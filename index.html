@@ -19,6 +19,12 @@
       const W = 960, H = 640, TILE = 74, COLS = 7, ROWS = 6;
       const BOARD_X = 382, BOARD_Y = 96, MAX_TURNS = 10, UPGRADE_EVERY = 3;
 
+      function renderResolutionForWidth(displayWidth = W) {
+        const pixelRatio = Math.min(window.devicePixelRatio || 1, 3);
+        const displayScale = Math.max(displayWidth / W, 1);
+        return Math.min(pixelRatio * displayScale, 3);
+      }
+
       const SEASONS = [
         { name: "Spring", icon: "flower", bg: 0x7dbd48, fill: 0x8fd85a, accent: 0x5daa35 },
         { name: "Summer", icon: "sun",    bg: 0x8fca45, fill: 0xf6c342, accent: 0xe3a92f },
@@ -216,7 +222,11 @@
           this.inventory={}; this.orders=[]; this.tools={clear:2,basic:1,rare:1,shuffle:0}; this.overlay=null;
         }
         create() {
-          this.input.topOnly=true; makeTextures(this); this.rebuild();
+          this.input.topOnly=true;
+          const textResolution = this.registry.get("renderResolution") || 1;
+          const addText = this.add.text.bind(this.add);
+          this.add.text = (...args) => addText(...args).setResolution(textResolution);
+          makeTextures(this); this.rebuild();
           this.input.on("pointerup",()=>this.endPath());
           this.input.keyboard?.on("keydown-SPACE",()=>this.shuffleBoard());
         }
@@ -441,7 +451,7 @@
         const gameRef = useRef(null);
         useEffect(() => {
           if (!hostRef.current || gameRef.current) return;
-          const renderResolution = Math.min(window.devicePixelRatio || 1, 3);
+          const renderResolution = renderResolutionForWidth(hostRef.current.getBoundingClientRect().width);
           gameRef.current = new Phaser.Game({
             type: Phaser.AUTO, width: W, height: H,
             resolution: renderResolution,
@@ -450,12 +460,17 @@
             scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
             render: { antialias: true, antialiasGL: true, roundPixels: false, powerPreference: "high-performance" },
             input: { activePointers: 3 },
+            callbacks: {
+              preBoot: (game) => {
+                game.registry.set("renderResolution", renderResolution);
+              },
+            },
           });
           return () => { gameRef.current?.destroy(true); gameRef.current = null; };
         }, []);
         return (
           <div className="min-h-screen w-full bg-emerald-950 flex flex-col items-center justify-center p-4 gap-3">
-            <div className="w-full max-w-[960px] rounded-2xl overflow-hidden shadow-2xl border border-white/20 bg-black" ref={hostRef} />
+            <div className="w-full max-w-[960px] aspect-[3/2] rounded-2xl overflow-hidden shadow-2xl border border-white/20 bg-black" ref={hostRef} />
             <div className="max-w-[960px] text-sm text-emerald-50/85 text-center">
               Drag 3+ matching tiles to collect. Every 3rd chained tile upgrades to the next tier.
             </div>

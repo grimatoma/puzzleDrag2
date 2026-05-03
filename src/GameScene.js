@@ -29,6 +29,9 @@ export class GameScene extends Phaser.Scene {
 
   create() {
     this.input.topOnly = true;
+    const textResolution = this.registry.get("renderResolution") || 1;
+    const addText = this.add.text.bind(this.add);
+    this.add.text = (...args) => addText(...args).setResolution(textResolution);
     makeTextures(this);
     this.rebuild();
     this.input.on("pointerup", () => this.endPath());

@@ -8,6 +8,12 @@ export const BOARD_Y = 96;
 export const MAX_TURNS = 10;
 export const UPGRADE_EVERY = 3;
 
+export function renderResolutionForWidth(displayWidth = W) {
+  const pixelRatio = Math.min(window.devicePixelRatio || 1, 3);
+  const displayScale = Math.max(displayWidth / W, 1);
+  return Math.min(pixelRatio * displayScale, 3);
+}
+
 export const SEASONS = [
   { name: "Spring", icon: "flower", bg: 0x7dbd48, fill: 0x8fd85a, accent: 0x5daa35 },
   { name: "Summer", icon: "sun", bg: 0x8fca45, fill: 0xf6c342, accent: 0xe3a92f },
