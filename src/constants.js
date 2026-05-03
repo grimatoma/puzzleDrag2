@@ -1,5 +1,7 @@
 export const W = 960;
 export const H = 640;
+export const MOBILE_W = 640;
+export const MOBILE_H = 1040;
 export const TILE = 74;
 export const COLS = 7;
 export const ROWS = 6;
@@ -8,9 +10,13 @@ export const BOARD_Y = 96;
 export const MAX_TURNS = 10;
 export const UPGRADE_EVERY = 3;
 
-export function renderResolutionForWidth(displayWidth = W) {
+export function responsiveGameSize(displayWidth = W) {
+  return displayWidth < 760 ? { width: MOBILE_W, height: MOBILE_H, narrow: true } : { width: W, height: H, narrow: false };
+}
+
+export function renderResolutionForWidth(displayWidth = W, gameWidth = W) {
   const pixelRatio = Math.min(window.devicePixelRatio || 1, 3);
-  const displayScale = Math.max(displayWidth / W, 1);
+  const displayScale = Math.max(displayWidth / gameWidth, 1);
   return Math.min(pixelRatio * displayScale, 3);
 }
 

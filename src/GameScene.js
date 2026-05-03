@@ -41,6 +41,74 @@ export class GameScene extends Phaser.Scene {
   seasonIndex() { return seasonIndexForTurns(this.turnsUsed); }
   season() { return SEASONS[this.seasonIndex()]; }
   biome() { return BIOMES[this.biomeKey]; }
+  viewW() { return this.scale.width || W; }
+  viewH() { return this.scale.height || H; }
+
+  layout() {
+    const narrow = this.registry.get("narrowLayout");
+    const boardW = COLS * TILE;
+    if (!narrow) {
+      return {
+        narrow,
+        boardX: BOARD_X,
+        boardY: BOARD_Y,
+        panelX: 0,
+        panelY: 72,
+        biomeX: 390,
+        biomeY: 596,
+        helpX: 652,
+        helpY: 610,
+        seasonPanelX: 252,
+        seasonPanelY: 8,
+        seasonPanelW: 434,
+        turnsX: 274,
+        turnsY: 22,
+        seasonNameX: 600,
+        seasonNameY: 22,
+        vineX: 286,
+        vineY: 49,
+        vineW: 369,
+        fillX: 286,
+        fillY: 35,
+        fillW: 370,
+        badgeX: 643,
+        badgeY: 43,
+        pipX: 300,
+        pipY: 43,
+        pipStep: 36,
+      };
+    }
+    const vw = this.viewW();
+    return {
+      narrow,
+      boardX: Math.round((vw - boardW) / 2),
+      boardY: 150,
+      panelX: Math.round((vw - 302) / 2),
+      panelY: 660,
+      biomeX: Math.round((vw - 214) / 2),
+      biomeY: 614,
+      helpX: vw / 2,
+      helpY: 122,
+      seasonPanelX: 102,
+      seasonPanelY: 76,
+      seasonPanelW: 436,
+      turnsX: 124,
+      turnsY: 92,
+      seasonNameX: 410,
+      seasonNameY: 92,
+      vineX: 136,
+      vineY: 119,
+      vineW: 369,
+      fillX: 136,
+      fillY: 105,
+      fillW: 370,
+      badgeX: 523,
+      badgeY: 113,
+      pipX: 150,
+      pipY: 113,
+      pipStep: 36,
+    };
+  }
 
   rebuild() {
     this.children.removeAll();
@@ -61,21 +129,24 @@ export class GameScene extends Phaser.Scene {
   addBackground() {
     const s = this.season();
     const b = this.biome();
+    const l = this.layout();
+    const vw = this.viewW();
+    const vh = this.viewH();
     const bg = this.biomeKey === "mine" ? 0x31404a : s.bg;
     this.cameras.main.setBackgroundColor(bg);
-    this.add.rectangle(0, 0, W, H, bg).setOrigin(0);
-    this.add.rectangle(0, 0, W, 70, 0x5b3b20).setOrigin(0).setAlpha(0.96);
-    for (let i = 0; i < 13; i++) {
+    this.add.rectangle(0, 0, vw, vh, bg).setOrigin(0);
+    this.add.rectangle(0, 0, vw, 70, 0x5b3b20).setOrigin(0).setAlpha(0.96);
+    for (let i = 0; i < Math.ceil(vw / 80) + 2; i++) {
       const x = i * 80 - 20;
       this.add.circle(x + 34, 69, 24, s.accent, 0.95);
       this.add.circle(x + 55, 64, 20, s.accent, 0.85);
     }
-    for (let y = 90; y < 596; y += 32) {
-      this.add.ellipse(350, y, 42, 24, s.accent, 0.7).setAngle(-25);
-      this.add.ellipse(934, y, 44, 24, s.accent, 0.7).setAngle(25);
+    for (let y = 90; y < vh - 44; y += 32) {
+      this.add.ellipse(l.boardX - 32, y, 42, 24, s.accent, 0.7).setAngle(-25);
+      this.add.ellipse(vw - 26, y, 44, 24, s.accent, 0.7).setAngle(25);
     }
-    rounded(this, BOARD_X - 24, BOARD_Y - 24, COLS * TILE + 48, ROWS * TILE + 48, 20, b.dark, 0.85);
-    rounded(this, BOARD_X - 14, BOARD_Y - 14, COLS * TILE + 28, ROWS * TILE + 28, 18, b.dirt, 1);
+    rounded(this, l.boardX - 24, l.boardY - 24, COLS * TILE + 48, ROWS * TILE + 48, 20, b.dark, 0.85);
+    rounded(this, l.boardX - 14, l.boardY - 14, COLS * TILE + 28, ROWS * TILE + 28, 18, b.dirt, 1);
   }
 
   addHud() {
@@ -92,7 +163,8 @@ export class GameScene extends Phaser.Scene {
     this.xpText = this.add.text(802, 34, "0/500", { fontFamily: "Arial", fontSize: "15px", color: "#fff", fontStyle: "bold" }).setOrigin(0.5);
     this.add.circle(908, 34, 28, 0xbb3b2f).setStrokeStyle(4, 0xffe2a3);
     this.levelText = this.add.text(908, 34, String(this.level), { fontFamily: "Arial", fontSize: "28px", color: "#fff", fontStyle: "bold" }).setOrigin(0.5);
-    this.add.text(652, 610, "Drag 3+ matching tiles. Every 3rd chained tile becomes the next tier.", { fontFamily: "Arial", fontSize: "16px", color: "#fff", stroke: "#000", strokeThickness: 4 }).setOrigin(0.5);
+    const l = this.layout();
+    this.add.text(l.helpX, l.helpY, "Drag 3+ matching tiles. Every 3rd chained tile becomes the next tier.", { fontFamily: "Arial", fontSize: l.narrow ? "15px" : "16px", color: "#fff", stroke: "#000", strokeThickness: 4, align: "center", wordWrap: { width: l.narrow ? 540 : 600 } }).setOrigin(0.5);
   }
 
   addSeasonBar() {
@@ -148,8 +220,87 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
+  addHud() {
+    const l = this.layout();
+    this.add.circle(38, 35, 24, 0xf7f0de).setStrokeStyle(4, 0xb28b62);
+    this.add.text(38, 35, "Back", { fontFamily: "Arial", fontSize: "18px", color: "#7a5638", fontStyle: "bold" }).setOrigin(0.5);
+    rounded(this, 92, 14, 142, 40, 20, 0xf6efe0, 1, 0xb28b62, 3);
+    this.coinText = this.add.text(118, 34, String(this.coins), { fontFamily: "Arial", fontSize: "22px", color: "#6a4b31", fontStyle: "bold" }).setOrigin(0, 0.5);
+    this.add.circle(210, 34, 24, 0xffc239).setStrokeStyle(4, 0xf2e2a1);
+    this.add.text(210, 34, "$", { fontFamily: "Arial", fontSize: "24px", color: "#7a5638", fontStyle: "bold" }).setOrigin(0.5);
+    this.addSeasonBar();
+
+    const xpPanelX = l.narrow ? 292 : 706;
+    const xpBarX = l.narrow ? 336 : 750;
+    const levelX = l.narrow ? 588 : 908;
+    rounded(this, xpPanelX, 14, 158, 40, 20, 0xf6efe0, 1, 0xb28b62, 3);
+    rounded(this, xpBarX, 20, 104, 28, 14, 0xb9a48f, 1);
+    this.xpFillX = xpBarX;
+    this.xpFill = rounded(this, xpBarX, 20, 8, 28, 14, 0xff8b25, 1);
+    this.xpText = this.add.text(xpBarX + 52, 34, "0/500", { fontFamily: "Arial", fontSize: "15px", color: "#fff", fontStyle: "bold" }).setOrigin(0.5);
+    this.add.circle(levelX, 34, 28, 0xbb3b2f).setStrokeStyle(4, 0xffe2a3);
+    this.levelText = this.add.text(levelX, 34, String(this.level), { fontFamily: "Arial", fontSize: "28px", color: "#fff", fontStyle: "bold" }).setOrigin(0.5);
+    this.add.text(l.helpX, l.helpY, "Drag 3+ matching tiles. Every 3rd chained tile becomes the next tier.", { fontFamily: "Arial", fontSize: l.narrow ? "15px" : "16px", color: "#fff", stroke: "#000", strokeThickness: 4, align: "center", wordWrap: { width: l.narrow ? 540 : 600 } }).setOrigin(0.5);
+  }
+
+  addSeasonBar() {
+    const s = this.season();
+    const l = this.layout();
+    rounded(this, l.seasonPanelX, l.seasonPanelY, l.seasonPanelW, 56, 20, 0xfaf0dd, 1, 0xb28b62, 3);
+    drawCuteVine(this, l.vineX, l.vineY, l.vineW, 0x6da53a);
+    for (let i = 0; i < 7; i++) {
+      const lx = l.vineX + 14 + i * 52;
+      const ly = l.vineY - 1 + (i % 2 === 0 ? -3 : 3);
+      this.add.ellipse(lx - 10, ly, 14, 8, 0x74b744, 0.95).setAngle(-35);
+      this.add.ellipse(lx + 10, ly, 14, 8, 0x74b744, 0.95).setAngle(35);
+    }
+    this.turnsText = this.add.text(l.turnsX, l.turnsY, "Turns 10/10", { fontFamily: "Arial", fontSize: "16px", color: "#6a4b31", fontStyle: "bold" }).setOrigin(0, 0.5);
+    this.seasonText = this.add.text(l.seasonNameX, l.seasonNameY, s.name, { fontFamily: "Arial", fontSize: "18px", color: "#6a4b31", fontStyle: "bold" }).setOrigin(0.5);
+    rounded(this, l.fillX, l.fillY, l.fillW, 16, 8, 0xe5d7bf, 1, 0xc5b390, 2);
+    this.seasonFill = rounded(this, l.fillX, l.fillY, 1, 16, 8, s.fill, 1);
+    this.seasonBadge = this.add.container(l.badgeX, l.badgeY);
+    this.pips = [];
+    for (let i = 0; i < MAX_TURNS; i++) {
+      const x = l.pipX + i * l.pipStep;
+      const back = this.add.circle(x, l.pipY, 11, 0xffffff, 0.72).setStrokeStyle(2, 0xb28b62, 0.7);
+      const icon = this.add.image(x, l.pipY, `season_${s.icon}`).setScale(0.52).setAlpha(0.25);
+      this.pips.push({ back, icon });
+    }
+  }
+
+  updateSeasonHud(animated = false) {
+    const s = this.season();
+    const l = this.layout();
+    const left = MAX_TURNS - this.turnsUsed;
+    const w = clamp((this.turnsUsed / MAX_TURNS) * l.fillW, 1, l.fillW);
+    this.turnsText?.setText(`Turns ${left}/${MAX_TURNS}`);
+    this.seasonText?.setText(s.name);
+    if (this.seasonFill) {
+      this.seasonFill.destroy();
+      this.seasonFill = rounded(this, l.fillX, l.fillY, w, 16, 8, s.fill, 1);
+    }
+    this.seasonBadge?.removeAll(true);
+    if (this.seasonBadge) {
+      this.seasonBadge.add([
+        this.add.circle(0, 0, 18, 0xffffff, 0.92).setStrokeStyle(3, 0xb28b62),
+        this.add.image(0, 0, `season_${s.icon}`).setScale(0.72),
+      ]);
+    }
+    this.pips?.forEach((p, i) => {
+      const filled = i < this.turnsUsed;
+      p.back.setFillStyle(filled ? s.fill : 0xffffff, filled ? 1 : 0.72);
+      p.icon.setTexture(`season_${s.icon}`);
+      p.icon.setAlpha(filled ? 1 : 0.25);
+      p.icon.setScale(filled ? 0.62 : 0.52);
+      if (animated && i === this.turnsUsed - 1) {
+        this.tweens.add({ targets: [p.back, p.icon], scale: 1.22, yoyo: true, duration: 180, ease: "Back.Out" });
+      }
+    });
+  }
+
   addPanel() {
-    this.panel = this.add.container(0, 72);
+    const l = this.layout();
+    this.panel = this.add.container(l.panelX, l.panelY);
     this.panel.add([
       rounded(this, 8, 0, 302, 544, 18, 0x7c4f2c, 0.98, 0xe2c19b, 5),
       rounded(this, 24, 18, 268, 110, 16, 0xf7ead8, 1),
@@ -212,7 +363,8 @@ export class GameScene extends Phaser.Scene {
     });
 
     if (!this.biomeButtons) {
-      this.biomeButtons = this.add.container(390, 596);
+      const l = this.layout();
+      this.biomeButtons = this.add.container(l.biomeX, l.biomeY);
       ["farm", "mine"].forEach((k, i) => {
         const x = i * 112;
         const b = rounded(this, x, 0, 102, 36, 18, k === this.biomeKey ? 0xffc239 : 0x6b4d34, 1, 0xffffff, 3, 0.5).setInteractive(new Phaser.Geom.Rectangle(x, 0, 102, 36), Phaser.Geom.Rectangle.Contains);
@@ -246,8 +398,9 @@ export class GameScene extends Phaser.Scene {
       this.grid[r] = this.grid[r] || [];
       for (let c = 0; c < COLS; c++) {
         if (!this.grid[r][c]) {
-          const x = BOARD_X + c * TILE + TILE / 2;
-          const y = BOARD_Y + r * TILE + TILE / 2;
+          const l = this.layout();
+          const x = l.boardX + c * TILE + TILE / 2;
+          const y = l.boardY + r * TILE + TILE / 2;
           const tile = new TileObj(this, x, initial ? y - 500 - Phaser.Math.Between(0, 100) : y - 140, c, r, this.randomResource());
           this.grid[r][c] = tile;
           this.tweens.add({ targets: tile.sprite, y, duration: initial ? 450 + r * 28 : 210, ease: "Back.Out" });
@@ -378,7 +531,8 @@ export class GameScene extends Phaser.Scene {
           this.grid[write][c] = tile;
           this.grid[r][c] = null;
           tile.row = write;
-          this.tweens.add({ targets: tile.sprite, y: BOARD_Y + write * TILE + TILE / 2, duration: 190 });
+          const l = this.layout();
+          this.tweens.add({ targets: tile.sprite, y: l.boardY + write * TILE + TILE / 2, duration: 190 });
         }
         write--;
       }
@@ -410,12 +564,14 @@ export class GameScene extends Phaser.Scene {
     if (this.overlay) return;
     this.clearPath(false);
     const group = this.add.container(0, 0).setDepth(60);
-    const shade = this.add.rectangle(W / 2, H / 2, W, H, 0x000000, 0.48);
-    const panel = rounded(this, W / 2 - 205, H / 2 - 132, 410, 264, 22, 0xf7ead8, 1, 0xb28b62, 5);
-    const title = this.add.text(W / 2, H / 2 - 88, `${this.season().name} Complete!`, { fontFamily: "Arial", fontSize: "31px", color: "#744d2e", fontStyle: "bold" }).setOrigin(0.5);
-    const body = this.add.text(W / 2, H / 2 - 20, `Coins: ${this.coins}\nLevel: ${this.level}\nOrders left: ${this.orders.length}`, { fontFamily: "Arial", fontSize: "22px", color: "#6a4b31", align: "center", lineSpacing: 8 }).setOrigin(0.5);
-    const btn = rounded(this, W / 2 - 96, H / 2 + 62, 192, 50, 18, 0x91bf24, 1, 0xffffff, 3, 0.75).setInteractive(new Phaser.Geom.Rectangle(W / 2 - 96, H / 2 + 62, 192, 50), Phaser.Geom.Rectangle.Contains);
-    const txt = this.add.text(W / 2, H / 2 + 87, "Next Season", { fontFamily: "Arial", fontSize: "22px", color: "#fff", fontStyle: "bold" }).setOrigin(0.5);
+    const vw = this.viewW();
+    const vh = this.viewH();
+    const shade = this.add.rectangle(vw / 2, vh / 2, vw, vh, 0x000000, 0.48);
+    const panel = rounded(this, vw / 2 - 205, vh / 2 - 132, 410, 264, 22, 0xf7ead8, 1, 0xb28b62, 5);
+    const title = this.add.text(vw / 2, vh / 2 - 88, `${this.season().name} Complete!`, { fontFamily: "Arial", fontSize: "31px", color: "#744d2e", fontStyle: "bold" }).setOrigin(0.5);
+    const body = this.add.text(vw / 2, vh / 2 - 20, `Coins: ${this.coins}\nLevel: ${this.level}\nOrders left: ${this.orders.length}`, { fontFamily: "Arial", fontSize: "22px", color: "#6a4b31", align: "center", lineSpacing: 8 }).setOrigin(0.5);
+    const btn = rounded(this, vw / 2 - 96, vh / 2 + 62, 192, 50, 18, 0x91bf24, 1, 0xffffff, 3, 0.75).setInteractive(new Phaser.Geom.Rectangle(vw / 2 - 96, vh / 2 + 62, 192, 50), Phaser.Geom.Rectangle.Contains);
+    const txt = this.add.text(vw / 2, vh / 2 + 87, "Next Season", { fontFamily: "Arial", fontSize: "22px", color: "#fff", fontStyle: "bold" }).setOrigin(0.5);
     group.add([shade, panel, title, body, btn, txt]);
     this.overlay = group;
     btn.on("pointerdown", () => {
@@ -459,7 +615,7 @@ export class GameScene extends Phaser.Scene {
     this.xpText?.setText(`${this.xp}/${this.level * 500}`);
     if (this.xpFill) {
       this.xpFill.destroy();
-      this.xpFill = rounded(this, 750, 20, clamp((this.xp / (this.level * 500)) * 104, 8, 104), 28, 14, 0xff8b25, 1);
+      this.xpFill = rounded(this, this.xpFillX || 750, 20, clamp((this.xp / (this.level * 500)) * 104, 8, 104), 28, 14, 0xff8b25, 1);
     }
     this.updateSeasonHud(false);
     if (render) this.renderPanel();

@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from "react";
 import Phaser from "phaser";
-import { W, H, renderResolutionForWidth } from "./src/constants.js";
+import { responsiveGameSize, renderResolutionForWidth } from "./src/constants.js";
 import { runSelfTests } from "./src/utils.js";
 import { GameScene } from "./src/GameScene.js";
 
@@ -11,11 +11,13 @@ export default function PuzzleCraftStylePhaserPrototype() {
   useEffect(() => {
     runSelfTests();
     if (!hostRef.current || gameRef.current) return;
-    const renderResolution = renderResolutionForWidth(hostRef.current.getBoundingClientRect().width);
+    const hostWidth = hostRef.current.getBoundingClientRect().width;
+    const gameSize = responsiveGameSize(hostWidth);
+    const renderResolution = renderResolutionForWidth(hostWidth, gameSize.width);
     gameRef.current = new Phaser.Game({
       type: Phaser.AUTO,
-      width: W,
-      height: H,
+      width: gameSize.width,
+      height: gameSize.height,
       resolution: renderResolution,
       parent: hostRef.current,
       backgroundColor: "#75b94a",
@@ -26,6 +28,7 @@ export default function PuzzleCraftStylePhaserPrototype() {
       callbacks: {
         preBoot: (game) => {
           game.registry.set("renderResolution", renderResolution);
+          game.registry.set("narrowLayout", gameSize.narrow);
         },
       },
     });
@@ -37,7 +40,7 @@ export default function PuzzleCraftStylePhaserPrototype() {
 
   return (
     <div className="min-h-screen w-full bg-emerald-950 flex flex-col items-center justify-center p-4 gap-3">
-      <div className="w-full max-w-[960px] aspect-[3/2] rounded-2xl overflow-hidden shadow-2xl border border-white/20 bg-black" ref={hostRef} />
+      <div className="w-full max-w-[960px] aspect-[3/2] max-[760px]:max-w-[640px] max-[760px]:aspect-[8/13] rounded-2xl overflow-hidden shadow-2xl border border-white/20 bg-black" ref={hostRef} />
       <div className="max-w-[960px] text-sm text-emerald-50/85 text-center">
         Cute visual season bar: vine track, fill bar, 10 decorative pips, and a changing season badge.
       </div>
