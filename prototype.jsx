@@ -11,15 +11,17 @@ export default function PuzzleCraftStylePhaserPrototype() {
   useEffect(() => {
     runSelfTests();
     if (!hostRef.current || gameRef.current) return;
+    const renderResolution = Math.min(window.devicePixelRatio || 1, 3);
     gameRef.current = new Phaser.Game({
       type: Phaser.AUTO,
       width: W,
       height: H,
+      resolution: renderResolution,
       parent: hostRef.current,
       backgroundColor: "#75b94a",
       scene: GameScene,
       scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
-      render: { antialias: false, roundPixels: true, powerPreference: "high-performance" },
+      render: { antialias: true, antialiasGL: true, roundPixels: false, powerPreference: "high-performance" },
       input: { activePointers: 3 },
     });
     return () => {
