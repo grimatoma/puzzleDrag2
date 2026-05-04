@@ -50,11 +50,15 @@ export function reduce(state, action) {
       return state;
     }
 
-    case 'SETTINGS/RESTART_RUN': {
+    case 'SETTINGS/LEAVE_BOARD': {
       return {
         ...state,
         modal: null,
-        bubble: { id: Date.now(), npc: 'wren', text: 'Restart not yet wired — coming soon.', ms: 1800 },
+        view: 'town',
+        turnsUsed: 0,
+        pendingView: null,
+        seasonStats: { harvests: 0, upgrades: 0, ordersFilled: 0, coins: 0 },
+        bubble: { id: Date.now(), npc: 'wren', text: 'Back in the vale. Your board progress was not saved.', ms: 2400 },
       };
     }
 

@@ -75,8 +75,9 @@ async function toggleFullscreen() {
   } catch {}
 }
 
-function MainTab({ dispatch }) {
+function MainTab({ state, dispatch }) {
   const [confirmReset, setConfirmReset] = React.useState(false);
+  const [confirmLeave, setConfirmLeave] = React.useState(false);
   const [fs, setFs] = React.useState(isFullscreen());
   React.useEffect(() => {
     const sync = () => setFs(isFullscreen());
@@ -87,6 +88,8 @@ function MainTab({ dispatch }) {
       document.removeEventListener("webkitfullscreenchange", sync);
     };
   }, []);
+
+  const onBoard = state?.view === 'board' && (state?.turnsUsed || 0) > 0;
 
   return (
     <div className="flex flex-col items-center gap-3 pt-1">
@@ -100,9 +103,38 @@ function MainTab({ dispatch }) {
           ▶ Resume
         </ActionBtn>
 
-        <ActionBtn onClick={() => dispatch({ type: 'SETTINGS/RESTART_RUN' })}>
-          ↻ Restart Run
-        </ActionBtn>
+        {onBoard && (
+          confirmLeave ? (
+            <div
+              className="w-full flex flex-col gap-2 py-3 px-3 rounded-xl border-2"
+              style={{ background: '#f4e8d0', borderColor: '#c23b22' }}
+            >
+              <span className="text-[12px] font-bold text-center" style={{ color: '#5a3a20' }}>
+                Leave the board? Your current run will not be saved.
+              </span>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => dispatch({ type: 'SETTINGS/LEAVE_BOARD' })}
+                  className="flex-1 py-1.5 text-[12px] font-bold rounded-lg border-2"
+                  style={{ background: '#c23b22', borderColor: '#8f2a18', color: '#fff' }}
+                >
+                  Leave
+                </button>
+                <button
+                  onClick={() => setConfirmLeave(false)}
+                  className="flex-1 py-1.5 text-[12px] font-bold rounded-lg border-2"
+                  style={{ background: '#e8dcc4', borderColor: '#b28b62', color: '#5a3a20' }}
+                >
+                  Stay
+                </button>
+              </div>
+            </div>
+          ) : (
+            <ActionBtn onClick={() => setConfirmLeave(true)}>
+              ⌂ Go to Town
+            </ActionBtn>
+          )
+        )}
 
         <ActionBtn onClick={() => dispatch({ type: 'SETTINGS/SHOW_TUTORIAL' })}>
           📖 Show Tutorial
@@ -306,7 +338,7 @@ export default function SettingsModal({ state, dispatch }) {
         </div>
 
         {/* Tab content */}
-        {tab === 'main' && <MainTab dispatch={dispatch} />}
+        {tab === 'main' && <MainTab state={state} dispatch={dispatch} />}
         {tab === 'settings' && <SettingsTab settings={settings} dispatch={dispatch} />}
         {tab === 'about' && <AboutTab dispatch={dispatch} />}
       </div>
