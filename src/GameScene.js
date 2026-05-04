@@ -403,19 +403,18 @@ export class GameScene extends Phaser.Scene {
     for (let r = 0; r < ROWS; r++) {
       for (let c = 0; c < COLS; c++) {
         const tile = this.grid[r]?.[c];
-        if (!tile || tile.res.key === key) continue;
-        this.tweens.add({ targets: tile.sprite, alpha: 0.3, duration: 140, ease: "Sine.Out" });
+        if (!tile) continue;
+        tile.sprite.setAlpha(tile.res.key === key ? 1 : 0.35);
       }
     }
   }
 
   clearDimming() {
-    const startKey = this.path[0]?.res.key;
     for (let r = 0; r < ROWS; r++) {
       for (let c = 0; c < COLS; c++) {
         const tile = this.grid[r]?.[c];
-        if (!tile || tile.res.key === startKey) continue;
-        this.tweens.add({ targets: tile.sprite, alpha: 1, duration: 160, ease: "Sine.Out" });
+        if (!tile) continue;
+        tile.sprite.setAlpha(1);
       }
     }
   }

@@ -222,7 +222,7 @@ export function reduce(state, action) {
         }
       }
 
-      // Apply active weather bonus
+      // Apply active weather bonus before decrementing turns
       if (next.weather && (next.weatherTurnsLeft || 0) > 0) {
         const wKey = next.weather.key;
         const chainKey = payload.key || "";

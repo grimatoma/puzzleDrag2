@@ -2,7 +2,7 @@ import React, { useEffect, useReducer, useRef, useState } from "react";
 import { COLS, ROWS, TILE } from "./src/constants.js";
 import { runSelfTests } from "./src/utils.js";
 import { gameReducer, initialState } from "./src/state.js";
-import { Hud, SidePanel, BottomNav, TownView, SeasonModal, NpcBubble, FeatureModals, FeatureScreens } from "./src/ui.jsx";
+import { Hud, SidePanel, MobileDock, BottomNav, TownView, SeasonModal, NpcBubble, FeatureModals, FeatureScreens } from "./src/ui.jsx";
 import { useAudio } from "./src/audio/useAudio.js";
 
 function PhaserMount({ dispatch, biomeKey, turnsUsed, uiLocked, sceneRef, memoryPerks }) {
@@ -146,21 +146,27 @@ export default function App() {
         {/* Main area: board + side panel, or town view */}
         <div className="flex-1 min-h-0 relative">
           {/* Board + side panel grid — always mounted to keep Phaser alive, hidden when in town view */}
-          <div className={`absolute inset-0 grid grid-cols-[1fr_300px] gap-3 p-3 max-[1024px]:grid-cols-1 max-[1024px]:grid-rows-[1fr_auto] max-[1024px]:gap-0 max-[1024px]:p-0 ${state.view === "board" ? "" : "invisible"}`}>
-            {/* Phaser host — takes the rest. Phaser draws its own background and frame. */}
-            <div className="relative min-h-0 min-w-0 overflow-hidden">
-              <PhaserMount
-                dispatch={dispatch}
-                biomeKey={state.biomeKey}
-                turnsUsed={state.turnsUsed}
-                uiLocked={uiLocked}
-                sceneRef={sceneRef}
-                memoryPerks={state.memoryPerks}
-              />
+          <div className={`absolute inset-0 flex flex-col ${state.view === "board" ? "" : "invisible"}`}>
+            <div className="flex-1 min-h-0 grid grid-cols-[1fr_300px] gap-3 p-3 max-[1024px]:grid-cols-1 max-[1024px]:gap-0 max-[1024px]:p-0">
+              {/* Phaser host — takes the rest. Phaser draws its own background and frame. */}
+              <div className="relative min-h-0 min-w-0 overflow-hidden">
+                <PhaserMount
+                  dispatch={dispatch}
+                  biomeKey={state.biomeKey}
+                  turnsUsed={state.turnsUsed}
+                  uiLocked={uiLocked}
+                  sceneRef={sceneRef}
+                  memoryPerks={state.memoryPerks}
+                />
+              </div>
+              {/* Side panel — hidden on mobile, replaced by MobileDock */}
+              <div className="min-h-0 max-[1024px]:hidden">
+                <SidePanel state={state} dispatch={dispatch} />
+              </div>
             </div>
-            {/* Side panel */}
-            <div className="min-h-0 max-[1024px]:max-h-[40dvh]">
-              <SidePanel state={state} dispatch={dispatch} />
+            {/* Mobile dock — only visible on mobile, in board view */}
+            <div className="hidden max-[1024px]:block flex-shrink-0">
+              <MobileDock state={state} dispatch={dispatch} />
             </div>
           </div>
 
