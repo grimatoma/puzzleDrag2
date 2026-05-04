@@ -247,6 +247,11 @@ function AboutTab({ dispatch }) {
             style={{ background: '#2a7a3a', borderColor: '#1a4a20', color: '#fff' }}
           >📦 +100 All Items</button>
           <button
+            onClick={() => dispatch({ type: 'DEV/ADD_GOLD', amount: 1000 })}
+            className="py-1 px-3 text-[11px] font-bold rounded-lg border-2"
+            style={{ background: '#7a6a10', borderColor: '#4a4008', color: '#fff' }}
+          >🪙 +1000 Gold</button>
+          <button
             onClick={() => dispatch({ type: 'DEV/RESET_GAME' })}
             className="py-1 px-3 text-[11px] font-bold rounded-lg border-2"
             style={{ background: '#3a3a8a', borderColor: '#1a1a5a', color: '#fff' }}
