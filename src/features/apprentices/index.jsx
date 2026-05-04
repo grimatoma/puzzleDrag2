@@ -241,7 +241,7 @@ function AvailableCard({ app, state, dispatch }) {
   );
 }
 
-export default function ApprenticesModal({ state, dispatch }) {
+export function ApprenticesPanel({ state, dispatch, showHeader = true, onClose = null }) {
   const hiredApprentices = state.hiredApprentices || [];
   const idleHistory = state.idleHistory || [];
   const lastHarvest = idleHistory[0] || null;
@@ -250,61 +250,14 @@ export default function ApprenticesModal({ state, dispatch }) {
     (a) => !hiredApprentices.some((h) => h.app === a.id)
   );
 
-  function handleClose() {
-    dispatch({ type: "CLOSE_MODAL" });
-  }
-
   return (
-    <div
-      style={{
-        position: "fixed",
-        inset: 0,
-        background: "rgba(30,18,8,0.72)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        zIndex: 500,
-        padding: 8,
-      }}
-      onClick={(e) => { if (e.target === e.currentTarget) handleClose(); }}
-    >
-      <div
-        style={{
-          background: "#f4ecd8",
-          border: "4px solid #b28b62",
-          borderRadius: 20,
-          padding: 20,
-          width: "min(640px, 94vw)",
-          maxHeight: "88vh",
-          overflowY: "auto",
-          fontFamily: "Arial, sans-serif",
-          boxSizing: "border-box",
-        }}
-      >
+    <div style={{ background: "#f4ecd8", borderRadius: 20, padding: 20, width: "100%", maxHeight: "88vh", overflowY: "auto", fontFamily: "Arial, sans-serif", boxSizing: "border-box" }}>
+      {showHeader && (
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
-          <span style={{ fontSize: 16, fontWeight: 700, color: "#3a2715" }}>
-            🧑‍🌾 Apprentices
-          </span>
-          <button
-            onClick={handleClose}
-            style={{
-              width: 28,
-              height: 28,
-              borderRadius: 8,
-              background: "#fff8e8",
-              border: "2px solid #b28b62",
-              color: "#6a4b31",
-              fontWeight: 700,
-              fontSize: 14,
-              cursor: "pointer",
-              display: "grid",
-              placeItems: "center",
-              fontFamily: "Arial, sans-serif",
-            }}
-          >
-            ×
-          </button>
+          <span style={{ fontSize: 16, fontWeight: 700, color: "#3a2715" }}>🧑‍🌾 Apprentices</span>
+          {onClose && <button onClick={onClose} style={{ width: 28, height: 28, borderRadius: 8, background: "#fff8e8", border: "2px solid #b28b62", color: "#6a4b31", fontWeight: 700, fontSize: 14, cursor: "pointer", display: "grid", placeItems: "center", fontFamily: "Arial, sans-serif" }}>×</button>}
         </div>
+      )}
 
         <p style={{ fontSize: 11, color: "#7a5a3a", marginBottom: 14, marginTop: 2 }}>
           Hire townsfolk to keep things going while you're away.
@@ -363,6 +316,15 @@ export default function ApprenticesModal({ state, dispatch }) {
               .join(", ")}
           </div>
         )}
+    </div>
+  );
+}
+
+export default function ApprenticesModal({ state, dispatch }) {
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(30,18,8,0.72)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 500, padding: 8 }} onClick={(e) => { if (e.target === e.currentTarget) dispatch({ type: "CLOSE_MODAL" }); }}>
+      <div style={{ background: "#f4ecd8", border: "4px solid #b28b62", borderRadius: 20, width: "min(640px, 94vw)" }}>
+        <ApprenticesPanel state={state} dispatch={dispatch} showHeader onClose={() => dispatch({ type: "CLOSE_MODAL" })} />
       </div>
     </div>
   );

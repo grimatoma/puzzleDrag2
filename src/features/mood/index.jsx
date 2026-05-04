@@ -195,32 +195,19 @@ function NpcCard({ npcKey, npcData, bond, inventory, dispatch }) {
 
 // ── Modal ───────────────────────────────────────────────────────────────────
 
-export default function MoodModal({ state, dispatch }) {
+export function MoodPanel({ state, dispatch, showHeader = true, onClose = null }) {
   const { npcBond = {}, inventory = {} } = state;
 
   return (
-    // Backdrop
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center"
-      style={{ backgroundColor: 'rgba(0,0,0,0.55)' }}
-      onClick={() => dispatch({ type: 'CLOSE_MODAL' })}
-    >
-      {/* Card */}
-      <div
-        className="bg-[#f4ecd8] border-[4px] border-[#b28b62] rounded-[20px] p-5 w-[min(640px,94vw)] max-h-[88vh] overflow-y-auto"
-        style={{ fontFamily: 'Arial, sans-serif' }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Header */}
+    <div className="bg-[#f4ecd8] rounded-[20px] p-5 w-full max-h-[88vh] overflow-y-auto" style={{ fontFamily: 'Arial, sans-serif' }}>
+      {showHeader && (
         <div className="flex items-center justify-between mb-2">
           <span className="font-bold text-[16px] text-[#3a2715]">💞 Townsfolk</span>
-          <button
-            onClick={() => dispatch({ type: 'CLOSE_MODAL' })}
-            className="w-7 h-7 rounded-lg bg-[#e8d9bc] border-2 border-[#b28b62] grid place-items-center text-[#6a4b31] font-bold text-[14px]"
-          >
-            ×
-          </button>
+          {onClose && (
+            <button onClick={onClose} className="w-7 h-7 rounded-lg bg-[#e8d9bc] border-2 border-[#b28b62] grid place-items-center text-[#6a4b31] font-bold text-[14px]">×</button>
+          )}
         </div>
+      )}
 
         {/* Sub-heading */}
         <p className="text-[11px] text-[#7a6248] mb-3">
@@ -240,6 +227,15 @@ export default function MoodModal({ state, dispatch }) {
             />
           ))}
         </div>
+    </div>
+  );
+}
+
+export default function MoodModal({ state, dispatch }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ backgroundColor: 'rgba(0,0,0,0.55)' }} onClick={() => dispatch({ type: 'CLOSE_MODAL' })}>
+      <div className="bg-[#f4ecd8] border-[4px] border-[#b28b62] rounded-[20px] p-0 w-[min(640px,94vw)] max-h-[88vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+        <MoodPanel state={state} dispatch={dispatch} showHeader onClose={() => dispatch({ type: 'CLOSE_MODAL' })} />
       </div>
     </div>
   );
