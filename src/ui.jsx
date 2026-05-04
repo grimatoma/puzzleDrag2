@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { BIOMES, NPCS, SEASONS, MAX_TURNS, BUILDINGS, RECIPES } from "./constants.js";
 import { MAP_NODES } from "./features/cartography/data.js";
 import { xpForLevel } from "./state.js";
@@ -166,6 +167,7 @@ export function InventoryGrid({ inventory, biomeKey, compact }) {
 
 function ToolsGrid({ tools, onUse }) {
   const [tooltip, setTooltip] = useState(null);
+  const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 });
   const [modalTool, setModalTool] = useState(null);
   const longPressTimer = useRef(null);
   const longPressOccurred = useRef(false);
@@ -182,6 +184,14 @@ function ToolsGrid({ tools, onUse }) {
     clearTimeout(longPressTimer.current);
   };
 
+  const showTooltip = (key, el) => {
+    const rect = el.getBoundingClientRect();
+    setTooltipPos({ x: rect.left + rect.width / 2, y: rect.top });
+    setTooltip(key);
+  };
+
+  const tooltipDef = TOOL_DEFS.find((t) => t.key === tooltip);
+
   return (
     <>
       <div className="grid grid-cols-2 gap-1.5">
@@ -196,7 +206,7 @@ function ToolsGrid({ tools, onUse }) {
                   if (longPressOccurred.current) { longPressOccurred.current = false; return; }
                   onUse(t.key);
                 }}
-                onMouseEnter={() => setTooltip(t.key)}
+                onMouseEnter={(e) => showTooltip(t.key, e.currentTarget)}
                 onMouseLeave={() => setTooltip(null)}
                 onTouchStart={() => startLongPress(t)}
                 onTouchEnd={cancelLongPress}
@@ -207,17 +217,21 @@ function ToolsGrid({ tools, onUse }) {
                 <div className="text-[20px] leading-none text-white">{t.icon}</div>
                 <div className="text-[9px] font-bold text-white">{t.name}</div>
               </button>
-              {tooltip === t.key && (
-                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50 w-36 bg-[#2b1d0e] text-white text-[10px] rounded-lg px-2.5 py-2 shadow-lg pointer-events-none border border-[#e6c49a]">
-                  <div className="font-bold text-[11px] mb-0.5">{t.name}</div>
-                  <div className="text-white/80 leading-snug">{t.desc}</div>
-                  <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-[#2b1d0e]" />
-                </div>
-              )}
             </div>
           );
         })}
       </div>
+      {tooltipDef && createPortal(
+        <div
+          className="fixed z-[9999] w-36 bg-[#2b1d0e] text-white text-[10px] rounded-lg px-2.5 py-2 shadow-lg pointer-events-none border border-[#e6c49a]"
+          style={{ left: tooltipPos.x, top: tooltipPos.y - 8, transform: "translate(-50%, -100%)" }}
+        >
+          <div className="font-bold text-[11px] mb-0.5">{tooltipDef.name}</div>
+          <div className="text-white/80 leading-snug">{tooltipDef.desc}</div>
+          <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-[#2b1d0e]" />
+        </div>,
+        document.body
+      )}
       {modalTool && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={() => setModalTool(null)}>
           <div className="bg-[#3d2310] border-2 border-[#e6c49a] rounded-2xl p-5 max-w-[260px] w-full mx-4 shadow-2xl" onClick={(e) => e.stopPropagation()}>
