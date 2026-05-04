@@ -36,18 +36,33 @@ function MiniCard({ boss, weather, dispatch }) {
 
   return (
     <div
-      className="absolute top-2 right-2 z-50 cursor-pointer select-none"
+      className="absolute top-2 right-2 z-50 select-none"
       style={{ maxWidth: 200 }}
-      onClick={() => dispatch({ type: "BOSS/EXPAND" })}
     >
       <div
-        className="rounded-xl p-2 text-white shadow-xl"
+        className="relative rounded-xl p-2 text-white shadow-xl cursor-pointer"
         style={{
           background: "rgba(58,39,21,0.95)",
           border: "2px solid #a8431a",
         }}
+        onClick={() => dispatch({ type: "BOSS/EXPAND" })}
       >
-        <div className="flex items-center gap-1.5 mb-1">
+        <button
+          type="button"
+          aria-label="Reject challenge"
+          onClick={(e) => {
+            e.stopPropagation();
+            dispatch({ type: "BOSS/REJECT" });
+          }}
+          className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full text-white text-[11px] font-bold flex items-center justify-center leading-none shadow"
+          style={{
+            background: "#a8431a",
+            border: "1.5px solid #ff9a50",
+          }}
+        >
+          ×
+        </button>
+        <div className="flex items-center gap-1.5 mb-1 pr-3">
           <span className="text-[14px]">{boss.emoji}</span>
           <span className="text-[10px] font-bold text-[#ff7a00] leading-tight">{boss.name}</span>
         </div>
@@ -152,20 +167,35 @@ function BossModal({ boss, weather, dispatch }) {
           </div>
         )}
 
-        {/* Accept button */}
-        <button
-          onClick={() => dispatch({ type: "BOSS/CLOSE" })}
-          className="w-full py-3 rounded-xl font-bold text-[15px] transition-colors"
-          style={{
-            background: "linear-gradient(to bottom, #e8622a, #a84010)",
-            border: "2px solid #ff9a50",
-            color: "white",
-            fontFamily: "Arial, sans-serif",
-            letterSpacing: "0.05em",
-          }}
-        >
-          ACCEPT THE CHALLENGE
-        </button>
+        {/* Action buttons */}
+        <div className="flex flex-col gap-2">
+          <button
+            onClick={() => dispatch({ type: "BOSS/CLOSE" })}
+            className="w-full py-3 rounded-xl font-bold text-[15px] transition-colors"
+            style={{
+              background: "linear-gradient(to bottom, #e8622a, #a84010)",
+              border: "2px solid #ff9a50",
+              color: "white",
+              fontFamily: "Arial, sans-serif",
+              letterSpacing: "0.05em",
+            }}
+          >
+            ACCEPT THE CHALLENGE
+          </button>
+          <button
+            onClick={() => dispatch({ type: "BOSS/REJECT" })}
+            className="w-full py-2 rounded-xl font-bold text-[12px] transition-colors"
+            style={{
+              background: "transparent",
+              border: "1px solid rgba(168,67,26,0.6)",
+              color: "rgba(255,255,255,0.7)",
+              fontFamily: "Arial, sans-serif",
+              letterSpacing: "0.05em",
+            }}
+          >
+            DECLINE
+          </button>
+        </div>
       </div>
     </div>
   );
