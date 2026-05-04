@@ -259,21 +259,6 @@ function AboutTab({ dispatch }) {
             style={{ background: '#a84a1a', borderColor: '#7a3210', color: '#fff' }}
           >🐉 Trigger Boss</button>
           <button
-            onClick={() => dispatch({ type: 'LONGNIGHT/START' })}
-            className="py-1 px-3 text-[11px] font-bold rounded-lg border-2"
-            style={{ background: '#3a2750', borderColor: '#1a0d28', color: '#fff' }}
-          >🌑 Start Long Night</button>
-          <button
-            onClick={() => dispatch({ type: 'FEST/START' })}
-            className="py-1 px-3 text-[11px] font-bold rounded-lg border-2"
-            style={{ background: '#c8923a', borderColor: '#8a6a1a', color: '#fff' }}
-          >🌼 Festival</button>
-          <button
-            onClick={() => { dispatch({ type: 'MARKET/ROLL' }); dispatch({ type: 'OPEN_MODAL', modal: 'festivals' }); }}
-            className="py-1 px-3 text-[11px] font-bold rounded-lg border-2"
-            style={{ background: '#7e4f24', borderColor: '#4f2f10', color: '#fff' }}
-          >🎒 Market</button>
-          <button
             onClick={() => dispatch({ type: 'DEV/FILL_STORAGE' })}
             className="py-1 px-3 text-[11px] font-bold rounded-lg border-2"
             style={{ background: '#2a7a3a', borderColor: '#1a4a20', color: '#fff' }}

@@ -1,7 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { BIOMES, NPCS, SEASONS, MAX_TURNS, BUILDINGS, RECIPES } from "./constants.js";
-import { MAP_NODES } from "./features/cartography/data.js";
 import { xpForLevel, resourceByKey } from "./state.js";
 import { seasonIndexForTurns } from "./utils.js";
 
@@ -416,7 +415,6 @@ export function BottomNav({ view, modal, dispatch }) {
     { key: "quests",       label: "📜 Quests" },
     { key: "crafting",     label: "🔨 Craft" },
     { key: "achievements", label: "🏆 Trophies" },
-    { key: "cartography",  label: "🗺 Map" },
     { key: "heirlooms",    label: "✨ Heirlooms", modal: "heirlooms" },
     { key: "mood",         label: "💞 Townsfolk", modal: "mood" },
     { key: "apprentices",  label: "🧑‍🌾 Helpers",  modal: "apprentices" },
@@ -487,8 +485,9 @@ const TOWN_THEMES = {
 };
 
 export function TownView({ state, dispatch }) {
-  const node = MAP_NODES.find(n => n.id === state.mapCurrent) || MAP_NODES[0];
-  const theme = TOWN_THEMES[node.kind] || TOWN_THEMES.home;
+  const biomeTheme = state.biomeKey === "mine" ? "mine" : "farm";
+  const node = { name: biomeTheme === "mine" ? "Ironridge Camp" : "Hearthwood Vale" };
+  const theme = TOWN_THEMES[biomeTheme] || TOWN_THEMES.home;
   return (
     <div
       className="absolute inset-0 overflow-hidden"
@@ -509,12 +508,6 @@ export function TownView({ state, dispatch }) {
       {/* Header */}
       <div className="absolute top-3 left-4 landscape:max-[1024px]:top-2 landscape:max-[1024px]:left-3 font-bold text-[20px] landscape:max-[1024px]:text-[15px]" style={{ color: theme.textColor }}>{node.name}</div>
       <div className="absolute top-3 right-4 landscape:max-[1024px]:top-2 landscape:max-[1024px]:right-3 flex items-center gap-2 z-10">
-        <button
-          onClick={() => dispatch({ type: "OPEN_MODAL", modal: "beasts" })}
-          className="bg-white/85 px-3 py-1.5 landscape:max-[1024px]:px-2 landscape:max-[1024px]:py-1 rounded-full font-bold text-[#3a2715] landscape:max-[1024px]:text-[13px] hover:bg-white transition-colors"
-        >
-          🦊 Stables{state.tamedBeasts?.length > 0 ? ` (${state.tamedBeasts.length})` : ""}
-        </button>
         <div className="bg-white/85 px-3 py-1.5 landscape:max-[1024px]:px-2 landscape:max-[1024px]:py-1 rounded-full font-bold text-[#3a2715] landscape:max-[1024px]:text-[13px]">◉ {state.coins.toLocaleString()}</div>
       </div>
 

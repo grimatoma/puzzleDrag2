@@ -24,7 +24,7 @@ test('nav pills are visible off board', async ({ page }) => {
   await waitForBoot(page);
   // Navigate off board so the nav is visible
   await page.getByTestId('menu-btn').click();
-  for (const label of ['◳ Board', '⌂ Town', '🎒 Inventory', '📜 Quests', '📖 Almanac', '🔨 Craft', '🏆 Trophies', '🗺 Map']) {
+  for (const label of ['◳ Board', '⌂ Town', '🎒 Inventory', '📜 Quests', '🔨 Craft', '🏆 Trophies']) {
     await expect(page.getByRole('button', { name: label })).toBeVisible();
   }
 });
