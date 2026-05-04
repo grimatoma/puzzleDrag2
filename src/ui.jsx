@@ -1,14 +1,14 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { BIOMES, NPCS, SEASONS, MAX_TURNS, BUILDINGS, RECIPES } from "./constants.js";
 import { MAP_NODES } from "./features/cartography/data.js";
 import { xpForLevel } from "./state.js";
 import { seasonIndexForTurns } from "./utils.js";
 
 const TOOL_DEFS = [
-  { key: "clear", icon: "⚔", name: "Scythe" },
-  { key: "basic", icon: "+", name: "Seedpack" },
-  { key: "rare", icon: "★", name: "Lockbox" },
-  { key: "shuffle", icon: "↻", name: "Reshuffle Horn" },
+  { key: "clear", icon: "⚔", name: "Scythe", desc: "Clears tiles from the board and collects +5 basic resources." },
+  { key: "basic", icon: "+", name: "Seedpack", desc: "Instantly adds +5 basic resources to your inventory." },
+  { key: "rare", icon: "★", name: "Lockbox", desc: "Grants +2 rare resources directly to your inventory." },
+  { key: "shuffle", icon: "↻", name: "Reshuffle Horn", desc: "Reshuffles all tiles on the board for a fresh layout." },
 ];
 
 // ─── HUD (top bar) ─────────────────────────────────────────────────────────
@@ -41,19 +41,20 @@ export function Hud({ state, dispatch }) {
           <span className="font-bold text-[14px]" data-testid="buildings">{buildingCount}</span>
         </Pill>
       )}
-      {onBoard && <SeasonBar season={season} turnsUsed={turnsUsed} />}
-      {onBoard && <div className="text-[#f8e7c6] text-[12px] font-bold whitespace-nowrap" data-testid="turns-left">{turnsLeft} left</div>}
-      <div className="ml-auto flex items-center gap-1.5">
-        <div className="bg-[#f6efe0] border-2 border-[#b28b62] rounded-full h-[26px] w-[110px] landscape:max-[1024px]:h-[20px] landscape:max-[1024px]:w-[80px] relative overflow-hidden">
-          <div className="h-full bg-gradient-to-r from-[#ff8b25] to-[#ffb347] transition-[width] duration-300" style={{ width: `${xpPct}%` }} />
-          <div className="absolute inset-0 grid place-items-center text-[11px] landscape:max-[1024px]:text-[9px] font-bold text-white" style={{ textShadow: "0 1px 2px rgba(0,0,0,.4)" }}>
-            {xp} / {xpNeed}
+      {onBoard && <SeasonBar season={season} turnsUsed={turnsUsed} turnsLeft={turnsLeft} />}
+      {!onBoard && (
+        <div className="ml-auto flex items-center gap-1.5">
+          <div className="bg-[#f6efe0] border-2 border-[#b28b62] rounded-full h-[26px] w-[110px] landscape:max-[1024px]:h-[20px] landscape:max-[1024px]:w-[80px] relative overflow-hidden">
+            <div className="h-full bg-gradient-to-r from-[#ff8b25] to-[#ffb347] transition-[width] duration-300" style={{ width: `${xpPct}%` }} />
+            <div className="absolute inset-0 grid place-items-center text-[11px] landscape:max-[1024px]:text-[9px] font-bold text-white" style={{ textShadow: "0 1px 2px rgba(0,0,0,.4)" }}>
+              {xp} / {xpNeed}
+            </div>
+          </div>
+          <div className="w-9 h-9 landscape:max-[1024px]:w-7 landscape:max-[1024px]:h-7 rounded-full bg-[#bb3b2f] border-[3px] border-[#ffe2a3] grid place-items-center text-white font-bold text-[16px] landscape:max-[1024px]:text-[12px]">
+            {level}
           </div>
         </div>
-        <div className="w-9 h-9 landscape:max-[1024px]:w-7 landscape:max-[1024px]:h-7 rounded-full bg-[#bb3b2f] border-[3px] border-[#ffe2a3] grid place-items-center text-white font-bold text-[16px] landscape:max-[1024px]:text-[12px]">
-          {level}
-        </div>
-      </div>
+      )}
     </div>
   );
 }
@@ -64,27 +65,28 @@ function Pill({ children, className = "" }) {
   );
 }
 
-function SeasonBar({ season, turnsUsed }) {
+function SeasonBar({ season, turnsUsed, turnsLeft }) {
   return (
-    <div className="bg-[#faf0dd] border-2 border-[#b28b62] rounded-full px-2 py-0.5 flex items-center gap-1.5 min-w-[200px] landscape:max-[1024px]:min-w-[140px] flex-1 max-w-[480px]">
+    <div className="bg-[#faf0dd] border-2 border-[#b28b62] rounded-full pl-3 pr-2 py-0.5 flex items-center gap-2 min-w-0 flex-1 max-w-[480px]">
       <div className="text-[#6a4b31] font-bold text-[12px] landscape:max-[1024px]:text-[10px] whitespace-nowrap">{season.name}</div>
-      <div className="flex gap-0.5 flex-1 justify-center">
+      <div className="flex gap-1 flex-1 justify-center min-w-0">
         {Array.from({ length: MAX_TURNS }).map((_, i) => {
           const filled = i < turnsUsed;
           const current = i === turnsUsed;
           return (
             <div
               key={i}
-              className={`w-3 h-3 landscape:max-[1024px]:w-2 landscape:max-[1024px]:h-2 rounded-full border ${filled ? "border-transparent" : "border-[#b28b62]"} transition-all`}
+              className={`w-2.5 h-2.5 landscape:max-[1024px]:w-2 landscape:max-[1024px]:h-2 rounded-full border flex-shrink-0 ${filled ? "border-transparent" : "border-[#8a6a3a]"} transition-all`}
               style={{
                 backgroundColor: filled ? cssFromHex(season.fill) : "#fff",
-                boxShadow: current ? "0 0 0 2px rgba(255,122,0,.45)" : "none",
+                boxShadow: current ? "0 0 0 2px rgba(255,122,0,.55)" : "none",
                 transform: filled ? "scale(1.05)" : "none",
               }}
             />
           );
         })}
       </div>
+      <div className="text-[#6a4b31] font-bold text-[12px] landscape:max-[1024px]:text-[10px] whitespace-nowrap pl-1 border-l border-[#b28b62] ml-1" data-testid="turns-left">{turnsLeft} left</div>
     </div>
   );
 }
@@ -119,29 +121,30 @@ function Section({ title, titleColor = "#f8e7c6", children }) {
 }
 
 
-function InventoryCell({ r, count }) {
+function InventoryCell({ r, count, compact }) {
   return (
-    <div className="bg-[#b68d64] border-2 border-[#e6c49a] rounded-lg p-1.5 flex items-center gap-2" title={r.label}>
-      <div className="w-7 h-7 rounded-md flex-shrink-0 grid place-items-center text-[14px] text-white" style={{ backgroundColor: cssFromHex(r.color), border: "2px solid rgba(255,255,255,.4)", textShadow: "0 1px 1px rgba(0,0,0,.4)" }}>{r.glyph}</div>
-      <div className="flex flex-col leading-none min-w-0">
-        <div className="text-[9px] text-white/70 truncate">{r.label}</div>
-        <div className="text-[14px] text-white font-bold" style={{ textShadow: "0 1px 2px rgba(0,0,0,.4)" }}>{count}</div>
+    <div className={`bg-[#b68d64] border-2 border-[#e6c49a] rounded-lg flex items-center gap-2.5 ${compact ? "p-1.5" : "p-2"}`} title={r.label}>
+      <div className={`rounded-md flex-shrink-0 grid place-items-center text-white ${compact ? "w-8 h-8 text-[16px]" : "w-10 h-10 text-[20px]"}`} style={{ backgroundColor: cssFromHex(r.color), border: "2px solid rgba(255,255,255,.4)", textShadow: "0 1px 1px rgba(0,0,0,.4)" }}>{r.glyph}</div>
+      <div className="flex flex-col leading-none min-w-0 flex-1">
+        <div className={`text-white/80 truncate font-medium ${compact ? "text-[10px]" : "text-[12px]"}`}>{r.label}</div>
+        <div className={`text-white font-bold mt-0.5 ${compact ? "text-[14px]" : "text-[18px]"}`} style={{ textShadow: "0 1px 2px rgba(0,0,0,.4)" }}>{count}</div>
       </div>
     </div>
   );
 }
 
-export function InventoryGrid({ inventory, biomeKey }) {
+export function InventoryGrid({ inventory, biomeKey, compact }) {
   const resources = BIOMES[biomeKey].resources;
   const items = Object.entries(RECIPES).filter(([key]) => (inventory[key] || 0) > 0);
+  const gridCols = compact ? "grid-cols-2" : "grid-cols-[repeat(auto-fill,minmax(180px,1fr))]";
 
   return (
     <div className="flex flex-col gap-3">
       <div>
         <div className="text-[11px] font-bold text-white/60 uppercase tracking-wider mb-1.5">Resources</div>
-        <div className="grid grid-cols-2 gap-1.5">
+        <div className={`grid ${gridCols} gap-2`}>
           {resources.map((r) => (
-            <InventoryCell key={r.key} r={r} count={inventory[r.key] || 0} />
+            <InventoryCell key={r.key} r={r} count={inventory[r.key] || 0} compact={compact} />
           ))}
         </div>
       </div>
@@ -150,9 +153,9 @@ export function InventoryGrid({ inventory, biomeKey }) {
         {items.length === 0 ? (
           <div className="text-[11px] text-white/40 italic px-1">No items yet — craft something!</div>
         ) : (
-          <div className="grid grid-cols-2 gap-1.5">
+          <div className={`grid ${gridCols} gap-2`}>
             {items.map(([key, recipe]) => (
-              <InventoryCell key={key} r={{ key, label: recipe.name, color: recipe.color, glyph: recipe.glyph }} count={inventory[key] || 0} />
+              <InventoryCell key={key} r={{ key, label: recipe.name, color: recipe.color, glyph: recipe.glyph }} count={inventory[key] || 0} compact={compact} />
             ))}
           </div>
         )}
@@ -162,25 +165,75 @@ export function InventoryGrid({ inventory, biomeKey }) {
 }
 
 function ToolsGrid({ tools, onUse }) {
+  const [tooltip, setTooltip] = useState(null);
+  const [modalTool, setModalTool] = useState(null);
+  const longPressTimer = useRef(null);
+  const longPressOccurred = useRef(false);
+
+  const startLongPress = (t) => {
+    longPressOccurred.current = false;
+    longPressTimer.current = setTimeout(() => {
+      longPressOccurred.current = true;
+      setModalTool(t);
+    }, 500);
+  };
+
+  const cancelLongPress = () => {
+    clearTimeout(longPressTimer.current);
+  };
+
   return (
-    <div className="grid grid-cols-2 gap-1.5">
-      {TOOL_DEFS.map((t) => {
-        const amt = tools[t.key] || 0;
-        const empty = amt === 0;
-        return (
-          <button
-            key={t.key}
-            disabled={empty}
-            onClick={() => onUse(t.key)}
-            className={`relative rounded-lg border-2 border-[#e6c49a] py-1.5 px-1 flex flex-col items-center gap-0.5 transition-transform ${empty ? "bg-[#9a724d] opacity-40 cursor-not-allowed" : "bg-[#9a724d] hover:bg-[#b8845a] hover:-translate-y-0.5"}`}
-          >
-            {amt > 0 && <div className="absolute -top-1 -right-1 bg-[#2b2218] text-white border border-[#f7e2b6] rounded-full px-1.5 text-[10px] font-bold">{amt}</div>}
-            <div className="text-[20px] leading-none text-white">{t.icon}</div>
-            <div className="text-[9px] font-bold text-white">{t.name}</div>
-          </button>
-        );
-      })}
-    </div>
+    <>
+      <div className="grid grid-cols-2 gap-1.5">
+        {TOOL_DEFS.map((t) => {
+          const amt = tools[t.key] || 0;
+          const empty = amt === 0;
+          return (
+            <div key={t.key} className="relative">
+              <button
+                disabled={empty}
+                onClick={() => {
+                  if (longPressOccurred.current) { longPressOccurred.current = false; return; }
+                  onUse(t.key);
+                }}
+                onMouseEnter={() => setTooltip(t.key)}
+                onMouseLeave={() => setTooltip(null)}
+                onTouchStart={() => startLongPress(t)}
+                onTouchEnd={cancelLongPress}
+                onTouchMove={cancelLongPress}
+                className={`relative w-full rounded-lg border-2 border-[#e6c49a] py-1.5 px-1 flex flex-col items-center gap-0.5 transition-transform ${empty ? "bg-[#9a724d] opacity-40 cursor-not-allowed" : "bg-[#9a724d] hover:bg-[#b8845a] hover:-translate-y-0.5"}`}
+              >
+                {amt > 0 && <div className="absolute -top-1 -right-1 bg-[#2b2218] text-white border border-[#f7e2b6] rounded-full px-1.5 text-[10px] font-bold">{amt}</div>}
+                <div className="text-[20px] leading-none text-white">{t.icon}</div>
+                <div className="text-[9px] font-bold text-white">{t.name}</div>
+              </button>
+              {tooltip === t.key && (
+                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50 w-36 bg-[#2b1d0e] text-white text-[10px] rounded-lg px-2.5 py-2 shadow-lg pointer-events-none border border-[#e6c49a]">
+                  <div className="font-bold text-[11px] mb-0.5">{t.name}</div>
+                  <div className="text-white/80 leading-snug">{t.desc}</div>
+                  <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-[#2b1d0e]" />
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+      {modalTool && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={() => setModalTool(null)}>
+          <div className="bg-[#3d2310] border-2 border-[#e6c49a] rounded-2xl p-5 max-w-[260px] w-full mx-4 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="text-[36px] text-center mb-1 leading-none">{modalTool.icon}</div>
+            <div className="text-white font-bold text-[17px] text-center mb-2">{modalTool.name}</div>
+            <div className="text-white/80 text-[12px] text-center leading-relaxed">{modalTool.desc}</div>
+            <button
+              onClick={() => setModalTool(null)}
+              className="mt-4 w-full bg-[#9a724d] hover:bg-[#b8845a] text-white font-bold py-2 rounded-lg border border-[#e6c49a] text-[13px] transition-colors"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 
@@ -298,7 +351,7 @@ export function TownView({ state, dispatch }) {
       </svg>
       {/* Header */}
       <div className="absolute top-3 left-4 landscape:max-[1024px]:top-2 landscape:max-[1024px]:left-3 font-bold text-[20px] landscape:max-[1024px]:text-[15px]" style={{ color: theme.textColor }}>{node.name}</div>
-      <div className="absolute top-3 right-4 landscape:max-[1024px]:top-2 landscape:max-[1024px]:right-3 flex items-center gap-2">
+      <div className="absolute top-3 right-4 landscape:max-[1024px]:top-2 landscape:max-[1024px]:right-3 flex items-center gap-2 z-10">
         <button
           onClick={() => dispatch({ type: "OPEN_MODAL", modal: "beasts" })}
           className="bg-white/85 px-3 py-1.5 landscape:max-[1024px]:px-2 landscape:max-[1024px]:py-1 rounded-full font-bold text-[#3a2715] landscape:max-[1024px]:text-[13px] hover:bg-white transition-colors"
@@ -317,8 +370,14 @@ export function TownView({ state, dispatch }) {
             const isLocked = state.level < b.lv;
             const canAfford = state.coins >= (b.cost.coins || 0) &&
               Object.entries(b.cost).every(([k, v]) => k === "coins" || (state.inventory[k] || 0) >= v);
+            const CRAFTING_STATIONS = new Set(["bakery", "forge", "larder"]);
             const onClick = () => {
-              if (isLocked || isBuilt) return;
+              if (isLocked) return;
+              if (isBuilt && CRAFTING_STATIONS.has(b.id)) {
+                dispatch({ type: "SET_VIEW", view: "crafting", craftingTab: b.id });
+                return;
+              }
+              if (isBuilt) return;
               if (!canAfford) return;
               dispatch({ type: "BUILD", building: b });
             };
@@ -423,7 +482,7 @@ export function NpcBubble({ bubble, dispatch }) {
   const npc = NPCS[shown.npc];
   if (!npc) return null;
   return (
-    <div className="absolute bottom-20 landscape:max-[1024px]:bottom-12 left-1/2 -translate-x-1/2 bg-[#f4ecd8] border-[3px] border-[#5a3a20] rounded-2xl px-4 py-3 landscape:max-[1024px]:px-3 landscape:max-[1024px]:py-2 max-w-[460px] landscape:max-[1024px]:max-w-[320px] shadow-2xl z-40 animate-bubblein">
+    <div className="absolute bottom-28 landscape:max-[1024px]:bottom-20 left-1/2 -translate-x-1/2 bg-[#f4ecd8] border-[3px] border-[#5a3a20] rounded-2xl px-4 py-3 landscape:max-[1024px]:px-3 landscape:max-[1024px]:py-2 max-w-[460px] landscape:max-[1024px]:max-w-[320px] shadow-2xl z-40 animate-bubblein">
       <div className="flex gap-2.5 items-start">
         <div className="w-10 h-10 rounded-full grid place-items-center text-white font-bold text-[16px] flex-shrink-0" style={{ backgroundColor: npc.color, border: "2px solid #fff" }}>{npc.name[0]}</div>
         <div className="flex-1 min-w-0">
