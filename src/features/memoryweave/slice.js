@@ -46,6 +46,10 @@ export function calcMemoriesGained(state) {
   return Math.floor(level / 2) + Math.floor(seasonsCycled) + Math.floor(coins / 200);
 }
 
+function hasPerks(state) {
+  return state.memoryPerks || [];
+}
+
 export function reduce(state, action) {
   // ── Auto-trigger: show modal once when player becomes eligible ──────────
   if (
@@ -128,16 +132,70 @@ export function reduce(state, action) {
     return { ...state, memories: newMemories, memoryPerks: newPerks };
   }
 
-  // ── Perk effects on other action types ───────────────────────────────────
+  // ── Perk effects on game actions ─────────────────────────────────────────
 
-  // silvertongue (+5% order reward) — NOTE: reward.coins is not available in
-  // TURN_IN_ORDER action payload in the current codebase. Left as visual-only.
-  // To wire: in the reducer handling TURN_IN_ORDER, after applying the reward
-  // do: if (state.memoryPerks.includes('silvertongue')) state.coins += Math.floor(reward.coins * 0.05)
+  const perks = state.memoryPerks || [];
 
-  // quickfingers, keenedge, fertileworld, richveins, eternalforge — visual-only.
-  // These perks are readable from state.memoryPerks in GameScene.js / other systems
-  // to apply their mechanical effects without further reducer changes.
+  // ── BUILD ─────────────────────────────────────────────────────────────────
+  // eternalforge: all buildings cost 10% less permanently (refund after main deducts full price)
+  if (action.type === 'BUILD') {
+    if (!perks.includes('eternalforge')) return state;
+    const b = action.building;
+    if (!b || !b.cost) return state;
+    const refund = Math.ceil((b.cost.coins || 0) * 0.10);
+    if (refund <= 0) return state;
+    return { ...state, coins: (state.coins || 0) + refund };
+  }
+
+  // ── USE_TOOL ──────────────────────────────────────────────────────────────
+  // keenedge: tools cost 1 less to use — 50% chance to refund the tool charge
+  // (net: tools cost half on average, simulating "1 less" for cost-1 tools)
+  if (action.type === 'USE_TOOL') {
+    if (!perks.includes('keenedge')) return state;
+    const { key } = action;
+    if (Math.random() < 0.5) {
+      const tools = { ...(state.tools || {}) };
+      tools[key] = (tools[key] || 0) + 1;
+      return { ...state, tools };
+    }
+    return state;
+  }
+
+  // ── CHAIN_COLLECTED ───────────────────────────────────────────────────────
+  if (action.type === 'CHAIN_COLLECTED') {
+    const { key } = action.payload || {};
+    let next = { ...state };
+
+    // fertileworld: farm pool spawns +1 wheat per chain
+    if (perks.includes('fertileworld') && (state.biomeKey || next.biomeKey) === 'farm') {
+      const inv = { ...(next.inventory || {}) };
+      inv.wheat = (inv.wheat || 0) + 1;
+      next = { ...next, inventory: inv };
+    }
+
+    // richveins: mine pool spawns +1 ore per chain
+    if (perks.includes('richveins') && (state.biomeKey || next.biomeKey) === 'mine') {
+      const inv = { ...(next.inventory || {}) };
+      inv.ore = (inv.ore || 0) + 1;
+      next = { ...next, inventory: inv };
+    }
+
+    // quickfingers: drag chains 10% faster — Phaser speed cannot be set from this reducer.
+    // The perk flag is readable from state.memoryPerks in GameScene.js to apply speed multiplier.
+
+    return next;
+  }
+
+  // ── TURN_IN_ORDER ─────────────────────────────────────────────────────────
+  // silvertongue: order rewards +5% — simplified as flat +5 coins per delivery.
+  // NOTE: The action does not carry reward.coins in payload; the main reducer reads the
+  // order object from state.orders before replacing it. A precise % would require
+  // pre-computing the reward here, which matches what the main reducer already does.
+  // Flat +5 is a pragmatic approximation noted here.
+  if (action.type === 'TURN_IN_ORDER') {
+    if (!perks.includes('silvertongue')) return state;
+    return { ...state, coins: (state.coins || 0) + 5 };
+  }
 
   return state;
 }

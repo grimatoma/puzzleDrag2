@@ -17,6 +17,32 @@ import * as glyphs from "./features/glyphs/slice.js";
 
 const slices = [crafting, quests, achievements, tutorial, settings, boss, heirlooms, longnight, beasts, cartography, festivals, memoryweave, apprentices, mood, glyphs];
 
+// ─── Save/load ─────────────────────────────────────────────────────────────
+// Persisted: everything except volatile UI fields (modal/bubble/view/pendingView).
+const SAVE_KEY = "hearth.save.v1";
+const VOLATILE = new Set(["modal", "bubble", "view", "pendingView"]);
+
+export function loadSavedState() {
+  try {
+    const raw = localStorage.getItem(SAVE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === "object" ? parsed : null;
+  } catch { return null; }
+}
+
+export function persistState(state) {
+  try {
+    const out = {};
+    for (const k of Object.keys(state)) if (!VOLATILE.has(k)) out[k] = state[k];
+    localStorage.setItem(SAVE_KEY, JSON.stringify(out));
+  } catch {}
+}
+
+export function clearSave() {
+  try { localStorage.removeItem(SAVE_KEY); } catch {}
+}
+
 export const xpForLevel = (l) => 50 + l * 80;
 
 export function resourceByKey(key) {
@@ -56,7 +82,7 @@ export function initialState() {
   const o1 = makeOrder(biomeKey, level);
   const o2 = makeOrder(biomeKey, level, [o1.npc]);
   const o3 = makeOrder(biomeKey, level, [o1.npc, o2.npc]);
-  return {
+  const fresh = {
     biomeKey,
     view: "board",
     coins: 150,
@@ -69,6 +95,7 @@ export function initialState() {
     built: { hearth: true },
     bubble: null,
     modal: null,
+    pendingView: null,
     seasonStats: { harvests: 0, upgrades: 0, ordersFilled: 0, coins: 0 },
     ...crafting.initial,
     ...quests.initial,
@@ -86,6 +113,13 @@ export function initialState() {
     ...mood.initial,
     ...glyphs.initial,
   };
+  // Hydrate from save if present, but always force board view + clear modals on boot
+  const saved = loadSavedState();
+  if (saved) {
+    return { ...fresh, ...saved, view: "board", turnsUsed: 0, modal: null, bubble: null, pendingView: null,
+      seasonStats: { harvests: 0, upgrades: 0, ordersFilled: 0, coins: 0 } };
+  }
+  return fresh;
 }
 
 function applyXp(state, xpDelta) {
@@ -100,10 +134,10 @@ function applyXp(state, xpDelta) {
   return { xp, level, leveledUp };
 }
 
-export function gameReducer(state, action) {
+function coreReducer(state, action) {
   switch (action.type) {
     case "CHAIN_COLLECTED": {
-      const { key, gained, upgrades, chainLength, value } = action.payload;
+      const { key, gained, upgrades, value } = action.payload;
       const res = resourceByKey(key);
       const inventory = { ...state.inventory };
       inventory[key] = (inventory[key] || 0) + gained;
@@ -196,8 +230,14 @@ export function gameReducer(state, action) {
       const replacements = state.orders.map(() => makeOrder(key, state.level));
       return { ...state, biomeKey: key, orders: replacements };
     }
-    case "SET_VIEW":
-      return { ...state, view: action.view };
+    case "SET_VIEW": {
+      const next = action.view;
+      // Leaving the board mid-session ends the session (pop summary modal first)
+      if (state.view === "board" && next !== "board" && state.turnsUsed > 0 && !state.modal) {
+        return { ...state, modal: "season", pendingView: next };
+      }
+      return { ...state, view: next };
+    }
     case "OPEN_MODAL":
       return { ...state, modal: action.modal };
     case "CLOSE_MODAL":
@@ -225,17 +265,34 @@ export function gameReducer(state, action) {
       return state.bubble && state.bubble.id === action.id ? { ...state, bubble: null } : state;
     case "CLOSE_SEASON": {
       const tools = { ...state.tools, shuffle: (state.tools.shuffle || 0) + 1 };
+      const view = state.pendingView || state.view;
       return {
         ...state,
         tools,
         coins: state.coins + 25,
         turnsUsed: 0,
         modal: null,
+        view,
+        pendingView: null,
         seasonStats: { harvests: 0, upgrades: 0, ordersFilled: 0, coins: 0 },
         bubble: { id: Date.now(), npc: "tomas", text: "Bonus: +1 Reshuffle Horn · +25◉", ms: 2000 },
       };
     }
     default:
-      return slices.reduce((s, slice) => slice.reduce(s, action), state);
+      return state;
   }
+}
+
+function rawReducer(state, action) {
+  // 1. Core reducer mutates the canonical game state for known actions.
+  // 2. Then every feature slice sees the action against the post-core state,
+  //    so cross-cutting effects (heirlooms, perks, glyphs, quests, achievements) fire.
+  const afterCore = coreReducer(state, action);
+  return slices.reduce((s, slice) => slice.reduce(s, action), afterCore);
+}
+
+export function gameReducer(state, action) {
+  const next = rawReducer(state, action);
+  if (next !== state) persistState(next);
+  return next;
 }

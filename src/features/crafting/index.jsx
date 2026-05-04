@@ -21,7 +21,6 @@ const STATION_META = {
 };
 
 function stationBuilt(built, station) {
-  if (station === "larder") return !!(built && built.granary);
   return !!(built && built[station]);
 }
 
@@ -100,7 +99,7 @@ function RecipeCard({ recipeKey, recipe, inventory, built, level, craftedTotals,
 
 export default function CraftingScreen({ state, dispatch }) {
   const { inventory = {}, built = {}, level = 1, craftedTotals = {} } = state;
-  const hasAnyStation = !!(built.bakery || built.forge || built.granary);
+  const hasAnyStation = !!(built.bakery || built.forge || built.larder);
 
   return (
     <div className="absolute inset-0 bg-gradient-to-b from-[#7c4f2c] to-[#6b4225] border-[3px] border-[#e2c19b] flex flex-col overflow-hidden">

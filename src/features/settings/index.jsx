@@ -57,8 +57,36 @@ function ActionBtn({ children, onClick, variant = 'default', className = '' }) {
 }
 
 // --- Main tab ---
+function isFullscreen() {
+  return !!(document.fullscreenElement || document.webkitFullscreenElement);
+}
+async function toggleFullscreen() {
+  try {
+    if (isFullscreen()) {
+      const exit = document.exitFullscreen || document.webkitExitFullscreen;
+      await exit?.call(document);
+    } else {
+      const el = document.documentElement;
+      const req = el.requestFullscreen || el.webkitRequestFullscreen;
+      await req?.call(el);
+      // Lock landscape if available (Android Chrome / TWA)
+      try { await screen.orientation?.lock?.("landscape"); } catch {}
+    }
+  } catch {}
+}
+
 function MainTab({ dispatch }) {
   const [confirmReset, setConfirmReset] = React.useState(false);
+  const [fs, setFs] = React.useState(isFullscreen());
+  React.useEffect(() => {
+    const sync = () => setFs(isFullscreen());
+    document.addEventListener("fullscreenchange", sync);
+    document.addEventListener("webkitfullscreenchange", sync);
+    return () => {
+      document.removeEventListener("fullscreenchange", sync);
+      document.removeEventListener("webkitfullscreenchange", sync);
+    };
+  }, []);
 
   return (
     <div className="flex flex-col items-center gap-3 pt-1">
@@ -78,6 +106,10 @@ function MainTab({ dispatch }) {
 
         <ActionBtn onClick={() => dispatch({ type: 'SETTINGS/SHOW_TUTORIAL' })}>
           📖 Show Tutorial
+        </ActionBtn>
+
+        <ActionBtn onClick={toggleFullscreen}>
+          {fs ? "↙ Exit Fullscreen" : "⛶ Go Fullscreen"}
         </ActionBtn>
 
         <ActionBtn onClick={() => dispatch({ type: 'SETTINGS/SET_TAB', tab: 'settings' })}>
@@ -186,6 +218,31 @@ function AboutTab({ dispatch }) {
       <p className="text-[12px] italic" style={{ color: '#7a5a38' }}>
         Made with care for cozy chains and slow seasons.
       </p>
+      <div className="w-full pt-3 border-t-2 mt-1" style={{ borderColor: '#b28b62' }}>
+        <div className="text-[10px] font-bold uppercase tracking-wide mb-2" style={{ color: '#7a5a38' }}>Dev triggers</div>
+        <div className="flex gap-2 justify-center flex-wrap">
+          <button
+            onClick={() => dispatch({ type: 'BOSS/TRIGGER' })}
+            className="py-1 px-3 text-[11px] font-bold rounded-lg border-2"
+            style={{ background: '#a84a1a', borderColor: '#7a3210', color: '#fff' }}
+          >🐉 Trigger Boss</button>
+          <button
+            onClick={() => dispatch({ type: 'LONGNIGHT/START' })}
+            className="py-1 px-3 text-[11px] font-bold rounded-lg border-2"
+            style={{ background: '#3a2750', borderColor: '#1a0d28', color: '#fff' }}
+          >🌑 Start Long Night</button>
+          <button
+            onClick={() => dispatch({ type: 'FEST/START' })}
+            className="py-1 px-3 text-[11px] font-bold rounded-lg border-2"
+            style={{ background: '#c8923a', borderColor: '#8a6a1a', color: '#fff' }}
+          >🌼 Festival</button>
+          <button
+            onClick={() => { dispatch({ type: 'MARKET/ROLL' }); dispatch({ type: 'OPEN_MODAL', modal: 'festivals' }); }}
+            className="py-1 px-3 text-[11px] font-bold rounded-lg border-2"
+            style={{ background: '#7e4f24', borderColor: '#4f2f10', color: '#fff' }}
+          >🎒 Market</button>
+        </div>
+      </div>
     </div>
   );
 }

@@ -3,3 +3,6 @@ dist/
 package-lock.json
 .DS_Store
 *.log
+test-results/
+playwright-report/
+playwright/.cache/

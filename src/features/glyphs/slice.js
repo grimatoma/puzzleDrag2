@@ -1,4 +1,5 @@
 import { BIOMES } from '../../constants.js';
+import { resourceByKey } from '../../state.js';
 import { pickWeightedGlyph } from './data.js';
 
 const PROC_CHANCE = 0.12;
@@ -18,36 +19,34 @@ function pickRandom(arr, rand = Math.random) {
   return arr[Math.floor(rand() * arr.length)];
 }
 
-function applyGlyphEffect(state, glyph, gained, resourceKey) {
+function applyGlyphEffect(state, glyph, payload) {
+  const upgrades = payload.upgrades || 0;
+  const key = payload.key;
+
   let next = { ...state };
   const inv = { ...(next.inventory || {}) };
 
   switch (glyph.id) {
     case 'blessed': {
       // Double the gained amounts in inventory
-      for (const [k, amt] of Object.entries(gained || {})) {
-        if (typeof amt === 'number') {
-          inv[k] = (inv[k] || 0) + amt;
-        }
+      if (key && typeof payload.gained === 'number') {
+        inv[key] = (inv[key] || 0) + payload.gained;
       }
       break;
     }
     case 'cursed': {
-      // Remove half of gained from inventory (don't go negative)
-      for (const [k, amt] of Object.entries(gained || {})) {
-        if (typeof amt === 'number') {
-          const remove = Math.floor(amt / 2);
-          inv[k] = Math.max(0, (inv[k] || 0) - remove);
-        }
+      // Remove half of gained from inventory (don't go negative) + -10 coins
+      if (key && typeof payload.gained === 'number') {
+        const remove = Math.floor(payload.gained / 2);
+        inv[key] = Math.max(0, (inv[key] || 0) - remove);
       }
+      next = { ...next, coins: Math.max(0, (next.coins || 0) - 10) };
       break;
     }
     case 'twin': {
       // Add gained again (same as blessed, tracked separately)
-      for (const [k, amt] of Object.entries(gained || {})) {
-        if (typeof amt === 'number') {
-          inv[k] = (inv[k] || 0) + amt;
-        }
+      if (key && typeof payload.gained === 'number') {
+        inv[key] = (inv[key] || 0) + payload.gained;
       }
       break;
     }
@@ -64,7 +63,18 @@ function applyGlyphEffect(state, glyph, gained, resourceKey) {
       break;
     }
     case 'frozen': {
-      // No inventory change — visual/mechanical effect only
+      // "Skips upgrades this chain" — retroactively undo the upgrades:
+      // remove the upgrade-tier resource that shouldn't have been added,
+      // and refund the base resource instead.
+      if (upgrades > 0 && key) {
+        const res = resourceByKey(key);
+        if (res && res.next) {
+          // Remove up to `upgrades` of the next-tier resource (clamped at 0)
+          inv[res.next] = Math.max(0, (inv[res.next] || 0) - upgrades);
+          // Refund as base resource
+          inv[key] = (inv[key] || 0) + upgrades;
+        }
+      }
       break;
     }
     case 'golden': {
@@ -72,7 +82,7 @@ function applyGlyphEffect(state, glyph, gained, resourceKey) {
       break;
     }
     case 'veiled': {
-      const biome = next.biome || 'farm';
+      const biome = next.biomeKey || next.biome || 'farm';
       const keys = getBiomeResourceKeys(biome);
       const pick = pickRandom(keys);
       inv[pick] = (inv[pick] || 0) + 1;
@@ -92,24 +102,24 @@ export function reduce(state, action) {
   if (Math.random() >= PROC_CHANCE) return state;
 
   const glyph = pickWeightedGlyph();
-  const gained = action.gained || {};
-  const resourceKey = action.key || Object.keys(gained)[0] || null;
+  const payload = action.payload || {};
+  const gained = payload.gained || 0;
+  const resourceKey = payload.key || null;
 
-  let next = applyGlyphEffect(state, glyph, gained, resourceKey);
+  let next = applyGlyphEffect(state, glyph, payload);
 
   // Update discovered count
   const glyphsDiscovered = { ...(next.glyphsDiscovered || {}) };
   glyphsDiscovered[glyph.id] = (glyphsDiscovered[glyph.id] || 0) + 1;
 
   // Build log entry
-  const chainAmt = Object.values(gained).reduce((s, v) => s + (typeof v === 'number' ? v : 0), 0);
   const logEntry = {
     id: Date.now(),
     glyphId: glyph.id,
     glyphName: glyph.name,
     glyphIcon: glyph.icon,
     resourceKey,
-    chainAmt,
+    chainAmt: typeof gained === 'number' ? gained : 0,
     ts: Date.now(),
   };
 

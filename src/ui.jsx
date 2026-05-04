@@ -13,7 +13,8 @@ const TOOL_DEFS = [
 // ─── HUD (top bar) ─────────────────────────────────────────────────────────
 
 export function Hud({ state, dispatch }) {
-  const { coins, level, xp, turnsUsed, built } = state;
+  const { coins, level, xp, turnsUsed, built, view } = state;
+  const onBoard = view === "board";
   const seasonIdx = seasonIndexForTurns(turnsUsed);
   const season = SEASONS[seasonIdx];
   const xpNeed = xpForLevel(level);
@@ -21,21 +22,22 @@ export function Hud({ state, dispatch }) {
   const turnsLeft = MAX_TURNS - turnsUsed;
   const buildingCount = Object.keys(built || {}).length;
   return (
-    <div className="flex items-center gap-2 px-3 py-2 landscape:max-[900px]:py-1 landscape:max-[900px]:px-2 landscape:max-[900px]:gap-1.5 bg-[#5b3b20] border-b-2 border-[#2a1d0f] text-[#6a4b31] flex-wrap">
+    <div className="flex items-center gap-2 px-3 py-2 landscape:max-[900px]:py-1 landscape:max-[900px]:px-2 landscape:max-[900px]:gap-1.5 bg-[#5b3b20] border-b-2 border-[#2a1d0f] text-[#6a4b31] flex-wrap" data-testid="hud">
       <button
         onClick={() => dispatch({ type: "OPEN_MODAL", modal: "menu" })}
         className="w-8 h-8 landscape:max-[900px]:w-6 landscape:max-[900px]:h-6 rounded-lg bg-[#f6efe0] border-2 border-[#b28b62] grid place-items-center text-[#6a4b31] font-bold text-[18px] landscape:max-[900px]:text-[13px] flex-shrink-0"
+        data-testid="menu-btn"
       >≡</button>
       <Pill>
         <span className="w-5 h-5 rounded-full bg-[#ffc239] grid place-items-center text-[#7a5638] text-[12px] font-bold leading-none">$</span>
-        <span className="font-bold text-[15px]">{coins.toLocaleString()}</span>
+        <span className="font-bold text-[15px]" data-testid="coins">{coins.toLocaleString()}</span>
       </Pill>
       <Pill>
         <span className="font-bold text-[14px]">⌂</span>
-        <span className="font-bold text-[14px]">{buildingCount}</span>
+        <span className="font-bold text-[14px]" data-testid="buildings">{buildingCount}</span>
       </Pill>
-      <SeasonBar season={season} turnsUsed={turnsUsed} />
-      <div className="text-[#f8e7c6] text-[12px] font-bold whitespace-nowrap">{turnsLeft} left</div>
+      {onBoard && <SeasonBar season={season} turnsUsed={turnsUsed} />}
+      {onBoard && <div className="text-[#f8e7c6] text-[12px] font-bold whitespace-nowrap" data-testid="turns-left">{turnsLeft} left</div>}
       <div className="ml-auto flex items-center gap-1.5">
         <div className="bg-[#f6efe0] border-2 border-[#b28b62] rounded-full h-[26px] w-[110px] landscape:max-[900px]:h-[20px] landscape:max-[900px]:w-[80px] relative overflow-hidden">
           <div className="h-full bg-gradient-to-r from-[#ff8b25] to-[#ffb347] transition-[width] duration-300" style={{ width: `${xpPct}%` }} />

@@ -1,14 +1,14 @@
-import React, { useEffect, useReducer, useRef } from "react";
-import Phaser from "phaser";
-import { GameScene } from "./src/GameScene.js";
+import React, { useEffect, useReducer, useRef, useState } from "react";
 import { COLS, ROWS, TILE } from "./src/constants.js";
 import { runSelfTests } from "./src/utils.js";
 import { gameReducer, initialState } from "./src/state.js";
 import { Hud, SidePanel, BottomNav, TownView, SeasonModal, NpcBubble, FeatureModals, FeatureScreens } from "./src/ui.jsx";
+import { useAudio } from "./src/audio/useAudio.js";
 
 function PhaserMount({ dispatch, biomeKey, turnsUsed, uiLocked, sceneRef }) {
   const hostRef = useRef(null);
   const gameRef = useRef(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!hostRef.current || gameRef.current) return;
@@ -16,31 +16,46 @@ function PhaserMount({ dispatch, biomeKey, turnsUsed, uiLocked, sceneRef }) {
     // Phaser canvas internal resolution — the FIT scale mode will then size it down to the host
     const internalW = COLS * TILE + 80;   // 7*74 + 80 = 598
     const internalH = ROWS * TILE + 80;   // 6*74 + 80 = 524
-    gameRef.current = new Phaser.Game({
-      type: Phaser.AUTO,
-      width: internalW,
-      height: internalH,
-      parent: hostRef.current,
-      backgroundColor: "#75b94a",
-      scene: GameScene,
-      scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
-      render: { antialias: true, antialiasGL: true, roundPixels: false, powerPreference: "high-performance" },
-      input: { activePointers: 3 },
-      callbacks: {
-        preBoot: (game) => {
-          game.registry.set("biomeKey", biomeKey);
-          game.registry.set("turnsUsed", turnsUsed);
-          game.registry.set("uiLocked", uiLocked);
-          game.registry.set("renderResolution", Math.min(window.devicePixelRatio || 1, 3));
-        },
-        postBoot: (game) => {
-          const scene = game.scene.scenes[0];
-          sceneRef.current = scene;
-          window.__phaserScene = scene; // for tools panel quick-access
-          scene.events.on("chain-collected", (payload) => dispatch({ type: "CHAIN_COLLECTED", payload }));
-        },
-      },
-    });
+
+    (async () => {
+      try {
+        const [{ default: Phaser }, { GameScene }] = await Promise.all([
+          import("phaser"),
+          import("./src/GameScene.js"),
+        ]);
+        if (!hostRef.current) return; // unmounted while loading
+        gameRef.current = new Phaser.Game({
+          type: Phaser.AUTO,
+          width: internalW,
+          height: internalH,
+          parent: hostRef.current,
+          backgroundColor: "#75b94a",
+          scene: GameScene,
+          scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
+          render: { antialias: true, antialiasGL: true, roundPixels: false, powerPreference: "high-performance" },
+          input: { activePointers: 3 },
+          callbacks: {
+            preBoot: (game) => {
+              game.registry.set("biomeKey", biomeKey);
+              game.registry.set("turnsUsed", turnsUsed);
+              game.registry.set("uiLocked", uiLocked);
+              game.registry.set("renderResolution", Math.min(window.devicePixelRatio || 1, 3));
+            },
+            postBoot: (game) => {
+              const scene = game.scene.scenes[0];
+              sceneRef.current = scene;
+              window.__phaserScene = scene; // for tools panel quick-access
+              scene.events.on("chain-collected", (payload) => dispatch({ type: "CHAIN_COLLECTED", payload }));
+              setLoading(false);
+            },
+          },
+        });
+      } catch (err) {
+        console.error("Failed to load Phaser:", err);
+        setLoading(false);
+      }
+    })();
+
     return () => {
       gameRef.current?.destroy(true);
       gameRef.current = null;
@@ -54,7 +69,13 @@ function PhaserMount({ dispatch, biomeKey, turnsUsed, uiLocked, sceneRef }) {
   useEffect(() => { gameRef.current?.registry.set("turnsUsed", turnsUsed); }, [turnsUsed]);
   useEffect(() => { gameRef.current?.registry.set("uiLocked", uiLocked); }, [uiLocked]);
 
-  return <div ref={hostRef} className="w-full h-full" />;
+  return (
+    <div ref={hostRef} className="w-full h-full">
+      {loading && (
+        <div className="absolute inset-0 grid place-items-center text-[#f8e7c6] text-[12px]">Loading board…</div>
+      )}
+    </div>
+  );
 }
 
 const DUST_MOTES = Array.from({ length: 14 }, (_, i) => ({
@@ -70,6 +91,7 @@ export default function App() {
   const [state, dispatch] = useReducer(gameReducer, undefined, initialState);
   const sceneRef = useRef(null);
   const uiLocked = !!state.modal || state.view !== "board";
+  useAudio(state);
 
   return (
     <div className="min-h-screen w-full bg-[#2a1d0f] text-[#2b2218] grid place-items-center" style={{ position: "relative", overflow: "hidden" }}>

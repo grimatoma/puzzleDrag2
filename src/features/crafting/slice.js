@@ -10,11 +10,7 @@ export function reduce(state, action) {
   if (!recipe) return state;
 
   const built = state.built || {};
-  const stationOk =
-    recipe.station === "larder"
-      ? !!built.granary
-      : !!built[recipe.station];
-  if (!stationOk) return state;
+  if (!built[recipe.station]) return state;
 
   const inv = state.inventory || {};
   for (const [res, need] of Object.entries(recipe.inputs)) {
