@@ -6,6 +6,7 @@ import { TileObj } from "./TileObj.js";
 
 const BOARD_PAD = 14;
 const BOARD_OUTER = 24;
+const TILE_BASE = TILE; // texture-native size; sprites scale relative to this
 
 export class GameScene extends Phaser.Scene {
   constructor() {
@@ -43,8 +44,15 @@ export class GameScene extends Phaser.Scene {
   layoutDims() {
     const vw = this.scale.width;
     const vh = this.scale.height;
-    this.boardX = Math.round((vw - COLS * TILE) / 2);
-    this.boardY = Math.round((vh - ROWS * TILE) / 2);
+    // Reserve room for the board frame (BOARD_OUTER on each side).
+    const margin = BOARD_OUTER;
+    const maxByW = (vw - margin * 2) / COLS;
+    const maxByH = (vh - margin * 2) / ROWS;
+    // Cap upscale at 2x texture size to avoid blur from over-magnification.
+    this.tileSize = Math.max(24, Math.min(maxByW, maxByH, TILE_BASE * 2));
+    this.tileScale = this.tileSize / TILE_BASE;
+    this.boardX = Math.round((vw - COLS * this.tileSize) / 2);
+    this.boardY = Math.round((vh - ROWS * this.tileSize) / 2);
   }
 
   handleResize() {
@@ -55,12 +63,15 @@ export class GameScene extends Phaser.Scene {
   }
 
   repositionTiles() {
+    const ts = this.tileSize;
     for (let r = 0; r < ROWS; r++) {
       for (let c = 0; c < COLS; c++) {
         const t = this.grid[r]?.[c];
         if (!t) continue;
-        t.sprite.x = this.boardX + c * TILE + TILE / 2;
-        t.sprite.y = this.boardY + r * TILE + TILE / 2;
+        this.tweens.killTweensOf(t.sprite);
+        t.sprite.x = this.boardX + c * ts + ts / 2;
+        t.sprite.y = this.boardY + r * ts + ts / 2;
+        t.sprite.setScale(this.tileScale * (t.selected ? 1.06 : 1));
       }
     }
   }
@@ -86,17 +97,23 @@ export class GameScene extends Phaser.Scene {
     const b = this.biome();
     const vw = this.scale.width;
     const vh = this.scale.height;
+    const ts = this.tileSize;
+    const boardW = COLS * ts;
+    const boardH = ROWS * ts;
     const bg = this.biomeKey() === "mine" ? 0x31404a : s.bg;
     this.cameras.main.setBackgroundColor(bg);
     tag(this.add.rectangle(0, 0, vw, vh, bg).setOrigin(0).setDepth(-10));
-    // Decorative side leaves
-    for (let y = 30; y < vh - 30; y += 36) {
-      tag(this.add.ellipse(this.boardX - 36, y, 38, 22, s.accent, 0.55).setAngle(-25).setDepth(-9));
-      tag(this.add.ellipse(this.boardX + COLS * TILE + 36, y, 38, 22, s.accent, 0.55).setAngle(25).setDepth(-9));
+    // Decorative side leaves — only draw if there's room outside the board frame.
+    const leafGap = 36;
+    if (this.boardX - BOARD_OUTER - leafGap > 0) {
+      for (let y = 30; y < vh - 30; y += 36) {
+        tag(this.add.ellipse(this.boardX - leafGap, y, 38, 22, s.accent, 0.55).setAngle(-25).setDepth(-9));
+        tag(this.add.ellipse(this.boardX + boardW + leafGap, y, 38, 22, s.accent, 0.55).setAngle(25).setDepth(-9));
+      }
     }
     // Board frame
-    tag(rounded(this, this.boardX - BOARD_OUTER, this.boardY - BOARD_OUTER, COLS * TILE + BOARD_OUTER * 2, ROWS * TILE + BOARD_OUTER * 2, 22, b.dark, 0.92).setDepth(-2));
-    tag(rounded(this, this.boardX - BOARD_PAD, this.boardY - BOARD_PAD, COLS * TILE + BOARD_PAD * 2, ROWS * TILE + BOARD_PAD * 2, 18, b.dirt, 1).setDepth(-1));
+    tag(rounded(this, this.boardX - BOARD_OUTER, this.boardY - BOARD_OUTER, boardW + BOARD_OUTER * 2, boardH + BOARD_OUTER * 2, 22, b.dark, 0.92).setDepth(-2));
+    tag(rounded(this, this.boardX - BOARD_PAD, this.boardY - BOARD_PAD, boardW + BOARD_PAD * 2, boardH + BOARD_PAD * 2, 18, b.dirt, 1).setDepth(-1));
   }
 
   refreshSeasonTint() {
@@ -135,13 +152,15 @@ export class GameScene extends Phaser.Scene {
   // ─── Board fill / collapse ────────────────────────────────────────────────
 
   fillBoard(initial = false) {
+    const ts = this.tileSize;
     for (let r = 0; r < ROWS; r++) {
       this.grid[r] = this.grid[r] || [];
       for (let c = 0; c < COLS; c++) {
         if (!this.grid[r][c]) {
-          const x = this.boardX + c * TILE + TILE / 2;
-          const y = this.boardY + r * TILE + TILE / 2;
+          const x = this.boardX + c * ts + ts / 2;
+          const y = this.boardY + r * ts + ts / 2;
           const tile = new TileObj(this, x, initial ? y - 500 - Phaser.Math.Between(0, 100) : y - 140, c, r, this.randomResource());
+          tile.sprite.setScale(this.tileScale);
           this.grid[r][c] = tile;
           this.tweens.add({ targets: tile.sprite, y, duration: initial ? 450 + r * 28 : 210, ease: "Back.Out" });
         }
@@ -150,6 +169,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   collapseBoard() {
+    const ts = this.tileSize;
     for (let c = 0; c < COLS; c++) {
       let write = ROWS - 1;
       for (let r = ROWS - 1; r >= 0; r--) {
@@ -159,7 +179,7 @@ export class GameScene extends Phaser.Scene {
           this.grid[write][c] = tile;
           this.grid[r][c] = null;
           tile.row = write;
-          this.tweens.add({ targets: tile.sprite, y: this.boardY + write * TILE + TILE / 2, duration: 190 });
+          this.tweens.add({ targets: tile.sprite, y: this.boardY + write * ts + ts / 2, duration: 190 });
         }
         write--;
       }
@@ -224,18 +244,19 @@ export class GameScene extends Phaser.Scene {
       const a = this.path[i - 1];
       const b = this.path[i];
       g.clear();
-      g.lineStyle(15, 0xffd248, 0.28);
+      g.lineStyle(15 * this.tileScale, 0xffd248, 0.28);
       g.beginPath(); g.moveTo(a.x, a.y); g.lineTo(b.x, b.y); g.strokePath();
-      g.lineStyle(8, 0xff6d00, 1);
+      g.lineStyle(8 * this.tileScale, 0xff6d00, 1);
       g.beginPath(); g.moveTo(a.x, a.y); g.lineTo(b.x, b.y); g.strokePath();
     }
     this.pathLines.forEach((g, i) => g.setVisible(i < this.path.length - 1));
     const next = this.path.length ? this.nextResource(this.path[0].res) : null;
     if (next) {
+      const off = 22 * this.tileScale;
       for (let i = UPGRADE_EVERY - 1; i < this.path.length; i += UPGRADE_EVERY) {
         const t = this.path[i];
-        const star = this.add.image(t.x + 22, t.y - 22, "spark").setScale(0.45).setDepth(9);
-        const prev = this.add.image(t.x + 22, t.y + 20, `tile_${next.key}`).setScale(0.28).setDepth(10);
+        const star = this.add.image(t.x + off, t.y - off, "spark").setScale(0.45 * this.tileScale).setDepth(9);
+        const prev = this.add.image(t.x + off, t.y + off * 0.9, `tile_${next.key}`).setScale(0.28 * this.tileScale).setDepth(10);
         this.pathStars.push(star, prev);
       }
     }
@@ -272,10 +293,10 @@ export class GameScene extends Phaser.Scene {
       if (upgrade) {
         tile.setSelected(false);
         tile.setResource(next);
-        tile.sprite.setScale(0.1).setAlpha(0.2);
-        this.tweens.add({ targets: tile.sprite, scale: 1, alpha: 1, angle: 360, duration: 280, ease: "Back.Out", onComplete: () => (tile.sprite.angle = 0) });
-        const burst = this.add.image(tile.x, tile.y, "spark").setScale(0.1).setDepth(12);
-        this.tweens.add({ targets: burst, scale: 0.9, alpha: 0, duration: 420, onComplete: () => burst.destroy() });
+        tile.sprite.setScale(0.1 * this.tileScale).setAlpha(0.2);
+        this.tweens.add({ targets: tile.sprite, scale: this.tileScale, alpha: 1, angle: 360, duration: 280, ease: "Back.Out", onComplete: () => (tile.sprite.angle = 0) });
+        const burst = this.add.image(tile.x, tile.y, "spark").setScale(0.1 * this.tileScale).setDepth(12);
+        this.tweens.add({ targets: burst, scale: 0.9 * this.tileScale, alpha: 0, duration: 420, onComplete: () => burst.destroy() });
       } else {
         this.grid[tile.row][tile.col] = null;
         this.tweens.add({ targets: tile.sprite, scale: 0, angle: Phaser.Math.Between(-25, 25), alpha: 0, duration: 180 + i * 15, onComplete: () => tile.destroy() });
@@ -297,7 +318,7 @@ export class GameScene extends Phaser.Scene {
 
   showChainBadge() {
     if (this.chainBadge) return;
-    const cx = this.boardX + (COLS * TILE) / 2;
+    const cx = this.boardX + (COLS * this.tileSize) / 2;
     const cy = this.boardY - BOARD_OUTER - 22;
     this.chainBadge = this.add.container(cx, cy).setDepth(40);
     const bg = rounded(this, -70, -16, 140, 32, 16, 0x2b2218, 0.9, 0xffd248, 2);

@@ -13,9 +13,9 @@ function PhaserMount({ dispatch, biomeKey, turnsUsed, uiLocked, sceneRef }) {
   useEffect(() => {
     if (!hostRef.current || gameRef.current) return;
     runSelfTests();
-    // Phaser canvas internal resolution — the FIT scale mode will then size it down to the host
-    const internalW = COLS * TILE + 80;   // 7*74 + 80 = 598
-    const internalH = ROWS * TILE + 80;   // 6*74 + 80 = 524
+    // Initial size — Phaser will resize to match the host once mounted
+    const initialW = hostRef.current.clientWidth || COLS * TILE + 80;
+    const initialH = hostRef.current.clientHeight || ROWS * TILE + 80;
 
     (async () => {
       try {
@@ -26,12 +26,12 @@ function PhaserMount({ dispatch, biomeKey, turnsUsed, uiLocked, sceneRef }) {
         if (!hostRef.current) return; // unmounted while loading
         gameRef.current = new Phaser.Game({
           type: Phaser.AUTO,
-          width: internalW,
-          height: internalH,
+          width: initialW,
+          height: initialH,
           parent: hostRef.current,
           backgroundColor: "#75b94a",
           scene: GameScene,
-          scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
+          scale: { mode: Phaser.Scale.RESIZE, autoCenter: Phaser.Scale.CENTER_BOTH },
           render: { antialias: true, antialiasGL: true, roundPixels: false, powerPreference: "high-performance" },
           input: { activePointers: 3 },
           callbacks: {
