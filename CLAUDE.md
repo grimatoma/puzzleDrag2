@@ -27,3 +27,7 @@ This is a Phaser 3 + React game. React owns the page shell; Phaser owns the game
 **Core game mechanic:** Player drags 3+ adjacent matching tiles to form a chain. Resources are added to inventory; every 3rd tile in the chain upgrades to the next-tier resource before being collected. The board collapses downward after each move. 10 turns per season, 4 seasons. Mine biome unlocks at level 2.
 
 **Texture pipeline:** All tile icons, season badges, and UI decorations are drawn once at scene init into Phaser's texture cache via `src/textures.js`. When adding a new resource type, register its texture there and add its definition to `src/constants.js`.
+
+## Workflow
+
+- Always merge any PR you open once it has been pushed and the PR exists. Use squash merge by default.
