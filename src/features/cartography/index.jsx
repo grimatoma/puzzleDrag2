@@ -273,7 +273,7 @@ export default function CartographyScreen({ state, dispatch }) {
             Map
           </span>
           <button
-            onClick={() => dispatch({ type: 'SET_VIEW', view: 'board' })}
+            onClick={() => dispatch({ type: 'SET_VIEW', view: 'town' })}
             style={{
               width: 28, height: 28, borderRadius: 8,
               background: '#f6efe0', border: '2px solid #b28b62',
