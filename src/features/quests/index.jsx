@@ -89,14 +89,7 @@ function AlmanacTierCard({ idx, tierDef, almanacXp, almanacClaimed, dispatch }) 
 }
 
 export default function QuestsScreen({ state, dispatch, initialTab }) {
-  const activeView = state.view;
-  const defaultTab = initialTab || (activeView === "almanac" ? "almanac" : "daily");
-  const [tab, setTab] = React.useState(defaultTab);
-
-  React.useEffect(() => {
-    if (activeView === "almanac") setTab("almanac");
-    else if (activeView === "quests") setTab("daily");
-  }, [activeView]);
+  const [tab, setTab] = React.useState(initialTab || "daily");
 
   const { dailies = [], almanacXp = 0, almanacTier = 0, almanacClaimed = [] } = state;
 
@@ -105,13 +98,11 @@ export default function QuestsScreen({ state, dispatch, initialTab }) {
   const xpIntoTier = almanacXp - currentTier * 100;
   const xpPct = Math.min(100, (xpIntoTier / 100) * 100);
 
-  const titleLabel = tab === "almanac" ? "📖 Almanac" : "📜 Day Book";
-
   return (
     <div className="absolute inset-0 bg-gradient-to-b from-[#7c4f2c] to-[#6b4225] border-[3px] border-[#e2c19b] flex flex-col overflow-hidden">
       {/* Header */}
       <div className="flex items-center justify-between px-3 py-2 flex-shrink-0 border-b border-[#e2c19b]/40">
-        <span className="font-bold text-[14px] text-[#f8e7c6]">{titleLabel}</span>
+        <span className="font-bold text-[14px] text-[#f8e7c6]">📜 Quests & Almanac</span>
         <button
           onClick={() => dispatch({ type: "SET_VIEW", view: "board" })}
           className="w-7 h-7 rounded-lg bg-[#f6efe0] border-2 border-[#b28b62] grid place-items-center text-[#6a4b31] font-bold text-[14px]"

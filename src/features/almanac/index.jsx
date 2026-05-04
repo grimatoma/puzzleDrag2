@@ -1,7 +1,2 @@
-import QuestsScreen from "../quests/index.jsx";
-
-export const viewKey = "almanac";
-
-export default function AlmanacProxy({ state, dispatch }) {
-  return <QuestsScreen state={state} dispatch={dispatch} initialTab="almanac" />;
-}
+// Almanac content is now inside the Quests tab (Daily / Almanac toggle).
+// This file is intentionally empty to avoid registering a duplicate view.

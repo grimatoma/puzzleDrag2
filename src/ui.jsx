@@ -228,7 +228,6 @@ export function BottomNav({ view, onChange }) {
     { key: "town", label: "⌂ Town" },
     { key: "inventory", label: "🎒 Inventory" },
     { key: "quests", label: "📜 Quests" },
-    { key: "almanac", label: "📖 Almanac" },
     { key: "crafting", label: "🔨 Craft" },
     { key: "achievements", label: "🏆 Trophies" },
     { key: "cartography", label: "🗺 Map" },
