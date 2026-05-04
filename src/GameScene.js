@@ -247,6 +247,7 @@ export class GameScene extends Phaser.Scene {
     this.dragging = true;
     this.clearPath(false);
     this.addToPath(tile);
+    this.dimUnselectableTiles(tile.res.key);
     this.showChainBadge();
     this.updateChainBadge();
   }
@@ -391,8 +392,30 @@ export class GameScene extends Phaser.Scene {
     if (!this.dragging) return;
     this.dragging = false;
     this.hideChainBadge();
+    this.clearDimming();
     if (this.path.length >= 3) this.collectPath();
     else this.clearPath(true);
+  }
+
+  dimUnselectableTiles(key) {
+    for (let r = 0; r < ROWS; r++) {
+      for (let c = 0; c < COLS; c++) {
+        const tile = this.grid[r]?.[c];
+        if (!tile || tile.res.key === key) continue;
+        this.tweens.add({ targets: tile.sprite, alpha: 0.3, duration: 140, ease: "Sine.Out" });
+      }
+    }
+  }
+
+  clearDimming() {
+    const startKey = this.path[0]?.res.key;
+    for (let r = 0; r < ROWS; r++) {
+      for (let c = 0; c < COLS; c++) {
+        const tile = this.grid[r]?.[c];
+        if (!tile || tile.res.key === startKey) continue;
+        this.tweens.add({ targets: tile.sprite, alpha: 1, duration: 160, ease: "Sine.Out" });
+      }
+    }
   }
 
   clearPath(deselect = true) {
