@@ -316,6 +316,95 @@ function BiomeSwitcher({ biomeKey, level, onSwitch }) {
   );
 }
 
+// ─── Mobile dock (board view only) ────────────────────────────────────────
+
+function BottomSheet({ onClose, children }) {
+  return createPortal(
+    <div className="fixed inset-0 z-50 flex flex-col justify-end" onClick={onClose}>
+      <div className="absolute inset-0 bg-black/50" />
+      <div
+        className="relative bg-[#3a2715] border-t-2 border-[#b28b62] rounded-t-2xl p-4 max-h-[60dvh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="w-10 h-1 bg-[#b28b62] rounded-full mx-auto mb-4" />
+        {children}
+      </div>
+    </div>,
+    document.body
+  );
+}
+
+export function MobileDock({ state, dispatch }) {
+  const [sheet, setSheet] = useState(null); // "tools" | "orders" | null
+
+  const totalTools = Object.values(state.tools || {}).reduce((s, v) => s + v, 0);
+  const readyOrders = (state.orders || []).filter((o) => (state.inventory[o.key] || 0) >= o.need).length;
+
+  const closeSheet = () => setSheet(null);
+
+  return (
+    <>
+      <div className="flex border-t-2 border-[#b28b62] bg-[#3a2715]">
+        {/* Tools */}
+        <button
+          className="flex-1 flex flex-col items-center justify-center gap-0.5 py-2.5 relative text-[#f8e7c6]"
+          onClick={() => setSheet(sheet === "tools" ? null : "tools")}
+        >
+          {totalTools > 0 && (
+            <div className="absolute top-1.5 right-[calc(50%-14px)] bg-[#d6612a] text-white text-[9px] font-bold rounded-full min-w-[16px] h-[16px] flex items-center justify-center px-1">
+              {totalTools}
+            </div>
+          )}
+          <span className="text-[20px] leading-none">⚔</span>
+          <span className="text-[9px] font-bold">Tools</span>
+        </button>
+
+        {/* Orders */}
+        <button
+          className="flex-1 flex flex-col items-center justify-center gap-0.5 py-2.5 relative text-[#f8e7c6]"
+          onClick={() => setSheet(sheet === "orders" ? null : "orders")}
+        >
+          {readyOrders > 0 && (
+            <div className="absolute top-1.5 right-[calc(50%-14px)] bg-[#91bf24] text-white text-[9px] font-bold rounded-full min-w-[16px] h-[16px] flex items-center justify-center px-1">
+              {readyOrders}
+            </div>
+          )}
+          <span className="text-[20px] leading-none">📋</span>
+          <span className="text-[9px] font-bold">Orders</span>
+        </button>
+      </div>
+
+      {sheet === "tools" && (
+        <BottomSheet onClose={closeSheet}>
+          <div className="text-[#f8e7c6] font-bold text-[14px] mb-3">Tools</div>
+          <ToolsGrid
+            tools={state.tools}
+            onUse={(key) => {
+              dispatch({ type: "USE_TOOL", key });
+              if (key === "shuffle") window.__phaserScene?.shuffleBoard();
+              closeSheet();
+            }}
+          />
+          <div className="mt-3">
+            <BiomeSwitcher
+              biomeKey={state.biomeKey}
+              level={state.level}
+              onSwitch={(key) => { dispatch({ type: "SWITCH_BIOME", key }); closeSheet(); }}
+            />
+          </div>
+        </BottomSheet>
+      )}
+
+      {sheet === "orders" && (
+        <BottomSheet onClose={closeSheet}>
+          <div className="text-[#f8e7c6] font-bold text-[14px] mb-3">Orders</div>
+          <CompactOrders orders={state.orders} inventory={state.inventory} dispatch={dispatch} />
+        </BottomSheet>
+      )}
+    </>
+  );
+}
+
 // ─── Bottom nav ───────────────────────────────────────────────────────────
 
 export function BottomNav({ view, modal, dispatch }) {
