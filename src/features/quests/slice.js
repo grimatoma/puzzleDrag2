@@ -93,6 +93,8 @@ export function reduce(state, action) {
       return { ...state, dailies };
     }
     case "TURN_IN_ORDER": {
+      const order = (state.orders || []).find((o) => o.id === action.id);
+      if (!order || ((state.inventory || {})[order.key] || 0) < order.need) return state;
       const dailies = progressQuests(state.dailies || [], "deliver", 1);
       return { ...state, dailies };
     }

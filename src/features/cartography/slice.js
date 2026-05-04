@@ -59,9 +59,9 @@ export function reduce(state, action) {
 
       switch (target.kind) {
         case 'farm':
-          return { ...base, biomeKey: 'farm', view: 'board' };
+          return { ...base, biomeKey: 'farm', view: 'town' };
         case 'mine':
-          return { ...base, biomeKey: 'mine', view: 'board' };
+          return { ...base, biomeKey: 'mine', view: 'town' };
         case 'home':
           return { ...base, view: 'town' };
         case 'festival':
