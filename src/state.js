@@ -84,7 +84,7 @@ export function initialState() {
   const o3 = makeOrder(biomeKey, level, [o1.npc, o2.npc]);
   const fresh = {
     biomeKey,
-    view: "board",
+    view: "town",
     coins: 150,
     level,
     xp: 0,
@@ -116,7 +116,7 @@ export function initialState() {
   // Hydrate from save if present, but always force board view + clear modals on boot
   const saved = loadSavedState();
   if (saved) {
-    return { ...fresh, ...saved, view: "board", turnsUsed: 0, modal: null, bubble: null, pendingView: null,
+    return { ...fresh, ...saved, view: "town", turnsUsed: 0, modal: null, bubble: null, pendingView: null,
       seasonStats: { harvests: 0, upgrades: 0, ordersFilled: 0, coins: 0 } };
   }
   return fresh;
