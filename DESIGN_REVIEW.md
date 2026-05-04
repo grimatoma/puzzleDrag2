@@ -141,19 +141,19 @@ I'd do these in order. Each builds on the last.
    - *Almanac unclaimable rewards* — Claim button was already wired in `quests/index.jsx` / `QUESTS/CLAIM_ALMANAC`; no change needed.
    - *Boss weather* — `rain` doubles berry-chain yield and `harvest_moon` grants +1 upgraded resource in `boss/slice.js` `CHAIN_COLLECTED`; `drought`/`frost` are board-level spawn-rate changes, deferred to Tier A.
 
-### Tier A — Next sprint. The "actually a game" tier.
+### Tier A — Next sprint. The "actually a game" tier. ✅ *Done 2026-05-04 (PR #52)*
 
-6. **Crafted items satisfy orders.** Right now NPCs only ever ask for raw resources. If Mira is the Baker and her order is `8 hay`, why does she never ask for bread? Add an "advanced order" track that demands crafted recipes — gives crafting a purpose beyond the side coin payout it currently has.
-7. **Tutorial flow rewrite.** The current tutorial is 6 generic bubbles on first load and that's it. Replace with milestone‑triggered nudges: first level up → "Mine biome unlocks!", first 10 hay → "Try chaining 3+ for an upgrade!", first build → "Craft station! Tap the building to open recipes."
-8. **Visible loop signaling.** Floating XP numbers on chain. Cycling NPC requests in the HUD ("Mira wants 8 hay — 2/8"). A "next milestone" pip on the level bar.
-9. **Make seasons feel different.** You already track season for visual tint. Push it into mechanics: Spring = +20% chain length, Summer = orders pay 2×, Autumn = double upgrade rate, Winter = chains require 4+ instead of 3+. Currently the only mechanical difference is the long‑night threat which most players will never see.
+6. ✅ **Crafted items satisfy orders.** `makeOrder` at level 3+ has a 30% chance to pick from `CRAFTED_FARM_POOL`/`CRAFTED_MINE_POOL`. Orders display shows recipe glyph and purple card styling. `TURN_IN_ORDER` deducts by key so no extra work needed for fulfillment.
+7. ✅ **Tutorial flow rewrite.** Old 6-step upfront tutorial replaced with milestone-triggered NPC bubbles: level 2 → mine unlock hint; first upgrade → "chain 6+ to snowball" tip; first craft station built → crafting recipe hint; winter first chain under 4 → winter rule reminder. `_hintsShown` flags prevent repeat.
+8. ✅ **Visible loop signaling.** `SeasonBar` now shows a two-line label (season name + mechanic effect). `SidePanel` shows a `CompactOrders` strip with glyph, have/need, and ✓ tap to deliver. `SeasonModal` previews the next season's effect badge.
+9. ✅ **Make seasons feel different.** Spring = +20% harvest (rounded up); Summer = orders pay 2×; Autumn = double upgrade tiles; Winter = chains require 4+ or turn is wasted. Calendar season = `(seasonsCycled || 0) % 4`.
 
-### Tier B — When the loop is solid.
+### Tier B — When the loop is solid. ✅ *Done 2026-05-04*
 
-10. **Apprentices as offline catch‑up.** If you're keeping it, it's a perfect "come back tomorrow" hook for a casual mobile game — but only after the rest of the loop holds for 20+ minutes per session. Make hiring them require building the Inn, so it gives the Inn a purpose.
-11. **Boss = season climax.** Currently a vague always‑mounted overlay. Make Year 1 / Spring 4 trigger an explicit "Frostmaw approaches" event with a board modifier (e.g. "all chains require 5+ for two seasons"). Tie clearing the boss to a heirloom drop.
-12. **Memoryweave is your meta‑progression.** The slice already exists. Wire the perks into the actual loop: "Quickfingers" → reduce drag time threshold; "Fertile World" → +1 to farm pool; "Eternal Forge" → all builds 10% cheaper. Then prestige actually means something.
-13. **Resource pruning.** Cut beam, block, cobble (or invent late‑game uses). Fewer resources, deeper progression.
+10. ✅ **Apprentices as offline catch‑up.** Pip (Forager) and Tuck (Lookout) — the previously no-requirement apprentices — now require `{ building: "inn" }`. Inn build fires a "You can now hire Helpers" NPC bubble. The Inn has a gameplay purpose.
+11. ✅ **Boss = season climax.** Boss now triggers deterministically at the end of every 4th season (year boundary) using a rotating seasonal lineup: Frostmaw (yr 1) → Quagmire (yr 2) → Ember Drake (yr 3) → Old Stoneface (yr 4). Frostmaw adds a board modifier (`minChain: 5`) enforced in `coreReducer`. Boss victories drop a random unowned heirloom from a curated legendary pool.
+12. ✅ **Memoryweave is your meta‑progression.** All 8 perks are wired: `fertileworld`/`richveins` add bonus resources per chain; `keenedge` 50%-refunds tool uses; `eternalforge` refunds 10% build cost; `silvertongue` +5 coins/delivery; `ancestor_call` starts at L2; `coinkin` +50 start coins; `quickfingers` reduces min-chain from 3 to 2 (read from Phaser registry in `GameScene.endPath`).
+13. ✅ **Resource pruning.** Added two tier-3 forge recipes that consume the previously dead resources: `ironframe` (2 beam + 1 ingot → 275◉) and `stonework` (2 block + 1 coke → 300◉). Both appear in the mine crafted-order pool at level 3+. Beam and block now have a clear endgame purpose without disrupting the upgrade chain progression.
 
 ### Tier C — Polish.
 

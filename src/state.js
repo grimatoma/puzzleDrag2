@@ -61,7 +61,7 @@ function pickNpcKey(excludeKeys = []) {
 
 // Crafted item pools for advanced orders (level 3+)
 const CRAFTED_FARM_POOL = ["bread", "honeyroll", "harvestpie", "preserve", "tincture"];
-const CRAFTED_MINE_POOL = ["hinge", "cobblepath", "lantern", "goldring", "gemcrown"];
+const CRAFTED_MINE_POOL = ["hinge", "cobblepath", "lantern", "goldring", "gemcrown", "ironframe", "stonework"];
 
 let orderIdSeq = 1;
 export function makeOrder(biomeKey, level, excludeNpcs = []) {
@@ -169,9 +169,23 @@ function coreReducer(state, action) {
       const { key, gained, upgrades, value, chainLength } = action.payload;
       const currentSeason = (state.seasonsCycled || 0) % 4;
       const hintsShown = state._hintsShown || {};
+      const effectiveChain = chainLength || gained;
+
+      // Boss board modifier: active boss may require longer chains
+      const bossMinChain = state.boss?.minChain || 0;
+      if (bossMinChain > 0 && effectiveChain < bossMinChain) {
+        const turnsUsed = state.turnsUsed + 1;
+        const seasonEnded = turnsUsed >= MAX_TURNS;
+        return {
+          ...state,
+          turnsUsed,
+          bubble: { id: Date.now(), npc: "mira", text: `${state.boss.emoji} Challenge: chains need ${bossMinChain}+ tiles!`, ms: 2200 },
+          modal: seasonEnded ? "season" : state.modal,
+        };
+      }
 
       // Winter: chains shorter than 4 tiles yield nothing but still consume the turn
-      if (currentSeason === 3 && (chainLength || gained) < 4) {
+      if (currentSeason === 3 && effectiveChain < 4) {
         const turnsUsed = state.turnsUsed + 1;
         const seasonEnded = turnsUsed >= MAX_TURNS;
         let bubble = state.bubble;
@@ -327,6 +341,9 @@ function coreReducer(state, action) {
       if (isCraftStation && !hintsShown.craftHint) {
         bubble = { id: Date.now(), npc: "mira", text: `${b.name} built! 🔨 Tap it in Town to open crafting recipes.`, ms: 2800 };
         newHintsShown = { ...hintsShown, craftHint: true };
+      } else if (b.id === "inn" && !hintsShown.innHint) {
+        bubble = { id: Date.now(), npc: "wren", text: "Inn built! 🧑‍🌾 You can now hire Helpers from the nav below.", ms: 2800 };
+        newHintsShown = { ...hintsShown, innHint: true };
       }
       return {
         ...state,

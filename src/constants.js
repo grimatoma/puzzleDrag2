@@ -137,6 +137,8 @@ export const RECIPES = {
   lantern:    { name: "Iron Lantern",   inputs: { ingot: 1, coke: 1, plank: 1 },tier: 2, station: "forge",  coins: 150, glyph: "🏮", color: 0xd4783a, dark: 0x6a2800 },
   goldring:   { name: "Gold Ring",      inputs: { gold: 1, ingot: 2 },          tier: 2, station: "forge",  coins: 225, glyph: "💍", color: 0xffd34c, dark: 0x886810 },
   gemcrown:   { name: "Gem Crown",      inputs: { cutgem: 1, gold: 2 },         tier: 2, station: "forge",  coins: 325, glyph: "👑", color: 0x65e5ff, dark: 0x1060a0 },
+  ironframe:  { name: "Iron Frame",     inputs: { beam: 2, ingot: 1 },          tier: 3, station: "forge",  coins: 275, glyph: "🔲", color: 0x6a7a86, dark: 0x2a3040 },
+  stonework:  { name: "Stonework",      inputs: { block: 2, coke: 1 },          tier: 3, station: "forge",  coins: 300, glyph: "🏗", color: 0x8a8a7a, dark: 0x383828 },
 };
 
 export const ACHIEVEMENTS = [

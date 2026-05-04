@@ -5,7 +5,7 @@ import { gameReducer, initialState } from "./src/state.js";
 import { Hud, SidePanel, BottomNav, TownView, SeasonModal, NpcBubble, FeatureModals, FeatureScreens } from "./src/ui.jsx";
 import { useAudio } from "./src/audio/useAudio.js";
 
-function PhaserMount({ dispatch, biomeKey, turnsUsed, uiLocked, sceneRef }) {
+function PhaserMount({ dispatch, biomeKey, turnsUsed, uiLocked, sceneRef, memoryPerks }) {
   const hostRef = useRef(null);
   const gameRef = useRef(null);
   const [loading, setLoading] = useState(true);
@@ -91,6 +91,7 @@ function PhaserMount({ dispatch, biomeKey, turnsUsed, uiLocked, sceneRef }) {
   useEffect(() => { gameRef.current?.registry.set("biomeKey", biomeKey); }, [biomeKey]);
   useEffect(() => { gameRef.current?.registry.set("turnsUsed", turnsUsed); }, [turnsUsed]);
   useEffect(() => { gameRef.current?.registry.set("uiLocked", uiLocked); }, [uiLocked]);
+  useEffect(() => { gameRef.current?.registry.set("memoryPerks", memoryPerks || []); }, [memoryPerks]);
 
   return (
     <div ref={hostRef} className="w-full h-full">
@@ -154,6 +155,7 @@ export default function App() {
                 turnsUsed={state.turnsUsed}
                 uiLocked={uiLocked}
                 sceneRef={sceneRef}
+                memoryPerks={state.memoryPerks}
               />
             </div>
             {/* Side panel */}
