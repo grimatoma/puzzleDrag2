@@ -19,6 +19,7 @@ export class GameScene extends Phaser.Scene {
     this.path = [];
     this.pathLines = [];
     this.pathStars = [];
+    this.pathNodeG = null;
     this.dragging = false;
     this.locked = false;
   }
@@ -268,29 +269,51 @@ export class GameScene extends Phaser.Scene {
     for (let i = 1; i < this.path.length; i++) {
       let g = this.pathLines[i - 1];
       if (!g) {
-        g = this.add.graphics().setDepth(4);
+        g = this.add.graphics().setDepth(8);
         this.pathLines[i - 1] = g;
       }
       const a = this.path[i - 1];
       const b = this.path[i];
       g.clear();
-      g.lineStyle(15 * this.tileScale, 0xffd248, 0.28);
+      // Outer glow
+      g.lineStyle(22 * this.tileScale, 0xffd248, 0.22);
       g.beginPath(); g.moveTo(a.x, a.y); g.lineTo(b.x, b.y); g.strokePath();
-      g.lineStyle(8 * this.tileScale, 0xff6d00, 1);
+      // Main line
+      g.lineStyle(9 * this.tileScale, 0xff6d00, 1);
+      g.beginPath(); g.moveTo(a.x, a.y); g.lineTo(b.x, b.y); g.strokePath();
+      // Bright core highlight
+      g.lineStyle(3 * this.tileScale, 0xfff4c2, 0.85);
       g.beginPath(); g.moveTo(a.x, a.y); g.lineTo(b.x, b.y); g.strokePath();
     }
     this.pathLines.forEach((g, i) => g.setVisible(i < this.path.length - 1));
+
+    // Draw nodes (dots) at each tile in the path
+    if (!this.pathNodeG) this.pathNodeG = this.add.graphics().setDepth(9);
+    this.pathNodeG.clear();
+    const nr = 7 * this.tileScale;
+    this.path.forEach((t, i) => {
+      // Outer ring
+      this.pathNodeG.fillStyle(0xffd248, 0.55);
+      this.pathNodeG.fillCircle(t.x, t.y, nr * 1.6);
+      // Inner dot
+      this.pathNodeG.fillStyle(0xff6d00, 1);
+      this.pathNodeG.fillCircle(t.x, t.y, nr);
+      // Bright center
+      this.pathNodeG.fillStyle(0xfff4c2, 0.9);
+      this.pathNodeG.fillCircle(t.x, t.y, nr * 0.4);
+    });
+
     const next = this.path.length ? this.nextResource(this.path[0].res) : null;
     if (next) {
-      const off = 22 * this.tileScale;
+      const off = 24 * this.tileScale;
       for (let i = UPGRADE_EVERY - 1; i < this.path.length; i += UPGRADE_EVERY) {
         const t = this.path[i];
-        const star = this.add.image(t.x + off, t.y - off, "spark").setScale(0.45 * this.tileScale).setDepth(9);
-        const prev = this.add.image(t.x + off, t.y + off * 0.9, `tile_${next.key}`).setScale(0.28 * this.tileScale).setDepth(10);
+        const star = this.add.image(t.x + off, t.y - off, "spark").setScale(0.72 * this.tileScale).setDepth(12);
+        const prev = this.add.image(t.x + off, t.y + off * 0.85, `tile_${next.key}`).setScale(0.32 * this.tileScale).setDepth(12);
         this.pathStars.push(star, prev);
       }
     }
-    this.path.forEach((t) => t.sprite.setDepth(6));
+    this.path.forEach((t) => t.sprite.setDepth(7));
   }
 
   endPath() {
@@ -307,6 +330,7 @@ export class GameScene extends Phaser.Scene {
     this.pathLines.forEach((l) => l.clear());
     this.pathStars.forEach((s) => s.destroy());
     this.pathStars = [];
+    if (this.pathNodeG) { this.pathNodeG.clear(); }
     this.hideChainBadge();
   }
 
@@ -338,6 +362,7 @@ export class GameScene extends Phaser.Scene {
 
     this.pathLines.forEach((l) => l.destroy());
     this.pathStars.forEach((s) => s.destroy());
+    if (this.pathNodeG) { this.pathNodeG.destroy(); this.pathNodeG = null; }
     this.pathLines = [];
     this.pathStars = [];
     this.path = [];
