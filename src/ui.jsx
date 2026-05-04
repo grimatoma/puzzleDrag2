@@ -41,8 +41,7 @@ export function Hud({ state, dispatch }) {
           <span className="font-bold text-[14px]" data-testid="buildings">{buildingCount}</span>
         </Pill>
       )}
-      {onBoard && <SeasonBar season={season} turnsUsed={turnsUsed} />}
-      {onBoard && <div className="text-[#f8e7c6] text-[12px] font-bold whitespace-nowrap" data-testid="turns-left">{turnsLeft} left</div>}
+      {onBoard && <SeasonBar season={season} turnsUsed={turnsUsed} turnsLeft={turnsLeft} />}
       {!onBoard && (
         <div className="ml-auto flex items-center gap-1.5">
           <div className="bg-[#f6efe0] border-2 border-[#b28b62] rounded-full h-[26px] w-[110px] landscape:max-[1024px]:h-[20px] landscape:max-[1024px]:w-[80px] relative overflow-hidden">
@@ -66,27 +65,28 @@ function Pill({ children, className = "" }) {
   );
 }
 
-function SeasonBar({ season, turnsUsed }) {
+function SeasonBar({ season, turnsUsed, turnsLeft }) {
   return (
-    <div className="bg-[#faf0dd] border-2 border-[#b28b62] rounded-full px-2 py-0.5 flex items-center gap-1.5 min-w-[200px] landscape:max-[1024px]:min-w-[140px] flex-1 max-w-[480px]">
+    <div className="bg-[#faf0dd] border-2 border-[#b28b62] rounded-full pl-3 pr-2 py-0.5 flex items-center gap-2 min-w-0 flex-1 max-w-[480px]">
       <div className="text-[#6a4b31] font-bold text-[12px] landscape:max-[1024px]:text-[10px] whitespace-nowrap">{season.name}</div>
-      <div className="flex gap-0.5 flex-1 justify-center">
+      <div className="flex gap-1 flex-1 justify-center min-w-0">
         {Array.from({ length: MAX_TURNS }).map((_, i) => {
           const filled = i < turnsUsed;
           const current = i === turnsUsed;
           return (
             <div
               key={i}
-              className={`w-3 h-3 landscape:max-[1024px]:w-2 landscape:max-[1024px]:h-2 rounded-full border ${filled ? "border-transparent" : "border-[#b28b62]"} transition-all`}
+              className={`w-2.5 h-2.5 landscape:max-[1024px]:w-2 landscape:max-[1024px]:h-2 rounded-full border flex-shrink-0 ${filled ? "border-transparent" : "border-[#8a6a3a]"} transition-all`}
               style={{
                 backgroundColor: filled ? cssFromHex(season.fill) : "#fff",
-                boxShadow: current ? "0 0 0 2px rgba(255,122,0,.45)" : "none",
+                boxShadow: current ? "0 0 0 2px rgba(255,122,0,.55)" : "none",
                 transform: filled ? "scale(1.05)" : "none",
               }}
             />
           );
         })}
       </div>
+      <div className="text-[#6a4b31] font-bold text-[12px] landscape:max-[1024px]:text-[10px] whitespace-nowrap pl-1 border-l border-[#b28b62] ml-1" data-testid="turns-left">{turnsLeft} left</div>
     </div>
   );
 }
