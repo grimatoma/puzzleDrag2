@@ -68,37 +68,40 @@ export default function App() {
         {/* HUD bar */}
         <Hud state={state} />
 
-        {/* Main area: board + side panel */}
-        <div className="flex-1 min-h-0 grid grid-cols-[1fr_300px] gap-3 p-3 max-[900px]:grid-cols-1 max-[900px]:grid-rows-[1fr_auto]">
-          {/* Phaser host — takes the rest */}
-          <div className="relative min-h-0 min-w-0">
-            <div className="absolute inset-0 rounded-xl overflow-hidden bg-[#4a2f18]">
-              <PhaserMount
-                dispatch={dispatch}
-                biomeKey={state.biomeKey}
-                turnsUsed={state.turnsUsed}
-                uiLocked={uiLocked}
-                sceneRef={sceneRef}
-              />
+        {/* Main area: board + side panel, or town view */}
+        <div className="flex-1 min-h-0 relative">
+          {/* Board + side panel grid — always mounted to keep Phaser alive, hidden when in town view */}
+          <div className={`absolute inset-0 grid grid-cols-[1fr_300px] gap-3 p-3 max-[900px]:grid-cols-1 max-[900px]:grid-rows-[1fr_auto] ${state.view === "town" ? "invisible" : ""}`}>
+            {/* Phaser host — takes the rest */}
+            <div className="relative min-h-0 min-w-0">
+              <div className="absolute inset-0 rounded-xl overflow-hidden bg-[#4a2f18]">
+                <PhaserMount
+                  dispatch={dispatch}
+                  biomeKey={state.biomeKey}
+                  turnsUsed={state.turnsUsed}
+                  uiLocked={uiLocked}
+                  sceneRef={sceneRef}
+                />
+              </div>
+            </div>
+            {/* Side panel */}
+            <div className="min-h-0 max-[900px]:max-h-[40vh]">
+              <SidePanel state={state} dispatch={dispatch} />
             </div>
           </div>
-          {/* Side panel */}
-          <div className="min-h-0 max-[900px]:max-h-[40vh]">
-            <SidePanel state={state} dispatch={dispatch} />
-          </div>
+
+          {/* Town overlay — covers exactly the same area as the board */}
+          {state.view === "town" && (
+            <div className="absolute inset-0 z-20">
+              <TownView state={state} dispatch={dispatch} />
+            </div>
+          )}
         </div>
 
         {/* Bottom nav */}
         <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-30">
           <BottomNav view={state.view} onChange={(v) => dispatch({ type: "SET_VIEW", view: v })} />
         </div>
-
-        {/* Town overlay (covers main area when active) */}
-        {state.view === "town" && (
-          <div className="absolute inset-0 top-[64px] bottom-[64px] z-20">
-            <TownView state={state} dispatch={dispatch} />
-          </div>
-        )}
 
         {/* NPC bubble */}
         <NpcBubble bubble={state.bubble} dispatch={dispatch} />
