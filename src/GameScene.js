@@ -81,10 +81,15 @@ export class GameScene extends Phaser.Scene {
   }
 
   handleResize() {
+    const prevX = this.boardX;
+    const prevY = this.boardY;
+    const prevSize = this.tileSize;
     this.layoutDims();
     this.children.list.filter((o) => o.__layer === "bg").forEach((o) => o.destroy());
     this.drawBackground();
-    this.repositionTiles();
+    if (this.boardX !== prevX || this.boardY !== prevY || this.tileSize !== prevSize) {
+      this.repositionTiles();
+    }
   }
 
   repositionTiles() {
