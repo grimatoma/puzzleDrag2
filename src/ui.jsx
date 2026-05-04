@@ -23,20 +23,24 @@ export function Hud({ state, dispatch }) {
   const turnsLeft = MAX_TURNS - turnsUsed;
   const buildingCount = Object.keys(built || {}).length;
   return (
-    <div className="flex items-center gap-2 px-3 py-2 landscape:max-[1024px]:py-1 landscape:max-[1024px]:px-2 landscape:max-[1024px]:gap-1.5 bg-[#5b3b20] border-b-2 border-[#2a1d0f] text-[#6a4b31] flex-wrap" data-testid="hud">
+    <div className="flex items-center gap-2 px-3 py-2 bg-[#5b3b20] border-b-2 border-[#2a1d0f] text-[#6a4b31] flex-wrap" data-testid="hud">
       <button
-        onClick={() => dispatch({ type: "OPEN_MODAL", modal: "menu" })}
-        className="w-8 h-8 landscape:max-[1024px]:w-6 landscape:max-[1024px]:h-6 rounded-lg bg-[#f6efe0] border-2 border-[#b28b62] grid place-items-center text-[#6a4b31] font-bold text-[18px] landscape:max-[1024px]:text-[13px] flex-shrink-0"
+        onClick={() => onBoard ? dispatch({ type: "SET_VIEW", view: "town" }) : dispatch({ type: "OPEN_MODAL", modal: "menu" })}
+        className="w-8 h-8 rounded-lg bg-[#f6efe0] border-2 border-[#b28b62] grid place-items-center text-[#6a4b31] font-bold text-[18px] flex-shrink-0"
         data-testid="menu-btn"
       >≡</button>
-      <Pill>
-        <span className="w-5 h-5 rounded-full bg-[#ffc239] grid place-items-center text-[#7a5638] text-[12px] font-bold leading-none">$</span>
-        <span className="font-bold text-[15px]" data-testid="coins">{coins.toLocaleString()}</span>
-      </Pill>
-      <Pill>
-        <span className="font-bold text-[14px]">⌂</span>
-        <span className="font-bold text-[14px]" data-testid="buildings">{buildingCount}</span>
-      </Pill>
+      {!onBoard && (
+        <Pill>
+          <span className="w-5 h-5 rounded-full bg-[#ffc239] grid place-items-center text-[#7a5638] text-[12px] font-bold leading-none">$</span>
+          <span className="font-bold text-[15px]" data-testid="coins">{coins.toLocaleString()}</span>
+        </Pill>
+      )}
+      {!onBoard && (
+        <Pill>
+          <span className="font-bold text-[14px]">⌂</span>
+          <span className="font-bold text-[14px]" data-testid="buildings">{buildingCount}</span>
+        </Pill>
+      )}
       {onBoard && <SeasonBar season={season} turnsUsed={turnsUsed} />}
       {onBoard && <div className="text-[#f8e7c6] text-[12px] font-bold whitespace-nowrap" data-testid="turns-left">{turnsLeft} left</div>}
       <div className="ml-auto flex items-center gap-1.5">
@@ -93,12 +97,9 @@ function cssFromHex(intHex) {
 
 export function SidePanel({ state, dispatch }) {
   return (
-    <div className="bg-gradient-to-b from-[#7c4f2c] to-[#6b4225] border-[3px] border-[#e2c19b] rounded-2xl p-3 landscape:max-[1024px]:p-2 flex flex-col gap-3 landscape:max-[1024px]:gap-1.5 overflow-hidden landscape:max-[1024px]:overflow-y-auto h-full min-h-0">
+    <div className="bg-gradient-to-b from-[#7c4f2c] to-[#6b4225] border-[3px] border-[#e2c19b] rounded-2xl p-3 flex flex-col gap-3 overflow-hidden h-full min-h-0">
       <Section title="Orders">
         <OrdersList orders={state.orders} inventory={state.inventory} onTurnIn={(id) => dispatch({ type: "TURN_IN_ORDER", id })} />
-      </Section>
-      <Section title="Storage" titleColor="#f8e7c6">
-        <InventoryGrid inventory={state.inventory} biomeKey={state.biomeKey} />
       </Section>
       <Section title="Tools" titleColor="#f8e7c6">
         <ToolsGrid tools={state.tools} onUse={(key) => {
@@ -158,10 +159,10 @@ function OrdersList({ orders, inventory, onTurnIn }) {
   );
 }
 
-function InventoryGrid({ inventory, biomeKey }) {
+export function InventoryGrid({ inventory, biomeKey }) {
   const resources = BIOMES[biomeKey].resources;
   return (
-    <div className="grid grid-cols-2 gap-1.5 max-h-[180px] landscape:max-[1024px]:max-h-[110px] overflow-y-auto pr-1">
+    <div className="grid grid-cols-2 gap-1.5">
       {resources.map((r) => (
         <div key={r.key} className="bg-[#b68d64] border-2 border-[#e6c49a] rounded-lg p-1.5 flex items-center gap-2" title={r.label}>
           <div className="w-7 h-7 rounded-md flex-shrink-0 grid place-items-center text-[14px] text-white" style={{ backgroundColor: cssFromHex(r.color), border: "2px solid rgba(255,255,255,.4)", textShadow: "0 1px 1px rgba(0,0,0,.4)" }}>{r.glyph}</div>
@@ -225,6 +226,7 @@ export function BottomNav({ view, onChange }) {
   const items = [
     { key: "board", label: "◳ Board" },
     { key: "town", label: "⌂ Town" },
+    { key: "inventory", label: "🎒 Inventory" },
     { key: "quests", label: "📜 Quests" },
     { key: "almanac", label: "📖 Almanac" },
     { key: "crafting", label: "🔨 Craft" },
