@@ -5,11 +5,11 @@ import * as achievements from "./features/achievements/slice.js";
 import * as tutorial from "./features/tutorial/slice.js";
 import * as settings from "./features/settings/slice.js";
 import * as boss from "./features/boss/slice.js";
-import * as heirlooms from "./features/heirlooms/slice.js";
+import * as cartography from "./features/cartography/slice.js";
 import * as apprentices from "./features/apprentices/slice.js";
 import * as mood from "./features/mood/slice.js";
 
-const slices = [crafting, quests, achievements, tutorial, settings, boss, heirlooms, apprentices, mood];
+const slices = [crafting, quests, achievements, tutorial, settings, boss, cartography, apprentices, mood];
 
 // ─── Save/load ─────────────────────────────────────────────────────────────
 // Persisted: everything except volatile UI fields (modal/bubble/view/pendingView).
@@ -118,7 +118,7 @@ export function initialState() {
     ...tutorial.initial,
     ...settings.initial,
     ...boss.initial,
-    ...heirlooms.initial,
+    ...cartography.initial,
     ...apprentices.initial,
     ...mood.initial,
   };
@@ -405,7 +405,7 @@ function coreReducer(state, action) {
 function rawReducer(state, action) {
   // 1. Core reducer mutates the canonical game state for known actions.
   // 2. Then every feature slice sees the action against the post-core state,
-  //    so cross-cutting effects (heirlooms, quests, achievements) fire.
+  //    so cross-cutting effects (quests, achievements, etc.) fire.
   const afterCore = coreReducer(state, action);
   return slices.reduce((s, slice) => slice.reduce(s, action), afterCore);
 }
