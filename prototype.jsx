@@ -13,9 +13,14 @@ function PhaserMount({ dispatch, biomeKey, turnsUsed, uiLocked, sceneRef }) {
   useEffect(() => {
     if (!hostRef.current || gameRef.current) return;
     runSelfTests();
-    // Initial size — Phaser will resize to match the host once mounted
-    const initialW = hostRef.current.clientWidth || COLS * TILE + 80;
-    const initialH = hostRef.current.clientHeight || ROWS * TILE + 80;
+    const host = hostRef.current;
+    // Render the canvas at the device pixel ratio so tiles aren't bilinearly
+    // upscaled by the browser on retina/mobile screens. The game's internal
+    // coordinates are in *device pixels* (canvas backing-store space); CSS
+    // sizing is applied separately on the canvas element.
+    const dpr = Math.min(window.devicePixelRatio || 1, 3);
+    const cssW = host.clientWidth || COLS * TILE + 80;
+    const cssH = host.clientHeight || ROWS * TILE + 80;
 
     (async () => {
       try {
@@ -26,22 +31,39 @@ function PhaserMount({ dispatch, biomeKey, turnsUsed, uiLocked, sceneRef }) {
         if (!hostRef.current) return; // unmounted while loading
         gameRef.current = new Phaser.Game({
           type: Phaser.AUTO,
-          width: initialW,
-          height: initialH,
-          parent: hostRef.current,
+          width: cssW * dpr,
+          height: cssH * dpr,
+          parent: host,
           backgroundColor: "#75b94a",
           scene: GameScene,
-          scale: { mode: Phaser.Scale.RESIZE, autoCenter: Phaser.Scale.CENTER_BOTH },
-          render: { antialias: true, antialiasGL: true, roundPixels: false, powerPreference: "high-performance" },
+          // zoom = 1/dpr makes canvas.style display at CSS size while the
+          // backing store stays at gameSize (cssSize × dpr).
+          scale: { mode: Phaser.Scale.NONE, autoCenter: Phaser.Scale.NO_CENTER, zoom: 1 / dpr },
+          // pixelArt would otherwise default to true whenever scale.zoom != 1,
+          // which forces nearest-neighbor sampling and breaks our crisp tiles.
+          render: { antialias: true, antialiasGL: true, roundPixels: false, pixelArt: false, powerPreference: "high-performance" },
           input: { activePointers: 3 },
           callbacks: {
             preBoot: (game) => {
               game.registry.set("biomeKey", biomeKey);
               game.registry.set("turnsUsed", turnsUsed);
               game.registry.set("uiLocked", uiLocked);
-              game.registry.set("renderResolution", Math.min(window.devicePixelRatio || 1, 3));
+              game.registry.set("dpr", dpr);
+              game.registry.set("renderResolution", dpr);
             },
             postBoot: (game) => {
+              // Track host CSS-size changes and resize the game's backing
+              // store to match cssSize × dpr; ScaleManager.zoom keeps the
+              // canvas displayed at cssSize.
+              const ro = new ResizeObserver(() => {
+                const w = host.clientWidth;
+                const h = host.clientHeight;
+                if (!w || !h) return;
+                game.scale.resize(w * dpr, h * dpr);
+              });
+              ro.observe(host);
+              game.__resizeObserver = ro;
+
               const scene = game.scene.scenes[0];
               sceneRef.current = scene;
               window.__phaserScene = scene; // for tools panel quick-access
@@ -57,6 +79,7 @@ function PhaserMount({ dispatch, biomeKey, turnsUsed, uiLocked, sceneRef }) {
     })();
 
     return () => {
+      gameRef.current?.__resizeObserver?.disconnect();
       gameRef.current?.destroy(true);
       gameRef.current = null;
       sceneRef.current = null;

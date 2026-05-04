@@ -39,11 +39,12 @@ function rr(ctx, x, y, w, h, r) {
   ctx.closePath();
 }
 
-export function canvasTexture(scene, key, w, h, draw) {
+export function canvasTexture(scene, key, w, h, draw, dpr = 1) {
   if (scene.textures.exists(key)) return;
-  const tex = scene.textures.createCanvas(key, w, h);
+  const tex = scene.textures.createCanvas(key, Math.ceil(w * dpr), Math.ceil(h * dpr));
   const ctx = tex.getContext();
   ctx.imageSmoothingEnabled = false;
+  if (dpr !== 1) ctx.scale(dpr, dpr);
   draw(ctx, w, h);
   tex.refresh();
 }
@@ -192,6 +193,7 @@ export function drawTileIcon(ctx, key) {
 }
 
 export function makeTextures(scene) {
+  const dpr = scene.registry.get("dpr") || 1;
   Object.values(BIOMES).forEach((biome) => {
     biome.resources.forEach((r) => {
       [false, true].forEach((selected) => {
@@ -228,7 +230,7 @@ export function makeTextures(scene) {
           ctx.translate(w / 2, h / 2);
           drawTileIcon(ctx, r.key);
           ctx.restore();
-        });
+        }, dpr);
       });
     });
   });
@@ -261,7 +263,7 @@ export function makeTextures(scene) {
     ctx.beginPath();
     ctx.arc(0, 0, 5, 0, Math.PI * 2);
     ctx.fill();
-  });
+  }, dpr);
 
   canvasTexture(scene, "season_flower", 42, 42, (ctx, w, h) => {
     ctx.translate(w / 2, h / 2);
@@ -276,7 +278,7 @@ export function makeTextures(scene) {
     ctx.beginPath();
     ctx.arc(0, 0, 6, 0, Math.PI * 2);
     ctx.fill();
-  });
+  }, dpr);
 
   canvasTexture(scene, "season_sun", 42, 42, (ctx, w, h) => {
     ctx.translate(w / 2, h / 2);
@@ -293,7 +295,7 @@ export function makeTextures(scene) {
     ctx.beginPath();
     ctx.arc(0, 0, 10, 0, Math.PI * 2);
     ctx.fill();
-  });
+  }, dpr);
 
   canvasTexture(scene, "season_leaf", 42, 42, (ctx, w, h) => {
     ctx.translate(w / 2, h / 2);
@@ -309,7 +311,7 @@ export function makeTextures(scene) {
     ctx.moveTo(0, -12);
     ctx.lineTo(0, 14);
     ctx.stroke();
-  });
+  }, dpr);
 
   canvasTexture(scene, "season_snow", 42, 42, (ctx, w, h) => {
     ctx.translate(w / 2, h / 2);
@@ -324,5 +326,5 @@ export function makeTextures(scene) {
       ctx.stroke();
       ctx.restore();
     }
-  });
+  }, dpr);
 }
