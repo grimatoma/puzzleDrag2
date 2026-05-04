@@ -12,6 +12,8 @@ const BOSS_META = {
     targetCount: 30,
     turns: 5,
     season: "winter",
+    // Board modifier: chains must be 5+ during this boss
+    minChain: 5,
   },
   ember_drake: {
     name: "Ember Drake",
@@ -22,6 +24,7 @@ const BOSS_META = {
     targetCount: 3,
     turns: 5,
     season: "summer",
+    minChain: null,
   },
   quagmire: {
     name: "The Quagmire",
@@ -32,6 +35,7 @@ const BOSS_META = {
     targetCount: 50,
     turns: 5,
     season: "spring",
+    minChain: null,
   },
   old_stoneface: {
     name: "Old Stoneface",
@@ -42,10 +46,15 @@ const BOSS_META = {
     targetCount: 20,
     turns: 5,
     season: "autumn",
+    minChain: null,
   },
 };
 
-const BOSS_KEYS = Object.keys(BOSS_META);
+// Seasonal boss rotation — one per year, cycling through the 4 bosses
+const YEAR_BOSS_ROTATION = ["frostmaw", "quagmire", "ember_drake", "old_stoneface"];
+
+// Heirloom IDs eligible to drop from boss victories (rare/legendary picks)
+const BOSS_HEIRLOOM_POOL = ["embershard", "forgemark", "windsong", "harvestmoon", "palecrown", "cartographer"];
 
 const WEATHER_META = {
   rain: {
@@ -86,22 +95,17 @@ export const initial = {
   _bossSeasonCount: 0,
 };
 
-function pickRandomBoss() {
-  return BOSS_KEYS[Math.floor(Math.random() * BOSS_KEYS.length)];
-}
-
 function pickRandomWeather() {
   return WEATHER_KEYS[Math.floor(Math.random() * WEATHER_KEYS.length)];
 }
 
 function triggerBoss(state, bossKey) {
-  const key = bossKey || pickRandomBoss();
-  const meta = BOSS_META[key];
+  const meta = BOSS_META[bossKey];
   if (!meta) return state;
   return {
     ...state,
     boss: {
-      key,
+      key: bossKey,
       name: meta.name,
       emoji: meta.emoji,
       flavor: meta.flavor,
@@ -110,6 +114,7 @@ function triggerBoss(state, bossKey) {
       targetCount: meta.targetCount,
       progress: 0,
       turnsLeft: meta.turns,
+      minChain: meta.minChain || null,
     },
     bossPending: false,
     bossMinimized: false,
@@ -120,7 +125,7 @@ function triggerBoss(state, bossKey) {
 export function reduce(state, action) {
   switch (action.type) {
     case "BOSS/TRIGGER": {
-      return triggerBoss(state, action.bossKey);
+      return triggerBoss(state, action.bossKey || YEAR_BOSS_ROTATION[0]);
     }
 
     case "BOSS/MINIMIZE": {
@@ -160,14 +165,25 @@ export function reduce(state, action) {
         modal: state.modal === "boss" ? null : state.modal,
       };
       if (won) {
+        // Drop a random heirloom the player doesn't already own
+        const owned = state.heirloomsOwned || [];
+        const eligible = BOSS_HEIRLOOM_POOL.filter((id) => !owned.includes(id));
+        let heirloomUpdate = {};
+        let heirloomText = "";
+        if (eligible.length > 0) {
+          const drop = eligible[Math.floor(Math.random() * eligible.length)];
+          heirloomUpdate = { heirloomsOwned: [...owned, drop] };
+          heirloomText = ` ✨ Heirloom found: ${drop}!`;
+        }
         return {
           ...base,
+          ...heirloomUpdate,
           bossesDefeated: (state.bossesDefeated || 0) + 1,
           coins: (state.coins || 0) + 200,
           bubble: {
             npc: "mira",
-            text: `Victory! +200 coins awarded.`,
-            ms: 2500,
+            text: `Victory! +200◉ awarded.${heirloomText}`,
+            ms: 3200,
             id: Date.now(),
           },
         };
@@ -185,24 +201,22 @@ export function reduce(state, action) {
 
     case "CHAIN_COLLECTED": {
       let next = { ...state };
+      const payload = action.payload || {};
 
       // Update boss progress
       if (next.boss) {
-        const payload = action.payload || {};
         const gained = payload.gained || 0;
         const resourceKey = payload.resource || payload.key || "";
         let added = 0;
         if (resourceKey === next.boss.resource) {
           added = gained;
         } else if (!resourceKey && gained > 0) {
-          // fallback: count all tiles if resource not specified
           added = gained;
         }
         if (added > 0) {
           const newProgress = Math.min(next.boss.targetCount, (next.boss.progress || 0) + added);
           next = { ...next, boss: { ...next.boss, progress: newProgress } };
           if (newProgress >= next.boss.targetCount) {
-            // Won!
             return reduce(next, { type: "BOSS/RESOLVE", won: true });
           }
         }
@@ -215,12 +229,10 @@ export function reduce(state, action) {
         const gained = payload.gained || 0;
 
         if (wKey === "rain" && chainKey === "berry" && gained > 0) {
-          // Rain: double berry chain yield
           const inv = { ...(next.inventory || {}) };
           inv.berry = (inv.berry || 0) + gained;
           next = { ...next, inventory: inv };
         } else if (wKey === "harvest_moon" && (payload.upgrades || 0) > 0) {
-          // Harvest Moon: +1 bonus upgraded resource per chain that produced upgrades
           const baseRes = ALL_RESOURCES.find((r) => r.key === chainKey);
           if (baseRes?.next) {
             const inv = { ...(next.inventory || {}) };
@@ -260,32 +272,30 @@ export function reduce(state, action) {
       const seasonCount = (next._bossSeasonCount || 0) + 1;
       next = { ...next, _bossSeasonCount: seasonCount };
 
-      // Decrement boss turns
+      // Decrement boss turns if a boss is active
       if (next.boss) {
         const turnsLeft = (next.boss.turnsLeft || 1) - 1;
         if (turnsLeft <= 0 && next.boss.progress < next.boss.targetCount) {
-          // Time ran out — boss wins
           return reduce({ ...next, boss: { ...next.boss, turnsLeft: 0 } }, { type: "BOSS/RESOLVE", won: false });
         }
         next = { ...next, boss: { ...next.boss, turnsLeft } };
       }
 
-      // Auto-trigger pending boss
-      if (next.bossPending && !next.boss) {
-        next = triggerBoss(next, null);
-      }
-
-      // Roll new boss pending every 4 seasons
-      if (seasonCount % 4 === 0 && !next.boss && !next.bossPending) {
-        next = { ...next, bossPending: true };
-        // Will trigger next CLOSE_SEASON
+      // Trigger a seasonal boss climax at the end of every 4th season (1 year)
+      // Each year cycles through the rotation: frostmaw → quagmire → ember_drake → old_stoneface
+      if (seasonCount % 4 === 0 && !next.boss) {
+        const yearIndex = Math.floor(seasonCount / 4) - 1;
+        const bossKey = YEAR_BOSS_ROTATION[yearIndex % YEAR_BOSS_ROTATION.length];
+        next = triggerBoss(next, bossKey);
+        // No weather roll this season — the boss is the event
+        return next;
       }
 
       // Roll weather (1-in-2 chance, independent of boss)
       if (!next.weather && Math.random() < 0.5) {
         const weatherKey = pickRandomWeather();
         const weatherMeta = WEATHER_META[weatherKey];
-        const weatherTurns = 2 + Math.floor(Math.random() * 2); // 2 or 3
+        const weatherTurns = 2 + Math.floor(Math.random() * 2);
         next = {
           ...next,
           weather: { key: weatherKey, ...weatherMeta, turns: weatherTurns },

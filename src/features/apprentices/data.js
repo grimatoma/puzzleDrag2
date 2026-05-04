@@ -30,7 +30,7 @@ export const APPRENTICES = [
     wage: 25,
     produces: { berry: 5, egg: 2 },
     hireCost: 150,
-    requirement: null,
+    requirement: { building: "inn" },
   },
   {
     id: "osric",
@@ -63,7 +63,7 @@ export const APPRENTICES = [
     wage: 20,
     produces: { coins: 25 },
     hireCost: 100,
-    requirement: null,
+    requirement: { building: "inn" },
   },
 ];
 

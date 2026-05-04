@@ -393,7 +393,9 @@ export class GameScene extends Phaser.Scene {
     this.dragging = false;
     this.hideChainBadge();
     this.clearDimming();
-    if (this.path.length >= 3) this.collectPath();
+    const perks = this.game?.registry?.get("memoryPerks") || [];
+    const minChain = perks.includes("quickfingers") ? 2 : 3;
+    if (this.path.length >= minChain) this.collectPath();
     else this.clearPath(true);
   }
 
