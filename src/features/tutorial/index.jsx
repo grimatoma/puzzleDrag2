@@ -1,6 +1,7 @@
 import { NPCS } from '../../constants.js';
 
 export const modalKey = 'tutorial';
+export const alwaysMounted = true;
 
 const STEPS = [
   {

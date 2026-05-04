@@ -17,6 +17,8 @@ export const initial = {
 };
 
 const TOTAL_STEPS = 6;
+// Steps that show a corner toast and require board interaction (no screen block)
+const CORNER_STEPS = new Set([1, 3, 4]);
 
 function endTutorial(state) {
   persistSeen();
@@ -35,6 +37,7 @@ function advanceStep(state) {
   return {
     ...state,
     tutorial: { ...state.tutorial, step: next },
+    modal: CORNER_STEPS.has(next) ? null : 'tutorial',
   };
 }
 

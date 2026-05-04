@@ -413,16 +413,28 @@ const FEATURES = Object.values(featureModules).map((m) => ({
   Component: m.default,
   viewKey: m.viewKey,
   modalKey: m.modalKey,
+  alwaysMounted: !!m.alwaysMounted,
 }));
 
 export function FeatureModals({ state, dispatch }) {
+  // Always-mounted features manage their own visibility internally
+  const alwaysFeatures = FEATURES.filter(f => f.alwaysMounted);
+
+  // Modal-keyed features only render when their modal is active
+  let modalFeature = null;
   for (const f of FEATURES) {
-    if (f.modalKey && state.modal === f.modalKey) {
-      const C = f.Component;
-      return <C state={state} dispatch={dispatch} />;
+    if (!f.alwaysMounted && f.modalKey && state.modal === f.modalKey) {
+      modalFeature = f;
+      break;
     }
   }
-  return null;
+
+  return (
+    <>
+      {alwaysFeatures.map(f => <f.Component key={f.modalKey || f.viewKey} state={state} dispatch={dispatch} />)}
+      {modalFeature && <modalFeature.Component state={state} dispatch={dispatch} />}
+    </>
+  );
 }
 
 export function FeatureScreens({ state, dispatch }) {
