@@ -89,7 +89,7 @@ function MainTab({ state, dispatch }) {
     };
   }, []);
 
-  const onBoard = state?.view === 'board' && (state?.turnsUsed || 0) > 0;
+  const onBoard = state?.view === 'board';
 
   return (
     <div className="flex flex-col items-center gap-3 pt-1">
