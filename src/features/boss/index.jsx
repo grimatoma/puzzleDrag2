@@ -2,6 +2,7 @@ import React from "react";
 import { BOSS_META, WEATHER_META } from "./slice.js";
 
 export const modalKey = "boss";
+export const alwaysMounted = true;
 
 function ProgressBar({ value, max, color }) {
   const pct = max > 0 ? Math.min(100, (value / max) * 100) : 0;
@@ -173,13 +174,14 @@ function BossModal({ boss, weather, dispatch }) {
 export default function BossFeature({ state, dispatch }) {
   const { boss, bossMinimized, weather } = state;
 
-  // Component only mounts when modal === 'boss'.
-  // When minimized, render a floating mini-card instead of the full modal.
-  if (bossMinimized && boss) {
+  if (!boss) return null;
+
+  if (bossMinimized) {
     return <MiniCard boss={boss} weather={weather} dispatch={dispatch} />;
   }
 
-  if (!boss) return null;
+  // Only show the blocking full modal when modal === 'boss' (board is locked)
+  if (state.modal !== "boss") return null;
 
   return <BossModal boss={boss} weather={weather} dispatch={dispatch} />;
 }

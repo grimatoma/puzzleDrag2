@@ -120,15 +120,15 @@ export function reduce(state, action) {
     }
 
     case "BOSS/MINIMIZE": {
-      return { ...state, bossMinimized: true };
+      return { ...state, bossMinimized: true, modal: null };
     }
 
     case "BOSS/EXPAND": {
-      return { ...state, bossMinimized: false };
+      return { ...state, bossMinimized: false, modal: "boss" };
     }
 
     case "BOSS/CLOSE": {
-      return { ...state, bossMinimized: true };
+      return { ...state, bossMinimized: true, modal: null };
     }
 
     case "BOSS/RESOLVE": {
