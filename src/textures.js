@@ -201,12 +201,29 @@ export function makeTextures(scene) {
           ctx.beginPath();
           ctx.ellipse(w / 2 + 2, h - 14, 26, 8, 0, 0, Math.PI * 2);
           ctx.fill();
+          if (selected) {
+            // Outer glow ring
+            rr(ctx, 3, 1, w - 6, h - 6, 16);
+            ctx.fillStyle = "rgba(255,160,0,.35)";
+            ctx.fill();
+          }
           rr(ctx, 7, 5, w - 14, h - 14, 14);
           ctx.fillStyle = hex(r.color);
           ctx.fill();
-          ctx.lineWidth = selected ? 6 : 3;
-          ctx.strokeStyle = selected ? "#ff7a00" : "rgba(255,255,255,.32)";
-          ctx.stroke();
+          if (selected) {
+            ctx.lineWidth = 7;
+            ctx.strokeStyle = "#ffb300";
+            ctx.stroke();
+            // Inner highlight line
+            rr(ctx, 11, 9, w - 22, h - 22, 11);
+            ctx.lineWidth = 2;
+            ctx.strokeStyle = "rgba(255,240,180,.65)";
+            ctx.stroke();
+          } else {
+            ctx.lineWidth = 3;
+            ctx.strokeStyle = "rgba(255,255,255,.32)";
+            ctx.stroke();
+          }
           ctx.save();
           ctx.translate(w / 2, h / 2);
           drawTileIcon(ctx, r.key);
@@ -216,20 +233,34 @@ export function makeTextures(scene) {
     });
   });
 
-  canvasTexture(scene, "spark", 54, 54, (ctx, w, h) => {
+  canvasTexture(scene, "spark", 72, 72, (ctx, w, h) => {
     ctx.translate(w / 2, h / 2);
+    // Soft glow halo
+    const glow = ctx.createRadialGradient(0, 0, 4, 0, 0, 30);
+    glow.addColorStop(0, "rgba(255,230,80,.85)");
+    glow.addColorStop(1, "rgba(255,160,0,0)");
+    ctx.fillStyle = glow;
+    ctx.beginPath();
+    ctx.arc(0, 0, 30, 0, Math.PI * 2);
+    ctx.fill();
+    // Star body
     ctx.fillStyle = "#ffd43b";
-    ctx.strokeStyle = "#fff7b0";
-    ctx.lineWidth = 4;
+    ctx.strokeStyle = "#fffde0";
+    ctx.lineWidth = 3.5;
     ctx.beginPath();
     for (let i = 0; i < 10; i++) {
       const a = -Math.PI / 2 + (i * Math.PI) / 5;
-      const rad = i % 2 === 0 ? 22 : 10;
+      const rad = i % 2 === 0 ? 28 : 12;
       ctx.lineTo(Math.cos(a) * rad, Math.sin(a) * rad);
     }
     ctx.closePath();
     ctx.fill();
     ctx.stroke();
+    // Bright center dot
+    ctx.fillStyle = "#fffde0";
+    ctx.beginPath();
+    ctx.arc(0, 0, 5, 0, Math.PI * 2);
+    ctx.fill();
   });
 
   canvasTexture(scene, "season_flower", 42, 42, (ctx, w, h) => {
