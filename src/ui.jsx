@@ -1,14 +1,14 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { BIOMES, NPCS, SEASONS, MAX_TURNS, BUILDINGS, RECIPES } from "./constants.js";
 import { MAP_NODES } from "./features/cartography/data.js";
 import { resourceByKey, xpForLevel } from "./state.js";
 import { seasonIndexForTurns } from "./utils.js";
 
 const TOOL_DEFS = [
-  { key: "clear", icon: "⚔", name: "Scythe" },
-  { key: "basic", icon: "+", name: "Seedpack" },
-  { key: "rare", icon: "★", name: "Lockbox" },
-  { key: "shuffle", icon: "↻", name: "Reshuffle Horn" },
+  { key: "clear", icon: "⚔", name: "Scythe", desc: "Clears tiles from the board and collects +5 basic resources." },
+  { key: "basic", icon: "+", name: "Seedpack", desc: "Instantly adds +5 basic resources to your inventory." },
+  { key: "rare", icon: "★", name: "Lockbox", desc: "Grants +2 rare resources directly to your inventory." },
+  { key: "shuffle", icon: "↻", name: "Reshuffle Horn", desc: "Reshuffles all tiles on the board for a fresh layout." },
 ];
 
 // ─── HUD (top bar) ─────────────────────────────────────────────────────────
@@ -204,25 +204,75 @@ export function InventoryGrid({ inventory, biomeKey }) {
 }
 
 function ToolsGrid({ tools, onUse }) {
+  const [tooltip, setTooltip] = useState(null);
+  const [modalTool, setModalTool] = useState(null);
+  const longPressTimer = useRef(null);
+  const longPressOccurred = useRef(false);
+
+  const startLongPress = (t) => {
+    longPressOccurred.current = false;
+    longPressTimer.current = setTimeout(() => {
+      longPressOccurred.current = true;
+      setModalTool(t);
+    }, 500);
+  };
+
+  const cancelLongPress = () => {
+    clearTimeout(longPressTimer.current);
+  };
+
   return (
-    <div className="grid grid-cols-2 gap-1.5">
-      {TOOL_DEFS.map((t) => {
-        const amt = tools[t.key] || 0;
-        const empty = amt === 0;
-        return (
-          <button
-            key={t.key}
-            disabled={empty}
-            onClick={() => onUse(t.key)}
-            className={`relative rounded-lg border-2 border-[#e6c49a] py-1.5 px-1 flex flex-col items-center gap-0.5 transition-transform ${empty ? "bg-[#9a724d] opacity-40 cursor-not-allowed" : "bg-[#9a724d] hover:bg-[#b8845a] hover:-translate-y-0.5"}`}
-          >
-            {amt > 0 && <div className="absolute -top-1 -right-1 bg-[#2b2218] text-white border border-[#f7e2b6] rounded-full px-1.5 text-[10px] font-bold">{amt}</div>}
-            <div className="text-[20px] leading-none text-white">{t.icon}</div>
-            <div className="text-[9px] font-bold text-white">{t.name}</div>
-          </button>
-        );
-      })}
-    </div>
+    <>
+      <div className="grid grid-cols-2 gap-1.5">
+        {TOOL_DEFS.map((t) => {
+          const amt = tools[t.key] || 0;
+          const empty = amt === 0;
+          return (
+            <div key={t.key} className="relative">
+              <button
+                disabled={empty}
+                onClick={() => {
+                  if (longPressOccurred.current) { longPressOccurred.current = false; return; }
+                  onUse(t.key);
+                }}
+                onMouseEnter={() => setTooltip(t.key)}
+                onMouseLeave={() => setTooltip(null)}
+                onTouchStart={() => startLongPress(t)}
+                onTouchEnd={cancelLongPress}
+                onTouchMove={cancelLongPress}
+                className={`relative w-full rounded-lg border-2 border-[#e6c49a] py-1.5 px-1 flex flex-col items-center gap-0.5 transition-transform ${empty ? "bg-[#9a724d] opacity-40 cursor-not-allowed" : "bg-[#9a724d] hover:bg-[#b8845a] hover:-translate-y-0.5"}`}
+              >
+                {amt > 0 && <div className="absolute -top-1 -right-1 bg-[#2b2218] text-white border border-[#f7e2b6] rounded-full px-1.5 text-[10px] font-bold">{amt}</div>}
+                <div className="text-[20px] leading-none text-white">{t.icon}</div>
+                <div className="text-[9px] font-bold text-white">{t.name}</div>
+              </button>
+              {tooltip === t.key && (
+                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50 w-36 bg-[#2b1d0e] text-white text-[10px] rounded-lg px-2.5 py-2 shadow-lg pointer-events-none border border-[#e6c49a]">
+                  <div className="font-bold text-[11px] mb-0.5">{t.name}</div>
+                  <div className="text-white/80 leading-snug">{t.desc}</div>
+                  <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-[#2b1d0e]" />
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+      {modalTool && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={() => setModalTool(null)}>
+          <div className="bg-[#3d2310] border-2 border-[#e6c49a] rounded-2xl p-5 max-w-[260px] w-full mx-4 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="text-[36px] text-center mb-1 leading-none">{modalTool.icon}</div>
+            <div className="text-white font-bold text-[17px] text-center mb-2">{modalTool.name}</div>
+            <div className="text-white/80 text-[12px] text-center leading-relaxed">{modalTool.desc}</div>
+            <button
+              onClick={() => setModalTool(null)}
+              className="mt-4 w-full bg-[#9a724d] hover:bg-[#b8845a] text-white font-bold py-2 rounded-lg border border-[#e6c49a] text-[13px] transition-colors"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 
