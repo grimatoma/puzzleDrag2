@@ -4,12 +4,12 @@ import { seasonIndexForTurns, upgradeCountForChain, cssColor } from "./utils.js"
 import { rounded, makeTextures } from "./textures.js";
 import { TileObj } from "./TileObj.js";
 
-const TILE_BASE = TILE; // texture-native size; sprites scale relative to this
+const TILE_BASE = TILE; // CSS-pixel design size for one tile; textures are baked at TILE * dpr
 
-// Single decorative frame around the tiles. Thinner on narrow viewports so
-// the board can stretch as wide as possible — see boardFrame() below.
-function boardFrameFor(vw) {
-  return vw < 600 ? 8 : 14;
+// Single decorative frame around the tiles, in CSS pixels. Thinner on narrow
+// viewports so the board can stretch as wide as possible.
+function boardFrameFor(cssVw) {
+  return cssVw < 600 ? 8 : 14;
 }
 
 export class GameScene extends Phaser.Scene {
@@ -29,6 +29,7 @@ export class GameScene extends Phaser.Scene {
 
   create() {
     this.input.topOnly = true;
+    this.dpr = this.registry.get("dpr") || 1;
     const textResolution = this.registry.get("renderResolution") || 1;
     const addText = this.add.text.bind(this.add);
     this.add.text = (...args) => addText(...args).setResolution(textResolution);
@@ -70,16 +71,24 @@ export class GameScene extends Phaser.Scene {
   // ─── Layout ───────────────────────────────────────────────────────────────
 
   layoutDims() {
+    // Scene world coordinates are in canvas (device) pixels because the game
+    // is configured at gameSize = cssSize × dpr. CSS-pixel design constants
+    // are converted with this.dpr where they appear as world dimensions.
+    const dpr = this.dpr;
     const vw = this.scale.width;
     const vh = this.scale.height;
-    // Reserve room for the single decorative frame on each side.
-    this.boardFrame = boardFrameFor(vw);
+    this.boardFrame = boardFrameFor(vw / dpr) * dpr;
     const margin = this.boardFrame;
     const maxByW = (vw - margin * 2) / COLS;
     const maxByH = (vh - margin * 2) / ROWS;
-    // Cap upscale at 2x texture size to avoid blur from over-magnification.
-    this.tileSize = Math.max(24, Math.min(maxByW, maxByH, TILE_BASE * 2));
+    // Cap upscale at 2× the CSS-pixel native tile size.
+    this.tileSize = Math.max(24 * dpr, Math.min(maxByW, maxByH, TILE_BASE * 2 * dpr));
+    // Ratio of canvas px to CSS px at current tile size — used for graphics
+    // line widths, offsets, and other CSS-pixel design constants.
     this.tileScale = this.tileSize / TILE_BASE;
+    // Sprite display scale: textures are baked at TILE_BASE * dpr canvas px,
+    // so dividing by dpr makes a sprite at scale 1 fill TILE_BASE * dpr.
+    this.tileSpriteScale = this.tileScale / dpr;
     this.boardX = Math.round((vw - COLS * this.tileSize) / 2);
     this.boardY = Math.round((vh - ROWS * this.tileSize) / 2);
   }
@@ -105,7 +114,7 @@ export class GameScene extends Phaser.Scene {
         this.tweens.killTweensOf(t.sprite);
         t.sprite.x = this.boardX + c * ts + ts / 2;
         t.sprite.y = this.boardY + r * ts + ts / 2;
-        t.sprite.setScale(this.tileScale * (t.selected ? 1.06 : 1));
+        t.sprite.setScale(this.tileSpriteScale * (t.selected ? 1.06 : 1));
       }
     }
   }
@@ -129,6 +138,7 @@ export class GameScene extends Phaser.Scene {
     const tag = (o) => { o.__layer = "bg"; return o; };
     const s = this.season();
     const b = this.biome();
+    const dpr = this.dpr;
     const vw = this.scale.width;
     const vh = this.scale.height;
     const ts = this.tileSize;
@@ -139,15 +149,15 @@ export class GameScene extends Phaser.Scene {
     tag(this.add.rectangle(0, 0, vw, vh, bg).setOrigin(0).setDepth(-10));
     const frame = this.boardFrame;
     // Decorative side leaves — only draw if there's room outside the board frame.
-    const leafGap = 36;
+    const leafGap = 36 * dpr;
     if (this.boardX - frame - leafGap > 0) {
-      for (let y = 30; y < vh - 30; y += 36) {
-        tag(this.add.ellipse(this.boardX - leafGap, y, 38, 22, s.accent, 0.55).setAngle(-25).setDepth(-9));
-        tag(this.add.ellipse(this.boardX + boardW + leafGap, y, 38, 22, s.accent, 0.55).setAngle(25).setDepth(-9));
+      for (let y = 30 * dpr; y < vh - 30 * dpr; y += 36 * dpr) {
+        tag(this.add.ellipse(this.boardX - leafGap, y, 38 * dpr, 22 * dpr, s.accent, 0.55).setAngle(-25).setDepth(-9));
+        tag(this.add.ellipse(this.boardX + boardW + leafGap, y, 38 * dpr, 22 * dpr, s.accent, 0.55).setAngle(25).setDepth(-9));
       }
     }
     // Single decorative board frame (replaces the previously stacked outer/inner frames).
-    tag(rounded(this, this.boardX - frame, this.boardY - frame, boardW + frame * 2, boardH + frame * 2, 16, b.dirt, 1).setDepth(-1));
+    tag(rounded(this, this.boardX - frame, this.boardY - frame, boardW + frame * 2, boardH + frame * 2, 16 * dpr, b.dirt, 1).setDepth(-1));
   }
 
   refreshSeasonTint() {
@@ -195,7 +205,7 @@ export class GameScene extends Phaser.Scene {
           const y = this.boardY + r * ts + ts / 2;
           const res = !initial && this.pendingUpgrades.length ? this.pendingUpgrades.shift() : this.randomResource();
           const tile = new TileObj(this, x, initial ? y - 500 - Phaser.Math.Between(0, 100) : y - 140, c, r, res);
-          tile.sprite.setScale(this.tileScale);
+          tile.sprite.setScale(this.tileSpriteScale);
           this.grid[r][c] = tile;
           this.tweens.add({ targets: tile.sprite, y, duration: initial ? 450 + r * 28 : 210, ease: "Back.Out" });
         }
@@ -347,18 +357,18 @@ export class GameScene extends Phaser.Scene {
       const off = 24 * this.tileScale;
       for (let i = UPGRADE_EVERY - 1; i < this.path.length; i += UPGRADE_EVERY) {
         const t = this.path[i];
-        const star = this.add.image(t.x + off, t.y - off, "spark").setScale(0.72 * this.tileScale).setDepth(12);
-        const preview = this.add.image(t.x + off, t.y + off * 0.85, `tile_${next.key}`).setScale(0.32 * this.tileScale).setDepth(12);
+        const star = this.add.image(t.x + off, t.y - off, "spark").setScale(0.72 * this.tileSpriteScale).setDepth(12);
+        const preview = this.add.image(t.x + off, t.y + off * 0.85, `tile_${next.key}`).setScale(0.32 * this.tileSpriteScale).setDepth(12);
         if (groupCount >= prevGroups) {
           // Pop-in + gentle sway for new star
           star.setScale(0).setAngle(-20);
-          this.tweens.add({ targets: star, scale: 0.72 * this.tileScale, angle: 15, duration: 320, ease: "Back.Out" });
+          this.tweens.add({ targets: star, scale: 0.72 * this.tileSpriteScale, angle: 15, duration: 320, ease: "Back.Out" });
           this.time.delayedCall(320, () => {
             if (!star.active) return;
             this.tweens.add({ targets: star, angle: -10, yoyo: true, repeat: -1, duration: 950, ease: "Sine.InOut" });
           });
           preview.setScale(0).setAlpha(0);
-          this.tweens.add({ targets: preview, scale: 0.32 * this.tileScale, alpha: 1, duration: 260, ease: "Back.Out", delay: 110 });
+          this.tweens.add({ targets: preview, scale: 0.32 * this.tileSpriteScale, alpha: 1, duration: 260, ease: "Back.Out", delay: 110 });
         }
         this.pathStars.push(star, preview);
         groupCount++;
@@ -433,11 +443,12 @@ export class GameScene extends Phaser.Scene {
 
   showChainBadge() {
     if (this.chainBadge) return;
+    const dpr = this.dpr;
     const cx = this.boardX + (COLS * this.tileSize) / 2;
-    const cy = this.boardY - this.boardFrame - 22;
+    const cy = this.boardY - this.boardFrame - 22 * dpr;
     this.chainBadge = this.add.container(cx, cy).setDepth(40);
-    const bg = rounded(this, -70, -16, 140, 32, 16, 0x2b2218, 0.9, 0xffd248, 2);
-    this.chainBadgeText = this.add.text(0, 0, "", { fontFamily: "Arial", fontSize: "14px", color: "#ffd248", fontStyle: "bold" }).setOrigin(0.5);
+    const bg = rounded(this, -70 * dpr, -16 * dpr, 140 * dpr, 32 * dpr, 16 * dpr, 0x2b2218, 0.9, 0xffd248, 2 * dpr);
+    this.chainBadgeText = this.add.text(0, 0, "", { fontFamily: "Arial", fontSize: `${14 * dpr}px`, color: "#ffd248", fontStyle: "bold" }).setOrigin(0.5);
     this.chainBadge.add([bg, this.chainBadgeText]);
   }
 
@@ -456,8 +467,9 @@ export class GameScene extends Phaser.Scene {
   // ─── Floater (resource-gain text per tile) ────────────────────────────────
 
   floatText(msg, x, y, color) {
-    const t = this.add.text(x, y, msg, { fontFamily: "Arial", fontSize: "22px", color: cssColor(color), fontStyle: "bold", stroke: "#000", strokeThickness: 5 }).setOrigin(0.5).setDepth(20).setScale(0.7);
+    const dpr = this.dpr;
+    const t = this.add.text(x, y, msg, { fontFamily: "Arial", fontSize: `${22 * dpr}px`, color: cssColor(color), fontStyle: "bold", stroke: "#000", strokeThickness: 5 * dpr }).setOrigin(0.5).setDepth(20).setScale(0.7);
     this.tweens.add({ targets: t, scale: 1, duration: 120, ease: "Back.Out" });
-    this.tweens.add({ targets: t, y: y - 58, alpha: 0, delay: 120, duration: 780, onComplete: () => t.destroy() });
+    this.tweens.add({ targets: t, y: y - 58 * dpr, alpha: 0, delay: 120, duration: 780, onComplete: () => t.destroy() });
   }
 }
