@@ -152,6 +152,10 @@ function MainTab({ state, dispatch }) {
           ℹ About
         </ActionBtn>
 
+        <ActionBtn onClick={() => { dispatch({ type: 'CLOSE_MODAL' }); dispatch({ type: 'SET_VIEW', view: 'achievements' }); }}>
+          🏆 Trophies
+        </ActionBtn>
+
         {confirmReset ? (
           <div
             className="w-full flex items-center justify-between gap-2 py-2 px-3 rounded-xl border-2"

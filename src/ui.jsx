@@ -409,15 +409,12 @@ export function MobileDock({ state, dispatch }) {
 export function BottomNav({ view, modal, dispatch }) {
   const items = [
     { key: "board",        label: "◳ Board" },
-    { key: "orders",       label: "📋 Orders" },
     { key: "town",         label: "⌂ Town" },
     { key: "inventory",    label: "🎒 Inventory" },
     { key: "quests",       label: "📜 Quests" },
     { key: "crafting",     label: "🔨 Craft" },
-    { key: "achievements", label: "🏆 Trophies" },
     { key: "cartography", label: "🗺️ Map" },
-    { key: "mood",         label: "💞 Townsfolk", modal: "mood" },
-    { key: "apprentices",  label: "🧑‍🌾 Helpers",  modal: "apprentices" },
+    { key: "townsfolk",    label: "👥 Townsfolk", modal: "townsfolk" },
   ];
   const activeKey = modal ? (items.find((i) => i.modal === modal)?.key ?? view) : view;
   return (
@@ -439,6 +436,28 @@ export function BottomNav({ view, modal, dispatch }) {
           {it.label}
         </button>
       ))}
+    </div>
+  );
+}
+
+function TownsfolkModal({ state, dispatch }) {
+  if (state.modal !== "townsfolk") return null;
+  return (
+    <div className="absolute inset-0 bg-black/55 grid place-items-center z-50 animate-fadein">
+      <div className="bg-[#f4ecd8] border-[4px] border-[#b28b62] rounded-[20px] p-5 w-[min(92vw,430px)] shadow-2xl">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="font-bold text-[20px] text-[#744d2e]">Townsfolk</h3>
+          <button
+            onClick={() => dispatch({ type: "CLOSE_MODAL" })}
+            className="w-8 h-8 rounded-lg bg-[#f6efe0] border-2 border-[#b28b62] grid place-items-center text-[#6a4b31] font-bold text-[14px]"
+          >✕</button>
+        </div>
+        <div className="flex flex-col gap-2">
+          <button onClick={() => { dispatch({ type: "CLOSE_MODAL" }); dispatch({ type: "SET_VIEW", view: "orders" }); }} className="text-left px-3 py-2.5 rounded-xl border-2 border-[#b28b62] bg-[#f7ead8] font-bold text-[#5a3a20]">📋 Orders</button>
+          <button onClick={() => dispatch({ type: "OPEN_MODAL", modal: "mood" })} className="text-left px-3 py-2.5 rounded-xl border-2 border-[#b28b62] bg-[#f7ead8] font-bold text-[#5a3a20]">💞 Townsfolk</button>
+          <button onClick={() => dispatch({ type: "OPEN_MODAL", modal: "apprentices" })} className="text-left px-3 py-2.5 rounded-xl border-2 border-[#b28b62] bg-[#f7ead8] font-bold text-[#5a3a20]">🧑‍🌾 Helpers</button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -679,6 +698,7 @@ export function FeatureModals({ state, dispatch }) {
 
   return (
     <>
+      <TownsfolkModal state={state} dispatch={dispatch} />
       {alwaysFeatures.map(f => <f.Component key={f.modalKey || f.viewKey} state={state} dispatch={dispatch} />)}
       {modalFeature && <modalFeature.Component state={state} dispatch={dispatch} />}
     </>

@@ -89,6 +89,8 @@ export function reduce(state, action) {
     }
 
     case "TURN_IN_ORDER": {
+      const order = (state.orders || []).find((o) => o.id === action.id);
+      if (!order || ((state.inventory || {})[order.key] || 0) < order.need) return state;
       const next = { ...state, totalOrders: (state.totalOrders || 0) + 1 };
       return checkTrophies(next);
     }
