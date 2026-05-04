@@ -8,7 +8,7 @@ function QuestCard({ q, dispatch }) {
   const claimable = q.done && !q.claimed;
 
   return (
-    <div className="bg-[#f6efe0] border-2 border-[#c5a87a] rounded-xl p-2.5 flex flex-col gap-2">
+    <div className="bg-[#f6efe0] border-2 border-[#c5a87a] rounded-xl p-2.5 flex flex-col gap-2 max-w-sm w-full self-center">
       <div className="flex items-start justify-between gap-2">
         <span className="font-bold text-[12px] text-[#3a2715] leading-snug flex-1">{q.label}</span>
         <span className="text-[11px] font-bold text-[#c8923a] whitespace-nowrap">
