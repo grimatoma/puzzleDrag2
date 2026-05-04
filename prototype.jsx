@@ -64,14 +64,14 @@ export default function App() {
 
   return (
     <div className="min-h-screen w-full bg-[#2a1d0f] text-[#2b2218] grid place-items-center">
-      <div className="relative w-full max-w-[1280px] aspect-[16/10] max-[900px]:aspect-[9/16] max-[900px]:max-w-[420px] bg-[#3a2715] rounded-2xl overflow-hidden shadow-2xl border border-white/10 flex flex-col">
+      <div className="relative w-full max-w-[1280px] aspect-[16/10] portrait:max-[900px]:aspect-[9/16] portrait:max-[900px]:max-w-[420px] landscape:max-[900px]:w-screen landscape:max-[900px]:h-screen landscape:max-[900px]:max-w-none bg-[#3a2715] rounded-2xl landscape:max-[900px]:rounded-none overflow-hidden shadow-2xl border border-white/10 flex flex-col">
         {/* HUD bar */}
         <Hud state={state} />
 
         {/* Main area: board + side panel, or town view */}
         <div className="flex-1 min-h-0 relative">
           {/* Board + side panel grid — always mounted to keep Phaser alive, hidden when in town view */}
-          <div className={`absolute inset-0 grid grid-cols-[1fr_300px] gap-3 p-3 max-[900px]:grid-cols-1 max-[900px]:grid-rows-[1fr_auto] ${state.view === "town" ? "invisible" : ""}`}>
+          <div className={`absolute inset-0 grid grid-cols-[1fr_300px] gap-3 p-3 portrait:max-[900px]:grid-cols-1 portrait:max-[900px]:grid-rows-[1fr_auto] landscape:max-[900px]:grid-cols-[1fr_200px] landscape:max-[900px]:gap-2 landscape:max-[900px]:p-2 ${state.view === "town" ? "invisible" : ""}`}>
             {/* Phaser host — takes the rest */}
             <div className="relative min-h-0 min-w-0">
               <div className="absolute inset-0 rounded-xl overflow-hidden bg-[#4a2f18]">
@@ -85,7 +85,7 @@ export default function App() {
               </div>
             </div>
             {/* Side panel */}
-            <div className="min-h-0 max-[900px]:max-h-[40vh]">
+            <div className="min-h-0 portrait:max-[900px]:max-h-[40vh]">
               <SidePanel state={state} dispatch={dispatch} />
             </div>
           </div>
@@ -99,7 +99,7 @@ export default function App() {
         </div>
 
         {/* Bottom nav */}
-        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-30">
+        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-30 landscape:max-[900px]:bottom-1.5">
           <BottomNav view={state.view} onChange={(v) => dispatch({ type: "SET_VIEW", view: v })} />
         </div>
 
