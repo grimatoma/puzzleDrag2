@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { BIOMES, NPCS, SEASONS, MAX_TURNS, BUILDINGS, RECIPES } from "./constants.js";
 import { MAP_NODES } from "./features/cartography/data.js";
-import { resourceByKey, xpForLevel } from "./state.js";
+import { xpForLevel } from "./state.js";
 import { seasonIndexForTurns } from "./utils.js";
 
 const TOOL_DEFS = [
@@ -25,7 +25,7 @@ export function Hud({ state, dispatch }) {
   return (
     <div className="flex items-center gap-2 px-3 py-2 bg-[#5b3b20] border-b-2 border-[#2a1d0f] text-[#6a4b31] flex-wrap" data-testid="hud">
       <button
-        onClick={() => onBoard ? dispatch({ type: "SET_VIEW", view: "town" }) : dispatch({ type: "OPEN_MODAL", modal: "menu" })}
+        onClick={() => dispatch({ type: "OPEN_MODAL", modal: "menu" })}
         className="w-8 h-8 rounded-lg bg-[#f6efe0] border-2 border-[#b28b62] grid place-items-center text-[#6a4b31] font-bold text-[18px] flex-shrink-0"
         data-testid="menu-btn"
       >≡</button>
@@ -100,9 +100,6 @@ function cssFromHex(intHex) {
 export function SidePanel({ state, dispatch }) {
   return (
     <div className="bg-gradient-to-b from-[#7c4f2c] to-[#6b4225] border-[3px] border-[#e2c19b] rounded-2xl p-3 flex flex-col gap-3 overflow-hidden h-full min-h-0">
-      <Section title="Orders">
-        <OrdersList orders={state.orders} inventory={state.inventory} onTurnIn={(id) => dispatch({ type: "TURN_IN_ORDER", id })} />
-      </Section>
       <Section title="Tools" titleColor="#f8e7c6">
         <ToolsGrid tools={state.tools} onUse={(key) => {
           dispatch({ type: "USE_TOOL", key });
@@ -123,43 +120,6 @@ function Section({ title, titleColor = "#f8e7c6", children }) {
   );
 }
 
-function OrdersList({ orders, inventory, onTurnIn }) {
-  return (
-    <div className="flex flex-col gap-2 max-h-[260px] landscape:max-[1024px]:max-h-[130px] overflow-y-auto pr-1 max-w-[400px]">
-      {orders.map((o) => {
-        const have = inventory[o.key] || 0;
-        const done = have >= o.need;
-        const npc = NPCS[o.npc];
-        const res = resourceByKey(o.key);
-        const pct = Math.min(100, (have / o.need) * 100);
-        return (
-          <button
-            key={o.id}
-            onClick={() => onTurnIn(o.id)}
-            className={`text-left rounded-xl border-2 px-2.5 py-2 flex flex-col gap-1.5 transition-transform hover:-translate-y-0.5 ${done ? "bg-[#cfe4a3] border-[#91bf24]" : "bg-[#f7ead8] border-[#c5a87a]"}`}
-          >
-            <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-full grid place-items-center text-white font-bold text-[12px] flex-shrink-0" style={{ backgroundColor: npc.color, border: "2px solid #fff" }}>{npc.name[0]}</div>
-              <div className="flex-1 min-w-0">
-                <div className="font-bold text-[#a8431a] text-[12px] leading-tight truncate">{npc.name}</div>
-                <div className="text-[#6a4b31] text-[10px] leading-snug line-clamp-2">{o.line}</div>
-              </div>
-              <div className="text-[#c8923a] text-[10px] font-bold whitespace-nowrap">+{o.reward}◉</div>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-md flex-shrink-0" style={{ backgroundColor: cssFromHex(res.color), border: "2px solid rgba(255,255,255,.4)" }} />
-              <div className="flex-1 h-2 bg-[#e0d2b0] rounded overflow-hidden">
-                <div className="h-full transition-[width] duration-300" style={{ width: `${pct}%`, backgroundColor: done ? "#4f6b3a" : "#d6612a" }} />
-              </div>
-              <div className="text-[#6a4b31] text-[11px] font-bold whitespace-nowrap min-w-[36px] text-right">{have}/{o.need}</div>
-            </div>
-            {done && <div className="text-[10px] text-[#4f6b3a] font-bold text-center">TAP TO DELIVER ✓</div>}
-          </button>
-        );
-      })}
-    </div>
-  );
-}
 
 function InventoryCell({ r, count, compact }) {
   return (
@@ -303,6 +263,7 @@ function BiomeSwitcher({ biomeKey, level, onSwitch }) {
 export function BottomNav({ view, onChange }) {
   const items = [
     { key: "board", label: "◳ Board" },
+    { key: "orders", label: "📋 Orders" },
     { key: "town", label: "⌂ Town" },
     { key: "inventory", label: "🎒 Inventory" },
     { key: "quests", label: "📜 Quests" },
