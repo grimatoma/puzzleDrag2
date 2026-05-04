@@ -2,8 +2,16 @@ import React, { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { BIOMES, NPCS, SEASONS, MAX_TURNS, BUILDINGS, RECIPES } from "./constants.js";
 import { MAP_NODES } from "./features/cartography/data.js";
-import { xpForLevel } from "./state.js";
+import { xpForLevel, resourceByKey } from "./state.js";
 import { seasonIndexForTurns } from "./utils.js";
+
+// Mechanical effect active each calendar season (seasonsCycled % 4)
+const SEASON_EFFECTS = [
+  "🌱 +20% harvest",  // Spring
+  "☀️ 2× order pay",  // Summer
+  "🍂 2× upgrades",   // Autumn
+  "❄️ 4+ chain min",  // Winter
+];
 
 const TOOL_DEFS = [
   { key: "clear", icon: "⚔", name: "Scythe", desc: "Clears tiles from the board and collects +5 basic resources." },
@@ -15,10 +23,11 @@ const TOOL_DEFS = [
 // ─── HUD (top bar) ─────────────────────────────────────────────────────────
 
 export function Hud({ state, dispatch }) {
-  const { coins, level, xp, turnsUsed, built, view } = state;
+  const { coins, level, xp, turnsUsed, built, view, seasonsCycled } = state;
   const onBoard = view === "board";
   const seasonIdx = seasonIndexForTurns(turnsUsed);
   const season = SEASONS[seasonIdx];
+  const calendarSeason = (seasonsCycled || 0) % 4;
   const xpNeed = xpForLevel(level);
   const xpPct = Math.min(100, (xp / xpNeed) * 100);
   const turnsLeft = MAX_TURNS - turnsUsed;
@@ -42,7 +51,7 @@ export function Hud({ state, dispatch }) {
           <span className="font-bold text-[14px]" data-testid="buildings">{buildingCount}</span>
         </Pill>
       )}
-      {onBoard && <SeasonBar season={season} turnsUsed={turnsUsed} turnsLeft={turnsLeft} />}
+      {onBoard && <SeasonBar season={season} turnsUsed={turnsUsed} turnsLeft={turnsLeft} calendarSeason={calendarSeason} />}
       {!onBoard && (
         <div className="ml-auto flex items-center gap-1.5">
           <div className="bg-[#f6efe0] border-2 border-[#b28b62] rounded-full h-[26px] w-[110px] landscape:max-[1024px]:h-[20px] landscape:max-[1024px]:w-[80px] relative overflow-hidden">
@@ -66,10 +75,13 @@ function Pill({ children, className = "" }) {
   );
 }
 
-function SeasonBar({ season, turnsUsed, turnsLeft }) {
+function SeasonBar({ season, turnsUsed, turnsLeft, calendarSeason }) {
   return (
-    <div className="bg-[#faf0dd] border-2 border-[#b28b62] rounded-full pl-3 pr-2 py-0.5 flex items-center gap-2 min-w-0 flex-1 max-w-[480px]">
-      <div className="text-[#6a4b31] font-bold text-[12px] landscape:max-[1024px]:text-[10px] whitespace-nowrap">{season.name}</div>
+    <div className="bg-[#faf0dd] border-2 border-[#b28b62] rounded-full pl-3 pr-2 py-0.5 flex items-center gap-2 min-w-0 flex-1 max-w-[540px]">
+      <div className="flex flex-col items-start">
+        <div className="text-[#6a4b31] font-bold text-[12px] landscape:max-[1024px]:text-[10px] whitespace-nowrap leading-tight">{season.name}</div>
+        <div className="text-[10px] landscape:max-[1024px]:text-[8px] text-[#d6612a] font-bold whitespace-nowrap leading-tight">{SEASON_EFFECTS[calendarSeason ?? 0]}</div>
+      </div>
       <div className="flex gap-1 flex-1 justify-center min-w-0">
         {Array.from({ length: MAX_TURNS }).map((_, i) => {
           const filled = i < turnsUsed;
@@ -108,6 +120,38 @@ export function SidePanel({ state, dispatch }) {
         }} />
         <BiomeSwitcher biomeKey={state.biomeKey} level={state.level} onSwitch={(key) => dispatch({ type: "SWITCH_BIOME", key })} />
       </Section>
+      <Section title="Orders" titleColor="#f8e7c6">
+        <CompactOrders orders={state.orders} inventory={state.inventory} dispatch={dispatch} />
+      </Section>
+    </div>
+  );
+}
+
+function CompactOrders({ orders, inventory, dispatch }) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      {orders.map((o) => {
+        const have = inventory[o.key] || 0;
+        const done = have >= o.need;
+        const res = resourceByKey(o.key);
+        const recipe = !res ? RECIPES[o.key] : null;
+        const glyph = res ? res.glyph : recipe?.glyph ?? "?";
+        const label = res ? res.label : recipe?.name ?? o.key;
+        return (
+          <button
+            key={o.id}
+            onClick={() => dispatch({ type: "TURN_IN_ORDER", id: o.id })}
+            className={`flex items-center gap-1.5 rounded-lg px-2 py-1 text-left border transition-colors ${done ? "bg-[#91bf24]/40 border-[#91bf24] text-white" : "bg-[#4a2e18] border-[#7a5038] text-[#f8e7c6]"}`}
+          >
+            <span className="text-[14px] flex-shrink-0">{glyph}</span>
+            <span className="flex-1 min-w-0 text-[10px] font-bold truncate">{label}</span>
+            <span className={`text-[10px] font-bold whitespace-nowrap ${done ? "text-white" : have > 0 ? "text-[#f7c254]" : "text-[#c5a87a]"}`}>
+              {Math.min(have, o.need)}/{o.need}
+            </span>
+            {done && <span className="text-[9px] text-white font-bold">✓</span>}
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -459,12 +503,17 @@ export function SeasonModal({ state, dispatch }) {
   const prevSeason = SEASONS[seasonIdx];
   const nextSeason = SEASONS[(seasonIdx + 1) % SEASONS.length];
   const stats = state.seasonStats;
+  const nextCalendarSeason = ((state.seasonsCycled || 0) + 1) % 4;
+  const nextEffect = SEASON_EFFECTS[nextCalendarSeason];
   return (
     <div className="absolute inset-0 bg-black/55 grid place-items-center z-50 animate-fadein">
       <div className="bg-[#f4ecd8] border-[4px] border-[#b28b62] rounded-[20px] px-8 py-6 landscape:max-[1024px]:px-4 landscape:max-[1024px]:py-3 min-w-[360px] max-w-[560px] landscape:max-[1024px]:min-w-0 landscape:max-[1024px]:w-[92vw] landscape:max-[1024px]:max-h-[88vh] landscape:max-[1024px]:overflow-y-auto text-center shadow-2xl">
         <div className="text-[48px] landscape:max-[1024px]:text-[28px] leading-none">{nextSeason.icon === "flower" ? "✿" : nextSeason.icon === "sun" ? "☀" : nextSeason.icon === "leaf" ? "🍂" : "❄"}</div>
         <h2 className="font-bold text-[26px] landscape:max-[1024px]:text-[18px] text-[#744d2e] mt-2 landscape:max-[1024px]:mt-1 mb-1 landscape:max-[1024px]:mb-0.5">{prevSeason.name} ends</h2>
         <p className="italic text-[#6a4b31] text-[14px] landscape:max-[1024px]:text-[11px]">The wind shifts. {nextSeason.name} arrives in Hearthwood Vale.</p>
+        <div className="my-2 inline-block bg-[#d6612a]/15 border border-[#d6612a]/40 rounded-full px-3 py-1 text-[12px] landscape:max-[1024px]:text-[10px] font-bold text-[#a8431a]">
+          {nextSeason.name} effect: {nextEffect}
+        </div>
         <div className="flex justify-around gap-2 my-4 landscape:max-[1024px]:my-2 p-3 landscape:max-[1024px]:p-2 bg-black/[.04] rounded-xl">
           <Stat v={stats.harvests} l="Harvested" />
           <Stat v={stats.upgrades} l="Upgrades ★" />

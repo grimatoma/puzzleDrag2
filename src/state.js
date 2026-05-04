@@ -1,4 +1,4 @@
-import { BIOMES, NPCS, MAX_TURNS } from "./constants.js";
+import { BIOMES, NPCS, MAX_TURNS, RECIPES } from "./constants.js";
 import * as crafting from "./features/crafting/slice.js";
 import * as quests from "./features/quests/slice.js";
 import * as achievements from "./features/achievements/slice.js";
@@ -59,20 +59,40 @@ function pickNpcKey(excludeKeys = []) {
   return pool[Math.floor(Math.random() * pool.length)];
 }
 
+// Crafted item pools for advanced orders (level 3+)
+const CRAFTED_FARM_POOL = ["bread", "honeyroll", "harvestpie", "preserve", "tincture"];
+const CRAFTED_MINE_POOL = ["hinge", "cobblepath", "lantern", "goldring", "gemcrown"];
+
 let orderIdSeq = 1;
 export function makeOrder(biomeKey, level, excludeNpcs = []) {
   const biome = BIOMES[biomeKey];
-  const candidates = biome.pool.filter((k, i, a) => a.indexOf(k) === i);
-  const key = candidates[Math.floor(Math.random() * candidates.length)];
-  const res = resourceByKey(key);
-  const baseNeed = res.value < 3 ? 8 : 4;
-  const need = baseNeed + Math.floor(Math.random() * 4) + Math.floor(level / 3) * 2;
-  const reward = Math.max(20, need * res.value * 6);
+
+  // At level 3+, 30% chance for a crafted item order
+  const useCrafted = level >= 3 && Math.random() < 0.30;
+
+  let key, need, reward, resourceLabel;
+  if (useCrafted) {
+    const craftedPool = biomeKey === "mine" ? CRAFTED_MINE_POOL : CRAFTED_FARM_POOL;
+    key = craftedPool[Math.floor(Math.random() * craftedPool.length)];
+    const recipe = RECIPES[key];
+    need = 1 + Math.floor(Math.random() * 3); // 1–3 crafted items
+    reward = Math.round(need * (recipe?.coins || 100) * 1.5);
+    resourceLabel = (recipe?.name || key).toLowerCase();
+  } else {
+    const candidates = biome.pool.filter((k, i, a) => a.indexOf(k) === i);
+    key = candidates[Math.floor(Math.random() * candidates.length)];
+    const res = resourceByKey(key);
+    const baseNeed = res.value < 3 ? 8 : 4;
+    need = baseNeed + Math.floor(Math.random() * 4) + Math.floor(level / 3) * 2;
+    reward = Math.max(20, need * res.value * 6);
+    resourceLabel = res.label.toLowerCase();
+  }
+
   const npc = pickNpcKey(excludeNpcs);
   const lines = NPCS[npc].lines;
   const line = lines[Math.floor(Math.random() * lines.length)]
     .replace("{n}", need)
-    .replace("{r}", res.label.toLowerCase());
+    .replace("{r}", resourceLabel);
   return { id: `o${orderIdSeq++}`, npc, key, need, reward, line };
 }
 
@@ -97,6 +117,7 @@ export function initialState() {
     modal: null,
     pendingView: null,
     seasonStats: { harvests: 0, upgrades: 0, ordersFilled: 0, coins: 0 },
+    _hintsShown: {},
     ...crafting.initial,
     ...quests.initial,
     ...achievements.initial,
@@ -145,28 +166,67 @@ function applyXp(state, xpDelta) {
 function coreReducer(state, action) {
   switch (action.type) {
     case "CHAIN_COLLECTED": {
-      const { key, gained, upgrades, value } = action.payload;
+      const { key, gained, upgrades, value, chainLength } = action.payload;
+      const currentSeason = (state.seasonsCycled || 0) % 4;
+      const hintsShown = state._hintsShown || {};
+
+      // Winter: chains shorter than 4 tiles yield nothing but still consume the turn
+      if (currentSeason === 3 && (chainLength || gained) < 4) {
+        const turnsUsed = state.turnsUsed + 1;
+        const seasonEnded = turnsUsed >= MAX_TURNS;
+        let bubble = state.bubble;
+        if (!hintsShown.winterChain) {
+          bubble = { id: Date.now(), npc: "wren", text: "❄️ Winter: chains need 4+ tiles to harvest!", ms: 2400 };
+        }
+        return {
+          ...state,
+          turnsUsed,
+          bubble,
+          _hintsShown: { ...hintsShown, winterChain: true },
+          modal: seasonEnded ? "season" : state.modal,
+        };
+      }
+
       const res = resourceByKey(key);
       const inventory = { ...state.inventory };
-      inventory[key] = (inventory[key] || 0) + gained;
-      if (res?.next && upgrades > 0) {
-        inventory[res.next] = (inventory[res.next] || 0) + upgrades;
+
+      // Spring: +20% resource bonus (rounded up)
+      const springBonus = currentSeason === 0 ? Math.ceil(gained * 0.2) : 0;
+      const effectiveGained = gained + springBonus;
+      inventory[key] = (inventory[key] || 0) + effectiveGained;
+
+      // Autumn: double upgrades
+      const effectiveUpgrades = currentSeason === 2 ? upgrades * 2 : upgrades;
+      if (res?.next && effectiveUpgrades > 0) {
+        inventory[res.next] = (inventory[res.next] || 0) + effectiveUpgrades;
       }
-      const coinsGain = Math.max(1, Math.floor((gained * value) / 2));
-      const xpGain = gained * value * 3 + upgrades * 12;
+
+      const coinsGain = Math.max(1, Math.floor((effectiveGained * value) / 2));
+      const xpGain = effectiveGained * value * 3 + effectiveUpgrades * 12;
       const xpResult = applyXp(state, xpGain);
       const turnsUsed = state.turnsUsed + 1;
       const seasonEnded = turnsUsed >= MAX_TURNS;
       const seasonStats = {
         ...state.seasonStats,
-        harvests: state.seasonStats.harvests + gained,
-        upgrades: state.seasonStats.upgrades + upgrades,
+        harvests: state.seasonStats.harvests + effectiveGained,
+        upgrades: state.seasonStats.upgrades + effectiveUpgrades,
         coins: state.seasonStats.coins + coinsGain,
       };
+
       let bubble = state.bubble;
+      let newHintsShown = hintsShown;
+
       if (xpResult.leveledUp) {
-        bubble = { id: Date.now(), npc: "wren", text: `Level ${xpResult.level}! New things await.`, ms: 2400 };
+        if (xpResult.level === 2) {
+          bubble = { id: Date.now(), npc: "wren", text: "Level 2! ⛏️ Mine biome unlocked — switch with the button below.", ms: 2800 };
+        } else {
+          bubble = { id: Date.now(), npc: "wren", text: `Level ${xpResult.level}! New things await.`, ms: 2400 };
+        }
+      } else if (effectiveUpgrades > 0 && !hintsShown.upgradeHint) {
+        bubble = { id: Date.now(), npc: "mira", text: "★ Upgrade! Chain 6+ tiles to snowball rare resources.", ms: 2800 };
+        newHintsShown = { ...hintsShown, upgradeHint: true };
       }
+
       return {
         ...state,
         inventory,
@@ -176,6 +236,7 @@ function coreReducer(state, action) {
         turnsUsed,
         seasonStats,
         bubble,
+        _hintsShown: newHintsShown,
         modal: seasonEnded ? "season" : state.modal,
       };
     }
@@ -190,18 +251,21 @@ function coreReducer(state, action) {
       const usedNpcs = state.orders.filter((x) => x.id !== o.id).map((x) => x.npc);
       const replacement = makeOrder(state.biomeKey, state.level, usedNpcs);
       const xpResult = applyXp(state, 12);
-      let bubble = { id: Date.now(), npc: o.npc, text: `+${o.reward}◉ — thank you!`, ms: 1600 };
+      // Summer: orders pay double
+      const summerMult = ((state.seasonsCycled || 0) % 4 === 1) ? 2 : 1;
+      const actualReward = o.reward * summerMult;
+      let bubble = { id: Date.now(), npc: o.npc, text: summerMult > 1 ? `+${actualReward}◉ (☀️ 2×) — thank you!` : `+${actualReward}◉ — thank you!`, ms: 1600 };
       if (xpResult.leveledUp) {
         bubble = { id: Date.now(), npc: "wren", text: `Level ${xpResult.level}! New things await.`, ms: 2400 };
       }
       return {
         ...state,
         inventory,
-        coins: state.coins + o.reward,
+        coins: state.coins + actualReward,
         xp: xpResult.xp,
         level: xpResult.level,
         orders: state.orders.map((x) => (x.id === o.id ? replacement : x)),
-        seasonStats: { ...state.seasonStats, ordersFilled: state.seasonStats.ordersFilled + 1, coins: state.seasonStats.coins + o.reward },
+        seasonStats: { ...state.seasonStats, ordersFilled: state.seasonStats.ordersFilled + 1, coins: state.seasonStats.coins + actualReward },
         bubble,
       };
     }
@@ -255,12 +319,22 @@ function coreReducer(state, action) {
       Object.entries(b.cost).forEach(([k, v]) => {
         if (k !== "coins") inventory[k] = (inventory[k] || 0) - v;
       });
+      const hintsShown = state._hintsShown || {};
+      const CRAFTING_STATIONS = new Set(["bakery", "forge", "larder"]);
+      const isCraftStation = CRAFTING_STATIONS.has(b.id);
+      let bubble = { id: Date.now(), npc: "mira", text: `${b.name} built! The vale grows warmer.`, ms: 2200 };
+      let newHintsShown = hintsShown;
+      if (isCraftStation && !hintsShown.craftHint) {
+        bubble = { id: Date.now(), npc: "mira", text: `${b.name} built! 🔨 Tap it in Town to open crafting recipes.`, ms: 2800 };
+        newHintsShown = { ...hintsShown, craftHint: true };
+      }
       return {
         ...state,
         coins: state.coins - (b.cost.coins || 0),
         inventory,
         built: { ...state.built, [b.id]: true },
-        bubble: { id: Date.now(), npc: "mira", text: `${b.name} built! The vale grows warmer.`, ms: 2200 },
+        bubble,
+        _hintsShown: newHintsShown,
       };
     }
     case "POP_NPC":
