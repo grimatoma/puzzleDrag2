@@ -129,7 +129,7 @@ export default function QuestsScreen({ state, dispatch, initialTab }) {
       {/* Body */}
       {tab === "daily" ? (
         <div className="flex-1 overflow-y-auto px-3 pb-3 flex flex-col gap-2">
-          {dailies.map((q) => (
+          {[...dailies].sort((a, b) => (b.done && !b.claimed ? 1 : 0) - (a.done && !a.claimed ? 1 : 0)).map((q) => (
             <QuestCard key={q.id} q={q} dispatch={dispatch} />
           ))}
           <p className="text-[10px] text-[#f8e7c6]/50 text-center mt-1">Next refresh: when season ends</p>
