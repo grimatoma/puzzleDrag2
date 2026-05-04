@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { BIOMES, NPCS, SEASONS, MAX_TURNS, BUILDINGS } from "./constants.js";
+import { BIOMES, NPCS, SEASONS, MAX_TURNS, BUILDINGS, RECIPES } from "./constants.js";
 import { MAP_NODES } from "./features/cartography/data.js";
 import { resourceByKey, xpForLevel } from "./state.js";
 import { seasonIndexForTurns } from "./utils.js";
@@ -159,19 +159,44 @@ function OrdersList({ orders, inventory, onTurnIn }) {
   );
 }
 
+function InventoryCell({ r, count }) {
+  return (
+    <div className="bg-[#b68d64] border-2 border-[#e6c49a] rounded-lg p-1.5 flex items-center gap-2" title={r.label}>
+      <div className="w-7 h-7 rounded-md flex-shrink-0 grid place-items-center text-[14px] text-white" style={{ backgroundColor: cssFromHex(r.color), border: "2px solid rgba(255,255,255,.4)", textShadow: "0 1px 1px rgba(0,0,0,.4)" }}>{r.glyph}</div>
+      <div className="flex flex-col leading-none min-w-0">
+        <div className="text-[9px] text-white/70 truncate">{r.label}</div>
+        <div className="text-[14px] text-white font-bold" style={{ textShadow: "0 1px 2px rgba(0,0,0,.4)" }}>{count}</div>
+      </div>
+    </div>
+  );
+}
+
 export function InventoryGrid({ inventory, biomeKey }) {
   const resources = BIOMES[biomeKey].resources;
+  const items = Object.entries(RECIPES).filter(([key]) => (inventory[key] || 0) > 0);
+
   return (
-    <div className="grid grid-cols-2 gap-1.5">
-      {resources.map((r) => (
-        <div key={r.key} className="bg-[#b68d64] border-2 border-[#e6c49a] rounded-lg p-1.5 flex items-center gap-2" title={r.label}>
-          <div className="w-7 h-7 rounded-md flex-shrink-0 grid place-items-center text-[14px] text-white" style={{ backgroundColor: cssFromHex(r.color), border: "2px solid rgba(255,255,255,.4)", textShadow: "0 1px 1px rgba(0,0,0,.4)" }}>{r.glyph}</div>
-          <div className="flex flex-col leading-none min-w-0">
-            <div className="text-[9px] text-white/70 truncate">{r.label}</div>
-            <div className="text-[14px] text-white font-bold" style={{ textShadow: "0 1px 2px rgba(0,0,0,.4)" }}>{inventory[r.key] || 0}</div>
-          </div>
+    <div className="flex flex-col gap-3">
+      <div>
+        <div className="text-[11px] font-bold text-white/60 uppercase tracking-wider mb-1.5">Resources</div>
+        <div className="grid grid-cols-2 gap-1.5">
+          {resources.map((r) => (
+            <InventoryCell key={r.key} r={r} count={inventory[r.key] || 0} />
+          ))}
         </div>
-      ))}
+      </div>
+      <div>
+        <div className="text-[11px] font-bold text-white/60 uppercase tracking-wider mb-1.5">Items</div>
+        {items.length === 0 ? (
+          <div className="text-[11px] text-white/40 italic px-1">No items yet — craft something!</div>
+        ) : (
+          <div className="grid grid-cols-2 gap-1.5">
+            {items.map(([key, recipe]) => (
+              <InventoryCell key={key} r={{ key, label: recipe.name, color: recipe.color, glyph: recipe.glyph }} count={inventory[key] || 0} />
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

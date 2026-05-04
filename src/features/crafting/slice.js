@@ -22,6 +22,8 @@ export function reduce(state, action) {
     newInv[res] = (newInv[res] || 0) - need;
   }
 
+  newInv[recipeKey] = (newInv[recipeKey] || 0) + 1;
+
   return {
     ...state,
     inventory: newInv,

@@ -127,16 +127,16 @@ export const BUILDINGS = [
 ];
 
 export const RECIPES = {
-  bread:      { name: "Bread Loaf",    inputs: { flour: 3, egg: 1 },          tier: 1, station: "bakery", coins: 125 },
-  honeyroll:  { name: "Honey Roll",    inputs: { flour: 2, egg: 1, jam: 1 },  tier: 2, station: "bakery", coins: 175 },
-  harvestpie: { name: "Harvest Pie",   inputs: { flour: 2, jam: 1, egg: 1 },  tier: 2, station: "bakery", coins: 175 },
-  preserve:   { name: "Preserve Jar",  inputs: { jam: 2, egg: 1 },            tier: 1, station: "larder", coins: 100 },
-  tincture:   { name: "Berry Tincture",inputs: { berry: 3, jam: 1 },          tier: 1, station: "larder", coins: 125 },
-  hinge:      { name: "Iron Hinge",    inputs: { ingot: 2, coke: 1 },         tier: 2, station: "forge",  coins: 175 },
-  cobblepath: { name: "Cobble Path",   inputs: { stone: 5, plank: 2 },        tier: 1, station: "forge",  coins: 200 },
-  lantern:    { name: "Iron Lantern",  inputs: { ingot: 1, coke: 1, plank: 1 },tier: 2, station: "forge", coins: 150 },
-  goldring:   { name: "Gold Ring",     inputs: { gold: 1, ingot: 2 },         tier: 2, station: "forge",  coins: 225 },
-  gemcrown:   { name: "Gem Crown",     inputs: { cutgem: 1, gold: 2 },        tier: 2, station: "forge",  coins: 325 },
+  bread:      { name: "Bread Loaf",     inputs: { flour: 3, egg: 1 },            tier: 1, station: "bakery", coins: 125, glyph: "🍞", color: 0xd49060, dark: 0x7a4a28 },
+  honeyroll:  { name: "Honey Roll",     inputs: { flour: 2, egg: 1, jam: 1 },   tier: 2, station: "bakery", coins: 175, glyph: "🍯", color: 0xf0c050, dark: 0x8a6010 },
+  harvestpie: { name: "Harvest Pie",    inputs: { flour: 2, jam: 1, egg: 1 },   tier: 2, station: "bakery", coins: 175, glyph: "🥧", color: 0xd4784a, dark: 0x6a3018 },
+  preserve:   { name: "Preserve Jar",   inputs: { jam: 2, egg: 1 },             tier: 1, station: "larder", coins: 100, glyph: "🫙", color: 0x9a6888, dark: 0x502848 },
+  tincture:   { name: "Berry Tincture", inputs: { berry: 3, jam: 1 },           tier: 1, station: "larder", coins: 125, glyph: "🌿", color: 0x6b8a3a, dark: 0x304018 },
+  hinge:      { name: "Iron Hinge",     inputs: { ingot: 2, coke: 1 },          tier: 2, station: "forge",  coins: 175, glyph: "⚙",  color: 0x7a8a96, dark: 0x2a3a46 },
+  cobblepath: { name: "Cobble Path",    inputs: { stone: 5, plank: 2 },         tier: 1, station: "forge",  coins: 200, glyph: "🪨", color: 0x9a9a8a, dark: 0x404038 },
+  lantern:    { name: "Iron Lantern",   inputs: { ingot: 1, coke: 1, plank: 1 },tier: 2, station: "forge",  coins: 150, glyph: "🏮", color: 0xd4783a, dark: 0x6a2800 },
+  goldring:   { name: "Gold Ring",      inputs: { gold: 1, ingot: 2 },          tier: 2, station: "forge",  coins: 225, glyph: "💍", color: 0xffd34c, dark: 0x886810 },
+  gemcrown:   { name: "Gem Crown",      inputs: { cutgem: 1, gold: 2 },         tier: 2, station: "forge",  coins: 325, glyph: "👑", color: 0x65e5ff, dark: 0x1060a0 },
 };
 
 export const ACHIEVEMENTS = [
