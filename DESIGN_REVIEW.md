@@ -1,0 +1,203 @@
+# Hearthlands — Design Review
+
+*Reviewed 2026-05-04, branch `claude/game-design-review-YMCfJ`. Played a full season cycle via Playwright + audited all 18 feature slices.*
+
+---
+
+## TL;DR
+
+You've built the chassis for at least three different games and bolted them onto one screen. The match‑3 + orders + town‑build core works. **Almost everything else is invisible to the player or has no mechanical effect on the loop.** Six of your eighteen feature slices are either unreachable from the UI or they read state and do nothing with it. The remaining "wired" features mostly fire at season‑end so the player never sees cause and effect.
+
+If you ship today, a new player will:
+
+1. Drag tiles for ~8 turns.
+2. Hit a season summary with 4 stat numbers.
+3. Open Town and discover they can't build anything they care about because every interesting building needs **stone** (mine) and **plank** (chain upgrades), but the mine is gated by Lv 2 and there's no signal that chains upgrade tiles.
+4. Notice the bottom nav has 8 items and 90% of those screens are empty.
+5. Close the tab.
+
+The good news: the core feel is decent, the art direction is consistent, and you can fix most of this without writing new systems — you mostly need to **delete, connect, and surface what's already there.**
+
+---
+
+## Part 1 — What's actually wired vs. what's pretending
+
+I traced every action type, every state field, and every consumer. Verdict per feature:
+
+| Feature       | Reachable? | Reads loop events? | Writes affect loop? | Verdict |
+|---------------|------------|--------------------|--------------------|---------|
+| crafting      | nav        | ✅ inv/coin        | ✅ produces items   | **WIRED** (but items don't fill orders) |
+| orders        | nav + side panel | ✅ TURN_IN_ORDER | ✅ coin + xp        | **WIRED** (the actual game) |
+| quests        | nav        | ✅ chains/orders/build/coins | ✅ coin + almanacXp + tools | **WIRED** |
+| heirlooms     | **unreachable** | ✅ many hooks  | ✅ +10% coin, +5 hay/season etc. | **WIRED but invisible** |
+| mood          | **unreachable** | ✅ TURN_IN_ORDER | ✅ ×0.7–×1.5 reward modifier | **WIRED but invisible** |
+| beasts        | town header button | ✅ CLOSE_SEASON | ✅ resource bonus   | **WIRED** (but offers come at seasons only) |
+| longnight     | auto‑modal at year boundary | ✅ winter trigger | ✅ can destroy a building | **WIRED but rarely seen** |
+| cartography   | nav        | ✅ map node data   | ✅ unlocks feed heirloom slots | **WIRED** (thin) |
+| festivals     | settings tab | ✅ season events  | ✅ market items     | **WIRED but buried** |
+| glyphs        | **unreachable** | ✅ 12% chain proc | ✅ chain bonuses    | **WIRED but invisible** |
+| tutorial      | auto on first board | —          | n/a (UI only)       | WIRED |
+| achievements  | nav        | ✅ stats           | ❌ rewards never claimed | **VISIBLE‑ONLY** (decoration) |
+| inventory     | nav        | —                  | n/a                 | VISIBLE‑ONLY (read‑only mirror) |
+| settings      | menu       | —                  | ❌ flags do nothing | **VISIBLE‑ONLY** |
+| almanac       | quests tab | ✅ tracks tier     | ❌ tier rewards never trigger | **VISIBLE‑ONLY** |
+| memoryweave   | **unreachable** | ✅ on prestige | ❌ perks declared but none read | **VISIBLE‑ONLY** (cosmetic perk list) |
+| boss          | always‑mounted overlay | ✅ tracks pending | ❌ weather modifiers never applied to chain rewards | **VISIBLE‑ONLY** |
+| apprentices   | **unreachable** | ✅ CLOSE_SEASON | ✅ idle income      | **DEAD** (no UI path to open the modal) |
+
+### What this means in plain English
+
+- **Apprentices is dead code.** The slice runs, the modal renders fine when force‑opened, but nothing in `ui.jsx` ever dispatches `OPEN_MODAL: apprentices`. Delete or surface it.
+- **Heirlooms, Mood, and Glyphs have real mechanical effects but no entry point.** I had to call `dispatch({type:'OPEN_MODAL', modal:'heirlooms'})` from devtools to see them. Old Coin (+10% coins on orders) was sitting in the collection unequipped during my entire playthrough.
+- **Achievements show 20 trophies with reward amounts you never receive.** The slice tracks the counters but never grants `coins/xp` when targets hit. This is the single most disappointing thing in the game right now — every progress bar is a lie.
+- **Almanac tier rewards are the same.** You can earn almanac XP from quests, climb tiers, and… nothing happens. No "claim" button anywhere I could find.
+- **Boss tracks weather but never applies it.** `state.weather` and `state.weatherTurnsLeft` get set, but `CHAIN_COLLECTED` doesn't read either field, so a "rainy season" is purely flavor text.
+- **Settings flags don't do anything.** Volume, reduce‑motion, etc. are persisted; no consumer.
+- **Memoryweave perks are listed but never applied.** "Quickfingers: drag chains 10% faster" — `GameScene.js` has no reference to a multiplier on drag speed.
+
+---
+
+## Part 2 — Brutal critiques of the core loop
+
+### 2.1 The first 3 minutes are a confused funnel
+
+A new player lands in **Town view** with 7 buildings visible, 5 of them locked behind levels they don't understand, and the only one they can afford (the Mill, 200◉ + 30 plank) requires **planks** which don't exist on the starting board. Planks are only produced as upgrades from chaining 3+ logs (which is itself never explained outside the first tutorial bubble).
+
+The progression chain a new player must intuit:
+> Drag logs → chain of 3+ produces planks → chain of 3+ planks produces beams → save 30 planks → afford mill → bakery (needs 10 stone) → mine biome (needs Lv 2) → grind stone → return to farm → build bakery → unlock crafting → craft bread → fill bread orders.
+
+Currently *zero of these dependencies are surfaced.* Bakery just shows "200◉ · 30 plank" with no hint that you need stone, no hint that stone is in the mine, no hint that mine is at L2, no hint that orders care about crafted goods.
+
+**Fix:** Add a "what unlocks next" panel — one line: "Need 10 stone → unlock the Mine at Level 2". Use the existing NPC bubble system to drop one hint per real milestone (level up, first plank, first stone in inventory).
+
+### 2.2 The board feels too small and the mechanic too quiet
+
+Screenshots `board-clean.png` and `board-mine.png` show the canvas rendering at roughly 640×360 inside a 1280×800 viewport. The Phaser scene's responsive logic isn't expanding to fill the available container. **The single most important visual element in your game is rendering at ~25% of the available area on desktop.**
+
+Beyond size: the chain visuals (orange line, gold ring) are tasteful but **the moment of harvest is tiny.** A 6‑chain rains the same little `+6 Hay ★ 2` floater as a 3‑chain. Match‑3s live or die on the juice of "the big one." Suggested:
+
+- Screen shake scaling with chain length.
+- A bigger flash / radial wipe when an upgrade tile lands (currently a small star icon).
+- Chain‑length combo counter that survives between matches (decays over 2–3 seconds) → multiplier on the next chain.
+
+### 2.3 The 8‑turn season is too short for real decision‑making
+
+`MAX_TURNS = 8` and you get one chain per turn. That's eight decisions per season, and 6/8 are just "find the longest chain on the board." Then a forced summary modal interrupts whatever you wanted to do. At present, a single play session feels like a tutorial that never ends.
+
+**Two options:**
+1. Lengthen the season to 12–15 turns so chains compound and you can actually deplete a resource type.
+2. Make turns *cost* something (stamina, daylight) and let players choose when to end them (tools, building actions).
+
+### 2.4 Leaving the board ends the season — without warning
+
+The reducer does this:
+```js
+if (state.view === "board" && next !== "board" && state.turnsUsed > 0 && !state.modal) {
+  return { ...state, modal: "season", pendingView: next, ... };
+}
+```
+A player tapping "Orders" mid‑session to remember what Tomas wanted **immediately gets a season‑end summary.** This is bad. Two safer patterns:
+
+- Allow free navigation; only end a season when turns are actually exhausted, **or** when the player presses a clear "End Season" button.
+- If you *want* leaving the board to be costly, gate it behind a confirm: "End your season early? You'll forfeit unused turns."
+
+I confirmed this bug in screenshots: every single "nav" screenshot I tried after one chain showed the season modal instead of the screen I asked for.
+
+### 2.5 The town view is mostly sky
+
+Look at any town screenshot — `nav-town.png` or `town-with-buildings.png`. The buildings are crammed into the bottom 30%, the sky/hills are 60% empty real estate, and there's no NPC activity, no road traffic, no animation. The screen does nothing visually. Consider:
+
+- Walking NPCs along the road, idling in front of their relevant building.
+- Smoke from the hearth/forge when active.
+- Day/night cycle tied to season turns (you already track turns).
+
+### 2.6 Resources outnumber consumers
+
+You have 20 resource tiers across two biomes. Of those:
+
+- **Used by orders:** hay, log, wheat, berry, egg, stone, ore, gold, gem (the `pool` arrays).
+- **Used by crafting:** flour, egg, jam, ingot, coke, plank, stone, gold, cutgem.
+- **Used only by buildings:** plank, stone, jam, ingot.
+
+That leaves **beam, grain, cobble, block, coke (only via chains), coal, cutgem** as either "you have to chain to unlock this but it's rarely consumed" or "produced but no consumer." Beam is the standout: it has `value: 7`, lovely art, and literally nothing in the game asks for it.
+
+**Fix:** Either delete the dead resource tiers or add late‑game buildings/recipes/orders that demand them. Right now every tile a player upgrades to a tier‑3 resource feels like progress, then sits in inventory rotting.
+
+---
+
+## Part 3 — Suggestions, ranked by ROI
+
+I'd do these in order. Each builds on the last.
+
+### Tier S — Do this week. Cheap, big payoff.
+
+1. **Connect the achievement rewards.** Three lines in `slice.js`: when a counter crosses target, dispatch the `reward.coins/xp`. A trophy that pays nothing is anti‑juice; a trophy that pays creates a positive feedback loop with no new system needed.
+2. **Surface heirlooms and mood.** Add bottom‑nav buttons or town‑side tiles. Both are wired and impactful — they just need a door. Bonus: the heirloom card art is already drawn.
+3. **Stop the season modal from ambushing navigation.** Either let players browse freely or add a confirm before ending the season. (Two‑line reducer change.)
+4. **Wire achievement → heirloom unlocks.** Right now only Old Coin and Seed Ring exist; you have art for 12 cards that say "locked." Trigger them off achievements or tier milestones. Suddenly trophies *mean* something.
+5. **Delete or use:** apprentices is unreachable code, settings flags, almanac unclaimable rewards, boss weather. Pick one path per item — the worst outcome is leaving them as half‑built scaffolding.
+
+### Tier A — Next sprint. The "actually a game" tier.
+
+6. **Crafted items satisfy orders.** Right now NPCs only ever ask for raw resources. If Mira is the Baker and her order is `8 hay`, why does she never ask for bread? Add an "advanced order" track that demands crafted recipes — gives crafting a purpose beyond the side coin payout it currently has.
+7. **Tutorial flow rewrite.** The current tutorial is 6 generic bubbles on first load and that's it. Replace with milestone‑triggered nudges: first level up → "Mine biome unlocks!", first 10 hay → "Try chaining 3+ for an upgrade!", first build → "Craft station! Tap the building to open recipes."
+8. **Visible loop signaling.** Floating XP numbers on chain. Cycling NPC requests in the HUD ("Mira wants 8 hay — 2/8"). A "next milestone" pip on the level bar.
+9. **Make seasons feel different.** You already track season for visual tint. Push it into mechanics: Spring = +20% chain length, Summer = orders pay 2×, Autumn = double upgrade rate, Winter = chains require 4+ instead of 3+. Currently the only mechanical difference is the long‑night threat which most players will never see.
+
+### Tier B — When the loop is solid.
+
+10. **Apprentices as offline catch‑up.** If you're keeping it, it's a perfect "come back tomorrow" hook for a casual mobile game — but only after the rest of the loop holds for 20+ minutes per session. Make hiring them require building the Inn, so it gives the Inn a purpose.
+11. **Boss = season climax.** Currently a vague always‑mounted overlay. Make Year 1 / Spring 4 trigger an explicit "Frostmaw approaches" event with a board modifier (e.g. "all chains require 5+ for two seasons"). Tie clearing the boss to a heirloom drop.
+12. **Memoryweave is your meta‑progression.** The slice already exists. Wire the perks into the actual loop: "Quickfingers" → reduce drag time threshold; "Fertile World" → +1 to farm pool; "Eternal Forge" → all builds 10% cheaper. Then prestige actually means something.
+13. **Resource pruning.** Cut beam, block, cobble (or invent late‑game uses). Fewer resources, deeper progression.
+
+### Tier C — Polish.
+
+14. Bigger board canvas on desktop (the current responsive logic clamps too aggressively — see `layoutDims()` in `GameScene.js:73`).
+15. Town animation (smoke, NPCs walking).
+16. Chain‑length juice (screen shake, radial flash, escalating SFX).
+17. A clearer inventory panel — show *which* resources have unmet orders vs. which are excess.
+
+---
+
+## Part 4 — A proposed cohesion strategy
+
+Right now, every feature was added in parallel. None of them know about each other. Here's a one‑paragraph "design pillar" that would tie things together without writing more systems:
+
+> **Each season is a small story.** You start with 3 NPC requests (orders), 1 daily challenge (quest), and 1 environmental modifier (weather/season). You play 12 turns, juggling chains to fill those needs while building toward a long‑term goal (next building, next heirloom, next biome unlock). At season end, you see the consequences: NPC moods shift, a heirloom is offered, an apprentice hires on, the map advances. **Every system already exists for this.** They just need to fire on the same turn boundary so the player feels them in concert instead of one at a time.
+
+Concretely: the season‑end summary should show **all** of these in one screen:
+
+- Stats (already there)
+- Mood deltas per NPC (mood data exists, never surfaced)
+- Heirloom drop (heirlooms exist, never auto‑offered)
+- Apprentice idle income (apprentices exist, unreachable)
+- Map node available (cartography exists, no obvious link)
+- Almanac tier reward (almanac exists, never claimed)
+- Memoryweave gain (memoryweave exists, abstract)
+
+That's six existing systems unified into one moment of "the world responded to my play." Nothing new. Just connect the wires.
+
+---
+
+## Part 5 — Files I'd touch first
+
+If I were given one day:
+
+1. `src/features/achievements/slice.js` — emit reward dispatches when targets hit.
+2. `src/ui.jsx:263` — add `heirlooms`, `mood` to `BottomNav.items` (or town‑side button cluster).
+3. `src/state.js:241` — kill the "leave board ends season" trap (or add confirmation).
+4. `src/features/apprentices/index.jsx` — either expose via nav or delete the slice.
+5. `src/features/almanac/index.jsx` — add a Claim button on tier rewards.
+6. `src/features/boss/slice.js` + `src/state.js` `CHAIN_COLLECTED` — read `state.weather` and apply the multiplier.
+7. `src/features/settings/index.jsx` — make at least the volume slider actually do something (`useAudio.js` exists), or hide the inert toggles.
+
+Total LoC: probably under 400. Player experience uplift: substantial.
+
+---
+
+## Closing
+
+You have an over‑built game with an under‑connected loop. The features aren't bad — many are genuinely interesting design ideas — but a feature the player never sees doesn't exist. The ROI of *connecting and surfacing* is dramatically higher than building anything new right now. Cut what you can't connect, surface what you can, and make the season summary the moment everything pays off in one big satisfying screen.
+
+The bones are good. The game is six wires away from being one.
