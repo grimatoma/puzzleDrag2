@@ -5,8 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>PuzzleDrag</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      html, body { margin: 0; padding: 0; background: #2a1d0f; min-height: 100%; }
+      @keyframes fadein { from { opacity: 0; } to { opacity: 1; } }
+      @keyframes bubblein { from { transform: translate(-50%, 16px); opacity: 0; } to { transform: translate(-50%, 0); opacity: 1; } }
+      .animate-fadein { animation: fadein .2s ease-out; }
+      .animate-bubblein { animation: bubblein .35s cubic-bezier(.34,1.56,.64,1); }
+      .line-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    </style>
   </head>
-  <body class="m-0 p-0">
+  <body>
     <div id="root"></div>
     <script type="module" src="/main.jsx"></script>
   </body>

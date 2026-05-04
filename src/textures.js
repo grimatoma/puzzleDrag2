@@ -86,7 +86,7 @@ export function drawTileIcon(ctx, key) {
         ctx.stroke();
       });
     }
-  } else if (key === "wood") {
+  } else if (key === "log") {
     ctx.fillStyle = "#8b5a2b";
     rr(ctx, -25, -13, 50, 27, 8);
     ctx.fill();
@@ -100,29 +100,6 @@ export function drawTileIcon(ctx, key) {
     ctx.strokeStyle = "#6a431f";
     ctx.lineWidth = 2;
     ctx.stroke();
-  } else if (key === "bird") {
-    ctx.fillStyle = "#d2965b";
-    ctx.beginPath();
-    ctx.ellipse(1, 4, 24, 18, -0.1, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.strokeStyle = "#78451f";
-    ctx.lineWidth = 4;
-    ctx.stroke();
-    ctx.fillStyle = "#f15c3b";
-    ctx.beginPath();
-    ctx.arc(-21, -8, 8, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = "#f2bd44";
-    ctx.beginPath();
-    ctx.moveTo(-29, -8);
-    ctx.lineTo(-41, -12);
-    ctx.lineTo(-29, -2);
-    ctx.closePath();
-    ctx.fill();
-    ctx.fillStyle = "#59341c";
-    ctx.beginPath();
-    ctx.ellipse(20, -5, 9, 17, -0.8, 0, Math.PI * 2);
-    ctx.fill();
   } else if (key === "egg") {
     ctx.fillStyle = "#fff7e5";
     ctx.beginPath();
@@ -149,7 +126,7 @@ export function drawTileIcon(ctx, key) {
     ctx.strokeStyle = "#555b61";
     ctx.lineWidth = 4;
     ctx.stroke();
-  } else if (key === "iron") {
+  } else if (key === "ore") {
     ctx.strokeStyle = "#e1e8ef";
     ctx.lineWidth = 12;
     ctx.beginPath();
@@ -197,6 +174,20 @@ export function drawTileIcon(ctx, key) {
     ctx.strokeStyle = "#946b11";
     ctx.lineWidth = 4;
     ctx.stroke();
+  } else {
+    // Generic glyph fallback for upper-tier resources (grain, flour, plank, beam, berry, jam, cobble, block, ingot, coke, cutgem, etc.)
+    let res = null;
+    for (const biome of Object.values(BIOMES)) {
+      res = biome.resources.find((r) => r.key === key);
+      if (res) break;
+    }
+    if (res) {
+      ctx.fillStyle = hex(res.dark);
+      ctx.font = 'bold 36px "Newsreader", "Times New Roman", serif';
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(res.glyph, 0, 2);
+    }
   }
 }
 
