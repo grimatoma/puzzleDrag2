@@ -21,6 +21,8 @@ export class GameScene extends Phaser.Scene {
     this.pathStars = [];
     this.pathNodeG = null;
     this.pendingUpgrades = [];
+    this._prevPathLen = 0;
+    this._prevStarGroups = 0;
     this.dragging = false;
     this.locked = false;
   }
@@ -275,57 +277,114 @@ export class GameScene extends Phaser.Scene {
   }
 
   redrawPath() {
-    this.pathLines.forEach((l) => l.clear());
+    const prevLen = this._prevPathLen;
+    const growing = this.path.length > prevLen;
+    this._prevPathLen = this.path.length;
+
     this.pathStars.forEach((s) => s.destroy());
     this.pathStars = [];
+
     for (let i = 1; i < this.path.length; i++) {
+      const a = this.path[i - 1];
+      const b = this.path[i];
       let g = this.pathLines[i - 1];
       if (!g) {
         g = this.add.graphics().setDepth(8);
         this.pathLines[i - 1] = g;
       }
-      const a = this.path[i - 1];
-      const b = this.path[i];
-      g.clear();
-      // Outer glow
-      g.lineStyle(22 * this.tileScale, 0xffd248, 0.22);
-      g.beginPath(); g.moveTo(a.x, a.y); g.lineTo(b.x, b.y); g.strokePath();
-      // Main line
-      g.lineStyle(9 * this.tileScale, 0xff6d00, 1);
-      g.beginPath(); g.moveTo(a.x, a.y); g.lineTo(b.x, b.y); g.strokePath();
-      // Bright core highlight
-      g.lineStyle(3 * this.tileScale, 0xfff4c2, 0.85);
-      g.beginPath(); g.moveTo(a.x, a.y); g.lineTo(b.x, b.y); g.strokePath();
+      if (growing && i === this.path.length - 1) {
+        // Newest segment: grow it from a toward b, then pulse
+        this.tweens.killTweensOf(g);
+        g.clear();
+        const ax = a.x, ay = a.y, bx = b.x, by = b.y;
+        const obj = { t: 0 };
+        this.tweens.add({
+          targets: obj, t: 1, duration: 160, ease: "Quad.Out",
+          onUpdate: () => {
+            const mx = ax + (bx - ax) * obj.t;
+            const my = ay + (by - ay) * obj.t;
+            g.clear();
+            this._drawSegment(g, ax, ay, mx, my);
+          },
+          onComplete: () => {
+            g.clear(); this._drawSegment(g, ax, ay, bx, by);
+            this.tweens.add({ targets: g, alpha: 0.78, yoyo: true, repeat: -1, duration: 680, ease: "Sine.InOut" });
+          },
+        });
+      } else {
+        g.clear();
+        this._drawSegment(g, a.x, a.y, b.x, b.y);
+        if (!this.tweens.isTweening(g)) {
+          this.tweens.add({ targets: g, alpha: 0.78, yoyo: true, repeat: -1, duration: 680, ease: "Sine.InOut" });
+        }
+      }
     }
     this.pathLines.forEach((g, i) => g.setVisible(i < this.path.length - 1));
 
-    // Draw nodes (dots) at each tile in the path
+    // Expanding ring burst at the newly added tile
+    if (growing && this.path.length > 0) {
+      const nt = this.path[this.path.length - 1];
+      const ring = this.add.graphics().setDepth(10);
+      const ro = { r: 5 * this.tileScale, a: 0.9 };
+      this.tweens.add({
+        targets: ro, r: 28 * this.tileScale, a: 0, duration: 340, ease: "Quad.Out",
+        onUpdate: () => {
+          ring.clear();
+          ring.lineStyle(2.5 * this.tileScale, 0xffd248, ro.a);
+          ring.strokeCircle(nt.x, nt.y, ro.r);
+        },
+        onComplete: () => ring.destroy(),
+      });
+    }
+
+    // Static node dots
     if (!this.pathNodeG) this.pathNodeG = this.add.graphics().setDepth(9);
     this.pathNodeG.clear();
     const nr = 7 * this.tileScale;
-    this.path.forEach((t, i) => {
-      // Outer ring
+    this.path.forEach((t) => {
       this.pathNodeG.fillStyle(0xffd248, 0.55);
       this.pathNodeG.fillCircle(t.x, t.y, nr * 1.6);
-      // Inner dot
       this.pathNodeG.fillStyle(0xff6d00, 1);
       this.pathNodeG.fillCircle(t.x, t.y, nr);
-      // Bright center
       this.pathNodeG.fillStyle(0xfff4c2, 0.9);
       this.pathNodeG.fillCircle(t.x, t.y, nr * 0.4);
     });
 
     const next = this.path.length ? this.nextResource(this.path[0].res) : null;
+    const prevGroups = this._prevStarGroups;
+    let groupCount = 0;
     if (next) {
       const off = 24 * this.tileScale;
       for (let i = UPGRADE_EVERY - 1; i < this.path.length; i += UPGRADE_EVERY) {
         const t = this.path[i];
         const star = this.add.image(t.x + off, t.y - off, "spark").setScale(0.72 * this.tileSpriteScale).setDepth(12);
-        const prev = this.add.image(t.x + off, t.y + off * 0.85, `tile_${next.key}`).setScale(0.32 * this.tileSpriteScale).setDepth(12);
-        this.pathStars.push(star, prev);
+        const preview = this.add.image(t.x + off, t.y + off * 0.85, `tile_${next.key}`).setScale(0.32 * this.tileSpriteScale).setDepth(12);
+        if (groupCount >= prevGroups) {
+          // Pop-in + gentle sway for new star
+          star.setScale(0).setAngle(-20);
+          this.tweens.add({ targets: star, scale: 0.72 * this.tileSpriteScale, angle: 15, duration: 320, ease: "Back.Out" });
+          this.time.delayedCall(320, () => {
+            if (!star.active) return;
+            this.tweens.add({ targets: star, angle: -10, yoyo: true, repeat: -1, duration: 950, ease: "Sine.InOut" });
+          });
+          preview.setScale(0).setAlpha(0);
+          this.tweens.add({ targets: preview, scale: 0.32 * this.tileSpriteScale, alpha: 1, duration: 260, ease: "Back.Out", delay: 110 });
+        }
+        this.pathStars.push(star, preview);
+        groupCount++;
       }
     }
+    this._prevStarGroups = groupCount;
     this.path.forEach((t) => t.sprite.setDepth(7));
+  }
+
+  _drawSegment(g, ax, ay, bx, by) {
+    g.lineStyle(22 * this.tileScale, 0xffd248, 0.22);
+    g.beginPath(); g.moveTo(ax, ay); g.lineTo(bx, by); g.strokePath();
+    g.lineStyle(9 * this.tileScale, 0xff6d00, 1);
+    g.beginPath(); g.moveTo(ax, ay); g.lineTo(bx, by); g.strokePath();
+    g.lineStyle(3 * this.tileScale, 0xfff4c2, 0.85);
+    g.beginPath(); g.moveTo(ax, ay); g.lineTo(bx, by); g.strokePath();
   }
 
   endPath() {
@@ -339,7 +398,9 @@ export class GameScene extends Phaser.Scene {
   clearPath(deselect = true) {
     if (deselect) this.path.forEach((t) => t.setSelected(false));
     this.path = [];
-    this.pathLines.forEach((l) => l.clear());
+    this._prevPathLen = 0;
+    this._prevStarGroups = 0;
+    this.pathLines.forEach((l) => { this.tweens.killTweensOf(l); l.clear(); });
     this.pathStars.forEach((s) => s.destroy());
     this.pathStars = [];
     if (this.pathNodeG) { this.pathNodeG.clear(); }
@@ -373,6 +434,8 @@ export class GameScene extends Phaser.Scene {
     this.pathLines = [];
     this.pathStars = [];
     this.path = [];
+    this._prevPathLen = 0;
+    this._prevStarGroups = 0;
     this.time.delayedCall(300, () => this.collapseBoard());
   }
 
