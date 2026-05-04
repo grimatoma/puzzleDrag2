@@ -274,17 +274,21 @@ function BiomeSwitcher({ biomeKey, level, onSwitch }) {
 
 // ─── Bottom nav ───────────────────────────────────────────────────────────
 
-export function BottomNav({ view, onChange }) {
+export function BottomNav({ view, modal, dispatch }) {
   const items = [
-    { key: "board", label: "◳ Board" },
-    { key: "orders", label: "📋 Orders" },
-    { key: "town", label: "⌂ Town" },
-    { key: "inventory", label: "🎒 Inventory" },
-    { key: "quests", label: "📜 Quests" },
-    { key: "crafting", label: "🔨 Craft" },
+    { key: "board",        label: "◳ Board" },
+    { key: "orders",       label: "📋 Orders" },
+    { key: "town",         label: "⌂ Town" },
+    { key: "inventory",    label: "🎒 Inventory" },
+    { key: "quests",       label: "📜 Quests" },
+    { key: "crafting",     label: "🔨 Craft" },
     { key: "achievements", label: "🏆 Trophies" },
-    { key: "cartography", label: "🗺 Map" },
+    { key: "cartography",  label: "🗺 Map" },
+    { key: "heirlooms",    label: "✨ Heirlooms", modal: "heirlooms" },
+    { key: "mood",         label: "💞 Townsfolk", modal: "mood" },
+    { key: "apprentices",  label: "🧑‍🌾 Helpers",  modal: "apprentices" },
   ];
+  const activeKey = modal ? (items.find((i) => i.modal === modal)?.key ?? view) : view;
   return (
     <div
       className="bg-[#2b2218]/95 border-2 border-[#f7e2b6] rounded-2xl p-1 flex flex-wrap gap-1 shadow-2xl max-w-[92vw] justify-center"
@@ -292,8 +296,14 @@ export function BottomNav({ view, onChange }) {
       {items.map((it) => (
         <button
           key={it.key}
-          onClick={() => onChange(it.key)}
-          className={`text-[11px] px-2.5 py-1.5 rounded-xl font-bold transition-colors whitespace-nowrap ${view === it.key ? "bg-[#d6612a] text-white" : "bg-transparent text-[#f7e2b6] hover:bg-white/10"}`}
+          onClick={() => {
+            if (it.modal) {
+              dispatch({ type: "OPEN_MODAL", modal: it.modal });
+            } else {
+              dispatch({ type: "SET_VIEW", view: it.key });
+            }
+          }}
+          className={`text-[11px] px-2.5 py-1.5 rounded-xl font-bold transition-colors whitespace-nowrap ${activeKey === it.key ? "bg-[#d6612a] text-white" : "bg-transparent text-[#f7e2b6] hover:bg-white/10"}`}
         >
           {it.label}
         </button>

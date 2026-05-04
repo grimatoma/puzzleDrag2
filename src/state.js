@@ -240,10 +240,6 @@ function coreReducer(state, action) {
     }
     case "SET_VIEW": {
       const next = action.view;
-      // Leaving the board mid-session ends the session (pop summary modal first)
-      if (state.view === "board" && next !== "board" && state.turnsUsed > 0 && !state.modal) {
-        return { ...state, modal: "season", pendingView: next, craftingTab: action.craftingTab ?? state.craftingTab };
-      }
       return { ...state, view: next, craftingTab: action.craftingTab ?? (next === "crafting" ? state.craftingTab : null) };
     }
     case "OPEN_MODAL":
