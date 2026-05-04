@@ -1,4 +1,19 @@
 import { ACHIEVEMENTS, BIOMES } from "../../constants.js";
+import { HEIRLOOM_MAP } from "../heirlooms/data.js";
+
+// Maps achievement IDs to the heirloom they unlock on first completion.
+const ACHIEVEMENT_HEIRLOOM_UNLOCK = {
+  harvest_100:  "harvestmoon",
+  build_2:      "forgemark",
+  build_5:      "stoneheart",
+  seasons_4:    "windsong",
+  harvest_1000: "lumberknot",
+  chain_6:      "embershard",
+  orders_5:     "chimes",
+  chain_10:     "tinder",
+  build_7:      "palecrown",
+  seasons_16:   "cartographer",
+};
 
 export const initial = {
   trophies: {},
@@ -29,16 +44,36 @@ function getMetric(state, eventKey) {
 
 function checkTrophies(state) {
   const trophies = { ...state.trophies };
+  let coins = state.coins || 0;
+  let xp = state.xp || 0;
+  let heirloomsOwned = state.heirloomsOwned || [];
+  let bubble = state.bubble;
   let changed = false;
+
   for (const a of ACHIEVEMENTS) {
-    if (trophies[a.id]) continue; // already unlocked or claimed
+    if (trophies[a.id] === "claimed") continue;
     const val = getMetric(state, a.eventKey);
-    if (val >= a.target) {
-      trophies[a.id] = true;
+    if (val >= a.target && !trophies[a.id]) {
+      // Auto-grant reward immediately on unlock
+      trophies[a.id] = "claimed";
+      coins += (a.reward.coins || 0);
+      xp += (a.reward.xp || 0);
+
+      // Unlock mapped heirloom
+      const heirloomId = ACHIEVEMENT_HEIRLOOM_UNLOCK[a.id];
+      if (heirloomId && !heirloomsOwned.includes(heirloomId)) {
+        heirloomsOwned = [...heirloomsOwned, heirloomId];
+        const h = HEIRLOOM_MAP[heirloomId];
+        bubble = { id: Date.now(), npc: "mira", text: `✨ Heirloom unlocked: ${h ? h.name : heirloomId}!`, ms: 2800 };
+      } else {
+        bubble = { id: Date.now(), npc: "wren", text: `🏆 ${a.name}! +${a.reward.coins || 0}◉`, ms: 2000 };
+      }
       changed = true;
     }
   }
-  return changed ? { ...state, trophies } : state;
+
+  if (!changed) return state;
+  return { ...state, trophies, coins, xp, heirloomsOwned, bubble };
 }
 
 export function reduce(state, action) {
@@ -97,21 +132,6 @@ export function reduce(state, action) {
     case "CRAFTING/CRAFT_RECIPE": {
       const next = { ...state, totalCrafted: (state.totalCrafted || 0) + 1 };
       return checkTrophies(next);
-    }
-
-    case "ACHIEVEMENTS/CLAIM": {
-      const { id } = action;
-      const trophyState = state.trophies[id];
-      if (!trophyState || trophyState === "claimed") return state;
-      const a = ACHIEVEMENTS.find((x) => x.id === id);
-      if (!a) return state;
-      const trophies = { ...state.trophies, [id]: "claimed" };
-      return {
-        ...state,
-        trophies,
-        coins: (state.coins || 0) + (a.reward.coins || 0),
-        xp: (state.xp || 0) + (a.reward.xp || 0),
-      };
     }
 
     default:

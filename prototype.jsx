@@ -176,7 +176,7 @@ export default function App() {
         {/* Bottom nav — hidden on board view */}
         {state.view !== "board" && (
           <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-30">
-            <BottomNav view={state.view} onChange={(v) => dispatch({ type: "SET_VIEW", view: v })} />
+            <BottomNav view={state.view} modal={state.modal} dispatch={dispatch} />
           </div>
         )}
 

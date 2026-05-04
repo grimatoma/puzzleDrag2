@@ -25,22 +25,19 @@ function getMetricValue(state, eventKey) {
 
 // ─── Trophy card ─────────────────────────────────────────────────────────────
 
-function TrophyCard({ achievement, current, trophyState, dispatch }) {
-  const { id, name, desc, icon, target, reward } = achievement;
+function TrophyCard({ achievement, current, trophyState }) {
+  const { name, desc, icon, target, reward } = achievement;
   const unlocked = !!trophyState;
   const claimed  = trophyState === "claimed";
-  const claimable = unlocked && !claimed;
   const pct = Math.min(100, (current / target) * 100);
 
   let cardBg = "bg-[#3a2715]";
   let borderCls = "border-[#c5a87a]/50";
-  if (claimed)   { cardBg = "bg-[#91bf24]/30"; borderCls = "border-[#91bf24]/60"; }
-  else if (claimable) { cardBg = "bg-[#5b3b20]"; borderCls = "border-[#f7c254]"; }
+  if (claimed)        { cardBg = "bg-[#91bf24]/30"; borderCls = "border-[#91bf24]/60"; }
   else if (unlocked)  { cardBg = "bg-[#5b3b20]"; borderCls = "border-[#c5a87a]"; }
 
   return (
-    <div className={`${cardBg} border ${borderCls} rounded-xl p-2 flex gap-2 items-center min-h-[72px] transition-colors`}
-      style={claimable ? { boxShadow: "0 0 8px rgba(247,194,84,.35)" } : {}}>
+    <div className={`${cardBg} border ${borderCls} rounded-xl p-2 flex gap-2 items-center min-h-[72px] transition-colors`}>
       {/* Icon */}
       <div className={`text-[22px] w-8 flex-shrink-0 text-center leading-none ${!unlocked ? "grayscale opacity-40" : ""}`}>
         {unlocked ? icon : "🔒"}
@@ -67,21 +64,13 @@ function TrophyCard({ achievement, current, trophyState, dispatch }) {
         </div>
       </div>
 
-      {/* Right: reward + claim */}
+      {/* Right: reward */}
       <div className="flex flex-col items-end gap-1 flex-shrink-0">
         <div className="text-[9px] text-[#c8923a] font-bold whitespace-nowrap leading-tight">
           {reward.coins ? `+${reward.coins}◉` : ""}{reward.coins && reward.xp ? " " : ""}{reward.xp ? `+${reward.xp}xp` : ""}
         </div>
-        {claimable && (
-          <button
-            onClick={() => dispatch({ type: "ACHIEVEMENTS/CLAIM", id })}
-            className="text-[9px] font-bold px-2 py-1 rounded-lg bg-[#f7c254] hover:bg-[#ffe07a] text-[#5a3a20] border border-[#d4a030] transition-colors"
-          >
-            CLAIM
-          </button>
-        )}
         {claimed && (
-          <div className="text-[9px] font-bold text-[#91bf24]">✓ Claimed</div>
+          <div className="text-[9px] font-bold text-[#91bf24]">✓ Done</div>
         )}
       </div>
     </div>
@@ -185,7 +174,6 @@ export default function AchievementsScreen({ state, dispatch }) {
                       achievement={a}
                       current={getMetricValue(state, a.eventKey)}
                       trophyState={trophies[a.id]}
-                      dispatch={dispatch}
                     />
                   ))}
                 </div>

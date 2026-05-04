@@ -1,3 +1,7 @@
+import { BIOMES } from "../../constants.js";
+
+const ALL_RESOURCES = [...BIOMES.farm.resources, ...BIOMES.mine.resources];
+
 const BOSS_META = {
   frostmaw: {
     name: "The Frostmaw",
@@ -200,6 +204,28 @@ export function reduce(state, action) {
           if (newProgress >= next.boss.targetCount) {
             // Won!
             return reduce(next, { type: "BOSS/RESOLVE", won: true });
+          }
+        }
+      }
+
+      // Apply active weather bonus before decrementing turns
+      if (next.weather && (next.weatherTurnsLeft || 0) > 0) {
+        const wKey = next.weather.key;
+        const chainKey = payload.key || "";
+        const gained = payload.gained || 0;
+
+        if (wKey === "rain" && chainKey === "berry" && gained > 0) {
+          // Rain: double berry chain yield
+          const inv = { ...(next.inventory || {}) };
+          inv.berry = (inv.berry || 0) + gained;
+          next = { ...next, inventory: inv };
+        } else if (wKey === "harvest_moon" && (payload.upgrades || 0) > 0) {
+          // Harvest Moon: +1 bonus upgraded resource per chain that produced upgrades
+          const baseRes = ALL_RESOURCES.find((r) => r.key === chainKey);
+          if (baseRes?.next) {
+            const inv = { ...(next.inventory || {}) };
+            inv[baseRes.next] = (inv[baseRes.next] || 0) + 1;
+            next = { ...next, inventory: inv };
           }
         }
       }

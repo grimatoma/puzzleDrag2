@@ -21,7 +21,10 @@ export function useAudio(state) {
     const s = state || {};
 
     // turnsUsed increase → chain was collected
-    if ((s.turnsUsed || 0) > (p.turnsUsed || 0)) play('chainCollect');
+    if ((s.turnsUsed || 0) > (p.turnsUsed || 0)) {
+      play('chainCollect');
+      if (s?.settings?.hapticsOn && navigator.vibrate) navigator.vibrate(40);
+    }
 
     // level increase → level up fanfare
     if ((s.level || 0) > (p.level || 0)) play('levelUp');
