@@ -29,21 +29,21 @@ I traced every action type, every state field, and every consumer. Verdict per f
 | crafting      | nav        | ✅ inv/coin        | ✅ produces items   | **WIRED** (but items don't fill orders) |
 | orders        | nav + side panel | ✅ TURN_IN_ORDER | ✅ coin + xp        | **WIRED** (the actual game) |
 | quests        | nav        | ✅ chains/orders/build/coins | ✅ coin + almanacXp + tools | **WIRED** |
-| heirlooms     | **unreachable** | ✅ many hooks  | ✅ +10% coin, +5 hay/season etc. | **WIRED but invisible** |
-| mood          | **unreachable** | ✅ TURN_IN_ORDER | ✅ ×0.7–×1.5 reward modifier | **WIRED but invisible** |
+| heirlooms     | BottomNav *(PR #50)* | ✅ many hooks  | ✅ +10% coin, +5 hay/season etc. | **WIRED** *(PR #50)* |
+| mood          | BottomNav *(PR #50)* | ✅ TURN_IN_ORDER | ✅ ×0.7–×1.5 reward modifier | **WIRED** *(PR #50)* |
 | beasts        | town header button | ✅ CLOSE_SEASON | ✅ resource bonus   | **WIRED** (but offers come at seasons only) |
 | longnight     | auto‑modal at year boundary | ✅ winter trigger | ✅ can destroy a building | **WIRED but rarely seen** |
 | cartography   | nav        | ✅ map node data   | ✅ unlocks feed heirloom slots | **WIRED** (thin) |
 | festivals     | settings tab | ✅ season events  | ✅ market items     | **WIRED but buried** |
 | glyphs        | **unreachable** | ✅ 12% chain proc | ✅ chain bonuses    | **WIRED but invisible** |
 | tutorial      | auto on first board | —          | n/a (UI only)       | WIRED |
-| achievements  | nav        | ✅ stats           | ❌ rewards never claimed | **VISIBLE‑ONLY** (decoration) |
+| achievements  | nav        | ✅ stats           | ✅ rewards auto-granted on unlock | **WIRED** *(PR #50)* |
 | inventory     | nav        | —                  | n/a                 | VISIBLE‑ONLY (read‑only mirror) |
 | settings      | menu       | —                  | ❌ flags do nothing | **VISIBLE‑ONLY** |
 | almanac       | quests tab | ✅ tracks tier     | ❌ tier rewards never trigger | **VISIBLE‑ONLY** |
 | memoryweave   | **unreachable** | ✅ on prestige | ❌ perks declared but none read | **VISIBLE‑ONLY** (cosmetic perk list) |
-| boss          | always‑mounted overlay | ✅ tracks pending | ❌ weather modifiers never applied to chain rewards | **VISIBLE‑ONLY** |
-| apprentices   | **unreachable** | ✅ CLOSE_SEASON | ✅ idle income      | **DEAD** (no UI path to open the modal) |
+| boss          | always‑mounted overlay | ✅ tracks pending | ✅ rain/harvest_moon bonuses applied in CHAIN_COLLECTED *(PR #50)*; drought/frost (board-level) still pending | **PARTIAL** *(PR #50)* |
+| apprentices   | BottomNav *(PR #50)* | ✅ CLOSE_SEASON | ✅ idle income      | **WIRED** *(PR #50)* |
 
 ### What this means in plain English
 
@@ -129,13 +129,17 @@ That leaves **beam, grain, cobble, block, coke (only via chains), coal, cutgem**
 
 I'd do these in order. Each builds on the last.
 
-### Tier S — Do this week. Cheap, big payoff.
+### Tier S — Do this week. Cheap, big payoff. ✅ *Done 2026-05-04 (PR #50)*
 
-1. **Connect the achievement rewards.** Three lines in `slice.js`: when a counter crosses target, dispatch the `reward.coins/xp`. A trophy that pays nothing is anti‑juice; a trophy that pays creates a positive feedback loop with no new system needed.
-2. **Surface heirlooms and mood.** Add bottom‑nav buttons or town‑side tiles. Both are wired and impactful — they just need a door. Bonus: the heirloom card art is already drawn.
-3. **Stop the season modal from ambushing navigation.** Either let players browse freely or add a confirm before ending the season. (Two‑line reducer change.)
-4. **Wire achievement → heirloom unlocks.** Right now only Old Coin and Seed Ring exist; you have art for 12 cards that say "locked." Trigger them off achievements or tier milestones. Suddenly trophies *mean* something.
-5. **Delete or use:** apprentices is unreachable code, settings flags, almanac unclaimable rewards, boss weather. Pick one path per item — the worst outcome is leaving them as half‑built scaffolding.
+1. ✅ **Connect the achievement rewards.** `checkTrophies` in `achievements/slice.js` now auto-grants `coins+xp` and marks trophies as `"claimed"` the moment the target is crossed. A Wren/Mira bubble fires on each unlock. Manual CLAIM button removed from the UI.
+2. ✅ **Surface heirlooms and mood.** `BottomNav` now includes `✨ Heirlooms`, `💞 Townsfolk`, and `🧑‍🌾 Helpers` buttons that dispatch `OPEN_MODAL` directly. The component now accepts `dispatch` instead of `onChange` so modal and view items are handled uniformly.
+3. ✅ **Stop the season modal from ambushing navigation.** The `SET_VIEW` reducer no longer intercepts mid-session navigation. Players may freely browse Orders/Town/Quests; the season summary only fires when all 8 turns are exhausted via `CHAIN_COLLECTED`.
+4. ✅ **Wire achievement → heirloom unlocks.** `ACHIEVEMENT_HEIRLOOM_UNLOCK` map in `achievements/slice.js` wires 10 achievements to specific heirlooms (e.g. chain_6 → Ember Shard, orders_5 → Chimes, build_7 → Pale Crown). Unlock fires alongside the reward grant and announces via NPC bubble.
+5. ✅ **Delete or use (per-item resolution):**
+   - *Apprentices* — surfaced via `🧑‍🌾 Helpers` in BottomNav; the existing modal now has a door.
+   - *Settings flags* — `sfxOn`/`musicOn` already wired via `useAudio.js`; `hapticsOn` now calls `navigator.vibrate(40)` on chain collect.
+   - *Almanac unclaimable rewards* — Claim button was already wired in `quests/index.jsx` / `QUESTS/CLAIM_ALMANAC`; no change needed.
+   - *Boss weather* — `rain` doubles berry-chain yield and `harvest_moon` grants +1 upgraded resource in `boss/slice.js` `CHAIN_COLLECTED`; `drought`/`frost` are board-level spawn-rate changes, deferred to Tier A.
 
 ### Tier A — Next sprint. The "actually a game" tier.
 
@@ -180,19 +184,15 @@ That's six existing systems unified into one moment of "the world responded to m
 
 ---
 
-## Part 5 — Files I'd touch first
+## Part 5 — Files I'd touch first ✅ *All done (PR #50)*
 
-If I were given one day:
-
-1. `src/features/achievements/slice.js` — emit reward dispatches when targets hit.
-2. `src/ui.jsx:263` — add `heirlooms`, `mood` to `BottomNav.items` (or town‑side button cluster).
-3. `src/state.js:241` — kill the "leave board ends season" trap (or add confirmation).
-4. `src/features/apprentices/index.jsx` — either expose via nav or delete the slice.
-5. `src/features/almanac/index.jsx` — add a Claim button on tier rewards.
-6. `src/features/boss/slice.js` + `src/state.js` `CHAIN_COLLECTED` — read `state.weather` and apply the multiplier.
-7. `src/features/settings/index.jsx` — make at least the volume slider actually do something (`useAudio.js` exists), or hide the inert toggles.
-
-Total LoC: probably under 400. Player experience uplift: substantial.
+1. ✅ `src/features/achievements/slice.js` — auto-grants rewards in `checkTrophies`; `ACHIEVEMENT_HEIRLOOM_UNLOCK` map fires heirloom unlocks.
+2. ✅ `src/ui.jsx` — `BottomNav` refactored to accept `dispatch`; added `heirlooms`, `mood`, and `apprentices` modal-opening items.
+3. ✅ `src/state.js:241` — navigation trap removed; `SET_VIEW` is now a straight state swap.
+4. ✅ `src/features/apprentices/index.jsx` — exposed via `🧑‍🌾 Helpers` nav item; no code deleted.
+5. ✅ `src/features/almanac/index.jsx` — Claim button was already wired; confirmed no change needed.
+6. ✅ `src/features/boss/slice.js` — imports `BIOMES`; applies `rain` (×2 berry) and `harvest_moon` (+1 upgrade) bonuses in `CHAIN_COLLECTED`.
+7. ✅ `src/audio/useAudio.js` — `hapticsOn` wired to `navigator.vibrate(40)` on chain collect.
 
 ---
 
