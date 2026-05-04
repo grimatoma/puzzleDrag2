@@ -195,16 +195,16 @@ export default function AchievementsScreen({ state, dispatch }) {
         </div>
       ) : (
         <div className="flex-1 flex flex-col overflow-hidden pb-2">
-          {/* Scrollable resource strip */}
+          {/* Resource strip */}
           <div
-            className="flex-1 overflow-x-auto overflow-y-hidden"
+            className="flex-1 overflow-y-auto overflow-x-hidden"
             style={{ scrollbarWidth: "none", WebkitOverflowScrolling: "touch" }}
           >
-            <div className="flex gap-1.5 px-2 py-1.5 h-full" style={{ minWidth: "max-content" }}>
+            <div className="flex flex-wrap gap-1.5 px-2 py-1.5">
               {/* Farm resources */}
               <div className="flex flex-col gap-1 justify-center">
                 <div className="text-[9px] text-[#c8923a] font-bold uppercase tracking-widest px-0.5">Farm</div>
-                <div className="flex gap-1.5">
+                <div className="flex flex-wrap gap-1.5">
                   {BIOMES.farm.resources.map((r) => (
                     <ResourceChip key={r.key} resource={r} count={collected[r.key] || 0} />
                   ))}
@@ -215,7 +215,7 @@ export default function AchievementsScreen({ state, dispatch }) {
               {/* Mine resources */}
               <div className="flex flex-col gap-1 justify-center">
                 <div className="text-[9px] text-[#c8923a] font-bold uppercase tracking-widest px-0.5">Mine</div>
-                <div className="flex gap-1.5">
+                <div className="flex flex-wrap gap-1.5">
                   {BIOMES.mine.resources.map((r) => (
                     <ResourceChip key={r.key} resource={r} count={collected[r.key] || 0} />
                   ))}

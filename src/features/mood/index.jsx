@@ -46,7 +46,7 @@ function GiftPicker({ npcKey, inventory, dispatch, onClose }) {
   }
 
   return (
-    <div className="mt-1 flex flex-wrap gap-1 overflow-x-auto pb-1">
+    <div className="mt-1 flex flex-wrap gap-1 pb-1">
       {items.map((r) => {
         const isFav = r.key === fav.favorite;
         const isDislike = r.key === fav.dislike;

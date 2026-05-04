@@ -58,14 +58,14 @@ function AlmanacTierCard({ idx, tierDef, almanacXp, almanacClaimed, dispatch }) 
 
   return (
     <div
-      className={`flex-shrink-0 flex flex-col items-center gap-1.5 p-2 rounded-xl border-2 ${
+      className={`flex flex-col items-center gap-1.5 p-2 rounded-xl border-2 ${
         claimed
           ? "bg-[#c5a87a]/40 border-[#c5a87a]"
           : claimable
           ? "bg-[#f6efe0] border-[#d6612a]"
           : "bg-[#3a2715]/60 border-[#5a3a20]"
       }`}
-      style={{ width: 90, minWidth: 90 }}
+      style={{ width: 90 }}
     >
       <div className="text-[11px] font-bold text-[#f8e7c6]">Tier {tier}</div>
       <div className="text-[20px] leading-none">{claimed ? "✓" : claimable ? icon : "🔒"}</div>
@@ -156,7 +156,7 @@ export default function QuestsScreen({ state, dispatch, initialTab }) {
           </div>
           {/* Tier strip */}
           <div
-            className="flex gap-2 overflow-x-auto pb-1"
+            className="flex flex-wrap gap-2 pb-1 overflow-y-auto"
             style={{ scrollbarWidth: "none", WebkitOverflowScrolling: "touch" }}
           >
             {ALMANAC_TIERS.map((tierDef, idx) => (
