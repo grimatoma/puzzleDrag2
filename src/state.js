@@ -116,6 +116,14 @@ export function initialState() {
   // Hydrate from save if present, but always force board view + clear modals on boot
   const saved = loadSavedState();
   if (saved) {
+    // Advance orderIdSeq past any IDs already in saved orders so new replacements
+    // never collide with existing ones (orderIdSeq resets to 1 on each module load).
+    if (Array.isArray(saved.orders)) {
+      for (const o of saved.orders) {
+        const n = parseInt((o.id || '').slice(1), 10);
+        if (!isNaN(n) && n >= orderIdSeq) orderIdSeq = n + 1;
+      }
+    }
     return { ...fresh, ...saved, view: "town", turnsUsed: 0, modal: null, bubble: null, pendingView: null,
       seasonStats: { harvests: 0, upgrades: 0, ordersFilled: 0, coins: 0 } };
   }
