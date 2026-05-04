@@ -4,26 +4,35 @@ import { resourceByKey, xpForLevel } from "./state.js";
 import { seasonIndexForTurns } from "./utils.js";
 
 const TOOL_DEFS = [
-  { key: "clear", icon: "✕", name: "Clear" },
-  { key: "basic", icon: "+", name: "+Basic" },
-  { key: "rare", icon: "★", name: "+Rare" },
-  { key: "shuffle", icon: "↻", name: "Shuffle" },
+  { key: "clear", icon: "⚔", name: "Scythe" },
+  { key: "basic", icon: "+", name: "Seedpack" },
+  { key: "rare", icon: "★", name: "Lockbox" },
+  { key: "shuffle", icon: "↻", name: "Reshuffle Horn" },
 ];
 
 // ─── HUD (top bar) ─────────────────────────────────────────────────────────
 
-export function Hud({ state }) {
-  const { coins, level, xp, turnsUsed } = state;
+export function Hud({ state, dispatch }) {
+  const { coins, level, xp, turnsUsed, built } = state;
   const seasonIdx = seasonIndexForTurns(turnsUsed);
   const season = SEASONS[seasonIdx];
   const xpNeed = xpForLevel(level);
   const xpPct = Math.min(100, (xp / xpNeed) * 100);
   const turnsLeft = MAX_TURNS - turnsUsed;
+  const buildingCount = Object.keys(built || {}).length;
   return (
     <div className="flex items-center gap-2 px-3 py-2 landscape:max-[900px]:py-1 landscape:max-[900px]:px-2 landscape:max-[900px]:gap-1.5 bg-[#5b3b20] border-b-2 border-[#2a1d0f] text-[#6a4b31] flex-wrap">
+      <button
+        onClick={() => dispatch({ type: "OPEN_MODAL", modal: "menu" })}
+        className="w-8 h-8 landscape:max-[900px]:w-6 landscape:max-[900px]:h-6 rounded-lg bg-[#f6efe0] border-2 border-[#b28b62] grid place-items-center text-[#6a4b31] font-bold text-[18px] landscape:max-[900px]:text-[13px] flex-shrink-0"
+      >≡</button>
       <Pill>
         <span className="w-5 h-5 rounded-full bg-[#ffc239] grid place-items-center text-[#7a5638] text-[12px] font-bold leading-none">$</span>
         <span className="font-bold text-[15px]">{coins.toLocaleString()}</span>
+      </Pill>
+      <Pill>
+        <span className="font-bold text-[14px]">⌂</span>
+        <span className="font-bold text-[14px]">{buildingCount}</span>
       </Pill>
       <SeasonBar season={season} turnsUsed={turnsUsed} />
       <div className="text-[#f8e7c6] text-[12px] font-bold whitespace-nowrap">{turnsLeft} left</div>
@@ -213,14 +222,22 @@ export function BottomNav({ view, onChange }) {
   const items = [
     { key: "board", label: "◳ Board" },
     { key: "town", label: "⌂ Town" },
+    { key: "quests", label: "📜 Quests" },
+    { key: "almanac", label: "📖 Almanac" },
+    { key: "crafting", label: "🔨 Craft" },
+    { key: "achievements", label: "🏆 Trophies" },
+    { key: "cartography", label: "🗺 Map" },
   ];
   return (
-    <div className="bg-[#2b2218]/95 border-2 border-[#f7e2b6] rounded-2xl p-1 flex gap-1 shadow-2xl">
+    <div
+      className="bg-[#2b2218]/95 border-2 border-[#f7e2b6] rounded-2xl p-1 flex gap-1 shadow-2xl max-w-[92vw] overflow-x-auto"
+      style={{ scrollbarWidth: "none", WebkitOverflowScrolling: "touch" }}
+    >
       {items.map((it) => (
         <button
           key={it.key}
           onClick={() => onChange(it.key)}
-          className={`px-4 py-1.5 landscape:max-[900px]:px-3 landscape:max-[900px]:py-1 rounded-xl text-[13px] landscape:max-[900px]:text-[11px] font-bold transition-colors ${view === it.key ? "bg-[#d6612a] text-white" : "bg-transparent text-[#f7e2b6] hover:bg-white/10"}`}
+          className={`text-[11px] px-2.5 py-1.5 rounded-xl font-bold transition-colors whitespace-nowrap flex-shrink-0 ${view === it.key ? "bg-[#d6612a] text-white" : "bg-transparent text-[#f7e2b6] hover:bg-white/10"}`}
         >
           {it.label}
         </button>
@@ -380,4 +397,39 @@ export function NpcBubble({ bubble, dispatch }) {
       </div>
     </div>
   );
+}
+
+// ─── Feature extension points ─────────────────────────────────────────────
+// Auto-discover features. Each feature's index.jsx must export:
+//   - default: the React component (receives { state, dispatch })
+//   - viewKey?: string — if set, mounts as a full-screen view when state.view === viewKey
+//   - modalKey?: string — if set, mounts as a modal when state.modal === modalKey
+// Vite's import.meta.glob with eager: true resolves at build time.
+
+const featureModules = import.meta.glob("./features/*/index.jsx", { eager: true });
+const FEATURES = Object.values(featureModules).map((m) => ({
+  Component: m.default,
+  viewKey: m.viewKey,
+  modalKey: m.modalKey,
+}));
+
+export function FeatureModals({ state, dispatch }) {
+  for (const f of FEATURES) {
+    if (f.modalKey && state.modal === f.modalKey) {
+      const C = f.Component;
+      return <C state={state} dispatch={dispatch} />;
+    }
+  }
+  return null;
+}
+
+export function FeatureScreens({ state, dispatch }) {
+  if (state.view === "board" || state.view === "town") return null;
+  for (const f of FEATURES) {
+    if (f.viewKey && state.view === f.viewKey) {
+      const C = f.Component;
+      return <C state={state} dispatch={dispatch} />;
+    }
+  }
+  return null;
 }

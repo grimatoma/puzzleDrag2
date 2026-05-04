@@ -265,7 +265,7 @@ export class GameScene extends Phaser.Scene {
     const next = this.nextResource(res);
     const upgradeTotal = next ? upgradeCountForChain(this.path.length) : 0;
     const gained = this.path.length * (this.path.length >= 6 ? 2 : 1);
-    this.floatText(`+${gained} ${res.label}${upgradeTotal ? `  ★ ${upgradeTotal}` : ""}`, this.path[this.path.length - 1].x, this.path[this.path.length - 1].y, 0xffffff);
+    this.floatText(`+${gained} ${res.label}${upgradeTotal ? `  ★ ${upgradeTotal}` : ""}`, this.path[this.path.length - 1].x, this.path[this.path.length - 1].y, 0xffd248);
 
     this.path.forEach((tile, i) => {
       const upgrade = next && (i + 1) % UPGRADE_EVERY === 0;

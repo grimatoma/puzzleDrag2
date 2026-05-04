@@ -8,6 +8,13 @@
     <style>
       html, body { margin: 0; padding: 0; background: #2a1d0f; min-height: 100%; }
       @keyframes fadein { from { opacity: 0; } to { opacity: 1; } }
+      @keyframes dustfloat {
+        0%   { transform: translateY(0) translateX(0); opacity: 0; }
+        10%  { opacity: 1; }
+        50%  { transform: translateY(-300px) translateX(18px); }
+        90%  { opacity: 1; }
+        100% { transform: translateY(-600px) translateX(-12px); opacity: 0; }
+      }
       @keyframes bubblein { from { transform: translate(-50%, 16px); opacity: 0; } to { transform: translate(-50%, 0); opacity: 1; } }
       .animate-fadein { animation: fadein .2s ease-out; }
       .animate-bubblein { animation: bubblein .35s cubic-bezier(.34,1.56,.64,1); }

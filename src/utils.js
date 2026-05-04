@@ -6,9 +6,9 @@ export function clamp(n, a, b) {
 }
 
 export function seasonIndexForTurns(turnsUsed) {
-  if (turnsUsed <= 2) return 0;
-  if (turnsUsed <= 5) return 1;
-  if (turnsUsed <= 8) return 2;
+  if (turnsUsed <= 1) return 0;
+  if (turnsUsed <= 3) return 1;
+  if (turnsUsed <= 5) return 2;
   return 3;
 }
 
@@ -26,10 +26,10 @@ export function hex(num) {
 
 export function runSelfTests() {
   console.assert(seasonIndexForTurns(0) === 0, "turn 0 should be Spring");
-  console.assert(seasonIndexForTurns(2) === 0, "turn 2 should be Spring");
-  console.assert(seasonIndexForTurns(3) === 1, "turn 3 should be Summer");
-  console.assert(seasonIndexForTurns(6) === 2, "turn 6 should be Autumn");
-  console.assert(seasonIndexForTurns(9) === 3, "turn 9 should be Winter");
+  console.assert(seasonIndexForTurns(1) === 0, "turn 1 should be Spring");
+  console.assert(seasonIndexForTurns(2) === 1, "turn 2 should be Summer");
+  console.assert(seasonIndexForTurns(4) === 2, "turn 4 should be Autumn");
+  console.assert(seasonIndexForTurns(6) === 3, "turn 6 should be Winter");
   console.assert(upgradeCountForChain(2) === 0, "2-chain should not upgrade");
   console.assert(upgradeCountForChain(3) === 1, "3-chain should upgrade once");
   console.assert(upgradeCountForChain(8) === 2, "8-chain should upgrade twice: cells 3 and 6");

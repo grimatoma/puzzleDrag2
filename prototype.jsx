@@ -4,7 +4,7 @@ import { GameScene } from "./src/GameScene.js";
 import { COLS, ROWS, TILE } from "./src/constants.js";
 import { runSelfTests } from "./src/utils.js";
 import { gameReducer, initialState } from "./src/state.js";
-import { Hud, SidePanel, BottomNav, TownView, SeasonModal, NpcBubble } from "./src/ui.jsx";
+import { Hud, SidePanel, BottomNav, TownView, SeasonModal, NpcBubble, FeatureModals, FeatureScreens } from "./src/ui.jsx";
 
 function PhaserMount({ dispatch, biomeKey, turnsUsed, uiLocked, sceneRef }) {
   const hostRef = useRef(null);
@@ -57,16 +57,45 @@ function PhaserMount({ dispatch, biomeKey, turnsUsed, uiLocked, sceneRef }) {
   return <div ref={hostRef} className="w-full h-full" />;
 }
 
+const DUST_MOTES = Array.from({ length: 14 }, (_, i) => ({
+  id: i,
+  left: `${5 + (i * 6.7) % 90}%`,
+  delay: `${(i * 0.57) % 8}s`,
+  duration: `${7 + (i * 0.41) % 4}s`,
+  size: `${3 + (i * 0.29) % 4}px`,
+  opacity: 0.18 + (i * 0.031) % 0.22,
+}));
+
 export default function App() {
   const [state, dispatch] = useReducer(gameReducer, undefined, initialState);
   const sceneRef = useRef(null);
   const uiLocked = !!state.modal || state.view !== "board";
 
   return (
-    <div className="min-h-screen w-full bg-[#2a1d0f] text-[#2b2218] grid place-items-center">
-      <div className="relative w-full max-w-[1280px] aspect-[16/10] portrait:max-[900px]:aspect-[9/16] portrait:max-[900px]:max-w-[420px] landscape:max-[900px]:w-screen landscape:max-[900px]:h-screen landscape:max-[900px]:max-w-none bg-[#3a2715] rounded-2xl landscape:max-[900px]:rounded-none overflow-hidden shadow-2xl border border-white/10 flex flex-col">
+    <div className="min-h-screen w-full bg-[#2a1d0f] text-[#2b2218] grid place-items-center" style={{ position: "relative", overflow: "hidden" }}>
+      {/* Ambient dust motes — behind all chrome */}
+      {DUST_MOTES.map((m) => (
+        <div
+          key={m.id}
+          style={{
+            position: "absolute",
+            left: m.left,
+            bottom: 0,
+            width: m.size,
+            height: m.size,
+            borderRadius: "50%",
+            background: "#f6efe0",
+            opacity: m.opacity,
+            pointerEvents: "none",
+            animation: `dustfloat ${m.duration} ${m.delay} infinite ease-in-out`,
+            zIndex: 0,
+          }}
+        />
+      ))}
+
+      <div className="relative w-full max-w-[1280px] aspect-[16/10] portrait:max-[900px]:aspect-[9/16] portrait:max-[900px]:max-w-[420px] landscape:max-[900px]:w-screen landscape:max-[900px]:h-screen landscape:max-[900px]:max-w-none bg-[#3a2715] rounded-2xl landscape:max-[900px]:rounded-none overflow-hidden shadow-2xl border border-white/10 flex flex-col" style={{ zIndex: 1 }}>
         {/* HUD bar */}
-        <Hud state={state} />
+        <Hud state={state} dispatch={dispatch} />
 
         {/* Main area: board + side panel, or town view */}
         <div className="flex-1 min-h-0 relative">
@@ -96,6 +125,9 @@ export default function App() {
               <TownView state={state} dispatch={dispatch} />
             </div>
           )}
+
+          {/* Feature full-screen views */}
+          <FeatureScreens state={state} dispatch={dispatch} />
         </div>
 
         {/* Bottom nav */}
@@ -108,6 +140,9 @@ export default function App() {
 
         {/* Season modal */}
         <SeasonModal state={state} dispatch={dispatch} />
+
+        {/* Feature modals */}
+        <FeatureModals state={state} dispatch={dispatch} />
       </div>
     </div>
   );

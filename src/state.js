@@ -1,4 +1,21 @@
 import { BIOMES, NPCS, MAX_TURNS } from "./constants.js";
+import * as crafting from "./features/crafting/slice.js";
+import * as quests from "./features/quests/slice.js";
+import * as achievements from "./features/achievements/slice.js";
+import * as tutorial from "./features/tutorial/slice.js";
+import * as settings from "./features/settings/slice.js";
+import * as boss from "./features/boss/slice.js";
+import * as heirlooms from "./features/heirlooms/slice.js";
+import * as longnight from "./features/longnight/slice.js";
+import * as beasts from "./features/beasts/slice.js";
+import * as cartography from "./features/cartography/slice.js";
+import * as festivals from "./features/festivals/slice.js";
+import * as memoryweave from "./features/memoryweave/slice.js";
+import * as apprentices from "./features/apprentices/slice.js";
+import * as mood from "./features/mood/slice.js";
+import * as glyphs from "./features/glyphs/slice.js";
+
+const slices = [crafting, quests, achievements, tutorial, settings, boss, heirlooms, longnight, beasts, cartography, festivals, memoryweave, apprentices, mood, glyphs];
 
 export const xpForLevel = (l) => 50 + l * 80;
 
@@ -36,6 +53,9 @@ export function makeOrder(biomeKey, level, excludeNpcs = []) {
 export function initialState() {
   const biomeKey = "farm";
   const level = 1;
+  const o1 = makeOrder(biomeKey, level);
+  const o2 = makeOrder(biomeKey, level, [o1.npc]);
+  const o3 = makeOrder(biomeKey, level, [o1.npc, o2.npc]);
   return {
     biomeKey,
     view: "board",
@@ -44,12 +64,27 @@ export function initialState() {
     xp: 0,
     turnsUsed: 0,
     inventory: {},
-    orders: [makeOrder(biomeKey, level), makeOrder(biomeKey, level, ["mira"])],
+    orders: [o1, o2, o3],
     tools: { clear: 2, basic: 1, rare: 1, shuffle: 0 },
     built: { hearth: true },
     bubble: null,
     modal: null,
     seasonStats: { harvests: 0, upgrades: 0, ordersFilled: 0, coins: 0 },
+    ...crafting.initial,
+    ...quests.initial,
+    ...achievements.initial,
+    ...tutorial.initial,
+    ...settings.initial,
+    ...boss.initial,
+    ...heirlooms.initial,
+    ...longnight.initial,
+    ...beasts.initial,
+    ...cartography.initial,
+    ...festivals.initial,
+    ...memoryweave.initial,
+    ...apprentices.initial,
+    ...mood.initial,
+    ...glyphs.initial,
   };
 }
 
@@ -68,7 +103,6 @@ function applyXp(state, xpDelta) {
 export function gameReducer(state, action) {
   switch (action.type) {
     case "CHAIN_COLLECTED": {
-      // payload: { key, gained, upgrades, chainLength, value }
       const { key, gained, upgrades, chainLength, value } = action.payload;
       const res = resourceByKey(key);
       const inventory = { ...state.inventory };
@@ -141,16 +175,17 @@ export function gameReducer(state, action) {
       if (key === "rare") {
         const r = biome.resources[4] || biome.resources[biome.resources.length - 1];
         inventory[r.key] = (inventory[r.key] || 0) + 2;
-      } else {
+        return { ...state, tools, inventory, bubble: { id: Date.now(), npc: "bram", text: "Seedpack — +2 rare!", ms: 1500 } };
+      }
+      if (key === "basic") {
         const r = biome.resources[0];
         inventory[r.key] = (inventory[r.key] || 0) + 5;
+        return { ...state, tools, inventory, bubble: { id: Date.now(), npc: "bram", text: "Seedpack — +5 basic!", ms: 1500 } };
       }
-      return {
-        ...state,
-        tools,
-        inventory,
-        bubble: { id: Date.now(), npc: "bram", text: `${key === "rare" ? "+Rare" : key === "basic" ? "+Basic" : "Clear"} — used!`, ms: 1500 },
-      };
+      // key === "clear"
+      const r = biome.resources[0];
+      inventory[r.key] = (inventory[r.key] || 0) + 5;
+      return { ...state, tools, inventory, bubble: { id: Date.now(), npc: "bram", text: "Scythe — clearing tiles!", ms: 1500 } };
     }
     case "SWITCH_BIOME": {
       const { key } = action;
@@ -163,6 +198,10 @@ export function gameReducer(state, action) {
     }
     case "SET_VIEW":
       return { ...state, view: action.view };
+    case "OPEN_MODAL":
+      return { ...state, modal: action.modal };
+    case "CLOSE_MODAL":
+      return { ...state, modal: null };
     case "BUILD": {
       const b = action.building;
       const canCoin = state.coins >= (b.cost.coins || 0);
@@ -197,6 +236,6 @@ export function gameReducer(state, action) {
       };
     }
     default:
-      return state;
+      return slices.reduce((s, slice) => slice.reduce(s, action), state);
   }
 }

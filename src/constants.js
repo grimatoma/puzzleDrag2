@@ -7,7 +7,7 @@ export const COLS = 7;
 export const ROWS = 6;
 export const BOARD_X = 382;
 export const BOARD_Y = 96;
-export const MAX_TURNS = 10;
+export const MAX_TURNS = 8;
 export const UPGRADE_EVERY = 3;
 
 export function responsiveGameSize(displayWidth = W) {
@@ -123,4 +123,69 @@ export const BUILDINGS = [
   { id: "granary", name: "Granary", cost: { coins: 250, plank: 20 }, lv: 1, x: 630, y: 380, w: 90, h: 100, color: "#c5a87a" },
   { id: "forge", name: "Forge", cost: { coins: 1200, stone: 60, ingot: 20 }, lv: 8, x: 770, y: 380, w: 100, h: 100, color: "#5a6973" },
   { id: "caravan", name: "Caravan Post", cost: { coins: 1500 }, lv: 8, x: 920, y: 390, w: 120, h: 90, color: "#7e4f24" },
+];
+
+export const RECIPES = {
+  bread:      { name: "Bread Loaf",    inputs: { flour: 3, egg: 1 },          tier: 1, station: "bakery", coins: 125 },
+  honeyroll:  { name: "Honey Roll",    inputs: { flour: 2, egg: 1, jam: 1 },  tier: 2, station: "bakery", coins: 175 },
+  harvestpie: { name: "Harvest Pie",   inputs: { flour: 2, jam: 1, egg: 1 },  tier: 2, station: "bakery", coins: 175 },
+  preserve:   { name: "Preserve Jar",  inputs: { jam: 2, egg: 1 },            tier: 1, station: "larder", coins: 100 },
+  tincture:   { name: "Berry Tincture",inputs: { berry: 3, jam: 1 },          tier: 1, station: "larder", coins: 125 },
+  hinge:      { name: "Iron Hinge",    inputs: { ingot: 2, coke: 1 },         tier: 2, station: "forge",  coins: 175 },
+  cobblepath: { name: "Cobble Path",   inputs: { stone: 5, plank: 2 },        tier: 1, station: "forge",  coins: 200 },
+  lantern:    { name: "Iron Lantern",  inputs: { ingot: 1, coke: 1, plank: 1 },tier: 2, station: "forge", coins: 150 },
+  goldring:   { name: "Gold Ring",     inputs: { gold: 1, ingot: 2 },         tier: 2, station: "forge",  coins: 225 },
+  gemcrown:   { name: "Gem Crown",     inputs: { cutgem: 1, gold: 2 },        tier: 2, station: "forge",  coins: 325 },
+};
+
+export const ACHIEVEMENTS = [
+  // Harvest
+  { id: "harvest_1",    name: "First Harvest",      desc: "Collect your first resource",            category: "Harvest",  target: 1,    eventKey: "totalHarvested", icon: "🌾", reward: { coins: 25,  xp: 10 } },
+  { id: "harvest_100",  name: "Bountiful",           desc: "Collect 100 resources total",            category: "Harvest",  target: 100,  eventKey: "totalHarvested", icon: "🌿", reward: { coins: 75,  xp: 30 } },
+  { id: "harvest_1000", name: "Field Master",        desc: "Collect 1000 resources total",           category: "Harvest",  target: 1000, eventKey: "totalHarvested", icon: "🏡", reward: { coins: 200, xp: 80 } },
+  { id: "harvest_5000", name: "Granary Full",        desc: "Collect 5000 resources total",           category: "Harvest",  target: 5000, eventKey: "totalHarvested", icon: "🏰", reward: { coins: 500, xp: 200 } },
+  // Chains
+  { id: "chain_3",      name: "Triple Match",        desc: "Form a chain of 3 or more",             category: "Chains",   target: 3,    eventKey: "longestChain",   icon: "🔗", reward: { coins: 20,  xp: 10 } },
+  { id: "chain_6",      name: "Big Chain",           desc: "Form a chain of 6 or more",             category: "Chains",   target: 6,    eventKey: "longestChain",   icon: "⛓", reward: { coins: 60,  xp: 25 } },
+  { id: "chain_10",     name: "Mega Chain",          desc: "Form a chain of 10 or more",            category: "Chains",   target: 10,   eventKey: "longestChain",   icon: "💫", reward: { coins: 150, xp: 60 } },
+  { id: "chain_speed",  name: "Lightning",           desc: "Make 5 chains in one season",           category: "Chains",   target: 5,    eventKey: "chainsThisSeason", icon: "⚡", reward: { coins: 100, xp: 40 } },
+  // Orders
+  { id: "orders_5",     name: "Helpful",             desc: "Fill 5 orders",                         category: "Orders",   target: 5,    eventKey: "totalOrders",    icon: "📦", reward: { coins: 50,  xp: 20 } },
+  { id: "orders_25",    name: "Trusted",             desc: "Fill 25 orders",                        category: "Orders",   target: 25,   eventKey: "totalOrders",    icon: "🤝", reward: { coins: 150, xp: 60 } },
+  { id: "orders_100",   name: "Pillar of the Town",  desc: "Fill 100 orders",                       category: "Orders",   target: 100,  eventKey: "totalOrders",    icon: "🏛", reward: { coins: 400, xp: 150 } },
+  // Buildings
+  { id: "build_2",      name: "Two Bricks",          desc: "Construct 2 buildings",                 category: "Buildings",target: 2,    eventKey: "buildingCount",  icon: "🪵", reward: { coins: 75,  xp: 30 } },
+  { id: "build_5",      name: "Hamlet",              desc: "Construct 5 buildings",                 category: "Buildings",target: 5,    eventKey: "buildingCount",  icon: "🏘", reward: { coins: 200, xp: 80 } },
+  { id: "build_7",      name: "Vale",                desc: "Construct all 7 buildings",             category: "Buildings",target: 7,    eventKey: "buildingCount",  icon: "🌆", reward: { coins: 500, xp: 200 } },
+  // Seasons
+  { id: "seasons_4",    name: "One Cycle",           desc: "Complete 4 seasons",                    category: "Seasons",  target: 4,    eventKey: "seasonsCycled",  icon: "🌀", reward: { coins: 100, xp: 50 } },
+  { id: "seasons_16",   name: "Year",                desc: "Complete 16 seasons (a full year)",     category: "Seasons",  target: 16,   eventKey: "seasonsCycled",  icon: "📅", reward: { coins: 300, xp: 120 } },
+  // Resources
+  { id: "gold_50",      name: "Goldsmith",           desc: "Collect 50 gold",                       category: "Resources",target: 50,   eventKey: "gold",           icon: "✺", reward: { coins: 200, xp: 80 } },
+  { id: "cutgem_10",    name: "Gemcutter",           desc: "Collect 10 cut gems",                   category: "Resources",target: 10,   eventKey: "cutgem",         icon: "✦", reward: { coins: 300, xp: 100 } },
+  // Crafting
+  { id: "craft_1",      name: "First Craft",         desc: "Craft your first recipe",               category: "Crafting", target: 1,    eventKey: "totalCrafted",   icon: "🔨", reward: { coins: 50,  xp: 20 } },
+  { id: "craft_50",     name: "Master Craftsman",    desc: "Craft 50 recipes",                      category: "Crafting", target: 50,   eventKey: "totalCrafted",   icon: "⚒",  reward: { coins: 300, xp: 120 } },
+];
+
+export const QUEST_TEMPLATES = [
+  { key: "harvest", label: "Harvest 30 hay", target: 30, reward: { coins: 50, almanacXp: 20 } },
+  { key: "chain5",  label: "Make 3 chains of 5+", target: 3, reward: { coins: 75, almanacXp: 30 } },
+  { key: "deliver", label: "Deliver 4 orders", target: 4, reward: { coins: 60, almanacXp: 25 } },
+  { key: "build",   label: "Build 1 building", target: 1, reward: { coins: 100, almanacXp: 40 } },
+  { key: "craft",   label: "Craft 2 recipes", target: 2, reward: { coins: 80, almanacXp: 35 } },
+  { key: "coins",   label: "Earn 200 coins this season", target: 200, reward: { coins: 50, almanacXp: 20 } },
+];
+
+export const ALMANAC_TIERS = [
+  { reward: { coins: 50 } },
+  { reward: { tool: "shuffle", amt: 1 } },
+  { reward: { coins: 75 } },
+  { reward: { tool: "basic", amt: 1 } },
+  { reward: { coins: 100 } },
+  { reward: { tool: "rare", amt: 1 } },
+  { reward: { coins: 150 } },
+  { reward: { tool: "shuffle", amt: 2 } },
+  { reward: { coins: 200 } },
+  { reward: { coins: 100, tool: "rare", amt: 1 } },
 ];
