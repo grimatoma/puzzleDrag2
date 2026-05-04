@@ -241,6 +241,16 @@ function AboutTab({ dispatch }) {
             className="py-1 px-3 text-[11px] font-bold rounded-lg border-2"
             style={{ background: '#7e4f24', borderColor: '#4f2f10', color: '#fff' }}
           >🎒 Market</button>
+          <button
+            onClick={() => dispatch({ type: 'DEV/FILL_STORAGE' })}
+            className="py-1 px-3 text-[11px] font-bold rounded-lg border-2"
+            style={{ background: '#2a7a3a', borderColor: '#1a4a20', color: '#fff' }}
+          >📦 +100 All Items</button>
+          <button
+            onClick={() => dispatch({ type: 'DEV/RESET_GAME' })}
+            className="py-1 px-3 text-[11px] font-bold rounded-lg border-2"
+            style={{ background: '#3a3a8a', borderColor: '#1a1a5a', color: '#fff' }}
+          >🔄 Reset Game</button>
         </div>
       </div>
     </div>
