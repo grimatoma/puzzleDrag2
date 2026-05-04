@@ -278,6 +278,9 @@ function coreReducer(state, action) {
         bubble: { id: Date.now(), npc: "tomas", text: "Bonus: +1 Reshuffle Horn · +25◉", ms: 2000 },
       };
     }
+    case "DEV/ADD_GOLD":
+      return { ...state, coins: state.coins + (action.amount ?? 1000) };
+
     case "DEV/FILL_STORAGE": {
       const inventory = { ...state.inventory };
       for (const biome of Object.values(BIOMES)) {
