@@ -456,12 +456,22 @@ function TownsfolkModal({ state, dispatch }) {
           >✕</button>
         </div>
         <div className="flex gap-1.5 px-1 pb-2 flex-shrink-0">
-          {[{ key: "mood", label: "💞 Townsfolk" }, { key: "apprentices", label: "🧑‍🌾 Helpers" }].map((item) => (
+          {[
+            { key: "mood", label: "💞 Townsfolk" },
+            { key: "apprentices", label: "🧑‍🌾 Apprentices" },
+            { key: "orders", label: "📋 Orders" },
+          ].map((item) => (
             <button key={item.key} onClick={() => setTab(item.key)} className={`flex-1 py-1.5 rounded-lg text-[11px] font-bold border-2 ${tab === item.key ? "bg-[#8a4a26] border-[#6b3114] text-white" : "bg-[#f7ead8] border-[#b28b62] text-[#5a3a20]"}`}>{item.label}</button>
           ))}
         </div>
         <div className="flex-1 min-h-0 overflow-y-auto">
-          {tab === "mood" ? <MoodPanel state={state} dispatch={dispatch} showHeader={false} /> : <ApprenticesPanel state={state} dispatch={dispatch} showHeader={false} />}
+          {tab === "mood" ? (
+            <MoodPanel state={state} dispatch={dispatch} showHeader={false} />
+          ) : tab === "apprentices" ? (
+            <ApprenticesPanel state={state} dispatch={dispatch} showHeader={false} />
+          ) : (
+            <CompactOrders orders={state.orders || []} inventory={state.inventory || {}} dispatch={dispatch} />
+          )}
         </div>
       </div>
     </div>
