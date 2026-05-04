@@ -3,6 +3,8 @@ import { createPortal } from "react-dom";
 import { BIOMES, NPCS, SEASONS, MAX_TURNS, BUILDINGS, RECIPES } from "./constants.js";
 import { xpForLevel, resourceByKey } from "./state.js";
 import { seasonIndexForTurns } from "./utils.js";
+import { MoodPanel } from "./features/mood/index.jsx";
+import { ApprenticesPanel } from "./features/apprentices/index.jsx";
 
 // Mechanical effect active each calendar season (seasonsCycled % 4)
 const SEASON_EFFECTS = [
@@ -442,9 +444,10 @@ export function BottomNav({ view, modal, dispatch }) {
 
 function TownsfolkModal({ state, dispatch }) {
   if (state.modal !== "townsfolk") return null;
+  const [tab, setTab] = useState("mood");
   return (
     <div className="absolute inset-0 bg-black/55 grid place-items-center z-50 animate-fadein">
-      <div className="bg-[#f4ecd8] border-[4px] border-[#b28b62] rounded-[20px] p-5 w-[min(92vw,430px)] shadow-2xl">
+      <div className="bg-[#f4ecd8] border-[4px] border-[#b28b62] rounded-[20px] p-3 w-[min(94vw,700px)] max-h-[90vh] shadow-2xl flex flex-col">
         <div className="flex items-center justify-between mb-3">
           <h3 className="font-bold text-[20px] text-[#744d2e]">Townsfolk</h3>
           <button
@@ -452,10 +455,13 @@ function TownsfolkModal({ state, dispatch }) {
             className="w-8 h-8 rounded-lg bg-[#f6efe0] border-2 border-[#b28b62] grid place-items-center text-[#6a4b31] font-bold text-[14px]"
           >✕</button>
         </div>
-        <div className="flex flex-col gap-2">
-          <button onClick={() => { dispatch({ type: "CLOSE_MODAL" }); dispatch({ type: "SET_VIEW", view: "orders" }); }} className="text-left px-3 py-2.5 rounded-xl border-2 border-[#b28b62] bg-[#f7ead8] font-bold text-[#5a3a20]">📋 Orders</button>
-          <button onClick={() => dispatch({ type: "OPEN_MODAL", modal: "mood" })} className="text-left px-3 py-2.5 rounded-xl border-2 border-[#b28b62] bg-[#f7ead8] font-bold text-[#5a3a20]">💞 Townsfolk</button>
-          <button onClick={() => dispatch({ type: "OPEN_MODAL", modal: "apprentices" })} className="text-left px-3 py-2.5 rounded-xl border-2 border-[#b28b62] bg-[#f7ead8] font-bold text-[#5a3a20]">🧑‍🌾 Helpers</button>
+        <div className="flex gap-1.5 px-1 pb-2 flex-shrink-0">
+          {[{ key: "mood", label: "💞 Townsfolk" }, { key: "apprentices", label: "🧑‍🌾 Helpers" }].map((item) => (
+            <button key={item.key} onClick={() => setTab(item.key)} className={`flex-1 py-1.5 rounded-lg text-[11px] font-bold border-2 ${tab === item.key ? "bg-[#8a4a26] border-[#6b3114] text-white" : "bg-[#f7ead8] border-[#b28b62] text-[#5a3a20]"}`}>{item.label}</button>
+          ))}
+        </div>
+        <div className="flex-1 min-h-0 overflow-y-auto">
+          {tab === "mood" ? <MoodPanel state={state} dispatch={dispatch} showHeader={false} /> : <ApprenticesPanel state={state} dispatch={dispatch} showHeader={false} />}
         </div>
       </div>
     </div>
