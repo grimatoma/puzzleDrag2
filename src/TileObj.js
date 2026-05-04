@@ -16,7 +16,8 @@ export class TileObj {
   setSelected(v) {
     this.selected = v;
     this.sprite.setTexture(`tile_${this.res.key}${v ? "_sel" : ""}`);
-    this.sprite.setScale(v ? 1.06 : 1);
+    const s = this.scene.tileScale ?? 1;
+    this.sprite.setScale(s * (v ? 1.06 : 1));
   }
 
   setResource(res) {
@@ -25,8 +26,9 @@ export class TileObj {
   }
 
   pulse() {
+    const s = this.scene.tileScale ?? 1;
     this.scene.tweens.killTweensOf(this.sprite);
-    this.scene.tweens.add({ targets: this.sprite, scale: 1.12, yoyo: true, duration: 90, ease: "Sine.Out" });
+    this.scene.tweens.add({ targets: this.sprite, scale: s * 1.12, yoyo: true, duration: 90, ease: "Sine.Out" });
   }
 
   destroy() {
