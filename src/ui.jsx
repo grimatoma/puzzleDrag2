@@ -22,10 +22,10 @@ export function Hud({ state, dispatch }) {
   const turnsLeft = MAX_TURNS - turnsUsed;
   const buildingCount = Object.keys(built || {}).length;
   return (
-    <div className="flex items-center gap-2 px-3 py-2 landscape:max-[900px]:py-1 landscape:max-[900px]:px-2 landscape:max-[900px]:gap-1.5 bg-[#5b3b20] border-b-2 border-[#2a1d0f] text-[#6a4b31] flex-wrap" data-testid="hud">
+    <div className="flex items-center gap-2 px-3 py-2 landscape:max-[1024px]:py-1 landscape:max-[1024px]:px-2 landscape:max-[1024px]:gap-1.5 bg-[#5b3b20] border-b-2 border-[#2a1d0f] text-[#6a4b31] flex-wrap" data-testid="hud">
       <button
         onClick={() => dispatch({ type: "OPEN_MODAL", modal: "menu" })}
-        className="w-8 h-8 landscape:max-[900px]:w-6 landscape:max-[900px]:h-6 rounded-lg bg-[#f6efe0] border-2 border-[#b28b62] grid place-items-center text-[#6a4b31] font-bold text-[18px] landscape:max-[900px]:text-[13px] flex-shrink-0"
+        className="w-8 h-8 landscape:max-[1024px]:w-6 landscape:max-[1024px]:h-6 rounded-lg bg-[#f6efe0] border-2 border-[#b28b62] grid place-items-center text-[#6a4b31] font-bold text-[18px] landscape:max-[1024px]:text-[13px] flex-shrink-0"
         data-testid="menu-btn"
       >≡</button>
       <Pill>
@@ -39,13 +39,13 @@ export function Hud({ state, dispatch }) {
       {onBoard && <SeasonBar season={season} turnsUsed={turnsUsed} />}
       {onBoard && <div className="text-[#f8e7c6] text-[12px] font-bold whitespace-nowrap" data-testid="turns-left">{turnsLeft} left</div>}
       <div className="ml-auto flex items-center gap-1.5">
-        <div className="bg-[#f6efe0] border-2 border-[#b28b62] rounded-full h-[26px] w-[110px] landscape:max-[900px]:h-[20px] landscape:max-[900px]:w-[80px] relative overflow-hidden">
+        <div className="bg-[#f6efe0] border-2 border-[#b28b62] rounded-full h-[26px] w-[110px] landscape:max-[1024px]:h-[20px] landscape:max-[1024px]:w-[80px] relative overflow-hidden">
           <div className="h-full bg-gradient-to-r from-[#ff8b25] to-[#ffb347] transition-[width] duration-300" style={{ width: `${xpPct}%` }} />
-          <div className="absolute inset-0 grid place-items-center text-[11px] landscape:max-[900px]:text-[9px] font-bold text-white" style={{ textShadow: "0 1px 2px rgba(0,0,0,.4)" }}>
+          <div className="absolute inset-0 grid place-items-center text-[11px] landscape:max-[1024px]:text-[9px] font-bold text-white" style={{ textShadow: "0 1px 2px rgba(0,0,0,.4)" }}>
             {xp} / {xpNeed}
           </div>
         </div>
-        <div className="w-9 h-9 landscape:max-[900px]:w-7 landscape:max-[900px]:h-7 rounded-full bg-[#bb3b2f] border-[3px] border-[#ffe2a3] grid place-items-center text-white font-bold text-[16px] landscape:max-[900px]:text-[12px]">
+        <div className="w-9 h-9 landscape:max-[1024px]:w-7 landscape:max-[1024px]:h-7 rounded-full bg-[#bb3b2f] border-[3px] border-[#ffe2a3] grid place-items-center text-white font-bold text-[16px] landscape:max-[1024px]:text-[12px]">
           {level}
         </div>
       </div>
@@ -61,8 +61,8 @@ function Pill({ children, className = "" }) {
 
 function SeasonBar({ season, turnsUsed }) {
   return (
-    <div className="bg-[#faf0dd] border-2 border-[#b28b62] rounded-full px-2 py-0.5 flex items-center gap-1.5 min-w-[200px] landscape:max-[900px]:min-w-[140px] flex-1 max-w-[480px]">
-      <div className="text-[#6a4b31] font-bold text-[12px] landscape:max-[900px]:text-[10px] whitespace-nowrap">{season.name}</div>
+    <div className="bg-[#faf0dd] border-2 border-[#b28b62] rounded-full px-2 py-0.5 flex items-center gap-1.5 min-w-[200px] landscape:max-[1024px]:min-w-[140px] flex-1 max-w-[480px]">
+      <div className="text-[#6a4b31] font-bold text-[12px] landscape:max-[1024px]:text-[10px] whitespace-nowrap">{season.name}</div>
       <div className="flex gap-0.5 flex-1 justify-center">
         {Array.from({ length: MAX_TURNS }).map((_, i) => {
           const filled = i < turnsUsed;
@@ -70,7 +70,7 @@ function SeasonBar({ season, turnsUsed }) {
           return (
             <div
               key={i}
-              className={`w-3 h-3 landscape:max-[900px]:w-2 landscape:max-[900px]:h-2 rounded-full border ${filled ? "border-transparent" : "border-[#b28b62]"} transition-all`}
+              className={`w-3 h-3 landscape:max-[1024px]:w-2 landscape:max-[1024px]:h-2 rounded-full border ${filled ? "border-transparent" : "border-[#b28b62]"} transition-all`}
               style={{
                 backgroundColor: filled ? cssFromHex(season.fill) : "#fff",
                 boxShadow: current ? "0 0 0 2px rgba(255,122,0,.45)" : "none",
@@ -92,7 +92,7 @@ function cssFromHex(intHex) {
 
 export function SidePanel({ state, dispatch }) {
   return (
-    <div className="bg-gradient-to-b from-[#7c4f2c] to-[#6b4225] border-[3px] border-[#e2c19b] rounded-2xl p-3 landscape:max-[900px]:p-2 flex flex-col gap-3 landscape:max-[900px]:gap-1.5 overflow-hidden landscape:max-[900px]:overflow-y-auto h-full min-h-0">
+    <div className="bg-gradient-to-b from-[#7c4f2c] to-[#6b4225] border-[3px] border-[#e2c19b] rounded-2xl p-3 landscape:max-[1024px]:p-2 flex flex-col gap-3 landscape:max-[1024px]:gap-1.5 overflow-hidden landscape:max-[1024px]:overflow-y-auto h-full min-h-0">
       <Section title="Orders">
         <OrdersList orders={state.orders} inventory={state.inventory} onTurnIn={(id) => dispatch({ type: "TURN_IN_ORDER", id })} />
       </Section>
@@ -113,7 +113,7 @@ export function SidePanel({ state, dispatch }) {
 function Section({ title, titleColor = "#f8e7c6", children }) {
   return (
     <div className="flex flex-col gap-2 min-h-0">
-      <div className="font-bold text-[14px] landscape:max-[900px]:text-[11px] tracking-wide" style={{ color: titleColor }}>{title}</div>
+      <div className="font-bold text-[14px] landscape:max-[1024px]:text-[11px] tracking-wide" style={{ color: titleColor }}>{title}</div>
       <div className="min-h-0">{children}</div>
     </div>
   );
@@ -121,7 +121,7 @@ function Section({ title, titleColor = "#f8e7c6", children }) {
 
 function OrdersList({ orders, inventory, onTurnIn }) {
   return (
-    <div className="flex flex-col gap-2 max-h-[260px] landscape:max-[900px]:max-h-[130px] overflow-y-auto pr-1">
+    <div className="flex flex-col gap-2 max-h-[260px] landscape:max-[1024px]:max-h-[130px] overflow-y-auto pr-1">
       {orders.map((o) => {
         const have = inventory[o.key] || 0;
         const done = have >= o.need;
@@ -160,7 +160,7 @@ function OrdersList({ orders, inventory, onTurnIn }) {
 function InventoryGrid({ inventory, biomeKey }) {
   const resources = BIOMES[biomeKey].resources;
   return (
-    <div className="grid grid-cols-2 gap-1.5 max-h-[180px] landscape:max-[900px]:max-h-[110px] overflow-y-auto pr-1">
+    <div className="grid grid-cols-2 gap-1.5 max-h-[180px] landscape:max-[1024px]:max-h-[110px] overflow-y-auto pr-1">
       {resources.map((r) => (
         <div key={r.key} className="bg-[#b68d64] border-2 border-[#e6c49a] rounded-lg p-1.5 flex items-center gap-2" title={r.label}>
           <div className="w-7 h-7 rounded-md flex-shrink-0 grid place-items-center text-[14px] text-white" style={{ backgroundColor: cssFromHex(r.color), border: "2px solid rgba(255,255,255,.4)", textShadow: "0 1px 1px rgba(0,0,0,.4)" }}>{r.glyph}</div>
@@ -271,8 +271,8 @@ export function TownView({ state, dispatch }) {
         <path d="M-20,500 Q200,480 400,500 T800,510 L1100,500" stroke="#a89065" strokeWidth="2" fill="none" strokeDasharray="6 8" />
       </svg>
       {/* Header */}
-      <div className="absolute top-3 left-4 landscape:max-[900px]:top-2 landscape:max-[900px]:left-3 font-bold text-[20px] landscape:max-[900px]:text-[15px] text-[#3a2715]">Hearthwood Vale</div>
-      <div className="absolute top-3 right-4 landscape:max-[900px]:top-2 landscape:max-[900px]:right-3 bg-white/85 px-3 py-1.5 landscape:max-[900px]:px-2 landscape:max-[900px]:py-1 rounded-full font-bold text-[#3a2715] landscape:max-[900px]:text-[13px]">◉ {state.coins.toLocaleString()}</div>
+      <div className="absolute top-3 left-4 landscape:max-[1024px]:top-2 landscape:max-[1024px]:left-3 font-bold text-[20px] landscape:max-[1024px]:text-[15px] text-[#3a2715]">Hearthwood Vale</div>
+      <div className="absolute top-3 right-4 landscape:max-[1024px]:top-2 landscape:max-[1024px]:right-3 bg-white/85 px-3 py-1.5 landscape:max-[1024px]:px-2 landscape:max-[1024px]:py-1 rounded-full font-bold text-[#3a2715] landscape:max-[1024px]:text-[13px]">◉ {state.coins.toLocaleString()}</div>
 
       {/* Buildings positioned in the 1100x600 design space, scaled to viewport */}
       <div className="absolute inset-0">
@@ -344,20 +344,20 @@ export function SeasonModal({ state, dispatch }) {
   const stats = state.seasonStats;
   return (
     <div className="absolute inset-0 bg-black/55 grid place-items-center z-50 animate-fadein">
-      <div className="bg-[#f4ecd8] border-[4px] border-[#b28b62] rounded-[20px] px-8 py-6 landscape:max-[900px]:px-4 landscape:max-[900px]:py-3 min-w-[360px] max-w-[560px] landscape:max-[900px]:min-w-0 landscape:max-[900px]:w-[92vw] landscape:max-[900px]:max-h-[88vh] landscape:max-[900px]:overflow-y-auto text-center shadow-2xl">
-        <div className="text-[48px] landscape:max-[900px]:text-[28px] leading-none">{nextSeason.icon === "flower" ? "✿" : nextSeason.icon === "sun" ? "☀" : nextSeason.icon === "leaf" ? "🍂" : "❄"}</div>
-        <h2 className="font-bold text-[26px] landscape:max-[900px]:text-[18px] text-[#744d2e] mt-2 landscape:max-[900px]:mt-1 mb-1 landscape:max-[900px]:mb-0.5">{prevSeason.name} ends</h2>
-        <p className="italic text-[#6a4b31] text-[14px] landscape:max-[900px]:text-[11px]">The wind shifts. {nextSeason.name} arrives in Hearthwood Vale.</p>
-        <div className="flex justify-around gap-2 my-4 landscape:max-[900px]:my-2 p-3 landscape:max-[900px]:p-2 bg-black/[.04] rounded-xl">
+      <div className="bg-[#f4ecd8] border-[4px] border-[#b28b62] rounded-[20px] px-8 py-6 landscape:max-[1024px]:px-4 landscape:max-[1024px]:py-3 min-w-[360px] max-w-[560px] landscape:max-[1024px]:min-w-0 landscape:max-[1024px]:w-[92vw] landscape:max-[1024px]:max-h-[88vh] landscape:max-[1024px]:overflow-y-auto text-center shadow-2xl">
+        <div className="text-[48px] landscape:max-[1024px]:text-[28px] leading-none">{nextSeason.icon === "flower" ? "✿" : nextSeason.icon === "sun" ? "☀" : nextSeason.icon === "leaf" ? "🍂" : "❄"}</div>
+        <h2 className="font-bold text-[26px] landscape:max-[1024px]:text-[18px] text-[#744d2e] mt-2 landscape:max-[1024px]:mt-1 mb-1 landscape:max-[1024px]:mb-0.5">{prevSeason.name} ends</h2>
+        <p className="italic text-[#6a4b31] text-[14px] landscape:max-[1024px]:text-[11px]">The wind shifts. {nextSeason.name} arrives in Hearthwood Vale.</p>
+        <div className="flex justify-around gap-2 my-4 landscape:max-[1024px]:my-2 p-3 landscape:max-[1024px]:p-2 bg-black/[.04] rounded-xl">
           <Stat v={stats.harvests} l="Harvested" />
           <Stat v={stats.upgrades} l="Upgrades ★" />
           <Stat v={stats.ordersFilled} l="Orders" />
           <Stat v={`+${stats.coins}`} l="Coins" />
         </div>
-        <p className="text-[12px] landscape:max-[900px]:text-[10px] text-[#8a785e] mb-3 landscape:max-[900px]:mb-2">Bonus: +1 Reshuffle Horn · +25◉</p>
+        <p className="text-[12px] landscape:max-[1024px]:text-[10px] text-[#8a785e] mb-3 landscape:max-[1024px]:mb-2">Bonus: +1 Reshuffle Horn · +25◉</p>
         <button
           onClick={() => dispatch({ type: "CLOSE_SEASON" })}
-          className="bg-[#91bf24] hover:bg-[#a3d028] text-white border-[3px] border-white rounded-2xl px-8 landscape:max-[900px]:px-5 py-2.5 landscape:max-[900px]:py-1.5 text-[16px] landscape:max-[900px]:text-[13px] font-bold shadow-lg"
+          className="bg-[#91bf24] hover:bg-[#a3d028] text-white border-[3px] border-white rounded-2xl px-8 landscape:max-[1024px]:px-5 py-2.5 landscape:max-[1024px]:py-1.5 text-[16px] landscape:max-[1024px]:text-[13px] font-bold shadow-lg"
         >
           Welcome the {nextSeason.name}
         </button>
@@ -369,8 +369,8 @@ export function SeasonModal({ state, dispatch }) {
 function Stat({ v, l }) {
   return (
     <div>
-      <div className="font-bold text-[22px] landscape:max-[900px]:text-[16px] text-[#a8431a]">{v}</div>
-      <div className="uppercase tracking-widest text-[10px] landscape:max-[900px]:text-[8px] text-[#8a785e]">{l}</div>
+      <div className="font-bold text-[22px] landscape:max-[1024px]:text-[16px] text-[#a8431a]">{v}</div>
+      <div className="uppercase tracking-widest text-[10px] landscape:max-[1024px]:text-[8px] text-[#8a785e]">{l}</div>
     </div>
   );
 }
@@ -389,7 +389,7 @@ export function NpcBubble({ bubble, dispatch }) {
   const npc = NPCS[shown.npc];
   if (!npc) return null;
   return (
-    <div className="absolute bottom-20 landscape:max-[900px]:bottom-12 left-1/2 -translate-x-1/2 bg-[#f4ecd8] border-[3px] border-[#5a3a20] rounded-2xl px-4 py-3 landscape:max-[900px]:px-3 landscape:max-[900px]:py-2 max-w-[460px] landscape:max-[900px]:max-w-[320px] shadow-2xl z-40 animate-bubblein">
+    <div className="absolute bottom-20 landscape:max-[1024px]:bottom-12 left-1/2 -translate-x-1/2 bg-[#f4ecd8] border-[3px] border-[#5a3a20] rounded-2xl px-4 py-3 landscape:max-[1024px]:px-3 landscape:max-[1024px]:py-2 max-w-[460px] landscape:max-[1024px]:max-w-[320px] shadow-2xl z-40 animate-bubblein">
       <div className="flex gap-2.5 items-start">
         <div className="w-10 h-10 rounded-full grid place-items-center text-white font-bold text-[16px] flex-shrink-0" style={{ backgroundColor: npc.color, border: "2px solid #fff" }}>{npc.name[0]}</div>
         <div className="flex-1 min-w-0">
