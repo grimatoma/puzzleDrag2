@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { BIOMES, NPCS, SEASONS, MAX_TURNS, BUILDINGS } from "./constants.js";
+import { MAP_NODES } from "./features/cartography/data.js";
 import { resourceByKey, xpForLevel } from "./state.js";
 import { seasonIndexForTurns } from "./utils.js";
 
@@ -250,28 +251,67 @@ export function BottomNav({ view, onChange }) {
 
 // ─── Town view ────────────────────────────────────────────────────────────
 
+const TOWN_THEMES = {
+  home: {
+    bg: "linear-gradient(180deg, #a8c5d6 0%, #c5b48b 55%, #7e9b5a 100%)",
+    hill1: "#8da568", hill2: "#5a7a3e", road: "#c5b48b", roadLine: "#a89065",
+    sunColor: "#f7d572", sunGlow: "rgba(247,213,114,.7)",
+    textColor: "#3a2715",
+  },
+  farm: {
+    bg: "linear-gradient(180deg, #b5d98c 0%, #d4c97a 55%, #6b9c3e 100%)",
+    hill1: "#6b9c3e", hill2: "#4a7a28", road: "#d4c97a", roadLine: "#b0a050",
+    sunColor: "#ffe066", sunGlow: "rgba(255,224,102,.7)",
+    textColor: "#1e3a0a",
+  },
+  mine: {
+    bg: "linear-gradient(180deg, #7a8a96 0%, #9a8878 55%, #4a4e52 100%)",
+    hill1: "#5a6068", hill2: "#3a3e42", road: "#9a8878", roadLine: "#706050",
+    sunColor: "#c8c4b0", sunGlow: "rgba(200,196,176,.5)",
+    textColor: "#e8e0d0",
+  },
+  festival: {
+    bg: "linear-gradient(180deg, #e8b84a 0%, #d4784a 55%, #8a5a2a 100%)",
+    hill1: "#c8782a", hill2: "#9a5820", road: "#e8b84a", roadLine: "#c8922a",
+    sunColor: "#fff0a0", sunGlow: "rgba(255,240,160,.8)",
+    textColor: "#3a1a00",
+  },
+  event: {
+    bg: "linear-gradient(180deg, #8ab4ca 0%, #b09878 55%, #6a7a5a 100%)",
+    hill1: "#7a9060", hill2: "#526840", road: "#b09878", roadLine: "#8a7860",
+    sunColor: "#e8e0c0", sunGlow: "rgba(232,224,192,.6)",
+    textColor: "#1a2a3a",
+  },
+  boss: {
+    bg: "linear-gradient(180deg, #2a1a1a 0%, #4a2a2a 55%, #1a0a0a 100%)",
+    hill1: "#3a1a1a", hill2: "#1a0a0a", road: "#4a2a2a", roadLine: "#6a3a3a",
+    sunColor: "#c83030", sunGlow: "rgba(200,48,48,.6)",
+    textColor: "#e8c0c0",
+  },
+};
+
 export function TownView({ state, dispatch }) {
+  const node = MAP_NODES.find(n => n.id === state.mapCurrent) || MAP_NODES[0];
+  const theme = TOWN_THEMES[node.kind] || TOWN_THEMES.home;
   return (
     <div
       className="absolute inset-0 overflow-hidden"
-      style={{
-        background: "linear-gradient(180deg, #a8c5d6 0%, #c5b48b 55%, #7e9b5a 100%)",
-      }}
+      style={{ background: theme.bg }}
     >
-      {/* Sun */}
-      <div className="absolute top-12 right-20 w-16 h-16 rounded-full" style={{ background: "#f7d572", boxShadow: "0 0 60px rgba(247,213,114,.7)" }} />
+      {/* Sun/light source */}
+      <div className="absolute top-12 right-20 w-16 h-16 rounded-full" style={{ background: theme.sunColor, boxShadow: `0 0 60px ${theme.sunGlow}` }} />
       {/* Clouds */}
       <div className="absolute top-16 left-[20%] w-24 h-6 rounded-full bg-white/70" />
       <div className="absolute top-24 left-[55%] w-28 h-7 rounded-full bg-white/60" />
       {/* Hills + road */}
       <svg className="absolute inset-0 w-full h-full" viewBox="0 0 1100 600" preserveAspectRatio="none">
-        <path d="M0,300 Q200,250 400,290 T800,280 L1100,260 L1100,600 L0,600 Z" fill="#8da568" opacity="0.75" />
-        <path d="M0,360 Q300,330 550,360 T1100,350 L1100,600 L0,600 Z" fill="#5a7a3e" opacity="0.6" />
-        <path d="M-20,500 Q200,480 400,500 T800,510 L1100,500" stroke="#c5b48b" strokeWidth="20" fill="none" strokeLinecap="round" opacity="0.85" />
-        <path d="M-20,500 Q200,480 400,500 T800,510 L1100,500" stroke="#a89065" strokeWidth="2" fill="none" strokeDasharray="6 8" />
+        <path d="M0,300 Q200,250 400,290 T800,280 L1100,260 L1100,600 L0,600 Z" fill={theme.hill1} opacity="0.75" />
+        <path d="M0,360 Q300,330 550,360 T1100,350 L1100,600 L0,600 Z" fill={theme.hill2} opacity="0.6" />
+        <path d="M-20,500 Q200,480 400,500 T800,510 L1100,500" stroke={theme.road} strokeWidth="20" fill="none" strokeLinecap="round" opacity="0.85" />
+        <path d="M-20,500 Q200,480 400,500 T800,510 L1100,500" stroke={theme.roadLine} strokeWidth="2" fill="none" strokeDasharray="6 8" />
       </svg>
       {/* Header */}
-      <div className="absolute top-3 left-4 landscape:max-[1024px]:top-2 landscape:max-[1024px]:left-3 font-bold text-[20px] landscape:max-[1024px]:text-[15px] text-[#3a2715]">Hearthwood Vale</div>
+      <div className="absolute top-3 left-4 landscape:max-[1024px]:top-2 landscape:max-[1024px]:left-3 font-bold text-[20px] landscape:max-[1024px]:text-[15px]" style={{ color: theme.textColor }}>{node.name}</div>
       <div className="absolute top-3 right-4 landscape:max-[1024px]:top-2 landscape:max-[1024px]:right-3 bg-white/85 px-3 py-1.5 landscape:max-[1024px]:px-2 landscape:max-[1024px]:py-1 rounded-full font-bold text-[#3a2715] landscape:max-[1024px]:text-[13px]">◉ {state.coins.toLocaleString()}</div>
 
       {/* Buildings positioned in the 1100x600 design space, scaled to viewport */}
