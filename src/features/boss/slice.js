@@ -54,7 +54,6 @@ const BOSS_META = {
 const YEAR_BOSS_ROTATION = ["frostmaw", "quagmire", "ember_drake", "old_stoneface"];
 
 // Heirloom IDs eligible to drop from boss victories (rare/legendary picks)
-const BOSS_HEIRLOOM_POOL = ["embershard", "forgemark", "windsong", "harvestmoon", "palecrown", "cartographer"];
 
 const WEATHER_META = {
   rain: {
@@ -165,24 +164,13 @@ export function reduce(state, action) {
         modal: state.modal === "boss" ? null : state.modal,
       };
       if (won) {
-        // Drop a random heirloom the player doesn't already own
-        const owned = state.heirloomsOwned || [];
-        const eligible = BOSS_HEIRLOOM_POOL.filter((id) => !owned.includes(id));
-        let heirloomUpdate = {};
-        let heirloomText = "";
-        if (eligible.length > 0) {
-          const drop = eligible[Math.floor(Math.random() * eligible.length)];
-          heirloomUpdate = { heirloomsOwned: [...owned, drop] };
-          heirloomText = ` ✨ Heirloom found: ${drop}!`;
-        }
         return {
           ...base,
-          ...heirloomUpdate,
           bossesDefeated: (state.bossesDefeated || 0) + 1,
           coins: (state.coins || 0) + 200,
           bubble: {
             npc: "mira",
-            text: `Victory! +200◉ awarded.${heirloomText}`,
+            text: "Victory! +200◉ awarded.",
             ms: 3200,
             id: Date.now(),
           },

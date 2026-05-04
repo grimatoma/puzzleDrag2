@@ -415,7 +415,7 @@ export function BottomNav({ view, modal, dispatch }) {
     { key: "quests",       label: "📜 Quests" },
     { key: "crafting",     label: "🔨 Craft" },
     { key: "achievements", label: "🏆 Trophies" },
-    { key: "heirlooms",    label: "✨ Heirlooms", modal: "heirlooms" },
+    { key: "cartography", label: "🗺️ Map" },
     { key: "mood",         label: "💞 Townsfolk", modal: "mood" },
     { key: "apprentices",  label: "🧑‍🌾 Helpers",  modal: "apprentices" },
   ];
