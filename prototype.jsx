@@ -122,7 +122,7 @@ export default function App() {
         {/* Main area: board + side panel, or town view */}
         <div className="flex-1 min-h-0 relative">
           {/* Board + side panel grid — always mounted to keep Phaser alive, hidden when in town view */}
-          <div className={`absolute inset-0 grid grid-cols-[1fr_300px] gap-3 p-3 portrait:max-[1024px]:grid-cols-1 portrait:max-[1024px]:grid-rows-[1fr_auto] landscape:max-[1024px]:grid-cols-[1fr_200px] landscape:max-[1024px]:gap-2 landscape:max-[1024px]:p-2 ${state.view === "town" ? "invisible" : ""}`}>
+          <div className={`absolute inset-0 grid grid-cols-[1fr_300px] gap-3 p-3 max-[1024px]:grid-cols-1 max-[1024px]:grid-rows-[1fr_auto] ${state.view === "board" ? "" : "invisible"}`}>
             {/* Phaser host — takes the rest */}
             <div className="relative min-h-0 min-w-0">
               <div className="absolute inset-0 rounded-xl overflow-hidden bg-[#4a2f18]">
@@ -136,7 +136,7 @@ export default function App() {
               </div>
             </div>
             {/* Side panel */}
-            <div className="min-h-0 portrait:max-[1024px]:max-h-[40dvh]">
+            <div className="min-h-0 max-[1024px]:max-h-[40dvh]">
               <SidePanel state={state} dispatch={dispatch} />
             </div>
           </div>
@@ -152,10 +152,12 @@ export default function App() {
           <FeatureScreens state={state} dispatch={dispatch} />
         </div>
 
-        {/* Bottom nav */}
-        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-30 landscape:max-[1024px]:bottom-1.5">
-          <BottomNav view={state.view} onChange={(v) => dispatch({ type: "SET_VIEW", view: v })} />
-        </div>
+        {/* Bottom nav — hidden on board view */}
+        {state.view !== "board" && (
+          <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-30">
+            <BottomNav view={state.view} onChange={(v) => dispatch({ type: "SET_VIEW", view: v })} />
+          </div>
+        )}
 
         {/* NPC bubble */}
         <NpcBubble bubble={state.bubble} dispatch={dispatch} />
