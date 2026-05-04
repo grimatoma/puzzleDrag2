@@ -1,5 +1,3 @@
-import { MAP_NODES } from '../cartography/data.js';
-
 const STORAGE_KEY = 'hearth.heirlooms.v1';
 
 function persist(owned, slots) {
@@ -47,16 +45,7 @@ export function reduce(state, action) {
     }
     newSlots[slot] = id;
 
-    // cartographer: reveal 2 extra undiscovered map nodes on equip
-    let next = { ...state, heirloomSlots: newSlots };
-    if (id === 'cartographer' && Array.isArray(state.mapDiscovered)) {
-      const allIds = MAP_NODES.map(n => n.id);
-      const undiscovered = allIds.filter(nid => !state.mapDiscovered.includes(nid));
-      const toAdd = undiscovered.slice(0, 2);
-      if (toAdd.length > 0) {
-        next = { ...next, mapDiscovered: [...state.mapDiscovered, ...toAdd] };
-      }
-    }
+    const next = { ...state, heirloomSlots: newSlots };
 
     persist(owned, newSlots);
     return next;

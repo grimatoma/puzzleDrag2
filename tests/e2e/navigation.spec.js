@@ -14,14 +14,6 @@ test('navigate to Town shows Hearthwood Vale', async ({ page }) => {
   expect(state.view).toBe('town');
 });
 
-test('navigate to Map shows map screen', async ({ page }) => {
-  await page.goto('/');
-  await waitForBoot(page);
-  await page.getByRole('button', { name: '🗺 Map' }).click();
-  // The cartography screen side panel shows "Tap a node to explore" when nothing is selected
-  await expect(page.getByText('Tap a node to explore')).toBeVisible();
-});
-
 test('open Crafting screen', async ({ page }) => {
   await page.goto('/');
   await waitForBoot(page);

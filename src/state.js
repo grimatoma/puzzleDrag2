@@ -6,16 +6,10 @@ import * as tutorial from "./features/tutorial/slice.js";
 import * as settings from "./features/settings/slice.js";
 import * as boss from "./features/boss/slice.js";
 import * as heirlooms from "./features/heirlooms/slice.js";
-import * as longnight from "./features/longnight/slice.js";
-import * as beasts from "./features/beasts/slice.js";
-import * as cartography from "./features/cartography/slice.js";
-import * as festivals from "./features/festivals/slice.js";
-import * as memoryweave from "./features/memoryweave/slice.js";
 import * as apprentices from "./features/apprentices/slice.js";
 import * as mood from "./features/mood/slice.js";
-import * as glyphs from "./features/glyphs/slice.js";
 
-const slices = [crafting, quests, achievements, tutorial, settings, boss, heirlooms, longnight, beasts, cartography, festivals, memoryweave, apprentices, mood, glyphs];
+const slices = [crafting, quests, achievements, tutorial, settings, boss, heirlooms, apprentices, mood];
 
 // ─── Save/load ─────────────────────────────────────────────────────────────
 // Persisted: everything except volatile UI fields (modal/bubble/view/pendingView).
@@ -125,14 +119,8 @@ export function initialState() {
     ...settings.initial,
     ...boss.initial,
     ...heirlooms.initial,
-    ...longnight.initial,
-    ...beasts.initial,
-    ...cartography.initial,
-    ...festivals.initial,
-    ...memoryweave.initial,
     ...apprentices.initial,
     ...mood.initial,
-    ...glyphs.initial,
   };
   // Hydrate from save if present, but always force board view + clear modals on boot
   const saved = loadSavedState();
@@ -417,7 +405,7 @@ function coreReducer(state, action) {
 function rawReducer(state, action) {
   // 1. Core reducer mutates the canonical game state for known actions.
   // 2. Then every feature slice sees the action against the post-core state,
-  //    so cross-cutting effects (heirlooms, perks, glyphs, quests, achievements) fire.
+  //    so cross-cutting effects (heirlooms, quests, achievements) fire.
   const afterCore = coreReducer(state, action);
   return slices.reduce((s, slice) => slice.reduce(s, action), afterCore);
 }
