@@ -4,9 +4,13 @@ import { seasonIndexForTurns, upgradeCountForChain, cssColor } from "./utils.js"
 import { rounded, makeTextures } from "./textures.js";
 import { TileObj } from "./TileObj.js";
 
-const BOARD_PAD = 14;
-const BOARD_OUTER = 24;
 const TILE_BASE = TILE; // texture-native size; sprites scale relative to this
+
+// Single decorative frame around the tiles. Thinner on narrow viewports so
+// the board can stretch as wide as possible — see boardFrame() below.
+function boardFrameFor(vw) {
+  return vw < 600 ? 8 : 14;
+}
 
 export class GameScene extends Phaser.Scene {
   constructor() {
@@ -64,8 +68,9 @@ export class GameScene extends Phaser.Scene {
   layoutDims() {
     const vw = this.scale.width;
     const vh = this.scale.height;
-    // Reserve room for the board frame (BOARD_OUTER on each side).
-    const margin = BOARD_OUTER;
+    // Reserve room for the single decorative frame on each side.
+    this.boardFrame = boardFrameFor(vw);
+    const margin = this.boardFrame;
     const maxByW = (vw - margin * 2) / COLS;
     const maxByH = (vh - margin * 2) / ROWS;
     // Cap upscale at 2x texture size to avoid blur from over-magnification.
@@ -123,17 +128,17 @@ export class GameScene extends Phaser.Scene {
     const bg = this.biomeKey() === "mine" ? 0x31404a : s.bg;
     this.cameras.main.setBackgroundColor(bg);
     tag(this.add.rectangle(0, 0, vw, vh, bg).setOrigin(0).setDepth(-10));
+    const frame = this.boardFrame;
     // Decorative side leaves — only draw if there's room outside the board frame.
     const leafGap = 36;
-    if (this.boardX - BOARD_OUTER - leafGap > 0) {
+    if (this.boardX - frame - leafGap > 0) {
       for (let y = 30; y < vh - 30; y += 36) {
         tag(this.add.ellipse(this.boardX - leafGap, y, 38, 22, s.accent, 0.55).setAngle(-25).setDepth(-9));
         tag(this.add.ellipse(this.boardX + boardW + leafGap, y, 38, 22, s.accent, 0.55).setAngle(25).setDepth(-9));
       }
     }
-    // Board frame
-    tag(rounded(this, this.boardX - BOARD_OUTER, this.boardY - BOARD_OUTER, boardW + BOARD_OUTER * 2, boardH + BOARD_OUTER * 2, 22, b.dark, 0.92).setDepth(-2));
-    tag(rounded(this, this.boardX - BOARD_PAD, this.boardY - BOARD_PAD, boardW + BOARD_PAD * 2, boardH + BOARD_PAD * 2, 18, b.dirt, 1).setDepth(-1));
+    // Single decorative board frame (replaces the previously stacked outer/inner frames).
+    tag(rounded(this, this.boardX - frame, this.boardY - frame, boardW + frame * 2, boardH + frame * 2, 16, b.dirt, 1).setDepth(-1));
   }
 
   refreshSeasonTint() {
@@ -339,7 +344,7 @@ export class GameScene extends Phaser.Scene {
   showChainBadge() {
     if (this.chainBadge) return;
     const cx = this.boardX + (COLS * this.tileSize) / 2;
-    const cy = this.boardY - BOARD_OUTER - 22;
+    const cy = this.boardY - this.boardFrame - 22;
     this.chainBadge = this.add.container(cx, cy).setDepth(40);
     const bg = rounded(this, -70, -16, 140, 32, 16, 0x2b2218, 0.9, 0xffd248, 2);
     this.chainBadgeText = this.add.text(0, 0, "", { fontFamily: "Arial", fontSize: "14px", color: "#ffd248", fontStyle: "bold" }).setOrigin(0.5);

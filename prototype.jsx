@@ -122,18 +122,16 @@ export default function App() {
         {/* Main area: board + side panel, or town view */}
         <div className="flex-1 min-h-0 relative">
           {/* Board + side panel grid — always mounted to keep Phaser alive, hidden when in town view */}
-          <div className={`absolute inset-0 grid grid-cols-[1fr_300px] gap-3 p-3 max-[1024px]:grid-cols-1 max-[1024px]:grid-rows-[1fr_auto] ${state.view === "board" ? "" : "invisible"}`}>
-            {/* Phaser host — takes the rest */}
-            <div className="relative min-h-0 min-w-0">
-              <div className="absolute inset-0 rounded-xl overflow-hidden bg-[#4a2f18]">
-                <PhaserMount
-                  dispatch={dispatch}
-                  biomeKey={state.biomeKey}
-                  turnsUsed={state.turnsUsed}
-                  uiLocked={uiLocked}
-                  sceneRef={sceneRef}
-                />
-              </div>
+          <div className={`absolute inset-0 grid grid-cols-[1fr_300px] gap-3 p-3 max-[1024px]:grid-cols-1 max-[1024px]:grid-rows-[1fr_auto] max-[1024px]:gap-0 max-[1024px]:p-0 ${state.view === "board" ? "" : "invisible"}`}>
+            {/* Phaser host — takes the rest. Phaser draws its own background and frame. */}
+            <div className="relative min-h-0 min-w-0 overflow-hidden">
+              <PhaserMount
+                dispatch={dispatch}
+                biomeKey={state.biomeKey}
+                turnsUsed={state.turnsUsed}
+                uiLocked={uiLocked}
+                sceneRef={sceneRef}
+              />
             </div>
             {/* Side panel */}
             <div className="min-h-0 max-[1024px]:max-h-[40dvh]">
