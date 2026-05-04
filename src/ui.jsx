@@ -234,14 +234,13 @@ export function BottomNav({ view, onChange }) {
   ];
   return (
     <div
-      className="bg-[#2b2218]/95 border-2 border-[#f7e2b6] rounded-2xl p-1 flex gap-1 shadow-2xl max-w-[92vw] overflow-x-auto"
-      style={{ scrollbarWidth: "none", WebkitOverflowScrolling: "touch" }}
+      className="bg-[#2b2218]/95 border-2 border-[#f7e2b6] rounded-2xl p-1 flex flex-wrap gap-1 shadow-2xl max-w-[92vw] justify-center"
     >
       {items.map((it) => (
         <button
           key={it.key}
           onClick={() => onChange(it.key)}
-          className={`text-[11px] px-2.5 py-1.5 rounded-xl font-bold transition-colors whitespace-nowrap flex-shrink-0 ${view === it.key ? "bg-[#d6612a] text-white" : "bg-transparent text-[#f7e2b6] hover:bg-white/10"}`}
+          className={`text-[11px] px-2.5 py-1.5 rounded-xl font-bold transition-colors whitespace-nowrap ${view === it.key ? "bg-[#d6612a] text-white" : "bg-transparent text-[#f7e2b6] hover:bg-white/10"}`}
         >
           {it.label}
         </button>
