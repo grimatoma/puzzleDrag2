@@ -20,7 +20,7 @@ const slices = [crafting, quests, achievements, tutorial, settings, boss, heirlo
 // ─── Save/load ─────────────────────────────────────────────────────────────
 // Persisted: everything except volatile UI fields (modal/bubble/view/pendingView).
 const SAVE_KEY = "hearth.save.v1";
-const VOLATILE = new Set(["modal", "bubble", "view", "pendingView"]);
+const VOLATILE = new Set(["modal", "bubble", "view", "pendingView", "craftingTab"]);
 
 export function loadSavedState() {
   try {
@@ -242,9 +242,9 @@ function coreReducer(state, action) {
       const next = action.view;
       // Leaving the board mid-session ends the session (pop summary modal first)
       if (state.view === "board" && next !== "board" && state.turnsUsed > 0 && !state.modal) {
-        return { ...state, modal: "season", pendingView: next };
+        return { ...state, modal: "season", pendingView: next, craftingTab: action.craftingTab ?? state.craftingTab };
       }
-      return { ...state, view: next };
+      return { ...state, view: next, craftingTab: action.craftingTab ?? (next === "crafting" ? state.craftingTab : null) };
     }
     case "OPEN_MODAL":
       return { ...state, modal: action.modal };

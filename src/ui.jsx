@@ -356,8 +356,14 @@ export function TownView({ state, dispatch }) {
             const isLocked = state.level < b.lv;
             const canAfford = state.coins >= (b.cost.coins || 0) &&
               Object.entries(b.cost).every(([k, v]) => k === "coins" || (state.inventory[k] || 0) >= v);
+            const CRAFTING_STATIONS = new Set(["bakery", "forge", "larder"]);
             const onClick = () => {
-              if (isLocked || isBuilt) return;
+              if (isLocked) return;
+              if (isBuilt && CRAFTING_STATIONS.has(b.id)) {
+                dispatch({ type: "SET_VIEW", view: "crafting", craftingTab: b.id });
+                return;
+              }
+              if (isBuilt) return;
               if (!canAfford) return;
               dispatch({ type: "BUILD", building: b });
             };
