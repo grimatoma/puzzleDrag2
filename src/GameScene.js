@@ -20,6 +20,7 @@ export class GameScene extends Phaser.Scene {
     this.pathLines = [];
     this.pathStars = [];
     this.pathNodeG = null;
+    this.pendingUpgrades = [];
     this.dragging = false;
     this.locked = false;
   }
@@ -190,7 +191,8 @@ export class GameScene extends Phaser.Scene {
         if (!this.grid[r][c]) {
           const x = this.boardX + c * ts + ts / 2;
           const y = this.boardY + r * ts + ts / 2;
-          const tile = new TileObj(this, x, initial ? y - 500 - Phaser.Math.Between(0, 100) : y - 140, c, r, this.randomResource());
+          const res = !initial && this.pendingUpgrades.length ? this.pendingUpgrades.shift() : this.randomResource();
+          const tile = new TileObj(this, x, initial ? y - 500 - Phaser.Math.Between(0, 100) : y - 140, c, r, res);
           tile.sprite.setScale(this.tileScale);
           this.grid[r][c] = tile;
           this.tweens.add({ targets: tile.sprite, y, duration: initial ? 450 + r * 28 : 210, ease: "Back.Out" });
@@ -346,15 +348,10 @@ export class GameScene extends Phaser.Scene {
       const upgrade = next && (i + 1) % UPGRADE_EVERY === 0;
       if (upgrade) {
         tile.setSelected(false);
-        tile.setResource(next);
-        tile.sprite.setScale(0.1 * this.tileScale).setAlpha(0.2);
-        this.tweens.add({ targets: tile.sprite, scale: this.tileScale, alpha: 1, angle: 360, duration: 280, ease: "Back.Out", onComplete: () => (tile.sprite.angle = 0) });
-        const burst = this.add.image(tile.x, tile.y, "spark").setScale(0.1 * this.tileScale).setDepth(12);
-        this.tweens.add({ targets: burst, scale: 0.9 * this.tileScale, alpha: 0, duration: 420, onComplete: () => burst.destroy() });
-      } else {
-        this.grid[tile.row][tile.col] = null;
-        this.tweens.add({ targets: tile.sprite, scale: 0, angle: Phaser.Math.Between(-25, 25), alpha: 0, duration: 180 + i * 15, onComplete: () => tile.destroy() });
+        this.pendingUpgrades.push(next);
       }
+      this.grid[tile.row][tile.col] = null;
+      this.tweens.add({ targets: tile.sprite, scale: 0, angle: Phaser.Math.Between(-25, 25), alpha: 0, duration: 180 + i * 15, onComplete: () => tile.destroy() });
     });
 
     // Emit to React
