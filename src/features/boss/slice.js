@@ -131,6 +131,22 @@ export function reduce(state, action) {
       return { ...state, bossMinimized: true, modal: null };
     }
 
+    case "BOSS/REJECT": {
+      if (!state.boss) return state;
+      return {
+        ...state,
+        boss: null,
+        bossMinimized: false,
+        modal: state.modal === "boss" ? null : state.modal,
+        bubble: {
+          npc: "mira",
+          text: `The challenge fades... better luck next season.`,
+          ms: 2500,
+          id: Date.now(),
+        },
+      };
+    }
+
     case "BOSS/RESOLVE": {
       const won = !!action.won;
       const base = {
