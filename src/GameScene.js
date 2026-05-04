@@ -29,6 +29,26 @@ export class GameScene extends Phaser.Scene {
     this.drawBackground();
     this.fillBoard(true);
     this.input.on("pointerup", () => this.endPath());
+
+    // Prevent the browser from hijacking pointer events with its native text/element
+    // selection during tile drags (causes the "foggy film" overlay and stuck tile selection).
+    const canvas = this.sys.game.canvas;
+    const preventSelect = (e) => e.preventDefault();
+    canvas.addEventListener("selectstart", preventSelect);
+    canvas.addEventListener("contextmenu", preventSelect);
+
+    // Fallback: fire endPath if the pointer is released outside the Phaser canvas.
+    const onDocPointerUp = () => this.endPath();
+    document.addEventListener("pointerup", onDocPointerUp);
+    document.addEventListener("mouseup", onDocPointerUp);
+
+    this.events.once("shutdown", () => {
+      canvas.removeEventListener("selectstart", preventSelect);
+      canvas.removeEventListener("contextmenu", preventSelect);
+      document.removeEventListener("pointerup", onDocPointerUp);
+      document.removeEventListener("mouseup", onDocPointerUp);
+    });
+
     this.scale.on("resize", () => this.handleResize());
     this.registry.events.on("changedata-biomeKey", (_p, value, prev) => {
       if (value !== prev) this.handleBiomeChange();
