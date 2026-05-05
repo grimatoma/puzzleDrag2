@@ -288,6 +288,7 @@ function ToolsGrid({ tools, onUse }) {
   const longPressTimer = useRef(null);
   const longPressOccurred = useRef(false);
   const lastTouchTime = useRef(0);
+  const dismissTimer = useRef(null);
 
   const startLongPress = (t) => {
     longPressOccurred.current = false;
@@ -302,10 +303,20 @@ function ToolsGrid({ tools, onUse }) {
   };
 
   const showTooltip = (key, el, touchY) => {
+    clearTimeout(dismissTimer.current);
     const rect = el.getBoundingClientRect();
     const y = touchY != null ? touchY - 100 : rect.top;
     setTooltipPos({ x: rect.left + rect.width / 2, y });
     setTooltip(key);
+  };
+
+  const hideTooltip = (delay = 0) => {
+    clearTimeout(dismissTimer.current);
+    if (delay > 0) {
+      dismissTimer.current = setTimeout(() => setTooltip(null), delay);
+    } else {
+      setTooltip(null);
+    }
   };
 
   const tooltipDef = TOOL_DEFS.find((t) => t.key === tooltip);
@@ -325,14 +336,14 @@ function ToolsGrid({ tools, onUse }) {
                   onUse(t.key);
                 }}
                 onMouseEnter={(e) => { if (Date.now() - lastTouchTime.current > 600) showTooltip(t.key, e.currentTarget); }}
-                onMouseLeave={() => setTooltip(null)}
+                onMouseLeave={() => hideTooltip()}
                 onTouchStart={(e) => {
                   lastTouchTime.current = Date.now();
                   startLongPress(t);
                   if (e.touches.length > 0) showTooltip(t.key, e.currentTarget, e.touches[0].clientY);
                 }}
-                onTouchEnd={() => { cancelLongPress(); setTimeout(() => setTooltip(null), 1800); }}
-                onTouchMove={(e) => { cancelLongPress(); setTooltip(null); }}
+                onTouchEnd={() => { cancelLongPress(); hideTooltip(1800); }}
+                onTouchMove={() => cancelLongPress()}
                 className={`relative w-full rounded-lg border-2 border-[#e6c49a] py-1.5 px-1 flex flex-col items-center gap-0.5 transition-transform ${empty ? "bg-[#9a724d] opacity-40 cursor-not-allowed" : "bg-[#9a724d] hover:bg-[#b8845a] hover:-translate-y-0.5"}`}
               >
                 {amt > 0 && <div className="absolute -top-1 -right-1 bg-[#2b2218] text-white border border-[#f7e2b6] rounded-full px-1.5 text-[10px] font-bold">{amt}</div>}
@@ -1100,6 +1111,7 @@ export function TownView({ state, dispatch }) {
   const [entryBiome, setEntryBiome] = useState(null);
   const [buildingTip, setBuildingTip] = useState(null);
   const buildingTouchTime = useRef(0);
+  const buildingDismissTimer = useRef(null);
   const biomeTheme = state.biomeKey === "mine" ? "mine" : "farm";
   const theme = TOWN_THEMES[biomeTheme] || TOWN_THEMES.home;
   const townConfig = TOWN_BIOME_CONFIGS[biomeTheme];
@@ -1355,6 +1367,7 @@ export function TownView({ state, dispatch }) {
             const costStr = Object.entries(b.cost).map(([k, v]) => k === "coins" ? `${v}◉` : `${v} ${k}`).join(" · ");
             const showTip = (el, touchY) => {
               if (isBuilt) return;
+              clearTimeout(buildingDismissTimer.current);
               const rect = el.getBoundingClientRect();
               const x = rect.left + rect.width / 2;
               const y = touchY != null ? touchY - 100 : rect.top;
@@ -1364,6 +1377,14 @@ export function TownView({ state, dispatch }) {
                 color: isLocked ? "#f7d572" : canAfford ? "#9bdb6a" : "#f7d572",
                 x, y,
               });
+            };
+            const hideTip = (delay = 0) => {
+              clearTimeout(buildingDismissTimer.current);
+              if (delay > 0) {
+                buildingDismissTimer.current = setTimeout(() => setBuildingTip(null), delay);
+              } else {
+                setBuildingTip(null);
+              }
             };
             return (
               <div
@@ -1378,10 +1399,9 @@ export function TownView({ state, dispatch }) {
                 }}
                 onClick={onClick}
                 onMouseEnter={(e) => { if (Date.now() - buildingTouchTime.current > 600) showTip(e.currentTarget); }}
-                onMouseLeave={() => setBuildingTip(null)}
+                onMouseLeave={() => hideTip()}
                 onTouchStart={(e) => { buildingTouchTime.current = Date.now(); if (e.touches.length > 0) showTip(e.currentTarget, e.touches[0].clientY); }}
-                onTouchEnd={() => setTimeout(() => setBuildingTip(null), 1800)}
-                onTouchMove={() => setBuildingTip(null)}
+                onTouchEnd={() => hideTip(1800)}
               >
                 <BuildingIllustration id={b.id} isBuilt={isBuilt} />
                 {isBuilt ? (
