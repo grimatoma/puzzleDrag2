@@ -287,6 +287,7 @@ function ToolsGrid({ tools, onUse }) {
   const [modalTool, setModalTool] = useState(null);
   const longPressTimer = useRef(null);
   const longPressOccurred = useRef(false);
+  const lastTouchTime = useRef(0);
 
   const startLongPress = (t) => {
     longPressOccurred.current = false;
@@ -323,13 +324,14 @@ function ToolsGrid({ tools, onUse }) {
                   if (longPressOccurred.current) { longPressOccurred.current = false; return; }
                   onUse(t.key);
                 }}
-                onMouseEnter={(e) => showTooltip(t.key, e.currentTarget)}
+                onMouseEnter={(e) => { if (Date.now() - lastTouchTime.current > 600) showTooltip(t.key, e.currentTarget); }}
                 onMouseLeave={() => setTooltip(null)}
                 onTouchStart={(e) => {
+                  lastTouchTime.current = Date.now();
                   startLongPress(t);
                   if (e.touches.length > 0) showTooltip(t.key, e.currentTarget, e.touches[0].clientY);
                 }}
-                onTouchEnd={() => { cancelLongPress(); setTimeout(() => setTooltip(null), 800); }}
+                onTouchEnd={() => { cancelLongPress(); setTimeout(() => setTooltip(null), 1800); }}
                 onTouchMove={(e) => { cancelLongPress(); setTooltip(null); }}
                 className={`relative w-full rounded-lg border-2 border-[#e6c49a] py-1.5 px-1 flex flex-col items-center gap-0.5 transition-transform ${empty ? "bg-[#9a724d] opacity-40 cursor-not-allowed" : "bg-[#9a724d] hover:bg-[#b8845a] hover:-translate-y-0.5"}`}
               >
@@ -1094,6 +1096,7 @@ function MineEntranceArt({ locked }) {
 export function TownView({ state, dispatch }) {
   const [entryBiome, setEntryBiome] = useState(null);
   const [buildingTip, setBuildingTip] = useState(null);
+  const buildingTouchTime = useRef(0);
   const biomeTheme = state.biomeKey === "mine" ? "mine" : "farm";
   const theme = TOWN_THEMES[biomeTheme] || TOWN_THEMES.home;
   const townConfig = TOWN_BIOME_CONFIGS[biomeTheme];
@@ -1371,10 +1374,10 @@ export function TownView({ state, dispatch }) {
                   opacity: isLocked && !isBuilt ? 0.5 : 1,
                 }}
                 onClick={onClick}
-                onMouseEnter={(e) => showTip(e.currentTarget)}
+                onMouseEnter={(e) => { if (Date.now() - buildingTouchTime.current > 600) showTip(e.currentTarget); }}
                 onMouseLeave={() => setBuildingTip(null)}
-                onTouchStart={(e) => { if (e.touches.length > 0) showTip(e.currentTarget, e.touches[0].clientY); }}
-                onTouchEnd={() => setTimeout(() => setBuildingTip(null), 900)}
+                onTouchStart={(e) => { buildingTouchTime.current = Date.now(); if (e.touches.length > 0) showTip(e.currentTarget, e.touches[0].clientY); }}
+                onTouchEnd={() => setTimeout(() => setBuildingTip(null), 1800)}
                 onTouchMove={() => setBuildingTip(null)}
               >
                 <BuildingIllustration id={b.id} isBuilt={isBuilt} />
