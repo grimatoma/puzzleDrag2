@@ -300,9 +300,10 @@ function ToolsGrid({ tools, onUse }) {
     clearTimeout(longPressTimer.current);
   };
 
-  const showTooltip = (key, el) => {
+  const showTooltip = (key, el, touchY) => {
     const rect = el.getBoundingClientRect();
-    setTooltipPos({ x: rect.left + rect.width / 2, y: rect.top });
+    const y = touchY != null ? touchY - 20 : rect.top;
+    setTooltipPos({ x: rect.left + rect.width / 2, y });
     setTooltip(key);
   };
 
@@ -324,9 +325,12 @@ function ToolsGrid({ tools, onUse }) {
                 }}
                 onMouseEnter={(e) => showTooltip(t.key, e.currentTarget)}
                 onMouseLeave={() => setTooltip(null)}
-                onTouchStart={() => startLongPress(t)}
-                onTouchEnd={cancelLongPress}
-                onTouchMove={cancelLongPress}
+                onTouchStart={(e) => {
+                  startLongPress(t);
+                  if (e.touches.length > 0) showTooltip(t.key, e.currentTarget, e.touches[0].clientY);
+                }}
+                onTouchEnd={() => { cancelLongPress(); setTimeout(() => setTooltip(null), 800); }}
+                onTouchMove={(e) => { cancelLongPress(); setTooltip(null); }}
                 className={`relative w-full rounded-lg border-2 border-[#e6c49a] py-1.5 px-1 flex flex-col items-center gap-0.5 transition-transform ${empty ? "bg-[#9a724d] opacity-40 cursor-not-allowed" : "bg-[#9a724d] hover:bg-[#b8845a] hover:-translate-y-0.5"}`}
               >
                 {amt > 0 && <div className="absolute -top-1 -right-1 bg-[#2b2218] text-white border border-[#f7e2b6] rounded-full px-1.5 text-[10px] font-bold">{amt}</div>}
@@ -1326,11 +1330,13 @@ export function TownView({ state, dispatch }) {
                   <>
                     {SMOKE_BUILDINGS.has(b.id) && <BuildingSmoke />}
                     <div
-                      className="absolute bottom-0 left-0 right-0 text-center font-bold text-white truncate py-0.5 px-1"
+                      className="absolute bottom-full left-0 right-0 text-center font-bold text-white truncate py-0.5 px-1"
                       style={{
-                        background: "rgba(0,0,0,.45)",
+                        background: "rgba(0,0,0,.55)",
                         fontSize: "clamp(7px,0.8vw,10px)",
                         textShadow: "0 1px 2px rgba(0,0,0,.8)",
+                        marginBottom: 2,
+                        borderRadius: "4px 4px 0 0",
                       }}
                     >
                       {b.name}
@@ -1389,46 +1395,73 @@ export function TownView({ state, dispatch }) {
 
       {/* Farm Field and Mine Entrance — rendered after buildings so they sit on top and receive clicks */}
       <div className="absolute inset-0 pointer-events-none">
-        {/* Farm Field — upper-left hills, entry to Farm board */}
+        {/* Farm Field — bottom-left, sits on the land */}
         <div
-          className="absolute cursor-pointer group pointer-events-auto"
-          style={{ left: "1%", top: "28%", width: "14%", aspectRatio: "1" }}
+          className="absolute cursor-pointer group pointer-events-auto flex flex-col items-center"
+          style={{ left: "1%", bottom: "4%", width: "20%" }}
           onClick={() => setEntryBiome("farm")}
         >
+          <div className="w-full text-center font-bold text-white mb-1" style={{ fontSize: "clamp(10px,1.2vw,15px)", textShadow: "0 1px 3px rgba(0,0,0,.9)" }}>🌾 Farm Field</div>
           <div
-            className="relative w-full h-full rounded-xl overflow-hidden transition-transform duration-150 group-hover:scale-105"
+            className="relative w-full overflow-hidden transition-transform duration-150 group-hover:scale-105"
             style={{
+              aspectRatio: "1",
               border: "3px solid #2a5010",
-              boxShadow: "0 4px 0 rgba(0,0,0,.35)",
+              borderBottom: "none",
+              borderRadius: "12px 12px 0 0",
+              boxShadow: "0 -2px 8px rgba(0,0,0,.3)",
             }}
           >
             <FarmFieldArt />
-            <div className="absolute top-1.5 inset-x-0 text-center font-bold text-white" style={{ fontSize: "clamp(9px,1.1vw,14px)", textShadow: "0 1px 3px rgba(0,0,0,.8)" }}>🌾 Farm Field</div>
-            <div className="absolute bottom-0 inset-x-0 text-center font-bold text-white py-1" style={{ background: "rgba(0,0,0,.45)", fontSize: "clamp(8px,0.9vw,11px)", textShadow: "0 1px 2px rgba(0,0,0,.7)" }}>▶ Enter</div>
+          </div>
+          <div
+            className="w-full text-center font-bold text-white py-1.5"
+            style={{
+              background: "rgba(30,70,10,.85)",
+              fontSize: "clamp(9px,1vw,13px)",
+              textShadow: "0 1px 2px rgba(0,0,0,.7)",
+              border: "3px solid #2a5010",
+              borderTop: "none",
+              borderRadius: "0 0 10px 10px",
+            }}
+          >
+            ▶ Enter
           </div>
         </div>
 
-        {/* Mine Entrance — upper-right hills, entry to Mine board */}
+        {/* Mine Entrance — bottom-right, sits on the land */}
         <div
-          className="absolute cursor-pointer group pointer-events-auto"
-          style={{ left: "85%", top: "28%", width: "14%", aspectRatio: "1" }}
+          className="absolute cursor-pointer group pointer-events-auto flex flex-col items-center"
+          style={{ right: "1%", bottom: "4%", width: "20%", opacity: state.level < 2 ? 0.65 : 1 }}
           onClick={() => setEntryBiome("mine")}
         >
+          <div className="w-full text-center font-bold text-white mb-1" style={{ fontSize: "clamp(10px,1.2vw,15px)", textShadow: "0 1px 3px rgba(0,0,0,.95)" }}>
+            {state.level < 2 ? "🔒 Mine" : "⛏ Mine"}
+          </div>
           <div
-            className="relative w-full h-full rounded-xl overflow-hidden transition-transform duration-150 group-hover:scale-105"
+            className="relative w-full overflow-hidden transition-transform duration-150 group-hover:scale-105"
             style={{
+              aspectRatio: "1",
               border: "3px solid #1a1e22",
-              boxShadow: "0 4px 0 rgba(0,0,0,.35)",
-              opacity: state.level < 2 ? 0.65 : 1,
+              borderBottom: "none",
+              borderRadius: "12px 12px 0 0",
+              boxShadow: "0 -2px 8px rgba(0,0,0,.4)",
             }}
           >
             <MineEntranceArt locked={state.level < 2} />
-            <div className="absolute top-1.5 inset-x-0 text-center font-bold text-white" style={{ fontSize: "clamp(9px,1.1vw,14px)", textShadow: "0 1px 3px rgba(0,0,0,.85)" }}>
-              {state.level < 2 ? "🔒 Mine" : "⛏ Mine"}
-            </div>
-            <div className="absolute bottom-0 inset-x-0 text-center font-bold text-white py-1" style={{ background: "rgba(0,0,0,.55)", fontSize: "clamp(8px,0.9vw,11px)", textShadow: "0 1px 2px rgba(0,0,0,.7)" }}>
-              {state.level < 2 ? "L2 req." : "▶ Enter"}
-            </div>
+          </div>
+          <div
+            className="w-full text-center font-bold text-white py-1.5"
+            style={{
+              background: "rgba(20,22,28,.85)",
+              fontSize: "clamp(9px,1vw,13px)",
+              textShadow: "0 1px 2px rgba(0,0,0,.7)",
+              border: "3px solid #1a1e22",
+              borderTop: "none",
+              borderRadius: "0 0 10px 10px",
+            }}
+          >
+            {state.level < 2 ? "L2 req." : "▶ Enter"}
           </div>
         </div>
       </div>
