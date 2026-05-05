@@ -239,6 +239,7 @@ function coreReducer(state, action) {
         seasonStats,
         bubble,
         _hintsShown: newHintsShown,
+        lastChainLength: effectiveChain,
         modal: seasonEnded ? "season" : state.modal,
       };
     }

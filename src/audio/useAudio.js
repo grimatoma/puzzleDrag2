@@ -20,10 +20,13 @@ export function useAudio(state) {
     const p = prev.current || {};
     const s = state || {};
 
-    // turnsUsed increase → chain was collected
+    // turnsUsed increase → chain was collected. Pitch climbs with chain length
+    // so a 3-chain sounds modest and a 10+ chain sounds triumphant.
     if ((s.turnsUsed || 0) > (p.turnsUsed || 0)) {
-      play('chainCollect');
-      if (s?.settings?.hapticsOn && navigator.vibrate) navigator.vibrate(40);
+      const len = s.lastChainLength || 0;
+      const pitch = len >= 3 ? Math.min(2.0, 1 + (len - 3) * 0.10) : 1;
+      play('chainCollect', { pitch });
+      if (s?.settings?.hapticsOn && navigator.vibrate) navigator.vibrate(len >= 6 ? 80 : 40);
     }
 
     // level increase → level up fanfare

@@ -81,8 +81,10 @@ export class GameScene extends Phaser.Scene {
     const margin = this.boardFrame;
     const maxByW = (vw - margin * 2) / COLS;
     const maxByH = (vh - margin * 2) / ROWS;
-    // Cap upscale at 2× the CSS-pixel native tile size.
-    this.tileSize = Math.max(24 * dpr, Math.min(maxByW, maxByH, TILE_BASE * 2 * dpr));
+    // Let the board fill its container — only clamp a hard ceiling so
+    // huge ultrawide displays don't render absurdly large tiles.
+    const ceiling = TILE_BASE * 3.2 * dpr;
+    this.tileSize = Math.max(24 * dpr, Math.min(maxByW, maxByH, ceiling));
     // Ratio of canvas px to CSS px at current tile size — used for graphics
     // line widths, offsets, and other CSS-pixel design constants.
     this.tileScale = this.tileSize / TILE_BASE;
@@ -450,11 +452,17 @@ export class GameScene extends Phaser.Scene {
     const gained = this.path.length * (this.path.length >= 6 ? 2 : 1);
     this.floatText(`+${gained} ${res.label}${upgradeTotal ? `  ★ ${upgradeTotal}` : ""}`, this.path[this.path.length - 1].x, this.path[this.path.length - 1].y, 0xffd248);
 
+    // Chain-length juice — escalating screen shake and a radial wipe. Big chains
+    // earn loud feedback; tier upgrades (every 3rd tile) add an extra burst.
+    this.shakeForChain(this.path.length);
+    this.radialFlash(this.path[this.path.length - 1].x, this.path[this.path.length - 1].y, this.path.length);
+
     this.path.forEach((tile, i) => {
       const upgrade = next && (i + 1) % UPGRADE_EVERY === 0;
       if (upgrade) {
         tile.setSelected(false);
         this.pendingUpgrades.push(next);
+        this.upgradeBurst(tile.x, tile.y);
       }
       this.grid[tile.row][tile.col] = null;
       this.tweens.add({ targets: tile.sprite, scale: 0, angle: Phaser.Math.Between(-25, 25), alpha: 0, duration: 180 + i * 15, onComplete: () => tile.destroy() });
@@ -497,6 +505,53 @@ export class GameScene extends Phaser.Scene {
 
   hideChainBadge() {
     if (this.chainBadge) { this.chainBadge.destroy(); this.chainBadge = null; this.chainBadgeText = null; }
+  }
+
+  // ─── Juice (chain-length feedback) ────────────────────────────────────────
+
+  shakeForChain(len) {
+    if (len < 3) return;
+    // 3 → barely; 6 → noticeable; 10+ → bone-rattling.
+    const intensity = Math.min(0.018, 0.0025 + (len - 3) * 0.0028);
+    const duration = Math.min(520, 160 + (len - 3) * 50);
+    this.cameras.main.shake(duration, intensity, false);
+  }
+
+  radialFlash(x, y, len) {
+    if (len < 3) return;
+    const ring = this.add.graphics().setDepth(15);
+    const startR = 10 * this.tileScale;
+    const peakR = (40 + Math.min(80, (len - 3) * 14)) * this.tileScale;
+    const obj = { r: startR, a: 0.55 };
+    this.tweens.add({
+      targets: obj, r: peakR, a: 0,
+      duration: 460,
+      ease: "Quad.Out",
+      onUpdate: () => {
+        ring.clear();
+        ring.lineStyle(6 * this.tileScale, 0xffe39a, obj.a);
+        ring.strokeCircle(x, y, obj.r);
+        ring.lineStyle(2 * this.tileScale, 0xffffff, obj.a * 0.9);
+        ring.strokeCircle(x, y, obj.r * 0.55);
+      },
+      onComplete: () => ring.destroy(),
+    });
+  }
+
+  upgradeBurst(x, y) {
+    const flash = this.add.graphics().setDepth(14);
+    const obj = { r: 4 * this.tileScale, a: 0.85 };
+    this.tweens.add({
+      targets: obj, r: 36 * this.tileScale, a: 0, duration: 360, ease: "Quad.Out",
+      onUpdate: () => {
+        flash.clear();
+        flash.fillStyle(0xfff4c2, obj.a * 0.5);
+        flash.fillCircle(x, y, obj.r);
+        flash.lineStyle(3 * this.tileScale, 0xffd248, obj.a);
+        flash.strokeCircle(x, y, obj.r);
+      },
+      onComplete: () => flash.destroy(),
+    });
   }
 
   // ─── Floater (resource-gain text per tile) ────────────────────────────────

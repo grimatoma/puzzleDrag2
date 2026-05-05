@@ -15,7 +15,7 @@ export default function InventoryScreen({ state, dispatch }) {
       </div>
       <div className="flex-1 overflow-y-auto px-3 py-3">
         <div className="max-w-[640px] mx-auto">
-          <InventoryGrid inventory={state.inventory} biomeKey={state.biomeKey} />
+          <InventoryGrid inventory={state.inventory} biomeKey={state.biomeKey} orders={state.orders} />
         </div>
       </div>
     </div>
