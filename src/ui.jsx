@@ -302,11 +302,10 @@ function ToolsGrid({ tools, onUse }) {
     clearTimeout(longPressTimer.current);
   };
 
-  const showTooltip = (key, el, touchY) => {
+  const showTooltip = (key, el) => {
     clearTimeout(dismissTimer.current);
     const rect = el.getBoundingClientRect();
-    const y = touchY != null ? touchY - 100 : rect.top;
-    setTooltipPos({ x: rect.left + rect.width / 2, y });
+    setTooltipPos({ x: rect.left + rect.width / 2, y: rect.top });
     setTooltip(key);
   };
 
@@ -336,13 +335,14 @@ function ToolsGrid({ tools, onUse }) {
                   onUse(t.key);
                 }}
                 onMouseEnter={(e) => { if (Date.now() - lastTouchTime.current > 600) showTooltip(t.key, e.currentTarget); }}
-                onMouseLeave={() => hideTooltip()}
+                onMouseLeave={() => { if (Date.now() - lastTouchTime.current > 600) hideTooltip(); }}
                 onTouchStart={(e) => {
                   lastTouchTime.current = Date.now();
                   startLongPress(t);
-                  if (e.touches.length > 0) showTooltip(t.key, e.currentTarget, e.touches[0].clientY);
+                  showTooltip(t.key, e.currentTarget);
                 }}
-                onTouchEnd={() => { cancelLongPress(); hideTooltip(1800); }}
+                onTouchEnd={() => { cancelLongPress(); hideTooltip(2000); }}
+                onTouchCancel={() => { cancelLongPress(); hideTooltip(2000); }}
                 onTouchMove={() => cancelLongPress()}
                 className={`relative w-full rounded-lg border-2 border-[#e6c49a] py-1.5 px-1 flex flex-col items-center gap-0.5 transition-transform ${empty ? "bg-[#9a724d] opacity-40 cursor-not-allowed" : "bg-[#9a724d] hover:bg-[#b8845a] hover:-translate-y-0.5"}`}
               >
