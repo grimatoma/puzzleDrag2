@@ -3,6 +3,19 @@
 *Synthesized from reference game screenshots (sets 1–5). Each section explains what a
 system does and how it connects to others. Open questions are marked `[GAP]`.*
 
+## Status
+
+| Picture set | Content | Documented in |
+|---|---|---|
+| Set 1 | Codex book UI — Trophies, Compendium (plants/birds), Records/Kingdom summary | §11, §8, §12 |
+| Set 2 | World map, Building shop, IAP store, Overworld village (Axeter) | §9, §7, §14 |
+| Set 3 | Sorceress's Hut, Workers (Reaper/Peasant/Lumberjack/Poultryman), Inventory, Tools | §5, §6, §13 |
+| Set 4 | Beach property, Kingdom map zoomed out, Shipwreck location | §9, §7 |
+| Set 5 | Advanced Compendium (Trees/Birds/Collections), Quests tab, Zone Five, session modals | §8, §10, §9, §3, §4 |
+
+**Levels seen:** early game (Level 10, Axeter/Shipwreck) and late game (Level 71, Zone Five).
+**Gaps remaining:** 20 open questions listed in §15. Continue with more screenshots to fill them.
+
 ---
 
 ## 1. Core Loop
