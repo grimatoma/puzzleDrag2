@@ -302,7 +302,7 @@ function ToolsGrid({ tools, onUse }) {
 
   const showTooltip = (key, el, touchY) => {
     const rect = el.getBoundingClientRect();
-    const y = touchY != null ? touchY - 20 : rect.top;
+    const y = touchY != null ? touchY - 100 : rect.top;
     setTooltipPos({ x: rect.left + rect.width / 2, y });
     setTooltip(key);
   };
