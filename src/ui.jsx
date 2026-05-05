@@ -1289,7 +1289,7 @@ export function TownView({ state, dispatch }) {
         {/* Farm Field — upper-left, in the hills */}
         <div
           className="absolute cursor-pointer group pointer-events-auto flex flex-col items-center"
-          style={{ left: "1.5%", bottom: "50%", width: "16%" }}
+          style={{ left: "1.5%", bottom: "50%", width: "22%" }}
           onClick={() => setEntryBiome("farm")}
         >
           <div className="w-full text-center font-bold text-white mb-0.5" style={{ fontSize: "clamp(9px,1vw,13px)", textShadow: "0 1px 3px rgba(0,0,0,.9)" }}>🌾 Farm Field</div>
@@ -1307,7 +1307,7 @@ export function TownView({ state, dispatch }) {
         {/* Mine Entrance — upper-right, in the hills */}
         <div
           className="absolute cursor-pointer group pointer-events-auto flex flex-col items-center"
-          style={{ right: "1.5%", bottom: "50%", width: "16%", opacity: state.level < 2 ? 0.65 : 1 }}
+          style={{ right: "1.5%", bottom: "50%", width: "22%", opacity: state.level < 2 ? 0.65 : 1 }}
           onClick={() => setEntryBiome("mine")}
         >
           <div className="w-full text-center font-bold text-white mb-0.5" style={{ fontSize: "clamp(9px,1vw,13px)", textShadow: "0 1px 3px rgba(0,0,0,.95)" }}>
