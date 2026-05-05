@@ -124,7 +124,6 @@ export function SidePanel({ state, dispatch, chainInfo }) {
           dispatch({ type: "USE_TOOL", key });
           if (key === "shuffle") window.__phaserScene?.shuffleBoard();
         }} />
-        <BiomeSwitcher biomeKey={state.biomeKey} level={state.level} onSwitch={(key) => dispatch({ type: "SWITCH_BIOME", key })} />
       </Section>
       <Section title="Orders" titleColor="#f8e7c6">
         <CompactOrders orders={state.orders} inventory={state.inventory} dispatch={dispatch} />
@@ -368,26 +367,6 @@ function ToolsGrid({ tools, onUse }) {
   );
 }
 
-function BiomeSwitcher({ biomeKey, level, onSwitch }) {
-  return (
-    <div className="flex gap-1.5 mt-2">
-      {Object.entries(BIOMES).map(([k, b]) => {
-        const locked = k === "mine" && level < 2;
-        const active = biomeKey === k;
-        return (
-          <button
-            key={k}
-            disabled={locked}
-            onClick={() => onSwitch(k)}
-            className={`flex-1 px-2 py-1.5 rounded-full border-2 border-[#f7e2b6] font-bold text-[12px] transition-colors ${active ? "bg-[#ffc239] text-[#5a3a20]" : locked ? "bg-[#6b4d34] text-white/40 cursor-not-allowed" : "bg-[#6b4d34] text-white"}`}
-          >
-            {b.name}{locked ? ` 🔒 L2` : ""}
-          </button>
-        );
-      })}
-    </div>
-  );
-}
 
 // ─── Mobile dock (board view only) ────────────────────────────────────────
 
@@ -486,13 +465,6 @@ export function MobileDock({ state, dispatch }) {
               closeSheet();
             }}
           />
-          <div className="mt-3">
-            <BiomeSwitcher
-              biomeKey={state.biomeKey}
-              level={state.level}
-              onSwitch={(key) => { dispatch({ type: "SWITCH_BIOME", key }); closeSheet(); }}
-            />
-          </div>
         </BottomSheet>
       )}
 
@@ -510,7 +482,6 @@ export function MobileDock({ state, dispatch }) {
 
 export function BottomNav({ view, modal, dispatch }) {
   const items = [
-    { key: "board",        label: "◳ Board" },
     { key: "town",         label: "⌂ Town" },
     { key: "inventory",    label: "🎒 Inventory" },
     { key: "quests",       label: "📜 Quests" },
@@ -578,6 +549,47 @@ function TownsfolkModal({ state, dispatch }) {
   );
 }
 
+// ─── Biome entry modal ────────────────────────────────────────────────────
+
+function BiomeEntryModal({ biomeKey, level, onEnter, onClose }) {
+  const biome = BIOMES[biomeKey];
+  const locked = biomeKey === "mine" && level < 2;
+  const descriptions = {
+    farm: "Tend the fields of Hearthwood Vale. Harvest crops, gather timber, and collect eggs to fulfil the villagers' orders.",
+    mine: "Descend into Ironridge depths. Extract stone, smelt ore, and uncover precious gems hidden below.",
+  };
+  return (
+    <div className="absolute inset-0 bg-black/60 grid place-items-center z-50 animate-fadein" onClick={onClose}>
+      <div
+        className="bg-[#f4ecd8] border-[4px] border-[#b28b62] rounded-[20px] px-8 py-6 max-w-[400px] w-[92vw] shadow-2xl text-center"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="text-[52px] leading-none mb-3">{biomeKey === "farm" ? "🌾" : "⛏"}</div>
+        <h2 className="font-bold text-[22px] text-[#744d2e] mb-2">{biome.name}</h2>
+        <p className="text-[#6a4b31] text-[13px] mb-5 leading-relaxed">{descriptions[biomeKey]}</p>
+        {locked ? (
+          <div className="bg-[#f7d572]/30 border border-[#f7d572] rounded-xl px-4 py-3 text-[#7a5020] font-bold text-[13px] mb-3">
+            🔒 Unlocks at Level 2
+          </div>
+        ) : (
+          <button
+            onClick={onEnter}
+            className="w-full mb-3 bg-[#91bf24] hover:bg-[#a3d028] text-white border-[3px] border-white rounded-2xl px-8 py-2.5 text-[16px] font-bold shadow-lg transition-colors"
+          >
+            Enter {biome.name}
+          </button>
+        )}
+        <button
+          onClick={onClose}
+          className="w-full bg-[#9a724d] hover:bg-[#b8845a] text-white font-bold py-2 rounded-lg border border-[#e6c49a] text-[13px] transition-colors"
+        >
+          Close
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ─── Town view ────────────────────────────────────────────────────────────
 
 const TOWN_THEMES = {
@@ -632,6 +644,7 @@ const TOWN_WALKERS = [
 const SMOKE_BUILDINGS = new Set(["hearth", "bakery", "forge"]);
 
 export function TownView({ state, dispatch }) {
+  const [entryBiome, setEntryBiome] = useState(null);
   const biomeTheme = state.biomeKey === "mine" ? "mine" : "farm";
   const node = { name: biomeTheme === "mine" ? "Ironridge Camp" : "Hearthwood Vale" };
   const theme = TOWN_THEMES[biomeTheme] || TOWN_THEMES.home;
@@ -664,6 +677,56 @@ export function TownView({ state, dispatch }) {
         {TOWN_WALKERS.map((w, i) => (
           <TownWalker key={i} {...w} />
         ))}
+      </div>
+
+      {/* Farm Field and Mine Entrance — clickable biome entry points */}
+      <div className="absolute inset-0 pointer-events-none">
+        {/* Farm Field — upper-left hills, entry to Farm board */}
+        <div
+          className="absolute cursor-pointer group pointer-events-auto"
+          style={{ left: "1%", top: "28%", width: "14%", height: "20%" }}
+          onClick={() => setEntryBiome("farm")}
+        >
+          <div
+            className="w-full h-full rounded-xl overflow-hidden transition-transform duration-150 group-hover:scale-105"
+            style={{
+              background: "linear-gradient(180deg, #6aaa30 0%, #4a8a1a 55%, #3a6e10 100%)",
+              border: "3px solid #2a5010",
+              boxShadow: "0 4px 0 rgba(0,0,0,.35)",
+            }}
+          >
+            {[0,1,2,3].map((i) => (
+              <div key={i} className="absolute left-0 right-0 opacity-30" style={{ top: `${18 + i * 18}%`, height: "2px", background: "#f7d254" }} />
+            ))}
+            <div className="absolute top-1.5 inset-x-0 text-center font-bold text-white" style={{ fontSize: "clamp(9px,1.1vw,14px)", textShadow: "0 1px 3px rgba(0,0,0,.6)" }}>🌾 Farm Field</div>
+            <div className="absolute bottom-0 inset-x-0 text-center font-bold text-white py-1" style={{ background: "rgba(0,0,0,.4)", fontSize: "clamp(8px,0.9vw,11px)", textShadow: "0 1px 2px rgba(0,0,0,.6)" }}>▶ Enter</div>
+          </div>
+        </div>
+
+        {/* Mine Entrance — upper-right hills, entry to Mine board */}
+        <div
+          className="absolute cursor-pointer group pointer-events-auto"
+          style={{ left: "85%", top: "28%", width: "14%", height: "20%" }}
+          onClick={() => setEntryBiome("mine")}
+        >
+          <div
+            className="w-full h-full rounded-xl overflow-hidden transition-transform duration-150 group-hover:scale-105"
+            style={{
+              background: "linear-gradient(180deg, #4a4e52 0%, #2a2e32 55%, #1a1e22 100%)",
+              border: "3px solid #1a1e22",
+              boxShadow: "0 4px 0 rgba(0,0,0,.35)",
+              opacity: state.level < 2 ? 0.65 : 1,
+            }}
+          >
+            <div className="absolute inset-0" style={{ opacity: 0.15, background: "repeating-linear-gradient(45deg, #888 0px, #888 1px, transparent 1px, transparent 7px)" }} />
+            <div className="absolute top-1.5 inset-x-0 text-center font-bold text-white" style={{ fontSize: "clamp(9px,1.1vw,14px)", textShadow: "0 1px 3px rgba(0,0,0,.8)" }}>
+              {state.level < 2 ? "🔒 Mine" : "⛏ Mine"}
+            </div>
+            <div className="absolute bottom-0 inset-x-0 text-center font-bold text-white py-1" style={{ background: "rgba(0,0,0,.5)", fontSize: "clamp(8px,0.9vw,11px)", textShadow: "0 1px 2px rgba(0,0,0,.6)" }}>
+              {state.level < 2 ? "L2 req." : "▶ Enter"}
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Buildings positioned in the 1100x600 design space, scaled to viewport */}
@@ -729,6 +792,19 @@ export function TownView({ state, dispatch }) {
           })}
         </div>
       </div>
+
+      {entryBiome && (
+        <BiomeEntryModal
+          biomeKey={entryBiome}
+          level={state.level}
+          onEnter={() => {
+            dispatch({ type: "SWITCH_BIOME", key: entryBiome });
+            dispatch({ type: "SET_VIEW", view: "board" });
+            setEntryBiome(null);
+          }}
+          onClose={() => setEntryBiome(null)}
+        />
+      )}
     </div>
   );
 }
