@@ -1,7 +1,21 @@
-import Phaser from "phaser";
-
-const PREMIUM_KEYS = new Set(["gem", "cutgem", "gold", "ingot", "jam"]);
-const SPARKLE_KEYS = new Set(["gem", "cutgem", "gold"]);
+// Per-resource ambient sway. Each entry produces a small angular oscillation
+// applied to the tile sprite when it's at rest, evoking the resource's
+// physical character (wheat in wind, berries dangling, gold catching light…).
+// Resources missing from this map stay perfectly still — heavy/dense items
+// (logs, planks, stone, ingot, coal) shouldn't move at all.
+const SWAY = {
+  hay:    { amp: 4.0, freq: 0.0014, gust: 0.25 },
+  wheat:  { amp: 5.0, freq: 0.0016, gust: 0.30 },
+  grain:  { amp: 1.2, freq: 0.0008, gust: 0.10 },
+  flour:  { amp: 1.0, freq: 0.0007, gust: 0.05 },
+  berry:  { amp: 3.5, freq: 0.0022, gust: 0.20 },
+  jam:    { amp: 0.8, freq: 0.0006, gust: 0.00 },
+  egg:    { amp: 1.5, freq: 0.0014, gust: 0.10 },
+  ore:    { amp: 0.4, freq: 0.0005, gust: 0.00 },
+  gem:    { amp: 1.2, freq: 0.0007, gust: 0.05 },
+  cutgem: { amp: 1.2, freq: 0.0007, gust: 0.05 },
+  gold:   { amp: 1.0, freq: 0.0006, gust: 0.05 },
+};
 
 export class TileObj {
   constructor(scene, x, y, col, row, res) {
@@ -14,7 +28,10 @@ export class TileObj {
     this.sprite.on("pointerdown", () => scene.startPath(this));
     this.sprite.on("pointerover", () => scene.tryAddToPath(this));
 
-    this._setupAmbient();
+    // Phase offset varies smoothly with column/row so the sway looks like a
+    // wind front rolling across the field rather than every tile in lockstep.
+    this._phase = (col * 380 + row * 240);
+    this._destroying = false;
   }
 
   get x() { return this.sprite.x; }
@@ -25,14 +42,12 @@ export class TileObj {
     this.sprite.setTexture(`tile_${this.res.key}${v ? "_sel" : ""}`);
     const s = this.scene.tileSpriteScale ?? this.scene.tileScale ?? 1;
     this.sprite.setScale(s * (v ? 1.06 : 1));
-    if (this.sparkle) this.sparkle.setVisible(!v);
+    if (!v) this.sprite.angle = 0;
   }
 
   setResource(res) {
     this.res = res;
     this.sprite.setTexture(`tile_${res.key}${this.selected ? "_sel" : ""}`);
-    this._teardownAmbient();
-    this._setupAmbient();
   }
 
   pulse() {
@@ -41,101 +56,33 @@ export class TileObj {
     this.scene.tweens.add({ targets: this.sprite, scale: s * 1.12, yoyo: true, duration: 90, ease: "Sine.Out" });
   }
 
-  // ─── Ambient animations (sparkle + glint) ────────────────────────────────
-
-  _setupAmbient() {
-    const scene = this.scene;
-    const key = this.res.key;
-    const baseScale = scene.tileSpriteScale ?? 1;
-
-    if (SPARKLE_KEYS.has(key)) {
-      // Persistent rotating sparkle anchored to a corner of the tile.
-      const offX = (key === "gold" ? -16 : 16) * (scene.tileScale ?? 1);
-      const offY = -16 * (scene.tileScale ?? 1);
-      this._sparkleOffX = offX;
-      this._sparkleOffY = offY;
-      this.sparkle = scene.add.image(this.sprite.x + offX, this.sprite.y + offY, "twinkle")
-        .setDepth(11)
-        .setBlendMode(Phaser.BlendModes.ADD)
-        .setScale(0.32 * baseScale)
-        .setAlpha(0.4);
-      this._sparkleTween = scene.tweens.add({
-        targets: this.sparkle,
-        scale: { from: 0.28 * baseScale, to: 0.55 * baseScale },
-        alpha: { from: 0.35, to: 0.95 },
-        angle: { from: 0, to: 180 },
-        duration: 1700 + Math.random() * 900,
-        yoyo: true,
-        repeat: -1,
-        ease: "Sine.InOut",
-        delay: Math.random() * 1500,
-      });
+  // Called once per frame from GameScene.update. Applies a subtle resource-
+  // specific sway, but only when no state-driven tween (selection pulse,
+  // collapse, destroy, shuffle) is active on the sprite — so it never fights
+  // those animations.
+  ambient(time) {
+    if (this._destroying || this.selected) return;
+    const sway = SWAY[this.res.key];
+    if (!sway) {
+      if (this.sprite.angle !== 0 && !this._tweenActive()) this.sprite.angle = 0;
+      return;
     }
-
-    // Periodic glint sweep — happens on every tile but rarely, with random
-    // stagger so the board has subtle, ongoing life rather than a synced flash.
-    this._glintEvent = scene.time.addEvent({
-      delay: 2800 + Math.random() * 5200,
-      loop: true,
-      callback: () => this._emitGlint(),
-    });
-
-    // Keep ambient sprites tracking the main sprite as it tweens around the board.
-    this._followFn = () => this._syncOverlays();
-    scene.events.on("postupdate", this._followFn);
+    if (this._tweenActive()) return;
+    const t = time + this._phase;
+    // Primary sway plus a smaller higher-frequency gust component so the
+    // motion isn't a perfect sine — closer to real wind / dangle.
+    const a = Math.sin(t * sway.freq) * sway.amp
+            + Math.sin(t * sway.freq * 3.1) * sway.amp * sway.gust;
+    this.sprite.angle = a;
   }
 
-  _teardownAmbient() {
-    if (this._sparkleTween) { this._sparkleTween.stop(); this._sparkleTween = null; }
-    if (this.sparkle) { this.sparkle.destroy(); this.sparkle = null; }
-    if (this._glintEvent) { this._glintEvent.remove(false); this._glintEvent = null; }
-    if (this._followFn) { this.scene.events.off("postupdate", this._followFn); this._followFn = null; }
-  }
-
-  _syncOverlays() {
-    const sp = this.sprite;
-    if (!sp || !sp.active) return;
-    if (this.sparkle && this.sparkle.active) {
-      const ts = this.scene.tileScale ?? 1;
-      const sign = this.res.key === "gold" ? -1 : 1;
-      this.sparkle.x = sp.x + sign * 16 * ts;
-      this.sparkle.y = sp.y - 16 * ts;
-      this.sparkle.setVisible(sp.visible && sp.alpha > 0.6 && !this.selected);
-    }
-  }
-
-  _emitGlint() {
-    const sp = this.sprite;
-    if (!sp || !sp.active || sp.alpha < 0.7 || this.selected) return;
-    const scene = this.scene;
-    const baseScale = scene.tileSpriteScale ?? 1;
-    const isPremium = PREMIUM_KEYS.has(this.res.key);
-    const glint = scene.add.image(sp.x, sp.y, "glint")
-      .setDepth(8)
-      .setBlendMode(Phaser.BlendModes.ADD)
-      .setAlpha(0)
-      .setScale(0.85 * baseScale)
-      .setAngle(-25);
-    const obj = { t: 0 };
-    scene.tweens.add({
-      targets: obj,
-      t: 1,
-      duration: isPremium ? 520 : 700,
-      ease: "Sine.InOut",
-      onUpdate: () => {
-        if (!glint.active) return;
-        glint.x = sp.x + (obj.t - 0.5) * 32 * (scene.tileScale ?? 1);
-        glint.y = sp.y - (obj.t - 0.5) * 32 * (scene.tileScale ?? 1);
-        const peak = Math.sin(obj.t * Math.PI);
-        glint.alpha = peak * (isPremium ? 0.85 : 0.45);
-        glint.setScale((0.7 + peak * 0.3) * baseScale);
-      },
-      onComplete: () => glint.destroy(),
-    });
+  _tweenActive() {
+    const active = this.scene.tweens.getTweensOf(this.sprite);
+    return active && active.length > 0;
   }
 
   destroy() {
-    this._teardownAmbient();
+    this._destroying = true;
     this.sprite.destroy();
   }
 }
