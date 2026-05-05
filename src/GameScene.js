@@ -360,16 +360,28 @@ export class GameScene extends Phaser.Scene {
         const t = this.path[i];
         const star = this.add.image(t.x + off, t.y - off, "spark").setScale(0.72 * this.tileSpriteScale).setDepth(12);
         const preview = this.add.image(t.x + off, t.y + off * 0.85, `tile_${next.key}`).setScale(0.32 * this.tileSpriteScale).setDepth(12);
+        const swayStar = () => {
+          if (!star.active) return;
+          this.tweens.add({
+            targets: star,
+            angle: { from: 10, to: -10 },
+            yoyo: true,
+            repeat: -1,
+            duration: 950,
+            ease: "Sine.InOut",
+          });
+        };
+
         if (groupCount >= prevGroups) {
           // Pop-in + gentle sway for new star
           star.setScale(0).setAngle(-20);
           this.tweens.add({ targets: star, scale: 0.72 * this.tileSpriteScale, angle: 15, duration: 320, ease: "Back.Out" });
-          this.time.delayedCall(320, () => {
-            if (!star.active) return;
-            this.tweens.add({ targets: star, angle: -10, yoyo: true, repeat: -1, duration: 950, ease: "Sine.InOut" });
-          });
+          this.time.delayedCall(320, swayStar);
           preview.setScale(0).setAlpha(0);
           this.tweens.add({ targets: preview, scale: 0.32 * this.tileSpriteScale, alpha: 1, duration: 260, ease: "Back.Out", delay: 110 });
+        } else {
+          star.setAngle(10);
+          swayStar();
         }
         this.pathStars.push(star, preview);
         groupCount++;
