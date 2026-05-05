@@ -679,56 +679,6 @@ export function TownView({ state, dispatch }) {
         ))}
       </div>
 
-      {/* Farm Field and Mine Entrance — clickable biome entry points */}
-      <div className="absolute inset-0 pointer-events-none">
-        {/* Farm Field — upper-left hills, entry to Farm board */}
-        <div
-          className="absolute cursor-pointer group pointer-events-auto"
-          style={{ left: "1%", top: "28%", width: "14%", height: "20%" }}
-          onClick={() => setEntryBiome("farm")}
-        >
-          <div
-            className="w-full h-full rounded-xl overflow-hidden transition-transform duration-150 group-hover:scale-105"
-            style={{
-              background: "linear-gradient(180deg, #6aaa30 0%, #4a8a1a 55%, #3a6e10 100%)",
-              border: "3px solid #2a5010",
-              boxShadow: "0 4px 0 rgba(0,0,0,.35)",
-            }}
-          >
-            {[0,1,2,3].map((i) => (
-              <div key={i} className="absolute left-0 right-0 opacity-30" style={{ top: `${18 + i * 18}%`, height: "2px", background: "#f7d254" }} />
-            ))}
-            <div className="absolute top-1.5 inset-x-0 text-center font-bold text-white" style={{ fontSize: "clamp(9px,1.1vw,14px)", textShadow: "0 1px 3px rgba(0,0,0,.6)" }}>🌾 Farm Field</div>
-            <div className="absolute bottom-0 inset-x-0 text-center font-bold text-white py-1" style={{ background: "rgba(0,0,0,.4)", fontSize: "clamp(8px,0.9vw,11px)", textShadow: "0 1px 2px rgba(0,0,0,.6)" }}>▶ Enter</div>
-          </div>
-        </div>
-
-        {/* Mine Entrance — upper-right hills, entry to Mine board */}
-        <div
-          className="absolute cursor-pointer group pointer-events-auto"
-          style={{ left: "85%", top: "28%", width: "14%", height: "20%" }}
-          onClick={() => setEntryBiome("mine")}
-        >
-          <div
-            className="w-full h-full rounded-xl overflow-hidden transition-transform duration-150 group-hover:scale-105"
-            style={{
-              background: "linear-gradient(180deg, #4a4e52 0%, #2a2e32 55%, #1a1e22 100%)",
-              border: "3px solid #1a1e22",
-              boxShadow: "0 4px 0 rgba(0,0,0,.35)",
-              opacity: state.level < 2 ? 0.65 : 1,
-            }}
-          >
-            <div className="absolute inset-0" style={{ opacity: 0.15, background: "repeating-linear-gradient(45deg, #888 0px, #888 1px, transparent 1px, transparent 7px)" }} />
-            <div className="absolute top-1.5 inset-x-0 text-center font-bold text-white" style={{ fontSize: "clamp(9px,1.1vw,14px)", textShadow: "0 1px 3px rgba(0,0,0,.8)" }}>
-              {state.level < 2 ? "🔒 Mine" : "⛏ Mine"}
-            </div>
-            <div className="absolute bottom-0 inset-x-0 text-center font-bold text-white py-1" style={{ background: "rgba(0,0,0,.5)", fontSize: "clamp(8px,0.9vw,11px)", textShadow: "0 1px 2px rgba(0,0,0,.6)" }}>
-              {state.level < 2 ? "L2 req." : "▶ Enter"}
-            </div>
-          </div>
-        </div>
-      </div>
-
       {/* Buildings positioned in the 1100x600 design space, scaled to viewport */}
       <div className="absolute inset-0">
         <svg viewBox="0 0 1100 600" preserveAspectRatio="none" className="w-full h-full" style={{ position: "absolute", inset: 0, pointerEvents: "none" }} />
@@ -805,6 +755,56 @@ export function TownView({ state, dispatch }) {
               </div>
             );
           })}
+        </div>
+      </div>
+
+      {/* Farm Field and Mine Entrance — rendered after buildings so they sit on top and receive clicks */}
+      <div className="absolute inset-0 pointer-events-none">
+        {/* Farm Field — upper-left hills, entry to Farm board */}
+        <div
+          className="absolute cursor-pointer group pointer-events-auto"
+          style={{ left: "1%", top: "28%", width: "14%", height: "20%" }}
+          onClick={() => setEntryBiome("farm")}
+        >
+          <div
+            className="w-full h-full rounded-xl overflow-hidden transition-transform duration-150 group-hover:scale-105"
+            style={{
+              background: "linear-gradient(180deg, #6aaa30 0%, #4a8a1a 55%, #3a6e10 100%)",
+              border: "3px solid #2a5010",
+              boxShadow: "0 4px 0 rgba(0,0,0,.35)",
+            }}
+          >
+            {[0,1,2,3].map((i) => (
+              <div key={i} className="absolute left-0 right-0 opacity-30" style={{ top: `${18 + i * 18}%`, height: "2px", background: "#f7d254" }} />
+            ))}
+            <div className="absolute top-1.5 inset-x-0 text-center font-bold text-white" style={{ fontSize: "clamp(9px,1.1vw,14px)", textShadow: "0 1px 3px rgba(0,0,0,.6)" }}>🌾 Farm Field</div>
+            <div className="absolute bottom-0 inset-x-0 text-center font-bold text-white py-1" style={{ background: "rgba(0,0,0,.4)", fontSize: "clamp(8px,0.9vw,11px)", textShadow: "0 1px 2px rgba(0,0,0,.6)" }}>▶ Enter</div>
+          </div>
+        </div>
+
+        {/* Mine Entrance — upper-right hills, entry to Mine board */}
+        <div
+          className="absolute cursor-pointer group pointer-events-auto"
+          style={{ left: "85%", top: "28%", width: "14%", height: "20%" }}
+          onClick={() => setEntryBiome("mine")}
+        >
+          <div
+            className="w-full h-full rounded-xl overflow-hidden transition-transform duration-150 group-hover:scale-105"
+            style={{
+              background: "linear-gradient(180deg, #4a4e52 0%, #2a2e32 55%, #1a1e22 100%)",
+              border: "3px solid #1a1e22",
+              boxShadow: "0 4px 0 rgba(0,0,0,.35)",
+              opacity: state.level < 2 ? 0.65 : 1,
+            }}
+          >
+            <div className="absolute inset-0" style={{ opacity: 0.15, background: "repeating-linear-gradient(45deg, #888 0px, #888 1px, transparent 1px, transparent 7px)" }} />
+            <div className="absolute top-1.5 inset-x-0 text-center font-bold text-white" style={{ fontSize: "clamp(9px,1.1vw,14px)", textShadow: "0 1px 3px rgba(0,0,0,.8)" }}>
+              {state.level < 2 ? "🔒 Mine" : "⛏ Mine"}
+            </div>
+            <div className="absolute bottom-0 inset-x-0 text-center font-bold text-white py-1" style={{ background: "rgba(0,0,0,.5)", fontSize: "clamp(8px,0.9vw,11px)", textShadow: "0 1px 2px rgba(0,0,0,.6)" }}>
+              {state.level < 2 ? "L2 req." : "▶ Enter"}
+            </div>
+          </div>
         </div>
       </div>
 
