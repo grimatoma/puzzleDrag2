@@ -250,72 +250,61 @@ export function ApprenticesPanel({ state, dispatch, showHeader = true, onClose =
     (a) => !hiredApprentices.some((h) => h.app === a.id)
   );
 
-  return (
-    <div style={{ background: "#f4ecd8", borderRadius: 20, padding: 20, width: "100%", maxHeight: "88vh", overflowY: "auto", fontFamily: "Arial, sans-serif", boxSizing: "border-box" }}>
+  const inner = (
+    <>
       {showHeader && (
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
           <span style={{ fontSize: 16, fontWeight: 700, color: "#3a2715" }}>🧑‍🌾 Apprentices</span>
           {onClose && <button onClick={onClose} style={{ width: 28, height: 28, borderRadius: 8, background: "#fff8e8", border: "2px solid #b28b62", color: "#6a4b31", fontWeight: 700, fontSize: 14, cursor: "pointer", display: "grid", placeItems: "center", fontFamily: "Arial, sans-serif" }}>×</button>}
         </div>
       )}
-
-        <p style={{ fontSize: 11, color: "#7a5a3a", marginBottom: 14, marginTop: 2 }}>
-          Hire townsfolk to keep things going while you're away.
+      <p style={{ fontSize: 11, color: "#7a5a3a", marginBottom: 14, marginTop: 2 }}>
+        Hire townsfolk to keep things going while you're away.
+      </p>
+      <div style={{ fontSize: 11, fontWeight: 700, color: "#7a5a3a", marginBottom: 8 }}>
+        On the Payroll ({hiredApprentices.length})
+      </div>
+      {hiredApprentices.length === 0 ? (
+        <p style={{ fontSize: 11, color: "#9a8a72", fontStyle: "italic", marginBottom: 14 }}>
+          Nobody on the payroll yet.
         </p>
-
-        <div style={{ fontSize: 11, fontWeight: 700, color: "#7a5a3a", marginBottom: 8 }}>
-          On the Payroll ({hiredApprentices.length})
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 14 }}>
+          {hiredApprentices.map((hired) => {
+            const app = APPRENTICES.find((a) => a.id === hired.app);
+            if (!app) return null;
+            return <HiredCard key={hired.id} hired={hired} app={app} dispatch={dispatch} />;
+          })}
         </div>
-
-        {hiredApprentices.length === 0 ? (
-          <p style={{ fontSize: 11, color: "#9a8a72", fontStyle: "italic", marginBottom: 14 }}>
-            Nobody on the payroll yet.
-          </p>
-        ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 14 }}>
-            {hiredApprentices.map((hired) => {
-              const app = APPRENTICES.find((a) => a.id === hired.app);
-              if (!app) return null;
-              return <HiredCard key={hired.id} hired={hired} app={app} dispatch={dispatch} />;
-            })}
+      )}
+      {availableApps.length > 0 && (
+        <>
+          <div style={{ fontSize: 11, fontWeight: 700, color: "#7a5a3a", marginBottom: 8 }}>
+            Available to Hire
           </div>
-        )}
-
-        {availableApps.length > 0 && (
-          <>
-            <div style={{ fontSize: 11, fontWeight: 700, color: "#7a5a3a", marginBottom: 8 }}>
-              Available to Hire
-            </div>
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(2, 1fr)",
-                gap: 8,
-                marginBottom: 14,
-              }}
-            >
-              {availableApps.map((app) => (
-                <AvailableCard key={app.id} app={app} state={state} dispatch={dispatch} />
-              ))}
-            </div>
-          </>
-        )}
-
-        {lastHarvest && (
-          <div
-            style={{
-              borderTop: "1.5px solid #d4c4a4",
-              paddingTop: 10,
-              fontSize: 11,
-              color: "#7a5a3a",
-            }}
-          >
-            <span style={{ fontWeight: 700 }}>Last harvest: </span>
-            {Object.entries(lastHarvest.gains)
-              .map(([k, v]) => `+${v} ${k === "coins" ? "◉" : k}`)
-              .join(", ")}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 8, marginBottom: 14 }}>
+            {availableApps.map((app) => (
+              <AvailableCard key={app.id} app={app} state={state} dispatch={dispatch} />
+            ))}
           </div>
-        )}
+        </>
+      )}
+      {lastHarvest && (
+        <div style={{ borderTop: "1.5px solid #d4c4a4", paddingTop: 10, fontSize: 11, color: "#7a5a3a" }}>
+          <span style={{ fontWeight: 700 }}>Last harvest: </span>
+          {Object.entries(lastHarvest.gains)
+            .map(([k, v]) => `+${v} ${k === "coins" ? "◉" : k}`)
+            .join(", ")}
+        </div>
+      )}
+    </>
+  );
+
+  if (!showHeader) return inner;
+
+  return (
+    <div style={{ background: "#f4ecd8", borderRadius: 20, padding: 20, width: "100%", maxHeight: "88vh", overflowY: "auto", fontFamily: "Arial, sans-serif", boxSizing: "border-box" }}>
+      {inner}
     </div>
   );
 }

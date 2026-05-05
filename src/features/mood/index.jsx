@@ -198,8 +198,8 @@ function NpcCard({ npcKey, npcData, bond, inventory, dispatch }) {
 export function MoodPanel({ state, dispatch, showHeader = true, onClose = null }) {
   const { npcBond = {}, inventory = {} } = state;
 
-  return (
-    <div className="bg-[#f4ecd8] rounded-[20px] p-5 w-full max-h-[88vh] overflow-y-auto" style={{ fontFamily: 'Arial, sans-serif' }}>
+  const inner = (
+    <>
       {showHeader && (
         <div className="flex items-center justify-between mb-2">
           <span className="font-bold text-[16px] text-[#3a2715]">💞 Townsfolk</span>
@@ -208,25 +208,29 @@ export function MoodPanel({ state, dispatch, showHeader = true, onClose = null }
           )}
         </div>
       )}
+      <p className="text-[11px] text-[#7a6248] mb-3">
+        Higher hearts = better order rewards. Gifts and deliveries grow your bond.
+      </p>
+      <div className="flex flex-col gap-2">
+        {Object.keys(NPCS).map((key) => (
+          <NpcCard
+            key={key}
+            npcKey={key}
+            npcData={NPCS[key]}
+            bond={npcBond[key] ?? 1}
+            inventory={inventory}
+            dispatch={dispatch}
+          />
+        ))}
+      </div>
+    </>
+  );
 
-        {/* Sub-heading */}
-        <p className="text-[11px] text-[#7a6248] mb-3">
-          Higher hearts = better order rewards. Gifts and deliveries grow your bond.
-        </p>
+  if (!showHeader) return inner;
 
-        {/* NPC list */}
-        <div className="flex flex-col gap-2">
-          {Object.keys(NPCS).map((key) => (
-            <NpcCard
-              key={key}
-              npcKey={key}
-              npcData={NPCS[key]}
-              bond={npcBond[key] ?? 1}
-              inventory={inventory}
-              dispatch={dispatch}
-            />
-          ))}
-        </div>
+  return (
+    <div className="bg-[#f4ecd8] rounded-[20px] p-5 w-full max-h-[88vh] overflow-y-auto" style={{ fontFamily: 'Arial, sans-serif' }}>
+      {inner}
     </div>
   );
 }
