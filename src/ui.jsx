@@ -1346,15 +1346,35 @@ export function TownView({ state, dispatch }) {
                       {isLocked ? `🔒` : "+"}
                     </div>
                     <div
-                      className="absolute -top-8 px-2.5 py-0.5 rounded-full font-bold whitespace-nowrap z-20 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"
+                      className="absolute -top-2 translate-y-[-100%] px-2.5 py-1.5 rounded z-20 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"
                       style={{
-                        background: "rgba(0,0,0,.85)",
-                        color: isLocked ? "#f7d572" : canAfford ? "#9bdb6a" : "#f7d572",
-                        fontSize: "clamp(8px,0.9vw,10px)",
+                        background: "rgba(0,0,0,.88)",
+                        minWidth: "140px",
+                        maxWidth: "220px",
                         ...tooltipPos,
                       }}
                     >
-                      {isLocked ? `🔒 ${b.name} L${b.lv}` : `Build ${b.name}: ${costStr}`}
+                      <div
+                        className="font-bold whitespace-nowrap"
+                        style={{
+                          color: isLocked ? "#f7d572" : canAfford ? "#9bdb6a" : "#f7d572",
+                          fontSize: "clamp(8px,0.9vw,11px)",
+                        }}
+                      >
+                        {isLocked ? `🔒 ${b.name} (Level ${b.lv})` : `Build ${b.name}: ${costStr}`}
+                      </div>
+                      {b.desc && (
+                        <div
+                          className="mt-0.5 leading-snug"
+                          style={{
+                            color: "rgba(255,255,255,.72)",
+                            fontSize: "clamp(7px,0.75vw,9px)",
+                            whiteSpace: "normal",
+                          }}
+                        >
+                          {b.desc}
+                        </div>
+                      )}
                     </div>
                   </>
                 )}

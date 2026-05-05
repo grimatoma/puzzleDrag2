@@ -116,14 +116,14 @@ export const NPCS = {
 };
 
 export const BUILDINGS = [
-  { id: "hearth", name: "Hearth", cost: { coins: 0 }, lv: 1, x: 60, y: 360, w: 90, h: 110, color: "#a8431a", built: true },
-  { id: "mill", name: "Mill", cost: { coins: 200, plank: 30 }, lv: 1, x: 200, y: 380, w: 80, h: 90, color: "#c8923a" },
-  { id: "bakery", name: "Bakery", cost: { coins: 500, plank: 40, stone: 10 }, lv: 1, x: 320, y: 360, w: 100, h: 110, color: "#8a4a26" },
-  { id: "inn", name: "Inn", cost: { coins: 700, plank: 50 }, lv: 2, x: 470, y: 350, w: 110, h: 130, color: "#4f6b3a" },
-  { id: "granary", name: "Granary", cost: { coins: 250, plank: 20 }, lv: 1, x: 600, y: 380, w: 80, h: 100, color: "#c5a87a" },
-  { id: "larder", name: "Larder", cost: { coins: 350, plank: 30, jam: 5 }, lv: 3, x: 700, y: 395, w: 70, h: 85, color: "#4f6b3a" },
-  { id: "forge", name: "Forge", cost: { coins: 1200, stone: 60, ingot: 20 }, lv: 8, x: 800, y: 380, w: 100, h: 100, color: "#5a6973" },
-  { id: "caravan", name: "Caravan Post", cost: { coins: 1500 }, lv: 8, x: 940, y: 390, w: 110, h: 90, color: "#7e4f24" },
+  { id: "hearth", name: "Hearth", desc: "The heart of the village. Keeps folk warm and anchors the community.", cost: { coins: 0 }, lv: 1, x: 60, y: 360, w: 90, h: 110, color: "#a8431a", built: true },
+  { id: "mill", name: "Mill", desc: "Grinds grain into flour, enabling the grain → flour upgrade chain.", cost: { coins: 200, plank: 30 }, lv: 1, x: 200, y: 380, w: 80, h: 90, color: "#c8923a" },
+  { id: "bakery", name: "Bakery", desc: "Craft baked goods — bread, honey rolls, harvest pies — to sell for coins.", cost: { coins: 500, plank: 40, stone: 10 }, lv: 1, x: 320, y: 360, w: 100, h: 110, color: "#8a4a26" },
+  { id: "inn", name: "Inn", desc: "Lodgings for helpers. Unlocks apprentice hiring: Pip (Forager) and Tuck (Lookout).", cost: { coins: 700, plank: 50 }, lv: 2, x: 470, y: 350, w: 110, h: 130, color: "#4f6b3a" },
+  { id: "granary", name: "Granary", desc: "Keeps the harvest safe. Unlocks Hilda the Farmhand apprentice.", cost: { coins: 250, plank: 20 }, lv: 1, x: 600, y: 380, w: 80, h: 100, color: "#c5a87a" },
+  { id: "larder", name: "Larder", desc: "Preserve and bottle your harvest. Craft preserve jars and berry tinctures for coins.", cost: { coins: 350, plank: 30, jam: 5 }, lv: 3, x: 700, y: 395, w: 70, h: 85, color: "#4f6b3a" },
+  { id: "forge", name: "Forge", desc: "Smith metal goods — hinges, lanterns, rings, and more — for high coin rewards.", cost: { coins: 1200, stone: 60, ingot: 20 }, lv: 8, x: 800, y: 380, w: 100, h: 100, color: "#5a6973" },
+  { id: "caravan", name: "Caravan Post", desc: "Opens distant trade routes, letting you sell crafted goods to far-off markets.", cost: { coins: 1500 }, lv: 8, x: 940, y: 390, w: 110, h: 90, color: "#7e4f24" },
 ];
 
 export const RECIPES = {
