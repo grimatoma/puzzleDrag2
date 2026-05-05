@@ -517,8 +517,8 @@ function TownsfolkModal({ state, dispatch }) {
   if (state.modal !== "townsfolk") return null;
   const [tab, setTab] = useState("mood");
   return (
-    <div className="absolute inset-0 bg-black/55 grid place-items-center z-50 animate-fadein">
-      <div className="bg-[#f4ecd8] border-[4px] border-[#b28b62] rounded-[20px] p-3 w-[min(94vw,700px)] max-h-[90vh] shadow-2xl flex flex-col">
+    <div className="absolute inset-0 bg-black/55 grid place-items-center z-[55] animate-fadein">
+      <div className="bg-[#f4ecd8] border-[4px] border-[#b28b62] rounded-[20px] p-5 w-[min(540px,92vw)] max-h-[85vh] shadow-2xl flex flex-col">
         <div className="flex items-center justify-between mb-3">
           <h3 className="font-bold text-[20px] text-[#744d2e]">Townsfolk</h3>
           <button
@@ -526,7 +526,7 @@ function TownsfolkModal({ state, dispatch }) {
             className="w-8 h-8 rounded-lg bg-[#f6efe0] border-2 border-[#b28b62] grid place-items-center text-[#6a4b31] font-bold text-[14px]"
           >✕</button>
         </div>
-        <div className="flex gap-1.5 px-1 pb-2 flex-shrink-0">
+        <div className="flex gap-1.5 pb-3 flex-shrink-0">
           {[
             { key: "mood", label: "💞 Townsfolk" },
             { key: "apprentices", label: "🧑‍🌾 Apprentices" },
