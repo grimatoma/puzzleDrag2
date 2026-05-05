@@ -76,8 +76,6 @@ async function toggleFullscreen() {
 }
 
 function MainTab({ state, dispatch }) {
-  const [confirmReset, setConfirmReset] = React.useState(false);
-  const [confirmLeave, setConfirmLeave] = React.useState(false);
   const [fs, setFs] = React.useState(isFullscreen());
   React.useEffect(() => {
     const sync = () => setFs(isFullscreen());
@@ -89,8 +87,6 @@ function MainTab({ state, dispatch }) {
     };
   }, []);
 
-  const onBoard = state?.view === 'board';
-
   return (
     <div className="flex flex-col items-center gap-3 pt-1">
       <div className="text-center">
@@ -99,43 +95,6 @@ function MainTab({ state, dispatch }) {
       </div>
 
       <div className="w-full flex flex-col gap-2 max-w-[320px]">
-        <ActionBtn variant="primary" onClick={() => dispatch({ type: 'CLOSE_MODAL' })}>
-          ▶ Resume
-        </ActionBtn>
-
-        {onBoard && (
-          confirmLeave ? (
-            <div
-              className="w-full flex flex-col gap-2 py-3 px-3 rounded-xl border-2"
-              style={{ background: '#f4e8d0', borderColor: '#c23b22' }}
-            >
-              <span className="text-[12px] font-bold text-center" style={{ color: '#5a3a20' }}>
-                Leave the board? Your current run will not be saved.
-              </span>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => dispatch({ type: 'SETTINGS/LEAVE_BOARD' })}
-                  className="flex-1 py-1.5 text-[12px] font-bold rounded-lg border-2"
-                  style={{ background: '#c23b22', borderColor: '#8f2a18', color: '#fff' }}
-                >
-                  Leave
-                </button>
-                <button
-                  onClick={() => setConfirmLeave(false)}
-                  className="flex-1 py-1.5 text-[12px] font-bold rounded-lg border-2"
-                  style={{ background: '#e8dcc4', borderColor: '#b28b62', color: '#5a3a20' }}
-                >
-                  Stay
-                </button>
-              </div>
-            </div>
-          ) : (
-            <ActionBtn onClick={() => setConfirmLeave(true)}>
-              ⌂ Go to Town
-            </ActionBtn>
-          )
-        )}
-
         <ActionBtn onClick={() => dispatch({ type: 'SETTINGS/SHOW_TUTORIAL' })}>
           📖 Show Tutorial
         </ActionBtn>
@@ -155,35 +114,6 @@ function MainTab({ state, dispatch }) {
         <ActionBtn onClick={() => { dispatch({ type: 'CLOSE_MODAL' }); dispatch({ type: 'SET_VIEW', view: 'achievements' }); }}>
           🏆 Trophies
         </ActionBtn>
-
-        {confirmReset ? (
-          <div
-            className="w-full flex items-center justify-between gap-2 py-2 px-3 rounded-xl border-2"
-            style={{ background: '#f4e8d0', borderColor: '#c23b22' }}
-          >
-            <span className="text-[12px] font-bold" style={{ color: '#5a3a20' }}>Sure? This cannot be undone.</span>
-            <div className="flex gap-2">
-              <button
-                onClick={() => { dispatch({ type: 'SETTINGS/RESET_SAVE' }); setConfirmReset(false); }}
-                className="py-1 px-3 text-[12px] font-bold rounded-lg border-2"
-                style={{ background: '#c23b22', borderColor: '#8f2a18', color: '#fff' }}
-              >
-                Yes
-              </button>
-              <button
-                onClick={() => setConfirmReset(false)}
-                className="py-1 px-3 text-[12px] font-bold rounded-lg border-2"
-                style={{ background: '#e8dcc4', borderColor: '#b28b62', color: '#5a3a20' }}
-              >
-                No
-              </button>
-            </div>
-          </div>
-        ) : (
-          <ActionBtn variant="danger" onClick={() => setConfirmReset(true)}>
-            🗑 Reset Save
-          </ActionBtn>
-        )}
       </div>
     </div>
   );
