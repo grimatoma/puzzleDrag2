@@ -172,30 +172,90 @@ function Section({ title, titleColor = "#f8e7c6", children }) {
 }
 
 
-function InventoryCell({ r, count, compact }) {
+// Per-key order status:
+//   "ready"  — at least one open order has all needed resources
+//   "needed" — at least one open order needs more of this resource
+//   "excess" — non-zero stash but no open order asks for it
+//   "idle"   — neither in stash nor in any order
+function orderStatusByKey(orders, inventory) {
+  const status = {};
+  const totals = {};
+  for (const o of orders) {
+    totals[o.key] = (totals[o.key] || 0) + o.need;
+    const have = inventory[o.key] || 0;
+    if (have >= o.need) status[o.key] = "ready";
+    else if (status[o.key] !== "ready") status[o.key] = "needed";
+  }
+  return { status, totals };
+}
+
+function InventoryCell({ r, count, compact, orderStatus, orderTotal }) {
+  // Visual states layered on top of the base cell.
+  const ready  = orderStatus === "ready";
+  const needed = orderStatus === "needed";
+  const excess = !orderStatus && count > 0;
+  const ringStyle = ready
+    ? { boxShadow: "0 0 0 2px #91bf24, 0 0 12px rgba(145,191,36,.55)" }
+    : needed
+    ? { boxShadow: "0 0 0 2px #f7c254" }
+    : excess
+    ? { boxShadow: "0 0 0 1px rgba(255,255,255,.18)" }
+    : {};
+  const tagText = ready
+    ? `✓ Order ${orderTotal}`
+    : needed
+    ? `Need ${orderTotal}`
+    : excess
+    ? "Excess"
+    : null;
+  const tagColor = ready ? "bg-[#91bf24]" : needed ? "bg-[#f7c254] text-[#3a2715]" : "bg-white/20";
   return (
-    <div className={`bg-[#b68d64] border-2 border-[#e6c49a] rounded-lg flex items-center gap-2.5 ${compact ? "p-1.5" : "p-2"}`} title={r.label}>
+    <div
+      className={`relative bg-[#b68d64] border-2 border-[#e6c49a] rounded-lg flex items-center gap-2.5 ${compact ? "p-1.5" : "p-2"} transition-shadow`}
+      style={ringStyle}
+      title={r.label}
+    >
       <div className={`rounded-md flex-shrink-0 grid place-items-center text-white ${compact ? "w-8 h-8 text-[16px]" : "w-10 h-10 text-[20px]"}`} style={{ backgroundColor: cssFromHex(r.color), border: "2px solid rgba(255,255,255,.4)", textShadow: "0 1px 1px rgba(0,0,0,.4)" }}>{r.glyph}</div>
       <div className="flex flex-col leading-none min-w-0 flex-1">
         <div className={`text-white/80 truncate font-medium ${compact ? "text-[10px]" : "text-[12px]"}`}>{r.label}</div>
         <div className={`text-white font-bold mt-0.5 ${compact ? "text-[14px]" : "text-[18px]"}`} style={{ textShadow: "0 1px 2px rgba(0,0,0,.4)" }}>{count}</div>
       </div>
+      {tagText && (
+        <div className={`absolute -top-1.5 -right-1.5 px-1.5 py-[1px] rounded-full text-[9px] font-bold text-white ${tagColor}`} style={{ textShadow: "0 1px 1px rgba(0,0,0,.4)" }}>
+          {tagText}
+        </div>
+      )}
     </div>
   );
 }
 
-export function InventoryGrid({ inventory, biomeKey, compact }) {
+export function InventoryGrid({ inventory, biomeKey, compact, orders = [] }) {
   const resources = BIOMES[biomeKey].resources;
   const items = Object.entries(RECIPES).filter(([key]) => (inventory[key] || 0) > 0);
   const gridCols = compact ? "grid-cols-2" : "grid-cols-[repeat(auto-fill,minmax(180px,1fr))]";
+  const { status, totals } = orderStatusByKey(orders, inventory);
 
   return (
     <div className="flex flex-col gap-3">
+      {orders.length > 0 && (
+        <div className="flex items-center gap-3 text-[10px] text-white/70 px-1 -mb-1">
+          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-[#91bf24]" /> ready</span>
+          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-[#f7c254]" /> needed</span>
+          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-white/40" /> excess</span>
+        </div>
+      )}
       <div>
         <div className="text-[11px] font-bold text-white/60 uppercase tracking-wider mb-1.5">Resources</div>
         <div className={`grid ${gridCols} gap-2`}>
           {resources.map((r) => (
-            <InventoryCell key={r.key} r={r} count={inventory[r.key] || 0} compact={compact} />
+            <InventoryCell
+              key={r.key}
+              r={r}
+              count={inventory[r.key] || 0}
+              compact={compact}
+              orderStatus={status[r.key]}
+              orderTotal={totals[r.key]}
+            />
           ))}
         </div>
       </div>
@@ -206,7 +266,14 @@ export function InventoryGrid({ inventory, biomeKey, compact }) {
         ) : (
           <div className={`grid ${gridCols} gap-2`}>
             {items.map(([key, recipe]) => (
-              <InventoryCell key={key} r={{ key, label: recipe.name, color: recipe.color, glyph: recipe.glyph }} count={inventory[key] || 0} compact={compact} />
+              <InventoryCell
+                key={key}
+                r={{ key, label: recipe.name, color: recipe.color, glyph: recipe.glyph }}
+                count={inventory[key] || 0}
+                compact={compact}
+                orderStatus={status[key]}
+                orderTotal={totals[key]}
+              />
             ))}
           </div>
         )}
@@ -552,6 +619,18 @@ const TOWN_THEMES = {
   },
 };
 
+// NPCs visible walking the town road. Color-keyed to NPCS where possible so
+// the same character a player gets orders from is the one ambling past.
+const TOWN_WALKERS = [
+  { color: "#d6612a", duration: 28, delay:  0,  dir:  1 }, // Mira
+  { color: "#5a6973", duration: 36, delay: 11,  dir: -1 }, // Bram
+  { color: "#4f6b3a", duration: 32, delay: 18,  dir:  1 }, // Wren
+  { color: "#c8923a", duration: 40, delay:  6,  dir: -1 }, // Tomas
+];
+
+// Buildings that emit smoke when built (industrial/warm interiors).
+const SMOKE_BUILDINGS = new Set(["hearth", "bakery", "forge"]);
+
 export function TownView({ state, dispatch }) {
   const biomeTheme = state.biomeKey === "mine" ? "mine" : "farm";
   const node = { name: biomeTheme === "mine" ? "Ironridge Camp" : "Hearthwood Vale" };
@@ -563,9 +642,10 @@ export function TownView({ state, dispatch }) {
     >
       {/* Sun/light source */}
       <div className="absolute top-12 right-20 w-16 h-16 rounded-full" style={{ background: theme.sunColor, boxShadow: `0 0 60px ${theme.sunGlow}` }} />
-      {/* Clouds */}
-      <div className="absolute top-16 left-[20%] w-24 h-6 rounded-full bg-white/70" />
-      <div className="absolute top-24 left-[55%] w-28 h-7 rounded-full bg-white/60" />
+      {/* Clouds — drift slowly across the sky */}
+      <div className="absolute top-16 w-24 h-6 rounded-full bg-white/70" style={{ animation: "townCloudA 95s linear infinite" }} />
+      <div className="absolute top-24 w-28 h-7 rounded-full bg-white/60" style={{ animation: "townCloudB 130s linear infinite" }} />
+      <div className="absolute top-10 w-20 h-5 rounded-full bg-white/50" style={{ animation: "townCloudA 160s linear infinite", animationDelay: "-40s" }} />
       {/* Hills + road */}
       <svg className="absolute inset-0 w-full h-full" viewBox="0 0 1100 600" preserveAspectRatio="none">
         <path d="M0,300 Q200,250 400,290 T800,280 L1100,260 L1100,600 L0,600 Z" fill={theme.hill1} opacity="0.75" />
@@ -577,6 +657,13 @@ export function TownView({ state, dispatch }) {
       <div className="absolute top-3 left-4 landscape:max-[1024px]:top-2 landscape:max-[1024px]:left-3 font-bold text-[20px] landscape:max-[1024px]:text-[15px]" style={{ color: theme.textColor }}>{node.name}</div>
       <div className="absolute top-3 right-4 landscape:max-[1024px]:top-2 landscape:max-[1024px]:right-3 flex items-center gap-2 z-10">
         <div className="bg-white/85 px-3 py-1.5 landscape:max-[1024px]:px-2 landscape:max-[1024px]:py-1 rounded-full font-bold text-[#3a2715] landscape:max-[1024px]:text-[13px]">◉ {state.coins.toLocaleString()}</div>
+      </div>
+
+      {/* Walking NPCs — drift along the road from edge to edge */}
+      <div className="absolute inset-x-0 pointer-events-none" style={{ top: "78%", height: "8%" }}>
+        {TOWN_WALKERS.map((w, i) => (
+          <TownWalker key={i} {...w} />
+        ))}
       </div>
 
       {/* Buildings positioned in the 1100x600 design space, scaled to viewport */}
@@ -614,6 +701,7 @@ export function TownView({ state, dispatch }) {
                 onClick={onClick}
               >
                 <div className="absolute -top-3 left-[-5px] right-[-5px] h-5" style={{ background: "#5a2e15", clipPath: "polygon(8% 100%, 50% 0, 92% 100%)" }} />
+                {isBuilt && SMOKE_BUILDINGS.has(b.id) && <BuildingSmoke />}
                 <div
                   className="w-full h-full rounded-sm grid place-items-end justify-center pb-1 font-bold text-[11px] text-white"
                   style={{
@@ -641,6 +729,52 @@ export function TownView({ state, dispatch }) {
           })}
         </div>
       </div>
+    </div>
+  );
+}
+
+function TownWalker({ color, duration, delay, dir }) {
+  const animation = dir > 0 ? "townWalkR" : "townWalkL";
+  return (
+    <div
+      className="absolute"
+      style={{
+        bottom: 0,
+        left: dir > 0 ? "-6%" : undefined,
+        right: dir < 0 ? "-6%" : undefined,
+        animation: `${animation} ${duration}s linear infinite`,
+        animationDelay: `-${delay}s`,
+      }}
+    >
+      <div className="relative" style={{ animation: "townBob 0.55s ease-in-out infinite alternate" }}>
+        {/* head */}
+        <div className="w-2.5 h-2.5 rounded-full" style={{ background: "#f5d6b0", border: "1px solid rgba(0,0,0,.25)", margin: "0 auto" }} />
+        {/* body */}
+        <div className="w-3.5 h-4 rounded-sm mt-0.5" style={{ background: color, border: "1px solid rgba(0,0,0,.3)" }} />
+        {/* shadow */}
+        <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-4 h-1 rounded-full bg-black/25" />
+      </div>
+    </div>
+  );
+}
+
+function BuildingSmoke() {
+  return (
+    <div className="absolute -top-2 left-1/2 -translate-x-1/2 pointer-events-none" style={{ width: 18, height: 36 }}>
+      {[0, 1, 2].map((i) => (
+        <div
+          key={i}
+          className="absolute left-1/2 -translate-x-1/2 rounded-full"
+          style={{
+            bottom: 0,
+            width: 8 + i * 2,
+            height: 8 + i * 2,
+            background: "rgba(240,235,220,.6)",
+            animation: "townSmoke 3.4s ease-out infinite",
+            animationDelay: `${i * 1.1}s`,
+          }}
+        />
+      ))}
     </div>
   );
 }

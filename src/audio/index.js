@@ -91,13 +91,20 @@ function playStep({ freq, freqEnd, dur, type, gain = 0.06, delay = 0 }, baseDela
 /**
  * Play a named sound. No-op if sfx is disabled or the name is unknown.
  * Lazy-inits and resumes the AudioContext on first call.
+ *
+ * `opts.pitch` (0.5–2.5) shifts the entire sound up/down a multiplicative
+ * pitch factor, used by chain-length escalation.
  */
-export function play(name) {
+export function play(name, opts = {}) {
   if (!enabled.sfx) return;
   const def = SOUNDS[name];
   if (!def) return;
   unlock(); // ensure context is running
-  def.steps.forEach((step) => playStep(step, 0));
+  const pitch = Math.max(0.5, Math.min(2.5, opts.pitch || 1));
+  def.steps.forEach((step) => {
+    if (pitch === 1) return playStep(step, 0);
+    playStep({ ...step, freq: step.freq * pitch, freqEnd: step.freqEnd ? step.freqEnd * pitch : undefined }, 0);
+  });
 }
 
 export { SOUNDS };
