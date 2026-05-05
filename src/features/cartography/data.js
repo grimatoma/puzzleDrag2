@@ -1,13 +1,64 @@
+// Map node positions are in a 0..100 SVG viewBox.
+// `kind` drives the side-effect on travel and the visual style.
+// `region` groups nodes for the tinted background zones.
+// `description` is a short flavor blurb shown in the side panel.
+// `activities` are bullet points describing what the player can do there.
+
 export const MAP_NODES = [
-  { id: 'home',       name: 'Hearthwood Vale',      kind: 'home',     x: 8,  y: 50, level: 1 },
-  { id: 'meadow',     name: 'Greenmeadow',           kind: 'farm',     x: 22, y: 30, level: 1 },
-  { id: 'orchard',    name: 'Wild Orchard',           kind: 'farm',     x: 22, y: 72, level: 2 },
-  { id: 'crossroads', name: 'The Crossroads',         kind: 'event',    x: 38, y: 50, level: 2 },
-  { id: 'quarry',     name: 'Cracked Quarry',         kind: 'mine',     x: 55, y: 28, level: 2 },
-  { id: 'caves',      name: 'Lanternlit Caves',       kind: 'mine',     x: 55, y: 72, level: 4 },
-  { id: 'fairground', name: "Drifter's Fairground",  kind: 'festival', x: 70, y: 50, level: 3 },
-  { id: 'forge',      name: 'Black Forge',            kind: 'mine',     x: 84, y: 30, level: 5 },
-  { id: 'pit',        name: 'The Pit',                kind: 'boss',     x: 90, y: 70, level: 6 },
+  {
+    id: 'home', name: 'Hearthwood Vale', kind: 'home', icon: '🏡',
+    x: 10, y: 50, level: 1, region: 'hearth',
+    description: 'Your home village. Build, craft, and rest by the hearth.',
+    activities: ['Manage town', 'Craft & build', 'Turn in orders'],
+  },
+  {
+    id: 'meadow', name: 'Greenmeadow', kind: 'farm', icon: '🌾',
+    x: 24, y: 28, level: 1, region: 'farm',
+    description: 'Sun-drenched fields. Easy harvests for new farmers.',
+    activities: ['Harvest farm tiles', 'Common resources'],
+  },
+  {
+    id: 'orchard', name: 'Wild Orchard', kind: 'farm', icon: '🍎',
+    x: 24, y: 72, level: 2, region: 'farm',
+    description: 'Tangled rows of fruit trees. Richer farm yields.',
+    activities: ['Harvest farm tiles', 'Higher-tier crops'],
+  },
+  {
+    id: 'crossroads', name: 'The Crossroads', kind: 'event', icon: '🎲',
+    x: 40, y: 50, level: 2, region: 'wilds',
+    description: 'A windswept junction where strangers and rumors meet.',
+    activities: ['Random encounters', 'Story bits'],
+  },
+  {
+    id: 'quarry', name: 'Cracked Quarry', kind: 'mine', icon: '⛏️',
+    x: 56, y: 26, level: 2, region: 'mine',
+    description: 'A wide, shattered pit. Stone, ore, and a few coins lost in cracks.',
+    activities: ['Harvest mine tiles', 'Ore & stone'],
+  },
+  {
+    id: 'caves', name: 'Lanternlit Caves', kind: 'mine', icon: '🪨',
+    x: 56, y: 74, level: 4, region: 'mine',
+    description: 'Twisting tunnels lit by old miners’ lanterns. Rare gems hide deep within.',
+    activities: ['Harvest mine tiles', 'Rare gems'],
+  },
+  {
+    id: 'fairground', name: "Drifter's Fairground", kind: 'festival', icon: '🎪',
+    x: 72, y: 50, level: 3, region: 'wilds',
+    description: 'A rolling fair of music, trinkets, and seasonal contests.',
+    activities: ['Festival rewards', 'Limited-time offers'],
+  },
+  {
+    id: 'forge', name: 'Black Forge', kind: 'mine', icon: '🔥',
+    x: 86, y: 28, level: 5, region: 'mine',
+    description: 'A roaring smithy at the foot of the mountain. Where heroes’ tools are born.',
+    activities: ['Advanced crafting', 'Boss-tier resources'],
+  },
+  {
+    id: 'pit', name: 'The Pit', kind: 'boss', icon: '⚔️',
+    x: 90, y: 72, level: 6, region: 'boss',
+    description: 'Something stirs in the dark. Bring your best chains.',
+    activities: ['Boss battles', 'Rare loot'],
+  },
 ];
 
 export const MAP_EDGES = [
@@ -31,4 +82,23 @@ export const NODE_COLORS = {
   festival: '#c8923a',
   boss:     '#3a1a1a',
   event:    '#5a7a9a',
+};
+
+// Background zone tints, drawn as soft circles behind the node graph.
+// Each zone is positioned roughly over the cluster of nodes it represents.
+export const REGIONS = [
+  { id: 'hearth', label: 'Hearthlands', cx: 12, cy: 50, rx: 16, ry: 22, fill: '#d8b878' },
+  { id: 'farm',   label: 'Greenfields', cx: 26, cy: 50, rx: 14, ry: 32, fill: '#b8c878' },
+  { id: 'wilds',  label: 'The Wilds',   cx: 56, cy: 50, rx: 22, ry: 30, fill: '#c4b888' },
+  { id: 'mine',   label: 'Stoneholds',  cx: 72, cy: 30, rx: 22, ry: 18, fill: '#a8a4a0' },
+  { id: 'boss',   label: 'The Deep',    cx: 90, cy: 72, rx: 12, ry: 16, fill: '#8a5050' },
+];
+
+export const KIND_LABELS = {
+  home:     'Home Village',
+  farm:     'Farm Region',
+  mine:     'Mine Region',
+  festival: 'Festival',
+  boss:     'Boss Arena',
+  event:    'Wayside Event',
 };
