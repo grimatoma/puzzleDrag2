@@ -196,9 +196,9 @@ export default function App() {
           <FeatureScreens state={state} dispatch={dispatch} />
         </div>
 
-        {/* Bottom nav — hidden on board view */}
+        {/* Nav — top bar in town, floating bottom in other off-board views */}
         {state.view !== "board" && (
-          <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-30">
+          <div className={`absolute left-1/2 -translate-x-1/2 z-30 ${state.view === "town" ? "top-3" : "bottom-3"}`}>
             <BottomNav view={state.view} modal={state.modal} dispatch={dispatch} />
           </div>
         )}
