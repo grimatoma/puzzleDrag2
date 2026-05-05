@@ -349,14 +349,13 @@ function coreReducer(state, action) {
       return state.bubble && state.bubble.id === action.id ? { ...state, bubble: null } : state;
     case "CLOSE_SEASON": {
       const tools = { ...state.tools, shuffle: (state.tools.shuffle || 0) + 1 };
-      const view = state.pendingView || state.view;
       return {
         ...state,
         tools,
         coins: state.coins + 25,
         turnsUsed: 0,
         modal: null,
-        view,
+        view: "town",
         pendingView: null,
         seasonStats: { harvests: 0, upgrades: 0, ordersFilled: 0, coins: 0 },
         bubble: { id: Date.now(), npc: "tomas", text: "Bonus: +1 Reshuffle Horn · +25◉", ms: 2000 },
