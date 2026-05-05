@@ -1,4 +1,5 @@
 import React from "react";
+import { ModalShell, ModalHeader } from '../../ui.jsx';
 
 export const modalKey = "menu";
 
@@ -252,36 +253,16 @@ export default function SettingsModal({ state, dispatch }) {
 
   const tab = state.settingsTab || 'main';
   const settings = state.settings || {};
+  const close = () => dispatch({ type: 'CLOSE_MODAL' });
 
   return (
-    <div
-      className="absolute inset-0 grid place-items-center"
-      style={{ background: 'rgba(0,0,0,0.55)', zIndex: 55 }}
-    >
-      <div
-        className="relative p-5 rounded-[20px] overflow-y-auto shadow-2xl"
-        style={{
-          background: '#f4ecd8',
-          border: '4px solid #b28b62',
-          width: 'min(540px, 92vw)',
-          maxHeight: '85vh',
-        }}
-      >
-        {/* Close button */}
-        <button
-          onClick={() => dispatch({ type: 'CLOSE_MODAL' })}
-          className="absolute top-3 right-3 w-7 h-7 rounded-lg grid place-items-center text-[16px] font-bold border-2"
-          style={{ background: '#e8dcc4', borderColor: '#b28b62', color: '#5a3a20' }}
-          aria-label="Close"
-        >
-          ×
-        </button>
-
-        {/* Tab content */}
+    <ModalShell onClose={close}>
+      <ModalHeader title="Menu" onClose={close} />
+      <div className="flex-1 min-h-0 overflow-y-auto px-5 pb-5">
         {tab === 'main' && <MainTab state={state} dispatch={dispatch} />}
         {tab === 'settings' && <SettingsTab settings={settings} dispatch={dispatch} />}
         {tab === 'about' && <AboutTab dispatch={dispatch} />}
       </div>
-    </div>
+    </ModalShell>
   );
 }

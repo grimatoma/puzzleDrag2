@@ -1,6 +1,7 @@
 import React from "react";
 import { APPRENTICES } from "./data.js";
 import { BIOMES } from "../../constants.js";
+import { ModalShell, ModalHeader } from "../../ui.jsx";
 
 export const modalKey = "apprentices";
 
@@ -310,11 +311,13 @@ export function ApprenticesPanel({ state, dispatch, showHeader = true, onClose =
 }
 
 export default function ApprenticesModal({ state, dispatch }) {
+  const close = () => dispatch({ type: "CLOSE_MODAL" });
   return (
-    <div style={{ position: "fixed", inset: 0, background: "rgba(30,18,8,0.72)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 500, padding: 8 }} onClick={(e) => { if (e.target === e.currentTarget) dispatch({ type: "CLOSE_MODAL" }); }}>
-      <div style={{ background: "#f4ecd8", border: "4px solid #b28b62", borderRadius: 20, width: "min(640px, 94vw)" }}>
-        <ApprenticesPanel state={state} dispatch={dispatch} showHeader onClose={() => dispatch({ type: "CLOSE_MODAL" })} />
+    <ModalShell onClose={close}>
+      <ModalHeader title="🧑‍🌾 Apprentices" onClose={close} />
+      <div className="flex-1 min-h-0 overflow-y-auto px-5 pb-5">
+        <ApprenticesPanel state={state} dispatch={dispatch} showHeader={false} />
       </div>
-    </div>
+    </ModalShell>
   );
 }

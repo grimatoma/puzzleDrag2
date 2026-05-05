@@ -414,6 +414,37 @@ function BottomSheet({ onClose, children }) {
   );
 }
 
+// ─── Shared modal shell ───────────────────────────────────────────────────────
+
+export function ModalShell({ onClose, children }) {
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[100] bg-black/55 grid place-items-center p-4 animate-fadein"
+      onClick={onClose}
+    >
+      <div
+        className="bg-[#f4ecd8] border-[4px] border-[#b28b62] rounded-[20px] w-full max-w-[600px] max-h-[88dvh] shadow-2xl flex flex-col overflow-hidden"
+        onClick={e => e.stopPropagation()}
+      >
+        {children}
+      </div>
+    </div>,
+    document.body
+  );
+}
+
+export function ModalHeader({ title, onClose }) {
+  return (
+    <div className="flex items-center justify-between px-5 pt-5 pb-3 flex-shrink-0">
+      <h3 className="font-bold text-[20px] text-[#744d2e]">{title}</h3>
+      <button
+        onClick={onClose}
+        className="w-8 h-8 rounded-lg bg-[#f6efe0] border-2 border-[#b28b62] grid place-items-center text-[#6a4b31] font-bold text-[14px]"
+      >✕</button>
+    </div>
+  );
+}
+
 export function MobileDock({ state, dispatch }) {
   const [sheet, setSheet] = useState(null); // "tools" | "orders" | null
 
@@ -518,37 +549,29 @@ export function BottomNav({ view, modal, dispatch }) {
 function TownsfolkModal({ state, dispatch }) {
   if (state.modal !== "townsfolk") return null;
   const [tab, setTab] = useState("mood");
-  return createPortal(
-    <div className="fixed inset-0 bg-black/55 grid place-items-center z-[100] animate-fadein">
-      <div className="bg-[#f4ecd8] border-[4px] border-[#b28b62] rounded-[20px] p-5 w-[min(540px,92vw)] max-h-[85vh] shadow-2xl flex flex-col">
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="font-bold text-[20px] text-[#744d2e]">Townsfolk</h3>
-          <button
-            onClick={() => dispatch({ type: "CLOSE_MODAL" })}
-            className="w-8 h-8 rounded-lg bg-[#f6efe0] border-2 border-[#b28b62] grid place-items-center text-[#6a4b31] font-bold text-[14px]"
-          >✕</button>
-        </div>
-        <div className="flex gap-1.5 pb-3 flex-shrink-0">
-          {[
-            { key: "mood", label: "💞 Townsfolk" },
-            { key: "apprentices", label: "🧑‍🌾 Apprentices" },
-            { key: "orders", label: "📋 Orders" },
-          ].map((item) => (
-            <button key={item.key} onClick={() => setTab(item.key)} className={`flex-1 py-1.5 rounded-lg text-[11px] font-bold border-2 ${tab === item.key ? "bg-[#8a4a26] border-[#6b3114] text-white" : "bg-[#f7ead8] border-[#b28b62] text-[#5a3a20]"}`}>{item.label}</button>
-          ))}
-        </div>
-        <div className="flex-1 min-h-0 overflow-y-auto">
-          {tab === "mood" ? (
-            <MoodPanel state={state} dispatch={dispatch} showHeader={false} />
-          ) : tab === "apprentices" ? (
-            <ApprenticesPanel state={state} dispatch={dispatch} showHeader={false} />
-          ) : (
-            <CompactOrders orders={state.orders || []} inventory={state.inventory || {}} dispatch={dispatch} />
-          )}
-        </div>
+  const close = () => dispatch({ type: "CLOSE_MODAL" });
+  return (
+    <ModalShell onClose={close}>
+      <ModalHeader title="Townsfolk" onClose={close} />
+      <div className="flex gap-1.5 px-5 pb-3 flex-shrink-0">
+        {[
+          { key: "mood", label: "💞 Townsfolk" },
+          { key: "apprentices", label: "🧑‍🌾 Apprentices" },
+          { key: "orders", label: "📋 Orders" },
+        ].map((item) => (
+          <button key={item.key} onClick={() => setTab(item.key)} className={`flex-1 py-1.5 rounded-lg text-[11px] font-bold border-2 ${tab === item.key ? "bg-[#8a4a26] border-[#6b3114] text-white" : "bg-[#f7ead8] border-[#b28b62] text-[#5a3a20]"}`}>{item.label}</button>
+        ))}
       </div>
-    </div>,
-    document.body
+      <div className="flex-1 min-h-0 overflow-y-auto px-5 pb-5">
+        {tab === "mood" ? (
+          <MoodPanel state={state} dispatch={dispatch} showHeader={false} />
+        ) : tab === "apprentices" ? (
+          <ApprenticesPanel state={state} dispatch={dispatch} showHeader={false} />
+        ) : (
+          <CompactOrders orders={state.orders || []} inventory={state.inventory || {}} dispatch={dispatch} />
+        )}
+      </div>
+    </ModalShell>
   );
 }
 
@@ -562,11 +585,8 @@ function BiomeEntryModal({ biomeKey, level, onEnter, onClose }) {
     mine: "Descend into Ironridge depths. Extract stone, smelt ore, and uncover precious gems hidden below.",
   };
   return (
-    <div className="absolute inset-0 bg-black/60 grid place-items-center z-50 animate-fadein" onClick={onClose}>
-      <div
-        className="bg-[#f4ecd8] border-[4px] border-[#b28b62] rounded-[20px] px-8 py-6 max-w-[400px] w-[92vw] shadow-2xl text-center"
-        onClick={(e) => e.stopPropagation()}
-      >
+    <ModalShell onClose={onClose}>
+      <div className="px-8 py-6 text-center">
         <div className="text-[52px] leading-none mb-3">{biomeKey === "farm" ? "🌾" : "⛏"}</div>
         <h2 className="font-bold text-[22px] text-[#744d2e] mb-2">{biome.name}</h2>
         <p className="text-[#6a4b31] text-[13px] mb-5 leading-relaxed">{descriptions[biomeKey]}</p>
@@ -589,7 +609,7 @@ function BiomeEntryModal({ biomeKey, level, onEnter, onClose }) {
           Close
         </button>
       </div>
-    </div>
+    </ModalShell>
   );
 }
 
@@ -1506,29 +1526,29 @@ export function SeasonModal({ state, dispatch }) {
   const nextCalendarSeason = ((state.seasonsCycled || 0) + 1) % 4;
   const nextEffect = SEASON_EFFECTS[nextCalendarSeason];
   return (
-    <div className="absolute inset-0 bg-black/55 grid place-items-center z-50 animate-fadein">
-      <div className="bg-[#f4ecd8] border-[4px] border-[#b28b62] rounded-[20px] px-8 py-6 landscape:max-[1024px]:px-4 landscape:max-[1024px]:py-3 max-[640px]:px-4 max-[640px]:py-4 min-w-[360px] max-w-[560px] landscape:max-[1024px]:min-w-0 landscape:max-[1024px]:w-[92vw] max-[640px]:min-w-0 max-[640px]:w-[92vw] landscape:max-[1024px]:max-h-[88vh] max-[640px]:max-h-[85dvh] landscape:max-[1024px]:overflow-y-auto max-[640px]:overflow-y-auto text-center shadow-2xl">
-        <div className="text-[48px] landscape:max-[1024px]:text-[28px] max-[640px]:text-[32px] leading-none">🏡</div>
-        <h2 className="font-bold text-[26px] landscape:max-[1024px]:text-[18px] max-[640px]:text-[20px] text-[#744d2e] mt-2 landscape:max-[1024px]:mt-1 max-[640px]:mt-1 mb-1 landscape:max-[1024px]:mb-0.5 max-[640px]:mb-0.5">Harvest Complete</h2>
-        <p className="italic text-[#6a4b31] text-[14px] landscape:max-[1024px]:text-[11px] max-[640px]:text-[12px]">{prevSeason.name} is over. Time to head back to town.</p>
-        <div className="my-2 inline-block bg-[#d6612a]/15 border border-[#d6612a]/40 rounded-full px-3 py-1 text-[12px] landscape:max-[1024px]:text-[10px] max-[640px]:text-[11px] font-bold text-[#a8431a]">
+    <ModalShell onClose={() => dispatch({ type: "CLOSE_SEASON" })}>
+      <div className="px-8 py-6 text-center overflow-y-auto">
+        <div className="text-[48px] leading-none">🏡</div>
+        <h2 className="font-bold text-[26px] text-[#744d2e] mt-2 mb-1">Harvest Complete</h2>
+        <p className="italic text-[#6a4b31] text-[14px]">{prevSeason.name} is over. Time to head back to town.</p>
+        <div className="my-2 inline-block bg-[#d6612a]/15 border border-[#d6612a]/40 rounded-full px-3 py-1 text-[12px] font-bold text-[#a8431a]">
           Next: {nextSeason.name} — {nextEffect}
         </div>
-        <div className="flex justify-around gap-2 my-4 landscape:max-[1024px]:my-2 max-[640px]:my-2 p-3 landscape:max-[1024px]:p-2 max-[640px]:p-2 bg-black/[.04] rounded-xl">
+        <div className="flex justify-around gap-2 my-4 p-3 bg-black/[.04] rounded-xl">
           <Stat v={stats.harvests} l="Harvested" />
           <Stat v={stats.upgrades} l="Upgrades ★" />
           <Stat v={stats.ordersFilled} l="Orders" />
           <Stat v={`+${stats.coins}`} l="Coins" />
         </div>
-        <p className="text-[12px] landscape:max-[1024px]:text-[10px] max-[640px]:text-[11px] text-[#8a785e] mb-3 landscape:max-[1024px]:mb-2 max-[640px]:mb-2">Bonus: +1 Reshuffle Horn · +25◉</p>
+        <p className="text-[12px] text-[#8a785e] mb-3">Bonus: +1 Reshuffle Horn · +25◉</p>
         <button
           onClick={() => dispatch({ type: "CLOSE_SEASON" })}
-          className="bg-[#91bf24] hover:bg-[#a3d028] text-white border-[3px] border-white rounded-2xl px-8 landscape:max-[1024px]:px-5 max-[640px]:px-5 py-2.5 landscape:max-[1024px]:py-1.5 max-[640px]:py-2 text-[16px] landscape:max-[1024px]:text-[13px] max-[640px]:text-[14px] font-bold shadow-lg"
+          className="bg-[#91bf24] hover:bg-[#a3d028] text-white border-[3px] border-white rounded-2xl px-8 py-2.5 text-[16px] font-bold shadow-lg"
         >
           Return to Town
         </button>
       </div>
-    </div>
+    </ModalShell>
   );
 }
 

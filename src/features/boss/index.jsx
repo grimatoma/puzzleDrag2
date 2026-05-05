@@ -1,4 +1,5 @@
 import React from "react";
+import { createPortal } from "react-dom";
 import { BOSS_META, WEATHER_META } from "./slice.js";
 
 export const modalKey = "boss";
@@ -86,18 +87,16 @@ function BossModal({ boss, weather, dispatch }) {
     ? Math.min(100, Math.round((boss.progress / boss.targetCount) * 100))
     : 0;
 
-  return (
+  return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center"
+      className="fixed inset-0 z-[100] flex items-center justify-center p-4"
       style={{ background: "rgba(0,0,0,0.72)" }}
     >
       <div
-        className="rounded-[20px] p-5 shadow-2xl text-white overflow-y-auto"
+        className="rounded-[20px] p-5 shadow-2xl text-white overflow-y-auto w-full max-w-[600px] max-h-[88dvh]"
         style={{
           background: "linear-gradient(to bottom, #3a2715, #1a0d05)",
           border: "4px solid #a8431a",
-          width: "min(540px, 92vw)",
-          maxHeight: "85vh",
         }}
       >
         {/* Header */}
@@ -197,7 +196,8 @@ function BossModal({ boss, weather, dispatch }) {
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 

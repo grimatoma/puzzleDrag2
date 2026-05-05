@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { NPCS, BIOMES } from '../../constants.js';
 import { NPC_FAVORITES, MOOD_STATES, moodForBond } from './data.js';
+import { ModalShell, ModalHeader } from '../../ui.jsx';
 
 export const modalKey = 'mood';
 
@@ -236,11 +237,13 @@ export function MoodPanel({ state, dispatch, showHeader = true, onClose = null }
 }
 
 export default function MoodModal({ state, dispatch }) {
+  const close = () => dispatch({ type: 'CLOSE_MODAL' });
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ backgroundColor: 'rgba(0,0,0,0.55)' }} onClick={() => dispatch({ type: 'CLOSE_MODAL' })}>
-      <div className="bg-[#f4ecd8] border-[4px] border-[#b28b62] rounded-[20px] p-0 w-[min(640px,94vw)] max-h-[88vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-        <MoodPanel state={state} dispatch={dispatch} showHeader onClose={() => dispatch({ type: 'CLOSE_MODAL' })} />
+    <ModalShell onClose={close}>
+      <ModalHeader title="💞 Townsfolk" onClose={close} />
+      <div className="flex-1 min-h-0 overflow-y-auto px-5 pb-5">
+        <MoodPanel state={state} dispatch={dispatch} showHeader={false} />
       </div>
-    </div>
+    </ModalShell>
   );
 }
