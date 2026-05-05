@@ -643,11 +643,59 @@ const TOWN_WALKERS = [
 // Buildings that emit smoke when built (industrial/warm interiors).
 const SMOKE_BUILDINGS = new Set(["hearth", "bakery", "forge"]);
 
+// Per-biome visual config: unique building layouts and terrain paths.
+// Building order within each layout determines z-stacking (later = on top).
+const TOWN_BIOME_CONFIGS = {
+  farm: {
+    name: "Hearthwood Vale",
+    // Gentle pastoral layout — spread wide, inn prominent at center
+    buildingLayout: {
+      hearth:  { x: 55,  y: 355, w: 90,  h: 115 },
+      mill:    { x: 168, y: 332, w: 86,  h: 128 },
+      bakery:  { x: 292, y: 348, w: 100, h: 114 },
+      inn:     { x: 440, y: 318, w: 128, h: 152 },
+      granary: { x: 616, y: 336, w: 90,  h: 132 },
+      larder:  { x: 738, y: 360, w: 76,  h: 90  },
+      forge:   { x: 848, y: 350, w: 100, h: 112 },
+      caravan: { x: 965, y: 356, w: 112, h: 100 },
+    },
+    // Gently rolling hills — soft bezier curves
+    hill1Path: "M0,305 C120,278 260,248 420,262 C580,276 700,252 860,258 C960,262 1040,252 1100,248 L1100,600 L0,600 Z",
+    hill2Path: "M0,368 C140,352 310,342 520,358 C720,373 900,358 1100,352 L1100,600 L0,600 Z",
+    roadPath:  "M-20,506 C160,490 380,498 580,510 C780,522 940,512 1120,502",
+    cloudOpacity: "bg-white/70",
+  },
+  mine: {
+    name: "Ironridge Camp",
+    // Compact industrial layout — forge dominates center, buildings cluster tightly
+    buildingLayout: {
+      hearth:  { x: 50,  y: 375, w: 84,  h: 100 },
+      granary: { x: 155, y: 365, w: 84,  h: 112 },
+      mill:    { x: 260, y: 375, w: 80,  h: 92  },
+      bakery:  { x: 358, y: 360, w: 94,  h: 108 },
+      forge:   { x: 480, y: 318, w: 124, h: 152 },
+      inn:     { x: 638, y: 345, w: 114, h: 132 },
+      larder:  { x: 783, y: 370, w: 76,  h: 90  },
+      caravan: { x: 888, y: 356, w: 112, h: 100 },
+    },
+    // Jagged rocky peaks — angular lineto commands
+    hill1Path: "M0,288 L78,252 L142,274 L218,218 L308,258 L418,196 L518,240 L638,206 L738,234 L838,196 L938,224 L1018,210 L1100,216 L1100,600 L0,600 Z",
+    hill2Path: "M0,366 C60,348 142,372 228,356 C320,342 420,368 530,358 C652,348 780,370 900,356 C980,346 1052,362 1100,356 L1100,600 L0,600 Z",
+    roadPath:  "M-20,498 C80,484 220,490 400,498 C580,506 760,500 920,494 C1000,490 1062,492 1120,490",
+    cloudOpacity: "bg-white/40",
+  },
+};
+
 export function TownView({ state, dispatch }) {
   const [entryBiome, setEntryBiome] = useState(null);
   const biomeTheme = state.biomeKey === "mine" ? "mine" : "farm";
-  const node = { name: biomeTheme === "mine" ? "Ironridge Camp" : "Hearthwood Vale" };
   const theme = TOWN_THEMES[biomeTheme] || TOWN_THEMES.home;
+  const townConfig = TOWN_BIOME_CONFIGS[biomeTheme];
+  // Merge canonical building defs with biome-specific layout overrides
+  const townBuildings = BUILDINGS.map(b => ({ ...b, ...(townConfig.buildingLayout[b.id] || {}) }));
+  // Sort by bottom edge so shorter buildings don't clip taller neighbours
+  const sortedBuildings = [...townBuildings].sort((a, b) => (a.y + a.h) - (b.y + b.h));
+
   return (
     <div
       className="absolute inset-0 overflow-hidden"
@@ -655,19 +703,66 @@ export function TownView({ state, dispatch }) {
     >
       {/* Sun/light source */}
       <div className="absolute top-12 right-20 w-16 h-16 rounded-full" style={{ background: theme.sunColor, boxShadow: `0 0 60px ${theme.sunGlow}` }} />
-      {/* Clouds — drift slowly across the sky */}
-      <div className="absolute top-16 w-24 h-6 rounded-full bg-white/70" style={{ animation: "townCloudA 95s linear infinite" }} />
-      <div className="absolute top-24 w-28 h-7 rounded-full bg-white/60" style={{ animation: "townCloudB 130s linear infinite" }} />
-      <div className="absolute top-10 w-20 h-5 rounded-full bg-white/50" style={{ animation: "townCloudA 160s linear infinite", animationDelay: "-40s" }} />
-      {/* Hills + road */}
+      {/* Clouds */}
+      <div className={`absolute top-16 w-24 h-6 rounded-full ${townConfig.cloudOpacity}`} style={{ animation: "townCloudA 95s linear infinite" }} />
+      <div className={`absolute top-24 w-28 h-7 rounded-full ${biomeTheme === "mine" ? "bg-white/30" : "bg-white/60"}`} style={{ animation: "townCloudB 130s linear infinite" }} />
+      <div className={`absolute top-10 w-20 h-5 rounded-full ${biomeTheme === "mine" ? "bg-white/25" : "bg-white/50"}`} style={{ animation: "townCloudA 160s linear infinite", animationDelay: "-40s" }} />
+
+      {/* Biome-specific terrain */}
       <svg className="absolute inset-0 w-full h-full" viewBox="0 0 1100 600" preserveAspectRatio="none">
-        <path d="M0,300 Q200,250 400,290 T800,280 L1100,260 L1100,600 L0,600 Z" fill={theme.hill1} opacity="0.75" />
-        <path d="M0,360 Q300,330 550,360 T1100,350 L1100,600 L0,600 Z" fill={theme.hill2} opacity="0.6" />
-        <path d="M-20,500 Q200,480 400,500 T800,510 L1100,500" stroke={theme.road} strokeWidth="20" fill="none" strokeLinecap="round" opacity="0.85" />
-        <path d="M-20,500 Q200,480 400,500 T800,510 L1100,500" stroke={theme.roadLine} strokeWidth="2" fill="none" strokeDasharray="6 8" />
+        <path d={townConfig.hill1Path} fill={theme.hill1} opacity="0.75" />
+        <path d={townConfig.hill2Path} fill={theme.hill2} opacity="0.6" />
+
+        {biomeTheme === "farm" && <>
+          {/* Crop rows on the back hill */}
+          {[0,1,2,3].map(i => (
+            <line key={i} x1="50" y1={225 + i * 12} x2="380" y2={238 + i * 12} stroke="#d4c060" strokeWidth="1.5" opacity="0.35" />
+          ))}
+          {/* Windmill silhouette */}
+          <rect x="808" y="168" width="10" height="88" fill="#5a5a18" opacity="0.55" />
+          <polygon points="808,215 778,188 790,230" fill="#5a5a18" opacity="0.55" />
+          <polygon points="818,215 840,180 836,224" fill="#5a5a18" opacity="0.55" />
+          <polygon points="813,210 844,235 806,240" fill="#5a5a18" opacity="0.55" />
+          <polygon points="813,210 782,240 790,205" fill="#5a5a18" opacity="0.55" />
+          <polygon points="795,252 831,252 826,220 800,220" fill="#7a6030" opacity="0.55" />
+          {/* Wooden fence row */}
+          {[0,1,2,3,4,5,6,7,8,9,10,11,12].map(i => (
+            <line key={i} x1={28 + i * 28} y1="355" x2={28 + i * 28} y2="385" stroke="#a07840" strokeWidth="3" opacity="0.5" />
+          ))}
+          <line x1="14" y1="368" x2="378" y2="364" stroke="#a07840" strokeWidth="2" opacity="0.5" />
+          <line x1="14" y1="376" x2="378" y2="372" stroke="#a07840" strokeWidth="2" opacity="0.5" />
+        </>}
+
+        {biomeTheme === "mine" && <>
+          {/* Mine shaft entrance arch on the rocky face */}
+          <rect x="730" y="255" width="72" height="90" fill="#121416" opacity="0.85" rx="2" />
+          <ellipse cx="766" cy="255" rx="36" ry="22" fill="#121416" opacity="0.85" />
+          <rect x="734" y="250" width="64" height="8" fill="#4a4030" opacity="0.7" />
+          {[0,1,2].map(i => (
+            <line key={i} x1={740 + i * 14} y1="258" x2={740 + i * 14} y2="345" stroke="#3a3020" strokeWidth="4" opacity="0.6" />
+          ))}
+          {/* Mine cart track */}
+          <line x1="690" y1="348" x2="860" y2="340" stroke="#6a5a40" strokeWidth="3" opacity="0.5" />
+          <line x1="690" y1="356" x2="860" y2="348" stroke="#6a5a40" strokeWidth="3" opacity="0.5" />
+          {[0,1,2,3,4,5,6].map(i => (
+            <line key={i} x1={695 + i * 24} y1="345" x2={698 + i * 24} y2="358" stroke="#6a5a40" strokeWidth="2.5" opacity="0.5" />
+          ))}
+          {/* Rocky outcroppings foreground */}
+          <polygon points="60,368 90,330 120,368" fill="#3a3e42" opacity="0.45" />
+          <polygon points="100,372 125,342 150,372" fill="#2e3236" opacity="0.38" />
+          <polygon points="940,362 972,325 1005,362" fill="#3a3e42" opacity="0.4" />
+          {/* Torch glows */}
+          <circle cx="722" cy="258" r="14" fill="#f7a030" opacity="0.18" />
+          <circle cx="810" cy="258" r="14" fill="#f7a030" opacity="0.18" />
+        </>}
+
+        {/* Road */}
+        <path d={townConfig.roadPath} stroke={theme.road} strokeWidth="20" fill="none" strokeLinecap="round" opacity="0.85" />
+        <path d={townConfig.roadPath} stroke={theme.roadLine} strokeWidth="2" fill="none" strokeDasharray="6 8" />
       </svg>
+
       {/* Header */}
-      <div className="absolute top-3 left-4 landscape:max-[1024px]:top-2 landscape:max-[1024px]:left-3 font-bold text-[20px] landscape:max-[1024px]:text-[15px]" style={{ color: theme.textColor }}>{node.name}</div>
+      <div className="absolute top-3 left-4 landscape:max-[1024px]:top-2 landscape:max-[1024px]:left-3 font-bold text-[20px] landscape:max-[1024px]:text-[15px]" style={{ color: theme.textColor }}>{townConfig.name}</div>
       <div className="absolute top-3 right-4 landscape:max-[1024px]:top-2 landscape:max-[1024px]:right-3 flex items-center gap-2 z-10">
         <div className="bg-white/85 px-3 py-1.5 landscape:max-[1024px]:px-2 landscape:max-[1024px]:py-1 rounded-full font-bold text-[#3a2715] landscape:max-[1024px]:text-[13px]">◉ {state.coins.toLocaleString()}</div>
       </div>
@@ -683,7 +778,7 @@ export function TownView({ state, dispatch }) {
       <div className="absolute inset-0">
         <svg viewBox="0 0 1100 600" preserveAspectRatio="none" className="w-full h-full" style={{ position: "absolute", inset: 0, pointerEvents: "none" }} />
         <div className="absolute" style={{ left: 0, right: 0, top: 0, bottom: 0 }}>
-          {BUILDINGS.map((b) => {
+          {sortedBuildings.map((b) => {
             const isBuilt = !!state.built[b.id];
             const isLocked = state.level < b.lv;
             const canAfford = state.coins >= (b.cost.coins || 0) &&
