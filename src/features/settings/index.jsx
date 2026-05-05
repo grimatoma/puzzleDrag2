@@ -19,23 +19,6 @@ function Toggle({ on, onToggle }) {
   );
 }
 
-// --- Tab pill ---
-function TabPill({ label, active, onClick }) {
-  return (
-    <button
-      onClick={onClick}
-      className="px-3 py-1 rounded-full text-[12px] font-bold border-2 transition-colors"
-      style={{
-        background: active ? '#d6612a' : '#e8dcc4',
-        borderColor: active ? '#a84010' : '#b28b62',
-        color: active ? '#fff' : '#5a3a20',
-      }}
-    >
-      {label}
-    </button>
-  );
-}
-
 // --- Action button ---
 function ActionBtn({ children, onClick, variant = 'default', className = '' }) {
   const styles = {
@@ -131,6 +114,13 @@ const TOGGLE_ROWS = [
 function SettingsTab({ settings = {}, dispatch }) {
   return (
     <div className="flex flex-col gap-3">
+      <button
+        onClick={() => dispatch({ type: 'SETTINGS/SET_TAB', tab: 'main' })}
+        className="self-start text-[12px] font-bold px-3 py-1 rounded-lg border-2"
+        style={{ background: '#e8dcc4', borderColor: '#b28b62', color: '#5a3a20' }}
+      >
+        ← Back
+      </button>
       <div className="text-[13px] font-bold text-center" style={{ color: '#7a5a38' }}>
         Audio · Motion · Accessibility
       </div>
@@ -168,6 +158,13 @@ function AboutTab({ dispatch }) {
 
   return (
     <div className="flex flex-col items-center gap-3 text-center">
+      <button
+        onClick={() => dispatch({ type: 'SETTINGS/SET_TAB', tab: 'main' })}
+        className="self-start text-[12px] font-bold px-3 py-1 rounded-lg border-2"
+        style={{ background: '#e8dcc4', borderColor: '#b28b62', color: '#5a3a20' }}
+      >
+        ← Back
+      </button>
       <button
         onClick={handleFireTap}
         className="text-[48px] leading-none select-none focus:outline-none"
@@ -243,18 +240,6 @@ export default function SettingsModal({ state, dispatch }) {
         >
           ×
         </button>
-
-        {/* Tab bar */}
-        <div className="flex gap-2 mb-4">
-          {['main', 'settings', 'about'].map((t) => (
-            <TabPill
-              key={t}
-              label={t.charAt(0).toUpperCase() + t.slice(1)}
-              active={tab === t}
-              onClick={() => dispatch({ type: 'SETTINGS/SET_TAB', tab: t })}
-            />
-          ))}
-        </div>
 
         {/* Tab content */}
         {tab === 'main' && <MainTab state={state} dispatch={dispatch} />}
