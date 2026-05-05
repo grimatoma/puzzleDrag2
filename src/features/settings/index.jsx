@@ -19,23 +19,6 @@ function Toggle({ on, onToggle }) {
   );
 }
 
-// --- Tab pill ---
-function TabPill({ label, active, onClick }) {
-  return (
-    <button
-      onClick={onClick}
-      className="px-3 py-1 rounded-full text-[12px] font-bold border-2 transition-colors"
-      style={{
-        background: active ? '#d6612a' : '#e8dcc4',
-        borderColor: active ? '#a84010' : '#b28b62',
-        color: active ? '#fff' : '#5a3a20',
-      }}
-    >
-      {label}
-    </button>
-  );
-}
-
 // --- Action button ---
 function ActionBtn({ children, onClick, variant = 'default', className = '' }) {
   const styles = {
@@ -76,9 +59,8 @@ async function toggleFullscreen() {
 }
 
 function MainTab({ state, dispatch }) {
-  const [confirmReset, setConfirmReset] = React.useState(false);
-  const [confirmLeave, setConfirmLeave] = React.useState(false);
   const [fs, setFs] = React.useState(isFullscreen());
+  const [confirmLeave, setConfirmLeave] = React.useState(false);
   React.useEffect(() => {
     const sync = () => setFs(isFullscreen());
     document.addEventListener("fullscreenchange", sync);
@@ -99,10 +81,6 @@ function MainTab({ state, dispatch }) {
       </div>
 
       <div className="w-full flex flex-col gap-2 max-w-[320px]">
-        <ActionBtn variant="primary" onClick={() => dispatch({ type: 'CLOSE_MODAL' })}>
-          ▶ Resume
-        </ActionBtn>
-
         {onBoard && (
           confirmLeave ? (
             <div
@@ -155,35 +133,6 @@ function MainTab({ state, dispatch }) {
         <ActionBtn onClick={() => { dispatch({ type: 'CLOSE_MODAL' }); dispatch({ type: 'SET_VIEW', view: 'achievements' }); }}>
           🏆 Trophies
         </ActionBtn>
-
-        {confirmReset ? (
-          <div
-            className="w-full flex items-center justify-between gap-2 py-2 px-3 rounded-xl border-2"
-            style={{ background: '#f4e8d0', borderColor: '#c23b22' }}
-          >
-            <span className="text-[12px] font-bold" style={{ color: '#5a3a20' }}>Sure? This cannot be undone.</span>
-            <div className="flex gap-2">
-              <button
-                onClick={() => { dispatch({ type: 'SETTINGS/RESET_SAVE' }); setConfirmReset(false); }}
-                className="py-1 px-3 text-[12px] font-bold rounded-lg border-2"
-                style={{ background: '#c23b22', borderColor: '#8f2a18', color: '#fff' }}
-              >
-                Yes
-              </button>
-              <button
-                onClick={() => setConfirmReset(false)}
-                className="py-1 px-3 text-[12px] font-bold rounded-lg border-2"
-                style={{ background: '#e8dcc4', borderColor: '#b28b62', color: '#5a3a20' }}
-              >
-                No
-              </button>
-            </div>
-          </div>
-        ) : (
-          <ActionBtn variant="danger" onClick={() => setConfirmReset(true)}>
-            🗑 Reset Save
-          </ActionBtn>
-        )}
       </div>
     </div>
   );
@@ -201,6 +150,13 @@ const TOGGLE_ROWS = [
 function SettingsTab({ settings = {}, dispatch }) {
   return (
     <div className="flex flex-col gap-3">
+      <button
+        onClick={() => dispatch({ type: 'SETTINGS/SET_TAB', tab: 'main' })}
+        className="self-start text-[12px] font-bold px-3 py-1 rounded-lg border-2"
+        style={{ background: '#e8dcc4', borderColor: '#b28b62', color: '#5a3a20' }}
+      >
+        ← Back
+      </button>
       <div className="text-[13px] font-bold text-center" style={{ color: '#7a5a38' }}>
         Audio · Motion · Accessibility
       </div>
@@ -238,6 +194,13 @@ function AboutTab({ dispatch }) {
 
   return (
     <div className="flex flex-col items-center gap-3 text-center">
+      <button
+        onClick={() => dispatch({ type: 'SETTINGS/SET_TAB', tab: 'main' })}
+        className="self-start text-[12px] font-bold px-3 py-1 rounded-lg border-2"
+        style={{ background: '#e8dcc4', borderColor: '#b28b62', color: '#5a3a20' }}
+      >
+        ← Back
+      </button>
       <button
         onClick={handleFireTap}
         className="text-[48px] leading-none select-none focus:outline-none"
@@ -313,18 +276,6 @@ export default function SettingsModal({ state, dispatch }) {
         >
           ×
         </button>
-
-        {/* Tab bar */}
-        <div className="flex gap-2 mb-4">
-          {['main', 'settings', 'about'].map((t) => (
-            <TabPill
-              key={t}
-              label={t.charAt(0).toUpperCase() + t.slice(1)}
-              active={tab === t}
-              onClick={() => dispatch({ type: 'SETTINGS/SET_TAB', tab: t })}
-            />
-          ))}
-        </div>
 
         {/* Tab content */}
         {tab === 'main' && <MainTab state={state} dispatch={dispatch} />}
