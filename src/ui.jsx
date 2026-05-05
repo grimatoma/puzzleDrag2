@@ -1289,17 +1289,17 @@ export function TownView({ state, dispatch }) {
         {/* Farm Field — upper-left, in the hills */}
         <div
           className="absolute cursor-pointer group pointer-events-auto flex flex-col items-center"
-          style={{ left: "1.5%", bottom: "52%", width: "12%" }}
+          style={{ left: "1.5%", bottom: "50%", width: "16%" }}
           onClick={() => setEntryBiome("farm")}
         >
-          <div className="w-full text-center font-bold text-white mb-0.5" style={{ fontSize: "clamp(7px,0.85vw,10px)", textShadow: "0 1px 3px rgba(0,0,0,.9)" }}>🌾 Farm Field</div>
+          <div className="w-full text-center font-bold text-white mb-0.5" style={{ fontSize: "clamp(9px,1vw,13px)", textShadow: "0 1px 3px rgba(0,0,0,.9)" }}>🌾 Farm Field</div>
           <div
             className="relative w-full overflow-hidden transition-transform duration-150 group-hover:scale-105"
             style={{ aspectRatio: "1", borderRadius: "8px", border: "2px solid #2a5010", boxShadow: "0 2px 10px rgba(0,0,0,.45)" }}
           >
             <FarmFieldArt />
             <div className="absolute inset-0 grid place-items-center opacity-0 group-hover:opacity-100 transition-opacity" style={{ background: "rgba(0,0,0,.45)" }}>
-              <span className="font-bold text-white" style={{ fontSize: "clamp(7px,0.85vw,10px)" }}>▶ Enter</span>
+              <span className="font-bold text-white" style={{ fontSize: "clamp(9px,1vw,13px)" }}>▶ Enter</span>
             </div>
           </div>
         </div>
@@ -1307,10 +1307,10 @@ export function TownView({ state, dispatch }) {
         {/* Mine Entrance — upper-right, in the hills */}
         <div
           className="absolute cursor-pointer group pointer-events-auto flex flex-col items-center"
-          style={{ right: "1.5%", bottom: "52%", width: "12%", opacity: state.level < 2 ? 0.65 : 1 }}
+          style={{ right: "1.5%", bottom: "50%", width: "16%", opacity: state.level < 2 ? 0.65 : 1 }}
           onClick={() => setEntryBiome("mine")}
         >
-          <div className="w-full text-center font-bold text-white mb-0.5" style={{ fontSize: "clamp(7px,0.85vw,10px)", textShadow: "0 1px 3px rgba(0,0,0,.95)" }}>
+          <div className="w-full text-center font-bold text-white mb-0.5" style={{ fontSize: "clamp(9px,1vw,13px)", textShadow: "0 1px 3px rgba(0,0,0,.95)" }}>
             {state.level < 2 ? "🔒 Mine" : "⛏ Mine"}
           </div>
           <div
@@ -1319,16 +1319,16 @@ export function TownView({ state, dispatch }) {
           >
             <MineEntranceArt locked={state.level < 2} />
             <div className="absolute inset-0 grid place-items-center opacity-0 group-hover:opacity-100 transition-opacity" style={{ background: "rgba(0,0,0,.45)" }}>
-              <span className="font-bold text-white" style={{ fontSize: "clamp(7px,0.85vw,10px)" }}>{state.level < 2 ? "🔒 L2" : "▶ Enter"}</span>
+              <span className="font-bold text-white" style={{ fontSize: "clamp(9px,1vw,13px)" }}>{state.level < 2 ? "🔒 L2" : "▶ Enter"}</span>
             </div>
           </div>
         </div>
       </div>
 
       {/* Buildings positioned in the 1100x600 design space, scaled to viewport */}
-      <div className="absolute inset-0">
+      <div className="absolute inset-0 pointer-events-none">
         <svg viewBox="0 0 1100 600" preserveAspectRatio="none" className="w-full h-full" style={{ position: "absolute", inset: 0, pointerEvents: "none" }} />
-        <div className="absolute" style={{ left: 0, right: 0, top: 0, bottom: 0 }}>
+        <div className="absolute pointer-events-none" style={{ left: 0, right: 0, top: 0, bottom: 0 }}>
           {sortedBuildings.map((b) => {
             const isBuilt = !!state.built[b.id];
             const isLocked = state.level < b.lv;
@@ -1356,7 +1356,7 @@ export function TownView({ state, dispatch }) {
             return (
               <div
                 key={b.id}
-                className="absolute cursor-pointer group"
+                className="absolute cursor-pointer group pointer-events-auto"
                 style={{
                   left: `${(b.x / 1100) * 100}%`,
                   bottom: `${((600 - b.y - b.h) / 600) * 100}%`,
