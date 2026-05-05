@@ -490,33 +490,36 @@ export function MobileDock({ state, dispatch }) {
 
 export function BottomNav({ view, modal, dispatch }) {
   const items = [
-    { key: "town",         label: "⌂ Town" },
-    { key: "inventory",    label: "🎒 Inventory" },
-    { key: "quests",       label: "📜 Quests" },
-    { key: "crafting",     label: "🔨 Craft" },
-    { key: "cartography", label: "🗺️ Map" },
-    { key: "townsfolk",    label: "👥 Townsfolk", modal: "townsfolk" },
+    { key: "town",        icon: "⌂",   label: "Town" },
+    { key: "inventory",   icon: "🎒",  label: "Inventory" },
+    { key: "quests",      icon: "📜",  label: "Quests" },
+    { key: "crafting",    icon: "🔨",  label: "Craft" },
+    { key: "cartography", icon: "🗺️", label: "Map" },
+    { key: "townsfolk",   icon: "👥",  label: "Townsfolk", modal: "townsfolk" },
   ];
   const activeKey = modal ? (items.find((i) => i.modal === modal)?.key ?? view) : view;
   return (
-    <div
-      className="bg-[#2b2218]/95 border-2 border-[#f7e2b6] rounded-2xl p-1 flex flex-nowrap gap-1 shadow-2xl max-w-[92vw] justify-center overflow-x-auto"
-    >
-      {items.map((it) => (
-        <button
-          key={it.key}
-          onClick={() => {
-            if (it.modal) {
-              dispatch({ type: "OPEN_MODAL", modal: it.modal });
-            } else {
-              dispatch({ type: "SET_VIEW", view: it.key });
-            }
-          }}
-          className={`text-[11px] px-2.5 py-1.5 rounded-xl font-bold transition-colors whitespace-nowrap ${activeKey === it.key ? "bg-[#d6612a] text-white" : "bg-transparent text-[#f7e2b6] hover:bg-white/10"}`}
-        >
-          {it.label}
-        </button>
-      ))}
+    <div className="flex w-full bg-[#2b2218]/95 border-t-2 border-[#f7e2b6] flex-shrink-0 shadow-[0_-4px_12px_rgba(0,0,0,.25)]">
+      {items.map((it) => {
+        const active = activeKey === it.key;
+        return (
+          <button
+            key={it.key}
+            onClick={() => {
+              if (it.modal) {
+                dispatch({ type: "OPEN_MODAL", modal: it.modal });
+              } else {
+                dispatch({ type: "SET_VIEW", view: it.key });
+              }
+            }}
+            aria-label={`${it.icon} ${it.label}`}
+            className={`flex-1 flex flex-col items-center justify-center gap-0.5 py-1.5 transition-colors ${active ? "bg-[#d6612a] text-white" : "text-[#f7e2b6] hover:bg-white/10"}`}
+          >
+            <span className="text-[18px] leading-none">{it.icon}</span>
+            <span className="text-[10px] font-bold leading-none whitespace-nowrap">{it.label}</span>
+          </button>
+        );
+      })}
     </div>
   );
 }
