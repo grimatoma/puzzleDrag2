@@ -694,7 +694,7 @@ function BuildingIllustration({ id, isBuilt }) {
   }
   const illustrations = {
     hearth: (
-      <svg viewBox="0 0 100 100" className="absolute inset-0 w-full h-full" preserveAspectRatio="none" style={f}>
+      <svg viewBox="0 0 100 100" className="absolute inset-0 w-full h-full" preserveAspectRatio="xMidYMax meet" style={f}>
         {shadow()}
         <rect x="63" y="13" width="10" height="26" rx="1" fill="#8a7a6a" />
         <rect x="61" y="11" width="14" height="5" rx="1" fill="#6a5a4a" />
@@ -721,7 +721,7 @@ function BuildingIllustration({ id, isBuilt }) {
       </svg>
     ),
     mill: (
-      <svg viewBox="0 0 100 100" className="absolute inset-0 w-full h-full" preserveAspectRatio="none" style={f}>
+      <svg viewBox="0 0 100 100" className="absolute inset-0 w-full h-full" preserveAspectRatio="xMidYMax meet" style={f}>
         {shadow(50, 32)}
         <path d="M32,98 L36,48 L64,48 L68,98 Z" fill="#d4b880" />
         <path d="M32,98 L36,48 L64,48 L68,98 Z" fill="none" stroke="#9a7a4a" strokeWidth="2" />
@@ -748,7 +748,7 @@ function BuildingIllustration({ id, isBuilt }) {
       </svg>
     ),
     bakery: (
-      <svg viewBox="0 0 100 100" className="absolute inset-0 w-full h-full" preserveAspectRatio="none" style={f}>
+      <svg viewBox="0 0 100 100" className="absolute inset-0 w-full h-full" preserveAspectRatio="xMidYMax meet" style={f}>
         {shadow()}
         <rect x="18" y="17" width="9" height="22" rx="1" fill="#8a6a5a" />
         <rect x="16" y="15" width="13" height="5" rx="1" fill="#6a5040" />
@@ -778,7 +778,7 @@ function BuildingIllustration({ id, isBuilt }) {
       </svg>
     ),
     inn: (
-      <svg viewBox="0 0 100 100" className="absolute inset-0 w-full h-full" preserveAspectRatio="none" style={f}>
+      <svg viewBox="0 0 100 100" className="absolute inset-0 w-full h-full" preserveAspectRatio="xMidYMax meet" style={f}>
         {shadow(50, 44)}
         <rect x="66" y="8" width="10" height="22" rx="1" fill="#8a7a6a" />
         <rect x="64" y="6" width="14" height="5" rx="1" fill="#6a5a4a" />
@@ -811,7 +811,7 @@ function BuildingIllustration({ id, isBuilt }) {
       </svg>
     ),
     granary: (
-      <svg viewBox="0 0 100 100" className="absolute inset-0 w-full h-full" preserveAspectRatio="none" style={f}>
+      <svg viewBox="0 0 100 100" className="absolute inset-0 w-full h-full" preserveAspectRatio="xMidYMax meet" style={f}>
         {shadow(50, 38)}
         <rect x="13" y="52" width="74" height="45" rx="3" fill="#c8b070" />
         {[24, 36, 50, 64, 76].map((x) => (
@@ -834,7 +834,7 @@ function BuildingIllustration({ id, isBuilt }) {
       </svg>
     ),
     larder: (
-      <svg viewBox="0 0 100 100" className="absolute inset-0 w-full h-full" preserveAspectRatio="none" style={f}>
+      <svg viewBox="0 0 100 100" className="absolute inset-0 w-full h-full" preserveAspectRatio="xMidYMax meet" style={f}>
         {shadow(50, 38)}
         <polygon points="6,46 50,18 94,46" fill="#7a6858" />
         <polygon points="6,46 50,18 94,46" fill="none" stroke="#5a4a38" strokeWidth="1.5" />
@@ -861,7 +861,7 @@ function BuildingIllustration({ id, isBuilt }) {
       </svg>
     ),
     forge: (
-      <svg viewBox="0 0 100 100" className="absolute inset-0 w-full h-full" preserveAspectRatio="none" style={f}>
+      <svg viewBox="0 0 100 100" className="absolute inset-0 w-full h-full" preserveAspectRatio="xMidYMax meet" style={f}>
         {shadow()}
         <rect x="66" y="4" width="13" height="36" rx="2" fill="#4a4848" />
         <rect x="64" y="2" width="17" height="6" rx="1" fill="#383838" />
@@ -890,7 +890,7 @@ function BuildingIllustration({ id, isBuilt }) {
       </svg>
     ),
     caravan: (
-      <svg viewBox="0 0 100 100" className="absolute inset-0 w-full h-full" preserveAspectRatio="none" style={f}>
+      <svg viewBox="0 0 100 100" className="absolute inset-0 w-full h-full" preserveAspectRatio="xMidYMax meet" style={f}>
         {shadow(50, 48)}
         <line x1="82" y1="12" x2="82" y2="40" stroke="#8a5a2a" strokeWidth="2.5" />
         <polygon points="82,12 95,18 82,24" fill="#c83030" />
@@ -1153,9 +1153,9 @@ export function TownView({ state, dispatch }) {
                 className="absolute cursor-pointer group"
                 style={{
                   left: `${(b.x / 1100) * 100}%`,
-                  top: `${(b.y / 600) * 100}%`,
+                  bottom: `${((600 - b.y - b.h) / 600) * 100}%`,
                   width: `${(b.w / 1100) * 100}%`,
-                  height: `${(b.h / 600) * 100}%`,
+                  aspectRatio: "1",
                   opacity: isLocked && !isBuilt ? 0.5 : 1,
                 }}
                 onClick={onClick}
