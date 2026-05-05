@@ -685,6 +685,246 @@ const TOWN_BIOME_CONFIGS = {
     cloudOpacity: "bg-white/40",
   },
 };
+function BuildingIllustration({ id, isBuilt }) {
+  const f = isBuilt ? {} : { filter: "saturate(0.15) brightness(0.65)" };
+  const lit = isBuilt ? "#ffd86b" : "#5a5040";
+  const glow = isBuilt ? "#ff8040" : "#3a2020";
+  function shadow(cx = 50, rx = 40) {
+    return <ellipse cx={cx} cy="97" rx={rx} ry="4" fill="rgba(0,0,0,.2)" />;
+  }
+  const illustrations = {
+    hearth: (
+      <svg viewBox="0 0 100 100" className="absolute inset-0 w-full h-full" style={f}>
+        {shadow()}
+        <rect x="63" y="13" width="10" height="26" rx="1" fill="#8a7a6a" />
+        <rect x="61" y="11" width="14" height="5" rx="1" fill="#6a5a4a" />
+        <polygon points="7,44 50,12 93,44" fill="#8a3a1a" />
+        <line x1="7" y1="44" x2="29" y2="28" stroke="#6a2a10" strokeWidth="1.5" opacity="0.6" />
+        <line x1="50" y1="12" x2="29" y2="28" stroke="#6a2a10" strokeWidth="1.5" opacity="0.6" />
+        <line x1="93" y1="44" x2="71" y2="28" stroke="#6a2a10" strokeWidth="1.5" opacity="0.6" />
+        <rect x="9" y="44" width="82" height="54" rx="3" fill="#c8a87a" />
+        <line x1="9" y1="58" x2="91" y2="58" stroke="rgba(0,0,0,.1)" strokeWidth="1" />
+        <line x1="9" y1="71" x2="91" y2="71" stroke="rgba(0,0,0,.1)" strokeWidth="1" />
+        <line x1="9" y1="84" x2="91" y2="84" stroke="rgba(0,0,0,.1)" strokeWidth="1" />
+        <rect x="13" y="49" width="20" height="16" rx="2" fill={lit} />
+        <line x1="23" y1="49" x2="23" y2="65" stroke="#8a6a3a" strokeWidth="1" />
+        <line x1="13" y1="57" x2="33" y2="57" stroke="#8a6a3a" strokeWidth="1" />
+        <rect x="13" y="49" width="20" height="16" rx="2" fill="none" stroke="#8a6a3a" strokeWidth="1.5" />
+        <rect x="67" y="49" width="20" height="16" rx="2" fill={lit} />
+        <line x1="77" y1="49" x2="77" y2="65" stroke="#8a6a3a" strokeWidth="1" />
+        <line x1="67" y1="57" x2="87" y2="57" stroke="#8a6a3a" strokeWidth="1" />
+        <rect x="67" y="49" width="20" height="16" rx="2" fill="none" stroke="#8a6a3a" strokeWidth="1.5" />
+        <path d="M38,98 L38,76 A12,12 0 0,1 62,76 L62,98 Z" fill="#7a4a2a" />
+        <path d="M38,76 A12,12 0 0,1 62,76" fill="none" stroke="#5a3a1a" strokeWidth="1.5" />
+        <circle cx="57" cy="87" r="2" fill="#c8923a" />
+        <rect x="9" y="44" width="82" height="54" rx="3" fill="none" stroke="#8a6a3a" strokeWidth="2" />
+      </svg>
+    ),
+    mill: (
+      <svg viewBox="0 0 100 100" className="absolute inset-0 w-full h-full" style={f}>
+        {shadow(50, 32)}
+        <path d="M32,98 L36,48 L64,48 L68,98 Z" fill="#d4b880" />
+        <path d="M32,98 L36,48 L64,48 L68,98 Z" fill="none" stroke="#9a7a4a" strokeWidth="2" />
+        <line x1="33" y1="70" x2="67" y2="70" stroke="rgba(0,0,0,.1)" strokeWidth="1" />
+        <line x1="34" y1="83" x2="66" y2="83" stroke="rgba(0,0,0,.1)" strokeWidth="1" />
+        <polygon points="27,48 50,14 73,48" fill="#8a4a1a" />
+        <polygon points="27,48 50,14 73,48" fill="none" stroke="#6a3a10" strokeWidth="1.5" />
+        <circle cx="50" cy="31" r="5" fill="#8a6040" />
+        <circle cx="50" cy="31" r="3" fill="#c8923a" />
+        <line x1="50" y1="31" x2="50" y2="10" stroke="#7a5a3a" strokeWidth="2.5" />
+        <polygon points="44,10 56,10 58,22 42,22" fill="#e8d8a0" stroke="#9a7a3a" strokeWidth="1" />
+        <line x1="50" y1="31" x2="71" y2="31" stroke="#7a5a3a" strokeWidth="2.5" />
+        <polygon points="71,25 71,37 59,39 59,23" fill="#e8d8a0" stroke="#9a7a3a" strokeWidth="1" />
+        <line x1="50" y1="31" x2="50" y2="52" stroke="#7a5a3a" strokeWidth="2.5" />
+        <polygon points="44,40 56,40 58,52 42,52" fill="#e8d8a0" stroke="#9a7a3a" strokeWidth="1" />
+        <line x1="50" y1="31" x2="29" y2="31" stroke="#7a5a3a" strokeWidth="2.5" />
+        <polygon points="29,25 29,37 41,39 41,23" fill="#e8d8a0" stroke="#9a7a3a" strokeWidth="1" />
+        <circle cx="50" cy="63" r="9" fill={lit} />
+        <line x1="50" y1="54" x2="50" y2="72" stroke="#8a6a3a" strokeWidth="1" />
+        <line x1="41" y1="63" x2="59" y2="63" stroke="#8a6a3a" strokeWidth="1" />
+        <circle cx="50" cy="63" r="9" fill="none" stroke="#8a6a3a" strokeWidth="1.5" />
+        <path d="M40,98 L40,82 A10,10 0 0,1 60,82 L60,98 Z" fill="#7a5a3a" />
+        <path d="M40,82 A10,10 0 0,1 60,82" fill="none" stroke="#5a3a1a" strokeWidth="1.5" />
+      </svg>
+    ),
+    bakery: (
+      <svg viewBox="0 0 100 100" className="absolute inset-0 w-full h-full" style={f}>
+        {shadow()}
+        <rect x="18" y="17" width="9" height="22" rx="1" fill="#8a6a5a" />
+        <rect x="16" y="15" width="13" height="5" rx="1" fill="#6a5040" />
+        <rect x="73" y="12" width="9" height="27" rx="1" fill="#8a6a5a" />
+        <rect x="71" y="10" width="13" height="5" rx="1" fill="#6a5040" />
+        <polygon points="6,40 50,8 94,40" fill="#7a3a1a" />
+        <line x1="6" y1="40" x2="28" y2="24" stroke="#5a2a10" strokeWidth="1.5" opacity="0.6" />
+        <line x1="50" y1="8" x2="28" y2="24" stroke="#5a2a10" strokeWidth="1.5" opacity="0.6" />
+        <line x1="94" y1="40" x2="72" y2="24" stroke="#5a2a10" strokeWidth="1.5" opacity="0.6" />
+        <rect x="8" y="40" width="84" height="58" rx="3" fill="#c88c60" />
+        <line x1="8" y1="53" x2="92" y2="53" stroke="rgba(0,0,0,.08)" strokeWidth="1" />
+        <line x1="8" y1="66" x2="92" y2="66" stroke="rgba(0,0,0,.08)" strokeWidth="1" />
+        <line x1="8" y1="79" x2="92" y2="79" stroke="rgba(0,0,0,.08)" strokeWidth="1" />
+        <line x1="8" y1="92" x2="92" y2="92" stroke="rgba(0,0,0,.08)" strokeWidth="1" />
+        <path d="M14,98 L14,57 Q14,44 28,44 Q42,44 42,57 L42,98 Z" fill={isBuilt ? "#ffe0a0" : "#7a6a5a"} />
+        <path d="M14,57 Q14,44 28,44 Q42,44 42,57" fill="none" stroke="#8a5a3a" strokeWidth="2" />
+        {isBuilt && <>
+          <ellipse cx="22" cy="78" rx="6" ry="4" fill="#c87840" />
+          <ellipse cx="34" cy="81" rx="5" ry="3.5" fill="#c87840" />
+        </>}
+        <rect x="50" y="52" width="36" height="9" rx="3" fill="#c8923a" />
+        <rect x="50" y="52" width="36" height="9" rx="3" fill="none" stroke="#8a5a1a" strokeWidth="1" />
+        <rect x="56" y="71" width="24" height="27" rx="2" fill="#7a4a2a" />
+        <rect x="56" y="71" width="24" height="27" rx="2" fill="none" stroke="#5a3a1a" strokeWidth="1.5" />
+        <circle cx="76" cy="85" r="2" fill="#c8923a" />
+        <rect x="8" y="40" width="84" height="58" rx="3" fill="none" stroke="#8a5a3a" strokeWidth="2" />
+      </svg>
+    ),
+    inn: (
+      <svg viewBox="0 0 100 100" className="absolute inset-0 w-full h-full" style={f}>
+        {shadow(50, 44)}
+        <rect x="66" y="8" width="10" height="22" rx="1" fill="#8a7a6a" />
+        <rect x="64" y="6" width="14" height="5" rx="1" fill="#6a5a4a" />
+        <polygon points="5,36 50,6 95,36" fill="#4a6a3a" />
+        <line x1="5" y1="36" x2="28" y2="21" stroke="#3a5a2a" strokeWidth="1.5" opacity="0.6" />
+        <line x1="50" y1="6" x2="28" y2="21" stroke="#3a5a2a" strokeWidth="1.5" opacity="0.6" />
+        <line x1="95" y1="36" x2="72" y2="21" stroke="#3a5a2a" strokeWidth="1.5" opacity="0.6" />
+        <rect x="7" y="36" width="86" height="28" rx="2" fill="#8a7a60" />
+        {[14, 32, 54, 72].map((x) => (
+          <g key={x}>
+            <rect x={x} y="41" width="14" height="12" rx="2" fill={lit} />
+            <line x1={x + 7} y1="41" x2={x + 7} y2="53" stroke="#7a6a4a" strokeWidth="1" />
+            <rect x={x} y="41" width="14" height="12" rx="2" fill="none" stroke="#7a6a4a" strokeWidth="1.5" />
+          </g>
+        ))}
+        <rect x="7" y="63" width="86" height="5" rx="1" fill="#6a5a3a" />
+        <rect x="7" y="64" width="86" height="34" rx="2" fill="#9a8a70" />
+        <line x1="38" y1="63" x2="38" y2="73" stroke="#6a4a2a" strokeWidth="1.5" />
+        <line x1="62" y1="63" x2="62" y2="73" stroke="#6a4a2a" strokeWidth="1.5" />
+        <rect x="30" y="69" width="40" height="10" rx="2" fill="#c8923a" />
+        <rect x="30" y="69" width="40" height="10" rx="2" fill="none" stroke="#8a5a1a" strokeWidth="1" />
+        <rect x="10" y="71" width="16" height="14" rx="2" fill={lit} />
+        <rect x="10" y="71" width="16" height="14" rx="2" fill="none" stroke="#7a6a4a" strokeWidth="1.5" />
+        <rect x="74" y="71" width="16" height="14" rx="2" fill={lit} />
+        <rect x="74" y="71" width="16" height="14" rx="2" fill="none" stroke="#7a6a4a" strokeWidth="1.5" />
+        <path d="M37,98 L37,82 A13,13 0 0,1 63,82 L63,98 Z" fill="#7a4a2a" />
+        <path d="M37,82 A13,13 0 0,1 63,82" fill="none" stroke="#5a3a1a" strokeWidth="2" />
+        <line x1="50" y1="82" x2="50" y2="98" stroke="#5a3a1a" strokeWidth="1" />
+        <circle cx="59" cy="91" r="2.5" fill="#c8923a" />
+      </svg>
+    ),
+    granary: (
+      <svg viewBox="0 0 100 100" className="absolute inset-0 w-full h-full" style={f}>
+        {shadow(50, 38)}
+        <rect x="13" y="52" width="74" height="45" rx="3" fill="#c8b070" />
+        {[24, 36, 50, 64, 76].map((x) => (
+          <line key={x} x1={x} y1="52" x2={x} y2="97" stroke="rgba(0,0,0,.1)" strokeWidth="1.5" />
+        ))}
+        <ellipse cx="50" cy="52" rx="40" ry="22" fill="#c8923a" />
+        <ellipse cx="50" cy="52" rx="40" ry="22" fill="none" stroke="#9a6a3a" strokeWidth="1.5" />
+        <path d="M12,52 Q50,38 88,52" fill="none" stroke="#9a6a3a" strokeWidth="1" opacity="0.5" />
+        <path d="M18,44 Q50,30 82,44" fill="none" stroke="#9a6a3a" strokeWidth="1" opacity="0.5" />
+        <ellipse cx="50" cy="30" rx="8" ry="4" fill="#8a5a1a" />
+        <rect x="18" y="59" width="12" height="5" rx="2" fill="rgba(0,0,0,.3)" />
+        <rect x="70" y="59" width="12" height="5" rx="2" fill="rgba(0,0,0,.3)" />
+        <rect x="28" y="72" width="20" height="25" rx="2" fill="#8a5a2a" />
+        <rect x="52" y="72" width="20" height="25" rx="2" fill="#8a5a2a" />
+        <line x1="50" y1="72" x2="50" y2="97" stroke="#6a4a1a" strokeWidth="2" />
+        <rect x="28" y="72" width="44" height="25" rx="2" fill="none" stroke="#6a4a1a" strokeWidth="1.5" />
+        <circle cx="46" cy="85" r="2" fill="#c8923a" />
+        <circle cx="54" cy="85" r="2" fill="#c8923a" />
+        <rect x="13" y="52" width="74" height="45" rx="3" fill="none" stroke="#9a7a4a" strokeWidth="2" />
+      </svg>
+    ),
+    larder: (
+      <svg viewBox="0 0 100 100" className="absolute inset-0 w-full h-full" style={f}>
+        {shadow(50, 38)}
+        <polygon points="6,46 50,18 94,46" fill="#7a6858" />
+        <polygon points="6,46 50,18 94,46" fill="none" stroke="#5a4a38" strokeWidth="1.5" />
+        <rect x="11" y="46" width="78" height="51" rx="3" fill="#9a8878" />
+        <line x1="11" y1="60" x2="89" y2="60" stroke="rgba(0,0,0,.12)" strokeWidth="1" />
+        <line x1="11" y1="74" x2="89" y2="74" stroke="rgba(0,0,0,.12)" strokeWidth="1" />
+        <line x1="11" y1="88" x2="89" y2="88" stroke="rgba(0,0,0,.12)" strokeWidth="1" />
+        <line x1="37" y1="46" x2="37" y2="60" stroke="rgba(0,0,0,.08)" strokeWidth="1" />
+        <line x1="63" y1="60" x2="63" y2="74" stroke="rgba(0,0,0,.08)" strokeWidth="1" />
+        <rect x="15" y="52" width="16" height="12" rx="1" fill={isBuilt ? "#b0c0d0" : "#6a5a4a"} />
+        <line x1="23" y1="52" x2="23" y2="64" stroke="#6a5a4a" strokeWidth="2" />
+        <line x1="15" y1="58" x2="31" y2="58" stroke="#6a5a4a" strokeWidth="1" />
+        <rect x="15" y="52" width="16" height="12" rx="1" fill="none" stroke="#6a5a4a" strokeWidth="1.5" />
+        <rect x="69" y="52" width="16" height="12" rx="1" fill={isBuilt ? "#b0c0d0" : "#6a5a4a"} />
+        <line x1="77" y1="52" x2="77" y2="64" stroke="#6a5a4a" strokeWidth="2" />
+        <line x1="69" y1="58" x2="85" y2="58" stroke="#6a5a4a" strokeWidth="1" />
+        <rect x="69" y="52" width="16" height="12" rx="1" fill="none" stroke="#6a5a4a" strokeWidth="1.5" />
+        <rect x="34" y="65" width="32" height="32" rx="2" fill="#5a4a38" />
+        <rect x="34" y="65" width="32" height="32" rx="2" fill="none" stroke="#3a2a18" strokeWidth="2" />
+        <line x1="34" y1="79" x2="66" y2="79" stroke="#3a2a18" strokeWidth="2" />
+        <line x1="34" y1="91" x2="66" y2="91" stroke="#3a2a18" strokeWidth="2" />
+        <rect x="47" y="84" width="6" height="6" rx="1" fill="#c8923a" />
+        <rect x="11" y="46" width="78" height="51" rx="3" fill="none" stroke="#6a5848" strokeWidth="2" />
+      </svg>
+    ),
+    forge: (
+      <svg viewBox="0 0 100 100" className="absolute inset-0 w-full h-full" style={f}>
+        {shadow()}
+        <rect x="66" y="4" width="13" height="36" rx="2" fill="#4a4848" />
+        <rect x="64" y="2" width="17" height="6" rx="1" fill="#383838" />
+        <rect x="21" y="10" width="10" height="30" rx="1" fill="#4a4848" />
+        <rect x="19" y="8" width="14" height="5" rx="1" fill="#383838" />
+        <rect x="6" y="38" width="88" height="59" rx="3" fill="#6a7278" />
+        <line x1="6" y1="52" x2="94" y2="52" stroke="rgba(255,255,255,.06)" strokeWidth="1" />
+        <line x1="6" y1="66" x2="94" y2="66" stroke="rgba(255,255,255,.06)" strokeWidth="1" />
+        <line x1="6" y1="80" x2="94" y2="80" stroke="rgba(255,255,255,.06)" strokeWidth="1" />
+        <line x1="6" y1="93" x2="94" y2="93" stroke="rgba(255,255,255,.06)" strokeWidth="1" />
+        <rect x="4" y="36" width="92" height="8" rx="2" fill="#5a6068" />
+        <rect x="4" y="36" width="92" height="8" rx="2" fill="none" stroke="#3a4048" strokeWidth="1.5" />
+        <path d="M26,97 L26,67 Q26,52 50,52 Q74,52 74,67 L74,97 Z" fill={glow} />
+        {isBuilt && <path d="M28,97 L28,68 Q28,55 50,55 Q72,55 72,68 L72,97 Z" fill="rgba(255,140,40,.4)" />}
+        <path d="M26,67 Q26,52 50,52 Q74,52 74,67" fill="none" stroke="#2a2020" strokeWidth="2.5" />
+        {isBuilt && <>
+          <rect x="40" y="83" width="20" height="4" rx="1" fill="#1a1a1a" />
+          <path d="M38,83 Q50,77 62,83 Z" fill="#1a1a1a" />
+          <rect x="44" y="87" width="12" height="7" rx="1" fill="#1a1a1a" />
+        </>}
+        <rect x="9" y="56" width="14" height="11" rx="1" fill={glow} />
+        <rect x="9" y="56" width="14" height="11" rx="1" fill="none" stroke="#3a4048" strokeWidth="1.5" />
+        <rect x="77" y="56" width="14" height="11" rx="1" fill={glow} />
+        <rect x="77" y="56" width="14" height="11" rx="1" fill="none" stroke="#3a4048" strokeWidth="1.5" />
+        <rect x="6" y="38" width="88" height="59" rx="3" fill="none" stroke="#3a4048" strokeWidth="2" />
+      </svg>
+    ),
+    caravan: (
+      <svg viewBox="0 0 100 100" className="absolute inset-0 w-full h-full" style={f}>
+        {shadow(50, 48)}
+        <line x1="82" y1="12" x2="82" y2="40" stroke="#8a5a2a" strokeWidth="2.5" />
+        <polygon points="82,12 95,18 82,24" fill="#c83030" />
+        <rect x="5" y="45" width="72" height="52" rx="3" fill="#a8784a" />
+        <line x1="5" y1="58" x2="77" y2="58" stroke="rgba(0,0,0,.1)" strokeWidth="1.5" />
+        <line x1="5" y1="71" x2="77" y2="71" stroke="rgba(0,0,0,.1)" strokeWidth="1.5" />
+        <line x1="5" y1="84" x2="77" y2="84" stroke="rgba(0,0,0,.1)" strokeWidth="1.5" />
+        <path d="M2,38 L79,38 L77,52 L4,52 Z" fill="#c83a1a" />
+        {[13, 26, 40, 53, 66].map((x) => (
+          <line key={x} x1={x} y1="38" x2={x - 1} y2="52" stroke="rgba(255,255,255,.2)" strokeWidth="1" />
+        ))}
+        <line x1="24" y1="38" x2="24" y2="46" stroke="#6a4a2a" strokeWidth="1.5" />
+        <line x1="56" y1="38" x2="56" y2="46" stroke="#6a4a2a" strokeWidth="1.5" />
+        <rect x="16" y="42" width="48" height="9" rx="2" fill="#e8c060" />
+        <rect x="16" y="42" width="48" height="9" rx="2" fill="none" stroke="#9a7a20" strokeWidth="1" />
+        <rect x="9" y="57" width="18" height="14" rx="2" fill={lit} />
+        <line x1="18" y1="57" x2="18" y2="71" stroke="#8a6a3a" strokeWidth="1" />
+        <line x1="9" y1="64" x2="27" y2="64" stroke="#8a6a3a" strokeWidth="1" />
+        <rect x="9" y="57" width="18" height="14" rx="2" fill="none" stroke="#8a6a3a" strokeWidth="1.5" />
+        <rect x="37" y="67" width="22" height="30" rx="2" fill="#7a4a2a" />
+        <rect x="37" y="67" width="22" height="30" rx="2" fill="none" stroke="#5a3a1a" strokeWidth="1.5" />
+        <circle cx="56" cy="83" r="2" fill="#c8923a" />
+        <circle cx="85" cy="75" r="13" fill="none" stroke="#8a5a2a" strokeWidth="2.5" />
+        <circle cx="85" cy="75" r="4" fill="#8a5a2a" />
+        <line x1="85" y1="62" x2="85" y2="88" stroke="#8a5a2a" strokeWidth="1.5" />
+        <line x1="72" y1="75" x2="98" y2="75" stroke="#8a5a2a" strokeWidth="1.5" />
+        <line x1="76" y1="66" x2="94" y2="84" stroke="#8a5a2a" strokeWidth="1.5" />
+        <line x1="76" y1="84" x2="94" y2="66" stroke="#8a5a2a" strokeWidth="1.5" />
+        <rect x="5" y="45" width="72" height="52" rx="3" fill="none" stroke="#7a5a3a" strokeWidth="2" />
+      </svg>
+    ),
+  };
+  return illustrations[id] || null;
+}
 
 export function TownView({ state, dispatch }) {
   const [entryBiome, setEntryBiome] = useState(null);
@@ -798,7 +1038,7 @@ export function TownView({ state, dispatch }) {
             return (
               <div
                 key={b.id}
-                className="absolute cursor-pointer"
+                className="absolute cursor-pointer group"
                 style={{
                   left: `${(b.x / 1100) * 100}%`,
                   top: `${(b.y / 600) * 100}%`,
@@ -808,17 +1048,16 @@ export function TownView({ state, dispatch }) {
                 }}
                 onClick={onClick}
               >
+                <BuildingIllustration id={b.id} isBuilt={isBuilt} />
                 {isBuilt ? (
                   <>
-                    <div className="absolute -top-3 left-[-5px] right-[-5px] h-5" style={{ background: "#5a2e15", clipPath: "polygon(8% 100%, 50% 0, 92% 100%)" }} />
                     {SMOKE_BUILDINGS.has(b.id) && <BuildingSmoke />}
                     <div
-                      className="w-full h-full rounded-sm grid place-items-end justify-center pb-1 font-bold text-[11px] text-white"
+                      className="absolute bottom-0 left-0 right-0 text-center font-bold text-white truncate py-0.5 px-1"
                       style={{
-                        background: b.color,
-                        border: "2px solid rgba(0,0,0,.25)",
-                        boxShadow: "0 4px 0 rgba(0,0,0,.25)",
-                        textShadow: "0 1px 2px rgba(0,0,0,.5)",
+                        background: "rgba(0,0,0,.45)",
+                        fontSize: "clamp(7px,0.8vw,10px)",
+                        textShadow: "0 1px 2px rgba(0,0,0,.8)",
                       }}
                     >
                       {b.name}
@@ -827,9 +1066,9 @@ export function TownView({ state, dispatch }) {
                 ) : (
                   <>
                     <div
-                      className="w-full h-full rounded-sm grid place-items-center font-bold text-[11px]"
+                      className="absolute inset-0 rounded-sm grid place-items-center font-bold text-[14px]"
                       style={{
-                        background: "repeating-linear-gradient(45deg, rgba(0,0,0,.08) 0px, rgba(0,0,0,.08) 4px, transparent 4px, transparent 10px)",
+                        background: "rgba(0,0,0,.28)",
                         border: `2px dashed ${isLocked ? "#888" : canAfford ? "#9bdb6a" : "rgba(255,255,255,.35)"}`,
                         color: isLocked ? "#888" : canAfford ? "#9bdb6a" : "rgba(255,255,255,.5)",
                       }}
@@ -837,10 +1076,11 @@ export function TownView({ state, dispatch }) {
                       {isLocked ? `🔒` : "+"}
                     </div>
                     <div
-                      className="absolute -top-9 left-1/2 -translate-x-1/2 px-2.5 py-0.5 rounded-full text-[10px] font-bold whitespace-nowrap"
+                      className="absolute -top-8 left-1/2 -translate-x-1/2 px-2.5 py-0.5 rounded-full font-bold whitespace-nowrap z-20 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"
                       style={{
-                        background: "rgba(0,0,0,.75)",
+                        background: "rgba(0,0,0,.85)",
                         color: isLocked ? "#f7d572" : canAfford ? "#9bdb6a" : "#f7d572",
+                        fontSize: "clamp(8px,0.9vw,10px)",
                       }}
                     >
                       {isLocked ? `🔒 ${b.name} L${b.lv}` : `Build ${b.name}: ${costStr}`}
