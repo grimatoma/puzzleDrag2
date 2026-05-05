@@ -417,6 +417,8 @@ function BottomSheet({ onClose, children }) {
 export function MobileDock({ state, dispatch }) {
   const [sheet, setSheet] = useState(null); // "tools" | "orders" | null
 
+  useEffect(() => { if (state.view !== "board") setSheet(null); }, [state.view]);
+
   const totalTools = Object.values(state.tools || {}).reduce((s, v) => s + v, 0);
   const readyOrders = (state.orders || []).filter((o) => (state.inventory[o.key] || 0) >= o.need).length;
 
@@ -516,8 +518,8 @@ export function BottomNav({ view, modal, dispatch }) {
 function TownsfolkModal({ state, dispatch }) {
   if (state.modal !== "townsfolk") return null;
   const [tab, setTab] = useState("mood");
-  return (
-    <div className="absolute inset-0 bg-black/55 grid place-items-center z-[55] animate-fadein">
+  return createPortal(
+    <div className="fixed inset-0 bg-black/55 grid place-items-center z-[100] animate-fadein">
       <div className="bg-[#f4ecd8] border-[4px] border-[#b28b62] rounded-[20px] p-5 w-[min(540px,92vw)] max-h-[85vh] shadow-2xl flex flex-col">
         <div className="flex items-center justify-between mb-3">
           <h3 className="font-bold text-[20px] text-[#744d2e]">Townsfolk</h3>
@@ -545,7 +547,8 @@ function TownsfolkModal({ state, dispatch }) {
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
