@@ -196,10 +196,8 @@ export default function App() {
           <FeatureScreens state={state} dispatch={dispatch} />
         </div>
 
-        {/* Bottom nav — visible across all views for easy menu navigation */}
-        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-30">
-          <BottomNav view={state.view} modal={state.modal} dispatch={dispatch} />
-        </div>
+        {/* Bottom nav — full-width bar at the bottom of every view */}
+        <BottomNav view={state.view} modal={state.modal} dispatch={dispatch} />
 
         {/* NPC bubble */}
         <NpcBubble bubble={state.bubble} dispatch={dispatch} />
