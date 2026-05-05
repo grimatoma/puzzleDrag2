@@ -2,7 +2,7 @@ import React, { useEffect, useReducer, useRef, useState } from "react";
 import { COLS, ROWS, TILE } from "./src/constants.js";
 import { runSelfTests } from "./src/utils.js";
 import { gameReducer, initialState } from "./src/state.js";
-import { Hud, SidePanel, MobileDock, BottomNav, TownView, SeasonModal, NpcBubble, FeatureModals, FeatureScreens } from "./src/ui.jsx";
+import { Hud, SidePanel, MobileDock, PortraitToolsBar, BottomNav, TownView, SeasonModal, NpcBubble, FeatureModals, FeatureScreens } from "./src/ui.jsx";
 import { useAudio } from "./src/audio/useAudio.js";
 
 function PhaserMount({ dispatch, biomeKey, turnsUsed, uiLocked, sceneRef, memoryPerks }) {
@@ -68,6 +68,7 @@ function PhaserMount({ dispatch, biomeKey, turnsUsed, uiLocked, sceneRef, memory
               sceneRef.current = scene;
               window.__phaserScene = scene; // for tools panel quick-access
               scene.events.on("chain-collected", (payload) => dispatch({ type: "CHAIN_COLLECTED", payload }));
+              scene.events.on("chain-update", (data) => setChainInfo(data));
               setLoading(false);
             },
           },
@@ -113,6 +114,7 @@ const DUST_MOTES = Array.from({ length: 14 }, (_, i) => ({
 
 export default function App() {
   const [state, dispatch] = useReducer(gameReducer, undefined, initialState);
+  const [chainInfo, setChainInfo] = useState(null);
   const sceneRef = useRef(null);
   const uiLocked = !!state.modal || state.view !== "board";
   useAudio(state);
@@ -147,6 +149,14 @@ export default function App() {
         <div className="flex-1 min-h-0 relative">
           {/* Board + side panel grid — always mounted to keep Phaser alive, hidden when in town view */}
           <div className={`absolute inset-0 flex flex-col ${state.view === "board" ? "" : "invisible"}`}>
+            {/* Chain badge overlay for phone landscape — React handles it since Phaser badge gets clipped */}
+            {chainInfo && (
+              <div className="hidden max-[1024px]:landscape:block absolute top-2 left-1/2 -translate-x-1/2 z-30 pointer-events-none">
+                <div className="bg-[#2b2218]/90 border border-[#ffd248] rounded-full px-3 py-1 text-[#ffd248] font-bold text-[12px] whitespace-nowrap">
+                  chain × {chainInfo.count}{chainInfo.upgrades > 0 ? `  +${chainInfo.upgrades}★` : ""}
+                </div>
+              </div>
+            )}
             <div className="flex-1 min-h-0 grid grid-cols-[1fr_300px] gap-3 p-3 max-[1024px]:grid-cols-1 max-[1024px]:gap-0 max-[1024px]:p-0">
               {/* Phaser host — takes the rest. Phaser draws its own background and frame. */}
               <div className="relative min-h-0 min-w-0 overflow-hidden">
@@ -161,8 +171,12 @@ export default function App() {
               </div>
               {/* Side panel — hidden on mobile, replaced by MobileDock */}
               <div className="min-h-0 max-[1024px]:hidden">
-                <SidePanel state={state} dispatch={dispatch} />
+                <SidePanel state={state} dispatch={dispatch} chainInfo={chainInfo} />
               </div>
+            </div>
+            {/* Portrait phone tools bar — board is width-limited so canvas height can shrink */}
+            <div className="hidden portrait:max-[1024px]:block flex-shrink-0">
+              <PortraitToolsBar state={state} dispatch={dispatch} />
             </div>
             {/* Mobile dock — only visible on mobile, in board view */}
             <div className="hidden max-[1024px]:block flex-shrink-0">

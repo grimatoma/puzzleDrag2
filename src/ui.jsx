@@ -111,9 +111,14 @@ function cssFromHex(intHex) {
 
 // ─── Side panel (orders / inventory / tools / biome switcher) ─────────────
 
-export function SidePanel({ state, dispatch }) {
+export function SidePanel({ state, dispatch, chainInfo }) {
   return (
     <div className="bg-gradient-to-b from-[#7c4f2c] to-[#6b4225] border-[3px] border-[#e2c19b] rounded-2xl p-3 flex flex-col gap-3 overflow-hidden h-full min-h-0">
+      {chainInfo && (
+        <div className="bg-[#2b2218]/90 border border-[#ffd248] rounded-xl px-3 py-2 text-[#ffd248] font-bold text-[13px] text-center flex-shrink-0">
+          chain × {chainInfo.count}{chainInfo.upgrades > 0 ? `  +${chainInfo.upgrades}★` : ""}
+        </div>
+      )}
       <Section title="Tools" titleColor="#f8e7c6">
         <ToolsGrid tools={state.tools} onUse={(key) => {
           dispatch({ type: "USE_TOOL", key });
@@ -318,6 +323,34 @@ function BiomeSwitcher({ biomeKey, level, onSwitch }) {
 }
 
 // ─── Mobile dock (board view only) ────────────────────────────────────────
+
+export function PortraitToolsBar({ state, dispatch }) {
+  return (
+    <div className="bg-[#3a2715] border-t border-[#b28b62] px-3 py-2 flex-shrink-0">
+      <div className="grid grid-cols-4 gap-2">
+        {TOOL_DEFS.map((t) => {
+          const amt = state.tools[t.key] || 0;
+          const empty = amt === 0;
+          return (
+            <button
+              key={t.key}
+              disabled={empty}
+              onClick={() => {
+                dispatch({ type: "USE_TOOL", key: t.key });
+                if (t.key === "shuffle") window.__phaserScene?.shuffleBoard();
+              }}
+              className={`relative flex flex-col items-center gap-0.5 py-2 rounded-lg border-2 border-[#e6c49a] transition-transform ${empty ? "bg-[#9a724d] opacity-40 cursor-not-allowed" : "bg-[#9a724d] hover:bg-[#b8845a] active:-translate-y-0.5"}`}
+            >
+              {amt > 0 && <div className="absolute -top-1 -right-1 bg-[#2b2218] text-white border border-[#f7e2b6] rounded-full px-1.5 text-[9px] font-bold leading-none py-0.5">{amt}</div>}
+              <div className="text-[18px] leading-none text-white">{t.icon}</div>
+              <div className="text-[8px] font-bold text-white/90">{t.name}</div>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
 function BottomSheet({ onClose, children }) {
   return createPortal(

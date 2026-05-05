@@ -478,6 +478,12 @@ export class GameScene extends Phaser.Scene {
 
   showChainBadge() {
     if (this.chainBadge) return;
+    // In landscape the badge sits above the board but boardY ≈ boardFrame so cy
+    // goes negative and gets clipped. React renders it in the side panel instead.
+    if (this.scale.width > this.scale.height) {
+      this._emitChainUpdate();
+      return;
+    }
     const dpr = this.dpr;
     const cx = this.boardX + (COLS * this.tileSize) / 2;
     const cy = this.boardY - this.boardFrame - 22 * dpr;
@@ -485,18 +491,29 @@ export class GameScene extends Phaser.Scene {
     const bg = rounded(this, -70 * dpr, -16 * dpr, 140 * dpr, 32 * dpr, 16 * dpr, 0x2b2218, 0.9, 0xffd248, 2 * dpr);
     this.chainBadgeText = this.add.text(0, 0, "", { fontFamily: "Arial", fontSize: `${14 * dpr}px`, color: "#ffd248", fontStyle: "bold" }).setOrigin(0.5);
     this.chainBadge.add([bg, this.chainBadgeText]);
+    this._emitChainUpdate();
   }
 
   updateChainBadge() {
-    if (!this.chainBadge) return;
     const n = this.path.length;
     const next = n ? this.nextResource(this.path[0].res) : null;
     const k = next ? upgradeCountForChain(n) : 0;
-    this.chainBadgeText.setText(k > 0 ? `chain × ${n}   +${k}★` : `chain × ${n}`);
+    if (this.chainBadge) {
+      this.chainBadgeText.setText(k > 0 ? `chain × ${n}   +${k}★` : `chain × ${n}`);
+    }
+    this._emitChainUpdate();
   }
 
   hideChainBadge() {
     if (this.chainBadge) { this.chainBadge.destroy(); this.chainBadge = null; this.chainBadgeText = null; }
+    this.events.emit("chain-update", null);
+  }
+
+  _emitChainUpdate() {
+    const n = this.path.length;
+    const next = n ? this.nextResource(this.path[0].res) : null;
+    const k = next ? upgradeCountForChain(n) : 0;
+    this.events.emit("chain-update", { count: n, upgrades: k });
   }
 
   // ─── Floater (resource-gain text per tile) ────────────────────────────────
