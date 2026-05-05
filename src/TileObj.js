@@ -4,17 +4,17 @@
 // Resources missing from this map stay perfectly still — heavy/dense items
 // (logs, planks, stone, ingot, coal) shouldn't move at all.
 const SWAY = {
-  hay:    { amp: 4.0, freq: 0.0014, gust: 0.25 },
-  wheat:  { amp: 5.0, freq: 0.0016, gust: 0.30 },
-  grain:  { amp: 1.2, freq: 0.0008, gust: 0.10 },
-  flour:  { amp: 1.0, freq: 0.0007, gust: 0.05 },
-  berry:  { amp: 3.5, freq: 0.0022, gust: 0.20 },
-  jam:    { amp: 0.8, freq: 0.0006, gust: 0.00 },
-  egg:    { amp: 1.5, freq: 0.0014, gust: 0.10 },
-  ore:    { amp: 0.4, freq: 0.0005, gust: 0.00 },
-  gem:    { amp: 1.2, freq: 0.0007, gust: 0.05 },
-  cutgem: { amp: 1.2, freq: 0.0007, gust: 0.05 },
-  gold:   { amp: 1.0, freq: 0.0006, gust: 0.05 },
+  hay:    { amp: 4.0, freq: 0.00060, gust: 0.20 },
+  wheat:  { amp: 5.0, freq: 0.00065, gust: 0.22 },
+  grain:  { amp: 1.2, freq: 0.00035, gust: 0.08 },
+  flour:  { amp: 1.0, freq: 0.00030, gust: 0.05 },
+  berry:  { amp: 3.5, freq: 0.00090, gust: 0.15 },
+  jam:    { amp: 0.8, freq: 0.00025, gust: 0.00 },
+  egg:    { amp: 1.5, freq: 0.00055, gust: 0.08 },
+  ore:    { amp: 0.4, freq: 0.00020, gust: 0.00 },
+  gem:    { amp: 1.2, freq: 0.00028, gust: 0.04 },
+  cutgem: { amp: 1.2, freq: 0.00028, gust: 0.04 },
+  gold:   { amp: 1.0, freq: 0.00024, gust: 0.04 },
 };
 
 export class TileObj {
@@ -72,7 +72,7 @@ export class TileObj {
     // Primary sway plus a smaller higher-frequency gust component so the
     // motion isn't a perfect sine — closer to real wind / dangle.
     const a = Math.sin(t * sway.freq) * sway.amp
-            + Math.sin(t * sway.freq * 3.1) * sway.amp * sway.gust;
+            + Math.sin(t * sway.freq * 2.4) * sway.amp * sway.gust;
     this.sprite.angle = a;
   }
 
