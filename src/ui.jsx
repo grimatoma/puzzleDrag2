@@ -287,6 +287,7 @@ function ToolsGrid({ tools, onUse }) {
   const [modalTool, setModalTool] = useState(null);
   const longPressTimer = useRef(null);
   const longPressOccurred = useRef(false);
+  const lastTouchTime = useRef(0);
 
   const startLongPress = (t) => {
     longPressOccurred.current = false;
@@ -323,13 +324,14 @@ function ToolsGrid({ tools, onUse }) {
                   if (longPressOccurred.current) { longPressOccurred.current = false; return; }
                   onUse(t.key);
                 }}
-                onMouseEnter={(e) => showTooltip(t.key, e.currentTarget)}
+                onMouseEnter={(e) => { if (Date.now() - lastTouchTime.current > 600) showTooltip(t.key, e.currentTarget); }}
                 onMouseLeave={() => setTooltip(null)}
                 onTouchStart={(e) => {
+                  lastTouchTime.current = Date.now();
                   startLongPress(t);
                   if (e.touches.length > 0) showTooltip(t.key, e.currentTarget, e.touches[0].clientY);
                 }}
-                onTouchEnd={() => { cancelLongPress(); setTimeout(() => setTooltip(null), 800); }}
+                onTouchEnd={() => { cancelLongPress(); setTimeout(() => setTooltip(null), 1800); }}
                 onTouchMove={(e) => { cancelLongPress(); setTooltip(null); }}
                 className={`relative w-full rounded-lg border-2 border-[#e6c49a] py-1.5 px-1 flex flex-col items-center gap-0.5 transition-transform ${empty ? "bg-[#9a724d] opacity-40 cursor-not-allowed" : "bg-[#9a724d] hover:bg-[#b8845a] hover:-translate-y-0.5"}`}
               >
@@ -1093,6 +1095,8 @@ function MineEntranceArt({ locked }) {
 
 export function TownView({ state, dispatch }) {
   const [entryBiome, setEntryBiome] = useState(null);
+  const [buildingTip, setBuildingTip] = useState(null);
+  const buildingTouchTime = useRef(0);
   const biomeTheme = state.biomeKey === "mine" ? "mine" : "farm";
   const theme = TOWN_THEMES[biomeTheme] || TOWN_THEMES.home;
   const townConfig = TOWN_BIOME_CONFIGS[biomeTheme];
@@ -1346,17 +1350,22 @@ export function TownView({ state, dispatch }) {
               dispatch({ type: "BUILD", building: b });
             };
             const costStr = Object.entries(b.cost).map(([k, v]) => k === "coins" ? `${v}◉` : `${v} ${k}`).join(" · ");
-            // Align tooltip away from viewport edges so it never clips
-            const bCenterFrac = (b.x + b.w / 2) / 1100;
-            const tooltipPos = bCenterFrac < 0.18
-              ? { left: 0 }
-              : bCenterFrac > 0.84
-              ? { right: 0 }
-              : { left: "50%", transform: "translateX(-50%)" };
+            const showTip = (el, touchY) => {
+              if (isBuilt) return;
+              const rect = el.getBoundingClientRect();
+              const x = rect.left + rect.width / 2;
+              const y = touchY != null ? touchY - 100 : rect.top;
+              setBuildingTip({
+                label: isLocked ? `🔒 ${b.name} (Level ${b.lv})` : `Build ${b.name}: ${costStr}`,
+                desc: b.desc,
+                color: isLocked ? "#f7d572" : canAfford ? "#9bdb6a" : "#f7d572",
+                x, y,
+              });
+            };
             return (
               <div
                 key={b.id}
-                className="absolute cursor-pointer group pointer-events-auto"
+                className="absolute cursor-pointer pointer-events-auto"
                 style={{
                   left: `${(b.x / 1100) * 100}%`,
                   bottom: `${((600 - b.y - b.h) / 600) * 100}%`,
@@ -1365,6 +1374,11 @@ export function TownView({ state, dispatch }) {
                   opacity: isLocked && !isBuilt ? 0.5 : 1,
                 }}
                 onClick={onClick}
+                onMouseEnter={(e) => { if (Date.now() - buildingTouchTime.current > 600) showTip(e.currentTarget); }}
+                onMouseLeave={() => setBuildingTip(null)}
+                onTouchStart={(e) => { buildingTouchTime.current = Date.now(); if (e.touches.length > 0) showTip(e.currentTarget, e.touches[0].clientY); }}
+                onTouchEnd={() => setTimeout(() => setBuildingTip(null), 1800)}
+                onTouchMove={() => setBuildingTip(null)}
               >
                 <BuildingIllustration id={b.id} isBuilt={isBuilt} />
                 {isBuilt ? (
@@ -1395,37 +1409,6 @@ export function TownView({ state, dispatch }) {
                     >
                       {isLocked ? `🔒` : "+"}
                     </div>
-                    <div
-                      className="absolute -top-2 translate-y-[-100%] px-2.5 py-1.5 rounded z-20 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"
-                      style={{
-                        background: "rgba(0,0,0,.88)",
-                        minWidth: "140px",
-                        maxWidth: "220px",
-                        ...tooltipPos,
-                      }}
-                    >
-                      <div
-                        className="font-bold whitespace-nowrap"
-                        style={{
-                          color: isLocked ? "#f7d572" : canAfford ? "#9bdb6a" : "#f7d572",
-                          fontSize: "clamp(8px,0.9vw,11px)",
-                        }}
-                      >
-                        {isLocked ? `🔒 ${b.name} (Level ${b.lv})` : `Build ${b.name}: ${costStr}`}
-                      </div>
-                      {b.desc && (
-                        <div
-                          className="mt-0.5 leading-snug"
-                          style={{
-                            color: "rgba(255,255,255,.72)",
-                            fontSize: "clamp(7px,0.75vw,9px)",
-                            whiteSpace: "normal",
-                          }}
-                        >
-                          {b.desc}
-                        </div>
-                      )}
-                    </div>
                   </>
                 )}
               </div>
@@ -1445,6 +1428,25 @@ export function TownView({ state, dispatch }) {
           }}
           onClose={() => setEntryBiome(null)}
         />
+      )}
+
+      {buildingTip && createPortal(
+        <div
+          className="fixed z-[9999] pointer-events-none px-3 py-2 rounded-lg border border-white/20"
+          style={{
+            left: buildingTip.x,
+            top: buildingTip.y - 8,
+            transform: "translate(-50%, -100%)",
+            background: "rgba(10,10,14,.92)",
+            maxWidth: 240,
+            minWidth: 150,
+          }}
+        >
+          <div className="font-bold" style={{ color: buildingTip.color, fontSize: "clamp(9px,1.1vw,13px)", whiteSpace: "nowrap" }}>{buildingTip.label}</div>
+          {buildingTip.desc && <div className="mt-0.5 leading-snug text-white/75" style={{ fontSize: "clamp(8px,0.9vw,11px)", whiteSpace: "normal" }}>{buildingTip.desc}</div>}
+          <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-[rgba(10,10,14,0.92)]" />
+        </div>,
+        document.body
       )}
     </div>
   );

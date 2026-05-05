@@ -1,7 +1,17 @@
 import { MAP_NODES, MAP_EDGES } from './data.js';
 
+// Node states (derived in the UI):
+//   visited    → player has been here at least once. Fast-travel allowed from anywhere.
+//   discovered → adjacent to a visited node, but not yet visited. Travel here only from
+//                an adjacent visited node, and only if the player meets the level req.
+//   hidden     → not adjacent to any visited node. Shown as a faint "?".
+//
+// `mapVisited` is the canonical list of visited node ids. `mapDiscovered` is kept
+// in sync (visited ∪ neighbors-of-visited) so the existing UI/save format keeps working.
+
 export const initial = {
   mapCurrent:    'home',
+  mapVisited:    ['home'],
   mapDiscovered: ['home', 'meadow', 'orchard'],
 };
 
@@ -16,7 +26,7 @@ function edgeSet() {
 
 const EDGES = edgeSet();
 
-function isAdjacent(a, b) {
+export function isAdjacent(a, b) {
   return EDGES.has(`${a}|${b}`);
 }
 
@@ -26,10 +36,10 @@ function neighborsOf(nodeId) {
     .map(n => n.id);
 }
 
-function discoverNeighbors(discovered, current) {
-  const next = new Set(discovered);
-  for (const nid of neighborsOf(current)) {
-    next.add(nid);
+function recomputeDiscovered(visited) {
+  const next = new Set(visited);
+  for (const v of visited) {
+    for (const nid of neighborsOf(v)) next.add(nid);
   }
   return [...next];
 }
@@ -43,19 +53,28 @@ export function reduce(state, action) {
       const target = MAP_NODES.find(n => n.id === nodeId);
       if (!target) return state;
 
-      if (!isAdjacent(state.mapCurrent, nodeId)) return state;
-
+      // Backwards-compatible visited list: if the save predates `mapVisited`,
+      // fall back to mapDiscovered (everything previously revealed counts as visited).
+      const visited = state.mapVisited || state.mapDiscovered || ['home'];
       const playerLevel = state.level || 1;
-      if (target.level > playerLevel) return state;
+      const alreadyVisited = visited.includes(nodeId);
 
-      const discovered = discoverNeighbors(
-        state.mapDiscovered.includes(nodeId)
-          ? state.mapDiscovered
-          : [...state.mapDiscovered, nodeId],
-        nodeId
-      );
+      // Fast-travel: any visited node, from anywhere on the map.
+      // First-visit: must be adjacent to current AND meet the level requirement.
+      if (!alreadyVisited) {
+        if (!isAdjacent(state.mapCurrent, nodeId)) return state;
+        if (target.level > playerLevel) return state;
+      }
 
-      const base = { ...state, mapCurrent: nodeId, mapDiscovered: discovered };
+      const nextVisited = alreadyVisited ? visited : [...visited, nodeId];
+      const nextDiscovered = recomputeDiscovered(nextVisited);
+
+      const base = {
+        ...state,
+        mapCurrent: nodeId,
+        mapVisited: nextVisited,
+        mapDiscovered: nextDiscovered,
+      };
 
       switch (target.kind) {
         case 'farm':
@@ -69,7 +88,7 @@ export function reduce(state, action) {
         case 'boss':
           return { ...base, modal: 'boss' };
         case 'event':
-          return { ...base, bubble: '🎲 You meet a stranger…' };
+          return { ...base, bubble: { id: Date.now(), npc: 'wren', text: '🎲 You meet a stranger at the Crossroads…', ms: 2200 } };
         default:
           return base;
       }
