@@ -1497,52 +1497,6 @@ export function makeTextures(scene) {
     ctx.fill();
   }, dpr);
 
-  // Small twinkle sprite used for premium-tile shimmer animation
-  canvasTexture(scene, "twinkle", 56, 56, (ctx, w, h) => {
-    ctx.translate(w / 2, h / 2);
-    // Soft halo
-    const glow = ctx.createRadialGradient(0, 0, 1, 0, 0, 24);
-    glow.addColorStop(0, "rgba(255,255,255,0.95)");
-    glow.addColorStop(0.4, "rgba(255,250,200,0.6)");
-    glow.addColorStop(1, "rgba(255,200,80,0)");
-    ctx.fillStyle = glow;
-    ctx.beginPath();
-    ctx.arc(0, 0, 24, 0, Math.PI * 2);
-    ctx.fill();
-    // 4-point star (like a sparkle/twinkle)
-    ctx.fillStyle = "#ffffff";
-    ctx.beginPath();
-    ctx.moveTo(0, -22);
-    ctx.lineTo(3, -3);
-    ctx.lineTo(22, 0);
-    ctx.lineTo(3, 3);
-    ctx.lineTo(0, 22);
-    ctx.lineTo(-3, 3);
-    ctx.lineTo(-22, 0);
-    ctx.lineTo(-3, -3);
-    ctx.closePath();
-    ctx.fill();
-    // Center bright dot
-    ctx.fillStyle = "#ffffff";
-    ctx.beginPath();
-    ctx.arc(0, 0, 3, 0, Math.PI * 2);
-    ctx.fill();
-  }, dpr);
-
-  // Soft glint/sweep used for the periodic flash on tiles
-  canvasTexture(scene, "glint", 80, 80, (ctx, w, h) => {
-    ctx.translate(w / 2, h / 2);
-    const grad = ctx.createLinearGradient(-30, 0, 30, 0);
-    grad.addColorStop(0, "rgba(255,255,255,0)");
-    grad.addColorStop(0.5, "rgba(255,255,255,0.7)");
-    grad.addColorStop(1, "rgba(255,255,255,0)");
-    ctx.fillStyle = grad;
-    ctx.save();
-    ctx.rotate(-Math.PI / 4);
-    ctx.fillRect(-40, -8, 80, 16);
-    ctx.restore();
-  }, dpr);
-
   canvasTexture(scene, "season_flower", 42, 42, (ctx, w, h) => {
     ctx.translate(w / 2, h / 2);
     ctx.fillStyle = "#fff";

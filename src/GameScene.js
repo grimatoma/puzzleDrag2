@@ -579,4 +579,16 @@ export class GameScene extends Phaser.Scene {
     this.tweens.add({ targets: t, scale: 1, duration: 120, ease: "Back.Out" });
     this.tweens.add({ targets: t, y: y - 58 * dpr, alpha: 0, delay: 120, duration: 780, onComplete: () => t.destroy() });
   }
+
+  // Called every frame by Phaser. Drives the per-tile ambient sway.
+  update(time) {
+    for (let r = 0; r < ROWS; r++) {
+      const row = this.grid[r];
+      if (!row) continue;
+      for (let c = 0; c < COLS; c++) {
+        const t = row[c];
+        if (t) t.ambient(time);
+      }
+    }
+  }
 }
