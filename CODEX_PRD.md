@@ -648,4 +648,304 @@ Existing stubs:
 
 ---
 
+## 13. Compendium — Collections & Zone Discovery (Picture Set 5)
+
+### 13a. Collections vs. Entity Categories
+
+The Compendium left page has two distinct types of content:
+
+| Type | Layout | Example |
+|---|---|---|
+| **Entity category** | 5-col icon grid, found/total counter | Trees 6/6, Birds 9/11 |
+| **Collection** | Horizontal row of 5 specific illustrated items, name + reward | Magnificent Feathers, Armament Collection |
+
+Collections are separated from entity categories by a padlock-and-curl divider, indicating
+they unlock progressively rather than filling as the player discovers entities.
+
+### 13b. Collection Structure
+
+```
+[Category icon]  [Collection name]           [reward badge: +N ◉ or +N% ★]
+[Item 1]  [Item 2]  [Item 3]  [Item 4]  [Item 5]
+                                              (all full-color or silhouettes)
+Discover in: Zone X, Zone Y
+```
+
+- **Reward badge** sits in the top-right of the collection row (e.g. `+1000 ◉`, `+5% ★`).
+- **Discovery hint** at the bottom names the zones where these items can be found.
+- A **padlock icon** in the top-right of the row header separates unlocked from locked
+  collections.
+- A **green border** on the entire row indicates the currently selected collection.
+
+### 13c. Collection Catalog (examples from set 5)
+
+| Collection | Contents | Zones | Reward |
+|---|---|---|---|
+| Magnificent Feathers | 5 feathers (blue, pink, fire, white, striped) | 3, 5, 6 | +1000◉ |
+| Witch's Workshop | Voodoo doll, crystal ball, cauldron, wand, pumpkin | 3, 5 | — |
+| Tribal Artifacts | (partially visible) | — | — |
+| Rare Beetles | 5 beetle silhouettes (all undiscovered) | 6 | +5%★ |
+| Armament Collection | Sword, helmet, poison bottle, cannonballs, cannon | 6 | — |
+| Pioneer Tools | (partially visible) | — | +1 envelope |
+
+### 13d. Extended Entity Categories (higher-level save)
+
+At level 71 the Compendium shows categories not visible in earlier sets:
+
+**Trees (6/6 — fully discovered):** All 6 trees collected. Includes Palm Tree as a late
+entry. The Palm Tree detail (right page):
+- Active: ☐ (not active)
+- "Can be collected with coconuts."
+- "2 free moves."
+- "A tree in the palm of your hand." (flavor/pun)
+
+**Birds (9/11):** 9 of 11 discovered including Turkey, Pheasant, Chicken, Black Hen,
+Rooster, Crow, Pelican, colorful exotic bird, Yellow Chick — 2 remaining silhouettes.
+
+### 13e. Chest Mechanics Tutorial (right page — Collections tab)
+
+When a collection is selected, the right page shows a **visual mechanics tutorial**
+(not a detail panel). Two chest types are illustrated:
+
+**Field and Mine Chests:**
+```
+[orange dot: 3] → [chest] → [field of crop tiles] → [pirate chest: opened]
+"Start with the map and draw a line over correct puzzles."
+```
+- Player draws a line of 3+ correct puzzle-board tiles → a chest appears at the end.
+
+**Sea Chests:**
+```
+[orange dot: 2] → [chest] → [sea tiles] → [ship] → [chest: opened]
+"Draw a line to place a chest. Move the ship to the chest to open it."
+```
+- Player draws a 2-step line on sea tiles → chest placed → player navigates ship to it.
+
+Both tutorials use an orange circle origin-point, dashed arrow lines, and a pointing-finger
+tap icon to show the gesture. This panel is persistent on the right while browsing
+collections on the left.
+
+---
+
+## 14. Quests Tab (Picture Set 5)
+
+### 14a. Tab
+
+The **speech-bubble tab** (top of the left icon bar) opens the Quests/Manual view. The tab
+turns red/pink and is marked with a "!" badge when new quests are available.
+
+### 14b. Left Page: Quests
+
+```
+~~~  Quests  ~~~           (decorative header with curl ornaments)
+
+┌─────────────────────────────────────────┐
+│ [NPC portrait]  [resource icon]         │
+│                 Collect N  (M left)     │
+│                                         │
+│                 Reward: +90 [crown]     │
+└─────────────────────────────────────────┘
+```
+
+- Each quest is a **card** with a rounded white background.
+- **NPC portrait** (worker character) on the left — shows who is requesting the resource.
+- **Resource icon** in a speech bubble indicates what to collect.
+- **Progress text**: "Collect N (M left)" where M decrements as the player collects.
+- **Reward**: crown currency shown in green text with a crown icon.
+- Multiple quests stack vertically; examples: Collect 1 honeycomb (+90◉), Collect 15 meat (+90◉).
+
+### 14c. Right Page: Manual
+
+```
+~~~  Manual  ~~~
+
+[NPC portrait — named quest giver]
+
+  [Speech bubble: narrative flavor text]
+```
+
+- A distinct **named NPC** (e.g. a purple-hatted governor figure) delivers story context.
+- The speech bubble contains a single sentence explaining the thematic reason for the
+  current quest batch (e.g. "It's governor's daughter's birthday, we need to prepare for
+  the party!").
+- The Manual text changes with each quest batch, providing narrative continuity.
+
+---
+
+## 15. Zone Map — Full Kingdom (Picture Set 5)
+
+### 15a. Zone Layout
+
+The full kingdom map is labeled "**Zones**" in the bottom banner and contains exactly
+**6 zones + 1 castle node**:
+
+| Node | Location | Terrain features |
+|---|---|---|
+| Zone One | West coast | Windmill, haystacks, beach, sheep |
+| Zone Two | Center-left | Red-roofed town, river crossing |
+| Zone Three | South-west | Large farm, sheep/pigs roaming |
+| Zone Four | North center | Island, accessible via bridge |
+| Zone Five | South center | Large river harbor town (most developed) |
+| Zone Six | East/ocean | Coastal pirate town, ship on water |
+| **Castle** | Center | Large fortified castle, central hub |
+
+All zones show yellow "!" markers when actions are pending. The Castle is a prominent
+separate node with its own "!" indicator.
+
+### 15b. Zone-Based Progression
+
+- Zones unlock sequentially (not shown locked in this high-level save, but see §6).
+- Collections reference zones: "Discover in: Zone Three, Zone Five, Zone Six."
+- Each zone has its own puzzle board, building set, and NPC roster.
+- Zone Five (late game) shows the widest building variety (harbor, mine, mill, lighthouse,
+  market, residential, bakery, windmill, stone arch, chicken coop, orchard).
+
+### 15c. Zone Five — Building Density (advanced example)
+
+Zone Five contains the following interactive structures:
+
+Left bank (mining/industrial):
+- Mining catapult, mine cart tracks, dark forge workshops, grinding wheel, smelter
+
+River / harbor:
+- Multi-level dock with nets and buoys
+- Lighthouse
+- Fishing/pirate sailing ship
+- Mermaid decoration (ambient)
+
+Center / town:
+- Multi-story mill/brewery
+- Tavern / inn
+- Market stall with chalkboard
+- Clock-tower building
+
+Right bank (farm / residential):
+- Windmill / grain silo
+- Bakery / stone oven
+- Residential house
+- Chicken coop / hen house
+- Orchard
+- Hay storage with wheat icon
+- Stone arch portal
+
+### 15d. In-World Building Tap Tooltip
+
+Tapping any building in a zone view shows a **small floating tooltip card**:
+
+```
+┌───────────────────────────────────┐
+│  [Building name]                  │
+│  [One-line description]           │
+│                                   │
+│   [🏠 Build/info btn]  [🔧 Upgrade btn] │
+└───────────────────────────────────┘
+```
+
+Example: "House — Sweet home for 4 new workers." + two green circular action buttons
+(one for building info/buy, one for upgrade).
+
+Ambient NPC speech bubbles: Animals (goat, cow) appear as floating face icons with a white
+speech bubble near their building — indicating they want attention or have a pending action.
+
+---
+
+## 16. Session Start Modals (Picture Set 5)
+
+### 16a. Farming Session Start — "Let's go farming!"
+
+A modal presented before entering a farm puzzle board. Shows all tile types the player will
+encounter this session:
+
+```
+           Let's go farming!
+
+┌────┐  ┌────┐  ┌────┐  ┌────┐  ┌────┐
+│ 🌿 │  │ 🌾 │  │ 🥕 │  │ 🍎 │  │ 🪷 🔍│
+└────┘  └────┘  └────┘  └────┘  └────┘
+┌────┐  ┌────┐  ┌────┐  ┌────┐  ┌────┐
+│ 🌳 │  │ 🦃 │  │ 🐷 │  │ 🐄 │  │ 🦬 │
+└────┘  └────┘  └────┘  └────┘  └────┘
+
+  [ Use ]  [x2 bag × 2]    [ 150◉ | 16📅 ]
+```
+
+- **10 tile types** arranged in a 2×5 grid (rounded square cells, tan background).
+- A **magnifying glass badge** on a tile (lotus flower) marks it as rare/hidden.
+- **"Use" button** (green) + consumable item preview: lets player activate a x2 resource
+  bag (qty 2 available) before entering — doubles resources collected this session.
+- **Cost pill** (orange): shows session entry cost in coins (150◉) and a calendar badge
+  (16) — likely the day of the current month or seasonal turn number.
+
+**Tile types seen:**
+Grass, Wheat field, Carrot, Apple/Tomato, Lotus (rare), Tree/bush, Turkey, Pig, Cow,
+Highland Cow/Yak
+
+### 16b. Mine Session Start — "Let's dig"
+
+A modal for entering a mine puzzle. Structured differently from farming:
+
+**Top section — chain progress tracker:**
+```
+[●●●●●●●]  (gray dots = steps in the mining chain, some filled)
+[rock icon]  [gem icon]  floating above dots   [2 🪣 counter]
+```
+Shows the player how many chain steps are in this session and what tier of resource
+they're currently targeting.
+
+**Main section — current goods inventory:**
+A 2×4 grid showing goods the player brings in (or their current stock), each with:
+- Quantity badge (e.g. 301 bread, 118 eggs)
+- Sell price below (`N ◉` — what each item sells for per unit)
+
+| Good | Qty | Sell value |
+|---|---|---|
+| Bread | 301 | 1◉ |
+| Eggs | 118 | 3◉ |
+| Vegetables | 27 | 6◉ |
+| Ham/Meat | 29 | 10◉ |
+| Pie/Tart | 0 | 20◉ |
+| Milk | 3 | 20◉ |
+| Honeycomb | 0 | 20◉ |
+| Horseshoe | 1 | 35◉ |
+
+**Bottom — entry CTAs (three options):**
+- Blue pill: `2 [rune] [gem]` — pay 2 runes to enter
+- Orange pill: `100◉ / 10🪣` — pay 100 coins + 10 shovels
+- Gray/white "Let's dig" button — free entry (uses standard tools)
+
+The **dual-cost design** gives players a choice between premium currency (runes) and
+consumable tools, with the free option still available.
+
+---
+
+## 17. Updated Implementation Scope Additions (§12 addendum)
+
+### Compendium — Collections (§13)
+- [ ] **Collections section** — horizontal 5-item row with name, reward badge, zone hint
+- [ ] **Zone discovery hint** — "Discover in: Zone X, Zone Y" text per collection
+- [ ] **Reward badge variants** — coin reward (`+N◉`) and percentage bonus (`+N%★`)
+- [ ] **Padlock section divider** — separates locked collections from available ones
+- [ ] **Green selection border** — highlights active/selected collection row
+- [ ] **Chest tutorial panel** — right page shows Field/Mine chest + Sea Chest diagrams
+
+### Quests System (§14)
+- [ ] **Quests tab** — speech-bubble tab with red "!" badge when active
+- [ ] **Quest card** — NPC portrait + speech-bubble resource + "Collect N (M left)" + reward
+- [ ] **Manual panel** — named story NPC with flavor text matching quest batch theme
+- [ ] **Crown reward display** — green "Reward: +N [crown]" in each card
+
+### Zone Map (§15)
+- [ ] **6-zone + Castle layout** — named zone nodes with terrain variety
+- [ ] **Zone Five density** — document as template for what advanced zones should contain
+- [ ] **Building tap tooltip** — floating card on building tap: name + description + 2 CTAs
+- [ ] **Animal NPC speech bubbles** — ambient face-bubble on buildings with pending actions
+
+### Session Start Modals (§16)
+- [ ] **Farming session modal** — 2×5 tile type preview + consumable "Use" button + cost pill
+- [ ] **Rare tile badge** — magnifying glass overlay for hidden/rare tile types
+- [ ] **Mine session modal** — chain tracker + goods inventory grid + 3-CTA entry (rune/tool/free)
+- [ ] **Sell-value display** — each good in mine modal shows its per-unit sell price
+
+---
+
 *More picture sets to follow — this doc will be extended.*
