@@ -5,7 +5,7 @@ import { gameReducer, initialState } from "./src/state.js";
 import { Hud, SidePanel, MobileDock, PortraitToolsBar, BottomNav, TownView, SeasonModal, NpcBubble, FeatureModals, FeatureScreens } from "./src/ui.jsx";
 import { useAudio } from "./src/audio/useAudio.js";
 
-function PhaserMount({ dispatch, biomeKey, turnsUsed, uiLocked, sceneRef, memoryPerks }) {
+function PhaserMount({ dispatch, biomeKey, turnsUsed, uiLocked, sceneRef, memoryPerks, setChainInfo }) {
   const hostRef = useRef(null);
   const gameRef = useRef(null);
   const [loading, setLoading] = useState(true);
@@ -167,6 +167,7 @@ export default function App() {
                   uiLocked={uiLocked}
                   sceneRef={sceneRef}
                   memoryPerks={state.memoryPerks}
+                  setChainInfo={setChainInfo}
                 />
               </div>
               {/* Side panel — hidden on mobile, replaced by MobileDock */}
