@@ -928,7 +928,7 @@ function BuildingIllustration({ id, isBuilt }) {
 
 function FarmFieldArt() {
   return (
-    <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="absolute inset-0 w-full h-full">
+    <svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMax meet" className="absolute inset-0 w-full h-full">
       {/* Sky */}
       <rect width="100" height="42" fill="#bce088" />
       <rect width="100" height="20" fill="#d8eea8" opacity="0.55" />
@@ -1003,7 +1003,7 @@ function MineEntranceArt({ locked }) {
   const lanternFill = locked ? "#5a4830" : "#c86820";
   const lanternGlow = locked ? "rgba(120,110,90,.0)" : "rgba(248,160,64,.22)";
   return (
-    <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="absolute inset-0 w-full h-full">
+    <svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMax meet" className="absolute inset-0 w-full h-full">
       {/* Dusk sky */}
       <rect width="100" height="40" fill="#3a3e44" />
       <rect width="100" height="14" fill="#52565c" opacity="0.6" />
@@ -1389,7 +1389,7 @@ export function TownView({ state, dispatch }) {
         {/* Farm Field — upper-left hills, entry to Farm board */}
         <div
           className="absolute cursor-pointer group pointer-events-auto"
-          style={{ left: "1%", top: "28%", width: "14%", height: "20%" }}
+          style={{ left: "1%", top: "28%", width: "14%", aspectRatio: "1" }}
           onClick={() => setEntryBiome("farm")}
         >
           <div
@@ -1408,7 +1408,7 @@ export function TownView({ state, dispatch }) {
         {/* Mine Entrance — upper-right hills, entry to Mine board */}
         <div
           className="absolute cursor-pointer group pointer-events-auto"
-          style={{ left: "85%", top: "28%", width: "14%", height: "20%" }}
+          style={{ left: "85%", top: "28%", width: "14%", aspectRatio: "1" }}
           onClick={() => setEntryBiome("mine")}
         >
           <div
