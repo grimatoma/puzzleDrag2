@@ -759,33 +759,48 @@ export function TownView({ state, dispatch }) {
                   top: `${(b.y / 600) * 100}%`,
                   width: `${(b.w / 1100) * 100}%`,
                   height: `${(b.h / 600) * 100}%`,
-                  opacity: isLocked && !isBuilt ? 0.6 : 1,
+                  opacity: isLocked && !isBuilt ? 0.5 : 1,
                 }}
                 onClick={onClick}
               >
-                <div className="absolute -top-3 left-[-5px] right-[-5px] h-5" style={{ background: "#5a2e15", clipPath: "polygon(8% 100%, 50% 0, 92% 100%)" }} />
-                {isBuilt && SMOKE_BUILDINGS.has(b.id) && <BuildingSmoke />}
-                <div
-                  className="w-full h-full rounded-sm grid place-items-end justify-center pb-1 font-bold text-[11px] text-white"
-                  style={{
-                    background: isLocked && !isBuilt ? "#888" : b.color,
-                    border: "2px solid rgba(0,0,0,.25)",
-                    boxShadow: "0 4px 0 rgba(0,0,0,.25)",
-                    textShadow: "0 1px 2px rgba(0,0,0,.5)",
-                  }}
-                >
-                  {isLocked && !isBuilt ? `🔒 L${b.lv}` : isBuilt ? b.name : (canAfford ? `Build ${b.name}` : b.name)}
-                </div>
-                {!isBuilt && (
-                  <div
-                    className="absolute -top-9 left-1/2 -translate-x-1/2 px-2.5 py-0.5 rounded-full text-[10px] font-bold whitespace-nowrap"
-                    style={{
-                      background: "rgba(0,0,0,.75)",
-                      color: isLocked ? "#f7d572" : canAfford ? "#9bdb6a" : "#f7d572",
-                    }}
-                  >
-                    {isLocked ? `🔒 L${b.lv}` : costStr}
-                  </div>
+                {isBuilt ? (
+                  <>
+                    <div className="absolute -top-3 left-[-5px] right-[-5px] h-5" style={{ background: "#5a2e15", clipPath: "polygon(8% 100%, 50% 0, 92% 100%)" }} />
+                    {SMOKE_BUILDINGS.has(b.id) && <BuildingSmoke />}
+                    <div
+                      className="w-full h-full rounded-sm grid place-items-end justify-center pb-1 font-bold text-[11px] text-white"
+                      style={{
+                        background: b.color,
+                        border: "2px solid rgba(0,0,0,.25)",
+                        boxShadow: "0 4px 0 rgba(0,0,0,.25)",
+                        textShadow: "0 1px 2px rgba(0,0,0,.5)",
+                      }}
+                    >
+                      {b.name}
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div
+                      className="w-full h-full rounded-sm grid place-items-center font-bold text-[11px]"
+                      style={{
+                        background: "repeating-linear-gradient(45deg, rgba(0,0,0,.08) 0px, rgba(0,0,0,.08) 4px, transparent 4px, transparent 10px)",
+                        border: `2px dashed ${isLocked ? "#888" : canAfford ? "#9bdb6a" : "rgba(255,255,255,.35)"}`,
+                        color: isLocked ? "#888" : canAfford ? "#9bdb6a" : "rgba(255,255,255,.5)",
+                      }}
+                    >
+                      {isLocked ? `🔒` : "+"}
+                    </div>
+                    <div
+                      className="absolute -top-9 left-1/2 -translate-x-1/2 px-2.5 py-0.5 rounded-full text-[10px] font-bold whitespace-nowrap"
+                      style={{
+                        background: "rgba(0,0,0,.75)",
+                        color: isLocked ? "#f7d572" : canAfford ? "#9bdb6a" : "#f7d572",
+                      }}
+                    >
+                      {isLocked ? `🔒 ${b.name} L${b.lv}` : `Build ${b.name}: ${costStr}`}
+                    </div>
+                  </>
                 )}
               </div>
             );
