@@ -650,14 +650,14 @@ const TOWN_BIOME_CONFIGS = {
     name: "Hearthwood Vale",
     // Gentle pastoral layout — spread wide, inn prominent at center
     buildingLayout: {
-      hearth:  { x: 55,  y: 355, w: 90,  h: 115 },
-      mill:    { x: 168, y: 332, w: 86,  h: 128 },
-      bakery:  { x: 292, y: 348, w: 100, h: 114 },
-      inn:     { x: 440, y: 318, w: 128, h: 152 },
-      granary: { x: 616, y: 336, w: 90,  h: 132 },
-      larder:  { x: 738, y: 360, w: 76,  h: 90  },
-      forge:   { x: 848, y: 350, w: 100, h: 112 },
-      caravan: { x: 965, y: 356, w: 112, h: 100 },
+      hearth:  { x: 60,  y: 372, w: 88,  h: 90  },
+      mill:    { x: 170, y: 352, w: 84,  h: 106 },
+      bakery:  { x: 295, y: 366, w: 98,  h: 96  },
+      inn:     { x: 442, y: 340, w: 118, h: 124 },
+      granary: { x: 618, y: 356, w: 88,  h: 106 },
+      larder:  { x: 740, y: 380, w: 72,  h: 82  },
+      forge:   { x: 848, y: 366, w: 98,  h: 96  },
+      caravan: { x: 966, y: 370, w: 104, h: 86  },
     },
     // Gently rolling hills — soft bezier curves
     hill1Path: "M0,305 C120,278 260,248 420,262 C580,276 700,252 860,258 C960,262 1040,252 1100,248 L1100,600 L0,600 Z",
@@ -669,14 +669,14 @@ const TOWN_BIOME_CONFIGS = {
     name: "Ironridge Camp",
     // Compact industrial layout — forge dominates center, buildings cluster tightly
     buildingLayout: {
-      hearth:  { x: 50,  y: 375, w: 84,  h: 100 },
-      granary: { x: 155, y: 365, w: 84,  h: 112 },
-      mill:    { x: 260, y: 375, w: 80,  h: 92  },
-      bakery:  { x: 358, y: 360, w: 94,  h: 108 },
-      forge:   { x: 480, y: 318, w: 124, h: 152 },
-      inn:     { x: 638, y: 345, w: 114, h: 132 },
-      larder:  { x: 783, y: 370, w: 76,  h: 90  },
-      caravan: { x: 888, y: 356, w: 112, h: 100 },
+      hearth:  { x: 52,  y: 388, w: 82,  h: 86  },
+      granary: { x: 158, y: 378, w: 82,  h: 96  },
+      mill:    { x: 262, y: 382, w: 78,  h: 84  },
+      bakery:  { x: 360, y: 372, w: 92,  h: 96  },
+      forge:   { x: 480, y: 322, w: 120, h: 144 },
+      inn:     { x: 638, y: 354, w: 112, h: 122 },
+      larder:  { x: 784, y: 382, w: 74,  h: 82  },
+      caravan: { x: 888, y: 368, w: 104, h: 88  },
     },
     // Jagged rocky peaks — angular lineto commands
     hill1Path: "M0,288 L78,252 L142,274 L218,218 L308,258 L418,196 L518,240 L638,206 L738,234 L838,196 L938,224 L1018,210 L1100,216 L1100,600 L0,600 Z",
@@ -694,7 +694,7 @@ function BuildingIllustration({ id, isBuilt }) {
   }
   const illustrations = {
     hearth: (
-      <svg viewBox="0 0 100 100" className="absolute inset-0 w-full h-full" style={f}>
+      <svg viewBox="0 0 100 100" className="absolute inset-0 w-full h-full" preserveAspectRatio="none" style={f}>
         {shadow()}
         <rect x="63" y="13" width="10" height="26" rx="1" fill="#8a7a6a" />
         <rect x="61" y="11" width="14" height="5" rx="1" fill="#6a5a4a" />
@@ -721,7 +721,7 @@ function BuildingIllustration({ id, isBuilt }) {
       </svg>
     ),
     mill: (
-      <svg viewBox="0 0 100 100" className="absolute inset-0 w-full h-full" style={f}>
+      <svg viewBox="0 0 100 100" className="absolute inset-0 w-full h-full" preserveAspectRatio="none" style={f}>
         {shadow(50, 32)}
         <path d="M32,98 L36,48 L64,48 L68,98 Z" fill="#d4b880" />
         <path d="M32,98 L36,48 L64,48 L68,98 Z" fill="none" stroke="#9a7a4a" strokeWidth="2" />
@@ -748,7 +748,7 @@ function BuildingIllustration({ id, isBuilt }) {
       </svg>
     ),
     bakery: (
-      <svg viewBox="0 0 100 100" className="absolute inset-0 w-full h-full" style={f}>
+      <svg viewBox="0 0 100 100" className="absolute inset-0 w-full h-full" preserveAspectRatio="none" style={f}>
         {shadow()}
         <rect x="18" y="17" width="9" height="22" rx="1" fill="#8a6a5a" />
         <rect x="16" y="15" width="13" height="5" rx="1" fill="#6a5040" />
@@ -778,7 +778,7 @@ function BuildingIllustration({ id, isBuilt }) {
       </svg>
     ),
     inn: (
-      <svg viewBox="0 0 100 100" className="absolute inset-0 w-full h-full" style={f}>
+      <svg viewBox="0 0 100 100" className="absolute inset-0 w-full h-full" preserveAspectRatio="none" style={f}>
         {shadow(50, 44)}
         <rect x="66" y="8" width="10" height="22" rx="1" fill="#8a7a6a" />
         <rect x="64" y="6" width="14" height="5" rx="1" fill="#6a5a4a" />
@@ -811,7 +811,7 @@ function BuildingIllustration({ id, isBuilt }) {
       </svg>
     ),
     granary: (
-      <svg viewBox="0 0 100 100" className="absolute inset-0 w-full h-full" style={f}>
+      <svg viewBox="0 0 100 100" className="absolute inset-0 w-full h-full" preserveAspectRatio="none" style={f}>
         {shadow(50, 38)}
         <rect x="13" y="52" width="74" height="45" rx="3" fill="#c8b070" />
         {[24, 36, 50, 64, 76].map((x) => (
@@ -834,7 +834,7 @@ function BuildingIllustration({ id, isBuilt }) {
       </svg>
     ),
     larder: (
-      <svg viewBox="0 0 100 100" className="absolute inset-0 w-full h-full" style={f}>
+      <svg viewBox="0 0 100 100" className="absolute inset-0 w-full h-full" preserveAspectRatio="none" style={f}>
         {shadow(50, 38)}
         <polygon points="6,46 50,18 94,46" fill="#7a6858" />
         <polygon points="6,46 50,18 94,46" fill="none" stroke="#5a4a38" strokeWidth="1.5" />
@@ -861,7 +861,7 @@ function BuildingIllustration({ id, isBuilt }) {
       </svg>
     ),
     forge: (
-      <svg viewBox="0 0 100 100" className="absolute inset-0 w-full h-full" style={f}>
+      <svg viewBox="0 0 100 100" className="absolute inset-0 w-full h-full" preserveAspectRatio="none" style={f}>
         {shadow()}
         <rect x="66" y="4" width="13" height="36" rx="2" fill="#4a4848" />
         <rect x="64" y="2" width="17" height="6" rx="1" fill="#383838" />
@@ -890,7 +890,7 @@ function BuildingIllustration({ id, isBuilt }) {
       </svg>
     ),
     caravan: (
-      <svg viewBox="0 0 100 100" className="absolute inset-0 w-full h-full" style={f}>
+      <svg viewBox="0 0 100 100" className="absolute inset-0 w-full h-full" preserveAspectRatio="none" style={f}>
         {shadow(50, 48)}
         <line x1="82" y1="12" x2="82" y2="40" stroke="#8a5a2a" strokeWidth="2.5" />
         <polygon points="82,12 95,18 82,24" fill="#c83030" />
@@ -954,46 +954,151 @@ export function TownView({ state, dispatch }) {
         <path d={townConfig.hill2Path} fill={theme.hill2} opacity="0.6" />
 
         {biomeTheme === "farm" && <>
-          {/* Crop rows on the back hill */}
-          {[0,1,2,3].map(i => (
-            <line key={i} x1="50" y1={225 + i * 12} x2="380" y2={238 + i * 12} stroke="#d4c060" strokeWidth="1.5" opacity="0.35" />
+          {/* Sunlit highlight ridge on the far hill */}
+          <path d="M0,248 C140,222 300,210 480,224 C640,238 780,218 960,210 C1020,208 1070,206 1100,204 L1100,305 C1040,252 760,252 420,262 C260,248 120,278 0,305 Z" fill="#9ad060" opacity="0.28" />
+          {/* Orchard tree clusters on left hill */}
+          {[0,1,2,3,4,5,6].map(i => {
+            const tx = 52 + i * 110 + (i%2)*28;
+            const ty = 238 + (i%3)*14;
+            return <g key={i}>
+              <rect x={tx-3} y={ty+12} width="6" height="20" fill="#6a4a20" opacity="0.55" />
+              <ellipse cx={tx} cy={ty} rx={18+(i%2)*6} ry={15+(i%3)*4} fill={i%3===0?"#3a7a20":i%3===1?"#4a8a28":"#5a9a30"} opacity="0.65" />
+            </g>;
+          })}
+          {/* Golden wheat field on left slope */}
+          <path d="M20,278 L0,310 L380,290 L390,260 Z" fill="#c8a040" opacity="0.22" />
+          {[0,1,2,3,4,5].map(i => (
+            <line key={i} x1="22" y1={268+i*8} x2="385" y2={258+i*6} stroke="#d4b040" strokeWidth="1.5" opacity="0.28" />
           ))}
-          {/* Windmill silhouette */}
-          <rect x="808" y="168" width="10" height="88" fill="#5a5a18" opacity="0.55" />
-          <polygon points="808,215 778,188 790,230" fill="#5a5a18" opacity="0.55" />
-          <polygon points="818,215 840,180 836,224" fill="#5a5a18" opacity="0.55" />
-          <polygon points="813,210 844,235 806,240" fill="#5a5a18" opacity="0.55" />
-          <polygon points="813,210 782,240 790,205" fill="#5a5a18" opacity="0.55" />
-          <polygon points="795,252 831,252 826,220 800,220" fill="#7a6030" opacity="0.55" />
+          {/* Distant barn silhouette — right hill */}
+          <rect x="870" y="218" width="56" height="46" fill="#5a3818" opacity="0.45" />
+          <polygon points="866,220 898,190 930,220" fill="#6a2818" opacity="0.5" />
+          <rect x="890" y="218" width="14" height="22" fill="#3a1808" opacity="0.5" />
+          {/* Windmill silhouette — right hill */}
+          <rect x="816" y="160" width="10" height="94" fill="#4a6618" opacity="0.62" />
+          <polygon points="821,207 788,182 796,226" fill="#4a6618" opacity="0.62" />
+          <polygon points="821,207 847,175 845,220" fill="#4a6618" opacity="0.62" />
+          <polygon points="821,205 852,230 813,240" fill="#4a6618" opacity="0.62" />
+          <polygon points="821,205 790,234 798,198" fill="#4a6618" opacity="0.62" />
+          <polygon points="803,250 839,250 836,220 806,220" fill="#7a5828" opacity="0.62" />
           {/* Wooden fence row */}
-          {[0,1,2,3,4,5,6,7,8,9,10,11,12].map(i => (
-            <line key={i} x1={28 + i * 28} y1="355" x2={28 + i * 28} y2="385" stroke="#a07840" strokeWidth="3" opacity="0.5" />
+          {[0,1,2,3,4,5,6,7,8,9,10,11].map(i => (
+            <g key={i}>
+              <rect x={22+i*30} y="343" width="5" height="38" rx="1" fill="#9a6828" opacity="0.65" />
+              <rect x={20+i*30} y="341" width="9" height="5" rx="1" fill="#7a5018" opacity="0.55" />
+            </g>
           ))}
-          <line x1="14" y1="368" x2="378" y2="364" stroke="#a07840" strokeWidth="2" opacity="0.5" />
-          <line x1="14" y1="376" x2="378" y2="372" stroke="#a07840" strokeWidth="2" opacity="0.5" />
+          <line x1="8" y1="358" x2="362" y2="353" stroke="#9a6828" strokeWidth="3.5" opacity="0.65" />
+          <line x1="8" y1="368" x2="362" y2="363" stroke="#9a6828" strokeWidth="3.5" opacity="0.65" />
+          {/* Hay bales in foreground */}
+          <ellipse cx="175" cy="464" rx="24" ry="16" fill="#c89838" opacity="0.7" />
+          <line x1="151" y1="464" x2="199" y2="464" stroke="#a07828" strokeWidth="1.5" opacity="0.5" />
+          <line x1="151" y1="458" x2="199" y2="458" stroke="#a07828" strokeWidth="1.5" opacity="0.5" />
+          <ellipse cx="224" cy="466" rx="20" ry="13" fill="#b88830" opacity="0.65" />
+          {/* Wildflowers on hillside */}
+          {[0,1,2,3,4,5,6,7,8,9].map(i => (
+            <circle key={i} cx={68+i*38+(i%3)*10} cy={294+(i%4)*9} r={3.5+(i%2)} fill={["#f7d254","#ff7070","#ffffff","#f0a0e0","#80e080"][i%5]} opacity="0.6" />
+          ))}
+          {/* Apple tree near fence right end */}
+          <rect x="392" y="312" width="7" height="52" fill="#7a5228" opacity="0.62" />
+          <ellipse cx="396" cy="304" rx="26" ry="22" fill="#3a7a20" opacity="0.68" />
+          <circle cx="385" cy="298" r="5" fill="#e03820" opacity="0.75" />
+          <circle cx="404" cy="306" r="4" fill="#d02818" opacity="0.72" />
         </>}
 
         {biomeTheme === "mine" && <>
-          {/* Mine shaft entrance arch on the rocky face */}
-          <rect x="730" y="255" width="72" height="90" fill="#121416" opacity="0.85" rx="2" />
-          <ellipse cx="766" cy="255" rx="36" ry="22" fill="#121416" opacity="0.85" />
-          <rect x="734" y="250" width="64" height="8" fill="#4a4030" opacity="0.7" />
-          {[0,1,2].map(i => (
-            <line key={i} x1={740 + i * 14} y1="258" x2={740 + i * 14} y2="345" stroke="#3a3020" strokeWidth="4" opacity="0.6" />
+          {/* Rock strata bands across the cliff face */}
+          <path d="M0,248 C180,238 400,226 640,232 C820,238 1000,224 1100,220 L1100,272 C900,268 620,278 380,274 C220,270 100,274 0,268 Z" fill="#48443c" opacity="0.28" />
+          <path d="M0,268 C160,260 380,250 640,256 C840,262 980,252 1100,248 L1100,286 C900,282 620,290 360,284 C220,280 100,282 0,282 Z" fill="#383430" opacity="0.22" />
+          {/* Ore / crystal vein streaks in exposed rock */}
+          <line x1="195" y1="240" x2="330" y2="274" stroke="#7a8894" strokeWidth="3" opacity="0.38" />
+          <line x1="545" y1="228" x2="605" y2="256" stroke="#9ad8f0" strokeWidth="4" opacity="0.42" />
+          <line x1="551" y1="232" x2="601" y2="252" stroke="#d8f0fc" strokeWidth="1.5" opacity="0.55" />
+          <line x1="862" y1="218" x2="928" y2="258" stroke="#8a7a5a" strokeWidth="2.5" opacity="0.33" />
+          {/* Mine entrance — dark tunnel void */}
+          <rect x="728" y="254" width="76" height="94" fill="#080a0c" opacity="0.94" rx="3" />
+          <ellipse cx="766" cy="254" rx="38" ry="17" fill="#080a0c" opacity="0.94" />
+          {/* Timber frame: vertical posts */}
+          <rect x="722" y="244" width="13" height="104" rx="2" fill="#5c3f1c" />
+          <rect x="797" y="244" width="13" height="104" rx="2" fill="#5c3f1c" />
+          {/* Header beam */}
+          <rect x="717" y="243" width="98" height="13" rx="2" fill="#6e4a22" />
+          <rect x="717" y="243" width="98" height="3" rx="1" fill="#9a6a34" opacity="0.55" />
+          {/* Diagonal knee braces */}
+          <line x1="735" y1="256" x2="762" y2="240" stroke="#5c3f1c" strokeWidth="8" strokeLinecap="round" />
+          <line x1="797" y1="256" x2="770" y2="240" stroke="#5c3f1c" strokeWidth="8" strokeLinecap="round" />
+          {/* Angled side supports to ground */}
+          <line x1="728" y1="290" x2="698" y2="350" stroke="#4a3014" strokeWidth="7" strokeLinecap="round" opacity="0.78" />
+          <line x1="810" y1="290" x2="840" y2="350" stroke="#4a3014" strokeWidth="7" strokeLinecap="round" opacity="0.78" />
+          {/* Sign board above entrance */}
+          <rect x="744" y="228" width="44" height="16" rx="2" fill="#7a5828" opacity="0.85" />
+          <rect x="744" y="228" width="44" height="16" rx="2" fill="none" stroke="#5a3818" strokeWidth="1.5" />
+          {/* Cart tracks */}
+          <line x1="630" y1="346" x2="898" y2="338" stroke="#7a6848" strokeWidth="4" opacity="0.65" />
+          <line x1="630" y1="358" x2="898" y2="350" stroke="#7a6848" strokeWidth="4" opacity="0.65" />
+          {[0,1,2,3,4,5,6,7,8,9].map(i => (
+            <line key={i} x1={638+i*26} y1="344" x2={640+i*26} y2="360" stroke="#6a5838" strokeWidth="2.5" opacity="0.5" />
           ))}
-          {/* Mine cart track */}
-          <line x1="690" y1="348" x2="860" y2="340" stroke="#6a5a40" strokeWidth="3" opacity="0.5" />
-          <line x1="690" y1="356" x2="860" y2="348" stroke="#6a5a40" strokeWidth="3" opacity="0.5" />
-          {[0,1,2,3,4,5,6].map(i => (
-            <line key={i} x1={695 + i * 24} y1="345" x2={698 + i * 24} y2="358" stroke="#6a5a40" strokeWidth="2.5" opacity="0.5" />
-          ))}
+          {/* Mine cart with ore load */}
+          <rect x="662" y="318" width="56" height="34" rx="3" fill="#4a3a26" />
+          <rect x="662" y="318" width="56" height="9" rx="2" fill="#665040" />
+          <ellipse cx="690" cy="318" rx="24" ry="9" fill="#78889a" />
+          <ellipse cx="684" cy="312" rx="14" ry="7" fill="#8898a8" opacity="0.85" />
+          <circle cx="682" cy="310" r="3" fill="#b0d8f0" opacity="0.7" />
+          <circle cx="674" cy="352" r="9" fill="none" stroke="#5a4030" strokeWidth="3.5" />
+          <circle cx="674" cy="352" r="3.5" fill="#5a4030" />
+          <line x1="674" y1="343" x2="674" y2="361" stroke="#5a4030" strokeWidth="2" />
+          <line x1="665" y1="352" x2="683" y2="352" stroke="#5a4030" strokeWidth="2" />
+          <circle cx="706" cy="352" r="9" fill="none" stroke="#5a4030" strokeWidth="3.5" />
+          <circle cx="706" cy="352" r="3.5" fill="#5a4030" />
+          <line x1="706" y1="343" x2="706" y2="361" stroke="#5a4030" strokeWidth="2" />
+          <line x1="697" y1="352" x2="715" y2="352" stroke="#5a4030" strokeWidth="2" />
+          {/* Hanging lanterns flanking entrance */}
+          <circle cx="716" cy="260" r="20" fill="#f8a030" opacity="0.13" />
+          <circle cx="816" cy="260" r="20" fill="#f8a030" opacity="0.13" />
+          <line x1="718" y1="242" x2="718" y2="254" stroke="#4a3820" strokeWidth="2" />
+          <rect x="711" y="254" width="14" height="18" rx="3" fill="#c86820" />
+          <rect x="711" y="254" width="14" height="18" rx="3" fill="none" stroke="#8a4810" strokeWidth="1.5" />
+          <ellipse cx="718" cy="256" rx="7" ry="2.5" fill="#e88030" opacity="0.7" />
+          <line x1="816" y1="242" x2="816" y2="254" stroke="#4a3820" strokeWidth="2" />
+          <rect x="809" y="254" width="14" height="18" rx="3" fill="#c86820" />
+          <rect x="809" y="254" width="14" height="18" rx="3" fill="none" stroke="#8a4810" strokeWidth="1.5" />
+          <ellipse cx="816" cy="256" rx="7" ry="2.5" fill="#e88030" opacity="0.7" />
+          {/* Tailings pile — rubble mound right of entrance */}
+          <ellipse cx="916" cy="358" rx="72" ry="22" fill="#4a4438" opacity="0.58" />
+          <polygon points="874,352 916,328 958,352" fill="#524c44" opacity="0.52" />
+          <polygon points="888,352 920,336 952,352" fill="#5c5650" opacity="0.42" />
+          <circle cx="906" cy="336" r="3" fill="#a0c0d0" opacity="0.52" />
+          <circle cx="926" cy="342" r="2" fill="#c8e4f8" opacity="0.58" />
+          <circle cx="942" cy="336" r="2.5" fill="#b8d0e0" opacity="0.48" />
+          {/* Barrels stacked left of entrance */}
+          <ellipse cx="634" cy="346" rx="18" ry="7.5" fill="#7a5030" opacity="0.72" />
+          <rect x="616" y="318" width="36" height="32" rx="3" fill="#7a5030" opacity="0.78" />
+          <ellipse cx="634" cy="318" rx="18" ry="7.5" fill="#8a6040" opacity="0.78" />
+          <line x1="616" y1="326" x2="652" y2="326" stroke="#5a3820" strokeWidth="2" opacity="0.45" />
+          <line x1="616" y1="334" x2="652" y2="334" stroke="#5a3820" strokeWidth="2" opacity="0.45" />
+          <ellipse cx="658" cy="348" rx="16" ry="6.5" fill="#6a4828" opacity="0.68" />
+          <rect x="642" y="322" width="32" height="30" rx="3" fill="#6a4828" opacity="0.72" />
+          <ellipse cx="658" cy="322" rx="16" ry="6.5" fill="#7a5838" opacity="0.72" />
+          <line x1="642" y1="330" x2="674" y2="330" stroke="#4a3018" strokeWidth="2" opacity="0.4" />
           {/* Rocky outcroppings foreground */}
-          <polygon points="60,368 90,330 120,368" fill="#3a3e42" opacity="0.45" />
-          <polygon points="100,372 125,342 150,372" fill="#2e3236" opacity="0.38" />
-          <polygon points="940,362 972,325 1005,362" fill="#3a3e42" opacity="0.4" />
-          {/* Torch glows */}
-          <circle cx="722" cy="258" r="14" fill="#f7a030" opacity="0.18" />
-          <circle cx="810" cy="258" r="14" fill="#f7a030" opacity="0.18" />
+          <polygon points="46,372 82,326 116,344 130,374" fill="#3c4044" opacity="0.58" />
+          <polygon points="86,378 116,346 142,374" fill="#2e3236" opacity="0.5" />
+          <line x1="54" y1="364" x2="86" y2="328" stroke="#5c6468" strokeWidth="1.5" opacity="0.38" />
+          <polygon points="942,366 978,328 1012,346 1026,368" fill="#3c4044" opacity="0.52" />
+          <polygon points="982,374 1008,348 1034,368" fill="#2e3236" opacity="0.44" />
+          <line x1="952" y1="360" x2="982" y2="330" stroke="#5c6468" strokeWidth="1.5" opacity="0.35" />
+          {/* Smoke wisps from mine entrance */}
+          <ellipse cx="750" cy="228" rx="9" ry="14" fill="rgba(160,152,144,.2)" />
+          <ellipse cx="758" cy="212" rx="7" ry="11" fill="rgba(160,152,144,.15)" />
+          <ellipse cx="764" cy="198" rx="5.5" ry="9" fill="rgba(160,152,144,.1)" />
+          <ellipse cx="774" cy="222" rx="8" ry="12" fill="rgba(160,152,144,.18)" />
+          <ellipse cx="780" cy="208" rx="6" ry="10" fill="rgba(160,152,144,.13)" />
+          {/* Ground pebbles */}
+          <ellipse cx="415" cy="386" rx="9" ry="4" fill="#3c3e42" opacity="0.4" />
+          <ellipse cx="455" cy="380" rx="7" ry="3" fill="#484c50" opacity="0.36" />
+          <ellipse cx="538" cy="388" rx="8" ry="3.5" fill="#3c3e42" opacity="0.38" />
+          <ellipse cx="576" cy="382" rx="6" ry="2.5" fill="#484c50" opacity="0.33" />
         </>}
 
         {/* Road */}
@@ -1035,6 +1140,13 @@ export function TownView({ state, dispatch }) {
               dispatch({ type: "BUILD", building: b });
             };
             const costStr = Object.entries(b.cost).map(([k, v]) => k === "coins" ? `${v}◉` : `${v} ${k}`).join(" · ");
+            // Align tooltip away from viewport edges so it never clips
+            const bCenterFrac = (b.x + b.w / 2) / 1100;
+            const tooltipPos = bCenterFrac < 0.18
+              ? { left: 0 }
+              : bCenterFrac > 0.84
+              ? { right: 0 }
+              : { left: "50%", transform: "translateX(-50%)" };
             return (
               <div
                 key={b.id}
@@ -1076,11 +1188,12 @@ export function TownView({ state, dispatch }) {
                       {isLocked ? `🔒` : "+"}
                     </div>
                     <div
-                      className="absolute -top-8 left-1/2 -translate-x-1/2 px-2.5 py-0.5 rounded-full font-bold whitespace-nowrap z-20 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"
+                      className="absolute -top-8 px-2.5 py-0.5 rounded-full font-bold whitespace-nowrap z-20 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"
                       style={{
                         background: "rgba(0,0,0,.85)",
                         color: isLocked ? "#f7d572" : canAfford ? "#9bdb6a" : "#f7d572",
                         fontSize: "clamp(8px,0.9vw,10px)",
+                        ...tooltipPos,
                       }}
                     >
                       {isLocked ? `🔒 ${b.name} L${b.lv}` : `Build ${b.name}: ${costStr}`}
