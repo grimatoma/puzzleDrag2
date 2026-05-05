@@ -1,460 +1,1049 @@
 # Game Asset Inventory
 
-Complete list of every visual and audio asset in the game. Currently all art is procedurally
-generated (Canvas 2D API) or pure CSS. This document describes what each asset needs to look
-like as a real production asset, including all required states and animations.
+Every visual and audio asset in the game. The purpose of this document is to describe
+**what each asset does, when it appears, what states it has, and how it behaves** — not
+what it should look like. That is for the artist to decide.
+
+Currently all art is procedurally generated (Canvas 2D API) or plain CSS. Everything
+listed here needs to be replaced with real production assets.
 
 ---
 
-## 1. TILE TEXTURES
+## How to Read This Document
 
-Each tile is **74 × 74 px** (export at 2× = 148 × 148 px for retina). Every resource needs
-**two texture variants**: a base/idle state and a selected state.
-
-There are two biomes — **Farm** and **Mine** — each with their own palette and resource set.
-
----
-
-### 1.1 Farm Biome Tiles
-
-All Farm tiles share a warm earthy palette. Background tile shape: rounded rectangle with
-soft drop shadow.
-
-| Key | Label | Tile Color | Icon Description | Tier |
-|-----|-------|-----------|------------------|------|
-| `hay` | Hay | `#8fcc3c` (green) | Bundle of hay / grass blades tied with twine | 1 |
-| `wheat` | Wheat | `#f2c12e` (gold) | Wheat stalk with grain heads | 1 |
-| `grain` | Grain | `#e8a820` (amber) | Pile of loose grain / seeds in a bowl | 2 |
-| `flour` | Flour | `#f0ead0` (cream) | Small cloth flour sack with tied top | 3 |
-| `log` | Log | `#a05c28` (brown) | Chopped log segment showing wood rings | 1 |
-| `plank` | Plank | `#c87840` (sienna) | Two wooden planks stacked | 2 |
-| `beam` | Beam | `#9a5820` (dark brown) | Thick structural timber beam | 3 |
-| `egg` | Egg | `#fff7e5` (cream) | Single speckled egg | 1 |
-| `berry` | Berry | `#e03060` (red) | Cluster of three round berries on a sprig | 1 |
-| `jam` | Jam | `#b82050` (dark red) | Small jar with a cloth-tied lid | 2 |
-
-**Selected state (all Farm tiles):** orange glowing border (`#ffb300`), slight scale-up (+6%),
-inner warm highlight rim.
+- **Key** — the internal identifier used to reference the texture in code
+- **Size** — the logical (CSS) pixel dimensions; export 2× for retina
+- **Location** — source file and approximate line numbers where the asset is used
+- **Purpose** — what role the asset plays in the game
+- **States** — every distinct visual condition the asset must support
+- **Animations** — timing and easing data for any animated behavior
 
 ---
 
-### 1.2 Mine Biome Tiles
+## Part 1: Game Board
 
-All Mine tiles share a cool rocky palette.
-
-| Key | Label | Tile Color | Icon Description | Tier |
-|-----|-------|-----------|------------------|------|
-| `stone` | Stone | `#9da3a8` (gray) | Rough irregular stone chunk | 1 |
-| `cobble` | Cobble | `#7a8288` (dark gray) | Smoother rounded cobblestone | 2 |
-| `block` | Block | `#505860` (slate) | Dressed rectangular stone block | 3 |
-| `ore` | Ore | `#b9c4ce` (pale blue-gray) | Raw ore vein with metallic glint | 1 |
-| `ingot` | Ingot | `#c0c8d0` (silver) | Cast metal ingot bar | 2 |
-| `coal` | Coal | `#1e1e1e` (black) | Irregular lump of coal with faint sheen | 1 |
-| `coke` | Coke | `#2a2a2a` (charcoal) | Processed coke briquette | 2 |
-| `gem` | Gem | `#65e5ff` (cyan) | Faceted gem / crystal | 1 |
-| `cutgem` | Cut Gem | `#30d0ff` (bright cyan) | Polished cut gem with sparkle | 2 |
-| `gold` | Gold | `#ffd34c` (yellow) | Gold coin or nugget | 1 |
-
-**Selected state (all Mine tiles):** same orange glow border as Farm.
+The board is rendered by Phaser 3 inside a canvas element. It is a 6-column × 7-row grid
+of draggable tiles. The player drags to connect 3 or more matching adjacent tiles.
 
 ---
 
-### 1.3 Tile States & Animations
+### 1.1 Tile Textures
 
-Every single tile (both biomes) must support:
+Each resource has **two textures**: one for the idle/unselected state and one for the
+selected/in-chain state. Tiles are square with a visible background shape (currently a
+rounded rectangle with a soft shadow).
 
-| State | Description |
-|-------|-------------|
-| **Idle** | Normal resting state on the board |
-| **Selected** | Tile is part of the active drag chain — glowing orange border, +6% scale |
-| **Pulse** | One-shot pop when first added to chain — scale spikes to +12% then returns, 90 ms |
-| **Collect / Disappear** | Tile flies off when chain is completed — shrinks to zero, fades out, slight random rotation ±25°, 180 ms |
-| **Drop / Spawn** | Tile falls into place after board collapse — drops from above, elastic bounce land |
-| **Shuffle / Biome Switch** | Full 360° spin in place, 280–300 ms |
-| **Hover** | Subtle scale up (~3%) while cursor is over it during a drag |
+**Logical size:** 74 × 74 px  
+**Export:** 1× and 2× (148 × 148 px), transparent background  
+**Location:** `src/textures.js` lines 1–236, used in `src/TileObj.js`
+
+#### Farm Biome — 10 Resources
+
+The Farm biome is the starting biome. Resources follow upgrade chains:
+`hay → wheat → grain → flour`, `log → plank → beam`, `berry → jam`, `egg` (terminal).
+
+Tier indicates position in the upgrade chain (1 = raw, 3 = most processed).
+
+| Key | Label | Tier | Chain |
+|-----|-------|------|-------|
+| `hay` | Hay | 1 | Grass/grain |
+| `wheat` | Wheat | 1 | Grass/grain |
+| `grain` | Grain | 2 | Grass/grain |
+| `flour` | Flour | 3 | Grass/grain |
+| `log` | Log | 1 | Wood |
+| `plank` | Plank | 2 | Wood |
+| `beam` | Beam | 3 | Wood |
+| `egg` | Egg | 1 | (terminal) |
+| `berry` | Berry | 1 | Berry |
+| `jam` | Jam | 2 | Berry |
+
+#### Mine Biome — 10 Resources
+
+The Mine biome unlocks at player level 2. Upgrade chains:
+`stone → cobble → block`, `ore → ingot`, `coal → coke`, `gem → cutgem`, `gold` (terminal).
+
+| Key | Label | Tier | Chain |
+|-----|-------|------|-------|
+| `stone` | Stone | 1 | Rock |
+| `cobble` | Cobble | 2 | Rock |
+| `block` | Block | 3 | Rock |
+| `ore` | Ore | 1 | Metal |
+| `ingot` | Ingot | 2 | Metal |
+| `coal` | Coal | 1 | Carbon |
+| `coke` | Coke | 2 | Carbon |
+| `gem` | Gem | 1 | Crystal |
+| `cutgem` | Cut Gem | 2 | Crystal |
+| `gold` | Gold | 1 | (terminal) |
+
+#### Tile States
+
+Every tile (both biomes) must support all of the following states:
+
+| State | Trigger | Behavior |
+|-------|---------|----------|
+| **Idle** | Default | Tile resting on board, not interacted with |
+| **Hover** | Cursor over tile during drag | Subtle acknowledgment that tile is reachable |
+| **Selected** | Tile added to the active drag chain | Visually distinct from idle; part of a connected sequence |
+| **Pulse** | Moment tile is first added to chain | One-shot burst animation, then settles into Selected; scale 1.0 → 1.12 → 1.06×, 90 ms, Sine.Out |
+| **Collect** | Chain successfully completed | Tile shrinks and disappears; scale + alpha → 0, ±25° random rotation, 180 ms, staggered 15 ms per tile |
+| **Drop / Spawn** | Tile falls after board collapses | Tile enters from above the board and lands in its new row |
+| **Shuffle** | Player uses Reshuffle Horn tool | Full 360° spin in place, 280–300 ms |
+| **Biome Switch** | Player switches between Farm and Mine | Same spin as shuffle |
 
 ---
 
-## 2. SPARK / UPGRADE INDICATOR
+### 1.2 Upgrade Star (Spark)
 
 **Key:** `spark`  
-**Size:** 72 × 72 px (export at 2× = 144 × 144 px)  
-**Location in code:** `src/textures.js` lines 238–266  
-**Purpose:** Floats above every 3rd tile in a chain to signal an upcoming upgrade.
+**Size:** 72 × 72 px  
+**Export:** 1× and 2× (144 × 144 px), transparent background  
+**Location:** `src/textures.js` lines 238–266, spawned in `src/GameScene.js`
 
-### Visual
-A bright starburst / sparkle icon. Soft radial glow halo (yellow → transparent), 10-pointed
-star body in yellow-gold, white highlight center dot.
+**Purpose:** A floating indicator that appears above every 3rd tile in an active chain,
+signaling that an upgrade is about to occur when the chain is collected. A small preview
+of the upgraded resource appears alongside it.
 
-### States & Animations
-| State | Description |
-|-------|-------------|
-| **Idle sway** | Gentle ±10° rock back and forth continuously, 950 ms yoyo, Sine.InOut |
-| **Pop-in** | Spawns from scale 0 → 0.72, angle −20° → +15°, 320 ms, Back.Out bounce |
-| **With resource preview** | Small tile icon appears next to star showing what the upgrade will produce; fades in 260 ms after pop |
-| **Dismiss** | Vanishes instantly when chain is cancelled or collected |
-
----
-
-## 3. SEASON ICONS
-
-**Size:** 42 × 42 px (export at 2× = 84 × 84 px)  
-**Location in code:** `src/textures.js` lines 268–329  
-**Purpose:** Displayed in the HUD season bar and season transition modal.
-
-| Key | Season | Icon Description | Color |
-|-----|--------|-----------------|-------|
-| `season_flower` | Spring | 6-petal flower, white petals, yellow center | `#ffd43b` center |
-| `season_sun` | Summer | Sun disc with 8 radiating rays | `#ffd34c` body, `#f1a91f` rays |
-| `season_leaf` | Autumn | Single leaf on a short stem | `#d97a2b` leaf, `#8b4a12` stem |
-| `season_snow` | Winter | 6-arm snowflake | `#eefbff` white-blue |
-
-### States
-These are static icons — no animation states required. They appear in the HUD as small
-badges and in the season modal at 48 px display size.
+| State / Animation | Behavior |
+|-------------------|----------|
+| **Pop-in** | Spawns at scale 0, angle −20°; animates to scale 0.72, angle +15°; 320 ms, Back.Out easing |
+| **Idle sway** | Continuously rocks ±10° after spawning; 950 ms yoyo loop, Sine.InOut |
+| **Resource preview** | A miniature tile icon (scale 0.32×) fades in adjacent to the star 110 ms after pop-in, showing what resource the upgrade will produce; 260 ms, Back.Out |
+| **Dismiss** | Disappears instantly when chain is cancelled or collected |
 
 ---
 
-## 4. BOARD & BACKGROUND
+### 1.3 Board Background
 
-### 4.1 Board Background
+**Location:** `src/GameScene.js` lines 137–166  
+**Purpose:** Full-viewport background visible behind and around the board during gameplay.
 
-**Location in code:** `src/GameScene.js` lines 137–166  
-**Purpose:** Full viewport background behind the game board.
+There are **5 variants**: one per season for the Farm biome, and one fixed variant for
+the Mine biome (Mine has no seasonal visual change).
 
-| Variant | Color | Notes |
-|---------|-------|-------|
-| Spring | `#7dbd48` | Bright grass green |
-| Summer | `#8fca45` | Slightly lighter green |
-| Autumn | `#b77b3a` | Warm brown-orange |
-| Winter | `#78aaca` | Cool blue-gray |
-| Mine (all seasons) | `#31404a` | Dark slate, no seasonal variation |
+| Variant | Condition |
+|---------|-----------|
+| Spring background | Farm biome, turns 1–8 of the year |
+| Summer background | Farm biome, turns 9–16 |
+| Autumn background | Farm biome, turns 17–24 |
+| Winter background | Farm biome, turns 25–32 |
+| Mine background | Mine biome active, any season |
 
-The background can be a flat color or a subtle full-screen illustration (sky gradient, distant
-hills, etc.) — anything that does not compete with the board tiles.
-
-### 4.2 Board Frame
-
-**Location in code:** `src/GameScene.js` lines 137–166  
-**Purpose:** The rounded-rectangle "dirt" border that surrounds the 6×7 tile grid.
-
-| Variant | Fill Color | Notes |
-|---------|-----------|-------|
-| Farm | `#6d4a2f` | Rich soil / earth brown |
-| Mine | `#242526` | Dark stone / charcoal |
-
-Dimensions: fits exactly around the 6×7 grid (444 × 518 px at 74 px tiles) with ~14 px padding
-on each side. Border radius: ~16 px.
-
-### 4.3 Decorative Side Leaves
-
-**Location in code:** `src/GameScene.js` lines 151–158  
-**Purpose:** Organic decorations on the left and right sides of the board frame (Farm biome only).
-Repeating elliptical leaf shapes, season accent color, ~55% opacity, alternating ±25° angle.
-
-Not needed for Mine biome.
+The background transitions instantly when the season changes.
 
 ---
 
-## 5. PATH DRAWING (Drag Chain Visuals)
+### 1.4 Board Frame
 
-These are runtime-drawn graphics (not pre-baked textures). The art team needs to define the
-look; engineering will implement it in Canvas/Phaser graphics calls.
+**Location:** `src/GameScene.js` lines 137–166  
+**Purpose:** A decorative border that surrounds the 6×7 tile grid. Currently a plain
+rounded rectangle.
 
-| Element | Current Look | Required Look |
-|---------|-------------|--------------|
-| **Path line** | 3-layer: thick yellow glow (22 px) + orange core (9 px) + white highlight (3 px) | Glowing rope or energy ribbon connecting selected tiles |
-| **Node dot** | 3-layer circle: outer glow + orange core + white center | Glowing orb at each tile center on the path |
-| **Expand ring burst** | Yellow circle expanding outward on tile-add | Light pulse ring / ripple on tile-add |
+**Logical dimensions:** the grid itself is 444 × 518 px (6 × 74 = 444, 7 × 74 = 518);
+the frame adds ~14 px of padding on all sides, giving a total frame area of ~472 × 546 px.
 
-### Path Animations
-| Animation | Description |
-|-----------|-------------|
-| **Segment grow** | Each new line segment draws itself from the previous tile to the new one, 160 ms, Quad.Out |
-| **Line pulse** | Entire path alpha oscillates 0.78 → 1.0 in a breathing loop, 680 ms yoyo |
-| **Ring burst** | Expanding ring at new tile position, fades out over 340 ms |
+**Variants:**
 
----
+| Variant | Condition |
+|---------|-----------|
+| Farm frame | Farm biome active |
+| Mine frame | Mine biome active |
 
-## 6. FLOATER TEXT (Resource Gain Popup)
-
-**Location in code:** `src/GameScene.js` lines 521–526  
-**Purpose:** "+3 Wheat" style popup that rises above the board when a chain is collected.
-
-| Property | Value |
-|----------|-------|
-| Font | Bold, 22 px (at 1× dpr) |
-| Color | `#ffd248` yellow |
-| Stroke | Black, 5 px |
-
-### Animation
-1. Pops in: scale 0.7 → 1.0, 120 ms, Back.Out
-2. Floats up: moves 58 px upward while fading to invisible, 780 ms, starting 120 ms after pop
-3. Destroys itself on completion
+The frame can be a 9-slice / stretchable asset.
 
 ---
 
-## 7. CHAIN BADGE (HUD Chain Counter)
+### 1.5 Board Decorations (Farm Only)
 
-**Location in code:** `src/GameScene.js` lines 479–517  
-**Purpose:** Displays "chain × 4" or "chain × 6  +2★" above the board during a drag.
+**Location:** `src/GameScene.js` lines 151–158  
+**Purpose:** Organic decorative elements rendered on either side of the board frame when
+there is enough horizontal space. Currently repeating ellipses colored by season accent.
+Not present in Mine biome.
 
-| Property | Value |
-|----------|-------|
-| Background | Dark brown `#2b2218`, 90% opacity |
-| Border | Orange `#ffd248`, 2 px |
-| Font | Bold, 14 px, color `#ffd248` |
-| Shape | Pill / rounded rectangle, 16 px radius |
-
-No special animation. Appears while dragging, disappears when chain ends.
+These are optional embellishments flanking the frame — the artist can define what they
+should be.
 
 ---
 
-## 8. UI PANELS (React / CSS — no Phaser textures)
+### 1.6 Drag Chain Visuals
 
-These are implemented in CSS. The art team provides the design system colors and any
-decorative image assets (e.g., panel borders, badges). No sprite sheets needed.
+These are drawn at runtime directly onto Phaser graphics objects (not pre-baked textures).
+The artist defines the visual language; engineering will implement it.
 
-### 8.1 HUD Top Bar
+| Element | Role | Current Implementation |
+|---------|------|----------------------|
+| **Path line** | Connects each tile in the chain with a continuous line | Three-layer line: wide soft outer glow + medium core + thin highlight; 9–22 px total width |
+| **Node dot** | Marks each tile's center point on the path | Three concentric circles: glow ring, main dot, inner highlight; 7 px radius |
+| **Expand ring burst** | Pulse effect at the moment a tile is added | Circle that expands outward from the tile center and fades; 340 ms, Quad.Out |
 
-| Element | Description |
-|---------|-------------|
-| **Menu button** | Small square button "≡", background `#f6efe0`, border `#b28b62` |
-| **Season bar** | Horizontal bar showing season icon + name, effect text, turn dots, turns remaining |
-| **Turn dots** | 2.5 px circles — filled (season color), current (orange glow ring), empty (white with border) |
-| **XP bar** | Gradient fill `#ff8b25` → `#ffb347`, level circle badge (red `#bb3b2f`) |
+**Path animations:**
 
-### 8.2 Side Panel (Tools & Orders)
-
-| Element | Description |
-|---------|-------------|
-| **Tool buttons** | Grid of 2×N buttons, background `#9a724d`, hover `#b8845a`, border `#e6c49a` |
-| **Tool badge counts** | Small pill top-right of button, dark bg `#2b2218`, border `#f7e2b6` |
-| **Order buttons** | Full-width rows; ready state: green `#91bf24`; not-ready: dark `#4a2e18` |
-| **Biome switcher** | Row of buttons; active: `#ffc239`; locked: `#6b4d34` with lock icon; inactive: `#6b4d34` |
-| **Chain info** | Appears during drag in landscape, same style as Chain Badge above |
-
-### 8.3 Inventory Grid
-
-| Element | Description |
-|---------|-------------|
-| **Cell container** | Rounded, background `#b68d64`, border `#e6c49a` |
-| **Icon square** | Colored square (resource color), white emoji glyph centered, slight drop shadow |
-| **Count text** | White bold number, drop shadow |
-
-### 8.4 Bottom Navigation
-
-| Element | Description |
-|---------|-------------|
-| **Nav bar** | Dark `#2b2218`, border `#f7e2b6`, pill shape |
-| **Active tab** | Background `#d6612a`, white text |
-| **Inactive tab** | Transparent background, `#f7e2b6` text |
-
-### 8.5 Mobile Dock (Portrait)
-
-| Element | Description |
-|---------|-------------|
-| **Dock bar** | Dark `#3a2715`, top border `#b28b62` |
-| **Tool / Orders buttons** | Large tap targets with emoji icon + text label |
-| **Badge** | Red `#d6612a` (tools) or green `#91bf24` (orders) dot with count |
-| **Bottom sheet** | Slides up from bottom, rounded top corners, drag handle bar |
+| Animation | Behavior |
+|-----------|----------|
+| **Segment grow** | Each new line segment draws itself from the previous tile to the current one; 160 ms, Quad.Out |
+| **Line pulse** | Entire path breathes (opacity 0.78 → 1.0 yoyo loop); 680 ms, Sine.InOut |
+| **Ring burst** | Radius grows ~4×, alpha 0.9 → 0; 340 ms, Quad.Out |
 
 ---
 
-## 9. TOWN VIEW
+### 1.7 Chain Badge
 
-**Location in code:** `src/ui.jsx` lines 555–646  
-**Purpose:** The main town overview screen between gameplay, showing buildings that can be
-purchased or upgraded.
+**Location:** `src/GameScene.js` lines 479–517  
+**Purpose:** A small floating badge above the board that appears during a drag and displays
+the current chain length and any pending upgrade count. Example text: `chain × 5` or
+`chain × 6   +2★`. In landscape layouts it appears inside the side panel instead.
 
-### 9.1 Background Scene
-
-| Element | Description |
-|---------|-------------|
-| **Sky gradient** | Farm: `#b5d98c` → `#d4c97a` → `#6b9c3e`; Mine: `#7a8a96` → `#9a8878` → `#4a4e52`; Home: `#a8c5d6` → `#c5b48b` → `#7e9b5a` |
-| **Sun / light source** | Circular glow, 64×64 px, color varies by biome |
-| **Clouds** | Two rounded CSS divs, white semi-transparent, fixed positions |
-| **SVG landscape** | Hills with road running through center, drawn as SVG paths |
-
-The landscape is a good candidate for a real illustrated background image per biome.
-
-### 9.2 Buildings
-
-8 buildings total. Each needs:
-
-| Element | Description |
-|---------|-------------|
-| **Roof** | Triangle clip, dark brown `#5a2e15` |
-| **Body** | Colored rectangle, border and drop shadow |
-| **Label** | Building name in white bold, centered |
-| **Cost label** | Floats above building, semi-transparent dark bg |
-| **Cost text colors** | Locked: `#f7d572` yellow; Affordable: `#9bdb6a` green; Not affordable: `#f7d572` yellow |
-
-| Building | Color | Description |
-|----------|-------|-------------|
-| Hearth | `#c87a40` | Starting building, central |
-| Mill | `#a0603c` | Grain milling |
-| Bakery | `#c09060` | Bread production |
-| Inn | `#8a6048` | Tavern / rest |
-| Granary | `#b0784a` | Food storage |
-| Larder | `#986040` | Preserve storage |
-| Forge | `#707880` | Metal working |
-| Caravan | `#8a6a50` | Trade |
+No entrance/exit animation. Appears and disappears with the drag gesture.
 
 ---
 
-## 10. MODALS
+### 1.8 Resource Gain Floater
 
-### 10.1 Season Transition Modal
+**Location:** `src/GameScene.js` lines 521–526  
+**Purpose:** Text that pops up at the collection point and floats upward when a chain is
+collected. Format: `+8 Wheat` or `+6 Wheat  ★2`. Phaser text object, not a texture.
 
-| Element | Description |
-|---------|-------------|
-| **Container** | Parchment `#f4ecd8`, border `#b28b62`, rounded 20 px |
-| **Season icon** | Large season icon (48 px display), one of the 4 season icons |
-| **Title** | Bold, large, color `#744d2e` |
-| **Description** | Italic, color `#6a4b31` |
-| **Effect badge** | Pill shape, orange tint, border `#d6612a` |
-| **Stats grid** | 4-column grid showing game stats in large bold numbers |
-| **Continue button** | Green `#91bf24`, white border, white text, rounded |
+| Animation step | Behavior |
+|----------------|----------|
+| Pop-in | Scale 0.7 → 1.0; 120 ms, Back.Out |
+| Float | Moves 58 px upward while fading to transparent; 780 ms, starting 120 ms after pop |
+| Destroy | Removed at end of float |
+
+**Note on typography:** this uses the game's display font; see Part 8 (Typography).
+
+---
+
+## Part 2: Screens
+
+The game has 8 distinct view screens. The bottom navigation (Part 5.2) switches between them.
+
+---
+
+### 2.1 Board Screen
+
+**Trigger:** Default starting screen; also accessible via Board button in nav  
+**Canvas:** Phaser game canvas occupies the main area  
+**Surrounding UI:** HUD top bar (Part 5.1), side panel (Part 5.3, landscape only),
+mobile dock (Part 5.4, portrait only)
+
+This is the core gameplay screen. See Part 1 for all board asset details.
+
+---
+
+### 2.2 Town Screen
+
+**Trigger:** Game loads here on first run; accessible via Town button in nav  
+**Location:** `src/ui.jsx` lines 555–646
+
+**Purpose:** The town overview where the player sees and purchases buildings. Buildings
+are positioned in a 2D scene illustration.
+
+#### Scene / Background
+
+The town scene is a stylized 2D landscape viewed from a slight angle, with buildings
+positioned on it. There are 3 location variants (the player travels between them via the
+Map screen):
+
+| Location | Description |
+|----------|-------------|
+| **Hearthwood Vale** | The starting farm village |
+| **Ironridge Camp** | The mine settlement, unlocked at level 2 |
+| **Home** | A neutral hub location |
+
+Each location needs a full background illustration that fits the game's design space
+(1100 × 600 px logical).
+
+#### Buildings
+
+8 buildings, each positioned at a specific coordinate in the scene. Buildings have 3
+construction states and an optional "active station" state:
+
+| State | Condition | Visual |
+|-------|-----------|--------|
+| **Built** | Player has constructed it | Appears as a real building in the scene |
+| **Unbuilt — affordable** | Not built, player has enough coins/resources | Shows cost; interactable |
+| **Unbuilt — unaffordable** | Not built, player lacks resources | Shows cost; indicates shortfall |
+| **Locked** | Player level requirement not met | Shows level requirement; non-interactable |
+
+| Building | Starting State | Level Req | Crafting Station? |
+|----------|---------------|-----------|-------------------|
+| **Hearth** | Pre-built | — | No |
+| **Mill** | Must build | 1 | No |
+| **Bakery** | Must build | 1 | Yes |
+| **Inn** | Must build | 2 | No |
+| **Granary** | Must build | 1 | No |
+| **Larder** | Must build | 3 | Yes |
+| **Forge** | Must build | 8 | Yes |
+| **Caravan Post** | Must build | 8 | No |
+
+Each building occupies a specific footprint in the scene. Approximate widths range from
+80 px (small) to 160 px (large).
+
+---
+
+### 2.3 Inventory Screen
+
+**Trigger:** Inventory button in nav  
+**Location:** `src/ui.jsx`
+
+**Purpose:** Displays all resources and crafted items the player currently holds, with
+counts.
+
+**Contents:**
+- Two sections: Resources and Crafted Items
+- Each entry: an icon for the resource/item, its name, and current count
+- Empty state when no items
+
+Resources and items share the same icon style as the board tile icons (see 1.1).
+
+---
+
+### 2.4 Quests & Almanac Screen
+
+**Trigger:** Quests button in nav  
+**Location:** `src/ui.jsx`
+
+**Purpose:** Two-tab screen for daily quests and a long-term progression track (the Almanac).
+
+#### Daily Quests Tab
+
+6 quest slots. Each quest card shows:
+- Quest description text
+- Coin + XP reward
+- Progress bar + counter (e.g., `30/30`)
+- Claim button
+
+| Quest card state | Condition |
+|-----------------|-----------|
+| In progress | Incomplete |
+| Claimable | Goal met, not yet collected |
+| Claimed | Already collected this season |
+
+Quests reset each season.
+
+#### Almanac Tab
+
+A horizontal progression strip of 10 reward tiers. Shows overall XP progress toward the
+next tier.
+
+Each tier card:
+- Tier number
+- Reward icon and description
+- Claim button
+
+| Tier card state | Condition |
+|----------------|-----------|
+| Locked | XP not yet reached |
+| Claimable | XP reached, not collected |
+| Claimed | Already collected |
+
+---
+
+### 2.5 Crafting Screen
+
+**Trigger:** Craft button in nav, or tapping a crafting station building in Town  
+**Location:** `src/ui.jsx`
+
+**Purpose:** Combine collected resources to produce crafted items that earn coins.
+Three crafting stations, each unlocked by building the corresponding building.
+
+**Station tabs:** Bakery · Larder · Forge
+
+| Station tab state | Condition |
+|------------------|-----------|
+| Active | Currently selected |
+| Inactive (built) | Built but not selected |
+| Locked | Building not yet constructed |
+
+#### Recipes
+
+12 recipes spread across the three stations. Each recipe card shows:
+- Recipe name
+- Tier badge (Tier 2 or Tier 3 recipes have a badge; Tier 1 do not)
+- Input requirements (each ingredient shown as a chip with resource name and quantity)
+- Coin reward
+- Craft button
+- Times-crafted count (shown if > 0)
+
+| Recipe card state | Condition |
+|------------------|-----------|
+| Craftable | All inputs present, station built, level met |
+| Missing inputs | Some ingredients insufficient |
+| Station not built | Building not constructed |
+| Level locked | Player level too low |
+
+**Full recipe list:**
+
+| Recipe | Station | Inputs | Tier |
+|--------|---------|--------|------|
+| Bread Loaf | Bakery | flour×3 + egg×1 | 1 |
+| Honey Roll | Bakery | flour×2 + egg×1 + jam×1 | 1 |
+| Harvest Pie | Bakery | flour×2 + jam×1 + egg×1 | 1 |
+| Preserve | Larder | jam×2 + egg×1 | 1 |
+| Tincture | Larder | berry×3 + jam×1 | 1 |
+| Hinge | Forge | ingot×2 + coke×1 | 2 |
+| Cobble Path | Forge | stone×5 + plank×2 | 1 |
+| Lantern | Forge | ingot×1 + coke×1 + plank×1 | 2 |
+| Gold Ring | Forge | gold×1 + ingot×2 | 2 |
+| Gem Crown | Forge | cutgem×1 + gold×2 | 2 |
+| Iron Frame | Forge | beam×2 + ingot×1 | 3 |
+| Stonework | Forge | block×2 + coke×1 | 3 |
+
+---
+
+### 2.6 Achievements Screen
+
+**Trigger:** Trophies option in menu modal  
+**Location:** `src/ui.jsx`
+
+**Purpose:** Tracks 23 milestones across 7 categories. Two tabs: Trophies and Collection.
+
+#### Trophies Tab
+
+Cards grouped by category (Harvest, Chains, Orders, Buildings, Seasons, Resources, Crafting).
+
+Each trophy card:
+- Icon (large)
+- Name + description
+- Progress bar + counter
+- Reward description
+- Claim button (when complete)
+
+| Trophy card state | Condition |
+|------------------|-----------|
+| Locked | Not yet progressed |
+| In progress | Partially met |
+| Claimable | Goal met, reward not collected |
+| Claimed | Reward already collected |
+
+#### Collection Tab
+
+A grid of every resource (Farm and Mine). Shows how many of each the player has ever
+collected.
+
+| Resource chip state | Condition |
+|--------------------|-----------|
+| Undiscovered | Never harvested; icon hidden, shows `?` |
+| Discovered | At least 1 ever harvested; shows icon and lifetime count |
+
+Footer shows total discovered count and total resources ever harvested.
+
+---
+
+### 2.7 Orders Screen
+
+**Trigger:** Orders button in nav  
+**Location:** `src/ui.jsx`
+
+**Purpose:** Lists active NPC delivery orders. The player collects the right resources
+or crafted items and delivers them to earn coins.
+
+Each order card shows:
+- NPC avatar and name (see Part 6 for NPCs)
+- Request description
+- Coin reward
+- Progress bar and counter
+- Delivery prompt when ready
+
+| Order card state | Condition |
+|-----------------|-----------|
+| Pending | Player does not yet have enough |
+| Ready | Player has all required items; card is tappable |
+| Crafted (partial) | Items needed are craftable but not yet crafted |
+
+Orders can be for raw resources or for crafted recipes.
+
+---
+
+### 2.8 Cartography (Map) Screen
+
+**Trigger:** Map button in nav  
+**Location:** `src/ui.jsx`
+
+**Purpose:** A map of locations the player can travel between. The player's current
+location determines which biome is active on the board.
+
+#### Map
+
+Displayed as an SVG (100 × 100 viewBox, rendered to fill the panel). Shows 9 nodes
+connected by 11 edges.
+
+**Node states:**
+
+| State | Condition |
+|-------|-----------|
+| Current | Player is here; pulsing ring animation |
+| Discovered | Player has visited; shows name and location kind |
+| Undiscovered | Not yet visited; shows `?`, reduced opacity |
+| Selected (non-current) | Player has tapped it in this session |
+
+**Node types** (each type needs a distinct visual treatment):
+
+| Type | Description |
+|------|-------------|
+| home | Hub settlement |
+| farm | Farm biome location |
+| mine | Mine biome location |
+| festival | Special event location |
+| event | Scripted event node |
+| boss | Boss challenge node |
+
+**Edge states:**
+
+| State | Condition |
+|-------|-----------|
+| Known | Both connected nodes have been discovered |
+| Partially known | One or both nodes undiscovered; reduced opacity |
+
+#### Side Panel (node detail)
+
+Appears when a node is tapped. Shows:
+- Node name and type label
+- Level requirement
+- Status message and/or Travel button
+
+| Travel button state | Condition |
+|--------------------|-----------|
+| Enabled | Node is adjacent to current, level met |
+| Locked | Level requirement not met |
+| Not adjacent | Not reachable from current node |
+| Current | "You are here" |
+
+**9 map nodes:**
+
+| Node | Type | Level Req |
+|------|------|-----------|
+| Hearthwood Vale | home | 1 |
+| Greenmeadow | farm | 1 |
+| Wild Orchard | farm | 2 |
+| The Crossroads | event | 2 |
+| Cracked Quarry | mine | 2 |
+| Lanternlit Caves | mine | 4 |
+| Drifter's Fairground | festival | 3 |
+| Black Forge | mine | 5 |
+| The Pit | boss | 6 |
+
+---
+
+## Part 3: Modals and Overlays
+
+Modals appear over the current screen. All have a semi-transparent backdrop behind them.
+
+---
+
+### 3.1 Menu / Settings Modal
+
+**Trigger:** Menu button (≡) in the HUD  
+**Location:** `src/ui.jsx`
+
+A multi-section modal with a main menu, settings toggles, and an about section.
+
+#### Main Menu
+
+Buttons:
+- Resume (close modal)
+- Go to Town (with inline confirmation if on the board — see below)
+- Show Tutorial
+- Go Fullscreen
+- Settings (switches to settings section)
+- About (switches to about section)
+- Trophies (opens achievements screen)
+- Reset Save (with inline confirmation)
+
+**Confirmation sub-states:** "Go to Town" and "Reset Save" each have a secondary
+confirmation step that appears inline, replacing the button area with a warning message
+and Confirm / Cancel buttons.
+
+#### Settings Section
+
+Toggle rows for:
+- Sound Effects
+- Music
+- Haptics
+- Reduced Motion
+- Color-Blind Mode
+
+Each row: label + on/off toggle switch.
+
+#### About Section
+
+Static text panel. Contains a hidden 5-tap easter egg on the title icon.
+
+Dev-only buttons (visible in development builds):
+- Trigger Boss
+- +100 All Items
+- +1000 Gold
+- Reset Game
+
+---
+
+### 3.2 Season Transition Modal
+
+**Trigger:** Automatically when the player exhausts all 8 turns in a season  
+**Location:** `src/ui.jsx` lines 650–683
+
+**Purpose:** Summarises the completed season and announces the incoming season.
+The player must tap the button to continue.
+
+**Contents:**
+- Large season icon for the incoming season (one of the 4 season icons; see Part 4.2)
+- Title: "[Previous Season] ends"
+- Flavour text naming the location
+- Season effect badge describing the incoming season's gameplay modifier
+- Stats grid (4 values): resources harvested, upgrades made, orders delivered, coins earned
+- End-of-season bonus description
+- Continue button
 
 **Entrance animation:** fade in, 200 ms ease-out.
 
-### 10.2 Townsfolk / NPC Modal
+---
 
-| Element | Description |
-|---------|-------------|
-| **Container** | Parchment `#f4ecd8`, border `#b28b62`, rounded 20 px |
-| **Header** | Title + close button (✕) |
-| **Tabs** | Active: dark brown `#8a4a26`; Inactive: parchment `#f7ead8` |
-| **Content** | Scrollable area |
+### 3.3 Boss Challenge Modal
 
-### 10.3 Tool Long-Press Modal
+**Trigger:** A boss node is entered on the map  
+**Location:** `src/ui.jsx`
 
-| Element | Description |
-|---------|-------------|
-| **Overlay** | Black 60% opacity backdrop |
-| **Card** | Dark brown `#3d2310`, border `#e6c49a`, rounded 16 px |
-| **Icon** | 36 px emoji |
-| **Description text** | White/80 opacity |
-| **Close button** | `#9a724d`, hover `#b8845a` |
+**Purpose:** Presents a time-limited challenge. The player must meet a goal within a
+set number of turns. Can be accepted or declined.
+
+#### Expanded view
+
+- Boss character name and description
+- Goal text
+- Progress bar with counter and percentage
+- Turns remaining counter
+- Weather condition badge (if active — a mid-run modifier)
+- Accept button (primary)
+- Decline button (secondary)
+
+#### Minimised view
+
+Once accepted, collapses to a small persistent card in a corner of the screen:
+- Boss name
+- Progress summary
+- Mini progress bar
+- Turns remaining
+- Weather badge (if active)
+- Close/expand button
+
+| Weather badge state | Condition |
+|--------------------|-----------|
+| Not shown | No active weather modifier |
+| Shown | Active modifier; color and icon vary by weather type |
 
 ---
 
-## 11. NPC SPEECH BUBBLE
+### 3.4 Townsfolk Modal
 
-**Location in code:** `src/ui.jsx` lines 696–718  
-**Purpose:** Brief speech bubble from an NPC character that appears above the bottom nav.
+**Trigger:** Townsfolk button in nav  
+**Location:** `src/ui.jsx` lines 478–512
 
-| Element | Description |
-|---------|-------------|
-| **Bubble container** | Parchment `#f4ecd8`, border `#5a3a20`, rounded 16 px, drop shadow |
-| **Avatar circle** | 40×40 px, NPC-specific color, white border, first-letter initial |
-| **NPC name** | Bold, 12 px, color `#a8431a` |
-| **Message text** | 13 px, color `#2b2218` |
+**Purpose:** View and interact with the 5 NPCs. Three tabs.
 
-**Entrance animation:** `bubblein` keyframe — scale from small + bounce, 340 ms
-`cubic-bezier(.34,1.56,.64,1)`.
+#### Mood Tab
 
----
+One card per NPC showing:
+- NPC avatar (see Part 6)
+- Name and role
+- Bond level displayed as a row of 10 hearts (filled / half / empty)
+- Current mood (with emoji)
+- Order reward modifier based on mood
+- Gift button — opens inline gift picker
 
-## 12. NPC AVATARS
+| Heart fill states | Meaning |
+|------------------|---------|
+| Full hearts | High bond |
+| Half hearts | Medium bond |
+| Empty hearts | Low bond |
 
-Each NPC in the game has an avatar circle. Currently just a colored circle with a letter initial.
-These should become small portrait illustrations or stylized character icons.
+**Mood states:**
+| Mood | Emoji |
+|------|-------|
+| Happy | 😊 |
+| Neutral | 😐 |
+| Sad | 😠 |
 
-NPC list lives in `src/constants.js` (NPCS array). Each NPC has a name and a color. They
-appear in:
-- Speech bubble avatar (40×40 px display)
-- Townsfolk modal tab content
+**Gift picker** (inline, opens below NPC card):
+- Grid of all items currently in inventory
+- Each item shows its icon and name
+- Favourite gift: marked with gold star badge
+- Disliked gift: marked with red X badge
+- Empty state: text message if inventory empty
 
-Suggested size: **64 × 64 px** icon per NPC, circular crop.
+#### Apprentices Tab
 
----
+See 3.5.
 
-## 13. CURSOR
+#### Orders Tab
 
-**Location in code:** `src/TileObj.js` (useHandCursor: true on all tiles)
-
-| State | Description |
-|-------|-------------|
-| **Default** | System arrow cursor |
-| **Over tile** | Hand / pointer cursor (system default or custom) |
-| **Dragging** | Currently same as hover; could be a "grabbing" hand custom cursor |
-
----
-
-## 14. PARTICLES / VFX
-
-Currently none are implemented as particle systems — all effects are tween-based. Future
-particle assets that should be added:
-
-| Effect | Trigger | Description |
-|--------|---------|-------------|
-| **Collect burst** | Chain collected | Small resource-colored sparkles bursting outward from collected tiles |
-| **Upgrade sparkle** | Upgrade occurs | Gold/white sparkle burst at the upgraded tile |
-| **Level up** | XP fills bar | Full-screen light flash + confetti-style particles |
-| **Season change** | New season starts | Seasonal particles (petals, sun rays, falling leaves, snowflakes) drift across screen |
+Compact version of the Orders screen (see 2.7).
 
 ---
 
-## 15. AUDIO ASSETS
+### 3.5 Apprentices Modal
 
-All audio is currently Web Audio API synthesized. These are the sounds that need real audio files:
+**Trigger:** Apprentices tab in Townsfolk modal  
+**Location:** `src/ui.jsx`
 
-| Key | Trigger | Current Sound | Suggested Replacement |
-|-----|---------|--------------|----------------------|
-| `chainStart` | First tile tapped to begin chain | Rising bleep, 80 ms | Soft wooden click or chime |
-| `chainCollect` | Chain successfully completed | Triple bleep arpeggio | Satisfying collect chime (3-note) |
-| `upgrade` | Tile upgrades in chain | Sparkle sweep 880→1318 Hz | Magical sparkle / shine sound |
-| `seasonTurn` | Season transitions | Warm bell 220 Hz, 400 ms | Bell toll or nature sound transition |
-| `npcBubble` | NPC speech bubble appears | Soft pop | Character "bloop" or voice chirp |
-| `levelUp` | Player levels up | Major chord arpeggio | Fanfare or triumphant short melody |
-| `coinSpend` | Coins spent on building | Coin shimmer | Coin clink or purchase confirm |
-| `error` | Invalid action | Descending buzz | Short negative click |
+**Purpose:** Hire NPCs to passively produce resources each season.
+
+Two sections:
+
+**On the Payroll** — currently hired apprentices. Each card:
+- Apprentice avatar
+- Name and role
+- Resource production list (what they produce per season)
+- Wage cost per season
+- Fire button
+
+**Available to Hire** — unhired apprentices. Each card:
+- Apprentice avatar
+- Name and role
+- Production list
+- Hire cost
+- Requirement indicator
+- Hire button
+
+| Hire button state | Condition |
+|------------------|-----------|
+| Enabled | Affordable + requirements met |
+| Unaffordable | Not enough coins |
+| Locked | Requirement not met (building or level) |
+
+**Requirement states** (inline chip):
+- Met: positive indicator
+- Unmet: negative indicator
+
+**6 apprentices:**
+
+| Name | Role | Produces | Wage | Hire Cost | Requirement |
+|------|------|---------|------|-----------|-------------|
+| Hilda | Farmhand | hay×8, log×4 | 30◉/season | 200◉ | Granary built |
+| Dren | Miner | stone×6, ore×3 | 50◉/season | 350◉ | Level 2 |
+| Pip | Forager | berry×5, egg×2 | 25◉/season | 150◉ | Inn built |
+| Osric | Smith Apprentice | ingot×1, plank×4 | 80◉/season | 500◉ | Forge built or Level 4 |
+| Wila | Cellarer | jam×2, flour×3 | 40◉/season | 300◉ | Bakery built |
+| Tuck | Lookout | coins×25 | 20◉/season | 100◉ | Inn built |
 
 ---
 
-## 16. FONTS
+### 3.6 Tutorial Modal
 
-| Usage | Current | Notes |
-|-------|---------|-------|
-| Tile glyph icons (upper-tier) | Newsreader / Times New Roman serif, 36 px | Could be replaced by actual icon sprites |
-| HUD text | Arial / system sans | Should be a themed font (e.g., a chunky pixel or hand-lettered style) |
-| Floater text | Arial bold | Same themed font as HUD |
-| UI labels | System sans (Tailwind defaults) | Should match HUD font |
+**Trigger:** Automatically on first game load; also via "Show Tutorial" in menu  
+**Location:** `src/ui.jsx` (alwaysMounted)
 
----
+**Purpose:** 6-step guided introduction to the game. NPC characters deliver each step.
+Can be skipped at any time.
 
-## 17. FULL ASSET COUNT SUMMARY
+The modal can appear as a center overlay or as a corner toast depending on the step.
 
-| Category | Count | Notes |
-|----------|-------|-------|
-| Tile textures (base + selected) | 20 resources × 2 = **40** | Farm: 10 resources, Mine: 10 resources |
-| Spark / upgrade star | **1** | |
-| Season icons | **4** | |
-| Board frame (Farm / Mine) | **2** | Could be 9-slice PNG or vector |
-| Season backgrounds | **4** Farm + **1** Mine = **5** | Or one per season per biome = 8 |
-| NPC avatars | **TBD** (check constants.js for full NPC list) | |
-| Building illustrations | **8** | One per building |
-| Audio SFX | **8** | |
-| Font | **1** (or 2 if separate display/body) | |
-| **Total textures** | **~60** | Excluding audio and fonts |
+Steps involve:
+1. Introduction to dragging tiles
+2. Forming chains of matching tiles
+3. The upgrade mechanic (every 3rd tile)
+4. Delivering orders
+5. Biomes
+6. Seasonal modifiers
+
+Each step shows an NPC avatar, NPC name, and instructional text. Navigation: next/skip.
 
 ---
 
-## 18. EXPORT SPECIFICATIONS
+### 3.7 NPC Speech Bubble
 
-| Asset Type | Base Size | Export at | Format |
-|-----------|-----------|-----------|--------|
-| Tile textures | 74 × 74 px | 1× and 2× | PNG, transparent background |
-| Spark | 72 × 72 px | 1× and 2× | PNG, transparent background |
-| Season icons | 42 × 42 px | 1× and 2× | PNG, transparent background |
-| Board frame | Fits 444 × 518 px + 28 px padding | 1× and 2× | PNG or 9-slice PNG |
-| Background scenes | 960 × 640 px (desktop) | 1× | PNG or JPG |
-| NPC avatars | 64 × 64 px | 1× and 2× | PNG, circular or square with transparency |
-| Building icons | 80–160 px wide (varies by building.w) | 1× and 2× | PNG, transparent background |
-| Audio SFX | n/a | — | MP3 + OGG (for browser compatibility) |
+**Trigger:** Various game events (season changes, level-ups, reaching milestones, etc.)  
+**Auto-dismiss:** After a configurable duration (default 1800 ms)  
+**Location:** `src/ui.jsx` lines 696–718
 
-All tile and icon sprites must have **transparent backgrounds**. Tile background shape
-(rounded rectangle) should be part of the sprite itself so the shadow and depth are
-baked in.
+**Purpose:** A brief contextual message from one of the NPCs. Appears bottom-center,
+above the nav bar.
+
+**Contents:**
+- NPC avatar (see Part 6)
+- NPC name and role
+- Speech text (1–2 sentences)
+
+**Entrance animation:** `bubblein` — scales in with a spring overshoot;
+340 ms, `cubic-bezier(.34, 1.56, .64, 1)`.
+
+---
+
+### 3.8 Tool Detail Modal (Long-press)
+
+**Trigger:** Long-pressing a tool button (mobile) or held click (desktop)  
+**Location:** `src/ui.jsx`
+
+**Purpose:** Displays the full name and description of a tool.
+
+**Contents:**
+- Tool icon (large)
+- Tool name
+- Description text
+- Close button
+
+---
+
+### 3.9 Tool Tooltip (Hover)
+
+**Trigger:** Hovering over a tool button on desktop  
+**Location:** `src/ui.jsx`
+
+Small floating tooltip positioned above the hovered button. Contains the tool name and
+a short description. Has a downward-pointing arrow notch at the bottom edge.
+
+---
+
+## Part 4: Phaser Textures (Non-Tile)
+
+---
+
+### 4.1 Season Icons
+
+**Size:** 42 × 42 px  
+**Export:** 1× and 2× (84 × 84 px), transparent background  
+**Location:** `src/textures.js` lines 268–329  
+**Purpose:** Used in the HUD season bar (small) and season transition modal (large, ~48 px).
+
+4 icons, one per season:
+
+| Key | Season | Appears when |
+|-----|--------|-------------|
+| `season_flower` | Spring | Turns 1–8 |
+| `season_sun` | Summer | Turns 9–16 |
+| `season_leaf` | Autumn | Turns 17–24 |
+| `season_snow` | Winter | Turns 25–32 |
+
+These are static — no animation required.
+
+---
+
+## Part 5: Persistent UI
+
+These elements are always visible while the relevant screen is active.
+
+---
+
+### 5.1 HUD — Top Bar
+
+**Location:** `src/ui.jsx` lines 26–71  
+**Always visible** at the top of every screen.
+
+| Element | Description | Appears when |
+|---------|-------------|-------------|
+| **Menu button** | Opens the menu modal | Always |
+| **Season bar** | Shows current season icon, name, effect label, turn progress, turns remaining | Board screen only |
+| **Turn dots** | 8 small circles showing turn progress within current season | Board screen only |
+| **XP bar** | Progress bar toward next player level, with level number badge | Non-board screens |
+| **Coin display** | Current coin count | Non-board screens |
+| **Buildings count** | Number of buildings constructed | Non-board screens |
+
+**Turn dot states:**
+| State | Condition |
+|-------|-----------|
+| Filled | Turn already used |
+| Current | The active turn (has glow/outline) |
+| Empty | Future turn |
+
+---
+
+### 5.2 Bottom Navigation Bar
+
+**Location:** `src/ui.jsx` lines 444–476  
+**Visible on all screens** (desktop/landscape layout).
+
+7 navigation items in a horizontal pill-shaped bar:
+
+| Label | Destination | Icon |
+|-------|-------------|------|
+| Board | Board screen | ◳ |
+| Town | Town screen | ⌂ |
+| Inventory | Inventory screen | 🎒 |
+| Quests | Quests screen | 📜 |
+| Craft | Crafting screen | 🔨 |
+| Map | Cartography screen | 🗺️ |
+| Townsfolk | Townsfolk modal | 👥 |
+
+| Item state | Condition |
+|-----------|-----------|
+| Active | Current screen or modal |
+| Inactive | All others |
+| Hover | Cursor over item |
+
+---
+
+### 5.3 Side Panel (Landscape / Desktop)
+
+**Location:** `src/ui.jsx` lines 114–172  
+**Visible on the Board screen in landscape layout**, to the right of the game canvas.
+
+Contains (from top to bottom):
+- Chain badge (only visible during an active drag)
+- Tools section
+- Biome switcher
+- Orders section (compact)
+
+#### Tools Section
+
+Grid of 4 tool buttons. Each button shows:
+- Tool icon
+- Tool name
+- Count badge (number of uses remaining)
+
+**4 tools:**
+
+| Tool | Icon | Function |
+|------|------|---------|
+| Scythe (clear) | ⚔ | Clears the board, adds +5 basic resources |
+| Seedpack (basic) | + | Adds +5 basic resources instantly |
+| Lockbox (rare) | ★ | Adds +2 rare resources |
+| Reshuffle Horn (shuffle) | ↻ | Randomises all tile positions |
+
+| Tool button state | Condition |
+|------------------|-----------|
+| Active | Uses remaining > 0 |
+| Disabled | 0 uses remaining |
+| Hover | Cursor over, not disabled |
+
+#### Biome Switcher
+
+Two buttons, one per biome:
+
+| Button state | Condition |
+|-------------|-----------|
+| Active | Currently selected biome |
+| Inactive | Unselected biome, available |
+| Locked | Mine biome, player level < 2 |
+
+---
+
+### 5.4 Mobile Dock (Portrait / Small Screen)
+
+**Location:** `src/ui.jsx` lines 371–440  
+**Visible on the Board screen in portrait/small-screen layout**, as a fixed bar at the bottom.
+
+Two tap targets: Tools and Orders. Each shows a badge with a count if relevant.
+
+Tapping opens a **bottom sheet** that slides up from the bottom edge of the screen:
+- Drag handle bar at top
+- Switches between Tools content and Orders content
+
+| Bottom sheet state | Condition |
+|-------------------|-----------|
+| Closed | Default |
+| Open — Tools | Tools button tapped |
+| Open — Orders | Orders button tapped |
+
+---
+
+## Part 6: Characters / NPCs
+
+5 named NPC characters appear throughout the game: in orders, speech bubbles, the
+Townsfolk modal, the Quests screen, and as gift recipients.
+
+Each NPC needs a **portrait / avatar**. Currently a colored circle with a single
+initial letter. The avatar appears at different sizes:
+- Speech bubble: 40 × 40 px displayed
+- Townsfolk modal card: 40 × 40 px displayed
+- Compact order cards: 24 × 24 px displayed
+
+**Export size:** 64 × 64 px (1× and 2×), transparent or circular crop.
+
+| NPC | Role | Associated color (current) |
+|-----|------|--------------------------|
+| **Mira** | Baker | `#d6612a` |
+| **Old Tomas** | Beekeeper | `#c8923a` |
+| **Bram** | Smith | `#5a6973` |
+| **Sister Liss** | Physician | `#8d3a5c` |
+| **Wren** | Scout | `#4f6b3a` |
+
+The same NPCs appear as the apprenticeable characters (Hilda, Dren, Pip, Osric, Wila, Tuck
+are additional characters who appear only in the Apprentices modal — they also need avatars).
+
+---
+
+## Part 7: Audio
+
+All 8 sounds are currently synthesized via the Web Audio API. These need real recorded
+or produced audio files.
+
+**Required formats:** MP3 + OGG (for browser cross-compatibility)
+
+| Key | Trigger | Character of current synth sound |
+|-----|---------|----------------------------------|
+| `chainStart` | Player taps the first tile to begin a chain | Rising tone, 80 ms, short |
+| `chainCollect` | Chain completed and resources collected | Three-note ascending figure, ~240 ms total |
+| `upgrade` | A tile upgrades during collection | Rising sweep, 120 ms, bright |
+| `seasonTurn` | Season changes | Low bell tone, 400 ms, natural decay |
+| `npcBubble` | An NPC speech bubble appears | Short soft pop, 60 ms |
+| `levelUp` | Player gains a level | Four-note major arpeggio, ~400 ms total |
+| `coinSpend` | Coins spent to build or purchase | Short shimmer, 100 ms |
+| `error` | Invalid action attempted | Descending tone, 150 ms |
+
+**Settings:** The player can independently toggle Sound Effects and Music (music is
+currently unused). A haptic vibration (40 ms) fires alongside `chainCollect` if the
+player enables haptics.
+
+---
+
+## Part 8: Typography
+
+The game uses two text contexts: Phaser-rendered text (inside the game canvas) and
+CSS-rendered text (all React UI panels).
+
+| Context | Current font | Used for |
+|---------|-------------|---------|
+| Phaser display text | Arial bold | Floater text, chain badge, chain labels |
+| Phaser tile glyphs (upper-tier resources) | Newsreader / Times New Roman serif | Single-glyph icon on processed resource tiles |
+| CSS UI text | System sans-serif (Tailwind defaults) | All panel labels, buttons, counts, descriptions |
+
+All three contexts should use a consistent game font. The glyph on processed-resource
+tiles can remain a font glyph or become a dedicated icon sprite.
+
+---
+
+## Part 9: Cursor
+
+**Location:** `src/TileObj.js` (Phaser's `useHandCursor: true` on all tiles)
+
+| State | Condition |
+|-------|-----------|
+| Default | Over non-interactive areas |
+| Pointer / hand | Over any board tile |
+| Drag / grab | Active drag in progress (currently same as pointer) |
+
+A custom cursor is optional but would replace the browser default in all three states.
+
+---
+
+## Part 10: Export Specifications
+
+| Asset category | Logical size | Export scales | Format | Background |
+|---------------|-------------|--------------|--------|-----------|
+| Tile textures (all 20 resources × 2 states) | 74 × 74 px | 1× and 2× | PNG | Transparent |
+| Upgrade star (spark) | 72 × 72 px | 1× and 2× | PNG | Transparent |
+| Season icons (×4) | 42 × 42 px | 1× and 2× | PNG | Transparent |
+| Board frame (Farm + Mine) | ~472 × 546 px | 1× and 2× | PNG or 9-slice PNG | Transparent |
+| Board backgrounds (×5) | 960 × 640 px | 1× | PNG or JPG | Opaque |
+| Town scene backgrounds (×3) | 1100 × 600 px | 1× | PNG or JPG | Opaque |
+| Building illustrations (×8) | 80–160 px wide (varies) | 1× and 2× | PNG | Transparent |
+| NPC avatars (×5 main + ×6 apprentices) | 64 × 64 px | 1× and 2× | PNG | Transparent |
+| Custom cursor (optional, ×3 states) | 32 × 32 px | 1× and 2× | PNG or CUR | Transparent |
+| Audio SFX (×8) | — | — | MP3 + OGG | — |
+
+---
+
+## Part 11: Asset Count Summary
+
+| Category | Count |
+|----------|-------|
+| Tile textures (20 resources × 2 states) | 40 |
+| Upgrade star | 1 |
+| Season icons | 4 |
+| Board frames | 2 |
+| Board backgrounds | 5 |
+| Town scene backgrounds | 3 |
+| Building illustrations | 8 |
+| NPC / character avatars (5 + 6) | 11 |
+| Custom cursor states (optional) | 3 |
+| **Total image assets** | **77** |
+| Audio SFX | 8 |
+| Typeface(s) | 1–2 |
