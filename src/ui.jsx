@@ -498,7 +498,7 @@ export function BottomNav({ view, modal, dispatch }) {
   const activeKey = modal ? (items.find((i) => i.modal === modal)?.key ?? view) : view;
   return (
     <div
-      className="bg-[#2b2218]/95 border-2 border-[#f7e2b6] rounded-2xl p-1 flex flex-wrap gap-1 shadow-2xl max-w-[92vw] justify-center"
+      className="bg-[#2b2218]/95 border-2 border-[#f7e2b6] rounded-2xl p-1 flex flex-nowrap gap-1 shadow-2xl max-w-[92vw] justify-center overflow-x-auto"
     >
       {items.map((it) => (
         <button
