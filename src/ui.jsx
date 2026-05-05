@@ -1284,6 +1284,47 @@ export function TownView({ state, dispatch }) {
         ))}
       </div>
 
+      {/* Farm Field and Mine — background locations, rendered behind buildings */}
+      <div className="absolute inset-0 pointer-events-none">
+        {/* Farm Field — upper-left, in the hills */}
+        <div
+          className="absolute cursor-pointer group pointer-events-auto flex flex-col items-center"
+          style={{ left: "1.5%", bottom: "52%", width: "12%" }}
+          onClick={() => setEntryBiome("farm")}
+        >
+          <div className="w-full text-center font-bold text-white mb-0.5" style={{ fontSize: "clamp(7px,0.85vw,10px)", textShadow: "0 1px 3px rgba(0,0,0,.9)" }}>🌾 Farm Field</div>
+          <div
+            className="relative w-full overflow-hidden transition-transform duration-150 group-hover:scale-105"
+            style={{ aspectRatio: "1", borderRadius: "8px", border: "2px solid #2a5010", boxShadow: "0 2px 10px rgba(0,0,0,.45)" }}
+          >
+            <FarmFieldArt />
+            <div className="absolute inset-0 grid place-items-center opacity-0 group-hover:opacity-100 transition-opacity" style={{ background: "rgba(0,0,0,.45)" }}>
+              <span className="font-bold text-white" style={{ fontSize: "clamp(7px,0.85vw,10px)" }}>▶ Enter</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Mine Entrance — upper-right, in the hills */}
+        <div
+          className="absolute cursor-pointer group pointer-events-auto flex flex-col items-center"
+          style={{ right: "1.5%", bottom: "52%", width: "12%", opacity: state.level < 2 ? 0.65 : 1 }}
+          onClick={() => setEntryBiome("mine")}
+        >
+          <div className="w-full text-center font-bold text-white mb-0.5" style={{ fontSize: "clamp(7px,0.85vw,10px)", textShadow: "0 1px 3px rgba(0,0,0,.95)" }}>
+            {state.level < 2 ? "🔒 Mine" : "⛏ Mine"}
+          </div>
+          <div
+            className="relative w-full overflow-hidden transition-transform duration-150 group-hover:scale-105"
+            style={{ aspectRatio: "1", borderRadius: "8px", border: "2px solid #1a1e22", boxShadow: "0 2px 10px rgba(0,0,0,.5)" }}
+          >
+            <MineEntranceArt locked={state.level < 2} />
+            <div className="absolute inset-0 grid place-items-center opacity-0 group-hover:opacity-100 transition-opacity" style={{ background: "rgba(0,0,0,.45)" }}>
+              <span className="font-bold text-white" style={{ fontSize: "clamp(7px,0.85vw,10px)" }}>{state.level < 2 ? "🔒 L2" : "▶ Enter"}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Buildings positioned in the 1100x600 design space, scaled to viewport */}
       <div className="absolute inset-0">
         <svg viewBox="0 0 1100 600" preserveAspectRatio="none" className="w-full h-full" style={{ position: "absolute", inset: 0, pointerEvents: "none" }} />
@@ -1390,79 +1431,6 @@ export function TownView({ state, dispatch }) {
               </div>
             );
           })}
-        </div>
-      </div>
-
-      {/* Farm Field and Mine Entrance — rendered after buildings so they sit on top and receive clicks */}
-      <div className="absolute inset-0 pointer-events-none">
-        {/* Farm Field — bottom-left, sits on the land */}
-        <div
-          className="absolute cursor-pointer group pointer-events-auto flex flex-col items-center"
-          style={{ left: "1%", bottom: "4%", width: "20%" }}
-          onClick={() => setEntryBiome("farm")}
-        >
-          <div className="w-full text-center font-bold text-white mb-1" style={{ fontSize: "clamp(10px,1.2vw,15px)", textShadow: "0 1px 3px rgba(0,0,0,.9)" }}>🌾 Farm Field</div>
-          <div
-            className="relative w-full overflow-hidden transition-transform duration-150 group-hover:scale-105"
-            style={{
-              aspectRatio: "1",
-              border: "3px solid #2a5010",
-              borderBottom: "none",
-              borderRadius: "12px 12px 0 0",
-              boxShadow: "0 -2px 8px rgba(0,0,0,.3)",
-            }}
-          >
-            <FarmFieldArt />
-          </div>
-          <div
-            className="w-full text-center font-bold text-white py-1.5"
-            style={{
-              background: "rgba(30,70,10,.85)",
-              fontSize: "clamp(9px,1vw,13px)",
-              textShadow: "0 1px 2px rgba(0,0,0,.7)",
-              border: "3px solid #2a5010",
-              borderTop: "none",
-              borderRadius: "0 0 10px 10px",
-            }}
-          >
-            ▶ Enter
-          </div>
-        </div>
-
-        {/* Mine Entrance — bottom-right, sits on the land */}
-        <div
-          className="absolute cursor-pointer group pointer-events-auto flex flex-col items-center"
-          style={{ right: "1%", bottom: "4%", width: "20%", opacity: state.level < 2 ? 0.65 : 1 }}
-          onClick={() => setEntryBiome("mine")}
-        >
-          <div className="w-full text-center font-bold text-white mb-1" style={{ fontSize: "clamp(10px,1.2vw,15px)", textShadow: "0 1px 3px rgba(0,0,0,.95)" }}>
-            {state.level < 2 ? "🔒 Mine" : "⛏ Mine"}
-          </div>
-          <div
-            className="relative w-full overflow-hidden transition-transform duration-150 group-hover:scale-105"
-            style={{
-              aspectRatio: "1",
-              border: "3px solid #1a1e22",
-              borderBottom: "none",
-              borderRadius: "12px 12px 0 0",
-              boxShadow: "0 -2px 8px rgba(0,0,0,.4)",
-            }}
-          >
-            <MineEntranceArt locked={state.level < 2} />
-          </div>
-          <div
-            className="w-full text-center font-bold text-white py-1.5"
-            style={{
-              background: "rgba(20,22,28,.85)",
-              fontSize: "clamp(9px,1vw,13px)",
-              textShadow: "0 1px 2px rgba(0,0,0,.7)",
-              border: "3px solid #1a1e22",
-              borderTop: "none",
-              borderRadius: "0 0 10px 10px",
-            }}
-          >
-            {state.level < 2 ? "L2 req." : "▶ Enter"}
-          </div>
         </div>
       </div>
 
