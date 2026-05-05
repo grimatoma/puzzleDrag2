@@ -52,8 +52,8 @@ async function toggleFullscreen() {
       const el = document.documentElement;
       const req = el.requestFullscreen || el.webkitRequestFullscreen;
       await req?.call(el);
-      // Lock landscape if available (Android Chrome / TWA)
-      try { await screen.orientation?.lock?.("landscape"); } catch {}
+      // Lock portrait if available (Android Chrome / TWA)
+      try { await screen.orientation?.lock?.("portrait"); } catch {}
     }
   } catch {}
 }
