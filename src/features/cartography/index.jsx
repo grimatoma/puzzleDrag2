@@ -6,6 +6,27 @@ export const viewKey = 'cartography';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────
 
+// Portrait phones get a stacked layout (panel on top, full-width map below).
+// Landscape (and tablets/desktop) keep the side-by-side layout.
+function useIsPortrait() {
+  const [portrait, setPortrait] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return window.matchMedia('(orientation: portrait)').matches;
+  });
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const mq = window.matchMedia('(orientation: portrait)');
+    const update = () => setPortrait(mq.matches);
+    mq.addEventListener?.('change', update);
+    window.addEventListener('resize', update);
+    return () => {
+      mq.removeEventListener?.('change', update);
+      window.removeEventListener('resize', update);
+    };
+  }, []);
+  return portrait;
+}
+
 function getNodeStatus(node, visitedSet, discoveredSet, current, playerLevel) {
   if (node.id === current) return 'current';
   if (visitedSet.has(node.id)) return 'visited';
@@ -274,18 +295,89 @@ function StatusBadge({ status, target, playerLevel }) {
   );
 }
 
-function SidePanel({ node, current, visited, discovered, playerLevel, dispatch }) {
+function ActionControl({ status, node, isCurrent, canFastTravel, canUnlock, onTravel, fullWidth }) {
+  const w = fullWidth ? '100%' : undefined;
+  const baseBox = {
+    ...labelStyle, fontSize: 10, padding: '6px 8px', borderRadius: 10,
+    textAlign: 'center', lineHeight: 1.25, width: w,
+  };
+  if (isCurrent) {
+    return (
+      <div style={{ ...baseBox, background: '#c8a868', border: '2px solid #a07840', color: '#3a2715', fontSize: 11, fontWeight: 'bold' }}>
+        You are here
+      </div>
+    );
+  }
+  if (canFastTravel) {
+    return (
+      <button
+        onClick={onTravel}
+        style={{
+          ...baseBox,
+          background: 'linear-gradient(to bottom, #5a8acc, #3a6aa8)',
+          border: '2px solid #2a4a78', color: 'white',
+          fontWeight: 'bold', fontSize: 11, cursor: 'pointer', letterSpacing: '0.05em',
+        }}
+      >
+        ✈ FAST TRAVEL
+      </button>
+    );
+  }
+  if (canUnlock) {
+    return (
+      <button
+        onClick={onTravel}
+        style={{
+          ...baseBox,
+          background: 'linear-gradient(to bottom, #7a9f2a, #5a7a18)',
+          border: '2px solid #4a6a10', color: 'white',
+          fontWeight: 'bold', fontSize: 11, cursor: 'pointer', letterSpacing: '0.05em',
+        }}
+      >
+        ★ EXPLORE & UNLOCK
+      </button>
+    );
+  }
+  if (status === 'discovered-locked') {
+    return (
+      <div style={{ ...baseBox, background: '#d4b585', border: '2px solid #b08040', color: '#9a3a2a', fontWeight: 'bold' }}>
+        Reach Level {node.level}
+      </div>
+    );
+  }
+  if (status === 'discovered-unreachable') {
+    return (
+      <div style={{ ...baseBox, background: '#d4b585', border: '2px solid #b08040', color: '#7c4f2c', fontSize: 9 }}>
+        Travel through an adjacent location first
+      </div>
+    );
+  }
+  return (
+    <div style={{ ...baseBox, background: '#d4b585', border: '2px solid #b08040', color: '#7c4f2c' }}>
+      Not yet discovered
+    </div>
+  );
+}
+
+function SidePanel({ node, current, visited, discovered, playerLevel, dispatch, compact }) {
   if (!node) {
     return (
-      <div className="flex flex-col items-center justify-center h-full px-2 text-center gap-1.5">
-        <div style={{ fontSize: 22, opacity: 0.6 }}>🗺️</div>
-        <p style={{ ...labelStyle, fontSize: 11, color: '#7c4f2c' }}>
-          Tap any location to view details.
-        </p>
-        <p style={{ ...labelStyle, fontSize: 9, color: '#9a7a55', lineHeight: 1.3 }}>
-          ✓ visited locations let you fast-travel.<br />
-          ★ glowing nodes are ready to unlock.
-        </p>
+      <div
+        className={
+          compact
+            ? "flex items-center justify-center h-full w-full px-3 py-1.5 gap-2"
+            : "flex flex-col items-center justify-center h-full px-2 text-center gap-1.5"
+        }
+      >
+        <div style={{ fontSize: compact ? 18 : 22, opacity: 0.6 }}>🗺️</div>
+        <div className={compact ? "flex flex-col gap-0.5 min-w-0" : "contents"}>
+          <p style={{ ...labelStyle, fontSize: 11, color: '#7c4f2c', textAlign: compact ? 'left' : 'center' }}>
+            Tap any location to view details.
+          </p>
+          <p style={{ ...labelStyle, fontSize: 9, color: '#9a7a55', lineHeight: 1.3, textAlign: compact ? 'left' : 'center' }}>
+            ✓ visited let you fast-travel · ★ glowing nodes are ready to unlock
+          </p>
+        </div>
       </div>
     );
   }
@@ -302,9 +394,78 @@ function SidePanel({ node, current, visited, discovered, playerLevel, dispatch }
     dispatch({ type: 'CARTO/TRAVEL', nodeId: node.id });
   }
 
+  // ─── Compact (portrait) layout: a single horizontal row that keeps the
+  // map huge underneath. Identity on left, body in the middle, action right.
+  if (compact) {
+    return (
+      <div className="flex h-full w-full items-stretch gap-2 px-2 py-2 overflow-hidden">
+        {/* Identity */}
+        <div
+          className="flex flex-col gap-1 flex-shrink-0 rounded-xl p-2"
+          style={{ background: '#f0ddb5', border: '2px solid #b08040', minWidth: 110, maxWidth: 150 }}
+        >
+          <div className="flex items-center gap-1.5">
+            <div
+              className="grid place-items-center flex-shrink-0"
+              style={{
+                width: 22, height: 22, borderRadius: '50%',
+                background: color,
+                border: node.kind === 'boss' ? '2px solid #cc2222' : '2px solid #2a1a0a',
+                fontSize: 12, lineHeight: 1,
+              }}
+            >
+              {node.icon}
+            </div>
+            <div className="flex-1 min-w-0">
+              <div style={{ ...labelStyle, fontWeight: 'bold', fontSize: 11, color: '#3a2715', lineHeight: 1.15 }}>
+                {node.name}
+              </div>
+              <div style={{ ...labelStyle, fontSize: 9, color: '#7c4f2c' }}>
+                {KIND_LABELS[node.kind] || node.kind}
+              </div>
+            </div>
+          </div>
+          <StatusBadge status={status} target={node} playerLevel={playerLevel} />
+        </div>
+
+        {/* Body: description + activities */}
+        <div className="flex-1 min-w-0 flex flex-col gap-1 overflow-y-auto">
+          <div style={{ ...labelStyle, fontSize: 10, color: '#3a2715', lineHeight: 1.3 }}>
+            {node.description}
+          </div>
+          {Array.isArray(node.activities) && node.activities.length > 0 && (
+            <div className="flex flex-wrap gap-1">
+              {node.activities.map((a, i) => (
+                <span
+                  key={i}
+                  style={{
+                    ...labelStyle, fontSize: 9, color: '#3a2715',
+                    background: '#e8d4a8', border: '1px solid #b08040',
+                    borderRadius: 999, padding: '1px 6px',
+                  }}
+                >
+                  {a}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Action */}
+        <div className="flex flex-col justify-center flex-shrink-0" style={{ minWidth: 110 }}>
+          <ActionControl
+            status={status} node={node}
+            isCurrent={isCurrent} canFastTravel={canFastTravel} canUnlock={canUnlock}
+            onTravel={handleTravel} fullWidth
+          />
+        </div>
+      </div>
+    );
+  }
+
+  // ─── Vertical (landscape) layout: original side-rail design.
   return (
     <div className="flex flex-col gap-1.5 h-full px-2 py-2 overflow-y-auto">
-      {/* Header card */}
       <div
         className="rounded-xl p-2 flex flex-col gap-1"
         style={{ background: '#f0ddb5', border: '2px solid #b08040' }}
@@ -333,12 +494,10 @@ function SidePanel({ node, current, visited, discovered, playerLevel, dispatch }
         <StatusBadge status={status} target={node} playerLevel={playerLevel} />
       </div>
 
-      {/* Description */}
       <div style={{ ...labelStyle, fontSize: 10, color: '#3a2715', lineHeight: 1.35 }}>
         {node.description}
       </div>
 
-      {/* Activities */}
       {Array.isArray(node.activities) && node.activities.length > 0 && (
         <div className="flex flex-col gap-0.5">
           <div style={{ ...labelStyle, fontSize: 9, color: '#7c4f2c', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 'bold' }}>
@@ -352,61 +511,12 @@ function SidePanel({ node, current, visited, discovered, playerLevel, dispatch }
         </div>
       )}
 
-      {/* Action button */}
       <div className="mt-auto">
-        {isCurrent ? (
-          <div
-            className="rounded-lg px-2 py-1.5 text-center"
-            style={{ background: '#c8a868', border: '2px solid #a07840', ...labelStyle, fontSize: 11, color: '#3a2715', fontWeight: 'bold' }}
-          >
-            You are here
-          </div>
-        ) : canFastTravel ? (
-          <button
-            onClick={handleTravel}
-            style={{
-              background: 'linear-gradient(to bottom, #5a8acc, #3a6aa8)',
-              border: '2px solid #2a4a78', borderRadius: 10, color: 'white',
-              ...labelStyle, fontWeight: 'bold', fontSize: 11, padding: '6px 4px',
-              cursor: 'pointer', letterSpacing: '0.05em', width: '100%',
-            }}
-          >
-            ✈ FAST TRAVEL
-          </button>
-        ) : canUnlock ? (
-          <button
-            onClick={handleTravel}
-            style={{
-              background: 'linear-gradient(to bottom, #7a9f2a, #5a7a18)',
-              border: '2px solid #4a6a10', borderRadius: 10, color: 'white',
-              ...labelStyle, fontWeight: 'bold', fontSize: 11, padding: '6px 4px',
-              cursor: 'pointer', letterSpacing: '0.05em', width: '100%',
-            }}
-          >
-            ★ EXPLORE & UNLOCK
-          </button>
-        ) : status === 'discovered-locked' ? (
-          <div
-            className="rounded-lg px-2 py-1.5 text-center"
-            style={{ background: '#d4b585', border: '2px solid #b08040', ...labelStyle, fontSize: 10, color: '#9a3a2a', fontWeight: 'bold' }}
-          >
-            Reach Level {node.level}
-          </div>
-        ) : status === 'discovered-unreachable' ? (
-          <div
-            className="rounded-lg px-2 py-1.5 text-center"
-            style={{ background: '#d4b585', border: '2px solid #b08040', ...labelStyle, fontSize: 9, color: '#7c4f2c', lineHeight: 1.3 }}
-          >
-            Travel through an adjacent location first
-          </div>
-        ) : (
-          <div
-            className="rounded-lg px-2 py-1.5 text-center"
-            style={{ background: '#d4b585', border: '2px solid #b08040', ...labelStyle, fontSize: 10, color: '#7c4f2c' }}
-          >
-            Not yet discovered
-          </div>
-        )}
+        <ActionControl
+          status={status} node={node}
+          isCurrent={isCurrent} canFastTravel={canFastTravel} canUnlock={canUnlock}
+          onTravel={handleTravel} fullWidth
+        />
       </div>
     </div>
   );
@@ -498,6 +608,7 @@ export default function CartographyScreen({ state, dispatch }) {
   // discovered list as visited so the player keeps fast-travel access.
   const visited = mapVisited || mapDiscovered;
 
+  const isPortrait = useIsPortrait();
   const [tapped, setTapped] = useState(null);
   const tappedNode = tapped ? MAP_NODES.find(n => n.id === tapped) : null;
   const currentNode = MAP_NODES.find(n => n.id === mapCurrent);
@@ -505,6 +616,44 @@ export default function CartographyScreen({ state, dispatch }) {
   function handleTap(nodeId) {
     setTapped(prev => (prev === nodeId ? null : nodeId));
   }
+
+  // In portrait the panel sits above the map (full width); in landscape it
+  // sits to the right (fixed-width rail).
+  const sidePanel = (
+    <div
+      className="flex-shrink-0 flex flex-col"
+      style={
+        isPortrait
+          ? { width: '100%', minHeight: 96, maxHeight: 130, borderBottom: '2px solid #b08040' }
+          : { width: 130, borderLeft: '2px solid #b08040' }
+      }
+    >
+      <SidePanel
+        node={tappedNode}
+        current={mapCurrent}
+        visited={visited}
+        discovered={mapDiscovered}
+        playerLevel={level}
+        dispatch={dispatch}
+        compact={isPortrait}
+      />
+    </div>
+  );
+
+  const mapArea = (
+    <div className="flex-1 min-w-0 min-h-0 p-1">
+      <MapSvg
+        nodes={MAP_NODES}
+        edges={MAP_EDGES}
+        visited={visited}
+        discovered={mapDiscovered}
+        current={mapCurrent}
+        tapped={tapped}
+        playerLevel={level}
+        onTap={handleTap}
+      />
+    </div>
+  );
 
   return (
     <div
@@ -522,33 +671,18 @@ export default function CartographyScreen({ state, dispatch }) {
           onClose={() => dispatch({ type: 'SET_VIEW', view: 'town' })}
         />
 
-        <div className="flex-1 flex min-h-0">
-          <div className="flex-1 min-w-0 p-1">
-            <MapSvg
-              nodes={MAP_NODES}
-              edges={MAP_EDGES}
-              visited={visited}
-              discovered={mapDiscovered}
-              current={mapCurrent}
-              tapped={tapped}
-              playerLevel={level}
-              onTap={handleTap}
-            />
-          </div>
-
-          <div
-            className="flex-shrink-0 flex flex-col"
-            style={{ width: 130, borderLeft: '2px solid #b08040' }}
-          >
-            <SidePanel
-              node={tappedNode}
-              current={mapCurrent}
-              visited={visited}
-              discovered={mapDiscovered}
-              playerLevel={level}
-              dispatch={dispatch}
-            />
-          </div>
+        <div className={`flex-1 flex min-h-0 ${isPortrait ? 'flex-col' : 'flex-row'}`}>
+          {isPortrait ? (
+            <>
+              {sidePanel}
+              {mapArea}
+            </>
+          ) : (
+            <>
+              {mapArea}
+              {sidePanel}
+            </>
+          )}
         </div>
 
         <Legend />
