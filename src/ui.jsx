@@ -1365,17 +1365,16 @@ export function TownView({ state, dispatch }) {
               dispatch({ type: "BUILD", building: b });
             };
             const costStr = Object.entries(b.cost).map(([k, v]) => k === "coins" ? `${v}◉` : `${v} ${k}`).join(" · ");
-            const showTip = (el, touchY) => {
+            const showTip = (el) => {
               if (isBuilt) return;
               clearTimeout(buildingDismissTimer.current);
               const rect = el.getBoundingClientRect();
-              const x = rect.left + rect.width / 2;
-              const y = touchY != null ? touchY - 100 : rect.top;
               setBuildingTip({
                 label: isLocked ? `🔒 ${b.name} (Level ${b.lv})` : `Build ${b.name}: ${costStr}`,
                 desc: b.desc,
                 color: isLocked ? "#f7d572" : canAfford ? "#9bdb6a" : "#f7d572",
-                x, y,
+                x: rect.left + rect.width / 2,
+                y: rect.top,
               });
             };
             const hideTip = (delay = 0) => {
@@ -1399,9 +1398,10 @@ export function TownView({ state, dispatch }) {
                 }}
                 onClick={onClick}
                 onMouseEnter={(e) => { if (Date.now() - buildingTouchTime.current > 600) showTip(e.currentTarget); }}
-                onMouseLeave={() => hideTip()}
-                onTouchStart={(e) => { buildingTouchTime.current = Date.now(); if (e.touches.length > 0) showTip(e.currentTarget, e.touches[0].clientY); }}
-                onTouchEnd={() => hideTip(1800)}
+                onMouseLeave={() => { if (Date.now() - buildingTouchTime.current > 600) hideTip(); }}
+                onTouchStart={(e) => { buildingTouchTime.current = Date.now(); showTip(e.currentTarget); }}
+                onTouchEnd={() => hideTip(2000)}
+                onTouchCancel={() => hideTip(2000)}
               >
                 <BuildingIllustration id={b.id} isBuilt={isBuilt} />
                 {isBuilt ? (
