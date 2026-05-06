@@ -1137,6 +1137,7 @@ function MineEntranceArt({ locked }) {
 
 export function TownView({ state, dispatch }) {
   const [entryBiome, setEntryBiome] = useState(null);
+  const [purchaseBuilding, setPurchaseBuilding] = useState(null);
   const { tip: buildingTip, handlers: tipHandlers } = useTooltip();
   const biomeTheme = state.biomeKey === "mine" ? "mine" : "farm";
   const theme = TOWN_THEMES[biomeTheme] || TOWN_THEMES.home;
@@ -1388,7 +1389,7 @@ export function TownView({ state, dispatch }) {
               }
               if (isBuilt) return;
               if (!canAfford) return;
-              dispatch({ type: "BUILD", building: b });
+              setPurchaseBuilding(b);
             };
             const costStr = Object.entries(b.cost).map(([k, v]) => k === "coins" ? `${v}◉` : `${v} ${k}`).join(" · ");
             const buildingTipData = isBuilt ? null : {
@@ -1475,6 +1476,55 @@ export function TownView({ state, dispatch }) {
           <div className="font-bold" style={{ color: buildingTip.data.color, fontSize: "clamp(9px,1.1vw,13px)", whiteSpace: "nowrap" }}>{buildingTip.data.label}</div>
           {buildingTip.data.desc && <div className="mt-0.5 leading-snug text-white/75" style={{ fontSize: "clamp(8px,0.9vw,11px)", whiteSpace: "normal" }}>{buildingTip.data.desc}</div>}
         </Tooltip>
+      )}
+
+      {purchaseBuilding && (
+        <div
+          className="absolute inset-0 z-[10000] flex items-center justify-center"
+          style={{ background: "rgba(0,0,0,.6)" }}
+          onClick={() => setPurchaseBuilding(null)}
+        >
+          <div
+            className="rounded-xl border border-white/20 p-5 flex flex-col gap-3"
+            style={{ background: "rgba(15,14,20,.96)", minWidth: 260, maxWidth: 340, boxShadow: "0 8px 40px rgba(0,0,0,.7)" }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="text-white font-bold" style={{ fontSize: "clamp(13px,1.5vw,18px)" }}>{purchaseBuilding.name}</div>
+            {purchaseBuilding.desc && (
+              <div className="text-white/70 leading-snug" style={{ fontSize: "clamp(10px,1.1vw,13px)" }}>{purchaseBuilding.desc}</div>
+            )}
+            <div className="flex flex-wrap gap-2 mt-1">
+              {Object.entries(purchaseBuilding.cost).map(([k, v]) => (
+                <span
+                  key={k}
+                  className="rounded px-2 py-0.5 font-semibold"
+                  style={{ background: "rgba(255,255,255,.08)", color: "#9bdb6a", fontSize: "clamp(10px,1.1vw,13px)" }}
+                >
+                  {k === "coins" ? `${v} ◉` : `${v} ${k}`}
+                </span>
+              ))}
+            </div>
+            <div className="flex gap-2 mt-1">
+              <button
+                className="flex-1 rounded-lg py-2 font-bold"
+                style={{ background: "#9bdb6a", color: "#1a2a10", fontSize: "clamp(11px,1.2vw,14px)" }}
+                onClick={() => {
+                  dispatch({ type: "BUILD", building: purchaseBuilding });
+                  setPurchaseBuilding(null);
+                }}
+              >
+                Buy
+              </button>
+              <button
+                className="flex-1 rounded-lg py-2 font-bold"
+                style={{ background: "rgba(255,255,255,.1)", color: "rgba(255,255,255,.7)", fontSize: "clamp(11px,1.2vw,14px)" }}
+                onClick={() => setPurchaseBuilding(null)}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
