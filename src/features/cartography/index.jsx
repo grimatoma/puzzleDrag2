@@ -526,33 +526,22 @@ function SidePanel({ node, current, visited, discovered, playerLevel, dispatch, 
 
 function HeaderBar({ currentNode, visitedCount, totalCount, onClose }) {
   return (
-    <div
-      className="flex items-center gap-2 px-3 py-1.5 flex-shrink-0"
-      style={{ borderBottom: '2px solid #b08040' }}
-    >
-      <span style={{ ...labelStyle, fontWeight: 'bold', fontSize: 14, color: '#3a2715' }}>
+    <div className="flex items-center justify-between px-3 py-2 flex-shrink-0 border-b border-[#e2c19b]/40">
+      <span className="font-bold text-[14px] text-[#f8e7c6]">
         🗺️ Map
+        {currentNode && (
+          <span className="font-normal text-[11px] text-[#e2c19b]/70 ml-1.5">
+            · {currentNode.icon} {currentNode.name}
+          </span>
+        )}
       </span>
-      {currentNode && (
-        <span style={{ ...labelStyle, fontSize: 11, color: '#7c4f2c' }}>
-          · {currentNode.icon} {currentNode.name}
-        </span>
-      )}
-      <span style={{ ...labelStyle, fontSize: 10, color: '#7c4f2c', marginLeft: 'auto', marginRight: 6 }}>
-        {visitedCount} / {totalCount} discovered
-      </span>
-      <button
-        onClick={onClose}
-        style={{
-          width: 28, height: 28, borderRadius: 8,
-          background: '#f6efe0', border: '2px solid #b28b62',
-          color: '#6a4b31', fontWeight: 'bold', fontSize: 14,
-          cursor: 'pointer', display: 'grid', placeItems: 'center',
-          ...labelStyle,
-        }}
-      >
-        ✕
-      </button>
+      <div className="flex items-center gap-2">
+        <span className="text-[10px] text-[#e2c19b]/70">{visitedCount} / {totalCount} discovered</span>
+        <button
+          onClick={onClose}
+          className="w-7 h-7 rounded-lg bg-[#f6efe0] border-2 border-[#b28b62] grid place-items-center text-[#6a4b31] font-bold text-[14px]"
+        >✕</button>
+      </div>
     </div>
   );
 }
@@ -656,21 +645,18 @@ export default function CartographyScreen({ state, dispatch }) {
   );
 
   return (
-    <div
-      className="absolute inset-0 flex flex-col"
-      style={{ background: 'linear-gradient(to bottom, #5b3b20, #3a2715)' }}
-    >
-      <div
-        className="flex-1 flex flex-col m-2 rounded-2xl overflow-hidden"
-        style={{ border: '6px solid #7c4f2c', background: '#d4b585' }}
-      >
-        <HeaderBar
-          currentNode={currentNode}
-          visitedCount={visited.length}
-          totalCount={MAP_NODES.length}
-          onClose={() => dispatch({ type: 'SET_VIEW', view: 'town' })}
-        />
+    <div className="absolute inset-0 bg-gradient-to-b from-[#7c4f2c] to-[#6b4225] border-[3px] border-[#e2c19b] flex flex-col overflow-hidden">
+      <HeaderBar
+        currentNode={currentNode}
+        visitedCount={visited.length}
+        totalCount={MAP_NODES.length}
+        onClose={() => dispatch({ type: 'SET_VIEW', view: 'town' })}
+      />
 
+      <div
+        className="flex-1 flex flex-col m-2 rounded-xl overflow-hidden"
+        style={{ border: '2px solid #b08040', background: '#d4b585' }}
+      >
         <div className={`flex-1 flex min-h-0 ${isPortrait ? 'flex-col' : 'flex-row'}`}>
           {isPortrait ? (
             <>
