@@ -39,10 +39,12 @@ export function clearSave() {
 
 export const xpForLevel = (l) => 50 + l * 80;
 
+const _resourceCache = new Map();
 export function resourceByKey(key) {
+  if (_resourceCache.has(key)) return _resourceCache.get(key);
   for (const b of Object.values(BIOMES)) {
     const r = b.resources.find((x) => x.key === key);
-    if (r) return r;
+    if (r) { _resourceCache.set(key, r); return r; }
   }
   return null;
 }
