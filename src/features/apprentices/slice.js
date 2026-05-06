@@ -10,6 +10,12 @@ export const initial = {
 
 let hireSeq = 1;
 
+export function seedHireSeq(savedApprentices) {
+  for (const h of (savedApprentices || [])) {
+    if (typeof h.id === "number" && h.id >= hireSeq) hireSeq = h.id + 1;
+  }
+}
+
 function checkRequirement(app, state) {
   const req = app.requirement;
   if (!req) return true;
