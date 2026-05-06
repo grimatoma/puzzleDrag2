@@ -1,4 +1,10 @@
-# Game Mechanics Reference — Puzzle Craft 2
+# Reference Catalog — Source Game Mechanics
+
+> **This file describes the *reference/source game*, not Hearthwood Vale.**
+> Tile names, resource chains, thresholds, and worker catalogs here belong to the
+> game this project is inspired by. Use this as a reference when expanding into new
+> resource types (Vegetables, Fruits, Cattle, Sea) — not as a spec for current code.
+> The authoritative spec for our game is `GAME_SPEC.md`.
 
 *Sources: reference game screenshots (sets 1–5) + merged GDD/gameplay doc. Gaps still
 remaining are marked `[GAP]`.*
