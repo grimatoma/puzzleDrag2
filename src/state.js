@@ -382,26 +382,11 @@ function coreReducer(state, action) {
     }
 
     case "DEV/RESET_GAME": {
-      const biomeKey = "farm";
-      const level = 1;
-      const o1 = makeOrder(biomeKey, level);
-      const o2 = makeOrder(biomeKey, level, [o1.npc]);
-      const o3 = makeOrder(biomeKey, level, [o1.npc, o2.npc]);
-      return {
-        ...state,
-        biomeKey,
-        coins: 150,
-        level,
-        xp: 0,
-        turnsUsed: 0,
-        inventory: {},
-        orders: [o1, o2, o3],
-        tools: { clear: 2, basic: 1, rare: 1, shuffle: 0 },
-        built: { hearth: true },
-        modal: null,
-        bubble: { id: Date.now(), npc: "wren", text: "Game reset to fresh state.", ms: 2000 },
-        seasonStats: { harvests: 0, upgrades: 0, ordersFilled: 0, coins: 0 },
-      };
+      // Wipe all persisted state (trophies, bonds, boss, weather, etc.) and reload
+      // so every feature slice re-initialises from its default initial state.
+      clearSave();
+      setTimeout(() => window.location.reload(), 100);
+      return state;
     }
 
     default:
