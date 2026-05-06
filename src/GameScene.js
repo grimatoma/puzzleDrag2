@@ -1,9 +1,8 @@
 import Phaser from "phaser";
-import { TILE, COLS, ROWS, MAX_TURNS, UPGRADE_EVERY, SEASONS, BIOMES } from "./constants.js";
+import { TILE, COLS, ROWS, UPGRADE_EVERY, SEASONS, BIOMES } from "./constants.js";
 import { upgradeCountForChain, cssColor } from "./utils.js";
 import { rounded, makeTextures } from "./textures.js";
 import { TileObj } from "./TileObj.js";
-import { resourceByKey } from "./state.js";
 
 const TILE_BASE = TILE; // CSS-pixel design size for one tile; textures are baked at TILE * dpr
 const DOUBLE_CHAIN_THRESHOLD = 6; // chains this long or longer yield double resources

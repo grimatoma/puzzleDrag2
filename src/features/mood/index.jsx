@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { NPCS, BIOMES } from '../../constants.js';
-import { NPC_FAVORITES, MOOD_STATES, moodForBond } from './data.js';
+import { NPC_FAVORITES, moodForBond } from './data.js';
 
 export const modalKey = 'mood';
 
@@ -10,11 +10,6 @@ const ALL_RESOURCES = [...BIOMES.farm.resources, ...BIOMES.mine.resources];
 
 function hexColor(num) {
   return '#' + num.toString(16).padStart(6, '0');
-}
-
-function resourceColor(key) {
-  const r = ALL_RESOURCES.find((x) => x.key === key);
-  return r ? hexColor(r.color) : '#888';
 }
 
 /** Render 10 hearts split at bond value (float). */

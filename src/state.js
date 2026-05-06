@@ -30,11 +30,11 @@ export function persistState(state) {
     const out = {};
     for (const k of Object.keys(state)) if (!VOLATILE.has(k)) out[k] = state[k];
     localStorage.setItem(SAVE_KEY, JSON.stringify(out));
-  } catch {}
+  } catch { /* storage unavailable (private browsing / quota) */ }
 }
 
 export function clearSave() {
-  try { localStorage.removeItem(SAVE_KEY); } catch {}
+  try { localStorage.removeItem(SAVE_KEY); } catch { /* storage unavailable */ }
 }
 
 export const xpForLevel = (l) => 50 + l * 80;

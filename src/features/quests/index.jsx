@@ -1,4 +1,4 @@
-import React from "react";
+import { useState } from "react";
 import { ALMANAC_TIERS } from "../../constants.js";
 
 export const viewKey = "quests";
@@ -89,9 +89,9 @@ function AlmanacTierCard({ idx, tierDef, almanacXp, almanacClaimed, dispatch }) 
 }
 
 export default function QuestsScreen({ state, dispatch, initialTab }) {
-  const [tab, setTab] = React.useState(initialTab || "daily");
+  const [tab, setTab] = useState(initialTab || "daily");
 
-  const { dailies = [], almanacXp = 0, almanacTier = 0, almanacClaimed = [] } = state;
+  const { dailies = [], almanacXp = 0, almanacClaimed = [] } = state;
 
   const currentTier = Math.floor(almanacXp / 100);
   const nextCost = (currentTier + 1) * 100;

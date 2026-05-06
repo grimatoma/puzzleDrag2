@@ -1,4 +1,4 @@
-import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { BIOMES, NPCS, SEASONS, MAX_TURNS, BUILDINGS, RECIPES } from "./constants.js";
 import { xpForLevel, resourceByKey } from "./state.js";
@@ -497,6 +497,7 @@ function BottomSheet({ onClose, children }) {
 export function MobileDock({ state, dispatch }) {
   const [sheet, setSheet] = useState(null); // "tools" | "orders" | null
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: clear local sheet state when leaving board view
   useEffect(() => { if (state.view !== "board") setSheet(null); }, [state.view]);
 
   const totalTools = Object.values(state.tools || {}).reduce((s, v) => s + v, 0);
@@ -1625,11 +1626,12 @@ function Stat({ v, l }) {
 export function NpcBubble({ bubble, dispatch }) {
   const [shown, setShown] = useState(null);
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- syncing local display state with incoming bubble prop
     if (!bubble) { setShown(null); return; }
     setShown(bubble);
     const t = setTimeout(() => dispatch({ type: "DISMISS_BUBBLE", id: bubble.id }), bubble.ms || 1800);
     return () => clearTimeout(t);
-  }, [bubble?.id]);
+  }, [bubble, dispatch]);
   if (!shown) return null;
   const npc = NPCS[shown.npc];
   if (!npc) return null;
