@@ -1,5 +1,5 @@
 
-import { InventoryGrid } from "../../ui.jsx";
+import { InventoryGrid } from "../../ui/Inventory.jsx";
 
 export const viewKey = "inventory";
 
