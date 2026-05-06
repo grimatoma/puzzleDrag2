@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { BIOMES, BUILDINGS } from "../constants.js";
 import { useTooltip, Tooltip } from "./Tooltip.jsx";
+import { MAP_NODES } from "../features/cartography/data.js";
 
 function BiomeEntryModal({ biomeKey, level, onEnter, onClose }) {
   const biome = BIOMES[biomeKey];
@@ -543,6 +544,8 @@ export function TownView({ state, dispatch }) {
   const biomeTheme = state.biomeKey === "mine" ? "mine" : "farm";
   const theme = TOWN_THEMES[biomeTheme] || TOWN_THEMES.home;
   const townConfig = TOWN_BIOME_CONFIGS[biomeTheme];
+  const currentNode = MAP_NODES.find(n => n.id === state.mapCurrent);
+  const locationName = currentNode?.name ?? townConfig.name;
   // Merge canonical building defs with biome-specific layout overrides
   const townBuildings = BUILDINGS.map(b => ({ ...b, ...(townConfig.buildingLayout[b.id] || {}) }));
   // Sort by bottom edge so shorter buildings don't clip taller neighbours
@@ -721,7 +724,7 @@ export function TownView({ state, dispatch }) {
       </svg>
 
       {/* Header */}
-      <div className="absolute top-3 left-4 landscape:max-[1024px]:top-2 landscape:max-[1024px]:left-3 font-bold text-[20px] landscape:max-[1024px]:text-[15px]" style={{ color: theme.textColor }}>{townConfig.name}</div>
+      <div className="absolute top-3 left-4 landscape:max-[1024px]:top-2 landscape:max-[1024px]:left-3 font-bold text-[20px] landscape:max-[1024px]:text-[15px]" style={{ color: theme.textColor }}>{locationName}</div>
       <div className="absolute top-3 right-4 landscape:max-[1024px]:top-2 landscape:max-[1024px]:right-3 flex items-center gap-2 z-10">
         <div className="bg-white/85 px-3 py-1.5 landscape:max-[1024px]:px-2 landscape:max-[1024px]:py-1 rounded-full font-bold text-[#3a2715] landscape:max-[1024px]:text-[13px]">◉ {state.coins.toLocaleString()}</div>
       </div>
