@@ -38,16 +38,18 @@ export function useAudio(state) {
     // season modal opened
     if (s.modal === 'season' && p.modal !== 'season') play('seasonTurn');
 
-    // coins decreased (purchase made)
-    if ((s.coins || 0) < (p.coins || 0)) play('coinSpend');
-
     // new building constructed
     const prevBuilt = Object.keys(p.built || {}).length;
     const newBuilt = Object.keys(s.built || {}).length;
-    if (newBuilt > prevBuilt) {
+    const buildingConstructed = newBuilt > prevBuilt;
+    if (buildingConstructed) {
       play('coinSpend');
       setTimeout(() => play('upgrade'), 200);
     }
+
+    // coins decreased (purchase made) — skip if a building was just constructed
+    // to avoid playing coinSpend twice on the same event
+    if ((s.coins || 0) < (p.coins || 0) && !buildingConstructed) play('coinSpend');
 
     // crafting total increased
     const prevCrafted = Object.values(p.craftedTotals || {}).reduce((a, v) => a + v, 0);
