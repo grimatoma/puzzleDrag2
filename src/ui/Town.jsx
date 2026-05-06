@@ -553,9 +553,11 @@ export function TownView({ state, dispatch }) {
       {/* Sun/light source */}
       <div className="absolute top-12 right-20 w-16 h-16 rounded-full" style={{ background: theme.sunColor, boxShadow: `0 0 60px ${theme.sunGlow}` }} />
       {/* Clouds */}
+      <div className={`absolute top-12 w-16 h-4 rounded-full ${biomeTheme === "mine" ? "bg-white/20" : "bg-white/40"}`} style={{ animation: "townCloudC 180s linear infinite", animationDelay: "-60s" }} />
       <div className={`absolute top-16 w-24 h-6 rounded-full ${townConfig.cloudOpacity}`} style={{ animation: "townCloudA 95s linear infinite" }} />
-      <div className={`absolute top-24 w-28 h-7 rounded-full ${biomeTheme === "mine" ? "bg-white/30" : "bg-white/60"}`} style={{ animation: "townCloudB 130s linear infinite" }} />
+      <div className={`absolute top-24 w-28 h-7 rounded-full ${biomeTheme === "mine" ? "bg-white/30" : "bg-white/60"}`} style={{ animation: "townCloudB 130s linear infinite", animationDelay: "-22s" }} />
       <div className={`absolute top-10 w-20 h-5 rounded-full ${biomeTheme === "mine" ? "bg-white/25" : "bg-white/50"}`} style={{ animation: "townCloudA 160s linear infinite", animationDelay: "-40s" }} />
+      <div className={`absolute top-28 w-32 h-8 rounded-full ${biomeTheme === "mine" ? "bg-white/20" : "bg-white/45"}`} style={{ animation: "townCloudB 210s linear infinite", animationDelay: "-95s" }} />
 
       {/* Biome-specific terrain */}
       <svg className="absolute inset-0 w-full h-full" viewBox="0 0 1100 600" preserveAspectRatio="none">
