@@ -6,11 +6,22 @@ export const viewKey = "quests";
 function QuestCard({ q, dispatch }) {
   const pct = Math.min(100, (q.progress / q.target) * 100);
   const claimable = q.done && !q.claimed;
+  const completed = q.done || q.claimed;
 
   return (
-    <div className="bg-[#f6efe0] border-2 border-[#c5a87a] rounded-xl p-2.5 flex flex-col gap-2 max-w-sm w-full self-center">
+    <div
+      className={`bg-[#f6efe0] border-2 rounded-xl p-2.5 flex flex-col gap-2 max-w-sm w-full self-center transition-all duration-300 ${
+        completed ? "border-[#d6612a] shadow-[0_0_0_2px_rgba(214,97,42,.25)]" : "border-[#c5a87a]"
+      }`}
+    >
       <div className="flex items-start justify-between gap-2">
         <span className="font-bold text-[12px] text-[#3a2715] leading-snug flex-1">{q.label}</span>
+        {claimable && (
+          <span className="relative mr-1 mt-0.5">
+            <span className="absolute inline-flex h-3 w-3 rounded-full bg-[#f1b34c] opacity-75 animate-ping" />
+            <span className="relative inline-flex h-3 w-3 rounded-full bg-[#d6612a]" />
+          </span>
+        )}
         <span className="text-[11px] font-bold text-[#c8923a] whitespace-nowrap">
           +{q.reward.coins}◉{q.reward.almanacXp ? ` +${q.reward.almanacXp}✦` : ""}
         </span>
@@ -31,7 +42,7 @@ function QuestCard({ q, dispatch }) {
           q.claimed
             ? "bg-[#c5a87a] border-[#a88a5a] text-white/70 cursor-default"
             : claimable
-            ? "bg-[#91bf24] border-[#6a9010] text-white hover:bg-[#a3d028]"
+            ? "bg-[#91bf24] border-[#6a9010] text-white hover:bg-[#a3d028] animate-pulse"
             : "bg-[#e0d2b0] border-[#c5a87a] text-[#a88a5a] cursor-not-allowed"
         }`}
       >
