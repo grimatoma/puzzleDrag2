@@ -4,6 +4,7 @@ import { runSelfTests } from "./src/utils.js";
 import { gameReducer, initialState } from "./src/state.js";
 import { Hud, SidePanel, MobileDock, PortraitToolsBar, BottomNav, TownView, SeasonModal, NpcBubble, FeatureModals, FeatureScreens } from "./src/ui.jsx";
 import { useAudio } from "./src/audio/useAudio.js";
+import { setPhaserScene } from "./src/phaserBridge.js";
 
 function PhaserMount({ dispatch, biomeKey, turnsUsed, uiLocked, sceneRef, memoryPerks, setChainInfo }) {
   const hostRef = useRef(null);
@@ -66,7 +67,7 @@ function PhaserMount({ dispatch, biomeKey, turnsUsed, uiLocked, sceneRef, memory
 
               const scene = game.scene.scenes[0];
               sceneRef.current = scene;
-              window.__phaserScene = scene; // for tools panel quick-access
+              setPhaserScene(scene);
               scene.events.on("chain-collected", (payload) => dispatch({ type: "CHAIN_COLLECTED", payload }));
               scene.events.on("chain-update", (data) => setChainInfo(data));
               setLoading(false);
@@ -84,7 +85,7 @@ function PhaserMount({ dispatch, biomeKey, turnsUsed, uiLocked, sceneRef, memory
       gameRef.current?.destroy(true);
       gameRef.current = null;
       sceneRef.current = null;
-      window.__phaserScene = null;
+      setPhaserScene(null);
     };
   }, []);
 

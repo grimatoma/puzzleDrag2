@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { BIOMES, NPCS, SEASONS, MAX_TURNS, BUILDINGS, RECIPES } from "./constants.js";
 import { xpForLevel, resourceByKey } from "./state.js";
 import { seasonIndexForTurns, hex } from "./utils.js";
+import { getPhaserScene } from "./phaserBridge.js";
 
 // Mechanical effect active each calendar season (seasonsCycled % 4)
 const SEASON_EFFECTS = [
@@ -204,7 +205,7 @@ export function SidePanel({ state, dispatch, chainInfo }) {
       <Section title="Tools" titleColor="#f8e7c6">
         <ToolsGrid tools={state.tools} onUse={(key) => {
           dispatch({ type: "USE_TOOL", key });
-          if (key === "shuffle") window.__phaserScene?.shuffleBoard();
+          if (key === "shuffle") getPhaserScene()?.shuffleBoard();
         }} />
       </Section>
       <Section title="Orders" titleColor="#f8e7c6">
@@ -463,7 +464,7 @@ export function PortraitToolsBar({ state, dispatch }) {
               disabled={empty}
               onClick={() => {
                 dispatch({ type: "USE_TOOL", key: t.key });
-                if (t.key === "shuffle") window.__phaserScene?.shuffleBoard();
+                if (t.key === "shuffle") getPhaserScene()?.shuffleBoard();
               }}
               className={`relative flex flex-col items-center gap-0.5 py-2 rounded-lg border-2 border-[#e6c49a] transition-transform ${empty ? "bg-[#9a724d] opacity-40 cursor-not-allowed" : "bg-[#9a724d] hover:bg-[#b8845a] active:-translate-y-0.5"}`}
             >
@@ -543,7 +544,7 @@ export function MobileDock({ state, dispatch }) {
             tools={state.tools}
             onUse={(key) => {
               dispatch({ type: "USE_TOOL", key });
-              if (key === "shuffle") window.__phaserScene?.shuffleBoard();
+              if (key === "shuffle") getPhaserScene()?.shuffleBoard();
               closeSheet();
             }}
           />

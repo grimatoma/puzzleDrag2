@@ -1,21 +1,3 @@
-// Per-resource ambient sway. Each entry produces a small angular oscillation
-// applied to the tile sprite when it's at rest, evoking the resource's
-// physical character (wheat in wind, berries dangling, gold catching light…).
-// Resources missing from this map stay perfectly still — heavy/dense items
-// (logs, planks, stone, ingot, coal) shouldn't move at all.
-const SWAY = {
-  hay:    { amp: 4.0, freq: 0.00060, gust: 0.20 },
-  wheat:  { amp: 5.0, freq: 0.00065, gust: 0.22 },
-  grain:  { amp: 1.2, freq: 0.00035, gust: 0.08 },
-  flour:  { amp: 1.0, freq: 0.00030, gust: 0.05 },
-  berry:  { amp: 3.5, freq: 0.00090, gust: 0.15 },
-  jam:    { amp: 0.8, freq: 0.00025, gust: 0.00 },
-  egg:    { amp: 1.5, freq: 0.00055, gust: 0.08 },
-  ore:    { amp: 0.4, freq: 0.00020, gust: 0.00 },
-  gem:    { amp: 1.2, freq: 0.00028, gust: 0.04 },
-  cutgem: { amp: 1.2, freq: 0.00028, gust: 0.04 },
-  gold:   { amp: 1.0, freq: 0.00024, gust: 0.04 },
-};
 
 export class TileObj {
   constructor(scene, x, y, col, row, res) {
@@ -64,7 +46,7 @@ export class TileObj {
   // those animations.
   ambient(time) {
     if (this._destroying || this.selected) return;
-    const sway = SWAY[this.res.key];
+    const sway = this.res.sway;
     if (!sway) {
       if (this.sprite.angle !== 0 && !this._tweenActive) this.sprite.angle = 0;
       return;
