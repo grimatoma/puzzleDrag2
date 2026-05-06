@@ -24,6 +24,10 @@ export function hex(num) {
   return `#${num.toString(16).padStart(6, "0")}`;
 }
 
+export function makeBubble(npc, text, ms = 1800) {
+  return { id: Date.now(), npc, text, ms };
+}
+
 export function runSelfTests() {
   console.assert(seasonIndexForTurns(0) === 0, "turn 0 should be Spring");
   console.assert(seasonIndexForTurns(1) === 0, "turn 1 should be Spring");
