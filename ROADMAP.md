@@ -71,7 +71,7 @@ Each phase is a horizontal slice — a fully playable improvement, not a half-bu
 | 4 | Workers (data model, effects, wages, housing) | Spec'd | [`roadmap/phase-4-workers.md`](./roadmap/phase-4-workers.md) |
 | 5 | Species (discovery, research, free moves) | Spec'd | [`roadmap/phase-5-species.md`](./roadmap/phase-5-species.md) |
 | 6 | NPC Social (gifts, dialog pools, mood UI) | Spec'd | [`roadmap/phase-6-npc-social.md`](./roadmap/phase-6-npc-social.md) |
-| 7 | Quests / Almanac / Achievements | Pending | `roadmap/phase-7-progression.md` |
+| 7 | Quests / Almanac / Achievements | Spec'd | [`roadmap/phase-7-progression.md`](./roadmap/phase-7-progression.md) |
 | 8 | Boss + Weather (1-season window, scaling rewards) | Pending | `roadmap/phase-8-boss-weather.md` |
 | 9 | Mine Biome (resources, hazards, workers) | Pending | `roadmap/phase-9-mine.md` |
 | 10 | Farm Depth (priority tools, tile pool tuning) | Pending | `roadmap/phase-10-farm-depth.md` |
@@ -103,8 +103,8 @@ Every tile resource becomes a discoverable species across five categories — gr
 ### Phase 6 — NPC social
 Turns the 5 NPCs from silent order vending machines into a system the player can read and push. Every order card now surfaces the speaking NPC's bond band and reward multiplier inline (`+135◉ ×1.15 · Liked`), reading from a single locked table (Sour ×0.70 / Warm ×1.00 / Liked ×1.15 / Beloved ×1.25) seeded at the §18 starting value of 5/Warm. A gift modal per NPC accepts any inventory item — favorites (Mira flour, Tomas/Liss jam, Bram ingot, Wren plank) bump bond +0.5, anything else +0.2 — with a one-gift-per-NPC-per-season cooldown to prevent grinding. Dialog pools fill out the (5 NPCs × 4 seasons × 4 bands) = 80-cell matrix so order delivery, gift acceptance, and story-beat arrivals pull a season-flavored, bond-flavored line via a deterministic `pickDialog`. Exit: a fresh save can push Mira from Warm to Liked across one season of deliveries-plus-gifts, see the order modifier step from ×1.00 to ×1.15, and hear her voice change with the season.
 
-### Phase 7 — Quests / Almanac / Achievements *(spec pending)*
-6 daily quest slots that reset per season. 5-tier almanac with structural reward at tier 5. Achievement counters wired to live game events. Exit criteria TBD.
+### Phase 7 — Quests / Almanac / Achievements
+Adds the short / medium / long-horizon progression spine the post-Phase-2 sandbox is missing. Six daily quest slots reset every season, rolled deterministically from `(saveSeed, year, season)` against a 12-template pool covering collect-resource, craft-item, fulfil-orders, use-tool, and chain-length categories — each claim pays coins plus the §17-locked 20 XP. A 5-tier almanac feeds on every XP source from §17 (1/chain, 5/order, 10/build, 25/boss, 20/quest) at the locked linear 150 XP/level curve, with tier rewards stepping up to a *structural* tier-5 unlock that flips `startingExtraScythe = true` so every subsequent session begins with one bonus Scythe. Twelve achievements (≥10 ship requirement) tick quietly in the background — `chains_committed`, `bosses_defeated`, `distinct_resources_chained`, `festival_won` — and pop a single-line "Achievement unlocked: <name>" floater on milestone crossings. Tiers 6–10 of the almanac (cosmetics + blueprints per §16) are deferred to Phase 11 polish. Exit: a fresh save can claim a full season's quests, level the almanac to 2 in one session, and unlock 4+ achievements during normal play.
 
 ### Phase 8 — Boss + Weather *(spec pending)*
 Boss seasons compressed to 1 in 4. Reward scales with margin of victory. Board modifiers per boss (Frostmaw freezes 2 columns, Ember Drake heats them, Mossback hides resources). Weather slot integrated with boss season. Exit criteria TBD.
