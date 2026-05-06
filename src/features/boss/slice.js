@@ -28,7 +28,7 @@ const BOSS_META = {
     name: "The Quagmire",
     emoji: "🌿",
     flavor: "The bog has swallowed the lower fields. Only a bountiful harvest can drain its hold.",
-    goal: "Drain the bog: harvest 50 hay this season.",
+    goal: "Drain the bog: harvest 50 hay across 5 seasons.",
     resource: "hay",
     targetCount: 50,
     turns: 5,
@@ -76,6 +76,7 @@ export const initial = {
   weatherTurnsLeft: 0,
   bossesDefeated: 0,
   _bossSeasonCount: 0,
+  _bossResolvedThisSeason: false,
 };
 
 function pickRandomWeather() {
@@ -146,6 +147,7 @@ export function reduce(state, action) {
         boss: null,
         bossMinimized: false,
         modal: state.modal === "boss" ? null : state.modal,
+        _bossResolvedThisSeason: true,
       };
       if (won) {
         return {
@@ -253,9 +255,9 @@ export function reduce(state, action) {
         next = { ...next, boss: { ...next.boss, turnsLeft } };
       }
 
-      // Trigger a seasonal boss climax at the end of every 4th season (1 year)
-      // Each year cycles through the rotation: frostmaw → quagmire → ember_drake → old_stoneface
-      if (seasonCount % 4 === 0 && !next.boss) {
+      // Trigger a seasonal boss climax at the end of every 4th season (1 year).
+      // Skip if a boss was already resolved this season to avoid two boss events in one beat.
+      if (seasonCount % 4 === 0 && !next.boss && !next._bossResolvedThisSeason) {
         const yearIndex = Math.floor(seasonCount / 4) - 1;
         const bossKey = YEAR_BOSS_ROTATION[yearIndex % YEAR_BOSS_ROTATION.length];
         next = triggerBoss(next, bossKey);
@@ -281,6 +283,8 @@ export function reduce(state, action) {
         };
       }
 
+      // Reset the per-season resolved flag at end of every season
+      next = { ...next, _bossResolvedThisSeason: false };
       return next;
     }
 
