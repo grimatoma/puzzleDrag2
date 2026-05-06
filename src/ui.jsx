@@ -19,6 +19,41 @@ const TOOL_DEFS = [
   { key: "shuffle", icon: "↻", name: "Reshuffle Horn", desc: "Reshuffles all tiles on the board for a fresh layout." },
 ];
 
+// ─── Tooltip hook ──────────────────────────────────────────────────────────
+// tip: null | { data, x, y }
+// handlers(data) returns the full set of mouse/touch event props with all
+// mobile fixes applied (synthetic-mouseleave guard, 2s touch dismiss, etc.)
+function useTooltip() {
+  const [tip, setTip] = useState(null);
+  const lastTouchTime = useRef(0);
+  const dismissTimer = useRef(null);
+
+  const show = (data, el) => {
+    clearTimeout(dismissTimer.current);
+    const rect = el.getBoundingClientRect();
+    setTip({ data, x: rect.left + rect.width / 2, y: rect.top });
+  };
+
+  const hide = (delay = 0) => {
+    clearTimeout(dismissTimer.current);
+    if (delay > 0) {
+      dismissTimer.current = setTimeout(() => setTip(null), delay);
+    } else {
+      setTip(null);
+    }
+  };
+
+  const handlers = (data) => ({
+    onMouseEnter: (e) => { if (Date.now() - lastTouchTime.current > 600) show(data, e.currentTarget); },
+    onMouseLeave: () => { if (Date.now() - lastTouchTime.current > 600) hide(); },
+    onTouchStart: (e) => { lastTouchTime.current = Date.now(); show(data, e.currentTarget); },
+    onTouchEnd: () => hide(2000),
+    onTouchCancel: () => hide(2000),
+  });
+
+  return { tip, show, hide, handlers, lastTouchTime };
+}
+
 // ─── HUD (top bar) ─────────────────────────────────────────────────────────
 
 export function Hud({ state, dispatch }) {
@@ -280,13 +315,10 @@ export function InventoryGrid({ inventory, biomeKey, compact, orders = [] }) {
 }
 
 function ToolsGrid({ tools, onUse }) {
-  const [tooltip, setTooltip] = useState(null);
-  const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 });
+  const { tip: tooltipTip, show: showTooltip, hide: hideTooltip, lastTouchTime } = useTooltip();
   const [modalTool, setModalTool] = useState(null);
   const longPressTimer = useRef(null);
   const longPressOccurred = useRef(false);
-  const lastTouchTime = useRef(0);
-  const dismissTimer = useRef(null);
 
   const startLongPress = (t) => {
     longPressOccurred.current = false;
@@ -300,23 +332,7 @@ function ToolsGrid({ tools, onUse }) {
     clearTimeout(longPressTimer.current);
   };
 
-  const showTooltip = (key, el) => {
-    clearTimeout(dismissTimer.current);
-    const rect = el.getBoundingClientRect();
-    setTooltipPos({ x: rect.left + rect.width / 2, y: rect.top });
-    setTooltip(key);
-  };
-
-  const hideTooltip = (delay = 0) => {
-    clearTimeout(dismissTimer.current);
-    if (delay > 0) {
-      dismissTimer.current = setTimeout(() => setTooltip(null), delay);
-    } else {
-      setTooltip(null);
-    }
-  };
-
-  const tooltipDef = TOOL_DEFS.find((t) => t.key === tooltip);
+  const tooltipDef = tooltipTip ? TOOL_DEFS.find((t) => t.key === tooltipTip.data) : null;
 
   return (
     <>
@@ -355,7 +371,7 @@ function ToolsGrid({ tools, onUse }) {
       {tooltipDef && createPortal(
         <div
           className="fixed z-[9999] w-36 bg-[#2b1d0e] text-white text-[10px] rounded-lg px-2.5 py-2 shadow-lg pointer-events-none border border-[#e6c49a]"
-          style={{ left: tooltipPos.x, top: tooltipPos.y - 8, transform: "translate(-50%, -100%)" }}
+          style={{ left: tooltipTip.x, top: tooltipTip.y - 8, transform: "translate(-50%, -100%)" }}
         >
           <div className="font-bold text-[11px] mb-0.5">{tooltipDef.name}</div>
           <div className="text-white/80 leading-snug">{tooltipDef.desc}</div>
@@ -1070,9 +1086,7 @@ function MineEntranceArt({ locked }) {
 
 export function TownView({ state, dispatch }) {
   const [entryBiome, setEntryBiome] = useState(null);
-  const [buildingTip, setBuildingTip] = useState(null);
-  const buildingTouchTime = useRef(0);
-  const buildingDismissTimer = useRef(null);
+  const { tip: buildingTip, handlers: tipHandlers } = useTooltip();
   const biomeTheme = state.biomeKey === "mine" ? "mine" : "farm";
   const theme = TOWN_THEMES[biomeTheme] || TOWN_THEMES.home;
   const townConfig = TOWN_BIOME_CONFIGS[biomeTheme];
@@ -1326,25 +1340,10 @@ export function TownView({ state, dispatch }) {
               dispatch({ type: "BUILD", building: b });
             };
             const costStr = Object.entries(b.cost).map(([k, v]) => k === "coins" ? `${v}◉` : `${v} ${k}`).join(" · ");
-            const showTip = (el) => {
-              if (isBuilt) return;
-              clearTimeout(buildingDismissTimer.current);
-              const rect = el.getBoundingClientRect();
-              setBuildingTip({
-                label: isLocked ? `🔒 ${b.name} (Level ${b.lv})` : `Build ${b.name}: ${costStr}`,
-                desc: b.desc,
-                color: isLocked ? "#f7d572" : canAfford ? "#9bdb6a" : "#f7d572",
-                x: rect.left + rect.width / 2,
-                y: rect.top,
-              });
-            };
-            const hideTip = (delay = 0) => {
-              clearTimeout(buildingDismissTimer.current);
-              if (delay > 0) {
-                buildingDismissTimer.current = setTimeout(() => setBuildingTip(null), delay);
-              } else {
-                setBuildingTip(null);
-              }
+            const buildingTipData = isBuilt ? null : {
+              label: isLocked ? `🔒 ${b.name} (Level ${b.lv})` : `Build ${b.name}: ${costStr}`,
+              desc: b.desc,
+              color: isLocked ? "#f7d572" : canAfford ? "#9bdb6a" : "#f7d572",
             };
             return (
               <div
@@ -1358,11 +1357,7 @@ export function TownView({ state, dispatch }) {
                   opacity: isLocked && !isBuilt ? 0.5 : 1,
                 }}
                 onClick={onClick}
-                onMouseEnter={(e) => { if (Date.now() - buildingTouchTime.current > 600) showTip(e.currentTarget); }}
-                onMouseLeave={() => { if (Date.now() - buildingTouchTime.current > 600) hideTip(); }}
-                onTouchStart={(e) => { buildingTouchTime.current = Date.now(); showTip(e.currentTarget); }}
-                onTouchEnd={() => hideTip(2000)}
-                onTouchCancel={() => hideTip(2000)}
+                {...(buildingTipData ? tipHandlers(buildingTipData) : {})}
               >
                 <BuildingIllustration id={b.id} isBuilt={isBuilt} />
                 {isBuilt ? (
@@ -1426,8 +1421,8 @@ export function TownView({ state, dispatch }) {
             minWidth: 150,
           }}
         >
-          <div className="font-bold" style={{ color: buildingTip.color, fontSize: "clamp(9px,1.1vw,13px)", whiteSpace: "nowrap" }}>{buildingTip.label}</div>
-          {buildingTip.desc && <div className="mt-0.5 leading-snug text-white/75" style={{ fontSize: "clamp(8px,0.9vw,11px)", whiteSpace: "normal" }}>{buildingTip.desc}</div>}
+          <div className="font-bold" style={{ color: buildingTip.data.color, fontSize: "clamp(9px,1.1vw,13px)", whiteSpace: "nowrap" }}>{buildingTip.data.label}</div>
+          {buildingTip.data.desc && <div className="mt-0.5 leading-snug text-white/75" style={{ fontSize: "clamp(8px,0.9vw,11px)", whiteSpace: "normal" }}>{buildingTip.data.desc}</div>}
           <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-[rgba(10,10,14,0.92)]" />
         </div>,
         document.body
