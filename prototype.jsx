@@ -6,7 +6,7 @@ import { Hud, SidePanel, MobileDock, PortraitToolsBar, BottomNav, TownView, Seas
 import { useAudio } from "./src/audio/useAudio.js";
 import { setPhaserScene } from "./src/phaserBridge.js";
 
-function PhaserMount({ dispatch, biomeKey, turnsUsed, uiLocked, sceneRef, memoryPerks, setChainInfo }) {
+function PhaserMount({ dispatch, biomeKey, turnsUsed, seasonsCycled, uiLocked, sceneRef, memoryPerks, setChainInfo }) {
   const hostRef = useRef(null);
   const gameRef = useRef(null);
   const [loading, setLoading] = useState(true);
@@ -48,6 +48,7 @@ function PhaserMount({ dispatch, biomeKey, turnsUsed, uiLocked, sceneRef, memory
             preBoot: (game) => {
               game.registry.set("biomeKey", biomeKey);
               game.registry.set("turnsUsed", turnsUsed);
+              game.registry.set("seasonsCycled", seasonsCycled);
               game.registry.set("uiLocked", uiLocked);
               game.registry.set("dpr", dpr);
               game.registry.set("renderResolution", dpr);
@@ -92,6 +93,7 @@ function PhaserMount({ dispatch, biomeKey, turnsUsed, uiLocked, sceneRef, memory
   // Sync React state → Phaser registry
   useEffect(() => { gameRef.current?.registry.set("biomeKey", biomeKey); }, [biomeKey]);
   useEffect(() => { gameRef.current?.registry.set("turnsUsed", turnsUsed); }, [turnsUsed]);
+  useEffect(() => { gameRef.current?.registry.set("seasonsCycled", seasonsCycled); }, [seasonsCycled]);
   useEffect(() => { gameRef.current?.registry.set("uiLocked", uiLocked); }, [uiLocked]);
   useEffect(() => { gameRef.current?.registry.set("memoryPerks", memoryPerks || []); }, [memoryPerks]);
 
@@ -169,6 +171,7 @@ export default function App() {
                   dispatch={dispatch}
                   biomeKey={state.biomeKey}
                   turnsUsed={state.turnsUsed}
+                  seasonsCycled={state.seasonsCycled}
                   uiLocked={uiLocked}
                   sceneRef={sceneRef}
                   memoryPerks={state.memoryPerks}

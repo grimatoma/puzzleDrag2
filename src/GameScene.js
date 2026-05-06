@@ -1,6 +1,6 @@
 import Phaser from "phaser";
 import { TILE, COLS, ROWS, MAX_TURNS, UPGRADE_EVERY, SEASONS, BIOMES } from "./constants.js";
-import { seasonIndexForTurns, upgradeCountForChain, cssColor } from "./utils.js";
+import { upgradeCountForChain, cssColor } from "./utils.js";
 import { rounded, makeTextures } from "./textures.js";
 import { TileObj } from "./TileObj.js";
 import { resourceByKey } from "./state.js";
@@ -127,8 +127,8 @@ export class GameScene extends Phaser.Scene {
   // ─── Background / board frame ─────────────────────────────────────────────
 
   season() {
-    const turns = this.registry.get("turnsUsed") || 0;
-    return SEASONS[seasonIndexForTurns(turns)];
+    const idx = (this.registry.get("seasonsCycled") || 0) % SEASONS.length;
+    return SEASONS[idx];
   }
 
   biomeKey() {

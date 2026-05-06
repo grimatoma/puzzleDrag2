@@ -2,7 +2,7 @@ import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { BIOMES, NPCS, SEASONS, MAX_TURNS, BUILDINGS, RECIPES } from "./constants.js";
 import { xpForLevel, resourceByKey } from "./state.js";
-import { seasonIndexForTurns, hex } from "./utils.js";
+import { hex } from "./utils.js";
 import { getPhaserScene } from "./phaserBridge.js";
 
 // Mechanical effect active each calendar season (seasonsCycled % 4)
@@ -111,9 +111,8 @@ function Tooltip({ anchorX, anchorY, gap = 8, edgeMargin = 8, className = "", st
 export function Hud({ state, dispatch }) {
   const { coins, level, xp, turnsUsed, built, view, seasonsCycled } = state;
   const onBoard = view === "board";
-  const seasonIdx = seasonIndexForTurns(turnsUsed);
-  const season = SEASONS[seasonIdx];
   const calendarSeason = (seasonsCycled || 0) % 4;
+  const season = SEASONS[calendarSeason];
   const xpNeed = xpForLevel(level);
   const xpPct = Math.min(100, (xp / xpNeed) * 100);
   const turnsLeft = MAX_TURNS - turnsUsed;
@@ -1579,11 +1578,11 @@ function BuildingSmoke() {
 
 export function SeasonModal({ state, dispatch }) {
   if (state.modal !== "season") return null;
-  const seasonIdx = seasonIndexForTurns(state.turnsUsed === 0 ? MAX_TURNS - 1 : state.turnsUsed - 1);
-  const prevSeason = SEASONS[seasonIdx];
-  const nextSeason = SEASONS[(seasonIdx + 1) % SEASONS.length];
+  const calendarSeason = (state.seasonsCycled || 0) % 4;
+  const prevSeason = SEASONS[calendarSeason];
+  const nextCalendarSeason = (calendarSeason + 1) % 4;
+  const nextSeason = SEASONS[nextCalendarSeason];
   const stats = state.seasonStats;
-  const nextCalendarSeason = ((state.seasonsCycled || 0) + 1) % 4;
   const nextEffect = SEASON_EFFECTS[nextCalendarSeason];
   return (
     <div className="absolute inset-0 bg-black/55 grid place-items-center z-50 animate-fadein">
