@@ -967,16 +967,16 @@ function TownWalker({ color, duration, delay, dir, hair = "short", accessory = "
         right: dir < 0 ? "-6%" : undefined,
         animation: `${animation} ${duration}s linear infinite`,
         animationDelay: `-${delay}s`,
-        transform: `scale(${size})`,
-        transformOrigin: "bottom center",
       }}
     >
+      <div style={{ transform: `scale(${size})`, transformOrigin: "bottom center" }}>
       <div className="relative" style={{ animation: "townBob 0.55s ease-in-out infinite alternate" }}>
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-2.5 h-2.5 rounded-full" style={{ background: "#f5d6b0", border: "1px solid rgba(0,0,0,.25)" }} />
         {hairByType[hair] || hairByType.short}
         <div className="w-3.5 h-4 rounded-sm mt-[11px]" style={{ background: color, border: "1px solid rgba(0,0,0,.3)" }} />
         {accessoryByType[accessory] || null}
         <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-4 h-1 rounded-full bg-black/25" />
+      </div>
       </div>
     </div>
   );
