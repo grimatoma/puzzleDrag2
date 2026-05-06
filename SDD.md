@@ -1,638 +1,914 @@
 # Software Design Document — Hearthwood Vale
 ## Gap Analysis, Phase Roadmap & Task Breakdown
 
-*Generated 2026-05-06. Based on a full audit of the current codebase against GAME_MECHANICS.md (the Puzzle Craft 2 reference) and the merged GDD.*
+*Updated 2026-05-06 incorporating design decisions from Q&A review and priority reorder.*
+
+---
+
+## Design Decisions Locked
+
+| Topic | Decision |
+|---|---|
+| **Win condition** | Story-based narrative arc; see Phase 2 |
+| **Chain upgrade model** | Chain must reach per-resource threshold length (endpoint model); see Phase 1.1 |
+| **Development priority** | Farm → Story → Economy → Workers → Species → Mine (later) → Sea (much later) |
+| **Stars (★)** | Dropped entirely for now — do not implement |
+| **HUD modifier (+0% / +16%)** | Omit — do not implement |
+| **Overchaining** | No cap; upgrades spawn at every threshold multiple; full spec in Phase 1 |
+| **Free move trigger** | Chaining the species (not just having it active) grants free moves |
+| **Active species limit** | Only 1 species per category active at session start |
+| **Magic Portal** | Player choice (not random draw) |
+| **Field state saving** | Yes — Silos/Barns preserve tile layout between sessions |
+| **Realm tier** | Based on number of towns/zones owned in the world map |
+| **Daily login streak** | Present; escalating rewards |
+| **XP scaling** | Linear for now; balance later |
+| **Worker resource** | Comes from Housing buildings; also available as IAP |
+| **Worker effect display** | Show max count only (e.g. "5", not "5/5") |
+| **Worker effects** | Max effect = fully-hired roster; starting effect = max ÷ max_count per worker |
+| **Barrels** | Skip for now |
+| **Architect / Archaeologist** | Omit for now |
+| **Potions** | TBD — keep as placeholder, no UI yet |
+| **Bombs** | Come from buildings with a production timer |
+| **Envelope icon** | Skip for now |
+| **Swamp tiles** | TBD |
+| **Sandbanks** | TBD |
+| **Sea ship navigation** | Hold off |
+| **Castle contribution system** | TBD |
 
 ---
 
 ## Executive Summary
 
-The prototype is in **good structural health**: Phaser 3 board, React shell, slice-based state management, save/load, responsive layout, and seven feature areas (crafting, orders, quests, achievements, apprentices, boss encounters, cartography) are all scaffolded. However, significant gaps exist between what is built and what the design calls for. The most critical are:
+The prototype has a solid Phaser 3 board, React shell, slice-based state, save/load, and several feature scaffolds. The most critical gaps blocking a playable vertical slice are:
 
-1. **No third biome (Sea)** — a full environment is absent.
-2. **Tools don't interact with the board** — "Scythe" (clear) never removes tiles.
-3. **Workers don't affect gameplay** — apprentices are hired but their mechanical effects (threshold reductions, etc.) are never read by GameScene.
-4. **Dead-board auto-shuffle is missing** — the game can reach an unwinnable state with no feedback.
-5. **No alternative currencies** — Runes, Influence/Crowns, Potions, and Bombs exist in the GDD but nothing in state.
-6. **No Market/Shop screen** — buy/sell is completely absent.
-7. **No Species system** — the active/inactive tile-pool toggle is the primary board-customization mechanic and doesn't exist.
-8. **Turn count mismatch** — MAX_TURNS=8; GDD says 10 per session.
-9. **Grid size mismatch** — constants declare 6×7 (42 tiles); GAME_MECHANICS says 6×6 (36 tiles). One of these is wrong.
-10. **`memoryPerks` passed to Phaser but never defined in state** — silent data bug.
+1. **Chain upgrade model is wrong** — current "every 3rd tile" model must change to per-resource threshold-at-endpoint.
+2. **Dead-board auto-shuffle is missing** — game can softlock.
+3. **Tools don't touch the board** — Scythe, Seedpack, Lockbox bypass Phaser entirely.
+4. **Workers are hired but do nothing** — no effects reach GameScene.
+5. **No story system** — no narrative arc or win path.
+6. **Three data bugs** — `memoryPerks` undefined, `gained` split, `MAX_TURNS` wrong.
+7. **No overchaining visual spec** — stars are misplaced and feedback is thin.
 
 ---
 
-## Current State Inventory
-
-### What Is Fully Implemented
-| System | Status | Notes |
-|---|---|---|
-| Phaser 3 board (drag chain, collapse, fill) | ✅ Complete | Solid, production-quality |
-| Farm biome (10 resource types, upgrade chain) | ✅ Complete | |
-| Mine biome (10 resource types) | ✅ Complete | |
-| Season cycle (Spring/Summer/Autumn/Winter effects) | ✅ Complete | All 4 seasonal modifiers fire correctly |
-| Orders system (3 active NPC orders) | ✅ Complete | Including crafted-item orders at level 3+ |
-| Crafting system (13 recipes, 3 stations) | ✅ Complete | Gated behind built buildings |
-| Building system (8 buildings) | ✅ Complete | Build costs enforced, level gates present |
-| XP / Level progression | ✅ Complete | Level-up bubbles, biome unlock at level 2 |
-| Save / load (localStorage) | ✅ Complete | Volatile fields excluded |
-| Achievements (20 achievements, 8 categories) | ✅ Complete | Tracking + reward delivery |
-| Quest system (3 dailies + Almanac tiers) | ✅ Complete | Progress tracked across all relevant actions |
-| Tutorial (6-step guided intro) | ✅ Complete | Corner-toast + center-modal steps |
-| Apprentices UI (hire panel, requirement gating) | ✅ Complete | |
-| Boss encounters (4 bosses) | ✅ Complete | Board modifier (minChain) wired to state |
-| Cartography / World map | ✅ Substantial | 678-line UI, node travel, adjacency logic |
-| NPC Mood / Bond system | ✅ Complete | Gifting, bond levels, favorite/dislike resources |
-| Settings (sfx, music, haptics, accessibility) | ✅ Complete | Persisted separately from game save |
-| Audio system | ✅ Scaffolded | Hook + index exist; sound completeness unknown |
-| Responsive layout (desktop/mobile/landscape) | ✅ Complete | |
-
-### What Is Partially Implemented
-| System | Status | Gap |
-|---|---|---|
-| Tools | ⚠️ Partial | Tools update inventory only; none actually alter the board. "Scythe" should physically remove tiles; "Reshuffle Horn" calls `shuffleBoard()` correctly but "Seedpack" and "Lockbox" bypass the board entirely. |
-| Apprentices (gameplay effect) | ⚠️ Partial | Hired apprentices stored in state but no effect propagated to GameScene (no threshold reduction, no pool changes). |
-| Season feedback | ⚠️ Partial | Mechanical modifiers fire; visual season transitions are thin (background color only, no tile-set changes). |
-| Boss system | ⚠️ Partial | 4 bosses defined; only `minChain` modifier actually fires from `coreReducer`. Boss resource-tracking (e.g., "collect 30 logs in 5 turns") is tracked in `boss.slice` but no clear "boss victory/defeat" modal is shown. |
-| Audio | ⚠️ Sparse | Hook exists and is called; actual sound completeness depends on `audio/index.js` content — needs audit. |
-
-### What Is Missing (Does Not Exist)
-| System | Status |
-|---|---|
-| Sea biome (third environment) | ❌ Missing |
-| Dead-board auto-shuffle | ❌ Missing |
-| Species system (active/inactive toggle, discovery) | ❌ Missing |
-| Market / Shop (buy & sell screen) | ❌ Missing |
-| Alternative currencies: Runes, Influence/Crowns, Potions, Bombs | ❌ Missing |
-| Magic Portal mechanic | ❌ Missing |
-| Mysterious Ore tile (countdown tile in Mine) | ❌ Missing |
-| Worker effects wired to board | ❌ Missing |
-| Supply chain (Farm food → Mine/Sea supplies) | ❌ Missing |
-| Castle system | ❌ Missing |
-| End-game / win condition | ❌ Missing |
-| `memoryPerks` state field (referenced in prototype but undefined) | ❌ Bug |
-
----
-
-## Known Data / Logic Bugs
+## Known Bugs (Fix Before Anything Else)
 
 | # | File | Bug |
 |---|---|---|
-| B1 | `constants.js` | `ROWS=7` → grid is 6×7 (42 tiles). GDD says 6×6. Pick one and unify. |
-| B2 | `constants.js` | `MAX_TURNS=8`. GDD says 10 turns per session. |
-| B3 | `prototype.jsx:169` | `memoryPerks={state.memoryPerks}` — `memoryPerks` is never declared in `initialState()` or any slice. This silently passes `undefined` to Phaser every re-render. |
-| B4 | `state.js:coreReducer` | `collectPath` calculates `gained = pathLength * (pathLength >= 6 ? 2 : 1)`. This "double gain at 6+" rule is embedded in GameScene, not in state — there is a logic split where neither side fully owns the calculation. |
-| B5 | `GameScene.js:452` | `gained` doubles for chains ≥ 6 but this isn't reflected in the chain badge text, which shows the raw count. Badge and inventory diverge. |
-| B6 | `utils.js:seasonIndexForTurns` | Mapping: turn 0-1 → Spring, 2-3 → Summer, 4-5 → Autumn, 6+ → Winter. With MAX_TURNS=8 this means only 2 turns per "phase," creating very fast season transitions. GDD describes them as full seasonal cycles. |
+| B1 | `constants.js` | `ROWS=7` — grid is 6×7. Decide 6×6 or 6×7 and commit. |
+| B2 | `constants.js` | `MAX_TURNS=8` — GDD says 10 turns per session. |
+| B3 | `prototype.jsx:169` | `memoryPerks={state.memoryPerks}` — never declared in `initialState`. Silently passes `undefined` to Phaser every render. Remove the prop until the worker-threshold feature is built. |
+| B4 | `GameScene.js` + `state.js` | `gained` doubled for chains ≥6 in GameScene but the state reducer trusts the value it receives. Neither owns the formula. Move to `utils.js` as `resourceGainForChain(len)`. |
+| B5 | `GameScene.js:452` | Chain badge shows raw `path.length`, not effective `gained`. Badge and inventory diverge on ≥6 chains. |
+| B6 | `utils.js` | `seasonIndexForTurns` breakpoints assume 8-turn sessions. Recalculate for 10-turn sessions. |
 
 ---
 
 ## Phase Roadmap
 
-Phases are ordered by dependency — each builds on the previous. Within a phase, tasks are ordered by impact.
+```
+Phase 0  — Bug fixes (blocking)
+Phase 1  — Chain mechanic overhaul + board tools (core feel)
+Phase 2  — Story system (win path)
+Phase 3  — Economy: Market + Supply chain
+Phase 4  — Workers wired to board
+Phase 5  — Species system (Farm species only first)
+Phase 6  — Mine biome depth (lower priority)
+Phase 7  — Sea biome (much later)
+Phase 8  — Magic Portal + Castle
+Phase 9  — Content depth + balance
+Phase 10 — Polish + accessibility
+Phase 11 — Infrastructure + monetization hooks
+```
+
+Phases 6, 7 are explicitly deferred. Focus is Phases 0–5.
 
 ---
 
-## Phase 0 — Foundation Fixes (Pre-requisite for everything)
-*These are data bugs and architectural ambiguities that will create merge conflicts if deferred.*
+## Phase 0 — Bug Fixes
 
-### Task 0.1 — Resolve grid size
+### Task 0.1 — Grid size
 **File:** `src/constants.js`
-- Decide: 6×6 (GDD) or 6×7 (current). 6×6 is the reference game standard and gives a cleaner layout.
-- Change `ROWS` from `7` to `6` if going with 6×6.
-- Update `BOARD_Y` and `boardFrame` calculations in `GameScene.js` accordingly.
-- **Impact:** All layout math, tile fill loops, and collapse logic use `ROWS`. Change is one constant + verify no hardcoded `7` anywhere.
+Commit to 6×6. Change `ROWS` from 7 to 6. Verify no hardcoded 7 anywhere in GameScene layout math.
 
-### Task 0.2 — Fix turn count
+### Task 0.2 — Turn count
 **File:** `src/constants.js`
-- Change `MAX_TURNS` from `8` to `10` to match GDD.
-- Verify `seasonIndexForTurns()` in `utils.js` uses correct breakpoints for a 10-turn session (e.g., turns 1–2: Spring, 3–5: Summer, 6–8: Autumn, 9–10: Winter).
-- Update self-tests in `runSelfTests()`.
+Change `MAX_TURNS` from 8 to 10. Update `seasonIndexForTurns()` breakpoints:
+```js
+// 10-turn session → 2-3 turns per phase
+export function seasonIndexForTurns(turnsUsed) {
+  if (turnsUsed <= 2)  return 0; // Spring
+  if (turnsUsed <= 5)  return 1; // Summer
+  if (turnsUsed <= 8)  return 2; // Autumn
+  return 3;                       // Winter
+}
+```
+Update self-tests in `runSelfTests()`.
 
-### Task 0.3 — Fix `memoryPerks` undefined bug
-**Files:** `src/state.js`, `prototype.jsx`
-- Add `memoryPerks: []` to `initialState()` in `state.js`.
-- Alternatively, remove the prop from `PhaserMount` if it's not yet implemented (prefer remove until the feature exists).
+### Task 0.3 — Remove `memoryPerks` phantom prop
+**File:** `prototype.jsx`
+Delete the `memoryPerks={state.memoryPerks}` prop from `<PhaserMount>` and its parameter in the component signature. Re-add properly in Phase 4.
 
-### Task 0.4 — Centralize `gained` calculation
-**Files:** `src/GameScene.js`, `src/state.js`
-- The "double gain at chainLength ≥ 6" rule lives in `GameScene.collectPath()` but the state reducer also uses the `gained` value it receives. This makes the calculation split.
-- Move the formula into a shared utility function in `utils.js` (e.g., `resourceGainForChain(len)`), import it in both places.
-- Fix chain badge text to use the effective `gained`, not raw path length.
+### Task 0.4 — Centralize `gained` formula
+**File:** `src/utils.js`, `src/GameScene.js`
+Add to `utils.js`:
+```js
+export function resourceGainForChain(chainLength) {
+  return chainLength * (chainLength >= 6 ? 2 : 1);
+}
+```
+Import in both `GameScene.collectPath()` and `state.js:CHAIN_COLLECTED`. Fix chain badge text to use effective gained value.
 
 ---
 
-## Phase 1 — Core Board Mechanics
-*The puzzle board is the game. These gaps directly hurt the play loop.*
+## Phase 1 — Chain Mechanic Overhaul + Board Tools
 
-### Task 1.1 — Dead-board auto-shuffle
+### 1.1 — Per-resource threshold model (replaces UPGRADE_EVERY)
+
+**This is the single most impactful design change.**
+
+#### How it works
+
+Each resource has a **threshold** — the minimum chain length required to produce one upgraded resource. Reaching a multiple of the threshold produces one upgrade per multiple.
+
+```
+Hay threshold = 6
+  Chain 3 hay   →  collect 3 hay, no upgrade
+  Chain 6 hay   →  collect 6 hay + 1 wheat spawns at chain endpoint
+  Chain 12 hay  →  collect 12 hay + 2 wheat spawn at endpoint
+  Chain 18 hay  →  collect 18 hay + 3 wheat spawn at endpoint
+```
+
+The upgrade spawns **at the last tile of the chain** (the endpoint), not at every 3rd tile.
+
+#### Threshold table for this game
+
+| Resource (tile) | Base Threshold | Upgrades To |
+|---|---|---|
+| Hay | 6 | Wheat |
+| Wheat | 5 | Grain |
+| Grain | 4 | Flour |
+| Log | 5 | Plank |
+| Plank | 4 | Beam |
+| Berry | 7 | Jam |
+| Stone | 8 | Cobble |
+| Cobble | 6 | Block |
+| Ore | 6 | Ingot |
+| Coal | 7 | Coke |
+| Gem | 5 | CutGem |
+
+Resources without an upgrade (Egg, Flour, Beam, Jam, Block, Ingot, Coke, CutGem, Gold) never trigger upgrades — they are collected as-is regardless of chain length.
+
+#### Overchaining — full specification
+
+Overchaining is the core skill expression mechanic.
+
+- **Star markers**: During chain selection, a star (★) appears at the tile at position T, 2T, 3T... (where T = threshold for that resource). The star shows the upgraded resource icon next to it.
+- **Visual escalation**:
+  - 1st star (1×T): gold ★, small, subtle sway animation
+  - 2nd star (2×T): gold ★★, larger, faster sway, brighter glow halo
+  - 3rd star (3×T): gold ★★★, largest, pulsing orange-white burst, screen micro-shake queued
+- **Upgrade spawning**: On chain commit, `upgradeCount = Math.floor(chainLength / threshold)` upgrades of the next-tier resource are placed into `pendingUpgrades` and appear on the board during the next fill cycle.
+- **No artificial cap**: Upgrades are limited only by available same-type tiles on the board.
+- **Floater text**: Shows `+N Hay  ★×K` where K is the upgrade count.
+- **Special case — adjacent routing**: Skilled players route chains so the endpoint tile is adjacent to higher-tier tiles, enabling them to immediately continue a chain into the just-spawned upgrade. The game should not auto-collect spawned upgrades.
+
+#### Implementation changes
+
+**`src/constants.js`**: Remove `UPGRADE_EVERY`. Add per-resource thresholds:
+```js
+export const UPGRADE_THRESHOLDS = {
+  hay: 6, wheat: 5, grain: 4,
+  log: 5, plank: 4,
+  berry: 7,
+  stone: 8, cobble: 6,
+  ore: 6, coal: 7, gem: 5,
+};
+```
+
+**`src/utils.js`**: Replace `upgradeCountForChain(n)` with:
+```js
+export function upgradeCountForChain(chainLength, resourceKey) {
+  const t = UPGRADE_THRESHOLDS[resourceKey];
+  if (!t) return 0;
+  return Math.floor(chainLength / t);
+}
+```
+
+**`src/GameScene.js:collectPath()`**: Pass `res.key` to `upgradeCountForChain`. Star markers in `redrawPath()` must use `UPGRADE_THRESHOLDS[res.key]` instead of `UPGRADE_EVERY`.
+
+**`src/GameScene.js:redrawPath()`**: Star positions change from `i % UPGRADE_EVERY === 0` to `(i + 1) % threshold === 0`. Visual escalation (size, sway speed, glow) must vary by which multiple (1st, 2nd, 3rd+).
+
+### 1.2 — Dead-board auto-shuffle
+
 **File:** `src/GameScene.js`
-**What:** After any board fill/collapse, check whether at least one valid 3-tile chain exists. If not, auto-shuffle all tiles without consuming a turn, and briefly flash a "Shuffled!" indicator.
-**How:**
+
+After any board fill completes, check whether at least one valid 3-tile chain exists. If not, auto-shuffle without consuming a turn.
+
 ```js
 hasValidChain() {
-  // For each tile, DFS check if 3+ same-resource adjacent tiles exist
   for (let r = 0; r < ROWS; r++) {
     for (let c = 0; c < COLS; c++) {
       const tile = this.grid[r][c];
       if (!tile) continue;
-      if (this._dfsChain(r, c, tile.res.key, new Set([`${r},${c}`])) >= 3) return true;
+      if (this._countReachable(r, c, tile.res.key, new Set()) >= 3) return true;
     }
   }
   return false;
 }
-```
-- Call `hasValidChain()` at the end of `fillBoard()` after the fill tween completes (use `delayedCall` to check after animation settles).
-- If false: call `shuffleBoard()`, show a toast "No moves — board reshuffled", do NOT increment `turnsUsed`.
-- Add a recursion depth limit to the DFS to keep it O(1) per tile in practice.
 
-### Task 1.2 — Scythe (clear) tool actually clears board tiles
-**Files:** `src/GameScene.js`, `src/state.js`
-**What:** Currently the "clear" tool just adds 5 basic resources to inventory. The actual mechanic should be: select tiles to remove from the board (or auto-remove a set of tiles), collect those resources, then refill.
-**How (simplest reasonable version):**
-- When `USE_TOOL { key: "clear" }` fires, emit a `tool-activate` event from state to the Phaser scene via the registry or a new event channel.
-- In GameScene, on receiving the tool event, randomly select 6-8 tiles, tween them out (scale → 0), collect their resources, then collapse+fill.
-- Remove the "adds 5 basic to inventory" shortcut from the state reducer for "clear".
-- The state reducer still decrements `tools.clear`.
-
-### Task 1.3 — Seedpack (basic) places tiles on the board
-**Files:** `src/GameScene.js`, `src/state.js`
-**What:** "Seedpack" should plant 5 extra basic-resource tiles on the board (replacing random tiles), giving the player more match opportunities. Currently it just adds to inventory.
-**How:**
-- Emit a `tool-seedpack` event with the resource key.
-- GameScene swaps 4-5 random non-selected tiles to the basic resource type with a sparkle animation.
-- Remove inventory-add shortcut from state reducer.
-
-### Task 1.4 — Lockbox (rare) places rare tiles on the board
-**Same pattern as 1.3 but for rare resources.** Swaps 2-3 tiles to the biome's rare resource with a golden flash animation.
-
-### Task 1.5 — Upgrade threshold preview (star placement)
-**File:** `src/GameScene.js`
-**What:** Currently stars appear at every `UPGRADE_EVERY` (3rd) tile position. The star should appear **only when the chain is long enough to actually produce an upgrade** (i.e., at position 3, 6, 9...) and show a preview of the upgraded resource.
-**Current status:** This is correctly implemented for the current `UPGRADE_EVERY=3` rule. This task becomes relevant if/when threshold values become per-resource (Phase 4). For now, verify the star shows the correct `next` resource icon.
-
-### Task 1.6 — Overchain feedback
-**File:** `src/GameScene.js`
-**What:** When a chain reaches a second multiple of `UPGRADE_EVERY` (e.g., tile 6), show a special "DOUBLE UPGRADE" burst rather than just a second star. This already technically works (two stars render) but lacks distinct visual feedback.
-**How:** When `groupCount === 2`, add a brighter, larger burst to the radial flash and change the floatText color.
-
----
-
-## Phase 2 — Economy & Currency System
-*The game currently has only one currency (coins). The GDD specifies 4+.*
-
-### Task 2.1 — Add Runes currency to state
-**File:** `src/state.js`, `src/constants.js`
-**What:** Add `runes: 0` to `initialState`. Define how runes are earned: from Mysterious Ore tile (Phase 3.1), from chests (boss rewards), from certain quest rewards.
-**How:**
-- Add `runes` to `initialState`.
-- Add `runes` display to HUD (small gem icon, only shown when > 0 or in Mine biome).
-- Add `runes` as possible quest reward type.
-- Add `DEV/ADD_RUNES` dev action.
-
-### Task 2.2 — Add Influence/Crowns currency to state
-**File:** `src/state.js`
-**What:** Add `influence: 0` to `initialState`. Influence is earned from decorative buildings and royal quests (both TBD). Spent at the Magic Portal.
-**How:** Same pattern as Task 2.1. Crown icon display.
-
-### Task 2.3 — Add Potions and Bombs to state
-**What:** `potions: 0`, `bombs: 0` in state. Used for: Potions accelerate species research (Phase 5). Bombs used for certain Mine worker hires. Both are drop/reward currencies, not purchasable.
-**How:** Add to `initialState`. Define drop sources in boss rewards and rare chest rewards.
-
-### Task 2.4 — Market / Shop screen
-**Files:** New `src/features/market/index.jsx`, `src/features/market/slice.js`
-**What:** A full screen where the player can:
-- **Sell** resources for coins (at extremely low rates — emergency only)
-- **Buy** resources for coins (at extremely high rates — deliberate convenience)
-- **Buy** tools for coins
-**Sell/buy price table (from GDD):**
-```
-Hay:        sell 0◉,   buy 40◉
-Wheat:      sell 2◉,   buy 60◉
-Grain:      sell 4◉,   buy 80◉
-Flour:      sell 6◉,   buy 100◉
-Log:        sell 2◉,   buy 60◉
-Plank:      sell 4◉,   buy 80◉
-Beam:       sell 7◉,   buy 110◉
-Berry:      sell 3◉,   buy 70◉
-Jam:        sell 5◉,   buy 90◉
-Egg:        sell 3◉,   buy 70◉
-Stone:      sell 1◉,   buy 50◉
-Cobble:     sell 3◉,   buy 70◉
-Block:      sell 6◉,   buy 100◉
-Ore:        sell 3◉,   buy 70◉
-Ingot:      sell 6◉,   buy 100◉
-Coal:       sell 2◉,   buy 60◉
-Coke:       sell 4◉,   buy 80◉
-Gem:        sell 7◉,   buy 120◉
-CutGem:     sell 14◉,  buy 200◉
-Gold:       sell 5◉,   buy 100◉
-```
-**How:**
-- New route `view: "market"` in state.
-- UI: tab for Farm resources, tab for Mine resources, tab for Tools.
-- Sell button per resource: shows sell price, disabled if 0 stock.
-- Buy button per resource: shows buy price, disabled if not enough coins.
-- Add "Market" to BottomNav.
-
-### Task 2.5 — Supply chain (Farm food → session supplies)
-**Files:** `src/state.js`, `src/constants.js`
-**What:** Mine and (future) Sea sessions should have a "supplies" counter separate from turns. Each session costs supplies to enter. Kitchen building converts farm food to supplies.
-**How (first pass):**
-- Add `supplies: 0` to state.
-- Add `kitchen` building to `BUILDINGS` array: converts `{grain: 3}` → `{supplies: 1}` via a craft action.
-- Mine session entry requires spending supplies (e.g., 5 supplies per session, or per N turns).
-- This is a medium-complexity change that touches the "enter biome" flow in `SWITCH_BIOME`.
-
----
-
-## Phase 3 — Mine Depth & Mysterious Ore
-*The Mine biome has a unique mechanic (countdown tile) that is entirely absent.*
-
-### Task 3.1 — Mysterious Ore tile type
-**Files:** `src/constants.js`, `src/textures.js`, `src/GameScene.js`, `src/TileObj.js`
-**What:** In the Mine biome, some tiles are "Mysterious Ore" — a countdown tile. When it spawns, it shows a timer (e.g., 3 turns). The player must chain dirt tiles adjacent to it before the timer reaches 0. If successful, they earn 1 Rune. If the timer expires, the tile converts to a regular stone tile.
-**How:**
-- Add `{ key: "mysterious_ore", label: "Mysterious Ore", ... }` to Mine resources (not in pool — spawns by special logic).
-- Add a custom texture in `textures.js`: glowing ore with a number overlay.
-- In `GameScene.fillBoard()`, after Mine session starts, occasionally (1 in 20 tiles?) spawn a `mysterious_ore` tile.
-- In `TileObj`, add `countdown` property. Each turn, decrement. Show countdown number on tile.
-- If a dirt chain is collected and a `mysterious_ore` tile is adjacent to the endpoint, consume the ore and emit a `RUNE_EARNED` action.
-- On turn end, decrement all `mysterious_ore` timers; if 0, convert to `stone`.
-
-### Task 3.2 — Mine special hazard tiles
-**What:** GDD mentions mine hazards. Based on the reference game, these include tiles that block or penalize chains.
-**Types to implement:**
-- **Rock Fall**: A tile that appears and, if not chained within N turns, blocks an adjacent column slot for the rest of the session.
-- **Gas Pocket**: Chaining this tile costs 2 turns instead of 1.
-**How:** Add to Mine pool at low frequency. Handle special effects in `collectPath()` and turn-end logic.
-
----
-
-## Phase 4 — Sea Biome (Third Environment)
-*A complete biome is missing. This is the largest single feature gap.*
-
-### Task 4.1 — Define Sea resource chains
-**File:** `src/constants.js`
-**What:** Add a `sea` biome to `BIOMES` with its own resources, pool, and upgrade chains.
-**Proposed resources (based on GDD reference):**
-```js
-sea: {
-  name: "Sea",
-  dirt: 0x1a3a5c,
-  dark: 0x0a1e30,
-  resources: [
-    { key: "fish",      label: "Fish",      color: 0x6ab4d8, dark: 0x1a4a6a, value: 2, next: "salt_fish", glyph: "🐟" },
-    { key: "salt_fish", label: "Salt Fish", color: 0x9ad0e8, dark: 0x2a6a8a, value: 4, next: null,       glyph: "🧂" },
-    { key: "kelp",      label: "Kelp",      color: 0x3a8a3a, dark: 0x1a4a1a, value: 1, next: "ointment", glyph: "🌿" },
-    { key: "ointment",  label: "Ointment",  color: 0x6ab88a, dark: 0x2a5a3a, value: 3, next: null,       glyph: "🧴" },
-    { key: "pearl",     label: "Pearl",     color: 0xf0f0f0, dark: 0x8a8a8a, value: 6, next: "necklace", glyph: "⚪" },
-    { key: "necklace",  label: "Necklace",  color: 0xfff8e8, dark: 0xb8a050, value: 12, next: null,      glyph: "📿" },
-    { key: "driftwood", label: "Driftwood", color: 0xa87850, dark: 0x5a3a18, value: 2, next: "timber",   glyph: "🪵" },
-    { key: "timber",    label: "Timber",    color: 0xd4a070, dark: 0x6a4020, value: 5, next: null,       glyph: "🪟" },
-    { key: "coral",     label: "Coral",     color: 0xff8870, dark: 0x8a3020, value: 3, next: "reef_stone", glyph: "🪸" },
-    { key: "reef_stone",label: "Reef Stone",color: 0xf0b890, dark: 0x8a5030, value: 6, next: null,       glyph: "🗿" },
-  ],
-  pool: ["fish", "fish", "kelp", "kelp", "driftwood", "coral", "pearl", "fish", "kelp"],
+_countReachable(r, c, key, visited) {
+  const k = `${r},${c}`;
+  if (visited.has(k)) return 0;
+  if (r < 0 || r >= ROWS || c < 0 || c >= COLS) return 0;
+  if (!this.grid[r][c] || this.grid[r][c].res.key !== key) return 0;
+  visited.add(k);
+  let count = 1;
+  for (let dr = -1; dr <= 1; dr++)
+    for (let dc = -1; dc <= 1; dc++)
+      if (dr !== 0 || dc !== 0)
+        count += this._countReachable(r + dr, c + dc, key, visited);
+  return count;
 }
 ```
 
-### Task 4.2 — Sea tile textures
-**File:** `src/textures.js`
-- Draw custom canvas icons for all 10 sea resources in `drawTileIcon()`.
-- Add ambient sway entries in `TileObj.js` `SWAY` table (e.g., kelp sways, pearl gently bobs).
+Call `hasValidChain()` inside `fillBoard()` after the tween delay:
+```js
+this.time.delayedCall(230, () => {
+  if (!this.hasValidChain()) {
+    this.shuffleBoard();
+    this.floatText("No moves — reshuffled", cx, cy, 0xaacfff);
+    // do NOT emit CHAIN_COLLECTED or increment turnsUsed
+  }
+});
+```
 
-### Task 4.3 — Sea biome unlock condition
-**File:** `src/state.js`
-- Sea unlocks at a specific level (suggest level 4) or after building a "Dock" building.
-- Add check in `SWITCH_BIOME` action: `if (key === "sea" && state.level < 4)` → show bubble.
-- Add biome switcher button for "Sea" in HUD / dock.
+### 1.3 — Scythe (clear) actually removes board tiles
 
-### Task 4.4 — Sea-specific hazards
-**What:** GDD mentions Sea session hazards.
-**Types:**
-- **Storm tile**: Spawns randomly, blocks an adjacent tile (covers it) for 2 turns.
-- **Fog tile**: Tile type is hidden (shows "?" texture) until chained — then reveals its type and can be included in a chain.
-**How:** Same pattern as Phase 3 hazards.
+**Files:** `src/GameScene.js`, `src/state.js`
 
-### Task 4.5 — Sea NPC orders
-**File:** `src/constants.js`
-- Add 2-3 Sea-specific NPCs (e.g., a Harbor Master, a Merchant, a Fisherman).
-- Add their dialog lines and update `makeOrder()` to handle `biomeKey === "sea"`.
+**State reducer**: When `USE_TOOL { key: "clear" }` fires, set a `toolPending: "clear"` flag in state and decrement `tools.clear`. Do NOT add inventory.
 
-### Task 4.6 — Sea crafting recipes
-**File:** `src/constants.js`
-- Add 4-6 Sea-specific recipes (e.g., Salted Fish Barrel, Pearl Necklace, Timber Plank, Coral Jewelry).
-- Add a `shipyard` or `smokehouse` building as the required station.
+**GameScene**: Listen for `toolPending` registry change. On "clear":
+1. Pick 6 random non-selected tiles.
+2. For each: tween `scale → 0, alpha → 0` over 200ms, null out `grid[r][c]`.
+3. Collect their resources (emit `chain-collected`-style events per tile or batch).
+4. Call `collapseBoard()` after all removals.
+5. Clear `toolPending` registry key.
+
+### 1.4 — Seedpack places tiles on board
+
+**Same event-channel pattern.** On `toolPending: "basic"`:
+1. Pick 5 random non-selected tiles.
+2. Swap each to the biome's first (basic) resource with a green sparkle burst.
+3. Clear `toolPending`.
+
+No inventory addition — the tiles are on the board, the player still needs to chain them.
+
+### 1.5 — Lockbox places rare tiles on board
+
+Same pattern. On `toolPending: "rare"`:
+1. Pick 3 random non-selected tiles.
+2. Swap each to the biome's rare resource (last in resources array) with a golden flash.
 
 ---
 
-## Phase 5 — Species System
-*The active/inactive tile-pool toggle is the primary board customization mechanic in the reference game. It doesn't exist here.*
+## Phase 2 — Story System
 
-### Task 5.1 — Species catalog data model
-**File:** `src/constants.js` (or new `src/features/species/data.js`)
-**What:** Each harvestable resource is a "species" with:
-- `key`: the resource key (already exists)
-- `active`: boolean — whether this species appears in the board pool
-- `discovered`: boolean — must be discovered before it can be toggled active
-- `discoveryMethod`: "chain" | "research" | "challenge" | "buy"
-- `unlockRequires`: another species key that must be discovered first (unlock tree)
-- `researchCost`: { key: "hay", amount: 50 } — collect N of this resource to research-discover it
-- `buyCost`: coins to buy discovery directly
-**How:**
+### Story Arc Overview
+
+Hearthwood Vale was once a thriving settlement but fell into ruin. The player is its new caretaker, restoring it through farming, crafting, and earning the trust of its people.
+
+#### Act 1 — First Light (Level 1–3)
+- The Hearth is cold. Wren the Scout finds you at the abandoned vale.
+- Task: Collect 20 Hay and light the Hearth (already built, but "dead").
+- Beat: Mira the Baker arrives when the Hearth is lit. The first NPC relationship begins.
+- Task: Bake the first bread (craft Bread Loaf in Bakery). Mira teaches you about orders.
+- Beat: Old Tomas arrives to tend the bees. He asks for Jam.
+- Milestone: Build the Mill. The vale is no longer starving.
+
+#### Act 2 — Roots (Level 4–8)
+- Bram the Smith arrives. He needs a Forge to work.
+- Task: Build the Forge. Craft your first Iron Hinge.
+- Beat: A harsh winter hits. Bram warns about the Frostmaw (boss intro).
+- Task: Survive the Winter boss event (collect 30 logs in 5 turns).
+- Milestone: Build the Inn. Pip and Tuck can be hired. The vale has lodgings.
+- Sister Liss arrives and sets up a physician's corner. She needs berries for medicine.
+- Beat: Liss heals a sick child in the vale using your berries.
+
+#### Act 3 — Seasons (Level 9–15)
+- Wren discovers the Mine entrance on a scouting trip (Mine biome unlocked narratively).
+- Task: Gather enough Stone and Coal to open the Mine properly.
+- Beat: The Caravan Post opens. Far-off markets become accessible.
+- Milestone: Complete all 8 buildings.
+- Beat: An annual Harvest Festival is announced. The whole town gathers.
+- Final boss: The Harvest Festival requires 50 of each core resource. Fill the festival larder.
+- **Win**: The Festival fires. The vale is restored. Credits roll → sandbox mode continues.
+
+### Task 2.1 — Story state slice
+
+**File:** `src/features/story/slice.js`
+
 ```js
-export const SPECIES = {
+export const initial = {
+  storyAct: 1,
+  storyBeat: 0,  // which beat within the act
+  storyFlags: {},  // e.g. { hearthLit: true, miraArrived: true }
+  completedBeats: [],
+};
+```
+
+Actions:
+- `STORY/ADVANCE_BEAT`: move to next beat, trigger NPC arrival or modal
+- `STORY/SET_FLAG { key, value }`: set an arbitrary story flag
+- Beat triggers check in `CHAIN_COLLECTED`, `BUILD`, `CRAFTING/CRAFT_RECIPE`, `TURN_IN_ORDER`
+
+### Task 2.2 — Story event triggers
+
+**File:** `src/state.js` (coreReducer) + `src/features/story/slice.js`
+
+Beat triggers (examples):
+- `hay >= 20 && !storyFlags.hearthLit` → dispatch `STORY/SET_FLAG { hearthLit: true }`, show story modal
+- `built.bakery && !storyFlags.miraArrived` → dispatch `STORY/ADVANCE_BEAT`, show Mira arrival modal
+- `totalCrafted >= 1 && !storyFlags.firstCraft` → story NPC bubble
+
+### Task 2.3 — Story modal UI
+
+**File:** `src/features/story/index.jsx`
+
+Full-screen story beat modal with:
+- NPC portrait (large, styled)
+- Story text (2-4 sentences, narrative voice)
+- Continue button → closes and dispatches `STORY/ADVANCE_BEAT`
+- Optional objective preview ("Next: Build the Mill")
+
+### Task 2.4 — Act transition screen
+
+Between acts, show a seasonal illustration (drawn via canvas, no external assets) with the act title and a brief summary of what was accomplished.
+
+### Task 2.5 — Harvest Festival win event
+
+When all 8 buildings are built:
+1. Show a "The Vale is Ready for the Harvest Festival!" story beat.
+2. Display a special goal: collect 50 each of Hay, Wheat, Grain, Berry, Log.
+3. On completion: full-screen celebration animation (confetti via canvas particles), credits NPC parade, then return to sandbox mode with `isWon: true` flag.
+
+---
+
+## Phase 3 — Economy: Market + Supply Chain
+
+### Task 3.1 — Market screen
+
+**Files:** `src/features/market/index.jsx`, new `src/constants.js` additions
+
+Add `MARKET_PRICES` to constants:
+```js
+export const MARKET_PRICES = {
+  hay:     { sell: 0,   buy: 40  },
+  wheat:   { sell: 2,   buy: 60  },
+  grain:   { sell: 4,   buy: 80  },
+  flour:   { sell: 6,   buy: 100 },
+  log:     { sell: 2,   buy: 60  },
+  plank:   { sell: 4,   buy: 80  },
+  beam:    { sell: 7,   buy: 110 },
+  berry:   { sell: 3,   buy: 70  },
+  jam:     { sell: 5,   buy: 90  },
+  egg:     { sell: 3,   buy: 70  },
+  stone:   { sell: 1,   buy: 50  },
+  cobble:  { sell: 3,   buy: 70  },
+  block:   { sell: 6,   buy: 100 },
+  ore:     { sell: 3,   buy: 70  },
+  ingot:   { sell: 6,   buy: 100 },
+  coal:    { sell: 2,   buy: 60  },
+  coke:    { sell: 4,   buy: 80  },
+  gem:     { sell: 7,   buy: 120 },
+  cutgem:  { sell: 14,  buy: 200 },
+  gold:    { sell: 5,   buy: 100 },
+};
+```
+
+Market UI: two tabs (Farm / Mine). Per resource row: icon, name, stock count, [SELL N◉] button (disabled if stock 0 or sell price 0), [BUY 1 for N◉] button (disabled if not enough coins). Warn player that sell prices are emergency rates.
+
+State actions: `MARKET/SELL { key, qty }`, `MARKET/BUY { key }`.
+
+### Task 3.2 — Supply chain
+
+**Files:** `src/state.js`, `src/constants.js`
+
+Add `supplies: 0` to `initialState`.
+
+Add Kitchen building:
+```js
+{ id: "kitchen", name: "Kitchen", desc: "Converts grain into supplies for Mine expeditions.", cost: { coins: 400, plank: 20 }, lv: 3 }
+```
+
+Add `KITCHEN/CONVERT` action: `{ grain: -3, supplies: +1 }`. UI: a convert button in the TownView building panel for the Kitchen, showing current grain stock and supplies.
+
+Mine entry (SWITCH_BIOME to "mine"): deduct 3 supplies. If supplies < 3, show bubble and block entry. Player must convert more grain first.
+
+### Task 3.3 — Runes currency
+
+Add `runes: 0` to `initialState`. Sources:
+- Mysterious Ore tile (Phase 6)
+- Boss victory rewards
+- Quest rewards (occasional)
+
+HUD: Show runes only when > 0 or in Mine biome. Small red gem icon.
+State actions: `EARN_RUNE { amount }`, `SPEND_RUNE { amount }`.
+Dev action: `DEV/ADD_RUNES`.
+
+### Task 3.4 — Bombs from buildings
+
+Bombs are a resource produced by certain buildings on a timer.
+
+Add `bombs: 0` to state. Add to `BUILDINGS`:
+```js
+{ id: "powder_store", name: "Powder Store", desc: "Produces Bombs over time. Needed for Mine worker hires.", cost: { coins: 600, stone: 30, ingot: 5 }, lv: 5 }
+```
+
+Each season end, if `built.powder_store`, add 2 bombs to state (in `CLOSE_SEASON` reducer).
+
+### Task 3.5 — Daily login streak
+
+**File:** `src/features/streak/slice.js`
+
+State: `{ streak: 0, lastLoginDate: null, streakRewardsClaimed: [] }`
+
+On app boot, compare `lastLoginDate` to today:
+- Same day: do nothing
+- Yesterday: increment streak, grant reward, update date
+- Older: reset streak to 1, grant day-1 reward, update date
+
+Reward schedule:
+| Day | Reward |
+|---|---|
+| 1 | 25 coins |
+| 2 | 50 coins |
+| 3 | 1 Seedpack tool |
+| 4 | 75 coins |
+| 5 | 1 Lockbox tool |
+| 7 | 150 coins + 1 Reshuffle Horn |
+| 14 | 300 coins + 1 Rune |
+| 30 | 1000 coins + 3 Runes |
+
+Show a "Daily Reward" toast/modal on login when reward is available.
+
+---
+
+## Phase 4 — Workers Wired to the Board
+
+The current apprentices use a `produces` model (passive inventory injection per season). This must change to a **threshold reduction** model that feeds into GameScene.
+
+### Task 4.1 — Redefine worker data model
+
+**File:** `src/features/apprentices/data.js`
+
+Every apprentice gets a typed `effect` field. The effect's value is the **maximum** (fully-hired) effect. Per-worker effect = max_effect ÷ max_count.
+
+```js
+{
+  id: "hilda",
+  name: "Hilda",
+  role: "Farmhand",
+  icon: "🧑‍🌾",
+  color: "#4f8c3a",
+  hireCost: 200,
+  requirement: { building: "granary" },
+  maxCount: 3,
+  effect: { type: "threshold_reduce", resource: "hay", maxReduction: 3 },
+  // Base hay threshold = 6. With 3 Hildas: 6 - 3 = 3.
+  // Per Hilda: -1 per worker.
+}
+```
+
+**Effect types:**
+- `threshold_reduce`: `{ resource, maxReduction }` — reduces chain threshold for that resource
+- `pool_weight`: `{ resource, weight }` — increases spawn probability of a resource in the board pool
+- `bonus_yield`: `{ resource, maxBonus }` — adds extra collected units per chain of that type
+- `turn_free`: grants free turn (doesn't consume session turn) when chaining specified resource
+- `season_bonus`: passive per-season inventory bonus (replaces old `produces` model)
+
+**Max display**: show `maxCount` as a plain number (e.g., "3"), not "3/3".
+
+**Farm apprentice effects (proposed):**
+
+| Apprentice | Max | Effect |
+|---|---|---|
+| Hilda (Farmhand) | 3 | `threshold_reduce` hay −3 (6→3) |
+| Pip (Forager) | 2 | `pool_weight` berry +2 |
+| Wila (Cellarer) | 2 | `bonus_yield` jam +2 |
+| Tuck (Lookout) | 1 | `season_bonus` coins +30/season |
+| Osric (Smith) | 2 | `threshold_reduce` ore −2 (6→4) |
+| Dren (Miner) | 2 | `threshold_reduce` stone −2 (8→6) |
+
+### Task 4.2 — Compute effective thresholds
+
+**File:** `src/features/apprentices/effects.js` (new)
+
+```js
+import { UPGRADE_THRESHOLDS } from "../../constants.js";
+import { APPRENTICE_MAP } from "./data.js";
+
+export function computeWorkerEffects(hiredApprentices) {
+  const thresholds = { ...UPGRADE_THRESHOLDS };
+  const poolWeights = {};
+  const bonusYield = {};
+
+  for (const { app, count } of hiredApprentices) {
+    const def = APPRENTICE_MAP[app];
+    if (!def?.effect) continue;
+    const { type, resource } = def.effect;
+    const perWorker = def.effect.maxReduction
+      ? def.effect.maxReduction / def.maxCount
+      : def.effect.maxBonus / def.maxCount;
+
+    if (type === "threshold_reduce" && resource) {
+      thresholds[resource] = Math.max(1, thresholds[resource] - Math.round(perWorker * count));
+    }
+    if (type === "pool_weight" && resource) {
+      poolWeights[resource] = (poolWeights[resource] || 0) + def.effect.weight * count;
+    }
+    if (type === "bonus_yield" && resource) {
+      bonusYield[resource] = (bonusYield[resource] || 0) + Math.round(perWorker * count);
+    }
+  }
+
+  return { thresholds, poolWeights, bonusYield };
+}
+```
+
+### Task 4.3 — Sync effects to Phaser registry
+
+**File:** `prototype.jsx`
+
+```jsx
+import { computeWorkerEffects } from "./src/features/apprentices/effects.js";
+
+// Inside App:
+const workerEffects = useMemo(
+  () => computeWorkerEffects(state.hiredApprentices || []),
+  [state.hiredApprentices]
+);
+
+// Pass to PhaserMount:
+<PhaserMount workerEffects={workerEffects} ... />
+
+// In PhaserMount useEffect:
+useEffect(() => {
+  gameRef.current?.registry.set("workerEffects", workerEffects);
+}, [workerEffects]);
+```
+
+**File:** `src/GameScene.js`
+
+Read effects from registry in:
+- `upgradeCountForChain()`: use `this.registry.get("workerEffects")?.thresholds?.[key] ?? UPGRADE_THRESHOLDS[key]`
+- `randomResource()`: apply `poolWeights` to weighted-random selection
+- `collectPath()`: add `bonusYield[res.key]` to `gained` before emitting `chain-collected`
+
+### Task 4.4 — Worker resource ("1 Worker") from Housing
+
+The generic "1 Worker" hire cost comes from Housing buildings that generate Workers over time.
+
+Add to `BUILDINGS`:
+```js
+{ id: "housing", name: "Housing Block", desc: "Provides Workers — needed to hire staff.", cost: { coins: 300, plank: 25 }, lv: 2 }
+```
+
+Add `workers: 0` to `initialState`. In `CLOSE_SEASON`: if `built.housing`, add 1 worker per season. Show worker count in HUD near coins (small person icon).
+
+IAP stub: add "Buy Workers" to the store stub (Phase 11). Workers = premium hiring resource; players without IAP earn via Housing over time.
+
+### Task 4.5 — Free move mechanic
+
+Certain species, when chained, grant extra turns that don't decrement the session counter.
+
+**Free move species** (Farm):
+| Species | Free Moves |
+|---|---|
+| Turkey | +2 |
+| Clover | +2 |
+| Melon (rare) | +5 |
+
+Implementation: Add `freeMoveTiles: Set<string>` to constants (keys that grant free moves). In `CHAIN_COLLECTED`, if `key` is in the free move set, add `freeMoves` to state instead of decrementing turns:
+```js
+// Instead of: turnsUsed + 1
+// Do: turnsUsed + Math.max(0, 1 - freeMoves)
+// and track remaining freeMoves separately
+```
+
+---
+
+## Phase 5 — Species System (Farm First)
+
+### Task 5.1 — Species data model
+
+**File:** `src/features/species/data.js`
+
+```js
+export const FARM_SPECIES = {
+  // Category: Grass
   hay: {
-    active: true,
+    category: "grass",
     discovered: true,
+    active: true,
     discoveryMethod: "default",
     unlockRequires: null,
+    buyCost: null,
+    researchCost: null,
+    freeMovesPerChain: 0,
   },
+  // Category: Grain
   wheat: {
-    active: true,
+    category: "grain",
     discovered: false,
-    discoveryMethod: "chain",   // discovered by chaining hay to wheat upgrade
+    active: false,
+    discoveryMethod: "chain",     // auto-discovered on first hay→wheat upgrade
     unlockRequires: "hay",
+    buyCost: 150,
+    researchCost: null,
+    freeMovesPerChain: 0,
   },
-  // ... etc for all resources
-}
+  grain: {
+    category: "grain",
+    discovered: false,
+    active: false,
+    discoveryMethod: "research",
+    unlockRequires: "wheat",
+    buyCost: 300,
+    researchCost: { key: "wheat", amount: 30 },
+    freeMovesPerChain: 0,
+  },
+  // ... etc
+};
 ```
 
 ### Task 5.2 — Species state slice
+
 **File:** `src/features/species/slice.js`
-**What:**
-- `initialState`: active set = default pool from biome, discovered set = starting resources only.
-- Actions: `SPECIES/TOGGLE_ACTIVE`, `SPECIES/DISCOVER`, `SPECIES/RESEARCH_PROGRESS`.
-- `SPECIES/TOGGLE_ACTIVE`: Mark a discovered species as active/inactive. Update `biome.pool` dynamically.
-**How:** Store `activeSpecies: { farm: Set<key>, mine: Set<key>, sea: Set<key> }` and `discoveredSpecies: Set<key>`.
 
-### Task 5.3 — Wire species pool to board
-**Files:** `src/GameScene.js`, `src/state.js`
-**What:** `randomResource()` in GameScene currently uses `this.biome().pool`. It should use the player's active species set for the current biome instead.
-**How:** Read the active species set from the Phaser registry (synced from React state). Rebuild the pool on `SPECIES/TOGGLE_ACTIVE`. If the active set is empty, use default pool as fallback.
+```js
+export const initial = {
+  speciesDiscovered: { hay: true, log: true, berry: true, egg: true, stone: true, ore: true, coal: true, gem: true, gold: true },
+  speciesActive: { hay: true, log: true, berry: true, egg: true },
+  speciesResearch: null,        // key currently being researched
+  speciesResearchProgress: {},  // { key: currentCount }
+};
+```
 
-### Task 5.4 — Chain discovery mechanic
-**File:** `src/state.js`, `src/features/species/slice.js`
-**What:** When a chain produces an upgrade (e.g., hay chain produces wheat), the `wheat` species is auto-discovered if not already.
-**How:** In `CHAIN_COLLECTED` handler, when `upgrades > 0`, check `res.next`. If `SPECIES[res.next].discovered === false`, dispatch `SPECIES/DISCOVER` for that key.
+Actions:
+- `SPECIES/TOGGLE_ACTIVE { key }`: only 1 active per category; swapping deactivates the previous
+- `SPECIES/DISCOVER { key }`: mark discovered; if previously set for research, clear it
+- `SPECIES/RESEARCH_TICK { key, amount }`: increment research progress; if >= cost, auto-discover
 
-### Task 5.5 — Research discovery mechanic
-**What:** Player can set a species to "research mode" — collecting N of that resource's prerequisite unlocks it.
-**How:** `SPECIES/SET_RESEARCH { key }` — marks that species as the current research target. Progress counter increments on each `CHAIN_COLLECTED` when the prerequisite is collected. At target, auto-discover.
+### Task 5.3 — Category enforcement (1 active per category)
+
+In `SPECIES/TOGGLE_ACTIVE`:
+```js
+const category = FARM_SPECIES[key]?.category;
+// Deactivate all others in the same category first
+const newActive = { ...state.speciesActive };
+Object.keys(newActive).forEach(k => {
+  if (FARM_SPECIES[k]?.category === category) newActive[k] = false;
+});
+newActive[key] = !state.speciesActive[key];
+return { ...state, speciesActive: newActive };
+```
+
+### Task 5.4 — Chain discovery auto-trigger
+
+**File:** `src/state.js`
+
+In `CHAIN_COLLECTED`, when `upgrades > 0` and `res.next` exists:
+```js
+if (upgrades > 0 && res?.next && !state.speciesDiscovered?.[res.next]) {
+  newSpeciesDiscovered = { ...state.speciesDiscovered, [res.next]: true };
+  bubble = { npc: "wren", text: `New species discovered: ${res.next}!`, ms: 2400 };
+}
+```
+
+### Task 5.5 — Wire active species to board pool
+
+**File:** `prototype.jsx`, `src/GameScene.js`
+
+Pass `state.speciesActive` to Phaser registry. In `GameScene.randomResource()`:
+```js
+randomResource() {
+  const active = this.registry.get("speciesActive") || {};
+  const pool = this.biome().pool.filter(key => active[key] !== false);
+  const effectivePool = pool.length ? pool : this.biome().pool;
+  return this.biome().resources.find(r => r.key === effectivePool[Math.floor(Math.random() * effectivePool.length)]);
+}
+```
 
 ### Task 5.6 — Species UI panel
+
 **File:** `src/features/species/index.jsx`
-**What:** A full-screen panel (new nav item) showing:
-- All species per biome, with lock/discovered/active states
-- Active toggle (on/off switch) for each discovered species
-- Research progress bar for species being researched
-- "Buy Discovery" button for species with buy cost
-- Unlock tree visual (faint connections showing which species unlock others)
+
+Full-screen panel (new nav item "Species" or "Fields"):
+- Biome tabs (Farm / Mine when unlocked)
+- Category sections (Grass, Grain, Trees...)
+- Per species: illustration tile preview, name, discovered/locked state
+- Toggle switch (active/inactive) — grayed out if not discovered
+- If not discovered: "Research (N/50 Wheat)" progress bar, "Buy Discovery (200◉)" button
+- Unlock tree: faint connecting lines between species in unlock order
 
 ---
 
-## Phase 6 — Workers Actually Working
-*Apprentices are hired but their effects are phantom. This is the biggest "feels complete but isn't" gap.*
+## Phase 6 — Mine Biome Depth (Lower Priority)
 
-### Task 6.1 — Define worker effect data model
-**File:** `src/features/apprentices/data.js`
-**What:** Every apprentice needs a typed, machine-readable `effect` field:
-```js
-{
-  key: "peasant",
-  name: "Peasant",
-  effect: { type: "threshold_reduce", resource: "hay", amount: 2 },
-  hireCost: 100,
-}
-```
-**Effect types:**
-- `threshold_reduce`: reduces the upgrade threshold for a resource (fewer tiles needed)
-- `pool_weight`: increases the spawn weight of a resource in the board pool
-- `bonus_yield`: adds N extra of a resource per chain of that type
-- `turn_savings`: reduces turn cost for chains of a given type (free moves)
-- `research_speed`: reduces research cost for a species
+Defer until Farm (Phases 0–5) is playable and polished.
 
-### Task 6.2 — Compute effective thresholds
-**File:** `src/state.js` or new `src/features/apprentices/effects.js`
-**What:** A pure function `computeEffectiveThresholds(hiredApprentices)` that returns a map of `{ resourceKey → upgradeThreshold }`. Base threshold is `UPGRADE_EVERY=3`. Each hired Peasant with `threshold_reduce` for "hay" reduces it by their `amount`.
-**How:**
-```js
-export function computeEffectiveThresholds(hiredApprentices) {
-  const thresholds = {};
-  for (const { app } of hiredApprentices) {
-    const def = APPRENTICE_MAP[app];
-    if (def?.effect?.type === "threshold_reduce") {
-      const key = def.effect.resource;
-      thresholds[key] = Math.max(1, (thresholds[key] ?? UPGRADE_EVERY) - def.effect.amount);
-    }
-  }
-  return thresholds;
-}
-```
+### Task 6.1 — Mysterious Ore countdown tile
 
-### Task 6.3 — Pass thresholds to GameScene
-**Files:** `prototype.jsx`, `src/GameScene.js`
-**What:** Compute thresholds in React and pass them to Phaser via registry (same pattern as `biomeKey`, `turnsUsed`).
-**How:**
-- In `prototype.jsx`, compute `effectiveThresholds = computeEffectiveThresholds(state.hiredApprentices)`.
-- Pass as `memoryPerks={effectiveThresholds}` (rename to `workerThresholds`).
-- In GameScene, read from registry in `upgradeCountForChain()` — or better, override the upgrade check per resource type.
+Add `mysterious_ore` tile type to Mine resources (spawns by logic, not in pool). Shows countdown number overlay. Must chain adjacent dirt tiles before timer hits 0 → earn 1 Rune.
 
-### Task 6.4 — Apply pool_weight effects
-**What:** Apprentices with `pool_weight` effect should modify the biome's effective spawn pool.
-**How:** In `randomResource()`, replace the flat pool array with a weighted sample that respects hired worker modifiers. Compute the modified pool from registry data each call.
+### Task 6.2 — Mine hazards
 
-### Task 6.5 — Apply bonus_yield effects
-**What:** In `collectPath()`, after computing `gained`, check if any hired worker gives `bonus_yield` for this resource type and add the bonus.
-**How:** Read worker effects from registry in GameScene. Add bonus to the `gained` value before emitting `chain-collected`.
+- **Lava**: Spreads each turn; chain lava tiles to contain, Water Pump tool to extinguish.
+- **Exploding Gas**: 3 connected clouds → explosion; tap individual clouds to neutralize.
+- **Moles**: removed by Explosives tool.
+
+### Task 6.3 — Mine workers wired
+
+Apply mine worker effects (Digger, Excavator, Stone Miner, etc.) using the same Phase 4 effects system.
 
 ---
 
-## Phase 7 — Magic Portal
-*A premium engagement mechanic from the reference game — absent.*
+## Phase 7 — Sea Biome (Much Later)
 
-### Task 7.1 — Magic Portal building
-**File:** `src/constants.js`
-**What:** Add `{ id: "portal", name: "Magic Portal", cost: { coins: 2000, runes: 5 }, desc: "Summon magical tools using Influence." }` to `BUILDINGS`.
+Full Sea biome deferred. Ship navigation mechanic on hold. Sandbanks and sea hazard details TBD.
 
-### Task 7.2 — Magic Portal UI
-**File:** `src/features/portal/index.jsx`
-**What:** A modal showing 3-5 "summonable" magic tool options, each costing Influence/Crowns.
-**Magic tools (examples from GDD):**
-- **Thunderclap**: Clears an entire row of tiles (cost: 10 Influence)
-- **Golden Touch**: Next chain of any type yields double (cost: 8 Influence)
-- **Time Bubble**: Next 2 turns don't consume days (cost: 15 Influence)
-- **Siren's Call**: Transforms all tiles to a single resource type (cost: 20 Influence)
-**How:**
-- Portal tools are added to `state.tools` on purchase (extend the tools map with new keys).
-- Each portal tool needs a handler in `USE_TOOL` and a board effect in GameScene.
+When the time comes, Sea will need:
+- Full resource chain (10 sea resources with textures)
+- Sea-specific hazards (sharks, icebergs, storms, whirlpools)
+- Ship movement mechanic (TBD design)
+- Sea workers (15 defined in GDD)
+- Sea-specific tools
+- 3 new NPCs
+- Sea crafting recipes + new building (Shipyard or Smokehouse)
 
 ---
 
-## Phase 8 — Castle System
-*Referenced in GDD as a prestige/meta-progression layer. Not implemented.*
+## Phase 8 — Magic Portal + Castle
 
-### Task 8.1 — Castle data model
-**What:** The Castle is a special building that upgrades through multiple tiers, each unlocking permanent bonuses (e.g., +1 order slot, reduced building costs, bonus starting coins per session).
-**Castle tiers:**
+### Task 8.1 — Magic Portal building + UI
+
+Building: `{ id: "portal", name: "Magic Portal", cost: { coins: 2000, runes: 5 } }`
+
+Portal modal: shows 4 magic tools available for purchase with Influence. Player chooses one. Tools added to `state.tools`. Each portal tool needs a board effect in GameScene.
+
+**Priority portal tools (implement first):**
+| Tool | Effect | Influence Cost |
+|---|---|---|
+| Magic Wand | Collect all tiles of chosen type | 15 |
+| Hourglass | Undo last move (restore previous grid state) | 12 |
+| Fertilizer | All refill tiles are grain for 1 turn | 8 |
+| Magic Seed | Session lasts 5 extra turns | 20 |
+
+### Task 8.2 — Castle system
+
+Castle is a tiered upgrade to the Hearth. Unlocks permanent bonuses.
+
 | Tier | Name | Cost | Bonus |
 |---|---|---|---|
-| 1 | Keep | 0 (starting) | None |
-| 2 | Manor | 1000◉, 20 beams | +1 order slot |
+| 1 | Keep | Starting state | — |
+| 2 | Manor | 1000◉, 20 beams | +1 order slot (4 total) |
 | 3 | Stronghold | 3000◉, 10 blocks, 5 ingots | Seasonal bonus doubled |
-| 4 | Citadel | 8000◉, 20 blocks, 10 ingots, 3 gems | Boss rewards ×2 |
+| 4 | Citadel | 8000◉, 20 blocks, 10 ingots, 3 gems | Boss victory rewards ×2 |
 
-### Task 8.2 — Castle UI in Town View
-**File:** `src/ui.jsx` (TownView), or new `src/features/castle/index.jsx`
-**What:** The Hearth building (already built by default) becomes the Castle visual. Clicking it opens the Castle upgrade panel.
+Castle "Needs" (contribution system): TBD — skip the contribution mechanic for now, just implement the upgrade tiers.
 
 ---
 
-## Phase 9 — End Game & Win Condition
-*The game currently has no defined win state or endgame.*
+## Phase 9 — Content Depth + Balance
 
-### Task 9.1 — Define win condition
-**Decision needed:** Options:
-- **Completionist**: Build all buildings, hire all workers, discover all species.
-- **Time-limited**: Complete N seasonal cycles.
-- **Story**: Complete a final "boss" quest chain.
-**Recommendation:** Soft win — show a "Hearthwood Vale is thriving!" celebration screen when all 8 buildings are built, then transition to prestige/sandbox mode.
+### Task 9.1 — Expand NPC dialog (8–10 lines each + mood-conditional)
 
-### Task 9.2 — Prestige / New Game+
-**What:** After win condition, player can "reset" for bonus starting resources or a permanent modifier (e.g., +2 starting tools, or a unique species discovered from the start).
+Each NPC needs lines for bond levels 1–3 (cold), 4–6 (warm), 7–10 (close friend). In `makeOrder()`, select from the appropriate bond tier.
 
----
+### Task 9.2 — Expand tool catalog (Farm tools first)
 
-## Phase 10 — Content Depth & Balance
+Priority farm tools to add:
+| Tool | Effect | Craft Cost |
+|---|---|---|
+| Rake | Collect all hay tiles | 1 Wood |
+| Axe | Collect all log tiles | 1 Stone |
+| Scythe (real) | Collect all grain tiles | 1 Stone |
+| Bird Cage | Collect all egg tiles | 1 Hay |
+| Cat | Remove all hazard-rat tiles | 2 Stone |
 
-### Task 10.1 — Expand NPC dialog
-**File:** `src/constants.js`
-**What:** Each NPC has only 2-3 dialog lines. Expand to 8-10 per NPC. Add mood-conditional lines (bond level 1 vs. bond level 10 show different personality).
-**How:** Extend `NPCS[npc].lines` array. In `makeOrder()`, additionally factor in `npcBond` level to select from appropriate mood tier.
+Store tools in a `craftableTools` object in constants. Workshop building enables crafting tools. Add `WORKSHOP/CRAFT_TOOL` action.
 
-### Task 10.2 — Expand tool catalog
-**File:** `src/constants.js`
-**What:** Current tools: clear, basic, rare, shuffle (4 total). GDD references 50+ tools. Add a second tier of tools:
-- **Fertilizer**: +25% yield for next 3 chains (farm)
-- **Dynamite**: Clears a 2×2 area of tiles (mine)
-- **Compass**: Reveals tile types 2 turns in advance
-- **Barrel**: Converts 3 low-tier resources to 1 mid-tier instantly
-**How:** Extend `TOOL_DEFS` in `ui.jsx` and add handlers in `coreReducer`.
+### Task 9.3 — Realm tier (based on zones owned)
 
-### Task 10.3 — Expand building system
-**File:** `src/constants.js`
-**What:** Add:
-- `kitchen`: Converts farm food → mine/sea supplies
-- `dock`: Unlocks Sea biome (sea equivalent of Mine level gate)
-- `library`: Reduces research cost for all species by 20%
-- `greenhouse`: +1 Berry, +1 Egg to pool weight permanently
-- `portal` (see Phase 7)
+Realm tier label in HUD or profile:
+| Zones Visited | Title |
+|---|---|
+| 1 | Peasant |
+| 3 | Freeholder |
+| 5 | Fief |
+| 8 | Village |
+| 12 | Manor |
+| 18 | Town |
+| 25 | Kingdom |
 
-### Task 10.4 — Add orders for Mine and Sea
-**What:** Mine and Sea NPCs and orders are thin. Mine orders can request crafted items (hinge, lantern, goldring). Sea orders request sea resources.
-**How:** Add sea NPC pool to `NPCS`. Extend `makeOrder()` sea path.
+Read from `mapVisited.length` in cartography state.
 
-### Task 10.5 — Seasonal NPC dialog variation
-**What:** NPC dialog should reference the current season.
-**How:** In `makeOrder()`, pass `currentSeason` and select from `lines` arrays keyed by season.
+### Task 9.4 — Linear XP curve
 
-### Task 10.6 — Balance pass: XP curve
-**File:** `src/state.js`
-**What:** `xpForLevel(l) = 50 + l * 80`. At level 1 this requires 130 XP. A 3-chain of hay (value=1, gained=3) yields 3 XP. That's 44 chains to level up. With 8 turns per session this is ~5-6 sessions to level 2 — probably too slow for a mobile game.
-**Decision needed:** Target time-to-level-2 should be 1-2 sessions. Adjust formula accordingly.
-
-### Task 10.7 — Balance pass: order rewards
-**What:** Order rewards computed as `need * value * 6`. For `hay` (value=1), need=10, reward=60 coins. First building (Hearth) costs 0 coins. Mill costs 200 coins. At 60 coins/order that's 3-4 orders to build Mill — probably reasonable but needs playtesting.
-
----
-
-## Phase 11 — Polish & Accessibility
-
-### Task 11.1 — Audio completeness audit
-**Files:** `src/audio/index.js`, `src/audio/useAudio.js`
-**What:** Audit which events trigger sound and which don't. Missing likely:
-- Chain start sound
-- Chain extend sound (per tile, subtle)
-- Upgrade earned sound (distinct "ding")
-- Order fulfilled sound
-- Level up fanfare
-- Season transition
-- Building constructed
-
-### Task 11.2 — Haptics
-**File:** `src/audio/useAudio.js`
-**What:** On mobile, use `navigator.vibrate()` for:
-- Chain start: 20ms pulse
-- Upgrade earned: 40ms-20ms-40ms pattern
-- Order fulfilled: 60ms long
-- Gated behind `state.settings.hapticsOn`.
-
-### Task 11.3 — Reduced motion
-**What:** When `settings.reducedMotion` is true, disable: tile sway animations (SWAY table), radial flash effects, screen shake (`shakeForChain`), and use instant tile collapses instead of tweens.
-**How:** Read `reducedMotion` from registry in GameScene. Skip tween creation or use duration=0.
-
-### Task 11.4 — Color blind mode
-**What:** When `settings.colorBlind` is true, add distinct shape indicators to tile backgrounds (not just color) so resources are distinguishable without color.
-**How:** In `makeTextures()`, if colorBlind mode is active, stamp a shape glyph (triangle, square, circle, diamond...) overlay on each tile texture.
-
-### Task 11.5 — Tutorial coverage for new mechanics
-**File:** `src/features/tutorial/index.jsx`
-**What:** The current 6-step tutorial covers: welcome, chain mechanic, upgrade mechanic, orders, town, season. Add steps for:
-- Species toggle (when unlocked)
-- Mine biome switch
-- Tool usage on board
-
-### Task 11.6 — Loading screen
-**What:** The current loading state shows "Loading board…" in tiny text. Add a proper loading animation (spinning Hearth icon or tile-bounce animation).
-
-### Task 11.7 — Offline/PWA support
-**What:** Add a `manifest.json` and service worker so the game can be installed and played offline.
-
----
-
-## Phase 12 — Infrastructure & Monetization Hooks
-
-### Task 12.1 — Analytics event stubs
-**What:** Define an `analytics.js` module with a no-op `track(event, props)` function. Call it for key events: session start/end, level up, building built, boss defeated, IAP prompt shown. This lets a real analytics backend be wired later with zero game-logic changes.
-
-### Task 12.2 — IAP / Rune pack stubs
-**What:** Add a `store/index.jsx` stub for in-app purchase flow. Show a "Get Runes" button in the HUD that opens a modal with packs (stub — no real purchase). This validates the flow and positions for a real store integration.
-
-### Task 12.3 — Cloud save stub
-**What:** Add a `save/cloud.js` with `uploadSave(state)` and `downloadSave()` no-ops. Hook `uploadSave` after `persistState()`. Real backend can be dropped in later.
-
----
-
-## Dependency Graph Summary
-
+Replace `xpForLevel(l) = 50 + l * 80` with:
+```js
+export const XP_PER_LEVEL = 150;
+export const xpForLevel = () => XP_PER_LEVEL; // same for every level
 ```
-Phase 0 (Foundation Fixes)
-    └─ Phase 1 (Board Mechanics)
-        ├─ Phase 2 (Economy)
-        │   └─ Phase 3 (Mine Depth)
-        │   └─ Phase 7 (Magic Portal)
-        ├─ Phase 4 (Sea Biome)  [can start after Phase 1]
-        ├─ Phase 5 (Species)    [can start after Phase 1]
-        └─ Phase 6 (Workers)    [can start after Phase 1]
-            └─ Phase 8 (Castle) [after Phase 6]
-                └─ Phase 9 (End Game)
-Phase 10 (Content) — parallel after Phase 4
-Phase 11 (Polish)  — parallel, any time
-Phase 12 (Infra)   — parallel, any time
-```
+Rebalance XP gains if needed during playtesting. Target: level 2 in approximately 1 session (8–10 chains of 5+).
+
+### Task 9.5 — Field state saving
+
+When player exits a puzzle session mid-session, save the current board layout:
+- Serialize `grid` as a 2D array of resource keys
+- Store as `savedBoardState` in state (persisted to localStorage)
+- On next session start, restore from `savedBoardState` if biome matches
+- Silos (Farm) and Barns (Farm) buildings enable this feature; without them, board is always fresh
 
 ---
 
-## Open Questions (Still Need Research/Decisions)
+## Phase 10 — Polish + Accessibility
 
-1. **Grid size**: Commit to 6×6 (GDD) or keep 6×7 (current)? 6×7 gives more board variety but breaks reference-game comparisons.
-2. **Threshold model**: Keep "every 3rd tile upgrades anywhere in chain" (current) or switch to "chain must reach threshold length to produce resource at endpoint" (reference game model)? The current model is simpler and already built; the reference model is more strategic. This is the most consequential design decision.
-3. **Sea supply cost**: How many supplies does a Mine/Sea session cost to enter? Per turn or per session?
-4. **Species unlock tree**: What are the specific unlock dependencies? (e.g., "discover wheat before grain" — this is in the reference game but needs mapping for THIS game's resource tree)
-5. **Win condition**: Completionist vs. timed vs. story? See Phase 9.
-6. **Prestige system**: After win — reset with bonus, or true sandbox mode?
-7. **Influence source**: What buildings generate Influence? Only decorative ones? Or all buildings?
-8. **Bomb source**: Where do Bombs drop? Mine sessions? Boss drops only?
-9. **Castle starting tier**: Does the Hearth (already built) count as Castle tier 1? Or is Castle a separate building?
-10. **Order slots**: Base is 3. Does Castle tier 2 (+1 order slot) make it 4? Is there a cap?
+### Task 10.1 — Audio completeness audit
+
+Check `src/audio/index.js` for missing events:
+- Chain start, chain extend (subtle per-tile), upgrade earned, order fulfilled
+- Level up fanfare, season transition, building constructed, boss defeated
+
+### Task 10.2 — Haptics
+
+Use `navigator.vibrate()` gated by `settings.hapticsOn`:
+- Chain start: 20ms
+- Upgrade earned: 40-20-40ms
+- Order fulfilled: 60ms
+
+### Task 10.3 — Reduced motion
+
+When `settings.reducedMotion`:
+- Skip SWAY ambient tile animations
+- Skip screen shake (`shakeForChain` → no-op)
+- Skip radial flash and ring bursts
+- Collapse/fill use `duration: 0`
+
+### Task 10.4 — Color blind mode
+
+When `settings.colorBlind`, stamp a unique shape glyph on each tile texture: △ circle ■ ◇ ⬡ etc. per resource family, so resources are distinguishable without color.
+
+### Task 10.5 — Tutorial updates
+
+Add tutorial steps for:
+- Species toggle (shown when first species is discovered)
+- Mine entry (shown when mine unlocks)
+- Tool placement (shown when first tool is used)
+
+### Task 10.6 — PWA / offline support
+
+Add `manifest.json` + service worker for install-to-homescreen and offline play.
+
+---
+
+## Phase 11 — Infrastructure + Monetization Hooks
+
+### Task 11.1 — Analytics stubs
+
+`src/analytics.js`:
+```js
+export function track(event, props = {}) {
+  if (import.meta.env.DEV) console.log('[analytics]', event, props);
+}
+```
+Call for: `session_start`, `session_end`, `level_up`, `building_built`, `boss_defeated`, `iap_prompt_shown`, `daily_login`.
+
+### Task 11.2 — IAP / Workers purchase stub
+
+`src/features/store/index.jsx`: "Get Workers" button in HUD that opens a modal with packages (stub — no real purchase). Workers = premium resource; organic source is Housing buildings over time.
+
+### Task 11.3 — Cloud save stub
+
+`src/save/cloud.js`:
+```js
+export async function uploadSave(state) { /* no-op */ }
+export async function downloadSave()   { return null; }
+```
+Hook `uploadSave` after `persistState()` in `gameReducer`.
+
+---
+
+## Remaining Open Questions
+
+| # | Question | Status |
+|---|---|---|
+| 1 | Potions — exact source building | TBD |
+| 2 | Swamp tile behavior + spread rules | TBD |
+| 3 | Sandbanks — Sea tile details | Deferred with Sea |
+| 4 | Castle contribution system ("Castle Needs: N") | TBD |
+| 5 | Free move cap — can a chain grant more than 5 free moves if multiple free-move species are active? | No cap per design; test in playtest |
+| 6 | Species research — is research global or per-session? | Global (accumulates across all sessions) |
+| 7 | Boss victory reward pool — exact rewards? | Define during Phase 9 balance pass |
