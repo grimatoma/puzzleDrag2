@@ -1,4 +1,5 @@
-const STORAGE_KEY = 'hearth.settings';
+import { STORAGE_KEYS } from "../../constants.js";
+const STORAGE_KEY = STORAGE_KEYS.settings;
 
 function loadSettings() {
   try {
@@ -70,7 +71,7 @@ export function reduce(state, action) {
 
     case 'SETTINGS/SHOW_TUTORIAL': {
       // Clear the persisted seen flag so the tutorial actually re-runs after reload
-      try { localStorage.removeItem('hearth.tutorial.seen'); } catch (_) {}
+      try { localStorage.removeItem(STORAGE_KEYS.tutorialSeen); } catch (_) {}
       const next = { ...state, modal: 'tutorial' };
       if (state.tutorial) {
         next.tutorial = { ...state.tutorial, active: true, step: 0, seen: false };
