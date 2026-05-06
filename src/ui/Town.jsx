@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { BIOMES, BUILDINGS } from "../constants.js";
 import { useTooltip, Tooltip } from "./Tooltip.jsx";
 
@@ -539,7 +539,9 @@ function MineEntranceArt({ locked }) {
 export function TownView({ state, dispatch }) {
   const [entryBiome, setEntryBiome] = useState(null);
   const [purchaseBuilding, setPurchaseBuilding] = useState(null);
-  const { tip: buildingTip, handlers: tipHandlers } = useTooltip();
+  const { tip: buildingTip, show: showBuildingTip, hide: hideBuildingTip, handlers: tipHandlers, lastTouchTime } = useTooltip();
+  const longPressTimer = useRef(null);
+  const longPressActive = useRef(false);
   const biomeTheme = state.biomeKey === "mine" ? "mine" : "farm";
   const theme = TOWN_THEMES[biomeTheme] || TOWN_THEMES.home;
   const townConfig = TOWN_BIOME_CONFIGS[biomeTheme];
@@ -547,6 +549,34 @@ export function TownView({ state, dispatch }) {
   const townBuildings = BUILDINGS.map(b => ({ ...b, ...(townConfig.buildingLayout[b.id] || {}) }));
   // Sort by bottom edge so shorter buildings don't clip taller neighbours
   const sortedBuildings = [...townBuildings].sort((a, b) => (a.y + a.h) - (b.y + b.h));
+
+  const builtTipHandlers = (b) => {
+    const data = { label: b.name, desc: b.desc, color: b.color };
+    return {
+      onMouseEnter: (e) => { if (Date.now() - lastTouchTime.current > 600) showBuildingTip(data, e.currentTarget); },
+      onMouseLeave: () => { if (Date.now() - lastTouchTime.current > 600) hideBuildingTip(); },
+      onTouchStart: (e) => {
+        lastTouchTime.current = Date.now();
+        longPressActive.current = false;
+        longPressTimer.current = setTimeout(() => {
+          longPressActive.current = true;
+          showBuildingTip(data, e.currentTarget);
+        }, 500);
+      },
+      onTouchEnd: (e) => {
+        clearTimeout(longPressTimer.current);
+        if (longPressActive.current) {
+          e.preventDefault();
+          hideBuildingTip(2000);
+        }
+      },
+      onTouchCancel: () => {
+        clearTimeout(longPressTimer.current);
+        if (longPressActive.current) hideBuildingTip(2000);
+        longPressActive.current = false;
+      },
+    };
+  };
 
   return (
     <div
@@ -785,6 +815,7 @@ export function TownView({ state, dispatch }) {
               Object.entries(b.cost).every(([k, v]) => k === "coins" || (state.inventory[k] || 0) >= v);
             const CRAFTING_STATIONS = new Set(["bakery", "forge", "larder"]);
             const onClick = () => {
+              if (longPressActive.current) { longPressActive.current = false; return; }
               if (isLocked) return;
               if (isBuilt && CRAFTING_STATIONS.has(b.id)) {
                 dispatch({ type: "SET_VIEW", view: "crafting", craftingTab: b.id });
@@ -812,7 +843,7 @@ export function TownView({ state, dispatch }) {
                   opacity: isLocked && !isBuilt ? 0.5 : 1,
                 }}
                 onClick={onClick}
-                {...(buildingTipData ? tipHandlers(buildingTipData) : {})}
+                {...(isBuilt ? builtTipHandlers(b) : buildingTipData ? tipHandlers(buildingTipData) : {})}
               >
                 <BuildingIllustration id={b.id} isBuilt={isBuilt} />
                 {isBuilt ? (
