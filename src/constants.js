@@ -1,24 +1,8 @@
-export const W = 960;
-export const H = 640;
-export const MOBILE_W = 640;
-export const MOBILE_H = 1040;
 export const TILE = 74;
 export const COLS = 6;
 export const ROWS = 7;
-export const BOARD_X = 382;
-export const BOARD_Y = 96;
 export const MAX_TURNS = 8;
 export const UPGRADE_EVERY = 3;
-
-export function responsiveGameSize(displayWidth = W) {
-  return displayWidth < 760 ? { width: MOBILE_W, height: MOBILE_H, narrow: true } : { width: W, height: H, narrow: false };
-}
-
-export function renderResolutionForWidth(displayWidth = W, gameWidth = W) {
-  const pixelRatio = Math.min(window.devicePixelRatio || 1, 3);
-  const displayScale = Math.max(displayWidth / gameWidth, 1);
-  return Math.min(pixelRatio * displayScale, 3);
-}
 
 export const SEASONS = [
   { name: "Spring", icon: "flower", bg: 0x7dbd48, fill: 0x8fd85a, accent: 0x5daa35 },
