@@ -112,6 +112,7 @@ export function initialState() {
     modal: null,
     pendingView: null,
     seasonStats: { harvests: 0, upgrades: 0, ordersFilled: 0, coins: 0 },
+    seasonsCycled: 0,
     _hintsShown: {},
     ...crafting.initial,
     ...quests.initial,

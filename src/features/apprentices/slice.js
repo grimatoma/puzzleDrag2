@@ -1,3 +1,4 @@
+import { MAX_TURNS } from "../../constants.js";
 import { APPRENTICE_MAP } from "./data.js";
 import { MAX_TURNS } from "../../constants.js";
 
