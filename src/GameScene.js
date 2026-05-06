@@ -3,6 +3,7 @@ import { TILE, COLS, ROWS, MAX_TURNS, UPGRADE_EVERY, SEASONS, BIOMES } from "./c
 import { seasonIndexForTurns, upgradeCountForChain, cssColor } from "./utils.js";
 import { rounded, makeTextures } from "./textures.js";
 import { TileObj } from "./TileObj.js";
+import { resourceByKey } from "./state.js";
 
 const TILE_BASE = TILE; // CSS-pixel design size for one tile; textures are baked at TILE * dpr
 
@@ -178,10 +179,6 @@ export class GameScene extends Phaser.Scene {
   }
 
   // ─── Resources ────────────────────────────────────────────────────────────
-
-  resourceByKey(key) {
-    return Object.values(BIOMES).flatMap((b) => b.resources).find((r) => r.key === key) || BIOMES.farm.resources[0];
-  }
 
   nextResource(res) {
     const resources = this.biome().resources;

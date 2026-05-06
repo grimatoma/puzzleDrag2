@@ -32,6 +32,7 @@ export class TileObj {
     // wind front rolling across the field rather than every tile in lockstep.
     this._phase = (col * 380 + row * 240);
     this._destroying = false;
+    this._tweenActive = false;
   }
 
   get x() { return this.sprite.x; }
@@ -53,7 +54,8 @@ export class TileObj {
   pulse() {
     const s = this.scene.tileSpriteScale ?? this.scene.tileScale ?? 1;
     this.scene.tweens.killTweensOf(this.sprite);
-    this.scene.tweens.add({ targets: this.sprite, scale: s * 1.12, yoyo: true, duration: 90, ease: "Sine.Out" });
+    this._tweenActive = true;
+    this.scene.tweens.add({ targets: this.sprite, scale: s * 1.12, yoyo: true, duration: 90, ease: "Sine.Out", onComplete: () => { this._tweenActive = false; } });
   }
 
   // Called once per frame from GameScene.update. Applies a subtle resource-
@@ -64,21 +66,16 @@ export class TileObj {
     if (this._destroying || this.selected) return;
     const sway = SWAY[this.res.key];
     if (!sway) {
-      if (this.sprite.angle !== 0 && !this._tweenActive()) this.sprite.angle = 0;
+      if (this.sprite.angle !== 0 && !this._tweenActive) this.sprite.angle = 0;
       return;
     }
-    if (this._tweenActive()) return;
+    if (this._tweenActive) return;
     const t = time + this._phase;
     // Primary sway plus a smaller higher-frequency gust component so the
     // motion isn't a perfect sine — closer to real wind / dangle.
     const a = Math.sin(t * sway.freq) * sway.amp
             + Math.sin(t * sway.freq * 2.4) * sway.amp * sway.gust;
     this.sprite.angle = a;
-  }
-
-  _tweenActive() {
-    const active = this.scene.tweens.getTweensOf(this.sprite);
-    return active && active.length > 0;
   }
 
   destroy() {
