@@ -70,7 +70,7 @@ Each phase is a horizontal slice — a fully playable improvement, not a half-bu
 | 3 | Economy (market, supply chain, runes, daily streak) | Spec'd | [`roadmap/phase-3-economy.md`](./roadmap/phase-3-economy.md) |
 | 4 | Workers (data model, effects, wages, housing) | Spec'd | [`roadmap/phase-4-workers.md`](./roadmap/phase-4-workers.md) |
 | 5 | Species (discovery, research, free moves) | Spec'd | [`roadmap/phase-5-species.md`](./roadmap/phase-5-species.md) |
-| 6 | NPC Social (gifts, dialog pools, mood UI) | Pending | `roadmap/phase-6-npc-social.md` |
+| 6 | NPC Social (gifts, dialog pools, mood UI) | Spec'd | [`roadmap/phase-6-npc-social.md`](./roadmap/phase-6-npc-social.md) |
 | 7 | Quests / Almanac / Achievements | Pending | `roadmap/phase-7-progression.md` |
 | 8 | Boss + Weather (1-season window, scaling rewards) | Pending | `roadmap/phase-8-boss-weather.md` |
 | 9 | Mine Biome (resources, hazards, workers) | Pending | `roadmap/phase-9-mine.md` |
@@ -100,8 +100,8 @@ Workers stop being decorative wallet decorations and start changing the board. T
 ### Phase 5 — Species
 Every tile resource becomes a discoverable species across five categories — grass, grain, wood, berry, bird — with one active species per category at session start, and inactive species excluded from the board pool entirely. Discovery flows through three methods locked in GAME_SPEC §13: chain-length (a chain of 20 hay reveals Meadow Grass, a chain of 6 hay reveals Wheat), research (cumulative resource totals tracked globally across sessions, persisted in save), and direct buy via coins. The board pool wiring layers active-species choices with Phase 4's worker `pool_weight` effects — workers only stack on resources whose species is active, never resurrecting an inactive resource. Free-move species (Turkey, Clover, Melon) grant extra turns when *chained* — not just activated — per the locked free-move trigger rule. A category-tabbed Species panel surfaces discovery progress, active toggles, and locked-tier hints. Exit: a fresh save discovers Wheat on the first 6-hay chain, swapping active species changes the next board fill, and chaining Turkey grants 2 free moves that don't tick the session counter.
 
-### Phase 6 — NPC social *(spec pending)*
-Bond modifier visible on every order card. Gift system: select an inventory item, hand to NPC, bond change varies by favorite item. Dialog pools per NPC × season × bond band. Exit criteria TBD.
+### Phase 6 — NPC social
+Turns the 5 NPCs from silent order vending machines into a system the player can read and push. Every order card now surfaces the speaking NPC's bond band and reward multiplier inline (`+135◉ ×1.15 · Liked`), reading from a single locked table (Sour ×0.70 / Warm ×1.00 / Liked ×1.15 / Beloved ×1.25) seeded at the §18 starting value of 5/Warm. A gift modal per NPC accepts any inventory item — favorites (Mira flour, Tomas/Liss jam, Bram ingot, Wren plank) bump bond +0.5, anything else +0.2 — with a one-gift-per-NPC-per-season cooldown to prevent grinding. Dialog pools fill out the (5 NPCs × 4 seasons × 4 bands) = 80-cell matrix so order delivery, gift acceptance, and story-beat arrivals pull a season-flavored, bond-flavored line via a deterministic `pickDialog`. Exit: a fresh save can push Mira from Warm to Liked across one season of deliveries-plus-gifts, see the order modifier step from ×1.00 to ×1.15, and hear her voice change with the season.
 
 ### Phase 7 — Quests / Almanac / Achievements *(spec pending)*
 6 daily quest slots that reset per season. 5-tier almanac with structural reward at tier 5. Achievement counters wired to live game events. Exit criteria TBD.
