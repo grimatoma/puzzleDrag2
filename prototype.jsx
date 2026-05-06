@@ -2,7 +2,11 @@ import { useEffect, useReducer, useRef, useState } from "react";
 import { COLS, ROWS, TILE } from "./src/constants.js";
 import { runSelfTests } from "./src/utils.js";
 import { gameReducer, initialState } from "./src/state.js";
-import { Hud, SidePanel, MobileDock, PortraitToolsBar, BottomNav, TownView, SeasonModal, NpcBubble, FeatureModals, FeatureScreens } from "./src/ui.jsx";
+import { Hud } from "./src/ui/Hud.jsx";
+import { MobileDock, PortraitToolsBar } from "./src/ui/Tools.jsx";
+import { TownView } from "./src/ui/Town.jsx";
+import { SeasonModal, NpcBubble } from "./src/ui/Modals.jsx";
+import { SidePanel, BottomNav, FeatureModals, FeatureScreens } from "./src/ui.jsx";
 import { useAudio } from "./src/audio/useAudio.js";
 import { setPhaserScene } from "./src/phaserBridge.js";
 
