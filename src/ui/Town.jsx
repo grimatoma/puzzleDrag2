@@ -537,6 +537,20 @@ function MineEntranceArt({ locked }) {
   );
 }
 
+function Cloud({ top, w, h, color, anim, breatheDur }) {
+  const s = { borderRadius: '50%', background: color, position: 'absolute' };
+  const animation = breatheDur ? `${anim}, cloudBreathe ${breatheDur}s ease-in-out infinite` : anim;
+  const bott = h * 0.2;
+  return (
+    <div style={{ position: 'absolute', top, width: w, height: h, animation }}>
+      <div style={{ ...s, width: '100%', height: '100%' }} />
+      <div style={{ ...s, width: w * 0.42, height: h * 1.6, bottom: bott, left: w * 0.05 }} />
+      <div style={{ ...s, width: w * 0.50, height: h * 1.9, bottom: bott, left: w * 0.28 }} />
+      <div style={{ ...s, width: w * 0.38, height: h * 1.5, bottom: bott, right: w * 0.05 }} />
+    </div>
+  );
+}
+
 export function TownView({ state, dispatch }) {
   const [entryBiome, setEntryBiome] = useState(null);
   const [purchaseBuilding, setPurchaseBuilding] = useState(null);
@@ -548,6 +562,9 @@ export function TownView({ state, dispatch }) {
   const townConfig = TOWN_BIOME_CONFIGS[biomeTheme];
   const currentNode = MAP_NODES.find(n => n.id === state.mapCurrent);
   const locationName = currentNode?.name ?? townConfig.name;
+  const cc = (a) => biomeTheme === 'mine'
+    ? `rgba(180,190,200,${(a * 0.55).toFixed(2)})`
+    : `rgba(255,255,255,${a})`;
   // Merge canonical building defs with biome-specific layout overrides
   const townBuildings = BUILDINGS.map(b => ({ ...b, ...(townConfig.buildingLayout[b.id] || {}) }));
   // Sort by bottom edge so shorter buildings don't clip taller neighbours
@@ -589,11 +606,13 @@ export function TownView({ state, dispatch }) {
       {/* Sun/light source */}
       <div className="absolute top-12 right-20 w-16 h-16 rounded-full" style={{ background: theme.sunColor, boxShadow: `0 0 60px ${theme.sunGlow}` }} />
       {/* Clouds */}
-      <div className={`absolute top-12 w-16 h-4 rounded-full ${biomeTheme === "mine" ? "bg-white/20" : "bg-white/40"}`} style={{ animation: "townCloudC 180s linear infinite", animationDelay: "-60s" }} />
-      <div className={`absolute top-16 w-24 h-6 rounded-full ${townConfig.cloudOpacity}`} style={{ animation: "townCloudA 95s linear infinite" }} />
-      <div className={`absolute top-24 w-28 h-7 rounded-full ${biomeTheme === "mine" ? "bg-white/30" : "bg-white/60"}`} style={{ animation: "townCloudB 130s linear infinite", animationDelay: "-22s" }} />
-      <div className={`absolute top-10 w-20 h-5 rounded-full ${biomeTheme === "mine" ? "bg-white/25" : "bg-white/50"}`} style={{ animation: "townCloudA 160s linear infinite", animationDelay: "-40s" }} />
-      <div className={`absolute top-28 w-32 h-8 rounded-full ${biomeTheme === "mine" ? "bg-white/20" : "bg-white/45"}`} style={{ animation: "townCloudB 210s linear infinite", animationDelay: "-95s" }} />
+      <Cloud top={48}  w={64}  h={18} color={cc(0.38)} anim="townCloudC 180s linear -60s infinite"  breatheDur={12} />
+      <Cloud top={64}  w={96}  h={26} color={cc(0.62)} anim="townCloudA 95s linear 0s infinite"     breatheDur={9}  />
+      <Cloud top={96}  w={112} h={30} color={cc(0.55)} anim="townCloudB 130s linear -22s infinite"  breatheDur={14} />
+      <Cloud top={40}  w={80}  h={22} color={cc(0.45)} anim="townCloudA 160s linear -40s infinite"  breatheDur={11} />
+      <Cloud top={112} w={128} h={34} color={cc(0.40)} anim="townCloudB 210s linear -95s infinite"  breatheDur={16} />
+      <Cloud top={76}  w={72}  h={20} color={cc(0.50)} anim="townCloudC 145s linear -115s infinite" breatheDur={10} />
+      <Cloud top={52}  w={104} h={28} color={cc(0.42)} anim="townCloudA 240s linear -170s infinite" breatheDur={13} />
 
       {/* Biome-specific terrain */}
       <svg className="absolute inset-0 w-full h-full" viewBox="0 0 1100 600" preserveAspectRatio="none">
