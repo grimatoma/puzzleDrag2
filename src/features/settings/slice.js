@@ -12,7 +12,7 @@ function loadSettings() {
 function persistSettings(settings) {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
-  } catch (_) {}
+  } catch { /* storage unavailable */ }
 }
 
 const DEFAULT_SETTINGS = {
@@ -46,7 +46,7 @@ export function reduce(state, action) {
       try {
         const keys = Object.keys(localStorage).filter((k) => k.startsWith('hearth.'));
         keys.forEach((k) => localStorage.removeItem(k));
-      } catch (_) {}
+      } catch { /* storage unavailable */ }
       // Set flag; prototype.jsx's useEffect performs the actual reload
       return { ...state, pendingReload: true };
     }
@@ -71,7 +71,7 @@ export function reduce(state, action) {
 
     case 'SETTINGS/SHOW_TUTORIAL': {
       // Clear the persisted seen flag so the tutorial actually re-runs after reload
-      try { localStorage.removeItem(STORAGE_KEYS.tutorialSeen); } catch (_) {}
+      try { localStorage.removeItem(STORAGE_KEYS.tutorialSeen); } catch { /* storage unavailable */ }
       const next = { ...state, modal: 'tutorial' };
       if (state.tutorial) {
         next.tutorial = { ...state.tutorial, active: true, step: 0, seen: false };

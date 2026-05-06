@@ -1,4 +1,4 @@
-import React from "react";
+
 import { APPRENTICES } from "./data.js";
 import { BIOMES } from "../../constants.js";
 

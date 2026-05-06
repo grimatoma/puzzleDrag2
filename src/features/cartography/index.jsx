@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { MAP_NODES, MAP_EDGES, NODE_COLORS, REGIONS, KIND_LABELS } from './data.js';
 import { isAdjacent } from './slice.js';
 
@@ -268,7 +268,7 @@ function MapSvg({ nodes, edges, visited, discovered, current, tapped, playerLeve
 
 const labelStyle = { fontFamily: 'Arial, sans-serif', color: '#5a3a20' };
 
-function StatusBadge({ status, target, playerLevel }) {
+function StatusBadge({ status, target }) {
   let bg, fg, text;
   switch (status) {
     case 'current':

@@ -1,4 +1,4 @@
-import React, { useEffect, useReducer, useRef, useState } from "react";
+import { useEffect, useReducer, useRef, useState } from "react";
 import { COLS, ROWS, TILE } from "./src/constants.js";
 import { runSelfTests } from "./src/utils.js";
 import { gameReducer, initialState } from "./src/state.js";
@@ -88,7 +88,7 @@ function PhaserMount({ dispatch, biomeKey, turnsUsed, seasonsCycled, uiLocked, s
       sceneRef.current = null;
       setPhaserScene(null);
     };
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps -- intentional: Phaser game initialises once on mount; registry syncs handled by separate effects below
 
   // Sync React state → Phaser registry
   useEffect(() => { gameRef.current?.registry.set("biomeKey", biomeKey); }, [biomeKey]);
