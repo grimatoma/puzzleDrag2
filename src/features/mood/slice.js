@@ -6,6 +6,11 @@ export const initial = {
   npcGiftsToday: {},
 };
 
+const BOND_DELTA_NEUTRAL = 0.2;
+const BOND_DELTA_FAVORITE = 0.5;
+const BOND_DELTA_DISLIKE = -0.5;
+const BOND_DELTA_ORDER = 0.3;
+
 /** Return new npcBond object with bond for npc adjusted by delta. */
 function adjustBond(npcBond, npc, delta) {
   const current = npcBond[npc] ?? 1;
@@ -20,10 +25,10 @@ export function reduce(state, action) {
       if ((inv[resource] || 0) < 1) return state;
 
       const fav = NPC_FAVORITES[npc];
-      let delta = 0.2;
+      let delta = BOND_DELTA_NEUTRAL;
       if (fav) {
-        if (resource === fav.favorite) delta = 0.5;
-        else if (resource === fav.dislike) delta = -0.5;
+        if (resource === fav.favorite) delta = BOND_DELTA_FAVORITE;
+        else if (resource === fav.dislike) delta = BOND_DELTA_DISLIKE;
       }
 
       const newBond = adjustBond(state.npcBond || initial.npcBond, npc, delta);
@@ -48,7 +53,7 @@ export function reduce(state, action) {
       const { npc, reward } = action;
       if (!npc) return state;
 
-      const newBond = adjustBond(state.npcBond || initial.npcBond, npc, 0.3);
+      const newBond = adjustBond(state.npcBond || initial.npcBond, npc, BOND_DELTA_ORDER);
 
       // Add extra coins from mood modifier on top of what core already paid.
       // Modifier > 1 → bonus; modifier < 1 → penalty (e.g. Sour NPC gives 70% of reward).

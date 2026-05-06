@@ -1,6 +1,7 @@
 import { MAX_TURNS } from "../../constants.js";
 import { APPRENTICE_MAP } from "./data.js";
-import { MAX_TURNS } from "../../constants.js";
+
+const HIRE_REFUND_RATE = 0.25;
 
 export const initial = {
   hiredApprentices: [],
@@ -58,7 +59,7 @@ export function reduce(state, action) {
     const hired = (state.hiredApprentices || []).find((h) => h.id === id);
     if (!hired) return state;
     const app = APPRENTICE_MAP[hired.app];
-    const refund = app ? Math.floor(app.hireCost * 0.25) : 0;
+    const refund = app ? Math.floor(app.hireCost * HIRE_REFUND_RATE) : 0;
     return {
       ...state,
       coins: (state.coins || 0) + refund,
