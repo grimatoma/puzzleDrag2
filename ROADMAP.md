@@ -69,7 +69,7 @@ Each phase is a horizontal slice — a fully playable improvement, not a half-bu
 | 2 | Story System & Win Condition | Spec'd | [`roadmap/phase-2-story.md`](./roadmap/phase-2-story.md) |
 | 3 | Economy (market, supply chain, runes, daily streak) | Spec'd | [`roadmap/phase-3-economy.md`](./roadmap/phase-3-economy.md) |
 | 4 | Workers (data model, effects, wages, housing) | Spec'd | [`roadmap/phase-4-workers.md`](./roadmap/phase-4-workers.md) |
-| 5 | Species (discovery, research, free moves) | Pending | `roadmap/phase-5-species.md` |
+| 5 | Species (discovery, research, free moves) | Spec'd | [`roadmap/phase-5-species.md`](./roadmap/phase-5-species.md) |
 | 6 | NPC Social (gifts, dialog pools, mood UI) | Pending | `roadmap/phase-6-npc-social.md` |
 | 7 | Quests / Almanac / Achievements | Pending | `roadmap/phase-7-progression.md` |
 | 8 | Boss + Weather (1-season window, scaling rewards) | Pending | `roadmap/phase-8-boss-weather.md` |
@@ -97,8 +97,8 @@ Turns coins from a single-purpose scoreboard into a real economy. Caravan Post u
 ### Phase 4 — Workers wired
 Workers stop being decorative wallet decorations and start changing the board. The data model is locked to a max-effect shape — every worker entry stores its full-slot value, with per-hire computed as `max ÷ maxCount` so a third Hilda completes the listed effect rather than tripling it. A pure `computeWorkerEffects(state)` aggregator feeds three Phaser registry channels — `effectiveThresholds`, `effectivePoolWeights`, `bonusYields` — which replace the raw Phase 1 thresholds at chain commit and shape the next board fill. Wages debit on `CLOSE_SEASON` against the same coin pool the Market uses; missed wages roll into `state.workers.debt`, pause production until cleared, and auto-repay against the next order or sale — no auto-fire. Housing capacity gates total hires (1 baseline + 1 per Housing built), with slot counts shown as plain numbers ("3", never "3/3") per the locked display rule. Exit: a fresh save can hire all 3 Hilda, watch chains of 3 hay upgrade where they previously didn't, deliberately under-fund wages, and recover via an order payment.
 
-### Phase 5 — Species *(spec pending)*
-Data model with categories (companion / mount / familiar). One active per category. Discovery via chain length thresholds. Research timer. Active species modifies board pool weights and grants free-moves per season. UI panel for browse/equip. Exit criteria TBD.
+### Phase 5 — Species
+Every tile resource becomes a discoverable species across five categories — grass, grain, wood, berry, bird — with one active species per category at session start, and inactive species excluded from the board pool entirely. Discovery flows through three methods locked in GAME_SPEC §13: chain-length (a chain of 20 hay reveals Meadow Grass, a chain of 6 hay reveals Wheat), research (cumulative resource totals tracked globally across sessions, persisted in save), and direct buy via coins. The board pool wiring layers active-species choices with Phase 4's worker `pool_weight` effects — workers only stack on resources whose species is active, never resurrecting an inactive resource. Free-move species (Turkey, Clover, Melon) grant extra turns when *chained* — not just activated — per the locked free-move trigger rule. A category-tabbed Species panel surfaces discovery progress, active toggles, and locked-tier hints. Exit: a fresh save discovers Wheat on the first 6-hay chain, swapping active species changes the next board fill, and chaining Turkey grants 2 free moves that don't tick the session counter.
 
 ### Phase 6 — NPC social *(spec pending)*
 Bond modifier visible on every order card. Gift system: select an inventory item, hand to NPC, bond change varies by favorite item. Dialog pools per NPC × season × bond band. Exit criteria TBD.
