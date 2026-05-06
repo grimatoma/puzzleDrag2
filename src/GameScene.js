@@ -1,6 +1,7 @@
 import Phaser from "phaser";
 import { TILE, COLS, ROWS, UPGRADE_EVERY, SEASONS, BIOMES } from "./constants.js";
-import { upgradeCountForChain, cssColor } from "./utils.js";
+import { upgradeCountForChain } from "./utils.js";
+const cssColor = (num) => Phaser.Display.Color.IntegerToColor(num).rgba;
 import { rounded, makeTextures } from "./textures.js";
 import { TileObj } from "./TileObj.js";
 
