@@ -76,7 +76,7 @@ Each phase is a horizontal slice — a fully playable improvement, not a half-bu
 | 9 | Mine Biome (resources, hazards, workers) | Spec'd | [`roadmap/phase-9-mine.md`](./roadmap/phase-9-mine.md) |
 | 10 | Farm Depth (priority tools, tile pool tuning) | Spec'd | [`roadmap/phase-10-farm-depth.md`](./roadmap/phase-10-farm-depth.md) |
 | 11 | Polish & Accessibility | Spec'd | [`roadmap/phase-11-polish.md`](./roadmap/phase-11-polish.md) |
-| 12 | Infrastructure (test runner, save migrations, build pipeline) | Pending | `roadmap/phase-12-infrastructure.md` |
+| 12 | Infrastructure (test runner, save migrations, build pipeline) | Spec'd | [`roadmap/phase-12-infrastructure.md`](./roadmap/phase-12-infrastructure.md) |
 
 ---
 
@@ -118,8 +118,8 @@ Polishes the Farm to high-value before any further Mine work, honouring the lock
 ### Phase 11 — Polish & Accessibility
 Widens the door so more players can actually play. A Settings panel exposes four persisted toggles: a color-blind palette dropdown (Default / Deuteranopia / Protanopia / Tritanopia, with the Default palette byte-for-byte identical to the existing hexes and the three a11y palettes verified at ≥3:1 contrast on adjacent-pool tiles), keyboard chain construction (Tab into the board, arrow keys move a yellow focus ring with edge clamping, Space adds an adjacent tile to the chain, Enter commits via the same path as the mouse drag, Escape cancels — Phase 1 tools also tray-shortcut firable), screen-reader announcements via two `aria-live` regions with a 200ms polite-debounce that narrate every chain commit, floater, modal, boss spawn, quest claim, and achievement unlock, and a reduced-motion toggle (defaulting to `prefers-reduced-motion`) that no-ops screen shake, freezes star sway, clamps long visual tweens to 100ms, and replaces particle bursts with a static 200ms glow. No new gameplay mechanics or resources — Phase 11 is strictly a polish pass on what Phases 0–10 already shipped. Exit: a fresh save can be played to the First Light beat by a deuteranopic player, a keyboard-only player, a screen-reader user, and a vestibular-disorder player without any of them ever touching a setting they didn't choose.
 
-### Phase 12 — Infrastructure *(spec pending)*
-A real test runner (Vitest) replacing the in-game `runSelfTests()`. Save-file schema migrations for old saves. CI pipeline. Vite build optimisation. Exit criteria TBD.
+### Phase 12 — Infrastructure
+Graduates testing from a single in-game `runSelfTests()` function to a real Vitest suite under `tests/phase-N-*.test.js` — one file per prior phase, all assertions migrated 1:1, with a coverage gate of 70% on `src/utils.js`, `src/state.js`, `src/features/**`. The in-game self-test path stays callable as a sub-50ms smoke shim against cross-phase invariants (MAX_TURNS, fresh bonds, initial story beat). A versioned save-migration pipeline (`SAVE_SCHEMA_VERSION = 11`, one pure idempotent step per Phase 1..11 save-shape change) lets a v0 save from a year ago load cleanly into the Phase 11 build with every later slice (story, market, workers, species, bonds, quests, weather, mine hazards, farm tools, prefs) initialised to spec'd defaults — with explicit fallback-to-fresh on corrupted saves. A GitHub Actions workflow runs `lint` + `test` + `build` in parallel on every PR against `main` (Node 20, npm cache, <3 minute target, all three required for merge). Vite build extends with manual chunking (`vendor/phaser`, `vendor/react`), gzip + brotli pre-compression, `rollup-plugin-visualizer` writing `dist/stats.html`, and preload hints — targeting <200KB gzipped main entry and <500KB total first-load. Exit: a v0 save fixture round-trips to v11 with no data loss, a deliberate chain-math regression fails CI in <2 minutes, and the production bundle hits the size budget.
 
 ---
 
