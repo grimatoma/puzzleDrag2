@@ -1,13 +1,10 @@
 import { NPC_FAVORITES, moodForBond } from './data.js';
+import { clamp } from '../../utils.js';
 
 export const initial = {
   npcBond: { mira: 1, tomas: 1, bram: 1, liss: 1, wren: 1 },
   npcGiftsToday: {},
 };
-
-function clamp(v, lo, hi) {
-  return Math.max(lo, Math.min(hi, v));
-}
 
 /** Return new npcBond object with bond for npc adjusted by delta. */
 function adjustBond(npcBond, npc, delta) {

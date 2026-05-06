@@ -103,6 +103,7 @@ export function initialState() {
     level,
     xp: 0,
     turnsUsed: 0,
+    seasonsCycled: 0,
     inventory: {},
     orders: [o1, o2, o3],
     tools: { clear: 2, basic: 1, rare: 1, shuffle: 0 },
