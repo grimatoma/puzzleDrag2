@@ -79,6 +79,18 @@ const TOWN_THEMES = {
     sunColor: "#c83030", sunGlow: "rgba(200,48,48,.6)",
     textColor: "#e8c0c0",
   },
+  cave: {
+    bg: "linear-gradient(180deg, #2e2a3a 0%, #4a3e2c 55%, #1a1a1e 100%)",
+    hill1: "#1e1a22", hill2: "#120e16", road: "#5a4a32", roadLine: "#7a6850",
+    sunColor: "#d4a830", sunGlow: "rgba(212,168,48,.5)",
+    textColor: "#e0c878",
+  },
+  forge: {
+    bg: "linear-gradient(180deg, #180808 0%, #380e08 55%, #0c0804 100%)",
+    hill1: "#200808", hill2: "#100402", road: "#3a1208", roadLine: "#7a2808",
+    sunColor: "#ff4010", sunGlow: "rgba(255,64,16,.7)",
+    textColor: "#ff8050",
+  },
 };
 
 // NPCs visible walking the town road. Color-keyed to NPCS where possible so
@@ -138,6 +150,55 @@ const TOWN_BIOME_CONFIGS = {
     cloudOpacity: "bg-white/40",
   },
 };
+
+// Per-location visual overrides keyed by MAP_NODES id.
+// `biomeVariant` controls which building layout + terrain decorations to use.
+// `themeKey` picks the colour scheme from TOWN_THEMES.
+const LOCATION_TOWN_CONFIGS = {
+  home: {
+    themeKey: 'home', biomeVariant: 'farm',
+    hill1Path: "M0,318 C100,292 230,275 400,282 C570,289 720,268 900,274 C980,270 1050,266 1100,262 L1100,600 L0,600 Z",
+    hill2Path: "M0,380 C130,364 290,355 490,370 C690,385 870,368 1100,362 L1100,600 L0,600 Z",
+    roadPath:  "M-20,510 C180,496 360,502 560,514 C760,526 940,516 1120,508",
+    cloudOpacity: "bg-white/65",
+  },
+  meadow: {
+    themeKey: 'farm', biomeVariant: 'farm',
+    hill1Path: "M0,295 C130,278 290,265 460,271 C630,277 800,260 970,258 C1040,256 1080,254 1100,253 L1100,600 L0,600 Z",
+    hill2Path: "M0,358 C155,348 325,342 535,355 C745,368 915,354 1100,348 L1100,600 L0,600 Z",
+    roadPath:  "M-20,504 C185,490 380,496 570,508 C760,520 930,512 1120,506",
+    cloudOpacity: "bg-white/70",
+  },
+  orchard: {
+    themeKey: 'farm', biomeVariant: 'farm',
+    hill1Path: "M0,326 C82,300 196,282 365,290 C534,298 704,272 882,276 C975,272 1050,268 1100,264 L1100,600 L0,600 Z",
+    hill2Path: "M0,388 C106,370 264,358 455,372 C646,386 845,372 1100,364 L1100,600 L0,600 Z",
+    roadPath:  "M-20,514 C148,500 342,506 554,518 C766,530 952,522 1120,514",
+    cloudOpacity: "bg-white/55",
+  },
+  quarry: {
+    themeKey: 'mine', biomeVariant: 'mine',
+    hill1Path: "M0,292 L68,270 L134,285 L205,249 L294,274 L385,212 L485,254 L622,220 L724,250 L826,206 L924,230 L1002,218 L1100,222 L1100,600 L0,600 Z",
+    hill2Path: "M0,372 C55,356 135,376 218,358 C308,342 410,370 522,360 C642,350 772,374 892,360 C974,350 1045,366 1100,360 L1100,600 L0,600 Z",
+    roadPath:  "M-20,496 C78,482 212,488 394,498 C576,508 754,500 914,494 C998,490 1064,492 1120,490",
+    cloudOpacity: "bg-white/30",
+  },
+  caves: {
+    themeKey: 'cave', biomeVariant: 'mine',
+    hill1Path: "M0,276 L58,238 L124,266 L208,196 L318,244 L428,172 L538,228 L660,186 L770,220 L872,178 L962,202 L1022,190 L1100,186 L1100,600 L0,600 Z",
+    hill2Path: "M0,356 C46,340 122,366 206,348 C294,330 406,360 520,346 C642,334 770,362 890,348 C968,338 1052,356 1100,350 L1100,600 L0,600 Z",
+    roadPath:  "M-20,492 C68,478 208,484 390,494 C572,504 750,496 910,490 C996,486 1064,488 1120,486",
+    cloudOpacity: "bg-white/20",
+  },
+  forge: {
+    themeKey: 'forge', biomeVariant: 'mine',
+    hill1Path: "M0,272 L50,228 L106,256 L186,180 L278,234 L390,150 L498,216 L628,170 L748,208 L860,156 L964,192 L1040,174 L1100,168 L1100,600 L0,600 Z",
+    hill2Path: "M0,350 C42,332 118,360 198,340 C286,320 400,354 514,338 C634,324 762,356 880,340 C962,328 1048,350 1100,342 L1100,600 L0,600 Z",
+    roadPath:  "M-20,490 C70,474 208,480 392,492 C576,504 754,494 914,488 C1000,484 1066,486 1120,484",
+    cloudOpacity: "bg-white/15",
+  },
+};
+
 function BuildingIllustration({ id, isBuilt }) {
   const f = isBuilt ? {} : { filter: "saturate(0.15) brightness(0.65)" };
   const lit = isBuilt ? "#ffd86b" : "#5a5040";
@@ -557,12 +618,17 @@ export function TownView({ state, dispatch }) {
   const { tip: buildingTip, show: showBuildingTip, hide: hideBuildingTip, handlers: tipHandlers, lastTouchTime } = useTooltip();
   const longPressTimer = useRef(null);
   const longPressActive = useRef(false);
-  const biomeTheme = state.biomeKey === "mine" ? "mine" : "farm";
-  const theme = TOWN_THEMES[biomeTheme] || TOWN_THEMES.home;
-  const townConfig = TOWN_BIOME_CONFIGS[biomeTheme];
+  const locConfig = LOCATION_TOWN_CONFIGS[state.mapCurrent];
+  const biomeVariant = locConfig?.biomeVariant ?? (state.biomeKey === 'mine' ? 'mine' : 'farm');
+  const themeKey = locConfig?.themeKey ?? biomeVariant;
+  const theme = TOWN_THEMES[themeKey] || TOWN_THEMES.farm;
+  const townConfig = TOWN_BIOME_CONFIGS[biomeVariant];
   const currentNode = MAP_NODES.find(n => n.id === state.mapCurrent);
   const locationName = currentNode?.name ?? townConfig.name;
-  const cc = (a) => biomeTheme === 'mine'
+  const hill1Path = locConfig?.hill1Path ?? townConfig.hill1Path;
+  const hill2Path = locConfig?.hill2Path ?? townConfig.hill2Path;
+  const roadPath = locConfig?.roadPath ?? townConfig.roadPath;
+  const cc = (a) => biomeVariant === 'mine'
     ? `rgba(180,190,200,${(a * 0.55).toFixed(2)})`
     : `rgba(255,255,255,${a})`;
   // Merge canonical building defs with biome-specific layout overrides
@@ -616,10 +682,10 @@ export function TownView({ state, dispatch }) {
 
       {/* Biome-specific terrain */}
       <svg className="absolute inset-0 w-full h-full" viewBox="0 0 1100 600" preserveAspectRatio="none">
-        <path d={townConfig.hill1Path} fill={theme.hill1} opacity="0.75" />
-        <path d={townConfig.hill2Path} fill={theme.hill2} opacity="0.6" />
+        <path d={hill1Path} fill={theme.hill1} opacity="0.75" />
+        <path d={hill2Path} fill={theme.hill2} opacity="0.6" />
 
-        {biomeTheme === "farm" && <>
+        {biomeVariant === "farm" && <>
           {/* Sunlit highlight ridge on the far hill */}
           <path d="M0,248 C140,222 300,210 480,224 C640,238 780,218 960,210 C1020,208 1070,206 1100,204 L1100,305 C1040,252 760,252 420,262 C260,248 120,278 0,305 Z" fill="#9ad060" opacity="0.28" />
           {/* Orchard tree clusters on left hill */}
@@ -672,7 +738,7 @@ export function TownView({ state, dispatch }) {
           <circle cx="404" cy="306" r="4" fill="#d02818" opacity="0.72" />
         </>}
 
-        {biomeTheme === "mine" && <>
+        {biomeVariant === "mine" && <>
           {/* Rock strata bands across the cliff face */}
           <path d="M0,248 C180,238 400,226 640,232 C820,238 1000,224 1100,220 L1100,272 C900,268 620,278 380,274 C220,270 100,274 0,268 Z" fill="#48443c" opacity="0.28" />
           <path d="M0,268 C160,260 380,250 640,256 C840,262 980,252 1100,248 L1100,286 C900,282 620,290 360,284 C220,280 100,282 0,282 Z" fill="#383430" opacity="0.22" />
@@ -768,8 +834,8 @@ export function TownView({ state, dispatch }) {
         </>}
 
         {/* Road */}
-        <path d={townConfig.roadPath} stroke={theme.road} strokeWidth="20" fill="none" strokeLinecap="round" opacity="0.85" />
-        <path d={townConfig.roadPath} stroke={theme.roadLine} strokeWidth="2" fill="none" strokeDasharray="6 8" />
+        <path d={roadPath} stroke={theme.road} strokeWidth="20" fill="none" strokeLinecap="round" opacity="0.85" />
+        <path d={roadPath} stroke={theme.roadLine} strokeWidth="2" fill="none" strokeDasharray="6 8" />
       </svg>
 
       {/* Header */}
