@@ -5,7 +5,7 @@ function loadSettings() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) return JSON.parse(raw);
-  } catch (_) {}
+  } catch (e) { console.warn("[hearth] settings data corrupt, using defaults:", e); }
   return null;
 }
 

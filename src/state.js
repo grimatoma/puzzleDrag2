@@ -22,7 +22,7 @@ export function loadSavedState() {
     if (!raw) return null;
     const parsed = JSON.parse(raw);
     return parsed && typeof parsed === "object" ? parsed : null;
-  } catch { return null; }
+  } catch (e) { console.warn("[hearth] save data corrupt, starting fresh:", e); return null; }
 }
 
 export function persistState(state) {
