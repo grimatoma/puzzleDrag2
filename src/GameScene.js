@@ -41,6 +41,8 @@ export class GameScene extends Phaser.Scene {
     this.drawBackground();
     this.fillBoard(true);
     this.input.on("pointerup", () => this.endPath());
+    this.input.on("pointerupoutside", () => this.endPath());
+    this.input.on("gameout", () => this.endPath());
 
     // Prevent the browser from hijacking pointer events with its native text/element
     // selection during tile drags (causes the "foggy film" overlay and stuck tile selection).
@@ -49,16 +51,31 @@ export class GameScene extends Phaser.Scene {
     canvas.addEventListener("selectstart", preventSelect);
     canvas.addEventListener("contextmenu", preventSelect);
 
-    // Fallback: fire endPath if the pointer is released outside the Phaser canvas.
+    // Fallback: fire endPath if the pointer is released outside the Phaser canvas
+    // or cancelled by the browser/OS (finger leaving the screen edge, system
+    // gestures, app switch, scroll takeover) — these dispatch pointercancel /
+    // touchcancel rather than pointerup, which would otherwise leave the drag
+    // state stuck with the chain path still rendered.
     const onDocPointerUp = () => this.endPath();
     document.addEventListener("pointerup", onDocPointerUp);
     document.addEventListener("mouseup", onDocPointerUp);
+    document.addEventListener("pointercancel", onDocPointerUp);
+    document.addEventListener("touchcancel", onDocPointerUp);
+    document.addEventListener("touchend", onDocPointerUp);
+    const onVisibility = () => { if (document.hidden) this.endPath(); };
+    document.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("blur", onDocPointerUp);
 
     this.events.once("shutdown", () => {
       canvas.removeEventListener("selectstart", preventSelect);
       canvas.removeEventListener("contextmenu", preventSelect);
       document.removeEventListener("pointerup", onDocPointerUp);
       document.removeEventListener("mouseup", onDocPointerUp);
+      document.removeEventListener("pointercancel", onDocPointerUp);
+      document.removeEventListener("touchcancel", onDocPointerUp);
+      document.removeEventListener("touchend", onDocPointerUp);
+      document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("blur", onDocPointerUp);
     });
 
     this.scale.on("resize", () => this.handleResize());
