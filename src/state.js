@@ -302,7 +302,12 @@ function coreReducer(state, action) {
       if (key === "mine" && state.level < 2) {
         return { ...state, bubble: { id: Date.now(), npc: "wren", text: "Mine unlocks at Level 2.", ms: 1800 } };
       }
-      const replacements = state.orders.map(() => makeOrder(key, state.level));
+      const excludeNpcs = [];
+      const replacements = state.orders.map(() => {
+        const o = makeOrder(key, state.level, excludeNpcs);
+        excludeNpcs.push(o.npc);
+        return o;
+      });
       return { ...state, biomeKey: key, orders: replacements };
     }
     case "SET_VIEW": {
