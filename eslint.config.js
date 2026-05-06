@@ -14,4 +14,8 @@ export default [
     files: ["**/*.{js,jsx}"],
     ignores: ["node_modules/**", "dist/**"],
   },
+  {
+    files: ["src/__tests__/**/*.js"],
+    languageOptions: { globals: { ...globals.node } },
+  },
 ];

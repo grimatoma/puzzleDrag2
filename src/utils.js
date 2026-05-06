@@ -1,4 +1,3 @@
-import Phaser from "phaser";
 import { UPGRADE_EVERY } from "./constants.js";
 
 export function clamp(n, a, b) {
@@ -7,10 +6,6 @@ export function clamp(n, a, b) {
 
 export function upgradeCountForChain(chainLength) {
   return Math.floor(chainLength / UPGRADE_EVERY);
-}
-
-export function cssColor(num) {
-  return Phaser.Display.Color.IntegerToColor(num).rgba;
 }
 
 export function hex(num) {
