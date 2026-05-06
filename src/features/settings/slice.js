@@ -69,6 +69,8 @@ export function reduce(state, action) {
       };
 
     case 'SETTINGS/SHOW_TUTORIAL': {
+      // Clear the persisted seen flag so the tutorial actually re-runs after reload
+      try { localStorage.removeItem('hearth.tutorial.seen'); } catch (_) {}
       const next = { ...state, modal: 'tutorial' };
       if (state.tutorial) {
         next.tutorial = { ...state.tutorial, active: true, step: 0, seen: false };
