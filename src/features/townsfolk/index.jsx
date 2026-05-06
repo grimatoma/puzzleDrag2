@@ -1,7 +1,7 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { MoodPanel } from "../mood/index.jsx";
 import { ApprenticesPanel } from "../apprentices/index.jsx";
-import { CompactOrders } from "../../ui.jsx";
+import { CompactOrders } from "../../ui/Inventory.jsx";
 
 export const viewKey = "townsfolk";
 

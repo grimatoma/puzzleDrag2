@@ -2,6 +2,13 @@ import { QUEST_TEMPLATES, ALMANAC_TIERS } from "../../constants.js";
 
 let _questIdSeq = 1;
 
+export function seedQuestIdSeq(savedDailies) {
+  for (const q of (savedDailies || [])) {
+    const n = parseInt((q.id || "").slice(1), 10);
+    if (!isNaN(n) && n >= _questIdSeq) _questIdSeq = n + 1;
+  }
+}
+
 function rollFresh() {
   const pool = [...QUEST_TEMPLATES];
   const picks = [];

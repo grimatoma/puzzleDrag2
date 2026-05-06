@@ -1,15 +1,15 @@
-name: Deploy to GitHub Pages
+name: Deploy Stable Preview
 
 on:
   push:
-    branches: [main]
+    branches: [stable]
   workflow_dispatch:
 
 permissions:
   contents: write
 
 concurrency:
-  group: pages
+  group: pages-preview-stable
   cancel-in-progress: true
 
 jobs:
@@ -24,9 +24,12 @@ jobs:
 
       - run: npm install
       - run: npm run build
+        env:
+          BASE_PATH: /puzzleDrag2/stable/
 
       - uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./dist
-          keep_files: true
+          destination_dir: stable
+

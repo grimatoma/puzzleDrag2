@@ -1,13 +1,15 @@
 import { NPC_FAVORITES, moodForBond } from './data.js';
+import { clamp } from '../../utils.js';
 
 export const initial = {
   npcBond: { mira: 1, tomas: 1, bram: 1, liss: 1, wren: 1 },
   npcGiftsToday: {},
 };
 
-function clamp(v, lo, hi) {
-  return Math.max(lo, Math.min(hi, v));
-}
+const BOND_DELTA_NEUTRAL = 0.2;
+const BOND_DELTA_FAVORITE = 0.5;
+const BOND_DELTA_DISLIKE = -0.5;
+const BOND_DELTA_ORDER = 0.3;
 
 /** Return new npcBond object with bond for npc adjusted by delta. */
 function adjustBond(npcBond, npc, delta) {
@@ -23,10 +25,10 @@ export function reduce(state, action) {
       if ((inv[resource] || 0) < 1) return state;
 
       const fav = NPC_FAVORITES[npc];
-      let delta = 0.2;
+      let delta = BOND_DELTA_NEUTRAL;
       if (fav) {
-        if (resource === fav.favorite) delta = 0.5;
-        else if (resource === fav.dislike) delta = -0.5;
+        if (resource === fav.favorite) delta = BOND_DELTA_FAVORITE;
+        else if (resource === fav.dislike) delta = BOND_DELTA_DISLIKE;
       }
 
       const newBond = adjustBond(state.npcBond || initial.npcBond, npc, delta);
@@ -47,21 +49,16 @@ export function reduce(state, action) {
     }
 
     case 'TURN_IN_ORDER': {
-      const { id } = action;
-      const orders = state.orders || [];
-      const order = orders.find((o) => o.id === id);
-      if (!order) return state;
+      // Use order data from the action (core has already replaced the order in state by now)
+      const { npc, reward } = action;
+      if (!npc) return state;
 
-      // Check that the order can actually be fulfilled (resource check mirrors state.js)
-      if ((state.inventory || {})[order.key] < order.need) return state;
+      const newBond = adjustBond(state.npcBond || initial.npcBond, npc, BOND_DELTA_ORDER);
 
-      const npc = order.npc;
-      const newBond = adjustBond(state.npcBond || initial.npcBond, npc, 0.3);
-
-      // The main reducer already added order.reward to state.coins.
-      // Here we add only the *extra* coins from the mood modifier.
-      const mood = moodForBond(newBond[npc]);
-      const extraCoins = Math.floor(order.reward * (mood.modifier - 1));
+      // Add extra coins from mood modifier on top of what core already paid.
+      // Modifier > 1 → bonus; modifier < 1 → penalty (e.g. Sour NPC gives 70% of reward).
+      const moodState = moodForBond(newBond[npc]);
+      const extraCoins = Math.floor(reward * (moodState.modifier - 1));
 
       return {
         ...state,

@@ -1,24 +1,14 @@
-export const W = 960;
-export const H = 640;
-export const MOBILE_W = 640;
-export const MOBILE_H = 1040;
+export const STORAGE_KEYS = {
+  save: "hearth.save.v1",
+  settings: "hearth.settings",
+  tutorialSeen: "hearth.tutorial.seen",
+};
+
 export const TILE = 74;
 export const COLS = 6;
 export const ROWS = 7;
-export const BOARD_X = 382;
-export const BOARD_Y = 96;
 export const MAX_TURNS = 8;
 export const UPGRADE_EVERY = 3;
-
-export function responsiveGameSize(displayWidth = W) {
-  return displayWidth < 760 ? { width: MOBILE_W, height: MOBILE_H, narrow: true } : { width: W, height: H, narrow: false };
-}
-
-export function renderResolutionForWidth(displayWidth = W, gameWidth = W) {
-  const pixelRatio = Math.min(window.devicePixelRatio || 1, 3);
-  const displayScale = Math.max(displayWidth / gameWidth, 1);
-  return Math.min(pixelRatio * displayScale, 3);
-}
 
 export const SEASONS = [
   { name: "Spring", icon: "flower", bg: 0x7dbd48, fill: 0x8fd85a, accent: 0x5daa35 },
@@ -33,16 +23,16 @@ export const BIOMES = {
     dirt: 0x6d4a2f,
     dark: 0x3e2a1a,
     resources: [
-      { key: "hay", label: "Hay", color: 0xa8c769, dark: 0x4f6b3a, value: 1, next: "wheat", glyph: "🌾" },
-      { key: "wheat", label: "Wheat", color: 0xdab947, dark: 0x7e5e1a, value: 2, next: "grain", glyph: "𓂃" },
-      { key: "grain", label: "Grain", color: 0xc8923a, dark: 0x5e3e10, value: 4, next: "flour", glyph: "✿" },
-      { key: "flour", label: "Flour", color: 0xf4e3c0, dark: 0x8a6a3a, value: 6, next: null, glyph: "◈" },
-      { key: "log", label: "Log", color: 0x9b6b3e, dark: 0x5e3a1d, value: 2, next: "plank", glyph: "🪵" },
-      { key: "plank", label: "Plank", color: 0xc98c50, dark: 0x5e3a1d, value: 4, next: "beam", glyph: "▤" },
-      { key: "beam", label: "Beam", color: 0x7e4f24, dark: 0x3a1d10, value: 7, next: null, glyph: "▦" },
-      { key: "berry", label: "Berry", color: 0xa3486a, dark: 0x5e1a3a, value: 3, next: "jam", glyph: "◉" },
-      { key: "jam", label: "Jam", color: 0xd4658c, dark: 0x7a2f50, value: 5, next: null, glyph: "◎" },
-      { key: "egg", label: "Egg", color: 0xf4ecd8, dark: 0x8a785e, value: 3, next: null, glyph: "◯" },
+      { key: "hay",   label: "Hay",   color: 0xa8c769, dark: 0x4f6b3a, value: 1, next: "wheat", glyph: "🌾", sway: { amp: 4.0, freq: 0.00060, gust: 0.20 } },
+      { key: "wheat", label: "Wheat", color: 0xdab947, dark: 0x7e5e1a, value: 2, next: "grain", glyph: "𓂃", sway: { amp: 5.0, freq: 0.00065, gust: 0.22 } },
+      { key: "grain", label: "Grain", color: 0xc8923a, dark: 0x5e3e10, value: 4, next: "flour", glyph: "✿", sway: { amp: 1.2, freq: 0.00035, gust: 0.08 } },
+      { key: "flour", label: "Flour", color: 0xf4e3c0, dark: 0x8a6a3a, value: 6, next: null,    glyph: "◈", sway: { amp: 1.0, freq: 0.00030, gust: 0.05 } },
+      { key: "log",   label: "Log",   color: 0x9b6b3e, dark: 0x5e3a1d, value: 2, next: "plank", glyph: "🪵" },
+      { key: "plank", label: "Plank", color: 0xc98c50, dark: 0x5e3a1d, value: 4, next: "beam",  glyph: "▤" },
+      { key: "beam",  label: "Beam",  color: 0x7e4f24, dark: 0x3a1d10, value: 7, next: null,    glyph: "▦" },
+      { key: "berry", label: "Berry", color: 0xa3486a, dark: 0x5e1a3a, value: 3, next: "jam",   glyph: "◉", sway: { amp: 3.5, freq: 0.00090, gust: 0.15 } },
+      { key: "jam",   label: "Jam",   color: 0xd4658c, dark: 0x7a2f50, value: 5, next: null,    glyph: "◎", sway: { amp: 0.8, freq: 0.00025, gust: 0.00 } },
+      { key: "egg",   label: "Egg",   color: 0xf4ecd8, dark: 0x8a785e, value: 3, next: null,    glyph: "◯", sway: { amp: 1.5, freq: 0.00055, gust: 0.08 } },
     ],
     pool: ["hay", "hay", "hay", "log", "log", "wheat", "berry", "berry", "egg"],
   },
@@ -51,16 +41,16 @@ export const BIOMES = {
     dirt: 0x242526,
     dark: 0x151515,
     resources: [
-      { key: "stone", label: "Stone", color: 0x9da3a8, dark: 0x3e4348, value: 1, next: "cobble", glyph: "◆" },
-      { key: "cobble", label: "Cobble", color: 0xbbc1c6, dark: 0x4e5358, value: 3, next: "block", glyph: "◇" },
-      { key: "block", label: "Block", color: 0x7c8388, dark: 0x2a2e32, value: 6, next: null, glyph: "■" },
-      { key: "ore", label: "Ore", color: 0xb6a3a3, dark: 0x5e4040, value: 3, next: "ingot", glyph: "◊" },
-      { key: "ingot", label: "Ingot", color: 0xe8e0d8, dark: 0x6a5a50, value: 6, next: null, glyph: "▭" },
-      { key: "coal", label: "Coal", color: 0x333333, dark: 0x000000, value: 2, next: "coke", glyph: "●" },
-      { key: "coke", label: "Coke", color: 0x5a5a60, dark: 0x1a1a20, value: 4, next: null, glyph: "⬢" },
-      { key: "gem", label: "Gem", color: 0x65e5ff, dark: 0x1686a3, value: 7, next: "cutgem", glyph: "◈" },
-      { key: "cutgem", label: "CutGem", color: 0xa3f0ff, dark: 0x1686a3, value: 14, next: null, glyph: "✦" },
-      { key: "gold", label: "Gold", color: 0xffd34c, dark: 0x946b11, value: 5, next: null, glyph: "✺" },
+      { key: "stone",  label: "Stone",  color: 0x9da3a8, dark: 0x3e4348, value: 1,  next: "cobble", glyph: "◆" },
+      { key: "cobble", label: "Cobble", color: 0xbbc1c6, dark: 0x4e5358, value: 3,  next: "block",  glyph: "◇" },
+      { key: "block",  label: "Block",  color: 0x7c8388, dark: 0x2a2e32, value: 6,  next: null,     glyph: "■" },
+      { key: "ore",    label: "Ore",    color: 0xb6a3a3, dark: 0x5e4040, value: 3,  next: "ingot",  glyph: "◊", sway: { amp: 0.4, freq: 0.00020, gust: 0.00 } },
+      { key: "ingot",  label: "Ingot",  color: 0xe8e0d8, dark: 0x6a5a50, value: 6,  next: null,     glyph: "▭" },
+      { key: "coal",   label: "Coal",   color: 0x333333, dark: 0x000000, value: 2,  next: "coke",   glyph: "●" },
+      { key: "coke",   label: "Coke",   color: 0x5a5a60, dark: 0x1a1a20, value: 4,  next: null,     glyph: "⬢" },
+      { key: "gem",    label: "Gem",    color: 0x65e5ff, dark: 0x1686a3, value: 7,  next: "cutgem", glyph: "◈", sway: { amp: 1.2, freq: 0.00028, gust: 0.04 } },
+      { key: "cutgem", label: "CutGem", color: 0xa3f0ff, dark: 0x1686a3, value: 14, next: null,     glyph: "✦", sway: { amp: 1.2, freq: 0.00028, gust: 0.04 } },
+      { key: "gold",   label: "Gold",   color: 0xffd34c, dark: 0x946b11, value: 5,  next: null,     glyph: "✺", sway: { amp: 1.0, freq: 0.00024, gust: 0.04 } },
     ],
     pool: ["stone", "stone", "stone", "ore", "ore", "coal", "coal", "gold", "gem"],
   },

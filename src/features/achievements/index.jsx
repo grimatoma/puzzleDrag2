@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { ACHIEVEMENTS, BIOMES } from "../../constants.js";
 
 export const viewKey = "achievements";

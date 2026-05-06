@@ -1,4 +1,7 @@
+import { MAX_TURNS } from "../../constants.js";
 import { APPRENTICE_MAP } from "./data.js";
+
+const HIRE_REFUND_RATE = 0.25;
 
 export const initial = {
   hiredApprentices: [],
@@ -6,6 +9,12 @@ export const initial = {
 };
 
 let hireSeq = 1;
+
+export function seedHireSeq(savedApprentices) {
+  for (const h of (savedApprentices || [])) {
+    if (typeof h.id === "number" && h.id >= hireSeq) hireSeq = h.id + 1;
+  }
+}
 
 function checkRequirement(app, state) {
   const req = app.requirement;
@@ -39,7 +48,7 @@ export function reduce(state, action) {
         bubble: { id: Date.now(), npc: "wren", text: `Can't hire ${app.name} yet — requirements not met.`, ms: 1800 },
       };
     }
-    const season = Math.floor((state.turnsUsed || 0) / 10);
+    const season = Math.floor((state.turnsUsed || 0) / MAX_TURNS);
     return {
       ...state,
       coins: state.coins - app.hireCost,
@@ -56,7 +65,7 @@ export function reduce(state, action) {
     const hired = (state.hiredApprentices || []).find((h) => h.id === id);
     if (!hired) return state;
     const app = APPRENTICE_MAP[hired.app];
-    const refund = app ? Math.floor(app.hireCost * 0.25) : 0;
+    const refund = app ? Math.floor(app.hireCost * HIRE_REFUND_RATE) : 0;
     return {
       ...state,
       coins: (state.coins || 0) + refund,
@@ -71,7 +80,7 @@ export function reduce(state, action) {
     let hiredApprentices = [...(state.hiredApprentices || [])];
     let idleHistory = [...(state.idleHistory || [])];
     let bubble = state.bubble;
-    const season = Math.floor((state.turnsUsed || 0) / 10);
+    const season = Math.floor((state.turnsUsed || 0) / MAX_TURNS);
     const gains = {};
     const firedNames = [];
 
@@ -81,8 +90,6 @@ export function reduce(state, action) {
       if (!app) continue;
       if (coins < app.wage) {
         firedNames.push(app.name);
-        const refund = 0;
-        void refund;
         continue;
       }
       coins -= app.wage;
