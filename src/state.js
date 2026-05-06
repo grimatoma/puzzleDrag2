@@ -63,7 +63,7 @@ const CRAFTED_FARM_POOL = ["bread", "honeyroll", "harvestpie", "preserve", "tinc
 const CRAFTED_MINE_POOL = ["hinge", "cobblepath", "lantern", "goldring", "gemcrown", "ironframe", "stonework"];
 
 let orderIdSeq = 1;
-export function makeOrder(biomeKey, level, excludeNpcs = []) {
+export function makeOrder(biomeKey, level, excludeNpcs = [], excludeOrderKeys = []) {
   const biome = BIOMES[biomeKey];
 
   // At level 3+, 30% chance for a crafted item order
@@ -72,14 +72,18 @@ export function makeOrder(biomeKey, level, excludeNpcs = []) {
   let key, need, reward, resourceLabel;
   if (useCrafted) {
     const craftedPool = biomeKey === "mine" ? CRAFTED_MINE_POOL : CRAFTED_FARM_POOL;
-    key = craftedPool[Math.floor(Math.random() * craftedPool.length)];
+    const craftedCandidates = craftedPool.filter((k) => !excludeOrderKeys.includes(k));
+    const craftedPickPool = craftedCandidates.length ? craftedCandidates : craftedPool;
+    key = craftedPickPool[Math.floor(Math.random() * craftedPickPool.length)];
     const recipe = RECIPES[key];
     need = 1 + Math.floor(Math.random() * 3); // 1–3 crafted items
     reward = Math.round(need * (recipe?.coins || 100) * 1.5);
     resourceLabel = (recipe?.name || key).toLowerCase();
   } else {
     const candidates = biome.pool.filter((k, i, a) => a.indexOf(k) === i);
-    key = candidates[Math.floor(Math.random() * candidates.length)];
+    const resourceCandidates = candidates.filter((k) => !excludeOrderKeys.includes(k));
+    const resourcePickPool = resourceCandidates.length ? resourceCandidates : candidates;
+    key = resourcePickPool[Math.floor(Math.random() * resourcePickPool.length)];
     const res = resourceByKey(key);
     const baseNeed = res.value < 3 ? 8 : 4;
     need = baseNeed + Math.floor(Math.random() * 4) + Math.floor(level / 3) * 2;
@@ -99,8 +103,8 @@ export function initialState() {
   const biomeKey = "farm";
   const level = 1;
   const o1 = makeOrder(biomeKey, level);
-  const o2 = makeOrder(biomeKey, level, [o1.npc]);
-  const o3 = makeOrder(biomeKey, level, [o1.npc, o2.npc]);
+  const o2 = makeOrder(biomeKey, level, [o1.npc], [o1.key]);
+  const o3 = makeOrder(biomeKey, level, [o1.npc, o2.npc], [o1.key, o2.key]);
   const fresh = {
     biomeKey,
     view: "town",
@@ -258,8 +262,10 @@ function coreReducer(state, action) {
       }
       const inventory = { ...state.inventory };
       inventory[o.key] -= o.need;
-      const usedNpcs = state.orders.filter((x) => x.id !== o.id).map((x) => x.npc);
-      const replacement = makeOrder(state.biomeKey, state.level, usedNpcs);
+      const remainingOrders = state.orders.filter((x) => x.id !== o.id);
+      const usedNpcs = remainingOrders.map((x) => x.npc);
+      const usedKeys = remainingOrders.map((x) => x.key);
+      const replacement = makeOrder(state.biomeKey, state.level, usedNpcs, usedKeys);
       const xpResult = applyXp(state, 12);
       // Summer: orders pay double
       const summerMult = ((state.seasonsCycled || 0) % 4 === 1) ? 2 : 1;
@@ -310,9 +316,11 @@ function coreReducer(state, action) {
         return { ...state, bubble: { id: Date.now(), npc: "wren", text: "Mine unlocks at Level 2.", ms: 1800 } };
       }
       const excludeNpcs = [];
+      const excludeKeys = [];
       const replacements = state.orders.map(() => {
-        const o = makeOrder(key, state.level, excludeNpcs);
+        const o = makeOrder(key, state.level, excludeNpcs, excludeKeys);
         excludeNpcs.push(o.npc);
+        excludeKeys.push(o.key);
         return o;
       });
       return { ...state, biomeKey: key, orders: replacements };
