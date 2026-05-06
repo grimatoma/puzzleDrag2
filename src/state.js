@@ -112,7 +112,6 @@ export function initialState() {
     modal: null,
     pendingView: null,
     seasonStats: { harvests: 0, upgrades: 0, ordersFilled: 0, coins: 0 },
-    seasonsCycled: 0,
     _hintsShown: {},
     ...crafting.initial,
     ...quests.initial,
@@ -169,7 +168,7 @@ function coreReducer(state, action) {
         return {
           ...state,
           turnsUsed,
-          bubble: { id: Date.now(), npc: "mira", text: `${state.boss.emoji} Challenge: chains need ${bossMinChain}+ tiles!`, ms: 2200 },
+          bubble: { id: Date.now(), npc: "mira", text: `${state.boss.emoji} Challenge: chains need ${bossMinChain}+ tiles!`, ms: 2200, priority: 2 },
           modal: seasonEnded ? "season" : state.modal,
         };
       }
@@ -180,7 +179,7 @@ function coreReducer(state, action) {
         const seasonEnded = turnsUsed >= MAX_TURNS;
         let bubble = state.bubble;
         if (!hintsShown.winterChain) {
-          bubble = { id: Date.now(), npc: "wren", text: "❄️ Winter: chains need 4+ tiles to harvest!", ms: 2400 };
+          bubble = { id: Date.now(), npc: "wren", text: "❄️ Winter: chains need 4+ tiles to harvest!", ms: 2400, priority: 2 };
         }
         return {
           ...state,
@@ -222,12 +221,12 @@ function coreReducer(state, action) {
 
       if (xpResult.leveledUp) {
         if (xpResult.level === 2) {
-          bubble = { id: Date.now(), npc: "wren", text: "Level 2! ⛏️ Mine biome unlocked — switch with the button below.", ms: 2800 };
+          bubble = { id: Date.now(), npc: "wren", text: "Level 2! ⛏️ Mine biome unlocked — switch with the button below.", ms: 2800, priority: 2 };
         } else {
-          bubble = { id: Date.now(), npc: "wren", text: `Level ${xpResult.level}! New things await.`, ms: 2400 };
+          bubble = { id: Date.now(), npc: "wren", text: `Level ${xpResult.level}! New things await.`, ms: 2400, priority: 2 };
         }
       } else if (effectiveUpgrades > 0 && !hintsShown.upgradeHint) {
-        bubble = { id: Date.now(), npc: "mira", text: "★ Upgrade! Chain 6+ tiles to snowball rare resources.", ms: 2800 };
+        bubble = { id: Date.now(), npc: "mira", text: "★ Upgrade! Chain 6+ tiles to snowball rare resources.", ms: 2800, priority: 2 };
         newHintsShown = { ...hintsShown, upgradeHint: true };
       }
 

@@ -119,6 +119,10 @@ export default function App() {
   const uiLocked = !!state.modal || state.view !== "board";
   useAudio(state);
 
+  useEffect(() => {
+    if (state.pendingReload) window.location.reload();
+  }, [state.pendingReload]);
+
   return (
     <div className="h-full w-full bg-[#2a1d0f] text-[#2b2218] grid place-items-center" style={{ position: "relative", overflow: "hidden" }}>
       {/* Ambient dust motes — behind all chrome */}

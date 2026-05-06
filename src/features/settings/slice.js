@@ -46,8 +46,8 @@ export function reduce(state, action) {
         const keys = Object.keys(localStorage).filter((k) => k.startsWith('hearth.'));
         keys.forEach((k) => localStorage.removeItem(k));
       } catch (_) {}
-      setTimeout(() => window.location.reload(), 400);
-      return state;
+      // Set flag; prototype.jsx's useEffect performs the actual reload
+      return { ...state, pendingReload: true };
     }
 
     case 'SETTINGS/LEAVE_BOARD': {
