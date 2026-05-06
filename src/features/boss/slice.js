@@ -11,7 +11,6 @@ const BOSS_META = {
     resource: "log",
     targetCount: 30,
     turns: 5,
-    season: "winter",
     // Board modifier: chains must be 5+ during this boss
     minChain: 5,
   },
@@ -23,7 +22,6 @@ const BOSS_META = {
     resource: "ingot",
     targetCount: 3,
     turns: 5,
-    season: "summer",
     minChain: null,
   },
   quagmire: {
@@ -34,7 +32,6 @@ const BOSS_META = {
     resource: "hay",
     targetCount: 50,
     turns: 5,
-    season: "spring",
     minChain: null,
   },
   old_stoneface: {
@@ -45,7 +42,6 @@ const BOSS_META = {
     resource: "stone",
     targetCount: 20,
     turns: 5,
-    season: "autumn",
     minChain: null,
   },
 };
@@ -61,18 +57,6 @@ const WEATHER_META = {
     emoji: "🌧",
     desc: "Rain settles over the vale — berry chains double resources for",
     color: "#3a6b8a",
-  },
-  drought: {
-    label: "Drought",
-    emoji: "☀️",
-    desc: "A dry spell grips the fields — wheat and grain spawn 50% rarer for",
-    color: "#c8823a",
-  },
-  frost: {
-    label: "Frost",
-    emoji: "🌨",
-    desc: "Frost creeps across the land — tile drops slow to a crawl for",
-    color: "#7ab8d4",
   },
   harvest_moon: {
     label: "Harvest Moon",
