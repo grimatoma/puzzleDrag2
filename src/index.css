@@ -1,3 +1,39 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@keyframes townCloudA {
+  0% { transform: translateX(-20%); }
+  100% { transform: translateX(120%); }
+}
+
+@keyframes townCloudB {
+  0% { transform: translateX(120%); }
+  100% { transform: translateX(-20%); }
+}
+
+@keyframes townCloudC {
+  0% { transform: translateX(-30%); }
+  100% { transform: translateX(130%); }
+}
+
+@keyframes townWalkR {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(112vw); }
+}
+
+@keyframes townWalkL {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-112vw); }
+}
+
+@keyframes townBob {
+  0% { transform: translateY(0); }
+  100% { transform: translateY(-1px); }
+}
+
+@keyframes townSmoke {
+  0% { transform: translate(-50%, 0) scale(0.6); opacity: 0.55; }
+  70% { opacity: 0.22; }
+  100% { transform: translate(-50%, -22px) scale(1.3); opacity: 0; }
+}

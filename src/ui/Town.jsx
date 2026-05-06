@@ -727,7 +727,7 @@ export function TownView({ state, dispatch }) {
       </div>
 
       {/* Walking NPCs — drift along the road from edge to edge */}
-      <div className="absolute inset-x-0 pointer-events-none" style={{ top: "78%", height: "8%" }}>
+      <div className="absolute inset-x-0 pointer-events-none z-20" style={{ top: "78%", height: "8%" }}>
         {TOWN_WALKERS.map((w, i) => (
           <TownWalker key={i} {...w} />
         ))}
