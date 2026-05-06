@@ -3,8 +3,6 @@ import { createPortal } from "react-dom";
 import { BIOMES, NPCS, SEASONS, MAX_TURNS, BUILDINGS, RECIPES } from "./constants.js";
 import { xpForLevel, resourceByKey } from "./state.js";
 import { seasonIndexForTurns } from "./utils.js";
-import { MoodPanel } from "./features/mood/index.jsx";
-import { ApprenticesPanel } from "./features/apprentices/index.jsx";
 
 // Mechanical effect active each calendar season (seasonsCycled % 4)
 const SEASON_EFFECTS = [
@@ -132,7 +130,7 @@ export function SidePanel({ state, dispatch, chainInfo }) {
   );
 }
 
-function CompactOrders({ orders, inventory, dispatch }) {
+export function CompactOrders({ orders, inventory, dispatch }) {
   return (
     <div className="flex flex-col gap-1.5">
       {orders.map((o) => {
@@ -506,7 +504,7 @@ export function BottomNav({ view, modal, dispatch }) {
     { key: "quests",      icon: "📜",  label: "Quests" },
     { key: "crafting",    icon: "🔨",  label: "Craft" },
     { key: "cartography", icon: "🗺️", label: "Map" },
-    { key: "townsfolk",   icon: "👥",  label: "Townsfolk", modal: "townsfolk" },
+    { key: "townsfolk",   icon: "👥",  label: "Townsfolk" },
   ];
   const activeKey = modal ? (items.find((i) => i.modal === modal)?.key ?? view) : view;
   return (
@@ -532,43 +530,6 @@ export function BottomNav({ view, modal, dispatch }) {
         );
       })}
     </div>
-  );
-}
-
-function TownsfolkModal({ state, dispatch }) {
-  if (state.modal !== "townsfolk") return null;
-  const [tab, setTab] = useState("mood");
-  return createPortal(
-    <div className="fixed inset-0 bg-black/55 grid place-items-center z-[100] animate-fadein">
-      <div className="bg-[#f4ecd8] border-[4px] border-[#b28b62] rounded-[20px] p-5 w-[min(540px,92vw)] max-h-[85vh] shadow-2xl flex flex-col">
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="font-bold text-[20px] text-[#744d2e]">Townsfolk</h3>
-          <button
-            onClick={() => dispatch({ type: "CLOSE_MODAL" })}
-            className="w-8 h-8 rounded-lg bg-[#f6efe0] border-2 border-[#b28b62] grid place-items-center text-[#6a4b31] font-bold text-[14px]"
-          >✕</button>
-        </div>
-        <div className="flex gap-1.5 pb-3 flex-shrink-0">
-          {[
-            { key: "mood", label: "💞 Townsfolk" },
-            { key: "apprentices", label: "🧑‍🌾 Apprentices" },
-            { key: "orders", label: "📋 Orders" },
-          ].map((item) => (
-            <button key={item.key} onClick={() => setTab(item.key)} className={`flex-1 py-1.5 rounded-lg text-[11px] font-bold border-2 ${tab === item.key ? "bg-[#8a4a26] border-[#6b3114] text-white" : "bg-[#f7ead8] border-[#b28b62] text-[#5a3a20]"}`}>{item.label}</button>
-          ))}
-        </div>
-        <div className="flex-1 min-h-0 overflow-y-auto">
-          {tab === "mood" ? (
-            <MoodPanel state={state} dispatch={dispatch} showHeader={false} />
-          ) : tab === "apprentices" ? (
-            <ApprenticesPanel state={state} dispatch={dispatch} showHeader={false} />
-          ) : (
-            <CompactOrders orders={state.orders || []} inventory={state.inventory || {}} dispatch={dispatch} />
-          )}
-        </div>
-      </div>
-    </div>,
-    document.body
   );
 }
 
@@ -1623,7 +1584,6 @@ export function FeatureModals({ state, dispatch }) {
 
   return (
     <>
-      <TownsfolkModal state={state} dispatch={dispatch} />
       {alwaysFeatures.map(f => <f.Component key={f.modalKey || f.viewKey} state={state} dispatch={dispatch} />)}
       {modalFeature && <modalFeature.Component state={state} dispatch={dispatch} />}
     </>
