@@ -1,10 +1,13 @@
 import Phaser from "phaser";
-import { TILE, COLS, ROWS, MAX_TURNS, UPGRADE_EVERY, SEASONS, BIOMES } from "./constants.js";
-import { seasonIndexForTurns, upgradeCountForChain, cssColor } from "./utils.js";
+import { TILE, COLS, ROWS, UPGRADE_EVERY, SEASONS, BIOMES } from "./constants.js";
+import { upgradeCountForChain } from "./utils.js";
+const cssColor = (num) => Phaser.Display.Color.IntegerToColor(num).rgba;
 import { rounded, makeTextures } from "./textures.js";
 import { TileObj } from "./TileObj.js";
 
 const TILE_BASE = TILE; // CSS-pixel design size for one tile; textures are baked at TILE * dpr
+const DOUBLE_CHAIN_THRESHOLD = 6; // chains this long or longer yield double resources
+const FLOAT_TEXT_COLOR = 0xffd248;
 
 // Single decorative frame around the tiles, in CSS pixels. Thinner on narrow
 // viewports so the board can stretch as wide as possible.
@@ -124,8 +127,8 @@ export class GameScene extends Phaser.Scene {
   // ─── Background / board frame ─────────────────────────────────────────────
 
   season() {
-    const turns = this.registry.get("turnsUsed") || 0;
-    return SEASONS[seasonIndexForTurns(turns)];
+    const idx = (this.registry.get("seasonsCycled") || 0) % SEASONS.length;
+    return SEASONS[idx];
   }
 
   biomeKey() {
@@ -178,10 +181,6 @@ export class GameScene extends Phaser.Scene {
   }
 
   // ─── Resources ────────────────────────────────────────────────────────────
-
-  resourceByKey(key) {
-    return Object.values(BIOMES).flatMap((b) => b.resources).find((r) => r.key === key) || BIOMES.farm.resources[0];
-  }
 
   nextResource(res) {
     const resources = this.biome().resources;
@@ -449,8 +448,8 @@ export class GameScene extends Phaser.Scene {
     const res = this.path[0].res;
     const next = this.nextResource(res);
     const upgradeTotal = next ? upgradeCountForChain(this.path.length) : 0;
-    const gained = this.path.length * (this.path.length >= 6 ? 2 : 1);
-    this.floatText(`+${gained} ${res.label}${upgradeTotal ? `  ★ ${upgradeTotal}` : ""}`, this.path[this.path.length - 1].x, this.path[this.path.length - 1].y, 0xffd248);
+    const gained = this.path.length * (this.path.length >= DOUBLE_CHAIN_THRESHOLD ? 2 : 1);
+    this.floatText(`+${gained} ${res.label}${upgradeTotal ? `  ★ ${upgradeTotal}` : ""}`, this.path[this.path.length - 1].x, this.path[this.path.length - 1].y);
 
     // Chain-length juice — escalating screen shake and a radial wipe. Big chains
     // earn loud feedback; tier upgrades (every 3rd tile) add an extra burst.
@@ -573,9 +572,9 @@ export class GameScene extends Phaser.Scene {
 
   // ─── Floater (resource-gain text per tile) ────────────────────────────────
 
-  floatText(msg, x, y, color) {
+  floatText(msg, x, y) {
     const dpr = this.dpr;
-    const t = this.add.text(x, y, msg, { fontFamily: "Arial", fontSize: `${22 * dpr}px`, color: cssColor(color), fontStyle: "bold", stroke: "#000", strokeThickness: 5 * dpr }).setOrigin(0.5).setDepth(20).setScale(0.7);
+    const t = this.add.text(x, y, msg, { fontFamily: "Arial", fontSize: `${22 * dpr}px`, color: cssColor(FLOAT_TEXT_COLOR), fontStyle: "bold", stroke: "#000", strokeThickness: 5 * dpr }).setOrigin(0.5).setDepth(20).setScale(0.7);
     this.tweens.add({ targets: t, scale: 1, duration: 120, ease: "Back.Out" });
     this.tweens.add({ targets: t, y: y - 58 * dpr, alpha: 0, delay: 120, duration: 780, onComplete: () => t.destroy() });
   }

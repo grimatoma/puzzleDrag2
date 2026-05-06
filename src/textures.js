@@ -51,32 +51,6 @@ export function canvasTexture(scene, key, w, h, draw, dpr = 1) {
 
 // ─── Icon drawing helpers ────────────────────────────────────────────────────
 
-function strokedFill(ctx, fill, stroke, lineWidth = 2.5) {
-  ctx.fillStyle = fill;
-  ctx.fill();
-  if (stroke) {
-    ctx.strokeStyle = stroke;
-    ctx.lineWidth = lineWidth;
-    ctx.stroke();
-  }
-}
-
-function dropShadow(ctx, drawFn) {
-  ctx.save();
-  ctx.shadowColor = "rgba(0,0,0,0.35)";
-  ctx.shadowBlur = 4;
-  ctx.shadowOffsetY = 2;
-  drawFn();
-  ctx.restore();
-}
-
-function highlight(ctx, x, y, rx, ry, angle = -0.5, color = "rgba(255,255,255,0.55)") {
-  ctx.fillStyle = color;
-  ctx.beginPath();
-  ctx.ellipse(x, y, rx, ry, angle, 0, Math.PI * 2);
-  ctx.fill();
-}
-
 // ─── Per-resource icon drawing ────────────────────────────────────────────────
 
 export function drawTileIcon(ctx, key) {

@@ -1,15 +1,17 @@
+import { STORAGE_KEYS } from "../../constants.js";
+
 function loadSeen() {
   try {
-    return localStorage.getItem('hearth.tutorial.seen') === '1';
-  } catch (_) {
+    return localStorage.getItem(STORAGE_KEYS.tutorialSeen) === '1';
+  } catch {
     return false;
   }
 }
 
 function persistSeen() {
   try {
-    localStorage.setItem('hearth.tutorial.seen', '1');
-  } catch (_) {}
+    localStorage.setItem(STORAGE_KEYS.tutorialSeen, '1');
+  } catch { /* storage unavailable */ }
 }
 
 export const initial = {

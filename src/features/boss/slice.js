@@ -11,7 +11,6 @@ const BOSS_META = {
     resource: "log",
     targetCount: 30,
     turns: 5,
-    season: "winter",
     // Board modifier: chains must be 5+ during this boss
     minChain: 5,
   },
@@ -23,18 +22,16 @@ const BOSS_META = {
     resource: "ingot",
     targetCount: 3,
     turns: 5,
-    season: "summer",
     minChain: null,
   },
   quagmire: {
     name: "The Quagmire",
     emoji: "🌿",
     flavor: "The bog has swallowed the lower fields. Only a bountiful harvest can drain its hold.",
-    goal: "Drain the bog: harvest 50 hay this season.",
+    goal: "Drain the bog: harvest 50 hay across 5 seasons.",
     resource: "hay",
     targetCount: 50,
     turns: 5,
-    season: "spring",
     minChain: null,
   },
   old_stoneface: {
@@ -45,7 +42,6 @@ const BOSS_META = {
     resource: "stone",
     targetCount: 20,
     turns: 5,
-    season: "autumn",
     minChain: null,
   },
 };
@@ -62,18 +58,6 @@ const WEATHER_META = {
     desc: "Rain settles over the vale — berry chains double resources for",
     color: "#3a6b8a",
   },
-  drought: {
-    label: "Drought",
-    emoji: "☀️",
-    desc: "A dry spell grips the fields — wheat and grain spawn 50% rarer for",
-    color: "#c8823a",
-  },
-  frost: {
-    label: "Frost",
-    emoji: "🌨",
-    desc: "Frost creeps across the land — tile drops slow to a crawl for",
-    color: "#7ab8d4",
-  },
   harvest_moon: {
     label: "Harvest Moon",
     emoji: "🌕",
@@ -83,6 +67,7 @@ const WEATHER_META = {
 };
 
 const WEATHER_KEYS = Object.keys(WEATHER_META);
+const WEATHER_ROLL_CHANCE = 0.5;
 
 export const initial = {
   boss: null,
@@ -92,6 +77,7 @@ export const initial = {
   weatherTurnsLeft: 0,
   bossesDefeated: 0,
   _bossSeasonCount: 0,
+  _bossResolvedThisSeason: false,
 };
 
 function pickRandomWeather() {
@@ -162,6 +148,7 @@ export function reduce(state, action) {
         boss: null,
         bossMinimized: false,
         modal: state.modal === "boss" ? null : state.modal,
+        _bossResolvedThisSeason: true,
       };
       if (won) {
         return {
@@ -269,9 +256,9 @@ export function reduce(state, action) {
         next = { ...next, boss: { ...next.boss, turnsLeft } };
       }
 
-      // Trigger a seasonal boss climax at the end of every 4th season (1 year)
-      // Each year cycles through the rotation: frostmaw → quagmire → ember_drake → old_stoneface
-      if (seasonCount % 4 === 0 && !next.boss) {
+      // Trigger a seasonal boss climax at the end of every 4th season (1 year).
+      // Skip if a boss was already resolved this season to avoid two boss events in one beat.
+      if (seasonCount % 4 === 0 && !next.boss && !next._bossResolvedThisSeason) {
         const yearIndex = Math.floor(seasonCount / 4) - 1;
         const bossKey = YEAR_BOSS_ROTATION[yearIndex % YEAR_BOSS_ROTATION.length];
         next = triggerBoss(next, bossKey);
@@ -280,7 +267,7 @@ export function reduce(state, action) {
       }
 
       // Roll weather (1-in-2 chance, independent of boss)
-      if (!next.weather && Math.random() < 0.5) {
+      if (!next.weather && Math.random() < WEATHER_ROLL_CHANCE) {
         const weatherKey = pickRandomWeather();
         const weatherMeta = WEATHER_META[weatherKey];
         const weatherTurns = 2 + Math.floor(Math.random() * 2);
@@ -297,6 +284,8 @@ export function reduce(state, action) {
         };
       }
 
+      // Reset the per-season resolved flag at end of every season
+      next = { ...next, _bossResolvedThisSeason: false };
       return next;
     }
 

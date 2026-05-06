@@ -1,11 +1,12 @@
-import React, { useEffect, useReducer, useRef, useState } from "react";
+import { useEffect, useReducer, useRef, useState } from "react";
 import { COLS, ROWS, TILE } from "./src/constants.js";
 import { runSelfTests } from "./src/utils.js";
 import { gameReducer, initialState } from "./src/state.js";
 import { Hud, SidePanel, MobileDock, PortraitToolsBar, BottomNav, TownView, SeasonModal, NpcBubble, FeatureModals, FeatureScreens } from "./src/ui.jsx";
 import { useAudio } from "./src/audio/useAudio.js";
+import { setPhaserScene } from "./src/phaserBridge.js";
 
-function PhaserMount({ dispatch, biomeKey, turnsUsed, uiLocked, sceneRef, memoryPerks, setChainInfo }) {
+function PhaserMount({ dispatch, biomeKey, turnsUsed, seasonsCycled, uiLocked, sceneRef, memoryPerks, setChainInfo }) {
   const hostRef = useRef(null);
   const gameRef = useRef(null);
   const [loading, setLoading] = useState(true);
@@ -47,6 +48,7 @@ function PhaserMount({ dispatch, biomeKey, turnsUsed, uiLocked, sceneRef, memory
             preBoot: (game) => {
               game.registry.set("biomeKey", biomeKey);
               game.registry.set("turnsUsed", turnsUsed);
+              game.registry.set("seasonsCycled", seasonsCycled);
               game.registry.set("uiLocked", uiLocked);
               game.registry.set("dpr", dpr);
               game.registry.set("renderResolution", dpr);
@@ -66,7 +68,7 @@ function PhaserMount({ dispatch, biomeKey, turnsUsed, uiLocked, sceneRef, memory
 
               const scene = game.scene.scenes[0];
               sceneRef.current = scene;
-              window.__phaserScene = scene; // for tools panel quick-access
+              setPhaserScene(scene);
               scene.events.on("chain-collected", (payload) => dispatch({ type: "CHAIN_COLLECTED", payload }));
               scene.events.on("chain-update", (data) => setChainInfo(data));
               setLoading(false);
@@ -84,13 +86,14 @@ function PhaserMount({ dispatch, biomeKey, turnsUsed, uiLocked, sceneRef, memory
       gameRef.current?.destroy(true);
       gameRef.current = null;
       sceneRef.current = null;
-      window.__phaserScene = null;
+      setPhaserScene(null);
     };
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps -- intentional: Phaser game initialises once on mount; registry syncs handled by separate effects below
 
   // Sync React state → Phaser registry
   useEffect(() => { gameRef.current?.registry.set("biomeKey", biomeKey); }, [biomeKey]);
   useEffect(() => { gameRef.current?.registry.set("turnsUsed", turnsUsed); }, [turnsUsed]);
+  useEffect(() => { gameRef.current?.registry.set("seasonsCycled", seasonsCycled); }, [seasonsCycled]);
   useEffect(() => { gameRef.current?.registry.set("uiLocked", uiLocked); }, [uiLocked]);
   useEffect(() => { gameRef.current?.registry.set("memoryPerks", memoryPerks || []); }, [memoryPerks]);
 
@@ -118,6 +121,10 @@ export default function App() {
   const sceneRef = useRef(null);
   const uiLocked = !!state.modal || state.view !== "board";
   useAudio(state);
+
+  useEffect(() => {
+    if (state.pendingReload) window.location.reload();
+  }, [state.pendingReload]);
 
   return (
     <div className="h-full w-full bg-[#2a1d0f] text-[#2b2218] grid place-items-center" style={{ position: "relative", overflow: "hidden" }}>
@@ -164,6 +171,7 @@ export default function App() {
                   dispatch={dispatch}
                   biomeKey={state.biomeKey}
                   turnsUsed={state.turnsUsed}
+                  seasonsCycled={state.seasonsCycled}
                   uiLocked={uiLocked}
                   sceneRef={sceneRef}
                   memoryPerks={state.memoryPerks}

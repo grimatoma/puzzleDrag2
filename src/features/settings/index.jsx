@@ -1,4 +1,4 @@
-import React from "react";
+import { useState, useEffect } from "react";
 
 export const modalKey = "menu";
 
@@ -53,15 +53,15 @@ async function toggleFullscreen() {
       const req = el.requestFullscreen || el.webkitRequestFullscreen;
       await req?.call(el);
       // Lock portrait if available (Android Chrome / TWA)
-      try { await screen.orientation?.lock?.("portrait"); } catch {}
+      try { await screen.orientation?.lock?.("portrait"); } catch { /* orientation lock not supported */ }
     }
-  } catch {}
+  } catch { /* fullscreen not supported or denied */ }
 }
 
 function MainTab({ state, dispatch }) {
-  const [fs, setFs] = React.useState(isFullscreen());
-  const [confirmLeave, setConfirmLeave] = React.useState(false);
-  React.useEffect(() => {
+  const [fs, setFs] = useState(isFullscreen());
+  const [confirmLeave, setConfirmLeave] = useState(false);
+  useEffect(() => {
     const sync = () => setFs(isFullscreen());
     document.addEventListener("fullscreenchange", sync);
     document.addEventListener("webkitfullscreenchange", sync);
@@ -181,7 +181,7 @@ function SettingsTab({ settings = {}, dispatch }) {
 
 // --- About tab ---
 function AboutTab({ dispatch }) {
-  const [taps, setTaps] = React.useState(0);
+  const [taps, setTaps] = useState(0);
 
   function handleFireTap() {
     const next = taps + 1;

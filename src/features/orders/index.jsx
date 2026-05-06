@@ -1,4 +1,4 @@
-import React from "react";
+
 import { NPCS, RECIPES } from "../../constants.js";
 import { resourceByKey } from "../../state.js";
 

@@ -1,8 +1,9 @@
-import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { BIOMES, NPCS, SEASONS, MAX_TURNS, BUILDINGS, RECIPES } from "./constants.js";
 import { xpForLevel, resourceByKey } from "./state.js";
-import { seasonIndexForTurns } from "./utils.js";
+import { hex } from "./utils.js";
+import { getPhaserScene } from "./phaserBridge.js";
 
 // Mechanical effect active each calendar season (seasonsCycled % 4)
 const SEASON_EFFECTS = [
@@ -110,9 +111,8 @@ function Tooltip({ anchorX, anchorY, gap = 8, edgeMargin = 8, className = "", st
 export function Hud({ state, dispatch }) {
   const { coins, level, xp, turnsUsed, built, view, seasonsCycled } = state;
   const onBoard = view === "board";
-  const seasonIdx = seasonIndexForTurns(turnsUsed);
-  const season = SEASONS[seasonIdx];
   const calendarSeason = (seasonsCycled || 0) % 4;
+  const season = SEASONS[calendarSeason];
   const xpNeed = xpForLevel(level);
   const xpPct = Math.min(100, (xp / xpNeed) * 100);
   const turnsLeft = MAX_TURNS - turnsUsed;
@@ -176,7 +176,7 @@ function SeasonBar({ season, turnsUsed, turnsLeft, calendarSeason }) {
               key={i}
               className={`w-2.5 h-2.5 landscape:max-[1024px]:w-2 landscape:max-[1024px]:h-2 rounded-full border flex-shrink-0 ${filled ? "border-transparent" : "border-[#8a6a3a]"} transition-all`}
               style={{
-                backgroundColor: filled ? cssFromHex(season.fill) : "#fff",
+                backgroundColor: filled ? hex(season.fill) : "#fff",
                 boxShadow: current ? "0 0 0 2px rgba(255,122,0,.55)" : "none",
                 transform: filled ? "scale(1.05)" : "none",
               }}
@@ -189,9 +189,7 @@ function SeasonBar({ season, turnsUsed, turnsLeft, calendarSeason }) {
   );
 }
 
-function cssFromHex(intHex) {
-  return `#${intHex.toString(16).padStart(6, "0")}`;
-}
+
 
 // ─── Side panel (orders / inventory / tools / biome switcher) ─────────────
 
@@ -206,7 +204,7 @@ export function SidePanel({ state, dispatch, chainInfo }) {
       <Section title="Tools" titleColor="#f8e7c6">
         <ToolsGrid tools={state.tools} onUse={(key) => {
           dispatch({ type: "USE_TOOL", key });
-          if (key === "shuffle") window.__phaserScene?.shuffleBoard();
+          if (key === "shuffle") getPhaserScene()?.shuffleBoard();
         }} />
       </Section>
       <Section title="Orders" titleColor="#f8e7c6">
@@ -229,7 +227,7 @@ export function CompactOrders({ orders, inventory, dispatch }) {
         return (
           <button
             key={o.id}
-            onClick={() => dispatch({ type: "TURN_IN_ORDER", id: o.id })}
+            onClick={() => dispatch({ type: "TURN_IN_ORDER", id: o.id, npc: o.npc, key: o.key, need: o.need, reward: o.reward })}
             className={`flex items-center gap-1.5 rounded-lg px-2 py-1 text-left border transition-colors ${done ? "bg-[#91bf24]/40 border-[#91bf24] text-white" : "bg-[#4a2e18] border-[#7a5038] text-[#f8e7c6]"}`}
           >
             <span className="text-[14px] flex-shrink-0">{glyph}</span>
@@ -298,7 +296,7 @@ function InventoryCell({ r, count, compact, orderStatus, orderTotal }) {
       style={ringStyle}
       title={r.label}
     >
-      <div className={`rounded-md flex-shrink-0 grid place-items-center text-white ${compact ? "w-8 h-8 text-[16px]" : "w-10 h-10 text-[20px]"}`} style={{ backgroundColor: cssFromHex(r.color), border: "2px solid rgba(255,255,255,.4)", textShadow: "0 1px 1px rgba(0,0,0,.4)" }}>{r.glyph}</div>
+      <div className={`rounded-md flex-shrink-0 grid place-items-center text-white ${compact ? "w-8 h-8 text-[16px]" : "w-10 h-10 text-[20px]"}`} style={{ backgroundColor: hex(r.color), border: "2px solid rgba(255,255,255,.4)", textShadow: "0 1px 1px rgba(0,0,0,.4)" }}>{r.glyph}</div>
       <div className="flex flex-col leading-none min-w-0 flex-1">
         <div className={`text-white/80 truncate font-medium ${compact ? "text-[10px]" : "text-[12px]"}`}>{r.label}</div>
         <div className={`text-white font-bold mt-0.5 ${compact ? "text-[14px]" : "text-[18px]"}`} style={{ textShadow: "0 1px 2px rgba(0,0,0,.4)" }}>{count}</div>
@@ -465,7 +463,7 @@ export function PortraitToolsBar({ state, dispatch }) {
               disabled={empty}
               onClick={() => {
                 dispatch({ type: "USE_TOOL", key: t.key });
-                if (t.key === "shuffle") window.__phaserScene?.shuffleBoard();
+                if (t.key === "shuffle") getPhaserScene()?.shuffleBoard();
               }}
               className={`relative flex flex-col items-center gap-0.5 py-2 rounded-lg border-2 border-[#e6c49a] transition-transform ${empty ? "bg-[#9a724d] opacity-40 cursor-not-allowed" : "bg-[#9a724d] hover:bg-[#b8845a] active:-translate-y-0.5"}`}
             >
@@ -499,6 +497,7 @@ function BottomSheet({ onClose, children }) {
 export function MobileDock({ state, dispatch }) {
   const [sheet, setSheet] = useState(null); // "tools" | "orders" | null
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: clear local sheet state when leaving board view
   useEffect(() => { if (state.view !== "board") setSheet(null); }, [state.view]);
 
   const totalTools = Object.values(state.tools || {}).reduce((s, v) => s + v, 0);
@@ -545,7 +544,7 @@ export function MobileDock({ state, dispatch }) {
             tools={state.tools}
             onUse={(key) => {
               dispatch({ type: "USE_TOOL", key });
-              if (key === "shuffle") window.__phaserScene?.shuffleBoard();
+              if (key === "shuffle") getPhaserScene()?.shuffleBoard();
               closeSheet();
             }}
           />
@@ -1580,11 +1579,11 @@ function BuildingSmoke() {
 
 export function SeasonModal({ state, dispatch }) {
   if (state.modal !== "season") return null;
-  const seasonIdx = seasonIndexForTurns(state.turnsUsed === 0 ? MAX_TURNS - 1 : state.turnsUsed - 1);
-  const prevSeason = SEASONS[seasonIdx];
-  const nextSeason = SEASONS[(seasonIdx + 1) % SEASONS.length];
+  const calendarSeason = (state.seasonsCycled || 0) % 4;
+  const prevSeason = SEASONS[calendarSeason];
+  const nextCalendarSeason = (calendarSeason + 1) % 4;
+  const nextSeason = SEASONS[nextCalendarSeason];
   const stats = state.seasonStats;
-  const nextCalendarSeason = ((state.seasonsCycled || 0) + 1) % 4;
   const nextEffect = SEASON_EFFECTS[nextCalendarSeason];
   return (
     <div className="absolute inset-0 bg-black/55 grid place-items-center z-50 animate-fadein">
@@ -1627,11 +1626,12 @@ function Stat({ v, l }) {
 export function NpcBubble({ bubble, dispatch }) {
   const [shown, setShown] = useState(null);
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- syncing local display state with incoming bubble prop
     if (!bubble) { setShown(null); return; }
     setShown(bubble);
     const t = setTimeout(() => dispatch({ type: "DISMISS_BUBBLE", id: bubble.id }), bubble.ms || 1800);
     return () => clearTimeout(t);
-  }, [bubble?.id]);
+  }, [bubble, dispatch]);
   if (!shown) return null;
   const npc = NPCS[shown.npc];
   if (!npc) return null;

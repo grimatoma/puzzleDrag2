@@ -1,4 +1,4 @@
-import { BIOMES, NPCS, MAX_TURNS, RECIPES } from "./constants.js";
+import { BIOMES, NPCS, MAX_TURNS, RECIPES, STORAGE_KEYS } from "./constants.js";
 import * as crafting from "./features/crafting/slice.js";
 import * as quests from "./features/quests/slice.js";
 import * as achievements from "./features/achievements/slice.js";
@@ -13,7 +13,7 @@ const slices = [crafting, quests, achievements, tutorial, settings, boss, cartog
 
 // ─── Save/load ─────────────────────────────────────────────────────────────
 // Persisted: everything except volatile UI fields (modal/bubble/view/pendingView).
-const SAVE_KEY = "hearth.save.v1";
+const SAVE_KEY = STORAGE_KEYS.save;
 const VOLATILE = new Set(["modal", "bubble", "view", "pendingView", "craftingTab"]);
 
 export function loadSavedState() {
@@ -22,7 +22,7 @@ export function loadSavedState() {
     if (!raw) return null;
     const parsed = JSON.parse(raw);
     return parsed && typeof parsed === "object" ? parsed : null;
-  } catch { return null; }
+  } catch (e) { console.warn("[hearth] save data corrupt, starting fresh:", e); return null; }
 }
 
 export function persistState(state) {
@@ -30,19 +30,21 @@ export function persistState(state) {
     const out = {};
     for (const k of Object.keys(state)) if (!VOLATILE.has(k)) out[k] = state[k];
     localStorage.setItem(SAVE_KEY, JSON.stringify(out));
-  } catch {}
+  } catch { /* storage unavailable (private browsing / quota) */ }
 }
 
 export function clearSave() {
-  try { localStorage.removeItem(SAVE_KEY); } catch {}
+  try { localStorage.removeItem(SAVE_KEY); } catch { /* storage unavailable */ }
 }
 
 export const xpForLevel = (l) => 50 + l * 80;
 
+const _resourceCache = new Map();
 export function resourceByKey(key) {
+  if (_resourceCache.has(key)) return _resourceCache.get(key);
   for (const b of Object.values(BIOMES)) {
     const r = b.resources.find((x) => x.key === key);
-    if (r) return r;
+    if (r) { _resourceCache.set(key, r); return r; }
   }
   return null;
 }
@@ -53,6 +55,9 @@ function pickNpcKey(excludeKeys = []) {
   return pool[Math.floor(Math.random() * pool.length)];
 }
 
+const CRAFTED_ORDER_CHANCE = 0.30;
+const SEASON_END_BONUS_COINS = 25;
+
 // Crafted item pools for advanced orders (level 3+)
 const CRAFTED_FARM_POOL = ["bread", "honeyroll", "harvestpie", "preserve", "tincture"];
 const CRAFTED_MINE_POOL = ["hinge", "cobblepath", "lantern", "goldring", "gemcrown", "ironframe", "stonework"];
@@ -62,7 +67,7 @@ export function makeOrder(biomeKey, level, excludeNpcs = []) {
   const biome = BIOMES[biomeKey];
 
   // At level 3+, 30% chance for a crafted item order
-  const useCrafted = level >= 3 && Math.random() < 0.30;
+  const useCrafted = level >= 3 && Math.random() < CRAFTED_ORDER_CHANCE;
 
   let key, need, reward, resourceLabel;
   if (useCrafted) {
@@ -103,6 +108,7 @@ export function initialState() {
     level,
     xp: 0,
     turnsUsed: 0,
+    seasonsCycled: 0,
     inventory: {},
     orders: [o1, o2, o3],
     tools: { clear: 2, basic: 1, rare: 1, shuffle: 0 },
@@ -125,14 +131,15 @@ export function initialState() {
   // Hydrate from save if present, but always force board view + clear modals on boot
   const saved = loadSavedState();
   if (saved) {
-    // Advance orderIdSeq past any IDs already in saved orders so new replacements
-    // never collide with existing ones (orderIdSeq resets to 1 on each module load).
+    // Advance all ID sequences past persisted IDs so new items never collide.
     if (Array.isArray(saved.orders)) {
       for (const o of saved.orders) {
         const n = parseInt((o.id || '').slice(1), 10);
         if (!isNaN(n) && n >= orderIdSeq) orderIdSeq = n + 1;
       }
     }
+    apprentices.seedHireSeq(saved.hiredApprentices);
+    quests.seedQuestIdSeq(saved.dailies);
     return { ...fresh, ...saved, view: "town", turnsUsed: 0, modal: null, bubble: null, pendingView: null,
       seasonStats: { harvests: 0, upgrades: 0, ordersFilled: 0, coins: 0 } };
   }
@@ -167,7 +174,7 @@ function coreReducer(state, action) {
         return {
           ...state,
           turnsUsed,
-          bubble: { id: Date.now(), npc: "mira", text: `${state.boss.emoji} Challenge: chains need ${bossMinChain}+ tiles!`, ms: 2200 },
+          bubble: { id: Date.now(), npc: "mira", text: `${state.boss.emoji} Challenge: chains need ${bossMinChain}+ tiles!`, ms: 2200, priority: 2 },
           modal: seasonEnded ? "season" : state.modal,
         };
       }
@@ -178,7 +185,7 @@ function coreReducer(state, action) {
         const seasonEnded = turnsUsed >= MAX_TURNS;
         let bubble = state.bubble;
         if (!hintsShown.winterChain) {
-          bubble = { id: Date.now(), npc: "wren", text: "❄️ Winter: chains need 4+ tiles to harvest!", ms: 2400 };
+          bubble = { id: Date.now(), npc: "wren", text: "❄️ Winter: chains need 4+ tiles to harvest!", ms: 2400, priority: 2 };
         }
         return {
           ...state,
@@ -220,12 +227,12 @@ function coreReducer(state, action) {
 
       if (xpResult.leveledUp) {
         if (xpResult.level === 2) {
-          bubble = { id: Date.now(), npc: "wren", text: "Level 2! ⛏️ Mine biome unlocked — switch with the button below.", ms: 2800 };
+          bubble = { id: Date.now(), npc: "wren", text: "Level 2! ⛏️ Mine biome unlocked — switch with the button below.", ms: 2800, priority: 2 };
         } else {
-          bubble = { id: Date.now(), npc: "wren", text: `Level ${xpResult.level}! New things await.`, ms: 2400 };
+          bubble = { id: Date.now(), npc: "wren", text: `Level ${xpResult.level}! New things await.`, ms: 2400, priority: 2 };
         }
       } else if (effectiveUpgrades > 0 && !hintsShown.upgradeHint) {
-        bubble = { id: Date.now(), npc: "mira", text: "★ Upgrade! Chain 6+ tiles to snowball rare resources.", ms: 2800 };
+        bubble = { id: Date.now(), npc: "mira", text: "★ Upgrade! Chain 6+ tiles to snowball rare resources.", ms: 2800, priority: 2 };
         newHintsShown = { ...hintsShown, upgradeHint: true };
       }
 
@@ -302,7 +309,12 @@ function coreReducer(state, action) {
       if (key === "mine" && state.level < 2) {
         return { ...state, bubble: { id: Date.now(), npc: "wren", text: "Mine unlocks at Level 2.", ms: 1800 } };
       }
-      const replacements = state.orders.map(() => makeOrder(key, state.level));
+      const excludeNpcs = [];
+      const replacements = state.orders.map(() => {
+        const o = makeOrder(key, state.level, excludeNpcs);
+        excludeNpcs.push(o.npc);
+        return o;
+      });
       return { ...state, biomeKey: key, orders: replacements };
     }
     case "SET_VIEW": {
@@ -352,7 +364,7 @@ function coreReducer(state, action) {
       return {
         ...state,
         tools,
-        coins: state.coins + 25,
+        coins: state.coins + SEASON_END_BONUS_COINS,
         turnsUsed: 0,
         modal: null,
         view: "town",
@@ -375,26 +387,11 @@ function coreReducer(state, action) {
     }
 
     case "DEV/RESET_GAME": {
-      const biomeKey = "farm";
-      const level = 1;
-      const o1 = makeOrder(biomeKey, level);
-      const o2 = makeOrder(biomeKey, level, [o1.npc]);
-      const o3 = makeOrder(biomeKey, level, [o1.npc, o2.npc]);
-      return {
-        ...state,
-        biomeKey,
-        coins: 150,
-        level,
-        xp: 0,
-        turnsUsed: 0,
-        inventory: {},
-        orders: [o1, o2, o3],
-        tools: { clear: 2, basic: 1, rare: 1, shuffle: 0 },
-        built: { hearth: true },
-        modal: null,
-        bubble: { id: Date.now(), npc: "wren", text: "Game reset to fresh state.", ms: 2000 },
-        seasonStats: { harvests: 0, upgrades: 0, ordersFilled: 0, coins: 0 },
-      };
+      // Wipe all persisted state (trophies, bonds, boss, weather, etc.) and reload
+      // so every feature slice re-initialises from its default initial state.
+      clearSave();
+      setTimeout(() => window.location.reload(), 100);
+      return state;
     }
 
     default:

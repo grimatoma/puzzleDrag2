@@ -9,7 +9,6 @@ export const initial = {
   longestChain: 0,
   chainsThisSeason: 0,
   totalOrders: 0,
-  seasonsCycled: 0,
   totalCrafted: 0,
 };
 
@@ -44,7 +43,10 @@ function checkTrophies(state) {
       coins += (a.reward.coins || 0);
       xp += (a.reward.xp || 0);
 
-      bubble = { id: Date.now(), npc: "wren", text: `🏆 ${a.name}! +${a.reward.coins || 0}◉`, ms: 2000 };
+      // Only show achievement toast if no higher-priority bubble (level-up, winter, boss) is already set
+      if (!bubble || (bubble.priority || 0) < 2) {
+        bubble = { id: Date.now(), npc: "wren", text: `🏆 ${a.name}! +${a.reward.coins || 0}◉`, ms: 2000, priority: 1 };
+      }
       changed = true;
     }
   }

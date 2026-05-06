@@ -1,5 +1,5 @@
-import React from "react";
-import { BOSS_META, WEATHER_META } from "./slice.js";
+
+import { BOSS_META } from "./slice.js";
 
 export const modalKey = "boss";
 export const alwaysMounted = true;
@@ -30,10 +30,6 @@ function WeatherBadge({ weather }) {
 }
 
 function MiniCard({ boss, weather, dispatch }) {
-  const pct = boss.targetCount > 0
-    ? Math.min(100, Math.round((boss.progress / boss.targetCount) * 100))
-    : 0;
-
   return (
     <div
       className="absolute top-2 right-2 z-50 select-none"

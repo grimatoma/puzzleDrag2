@@ -1,4 +1,4 @@
-import React from "react";
+import { useState, useEffect, useRef } from "react";
 import { RECIPES, BIOMES } from "../../constants.js";
 
 export const viewKey = "crafting";
@@ -101,20 +101,21 @@ export default function CraftingScreen({ state, dispatch }) {
 
   // Stations that exist (built or not) — always show all three tabs, but indicate built status
   const builtStations = STATION_ORDER.filter((s) => stationBuilt(built, s));
-  const hasAnyStation = builtStations.length > 0;
 
   // Determine active tab: prefer state.craftingTab if valid, else first built station
-  const [localTab, setLocalTab] = React.useState(() => {
+  const [localTab, setLocalTab] = useState(() => {
     if (craftingTab && STATION_ORDER.includes(craftingTab)) return craftingTab;
     return builtStations[0] || STATION_ORDER[0];
   });
 
   // Sync when craftingTab changes (e.g. navigated from town)
-  const prevCraftingTab = React.useRef(craftingTab);
-  if (craftingTab && craftingTab !== prevCraftingTab.current && STATION_ORDER.includes(craftingTab)) {
-    prevCraftingTab.current = craftingTab;
-    if (localTab !== craftingTab) setLocalTab(craftingTab);
-  }
+  const prevCraftingTab = useRef(craftingTab);
+  useEffect(() => {
+    if (craftingTab && craftingTab !== prevCraftingTab.current && STATION_ORDER.includes(craftingTab)) {
+      prevCraftingTab.current = craftingTab;
+      setLocalTab(craftingTab);
+    }
+  }, [craftingTab]);
 
   const activeTab = localTab;
   const stationRecipes = Object.entries(RECIPES).filter(([, r]) => r.station === activeTab);
