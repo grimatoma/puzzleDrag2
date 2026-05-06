@@ -55,6 +55,9 @@ function pickNpcKey(excludeKeys = []) {
   return pool[Math.floor(Math.random() * pool.length)];
 }
 
+const CRAFTED_ORDER_CHANCE = 0.30;
+const SEASON_END_BONUS_COINS = 25;
+
 // Crafted item pools for advanced orders (level 3+)
 const CRAFTED_FARM_POOL = ["bread", "honeyroll", "harvestpie", "preserve", "tincture"];
 const CRAFTED_MINE_POOL = ["hinge", "cobblepath", "lantern", "goldring", "gemcrown", "ironframe", "stonework"];
@@ -64,7 +67,7 @@ export function makeOrder(biomeKey, level, excludeNpcs = []) {
   const biome = BIOMES[biomeKey];
 
   // At level 3+, 30% chance for a crafted item order
-  const useCrafted = level >= 3 && Math.random() < 0.30;
+  const useCrafted = level >= 3 && Math.random() < CRAFTED_ORDER_CHANCE;
 
   let key, need, reward, resourceLabel;
   if (useCrafted) {
@@ -360,7 +363,7 @@ function coreReducer(state, action) {
       return {
         ...state,
         tools,
-        coins: state.coins + 25,
+        coins: state.coins + SEASON_END_BONUS_COINS,
         turnsUsed: 0,
         modal: null,
         view: "town",

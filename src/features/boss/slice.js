@@ -67,6 +67,7 @@ const WEATHER_META = {
 };
 
 const WEATHER_KEYS = Object.keys(WEATHER_META);
+const WEATHER_ROLL_CHANCE = 0.5;
 
 export const initial = {
   boss: null,
@@ -266,7 +267,7 @@ export function reduce(state, action) {
       }
 
       // Roll weather (1-in-2 chance, independent of boss)
-      if (!next.weather && Math.random() < 0.5) {
+      if (!next.weather && Math.random() < WEATHER_ROLL_CHANCE) {
         const weatherKey = pickRandomWeather();
         const weatherMeta = WEATHER_META[weatherKey];
         const weatherTurns = 2 + Math.floor(Math.random() * 2);
