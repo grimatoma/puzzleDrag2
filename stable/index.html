@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="theme-color" content="#2a1d0f" />
+    <title>Hearthlands</title>
+    <style>
+      html, body { margin: 0; padding: 0; background: #2a1d0f; height: 100dvh; overflow: hidden; overscroll-behavior: none; touch-action: manipulation; -moz-user-select: none; user-select: none; -webkit-user-select: none; }
+      canvas { -moz-user-select: none; user-select: none; -webkit-user-select: none; }
+      body { box-sizing: border-box; padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom); padding-left: env(safe-area-inset-left); padding-right: env(safe-area-inset-right); }
+      #root { width: 100%; height: 100%; }
+      @keyframes fadein { from { opacity: 0; } to { opacity: 1; } }
+      @keyframes dustfloat {
+        0%   { transform: translateY(0) translateX(0); opacity: 0; }
+        10%  { opacity: 1; }
+        50%  { transform: translateY(-300px) translateX(18px); }
+        90%  { opacity: 1; }
+        100% { transform: translateY(-600px) translateX(-12px); opacity: 0; }
+      }
+      @keyframes bubblein { from { transform: translate(-50%, 16px); opacity: 0; } to { transform: translate(-50%, 0); opacity: 1; } }
+      @keyframes townWalkR { from { transform: translateX(0); } to { transform: translateX(112vw); } }
+      @keyframes townWalkL { from { transform: translateX(0); } to { transform: translateX(-112vw); } }
+      @keyframes townBob   { from { transform: translateY(0); } to { transform: translateY(-2px); } }
+      @keyframes townSmoke {
+        0%   { transform: translate(-50%, 0) scale(.6); opacity: 0; }
+        15%  { opacity: .6; }
+        100% { transform: translate(calc(-50% + 6px), -32px) scale(1.4); opacity: 0; }
+      }
+      @keyframes townCloudA { from { transform: translateX(-30%); } to { transform: translateX(130%); } }
+      @keyframes townCloudB { from { transform: translateX(-25%); } to { transform: translateX(125%); } }
+      .animate-fadein { animation: fadein .2s ease-out; }
+      .animate-bubblein { animation: bubblein .35s cubic-bezier(.34,1.56,.64,1); }
+      .line-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    </style>
+    <script type="module" crossorigin src="/puzzleDrag2/stable/assets/index-BthOSyxt.js"></script>
+    <link rel="stylesheet" crossorigin href="/puzzleDrag2/stable/assets/index-DEKS6b4n.css">
+  </head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>
