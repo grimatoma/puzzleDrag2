@@ -68,7 +68,7 @@ Each phase is a horizontal slice — a fully playable improvement, not a half-bu
 | 1 | Chain Mechanic Overhaul + Board Tools | Spec'd | [`roadmap/phase-1-chain-mechanic.md`](./roadmap/phase-1-chain-mechanic.md) |
 | 2 | Story System & Win Condition | Spec'd | [`roadmap/phase-2-story.md`](./roadmap/phase-2-story.md) |
 | 3 | Economy (market, supply chain, runes, daily streak) | Spec'd | [`roadmap/phase-3-economy.md`](./roadmap/phase-3-economy.md) |
-| 4 | Workers (data model, effects, wages, housing) | Pending | `roadmap/phase-4-workers.md` |
+| 4 | Workers (data model, effects, wages, housing) | Spec'd | [`roadmap/phase-4-workers.md`](./roadmap/phase-4-workers.md) |
 | 5 | Species (discovery, research, free moves) | Pending | `roadmap/phase-5-species.md` |
 | 6 | NPC Social (gifts, dialog pools, mood UI) | Pending | `roadmap/phase-6-npc-social.md` |
 | 7 | Quests / Almanac / Achievements | Pending | `roadmap/phase-7-progression.md` |
@@ -94,8 +94,8 @@ Adds the 13-beat 3-act arc from GAME_SPEC §15. Beats: Wren arrival → Mira (he
 ### Phase 3 — Economy
 Turns coins from a single-purpose scoreboard into a real economy. Caravan Post unlocks a Market with deterministic ±15% per-season price drift on all 20 sellable resources. Kitchen converts grain → supplies to gate standard Mine entry (3 supplies); runes earned from Mysterious Ore and boss victories pay for premium Mine entry, the Magic Portal, and a wildcard-tile board consumable. Powder Store grants 2 Bombs per `CLOSE_SEASON` — a tactical 3×3 board clear with the same no-turn-cost contract as the Phase 1 tools. A daily login streak modal credits the GAME_SPEC §16 reward ladder (day 1 = 25◉, day 7 = 150◉ + Reshuffle Horn, day 14 = 300◉ + 1 rune, day 30 = 1000◉ + 3 runes). Exit: a fresh save can take both supply and rune paths into the Mine, and the Market drift is visibly worth checking each season.
 
-### Phase 4 — Workers wired *(spec pending)*
-Workers stop being decorative. Data model with max-effect (full-slot) and per-hire (max ÷ maxCount) values. `computeWorkerEffects()` syncs to Phaser registry; effects modify board spawn weights, chain bonuses, and order rewards. Wages deducted on `CLOSE_SEASON`; debt tracked. Housing requirement gates hire count. Exit criteria TBD.
+### Phase 4 — Workers wired
+Workers stop being decorative wallet decorations and start changing the board. The data model is locked to a max-effect shape — every worker entry stores its full-slot value, with per-hire computed as `max ÷ maxCount` so a third Hilda completes the listed effect rather than tripling it. A pure `computeWorkerEffects(state)` aggregator feeds three Phaser registry channels — `effectiveThresholds`, `effectivePoolWeights`, `bonusYields` — which replace the raw Phase 1 thresholds at chain commit and shape the next board fill. Wages debit on `CLOSE_SEASON` against the same coin pool the Market uses; missed wages roll into `state.workers.debt`, pause production until cleared, and auto-repay against the next order or sale — no auto-fire. Housing capacity gates total hires (1 baseline + 1 per Housing built), with slot counts shown as plain numbers ("3", never "3/3") per the locked display rule. Exit: a fresh save can hire all 3 Hilda, watch chains of 3 hay upgrade where they previously didn't, deliberately under-fund wages, and recover via an order payment.
 
 ### Phase 5 — Species *(spec pending)*
 Data model with categories (companion / mount / familiar). One active per category. Discovery via chain length thresholds. Research timer. Active species modifies board pool weights and grants free-moves per season. UI panel for browse/equip. Exit criteria TBD.
