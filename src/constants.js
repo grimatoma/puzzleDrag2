@@ -1,3 +1,9 @@
+export const STORAGE_KEYS = {
+  save: "hearth.save.v1",
+  settings: "hearth.settings",
+  tutorialSeen: "hearth.tutorial.seen",
+};
+
 export const TILE = 74;
 export const COLS = 6;
 export const ROWS = 7;

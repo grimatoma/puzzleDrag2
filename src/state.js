@@ -1,4 +1,4 @@
-import { BIOMES, NPCS, MAX_TURNS, RECIPES } from "./constants.js";
+import { BIOMES, NPCS, MAX_TURNS, RECIPES, STORAGE_KEYS } from "./constants.js";
 import * as crafting from "./features/crafting/slice.js";
 import * as quests from "./features/quests/slice.js";
 import * as achievements from "./features/achievements/slice.js";
@@ -13,7 +13,7 @@ const slices = [crafting, quests, achievements, tutorial, settings, boss, cartog
 
 // ─── Save/load ─────────────────────────────────────────────────────────────
 // Persisted: everything except volatile UI fields (modal/bubble/view/pendingView).
-const SAVE_KEY = "hearth.save.v1";
+const SAVE_KEY = STORAGE_KEYS.save;
 const VOLATILE = new Set(["modal", "bubble", "view", "pendingView", "craftingTab"]);
 
 export function loadSavedState() {
