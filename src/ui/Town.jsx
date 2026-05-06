@@ -83,10 +83,13 @@ const TOWN_THEMES = {
 // NPCs visible walking the town road. Color-keyed to NPCS where possible so
 // the same character a player gets orders from is the one ambling past.
 const TOWN_WALKERS = [
-  { color: "#d6612a", duration: 28, delay:  0,  dir:  1 }, // Mira
-  { color: "#5a6973", duration: 36, delay: 11,  dir: -1 }, // Bram
-  { color: "#4f6b3a", duration: 32, delay: 18,  dir:  1 }, // Wren
-  { color: "#c8923a", duration: 40, delay:  6,  dir: -1 }, // Tomas
+  { color: "#d6612a", duration: 28, delay: 0,  dir: 1,  hair: "bun",       accessory: "basket", size: 1.00 }, // Mira
+  { color: "#5a6973", duration: 36, delay: 11, dir: -1, hair: "cap",       accessory: "book",   size: 1.05 }, // Bram
+  { color: "#4f6b3a", duration: 32, delay: 18, dir: 1,  hair: "ponytail",  accessory: "flower", size: 0.95 }, // Wren
+  { color: "#c8923a", duration: 40, delay: 6,  dir: -1, hair: "short",     accessory: "satchel",size: 1.1  }, // Tomas
+  { color: "#8d5ab6", duration: 34, delay: 14, dir: 1,  hair: "puffs",     accessory: "balloon",size: 0.92 }, // Pippa
+  { color: "#3f86a8", duration: 45, delay: 21, dir: -1, hair: "braids",    accessory: "lantern",size: 1.08 }, // Olin
+  { color: "#b65a7a", duration: 31, delay: 25, dir: 1,  hair: "spiky",     accessory: "kite",   size: 0.98 }, // Nia
 ];
 
 // Buildings that emit smoke when built (industrial/warm interiors).
@@ -928,8 +931,31 @@ export function TownView({ state, dispatch }) {
   );
 }
 
-function TownWalker({ color, duration, delay, dir }) {
+function TownWalker({ color, duration, delay, dir, hair = "short", accessory = "none", size = 1 }) {
   const animation = dir > 0 ? "townWalkR" : "townWalkL";
+  const facingLeft = dir < 0;
+
+  const hairByType = {
+    short: <div className="absolute -top-0.5 left-1/2 -translate-x-1/2 w-2.5 h-1.5 rounded-t-full" style={{ background: "#5a3a2a" }} />,
+    bun: <><div className="absolute -top-0.5 left-1/2 -translate-x-1/2 w-2.5 h-1.5 rounded-t-full" style={{ background: "#4a2f22" }} /><div className="absolute -top-1.5 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full" style={{ background: "#4a2f22" }} /></>,
+    ponytail: <><div className="absolute -top-0.5 left-1/2 -translate-x-1/2 w-2.5 h-1.5 rounded-t-full" style={{ background: "#3e2a1f" }} /><div className={`absolute top-1 ${facingLeft ? "-left-0.5" : "-right-0.5"} w-1 h-2 rounded-full`} style={{ background: "#3e2a1f" }} /></>,
+    cap: <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-3 h-1.5 rounded-full" style={{ background: "#7a8a94", border: "1px solid rgba(0,0,0,.22)" }} />,
+    puffs: <><div className="absolute -top-0.25 left-0 w-1.25 h-1.25 rounded-full" style={{ background: "#4a2a1a" }} /><div className="absolute -top-0.25 right-0 w-1.25 h-1.25 rounded-full" style={{ background: "#4a2a1a" }} /><div className="absolute -top-0.2 left-1/2 -translate-x-1/2 w-2 h-1.2 rounded-t-full" style={{ background: "#4a2a1a" }} /></>,
+    braids: <><div className="absolute -top-0.5 left-1/2 -translate-x-1/2 w-2.5 h-1.5 rounded-t-full" style={{ background: "#5a4028" }} /><div className="absolute top-1 -left-0.25 w-0.75 h-2 rounded-full" style={{ background: "#5a4028" }} /><div className="absolute top-1 -right-0.25 w-0.75 h-2 rounded-full" style={{ background: "#5a4028" }} /></>,
+    spiky: <div className="absolute -top-1 left-1/2 -translate-x-1/2 text-[8px] leading-none" style={{ color: "#3f2b1d" }}>▲▲</div>,
+  };
+
+  const accessoryByType = {
+    basket: <div className={`absolute top-[11px] ${facingLeft ? "-right-2.5" : "-left-2.5"} w-2.5 h-1.5 rounded-sm`} style={{ background: "#b98746", border: "1px solid rgba(0,0,0,.25)" }} />,
+    book: <div className={`absolute top-[10px] ${facingLeft ? "-left-2" : "-right-2"} w-1.75 h-2 rounded-sm`} style={{ background: "#8a4f4f", border: "1px solid rgba(0,0,0,.25)" }} />,
+    flower: <div className={`absolute top-[6px] ${facingLeft ? "-left-1.5" : "-right-1.5"} w-1.5 h-1.5 rounded-full`} style={{ background: "#ff8fb0", boxShadow: "0 0 0 1px rgba(0,0,0,.2)" }} />,
+    satchel: <div className={`absolute top-[9px] ${facingLeft ? "-left-2.25" : "-right-2.25"} w-2 h-2.5 rounded-sm`} style={{ background: "#7a5a3a", border: "1px solid rgba(0,0,0,.25)" }} />,
+    balloon: <><div className={`absolute -top-6 ${facingLeft ? "left-3" : "right-3"} w-2.5 h-3 rounded-full`} style={{ background: "#f07ea8", border: "1px solid rgba(0,0,0,.2)" }} /><div className={`absolute -top-3 ${facingLeft ? "left-4" : "right-4"} w-px h-4 bg-[#c8c8c8]`} /></>,
+    lantern: <div className={`absolute top-[9px] ${facingLeft ? "-right-2.5" : "-left-2.5"} w-2 h-2.5 rounded-sm`} style={{ background: "#f0bc58", boxShadow: "0 0 8px rgba(255,210,120,.55)", border: "1px solid rgba(0,0,0,.25)" }} />,
+    kite: <><div className={`absolute -top-5 ${facingLeft ? "left-4" : "right-4"} w-2.5 h-2.5 rotate-45`} style={{ background: "#7ed4ff", border: "1px solid rgba(0,0,0,.2)" }} /><div className={`absolute -top-3 ${facingLeft ? "left-5" : "right-5"} w-px h-4 bg-[#d4d4d4]`} /></>,
+    none: null,
+  };
+
   return (
     <div
       className="absolute"
@@ -939,14 +965,15 @@ function TownWalker({ color, duration, delay, dir }) {
         right: dir < 0 ? "-6%" : undefined,
         animation: `${animation} ${duration}s linear infinite`,
         animationDelay: `-${delay}s`,
+        transform: `scale(${size})`,
+        transformOrigin: "bottom center",
       }}
     >
       <div className="relative" style={{ animation: "townBob 0.55s ease-in-out infinite alternate" }}>
-        {/* head */}
-        <div className="w-2.5 h-2.5 rounded-full" style={{ background: "#f5d6b0", border: "1px solid rgba(0,0,0,.25)", margin: "0 auto" }} />
-        {/* body */}
-        <div className="w-3.5 h-4 rounded-sm mt-0.5" style={{ background: color, border: "1px solid rgba(0,0,0,.3)" }} />
-        {/* shadow */}
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-2.5 h-2.5 rounded-full" style={{ background: "#f5d6b0", border: "1px solid rgba(0,0,0,.25)" }} />
+        {hairByType[hair] || hairByType.short}
+        <div className="w-3.5 h-4 rounded-sm mt-[11px]" style={{ background: color, border: "1px solid rgba(0,0,0,.3)" }} />
+        {accessoryByType[accessory] || null}
         <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-4 h-1 rounded-full bg-black/25" />
       </div>
     </div>
