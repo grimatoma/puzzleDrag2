@@ -2,7 +2,7 @@ import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { BIOMES, NPCS, SEASONS, MAX_TURNS, BUILDINGS, RECIPES } from "./constants.js";
 import { xpForLevel, resourceByKey } from "./state.js";
-import { seasonIndexForTurns } from "./utils.js";
+import { seasonIndexForTurns, hex } from "./utils.js";
 
 // Mechanical effect active each calendar season (seasonsCycled % 4)
 const SEASON_EFFECTS = [
@@ -176,7 +176,7 @@ function SeasonBar({ season, turnsUsed, turnsLeft, calendarSeason }) {
               key={i}
               className={`w-2.5 h-2.5 landscape:max-[1024px]:w-2 landscape:max-[1024px]:h-2 rounded-full border flex-shrink-0 ${filled ? "border-transparent" : "border-[#8a6a3a]"} transition-all`}
               style={{
-                backgroundColor: filled ? cssFromHex(season.fill) : "#fff",
+                backgroundColor: filled ? hex(season.fill) : "#fff",
                 boxShadow: current ? "0 0 0 2px rgba(255,122,0,.55)" : "none",
                 transform: filled ? "scale(1.05)" : "none",
               }}
@@ -189,9 +189,7 @@ function SeasonBar({ season, turnsUsed, turnsLeft, calendarSeason }) {
   );
 }
 
-function cssFromHex(intHex) {
-  return `#${intHex.toString(16).padStart(6, "0")}`;
-}
+
 
 // ─── Side panel (orders / inventory / tools / biome switcher) ─────────────
 
@@ -298,7 +296,7 @@ function InventoryCell({ r, count, compact, orderStatus, orderTotal }) {
       style={ringStyle}
       title={r.label}
     >
-      <div className={`rounded-md flex-shrink-0 grid place-items-center text-white ${compact ? "w-8 h-8 text-[16px]" : "w-10 h-10 text-[20px]"}`} style={{ backgroundColor: cssFromHex(r.color), border: "2px solid rgba(255,255,255,.4)", textShadow: "0 1px 1px rgba(0,0,0,.4)" }}>{r.glyph}</div>
+      <div className={`rounded-md flex-shrink-0 grid place-items-center text-white ${compact ? "w-8 h-8 text-[16px]" : "w-10 h-10 text-[20px]"}`} style={{ backgroundColor: hex(r.color), border: "2px solid rgba(255,255,255,.4)", textShadow: "0 1px 1px rgba(0,0,0,.4)" }}>{r.glyph}</div>
       <div className="flex flex-col leading-none min-w-0 flex-1">
         <div className={`text-white/80 truncate font-medium ${compact ? "text-[10px]" : "text-[12px]"}`}>{r.label}</div>
         <div className={`text-white font-bold mt-0.5 ${compact ? "text-[14px]" : "text-[18px]"}`} style={{ textShadow: "0 1px 2px rgba(0,0,0,.4)" }}>{count}</div>
