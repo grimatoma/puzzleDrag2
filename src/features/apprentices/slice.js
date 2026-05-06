@@ -1,3 +1,4 @@
+import { MAX_TURNS } from "../../constants.js";
 import { APPRENTICE_MAP } from "./data.js";
 
 export const initial = {
@@ -39,7 +40,7 @@ export function reduce(state, action) {
         bubble: { id: Date.now(), npc: "wren", text: `Can't hire ${app.name} yet — requirements not met.`, ms: 1800 },
       };
     }
-    const season = Math.floor((state.turnsUsed || 0) / 10);
+    const season = Math.floor((state.turnsUsed || 0) / MAX_TURNS);
     return {
       ...state,
       coins: state.coins - app.hireCost,
@@ -71,7 +72,7 @@ export function reduce(state, action) {
     let hiredApprentices = [...(state.hiredApprentices || [])];
     let idleHistory = [...(state.idleHistory || [])];
     let bubble = state.bubble;
-    const season = Math.floor((state.turnsUsed || 0) / 10);
+    const season = Math.floor((state.turnsUsed || 0) / MAX_TURNS);
     const gains = {};
     const firedNames = [];
 

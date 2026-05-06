@@ -9,7 +9,6 @@ export const initial = {
   longestChain: 0,
   chainsThisSeason: 0,
   totalOrders: 0,
-  seasonsCycled: 0,
   totalCrafted: 0,
 };
 
