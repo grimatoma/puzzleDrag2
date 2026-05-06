@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { BIOMES, NPCS, SEASONS, MAX_TURNS, BUILDINGS, RECIPES } from "./constants.js";
 import { xpForLevel, resourceByKey } from "./state.js";
@@ -52,6 +52,57 @@ function useTooltip() {
   });
 
   return { tip, show, hide, handlers, lastTouchTime };
+}
+
+// Tooltip portal that clamps horizontally to the viewport so it never
+// gets cut off near the screen edges, and shifts its tail to keep
+// pointing at the anchor.
+function Tooltip({ anchorX, anchorY, gap = 8, edgeMargin = 8, className = "", style, arrowClassName, children }) {
+  const ref = useRef(null);
+  const [layout, setLayout] = useState(null);
+
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const vw = window.innerWidth;
+    const w = rect.width;
+    const minLeft = edgeMargin;
+    const maxLeft = vw - edgeMargin - w;
+    let leftEdge = anchorX - w / 2;
+    leftEdge = maxLeft < minLeft ? minLeft : Math.max(minLeft, Math.min(maxLeft, leftEdge));
+    const tailLeft = Math.max(10, Math.min(w - 10, anchorX - leftEdge));
+    setLayout({ leftEdge, tailLeft });
+  }, [anchorX, anchorY, gap, edgeMargin, children]);
+
+  return createPortal(
+    <div
+      ref={ref}
+      className={className}
+      style={{
+        position: "fixed",
+        left: layout ? layout.leftEdge : anchorX,
+        top: anchorY - gap,
+        transform: layout ? "translateY(-100%)" : "translate(-50%, -100%)",
+        visibility: layout ? "visible" : "hidden",
+        ...style,
+      }}
+    >
+      {children}
+      {arrowClassName && (
+        <div
+          className={arrowClassName}
+          style={{
+            position: "absolute",
+            top: "100%",
+            left: layout ? layout.tailLeft : "50%",
+            transform: "translateX(-50%)",
+          }}
+        />
+      )}
+    </div>,
+    document.body
+  );
 }
 
 // ─── HUD (top bar) ─────────────────────────────────────────────────────────
@@ -368,16 +419,16 @@ function ToolsGrid({ tools, onUse }) {
           );
         })}
       </div>
-      {tooltipDef && createPortal(
-        <div
-          className="fixed z-[9999] w-36 bg-[#2b1d0e] text-white text-[10px] rounded-lg px-2.5 py-2 shadow-lg pointer-events-none border border-[#e6c49a]"
-          style={{ left: tooltipTip.x, top: tooltipTip.y - 8, transform: "translate(-50%, -100%)" }}
+      {tooltipDef && (
+        <Tooltip
+          anchorX={tooltipTip.x}
+          anchorY={tooltipTip.y}
+          className="z-[9999] w-36 bg-[#2b1d0e] text-white text-[10px] rounded-lg px-2.5 py-2 shadow-lg pointer-events-none border border-[#e6c49a]"
+          arrowClassName="border-4 border-transparent border-t-[#2b1d0e]"
         >
           <div className="font-bold text-[11px] mb-0.5">{tooltipDef.name}</div>
           <div className="text-white/80 leading-snug">{tooltipDef.desc}</div>
-          <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-[#2b1d0e]" />
-        </div>,
-        document.body
+        </Tooltip>
       )}
       {modalTool && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={() => setModalTool(null)}>
@@ -1409,23 +1460,21 @@ export function TownView({ state, dispatch }) {
         />
       )}
 
-      {buildingTip && createPortal(
-        <div
-          className="fixed z-[9999] pointer-events-none px-3 py-2 rounded-lg border border-white/20"
+      {buildingTip && (
+        <Tooltip
+          anchorX={buildingTip.x}
+          anchorY={buildingTip.y}
+          className="z-[9999] pointer-events-none px-3 py-2 rounded-lg border border-white/20"
           style={{
-            left: buildingTip.x,
-            top: buildingTip.y - 8,
-            transform: "translate(-50%, -100%)",
             background: "rgba(10,10,14,.92)",
             maxWidth: 240,
             minWidth: 150,
           }}
+          arrowClassName="border-4 border-transparent border-t-[rgba(10,10,14,0.92)]"
         >
           <div className="font-bold" style={{ color: buildingTip.data.color, fontSize: "clamp(9px,1.1vw,13px)", whiteSpace: "nowrap" }}>{buildingTip.data.label}</div>
           {buildingTip.data.desc && <div className="mt-0.5 leading-snug text-white/75" style={{ fontSize: "clamp(8px,0.9vw,11px)", whiteSpace: "normal" }}>{buildingTip.data.desc}</div>}
-          <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-[rgba(10,10,14,0.92)]" />
-        </div>,
-        document.body
+        </Tooltip>
       )}
     </div>
   );
