@@ -5,6 +5,7 @@ import { computeWorkerEffects } from "./features/apprentices/effects.js";
 const cssColor = (num) => Phaser.Display.Color.IntegerToColor(num).rgba;
 import { rounded, makeTextures, regenerateTextures } from "./textures.js";
 import { TileObj } from "./TileObj.js";
+import { getTweenDuration, screenShake, particleQuantity } from "./a11y.js";
 
 const TILE_BASE = TILE; // CSS-pixel design size for one tile; textures are baked at TILE * dpr
 const FLOAT_TEXT_COLOR = 0xffd248;
@@ -152,6 +153,24 @@ export class GameScene extends Phaser.Scene {
     this.registry.set("seasonBonus",          agg.seasonBonus);
   }
 
+  // ─── Motion helpers ──────────────────────────────────────────────────────
+
+  /** Returns a minimal state-like object for the a11y motion helpers. */
+  _motionState() {
+    return { settings: { reducedMotion: this.registry.get("reducedMotion") ?? null } };
+  }
+
+  /** getTweenDuration wrapper reading reducedMotion from registry. */
+  _dur(base) {
+    return getTweenDuration(this._motionState(), base);
+  }
+
+  /** screenShake wrapper — no-op when reducedMotion is on. */
+  _shake(duration, intensity) {
+    // a11y.screenShake passes (intensity, 0.005) to camera.shake; we preserve the full params.
+    screenShake(this._motionState(), duration, { shake: () => this.cameras.main.shake(duration, intensity, false) });
+  }
+
   // ─── Layout ───────────────────────────────────────────────────────────────
 
   layoutDims() {
@@ -257,7 +276,7 @@ export class GameScene extends Phaser.Scene {
     this.grid.flat().forEach((t) => {
       if (!t) return;
       t.setResource(this.randomResource());
-      this.tweens.add({ targets: t.sprite, angle: 360, duration: 280, onComplete: () => (t.sprite.angle = 0) });
+      this.tweens.add({ targets: t.sprite, angle: 360, duration: this._dur(280), onComplete: () => (t.sprite.angle = 0) });
     });
   }
 
@@ -306,7 +325,7 @@ export class GameScene extends Phaser.Scene {
           const tile = new TileObj(this, x, initial ? y - 500 - Phaser.Math.Between(0, 100) : y - 140, c, r, res);
           tile.sprite.setScale(this.tileSpriteScale);
           this.grid[r][c] = tile;
-          this.tweens.add({ targets: tile.sprite, y, duration: (initial ? 450 + r * 28 : 210) + frostBonus, ease: "Back.Out" });
+          this.tweens.add({ targets: tile.sprite, y, duration: this._dur((initial ? 450 + r * 28 : 210) + frostBonus), ease: "Back.Out" });
         }
       }
     }
@@ -333,7 +352,7 @@ export class GameScene extends Phaser.Scene {
           this.grid[write][c] = tile;
           this.grid[r][c] = null;
           tile.row = write;
-          this.tweens.add({ targets: tile.sprite, y: this.boardY + write * ts + ts / 2, duration: 190 });
+          this.tweens.add({ targets: tile.sprite, y: this.boardY + write * ts + ts / 2, duration: this._dur(190) });
         }
         write--;
       }
@@ -360,7 +379,7 @@ export class GameScene extends Phaser.Scene {
     this.tweens.add({
       targets: this.board,
       rotation: Math.PI * 2,
-      duration: 600,
+      duration: this._dur(600),
       ease: "Sine.easeInOut",
       onComplete: () => {
         this.board.destroy();
@@ -378,7 +397,7 @@ export class GameScene extends Phaser.Scene {
     this.grid.flat().forEach((t) => {
       if (!t) return;
       t.setResource(this.randomResource());
-      this.tweens.add({ targets: t.sprite, angle: 360, duration: 300, onComplete: () => (t.sprite.angle = 0) });
+      this.tweens.add({ targets: t.sprite, angle: 360, duration: this._dur(300), onComplete: () => (t.sprite.angle = 0) });
     });
   }
 
@@ -735,7 +754,7 @@ export class GameScene extends Phaser.Scene {
 
     this.path.forEach((tile, i) => {
       this.grid[tile.row][tile.col] = null;
-      this.tweens.add({ targets: tile.sprite, scale: 0, angle: Phaser.Math.Between(-25, 25), alpha: 0, duration: 180 + i * 15, onComplete: () => tile.destroy() });
+      this.tweens.add({ targets: tile.sprite, scale: 0, angle: Phaser.Math.Between(-25, 25), alpha: 0, duration: this._dur(180 + i * 15), onComplete: () => tile.destroy() });
     });
 
     // Emit to React — include bonus yield grants from workers
@@ -808,7 +827,7 @@ export class GameScene extends Phaser.Scene {
     // 3 → barely; 6 → noticeable; 10+ → bone-rattling.
     const intensity = Math.min(0.018, 0.0025 + (len - 3) * 0.0028);
     const duration = Math.min(520, 160 + (len - 3) * 50);
-    this.cameras.main.shake(duration, intensity, false);
+    this._shake(duration, intensity);
   }
 
   radialFlash(x, y, len) {
