@@ -392,6 +392,29 @@ export class GameScene extends Phaser.Scene {
       if (cat && speciesActive && speciesActive[cat] !== k) continue;
       for (let i = 0; i < Math.round(n); i++) workerPool.push(k);
     }
+    // Boss spawnBias: Quagmire pushes extra log/hay tiles into pool.
+    // For each resource key, the bias factor adds (bias-1)*baseCount extra copies.
+    const boss = this.registry.get("boss");
+    const spawnBias = boss?.spawnBias ?? null;
+    if (spawnBias) {
+      const baseCounts = {};
+      for (const k of workerPool) baseCounts[k] = (baseCounts[k] ?? 0) + 1;
+      for (const [k, factor] of Object.entries(spawnBias)) {
+        const extra = Math.round((baseCounts[k] ?? 0) * (factor - 1));
+        for (let i = 0; i < extra; i++) workerPool.push(k);
+      }
+    }
+    // Fertilizer bias: double seedling-tier resource copies in pool
+    const fertilizerActive = this.registry.get("fertilizerActive") ?? false;
+    if (fertilizerActive) {
+      const seedlings = ["seedling", "hay", "wheat", "grain"];
+      const fBase = {};
+      for (const k of workerPool) fBase[k] = (fBase[k] ?? 0) + 1;
+      for (const k of seedlings) {
+        const extra = fBase[k] ?? 0;
+        for (let i = 0; i < extra; i++) workerPool.push(k);
+      }
+    }
     for (let r = 0; r < ROWS; r++) {
       this.grid[r] = this.grid[r] || [];
       for (let c = 0; c < COLS; c++) {
