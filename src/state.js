@@ -36,6 +36,53 @@ import { migrateSave } from "./migrations.js";
 
 const slices = [crafting, quests, achievements, tutorial, settings, boss, cartography, apprentices, mood, storySlice, decorations, portal, market, castle];
 
+// Season name lookup, indexed by `state.seasonsCycled % 4`. Was duplicated
+// inline in four places before.
+const SEASON_NAMES = ["spring", "summer", "autumn", "winter"];
+
+// ─── Inventory helpers ─────────────────────────────────────────────────────
+
+/**
+ * Mutates `inv` (and `capFloaters` / `floaters` when provided) to credit
+ * `amount` of `key` to inventory, applying the resource cap when the key is
+ * in CAPPED_RESOURCES. When the cap is freshly hit, sets capFloaters[key]
+ * and appends a "stash full" floater if a floaters draft is supplied.
+ *
+ * Caller is responsible for cloning `inv`/`capFloaters`/`floaters` first
+ * (they're treated as locally-owned drafts).
+ */
+function addCappedResourceMut(inv, capFloaters, floaters, key, amount, cap) {
+  if (!CAPPED_RESOURCES.includes(key)) {
+    inv[key] = (inv[key] ?? 0) + amount;
+    return;
+  }
+  const cur = inv[key] ?? 0;
+  const next = Math.min(cap, cur + amount);
+  inv[key] = next;
+  if (next === cap && cur + amount > cap && !capFloaters[key]) {
+    capFloaters[key] = true;
+    if (floaters) floaters.push({ text: `${key} stash full`, ms: 1200 });
+  }
+}
+
+/** Returns true if state.inventory has at least `needs[k]` of every key. */
+function hasAllInventory(state, needs) {
+  const inv = state.inventory ?? {};
+  for (const [k, n] of Object.entries(needs)) {
+    if ((inv[k] ?? 0) < n) return false;
+  }
+  return true;
+}
+
+/** Returns a new inventory with each `needs[k]` deducted from `inv[k]`. */
+function deductInventory(inv, needs) {
+  const next = { ...inv };
+  for (const [k, n] of Object.entries(needs)) {
+    next[k] = (next[k] ?? 0) - n;
+  }
+  return next;
+}
+
 // ─── Wages / debt ──────────────────────────────────────────────────────────
 const MAX_DEBT = 9999;
 
@@ -477,14 +524,7 @@ function coreReducer(state, action) {
         const inv = { ...state.inventory };
         const floaters = [...(state.floaters ?? [])];
         for (const [k, n] of Object.entries(gainsMap)) {
-          if (!CAPPED_RESOURCES.includes(k)) { inv[k] = (inv[k] ?? 0) + n; continue; }
-          const cur = inv[k] ?? 0;
-          const next = Math.min(cap, cur + n);
-          inv[k] = next;
-          if (next === cap && cur + n > cap && !cf[k]) {
-            cf[k] = true;
-            floaters.push({ text: `${k} stash full`, ms: 1200 });
-          }
+          addCappedResourceMut(inv, cf, floaters, k, n, cap);
         }
         return { ...state, inventory: inv, floaters,
           seasonStats: { ...state.seasonStats, capFloaters: cf } };
@@ -500,11 +540,8 @@ function coreReducer(state, action) {
       if (noTurn) {
         const capNoTurn = currentCap(state);
         const inventory = { ...state.inventory };
-        if (CAPPED_RESOURCES.includes(key)) {
-          inventory[key] = Math.min(capNoTurn, (inventory[key] || 0) + gained);
-        } else {
-          inventory[key] = (inventory[key] || 0) + gained;
-        }
+        // No floater bookkeeping for tool-only gains (silent credit).
+        addCappedResourceMut(inventory, {}, null, key, gained, capNoTurn);
         return { ...state, inventory };
       }
 
@@ -579,33 +616,12 @@ function coreReducer(state, action) {
       // Spring: +harvestBonus% resource bonus (rounded up)
       const springBonus = currentSeason === 0 ? Math.ceil(gained * SEASON_EFFECTS.Spring.harvestBonus) : 0;
       const effectiveGained = gained + springBonus;
-      if (CAPPED_RESOURCES.includes(key)) {
-        const cur = inventory[key] ?? 0;
-        const next = Math.min(chainCap, cur + effectiveGained);
-        inventory[key] = next;
-        if (next === chainCap && cur + effectiveGained > chainCap && !chainCf[key]) {
-          chainCf[key] = true;
-          chainFloaters.push({ text: `${key} stash full`, ms: 1200 });
-        }
-      } else {
-        inventory[key] = (inventory[key] || 0) + effectiveGained;
-      }
+      addCappedResourceMut(inventory, chainCf, chainFloaters, key, effectiveGained, chainCap);
 
       // Autumn: multiply upgrades
       const effectiveUpgrades = currentSeason === 2 ? upgrades * SEASON_EFFECTS.Autumn.upgradeMult : upgrades;
       if (res?.next && effectiveUpgrades > 0) {
-        const nextKey = res.next;
-        if (CAPPED_RESOURCES.includes(nextKey)) {
-          const cur2 = inventory[nextKey] ?? 0;
-          const next2 = Math.min(chainCap, cur2 + effectiveUpgrades);
-          inventory[nextKey] = next2;
-          if (next2 === chainCap && cur2 + effectiveUpgrades > chainCap && !chainCf[nextKey]) {
-            chainCf[nextKey] = true;
-            chainFloaters.push({ text: `${nextKey} stash full`, ms: 1200 });
-          }
-        } else {
-          inventory[nextKey] = (inventory[nextKey] || 0) + effectiveUpgrades;
-        }
+        addCappedResourceMut(inventory, chainCf, chainFloaters, res.next, effectiveUpgrades, chainCap);
       }
 
       const coinsGain = Math.max(1, Math.floor((effectiveGained * value) / 2));
@@ -718,8 +734,7 @@ function coreReducer(state, action) {
       // Auto-repay debt before crediting coins
       const { coinsCredit, newDebt } = applyDebtRepayment(state, actualReward);
       // Dialog line from pool (Phase 6.3)
-      const seasonNames = ["spring", "summer", "autumn", "winter"];
-      const currentSeason = seasonNames[(state.seasonsCycled || 0) % 4];
+      const currentSeason = SEASON_NAMES[(state.seasonsCycled || 0) % 4];
       const dialogLine = pickDialog(o.npc, currentSeason, newBond, Math.random);
       const orderLeveledUp = afterOrderAlmanac.almanac.level > state.almanac.level;
       let bubble = { id: Date.now(), npc: o.npc,
@@ -750,18 +765,10 @@ function coreReducer(state, action) {
       if (!toolRecipe) return state;
       // Workshop must be built
       if (!state.built?.workshop) return state;
-      // Check inputs
-      const craftInv = state.inventory ?? {};
-      for (const [res, need] of Object.entries(toolRecipe.inputs)) {
-        if ((craftInv[res] ?? 0) < need) return state;
-      }
-      const newCraftInv = { ...craftInv };
-      for (const [res, need] of Object.entries(toolRecipe.inputs)) {
-        newCraftInv[res] = (newCraftInv[res] ?? 0) - need;
-      }
+      if (!hasAllInventory(state, toolRecipe.inputs)) return state;
       return {
         ...state,
-        inventory: newCraftInv,
+        inventory: deductInventory(state.inventory ?? {}, toolRecipe.inputs),
         tools: { ...state.tools, [toolId]: (state.tools[toolId] ?? 0) + 1 },
       };
     }
@@ -1130,8 +1137,7 @@ function coreReducer(state, action) {
       // Re-roll deterministic 6-slot quests for the new season
       const newYear = Math.max(1, Math.floor(((afterSeason.seasonsCycled || 0) - 1) / 4) + 1);
       const newSeasonIndex2 = (afterSeason.seasonsCycled || 0) % 4;
-      const seasonNames2 = ["spring", "summer", "autumn", "winter"];
-      const rerolledQuests = rollQuests(state.saveSeed ?? "default", newYear, seasonNames2[newSeasonIndex2]);
+      const rerolledQuests = rollQuests(state.saveSeed ?? "default", newYear, SEASON_NAMES[newSeasonIndex2]);
       const afterSeasonWithFields = {
         ...afterSeason,
         farm: afterSeasonFarm,
@@ -1140,8 +1146,7 @@ function coreReducer(state, action) {
       };
       // Story: fire season_entered trigger
       const newSeasonIndex = (afterSeasonWithFields.seasonsCycled % 4);
-      const seasonNames = ["spring", "summer", "autumn", "winter"];
-      return evaluateAndApplyStoryBeat(afterSeasonWithFields, { type: "season_entered", season: seasonNames[newSeasonIndex] });
+      return evaluateAndApplyStoryBeat(afterSeasonWithFields, { type: "season_entered", season: SEASON_NAMES[newSeasonIndex] });
     }
     case "SESSION_START": {
       // Always evaluate story beats on session start — each beat checks its own first-time
@@ -1258,15 +1263,13 @@ function coreReducer(state, action) {
       if (!recipe) return state;
       // Check station is built (for workshop, check state.built.workshop)
       if (recipe.station && !state.built?.[recipe.station]) return state;
-      // Check inputs
-      const inv = state.inventory ?? {};
-      for (const [res, need] of Object.entries(recipe.inputs)) {
-        if ((inv[res] ?? 0) < need * craftQty) return state;
-      }
-      const newInv = { ...inv };
-      for (const [res, need] of Object.entries(recipe.inputs)) {
-        newInv[res] = (newInv[res] ?? 0) - need * craftQty;
-      }
+      // Scale recipe inputs by craftQty so the shared helpers can do the
+      // check + deduct without a qty-aware codepath.
+      const scaledInputs = craftQty === 1
+        ? recipe.inputs
+        : Object.fromEntries(Object.entries(recipe.inputs).map(([k, n]) => [k, n * craftQty]));
+      if (!hasAllInventory(state, scaledInputs)) return state;
+      const newInv = deductInventory(state.inventory ?? {}, scaledInputs);
       // shovel is tracked as state.shovel (not inventory)
       if (craftId === "shovel") {
         return { ...state, inventory: newInv, shovel: (state.shovel ?? 0) + craftQty };
@@ -1590,8 +1593,7 @@ function coreReducer(state, action) {
       if (!npcId || !itemKey) return state;
       const giftResult = applyGift(state, npcId, itemKey);
       if (!giftResult.ok) return state; // cooldown or empty inventory — silent no-op
-      const seasonNamesGift = ["spring", "summer", "autumn", "winter"];
-      const giftSeason = seasonNamesGift[(state.seasonsCycled || 0) % 4];
+      const giftSeason = SEASON_NAMES[(state.seasonsCycled || 0) % 4];
       const giftDialog = pickDialog(npcId, giftSeason, giftResult.newState.npcs.bonds[npcId], Math.random);
       const giftBubble = {
         id: Date.now(),
@@ -1778,7 +1780,16 @@ function runActionEffects(state, action) {
 }
 
 export function gameReducer(state, action) {
-  const next = rawReducer(state, action);
+  let next;
+  try {
+    next = rawReducer(state, action);
+  } catch (e) {
+    // Don't crash the React tree on a reducer bug. Log so the error boundary
+    // and any external monitoring can catch it; return the previous state so
+    // the next render is consistent with the last good state.
+    console.error("[hearth] reducer threw on action", action?.type, e);
+    return state;
+  }
   if (next !== state) {
     persistState(next);
     runActionEffects(next, action);
