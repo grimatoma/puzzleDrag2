@@ -46,12 +46,14 @@ function advanceStep(state) {
 export function reduce(state, action) {
   if (!state.tutorial) return state;
 
-  // Auto-start on very first action
+  // Auto-start on very first action (exclude meta/biome actions that may fire before
+  // the player has a chance to see the board — prevents spurious auto-start in tests
+  // and during biome-switch no-ops).
+  const TUTORIAL_SKIP_ACTIONS = new Set(['@@INIT', 'TUTORIAL/START', 'SET_BIOME', 'ADVANCE_SEASON']);
   if (
     !state.tutorial.seen &&
     !state.tutorial.active &&
-    action.type !== '@@INIT' &&
-    action.type !== 'TUTORIAL/START' &&
+    !TUTORIAL_SKIP_ACTIONS.has(action.type) &&
     state.modal === null
   ) {
     return {
