@@ -860,9 +860,9 @@ function coreReducer(state, action) {
       return { ...state, view: next, craftingTab: action.craftingTab ?? (next === "crafting" ? state.craftingTab : null) };
     }
     case "OPEN_MODAL":
-      return { ...state, modal: action.modal };
+      return { ...state, modal: action.modal, settingsTab: 'main' };
     case "CLOSE_MODAL":
-      return { ...state, modal: null };
+      return { ...state, modal: null, settingsTab: 'main' };
     case "BUILD": {
       // Support both legacy action.building (full object) and action.payload.id (lookup by id)
       const b = action.building ?? BUILDINGS.find((x) => x.id === action.payload?.id);
@@ -1512,6 +1512,8 @@ const SLICE_PRIMARY_ACTIONS = new Set([
   "CARTO/TRAVEL",
   // Story modal dismiss is owned by story/slice
   "STORY/DISMISS_MODAL",
+  // Settings tab navigation is owned by settings/slice
+  "SETTINGS/SET_TAB",
 ]);
 
 // Actions where coreReducer intentionally defers to slices (e.g. CRAFTING/CRAFT_RECIPE
