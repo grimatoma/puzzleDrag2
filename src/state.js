@@ -720,6 +720,12 @@ function coreReducer(state, action) {
       return { ...next, modal: { type: "daily_streak", day: nextDay, reward } };
     }
 
+    case "WORKERS/BUY_POOL": {
+      // DEV-only IAP stub: credits +N worker pool units (default 5)
+      const amount = Math.max(0, (action.payload?.amount | 0) || 5);
+      return { ...state, workers: { ...state.workers, pool: (state.workers?.pool ?? 0) + amount } };
+    }
+
     default: {
       if (import.meta.env.DEV) {
         if (action.type === "DEV/ADD_GOLD") {
