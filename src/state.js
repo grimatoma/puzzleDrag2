@@ -963,7 +963,17 @@ function coreReducer(state, action) {
           turnsUsed: 0,
         } };
       }
-      const afterSeasonWithFields = { ...afterSeason, farm: afterSeasonFarm, mine: afterSeasonMine };
+      // Re-roll deterministic 6-slot quests for the new season
+      const newYear = Math.max(1, Math.floor(((afterSeason.seasonsCycled || 0) - 1) / 4) + 1);
+      const newSeasonIndex2 = (afterSeason.seasonsCycled || 0) % 4;
+      const seasonNames2 = ["spring", "summer", "autumn", "winter"];
+      const rerolledQuests = rollQuests(state.saveSeed ?? "default", newYear, seasonNames2[newSeasonIndex2]);
+      const afterSeasonWithFields = {
+        ...afterSeason,
+        farm: afterSeasonFarm,
+        mine: afterSeasonMine,
+        quests: rerolledQuests,
+      };
       // Story: fire season_entered trigger
       const newSeasonIndex = (afterSeasonWithFields.seasonsCycled % 4);
       const seasonNames = ["spring", "summer", "autumn", "winter"];

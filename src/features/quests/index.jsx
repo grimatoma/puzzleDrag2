@@ -1,12 +1,22 @@
 import { useState } from "react";
 import { ALMANAC_TIERS } from "../../constants.js";
+import { QUEST_TEMPLATES } from "./templates.js";
 
 export const viewKey = "quests";
 
+function questLabel(q) {
+  if (q.label) return q.label;
+  const tpl = QUEST_TEMPLATES.find((t) => t.id === q.template);
+  if (tpl?.label) return tpl.label.replace("{n}", q.target);
+  return `Quest: ${q.category ?? "unknown"} (${q.target})`;
+}
+
 function QuestCard({ q, dispatch }) {
   const pct = Math.min(100, (q.progress / q.target) * 100);
-  const claimable = q.done && !q.claimed;
-  const completed = q.done || q.claimed;
+  // Support both legacy shape (q.done) and new shape (progress >= target)
+  const isDone = q.done ?? (q.progress >= q.target);
+  const claimable = isDone && !q.claimed;
+  const completed = isDone || q.claimed;
 
   return (
     <div
@@ -15,7 +25,7 @@ function QuestCard({ q, dispatch }) {
       }`}
     >
       <div className="flex items-start justify-between gap-2">
-        <span className="font-bold text-[12px] text-[#3a2715] leading-snug flex-1">{q.label}</span>
+        <span className="font-bold text-[12px] text-[#3a2715] leading-snug flex-1">{questLabel(q)}</span>
         {claimable && (
           <span className="relative mr-1 mt-0.5">
             <span className="absolute inline-flex h-3 w-3 rounded-full bg-[#f1b34c] opacity-75 animate-ping" />
@@ -102,7 +112,11 @@ function AlmanacTierCard({ idx, tierDef, almanacXp, almanacClaimed, dispatch }) 
 export default function QuestsScreen({ state, dispatch, initialTab }) {
   const [tab, setTab] = useState(initialTab || "daily");
 
-  const { dailies = [], almanacXp = 0, almanacClaimed = [] } = state;
+  // New deterministic 6-slot system (canonical); fall back to legacy dailies if absent
+  const quests = state.quests ?? state.dailies ?? [];
+  // Almanac XP from canonical almanac slice; fall back to legacy almanacXp
+  const almanacXp = state.almanac?.xp ?? state.almanacXp ?? 0;
+  const almanacClaimed = state.almanacClaimed ?? [];
 
   const currentTier = Math.floor(almanacXp / 100);
   const nextCost = (currentTier + 1) * 100;
@@ -140,7 +154,11 @@ export default function QuestsScreen({ state, dispatch, initialTab }) {
       {/* Body */}
       {tab === "daily" ? (
         <div className="flex-1 overflow-y-auto px-3 pb-3 flex flex-col gap-2">
-          {[...dailies].sort((a, b) => (b.done && !b.claimed ? 1 : 0) - (a.done && !a.claimed ? 1 : 0)).map((q) => (
+          {[...quests].sort((a, b) => {
+            const aDone = a.done ?? (a.progress >= a.target);
+            const bDone = b.done ?? (b.progress >= b.target);
+            return (bDone && !b.claimed ? 1 : 0) - (aDone && !a.claimed ? 1 : 0);
+          }).map((q) => (
             <QuestCard key={q.id} q={q} dispatch={dispatch} />
           ))}
           <p className="text-[10px] text-[#f8e7c6]/50 text-center mt-1">Next refresh: when season ends</p>
