@@ -747,6 +747,171 @@ encourage daily play without feeling punitive?*
 
 ---
 
+### 3.6 — Mine entry middle tier (`100◉ + 10 shovels`) + Workshop-craftable Shovel
+
+**What this delivers:** GAME_SPEC §7 lists three Mine entry tiers: free (3 supplies,
+Phase 3.2), better (`100◉ + 10 shovels`), premium (2 runes, Phase 3.3). The middle
+tier is currently missing. This task introduces the Shovel as a Workshop-craftable
+item (1 plank + 1 stone → 1 shovel) and wires the middle entry option, so all three
+§7 paths coexist as the player's three pricing strategies for getting underground.
+
+**Completion Criteria:**
+- [ ] `RECIPES.shovel` registered in `src/constants.js` with `inputs: { plank: 1, stone: 1 }`, `tier: 1`, `station: "workshop"`, `coins: 25` (sell rate; mostly used as currency, not sold)
+- [ ] `state.shovel` (`number`, default 0) is part of fresh state (`createInitialState`)
+- [ ] `MINE_ENTRY_TIERS` constant exported from `src/constants.js` with three entries: `{ id: "free", supplies: 3, label: "Standard" }`, `{ id: "better", coins: 100, shovels: 10, label: "Better" }`, `{ id: "premium", runes: 2, label: "Premium" }`
+- [ ] `MINE/ENTER` action accepts `payload: { tier: "free" | "better" | "premium" }` and validates the player has the required cost; rejects with no state change if insufficient
+- [ ] Middle-tier entry debits exactly `100◉ + 10 shovels`, switches `biomeKey` to `"mine"`, and bypasses supply consumption
+- [ ] Mine entry UI (`src/ui/Modals.jsx` or wherever the Mine entry modal lives per existing pattern) shows three buttons disabled or enabled by current resource counts
+- [ ] `act3_mine_opened` story flag still gates the entry per Phase 2
+- [ ] Better-tier provides a §7 "better supply allocation" — concretely: the entry yields `+2 starting Mine session turns` (visualised as `MAX_TURNS + 2` for that session only, reset on `CLOSE_SEASON`)
+
+**Validation Spec — write before code:**
+
+*Tests (red phase) — file `src/__tests__/mine-entry-tiers.test.js`:*
+```js
+import { describe, it, expect } from "vitest";
+import { rootReducer, createInitialState } from "../state.js";
+import { RECIPES, MINE_ENTRY_TIERS, MAX_TURNS } from "../constants.js";
+
+describe("Phase 3.6 — Mine entry tiers", () => {
+  it("registers shovel recipe at workshop tier 1", () => {
+    expect(RECIPES.shovel).toMatchObject({
+      inputs: { plank: 1, stone: 1 }, tier: 1, station: "workshop", coins: 25,
+    });
+  });
+
+  it("fresh state seeds shovel = 0", () => {
+    expect(createInitialState().shovel).toBe(0);
+  });
+
+  it("crafts 1 shovel for 1 plank + 1 stone", () => {
+    const s0 = { ...createInitialState(), inventory: { plank: 2, stone: 2 } };
+    const s1 = rootReducer(s0, { type: "CRAFT", payload: { id: "shovel", qty: 1 } });
+    expect(s1.shovel).toBe(1);
+    expect(s1.inventory.plank).toBe(1);
+    expect(s1.inventory.stone).toBe(1);
+  });
+
+  it("MINE_ENTRY_TIERS lists three tiers in spec order", () => {
+    expect(MINE_ENTRY_TIERS.map(t => t.id)).toEqual(["free", "better", "premium"]);
+  });
+
+  it("rejects entry without act3_mine_opened flag", () => {
+    const s = { ...createInitialState(), inventory: { supplies: 5 } };
+    const r = rootReducer(s, { type: "MINE/ENTER", payload: { tier: "free" } });
+    expect(r.biomeKey).toBe("farm");
+  });
+
+  it("free tier consumes 3 supplies and switches biome", () => {
+    const s = { ...createInitialState(), inventory: { supplies: 5 },
+      story: { flags: { act3_mine_opened: true } } };
+    const r = rootReducer(s, { type: "MINE/ENTER", payload: { tier: "free" } });
+    expect(r.biomeKey).toBe("mine");
+    expect(r.inventory.supplies).toBe(2);
+  });
+
+  it("better tier consumes 100◉ + 10 shovels and extends session by 2 turns", () => {
+    const s = { ...createInitialState(), coins: 150, shovel: 12,
+      story: { flags: { act3_mine_opened: true } } };
+    const r = rootReducer(s, { type: "MINE/ENTER", payload: { tier: "better" } });
+    expect(r.biomeKey).toBe("mine");
+    expect(r.coins).toBe(50);
+    expect(r.shovel).toBe(2);
+    expect(r.sessionMaxTurns).toBe(MAX_TURNS + 2);
+  });
+
+  it("better tier rejected when shovels short", () => {
+    const s = { ...createInitialState(), coins: 100, shovel: 9,
+      story: { flags: { act3_mine_opened: true } } };
+    const r = rootReducer(s, { type: "MINE/ENTER", payload: { tier: "better" } });
+    expect(r.biomeKey).toBe("farm");
+    expect(r.coins).toBe(100);
+    expect(r.shovel).toBe(9);
+  });
+
+  it("premium tier consumes 2 runes only, no supplies/shovels/coins", () => {
+    const s = { ...createInitialState(), runes: 3, coins: 0, shovel: 0,
+      inventory: { supplies: 0 }, story: { flags: { act3_mine_opened: true } } };
+    const r = rootReducer(s, { type: "MINE/ENTER", payload: { tier: "premium" } });
+    expect(r.biomeKey).toBe("mine");
+    expect(r.runes).toBe(1);
+  });
+});
+```
+Run — confirm: `RECIPES.shovel is undefined` and `MINE_ENTRY_TIERS is not exported`.
+
+*Gameplay simulation (player at session 9, just unlocked the Mine):* They have 180◉,
+0 supplies, 0 runes, but a stack of 22 plank and 18 stone from Workshop sessions.
+The Mine entry modal opens. Free tier is greyed out (need 3 supplies). Premium is
+greyed (need 2 runes). Better reads "100◉ + 10 shovels — Better" and is greyed too
+(0 shovels). They open the Workshop, queue 10 Shovels (10 plank + 10 stone, 0 turn
+cost). Back at Mine entry: Better lights up. Tap. Coins → 80, shovels → 0, biome
+switches, the session HUD reads "Turns: 0/12". Two extra turns purchased with the
+crafted middle-tier currency.
+
+Designer reflection: *Does the Shovel as a craft-only currency feel honest, or
+does it feel like a coin-laundering detour? Are the three tiers sufficiently
+distinct that the player's choice between them encodes a real strategic stance?*
+
+**Implementation:**
+- `src/constants.js` — append:
+  ```js
+  RECIPES.shovel = { inputs: { plank: 1, stone: 1 }, tier: 1,
+                     station: "workshop", coins: 25 };
+  export const MINE_ENTRY_TIERS = [
+    { id: "free",    supplies: 3,                label: "Standard" },
+    { id: "better",  coins: 100, shovels: 10,    label: "Better"   },
+    { id: "premium", runes: 2,                   label: "Premium"  },
+  ];
+  ```
+- `src/state.js:createInitialState()` — add `shovel: 0, sessionMaxTurns: MAX_TURNS`.
+  Extend the `MINE/ENTER` (was `ENTER_MINE` in 3.2/3.3) reducer with tier dispatch:
+  ```js
+  case "MINE/ENTER": {
+    if (!state.story?.flags?.act3_mine_opened) return state;
+    const tier = MINE_ENTRY_TIERS.find(t => t.id === action.payload?.tier);
+    if (!tier) return state;
+    if (tier.id === "free") {
+      if ((state.inventory.supplies ?? 0) < 3) return state;
+      return { ...state, biomeKey: "mine",
+        inventory: { ...state.inventory, supplies: state.inventory.supplies - 3 },
+        sessionMaxTurns: MAX_TURNS };
+    }
+    if (tier.id === "better") {
+      if ((state.coins ?? 0) < 100 || (state.shovel ?? 0) < 10) return state;
+      return { ...state, biomeKey: "mine",
+        coins: state.coins - 100, shovel: state.shovel - 10,
+        sessionMaxTurns: MAX_TURNS + 2 };
+    }
+    if (tier.id === "premium") {
+      if ((state.runes ?? 0) < 2) return state;
+      return { ...state, biomeKey: "mine",
+        runes: state.runes - 2, sessionMaxTurns: MAX_TURNS };
+    }
+    return state;
+  }
+  ```
+  Reset `sessionMaxTurns` to `MAX_TURNS` in `CLOSE_SEASON`.
+- `src/ui/Modals.jsx` (or wherever the Mine entry modal lives) — render three
+  buttons from `MINE_ENTRY_TIERS`; disabled state derived from current resources;
+  tooltip names the missing currency.
+- `src/textures.js` — register `iconShovel` (small spade) for inventory chip and
+  workshop craft card.
+
+**Manual Verify Walk-through:**
+1. Fresh save. Console: `gameState.story.flags.act3_mine_opened = true`. Build
+   Workshop. Confirm Shovel craft card appears.
+2. Set `inventory.plank = 10, inventory.stone = 10`. Craft 10 Shovels. Confirm
+   `gameState.shovel === 10`, plank → 0, stone → 0.
+3. Console: `gameState.coins = 100`. Open Mine entry modal. Confirm three buttons:
+   Standard (greyed, 0 supplies), Better (enabled), Premium (greyed, 0 runes).
+4. Tap Better. Confirm `coins === 0`, `shovel === 0`, `biomeKey === "mine"`,
+   session HUD reads "Turns: 0/12".
+5. End session via `CLOSE_SEASON`. Confirm `sessionMaxTurns` resets to 10.
+6. `npm test src/__tests__/mine-entry-tiers.test.js` passes all 3.6 assertions.
+
+---
+
 ## Phase 3 Sign-off Gate
 
 Play 2 full multi-day playthroughs (or simulate via console date manipulation): one
@@ -755,6 +920,7 @@ runes from Mysterious Ore + bosses and uses premium entry plus a wildcard rune.
 Before moving to Phase 4, confirm all:
 
 - [ ] 3.1–3.5 Completion Criteria all checked
+- [ ] 3.6 Completion Criteria all checked
 - [ ] Caravan Post unlocks the Market screen — Market is invisible until then
 - [ ] Buy/sell prices drift each season and the ▲/▼ arrow accurately reflects the change
 - [ ] Buying with insufficient coins is a no-op (button disabled, no silent debit)
