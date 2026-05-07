@@ -3,7 +3,7 @@ import { TILE, COLS, ROWS, UPGRADE_THRESHOLDS, SEASONS, BIOMES } from "./constan
 import { upgradeCountForChain, resourceGainForChain, rollResourceWithWeather } from "./utils.js";
 import { computeWorkerEffects } from "./features/apprentices/effects.js";
 const cssColor = (num) => Phaser.Display.Color.IntegerToColor(num).rgba;
-import { rounded, makeTextures } from "./textures.js";
+import { rounded, makeTextures, regenerateTextures } from "./textures.js";
 import { TileObj } from "./TileObj.js";
 
 const TILE_BASE = TILE; // CSS-pixel design size for one tile; textures are baked at TILE * dpr
@@ -131,6 +131,10 @@ export class GameScene extends Phaser.Scene {
     // Sync worker effects on init and whenever state.workers changes
     this._syncWorkerEffects();
     this.registry.events.on("changedata-workers", () => this._syncWorkerEffects());
+    // Re-render tile textures when the color-blind palette changes
+    this.registry.events.on("changedata-palette", (_p, value) => {
+      regenerateTextures(this, value ?? "default");
+    });
   }
 
   // ─── Worker effects sync ─────────────────────────────────────────────────
