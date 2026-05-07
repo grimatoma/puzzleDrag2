@@ -436,6 +436,281 @@ function BuildingIllustration({ id, isBuilt }) {
         <rect x="5" y="45" width="72" height="52" rx="3" fill="none" stroke="#7a5a3a" strokeWidth="2" />
       </svg>
     ),
+    kitchen: (
+      <svg viewBox="0 0 100 100" className="absolute inset-0 w-full h-full" preserveAspectRatio="xMidYMax meet" style={f}>
+        {shadow()}
+        <rect x="58" y="10" width="12" height="30" rx="1" fill="#8a6858" />
+        <rect x="56" y="8" width="16" height="5" rx="1" fill="#6a4a3a" />
+        <rect x="60" y="14" width="8" height="3" rx="0.5" fill="#3a2a20" />
+        <polygon points="6,42 50,12 94,42" fill="#7a4838" />
+        <polygon points="6,42 50,12 94,42" fill="none" stroke="#5a2c1a" strokeWidth="1.5" />
+        <line x1="50" y1="12" x2="28" y2="27" stroke="#5a2c1a" strokeWidth="1.2" opacity="0.55" />
+        <line x1="50" y1="12" x2="72" y2="27" stroke="#5a2c1a" strokeWidth="1.2" opacity="0.55" />
+        <rect x="8" y="42" width="84" height="56" rx="3" fill="#caa680" />
+        <line x1="8" y1="56" x2="92" y2="56" stroke="rgba(0,0,0,.1)" strokeWidth="1" />
+        <line x1="8" y1="70" x2="92" y2="70" stroke="rgba(0,0,0,.1)" strokeWidth="1" />
+        <line x1="8" y1="84" x2="92" y2="84" stroke="rgba(0,0,0,.1)" strokeWidth="1" />
+        <rect x="14" y="48" width="16" height="14" rx="2" fill={lit} />
+        <line x1="22" y1="48" x2="22" y2="62" stroke="#8a6a3a" strokeWidth="1" />
+        <line x1="14" y1="55" x2="30" y2="55" stroke="#8a6a3a" strokeWidth="1" />
+        <rect x="14" y="48" width="16" height="14" rx="2" fill="none" stroke="#8a6a3a" strokeWidth="1.5" />
+        <rect x="44" y="58" width="32" height="24" rx="2" fill="#5a4838" />
+        <rect x="44" y="58" width="32" height="24" rx="2" fill="none" stroke="#3a2818" strokeWidth="1.5" />
+        <ellipse cx="60" cy="70" rx="11" ry="7" fill={isBuilt ? "#ffb060" : "#3a2818"} />
+        <ellipse cx="60" cy="70" rx="11" ry="7" fill="none" stroke="#3a2818" strokeWidth="1.2" />
+        {isBuilt && <ellipse cx="60" cy="70" rx="6" ry="3" fill="#ffe080" opacity="0.85" />}
+        <rect x="46" y="80" width="28" height="3" rx="1" fill="#3a2818" />
+        <path d="M14,98 L14,86 Q14,80 22,80 Q30,80 30,86 L30,98 Z" fill="#7a4a2a" />
+        <path d="M14,86 Q14,80 22,80 Q30,80 30,86" fill="none" stroke="#5a3a1a" strokeWidth="1.2" />
+        <circle cx="27" cy="91" r="1.6" fill="#c8923a" />
+        <rect x="80" y="78" width="10" height="14" rx="1" fill="#9a7048" />
+        <rect x="80" y="78" width="10" height="14" rx="1" fill="none" stroke="#6a4828" strokeWidth="1" />
+        <line x1="80" y1="85" x2="90" y2="85" stroke="#6a4828" strokeWidth="0.8" />
+        <rect x="8" y="42" width="84" height="56" rx="3" fill="none" stroke="#8a5a3a" strokeWidth="2" />
+      </svg>
+    ),
+    workshop: (
+      <svg viewBox="0 0 100 100" className="absolute inset-0 w-full h-full" preserveAspectRatio="xMidYMax meet" style={f}>
+        {shadow(50, 42)}
+        <polygon points="6,40 50,10 94,40" fill="#6a5840" />
+        <polygon points="6,40 50,10 94,40" fill="none" stroke="#4a3828" strokeWidth="1.5" />
+        <line x1="50" y1="10" x2="50" y2="40" stroke="#4a3828" strokeWidth="1" opacity="0.6" />
+        <rect x="9" y="40" width="82" height="58" rx="3" fill="#a88868" />
+        <line x1="9" y1="54" x2="91" y2="54" stroke="rgba(0,0,0,.1)" strokeWidth="1" />
+        <line x1="9" y1="68" x2="91" y2="68" stroke="rgba(0,0,0,.1)" strokeWidth="1" />
+        <line x1="9" y1="82" x2="91" y2="82" stroke="rgba(0,0,0,.1)" strokeWidth="1" />
+        <rect x="14" y="46" width="14" height="12" rx="1" fill={lit} />
+        <line x1="21" y1="46" x2="21" y2="58" stroke="#7a5a3a" strokeWidth="1" />
+        <line x1="14" y1="52" x2="28" y2="52" stroke="#7a5a3a" strokeWidth="1" />
+        <rect x="14" y="46" width="14" height="12" rx="1" fill="none" stroke="#7a5a3a" strokeWidth="1.5" />
+        <rect x="72" y="46" width="14" height="12" rx="1" fill={lit} />
+        <line x1="79" y1="46" x2="79" y2="58" stroke="#7a5a3a" strokeWidth="1" />
+        <line x1="72" y1="52" x2="86" y2="52" stroke="#7a5a3a" strokeWidth="1" />
+        <rect x="72" y="46" width="14" height="12" rx="1" fill="none" stroke="#7a5a3a" strokeWidth="1.5" />
+        <path d="M40,98 L40,76 L60,76 L60,98 Z" fill="#5a3818" />
+        <path d="M40,98 L40,76 L60,76 L60,98 Z" fill="none" stroke="#3a2008" strokeWidth="1.5" />
+        <line x1="50" y1="76" x2="50" y2="98" stroke="#3a2008" strokeWidth="1" />
+        <circle cx="44" cy="87" r="1.4" fill="#c8923a" />
+        <circle cx="56" cy="87" r="1.4" fill="#c8923a" />
+        <rect x="14" y="80" width="22" height="6" rx="1" fill="#5a4830" />
+        <rect x="14" y="80" width="22" height="6" rx="1" fill="none" stroke="#3a2818" strokeWidth="1" />
+        <line x1="20" y1="80" x2="20" y2="86" stroke="#3a2818" strokeWidth="0.8" />
+        <line x1="26" y1="80" x2="26" y2="86" stroke="#3a2818" strokeWidth="0.8" />
+        <line x1="32" y1="80" x2="32" y2="86" stroke="#3a2818" strokeWidth="0.8" />
+        <line x1="13" y1="86" x2="37" y2="86" stroke="#3a2818" strokeWidth="0.8" />
+        <rect x="14" y="65" width="3" height="13" fill="#7a5028" />
+        <polygon points="11,68 20,65 22,67 13,70" fill="#9aa0a8" stroke="#5a606a" strokeWidth="0.4" />
+        <line x1="68" y1="63" x2="86" y2="78" stroke="#5a4830" strokeWidth="2" strokeLinecap="round" />
+        <path d="M64,60 L72,58 L74,62 L66,64 Z" fill="#9aa0a8" stroke="#5a606a" strokeWidth="0.4" />
+        <rect x="74" y="74" width="14" height="14" rx="1" fill="#3a2818" />
+        <rect x="76" y="76" width="10" height="10" fill="#5a4838" />
+        <line x1="74" y1="88" x2="88" y2="88" stroke="#1a1208" strokeWidth="1.2" />
+        <rect x="9" y="40" width="82" height="58" rx="3" fill="none" stroke="#6a4828" strokeWidth="2" />
+      </svg>
+    ),
+    powder_store: (
+      <svg viewBox="0 0 100 100" className="absolute inset-0 w-full h-full" preserveAspectRatio="xMidYMax meet" style={f}>
+        {shadow(50, 42)}
+        <polygon points="10,46 50,24 90,46" fill="#3a3028" />
+        <polygon points="10,46 50,24 90,46" fill="none" stroke="#1a1408" strokeWidth="1.5" />
+        <rect x="48" y="20" width="4" height="6" fill="#c83020" />
+        <polygon points="48,20 56,22 48,24" fill="#c83020" />
+        <rect x="13" y="46" width="74" height="52" rx="2" fill="#5c5048" />
+        <rect x="13" y="46" width="74" height="52" rx="2" fill="none" stroke="#2a2018" strokeWidth="2" />
+        {[0,1,2,3].map((row) => (
+          [0,1,2,3,4,5].map((col) => (
+            <rect key={`${row}-${col}`} x={15 + col * 12 + (row%2)*6} y={50 + row * 12} width="11" height="11" rx="0.5" fill="none" stroke="rgba(0,0,0,.18)" strokeWidth="0.6" />
+          ))
+        ))}
+        <rect x="13" y="58" width="74" height="3" fill="#3a3028" />
+        <rect x="13" y="80" width="74" height="3" fill="#3a3028" />
+        <rect x="40" y="68" width="20" height="30" rx="1" fill="#3a3028" />
+        <rect x="40" y="68" width="20" height="30" rx="1" fill="none" stroke="#1a1208" strokeWidth="1.5" />
+        <rect x="38" y="68" width="24" height="3" fill="#5a5048" />
+        <line x1="50" y1="68" x2="50" y2="98" stroke="#1a1208" strokeWidth="1" />
+        <circle cx="46" cy="83" r="1.4" fill="#c8923a" />
+        <circle cx="54" cy="83" r="1.4" fill="#c8923a" />
+        <rect x="20" y="56" width="10" height="6" rx="1" fill="#1a1208" />
+        <line x1="22" y1="58" x2="28" y2="58" stroke={isBuilt ? "#ffd86b" : "#3a2820"} strokeWidth="0.8" />
+        <line x1="22" y1="60" x2="28" y2="60" stroke={isBuilt ? "#ffd86b" : "#3a2820"} strokeWidth="0.8" />
+        <rect x="70" y="56" width="10" height="6" rx="1" fill="#1a1208" />
+        <line x1="72" y1="58" x2="78" y2="58" stroke={isBuilt ? "#ffd86b" : "#3a2820"} strokeWidth="0.8" />
+        <line x1="72" y1="60" x2="78" y2="60" stroke={isBuilt ? "#ffd86b" : "#3a2820"} strokeWidth="0.8" />
+        <ellipse cx="20" cy="92" rx="6" ry="2.5" fill="#3a2818" opacity="0.6" />
+        <rect x="14" y="76" width="12" height="16" rx="1" fill="#5a3818" />
+        <ellipse cx="20" cy="76" rx="6" ry="2.2" fill="#7a4828" />
+        <line x1="14" y1="82" x2="26" y2="82" stroke="#2a1808" strokeWidth="1" />
+        <line x1="14" y1="88" x2="26" y2="88" stroke="#2a1808" strokeWidth="1" />
+        <ellipse cx="82" cy="92" rx="6" ry="2.5" fill="#3a2818" opacity="0.6" />
+        <rect x="76" y="76" width="12" height="16" rx="1" fill="#5a3818" />
+        <ellipse cx="82" cy="76" rx="6" ry="2.2" fill="#7a4828" />
+        <line x1="76" y1="82" x2="88" y2="82" stroke="#2a1808" strokeWidth="1" />
+        <line x1="76" y1="88" x2="88" y2="88" stroke="#2a1808" strokeWidth="1" />
+        <circle cx="50" cy="38" r="3.5" fill={isBuilt ? "#f8d030" : "#5a4830"} />
+        <text x="50" y="40.5" textAnchor="middle" fontSize="5" fontWeight="bold" fill="#1a1208">!</text>
+      </svg>
+    ),
+    portal: (
+      <svg viewBox="0 0 100 100" className="absolute inset-0 w-full h-full" preserveAspectRatio="xMidYMax meet" style={f}>
+        {shadow(50, 38)}
+        <ellipse cx="50" cy="96" rx="34" ry="3" fill="#2a1a4a" opacity="0.5" />
+        <path d="M22,98 L22,52 A28,28 0 0,1 78,52 L78,98 Z" fill="#3a2a4a" />
+        <path d="M22,52 A28,28 0 0,1 78,52" fill="none" stroke="#1a0a2a" strokeWidth="2.5" />
+        <path d="M28,98 L28,54 A22,22 0 0,1 72,54 L72,98 Z" fill={isBuilt ? "#5a3aaa" : "#2a1a3a"} opacity={isBuilt ? 0.85 : 1} />
+        {isBuilt && <>
+          <circle cx="50" cy="68" r="22" fill="#7a4adc" opacity="0.7" />
+          <circle cx="50" cy="68" r="16" fill="#9a6afc" opacity="0.6" />
+          <circle cx="50" cy="68" r="9" fill="#d8b8ff" opacity="0.85" />
+          <circle cx="46" cy="62" r="2" fill="#ffffff" opacity="0.85" />
+          <ellipse cx="50" cy="68" rx="20" ry="6" fill="none" stroke="#d8b8ff" strokeWidth="0.8" opacity="0.6" />
+          <ellipse cx="50" cy="68" rx="6" ry="20" fill="none" stroke="#d8b8ff" strokeWidth="0.8" opacity="0.6" />
+        </>}
+        {!isBuilt && <ellipse cx="50" cy="68" rx="14" ry="22" fill="#1a0a1a" opacity="0.6" />}
+        <rect x="14" y="50" width="14" height="48" rx="2" fill="#5a4a6a" />
+        <rect x="14" y="50" width="14" height="48" rx="2" fill="none" stroke="#2a1a3a" strokeWidth="1.5" />
+        <rect x="13" y="48" width="16" height="4" rx="1" fill="#7a6a8a" />
+        <rect x="13" y="94" width="16" height="4" rx="1" fill="#7a6a8a" />
+        <line x1="14" y1="62" x2="28" y2="62" stroke="#2a1a3a" strokeWidth="0.8" opacity="0.6" />
+        <line x1="14" y1="76" x2="28" y2="76" stroke="#2a1a3a" strokeWidth="0.8" opacity="0.6" />
+        <rect x="72" y="50" width="14" height="48" rx="2" fill="#5a4a6a" />
+        <rect x="72" y="50" width="14" height="48" rx="2" fill="none" stroke="#2a1a3a" strokeWidth="1.5" />
+        <rect x="71" y="48" width="16" height="4" rx="1" fill="#7a6a8a" />
+        <rect x="71" y="94" width="16" height="4" rx="1" fill="#7a6a8a" />
+        <line x1="72" y1="62" x2="86" y2="62" stroke="#2a1a3a" strokeWidth="0.8" opacity="0.6" />
+        <line x1="72" y1="76" x2="86" y2="76" stroke="#2a1a3a" strokeWidth="0.8" opacity="0.6" />
+        <path d="M14,50 Q50,22 86,50" fill="none" stroke="#5a4a6a" strokeWidth="3" />
+        <path d="M14,50 Q50,22 86,50" fill="none" stroke="#2a1a3a" strokeWidth="1.5" />
+        <circle cx="50" cy="32" r="3" fill={isBuilt ? "#d8b8ff" : "#3a2a4a"} />
+        {isBuilt && <circle cx="50" cy="32" r="5" fill="#9a6afc" opacity="0.4" />}
+        <path d="M22,52 A28,28 0 0,1 78,52" fill="none" stroke="#7a6a8a" strokeWidth="0.8" opacity="0.5" />
+      </svg>
+    ),
+    housing: (
+      <svg viewBox="0 0 100 100" className="absolute inset-0 w-full h-full" preserveAspectRatio="xMidYMax meet" style={f}>
+        {shadow(50, 38)}
+        <rect x="74" y="14" width="9" height="22" rx="1" fill="#8a6a5a" />
+        <rect x="72" y="12" width="13" height="5" rx="1" fill="#6a4a3a" />
+        <polygon points="8,42 50,16 92,42" fill="#6a3818" />
+        <polygon points="8,42 50,16 92,42" fill="none" stroke="#4a2008" strokeWidth="1.5" />
+        <line x1="50" y1="16" x2="28" y2="29" stroke="#4a2008" strokeWidth="1" opacity="0.55" />
+        <line x1="50" y1="16" x2="72" y2="29" stroke="#4a2008" strokeWidth="1" opacity="0.55" />
+        <line x1="8" y1="42" x2="92" y2="42" stroke="#4a2008" strokeWidth="0.8" opacity="0.4" />
+        <rect x="11" y="42" width="78" height="56" rx="3" fill="#d8b888" />
+        <line x1="11" y1="58" x2="89" y2="58" stroke="rgba(0,0,0,.1)" strokeWidth="1" />
+        <line x1="11" y1="74" x2="89" y2="74" stroke="rgba(0,0,0,.1)" strokeWidth="1" />
+        <line x1="11" y1="90" x2="89" y2="90" stroke="rgba(0,0,0,.1)" strokeWidth="1" />
+        <rect x="17" y="48" width="14" height="14" rx="1" fill={lit} />
+        <line x1="24" y1="48" x2="24" y2="62" stroke="#7a5a3a" strokeWidth="1" />
+        <line x1="17" y1="55" x2="31" y2="55" stroke="#7a5a3a" strokeWidth="1" />
+        <rect x="17" y="48" width="14" height="14" rx="1" fill="none" stroke="#7a5a3a" strokeWidth="1.5" />
+        <rect x="69" y="48" width="14" height="14" rx="1" fill={lit} />
+        <line x1="76" y1="48" x2="76" y2="62" stroke="#7a5a3a" strokeWidth="1" />
+        <line x1="69" y1="55" x2="83" y2="55" stroke="#7a5a3a" strokeWidth="1" />
+        <rect x="69" y="48" width="14" height="14" rx="1" fill="none" stroke="#7a5a3a" strokeWidth="1.5" />
+        <rect x="42" y="48" width="16" height="12" rx="1" fill={lit} />
+        <line x1="50" y1="48" x2="50" y2="60" stroke="#7a5a3a" strokeWidth="1" />
+        <line x1="42" y1="54" x2="58" y2="54" stroke="#7a5a3a" strokeWidth="1" />
+        <rect x="42" y="48" width="16" height="12" rx="1" fill="none" stroke="#7a5a3a" strokeWidth="1.5" />
+        <path d="M40,98 L40,72 A10,10 0 0,1 60,72 L60,98 Z" fill="#5a3818" />
+        <path d="M40,72 A10,10 0 0,1 60,72" fill="none" stroke="#3a2008" strokeWidth="1.5" />
+        <line x1="50" y1="72" x2="50" y2="98" stroke="#3a2008" strokeWidth="1" />
+        <circle cx="56" cy="86" r="1.6" fill="#c8923a" />
+        <rect x="17" y="68" width="14" height="10" rx="1" fill={lit} />
+        <line x1="17" y1="73" x2="31" y2="73" stroke="#7a5a3a" strokeWidth="1" />
+        <rect x="17" y="68" width="14" height="10" rx="1" fill="none" stroke="#7a5a3a" strokeWidth="1.2" />
+        <rect x="69" y="68" width="14" height="10" rx="1" fill={lit} />
+        <line x1="69" y1="73" x2="83" y2="73" stroke="#7a5a3a" strokeWidth="1" />
+        <rect x="69" y="68" width="14" height="10" rx="1" fill="none" stroke="#7a5a3a" strokeWidth="1.2" />
+        <rect x="11" y="42" width="78" height="56" rx="3" fill="none" stroke="#7a5a3a" strokeWidth="2" />
+      </svg>
+    ),
+    silo: (
+      <svg viewBox="0 0 100 100" className="absolute inset-0 w-full h-full" preserveAspectRatio="xMidYMax meet" style={f}>
+        {shadow(54, 36)}
+        <rect x="14" y="68" width="32" height="30" rx="2" fill="#8a6840" />
+        <rect x="14" y="68" width="32" height="30" rx="2" fill="none" stroke="#5a3818" strokeWidth="1.5" />
+        <rect x="14" y="74" width="32" height="2" fill="#5a3818" opacity="0.5" />
+        <rect x="14" y="86" width="32" height="2" fill="#5a3818" opacity="0.5" />
+        <rect x="22" y="80" width="16" height="18" rx="1" fill="#3a2818" />
+        <line x1="30" y1="80" x2="30" y2="98" stroke="#1a1208" strokeWidth="0.8" />
+        <circle cx="34" cy="89" r="1.2" fill="#c8923a" />
+        <rect x="50" y="36" width="36" height="62" rx="2" fill="#c0b8a0" />
+        <rect x="50" y="36" width="36" height="62" rx="2" fill="none" stroke="#7a7260" strokeWidth="1.5" />
+        <line x1="50" y1="48" x2="86" y2="48" stroke="#9a9282" strokeWidth="1" />
+        <line x1="50" y1="60" x2="86" y2="60" stroke="#9a9282" strokeWidth="1" />
+        <line x1="50" y1="72" x2="86" y2="72" stroke="#9a9282" strokeWidth="1" />
+        <line x1="50" y1="84" x2="86" y2="84" stroke="#9a9282" strokeWidth="1" />
+        <path d="M48,36 Q68,16 88,36 Z" fill="#7a8a8a" />
+        <path d="M48,36 Q68,16 88,36 Z" fill="none" stroke="#5a6a6a" strokeWidth="1.5" />
+        <line x1="58" y1="28" x2="78" y2="28" stroke="#5a6a6a" strokeWidth="0.8" opacity="0.6" />
+        <rect x="66" y="14" width="4" height="6" fill="#5a6a6a" />
+        <rect x="64" y="12" width="8" height="3" fill="#3a4a4a" />
+        <rect x="60" y="44" width="14" height="8" rx="1" fill={lit} />
+        <line x1="60" y1="48" x2="74" y2="48" stroke="#8a6a3a" strokeWidth="0.8" />
+        <rect x="60" y="44" width="14" height="8" rx="1" fill="none" stroke="#8a6a3a" strokeWidth="1" />
+        <rect x="60" y="78" width="14" height="20" rx="1" fill="#5a3818" />
+        <rect x="60" y="78" width="14" height="20" rx="1" fill="none" stroke="#3a2008" strokeWidth="1.2" />
+        <line x1="67" y1="78" x2="67" y2="98" stroke="#3a2008" strokeWidth="1" />
+        <circle cx="71" cy="88" r="1.2" fill="#c8923a" />
+        <rect x="40" y="58" width="14" height="6" rx="1" fill="#7a6840" />
+        <rect x="40" y="58" width="14" height="6" rx="1" fill="none" stroke="#4a3820" strokeWidth="0.8" />
+        <line x1="40" y1="64" x2="48" y2="74" stroke="#7a6840" strokeWidth="2" />
+        <line x1="48" y1="74" x2="48" y2="68" stroke="#4a3820" strokeWidth="0.8" opacity="0.6" />
+        {isBuilt && <>
+          <ellipse cx="44" cy="76" rx="3" ry="1.5" fill="#e8c060" opacity="0.7" />
+          <circle cx="42" cy="78" r="0.8" fill="#c89838" />
+          <circle cx="46" cy="79" r="0.7" fill="#c89838" />
+        </>}
+      </svg>
+    ),
+    barn: (
+      <svg viewBox="0 0 100 100" className="absolute inset-0 w-full h-full" preserveAspectRatio="xMidYMax meet" style={f}>
+        {shadow()}
+        <rect x="62" y="14" width="10" height="24" rx="1" fill="#4a4030" />
+        <rect x="60" y="12" width="14" height="5" rx="1" fill="#2a2018" />
+        <polygon points="6,38 28,16 72,16 94,38" fill="#5a2818" />
+        <polygon points="6,38 28,16 72,16 94,38" fill="none" stroke="#3a1808" strokeWidth="1.5" />
+        <line x1="6" y1="38" x2="28" y2="16" stroke="#3a1808" strokeWidth="1" opacity="0.55" />
+        <line x1="94" y1="38" x2="72" y2="16" stroke="#3a1808" strokeWidth="1" opacity="0.55" />
+        <rect x="6" y="38" width="88" height="60" rx="2" fill="#7a4838" />
+        <rect x="6" y="38" width="88" height="60" rx="2" fill="none" stroke="#3a1808" strokeWidth="2" />
+        <line x1="6" y1="52" x2="94" y2="52" stroke="#3a1808" strokeWidth="0.8" opacity="0.4" />
+        <line x1="6" y1="68" x2="94" y2="68" stroke="#3a1808" strokeWidth="0.8" opacity="0.4" />
+        <line x1="6" y1="84" x2="94" y2="84" stroke="#3a1808" strokeWidth="0.8" opacity="0.4" />
+        <line x1="26" y1="38" x2="26" y2="98" stroke="#3a1808" strokeWidth="0.6" opacity="0.35" />
+        <line x1="50" y1="38" x2="50" y2="98" stroke="#3a1808" strokeWidth="0.6" opacity="0.35" />
+        <line x1="74" y1="38" x2="74" y2="98" stroke="#3a1808" strokeWidth="0.6" opacity="0.35" />
+        <rect x="11" y="42" width="78" height="3" fill="#4a4030" />
+        <rect x="11" y="95" width="78" height="3" fill="#4a4030" />
+        <line x1="14" y1="42" x2="14" y2="98" stroke="#4a4030" strokeWidth="2" />
+        <line x1="86" y1="42" x2="86" y2="98" stroke="#4a4030" strokeWidth="2" />
+        <rect x="36" y="52" width="14" height="14" rx="1" fill="#3a2818" />
+        <rect x="36" y="52" width="14" height="14" rx="1" fill="none" stroke="#1a1208" strokeWidth="1" />
+        <line x1="36" y1="59" x2="50" y2="59" stroke="#1a1208" strokeWidth="0.8" />
+        <line x1="43" y1="52" x2="43" y2="66" stroke="#1a1208" strokeWidth="0.8" />
+        <rect x="50" y="52" width="14" height="14" rx="1" fill="#3a2818" />
+        <rect x="50" y="52" width="14" height="14" rx="1" fill="none" stroke="#1a1208" strokeWidth="1" />
+        <line x1="50" y1="59" x2="64" y2="59" stroke="#1a1208" strokeWidth="0.8" />
+        <line x1="57" y1="52" x2="57" y2="66" stroke="#1a1208" strokeWidth="0.8" />
+        <path d="M30,98 L30,74 L70,74 L70,98 Z" fill="#3a2818" />
+        <path d="M30,98 L30,74 L70,74 L70,98 Z" fill="none" stroke="#1a1208" strokeWidth="2" />
+        <line x1="50" y1="74" x2="50" y2="98" stroke="#1a1208" strokeWidth="1.5" />
+        <line x1="30" y1="74" x2="50" y2="98" stroke="#5a4838" strokeWidth="0.8" opacity="0.55" />
+        <line x1="50" y1="74" x2="30" y2="98" stroke="#5a4838" strokeWidth="0.8" opacity="0.55" />
+        <line x1="50" y1="74" x2="70" y2="98" stroke="#5a4838" strokeWidth="0.8" opacity="0.55" />
+        <line x1="70" y1="74" x2="50" y2="98" stroke="#5a4838" strokeWidth="0.8" opacity="0.55" />
+        <circle cx="46" cy="86" r="1.6" fill="#c8923a" />
+        <circle cx="54" cy="86" r="1.6" fill="#c8923a" />
+        <rect x="14" y="78" width="12" height="14" rx="1" fill="#5a3818" />
+        <rect x="14" y="78" width="12" height="14" rx="1" fill="none" stroke="#3a2008" strokeWidth="1" />
+        <ellipse cx="20" cy="78" rx="6" ry="2" fill="#7a4828" />
+        <line x1="14" y1="84" x2="26" y2="84" stroke="#2a1808" strokeWidth="0.8" />
+        <rect x="76" y="48" width="6" height="14" rx="1" fill={isBuilt ? "#c86820" : "#5a4830"} />
+        <rect x="76" y="48" width="6" height="14" rx="1" fill="none" stroke="#3a2008" strokeWidth="0.8" />
+        {isBuilt && <ellipse cx="79" cy="50" rx="3" ry="1" fill="#f8a040" opacity="0.85" />}
+        <line x1="79" y1="42" x2="79" y2="48" stroke="#3a2008" strokeWidth="1" />
+      </svg>
+    ),
   };
   return illustrations[id] || null;
 }
