@@ -1508,6 +1508,8 @@ const SLICE_PRIMARY_ACTIONS = new Set([
   "BOSS/MINIMIZE",
   "BOSS/EXPAND",
   "BOSS/CLOSE",
+  // Cartography actions are owned by cartography/slice
+  "CARTO/TRAVEL",
 ]);
 
 // Actions where coreReducer intentionally defers to slices (e.g. CRAFTING/CRAFT_RECIPE
