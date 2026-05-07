@@ -127,6 +127,8 @@ function PhaserMount({ dispatch, biomeKey, turnsUsed, seasonsCycled, uiLocked, s
   useEffect(() => { gameRef.current?.registry.set("inventoryCap", currentCap(gameState) ?? 200); }, [gameState]);
   // Sync hazards.fire so GameScene.fillBoard can overlay fire tiles on the board
   useEffect(() => { gameRef.current?.registry.set("hazardFire", gameState?.hazards?.fire ?? null); }, [gameState?.hazards?.fire]);
+  // Sync magicFertilizerCharges so GameScene.fillBoard can apply the bias for each fill charge
+  useEffect(() => { gameRef.current?.registry.set("magicFertilizerCharges", gameState?.magicFertilizerCharges ?? 0); }, [gameState?.magicFertilizerCharges]);
 
   // Keyboard chain construction — Tab focuses board, arrows move cursor, Space adds tile, Enter commits, Esc cancels
   useEffect(() => {

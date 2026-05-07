@@ -507,7 +507,9 @@ export class GameScene extends Phaser.Scene {
       }
     }
     // Fertilizer bias: double seedling-tier resource copies in pool
-    const fertilizerActive = this.registry.get("fertilizerActive") ?? false;
+    // Also activated by magic_fertilizer charges (one charge consumed per fill)
+    const fertilizerActive = (this.registry.get("fertilizerActive") ?? false) ||
+                             ((this.registry.get("magicFertilizerCharges") ?? 0) > 0);
     if (fertilizerActive) {
       const seedlings = ["seedling", "hay", "wheat", "grain"];
       const fBase = {};
