@@ -134,6 +134,7 @@ export function getCategoryViewModel(state, category) {
       locked,
       status: statusFor(state, s),
       action,
+      description: s.description ?? null,
     };
   });
 }
