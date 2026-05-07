@@ -128,9 +128,14 @@ export const BUILDINGS = [
   { id: "larder", name: "Larder", desc: "Preserve and bottle your harvest. Craft preserve jars and berry tinctures for coins.", cost: { coins: 350, plank: 30, jam: 5 }, lv: 3, x: 700, y: 395, w: 70, h: 85, color: "#4f6b3a" },
   { id: "forge", name: "Forge", desc: "Smith metal goods — hinges, lanterns, rings, and more — for high coin rewards.", cost: { coins: 1200, stone: 60, ingot: 20 }, lv: 8, x: 800, y: 380, w: 100, h: 100, color: "#5a6973" },
   { id: "caravan", name: "Caravan Post", desc: "Opens distant trade routes, letting you sell crafted goods to far-off markets.", cost: { coins: 1500 }, lv: 8, x: 940, y: 390, w: 110, h: 90, color: "#7e4f24" },
+  { id: "kitchen", name: "Kitchen", desc: "Converts surplus grain into supplies. Three supplies grant standard Mine entry.", cost: { coins: 400, plank: 20 }, lv: 2, x: 1080, y: 360, w: 90, h: 100, color: "#8a4a26" },
+  { id: "workshop", name: "Workshop", desc: "Crafts shovels and other tools from raw materials.", cost: { coins: 600, plank: 30, stone: 10 }, lv: 3, x: 1200, y: 370, w: 90, h: 100, color: "#6a5a3a" },
+  { id: "powder_store", name: "Powder Store", desc: "Stockpiles black powder. Produces 2 Bombs at the end of every season.", cost: { coins: 600, stone: 30, ingot: 5 }, lv: 5, x: 1080, y: 380, w: 90, h: 100, color: "#3a2a1a" },
+  { id: "portal", name: "Magic Portal", desc: "A shimmering gateway. Summons unlock with Influence (Phase 8).", cost: { coins: 2000, runes: 5 }, lv: 8, x: 1320, y: 355, w: 100, h: 115, color: "#4a2a7a" },
 ];
 
 export const RECIPES = {
+  shovel:     { name: "Shovel",          inputs: { plank: 1, stone: 1 },          tier: 1, station: "workshop", coins: 25 },
   bread:      { name: "Bread Loaf",     inputs: { flour: 3, egg: 1 },            tier: 1, station: "bakery", coins: 125, glyph: "🍞", color: 0xd49060, dark: 0x7a4a28 },
   honeyroll:  { name: "Honey Roll",     inputs: { flour: 2, egg: 1, jam: 1 },   tier: 2, station: "bakery", coins: 175, glyph: "🍯", color: 0xf0c050, dark: 0x8a6010 },
   harvestpie: { name: "Harvest Pie",    inputs: { flour: 2, jam: 1, egg: 1 },   tier: 2, station: "bakery", coins: 175, glyph: "🥧", color: 0xd4784a, dark: 0x6a3018 },
@@ -175,6 +180,29 @@ export const ACHIEVEMENTS = [
   { id: "craft_50",     name: "Master Craftsman",    desc: "Craft 50 recipes",                      category: "Crafting", target: 50,   eventKey: "totalCrafted",   icon: "⚒",  reward: { coins: 300, xp: 120 } },
 ];
 
+export const MARKET_PRICES = {
+  hay:    { buy: 40,  sell: 0  },
+  wheat:  { buy: 60,  sell: 2  },
+  grain:  { buy: 80,  sell: 4  },
+  flour:  { buy: 100, sell: 6  },
+  log:    { buy: 60,  sell: 2  },
+  plank:  { buy: 80,  sell: 4  },
+  beam:   { buy: 110, sell: 7  },
+  berry:  { buy: 70,  sell: 3  },
+  jam:    { buy: 90,  sell: 5  },
+  egg:    { buy: 70,  sell: 3  },
+  stone:  { buy: 50,  sell: 1  },
+  cobble: { buy: 70,  sell: 3  },
+  block:  { buy: 100, sell: 6  },
+  ore:    { buy: 70,  sell: 3  },
+  ingot:  { buy: 100, sell: 6  },
+  coal:   { buy: 60,  sell: 2  },
+  coke:   { buy: 80,  sell: 4  },
+  gem:    { buy: 120, sell: 7  },
+  cutgem: { buy: 200, sell: 14 },
+  gold:   { buy: 100, sell: 5  },
+};
+
 export const QUEST_TEMPLATES = [
   { key: "harvest", label: "Harvest 30 hay", target: 30, reward: { coins: 50, almanacXp: 20 } },
   { key: "chain5",  label: "Make 3 chains of 5+", target: 3, reward: { coins: 75, almanacXp: 30 } },
@@ -196,3 +224,40 @@ export const ALMANAC_TIERS = [
   { reward: { coins: 200 } },
   { reward: { coins: 100, tool: "rare", amt: 1 } },
 ];
+
+// ─── Phase 3 Economy ──────────────────────────────────────────────────────────
+
+/** Mine entry pricing tiers (§7). */
+export const MINE_ENTRY_TIERS = [
+  { id: "free",    supplies: 3,               label: "Standard" },
+  { id: "better",  coins: 100, shovels: 10,   label: "Better"   },
+  { id: "premium", runes: 2,                  label: "Premium"  },
+];
+
+/** Daily login-streak reward ladder (GAME_SPEC §16 — locked). */
+export const DAILY_REWARDS = {
+  1:  { coins: 25 },
+  2:  { coins: 50 },
+  3:  { tool: "basic",   amount: 1 },
+  4:  { coins: 75 },
+  5:  { tool: "rare",    amount: 1 },
+  6:  { coins: 50 },
+  7:  { coins: 150, tool: "shuffle", amount: 1 },
+  8:  { coins: 60 },  9: { coins: 70 },  10: { coins: 80 },
+  11: { coins: 90 }, 12: { coins: 100 }, 13: { coins: 120 },
+  14: { coins: 300, runes: 1 },
+  15: { coins: 100 }, 16: { coins: 110 }, 17: { coins: 120 },
+  18: { coins: 130 }, 19: { coins: 140 }, 20: { coins: 160 },
+  21: { coins: 180 }, 22: { coins: 200 }, 23: { coins: 220 },
+  24: { coins: 240 }, 25: { coins: 260 }, 26: { coins: 280 },
+  27: { coins: 300 }, 28: { coins: 350 }, 29: { coins: 400 },
+  30: { coins: 1000, runes: 3 },
+};
+
+/** Return local YYYY-MM-DD string for a Date object. */
+export function dayKeyForDate(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}

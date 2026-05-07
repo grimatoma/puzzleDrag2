@@ -1,4 +1,5 @@
-import { BIOMES, NPCS, MAX_TURNS, RECIPES, STORAGE_KEYS, SEASON_EFFECTS } from "./constants.js";
+import { BIOMES, BUILDINGS, NPCS, MAX_TURNS, RECIPES, STORAGE_KEYS, SEASON_EFFECTS, DAILY_REWARDS, MINE_ENTRY_TIERS } from "./constants.js";
+import { driftPrices, applyTrade } from "./market.js";
 import * as crafting from "./features/crafting/slice.js";
 import * as quests from "./features/quests/slice.js";
 import * as achievements from "./features/achievements/slice.js";
@@ -108,6 +109,7 @@ export function initialState() {
   const o1 = makeOrder(biomeKey, level);
   const o2 = makeOrder(biomeKey, level, [o1.npc], [o1.key]);
   const o3 = makeOrder(biomeKey, level, [o1.npc, o2.npc], [o1.key, o2.key]);
+  const marketSeed = Math.floor(Math.random() * 1e9);
   const fresh = {
     biomeKey,
     view: "town",
@@ -116,9 +118,9 @@ export function initialState() {
     xp: 0,
     turnsUsed: 0,
     seasonsCycled: 0,
-    inventory: {},
+    inventory: { supplies: 0 },
     orders: [o1, o2, o3],
-    tools: { clear: 2, basic: 1, rare: 1, shuffle: 0 },
+    tools: { clear: 2, basic: 1, rare: 1, shuffle: 0, bomb: 0 },
     built: { hearth: true },
     bubble: null,
     modal: null,
@@ -127,6 +129,12 @@ export function initialState() {
     _hintsShown: {},
     story: { ...INITIAL_STORY_STATE, flags: {}, queuedBeat: null, beatQueue: [], sandbox: false },
     npcs: { roster: ["wren"], bonds: { wren: 5 } },
+    market: { seed: marketSeed, season: 0, prices: driftPrices(marketSeed, 0), prevPrices: null },
+    runes: 0,
+    runeStash: 0,
+    shovel: 0,
+    sessionMaxTurns: MAX_TURNS,
+    dailyStreak: { lastClaimedDate: null, currentDay: 0 },
     ...crafting.initial,
     ...quests.initial,
     ...achievements.initial,
@@ -375,6 +383,14 @@ function coreReducer(state, action) {
           bubble: { id: Date.now(), npc: "bram", text: "Lockbox — placing rare tiles!", ms: 1500 },
         };
       }
+      if (key === "bomb") {
+        return {
+          ...state,
+          tools,
+          toolPending: "bomb",
+          bubble: { id: Date.now(), npc: "bram", text: "Bomb armed — tap a tile to detonate!", ms: 1500 },
+        };
+      }
       // Unknown tool key — decrement only
       return { ...state, tools };
     }
@@ -403,13 +419,20 @@ function coreReducer(state, action) {
     case "CLOSE_MODAL":
       return { ...state, modal: null };
     case "BUILD": {
-      const b = action.building;
+      // Support both legacy action.building (full object) and action.payload.id (lookup by id)
+      const b = action.building ?? BUILDINGS.find((x) => x.id === action.payload?.id);
+      if (!b) return state;
       const canCoin = state.coins >= (b.cost.coins || 0);
-      const canRes = Object.entries(b.cost).every(([k, v]) => k === "coins" || (state.inventory[k] || 0) >= v);
-      if (!canCoin || !canRes) return state;
+      const canRes = Object.entries(b.cost).every(
+        ([k, v]) => k === "coins" || k === "runes" || (state.inventory[k] || 0) >= v,
+      );
+      // Special gate: portal requires runes (not inventory)
+      const runesNeeded = b.cost.runes ?? 0;
+      const canRunes = (state.runes ?? 0) >= runesNeeded;
+      if (!canCoin || !canRes || !canRunes) return state;
       const inventory = { ...state.inventory };
       Object.entries(b.cost).forEach(([k, v]) => {
-        if (k !== "coins") inventory[k] = (inventory[k] || 0) - v;
+        if (k !== "coins" && k !== "runes") inventory[k] = (inventory[k] || 0) - v;
       });
       const hintsShown = state._hintsShown || {};
       const CRAFTING_STATIONS = new Set(["bakery", "forge", "larder"]);
@@ -426,6 +449,7 @@ function coreReducer(state, action) {
       const afterBuild = {
         ...state,
         coins: state.coins - (b.cost.coins || 0),
+        runes: (state.runes ?? 0) - runesNeeded,
         inventory,
         built: { ...state.built, [b.id]: true },
         bubble,
@@ -445,18 +469,32 @@ function coreReducer(state, action) {
     case "DISMISS_BUBBLE":
       return state.bubble && state.bubble.id === action.id ? { ...state, bubble: null } : state;
     case "CLOSE_SEASON": {
-      const tools = { ...state.tools, shuffle: (state.tools.shuffle || 0) + 1 };
+      const newSeasonNum = (state.market?.season ?? 0) + 1;
+      const mSeed = state.market?.seed ?? 0;
+      const newPrices = driftPrices(mSeed, newSeasonNum);
+      let tools = { ...state.tools, shuffle: (state.tools.shuffle || 0) + 1 };
+      // Powder Store: grant 2 bombs per season-end
+      if (state.built?.powder_store) {
+        tools = { ...tools, bomb: (tools.bomb ?? 0) + 2 };
+      }
       const afterSeason = {
         ...state,
         tools,
         coins: state.coins + SEASON_END_BONUS_COINS,
         turnsUsed: 0,
         seasonsCycled: (state.seasonsCycled || 0) + 1,
+        sessionMaxTurns: MAX_TURNS,
         modal: null,
         view: "town",
         pendingView: null,
         seasonStats: { harvests: 0, upgrades: 0, ordersFilled: 0, coins: 0 },
         bubble: { id: Date.now(), npc: "tomas", text: "Bonus: +1 Reshuffle Horn · +25◉", ms: 2000 },
+        market: {
+          ...(state.market ?? {}),
+          season: newSeasonNum,
+          prevPrices: state.market?.prices ?? null,
+          prices: newPrices,
+        },
       };
       // Story: fire season_entered trigger
       const newSeasonIndex = (afterSeason.seasonsCycled % 4);
@@ -474,6 +512,144 @@ function coreReducer(state, action) {
       if (!craftKey) return state;
       return evaluateAndApplyStoryBeat(state, { type: "craft_made", item: craftKey, count: 1 });
     }
+
+    // ─── Phase 3 Economy ────────────────────────────────────────────────────────
+
+    case "BUY_RESOURCE":
+    case "SELL_RESOURCE":
+      return applyTrade(state, action);
+
+    case "CONVERT_TO_SUPPLY": {
+      const qty = Math.max(1, action.payload.qty | 0);
+      const cost = qty * 3;
+      if ((state.inventory.grain ?? 0) < cost) return state;
+      return {
+        ...state,
+        inventory: {
+          ...state.inventory,
+          grain: state.inventory.grain - cost,
+          supplies: (state.inventory.supplies ?? 0) + qty,
+        },
+      };
+    }
+
+    case "ENTER_MINE": {
+      if (!state.story?.flags?.mine_unlocked) return state;
+      const mode = action.payload?.mode ?? "standard";
+      if (mode === "standard") {
+        if ((state.inventory.supplies ?? 0) < 3) return state;
+        return {
+          ...state,
+          biomeKey: "mine",
+          inventory: { ...state.inventory, supplies: state.inventory.supplies - 3 },
+        };
+      }
+      if (mode === "premium") {
+        if ((state.runes ?? 0) < 2) return state;
+        return { ...state, biomeKey: "mine", runes: state.runes - 2 };
+      }
+      return state;
+    }
+
+    case "MINE/ENTER": {
+      if (!state.story?.flags?.act3_mine_opened) return state;
+      const tier = MINE_ENTRY_TIERS.find((t) => t.id === action.payload?.tier);
+      if (!tier) return state;
+      if (tier.id === "free") {
+        if ((state.inventory.supplies ?? 0) < 3) return state;
+        return {
+          ...state,
+          biomeKey: "mine",
+          inventory: { ...state.inventory, supplies: state.inventory.supplies - 3 },
+          sessionMaxTurns: MAX_TURNS,
+        };
+      }
+      if (tier.id === "better") {
+        if ((state.coins ?? 0) < 100 || (state.shovel ?? 0) < 10) return state;
+        return {
+          ...state,
+          biomeKey: "mine",
+          coins: state.coins - 100,
+          shovel: state.shovel - 10,
+          sessionMaxTurns: MAX_TURNS + 2,
+        };
+      }
+      if (tier.id === "premium") {
+        if ((state.runes ?? 0) < 2) return state;
+        return { ...state, biomeKey: "mine", runes: state.runes - 2, sessionMaxTurns: MAX_TURNS };
+      }
+      return state;
+    }
+
+    case "CRAFT": {
+      const { id: craftId, qty: craftQty = 1 } = action.payload ?? {};
+      const recipe = RECIPES[craftId];
+      if (!recipe) return state;
+      // Check station is built (for workshop, check state.built.workshop)
+      if (recipe.station && !state.built?.[recipe.station]) return state;
+      // Check inputs
+      const inv = state.inventory ?? {};
+      for (const [res, need] of Object.entries(recipe.inputs)) {
+        if ((inv[res] ?? 0) < need * craftQty) return state;
+      }
+      const newInv = { ...inv };
+      for (const [res, need] of Object.entries(recipe.inputs)) {
+        newInv[res] = (newInv[res] ?? 0) - need * craftQty;
+      }
+      // shovel is tracked as state.shovel (not inventory)
+      if (craftId === "shovel") {
+        return { ...state, inventory: newInv, shovel: (state.shovel ?? 0) + craftQty };
+      }
+      return { ...state, inventory: newInv };
+    }
+
+    case "GRANT_RUNES": {
+      const amt = Math.max(0, action.payload?.amount | 0);
+      return { ...state, runes: (state.runes ?? 0) + amt };
+    }
+
+    case "ACTIVATE_RUNE_WILDCARD": {
+      if ((state.runeStash ?? 0) < 1) return state;
+      return { ...state, runeStash: state.runeStash - 1, toolPending: "rune_wildcard" };
+    }
+
+    case "USE_TOOL_BOMB": {
+      // Alias to USE_TOOL for bomb — handled in USE_TOOL branch too
+      if ((state.tools.bomb ?? 0) <= 0) return state;
+      return {
+        ...state,
+        tools: { ...state.tools, bomb: state.tools.bomb - 1 },
+        toolPending: "bomb",
+      };
+    }
+
+    case "LOGIN_TICK": {
+      const today = action.payload.today;
+      const last = state.dailyStreak?.lastClaimedDate ?? null;
+      if (last === today) return state; // idempotent
+      let nextDay;
+      if (!last) {
+        nextDay = 1;
+      } else {
+        const d1 = new Date(last + "T00:00:00");
+        const d2 = new Date(today + "T00:00:00");
+        const diff = Math.round((d2 - d1) / 86400000);
+        nextDay = diff === 1 ? Math.min((state.dailyStreak?.currentDay ?? 0) + 1, 30) : 1;
+      }
+      const reward = DAILY_REWARDS[nextDay] ?? { coins: 25 };
+      let next = {
+        ...state,
+        dailyStreak: { lastClaimedDate: today, currentDay: nextDay },
+        coins: (state.coins ?? 0) + (reward.coins ?? 0),
+        runes: (state.runes ?? 0) + (reward.runes ?? 0),
+      };
+      if (reward.tool) {
+        const cur = next.tools?.[reward.tool] ?? 0;
+        next = { ...next, tools: { ...next.tools, [reward.tool]: cur + (reward.amount ?? 1) } };
+      }
+      return { ...next, modal: { type: "daily_streak", day: nextDay, reward } };
+    }
+
     default: {
       if (import.meta.env.DEV) {
         if (action.type === "DEV/ADD_GOLD") {
@@ -515,3 +691,7 @@ export function gameReducer(state, action) {
   if (next !== state) persistState(next);
   return next;
 }
+
+// Alias exports for test compatibility (spec uses rootReducer / createInitialState)
+export const rootReducer = rawReducer;
+export const createInitialState = initialState;
