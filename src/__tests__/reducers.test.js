@@ -114,6 +114,25 @@ describe("CHAIN_COLLECTED", () => {
 });
 
 describe("TURN_IN_ORDER", () => {
+  it("increases npcBond by 0.3 via mood slice", () => {
+    const order = { id: "o1", npc: "mira", key: "hay", need: 5, reward: 100, line: "test" };
+    const state = minState({
+      seasonsCycled: 2,
+      inventory: { hay: 10 },
+      orders: [order],
+      npcBond: { ...NEUTRAL_BOND, mira: 5 },
+    });
+    const next = gameReducer(state, {
+      type: "TURN_IN_ORDER",
+      id: "o1",
+      npc: order.npc,
+      key: order.key,
+      need: order.need,
+      reward: order.reward,
+    });
+    expect(next.npcBond.mira).toBeCloseTo(5.3, 5);
+  });
+
   it("deducts inventory and adds reward coins", () => {
     const order = { id: "o1", npc: "wren", key: "hay", need: 5, reward: 30, line: "test" };
     const state = minState({
