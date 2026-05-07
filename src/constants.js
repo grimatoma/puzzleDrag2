@@ -243,6 +243,11 @@ export const RECIPES = {
   gem_crown:  null,
   gold_ring:  null,
 };
+// Merge WORKSHOP_RECIPES into RECIPES so all 11 workshop recipes are top-level entries.
+// (Previously they lived only in WORKSHOP_RECIPES; the crafting screen's
+// Object.entries(RECIPES).filter(station==="workshop") would only see 3.)
+Object.assign(RECIPES, WORKSHOP_RECIPES);
+
 // Resolve snake_case aliases to the same objects (no data duplication)
 RECIPES.iron_frame = RECIPES.ironframe;
 RECIPES.gem_crown  = RECIPES.gemcrown;

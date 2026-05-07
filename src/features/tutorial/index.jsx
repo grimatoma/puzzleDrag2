@@ -239,6 +239,8 @@ export default function Tutorial({ state, dispatch }) {
   const tut = state.tutorial;
   // Do not render while a story beat is queued — StoryModal must be clickable (fix #1)
   if (state.story?.queuedBeat) return null;
+  // Do not render while any modal is open — modals must be clickable above this overlay
+  if (state.modal) return null;
   if (!tut || !tut.active) return null;
 
   const step = Math.min(tut.step, STEPS.length - 1);

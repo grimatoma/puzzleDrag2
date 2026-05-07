@@ -545,6 +545,13 @@ function coreReducer(state, action) {
         newHintsShown = { ...hintsShown, upgradeHint: true };
       }
 
+      // Capture snapshot for hourglass rewind (before chain is applied)
+      const lastChainSnapshot = {
+        inventory: state.inventory,
+        grid: state.grid ?? null,
+        turnsUsed: state.turnsUsed,
+      };
+
       let afterChain = {
         ...state,
         inventory,
@@ -559,6 +566,7 @@ function coreReducer(state, action) {
         bubble,
         _hintsShown: newHintsShown,
         lastChainLength: effectiveChain,
+        lastChainSnapshot,
         modal: seasonEnded ? "season" : state.modal,
       };
       // Mine: tick mysterious ore countdown on each chain

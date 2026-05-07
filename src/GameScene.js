@@ -125,10 +125,16 @@ export class GameScene extends Phaser.Scene {
     });
     this.registry.events.on("changedata-toolPending", (_p, value) => {
       if (!value) return;
-      if (value === "clear")   this._applyToolClear();
-      if (value === "basic")   this._applyToolBasic();
-      if (value === "rare")    this._applyToolRare();
-      if (value === "shuffle") this.shuffleBoard();
+      if (value === "clear")      this._applyToolClear();
+      if (value === "basic")      this._applyToolBasic();
+      if (value === "rare")       this._applyToolRare();
+      if (value === "shuffle")    this.shuffleBoard();
+      if (value === "magic_wand") {
+        // Arm the wand — next tile tap sweeps all tiles of that type
+        this._magicWandPending = true;
+        // Do NOT clear toolPending yet; it clears after the tap in _applyMagicWand
+        return;
+      }
       // Clear the pending flag once handled
       this.time.delayedCall(50, () => this.registry.set("toolPending", null));
     });
@@ -575,10 +581,56 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
+  /** Magic Wand: sweep all tiles of the chosen resource type and collect them (no turn cost). */
+  _applyMagicWand(targetRes) {
+    const swept = [];
+    for (let r = 0; r < ROWS; r++) {
+      for (let c = 0; c < COLS; c++) {
+        const tile = this.grid[r][c];
+        if (tile && tile.res.key === targetRes.key) {
+          swept.push(tile);
+          this.grid[r][c] = null;
+        }
+      }
+    }
+    if (!swept.length) return;
+    // Animate out with a staggered sparkle burst
+    swept.forEach((tile, i) => {
+      tile.sprite.setTint(0xa070ff);
+      this.tweens.add({
+        targets: tile.sprite,
+        scale: 0,
+        alpha: 0,
+        angle: Phaser.Math.Between(-30, 30),
+        duration: this._dur(200),
+        delay: i * 15,
+        ease: "Quad.In",
+        onComplete: () => tile.destroy(),
+      });
+    });
+    // Emit collection event (noTurn: true so no turn is consumed)
+    this.events.emit("chain-collected", {
+      key: targetRes.key,
+      gained: swept.length,
+      upgrades: 0,
+      chainLength: swept.length,
+      value: targetRes.value,
+      noTurn: true,
+    });
+    this.time.delayedCall(this._dur(240), () => this.collapseBoard());
+  }
+
   // ─── Drag chain ───────────────────────────────────────────────────────────
 
   startPath(tile) {
     if (this.locked) return;
+    // Magic Wand intercept: sweep all tiles of the tapped resource type
+    if (this._magicWandPending) {
+      this._magicWandPending = false;
+      this._applyMagicWand(tile.res);
+      this.time.delayedCall(50, () => this.registry.set("toolPending", null));
+      return;
+    }
     this.dragging = true;
     this.clearPath(false);
     this.addToPath(tile);

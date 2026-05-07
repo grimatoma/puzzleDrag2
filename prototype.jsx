@@ -375,7 +375,7 @@ export default function App() {
         </div>
 
         {/* Bottom nav — full-width bar at the bottom of every view */}
-        <BottomNav view={state.view} modal={state.modal} dispatch={dispatchWithA11y} />
+        <BottomNav view={state.view} modal={state.modal} dispatch={dispatchWithA11y} state={state} />
 
         {/* NPC bubble */}
         <NpcBubble bubble={state.bubble} dispatch={dispatchWithA11y} />
