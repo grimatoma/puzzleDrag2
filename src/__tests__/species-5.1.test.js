@@ -67,20 +67,20 @@ describe("Phase 5.1 — Tile Collection data model", () => {
     }
   });
 
-  it("wheat chain threshold === UPGRADE_THRESHOLDS.hay (no UPGRADE_EVERY literal)", () => {
-    const wheat = TILE_TYPES_MAP.wheat;
+  it("wheat chain threshold === UPGRADE_THRESHOLDS.grass_hay (no UPGRADE_EVERY literal)", () => {
+    const wheat = TILE_TYPES_MAP.grain_wheat;
     expect(wheat).toBeTruthy();
     expect(wheat.discovery.method).toBe("chain");
-    expect(wheat.discovery.chainLength).toBe(UPGRADE_THRESHOLDS.hay);
+    expect(wheat.discovery.chainLength).toBe(UPGRADE_THRESHOLDS.grass_hay);
   });
 
   it("meadow_grass chains at exactly 20 hay (GAME_SPEC §13)", () => {
-    expect(TILE_TYPES_MAP.meadow_grass.discovery.chainLength).toBe(20);
+    expect(TILE_TYPES_MAP.grass_meadow.discovery.chainLength).toBe(20);
   });
 
   it("free-move tile types carry the locked effect values", () => {
-    expect(TILE_TYPES_MAP.turkey.effects.freeMoves).toBe(2);
-    expect(TILE_TYPES_MAP.clover.effects.freeMoves).toBe(2);
-    expect(TILE_TYPES_MAP.melon.effects.freeMoves).toBe(5);
+    expect(TILE_TYPES_MAP.bird_turkey.effects.freeMoves).toBe(2);
+    expect(TILE_TYPES_MAP.bird_clover.effects.freeMoves).toBe(2);
+    expect(TILE_TYPES_MAP.bird_melon.effects.freeMoves).toBe(5);
   });
 });

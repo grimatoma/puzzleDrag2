@@ -82,7 +82,7 @@ describe("Fix 5 — tickMysteriousOre wired on CHAIN_COLLECTED in mine", () => {
     };
     const next = rootReducer(s, {
       type: "CHAIN_COLLECTED",
-      payload: { key: "hay", gained: 3, upgrades: 0, value: 1, chainLength: 3, noTurn: false },
+      payload: { key: "grass_hay", gained: 3, upgrades: 0, value: 1, chainLength: 3, noTurn: false },
     });
     expect(next.mysteriousOre?.turnsRemaining).toBe(5);
   });

@@ -4,7 +4,7 @@ import { BIOMES } from "../constants.js";
 
 describe("Phase 5.6 — Board pool wiring", () => {
   const baseDefaults = {
-    grass: "hay", grain: "wheat", wood: "log", berry: "berry", bird: "egg",
+    grass: "grass_hay", grain: "grain_wheat", wood: "wood_log", berry: "berry", bird: "bird_egg",
     vegetables: "carrot",
     fruits: "fruit_apple", flowers: "flower_pansy", trees: "tree_oak",
     herd_animals: "herd_pig", cattle: "cattle_cow", mounts: "mount_horse",
@@ -13,9 +13,9 @@ describe("Phase 5.6 — Board pool wiring", () => {
     tileCollection: {
       activeByCategory: { ...baseDefaults, ...overrides },
       discovered: {
-        hay: true, wheat: true, log: true, berry: true, egg: true,
-        grain: true, plank: true, jam: true, turkey: true,
-        meadow_grass: true, beam: true, spiky_grass: true, flour: true,
+        grass_hay: true, grain_wheat: true, wood_log: true, berry: true, bird_egg: true,
+        grain: true, wood_plank: true, berry_jam: true, bird_turkey: true,
+        grass_meadow: true, wood_beam: true, grass_spiky: true, grain_flour: true,
         carrot: true, eggplant: true, turnip: true, cucumber: true,
         fruit_apple: true, flower_pansy: true, tree_oak: true,
         herd_pig: true, cattle_cow: true, mount_horse: true,
@@ -33,14 +33,14 @@ describe("Phase 5.6 — Board pool wiring", () => {
 
   it("B: swap wheat for grain in grain category", () => {
     const r1 = getActivePool(mkState({ grain: "grain" }), "farm");
-    expect(r1.filter((k) => k === "wheat").length).toBe(0);
+    expect(r1.filter((k) => k === "grain_wheat").length).toBe(0);
     expect(r1.filter((k) => k === "grain").length).toBe(1);
   });
 
   it("C: setting a category to null removes that category's resource", () => {
     const r2 = getActivePool(mkState({ bird: null }), "farm");
-    expect(r2.filter((k) => k === "egg").length).toBe(0);
-    expect(r2.filter((k) => k === "hay").length).toBe(3);
+    expect(r2.filter((k) => k === "bird_egg").length).toBe(0);
+    expect(r2.filter((k) => k === "grass_hay").length).toBe(3);
   });
 
   it("D: worker pool_weight stacks when key is the active tile type", () => {
@@ -55,12 +55,12 @@ describe("Phase 5.6 — Board pool wiring", () => {
   });
 
   it("F: turkey weight ignored when egg is active bird, applied when turkey is active bird", () => {
-    const r5a = getActivePool(mkState({ bird: "egg" }, { turkey: 3 }), "farm");
-    expect(r5a.filter((k) => k === "turkey").length).toBe(0);
+    const r5a = getActivePool(mkState({ bird: "bird_egg" }, { bird_turkey: 3 }), "farm");
+    expect(r5a.filter((k) => k === "bird_turkey").length).toBe(0);
 
-    const r5b = getActivePool(mkState({ bird: "turkey" }, { turkey: 3 }), "farm");
-    // turkey: 1 base copy in pool (from egg slot replaced by turkey) + 3 boost = 4
-    expect(r5b.filter((k) => k === "turkey").length).toBe(4);
+    const r5b = getActivePool(mkState({ bird: "bird_turkey" }, { bird_turkey: 3 }), "farm");
+    // bird_turkey: 1 base copy in pool (from egg slot replaced by turkey) + 3 boost = 4
+    expect(r5b.filter((k) => k === "bird_turkey").length).toBe(4);
   });
 
   it("G: getActivePool does not mutate state", () => {

@@ -10,7 +10,7 @@ describe("Phase 10 — Workshop tool recipes", () => {
   });
 
   it("rake costs 1 plank", () => {
-    expect(WORKSHOP_RECIPES.rake.inputs.plank).toBe(1);
+    expect(WORKSHOP_RECIPES.rake.inputs.wood_plank).toBe(1);
   });
 
   it("axe costs 1 stone", () => {
@@ -18,7 +18,7 @@ describe("Phase 10 — Workshop tool recipes", () => {
   });
 
   it("fertilizer costs 1 hay + 1 dirt", () => {
-    expect(WORKSHOP_RECIPES.fertilizer.inputs.hay).toBe(1);
+    expect(WORKSHOP_RECIPES.fertilizer.inputs.grass_hay).toBe(1);
     expect(WORKSHOP_RECIPES.fertilizer.inputs.dirt).toBe(1);
   });
 });
@@ -50,17 +50,17 @@ describe("Phase 10 — CRAFT_TOOL action", () => {
     const s = {
       ...createInitialState(),
       built: { ...createInitialState().built, workshop: true },
-      inventory: { ...createInitialState().inventory, plank: 5 },
+      inventory: { ...createInitialState().inventory, wood_plank: 5 },
     };
     const next = rootReducer(s, { type: "CRAFT_TOOL", id: "rake" });
     expect(next.tools.rake).toBe(1);
-    expect(next.inventory.plank).toBe(4);
+    expect(next.inventory.wood_plank).toBe(4);
   });
 
   it("rejects craft when workshop not built", () => {
     const s = {
       ...createInitialState(),
-      inventory: { ...createInitialState().inventory, plank: 5 },
+      inventory: { ...createInitialState().inventory, wood_plank: 5 },
     };
     const next = rootReducer(s, { type: "CRAFT_TOOL", id: "rake" });
     expect(next.tools.rake).toBe(0);

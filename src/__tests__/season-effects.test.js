@@ -20,8 +20,8 @@ describe("SEASON_EFFECTS — single source of truth", () => {
     // chain of 5 hay × 1.20 = 6 (rounded up)
     const s = { ...initialState(), seasonsCycled: 0 };
     const after = gameReducer(s,
-      { type: "CHAIN_COLLECTED", payload: { key: "hay", gained: 5, upgrades: 0, value: 1, chainLength: 5 } });
-    expect(after.inventory.hay).toBe(6);
+      { type: "CHAIN_COLLECTED", payload: { key: "grass_hay", gained: 5, upgrades: 0, value: 1, chainLength: 5 } });
+    expect(after.inventory.grass_hay).toBe(6);
   });
 
   it("Summer doubles order coin rewards", () => {
@@ -35,14 +35,14 @@ describe("SEASON_EFFECTS — single source of truth", () => {
   it("Winter chain length 4 yields zero", () => {
     const s = { ...initialState(), seasonsCycled: 3 };
     const after = gameReducer(s,
-      { type: "CHAIN_COLLECTED", payload: { key: "hay", gained: 4, upgrades: 0, value: 1, chainLength: 4 } });
-    expect(after.inventory.hay ?? 0).toBe(0);
+      { type: "CHAIN_COLLECTED", payload: { key: "grass_hay", gained: 4, upgrades: 0, value: 1, chainLength: 4 } });
+    expect(after.inventory.grass_hay ?? 0).toBe(0);
   });
 
   it("Winter chain length 5 yields normally", () => {
     const s = { ...initialState(), seasonsCycled: 3 };
     const after = gameReducer(s,
-      { type: "CHAIN_COLLECTED", payload: { key: "hay", gained: 5, upgrades: 0, value: 1, chainLength: 5 } });
-    expect(after.inventory.hay).toBe(5);
+      { type: "CHAIN_COLLECTED", payload: { key: "grass_hay", gained: 5, upgrades: 0, value: 1, chainLength: 5 } });
+    expect(after.inventory.grass_hay).toBe(5);
   });
 });

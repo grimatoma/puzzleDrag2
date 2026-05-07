@@ -51,14 +51,30 @@ export function getQueue() {
 
 // ─── Phase 11.3 — Announcement formatters ────────────────────────────────────
 
+// Catalog category prefixes — stripped for user-facing announcements so
+// "grass_hay" reads as "hay", "grain_wheat" as "wheat", etc. Unprefixed
+// keys (soup, pie, grain) pass through unchanged.
+const CATEGORY_PREFIXES = [
+  "grass_", "grain_", "wood_", "berry_", "bird_", "veg_",
+  "fruit_", "flower_", "tree_", "herd_", "cattle_", "mount_",
+];
+
+function displayKey(k) {
+  for (const p of CATEGORY_PREFIXES) {
+    if (k.startsWith(p)) return k.slice(p.length);
+  }
+  return k;
+}
+
 /**
  * Format a chain-commit announcement.
  * @param {{ key: string, collected: number, upgrades: Array<{key:string,count:number}> }} result
  */
 export function formatChainAnnouncement({ key, collected, upgrades = [] }) {
-  if (!upgrades.length) return `Collected ${collected} ${key}.`;
+  const k = displayKey(key);
+  if (!upgrades.length) return `Collected ${collected} ${k}.`;
   const u = upgrades[0];
-  return `Collected ${collected} ${key}; ${u.count} ${u.key} upgrade spawned at the endpoint.`;
+  return `Collected ${collected} ${k}; ${u.count} ${displayKey(u.key)} upgrade spawned at the endpoint.`;
 }
 
 /**

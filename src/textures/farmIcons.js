@@ -13,7 +13,7 @@ function rr(ctx, x, y, w, h, r) {
 }
 
 export function drawFarmTileIcon(ctx, key) {
-  if (key === "hay") {
+  if (key === "grass_hay") {
     // Golden bundle of dried straw tied with twine
     // Outer dark straw (warm brown)
     ctx.strokeStyle = "#5e3a08";
@@ -65,7 +65,7 @@ export function drawFarmTileIcon(ctx, key) {
     ctx.stroke();
   }
 
-  else if (key === "wheat") {
+  else if (key === "grain_wheat") {
     // Tall wheat stalk with detailed grains
     // Stalk
     ctx.strokeStyle = "#6b4710";
@@ -203,7 +203,7 @@ export function drawFarmTileIcon(ctx, key) {
     ctx.fill();
   }
 
-  else if (key === "flour") {
+  else if (key === "grain_flour") {
     // Cream-colored cloth sack with stenciled wheat & flour dust
     // Shadow
     ctx.fillStyle = "rgba(0,0,0,0.18)";
@@ -281,7 +281,7 @@ export function drawFarmTileIcon(ctx, key) {
     ctx.fill();
   }
 
-  else if (key === "log") {
+  else if (key === "wood_log") {
     // 3D wooden log lying on its side
     // Body shadow
     ctx.fillStyle = "rgba(0,0,0,0.2)";
@@ -349,7 +349,7 @@ export function drawFarmTileIcon(ctx, key) {
     ctx.fill();
   }
 
-  else if (key === "plank") {
+  else if (key === "wood_plank") {
     // Wooden plank with grain & nails (slight isometric)
     ctx.save();
     ctx.rotate(-0.18);
@@ -406,7 +406,7 @@ export function drawFarmTileIcon(ctx, key) {
     ctx.restore();
   }
 
-  else if (key === "beam") {
+  else if (key === "wood_beam") {
     // Thick dark wooden beam with iron brackets
     ctx.save();
     ctx.rotate(-0.15);
@@ -530,7 +530,7 @@ export function drawFarmTileIcon(ctx, key) {
     });
   }
 
-  else if (key === "jam") {
+  else if (key === "berry_jam") {
     // Glass jar of berry jam with lid and label
     // Shadow
     ctx.fillStyle = "rgba(0,0,0,0.22)";
@@ -621,7 +621,7 @@ export function drawFarmTileIcon(ctx, key) {
     ctx.fill();
   }
 
-  else if (key === "egg") {
+  else if (key === "bird_egg") {
     // Glossy speckled egg with strong outline (its tile color is also cream,
     // so we lean on a darker outline + warmer shading to keep contrast).
     // Drop shadow on the tile beneath the egg
@@ -665,7 +665,7 @@ export function drawFarmTileIcon(ctx, key) {
     ctx.fill();
   }
 
-  else if (key === "meadow_grass") {
+  else if (key === "grass_meadow") {
     // Lush thick meadow grass — long bowing blades, denser & greener than hay,
     // with a small wildflower nestled at the base.
     // Soil mound shadow
@@ -725,7 +725,7 @@ export function drawFarmTileIcon(ctx, key) {
     ctx.fill();
   }
 
-  else if (key === "spiky_grass") {
+  else if (key === "grass_spiky") {
     // Hardy thorny spiky grass — short rigid blades with prominent thorns.
     // Soil shadow
     ctx.fillStyle = "rgba(0,0,0,0.22)";
@@ -799,7 +799,7 @@ export function drawFarmTileIcon(ctx, key) {
     ctx.fill();
   }
 
-  else if (key === "turkey") {
+  else if (key === "bird_turkey") {
     // Plump tom turkey with fanned tail feathers.
     // Drop shadow
     ctx.fillStyle = "rgba(0,0,0,0.25)";
@@ -907,7 +907,7 @@ export function drawFarmTileIcon(ctx, key) {
     });
   }
 
-  else if (key === "clover") {
+  else if (key === "bird_clover") {
     // Lucky four-leaf clover patch — three trefoil shapes with one bigger 4-leaf.
     // Soil shadow
     ctx.fillStyle = "rgba(0,0,0,0.20)";
@@ -1758,7 +1758,7 @@ export function drawFarmTileIcon(ctx, key) {
     ctx.stroke();
   }
 
-  else if (key === "melon") {
+  else if (key === "bird_melon") {
     // Round striped summer melon with leaf and curling tendril.
     // Drop shadow
     ctx.fillStyle = "rgba(0,0,0,0.25)";

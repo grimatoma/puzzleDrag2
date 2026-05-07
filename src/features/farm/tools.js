@@ -5,7 +5,7 @@
  * Locked rule: tools NEVER tick state.turnsUsed.
  *
  * §5 lists "1 Wood" for Rake; implementation uses `plank` because the
- * §6 wood chain names the base tile "log" and the first upgrade "plank" —
+ * §6 wood chain names the base tile "wood_log" and the first upgrade "wood_plank" —
  * plank is what the player can actually hold at workshop-build time.
  *
  * §6 Cat tool counter deferred per Phase 10.4 design note;
@@ -23,8 +23,8 @@
 export function applyToolPending(state) {
   const id = state.toolPending;
   if (!id) return state;
-  if (id === "rake") return _clearKey(state, "hay");
-  if (id === "axe") return _clearKey(state, "log");
+  if (id === "rake") return _clearKey(state, "grass_hay");
+  if (id === "axe") return _clearKey(state, "wood_log");
   // fertilizer is handled at fillBoard time, not here
   return { ...state, toolPending: null };
 }

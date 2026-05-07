@@ -11,11 +11,11 @@ describe("6.1 — Bond data (BOND_BANDS, NPC_DATA)", () => {
   });
 
   it("NPC_DATA has correct favoriteGift per §14", () => {
-    expect(NPC_DATA.mira.favoriteGift).toBe("flour");
-    expect(NPC_DATA.tomas.favoriteGift).toBe("jam");
+    expect(NPC_DATA.mira.favoriteGift).toBe("grain_flour");
+    expect(NPC_DATA.tomas.favoriteGift).toBe("berry_jam");
     expect(NPC_DATA.bram.favoriteGift).toBe("ingot");
-    expect(NPC_DATA.liss.favoriteGift).toBe("jam");
-    expect(NPC_DATA.wren.favoriteGift).toBe("plank");
+    expect(NPC_DATA.liss.favoriteGift).toBe("berry_jam");
+    expect(NPC_DATA.wren.favoriteGift).toBe("wood_plank");
   });
 });
 

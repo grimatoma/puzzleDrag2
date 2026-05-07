@@ -44,13 +44,13 @@ describe("Fix 4 — deterministic 6-slot quests", () => {
     const s = {
       ...fresh(),
       quests: [{
-        id: "q1", template: "collect_hay", category: "collect", key: "hay",
+        id: "q1", template: "collect_hay", category: "collect", key: "grass_hay",
         target: 30, progress: 0, claimed: false, reward: { coins: 60, xp: 20 },
       }],
     };
     const next = rootReducer(s, {
       type: "CHAIN_COLLECTED",
-      payload: { key: "hay", gained: 10, upgrades: 0, value: 1, chainLength: 5, noTurn: false },
+      payload: { key: "grass_hay", gained: 10, upgrades: 0, value: 1, chainLength: 5, noTurn: false },
     });
     expect(next.quests[0].progress).toBe(10);
   });
@@ -59,7 +59,7 @@ describe("Fix 4 — deterministic 6-slot quests", () => {
     const s = {
       ...fresh(),
       quests: [{
-        id: "qclaim1", template: "collect_hay", category: "collect", key: "hay",
+        id: "qclaim1", template: "collect_hay", category: "collect", key: "grass_hay",
         target: 10, progress: 10, claimed: false, reward: { coins: 50, xp: 20 },
       }],
     };

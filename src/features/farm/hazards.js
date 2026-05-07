@@ -37,7 +37,7 @@ const FIRE_SPREAD_RATE  = 0.50;
 const FIRE_MAX_CELLS    = 3;
 const WOLF_SPAWN_RATE   = 0.06;
 const WOLF_MAX_ACTIVE   = 2;
-const WOLF_BIRD_KEYS    = new Set(["egg", "turkey", "clover"]);
+const WOLF_BIRD_KEYS    = new Set(["bird_egg", "bird_turkey", "bird_clover"]);
 
 /**
  * Roll for a Farm hazard spawn.
@@ -75,7 +75,7 @@ export function rollFarmHazard(state, rng = Math.random) {
   // Wolf spawn gate (independent roll, but still single-active cap)
   if (!wolves && rats.length === 0 && !fire) {
     const inv = state.inventory ?? {};
-    const birdRich = (inv.egg ?? 0) > 30 || (inv.turkey ?? 0) > 5;
+    const birdRich = (inv.bird_egg ?? 0) > 30 || (inv.bird_turkey ?? 0) > 5;
     if (birdRich) {
       const wolvesCount = (wolves?.list?.length ?? 0);
       if (wolvesCount < WOLF_MAX_ACTIVE && rng() < WOLF_SPAWN_RATE) {

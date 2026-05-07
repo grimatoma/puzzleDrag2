@@ -22,7 +22,7 @@ export const STORY_BEATS = [
     act: 1,
     title: "First Light",
     body: "Wren: 'The Hearth is alive again. Mira will be here soon.'",
-    trigger: { type: "resource_total", key: "hay", amount: 20 },
+    trigger: { type: "resource_total", key: "grass_hay", amount: 20 },
     onComplete: { setFlag: "hearth_lit", spawnNPC: "mira" },
   },
   {
@@ -114,7 +114,7 @@ export const STORY_BEATS = [
     body: "The festival larder is full. Hearthwood Vale lives again. (Sandbox mode continues.)",
     trigger: {
       type: "resource_total_multi",
-      req: { hay: 50, wheat: 50, grain: 50, berry: 50, log: 50 },
+      req: { grass_hay: 50, grain_wheat: 50, grain: 50, berry: 50, wood_log: 50 },
     },
     onComplete: { setFlag: "isWon" },
   },

@@ -10,7 +10,7 @@ import { rollFarmHazard } from "../features/farm/hazards.js";
 
 function makeGrid(rows = 4, cols = 4) {
   return Array.from({ length: rows }, () =>
-    Array.from({ length: cols }, () => ({ key: "hay" })),
+    Array.from({ length: cols }, () => ({ key: "grass_hay" })),
   );
 }
 

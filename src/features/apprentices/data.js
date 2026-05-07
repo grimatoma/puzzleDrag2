@@ -17,9 +17,9 @@ export const WORKERS = [
     icon: "🧑‍🌾",
     color: "#4f8c3a",
     wage: 15,
-    hireCost: { worker: 1, hay: 6, bread: 8 },
+    hireCost: { worker: 1, grass_hay: 6, bread: 8 },
     maxCount: 3,
-    effect: { type: "threshold_reduce", key: "hay", from: 6, to: 3 },
+    effect: { type: "threshold_reduce", key: "grass_hay", from: 6, to: 3 },
     requirement: { building: "granary" },
     description: "A tireless farmhand who knows just when to cut the hay. Lowers the chain length needed to upgrade hay tiles.",
   },
@@ -43,9 +43,9 @@ export const WORKERS = [
     icon: "🍯",
     color: "#c8923a",
     wage: 20,
-    hireCost: { worker: 1, jam: 3, bread: 8 },
+    hireCost: { worker: 1, berry_jam: 3, bread: 8 },
     maxCount: 2,
-    effect: { type: "bonus_yield", key: "jam", amount: 2 },
+    effect: { type: "bonus_yield", key: "berry_jam", amount: 2 },
     requirement: { building: "bakery" },
     description: "A patient cellarer who turns surplus berries into rich preserves. Yields bonus jam whenever you chain berry tiles.",
   },
@@ -95,7 +95,7 @@ export const WORKERS = [
     icon: "🧺",
     color: "#7a9a3a",
     wage: 25,
-    hireCost: { worker: 1, hay: 10, bread: 20, stone: 10, ingot: 15 },
+    hireCost: { worker: 1, grass_hay: 10, bread: 20, stone: 10, ingot: 15 },
     maxCount: 4,
     effect: { type: "threshold_reduce_category", category: "vegetables", from: 6, to: 5 },
     requirement: { building: "kitchen", orLevel: 5 },
@@ -111,7 +111,7 @@ export const WORKERS = [
     icon: "🧺",
     color: "#c84a3a",
     wage: 30,
-    hireCost: { worker: 1, hay: 6, bread: 10, stone: 12, soup: 2 },
+    hireCost: { worker: 1, grass_hay: 6, bread: 10, stone: 12, soup: 2 },
     maxCount: 2,
     // Catalog: 7 fruit = 1 pie at max (base 7 → max 6).
     effect: { type: "threshold_reduce_category", category: "fruits", from: 7, to: 6 },
@@ -125,7 +125,7 @@ export const WORKERS = [
     icon: "🪈",
     color: "#a86838",
     wage: 35,
-    hireCost: { worker: 1, hay: 4, bread: 10, stone: 12, meat: 16 },
+    hireCost: { worker: 1, grass_hay: 4, bread: 10, stone: 12, meat: 16 },
     maxCount: 4,
     // Catalog: 5 herd = 1 meat at max (base 5 → max 4).
     effect: { type: "threshold_reduce_category", category: "herd_animals", from: 5, to: 4 },
@@ -139,7 +139,7 @@ export const WORKERS = [
     icon: "🥛",
     color: "#8aa6c4",
     wage: 40,
-    hireCost: { worker: 1, hay: 6, soup: 3, meat: 3, ingot: 15 },
+    hireCost: { worker: 1, grass_hay: 6, soup: 3, meat: 3, ingot: 15 },
     maxCount: 2,
     // Catalog: 6 cattle = 1 milk at max (base 6 → max 5).
     effect: { type: "threshold_reduce_category", category: "cattle", from: 6, to: 5 },
@@ -155,7 +155,7 @@ export const WORKERS = [
     wage: 45,
     // Mounts → Horseshoe is a long chain (10) and a high-value product. Hire
     // cost mirrors catalog tier: heavy on bread/stone with a soup-tier check.
-    hireCost: { worker: 1, hay: 9, bread: 9, stone: 12, soup: 9 },
+    hireCost: { worker: 1, grass_hay: 9, bread: 9, stone: 12, soup: 9 },
     maxCount: 2,
     // Catalog: 6 cattle = 1 mount at max — but in our chain model mounts are
     // their own category producing horseshoes (chain 10). We use the rancher
@@ -173,7 +173,7 @@ export const WORKERS = [
     wage: 35,
     // No catalog worker for flowers → honey, but the chain length (10) is
     // brutal without help. Beekeeper fills the gap with a modest reduction.
-    hireCost: { worker: 1, hay: 6, bread: 8, soup: 2, jam: 4 },
+    hireCost: { worker: 1, grass_hay: 6, bread: 8, soup: 2, berry_jam: 4 },
     maxCount: 2,
     effect: { type: "threshold_reduce_category", category: "flowers", from: 10, to: 9 },
     requirement: { building: "larder", orLevel: 6 },

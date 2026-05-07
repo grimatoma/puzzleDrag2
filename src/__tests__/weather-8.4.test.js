@@ -42,9 +42,9 @@ describe("8.4 — Weather slot", () => {
 
   it("rain doubles berry only, hay untouched", () => {
     const rain = { active: "rain", turnsRemaining: 2 };
-    const after = applyRainBerryBonus({ hay: 5, berry: 4 }, rain);
+    const after = applyRainBerryBonus({ grass_hay: 5, berry: 4 }, rain);
     expect(after.berry).toBe(8);
-    expect(after.hay).toBe(5);
+    expect(after.grass_hay).toBe(5);
   });
 
   it("non-rain: berry untouched", () => {
@@ -68,18 +68,18 @@ describe("8.4 — Weather slot", () => {
   it("drought: wheat+grain halved, hay+log untouched (pure)", () => {
     const drought = { active: "drought", turnsRemaining: 1 };
     const pool = [
-      { key: "hay", weight: 3 },
-      { key: "wheat", weight: 2 },
+      { key: "grass_hay", weight: 3 },
+      { key: "grain_wheat", weight: 2 },
       { key: "grain", weight: 4 },
-      { key: "log", weight: 3 },
+      { key: "wood_log", weight: 3 },
     ];
     const p2 = applyDroughtSpawnWeights(pool, drought);
-    expect(p2.find((p) => p.key === "wheat").weight).toBe(1);
+    expect(p2.find((p) => p.key === "grain_wheat").weight).toBe(1);
     expect(p2.find((p) => p.key === "grain").weight).toBe(2);
-    expect(p2.find((p) => p.key === "hay").weight).toBe(3);
-    expect(p2.find((p) => p.key === "log").weight).toBe(3);
+    expect(p2.find((p) => p.key === "grass_hay").weight).toBe(3);
+    expect(p2.find((p) => p.key === "wood_log").weight).toBe(3);
     // purity: input pool unmutated
-    expect(pool.find((p) => p.key === "wheat").weight).toBe(2);
+    expect(pool.find((p) => p.key === "grain_wheat").weight).toBe(2);
   });
 
   it("frost: tween 2×", () => {

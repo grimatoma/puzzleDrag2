@@ -1,9 +1,9 @@
 export const NPC_FAVORITES = {
-  mira:  { favorite: 'flour', dislike: 'coal' },
-  tomas: { favorite: 'jam',   dislike: 'stone' },
+  mira:  { favorite: 'grain_flour', dislike: 'coal' },
+  tomas: { favorite: 'berry_jam',   dislike: 'stone' },
   bram:  { favorite: 'ingot', dislike: 'berry' },
-  liss:  { favorite: 'jam',   dislike: 'coal' },
-  wren:  { favorite: 'plank', dislike: 'gem' },
+  liss:  { favorite: 'berry_jam',   dislike: 'coal' },
+  wren:  { favorite: 'wood_plank', dislike: 'gem' },
 };
 
 export const MOOD_STATES = [

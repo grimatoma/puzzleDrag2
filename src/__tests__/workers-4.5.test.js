@@ -10,7 +10,7 @@ describe("Phase 4.5 — Housing requirement gates hire count", () => {
     // Provide enough goods for any worker hireCost (spec §12: object hireCost)
     const a0 = { ...base, coins: 9999,
       built: { ...base.built, granary: true, inn: true },
-      inventory: { ...base.inventory, hay: 20, berry: 20, jam: 20, bread: 20, ingot: 20, stone: 20 },
+      inventory: { ...base.inventory, grass_hay: 20, berry: 20, berry_jam: 20, bread: 20, ingot: 20, stone: 20 },
       workers: { hired: { ...base.workers.hired }, debt: 0, pool: 10 } };
     expect(housingCapacity(a0)).toBe(1);
 
@@ -28,7 +28,7 @@ describe("Phase 4.5 — Housing requirement gates hire count", () => {
     // Provide enough goods for any worker hireCost (spec §12: object hireCost)
     const b0 = { ...base, coins: 9999,
       built: { ...base.built, granary: true, inn: true, housing: true },
-      inventory: { ...base.inventory, hay: 20, berry: 20, jam: 20, bread: 20, ingot: 20, stone: 20 },
+      inventory: { ...base.inventory, grass_hay: 20, berry: 20, berry_jam: 20, bread: 20, ingot: 20, stone: 20 },
       workers: { hired: { ...base.workers.hired }, debt: 0, pool: 10 } };
     expect(housingCapacity(b0)).toBe(2);
 
@@ -72,7 +72,7 @@ describe("Phase 4.5 — Housing requirement gates hire count", () => {
     const h = BUILDINGS.find((b) => b.id === "housing");
     expect(h).toBeTruthy();
     expect(h.cost.coins).toBe(300);
-    expect(h.cost.plank).toBe(25);
+    expect(h.cost.wood_plank).toBe(25);
   });
 
   // G: hire deducts pool (4.6 pre-check — pool must be ≥ 1)

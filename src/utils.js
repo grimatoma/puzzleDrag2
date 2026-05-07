@@ -65,7 +65,7 @@ export function resourceGainForChain(chainLength) {
   return chainLength * (chainLength >= 6 ? 2 : 1);
 }
 
-const DROUGHT_AFFECTED = new Set(["wheat", "grain"]);
+const DROUGHT_AFFECTED = new Set(["grain_wheat", "grain"]);
 
 /**
  * Apply weather modification to a resource pool roll.

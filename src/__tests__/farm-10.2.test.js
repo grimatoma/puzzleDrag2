@@ -19,10 +19,10 @@ function farmAt(season) {
 
 describe("10.2 — SEASON_POOL_MODS constants", () => {
   it("spring berry +1", () => expect(SEASON_POOL_MODS.Spring.berry).toBe(1));
-  it("summer wheat +1", () => expect(SEASON_POOL_MODS.Summer.wheat).toBe(1));
-  it("autumn log +2",  () => expect(SEASON_POOL_MODS.Autumn.log).toBe(2));
+  it("summer wheat +1", () => expect(SEASON_POOL_MODS.Summer.grain_wheat).toBe(1));
+  it("autumn log +2",  () => expect(SEASON_POOL_MODS.Autumn.wood_log).toBe(2));
   it("winter stone +1", () => expect(SEASON_POOL_MODS.Winter.stone).toBe(1));
-  it("winter hay -1", () => expect(SEASON_POOL_MODS.Winter.hay).toBe(-1));
+  it("winter hay -1", () => expect(SEASON_POOL_MODS.Winter.grass_hay).toBe(-1));
 });
 
 // ── Pool counts by season ─────────────────────────────────────────────────────
@@ -33,15 +33,15 @@ describe("10.2 — getEffectivePool seasonal counts", () => {
   });
 
   it("spring hay is unchanged", () => {
-    expect(cnt(farmAt("Spring"), "hay")).toBe(cnt(BASE, "hay"));
+    expect(cnt(farmAt("Spring"), "grass_hay")).toBe(cnt(BASE, "grass_hay"));
   });
 
   it("summer pool has +1 wheat over base", () => {
-    expect(cnt(farmAt("Summer"), "wheat")).toBe(cnt(BASE, "wheat") + 1);
+    expect(cnt(farmAt("Summer"), "grain_wheat")).toBe(cnt(BASE, "grain_wheat") + 1);
   });
 
   it("autumn pool has +2 log over base", () => {
-    expect(cnt(farmAt("Autumn"), "log")).toBe(cnt(BASE, "log") + 2);
+    expect(cnt(farmAt("Autumn"), "wood_log")).toBe(cnt(BASE, "wood_log") + 2);
   });
 
   it("winter pool has +1 stone over base", () => {
@@ -49,7 +49,7 @@ describe("10.2 — getEffectivePool seasonal counts", () => {
   });
 
   it("winter pool has -1 hay (clamped at min 1)", () => {
-    expect(cnt(farmAt("Winter"), "hay")).toBe(Math.max(1, cnt(BASE, "hay") - 1));
+    expect(cnt(farmAt("Winter"), "grass_hay")).toBe(Math.max(1, cnt(BASE, "grass_hay") - 1));
   });
 
   it("pool never collapses below 9 entries", () => {
@@ -65,9 +65,9 @@ describe("10.2 — worker pool_weight additive stacking", () => {
       ...createInitialState(),
       biome: "farm",
       season: "Autumn",
-      _workerEffects: { effectivePoolWeights: { log: 1 } },
+      _workerEffects: { effectivePoolWeights: { wood_log: 1 } },
     };
-    expect(cnt(getEffectivePool(s), "log")).toBe(cnt(BASE, "log") + 2 + 1);
+    expect(cnt(getEffectivePool(s), "wood_log")).toBe(cnt(BASE, "wood_log") + 2 + 1);
   });
 });
 

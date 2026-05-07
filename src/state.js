@@ -228,7 +228,7 @@ export function initialState(overrides) {
                // Phase 10.8 — Wolves hazard
                wolves: null },
     // Board grid (populated during play, not stored on init)
-    grid: Array.from({ length: 6 }, () => Array.from({ length: 6 }, () => ({ key: "hay" }))),
+    grid: Array.from({ length: 6 }, () => Array.from({ length: 6 }, () => ({ key: "grass_hay" }))),
     _biomeRestored: false,
     lastChainSnapshot: null,
     magicFertilizerCharges: 0,
@@ -788,14 +788,14 @@ function coreReducer(state, action) {
         let grid = state.grid;
         let collected = 0;
         if (grid) {
-          const eggCount = grid.flat().filter((t) => t.key === "egg").length;
+          const eggCount = grid.flat().filter((t) => t.key === "bird_egg").length;
           if (eggCount === 0) {
             return { ...state, tools: { ...state.tools }, // refund
               bubble: { id: Date.now(), npc: "bram", text: "No eggs to cage.", ms: 1200 } };
           }
           grid = grid.map((row) =>
             row.map((t) => {
-              if (t.key === "egg") { collected += 1; return { ...t, key: null, _emptied: true }; }
+              if (t.key === "bird_egg") { collected += 1; return { ...t, key: null, _emptied: true }; }
               return t;
             }),
           );
@@ -804,7 +804,7 @@ function coreReducer(state, action) {
           ...state,
           tools,
           grid,
-          inventory: { ...state.inventory, egg: (state.inventory?.egg ?? 0) + collected },
+          inventory: { ...state.inventory, bird_egg: (state.inventory?.bird_egg ?? 0) + collected },
         };
       }
       // Phase 10.6 — Scythe (full): collect all grain tiles (no turn cost)

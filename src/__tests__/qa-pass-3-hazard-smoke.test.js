@@ -5,7 +5,7 @@
 import { describe, it, expect } from "vitest";
 import { createInitialState, rootReducer } from "../state.js";
 
-function makeGrid(rows = 6, cols = 6, key = "hay") {
+function makeGrid(rows = 6, cols = 6, key = "grass_hay") {
   return Array.from({ length: rows }, () =>
     Array.from({ length: cols }, () => ({ key })),
   );
@@ -15,7 +15,7 @@ function dispatchChain(state, n = 3) {
   return rootReducer(state, {
     type: "CHAIN_COLLECTED",
     payload: {
-      key: "hay",
+      key: "grass_hay",
       gained: n,
       upgrades: 0,
       value: 1,

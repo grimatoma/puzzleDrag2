@@ -68,14 +68,14 @@ describe("XP per source — CHAIN_COLLECTED (1 XP/chain)", () => {
     const res = s2.inventory;
     const next = rootReducer(s2, {
       type: "CHAIN_COLLECTED",
-      payload: { key: "hay", gained: 5, upgrades: 0, value: 1, chainLength: 5, noTurn: false },
+      payload: { key: "grass_hay", gained: 5, upgrades: 0, value: 1, chainLength: 5, noTurn: false },
     });
     expect(next.almanac.xp).toBe(1);
   });
 
   it("two chains = 2 almanac XP", () => {
     let s = fresh();
-    const payload = { key: "hay", gained: 3, upgrades: 0, value: 1, chainLength: 3, noTurn: false };
+    const payload = { key: "grass_hay", gained: 3, upgrades: 0, value: 1, chainLength: 3, noTurn: false };
     s = rootReducer(s, { type: "CHAIN_COLLECTED", payload });
     s = rootReducer(s, { type: "CHAIN_COLLECTED", payload });
     expect(s.almanac.xp).toBe(2);
@@ -102,7 +102,7 @@ describe("XP per source — BUILD (10 XP)", () => {
     const b = BUILDINGS.find((x) => x.id === "hearth_upgrade") ?? BUILDINGS[0];
     if (!b) return; // guard if no buildings available cheaply
     // Give enough resources to build cheaply
-    const rich = { ...s, coins: 99999, inventory: { hay: 999, log: 999, stone: 999, ore: 999, grain: 999 } };
+    const rich = { ...s, coins: 99999, inventory: { grass_hay: 999, wood_log: 999, stone: 999, ore: 999, grain: 999 } };
     const next = rootReducer(rich, { type: "BUILD", building: b });
     if (next === rich) return; // build was rejected (no-op guard)
     expect(next.almanac.xp).toBe(10);
@@ -113,7 +113,7 @@ describe("XP per source — BOSS/RESOLVE won (25 XP)", () => {
   it("winning a boss awards 25 almanac XP", () => {
     const s = {
       ...fresh(),
-      boss: { key: "frostmaw", resource: "log", targetCount: 30, progress: 30, turnsLeft: 3, minChain: null },
+      boss: { key: "frostmaw", resource: "wood_log", targetCount: 30, progress: 30, turnsLeft: 3, minChain: null },
     };
     const next = rootReducer(s, { type: "BOSS/RESOLVE", won: true });
     expect(next.almanac.xp).toBe(25);
@@ -122,7 +122,7 @@ describe("XP per source — BOSS/RESOLVE won (25 XP)", () => {
   it("losing a boss awards 0 almanac XP", () => {
     const s = {
       ...fresh(),
-      boss: { key: "frostmaw", resource: "log", targetCount: 30, progress: 5, turnsLeft: 0, minChain: null },
+      boss: { key: "frostmaw", resource: "wood_log", targetCount: 30, progress: 5, turnsLeft: 0, minChain: null },
     };
     const next = rootReducer(s, { type: "BOSS/RESOLVE", won: false });
     expect(next.almanac.xp).toBe(0);
@@ -134,7 +134,7 @@ describe("XP per source — CLAIM_QUEST (20 XP)", () => {
     const s = {
       ...fresh(),
       quests: [{
-        id: "tq1", template: "collect_hay", category: "collect", key: "hay",
+        id: "tq1", template: "collect_hay", category: "collect", key: "grass_hay",
         target: 10, progress: 10, claimed: false, reward: { coins: 50, xp: 20 },
       }],
     };

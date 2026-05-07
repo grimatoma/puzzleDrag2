@@ -16,7 +16,7 @@ function recipe(id) {
 
 describe("10.3 — §11 forge recipe registration", () => {
   it("iron_frame: 2 beam + 1 ingot", () => {
-    expect(recipe("iron_frame").inputs.beam).toBe(2);
+    expect(recipe("iron_frame").inputs.wood_beam).toBe(2);
     expect(recipe("iron_frame").inputs.ingot).toBe(1);
   });
 
@@ -41,7 +41,7 @@ describe("10.3 — §11 forge recipe registration", () => {
 
   it("camelCase aliases still work: ironframe", () => {
     expect(recipe("ironframe")).toBeDefined();
-    expect(recipe("ironframe").inputs.beam).toBe(2);
+    expect(recipe("ironframe").inputs.wood_beam).toBe(2);
   });
 
   it("camelCase aliases still work: gemcrown", () => {
@@ -66,18 +66,18 @@ describe("10.3 — CRAFT iron_frame via CRAFT action", () => {
   }
 
   it("crafts iron_frame: debits 2 beam + 1 ingot, adds 1 iron_frame", () => {
-    const s0 = forgeState({ beam: 3, ingot: 3 });
+    const s0 = forgeState({ wood_beam: 3, ingot: 3 });
     const s1 = rootReducer(s0, { type: "CRAFT", payload: { id: "iron_frame" } });
-    expect(s1.inventory.beam).toBe(1);
+    expect(s1.inventory.wood_beam).toBe(1);
     expect(s1.inventory.ingot).toBe(2);
     expect(s1.inventory.iron_frame ?? 0).toBe(1);
   });
 
   it("insufficient inputs = no-op (inventory and iron_frame unchanged)", () => {
-    const s0 = forgeState({ beam: 1, ingot: 1 });
+    const s0 = forgeState({ wood_beam: 1, ingot: 1 });
     const s1 = rootReducer(s0, { type: "CRAFT", payload: { id: "iron_frame" } });
     // Core state should be unchanged: inventory not debited, no iron_frame added
-    expect(s1.inventory.beam).toBe(1);
+    expect(s1.inventory.wood_beam).toBe(1);
     expect(s1.inventory.ingot).toBe(1);
     expect(s1.inventory.iron_frame ?? 0).toBe(0);
   });
@@ -85,7 +85,7 @@ describe("10.3 — CRAFT iron_frame via CRAFT action", () => {
   it("no forge = no craft", () => {
     const s0 = createInitialState();
     const s1 = rootReducer(
-      { ...s0, inventory: { ...s0.inventory, beam: 5, ingot: 5 } },
+      { ...s0, inventory: { ...s0.inventory, wood_beam: 5, ingot: 5 } },
       { type: "CRAFT", payload: { id: "iron_frame" } },
     );
     expect(s1.inventory.iron_frame ?? 0).toBe(0);

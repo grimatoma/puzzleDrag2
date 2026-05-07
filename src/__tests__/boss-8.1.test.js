@@ -28,7 +28,7 @@ describe("8.1 — Boss board modifiers", () => {
 
   it("frostmaw: 30 logs + freeze_columns n=2", () => {
     const fm = BOSSES.find((b) => b.id === "frostmaw");
-    expect(fm.target.resource).toBe("log");
+    expect(fm.target.resource).toBe("wood_log");
     expect(fm.target.amount).toBe(30);
     expect(fm.modifier.type).toBe("freeze_columns");
     expect(fm.modifier.params.n).toBe(2);
@@ -49,7 +49,7 @@ describe("8.1 — Boss board modifiers", () => {
   it("quagmire: 50 hay", () => {
     const qm = BOSSES.find((b) => b.id === "quagmire");
     expect(qm.target.amount).toBe(50);
-    expect(qm.target.resource).toBe("hay");
+    expect(qm.target.resource).toBe("grass_hay");
   });
 
   it("freeze_columns: 2 distinct columns flagged, frozen tiles not chainable", () => {
@@ -67,7 +67,7 @@ describe("8.1 — Boss board modifiers", () => {
   it("heat_tiles: age 1 → 2 → burn 1 random inventory unit", () => {
     const ed = BOSSES.find((b) => b.id === "ember_drake");
     let s = createInitialState();
-    s.inventory = { hay: 5, log: 3 };
+    s.inventory = { grass_hay: 5, wood_log: 3 };
     s.boss = {
       id: "ember_drake",
       target: { resource: "ingot", amount: 3 },
@@ -78,7 +78,7 @@ describe("8.1 — Boss board modifiers", () => {
     s = tickModifier(s, ed.modifier).newState;
     expect(s.boss.modifierState.heat[0].age).toBe(2);
     s = tickModifier(s, ed.modifier).newState;
-    expect(s.inventory.hay + s.inventory.log).toBe(7);
+    expect(s.inventory.grass_hay + s.inventory.wood_log).toBe(7);
     expect(s.boss.modifierState.heat.length).toBe(0);
   });
 

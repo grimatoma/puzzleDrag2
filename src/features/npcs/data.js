@@ -6,11 +6,11 @@ export const BOND_BANDS = Object.freeze([
 ]);
 
 export const NPC_DATA = Object.freeze({
-  mira:  { id: "mira",  displayName: "Mira",        favoriteGift: "flour" },
-  tomas: { id: "tomas", displayName: "Old Tomas",   favoriteGift: "jam"   },
+  mira:  { id: "mira",  displayName: "Mira",        favoriteGift: "grain_flour" },
+  tomas: { id: "tomas", displayName: "Old Tomas",   favoriteGift: "berry_jam"   },
   bram:  { id: "bram",  displayName: "Bram",        favoriteGift: "ingot" },
-  liss:  { id: "liss",  displayName: "Sister Liss", favoriteGift: "jam"   },
-  wren:  { id: "wren",  displayName: "Wren",        favoriteGift: "plank" },
+  liss:  { id: "liss",  displayName: "Sister Liss", favoriteGift: "berry_jam"   },
+  wren:  { id: "wren",  displayName: "Wren",        favoriteGift: "wood_plank" },
 });
 
 export const NPC_IDS = Object.freeze(["wren", "mira", "tomas", "bram", "liss"]);

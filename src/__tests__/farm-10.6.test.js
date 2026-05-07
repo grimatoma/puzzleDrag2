@@ -26,7 +26,7 @@ function makeGridWith(items) {
 
 describe("10.6 — WORKSHOP_RECIPES", () => {
   it("bird_cage costs 1 hay", () => {
-    expect(WORKSHOP_RECIPES.bird_cage.inputs.hay).toBe(1);
+    expect(WORKSHOP_RECIPES.bird_cage.inputs.grass_hay).toBe(1);
   });
 
   it("scythe_full costs 1 stone", () => {
@@ -45,20 +45,20 @@ describe("10.6 — initial tool counts", () => {
 
 describe("10.6 — USE_TOOL bird_cage", () => {
   it("collects all 3 egg tiles into inventory", () => {
-    const grid = makeGridWith([{ key: "egg", count: 3 }, { key: "hay", count: 4 }]);
+    const grid = makeGridWith([{ key: "bird_egg", count: 3 }, { key: "grass_hay", count: 4 }]);
     const s0 = {
       ...createInitialState(),
       grid,
       tools: { ...createInitialState().tools, bird_cage: 1 },
-      inventory: { ...createInitialState().inventory, egg: 0 },
+      inventory: { ...createInitialState().inventory, bird_egg: 0 },
     };
     const s1 = rootReducer(s0, { type: "USE_TOOL", payload: { id: "bird_cage" } });
-    expect(s1.inventory.egg).toBe(3);
+    expect(s1.inventory.bird_egg).toBe(3);
     expect(s1.tools.bird_cage).toBe(0);
   });
 
   it("does NOT consume a turn", () => {
-    const grid = makeGridWith([{ key: "egg", count: 2 }]);
+    const grid = makeGridWith([{ key: "bird_egg", count: 2 }]);
     const s0 = {
       ...createInitialState(),
       grid,
@@ -70,7 +70,7 @@ describe("10.6 — USE_TOOL bird_cage", () => {
   });
 
   it("refunds when no egg tiles (tool count unchanged)", () => {
-    const grid = makeGridWith([{ key: "hay", count: 6 }]);
+    const grid = makeGridWith([{ key: "grass_hay", count: 6 }]);
     const s0 = {
       ...createInitialState(),
       grid,
@@ -85,7 +85,7 @@ describe("10.6 — USE_TOOL bird_cage", () => {
 
 describe("10.6 — USE_TOOL scythe_full", () => {
   it("collects all 5 grain tiles into inventory", () => {
-    const grid = makeGridWith([{ key: "grain", count: 5 }, { key: "hay", count: 2 }]);
+    const grid = makeGridWith([{ key: "grain", count: 5 }, { key: "grass_hay", count: 2 }]);
     const s0 = {
       ...createInitialState(),
       grid,
@@ -110,7 +110,7 @@ describe("10.6 — USE_TOOL scythe_full", () => {
   });
 
   it("Phase-1 scythe (key 'clear') is NOT affected", () => {
-    const grid = makeGridWith([{ key: "grain", count: 5 }, { key: "hay", count: 2 }]);
+    const grid = makeGridWith([{ key: "grain", count: 5 }, { key: "grass_hay", count: 2 }]);
     const s0 = {
       ...createInitialState(),
       grid,
