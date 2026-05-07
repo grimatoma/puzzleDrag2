@@ -1,5 +1,5 @@
 import Phaser from "phaser";
-import { TILE, COLS, ROWS, UPGRADE_THRESHOLDS, SEASONS, BIOMES, SEASON_EFFECTS, CAPPED_RESOURCES } from "./constants.js";
+import { TILE, COLS, ROWS, UPGRADE_THRESHOLDS, SEASONS, BIOMES, SEASON_EFFECTS, CAPPED_RESOURCES, SCENE_EVENTS } from "./constants.js";
 import { upgradeCountForChain, resourceGainForChain, rollResourceWithWeather } from "./utils.js";
 import { computeWorkerEffects } from "./features/apprentices/aggregate.js";
 import { applyFrostCollapseDuration } from "./features/weather/effects.js";
@@ -466,7 +466,7 @@ export class GameScene extends Phaser.Scene {
       serialized.push(row);
     }
     this._suppressNextGridApply = true;
-    this.events.emit("grid-sync", { grid: serialized });
+    this.events.emit(SCENE_EVENTS.GRID_SYNC, { grid: serialized });
     this.time.delayedCall(0, () => { this._suppressNextGridApply = false; });
   }
 
@@ -532,7 +532,7 @@ export class GameScene extends Phaser.Scene {
         const extra = fBase[k] ?? 0;
         for (let i = 0; i < extra; i++) workerPool.push(k);
       }
-      this.events.emit("fertilizer-consumed");
+      this.events.emit(SCENE_EVENTS.FERTILIZER_CONSUMED);
     }
     for (let r = 0; r < ROWS; r++) {
       this.grid[r] = this.grid[r] || [];
@@ -707,7 +707,7 @@ export class GameScene extends Phaser.Scene {
       const biome = this.biome();
       const res = biome.resources.find((r) => r.key === key);
       if (res) {
-        this.events.emit("chain-collected", { key, gained, upgrades: 0, chainLength: gained, value: res.value, noTurn: true });
+        this.events.emit(SCENE_EVENTS.CHAIN_COLLECTED, { key, gained, upgrades: 0, chainLength: gained, value: res.value, noTurn: true });
       }
     }
     this.time.delayedCall(240, () => this.collapseBoard());
@@ -808,7 +808,7 @@ export class GameScene extends Phaser.Scene {
       });
     });
     // Emit collection event (noTurn: true so no turn is consumed)
-    this.events.emit("chain-collected", {
+    this.events.emit(SCENE_EVENTS.CHAIN_COLLECTED, {
       key: targetRes.key,
       gained: swept.length,
       upgrades: 0,
@@ -853,7 +853,7 @@ export class GameScene extends Phaser.Scene {
       });
     });
     const res = this.biome().resources.find((r) => r.key === targetKey);
-    this.events.emit("chain-collected", {
+    this.events.emit(SCENE_EVENTS.CHAIN_COLLECTED, {
       key: targetKey, gained: swept.length, upgrades: 0,
       chainLength: swept.length, value: res?.value ?? 1, noTurn: true,
     });
@@ -882,7 +882,7 @@ export class GameScene extends Phaser.Scene {
     });
     for (const [key, gained] of Object.entries(gainMap)) {
       const res = this.biome().resources.find((r) => r.key === key);
-      this.events.emit("chain-collected", {
+      this.events.emit(SCENE_EVENTS.CHAIN_COLLECTED, {
         key, gained, upgrades: 0, chainLength: gained, value: res?.value ?? 1, noTurn: true,
       });
     }
@@ -914,7 +914,7 @@ export class GameScene extends Phaser.Scene {
     });
     for (const [key, gained] of Object.entries(gainMap)) {
       const res = this.biome().resources.find((r) => r.key === key);
-      this.events.emit("chain-collected", {
+      this.events.emit(SCENE_EVENTS.CHAIN_COLLECTED, {
         key, gained, upgrades: 0, chainLength: gained, value: res?.value ?? 1, noTurn: true,
       });
     }
@@ -944,7 +944,7 @@ export class GameScene extends Phaser.Scene {
         onComplete: () => t.destroy(),
       });
     });
-    this.events.emit("chain-collected", {
+    this.events.emit(SCENE_EVENTS.CHAIN_COLLECTED, {
       key: targetRes.key, gained: swept.length, upgrades: 0,
       chainLength: swept.length, value: targetRes.value, noTurn: true,
     });
@@ -1270,7 +1270,7 @@ export class GameScene extends Phaser.Scene {
     const totalGained = gained + (bonusGains[res.key] ?? 0);
     // Include tile positions so the reducer can extinguish fire/hazard cells
     const chainTiles = this.path.map(t => ({ key: t.res.key, row: t.row, col: t.col }));
-    this.events.emit("chain-collected", { key: res.key, gained: totalGained, upgrades: rawUpgrades, chainLength: this.path.length, value: res.value, chain: chainTiles });
+    this.events.emit(SCENE_EVENTS.CHAIN_COLLECTED, { key: res.key, gained: totalGained, upgrades: rawUpgrades, chainLength: this.path.length, value: res.value, chain: chainTiles });
 
     this.pathLines.forEach((l) => l.destroy());
     this.pathStars.forEach((s) => s.destroy());
@@ -1322,7 +1322,7 @@ export class GameScene extends Phaser.Scene {
   hideChainBadge() {
     if (this.chainBadge) { this.chainBadge.destroy(); this.chainBadge = null; this.chainBadgeText = null; }
     this.hideChainStatus();
-    this.events.emit("chain-update", null);
+    this.events.emit(SCENE_EVENTS.CHAIN_UPDATE, null);
   }
 
   // ─── Chain progress panel (X/T toward next upgrade product) ──────────────
@@ -1464,7 +1464,7 @@ export class GameScene extends Phaser.Scene {
     // V.2 — Display autumn-multiplied upgrade count; V.1 — include valid flag for React side panel
     const k = next ? upgradeCountForChain(n, res.key, effThresh) * this._autumnMult() : 0;
     const valid = n === 0 || n >= this._effectiveMinChain();
-    this.events.emit("chain-update", { count: gained, upgrades: k, valid });
+    this.events.emit(SCENE_EVENTS.CHAIN_UPDATE, { count: gained, upgrades: k, valid });
   }
 
   // ─── Juice (chain-length feedback) ────────────────────────────────────────

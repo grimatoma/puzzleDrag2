@@ -1,5 +1,5 @@
 import { useEffect, useReducer, useRef, useState } from "react";
-import { COLS, ROWS, TILE } from "./src/constants.js";
+import { COLS, ROWS, TILE, SCENE_EVENTS } from "./src/constants.js";
 import { runSelfTests, currentCap } from "./src/utils.js";
 import { gameReducer, initialState } from "./src/state.js";
 import { Hud } from "./src/ui/Hud.jsx";
@@ -84,10 +84,10 @@ function PhaserMount({ dispatch, biomeKey, turnsUsed, seasonsCycled, uiLocked, s
               const scene = game.scene.scenes[0];
               sceneRef.current = scene;
               setPhaserScene(scene);
-              scene.events.on("chain-collected", (payload) => dispatch({ type: "CHAIN_COLLECTED", payload }));
-              scene.events.on("fertilizer-consumed", () => dispatch({ type: "FERTILIZER/CONSUMED" }));
-              scene.events.on("grid-sync", ({ grid: g }) => dispatch({ type: "GRID/SYNC", payload: { grid: g } }));
-              scene.events.on("chain-update", (data) => setChainInfo(data));
+              scene.events.on(SCENE_EVENTS.CHAIN_COLLECTED, (payload) => dispatch({ type: "CHAIN_COLLECTED", payload }));
+              scene.events.on(SCENE_EVENTS.FERTILIZER_CONSUMED, () => dispatch({ type: "FERTILIZER/CONSUMED" }));
+              scene.events.on(SCENE_EVENTS.GRID_SYNC, ({ grid: g }) => dispatch({ type: "GRID/SYNC", payload: { grid: g } }));
+              scene.events.on(SCENE_EVENTS.CHAIN_UPDATE, (data) => setChainInfo(data));
               setLoading(false);
             },
           },
