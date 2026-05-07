@@ -3,25 +3,33 @@ import { WORKERS, WORKER_MAP, APPRENTICES, APPRENTICE_MAP } from "../features/ap
 import { initialState } from "../state.js";
 
 describe("Phase 4.1 — Worker data model", () => {
-  it("exports exactly 6 farm workers", () => {
-    expect(WORKERS.length).toBe(6);
+  it("exports exactly 6 farm workers (Phase 9 mine workers added separately)", () => {
+    // Phase 9 added canary + geologist (mine workers) to the same WORKERS array.
+    // Farm workers remain the original 6; total is now 8.
+    const farmWorkerIds = ["hilda", "pip", "wila", "tuck", "osric", "dren"];
+    const farmWorkers = WORKERS.filter((w) => farmWorkerIds.includes(w.id));
+    expect(farmWorkers.length).toBe(6);
   });
 
-  it("WORKER_MAP has all 6 ids", () => {
+  it("WORKER_MAP has all 6 farm worker ids", () => {
     for (const id of ["hilda", "pip", "wila", "tuck", "osric", "dren"]) {
       expect(WORKER_MAP[id]).toBeTruthy();
     }
   });
 
-  it("every worker has required shape", () => {
+  it("every farm worker has required shape (mine workers use structured effect format)", () => {
+    const farmWorkerIds = new Set(["hilda", "pip", "wila", "tuck", "osric", "dren"]);
     for (const w of WORKERS) {
       expect(typeof w.id).toBe("string");
       expect(typeof w.name).toBe("string");
       expect(Number.isInteger(w.maxCount) && w.maxCount >= 1).toBe(true);
-      expect(["threshold_reduce", "pool_weight", "bonus_yield", "season_bonus"]
-        .includes(w.effect.type)).toBe(true);
-      expect(Number.isInteger(w.hireCost)).toBe(true);
       expect(Number.isInteger(w.wage)).toBe(true);
+      // Farm workers use legacy type-dispatch; mine workers (Phase 9) use structured effects
+      if (farmWorkerIds.has(w.id)) {
+        expect(["threshold_reduce", "pool_weight", "bonus_yield", "season_bonus"]
+          .includes(w.effect.type)).toBe(true);
+        expect(Number.isInteger(w.hireCost)).toBe(true);
+      }
     }
   });
 

@@ -82,6 +82,36 @@ export const WORKERS = [
     effect: { type: "pool_weight", key: "stone", amount: 2 },
     requirement: { level: 2 },
   },
+
+  // ── Phase 9 — Mine workers ──────────────────────────────────────────────────
+  // Locked rule: max-effect model from Phase 4.
+  // Per-hire = effect / maxCount. Pool-weight effects floor to integer.
+  {
+    id: "canary",
+    name: "Canary",
+    role: "Hazard Spotter",
+    icon: "🐦",
+    color: "#f5c842",
+    wage: 18,
+    hireCost: { worker: 1, coke: 4, bread: 6 },
+    maxCount: 2,
+    // At max hire (2): gas_vent spawn rate −50%. Per hire: −25%.
+    effect: { hazardSpawnReduce: { gas_vent: 0.5 } },
+    requirement: { biomeUnlocked: "mine" },
+  },
+  {
+    id: "geologist",
+    name: "Geologist",
+    role: "Surveyor",
+    icon: "🔭",
+    color: "#8a6a3a",
+    wage: 30,
+    hireCost: { worker: 1, ingot: 6, bread: 6 },
+    maxCount: 2,
+    // At max hire (2): ore +1, gem +1 in pool. 1 hire floors to +0 (0.5 per hire).
+    effect: { poolWeight: { ore: 1, gem: 1 } },
+    requirement: { biomeUnlocked: "mine" },
+  },
 ];
 
 export const WORKER_MAP = Object.fromEntries(WORKERS.map((w) => [w.id, w]));

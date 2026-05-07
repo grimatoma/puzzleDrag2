@@ -31,11 +31,17 @@ export const SEASONS = [
   { name: "Winter", icon: "snow", bg: 0x78aaca, fill: 0x91d9ff, accent: 0xd9f6ff },
 ];
 
+export const FARM_TILE_POOL = ["hay", "hay", "hay", "log", "log", "wheat", "berry", "berry", "egg"];
+export const MINE_TILE_POOL = ["stone", "stone", "stone", "ore", "ore", "coal", "dirt", "dirt", "gem"];
+
 export const BIOMES = {
   farm: {
     name: "Farm",
     dirt: 0x6d4a2f,
     dark: 0x3e2a1a,
+    dirtColor: 0x6d4a2f,
+    palette: { bg: 0x7dbd48, accent: 0x5daa35, dim: 0x3e2a1a },
+    tilePool: FARM_TILE_POOL,
     resources: [
       { key: "hay",   label: "Hay",   color: 0xa8c769, dark: 0x4f6b3a, value: 1, next: "wheat", glyph: "🌾", sway: { amp: 4.0, freq: 0.00060, gust: 0.20 } },
       { key: "wheat", label: "Wheat", color: 0xdab947, dark: 0x7e5e1a, value: 2, next: "grain", glyph: "𓂃", sway: { amp: 5.0, freq: 0.00065, gust: 0.22 } },
@@ -48,12 +54,15 @@ export const BIOMES = {
       { key: "jam",   label: "Jam",   color: 0xd4658c, dark: 0x7a2f50, value: 5, next: null,    glyph: "◎", sway: { amp: 0.8, freq: 0.00025, gust: 0.00 } },
       { key: "egg",   label: "Egg",   color: 0xf4ecd8, dark: 0x8a785e, value: 3, next: null,    glyph: "◯", sway: { amp: 1.5, freq: 0.00055, gust: 0.08 } },
     ],
-    pool: ["hay", "hay", "hay", "log", "log", "wheat", "berry", "berry", "egg"],
+    pool: FARM_TILE_POOL,
   },
   mine: {
     name: "Mine",
     dirt: 0x242526,
     dark: 0x151515,
+    dirtColor: 0x3e3a36,
+    palette: { bg: 0x2a2c30, accent: 0x6a7280, dim: 0x121316 },
+    tilePool: MINE_TILE_POOL,
     resources: [
       { key: "stone",  label: "Stone",  color: 0x9da3a8, dark: 0x3e4348, value: 1,  next: "cobble", glyph: "◆" },
       { key: "cobble", label: "Cobble", color: 0xbbc1c6, dark: 0x4e5358, value: 3,  next: "block",  glyph: "◇" },
@@ -65,8 +74,9 @@ export const BIOMES = {
       { key: "gem",    label: "Gem",    color: 0x65e5ff, dark: 0x1686a3, value: 7,  next: "cutgem", glyph: "◈", sway: { amp: 1.2, freq: 0.00028, gust: 0.04 } },
       { key: "cutgem", label: "CutGem", color: 0xa3f0ff, dark: 0x1686a3, value: 14, next: null,     glyph: "✦", sway: { amp: 1.2, freq: 0.00028, gust: 0.04 } },
       { key: "gold",   label: "Gold",   color: 0xffd34c, dark: 0x946b11, value: 5,  next: null,     glyph: "✺", sway: { amp: 1.0, freq: 0.00024, gust: 0.04 } },
+      { key: "dirt",   label: "Dirt",   color: 0x7a6850, dark: 0x3e3a36, value: 1,  next: null,     glyph: "◫" },
     ],
-    pool: ["stone", "stone", "stone", "ore", "ore", "coal", "coal", "gold", "gem"],
+    pool: MINE_TILE_POOL,
   },
 };
 
@@ -140,6 +150,8 @@ export const BUILDINGS = [
 
 export const RECIPES = {
   shovel:     { name: "Shovel",          inputs: { plank: 1, stone: 1 },          tier: 1, station: "workshop", coins: 25 },
+  water_pump: { name: "Water Pump",      inputs: { plank: 1, stone: 1 },          tier: 2, station: "workshop", coins: 0, tool: "water_pump" },
+  explosives: { name: "Explosives",      inputs: { hay: 1, dirt: 1 },             tier: 2, station: "workshop", coins: 0, tool: "explosives" },
   bread:      { name: "Bread Loaf",     inputs: { flour: 3, egg: 1 },            tier: 1, station: "bakery", coins: 125, glyph: "🍞", color: 0xd49060, dark: 0x7a4a28 },
   honeyroll:  { name: "Honey Roll",     inputs: { flour: 2, egg: 1, jam: 1 },   tier: 2, station: "bakery", coins: 175, glyph: "🍯", color: 0xf0c050, dark: 0x8a6010 },
   harvestpie: { name: "Harvest Pie",    inputs: { flour: 2, jam: 1, egg: 1 },   tier: 2, station: "bakery", coins: 175, glyph: "🥧", color: 0xd4784a, dark: 0x6a3018 },

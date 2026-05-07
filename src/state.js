@@ -1,4 +1,5 @@
-import { BIOMES, BUILDINGS, NPCS, MAX_TURNS, RECIPES, STORAGE_KEYS, SEASON_EFFECTS, DAILY_REWARDS, MINE_ENTRY_TIERS, CAPPED_RESOURCES } from "./constants.js";
+import { BIOMES, BUILDINGS, NPCS, MAX_TURNS, RECIPES, STORAGE_KEYS, SEASON_EFFECTS, DAILY_REWARDS, MINE_ENTRY_TIERS, CAPPED_RESOURCES, UPGRADE_THRESHOLDS } from "./constants.js";
+import { isMysteriousChainValid } from "./features/mine/mysterious_ore.js";
 import { driftPrices, applyTrade } from "./market.js";
 import { currentCap } from "./utils.js";
 import { WORKER_MAP } from "./features/apprentices/data.js";
@@ -179,6 +180,7 @@ export function initialState(overrides) {
   const extraScytheBonus = overrides?.tools?.startingExtraScythe ? 1 : 0;
   const fresh = {
     biomeKey,
+    biome: "farm",
     saveSeed,
     view: "town",
     coins: 150,
@@ -192,7 +194,13 @@ export function initialState(overrides) {
     tools: { clear: 2, basic: 1, rare: 1, shuffle: 0, bomb: 0,
              scythe: extraScytheBonus, seedpack: 0, lockbox: 0, reshuffle: 0,
              startingExtraScythe: !!overrides?.tools?.startingExtraScythe,
-             magic_wand: 0, hourglass: 0, magic_seed: 0, magic_fertilizer: 0 },
+             magic_wand: 0, hourglass: 0, magic_seed: 0, magic_fertilizer: 0,
+             water_pump: 0, explosives: 0 },
+    // Phase 9 — Mine biome state
+    mysteriousOre: null,
+    hazards: { caveIn: null, gasVent: null, lava: null, mole: null },
+    // Board grid (populated during play, not stored on init)
+    grid: Array.from({ length: 6 }, () => Array.from({ length: 6 }, () => ({ key: "hay" }))),
     lastChainSnapshot: null,
     magicFertilizerCharges: 0,
     built: { hearth: true, decorations: {} },
@@ -534,8 +542,12 @@ function coreReducer(state, action) {
       };
     }
     case "USE_TOOL": {
-      // Support both action.key (legacy) and action.payload.key (Phase 1+)
-      const key = action.payload?.key ?? action.key;
+      // Support action.payload.id (Phase 9), action.payload.key, or action.key (legacy)
+      const key = action.payload?.id ?? action.payload?.key ?? action.key;
+      // Magic tools (hourglass, magic_seed, magic_fertilizer) are handled exclusively
+      // by the portal slice — skip them here to avoid double-consume.
+      const MAGIC_TOOL_IDS = new Set(["hourglass", "magic_seed", "magic_fertilizer", "magic_wand"]);
+      if (MAGIC_TOOL_IDS.has(key)) return state;
       if ((state.tools[key] || 0) <= 0) return state;
       const tools = { ...state.tools, [key]: state.tools[key] - 1 };
       if (key === "shuffle") {
@@ -576,6 +588,33 @@ function coreReducer(state, action) {
           tools,
           toolPending: "bomb",
           bubble: { id: Date.now(), npc: "bram", text: "Bomb armed — tap a tile to detonate!", ms: 1500 },
+        };
+      }
+      // Phase 9 — Water Pump: clear all lava cells (converts to rubble), no turn cost
+      if (key === "water_pump") {
+        const lavaCells = state.hazards?.lava?.cells ?? [];
+        let grid = state.grid;
+        if (lavaCells.length > 0 && grid) {
+          const lavaSet = new Set(lavaCells.map((c) => `${c.row},${c.col}`));
+          grid = grid.map((row, ri) =>
+            row.map((t, ci) =>
+              lavaSet.has(`${ri},${ci}`) ? { ...t, key: "stone", rubble: true, lava: false } : t,
+            ),
+          );
+        }
+        return {
+          ...state,
+          tools,
+          grid,
+          hazards: { ...state.hazards, lava: null },
+        };
+      }
+      // Phase 9 — Explosives: clear mole + cave-in rubble, no turn cost
+      if (key === "explosives") {
+        return {
+          ...state,
+          tools,
+          hazards: { ...state.hazards, mole: null, caveIn: null },
         };
       }
       // Unknown tool key — decrement only
@@ -855,6 +894,69 @@ function coreReducer(state, action) {
     case "GRANT_RUNES": {
       const amt = Math.max(0, action.payload?.amount | 0);
       return { ...state, runes: (state.runes ?? 0) + amt };
+    }
+
+    // ── Phase 9 — Mine biome actions ───────────────────────────────────────────
+
+    case "ADVANCE_SEASON": {
+      // Used in tests to move to a season boundary so SET_BIOME is allowed.
+      return { ...state, turnsUsed: 0, seasonsCycled: (state.seasonsCycled || 0) + 1 };
+    }
+
+    case "SET_BIOME": {
+      // Reject mid-season switches; only allowed at a season boundary (turnsUsed === 0)
+      if ((state.turnsUsed ?? 0) > 0) return state;
+      const biomeId = action.id ?? action.payload?.id;
+      if (!biomeId || !BIOMES[biomeId]) return state;
+      if (biomeId === state.biome) return state;
+      // Switching to Farm clears mysteriousOre (mine-only mechanic)
+      const clearMine = biomeId === "farm";
+      return {
+        ...state,
+        biome: biomeId,
+        biomeKey: biomeId,
+        mysteriousOre: clearMine ? null : state.mysteriousOre,
+        _needsRefill: true,
+      };
+    }
+
+    case "COMMIT_CHAIN": {
+      // Mine-biome chain commit with upgrade logic.
+      // Checks for mysterious ore special case; applies standard upgrade math.
+      const chain = action.chain ?? [];
+      if (chain.length === 0) return state;
+
+      const chainKey = chain[0]?.key;
+      if (!chainKey) return state;
+
+      // Mysterious ore chain check
+      const hasOre = chain.some((t) => t.key === "mysterious_ore");
+      if (hasOre) {
+        if (!isMysteriousChainValid(chain)) {
+          // Rejected — no-op (countdown does NOT tick)
+          return state;
+        }
+        // Valid mysterious capture: +1 rune, clear ore
+        return {
+          ...state,
+          runes: (state.runes ?? 0) + 1,
+          mysteriousOre: null,
+        };
+      }
+
+      // Standard chain: all tiles must be the same key
+      const length = chain.length;
+      const threshold = UPGRADE_THRESHOLDS[chainKey];
+      const upgrades = threshold ? Math.floor(length / threshold) : 0;
+      const gained = length - upgrades;
+      const inv = { ...state.inventory };
+      inv[chainKey] = (inv[chainKey] ?? 0) + gained;
+      // Upgraded resource
+      const res = Object.values(BIOMES).flatMap((b) => b.resources ?? []).find((r) => r.key === chainKey);
+      if (res?.next && upgrades > 0) {
+        inv[res.next] = (inv[res.next] ?? 0) + upgrades;
+      }
+      return { ...state, inventory: inv };
     }
 
     case "ACTIVATE_RUNE_WILDCARD": {
