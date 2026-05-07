@@ -1,17 +1,21 @@
 import { BIOMES, RECIPES } from "../../constants.js";
+import { BOSSES, BOSS_WINDOW_TURNS, bossReward as bossRewardFn } from "../bosses/data.js";
+import { WEATHER_TABLE, rollWeather } from "../weather/data.js";
 
 const ALL_RESOURCES = [...BIOMES.farm.resources, ...BIOMES.mine.resources];
 
+// Build BOSS_META from the canonical BOSSES list (features/bosses/data.js)
+// Preserving UI-only fields (emoji, flavor, goal) inline while sourcing turns
+// from BOSS_WINDOW_TURNS and resource/target from each boss def.
 const BOSS_META = {
   frostmaw: {
     name: "The Frostmaw",
     emoji: "❄️",
     flavor: "A frozen titan stirs in the deep winter wood. Your hearth must not go dark.",
-    goal: "Bring 30 logs in 5 turns to keep the hearth lit.",
+    goal: "Bring 30 logs in 10 turns to keep the hearth lit.",
     resource: "log",
     targetCount: 30,
-    turns: 5,
-    // Board modifier: chains must be 5+ during this boss
+    turns: BOSS_WINDOW_TURNS, // §18 locked: 10
     minChain: 5,
   },
   ember_drake: {
@@ -21,17 +25,17 @@ const BOSS_META = {
     goal: "Forge 3 ingots before the hour passes.",
     resource: "ingot",
     targetCount: 3,
-    turns: 5,
+    turns: BOSS_WINDOW_TURNS,
     minChain: null,
   },
   quagmire: {
     name: "The Quagmire",
     emoji: "🌿",
     flavor: "The bog has swallowed the lower fields. Only a bountiful harvest can drain its hold.",
-    goal: "Drain the bog: harvest 50 hay across 5 seasons.",
+    goal: "Drain the bog: harvest 50 hay across 10 turns.",
     resource: "hay",
     targetCount: 50,
-    turns: 5,
+    turns: BOSS_WINDOW_TURNS,
     minChain: null,
   },
   old_stoneface: {
@@ -41,7 +45,7 @@ const BOSS_META = {
     goal: "Quarry 20 stone from the rock biome.",
     resource: "stone",
     targetCount: 20,
-    turns: 5,
+    turns: BOSS_WINDOW_TURNS,
     minChain: null,
   },
   mossback: {
@@ -51,17 +55,18 @@ const BOSS_META = {
     goal: "Hide ~4 mystery tiles that flip on chain.",
     resource: "berry",
     targetCount: 30,
-    turns: 10,
+    turns: BOSS_WINDOW_TURNS,
     minChain: null,
     hiddenTilesTarget: 4,
   },
 };
 
-// Seasonal boss rotation — one per year, cycling through the 4 bosses
-const YEAR_BOSS_ROTATION = ["frostmaw", "quagmire", "ember_drake", "old_stoneface"];
+// Seasonal boss rotation — one per year, cycling through the 5 bosses (includes mossback)
+const YEAR_BOSS_ROTATION = ["frostmaw", "quagmire", "ember_drake", "old_stoneface", "mossback"];
 
 // Heirloom IDs eligible to drop from boss victories (rare/legendary picks)
 
+// WEATHER_META: all 5 weather types from the canonical weather table.
 const WEATHER_META = {
   rain: {
     label: "Rain",
@@ -75,10 +80,19 @@ const WEATHER_META = {
     desc: "The Harvest Moon rises — first 3 chains each night yield +1 upgrade for",
     color: "#c8a030",
   },
+  drought: {
+    label: "Drought",
+    emoji: "☀️",
+    desc: "A dry spell grips the vale — wheat and grain yields are halved for",
+    color: "#c8820a",
+  },
+  frost: {
+    label: "Frost",
+    emoji: "🌨",
+    desc: "Frost creeps across the fields — tile-fall slows for",
+    color: "#7ab8d4",
+  },
 };
-
-const WEATHER_KEYS = Object.keys(WEATHER_META);
-const WEATHER_ROLL_CHANCE = 0.5;
 
 export const initial = {
   boss: null,
@@ -91,8 +105,11 @@ export const initial = {
   _bossResolvedThisSeason: false,
 };
 
+// eslint-disable-next-line no-unused-vars
 function pickRandomWeather() {
-  return WEATHER_KEYS[Math.floor(Math.random() * WEATHER_KEYS.length)];
+  // Legacy stub kept for reference — use rollWeatherEvent() instead
+  const keys = Object.keys(WEATHER_META).filter((k) => k !== "none");
+  return keys[Math.floor(Math.random() * keys.length)];
 }
 
 function triggerBoss(state, bossKey) {
@@ -162,13 +179,22 @@ export function reduce(state, action) {
         _bossResolvedThisSeason: true,
       };
       if (won) {
+        // Use year-scaling reward from features/bosses/data.js
+        const bossDef = BOSSES.find((b) => b.id === state.boss?.key) ??
+          // fallback: construct a minimal def from BOSS_META if id not found
+          { target: { amount: state.boss?.targetCount ?? 1 } };
+        const year = state.year ?? Math.max(1, Math.ceil(((state._bossSeasonCount ?? 0) / 4)));
+        const progress = state.boss?.progress ?? 0;
+        const { coins: rewardCoins, runes: rewardRunes } = bossRewardFn(bossDef, progress, year);
+        const earnedCoins = rewardCoins > 0 ? rewardCoins : 200 * year; // guaranteed-win floor
         return {
           ...base,
           bossesDefeated: (state.bossesDefeated || 0) + 1,
-          coins: (state.coins || 0) + 200,
+          coins: (state.coins || 0) + earnedCoins,
+          runes: (state.runes ?? 0) + (rewardRunes ?? 0),
           bubble: {
             npc: "mira",
-            text: "Victory! +200◉ awarded.",
+            text: `Victory! +${earnedCoins}◉ awarded.`,
             ms: 3200,
             id: Date.now(),
           },
@@ -279,22 +305,24 @@ export function reduce(state, action) {
         return next;
       }
 
-      // Roll weather (1-in-2 chance, independent of boss)
-      if (!next.weather && Math.random() < WEATHER_ROLL_CHANCE) {
-        const weatherKey = pickRandomWeather();
-        const weatherMeta = WEATHER_META[weatherKey];
-        const weatherTurns = 2 + Math.floor(Math.random() * 2);
-        next = {
-          ...next,
-          weather: { key: weatherKey, ...weatherMeta, turns: weatherTurns },
-          weatherTurnsLeft: weatherTurns,
-          bubble: {
-            npc: "mira",
-            text: `${weatherMeta.emoji} ${weatherMeta.desc} ${weatherTurns} turn${weatherTurns > 1 ? "s" : ""}.`,
-            ms: 3000,
-            id: Date.now(),
-          },
-        };
+      // Roll weather using the canonical 5-entry weighted table from features/weather/data.js
+      if (!next.weather) {
+        const rolled = rollWeather(Math.random);
+        if (rolled.active) {
+          const weatherMeta = WEATHER_META[rolled.active];
+          const weatherTurns = rolled.turnsRemaining;
+          next = {
+            ...next,
+            weather: { key: rolled.active, ...weatherMeta, turns: weatherTurns },
+            weatherTurnsLeft: weatherTurns,
+            bubble: {
+              npc: "mira",
+              text: `${weatherMeta.emoji} ${weatherMeta.desc} ${weatherTurns} turn${weatherTurns > 1 ? "s" : ""}.`,
+              ms: 3000,
+              id: Date.now(),
+            },
+          };
+        }
       }
 
       // Reset the per-season resolved flag at end of every season
