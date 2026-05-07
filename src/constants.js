@@ -11,6 +11,17 @@ export const STORAGE_KEYS = {
   tutorialSeen: "hearth.tutorial.seen",
 };
 
+// Custom Phaser scene event names (this.events.emit / .on). Centralised so
+// a typo on either side becomes a static reference error instead of a
+// silently-dropped event. Phaser's automatic `changedata-<key>` events are
+// not listed here — they're derived from registry keys.
+export const SCENE_EVENTS = Object.freeze({
+  CHAIN_COLLECTED: "chain-collected",
+  CHAIN_UPDATE: "chain-update",
+  GRID_SYNC: "grid-sync",
+  FERTILIZER_CONSUMED: "fertilizer-consumed",
+});
+
 export const TILE = 74;
 export const COLS = 6;
 export const ROWS = 6;

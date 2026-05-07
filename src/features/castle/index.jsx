@@ -1,6 +1,9 @@
 import { CASTLE_NEEDS } from "./data.js";
 
-export const viewKey = "castle";
+// Note: this panel is embedded inside features/inventory/index.jsx (direct
+// default-import) rather than mounted as its own top-level view. Don't add
+// a `viewKey` export — it would cause this panel to render twice whenever
+// state.view ever became "castle".
 
 function ProgressBar({ value, max }) {
   const pct = max > 0 ? Math.min(100, Math.max(0, (value / max) * 100)) : 0;
