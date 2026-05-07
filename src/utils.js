@@ -4,6 +4,57 @@ export function clamp(n, a, b) {
   return Math.max(a, Math.min(b, n));
 }
 
+/**
+ * WCAG relative luminance for a 24-bit hex colour (e.g. 0xa8c769 or 0x00RRGGBB).
+ * Only the lowest 24 bits (RGB) are used; any alpha byte is ignored.
+ */
+function relativeLuminance(hex) {
+  const r = ((hex >> 16) & 0xff) / 255;
+  const g = ((hex >> 8)  & 0xff) / 255;
+  const b = ( hex        & 0xff) / 255;
+  const lin = (c) => c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+  return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
+}
+
+/**
+ * WCAG contrast ratio between two numeric hex colours.
+ * Returns a value ≥ 1; 7 = maximum (black on white).
+ * @param {number} hexA - e.g. 0xa8c769
+ * @param {number} hexB - e.g. 0x9b6b3e
+ * @returns {number}
+ */
+export function contrastRatio(hexA, hexB) {
+  const L1 = relativeLuminance(hexA);
+  const L2 = relativeLuminance(hexB);
+  const lighter = Math.max(L1, L2);
+  const darker  = Math.min(L1, L2);
+  return (lighter + 0.05) / (darker + 0.05);
+}
+
+/**
+ * Returns true if tiles a and b are orthogonally adjacent on the grid.
+ * @param {{ row: number, col: number }} a
+ * @param {{ row: number, col: number }} b
+ * @returns {boolean}
+ */
+export function isAdjacent(a, b) {
+  const dr = Math.abs(a.row - b.row);
+  const dc = Math.abs(a.col - b.col);
+  return (dr === 1 && dc === 0) || (dr === 0 && dc === 1);
+}
+
+/**
+ * Returns true if the tile can extend the current chain (same resource key,
+ * not already in chain). Stub: always returns true when chain is empty.
+ * @param {Array<{key: string}>} chain
+ * @param {{ key: string }} tile
+ * @returns {boolean}
+ */
+export function canExtendChain(chain, tile) {
+  if (chain.length === 0) return true;
+  return chain[0].key === tile.key;
+}
+
 export function upgradeCountForChain(chainLength, resourceKey, thresholdMap = UPGRADE_THRESHOLDS) {
   const t = thresholdMap[resourceKey];
   if (!t) return 0; // terminal or unknown resource

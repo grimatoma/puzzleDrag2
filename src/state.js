@@ -1399,12 +1399,44 @@ function coreReducer(state, action) {
   }
 }
 
+// Actions that are owned exclusively by feature slices (not coreReducer).
+// For these, slices must run even when coreReducer returns the same state reference
+// (because coreReducer has no handler for them — it falls through to `default: return state`).
+// Referential-equality no-op semantics are preserved: if every slice also returns the same
+// state for a rejected action, the final result still === the original state.
+const SLICE_PRIMARY_ACTIONS = new Set([
+  "APP/HIRE",
+  "APP/FIRE",
+  "BUILD_DECORATION",
+  "SUMMON_MAGIC_TOOL",
+]);
+
+// Actions where coreReducer intentionally defers to slices (e.g. CRAFTING/CRAFT_RECIPE
+// fires a story beat in core but the actual craft logic lives in crafting/slice.js).
+// When no story beat fires, core returns the same state — but slices still need to run.
+const ALWAYS_RUN_SLICES = new Set([
+  "CRAFTING/CRAFT_RECIPE",
+  "USE_TOOL",  // magic tool variants (hourglass, magic_seed, magic_fertilizer) handled in portal/slice
+]);
+
 function rawReducer(state, action) {
   // 1. Core reducer mutates the canonical game state for known actions.
   // 2. Then every feature slice sees the action against the post-core state,
   //    so cross-cutting effects (quests, achievements, etc.) fire.
+  // 3. If the core reducer returned the same reference (action was rejected /
+  //    was a no-op), skip all slice processing so side-effects don't fire on
+  //    rejected actions (this also preserves referential equality for callers
+  //    that test `next === state` to detect no-ops).
+  // Exception: slice-primary actions and actions where core defers to slices
+  //    must always run slices regardless.
   const afterCore = coreReducer(state, action);
-  return slices.reduce((s, slice) => slice.reduce(s, action), afterCore);
+  const needSlices = afterCore !== state
+    || SLICE_PRIMARY_ACTIONS.has(action.type)
+    || ALWAYS_RUN_SLICES.has(action.type);
+  if (!needSlices) return state;
+  const afterSlices = slices.reduce((s, slice) => slice.reduce(s, action), afterCore);
+  // Preserve referential equality for true no-ops: if nothing changed, return original state.
+  return afterSlices === state ? state : afterSlices;
 }
 
 export function gameReducer(state, action) {
