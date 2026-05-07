@@ -1,0 +1,32 @@
+{
+  "version": 9,
+  "inventory": { "hay": 80, "wheat": 35, "log": 45, "plank": 20, "berry": 25, "stone": 40, "ore": 15, "coal": 10 },
+  "coins": 1500,
+  "turnsUsed": 0,
+  "season": "Winter",
+  "year": 3,
+  "level": 7,
+  "biome": "farm",
+  "gridCols": 7,
+  "gridRows": 6,
+  "chainModel": "threshold",
+  "story": { "act": 3, "beat": "act3_mine_opened", "flags": { "intro_seen": true, "hearth_lit": true, "mill_built": true, "mine_unlocked": true } },
+  "market": { "drift": {}, "lastSeasonRolled": 4 },
+  "runes": 8,
+  "dailyStreak": { "day": 14, "lastClaim": "2025-01-14" },
+  "supplies": 15,
+  "workers": { "hires": { "hilda": 1, "pip": 1 }, "debt": 0 },
+  "species": { "discovered": ["hay_sparrow", "log_beaver"], "active": { "grass": "hay", "grain": "wheat", "wood": "log", "berry": "berry", "bird": "sparrow" } },
+  "npcs": {
+    "roster": ["wren", "mira", "tomas", "bram"],
+    "bonds": { "wren": 7, "mira": 6, "tomas": 5, "bram": 5 },
+    "lastGiftSeason": {}
+  },
+  "quests": { "active": [{ "id": "q1", "key": "harvest", "progress": 15 }], "claimed": [], "rolledFor": 3 },
+  "almanac": { "level": 3, "xp": 150 },
+  "achievements": { "harvest_1": true },
+  "boss": null,
+  "weather": { "current": "rain", "rolledForSeason": 3 },
+  "biomeUnlocked": { "farm": true, "mine": true },
+  "hazards": { "caveIn": null, "gasVent": null, "rats": [] }
+}

@@ -1,4 +1,4 @@
-import { BIOMES, BUILDINGS, NPCS, MAX_TURNS, RECIPES, WORKSHOP_RECIPES, STORAGE_KEYS, SEASON_EFFECTS, DAILY_REWARDS, MINE_ENTRY_TIERS, CAPPED_RESOURCES, UPGRADE_THRESHOLDS } from "./constants.js";
+import { BIOMES, BUILDINGS, NPCS, MAX_TURNS, RECIPES, WORKSHOP_RECIPES, STORAGE_KEYS, SEASON_EFFECTS, DAILY_REWARDS, MINE_ENTRY_TIERS, CAPPED_RESOURCES, UPGRADE_THRESHOLDS, SAVE_SCHEMA_VERSION } from "./constants.js";
 import { sellPriceFor as _sellPriceFor } from "./features/market/pricing.js";
 import { tryClearRatChain } from "./features/farm/rats.js";
 import { tryExtinguishFire } from "./features/farm/hazards.js";
@@ -182,6 +182,7 @@ export function initialState(overrides) {
   // tools with structural flag support — startingExtraScythe grants +1 scythe each session
   const extraScytheBonus = overrides?.tools?.startingExtraScythe ? 1 : 0;
   const fresh = {
+    version: SAVE_SCHEMA_VERSION,
     biomeKey,
     biome: "farm",
     saveSeed,

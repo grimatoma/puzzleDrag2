@@ -16,6 +16,9 @@ export const COLS = 6;
 export const ROWS = 6;
 export const MAX_TURNS = 10;
 
+// Phase 12.2 — save schema version (increment when save shape changes)
+export const SAVE_SCHEMA_VERSION = 12;
+
 export const UPGRADE_THRESHOLDS = {
   hay: 6, wheat: 5, grain: 4,
   log: 5, plank: 4,

@@ -1,0 +1,9 @@
+{
+  "inventory": { "hay": 12, "wheat": 3, "log": 0 },
+  "coins": 80,
+  "turnsUsed": 3,
+  "season": "Spring",
+  "year": 1,
+  "level": 2,
+  "biome": "farm"
+}
