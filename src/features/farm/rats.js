@@ -11,6 +11,7 @@
  */
 
 import { RAT_SPAWN_THRESHOLDS, RAT_CLEAR_REWARD_PER } from "../../constants.js";
+import { RATS_HAZARD_ENABLED } from "../../featureFlags.js";
 
 const PLANT_KEYS = new Set(["hay", "wheat", "grain", "berry"]);
 
@@ -25,6 +26,7 @@ const PLANT_KEYS = new Set(["hay", "wheat", "grain", "berry"]);
  * @returns {{ row: number, col: number, age: number } | null}
  */
 export function rollRatSpawn(state, rng = Math.random) {
+  if (!RATS_HAZARD_ENABLED) return null;
   if (state.biome !== "farm") return null;
   const inv = state.inventory ?? {};
   if ((inv.hay ?? 0) <= RAT_SPAWN_THRESHOLDS.hay) return null;
