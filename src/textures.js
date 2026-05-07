@@ -2,6 +2,7 @@ import { TILE, BIOMES, PALETTES } from "./constants.js";
 import { hex } from "./utils.js";
 import { drawFarmTileIcon } from "./textures/farmIcons.js";
 import { drawMineTileIcon } from "./textures/mineIcons.js";
+import { drawIcon as drawRegisteredIcon } from "./textures/iconRegistry.js";
 
 export function rounded(scene, x, y, w, h, r, fill, alpha = 1, stroke = null, sw = 0, sa = 1) {
   const g = scene.add.graphics();
@@ -52,16 +53,26 @@ export function canvasTexture(scene, key, w, h, draw, dpr = 1) {
 }
 
 // ─── Per-resource icon drawing ────────────────────────────────────────────────
-
-const FARM_KEYS = new Set(["hay","meadow_grass","spiky_grass","wheat","grain","flour","log","plank","beam","berry","jam","egg","turkey","clover","melon","carrot","eggplant","turnip","beet","cucumber","squash","mushroom","pepper","broccoli","soup"]);
-const MINE_KEYS = new Set(["stone","cobble","block","ore","ingot","coal","coke","gem","cutgem","gold"]);
+//
+// Resolution order for a given key:
+//   1. The unified iconRegistry (design-bundle drawings under
+//      src/textures/categories/) — covers all new species + improved
+//      versions of the existing ones.
+//   2. The legacy in-tree dispatchers (drawFarmTileIcon / drawMineTileIcon)
+//      which are still consulted as a safety net for any key that exists
+//      in BIOMES but hasn't been ported to the registry yet.
+//   3. Glyph fallback — render the resource's emoji/glyph using the
+//      Newsreader serif face.
 
 export function drawTileIcon(ctx, key) {
   ctx.lineCap = "round";
   ctx.lineJoin = "round";
-  if (FARM_KEYS.has(key)) { drawFarmTileIcon(ctx, key); return; }
-  if (MINE_KEYS.has(key)) { drawMineTileIcon(ctx, key); return; }
-  // fallback: glyph-based rendering
+  if (drawRegisteredIcon(ctx, key)) return;
+  // Legacy fallthrough — keeps any in-tree key not yet in the registry alive.
+  // Both legacy dispatchers no-op for unknown keys, so this is safe.
+  drawFarmTileIcon(ctx, key);
+  drawMineTileIcon(ctx, key);
+  // Glyph fallback — only fires if neither registry nor legacy handled it.
   let res = null;
   for (const biome of Object.values(BIOMES)) {
     res = biome.resources.find((r) => r.key === key);

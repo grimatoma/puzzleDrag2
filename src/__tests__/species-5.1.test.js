@@ -8,8 +8,8 @@ describe("Phase 5.1 — Tile Collection data model", () => {
     expect(TILE_TYPES.length).toBeGreaterThanOrEqual(12);
   });
 
-  it("6 farm categories", () => {
-    expect(CATEGORIES.length).toBe(6);
+  it("≥6 farm categories (catalog import expanded set)", () => {
+    expect(CATEGORIES.length).toBeGreaterThanOrEqual(6);
     for (const c of ["grass", "grain", "wood", "berry", "bird", "vegetables"]) {
       expect(CATEGORIES).toContain(c);
     }
@@ -34,16 +34,14 @@ describe("Phase 5.1 — Tile Collection data model", () => {
     }
   });
 
-  it("categories with default tile types: grass, wood, berry, bird, vegetables (grain has none — starts null)", () => {
-    // Per GAME_SPEC §13 unlock tree, grain category has no default tile type (all chain/research)
-    const withDefault = ["grass", "wood", "berry", "bird", "vegetables"];
+  it("categories with default tile types: grass, wood, berry, bird, vegetables, grain (catalog canonicalized grain defaults)", () => {
+    // Pre-catalog, grain had no default (wheat was chain-only). REFERENCE_CATALOG §7
+    // marks Corn/Buckwheat/Rice as Active so grain now has defaults too.
+    const withDefault = ["grass", "wood", "berry", "bird", "vegetables", "grain"];
     for (const c of withDefault) {
       const defaults = TILE_TYPES_BY_CATEGORY[c].filter((t) => t.discovery.method === "default");
       expect(defaults.length).toBeGreaterThanOrEqual(1);
     }
-    // grain has no default — every entry is chain or research
-    const grainDefaults = TILE_TYPES_BY_CATEGORY.grain.filter((t) => t.discovery.method === "default");
-    expect(grainDefaults.length).toBe(0);
   });
 
   it("chain-method entries have chainLengthOf and integer chainLength", () => {

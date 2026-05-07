@@ -53,9 +53,9 @@ describe("Phase 12.2 — save migrations", () => {
     expect(result.state.dailyStreak).toBeDefined();
     // Phase 4
     expect(result.state.workers).toEqual({ hires: {}, debt: 0 });
-    // Phase 5
-    expect(result.state.species).toBeDefined();
-    expect(Array.isArray(result.state.species.discovered) || typeof result.state.species.discovered === "object").toBe(true);
+    // Phase 5 — renamed from `species` to `tileCollection` in PR #190.
+    expect(result.state.tileCollection).toBeDefined();
+    expect(Array.isArray(result.state.tileCollection.discovered) || typeof result.state.tileCollection.discovered === "object").toBe(true);
     // Phase 6
     expect(result.state.npcs.bonds.wren).toBe(5);
     // Phase 7

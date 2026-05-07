@@ -15,7 +15,7 @@
  */
 
 import { WORKERS } from "./data.js";
-import { SPECIES_BY_CATEGORY } from "../species/data.js";
+import { TILE_TYPES_BY_CATEGORY as SPECIES_BY_CATEGORY } from "../tileCollection/data.js";
 
 /**
  * Returns an aggregated effects object for the current workforce.
