@@ -420,6 +420,7 @@ function coreReducer(state, action) {
       //  rather than a separate COMMIT_CHAIN)
       const chainTiles = action.payload.chain ?? null;
       const currentBiome = state.biome ?? state.biomeKey;
+      let fireExtinguishPatch = null;
       if (chainTiles && chainTiles.length > 0) {
         if (currentBiome === "farm") {
           // Rat clearing: chain of 3+ rat tiles
@@ -431,12 +432,8 @@ function coreReducer(state, action) {
             }
             return state; // rejected
           }
-          // Fire extinguishing
-          const firePatch = tryExtinguishFire(state, chainTiles);
-          if (firePatch) {
-            // Continue with normal chain logic using the patched state
-            // (fire coins bonus handled below in combined result)
-          }
+          // Fire extinguishing — capture patch to apply when building afterChain
+          fireExtinguishPatch = tryExtinguishFire(state, chainTiles);
         } else if (currentBiome === "mine") {
           // Mysterious ore capture
           const hasOre = chainTiles.some((t) => t.key === "mysterious_ore");
@@ -552,10 +549,12 @@ function coreReducer(state, action) {
         turnsUsed: state.turnsUsed,
       };
 
+      const fireCoinBonus = fireExtinguishPatch?.coinsBonus ?? 0;
       let afterChain = {
         ...state,
+        ...(fireExtinguishPatch ? { hazards: fireExtinguishPatch.hazards } : {}),
         inventory,
-        coins: state.coins + coinsGain,
+        coins: state.coins + coinsGain + fireCoinBonus,
         xp: afterAlmanacXp.almanac.xp,
         level: afterAlmanacXp.almanac.level,
         almanac: afterAlmanacXp.almanac,
