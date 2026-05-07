@@ -87,6 +87,11 @@ export function reduce(state, action) {
       return { ...state, totalCrafted: (state.totalCrafted || 0) + 1 };
     }
 
+    case "CONVERT_TO_SUPPLY": {
+      const qty = Math.max(1, action.payload?.qty | 0);
+      return tick(state, "supplies_converted", qty);
+    }
+
     default:
       return state;
   }
