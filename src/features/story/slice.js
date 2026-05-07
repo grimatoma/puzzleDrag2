@@ -3,6 +3,7 @@
 // Other slices (core) call evaluateStoryTriggers then dispatch STORY/BEAT_FIRED.
 
 import { applyBeatResult, firedFlagKey } from "../../story.js";
+import { tickAchievement } from "../achievements/data.js";
 
 export const initial = {
   // story state is initialised in src/state.js initialState() as:
@@ -49,10 +50,17 @@ export function reduce(state, action) {
       const dismissedBeat = state.story?.queuedBeat;
       const sandbox = dismissedBeat?.id === "act3_win" ? true : (state.story?.sandbox ?? false);
 
+      // Tick festival_won achievement when the harvest festival win beat is dismissed
+      let afterDismiss = state;
+      if (dismissedBeat?.id === "act3_win") {
+        const { newState } = tickAchievement(state, "festival_won", 1);
+        afterDismiss = newState;
+      }
+
       return {
-        ...state,
+        ...afterDismiss,
         story: {
-          ...state.story,
+          ...afterDismiss.story,
           queuedBeat: next,
           beatQueue: remaining,
           sandbox,
