@@ -1484,33 +1484,69 @@ function coreReducer(state, action) {
     }
 
     default: {
-      if (import.meta.env.DEV) {
-        if (action.type === "DEV/ADD_GOLD") {
-          return { ...state, coins: state.coins + (action.amount ?? 1000) };
-        }
-        if (action.type === "DEV/FILL_STORAGE") {
-          const inventory = { ...state.inventory };
-          for (const biome of Object.values(BIOMES)) {
-            for (const res of biome.resources) {
-              inventory[res.key] = (inventory[res.key] || 0) + 100;
-            }
+      if (action.type === "DEV/ADD_GOLD") {
+        return { ...state, coins: state.coins + (action.amount ?? 1000) };
+      }
+      if (action.type === "DEV/FILL_STORAGE") {
+        const inventory = { ...state.inventory };
+        for (const biome of Object.values(BIOMES)) {
+          for (const res of biome.resources) {
+            inventory[res.key] = (inventory[res.key] || 0) + (action.amount ?? 100);
           }
-          return { ...state, inventory };
         }
-        if (action.type === "DEV/RESET_GAME") {
-          // Wipe all persisted state and reset to initial state, preserving settings.
-          clearSave();
-          const fresh = initialState();
-          return { ...fresh, settings: state.settings,
-            story: { ...INITIAL_STORY_STATE, flags: {}, queuedBeat: null, beatQueue: [], sandbox: false },
-            npcs: {
-              roster: ["wren"],
-              bonds: { wren: 5, mira: 5, tomas: 5, bram: 5, liss: 5 },
-              giftCooldown: { wren: 0, mira: 0, tomas: 0, bram: 0, liss: 0 },
-            },
-            workers: { hired: { hilda: 0, pip: 0, wila: 0, tuck: 0, osric: 0, dren: 0 }, debt: 0, pool: 1 },
-            species: defaultSpeciesSlice() };
+        return { ...state, inventory };
+      }
+      if (action.type === "DEV/ADD_ITEM") {
+        const key = action.key;
+        if (!key) return state;
+        const inventory = { ...state.inventory };
+        inventory[key] = (inventory[key] || 0) + (action.amount ?? 50);
+        return { ...state, inventory };
+      }
+      if (action.type === "DEV/ADD_XP") {
+        const { xp, level } = applyXp(state, action.amount ?? 100);
+        return { ...state, xp, level };
+      }
+      if (action.type === "DEV/ADD_LEVEL") {
+        const next = (state.level ?? 1) + (action.amount ?? 1);
+        return { ...state, level: next, xp: 0 };
+      }
+      if (action.type === "DEV/ADD_ALMANAC_XP") {
+        const { newState } = applyAlmanacXp(state, action.amount ?? 50);
+        return newState;
+      }
+      if (action.type === "DEV/ADD_RUNES") {
+        return { ...state, runes: (state.runes ?? 0) + (action.amount ?? 10) };
+      }
+      if (action.type === "DEV/ADD_INFLUENCE") {
+        return { ...state, influence: (state.influence ?? 0) + (action.amount ?? 10) };
+      }
+      if (action.type === "DEV/FILL_TOOLS") {
+        const amt = action.amount ?? 5;
+        const tools = { ...state.tools };
+        for (const k of Object.keys(tools)) {
+          if (typeof tools[k] === "number") tools[k] = tools[k] + amt;
         }
+        return { ...state, tools };
+      }
+      if (action.type === "DEV/ADD_SUPPLIES") {
+        const inventory = { ...state.inventory };
+        inventory.supplies = (inventory.supplies || 0) + (action.amount ?? 10);
+        return { ...state, inventory };
+      }
+      if (action.type === "DEV/RESET_GAME") {
+        // Wipe all persisted state and reset to initial state, preserving settings.
+        clearSave();
+        const fresh = initialState();
+        return { ...fresh, settings: state.settings,
+          story: { ...INITIAL_STORY_STATE, flags: {}, queuedBeat: null, beatQueue: [], sandbox: false },
+          npcs: {
+            roster: ["wren"],
+            bonds: { wren: 5, mira: 5, tomas: 5, bram: 5, liss: 5 },
+            giftCooldown: { wren: 0, mira: 0, tomas: 0, bram: 0, liss: 0 },
+          },
+          workers: { hired: { hilda: 0, pip: 0, wila: 0, tuck: 0, osric: 0, dren: 0 }, debt: 0, pool: 1 },
+          species: defaultSpeciesSlice() };
       }
       return state;
     }

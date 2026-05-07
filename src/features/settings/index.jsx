@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { BIOMES } from "../../constants.js";
 
 export const modalKey = "menu";
 
@@ -225,9 +226,35 @@ function SettingsTab({ settings = {}, dispatch }) {
   );
 }
 
+// --- Debug button ---
+function DebugBtn({ children, onClick, color = 'slate' }) {
+  const palettes = {
+    gold:   { background: '#7a6a10', borderColor: '#4a4008' },
+    green:  { background: '#2a7a3a', borderColor: '#1a4a20' },
+    blue:   { background: '#3a5a8a', borderColor: '#1a2e5a' },
+    purple: { background: '#5a3a8a', borderColor: '#2e1a5a' },
+    red:    { background: '#a84a1a', borderColor: '#7a3210' },
+    slate:  { background: '#5a5e66', borderColor: '#2a2e36' },
+    teal:   { background: '#2a7a7a', borderColor: '#0f4a4a' },
+    rose:   { background: '#a83a5a', borderColor: '#702030' },
+  };
+  return (
+    <button
+      onClick={onClick}
+      className="py-1 px-2 text-[11px] font-bold rounded-lg border-2 leading-tight"
+      style={{ ...palettes[color], color: '#fff' }}
+    >
+      {children}
+    </button>
+  );
+}
+
 // --- About tab ---
-function AboutTab({ dispatch }) {
+function AboutTab({ state, dispatch }) {
   const [taps, setTaps] = useState(0);
+  const [debugOpen, setDebugOpen] = useState(false);
+  const [itemBiome, setItemBiome] = useState('farm');
+  const [itemKey, setItemKey] = useState('hay');
 
   function handleFireTap() {
     const next = taps + 1;
@@ -237,6 +264,8 @@ function AboutTab({ dispatch }) {
       dispatch({ type: 'SETTINGS/EASTER_EGG' });
     }
   }
+
+  const biomeResources = BIOMES[itemBiome]?.resources ?? [];
 
   return (
     <div className="flex flex-col items-center gap-3 text-center">
@@ -263,33 +292,109 @@ function AboutTab({ dispatch }) {
       <p className="text-[12px] italic" style={{ color: '#7a5a38' }}>
         Made with care for cozy chains and slow seasons.
       </p>
-      {import.meta.env.DEV && (
+
       <div className="w-full pt-3 border-t-2 mt-1" style={{ borderColor: '#b28b62' }}>
-        <div className="text-[10px] font-bold uppercase tracking-wide mb-2" style={{ color: '#7a5a38' }}>Dev triggers</div>
-        <div className="flex gap-2 justify-center flex-wrap">
-          <button
-            onClick={() => dispatch({ type: 'BOSS/TRIGGER' })}
-            className="py-1 px-3 text-[11px] font-bold rounded-lg border-2"
-            style={{ background: '#a84a1a', borderColor: '#7a3210', color: '#fff' }}
-          >🐉 Trigger Boss</button>
-          <button
-            onClick={() => dispatch({ type: 'DEV/FILL_STORAGE' })}
-            className="py-1 px-3 text-[11px] font-bold rounded-lg border-2"
-            style={{ background: '#2a7a3a', borderColor: '#1a4a20', color: '#fff' }}
-          >📦 +100 All Items</button>
-          <button
-            onClick={() => dispatch({ type: 'DEV/ADD_GOLD', amount: 1000 })}
-            className="py-1 px-3 text-[11px] font-bold rounded-lg border-2"
-            style={{ background: '#7a6a10', borderColor: '#4a4008', color: '#fff' }}
-          >🪙 +1000 Gold</button>
-          <button
-            onClick={() => dispatch({ type: 'DEV/RESET_GAME' })}
-            className="py-1 px-3 text-[11px] font-bold rounded-lg border-2"
-            style={{ background: '#3a3a8a', borderColor: '#1a1a5a', color: '#fff' }}
-          >🔄 Reset Game</button>
-        </div>
+        <button
+          onClick={() => setDebugOpen((v) => !v)}
+          className="w-full py-1.5 text-[12px] font-bold rounded-lg border-2"
+          style={{ background: '#2b2218', borderColor: '#000', color: '#f4ecd8' }}
+        >
+          🛠 Debug Tools {debugOpen ? '▾' : '▸'}
+        </button>
+
+        {debugOpen && (
+          <div className="mt-3 flex flex-col gap-3 text-left">
+            {/* Live counters */}
+            <div
+              className="grid grid-cols-3 gap-1.5 py-2 px-2 rounded-lg border-2 text-[11px]"
+              style={{ background: '#f4e8d0', borderColor: '#b28b62', color: '#2b2218' }}
+            >
+              <div>🪙 {state?.coins ?? 0}</div>
+              <div>⭐ Lv {state?.level ?? 1}</div>
+              <div>✨ {state?.xp ?? 0} xp</div>
+              <div>🔮 {state?.runes ?? 0} runes</div>
+              <div>💠 {state?.influence ?? 0} infl</div>
+              <div>📚 Alm {state?.almanac?.level ?? 1}</div>
+            </div>
+
+            {/* Currency */}
+            <div>
+              <div className="text-[10px] font-bold uppercase tracking-wide mb-1.5" style={{ color: '#7a5a38' }}>Money & XP</div>
+              <div className="grid grid-cols-2 gap-1.5">
+                <DebugBtn color="gold" onClick={() => dispatch({ type: 'DEV/ADD_GOLD', amount: 1000 })}>🪙 +1,000 Gold</DebugBtn>
+                <DebugBtn color="gold" onClick={() => dispatch({ type: 'DEV/ADD_GOLD', amount: 10000 })}>🪙 +10,000 Gold</DebugBtn>
+                <DebugBtn color="purple" onClick={() => dispatch({ type: 'DEV/ADD_XP', amount: 100 })}>✨ +100 XP</DebugBtn>
+                <DebugBtn color="purple" onClick={() => dispatch({ type: 'DEV/ADD_LEVEL', amount: 1 })}>⭐ +1 Level</DebugBtn>
+                <DebugBtn color="teal" onClick={() => dispatch({ type: 'DEV/ADD_ALMANAC_XP', amount: 50 })}>📚 +50 Almanac XP</DebugBtn>
+                <DebugBtn color="blue" onClick={() => dispatch({ type: 'DEV/ADD_RUNES', amount: 10 })}>🔮 +10 Runes</DebugBtn>
+                <DebugBtn color="rose" onClick={() => dispatch({ type: 'DEV/ADD_INFLUENCE', amount: 10 })}>💠 +10 Influence</DebugBtn>
+                <DebugBtn color="green" onClick={() => dispatch({ type: 'DEV/ADD_SUPPLIES', amount: 10 })}>🍞 +10 Supplies</DebugBtn>
+              </div>
+            </div>
+
+            {/* Items */}
+            <div>
+              <div className="text-[10px] font-bold uppercase tracking-wide mb-1.5" style={{ color: '#7a5a38' }}>Items</div>
+              <div className="grid grid-cols-2 gap-1.5 mb-1.5">
+                <DebugBtn color="green" onClick={() => dispatch({ type: 'DEV/FILL_STORAGE', amount: 100 })}>📦 +100 Every Item</DebugBtn>
+                <DebugBtn color="slate" onClick={() => dispatch({ type: 'DEV/FILL_TOOLS', amount: 5 })}>🔧 +5 Every Tool</DebugBtn>
+              </div>
+              <div
+                className="flex flex-col gap-1.5 py-2 px-2 rounded-lg border-2"
+                style={{ background: '#f4e8d0', borderColor: '#b28b62' }}
+              >
+                <div className="flex gap-1.5">
+                  {Object.keys(BIOMES).map((b) => (
+                    <button
+                      key={b}
+                      onClick={() => {
+                        setItemBiome(b);
+                        setItemKey(BIOMES[b].resources[0]?.key ?? '');
+                      }}
+                      className="flex-1 py-1 text-[11px] font-bold rounded border-2"
+                      style={
+                        itemBiome === b
+                          ? { background: '#d6612a', borderColor: '#a84010', color: '#fff' }
+                          : { background: '#e8dcc4', borderColor: '#b28b62', color: '#5a3a20' }
+                      }
+                    >
+                      {BIOMES[b].name}
+                    </button>
+                  ))}
+                </div>
+                <select
+                  value={itemKey}
+                  onChange={(e) => setItemKey(e.target.value)}
+                  className="w-full py-1 px-2 text-[11px] rounded border-2"
+                  style={{ background: '#fff', borderColor: '#b28b62', color: '#2b2218' }}
+                >
+                  {biomeResources.map((r) => (
+                    <option key={r.key} value={r.key}>{r.label} ({r.key})</option>
+                  ))}
+                </select>
+                <div className="grid grid-cols-3 gap-1.5">
+                  <DebugBtn color="green" onClick={() => dispatch({ type: 'DEV/ADD_ITEM', key: itemKey, amount: 10 })}>+10</DebugBtn>
+                  <DebugBtn color="green" onClick={() => dispatch({ type: 'DEV/ADD_ITEM', key: itemKey, amount: 50 })}>+50</DebugBtn>
+                  <DebugBtn color="green" onClick={() => dispatch({ type: 'DEV/ADD_ITEM', key: itemKey, amount: 250 })}>+250</DebugBtn>
+                </div>
+              </div>
+            </div>
+
+            {/* Triggers & Reset */}
+            <div>
+              <div className="text-[10px] font-bold uppercase tracking-wide mb-1.5" style={{ color: '#7a5a38' }}>Triggers</div>
+              <div className="grid grid-cols-2 gap-1.5">
+                <DebugBtn color="red" onClick={() => dispatch({ type: 'BOSS/TRIGGER' })}>🐉 Trigger Boss</DebugBtn>
+                <DebugBtn color="slate" onClick={() => {
+                  if (confirm('Reset the entire game? This cannot be undone.')) {
+                    dispatch({ type: 'DEV/RESET_GAME' });
+                  }
+                }}>🔄 Reset Game</DebugBtn>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
-      )}
     </div>
   );
 }
@@ -328,7 +433,7 @@ export default function SettingsModal({ state, dispatch }) {
         {/* Tab content */}
         {tab === 'main' && <MainTab state={state} dispatch={dispatch} />}
         {tab === 'settings' && <SettingsTab settings={settings} dispatch={dispatch} />}
-        {tab === 'about' && <AboutTab dispatch={dispatch} />}
+        {tab === 'about' && <AboutTab state={state} dispatch={dispatch} />}
       </div>
     </div>
   );
