@@ -1,0 +1,87 @@
+import { MAGIC_TOOLS } from "./data.js";
+
+export const initial = {};
+
+/**
+ * SUMMON_MAGIC_TOOL reducer.
+ * Deducts influence, increments state.tools[id].
+ * Requires state.built.portal === true and state.influence >= cost.
+ */
+export function reduce(state, action) {
+  switch (action.type) {
+    case "SUMMON_MAGIC_TOOL": {
+      const { id } = action.payload ?? {};
+      const def = MAGIC_TOOLS.find((t) => t.id === id);
+      if (!def) return state;
+      // Portal must be built
+      if (!state.built?.portal) return state;
+      // Sufficient influence
+      if ((state.influence ?? 0) < def.influenceCost) return state;
+      return {
+        ...state,
+        influence: state.influence - def.influenceCost,
+        tools: {
+          ...state.tools,
+          [id]: (state.tools?.[id] ?? 0) + 1,
+        },
+      };
+    }
+
+    case "USE_TOOL": {
+      // Magic tool use handler — extends the existing USE_TOOL case.
+      // Only handle magic tool ids here; other ids are handled by coreReducer.
+      const id = action.payload?.id ?? action.payload?.key ?? action.key;
+      if (!id) return state;
+
+      // Hourglass — undo last chain
+      if (id === "hourglass") {
+        const count = state.tools?.[id] ?? 0;
+        if (count <= 0) return state;
+        const snap = state.lastChainSnapshot;
+        if (!snap) {
+          // No snapshot: refund — do not consume
+          return state;
+        }
+        // Restore snapshot
+        return {
+          ...state,
+          tools: { ...state.tools, [id]: count - 1 },
+          grid: snap.grid ?? state.grid,
+          inventory: snap.inventory ?? state.inventory,
+          turnsUsed: snap.turnsUsed ?? state.turnsUsed,
+          lastChainSnapshot: null,
+        };
+      }
+
+      // Magic Seed — +5 turns
+      if (id === "magic_seed") {
+        const count = state.tools?.[id] ?? 0;
+        if (count <= 0) return state;
+        return {
+          ...state,
+          tools: { ...state.tools, [id]: count - 1 },
+          session: {
+            ...(state.session ?? {}),
+            turnsRemaining: (state.session?.turnsRemaining ?? 0) + 5,
+          },
+        };
+      }
+
+      // Magic Fertilizer — set 3 fill charges
+      if (id === "magic_fertilizer") {
+        const count = state.tools?.[id] ?? 0;
+        if (count <= 0) return state;
+        return {
+          ...state,
+          tools: { ...state.tools, [id]: count - 1 },
+          magicFertilizerCharges: 3,
+        };
+      }
+
+      return state;
+    }
+
+    default:
+      return state;
+  }
+}

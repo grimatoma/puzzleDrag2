@@ -18,7 +18,11 @@ function getMetric(state, eventKey) {
     case "longestChain":     return state.longestChain || 0;
     case "chainsThisSeason": return state.chainsThisSeason || 0;
     case "totalOrders":      return state.totalOrders || 0;
-    case "buildingCount":    return Object.keys(state.built || {}).length;
+    case "buildingCount": {
+      // Count only boolean/true entries (actual buildings), not sub-objects like decorations
+      const built = state.built || {};
+      return Object.values(built).filter((v) => v === true).length;
+    }
     case "seasonsCycled":    return state.seasonsCycled || 0;
     case "totalCrafted":     return state.totalCrafted || 0;
     default:
