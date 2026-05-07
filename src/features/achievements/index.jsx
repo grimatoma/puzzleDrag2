@@ -18,20 +18,8 @@ function getCounterValue(state, counter) {
   return (state.achievements?.counters?.[counter] ?? 0);
 }
 
-// Legacy metric lookup (for backward compat with constants.js shape)
-function getMetricValue(state, eventKey) {
-  switch (eventKey) {
-    case "totalHarvested":   return state.totalHarvested || 0;
-    case "longestChain":     return state.longestChain || 0;
-    case "chainsThisSeason": return state.chainsThisSeason || 0;
-    case "totalOrders":      return state.totalOrders || 0;
-    case "buildingCount":    return Object.keys(state.built || {}).length;
-    case "seasonsCycled":    return state.seasonsCycled || 0;
-    case "totalCrafted":     return state.totalCrafted || 0;
-    default:
-      return (state.collected || {})[eventKey] || 0;
-  }
-}
+// Legacy metric lookup kept for reference (not currently rendered)
+// function getMetricValue(state, eventKey) { ... }
 
 // ─── Trophy card ─────────────────────────────────────────────────────────────
 
@@ -140,8 +128,6 @@ export default function AchievementsScreen({ state, dispatch }) {
 
   // Canonical: state.achievements.unlocked (from features/achievements/data.js)
   const unlockedMap = state.achievements?.unlocked ?? {};
-  // Legacy fallback: state.trophies (from achievements/slice.js)
-  const trophies = state.trophies || {};
   const collected = state.collected || {};
 
   const discoveredCount = ALL_RESOURCES.filter((r) => (collected[r.key] || 0) > 0).length;

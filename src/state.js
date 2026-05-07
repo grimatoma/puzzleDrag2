@@ -1092,10 +1092,10 @@ function coreReducer(state, action) {
       if (!state.story?.flags?.mine_unlocked) return state;
       const tier = MINE_ENTRY_TIERS.find((t) => t.id === action.payload?.tier);
       if (!tier) return state;
-      let afterMineEnter = state;
+      let mineBase;
       if (tier.id === "free") {
         if ((state.inventory.supplies ?? 0) < 3) return state;
-        afterMineEnter = {
+        mineBase = {
           ...state,
           biomeKey: "mine",
           biome: "mine",
@@ -1104,7 +1104,7 @@ function coreReducer(state, action) {
         };
       } else if (tier.id === "better") {
         if ((state.coins ?? 0) < 100 || (state.shovel ?? 0) < 10) return state;
-        afterMineEnter = {
+        mineBase = {
           ...state,
           biomeKey: "mine",
           biome: "mine",
@@ -1114,15 +1114,15 @@ function coreReducer(state, action) {
         };
       } else if (tier.id === "premium") {
         if ((state.runes ?? 0) < 2) return state;
-        afterMineEnter = { ...state, biomeKey: "mine", biome: "mine", runes: state.runes - 2, sessionMaxTurns: MAX_TURNS };
+        mineBase = { ...state, biomeKey: "mine", biome: "mine", runes: state.runes - 2, sessionMaxTurns: MAX_TURNS };
       } else {
         return state;
       }
       // Spawn mysterious ore on mine entry if grid is available
-      if (afterMineEnter.grid && afterMineEnter.grid.length > 0) {
-        afterMineEnter = spawnMysteriousOre(afterMineEnter);
+      if (mineBase.grid && mineBase.grid.length > 0) {
+        return spawnMysteriousOre(mineBase);
       }
-      return afterMineEnter;
+      return mineBase;
     }
 
     case "CRAFT": {

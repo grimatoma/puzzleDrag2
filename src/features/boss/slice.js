@@ -1,6 +1,6 @@
 import { BIOMES, RECIPES } from "../../constants.js";
 import { BOSSES, BOSS_WINDOW_TURNS, bossReward as bossRewardFn } from "../bosses/data.js";
-import { WEATHER_TABLE, rollWeather } from "../weather/data.js";
+import { rollWeather } from "../weather/data.js";
 import { awardXp } from "../almanac/data.js";
 
 const ALL_RESOURCES = [...BIOMES.farm.resources, ...BIOMES.mine.resources];
