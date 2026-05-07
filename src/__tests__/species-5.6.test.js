@@ -6,6 +6,8 @@ describe("Phase 5.6 — Board pool wiring", () => {
   const baseDefaults = {
     grass: "hay", grain: "wheat", wood: "log", berry: "berry", bird: "egg",
     vegetables: "carrot",
+    fruits: "fruit_apple", flowers: "flower_pansy", trees: "tree_oak",
+    herd_animals: "herd_pig", cattle: "cattle_cow", mounts: "mount_horse",
   };
   const mkState = (overrides = {}, weights = {}) => ({
     tileCollection: {
@@ -15,6 +17,8 @@ describe("Phase 5.6 — Board pool wiring", () => {
         grain: true, plank: true, jam: true, turkey: true,
         meadow_grass: true, beam: true, spiky_grass: true, flour: true,
         carrot: true, eggplant: true, turnip: true, cucumber: true,
+        fruit_apple: true, flower_pansy: true, tree_oak: true,
+        herd_pig: true, cattle_cow: true, mount_horse: true,
       },
       researchProgress: {},
     },
