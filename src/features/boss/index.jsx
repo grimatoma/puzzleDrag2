@@ -83,7 +83,7 @@ function MiniCard({ boss, weather, dispatch }) {
   );
 }
 
-function BossModal({ boss, weather, dispatch }) {
+function BossModal({ boss, weather, year = 1, dispatch }) {
   const meta = BOSS_META[boss.key] || {};
   const pct = boss.targetCount > 0
     ? Math.min(100, Math.round((boss.progress / boss.targetCount) * 100))
@@ -179,12 +179,12 @@ function BossModal({ boss, weather, dispatch }) {
           </div>
         </div>
 
-        {/* Reward hint */}
+        {/* Reward hint — show actual year-scaled estimate */}
         <div
           className="text-[11px] text-center text-white/50 mb-4"
           style={{ fontFamily: "Arial, sans-serif" }}
         >
-          Victory reward: Coins (year-scaled)
+          Victory reward: +{200 * year}◉ (Year {year})
         </div>
 
         {/* Weather badge if active */}
@@ -230,6 +230,7 @@ function BossModal({ boss, weather, dispatch }) {
 
 export default function BossFeature({ state, dispatch }) {
   const { boss, bossMinimized, weather } = state;
+  const year = state.year ?? Math.max(1, Math.ceil(((state._bossSeasonCount ?? 0) / 4)));
 
   if (!boss) return null;
 
@@ -240,5 +241,5 @@ export default function BossFeature({ state, dispatch }) {
   // Only show the blocking full modal when modal === 'boss' (board is locked)
   if (state.modal !== "boss") return null;
 
-  return <BossModal boss={boss} weather={weather} dispatch={dispatch} />;
+  return <BossModal boss={boss} weather={weather} year={year} dispatch={dispatch} />;
 }
