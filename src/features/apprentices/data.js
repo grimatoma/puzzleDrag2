@@ -156,5 +156,7 @@ export function checkRequirement(worker, state) {
   if (req.building && !state?.built?.[req.building]) return false;
   if (req.level && (state?.level ?? 1) < req.level) return false;
   if (req.orLevel && !state?.built?.[req.building] && (state?.level ?? 1) < req.orLevel) return false;
+  // biomeUnlocked: gate mine workers until the mine story flag is set
+  if (req.biomeUnlocked === "mine" && !state?.story?.flags?.mine_unlocked) return false;
   return true;
 }
