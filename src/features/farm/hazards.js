@@ -10,6 +10,26 @@
  * §6 wolves spawn: 6% per fillBoard when egg > 30 OR turkey > 5, cap 2.
  */
 
+// ─── Hazard metadata (player-facing) ─────────────────────────────────────────
+
+export const FARM_HAZARD_META = {
+  fire: {
+    name: "Fire",
+    description: "A fire has broken out in the fields, spreading to adjacent tiles each turn and burning resources away.",
+    clearInstruction: "Chain any fire tiles to extinguish them and earn a small coin bonus per tile cleared.",
+  },
+  wolf: {
+    name: "Wolves",
+    description: "A pack of wolves has crept into the farm and is devouring your bird tiles one by one.",
+    clearInstruction: "Use a Rifle (Workshop recipe) to drive them off, or a Hound to scatter them temporarily.",
+  },
+  rats: {
+    name: "Rats",
+    description: "Rats have invaded the granary! They eat plant tiles adjacent to them every turn.",
+    clearInstruction: "Chain 3 or more rat tiles together to clear them and earn 5 coins per rat removed.",
+  },
+};
+
 // ─── Fire hazard ──────────────────────────────────────────────────────────────
 
 const FIRE_SPAWN_RATE   = 0.04;

@@ -12,6 +12,9 @@ export const HAZARD_BASE_RATE = 0.05;
 export const HAZARDS = [
   {
     id: "cave_in",
+    name: "Cave-In",
+    description: "A tunnel collapse has buried an entire row in rubble, blocking all tiles in that row.",
+    clearInstruction: "Chain 3 or more stone tiles adjacent to the rubble row to clear the debris.",
     weight: 25,
     spawn(grid, rng) {
       const row = Math.floor(rng() * grid.length);
@@ -20,6 +23,9 @@ export const HAZARDS = [
   },
   {
     id: "gas_vent",
+    name: "Gas Vent",
+    description: "Poisonous gas seeps through a crack, spreading a noxious cloud over nearby tiles.",
+    clearInstruction: "Chain through any tiles in the gas cloud to disperse it before the 3-turn timer expires.",
     weight: 40,
     durationTurns: 3,
     spawn(grid, rng) {
@@ -30,6 +36,9 @@ export const HAZARDS = [
   },
   {
     id: "lava",
+    name: "Lava Flow",
+    description: "A lava seam has cracked open, spreading molten rock that destroys any resource it touches.",
+    clearInstruction: "There is no direct counter — lava spreads each turn. Mine all resources away from its path before it reaches them.",
     weight: 20,
     spawn(grid, rng) {
       const row = Math.floor(rng() * grid.length);
@@ -39,6 +48,9 @@ export const HAZARDS = [
   },
   {
     id: "mole",
+    name: "Giant Mole",
+    description: "A monstrous mole is tunnelling through the mine, consuming adjacent resource tiles as it burrows.",
+    clearInstruction: "Wait — the mole moves on a 3-turn cycle and hops to a new position. Clear tiles from its current path to limit damage.",
     weight: 15,
     spawn(grid, rng) {
       const row = Math.floor(rng() * grid.length);
