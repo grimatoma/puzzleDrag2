@@ -874,7 +874,7 @@ function coreReducer(state, action) {
         excludeKeys.push(o.key);
         return o;
       });
-      return { ...state, biomeKey: key, orders: replacements, turnsUsed: 0, _biomeRestored: !!(savedField && savedField.tiles), ...boardPatch };
+      return { ...state, biome: key, biomeKey: key, orders: replacements, turnsUsed: 0, _biomeRestored: !!(savedField && savedField.tiles), ...boardPatch };
     }
     case "SET_VIEW": {
       const next = action.view;
@@ -1104,13 +1104,14 @@ function coreReducer(state, action) {
         if ((state.inventory.supplies ?? 0) < 3) return state;
         return {
           ...state,
+          biome: "mine",
           biomeKey: "mine",
           inventory: { ...state.inventory, supplies: state.inventory.supplies - 3 },
         };
       }
       if (mode === "premium") {
         if ((state.runes ?? 0) < 2) return state;
-        return { ...state, biomeKey: "mine", runes: state.runes - 2 };
+        return { ...state, biome: "mine", biomeKey: "mine", runes: state.runes - 2 };
       }
       return state;
     }
