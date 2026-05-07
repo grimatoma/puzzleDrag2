@@ -1007,6 +1007,8 @@ function coreReducer(state, action) {
         pendingView: null,
         seasonStats: { harvests: 0, upgrades: 0, ordersFilled: 0, coins: 0, capFloaters: {} },
         workers: { ...state.workers, debt: wageDebt, pool: newPool },
+        // Clear fertilizer flag at season end — it was consumed this season
+        fertilizerActive: false,
         // 5.7: reset per-season free moves on season close
         species: state.species ? { ...state.species, freeMoves: 0 } : state.species,
         npcs: decayedNpcs,
