@@ -27,7 +27,8 @@ export function hasValidChain(grid) {
   const cols = rows ? grid[0].length : 0;
   const visited = Array.from({ length: rows }, () => new Array(cols).fill(false));
 
-  const DIRS = [[0, 1], [0, -1], [1, 0], [-1, 0]];
+  // Spec §4: adjacency includes all 8 directions (diagonals count)
+  const DIRS = [[0, 1], [0, -1], [1, 0], [-1, 0], [1, 1], [1, -1], [-1, 1], [-1, -1]];
 
   function dfs(r, c, key) {
     if (r < 0 || r >= rows || c < 0 || c >= cols) return 0;
