@@ -155,7 +155,7 @@ function PhaserMount({ dispatch, biomeKey, turnsUsed, seasonsCycled, uiLocked, s
     };
     el.addEventListener("keydown", handler);
     return () => el.removeEventListener("keydown", handler);
-  }, [dispatch]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [dispatch]); // intentional: handler uses ref for current state, dispatch is stable
 
   // Render keyboard cursor overlay when active
   const cursor = gameState?.settings?.keyboardCursor;

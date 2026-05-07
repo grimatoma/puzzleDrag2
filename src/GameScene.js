@@ -5,7 +5,7 @@ import { computeWorkerEffects } from "./features/apprentices/effects.js";
 const cssColor = (num) => Phaser.Display.Color.IntegerToColor(num).rgba;
 import { rounded, makeTextures, regenerateTextures } from "./textures.js";
 import { TileObj } from "./TileObj.js";
-import { getTweenDuration, screenShake, particleQuantity } from "./a11y.js";
+import { getTweenDuration, screenShake } from "./a11y.js";
 
 const TILE_BASE = TILE; // CSS-pixel design size for one tile; textures are baked at TILE * dpr
 const FLOAT_TEXT_COLOR = 0xffd248;
