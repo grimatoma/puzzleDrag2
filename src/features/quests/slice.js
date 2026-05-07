@@ -1,4 +1,6 @@
 import { QUEST_TEMPLATES, ALMANAC_TIERS } from "../../constants.js";
+import { claimQuest, tickQuest } from "./data.js";
+import { awardXp } from "../almanac/data.js";
 
 let _questIdSeq = 1;
 
@@ -56,17 +58,35 @@ export function reduce(state, action) {
     }
     case "QUESTS/CLAIM_QUEST": {
       const { id } = action;
+
+      // New system: look in state.quests first (deterministic 6-slot system)
+      if ((state.quests || []).some((q) => q.id === id)) {
+        const result = claimQuest(state, id);
+        if (!result.ok) return state;
+        // Award almanac XP: §17 locked: 20 XP per quest claim
+        const { newState: afterXp } = awardXp(result.newState, result.xpGain);
+        return afterXp;
+      }
+
+      // Legacy system: look in state.dailies (3-slot)
       const q = (state.dailies || []).find((x) => x.id === id);
       if (!q || !q.done || q.claimed) return state;
       const dailies = (state.dailies || []).map((x) =>
         x.id === id ? { ...x, claimed: true } : x
       );
-      return {
+      const afterLegacy = {
         ...state,
         dailies,
         coins: (state.coins || 0) + (q.reward.coins || 0),
         almanacXp: (state.almanacXp || 0) + (q.reward.almanacXp || 0),
       };
+      // Also award almanac XP to canonical almanac slice
+      const legacyXp = q.reward.almanacXp || 0;
+      if (legacyXp > 0) {
+        const { newState: afterXp } = awardXp(afterLegacy, legacyXp);
+        return afterXp;
+      }
+      return afterLegacy;
     }
     case "QUESTS/CLAIM_ALMANAC": {
       const { tier } = action;
@@ -85,7 +105,8 @@ export function reduce(state, action) {
       return { ...state, almanacClaimed, coins, tools };
     }
     case "CHAIN_COLLECTED": {
-      const { gained = 0, chainLength = 0 } = action.payload || {};
+      const { gained = 0, chainLength = 0, key: chainKey = "" } = action.payload || {};
+      // Legacy dailies
       let dailies = state.dailies || [];
       dailies = progressQuests(dailies, "harvest", gained);
       if (chainLength >= 5) {
@@ -97,23 +118,41 @@ export function reduce(state, action) {
         const next = Math.min(q.target, q.progress + coinsGain);
         return { ...q, progress: next, done: next >= q.target };
       });
-      return { ...state, dailies };
+      // New deterministic quests: tick with collect + chain events
+      const collectEvent = { type: "collect", key: chainKey, amount: gained };
+      const chainEvent = { type: "chain", length: chainLength };
+      const newQuests = (state.quests || []).map((q) => {
+        let ticked = tickQuest(q, collectEvent);
+        ticked = tickQuest(ticked, chainEvent);
+        return ticked;
+      });
+      return { ...state, dailies, quests: newQuests };
     }
     case "TURN_IN_ORDER": {
       const order = (state.orders || []).find((o) => o.id === action.id);
       if (!order || ((state.inventory || {})[order.key] || 0) < order.need) return state;
+      // Legacy dailies
       const dailies = progressQuests(state.dailies || [], "deliver", 1);
-      return { ...state, dailies };
+      // New deterministic quests
+      const orderEvent = { type: "order" };
+      const newQuests = (state.quests || []).map((q) => tickQuest(q, orderEvent));
+      return { ...state, dailies, quests: newQuests };
     }
     case "BUILD": {
       const dailies = progressQuests(state.dailies || [], "build", 1);
       return { ...state, dailies };
     }
     case "CRAFTING/CRAFT_RECIPE": {
+      const craftKey = action.payload?.key ?? "";
       const dailies = progressQuests(state.dailies || [], "craft", 1);
-      return { ...state, dailies };
+      // New deterministic quests
+      const craftEvent = { type: "craft", item: craftKey, count: 1 };
+      const newQuests = (state.quests || []).map((q) => tickQuest(q, craftEvent));
+      return { ...state, dailies, quests: newQuests };
     }
     case "CLOSE_SEASON": {
+      // Legacy dailies re-roll (CLOSE_SEASON in quests/slice — note: state.quests
+      // re-roll happens in coreReducer which runs before this slice)
       return { ...state, dailies: rollFresh(), dailyDay: (state.dailyDay || 0) + 1 };
     }
     default:

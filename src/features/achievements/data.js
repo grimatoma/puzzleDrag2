@@ -6,24 +6,24 @@
 
 export const ACHIEVEMENTS = [
   // chains_committed
-  { id: "first_steps",    name: "First Steps",                counter: "chains_committed",           threshold: 1,   target: 1   },
-  { id: "patient_hands",  name: "Patient Hands",              counter: "chains_committed",           threshold: 10,  target: 10  },
-  { id: "tireless",       name: "Tireless",                   counter: "chains_committed",           threshold: 100, target: 100 },
+  { id: "first_steps",    name: "First Steps",                desc: "Complete your first chain",                      counter: "chains_committed",           threshold: 1,   target: 1   },
+  { id: "patient_hands",  name: "Patient Hands",              desc: "Complete 10 chains",                             counter: "chains_committed",           threshold: 10,  target: 10  },
+  { id: "tireless",       name: "Tireless",                   desc: "Complete 100 chains",                            counter: "chains_committed",           threshold: 100, target: 100 },
   // orders_fulfilled
-  { id: "trusted_friend", name: "Trusted Friend",             counter: "orders_fulfilled",           threshold: 5,   target: 5   },
-  { id: "village_voice",  name: "Village Voice",              counter: "orders_fulfilled",           threshold: 25,  target: 25  },
+  { id: "trusted_friend", name: "Trusted Friend",             desc: "Fill 5 villager orders",                         counter: "orders_fulfilled",           threshold: 5,   target: 5   },
+  { id: "village_voice",  name: "Village Voice",              desc: "Fill 25 villager orders",                        counter: "orders_fulfilled",           threshold: 25,  target: 25  },
   // bosses_defeated
-  { id: "first_blood",    name: "First Blood",                counter: "bosses_defeated",            threshold: 1,   target: 1   },
-  { id: "champion",       name: "Champion",                   counter: "bosses_defeated",            threshold: 4,   target: 4   },
+  { id: "first_blood",    name: "First Blood",                desc: "Defeat your first seasonal boss",                counter: "bosses_defeated",            threshold: 1,   target: 1   },
+  { id: "champion",       name: "Champion",                   desc: "Defeat 4 seasonal bosses",                       counter: "bosses_defeated",            threshold: 4,   target: 4   },
   // festival_won
-  { id: "true_keeper",    name: "True Keeper of the Vale",    counter: "festival_won",               threshold: 1,   target: 1   },
+  { id: "true_keeper",    name: "True Keeper of the Vale",    desc: "Win the harvest festival",                       counter: "festival_won",               threshold: 1,   target: 1   },
   // distinct_resources_chained
-  { id: "naturalist",     name: "Naturalist",                 counter: "distinct_resources_chained", threshold: 8,   target: 8   },
-  { id: "polymath",       name: "Polymath",                   counter: "distinct_resources_chained", threshold: 15,  target: 15  },
+  { id: "naturalist",     name: "Naturalist",                 desc: "Chain 8 different resource types",               counter: "distinct_resources_chained", threshold: 8,   target: 8   },
+  { id: "polymath",       name: "Polymath",                   desc: "Chain 15 different resource types",              counter: "distinct_resources_chained", threshold: 15,  target: 15  },
   // distinct_buildings_built
-  { id: "town_planner",   name: "Town Planner",               counter: "distinct_buildings_built",   threshold: 5,   target: 5   },
+  { id: "town_planner",   name: "Town Planner",               desc: "Construct 5 different buildings",                counter: "distinct_buildings_built",   threshold: 5,   target: 5   },
   // supplies_converted
-  { id: "supply_chain",   name: "Supply Chain",               counter: "supplies_converted",         threshold: 10,  target: 10  },
+  { id: "supply_chain",   name: "Supply Chain",               desc: "Convert 10 grain bundles into supplies",         counter: "supplies_converted",         threshold: 10,  target: 10  },
 ];
 
 /**

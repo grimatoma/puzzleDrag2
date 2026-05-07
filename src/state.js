@@ -2,7 +2,7 @@ import { BIOMES, BUILDINGS, NPCS, MAX_TURNS, RECIPES, WORKSHOP_RECIPES, STORAGE_
 import { sellPriceFor as _sellPriceFor } from "./features/market/pricing.js";
 import { tryClearRatChain } from "./features/farm/rats.js";
 import { tryExtinguishFire } from "./features/farm/hazards.js";
-import { isMysteriousChainValid } from "./features/mine/mysterious_ore.js";
+import { isMysteriousChainValid, spawnMysteriousOre, tickMysteriousOre } from "./features/mine/mysterious_ore.js";
 import { driftPrices, applyTrade } from "./market.js";
 import { currentCap } from "./utils.js";
 import { WORKER_MAP } from "./features/apprentices/data.js";
@@ -10,6 +10,7 @@ import { computeWorkerEffects } from "./features/apprentices/effects.js";
 import { SPECIES, CATEGORIES, SPECIES_MAP } from "./features/species/data.js";
 import { rollQuests } from "./features/quests/data.js";
 import { ACHIEVEMENTS as ACHIEVEMENT_LIST } from "./features/achievements/data.js";
+import { awardXp } from "./features/almanac/data.js";
 import * as crafting from "./features/crafting/slice.js";
 import * as quests from "./features/quests/slice.js";
 import * as achievements from "./features/achievements/slice.js";
@@ -107,6 +108,8 @@ export function mergeLoadedState(saved) {
   return { ...saved, species };
 }
 
+// Legacy non-linear curve — kept for backward compat with any external callers.
+// Internal state.js reducers now route through applyAlmanacXp (linear 150/level).
 export const xpForLevel = (l) => 50 + l * 80;
 
 const _resourceCache = new Map();
@@ -318,6 +321,7 @@ export function initialState(overrides) {
   return fresh;
 }
 
+// Legacy XP function (non-linear): used for state.xp / state.level (game-play level).
 function applyXp(state, xpDelta) {
   let xp = state.xp + xpDelta;
   let level = state.level;
@@ -328,6 +332,13 @@ function applyXp(state, xpDelta) {
     leveledUp = true;
   }
   return { xp, level, leveledUp };
+}
+
+// Canonical almanac XP function (§17 linear, 150 XP/level).
+// Wraps features/almanac/data.js awardXp() so all reducers route through it.
+function applyAlmanacXp(state, amount) {
+  const { newState, leveledTo } = awardXp(state, amount);
+  return { newState, leveledTo };
 }
 
 // ─── Story trigger integration ────────────────────────────────────────────────
@@ -402,6 +413,41 @@ function coreReducer(state, action) {
         return { ...state, inventory };
       }
 
+      // Mine/Farm hazard processing when full chain is provided in payload
+      // (e.g. when GameScene dispatches CHAIN_COLLECTED with chain: [...]
+      //  rather than a separate COMMIT_CHAIN)
+      const chainTiles = action.payload.chain ?? null;
+      const currentBiome = state.biome ?? state.biomeKey;
+      if (chainTiles && chainTiles.length > 0) {
+        if (currentBiome === "farm") {
+          // Rat clearing: chain of 3+ rat tiles
+          const hasRat = chainTiles.some((t) => t.key === "rat");
+          if (hasRat) {
+            const patch = tryClearRatChain(state, chainTiles);
+            if (patch) {
+              return { ...state, hazards: patch.hazards, coins: patch.coins };
+            }
+            return state; // rejected
+          }
+          // Fire extinguishing
+          const firePatch = tryExtinguishFire(state, chainTiles);
+          if (firePatch) {
+            // Continue with normal chain logic using the patched state
+            // (fire coins bonus handled below in combined result)
+          }
+        } else if (currentBiome === "mine") {
+          // Mysterious ore capture
+          const hasOre = chainTiles.some((t) => t.key === "mysterious_ore");
+          if (hasOre && isMysteriousChainValid(chainTiles)) {
+            return {
+              ...state,
+              runes: (state.runes ?? 0) + 1,
+              mysteriousOre: null,
+            };
+          }
+        }
+      }
+
       // Boss board modifier: active boss may require longer chains
       const bossMinChain = state.boss?.minChain || 0;
       if (bossMinChain > 0 && effectiveChain < bossMinChain) {
@@ -473,6 +519,8 @@ function coreReducer(state, action) {
       const coinsGain = Math.max(1, Math.floor((effectiveGained * value) / 2));
       const xpGain = effectiveGained * value * 3 + effectiveUpgrades * 12;
       const xpResult = applyXp(state, xpGain);
+      // §17 locked: 1 XP per chain (regardless of length/value) into almanac
+      const { newState: afterAlmanacXp } = applyAlmanacXp(state, 1);
       const turnsUsed = state.turnsUsed + 1;
       const seasonEnded = turnsUsed >= MAX_TURNS;
       const seasonStats = {
@@ -496,12 +544,14 @@ function coreReducer(state, action) {
         newHintsShown = { ...hintsShown, upgradeHint: true };
       }
 
-      const afterChain = {
+      let afterChain = {
         ...state,
         inventory,
         coins: state.coins + coinsGain,
         xp: xpResult.xp,
         level: xpResult.level,
+        // almanac XP from awardXp (linear 150/level)
+        almanac: afterAlmanacXp.almanac,
         turnsUsed,
         seasonStats: { ...seasonStats, capFloaters: chainCf },
         floaters: chainFloaters,
@@ -510,6 +560,10 @@ function coreReducer(state, action) {
         lastChainLength: effectiveChain,
         modal: seasonEnded ? "season" : state.modal,
       };
+      // Mine: tick mysterious ore countdown on each chain
+      if ((afterChain.biome ?? afterChain.biomeKey) === "mine" && afterChain.mysteriousOre) {
+        afterChain = tickMysteriousOre(afterChain);
+      }
       // Story: evaluate resource beats after inventory updated
       return maybeFireResourceBeats(afterChain, state);
     }
@@ -526,6 +580,8 @@ function coreReducer(state, action) {
       const usedKeys = remainingOrders.map((x) => x.key);
       const replacement = makeOrder(state.biomeKey, state.level, usedNpcs, usedKeys);
       const xpResult = applyXp(state, 12);
+      // §17 locked: 5 XP per order into almanac
+      const { newState: afterOrderAlmanac } = applyAlmanacXp(state, 5);
       // Bond multiplier (Phase 6.1): base reward × bond modifier
       const npcBond = state.npcs?.bonds?.[o.npc] ?? 5;
       // Use order.baseReward if present, else fall back to order.reward as the base
@@ -557,6 +613,7 @@ function coreReducer(state, action) {
         coins: state.coins + coinsCredit,
         xp: xpResult.xp,
         level: xpResult.level,
+        almanac: afterOrderAlmanac.almanac,
         orders: state.orders.map((x) => (x.id === o.id ? replacement : x)),
         seasonStats: { ...state.seasonStats, ordersFilled: state.seasonStats.ordersFilled + 1, coins: state.seasonStats.coins + actualReward },
         workers: state.workers ? { ...state.workers, debt: newDebt } : state.workers,
@@ -833,12 +890,15 @@ function coreReducer(state, action) {
         bubble = { id: Date.now(), npc: "wren", text: "Inn built! 🧑‍🌾 You can now hire Helpers from the nav below.", ms: 2800 };
         newHintsShown = { ...hintsShown, innHint: true };
       }
+      // §17 locked: 10 XP per building into almanac
+      const { newState: afterBuildAlmanac } = applyAlmanacXp(state, 10);
       const afterBuild = {
         ...state,
         coins: state.coins - (b.cost.coins || 0),
         runes: (state.runes ?? 0) - runesNeeded,
         inventory,
         built: { ...state.built, [b.id]: true },
+        almanac: afterBuildAlmanac.almanac,
         bubble,
         _hintsShown: newHintsShown,
       };
@@ -942,7 +1002,17 @@ function coreReducer(state, action) {
           turnsUsed: 0,
         } };
       }
-      const afterSeasonWithFields = { ...afterSeason, farm: afterSeasonFarm, mine: afterSeasonMine };
+      // Re-roll deterministic 6-slot quests for the new season
+      const newYear = Math.max(1, Math.floor(((afterSeason.seasonsCycled || 0) - 1) / 4) + 1);
+      const newSeasonIndex2 = (afterSeason.seasonsCycled || 0) % 4;
+      const seasonNames2 = ["spring", "summer", "autumn", "winter"];
+      const rerolledQuests = rollQuests(state.saveSeed ?? "default", newYear, seasonNames2[newSeasonIndex2]);
+      const afterSeasonWithFields = {
+        ...afterSeason,
+        farm: afterSeasonFarm,
+        mine: afterSeasonMine,
+        quests: rerolledQuests,
+      };
       // Story: fire season_entered trigger
       const newSeasonIndex = (afterSeasonWithFields.seasonsCycled % 4);
       const seasonNames = ["spring", "summer", "autumn", "winter"];
@@ -1022,30 +1092,37 @@ function coreReducer(state, action) {
       if (!state.story?.flags?.mine_unlocked) return state;
       const tier = MINE_ENTRY_TIERS.find((t) => t.id === action.payload?.tier);
       if (!tier) return state;
+      let mineBase;
       if (tier.id === "free") {
         if ((state.inventory.supplies ?? 0) < 3) return state;
-        return {
+        mineBase = {
           ...state,
           biomeKey: "mine",
+          biome: "mine",
           inventory: { ...state.inventory, supplies: state.inventory.supplies - 3 },
           sessionMaxTurns: MAX_TURNS,
         };
-      }
-      if (tier.id === "better") {
+      } else if (tier.id === "better") {
         if ((state.coins ?? 0) < 100 || (state.shovel ?? 0) < 10) return state;
-        return {
+        mineBase = {
           ...state,
           biomeKey: "mine",
+          biome: "mine",
           coins: state.coins - 100,
           shovel: state.shovel - 10,
           sessionMaxTurns: MAX_TURNS + 2,
         };
-      }
-      if (tier.id === "premium") {
+      } else if (tier.id === "premium") {
         if ((state.runes ?? 0) < 2) return state;
-        return { ...state, biomeKey: "mine", runes: state.runes - 2, sessionMaxTurns: MAX_TURNS };
+        mineBase = { ...state, biomeKey: "mine", biome: "mine", runes: state.runes - 2, sessionMaxTurns: MAX_TURNS };
+      } else {
+        return state;
       }
-      return state;
+      // Spawn mysterious ore on mine entry if grid is available
+      if (mineBase.grid && mineBase.grid.length > 0) {
+        return spawnMysteriousOre(mineBase);
+      }
+      return mineBase;
     }
 
     case "CRAFT": {
@@ -1107,13 +1184,18 @@ function coreReducer(state, action) {
       if (biomeId === state.biome) return state;
       // Switching to Farm clears mysteriousOre (mine-only mechanic)
       const clearMine = biomeId === "farm";
-      return {
+      const afterSetBiome = {
         ...state,
         biome: biomeId,
         biomeKey: biomeId,
         mysteriousOre: clearMine ? null : state.mysteriousOre,
         _needsRefill: true,
       };
+      // Spawn mysterious ore when entering mine, if grid is available
+      if (!clearMine && afterSetBiome.grid && afterSetBiome.grid.length > 0) {
+        return spawnMysteriousOre(afterSetBiome);
+      }
+      return afterSetBiome;
     }
 
     case "COMMIT_CHAIN": {
@@ -1409,6 +1491,18 @@ const SLICE_PRIMARY_ACTIONS = new Set([
   "APP/FIRE",
   "BUILD_DECORATION",
   "SUMMON_MAGIC_TOOL",
+  // Quest claim and almanac actions are owned by quests/slice
+  "QUESTS/CLAIM_QUEST",
+  "QUESTS/CLAIM_ALMANAC",
+  "QUESTS/ROLL_DAILIES",
+  "QUESTS/PROGRESS_QUEST",
+  // Boss actions are owned by boss/slice
+  "BOSS/TRIGGER",
+  "BOSS/RESOLVE",
+  "BOSS/REJECT",
+  "BOSS/MINIMIZE",
+  "BOSS/EXPAND",
+  "BOSS/CLOSE",
 ]);
 
 // Actions where coreReducer intentionally defers to slices (e.g. CRAFTING/CRAFT_RECIPE

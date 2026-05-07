@@ -221,6 +221,9 @@ export const RECIPE_ID_ALIASES = {
   goldring:  "gold_ring",
 };
 
+// @deprecated — Use ACHIEVEMENTS from src/features/achievements/data.js instead.
+// This legacy list (20 entries, eventKey/target shape) is kept for the achievements/slice.js
+// trophy system only. New code should use the canonical counter/threshold shape.
 export const ACHIEVEMENTS = [
   // Harvest
   { id: "harvest_1",    name: "First Harvest",      desc: "Collect your first resource",            category: "Harvest",  target: 1,    eventKey: "totalHarvested", icon: "🌾", reward: { coins: 25,  xp: 10 } },
