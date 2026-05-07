@@ -421,6 +421,8 @@ export class GameScene extends Phaser.Scene {
           const newRes = this.resourceByKey(cell.key);
           if (newRes) tile.setResource(newRes);
         }
+        tile.frozen = !!cell.frozen;
+        tile.rubble = !!cell.rubble;
       }
     }
   }
@@ -475,7 +477,14 @@ export class GameScene extends Phaser.Scene {
         if (!this.grid[r][c]) {
           const x = this.boardX + c * ts + ts / 2;
           const y = this.boardY + r * ts + ts / 2;
-          const res = !initial && this.pendingUpgrades.length ? this.pendingUpgrades.shift() : this._randomFromPool(workerPool, weatherKey);
+          let res;
+          if (!initial && this.pendingUpgrades.length) {
+            const idx = this.pendingUpgrades.findIndex(u => u.col === c);
+            if (idx !== -1) {
+              res = this.pendingUpgrades.splice(idx, 1)[0].res;
+            }
+          }
+          if (!res) res = this._randomFromPool(workerPool, weatherKey);
           const tile = new TileObj(this, x, initial ? y - 500 - Phaser.Math.Between(0, 100) : y - 140, c, r, res);
           tile.sprite.setScale(this.tileSpriteScale);
           this.grid[r][c] = tile;
@@ -722,6 +731,7 @@ export class GameScene extends Phaser.Scene {
 
   tryAddToPath(tile) {
     if (!this.dragging || !this.path.length) return;
+    if (tile.frozen || tile.rubble) return;
     const last = this.path[this.path.length - 1];
     const prev = this.path[this.path.length - 2];
     if (prev === tile) {
@@ -896,7 +906,8 @@ export class GameScene extends Phaser.Scene {
     if (this._deferredTool) {
       const tool = this._deferredTool;
       this._deferredTool = null;
-      this.time.delayedCall(50, () => this.registry.set("toolPending", tool));
+      this.registry.set("toolPending", null);
+      this.time.delayedCall(60, () => this.registry.set("toolPending", tool));
     }
   }
 
@@ -955,12 +966,13 @@ export class GameScene extends Phaser.Scene {
     this.radialFlash(this.path[this.path.length - 1].x, this.path[this.path.length - 1].y, this.path.length);
 
     // Queue upgrade tiles to spawn at the endpoint after board collapse.
-    // All upgrades land at the endpoint position (last tile in path).
+    // All upgrades land at the endpoint column (last tile in path).
     if (next && upgradeTotal > 0) {
+      const endpointTile = this.path[this.path.length - 1];
       for (let u = 0; u < upgradeTotal; u++) {
-        this.pendingUpgrades.push(next);
+        this.pendingUpgrades.push({ res: next, col: endpointTile.col, row: endpointTile.row });
       }
-      this.upgradeBurst(this.path[this.path.length - 1].x, this.path[this.path.length - 1].y);
+      this.upgradeBurst(endpointTile.x, endpointTile.y);
     }
 
     this.path.forEach((tile, i) => {
