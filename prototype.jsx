@@ -1,6 +1,6 @@
 import { useEffect, useReducer, useRef, useState } from "react";
 import { COLS, ROWS, TILE } from "./src/constants.js";
-import { runSelfTests } from "./src/utils.js";
+import { runSelfTests, currentCap } from "./src/utils.js";
 import { gameReducer, initialState } from "./src/state.js";
 import { Hud } from "./src/ui/Hud.jsx";
 import { MobileDock, PortraitToolsBar } from "./src/ui/Tools.jsx";
@@ -122,6 +122,9 @@ function PhaserMount({ dispatch, biomeKey, turnsUsed, seasonsCycled, uiLocked, s
   useEffect(() => { gameRef.current?.registry.set("boss", gameState?.boss ?? null); }, [gameState?.boss]);
   // Sync fertilizerActive so GameScene.fillBoard can bias seedling-tier resources
   useEffect(() => { gameRef.current?.registry.set("fertilizerActive", gameState?.fertilizerActive ?? false); }, [gameState?.fertilizerActive]);
+  // V.3 — Sync inventory and cap so GameScene.collectPath can compute actual gain for float text
+  useEffect(() => { gameRef.current?.registry.set("inventory", gameState?.inventory ?? {}); }, [gameState?.inventory]);
+  useEffect(() => { gameRef.current?.registry.set("inventoryCap", currentCap(gameState) ?? 200); }, [gameState]);
 
   // Keyboard chain construction — Tab focuses board, arrows move cursor, Space adds tile, Enter commits, Esc cancels
   useEffect(() => {
