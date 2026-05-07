@@ -345,7 +345,6 @@ export const DAILY_REWARDS = {
   3:  { tool: "basic",   amount: 1 },
   4:  { coins: 75 },
   5:  { tool: "rare",    amount: 1 },
-  6:  { coins: 50 },
   7:  { coins: 150, tool: "shuffle", amount: 1 },
   8:  { coins: 60 },  9: { coins: 70 },  10: { coins: 80 },
   11: { coins: 90 }, 12: { coins: 100 }, 13: { coins: 120 },

@@ -247,10 +247,11 @@ describe("CLOSE_SEASON", () => {
     expect(s2.seasonsCycled).toBe(2);
   });
 
-  it("awards end-of-season coins and shuffle tool", () => {
+  it("awards end-of-season coins; shuffles earned via almanac/quests not free per season (spec §11)", () => {
     const state = minState({ tools: { shuffle: 0 } });
     const next = gameReducer(state, { type: "CLOSE_SEASON" });
-    expect(next.tools.shuffle).toBe(1);
+    // Spec: no free shuffle per season — shuffles come from almanac/quests only
+    expect(next.tools.shuffle).toBe(0);
     expect(next.coins).toBe(state.coins + 25); // SEASON_END_BONUS_COINS
   });
 });

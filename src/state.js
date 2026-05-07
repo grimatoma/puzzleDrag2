@@ -920,7 +920,9 @@ function coreReducer(state, action) {
       const newSeasonNum = (state.market?.season ?? 0) + 1;
       const mSeed = state.market?.seed ?? 0;
       const newPrices = driftPrices(mSeed, newSeasonNum);
-      let tools = { ...state.tools, shuffle: (state.tools.shuffle || 0) + 1 };
+      // Spec §11: shuffles are earned via almanac/quests — not free per season.
+      // TODO: if players run out of shuffles entirely, add a season-1 bootstrap grant here.
+      let tools = { ...state.tools };
       // Powder Store: grant 2 bombs per season-end
       if (state.built?.powder_store) {
         tools = { ...tools, bomb: (tools.bomb ?? 0) + 2 };
@@ -978,7 +980,7 @@ function coreReducer(state, action) {
         // 5.7: reset per-season free moves on season close
         species: state.species ? { ...state.species, freeMoves: 0 } : state.species,
         npcs: decayedNpcs,
-        bubble: { id: Date.now(), npc: "tomas", text: "Bonus: +1 Reshuffle Horn · +25◉", ms: 2000 },
+        bubble: { id: Date.now(), npc: "tomas", text: "Season ended! +25◉ season bonus.", ms: 2000 },
         market: {
           ...(state.market ?? {}),
           season: newSeasonNum,
