@@ -1,25 +1,26 @@
-export const APPRENTICES = [
+/**
+ * Phase 4 — Worker data model.
+ * Each worker has: id, name, role, icon, color, wage, hireCost, maxCount,
+ * effect (type + params), requirement.
+ *
+ * effect.type is one of:
+ *   "threshold_reduce" — lowers chain upgrade threshold for a resource
+ *   "pool_weight"      — adds extra copies of a resource to the spawn pool
+ *   "bonus_yield"      — adds bonus resources per chain of a type
+ *   "season_bonus"     — pays extra coins at season end
+ */
+export const WORKERS = [
   {
     id: "hilda",
     name: "Hilda",
     role: "Farmhand",
     icon: "🧑‍🌾",
     color: "#4f8c3a",
-    wage: 30,
-    produces: { hay: 8, log: 4 },
+    wage: 15,
     hireCost: 200,
+    maxCount: 3,
+    effect: { type: "threshold_reduce", key: "hay", from: 6, to: 3 },
     requirement: { building: "granary" },
-  },
-  {
-    id: "dren",
-    name: "Dren",
-    role: "Miner",
-    icon: "⛏",
-    color: "#7a8490",
-    wage: 50,
-    produces: { stone: 6, ore: 3 },
-    hireCost: 350,
-    requirement: { level: 2 },
   },
   {
     id: "pip",
@@ -27,21 +28,11 @@ export const APPRENTICES = [
     role: "Forager",
     icon: "🌿",
     color: "#7dc45a",
-    wage: 25,
-    produces: { berry: 5, egg: 2 },
+    wage: 12,
     hireCost: 150,
+    maxCount: 2,
+    effect: { type: "pool_weight", key: "berry", amount: 2 },
     requirement: { building: "inn" },
-  },
-  {
-    id: "osric",
-    name: "Osric",
-    role: "Smith Apprentice",
-    icon: "⚒",
-    color: "#3a3a3a",
-    wage: 80,
-    produces: { ingot: 1, plank: 4 },
-    hireCost: 500,
-    requirement: { building: "forge", orLevel: 4 },
   },
   {
     id: "wila",
@@ -49,9 +40,10 @@ export const APPRENTICES = [
     role: "Cellarer",
     icon: "🍯",
     color: "#c8923a",
-    wage: 40,
-    produces: { jam: 2, flour: 3 },
+    wage: 20,
     hireCost: 300,
+    maxCount: 2,
+    effect: { type: "bonus_yield", key: "jam", amount: 2 },
     requirement: { building: "bakery" },
   },
   {
@@ -61,10 +53,70 @@ export const APPRENTICES = [
     icon: "👀",
     color: "#3a6a9a",
     wage: 20,
-    produces: { coins: 25 },
     hireCost: 100,
+    maxCount: 1,
+    effect: { type: "season_bonus", key: "coins", amount: 30 },
     requirement: { building: "inn" },
+  },
+  {
+    id: "osric",
+    name: "Osric",
+    role: "Smith Apprentice",
+    icon: "⚒",
+    color: "#3a3a3a",
+    wage: 40,
+    hireCost: 500,
+    maxCount: 1,
+    effect: { type: "threshold_reduce", key: "ore", from: 6, to: 3 },
+    requirement: { building: "forge", orLevel: 4 },
+  },
+  {
+    id: "dren",
+    name: "Dren",
+    role: "Miner",
+    icon: "⛏",
+    color: "#7a8490",
+    wage: 25,
+    hireCost: 350,
+    maxCount: 2,
+    effect: { type: "pool_weight", key: "stone", amount: 2 },
+    requirement: { level: 2 },
   },
 ];
 
-export const APPRENTICE_MAP = Object.fromEntries(APPRENTICES.map((a) => [a.id, a]));
+export const WORKER_MAP = Object.fromEntries(WORKERS.map((w) => [w.id, w]));
+
+// Legacy aliases kept for backward compatibility
+export const APPRENTICES = WORKERS;
+export const APPRENTICE_MAP = WORKER_MAP;
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+/** Total workers hired across all types. */
+export function totalHired(state) {
+  return Object.values(state?.workers?.hired ?? {}).reduce((a, n) => a + (n | 0), 0);
+}
+
+/** Worker capacity from housing buildings. 1 base + 1 per Housing Block. */
+export function housingCapacity(state) {
+  const housingBuilt = state?.built?.housing;
+  const housingCount = typeof housingBuilt === "object"
+    ? (housingBuilt?.count ?? 1)
+    : (housingBuilt ? 1 : 0);
+  return 1 + housingCount;
+}
+
+/** Returns the display label for a worker's slot count (plain number string). */
+export function workerSlotLabel(worker) {
+  return String(worker?.maxCount ?? 0);
+}
+
+/** Check if a worker's requirement is met. */
+export function checkRequirement(worker, state) {
+  const req = worker.requirement;
+  if (!req) return true;
+  if (req.building && !state?.built?.[req.building]) return false;
+  if (req.level && (state?.level ?? 1) < req.level) return false;
+  if (req.orLevel && !state?.built?.[req.building] && (state?.level ?? 1) < req.orLevel) return false;
+  return true;
+}
