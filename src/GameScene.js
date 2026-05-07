@@ -347,12 +347,28 @@ export class GameScene extends Phaser.Scene {
 
   handleBiomeChange() {
     this.refreshSeasonTint();
-    // Reshuffle every tile to the new biome's pool
+    const biomeRestored = this.registry.get("biomeRestored");
+    if (biomeRestored) {
+      // savedField was restored into state.grid — sync those keys onto the live tiles
+      const savedGrid = this.registry.get("grid");
+      this.grid.flat().forEach((t) => {
+        if (!t) return;
+        const cell = savedGrid?.[t.row]?.[t.col];
+        if (cell?.key) {
+          const newRes = this.resourceByKey(cell.key);
+          if (newRes) t.setResource(newRes);
+        }
+      });
+      this._syncGridToState();
+      return;
+    }
+    // No saved field — randomize tiles for the new biome
     this.grid.flat().forEach((t) => {
       if (!t) return;
       t.setResource(this.randomResource());
       this.tweens.add({ targets: t.sprite, angle: 360, duration: this._dur(280), onComplete: () => (t.sprite.angle = 0) });
     });
+    this._syncGridToState();
   }
 
   // ─── Resources ────────────────────────────────────────────────────────────
@@ -543,7 +559,7 @@ export class GameScene extends Phaser.Scene {
     this.time.delayedCall(210, () => this.fillBoard(false));
   }
 
-  shuffleBoard() {
+  shuffleBoard(attempt = 0) {
     const ts = this.tileSize;
     const boardW = COLS * ts;
     const boardH = ROWS * ts;
@@ -570,10 +586,33 @@ export class GameScene extends Phaser.Scene {
         this._performShuffleSwap();
         // Re-check after a brief delay to let the new tiles animate in
         this.time.delayedCall(320, () => {
-          if (!hasValidChain(this.grid)) this.shuffleBoard();
+          if (!hasValidChain(this.grid)) {
+            if (attempt >= 2) {
+              this._forceGuaranteedChain();
+              this._syncGridToState();
+            } else {
+              this.shuffleBoard(attempt + 1);
+            }
+          }
         });
       },
     });
+  }
+
+  _forceGuaranteedChain() {
+    const pool = this.activePool();
+    const key = pool[0] ?? this.biome().pool[0];
+    const res = this.resourceByKey(key) ?? this.biome().resources[0];
+    // Assign the same resource to the first 3 tiles in row-major order
+    let count = 0;
+    for (let r = 0; r < ROWS && count < 3; r++) {
+      for (let c = 0; c < COLS && count < 3; c++) {
+        const t = this.grid[r][c];
+        if (!t) continue;
+        t.setResource(res);
+        count += 1;
+      }
+    }
   }
 
   _performShuffleSwap() {

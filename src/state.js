@@ -226,6 +226,7 @@ export function initialState(overrides) {
                wolves: null },
     // Board grid (populated during play, not stored on init)
     grid: Array.from({ length: 6 }, () => Array.from({ length: 6 }, () => ({ key: "hay" }))),
+    _biomeRestored: false,
     lastChainSnapshot: null,
     magicFertilizerCharges: 0,
     built: { hearth: true, decorations: {} },
@@ -863,7 +864,7 @@ function coreReducer(state, action) {
       const savedField = state[key]?.savedField ?? null;
       let boardPatch = {};
       if (savedField && savedField.tiles) {
-        boardPatch = { board: { tiles: savedField.tiles, hazards: savedField.hazards ?? [] } };
+        boardPatch = { grid: savedField.tiles };
       }
       const excludeNpcs = [];
       const excludeKeys = [];
@@ -873,7 +874,7 @@ function coreReducer(state, action) {
         excludeKeys.push(o.key);
         return o;
       });
-      return { ...state, biomeKey: key, orders: replacements, turnsUsed: 0, ...boardPatch };
+      return { ...state, biomeKey: key, orders: replacements, turnsUsed: 0, _biomeRestored: !!(savedField && savedField.tiles), ...boardPatch };
     }
     case "SET_VIEW": {
       const next = action.view;
@@ -1013,17 +1014,17 @@ function coreReducer(state, action) {
       // Phase 12.5 — snapshot board into saved-field slot when Silo/Barn is built
       let afterSeasonFarm = afterSeason.farm ?? { savedField: null };
       let afterSeasonMine = afterSeason.mine ?? { savedField: null };
-      if (state.biomeKey === "farm" && state.built?.silo && state.board) {
+      if (state.biomeKey === "farm" && state.built?.silo && state.grid) {
         afterSeasonFarm = { ...afterSeasonFarm, savedField: {
-          tiles: state.board.tiles,
-          hazards: state.board.hazards ?? [],
+          tiles: state.grid,
+          hazards: state.hazards ?? null,
           turnsUsed: 0,
         } };
       }
-      if (state.biomeKey === "mine" && state.built?.barn && state.board) {
+      if (state.biomeKey === "mine" && state.built?.barn && state.grid) {
         afterSeasonMine = { ...afterSeasonMine, savedField: {
-          tiles: state.board.tiles,
-          hazards: state.board.hazards ?? [],
+          tiles: state.grid,
+          hazards: state.hazards ?? null,
           turnsUsed: 0,
         } };
       }
@@ -1188,10 +1189,13 @@ function coreReducer(state, action) {
       const owned = state.inventory?.[itemId] ?? 0;
       if (owned < sellQty) return state;
       const price = _sellPriceFor(itemId);
+      const proceeds = price * sellQty;
+      const { coinsCredit, newDebt } = applyDebtRepayment(state, proceeds);
       return {
         ...state,
         inventory: { ...state.inventory, [itemId]: owned - sellQty },
-        coins: (state.coins ?? 0) + price * sellQty,
+        coins: (state.coins ?? 0) + coinsCredit,
+        workers: state.workers ? { ...state.workers, debt: newDebt } : state.workers,
       };
     }
 

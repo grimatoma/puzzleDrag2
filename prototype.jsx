@@ -116,6 +116,8 @@ function PhaserMount({ dispatch, biomeKey, turnsUsed, seasonsCycled, uiLocked, s
   useEffect(() => { gameRef.current?.registry.set("speciesActive", species?.activeByCategory ?? null); }, [species?.activeByCategory]);
   // Sync grid state → Phaser registry so hazard engines see real tile keys
   useEffect(() => { gameRef.current?.registry.set("grid", grid ?? null); }, [grid]);
+  // Sync biomeRestored flag so GameScene.handleBiomeChange can skip randomize when savedField restored
+  useEffect(() => { gameRef.current?.registry.set("biomeRestored", gameState?._biomeRestored ?? false); }, [gameState?._biomeRestored]);
   // Sync boss modifier flags so GameScene.fillBoard can apply spawnBias
   useEffect(() => { gameRef.current?.registry.set("boss", gameState?.boss ?? null); }, [gameState?.boss]);
   // Sync fertilizerActive so GameScene.fillBoard can bias seedling-tier resources
