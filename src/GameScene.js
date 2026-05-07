@@ -14,6 +14,38 @@ function boardFrameFor(cssVw) {
   return cssVw < 600 ? 8 : 14;
 }
 
+/**
+ * Pure function — no Phaser dependency. Returns true if the grid contains any
+ * cluster of 3+ 4-connected tiles with the same resource key.
+ * @param {Array<Array<{res:{key:string}}|null>>} grid
+ * @returns {boolean}
+ */
+export function hasValidChain(grid) {
+  const rows = grid.length;
+  const cols = rows ? grid[0].length : 0;
+  const visited = Array.from({ length: rows }, () => new Array(cols).fill(false));
+
+  const DIRS = [[0, 1], [0, -1], [1, 0], [-1, 0]];
+
+  function dfs(r, c, key) {
+    if (r < 0 || r >= rows || c < 0 || c >= cols) return 0;
+    if (visited[r][c]) return 0;
+    if (!grid[r][c] || grid[r][c].res.key !== key) return 0;
+    visited[r][c] = true;
+    let count = 1;
+    for (const [dr, dc] of DIRS) count += dfs(r + dr, c + dc, key);
+    return count;
+  }
+
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      if (!grid[r][c] || visited[r][c]) continue;
+      if (dfs(r, c, grid[r][c].res.key) >= 3) return true;
+    }
+  }
+  return false;
+}
+
 export class GameScene extends Phaser.Scene {
   constructor() {
     super("GameScene");
@@ -27,6 +59,7 @@ export class GameScene extends Phaser.Scene {
     this._prevStarGroups = 0;
     this.dragging = false;
     this.locked = false;
+    this.board = null; // Phaser Container used as tween target for shuffle spin
   }
 
   create() {
@@ -84,6 +117,15 @@ export class GameScene extends Phaser.Scene {
     this.registry.events.on("changedata-turnsUsed", () => this.refreshSeasonTint());
     this.registry.events.on("changedata-uiLocked", (_p, value) => {
       this.locked = !!value;
+    });
+    this.registry.events.on("changedata-toolPending", (_p, value) => {
+      if (!value) return;
+      if (value === "clear")   this._applyToolClear();
+      if (value === "basic")   this._applyToolBasic();
+      if (value === "rare")    this._applyToolRare();
+      if (value === "shuffle") this.shuffleBoard();
+      // Clear the pending flag once handled
+      this.time.delayedCall(50, () => this.registry.set("toolPending", null));
     });
   }
 
@@ -233,6 +275,16 @@ export class GameScene extends Phaser.Scene {
         }
       }
     }
+    // 1.2 — Dead-board auto-shuffle: after every non-initial fill, check for valid chains.
+    if (!initial) {
+      const delay = frostBonus ? 350 : 240;
+      this.time.delayedCall(delay, () => {
+        if (!hasValidChain(this.grid)) {
+          this.floatText("No moves — reshuffled!", this.boardX + (COLS * ts) / 2, this.boardY - 24 * this.dpr);
+          this.shuffleBoard();
+        }
+      });
+    }
   }
 
   collapseBoard() {
@@ -255,10 +307,144 @@ export class GameScene extends Phaser.Scene {
   }
 
   shuffleBoard() {
+    const ts = this.tileSize;
+    const boardW = COLS * ts;
+    const boardH = ROWS * ts;
+    const cx = this.boardX + boardW / 2;
+    const cy = this.boardY + boardH / 2;
+
+    // Destroy any existing board container (e.g. from a previous shuffle that
+    // completed before this one was triggered).
+    if (this.board) { this.board.destroy(); this.board = null; }
+
+    // Create board container as tween target + visual spin overlay
+    this.board = this.add.container(cx, cy).setDepth(18);
+    const spinOverlay = this.add.rectangle(0, 0, boardW, boardH, 0x2b2218, 0.35);
+    this.board.add(spinOverlay);
+
+    this.tweens.add({
+      targets: this.board,
+      rotation: Math.PI * 2,
+      duration: 600,
+      ease: "Sine.easeInOut",
+      onComplete: () => {
+        this.board.destroy();
+        this.board = null;
+        this._performShuffleSwap();
+        // Re-check after a brief delay to let the new tiles animate in
+        this.time.delayedCall(320, () => {
+          if (!hasValidChain(this.grid)) this.shuffleBoard();
+        });
+      },
+    });
+  }
+
+  _performShuffleSwap() {
     this.grid.flat().forEach((t) => {
       if (!t) return;
       t.setResource(this.randomResource());
       this.tweens.add({ targets: t.sprite, angle: 360, duration: 300, onComplete: () => (t.sprite.angle = 0) });
+    });
+  }
+
+  // ─── Board tool handlers (1.3 Scythe / 1.4 Seedpack / 1.5 Lockbox) ──────
+
+  /** 1.3 Scythe: remove 6 random tiles with animation, credit resources, collapse + refill. */
+  _applyToolClear() {
+    const allTiles = [];
+    for (let r = 0; r < ROWS; r++) {
+      for (let c = 0; c < COLS; c++) {
+        if (this.grid[r][c] && !this.grid[r][c].selected) allTiles.push(this.grid[r][c]);
+      }
+    }
+    // Pick up to 6 random tiles
+    Phaser.Utils.Array.Shuffle(allTiles);
+    const picks = allTiles.slice(0, 6);
+    const gainMap = {};
+    picks.forEach((tile, i) => {
+      const key = tile.res.key;
+      gainMap[key] = (gainMap[key] || 0) + 1;
+      this.grid[tile.row][tile.col] = null;
+      this.tweens.add({
+        targets: tile.sprite,
+        scaleX: 0, scaleY: 0,
+        alpha: 0,
+        rotation: (Math.random() - 0.5) * 0.6,
+        duration: 200,
+        delay: i * 20,
+        ease: "Quad.In",
+        onComplete: () => tile.destroy(),
+      });
+    });
+    // Emit resource gains to React (like a mini chain collect, no turn cost)
+    for (const [key, gained] of Object.entries(gainMap)) {
+      const biome = this.biome();
+      const res = biome.resources.find((r) => r.key === key);
+      if (res) {
+        this.events.emit("chain-collected", { key, gained, upgrades: 0, chainLength: gained, value: res.value, noTurn: true });
+      }
+    }
+    this.time.delayedCall(240, () => this.collapseBoard());
+  }
+
+  /** 1.4 Seedpack: replace 5 random non-selected tiles with the biome's base resource. */
+  _applyToolBasic() {
+    const baseRes = this.biome().resources[0]; // hay / stone
+    const allTiles = [];
+    for (let r = 0; r < ROWS; r++) {
+      for (let c = 0; c < COLS; c++) {
+        if (this.grid[r][c] && !this.grid[r][c].selected) allTiles.push(this.grid[r][c]);
+      }
+    }
+    Phaser.Utils.Array.Shuffle(allTiles);
+    const picks = allTiles.slice(0, 5);
+    picks.forEach((tile) => {
+      tile.setResource(baseRes);
+      // Green sparkle burst: scale 0→1 with Back.Out ease
+      tile.sprite.setScale(0);
+      tile.sprite.setTint(0x88ff88);
+      this.tweens.add({
+        targets: tile.sprite,
+        scale: this.tileSpriteScale,
+        duration: 180,
+        ease: "Back.Out",
+        onComplete: () => tile.sprite.clearTint(),
+      });
+    });
+  }
+
+  /** 1.5 Lockbox: replace 3 random non-selected tiles with biome's rare resource. */
+  _applyToolRare() {
+    const biome = this.biome();
+    const rareKey = biome.name === "Mine" ? "gem" : "berry";
+    const rareRes = biome.resources.find((r) => r.key === rareKey) || biome.resources[biome.resources.length - 1];
+    const allTiles = [];
+    for (let r = 0; r < ROWS; r++) {
+      for (let c = 0; c < COLS; c++) {
+        if (this.grid[r][c] && !this.grid[r][c].selected) allTiles.push(this.grid[r][c]);
+      }
+    }
+    Phaser.Utils.Array.Shuffle(allTiles);
+    const picks = allTiles.slice(0, 3);
+    picks.forEach((tile) => {
+      tile.setResource(rareRes);
+      // Golden flash: scale 0 → 1.1 → 1.0
+      tile.sprite.setScale(0);
+      tile.sprite.setTint(0xffd248);
+      this.tweens.add({
+        targets: tile.sprite,
+        scale: this.tileSpriteScale * 1.1,
+        duration: 130,
+        ease: "Back.Out",
+        onComplete: () => {
+          this.tweens.add({
+            targets: tile.sprite,
+            scale: this.tileSpriteScale,
+            duration: 80,
+            onComplete: () => tile.sprite.clearTint(),
+          });
+        },
+      });
     });
   }
 
