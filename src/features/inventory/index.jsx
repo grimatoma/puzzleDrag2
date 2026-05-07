@@ -5,8 +5,9 @@ import CastlePanel from "../castle/index.jsx";
 export const viewKey = "inventory";
 
 export default function InventoryScreen({ state, dispatch }) {
+  const biomeKey = state.biomeKey ?? "farm";
   return (
-    <div className="absolute inset-0 bg-gradient-to-b from-[#7c4f2c] to-[#6b4225] border-[3px] border-[#e2c19b] flex flex-col overflow-hidden">
+    <div className="absolute inset-0 z-10 bg-gradient-to-b from-[#7c4f2c] to-[#6b4225] border-[3px] border-[#e2c19b] flex flex-col overflow-hidden">
       <div className="flex items-center justify-between px-3 py-2 flex-shrink-0 border-b border-[#e2c19b]/40">
         <span className="font-bold text-[14px] text-[#f8e7c6]">🎒 Inventory</span>
         <button
@@ -16,7 +17,7 @@ export default function InventoryScreen({ state, dispatch }) {
       </div>
       <div className="flex-1 overflow-y-auto px-3 py-3">
         <div className="max-w-[640px] mx-auto flex flex-col gap-3">
-          <InventoryGrid inventory={state.inventory} biomeKey={state.biomeKey} orders={state.orders} />
+          <InventoryGrid inventory={state.inventory} biomeKey={biomeKey} orders={state.orders} />
           <CastlePanel state={state} dispatch={dispatch} />
         </div>
       </div>
