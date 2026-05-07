@@ -339,6 +339,91 @@ export const RAT_SPAWN_THRESHOLDS = {
 };
 export const RAT_CLEAR_REWARD_PER = 5;
 
+// ─── Phase 11.1 — Color-blind palettes ───────────────────────────────────────
+// The `default` palette reads back from BIOMES + SEASONS to guarantee zero
+// visual drift versus the Phase 0–10 hex baseline.
+const _defaultTiles = Object.fromEntries(
+  [...BIOMES.farm.resources, ...BIOMES.mine.resources].map((r) => [r.key, r.color]),
+);
+const _defaultSeasons = Object.fromEntries(
+  SEASONS.map((s) => [s.name, { bg: s.bg, fill: s.fill, accent: s.accent }]),
+);
+
+// Accessibility palettes — all adjacency-pair contrast ratios ≥ 3:1 (WCAG AA large text).
+// Pairs checked: hay/log, hay/berry, log/berry, ore/coal.
+export const PALETTES = {
+  default: {
+    tiles: _defaultTiles,
+    seasons: _defaultSeasons,
+  },
+
+  // Deuteranopia (M-cone deficiency): straw-yellow hay, warm-brown log, dark-violet berry.
+  // Luminance: hay(0.685) >> log(0.182) >> berry(0.005) — every adjacent pair ≥ 3:1.
+  deuteranopia: {
+    tiles: {
+      hay:    0xf0d860, wheat:  0xd4b040, grain:  0xb08828, flour:  0xf4ecd0,
+      log:    0x9a6e30, plank:  0xc49050, beam:   0x6a4218,
+      berry:  0x1a003a, jam:    0x4a1060,
+      egg:    0xf0e8c8,
+      stone:  0x9da3a8, cobble: 0xbbc1c6, block:  0x7c8388,
+      ore:    0xe89040, ingot:  0xf8d880,
+      coal:   0x1a1a1a, coke:   0x505060,
+      gem:    0x50d8f8, cutgem: 0xa0f0ff, gold:   0xffd34c,
+      dirt:   0x7a6850,
+    },
+    seasons: {
+      Spring: { bg: 0x5090b0, fill: 0x60b0d0, accent: 0x3870a0 },
+      Summer: { bg: 0x9aba40, fill: 0xd4b030, accent: 0xc09020 },
+      Autumn: { bg: 0x8c5428, fill: 0xb07030, accent: 0x6a3818 },
+      Winter: { bg: 0x607898, fill: 0x80a8cc, accent: 0xc0d8f0 },
+    },
+  },
+
+  // Protanopia (L-cone deficiency): bright-yellow hay, burnt-orange log, midnight-blue berry.
+  // Luminance: hay(0.762) >> log(0.150) >> berry(0.010) — every adjacent pair ≥ 3:1.
+  protanopia: {
+    tiles: {
+      hay:    0xffe060, wheat:  0xf0c840, grain:  0xd0a020, flour:  0xf8f0e0,
+      log:    0xb05018, plank:  0xd07838, beam:   0x783010,
+      berry:  0x001050, jam:    0x002888,
+      egg:    0xf0e8d0,
+      stone:  0x9da3a8, cobble: 0xbbc1c6, block:  0x7c8388,
+      ore:    0xa0c8e8, ingot:  0xd8f0ff,
+      coal:   0x0a1020, coke:   0x283848,
+      gem:    0x60e0f8, cutgem: 0xb0f4ff, gold:   0xffd34c,
+      dirt:   0x7a6850,
+    },
+    seasons: {
+      Spring: { bg: 0x40a080, fill: 0x50c8a0, accent: 0x207858 },
+      Summer: { bg: 0xc8b020, fill: 0xe8d030, accent: 0xa08010 },
+      Autumn: { bg: 0xa04820, fill: 0xc86030, accent: 0x782810 },
+      Winter: { bg: 0x304870, fill: 0x5080b0, accent: 0xa0c0e8 },
+    },
+  },
+
+  // Tritanopia (S-cone deficiency): cream-yellow hay, tawny log, dark-violet berry.
+  // Luminance: hay(0.848) >> log(0.215) >> berry(0.005) — every adjacent pair ≥ 3:1.
+  tritanopia: {
+    tiles: {
+      hay:    0xfff070, wheat:  0xf0d850, grain:  0xd0b030, flour:  0xfcf4e0,
+      log:    0xb47030, plank:  0xd49050, beam:   0x7a4818,
+      berry:  0x1a003a, jam:    0x48006c,
+      egg:    0xf4ecd8,
+      stone:  0x9da3a8, cobble: 0xbbc1c6, block:  0x7c8388,
+      ore:    0xe08820, ingot:  0xf8d060,
+      coal:   0x0c0c14, coke:   0x303040,
+      gem:    0x50d0f0, cutgem: 0xa8f0ff, gold:   0xffd34c,
+      dirt:   0x7a6850,
+    },
+    seasons: {
+      Spring: { bg: 0x609080, fill: 0x78b0a0, accent: 0x406858 },
+      Summer: { bg: 0xb8a820, fill: 0xd8c830, accent: 0x907808 },
+      Autumn: { bg: 0x9a5820, fill: 0xc07030, accent: 0x703808 },
+      Winter: { bg: 0x405868, fill: 0x6090b0, accent: 0xa8c8e0 },
+    },
+  },
+};
+
 /** Return local YYYY-MM-DD string for a Date object. */
 export function dayKeyForDate(d) {
   const y = d.getFullYear();
