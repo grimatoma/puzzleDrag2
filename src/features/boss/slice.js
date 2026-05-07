@@ -1,6 +1,7 @@
 import { BIOMES, RECIPES } from "../../constants.js";
 import { BOSSES, BOSS_WINDOW_TURNS, bossReward as bossRewardFn } from "../bosses/data.js";
 import { WEATHER_TABLE, rollWeather } from "../weather/data.js";
+import { awardXp } from "../almanac/data.js";
 
 const ALL_RESOURCES = [...BIOMES.farm.resources, ...BIOMES.mine.resources];
 
@@ -187,8 +188,10 @@ export function reduce(state, action) {
         const progress = state.boss?.progress ?? 0;
         const { coins: rewardCoins, runes: rewardRunes } = bossRewardFn(bossDef, progress, year);
         const earnedCoins = rewardCoins > 0 ? rewardCoins : 200 * year; // guaranteed-win floor
+        // §17 locked: 25 XP per boss win into almanac
+        const { newState: afterBossXp } = awardXp(base, 25);
         return {
-          ...base,
+          ...afterBossXp,
           bossesDefeated: (state.bossesDefeated || 0) + 1,
           coins: (state.coins || 0) + earnedCoins,
           runes: (state.runes ?? 0) + (rewardRunes ?? 0),

@@ -1,4 +1,6 @@
 import { QUEST_TEMPLATES, ALMANAC_TIERS } from "../../constants.js";
+import { claimQuest } from "./data.js";
+import { awardXp } from "../almanac/data.js";
 
 let _questIdSeq = 1;
 
@@ -56,17 +58,35 @@ export function reduce(state, action) {
     }
     case "QUESTS/CLAIM_QUEST": {
       const { id } = action;
+
+      // New system: look in state.quests first (deterministic 6-slot system)
+      if ((state.quests || []).some((q) => q.id === id)) {
+        const result = claimQuest(state, id);
+        if (!result.ok) return state;
+        // Award almanac XP: §17 locked: 20 XP per quest claim
+        const { newState: afterXp } = awardXp(result.newState, result.xpGain);
+        return afterXp;
+      }
+
+      // Legacy system: look in state.dailies (3-slot)
       const q = (state.dailies || []).find((x) => x.id === id);
       if (!q || !q.done || q.claimed) return state;
       const dailies = (state.dailies || []).map((x) =>
         x.id === id ? { ...x, claimed: true } : x
       );
-      return {
+      const afterLegacy = {
         ...state,
         dailies,
         coins: (state.coins || 0) + (q.reward.coins || 0),
         almanacXp: (state.almanacXp || 0) + (q.reward.almanacXp || 0),
       };
+      // Also award almanac XP to canonical almanac slice
+      const legacyXp = q.reward.almanacXp || 0;
+      if (legacyXp > 0) {
+        const { newState: afterXp } = awardXp(afterLegacy, legacyXp);
+        return afterXp;
+      }
+      return afterLegacy;
     }
     case "QUESTS/CLAIM_ALMANAC": {
       const { tier } = action;
