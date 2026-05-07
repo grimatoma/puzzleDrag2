@@ -1,6 +1,7 @@
 import { SEASONS, MAX_TURNS } from "../constants.js";
 import { hex } from "../utils.js";
 import { xpForLevel } from "../state.js";
+import { WEATHER_META } from "../features/boss/slice.js";
 
 // Mechanical effect active each calendar season (seasonsCycled % 4)
 export const SEASON_EFFECTS = [
@@ -13,6 +14,24 @@ export const SEASON_EFFECTS = [
 function Pill({ children, className = "" }) {
   return (
     <div className={`bg-[#f6efe0] border-2 border-[#b28b62] rounded-full px-3 py-1 flex items-center gap-1.5 text-[#6a4b31] ${className}`}>{children}</div>
+  );
+}
+
+function WeatherChip({ weather }) {
+  if (!weather) return null;
+  const key = weather?.key ?? weather ?? null;
+  if (!key || key === "none") return null;
+  const meta = WEATHER_META[key];
+  if (!meta) return null;
+  return (
+    <div
+      className="flex items-center gap-1 rounded-full px-2 py-0.5 text-white flex-shrink-0"
+      style={{ background: meta.color || "#3a6b8a", fontSize: 10, fontWeight: "bold" }}
+      title={meta.description || meta.desc || ""}
+    >
+      <span>{meta.emoji}</span>
+      <span>{meta.label}</span>
+    </div>
   );
 }
 
@@ -123,6 +142,8 @@ export function Hud({ state, dispatch }) {
         </Pill>
       )}
       {onBoard && <SeasonBar season={season} turnsUsed={turnsUsed} turnsLeft={turnsLeft} calendarSeason={calendarSeason} />}
+      {/* Weather chip — visible on board view when weather is active and no boss overlay covering it */}
+      {onBoard && !state.boss && <WeatherChip weather={state.weather} />}
       {/* Larder progress bars — visible when festival announced, on board view */}
       {onBoard && festivalAnnounced && !isWon && (
         <div className="flex-shrink-0">
