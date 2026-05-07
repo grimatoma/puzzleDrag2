@@ -859,6 +859,238 @@ Hildas AND 2 canaries but housing only buys 4 slots total)?*
 
 ---
 
+### 9.5 — Lava hazard + Water Pump tool counter
+
+**What this delivers:** The §7 Lava hazard the spec promised. On Mine biome,
+when the hazard roll lands on `lava` (replacing the cave-in / gas-vent coin
+flip with a 3-way roll: 40 cave_in / 40 gas_vent / 20 lava), one cell is
+seeded with a glowing red lava tile. Each turn, lava spreads to one random
+orthogonally-adjacent cell — destroying any resource that was in that cell
+*before* spawn (no inventory credit). The counter is the **Water Pump**, a
+new Workshop-craftable tool that converts every lava tile on the board to
+rubble in one tap (no turn cost).
+
+**Completion Criteria:**
+- [ ] `HAZARDS` (from 9.3) extended with a third entry `lava`; pool weights
+  update to `cave_in: 40`, `gas_vent: 40`, `lava: 20`. Per-fillBoard 5%
+  hazard roll unchanged; one active hazard cap unchanged.
+- [ ] `state.hazards.lava` shape:
+  `{ cells: [{row, col}, ...], turnsToSpread } | null`. `turnsToSpread`
+  resets to 1 each turn; on tick = 0 the hazard spreads to a random
+  orthogonally-adjacent free cell.
+- [ ] Spread destroys whatever was in the target cell (no resource credit).
+  When no adjacent free cells exist, lava stops spreading (still active,
+  still blocks chains).
+- [ ] `tileBlockedByHazard(tile)` returns `true` for any lava cell.
+- [ ] New tool `water_pump` registered in the Workshop catalog:
+  `{ inputs: { plank: 1, stone: 1 }, station: "workshop" }`.
+  `USE_TOOL water_pump` clears every lava cell from
+  `state.hazards.lava.cells` (sets to empty array; if empty, sets
+  `state.hazards.lava = null`), converts each cleared cell to a rubble
+  cell that joins the cave-in clear rule, and respects the locked
+  no-turn-cost contract.
+- [ ] Lava NEVER spawns in Farm; never spawns when a boss is active;
+  never co-spawns with cave-in or gas vent (single-active cap unchanged).
+- [ ] Phase 4 worker effect `hazardSpawnReduce.lava` honours the canary
+  pattern but is NOT auto-granted by Canary (Canary stays gas-only).
+  No worker reduces lava in Phase 9; spec extension reserved for Phase 10+.
+- [ ] `src/textures.js` registers `hazard.lava` (pulsing red-orange,
+  74×74) and `tool.water_pump` (48×48).
+- [ ] Save/load round-trips `state.hazards.lava` exactly (cell list,
+  turnsToSpread).
+
+**Validation Spec — write before code:**
+
+*Tests (red phase) — add to `runSelfTests()`:*
+```js
+import { HAZARDS, rollHazard, tickHazards }
+  from "./features/mine/hazards.js";
+import { createInitialState, rootReducer } from "./state.js";
+
+// Catalog
+assert(HAZARDS.length === 3, "exactly 3 hazards now: cave_in, gas_vent, lava");
+const lava = HAZARDS.find(h => h.id === "lava");
+assert(lava && lava.weight === 20, "lava weight = 20");
+
+// Lava spawns only in Mine
+const farmState = { ...createInitialState(), biome: "farm" };
+const r = rollHazard(farmState, () => 0.01);
+assert(r === null, "no hazard spawn in Farm even at lowest roll");
+
+// Spread tick
+const s0 = { ...createInitialState(), biome: "mine",
+             hazards: { caveIn: null, gasVent: null,
+                        lava: { cells: [{row: 2, col: 2}], turnsToSpread: 1 } } };
+const s1 = tickHazards(s0, () => 0.0);  // deterministic spread
+assert(s1.hazards.lava.cells.length === 2, "lava spreads to 1 new cell");
+
+// Water Pump clears lava
+const s2 = { ...s1, tools: { water_pump: 1 } };
+const s3 = rootReducer(s2, { type: "USE_TOOL", payload: { id: "water_pump" } });
+assert(s3.hazards.lava === null, "water pump clears lava entirely");
+assert(s3.tools.water_pump === 0, "water pump consumed");
+assert(s3.turnsUsed === s2.turnsUsed, "no turn cost");
+
+// Lava cell blocks chain
+import { tileBlockedByHazard } from "./features/mine/hazards.js";
+assert(tileBlockedByHazard({ lava: true }) === true, "lava cell blocked");
+```
+
+*Gameplay simulation (mid-Mine session, no Water Pump yet):* The player
+opens a mine session. On turn 3 the board ripples and a single red glowing
+tile appears at row 2 col 4 — the floater reads "Lava bubbles up". Turn 4:
+the lava expands to col 5, eating a coal tile that was sitting there (no
+inventory credit, just gone). Turn 5: it spreads again. The player
+realises the chain they were planning across that row is now impossible.
+They tap Workshop in town next session, craft a Water Pump (1 plank +
+1 stone), come back, tap the pump on a fresh lava field — every lava cell
+flashes white and converts to rubble. Now they need a 3-stone chain
+adjacent to clear the rubble. Two-step puzzle, two tools deep.
+
+Designer reflection: *Does losing a coal tile to lava feel like a real
+sting that teaches the player "deal with it now," or does it feel
+arbitrary? Does the Water Pump → rubble conversion (instead of full clear)
+feel like a fair trade or like a slap?*
+
+**Implementation:**
+
+- `src/features/mine/hazards.js` — extend `HAZARDS`; add `spreadLava`
+  helper; update `tickHazards` and `tileBlockedByHazard`.
+- `src/features/tools/data.js` — register `water_pump`.
+- `src/features/tools/use.js` — `USE_TOOL water_pump` handler.
+- `src/state.js` — `createInitialState()` adds
+  `state.hazards.lava: null`.
+- `src/textures.js` — register `hazard.lava` (subtle 4-frame pulse) and
+  `tool.water_pump`.
+
+**Manual Verify Walk-through:**
+1. Force `gameState.hazards.lava = { cells: [{row:2,col:2}], turnsToSpread: 1 }`
+   in a mine session. Confirm red glow at (2,2), chains routed through it
+   refuse with a "blocked by lava" floater.
+2. Take 1 turn. Confirm lava cell count = 2, the new cell is orthogonally
+   adjacent to (2,2).
+3. Take another turn. Confirm cell count = 3 (or stops if surrounded).
+4. Craft Water Pump in Workshop (1 plank + 1 stone). Confirm
+   `gameState.tools.water_pump === 1`.
+5. Tap Water Pump on the board. Confirm all lava cells convert to rubble,
+   `state.hazards.lava === null`, `turnsUsed` unchanged.
+6. Save → refresh mid-spread. Confirm `cells` array and `turnsToSpread`
+   restored exactly.
+7. Switch to Farm biome. Force a hazard roll. Confirm no hazard spawns
+   (Farm-blocked, as before).
+8. `runSelfTests()` passes all 9.5 assertions.
+
+---
+
+### 9.6 — Moles hazard + Explosives tool counter
+
+**What this delivers:** The §7 Moles hazard. Adds a fourth hazard entry
+(weight 15 — pulled from cave-in's 40 down to 25 to keep total at 100).
+A Mole appears on a single cell with a small dirt mound icon and a
+3-turn timer. Each turn, the Mole consumes one orthogonally-adjacent
+non-rubble tile (resource is lost, no credit). At timer = 0, the Mole
+moves to a random adjacent cell and the timer resets. Counter is the
+**Explosives** tool — Workshop-craftable, removes every Mole on the board
+plus converts any rubble cell to an empty cell ready for refill.
+
+**Completion Criteria:**
+- [ ] `HAZARDS` extended with `mole`; pool weights updated to
+  `cave_in: 25`, `gas_vent: 40`, `lava: 20`, `mole: 15`.
+- [ ] `state.hazards.mole` shape:
+  `{ row, col, turnsRemaining } | null`. Each `tickHazards` call
+  decrements `turnsRemaining`; consumes one adjacent tile per tick.
+- [ ] On `turnsRemaining === 0`, the mole hops to a random adjacent
+  free cell (re-rolling if no free cells; if fully boxed, stays put
+  and the timer re-arms at 3).
+- [ ] Mole-consumed tiles are flagged `consumed: true` and refill on
+  the next collapse pass (no inventory credit).
+- [ ] New tool `explosives` registered in the Workshop catalog:
+  `{ inputs: { hay: 1, dirt: 1 }, station: "workshop" }`.
+  `USE_TOOL explosives` clears `state.hazards.mole = null` AND clears
+  `state.hazards.caveIn = null` (rubble row freed); respects
+  no-turn-cost contract.
+- [ ] Mole NEVER spawns in Farm; never spawns when a boss is active;
+  honours single-active hazard cap.
+- [ ] `src/textures.js` registers `hazard.mole` (small brown mound,
+  74×74) and `tool.explosives` (48×48).
+- [ ] Save/load round-trips `state.hazards.mole`.
+
+**Validation Spec — write before code:**
+
+*Tests (red phase) — add to `runSelfTests()`:*
+```js
+import { HAZARDS, tickHazards }
+  from "./features/mine/hazards.js";
+import { createInitialState, rootReducer } from "./state.js";
+
+// Catalog
+assert(HAZARDS.length === 4, "4 hazards: cave_in, gas_vent, lava, mole");
+assert(HAZARDS.find(h => h.id === "mole").weight === 15, "mole weight = 15");
+
+// Tile consumption per tick
+const s0 = { ...createInitialState(), biome: "mine",
+             hazards: { caveIn: null, gasVent: null, lava: null,
+                        mole: { row: 1, col: 1, turnsRemaining: 3 } } };
+const s1 = tickHazards(s0, () => 0.0);
+assert(s1.hazards.mole.turnsRemaining === 2, "timer decrements");
+// One adjacent tile flagged consumed (deterministic via rng=0)
+const consumedCells = s1.grid.flat().filter(t => t.consumed).length;
+assert(consumedCells === 1, "exactly 1 adjacent tile consumed per tick");
+
+// Hop on timer-zero
+const s2 = { ...s0, hazards: { ...s0.hazards,
+             mole: { row: 1, col: 1, turnsRemaining: 0 } } };
+const s3 = tickHazards(s2, () => 0.5);
+assert(s3.hazards.mole.row !== 1 || s3.hazards.mole.col !== 1,
+       "mole hops on timer expiry");
+assert(s3.hazards.mole.turnsRemaining === 3, "timer re-arms");
+
+// Explosives clears mole + cave-in
+const s4 = { ...s0, tools: { explosives: 1 },
+             hazards: { ...s0.hazards, caveIn: { row: 4 } } };
+const s5 = rootReducer(s4, { type: "USE_TOOL", payload: { id: "explosives" } });
+assert(s5.hazards.mole === null, "explosives clears mole");
+assert(s5.hazards.caveIn === null, "explosives also clears cave-in");
+assert(s5.tools.explosives === 0, "explosives consumed");
+assert(s5.turnsUsed === s4.turnsUsed, "no turn cost");
+```
+
+*Gameplay simulation (mine session, mid-game):* The player commits a chain
+and a brown dirt-mound tile appears with a "3" badge. Turn after, a coal
+tile next to it has vanished — the floater reads "A mole stole your
+coal!". The player has no Explosives crafted. Two more turns: the mole
+eats two more tiles. They tab to the Workshop, craft Explosives (1 hay
++ 1 dirt), come back, tap it. A small puff animation; mole gone, board
+clean. Next session they craft two extras to keep on hand.
+
+Designer reflection: *Are 3-turn moles a tense puzzle or just an
+attrition tax? Should Explosives also collect rubble *as* resources, or
+is "convert to empty" the right cost?*
+
+**Implementation:**
+
+- `src/features/mine/hazards.js` — extend `HAZARDS`; add `consumeAdjacent`
+  and `hopMole` helpers; thread into `tickHazards`.
+- `src/features/tools/data.js` — register `explosives`.
+- `src/features/tools/use.js` — `USE_TOOL explosives` handler.
+- `src/state.js` — `createInitialState()` adds `state.hazards.mole: null`.
+- `src/textures.js` — register `hazard.mole` and `tool.explosives`.
+
+**Manual Verify Walk-through:**
+1. Force `gameState.hazards.mole = { row: 2, col: 3, turnsRemaining: 3 }`.
+   Confirm dirt-mound tile rendered at (2,3) with timer "3".
+2. Take 1 turn. Confirm timer "2", an adjacent tile is flagged consumed
+   and re-fills on next collapse with no inventory credit.
+3. Two more turns. Mole hops to a new adjacent cell, timer re-arms to "3".
+4. Craft Explosives (1 hay + 1 dirt). Tap on board. Confirm mole + any
+   active rubble cleared, `gameState.turnsUsed` unchanged.
+5. Save → refresh mid-mole-active. Confirm row/col/timer restored exactly.
+6. Switch to Farm biome. Force hazard roll repeatedly — confirm no mole
+   ever spawns (Farm-blocked).
+7. `runSelfTests()` passes all 9.6 assertions.
+
+---
+
 ## Phase 9 Sign-off Gate
 
 Play 3 mine-focused playthroughs from a fresh save covering: a *first-entry*
@@ -871,6 +1103,13 @@ to observe wage burn and gem-tilt). Before moving to Phase 10, confirm all:
 - [ ] 9.2 Completion Criteria all checked
 - [ ] 9.3 Completion Criteria all checked
 - [ ] 9.4 Completion Criteria all checked
+- [ ] 9.5 Completion Criteria all checked (lava + Water Pump)
+- [ ] 9.6 Completion Criteria all checked (mole + Explosives)
+- [ ] **All 4 spec hazards (cave-in, gas vent, lava, mole) can spawn in Mine
+  and never in Farm** — verified by 1000-roll harness in both biomes
+- [ ] **Water Pump converts every lava cell to rubble in one tap with no
+  turn cost; Explosives clears mole + any active cave-in in one tap with
+  no turn cost** — both tools honour the locked tool contract
 - [ ] **After the `act3_mine_opened` story beat fires, the player can switch
   to the Mine biome via the Town nav at season boundary and see a stone /
   ore / coal / dirt board with the cool-grey palette** — verified on a fresh

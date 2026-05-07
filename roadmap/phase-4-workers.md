@@ -782,6 +782,129 @@ about her, not about housing — or do players blame the housing cap?*
 
 ---
 
+### 4.6 — Generic `Worker` resource (per §18 lock)
+
+**What this delivers:** Honours the §18 LOCKED decision *"Worker unit | From
+Housing buildings (1/season) + IAP stub"* that 4.1–4.5 silently dropped in
+favour of a coins-only hire cost. A new generic resource `state.workers.pool`
+counts unspent Worker units. Each Housing building grants `+1 pool` on
+`CLOSE_SEASON`. Hiring any worker now costs `1 pool + coins (existing
+hireCost)` — the coin cost stays as-is so 4.1–4.5 economy balance is
+unchanged. An IAP stub button in the Workers panel grants +5 pool for
+testing (no real billing).
+
+**Completion Criteria:**
+- [ ] `state.workers.pool` integer ≥ 0; defaults to **1** on a fresh save
+  (the §18 baseline IAP-stub seed so the player can hire one worker
+  immediately).
+- [ ] `CLOSE_SEASON` reducer credits
+  `state.workers.pool += state.built.housing.count` (1 per housing
+  building each season; 0 if no housing built).
+- [ ] `APP/HIRE` reducer rejects (no-op + floater "Need a Worker.") when
+  `state.workers.pool < 1`. On success: deducts 1 pool *and* the existing
+  coin `hireCost`, then increments `hired[id]` as before.
+- [ ] `APP/FIRE` does NOT refund the pool (consistent with the existing
+  no-refund-on-fire rule from 4.5).
+- [ ] Workers panel header gains a second number alongside Capacity:
+  "Workers: N" (the pool). Plain number per the §18 display rule — no
+  fractions.
+- [ ] An IAP stub button "Buy 5 Workers (debug)" is visible only when
+  `import.meta.env.DEV === true` (not in production builds); clicking
+  credits `state.workers.pool += 5`. Real-billing UI is deferred.
+- [ ] Migration: v3→v4 step (already present from 4.1) extended to seed
+  `state.workers.pool = 1` on any save without it.
+- [ ] Save/load round-trips `state.workers.pool` exactly.
+
+**Validation Spec — write before code:**
+
+*Tests (red phase) — add to `runSelfTests()`:*
+```js
+import { createInitialState, rootReducer } from "./state.js";
+
+// Fresh save baseline
+const s0 = createInitialState();
+assert(s0.workers.pool === 1, "fresh save: 1 worker pool (IAP-stub seed)");
+
+// Housing produces +1 per season
+const s1 = { ...s0, built: { ...s0.built, housing: { count: 2 } } };
+const s2 = rootReducer(s1, { type: "CLOSE_SEASON" });
+assert(s2.workers.pool === s1.workers.pool + 2,
+       "2 housing → +2 pool per season");
+
+// Hire deducts pool + coins
+const s3 = { ...s0, coins: 1000, workers: { ...s0.workers, pool: 1 } };
+const s4 = rootReducer(s3, { type: "APP/HIRE", payload: { id: "hilda" } });
+assert(s4.workers.pool === 0, "hire deducts 1 pool");
+assert(s4.workers.hired.hilda === 1, "hire incremented");
+assert(s4.coins < s3.coins, "hire deducts coins (existing rule)");
+
+// Hire blocked when pool empty
+const s5 = { ...s3, workers: { ...s3.workers, pool: 0 } };
+const s6 = rootReducer(s5, { type: "APP/HIRE", payload: { id: "hilda" } });
+assert(s6 === s5, "no hire when pool empty");
+
+// Fire does NOT refund pool
+const s7 = rootReducer(s4, { type: "APP/FIRE", payload: { id: "hilda" } });
+assert(s7.workers.pool === 0, "fire does not refund pool");
+assert(s7.workers.hired.hilda === 0, "fire decrements hired");
+
+// Migration seeds pool=1 on legacy save
+import { migrateState } from "./migrations.js";
+const legacy = { ...s0, workers: { hired: {}, debt: 0 } };  // no pool field
+delete legacy.workers.pool;
+const m = migrateState(JSON.parse(JSON.stringify({ ...legacy, version: 3 })));
+assert(m.state.workers.pool === 1, "migration seeds pool=1 on legacy save");
+```
+
+*Gameplay simulation:* The player opens a fresh save. Workers panel header
+reads "Capacity: 1 · Workers: 1". They hire Hilda — pool drops to 0. They
+try to hire Pip — button greyed, tooltip "Need a Worker (build Housing
+or wait a season)". They build a Housing (300◉ + 25 plank). Capacity ticks
+to 2 immediately, but pool stays at 0 — the new worker isn't *granted*
+until next season. They play a season. On `CLOSE_SEASON`: floater "+1
+Worker (Housing)". Pool → 1. They hire Pip. The two-pace loop —
+build Housing now, get the Worker next season — feels like running a
+village payroll, not a slot-machine.
+
+Designer reflection: *Does the season-delay between building Housing and
+gaining the Worker feel like a meaningful tempo, or like an annoying
+tax? Is the IAP stub seed of 1 the right number — enough to hire on day
+one, but not enough to skip the housing loop entirely?*
+
+**Implementation:**
+
+- `src/state.js`:
+  - `createInitialState()` — `workers: { hired: {}, debt: 0, pool: 1 }`.
+  - `CLOSE_SEASON` handler — append
+    `pool += state.built.housing?.count ?? 0`.
+- `src/features/apprentices/slice.js`:
+  - `APP/HIRE` — pre-check `state.workers.pool >= 1`; deduct 1 on success.
+- `src/features/apprentices/index.jsx`:
+  - Header: "Capacity: N · Workers: M".
+  - Hire button tooltip when `pool === 0`: "Need a Worker (build Housing
+    or wait a season)".
+  - DEV-only "Buy 5 Workers (debug)" button.
+- `src/migrations.js` — extend the v3→v4 step to seed
+  `state.workers.pool = 1` if missing.
+
+**Manual Verify Walk-through:**
+1. Fresh save. Workers panel reads "Capacity: 1 · Workers: 1".
+2. Hire Hilda. Header reads "Workers: 0". Hire Pip — button greyed, tooltip
+   "Need a Worker".
+3. Build a Housing (Town panel). Header `Capacity: 2 · Workers: 0`.
+4. End the season. Confirm "+1 Worker (Housing)" floater fires; header now
+   "Capacity: 2 · Workers: 1".
+5. Hire Pip. Header `Workers: 0`, `gameState.workers.hired.pip === 1`.
+6. Fire Hilda. Confirm `hired.hilda === 0`, `pool === 0` (no refund).
+7. Click DEV "Buy 5 Workers". Header `Workers: 5`. Confirm button hidden
+   in production build (`vite build` and reload).
+8. Save → refresh. Confirm pool restored exactly.
+9. Force `version = 3` in localStorage on a v3 save without `pool`.
+   Reload. Confirm migration seeds `pool = 1`.
+10. `runSelfTests()` passes all 4.6 assertions.
+
+---
+
 ## Phase 4 Sign-off Gate
 
 Play 3 multi-season playthroughs from a fresh save covering: a no-debt run (always
@@ -789,7 +912,10 @@ pay wages on time), a debt-recovery run (deliberately under-fund wages and let a
 order auto-clear the debt), and a max-housing run (build 3+ Housing and hire all 6
 workers to their caps). Before moving to Phase 5, confirm all:
 
-- [ ] 4.1–4.5 Completion Criteria all checked
+- [ ] 4.1–4.6 Completion Criteria all checked
+- [ ] **A fresh save honours §18: pool=1 on day one, +1 pool per Housing
+  per season, hires deduct 1 pool, fires don't refund** — verified end-to-end
+  on the Workers panel
 - [ ] **Player feels the difference between 0 hires and 3 hires of Hilda — chains of 3
   hay now upgrade where they previously didn't.** This is the Phase 4 horizontal-slice
   property; if it isn't observably true, the phase is not done.

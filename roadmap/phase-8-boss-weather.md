@@ -729,6 +729,298 @@ the game feels more alive when *something* is happening, even a frost shimmer
 
 ---
 
+### 8.5 — Influence currency + Decoration buildings
+
+**What this delivers:** Closes the §3 / §11 Influence loop the spec promised.
+A new currency `state.influence` (starts at 0) is earned by placing decoration
+buildings — three small village ornaments (Violet Bed, Stone Lantern, Apple
+Sapling) — and by completing future "royal quest" objectives (hooked but
+flagged-off until Phase 7 wires them in). Decorations cost coins + a small
+resource bundle; on build they pay a one-time Influence grant and continue
+to read in the Town panel as cosmetic. Influence is the *only* spend currency
+for §8.6 magic-tool summons. No magic-tool selection UI lives here — that is
+the 8.6 task.
+
+**Completion Criteria:**
+- [ ] `state.influence` (integer ≥ 0) added in `createInitialState()`;
+  defaults to 0 on a fresh save and migrates to 0 on a v0..v7 save.
+- [ ] `src/features/decorations/data.js` exports `DECORATIONS` (3 entries):
+  - `violet_bed`   — `{ cost: { coins: 60,  hay: 4 },             influence: 20 }`
+  - `stone_lantern` — `{ cost: { coins: 120, stone: 6, plank: 2 }, influence: 35 }`
+  - `apple_sapling` — `{ cost: { coins: 200, plank: 4, berry: 6 }, influence: 60 }`
+- [ ] `BUILD_DECORATION` reducer: deducts cost, increments
+  `state.built.decorations[id]` (count, no level cap), credits
+  `influence += DECORATIONS[id].influence`. Same-id second build pays the
+  *same* Influence grant again (decorations are repeatable, by design).
+- [ ] Order-delivery and quest-claim payloads accept an optional
+  `influence: N` field that adds to `state.influence`. Wired but unused
+  in this phase (Phase 7 quests will set it; Phase 6 orders won't).
+- [ ] Town panel adds a Decorations sub-tab next to Buildings; each
+  decoration card shows cost, "+N Influence on build", and a Build button
+  greyed out when cost is unmet.
+- [ ] HUD badge: a small crown icon + `state.influence` value, rendered to
+  the right of the runes badge. Tap for a tooltip "Influence — spent at
+  the Magic Portal".
+- [ ] `src/textures.js` registers `building.violet_bed` (56×56),
+  `building.stone_lantern` (56×56), `building.apple_sapling` (56×56),
+  and `hud.influence_crown` (24×24).
+- [ ] Save/load round-trips `state.influence` and
+  `state.built.decorations` exactly.
+
+**Validation Spec — write before code:**
+
+*Tests (red phase) — add to `runSelfTests()`:*
+```js
+import { createInitialState, rootReducer } from "./state.js";
+import { DECORATIONS } from "./features/decorations/data.js";
+
+// Catalog
+assert(Object.keys(DECORATIONS).length === 3, "exactly 3 decorations");
+assert(DECORATIONS.violet_bed.influence    === 20, "violet_bed = +20 influence");
+assert(DECORATIONS.stone_lantern.influence === 35, "stone_lantern = +35");
+assert(DECORATIONS.apple_sapling.influence === 60, "apple_sapling = +60");
+
+// Fresh state
+const s0 = createInitialState();
+assert(s0.influence === 0, "fresh: influence starts at 0");
+assert(Object.keys(s0.built.decorations ?? {}).length === 0,
+       "fresh: no decorations built");
+
+// Build a decoration
+const s1 = rootReducer({ ...s0, coins: 200, hay: 10 },
+  { type: "BUILD_DECORATION", payload: { id: "violet_bed" } });
+assert(s1.coins === 140, "violet_bed cost 60 coins");
+assert(s1.hay   === 6,   "violet_bed cost 4 hay");
+assert(s1.influence === 20, "violet_bed grants +20 influence");
+assert(s1.built.decorations.violet_bed === 1, "decoration count incremented");
+
+// Repeatable
+const s2 = rootReducer({ ...s1, coins: 100, hay: 8 },
+  { type: "BUILD_DECORATION", payload: { id: "violet_bed" } });
+assert(s2.influence === 40, "second violet_bed grants another +20");
+assert(s2.built.decorations.violet_bed === 2, "count → 2");
+
+// Insufficient resources blocks build
+const s3 = rootReducer(s0,
+  { type: "BUILD_DECORATION", payload: { id: "stone_lantern" } });
+assert(s3 === s0, "no-op when cost unmet");
+
+// Save/load round-trip
+import { migrateState, SAVE_SCHEMA_VERSION } from "./migrations.js";
+const round = migrateState(JSON.parse(JSON.stringify(s2)));
+assert(round.state.influence === 40, "save/load preserves influence");
+assert(round.state.built.decorations.violet_bed === 2, "preserves decoration counts");
+```
+
+*Gameplay simulation (Act 2 player, has Workshop):* The player has 350◉ and a
+small inventory. They open Town → Decorations and see three muted cards.
+Violet Bed lights up — cost 60◉ + 4 hay. They tap Build. A 200ms ribbon
+animation plants a small purple cluster next to the Hearth. The HUD crown
+ticks up by 20. Two more Violet Beds and a Stone Lantern later, the
+Influence badge reads 95 — the player has not yet seen what to spend it on
+(the Magic Portal in 8.6 will be the answer). The badge feels like quiet
+foreshadowing.
+
+Designer reflection: *Does +20 / +35 / +60 feel like a real progression
+ladder, or does the player stop noticing the deltas after the third build?
+Are decorations "actual buildings worth pondering" or "an Influence vending
+machine with sprites"?*
+
+**Implementation:**
+
+- New file `src/features/decorations/data.js` — locked decoration table.
+- New file `src/features/decorations/slice.js` — `BUILD_DECORATION` reducer.
+- `src/state.js`:
+  - `createInitialState()` — add `influence: 0`,
+    `built: { ...existing, decorations: {} }`.
+  - `rootReducer` — wire `BUILD_DECORATION`; thread the optional
+    `influence: N` field on `DELIVER_ORDER` and `CLAIM_QUEST` payloads.
+- `src/migrations.js` — v7 → v8 step now also seeds `influence: 0` and
+  `built.decorations: {}` (folds into the Phase 8 migration).
+- `src/GameScene.js` — Town panel: add Decorations sub-tab, render cards
+  using the locked cost / influence values; HUD: add the crown badge to
+  the right of the runes badge.
+- `src/textures.js` — register the four new textures listed above.
+
+**Manual Verify Walk-through:**
+1. Fresh save. HUD shows runes badge + new crown badge reading "0".
+2. Open Town → Decorations sub-tab. Three cards: Violet Bed, Stone Lantern,
+   Apple Sapling. Apple Sapling is greyed out (no berries yet).
+3. Earn 60◉ + 4 hay through normal play. Violet Bed lights up; tap Build.
+   Confirm `gameState.influence === 20`, ribbon animation, HUD crown ticks.
+4. Build a second Violet Bed. Confirm `influence === 40`,
+   `gameState.built.decorations.violet_bed === 2`.
+5. Tap the HUD crown badge. Confirm tooltip "Influence — spent at the
+   Magic Portal".
+6. Save → refresh. Confirm influence and decoration counts intact.
+7. Force-set `gameState.coins = 0`. Try to build a third Violet Bed.
+   Confirm Build button greyed; no state change on tap.
+8. `runSelfTests()` passes all 8.5 assertions.
+
+---
+
+### 8.6 — Magic Portal summons (Wand, Hourglass, Magic Seed, Magic Fertilizer)
+
+**What this delivers:** The §5 Magic Tools the spec has been promising since
+Phase 0. The Magic Portal — built in Phase 3 as a rune-gated structure — now
+opens a *Summon* modal that spends Influence to grant one of four named
+magic tools. Per §18 lock the player picks (no random draw). Each magic tool
+fires through the Phase 1 tool tray with the same locked no-turn-cost
+contract; each is one-shot consumable per summon.
+
+| Magic Tool | Effect | Influence cost |
+|---|---|---|
+| Magic Wand | Pick a tile type; collect every tile of that type on the board | 80 |
+| Hourglass | Restore the board, inventory, and `turnsUsed` to their pre-last-chain snapshot (one-deep undo) | 120 |
+| Magic Seed | Add 5 to `state.session.turnsRemaining` (this session only) | 100 |
+| Magic Fertilizer | Next 3 `fillBoard()` calls spawn grain in every cell | 60 |
+
+**Completion Criteria:**
+- [ ] `src/features/portal/data.js` exports `MAGIC_TOOLS` (4 entries) with
+  `{ id, name, influenceCost, effect }`. Costs locked: 80 / 120 / 100 / 60.
+- [ ] Portal is summon-eligible only when `state.built.portal === true`
+  (built in Phase 3.3).
+- [ ] `SUMMON_MAGIC_TOOL` reducer: rejects (no-op) when
+  `state.influence < cost`; otherwise deducts Influence and increments
+  `state.tools[id]` (where `id ∈ {magic_wand, hourglass, magic_seed,
+  magic_fertilizer}`).
+- [ ] `state.lastChainSnapshot` is captured on every chain commit (grid +
+  inventory deltas + `turnsUsed`) so Hourglass has something to restore.
+  The snapshot is one-deep (most recent only).
+- [ ] Magic Wand fires a *type-picker* sub-modal (one row per resource
+  currently visible on the board); selecting a type collects every tile
+  of that type, awards the resources, and refills via the standard
+  collapse pipeline; `turnsUsed` unchanged.
+- [ ] Hourglass restores `lastChainSnapshot` exactly; if no snapshot exists
+  (start of session) the tool refunds its Influence and floats "Nothing
+  to undo."
+- [ ] Magic Seed adds exactly 5 to `state.session.turnsRemaining`. This
+  bypasses the §4 10-turn cap *for this session only*.
+- [ ] Magic Fertilizer sets `state.magicFertilizerCharges = 3`; each
+  `fillBoard()` while charges > 0 forces every refilled cell to `grain`
+  and decrements charges. Stacks additively with the §10 Fertilizer
+  one-shot tool — magic-fertilizer charges count down per fill, regular
+  Fertilizer is a single-fill flag.
+- [ ] Portal Summon modal is keyboard- and screen-reader-navigable per
+  Phase 11 a11y rules (announce each option + cost on focus).
+- [ ] `src/textures.js` registers `tool.magic_wand`, `tool.hourglass`,
+  `tool.magic_seed`, `tool.magic_fertilizer` (48×48 each).
+- [ ] Save/load round-trips `state.tools.magic_*`,
+  `state.lastChainSnapshot`, `state.magicFertilizerCharges`.
+
+**Validation Spec — write before code:**
+
+*Tests (red phase) — add to `runSelfTests()`:*
+```js
+import { MAGIC_TOOLS } from "./features/portal/data.js";
+import { createInitialState, rootReducer } from "./state.js";
+
+// Catalog
+const ids = MAGIC_TOOLS.map(t => t.id);
+assert(ids.length === 4 &&
+       ids.includes("magic_wand") && ids.includes("hourglass") &&
+       ids.includes("magic_seed") && ids.includes("magic_fertilizer"),
+       "all 4 magic tools registered");
+assert(MAGIC_TOOLS.find(t => t.id === "magic_wand").influenceCost === 80,
+       "wand costs 80 influence");
+assert(MAGIC_TOOLS.find(t => t.id === "hourglass").influenceCost === 120,
+       "hourglass costs 120 influence");
+
+// Insufficient influence rejects
+const s0 = { ...createInitialState(), built: { portal: true }, influence: 50 };
+const r0 = rootReducer(s0,
+  { type: "SUMMON_MAGIC_TOOL", payload: { id: "magic_wand" } });
+assert(r0 === s0, "no-op when influence < cost");
+
+// Successful summon
+const s1 = { ...createInitialState(), built: { portal: true }, influence: 200 };
+const r1 = rootReducer(s1,
+  { type: "SUMMON_MAGIC_TOOL", payload: { id: "magic_wand" } });
+assert(r1.influence === 120, "wand deducts 80 influence");
+assert(r1.tools.magic_wand === 1, "wand granted");
+
+// Hourglass with no snapshot refunds
+const s2 = { ...s1, lastChainSnapshot: null };
+const r2 = rootReducer(s2,
+  { type: "USE_TOOL", payload: { id: "hourglass" } });
+// Pre-condition: hourglass count was 1; effect refunds influence, no decrement
+// (specific shape determined by the tool-use reducer; assertion is on outcome)
+assert((r2.tools.hourglass ?? 0) === (s2.tools.hourglass ?? 0),
+       "hourglass with no snapshot does not consume the tool");
+
+// Magic Seed adds 5 turns
+const s3 = { ...s1, tools: { magic_seed: 1 },
+             session: { turnsRemaining: 4 } };
+const r3 = rootReducer(s3, { type: "USE_TOOL", payload: { id: "magic_seed" } });
+assert(r3.session.turnsRemaining === 9, "magic_seed +5 turns");
+assert(r3.tools.magic_seed === 0, "magic_seed consumed");
+
+// Magic Fertilizer charges
+const s4 = { ...s1, tools: { magic_fertilizer: 1 } };
+const r4 = rootReducer(s4,
+  { type: "USE_TOOL", payload: { id: "magic_fertilizer" } });
+assert(r4.magicFertilizerCharges === 3, "fertilizer sets 3 charges");
+assert(r4.tools.magic_fertilizer === 0, "fertilizer consumed");
+```
+
+*Gameplay simulation (mid-Act-3 player, 250 Influence stockpiled):* The
+player has been quietly building decorations all year and has 250 Influence
+sitting in the HUD. They open the Magic Portal for the first time. A
+backlit summon modal slides in: four cards in a 2×2 grid, each with name +
+icon + cost + a single-sentence effect. They tap Magic Seed (100). Confetti
+burst, +1 magic_seed icon slides into the tool tray. Mid-session at turn
+8/10 (running out of moves on a juicy near-finished order), they tap the
+seed icon. The session counter jumps to 13/10 with a green chime and the
+order delivers two turns later. They walk away thinking *that* was worth
+saving up for.
+
+Designer reflection: *Does Magic Seed feel like a "save the day" tool the
+player remembers, or like a generic +5 turns? Does Hourglass-with-nothing-
+to-undo refund cleanly enough that the player learns the rule without
+losing the tool?*
+
+**Implementation:**
+
+- New file `src/features/portal/data.js` — locked `MAGIC_TOOLS` table.
+- New file `src/features/portal/slice.js` — `SUMMON_MAGIC_TOOL` reducer.
+- `src/state.js`:
+  - `createInitialState()` — add `lastChainSnapshot: null`,
+    `magicFertilizerCharges: 0`, and zeroed `tools.magic_wand`,
+    `tools.hourglass`, `tools.magic_seed`, `tools.magic_fertilizer`.
+  - `commitChain()` — before applying the chain, capture the snapshot:
+    `state.lastChainSnapshot = { grid, inventoryDelta: {}, turnsUsedAt }`.
+- `src/features/tools/use.js` — extend the dispatch switch with the four
+  magic-tool handlers (each pure, each respects the no-turn-cost contract).
+- `src/GameScene.js`:
+  - `fillBoard()` — when `state.magicFertilizerCharges > 0`, override
+    every cell to `grain` and decrement charges by 1.
+  - Portal building tap → opens `<PortalSummonModal />`.
+  - `<MagicWandPicker />` modal — type list from on-board tiles.
+- `src/ui.jsx` — `<PortalSummonModal />`, `<MagicWandPicker />`.
+- `src/textures.js` — register the four magic-tool icons.
+
+**Manual Verify Walk-through:**
+1. Build the Magic Portal (Phase 3.3) and stockpile 200 Influence via 8.5
+   decorations. Tap the Portal. Summon modal opens.
+2. Tap Magic Wand. Confirm `gameState.tools.magic_wand === 1`,
+   `gameState.influence === 120`, wand icon in tool tray with badge "1".
+3. Arm the wand on a board with 4 hay tiles. Pick "hay". Confirm all 4 hay
+   collected, `gameState.turnsUsed` unchanged.
+4. Chain a 6-hay chain. Tap Hourglass (after summoning one for 120). Confirm
+   board, inventory, and `turnsUsed` snap back to pre-chain state.
+5. Try Hourglass with no snapshot (immediately on session start). Confirm
+   floater "Nothing to undo." and `gameState.tools.hourglass` unchanged.
+6. Summon a Magic Seed (100). Tap it. Confirm `turnsRemaining += 5`.
+7. Summon a Magic Fertilizer (60). Tap it. Confirm `magicFertilizerCharges
+   === 3`. Trigger 3 fillBoards via console. Confirm every refilled cell
+   is grain. Trigger a 4th fillBoard — confirm the standard pool returns.
+8. Save → refresh mid-magic-fertilizer (charges = 1). Confirm charge
+   restored exactly; next fillBoard is all-grain; the one after returns
+   to standard.
+9. `runSelfTests()` passes all 8.6 assertions.
+
+---
+
 ## Phase 8 Sign-off Gate
 
 Play 3 multi-year playthroughs from a fresh save covering: a *boss-focused*
@@ -737,7 +1029,12 @@ heavy* sandbox stretch (skip post-festival, observe 8+ weather rolls), and a
 *save-stress* run (refresh during every boss and every weather event). Before
 moving to Phase 9, confirm all:
 
-- [ ] 8.1–8.4 Completion Criteria all checked
+- [ ] 8.1–8.6 Completion Criteria all checked
+- [ ] **Building 3 Violet Beds + 1 Stone Lantern grants exactly +95
+  Influence** — verified before/after on a fresh save
+- [ ] **Stockpiling 200 Influence and summoning Magic Wand + Magic Seed at
+  the Portal grants both tools and leaves Influence at exactly 20** — the
+  player can then fire each magic tool without consuming a turn
 - [ ] **Frostmaw season is visually distinguishable from a normal winter** —
   two columns frozen with ice overlay, drag refuses chains through them,
   columns thaw with a shimmer at season end
