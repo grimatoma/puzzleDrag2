@@ -4,7 +4,7 @@ import { reduce as moodReduce } from "../features/mood/slice.js";
 import { reduce as bossReduce } from "../features/boss/slice.js";
 import { reduce as apprenticesReduce, seedHireSeq } from "../features/apprentices/slice.js";
 import { seedQuestIdSeq } from "../features/quests/slice.js";
-import { resourceGainForChain } from "../utils.js";
+import { resourceGainForChain, rollResourceWithWeather } from "../utils.js";
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
@@ -40,6 +40,36 @@ function minState(overrides = {}) {
     ...overrides,
   };
 }
+
+// ─── drought weather ─────────────────────────────────────────────────────────
+
+describe("drought weather — rollResourceWithWeather", () => {
+  it("drought reduces wheat+grain below 20% of rolls (baseline ~33%)", () => {
+    // Farm pool has wheat and grain represented; simulate 1000 rolls
+    const pool = ["hay", "hay", "hay", "log", "log", "wheat", "berry", "berry", "egg"];
+    const counts = { wheat: 0, grain: 0, other: 0 };
+    for (let i = 0; i < 1000; i++) {
+      const key = rollResourceWithWeather(pool, "drought");
+      if (key === "wheat") counts.wheat++;
+      else if (key === "grain") counts.grain++;
+      else counts.other++;
+    }
+    const affected = counts.wheat + counts.grain;
+    expect(affected).toBeLessThan(200); // <20% of 1000 rolls
+  });
+
+  it("no drought: wheat+grain appear at normal baseline rate", () => {
+    const pool = ["hay", "hay", "hay", "log", "log", "wheat", "berry", "berry", "egg"];
+    const counts = { wheat: 0, other: 0 };
+    for (let i = 0; i < 1000; i++) {
+      const key = rollResourceWithWeather(pool, null);
+      if (key === "wheat") counts.wheat++;
+      else counts.other++;
+    }
+    // wheat is 1/9 ≈ 11% of pool; over 1000 rolls expect roughly 111 ± tolerance
+    expect(counts.wheat).toBeGreaterThan(50);
+  });
+});
 
 // ─── resourceGainForChain ────────────────────────────────────────────────────
 

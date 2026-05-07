@@ -1,6 +1,6 @@
 import Phaser from "phaser";
 import { TILE, COLS, ROWS, UPGRADE_EVERY, SEASONS, BIOMES } from "./constants.js";
-import { upgradeCountForChain, resourceGainForChain } from "./utils.js";
+import { upgradeCountForChain, resourceGainForChain, rollResourceWithWeather } from "./utils.js";
 const cssColor = (num) => Phaser.Display.Color.IntegerToColor(num).rgba;
 import { rounded, makeTextures } from "./textures.js";
 import { TileObj } from "./TileObj.js";
@@ -205,15 +205,20 @@ export class GameScene extends Phaser.Scene {
   }
 
   randomResource() {
-    const pool = this.biome().pool;
-    const key = pool[Math.floor(Math.random() * pool.length)];
-    return this.biome().resources.find((r) => r.key === key);
+    const biome = this.biome();
+    const weather = this.registry.get("weather");
+    const weatherKey = weather?.key ?? weather ?? null;
+    const key = rollResourceWithWeather(biome.pool, weatherKey);
+    return biome.resources.find((r) => r.key === key);
   }
 
   // ─── Board fill / collapse ────────────────────────────────────────────────
 
   fillBoard(initial = false) {
     const ts = this.tileSize;
+    const weather = this.registry.get("weather");
+    const weatherKey = weather?.key ?? weather ?? null;
+    const frostBonus = (!initial && weatherKey === "frost") ? 120 : 0;
     for (let r = 0; r < ROWS; r++) {
       this.grid[r] = this.grid[r] || [];
       for (let c = 0; c < COLS; c++) {
@@ -224,7 +229,7 @@ export class GameScene extends Phaser.Scene {
           const tile = new TileObj(this, x, initial ? y - 500 - Phaser.Math.Between(0, 100) : y - 140, c, r, res);
           tile.sprite.setScale(this.tileSpriteScale);
           this.grid[r][c] = tile;
-          this.tweens.add({ targets: tile.sprite, y, duration: initial ? 450 + r * 28 : 210, ease: "Back.Out" });
+          this.tweens.add({ targets: tile.sprite, y, duration: (initial ? 450 + r * 28 : 210) + frostBonus, ease: "Back.Out" });
         }
       }
     }

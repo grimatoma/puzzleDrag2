@@ -10,7 +10,7 @@ import { SidePanel, BottomNav, FeatureModals, FeatureScreens } from "./src/ui.js
 import { useAudio } from "./src/audio/useAudio.js";
 import { setPhaserScene } from "./src/phaserBridge.js";
 
-function PhaserMount({ dispatch, biomeKey, turnsUsed, seasonsCycled, uiLocked, sceneRef, setChainInfo }) {
+function PhaserMount({ dispatch, biomeKey, turnsUsed, seasonsCycled, uiLocked, sceneRef, weather, setChainInfo }) {
   const hostRef = useRef(null);
   const gameRef = useRef(null);
   const [loading, setLoading] = useState(true);
@@ -99,6 +99,7 @@ function PhaserMount({ dispatch, biomeKey, turnsUsed, seasonsCycled, uiLocked, s
   useEffect(() => { gameRef.current?.registry.set("turnsUsed", turnsUsed); }, [turnsUsed]);
   useEffect(() => { gameRef.current?.registry.set("seasonsCycled", seasonsCycled); }, [seasonsCycled]);
   useEffect(() => { gameRef.current?.registry.set("uiLocked", uiLocked); }, [uiLocked]);
+  useEffect(() => { gameRef.current?.registry.set("weather", weather); }, [weather]);
 
   return (
     <div ref={hostRef} className="w-full h-full">
@@ -177,6 +178,7 @@ export default function App() {
                   seasonsCycled={state.seasonsCycled}
                   uiLocked={uiLocked}
                   sceneRef={sceneRef}
+                  weather={state.weather}
                   setChainInfo={setChainInfo}
                 />
               </div>

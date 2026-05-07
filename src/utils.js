@@ -12,6 +12,25 @@ export function resourceGainForChain(chainLength) {
   return chainLength * (chainLength >= 6 ? 2 : 1);
 }
 
+const DROUGHT_AFFECTED = new Set(["wheat", "grain"]);
+
+/**
+ * Apply weather modification to a resource pool roll.
+ * Returns a resource key sampled from the pool with weather rules applied.
+ * @param {string[]} pool - array of resource keys (with repetition for weighting)
+ * @param {string|null} weather - active weather key, or null
+ * @param {() => number} [rand] - optional RNG (defaults to Math.random)
+ */
+export function rollResourceWithWeather(pool, weather, rand = Math.random) {
+  const pick = () => pool[Math.floor(rand() * pool.length)];
+  let key = pick();
+  if (weather === "drought" && DROUGHT_AFFECTED.has(key)) {
+    // 50% chance to re-roll once, reducing wheat/grain appearance by ~50%
+    if (rand() < 0.5) key = pick();
+  }
+  return key;
+}
+
 export function hex(num) {
   return `#${num.toString(16).padStart(6, "0")}`;
 }
