@@ -1583,6 +1583,10 @@ const SLICE_PRIMARY_ACTIONS = new Set([
   "STORY/DISMISS_MODAL",
   // Settings tab navigation is owned by settings/slice
   "SETTINGS/SET_TAB",
+  // Tutorial actions are owned by tutorial/slice
+  "TUTORIAL/START",
+  "TUTORIAL/NEXT",
+  "TUTORIAL/SKIP",
 ]);
 
 // Actions where coreReducer intentionally defers to slices (e.g. CRAFTING/CRAFT_RECIPE
