@@ -35,6 +35,7 @@ export function BottomNav({ view, modal, dispatch }) {
     { key: "crafting",    icon: "🔨",  label: "Craft" },
     { key: "cartography", icon: "🗺️", label: "Map" },
     { key: "townsfolk",   icon: "👥",  label: "Townsfolk" },
+    { key: "species",     icon: "🦎",  label: "Species" },
   ];
   const activeKey = modal ? (items.find((i) => i.modal === modal)?.key ?? view) : view;
   return (
