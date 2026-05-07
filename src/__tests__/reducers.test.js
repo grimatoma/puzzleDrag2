@@ -311,7 +311,7 @@ describe("mood/slice TURN_IN_ORDER", () => {
 
 describe("boss Ember Drake — CRAFTING/CRAFT_RECIPE", () => {
   const drakeState = () => minState({
-    boss: { key: "ember_drake", resource: "ingot", progress: 0, targetCount: 5, turnsLeft: 5, name: "Ember Drake", emoji: "🔥", goal: "", flavor: "", minChain: null },
+    boss: { key: "ember_drake", resource: "mine_ingot", progress: 0, targetCount: 5, turnsLeft: 5, name: "Ember Drake", emoji: "🔥", goal: "", flavor: "", minChain: null },
   });
 
   it("bread does not increment Drake progress", () => {

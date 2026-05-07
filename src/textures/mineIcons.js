@@ -13,7 +13,7 @@ function rr(ctx, x, y, w, h, r) {
 }
 
 export function drawMineTileIcon(ctx, key) {
-  if (key === "stone") {
+  if (key === "mine_stone") {
     // Faceted gray rock with crevices
     // Shadow
     ctx.fillStyle = "rgba(0,0,0,0.25)";
@@ -71,7 +71,7 @@ export function drawMineTileIcon(ctx, key) {
     });
   }
 
-  else if (key === "cobble") {
+  else if (key === "mine_cobble") {
     // Four cobblestones in 2x2 pattern with mortar
     // Shadow
     ctx.fillStyle = "rgba(0,0,0,0.22)";
@@ -131,7 +131,7 @@ export function drawMineTileIcon(ctx, key) {
     ctx.stroke();
   }
 
-  else if (key === "block") {
+  else if (key === "mine_block") {
     // Polished isometric stone block with engraving
     // Shadow
     ctx.fillStyle = "rgba(0,0,0,0.28)";
@@ -200,7 +200,7 @@ export function drawMineTileIcon(ctx, key) {
     ctx.stroke();
   }
 
-  else if (key === "ore") {
+  else if (key === "mine_ore") {
     // Rocky chunk with bright copper/gold metal veins
     // Shadow
     ctx.fillStyle = "rgba(0,0,0,0.25)";
@@ -267,7 +267,7 @@ export function drawMineTileIcon(ctx, key) {
     });
   }
 
-  else if (key === "ingot") {
+  else if (key === "mine_ingot") {
     // 3D metallic silver ingot bar with stamp
     // Shadow
     ctx.fillStyle = "rgba(0,0,0,0.3)";
@@ -347,7 +347,7 @@ export function drawMineTileIcon(ctx, key) {
     ctx.stroke();
   }
 
-  else if (key === "coal") {
+  else if (key === "mine_coal") {
     // Lumpy black coal with cracks and highlights
     // Shadow
     ctx.fillStyle = "rgba(0,0,0,0.3)";
@@ -408,7 +408,7 @@ export function drawMineTileIcon(ctx, key) {
     });
   }
 
-  else if (key === "coke") {
+  else if (key === "mine_coke") {
     // Refined hexagonal coke briquette with red glow
     // Shadow
     ctx.fillStyle = "rgba(0,0,0,0.3)";
@@ -479,7 +479,7 @@ export function drawMineTileIcon(ctx, key) {
     ctx.stroke();
   }
 
-  else if (key === "gem") {
+  else if (key === "mine_gem") {
     // Cut crystal gem with multiple facets
     // Shadow
     ctx.fillStyle = "rgba(0,0,0,0.28)";
@@ -550,7 +550,7 @@ export function drawMineTileIcon(ctx, key) {
     ctx.fill();
   }
 
-  else if (key === "cutgem") {
+  else if (key === "mine_cutgem") {
     // Brilliant round-cut gem viewed from above with star burst
     // Shadow
     ctx.fillStyle = "rgba(0,0,0,0.28)";
@@ -621,7 +621,7 @@ export function drawMineTileIcon(ctx, key) {
     });
   }
 
-  else if (key === "gold") {
+  else if (key === "mine_gold") {
     // Irregular gold nugget (NOT a circle)
     // Shadow
     ctx.fillStyle = "rgba(0,0,0,0.3)";

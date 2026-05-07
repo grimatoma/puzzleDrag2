@@ -4,7 +4,7 @@ Snapshot of what's still outstanding from `REFERENCE_CATALOG.md` (now canonical
 for HV expansions). Treat this as a living checklist; cross things off in PRs
 that ship the work.
 
-> **Last updated:** PR #194 — Grain → Bread + farm category-prefix rename + this doc.
+> **Last updated:** PR #201 — Mine-side prefix rename + cross-chain workers (Grain Trader / Gardener / Orchardist / Farmer) via new `chain_redirect_category` effect type.
 
 ---
 
@@ -18,6 +18,7 @@ that ship the work.
 | #192  | Fruits → Pie / Flowers → Honey / Herd → Meat / Cattle → Milk / Mounts → Horseshoe chains; 5 new chain-reducer workers. |
 | #193  | Birds → Eggs (split tile vs. product) / Trees → Log (feeds existing wood chain) / Coal in Castle Needs UI. |
 | #194  | Grain → Bread (flour → bread terminal). Category-prefix rename for the 14 farm-side legacy keys (`hay → grass_hay`, `egg → bird_egg`, etc.) with v13 → v14 save migration. Display-layer prefix-strip helpers in `a11y.js` and `tileCollection/effects.js`. |
+| #201  | Mine-side prefix rename for the 11 mine resource keys (`stone → mine_stone`, `coal → mine_coal`, etc.) with v14 → v15 save migration. Cross-chain workers via new `chain_redirect_category` effect type: Grain Trader (grain→veg), Gardener (veg→fruit), Orchardist (fruit→flower), Farmer (bird→herd). Engine integration in `state.js` upgrade path. |
 
 ---
 
@@ -50,30 +51,15 @@ Estimated effort: 1–2 weeks. New Phaser scene, new state slice, new
 hazard pipeline, ~16 procedural icons (already imported via `toolsSea.js`),
 ~30 chain-product wiring, market prices, save migration.
 
-### Mine-side category prefix rename
+### Mine-side category prefix rename — ✅ done in PR #201
 
-This PR (#194) only renamed the **farm-side** legacy keys. Mine resources
-still use unprefixed names: `stone`, `cobble`, `block`, `ore`, `ingot`,
-`coal`, `coke`, `gem`, `cutgem`, `gold`, `dirt`. To finish the rename:
-
-- Pick a prefix scheme. Suggested mapping:
-    - `stone → stone_raw` (or keep `stone` since it's both a category and the canonical resource — same wart as `grain`)
-    - `cobble → stone_cobble`
-    - `block → stone_block`
-    - `ore → iron_ore`
-    - `ingot → iron_ingot`
-    - `coal → coal_raw` (or keep)
-    - `coke → coal_coke`
-    - `gem → gem_rough`
-    - `cutgem → gem_cut`
-    - `gold → gold_nugget`
-    - `dirt → dirt_pile`
-- Add the v14 → v15 save migration with the rename map.
-- Run the same Python sweep used in #194 across `src/` and `tests/`. **Watch
-  for false positives** — `block`, `ore`, and `coal` are short generic words
-  that may collide with non-resource uses; review each substitution.
-- Ensure mine display-layer (Phaser scene HUD, almanac, etc.) strips the prefix
-  same as `displayKey()` already does for farm.
+Resolution: chose the flat `mine_` prefix for every mine-side key (uniform
+namespace, no per-chain sub-categories needed). v14 → v15 save migration
+remaps inventory + tileCollection slice (idempotent). `mine_` was added
+to `CATEGORY_PREFIXES` in `a11y.js` and `tileCollection/effects.js` so
+displays still read "stone" / "coal" / etc. Castle Needs `coal` need-key
+intentionally kept unchanged (state.castle.contributed.coal) — only the
+`resource` field in `CASTLE_NEEDS.coal` points to `mine_coal`.
 
 ### Bird → Eggs model cleanup
 
@@ -116,16 +102,24 @@ Workers from the catalog not yet implemented:
 | Peasant         | grass → hay              | 10 grass = 1 hay       | Not built — grass chain is implicit (hay = the tile and the product) |
 | Reaper          | grain → bread            | 6 grain = 1 bread      | Not built — bread chain is now wired (PR #194), worker missing |
 | Lumberjack      | tree → wood              | 1 tree = 1 wood        | Not built — chain length 1 doesn't fit the threshold model |
-| Grain Trader    | grain → vegetable        | 4 grain = 1 vegetable  | Not built — grain ↔ vegetable cross-chain not modeled |
-| Gardener        | vegetable → fruit        | 5 vegetable = 1 fruit  | Not built — cross-chain |
-| Orchardist      | fruit → flower           | 6 fruit = 1 flower     | Not built — cross-chain |
+| Grain Trader    | grain → vegetable        | 4 grain = 1 vegetable  | ✅ Tilda (PR #201) — `chain_redirect_category` |
+| Gardener        | vegetable → fruit        | 5 vegetable = 1 fruit  | ✅ Marin (PR #201) |
+| Orchardist      | fruit → flower           | 6 fruit = 1 flower     | ✅ Annek (PR #201) |
 | Poultryman      | bird → egg               | 8 bird = 1 egg         | Not built |
-| Farmer          | bird → herd animal       | 7 bird = 1 herd        | Not built — cross-chain |
+| Farmer          | bird → herd animal       | 7 bird = 1 herd        | ✅ Ren (PR #201) |
 | Ratcatcher      | rats → coin              | 10 rats = 1 coin       | Not built — hazard-to-resource conversion not modeled |
 | Sapper          | gas → coin               | 7 gas = 1 coin         | Not built — same |
 | (mine workers)  | (Digger/Excavator/etc.)  | various                | Not built — see Mine-side prefix rename above |
 
-The biggest model gap is **cross-chain workers** (grain → vegetable, vegetable → fruit, fruit → flower, bird → herd). Our `threshold_reduce_category` effect type only reduces a category's *own* chain threshold; producing a *different* category's tile would need a new effect type, e.g., `chain_redirect_category`.
+**Cross-chain workers — ✅ done in PR #201.** New effect type
+`chain_redirect_category` with `{ fromCategory, toCategory, from, to }`
+fields, integrated in `state.js`'s `CHAIN_COLLECTED` upgrade path: when
+a redirect is active and the chained tile's category matches `fromCategory`,
+the upgrade target becomes the active species in `toCategory` instead of
+the source's native `next`, with the redirect's threshold superseding the
+native one. Multiple redirects on the same source category resolve by
+lowest threshold (most generous). Aggregate computed in
+`apprentices/aggregate.js` `computeWorkerEffects()`.
 
 ---
 

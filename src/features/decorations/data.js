@@ -12,7 +12,7 @@ export const DECORATIONS = {
   stone_lantern: {
     id: "stone_lantern",
     name: "Stone Lantern",
-    cost: { coins: 120, stone: 6, wood_plank: 2 },
+    cost: { coins: 120, mine_stone: 6, wood_plank: 2 },
     influence: 35,
   },
   apple_sapling: {

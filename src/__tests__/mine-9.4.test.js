@@ -34,7 +34,7 @@ describe("Phase 9.4 — Mine workers (canary, geologist)", () => {
 
   it("canary cost: 4 coke + 6 bread", () => {
     const can = WORKER_MAP.canary;
-    expect(can.hireCost.coke).toBe(4);
+    expect(can.hireCost.mine_coke).toBe(4);
     expect(can.hireCost.bread).toBe(6);
   });
 
@@ -45,8 +45,8 @@ describe("Phase 9.4 — Mine workers (canary, geologist)", () => {
 
   it("geologist full effect = ore+1, gem+1", () => {
     const geo = WORKER_MAP.geologist;
-    expect(geo.effect.poolWeight.ore).toBe(1);
-    expect(geo.effect.poolWeight.gem).toBe(1);
+    expect(geo.effect.poolWeight.mine_ore).toBe(1);
+    expect(geo.effect.poolWeight.mine_gem).toBe(1);
   });
 
   it("geologist wage = 30", () => {
@@ -55,7 +55,7 @@ describe("Phase 9.4 — Mine workers (canary, geologist)", () => {
 
   it("geologist cost: 6 ingot + 6 bread", () => {
     const geo = WORKER_MAP.geologist;
-    expect(geo.hireCost.ingot).toBe(6);
+    expect(geo.hireCost.mine_ingot).toBe(6);
     expect(geo.hireCost.bread).toBe(6);
   });
 
@@ -78,14 +78,14 @@ describe("Phase 9.4 — Mine workers (canary, geologist)", () => {
   // ── Per-hire computation (geologist — integer floor) ──────────────────────
   it("1 geologist floors to +0 ore (0.5 → 0 by floor)", () => {
     const s = { ...createInitialState(), workers: { hired: { geologist: 1 }, debt: 0 } };
-    expect(computeWorkerEffects(s).effectivePoolWeights?.ore ?? 0).toBe(0);
+    expect(computeWorkerEffects(s).effectivePoolWeights?.mine_ore ?? 0).toBe(0);
   });
 
   it("2 geologist (max) = ore +1, gem +1", () => {
     const s = { ...createInitialState(), workers: { hired: { geologist: 2 }, debt: 0 } };
     const e2 = computeWorkerEffects(s);
-    expect(e2.effectivePoolWeights.ore).toBe(1);
-    expect(e2.effectivePoolWeights.gem).toBe(1);
+    expect(e2.effectivePoolWeights.mine_ore).toBe(1);
+    expect(e2.effectivePoolWeights.mine_gem).toBe(1);
   });
 
   // ── Clamped to maxCount ───────────────────────────────────────────────────
@@ -114,7 +114,7 @@ describe("Phase 9.4 — Mine workers (canary, geologist)", () => {
     };
     const merged = computeWorkerEffects(s);
     expect(merged.hazardSpawnReduce.gas_vent).toBe(0.5);
-    expect(merged.effectivePoolWeights.ore).toBe(1);
-    expect(merged.effectivePoolWeights.gem).toBe(1);
+    expect(merged.effectivePoolWeights.mine_ore).toBe(1);
+    expect(merged.effectivePoolWeights.mine_gem).toBe(1);
   });
 });

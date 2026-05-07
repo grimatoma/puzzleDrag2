@@ -70,7 +70,7 @@ describe("8.1 — Boss board modifiers", () => {
     s.inventory = { grass_hay: 5, wood_log: 3 };
     s.boss = {
       id: "ember_drake",
-      target: { resource: "ingot", amount: 3 },
+      target: { resource: "mine_ingot", amount: 3 },
       progress: 0,
       turnsRemaining: 10,
       modifierState: { heat: [{ row: 2, col: 3, age: 1 }] },

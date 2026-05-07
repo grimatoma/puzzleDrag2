@@ -17,7 +17,7 @@ export const ROWS = 6;
 export const MAX_TURNS = 10;
 
 // Phase 12.2 — save schema version (increment when save shape changes)
-export const SAVE_SCHEMA_VERSION = 14;
+export const SAVE_SCHEMA_VERSION = 15;
 
 export const UPGRADE_THRESHOLDS = {
   grass_hay: 6, grass_meadow: 6, grass_spiky: 6,
@@ -30,8 +30,8 @@ export const UPGRADE_THRESHOLDS = {
   // as a faster alternative path.
   grain_flour: 6,
   berry: 7,
-  stone: 8, cobble: 6,
-  ore: 6, coal: 7, gem: 5,
+  mine_stone: 8, mine_cobble: 6,
+  mine_ore: 6, mine_coal: 7, mine_gem: 5,
   // Birds → Eggs (chain 6). Existing bird tiles get explicit thresholds now
   // that they upgrade to the new `eggs` product.
   bird_egg: 6, bird_turkey: 6, bird_clover: 6, bird_melon: 6,
@@ -87,12 +87,12 @@ export const FARM_TILE_POOL = [
   // (chicken, hen, rooster, …) become alternate active species via the
   // species-activation pipeline rather than additional pool slots.
 ];
-export const MINE_TILE_POOL = ["stone", "stone", "stone", "ore", "ore", "coal", "dirt", "dirt", "gem"];
+export const MINE_TILE_POOL = ["mine_stone", "mine_stone", "mine_stone", "mine_ore", "mine_ore", "mine_coal", "mine_dirt", "mine_dirt", "mine_gem"];
 
 export const BIOMES = {
   farm: {
     name: "Farm",
-    dirt: 0x6d4a2f,
+    mine_dirt: 0x6d4a2f,
     dark: 0x3e2a1a,
     dirtColor: 0x6d4a2f,
     palette: { bg: 0x7dbd48, accent: 0x5daa35, dim: 0x3e2a1a },
@@ -199,23 +199,23 @@ export const BIOMES = {
   },
   mine: {
     name: "Mine",
-    dirt: 0x242526,
+    mine_dirt: 0x242526,
     dark: 0x151515,
     dirtColor: 0x3e3a36,
     palette: { bg: 0x2a2c30, accent: 0x6a7280, dim: 0x121316 },
     tilePool: MINE_TILE_POOL,
     resources: [
-      { key: "stone",  label: "Stone",  color: 0x9da3a8, dark: 0x3e4348, value: 1,  next: "cobble", glyph: "◆" },
-      { key: "cobble", label: "Cobble", color: 0xbbc1c6, dark: 0x4e5358, value: 3,  next: "block",  glyph: "◇" },
-      { key: "block",  label: "Block",  color: 0x7c8388, dark: 0x2a2e32, value: 6,  next: null,     glyph: "■" },
-      { key: "ore",    label: "Ore",    color: 0xb6a3a3, dark: 0x5e4040, value: 3,  next: "ingot",  glyph: "◊", sway: { amp: 0.4, freq: 0.00020, gust: 0.00 } },
-      { key: "ingot",  label: "Ingot",  color: 0xe8e0d8, dark: 0x6a5a50, value: 6,  next: null,     glyph: "▭" },
-      { key: "coal",   label: "Coal",   color: 0x333333, dark: 0x000000, value: 2,  next: "coke",   glyph: "●" },
-      { key: "coke",   label: "Coke",   color: 0x5a5a60, dark: 0x1a1a20, value: 4,  next: null,     glyph: "⬢" },
-      { key: "gem",    label: "Gem",    color: 0x65e5ff, dark: 0x1686a3, value: 7,  next: "cutgem", glyph: "◈", sway: { amp: 1.2, freq: 0.00028, gust: 0.04 } },
-      { key: "cutgem", label: "CutGem", color: 0xa3f0ff, dark: 0x1686a3, value: 14, next: null,     glyph: "✦", sway: { amp: 1.2, freq: 0.00028, gust: 0.04 } },
-      { key: "gold",   label: "Gold",   color: 0xffd34c, dark: 0x946b11, value: 5,  next: null,     glyph: "✺", sway: { amp: 1.0, freq: 0.00024, gust: 0.04 } },
-      { key: "dirt",   label: "Dirt",   color: 0x7a6850, dark: 0x3e3a36, value: 1,  next: null,     glyph: "◫" },
+      { key: "mine_stone",  label: "Stone",  color: 0x9da3a8, dark: 0x3e4348, value: 1,  next: "mine_cobble", glyph: "◆" },
+      { key: "mine_cobble", label: "Cobble", color: 0xbbc1c6, dark: 0x4e5358, value: 3,  next: "mine_block",  glyph: "◇" },
+      { key: "mine_block",  label: "Block",  color: 0x7c8388, dark: 0x2a2e32, value: 6,  next: null,     glyph: "■" },
+      { key: "mine_ore",    label: "Ore",    color: 0xb6a3a3, dark: 0x5e4040, value: 3,  next: "mine_ingot",  glyph: "◊", sway: { amp: 0.4, freq: 0.00020, gust: 0.00 } },
+      { key: "mine_ingot",  label: "Ingot",  color: 0xe8e0d8, dark: 0x6a5a50, value: 6,  next: null,     glyph: "▭" },
+      { key: "mine_coal",   label: "Coal",   color: 0x333333, dark: 0x000000, value: 2,  next: "mine_coke",   glyph: "●" },
+      { key: "mine_coke",   label: "Coke",   color: 0x5a5a60, dark: 0x1a1a20, value: 4,  next: null,     glyph: "⬢" },
+      { key: "mine_gem",    label: "Gem",    color: 0x65e5ff, dark: 0x1686a3, value: 7,  next: "mine_cutgem", glyph: "◈", sway: { amp: 1.2, freq: 0.00028, gust: 0.04 } },
+      { key: "mine_cutgem", label: "CutGem", color: 0xa3f0ff, dark: 0x1686a3, value: 14, next: null,     glyph: "✦", sway: { amp: 1.2, freq: 0.00028, gust: 0.04 } },
+      { key: "mine_gold",   label: "Gold",   color: 0xffd34c, dark: 0x946b11, value: 5,  next: null,     glyph: "✺", sway: { amp: 1.0, freq: 0.00024, gust: 0.04 } },
+      { key: "mine_dirt",   label: "Dirt",   color: 0x7a6850, dark: 0x3e3a36, value: 1,  next: null,     glyph: "◫" },
     ],
     pool: MINE_TILE_POOL,
   },
@@ -273,15 +273,15 @@ export const NPCS = {
 export const BUILDINGS = [
   { id: "hearth", name: "Hearth", desc: "The heart of the village. Keeps folk warm and anchors the community.", cost: { coins: 0 }, lv: 1, x: 60, y: 360, w: 90, h: 110, color: "#a8431a", built: true },
   { id: "mill", name: "Mill", desc: "Grinds grain into flour, enabling the grain → flour upgrade chain.", cost: { coins: 200, wood_plank: 30 }, lv: 1, x: 200, y: 380, w: 80, h: 90, color: "#c8923a" },
-  { id: "bakery", name: "Bakery", desc: "Craft baked goods — bread, honey rolls, harvest pies — to sell for coins.", cost: { coins: 500, wood_plank: 40, stone: 10 }, lv: 1, x: 320, y: 360, w: 100, h: 110, color: "#8a4a26" },
+  { id: "bakery", name: "Bakery", desc: "Craft baked goods — bread, honey rolls, harvest pies — to sell for coins.", cost: { coins: 500, wood_plank: 40, mine_stone: 10 }, lv: 1, x: 320, y: 360, w: 100, h: 110, color: "#8a4a26" },
   { id: "inn", name: "Inn", desc: "Lodgings for helpers. Unlocks apprentice hiring: Pip (Forager) and Tuck (Lookout).", cost: { coins: 400, wood_plank: 20 }, lv: 2, x: 470, y: 350, w: 110, h: 130, color: "#4f6b3a" },
   { id: "granary", name: "Granary", desc: "Keeps the harvest safe. Unlocks Hilda the Farmhand apprentice.", cost: { coins: 300, wood_plank: 20 }, lv: 1, x: 600, y: 380, w: 80, h: 100, color: "#c5a87a" },
-  { id: "larder", name: "Larder", desc: "Preserve and bottle your harvest. Craft preserve jars and berry tinctures for coins.", cost: { coins: 700, wood_plank: 30, stone: 20 }, lv: 3, x: 700, y: 395, w: 70, h: 85, color: "#4f6b3a" },
-  { id: "forge", name: "Forge", desc: "Smith metal goods — hinges, lanterns, rings, and more — for high coin rewards.", cost: { coins: 1200, stone: 60, ingot: 20 }, lv: 8, x: 800, y: 380, w: 100, h: 100, color: "#5a6973" },
+  { id: "larder", name: "Larder", desc: "Preserve and bottle your harvest. Craft preserve jars and berry tinctures for coins.", cost: { coins: 700, wood_plank: 30, mine_stone: 20 }, lv: 3, x: 700, y: 395, w: 70, h: 85, color: "#4f6b3a" },
+  { id: "forge", name: "Forge", desc: "Smith metal goods — hinges, lanterns, rings, and more — for high coin rewards.", cost: { coins: 1200, mine_stone: 60, mine_ingot: 20 }, lv: 8, x: 800, y: 380, w: 100, h: 100, color: "#5a6973" },
   { id: "caravan_post", name: "Caravan Post", desc: "Opens distant trade routes, letting you sell crafted goods to far-off markets.", cost: { coins: 800, wood_plank: 40 }, lv: 8, x: 940, y: 390, w: 110, h: 90, color: "#7e4f24" },
   { id: "kitchen", name: "Kitchen", desc: "Converts surplus grain into supplies. Three supplies grant standard Mine entry.", cost: { coins: 400, wood_plank: 20 }, lv: 2, x: 60, y: 260, w: 90, h: 100, color: "#8a4a26" },
-  { id: "workshop", name: "Workshop", desc: "Crafts shovels and other tools from raw materials.", cost: { coins: 500, wood_plank: 20, stone: 10 }, lv: 3, x: 180, y: 265, w: 90, h: 100, color: "#6a5a3a" },
-  { id: "powder_store", name: "Powder Store", desc: "Stockpiles black powder. Produces 2 Bombs at the end of every season.", cost: { coins: 600, stone: 30, ingot: 5 }, lv: 5, x: 310, y: 260, w: 90, h: 100, color: "#3a2a1a" },
+  { id: "workshop", name: "Workshop", desc: "Crafts shovels and other tools from raw materials.", cost: { coins: 500, wood_plank: 20, mine_stone: 10 }, lv: 3, x: 180, y: 265, w: 90, h: 100, color: "#6a5a3a" },
+  { id: "powder_store", name: "Powder Store", desc: "Stockpiles black powder. Produces 2 Bombs at the end of every season.", cost: { coins: 600, mine_stone: 30, mine_ingot: 5 }, lv: 5, x: 310, y: 260, w: 90, h: 100, color: "#3a2a1a" },
   { id: "portal", name: "Magic Portal", desc: "A shimmering gateway. Summons unlock with Influence (Phase 8).", cost: { coins: 2000, runes: 5 }, lv: 8, x: 440, y: 245, w: 100, h: 115, color: "#4a2a7a" },
   { id: "housing", name: "Housing Block",
     desc: "Quarters for hired hands. Each Housing raises your worker capacity by 1.",
@@ -302,7 +302,7 @@ export const BUILDINGS = [
     x: 710, y: 260, w: 90, h: 100, color: "#9a6a3a" },
   { id: "barn", name: "Barn",
     desc: "Reinforced ore shed. Preserves the tile layout between sessions in the Mine.",
-    cost: { coins: 400, wood_plank: 25, stone: 5 }, lv: 5, biome: "mine",
+    cost: { coins: 400, wood_plank: 25, mine_stone: 5 }, lv: 5, biome: "mine",
     x: 840, y: 260, w: 90, h: 100, color: "#7a4a2a" },
 ];
 
@@ -313,38 +313,38 @@ export const WORKSHOP_RECIPES = {
   rake:        { name: "Rake",          station: "workshop", inputs: { wood_plank: 1 },
                  effect: "clear_all", target: "grass_hay",   anim: "sweep",   ms: 300,
                  desc: "Clears all hay tiles from the board in one sweep. Used by Hilda to tidy overgrown fields." },
-  axe:         { name: "Axe",          station: "workshop", inputs: { stone: 1 },
+  axe:         { name: "Axe",          station: "workshop", inputs: { mine_stone: 1 },
                  effect: "clear_all", target: "wood_log",   anim: "chops",   ms: 200,
                  desc: "Fells all log tiles on the board instantly. Handy when the wood supply is blocking upgrades." },
-  fertilizer:  { name: "Fertilizer",   station: "workshop", inputs: { grass_hay: 1, dirt: 1 },
+  fertilizer:  { name: "Fertilizer",   station: "workshop", inputs: { grass_hay: 1, mine_dirt: 1 },
                  effect: "fill_bias", target: "grain",  anim: "shimmer", ms: 600,
                  desc: "Enriches the soil so the next board fill is biased toward grain tiles." },
   // Phase 10.5 — Cat tool (clears all rats, no turn cost)
-  cat:         { name: "Cat",          station: "workshop", inputs: { stone: 2, water: 1 },
+  cat:         { name: "Cat",          station: "workshop", inputs: { mine_stone: 2, water: 1 },
                  effect: "clear_hazard", target: "rats", anim: "scatter", ms: 200,
                  desc: "Dispatches a mouser to clear all active rat hazards from the farm in one go." },
   // Phase 10.6 — Bird Cage + full Scythe
   bird_cage:   { name: "Bird Cage",    station: "workshop", inputs: { grass_hay: 1 },
                  effect: "clear_all", target: "bird_egg",   anim: "cage",    ms: 300,
                  desc: "Sweeps all egg tiles from the board — useful when bird tiles are flooding the farm." },
-  scythe_full: { name: "Scythe (full)", station: "workshop", inputs: { stone: 1 },
+  scythe_full: { name: "Scythe (full)", station: "workshop", inputs: { mine_stone: 1 },
                  effect: "clear_all", target: "grain", anim: "sweep",   ms: 300,
                  desc: "Harvests all grain tiles at once, clearing the board for a fresh fill." },
   // Phase 10.8 — Wolf counters
-  rifle:       { name: "Rifle",        station: "workshop", inputs: { wood_plank: 1, stone: 1, ingot: 1 },
+  rifle:       { name: "Rifle",        station: "workshop", inputs: { wood_plank: 1, mine_stone: 1, mine_ingot: 1 },
                  effect: "clear_hazard", target: "wolves", anim: "shot",    ms: 300,
                  desc: "Drives off all active wolves permanently, ending the wolf hazard immediately." },
-  hound:       { name: "Hound",        station: "workshop", inputs: { bread: 1, stone: 3 },
+  hound:       { name: "Hound",        station: "workshop", inputs: { bread: 1, mine_stone: 3 },
                  effect: "scatter_hazard", target: "wolves", anim: "bark", ms: 400,
                  desc: "Scares the wolves away for several turns, buying time to chain away their target tiles." },
 };
 
 export const RECIPES = {
-  shovel:     { name: "Shovel",          inputs: { wood_plank: 1, stone: 1 },          tier: 1, station: "workshop", coins: 25,
+  shovel:     { name: "Shovel",          inputs: { wood_plank: 1, mine_stone: 1 },          tier: 1, station: "workshop", coins: 25,
                 desc: "A sturdy digging tool sold for 25 coins. Essential for farm maintenance and mine entry." },
-  water_pump: { name: "Water Pump",      inputs: { wood_plank: 1, stone: 1 },          tier: 2, station: "workshop", coins: 0, tool: "water_pump",
+  water_pump: { name: "Water Pump",      inputs: { wood_plank: 1, mine_stone: 1 },          tier: 2, station: "workshop", coins: 0, tool: "water_pump",
                 desc: "Crafts a water pump tool that can irrigate farm tiles, boosting grain yield for one turn." },
-  explosives: { name: "Explosives",      inputs: { grass_hay: 1, dirt: 1 },             tier: 2, station: "workshop", coins: 0, tool: "explosives",
+  explosives: { name: "Explosives",      inputs: { grass_hay: 1, mine_dirt: 1 },             tier: 2, station: "workshop", coins: 0, tool: "explosives",
                 desc: "Crafts a bundle of explosives that clears a 3×3 area of tiles from the mine board." },
   bread:      { name: "Bread Loaf",     inputs: { grain_flour: 3, bird_egg: 1 },            tier: 1, station: "bakery", coins: 125, glyph: "🍞", color: 0xd49060, dark: 0x7a4a28,
                 desc: "A wholesome loaf baked from flour and eggs, sold for 125 coins at the Bakery." },
@@ -356,19 +356,19 @@ export const RECIPES = {
                 desc: "Bottled berry preserves sealed with egg-white, fetching 100 coins at the Larder." },
   tincture:   { name: "Berry Tincture", inputs: { berry: 3, berry_jam: 1 },           tier: 1, station: "larder", coins: 125, glyph: "🌿", color: 0x6b8a3a, dark: 0x304018,
                 desc: "A medicinal berry tincture used by Sister Liss, sold for 125 coins." },
-  iron_hinge: { name: "Iron Hinge",     inputs: { ingot: 2, coke: 1 },          tier: 2, station: "forge",  output: "ingot", coins: 175, glyph: "⚙",  color: 0x7a8a96, dark: 0x2a3a46,
+  iron_hinge: { name: "Iron Hinge",     inputs: { mine_ingot: 2, mine_coke: 1 },          tier: 2, station: "forge",  output: "mine_ingot", coins: 175, glyph: "⚙",  color: 0x7a8a96, dark: 0x2a3a46,
                 desc: "A forged iron hinge used in building construction. Story note: Bram requests these for the Caravan Post." },
-  cobblepath: { name: "Cobble Path",    inputs: { stone: 5, wood_plank: 2 },         tier: 1, station: "forge",  output: "ingot", coins: 200, glyph: "🪨", color: 0x9a9a8a, dark: 0x404038,
+  cobblepath: { name: "Cobble Path",    inputs: { mine_stone: 5, wood_plank: 2 },         tier: 1, station: "forge",  output: "mine_ingot", coins: 200, glyph: "🪨", color: 0x9a9a8a, dark: 0x404038,
                 desc: "Laid cobblestones that pave trade paths, sold to caravans for 200 coins." },
-  lantern:    { name: "Iron Lantern",   inputs: { ingot: 1, coke: 1, wood_plank: 1 },tier: 2, station: "forge",  output: "ingot", coins: 150, glyph: "🏮", color: 0xd4783a, dark: 0x6a2800,
+  lantern:    { name: "Iron Lantern",   inputs: { mine_ingot: 1, mine_coke: 1, wood_plank: 1 },tier: 2, station: "forge",  output: "mine_ingot", coins: 150, glyph: "🏮", color: 0xd4783a, dark: 0x6a2800,
                 desc: "A wrought-iron lantern that lights the evening market, selling for 150 coins." },
-  goldring:   { name: "Gold Ring",      inputs: { gold: 1, ingot: 2 },          tier: 2, station: "forge",  output: "ingot", coins: 225, glyph: "💍", color: 0xffd34c, dark: 0x886810,
+  goldring:   { name: "Gold Ring",      inputs: { mine_gold: 1, mine_ingot: 2 },          tier: 2, station: "forge",  output: "mine_ingot", coins: 225, glyph: "💍", color: 0xffd34c, dark: 0x886810,
                 desc: "A gleaming gold ring favoured by merchants, commanding 225 coins at the forge." },
-  gemcrown:   { name: "Gem Crown",      inputs: { cutgem: 1, gold: 2 },         tier: 2, station: "forge",  output: "ingot", coins: 325, glyph: "👑", color: 0x65e5ff, dark: 0x1060a0,
+  gemcrown:   { name: "Gem Crown",      inputs: { mine_cutgem: 1, mine_gold: 2 },         tier: 2, station: "forge",  output: "mine_ingot", coins: 325, glyph: "👑", color: 0x65e5ff, dark: 0x1060a0,
                 desc: "A jewelled crown set with cut gems — the Forge's most prestigious commission, worth 325 coins." },
-  ironframe:  { name: "Iron Frame",     inputs: { wood_beam: 2, ingot: 1 },          tier: 3, station: "forge",  output: "ingot", coins: 275, glyph: "🔲", color: 0x6a7a86, dark: 0x2a3040,
+  ironframe:  { name: "Iron Frame",     inputs: { wood_beam: 2, mine_ingot: 1 },          tier: 3, station: "forge",  output: "mine_ingot", coins: 275, glyph: "🔲", color: 0x6a7a86, dark: 0x2a3040,
                 desc: "A structural iron frame used in advanced buildings and caravan reinforcement, worth 275 coins." },
-  stonework:  { name: "Stonework",      inputs: { block: 2, coke: 1 },          tier: 3, station: "forge",  output: "ingot", coins: 300, glyph: "🏗", color: 0x8a8a7a, dark: 0x383828,
+  stonework:  { name: "Stonework",      inputs: { mine_block: 2, mine_coke: 1 },          tier: 3, station: "forge",  output: "mine_ingot", coins: 300, glyph: "🏗", color: 0x8a8a7a, dark: 0x383828,
                 desc: "Dressed stonework for walls and facades — the final tier of Forge crafting, worth 300 coins." },
   // Phase 10.3 — snake_case aliases so tests and saves can use either form
   iron_frame: null, // resolved below
@@ -421,8 +421,8 @@ export const ACHIEVEMENTS = [
   { id: "seasons_4",    name: "One Cycle",           desc: "Complete 4 seasons",                    category: "Seasons",  target: 4,    eventKey: "seasonsCycled",  icon: "🌀", reward: { coins: 100, xp: 50 } },
   { id: "seasons_16",   name: "Year",                desc: "Complete 16 seasons (a full year)",     category: "Seasons",  target: 16,   eventKey: "seasonsCycled",  icon: "📅", reward: { coins: 300, xp: 120 } },
   // Resources
-  { id: "gold_50",      name: "Goldsmith",           desc: "Collect 50 gold",                       category: "Resources",target: 50,   eventKey: "gold",           icon: "✺", reward: { coins: 200, xp: 80 } },
-  { id: "cutgem_10",    name: "Gemcutter",           desc: "Collect 10 cut gems",                   category: "Resources",target: 10,   eventKey: "cutgem",         icon: "✦", reward: { coins: 300, xp: 100 } },
+  { id: "gold_50",      name: "Goldsmith",           desc: "Collect 50 gold",                       category: "Resources",target: 50,   eventKey: "mine_gold",           icon: "✺", reward: { coins: 200, xp: 80 } },
+  { id: "cutgem_10",    name: "Gemcutter",           desc: "Collect 10 cut gems",                   category: "Resources",target: 10,   eventKey: "mine_cutgem",         icon: "✦", reward: { coins: 300, xp: 100 } },
   // Crafting
   { id: "craft_1",      name: "First Craft",         desc: "Craft your first recipe",               category: "Crafting", target: 1,    eventKey: "totalCrafted",   icon: "🔨", reward: { coins: 50,  xp: 20 } },
   { id: "craft_50",     name: "Master Craftsman",    desc: "Craft 50 recipes",                      category: "Crafting", target: 50,   eventKey: "totalCrafted",   icon: "⚒",  reward: { coins: 300, xp: 120 } },
@@ -439,16 +439,16 @@ export const MARKET_PRICES = {
   berry:  { buy: 70,  sell: 3  },
   berry_jam:    { buy: 90,  sell: 5  },
   bird_egg:    { buy: 70,  sell: 3  },
-  stone:  { buy: 50,  sell: 1  },
-  cobble: { buy: 70,  sell: 3  },
-  block:  { buy: 100, sell: 6  },
-  ore:    { buy: 70,  sell: 3  },
-  ingot:  { buy: 100, sell: 6  },
-  coal:   { buy: 60,  sell: 2  },
-  coke:   { buy: 80,  sell: 4  },
-  gem:    { buy: 120, sell: 7  },
-  cutgem: { buy: 200, sell: 14 },
-  gold:   { buy: 100, sell: 5  },
+  mine_stone:  { buy: 50,  sell: 1  },
+  mine_cobble: { buy: 70,  sell: 3  },
+  mine_block:  { buy: 100, sell: 6  },
+  mine_ore:    { buy: 70,  sell: 3  },
+  mine_ingot:  { buy: 100, sell: 6  },
+  mine_coal:   { buy: 60,  sell: 2  },
+  mine_coke:   { buy: 80,  sell: 4  },
+  mine_gem:    { buy: 120, sell: 7  },
+  mine_cutgem: { buy: 200, sell: 14 },
+  mine_gold:   { buy: 100, sell: 5  },
   soup:   { buy: 220, sell: 20 },
   // Phase: wire-all-chains — terminal products from REFERENCE_CATALOG §4.
   pie:       { buy: 840,  sell: 90  },
@@ -489,7 +489,7 @@ export const RESOURCE_CAP_BASE = 200;
 export const RESOURCE_CAP_GRANARY = 500;
 /** Raw farm + mine resources subject to the inventory cap. */
 export const CAPPED_RESOURCES = ["grass_hay","grain_wheat","grain","grain_flour","wood_log","wood_plank",
-  "wood_beam","berry","berry_jam","bird_egg","stone","ore","coal",
+  "wood_beam","berry","berry_jam","bird_egg","mine_stone","mine_ore","mine_coal",
   "carrot","eggplant","turnip","beet","cucumber","squash","mushroom","pepper","broccoli","soup",
   // Catalog-import placeholders.
   "grass_heather",
@@ -542,7 +542,7 @@ export const SEASON_POOL_MODS = {
   Spring: { berry: +1 },
   Summer: { grain_wheat: +1 },
   Autumn: { wood_log:   +2 },
-  Winter: { stone: +1, grass_hay: -1 },
+  Winter: { mine_stone: +1, grass_hay: -1 },
 };
 
 // ─── Phase 10.4 — Rat hazard constants ────────────────────────────────────────
@@ -581,11 +581,11 @@ export const PALETTES = {
       wood_log:    0x9a6e30, wood_plank:  0xc49050, wood_beam:   0x6a4218,
       berry:  0x1a003a, berry_jam:    0x4a1060,
       bird_egg:    0xf0e8c8, bird_turkey: 0xc06820, bird_clover: 0x70b048, bird_melon: 0xc8e060,
-      stone:  0x9da3a8, cobble: 0xbbc1c6, block:  0x7c8388,
-      ore:    0xe89040, ingot:  0xf8d880,
-      coal:   0x1a1a1a, coke:   0x505060,
-      gem:    0x50d8f8, cutgem: 0xa0f0ff, gold:   0xffd34c,
-      dirt:   0x7a6850,
+      mine_stone:  0x9da3a8, mine_cobble: 0xbbc1c6, mine_block:  0x7c8388,
+      mine_ore:    0xe89040, mine_ingot:  0xf8d880,
+      mine_coal:   0x1a1a1a, mine_coke:   0x505060,
+      mine_gem:    0x50d8f8, mine_cutgem: 0xa0f0ff, mine_gold:   0xffd34c,
+      mine_dirt:   0x7a6850,
     },
     seasons: {
       Spring: { bg: 0x5090b0, fill: 0x60b0d0, accent: 0x3870a0 },
@@ -604,11 +604,11 @@ export const PALETTES = {
       wood_log:    0xb05018, wood_plank:  0xd07838, wood_beam:   0x783010,
       berry:  0x001050, berry_jam:    0x002888,
       bird_egg:    0xf0e8d0, bird_turkey: 0xc06028, bird_clover: 0x80b860, bird_melon: 0xd8e878,
-      stone:  0x9da3a8, cobble: 0xbbc1c6, block:  0x7c8388,
-      ore:    0xa0c8e8, ingot:  0xd8f0ff,
-      coal:   0x0a1020, coke:   0x283848,
-      gem:    0x60e0f8, cutgem: 0xb0f4ff, gold:   0xffd34c,
-      dirt:   0x7a6850,
+      mine_stone:  0x9da3a8, mine_cobble: 0xbbc1c6, mine_block:  0x7c8388,
+      mine_ore:    0xa0c8e8, mine_ingot:  0xd8f0ff,
+      mine_coal:   0x0a1020, mine_coke:   0x283848,
+      mine_gem:    0x60e0f8, mine_cutgem: 0xb0f4ff, mine_gold:   0xffd34c,
+      mine_dirt:   0x7a6850,
     },
     seasons: {
       Spring: { bg: 0x40a080, fill: 0x50c8a0, accent: 0x207858 },
@@ -627,11 +627,11 @@ export const PALETTES = {
       wood_log:    0xb47030, wood_plank:  0xd49050, wood_beam:   0x7a4818,
       berry:  0x1a003a, berry_jam:    0x48006c,
       bird_egg:    0xf4ecd8, bird_turkey: 0xc06820, bird_clover: 0x80b048, bird_melon: 0xc8d870,
-      stone:  0x9da3a8, cobble: 0xbbc1c6, block:  0x7c8388,
-      ore:    0xe08820, ingot:  0xf8d060,
-      coal:   0x0c0c14, coke:   0x303040,
-      gem:    0x50d0f0, cutgem: 0xa8f0ff, gold:   0xffd34c,
-      dirt:   0x7a6850,
+      mine_stone:  0x9da3a8, mine_cobble: 0xbbc1c6, mine_block:  0x7c8388,
+      mine_ore:    0xe08820, mine_ingot:  0xf8d060,
+      mine_coal:   0x0c0c14, mine_coke:   0x303040,
+      mine_gem:    0x50d0f0, mine_cutgem: 0xa8f0ff, mine_gold:   0xffd34c,
+      mine_dirt:   0x7a6850,
     },
     seasons: {
       Spring: { bg: 0x609080, fill: 0x78b0a0, accent: 0x406858 },

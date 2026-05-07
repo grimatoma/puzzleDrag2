@@ -7,7 +7,7 @@ import { CASTLE_NEEDS } from "./data.js";
 
 export const initial = {
   castle: {
-    contributed: { soup: 0, meat: 0, coal: 0, cocoa: 0, ink: 0 },
+    contributed: { soup: 0, meat: 0, mine_coal: 0, cocoa: 0, ink: 0 },
   },
 };
 
@@ -19,13 +19,13 @@ function castleOf(state) {
       contributed: {
         soup: c.contributed.soup ?? 0,
         meat: c.contributed.meat ?? 0,
-        coal: c.contributed.coal ?? 0,
+        mine_coal: c.contributed.mine_coal ?? 0,
         cocoa: c.contributed.cocoa ?? 0,
         ink: c.contributed.ink ?? 0,
       },
     };
   }
-  return { contributed: { soup: 0, meat: 0, coal: 0, cocoa: 0, ink: 0 } };
+  return { contributed: { soup: 0, meat: 0, mine_coal: 0, cocoa: 0, ink: 0 } };
 }
 
 export function reduce(state, action) {

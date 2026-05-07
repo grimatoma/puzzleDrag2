@@ -10,7 +10,7 @@ import { createInitialState, rootReducer } from "../state.js";
 
 describe("10.5 — WORKSHOP_RECIPES.cat", () => {
   it("cat recipe requires 2 stone", () => {
-    expect(WORKSHOP_RECIPES.cat.inputs.stone).toBe(2);
+    expect(WORKSHOP_RECIPES.cat.inputs.mine_stone).toBe(2);
   });
 
   it("cat recipe requires 1 water", () => {
@@ -82,11 +82,11 @@ describe("10.5 — CRAFT_TOOL cat", () => {
     const s0 = {
       ...createInitialState(),
       built: { ...createInitialState().built, workshop: true },
-      inventory: { ...createInitialState().inventory, stone: 3, water: 2 },
+      inventory: { ...createInitialState().inventory, mine_stone: 3, water: 2 },
     };
     const s1 = rootReducer(s0, { type: "CRAFT_TOOL", id: "cat" });
     expect(s1.tools.cat).toBe(1);
-    expect(s1.inventory.stone).toBe(1);
+    expect(s1.inventory.mine_stone).toBe(1);
     expect(s1.inventory.water).toBe(1);
   });
 });

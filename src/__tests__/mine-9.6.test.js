@@ -4,7 +4,7 @@ import { createInitialState, rootReducer } from "../state.js";
 
 function makeGrid(rows = 6, cols = 6) {
   return Array.from({ length: rows }, () =>
-    Array.from({ length: cols }, () => ({ key: "stone" })),
+    Array.from({ length: cols }, () => ({ key: "mine_stone" })),
   );
 }
 

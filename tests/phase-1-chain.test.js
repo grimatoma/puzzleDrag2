@@ -15,7 +15,7 @@ describe("Phase 1 — per-resource upgrade thresholds", () => {
   it("wheat threshold is 5, not 4", () => expect(upgradeCountForChain(4, "grain_wheat")).toBe(0));
   it("5 wheat → 1 upgrade", () => expect(upgradeCountForChain(5, "grain_wheat")).toBe(1));
   it("log threshold is 5", () => expect(upgradeCountForChain(5, "wood_log")).toBe(1));
-  it("ore threshold is 6", () => expect(upgradeCountForChain(6, "ore")).toBe(1));
+  it("ore threshold is 6", () => expect(upgradeCountForChain(6, "mine_ore")).toBe(1));
 });
 
 describe("Phase 1 — resource gain formula", () => {

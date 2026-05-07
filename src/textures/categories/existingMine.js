@@ -246,14 +246,14 @@ function drawGold(ctx) {
 }
 
 export const ICONS = {
-  stone:   { label:"Stone",       color:"#8a8f94", draw:drawStone },
-  cobble:  { label:"Cobblestone", color:"#a8aeb4", draw:drawCobble },
-  block:   { label:"Block",       color:"#7e858a", draw:drawBlock },
-  ore:     { label:"Ore",         color:"#9c5e2c", draw:drawOre },
-  ingot:   { label:"Ingot",       color:"#c0c8d0", draw:drawIngot },
-  coal:    { label:"Coal",        color:"#3a3a40", draw:drawCoal },
-  coke:    { label:"Coke",        color:"#5a5a64", draw:drawCoke },
-  gem:     { label:"Gem (rough)", color:"#6dd5e8", draw:drawGem },
-  cutgem:  { label:"Cut Gem",     color:"#7ce0ff", draw:drawCutgem },
-  gold:    { label:"Gold Nugget", color:"#e8b830", draw:drawGold },
+  mine_stone:   { label:"Stone",       color:"#8a8f94", draw:drawStone },
+  mine_cobble:  { label:"Cobblestone", color:"#a8aeb4", draw:drawCobble },
+  mine_block:   { label:"Block",       color:"#7e858a", draw:drawBlock },
+  mine_ore:     { label:"Ore",         color:"#9c5e2c", draw:drawOre },
+  mine_ingot:   { label:"Ingot",       color:"#c0c8d0", draw:drawIngot },
+  mine_coal:    { label:"Coal",        color:"#3a3a40", draw:drawCoal },
+  mine_coke:    { label:"Coke",        color:"#5a5a64", draw:drawCoke },
+  mine_gem:     { label:"Gem (rough)", color:"#6dd5e8", draw:drawGem },
+  mine_cutgem:  { label:"Cut Gem",     color:"#7ce0ff", draw:drawCutgem },
+  mine_gold:    { label:"Gold Nugget", color:"#e8b830", draw:drawGold },
 };

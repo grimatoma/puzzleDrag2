@@ -134,7 +134,7 @@ export const MIGRATIONS = [
   (s) => ({
     ...s,
     castle: s.castle ?? {
-      contributed: { soup: 0, meat: 0, coal: 0, cocoa: 0, ink: 0 },
+      contributed: { soup: 0, meat: 0, mine_coal: 0, cocoa: 0, ink: 0 },
     },
   }),
 
@@ -160,6 +160,51 @@ export const MIGRATIONS = [
       log: "wood_log", plank: "wood_plank", beam: "wood_beam",
       jam: "berry_jam",
       egg: "bird_egg", turkey: "bird_turkey", clover: "bird_clover", melon: "bird_melon",
+    };
+    const remap = (obj) => {
+      if (!obj || typeof obj !== "object") return obj;
+      const out = {};
+      for (const [k, v] of Object.entries(obj)) {
+        out[RENAME[k] ?? k] = v;
+      }
+      return out;
+    };
+    const next = { ...s };
+    if (s.inventory) next.inventory = remap(s.inventory);
+    if (s.tileCollection) {
+      next.tileCollection = {
+        ...s.tileCollection,
+        discovered: remap(s.tileCollection.discovered),
+        researchProgress: remap(s.tileCollection.researchProgress),
+        activeByCategory: Object.fromEntries(
+          Object.entries(s.tileCollection.activeByCategory ?? {})
+            .map(([cat, val]) => [cat, RENAME[val] ?? val]),
+        ),
+      };
+    }
+    return next;
+  },
+
+  // v14 → v15: Mine-side category prefix rename.
+  //
+  // Mapping:
+  //   stone → mine_stone     ore → mine_ore        gem → mine_gem
+  //   cobble → mine_cobble   ingot → mine_ingot    cutgem → mine_cutgem
+  //   block → mine_block     coal → mine_coal      gold → mine_gold
+  //                          coke → mine_coke      dirt → mine_dirt
+  //
+  // Castle `contributed.coal` need-key stays unchanged; only the inventory
+  // resource key gets remapped (CASTLE_NEEDS.coal.resource = "mine_coal").
+  //
+  // Idempotent: re-running on an already-migrated save is a no-op because
+  // none of the old mine keys remain in inventory.
+  (s) => {
+    const RENAME = {
+      stone: "mine_stone", cobble: "mine_cobble", block: "mine_block",
+      ore: "mine_ore", ingot: "mine_ingot",
+      coal: "mine_coal", coke: "mine_coke",
+      gem: "mine_gem", cutgem: "mine_cutgem",
+      gold: "mine_gold", dirt: "mine_dirt",
     };
     const remap = (obj) => {
       if (!obj || typeof obj !== "object") return obj;

@@ -57,6 +57,7 @@ export function getQueue() {
 const CATEGORY_PREFIXES = [
   "grass_", "grain_", "wood_", "berry_", "bird_", "veg_",
   "fruit_", "flower_", "tree_", "herd_", "cattle_", "mount_",
+  "mine_",
 ];
 
 function displayKey(k) {

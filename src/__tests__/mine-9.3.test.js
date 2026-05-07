@@ -11,7 +11,7 @@ import { computeWorkerEffects } from "../features/apprentices/aggregate.js";
 
 function makeGrid(rows = 6, cols = 6) {
   return Array.from({ length: rows }, () =>
-    Array.from({ length: cols }, () => ({ key: "stone" })),
+    Array.from({ length: cols }, () => ({ key: "mine_stone" })),
   );
 }
 
@@ -80,7 +80,7 @@ describe("Phase 9.3 — Hazards (cave-in, gas vent)", () => {
   });
 
   // ── Cave-in clear ──────────────────────────────────────────────────────────
-  const stoneTile = (r, c) => ({ key: "stone", row: r, col: c });
+  const stoneTile = (r, c) => ({ key: "mine_stone", row: r, col: c });
 
   it("3 stone in row 2 clears caveIn at row 3", () => {
     const s = {

@@ -66,7 +66,7 @@ export function tickMysteriousOre(state) {
   const { row, col } = state.mysteriousOre;
   const grid = state.grid.map((rowArr, ri) =>
     rowArr.map((t, ci) =>
-      ri === row && ci === col ? { ...t, key: "dirt" } : t,
+      ri === row && ci === col ? { ...t, key: "mine_dirt" } : t,
     ),
   );
   return { ...state, grid, mysteriousOre: null };
@@ -80,6 +80,6 @@ export function tickMysteriousOre(state) {
  */
 export function isMysteriousChainValid(chain) {
   const hasOre = chain.some((t) => t.key === "mysterious_ore");
-  const dirtCnt = chain.filter((t) => t.key === "dirt").length;
+  const dirtCnt = chain.filter((t) => t.key === "mine_dirt").length;
   return hasOre && dirtCnt >= REQUIRED_DIRT_IN_CHAIN;
 }

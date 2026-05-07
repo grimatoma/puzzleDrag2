@@ -11,7 +11,7 @@ describe("Phase 12.5 — saved-field preservation", () => {
     const barn = findBuilding("barn");
     expect(silo).toMatchObject({ cost: { coins: 250, wood_plank: 15 },
       lv: 4, biome: "farm" });
-    expect(barn).toMatchObject({ cost: { coins: 400, wood_plank: 25, stone: 5 },
+    expect(barn).toMatchObject({ cost: { coins: 400, wood_plank: 25, mine_stone: 5 },
       lv: 5, biome: "mine" });
     expect(silo.desc).toMatch(/preserves the tile layout between sessions/i);
     expect(barn.desc).toMatch(/preserves the tile layout between sessions/i);
@@ -61,8 +61,8 @@ describe("Phase 12.5 — saved-field preservation", () => {
     expect(s1.turnsUsed).toBe(0);
   });
 
-  it("SAVE_SCHEMA_VERSION === 14 and migration v11 → v12 seeds slots", () => {
-    expect(SAVE_SCHEMA_VERSION).toBe(14);
+  it("SAVE_SCHEMA_VERSION === 15 and migration v11 → v12 seeds slots", () => {
+    expect(SAVE_SCHEMA_VERSION).toBe(15);
     const v11 = { version: 11, farm: {}, mine: {} };
     const v12 = MIGRATIONS[11](v11);
     expect(v12.farm.savedField).toBeNull();

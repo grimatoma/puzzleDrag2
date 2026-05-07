@@ -4,7 +4,7 @@
 import { describe, it, expect } from "vitest";
 import { createInitialState, rootReducer } from "../src/state.js";
 
-function makeGrid(rows = 6, cols = 6, key = "stone") {
+function makeGrid(rows = 6, cols = 6, key = "mine_stone") {
   return Array.from({ length: rows }, () =>
     Array.from({ length: cols }, () => ({ key }))
   );
@@ -56,7 +56,7 @@ describe("Fix 5 — tickMysteriousOre wired on CHAIN_COLLECTED in mine", () => {
     };
     const next = rootReducer(s, {
       type: "CHAIN_COLLECTED",
-      payload: { key: "stone", gained: 3, upgrades: 0, value: 1, chainLength: 3, noTurn: false },
+      payload: { key: "mine_stone", gained: 3, upgrades: 0, value: 1, chainLength: 3, noTurn: false },
     });
     expect(next.mysteriousOre?.turnsRemaining).toBe(4);
   });
@@ -66,7 +66,7 @@ describe("Fix 5 — tickMysteriousOre wired on CHAIN_COLLECTED in mine", () => {
       ...mineState(),
       mysteriousOre: { row: 2, col: 3, turnsRemaining: 5 },
     };
-    const payload = { key: "stone", gained: 2, upgrades: 0, value: 1, chainLength: 2, noTurn: false };
+    const payload = { key: "mine_stone", gained: 2, upgrades: 0, value: 1, chainLength: 2, noTurn: false };
     for (let i = 0; i < 5; i++) {
       s = rootReducer(s, { type: "CHAIN_COLLECTED", payload });
     }

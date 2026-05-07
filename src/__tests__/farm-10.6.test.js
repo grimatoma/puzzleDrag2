@@ -7,9 +7,9 @@ import { WORKSHOP_RECIPES } from "../constants.js";
 import { createInitialState, rootReducer } from "../state.js";
 
 function makeGridWith(items) {
-  // items: array of {key, count}; fill rest with 'dirt'
+  // items: array of {key, count}; fill rest with 'mine_dirt'
   const grid = Array.from({ length: 2 }, () =>
-    Array.from({ length: 4 }, () => ({ key: "dirt" })),
+    Array.from({ length: 4 }, () => ({ key: "mine_dirt" })),
   );
   let idx = 0;
   for (const { key, count } of items) {
@@ -30,7 +30,7 @@ describe("10.6 — WORKSHOP_RECIPES", () => {
   });
 
   it("scythe_full costs 1 stone", () => {
-    expect(WORKSHOP_RECIPES.scythe_full.inputs.stone).toBe(1);
+    expect(WORKSHOP_RECIPES.scythe_full.inputs.mine_stone).toBe(1);
   });
 });
 

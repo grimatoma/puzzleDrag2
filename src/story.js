@@ -88,7 +88,7 @@ export const STORY_BEATS = [
     act: 3,
     title: "Into the Dark",
     body: "Wren: 'The seal is broken. The mine is yours.'",
-    trigger: { type: "resource_total_multi", req: { stone: 20, coal: 10 } },
+    trigger: { type: "resource_total_multi", req: { mine_stone: 20, mine_coal: 10 } },
     onComplete: { setFlag: "mine_unlocked", unlockBiome: "mine" },
   },
   {

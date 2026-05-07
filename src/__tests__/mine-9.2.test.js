@@ -6,7 +6,7 @@ import {
 } from "../features/mine/mysterious_ore.js";
 import { createInitialState, rootReducer as reduce } from "../state.js";
 
-function makeGrid(rows = 6, cols = 6, key = "stone") {
+function makeGrid(rows = 6, cols = 6, key = "mine_stone") {
   return Array.from({ length: rows }, () =>
     Array.from({ length: cols }, () => ({ key })),
   );
@@ -94,14 +94,14 @@ describe("Phase 9.2 — Mysterious Ore", () => {
     const expired = tickMysteriousOre(t);
     expect(expired.mysteriousOre).toBeNull();
     expect(expired.runes ?? 0).toBe(t.runes ?? 0);
-    expect(expired.grid[t.mysteriousOre.row][t.mysteriousOre.col].key).toBe("dirt");
+    expect(expired.grid[t.mysteriousOre.row][t.mysteriousOre.col].key).toBe("mine_dirt");
   });
 
   // ── Chain validation ───────────────────────────────────────────────────────
   const ore = { key: "mysterious_ore", row: 2, col: 3 };
-  const d1 = { key: "dirt", row: 2, col: 4 };
-  const d2 = { key: "dirt", row: 2, col: 5 };
-  const stone = { key: "stone", row: 2, col: 6 };
+  const d1 = { key: "mine_dirt", row: 2, col: 4 };
+  const d2 = { key: "mine_dirt", row: 2, col: 5 };
+  const stone = { key: "mine_stone", row: 2, col: 6 };
 
   it("ore alone fails", () => {
     expect(isMysteriousChainValid([ore])).toBe(false);

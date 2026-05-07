@@ -8,7 +8,7 @@ beforeEach(() => global.localStorage.clear());
 describe("6.2 — favorite-gift table (§14)", () => {
   it("Mira  → flour",  () => expect(NPC_DATA.mira.favoriteGift).toBe("grain_flour"));
   it("Tomas → jam",    () => expect(NPC_DATA.tomas.favoriteGift).toBe("berry_jam"));
-  it("Bram  → ingot",  () => expect(NPC_DATA.bram.favoriteGift).toBe("ingot"));
+  it("Bram  → ingot",  () => expect(NPC_DATA.bram.favoriteGift).toBe("mine_ingot"));
   it("Liss  → jam",    () => expect(NPC_DATA.liss.favoriteGift).toBe("berry_jam"));
   it("Wren  → plank",  () => expect(NPC_DATA.wren.favoriteGift).toBe("wood_plank"));
 });
@@ -83,11 +83,11 @@ describe("6.2 — bond clamps at 10", () => {
 describe("6.2 — cross-NPC gifts are independent", () => {
   it("Bram gift OK after Mira gift in the same season", () => {
     const s = createInitialState();
-    s.inventory.ingot = 1;
+    s.inventory.mine_ingot = 1;
     s.inventory.grain_flour = 1;
     s.season = 2;
     const r3 = applyGift(s, "mira", "grain_flour");
-    const r4 = applyGift(r3.newState, "bram", "ingot");
+    const r4 = applyGift(r3.newState, "bram", "mine_ingot");
     expect(r4.ok).toBe(true);
     expect(r4.newState.npcs.bonds.bram).toBe(5.5);
   });
