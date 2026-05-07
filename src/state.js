@@ -3,6 +3,7 @@ import { driftPrices, applyTrade } from "./market.js";
 import { currentCap } from "./utils.js";
 import { WORKER_MAP } from "./features/apprentices/data.js";
 import { computeWorkerEffects } from "./features/apprentices/effects.js";
+import { SPECIES, CATEGORIES, SPECIES_MAP } from "./features/species/data.js";
 import * as crafting from "./features/crafting/slice.js";
 import * as quests from "./features/quests/slice.js";
 import * as achievements from "./features/achievements/slice.js";
@@ -52,6 +53,47 @@ export function persistState(state) {
 
 export function clearSave() {
   try { localStorage.removeItem(SAVE_KEY); } catch { /* storage unavailable */ }
+}
+
+// ─── Species slice helpers ─────────────────────────────────────────────────
+
+function defaultSpeciesSlice() {
+  const discovered = {};
+  const researchProgress = {};
+  const activeByCategory = {};
+  for (const c of CATEGORIES) activeByCategory[c] = null;
+  for (const s of SPECIES) {
+    if (s.discovery.method === "default") {
+      discovered[s.id] = true;
+      if (activeByCategory[s.category] === null) {
+        activeByCategory[s.category] = s.id;
+      }
+    } else if (s.discovery.method === "research") {
+      researchProgress[s.id] = 0;
+    }
+  }
+  return { discovered, researchProgress, activeByCategory, freeMoves: 0 };
+}
+
+/**
+ * Merges a loaded save state with current defaults, ensuring the species slice
+ * is always well-formed. Idempotent: calling twice produces the same result.
+ */
+export function mergeLoadedState(saved) {
+  const freshSpecies = defaultSpeciesSlice();
+  if (!saved || typeof saved !== "object") return { species: freshSpecies };
+  let species = saved.species;
+  if (!species || typeof species !== "object") {
+    species = freshSpecies;
+  } else {
+    // Deep-merge each sub-key: fill in any missing ids from fresh defaults
+    const discovered = { ...freshSpecies.discovered, ...species.discovered };
+    const researchProgress = { ...freshSpecies.researchProgress, ...species.researchProgress };
+    const activeByCategory = { ...freshSpecies.activeByCategory, ...species.activeByCategory };
+    const freeMoves = typeof species.freeMoves === "number" ? species.freeMoves : 0;
+    species = { discovered, researchProgress, activeByCategory, freeMoves };
+  }
+  return { ...saved, species };
 }
 
 export const xpForLevel = (l) => 50 + l * 80;
@@ -149,6 +191,7 @@ export function initialState() {
     sessionMaxTurns: MAX_TURNS,
     dailyStreak: { lastClaimedDate: null, currentDay: 0 },
     workers: { hired: { hilda: 0, pip: 0, wila: 0, tuck: 0, osric: 0, dren: 0 }, debt: 0, pool: 1 },
+    species: defaultSpeciesSlice(),
     ...crafting.initial,
     ...quests.initial,
     ...achievements.initial,
@@ -187,7 +230,18 @@ export function initialState() {
           pool:  saved.workers.pool  ?? 1,
         }
       : fresh.workers;
-    return { ...fresh, ...saved, workers: mergedWorkers, story: mergedStory, view: "town", turnsUsed: 0, modal: null, bubble: null, pendingView: null,
+    // Migrate: old saves without state.species get the default shape
+    const mergedSpecies = (() => {
+      const freshSpec = defaultSpeciesSlice();
+      if (!saved.species || typeof saved.species !== "object") return freshSpec;
+      return {
+        discovered: { ...freshSpec.discovered, ...saved.species.discovered },
+        researchProgress: { ...freshSpec.researchProgress, ...saved.species.researchProgress },
+        activeByCategory: { ...freshSpec.activeByCategory, ...saved.species.activeByCategory },
+        freeMoves: typeof saved.species.freeMoves === "number" ? saved.species.freeMoves : 0,
+      };
+    })();
+    return { ...fresh, ...saved, workers: mergedWorkers, story: mergedStory, species: mergedSpecies, view: "town", turnsUsed: 0, modal: null, bubble: null, pendingView: null,
       seasonStats: { harvests: 0, upgrades: 0, ordersFilled: 0, coins: 0 } };
   }
   return fresh;
@@ -594,6 +648,8 @@ function coreReducer(state, action) {
         pendingView: null,
         seasonStats: { harvests: 0, upgrades: 0, ordersFilled: 0, coins: 0, capFloaters: {} },
         workers: { ...state.workers, debt: wageDebt, pool: newPool },
+        // 5.7: reset per-season free moves on season close
+        species: state.species ? { ...state.species, freeMoves: 0 } : state.species,
         bubble: { id: Date.now(), npc: "tomas", text: "Bonus: +1 Reshuffle Horn · +25◉", ms: 2000 },
         market: {
           ...(state.market ?? {}),
@@ -800,6 +856,108 @@ function coreReducer(state, action) {
       return { ...state, workers: { ...state.workers, pool: (state.workers?.pool ?? 0) + amount } };
     }
 
+    // ─── Phase 5 Species ────────────────────────────────────────────────────────
+
+    case "SET_ACTIVE_SPECIES": {
+      const { category, speciesId } = action.payload ?? {};
+      if (!CATEGORIES.includes(category)) return state;          // unknown category
+      const current = state.species?.activeByCategory?.[category];
+      if (current === speciesId) return state;                   // already active → no-op
+
+      if (speciesId !== null) {
+        const sp = SPECIES_MAP[speciesId];
+        if (!sp) return state;                                   // unknown species
+        if (sp.category !== category) return state;              // cross-category
+        if (!state.species?.discovered?.[speciesId]) return state; // undiscovered
+      }
+
+      return {
+        ...state,
+        species: {
+          ...state.species,
+          activeByCategory: { ...state.species.activeByCategory, [category]: speciesId },
+        },
+      };
+    }
+
+    case "SPECIES_DISCOVERED": {
+      const ids = action.payload?.ids ?? [];
+      const known = state.species?.discovered ?? {};
+      let changed = false;
+      const next = { ...known };
+      for (const id of ids) {
+        if (!SPECIES_MAP[id]) continue;
+        if (!next[id]) { next[id] = true; changed = true; }
+      }
+      if (!changed) return state;
+      return { ...state, species: { ...state.species, discovered: next } };
+    }
+
+    case "CHAIN_COMMIT": {
+      const { key, length } = action.payload ?? {};
+      if (!key || !length) return state;
+
+      let speciesSlice = state.species ?? defaultSpeciesSlice();
+      let progress = speciesSlice.researchProgress ?? {};
+      let discovered = speciesSlice.discovered ?? {};
+      let bubble = state.bubble;
+
+      // 5.5 — research progress
+      for (const s of SPECIES) {
+        if (s.discovery?.method !== "research") continue;
+        if (s.discovery.researchOf !== key) continue;
+        if (discovered[s.id]) continue; // already discovered — no-op
+        const cur = progress[s.id] ?? 0;
+        const next = cur + length;
+        const capped = Math.min(next, s.discovery.researchAmount);
+        progress = { ...progress, [s.id]: capped };
+        if (next >= s.discovery.researchAmount) {
+          discovered = { ...discovered, [s.id]: true };
+          bubble = { id: Date.now() + s.id.length, npc: "wren",
+            text: `New species: ${s.displayName}`, ms: 2200 };
+        }
+      }
+
+      // 5.7 — free moves from chaining a free-move species
+      const chainedSpec = SPECIES_MAP[key];
+      const grant = chainedSpec?.effects?.freeMoves ?? 0;
+      let freeMoves = speciesSlice.freeMoves ?? 0;
+      if (grant > 0) {
+        freeMoves = freeMoves + grant;
+      }
+
+      speciesSlice = { ...speciesSlice, researchProgress: progress, discovered, freeMoves };
+      return { ...state, species: speciesSlice, bubble };
+    }
+
+    case "END_TURN": {
+      const fm = state.species?.freeMoves ?? 0;
+      if (fm > 0) {
+        return { ...state, species: { ...state.species, freeMoves: fm - 1 } };
+        // turnsUsed NOT incremented — free move spent
+      }
+      return { ...state, turnsUsed: (state.turnsUsed ?? 0) + 1 };
+    }
+
+    case "BUY_SPECIES": {
+      const { id: buyId } = action.payload ?? {};
+      if (!buyId) return state;
+      const sp = SPECIES_MAP[buyId];
+      if (!sp) return state;
+      if (sp.discovery.method !== "buy") return state;
+      const cost = sp.discovery.coinCost ?? 0;
+      if ((state.coins ?? 0) < cost) return state;
+      if (state.species?.discovered?.[buyId]) return state; // already discovered
+      return {
+        ...state,
+        coins: state.coins - cost,
+        species: {
+          ...state.species,
+          discovered: { ...state.species.discovered, [buyId]: true },
+        },
+      };
+    }
+
     default: {
       if (import.meta.env.DEV) {
         if (action.type === "DEV/ADD_GOLD") {
@@ -821,7 +979,8 @@ function coreReducer(state, action) {
           return { ...fresh, settings: state.settings,
             story: { ...INITIAL_STORY_STATE, flags: {}, queuedBeat: null, beatQueue: [], sandbox: false },
             npcs: { roster: ["wren"], bonds: { wren: 5 } },
-            workers: { hired: { hilda: 0, pip: 0, wila: 0, tuck: 0, osric: 0, dren: 0 }, debt: 0, pool: 1 } };
+            workers: { hired: { hilda: 0, pip: 0, wila: 0, tuck: 0, osric: 0, dren: 0 }, debt: 0, pool: 1 },
+            species: defaultSpeciesSlice() };
         }
       }
       return state;
