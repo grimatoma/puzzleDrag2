@@ -5,7 +5,7 @@ import { gameReducer, initialState } from "./src/state.js";
 import { Hud } from "./src/ui/Hud.jsx";
 import { MobileDock, PortraitToolsBar } from "./src/ui/Tools.jsx";
 import { TownView } from "./src/ui/Town.jsx";
-import { SeasonModal, NpcBubble } from "./src/ui/Modals.jsx";
+import { SeasonModal, NpcBubble, StoryModal } from "./src/ui/Modals.jsx";
 import { SidePanel, BottomNav, FeatureModals, FeatureScreens } from "./src/ui.jsx";
 import { useAudio } from "./src/audio/useAudio.js";
 import { setPhaserScene } from "./src/phaserBridge.js";
@@ -124,8 +124,14 @@ export default function App() {
   const [state, dispatch] = useReducer(gameReducer, undefined, initialState);
   const [chainInfo, setChainInfo] = useState(null);
   const sceneRef = useRef(null);
-  const uiLocked = !!state.modal || state.view !== "board";
+  const storyModalOpen = !!state.story?.queuedBeat;
+  const uiLocked = !!state.modal || state.view !== "board" || storyModalOpen;
   useAudio(state);
+
+  // Fire session_start story beat on first mount
+  useEffect(() => {
+    dispatch({ type: "SESSION_START" });
+  }, [dispatch]);
 
   useEffect(() => {
     if (state.pendingReload) window.location.reload();
@@ -218,6 +224,9 @@ export default function App() {
 
         {/* Season modal */}
         <SeasonModal state={state} dispatch={dispatch} />
+
+        {/* Story modal — highest z-index, blocks all interaction */}
+        <StoryModal state={state} dispatch={dispatch} />
 
         {/* Feature modals */}
         <FeatureModals state={state} dispatch={dispatch} />
