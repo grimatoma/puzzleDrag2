@@ -76,10 +76,17 @@ function WorkerRow({ worker, state, dispatch }) {
   const total = totalHired(state);
   const pool = state.workers?.pool ?? 0;
   const reqMet = checkRequirement(worker, state);
-  // For object hireCost (Phase-9 workers), only check coins if there's a coins field
-  const canAfford = typeof worker.hireCost === "object"
-    ? true // object costs are checked server-side; display only
-    : (state.coins ?? 0) >= worker.hireCost;
+  const canAfford = (() => {
+    if (typeof worker.hireCost === "number") return (state.coins ?? 0) >= worker.hireCost;
+    if (typeof worker.hireCost === "object" && worker.hireCost !== null) {
+      for (const [res, amt] of Object.entries(worker.hireCost)) {
+        if (res === "worker") continue;
+        if ((state.inventory?.[res] ?? 0) < amt) return false;
+      }
+      return true;
+    }
+    return true;
+  })();
   const atWorkerMax = hiredCount >= worker.maxCount;
   const atHousingCap = total >= cap;
   const noPool = pool < 1;
@@ -89,8 +96,17 @@ function WorkerRow({ worker, state, dispatch }) {
   if (atWorkerMax) hireTooltip = `${worker.name}'s slots are full`;
   else if (atHousingCap) hireTooltip = "Build Housing for more capacity";
   else if (noPool) hireTooltip = "Need a Worker (build Housing or wait a season)";
-  else if (!canAfford) hireTooltip = `Need ${formatHireCost(worker.hireCost)}`;
-  else if (!reqMet) hireTooltip = "Requirements not met";
+  else if (!canAfford) {
+    if (typeof worker.hireCost === "object" && worker.hireCost !== null) {
+      const missing = Object.entries(worker.hireCost)
+        .filter(([res, amt]) => res !== "worker" && (state.inventory?.[res] ?? 0) < amt)
+        .map(([res, amt]) => `${amt} ${res}`)
+        .join(", ");
+      hireTooltip = `Need: ${missing}`;
+    } else {
+      hireTooltip = `Need ${formatHireCost(worker.hireCost)}`;
+    }
+  } else if (!reqMet) hireTooltip = "Requirements not met";
 
   return (
     <div style={{

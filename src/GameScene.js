@@ -179,9 +179,9 @@ export class GameScene extends Phaser.Scene {
   }
 
   /**
-   * When the active tile type for any category changes, re-key any on-board tiles
-   * whose current key was the previously-active tile type in that category. Tiles
-   * currently selected in a drag chain are left alone to avoid disrupting input.
+   * When the active tile type for any category changes, re-key ALL on-board tiles
+   * that belong to a changed category to the new active tile type. Tiles currently
+   * selected in a drag chain are left alone to avoid disrupting input.
    */
   handleActiveTileChange(next, prev) {
     if (!next) return;
@@ -197,9 +197,9 @@ export class GameScene extends Phaser.Scene {
         if (!tile || tile.selected) continue;
         const tileCat = CATEGORY_OF[tile.res.key];
         if (!tileCat || !changed.includes(tileCat)) continue;
-        if (tile.res.key !== prevMap[tileCat]) continue;
         const newKey = next[tileCat];
         if (!newKey) continue;
+        if (tile.res.key === newKey) continue; // already the right type
         const newRes = this.resourceByKey(newKey);
         if (!newRes) continue;
         tile.setResource(newRes);
