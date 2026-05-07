@@ -1,16 +1,7 @@
 
-import { WORKERS, WORKER_MAP, workerSlotLabel, totalHired, housingCapacity, checkRequirement } from "./data.js";
-import { BIOMES } from "../../constants.js";
+import { WORKERS, workerSlotLabel, totalHired, housingCapacity, checkRequirement } from "./data.js";
 
 export const modalKey = "apprentices";
-
-const ALL_RESOURCES = [...BIOMES.farm.resources, ...BIOMES.mine.resources];
-
-function colorForKey(key) {
-  const r = ALL_RESOURCES.find((x) => x.key === key);
-  if (!r) return "#888";
-  return "#" + r.color.toString(16).padStart(6, "0");
-}
 
 function reqLabel(app) {
   const req = app.requirement;

@@ -4,8 +4,6 @@
  * The pipeline is applied sequentially when a save is loaded.
  */
 
-const CURRENT_VERSION = 4;
-
 /**
  * Migrate a raw save object to the current schema.
  * Returns { state, version } where state is the migrated object.
