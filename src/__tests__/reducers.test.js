@@ -349,6 +349,18 @@ describe("seedQuestIdSeq", () => {
   });
 });
 
+// ─── DEV/RESET_GAME ──────────────────────────────────────────────────────────
+
+describe("DEV/RESET_GAME", () => {
+  it("resets coins to initial, clears trophies, and resets npcBond", () => {
+    const s = minState({ coins: 999, trophies: { chain_10: "claimed" }, npcBond: { mira: 9, tomas: 5, bram: 5, liss: 5, wren: 5 } });
+    const next = gameReducer(s, { type: "DEV/RESET_GAME" });
+    expect(next.coins).toBe(150); // initialState default
+    expect(Object.keys(next.trophies || {}).length).toBe(0);
+    expect(next.npcBond.mira).toBe(5);
+  });
+});
+
 // ─── SWITCH_BIOME ─────────────────────────────────────────────────────────────
 
 describe("SWITCH_BIOME", () => {

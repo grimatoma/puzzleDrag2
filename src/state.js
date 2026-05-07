@@ -396,11 +396,10 @@ function coreReducer(state, action) {
     }
 
     case "DEV/RESET_GAME": {
-      // Wipe all persisted state (trophies, bonds, boss, weather, etc.) and reload
-      // so every feature slice re-initialises from its default initial state.
+      // Wipe all persisted state (trophies, bonds, boss, weather, etc.) and reset
+      // to initial state, preserving settings (volume, etc.).
       clearSave();
-      setTimeout(() => window.location.reload(), 100);
-      return state;
+      return { ...initialState(), settings: state.settings };
     }
 
     default:
