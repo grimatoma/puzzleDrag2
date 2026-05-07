@@ -71,7 +71,8 @@ export function reduce(state, action) {
     }
 
     case "BOSS/RESOLVE": {
-      return tick(state, "bosses_defeated", 1);
+      if (action.payload?.won === true) return tick(state, "bosses_defeated", 1);
+      return state;
     }
 
     case "CLOSE_SEASON": {
