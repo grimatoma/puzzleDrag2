@@ -45,10 +45,10 @@ export const MIGRATIONS = [
     workers: s.workers ?? { hires: {}, debt: 0 },
   }),
 
-  // v4 → v5: Phase 5 — species discovery + active filter
+  // v4 → v5: Phase 5 — tile collection discovery + active filter (originally "species")
   (s) => ({
     ...s,
-    species: s.species ?? {
+    tileCollection: s.tileCollection ?? s.species ?? {
       discovered: [],
       active: {
         grass: "hay", grain: "wheat",

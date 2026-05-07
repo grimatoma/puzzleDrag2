@@ -3,7 +3,7 @@ import { TILE, COLS, ROWS, UPGRADE_THRESHOLDS, SEASONS, BIOMES, SEASON_EFFECTS, 
 import { upgradeCountForChain, resourceGainForChain, rollResourceWithWeather } from "./utils.js";
 import { computeWorkerEffects } from "./features/apprentices/aggregate.js";
 import { applyFrostCollapseDuration } from "./features/weather/effects.js";
-import { CATEGORY_OF } from "./features/species/data.js";
+import { CATEGORY_OF } from "./features/tileCollection/data.js";
 const cssColor = (num) => Phaser.Display.Color.IntegerToColor(num).rgba;
 import { rounded, makeTextures, regenerateTextures } from "./textures.js";
 import { TileObj } from "./TileObj.js";
@@ -171,19 +171,19 @@ export class GameScene extends Phaser.Scene {
     this.registry.events.on("changedata-palette", (_p, value) => {
       regenerateTextures(this, value ?? "default");
     });
-    // Swap on-board tiles to match the newly active species in their category,
-    // so picking a new species in the panel immediately rerenders the puzzle.
-    this.registry.events.on("changedata-speciesActive", (_p, value, prev) => {
-      this.handleActiveSpeciesChange(value, prev);
+    // Swap on-board tiles to match the newly active tile type in their category,
+    // so picking a new tile type in the panel immediately rerenders the puzzle.
+    this.registry.events.on("changedata-tileCollectionActive", (_p, value, prev) => {
+      this.handleActiveTileChange(value, prev);
     });
   }
 
   /**
-   * When the active species for any category changes, re-key any on-board tiles
-   * whose current key was the previously-active species in that category. Tiles
+   * When the active tile type for any category changes, re-key any on-board tiles
+   * whose current key was the previously-active tile type in that category. Tiles
    * currently selected in a drag chain are left alone to avoid disrupting input.
    */
-  handleActiveSpeciesChange(next, prev) {
+  handleActiveTileChange(next, prev) {
     if (!next) return;
     const prevMap = prev ?? {};
     const changed = [];
@@ -395,13 +395,13 @@ export class GameScene extends Phaser.Scene {
 
   /**
    * Returns the biome pool with each slot substituted by the player's currently
-   * active species for that category. If a category has no active species
+   * active tile type for that category. If a category has no active tile type
    * selected, the slot keeps its original base resource (preserves existing
-   * gameplay before any species is picked).
+   * gameplay before any tile type is picked).
    */
   activePool() {
     const base = this.biome().pool;
-    const active = this.registry.get("speciesActive") ?? null;
+    const active = this.registry.get("tileCollectionActive") ?? null;
     if (!active) return [...base];
     const out = [];
     for (const baseKey of base) {
@@ -483,15 +483,15 @@ export class GameScene extends Phaser.Scene {
     const baseFillMs = 210;
     const frostFillMs = !initial ? applyFrostCollapseDuration(baseFillMs, weather) : baseFillMs;
     const frostBonus = frostFillMs - baseFillMs;
-    // Build worker-boosted, species-substituted pool. Worker boosts are gated
-    // by the active species: a boost for key K only applies when K is the active
-    // species in its category (matches getActivePool semantics).
-    const speciesActive = this.registry.get("speciesActive") ?? null;
+    // Build worker-boosted, tile-collection-substituted pool. Worker boosts are gated
+    // by the active tile type: a boost for key K only applies when K is the active
+    // tile type in its category (matches getActivePool semantics).
+    const tileCollectionActive = this.registry.get("tileCollectionActive") ?? null;
     const workerPool = this.activePool();
     const poolWeights = this.registry.get("effectivePoolWeights") ?? {};
     for (const [k, n] of Object.entries(poolWeights)) {
       const cat = CATEGORY_OF[k];
-      if (cat && speciesActive && speciesActive[cat] !== k) continue;
+      if (cat && tileCollectionActive && tileCollectionActive[cat] !== k) continue;
       for (let i = 0; i < Math.round(n); i++) workerPool.push(k);
     }
     // Boss spawnBias: Quagmire pushes extra log/hay tiles into pool.

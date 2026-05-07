@@ -2,7 +2,7 @@ import { UPGRADE_THRESHOLDS } from "../../constants.js";
 
 export const CATEGORIES = ["grass", "grain", "wood", "berry", "bird", "vegetables"];
 
-export const SPECIES = [
+export const TILE_TYPES = [
   // Grass
   {
     id: "hay", category: "grass", displayName: "Hay", baseResource: "hay", tier: 0,
@@ -25,7 +25,7 @@ export const SPECIES = [
     description: "A hardy, drought-tolerant grass that spreads quickly, adding two extra hay tiles to every board fill.",
   },
 
-  // Grain — no "default" species; grain category starts null
+  // Grain — no "default" tile type; grain category starts null
   {
     id: "wheat", category: "grain", displayName: "Wheat", baseResource: "wheat", tier: 0,
     discovery: { method: "chain", chainLengthOf: "hay", chainLength: UPGRADE_THRESHOLDS.hay },
@@ -167,17 +167,17 @@ export const SPECIES = [
     baseResource: "broccoli", tier: 3,
     discovery: { method: "buy", coinCost: 250 },
     effects: {},
-    description: "A long chain gives flowers. Not the best choice for a bouquet. This species can only be bought.",
+    description: "A long chain gives flowers. Not the best choice for a bouquet. This tile type can only be bought.",
   },
 ];
 
-export const SPECIES_MAP = Object.fromEntries(SPECIES.map((s) => [s.id, s]));
+export const TILE_TYPES_MAP = Object.fromEntries(TILE_TYPES.map((t) => [t.id, t]));
 
-export const SPECIES_BY_CATEGORY = Object.fromEntries(
-  CATEGORIES.map((c) => [c, SPECIES.filter((s) => s.category === c)]),
+export const TILE_TYPES_BY_CATEGORY = Object.fromEntries(
+  CATEGORIES.map((c) => [c, TILE_TYPES.filter((t) => t.category === c)]),
 );
 
 /** Quick O(1) lookup: resource key → category (or null if not in catalog). */
 export const CATEGORY_OF = Object.fromEntries(
-  SPECIES.map((s) => [s.baseResource, s.category]),
+  TILE_TYPES.map((t) => [t.baseResource, t.category]),
 );

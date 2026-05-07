@@ -8,7 +8,7 @@ import { driftPrices, applyTrade } from "./market.js";
 import { currentCap } from "./utils.js";
 import { WORKER_MAP } from "./features/apprentices/data.js";
 import { computeWorkerEffects } from "./features/apprentices/aggregate.js";
-import { SPECIES, CATEGORIES, SPECIES_MAP } from "./features/species/data.js";
+import { TILE_TYPES, CATEGORIES, TILE_TYPES_MAP } from "./features/tileCollection/data.js";
 import { rollQuests } from "./features/quests/data.js";
 import { ACHIEVEMENTS as ACHIEVEMENT_LIST } from "./features/achievements/data.js";
 import { awardXp } from "./features/almanac/data.js";
@@ -70,45 +70,47 @@ export function clearSave() {
   try { localStorage.removeItem(SAVE_KEY); } catch { /* storage unavailable */ }
 }
 
-// ─── Species slice helpers ─────────────────────────────────────────────────
+// ─── Tile Collection slice helpers ─────────────────────────────────────────
 
-function defaultSpeciesSlice() {
+function defaultTileCollectionSlice() {
   const discovered = {};
   const researchProgress = {};
   const activeByCategory = {};
   for (const c of CATEGORIES) activeByCategory[c] = null;
-  for (const s of SPECIES) {
-    if (s.discovery.method === "default") {
-      discovered[s.id] = true;
-      if (activeByCategory[s.category] === null) {
-        activeByCategory[s.category] = s.id;
+  for (const t of TILE_TYPES) {
+    if (t.discovery.method === "default") {
+      discovered[t.id] = true;
+      if (activeByCategory[t.category] === null) {
+        activeByCategory[t.category] = t.id;
       }
-    } else if (s.discovery.method === "research") {
-      researchProgress[s.id] = 0;
+    } else if (t.discovery.method === "research") {
+      researchProgress[t.id] = 0;
     }
   }
   return { discovered, researchProgress, activeByCategory, freeMoves: 0 };
 }
 
 /**
- * Merges a loaded save state with current defaults, ensuring the species slice
+ * Merges a loaded save state with current defaults, ensuring the tileCollection slice
  * is always well-formed. Idempotent: calling twice produces the same result.
  */
 export function mergeLoadedState(saved) {
-  const freshSpecies = defaultSpeciesSlice();
-  if (!saved || typeof saved !== "object") return { species: freshSpecies };
-  let species = saved.species;
-  if (!species || typeof species !== "object") {
-    species = freshSpecies;
+  const freshTileCollection = defaultTileCollectionSlice();
+  if (!saved || typeof saved !== "object") return { tileCollection: freshTileCollection };
+  let tileCollection = saved.tileCollection ?? saved.species; // backward compat: migrate old saves
+  if (!tileCollection || typeof tileCollection !== "object") {
+    tileCollection = freshTileCollection;
   } else {
     // Deep-merge each sub-key: fill in any missing ids from fresh defaults
-    const discovered = { ...freshSpecies.discovered, ...species.discovered };
-    const researchProgress = { ...freshSpecies.researchProgress, ...species.researchProgress };
-    const activeByCategory = { ...freshSpecies.activeByCategory, ...species.activeByCategory };
-    const freeMoves = typeof species.freeMoves === "number" ? species.freeMoves : 0;
-    species = { discovered, researchProgress, activeByCategory, freeMoves };
+    const discovered = { ...freshTileCollection.discovered, ...tileCollection.discovered };
+    const researchProgress = { ...freshTileCollection.researchProgress, ...tileCollection.researchProgress };
+    const activeByCategory = { ...freshTileCollection.activeByCategory, ...tileCollection.activeByCategory };
+    const freeMoves = typeof tileCollection.freeMoves === "number" ? tileCollection.freeMoves : 0;
+    tileCollection = { discovered, researchProgress, activeByCategory, freeMoves };
   }
-  return { ...saved, species };
+  const out = { ...saved };
+  delete out.species; // remove legacy key if present
+  return { ...out, tileCollection };
 }
 
 // Legacy non-linear curve — kept for backward compat with any external callers.
@@ -251,7 +253,7 @@ export function initialState(overrides) {
     sessionMaxTurns: MAX_TURNS,
     dailyStreak: { lastClaimedDate: null, currentDay: 0 },
     workers: { hired: { hilda: 0, pip: 0, wila: 0, tuck: 0, osric: 0, dren: 0 }, debt: 0, pool: 1 },
-    species: defaultSpeciesSlice(),
+    tileCollection: defaultTileCollectionSlice(),
     almanac: {
       xp: 0,
       level: 1,
@@ -309,18 +311,21 @@ export function initialState(overrides) {
           pool:  saved.workers.pool  ?? 1,
         }
       : fresh.workers;
-    // Migrate: old saves without state.species get the default shape
-    const mergedSpecies = (() => {
-      const freshSpec = defaultSpeciesSlice();
-      if (!saved.species || typeof saved.species !== "object") return freshSpec;
+    // Migrate: old saves without state.tileCollection get the default shape (also migrates legacy state.species)
+    const mergedTileCollection = (() => {
+      const freshTC = defaultTileCollectionSlice();
+      const src = saved.tileCollection ?? saved.species; // backward compat
+      if (!src || typeof src !== "object") return freshTC;
       return {
-        discovered: { ...freshSpec.discovered, ...saved.species.discovered },
-        researchProgress: { ...freshSpec.researchProgress, ...saved.species.researchProgress },
-        activeByCategory: { ...freshSpec.activeByCategory, ...saved.species.activeByCategory },
-        freeMoves: typeof saved.species.freeMoves === "number" ? saved.species.freeMoves : 0,
+        discovered: { ...freshTC.discovered, ...src.discovered },
+        researchProgress: { ...freshTC.researchProgress, ...src.researchProgress },
+        activeByCategory: { ...freshTC.activeByCategory, ...src.activeByCategory },
+        freeMoves: typeof src.freeMoves === "number" ? src.freeMoves : 0,
       };
     })();
-    return { ...fresh, ...saved, workers: mergedWorkers, story: mergedStory, species: mergedSpecies, view: "town", turnsUsed: 0, modal: null, bubble: null, pendingView: null,
+    const savedWithoutLegacy = { ...saved };
+    delete savedWithoutLegacy.species; // remove legacy key
+    return { ...fresh, ...savedWithoutLegacy, workers: mergedWorkers, story: mergedStory, tileCollection: mergedTileCollection, view: "town", turnsUsed: 0, modal: null, bubble: null, pendingView: null,
       seasonStats: { harvests: 0, upgrades: 0, ordersFilled: 0, coins: 0 } };
   }
   return fresh;
@@ -1003,7 +1008,7 @@ function coreReducer(state, action) {
         // Clear fertilizer flag at season end — it was consumed this season
         fertilizerActive: false,
         // 5.7: reset per-season free moves on season close
-        species: state.species ? { ...state.species, freeMoves: 0 } : state.species,
+        tileCollection: state.tileCollection ? { ...state.tileCollection, freeMoves: 0 } : state.tileCollection,
         npcs: decayedNpcs,
         bubble: { id: Date.now(), npc: "tomas", text: "Season ended! +25◉ season bonus.", ms: 2000 },
         market: {
@@ -1367,104 +1372,104 @@ function coreReducer(state, action) {
       return { ...state, workers: { ...state.workers, pool: (state.workers?.pool ?? 0) + amount } };
     }
 
-    // ─── Phase 5 Species ────────────────────────────────────────────────────────
+    // ─── Phase 5 Tile Collection ─────────────────────────────────────────────────
 
-    case "SET_ACTIVE_SPECIES": {
-      const { category, speciesId } = action.payload ?? {};
+    case "SET_ACTIVE_TILE": {
+      const { category, tileId } = action.payload ?? {};
       if (!CATEGORIES.includes(category)) return state;          // unknown category
-      const current = state.species?.activeByCategory?.[category];
-      if (current === speciesId) return state;                   // already active → no-op
+      const current = state.tileCollection?.activeByCategory?.[category];
+      if (current === tileId) return state;                      // already active → no-op
 
-      if (speciesId !== null) {
-        const sp = SPECIES_MAP[speciesId];
-        if (!sp) return state;                                   // unknown species
-        if (sp.category !== category) return state;              // cross-category
-        if (!state.species?.discovered?.[speciesId]) return state; // undiscovered
+      if (tileId !== null) {
+        const t = TILE_TYPES_MAP[tileId];
+        if (!t) return state;                                    // unknown tile type
+        if (t.category !== category) return state;               // cross-category
+        if (!state.tileCollection?.discovered?.[tileId]) return state; // undiscovered
       }
 
       return {
         ...state,
-        species: {
-          ...state.species,
-          activeByCategory: { ...state.species.activeByCategory, [category]: speciesId },
+        tileCollection: {
+          ...state.tileCollection,
+          activeByCategory: { ...state.tileCollection.activeByCategory, [category]: tileId },
         },
       };
     }
 
-    case "SPECIES_DISCOVERED": {
+    case "TILE_DISCOVERED": {
       const ids = action.payload?.ids ?? [];
-      const known = state.species?.discovered ?? {};
+      const known = state.tileCollection?.discovered ?? {};
       let changed = false;
       const next = { ...known };
       for (const id of ids) {
-        if (!SPECIES_MAP[id]) continue;
+        if (!TILE_TYPES_MAP[id]) continue;
         if (!next[id]) { next[id] = true; changed = true; }
       }
       if (!changed) return state;
-      return { ...state, species: { ...state.species, discovered: next } };
+      return { ...state, tileCollection: { ...state.tileCollection, discovered: next } };
     }
 
     case "CHAIN_COMMIT": {
       const { key, length } = action.payload ?? {};
       if (!key || !length) return state;
 
-      let speciesSlice = state.species ?? defaultSpeciesSlice();
-      let progress = speciesSlice.researchProgress ?? {};
-      let discovered = speciesSlice.discovered ?? {};
+      let tcSlice = state.tileCollection ?? defaultTileCollectionSlice();
+      let progress = tcSlice.researchProgress ?? {};
+      let discovered = tcSlice.discovered ?? {};
       let bubble = state.bubble;
 
       // 5.5 — research progress
-      for (const s of SPECIES) {
-        if (s.discovery?.method !== "research") continue;
-        if (s.discovery.researchOf !== key) continue;
-        if (discovered[s.id]) continue; // already discovered — no-op
-        const cur = progress[s.id] ?? 0;
+      for (const t of TILE_TYPES) {
+        if (t.discovery?.method !== "research") continue;
+        if (t.discovery.researchOf !== key) continue;
+        if (discovered[t.id]) continue; // already discovered — no-op
+        const cur = progress[t.id] ?? 0;
         const next = cur + length;
-        const capped = Math.min(next, s.discovery.researchAmount);
-        progress = { ...progress, [s.id]: capped };
-        if (next >= s.discovery.researchAmount) {
-          discovered = { ...discovered, [s.id]: true };
-          bubble = { id: Date.now() + s.id.length, npc: "wren",
-            text: `New species: ${s.displayName}`, ms: 2200 };
+        const capped = Math.min(next, t.discovery.researchAmount);
+        progress = { ...progress, [t.id]: capped };
+        if (next >= t.discovery.researchAmount) {
+          discovered = { ...discovered, [t.id]: true };
+          bubble = { id: Date.now() + t.id.length, npc: "wren",
+            text: `New tile type: ${t.displayName}`, ms: 2200 };
         }
       }
 
-      // 5.7 — free moves from chaining a free-move species
-      const chainedSpec = SPECIES_MAP[key];
-      const grant = chainedSpec?.effects?.freeMoves ?? 0;
-      let freeMoves = speciesSlice.freeMoves ?? 0;
+      // 5.7 — free moves from chaining a free-move tile type
+      const chainedTile = TILE_TYPES_MAP[key];
+      const grant = chainedTile?.effects?.freeMoves ?? 0;
+      let freeMoves = tcSlice.freeMoves ?? 0;
       if (grant > 0) {
         freeMoves = freeMoves + grant;
       }
 
-      speciesSlice = { ...speciesSlice, researchProgress: progress, discovered, freeMoves };
-      return { ...state, species: speciesSlice, bubble };
+      tcSlice = { ...tcSlice, researchProgress: progress, discovered, freeMoves };
+      return { ...state, tileCollection: tcSlice, bubble };
     }
 
     case "END_TURN": {
-      const fm = state.species?.freeMoves ?? 0;
+      const fm = state.tileCollection?.freeMoves ?? 0;
       if (fm > 0) {
-        return { ...state, species: { ...state.species, freeMoves: fm - 1 } };
+        return { ...state, tileCollection: { ...state.tileCollection, freeMoves: fm - 1 } };
         // turnsUsed NOT incremented — free move spent
       }
       return { ...state, turnsUsed: (state.turnsUsed ?? 0) + 1 };
     }
 
-    case "BUY_SPECIES": {
+    case "BUY_TILE": {
       const { id: buyId } = action.payload ?? {};
       if (!buyId) return state;
-      const sp = SPECIES_MAP[buyId];
-      if (!sp) return state;
-      if (sp.discovery.method !== "buy") return state;
-      const cost = sp.discovery.coinCost ?? 0;
+      const t = TILE_TYPES_MAP[buyId];
+      if (!t) return state;
+      if (t.discovery.method !== "buy") return state;
+      const cost = t.discovery.coinCost ?? 0;
       if ((state.coins ?? 0) < cost) return state;
-      if (state.species?.discovered?.[buyId]) return state; // already discovered
+      if (state.tileCollection?.discovered?.[buyId]) return state; // already discovered
       return {
         ...state,
         coins: state.coins - cost,
-        species: {
-          ...state.species,
-          discovered: { ...state.species.discovered, [buyId]: true },
+        tileCollection: {
+          ...state.tileCollection,
+          discovered: { ...state.tileCollection.discovered, [buyId]: true },
         },
       };
     }
@@ -1550,7 +1555,7 @@ function coreReducer(state, action) {
             giftCooldown: { wren: 0, mira: 0, tomas: 0, bram: 0, liss: 0 },
           },
           workers: { hired: { hilda: 0, pip: 0, wila: 0, tuck: 0, osric: 0, dren: 0 }, debt: 0, pool: 1 },
-          species: defaultSpeciesSlice() };
+          tileCollection: defaultTileCollectionSlice() };
       }
       return state;
     }
