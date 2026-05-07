@@ -9,6 +9,7 @@ import { SeasonModal, NpcBubble, StoryModal } from "./src/ui/Modals.jsx";
 import { SidePanel, BottomNav, FeatureModals, FeatureScreens } from "./src/ui.jsx";
 import { useAudio } from "./src/audio/useAudio.js";
 import { setPhaserScene } from "./src/phaserBridge.js";
+import { announce, getQueue, flushAnnouncements, formatChainAnnouncement, formatModalAnnouncement, formatQuestAnnouncement } from "./src/a11y.js";
 
 function PhaserMount({ dispatch, biomeKey, turnsUsed, seasonsCycled, uiLocked, sceneRef, weather, toolPending, setChainInfo, workers, palette, reducedMotion }) {
   const hostRef = useRef(null);
@@ -123,13 +124,81 @@ const DUST_MOTES = Array.from({ length: 14 }, (_, i) => ({
   opacity: 0.18 + (i * 0.031) % 0.22,
 }));
 
+// Screen-reader aria-live region (visually hidden)
+const SR_ONLY_STYLE = {
+  position: "absolute",
+  width: "1px",
+  height: "1px",
+  padding: 0,
+  margin: "-1px",
+  overflow: "hidden",
+  clip: "rect(0,0,0,0)",
+  whiteSpace: "nowrap",
+  border: 0,
+};
+
 export default function App() {
   const [state, dispatch] = useReducer(gameReducer, undefined, initialState);
   const [chainInfo, setChainInfo] = useState(null);
   const sceneRef = useRef(null);
+  const ariaLiveRef = useRef(null);
   const storyModalOpen = !!state.story?.queuedBeat;
   const uiLocked = !!state.modal || state.view !== "board" || storyModalOpen;
   useAudio(state);
+
+  // Drain the announce() queue into the aria-live region
+  useEffect(() => {
+    const id = setInterval(() => {
+      const q = getQueue();
+      const next = q.urgent[0] ?? q.polite[0];
+      if (!next || !ariaLiveRef.current) return;
+      ariaLiveRef.current.textContent = next.text;
+      flushAnnouncements();
+    }, 250);
+    return () => clearInterval(id);
+  }, []);
+
+  // Announce chain commits
+  useEffect(() => {
+    const prevChain = state.chain;
+    // We only announce after CHAIN_COLLECTED by watching inventory changes via
+    // a wrapper dispatch below.
+    void prevChain;
+  }, [state.chain]);
+
+  // Wrapped dispatch: intercept announcement-worthy actions
+  const dispatchWithA11y = (action) => {
+    dispatch(action);
+    switch (action.type) {
+      case "CHAIN_COLLECTED": {
+        const { key, gained, upgrades } = action.payload ?? {};
+        if (key) {
+          const upgList = upgrades > 0 ? [{ key: "upgraded tile", count: upgrades }] : [];
+          announce(formatChainAnnouncement({ key, collected: gained, upgrades: upgList }));
+        }
+        break;
+      }
+      case "CLOSE_SEASON":
+        announce("Season complete. Returning to town.", "assertive");
+        break;
+      case "QUESTS/CLAIM_QUEST":
+        if (action.quest) announce(formatQuestAnnouncement(action.quest), "assertive");
+        break;
+      case "STORY/DISMISS_MODAL":
+        // Beat was just dismissed — nothing extra to announce
+        break;
+    }
+  };
+
+  // Announce story beat on appearance
+  const prevBeatRef = useRef(null);
+  useEffect(() => {
+    const beat = state.story?.queuedBeat;
+    if (beat && beat !== prevBeatRef.current) {
+      announce(formatModalAnnouncement(beat), "assertive");
+    }
+    prevBeatRef.current = beat ?? null;
+  }, [state.story?.queuedBeat]);
 
   // Fire session_start story beat on first mount
   useEffect(() => {
@@ -142,6 +211,14 @@ export default function App() {
 
   return (
     <div className="h-full w-full bg-[#2a1d0f] text-[#2b2218] grid place-items-center" style={{ position: "relative", overflow: "hidden" }}>
+      {/* Screen-reader live region — visually hidden */}
+      <div
+        ref={ariaLiveRef}
+        aria-live="polite"
+        role="status"
+        aria-atomic="true"
+        style={SR_ONLY_STYLE}
+      />
       {/* Ambient dust motes — behind all chrome */}
       {DUST_MOTES.map((m) => (
         <div
@@ -164,7 +241,7 @@ export default function App() {
 
       <div className="relative w-full max-w-[1280px] aspect-[5/4] max-h-[100dvh] max-[1024px]:aspect-auto max-[1024px]:max-h-none max-[1024px]:w-full max-[1024px]:h-full max-[1024px]:max-w-none bg-[#3a2715] rounded-2xl max-[1024px]:rounded-none overflow-hidden shadow-2xl border border-white/10 flex flex-col" style={{ zIndex: 1 }}>
         {/* HUD bar */}
-        <Hud state={state} dispatch={dispatch} />
+        <Hud state={state} dispatch={dispatchWithA11y} />
 
         {/* Main area: board + side panel, or town view */}
         <div className="flex-1 min-h-0 relative">
@@ -182,7 +259,7 @@ export default function App() {
               {/* Phaser host — takes the rest. Phaser draws its own background and frame. */}
               <div className="relative min-h-0 min-w-0 overflow-hidden">
                 <PhaserMount
-                  dispatch={dispatch}
+                  dispatch={dispatchWithA11y}
                   biomeKey={state.biomeKey}
                   turnsUsed={state.turnsUsed}
                   seasonsCycled={state.seasonsCycled}
@@ -198,44 +275,44 @@ export default function App() {
               </div>
               {/* Side panel — hidden on mobile, replaced by MobileDock */}
               <div className="min-h-0 max-[1024px]:hidden">
-                <SidePanel state={state} dispatch={dispatch} chainInfo={chainInfo} />
+                <SidePanel state={state} dispatch={dispatchWithA11y} chainInfo={chainInfo} />
               </div>
             </div>
             {/* Portrait phone tools bar — board is width-limited so canvas height can shrink */}
             <div className="hidden portrait:max-[1024px]:block flex-shrink-0">
-              <PortraitToolsBar state={state} dispatch={dispatch} />
+              <PortraitToolsBar state={state} dispatch={dispatchWithA11y} />
             </div>
             {/* Mobile dock — only visible on mobile, in board view */}
             <div className="hidden max-[1024px]:block flex-shrink-0">
-              <MobileDock state={state} dispatch={dispatch} />
+              <MobileDock state={state} dispatch={dispatchWithA11y} />
             </div>
           </div>
 
           {/* Town overlay — covers exactly the same area as the board */}
           {state.view === "town" && (
             <div className="absolute inset-0 z-20">
-              <TownView state={state} dispatch={dispatch} />
+              <TownView state={state} dispatch={dispatchWithA11y} />
             </div>
           )}
 
           {/* Feature full-screen views */}
-          <FeatureScreens state={state} dispatch={dispatch} />
+          <FeatureScreens state={state} dispatch={dispatchWithA11y} />
         </div>
 
         {/* Bottom nav — full-width bar at the bottom of every view */}
-        <BottomNav view={state.view} modal={state.modal} dispatch={dispatch} />
+        <BottomNav view={state.view} modal={state.modal} dispatch={dispatchWithA11y} />
 
         {/* NPC bubble */}
-        <NpcBubble bubble={state.bubble} dispatch={dispatch} />
+        <NpcBubble bubble={state.bubble} dispatch={dispatchWithA11y} />
 
         {/* Season modal */}
-        <SeasonModal state={state} dispatch={dispatch} />
+        <SeasonModal state={state} dispatch={dispatchWithA11y} />
 
         {/* Story modal — highest z-index, blocks all interaction */}
-        <StoryModal state={state} dispatch={dispatch} />
+        <StoryModal state={state} dispatch={dispatchWithA11y} />
 
         {/* Feature modals */}
-        <FeatureModals state={state} dispatch={dispatch} />
+        <FeatureModals state={state} dispatch={dispatchWithA11y} />
       </div>
     </div>
   );
