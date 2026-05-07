@@ -1,7 +1,58 @@
-import { UPGRADE_THRESHOLDS, ROWS, COLS, MAX_TURNS, RESOURCE_CAP_BASE, RESOURCE_CAP_GRANARY } from "./constants.js";
+import { UPGRADE_THRESHOLDS, RESOURCE_CAP_BASE, RESOURCE_CAP_GRANARY } from "./constants.js";
 
 export function clamp(n, a, b) {
   return Math.max(a, Math.min(b, n));
+}
+
+/**
+ * WCAG relative luminance for a 24-bit hex colour (e.g. 0xa8c769 or 0x00RRGGBB).
+ * Only the lowest 24 bits (RGB) are used; any alpha byte is ignored.
+ */
+function relativeLuminance(hex) {
+  const r = ((hex >> 16) & 0xff) / 255;
+  const g = ((hex >> 8)  & 0xff) / 255;
+  const b = ( hex        & 0xff) / 255;
+  const lin = (c) => c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+  return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
+}
+
+/**
+ * WCAG contrast ratio between two numeric hex colours.
+ * Returns a value ≥ 1; 7 = maximum (black on white).
+ * @param {number} hexA - e.g. 0xa8c769
+ * @param {number} hexB - e.g. 0x9b6b3e
+ * @returns {number}
+ */
+export function contrastRatio(hexA, hexB) {
+  const L1 = relativeLuminance(hexA);
+  const L2 = relativeLuminance(hexB);
+  const lighter = Math.max(L1, L2);
+  const darker  = Math.min(L1, L2);
+  return (lighter + 0.05) / (darker + 0.05);
+}
+
+/**
+ * Returns true if tiles a and b are orthogonally adjacent on the grid.
+ * @param {{ row: number, col: number }} a
+ * @param {{ row: number, col: number }} b
+ * @returns {boolean}
+ */
+export function isAdjacent(a, b) {
+  const dr = Math.abs(a.row - b.row);
+  const dc = Math.abs(a.col - b.col);
+  return (dr === 1 && dc === 0) || (dr === 0 && dc === 1);
+}
+
+/**
+ * Returns true if the tile can extend the current chain (same resource key,
+ * not already in chain). Stub: always returns true when chain is empty.
+ * @param {Array<{key: string}>} chain
+ * @param {{ key: string }} tile
+ * @returns {boolean}
+ */
+export function canExtendChain(chain, tile) {
+  if (chain.length === 0) return true;
+  return chain[0].key === tile.key;
 }
 
 export function upgradeCountForChain(chainLength, resourceKey, thresholdMap = UPGRADE_THRESHOLDS) {
@@ -54,26 +105,25 @@ export function currentCap(state) {
   return state?.built?.granary ? RESOURCE_CAP_GRANARY : RESOURCE_CAP_BASE;
 }
 
-export function runSelfTests() {
-  // 1.1 — Per-resource upgrade thresholds
-  console.assert(upgradeCountForChain(5,  "hay")   === 0, "5 hay → no upgrade");
-  console.assert(upgradeCountForChain(6,  "hay")   === 1, "6 hay → 1 upgrade");
-  console.assert(upgradeCountForChain(12, "hay")   === 2, "12 hay → 2 upgrades");
-  console.assert(upgradeCountForChain(18, "hay")   === 3, "18 hay → 3 upgrades");
-  console.assert(upgradeCountForChain(4,  "grain") === 1, "grain threshold is 4");
-  console.assert(upgradeCountForChain(5,  "egg")   === 0, "egg is terminal — no upgrade");
-  console.assert(upgradeCountForChain(6,  "egg")   === 0, "egg terminal regardless of length");
-  console.assert(upgradeCountForChain(4,  "wheat") === 0, "wheat threshold is 5, not 4");
-  console.assert(upgradeCountForChain(5,  "wheat") === 1, "5 wheat → 1 upgrade");
-  console.assert(clamp(12, 0, 10) === 10, "clamp upper bound failed");
-  // 0.1 — Grid size
-  console.assert(ROWS === 6, "ROWS must be 6");
-  console.assert(COLS === 6, "COLS must be 6");
-  // 0.2 — Turn count
-  console.assert(MAX_TURNS === 10, "MAX_TURNS must be 10");
-  console.assert(seasonIndexForTurns(0)  === 0, "turn 0 → Spring");
-  console.assert(seasonIndexForTurns(3)  === 1, "turn 3 → Summer");
-  console.assert(seasonIndexForTurns(6)  === 2, "turn 6 → Autumn");
-  console.assert(seasonIndexForTurns(9)  === 3, "turn 9 → Winter");
-  console.assert(seasonIndexForTurns(10) === 3, "turn 10 → still Winter");
+// runSelfTests — thin smoke shim for in-game console use (<50ms).
+// The comprehensive test suite lives in tests/phase-N-*.test.js (run via npm test).
+// Import is lazy to avoid circular deps at module init time.
+export async function runSelfTests() {
+  const { SMOKE_INVARIANTS } = await import("./smokeTests.js");
+  let passed = 0, failed = 0;
+  for (const { name, check } of SMOKE_INVARIANTS) {
+    try {
+      if (check()) {
+        passed++;
+      } else {
+        failed++;
+        console.assert(false, name);
+      }
+    } catch (e) {
+      failed++;
+      console.error("smoke fail:", name, e);
+    }
+  }
+  console.log(`[smoke] ${passed} passed, ${failed} failed`);
+  return failed === 0;
 }

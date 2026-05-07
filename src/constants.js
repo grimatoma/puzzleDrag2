@@ -16,6 +16,9 @@ export const COLS = 6;
 export const ROWS = 6;
 export const MAX_TURNS = 10;
 
+// Phase 12.2 — save schema version (increment when save shape changes)
+export const SAVE_SCHEMA_VERSION = 12;
+
 export const UPGRADE_THRESHOLDS = {
   hay: 6, wheat: 5, grain: 4,
   log: 5, plank: 4,
@@ -146,6 +149,15 @@ export const BUILDINGS = [
     desc: "Quarters for hired hands. Each Housing raises your worker capacity by 1.",
     cost: { coins: 300, plank: 25 }, lv: 2,
     x: 1180, y: 380, w: 90, h: 100, color: "#a07a4a" },
+  // Phase 12.5 — §18 LOCKED: Silos/Barns preserve tile layout between sessions
+  { id: "silo", name: "Silo",
+    desc: "Wood-and-stone grain store. Preserves the tile layout between sessions on the Farm.",
+    cost: { coins: 250, plank: 15 }, lv: 4, biome: "farm",
+    x: 1280, y: 380, w: 90, h: 100, color: "#9a6a3a" },
+  { id: "barn", name: "Barn",
+    desc: "Reinforced ore shed. Preserves the tile layout between sessions in the Mine.",
+    cost: { coins: 400, plank: 25, stone: 5 }, lv: 5, biome: "mine",
+    x: 1380, y: 380, w: 90, h: 100, color: "#7a4a2a" },
 ];
 
 // Phase 10.1 — Workshop tool recipes (no turn cost, board animation).

@@ -1,0 +1,18 @@
+{
+  "version": 3,
+  "inventory": { "hay": 25, "wheat": 8, "log": 12, "plank": 4, "berry": 3 },
+  "coins": 340,
+  "turnsUsed": 5,
+  "season": "Summer",
+  "year": 1,
+  "level": 3,
+  "biome": "farm",
+  "gridCols": 7,
+  "gridRows": 6,
+  "chainModel": "threshold",
+  "story": { "act": 1, "beat": "act1_arrival", "flags": { "intro_seen": true } },
+  "market": { "drift": {}, "lastSeasonRolled": null },
+  "runes": 2,
+  "dailyStreak": { "day": 3, "lastClaim": "2025-01-03" },
+  "supplies": 6
+}

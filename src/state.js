@@ -1,4 +1,4 @@
-import { BIOMES, BUILDINGS, NPCS, MAX_TURNS, RECIPES, WORKSHOP_RECIPES, STORAGE_KEYS, SEASON_EFFECTS, DAILY_REWARDS, MINE_ENTRY_TIERS, CAPPED_RESOURCES, UPGRADE_THRESHOLDS } from "./constants.js";
+import { BIOMES, BUILDINGS, NPCS, MAX_TURNS, RECIPES, WORKSHOP_RECIPES, STORAGE_KEYS, SEASON_EFFECTS, DAILY_REWARDS, MINE_ENTRY_TIERS, CAPPED_RESOURCES, UPGRADE_THRESHOLDS, SAVE_SCHEMA_VERSION } from "./constants.js";
 import { sellPriceFor as _sellPriceFor } from "./features/market/pricing.js";
 import { tryClearRatChain } from "./features/farm/rats.js";
 import { tryExtinguishFire } from "./features/farm/hazards.js";
@@ -182,6 +182,7 @@ export function initialState(overrides) {
   // tools with structural flag support — startingExtraScythe grants +1 scythe each session
   const extraScytheBonus = overrides?.tools?.startingExtraScythe ? 1 : 0;
   const fresh = {
+    version: SAVE_SCHEMA_VERSION,
     biomeKey,
     biome: "farm",
     saveSeed,
@@ -268,6 +269,9 @@ export function initialState(overrides) {
     ...cartography.initial,
     ...apprentices.initial,
     ...mood.initial,
+    // Phase 12.5 — saved-field slots for Silo/Barn
+    farm: { savedField: null },
+    mine: { savedField: null },
   };
   // Hydrate from save if present, but always force board view + clear modals on boot
   const saved = loadSavedState();
@@ -770,20 +774,28 @@ function coreReducer(state, action) {
       return { ...state, tools };
     }
     case "SWITCH_BIOME": {
-      const { key } = action;
+      // Support both legacy action.key and Phase 12.5 action.payload.biome
+      const key = action.key ?? action.payload?.biome;
+      if (!key) return state;
       if (key === state.biomeKey) return state;
       if (key === "mine" && state.level < 2) {
         return { ...state, bubble: { id: Date.now(), npc: "wren", text: "Mine unlocks at Level 2.", ms: 1800 } };
       }
+      // Phase 12.5 — restore saved board if Silo/Barn built and snapshot exists
+      const savedField = state[key]?.savedField ?? null;
+      let boardPatch = {};
+      if (savedField && savedField.tiles) {
+        boardPatch = { board: { tiles: savedField.tiles, hazards: savedField.hazards ?? [] } };
+      }
       const excludeNpcs = [];
       const excludeKeys = [];
-      const replacements = state.orders.map(() => {
+      const replacements = (state.orders ?? []).map(() => {
         const o = makeOrder(key, state.level, excludeNpcs, excludeKeys);
         excludeNpcs.push(o.npc);
         excludeKeys.push(o.key);
         return o;
       });
-      return { ...state, biomeKey: key, orders: replacements };
+      return { ...state, biomeKey: key, orders: replacements, turnsUsed: 0, ...boardPatch };
     }
     case "SET_VIEW": {
       const next = action.view;
@@ -913,10 +925,28 @@ function coreReducer(state, action) {
           prices: newPrices,
         },
       };
+      // Phase 12.5 — snapshot board into saved-field slot when Silo/Barn is built
+      let afterSeasonFarm = afterSeason.farm ?? { savedField: null };
+      let afterSeasonMine = afterSeason.mine ?? { savedField: null };
+      if (state.biomeKey === "farm" && state.built?.silo && state.board) {
+        afterSeasonFarm = { ...afterSeasonFarm, savedField: {
+          tiles: state.board.tiles,
+          hazards: state.board.hazards ?? [],
+          turnsUsed: 0,
+        } };
+      }
+      if (state.biomeKey === "mine" && state.built?.barn && state.board) {
+        afterSeasonMine = { ...afterSeasonMine, savedField: {
+          tiles: state.board.tiles,
+          hazards: state.board.hazards ?? [],
+          turnsUsed: 0,
+        } };
+      }
+      const afterSeasonWithFields = { ...afterSeason, farm: afterSeasonFarm, mine: afterSeasonMine };
       // Story: fire season_entered trigger
-      const newSeasonIndex = (afterSeason.seasonsCycled % 4);
+      const newSeasonIndex = (afterSeasonWithFields.seasonsCycled % 4);
       const seasonNames = ["spring", "summer", "autumn", "winter"];
-      return evaluateAndApplyStoryBeat(afterSeason, { type: "season_entered", season: seasonNames[newSeasonIndex] });
+      return evaluateAndApplyStoryBeat(afterSeasonWithFields, { type: "season_entered", season: seasonNames[newSeasonIndex] });
     }
     case "SESSION_START": {
       // Fire story session_start trigger if intro hasn't been seen yet
@@ -1369,12 +1399,44 @@ function coreReducer(state, action) {
   }
 }
 
+// Actions that are owned exclusively by feature slices (not coreReducer).
+// For these, slices must run even when coreReducer returns the same state reference
+// (because coreReducer has no handler for them — it falls through to `default: return state`).
+// Referential-equality no-op semantics are preserved: if every slice also returns the same
+// state for a rejected action, the final result still === the original state.
+const SLICE_PRIMARY_ACTIONS = new Set([
+  "APP/HIRE",
+  "APP/FIRE",
+  "BUILD_DECORATION",
+  "SUMMON_MAGIC_TOOL",
+]);
+
+// Actions where coreReducer intentionally defers to slices (e.g. CRAFTING/CRAFT_RECIPE
+// fires a story beat in core but the actual craft logic lives in crafting/slice.js).
+// When no story beat fires, core returns the same state — but slices still need to run.
+const ALWAYS_RUN_SLICES = new Set([
+  "CRAFTING/CRAFT_RECIPE",
+  "USE_TOOL",  // magic tool variants (hourglass, magic_seed, magic_fertilizer) handled in portal/slice
+]);
+
 function rawReducer(state, action) {
   // 1. Core reducer mutates the canonical game state for known actions.
   // 2. Then every feature slice sees the action against the post-core state,
   //    so cross-cutting effects (quests, achievements, etc.) fire.
+  // 3. If the core reducer returned the same reference (action was rejected /
+  //    was a no-op), skip all slice processing so side-effects don't fire on
+  //    rejected actions (this also preserves referential equality for callers
+  //    that test `next === state` to detect no-ops).
+  // Exception: slice-primary actions and actions where core defers to slices
+  //    must always run slices regardless.
   const afterCore = coreReducer(state, action);
-  return slices.reduce((s, slice) => slice.reduce(s, action), afterCore);
+  const needSlices = afterCore !== state
+    || SLICE_PRIMARY_ACTIONS.has(action.type)
+    || ALWAYS_RUN_SLICES.has(action.type);
+  if (!needSlices) return state;
+  const afterSlices = slices.reduce((s, slice) => slice.reduce(s, action), afterCore);
+  // Preserve referential equality for true no-ops: if nothing changed, return original state.
+  return afterSlices === state ? state : afterSlices;
 }
 
 export function gameReducer(state, action) {
