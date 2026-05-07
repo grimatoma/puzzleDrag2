@@ -21,6 +21,15 @@ either crashes on load or silently loses unrecognised slices. CI is the
 safety net that keeps future phases from breaking what the prior eleven
 already shipped.
 
+> **Note on existing test infra:** Vitest is **already installed** in
+> `package.json` (`"vitest": "^4.1.5"`, `"test": "vitest run"`), and there
+> is an existing `src/__tests__/reducers.test.js`. Phase 12 therefore
+> *completes* the migration — porting every `runSelfTests()` assertion
+> into per-phase Vitest files, formalising the coverage gate, and wiring
+> CI — rather than introducing the runner from scratch. The Phase 12
+> tasks below assume Vitest is the existing test surface and elevate it
+> to the canonical merge-gate runner.
+
 **Entry check:** [Phase 11 Sign-off Gate](./phase-11-polish.md#phase-11-sign-off-gate)
 complete — but per the ROADMAP dependency graph, Phase 12 can also be picked
 up earlier in parallel if test friction grows. Spec'ing it last keeps the

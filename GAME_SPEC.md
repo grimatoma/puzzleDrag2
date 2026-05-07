@@ -37,9 +37,9 @@ Enter a puzzle session
 |---|---|---|
 | **Coins (◉)** | Fulfilling orders, selling resources, quests | Buildings, tools, market, hiring workers |
 | **Runes** | Mysterious Ore (Mine tile), boss victories, quests | Mine/premium entry, Magic Portal, certain buildings |
-| **Workers** | Housing buildings (1/season), IAP | Hiring staff — every hire costs 1 Worker + goods |
+| **Workers** | Housing buildings (1/season; Phase 4.6), IAP stub (Phase 4.6) | Hiring staff — every hire costs 1 Worker + goods (Phase 4.6) |
 | **Bombs** | Powder Store building (2/season end) | Mine worker hire costs |
-| **Influence** | Building decorations, royal quests | Magic Portal summons |
+| **Influence** | Building decorations (Phase 8.5: violet bed +20, stone lantern +35, apple sapling +60), royal quests (Phase 7) | Magic Portal summons (Phase 8.6) |
 
 **Sell/buy asymmetry:** Sell prices are emergency rates (roughly 5–10% of buy). Selling resources is never optimal play.
 
@@ -133,25 +133,29 @@ All tools operate directly on the Phaser board — they are not inventory shortc
 | Lockbox (rare) | Replace 3 random tiles with the biome's rare resource | Starting stock |
 | Reshuffle Horn | Randomise all tile positions (full 360° spin animation) | Earn via almanac/quests |
 
-### Priority Farm Tools (Phase 9)
+### Priority Farm Tools (Phase 10)
 
-| Tool | Board Effect | Craft Cost |
+| Tool | Board Effect | Craft Cost | Phase |
+|---|---|---|---|
+| Rake | Collect all hay tiles | 1 Plank (per §6 wood chain) | 10.1 |
+| Axe | Collect all log tiles | 1 Stone | 10.1 |
+| Fertilizer | All next-fill tiles are grain | 1 Hay + 1 Dirt | 10.1 |
+| Cat | Remove all rat tiles | 2 Stone + 1 Water | 10.5 |
+| Bird Cage | Collect all egg tiles | 1 Hay | 10.6 |
+| Scythe (full) | Collect all grain tiles | 1 Stone | 10.6 |
+| Rifle | Remove all wolf tiles | 1 Plank + 1 Stone + 1 Ingot | 10.8 |
+| Hound | Scatter wolves for 5 turns | 1 Bread + 3 Stone | 10.8 |
+
+### Magic Tools (Phase 8.6, Portal-only)
+
+Cost paid in **Influence** (Phase 8.5). Player picks (no random draw, per §18).
+
+| Tool | Effect | Influence cost |
 |---|---|---|
-| Rake | Collect all hay tiles | 1 Wood |
-| Axe | Collect all log tiles | 1 Stone |
-| Scythe (full) | Collect all grain tiles | 1 Stone |
-| Bird Cage | Collect all egg tiles | 1 Hay |
-| Cat | Remove all hazard-rat tiles | 2 Stone + 1 Water |
-| Fertilizer | All next-fill tiles are grain | 1 Hay + 1 Dirt |
-
-### Magic Tools (Phase 8, Portal-only)
-
-| Tool | Effect |
-|---|---|
-| Magic Wand | Collect all tiles of a chosen type |
-| Hourglass | Undo last move (restore previous grid state) |
-| Magic Seed | Session lasts 5 extra turns |
-| Fertilizer (magic) | All refill tiles are grain for 3 turns |
+| Magic Wand | Collect all tiles of a chosen type | 80 |
+| Hourglass | Undo last move (restore previous grid + inventory + turnsUsed) | 120 |
+| Magic Seed | Session lasts 5 extra turns | 100 |
+| Fertilizer (magic) | All refill tiles are grain for 3 turns | 60 |
 
 ---
 
@@ -192,13 +196,13 @@ Egg                             (terminal, no upgrade)
 
 Base pool: `[hay, hay, hay, log, log, wheat, berry, berry, egg]`. Weights are modified by active species and hired workers with `pool_weight` effects.
 
-### Farm Hazards (Phase 9)
+### Farm Hazards (Phase 10)
 
-| Hazard | Behavior | Counter |
-|---|---|---|
-| Rats | Active; eat plants each turn; chain 3+ to remove | Cat tool, Ratcatcher worker |
-| Fire | Spreads to adjacent tiles each turn | Chain fire tiles to extinguish |
-| Wolves | Chase and eat bird/herd tiles | Rifle tool, Hound tool |
+| Hazard | Behavior | Counter | Phase |
+|---|---|---|---|
+| Rats | Active; eat plants each turn; chain 3+ to remove | Cat tool, Ratcatcher worker | 10.4 (rats) + 10.5 (Cat tool) |
+| Fire | Spreads to adjacent tiles each turn | Chain fire tiles to extinguish | 10.7 |
+| Wolves | Chase and eat bird/herd tiles | Rifle tool (clear), Hound tool (5-turn scatter) | 10.8 |
 
 ---
 
@@ -220,13 +224,16 @@ Mine sessions consume **supplies** (converted from grain via Kitchen building) i
 
 A special tile that spawns among Dirt tiles with a countdown timer. Must be chained with adjacent Dirt tiles before the countdown expires. Success = 1 Rune. Failure = degrades to ordinary Dirt.
 
-### Mine Hazards (Phase 6)
+### Mine Hazards (Phase 9)
 
 | Hazard | Behavior | Counter |
 |---|---|---|
+| Cave-in | Locks a row behind rubble | Chain 3+ stone in an adjacent row |
+| Gas vent | 2×2 region; ignored = lose next turn | Chain into the 2×2 within 3 turns; Canary worker reduces spawn rate |
 | Lava | Spreads each turn; destroys resources | Water Pump tool |
-| Exploding Gas | 3 connected clouds → explosion | Flint tool, Sapper worker |
-| Moles | Consume tiles | Explosives tool |
+| Moles | Consume adjacent tiles each turn | Explosives tool |
+
+(Exploding Gas in earlier drafts has been folded into the Gas vent hazard.)
 
 ---
 
