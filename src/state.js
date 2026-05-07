@@ -8,6 +8,7 @@ import * as boss from "./features/boss/slice.js";
 import * as cartography from "./features/cartography/slice.js";
 import * as apprentices from "./features/apprentices/slice.js";
 import * as mood from "./features/mood/slice.js";
+import { INITIAL_STORY_STATE } from "./story.js";
 
 const slices = [crafting, quests, achievements, tutorial, settings, boss, cartography, apprentices, mood];
 
@@ -122,6 +123,8 @@ export function initialState() {
     pendingView: null,
     seasonStats: { harvests: 0, upgrades: 0, ordersFilled: 0, coins: 0 },
     _hintsShown: {},
+    story: { ...INITIAL_STORY_STATE, flags: {} },
+    npcs: { roster: ["wren"], bonds: { wren: 5 } },
     ...crafting.initial,
     ...quests.initial,
     ...achievements.initial,
@@ -144,7 +147,11 @@ export function initialState() {
     }
     apprentices.seedHireSeq(saved.hiredApprentices);
     quests.seedQuestIdSeq(saved.dailies);
-    return { ...fresh, ...saved, view: "town", turnsUsed: 0, modal: null, bubble: null, pendingView: null,
+    // Merge saved story with INITIAL_STORY_STATE so older saves gain new beat fields.
+    const mergedStory = saved.story
+      ? { ...INITIAL_STORY_STATE, ...saved.story }
+      : { ...INITIAL_STORY_STATE, flags: {} };
+    return { ...fresh, ...saved, story: mergedStory, view: "town", turnsUsed: 0, modal: null, bubble: null, pendingView: null,
       seasonStats: { harvests: 0, upgrades: 0, ordersFilled: 0, coins: 0 } };
   }
   return fresh;
@@ -423,7 +430,8 @@ function coreReducer(state, action) {
         if (action.type === "DEV/RESET_GAME") {
           // Wipe all persisted state and reset to initial state, preserving settings.
           clearSave();
-          return { ...initialState(), settings: state.settings };
+          return { ...initialState(), settings: state.settings,
+            story: { ...INITIAL_STORY_STATE, flags: {} } };
         }
       }
       return state;
