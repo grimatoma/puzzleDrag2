@@ -51,8 +51,8 @@ export const MIGRATIONS = [
     tileCollection: s.tileCollection ?? s.species ?? {
       discovered: [],
       active: {
-        grass: "hay", grain: "wheat",
-        wood: "log", berry: "berry", bird: "sparrow",
+        grass: "grass_hay", grain: "grain_wheat",
+        wood: "wood_log", berry: "berry", bird: "sparrow",
       },
     },
   }),
@@ -137,6 +137,53 @@ export const MIGRATIONS = [
       contributed: { soup: 0, meat: 0, coal: 0, cocoa: 0, ink: 0 },
     },
   }),
+
+  // v13 → v14: Catalog category-prefix rename. The 14 farm-side tile keys
+  // get prefixed with their category for clearer namespacing. Old saves
+  // need their inventory, tile-collection slice, and pool references
+  // remapped — the in-tree code only knows the new names.
+  //
+  // Mapping:
+  //   hay → grass_hay        wheat → grain_wheat       log → wood_log
+  //   meadow_grass → grass_meadow                       plank → wood_plank
+  //   spiky_grass → grass_spiky    flour → grain_flour  beam → wood_beam
+  //   egg → bird_egg         turkey → bird_turkey       clover → bird_clover
+  //   melon → bird_melon
+  //   (jam stays paired with berry — both keep prefixes via berry_jam)
+  //
+  // Idempotent: re-running on an already-migrated save is a no-op because
+  // none of the old keys remain.
+  (s) => {
+    const RENAME = {
+      hay: "grass_hay", meadow_grass: "grass_meadow", spiky_grass: "grass_spiky",
+      wheat: "grain_wheat", flour: "grain_flour",
+      log: "wood_log", plank: "wood_plank", beam: "wood_beam",
+      jam: "berry_jam",
+      egg: "bird_egg", turkey: "bird_turkey", clover: "bird_clover", melon: "bird_melon",
+    };
+    const remap = (obj) => {
+      if (!obj || typeof obj !== "object") return obj;
+      const out = {};
+      for (const [k, v] of Object.entries(obj)) {
+        out[RENAME[k] ?? k] = v;
+      }
+      return out;
+    };
+    const next = { ...s };
+    if (s.inventory) next.inventory = remap(s.inventory);
+    if (s.tileCollection) {
+      next.tileCollection = {
+        ...s.tileCollection,
+        discovered: remap(s.tileCollection.discovered),
+        researchProgress: remap(s.tileCollection.researchProgress),
+        activeByCategory: Object.fromEntries(
+          Object.entries(s.tileCollection.activeByCategory ?? {})
+            .map(([cat, val]) => [cat, RENAME[val] ?? val]),
+        ),
+      };
+    }
+    return next;
+  },
 ];
 
 function isCorrupted(raw) {

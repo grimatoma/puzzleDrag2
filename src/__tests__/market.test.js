@@ -5,8 +5,8 @@ import { driftPrices, applyTrade, bombFootprint } from "../market.js";
 describe("3.1 — Market prices", () => {
   it("MARKET_PRICES covers all 20 sellable resources", () => {
     const keys = [
-      "hay", "wheat", "grain", "flour", "log", "plank", "beam",
-      "berry", "jam", "egg", "stone", "cobble", "block", "ore",
+      "grass_hay", "grain_wheat", "grain", "grain_flour", "wood_log", "wood_plank", "wood_beam",
+      "berry", "berry_jam", "bird_egg", "stone", "cobble", "block", "ore",
       "ingot", "coal", "coke", "gem", "cutgem", "gold",
     ];
     for (const k of keys) {
@@ -40,9 +40,9 @@ describe("3.1 — Market prices", () => {
     const broke = {
       coins: 10,
       inventory: {},
-      market: { prices: { hay: { buy: 40, sell: 0 } } },
+      market: { prices: { grass_hay: { buy: 40, sell: 0 } } },
     };
-    const r1 = applyTrade(broke, { type: "BUY_RESOURCE", payload: { key: "hay", qty: 1 } });
+    const r1 = applyTrade(broke, { type: "BUY_RESOURCE", payload: { key: "grass_hay", qty: 1 } });
     expect(r1).toBe(broke);
   });
 
@@ -50,20 +50,20 @@ describe("3.1 — Market prices", () => {
     const flush = {
       coins: 100,
       inventory: {},
-      market: { prices: { hay: { buy: 40, sell: 0 } } },
+      market: { prices: { grass_hay: { buy: 40, sell: 0 } } },
     };
-    const r2 = applyTrade(flush, { type: "BUY_RESOURCE", payload: { key: "hay", qty: 2 } });
+    const r2 = applyTrade(flush, { type: "BUY_RESOURCE", payload: { key: "grass_hay", qty: 2 } });
     expect(r2.coins).toBe(20);
-    expect(r2.inventory.hay).toBe(2);
+    expect(r2.inventory.grass_hay).toBe(2);
   });
 
   it("SELL_RESOURCE: selling more than owned → no-op", () => {
     const empty = {
       coins: 0,
-      inventory: { hay: 1 },
-      market: { prices: { hay: { buy: 40, sell: 0 } } },
+      inventory: { grass_hay: 1 },
+      market: { prices: { grass_hay: { buy: 40, sell: 0 } } },
     };
-    const r3 = applyTrade(empty, { type: "SELL_RESOURCE", payload: { key: "hay", qty: 5 } });
+    const r3 = applyTrade(empty, { type: "SELL_RESOURCE", payload: { key: "grass_hay", qty: 5 } });
     expect(r3).toBe(empty);
   });
 });

@@ -26,10 +26,10 @@ describe("Phase 5.2 — state.tileCollection slice", () => {
 
   it("activeByCategory: grass=hay, wood=log, berry=berry, bird=egg", () => {
     const s0 = initialState();
-    expect(s0.tileCollection.activeByCategory.grass).toBe("hay");
-    expect(s0.tileCollection.activeByCategory.wood).toBe("log");
+    expect(s0.tileCollection.activeByCategory.grass).toBe("grass_hay");
+    expect(s0.tileCollection.activeByCategory.wood).toBe("wood_log");
     expect(s0.tileCollection.activeByCategory.berry).toBe("berry");
-    expect(s0.tileCollection.activeByCategory.bird).toBe("egg");
+    expect(s0.tileCollection.activeByCategory.bird).toBe("bird_egg");
     // Grain previously started null because wheat was the only entry and
     // wheat is `chain`-discovered. After REFERENCE_CATALOG canonicalized
     // Corn/Buckwheat/Rice as `default`, grain auto-activates the first one
@@ -58,8 +58,8 @@ describe("Phase 5.2 — state.tileCollection slice", () => {
     delete oldSave.tileCollection;
     const migrated = mergeLoadedState(oldSave);
     expect(migrated.tileCollection).toBeTruthy();
-    expect(migrated.tileCollection.discovered.hay).toBe(true);
-    expect(migrated.tileCollection.activeByCategory.grass).toBe("hay");
+    expect(migrated.tileCollection.discovered.grass_hay).toBe(true);
+    expect(migrated.tileCollection.activeByCategory.grass).toBe("grass_hay");
     expect(migrated.tileCollection.freeMoves).toBe(0);
   });
 
@@ -78,13 +78,13 @@ describe("Phase 5.2 — state.tileCollection slice", () => {
       ...s0,
       tileCollection: {
         ...s0.tileCollection,
-        discovered: { ...s0.tileCollection.discovered, wheat: true, meadow_grass: true },
+        discovered: { ...s0.tileCollection.discovered, grain_wheat: true, grass_meadow: true },
         freeMoves: 7,
       },
     };
     const reset = rootReducer(dirty, { type: "DEV/RESET_GAME" });
-    expect(reset.tileCollection.discovered.wheat).toBeFalsy();
-    expect(reset.tileCollection.discovered.meadow_grass).toBeFalsy();
+    expect(reset.tileCollection.discovered.grain_wheat).toBeFalsy();
+    expect(reset.tileCollection.discovered.grass_meadow).toBeFalsy();
     expect(reset.tileCollection.freeMoves).toBe(0);
   });
 });

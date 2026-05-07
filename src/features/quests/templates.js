@@ -6,11 +6,11 @@
  */
 export const QUEST_TEMPLATES = [
   // ── collect-resource ────────────────────────────────────────────────────────
-  { id: "collect_hay",   category: "collect", key: "hay",   label: "Collect {n} hay",
+  { id: "collect_hay",   category: "collect", key: "grass_hay",   label: "Collect {n} hay",
     targetMin: 20, targetMax: 50, coinBase: 30, coinPerUnit: 1 },
-  { id: "collect_wheat", category: "collect", key: "wheat", label: "Collect {n} wheat",
+  { id: "collect_wheat", category: "collect", key: "grain_wheat", label: "Collect {n} wheat",
     targetMin: 8,  targetMax: 20, coinBase: 40, coinPerUnit: 2 },
-  { id: "collect_log",   category: "collect", key: "log",   label: "Collect {n} logs",
+  { id: "collect_log",   category: "collect", key: "wood_log",   label: "Collect {n} logs",
     targetMin: 8,  targetMax: 18, coinBase: 30, coinPerUnit: 2 },
   { id: "collect_berry", category: "collect", key: "berry", label: "Collect {n} berries",
     targetMin: 6,  targetMax: 14, coinBase: 30, coinPerUnit: 3 },
@@ -19,9 +19,9 @@ export const QUEST_TEMPLATES = [
   // ── craft-item ──────────────────────────────────────────────────────────────
   { id: "craft_bread",   category: "craft",   item: "bread",   label: "Bake {n} bread",
     targetMin: 2, targetMax: 5,  coinBase: 50, coinPerUnit: 15 },
-  { id: "craft_jam",     category: "craft",   item: "jam",     label: "Cook {n} jam",
+  { id: "craft_jam",     category: "craft",   item: "berry_jam",     label: "Cook {n} jam",
     targetMin: 2, targetMax: 4,  coinBase: 50, coinPerUnit: 20 },
-  { id: "craft_plank",   category: "craft",   item: "plank",   label: "Mill {n} planks",
+  { id: "craft_plank",   category: "craft",   item: "wood_plank",   label: "Mill {n} planks",
     targetMin: 3, targetMax: 8,  coinBase: 40, coinPerUnit: 10 },
   // ── fulfil-orders ───────────────────────────────────────────────────────────
   { id: "orders_any",    category: "order",                    label: "Deliver {n} orders",

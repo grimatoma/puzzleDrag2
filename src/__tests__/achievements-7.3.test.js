@@ -109,23 +109,23 @@ describe("7.3 tickAchievement basic counter", () => {
 describe("7.3 distinct_resources_chained", () => {
   it("first chain of hay increments distinct counter", () => {
     const s = freshState();
-    const r = tickAchievement(s, "distinct_resources_chained", 1, "hay");
+    const r = tickAchievement(s, "distinct_resources_chained", 1, "grass_hay");
     expect(r.newState.achievements.counters.distinct_resources_chained).toBe(1);
-    expect(r.newState.achievements.seenResources.hay).toBe(true);
+    expect(r.newState.achievements.seenResources.grass_hay).toBe(true);
   });
 
   it("second chain of same resource does NOT increment distinct counter", () => {
     const s = freshState();
-    const r1 = tickAchievement(s, "distinct_resources_chained", 1, "hay");
-    const r2 = tickAchievement(r1.newState, "distinct_resources_chained", 1, "hay");
+    const r1 = tickAchievement(s, "distinct_resources_chained", 1, "grass_hay");
+    const r2 = tickAchievement(r1.newState, "distinct_resources_chained", 1, "grass_hay");
     expect(r2.newState.achievements.counters.distinct_resources_chained).toBe(1);
     expect(r2.unlocked.length).toBe(0);
   });
 
   it("chaining a new resource (wheat) after hay increments to 2", () => {
     const s = freshState();
-    const r1 = tickAchievement(s, "distinct_resources_chained", 1, "hay");
-    const r2 = tickAchievement(r1.newState, "distinct_resources_chained", 1, "wheat");
+    const r1 = tickAchievement(s, "distinct_resources_chained", 1, "grass_hay");
+    const r2 = tickAchievement(r1.newState, "distinct_resources_chained", 1, "grain_wheat");
     expect(r2.newState.achievements.counters.distinct_resources_chained).toBe(2);
   });
 });

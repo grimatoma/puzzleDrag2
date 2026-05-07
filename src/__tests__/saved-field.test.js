@@ -9,9 +9,9 @@ describe("Phase 12.5 — saved-field preservation", () => {
   it("registers silo and barn buildings with §18 wording", () => {
     const silo = findBuilding("silo");
     const barn = findBuilding("barn");
-    expect(silo).toMatchObject({ cost: { coins: 250, plank: 15 },
+    expect(silo).toMatchObject({ cost: { coins: 250, wood_plank: 15 },
       lv: 4, biome: "farm" });
-    expect(barn).toMatchObject({ cost: { coins: 400, plank: 25, stone: 5 },
+    expect(barn).toMatchObject({ cost: { coins: 400, wood_plank: 25, stone: 5 },
       lv: 5, biome: "mine" });
     expect(silo.desc).toMatch(/preserves the tile layout between sessions/i);
     expect(barn.desc).toMatch(/preserves the tile layout between sessions/i);
@@ -24,7 +24,7 @@ describe("Phase 12.5 — saved-field preservation", () => {
   });
 
   it("CLOSE_SEASON snapshots farm field when silo built", () => {
-    const tiles = [["hay","log","hay","wheat","berry","egg"]];
+    const tiles = [["grass_hay","wood_log","grass_hay","grain_wheat","berry","bird_egg"]];
     const s0 = { ...createInitialState(),
       biomeKey: "farm", built: { ...createInitialState().built, silo: true },
       grid: tiles, hazards: null };
@@ -35,13 +35,13 @@ describe("Phase 12.5 — saved-field preservation", () => {
   it("CLOSE_SEASON does NOT snapshot when silo not built", () => {
     const s0 = { ...createInitialState(),
       biomeKey: "farm",
-      grid: [["hay"]], hazards: null };
+      grid: [["grass_hay"]], hazards: null };
     const s1 = rootReducer(s0, { type: "CLOSE_SEASON" });
     expect(s1.farm.savedField).toBeNull();
   });
 
   it("SWITCH_BIOME restores saved field when non-null", () => {
-    const tiles = [["wheat","wheat","hay","log","berry","egg"]];
+    const tiles = [["grain_wheat","grain_wheat","grass_hay","wood_log","berry","bird_egg"]];
     const s0 = { ...createInitialState(),
       biomeKey: "mine",
       farm: { savedField: { tiles, hazards: [{ id: "vent" }], turnsUsed: 5 } } };
@@ -61,8 +61,8 @@ describe("Phase 12.5 — saved-field preservation", () => {
     expect(s1.turnsUsed).toBe(0);
   });
 
-  it("SAVE_SCHEMA_VERSION === 13 and migration v11 → v12 seeds slots", () => {
-    expect(SAVE_SCHEMA_VERSION).toBe(13);
+  it("SAVE_SCHEMA_VERSION === 14 and migration v11 → v12 seeds slots", () => {
+    expect(SAVE_SCHEMA_VERSION).toBe(14);
     const v11 = { version: 11, farm: {}, mine: {} };
     const v12 = MIGRATIONS[11](v11);
     expect(v12.farm.savedField).toBeNull();

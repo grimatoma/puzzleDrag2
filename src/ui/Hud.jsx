@@ -69,11 +69,11 @@ function SeasonBar({ season, turnsUsed, turnsLeft, calendarSeason }) {
 // (hay, wheat, grain, berry, log) toward the 50-each win threshold.
 
 const LARDER_RESOURCES = [
-  { key: "hay",   icon: "🌾", label: "Hay" },
-  { key: "wheat", icon: "𓂃", label: "Wheat" },
+  { key: "grass_hay",   icon: "🌾", label: "Hay" },
+  { key: "grain_wheat", icon: "𓂃", label: "Wheat" },
   { key: "grain", icon: "✿", label: "Grain" },
   { key: "berry", icon: "◉", label: "Berry" },
-  { key: "log",   icon: "🪵", label: "Log" },
+  { key: "wood_log",   icon: "🪵", label: "Log" },
 ];
 
 function LarderWidget({ inventory }) {

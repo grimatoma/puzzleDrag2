@@ -35,7 +35,7 @@ describe("Phase 4.4 — Wages on CLOSE_SEASON + debt rollover", () => {
     const b0 = { ...base, coins: 10,
       workers: { hired: { ...base.workers.hired, hilda: 1 }, debt: 0, pool: 0 } };
     const b1 = rootReducer(b0, { type: "CLOSE_SEASON" });
-    expect(computeWorkerEffects(b1).thresholdReduce.hay ?? 0).toBe(0);
+    expect(computeWorkerEffects(b1).thresholdReduce.grass_hay ?? 0).toBe(0);
   });
 
   // D: order auto-pays debt before crediting coins
@@ -43,9 +43,9 @@ describe("Phase 4.4 — Wages on CLOSE_SEASON + debt rollover", () => {
     const b0 = { ...base, coins: 0,
       workers: { hired: { ...base.workers.hired, hilda: 1 }, debt: 5, pool: 0 } };
     // Create a matching order manually
-    const order = { id: "test-order", npc: "mira", key: "hay", need: 0, reward: 50, line: "" };
+    const order = { id: "test-order", npc: "mira", key: "grass_hay", need: 0, reward: 50, line: "" };
     const withOrder = { ...b0, orders: [order, ...b0.orders.slice(1)],
-      inventory: { ...b0.inventory, hay: 100 } };
+      inventory: { ...b0.inventory, grass_hay: 100 } };
     const d1 = rootReducer(withOrder, { type: "TURN_IN_ORDER", id: "test-order" });
     expect(d1.workers.debt).toBe(0);
     expect(d1.coins).toBe(45); // 50 - 5 debt = 45 net
@@ -55,11 +55,11 @@ describe("Phase 4.4 — Wages on CLOSE_SEASON + debt rollover", () => {
   it("E: effects resume after debt cleared", () => {
     const b0 = { ...base, coins: 0,
       workers: { hired: { ...base.workers.hired, hilda: 1 }, debt: 5, pool: 0 } };
-    const order = { id: "test-order2", npc: "mira", key: "hay", need: 0, reward: 50, line: "" };
+    const order = { id: "test-order2", npc: "mira", key: "grass_hay", need: 0, reward: 50, line: "" };
     const withOrder = { ...b0, orders: [order, ...b0.orders.slice(1)],
-      inventory: { ...b0.inventory, hay: 100 } };
+      inventory: { ...b0.inventory, grass_hay: 100 } };
     const d1 = rootReducer(withOrder, { type: "TURN_IN_ORDER", id: "test-order2" });
-    expect(computeWorkerEffects(d1).thresholdReduce.hay).toBe(1);
+    expect(computeWorkerEffects(d1).thresholdReduce.grass_hay).toBe(1);
   });
 
   // F: Tuck — 20 coins, wage 20, season_bonus +30 → 0 + 30 + 25 = 55 coins
@@ -97,9 +97,9 @@ describe("Phase 4.4 — Wages on CLOSE_SEASON + debt rollover", () => {
   it("I: SELL_RESOURCE auto-repays debt before crediting coins", () => {
     const s0 = { ...base, coins: 0,
       workers: { hired: { ...base.workers.hired }, debt: 20, pool: 0 },
-      inventory: { ...base.inventory, hay: 10 },
-      market: { ...base.market, prices: { hay: { buy: 40, sell: 5 } } } };
-    const s1 = rootReducer(s0, { type: "SELL_RESOURCE", payload: { key: "hay", qty: 10 } });
+      inventory: { ...base.inventory, grass_hay: 10 },
+      market: { ...base.market, prices: { grass_hay: { buy: 40, sell: 5 } } } };
+    const s1 = rootReducer(s0, { type: "SELL_RESOURCE", payload: { key: "grass_hay", qty: 10 } });
     // sale = 50, debt = 20, net coins = 30
     expect(s1.workers.debt).toBe(0);
     expect(s1.coins).toBe(30);

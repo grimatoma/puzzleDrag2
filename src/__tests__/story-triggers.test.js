@@ -42,9 +42,9 @@ describe("2.2 — evaluateStoryTriggers: resource_total", () => {
   it("20 hay fires hearth beat", () => {
     const r = evaluateStoryTriggers(afterArrival, {
       type: "resource_total",
-      key: "hay",
+      key: "grass_hay",
       amount: 20,
-    }, { hay: 20 });
+    }, { grass_hay: 20 });
     expect(r).not.toBeNull();
     expect(r.firedBeat.id).toBe("act1_light_hearth");
   });
@@ -52,18 +52,18 @@ describe("2.2 — evaluateStoryTriggers: resource_total", () => {
   it("spawns mira as side effect", () => {
     const r = evaluateStoryTriggers(afterArrival, {
       type: "resource_total",
-      key: "hay",
+      key: "grass_hay",
       amount: 20,
-    }, { hay: 20 });
+    }, { grass_hay: 20 });
     expect(r.sideEffects.spawnNPC).toBe("mira");
   });
 
   it("19 hay does not fire the hearth beat", () => {
     const r = evaluateStoryTriggers(afterArrival, {
       type: "resource_total",
-      key: "hay",
+      key: "grass_hay",
       amount: 19,
-    }, { hay: 19 });
+    }, { grass_hay: 19 });
     expect(r).toBeNull();
   });
 });

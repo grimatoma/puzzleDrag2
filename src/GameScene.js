@@ -511,7 +511,7 @@ export class GameScene extends Phaser.Scene {
     const fertilizerActive = (this.registry.get("fertilizerActive") ?? false) ||
                              ((this.registry.get("magicFertilizerCharges") ?? 0) > 0);
     if (fertilizerActive) {
-      const seedlings = ["seedling", "hay", "wheat", "grain"];
+      const seedlings = ["seedling", "grass_hay", "grain_wheat", "grain"];
       const fBase = {};
       for (const k of workerPool) fBase[k] = (fBase[k] ?? 0) + 1;
       for (const k of seedlings) {

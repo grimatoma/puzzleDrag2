@@ -23,7 +23,7 @@ export function applyHarvestMoonUpgrade(upgradeCount, weather) {
 export function applyDroughtSpawnWeights(pool, weather) {
   if (weather?.active !== "drought") return pool;
   return pool.map((p) =>
-    p.key === "wheat" || p.key === "grain"
+    p.key === "grain_wheat" || p.key === "grain"
       ? { ...p, weight: p.weight * 0.5 }
       : p
   );

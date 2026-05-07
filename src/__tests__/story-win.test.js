@@ -33,7 +33,7 @@ const postAnnounce = {
   flags: { ...preAnnounceFlags, festival_announced: true },
 };
 
-const fullTotals = { hay: 50, wheat: 50, grain: 50, berry: 50, log: 50 };
+const fullTotals = { grass_hay: 50, grain_wheat: 50, grain: 50, berry: 50, wood_log: 50 };
 
 describe("2.5 — win beat gating", () => {
   it("win does NOT fire before festival announced, even with 50/50/50/50/50", () => {
@@ -65,7 +65,7 @@ describe("2.5 — win beat gating", () => {
   });
 
   it("49 log does NOT trigger win", () => {
-    const short = { ...fullTotals, log: 49 };
+    const short = { ...fullTotals, wood_log: 49 };
     const r = evaluateStoryTriggers(
       postAnnounce,
       { type: "resource_total_multi" },
@@ -75,7 +75,7 @@ describe("2.5 — win beat gating", () => {
   });
 
   it("49 hay does NOT trigger win", () => {
-    const short = { ...fullTotals, hay: 49 };
+    const short = { ...fullTotals, grass_hay: 49 };
     const r = evaluateStoryTriggers(
       postAnnounce,
       { type: "resource_total_multi" },

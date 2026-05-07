@@ -10,11 +10,11 @@ describe("Phase 5.7 — Free moves per season", () => {
       ...base,
       tileCollection: {
         ...base.tileCollection,
-        discovered: { ...base.tileCollection.discovered, turkey: true },
-        activeByCategory: { ...base.tileCollection.activeByCategory, bird: "turkey" },
+        discovered: { ...base.tileCollection.discovered, bird_turkey: true },
+        activeByCategory: { ...base.tileCollection.activeByCategory, bird: "bird_turkey" },
       },
     };
-    const a1 = rootReducer(a0, { type: "CHAIN_COMMIT", payload: { key: "turkey", length: 3 } });
+    const a1 = rootReducer(a0, { type: "CHAIN_COMMIT", payload: { key: "bird_turkey", length: 3 } });
     expect(a1.tileCollection.freeMoves).toBe(2);
   });
 
@@ -23,12 +23,12 @@ describe("Phase 5.7 — Free moves per season", () => {
       ...base,
       tileCollection: {
         ...base.tileCollection,
-        discovered: { ...base.tileCollection.discovered, turkey: true },
-        activeByCategory: { ...base.tileCollection.activeByCategory, bird: "turkey" },
+        discovered: { ...base.tileCollection.discovered, bird_turkey: true },
+        activeByCategory: { ...base.tileCollection.activeByCategory, bird: "bird_turkey" },
       },
     };
-    const a1 = rootReducer(a0, { type: "CHAIN_COMMIT", payload: { key: "turkey", length: 3 } });
-    const b1 = rootReducer(a1, { type: "CHAIN_COMMIT", payload: { key: "turkey", length: 5 } });
+    const a1 = rootReducer(a0, { type: "CHAIN_COMMIT", payload: { key: "bird_turkey", length: 3 } });
+    const b1 = rootReducer(a1, { type: "CHAIN_COMMIT", payload: { key: "bird_turkey", length: 5 } });
     expect(b1.tileCollection.freeMoves).toBe(4);
   });
 
@@ -37,11 +37,11 @@ describe("Phase 5.7 — Free moves per season", () => {
       ...base,
       tileCollection: {
         ...base.tileCollection,
-        discovered: { ...base.tileCollection.discovered, turkey: true },
-        activeByCategory: { ...base.tileCollection.activeByCategory, bird: "turkey" },
+        discovered: { ...base.tileCollection.discovered, bird_turkey: true },
+        activeByCategory: { ...base.tileCollection.activeByCategory, bird: "bird_turkey" },
       },
     };
-    const c1 = rootReducer(a0, { type: "CHAIN_COMMIT", payload: { key: "hay", length: 12 } });
+    const c1 = rootReducer(a0, { type: "CHAIN_COMMIT", payload: { key: "grass_hay", length: 12 } });
     expect(c1.tileCollection.freeMoves).toBe(0);
   });
 
@@ -50,13 +50,13 @@ describe("Phase 5.7 — Free moves per season", () => {
       ...base,
       tileCollection: {
         ...base.tileCollection,
-        discovered: { ...base.tileCollection.discovered, turkey: true },
-        activeByCategory: { ...base.tileCollection.activeByCategory, bird: "turkey" },
+        discovered: { ...base.tileCollection.discovered, bird_turkey: true },
+        activeByCategory: { ...base.tileCollection.activeByCategory, bird: "bird_turkey" },
       },
     };
     let d = d0;
     for (let i = 0; i < 5; i++) {
-      d = rootReducer(d, { type: "CHAIN_COMMIT", payload: { key: "hay", length: 6 } });
+      d = rootReducer(d, { type: "CHAIN_COMMIT", payload: { key: "grass_hay", length: 6 } });
     }
     expect(d.tileCollection.freeMoves).toBe(0);
   });
@@ -82,7 +82,7 @@ describe("Phase 5.7 — Free moves per season", () => {
   });
 
   it("H: clover grants +2, melon grants +5 per spec", () => {
-    expect(TILE_TYPES_MAP.clover.effects.freeMoves).toBe(2);
-    expect(TILE_TYPES_MAP.melon.effects.freeMoves).toBe(5);
+    expect(TILE_TYPES_MAP.bird_clover.effects.freeMoves).toBe(2);
+    expect(TILE_TYPES_MAP.bird_melon.effects.freeMoves).toBe(5);
   });
 });

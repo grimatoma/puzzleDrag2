@@ -15,7 +15,7 @@ const BOSS_META = {
     emoji: "❄️",
     flavor: "A frozen titan stirs in the deep winter wood. Your hearth must not go dark.",
     goal: "Bring 30 logs in 10 turns to keep the hearth lit.",
-    resource: "log",
+    resource: "wood_log",
     targetCount: 30,
     turns: BOSS_WINDOW_TURNS, // §18 locked: 10
     minChain: 5,
@@ -37,12 +37,12 @@ const BOSS_META = {
     emoji: "🌿",
     flavor: "The bog has swallowed the lower fields. Only a bountiful harvest can drain its hold.",
     goal: "Drain the bog: harvest 50 hay across 10 turns.",
-    resource: "hay",
+    resource: "grass_hay",
     targetCount: 50,
     turns: BOSS_WINDOW_TURNS,
     minChain: null,
     // Spec §9: extra log/hay respawn tiles — bias spawn pool +30% log+hay
-    spawnBias: { log: 1.3, hay: 1.3 },
+    spawnBias: { wood_log: 1.3, grass_hay: 1.3 },
   },
   old_stoneface: {
     name: "Old Stoneface",

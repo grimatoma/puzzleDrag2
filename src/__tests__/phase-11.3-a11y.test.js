@@ -48,14 +48,14 @@ describe("11.3 assertive bypasses debounce", () => {
 
 describe("11.3 formatChainAnnouncement", () => {
   it("no-upgrade chain string", () => {
-    expect(formatChainAnnouncement({ key: "hay", collected: 6, upgrades: [] }))
+    expect(formatChainAnnouncement({ key: "grass_hay", collected: 6, upgrades: [] }))
       .toBe("Collected 6 hay.");
   });
   it("chain with upgrade string", () => {
     expect(formatChainAnnouncement({
-      key: "hay",
+      key: "grass_hay",
       collected: 6,
-      upgrades: [{ key: "wheat", count: 1 }],
+      upgrades: [{ key: "grain_wheat", count: 1 }],
     })).toBe("Collected 6 hay; 1 wheat upgrade spawned at the endpoint.");
   });
 });

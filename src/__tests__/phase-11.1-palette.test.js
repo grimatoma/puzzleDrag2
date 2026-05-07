@@ -12,8 +12,8 @@ describe("11.1 settings initial shape", () => {
 
 describe("11.1 PALETTES table", () => {
   const IDS = ["default", "deuteranopia", "protanopia", "tritanopia"];
-  const KEYS = ["hay","wheat","grain","flour","log","plank","beam","berry","jam",
-    "egg","stone","cobble","block","ore","ingot","coal","coke","gem","cutgem","gold"];
+  const KEYS = ["grass_hay","grain_wheat","grain","grain_flour","wood_log","wood_plank","wood_beam","berry","berry_jam",
+    "bird_egg","stone","cobble","block","ore","ingot","coal","coke","gem","cutgem","gold"];
 
   IDS.forEach(id => {
     it(`palette ${id} exists`, () => {
@@ -34,8 +34,8 @@ describe("11.1 PALETTES table", () => {
 
 describe("11.1 default palette equals existing constants", () => {
   it("default hay equals BIOMES.farm hay", () => {
-    const farmHay = BIOMES.farm.resources.find(r => r.key === "hay").color;
-    expect(PALETTES.default.tiles.hay).toBe(farmHay);
+    const farmHay = BIOMES.farm.resources.find(r => r.key === "grass_hay").color;
+    expect(PALETTES.default.tiles.grass_hay).toBe(farmHay);
   });
   it("default ore equals BIOMES.mine ore", () => {
     const mineOre = BIOMES.mine.resources.find(r => r.key === "ore").color;
@@ -54,7 +54,7 @@ describe("11.1 SET_PALETTE reducer", () => {
 describe("11.1 getTileColor / getSeasonColor", () => {
   it("getTileColor honours active palette", () => {
     const fakeState = { settings: { palette: "deuteranopia" }, biome: "farm" };
-    expect(getTileColor(fakeState, "hay")).toBe(PALETTES.deuteranopia.tiles.hay);
+    expect(getTileColor(fakeState, "grass_hay")).toBe(PALETTES.deuteranopia.tiles.grass_hay);
   });
 
   it("getSeasonColor honours active palette", () => {
@@ -79,15 +79,15 @@ describe("11.1 contrast ratios ≥ 3:1 for adjacency pairs", () => {
   ["deuteranopia","protanopia","tritanopia"].forEach(p => {
     it(`${p}: hay vs log ≥ 3:1`, () => {
       const t = PALETTES[p].tiles;
-      expect(contrastRatio(t.hay, t.log)).toBeGreaterThanOrEqual(3.0);
+      expect(contrastRatio(t.grass_hay, t.wood_log)).toBeGreaterThanOrEqual(3.0);
     });
     it(`${p}: hay vs berry ≥ 3:1`, () => {
       const t = PALETTES[p].tiles;
-      expect(contrastRatio(t.hay, t.berry)).toBeGreaterThanOrEqual(3.0);
+      expect(contrastRatio(t.grass_hay, t.berry)).toBeGreaterThanOrEqual(3.0);
     });
     it(`${p}: log vs berry ≥ 3:1`, () => {
       const t = PALETTES[p].tiles;
-      expect(contrastRatio(t.log, t.berry)).toBeGreaterThanOrEqual(3.0);
+      expect(contrastRatio(t.wood_log, t.berry)).toBeGreaterThanOrEqual(3.0);
     });
     it(`${p}: ore vs coal ≥ 3:1`, () => {
       const t = PALETTES[p].tiles;

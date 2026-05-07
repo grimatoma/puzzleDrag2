@@ -47,28 +47,28 @@ function minState(overrides = {}) {
 describe("drought weather — rollResourceWithWeather", () => {
   it("drought reduces wheat+grain below 20% of rolls (baseline ~33%)", () => {
     // Farm pool has wheat and grain represented; simulate 1000 rolls
-    const pool = ["hay", "hay", "hay", "log", "log", "wheat", "berry", "berry", "egg"];
-    const counts = { wheat: 0, grain: 0, other: 0 };
+    const pool = ["grass_hay", "grass_hay", "grass_hay", "wood_log", "wood_log", "grain_wheat", "berry", "berry", "bird_egg"];
+    const counts = { grain_wheat: 0, grain: 0, other: 0 };
     for (let i = 0; i < 1000; i++) {
       const key = rollResourceWithWeather(pool, "drought");
-      if (key === "wheat") counts.wheat++;
+      if (key === "grain_wheat") counts.grain_wheat++;
       else if (key === "grain") counts.grain++;
       else counts.other++;
     }
-    const affected = counts.wheat + counts.grain;
+    const affected = counts.grain_wheat + counts.grain;
     expect(affected).toBeLessThan(200); // <20% of 1000 rolls
   });
 
   it("no drought: wheat+grain appear at normal baseline rate", () => {
-    const pool = ["hay", "hay", "hay", "log", "log", "wheat", "berry", "berry", "egg"];
-    const counts = { wheat: 0, other: 0 };
+    const pool = ["grass_hay", "grass_hay", "grass_hay", "wood_log", "wood_log", "grain_wheat", "berry", "berry", "bird_egg"];
+    const counts = { grain_wheat: 0, other: 0 };
     for (let i = 0; i < 1000; i++) {
       const key = rollResourceWithWeather(pool, null);
-      if (key === "wheat") counts.wheat++;
+      if (key === "grain_wheat") counts.grain_wheat++;
       else counts.other++;
     }
     // wheat is 1/9 ≈ 11% of pool; over 1000 rolls expect roughly 111 ± tolerance
-    expect(counts.wheat).toBeGreaterThan(50);
+    expect(counts.grain_wheat).toBeGreaterThan(50);
   });
 });
 
@@ -88,38 +88,38 @@ describe("CHAIN_COLLECTED", () => {
     const state = minState();
     const next = gameReducer(state, {
       type: "CHAIN_COLLECTED",
-      payload: { key: "hay", gained: 4, upgrades: 0, value: 1, chainLength: 4 },
+      payload: { key: "grass_hay", gained: 4, upgrades: 0, value: 1, chainLength: 4 },
     });
-    expect(next.inventory.hay).toBe(4);
+    expect(next.inventory.grass_hay).toBe(4);
   });
 
   it("applies spring +20% bonus (season 0)", () => {
     const state = minState({ seasonsCycled: 0, npcBond: NEUTRAL_BOND }); // Spring
     const next = gameReducer(state, {
       type: "CHAIN_COLLECTED",
-      payload: { key: "hay", gained: 5, upgrades: 0, value: 1, chainLength: 5 },
+      payload: { key: "grass_hay", gained: 5, upgrades: 0, value: 1, chainLength: 5 },
     });
     // Spring bonus: ceil(5 * 0.2) = 1 extra → 6 total
-    expect(next.inventory.hay).toBe(6);
+    expect(next.inventory.grass_hay).toBe(6);
   });
 
   it("doubles upgrades in autumn (season 2)", () => {
     const state = minState({ seasonsCycled: 2 }); // Autumn
     const next = gameReducer(state, {
       type: "CHAIN_COLLECTED",
-      payload: { key: "hay", gained: 3, upgrades: 1, value: 1, chainLength: 3 },
+      payload: { key: "grass_hay", gained: 3, upgrades: 1, value: 1, chainLength: 3 },
     });
     // Autumn: 1 upgrade → 2 effective upgrades → 2 wheat
-    expect(next.inventory.wheat).toBe(2);
+    expect(next.inventory.grain_wheat).toBe(2);
   });
 
   it("yields nothing in winter with chain < 5", () => {
     const state = minState({ seasonsCycled: 3 }); // Winter
     const next = gameReducer(state, {
       type: "CHAIN_COLLECTED",
-      payload: { key: "hay", gained: 4, upgrades: 0, value: 1, chainLength: 4 },
+      payload: { key: "grass_hay", gained: 4, upgrades: 0, value: 1, chainLength: 4 },
     });
-    expect(next.inventory.hay).toBeUndefined();
+    expect(next.inventory.grass_hay).toBeUndefined();
     expect(next.turnsUsed).toBe(1); // turn still consumed
   });
 
@@ -127,9 +127,9 @@ describe("CHAIN_COLLECTED", () => {
     const state = minState({ seasonsCycled: 3 }); // Winter
     const next = gameReducer(state, {
       type: "CHAIN_COLLECTED",
-      payload: { key: "hay", gained: 5, upgrades: 0, value: 1, chainLength: 5 },
+      payload: { key: "grass_hay", gained: 5, upgrades: 0, value: 1, chainLength: 5 },
     });
-    expect(next.inventory.hay).toBe(5);
+    expect(next.inventory.grass_hay).toBe(5);
   });
 
   it("advances turnsUsed and sets season modal when turn limit reached", async () => {
@@ -137,7 +137,7 @@ describe("CHAIN_COLLECTED", () => {
     const state = minState({ turnsUsed: MAX_TURNS - 1 });
     const next = gameReducer(state, {
       type: "CHAIN_COLLECTED",
-      payload: { key: "hay", gained: 3, upgrades: 0, value: 1, chainLength: 4 },
+      payload: { key: "grass_hay", gained: 3, upgrades: 0, value: 1, chainLength: 4 },
     });
     expect(next.turnsUsed).toBe(MAX_TURNS);
     expect(next.modal).toBe("season");
@@ -147,7 +147,7 @@ describe("CHAIN_COLLECTED", () => {
     const state = minState();
     const next = gameReducer(state, {
       type: "CHAIN_COLLECTED",
-      payload: { key: "hay", gained: 6, upgrades: 0, value: 1, chainLength: 6 },
+      payload: { key: "grass_hay", gained: 6, upgrades: 0, value: 1, chainLength: 6 },
     });
     expect(next.coins).toBeGreaterThan(state.coins);
     expect(next.xp).toBeGreaterThan(0);
@@ -156,10 +156,10 @@ describe("CHAIN_COLLECTED", () => {
 
 describe("TURN_IN_ORDER", () => {
   it("increases npcBond by 0.3 via mood slice", () => {
-    const order = { id: "o1", npc: "mira", key: "hay", need: 5, reward: 100, line: "test" };
+    const order = { id: "o1", npc: "mira", key: "grass_hay", need: 5, reward: 100, line: "test" };
     const state = minState({
       seasonsCycled: 2,
-      inventory: { hay: 10 },
+      inventory: { grass_hay: 10 },
       orders: [order],
       npcBond: { ...NEUTRAL_BOND, mira: 5 },
     });
@@ -175,10 +175,10 @@ describe("TURN_IN_ORDER", () => {
   });
 
   it("deducts inventory and adds reward coins", () => {
-    const order = { id: "o1", npc: "wren", key: "hay", need: 5, reward: 30, line: "test" };
+    const order = { id: "o1", npc: "wren", key: "grass_hay", need: 5, reward: 30, line: "test" };
     const state = minState({
       seasonsCycled: 2, // Autumn — no order reward modifier
-      inventory: { hay: 10 },
+      inventory: { grass_hay: 10 },
       orders: [order],
     });
     const next = gameReducer(state, {
@@ -189,15 +189,15 @@ describe("TURN_IN_ORDER", () => {
       need: order.need,
       reward: order.reward,
     });
-    expect(next.inventory.hay).toBe(5);
+    expect(next.inventory.grass_hay).toBe(5);
     expect(next.coins).toBe(state.coins + 30);
   });
 
   it("doubles reward in summer (season 1)", () => {
-    const order = { id: "o1", npc: "wren", key: "hay", need: 3, reward: 20, line: "test" };
+    const order = { id: "o1", npc: "wren", key: "grass_hay", need: 3, reward: 20, line: "test" };
     const state = minState({
       seasonsCycled: 1, // Summer
-      inventory: { hay: 5 },
+      inventory: { grass_hay: 5 },
       orders: [order],
       npcBond: NEUTRAL_BOND,
     });
@@ -213,10 +213,10 @@ describe("TURN_IN_ORDER", () => {
   });
 
   it("does nothing when inventory is insufficient", () => {
-    const order = { id: "o1", npc: "wren", key: "hay", need: 10, reward: 30, line: "test" };
+    const order = { id: "o1", npc: "wren", key: "grass_hay", need: 10, reward: 30, line: "test" };
     const state = minState({
       seasonsCycled: 2, // Autumn — no order reward modifier
-      inventory: { hay: 2 },
+      inventory: { grass_hay: 2 },
       orders: [order],
     });
     const next = gameReducer(state, {
@@ -227,7 +227,7 @@ describe("TURN_IN_ORDER", () => {
       need: order.need,
       reward: order.reward,
     });
-    expect(next.inventory.hay).toBe(2); // unchanged
+    expect(next.inventory.grass_hay).toBe(2); // unchanged
     expect(next.coins).toBe(state.coins); // unchanged
   });
 });
@@ -399,8 +399,8 @@ describe("SWITCH_BIOME", () => {
   it("always generates 3 orders with distinct NPCs (100 iterations)", () => {
     // Need a state that already has 3 orders so SWITCH_BIOME has something to map over
     const baseOrders = [
-      { id: "o1", npc: "mira", key: "hay", need: 5, reward: 30, line: "t" },
-      { id: "o2", npc: "tomas", key: "log", need: 5, reward: 30, line: "t" },
+      { id: "o1", npc: "mira", key: "grass_hay", need: 5, reward: 30, line: "t" },
+      { id: "o2", npc: "tomas", key: "wood_log", need: 5, reward: 30, line: "t" },
       { id: "o3", npc: "bram", key: "berry", need: 5, reward: 30, line: "t" },
     ];
     for (let i = 0; i < 100; i++) {

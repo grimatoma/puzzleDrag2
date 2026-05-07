@@ -20,7 +20,7 @@ describe("8.3 — 1-season boss window", () => {
     expect(s.boss.year).toBe(1);
     expect(s.boss.turnsRemaining).toBe(10);
     expect(s.boss.progress).toBe(0);
-    expect(s.boss.target.resource).toBe("log");
+    expect(s.boss.target.resource).toBe("wood_log");
     expect(s.boss.target.amount).toBe(30);
     expect(s.boss.modifierState.frozenColumns?.length).toBe(2);
     expect(s.story.flags.frostmaw_active).toBe(true);

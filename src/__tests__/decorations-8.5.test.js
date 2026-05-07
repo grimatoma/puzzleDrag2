@@ -32,11 +32,11 @@ describe("8.5 — Influence currency + Decoration buildings", () => {
   it("BUILD_DECORATION: deducts cost, credits influence, increments count", () => {
     const s0 = createInitialState();
     const s1 = rootReducer(
-      { ...s0, coins: 200, inventory: { ...s0.inventory, hay: 10 } },
+      { ...s0, coins: 200, inventory: { ...s0.inventory, grass_hay: 10 } },
       { type: "BUILD_DECORATION", payload: { id: "violet_bed" } }
     );
     expect(s1.coins).toBe(140);
-    expect(s1.inventory.hay).toBe(6);
+    expect(s1.inventory.grass_hay).toBe(6);
     expect(s1.influence).toBe(20);
     expect(s1.built.decorations.violet_bed).toBe(1);
   });
@@ -44,11 +44,11 @@ describe("8.5 — Influence currency + Decoration buildings", () => {
   it("BUILD_DECORATION is repeatable — second build grants same influence again", () => {
     const s0 = createInitialState();
     const s1 = rootReducer(
-      { ...s0, coins: 200, inventory: { ...s0.inventory, hay: 10 } },
+      { ...s0, coins: 200, inventory: { ...s0.inventory, grass_hay: 10 } },
       { type: "BUILD_DECORATION", payload: { id: "violet_bed" } }
     );
     const s2 = rootReducer(
-      { ...s1, coins: 100, inventory: { ...s1.inventory, hay: 8 } },
+      { ...s1, coins: 100, inventory: { ...s1.inventory, grass_hay: 8 } },
       { type: "BUILD_DECORATION", payload: { id: "violet_bed" } }
     );
     expect(s2.influence).toBe(40);
@@ -70,11 +70,11 @@ describe("8.5 — Influence currency + Decoration buildings", () => {
   it("save/load round-trip preserves influence and decoration counts", () => {
     const s0 = createInitialState();
     const s1 = rootReducer(
-      { ...s0, coins: 200, inventory: { ...s0.inventory, hay: 10 } },
+      { ...s0, coins: 200, inventory: { ...s0.inventory, grass_hay: 10 } },
       { type: "BUILD_DECORATION", payload: { id: "violet_bed" } }
     );
     const s2 = rootReducer(
-      { ...s1, coins: 100, inventory: { ...s1.inventory, hay: 8 } },
+      { ...s1, coins: 100, inventory: { ...s1.inventory, grass_hay: 8 } },
       { type: "BUILD_DECORATION", payload: { id: "violet_bed" } }
     );
     const round = JSON.parse(JSON.stringify(s2));

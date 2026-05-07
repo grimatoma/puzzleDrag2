@@ -71,7 +71,7 @@ describe("11.2 Space adds tile to chain", () => {
   it("Space starts chain at (0,0)", () => {
     let s = createInitialState();
     s.settings.keyboardCursor = { row: 0, col: 0, active: true };
-    s.grid[0][0] = { key: "hay" };
+    s.grid[0][0] = { key: "grass_hay" };
     s = handleKeyboard(s, { key: " " });
     expect(s.chain.length).toBe(1);
     expect(s.chain[0].row).toBe(0);
@@ -79,8 +79,8 @@ describe("11.2 Space adds tile to chain", () => {
   it("Space adds adjacent tile", () => {
     let s = createInitialState();
     s.settings.keyboardCursor = { row: 0, col: 0, active: true };
-    s.grid[0][0] = { key: "hay" };
-    s.grid[0][1] = { key: "hay" };
+    s.grid[0][0] = { key: "grass_hay" };
+    s.grid[0][1] = { key: "grass_hay" };
     s = handleKeyboard(s, { key: " " });
     s.settings.keyboardCursor = { ...s.settings.keyboardCursor, col: 1 };
     s = handleKeyboard(s, { key: " " });
@@ -89,8 +89,8 @@ describe("11.2 Space adds tile to chain", () => {
   it("non-adjacent Space rejected", () => {
     let s = createInitialState();
     s.settings.keyboardCursor = { row: 0, col: 0, active: true };
-    s.grid[0][0] = { key: "hay" };
-    s.grid[3][3] = { key: "hay" };
+    s.grid[0][0] = { key: "grass_hay" };
+    s.grid[3][3] = { key: "grass_hay" };
     s = handleKeyboard(s, { key: " " });
     // Move to far tile
     s.settings.keyboardCursor = { row: 3, col: 3, active: true };
@@ -104,14 +104,14 @@ describe("11.2 Enter commits chain", () => {
   it("Enter commits → inventory increased and chain cleared", () => {
     let s = createInitialState();
     s.chain = [
-      { row: 0, col: 0, key: "hay" },
-      { row: 0, col: 1, key: "hay" },
-      { row: 0, col: 2, key: "hay" },
+      { row: 0, col: 0, key: "grass_hay" },
+      { row: 0, col: 1, key: "grass_hay" },
+      { row: 0, col: 2, key: "grass_hay" },
     ];
     s.settings.keyboardCursor = { row: 0, col: 2, active: true };
-    const beforeInv = s.inventory.hay ?? 0;
+    const beforeInv = s.inventory.grass_hay ?? 0;
     s = handleKeyboard(s, { key: "Enter" });
-    expect((s.inventory.hay ?? 0)).toBeGreaterThan(beforeInv);
+    expect((s.inventory.grass_hay ?? 0)).toBeGreaterThan(beforeInv);
     expect(s.chain.length).toBe(0);
   });
 });
@@ -119,7 +119,7 @@ describe("11.2 Enter commits chain", () => {
 describe("11.2 Escape clears chain", () => {
   it("Escape clears chain", () => {
     let s = createInitialState();
-    s.chain = [{ row: 0, col: 0, key: "hay" }];
+    s.chain = [{ row: 0, col: 0, key: "grass_hay" }];
     s = handleKeyboard(s, { key: "Escape" });
     expect(s.chain.length).toBe(0);
   });
@@ -129,9 +129,9 @@ describe("11.2 keyboard chain fires story triggers", () => {
   it("keyboard chain credited inventory correctly", () => {
     let s = createInitialState();
     s.settings.keyboardCursor = { row: 0, col: 2, active: true };
-    s.chain = Array.from({ length: 3 }, (_, i) => ({ row: 0, col: i, key: "hay" }));
-    const before = s.inventory.hay ?? 0;
+    s.chain = Array.from({ length: 3 }, (_, i) => ({ row: 0, col: i, key: "grass_hay" }));
+    const before = s.inventory.grass_hay ?? 0;
     s = handleKeyboard(s, { key: "Enter" });
-    expect(s.inventory.hay ?? 0).toBeGreaterThan(before);
+    expect(s.inventory.grass_hay ?? 0).toBeGreaterThan(before);
   });
 });

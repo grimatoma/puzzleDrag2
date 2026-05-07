@@ -87,6 +87,22 @@ export function getActivePool(state, biomeKey = "farm") {
 /**
  * Returns a human-readable status string for a tile type row in the panel.
  */
+// Catalog category prefixes — stripped from chainLengthOf/researchOf in
+// status strings so users see "chain 20 hay to discover" instead of
+// "chain 20 grass_hay to discover".
+const CATEGORY_PREFIXES = [
+  "grass_", "grain_", "wood_", "berry_", "bird_", "veg_",
+  "fruit_", "flower_", "tree_", "herd_", "cattle_", "mount_",
+];
+
+function displayKey(k) {
+  if (typeof k !== "string") return k;
+  for (const p of CATEGORY_PREFIXES) {
+    if (k.startsWith(p)) return k.slice(p.length);
+  }
+  return k;
+}
+
 function statusFor(state, t) {
   const disc = state.tileCollection?.discovered?.[t.id];
   const d = t.discovery ?? {};
@@ -95,19 +111,19 @@ function statusFor(state, t) {
 
   if (disc) {
     if (d.method === "chain") {
-      return `Discovered — chain ${d.chainLength} ${d.chainLengthOf} to find`;
+      return `Discovered — chain ${d.chainLength} ${displayKey(d.chainLengthOf)} to find`;
     }
-    if (d.method === "research") return `Discovered — researched ${d.researchOf}`;
+    if (d.method === "research") return `Discovered — researched ${displayKey(d.researchOf)}`;
     if (d.method === "buy") return "Discovered — purchased";
   }
 
   // Not yet discovered
   if (d.method === "research") {
     const p = state.tileCollection?.researchProgress?.[t.id] ?? 0;
-    return `Researching ${d.researchOf}: ${p} / ${d.researchAmount}`;
+    return `Researching ${displayKey(d.researchOf)}: ${p} / ${d.researchAmount}`;
   }
   if (d.method === "chain") {
-    return `Locked — chain ${d.chainLength} ${d.chainLengthOf} to discover`;
+    return `Locked — chain ${d.chainLength} ${displayKey(d.chainLengthOf)} to discover`;
   }
   if (d.method === "buy") {
     return `Buy ${d.coinCost}◉`;
