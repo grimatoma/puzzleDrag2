@@ -217,6 +217,7 @@ function AboutTab({ dispatch }) {
       <p className="text-[12px] italic" style={{ color: '#7a5a38' }}>
         Made with care for cozy chains and slow seasons.
       </p>
+      {import.meta.env.DEV && (
       <div className="w-full pt-3 border-t-2 mt-1" style={{ borderColor: '#b28b62' }}>
         <div className="text-[10px] font-bold uppercase tracking-wide mb-2" style={{ color: '#7a5a38' }}>Dev triggers</div>
         <div className="flex gap-2 justify-center flex-wrap">
@@ -242,6 +243,7 @@ function AboutTab({ dispatch }) {
           >🔄 Reset Game</button>
         </div>
       </div>
+      )}
     </div>
   );
 }

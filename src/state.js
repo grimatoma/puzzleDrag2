@@ -382,28 +382,28 @@ function coreReducer(state, action) {
         bubble: { id: Date.now(), npc: "tomas", text: "Bonus: +1 Reshuffle Horn · +25◉", ms: 2000 },
       };
     }
-    case "DEV/ADD_GOLD":
-      return { ...state, coins: state.coins + (action.amount ?? 1000) };
-
-    case "DEV/FILL_STORAGE": {
-      const inventory = { ...state.inventory };
-      for (const biome of Object.values(BIOMES)) {
-        for (const res of biome.resources) {
-          inventory[res.key] = (inventory[res.key] || 0) + 100;
+    default: {
+      if (import.meta.env.DEV) {
+        if (action.type === "DEV/ADD_GOLD") {
+          return { ...state, coins: state.coins + (action.amount ?? 1000) };
+        }
+        if (action.type === "DEV/FILL_STORAGE") {
+          const inventory = { ...state.inventory };
+          for (const biome of Object.values(BIOMES)) {
+            for (const res of biome.resources) {
+              inventory[res.key] = (inventory[res.key] || 0) + 100;
+            }
+          }
+          return { ...state, inventory };
+        }
+        if (action.type === "DEV/RESET_GAME") {
+          // Wipe all persisted state and reset to initial state, preserving settings.
+          clearSave();
+          return { ...initialState(), settings: state.settings };
         }
       }
-      return { ...state, inventory };
-    }
-
-    case "DEV/RESET_GAME": {
-      // Wipe all persisted state (trophies, bonds, boss, weather, etc.) and reset
-      // to initial state, preserving settings (volume, etc.).
-      clearSave();
-      return { ...initialState(), settings: state.settings };
-    }
-
-    default:
       return state;
+    }
   }
 }
 
