@@ -153,7 +153,7 @@ function BossModal({ boss, weather, dispatch }) {
           className="text-[11px] text-center text-white/50 mb-4"
           style={{ fontFamily: "Arial, sans-serif" }}
         >
-          Victory reward: +200 coins
+          Victory reward: Coins (year-scaled)
         </div>
 
         {/* Weather badge if active */}
