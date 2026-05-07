@@ -465,9 +465,11 @@ export class GameScene extends Phaser.Scene {
   }
 
   _performShuffleSwap() {
-    this.grid.flat().forEach((t) => {
-      if (!t) return;
-      t.setResource(this.randomResource());
+    const tiles = this.grid.flat().filter(Boolean);
+    const resources = tiles.map((t) => t.res);
+    Phaser.Utils.Array.Shuffle(resources);
+    tiles.forEach((t, i) => {
+      t.setResource(resources[i]);
       this.tweens.add({ targets: t.sprite, angle: 360, duration: this._dur(300), onComplete: () => (t.sprite.angle = 0) });
     });
   }
