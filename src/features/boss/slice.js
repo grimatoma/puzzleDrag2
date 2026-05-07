@@ -29,6 +29,8 @@ const BOSS_META = {
     targetCount: 3,
     turns: BOSS_WINDOW_TURNS,
     minChain: null,
+    // Spec §9: heat tiles appear — spawn 1-2 fire tiles per season
+    spawnFireTiles: 2,
   },
   quagmire: {
     name: "The Quagmire",
@@ -39,6 +41,8 @@ const BOSS_META = {
     targetCount: 50,
     turns: BOSS_WINDOW_TURNS,
     minChain: null,
+    // Spec §9: extra log/hay respawn tiles — bias spawn pool +30% log+hay
+    spawnBias: { log: 1.3, hay: 1.3 },
   },
   old_stoneface: {
     name: "Old Stoneface",
@@ -49,6 +53,8 @@ const BOSS_META = {
     targetCount: 20,
     turns: BOSS_WINDOW_TURNS,
     minChain: null,
+    // Spec §9: rubble tiles block until cleared — spawn 1-2 cave_in tiles per season
+    spawnRubbleTiles: 2,
   },
   mossback: {
     name: "Mossback",
@@ -134,6 +140,10 @@ function triggerBoss(state, bossKey) {
       progress: 0,
       turnsLeft: meta.turns,
       minChain: meta.minChain || null,
+      // Board modifier flags (Spec §9: boss-specific board effects)
+      spawnBias: meta.spawnBias ?? null,
+      spawnFireTiles: meta.spawnFireTiles ?? null,
+      spawnRubbleTiles: meta.spawnRubbleTiles ?? null,
     },
     bossPending: false,
     bossMinimized: false,
