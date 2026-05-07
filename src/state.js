@@ -31,6 +31,7 @@ import * as decorations from "./features/decorations/slice.js";
 import * as portal from "./features/portal/slice.js";
 import * as market from "./features/market/slice.js";
 import * as castle from "./features/castle/slice.js";
+import { FIRE_HAZARD_ENABLED } from "./featureFlags.js";
 
 const slices = [crafting, quests, achievements, tutorial, settings, boss, cartography, apprentices, mood, storySlice, decorations, portal, market, castle];
 
@@ -325,6 +326,11 @@ export function initialState(overrides) {
     })();
     const savedWithoutLegacy = { ...saved };
     delete savedWithoutLegacy.species; // remove legacy key
+    // Drop persisted fire if the feature flag is off — a previous session may
+    // have spawned fire while it was enabled.
+    if (!FIRE_HAZARD_ENABLED && savedWithoutLegacy.hazards?.fire) {
+      savedWithoutLegacy.hazards = { ...savedWithoutLegacy.hazards, fire: null };
+    }
     return { ...fresh, ...savedWithoutLegacy, workers: mergedWorkers, story: mergedStory, tileCollection: mergedTileCollection, view: "town", turnsUsed: 0, modal: null, bubble: null, pendingView: null,
       seasonStats: { harvests: 0, upgrades: 0, ordersFilled: 0, coins: 0 } };
   }
