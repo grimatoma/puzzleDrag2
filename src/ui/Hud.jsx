@@ -45,6 +45,45 @@ function SeasonBar({ season, turnsUsed, turnsLeft, calendarSeason }) {
   );
 }
 
+// ─── Larder progress widget (task 2.5) ───────────────────────────────────────
+// Visible once flags.festival_announced is true. Shows 5 progress bars
+// (hay, wheat, grain, berry, log) toward the 50-each win threshold.
+
+const LARDER_RESOURCES = [
+  { key: "hay",   icon: "🌾", label: "Hay" },
+  { key: "wheat", icon: "𓂃", label: "Wheat" },
+  { key: "grain", icon: "✿", label: "Grain" },
+  { key: "berry", icon: "◉", label: "Berry" },
+  { key: "log",   icon: "🪵", label: "Log" },
+];
+
+function LarderWidget({ inventory }) {
+  return (
+    <div className="flex items-center gap-1.5 flex-wrap">
+      {LARDER_RESOURCES.map(({ key, icon }) => {
+        const amt = Math.min(50, inventory[key] ?? 0);
+        const pct = (amt / 50) * 100;
+        const done = amt >= 50;
+        return (
+          <div key={key} className="flex items-center gap-1 min-w-0">
+            <span className="text-[11px] leading-none">{icon}</span>
+            <div className="w-10 h-2 rounded-full bg-[#3a2715] border border-[#b28b62] overflow-hidden">
+              <div
+                className="h-full rounded-full transition-[width] duration-300"
+                style={{
+                  width: `${pct}%`,
+                  background: done ? "#ffd34c" : "#a8431a",
+                }}
+              />
+            </div>
+            <span className="text-[9px] font-bold text-[#f8e7c6] leading-none">{amt}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 export function Hud({ state, dispatch }) {
   const { coins, level, xp, turnsUsed, built, view, seasonsCycled } = state;
   const onBoard = view === "board";
@@ -54,6 +93,9 @@ export function Hud({ state, dispatch }) {
   const xpPct = Math.min(100, (xp / xpNeed) * 100);
   const turnsLeft = MAX_TURNS - turnsUsed;
   const buildingCount = Object.keys(built || {}).length;
+  const festivalAnnounced = !!state.story?.flags?.festival_announced;
+  const isWon = !!state.story?.flags?.isWon;
+  const sandbox = !!state.story?.sandbox;
   return (
     <div className="flex items-center gap-2 px-3 py-2 bg-[#5b3b20] border-b-2 border-[#2a1d0f] text-[#6a4b31] flex-wrap" data-testid="hud">
       <button
@@ -61,6 +103,12 @@ export function Hud({ state, dispatch }) {
         className="w-8 h-8 rounded-lg bg-[#f6efe0] border-2 border-[#b28b62] grid place-items-center text-[#6a4b31] font-bold text-[18px] flex-shrink-0"
         data-testid="menu-btn"
       >≡</button>
+      {/* Sandbox banner — shown after winning */}
+      {(isWon || sandbox) && (
+        <div className="bg-[#ffd34c] border-2 border-[#b28b62] rounded-full px-3 py-0.5 text-[#3a2a0e] font-bold text-[11px] flex-shrink-0">
+          Sandbox Mode
+        </div>
+      )}
       {!onBoard && (
         <Pill>
           <span className="w-5 h-5 rounded-full bg-[#ffc239] grid place-items-center text-[#7a5638] text-[12px] font-bold leading-none">$</span>
@@ -74,6 +122,12 @@ export function Hud({ state, dispatch }) {
         </Pill>
       )}
       {onBoard && <SeasonBar season={season} turnsUsed={turnsUsed} turnsLeft={turnsLeft} calendarSeason={calendarSeason} />}
+      {/* Larder progress bars — visible when festival announced, on board view */}
+      {onBoard && festivalAnnounced && !isWon && (
+        <div className="flex-shrink-0">
+          <LarderWidget inventory={state.inventory || {}} />
+        </div>
+      )}
       {!onBoard && (
         <div className="ml-auto flex items-center gap-1.5">
           <div className="bg-[#f6efe0] border-2 border-[#b28b62] rounded-full h-[26px] w-[110px] landscape:max-[1024px]:h-[20px] landscape:max-[1024px]:w-[80px] relative overflow-hidden">
