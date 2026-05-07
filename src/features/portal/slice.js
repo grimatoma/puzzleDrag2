@@ -78,6 +78,20 @@ export function reduce(state, action) {
         };
       }
 
+      // Magic Wand — collect every tile of a player-chosen type from the board.
+      // Sets toolPending so GameScene can prompt the player to tap a tile type.
+      // The tool is consumed immediately; inventory credit happens in GameScene
+      // when it resolves the pending wand action.
+      if (id === "magic_wand") {
+        const count = state.tools?.[id] ?? 0;
+        if (count <= 0) return state;
+        return {
+          ...state,
+          tools: { ...state.tools, [id]: count - 1 },
+          toolPending: "magic_wand",
+        };
+      }
+
       return state;
     }
 
