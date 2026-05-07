@@ -857,8 +857,10 @@ export function TownView({ state, dispatch }) {
       {/* Farm Field and Mine — background locations, rendered behind buildings */}
       <div className="absolute inset-0 pointer-events-none">
         {/* Farm Field — upper-left, in the hills */}
-        <div
-          className="absolute cursor-pointer group pointer-events-auto flex flex-col items-center"
+        <button
+          type="button"
+          aria-label="Enter Farm Field"
+          className="absolute cursor-pointer group pointer-events-auto flex flex-col items-center bg-transparent border-0 p-0 focus-visible:outline-2 focus-visible:outline-[#ffd248] focus-visible:rounded"
           style={{ left: "1.5%", bottom: "50%", width: "22%" }}
           onClick={() => setEntryBiome("farm")}
         >
@@ -872,11 +874,14 @@ export function TownView({ state, dispatch }) {
               <span className="font-bold text-white" style={{ fontSize: "clamp(9px,1vw,13px)" }}>▶ Enter</span>
             </div>
           </div>
-        </div>
+        </button>
 
         {/* Mine Entrance — upper-right, in the hills */}
-        <div
-          className="absolute cursor-pointer group pointer-events-auto flex flex-col items-center"
+        <button
+          type="button"
+          aria-label={state.level < 2 ? "Mine locked until level 2" : "Enter Mine"}
+          disabled={state.level < 2}
+          className="absolute cursor-pointer group pointer-events-auto flex flex-col items-center bg-transparent border-0 p-0 focus-visible:outline-2 focus-visible:outline-[#ffd248] focus-visible:rounded disabled:cursor-not-allowed"
           style={{ right: "1.5%", bottom: "50%", width: "22%", opacity: state.level < 2 ? 0.65 : 1 }}
           onClick={() => setEntryBiome("mine")}
         >
@@ -892,7 +897,7 @@ export function TownView({ state, dispatch }) {
               <span className="font-bold text-white" style={{ fontSize: "clamp(9px,1vw,13px)" }}>{state.level < 2 ? "🔒 L2" : "▶ Enter"}</span>
             </div>
           </div>
-        </div>
+        </button>
       </div>
 
       {/* Buildings positioned in the 1100x600 design space, scaled to viewport */}

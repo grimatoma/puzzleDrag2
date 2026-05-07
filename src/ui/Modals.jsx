@@ -21,10 +21,10 @@ export function SeasonModal({ state, dispatch }) {
   const stats = state.seasonStats;
   const nextEffect = SEASON_EFFECTS[nextCalendarSeason];
   return (
-    <div className="absolute inset-0 bg-black/55 grid place-items-center z-50 animate-fadein">
+    <div className="absolute inset-0 bg-black/55 grid place-items-center z-50 animate-fadein" role="dialog" aria-modal="true" aria-labelledby="season-modal-title">
       <div className="bg-[#f4ecd8] border-[4px] border-[#b28b62] rounded-[20px] px-8 py-6 landscape:max-[1024px]:px-4 landscape:max-[1024px]:py-3 max-[640px]:px-4 max-[640px]:py-4 min-w-[360px] max-w-[560px] landscape:max-[1024px]:min-w-0 landscape:max-[1024px]:w-[92vw] max-[640px]:min-w-0 max-[640px]:w-[92vw] landscape:max-[1024px]:max-h-[88vh] max-[640px]:max-h-[85dvh] landscape:max-[1024px]:overflow-y-auto max-[640px]:overflow-y-auto text-center shadow-2xl">
         <div className="text-[48px] landscape:max-[1024px]:text-[28px] max-[640px]:text-[32px] leading-none">🏡</div>
-        <h2 className="font-bold text-[26px] landscape:max-[1024px]:text-[18px] max-[640px]:text-[20px] text-[#744d2e] mt-2 landscape:max-[1024px]:mt-1 max-[640px]:mt-1 mb-1 landscape:max-[1024px]:mb-0.5 max-[640px]:mb-0.5">Harvest Complete</h2>
+        <h2 id="season-modal-title" className="font-bold text-[26px] landscape:max-[1024px]:text-[18px] max-[640px]:text-[20px] text-[#744d2e] mt-2 landscape:max-[1024px]:mt-1 max-[640px]:mt-1 mb-1 landscape:max-[1024px]:mb-0.5 max-[640px]:mb-0.5">Harvest Complete</h2>
         <p className="italic text-[#6a4b31] text-[14px] landscape:max-[1024px]:text-[11px] max-[640px]:text-[12px]">{prevSeason.name} is over. Time to head back to town.</p>
         <div className="my-2 inline-block bg-[#d6612a]/15 border border-[#d6612a]/40 rounded-full px-3 py-1 text-[12px] landscape:max-[1024px]:text-[10px] max-[640px]:text-[11px] font-bold text-[#a8431a]">
           Next: {nextSeason.name} — {nextEffect}
@@ -79,6 +79,9 @@ export function StoryModal({ state, dispatch }) {
     return (
       <div
         ref={backdropRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="story-win-title"
         className="absolute inset-0 bg-black/65 grid place-items-center z-[60]"
         style={{ animation: "fadein 0.8s ease both" }}
       >
@@ -92,7 +95,7 @@ export function StoryModal({ state, dispatch }) {
           }}
         >
           <div className="text-[56px] leading-none mb-2">🏆</div>
-          <h2 className="font-bold text-[28px] text-[#ffd34c] mb-2">{beat.title}</h2>
+          <h2 id="story-win-title" className="font-bold text-[28px] text-[#ffd34c] mb-2">{beat.title}</h2>
           <p className="text-[#f4ecd8] text-[16px] leading-relaxed mb-6 max-w-[420px] mx-auto">{beat.body}</p>
           <button
             onClick={() => dispatch({ type: "STORY/DISMISS_MODAL" })}
@@ -109,6 +112,9 @@ export function StoryModal({ state, dispatch }) {
   return (
     <div
       ref={backdropRef}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="story-modal-title"
       className="absolute inset-0 bg-black/60 grid place-items-center z-[60] animate-fadein"
     >
       <div
@@ -131,7 +137,7 @@ export function StoryModal({ state, dispatch }) {
           )}
           <div>
             {npc && <div className="text-[#d6a060] text-[12px] font-bold uppercase tracking-widest">{npc.name}</div>}
-            <div className="text-[#ffd34c] font-bold text-[20px] leading-tight">{beat.title}</div>
+            <div id="story-modal-title" className="text-[#ffd34c] font-bold text-[20px] leading-tight">{beat.title}</div>
           </div>
         </div>
 
@@ -168,7 +174,7 @@ export function NpcBubble({ bubble, dispatch }) {
   const npc = NPCS[shown.npc];
   if (!npc) return null;
   return (
-    <div className="absolute bottom-28 landscape:max-[1024px]:bottom-20 left-1/2 -translate-x-1/2 bg-[#f4ecd8] border-[3px] border-[#5a3a20] rounded-2xl px-4 py-3 landscape:max-[1024px]:px-3 landscape:max-[1024px]:py-2 max-w-[460px] landscape:max-[1024px]:max-w-[320px] shadow-2xl z-40 animate-bubblein">
+    <div role="status" aria-live="polite" className="absolute bottom-28 landscape:max-[1024px]:bottom-20 left-1/2 -translate-x-1/2 bg-[#f4ecd8] border-[3px] border-[#5a3a20] rounded-2xl px-4 py-3 landscape:max-[1024px]:px-3 landscape:max-[1024px]:py-2 max-w-[460px] landscape:max-[1024px]:max-w-[320px] shadow-2xl z-40 animate-bubblein">
       <div className="flex gap-2.5 items-start">
         <div className="w-10 h-10 rounded-full grid place-items-center text-white font-bold text-[16px] flex-shrink-0" style={{ backgroundColor: npc.color, border: "2px solid #fff" }}>{npc.name[0]}</div>
         <div className="flex-1 min-w-0">
