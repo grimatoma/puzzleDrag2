@@ -1,6 +1,6 @@
-import { QUEST_TEMPLATES, ALMANAC_TIERS } from "../../constants.js";
+import { QUEST_TEMPLATES } from "../../constants.js";
 import { claimQuest, tickQuest } from "./data.js";
-import { awardXp } from "../almanac/data.js";
+import { awardXp, claimAlmanacTier } from "../almanac/data.js";
 
 let _questIdSeq = 1;
 
@@ -90,19 +90,21 @@ export function reduce(state, action) {
     }
     case "QUESTS/CLAIM_ALMANAC": {
       const { tier } = action;
-      const tierDef = ALMANAC_TIERS[tier - 1];
-      if (!tierDef) return state;
-      const cost = tier * 100;
-      if ((state.almanacXp || 0) < cost) return state;
-      if ((state.almanacClaimed || []).includes(tier)) return state;
-      const almanacClaimed = [...(state.almanacClaimed || []), tier];
-      let coins = state.coins || 0;
-      let tools = { ...state.tools };
-      if (tierDef.reward.coins) coins += tierDef.reward.coins;
-      if (tierDef.reward.tool) {
-        tools[tierDef.reward.tool] = (tools[tierDef.reward.tool] || 0) + (tierDef.reward.amt || 1);
-      }
-      return { ...state, almanacClaimed, coins, tools };
+      // Ensure almanac state is initialised so claimAlmanacTier can read it
+      const stateWithAlmanac = state.almanac
+        ? state
+        : { ...state, almanac: { xp: state.almanacXp ?? 0, level: 1, claimed: {} } };
+      // Migrate legacy almanacXp into canonical almanac.xp if needed
+      const legacyXp = stateWithAlmanac.almanacXp ?? 0;
+      const migratedState = legacyXp > 0 && !stateWithAlmanac.almanac?.xp
+        ? { ...stateWithAlmanac, almanac: { ...stateWithAlmanac.almanac, xp: legacyXp } }
+        : stateWithAlmanac;
+      const { ok, newState } = claimAlmanacTier(migratedState, tier);
+      if (!ok) return state;
+      // Keep legacy almanacClaimed in sync for backward compat with UI
+      const almanacClaimed = [...(state.almanacClaimed || [])];
+      if (!almanacClaimed.includes(tier)) almanacClaimed.push(tier);
+      return { ...newState, almanacClaimed };
     }
     case "CHAIN_COLLECTED": {
       const { gained = 0, chainLength = 0, key: chainKey = "" } = action.payload || {};
