@@ -1,5 +1,5 @@
 import Phaser from "phaser";
-import { TILE, COLS, ROWS, UPGRADE_THRESHOLDS, SEASONS, BIOMES } from "./constants.js";
+import { TILE, COLS, ROWS, UPGRADE_THRESHOLDS, SEASONS, BIOMES, SEASON_EFFECTS, CAPPED_RESOURCES } from "./constants.js";
 import { upgradeCountForChain, resourceGainForChain, rollResourceWithWeather } from "./utils.js";
 import { computeWorkerEffects } from "./features/apprentices/aggregate.js";
 import { applyFrostCollapseDuration } from "./features/weather/effects.js";
@@ -115,6 +115,12 @@ export class GameScene extends Phaser.Scene {
       window.removeEventListener("blur", onDocPointerUp);
     });
 
+    // Apply state.grid → Phaser when Redux pushes a change back (hazard engines may mutate)
+    this.registry.events.on("changedata-grid", (_p, value) => {
+      if (this._suppressNextGridApply) return;
+      this._applyGridFromState(value);
+    });
+
     this.scale.on("resize", () => this.handleResize());
     this.registry.events.on("changedata-biomeKey", (_p, value, prev) => {
       if (value !== prev) this.handleBiomeChange();
@@ -125,6 +131,10 @@ export class GameScene extends Phaser.Scene {
     });
     this.registry.events.on("changedata-toolPending", (_p, value) => {
       if (!value) return;
+      if (this.dragging) {
+        this._deferredTool = value;
+        return;
+      }
       if (value === "clear")      this._applyToolClear();
       if (value === "basic")      this._applyToolBasic();
       if (value === "rare")       this._applyToolRare();
@@ -133,6 +143,22 @@ export class GameScene extends Phaser.Scene {
         // Arm the wand — next tile tap sweeps all tiles of that type
         this._magicWandPending = true;
         // Do NOT clear toolPending yet; it clears after the tap in _applyMagicWand
+        return;
+      }
+      if (value === "rake") {
+        this._rakePending = true;
+        return;
+      }
+      if (value === "axe") {
+        this._axePending = true;
+        return;
+      }
+      if (value === "bomb") {
+        this._bombPending = true;
+        return;
+      }
+      if (value === "rune_wildcard") {
+        this._runeWildcardPending = true;
         return;
       }
       // Clear the pending flag once handled
@@ -218,6 +244,20 @@ export class GameScene extends Phaser.Scene {
   _shake(duration, intensity) {
     // a11y.screenShake passes (intensity, 0.005) to camera.shake; we preserve the full params.
     screenShake(this._motionState(), duration, { shake: () => this.cameras.main.shake(duration, intensity, false) });
+  }
+
+  /** Returns the effective minimum chain length for the current season/boss. */
+  _effectiveMinChain() {
+    const seasonIdx = (this.registry.get("seasonsCycled") || 0) % 4;
+    const winterMin = seasonIdx === 3 ? SEASON_EFFECTS.Winter.minChain : 0;
+    const bossMin = this.registry.get("boss")?.minChain ?? 0;
+    return Math.max(3, winterMin, bossMin);
+  }
+
+  /** Returns 2 in Autumn (season index 2), 1 otherwise. */
+  _autumnMult() {
+    const seasonIdx = (this.registry.get("seasonsCycled") || 0) % 4;
+    return seasonIdx === 2 ? SEASON_EFFECTS.Autumn.upgradeMult : 1;
   }
 
   // ─── Layout ───────────────────────────────────────────────────────────────
@@ -321,12 +361,28 @@ export class GameScene extends Phaser.Scene {
 
   handleBiomeChange() {
     this.refreshSeasonTint();
-    // Reshuffle every tile to the new biome's pool
+    const biomeRestored = this.registry.get("biomeRestored");
+    if (biomeRestored) {
+      // savedField was restored into state.grid — sync those keys onto the live tiles
+      const savedGrid = this.registry.get("grid");
+      this.grid.flat().forEach((t) => {
+        if (!t) return;
+        const cell = savedGrid?.[t.row]?.[t.col];
+        if (cell?.key) {
+          const newRes = this.resourceByKey(cell.key);
+          if (newRes) t.setResource(newRes);
+        }
+      });
+      this._syncGridToState();
+      return;
+    }
+    // No saved field — randomize tiles for the new biome
     this.grid.flat().forEach((t) => {
       if (!t) return;
       t.setResource(this.randomResource());
       this.tweens.add({ targets: t.sprite, angle: 360, duration: this._dur(280), onComplete: () => (t.sprite.angle = 0) });
     });
+    this._syncGridToState();
   }
 
   // ─── Resources ────────────────────────────────────────────────────────────
@@ -376,6 +432,47 @@ export class GameScene extends Phaser.Scene {
     return this.resourceByKey(key) ?? this.biome().resources[0];
   }
 
+  // ─── Grid sync helpers ────────────────────────────────────────────────────
+
+  _syncGridToState() {
+    const serialized = [];
+    for (let r = 0; r < ROWS; r++) {
+      const row = [];
+      for (let c = 0; c < COLS; c++) {
+        const tile = this.grid[r]?.[c];
+        if (tile) {
+          const cell = { key: tile.res.key };
+          if (tile.frozen) cell.frozen = true;
+          if (tile.rubble) cell.rubble = true;
+          row.push(cell);
+        } else {
+          row.push(null);
+        }
+      }
+      serialized.push(row);
+    }
+    this._suppressNextGridApply = true;
+    this.events.emit("grid-sync", { grid: serialized });
+    this.time.delayedCall(0, () => { this._suppressNextGridApply = false; });
+  }
+
+  _applyGridFromState(stateGrid) {
+    if (!stateGrid) return;
+    for (let r = 0; r < ROWS; r++) {
+      for (let c = 0; c < COLS; c++) {
+        const tile = this.grid[r]?.[c];
+        const cell = stateGrid[r]?.[c];
+        if (!tile || !cell) continue;
+        if (tile.res.key !== cell.key) {
+          const newRes = this.resourceByKey(cell.key);
+          if (newRes) tile.setResource(newRes);
+        }
+        tile.frozen = !!cell.frozen;
+        tile.rubble = !!cell.rubble;
+      }
+    }
+  }
+
   // ─── Board fill / collapse ────────────────────────────────────────────────
 
   fillBoard(initial = false) {
@@ -419,6 +516,7 @@ export class GameScene extends Phaser.Scene {
         const extra = fBase[k] ?? 0;
         for (let i = 0; i < extra; i++) workerPool.push(k);
       }
+      this.events.emit("fertilizer-consumed");
     }
     for (let r = 0; r < ROWS; r++) {
       this.grid[r] = this.grid[r] || [];
@@ -426,7 +524,14 @@ export class GameScene extends Phaser.Scene {
         if (!this.grid[r][c]) {
           const x = this.boardX + c * ts + ts / 2;
           const y = this.boardY + r * ts + ts / 2;
-          const res = !initial && this.pendingUpgrades.length ? this.pendingUpgrades.shift() : this._randomFromPool(workerPool, weatherKey);
+          let res;
+          if (!initial && this.pendingUpgrades.length) {
+            const idx = this.pendingUpgrades.findIndex(u => u.col === c);
+            if (idx !== -1) {
+              res = this.pendingUpgrades.splice(idx, 1)[0].res;
+            }
+          }
+          if (!res) res = this._randomFromPool(workerPool, weatherKey);
           const tile = new TileObj(this, x, initial ? y - 500 - Phaser.Math.Between(0, 100) : y - 140, c, r, res);
           tile.sprite.setScale(this.tileSpriteScale);
           this.grid[r][c] = tile;
@@ -442,7 +547,10 @@ export class GameScene extends Phaser.Scene {
           this.floatText("No moves — reshuffled!", this.boardX + (COLS * ts) / 2, this.boardY - 24 * this.dpr);
           this.shuffleBoard();
         }
+        this._syncGridToState();
       });
+    } else {
+      this._syncGridToState();
     }
   }
 
@@ -465,7 +573,7 @@ export class GameScene extends Phaser.Scene {
     this.time.delayedCall(210, () => this.fillBoard(false));
   }
 
-  shuffleBoard() {
+  shuffleBoard(attempt = 0) {
     const ts = this.tileSize;
     const boardW = COLS * ts;
     const boardH = ROWS * ts;
@@ -492,10 +600,33 @@ export class GameScene extends Phaser.Scene {
         this._performShuffleSwap();
         // Re-check after a brief delay to let the new tiles animate in
         this.time.delayedCall(320, () => {
-          if (!hasValidChain(this.grid)) this.shuffleBoard();
+          if (!hasValidChain(this.grid)) {
+            if (attempt >= 2) {
+              this._forceGuaranteedChain();
+              this._syncGridToState();
+            } else {
+              this.shuffleBoard(attempt + 1);
+            }
+          }
         });
       },
     });
+  }
+
+  _forceGuaranteedChain() {
+    const pool = this.activePool();
+    const key = pool[0] ?? this.biome().pool[0];
+    const res = this.resourceByKey(key) ?? this.biome().resources[0];
+    // Assign the same resource to the first 3 tiles in row-major order
+    let count = 0;
+    for (let r = 0; r < ROWS && count < 3; r++) {
+      for (let c = 0; c < COLS && count < 3; c++) {
+        const t = this.grid[r][c];
+        if (!t) continue;
+        t.setResource(res);
+        count += 1;
+      }
+    }
   }
 
   _performShuffleSwap() {
@@ -506,6 +637,7 @@ export class GameScene extends Phaser.Scene {
       t.setResource(resources[i]);
       this.tweens.add({ targets: t.sprite, angle: 360, duration: this._dur(300), onComplete: () => (t.sprite.angle = 0) });
     });
+    this._syncGridToState();
   }
 
   // ─── Board tool handlers (1.3 Scythe / 1.4 Seedpack / 1.5 Lockbox) ──────
@@ -607,6 +739,12 @@ export class GameScene extends Phaser.Scene {
         },
       });
     });
+    this.time.delayedCall(this._dur(220), () => {
+      if (!hasValidChain(this.grid)) {
+        this.floatText("No moves — reshuffled!", this.boardX + (COLS * this.tileSize) / 2, this.boardY - 24 * this.dpr);
+        this.shuffleBoard();
+      }
+    });
   }
 
   /** Magic Wand: sweep all tiles of the chosen resource type and collect them (no turn cost). */
@@ -648,6 +786,138 @@ export class GameScene extends Phaser.Scene {
     this.time.delayedCall(this._dur(240), () => this.collapseBoard());
   }
 
+  /** Rake: sweep the 4-connected component (same key) containing the tapped tile. */
+  _applyToolRake(tile) {
+    const targetKey = tile.res.key;
+    // BFS to find all 4-connected tiles with the same key
+    const swept = [];
+    const visited = Array.from({ length: ROWS }, () => new Array(COLS).fill(false));
+    const queue = [{ r: tile.row, c: tile.col }];
+    visited[tile.row][tile.col] = true;
+    const DIRS4 = [[0, 1], [0, -1], [1, 0], [-1, 0]];
+    while (queue.length) {
+      const { r, c } = queue.shift();
+      const t = this.grid[r]?.[c];
+      if (!t || t.res.key !== targetKey) continue;
+      swept.push(t);
+      this.grid[r][c] = null;
+      for (const [dr, dc] of DIRS4) {
+        const nr = r + dr, nc = c + dc;
+        if (nr >= 0 && nr < ROWS && nc >= 0 && nc < COLS && !visited[nr][nc]) {
+          visited[nr][nc] = true;
+          queue.push({ r: nr, c: nc });
+        }
+      }
+    }
+    if (!swept.length) return;
+    swept.forEach((t, i) => {
+      t.sprite.setTint(0x88ff88);
+      this.tweens.add({
+        targets: t.sprite, scale: 0, alpha: 0,
+        angle: Phaser.Math.Between(-20, 20),
+        duration: this._dur(190), delay: i * 12, ease: "Quad.In",
+        onComplete: () => t.destroy(),
+      });
+    });
+    const res = this.biome().resources.find((r) => r.key === targetKey);
+    this.events.emit("chain-collected", {
+      key: targetKey, gained: swept.length, upgrades: 0,
+      chainLength: swept.length, value: res?.value ?? 1, noTurn: true,
+    });
+    this.time.delayedCall(this._dur(220), () => this.collapseBoard());
+  }
+
+  /** Axe: clear an entire row containing the tapped tile. */
+  _applyToolAxe(tile) {
+    const targetRow = tile.row;
+    const swept = [];
+    for (let c = 0; c < COLS; c++) {
+      const t = this.grid[targetRow]?.[c];
+      if (t) { swept.push(t); this.grid[targetRow][c] = null; }
+    }
+    if (!swept.length) return;
+    const gainMap = {};
+    swept.forEach((t, i) => {
+      gainMap[t.res.key] = (gainMap[t.res.key] ?? 0) + 1;
+      t.sprite.setTint(0xff9900);
+      this.tweens.add({
+        targets: t.sprite, scale: 0, alpha: 0,
+        angle: Phaser.Math.Between(-25, 25),
+        duration: this._dur(190), delay: i * 10, ease: "Quad.In",
+        onComplete: () => t.destroy(),
+      });
+    });
+    for (const [key, gained] of Object.entries(gainMap)) {
+      const res = this.biome().resources.find((r) => r.key === key);
+      this.events.emit("chain-collected", {
+        key, gained, upgrades: 0, chainLength: gained, value: res?.value ?? 1, noTurn: true,
+      });
+    }
+    this.time.delayedCall(this._dur(220), () => this.collapseBoard());
+  }
+
+  /** Bomb: clear a 3×3 area around the tapped tile. */
+  _applyToolBomb(tile) {
+    const swept = [];
+    for (let dr = -1; dr <= 1; dr++) {
+      for (let dc = -1; dc <= 1; dc++) {
+        const r = tile.row + dr, c = tile.col + dc;
+        if (r < 0 || r >= ROWS || c < 0 || c >= COLS) continue;
+        const t = this.grid[r]?.[c];
+        if (t) { swept.push(t); this.grid[r][c] = null; }
+      }
+    }
+    if (!swept.length) return;
+    const gainMap = {};
+    swept.forEach((t, i) => {
+      gainMap[t.res.key] = (gainMap[t.res.key] ?? 0) + 1;
+      t.sprite.setTint(0xff4444);
+      this.tweens.add({
+        targets: t.sprite, scale: 0, alpha: 0,
+        angle: Phaser.Math.Between(-40, 40),
+        duration: this._dur(180), delay: i * 8, ease: "Quad.In",
+        onComplete: () => t.destroy(),
+      });
+    });
+    for (const [key, gained] of Object.entries(gainMap)) {
+      const res = this.biome().resources.find((r) => r.key === key);
+      this.events.emit("chain-collected", {
+        key, gained, upgrades: 0, chainLength: gained, value: res?.value ?? 1, noTurn: true,
+      });
+    }
+    this.time.delayedCall(this._dur(220), () => this.collapseBoard());
+  }
+
+  /** Rune Wildcard: sweep entire board of the tapped tile's key (golden tint). */
+  _applyRuneWildcard(tile) {
+    const targetRes = tile.res;
+    const swept = [];
+    for (let r = 0; r < ROWS; r++) {
+      for (let c = 0; c < COLS; c++) {
+        const t = this.grid[r][c];
+        if (t && t.res.key === targetRes.key) {
+          swept.push(t);
+          this.grid[r][c] = null;
+        }
+      }
+    }
+    if (!swept.length) return;
+    swept.forEach((t, i) => {
+      t.sprite.setTint(0xffd248);
+      this.tweens.add({
+        targets: t.sprite, scale: 0, alpha: 0,
+        angle: Phaser.Math.Between(-30, 30),
+        duration: this._dur(200), delay: i * 15, ease: "Quad.In",
+        onComplete: () => t.destroy(),
+      });
+    });
+    this.events.emit("chain-collected", {
+      key: targetRes.key, gained: swept.length, upgrades: 0,
+      chainLength: swept.length, value: targetRes.value, noTurn: true,
+    });
+    this.time.delayedCall(this._dur(240), () => this.collapseBoard());
+  }
+
   // ─── Drag chain ───────────────────────────────────────────────────────────
 
   startPath(tile) {
@@ -656,6 +926,30 @@ export class GameScene extends Phaser.Scene {
     if (this._magicWandPending) {
       this._magicWandPending = false;
       this._applyMagicWand(tile.res);
+      this.time.delayedCall(50, () => this.registry.set("toolPending", null));
+      return;
+    }
+    if (this._rakePending) {
+      this._rakePending = false;
+      this._applyToolRake(tile);
+      this.time.delayedCall(50, () => this.registry.set("toolPending", null));
+      return;
+    }
+    if (this._axePending) {
+      this._axePending = false;
+      this._applyToolAxe(tile);
+      this.time.delayedCall(50, () => this.registry.set("toolPending", null));
+      return;
+    }
+    if (this._bombPending) {
+      this._bombPending = false;
+      this._applyToolBomb(tile);
+      this.time.delayedCall(50, () => this.registry.set("toolPending", null));
+      return;
+    }
+    if (this._runeWildcardPending) {
+      this._runeWildcardPending = false;
+      this._applyRuneWildcard(tile);
       this.time.delayedCall(50, () => this.registry.set("toolPending", null));
       return;
     }
@@ -669,6 +963,7 @@ export class GameScene extends Phaser.Scene {
 
   tryAddToPath(tile) {
     if (!this.dragging || !this.path.length) return;
+    if (tile.frozen || tile.rubble) return;
     const last = this.path[this.path.length - 1];
     const prev = this.path[this.path.length - 2];
     if (prev === tile) {
@@ -700,6 +995,14 @@ export class GameScene extends Phaser.Scene {
     this.pathStars.forEach((s) => s.destroy());
     this.pathStars = [];
 
+    // V.1 — Choose path colors based on whether chain meets the effective minimum length
+    const effectiveMinChain = this._effectiveMinChain();
+    const pathValid = this.path.length === 0 || this.path.length >= effectiveMinChain;
+    const lineColor = pathValid ? 0xff6d00 : 0x9a4630;
+    const haloColor = pathValid ? 0xffd248 : 0xc06b3e;
+    const nodeOuterColor = pathValid ? 0xffd248 : 0xc06b3e;
+    const nodeInnerColor = pathValid ? 0xff6d00 : 0x9a4630;
+
     for (let i = 1; i < this.path.length; i++) {
       const a = this.path[i - 1];
       const b = this.path[i];
@@ -720,16 +1023,16 @@ export class GameScene extends Phaser.Scene {
             const mx = ax + (bx - ax) * obj.t;
             const my = ay + (by - ay) * obj.t;
             g.clear();
-            this._drawSegment(g, ax, ay, mx, my);
+            this._drawSegment(g, ax, ay, mx, my, lineColor, haloColor);
           },
           onComplete: () => {
-            g.clear(); this._drawSegment(g, ax, ay, bx, by);
+            g.clear(); this._drawSegment(g, ax, ay, bx, by, lineColor, haloColor);
             this.tweens.add({ targets: g, alpha: 0.78, yoyo: true, repeat: -1, duration: 680, ease: "Sine.InOut" });
           },
         });
       } else {
         g.clear();
-        this._drawSegment(g, a.x, a.y, b.x, b.y);
+        this._drawSegment(g, a.x, a.y, b.x, b.y, lineColor, haloColor);
         if (!this.tweens.isTweening(g)) {
           this.tweens.add({ targets: g, alpha: 0.78, yoyo: true, repeat: -1, duration: 680, ease: "Sine.InOut" });
         }
@@ -746,7 +1049,7 @@ export class GameScene extends Phaser.Scene {
         targets: ro, r: 28 * this.tileScale, a: 0, duration: 340, ease: "Quad.Out",
         onUpdate: () => {
           ring.clear();
-          ring.lineStyle(2.5 * this.tileScale, 0xffd248, ro.a);
+          ring.lineStyle(2.5 * this.tileScale, haloColor, ro.a);
           ring.strokeCircle(nt.x, nt.y, ro.r);
         },
         onComplete: () => ring.destroy(),
@@ -758,9 +1061,9 @@ export class GameScene extends Phaser.Scene {
     this.pathNodeG.clear();
     const nr = 7 * this.tileScale;
     this.path.forEach((t) => {
-      this.pathNodeG.fillStyle(0xffd248, 0.55);
+      this.pathNodeG.fillStyle(nodeOuterColor, 0.55);
       this.pathNodeG.fillCircle(t.x, t.y, nr * 1.6);
-      this.pathNodeG.fillStyle(0xff6d00, 1);
+      this.pathNodeG.fillStyle(nodeInnerColor, 1);
       this.pathNodeG.fillCircle(t.x, t.y, nr);
       this.pathNodeG.fillStyle(0xfff4c2, 0.9);
       this.pathNodeG.fillCircle(t.x, t.y, nr * 0.4);
@@ -823,10 +1126,10 @@ export class GameScene extends Phaser.Scene {
     this.path.forEach((t) => t.sprite.setDepth(7));
   }
 
-  _drawSegment(g, ax, ay, bx, by) {
-    g.lineStyle(22 * this.tileScale, 0xffd248, 0.22);
+  _drawSegment(g, ax, ay, bx, by, lineColor = 0xff6d00, haloColor = 0xffd248) {
+    g.lineStyle(22 * this.tileScale, haloColor, 0.22);
     g.beginPath(); g.moveTo(ax, ay); g.lineTo(bx, by); g.strokePath();
-    g.lineStyle(9 * this.tileScale, 0xff6d00, 1);
+    g.lineStyle(9 * this.tileScale, lineColor, 1);
     g.beginPath(); g.moveTo(ax, ay); g.lineTo(bx, by); g.strokePath();
     g.lineStyle(3 * this.tileScale, 0xfff4c2, 0.85);
     g.beginPath(); g.moveTo(ax, ay); g.lineTo(bx, by); g.strokePath();
@@ -837,9 +1140,15 @@ export class GameScene extends Phaser.Scene {
     this.dragging = false;
     this.hideChainBadge();
     this.clearDimming();
-    const minChain = 3;
+    const minChain = this._effectiveMinChain();
     if (this.path.length >= minChain) this.collectPath();
     else this.clearPath(true);
+    if (this._deferredTool) {
+      const tool = this._deferredTool;
+      this._deferredTool = null;
+      this.registry.set("toolPending", null);
+      this.time.delayedCall(60, () => this.registry.set("toolPending", tool));
+    }
   }
 
   dimUnselectableTiles(key) {
@@ -879,7 +1188,10 @@ export class GameScene extends Phaser.Scene {
     const res = this.path[0].res;
     const next = this.nextResource(res);
     const effThresholds = this.registry.get("effectiveThresholds") ?? UPGRADE_THRESHOLDS;
-    const upgradeTotal = next ? upgradeCountForChain(this.path.length, res.key, effThresholds) : 0;
+    // V.2 — rawUpgrades goes to React (state.js multiplies by autumnMult itself);
+    //        displayedUpgrades is shown in float text, badge, and star count.
+    const rawUpgrades = next ? upgradeCountForChain(this.path.length, res.key, effThresholds) : 0;
+    const displayedUpgrades = rawUpgrades * this._autumnMult();
     const gained = resourceGainForChain(this.path.length);
     // Bonus yields: add per-resource bonus if this chain contained that resource
     const bonusYields = this.registry.get("bonusYields") ?? {};
@@ -887,9 +1199,18 @@ export class GameScene extends Phaser.Scene {
     if (bonusYields[res.key]) {
       bonusGains[res.key] = Math.round(bonusYields[res.key]);
     }
-    const floatSuffix = upgradeTotal > 0 ? `  ★×${upgradeTotal}` : "";
-    const bonusText = Object.entries(bonusGains).map(([k, n]) => `  +${n} ${k}★`).join("");
-    this.floatText(`+${gained} ${res.label}${floatSuffix}${bonusText}`, this.path[this.path.length - 1].x, this.path[this.path.length - 1].y);
+    // V.3 — Clamp the displayed gain to the inventory cap so float text matches what the player actually receives
+    const cap = this.registry.get("inventoryCap") ?? 200;
+    const inv = this.registry.get("inventory") ?? {};
+    const isCapped = CAPPED_RESOURCES.includes(res.key);
+    const currentAmt = inv[res.key] ?? 0;
+    const wouldGain = gained + (bonusGains[res.key] ?? 0);
+    const actualGain = isCapped ? Math.max(0, Math.min(cap - currentAmt, wouldGain)) : wouldGain;
+    const overCap = wouldGain - actualGain > 0;
+
+    const floatSuffix = displayedUpgrades > 0 ? `  ★×${displayedUpgrades}` : "";
+    const bonusText = Object.entries(bonusGains).filter(([k]) => k !== res.key).map(([k, n]) => `  +${n} ${k}★`).join("");
+    this.floatText(`+${actualGain} ${res.label}${overCap ? " ⓘ" : ""}${floatSuffix}${bonusText}`, this.path[this.path.length - 1].x, this.path[this.path.length - 1].y);
 
     // Chain-length juice — escalating screen shake and a radial wipe. Big chains
     // earn loud feedback; upgrades add an extra burst.
@@ -897,12 +1218,13 @@ export class GameScene extends Phaser.Scene {
     this.radialFlash(this.path[this.path.length - 1].x, this.path[this.path.length - 1].y, this.path.length);
 
     // Queue upgrade tiles to spawn at the endpoint after board collapse.
-    // All upgrades land at the endpoint position (last tile in path).
-    if (next && upgradeTotal > 0) {
-      for (let u = 0; u < upgradeTotal; u++) {
-        this.pendingUpgrades.push(next);
+    // V.2 — queue displayedUpgrades tiles so the player sees the full autumn-boosted count drop.
+    if (next && displayedUpgrades > 0) {
+      const endpointTile = this.path[this.path.length - 1];
+      for (let u = 0; u < displayedUpgrades; u++) {
+        this.pendingUpgrades.push({ res: next, col: endpointTile.col, row: endpointTile.row });
       }
-      this.upgradeBurst(this.path[this.path.length - 1].x, this.path[this.path.length - 1].y);
+      this.upgradeBurst(endpointTile.x, endpointTile.y);
     }
 
     this.path.forEach((tile, i) => {
@@ -910,9 +1232,10 @@ export class GameScene extends Phaser.Scene {
       this.tweens.add({ targets: tile.sprite, scale: 0, angle: Phaser.Math.Between(-25, 25), alpha: 0, duration: this._dur(180 + i * 15), onComplete: () => tile.destroy() });
     });
 
-    // Emit to React — include bonus yield grants from workers
+    // Emit to React — use raw upgrade count (state.js applies autumnMult itself); gained is full amount (state.js caps it).
     const totalGained = gained + (bonusGains[res.key] ?? 0);
-    this.events.emit("chain-collected", { key: res.key, gained: totalGained, upgrades: upgradeTotal, chainLength: this.path.length, value: res.value });
+    const chainTiles = this.path.map(t => ({ key: t.res.key, row: t.row, col: t.col }));
+    this.events.emit("chain-collected", { key: res.key, gained: totalGained, upgrades: rawUpgrades, chainLength: this.path.length, value: res.value, chain: chainTiles });
 
     this.pathLines.forEach((l) => l.destroy());
     this.pathStars.forEach((s) => s.destroy());
@@ -923,6 +1246,7 @@ export class GameScene extends Phaser.Scene {
     this._prevPathLen = 0;
     this._prevStarGroups = 0;
     this.time.delayedCall(300, () => this.collapseBoard());
+    this.time.delayedCall(310, () => this._syncGridToState());
   }
 
   // ─── Chain badge (above board) ────────────────────────────────────────────
@@ -951,7 +1275,8 @@ export class GameScene extends Phaser.Scene {
     const res = n ? this.path[0].res : null;
     const next = res ? this.nextResource(res) : null;
     const effThresh = this.registry.get("effectiveThresholds") ?? UPGRADE_THRESHOLDS;
-    const k = next ? upgradeCountForChain(n, res.key, effThresh) : 0;
+    // V.2 — Display autumn-multiplied upgrade count in the badge
+    const k = next ? upgradeCountForChain(n, res.key, effThresh) * this._autumnMult() : 0;
     if (this.chainBadge) {
       this.chainBadgeText.setText(k > 0 ? `chain × ${gained}   +${k}★` : `chain × ${gained}`);
     }
@@ -969,8 +1294,10 @@ export class GameScene extends Phaser.Scene {
     const res = n ? this.path[0].res : null;
     const next = res ? this.nextResource(res) : null;
     const effThresh = this.registry.get("effectiveThresholds") ?? UPGRADE_THRESHOLDS;
-    const k = next ? upgradeCountForChain(n, res.key, effThresh) : 0;
-    this.events.emit("chain-update", { count: gained, upgrades: k });
+    // V.2 — Display autumn-multiplied upgrade count; V.1 — include valid flag for React side panel
+    const k = next ? upgradeCountForChain(n, res.key, effThresh) * this._autumnMult() : 0;
+    const valid = n === 0 || n >= this._effectiveMinChain();
+    this.events.emit("chain-update", { count: gained, upgrades: k, valid });
   }
 
   // ─── Juice (chain-length feedback) ────────────────────────────────────────

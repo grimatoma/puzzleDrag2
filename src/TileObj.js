@@ -6,6 +6,8 @@ export class TileObj {
     this.row = row;
     this.res = res;
     this.selected = false;
+    this.frozen = false;
+    this.rubble = false;
     this.sprite = scene.add.sprite(x, y, `tile_${res.key}`).setInteractive({ useHandCursor: true });
     this.sprite.on("pointerdown", () => scene.startPath(this));
     this.sprite.on("pointerover", () => scene.tryAddToPath(this));

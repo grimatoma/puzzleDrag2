@@ -1,6 +1,6 @@
 import { useEffect, useReducer, useRef, useState } from "react";
 import { COLS, ROWS, TILE } from "./src/constants.js";
-import { runSelfTests } from "./src/utils.js";
+import { runSelfTests, currentCap } from "./src/utils.js";
 import { gameReducer, initialState } from "./src/state.js";
 import { Hud } from "./src/ui/Hud.jsx";
 import { MobileDock, PortraitToolsBar } from "./src/ui/Tools.jsx";
@@ -12,7 +12,7 @@ import { setPhaserScene } from "./src/phaserBridge.js";
 import { announce, getQueue, flushAnnouncements, formatChainAnnouncement, formatModalAnnouncement, formatQuestAnnouncement } from "./src/a11y.js";
 import { handleKeyboard } from "./src/features/a11y/keyboard.js";
 
-function PhaserMount({ dispatch, biomeKey, turnsUsed, seasonsCycled, uiLocked, sceneRef, weather, toolPending, setChainInfo, workers, palette, reducedMotion, species, gameState }) {
+function PhaserMount({ dispatch, biomeKey, turnsUsed, seasonsCycled, uiLocked, sceneRef, weather, toolPending, setChainInfo, workers, palette, reducedMotion, species, gameState, grid }) {
   const hostRef = useRef(null);
   const gameRef = useRef(null);
   const [loading, setLoading] = useState(true);
@@ -81,6 +81,8 @@ function PhaserMount({ dispatch, biomeKey, turnsUsed, seasonsCycled, uiLocked, s
               sceneRef.current = scene;
               setPhaserScene(scene);
               scene.events.on("chain-collected", (payload) => dispatch({ type: "CHAIN_COLLECTED", payload }));
+              scene.events.on("fertilizer-consumed", () => dispatch({ type: "FERTILIZER/CONSUMED" }));
+              scene.events.on("grid-sync", ({ grid: g }) => dispatch({ type: "GRID/SYNC", payload: { grid: g } }));
               scene.events.on("chain-update", (data) => setChainInfo(data));
               setLoading(false);
             },
@@ -112,10 +114,17 @@ function PhaserMount({ dispatch, biomeKey, turnsUsed, seasonsCycled, uiLocked, s
   useEffect(() => { gameRef.current?.registry.set("palette", palette ?? "default"); }, [palette]);
   useEffect(() => { gameRef.current?.registry.set("reducedMotion", reducedMotion ?? null); }, [reducedMotion]);
   useEffect(() => { gameRef.current?.registry.set("speciesActive", species?.activeByCategory ?? null); }, [species?.activeByCategory]);
+  // Sync grid state → Phaser registry so hazard engines see real tile keys
+  useEffect(() => { gameRef.current?.registry.set("grid", grid ?? null); }, [grid]);
+  // Sync biomeRestored flag so GameScene.handleBiomeChange can skip randomize when savedField restored
+  useEffect(() => { gameRef.current?.registry.set("biomeRestored", gameState?._biomeRestored ?? false); }, [gameState?._biomeRestored]);
   // Sync boss modifier flags so GameScene.fillBoard can apply spawnBias
   useEffect(() => { gameRef.current?.registry.set("boss", gameState?.boss ?? null); }, [gameState?.boss]);
   // Sync fertilizerActive so GameScene.fillBoard can bias seedling-tier resources
   useEffect(() => { gameRef.current?.registry.set("fertilizerActive", gameState?.fertilizerActive ?? false); }, [gameState?.fertilizerActive]);
+  // V.3 — Sync inventory and cap so GameScene.collectPath can compute actual gain for float text
+  useEffect(() => { gameRef.current?.registry.set("inventory", gameState?.inventory ?? {}); }, [gameState?.inventory]);
+  useEffect(() => { gameRef.current?.registry.set("inventoryCap", currentCap(gameState) ?? 200); }, [gameState]);
 
   // Keyboard chain construction — Tab focuses board, arrows move cursor, Space adds tile, Enter commits, Esc cancels
   useEffect(() => {
@@ -350,6 +359,7 @@ export default function App() {
                   reducedMotion={state.settings?.reducedMotion}
                   species={state.species}
                   gameState={state}
+                  grid={state.grid}
                 />
               </div>
               {/* Side panel — hidden on mobile, replaced by MobileDock */}

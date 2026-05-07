@@ -226,6 +226,7 @@ export function initialState(overrides) {
                wolves: null },
     // Board grid (populated during play, not stored on init)
     grid: Array.from({ length: 6 }, () => Array.from({ length: 6 }, () => ({ key: "hay" }))),
+    _biomeRestored: false,
     lastChainSnapshot: null,
     magicFertilizerCharges: 0,
     built: { hearth: true, decorations: {} },
@@ -323,19 +324,6 @@ export function initialState(overrides) {
   return fresh;
 }
 
-// Legacy XP function (non-linear): used for state.xp / state.level (game-play level).
-function applyXp(state, xpDelta) {
-  let xp = state.xp + xpDelta;
-  let level = state.level;
-  let leveledUp = false;
-  while (xp >= xpForLevel(level)) {
-    xp -= xpForLevel(level);
-    level += 1;
-    leveledUp = true;
-  }
-  return { xp, level, leveledUp };
-}
-
 // Canonical almanac XP function (§17 linear, 150 XP/level).
 // Wraps features/almanac/data.js awardXp() so all reducers route through it.
 function applyAlmanacXp(state, amount) {
@@ -375,6 +363,11 @@ function maybeFireResourceBeats(stateAfter, stateBefore) {
 
 function coreReducer(state, action) {
   switch (action.type) {
+    case "GRID/SYNC": {
+      const { grid } = action.payload;
+      if (!grid) return state;
+      return { ...state, grid };
+    }
     case "CHAIN_COLLECTED": {
       // Phase 4.7: support { gains: {key: n, ...} } payload for cap-aware bulk collection
       if (action.payload?.gains) {
@@ -519,8 +512,6 @@ function coreReducer(state, action) {
       }
 
       const coinsGain = Math.max(1, Math.floor((effectiveGained * value) / 2));
-      const xpGain = effectiveGained * value * 3 + effectiveUpgrades * 12;
-      const xpResult = applyXp(state, xpGain);
       // §17 locked: 1 XP per chain (regardless of length/value) into almanac
       const { newState: afterAlmanacXp } = applyAlmanacXp(state, 1);
       const turnsUsed = state.turnsUsed + 1;
@@ -535,11 +526,12 @@ function coreReducer(state, action) {
       let bubble = state.bubble;
       let newHintsShown = hintsShown;
 
-      if (xpResult.leveledUp) {
-        if (xpResult.level === 2) {
+      const leveledUp = afterAlmanacXp.almanac.level > state.almanac.level;
+      if (leveledUp) {
+        if (afterAlmanacXp.almanac.level === 2) {
           bubble = { id: Date.now(), npc: "wren", text: "Level 2! ⛏️ Mine biome unlocked — switch with the button below.", ms: 2800, priority: 2 };
         } else {
-          bubble = { id: Date.now(), npc: "wren", text: `Level ${xpResult.level}! New things await.`, ms: 2400, priority: 2 };
+          bubble = { id: Date.now(), npc: "wren", text: `Level ${afterAlmanacXp.almanac.level}! New things await.`, ms: 2400, priority: 2 };
         }
       } else if (effectiveUpgrades > 0 && !hintsShown.upgradeHint) {
         bubble = { id: Date.now(), npc: "mira", text: "★ Upgrade! Chain 6+ tiles to snowball rare resources.", ms: 2800, priority: 2 };
@@ -557,9 +549,8 @@ function coreReducer(state, action) {
         ...state,
         inventory,
         coins: state.coins + coinsGain,
-        xp: xpResult.xp,
-        level: xpResult.level,
-        // almanac XP from awardXp (linear 150/level)
+        xp: afterAlmanacXp.almanac.xp,
+        level: afterAlmanacXp.almanac.level,
         almanac: afterAlmanacXp.almanac,
         turnsUsed,
         seasonStats: { ...seasonStats, capFloaters: chainCf },
@@ -610,7 +601,6 @@ function coreReducer(state, action) {
       const usedNpcs = remainingOrders.map((x) => x.npc);
       const usedKeys = remainingOrders.map((x) => x.key);
       const replacement = makeOrder(state.biomeKey, state.level, usedNpcs, usedKeys);
-      const xpResult = applyXp(state, 12);
       // §17 locked: 5 XP per order into almanac
       const { newState: afterOrderAlmanac } = applyAlmanacXp(state, 5);
       // Bond multiplier (Phase 6.1): base reward × bond modifier
@@ -632,18 +622,19 @@ function coreReducer(state, action) {
       const seasonNames = ["spring", "summer", "autumn", "winter"];
       const currentSeason = seasonNames[(state.seasonsCycled || 0) % 4];
       const dialogLine = pickDialog(o.npc, currentSeason, newBond, Math.random);
+      const orderLeveledUp = afterOrderAlmanac.almanac.level > state.almanac.level;
       let bubble = { id: Date.now(), npc: o.npc,
         text: summerMult > 1 ? `+${actualReward}◉ (☀️ 2×) — ${dialogLine}` : `+${actualReward}◉ — ${dialogLine}`,
         ms: 2000 };
-      if (xpResult.leveledUp) {
-        bubble = { id: Date.now(), npc: "wren", text: `Level ${xpResult.level}! New things await.`, ms: 2400 };
+      if (orderLeveledUp) {
+        bubble = { id: Date.now(), npc: "wren", text: `Level ${afterOrderAlmanac.almanac.level}! New things await.`, ms: 2400 };
       }
       return {
         ...state,
         inventory,
         coins: state.coins + coinsCredit,
-        xp: xpResult.xp,
-        level: xpResult.level,
+        xp: afterOrderAlmanac.almanac.xp,
+        level: afterOrderAlmanac.almanac.level,
         almanac: afterOrderAlmanac.almanac,
         orders: state.orders.map((x) => (x.id === o.id ? replacement : x)),
         seasonStats: { ...state.seasonStats, ordersFilled: state.seasonStats.ordersFilled + 1, coins: state.seasonStats.coins + actualReward },
@@ -754,7 +745,7 @@ function coreReducer(state, action) {
       }
       // Phase 10.1 — Rake / Axe: arm the board tool (no turn cost)
       if (key === "rake" || key === "axe") {
-        return { ...state, tools, _toolPending: key };
+        return { ...state, tools, toolPending: key };
       }
       // Phase 10.1 — Fertilizer: set flag for next fillBoard (no turn cost)
       if (key === "fertilizer") {
@@ -873,7 +864,7 @@ function coreReducer(state, action) {
       const savedField = state[key]?.savedField ?? null;
       let boardPatch = {};
       if (savedField && savedField.tiles) {
-        boardPatch = { board: { tiles: savedField.tiles, hazards: savedField.hazards ?? [] } };
+        boardPatch = { grid: savedField.tiles };
       }
       const excludeNpcs = [];
       const excludeKeys = [];
@@ -883,7 +874,7 @@ function coreReducer(state, action) {
         excludeKeys.push(o.key);
         return o;
       });
-      return { ...state, biomeKey: key, orders: replacements, turnsUsed: 0, ...boardPatch };
+      return { ...state, biomeKey: key, orders: replacements, turnsUsed: 0, _biomeRestored: !!(savedField && savedField.tiles), ...boardPatch };
     }
     case "SET_VIEW": {
       const next = action.view;
@@ -1023,17 +1014,17 @@ function coreReducer(state, action) {
       // Phase 12.5 — snapshot board into saved-field slot when Silo/Barn is built
       let afterSeasonFarm = afterSeason.farm ?? { savedField: null };
       let afterSeasonMine = afterSeason.mine ?? { savedField: null };
-      if (state.biomeKey === "farm" && state.built?.silo && state.board) {
+      if (state.biomeKey === "farm" && state.built?.silo && state.grid) {
         afterSeasonFarm = { ...afterSeasonFarm, savedField: {
-          tiles: state.board.tiles,
-          hazards: state.board.hazards ?? [],
+          tiles: state.grid,
+          hazards: state.hazards ?? null,
           turnsUsed: 0,
         } };
       }
-      if (state.biomeKey === "mine" && state.built?.barn && state.board) {
+      if (state.biomeKey === "mine" && state.built?.barn && state.grid) {
         afterSeasonMine = { ...afterSeasonMine, savedField: {
-          tiles: state.board.tiles,
-          hazards: state.board.hazards ?? [],
+          tiles: state.grid,
+          hazards: state.hazards ?? null,
           turnsUsed: 0,
         } };
       }
@@ -1198,10 +1189,13 @@ function coreReducer(state, action) {
       const owned = state.inventory?.[itemId] ?? 0;
       if (owned < sellQty) return state;
       const price = _sellPriceFor(itemId);
+      const proceeds = price * sellQty;
+      const { coinsCredit, newDebt } = applyDebtRepayment(state, proceeds);
       return {
         ...state,
         inventory: { ...state.inventory, [itemId]: owned - sellQty },
-        coins: (state.coins ?? 0) + price * sellQty,
+        coins: (state.coins ?? 0) + coinsCredit,
+        workers: state.workers ? { ...state.workers, debt: newDebt } : state.workers,
       };
     }
 
@@ -1283,8 +1277,10 @@ function coreReducer(state, action) {
       const chainToProcess = nonFireChain.length >= chain.length ? chain : nonFireChain;
       const effectiveKey = chainToProcess[0]?.key ?? chainKey;
       const length = chainToProcess.length;
-      const threshold = UPGRADE_THRESHOLDS[effectiveKey];
-      const upgrades = threshold ? Math.floor(length / threshold) : 0;
+      const workerEffects = computeWorkerEffects(state);
+      const reduce = workerEffects.thresholdReduce?.[effectiveKey] ?? 0;
+      const threshold = Math.max(1, (UPGRADE_THRESHOLDS[effectiveKey] ?? Infinity) - reduce);
+      const upgrades = isFinite(threshold) ? Math.floor(length / threshold) : 0;
       const gained = length - upgrades;
       const inv = { ...(stateAfterFire.inventory ?? state.inventory) };
       if (gained > 0) inv[effectiveKey] = (inv[effectiveKey] ?? 0) + gained;
@@ -1300,6 +1296,11 @@ function coreReducer(state, action) {
     case "ACTIVATE_RUNE_WILDCARD": {
       if ((state.runeStash ?? 0) < 1) return state;
       return { ...state, runeStash: state.runeStash - 1, toolPending: "rune_wildcard" };
+    }
+
+    case "FERTILIZER/CONSUMED": {
+      if (!state.fertilizerActive) return state;
+      return { ...state, fertilizerActive: false };
     }
 
     case "USE_TOOL_BOMB": {
