@@ -215,11 +215,11 @@ days in the season or a quest counter.
 | Fish → Filled Net → Squid → Serpent → Oil | 600◉ | 2000◉ | — |
 | Spice Island (2) → Spice | 40◉ | 320◉ | — |
 | Cocoa Island (2) → Cocoa | 160◉ | 1280◉ | 33 |
-| 3 Squid → Ink | 160◉ | 1280◉ | 12 |
-| Silk Island → Silk | 600◉ | 2000◉ | — |
+| Squid (3) → Ink | 160◉ | 1280◉ | 12 |
+| Silk Island (3) → Silk | 600◉ | 2000◉ | — |
 | Sea Serpent (4) → Oil | 600◉ | 2000◉ | — |
-| Jade Island → Jade | 800◉ | 4000◉ | — |
-| Oyster/Clam → Pearl | 800◉ | 4000◉ | — |
+| Jade Island (4) → Jade | 800◉ | 4000◉ | — |
+| Oyster/Clam (4) → Pearl | 800◉ | 4000◉ | — |
 
 ### Sea Hazards
 
@@ -254,43 +254,187 @@ toggle, star bonus per collection, trait bullets, and special tile interactions.
 | **Special challenge** | Complete a specific challenge event |
 | **Buy directly** | Pay coins immediately ("Find Now: N Coins") |
 
-### Species Unlock Trees (selected)
+### Reading the species tables
 
-```
-Grass:      Meadow Grass → [spiky grass] → locked
-Grain:      Wheat → Corn → Buckwheat → Manna → Rice
-Vegetables: Carrot → Eggplant → Turnip → [Beet] → locked → Cucumber → [Squash]
-Fruits:     Apple → [Pear] → Blackberry → [Rambutan] → locked [Starfruit]
-            Lemon → [Jackfruit] → locked
-            Coconut (standalone)
-Trees:      Oak → Birch → Willow → Fir → Cypress → Palm Tree
-Birds:      Turkey, Pheasant, Chicken → Hen → (more)
-            Rooster, Wild Goose → Goose (research 200), Parrot
-Herd:       Hog → [Boar] → locked
-            Sheep → [Alpaca] → locked
-            Goat → [Ram] → locked
-Cattle:     Cow → Longhorn → locked × 2
-Mounts:     Horse → [Donkey], Moose (standalone)
-```
+Every entry below corresponds to one slot in the in-game Compendium. Columns:
 
-### Rare / Buy-Only Species
+- **Name** — display name. Bracketed names (e.g. `[Beet]`) are the catalog identity of an
+  Unknown silhouette that has not yet been discovered; the silhouette's flavor text usually
+  hints at the true species.
+- **Looks** — what the tile/species illustration depicts in the Compendium.
+- **Status / Unlock** — current player state: `Active` means already discovered and toggle-able
+  on the board; otherwise the unlock path (chain prerequisite + N% research progress, flat
+  research target, special challenge, daily reward, or coin buy-out via "Find Now").
+- **Description & Actions** — full trait text from the Compendium, including star yield, free
+  moves, hazard interactions, co-collection partners, and flavor tagline.
 
-| Species | Cost / Condition | Notable trait |
-|---|---|---|
-| Golden Apple | Active (already discovered) | 12★ per collection, 5◉ per collection |
-| Melon | Buy-only | 6★, +5 free moves, permanent on fields |
-| Warthog | Buy-only (250◉) | Long chain → mounts |
-| Dodo Bird | Buy-only (250◉) | All auto-collected when chain made |
-| Pig-in-Disguise Bird | Buy-only (100,000◉) | Copies last long chain bonus |
-| Triceratops | Day 30 daily reward only | Gives 2× milk |
+Star yield ("N stars when collected"), bonus coins, and free-move grants are **per-collection
+bonuses** that fire every time a chain of that species is harvested. "Gives a chance to find"
+hints at random extra spawn loot when the chain is long. "A long chain gives X" means
+overchaining produces a bonus tile of category X at the endpoint.
 
-### Species Special Interactions (examples)
+### Grass
 
-- **Resistant to swamp**: Rice, Moose, Water Lily — chain in swamp tiles without penalty
-- **Avoided by rats**: Wheat, Coconut, Cypress — rats won't eat these
-- **Attracts rats**: Manna and others
-- **Attracted by wolves / Avoided by wolves**: various birds and herd animals
-- **Can be collected with [other species]**: Coconut+Palm, Corn+Grass, Pheasant+Grass, Fir+Sheep, Parrot+Trees, Rice+Starfruit
+| Name | Looks | Status / Unlock | Description & Actions |
+|---|---|---|---|
+| Meadow Grass | Green grass | Active | Great to produce haystacks, slow to get bonus grain. Always greener on the other side. |
+| Heather | Grass with purple flowers | Active | Eaten by rats. Grows on wuthering heights. |
+| Clover | Green clover patch | Active | 2 stars when collected. Gives a chance to find: Start by collecting long chains. 2 free moves. Brings you luck. |
+| `[Spiky Grass]` | Silhouette of spiky grass | 2% progress · Discover by long chains of Meadow Grass · Find Now: 245◉ | Can be collected with mounts. Straight from the Great Plains. |
+
+### Grain
+
+| Name | Looks | Status / Unlock | Description & Actions |
+|---|---|---|---|
+| Wheat | Golden wheat | Active | Avoided by rats. For those who like bread and games. |
+| Corn | Tall corn stalks | Active | Can be collected with grass. Popcorn is yummy. |
+| Buckwheat | Green stalks with white tops | Active | A long chain gives herd animals. Some do like it. Really. |
+| Manna | Fluffy white crop | 96% progress · Collect 200 · Speed-up: 1 Potion | 3 stars when collected. Attracts rats. Extremely nutritious. |
+| Rice | Rice stalks in water | Active | Resistant to swamp. Can be collected with starfruits. Responsible for the rice of an empire. |
+
+### Vegetables
+
+| Name | Looks | Status / Unlock | Description & Actions |
+|---|---|---|---|
+| Carrot | Orange carrot | Active | Easy to collect. Good for your eyes. |
+| Eggplant | Purple eggplant | Active | A long chain gives vegetables. Tastes great with scrambled eggs. |
+| Turnip | Pink and white turnip | Active | Gives a chance to find: Start by collecting long chains. Great to produce soup, slow to get bonus fruits. You cannot squeeze blood from it. |
+| `[Beet]` | Silhouette of a beet | 72% progress · Discover by long chains of Turnips · Find Now: 27◉ | 5 stars when collected. Gives a chance to find: Start by collecting long chains. Deadly to pests. Are you ready for borscht? |
+| `[Root Veg]` | Silhouette of a root veg | Locked | To unlock this species you must first research `[Beet Silhouette]`. |
+| Cucumber | Green cucumber | Active | Gives a chance to find: Start by collecting long chains. Avoided by rats. It is cool. |
+| `[Squash]` | Silhouette of a squash | 13% progress · Discover by long chains of Cucumbers · Find Now: 87◉ | Can be collected with grain. Loves playing racquet. |
+| `[Mushroom]` | Silhouette of a mushroom | Special challenge unlock · Find Now: 100◉ | Resistant to swamp. Can be collected with rambutans. Everybody likes him. He's a fungi. |
+| `[Pepper #1]` | Silhouette of a pepper | Locked | Unlocked only by completing a special collection. |
+| `[Pepper #2]` | Silhouette of a pepper | Locked | To unlock this species you must first research `[Pepper Silhouette]`. |
+| `[Broccoli]` (Rare) | Silhouette of broccoli | Find Now: 250◉ (buy-only) | A long chain gives flowers. Not the best choice for a bouquet. This species can only be bought. |
+
+### Fruits
+
+| Name | Looks | Status / Unlock | Description & Actions |
+|---|---|---|---|
+| Apple | Red apple | Active | Gives a chance to find: Start by collecting long chains. Great to produce pies. One a day keeps the doctor away. |
+| `[Pear]` | Silhouette of a pear | 86% progress · Discover by long chains of Apples · Find Now: 13◉ | Avoided by rats. It is pear-shaped. |
+| Golden Apple (Rare) | Gold apple | Active | 12 stars when collected. 5 coins when collected. For the most beautiful. |
+| Blackberry | Blackberry | Active | 6 stars when collected. Gives a chance to find: Start by collecting long chains. Easy to collect. It's ironic that it replaces the apple. |
+| `[Rambutan]` | Silhouette of a rambutan | 0% progress · Discover by long chains of Blackberries · Find Now: 150◉ | Gives a chance to find: Start by collecting long chains. Resistant to swamp. Can be collected with mushrooms. Badly needs a haircut. |
+| `[Starfruit]` | Silhouette of a starfruit | Locked | To unlock this species you must first research `[Rambutan Silhouette]`. |
+| Coconut | Brown coconut | Active | Avoided by rats. Can be collected with palms. Because of its sound, often mistaken for a horse. |
+| Lemon | Yellow lemon | Active | Gives a chance to find: Start by collecting long chains. Great to get bonus flowers, slow to produce pie. Easily obtained from life. |
+| `[Jackfruit]` | Silhouette of jackfruit | 0% progress · Discover by long chains of Lemons · Find Now: 200◉ | Gives a chance to find: Start by collecting long chains. Gives two times more pie. A long chain gives rats. Doesn't know jack. |
+| `[Fruit (locked)]` | Silhouette of a fruit | Locked | To unlock this species you must first research `[Jackfruit Silhouette]`. |
+| `[Melon]` (Rare) | Silhouette of a melon | Find Now: 200◉ (buy-only) | 6 stars when collected. You just need one to collect. 5 free moves. On your fields forever. This species can only be bought. |
+
+### Flowers
+
+| Name | Looks | Status / Unlock | Description & Actions |
+|---|---|---|---|
+| Pansy | Purple flower | Active | Great to produce honey. It actually is a very manly flower. |
+| Water Lily | Pink lily/lotus on a pad | 40% progress · Collect 15 · Speed-up: 31 Potions | 24 stars when collected. Resistant to swamp. Can be collected with reed. Leaves a lasting impression. |
+
+### Trees
+
+| Name | Looks | Status / Unlock | Description & Actions |
+|---|---|---|---|
+| Oak | Standard tree | Active | Great to produce wood, slow to get bonus birds. Grows from little acorns. |
+| Birch | Tree with white trunk | Active | Great to get bonus birds, slow to produce wood. Tall and flexible. |
+| Willow | Weeping willow | Active | 2 stars when collected. A long chain gives vegetables. Listen to the wind in its boughs. |
+| Fir | Evergreen tree | Active | Can be collected with sheep. Perfect for the winter holidays. |
+| Cypress | Tall skinny tree | Active | Deadly to pests. Eaten by wolves. Can be a bit prickly. |
+| Palm Tree | Palm tree | Active | Can be collected with coconuts. 2 free moves. A tree in the palm of your hand. |
+
+### Birds
+
+| Name | Looks | Status / Unlock | Description & Actions |
+|---|---|---|---|
+| Turkey | Brown turkey | Active | 2 free moves. Welcomes all pilgrims. |
+| Pheasant | Pheasant | Active | Can be collected with grass. Pleasant. |
+| Chicken | White chicken | Active | Great to produce eggs, slow to get bonus herd animals. Not very courageous. |
+| Hen | Black hen | Active | Great to get bonus herd animals, slow to produce eggs. Not always wet. |
+| Rooster | Colorful rooster | Active | 4 stars when collected. Avoided by wolves. Can spell cock-a-doodle-doo. |
+| Wild Goose | Canadian goose | Active | Attracts wolves. Prone to wanderlust. |
+| Goose | White goose | 39% progress · Collect 200 · Speed-up: 18 Potions | A long chain gives vegetables. Its quill is said to be quite dangerous. |
+| Parrot | Colorful macaw | Active | 3 stars when collected. Can be collected with trees. Her name is Polly and she wants a cracker. |
+| Phoenix (Rare) | Fiery bird | Active | 2 stars when collected. Attracts wolves. Deadly to pests. Can light your fire. |
+| `[Dodo]` (Rare) | Silhouette of a dodo | Find Now: 250◉ (buy-only) | All are automatically collected when you make a chain. A proactive bird, always says "do, do!". This species can only be bought. |
+| `[Pig-in-Disguise]` (Rare) | Silhouette of a pig in disguise | Find Now: 100,000◉ (buy-only) | 2 stars when collected. Copies the last long chain bonus. "Day 236: They still think I'm a bird." This species can only be bought. |
+
+### Herd Animals
+
+| Name | Looks | Status / Unlock | Description & Actions |
+|---|---|---|---|
+| Pig | Pink pig | Active | More experience for long chains. Surprisingly tidy. |
+| Hog | Grey hog | Active | Gives a chance to find: Start by collecting long chains. Great to produce meat, slow to get bonus cattle. Not into healthy food. |
+| `[Boar]` | Silhouette of a boar | 78% progress · Discover by long chains of Hogs · Find Now: 21◉ | Gives a chance to find: Start by collecting long chains. Can be collected with vegetables. Works hard not to appear a bore. |
+| `[Boar-tier locked]` | Silhouette of an animal | Locked | To unlock this species you must first research `[Boar Silhouette]`. |
+| Sheep | White sheep | Active | Gives a chance to find: Start by collecting long chains. Avoided by wolves. Very silent. |
+| `[Alpaca]` | Silhouette of an alpaca/fluffy sheep | 20% progress · Discover by long chains of Sheep · Find Now: 80◉ | Gives a chance to find: Start by collecting long chains. Avoided by wolves. It's never cold. |
+| `[Alpaca-tier locked]` | Silhouette of an animal | Locked | To unlock this species you must first research `[Alpaca Silhouette]`. |
+| Goat | Brown goat | Active | Gives a chance to find: Start by collecting long chains. Can be collected with rats. Stubborn, eats everything. |
+| `[Ram]` | Silhouette of a horned ram | 1% progress · Discover by long chains of Goats · Find Now: 99◉ | Gives a chance to find: Start by collecting long chains. Can be collected with carrots. Sports a fashionable beard. |
+| `[Ram-tier locked]` | Silhouette of an animal | Locked | To unlock this species you must first research `[Ram Silhouette]`. |
+| `[Warthog]` (Rare) | Silhouette of a warthog | Find Now: 250◉ (buy-only) | Avoided by wolves. A long chain gives mounts. A savage pig from a wild, savage age. This species can only be bought. |
+
+### Cattle
+
+| Name | Looks | Status / Unlock | Description & Actions |
+|---|---|---|---|
+| Cow | Brown and white cow | Active | Easy to collect. Sorry for the lactose intolerance! |
+| Longhorn | Brown cow with long horns | Active | 24 stars when collected. Gives a chance to find: Start by collecting long chains. Hardcore vegan. |
+| `[Cattle locked #1]` | Silhouette of cattle | Locked | To unlock this species you must first research the prerequisite silhouette. |
+| `[Cattle locked #2]` | Silhouette of cattle | Locked | To unlock this species you must first research the prerequisite silhouette. |
+| `[Triceratops]` (Rare) | Silhouette of a triceratops | Daily Rewards day 30 only | Avoided by wolves. Gives two times more milk. Played in the movie Cretaceous Park. |
+
+### Mounts
+
+| Name | Looks | Status / Unlock | Description & Actions |
+|---|---|---|---|
+| Horse | Brown horse | Active | Gives a chance to find: Start by collecting long chains. Easy to collect. Look at it. It's amazing! |
+| `[Donkey]` | Silhouette of a donkey | 0% progress · Discover by long chains of Horses · Find Now: 250◉ | Can be collected with vegetables. Great to produce horseshoes, slow to get bonus coins. After he got his PhD, he's a real smart ass. |
+| Moose | Brown moose | Active | 29 stars when collected. Resistant to swamp. He loves chocolate mousse. |
+| `[Mammoth]` (Rare) | Silhouette of a mammoth | Find Now: 300◉ (buy-only) | 58 stars when collected. You just need one to collect. A mean mammoth is just a woolly bully. This species can only be bought. |
+
+### Rare / Buy-Only Species — quick reference
+
+| Species | Category | Cost / Condition | Notable trait |
+|---|---|---|---|
+| Golden Apple | Fruit | Active (already discovered) | 12★ per collection · +5◉ per collection |
+| `[Melon]` | Fruit | Buy-only · 200◉ | 6★ · +5 free moves · permanent on fields · single-tile collect |
+| `[Broccoli]` | Vegetable | Buy-only · 250◉ | Long chain → flowers |
+| `[Warthog]` | Herd | Buy-only · 250◉ | Avoided by wolves · long chain → mounts |
+| Phoenix | Bird | Active | 2★ · attracts wolves · deadly to pests |
+| `[Dodo]` | Bird | Buy-only · 250◉ | Auto-collects all when a chain is made |
+| `[Pig-in-Disguise]` | Bird | Buy-only · 100,000◉ | 2★ · copies last long-chain bonus |
+| `[Triceratops]` | Cattle | Daily Rewards day 30 | Avoided by wolves · 2× milk yield |
+| `[Mammoth]` | Mount | Buy-only · 300◉ | 58★ · single-tile collect |
+
+### Species Special Interactions (cross-cutting tags)
+
+- **Resistant to swamp**: Rice, Moose, Water Lily, Mushroom, Rambutan — chain through swamp
+  tiles without yield penalty.
+- **Avoided by rats**: Wheat, Coconut, Cypress, Pear, Cucumber — rats will not consume these.
+- **Attracts rats**: Manna, Jackfruit (long chain) — increases rat hazard pressure when active.
+- **Avoided by wolves**: Rooster, Sheep, Alpaca, Warthog, Triceratops — wolves skip these.
+- **Attracts wolves**: Wild Goose, Phoenix — wolf hazards spawn more frequently.
+- **Eaten by wolves**: Cypress — chain it before wolves reach it.
+- **Eaten by rats**: Heather — chain it before rats reach it.
+- **Deadly to pests**: Cypress, Beet, Phoenix — kill rats/pests on contact.
+- **Co-collection partners** ("Can be collected with X"): Coconut + Palm Tree, Corn + Grass,
+  Pheasant + Grass, Fir + Sheep, Parrot + Trees, Rice + Starfruit, Squash + Grain, Mushroom +
+  Rambutan, Rambutan + Mushroom, Donkey + Vegetables, Boar + Vegetables, Goat + Rats,
+  Ram + Carrots, Spiky Grass + Mounts, Water Lily + Reed.
+- **Free-move grants**: Turkey (+2), Palm Tree (+2), Clover (+2), Melon (+5).
+- **Per-collection coin/star bonuses**: Golden Apple (+5◉, 12★), Blackberry (6★),
+  Rooster (4★), Parrot (3★), Manna (3★), Phoenix (2★), Pig-in-Disguise (2★), Willow (2★),
+  Clover (2★), Beet (5★), Melon (6★), Longhorn (24★), Water Lily (24★), Moose (29★),
+  Mammoth (58★).
+- **"Long chain gives X"** (overchain bonus tile): Buckwheat → herd animals, Eggplant → vegetables,
+  Goose → vegetables, Willow → vegetables, Broccoli → flowers, Warthog → mounts,
+  Jackfruit → rats (penalty).
+- **"Gives two times more"**: Jackfruit → 2× pie, Triceratops → 2× milk.
+- **Single-tile collect**: Melon, Mammoth — one tile completes the chain.
+- **Auto-collect on chain made**: Dodo — clears all instances when any chain is committed.
+- **Copies last long-chain bonus**: Pig-in-Disguise — repeats whichever overchain reward fired most recently.
+- **Permanent on fields**: Melon — once placed, never removed by fills.
 
 ---
 
@@ -452,7 +596,7 @@ determines the floor ratio. All hires cost `1 Worker` (generic resource unit) + 
 | Confectioner | 4/5 | 2 islands = 1 cocoa | 1 Worker + 10 Bread + 10 Stone + 5 Spice |
 | Captain | 3/3 | 4 cocoa island = 1 silk island | 1 Worker + 16 Wood + 10 Stone + 12 Spice |
 | Explorer | 2/2 | 5 silk island = 1 jade island | 1 Worker + 15 Wood + 10 Stone + 3 Jade |
-| Antiquarian | 2/2 | 4 islands = 1 jade | 1 Worker + 3 Soup + 3 Jade |
+| Antiquarian | 2/2 | 4 islands = 1 jade | 1 Worker + 3 Soup + 3 Soup (red/borscht) + 3 Jade |
 | Pirate | 1/1 | 5 jade island = 1 coin | 1 Worker + 4 Gold + 2 Potions + 2 Barrels |
 
 ---
