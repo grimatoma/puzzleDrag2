@@ -11,6 +11,7 @@ import { useAudio } from "./src/audio/useAudio.js";
 import { setPhaserScene } from "./src/phaserBridge.js";
 import { announce, getQueue, flushAnnouncements, formatChainAnnouncement, formatModalAnnouncement, formatQuestAnnouncement } from "./src/a11y.js";
 import { handleKeyboard } from "./src/features/a11y/keyboard.js";
+import { FIRE_HAZARD_ENABLED } from "./src/featureFlags.js";
 
 function PhaserMount({ dispatch, biomeKey, turnsUsed, seasonsCycled, uiLocked, sceneRef, weather, toolPending, setChainInfo, workers, palette, reducedMotion, tileCollection, gameState, grid }) {
   const hostRef = useRef(null);
@@ -129,7 +130,7 @@ function PhaserMount({ dispatch, biomeKey, turnsUsed, seasonsCycled, uiLocked, s
   useEffect(() => { gameRef.current?.registry.set("inventory", gameState?.inventory ?? {}); }, [gameState?.inventory]);
   useEffect(() => { gameRef.current?.registry.set("inventoryCap", currentCap(gameState) ?? 200); }, [gameState]);
   // Sync hazards.fire so GameScene.fillBoard can overlay fire tiles on the board
-  useEffect(() => { gameRef.current?.registry.set("hazardFire", gameState?.hazards?.fire ?? null); }, [gameState?.hazards?.fire]);
+  useEffect(() => { gameRef.current?.registry.set("hazardFire", FIRE_HAZARD_ENABLED ? (gameState?.hazards?.fire ?? null) : null); }, [gameState?.hazards?.fire]);
   // Sync magicFertilizerCharges so GameScene.fillBoard can apply the bias for each fill charge
   useEffect(() => { gameRef.current?.registry.set("magicFertilizerCharges", gameState?.magicFertilizerCharges ?? 0); }, [gameState?.magicFertilizerCharges]);
 
