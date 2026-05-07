@@ -130,7 +130,7 @@ const SEASON_END_BONUS_COINS = 25;
 
 // Crafted item pools for advanced orders (level 3+)
 const CRAFTED_FARM_POOL = ["bread", "honeyroll", "harvestpie", "preserve", "tincture"];
-const CRAFTED_MINE_POOL = ["hinge", "cobblepath", "lantern", "goldring", "gemcrown", "ironframe", "stonework"];
+const CRAFTED_MINE_POOL = ["iron_hinge", "cobblepath", "lantern", "goldring", "gemcrown", "ironframe", "stonework"];
 
 let orderIdSeq = 1;
 export function makeOrder(biomeKey, level, excludeNpcs = [], excludeOrderKeys = []) {
@@ -1019,7 +1019,7 @@ function coreReducer(state, action) {
     }
 
     case "MINE/ENTER": {
-      if (!state.story?.flags?.act3_mine_opened) return state;
+      if (!state.story?.flags?.mine_unlocked) return state;
       const tier = MINE_ENTRY_TIERS.find((t) => t.id === action.payload?.tier);
       if (!tier) return state;
       if (tier.id === "free") {

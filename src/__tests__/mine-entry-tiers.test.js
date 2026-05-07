@@ -27,7 +27,7 @@ describe("Phase 3.6 — Mine entry tiers", () => {
     expect(MINE_ENTRY_TIERS.map((t) => t.id)).toEqual(["free", "better", "premium"]);
   });
 
-  it("rejects MINE/ENTER without act3_mine_opened flag", () => {
+  it("rejects MINE/ENTER without mine_unlocked flag", () => {
     const s = { ...createInitialState(), inventory: { supplies: 5 } };
     const r = rootReducer(s, { type: "MINE/ENTER", payload: { tier: "free" } });
     expect(r.biomeKey).toBe("farm");
@@ -37,7 +37,7 @@ describe("Phase 3.6 — Mine entry tiers", () => {
     const s = {
       ...createInitialState(),
       inventory: { supplies: 5 },
-      story: { flags: { act3_mine_opened: true } },
+      story: { flags: { mine_unlocked: true } },
     };
     const r = rootReducer(s, { type: "MINE/ENTER", payload: { tier: "free" } });
     expect(r.biomeKey).toBe("mine");
@@ -49,7 +49,7 @@ describe("Phase 3.6 — Mine entry tiers", () => {
       ...createInitialState(),
       coins: 150,
       shovel: 12,
-      story: { flags: { act3_mine_opened: true } },
+      story: { flags: { mine_unlocked: true } },
     };
     const r = rootReducer(s, { type: "MINE/ENTER", payload: { tier: "better" } });
     expect(r.biomeKey).toBe("mine");
@@ -63,7 +63,7 @@ describe("Phase 3.6 — Mine entry tiers", () => {
       ...createInitialState(),
       coins: 100,
       shovel: 9,
-      story: { flags: { act3_mine_opened: true } },
+      story: { flags: { mine_unlocked: true } },
     };
     const r = rootReducer(s, { type: "MINE/ENTER", payload: { tier: "better" } });
     expect(r.biomeKey).toBe("farm");
@@ -76,7 +76,7 @@ describe("Phase 3.6 — Mine entry tiers", () => {
       ...createInitialState(),
       coins: 50,
       shovel: 10,
-      story: { flags: { act3_mine_opened: true } },
+      story: { flags: { mine_unlocked: true } },
     };
     const r = rootReducer(s, { type: "MINE/ENTER", payload: { tier: "better" } });
     expect(r.biomeKey).toBe("farm");
@@ -89,7 +89,7 @@ describe("Phase 3.6 — Mine entry tiers", () => {
       coins: 0,
       shovel: 0,
       inventory: { supplies: 0 },
-      story: { flags: { act3_mine_opened: true } },
+      story: { flags: { mine_unlocked: true } },
     };
     const r = rootReducer(s, { type: "MINE/ENTER", payload: { tier: "premium" } });
     expect(r.biomeKey).toBe("mine");

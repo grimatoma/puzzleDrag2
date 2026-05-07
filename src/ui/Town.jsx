@@ -122,7 +122,7 @@ const TOWN_BIOME_CONFIGS = {
       granary: { x: 618, y: 356, w: 88,  h: 106 },
       larder:  { x: 740, y: 380, w: 72,  h: 82  },
       forge:   { x: 848, y: 366, w: 98,  h: 96  },
-      caravan: { x: 966, y: 370, w: 104, h: 86  },
+      caravan_post: { x: 966, y: 370, w: 104, h: 86  },
     },
     // Gently rolling hills — soft bezier curves
     hill1Path: "M0,305 C120,278 260,248 420,262 C580,276 700,252 860,258 C960,262 1040,252 1100,248 L1100,600 L0,600 Z",
@@ -141,7 +141,7 @@ const TOWN_BIOME_CONFIGS = {
       forge:   { x: 480, y: 322, w: 120, h: 144 },
       inn:     { x: 638, y: 354, w: 112, h: 122 },
       larder:  { x: 784, y: 382, w: 74,  h: 82  },
-      caravan: { x: 888, y: 368, w: 104, h: 88  },
+      caravan_post: { x: 888, y: 368, w: 104, h: 88  },
     },
     // Jagged rocky peaks — angular lineto commands
     hill1Path: "M0,288 L78,252 L142,274 L218,218 L308,258 L418,196 L518,240 L638,206 L738,234 L838,196 L938,224 L1018,210 L1100,216 L1100,600 L0,600 Z",
@@ -403,7 +403,7 @@ function BuildingIllustration({ id, isBuilt }) {
         <rect x="6" y="38" width="88" height="59" rx="3" fill="none" stroke="#3a4048" strokeWidth="2" />
       </svg>
     ),
-    caravan: (
+    caravan_post: (
       <svg viewBox="0 0 100 100" className="absolute inset-0 w-full h-full" preserveAspectRatio="xMidYMax meet" style={f}>
         {shadow(50, 48)}
         <line x1="82" y1="12" x2="82" y2="40" stroke="#8a5a2a" strokeWidth="2.5" />

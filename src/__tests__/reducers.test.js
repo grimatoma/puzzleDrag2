@@ -317,8 +317,8 @@ describe("boss Ember Drake — CRAFTING/CRAFT_RECIPE", () => {
     expect(s.boss.progress).toBe(0);
   });
 
-  it("hinge (forge output) increments Drake progress", () => {
-    const s = gameReducer(drakeState(), { type: "CRAFTING/CRAFT_RECIPE", payload: { key: "hinge" } });
+  it("iron_hinge (forge output) increments Drake progress", () => {
+    const s = gameReducer(drakeState(), { type: "CRAFTING/CRAFT_RECIPE", payload: { key: "iron_hinge" } });
     expect(s.boss.progress).toBe(1);
   });
 });

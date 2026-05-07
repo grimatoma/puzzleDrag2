@@ -17,7 +17,7 @@ const PREEXISTING = [
   "harvestpie",
   "preserve",
   "tincture",
-  "hinge",
+  "iron_hinge",
   "cobblepath",
   "lantern",
 ];

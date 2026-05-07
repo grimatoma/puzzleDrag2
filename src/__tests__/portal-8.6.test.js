@@ -89,4 +89,30 @@ describe("8.6 — Magic Portal summons", () => {
     expect(r4.magicFertilizerCharges).toBe(3);
     expect(r4.tools.magic_fertilizer).toBe(0);
   });
+
+  it("USE_TOOL magic_wand: decrements tool count and sets toolPending", () => {
+    const s5 = {
+      ...createInitialState(),
+      tools: { ...createInitialState().tools, magic_wand: 1 },
+    };
+    const r5 = rootReducer(s5, {
+      type: "USE_TOOL",
+      payload: { id: "magic_wand" },
+    });
+    expect(r5.tools.magic_wand).toBe(0);
+    expect(r5.toolPending).toBe("magic_wand");
+  });
+
+  it("USE_TOOL magic_wand: no-op when count is 0", () => {
+    const s6 = {
+      ...createInitialState(),
+      tools: { ...createInitialState().tools, magic_wand: 0 },
+    };
+    const r6 = rootReducer(s6, {
+      type: "USE_TOOL",
+      payload: { id: "magic_wand" },
+    });
+    expect(r6.tools.magic_wand).toBe(0);
+    expect(r6.toolPending ?? null).toBeNull();
+  });
 });
