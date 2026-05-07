@@ -979,6 +979,7 @@ export class GameScene extends Phaser.Scene {
     this.addToPath(tile);
     this.dimUnselectableTiles(tile.res.key);
     this.showChainBadge();
+    this.showChainStatus();
     this.updateChainBadge();
   }
 
@@ -1302,12 +1303,144 @@ export class GameScene extends Phaser.Scene {
     if (this.chainBadge) {
       this.chainBadgeText.setText(k > 0 ? `chain × ${gained}   +${k}★` : `chain × ${gained}`);
     }
+    this.updateChainStatus();
     this._emitChainUpdate();
   }
 
   hideChainBadge() {
     if (this.chainBadge) { this.chainBadge.destroy(); this.chainBadge = null; this.chainBadgeText = null; }
+    this.hideChainStatus();
     this.events.emit("chain-update", null);
+  }
+
+  // ─── Chain progress panel (X/T toward next upgrade product) ──────────────
+  //
+  // Sits above the board while dragging. Shows: a horizontal progress bar
+  // labelled "<chain>/<threshold>", the next-tier product icon, and an
+  // "x N earned" badge once the chain has produced upgrades.
+  //
+  // Inventory is also surfaced so the player can see "I have K of these
+  // already, plus what I'm chaining" — matches the pattern from the
+  // reference design where the meter accumulates across owned + selected.
+
+  showChainStatus() {
+    if (this.chainStatus) return;
+    const dpr = this.dpr;
+    const w = 220 * dpr;
+    const h = 60 * dpr;
+    const cx = this.boardX + (COLS * this.tileSize) / 2;
+    const minY = h / 2 + 8 * dpr;
+    const cy = Math.max(minY, this.boardY - this.boardFrame - 36 * dpr);
+    this.chainStatus = this.add.container(cx, cy).setDepth(45);
+
+    const bg = rounded(this, -w / 2, -h / 2, w, h, 14 * dpr, 0xfff4e0, 0.97, 0xb88a3a, 2 * dpr);
+
+    const iconCx = w / 2 - 26 * dpr;
+    const iconHaloR = 22 * dpr;
+    const halo = this.add.graphics();
+    halo.fillStyle(0xf2dca0, 1);
+    halo.fillCircle(iconCx, 0, iconHaloR);
+    halo.lineStyle(1.5 * dpr, 0xb88a3a, 1);
+    halo.strokeCircle(iconCx, 0, iconHaloR);
+
+    this.chainStatusIcon = this.add.image(iconCx, 0, "spark").setScale(0.6);
+
+    // "x N earned" badge — bottom-right of the icon halo
+    const badgeR = 10 * dpr;
+    const badgeX = iconCx + iconHaloR - 4 * dpr;
+    const badgeY = iconHaloR - 6 * dpr;
+    const badgeBg = this.add.circle(badgeX, badgeY, badgeR, 0x2b2218, 1).setStrokeStyle(1.5 * dpr, 0xffd248);
+    const badgeText = this.add.text(badgeX, badgeY, "0", {
+      fontFamily: "Arial", fontSize: `${11 * dpr}px`, color: "#ffd248", fontStyle: "bold",
+    }).setOrigin(0.5);
+    badgeBg.setVisible(false);
+    badgeText.setVisible(false);
+    this.chainStatusBadgeBg = badgeBg;
+    this.chainStatusBadge = badgeText;
+
+    // Progress bar
+    const barW = 130 * dpr;
+    const barH = 18 * dpr;
+    const barX = -w / 2 + 14 * dpr;
+    const barY = 0;
+    const barRadius = barH / 2;
+    const barBg = this.add.graphics();
+    barBg.fillStyle(0xd4b890, 1);
+    barBg.fillRoundedRect(barX, barY - barH / 2, barW, barH, barRadius);
+    barBg.lineStyle(1.5 * dpr, 0x6a4a2a, 1);
+    barBg.strokeRoundedRect(barX, barY - barH / 2, barW, barH, barRadius);
+
+    const barFill = this.add.graphics();
+    this.chainStatusBarFill = barFill;
+    this.chainStatusBarGeom = { x: barX, y: barY, w: barW, h: barH, r: barRadius };
+
+    this.chainStatusText = this.add.text(barX + barW / 2, barY, "0/0", {
+      fontFamily: "Arial", fontSize: `${13 * dpr}px`, color: "#2b2218", fontStyle: "bold",
+      stroke: "#fff4e0", strokeThickness: 3 * dpr,
+    }).setOrigin(0.5);
+
+    this.chainStatus.add([bg, halo, barBg, barFill, this.chainStatusText, this.chainStatusIcon, badgeBg, badgeText]);
+
+    this.chainStatus.setScale(0.85).setAlpha(0);
+    this.tweens.add({ targets: this.chainStatus, scale: 1, alpha: 1, duration: this._dur(180), ease: "Back.Out" });
+  }
+
+  updateChainStatus() {
+    if (!this.chainStatus) return;
+    const n = this.path.length;
+    if (n === 0) { this.chainStatus.setVisible(false); return; }
+    const res = this.path[0].res;
+    const next = this.nextResource(res);
+    const effThresh = this.registry.get("effectiveThresholds") ?? UPGRADE_THRESHOLDS;
+    const T = next ? (effThresh[res.key] ?? 0) : 0;
+    if (!next || T <= 0) { this.chainStatus.setVisible(false); return; }
+    this.chainStatus.setVisible(true);
+
+    // Progress within the current tier; show full bar at the moment a tier
+    // completes before the next tile resets it.
+    const earnedRaw = Math.floor(n / T);
+    const earned = earnedRaw * this._autumnMult();
+    const within = n % T;
+    const displayCurrent = within === 0 && earnedRaw > 0 ? T : within;
+
+    this.chainStatusText.setText(`${displayCurrent}/${T}`);
+
+    const ready = displayCurrent >= T;
+    const fillColor = ready ? 0xe39a2f : 0xa8c769;
+    const ratio = Math.min(1, displayCurrent / T);
+    const { x, y, w, h, r } = this.chainStatusBarGeom;
+    const fillW = Math.max(0, w * ratio);
+    const g = this.chainStatusBarFill;
+    g.clear();
+    if (fillW > 0) {
+      g.fillStyle(fillColor, 1);
+      // Use a rounded rect that won't overflow the inner pill at low fills.
+      const rr = Math.min(r, fillW / 2);
+      g.fillRoundedRect(x, y - h / 2, fillW, h, rr);
+    }
+
+    if (this.chainStatusIcon.texture.key !== `tile_${next.key}`) {
+      this.chainStatusIcon.setTexture(`tile_${next.key}`);
+    }
+    this.chainStatusIcon.setScale(0.42 * this.tileSpriteScale);
+
+    const showBadge = earned > 0;
+    this.chainStatusBadgeBg.setVisible(showBadge);
+    this.chainStatusBadge.setVisible(showBadge);
+    if (showBadge) this.chainStatusBadge.setText(`${earned}`);
+  }
+
+  hideChainStatus() {
+    if (!this.chainStatus) return;
+    this.tweens.killTweensOf(this.chainStatus);
+    this.chainStatus.destroy();
+    this.chainStatus = null;
+    this.chainStatusIcon = null;
+    this.chainStatusText = null;
+    this.chainStatusBarFill = null;
+    this.chainStatusBarGeom = null;
+    this.chainStatusBadge = null;
+    this.chainStatusBadgeBg = null;
   }
 
   _emitChainUpdate() {
