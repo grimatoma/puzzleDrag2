@@ -20,7 +20,8 @@ export const MAX_TURNS = 10;
 export const SAVE_SCHEMA_VERSION = 12;
 
 export const UPGRADE_THRESHOLDS = {
-  hay: 6, wheat: 5, grain: 4,
+  hay: 6, meadow_grass: 6, spiky_grass: 6,
+  wheat: 5, grain: 4,
   log: 5, plank: 4,
   berry: 7,
   stone: 8, cobble: 6,
@@ -46,7 +47,9 @@ export const BIOMES = {
     palette: { bg: 0x7dbd48, accent: 0x5daa35, dim: 0x3e2a1a },
     tilePool: FARM_TILE_POOL,
     resources: [
-      { key: "hay",   label: "Hay",   color: 0xa8c769, dark: 0x4f6b3a, value: 1, next: "wheat", glyph: "🌾", sway: { amp: 4.0, freq: 0.00060, gust: 0.20 } },
+      { key: "hay",          label: "Hay",          color: 0xa8c769, dark: 0x4f6b3a, value: 1, next: "wheat", glyph: "🌾", sway: { amp: 4.0, freq: 0.00060, gust: 0.20 } },
+      { key: "meadow_grass", label: "Meadow Grass", color: 0x7fb24a, dark: 0x3e5a18, value: 1, next: "wheat", glyph: "🌿", sway: { amp: 4.5, freq: 0.00058, gust: 0.22 } },
+      { key: "spiky_grass",  label: "Spiky Grass",  color: 0x9bb55a, dark: 0x4a5e1c, value: 1, next: "wheat", glyph: "🌱", sway: { amp: 2.5, freq: 0.00075, gust: 0.18 } },
       { key: "wheat", label: "Wheat", color: 0xdab947, dark: 0x7e5e1a, value: 2, next: "grain", glyph: "𓂃", sway: { amp: 5.0, freq: 0.00065, gust: 0.22 } },
       { key: "grain", label: "Grain", color: 0xc8923a, dark: 0x5e3e10, value: 4, next: "flour", glyph: "✿", sway: { amp: 1.2, freq: 0.00035, gust: 0.08 } },
       { key: "flour", label: "Flour", color: 0xf4e3c0, dark: 0x8a6a3a, value: 6, next: null,    glyph: "◈", sway: { amp: 1.0, freq: 0.00030, gust: 0.05 } },
@@ -56,6 +59,9 @@ export const BIOMES = {
       { key: "berry", label: "Berry", color: 0xa3486a, dark: 0x5e1a3a, value: 3, next: "jam",   glyph: "◉", sway: { amp: 3.5, freq: 0.00090, gust: 0.15 } },
       { key: "jam",   label: "Jam",   color: 0xd4658c, dark: 0x7a2f50, value: 5, next: null,    glyph: "◎", sway: { amp: 0.8, freq: 0.00025, gust: 0.00 } },
       { key: "egg",   label: "Egg",   color: 0xf4ecd8, dark: 0x8a785e, value: 3, next: null,    glyph: "◯", sway: { amp: 1.5, freq: 0.00055, gust: 0.08 } },
+      { key: "turkey", label: "Turkey", color: 0xb8743a, dark: 0x5e3818, value: 4, next: null, glyph: "🦃", sway: { amp: 1.2, freq: 0.00050, gust: 0.10 } },
+      { key: "clover", label: "Clover", color: 0x6fa450, dark: 0x365e22, value: 5, next: null, glyph: "☘", sway: { amp: 2.5, freq: 0.00080, gust: 0.18 } },
+      { key: "melon",  label: "Melon",  color: 0xb3d770, dark: 0x4a6e2a, value: 6, next: null, glyph: "🍈", sway: { amp: 0.8, freq: 0.00030, gust: 0.05 } },
     ],
     pool: FARM_TILE_POOL,
   },
@@ -398,10 +404,11 @@ export const PALETTES = {
   // Luminance: hay(0.685) >> log(0.182) >> berry(0.005) — every adjacent pair ≥ 3:1.
   deuteranopia: {
     tiles: {
-      hay:    0xf0d860, wheat:  0xd4b040, grain:  0xb08828, flour:  0xf4ecd0,
+      hay:    0xf0d860, meadow_grass: 0x88d048, spiky_grass: 0xb0c850,
+      wheat:  0xd4b040, grain:  0xb08828, flour:  0xf4ecd0,
       log:    0x9a6e30, plank:  0xc49050, beam:   0x6a4218,
       berry:  0x1a003a, jam:    0x4a1060,
-      egg:    0xf0e8c8,
+      egg:    0xf0e8c8, turkey: 0xc06820, clover: 0x70b048, melon: 0xc8e060,
       stone:  0x9da3a8, cobble: 0xbbc1c6, block:  0x7c8388,
       ore:    0xe89040, ingot:  0xf8d880,
       coal:   0x1a1a1a, coke:   0x505060,
@@ -420,10 +427,11 @@ export const PALETTES = {
   // Luminance: hay(0.762) >> log(0.150) >> berry(0.010) — every adjacent pair ≥ 3:1.
   protanopia: {
     tiles: {
-      hay:    0xffe060, wheat:  0xf0c840, grain:  0xd0a020, flour:  0xf8f0e0,
+      hay:    0xffe060, meadow_grass: 0xa0d850, spiky_grass: 0xc8d058,
+      wheat:  0xf0c840, grain:  0xd0a020, flour:  0xf8f0e0,
       log:    0xb05018, plank:  0xd07838, beam:   0x783010,
       berry:  0x001050, jam:    0x002888,
-      egg:    0xf0e8d0,
+      egg:    0xf0e8d0, turkey: 0xc06028, clover: 0x80b860, melon: 0xd8e878,
       stone:  0x9da3a8, cobble: 0xbbc1c6, block:  0x7c8388,
       ore:    0xa0c8e8, ingot:  0xd8f0ff,
       coal:   0x0a1020, coke:   0x283848,
@@ -442,10 +450,11 @@ export const PALETTES = {
   // Luminance: hay(0.848) >> log(0.215) >> berry(0.005) — every adjacent pair ≥ 3:1.
   tritanopia: {
     tiles: {
-      hay:    0xfff070, wheat:  0xf0d850, grain:  0xd0b030, flour:  0xfcf4e0,
+      hay:    0xfff070, meadow_grass: 0x90c850, spiky_grass: 0xb8c058,
+      wheat:  0xf0d850, grain:  0xd0b030, flour:  0xfcf4e0,
       log:    0xb47030, plank:  0xd49050, beam:   0x7a4818,
       berry:  0x1a003a, jam:    0x48006c,
-      egg:    0xf4ecd8,
+      egg:    0xf4ecd8, turkey: 0xc06820, clover: 0x80b048, melon: 0xc8d870,
       stone:  0x9da3a8, cobble: 0xbbc1c6, block:  0x7c8388,
       ore:    0xe08820, ingot:  0xf8d060,
       coal:   0x0c0c14, coke:   0x303040,

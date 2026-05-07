@@ -3,6 +3,7 @@ import { TILE, COLS, ROWS, UPGRADE_THRESHOLDS, SEASONS, BIOMES } from "./constan
 import { upgradeCountForChain, resourceGainForChain, rollResourceWithWeather } from "./utils.js";
 import { computeWorkerEffects } from "./features/apprentices/effects.js";
 import { applyFrostCollapseDuration } from "./features/weather/effects.js";
+import { CATEGORY_OF } from "./features/species/data.js";
 const cssColor = (num) => Phaser.Display.Color.IntegerToColor(num).rgba;
 import { rounded, makeTextures, regenerateTextures } from "./textures.js";
 import { TileObj } from "./TileObj.js";
@@ -138,6 +139,41 @@ export class GameScene extends Phaser.Scene {
     this.registry.events.on("changedata-palette", (_p, value) => {
       regenerateTextures(this, value ?? "default");
     });
+    // Swap on-board tiles to match the newly active species in their category,
+    // so picking a new species in the panel immediately rerenders the puzzle.
+    this.registry.events.on("changedata-speciesActive", (_p, value, prev) => {
+      this.handleActiveSpeciesChange(value, prev);
+    });
+  }
+
+  /**
+   * When the active species for any category changes, re-key any on-board tiles
+   * whose current key was the previously-active species in that category. Tiles
+   * currently selected in a drag chain are left alone to avoid disrupting input.
+   */
+  handleActiveSpeciesChange(next, prev) {
+    if (!next) return;
+    const prevMap = prev ?? {};
+    const changed = [];
+    for (const cat of Object.keys(next)) {
+      if (prevMap[cat] !== next[cat]) changed.push(cat);
+    }
+    if (changed.length === 0) return;
+    for (let r = 0; r < ROWS; r++) {
+      for (let c = 0; c < COLS; c++) {
+        const tile = this.grid[r]?.[c];
+        if (!tile || tile.selected) continue;
+        const tileCat = CATEGORY_OF[tile.res.key];
+        if (!tileCat || !changed.includes(tileCat)) continue;
+        if (tile.res.key !== prevMap[tileCat]) continue;
+        const newKey = next[tileCat];
+        if (!newKey) continue;
+        const newRes = this.resourceByKey(newKey);
+        if (!newRes) continue;
+        tile.setResource(newRes);
+        this.tweens.add({ targets: tile.sprite, angle: 360, duration: this._dur(280), onComplete: () => (tile.sprite.angle = 0) });
+      }
+    }
   }
 
   // ─── Worker effects sync ─────────────────────────────────────────────────
@@ -290,17 +326,43 @@ export class GameScene extends Phaser.Scene {
     return nextKey ? resources.find((r) => r.key === nextKey) : null;
   }
 
+  /**
+   * Returns the biome pool with each slot substituted by the player's currently
+   * active species for that category. If a category has no active species
+   * selected, the slot keeps its original base resource (preserves existing
+   * gameplay before any species is picked).
+   */
+  activePool() {
+    const base = this.biome().pool;
+    const active = this.registry.get("speciesActive") ?? null;
+    if (!active) return [...base];
+    const out = [];
+    for (const baseKey of base) {
+      const cat = CATEGORY_OF[baseKey];
+      if (!cat) { out.push(baseKey); continue; }
+      const a = active[cat];
+      out.push(a ?? baseKey);
+    }
+    return out;
+  }
+
+  resourceByKey(key) {
+    return this.biome().resources.find((r) => r.key === key);
+  }
+
   randomResource() {
-    const biome = this.biome();
     const weather = this.registry.get("weather");
     const weatherKey = weather?.key ?? weather ?? null;
-    const key = rollResourceWithWeather(biome.pool, weatherKey);
-    return biome.resources.find((r) => r.key === key);
+    const pool = this.activePool();
+    if (pool.length === 0) return this.biome().resources[0];
+    const key = rollResourceWithWeather(pool, weatherKey);
+    return this.resourceByKey(key) ?? this.biome().resources[0];
   }
 
   _randomFromPool(pool, weatherKey) {
-    const key = rollResourceWithWeather(pool, weatherKey);
-    return this.biome().resources.find((r) => r.key === key);
+    const safePool = pool.length ? pool : this.biome().pool;
+    const key = rollResourceWithWeather(safePool, weatherKey);
+    return this.resourceByKey(key) ?? this.biome().resources[0];
   }
 
   // ─── Board fill / collapse ────────────────────────────────────────────────
@@ -313,11 +375,15 @@ export class GameScene extends Phaser.Scene {
     const baseFillMs = 210;
     const frostFillMs = !initial ? applyFrostCollapseDuration(baseFillMs, weather) : baseFillMs;
     const frostBonus = frostFillMs - baseFillMs;
-    // Build worker-boosted pool
-    const biomeBase = this.biome().pool;
+    // Build worker-boosted, species-substituted pool. Worker boosts are gated
+    // by the active species: a boost for key K only applies when K is the active
+    // species in its category (matches getActivePool semantics).
+    const speciesActive = this.registry.get("speciesActive") ?? null;
+    const workerPool = this.activePool();
     const poolWeights = this.registry.get("effectivePoolWeights") ?? {};
-    const workerPool = [...biomeBase];
     for (const [k, n] of Object.entries(poolWeights)) {
+      const cat = CATEGORY_OF[k];
+      if (cat && speciesActive && speciesActive[cat] !== k) continue;
       for (let i = 0; i < Math.round(n); i++) workerPool.push(k);
     }
     for (let r = 0; r < ROWS; r++) {
