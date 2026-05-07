@@ -1,4 +1,5 @@
 import { BIOMES, BUILDINGS, NPCS, MAX_TURNS, RECIPES, WORKSHOP_RECIPES, STORAGE_KEYS, SEASON_EFFECTS, DAILY_REWARDS, MINE_ENTRY_TIERS, CAPPED_RESOURCES, UPGRADE_THRESHOLDS } from "./constants.js";
+import { sellPriceFor as _sellPriceFor } from "./features/market/pricing.js";
 import { isMysteriousChainValid } from "./features/mine/mysterious_ore.js";
 import { driftPrices, applyTrade } from "./market.js";
 import { currentCap } from "./utils.js";
@@ -1034,12 +1035,29 @@ function coreReducer(state, action) {
       if (craftId === "shovel") {
         return { ...state, inventory: newInv, shovel: (state.shovel ?? 0) + craftQty };
       }
+      // Credit crafted output to inventory
+      newInv[craftId] = (newInv[craftId] ?? 0) + craftQty;
       return { ...state, inventory: newInv };
     }
 
     case "GRANT_RUNES": {
       const amt = Math.max(0, action.payload?.amount | 0);
       return { ...state, runes: (state.runes ?? 0) + amt };
+    }
+
+    // Phase 10.3 — Sell a crafted item for its §10 sell price
+    case "SELL_ITEM": {
+      const itemId = action.id ?? action.payload?.id;
+      const sellQty = Math.max(1, (action.qty ?? action.payload?.qty ?? 1) | 0);
+      if (!itemId) return state;
+      const owned = state.inventory?.[itemId] ?? 0;
+      if (owned < sellQty) return state;
+      const price = _sellPriceFor(itemId);
+      return {
+        ...state,
+        inventory: { ...state.inventory, [itemId]: owned - sellQty },
+        coins: (state.coins ?? 0) + price * sellQty,
+      };
     }
 
     // ── Phase 9 — Mine biome actions ───────────────────────────────────────────
@@ -1342,3 +1360,5 @@ export function gameReducer(state, action) {
 // Alias exports for test compatibility (spec uses rootReducer / createInitialState)
 export const rootReducer = rawReducer;
 export const createInitialState = initialState;
+// Phase 10.3 — re-export sellPriceFor for test imports from state.js
+export { _sellPriceFor as sellPriceFor };
