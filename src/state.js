@@ -28,8 +28,9 @@ import { payOrder, gainBond, decayBond, applyGift } from "./features/npcs/bond.j
 import { pickDialog } from "./features/npcs/dialog.js";
 import * as decorations from "./features/decorations/slice.js";
 import * as portal from "./features/portal/slice.js";
+import * as market from "./features/market/slice.js";
 
-const slices = [crafting, quests, achievements, tutorial, settings, boss, cartography, apprentices, mood, storySlice, decorations, portal];
+const slices = [crafting, quests, achievements, tutorial, settings, boss, cartography, apprentices, mood, storySlice, decorations, portal, market];
 
 // ─── Wages / debt ──────────────────────────────────────────────────────────
 const MAX_DEBT = 9999;
@@ -1491,6 +1492,7 @@ const SLICE_PRIMARY_ACTIONS = new Set([
   "APP/FIRE",
   "BUILD_DECORATION",
   "SUMMON_MAGIC_TOOL",
+  "MARKET/SELL",
   // Quest claim and almanac actions are owned by quests/slice
   "QUESTS/CLAIM_QUEST",
   "QUESTS/CLAIM_ALMANAC",
