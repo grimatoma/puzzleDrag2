@@ -24,9 +24,11 @@ if [ ! -d node_modules ] || [ ! -x node_modules/.bin/vitest ]; then
 fi
 
 # 2. Install Playwright Chromium (no-op if cache already exists).
+#    Honors PLAYWRIGHT_BROWSERS_PATH (sandbox images set this to /opt/pw-browsers).
 #    Browser walkthrough subagents need this; cold install is ~30s.
-if [ ! -d "${HOME}/.cache/ms-playwright" ]; then
-  npx playwright install chromium --with-deps 2>/dev/null || npx playwright install chromium
+PW_CACHE_DIR="${PLAYWRIGHT_BROWSERS_PATH:-$HOME/.cache/ms-playwright}"
+if [ -z "$(ls -A "$PW_CACHE_DIR" 2>/dev/null)" ]; then
+  npx playwright install chromium
 fi
 
 exit 0
