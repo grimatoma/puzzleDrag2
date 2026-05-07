@@ -4,8 +4,8 @@ export function clamp(n, a, b) {
   return Math.max(a, Math.min(b, n));
 }
 
-export function upgradeCountForChain(chainLength, resourceKey) {
-  const t = UPGRADE_THRESHOLDS[resourceKey];
+export function upgradeCountForChain(chainLength, resourceKey, thresholdMap = UPGRADE_THRESHOLDS) {
+  const t = thresholdMap[resourceKey];
   if (!t) return 0; // terminal or unknown resource
   return Math.floor(chainLength / t);
 }
