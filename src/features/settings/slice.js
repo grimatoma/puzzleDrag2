@@ -1,6 +1,6 @@
 import { STORAGE_KEYS } from "../../constants.js";
 // Phase 11: import INITIAL_SETTINGS so the slice extends it (not duplicates it)
-import { INITIAL_SETTINGS as PHASE11_INITIAL, saveSettings as savePhase11Settings, settingsReduce as phase11Reduce } from "../../settings.js";
+import { INITIAL_SETTINGS as PHASE11_INITIAL, settingsReduce as phase11Reduce } from "../../settings.js";
 const STORAGE_KEY = STORAGE_KEYS.settings;
 
 function loadSettings() {
@@ -11,10 +11,28 @@ function loadSettings() {
   return null;
 }
 
-function persistSettings(settings) {
+/**
+ * Side-effect: persist the settings sub-state to its own localStorage key.
+ * Called from state.runActionEffects after the reducer has run, so the
+ * reducer itself stays pure.
+ */
+export function persistSettings(settings) {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
   } catch { /* storage unavailable */ }
+}
+
+/** Side-effect: clear every hearth.* localStorage key (used by SETTINGS/RESET_SAVE). */
+export function clearAllHearthStorage() {
+  try {
+    const keys = Object.keys(localStorage).filter((k) => k.startsWith("hearth."));
+    for (const k of keys) localStorage.removeItem(k);
+  } catch { /* storage unavailable */ }
+}
+
+/** Side-effect: clear the tutorial-seen flag so the tutorial replays. */
+export function clearTutorialSeen() {
+  try { localStorage.removeItem(STORAGE_KEYS.tutorialSeen); } catch { /* storage unavailable */ }
 }
 
 const DEFAULT_SETTINGS = {
@@ -33,6 +51,8 @@ export const initial = {
   settingsTab: 'main',
 };
 
+// Reducer is pure: any localStorage writes/clears triggered by these actions
+// happen in state.runActionEffects after this returns.
 export function reduce(state, action) {
   switch (action.type) {
     case 'SETTINGS/TOGGLE': {
@@ -40,21 +60,18 @@ export function reduce(state, action) {
         ...state.settings,
         [action.key]: !state.settings[action.key],
       };
-      persistSettings(settings);
       return { ...state, settings };
     }
 
     // Phase 11.1 — Color palette
     case 'SET_PALETTE': {
       const settings = phase11Reduce(state.settings, action);
-      savePhase11Settings(settings);
       return { ...state, settings };
     }
 
     // Phase 11.4 — Reduced motion
     case 'SET_REDUCED_MOTION': {
       const settings = phase11Reduce(state.settings, action);
-      savePhase11Settings(settings);
       return { ...state, settings };
     }
 
@@ -68,11 +85,8 @@ export function reduce(state, action) {
       return { ...state, settingsTab: action.tab };
 
     case 'SETTINGS/RESET_SAVE': {
-      try {
-        const keys = Object.keys(localStorage).filter((k) => k.startsWith('hearth.'));
-        keys.forEach((k) => localStorage.removeItem(k));
-      } catch { /* storage unavailable */ }
-      // Set flag; prototype.jsx's useEffect performs the actual reload
+      // Set flag; prototype.jsx's useEffect performs the actual reload, and
+      // runActionEffects clears the hearth.* localStorage keys.
       return { ...state, pendingReload: true };
     }
 
@@ -95,8 +109,7 @@ export function reduce(state, action) {
       };
 
     case 'SETTINGS/SHOW_TUTORIAL': {
-      // Clear the persisted seen flag so the tutorial actually re-runs after reload
-      try { localStorage.removeItem(STORAGE_KEYS.tutorialSeen); } catch { /* storage unavailable */ }
+      // The persisted tutorial-seen flag is cleared by runActionEffects.
       const next = { ...state, modal: 'tutorial' };
       if (state.tutorial) {
         next.tutorial = { ...state.tutorial, active: true, step: 0, seen: false };

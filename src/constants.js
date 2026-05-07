@@ -339,6 +339,11 @@ export const WORKSHOP_RECIPES = {
                  desc: "Scares the wolves away for several turns, buying time to chain away their target tiles." },
 };
 
+// NOTE (balance audit, 2026-05): Several bakery recipes appear to sell for
+// less than the raw market value of their inputs (e.g. bread = 125 coins for
+// 3 flour + 1 egg; selling those raw nets ~370). This may be intentional
+// (crafting unlocks orders/quests, not coin profit) or stale data — flagged
+// for design review before any code-side rebalance. See REFERENCE_CATALOG §4.
 export const RECIPES = {
   shovel:     { name: "Shovel",          inputs: { wood_plank: 1, mine_stone: 1 },          tier: 1, station: "workshop", coins: 25,
                 desc: "A sturdy digging tool sold for 25 coins. Essential for farm maintenance and mine entry." },
