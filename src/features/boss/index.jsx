@@ -118,7 +118,31 @@ function BossModal({ boss, weather, dispatch }) {
           >
             {meta.flavor || boss.flavor}
           </div>
+          {boss.description && (
+            <div
+              className="text-[11px] text-white/60 text-center mt-2 px-3 leading-snug"
+              style={{ fontFamily: "Arial, sans-serif" }}
+            >
+              {boss.description}
+            </div>
+          )}
         </div>
+
+        {/* Board modifier panel */}
+        {boss.modifierDescription && (
+          <div
+            className="rounded-xl p-3 mb-4 flex items-start gap-2"
+            style={{ background: "rgba(168,67,26,0.18)", border: "1px solid rgba(168,67,26,0.4)" }}
+          >
+            <span className="text-[14px] flex-shrink-0">⚠️</span>
+            <div
+              className="text-[11px] text-[#f8c894] leading-snug"
+              style={{ fontFamily: "Arial, sans-serif" }}
+            >
+              <span className="font-bold">Board effect: </span>{boss.modifierDescription}
+            </div>
+          </div>
+        )}
 
         {/* Goal panel */}
         <div
