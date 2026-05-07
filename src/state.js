@@ -6,7 +6,7 @@ import { isMysteriousChainValid, spawnMysteriousOre, tickMysteriousOre } from ".
 import { driftPrices, applyTrade } from "./market.js";
 import { currentCap } from "./utils.js";
 import { WORKER_MAP } from "./features/apprentices/data.js";
-import { computeWorkerEffects } from "./features/apprentices/effects.js";
+import { computeWorkerEffects } from "./features/apprentices/aggregate.js";
 import { SPECIES, CATEGORIES, SPECIES_MAP } from "./features/species/data.js";
 import { rollQuests } from "./features/quests/data.js";
 import { ACHIEVEMENTS as ACHIEVEMENT_LIST } from "./features/achievements/data.js";

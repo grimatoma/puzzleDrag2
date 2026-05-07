@@ -1,7 +1,7 @@
 import Phaser from "phaser";
 import { TILE, COLS, ROWS, UPGRADE_THRESHOLDS, SEASONS, BIOMES } from "./constants.js";
 import { upgradeCountForChain, resourceGainForChain, rollResourceWithWeather } from "./utils.js";
-import { computeWorkerEffects } from "./features/apprentices/effects.js";
+import { computeWorkerEffects } from "./features/apprentices/aggregate.js";
 import { applyFrostCollapseDuration } from "./features/weather/effects.js";
 import { CATEGORY_OF } from "./features/species/data.js";
 const cssColor = (num) => Phaser.Display.Color.IntegerToColor(num).rgba;
@@ -191,8 +191,13 @@ export class GameScene extends Phaser.Scene {
     for (const [k, v] of Object.entries(UPGRADE_THRESHOLDS)) {
       eff[k] = Math.max(1, v - (agg.thresholdReduce[k] ?? 0));
     }
+    // Merge legacy poolWeight (Phase 4) + Phase-9 effectivePoolWeights
+    const mergedPoolWeights = { ...agg.poolWeight };
+    for (const [k, v] of Object.entries(agg.effectivePoolWeights ?? {})) {
+      mergedPoolWeights[k] = (mergedPoolWeights[k] ?? 0) + v;
+    }
     this.registry.set("effectiveThresholds",  eff);
-    this.registry.set("effectivePoolWeights", agg.poolWeight);
+    this.registry.set("effectivePoolWeights", mergedPoolWeights);
     this.registry.set("bonusYields",          agg.bonusYield);
     this.registry.set("seasonBonus",          agg.seasonBonus);
   }
