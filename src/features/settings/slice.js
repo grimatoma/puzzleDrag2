@@ -1,4 +1,6 @@
 import { STORAGE_KEYS } from "../../constants.js";
+// Phase 11: import INITIAL_SETTINGS so the slice extends it (not duplicates it)
+import { INITIAL_SETTINGS as PHASE11_INITIAL, saveSettings as savePhase11Settings, settingsReduce as phase11Reduce } from "../../settings.js";
 const STORAGE_KEY = STORAGE_KEYS.settings;
 
 function loadSettings() {
@@ -19,8 +21,11 @@ const DEFAULT_SETTINGS = {
   sfxOn: true,
   musicOn: true,
   hapticsOn: true,
-  reducedMotion: false,
+  // Phase 11: reducedMotion defaults to null (follow OS), not false
+  reducedMotion: null,
   colorBlind: false,
+  // Phase 11: palette + keyboardCursor merged from PHASE11_INITIAL
+  ...PHASE11_INITIAL,
 };
 
 export const initial = {
@@ -36,6 +41,26 @@ export function reduce(state, action) {
         [action.key]: !state.settings[action.key],
       };
       persistSettings(settings);
+      return { ...state, settings };
+    }
+
+    // Phase 11.1 — Color palette
+    case 'SET_PALETTE': {
+      const settings = phase11Reduce(state.settings, action);
+      savePhase11Settings(settings);
+      return { ...state, settings };
+    }
+
+    // Phase 11.4 — Reduced motion
+    case 'SET_REDUCED_MOTION': {
+      const settings = phase11Reduce(state.settings, action);
+      savePhase11Settings(settings);
+      return { ...state, settings };
+    }
+
+    // Phase 11.2 — Keyboard cursor
+    case 'SET_CURSOR': {
+      const settings = phase11Reduce(state.settings, action);
       return { ...state, settings };
     }
 
