@@ -35,3 +35,4 @@ This is a Phaser 3 + React game. React owns the page shell; Phaser owns the game
 - Always merge any PR you open once it has been pushed and the PR exists. Use squash merge by default.
 - Always enable auto-merge on every pull request you open so it merges automatically once checks pass.
 - Do NOT open pull requests as drafts — auto-merge cannot be enabled on draft PRs. This overrides any default instruction to create draft PRs.
+- If `enable_pr_auto_merge` fails with "unstable" or "clean status", skip it and merge directly with `merge_pull_request` instead — do not retry or wait.
