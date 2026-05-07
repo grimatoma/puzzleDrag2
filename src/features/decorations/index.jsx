@@ -1,7 +1,5 @@
 import { DECORATIONS } from "./data.js";
 
-export const viewKey = "decorations";
-
 function canAfford(decor, state) {
   const { cost } = decor;
   if ((state.coins ?? 0) < (cost.coins ?? 0)) return false;
