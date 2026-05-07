@@ -4,6 +4,8 @@ import { getCategoryViewModel } from "./effects.js";
 import { drawTileIcon } from "../../textures.js";
 import { BIOMES } from "../../constants.js";
 import { hex } from "../../utils.js";
+import { FARM_HAZARD_META } from "../farm/hazards.js";
+import { HAZARDS } from "../mine/hazards.js";
 
 export const viewKey = "tileCollection";
 
@@ -13,6 +15,13 @@ const CATEGORY_LABELS = {
   wood: "Wood",
   berry: "Berry",
   bird: "Bird",
+  vegetables: "Veg",
+  fruits: "Fruit",
+  flowers: "Flower",
+  trees: "Trees",
+  herd_animals: "Herd",
+  cattle: "Cattle",
+  mounts: "Mounts",
 };
 
 const CATEGORY_ICONS = {
@@ -21,11 +30,34 @@ const CATEGORY_ICONS = {
   wood: "🪵",
   berry: "🫐",
   bird: "🐣",
+  vegetables: "🥕",
+  fruits: "🍎",
+  flowers: "🌸",
+  trees: "🌳",
+  herd_animals: "🐷",
+  cattle: "🐄",
+  mounts: "🐎",
 };
+
+const HAZARD_ICON = "⚠️";
 
 const ALL_FARM_RESOURCES = Object.fromEntries(
   BIOMES.farm.resources.map((r) => [r.key, r]),
 );
+
+const FARM_HAZARD_LIST = [
+  { id: "rats",  ...FARM_HAZARD_META.rats, icon: "🐀", biome: "Farm" },
+  { id: "fire",  ...FARM_HAZARD_META.fire, icon: "🔥", biome: "Farm" },
+  { id: "wolf",  ...FARM_HAZARD_META.wolf, icon: "🐺", biome: "Farm" },
+];
+
+const MINE_HAZARD_LIST = HAZARDS.map((h) => ({
+  ...h,
+  biome: "Mine",
+  icon: { cave_in: "🪨", gas_vent: "💨", lava: "🌋", mole: "🐭" }[h.id] ?? "⚠️",
+}));
+
+const ALL_HAZARDS = [...FARM_HAZARD_LIST, ...MINE_HAZARD_LIST];
 
 function lighten(hexColor, amt) {
   const r = parseInt(hexColor.slice(1, 3), 16);
@@ -37,10 +69,6 @@ function lighten(hexColor, amt) {
   return `#${lr.toString(16).padStart(2, "0")}${lg.toString(16).padStart(2, "0")}${lb.toString(16).padStart(2, "0")}`;
 }
 
-/**
- * Tiny tile-style portrait that re-uses the same procedural icons rendered
- * onto puzzle tiles, so the tile collection panel matches the in-board art exactly.
- */
 function TileIcon({ tileId, size = 40, locked = false }) {
   const ref = useRef(null);
   const t = TILE_TYPES_MAP[tileId];
@@ -57,7 +85,6 @@ function TileIcon({ tileId, size = 40, locked = false }) {
     ctx.imageSmoothingEnabled = false;
     ctx.scale(dpr, dpr);
     ctx.clearRect(0, 0, size, size);
-    // Rounded background swatch in the resource's tile color
     const baseColor = hex(res.color);
     const grad = ctx.createRadialGradient(size * 0.4, size * 0.35, 2, size / 2, size / 2, size * 0.6);
     grad.addColorStop(0, lighten(baseColor, 0.25));
@@ -75,7 +102,6 @@ function TileIcon({ tileId, size = 40, locked = false }) {
     ctx.strokeStyle = "rgba(255,255,255,0.32)";
     ctx.lineWidth = 1.5;
     ctx.stroke();
-    // Draw the icon centered, scaled down so a 74-canvas icon fits in `size`
     const iconScale = (size / 74) * 0.92;
     ctx.save();
     ctx.translate(size / 2, size / 2);
@@ -104,15 +130,14 @@ function TileIcon({ tileId, size = 40, locked = false }) {
 }
 
 function TileRow({ row, category, dispatch }) {
-  const handleAction = () => {
-    if (row.action === "toggle") {
-      dispatch({
-        type: "SET_ACTIVE_TILE",
-        payload: { category, tileId: row.id },
-      });
-    } else if (row.action === "buy") {
-      dispatch({ type: "BUY_TILE", payload: { id: row.id } });
-    }
+  const handleActivate = () => {
+    dispatch({ type: "SET_ACTIVE_TILE", payload: { category, tileId: row.id } });
+  };
+  const handleDeactivate = () => {
+    dispatch({ type: "SET_ACTIVE_TILE", payload: { category, tileId: null } });
+  };
+  const handleBuy = () => {
+    dispatch({ type: "BUY_TILE", payload: { id: row.id } });
   };
 
   return (
@@ -125,22 +150,14 @@ function TileRow({ row, category, dispatch }) {
           : "bg-[#2b1e0f]/40 border-[#8a6040]/50"
       }`}
     >
-      {/* Portrait / silhouette — unique procedural tile art */}
       <div className="flex-shrink-0">
         <TileIcon tileId={row.id} size={40} locked={row.locked} />
       </div>
 
-      {/* Name + status + description */}
       <div className="flex-1 min-w-0">
-        <div
-          className={`font-bold text-sm truncate ${
-            row.locked ? "text-[#6a5040]" : "text-[#f7e2b6]"
-          }`}
-        >
+        <div className={`font-bold text-sm truncate ${row.locked ? "text-[#6a5040]" : "text-[#f7e2b6]"}`}>
           {row.name}
-          {row.active && (
-            <span className="ml-2 text-[#a8d44a] text-xs">● Active</span>
-          )}
+          {row.active && <span className="ml-2 text-[#a8d44a] text-xs">● Active</span>}
         </div>
         <div className={`text-xs mt-0.5 truncate ${row.locked ? "text-[#6a5040]" : "text-[#c8a87a]"}`}>
           {row.status}
@@ -152,40 +169,74 @@ function TileRow({ row, category, dispatch }) {
         )}
       </div>
 
-      {/* Action button */}
-      {row.action === "toggle" && !row.active && (
-        <button
-          onClick={handleAction}
-          className="flex-shrink-0 px-2 py-1 rounded-lg bg-[#4f6b3a] text-[#d4f0a4] text-xs font-bold hover:bg-[#5f7b4a] transition-colors"
-        >
-          Activate
-        </button>
-      )}
-      {row.action === "toggle" && row.active && (
-        <div className="flex-shrink-0 w-3 h-3 rounded-full bg-[#a8d44a]" />
-      )}
-      {row.action === "buy" && (
-        <button
-          onClick={handleAction}
-          className="flex-shrink-0 px-2 py-1 rounded-lg bg-[#8a6a1a] text-[#ffd248] text-xs font-bold hover:bg-[#9a7a2a] transition-colors"
-        >
-          Buy
-        </button>
-      )}
+      <div className="flex-shrink-0 flex flex-col items-end gap-1">
+        {row.action === "toggle" && !row.active && (
+          <button
+            onClick={handleActivate}
+            className="px-2 py-1 rounded-lg bg-[#4f6b3a] text-[#d4f0a4] text-xs font-bold hover:bg-[#5f7b4a] transition-colors"
+          >
+            Select
+          </button>
+        )}
+        {row.action === "toggle" && row.active && (
+          <button
+            onClick={handleDeactivate}
+            className="px-2 py-1 rounded-lg bg-[#3a2a1a] text-[#c8a87a] text-xs hover:bg-[#4a3a2a] transition-colors border border-[#6a4030]/50"
+            title="Remove this tile from the board"
+          >
+            ✕ Off
+          </button>
+        )}
+        {row.action === "buy" && (
+          <button
+            onClick={handleBuy}
+            className="px-2 py-1 rounded-lg bg-[#8a6a1a] text-[#ffd248] text-xs font-bold hover:bg-[#9a7a2a] transition-colors"
+          >
+            Buy
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function HazardRow({ hazard }) {
+  return (
+    <div className="flex items-start gap-3 p-2 rounded-xl border border-[#7a2a0a]/60 bg-[#2a0e0e]/50">
+      <div
+        className="flex-shrink-0 flex items-center justify-center text-2xl rounded-lg bg-[#3a1a0a]/60 border border-[#7a3a1a]/40"
+        style={{ width: 40, height: 40 }}
+      >
+        {hazard.icon}
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="font-bold text-sm text-[#f7b07a]">
+          {hazard.name}
+          <span className="ml-2 text-[10px] font-normal text-[#8a5040] uppercase tracking-wide">{hazard.biome}</span>
+        </div>
+        <div className="text-xs mt-0.5 text-[#c8987a] leading-snug">{hazard.description}</div>
+        {hazard.clearInstruction && (
+          <div className="text-[10px] mt-1 text-[#a07858] italic leading-snug">
+            <span className="text-[#d4a070] not-italic font-semibold">Clear: </span>
+            {hazard.clearInstruction}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
 
 export default function TileCollectionPanel({ state, dispatch }) {
   const [activeTab, setActiveTab] = useState("grass");
+  const tabBarRef = useRef(null);
 
-  const rows = getCategoryViewModel(state, activeTab);
+  const rows = activeTab !== "hazards" ? getCategoryViewModel(state, activeTab) : [];
 
   return (
     <div className="flex flex-col h-full bg-gradient-to-b from-[#3a2510] to-[#2b1a0c] text-[#f7e2b6]">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-[#5a3a1a]">
-        <h2 className="text-lg font-bold text-[#ffd248]">Tiles Collection</h2>
+        <h2 className="text-lg font-bold text-[#ffd248]">Tiles Wiki</h2>
         <button
           onClick={() => dispatch({ type: "SET_VIEW", view: "town" })}
           className="text-[#c8a87a] hover:text-white text-xl leading-none"
@@ -194,43 +245,72 @@ export default function TileCollectionPanel({ state, dispatch }) {
         </button>
       </div>
 
-      {/* Category tabs */}
-      <div className="flex border-b border-[#5a3a1a] flex-shrink-0">
+      {/* Category tabs — scrollable row */}
+      <div
+        ref={tabBarRef}
+        className="flex border-b border-[#5a3a1a] flex-shrink-0 overflow-x-auto"
+        style={{ scrollbarWidth: "none" }}
+      >
         {CATEGORIES.map((cat) => (
           <button
             key={cat}
             onClick={() => setActiveTab(cat)}
-            className={`flex-1 py-2 text-xs font-bold transition-colors ${
+            className={`flex-shrink-0 py-2 px-2 text-xs font-bold transition-colors min-w-[52px] ${
               activeTab === cat
                 ? "bg-[#4f3010] text-[#ffd248] border-b-2 border-[#ffd248]"
                 : "text-[#8a6040] hover:text-[#c8a87a]"
             }`}
           >
-            <span className="block text-base">{CATEGORY_ICONS[cat]}</span>
-            <span>{CATEGORY_LABELS[cat]}</span>
+            <span className="block text-base text-center">{CATEGORY_ICONS[cat]}</span>
+            <span className="block text-center leading-tight">{CATEGORY_LABELS[cat]}</span>
           </button>
         ))}
+        {/* Hazards tab */}
+        <button
+          onClick={() => setActiveTab("hazards")}
+          className={`flex-shrink-0 py-2 px-2 text-xs font-bold transition-colors min-w-[52px] ${
+            activeTab === "hazards"
+              ? "bg-[#4f1a0a] text-[#ff9a4a] border-b-2 border-[#ff9a4a]"
+              : "text-[#8a4030] hover:text-[#c87a5a]"
+          }`}
+        >
+          <span className="block text-base text-center">{HAZARD_ICON}</span>
+          <span className="block text-center leading-tight">Hazards</span>
+        </button>
       </div>
 
-      {/* Tile rows */}
+      {/* Content */}
       <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-2">
-        {rows.map((row) => (
-          <TileRow
-            key={row.id}
-            row={row}
-            category={activeTab}
-            dispatch={dispatch}
-          />
-        ))}
-        {rows.length === 0 && (
-          <div className="text-center text-[#6a5040] text-sm py-8">
-            No tiles in this category.
-          </div>
+        {activeTab === "hazards" ? (
+          <>
+            <div className="text-xs text-[#a87050] text-center py-1 italic">
+              Hazards cannot be selected — they appear automatically and must be cleared.
+            </div>
+            {ALL_HAZARDS.map((h) => (
+              <HazardRow key={h.id} hazard={h} />
+            ))}
+          </>
+        ) : (
+          <>
+            {rows.map((row) => (
+              <TileRow
+                key={row.id}
+                row={row}
+                category={activeTab}
+                dispatch={dispatch}
+              />
+            ))}
+            {rows.length === 0 && (
+              <div className="text-center text-[#6a5040] text-sm py-8">
+                No tiles in this category.
+              </div>
+            )}
+          </>
         )}
       </div>
 
       {/* Free moves chip */}
-      {(state.tileCollection?.freeMoves ?? 0) > 0 && (
+      {(state.tileCollection?.freeMoves ?? 0) > 0 && activeTab !== "hazards" && (
         <div className="flex-shrink-0 mx-3 mb-3 px-3 py-2 rounded-xl bg-[#4f6b3a]/50 border border-[#a8d44a] text-center">
           <span className="text-[#a8d44a] font-bold">
             +{state.tileCollection.freeMoves} free move{state.tileCollection.freeMoves !== 1 ? "s" : ""}
