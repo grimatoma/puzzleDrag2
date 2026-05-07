@@ -44,6 +44,17 @@ const BOSS_META = {
     turns: 5,
     minChain: null,
   },
+  mossback: {
+    name: "Mossback",
+    emoji: "🌱",
+    flavor: "A mossy titan lurks in the spring glades. Four mystery tiles hide its weakness — reveal them all.",
+    goal: "Hide ~4 mystery tiles that flip on chain.",
+    resource: "berry",
+    targetCount: 30,
+    turns: 10,
+    minChain: null,
+    hiddenTilesTarget: 4,
+  },
 };
 
 // Seasonal boss rotation — one per year, cycling through the 4 bosses
