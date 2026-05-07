@@ -336,7 +336,7 @@ both feed into the same ledger without a refactor.
 - [ ] Solving Mysterious Ore dispatches `GRANT_RUNES { amount: 1, source: "mysterious_ore" }`
 - [ ] Defeating any boss dispatches `GRANT_RUNES { amount: 1, source: "boss" }`
 - [ ] `ENTER_MINE` with `mode: "premium"` requires `runes >= 2`, deducts 2, no supplies needed
-- [ ] Magic Portal `BUILD` requires `runes >= 5` (in addition to coin cost)
+- [ ] Magic Portal `BUILD` requires `runes >= 5` (in addition to coin cost). The Magic Portal *building* unlocks here in Phase 3.3; its **summon UI and the four magic tools (Wand, Hourglass, Magic Seed, Magic Fertilizer per §5) are wired in Phase 8.6**, after the Influence currency they spend is introduced in Phase 8.5. Tapping the built Portal in Phase 3 only shows a "Summons unlock with Influence" placeholder modal.
 - [ ] `ACTIVATE_RUNE_WILDCARD` reducer case: requires `runeStash >= 1`, decrements stash, sets `state.toolPending = "rune_wildcard"`
 - [ ] Phaser handler for `toolPending: "rune_wildcard"` replaces 3 random non-selected tiles with a wildcard sprite that matches any neighbour during chain validation
 - [ ] Wildcard tiles do NOT consume a session turn to deploy; they DO consume a turn when the resulting chain commits
