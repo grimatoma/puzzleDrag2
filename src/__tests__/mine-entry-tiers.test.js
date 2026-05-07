@@ -7,7 +7,7 @@ beforeEach(() => global.localStorage.clear());
 describe("Phase 3.6 — Mine entry tiers", () => {
   it("registers shovel recipe at workshop tier 1", () => {
     expect(RECIPES.shovel).toMatchObject({
-      inputs: { wood_plank: 1, stone: 1 }, tier: 1, station: "workshop", coins: 25,
+      inputs: { wood_plank: 1, mine_stone: 1 }, tier: 1, station: "workshop", coins: 25,
     });
   });
 
@@ -16,11 +16,11 @@ describe("Phase 3.6 — Mine entry tiers", () => {
   });
 
   it("crafts 1 shovel for 1 plank + 1 stone", () => {
-    const s0 = { ...createInitialState(), inventory: { wood_plank: 2, stone: 2 }, built: { hearth: true, workshop: true } };
+    const s0 = { ...createInitialState(), inventory: { wood_plank: 2, mine_stone: 2 }, built: { hearth: true, workshop: true } };
     const s1 = rootReducer(s0, { type: "CRAFT", payload: { id: "shovel", qty: 1 } });
     expect(s1.shovel).toBe(1);
     expect(s1.inventory.wood_plank).toBe(1);
-    expect(s1.inventory.stone).toBe(1);
+    expect(s1.inventory.mine_stone).toBe(1);
   });
 
   it("MINE_ENTRY_TIERS lists three tiers in spec order", () => {

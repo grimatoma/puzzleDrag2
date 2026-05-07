@@ -69,9 +69,9 @@ export const WORKERS = [
     icon: "⚒",
     color: "#3a3a3a",
     wage: 40,
-    hireCost: { worker: 1, ingot: 4, bread: 8 },
+    hireCost: { worker: 1, mine_ingot: 4, bread: 8 },
     maxCount: 2,
-    effect: { type: "threshold_reduce", key: "ore", from: 6, to: 4 },
+    effect: { type: "threshold_reduce", key: "mine_ore", from: 6, to: 4 },
     requirement: { building: "forge", orLevel: 4 },
     description: "A forge apprentice who learned the trade at Bram's knee. Reduces the chain length needed to smelt ore into ingots.",
   },
@@ -82,9 +82,9 @@ export const WORKERS = [
     icon: "⛏",
     color: "#7a8490",
     wage: 25,
-    hireCost: { worker: 1, stone: 6, bread: 6 },
+    hireCost: { worker: 1, mine_stone: 6, bread: 6 },
     maxCount: 2,
-    effect: { type: "threshold_reduce", key: "stone", from: 8, to: 6 },
+    effect: { type: "threshold_reduce", key: "mine_stone", from: 8, to: 6 },
     requirement: { level: 2 },
     description: "A seasoned miner who always finds a richer seam. Reduces the chain length needed to upgrade stone tiles.",
   },
@@ -95,7 +95,7 @@ export const WORKERS = [
     icon: "🧺",
     color: "#7a9a3a",
     wage: 25,
-    hireCost: { worker: 1, grass_hay: 10, bread: 20, stone: 10, ingot: 15 },
+    hireCost: { worker: 1, grass_hay: 10, bread: 20, mine_stone: 10, mine_ingot: 15 },
     maxCount: 4,
     effect: { type: "threshold_reduce_category", category: "vegetables", from: 6, to: 5 },
     requirement: { building: "kitchen", orLevel: 5 },
@@ -111,7 +111,7 @@ export const WORKERS = [
     icon: "🧺",
     color: "#c84a3a",
     wage: 30,
-    hireCost: { worker: 1, grass_hay: 6, bread: 10, stone: 12, soup: 2 },
+    hireCost: { worker: 1, grass_hay: 6, bread: 10, mine_stone: 12, soup: 2 },
     maxCount: 2,
     // Catalog: 7 fruit = 1 pie at max (base 7 → max 6).
     effect: { type: "threshold_reduce_category", category: "fruits", from: 7, to: 6 },
@@ -125,7 +125,7 @@ export const WORKERS = [
     icon: "🪈",
     color: "#a86838",
     wage: 35,
-    hireCost: { worker: 1, grass_hay: 4, bread: 10, stone: 12, meat: 16 },
+    hireCost: { worker: 1, grass_hay: 4, bread: 10, mine_stone: 12, meat: 16 },
     maxCount: 4,
     // Catalog: 5 herd = 1 meat at max (base 5 → max 4).
     effect: { type: "threshold_reduce_category", category: "herd_animals", from: 5, to: 4 },
@@ -139,7 +139,7 @@ export const WORKERS = [
     icon: "🥛",
     color: "#8aa6c4",
     wage: 40,
-    hireCost: { worker: 1, grass_hay: 6, soup: 3, meat: 3, ingot: 15 },
+    hireCost: { worker: 1, grass_hay: 6, soup: 3, meat: 3, mine_ingot: 15 },
     maxCount: 2,
     // Catalog: 6 cattle = 1 milk at max (base 6 → max 5).
     effect: { type: "threshold_reduce_category", category: "cattle", from: 6, to: 5 },
@@ -155,7 +155,7 @@ export const WORKERS = [
     wage: 45,
     // Mounts → Horseshoe is a long chain (10) and a high-value product. Hire
     // cost mirrors catalog tier: heavy on bread/stone with a soup-tier check.
-    hireCost: { worker: 1, grass_hay: 9, bread: 9, stone: 12, soup: 9 },
+    hireCost: { worker: 1, grass_hay: 9, bread: 9, mine_stone: 12, soup: 9 },
     maxCount: 2,
     // Catalog: 6 cattle = 1 mount at max — but in our chain model mounts are
     // their own category producing horseshoes (chain 10). We use the rancher
@@ -164,6 +164,94 @@ export const WORKERS = [
     requirement: { building: "granary", orLevel: 6 },
     description: "Knows every mount's gait by ear. Shaves a tile off the horseshoe chain.",
   },
+  // ── Cross-chain workers — REFERENCE_CATALOG §9 ─────────────────────────────
+  // These redirect the source-category chain to spawn a tile from the target
+  // category instead of the source's native `next` product. The catalog's
+  // numeric specs are honored where possible; thresholds are calibrated to
+  // the catalog "now: N source = 1 target" wording.
+
+  {
+    id: "tilda",
+    name: "Tilda",
+    role: "Grain Trader",
+    icon: "🌾",
+    color: "#c8923a",
+    wage: 25,
+    hireCost: { worker: 1, bread: 8, mine_stone: 10, mine_coal: 10 },
+    maxCount: 4,
+    // Catalog: 4 grain = 1 vegetable at max. Source category `grain`,
+    // redirects to first active species in `vegetables`.
+    effect: {
+      type: "chain_redirect_category",
+      fromCategory: "grain",
+      toCategory: "vegetables",
+      from: 5,  // base ratio
+      to: 4,    // catalog max
+    },
+    requirement: { building: "kitchen", orLevel: 5 },
+    description: "A market-savvy trader who barters surplus grain into root crops.",
+  },
+  {
+    id: "marin",
+    name: "Marin",
+    role: "Gardener",
+    icon: "🌱",
+    color: "#7eb83a",
+    wage: 30,
+    hireCost: { worker: 1, grass_hay: 8, bread: 16, mine_stone: 12, soup: 4 },
+    maxCount: 3,
+    // Catalog: 5 vegetable = 1 fruit at max.
+    effect: {
+      type: "chain_redirect_category",
+      fromCategory: "vegetables",
+      toCategory: "fruits",
+      from: 6,
+      to: 5,
+    },
+    requirement: { building: "kitchen", orLevel: 6 },
+    description: "A patient gardener who coaxes fruit trees into bearing from a vegetable patch's runoff.",
+  },
+  {
+    id: "annek",
+    name: "Annek",
+    role: "Orchardist",
+    icon: "✂️",
+    color: "#c84a3a",
+    wage: 35,
+    hireCost: { worker: 1, grass_hay: 9, bread: 16, mine_stone: 10, soup: 9 },
+    maxCount: 2,
+    // Catalog: 6 fruit = 1 flower at max.
+    effect: {
+      type: "chain_redirect_category",
+      fromCategory: "fruits",
+      toCategory: "flowers",
+      from: 7,
+      to: 6,
+    },
+    requirement: { building: "larder", orLevel: 6 },
+    description: "Trims orchard branches just so — fruit chains coax flowers into bloom.",
+  },
+  {
+    id: "ren",
+    name: "Ren",
+    role: "Farmer",
+    icon: "🪣",
+    color: "#5a7a3a",
+    wage: 30,
+    hireCost: { worker: 1, bread: 12, mine_stone: 10, meat: 8 },
+    maxCount: 4,
+    // Catalog: 7 bird = 1 herd animal at max.
+    effect: {
+      type: "chain_redirect_category",
+      fromCategory: "bird",
+      toCategory: "herd_animals",
+      from: 8,
+      to: 7,
+    },
+    requirement: { building: "granary", orLevel: 6 },
+    description: "Cultivates yard flocks alongside livestock — long bird chains drive animals from the brake.",
+  },
+
   {
     id: "ivar",
     name: "Ivar",
@@ -190,7 +278,7 @@ export const WORKERS = [
     icon: "🐦",
     color: "#f5c842",
     wage: 18,
-    hireCost: { worker: 1, coke: 4, bread: 6 },
+    hireCost: { worker: 1, mine_coke: 4, bread: 6 },
     maxCount: 2,
     // At max hire (2): gas_vent spawn rate −50%. Per hire: −25%.
     effect: { hazardSpawnReduce: { gas_vent: 0.5 } },
@@ -204,10 +292,10 @@ export const WORKERS = [
     icon: "🔭",
     color: "#8a6a3a",
     wage: 30,
-    hireCost: { worker: 1, ingot: 6, bread: 6 },
+    hireCost: { worker: 1, mine_ingot: 6, bread: 6 },
     maxCount: 2,
     // At max hire (2): ore +1, gem +1 in pool. 1 hire floors to +0 (0.5 per hire).
-    effect: { poolWeight: { ore: 1, gem: 1 } },
+    effect: { poolWeight: { mine_ore: 1, mine_gem: 1 } },
     requirement: { biomeUnlocked: "mine" },
     description: "A seasoned surveyor who knows where the richest veins run. Adds bonus ore and gem tiles to the mine spawn pool.",
   },

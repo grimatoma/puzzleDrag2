@@ -8,7 +8,7 @@ import { driftPrices, applyTrade } from "./market.js";
 import { currentCap } from "./utils.js";
 import { WORKER_MAP } from "./features/apprentices/data.js";
 import { computeWorkerEffects } from "./features/apprentices/aggregate.js";
-import { TILE_TYPES, CATEGORIES, TILE_TYPES_MAP } from "./features/tileCollection/data.js";
+import { TILE_TYPES, CATEGORIES, TILE_TYPES_MAP, CATEGORY_OF } from "./features/tileCollection/data.js";
 import { rollQuests } from "./features/quests/data.js";
 import { ACHIEVEMENTS as ACHIEVEMENT_LIST } from "./features/achievements/data.js";
 import { awardXp } from "./features/almanac/data.js";
@@ -730,7 +730,7 @@ function coreReducer(state, action) {
           const lavaSet = new Set(lavaCells.map((c) => `${c.row},${c.col}`));
           grid = grid.map((row, ri) =>
             row.map((t, ci) =>
-              lavaSet.has(`${ri},${ci}`) ? { ...t, key: "stone", rubble: true, lava: false } : t,
+              lavaSet.has(`${ri},${ci}`) ? { ...t, key: "mine_stone", rubble: true, lava: false } : t,
             ),
           );
         }
@@ -1286,15 +1286,33 @@ function coreReducer(state, action) {
       const length = chainToProcess.length;
       const workerEffects = computeWorkerEffects(state);
       const reduce = workerEffects.thresholdReduce?.[effectiveKey] ?? 0;
-      const threshold = Math.max(1, (UPGRADE_THRESHOLDS[effectiveKey] ?? Infinity) - reduce);
+
+      // Cross-chain redirect (Grain Trader, Gardener, Orchardist, Farmer):
+      // when a worker has redirected this category, the chain produces a tile
+      // from the target category instead of the species' native `next`. The
+      // redirect threshold supersedes the native threshold.
+      const tileCat = CATEGORY_OF[effectiveKey] ?? null;
+      const redirect = tileCat ? workerEffects.chainRedirect?.[tileCat] : null;
+      let threshold;
+      let upgradeKey;
+      if (redirect) {
+        threshold = Math.max(1, redirect.threshold);
+        // Redirect target = active species in toCategory, fallback to first
+        // default species in that category.
+        const active = state.tileCollection?.activeByCategory?.[redirect.toCategory];
+        upgradeKey = active ?? null;
+      } else {
+        threshold = Math.max(1, (UPGRADE_THRESHOLDS[effectiveKey] ?? Infinity) - reduce);
+        const res = Object.values(BIOMES).flatMap((b) => b.resources ?? []).find((r) => r.key === effectiveKey);
+        upgradeKey = res?.next ?? null;
+      }
+
       const upgrades = isFinite(threshold) ? Math.floor(length / threshold) : 0;
       const gained = length - upgrades;
       const inv = { ...(stateAfterFire.inventory ?? state.inventory) };
       if (gained > 0) inv[effectiveKey] = (inv[effectiveKey] ?? 0) + gained;
-      // Upgraded resource
-      const res = Object.values(BIOMES).flatMap((b) => b.resources ?? []).find((r) => r.key === effectiveKey);
-      if (res?.next && upgrades > 0) {
-        inv[res.next] = (inv[res.next] ?? 0) + upgrades;
+      if (upgradeKey && upgrades > 0) {
+        inv[upgradeKey] = (inv[upgradeKey] ?? 0) + upgrades;
       }
       return { ...stateAfterFire, inventory: inv,
                coins: (stateAfterFire.coins ?? 0) + fireCoinBonus };

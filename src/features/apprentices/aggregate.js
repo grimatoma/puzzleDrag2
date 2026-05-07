@@ -40,6 +40,13 @@ export function computeWorkerEffects(state) {
     seasonBonus: {},
     effectivePoolWeights: {}, // Phase 9 integer-floored pool tilt
     hazardSpawnReduce: {},    // Phase 9 gas-vent / future hazard reduction
+    // Cross-chain redirect: when a worker is hired with `chain_redirect_category`,
+    // chain upgrades for every species in `fromCategory` produce a tile from
+    // `toCategory` (active species there) instead of the species' native `next`.
+    // Shape: { [fromCategory]: { toCategory, threshold, redirectShare } }.
+    // `redirectShare` ∈ [0, 1] is hiredCount/maxCount — the engine uses it to
+    // decide whether the worker is "fully active" for redirect purposes.
+    chainRedirect: {},
   };
 
   const hired = state?.workers?.hired ?? {};
@@ -70,6 +77,25 @@ export function computeWorkerEffects(state) {
             const k = sp.baseResource;
             if (!k) continue;
             out.thresholdReduce[k] = (out.thresholdReduce[k] ?? 0) + delta;
+          }
+          break;
+        }
+        case "chain_redirect_category": {
+          // Cross-chain reducer: chains in `fromCategory` produce a tile from
+          // `toCategory` instead of the species' native `next`. Threshold for
+          // the redirect is `from` at base hire, scaling linearly to `to` at max.
+          // Effective threshold = from − (from − to) × (hiredCount / maxCount).
+          const eff = e.from - (e.from - e.to) * perHireScalar;
+          const prev = out.chainRedirect[e.fromCategory];
+          // If multiple workers redirect the same source category, take the
+          // lowest threshold (most generous to the player). This is a rare edge
+          // case — by default each fromCategory has at most one redirect worker.
+          if (!prev || eff < prev.threshold) {
+            out.chainRedirect[e.fromCategory] = {
+              toCategory: e.toCategory,
+              threshold: eff,
+              redirectShare: perHireScalar,
+            };
           }
           break;
         }

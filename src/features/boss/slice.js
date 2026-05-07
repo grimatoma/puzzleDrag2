@@ -25,7 +25,7 @@ const BOSS_META = {
     emoji: "🔥",
     flavor: "Scales of cinder, breath of smelting flame — the Drake demands tribute in iron.",
     goal: "Forge 3 ingots before the hour passes.",
-    resource: "ingot",
+    resource: "mine_ingot",
     targetCount: 3,
     turns: BOSS_WINDOW_TURNS,
     minChain: null,
@@ -49,7 +49,7 @@ const BOSS_META = {
     emoji: "🪨",
     flavor: "An ancient golem has sealed the mountain pass. Prove your worth at the rock face.",
     goal: "Quarry 20 stone from the rock biome.",
-    resource: "stone",
+    resource: "mine_stone",
     targetCount: 20,
     turns: BOSS_WINDOW_TURNS,
     minChain: null,
@@ -299,9 +299,9 @@ export function reduce(state, action) {
     }
 
     case "CRAFTING/CRAFT_RECIPE": {
-      if (!state.boss || state.boss.resource !== "ingot") return state;
+      if (!state.boss || state.boss.resource !== "mine_ingot") return state;
       const recipe = RECIPES[action.payload?.key];
-      if (!recipe || recipe.output !== "ingot") return state;
+      if (!recipe || recipe.output !== "mine_ingot") return state;
       const newProgress = Math.min(state.boss.targetCount, (state.boss.progress || 0) + 1);
       const updatedBoss = { ...state.boss, progress: newProgress };
       if (newProgress >= state.boss.targetCount) {

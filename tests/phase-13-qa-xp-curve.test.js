@@ -102,7 +102,7 @@ describe("XP per source — BUILD (10 XP)", () => {
     const b = BUILDINGS.find((x) => x.id === "hearth_upgrade") ?? BUILDINGS[0];
     if (!b) return; // guard if no buildings available cheaply
     // Give enough resources to build cheaply
-    const rich = { ...s, coins: 99999, inventory: { grass_hay: 999, wood_log: 999, stone: 999, ore: 999, grain: 999 } };
+    const rich = { ...s, coins: 99999, inventory: { grass_hay: 999, wood_log: 999, mine_stone: 999, mine_ore: 999, grain: 999 } };
     const next = rootReducer(rich, { type: "BUILD", building: b });
     if (next === rich) return; // build was rejected (no-op guard)
     expect(next.almanac.xp).toBe(10);

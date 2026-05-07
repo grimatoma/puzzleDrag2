@@ -9,7 +9,9 @@
 export const CASTLE_NEEDS = {
   soup:  { target: 53, label: "Soup",  resource: "soup"  },
   meat:  { target: 47, label: "Meat",  resource: "meat"  },
-  coal:  { target: 43, label: "Coal",  resource: "coal"  },
+  // Need-key kept as `coal` for save-shape stability (state.castle.contributed.coal);
+  // `resource` points to the now-prefixed mine inventory key.
+  coal:  { target: 43, label: "Coal",  resource: "mine_coal" },
   cocoa: { target: 33, label: "Cocoa", resource: "cocoa" },
   ink:   { target: 12, label: "Ink",   resource: "ink"   },
 };

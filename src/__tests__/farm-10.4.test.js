@@ -94,7 +94,7 @@ describe("10.4 — tickRats", () => {
       biome: "farm",
       grid: [
         [{ key: "grass_hay" }, { key: "rat" }, { key: "grain_wheat" }],
-        [{ key: "berry" }, { key: "wood_log" }, { key: "stone" }],
+        [{ key: "berry" }, { key: "wood_log" }, { key: "mine_stone" }],
       ],
       hazards: { ...createInitialState().hazards, rats: [{ row: 0, col: 1, age: 0 }] },
     };
@@ -120,7 +120,7 @@ describe("10.4 — tickRats", () => {
     const s = {
       ...createInitialState(),
       biome: "farm",
-      grid: [[{ key: "stone" }, { key: "rat" }, { key: "stone" }]],
+      grid: [[{ key: "mine_stone" }, { key: "rat" }, { key: "mine_stone" }]],
       hazards: { ...createInitialState().hazards, rats: [{ row: 0, col: 1, age: 2 }] },
     };
     const s2 = tickRats(s);

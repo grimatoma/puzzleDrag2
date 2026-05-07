@@ -229,7 +229,7 @@ function SettingsTab({ settings = {}, dispatch }) {
 // --- Debug button ---
 function DebugBtn({ children, onClick, color = 'slate' }) {
   const palettes = {
-    gold:   { background: '#7a6a10', borderColor: '#4a4008' },
+    mine_gold:   { background: '#7a6a10', borderColor: '#4a4008' },
     green:  { background: '#2a7a3a', borderColor: '#1a4a20' },
     blue:   { background: '#3a5a8a', borderColor: '#1a2e5a' },
     purple: { background: '#5a3a8a', borderColor: '#2e1a5a' },
@@ -321,8 +321,8 @@ function AboutTab({ state, dispatch }) {
             <div>
               <div className="text-[10px] font-bold uppercase tracking-wide mb-1.5" style={{ color: '#7a5a38' }}>Money & XP</div>
               <div className="grid grid-cols-2 gap-1.5">
-                <DebugBtn color="gold" onClick={() => dispatch({ type: 'DEV/ADD_GOLD', amount: 1000 })}>🪙 +1,000 Gold</DebugBtn>
-                <DebugBtn color="gold" onClick={() => dispatch({ type: 'DEV/ADD_GOLD', amount: 10000 })}>🪙 +10,000 Gold</DebugBtn>
+                <DebugBtn color="mine_gold" onClick={() => dispatch({ type: 'DEV/ADD_GOLD', amount: 1000 })}>🪙 +1,000 Gold</DebugBtn>
+                <DebugBtn color="mine_gold" onClick={() => dispatch({ type: 'DEV/ADD_GOLD', amount: 10000 })}>🪙 +10,000 Gold</DebugBtn>
                 <DebugBtn color="purple" onClick={() => dispatch({ type: 'DEV/ADD_XP', amount: 100 })}>✨ +100 XP</DebugBtn>
                 <DebugBtn color="purple" onClick={() => dispatch({ type: 'DEV/ADD_LEVEL', amount: 1 })}>⭐ +1 Level</DebugBtn>
                 <DebugBtn color="teal" onClick={() => dispatch({ type: 'DEV/ADD_ALMANAC_XP', amount: 50 })}>📚 +50 Almanac XP</DebugBtn>

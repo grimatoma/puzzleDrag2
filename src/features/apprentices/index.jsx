@@ -19,7 +19,7 @@ function reqLabel(app) {
 }
 
 /**
- * Format a hireCost that may be a number (200◉) or an object ({worker:1, coke:4}).
+ * Format a hireCost that may be a number (200◉) or an object ({worker:1, mine_coke:4}).
  * Returns a plain string like "1 worker · 4 coke · 6 bread".
  */
 export function formatHireCost(hireCost) {

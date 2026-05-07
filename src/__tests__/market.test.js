@@ -6,8 +6,8 @@ describe("3.1 — Market prices", () => {
   it("MARKET_PRICES covers all 20 sellable resources", () => {
     const keys = [
       "grass_hay", "grain_wheat", "grain", "grain_flour", "wood_log", "wood_plank", "wood_beam",
-      "berry", "berry_jam", "bird_egg", "stone", "cobble", "block", "ore",
-      "ingot", "coal", "coke", "gem", "cutgem", "gold",
+      "berry", "berry_jam", "bird_egg", "mine_stone", "mine_cobble", "mine_block", "mine_ore",
+      "mine_ingot", "mine_coal", "mine_coke", "mine_gem", "mine_cutgem", "mine_gold",
     ];
     for (const k of keys) {
       expect(MARKET_PRICES[k], `MARKET_PRICES has ${k}`).toBeTruthy();

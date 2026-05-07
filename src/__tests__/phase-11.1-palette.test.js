@@ -13,7 +13,7 @@ describe("11.1 settings initial shape", () => {
 describe("11.1 PALETTES table", () => {
   const IDS = ["default", "deuteranopia", "protanopia", "tritanopia"];
   const KEYS = ["grass_hay","grain_wheat","grain","grain_flour","wood_log","wood_plank","wood_beam","berry","berry_jam",
-    "bird_egg","stone","cobble","block","ore","ingot","coal","coke","gem","cutgem","gold"];
+    "bird_egg","mine_stone","mine_cobble","mine_block","mine_ore","mine_ingot","mine_coal","mine_coke","mine_gem","mine_cutgem","mine_gold"];
 
   IDS.forEach(id => {
     it(`palette ${id} exists`, () => {
@@ -38,8 +38,8 @@ describe("11.1 default palette equals existing constants", () => {
     expect(PALETTES.default.tiles.grass_hay).toBe(farmHay);
   });
   it("default ore equals BIOMES.mine ore", () => {
-    const mineOre = BIOMES.mine.resources.find(r => r.key === "ore").color;
-    expect(PALETTES.default.tiles.ore).toBe(mineOre);
+    const mineOre = BIOMES.mine.resources.find(r => r.key === "mine_ore").color;
+    expect(PALETTES.default.tiles.mine_ore).toBe(mineOre);
   });
 });
 
@@ -91,7 +91,7 @@ describe("11.1 contrast ratios ≥ 3:1 for adjacency pairs", () => {
     });
     it(`${p}: ore vs coal ≥ 3:1`, () => {
       const t = PALETTES[p].tiles;
-      expect(contrastRatio(t.ore, t.coal)).toBeGreaterThanOrEqual(3.0);
+      expect(contrastRatio(t.mine_ore, t.mine_coal)).toBeGreaterThanOrEqual(3.0);
     });
   });
 });

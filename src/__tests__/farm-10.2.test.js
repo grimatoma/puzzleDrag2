@@ -21,7 +21,7 @@ describe("10.2 — SEASON_POOL_MODS constants", () => {
   it("spring berry +1", () => expect(SEASON_POOL_MODS.Spring.berry).toBe(1));
   it("summer wheat +1", () => expect(SEASON_POOL_MODS.Summer.grain_wheat).toBe(1));
   it("autumn log +2",  () => expect(SEASON_POOL_MODS.Autumn.wood_log).toBe(2));
-  it("winter stone +1", () => expect(SEASON_POOL_MODS.Winter.stone).toBe(1));
+  it("winter stone +1", () => expect(SEASON_POOL_MODS.Winter.mine_stone).toBe(1));
   it("winter hay -1", () => expect(SEASON_POOL_MODS.Winter.grass_hay).toBe(-1));
 });
 
@@ -45,7 +45,7 @@ describe("10.2 — getEffectivePool seasonal counts", () => {
   });
 
   it("winter pool has +1 stone over base", () => {
-    expect(cnt(farmAt("Winter"), "stone")).toBe(cnt(BASE, "stone") + 1);
+    expect(cnt(farmAt("Winter"), "mine_stone")).toBe(cnt(BASE, "mine_stone") + 1);
   });
 
   it("winter pool has -1 hay (clamped at min 1)", () => {

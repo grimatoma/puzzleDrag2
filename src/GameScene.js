@@ -351,7 +351,7 @@ export class GameScene extends Phaser.Scene {
       }
     }
     // Single decorative board frame (replaces the previously stacked outer/inner frames).
-    tag(rounded(this, this.boardX - frame, this.boardY - frame, boardW + frame * 2, boardH + frame * 2, 16 * dpr, b.dirt, 1).setDepth(-1));
+    tag(rounded(this, this.boardX - frame, this.boardY - frame, boardW + frame * 2, boardH + frame * 2, 16 * dpr, b.mine_dirt, 1).setDepth(-1));
   }
 
   refreshSeasonTint() {
@@ -730,7 +730,7 @@ export class GameScene extends Phaser.Scene {
   /** 1.5 Lockbox: replace 3 random non-selected tiles with biome's rare resource. */
   _applyToolRare() {
     const biome = this.biome();
-    const rareKey = biome.name === "Mine" ? "gem" : "berry";
+    const rareKey = biome.name === "Mine" ? "mine_gem" : "berry";
     const rareRes = biome.resources.find((r) => r.key === rareKey) || biome.resources[biome.resources.length - 1];
     const allTiles = [];
     for (let r = 0; r < ROWS; r++) {

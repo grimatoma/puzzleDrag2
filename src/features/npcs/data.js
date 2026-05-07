@@ -8,7 +8,7 @@ export const BOND_BANDS = Object.freeze([
 export const NPC_DATA = Object.freeze({
   mira:  { id: "mira",  displayName: "Mira",        favoriteGift: "grain_flour" },
   tomas: { id: "tomas", displayName: "Old Tomas",   favoriteGift: "berry_jam"   },
-  bram:  { id: "bram",  displayName: "Bram",        favoriteGift: "ingot" },
+  bram:  { id: "bram",  displayName: "Bram",        favoriteGift: "mine_ingot" },
   liss:  { id: "liss",  displayName: "Sister Liss", favoriteGift: "berry_jam"   },
   wren:  { id: "wren",  displayName: "Wren",        favoriteGift: "wood_plank" },
 });
