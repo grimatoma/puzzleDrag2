@@ -1,7 +1,6 @@
 # Game Spec — Hearthwood Vale
 
 *Last updated 2026-05-06. This is the authoritative game design reference.*
-*For implementation order, see ROADMAP.md.*
 
 ---
 
