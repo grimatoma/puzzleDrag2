@@ -375,6 +375,11 @@ function maybeFireResourceBeats(stateAfter, stateBefore) {
 
 function coreReducer(state, action) {
   switch (action.type) {
+    case "GRID/SYNC": {
+      const { grid } = action.payload;
+      if (!grid) return state;
+      return { ...state, grid };
+    }
     case "CHAIN_COLLECTED": {
       // Phase 4.7: support { gains: {key: n, ...} } payload for cap-aware bulk collection
       if (action.payload?.gains) {

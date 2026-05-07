@@ -12,7 +12,7 @@ import { setPhaserScene } from "./src/phaserBridge.js";
 import { announce, getQueue, flushAnnouncements, formatChainAnnouncement, formatModalAnnouncement, formatQuestAnnouncement } from "./src/a11y.js";
 import { handleKeyboard } from "./src/features/a11y/keyboard.js";
 
-function PhaserMount({ dispatch, biomeKey, turnsUsed, seasonsCycled, uiLocked, sceneRef, weather, toolPending, setChainInfo, workers, palette, reducedMotion, species, gameState }) {
+function PhaserMount({ dispatch, biomeKey, turnsUsed, seasonsCycled, uiLocked, sceneRef, weather, toolPending, setChainInfo, workers, palette, reducedMotion, species, gameState, grid }) {
   const hostRef = useRef(null);
   const gameRef = useRef(null);
   const [loading, setLoading] = useState(true);
@@ -81,6 +81,7 @@ function PhaserMount({ dispatch, biomeKey, turnsUsed, seasonsCycled, uiLocked, s
               sceneRef.current = scene;
               setPhaserScene(scene);
               scene.events.on("chain-collected", (payload) => dispatch({ type: "CHAIN_COLLECTED", payload }));
+              scene.events.on("grid-sync", ({ grid: g }) => dispatch({ type: "GRID/SYNC", payload: { grid: g } }));
               scene.events.on("chain-update", (data) => setChainInfo(data));
               setLoading(false);
             },
@@ -112,6 +113,8 @@ function PhaserMount({ dispatch, biomeKey, turnsUsed, seasonsCycled, uiLocked, s
   useEffect(() => { gameRef.current?.registry.set("palette", palette ?? "default"); }, [palette]);
   useEffect(() => { gameRef.current?.registry.set("reducedMotion", reducedMotion ?? null); }, [reducedMotion]);
   useEffect(() => { gameRef.current?.registry.set("speciesActive", species?.activeByCategory ?? null); }, [species?.activeByCategory]);
+  // Sync grid state → Phaser registry so hazard engines see real tile keys
+  useEffect(() => { gameRef.current?.registry.set("grid", grid ?? null); }, [grid]);
   // Sync boss modifier flags so GameScene.fillBoard can apply spawnBias
   useEffect(() => { gameRef.current?.registry.set("boss", gameState?.boss ?? null); }, [gameState?.boss]);
   // Sync fertilizerActive so GameScene.fillBoard can bias seedling-tier resources
@@ -350,6 +353,7 @@ export default function App() {
                   reducedMotion={state.settings?.reducedMotion}
                   species={state.species}
                   gameState={state}
+                  grid={state.grid}
                 />
               </div>
               {/* Side panel — hidden on mobile, replaced by MobileDock */}

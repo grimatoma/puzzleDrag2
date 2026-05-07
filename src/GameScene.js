@@ -115,6 +115,12 @@ export class GameScene extends Phaser.Scene {
       window.removeEventListener("blur", onDocPointerUp);
     });
 
+    // Apply state.grid → Phaser when Redux pushes a change back (hazard engines may mutate)
+    this.registry.events.on("changedata-grid", (_p, value) => {
+      if (this._suppressNextGridApply) return;
+      this._applyGridFromState(value);
+    });
+
     this.scale.on("resize", () => this.handleResize());
     this.registry.events.on("changedata-biomeKey", (_p, value, prev) => {
       if (value !== prev) this.handleBiomeChange();
@@ -125,6 +131,10 @@ export class GameScene extends Phaser.Scene {
     });
     this.registry.events.on("changedata-toolPending", (_p, value) => {
       if (!value) return;
+      if (this.dragging) {
+        this._deferredTool = value;
+        return;
+      }
       if (value === "clear")      this._applyToolClear();
       if (value === "basic")      this._applyToolBasic();
       if (value === "rare")       this._applyToolRare();
@@ -376,6 +386,45 @@ export class GameScene extends Phaser.Scene {
     return this.resourceByKey(key) ?? this.biome().resources[0];
   }
 
+  // ─── Grid sync helpers ────────────────────────────────────────────────────
+
+  _syncGridToState() {
+    const serialized = [];
+    for (let r = 0; r < ROWS; r++) {
+      const row = [];
+      for (let c = 0; c < COLS; c++) {
+        const tile = this.grid[r]?.[c];
+        if (tile) {
+          const cell = { key: tile.res.key };
+          if (tile.frozen) cell.frozen = true;
+          if (tile.rubble) cell.rubble = true;
+          row.push(cell);
+        } else {
+          row.push(null);
+        }
+      }
+      serialized.push(row);
+    }
+    this._suppressNextGridApply = true;
+    this.events.emit("grid-sync", { grid: serialized });
+    this.time.delayedCall(0, () => { this._suppressNextGridApply = false; });
+  }
+
+  _applyGridFromState(stateGrid) {
+    if (!stateGrid) return;
+    for (let r = 0; r < ROWS; r++) {
+      for (let c = 0; c < COLS; c++) {
+        const tile = this.grid[r]?.[c];
+        const cell = stateGrid[r]?.[c];
+        if (!tile || !cell) continue;
+        if (tile.res.key !== cell.key) {
+          const newRes = this.resourceByKey(cell.key);
+          if (newRes) tile.setResource(newRes);
+        }
+      }
+    }
+  }
+
   // ─── Board fill / collapse ────────────────────────────────────────────────
 
   fillBoard(initial = false) {
@@ -442,7 +491,10 @@ export class GameScene extends Phaser.Scene {
           this.floatText("No moves — reshuffled!", this.boardX + (COLS * ts) / 2, this.boardY - 24 * this.dpr);
           this.shuffleBoard();
         }
+        this._syncGridToState();
       });
+    } else {
+      this._syncGridToState();
     }
   }
 
@@ -506,6 +558,7 @@ export class GameScene extends Phaser.Scene {
       t.setResource(resources[i]);
       this.tweens.add({ targets: t.sprite, angle: 360, duration: this._dur(300), onComplete: () => (t.sprite.angle = 0) });
     });
+    this._syncGridToState();
   }
 
   // ─── Board tool handlers (1.3 Scythe / 1.4 Seedpack / 1.5 Lockbox) ──────
@@ -840,6 +893,11 @@ export class GameScene extends Phaser.Scene {
     const minChain = 3;
     if (this.path.length >= minChain) this.collectPath();
     else this.clearPath(true);
+    if (this._deferredTool) {
+      const tool = this._deferredTool;
+      this._deferredTool = null;
+      this.time.delayedCall(50, () => this.registry.set("toolPending", tool));
+    }
   }
 
   dimUnselectableTiles(key) {
@@ -912,7 +970,8 @@ export class GameScene extends Phaser.Scene {
 
     // Emit to React — include bonus yield grants from workers
     const totalGained = gained + (bonusGains[res.key] ?? 0);
-    this.events.emit("chain-collected", { key: res.key, gained: totalGained, upgrades: upgradeTotal, chainLength: this.path.length, value: res.value });
+    const chainTiles = this.path.map(t => ({ key: t.res.key, row: t.row, col: t.col }));
+    this.events.emit("chain-collected", { key: res.key, gained: totalGained, upgrades: upgradeTotal, chainLength: this.path.length, value: res.value, chain: chainTiles });
 
     this.pathLines.forEach((l) => l.destroy());
     this.pathStars.forEach((s) => s.destroy());
@@ -923,6 +982,7 @@ export class GameScene extends Phaser.Scene {
     this._prevPathLen = 0;
     this._prevStarGroups = 0;
     this.time.delayedCall(300, () => this.collapseBoard());
+    this.time.delayedCall(310, () => this._syncGridToState());
   }
 
   // ─── Chain badge (above board) ────────────────────────────────────────────
