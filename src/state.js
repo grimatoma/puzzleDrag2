@@ -413,6 +413,41 @@ function coreReducer(state, action) {
         return { ...state, inventory };
       }
 
+      // Mine/Farm hazard processing when full chain is provided in payload
+      // (e.g. when GameScene dispatches CHAIN_COLLECTED with chain: [...]
+      //  rather than a separate COMMIT_CHAIN)
+      const chainTiles = action.payload.chain ?? null;
+      const currentBiome = state.biome ?? state.biomeKey;
+      if (chainTiles && chainTiles.length > 0) {
+        if (currentBiome === "farm") {
+          // Rat clearing: chain of 3+ rat tiles
+          const hasRat = chainTiles.some((t) => t.key === "rat");
+          if (hasRat) {
+            const patch = tryClearRatChain(state, chainTiles);
+            if (patch) {
+              return { ...state, hazards: patch.hazards, coins: patch.coins };
+            }
+            return state; // rejected
+          }
+          // Fire extinguishing
+          const firePatch = tryExtinguishFire(state, chainTiles);
+          if (firePatch) {
+            // Continue with normal chain logic using the patched state
+            // (fire coins bonus handled below in combined result)
+          }
+        } else if (currentBiome === "mine") {
+          // Mysterious ore capture
+          const hasOre = chainTiles.some((t) => t.key === "mysterious_ore");
+          if (hasOre && isMysteriousChainValid(chainTiles)) {
+            return {
+              ...state,
+              runes: (state.runes ?? 0) + 1,
+              mysteriousOre: null,
+            };
+          }
+        }
+      }
+
       // Boss board modifier: active boss may require longer chains
       const bossMinChain = state.boss?.minChain || 0;
       if (bossMinChain > 0 && effectiveChain < bossMinChain) {
