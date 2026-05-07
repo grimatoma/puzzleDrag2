@@ -1,4 +1,7 @@
-import { BIOMES, BUILDINGS, NPCS, MAX_TURNS, RECIPES, STORAGE_KEYS, SEASON_EFFECTS, DAILY_REWARDS, MINE_ENTRY_TIERS, CAPPED_RESOURCES, UPGRADE_THRESHOLDS } from "./constants.js";
+import { BIOMES, BUILDINGS, NPCS, MAX_TURNS, RECIPES, WORKSHOP_RECIPES, STORAGE_KEYS, SEASON_EFFECTS, DAILY_REWARDS, MINE_ENTRY_TIERS, CAPPED_RESOURCES, UPGRADE_THRESHOLDS } from "./constants.js";
+import { sellPriceFor as _sellPriceFor } from "./features/market/pricing.js";
+import { tryClearRatChain } from "./features/farm/rats.js";
+import { tryExtinguishFire } from "./features/farm/hazards.js";
 import { isMysteriousChainValid } from "./features/mine/mysterious_ore.js";
 import { driftPrices, applyTrade } from "./market.js";
 import { currentCap } from "./utils.js";
@@ -195,10 +198,26 @@ export function initialState(overrides) {
              scythe: extraScytheBonus, seedpack: 0, lockbox: 0, reshuffle: 0,
              startingExtraScythe: !!overrides?.tools?.startingExtraScythe,
              magic_wand: 0, hourglass: 0, magic_seed: 0, magic_fertilizer: 0,
-             water_pump: 0, explosives: 0 },
+             water_pump: 0, explosives: 0,
+             // Phase 10.1 — new Workshop farm tools
+             rake: 0, axe: 0, fertilizer: 0,
+             // Phase 10.5 — Cat (clears rats)
+             cat: 0,
+             // Phase 10.6 — Bird Cage + Scythe (full)
+             bird_cage: 0, scythe_full: 0,
+             // Phase 10.8 — Rifle + Hound (wolf counters)
+             rifle: 0, hound: 0 },
+    _toolPending: null,
+    fertilizerActive: false,
     // Phase 9 — Mine biome state
     mysteriousOre: null,
-    hazards: { caveIn: null, gasVent: null, lava: null, mole: null },
+    hazards: { caveIn: null, gasVent: null, lava: null, mole: null,
+               // Phase 10.4 — Rat hazard
+               rats: [],
+               // Phase 10.7 — Fire hazard
+               fire: null,
+               // Phase 10.8 — Wolves hazard
+               wolves: null },
     // Board grid (populated during play, not stored on init)
     grid: Array.from({ length: 6 }, () => Array.from({ length: 6 }, () => ({ key: "hay" }))),
     lastChainSnapshot: null,
@@ -541,6 +560,30 @@ function coreReducer(state, action) {
         bubble,
       };
     }
+    case "CRAFT_TOOL": {
+      // Phase 10.1 — craft a Workshop tool (rake / axe / fertilizer / cat / etc.)
+      const toolId = action.id ?? action.payload?.id;
+      if (!toolId) return state;
+      const toolRecipe = WORKSHOP_RECIPES[toolId];
+      if (!toolRecipe) return state;
+      // Workshop must be built
+      if (!state.built?.workshop) return state;
+      // Check inputs
+      const craftInv = state.inventory ?? {};
+      for (const [res, need] of Object.entries(toolRecipe.inputs)) {
+        if ((craftInv[res] ?? 0) < need) return state;
+      }
+      const newCraftInv = { ...craftInv };
+      for (const [res, need] of Object.entries(toolRecipe.inputs)) {
+        newCraftInv[res] = (newCraftInv[res] ?? 0) - need;
+      }
+      return {
+        ...state,
+        inventory: newCraftInv,
+        tools: { ...state.tools, [toolId]: (state.tools[toolId] ?? 0) + 1 },
+      };
+    }
+
     case "USE_TOOL": {
       // Support action.payload.id (Phase 9), action.payload.key, or action.key (legacy)
       const key = action.payload?.id ?? action.payload?.key ?? action.key;
@@ -615,6 +658,112 @@ function coreReducer(state, action) {
           ...state,
           tools,
           hazards: { ...state.hazards, mole: null, caveIn: null },
+        };
+      }
+      // Phase 10.1 — Rake / Axe: arm the board tool (no turn cost)
+      if (key === "rake" || key === "axe") {
+        return { ...state, tools, _toolPending: key };
+      }
+      // Phase 10.1 — Fertilizer: set flag for next fillBoard (no turn cost)
+      if (key === "fertilizer") {
+        return { ...state, tools, fertilizerActive: true };
+      }
+      // Phase 10.5 — Cat: clear all rats from board (no turn cost)
+      if (key === "cat") {
+        const rats = state.hazards?.rats ?? [];
+        if (rats.length === 0) {
+          // Refund — no rats to chase
+          return { ...state, tools: { ...state.tools }, // don't decrement
+            bubble: { id: Date.now(), npc: "bram", text: "No rats to chase.", ms: 1200 } };
+        }
+        // Clear rat tiles from grid
+        const ratSet = new Set(rats.map((r) => `${r.row},${r.col}`));
+        let grid = state.grid;
+        if (grid) {
+          grid = grid.map((row, ri) =>
+            row.map((t, ci) =>
+              ratSet.has(`${ri},${ci}`) ? { ...t, key: null, _emptied: true } : t,
+            ),
+          );
+        }
+        return {
+          ...state,
+          tools,
+          grid,
+          hazards: { ...state.hazards, rats: [] },
+        };
+      }
+      // Phase 10.6 — Bird Cage: collect all egg tiles (no turn cost)
+      if (key === "bird_cage") {
+        let grid = state.grid;
+        let collected = 0;
+        if (grid) {
+          const eggCount = grid.flat().filter((t) => t.key === "egg").length;
+          if (eggCount === 0) {
+            return { ...state, tools: { ...state.tools }, // refund
+              bubble: { id: Date.now(), npc: "bram", text: "No eggs to cage.", ms: 1200 } };
+          }
+          grid = grid.map((row) =>
+            row.map((t) => {
+              if (t.key === "egg") { collected += 1; return { ...t, key: null, _emptied: true }; }
+              return t;
+            }),
+          );
+        }
+        return {
+          ...state,
+          tools,
+          grid,
+          inventory: { ...state.inventory, egg: (state.inventory?.egg ?? 0) + collected },
+        };
+      }
+      // Phase 10.6 — Scythe (full): collect all grain tiles (no turn cost)
+      if (key === "scythe_full") {
+        let grid = state.grid;
+        let collectedGrain = 0;
+        if (grid) {
+          const grainCount = grid.flat().filter((t) => t.key === "grain").length;
+          if (grainCount === 0) {
+            return { ...state, tools: { ...state.tools }, // refund
+              bubble: { id: Date.now(), npc: "bram", text: "No grain to cut.", ms: 1200 } };
+          }
+          grid = grid.map((row) =>
+            row.map((t) => {
+              if (t.key === "grain") { collectedGrain += 1; return { ...t, key: null, _emptied: true }; }
+              return t;
+            }),
+          );
+        }
+        return {
+          ...state,
+          tools,
+          grid,
+          inventory: { ...state.inventory, grain: (state.inventory?.grain ?? 0) + collectedGrain },
+        };
+      }
+      // Phase 10.8 — Rifle: clear all wolves (no turn cost)
+      if (key === "rifle") {
+        return {
+          ...state,
+          tools,
+          hazards: { ...state.hazards, wolves: null },
+        };
+      }
+      // Phase 10.8 — Hound: scatter all wolves for 5 turns (no turn cost)
+      if (key === "hound") {
+        const wolvesState = state.hazards?.wolves;
+        if (!wolvesState) return { ...state, tools };
+        return {
+          ...state,
+          tools,
+          hazards: {
+            ...state.hazards,
+            wolves: {
+              ...wolvesState,
+              list: (wolvesState.list ?? []).map((w) => ({ ...w, scared: true })),
+              scaredTurnsRemaining: 5,
+            },
+          },
         };
       }
       // Unknown tool key — decrement only
@@ -888,12 +1037,29 @@ function coreReducer(state, action) {
       if (craftId === "shovel") {
         return { ...state, inventory: newInv, shovel: (state.shovel ?? 0) + craftQty };
       }
+      // Credit crafted output to inventory
+      newInv[craftId] = (newInv[craftId] ?? 0) + craftQty;
       return { ...state, inventory: newInv };
     }
 
     case "GRANT_RUNES": {
       const amt = Math.max(0, action.payload?.amount | 0);
       return { ...state, runes: (state.runes ?? 0) + amt };
+    }
+
+    // Phase 10.3 — Sell a crafted item for its §10 sell price
+    case "SELL_ITEM": {
+      const itemId = action.id ?? action.payload?.id;
+      const sellQty = Math.max(1, (action.qty ?? action.payload?.qty ?? 1) | 0);
+      if (!itemId) return state;
+      const owned = state.inventory?.[itemId] ?? 0;
+      if (owned < sellQty) return state;
+      const price = _sellPriceFor(itemId);
+      return {
+        ...state,
+        inventory: { ...state.inventory, [itemId]: owned - sellQty },
+        coins: (state.coins ?? 0) + price * sellQty,
+      };
     }
 
     // ── Phase 9 — Mine biome actions ───────────────────────────────────────────
@@ -929,6 +1095,25 @@ function coreReducer(state, action) {
       const chainKey = chain[0]?.key;
       if (!chainKey) return state;
 
+      // Phase 10.4 — Rat chain: chain of 3+ rat tiles clears rats, +5◉ per rat.
+      // Mixed chains (rat + other) and chains of < 3 rats are rejected.
+      const hasRat = chain.some((t) => t.key === "rat");
+      if (hasRat) {
+        const patch = tryClearRatChain(state, chain);
+        if (!patch) return state; // rejected — no-op
+        return { ...state, hazards: patch.hazards, coins: patch.coins };
+      }
+
+      // Phase 10.7 — Fire extinguishing: fire tiles in chain are removed and
+      // credit +2◉ each. Normal chain logic continues with non-fire tiles.
+      const firePatch = tryExtinguishFire(state, chain);
+      let stateAfterFire = state;
+      let fireCoinBonus = 0;
+      if (firePatch) {
+        stateAfterFire = { ...state, hazards: firePatch.hazards };
+        fireCoinBonus = firePatch.coinsBonus;
+      }
+
       // Mysterious ore chain check
       const hasOre = chain.some((t) => t.key === "mysterious_ore");
       if (hasOre) {
@@ -945,18 +1130,23 @@ function coreReducer(state, action) {
       }
 
       // Standard chain: all tiles must be the same key
-      const length = chain.length;
-      const threshold = UPGRADE_THRESHOLDS[chainKey];
+      // (fire tiles filtered out — they are handled by tryExtinguishFire above)
+      const nonFireChain = chain.filter((t) => t.key !== "fire");
+      const chainToProcess = nonFireChain.length >= chain.length ? chain : nonFireChain;
+      const effectiveKey = chainToProcess[0]?.key ?? chainKey;
+      const length = chainToProcess.length;
+      const threshold = UPGRADE_THRESHOLDS[effectiveKey];
       const upgrades = threshold ? Math.floor(length / threshold) : 0;
       const gained = length - upgrades;
-      const inv = { ...state.inventory };
-      inv[chainKey] = (inv[chainKey] ?? 0) + gained;
+      const inv = { ...(stateAfterFire.inventory ?? state.inventory) };
+      if (gained > 0) inv[effectiveKey] = (inv[effectiveKey] ?? 0) + gained;
       // Upgraded resource
-      const res = Object.values(BIOMES).flatMap((b) => b.resources ?? []).find((r) => r.key === chainKey);
+      const res = Object.values(BIOMES).flatMap((b) => b.resources ?? []).find((r) => r.key === effectiveKey);
       if (res?.next && upgrades > 0) {
         inv[res.next] = (inv[res.next] ?? 0) + upgrades;
       }
-      return { ...state, inventory: inv };
+      return { ...stateAfterFire, inventory: inv,
+               coins: (stateAfterFire.coins ?? 0) + fireCoinBonus };
     }
 
     case "ACTIVATE_RUNE_WILDCARD": {
@@ -1196,3 +1386,5 @@ export function gameReducer(state, action) {
 // Alias exports for test compatibility (spec uses rootReducer / createInitialState)
 export const rootReducer = rawReducer;
 export const createInitialState = initialState;
+// Phase 10.3 — re-export sellPriceFor for test imports from state.js
+export { _sellPriceFor as sellPriceFor };

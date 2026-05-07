@@ -148,6 +148,31 @@ export const BUILDINGS = [
     x: 1180, y: 380, w: 90, h: 100, color: "#a07a4a" },
 ];
 
+// Phase 10.1 — Workshop tool recipes (no turn cost, board animation).
+// §5 lists "1 Wood" for Rake; impl uses `plank` because the §6 wood chain
+// names the base tile "log" and the first upgrade "plank".
+export const WORKSHOP_RECIPES = {
+  rake:        { name: "Rake",          station: "workshop", inputs: { plank: 1 },
+                 effect: "clear_all", target: "hay",   anim: "sweep",   ms: 300 },
+  axe:         { name: "Axe",          station: "workshop", inputs: { stone: 1 },
+                 effect: "clear_all", target: "log",   anim: "chops",   ms: 200 },
+  fertilizer:  { name: "Fertilizer",   station: "workshop", inputs: { hay: 1, dirt: 1 },
+                 effect: "fill_bias", target: "grain",  anim: "shimmer", ms: 600 },
+  // Phase 10.5 — Cat tool (clears all rats, no turn cost)
+  cat:         { name: "Cat",          station: "workshop", inputs: { stone: 2, water: 1 },
+                 effect: "clear_hazard", target: "rats", anim: "scatter", ms: 200 },
+  // Phase 10.6 — Bird Cage + full Scythe
+  bird_cage:   { name: "Bird Cage",    station: "workshop", inputs: { hay: 1 },
+                 effect: "clear_all", target: "egg",   anim: "cage",    ms: 300 },
+  scythe_full: { name: "Scythe (full)", station: "workshop", inputs: { stone: 1 },
+                 effect: "clear_all", target: "grain", anim: "sweep",   ms: 300 },
+  // Phase 10.8 — Wolf counters
+  rifle:       { name: "Rifle",        station: "workshop", inputs: { plank: 1, stone: 1, ingot: 1 },
+                 effect: "clear_hazard", target: "wolves", anim: "shot",    ms: 300 },
+  hound:       { name: "Hound",        station: "workshop", inputs: { bread: 1, stone: 3 },
+                 effect: "scatter_hazard", target: "wolves", anim: "bark", ms: 400 },
+};
+
 export const RECIPES = {
   shovel:     { name: "Shovel",          inputs: { plank: 1, stone: 1 },          tier: 1, station: "workshop", coins: 25 },
   water_pump: { name: "Water Pump",      inputs: { plank: 1, stone: 1 },          tier: 2, station: "workshop", coins: 0, tool: "water_pump" },
@@ -164,6 +189,24 @@ export const RECIPES = {
   gemcrown:   { name: "Gem Crown",      inputs: { cutgem: 1, gold: 2 },         tier: 2, station: "forge",  output: "ingot", coins: 325, glyph: "👑", color: 0x65e5ff, dark: 0x1060a0 },
   ironframe:  { name: "Iron Frame",     inputs: { beam: 2, ingot: 1 },          tier: 3, station: "forge",  output: "ingot", coins: 275, glyph: "🔲", color: 0x6a7a86, dark: 0x2a3040 },
   stonework:  { name: "Stonework",      inputs: { block: 2, coke: 1 },          tier: 3, station: "forge",  output: "ingot", coins: 300, glyph: "🏗", color: 0x8a8a7a, dark: 0x383828 },
+  // Phase 10.3 — snake_case aliases so tests and saves can use either form
+  iron_frame: null, // resolved below
+  gem_crown:  null,
+  gold_ring:  null,
+};
+// Resolve snake_case aliases to the same objects (no data duplication)
+RECIPES.iron_frame = RECIPES.ironframe;
+RECIPES.gem_crown  = RECIPES.gemcrown;
+RECIPES.gold_ring  = RECIPES.goldring;
+
+// Phase 10.1 — RECIPES.tools aliases WORKSHOP_RECIPES for backwards compat
+RECIPES.tools = WORKSHOP_RECIPES;
+
+// Phase 10.3 — ID normalisation aliases for old save-file keys
+export const RECIPE_ID_ALIASES = {
+  ironframe: "iron_frame",
+  gemcrown:  "gem_crown",
+  goldring:  "gold_ring",
 };
 
 export const ACHIEVEMENTS = [
@@ -276,6 +319,25 @@ export const DAILY_REWARDS = {
   27: { coins: 300 }, 28: { coins: 350 }, 29: { coins: 400 },
   30: { coins: 1000, runes: 3 },
 };
+
+// ─── Phase 10 — Tile pool seasonal modifiers ──────────────────────────────────
+// Applied additively on BIOMES.farm.pool. Locked: ONLY spawn weights.
+// The §6 SEASON_EFFECTS table above is NOT changed here.
+export const SEASON_POOL_MODS = {
+  Spring: { berry: +1 },
+  Summer: { wheat: +1 },
+  Autumn: { log:   +2 },
+  Winter: { stone: +1, hay: -1 },
+};
+
+// ─── Phase 10.4 — Rat hazard constants ────────────────────────────────────────
+export const RAT_SPAWN_THRESHOLDS = {
+  hay:         50,
+  wheat:       50,
+  perFillRate: 0.10,
+  maxActive:   4,
+};
+export const RAT_CLEAR_REWARD_PER = 5;
 
 /** Return local YYYY-MM-DD string for a Date object. */
 export function dayKeyForDate(d) {

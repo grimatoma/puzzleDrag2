@@ -5,7 +5,8 @@ export const initial = { craftedTotals: {} };
 export function reduce(state, action) {
   if (action.type !== "CRAFTING/CRAFT_RECIPE") return state;
 
-  const { recipeKey } = action;
+  // Support both action.recipeKey (legacy UI) and action.payload.key (test/spec form)
+  const recipeKey = action.recipeKey ?? action.payload?.key;
   const recipe = RECIPES[recipeKey];
   if (!recipe) return state;
 
