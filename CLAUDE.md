@@ -15,7 +15,7 @@ There is no test runner — self-tests run automatically on game init via `runSe
 
 This is a Phaser 3 + React game. React owns the page shell; Phaser owns the game canvas.
 
-**Entry flow:** `index.html` (CDN imports: Tailwind, React, Phaser, Babel) → `main.jsx` → `prototype.jsx` (React component that mounts the Phaser.Game instance) → `src/GameScene.js` (the single Phaser Scene that owns all game state and rendering).
+**Entry flow:** `index.html` (single `<script type="module" src="/main.jsx">`; Vite bundles React, Phaser, Tailwind, etc.) → `main.jsx` (mounts a `RootErrorBoundary` around the app) → `prototype.jsx` (React component that mounts the Phaser.Game instance) → `src/GameScene.js` (the single Phaser Scene that owns all game state and rendering).
 
 **Key files:**
 - `src/GameScene.js` — entire game loop, board state, UI panels (HUD, orders, inventory, tools), input handling, and animation. All game state lives here (no external store).
