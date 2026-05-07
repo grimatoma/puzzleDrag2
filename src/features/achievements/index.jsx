@@ -64,11 +64,19 @@ function TrophyCard({ achievement, current, trophyState }) {
         </div>
       </div>
 
-      {/* Right: reward (canonical shape has no reward field; show unlock icon) */}
+      {/* Right: reward */}
       <div className="flex flex-col items-end gap-1 flex-shrink-0">
-        <div className="text-[9px] text-[#c8923a] font-bold whitespace-nowrap leading-tight">
-          {achievement.reward?.coins ? `+${achievement.reward.coins}◉` : ""}{achievement.reward?.coins && achievement.reward?.xp ? " " : ""}{achievement.reward?.xp ? `+${achievement.reward.xp}xp` : ""}
-        </div>
+        {achievement.reward && (
+          <div className="text-[9px] text-[#c8923a] font-bold whitespace-nowrap leading-tight">
+            {achievement.reward.coins ? `+${achievement.reward.coins}◉` : ""}
+            {achievement.reward.xp ? ` +${achievement.reward.xp}xp` : ""}
+            {achievement.reward.tools
+              ? Object.entries(achievement.reward.tools)
+                  .map(([k, v]) => ` +${v} ${k}`)
+                  .join("")
+              : ""}
+          </div>
+        )}
         {claimed && (
           <div className="text-[9px] font-bold text-[#91bf24]">✓ Done</div>
         )}
