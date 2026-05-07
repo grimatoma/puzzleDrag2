@@ -1,6 +1,7 @@
 import Phaser from "phaser";
 import { TILE, COLS, ROWS, UPGRADE_THRESHOLDS, SEASONS, BIOMES } from "./constants.js";
 import { upgradeCountForChain, resourceGainForChain, rollResourceWithWeather } from "./utils.js";
+import { computeWorkerEffects } from "./features/apprentices/effects.js";
 const cssColor = (num) => Phaser.Display.Color.IntegerToColor(num).rgba;
 import { rounded, makeTextures } from "./textures.js";
 import { TileObj } from "./TileObj.js";
@@ -127,6 +128,24 @@ export class GameScene extends Phaser.Scene {
       // Clear the pending flag once handled
       this.time.delayedCall(50, () => this.registry.set("toolPending", null));
     });
+    // Sync worker effects on init and whenever state.workers changes
+    this._syncWorkerEffects();
+    this.registry.events.on("changedata-workers", () => this._syncWorkerEffects());
+  }
+
+  // ─── Worker effects sync ─────────────────────────────────────────────────
+
+  _syncWorkerEffects() {
+    const workers = this.registry.get("workers") ?? { hired: {}, debt: 0, pool: 0 };
+    const agg = computeWorkerEffects({ workers });
+    const eff = {};
+    for (const [k, v] of Object.entries(UPGRADE_THRESHOLDS)) {
+      eff[k] = Math.max(1, v - (agg.thresholdReduce[k] ?? 0));
+    }
+    this.registry.set("effectiveThresholds",  eff);
+    this.registry.set("effectivePoolWeights", agg.poolWeight);
+    this.registry.set("bonusYields",          agg.bonusYield);
+    this.registry.set("seasonBonus",          agg.seasonBonus);
   }
 
   // ─── Layout ───────────────────────────────────────────────────────────────
@@ -254,6 +273,11 @@ export class GameScene extends Phaser.Scene {
     return biome.resources.find((r) => r.key === key);
   }
 
+  _randomFromPool(pool, weatherKey) {
+    const key = rollResourceWithWeather(pool, weatherKey);
+    return this.biome().resources.find((r) => r.key === key);
+  }
+
   // ─── Board fill / collapse ────────────────────────────────────────────────
 
   fillBoard(initial = false) {
@@ -261,13 +285,20 @@ export class GameScene extends Phaser.Scene {
     const weather = this.registry.get("weather");
     const weatherKey = weather?.key ?? weather ?? null;
     const frostBonus = (!initial && weatherKey === "frost") ? 120 : 0;
+    // Build worker-boosted pool
+    const biomeBase = this.biome().pool;
+    const poolWeights = this.registry.get("effectivePoolWeights") ?? {};
+    const workerPool = [...biomeBase];
+    for (const [k, n] of Object.entries(poolWeights)) {
+      for (let i = 0; i < Math.round(n); i++) workerPool.push(k);
+    }
     for (let r = 0; r < ROWS; r++) {
       this.grid[r] = this.grid[r] || [];
       for (let c = 0; c < COLS; c++) {
         if (!this.grid[r][c]) {
           const x = this.boardX + c * ts + ts / 2;
           const y = this.boardY + r * ts + ts / 2;
-          const res = !initial && this.pendingUpgrades.length ? this.pendingUpgrades.shift() : this.randomResource();
+          const res = !initial && this.pendingUpgrades.length ? this.pendingUpgrades.shift() : this._randomFromPool(workerPool, weatherKey);
           const tile = new TileObj(this, x, initial ? y - 500 - Phaser.Math.Between(0, 100) : y - 140, c, r, res);
           tile.sprite.setScale(this.tileSpriteScale);
           this.grid[r][c] = tile;
@@ -561,7 +592,8 @@ export class GameScene extends Phaser.Scene {
 
     const res0 = this.path.length ? this.path[0].res : null;
     const next = res0 ? this.nextResource(res0) : null;
-    const threshold = res0 ? (UPGRADE_THRESHOLDS[res0.key] || 0) : 0;
+    const effThresh = this.registry.get("effectiveThresholds") ?? UPGRADE_THRESHOLDS;
+    const threshold = res0 ? (effThresh[res0.key] || 0) : 0;
     const prevGroups = this._prevStarGroups;
     let groupCount = 0;
     if (next && threshold > 0) {
@@ -670,10 +702,18 @@ export class GameScene extends Phaser.Scene {
     if (!this.path.length) return;
     const res = this.path[0].res;
     const next = this.nextResource(res);
-    const upgradeTotal = next ? upgradeCountForChain(this.path.length, res.key) : 0;
+    const effThresholds = this.registry.get("effectiveThresholds") ?? UPGRADE_THRESHOLDS;
+    const upgradeTotal = next ? upgradeCountForChain(this.path.length, res.key, effThresholds) : 0;
     const gained = resourceGainForChain(this.path.length);
+    // Bonus yields: add per-resource bonus if this chain contained that resource
+    const bonusYields = this.registry.get("bonusYields") ?? {};
+    const bonusGains = {};
+    if (bonusYields[res.key]) {
+      bonusGains[res.key] = Math.round(bonusYields[res.key]);
+    }
     const floatSuffix = upgradeTotal > 0 ? `  ★×${upgradeTotal}` : "";
-    this.floatText(`+${gained} ${res.label}${floatSuffix}`, this.path[this.path.length - 1].x, this.path[this.path.length - 1].y);
+    const bonusText = Object.entries(bonusGains).map(([k, n]) => `  +${n} ${k}★`).join("");
+    this.floatText(`+${gained} ${res.label}${floatSuffix}${bonusText}`, this.path[this.path.length - 1].x, this.path[this.path.length - 1].y);
 
     // Chain-length juice — escalating screen shake and a radial wipe. Big chains
     // earn loud feedback; upgrades add an extra burst.
@@ -694,8 +734,9 @@ export class GameScene extends Phaser.Scene {
       this.tweens.add({ targets: tile.sprite, scale: 0, angle: Phaser.Math.Between(-25, 25), alpha: 0, duration: 180 + i * 15, onComplete: () => tile.destroy() });
     });
 
-    // Emit to React
-    this.events.emit("chain-collected", { key: res.key, gained, upgrades: upgradeTotal, chainLength: this.path.length, value: res.value });
+    // Emit to React — include bonus yield grants from workers
+    const totalGained = gained + (bonusGains[res.key] ?? 0);
+    this.events.emit("chain-collected", { key: res.key, gained: totalGained, upgrades: upgradeTotal, chainLength: this.path.length, value: res.value });
 
     this.pathLines.forEach((l) => l.destroy());
     this.pathStars.forEach((s) => s.destroy());
@@ -733,7 +774,8 @@ export class GameScene extends Phaser.Scene {
     const gained = resourceGainForChain(n);
     const res = n ? this.path[0].res : null;
     const next = res ? this.nextResource(res) : null;
-    const k = next ? upgradeCountForChain(n, res.key) : 0;
+    const effThresh = this.registry.get("effectiveThresholds") ?? UPGRADE_THRESHOLDS;
+    const k = next ? upgradeCountForChain(n, res.key, effThresh) : 0;
     if (this.chainBadge) {
       this.chainBadgeText.setText(k > 0 ? `chain × ${gained}   +${k}★` : `chain × ${gained}`);
     }
@@ -750,7 +792,8 @@ export class GameScene extends Phaser.Scene {
     const gained = resourceGainForChain(n);
     const res = n ? this.path[0].res : null;
     const next = res ? this.nextResource(res) : null;
-    const k = next ? upgradeCountForChain(n, res.key) : 0;
+    const effThresh = this.registry.get("effectiveThresholds") ?? UPGRADE_THRESHOLDS;
+    const k = next ? upgradeCountForChain(n, res.key, effThresh) : 0;
     this.events.emit("chain-update", { count: gained, upgrades: k });
   }
 

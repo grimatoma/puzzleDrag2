@@ -132,6 +132,10 @@ export const BUILDINGS = [
   { id: "workshop", name: "Workshop", desc: "Crafts shovels and other tools from raw materials.", cost: { coins: 600, plank: 30, stone: 10 }, lv: 3, x: 1200, y: 370, w: 90, h: 100, color: "#6a5a3a" },
   { id: "powder_store", name: "Powder Store", desc: "Stockpiles black powder. Produces 2 Bombs at the end of every season.", cost: { coins: 600, stone: 30, ingot: 5 }, lv: 5, x: 1080, y: 380, w: 90, h: 100, color: "#3a2a1a" },
   { id: "portal", name: "Magic Portal", desc: "A shimmering gateway. Summons unlock with Influence (Phase 8).", cost: { coins: 2000, runes: 5 }, lv: 8, x: 1320, y: 355, w: 100, h: 115, color: "#4a2a7a" },
+  { id: "housing", name: "Housing Block",
+    desc: "Quarters for hired hands. Each Housing raises your worker capacity by 1.",
+    cost: { coins: 300, plank: 25 }, lv: 2,
+    x: 1180, y: 380, w: 90, h: 100, color: "#a07a4a" },
 ];
 
 export const RECIPES = {
@@ -224,6 +228,13 @@ export const ALMANAC_TIERS = [
   { reward: { coins: 200 } },
   { reward: { coins: 100, tool: "rare", amt: 1 } },
 ];
+
+// ─── Phase 4 — Inventory soft caps ───────────────────────────────────────────
+export const RESOURCE_CAP_BASE = 200;
+export const RESOURCE_CAP_GRANARY = 500;
+/** The 13 raw farm + mine resources subject to the inventory cap. */
+export const CAPPED_RESOURCES = ["hay","wheat","grain","flour","log","plank",
+  "beam","berry","jam","egg","stone","ore","coal"];
 
 // ─── Phase 3 Economy ──────────────────────────────────────────────────────────
 
