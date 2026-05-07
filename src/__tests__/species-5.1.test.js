@@ -3,20 +3,20 @@ import { SPECIES, SPECIES_MAP, SPECIES_BY_CATEGORY, CATEGORIES } from "../featur
 import { UPGRADE_THRESHOLDS } from "../constants.js";
 
 describe("Phase 5.1 — Species data model", () => {
-  it("≥12 species across the 5 farm categories", () => {
+  it("≥12 species across the 6 farm categories", () => {
     expect(Array.isArray(SPECIES)).toBe(true);
     expect(SPECIES.length).toBeGreaterThanOrEqual(12);
   });
 
-  it("5 farm categories", () => {
-    expect(CATEGORIES.length).toBe(5);
-    for (const c of ["grass", "grain", "wood", "berry", "bird"]) {
+  it("6 farm categories", () => {
+    expect(CATEGORIES.length).toBe(6);
+    for (const c of ["grass", "grain", "wood", "berry", "bird", "vegetables"]) {
       expect(CATEGORIES).toContain(c);
     }
   });
 
   it("each category has ≥1 species in SPECIES_BY_CATEGORY", () => {
-    for (const c of ["grass", "grain", "wood", "berry", "bird"]) {
+    for (const c of ["grass", "grain", "wood", "berry", "bird", "vegetables"]) {
       expect(SPECIES_BY_CATEGORY[c]).toBeTruthy();
       expect(SPECIES_BY_CATEGORY[c].length).toBeGreaterThanOrEqual(1);
     }
@@ -34,9 +34,9 @@ describe("Phase 5.1 — Species data model", () => {
     }
   });
 
-  it("categories with default species: grass, wood, berry, bird (grain has none — starts null)", () => {
+  it("categories with default species: grass, wood, berry, bird, vegetables (grain has none — starts null)", () => {
     // Per GAME_SPEC §13 unlock tree, grain category has no default species (all chain/research)
-    const withDefault = ["grass", "wood", "berry", "bird"];
+    const withDefault = ["grass", "wood", "berry", "bird", "vegetables"];
     for (const c of withDefault) {
       const defaults = SPECIES_BY_CATEGORY[c].filter((s) => s.discovery.method === "default");
       expect(defaults.length).toBeGreaterThanOrEqual(1);

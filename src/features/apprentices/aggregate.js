@@ -15,6 +15,7 @@
  */
 
 import { WORKERS } from "./data.js";
+import { SPECIES_BY_CATEGORY } from "../species/data.js";
 
 /**
  * Returns an aggregated effects object for the current workforce.
@@ -60,6 +61,18 @@ export function computeWorkerEffects(state) {
           out.thresholdReduce[e.key] =
             (out.thresholdReduce[e.key] ?? 0) + (e.from - e.to) * perHireScalar;
           break;
+        case "threshold_reduce_category": {
+          // Generalization of threshold_reduce: applies the same per-species
+          // delta to every species' baseResource within the named category.
+          const list = SPECIES_BY_CATEGORY[e.category] ?? [];
+          const delta = (e.from - e.to) * perHireScalar;
+          for (const sp of list) {
+            const k = sp.baseResource;
+            if (!k) continue;
+            out.thresholdReduce[k] = (out.thresholdReduce[k] ?? 0) + delta;
+          }
+          break;
+        }
         case "pool_weight":
           out.poolWeight[e.key] =
             (out.poolWeight[e.key] ?? 0) + e.amount * perHireScalar;

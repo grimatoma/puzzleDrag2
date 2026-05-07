@@ -129,6 +129,14 @@ export const MIGRATIONS = [
     farm: { ...(s.farm ?? {}), savedField: s.farm?.savedField ?? null },
     mine: { ...(s.mine ?? {}), savedField: s.mine?.savedField ?? null },
   }),
+
+  // v12 → v13: Castle Needs slice — initialize state.castle for older saves
+  (s) => ({
+    ...s,
+    castle: s.castle ?? {
+      contributed: { soup: 0, meat: 0, coal: 0, cocoa: 0, ink: 0 },
+    },
+  }),
 ];
 
 function isCorrupted(raw) {

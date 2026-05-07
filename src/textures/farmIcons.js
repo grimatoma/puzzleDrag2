@@ -968,6 +968,796 @@ export function drawFarmTileIcon(ctx, key) {
     ctx.stroke();
   }
 
+  else if (key === "carrot") {
+    // Orange tapered root with leafy green top
+    // Drop shadow
+    ctx.fillStyle = "rgba(0,0,0,0.22)";
+    ctx.beginPath();
+    ctx.ellipse(2, 24, 16, 3.5, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // Carrot body — tapered triangle with rounded shoulders
+    const grad = ctx.createLinearGradient(-12, 0, 12, 0);
+    grad.addColorStop(0, "#ff9a3c");
+    grad.addColorStop(0.5, "#f0731a");
+    grad.addColorStop(1, "#a8410a");
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.moveTo(-10, -8);
+    ctx.quadraticCurveTo(-12, -4, -8, 4);
+    ctx.lineTo(-2, 22);
+    ctx.quadraticCurveTo(0, 26, 2, 22);
+    ctx.lineTo(8, 4);
+    ctx.quadraticCurveTo(12, -4, 10, -8);
+    ctx.quadraticCurveTo(0, -12, -10, -8);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = "#5a2308";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    // Horizontal ridge lines
+    ctx.strokeStyle = "rgba(90,35,8,0.55)";
+    ctx.lineWidth = 1.1;
+    [-3, 3, 9, 14, 18].forEach((y) => {
+      ctx.beginPath();
+      ctx.moveTo(-9 + y * 0.2, y);
+      ctx.quadraticCurveTo(0, y + 1.4, 9 - y * 0.2, y);
+      ctx.stroke();
+    });
+    // Body highlight
+    ctx.strokeStyle = "rgba(255,235,180,0.55)";
+    ctx.lineWidth = 1.4;
+    ctx.beginPath();
+    ctx.moveTo(-6, -4);
+    ctx.lineTo(-2, 18);
+    ctx.stroke();
+    // Leafy green top — three feathery sprigs
+    const drawSprig = (x0, sway, h, color, dark) => {
+      ctx.strokeStyle = dark;
+      ctx.lineWidth = 3.5;
+      ctx.beginPath();
+      ctx.moveTo(x0, -8);
+      ctx.quadraticCurveTo(x0 + sway * 0.6, -8 - h * 0.6, x0 + sway, -8 - h);
+      ctx.stroke();
+      ctx.fillStyle = color;
+      ctx.strokeStyle = dark;
+      ctx.lineWidth = 1;
+      // Leaflets
+      for (let i = 0; i < 4; i++) {
+        const t = (i + 1) / 5;
+        const lx = x0 + sway * t;
+        const ly = -8 - h * t;
+        ctx.beginPath();
+        ctx.ellipse(lx + (sway > 0 ? 2 : -2), ly + 1, 3, 1.4, sway * 0.1, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+      }
+    };
+    drawSprig(-4, -8, 16, "#7ec238", "#2f5410");
+    drawSprig(0, 0, 20, "#a0db4a", "#3a6814");
+    drawSprig(4, 8, 16, "#7ec238", "#2f5410");
+  }
+
+  else if (key === "eggplant") {
+    // Deep purple bulb with curved green calyx/stem
+    // Drop shadow
+    ctx.fillStyle = "rgba(0,0,0,0.25)";
+    ctx.beginPath();
+    ctx.ellipse(2, 22, 18, 4, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // Eggplant body — pear/teardrop shape
+    const grad = ctx.createRadialGradient(-5, 4, 3, 0, 6, 22);
+    grad.addColorStop(0, "#7a3aa8");
+    grad.addColorStop(0.55, "#3e1660");
+    grad.addColorStop(1, "#1e0a30");
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.moveTo(0, -10);
+    ctx.bezierCurveTo(-14, -8, -16, 8, -10, 16);
+    ctx.bezierCurveTo(-6, 22, 6, 22, 10, 16);
+    ctx.bezierCurveTo(16, 8, 14, -8, 0, -10);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = "#0a0418";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    // Glossy specular highlight
+    ctx.fillStyle = "rgba(255,255,255,0.42)";
+    ctx.beginPath();
+    ctx.ellipse(-6, 0, 3, 8, -0.3, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "rgba(255,255,255,0.25)";
+    ctx.beginPath();
+    ctx.ellipse(-3, -4, 1.6, 3, -0.3, 0, Math.PI * 2);
+    ctx.fill();
+    // Calyx (5-pointed green star) at top
+    ctx.fillStyle = "#4a7818";
+    ctx.strokeStyle = "#1f3a08";
+    ctx.lineWidth = 1.4;
+    ctx.beginPath();
+    const cx = 0, cy = -10;
+    for (let i = 0; i < 5; i++) {
+      const a = -Math.PI / 2 + (i / 5) * Math.PI * 2;
+      const x = cx + Math.cos(a) * 8;
+      const y = cy + Math.sin(a) * 5;
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+      const a2 = a + Math.PI / 5;
+      ctx.lineTo(cx + Math.cos(a2) * 3, cy + Math.sin(a2) * 2.5);
+    }
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    // Curved stem rising from calyx
+    ctx.strokeStyle = "#3a5818";
+    ctx.lineWidth = 3.5;
+    ctx.beginPath();
+    ctx.moveTo(0, -12);
+    ctx.quadraticCurveTo(4, -18, 8, -22);
+    ctx.stroke();
+    ctx.strokeStyle = "#7eb44a";
+    ctx.lineWidth = 1.4;
+    ctx.beginPath();
+    ctx.moveTo(0, -12);
+    ctx.quadraticCurveTo(4, -18, 8, -22);
+    ctx.stroke();
+  }
+
+  else if (key === "turnip") {
+    // Pink/magenta upper, white lower, round root, green leaves on top
+    // Drop shadow
+    ctx.fillStyle = "rgba(0,0,0,0.22)";
+    ctx.beginPath();
+    ctx.ellipse(0, 22, 18, 4, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // Turnip body (round bulb tapering to a small root)
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(-14, -2);
+    ctx.bezierCurveTo(-16, 12, -8, 22, 0, 22);
+    ctx.bezierCurveTo(8, 22, 16, 12, 14, -2);
+    ctx.bezierCurveTo(12, -10, -12, -10, -14, -2);
+    ctx.closePath();
+    ctx.clip();
+    // White lower fill
+    ctx.fillStyle = "#f4eddb";
+    ctx.fillRect(-20, 0, 40, 30);
+    // Pink/magenta upper
+    const top = ctx.createLinearGradient(0, -12, 0, 4);
+    top.addColorStop(0, "#f48ac0");
+    top.addColorStop(0.6, "#d54a90");
+    top.addColorStop(1, "#a82c70");
+    ctx.fillStyle = top;
+    ctx.fillRect(-20, -16, 40, 18);
+    // Soft transition band
+    const band = ctx.createLinearGradient(0, -2, 0, 6);
+    band.addColorStop(0, "rgba(213,74,144,0.7)");
+    band.addColorStop(1, "rgba(244,237,219,0)");
+    ctx.fillStyle = band;
+    ctx.fillRect(-20, -2, 40, 8);
+    ctx.restore();
+    // Outline
+    ctx.strokeStyle = "#5a1830";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(-14, -2);
+    ctx.bezierCurveTo(-16, 12, -8, 22, 0, 22);
+    ctx.bezierCurveTo(8, 22, 16, 12, 14, -2);
+    ctx.bezierCurveTo(12, -10, -12, -10, -14, -2);
+    ctx.closePath();
+    ctx.stroke();
+    // Highlight on the pink shoulder
+    ctx.fillStyle = "rgba(255,255,255,0.55)";
+    ctx.beginPath();
+    ctx.ellipse(-6, -4, 3, 5, -0.3, 0, Math.PI * 2);
+    ctx.fill();
+    // Tiny taproot tip at bottom
+    ctx.strokeStyle = "#7a5a30";
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    ctx.moveTo(0, 22);
+    ctx.quadraticCurveTo(1, 25, -1, 27);
+    ctx.stroke();
+    // Green leaves up top — three lobed leaves
+    const drawLeaf = (x0, sway, h, light, dark) => {
+      ctx.fillStyle = light;
+      ctx.strokeStyle = dark;
+      ctx.lineWidth = 1.3;
+      ctx.beginPath();
+      ctx.moveTo(x0, -8);
+      ctx.bezierCurveTo(x0 + sway * 0.8, -8 - h * 0.4, x0 + sway, -8 - h, x0 + sway * 0.4, -8 - h);
+      ctx.bezierCurveTo(x0 + sway * 0.2, -8 - h * 0.6, x0 + sway * 0.1, -8 - h * 0.3, x0, -8);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+    };
+    drawLeaf(-4, -6, 14, "#7ec238", "#2f5410");
+    drawLeaf(0, 0, 18, "#a0db4a", "#3a6814");
+    drawLeaf(3, 7, 13, "#7ec238", "#2f5410");
+  }
+
+  else if (key === "beet") {
+    // Dark red-purple round root with red-veined leaves
+    // Drop shadow
+    ctx.fillStyle = "rgba(0,0,0,0.22)";
+    ctx.beginPath();
+    ctx.ellipse(0, 22, 16, 4, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // Body
+    const grad = ctx.createRadialGradient(-5, 2, 3, 0, 6, 18);
+    grad.addColorStop(0, "#a83260");
+    grad.addColorStop(0.55, "#621230");
+    grad.addColorStop(1, "#280818");
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.moveTo(-12, 0);
+    ctx.bezierCurveTo(-14, 14, -6, 22, 0, 22);
+    ctx.bezierCurveTo(6, 22, 14, 14, 12, 0);
+    ctx.bezierCurveTo(10, -8, -10, -8, -12, 0);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = "#1a040c";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    // Concentric ring (beet's interior pattern hint)
+    ctx.strokeStyle = "rgba(220,80,140,0.45)";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.ellipse(-2, 8, 6, 7, 0, 0, Math.PI * 2);
+    ctx.stroke();
+    // Highlight
+    ctx.fillStyle = "rgba(255,200,220,0.4)";
+    ctx.beginPath();
+    ctx.ellipse(-6, -2, 2.6, 5, -0.3, 0, Math.PI * 2);
+    ctx.fill();
+    // Wispy taproot
+    ctx.strokeStyle = "#3a1018";
+    ctx.lineWidth = 1.4;
+    ctx.beginPath();
+    ctx.moveTo(0, 22);
+    ctx.quadraticCurveTo(2, 26, 0, 28);
+    ctx.stroke();
+    // Leaves with red-pink veins
+    const drawBeetLeaf = (x0, sway, h, ang) => {
+      ctx.save();
+      ctx.translate(x0, -8);
+      ctx.rotate(ang);
+      // Stem
+      ctx.strokeStyle = "#a02448";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(0, -h * 0.4);
+      ctx.stroke();
+      // Leaf blade
+      const lg = ctx.createLinearGradient(0, -h, 0, 0);
+      lg.addColorStop(0, "#5a8a26");
+      lg.addColorStop(1, "#2f5410");
+      ctx.fillStyle = lg;
+      ctx.strokeStyle = "#1f3a08";
+      ctx.lineWidth = 1.3;
+      ctx.beginPath();
+      ctx.moveTo(0, -h * 0.4);
+      ctx.bezierCurveTo(-6, -h * 0.6, -5, -h, 0, -h);
+      ctx.bezierCurveTo(5, -h, 6, -h * 0.6, 0, -h * 0.4);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+      // Red vein
+      ctx.strokeStyle = "#d8487a";
+      ctx.lineWidth = 1.3;
+      ctx.beginPath();
+      ctx.moveTo(0, -h * 0.45);
+      ctx.lineTo(0, -h * 0.95);
+      ctx.stroke();
+      ctx.restore();
+    };
+    drawBeetLeaf(-4, 0, 14, -0.4);
+    drawBeetLeaf(0, 0, 18, 0);
+    drawBeetLeaf(4, 0, 14, 0.4);
+  }
+
+  else if (key === "cucumber") {
+    // Long green ribbed cylinder with subtle bumps, tilted
+    ctx.save();
+    ctx.rotate(-0.4);
+    // Shadow
+    ctx.fillStyle = "rgba(0,0,0,0.25)";
+    rr(ctx, -22, 14, 44, 7, 6);
+    ctx.fill();
+    // Body
+    const grad = ctx.createLinearGradient(0, -10, 0, 10);
+    grad.addColorStop(0, "#8ac246");
+    grad.addColorStop(0.5, "#3e7a18");
+    grad.addColorStop(1, "#1f4810");
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.moveTo(-22, 0);
+    ctx.quadraticCurveTo(-26, -10, -16, -10);
+    ctx.lineTo(18, -10);
+    ctx.quadraticCurveTo(26, -10, 22, 0);
+    ctx.quadraticCurveTo(26, 10, 18, 10);
+    ctx.lineTo(-16, 10);
+    ctx.quadraticCurveTo(-26, 10, -22, 0);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = "#0c2806";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    // Vertical ribs (length-wise lines along body)
+    ctx.strokeStyle = "rgba(15,40,8,0.55)";
+    ctx.lineWidth = 1.1;
+    [-7, -3, 1, 5].forEach((y) => {
+      ctx.beginPath();
+      ctx.moveTo(-19, y);
+      ctx.bezierCurveTo(-8, y - 0.6, 8, y + 0.5, 19, y);
+      ctx.stroke();
+    });
+    // Lighter rib highlights
+    ctx.strokeStyle = "rgba(220,250,160,0.5)";
+    ctx.lineWidth = 0.9;
+    [-5, -1, 3].forEach((y) => {
+      ctx.beginPath();
+      ctx.moveTo(-18, y);
+      ctx.bezierCurveTo(-6, y - 0.4, 8, y + 0.4, 18, y);
+      ctx.stroke();
+    });
+    // Bumps (tiny dots)
+    ctx.fillStyle = "rgba(15,40,8,0.7)";
+    [[-14, -5], [-8, 2], [-2, -4], [4, 3], [10, -2], [14, 4], [-12, 5], [6, -6]].forEach(([bx, by]) => {
+      ctx.beginPath();
+      ctx.arc(bx, by, 0.9, 0, Math.PI * 2);
+      ctx.fill();
+    });
+    // Bump highlights
+    ctx.fillStyle = "rgba(220,250,160,0.7)";
+    [[-13, -6], [-7, 1], [-1, -5], [5, 2], [11, -3], [15, 3], [-11, 4], [7, -7]].forEach(([bx, by]) => {
+      ctx.beginPath();
+      ctx.arc(bx, by, 0.6, 0, Math.PI * 2);
+      ctx.fill();
+    });
+    // Top specular highlight strip
+    ctx.fillStyle = "rgba(255,255,255,0.3)";
+    ctx.beginPath();
+    ctx.ellipse(-2, -7, 14, 1.6, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // Tip stem nub on right
+    ctx.fillStyle = "#5a3a14";
+    ctx.beginPath();
+    ctx.ellipse(22, -2, 2.5, 1.8, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  else if (key === "squash") {
+    // Yellow rounded gourd (acorn-squash) with brown stem and ridges
+    // Drop shadow
+    ctx.fillStyle = "rgba(0,0,0,0.25)";
+    ctx.beginPath();
+    ctx.ellipse(2, 22, 20, 4, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // Body
+    const grad = ctx.createRadialGradient(-5, -2, 3, 0, 6, 22);
+    grad.addColorStop(0, "#ffe58a");
+    grad.addColorStop(0.55, "#e6a020");
+    grad.addColorStop(1, "#8a5410");
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.moveTo(0, -8);
+    ctx.bezierCurveTo(-18, -10, -20, 14, -10, 20);
+    ctx.bezierCurveTo(-4, 24, 4, 24, 10, 20);
+    ctx.bezierCurveTo(20, 14, 18, -10, 0, -8);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = "#4a2e08";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    // Vertical ridges (body segmentation)
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(0, -8);
+    ctx.bezierCurveTo(-18, -10, -20, 14, -10, 20);
+    ctx.bezierCurveTo(-4, 24, 4, 24, 10, 20);
+    ctx.bezierCurveTo(20, 14, 18, -10, 0, -8);
+    ctx.closePath();
+    ctx.clip();
+    ctx.strokeStyle = "rgba(74,46,8,0.55)";
+    ctx.lineWidth = 1.6;
+    [-12, -6, 0, 6, 12].forEach((x) => {
+      ctx.beginPath();
+      ctx.moveTo(x * 0.5, -8);
+      ctx.bezierCurveTo(x, 0, x, 14, x * 0.7, 22);
+      ctx.stroke();
+    });
+    // Light ridge highlights
+    ctx.strokeStyle = "rgba(255,240,180,0.55)";
+    ctx.lineWidth = 1;
+    [-9, -3, 3, 9].forEach((x) => {
+      ctx.beginPath();
+      ctx.moveTo(x * 0.5, -7);
+      ctx.bezierCurveTo(x, 1, x, 14, x * 0.7, 21);
+      ctx.stroke();
+    });
+    ctx.restore();
+    // Specular highlight
+    ctx.fillStyle = "rgba(255,255,255,0.4)";
+    ctx.beginPath();
+    ctx.ellipse(-7, -2, 3, 5, -0.3, 0, Math.PI * 2);
+    ctx.fill();
+    // Brown chunky stem
+    ctx.fillStyle = "#6a4218";
+    ctx.beginPath();
+    ctx.moveTo(-3, -10);
+    ctx.lineTo(-4, -18);
+    ctx.lineTo(4, -18);
+    ctx.lineTo(3, -10);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = "#2a1808";
+    ctx.lineWidth = 1.6;
+    ctx.stroke();
+    // Stem cap (knobby top)
+    ctx.fillStyle = "#8a5a20";
+    ctx.beginPath();
+    ctx.ellipse(0, -19, 5, 2.2, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = "#2a1808";
+    ctx.lineWidth = 1.4;
+    ctx.stroke();
+    // Stem highlight
+    ctx.strokeStyle = "rgba(255,220,170,0.5)";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(-2, -17);
+    ctx.lineTo(-2, -11);
+    ctx.stroke();
+  }
+
+  else if (key === "mushroom") {
+    // Toadstool — red cap with white spots, white stem
+    // Drop shadow
+    ctx.fillStyle = "rgba(0,0,0,0.22)";
+    ctx.beginPath();
+    ctx.ellipse(0, 22, 16, 3.5, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // Stem (white, slightly bulbous at base)
+    const stemGrad = ctx.createLinearGradient(-7, 0, 7, 0);
+    stemGrad.addColorStop(0, "#e8dcc0");
+    stemGrad.addColorStop(0.5, "#fff8e8");
+    stemGrad.addColorStop(1, "#c8b896");
+    ctx.fillStyle = stemGrad;
+    ctx.beginPath();
+    ctx.moveTo(-5, 0);
+    ctx.lineTo(-7, 18);
+    ctx.quadraticCurveTo(-8, 22, -3, 22);
+    ctx.lineTo(3, 22);
+    ctx.quadraticCurveTo(8, 22, 7, 18);
+    ctx.lineTo(5, 0);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = "#5a4818";
+    ctx.lineWidth = 1.8;
+    ctx.stroke();
+    // Stem ring/skirt (annulus)
+    ctx.fillStyle = "#f0e4c6";
+    rr(ctx, -8, -2, 16, 4, 1.5);
+    ctx.fill();
+    ctx.strokeStyle = "#5a4818";
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
+    // Gills hint (under cap)
+    ctx.strokeStyle = "rgba(120,100,40,0.6)";
+    ctx.lineWidth = 0.8;
+    [-6, -3, 0, 3, 6].forEach((x) => {
+      ctx.beginPath();
+      ctx.moveTo(x, -3);
+      ctx.lineTo(x, -1);
+      ctx.stroke();
+    });
+    // Cap (red half-dome)
+    const capGrad = ctx.createRadialGradient(-5, -10, 3, 0, -4, 18);
+    capGrad.addColorStop(0, "#ff6a4a");
+    capGrad.addColorStop(0.5, "#d22418");
+    capGrad.addColorStop(1, "#7a0e08");
+    ctx.fillStyle = capGrad;
+    ctx.beginPath();
+    ctx.moveTo(-16, -3);
+    ctx.bezierCurveTo(-16, -22, 16, -22, 16, -3);
+    ctx.quadraticCurveTo(8, -1, 0, -1);
+    ctx.quadraticCurveTo(-8, -1, -16, -3);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = "#3a0608";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    // White spots
+    ctx.fillStyle = "#fff8e8";
+    ctx.strokeStyle = "rgba(120,40,30,0.4)";
+    ctx.lineWidth = 0.8;
+    [[-9, -8, 2.6], [-2, -14, 2.4], [6, -10, 2.2], [-7, -16, 1.6], [10, -6, 1.6], [3, -6, 1.4], [-12, -4, 1.6]].forEach(([sx, sy, sr]) => {
+      ctx.beginPath();
+      ctx.arc(sx, sy, sr, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+    });
+    // Cap specular highlight
+    ctx.fillStyle = "rgba(255,255,255,0.3)";
+    ctx.beginPath();
+    ctx.ellipse(-6, -14, 3, 4, -0.4, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  else if (key === "pepper") {
+    // Glossy red bell pepper with green stem
+    // Drop shadow
+    ctx.fillStyle = "rgba(0,0,0,0.25)";
+    ctx.beginPath();
+    ctx.ellipse(2, 22, 18, 4, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // Body — three-lobed bell shape
+    const grad = ctx.createRadialGradient(-6, -2, 3, 0, 6, 22);
+    grad.addColorStop(0, "#ff6a4a");
+    grad.addColorStop(0.5, "#d22418");
+    grad.addColorStop(1, "#5a0a08");
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.moveTo(-12, -8);
+    ctx.bezierCurveTo(-18, 0, -16, 16, -8, 20);
+    ctx.bezierCurveTo(-4, 22, -2, 18, 0, 18);
+    ctx.bezierCurveTo(2, 18, 4, 22, 8, 20);
+    ctx.bezierCurveTo(16, 16, 18, 0, 12, -8);
+    ctx.bezierCurveTo(8, -10, 4, -8, 0, -8);
+    ctx.bezierCurveTo(-4, -8, -8, -10, -12, -8);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = "#3a0608";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    // Vertical lobe creases
+    ctx.strokeStyle = "rgba(58,6,8,0.55)";
+    ctx.lineWidth = 1.4;
+    [-6, 0, 6].forEach((x) => {
+      ctx.beginPath();
+      ctx.moveTo(x, -6);
+      ctx.bezierCurveTo(x + (x === 0 ? 0 : x > 0 ? 1 : -1), 4, x, 14, x * 0.6, 19);
+      ctx.stroke();
+    });
+    // Glossy specular highlight (large)
+    ctx.fillStyle = "rgba(255,255,255,0.5)";
+    ctx.beginPath();
+    ctx.ellipse(-6, 0, 3, 7, -0.3, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "rgba(255,255,255,0.3)";
+    ctx.beginPath();
+    ctx.ellipse(5, 4, 1.6, 5, -0.2, 0, Math.PI * 2);
+    ctx.fill();
+    // Green stem (cylinder) on top
+    ctx.fillStyle = "#5a8a26";
+    ctx.beginPath();
+    ctx.moveTo(-3, -8);
+    ctx.lineTo(-3, -16);
+    ctx.quadraticCurveTo(0, -19, 3, -16);
+    ctx.lineTo(3, -8);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = "#1f3a08";
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    // Stem highlight
+    ctx.strokeStyle = "rgba(220,250,160,0.6)";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(-2, -15);
+    ctx.lineTo(-2, -10);
+    ctx.stroke();
+    // Calyx leaves around stem
+    ctx.fillStyle = "#3a6814";
+    ctx.beginPath();
+    ctx.moveTo(-8, -8);
+    ctx.quadraticCurveTo(-3, -10, 0, -8);
+    ctx.quadraticCurveTo(3, -10, 8, -8);
+    ctx.quadraticCurveTo(4, -6, 0, -6);
+    ctx.quadraticCurveTo(-4, -6, -8, -8);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = "#1f3a08";
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
+  }
+
+  else if (key === "broccoli") {
+    // Green clustered florets atop a thicker pale-green stalk
+    // Drop shadow
+    ctx.fillStyle = "rgba(0,0,0,0.22)";
+    ctx.beginPath();
+    ctx.ellipse(0, 22, 16, 3.5, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // Stalk (pale green column)
+    const stalkGrad = ctx.createLinearGradient(-7, 0, 7, 0);
+    stalkGrad.addColorStop(0, "#7ea848");
+    stalkGrad.addColorStop(0.5, "#c4dc78");
+    stalkGrad.addColorStop(1, "#5a7a30");
+    ctx.fillStyle = stalkGrad;
+    ctx.beginPath();
+    ctx.moveTo(-6, 0);
+    ctx.lineTo(-8, 20);
+    ctx.quadraticCurveTo(-8, 22, -4, 22);
+    ctx.lineTo(4, 22);
+    ctx.quadraticCurveTo(8, 22, 8, 20);
+    ctx.lineTo(6, 0);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = "#2f5410";
+    ctx.lineWidth = 1.8;
+    ctx.stroke();
+    // Stalk vertical fibers
+    ctx.strokeStyle = "rgba(47,84,16,0.5)";
+    ctx.lineWidth = 0.8;
+    [-3, 0, 3].forEach((x) => {
+      ctx.beginPath();
+      ctx.moveTo(x, 4);
+      ctx.lineTo(x, 20);
+      ctx.stroke();
+    });
+    // Small side branches
+    ctx.strokeStyle = "#5a7a30";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(-5, 4);
+    ctx.lineTo(-12, 0);
+    ctx.moveTo(5, 4);
+    ctx.lineTo(12, 0);
+    ctx.stroke();
+    // Florets — bumpy circles forming a cloud cluster on top
+    const florets = [
+      [-12, -2, 6.5],
+      [-6, -8, 7],
+      [0, -12, 7.5],
+      [6, -8, 7],
+      [12, -2, 6.5],
+      [-3, -2, 6],
+      [4, -3, 6.5],
+      [-9, -14, 5],
+      [9, -14, 5],
+      [0, -18, 5.5],
+    ];
+    // Dark base layer
+    florets.forEach(([fx, fy, fr]) => {
+      ctx.fillStyle = "#2f5410";
+      ctx.beginPath();
+      ctx.arc(fx, fy, fr + 1, 0, Math.PI * 2);
+      ctx.fill();
+    });
+    // Mid green
+    florets.forEach(([fx, fy, fr]) => {
+      const fg = ctx.createRadialGradient(fx - fr * 0.3, fy - fr * 0.3, 1, fx, fy, fr);
+      fg.addColorStop(0, "#9cd040");
+      fg.addColorStop(1, "#3a6814");
+      ctx.fillStyle = fg;
+      ctx.beginPath();
+      ctx.arc(fx, fy, fr, 0, Math.PI * 2);
+      ctx.fill();
+    });
+    // Floret texture — tiny bumps
+    ctx.fillStyle = "rgba(180,220,80,0.7)";
+    florets.forEach(([fx, fy, fr]) => {
+      for (let i = 0; i < 5; i++) {
+        const a = (i / 5) * Math.PI * 2 + fx * 0.2;
+        const dx = fx + Math.cos(a) * fr * 0.55;
+        const dy = fy + Math.sin(a) * fr * 0.55;
+        ctx.beginPath();
+        ctx.arc(dx, dy, 1.1, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    });
+    // Highlights on top florets
+    ctx.fillStyle = "rgba(220,250,160,0.55)";
+    [[-7, -10, 2], [1, -14, 2.2], [7, -10, 1.8]].forEach(([hx, hy, hr]) => {
+      ctx.beginPath();
+      ctx.ellipse(hx, hy, hr, hr * 0.7, -0.3, 0, Math.PI * 2);
+      ctx.fill();
+    });
+  }
+
+  else if (key === "soup") {
+    // Wooden bowl with orange/red broth and rising steam wisps
+    // Steam wisps (drawn first so the bowl overlaps if needed)
+    ctx.strokeStyle = "rgba(255,255,255,0.85)";
+    ctx.lineWidth = 2.4;
+    ctx.lineCap = "round";
+    [[-7, -4], [0, -2], [7, -4]].forEach(([x0, y0], i) => {
+      ctx.beginPath();
+      ctx.moveTo(x0, y0);
+      ctx.bezierCurveTo(x0 + 4, y0 - 6, x0 - 6, y0 - 12, x0 + 2 + i, y0 - 18);
+      ctx.bezierCurveTo(x0 + 6, y0 - 22, x0 - 4, y0 - 24, x0 + i * 2, y0 - 28);
+      ctx.stroke();
+    });
+    // Soft steam glow
+    ctx.strokeStyle = "rgba(255,255,255,0.35)";
+    ctx.lineWidth = 4.4;
+    [[-7, -4], [0, -2], [7, -4]].forEach(([x0, y0], i) => {
+      ctx.beginPath();
+      ctx.moveTo(x0, y0);
+      ctx.bezierCurveTo(x0 + 4, y0 - 6, x0 - 6, y0 - 12, x0 + 2 + i, y0 - 18);
+      ctx.bezierCurveTo(x0 + 6, y0 - 22, x0 - 4, y0 - 24, x0 + i * 2, y0 - 28);
+      ctx.stroke();
+    });
+    // Bowl shadow
+    ctx.fillStyle = "rgba(0,0,0,0.3)";
+    ctx.beginPath();
+    ctx.ellipse(2, 22, 22, 4, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // Bowl outer body (wooden)
+    const bowlGrad = ctx.createLinearGradient(0, 0, 0, 22);
+    bowlGrad.addColorStop(0, "#b07a3e");
+    bowlGrad.addColorStop(0.5, "#7a4a18");
+    bowlGrad.addColorStop(1, "#3e2208");
+    ctx.fillStyle = bowlGrad;
+    ctx.beginPath();
+    ctx.moveTo(-22, 0);
+    ctx.bezierCurveTo(-22, 18, -10, 22, 0, 22);
+    ctx.bezierCurveTo(10, 22, 22, 18, 22, 0);
+    ctx.lineTo(-22, 0);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = "#1f0f04";
+    ctx.lineWidth = 2.2;
+    ctx.stroke();
+    // Bowl wood grain
+    ctx.strokeStyle = "rgba(31,15,4,0.55)";
+    ctx.lineWidth = 0.9;
+    [6, 11, 16].forEach((y) => {
+      ctx.beginPath();
+      ctx.moveTo(-20 + y * 0.2, y);
+      ctx.bezierCurveTo(-8, y - 0.8, 8, y + 0.8, 20 - y * 0.2, y);
+      ctx.stroke();
+    });
+    // Bowl rim ellipse (top opening)
+    ctx.fillStyle = "#5a3814";
+    ctx.beginPath();
+    ctx.ellipse(0, 0, 22, 5, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = "#1f0f04";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    // Broth (orange/red surface)
+    const broth = ctx.createRadialGradient(-4, -1, 2, 0, 0, 22);
+    broth.addColorStop(0, "#ffba60");
+    broth.addColorStop(0.5, "#e6601c");
+    broth.addColorStop(1, "#a82408");
+    ctx.fillStyle = broth;
+    ctx.beginPath();
+    ctx.ellipse(0, 0, 19, 4, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = "#5a1808";
+    ctx.lineWidth = 1.4;
+    ctx.stroke();
+    // Floating veggie chunks
+    ctx.fillStyle = "#ffa830";
+    ctx.beginPath();
+    ctx.ellipse(-8, -1, 2.6, 1.4, 0.2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#7ec238";
+    ctx.beginPath();
+    ctx.ellipse(6, 0, 2, 1.1, -0.3, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#d22418";
+    ctx.beginPath();
+    ctx.ellipse(0, 1, 1.8, 1, 0.2, 0, Math.PI * 2);
+    ctx.fill();
+    // Broth highlight
+    ctx.fillStyle = "rgba(255,255,255,0.4)";
+    ctx.beginPath();
+    ctx.ellipse(-9, -2, 4, 0.8, 0.1, 0, Math.PI * 2);
+    ctx.fill();
+    // Bowl bottom rim shine
+    ctx.strokeStyle = "rgba(255,220,170,0.45)";
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.moveTo(-20, 2);
+    ctx.bezierCurveTo(-22, 12, -16, 18, -10, 20);
+    ctx.stroke();
+  }
+
   else if (key === "melon") {
     // Round striped summer melon with leaf and curling tendril.
     // Drop shadow

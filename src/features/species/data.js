@@ -1,6 +1,6 @@
 import { UPGRADE_THRESHOLDS } from "../../constants.js";
 
-export const CATEGORIES = ["grass", "grain", "wood", "berry", "bird"];
+export const CATEGORIES = ["grass", "grain", "wood", "berry", "bird", "vegetables"];
 
 export const SPECIES = [
   // Grass
@@ -103,6 +103,71 @@ export const SPECIES = [
     discovery: { method: "buy", coinCost: 500 },
     effects: { freeMoves: 5 },
     description: "Plump summer melons that attract whole flocks of birds, granting 5 free moves per season.",
+  },
+
+  // Vegetables — chain to soup (threshold 6). Carrot is the canonical default.
+  {
+    id: "carrot", category: "vegetables", displayName: "Carrot",
+    baseResource: "carrot", tier: 0,
+    discovery: { method: "default" },
+    effects: {},
+    description: "Easy to collect. Good for your eyes.",
+  },
+  {
+    id: "eggplant", category: "vegetables", displayName: "Eggplant",
+    baseResource: "eggplant", tier: 0,
+    discovery: { method: "default" },
+    effects: {},
+    description: "A long chain gives vegetables. Tastes great with scrambled eggs.",
+  },
+  {
+    id: "turnip", category: "vegetables", displayName: "Turnip",
+    baseResource: "turnip", tier: 0,
+    discovery: { method: "default" },
+    effects: {},
+    description: "Great to produce soup, slow to get bonus fruits. You cannot squeeze blood from it.",
+  },
+  {
+    id: "beet", category: "vegetables", displayName: "Beet",
+    baseResource: "beet", tier: 1,
+    discovery: { method: "chain", chainLengthOf: "turnip", chainLength: UPGRADE_THRESHOLDS.turnip },
+    effects: {},
+    description: "Deadly to pests. Are you ready for borscht?",
+  },
+  {
+    id: "cucumber", category: "vegetables", displayName: "Cucumber",
+    baseResource: "cucumber", tier: 0,
+    discovery: { method: "default" },
+    effects: {},
+    description: "Avoided by rats. It is cool.",
+  },
+  {
+    id: "squash", category: "vegetables", displayName: "Squash",
+    baseResource: "squash", tier: 1,
+    discovery: { method: "chain", chainLengthOf: "cucumber", chainLength: UPGRADE_THRESHOLDS.cucumber },
+    effects: {},
+    description: "Can be collected with grain. Loves playing racquet.",
+  },
+  {
+    id: "mushroom", category: "vegetables", displayName: "Mushroom",
+    baseResource: "mushroom", tier: 2,
+    discovery: { method: "research", researchOf: "carrot", researchAmount: 50 },
+    effects: {},
+    description: "Resistant to swamp. Can be collected with rambutans. Everybody likes him. He's a fungi.",
+  },
+  {
+    id: "pepper", category: "vegetables", displayName: "Pepper",
+    baseResource: "pepper", tier: 2,
+    discovery: { method: "research", researchOf: "eggplant", researchAmount: 80 },
+    effects: {},
+    description: "A peppery silhouette unlocked only by completing a special collection challenge.",
+  },
+  {
+    id: "broccoli", category: "vegetables", displayName: "Broccoli",
+    baseResource: "broccoli", tier: 3,
+    discovery: { method: "buy", coinCost: 250 },
+    effects: {},
+    description: "A long chain gives flowers. Not the best choice for a bouquet. This species can only be bought.",
   },
 ];
 
