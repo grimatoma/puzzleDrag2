@@ -2,7 +2,7 @@ import { BIOMES, BUILDINGS, NPCS, MAX_TURNS, RECIPES, WORKSHOP_RECIPES, STORAGE_
 import { sellPriceFor as _sellPriceFor } from "./features/market/pricing.js";
 import { tryClearRatChain } from "./features/farm/rats.js";
 import { tryExtinguishFire } from "./features/farm/hazards.js";
-import { isMysteriousChainValid } from "./features/mine/mysterious_ore.js";
+import { isMysteriousChainValid, spawnMysteriousOre, tickMysteriousOre } from "./features/mine/mysterious_ore.js";
 import { driftPrices, applyTrade } from "./market.js";
 import { currentCap } from "./utils.js";
 import { WORKER_MAP } from "./features/apprentices/data.js";
@@ -509,7 +509,7 @@ function coreReducer(state, action) {
         newHintsShown = { ...hintsShown, upgradeHint: true };
       }
 
-      const afterChain = {
+      let afterChain = {
         ...state,
         inventory,
         coins: state.coins + coinsGain,
@@ -525,6 +525,10 @@ function coreReducer(state, action) {
         lastChainLength: effectiveChain,
         modal: seasonEnded ? "season" : state.modal,
       };
+      // Mine: tick mysterious ore countdown on each chain
+      if ((afterChain.biome ?? afterChain.biomeKey) === "mine" && afterChain.mysteriousOre) {
+        afterChain = tickMysteriousOre(afterChain);
+      }
       // Story: evaluate resource beats after inventory updated
       return maybeFireResourceBeats(afterChain, state);
     }
@@ -1053,30 +1057,37 @@ function coreReducer(state, action) {
       if (!state.story?.flags?.mine_unlocked) return state;
       const tier = MINE_ENTRY_TIERS.find((t) => t.id === action.payload?.tier);
       if (!tier) return state;
+      let afterMineEnter = state;
       if (tier.id === "free") {
         if ((state.inventory.supplies ?? 0) < 3) return state;
-        return {
+        afterMineEnter = {
           ...state,
           biomeKey: "mine",
+          biome: "mine",
           inventory: { ...state.inventory, supplies: state.inventory.supplies - 3 },
           sessionMaxTurns: MAX_TURNS,
         };
-      }
-      if (tier.id === "better") {
+      } else if (tier.id === "better") {
         if ((state.coins ?? 0) < 100 || (state.shovel ?? 0) < 10) return state;
-        return {
+        afterMineEnter = {
           ...state,
           biomeKey: "mine",
+          biome: "mine",
           coins: state.coins - 100,
           shovel: state.shovel - 10,
           sessionMaxTurns: MAX_TURNS + 2,
         };
-      }
-      if (tier.id === "premium") {
+      } else if (tier.id === "premium") {
         if ((state.runes ?? 0) < 2) return state;
-        return { ...state, biomeKey: "mine", runes: state.runes - 2, sessionMaxTurns: MAX_TURNS };
+        afterMineEnter = { ...state, biomeKey: "mine", biome: "mine", runes: state.runes - 2, sessionMaxTurns: MAX_TURNS };
+      } else {
+        return state;
       }
-      return state;
+      // Spawn mysterious ore on mine entry if grid is available
+      if (afterMineEnter.grid && afterMineEnter.grid.length > 0) {
+        afterMineEnter = spawnMysteriousOre(afterMineEnter);
+      }
+      return afterMineEnter;
     }
 
     case "CRAFT": {
@@ -1138,13 +1149,18 @@ function coreReducer(state, action) {
       if (biomeId === state.biome) return state;
       // Switching to Farm clears mysteriousOre (mine-only mechanic)
       const clearMine = biomeId === "farm";
-      return {
+      const afterSetBiome = {
         ...state,
         biome: biomeId,
         biomeKey: biomeId,
         mysteriousOre: clearMine ? null : state.mysteriousOre,
         _needsRefill: true,
       };
+      // Spawn mysterious ore when entering mine, if grid is available
+      if (!clearMine && afterSetBiome.grid && afterSetBiome.grid.length > 0) {
+        return spawnMysteriousOre(afterSetBiome);
+      }
+      return afterSetBiome;
     }
 
     case "COMMIT_CHAIN": {
