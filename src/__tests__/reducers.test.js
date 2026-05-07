@@ -340,4 +340,26 @@ describe("initialState", () => {
     const npcs = state.orders.map((o) => o.npc);
     expect(new Set(npcs).size).toBe(npcs.length);
   });
+
+  it("all NPCs start at Warm bond (5)", () => {
+    const state = freshState();
+    for (const npc of ["mira", "tomas", "bram", "liss", "wren"]) {
+      expect(state.npcBond[npc]).toBe(5);
+    }
+  });
+});
+
+describe("NPC bond decay", () => {
+  it("bond above 5 decays toward 5 over multiple seasons", () => {
+    let s = minState({ npcBond: { ...NEUTRAL_BOND, mira: 7 } });
+    for (let i = 0; i < 10; i++) s = gameReducer(s, { type: "CLOSE_SEASON" });
+    expect(s.npcBond.mira).toBeLessThan(7);
+    expect(s.npcBond.mira).toBeGreaterThanOrEqual(5);
+  });
+
+  it("bond exactly 5 stays at 5 after multiple seasons", () => {
+    let s = minState({ npcBond: { ...NEUTRAL_BOND, mira: 5 } });
+    for (let i = 0; i < 10; i++) s = gameReducer(s, { type: "CLOSE_SEASON" });
+    expect(s.npcBond.mira).toBe(5);
+  });
 });

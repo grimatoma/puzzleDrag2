@@ -2,7 +2,7 @@ import { NPC_FAVORITES, moodForBond } from './data.js';
 import { clamp } from '../../utils.js';
 
 export const initial = {
-  npcBond: { mira: 1, tomas: 1, bram: 1, liss: 1, wren: 1 },
+  npcBond: { mira: 5, tomas: 5, bram: 5, liss: 5, wren: 5 },
   npcGiftsToday: {},
 };
 
@@ -13,7 +13,7 @@ const BOND_DELTA_ORDER = 0.3;
 
 /** Return new npcBond object with bond for npc adjusted by delta. */
 function adjustBond(npcBond, npc, delta) {
-  const current = npcBond[npc] ?? 1;
+  const current = npcBond[npc] ?? 5;
   return { ...npcBond, [npc]: clamp(current + delta, 0, 10) };
 }
 
