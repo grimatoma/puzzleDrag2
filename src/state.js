@@ -4,6 +4,8 @@ import { currentCap } from "./utils.js";
 import { WORKER_MAP } from "./features/apprentices/data.js";
 import { computeWorkerEffects } from "./features/apprentices/effects.js";
 import { SPECIES, CATEGORIES, SPECIES_MAP } from "./features/species/data.js";
+import { rollQuests } from "./features/quests/data.js";
+import { ACHIEVEMENTS as ACHIEVEMENT_LIST } from "./features/achievements/data.js";
 import * as crafting from "./features/crafting/slice.js";
 import * as quests from "./features/quests/slice.js";
 import * as achievements from "./features/achievements/slice.js";
@@ -161,15 +163,21 @@ export function makeOrder(biomeKey, level, excludeNpcs = [], excludeOrderKeys = 
   return { id: `o${orderIdSeq++}`, npc, key, need, reward, line };
 }
 
-export function initialState() {
+export function initialState(overrides) {
   const biomeKey = "farm";
   const level = 1;
   const o1 = makeOrder(biomeKey, level);
   const o2 = makeOrder(biomeKey, level, [o1.npc], [o1.key]);
   const o3 = makeOrder(biomeKey, level, [o1.npc, o2.npc], [o1.key, o2.key]);
   const marketSeed = Math.floor(Math.random() * 1e9);
+  // saveSeed: stable per-save identifier for deterministic quest rolls.
+  // If overrides supply one (e.g. from a loaded save), keep it; otherwise generate.
+  const saveSeed = overrides?.saveSeed ?? Math.random().toString(36).slice(2, 10);
+  // tools with structural flag support — startingExtraScythe grants +1 scythe each session
+  const extraScytheBonus = overrides?.tools?.startingExtraScythe ? 1 : 0;
   const fresh = {
     biomeKey,
+    saveSeed,
     view: "town",
     coins: 150,
     level,
@@ -178,7 +186,10 @@ export function initialState() {
     seasonsCycled: 0,
     inventory: { supplies: 0 },
     orders: [o1, o2, o3],
-    tools: { clear: 2, basic: 1, rare: 1, shuffle: 0, bomb: 0 },
+    quests: rollQuests(saveSeed, 1, "spring"),
+    tools: { clear: 2, basic: 1, rare: 1, shuffle: 0, bomb: 0,
+             scythe: extraScytheBonus, seedpack: 0, lockbox: 0, reshuffle: 0,
+             startingExtraScythe: !!overrides?.tools?.startingExtraScythe },
     built: { hearth: true },
     bubble: null,
     modal: null,
@@ -200,6 +211,21 @@ export function initialState() {
     dailyStreak: { lastClaimedDate: null, currentDay: 0 },
     workers: { hired: { hilda: 0, pip: 0, wila: 0, tuck: 0, osric: 0, dren: 0 }, debt: 0, pool: 1 },
     species: defaultSpeciesSlice(),
+    almanac: {
+      xp: 0,
+      level: 1,
+      claimed: { 1: false, 2: false, 3: false, 4: false, 5: false },
+    },
+    achievements: {
+      counters: {
+        chains_committed: 0, orders_fulfilled: 0, bosses_defeated: 0,
+        festival_won: 0, distinct_resources_chained: 0,
+        distinct_buildings_built: 0, supplies_converted: 0,
+      },
+      unlocked: Object.fromEntries(ACHIEVEMENT_LIST.map((a) => [a.id, false])),
+      seenResources: {},
+      seenBuildings: {},
+    },
     ...crafting.initial,
     ...quests.initial,
     ...achievements.initial,
