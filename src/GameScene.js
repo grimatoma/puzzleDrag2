@@ -1,12 +1,11 @@
 import Phaser from "phaser";
 import { TILE, COLS, ROWS, UPGRADE_EVERY, SEASONS, BIOMES } from "./constants.js";
-import { upgradeCountForChain } from "./utils.js";
+import { upgradeCountForChain, resourceGainForChain } from "./utils.js";
 const cssColor = (num) => Phaser.Display.Color.IntegerToColor(num).rgba;
 import { rounded, makeTextures } from "./textures.js";
 import { TileObj } from "./TileObj.js";
 
 const TILE_BASE = TILE; // CSS-pixel design size for one tile; textures are baked at TILE * dpr
-const DOUBLE_CHAIN_THRESHOLD = 6; // chains this long or longer yield double resources
 const FLOAT_TEXT_COLOR = 0xffd248;
 
 // Single decorative frame around the tiles, in CSS pixels. Thinner on narrow
@@ -465,7 +464,7 @@ export class GameScene extends Phaser.Scene {
     const res = this.path[0].res;
     const next = this.nextResource(res);
     const upgradeTotal = next ? upgradeCountForChain(this.path.length) : 0;
-    const gained = this.path.length * (this.path.length >= DOUBLE_CHAIN_THRESHOLD ? 2 : 1);
+    const gained = resourceGainForChain(this.path.length);
     this.floatText(`+${gained} ${res.label}${upgradeTotal ? `  ★ ${upgradeTotal}` : ""}`, this.path[this.path.length - 1].x, this.path[this.path.length - 1].y);
 
     // Chain-length juice — escalating screen shake and a radial wipe. Big chains
@@ -520,10 +519,11 @@ export class GameScene extends Phaser.Scene {
 
   updateChainBadge() {
     const n = this.path.length;
+    const gained = resourceGainForChain(n);
     const next = n ? this.nextResource(this.path[0].res) : null;
     const k = next ? upgradeCountForChain(n) : 0;
     if (this.chainBadge) {
-      this.chainBadgeText.setText(k > 0 ? `chain × ${n}   +${k}★` : `chain × ${n}`);
+      this.chainBadgeText.setText(k > 0 ? `chain × ${gained}   +${k}★` : `chain × ${gained}`);
     }
     this._emitChainUpdate();
   }
@@ -535,9 +535,10 @@ export class GameScene extends Phaser.Scene {
 
   _emitChainUpdate() {
     const n = this.path.length;
+    const gained = resourceGainForChain(n);
     const next = n ? this.nextResource(this.path[0].res) : null;
     const k = next ? upgradeCountForChain(n) : 0;
-    this.events.emit("chain-update", { count: n, upgrades: k });
+    this.events.emit("chain-update", { count: gained, upgrades: k });
   }
 
   // ─── Juice (chain-length feedback) ────────────────────────────────────────

@@ -4,6 +4,7 @@ import { reduce as moodReduce } from "../features/mood/slice.js";
 import { reduce as bossReduce } from "../features/boss/slice.js";
 import { reduce as apprenticesReduce, seedHireSeq } from "../features/apprentices/slice.js";
 import { seedQuestIdSeq } from "../features/quests/slice.js";
+import { resourceGainForChain } from "../utils.js";
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
@@ -39,6 +40,15 @@ function minState(overrides = {}) {
     ...overrides,
   };
 }
+
+// ─── resourceGainForChain ────────────────────────────────────────────────────
+
+describe("resourceGainForChain", () => {
+  it("chain 3 → gain 3", () => expect(resourceGainForChain(3)).toBe(3));
+  it("chain 5 → gain 5", () => expect(resourceGainForChain(5)).toBe(5));
+  it("chain 6 → double gain (12)", () => expect(resourceGainForChain(6)).toBe(12));
+  it("chain 7 → double gain (14)", () => expect(resourceGainForChain(7)).toBe(14));
+});
 
 // ─── coreReducer via gameReducer ─────────────────────────────────────────────
 

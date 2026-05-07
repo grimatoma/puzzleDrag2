@@ -8,6 +8,10 @@ export function upgradeCountForChain(chainLength) {
   return Math.floor(chainLength / UPGRADE_EVERY);
 }
 
+export function resourceGainForChain(chainLength) {
+  return chainLength * (chainLength >= 6 ? 2 : 1);
+}
+
 export function hex(num) {
   return `#${num.toString(16).padStart(6, "0")}`;
 }
