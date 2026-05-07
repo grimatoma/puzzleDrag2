@@ -396,8 +396,8 @@ export class GameScene extends Phaser.Scene {
   /**
    * Returns the biome pool with each slot substituted by the player's currently
    * active tile type for that category. If a category has no active tile type
-   * selected, the slot keeps its original base resource (preserves existing
-   * gameplay before any tile type is picked).
+   * selected (null), that slot is dropped from the pool — only tiles the player
+   * has explicitly chosen (or defaulted) will spawn.
    */
   activePool() {
     const base = this.biome().pool;
@@ -408,9 +408,11 @@ export class GameScene extends Phaser.Scene {
       const cat = CATEGORY_OF[baseKey];
       if (!cat) { out.push(baseKey); continue; }
       const a = active[cat];
-      out.push(a ?? baseKey);
+      if (a === null || a === undefined) continue; // category disabled — drop slot
+      out.push(a);
     }
-    return out;
+    // Safety: never return an empty pool (fallback to base so the board can fill)
+    return out.length > 0 ? out : [...base];
   }
 
   resourceByKey(key) {

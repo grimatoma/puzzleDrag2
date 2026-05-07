@@ -63,6 +63,9 @@ function PhaserMount({ dispatch, biomeKey, turnsUsed, seasonsCycled, uiLocked, s
               game.registry.set("uiLocked", uiLocked);
               game.registry.set("dpr", dpr);
               game.registry.set("renderResolution", dpr);
+              // Set before GameScene.create() so the initial fillBoard uses the
+              // player's active tile selections instead of the raw base pool.
+              game.registry.set("tileCollectionActive", tileCollection?.activeByCategory ?? null);
             },
             postBoot: (game) => {
               // Track host CSS-size changes and resize the game's backing
