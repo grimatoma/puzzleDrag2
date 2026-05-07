@@ -10,11 +10,17 @@ import { SidePanel, BottomNav, FeatureModals, FeatureScreens } from "./src/ui.js
 import { useAudio } from "./src/audio/useAudio.js";
 import { setPhaserScene } from "./src/phaserBridge.js";
 import { announce, getQueue, flushAnnouncements, formatChainAnnouncement, formatModalAnnouncement, formatQuestAnnouncement } from "./src/a11y.js";
+import { handleKeyboard } from "./src/features/a11y/keyboard.js";
 
-function PhaserMount({ dispatch, biomeKey, turnsUsed, seasonsCycled, uiLocked, sceneRef, weather, toolPending, setChainInfo, workers, palette, reducedMotion }) {
+function PhaserMount({ dispatch, biomeKey, turnsUsed, seasonsCycled, uiLocked, sceneRef, weather, toolPending, setChainInfo, workers, palette, reducedMotion, gameState }) {
   const hostRef = useRef(null);
   const gameRef = useRef(null);
   const [loading, setLoading] = useState(true);
+  // Keep a ref to the latest game state for keyboard handler (avoids stale closure)
+  const gameStateRef = useRef(gameState);
+  useEffect(() => { gameStateRef.current = gameState; }, [gameState]);
+  // Keyboard chain state (chain array, separate from Phaser's drag chain)
+  const kbChainRef = useRef([]);
 
   useEffect(() => {
     if (!hostRef.current || gameRef.current) return;
@@ -106,10 +112,76 @@ function PhaserMount({ dispatch, biomeKey, turnsUsed, seasonsCycled, uiLocked, s
   useEffect(() => { gameRef.current?.registry.set("palette", palette ?? "default"); }, [palette]);
   useEffect(() => { gameRef.current?.registry.set("reducedMotion", reducedMotion ?? null); }, [reducedMotion]);
 
+  // Keyboard chain construction — Tab focuses board, arrows move cursor, Space adds tile, Enter commits, Esc cancels
+  useEffect(() => {
+    const el = hostRef.current;
+    if (!el) return;
+    const handler = (e) => {
+      const HANDLED_KEYS = ["Tab", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", " ", "Enter", "Escape"];
+      if (!HANDLED_KEYS.includes(e.key)) return;
+      const s = gameStateRef.current;
+      if (!s) return;
+      const cur = s.settings?.keyboardCursor ?? { row: 0, col: 0, active: false };
+      // Only intercept arrows/space/enter/esc when cursor is active (Tab always handled)
+      if (e.key !== "Tab" && !cur.active) return;
+      e.preventDefault();
+      // Build minimal state for handleKeyboard
+      const kbState = { settings: s.settings, grid: s.grid ?? [], chain: kbChainRef.current };
+      const next = handleKeyboard(kbState, { key: e.key });
+      // Update keyboard chain ref
+      kbChainRef.current = next.chain ?? [];
+      // Dispatch cursor changes
+      if (JSON.stringify(next.settings?.keyboardCursor) !== JSON.stringify(s.settings?.keyboardCursor)) {
+        dispatch({ type: "SET_CURSOR", cursor: next.settings.keyboardCursor });
+      }
+      // Enter commits chain → dispatch CHAIN_COLLECTED if chain was non-empty
+      if (e.key === "Enter" && kbState.chain.length > 0) {
+        const inv = next.inventory ?? {};
+        const prevInv = s.inventory ?? {};
+        // Find what changed and emit as CHAIN_COLLECTED
+        const key = kbState.chain[0]?.key;
+        if (key) {
+          const gained = (inv[key] ?? 0) - (prevInv[key] ?? 0);
+          if (gained > 0) {
+            dispatch({ type: "CHAIN_COLLECTED", payload: { key, gained, upgrades: 0, chainLength: kbState.chain.length, value: 1 } });
+          }
+        }
+        kbChainRef.current = [];
+      }
+      // Escape clears local chain (no dispatch needed beyond cursor)
+      if (e.key === "Escape") {
+        kbChainRef.current = [];
+      }
+    };
+    el.addEventListener("keydown", handler);
+    return () => el.removeEventListener("keydown", handler);
+  }, [dispatch]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Render keyboard cursor overlay when active
+  const cursor = gameState?.settings?.keyboardCursor;
+  const cursorActive = cursor?.active;
+
   return (
-    <div ref={hostRef} className="w-full h-full">
+    <div ref={hostRef} tabIndex={0} className="w-full h-full relative outline-none focus-visible:outline-2 focus-visible:outline-[#ffd248]">
       {loading && (
         <div className="absolute inset-0 grid place-items-center text-[#f8e7c6] text-[12px]">Loading board…</div>
+      )}
+      {cursorActive && cursor && (
+        <div
+          aria-hidden="true"
+          style={{
+            position: "absolute",
+            pointerEvents: "none",
+            left: `calc(${(cursor.col / 6) * 100}% + 4px)`,
+            top: `calc(${(cursor.row / 6) * 100}% + 4px)`,
+            width: `calc(${100 / 6}% - 8px)`,
+            height: `calc(${100 / 6}% - 8px)`,
+            border: "3px solid #ffd248",
+            borderRadius: "12px",
+            boxShadow: "0 0 0 3px rgba(255,210,72,.35)",
+            zIndex: 30,
+          }}
+        />
       )}
     </div>
   );
@@ -271,6 +343,7 @@ export default function App() {
                   workers={state.workers}
                   palette={state.settings?.palette}
                   reducedMotion={state.settings?.reducedMotion}
+                  gameState={state}
                 />
               </div>
               {/* Side panel — hidden on mobile, replaced by MobileDock */}
