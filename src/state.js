@@ -1,6 +1,7 @@
 import { BIOMES, BUILDINGS, NPCS, MAX_TURNS, RECIPES, WORKSHOP_RECIPES, STORAGE_KEYS, SEASON_EFFECTS, DAILY_REWARDS, MINE_ENTRY_TIERS, CAPPED_RESOURCES, UPGRADE_THRESHOLDS } from "./constants.js";
 import { sellPriceFor as _sellPriceFor } from "./features/market/pricing.js";
 import { tryClearRatChain } from "./features/farm/rats.js";
+import { tryExtinguishFire } from "./features/farm/hazards.js";
 import { isMysteriousChainValid } from "./features/mine/mysterious_ore.js";
 import { driftPrices, applyTrade } from "./market.js";
 import { currentCap } from "./utils.js";
@@ -1103,6 +1104,16 @@ function coreReducer(state, action) {
         return { ...state, hazards: patch.hazards, coins: patch.coins };
       }
 
+      // Phase 10.7 — Fire extinguishing: fire tiles in chain are removed and
+      // credit +2◉ each. Normal chain logic continues with non-fire tiles.
+      const firePatch = tryExtinguishFire(state, chain);
+      let stateAfterFire = state;
+      let fireCoinBonus = 0;
+      if (firePatch) {
+        stateAfterFire = { ...state, hazards: firePatch.hazards };
+        fireCoinBonus = firePatch.coinsBonus;
+      }
+
       // Mysterious ore chain check
       const hasOre = chain.some((t) => t.key === "mysterious_ore");
       if (hasOre) {
@@ -1119,18 +1130,23 @@ function coreReducer(state, action) {
       }
 
       // Standard chain: all tiles must be the same key
-      const length = chain.length;
-      const threshold = UPGRADE_THRESHOLDS[chainKey];
+      // (fire tiles filtered out — they are handled by tryExtinguishFire above)
+      const nonFireChain = chain.filter((t) => t.key !== "fire");
+      const chainToProcess = nonFireChain.length >= chain.length ? chain : nonFireChain;
+      const effectiveKey = chainToProcess[0]?.key ?? chainKey;
+      const length = chainToProcess.length;
+      const threshold = UPGRADE_THRESHOLDS[effectiveKey];
       const upgrades = threshold ? Math.floor(length / threshold) : 0;
       const gained = length - upgrades;
-      const inv = { ...state.inventory };
-      inv[chainKey] = (inv[chainKey] ?? 0) + gained;
+      const inv = { ...(stateAfterFire.inventory ?? state.inventory) };
+      if (gained > 0) inv[effectiveKey] = (inv[effectiveKey] ?? 0) + gained;
       // Upgraded resource
-      const res = Object.values(BIOMES).flatMap((b) => b.resources ?? []).find((r) => r.key === chainKey);
+      const res = Object.values(BIOMES).flatMap((b) => b.resources ?? []).find((r) => r.key === effectiveKey);
       if (res?.next && upgrades > 0) {
         inv[res.next] = (inv[res.next] ?? 0) + upgrades;
       }
-      return { ...state, inventory: inv };
+      return { ...stateAfterFire, inventory: inv,
+               coins: (stateAfterFire.coins ?? 0) + fireCoinBonus };
     }
 
     case "ACTIVATE_RUNE_WILDCARD": {
