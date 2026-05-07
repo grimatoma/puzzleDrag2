@@ -173,12 +173,19 @@ describe("TURN_IN_ORDER", () => {
 });
 
 describe("CLOSE_SEASON", () => {
-  it("resets turnsUsed and increments seasonsCycled via boss slice", () => {
+  it("resets turnsUsed and increments seasonsCycled", () => {
     const state = minState({ turnsUsed: 8, seasonsCycled: 1, modal: "season" });
     const next = gameReducer(state, { type: "CLOSE_SEASON" });
     expect(next.turnsUsed).toBe(0);
     expect(next.modal).toBeNull();
     expect(next.view).toBe("town");
+  });
+
+  it("increments seasonsCycled from core state", () => {
+    const s0 = minState({ seasonsCycled: 0 });
+    const s1 = gameReducer(s0, { type: "CLOSE_SEASON" });
+    const s2 = gameReducer(s1, { type: "CLOSE_SEASON" });
+    expect(s2.seasonsCycled).toBe(2);
   });
 
   it("awards end-of-season coins and shuffle tool", () => {

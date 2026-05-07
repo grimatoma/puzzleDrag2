@@ -374,6 +374,7 @@ function coreReducer(state, action) {
         tools,
         coins: state.coins + SEASON_END_BONUS_COINS,
         turnsUsed: 0,
+        seasonsCycled: (state.seasonsCycled || 0) + 1,
         modal: null,
         view: "town",
         pendingView: null,
