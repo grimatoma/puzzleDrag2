@@ -31,16 +31,23 @@ export const UPGRADE_THRESHOLDS = {
   // Catalog-import placeholders. All default to 6 — balance comes later.
   grass_heather: 6,
   grain_corn: 6, grain_buckwheat: 6, grain_manna: 6, grain_rice: 6,
-  fruit_apple: 6, fruit_pear: 6, fruit_golden_apple: 6, fruit_blackberry: 6,
-  fruit_rambutan: 6, fruit_starfruit: 6, fruit_coconut: 6, fruit_lemon: 6, fruit_jackfruit: 6,
-  flower_pansy: 6, flower_water_lily: 6,
+  // Fruits → Pie (catalog §4: 7 fruits → 1 pie)
+  fruit_apple: 7, fruit_pear: 7, fruit_golden_apple: 7, fruit_blackberry: 7,
+  fruit_rambutan: 7, fruit_starfruit: 7, fruit_coconut: 7, fruit_lemon: 7, fruit_jackfruit: 7,
+  // Flowers → Honey (catalog §4: 10 flowers → 1 honey)
+  flower_pansy: 10, flower_water_lily: 10,
+  // Trees — placeholder; new tree species don't yet chain to a product (existing log/plank/beam chain still authoritative for wood).
   tree_oak: 6, tree_birch: 6, tree_willow: 6, tree_fir: 6, tree_cypress: 6, tree_palm: 6,
+  // Birds — chain length kept at 6 placeholder; egg/eggs upgrade product would live here once we redesign the bird chain.
   pheasant: 6, chicken: 6, hen: 6, rooster: 6, wild_goose: 6, goose: 6,
   parrot: 6, phoenix: 6, dodo: 6, pig_in_disguise: 6,
-  herd_pig: 6, herd_hog: 6, herd_boar: 6, herd_warthog: 6,
-  herd_sheep: 6, herd_alpaca: 6, herd_goat: 6, herd_ram: 6,
+  // Herd Animals → Meat (catalog §4: 5 herd → 1 meat)
+  herd_pig: 5, herd_hog: 5, herd_boar: 5, herd_warthog: 5,
+  herd_sheep: 5, herd_alpaca: 5, herd_goat: 5, herd_ram: 5,
+  // Cattle → Milk (catalog §4: 6 cattle → 1 milk)
   cattle_cow: 6, cattle_longhorn: 6, cattle_triceratops: 6,
-  mount_horse: 6, mount_donkey: 6, mount_moose: 6, mount_mammoth: 6,
+  // Mounts → Horseshoe (catalog §4: 10 mounts → 1 horseshoe)
+  mount_horse: 10, mount_donkey: 10, mount_moose: 10, mount_mammoth: 10,
 };
 
 export const SEASONS = [
@@ -50,7 +57,27 @@ export const SEASONS = [
   { name: "Winter", icon: "snow", bg: 0x78aaca, fill: 0x91d9ff, accent: 0xd9f6ff },
 ];
 
-export const FARM_TILE_POOL = ["hay", "hay", "hay", "log", "log", "wheat", "berry", "berry", "egg", "carrot"];
+// Farm board tile pool. Each entry is one slot in the random fill rotation.
+// Per-category counts intentionally weighted: staple chains (hay, log) get
+// more slots; new chain categories get one each so the player sees them
+// without the board becoming chain-impossible at 6×6 = 36 cells.
+export const FARM_TILE_POOL = [
+  "hay", "hay", "hay",
+  "log", "log",
+  "wheat",
+  "berry", "berry",
+  "egg",
+  "carrot",
+  "fruit_apple",
+  "flower_pansy",
+  "tree_oak",
+  "herd_pig",
+  "cattle_cow",
+  "mount_horse",
+  // Bird category already covered by `egg` slot above; new bird species
+  // (chicken, hen, rooster, …) become alternate active species via the
+  // species-activation pipeline rather than additional pool slots.
+];
 export const MINE_TILE_POOL = ["stone", "stone", "stone", "ore", "ore", "coal", "dirt", "dirt", "gem"];
 
 export const BIOMES = {
@@ -87,6 +114,12 @@ export const BIOMES = {
       { key: "pepper",   label: "Pepper",   color: 0xd83a3a, dark: 0x6e1818, value: 4, next: "soup", glyph: "🌶", sway: { amp: 2.2, freq: 0.00054, gust: 0.10 } },
       { key: "broccoli", label: "Broccoli", color: 0x4a8a3a, dark: 0x1e3e18, value: 4, next: "soup", glyph: "🥦", sway: { amp: 3.0, freq: 0.00060, gust: 0.12 } },
       { key: "soup",     label: "Soup",     color: 0xc46a2f, dark: 0x6e3a18, value: 20, next: null, glyph: "🍲" },
+      // Phase: wire-all-chains — terminal chain products from REFERENCE_CATALOG §4.
+      { key: "pie",       label: "Pie",       color: 0xb05428, dark: 0x582818, value: 90,  next: null, glyph: "🥧" },
+      { key: "honey",     label: "Honey",     color: 0xe8a020, dark: 0x745010, value: 300, next: null, glyph: "🍯" },
+      { key: "meat",      label: "Meat",      color: 0xc44848, dark: 0x682424, value: 21,  next: null, glyph: "🍖" },
+      { key: "milk",      label: "Milk",      color: 0xfaf6ec, dark: 0x807e74, value: 100, next: null, glyph: "🥛" },
+      { key: "horseshoe", label: "Horseshoe", color: 0x8a8a90, dark: 0x46464a, value: 400, next: null, glyph: "🧲" },
 
       // ─── Catalog-import placeholders (assets-only PR) ─────────────────────
       // Resources for every new tile-type in REFERENCE_CATALOG §7. They
@@ -102,18 +135,18 @@ export const BIOMES = {
       { key: "grain_manna",        label: "Manna",        color: 0xf8e8c0, dark: 0x7a6e58, value: 1, next: null, glyph: "✨", sway: { amp: 1.5, freq: 0.00040, gust: 0.06 } },
       { key: "grain_rice",         label: "Rice",         color: 0xc8d878, dark: 0x60683c, value: 1, next: null, glyph: "🌾", sway: { amp: 3.0, freq: 0.00056, gust: 0.14 } },
       // Fruits
-      { key: "fruit_apple",        label: "Apple",        color: 0xd4543a, dark: 0x6a2a18, value: 1, next: null, glyph: "🍎", sway: { amp: 1.2, freq: 0.00040, gust: 0.06 } },
-      { key: "fruit_pear",         label: "Pear",         color: 0xbcc436, dark: 0x5e6018, value: 1, next: null, glyph: "🍐", sway: { amp: 1.2, freq: 0.00040, gust: 0.06 } },
-      { key: "fruit_golden_apple", label: "Golden Apple", color: 0xf4c430, dark: 0x7a6010, value: 1, next: null, glyph: "🍏", sway: { amp: 1.2, freq: 0.00040, gust: 0.06 } },
-      { key: "fruit_blackberry",   label: "Blackberry",   color: 0x3a1a4a, dark: 0x180a20, value: 1, next: null, glyph: "🫐", sway: { amp: 1.0, freq: 0.00038, gust: 0.05 } },
-      { key: "fruit_rambutan",     label: "Rambutan",     color: 0xd8344a, dark: 0x6a1820, value: 1, next: null, glyph: "🌶", sway: { amp: 1.4, freq: 0.00042, gust: 0.07 } },
-      { key: "fruit_starfruit",    label: "Starfruit",    color: 0xe8c83c, dark: 0x726018, value: 1, next: null, glyph: "⭐", sway: { amp: 1.0, freq: 0.00040, gust: 0.05 } },
-      { key: "fruit_coconut",      label: "Coconut",      color: 0x5e3a14, dark: 0x2e1c08, value: 1, next: null, glyph: "🥥", sway: { amp: 0.8, freq: 0.00030, gust: 0.04 } },
-      { key: "fruit_lemon",        label: "Lemon",        color: 0xf4d030, dark: 0x7a6818, value: 1, next: null, glyph: "🍋", sway: { amp: 1.2, freq: 0.00042, gust: 0.06 } },
-      { key: "fruit_jackfruit",    label: "Jackfruit",    color: 0xa8a040, dark: 0x52501c, value: 1, next: null, glyph: "🍈", sway: { amp: 1.0, freq: 0.00038, gust: 0.05 } },
+      { key: "fruit_apple",        label: "Apple",        color: 0xd4543a, dark: 0x6a2a18, value: 1, next: "pie", glyph: "🍎", sway: { amp: 1.2, freq: 0.00040, gust: 0.06 } },
+      { key: "fruit_pear",         label: "Pear",         color: 0xbcc436, dark: 0x5e6018, value: 1, next: "pie", glyph: "🍐", sway: { amp: 1.2, freq: 0.00040, gust: 0.06 } },
+      { key: "fruit_golden_apple", label: "Golden Apple", color: 0xf4c430, dark: 0x7a6010, value: 1, next: "pie", glyph: "🍏", sway: { amp: 1.2, freq: 0.00040, gust: 0.06 } },
+      { key: "fruit_blackberry",   label: "Blackberry",   color: 0x3a1a4a, dark: 0x180a20, value: 1, next: "pie", glyph: "🫐", sway: { amp: 1.0, freq: 0.00038, gust: 0.05 } },
+      { key: "fruit_rambutan",     label: "Rambutan",     color: 0xd8344a, dark: 0x6a1820, value: 1, next: "pie", glyph: "🌶", sway: { amp: 1.4, freq: 0.00042, gust: 0.07 } },
+      { key: "fruit_starfruit",    label: "Starfruit",    color: 0xe8c83c, dark: 0x726018, value: 1, next: "pie", glyph: "⭐", sway: { amp: 1.0, freq: 0.00040, gust: 0.05 } },
+      { key: "fruit_coconut",      label: "Coconut",      color: 0x5e3a14, dark: 0x2e1c08, value: 1, next: "pie", glyph: "🥥", sway: { amp: 0.8, freq: 0.00030, gust: 0.04 } },
+      { key: "fruit_lemon",        label: "Lemon",        color: 0xf4d030, dark: 0x7a6818, value: 1, next: "pie", glyph: "🍋", sway: { amp: 1.2, freq: 0.00042, gust: 0.06 } },
+      { key: "fruit_jackfruit",    label: "Jackfruit",    color: 0xa8a040, dark: 0x52501c, value: 1, next: "pie", glyph: "🍈", sway: { amp: 1.0, freq: 0.00038, gust: 0.05 } },
       // Flowers
-      { key: "flower_pansy",       label: "Pansy",        color: 0x7a3aa8, dark: 0x3c1c54, value: 1, next: null, glyph: "🌸", sway: { amp: 2.6, freq: 0.00070, gust: 0.14 } },
-      { key: "flower_water_lily",  label: "Water Lily",   color: 0xe890c0, dark: 0x70486a, value: 1, next: null, glyph: "🪷", sway: { amp: 0.8, freq: 0.00026, gust: 0.04 } },
+      { key: "flower_pansy",       label: "Pansy",        color: 0x7a3aa8, dark: 0x3c1c54, value: 1, next: "honey", glyph: "🌸", sway: { amp: 2.6, freq: 0.00070, gust: 0.14 } },
+      { key: "flower_water_lily",  label: "Water Lily",   color: 0xe890c0, dark: 0x70486a, value: 1, next: "honey", glyph: "🪷", sway: { amp: 0.8, freq: 0.00026, gust: 0.04 } },
       // Trees (distinct from existing log/plank/beam wood chain)
       { key: "tree_oak",           label: "Oak",          color: 0x3a6818, dark: 0x1a3008, value: 1, next: null, glyph: "🌳", sway: { amp: 1.6, freq: 0.00030, gust: 0.10 } },
       { key: "tree_birch",         label: "Birch",        color: 0xa8c038, dark: 0x546018, value: 1, next: null, glyph: "🌲", sway: { amp: 2.2, freq: 0.00034, gust: 0.12 } },
@@ -133,23 +166,23 @@ export const BIOMES = {
       { key: "dodo",               label: "Dodo",         color: 0xa89878, dark: 0x524a3a, value: 1, next: null, glyph: "🦤", sway: { amp: 0.8, freq: 0.00036, gust: 0.04 } },
       { key: "pig_in_disguise",    label: "Pig in Disguise", color: 0xe88a98, dark: 0x72424a, value: 1, next: null, glyph: "🐽", sway: { amp: 0.8, freq: 0.00036, gust: 0.04 } },
       // Herd Animals
-      { key: "herd_pig",           label: "Pig",          color: 0xe88a98, dark: 0x72424a, value: 1, next: null, glyph: "🐖", sway: { amp: 0.6, freq: 0.00028, gust: 0.04 } },
-      { key: "herd_hog",           label: "Hog",          color: 0xa87838, dark: 0x523a1a, value: 1, next: null, glyph: "🐗", sway: { amp: 0.6, freq: 0.00028, gust: 0.04 } },
-      { key: "herd_boar",          label: "Boar",         color: 0x241408, dark: 0x100804, value: 1, next: null, glyph: "🐗", sway: { amp: 0.6, freq: 0.00028, gust: 0.04 } },
-      { key: "herd_warthog",       label: "Warthog",      color: 0x5a4828, dark: 0x2c2412, value: 1, next: null, glyph: "🐗", sway: { amp: 0.6, freq: 0.00028, gust: 0.04 } },
-      { key: "herd_sheep",         label: "Sheep",        color: 0xfffce8, dark: 0x807e74, value: 1, next: null, glyph: "🐑", sway: { amp: 0.6, freq: 0.00028, gust: 0.04 } },
-      { key: "herd_alpaca",        label: "Alpaca",       color: 0xf8e8c8, dark: 0x7c7264, value: 1, next: null, glyph: "🦙", sway: { amp: 0.6, freq: 0.00028, gust: 0.04 } },
-      { key: "herd_goat",          label: "Goat",         color: 0xd8c098, dark: 0x6c604a, value: 1, next: null, glyph: "🐐", sway: { amp: 0.6, freq: 0.00028, gust: 0.04 } },
-      { key: "herd_ram",           label: "Ram",          color: 0xa87838, dark: 0x523a1a, value: 1, next: null, glyph: "🐏", sway: { amp: 0.6, freq: 0.00028, gust: 0.04 } },
+      { key: "herd_pig",           label: "Pig",          color: 0xe88a98, dark: 0x72424a, value: 1, next: "meat", glyph: "🐖", sway: { amp: 0.6, freq: 0.00028, gust: 0.04 } },
+      { key: "herd_hog",           label: "Hog",          color: 0xa87838, dark: 0x523a1a, value: 1, next: "meat", glyph: "🐗", sway: { amp: 0.6, freq: 0.00028, gust: 0.04 } },
+      { key: "herd_boar",          label: "Boar",         color: 0x241408, dark: 0x100804, value: 1, next: "meat", glyph: "🐗", sway: { amp: 0.6, freq: 0.00028, gust: 0.04 } },
+      { key: "herd_warthog",       label: "Warthog",      color: 0x5a4828, dark: 0x2c2412, value: 1, next: "meat", glyph: "🐗", sway: { amp: 0.6, freq: 0.00028, gust: 0.04 } },
+      { key: "herd_sheep",         label: "Sheep",        color: 0xfffce8, dark: 0x807e74, value: 1, next: "meat", glyph: "🐑", sway: { amp: 0.6, freq: 0.00028, gust: 0.04 } },
+      { key: "herd_alpaca",        label: "Alpaca",       color: 0xf8e8c8, dark: 0x7c7264, value: 1, next: "meat", glyph: "🦙", sway: { amp: 0.6, freq: 0.00028, gust: 0.04 } },
+      { key: "herd_goat",          label: "Goat",         color: 0xd8c098, dark: 0x6c604a, value: 1, next: "meat", glyph: "🐐", sway: { amp: 0.6, freq: 0.00028, gust: 0.04 } },
+      { key: "herd_ram",           label: "Ram",          color: 0xa87838, dark: 0x523a1a, value: 1, next: "meat", glyph: "🐏", sway: { amp: 0.6, freq: 0.00028, gust: 0.04 } },
       // Cattle
-      { key: "cattle_cow",         label: "Cow",          color: 0xfffce8, dark: 0x807e74, value: 1, next: null, glyph: "🐄", sway: { amp: 0.4, freq: 0.00022, gust: 0.03 } },
-      { key: "cattle_longhorn",    label: "Longhorn",     color: 0xd89048, dark: 0x6a4820, value: 1, next: null, glyph: "🐂", sway: { amp: 0.4, freq: 0.00022, gust: 0.03 } },
-      { key: "cattle_triceratops", label: "Triceratops",  color: 0x5a8a28, dark: 0x2c4414, value: 1, next: null, glyph: "🦖", sway: { amp: 0.4, freq: 0.00022, gust: 0.03 } },
+      { key: "cattle_cow",         label: "Cow",          color: 0xfffce8, dark: 0x807e74, value: 1, next: "milk", glyph: "🐄", sway: { amp: 0.4, freq: 0.00022, gust: 0.03 } },
+      { key: "cattle_longhorn",    label: "Longhorn",     color: 0xd89048, dark: 0x6a4820, value: 1, next: "milk", glyph: "🐂", sway: { amp: 0.4, freq: 0.00022, gust: 0.03 } },
+      { key: "cattle_triceratops", label: "Triceratops",  color: 0x5a8a28, dark: 0x2c4414, value: 1, next: "milk", glyph: "🦖", sway: { amp: 0.4, freq: 0.00022, gust: 0.03 } },
       // Mounts
-      { key: "mount_horse",        label: "Horse",        color: 0xa86838, dark: 0x52321a, value: 1, next: null, glyph: "🐎", sway: { amp: 0.4, freq: 0.00022, gust: 0.03 } },
-      { key: "mount_donkey",       label: "Donkey",       color: 0x8a8478, dark: 0x44423a, value: 1, next: null, glyph: "🫏", sway: { amp: 0.4, freq: 0.00022, gust: 0.03 } },
-      { key: "mount_moose",        label: "Moose",        color: 0x5a3814, dark: 0x2c1c0a, value: 1, next: null, glyph: "🦌", sway: { amp: 0.4, freq: 0.00022, gust: 0.03 } },
-      { key: "mount_mammoth",      label: "Mammoth",      color: 0xa87838, dark: 0x523a1a, value: 1, next: null, glyph: "🐘", sway: { amp: 0.4, freq: 0.00022, gust: 0.03 } },
+      { key: "mount_horse",        label: "Horse",        color: 0xa86838, dark: 0x52321a, value: 1, next: "horseshoe", glyph: "🐎", sway: { amp: 0.4, freq: 0.00022, gust: 0.03 } },
+      { key: "mount_donkey",       label: "Donkey",       color: 0x8a8478, dark: 0x44423a, value: 1, next: "horseshoe", glyph: "🫏", sway: { amp: 0.4, freq: 0.00022, gust: 0.03 } },
+      { key: "mount_moose",        label: "Moose",        color: 0x5a3814, dark: 0x2c1c0a, value: 1, next: "horseshoe", glyph: "🦌", sway: { amp: 0.4, freq: 0.00022, gust: 0.03 } },
+      { key: "mount_mammoth",      label: "Mammoth",      color: 0xa87838, dark: 0x523a1a, value: 1, next: "horseshoe", glyph: "🐘", sway: { amp: 0.4, freq: 0.00022, gust: 0.03 } },
     ],
     pool: FARM_TILE_POOL,
   },
@@ -406,6 +439,12 @@ export const MARKET_PRICES = {
   cutgem: { buy: 200, sell: 14 },
   gold:   { buy: 100, sell: 5  },
   soup:   { buy: 220, sell: 20 },
+  // Phase: wire-all-chains — terminal products from REFERENCE_CATALOG §4.
+  pie:       { buy: 840,  sell: 90  },
+  honey:     { buy: 1500, sell: 300 },
+  meat:      { buy: 240,  sell: 21  },
+  milk:      { buy: 900,  sell: 100 },
+  horseshoe: { buy: 1600, sell: 400 },
 };
 
 export const QUEST_TEMPLATES = [
@@ -449,7 +488,9 @@ export const CAPPED_RESOURCES = ["hay","wheat","grain","flour","log","plank",
   "herd_pig","herd_hog","herd_boar","herd_warthog",
   "herd_sheep","herd_alpaca","herd_goat","herd_ram",
   "cattle_cow","cattle_longhorn","cattle_triceratops",
-  "mount_horse","mount_donkey","mount_moose","mount_mammoth"];
+  "mount_horse","mount_donkey","mount_moose","mount_mammoth",
+  // Phase: wire-all-chains — terminal products.
+  "pie","honey","meat","milk","horseshoe"];
 
 // ─── Phase 3 Economy ──────────────────────────────────────────────────────────
 

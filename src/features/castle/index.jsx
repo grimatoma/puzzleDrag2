@@ -25,10 +25,14 @@ export default function CastlePanel({ state, dispatch }) {
         const value = contributed[key] ?? 0;
         const have = inventory[need.resource] ?? 0;
         const remaining = Math.max(0, need.target - value);
-        const isSoup = key === "soup";
+        // Wired contribute targets — must have a matching inventory resource
+        // and a chain that produces it. Soup is from PR #189; Meat from the
+        // herd-animals chain (this PR). Coal/Cocoa/Ink are scaffolded but
+        // their chains aren't wired yet, so the buttons are hidden for them.
+        const wired = key === "soup" || key === "meat";
         const complete = value >= need.target;
-        const canContribute1 = isSoup && have >= 1 && !complete;
-        const canContributeAll = isSoup && have >= 1 && remaining > 0;
+        const canContribute1 = wired && have >= 1 && !complete;
+        const canContributeAll = wired && have >= 1 && remaining > 0;
         const allAmount = Math.min(have, remaining);
         return (
           <div key={key} className="bg-[#f6efe0] border-2 border-[#c5a87a] rounded-lg p-2 flex flex-col gap-1.5">
@@ -37,7 +41,7 @@ export default function CastlePanel({ state, dispatch }) {
               <span className="text-[10px] text-[#8a785e]">{value} / {need.target}</span>
             </div>
             <ProgressBar value={value} max={need.target} />
-            {isSoup && (
+            {wired && (
               <div className="flex items-center justify-between gap-2 mt-0.5">
                 <span className="text-[10px] text-[#8a785e]">Have: {have}</span>
                 <div className="flex gap-1">

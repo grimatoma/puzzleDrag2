@@ -102,6 +102,84 @@ export const WORKERS = [
     description: "A cheerful picker who carries baskets full of vegetables back from the rows, shaving a step off every soup-pot's chain.",
   },
 
+  // ── Phase: wire-all-chains — chain-product workers from REFERENCE_CATALOG §9 ─
+
+  {
+    id: "fenna",
+    name: "Fenna",
+    role: "Fruit Picker",
+    icon: "🧺",
+    color: "#c84a3a",
+    wage: 30,
+    hireCost: { worker: 1, hay: 6, bread: 10, stone: 12, soup: 2 },
+    maxCount: 2,
+    // Catalog: 7 fruit = 1 pie at max (base 7 → max 6).
+    effect: { type: "threshold_reduce_category", category: "fruits", from: 7, to: 6 },
+    requirement: { building: "bakery", orLevel: 5 },
+    description: "An orchard climber who knows which limb to coax. Trims a fruit off every pie chain.",
+  },
+  {
+    id: "garrick",
+    name: "Garrick",
+    role: "Herder",
+    icon: "🪈",
+    color: "#a86838",
+    wage: 35,
+    hireCost: { worker: 1, hay: 4, bread: 10, stone: 12, meat: 16 },
+    maxCount: 4,
+    // Catalog: 5 herd = 1 meat at max (base 5 → max 4).
+    effect: { type: "threshold_reduce_category", category: "herd_animals", from: 5, to: 4 },
+    requirement: { building: "kitchen", orLevel: 5 },
+    description: "Steady on the moors with a long crook. Trims one animal off every meat chain.",
+  },
+  {
+    id: "elsa",
+    name: "Elsa",
+    role: "Dairywoman",
+    icon: "🥛",
+    color: "#8aa6c4",
+    wage: 40,
+    hireCost: { worker: 1, hay: 6, soup: 3, meat: 3, ingot: 15 },
+    maxCount: 2,
+    // Catalog: 6 cattle = 1 milk at max (base 6 → max 5).
+    effect: { type: "threshold_reduce_category", category: "cattle", from: 6, to: 5 },
+    requirement: { building: "granary", orLevel: 6 },
+    description: "An early riser at the byre — trims one cow off every milk pail.",
+  },
+  {
+    id: "rusk",
+    name: "Rusk",
+    role: "Rancher",
+    icon: "🐎",
+    color: "#a85a3a",
+    wage: 45,
+    // Mounts → Horseshoe is a long chain (10) and a high-value product. Hire
+    // cost mirrors catalog tier: heavy on bread/stone with a soup-tier check.
+    hireCost: { worker: 1, hay: 9, bread: 9, stone: 12, soup: 9 },
+    maxCount: 2,
+    // Catalog: 6 cattle = 1 mount at max — but in our chain model mounts are
+    // their own category producing horseshoes (chain 10). We use the rancher
+    // as the mount-chain reducer: 10 → 9 at max hire.
+    effect: { type: "threshold_reduce_category", category: "mounts", from: 10, to: 9 },
+    requirement: { building: "granary", orLevel: 6 },
+    description: "Knows every mount's gait by ear. Shaves a tile off the horseshoe chain.",
+  },
+  {
+    id: "ivar",
+    name: "Ivar",
+    role: "Beekeeper",
+    icon: "🐝",
+    color: "#e8a020",
+    wage: 35,
+    // No catalog worker for flowers → honey, but the chain length (10) is
+    // brutal without help. Beekeeper fills the gap with a modest reduction.
+    hireCost: { worker: 1, hay: 6, bread: 8, soup: 2, jam: 4 },
+    maxCount: 2,
+    effect: { type: "threshold_reduce_category", category: "flowers", from: 10, to: 9 },
+    requirement: { building: "larder", orLevel: 6 },
+    description: "Hums with the hive. Lifts one petal-tile off every honey chain.",
+  },
+
   // ── Phase 9 — Mine workers ──────────────────────────────────────────────────
   // Locked rule: max-effect model from Phase 4.
   // Per-hire = effect / maxCount. Pool-weight effects floor to integer.
