@@ -27,8 +27,9 @@ export function SidePanel({ state, dispatch, chainInfo }) {
 
 // ─── Bottom nav ───────────────────────────────────────────────────────────
 
-export function BottomNav({ view, modal, dispatch }) {
-  const items = [
+export function BottomNav({ view, modal, dispatch, state }) {
+  const built = state?.built ?? {};
+  const baseItems = [
     { key: "town",        icon: "⌂",   label: "Town" },
     { key: "inventory",   icon: "🎒",  label: "Inventory" },
     { key: "quests",      icon: "📜",  label: "Quests" },
@@ -36,7 +37,11 @@ export function BottomNav({ view, modal, dispatch }) {
     { key: "cartography", icon: "🗺️", label: "Map" },
     { key: "townsfolk",   icon: "👥",  label: "Townsfolk" },
     { key: "species",     icon: "🦎",  label: "Species" },
+    { key: "decorations", icon: "🌸",  label: "Decor" },
+    ...(built.caravan_post ? [{ key: "market", icon: "🏪", label: "Market" }] : []),
+    ...(built.portal       ? [{ key: "portal", icon: "🔮", label: "Portal" }] : []),
   ];
+  const items = baseItems;
   const activeKey = modal ? (items.find((i) => i.modal === modal)?.key ?? view) : view;
   return (
     <div className="flex w-full bg-[#2b2218]/95 border-t-2 border-[#f7e2b6] flex-shrink-0 shadow-[0_-4px_12px_rgba(0,0,0,.25)]">
