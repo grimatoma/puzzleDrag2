@@ -213,7 +213,7 @@ export function initialState(overrides) {
              bird_cage: 0, scythe_full: 0,
              // Phase 10.8 — Rifle + Hound (wolf counters)
              rifle: 0, hound: 0 },
-    _toolPending: null,
+    toolPending: null,
     fertilizerActive: false,
     // Phase 9 — Mine biome state
     mysteriousOre: null,
@@ -874,7 +874,7 @@ function coreReducer(state, action) {
         excludeKeys.push(o.key);
         return o;
       });
-      return { ...state, biomeKey: key, orders: replacements, turnsUsed: 0, _biomeRestored: !!(savedField && savedField.tiles), ...boardPatch };
+      return { ...state, biome: key, biomeKey: key, orders: replacements, turnsUsed: 0, _biomeRestored: !!(savedField && savedField.tiles), ...boardPatch };
     }
     case "SET_VIEW": {
       const next = action.view;
@@ -1104,13 +1104,14 @@ function coreReducer(state, action) {
         if ((state.inventory.supplies ?? 0) < 3) return state;
         return {
           ...state,
+          biome: "mine",
           biomeKey: "mine",
           inventory: { ...state.inventory, supplies: state.inventory.supplies - 3 },
         };
       }
       if (mode === "premium") {
         if ((state.runes ?? 0) < 2) return state;
-        return { ...state, biomeKey: "mine", runes: state.runes - 2 };
+        return { ...state, biome: "mine", biomeKey: "mine", runes: state.runes - 2 };
       }
       return state;
     }
@@ -1505,8 +1506,8 @@ function coreReducer(state, action) {
         return { ...state, inventory };
       }
       if (action.type === "DEV/ADD_XP") {
-        const { xp, level } = applyXp(state, action.amount ?? 100);
-        return { ...state, xp, level };
+        const { newState } = applyAlmanacXp(state, action.amount ?? 100);
+        return { ...state, almanac: newState.almanac, xp: newState.almanac.xp, level: newState.almanac.level };
       }
       if (action.type === "DEV/ADD_LEVEL") {
         const next = (state.level ?? 1) + (action.amount ?? 1);

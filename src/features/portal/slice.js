@@ -92,6 +92,18 @@ export function reduce(state, action) {
       return state;
     }
 
+    case "CHAIN_COLLECTED": {
+      // Decrement magic_fertilizer charges on each chain; clear when exhausted
+      const charges = state.magicFertilizerCharges ?? 0;
+      if (charges <= 0) return state;
+      const newCharges = charges - 1;
+      return {
+        ...state,
+        magicFertilizerCharges: newCharges,
+        fertilizerActive: newCharges > 0 ? state.fertilizerActive : false,
+      };
+    }
+
     default:
       return state;
   }

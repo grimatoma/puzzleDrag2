@@ -37,6 +37,7 @@ function minState(overrides = {}) {
     seasonStats: { harvests: 0, upgrades: 0, ordersFilled: 0, coins: 0 },
     _hintsShown: {},
     npcBond: NEUTRAL_BOND,
+    almanac: { xp: 0, level: 1 },
     ...overrides,
   };
 }

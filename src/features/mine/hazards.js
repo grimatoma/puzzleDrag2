@@ -7,6 +7,8 @@
  * Pool weights (total 100): cave_in 25, gas_vent 40, lava 20, mole 15
  */
 
+import { computeWorkerEffects } from "../apprentices/aggregate.js";
+
 export const HAZARD_BASE_RATE = 0.05;
 
 export const HAZARDS = [
@@ -92,9 +94,10 @@ export function rollHazard(state, rng = Math.random) {
     }
   }
 
-  // Canary reduces gas_vent spawn probability
+  // Canary reduces gas_vent spawn probability — computed on the fly from workers
   if (picked.id === "gas_vent") {
-    const reduce = state._workerEffects?.hazardSpawnReduce ?? {};
+    const workerEffects = computeWorkerEffects(state);
+    const reduce = workerEffects.hazardSpawnReduce ?? {};
     if (reduce.gas_vent && rng() < reduce.gas_vent) return null;
   }
 

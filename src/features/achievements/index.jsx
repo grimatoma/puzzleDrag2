@@ -4,6 +4,14 @@ import { BIOMES } from "../../constants.js";
 // (12 entries with counter/threshold shape). The constants.js ACHIEVEMENTS
 // list (20 entries) is retained for legacy compatibility but not rendered here.
 import { ACHIEVEMENTS } from "./data.js";
+import { MAGIC_TOOLS } from "../portal/data.js";
+
+function prettyToolName(key) {
+  const magic = MAGIC_TOOLS.find((t) => t.id === key);
+  if (magic) return magic.name;
+  // Fallback: replace underscores with spaces and title-case
+  return key.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+}
 
 export const viewKey = "achievements";
 
@@ -72,7 +80,7 @@ function TrophyCard({ achievement, current, trophyState }) {
             {achievement.reward.xp ? ` +${achievement.reward.xp}xp` : ""}
             {achievement.reward.tools
               ? Object.entries(achievement.reward.tools)
-                  .map(([k, v]) => ` +${v} ${k}`)
+                  .map(([k, v]) => ` +${v} ${prettyToolName(k)}`)
                   .join("")
               : ""}
           </div>

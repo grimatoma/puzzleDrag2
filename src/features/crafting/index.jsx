@@ -83,7 +83,14 @@ function RecipeCard({ recipeKey, recipe, inventory, built, level, craftedTotals,
       </div>
 
       <div className="flex flex-col items-end gap-1 flex-shrink-0">
-        <span className="text-[10px] font-bold text-[#c8923a]">+{recipe.coins}◉</span>
+        {recipe.coins != null
+          ? <span className="text-[10px] font-bold text-[#c8923a]">+{recipe.coins}◉</span>
+          : recipe.tool
+            ? <span className="text-[10px] font-bold text-[#6a8a3a]">→ {recipe.name}</span>
+            : recipe.effect
+              ? <span className="text-[10px] font-bold text-[#5a7aaa]">🛠 {recipe.name}</span>
+              : null
+        }
         <button
           disabled={!craftable}
           onClick={() => dispatch({ type: "CRAFTING/CRAFT_RECIPE", payload: { key: recipeKey }, recipeKey })}

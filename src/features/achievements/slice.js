@@ -71,7 +71,8 @@ export function reduce(state, action) {
     }
 
     case "BOSS/RESOLVE": {
-      return tick(state, "bosses_defeated", 1);
+      if (action.payload?.won === true) return tick(state, "bosses_defeated", 1);
+      return state;
     }
 
     case "CLOSE_SEASON": {
@@ -84,6 +85,11 @@ export function reduce(state, action) {
 
     case "CRAFTING/CRAFT_RECIPE": {
       return { ...state, totalCrafted: (state.totalCrafted || 0) + 1 };
+    }
+
+    case "CONVERT_TO_SUPPLY": {
+      const qty = Math.max(1, action.payload?.qty | 0);
+      return tick(state, "supplies_converted", qty);
     }
 
     default:

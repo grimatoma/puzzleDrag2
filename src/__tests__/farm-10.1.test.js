@@ -55,8 +55,8 @@ describe("10.1 — createInitialState tool counters", () => {
     expect(createInitialState().tools.fertilizer).toBe(0);
   });
 
-  it("_toolPending starts null", () => {
-    expect(createInitialState()._toolPending).toBeNull();
+  it("toolPending starts null", () => {
+    expect(createInitialState().toolPending).toBeNull();
   });
 
   it("fertilizerActive starts false", () => {
@@ -122,11 +122,11 @@ describe("10.1 — CRAFT_TOOL action", () => {
 // ── USE_TOOL action — Phase 1 contract (no turn cost) ─────────────────────────
 
 describe("10.1 — USE_TOOL (no turn cost)", () => {
-  it("rake armed: tools.rake decremented, _toolPending = 'rake'", () => {
+  it("rake armed: tools.rake decremented, toolPending = 'rake'", () => {
     const s0 = { ...createInitialState(), tools: { ...createInitialState().tools, rake: 1 }, turnsUsed: 4 };
     const s1 = rootReducer(s0, { type: "USE_TOOL", key: "rake" });
     expect(s1.tools.rake).toBe(0);
-    expect(s1._toolPending).toBe("rake");
+    expect(s1.toolPending).toBe("rake");
   });
 
   it("rake does NOT consume a turn", () => {
@@ -135,10 +135,10 @@ describe("10.1 — USE_TOOL (no turn cost)", () => {
     expect(s1.turnsUsed).toBe(4);
   });
 
-  it("axe armed: _toolPending = 'axe'", () => {
+  it("axe armed: toolPending = 'axe'", () => {
     const s0 = { ...createInitialState(), tools: { ...createInitialState().tools, axe: 1 }, turnsUsed: 2 };
     const s1 = rootReducer(s0, { type: "USE_TOOL", key: "axe" });
-    expect(s1._toolPending).toBe("axe");
+    expect(s1.toolPending).toBe("axe");
     expect(s1.turnsUsed).toBe(2);
   });
 
@@ -163,7 +163,7 @@ describe("10.1 — applyToolPending", () => {
         [{ key: "hay" }, { key: "berry" }, { key: "wheat" }],
       ],
       inventory: { ...s0.inventory, hay: 0 },
-      _toolPending: "rake",
+      toolPending: "rake",
     };
     const s2 = applyToolPending(s1);
     expect(s2.inventory.hay).toBe(3);
@@ -178,22 +178,22 @@ describe("10.1 — applyToolPending", () => {
         [{ key: "hay" }, { key: "berry" }, { key: "wheat" }],
       ],
       inventory: { ...s0.inventory, hay: 0 },
-      _toolPending: "rake",
+      toolPending: "rake",
     };
     const s2 = applyToolPending(s1);
     expect(s2.grid.flat().every((t) => t.key !== "hay")).toBe(true);
   });
 
-  it("rake clears _toolPending", () => {
+  it("rake clears toolPending", () => {
     const s0 = createInitialState();
     const s1 = {
       ...s0,
       grid: [[{ key: "hay" }]],
       inventory: { ...s0.inventory },
-      _toolPending: "rake",
+      toolPending: "rake",
     };
     const s2 = applyToolPending(s1);
-    expect(s2._toolPending).toBeNull();
+    expect(s2.toolPending).toBeNull();
   });
 
   it("axe collects 3 log tiles", () => {
@@ -205,7 +205,7 @@ describe("10.1 — applyToolPending", () => {
         [{ key: "log" }, { key: "log" }],
       ],
       inventory: { ...s0.inventory, log: 0 },
-      _toolPending: "axe",
+      toolPending: "axe",
     };
     const s2 = applyToolPending(s1);
     expect(s2.inventory.log).toBe(3);
@@ -219,7 +219,7 @@ describe("10.1 — applyToolPending", () => {
         [{ key: "hay", rubble: true }, { key: "hay" }],
       ],
       inventory: { ...s0.inventory, hay: 0 },
-      _toolPending: "rake",
+      toolPending: "rake",
     };
     const s2 = applyToolPending(s1);
     expect(s2.inventory.hay).toBe(1);
