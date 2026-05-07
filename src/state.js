@@ -453,7 +453,7 @@ function coreReducer(state, action) {
       const bossMinChain = state.boss?.minChain || 0;
       if (bossMinChain > 0 && effectiveChain < bossMinChain) {
         const turnsUsed = state.turnsUsed + 1;
-        const seasonEnded = turnsUsed >= MAX_TURNS;
+        const seasonEnded = turnsUsed >= (state.sessionMaxTurns ?? MAX_TURNS);
         return {
           ...state,
           turnsUsed,
@@ -465,7 +465,7 @@ function coreReducer(state, action) {
       // Winter: chains shorter than minChain tiles yield nothing but still consume the turn
       if (currentSeason === 3 && effectiveChain < SEASON_EFFECTS.Winter.minChain) {
         const turnsUsed = state.turnsUsed + 1;
-        const seasonEnded = turnsUsed >= MAX_TURNS;
+        const seasonEnded = turnsUsed >= (state.sessionMaxTurns ?? MAX_TURNS);
         let bubble = state.bubble;
         if (!hintsShown.winterChain) {
           bubble = { id: Date.now(), npc: "wren", text: `❄️ Winter: chains need ${SEASON_EFFECTS.Winter.minChain}+ tiles to harvest!`, ms: 2400, priority: 2 };
