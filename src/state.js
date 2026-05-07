@@ -1589,8 +1589,9 @@ const SLICE_PRIMARY_ACTIONS = new Set([
   "CARTO/TRAVEL",
   // Story modal dismiss is owned by story/slice
   "STORY/DISMISS_MODAL",
-  // Settings tab navigation is owned by settings/slice
+  // Settings actions are owned by settings/slice
   "SETTINGS/SET_TAB",
+  "SETTINGS/LEAVE_BOARD",
   // Tutorial actions are owned by tutorial/slice
   "TUTORIAL/START",
   "TUTORIAL/NEXT",
