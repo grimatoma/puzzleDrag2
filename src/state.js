@@ -32,6 +32,7 @@ import * as portal from "./features/portal/slice.js";
 import * as market from "./features/market/slice.js";
 import * as castle from "./features/castle/slice.js";
 import { FIRE_HAZARD_ENABLED } from "./featureFlags.js";
+import { migrateSave } from "./migrations.js";
 
 const slices = [crafting, quests, achievements, tutorial, settings, boss, cartography, apprentices, mood, storySlice, decorations, portal, market, castle];
 
@@ -178,7 +179,13 @@ export function makeOrder(biomeKey, level, excludeNpcs = [], excludeOrderKeys = 
   return { id: `o${orderIdSeq++}`, npc, key, need, reward, line };
 }
 
-export function initialState(overrides) {
+/**
+ * Build a fresh state object with no I/O. This is the side-effect-free core
+ * of `initialState`, exported so migrations.js can use it as a corruption
+ * fallback without recursing back through localStorage. Callers that want
+ * the hydrated-from-save behaviour should use `initialState` instead.
+ */
+export function createFreshState(overrides) {
   const biomeKey = "farm";
   const level = 1;
   const o1 = makeOrder(biomeKey, level);
@@ -186,8 +193,10 @@ export function initialState(overrides) {
   const o3 = makeOrder(biomeKey, level, [o1.npc, o2.npc], [o1.key, o2.key]);
   const marketSeed = Math.floor(Math.random() * 1e9);
   // saveSeed: stable per-save identifier for deterministic quest rolls.
-  // If overrides supply one (e.g. from a loaded save), keep it; otherwise generate.
-  const saveSeed = overrides?.saveSeed ?? Math.random().toString(36).slice(2, 10);
+  // If overrides supply one (e.g. from a loaded save), keep it; otherwise
+  // generate from crypto.getRandomValues when available (better entropy than
+  // Math.random's ~30 bits) and fall back to Math.random elsewhere.
+  const saveSeed = overrides?.saveSeed ?? generateSaveSeed();
   // tools with structural flag support — startingExtraScythe grants +1 scythe each session
   const extraScytheBonus = overrides?.tools?.startingExtraScythe ? 1 : 0;
   const fresh = {
@@ -284,9 +293,36 @@ export function initialState(overrides) {
     farm: { savedField: null },
     mine: { savedField: null },
   };
-  // Hydrate from save if present, but always force board view + clear modals on boot
-  const saved = loadSavedState();
-  if (saved) {
+  return fresh;
+}
+
+/**
+ * Stable per-save id seed used by deterministic systems (quest rolls).
+ * Prefers crypto.getRandomValues for ~64 bits of entropy; falls back to
+ * Math.random when crypto isn't available (older test envs).
+ */
+function generateSaveSeed() {
+  try {
+    const c = (typeof globalThis !== "undefined" && globalThis.crypto)
+      || (typeof window !== "undefined" && window.crypto);
+    if (c && typeof c.getRandomValues === "function") {
+      const buf = new Uint32Array(2);
+      c.getRandomValues(buf);
+      return buf[0].toString(36).padStart(7, "0") + buf[1].toString(36).padStart(7, "0");
+    }
+  } catch { /* fall through */ }
+  return Math.random().toString(36).slice(2, 10) + Math.random().toString(36).slice(2, 10);
+}
+
+export function initialState(overrides) {
+  const fresh = createFreshState(overrides);
+  // Hydrate from save if present, but always force board view + clear modals on boot.
+  // Saves are first run through migrateSave so v0..v(N-1) shapes get upgraded
+  // before the merge below sees them.
+  const raw = loadSavedState();
+  if (raw) {
+    const { state: saved } = migrateSave(raw);
+    if (!saved) return fresh;
     // Advance all ID sequences past persisted IDs so new items never collide.
     if (Array.isArray(saved.orders)) {
       for (const o of saved.orders) {
@@ -1601,6 +1637,8 @@ const SLICE_PRIMARY_ACTIONS = new Set([
   "BUILD_DECORATION",
   "SUMMON_MAGIC_TOOL",
   "MARKET/SELL",
+  // Mood (gift) is owned by mood/slice
+  "MOOD/GIFT",
   // Quest claim and almanac actions are owned by quests/slice
   "QUESTS/CLAIM_QUEST",
   "QUESTS/CLAIM_ALMANAC",
@@ -1620,6 +1658,13 @@ const SLICE_PRIMARY_ACTIONS = new Set([
   // Settings actions are owned by settings/slice
   "SETTINGS/SET_TAB",
   "SETTINGS/LEAVE_BOARD",
+  "SETTINGS/TOGGLE",
+  "SETTINGS/RESET_SAVE",
+  "SETTINGS/EASTER_EGG",
+  "SETTINGS/SHOW_TUTORIAL",
+  "SET_PALETTE",
+  "SET_REDUCED_MOTION",
+  "SET_CURSOR",
   // Tutorial actions are owned by tutorial/slice
   "TUTORIAL/START",
   "TUTORIAL/NEXT",
@@ -1656,9 +1701,37 @@ function rawReducer(state, action) {
   return afterSlices === state ? state : afterSlices;
 }
 
+// Side effects that fire after a successful state transition. These were
+// previously inlined inside slice reducers (which violated reducer purity);
+// pulling them out lets slices stay pure and lets test code call rawReducer
+// without touching localStorage.
+function runActionEffects(state, action) {
+  switch (action.type) {
+    case "SETTINGS/TOGGLE":
+    case "SET_PALETTE":
+    case "SET_REDUCED_MOTION":
+      // Persist the settings sub-state to its own localStorage key so it
+      // survives a SETTINGS/RESET_SAVE clearing of the main save slot.
+      settings.persistSettings(state.settings);
+      break;
+    case "SETTINGS/RESET_SAVE":
+      // Clears every hearth.* key. Runs after persistState above (which would
+      // otherwise have just rewritten the main save), so the wipe is final.
+      settings.clearAllHearthStorage();
+      break;
+    case "SETTINGS/SHOW_TUTORIAL":
+      settings.clearTutorialSeen();
+      break;
+    default: break;
+  }
+}
+
 export function gameReducer(state, action) {
   const next = rawReducer(state, action);
-  if (next !== state) persistState(next);
+  if (next !== state) {
+    persistState(next);
+    runActionEffects(next, action);
+  }
   return next;
 }
 

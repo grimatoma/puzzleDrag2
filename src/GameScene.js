@@ -103,6 +103,17 @@ export class GameScene extends Phaser.Scene {
     document.addEventListener("visibilitychange", onVisibility);
     window.addEventListener("blur", onDocPointerUp);
 
+    // Registry and scale listeners — track each so they can be torn down on
+    // shutdown. Otherwise scene recreation (HMR, tests, biome reload) leaks
+    // handlers that fire against a destroyed scene.
+    const registryListeners = [];
+    const onRegistry = (event, fn) => {
+      this.registry.events.on(event, fn);
+      registryListeners.push([event, fn]);
+    };
+    const onResize = () => this.handleResize();
+    this.scale.on("resize", onResize);
+
     this.events.once("shutdown", () => {
       canvas.removeEventListener("selectstart", preventSelect);
       canvas.removeEventListener("contextmenu", preventSelect);
@@ -113,23 +124,24 @@ export class GameScene extends Phaser.Scene {
       document.removeEventListener("touchend", onDocPointerUp);
       document.removeEventListener("visibilitychange", onVisibility);
       window.removeEventListener("blur", onDocPointerUp);
+      for (const [event, fn] of registryListeners) this.registry.events.off(event, fn);
+      this.scale.off("resize", onResize);
     });
 
     // Apply state.grid → Phaser when Redux pushes a change back (hazard engines may mutate)
-    this.registry.events.on("changedata-grid", (_p, value) => {
+    onRegistry("changedata-grid", (_p, value) => {
       if (this._suppressNextGridApply) return;
       this._applyGridFromState(value);
     });
 
-    this.scale.on("resize", () => this.handleResize());
-    this.registry.events.on("changedata-biomeKey", (_p, value, prev) => {
+    onRegistry("changedata-biomeKey", (_p, value, prev) => {
       if (value !== prev) this.handleBiomeChange();
     });
-    this.registry.events.on("changedata-turnsUsed", () => this.refreshSeasonTint());
-    this.registry.events.on("changedata-uiLocked", (_p, value) => {
+    onRegistry("changedata-turnsUsed", () => this.refreshSeasonTint());
+    onRegistry("changedata-uiLocked", (_p, value) => {
       this.locked = !!value;
     });
-    this.registry.events.on("changedata-toolPending", (_p, value) => {
+    onRegistry("changedata-toolPending", (_p, value) => {
       if (!value) return;
       if (this.dragging) {
         this._deferredTool = value;
@@ -166,14 +178,14 @@ export class GameScene extends Phaser.Scene {
     });
     // Sync worker effects on init and whenever state.workers changes
     this._syncWorkerEffects();
-    this.registry.events.on("changedata-workers", () => this._syncWorkerEffects());
+    onRegistry("changedata-workers", () => this._syncWorkerEffects());
     // Re-render tile textures when the color-blind palette changes
-    this.registry.events.on("changedata-palette", (_p, value) => {
+    onRegistry("changedata-palette", (_p, value) => {
       regenerateTextures(this, value ?? "default");
     });
     // Swap on-board tiles to match the newly active tile type in their category,
     // so picking a new tile type in the panel immediately rerenders the puzzle.
-    this.registry.events.on("changedata-tileCollectionActive", (_p, value, prev) => {
+    onRegistry("changedata-tileCollectionActive", (_p, value, prev) => {
       this.handleActiveTileChange(value, prev);
     });
   }

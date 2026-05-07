@@ -6,7 +6,7 @@
  * Locked rule: migrations are PURE and IDEMPOTENT. No I/O. No mutation.
  */
 
-import { createInitialState } from "./state.js";
+import { createFreshState } from "./state.js";
 import { SAVE_SCHEMA_VERSION as _VERSION } from "./constants.js";
 
 export const SAVE_SCHEMA_VERSION = _VERSION;
@@ -240,14 +240,14 @@ function isCorrupted(raw) {
 /**
  * Migrate a raw parsed save to the current schema version.
  * Returns { state, migratedFrom, version }.
- * On corruption, falls back to createInitialState() with a console.warn.
+ * On corruption, falls back to createFreshState() with a console.warn.
  */
 export function migrateSave(raw) {
   const reason = isCorrupted(raw);
   if (reason) {
     console.warn(`[save] corrupted, starting fresh: ${reason}`);
     return {
-      state: createInitialState(),
+      state: createFreshState(),
       migratedFrom: -1,
       version: SAVE_SCHEMA_VERSION,
     };
@@ -260,7 +260,7 @@ export function migrateSave(raw) {
     } catch (e) {
       console.warn(`[save] migration v${v}→v${v + 1} failed: ${e.message}`);
       return {
-        state: createInitialState(),
+        state: createFreshState(),
         migratedFrom: from,
         version: SAVE_SCHEMA_VERSION,
       };
