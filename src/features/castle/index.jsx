@@ -26,10 +26,10 @@ export default function CastlePanel({ state, dispatch }) {
         const have = inventory[need.resource] ?? 0;
         const remaining = Math.max(0, need.target - value);
         // Wired contribute targets — must have a matching inventory resource
-        // and a chain that produces it. Soup is from PR #189; Meat from the
-        // herd-animals chain (this PR). Coal/Cocoa/Ink are scaffolded but
-        // their chains aren't wired yet, so the buttons are hidden for them.
-        const wired = key === "soup" || key === "meat";
+        // and a chain that produces it. Soup (vegetables chain), Meat
+        // (herd-animals chain), and Coal (existing mine chain) are wired.
+        // Cocoa/Ink remain scaffolded — their Sea-biome chains aren't built.
+        const wired = key === "soup" || key === "meat" || key === "coal";
         const complete = value >= need.target;
         const canContribute1 = wired && have >= 1 && !complete;
         const canContributeAll = wired && have >= 1 && remaining > 0;

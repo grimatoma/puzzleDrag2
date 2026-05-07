@@ -26,6 +26,9 @@ export const UPGRADE_THRESHOLDS = {
   berry: 7,
   stone: 8, cobble: 6,
   ore: 6, coal: 7, gem: 5,
+  // Birds → Eggs (chain 6). Existing bird tiles get explicit thresholds now
+  // that they upgrade to the new `eggs` product.
+  egg: 6, turkey: 6, clover: 6, melon: 6,
   carrot: 6, eggplant: 6, turnip: 6, beet: 6, cucumber: 6,
   squash: 6, mushroom: 6, pepper: 6, broccoli: 6,
   // Catalog-import placeholders. All default to 6 — balance comes later.
@@ -100,10 +103,10 @@ export const BIOMES = {
       { key: "beam",  label: "Beam",  color: 0x7e4f24, dark: 0x3a1d10, value: 7, next: null,    glyph: "▦" },
       { key: "berry", label: "Berry", color: 0xa3486a, dark: 0x5e1a3a, value: 3, next: "jam",   glyph: "◉", sway: { amp: 3.5, freq: 0.00090, gust: 0.15 } },
       { key: "jam",   label: "Jam",   color: 0xd4658c, dark: 0x7a2f50, value: 5, next: null,    glyph: "◎", sway: { amp: 0.8, freq: 0.00025, gust: 0.00 } },
-      { key: "egg",   label: "Egg",   color: 0xf4ecd8, dark: 0x8a785e, value: 3, next: null,    glyph: "◯", sway: { amp: 1.5, freq: 0.00055, gust: 0.08 } },
-      { key: "turkey", label: "Turkey", color: 0xb8743a, dark: 0x5e3818, value: 4, next: null, glyph: "🦃", sway: { amp: 1.2, freq: 0.00050, gust: 0.10 } },
-      { key: "clover", label: "Clover", color: 0x6fa450, dark: 0x365e22, value: 5, next: null, glyph: "☘", sway: { amp: 2.5, freq: 0.00080, gust: 0.18 } },
-      { key: "melon",  label: "Melon",  color: 0xb3d770, dark: 0x4a6e2a, value: 6, next: null, glyph: "🍈", sway: { amp: 0.8, freq: 0.00030, gust: 0.05 } },
+      { key: "egg",   label: "Egg",   color: 0xf4ecd8, dark: 0x8a785e, value: 3, next: "eggs",    glyph: "◯", sway: { amp: 1.5, freq: 0.00055, gust: 0.08 } },
+      { key: "turkey", label: "Turkey", color: 0xb8743a, dark: 0x5e3818, value: 4, next: "eggs", glyph: "🦃", sway: { amp: 1.2, freq: 0.00050, gust: 0.10 } },
+      { key: "clover", label: "Clover", color: 0x6fa450, dark: 0x365e22, value: 5, next: "eggs", glyph: "☘", sway: { amp: 2.5, freq: 0.00080, gust: 0.18 } },
+      { key: "melon",  label: "Melon",  color: 0xb3d770, dark: 0x4a6e2a, value: 6, next: "eggs", glyph: "🍈", sway: { amp: 0.8, freq: 0.00030, gust: 0.05 } },
       { key: "carrot",   label: "Carrot",   color: 0xe88439, dark: 0x7a3e10, value: 4, next: "soup", glyph: "🥕", sway: { amp: 2.0, freq: 0.00050, gust: 0.10 } },
       { key: "eggplant", label: "Eggplant", color: 0x6b3a8a, dark: 0x301848, value: 4, next: "soup", glyph: "🍆", sway: { amp: 1.8, freq: 0.00048, gust: 0.08 } },
       { key: "turnip",   label: "Turnip",   color: 0xd87aa0, dark: 0x6e2a4a, value: 4, next: "soup", glyph: "🥬", sway: { amp: 1.6, freq: 0.00050, gust: 0.08 } },
@@ -120,6 +123,7 @@ export const BIOMES = {
       { key: "meat",      label: "Meat",      color: 0xc44848, dark: 0x682424, value: 21,  next: null, glyph: "🍖" },
       { key: "milk",      label: "Milk",      color: 0xfaf6ec, dark: 0x807e74, value: 100, next: null, glyph: "🥛" },
       { key: "horseshoe", label: "Horseshoe", color: 0x8a8a90, dark: 0x46464a, value: 400, next: null, glyph: "🧲" },
+      { key: "eggs",      label: "Eggs",      color: 0xf8efd0, dark: 0x807660, value: 5, next: null, glyph: "🥚" },
 
       // ─── Catalog-import placeholders (assets-only PR) ─────────────────────
       // Resources for every new tile-type in REFERENCE_CATALOG §7. They
@@ -148,23 +152,23 @@ export const BIOMES = {
       { key: "flower_pansy",       label: "Pansy",        color: 0x7a3aa8, dark: 0x3c1c54, value: 1, next: "honey", glyph: "🌸", sway: { amp: 2.6, freq: 0.00070, gust: 0.14 } },
       { key: "flower_water_lily",  label: "Water Lily",   color: 0xe890c0, dark: 0x70486a, value: 1, next: "honey", glyph: "🪷", sway: { amp: 0.8, freq: 0.00026, gust: 0.04 } },
       // Trees (distinct from existing log/plank/beam wood chain)
-      { key: "tree_oak",           label: "Oak",          color: 0x3a6818, dark: 0x1a3008, value: 1, next: null, glyph: "🌳", sway: { amp: 1.6, freq: 0.00030, gust: 0.10 } },
-      { key: "tree_birch",         label: "Birch",        color: 0xa8c038, dark: 0x546018, value: 1, next: null, glyph: "🌲", sway: { amp: 2.2, freq: 0.00034, gust: 0.12 } },
-      { key: "tree_willow",        label: "Willow",       color: 0x5a8a18, dark: 0x2a4008, value: 1, next: null, glyph: "🌿", sway: { amp: 3.0, freq: 0.00038, gust: 0.18 } },
-      { key: "tree_fir",           label: "Fir",          color: 0x2a5008, dark: 0x142404, value: 1, next: null, glyph: "🌲", sway: { amp: 0.6, freq: 0.00024, gust: 0.04 } },
-      { key: "tree_cypress",       label: "Cypress",      color: 0x1a3a08, dark: 0x0a1804, value: 1, next: null, glyph: "🌲", sway: { amp: 0.4, freq: 0.00020, gust: 0.02 } },
-      { key: "tree_palm",          label: "Palm Tree",    color: 0x5a8a18, dark: 0x2a4008, value: 1, next: null, glyph: "🌴", sway: { amp: 2.8, freq: 0.00040, gust: 0.16 } },
+      { key: "tree_oak",           label: "Oak",          color: 0x3a6818, dark: 0x1a3008, value: 1, next: "log", glyph: "🌳", sway: { amp: 1.6, freq: 0.00030, gust: 0.10 } },
+      { key: "tree_birch",         label: "Birch",        color: 0xa8c038, dark: 0x546018, value: 1, next: "log", glyph: "🌲", sway: { amp: 2.2, freq: 0.00034, gust: 0.12 } },
+      { key: "tree_willow",        label: "Willow",       color: 0x5a8a18, dark: 0x2a4008, value: 1, next: "log", glyph: "🌿", sway: { amp: 3.0, freq: 0.00038, gust: 0.18 } },
+      { key: "tree_fir",           label: "Fir",          color: 0x2a5008, dark: 0x142404, value: 1, next: "log", glyph: "🌲", sway: { amp: 0.6, freq: 0.00024, gust: 0.04 } },
+      { key: "tree_cypress",       label: "Cypress",      color: 0x1a3a08, dark: 0x0a1804, value: 1, next: "log", glyph: "🌲", sway: { amp: 0.4, freq: 0.00020, gust: 0.02 } },
+      { key: "tree_palm",          label: "Palm Tree",    color: 0x5a8a18, dark: 0x2a4008, value: 1, next: "log", glyph: "🌴", sway: { amp: 2.8, freq: 0.00040, gust: 0.16 } },
       // Birds (extends existing `bird` category)
-      { key: "pheasant",           label: "Pheasant",     color: 0x8a4a18, dark: 0x44230a, value: 1, next: null, glyph: "🦅", sway: { amp: 1.0, freq: 0.00040, gust: 0.05 } },
-      { key: "chicken",            label: "Chicken",      color: 0xf0d8a0, dark: 0x786a48, value: 1, next: null, glyph: "🐔", sway: { amp: 1.0, freq: 0.00040, gust: 0.05 } },
-      { key: "hen",                label: "Hen",          color: 0xa86838, dark: 0x52321a, value: 1, next: null, glyph: "🐓", sway: { amp: 1.0, freq: 0.00040, gust: 0.05 } },
-      { key: "rooster",            label: "Rooster",      color: 0xd81818, dark: 0x6a0a0a, value: 1, next: null, glyph: "🐓", sway: { amp: 1.2, freq: 0.00044, gust: 0.06 } },
-      { key: "wild_goose",         label: "Wild Goose",   color: 0xa89878, dark: 0x524a3a, value: 1, next: null, glyph: "🦢", sway: { amp: 1.2, freq: 0.00044, gust: 0.06 } },
-      { key: "goose",              label: "Goose",        color: 0xfffce8, dark: 0x807e74, value: 1, next: null, glyph: "🦆", sway: { amp: 1.2, freq: 0.00044, gust: 0.06 } },
-      { key: "parrot",             label: "Parrot",       color: 0xd81818, dark: 0x6a0a0a, value: 1, next: null, glyph: "🦜", sway: { amp: 1.4, freq: 0.00046, gust: 0.07 } },
-      { key: "phoenix",            label: "Phoenix",      color: 0xf8a020, dark: 0x7c500e, value: 1, next: null, glyph: "🔥", sway: { amp: 1.6, freq: 0.00050, gust: 0.10 } },
-      { key: "dodo",               label: "Dodo",         color: 0xa89878, dark: 0x524a3a, value: 1, next: null, glyph: "🦤", sway: { amp: 0.8, freq: 0.00036, gust: 0.04 } },
-      { key: "pig_in_disguise",    label: "Pig in Disguise", color: 0xe88a98, dark: 0x72424a, value: 1, next: null, glyph: "🐽", sway: { amp: 0.8, freq: 0.00036, gust: 0.04 } },
+      { key: "pheasant",           label: "Pheasant",     color: 0x8a4a18, dark: 0x44230a, value: 1, next: "eggs", glyph: "🦅", sway: { amp: 1.0, freq: 0.00040, gust: 0.05 } },
+      { key: "chicken",            label: "Chicken",      color: 0xf0d8a0, dark: 0x786a48, value: 1, next: "eggs", glyph: "🐔", sway: { amp: 1.0, freq: 0.00040, gust: 0.05 } },
+      { key: "hen",                label: "Hen",          color: 0xa86838, dark: 0x52321a, value: 1, next: "eggs", glyph: "🐓", sway: { amp: 1.0, freq: 0.00040, gust: 0.05 } },
+      { key: "rooster",            label: "Rooster",      color: 0xd81818, dark: 0x6a0a0a, value: 1, next: "eggs", glyph: "🐓", sway: { amp: 1.2, freq: 0.00044, gust: 0.06 } },
+      { key: "wild_goose",         label: "Wild Goose",   color: 0xa89878, dark: 0x524a3a, value: 1, next: "eggs", glyph: "🦢", sway: { amp: 1.2, freq: 0.00044, gust: 0.06 } },
+      { key: "goose",              label: "Goose",        color: 0xfffce8, dark: 0x807e74, value: 1, next: "eggs", glyph: "🦆", sway: { amp: 1.2, freq: 0.00044, gust: 0.06 } },
+      { key: "parrot",             label: "Parrot",       color: 0xd81818, dark: 0x6a0a0a, value: 1, next: "eggs", glyph: "🦜", sway: { amp: 1.4, freq: 0.00046, gust: 0.07 } },
+      { key: "phoenix",            label: "Phoenix",      color: 0xf8a020, dark: 0x7c500e, value: 1, next: "eggs", glyph: "🔥", sway: { amp: 1.6, freq: 0.00050, gust: 0.10 } },
+      { key: "dodo",               label: "Dodo",         color: 0xa89878, dark: 0x524a3a, value: 1, next: "eggs", glyph: "🦤", sway: { amp: 0.8, freq: 0.00036, gust: 0.04 } },
+      { key: "pig_in_disguise",    label: "Pig in Disguise", color: 0xe88a98, dark: 0x72424a, value: 1, next: "eggs", glyph: "🐽", sway: { amp: 0.8, freq: 0.00036, gust: 0.04 } },
       // Herd Animals
       { key: "herd_pig",           label: "Pig",          color: 0xe88a98, dark: 0x72424a, value: 1, next: "meat", glyph: "🐖", sway: { amp: 0.6, freq: 0.00028, gust: 0.04 } },
       { key: "herd_hog",           label: "Hog",          color: 0xa87838, dark: 0x523a1a, value: 1, next: "meat", glyph: "🐗", sway: { amp: 0.6, freq: 0.00028, gust: 0.04 } },
@@ -445,6 +449,9 @@ export const MARKET_PRICES = {
   meat:      { buy: 240,  sell: 21  },
   milk:      { buy: 900,  sell: 100 },
   horseshoe: { buy: 1600, sell: 400 },
+  // Eggs (plural) is the terminal product of bird chains — distinct from
+  // `egg` (singular), which is a default bird tile.
+  eggs:      { buy: 80,   sell: 5   },
 };
 
 export const QUEST_TEMPLATES = [
@@ -490,7 +497,7 @@ export const CAPPED_RESOURCES = ["hay","wheat","grain","flour","log","plank",
   "cattle_cow","cattle_longhorn","cattle_triceratops",
   "mount_horse","mount_donkey","mount_moose","mount_mammoth",
   // Phase: wire-all-chains — terminal products.
-  "pie","honey","meat","milk","horseshoe"];
+  "pie","honey","meat","milk","horseshoe","eggs"];
 
 // ─── Phase 3 Economy ──────────────────────────────────────────────────────────
 
