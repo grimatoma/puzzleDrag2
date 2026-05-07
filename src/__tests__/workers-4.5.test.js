@@ -7,8 +7,10 @@ describe("Phase 4.5 — Housing requirement gates hire count", () => {
 
   // A: 0 housing → cap 1
   it("A: no housing → capacity 1, first hire OK, second blocked", () => {
+    // Provide enough goods for any worker hireCost (spec §12: object hireCost)
     const a0 = { ...base, coins: 9999,
       built: { ...base.built, granary: true, inn: true },
+      inventory: { ...base.inventory, hay: 20, berry: 20, jam: 20, bread: 20, ingot: 20, stone: 20 },
       workers: { hired: { ...base.workers.hired }, debt: 0, pool: 10 } };
     expect(housingCapacity(a0)).toBe(1);
 
@@ -23,8 +25,10 @@ describe("Phase 4.5 — Housing requirement gates hire count", () => {
 
   // B: 1 housing → cap 2
   it("B: 1 housing → capacity 2, two hires OK, third blocked", () => {
+    // Provide enough goods for any worker hireCost (spec §12: object hireCost)
     const b0 = { ...base, coins: 9999,
       built: { ...base.built, granary: true, inn: true, housing: true },
+      inventory: { ...base.inventory, hay: 20, berry: 20, jam: 20, bread: 20, ingot: 20, stone: 20 },
       workers: { hired: { ...base.workers.hired }, debt: 0, pool: 10 } };
     expect(housingCapacity(b0)).toBe(2);
 

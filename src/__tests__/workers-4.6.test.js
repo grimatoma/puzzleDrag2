@@ -17,17 +17,21 @@ describe("Phase 4.6 — Generic Worker pool", () => {
     expect(s2.workers.pool).toBe(s1.workers.pool + 1);
   });
 
-  // Hire deducts pool + coins
-  it("hire deducts 1 pool and coins", () => {
+  // Hire deducts pool + goods (spec §12: hireCost is object with worker + goods)
+  it("hire deducts 1 pool and costs goods", () => {
     const s0 = createInitialState();
+    // Hilda hireCost: { worker: 1, hay: 6, bread: 8 }
     const s3 = { ...s0, coins: 1000,
       built: { ...s0.built, granary: true },
       workers: { ...s0.workers, pool: 1 },
+      inventory: { ...s0.inventory, hay: 10, bread: 10 },
       tutorial: { ...s0.tutorial, seen: true, active: false } };
     const s4 = rootReducer(s3, { type: "APP/HIRE", payload: { id: "hilda" } });
     expect(s4.workers.pool).toBe(0);
     expect(s4.workers.hired.hilda).toBe(1);
-    expect(s4.coins).toBeLessThan(s3.coins);
+    // Goods deducted (hay: 10-6=4, bread: 10-8=2)
+    expect(s4.inventory.hay).toBe(4);
+    expect(s4.inventory.bread).toBe(2);
   });
 
   // Hire blocked when pool empty
