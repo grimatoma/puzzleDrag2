@@ -1022,8 +1022,9 @@ function coreReducer(state, action) {
       return evaluateAndApplyStoryBeat(afterSeasonWithFields, { type: "season_entered", season: seasonNames[newSeasonIndex] });
     }
     case "SESSION_START": {
-      // Fire story session_start trigger if intro hasn't been seen yet
-      if (state.story?.flags?.intro_seen) return state;
+      // Always evaluate story beats on session start — each beat checks its own first-time
+      // flags via isBeatComplete() in nextPendingBeat(). The blanket intro_seen gate was
+      // removed so later session_start beats (if added) also fire correctly.
       return evaluateAndApplyStoryBeat(state, { type: "session_start" });
     }
     case "CRAFTING/CRAFT_RECIPE": {
