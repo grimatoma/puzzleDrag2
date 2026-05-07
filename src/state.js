@@ -1,5 +1,6 @@
 import { BIOMES, BUILDINGS, NPCS, MAX_TURNS, RECIPES, WORKSHOP_RECIPES, STORAGE_KEYS, SEASON_EFFECTS, DAILY_REWARDS, MINE_ENTRY_TIERS, CAPPED_RESOURCES, UPGRADE_THRESHOLDS } from "./constants.js";
 import { sellPriceFor as _sellPriceFor } from "./features/market/pricing.js";
+import { tryClearRatChain } from "./features/farm/rats.js";
 import { isMysteriousChainValid } from "./features/mine/mysterious_ore.js";
 import { driftPrices, applyTrade } from "./market.js";
 import { currentCap } from "./utils.js";
@@ -1092,6 +1093,15 @@ function coreReducer(state, action) {
 
       const chainKey = chain[0]?.key;
       if (!chainKey) return state;
+
+      // Phase 10.4 — Rat chain: chain of 3+ rat tiles clears rats, +5◉ per rat.
+      // Mixed chains (rat + other) and chains of < 3 rats are rejected.
+      const hasRat = chain.some((t) => t.key === "rat");
+      if (hasRat) {
+        const patch = tryClearRatChain(state, chain);
+        if (!patch) return state; // rejected — no-op
+        return { ...state, hazards: patch.hazards, coins: patch.coins };
+      }
 
       // Mysterious ore chain check
       const hasOre = chain.some((t) => t.key === "mysterious_ore");
