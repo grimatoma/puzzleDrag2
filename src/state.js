@@ -1510,6 +1510,8 @@ const SLICE_PRIMARY_ACTIONS = new Set([
   "BOSS/CLOSE",
   // Cartography actions are owned by cartography/slice
   "CARTO/TRAVEL",
+  // Story modal dismiss is owned by story/slice
+  "STORY/DISMISS_MODAL",
 ]);
 
 // Actions where coreReducer intentionally defers to slices (e.g. CRAFTING/CRAFT_RECIPE
