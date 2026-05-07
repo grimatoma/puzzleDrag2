@@ -331,6 +331,25 @@ describe("seedQuestIdSeq", () => {
   });
 });
 
+// ─── SWITCH_BIOME ─────────────────────────────────────────────────────────────
+
+describe("SWITCH_BIOME", () => {
+  it("always generates 3 orders with distinct NPCs (100 iterations)", () => {
+    // Need a state that already has 3 orders so SWITCH_BIOME has something to map over
+    const baseOrders = [
+      { id: "o1", npc: "mira", key: "hay", need: 5, reward: 30, line: "t" },
+      { id: "o2", npc: "tomas", key: "log", need: 5, reward: 30, line: "t" },
+      { id: "o3", npc: "bram", key: "berry", need: 5, reward: 30, line: "t" },
+    ];
+    for (let i = 0; i < 100; i++) {
+      const state = minState({ biomeKey: "mine", level: 2, orders: baseOrders });
+      const next = gameReducer(state, { type: "SWITCH_BIOME", key: "farm" });
+      const npcs = next.orders.map((o) => o.npc);
+      expect(new Set(npcs).size).toBe(3);
+    }
+  });
+});
+
 // ─── initialState ─────────────────────────────────────────────────────────────
 
 describe("initialState", () => {
