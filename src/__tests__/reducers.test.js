@@ -275,6 +275,24 @@ describe("mood/slice TURN_IN_ORDER", () => {
   });
 });
 
+// ─── boss/Ember Drake ─────────────────────────────────────────────────────────
+
+describe("boss Ember Drake — CRAFTING/CRAFT_RECIPE", () => {
+  const drakeState = () => minState({
+    boss: { key: "ember_drake", resource: "ingot", progress: 0, targetCount: 5, turnsLeft: 5, name: "Ember Drake", emoji: "🔥", goal: "", flavor: "", minChain: null },
+  });
+
+  it("bread does not increment Drake progress", () => {
+    const s = gameReducer(drakeState(), { type: "CRAFTING/CRAFT_RECIPE", payload: { key: "bread" } });
+    expect(s.boss.progress).toBe(0);
+  });
+
+  it("hinge (forge output) increments Drake progress", () => {
+    const s = gameReducer(drakeState(), { type: "CRAFTING/CRAFT_RECIPE", payload: { key: "hinge" } });
+    expect(s.boss.progress).toBe(1);
+  });
+});
+
 // ─── boss slice ───────────────────────────────────────────────────────────────
 
 describe("boss/slice CLOSE_SEASON", () => {
