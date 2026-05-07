@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { SEASONS, NPCS } from "../constants.js";
 import { SEASON_EFFECTS } from "./Hud.jsx";
+import { parseSpeaker } from "../story.js";
 
 function Stat({ v, l }) {
   return (
@@ -45,6 +46,114 @@ export function SeasonModal({ state, dispatch }) {
     </div>
   );
 }
+
+// ─── Story Modal (task 2.3) ───────────────────────────────────────────────────
+
+/**
+ * Renders when state.story.queuedBeat is set.
+ * Blocks tile drag / turn advance (handled by App.jsx checking state.story.queuedBeat).
+ * Dismissable via "Continue" button or ESC key.
+ */
+export function StoryModal({ state, dispatch }) {
+  const beat = state.story?.queuedBeat;
+  const isWin = beat?.id === "act3_win";
+  const backdropRef = useRef(null);
+
+  // ESC key to dismiss
+  useEffect(() => {
+    if (!beat) return;
+    const handler = (e) => {
+      if (e.key === "Escape") dispatch({ type: "STORY/DISMISS_MODAL" });
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [beat, dispatch]);
+
+  if (!beat) return null;
+
+  const speakerKey = parseSpeaker(beat.body);
+  const npc = speakerKey ? NPCS[speakerKey] : null;
+
+  if (isWin) {
+    // Win modal: gold border, larger panel, slow fade-in
+    return (
+      <div
+        ref={backdropRef}
+        className="absolute inset-0 bg-black/65 grid place-items-center z-[60]"
+        style={{ animation: "fadein 0.8s ease both" }}
+      >
+        {/* Particle suggestion: golden sparkles via CSS */}
+        <div
+          className="relative rounded-[24px] px-10 py-8 max-w-[600px] w-[94vw] text-center shadow-2xl"
+          style={{
+            background: "linear-gradient(160deg, #3a2a0e 0%, #1f1610 100%)",
+            border: "4px solid #ffd34c",
+            boxShadow: "0 0 40px rgba(255,211,76,0.35), 0 8px 32px rgba(0,0,0,0.6)",
+          }}
+        >
+          <div className="text-[56px] leading-none mb-2">🏆</div>
+          <h2 className="font-bold text-[28px] text-[#ffd34c] mb-2">{beat.title}</h2>
+          <p className="text-[#f4ecd8] text-[16px] leading-relaxed mb-6 max-w-[420px] mx-auto">{beat.body}</p>
+          <button
+            onClick={() => dispatch({ type: "STORY/DISMISS_MODAL" })}
+            autoFocus
+            className="bg-[#ffd34c] hover:bg-[#ffe880] text-[#3a2a0e] border-[3px] border-[#ffd34c] rounded-2xl px-10 py-3 text-[18px] font-bold shadow-lg transition-colors"
+          >
+            Continue
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      ref={backdropRef}
+      className="absolute inset-0 bg-black/60 grid place-items-center z-[60] animate-fadein"
+    >
+      <div
+        className="rounded-[20px] px-7 py-6 max-w-[480px] w-[94vw] shadow-2xl"
+        style={{ background: "#1f1610", border: "3px solid #b28b62" }}
+      >
+        {/* Header: portrait + title */}
+        <div className="flex items-center gap-4 mb-4">
+          {npc ? (
+            <div
+              className="w-16 h-16 rounded-full grid place-items-center text-white font-bold text-[24px] flex-shrink-0"
+              style={{ backgroundColor: npc.color, border: "3px solid #f6efe0" }}
+            >
+              {npc.name[0]}
+            </div>
+          ) : (
+            <div className="w-16 h-16 rounded-full grid place-items-center text-[#f6efe0] text-[28px] flex-shrink-0 bg-[#3a2715] border-2 border-[#b28b62]">
+              ✦
+            </div>
+          )}
+          <div>
+            {npc && <div className="text-[#d6a060] text-[12px] font-bold uppercase tracking-widest">{npc.name}</div>}
+            <div className="text-[#ffd34c] font-bold text-[20px] leading-tight">{beat.title}</div>
+          </div>
+        </div>
+
+        {/* Body */}
+        <p className="text-[#f4ecd8] text-[15px] leading-relaxed mb-5">{beat.body}</p>
+
+        {/* Continue button */}
+        <div className="flex justify-end">
+          <button
+            onClick={() => dispatch({ type: "STORY/DISMISS_MODAL" })}
+            autoFocus
+            className="bg-[#ffd34c] hover:bg-[#ffe880] text-[#3a2a0e] border-[3px] border-[#b28b62] rounded-xl px-7 py-2 text-[15px] font-bold shadow-lg transition-colors"
+          >
+            Continue
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── NpcBubble ────────────────────────────────────────────────────────────────
 
 export function NpcBubble({ bubble, dispatch }) {
   const [shown, setShown] = useState(null);

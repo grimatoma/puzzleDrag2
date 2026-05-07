@@ -8,8 +8,11 @@ import * as boss from "./features/boss/slice.js";
 import * as cartography from "./features/cartography/slice.js";
 import * as apprentices from "./features/apprentices/slice.js";
 import * as mood from "./features/mood/slice.js";
+import * as storySlice from "./features/story/slice.js";
+import { INITIAL_STORY_STATE, evaluateStoryTriggers } from "./story.js";
+import { STORY_BUILDING_IDS } from "./features/story/data.js";
 
-const slices = [crafting, quests, achievements, tutorial, settings, boss, cartography, apprentices, mood];
+const slices = [crafting, quests, achievements, tutorial, settings, boss, cartography, apprentices, mood, storySlice];
 
 // ─── Save/load ─────────────────────────────────────────────────────────────
 // Persisted: everything except volatile UI fields (modal/bubble/view/pendingView).
@@ -122,6 +125,8 @@ export function initialState() {
     pendingView: null,
     seasonStats: { harvests: 0, upgrades: 0, ordersFilled: 0, coins: 0 },
     _hintsShown: {},
+    story: { ...INITIAL_STORY_STATE, flags: {}, queuedBeat: null, beatQueue: [], sandbox: false },
+    npcs: { roster: ["wren"], bonds: { wren: 5 } },
     ...crafting.initial,
     ...quests.initial,
     ...achievements.initial,
@@ -144,7 +149,15 @@ export function initialState() {
     }
     apprentices.seedHireSeq(saved.hiredApprentices);
     quests.seedQuestIdSeq(saved.dailies);
-    return { ...fresh, ...saved, view: "town", turnsUsed: 0, modal: null, bubble: null, pendingView: null,
+    // Merge saved story with INITIAL_STORY_STATE so older saves gain new beat fields.
+    // Merge saved story: spread defaults first, then saved, then always clear volatile beat queue/modal on boot
+    const mergedStory = saved.story
+      ? { ...INITIAL_STORY_STATE, queuedBeat: null, beatQueue: [], sandbox: false, ...saved.story }
+      : { ...INITIAL_STORY_STATE, flags: {}, queuedBeat: null, beatQueue: [], sandbox: false };
+    // Always clear story modal queue on boot — never resume mid-modal
+    mergedStory.queuedBeat = null;
+    mergedStory.beatQueue = [];
+    return { ...fresh, ...saved, story: mergedStory, view: "town", turnsUsed: 0, modal: null, bubble: null, pendingView: null,
       seasonStats: { harvests: 0, upgrades: 0, ordersFilled: 0, coins: 0 } };
   }
   return fresh;
@@ -160,6 +173,36 @@ function applyXp(state, xpDelta) {
     leveledUp = true;
   }
   return { xp, level, leveledUp };
+}
+
+// ─── Story trigger integration ────────────────────────────────────────────────
+// evaluateAndApplyStoryBeat: given a game event, evaluate triggers against current story
+// state and, if a beat fires, apply all side effects and queue the modal.
+// Returns the updated state (no mutation).
+function evaluateAndApplyStoryBeat(state, event) {
+  const totals = state.inventory ?? {};
+  const result = evaluateStoryTriggers(state.story ?? { ...INITIAL_STORY_STATE, flags: {} }, event, totals);
+  if (!result) return state;
+  // Delegate to the story slice reducer with a synthetic action
+  return storySlice.reduce(state, { type: "STORY/BEAT_FIRED", payload: result });
+}
+
+// Emit resource_total events for changed inventory keys
+function maybeFireResourceBeats(stateAfter, stateBefore) {
+  const inv = stateAfter.inventory ?? {};
+  const keys = Object.keys(inv);
+  let next = stateAfter;
+  // Check resource_total for each key that grew
+  for (const key of keys) {
+    const nowAmt = inv[key] || 0;
+    const wasAmt = (stateBefore.inventory?.[key]) || 0;
+    if (nowAmt > wasAmt) {
+      next = evaluateAndApplyStoryBeat(next, { type: "resource_total", key, amount: nowAmt });
+    }
+  }
+  // Also check resource_total_multi with full inventory snapshot
+  next = evaluateAndApplyStoryBeat(next, { type: "resource_total_multi" });
+  return next;
 }
 
 function coreReducer(state, action) {
@@ -248,7 +291,7 @@ function coreReducer(state, action) {
         newHintsShown = { ...hintsShown, upgradeHint: true };
       }
 
-      return {
+      const afterChain = {
         ...state,
         inventory,
         coins: state.coins + coinsGain,
@@ -261,6 +304,8 @@ function coreReducer(state, action) {
         lastChainLength: effectiveChain,
         modal: seasonEnded ? "season" : state.modal,
       };
+      // Story: evaluate resource beats after inventory updated
+      return maybeFireResourceBeats(afterChain, state);
     }
     case "TURN_IN_ORDER": {
       const o = state.orders.find((x) => x.id === action.id);
@@ -378,7 +423,7 @@ function coreReducer(state, action) {
         bubble = { id: Date.now(), npc: "wren", text: "Inn built! 🧑‍🌾 You can now hire Helpers from the nav below.", ms: 2800 };
         newHintsShown = { ...hintsShown, innHint: true };
       }
-      return {
+      const afterBuild = {
         ...state,
         coins: state.coins - (b.cost.coins || 0),
         inventory,
@@ -386,6 +431,14 @@ function coreReducer(state, action) {
         bubble,
         _hintsShown: newHintsShown,
       };
+      // Story: fire building_built trigger
+      let afterBuildStory = evaluateAndApplyStoryBeat(afterBuild, { type: "building_built", id: b.id });
+      // Check if all 8 story-required buildings are now built
+      const allBuilt = STORY_BUILDING_IDS.every((id) => afterBuildStory.built?.[id]);
+      if (allBuilt) {
+        afterBuildStory = evaluateAndApplyStoryBeat(afterBuildStory, { type: "all_buildings_built", allBuilt: true });
+      }
+      return afterBuildStory;
     }
     case "POP_NPC":
       return { ...state, bubble: { id: Date.now(), npc: action.npc, text: action.text, ms: action.ms ?? 1800 } };
@@ -393,7 +446,7 @@ function coreReducer(state, action) {
       return state.bubble && state.bubble.id === action.id ? { ...state, bubble: null } : state;
     case "CLOSE_SEASON": {
       const tools = { ...state.tools, shuffle: (state.tools.shuffle || 0) + 1 };
-      return {
+      const afterSeason = {
         ...state,
         tools,
         coins: state.coins + SEASON_END_BONUS_COINS,
@@ -405,6 +458,21 @@ function coreReducer(state, action) {
         seasonStats: { harvests: 0, upgrades: 0, ordersFilled: 0, coins: 0 },
         bubble: { id: Date.now(), npc: "tomas", text: "Bonus: +1 Reshuffle Horn · +25◉", ms: 2000 },
       };
+      // Story: fire season_entered trigger
+      const newSeasonIndex = (afterSeason.seasonsCycled % 4);
+      const seasonNames = ["spring", "summer", "autumn", "winter"];
+      return evaluateAndApplyStoryBeat(afterSeason, { type: "season_entered", season: seasonNames[newSeasonIndex] });
+    }
+    case "SESSION_START": {
+      // Fire story session_start trigger if intro hasn't been seen yet
+      if (state.story?.flags?.intro_seen) return state;
+      return evaluateAndApplyStoryBeat(state, { type: "session_start" });
+    }
+    case "CRAFTING/CRAFT_RECIPE": {
+      // Story: crafted items can trigger story beats (forwarded to next action handlers below)
+      const craftKey = action.payload?.key;
+      if (!craftKey) return state;
+      return evaluateAndApplyStoryBeat(state, { type: "craft_made", item: craftKey, count: 1 });
     }
     default: {
       if (import.meta.env.DEV) {
@@ -423,7 +491,10 @@ function coreReducer(state, action) {
         if (action.type === "DEV/RESET_GAME") {
           // Wipe all persisted state and reset to initial state, preserving settings.
           clearSave();
-          return { ...initialState(), settings: state.settings };
+          const fresh = initialState();
+          return { ...fresh, settings: state.settings,
+            story: { ...INITIAL_STORY_STATE, flags: {}, queuedBeat: null, beatQueue: [], sandbox: false },
+            npcs: { roster: ["wren"], bonds: { wren: 5 } } };
         }
       }
       return state;
