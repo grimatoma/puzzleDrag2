@@ -1,0 +1,49 @@
+/**
+ * QA Batch 2 — Fix 7: canonical achievements list from features/achievements/data.js
+ */
+import { describe, it, expect } from "vitest";
+import { ACHIEVEMENTS } from "../src/features/achievements/data.js";
+
+describe("Fix 7 — canonical ACHIEVEMENTS list shape", () => {
+  it("has exactly 12 entries", () => {
+    expect(ACHIEVEMENTS.length).toBe(12);
+  });
+
+  it("every achievement has id, name, desc, counter, threshold", () => {
+    for (const a of ACHIEVEMENTS) {
+      expect(a.id, `${a.id} missing id`).toBeTruthy();
+      expect(a.name, `${a.id} missing name`).toBeTruthy();
+      expect(a.desc, `${a.id} missing desc`).toBeTruthy();
+      expect(a.counter, `${a.id} missing counter`).toBeTruthy();
+      expect(a.threshold, `${a.id} missing threshold`).toBeGreaterThan(0);
+    }
+  });
+
+  it("first_steps has threshold 1 and counter chains_committed", () => {
+    const a = ACHIEVEMENTS.find((x) => x.id === "first_steps");
+    expect(a).toBeDefined();
+    expect(a.threshold).toBe(1);
+    expect(a.counter).toBe("chains_committed");
+    expect(a.name).toBe("First Steps");
+    expect(typeof a.desc).toBe("string");
+    expect(a.desc.length).toBeGreaterThan(0);
+  });
+
+  it("champion has desc string", () => {
+    const a = ACHIEVEMENTS.find((x) => x.id === "champion");
+    expect(a).toBeDefined();
+    expect(typeof a.desc).toBe("string");
+    expect(a.desc.length).toBeGreaterThan(0);
+  });
+
+  it("all counters are one of the 7 known counter keys", () => {
+    const valid = new Set([
+      "chains_committed", "orders_fulfilled", "bosses_defeated",
+      "festival_won", "distinct_resources_chained", "distinct_buildings_built",
+      "supplies_converted",
+    ]);
+    for (const a of ACHIEVEMENTS) {
+      expect(valid.has(a.counter), `${a.id} has unknown counter: ${a.counter}`).toBe(true);
+    }
+  });
+});

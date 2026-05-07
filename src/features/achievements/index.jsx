@@ -1,5 +1,9 @@
 import { useState } from "react";
-import { ACHIEVEMENTS, BIOMES } from "../../constants.js";
+import { BIOMES } from "../../constants.js";
+// Use the canonical achievements list from features/achievements/data.js
+// (12 entries with counter/threshold shape). The constants.js ACHIEVEMENTS
+// list (20 entries) is retained for legacy compatibility but not rendered here.
+import { ACHIEVEMENTS } from "./data.js";
 
 export const viewKey = "achievements";
 
@@ -9,6 +13,12 @@ function hexColor(n) {
   return "#" + n.toString(16).padStart(6, "0");
 }
 
+// Get progress value for the canonical counter-based achievements
+function getCounterValue(state, counter) {
+  return (state.achievements?.counters?.[counter] ?? 0);
+}
+
+// Legacy metric lookup (for backward compat with constants.js shape)
 function getMetricValue(state, eventKey) {
   switch (eventKey) {
     case "totalHarvested":   return state.totalHarvested || 0;
@@ -26,7 +36,9 @@ function getMetricValue(state, eventKey) {
 // ─── Trophy card ─────────────────────────────────────────────────────────────
 
 function TrophyCard({ achievement, current, trophyState }) {
-  const { name, desc, icon, target, reward } = achievement;
+  // canonical shape uses threshold; legacy shape uses target
+  const { name, desc, icon, threshold, target: targetLegacy } = achievement;
+  const target = threshold ?? targetLegacy ?? 1;
   const unlocked = !!trophyState;
   const claimed  = trophyState === "claimed";
   const pct = Math.min(100, (current / target) * 100);
@@ -64,10 +76,10 @@ function TrophyCard({ achievement, current, trophyState }) {
         </div>
       </div>
 
-      {/* Right: reward */}
+      {/* Right: reward (canonical shape has no reward field; show unlock icon) */}
       <div className="flex flex-col items-end gap-1 flex-shrink-0">
         <div className="text-[9px] text-[#c8923a] font-bold whitespace-nowrap leading-tight">
-          {reward.coins ? `+${reward.coins}◉` : ""}{reward.coins && reward.xp ? " " : ""}{reward.xp ? `+${reward.xp}xp` : ""}
+          {achievement.reward?.coins ? `+${achievement.reward.coins}◉` : ""}{achievement.reward?.coins && achievement.reward?.xp ? " " : ""}{achievement.reward?.xp ? `+${achievement.reward.xp}xp` : ""}
         </div>
         {claimed && (
           <div className="text-[9px] font-bold text-[#91bf24]">✓ Done</div>
@@ -112,16 +124,32 @@ function ResourceChip({ resource, count }) {
 
 // ─── Main screen ─────────────────────────────────────────────────────────────
 
+// Derive counter-grouped categories from canonical ACHIEVEMENTS list
+const COUNTER_GROUPS = {
+  chains_committed: "Chains",
+  orders_fulfilled: "Orders",
+  bosses_defeated: "Bosses",
+  festival_won: "Festival",
+  distinct_resources_chained: "Resources",
+  distinct_buildings_built: "Buildings",
+  supplies_converted: "Supplies",
+};
+
 export default function AchievementsScreen({ state, dispatch }) {
   const [tab, setTab] = useState("trophies");
 
+  // Canonical: state.achievements.unlocked (from features/achievements/data.js)
+  const unlockedMap = state.achievements?.unlocked ?? {};
+  // Legacy fallback: state.trophies (from achievements/slice.js)
   const trophies = state.trophies || {};
   const collected = state.collected || {};
 
   const discoveredCount = ALL_RESOURCES.filter((r) => (collected[r.key] || 0) > 0).length;
   const totalLifetime = Object.values(collected).reduce((s, v) => s + v, 0);
 
-  const CATEGORIES = ["Harvest", "Chains", "Orders", "Buildings", "Seasons", "Resources", "Crafting"];
+  // Use canonical achievements list, group by counter
+  const counterGroups = [...new Set(ACHIEVEMENTS.map((a) => COUNTER_GROUPS[a.counter] ?? a.counter))];
+  const unlockedCount = ACHIEVEMENTS.filter((a) => unlockedMap[a.id]).length;
 
   return (
     <div className="absolute inset-0 bg-gradient-to-b from-[#7c4f2c] to-[#6b4225] border-[3px] border-[#e2c19b] rounded-2xl flex flex-col overflow-hidden">
@@ -153,7 +181,7 @@ export default function AchievementsScreen({ state, dispatch }) {
         ))}
         <div className="ml-auto text-[10px] text-[#c5a87a] flex items-center">
           {tab === "trophies"
-            ? `${Object.keys(trophies).length}/${ACHIEVEMENTS.length} unlocked`
+            ? `${unlockedCount}/${ACHIEVEMENTS.length} unlocked`
             : `${discoveredCount}/${ALL_RESOURCES.length} discovered`}
         </div>
       </div>
@@ -161,19 +189,19 @@ export default function AchievementsScreen({ state, dispatch }) {
       {/* Body */}
       {tab === "trophies" ? (
         <div className="flex-1 overflow-y-auto px-2 pb-2" style={{ scrollbarWidth: "none" }}>
-          {CATEGORIES.map((cat) => {
-            const group = ACHIEVEMENTS.filter((a) => a.category === cat);
+          {counterGroups.map((grp) => {
+            const group = ACHIEVEMENTS.filter((a) => (COUNTER_GROUPS[a.counter] ?? a.counter) === grp);
             if (!group.length) return null;
             return (
-              <div key={cat} className="mb-2">
-                <div className="text-[10px] font-bold text-[#c8923a] uppercase tracking-widest px-1 mb-1">{cat}</div>
+              <div key={grp} className="mb-2">
+                <div className="text-[10px] font-bold text-[#c8923a] uppercase tracking-widest px-1 mb-1">{grp}</div>
                 <div className="grid grid-cols-3 portrait:grid-cols-2 gap-1.5">
                   {group.map((a) => (
                     <TrophyCard
                       key={a.id}
                       achievement={a}
-                      current={getMetricValue(state, a.eventKey)}
-                      trophyState={trophies[a.id]}
+                      current={getCounterValue(state, a.counter)}
+                      trophyState={unlockedMap[a.id] ? "claimed" : null}
                     />
                   ))}
                 </div>
