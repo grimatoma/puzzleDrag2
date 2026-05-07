@@ -127,6 +127,8 @@ function pickRandomWeather() {
 function triggerBoss(state, bossKey) {
   const meta = BOSS_META[bossKey];
   if (!meta) return state;
+  // Pull description + modifierDescription from the canonical bosses/data.js list
+  const canonicalDef = BOSSES.find((b) => b.id === bossKey) ?? {};
   return {
     ...state,
     boss: {
@@ -135,6 +137,8 @@ function triggerBoss(state, bossKey) {
       emoji: meta.emoji,
       flavor: meta.flavor,
       goal: meta.goal,
+      description: canonicalDef.description ?? null,
+      modifierDescription: canonicalDef.modifierDescription ?? null,
       resource: meta.resource,
       targetCount: meta.targetCount,
       progress: 0,

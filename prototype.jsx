@@ -112,6 +112,10 @@ function PhaserMount({ dispatch, biomeKey, turnsUsed, seasonsCycled, uiLocked, s
   useEffect(() => { gameRef.current?.registry.set("palette", palette ?? "default"); }, [palette]);
   useEffect(() => { gameRef.current?.registry.set("reducedMotion", reducedMotion ?? null); }, [reducedMotion]);
   useEffect(() => { gameRef.current?.registry.set("speciesActive", species?.activeByCategory ?? null); }, [species?.activeByCategory]);
+  // Sync boss modifier flags so GameScene.fillBoard can apply spawnBias
+  useEffect(() => { gameRef.current?.registry.set("boss", gameState?.boss ?? null); }, [gameState?.boss]);
+  // Sync fertilizerActive so GameScene.fillBoard can bias seedling-tier resources
+  useEffect(() => { gameRef.current?.registry.set("fertilizerActive", gameState?.fertilizerActive ?? false); }, [gameState?.fertilizerActive]);
 
   // Keyboard chain construction — Tab focuses board, arrows move cursor, Space adds tile, Enter commits, Esc cancels
   useEffect(() => {

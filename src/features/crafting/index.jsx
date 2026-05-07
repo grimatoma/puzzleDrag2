@@ -56,6 +56,9 @@ function RecipeCard({ recipeKey, recipe, inventory, built, level, craftedTotals,
             <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full text-white bg-[#c8923a]">T2</span>
           )}
         </div>
+        {recipe.desc && (
+          <p className="text-xs text-stone-500 leading-tight">{recipe.desc}</p>
+        )}
 
         <div className="flex flex-wrap gap-1 mt-0.5">
           {Object.entries(recipe.inputs).map(([res, need]) => {
