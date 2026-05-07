@@ -112,23 +112,23 @@ describe("CHAIN_COLLECTED", () => {
     expect(next.inventory.wheat).toBe(2);
   });
 
-  it("yields nothing in winter with chain < 4", () => {
-    const state = minState({ seasonsCycled: 3 }); // Winter
-    const next = gameReducer(state, {
-      type: "CHAIN_COLLECTED",
-      payload: { key: "hay", gained: 3, upgrades: 0, value: 1, chainLength: 3 },
-    });
-    expect(next.inventory.hay).toBeUndefined();
-    expect(next.turnsUsed).toBe(1); // turn still consumed
-  });
-
-  it("collects normally in winter with chain >= 4", () => {
+  it("yields nothing in winter with chain < 5", () => {
     const state = minState({ seasonsCycled: 3 }); // Winter
     const next = gameReducer(state, {
       type: "CHAIN_COLLECTED",
       payload: { key: "hay", gained: 4, upgrades: 0, value: 1, chainLength: 4 },
     });
-    expect(next.inventory.hay).toBe(4);
+    expect(next.inventory.hay).toBeUndefined();
+    expect(next.turnsUsed).toBe(1); // turn still consumed
+  });
+
+  it("collects normally in winter with chain >= 5", () => {
+    const state = minState({ seasonsCycled: 3 }); // Winter
+    const next = gameReducer(state, {
+      type: "CHAIN_COLLECTED",
+      payload: { key: "hay", gained: 5, upgrades: 0, value: 1, chainLength: 5 },
+    });
+    expect(next.inventory.hay).toBe(5);
   });
 
   it("advances turnsUsed and sets season modal when turn limit reached", async () => {

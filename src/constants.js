@@ -1,3 +1,10 @@
+export const SEASON_EFFECTS = Object.freeze({
+  Spring: { harvestBonus: 0.20 },
+  Summer: { orderMult: 2 },
+  Autumn: { upgradeMult: 2 },
+  Winter: { minChain: 5 },
+});
+
 export const STORAGE_KEYS = {
   save: "hearth.save.v1",
   settings: "hearth.settings",
