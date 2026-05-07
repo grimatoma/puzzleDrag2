@@ -152,9 +152,12 @@ function PhaserMount({ dispatch, biomeKey, turnsUsed, seasonsCycled, uiLocked, s
       const next = handleKeyboard(kbState, { key: e.key });
       // Update keyboard chain ref
       kbChainRef.current = next.chain ?? [];
-      // Dispatch cursor changes
-      if (JSON.stringify(next.settings?.keyboardCursor) !== JSON.stringify(s.settings?.keyboardCursor)) {
-        dispatch({ type: "SET_CURSOR", cursor: next.settings.keyboardCursor });
+      // Dispatch cursor changes — shallow compare the three known fields,
+      // not JSON.stringify (which serialised on every keydown).
+      const nc = next.settings?.keyboardCursor;
+      const pc = s.settings?.keyboardCursor;
+      if (nc && (!pc || nc.row !== pc.row || nc.col !== pc.col || nc.active !== pc.active)) {
+        dispatch({ type: "SET_CURSOR", cursor: nc });
       }
       // Enter commits chain → dispatch CHAIN_COLLECTED if chain was non-empty
       if (e.key === "Enter" && kbState.chain.length > 0) {

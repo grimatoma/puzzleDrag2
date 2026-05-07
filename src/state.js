@@ -60,12 +60,63 @@ export function loadSavedState() {
   } catch (e) { console.warn("[hearth] save data corrupt, starting fresh:", e); return null; }
 }
 
-export function persistState(state) {
+// Synchronous write. Used internally by persistState's flush path and by the
+// page-unload handler. Tests can call this directly to bypass debouncing.
+export function persistStateNow(state) {
   try {
     const out = {};
     for (const k of Object.keys(state)) if (!VOLATILE.has(k)) out[k] = state[k];
     localStorage.setItem(SAVE_KEY, JSON.stringify(out));
   } catch { /* storage unavailable (private browsing / quota) */ }
+}
+
+// rAF-coalesced wrapper around persistStateNow. Multiple dispatches in the
+// same animation frame collapse to a single localStorage write — important
+// because a chain-collect or close-season fires several reducer transitions
+// in rapid succession, and JSON.stringify over the entire game state on the
+// hot path was a measurable cost. A pagehide handler flushes any pending
+// state so a tab close right after a dispatch never loses progress.
+let _pendingPersist = null;
+let _persistScheduled = false;
+let _unloadHooked = false;
+
+function _flushPersist() {
+  _persistScheduled = false;
+  if (_pendingPersist === null) return;
+  const s = _pendingPersist;
+  _pendingPersist = null;
+  persistStateNow(s);
+}
+
+export function persistState(state) {
+  _pendingPersist = state;
+  if (!_persistScheduled) {
+    _persistScheduled = true;
+    if (typeof requestAnimationFrame === "function") {
+      requestAnimationFrame(_flushPersist);
+    } else {
+      // Tests / SSR have no rAF; queueMicrotask preserves the intent (flush
+      // before the next macrotask) without making the call synchronous.
+      queueMicrotask(_flushPersist);
+    }
+  }
+  if (!_unloadHooked && typeof window !== "undefined") {
+    _unloadHooked = true;
+    const flushOnExit = () => {
+      if (_pendingPersist) persistStateNow(_pendingPersist);
+      _pendingPersist = null;
+      _persistScheduled = false;
+    };
+    window.addEventListener("pagehide", flushOnExit);
+    window.addEventListener("beforeunload", flushOnExit);
+  }
+}
+
+// Public flush, useful for callers that need a hard sync (tests, debug tools).
+export function flushPersistState() {
+  if (_pendingPersist) persistStateNow(_pendingPersist);
+  _pendingPersist = null;
+  _persistScheduled = false;
 }
 
 export function clearSave() {
