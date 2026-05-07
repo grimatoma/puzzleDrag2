@@ -17,7 +17,7 @@ export const WORKERS = [
     icon: "🧑‍🌾",
     color: "#4f8c3a",
     wage: 15,
-    hireCost: 200,
+    hireCost: { worker: 1, hay: 6, bread: 8 },
     maxCount: 3,
     effect: { type: "threshold_reduce", key: "hay", from: 6, to: 3 },
     requirement: { building: "granary" },
@@ -30,7 +30,7 @@ export const WORKERS = [
     icon: "🌿",
     color: "#7dc45a",
     wage: 12,
-    hireCost: 150,
+    hireCost: { worker: 1, berry: 4, bread: 6 },
     maxCount: 2,
     effect: { type: "pool_weight", key: "berry", amount: 2 },
     requirement: { building: "inn" },
@@ -43,7 +43,7 @@ export const WORKERS = [
     icon: "🍯",
     color: "#c8923a",
     wage: 20,
-    hireCost: 300,
+    hireCost: { worker: 1, jam: 3, bread: 8 },
     maxCount: 2,
     effect: { type: "bonus_yield", key: "jam", amount: 2 },
     requirement: { building: "bakery" },
@@ -56,7 +56,7 @@ export const WORKERS = [
     icon: "👀",
     color: "#3a6a9a",
     wage: 20,
-    hireCost: 100,
+    hireCost: { worker: 1, bread: 6 },
     maxCount: 1,
     effect: { type: "season_bonus", key: "coins", amount: 30 },
     requirement: { building: "inn" },
@@ -69,11 +69,11 @@ export const WORKERS = [
     icon: "⚒",
     color: "#3a3a3a",
     wage: 40,
-    hireCost: 500,
-    maxCount: 1,
-    effect: { type: "threshold_reduce", key: "ore", from: 6, to: 3 },
+    hireCost: { worker: 1, ingot: 4, bread: 8 },
+    maxCount: 2,
+    effect: { type: "threshold_reduce", key: "ore", from: 6, to: 4 },
     requirement: { building: "forge", orLevel: 4 },
-    description: "A forge apprentice who learned the trade at Bram's knee. Halves the chain length needed to smelt ore into ingots.",
+    description: "A forge apprentice who learned the trade at Bram's knee. Reduces the chain length needed to smelt ore into ingots.",
   },
   {
     id: "dren",
@@ -82,11 +82,11 @@ export const WORKERS = [
     icon: "⛏",
     color: "#7a8490",
     wage: 25,
-    hireCost: 350,
+    hireCost: { worker: 1, stone: 6, bread: 6 },
     maxCount: 2,
-    effect: { type: "pool_weight", key: "stone", amount: 2 },
+    effect: { type: "threshold_reduce", key: "stone", from: 8, to: 6 },
     requirement: { level: 2 },
-    description: "A seasoned miner who always finds a richer seam. Adds extra stone tiles to the board spawn pool.",
+    description: "A seasoned miner who always finds a richer seam. Reduces the chain length needed to upgrade stone tiles.",
   },
 
   // ── Phase 9 — Mine workers ──────────────────────────────────────────────────
@@ -156,5 +156,7 @@ export function checkRequirement(worker, state) {
   if (req.building && !state?.built?.[req.building]) return false;
   if (req.level && (state?.level ?? 1) < req.level) return false;
   if (req.orLevel && !state?.built?.[req.building] && (state?.level ?? 1) < req.orLevel) return false;
+  // biomeUnlocked: gate mine workers until the mine story flag is set
+  if (req.biomeUnlocked === "mine" && !state?.story?.flags?.mine_unlocked) return false;
   return true;
 }

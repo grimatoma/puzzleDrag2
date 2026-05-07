@@ -453,7 +453,7 @@ function coreReducer(state, action) {
       const bossMinChain = state.boss?.minChain || 0;
       if (bossMinChain > 0 && effectiveChain < bossMinChain) {
         const turnsUsed = state.turnsUsed + 1;
-        const seasonEnded = turnsUsed >= MAX_TURNS;
+        const seasonEnded = turnsUsed >= (state.sessionMaxTurns ?? MAX_TURNS);
         return {
           ...state,
           turnsUsed,
@@ -465,7 +465,7 @@ function coreReducer(state, action) {
       // Winter: chains shorter than minChain tiles yield nothing but still consume the turn
       if (currentSeason === 3 && effectiveChain < SEASON_EFFECTS.Winter.minChain) {
         const turnsUsed = state.turnsUsed + 1;
-        const seasonEnded = turnsUsed >= MAX_TURNS;
+        const seasonEnded = turnsUsed >= (state.sessionMaxTurns ?? MAX_TURNS);
         let bubble = state.bubble;
         if (!hintsShown.winterChain) {
           bubble = { id: Date.now(), npc: "wren", text: `❄️ Winter: chains need ${SEASON_EFFECTS.Winter.minChain}+ tiles to harvest!`, ms: 2400, priority: 2 };
@@ -920,7 +920,9 @@ function coreReducer(state, action) {
       const newSeasonNum = (state.market?.season ?? 0) + 1;
       const mSeed = state.market?.seed ?? 0;
       const newPrices = driftPrices(mSeed, newSeasonNum);
-      let tools = { ...state.tools, shuffle: (state.tools.shuffle || 0) + 1 };
+      // Spec §11: shuffles are earned via almanac/quests — not free per season.
+      // TODO: if players run out of shuffles entirely, add a season-1 bootstrap grant here.
+      let tools = { ...state.tools };
       // Powder Store: grant 2 bombs per season-end
       if (state.built?.powder_store) {
         tools = { ...tools, bomb: (tools.bomb ?? 0) + 2 };
@@ -978,7 +980,7 @@ function coreReducer(state, action) {
         // 5.7: reset per-season free moves on season close
         species: state.species ? { ...state.species, freeMoves: 0 } : state.species,
         npcs: decayedNpcs,
-        bubble: { id: Date.now(), npc: "tomas", text: "Bonus: +1 Reshuffle Horn · +25◉", ms: 2000 },
+        bubble: { id: Date.now(), npc: "tomas", text: "Season ended! +25◉ season bonus.", ms: 2000 },
         market: {
           ...(state.market ?? {}),
           season: newSeasonNum,
@@ -1020,8 +1022,9 @@ function coreReducer(state, action) {
       return evaluateAndApplyStoryBeat(afterSeasonWithFields, { type: "season_entered", season: seasonNames[newSeasonIndex] });
     }
     case "SESSION_START": {
-      // Fire story session_start trigger if intro hasn't been seen yet
-      if (state.story?.flags?.intro_seen) return state;
+      // Always evaluate story beats on session start — each beat checks its own first-time
+      // flags via isBeatComplete() in nextPendingBeat(). The blanket intro_seen gate was
+      // removed so later session_start beats (if added) also fire correctly.
       return evaluateAndApplyStoryBeat(state, { type: "session_start" });
     }
     case "CRAFTING/CRAFT_RECIPE": {

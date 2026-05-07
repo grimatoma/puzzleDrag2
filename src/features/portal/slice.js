@@ -53,17 +53,14 @@ export function reduce(state, action) {
         };
       }
 
-      // Magic Seed — +5 turns
+      // Magic Seed — +5 turns (extends sessionMaxTurns so turn-end check honors it)
       if (id === "magic_seed") {
         const count = state.tools?.[id] ?? 0;
         if (count <= 0) return state;
         return {
           ...state,
           tools: { ...state.tools, [id]: count - 1 },
-          session: {
-            ...(state.session ?? {}),
-            turnsRemaining: (state.session?.turnsRemaining ?? 0) + 5,
-          },
+          sessionMaxTurns: (state.sessionMaxTurns ?? 10) + 5,
         };
       }
 

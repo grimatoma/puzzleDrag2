@@ -2,6 +2,7 @@ import { BIOMES, RECIPES } from "../../constants.js";
 import { BOSSES, BOSS_WINDOW_TURNS, bossReward as bossRewardFn } from "../bosses/data.js";
 import { rollWeather } from "../weather/data.js";
 import { awardXp } from "../almanac/data.js";
+import { applyRainBerryBonus, applyHarvestMoonUpgrade } from "../weather/effects.js";
 
 const ALL_RESOURCES = [...BIOMES.farm.resources, ...BIOMES.mine.resources];
 
@@ -28,6 +29,8 @@ const BOSS_META = {
     targetCount: 3,
     turns: BOSS_WINDOW_TURNS,
     minChain: null,
+    // Spec §9: heat tiles appear — spawn 1-2 fire tiles per season
+    spawnFireTiles: 2,
   },
   quagmire: {
     name: "The Quagmire",
@@ -38,6 +41,8 @@ const BOSS_META = {
     targetCount: 50,
     turns: BOSS_WINDOW_TURNS,
     minChain: null,
+    // Spec §9: extra log/hay respawn tiles — bias spawn pool +30% log+hay
+    spawnBias: { log: 1.3, hay: 1.3 },
   },
   old_stoneface: {
     name: "Old Stoneface",
@@ -48,6 +53,8 @@ const BOSS_META = {
     targetCount: 20,
     turns: BOSS_WINDOW_TURNS,
     minChain: null,
+    // Spec §9: rubble tiles block until cleared — spawn 1-2 cave_in tiles per season
+    spawnRubbleTiles: 2,
   },
   mossback: {
     name: "Mossback",
@@ -133,6 +140,10 @@ function triggerBoss(state, bossKey) {
       progress: 0,
       turnsLeft: meta.turns,
       minChain: meta.minChain || null,
+      // Board modifier flags (Spec §9: boss-specific board effects)
+      spawnBias: meta.spawnBias ?? null,
+      spawnFireTiles: meta.spawnFireTiles ?? null,
+      spawnRubbleTiles: meta.spawnRubbleTiles ?? null,
     },
     bossPending: false,
     bossMinimized: false,
@@ -247,16 +258,25 @@ export function reduce(state, action) {
         const chainKey = payload.key || "";
         const gained = payload.gained || 0;
 
-        if (wKey === "rain" && chainKey === "berry" && gained > 0) {
-          const inv = { ...(next.inventory || {}) };
-          inv.berry = (inv.berry || 0) + gained;
-          next = { ...next, inventory: inv };
-        } else if (wKey === "harvest_moon" && (payload.upgrades || 0) > 0) {
-          const baseRes = ALL_RESOURCES.find((r) => r.key === chainKey);
-          if (baseRes?.next) {
+        if (wKey === "rain" && gained > 0) {
+          // Use helper: doubles berry yield; other resources unchanged
+          const bonusPayload = applyRainBerryBonus({ [chainKey]: gained }, next.weather);
+          if (bonusPayload[chainKey] !== gained) {
             const inv = { ...(next.inventory || {}) };
-            inv[baseRes.next] = (inv[baseRes.next] || 0) + 1;
+            inv[chainKey] = (inv[chainKey] || 0) + (bonusPayload[chainKey] - gained);
             next = { ...next, inventory: inv };
+          }
+        } else if (wKey === "harvest_moon") {
+          // Spec M-10: +1 upgrade applies to EVERY chain (not just chains with existing upgrades)
+          // applyHarvestMoonUpgrade(0, weather) = 1 — always grants at least 1 upgrade
+          const bonusUpgrades = applyHarvestMoonUpgrade(0, next.weather);
+          if (bonusUpgrades > 0) {
+            const baseRes = ALL_RESOURCES.find((r) => r.key === chainKey);
+            if (baseRes?.next) {
+              const inv = { ...(next.inventory || {}) };
+              inv[baseRes.next] = (inv[baseRes.next] || 0) + bonusUpgrades;
+              next = { ...next, inventory: inv };
+            }
           }
         }
       }

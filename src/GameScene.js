@@ -2,6 +2,7 @@ import Phaser from "phaser";
 import { TILE, COLS, ROWS, UPGRADE_THRESHOLDS, SEASONS, BIOMES } from "./constants.js";
 import { upgradeCountForChain, resourceGainForChain, rollResourceWithWeather } from "./utils.js";
 import { computeWorkerEffects } from "./features/apprentices/effects.js";
+import { applyFrostCollapseDuration } from "./features/weather/effects.js";
 const cssColor = (num) => Phaser.Display.Color.IntegerToColor(num).rgba;
 import { rounded, makeTextures, regenerateTextures } from "./textures.js";
 import { TileObj } from "./TileObj.js";
@@ -27,7 +28,8 @@ export function hasValidChain(grid) {
   const cols = rows ? grid[0].length : 0;
   const visited = Array.from({ length: rows }, () => new Array(cols).fill(false));
 
-  const DIRS = [[0, 1], [0, -1], [1, 0], [-1, 0]];
+  // Spec §4: adjacency includes all 8 directions (diagonals count)
+  const DIRS = [[0, 1], [0, -1], [1, 0], [-1, 0], [1, 1], [1, -1], [-1, 1], [-1, -1]];
 
   function dfs(r, c, key) {
     if (r < 0 || r >= rows || c < 0 || c >= cols) return 0;
@@ -307,7 +309,10 @@ export class GameScene extends Phaser.Scene {
     const ts = this.tileSize;
     const weather = this.registry.get("weather");
     const weatherKey = weather?.key ?? weather ?? null;
-    const frostBonus = (!initial && weatherKey === "frost") ? 120 : 0;
+    // Frost doubles collapse/fill tween duration (visual only). Use helper for consistency.
+    const baseFillMs = 210;
+    const frostFillMs = !initial ? applyFrostCollapseDuration(baseFillMs, weather) : baseFillMs;
+    const frostBonus = frostFillMs - baseFillMs;
     // Build worker-boosted pool
     const biomeBase = this.biome().pool;
     const poolWeights = this.registry.get("effectivePoolWeights") ?? {};

@@ -28,7 +28,9 @@ describe("Phase 4.1 — Worker data model", () => {
       if (farmWorkerIds.has(w.id)) {
         expect(["threshold_reduce", "pool_weight", "bonus_yield", "season_bonus"]
           .includes(w.effect.type)).toBe(true);
-        expect(Number.isInteger(w.hireCost)).toBe(true);
+        // Spec §12: hireCost is an object { worker: 1, <goods> } for all workers
+        expect(w.hireCost !== null && typeof w.hireCost === "object").toBe(true);
+        expect(w.hireCost.worker).toBe(1);
       }
     }
   });
