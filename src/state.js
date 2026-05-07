@@ -1,4 +1,4 @@
-import { BIOMES, NPCS, MAX_TURNS, RECIPES, STORAGE_KEYS } from "./constants.js";
+import { BIOMES, NPCS, MAX_TURNS, RECIPES, STORAGE_KEYS, SEASON_EFFECTS } from "./constants.js";
 import * as crafting from "./features/crafting/slice.js";
 import * as quests from "./features/quests/slice.js";
 import * as achievements from "./features/achievements/slice.js";
@@ -183,13 +183,13 @@ function coreReducer(state, action) {
         };
       }
 
-      // Winter: chains shorter than 4 tiles yield nothing but still consume the turn
-      if (currentSeason === 3 && effectiveChain < 4) {
+      // Winter: chains shorter than minChain tiles yield nothing but still consume the turn
+      if (currentSeason === 3 && effectiveChain < SEASON_EFFECTS.Winter.minChain) {
         const turnsUsed = state.turnsUsed + 1;
         const seasonEnded = turnsUsed >= MAX_TURNS;
         let bubble = state.bubble;
         if (!hintsShown.winterChain) {
-          bubble = { id: Date.now(), npc: "wren", text: "❄️ Winter: chains need 4+ tiles to harvest!", ms: 2400, priority: 2 };
+          bubble = { id: Date.now(), npc: "wren", text: `❄️ Winter: chains need ${SEASON_EFFECTS.Winter.minChain}+ tiles to harvest!`, ms: 2400, priority: 2 };
         }
         return {
           ...state,
@@ -203,13 +203,13 @@ function coreReducer(state, action) {
       const res = resourceByKey(key);
       const inventory = { ...state.inventory };
 
-      // Spring: +20% resource bonus (rounded up)
-      const springBonus = currentSeason === 0 ? Math.ceil(gained * 0.2) : 0;
+      // Spring: +harvestBonus% resource bonus (rounded up)
+      const springBonus = currentSeason === 0 ? Math.ceil(gained * SEASON_EFFECTS.Spring.harvestBonus) : 0;
       const effectiveGained = gained + springBonus;
       inventory[key] = (inventory[key] || 0) + effectiveGained;
 
-      // Autumn: double upgrades
-      const effectiveUpgrades = currentSeason === 2 ? upgrades * 2 : upgrades;
+      // Autumn: multiply upgrades
+      const effectiveUpgrades = currentSeason === 2 ? upgrades * SEASON_EFFECTS.Autumn.upgradeMult : upgrades;
       if (res?.next && effectiveUpgrades > 0) {
         inventory[res.next] = (inventory[res.next] || 0) + effectiveUpgrades;
       }
@@ -267,8 +267,8 @@ function coreReducer(state, action) {
       const usedKeys = remainingOrders.map((x) => x.key);
       const replacement = makeOrder(state.biomeKey, state.level, usedNpcs, usedKeys);
       const xpResult = applyXp(state, 12);
-      // Summer: orders pay double
-      const summerMult = ((state.seasonsCycled || 0) % 4 === 1) ? 2 : 1;
+      // Summer: orders pay multiplied reward
+      const summerMult = ((state.seasonsCycled || 0) % 4 === 1) ? SEASON_EFFECTS.Summer.orderMult : 1;
       const actualReward = o.reward * summerMult;
       let bubble = { id: Date.now(), npc: o.npc, text: summerMult > 1 ? `+${actualReward}◉ (☀️ 2×) — thank you!` : `+${actualReward}◉ — thank you!`, ms: 1600 };
       if (xpResult.leveledUp) {
@@ -374,6 +374,7 @@ function coreReducer(state, action) {
         tools,
         coins: state.coins + SEASON_END_BONUS_COINS,
         turnsUsed: 0,
+        seasonsCycled: (state.seasonsCycled || 0) + 1,
         modal: null,
         view: "town",
         pendingView: null,
@@ -381,29 +382,28 @@ function coreReducer(state, action) {
         bubble: { id: Date.now(), npc: "tomas", text: "Bonus: +1 Reshuffle Horn · +25◉", ms: 2000 },
       };
     }
-    case "DEV/ADD_GOLD":
-      return { ...state, coins: state.coins + (action.amount ?? 1000) };
-
-    case "DEV/FILL_STORAGE": {
-      const inventory = { ...state.inventory };
-      for (const biome of Object.values(BIOMES)) {
-        for (const res of biome.resources) {
-          inventory[res.key] = (inventory[res.key] || 0) + 100;
+    default: {
+      if (import.meta.env.DEV) {
+        if (action.type === "DEV/ADD_GOLD") {
+          return { ...state, coins: state.coins + (action.amount ?? 1000) };
+        }
+        if (action.type === "DEV/FILL_STORAGE") {
+          const inventory = { ...state.inventory };
+          for (const biome of Object.values(BIOMES)) {
+            for (const res of biome.resources) {
+              inventory[res.key] = (inventory[res.key] || 0) + 100;
+            }
+          }
+          return { ...state, inventory };
+        }
+        if (action.type === "DEV/RESET_GAME") {
+          // Wipe all persisted state and reset to initial state, preserving settings.
+          clearSave();
+          return { ...initialState(), settings: state.settings };
         }
       }
-      return { ...state, inventory };
-    }
-
-    case "DEV/RESET_GAME": {
-      // Wipe all persisted state (trophies, bonds, boss, weather, etc.) and reload
-      // so every feature slice re-initialises from its default initial state.
-      clearSave();
-      setTimeout(() => window.location.reload(), 100);
       return state;
     }
-
-    default:
-      return state;
   }
 }
 

@@ -104,7 +104,6 @@ export function reduce(state, action) {
     case "CLOSE_SEASON": {
       const next = {
         ...state,
-        seasonsCycled: (state.seasonsCycled || 0) + 1,
         chainsThisSeason: 0,
       };
       return checkTrophies(next);

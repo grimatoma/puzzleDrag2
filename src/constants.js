@@ -1,3 +1,10 @@
+export const SEASON_EFFECTS = Object.freeze({
+  Spring: { harvestBonus: 0.20 },
+  Summer: { orderMult: 2 },
+  Autumn: { upgradeMult: 2 },
+  Winter: { minChain: 5 },
+});
+
 export const STORAGE_KEYS = {
   save: "hearth.save.v1",
   settings: "hearth.settings",
@@ -6,8 +13,8 @@ export const STORAGE_KEYS = {
 
 export const TILE = 74;
 export const COLS = 6;
-export const ROWS = 7;
-export const MAX_TURNS = 8;
+export const ROWS = 6;
+export const MAX_TURNS = 10;
 export const UPGRADE_EVERY = 3;
 
 export const SEASONS = [
@@ -122,13 +129,13 @@ export const RECIPES = {
   harvestpie: { name: "Harvest Pie",    inputs: { flour: 2, jam: 1, egg: 1 },   tier: 2, station: "bakery", coins: 175, glyph: "🥧", color: 0xd4784a, dark: 0x6a3018 },
   preserve:   { name: "Preserve Jar",   inputs: { jam: 2, egg: 1 },             tier: 1, station: "larder", coins: 100, glyph: "🫙", color: 0x9a6888, dark: 0x502848 },
   tincture:   { name: "Berry Tincture", inputs: { berry: 3, jam: 1 },           tier: 1, station: "larder", coins: 125, glyph: "🌿", color: 0x6b8a3a, dark: 0x304018 },
-  hinge:      { name: "Iron Hinge",     inputs: { ingot: 2, coke: 1 },          tier: 2, station: "forge",  coins: 175, glyph: "⚙",  color: 0x7a8a96, dark: 0x2a3a46 },
-  cobblepath: { name: "Cobble Path",    inputs: { stone: 5, plank: 2 },         tier: 1, station: "forge",  coins: 200, glyph: "🪨", color: 0x9a9a8a, dark: 0x404038 },
-  lantern:    { name: "Iron Lantern",   inputs: { ingot: 1, coke: 1, plank: 1 },tier: 2, station: "forge",  coins: 150, glyph: "🏮", color: 0xd4783a, dark: 0x6a2800 },
-  goldring:   { name: "Gold Ring",      inputs: { gold: 1, ingot: 2 },          tier: 2, station: "forge",  coins: 225, glyph: "💍", color: 0xffd34c, dark: 0x886810 },
-  gemcrown:   { name: "Gem Crown",      inputs: { cutgem: 1, gold: 2 },         tier: 2, station: "forge",  coins: 325, glyph: "👑", color: 0x65e5ff, dark: 0x1060a0 },
-  ironframe:  { name: "Iron Frame",     inputs: { beam: 2, ingot: 1 },          tier: 3, station: "forge",  coins: 275, glyph: "🔲", color: 0x6a7a86, dark: 0x2a3040 },
-  stonework:  { name: "Stonework",      inputs: { block: 2, coke: 1 },          tier: 3, station: "forge",  coins: 300, glyph: "🏗", color: 0x8a8a7a, dark: 0x383828 },
+  hinge:      { name: "Iron Hinge",     inputs: { ingot: 2, coke: 1 },          tier: 2, station: "forge",  output: "ingot", coins: 175, glyph: "⚙",  color: 0x7a8a96, dark: 0x2a3a46 },
+  cobblepath: { name: "Cobble Path",    inputs: { stone: 5, plank: 2 },         tier: 1, station: "forge",  output: "ingot", coins: 200, glyph: "🪨", color: 0x9a9a8a, dark: 0x404038 },
+  lantern:    { name: "Iron Lantern",   inputs: { ingot: 1, coke: 1, plank: 1 },tier: 2, station: "forge",  output: "ingot", coins: 150, glyph: "🏮", color: 0xd4783a, dark: 0x6a2800 },
+  goldring:   { name: "Gold Ring",      inputs: { gold: 1, ingot: 2 },          tier: 2, station: "forge",  output: "ingot", coins: 225, glyph: "💍", color: 0xffd34c, dark: 0x886810 },
+  gemcrown:   { name: "Gem Crown",      inputs: { cutgem: 1, gold: 2 },         tier: 2, station: "forge",  output: "ingot", coins: 325, glyph: "👑", color: 0x65e5ff, dark: 0x1060a0 },
+  ironframe:  { name: "Iron Frame",     inputs: { beam: 2, ingot: 1 },          tier: 3, station: "forge",  output: "ingot", coins: 275, glyph: "🔲", color: 0x6a7a86, dark: 0x2a3040 },
+  stonework:  { name: "Stonework",      inputs: { block: 2, coke: 1 },          tier: 3, station: "forge",  output: "ingot", coins: 300, glyph: "🏗", color: 0x8a8a7a, dark: 0x383828 },
 };
 
 export const ACHIEVEMENTS = [

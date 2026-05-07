@@ -1,12 +1,11 @@
 import Phaser from "phaser";
 import { TILE, COLS, ROWS, UPGRADE_EVERY, SEASONS, BIOMES } from "./constants.js";
-import { upgradeCountForChain } from "./utils.js";
+import { upgradeCountForChain, resourceGainForChain, rollResourceWithWeather } from "./utils.js";
 const cssColor = (num) => Phaser.Display.Color.IntegerToColor(num).rgba;
 import { rounded, makeTextures } from "./textures.js";
 import { TileObj } from "./TileObj.js";
 
 const TILE_BASE = TILE; // CSS-pixel design size for one tile; textures are baked at TILE * dpr
-const DOUBLE_CHAIN_THRESHOLD = 6; // chains this long or longer yield double resources
 const FLOAT_TEXT_COLOR = 0xffd248;
 
 // Single decorative frame around the tiles, in CSS pixels. Thinner on narrow
@@ -206,15 +205,20 @@ export class GameScene extends Phaser.Scene {
   }
 
   randomResource() {
-    const pool = this.biome().pool;
-    const key = pool[Math.floor(Math.random() * pool.length)];
-    return this.biome().resources.find((r) => r.key === key);
+    const biome = this.biome();
+    const weather = this.registry.get("weather");
+    const weatherKey = weather?.key ?? weather ?? null;
+    const key = rollResourceWithWeather(biome.pool, weatherKey);
+    return biome.resources.find((r) => r.key === key);
   }
 
   // ─── Board fill / collapse ────────────────────────────────────────────────
 
   fillBoard(initial = false) {
     const ts = this.tileSize;
+    const weather = this.registry.get("weather");
+    const weatherKey = weather?.key ?? weather ?? null;
+    const frostBonus = (!initial && weatherKey === "frost") ? 120 : 0;
     for (let r = 0; r < ROWS; r++) {
       this.grid[r] = this.grid[r] || [];
       for (let c = 0; c < COLS; c++) {
@@ -225,7 +229,7 @@ export class GameScene extends Phaser.Scene {
           const tile = new TileObj(this, x, initial ? y - 500 - Phaser.Math.Between(0, 100) : y - 140, c, r, res);
           tile.sprite.setScale(this.tileSpriteScale);
           this.grid[r][c] = tile;
-          this.tweens.add({ targets: tile.sprite, y, duration: initial ? 450 + r * 28 : 210, ease: "Back.Out" });
+          this.tweens.add({ targets: tile.sprite, y, duration: (initial ? 450 + r * 28 : 210) + frostBonus, ease: "Back.Out" });
         }
       }
     }
@@ -465,7 +469,7 @@ export class GameScene extends Phaser.Scene {
     const res = this.path[0].res;
     const next = this.nextResource(res);
     const upgradeTotal = next ? upgradeCountForChain(this.path.length) : 0;
-    const gained = this.path.length * (this.path.length >= DOUBLE_CHAIN_THRESHOLD ? 2 : 1);
+    const gained = resourceGainForChain(this.path.length);
     this.floatText(`+${gained} ${res.label}${upgradeTotal ? `  ★ ${upgradeTotal}` : ""}`, this.path[this.path.length - 1].x, this.path[this.path.length - 1].y);
 
     // Chain-length juice — escalating screen shake and a radial wipe. Big chains
@@ -520,10 +524,11 @@ export class GameScene extends Phaser.Scene {
 
   updateChainBadge() {
     const n = this.path.length;
+    const gained = resourceGainForChain(n);
     const next = n ? this.nextResource(this.path[0].res) : null;
     const k = next ? upgradeCountForChain(n) : 0;
     if (this.chainBadge) {
-      this.chainBadgeText.setText(k > 0 ? `chain × ${n}   +${k}★` : `chain × ${n}`);
+      this.chainBadgeText.setText(k > 0 ? `chain × ${gained}   +${k}★` : `chain × ${gained}`);
     }
     this._emitChainUpdate();
   }
@@ -535,9 +540,10 @@ export class GameScene extends Phaser.Scene {
 
   _emitChainUpdate() {
     const n = this.path.length;
+    const gained = resourceGainForChain(n);
     const next = n ? this.nextResource(this.path[0].res) : null;
     const k = next ? upgradeCountForChain(n) : 0;
-    this.events.emit("chain-update", { count: n, upgrades: k });
+    this.events.emit("chain-update", { count: gained, upgrades: k });
   }
 
   // ─── Juice (chain-length feedback) ────────────────────────────────────────

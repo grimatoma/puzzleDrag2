@@ -1,4 +1,4 @@
-import { BIOMES } from "../../constants.js";
+import { BIOMES, RECIPES } from "../../constants.js";
 
 const ALL_RESOURCES = [...BIOMES.farm.resources, ...BIOMES.mine.resources];
 
@@ -232,6 +232,8 @@ export function reduce(state, action) {
 
     case "CRAFTING/CRAFT_RECIPE": {
       if (!state.boss || state.boss.resource !== "ingot") return state;
+      const recipe = RECIPES[action.payload?.key];
+      if (!recipe || recipe.output !== "ingot") return state;
       const newProgress = Math.min(state.boss.targetCount, (state.boss.progress || 0) + 1);
       const updatedBoss = { ...state.boss, progress: newProgress };
       if (newProgress >= state.boss.targetCount) {

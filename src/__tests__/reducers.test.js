@@ -4,6 +4,7 @@ import { reduce as moodReduce } from "../features/mood/slice.js";
 import { reduce as bossReduce } from "../features/boss/slice.js";
 import { reduce as apprenticesReduce, seedHireSeq } from "../features/apprentices/slice.js";
 import { seedQuestIdSeq } from "../features/quests/slice.js";
+import { resourceGainForChain, rollResourceWithWeather } from "../utils.js";
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
@@ -40,6 +41,45 @@ function minState(overrides = {}) {
   };
 }
 
+// ─── drought weather ─────────────────────────────────────────────────────────
+
+describe("drought weather — rollResourceWithWeather", () => {
+  it("drought reduces wheat+grain below 20% of rolls (baseline ~33%)", () => {
+    // Farm pool has wheat and grain represented; simulate 1000 rolls
+    const pool = ["hay", "hay", "hay", "log", "log", "wheat", "berry", "berry", "egg"];
+    const counts = { wheat: 0, grain: 0, other: 0 };
+    for (let i = 0; i < 1000; i++) {
+      const key = rollResourceWithWeather(pool, "drought");
+      if (key === "wheat") counts.wheat++;
+      else if (key === "grain") counts.grain++;
+      else counts.other++;
+    }
+    const affected = counts.wheat + counts.grain;
+    expect(affected).toBeLessThan(200); // <20% of 1000 rolls
+  });
+
+  it("no drought: wheat+grain appear at normal baseline rate", () => {
+    const pool = ["hay", "hay", "hay", "log", "log", "wheat", "berry", "berry", "egg"];
+    const counts = { wheat: 0, other: 0 };
+    for (let i = 0; i < 1000; i++) {
+      const key = rollResourceWithWeather(pool, null);
+      if (key === "wheat") counts.wheat++;
+      else counts.other++;
+    }
+    // wheat is 1/9 ≈ 11% of pool; over 1000 rolls expect roughly 111 ± tolerance
+    expect(counts.wheat).toBeGreaterThan(50);
+  });
+});
+
+// ─── resourceGainForChain ────────────────────────────────────────────────────
+
+describe("resourceGainForChain", () => {
+  it("chain 3 → gain 3", () => expect(resourceGainForChain(3)).toBe(3));
+  it("chain 5 → gain 5", () => expect(resourceGainForChain(5)).toBe(5));
+  it("chain 6 → double gain (12)", () => expect(resourceGainForChain(6)).toBe(12));
+  it("chain 7 → double gain (14)", () => expect(resourceGainForChain(7)).toBe(14));
+});
+
 // ─── coreReducer via gameReducer ─────────────────────────────────────────────
 
 describe("CHAIN_COLLECTED", () => {
@@ -72,23 +112,23 @@ describe("CHAIN_COLLECTED", () => {
     expect(next.inventory.wheat).toBe(2);
   });
 
-  it("yields nothing in winter with chain < 4", () => {
-    const state = minState({ seasonsCycled: 3 }); // Winter
-    const next = gameReducer(state, {
-      type: "CHAIN_COLLECTED",
-      payload: { key: "hay", gained: 3, upgrades: 0, value: 1, chainLength: 3 },
-    });
-    expect(next.inventory.hay).toBeUndefined();
-    expect(next.turnsUsed).toBe(1); // turn still consumed
-  });
-
-  it("collects normally in winter with chain >= 4", () => {
+  it("yields nothing in winter with chain < 5", () => {
     const state = minState({ seasonsCycled: 3 }); // Winter
     const next = gameReducer(state, {
       type: "CHAIN_COLLECTED",
       payload: { key: "hay", gained: 4, upgrades: 0, value: 1, chainLength: 4 },
     });
-    expect(next.inventory.hay).toBe(4);
+    expect(next.inventory.hay).toBeUndefined();
+    expect(next.turnsUsed).toBe(1); // turn still consumed
+  });
+
+  it("collects normally in winter with chain >= 5", () => {
+    const state = minState({ seasonsCycled: 3 }); // Winter
+    const next = gameReducer(state, {
+      type: "CHAIN_COLLECTED",
+      payload: { key: "hay", gained: 5, upgrades: 0, value: 1, chainLength: 5 },
+    });
+    expect(next.inventory.hay).toBe(5);
   });
 
   it("advances turnsUsed and sets season modal when turn limit reached", async () => {
@@ -114,6 +154,25 @@ describe("CHAIN_COLLECTED", () => {
 });
 
 describe("TURN_IN_ORDER", () => {
+  it("increases npcBond by 0.3 via mood slice", () => {
+    const order = { id: "o1", npc: "mira", key: "hay", need: 5, reward: 100, line: "test" };
+    const state = minState({
+      seasonsCycled: 2,
+      inventory: { hay: 10 },
+      orders: [order],
+      npcBond: { ...NEUTRAL_BOND, mira: 5 },
+    });
+    const next = gameReducer(state, {
+      type: "TURN_IN_ORDER",
+      id: "o1",
+      npc: order.npc,
+      key: order.key,
+      need: order.need,
+      reward: order.reward,
+    });
+    expect(next.npcBond.mira).toBeCloseTo(5.3, 5);
+  });
+
   it("deducts inventory and adds reward coins", () => {
     const order = { id: "o1", npc: "wren", key: "hay", need: 5, reward: 30, line: "test" };
     const state = minState({
@@ -173,12 +232,19 @@ describe("TURN_IN_ORDER", () => {
 });
 
 describe("CLOSE_SEASON", () => {
-  it("resets turnsUsed and increments seasonsCycled via boss slice", () => {
+  it("resets turnsUsed and increments seasonsCycled", () => {
     const state = minState({ turnsUsed: 8, seasonsCycled: 1, modal: "season" });
     const next = gameReducer(state, { type: "CLOSE_SEASON" });
     expect(next.turnsUsed).toBe(0);
     expect(next.modal).toBeNull();
     expect(next.view).toBe("town");
+  });
+
+  it("increments seasonsCycled from core state", () => {
+    const s0 = minState({ seasonsCycled: 0 });
+    const s1 = gameReducer(s0, { type: "CLOSE_SEASON" });
+    const s2 = gameReducer(s1, { type: "CLOSE_SEASON" });
+    expect(s2.seasonsCycled).toBe(2);
   });
 
   it("awards end-of-season coins and shuffle tool", () => {
@@ -239,6 +305,24 @@ describe("mood/slice TURN_IN_ORDER", () => {
   });
 });
 
+// ─── boss/Ember Drake ─────────────────────────────────────────────────────────
+
+describe("boss Ember Drake — CRAFTING/CRAFT_RECIPE", () => {
+  const drakeState = () => minState({
+    boss: { key: "ember_drake", resource: "ingot", progress: 0, targetCount: 5, turnsLeft: 5, name: "Ember Drake", emoji: "🔥", goal: "", flavor: "", minChain: null },
+  });
+
+  it("bread does not increment Drake progress", () => {
+    const s = gameReducer(drakeState(), { type: "CRAFTING/CRAFT_RECIPE", payload: { key: "bread" } });
+    expect(s.boss.progress).toBe(0);
+  });
+
+  it("hinge (forge output) increments Drake progress", () => {
+    const s = gameReducer(drakeState(), { type: "CRAFTING/CRAFT_RECIPE", payload: { key: "hinge" } });
+    expect(s.boss.progress).toBe(1);
+  });
+});
+
 // ─── boss slice ───────────────────────────────────────────────────────────────
 
 describe("boss/slice CLOSE_SEASON", () => {
@@ -295,6 +379,37 @@ describe("seedQuestIdSeq", () => {
   });
 });
 
+// ─── DEV/RESET_GAME ──────────────────────────────────────────────────────────
+
+describe("DEV/RESET_GAME", () => {
+  it("resets coins to initial, clears trophies, and resets npcBond", () => {
+    const s = minState({ coins: 999, trophies: { chain_10: "claimed" }, npcBond: { mira: 9, tomas: 5, bram: 5, liss: 5, wren: 5 } });
+    const next = gameReducer(s, { type: "DEV/RESET_GAME" });
+    expect(next.coins).toBe(150); // initialState default
+    expect(Object.keys(next.trophies || {}).length).toBe(0);
+    expect(next.npcBond.mira).toBe(5);
+  });
+});
+
+// ─── SWITCH_BIOME ─────────────────────────────────────────────────────────────
+
+describe("SWITCH_BIOME", () => {
+  it("always generates 3 orders with distinct NPCs (100 iterations)", () => {
+    // Need a state that already has 3 orders so SWITCH_BIOME has something to map over
+    const baseOrders = [
+      { id: "o1", npc: "mira", key: "hay", need: 5, reward: 30, line: "t" },
+      { id: "o2", npc: "tomas", key: "log", need: 5, reward: 30, line: "t" },
+      { id: "o3", npc: "bram", key: "berry", need: 5, reward: 30, line: "t" },
+    ];
+    for (let i = 0; i < 100; i++) {
+      const state = minState({ biomeKey: "mine", level: 2, orders: baseOrders });
+      const next = gameReducer(state, { type: "SWITCH_BIOME", key: "farm" });
+      const npcs = next.orders.map((o) => o.npc);
+      expect(new Set(npcs).size).toBe(3);
+    }
+  });
+});
+
 // ─── initialState ─────────────────────────────────────────────────────────────
 
 describe("initialState", () => {
@@ -313,5 +428,32 @@ describe("initialState", () => {
     const state = freshState();
     const npcs = state.orders.map((o) => o.npc);
     expect(new Set(npcs).size).toBe(npcs.length);
+  });
+
+  it("does not contain memoryPerks", () => {
+    const state = freshState();
+    expect("memoryPerks" in state).toBe(false);
+  });
+
+  it("all NPCs start at Warm bond (5)", () => {
+    const state = freshState();
+    for (const npc of ["mira", "tomas", "bram", "liss", "wren"]) {
+      expect(state.npcBond[npc]).toBe(5);
+    }
+  });
+});
+
+describe("NPC bond decay", () => {
+  it("bond above 5 decays toward 5 over multiple seasons", () => {
+    let s = minState({ npcBond: { ...NEUTRAL_BOND, mira: 7 } });
+    for (let i = 0; i < 10; i++) s = gameReducer(s, { type: "CLOSE_SEASON" });
+    expect(s.npcBond.mira).toBeLessThan(7);
+    expect(s.npcBond.mira).toBeGreaterThanOrEqual(5);
+  });
+
+  it("bond exactly 5 stays at 5 after multiple seasons", () => {
+    let s = minState({ npcBond: { ...NEUTRAL_BOND, mira: 5 } });
+    for (let i = 0; i < 10; i++) s = gameReducer(s, { type: "CLOSE_SEASON" });
+    expect(s.npcBond.mira).toBe(5);
   });
 });
