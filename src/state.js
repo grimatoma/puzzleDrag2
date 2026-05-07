@@ -1,5 +1,7 @@
 import { BIOMES, BUILDINGS, NPCS, MAX_TURNS, RECIPES, STORAGE_KEYS, SEASON_EFFECTS, DAILY_REWARDS, MINE_ENTRY_TIERS } from "./constants.js";
 import { driftPrices, applyTrade } from "./market.js";
+import { WORKER_MAP } from "./features/apprentices/data.js";
+import { computeWorkerEffects } from "./features/apprentices/effects.js";
 import * as crafting from "./features/crafting/slice.js";
 import * as quests from "./features/quests/slice.js";
 import * as achievements from "./features/achievements/slice.js";
@@ -14,6 +16,16 @@ import { INITIAL_STORY_STATE, evaluateStoryTriggers } from "./story.js";
 import { STORY_BUILDING_IDS } from "./features/story/data.js";
 
 const slices = [crafting, quests, achievements, tutorial, settings, boss, cartography, apprentices, mood, storySlice];
+
+// ─── Wages / debt ──────────────────────────────────────────────────────────
+const MAX_DEBT = 9999;
+
+function applyDebtRepayment(state, incomingCoins) {
+  const debt = state.workers?.debt ?? 0;
+  if (debt <= 0 || incomingCoins <= 0) return { coinsCredit: incomingCoins, newDebt: debt };
+  if (incomingCoins >= debt)           return { coinsCredit: incomingCoins - debt, newDebt: 0 };
+  return { coinsCredit: 0, newDebt: debt - incomingCoins };
+}
 
 // ─── Save/load ─────────────────────────────────────────────────────────────
 // Persisted: everything except volatile UI fields (modal/bubble/view/pendingView).
@@ -135,6 +147,7 @@ export function initialState() {
     shovel: 0,
     sessionMaxTurns: MAX_TURNS,
     dailyStreak: { lastClaimedDate: null, currentDay: 0 },
+    workers: { hired: { hilda: 0, pip: 0, wila: 0, tuck: 0, osric: 0, dren: 0 }, debt: 0, pool: 1 },
     ...crafting.initial,
     ...quests.initial,
     ...achievements.initial,
@@ -165,7 +178,15 @@ export function initialState() {
     // Always clear story modal queue on boot — never resume mid-modal
     mergedStory.queuedBeat = null;
     mergedStory.beatQueue = [];
-    return { ...fresh, ...saved, story: mergedStory, view: "town", turnsUsed: 0, modal: null, bubble: null, pendingView: null,
+    // Migrate: old saves without state.workers get the fresh initial shape.
+    const mergedWorkers = saved.workers
+      ? {
+          hired: { hilda: 0, pip: 0, wila: 0, tuck: 0, osric: 0, dren: 0, ...(saved.workers.hired ?? {}) },
+          debt:  saved.workers.debt  ?? 0,
+          pool:  saved.workers.pool  ?? 1,
+        }
+      : fresh.workers;
+    return { ...fresh, ...saved, workers: mergedWorkers, story: mergedStory, view: "town", turnsUsed: 0, modal: null, bubble: null, pendingView: null,
       seasonStats: { harvests: 0, upgrades: 0, ordersFilled: 0, coins: 0 } };
   }
   return fresh;
@@ -331,6 +352,8 @@ function coreReducer(state, action) {
       // Summer: orders pay multiplied reward
       const summerMult = ((state.seasonsCycled || 0) % 4 === 1) ? SEASON_EFFECTS.Summer.orderMult : 1;
       const actualReward = o.reward * summerMult;
+      // Auto-repay debt before crediting coins
+      const { coinsCredit, newDebt } = applyDebtRepayment(state, actualReward);
       let bubble = { id: Date.now(), npc: o.npc, text: summerMult > 1 ? `+${actualReward}◉ (☀️ 2×) — thank you!` : `+${actualReward}◉ — thank you!`, ms: 1600 };
       if (xpResult.leveledUp) {
         bubble = { id: Date.now(), npc: "wren", text: `Level ${xpResult.level}! New things await.`, ms: 2400 };
@@ -338,11 +361,12 @@ function coreReducer(state, action) {
       return {
         ...state,
         inventory,
-        coins: state.coins + actualReward,
+        coins: state.coins + coinsCredit,
         xp: xpResult.xp,
         level: xpResult.level,
         orders: state.orders.map((x) => (x.id === o.id ? replacement : x)),
         seasonStats: { ...state.seasonStats, ordersFilled: state.seasonStats.ordersFilled + 1, coins: state.seasonStats.coins + actualReward },
+        workers: state.workers ? { ...state.workers, debt: newDebt } : state.workers,
         bubble,
       };
     }
@@ -477,17 +501,47 @@ function coreReducer(state, action) {
       if (state.built?.powder_store) {
         tools = { ...tools, bomb: (tools.bomb ?? 0) + 2 };
       }
+
+      // ── Wages (FIRST economic event) ──────────────────────────────────────
+      let wageCoins = state.coins;
+      let wageDebt  = state.workers?.debt ?? 0;
+      let totalWages = 0;
+      for (const [id, count] of Object.entries(state.workers?.hired ?? {})) {
+        const w = WORKER_MAP[id];
+        if (!w || count <= 0) continue;
+        totalWages += w.wage * count;
+      }
+      if (wageCoins >= totalWages) {
+        wageCoins -= totalWages;
+      } else {
+        wageDebt += (totalWages - wageCoins);
+        wageCoins = 0;
+      }
+      wageDebt = Math.min(wageDebt, MAX_DEBT);
+
+      // ── season_bonus AFTER wages, AND only when not in debt ───────────────
+      let bonusCoins = 0;
+      if (wageDebt === 0) {
+        const agg = computeWorkerEffects({ ...state, workers: { ...state.workers, debt: 0 } });
+        bonusCoins = Math.round(agg.seasonBonus.coins ?? 0);
+      }
+
+      // ── Pool income from Housing buildings ────────────────────────────────
+      const housingCount = state.built?.housing?.count ?? (state.built?.housing ? 1 : 0);
+      const newPool = (state.workers?.pool ?? 0) + housingCount;
+
       const afterSeason = {
         ...state,
         tools,
-        coins: state.coins + SEASON_END_BONUS_COINS,
+        coins: wageCoins + bonusCoins + SEASON_END_BONUS_COINS,
         turnsUsed: 0,
         seasonsCycled: (state.seasonsCycled || 0) + 1,
         sessionMaxTurns: MAX_TURNS,
         modal: null,
         view: "town",
         pendingView: null,
-        seasonStats: { harvests: 0, upgrades: 0, ordersFilled: 0, coins: 0 },
+        seasonStats: { harvests: 0, upgrades: 0, ordersFilled: 0, coins: 0, capFloaters: {} },
+        workers: { ...state.workers, debt: wageDebt, pool: newPool },
         bubble: { id: Date.now(), npc: "tomas", text: "Bonus: +1 Reshuffle Horn · +25◉", ms: 2000 },
         market: {
           ...(state.market ?? {}),
@@ -516,8 +570,21 @@ function coreReducer(state, action) {
     // ─── Phase 3 Economy ────────────────────────────────────────────────────────
 
     case "BUY_RESOURCE":
-    case "SELL_RESOURCE":
       return applyTrade(state, action);
+    case "SELL_RESOURCE": {
+      const afterTrade = applyTrade(state, action);
+      if (afterTrade === state) return state; // trade rejected (not enough inventory)
+      // Auto-repay debt from sale proceeds
+      const saleProceeds = afterTrade.coins - state.coins;
+      if (saleProceeds > 0 && (state.workers?.debt ?? 0) > 0) {
+        const { coinsCredit, newDebt } = applyDebtRepayment(state, saleProceeds);
+        return { ...afterTrade,
+          coins: state.coins + coinsCredit,
+          workers: afterTrade.workers ? { ...afterTrade.workers, debt: newDebt } : afterTrade.workers,
+        };
+      }
+      return afterTrade;
+    }
 
     case "CONVERT_TO_SUPPLY": {
       const qty = Math.max(1, action.payload.qty | 0);
@@ -637,11 +704,14 @@ function coreReducer(state, action) {
         nextDay = diff === 1 ? Math.min((state.dailyStreak?.currentDay ?? 0) + 1, 30) : 1;
       }
       const reward = DAILY_REWARDS[nextDay] ?? { coins: 25 };
+      const rewardCoins = reward.coins ?? 0;
+      const { coinsCredit: loginCoinsCredit, newDebt: loginNewDebt } = applyDebtRepayment(state, rewardCoins);
       let next = {
         ...state,
         dailyStreak: { lastClaimedDate: today, currentDay: nextDay },
-        coins: (state.coins ?? 0) + (reward.coins ?? 0),
+        coins: (state.coins ?? 0) + loginCoinsCredit,
         runes: (state.runes ?? 0) + (reward.runes ?? 0),
+        workers: state.workers ? { ...state.workers, debt: loginNewDebt } : state.workers,
       };
       if (reward.tool) {
         const cur = next.tools?.[reward.tool] ?? 0;
@@ -670,7 +740,8 @@ function coreReducer(state, action) {
           const fresh = initialState();
           return { ...fresh, settings: state.settings,
             story: { ...INITIAL_STORY_STATE, flags: {}, queuedBeat: null, beatQueue: [], sandbox: false },
-            npcs: { roster: ["wren"], bonds: { wren: 5 } } };
+            npcs: { roster: ["wren"], bonds: { wren: 5 } },
+            workers: { hired: { hilda: 0, pip: 0, wila: 0, tuck: 0, osric: 0, dren: 0 }, debt: 0, pool: 1 } };
         }
       }
       return state;
