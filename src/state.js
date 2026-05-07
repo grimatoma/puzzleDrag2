@@ -1506,8 +1506,8 @@ function coreReducer(state, action) {
         return { ...state, inventory };
       }
       if (action.type === "DEV/ADD_XP") {
-        const { xp, level } = applyXp(state, action.amount ?? 100);
-        return { ...state, xp, level };
+        const { newState } = applyAlmanacXp(state, action.amount ?? 100);
+        return { ...state, almanac: newState.almanac, xp: newState.almanac.xp, level: newState.almanac.level };
       }
       if (action.type === "DEV/ADD_LEVEL") {
         const next = (state.level ?? 1) + (action.amount ?? 1);
