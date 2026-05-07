@@ -341,6 +341,11 @@ describe("initialState", () => {
     expect(new Set(npcs).size).toBe(npcs.length);
   });
 
+  it("does not contain memoryPerks", () => {
+    const state = freshState();
+    expect("memoryPerks" in state).toBe(false);
+  });
+
   it("all NPCs start at Warm bond (5)", () => {
     const state = freshState();
     for (const npc of ["mira", "tomas", "bram", "liss", "wren"]) {
