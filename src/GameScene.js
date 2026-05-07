@@ -145,6 +145,22 @@ export class GameScene extends Phaser.Scene {
         // Do NOT clear toolPending yet; it clears after the tap in _applyMagicWand
         return;
       }
+      if (value === "rake") {
+        this._rakePending = true;
+        return;
+      }
+      if (value === "axe") {
+        this._axePending = true;
+        return;
+      }
+      if (value === "bomb") {
+        this._bombPending = true;
+        return;
+      }
+      if (value === "rune_wildcard") {
+        this._runeWildcardPending = true;
+        return;
+      }
       // Clear the pending flag once handled
       this.time.delayedCall(50, () => this.registry.set("toolPending", null));
     });
@@ -470,6 +486,7 @@ export class GameScene extends Phaser.Scene {
         const extra = fBase[k] ?? 0;
         for (let i = 0; i < extra; i++) workerPool.push(k);
       }
+      this.events.emit("fertilizer-consumed");
     }
     for (let r = 0; r < ROWS; r++) {
       this.grid[r] = this.grid[r] || [];
@@ -669,6 +686,12 @@ export class GameScene extends Phaser.Scene {
         },
       });
     });
+    this.time.delayedCall(this._dur(220), () => {
+      if (!hasValidChain(this.grid)) {
+        this.floatText("No moves — reshuffled!", this.boardX + (COLS * this.tileSize) / 2, this.boardY - 24 * this.dpr);
+        this.shuffleBoard();
+      }
+    });
   }
 
   /** Magic Wand: sweep all tiles of the chosen resource type and collect them (no turn cost). */
@@ -710,6 +733,138 @@ export class GameScene extends Phaser.Scene {
     this.time.delayedCall(this._dur(240), () => this.collapseBoard());
   }
 
+  /** Rake: sweep the 4-connected component (same key) containing the tapped tile. */
+  _applyToolRake(tile) {
+    const targetKey = tile.res.key;
+    // BFS to find all 4-connected tiles with the same key
+    const swept = [];
+    const visited = Array.from({ length: ROWS }, () => new Array(COLS).fill(false));
+    const queue = [{ r: tile.row, c: tile.col }];
+    visited[tile.row][tile.col] = true;
+    const DIRS4 = [[0, 1], [0, -1], [1, 0], [-1, 0]];
+    while (queue.length) {
+      const { r, c } = queue.shift();
+      const t = this.grid[r]?.[c];
+      if (!t || t.res.key !== targetKey) continue;
+      swept.push(t);
+      this.grid[r][c] = null;
+      for (const [dr, dc] of DIRS4) {
+        const nr = r + dr, nc = c + dc;
+        if (nr >= 0 && nr < ROWS && nc >= 0 && nc < COLS && !visited[nr][nc]) {
+          visited[nr][nc] = true;
+          queue.push({ r: nr, c: nc });
+        }
+      }
+    }
+    if (!swept.length) return;
+    swept.forEach((t, i) => {
+      t.sprite.setTint(0x88ff88);
+      this.tweens.add({
+        targets: t.sprite, scale: 0, alpha: 0,
+        angle: Phaser.Math.Between(-20, 20),
+        duration: this._dur(190), delay: i * 12, ease: "Quad.In",
+        onComplete: () => t.destroy(),
+      });
+    });
+    const res = this.biome().resources.find((r) => r.key === targetKey);
+    this.events.emit("chain-collected", {
+      key: targetKey, gained: swept.length, upgrades: 0,
+      chainLength: swept.length, value: res?.value ?? 1, noTurn: true,
+    });
+    this.time.delayedCall(this._dur(220), () => this.collapseBoard());
+  }
+
+  /** Axe: clear an entire row containing the tapped tile. */
+  _applyToolAxe(tile) {
+    const targetRow = tile.row;
+    const swept = [];
+    for (let c = 0; c < COLS; c++) {
+      const t = this.grid[targetRow]?.[c];
+      if (t) { swept.push(t); this.grid[targetRow][c] = null; }
+    }
+    if (!swept.length) return;
+    const gainMap = {};
+    swept.forEach((t, i) => {
+      gainMap[t.res.key] = (gainMap[t.res.key] ?? 0) + 1;
+      t.sprite.setTint(0xff9900);
+      this.tweens.add({
+        targets: t.sprite, scale: 0, alpha: 0,
+        angle: Phaser.Math.Between(-25, 25),
+        duration: this._dur(190), delay: i * 10, ease: "Quad.In",
+        onComplete: () => t.destroy(),
+      });
+    });
+    for (const [key, gained] of Object.entries(gainMap)) {
+      const res = this.biome().resources.find((r) => r.key === key);
+      this.events.emit("chain-collected", {
+        key, gained, upgrades: 0, chainLength: gained, value: res?.value ?? 1, noTurn: true,
+      });
+    }
+    this.time.delayedCall(this._dur(220), () => this.collapseBoard());
+  }
+
+  /** Bomb: clear a 3×3 area around the tapped tile. */
+  _applyToolBomb(tile) {
+    const swept = [];
+    for (let dr = -1; dr <= 1; dr++) {
+      for (let dc = -1; dc <= 1; dc++) {
+        const r = tile.row + dr, c = tile.col + dc;
+        if (r < 0 || r >= ROWS || c < 0 || c >= COLS) continue;
+        const t = this.grid[r]?.[c];
+        if (t) { swept.push(t); this.grid[r][c] = null; }
+      }
+    }
+    if (!swept.length) return;
+    const gainMap = {};
+    swept.forEach((t, i) => {
+      gainMap[t.res.key] = (gainMap[t.res.key] ?? 0) + 1;
+      t.sprite.setTint(0xff4444);
+      this.tweens.add({
+        targets: t.sprite, scale: 0, alpha: 0,
+        angle: Phaser.Math.Between(-40, 40),
+        duration: this._dur(180), delay: i * 8, ease: "Quad.In",
+        onComplete: () => t.destroy(),
+      });
+    });
+    for (const [key, gained] of Object.entries(gainMap)) {
+      const res = this.biome().resources.find((r) => r.key === key);
+      this.events.emit("chain-collected", {
+        key, gained, upgrades: 0, chainLength: gained, value: res?.value ?? 1, noTurn: true,
+      });
+    }
+    this.time.delayedCall(this._dur(220), () => this.collapseBoard());
+  }
+
+  /** Rune Wildcard: sweep entire board of the tapped tile's key (golden tint). */
+  _applyRuneWildcard(tile) {
+    const targetRes = tile.res;
+    const swept = [];
+    for (let r = 0; r < ROWS; r++) {
+      for (let c = 0; c < COLS; c++) {
+        const t = this.grid[r][c];
+        if (t && t.res.key === targetRes.key) {
+          swept.push(t);
+          this.grid[r][c] = null;
+        }
+      }
+    }
+    if (!swept.length) return;
+    swept.forEach((t, i) => {
+      t.sprite.setTint(0xffd248);
+      this.tweens.add({
+        targets: t.sprite, scale: 0, alpha: 0,
+        angle: Phaser.Math.Between(-30, 30),
+        duration: this._dur(200), delay: i * 15, ease: "Quad.In",
+        onComplete: () => t.destroy(),
+      });
+    });
+    this.events.emit("chain-collected", {
+      key: targetRes.key, gained: swept.length, upgrades: 0,
+      chainLength: swept.length, value: targetRes.value, noTurn: true,
+    });
+    this.time.delayedCall(this._dur(240), () => this.collapseBoard());
+  }
+
   // ─── Drag chain ───────────────────────────────────────────────────────────
 
   startPath(tile) {
@@ -718,6 +873,30 @@ export class GameScene extends Phaser.Scene {
     if (this._magicWandPending) {
       this._magicWandPending = false;
       this._applyMagicWand(tile.res);
+      this.time.delayedCall(50, () => this.registry.set("toolPending", null));
+      return;
+    }
+    if (this._rakePending) {
+      this._rakePending = false;
+      this._applyToolRake(tile);
+      this.time.delayedCall(50, () => this.registry.set("toolPending", null));
+      return;
+    }
+    if (this._axePending) {
+      this._axePending = false;
+      this._applyToolAxe(tile);
+      this.time.delayedCall(50, () => this.registry.set("toolPending", null));
+      return;
+    }
+    if (this._bombPending) {
+      this._bombPending = false;
+      this._applyToolBomb(tile);
+      this.time.delayedCall(50, () => this.registry.set("toolPending", null));
+      return;
+    }
+    if (this._runeWildcardPending) {
+      this._runeWildcardPending = false;
+      this._applyRuneWildcard(tile);
       this.time.delayedCall(50, () => this.registry.set("toolPending", null));
       return;
     }

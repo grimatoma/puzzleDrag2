@@ -81,6 +81,7 @@ function PhaserMount({ dispatch, biomeKey, turnsUsed, seasonsCycled, uiLocked, s
               sceneRef.current = scene;
               setPhaserScene(scene);
               scene.events.on("chain-collected", (payload) => dispatch({ type: "CHAIN_COLLECTED", payload }));
+              scene.events.on("fertilizer-consumed", () => dispatch({ type: "FERTILIZER/CONSUMED" }));
               scene.events.on("grid-sync", ({ grid: g }) => dispatch({ type: "GRID/SYNC", payload: { grid: g } }));
               scene.events.on("chain-update", (data) => setChainInfo(data));
               setLoading(false);

@@ -744,7 +744,7 @@ function coreReducer(state, action) {
       }
       // Phase 10.1 — Rake / Axe: arm the board tool (no turn cost)
       if (key === "rake" || key === "axe") {
-        return { ...state, tools, _toolPending: key };
+        return { ...state, tools, toolPending: key };
       }
       // Phase 10.1 — Fertilizer: set flag for next fillBoard (no turn cost)
       if (key === "fertilizer") {
@@ -1292,6 +1292,11 @@ function coreReducer(state, action) {
     case "ACTIVATE_RUNE_WILDCARD": {
       if ((state.runeStash ?? 0) < 1) return state;
       return { ...state, runeStash: state.runeStash - 1, toolPending: "rune_wildcard" };
+    }
+
+    case "FERTILIZER/CONSUMED": {
+      if (!state.fertilizerActive) return state;
+      return { ...state, fertilizerActive: false };
     }
 
     case "USE_TOOL_BOMB": {
