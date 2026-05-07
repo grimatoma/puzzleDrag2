@@ -237,6 +237,8 @@ function CornerToast({ step, stepData, dispatch }) {
 
 export default function Tutorial({ state, dispatch }) {
   const tut = state.tutorial;
+  // Do not render while a story beat is queued — StoryModal must be clickable (fix #1)
+  if (state.story?.queuedBeat) return null;
   if (!tut || !tut.active) return null;
 
   const step = Math.min(tut.step, STEPS.length - 1);
