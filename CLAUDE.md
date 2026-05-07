@@ -28,6 +28,8 @@ This is a Phaser 3 + React game. React owns the page shell; Phaser owns the game
 
 **Texture pipeline:** All tile icons, season badges, and UI decorations are drawn once at scene init into Phaser's texture cache via `src/textures.js`. When adding a new resource type, register its texture there and add its definition to `src/constants.js`.
 
+**Slice-primary actions:** `src/state.js` skips feature slice processing when `coreReducer` returns the same state reference. Any action handled *only* by a feature slice (not by `coreReducer`) must be added to `SLICE_PRIMARY_ACTIONS` in `src/state.js`, otherwise dispatching it will silently do nothing. Examples: `CARTO/TRAVEL`, `APP/HIRE`, `BOSS/TRIGGER`. When adding a new slice action, always check whether it needs to go in this set.
+
 ## Workflow
 
 - Always merge any PR you open once it has been pushed and the PR exists. Use squash merge by default.
