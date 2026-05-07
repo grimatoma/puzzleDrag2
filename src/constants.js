@@ -7,7 +7,7 @@ export const STORAGE_KEYS = {
 export const TILE = 74;
 export const COLS = 6;
 export const ROWS = 6;
-export const MAX_TURNS = 8;
+export const MAX_TURNS = 10;
 export const UPGRADE_EVERY = 3;
 
 export const SEASONS = [
