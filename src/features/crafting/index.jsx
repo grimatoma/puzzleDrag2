@@ -83,7 +83,7 @@ function RecipeCard({ recipeKey, recipe, inventory, built, level, craftedTotals,
         <span className="text-[10px] font-bold text-[#c8923a]">+{recipe.coins}◉</span>
         <button
           disabled={!craftable}
-          onClick={() => dispatch({ type: "CRAFTING/CRAFT_RECIPE", recipeKey })}
+          onClick={() => dispatch({ type: "CRAFTING/CRAFT_RECIPE", payload: { key: recipeKey }, recipeKey })}
           className={`text-[10px] font-bold px-2.5 py-1 rounded-lg border-2 transition-colors ${
             craftable
               ? "bg-[#91bf24] border-[#6a9010] text-white hover:bg-[#a3d028]"
