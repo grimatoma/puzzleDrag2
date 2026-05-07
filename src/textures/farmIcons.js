@@ -664,4 +664,389 @@ export function drawFarmTileIcon(ctx, key) {
     ctx.ellipse(-9, -5, 1.5, 4, -0.2, 0, Math.PI * 2);
     ctx.fill();
   }
+
+  else if (key === "meadow_grass") {
+    // Lush thick meadow grass — long bowing blades, denser & greener than hay,
+    // with a small wildflower nestled at the base.
+    // Soil mound shadow
+    ctx.fillStyle = "rgba(0,0,0,0.22)";
+    ctx.beginPath();
+    ctx.ellipse(0, 22, 22, 5, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // Dark base blades
+    ctx.strokeStyle = "#234012";
+    ctx.lineWidth = 4.5;
+    [-18, -10, -2, 6, 14].forEach((x, i) => {
+      ctx.beginPath();
+      ctx.moveTo(x, 22);
+      ctx.bezierCurveTo(x + 4 - i * 2, 6, x - 6 + i * 3, -8, x - 10 + i * 4, -22);
+      ctx.stroke();
+    });
+    // Mid bright-green blades
+    ctx.strokeStyle = "#5c9c2e";
+    ctx.lineWidth = 3.2;
+    [-15, -7, 1, 9, 16].forEach((x, i) => {
+      ctx.beginPath();
+      ctx.moveTo(x, 20);
+      ctx.bezierCurveTo(x + 2, 4, x - 4 + i * 2, -10, x - 8 + i * 3, -22);
+      ctx.stroke();
+    });
+    // Highlight blades
+    ctx.strokeStyle = "#b6e068";
+    ctx.lineWidth = 1.5;
+    [-12, -4, 4, 12].forEach((x, i) => {
+      ctx.beginPath();
+      ctx.moveTo(x, 18);
+      ctx.bezierCurveTo(x + 2, 2, x - 2 + i * 2, -8, x - 4 + i * 3, -20);
+      ctx.stroke();
+    });
+    // Tiny wildflower at base (white petals + yellow center)
+    ctx.fillStyle = "#fffbe0";
+    [[-7, -2], [-4, -4], [-10, -4], [-7, -6], [-4, -1]].forEach(([px, py]) => {
+      ctx.beginPath();
+      ctx.arc(px, py, 2.2, 0, Math.PI * 2);
+      ctx.fill();
+    });
+    ctx.strokeStyle = "#7a8a30";
+    ctx.lineWidth = 0.8;
+    [[-7, -2], [-4, -4], [-10, -4], [-7, -6], [-4, -1]].forEach(([px, py]) => {
+      ctx.beginPath();
+      ctx.arc(px, py, 2.2, 0, Math.PI * 2);
+      ctx.stroke();
+    });
+    ctx.fillStyle = "#ffd248";
+    ctx.beginPath();
+    ctx.arc(-7, -3, 1.6, 0, Math.PI * 2);
+    ctx.fill();
+    // Soil base
+    ctx.fillStyle = "#5a3a18";
+    ctx.beginPath();
+    ctx.ellipse(0, 24, 14, 3, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  else if (key === "spiky_grass") {
+    // Hardy thorny spiky grass — short rigid blades with prominent thorns.
+    // Soil shadow
+    ctx.fillStyle = "rgba(0,0,0,0.22)";
+    ctx.beginPath();
+    ctx.ellipse(0, 22, 22, 4.5, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // Outer dark spikes (sawtooth fan)
+    ctx.fillStyle = "#3d4a14";
+    ctx.strokeStyle = "#1f2a08";
+    ctx.lineWidth = 1.5;
+    const outerSpikes = [
+      [-22, 20, -16, -22],
+      [-14, 22, -10, -20],
+      [-6, 22, -4, -24],
+      [2, 22, 4, -24],
+      [10, 22, 12, -20],
+      [18, 20, 16, -22],
+    ];
+    outerSpikes.forEach(([x1, y1, xt, yt]) => {
+      ctx.beginPath();
+      ctx.moveTo(x1 - 4, y1);
+      ctx.lineTo(x1 + 4, y1);
+      ctx.lineTo(xt, yt);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+    });
+    // Mid-tone narrower spikes layered in front
+    ctx.fillStyle = "#83a235";
+    ctx.strokeStyle = "#3a4818";
+    ctx.lineWidth = 1.2;
+    const midSpikes = [
+      [-18, 18, -14, -16],
+      [-10, 20, -8, -16],
+      [-2, 20, 0, -20],
+      [6, 20, 8, -16],
+      [14, 18, 12, -16],
+    ];
+    midSpikes.forEach(([x1, y1, xt, yt]) => {
+      ctx.beginPath();
+      ctx.moveTo(x1 - 3, y1);
+      ctx.lineTo(x1 + 3, y1);
+      ctx.lineTo(xt, yt);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+    });
+    // Thorn highlights along centre spike
+    ctx.fillStyle = "#c8de72";
+    [-14, -4, 6, 14].forEach((x, i) => {
+      ctx.beginPath();
+      ctx.moveTo(x - 1, -8 - i);
+      ctx.lineTo(x + 1, -8 - i);
+      ctx.lineTo(x, -16 - i * 2);
+      ctx.closePath();
+      ctx.fill();
+    });
+    // Side thorn protrusions
+    ctx.strokeStyle = "#1f2a08";
+    ctx.lineWidth = 1.4;
+    [[-8, -4, -14, -6], [4, -4, 10, -6], [-10, 4, -16, 2], [6, 4, 12, 2]].forEach(([x1, y1, x2, y2]) => {
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x2, y2);
+      ctx.stroke();
+    });
+    // Soil base
+    ctx.fillStyle = "#5a3a18";
+    ctx.beginPath();
+    ctx.ellipse(0, 24, 16, 3, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  else if (key === "turkey") {
+    // Plump tom turkey with fanned tail feathers.
+    // Drop shadow
+    ctx.fillStyle = "rgba(0,0,0,0.25)";
+    ctx.beginPath();
+    ctx.ellipse(2, 22, 20, 4, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // Fanned tail feathers — three layers, alternating colors
+    const tailColors = ["#5a2f10", "#8a4a18", "#c08038", "#e8b048"];
+    for (let layer = 0; layer < 4; layer++) {
+      ctx.fillStyle = tailColors[layer];
+      ctx.strokeStyle = "#2a1408";
+      ctx.lineWidth = 1.2;
+      const r = 22 - layer * 3;
+      const startA = -Math.PI * 0.95;
+      const endA   = -Math.PI * 0.05;
+      const steps = 7 - layer;
+      for (let i = 0; i < steps; i++) {
+        const a = startA + (i / (steps - 1)) * (endA - startA);
+        ctx.save();
+        ctx.translate(0, 8);
+        ctx.rotate(a + Math.PI / 2);
+        ctx.beginPath();
+        ctx.ellipse(0, -r * 0.55, 3.2 - layer * 0.2, r * 0.55, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        // Feather quill highlight
+        ctx.strokeStyle = "rgba(255,230,170,0.5)";
+        ctx.lineWidth = 0.8;
+        ctx.beginPath();
+        ctx.moveTo(0, -r * 0.95);
+        ctx.lineTo(0, -r * 0.2);
+        ctx.stroke();
+        ctx.strokeStyle = "#2a1408";
+        ctx.lineWidth = 1.2;
+        ctx.restore();
+      }
+    }
+    // Body (rounded brown egg-shape)
+    const bodyGrad = ctx.createRadialGradient(-4, 4, 2, 0, 8, 16);
+    bodyGrad.addColorStop(0, "#7a4a18");
+    bodyGrad.addColorStop(1, "#3a1f08");
+    ctx.fillStyle = bodyGrad;
+    ctx.beginPath();
+    ctx.ellipse(0, 8, 12, 11, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = "#1a0a04";
+    ctx.lineWidth = 1.8;
+    ctx.stroke();
+    // Breast highlight
+    ctx.fillStyle = "rgba(220,150,60,0.35)";
+    ctx.beginPath();
+    ctx.ellipse(-3, 6, 5, 7, -0.3, 0, Math.PI * 2);
+    ctx.fill();
+    // Head
+    ctx.fillStyle = "#8a4a1a";
+    ctx.beginPath();
+    ctx.arc(0, -4, 6, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = "#1a0a04";
+    ctx.lineWidth = 1.6;
+    ctx.stroke();
+    // Beak
+    ctx.fillStyle = "#f6c64a";
+    ctx.beginPath();
+    ctx.moveTo(5, -4);
+    ctx.lineTo(11, -2);
+    ctx.lineTo(5, -1);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = "#5e3a08";
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    // Wattle (red dangly bit)
+    ctx.fillStyle = "#c8242a";
+    ctx.beginPath();
+    ctx.moveTo(4, -2);
+    ctx.quadraticCurveTo(8, 2, 4, 4);
+    ctx.quadraticCurveTo(2, 2, 4, -2);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = "#5a0810";
+    ctx.lineWidth = 0.8;
+    ctx.stroke();
+    // Eye
+    ctx.fillStyle = "#fff8e0";
+    ctx.beginPath();
+    ctx.arc(2, -5, 1.6, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#1a0a04";
+    ctx.beginPath();
+    ctx.arc(2.2, -5, 0.9, 0, Math.PI * 2);
+    ctx.fill();
+    // Feet
+    ctx.strokeStyle = "#f6c64a";
+    ctx.lineWidth = 1.6;
+    [[-4, 18], [4, 18]].forEach(([fx, fy]) => {
+      ctx.beginPath();
+      ctx.moveTo(fx, fy);
+      ctx.lineTo(fx, fy + 4);
+      ctx.moveTo(fx, fy + 4);
+      ctx.lineTo(fx - 2, fy + 6);
+      ctx.moveTo(fx, fy + 4);
+      ctx.lineTo(fx + 2, fy + 6);
+      ctx.stroke();
+    });
+  }
+
+  else if (key === "clover") {
+    // Lucky four-leaf clover patch — three trefoil shapes with one bigger 4-leaf.
+    // Soil shadow
+    ctx.fillStyle = "rgba(0,0,0,0.20)";
+    ctx.beginPath();
+    ctx.ellipse(0, 22, 22, 4, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // Helper to draw a heart-shaped clover leaf
+    const drawLeaf = (cx, cy, r, angle, lightHex, darkHex) => {
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.rotate(angle);
+      const grad = ctx.createRadialGradient(-r * 0.3, -r * 0.3, 1, 0, 0, r);
+      grad.addColorStop(0, lightHex);
+      grad.addColorStop(1, darkHex);
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      // Heart-shape leaf
+      ctx.moveTo(0, r * 0.4);
+      ctx.bezierCurveTo(r * 1.1, r * 0.2, r * 0.9, -r * 0.9, 0, -r * 0.3);
+      ctx.bezierCurveTo(-r * 0.9, -r * 0.9, -r * 1.1, r * 0.2, 0, r * 0.4);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = "#1f4810";
+      ctx.lineWidth = 1.4;
+      ctx.stroke();
+      // Leaf vein
+      ctx.strokeStyle = "rgba(255,255,255,0.4)";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(0, r * 0.35);
+      ctx.lineTo(0, -r * 0.25);
+      ctx.stroke();
+      ctx.restore();
+    };
+    // Background trefoil (small, behind)
+    drawLeaf(-12, 8, 6, -0.5, "#7cba48", "#3a6818");
+    drawLeaf(-8, 14, 6, 0.4,  "#7cba48", "#3a6818");
+    drawLeaf(-4, 10, 6, 0,    "#7cba48", "#3a6818");
+    // Stem
+    ctx.strokeStyle = "#3a5a18";
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.moveTo(4, 22);
+    ctx.bezierCurveTo(2, 14, 4, 6, 4, -4);
+    ctx.stroke();
+    // Foreground 4-leaf clover (the lucky one)
+    drawLeaf(4, -10, 9, 0,            "#a8e068", "#3a7018");
+    drawLeaf(4 + 9, -2, 9, Math.PI / 2, "#a8e068", "#3a7018");
+    drawLeaf(4, 6, 9, Math.PI,        "#a8e068", "#3a7018");
+    drawLeaf(4 - 9, -2, 9, -Math.PI / 2,"#a8e068", "#3a7018");
+    // Center node
+    ctx.fillStyle = "#fff8c0";
+    ctx.beginPath();
+    ctx.arc(4, -2, 1.8, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = "#5a7818";
+    ctx.lineWidth = 0.8;
+    ctx.stroke();
+  }
+
+  else if (key === "melon") {
+    // Round striped summer melon with leaf and curling tendril.
+    // Drop shadow
+    ctx.fillStyle = "rgba(0,0,0,0.25)";
+    ctx.beginPath();
+    ctx.ellipse(2, 22, 22, 4.5, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // Body
+    const grad = ctx.createRadialGradient(-6, -6, 4, 0, 0, 22);
+    grad.addColorStop(0, "#d4ed90");
+    grad.addColorStop(0.55, "#7eb44a");
+    grad.addColorStop(1, "#3a6818");
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(0, 4, 19, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = "#1f4810";
+    ctx.lineWidth = 2.2;
+    ctx.stroke();
+    // Vertical dark stripes (clipped to body circle)
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(0, 4, 18, 0, Math.PI * 2);
+    ctx.clip();
+    ctx.strokeStyle = "rgba(28,68,16,0.7)";
+    ctx.lineWidth = 2;
+    [-12, -4, 4, 12].forEach((x) => {
+      ctx.beginPath();
+      ctx.moveTo(x, -16);
+      ctx.bezierCurveTo(x + (x < 0 ? 1 : -1), 0, x + (x < 0 ? 2 : -2), 12, x + (x < 0 ? 2 : -2), 24);
+      ctx.stroke();
+    });
+    // Lighter highlight stripes
+    ctx.strokeStyle = "rgba(220,240,160,0.55)";
+    ctx.lineWidth = 1.2;
+    [-8, 0, 8].forEach((x) => {
+      ctx.beginPath();
+      ctx.moveTo(x, -14);
+      ctx.bezierCurveTo(x, 0, x + 1, 12, x + 1, 22);
+      ctx.stroke();
+    });
+    ctx.restore();
+    // Specular highlight
+    ctx.fillStyle = "rgba(255,255,255,0.45)";
+    ctx.beginPath();
+    ctx.ellipse(-7, -6, 4, 7, -0.4, 0, Math.PI * 2);
+    ctx.fill();
+    // Stem (top knob)
+    ctx.fillStyle = "#5a3a14";
+    ctx.beginPath();
+    ctx.ellipse(-1, -16, 3.5, 4, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = "#2a1808";
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
+    // Leaf
+    ctx.fillStyle = "#5a8a26";
+    ctx.beginPath();
+    ctx.moveTo(-2, -18);
+    ctx.bezierCurveTo(-12, -22, -16, -14, -10, -10);
+    ctx.bezierCurveTo(-6, -14, -2, -16, -2, -18);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = "#2a4a10";
+    ctx.lineWidth = 1.3;
+    ctx.stroke();
+    ctx.strokeStyle = "rgba(255,255,255,0.4)";
+    ctx.lineWidth = 0.8;
+    ctx.beginPath();
+    ctx.moveTo(-2, -18);
+    ctx.lineTo(-10, -12);
+    ctx.stroke();
+    // Curling tendril
+    ctx.strokeStyle = "#3a5a18";
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    ctx.moveTo(2, -18);
+    ctx.bezierCurveTo(8, -22, 14, -18, 12, -14);
+    ctx.bezierCurveTo(10, -12, 14, -10, 16, -14);
+    ctx.stroke();
+  }
 }

@@ -1,6 +1,9 @@
-import { useState } from "react";
-import { CATEGORIES } from "./data.js";
+import { useEffect, useRef, useState } from "react";
+import { CATEGORIES, SPECIES_MAP } from "./data.js";
 import { getCategoryViewModel } from "./effects.js";
+import { drawTileIcon } from "../../textures.js";
+import { BIOMES } from "../../constants.js";
+import { hex } from "../../utils.js";
 
 export const viewKey = "species";
 
@@ -19,6 +22,86 @@ const CATEGORY_ICONS = {
   berry: "🫐",
   bird: "🐣",
 };
+
+const ALL_FARM_RESOURCES = Object.fromEntries(
+  BIOMES.farm.resources.map((r) => [r.key, r]),
+);
+
+function lighten(hexColor, amt) {
+  const r = parseInt(hexColor.slice(1, 3), 16);
+  const g = parseInt(hexColor.slice(3, 5), 16);
+  const b = parseInt(hexColor.slice(5, 7), 16);
+  const lr = Math.min(255, Math.round(r + (255 - r) * amt));
+  const lg = Math.min(255, Math.round(g + (255 - g) * amt));
+  const lb = Math.min(255, Math.round(b + (255 - b) * amt));
+  return `#${lr.toString(16).padStart(2, "0")}${lg.toString(16).padStart(2, "0")}${lb.toString(16).padStart(2, "0")}`;
+}
+
+/**
+ * Tiny tile-style portrait that re-uses the same procedural icons rendered
+ * onto puzzle tiles, so the species panel matches the in-board art exactly.
+ */
+function SpeciesIcon({ speciesId, size = 40, locked = false }) {
+  const ref = useRef(null);
+  const sp = SPECIES_MAP[speciesId];
+  const key = sp?.baseResource;
+  const res = key ? ALL_FARM_RESOURCES[key] : null;
+
+  useEffect(() => {
+    const canvas = ref.current;
+    if (!canvas || !res) return;
+    const dpr = Math.min(window.devicePixelRatio || 1, 3);
+    canvas.width = size * dpr;
+    canvas.height = size * dpr;
+    const ctx = canvas.getContext("2d");
+    ctx.imageSmoothingEnabled = false;
+    ctx.scale(dpr, dpr);
+    ctx.clearRect(0, 0, size, size);
+    // Rounded background swatch in the resource's tile color
+    const baseColor = hex(res.color);
+    const grad = ctx.createRadialGradient(size * 0.4, size * 0.35, 2, size / 2, size / 2, size * 0.6);
+    grad.addColorStop(0, lighten(baseColor, 0.25));
+    grad.addColorStop(1, baseColor);
+    ctx.fillStyle = grad;
+    const r = 8;
+    ctx.beginPath();
+    ctx.moveTo(r, 0);
+    ctx.arcTo(size, 0, size, size, r);
+    ctx.arcTo(size, size, 0, size, r);
+    ctx.arcTo(0, size, 0, 0, r);
+    ctx.arcTo(0, 0, size, 0, r);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = "rgba(255,255,255,0.32)";
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    // Draw the icon centered, scaled down so a 74-canvas icon fits in `size`
+    const iconScale = (size / 74) * 0.92;
+    ctx.save();
+    ctx.translate(size / 2, size / 2);
+    ctx.scale(iconScale, iconScale);
+    drawTileIcon(ctx, key);
+    ctx.restore();
+  }, [size, key, res]);
+
+  if (!res) {
+    return (
+      <div
+        className={`flex items-center justify-center text-2xl rounded-lg ${locked ? "opacity-30 grayscale" : ""}`}
+        style={{ width: size, height: size }}
+      >
+        ?
+      </div>
+    );
+  }
+  return (
+    <canvas
+      ref={ref}
+      style={{ width: size, height: size, borderRadius: 8, filter: locked ? "grayscale(1) brightness(0.55)" : "none" }}
+      aria-hidden="true"
+    />
+  );
+}
 
 function SpeciesRow({ row, category, dispatch }) {
   const handleAction = () => {
@@ -42,13 +125,9 @@ function SpeciesRow({ row, category, dispatch }) {
           : "bg-[#2b1e0f]/40 border-[#8a6040]/50"
       }`}
     >
-      {/* Portrait / silhouette */}
-      <div
-        className={`w-10 h-10 rounded-lg flex items-center justify-center text-2xl flex-shrink-0 ${
-          row.locked ? "opacity-30 grayscale" : ""
-        }`}
-      >
-        {CATEGORY_ICONS[category] ?? "?"}
+      {/* Portrait / silhouette — unique procedural species art */}
+      <div className="flex-shrink-0">
+        <SpeciesIcon speciesId={row.id} size={40} locked={row.locked} />
       </div>
 
       {/* Name + status + description */}
