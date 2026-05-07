@@ -37,7 +37,6 @@ export function BottomNav({ view, modal, dispatch, state }) {
     { key: "cartography", icon: "🗺️", label: "Map" },
     { key: "townsfolk",   icon: "👥",  label: "Townsfolk" },
     { key: "tileCollection", icon: "🧩",  label: "Tiles" },
-    ...(built.caravan_post ? [{ key: "market", icon: "🏪", label: "Market" }] : []),
     ...(built.portal       ? [{ key: "portal", icon: "🔮", label: "Portal" }] : []),
   ];
   const items = baseItems;
