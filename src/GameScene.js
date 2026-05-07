@@ -1,5 +1,5 @@
 import Phaser from "phaser";
-import { TILE, COLS, ROWS, UPGRADE_EVERY, SEASONS, BIOMES } from "./constants.js";
+import { TILE, COLS, ROWS, UPGRADE_THRESHOLDS, SEASONS, BIOMES } from "./constants.js";
 import { upgradeCountForChain, resourceGainForChain, rollResourceWithWeather } from "./utils.js";
 const cssColor = (num) => Phaser.Display.Color.IntegerToColor(num).rgba;
 import { rounded, makeTextures } from "./textures.js";
@@ -373,36 +373,52 @@ export class GameScene extends Phaser.Scene {
       this.pathNodeG.fillCircle(t.x, t.y, nr * 0.4);
     });
 
-    const next = this.path.length ? this.nextResource(this.path[0].res) : null;
+    const res0 = this.path.length ? this.path[0].res : null;
+    const next = res0 ? this.nextResource(res0) : null;
+    const threshold = res0 ? (UPGRADE_THRESHOLDS[res0.key] || 0) : 0;
     const prevGroups = this._prevStarGroups;
     let groupCount = 0;
-    if (next) {
+    if (next && threshold > 0) {
       const off = 24 * this.tileScale;
-      for (let i = UPGRADE_EVERY - 1; i < this.path.length; i += UPGRADE_EVERY) {
+      for (let i = threshold - 1; i < this.path.length; i += threshold) {
         const t = this.path[i];
-        const star = this.add.image(t.x + off, t.y - off, "spark").setScale(0.72 * this.tileSpriteScale).setDepth(12);
+        // Scale star by upgrade tier (1×, 2×, 3×)
+        const tier = groupCount + 1; // 1-based
+        const baseStarScale = (0.62 + tier * 0.12) * this.tileSpriteScale;
+        const swayAmp = 10 + tier * 5;  // ±10° / ±15° / ±20°
+        const swayDur = Math.max(400, 950 - (tier - 1) * 175); // 950 / 775 / 600ms
+        const star = this.add.image(t.x + off, t.y - off, "spark").setScale(baseStarScale).setDepth(12);
         const preview = this.add.image(t.x + off, t.y + off * 0.85, `tile_${next.key}`).setScale(0.32 * this.tileSpriteScale).setDepth(12);
+        // 3× tier: tint star orange-white
+        if (tier >= 3) star.setTint(0xffb347);
         const swayStar = () => {
           if (!star.active) return;
           this.tweens.add({
             targets: star,
-            angle: { from: 10, to: -10 },
+            angle: { from: swayAmp, to: -swayAmp },
             yoyo: true,
             repeat: -1,
-            duration: 950,
+            duration: swayDur,
             ease: "Sine.InOut",
           });
         };
 
         if (groupCount >= prevGroups) {
-          // Pop-in + gentle sway for new star
+          // Pop-in + sway for new star
           star.setScale(0).setAngle(-20);
-          this.tweens.add({ targets: star, scale: 0.72 * this.tileSpriteScale, angle: 15, duration: 320, ease: "Back.Out" });
+          this.tweens.add({ targets: star, scale: baseStarScale, angle: swayAmp, duration: 320, ease: "Back.Out" });
           this.time.delayedCall(320, swayStar);
           preview.setScale(0).setAlpha(0);
           this.tweens.add({ targets: preview, scale: 0.32 * this.tileSpriteScale, alpha: 1, duration: 260, ease: "Back.Out", delay: 110 });
+          // 2× tier: glow halo
+          if (tier >= 2) {
+            const halo = this.add.graphics().setDepth(11);
+            halo.lineStyle(3 * this.tileScale, 0xffd248, 0.55);
+            halo.strokeCircle(t.x + off, t.y - off, 14 * this.tileScale);
+            this.pathStars.push(halo);
+          }
         } else {
-          star.setAngle(10);
+          star.setAngle(swayAmp);
           swayStar();
         }
         this.pathStars.push(star, preview);
@@ -468,22 +484,26 @@ export class GameScene extends Phaser.Scene {
     if (!this.path.length) return;
     const res = this.path[0].res;
     const next = this.nextResource(res);
-    const upgradeTotal = next ? upgradeCountForChain(this.path.length) : 0;
+    const upgradeTotal = next ? upgradeCountForChain(this.path.length, res.key) : 0;
     const gained = resourceGainForChain(this.path.length);
-    this.floatText(`+${gained} ${res.label}${upgradeTotal ? `  ★ ${upgradeTotal}` : ""}`, this.path[this.path.length - 1].x, this.path[this.path.length - 1].y);
+    const floatSuffix = upgradeTotal > 0 ? `  ★×${upgradeTotal}` : "";
+    this.floatText(`+${gained} ${res.label}${floatSuffix}`, this.path[this.path.length - 1].x, this.path[this.path.length - 1].y);
 
     // Chain-length juice — escalating screen shake and a radial wipe. Big chains
-    // earn loud feedback; tier upgrades (every 3rd tile) add an extra burst.
+    // earn loud feedback; upgrades add an extra burst.
     this.shakeForChain(this.path.length);
     this.radialFlash(this.path[this.path.length - 1].x, this.path[this.path.length - 1].y, this.path.length);
 
-    this.path.forEach((tile, i) => {
-      const upgrade = next && (i + 1) % UPGRADE_EVERY === 0;
-      if (upgrade) {
-        tile.setSelected(false);
+    // Queue upgrade tiles to spawn at the endpoint after board collapse.
+    // All upgrades land at the endpoint position (last tile in path).
+    if (next && upgradeTotal > 0) {
+      for (let u = 0; u < upgradeTotal; u++) {
         this.pendingUpgrades.push(next);
-        this.upgradeBurst(tile.x, tile.y);
       }
+      this.upgradeBurst(this.path[this.path.length - 1].x, this.path[this.path.length - 1].y);
+    }
+
+    this.path.forEach((tile, i) => {
       this.grid[tile.row][tile.col] = null;
       this.tweens.add({ targets: tile.sprite, scale: 0, angle: Phaser.Math.Between(-25, 25), alpha: 0, duration: 180 + i * 15, onComplete: () => tile.destroy() });
     });
@@ -525,8 +545,9 @@ export class GameScene extends Phaser.Scene {
   updateChainBadge() {
     const n = this.path.length;
     const gained = resourceGainForChain(n);
-    const next = n ? this.nextResource(this.path[0].res) : null;
-    const k = next ? upgradeCountForChain(n) : 0;
+    const res = n ? this.path[0].res : null;
+    const next = res ? this.nextResource(res) : null;
+    const k = next ? upgradeCountForChain(n, res.key) : 0;
     if (this.chainBadge) {
       this.chainBadgeText.setText(k > 0 ? `chain × ${gained}   +${k}★` : `chain × ${gained}`);
     }
@@ -541,8 +562,9 @@ export class GameScene extends Phaser.Scene {
   _emitChainUpdate() {
     const n = this.path.length;
     const gained = resourceGainForChain(n);
-    const next = n ? this.nextResource(this.path[0].res) : null;
-    const k = next ? upgradeCountForChain(n) : 0;
+    const res = n ? this.path[0].res : null;
+    const next = res ? this.nextResource(res) : null;
+    const k = next ? upgradeCountForChain(n, res.key) : 0;
     this.events.emit("chain-update", { count: gained, upgrades: k });
   }
 

@@ -15,7 +15,14 @@ export const TILE = 74;
 export const COLS = 6;
 export const ROWS = 6;
 export const MAX_TURNS = 10;
-export const UPGRADE_EVERY = 3;
+
+export const UPGRADE_THRESHOLDS = {
+  hay: 6, wheat: 5, grain: 4,
+  log: 5, plank: 4,
+  berry: 7,
+  stone: 8, cobble: 6,
+  ore: 6, coal: 7, gem: 5,
+};
 
 export const SEASONS = [
   { name: "Spring", icon: "flower", bg: 0x7dbd48, fill: 0x8fd85a, accent: 0x5daa35 },
