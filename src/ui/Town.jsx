@@ -123,6 +123,9 @@ const TOWN_BIOME_CONFIGS = {
       larder:  { x: 740, y: 380, w: 72,  h: 82  },
       forge:   { x: 848, y: 366, w: 98,  h: 96  },
       caravan_post: { x: 966, y: 370, w: 104, h: 86  },
+      housing:  { x: 430, y: 262, w: 80, h: 92 },
+      housing2: { x: 520, y: 262, w: 80, h: 92 },
+      housing3: { x: 610, y: 262, w: 80, h: 92 },
     },
     // Gently rolling hills — soft bezier curves
     hill1Path: "M0,305 C120,278 260,248 420,262 C580,276 700,252 860,258 C960,262 1040,252 1100,248 L1100,600 L0,600 Z",
@@ -142,6 +145,9 @@ const TOWN_BIOME_CONFIGS = {
       inn:     { x: 638, y: 354, w: 112, h: 122 },
       larder:  { x: 784, y: 382, w: 74,  h: 82  },
       caravan_post: { x: 888, y: 368, w: 104, h: 88  },
+      housing:  { x: 430, y: 262, w: 80, h: 92 },
+      housing2: { x: 520, y: 262, w: 80, h: 92 },
+      housing3: { x: 610, y: 262, w: 80, h: 92 },
     },
     // Jagged rocky peaks — angular lineto commands
     hill1Path: "M0,288 L78,252 L142,274 L218,218 L308,258 L418,196 L518,240 L638,206 L738,234 L838,196 L938,224 L1018,210 L1100,216 L1100,600 L0,600 Z",
@@ -712,6 +718,8 @@ function BuildingIllustration({ id, isBuilt }) {
       </svg>
     ),
   };
+  illustrations.housing2 = illustrations.housing;
+  illustrations.housing3 = illustrations.housing;
   return illustrations[id] || null;
 }
 
@@ -1181,7 +1189,8 @@ export function TownView({ state, dispatch }) {
         <div className="absolute pointer-events-none" style={{ left: 0, right: 0, top: 0, bottom: 0 }}>
           {sortedBuildings.map((b) => {
             const isBuilt = !!state.built[b.id];
-            const isLocked = state.level < b.lv;
+            const prereqMet = !b.requires || !!state.built[b.requires];
+            const isLocked = state.level < b.lv || !prereqMet;
             const canAfford = state.coins >= (b.cost.coins || 0) &&
               Object.entries(b.cost).every(([k, v]) => k === "coins" || (state.inventory[k] || 0) >= v);
             const CRAFTING_STATIONS = new Set(["bakery", "forge", "larder"]);
@@ -1198,7 +1207,7 @@ export function TownView({ state, dispatch }) {
             };
             const costStr = Object.entries(b.cost).map(([k, v]) => k === "coins" ? `${v}◉` : `${v} ${k}`).join(" · ");
             const buildingTipData = isBuilt ? null : {
-              label: isLocked ? `🔒 ${b.name} (Level ${b.lv})` : `Build ${b.name}: ${costStr}`,
+              label: isLocked ? (!prereqMet ? `🔒 ${b.name} (requires previous Housing)` : `🔒 ${b.name} (Level ${b.lv})`) : `Build ${b.name}: ${costStr}`,
               desc: b.desc,
               color: isLocked ? "#f7d572" : canAfford ? "#9bdb6a" : "#f7d572",
             };

@@ -137,11 +137,9 @@ export function totalHired(state) {
 
 /** Worker capacity from housing buildings. 1 base + 1 per Housing Block. */
 export function housingCapacity(state) {
-  const housingBuilt = state?.built?.housing;
-  const housingCount = typeof housingBuilt === "object"
-    ? (housingBuilt?.count ?? 1)
-    : (housingBuilt ? 1 : 0);
-  return 1 + housingCount;
+  const count = ["housing", "housing2", "housing3"]
+    .filter(id => !!state?.built?.[id]).length;
+  return 1 + count;
 }
 
 /** Returns the display label for a worker's slot count (plain number string). */
