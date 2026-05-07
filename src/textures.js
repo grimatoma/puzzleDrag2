@@ -194,6 +194,72 @@ export function makeTextures(scene) {
     });
   });
 
+  // ─── Fire hazard tile (dark background + orange-red flame) ──────────────────
+  [false, true].forEach((selected) => {
+    const key = `tile_fire${selected ? "_sel" : ""}`;
+    canvasTexture(scene, key, TILE, TILE, (ctx, w, h) => {
+      ctx.clearRect(0, 0, w, h);
+      // Drop shadow
+      ctx.fillStyle = "rgba(0,0,0,.22)";
+      ctx.beginPath();
+      ctx.ellipse(w / 2 + 2, h - 14, 26, 8, 0, 0, Math.PI * 2);
+      ctx.fill();
+      if (selected) {
+        rr(ctx, 3, 1, w - 6, h - 6, 16);
+        ctx.fillStyle = "rgba(255,100,0,.40)";
+        ctx.fill();
+      }
+      // Dark tile background
+      rr(ctx, 7, 5, w - 14, h - 14, 14);
+      const bgGrad = ctx.createRadialGradient(w / 2 - 6, h / 2 - 8, 3, w / 2, h / 2, w / 2);
+      bgGrad.addColorStop(0, "#3a1a00");
+      bgGrad.addColorStop(1, "#1a0800");
+      ctx.fillStyle = bgGrad;
+      ctx.fill();
+      ctx.lineWidth = selected ? 7 : 3;
+      ctx.strokeStyle = selected ? "#ff6600" : "rgba(255,100,0,.50)";
+      ctx.stroke();
+      if (selected) {
+        rr(ctx, 11, 9, w - 22, h - 22, 11);
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = "rgba(255,200,100,.65)";
+        ctx.stroke();
+      }
+      // Flame icon — three layered teardrops
+      ctx.save();
+      ctx.translate(w / 2, h / 2);
+      // Outer glow
+      const glow = ctx.createRadialGradient(0, 4, 2, 0, 0, 22);
+      glow.addColorStop(0, "rgba(255,80,0,.70)");
+      glow.addColorStop(1, "rgba(255,80,0,0)");
+      ctx.fillStyle = glow;
+      ctx.beginPath(); ctx.arc(0, 0, 22, 0, Math.PI * 2); ctx.fill();
+      // Main flame body
+      ctx.beginPath();
+      ctx.moveTo(0, -18);
+      ctx.bezierCurveTo(10, -8, 14, 6, 6, 14);
+      ctx.bezierCurveTo(2, 18, -2, 18, -6, 14);
+      ctx.bezierCurveTo(-14, 6, -10, -8, 0, -18);
+      ctx.closePath();
+      const flameGrad = ctx.createLinearGradient(0, -18, 0, 18);
+      flameGrad.addColorStop(0, "#ffdd44");
+      flameGrad.addColorStop(0.4, "#ff7700");
+      flameGrad.addColorStop(1, "#cc2200");
+      ctx.fillStyle = flameGrad;
+      ctx.fill();
+      // Inner bright core
+      ctx.beginPath();
+      ctx.moveTo(0, -10);
+      ctx.bezierCurveTo(5, -3, 7, 5, 2, 10);
+      ctx.bezierCurveTo(0, 12, -2, 12, -2, 10);
+      ctx.bezierCurveTo(-7, 5, -5, -3, 0, -10);
+      ctx.closePath();
+      ctx.fillStyle = "rgba(255,240,100,.75)";
+      ctx.fill();
+      ctx.restore();
+    }, dpr);
+  });
+
   canvasTexture(scene, "spark", 72, 72, (ctx, w, h) => {
     ctx.translate(w / 2, h / 2);
     // Soft glow halo

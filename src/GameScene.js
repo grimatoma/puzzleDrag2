@@ -539,6 +539,23 @@ export class GameScene extends Phaser.Scene {
         }
       }
     }
+    // Fire hazard overlay: replace grid cells at fire positions with fire tiles
+    const hazardFire = this.registry.get("hazardFire");
+    if (hazardFire?.cells?.length) {
+      for (const { row: fr, col: fc } of hazardFire.cells) {
+        if (fr < 0 || fr >= ROWS || fc < 0 || fc >= COLS) continue;
+        const existing = this.grid[fr][fc];
+        if (existing) { this.tweens.killTweensOf(existing.sprite); existing.destroy(); }
+        const fx = this.boardX + fc * ts + ts / 2;
+        const fy = this.boardY + fr * ts + ts / 2;
+        const fireRes = { key: "fire", value: 0, sway: null, label: "fire", next: null };
+        const fireTile = new TileObj(this, fx, initial ? fy - 500 : fy - 140, fc, fr, fireRes);
+        fireTile.sprite.setScale(this.tileSpriteScale);
+        this.grid[fr][fc] = fireTile;
+        this.tweens.add({ targets: fireTile.sprite, y: fy, duration: this._dur((initial ? 450 + fr * 28 : 210) + frostBonus), ease: "Back.Out" });
+      }
+    }
+
     // 1.2 — Dead-board auto-shuffle: after every non-initial fill, check for valid chains.
     if (!initial) {
       const delay = frostBonus ? 350 : 240;
@@ -1234,6 +1251,7 @@ export class GameScene extends Phaser.Scene {
 
     // Emit to React — use raw upgrade count (state.js applies autumnMult itself); gained is full amount (state.js caps it).
     const totalGained = gained + (bonusGains[res.key] ?? 0);
+    // Include tile positions so the reducer can extinguish fire/hazard cells
     const chainTiles = this.path.map(t => ({ key: t.res.key, row: t.row, col: t.col }));
     this.events.emit("chain-collected", { key: res.key, gained: totalGained, upgrades: rawUpgrades, chainLength: this.path.length, value: res.value, chain: chainTiles });
 
