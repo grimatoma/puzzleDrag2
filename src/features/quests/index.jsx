@@ -1,6 +1,35 @@
 import { useState } from "react";
-import { ALMANAC_TIERS } from "../../constants.js";
+import { ALMANAC_TIERS } from "../almanac/data.js";
 import { QUEST_TEMPLATES } from "./templates.js";
+
+/**
+ * Returns a player-facing label for a tier reward.
+ * Handles coins, tools object, structural keys, and unknown shapes.
+ */
+function rewardLabel(reward) {
+  if (!reward) return "?";
+  const parts = [];
+  if (reward.coins) parts.push(`+${reward.coins}◉`);
+  if (reward.tools) {
+    for (const [k, v] of Object.entries(reward.tools)) {
+      parts.push(`+${v} ${k}`);
+    }
+  }
+  if (reward.structural) {
+    const structuralLabels = {
+      startingExtraScythe: "Extra Scythe (permanent)",
+      extraBlueprintSlot: "Extra Blueprint Slot",
+      extraTurn: "Extra Turn token",
+      goldSeal: "Golden Seal",
+    };
+    parts.push(structuralLabels[reward.structural] ?? reward.structural);
+  }
+  // Legacy shape used by constants.js ALMANAC_TIERS
+  if (reward.tool) {
+    parts.push(`+${reward.amt ?? 1} ${reward.tool}`);
+  }
+  return parts.length > 0 ? parts.join(" · ") : "?";
+}
 
 export const viewKey = "quests";
 
@@ -69,33 +98,38 @@ function AlmanacTierCard({ idx, tierDef, almanacXp, almanacClaimed, dispatch }) 
   const unlocked = almanacXp >= cost;
   const claimable = unlocked && !claimed;
 
-  const rewardStr = tierDef.reward.coins
-    ? `+${tierDef.reward.coins}◉`
-    : tierDef.reward.tool
-    ? `+${tierDef.reward.amt}↻`
-    : "?";
-
+  const rewardStr = rewardLabel(tierDef.reward);
   const icon = tier >= 8 ? "🔺" : tier >= 5 ? "△" : "◈";
 
   return (
     <div
-      className={`flex flex-col items-center gap-1.5 p-2 rounded-xl border-2 ${
+      className={`flex flex-col gap-1 p-2.5 rounded-xl border-2 w-full ${
         claimed
           ? "bg-[#c5a87a]/40 border-[#c5a87a]"
           : claimable
           ? "bg-[#f6efe0] border-[#d6612a]"
           : "bg-[#3a2715]/60 border-[#5a3a20]"
       }`}
-      style={{ width: 90 }}
     >
-      <div className="text-[11px] font-bold text-[#f8e7c6]">Tier {tier}</div>
-      <div className="text-[20px] leading-none">{claimed ? "✓" : claimable ? icon : "🔒"}</div>
-      <div className="text-[11px] font-bold text-[#c8923a]">{rewardStr}</div>
-      <div className="text-[9px] text-[#f8e7c6]/60">{cost}✦</div>
+      <div className="flex items-center gap-2">
+        <div className="text-[18px] leading-none flex-shrink-0">{claimed ? "✓" : claimable ? icon : "🔒"}</div>
+        <div className="flex-1 min-w-0">
+          <div className="text-[11px] font-bold text-[#f8e7c6]">
+            Tier {tier}{tierDef.name ? ` — ${tierDef.name}` : ""}
+          </div>
+          <div className="text-[10px] font-bold text-[#c8923a]">{rewardStr}</div>
+        </div>
+        <div className="text-[9px] text-[#f8e7c6]/60 flex-shrink-0">{cost}✦</div>
+      </div>
+      {tierDef.description && (
+        <div className="text-[9px] text-[#f8e7c6]/70 italic leading-snug">
+          {tierDef.description}
+        </div>
+      )}
       <button
         disabled={!claimable}
         onClick={() => claimable && dispatch({ type: "QUESTS/CLAIM_ALMANAC", tier })}
-        className={`text-[9px] font-bold px-2 py-0.5 rounded-md border ${
+        className={`text-[9px] font-bold px-2 py-0.5 rounded-md border self-end ${
           claimed
             ? "bg-[#c5a87a] border-[#a88a5a] text-white/60 cursor-default"
             : claimable
@@ -103,7 +137,7 @@ function AlmanacTierCard({ idx, tierDef, almanacXp, almanacClaimed, dispatch }) 
             : "bg-[#2a1d0f] border-[#3a2715] text-white/30 cursor-not-allowed"
         }`}
       >
-        {claimed ? "✓" : claimable ? "CLAIM" : "🔒"}
+        {claimed ? "✓ Claimed" : claimable ? "CLAIM" : "🔒"}
       </button>
     </div>
   );
@@ -183,9 +217,9 @@ export default function QuestsScreen({ state, dispatch, initialTab }) {
               {almanacXp}✦ / {nextCost > 1000 ? "MAX" : nextCost}
             </span>
           </div>
-          {/* Tier strip */}
+          {/* Tier list */}
           <div
-            className="flex flex-wrap gap-2 pb-1 overflow-y-auto"
+            className="flex flex-col gap-2 pb-1 overflow-y-auto"
             style={{ scrollbarWidth: "none", WebkitOverflowScrolling: "touch" }}
           >
             {ALMANAC_TIERS.map((tierDef, idx) => (
