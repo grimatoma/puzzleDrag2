@@ -21,12 +21,12 @@
  * @returns {object}
  */
 export function applyToolPending(state) {
-  const id = state._toolPending;
+  const id = state.toolPending;
   if (!id) return state;
   if (id === "rake") return _clearKey(state, "hay");
   if (id === "axe") return _clearKey(state, "log");
   // fertilizer is handled at fillBoard time, not here
-  return { ...state, _toolPending: null };
+  return { ...state, toolPending: null };
 }
 
 /**
@@ -47,5 +47,5 @@ function _clearKey(state, key) {
     ...state.inventory,
     [key]: (state.inventory[key] ?? 0) + collected,
   };
-  return { ...state, grid, inventory, _toolPending: null };
+  return { ...state, grid, inventory, toolPending: null };
 }

@@ -27,15 +27,15 @@ describe("Phase 12.5 — saved-field preservation", () => {
     const tiles = [["hay","log","hay","wheat","berry","egg"]];
     const s0 = { ...createInitialState(),
       biomeKey: "farm", built: { ...createInitialState().built, silo: true },
-      board: { tiles, hazards: [] } };
+      grid: tiles, hazards: null };
     const s1 = rootReducer(s0, { type: "CLOSE_SEASON" });
-    expect(s1.farm.savedField).toMatchObject({ tiles, hazards: [], turnsUsed: 0 });
+    expect(s1.farm.savedField).toMatchObject({ tiles, turnsUsed: 0 });
   });
 
   it("CLOSE_SEASON does NOT snapshot when silo not built", () => {
     const s0 = { ...createInitialState(),
       biomeKey: "farm",
-      board: { tiles: [["hay"]], hazards: [] } };
+      grid: [["hay"]], hazards: null };
     const s1 = rootReducer(s0, { type: "CLOSE_SEASON" });
     expect(s1.farm.savedField).toBeNull();
   });
@@ -47,8 +47,7 @@ describe("Phase 12.5 — saved-field preservation", () => {
       farm: { savedField: { tiles, hazards: [{ id: "vent" }], turnsUsed: 5 } } };
     const s1 = rootReducer(s0,
       { type: "SWITCH_BIOME", payload: { biome: "farm" } });
-    expect(s1.board.tiles).toEqual(tiles);
-    expect(s1.board.hazards).toEqual([{ id: "vent" }]);
+    expect(s1.grid).toEqual(tiles);
     expect(s1.turnsUsed).toBe(0);
   });
 

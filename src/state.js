@@ -213,7 +213,7 @@ export function initialState(overrides) {
              bird_cage: 0, scythe_full: 0,
              // Phase 10.8 — Rifle + Hound (wolf counters)
              rifle: 0, hound: 0 },
-    _toolPending: null,
+    toolPending: null,
     fertilizerActive: false,
     // Phase 9 — Mine biome state
     mysteriousOre: null,
