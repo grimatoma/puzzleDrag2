@@ -1,6 +1,7 @@
 
 import { NPCS, RECIPES } from "../../constants.js";
 import { resourceByKey } from "../../state.js";
+import { bondBand, bondModifier, payOrder } from "../npcs/bond.js";
 
 export const viewKey = "orders";
 
@@ -29,6 +30,12 @@ export default function OrdersScreen({ state, dispatch }) {
           const recipe = !res ? RECIPES[o.key] : null;
           const pct = Math.min(100, (have / o.need) * 100);
           const isCrafted = !!recipe;
+          // Phase 6.1: bond chip
+          const bond = state.npcs?.bonds?.[o.npc] ?? 5;
+          const baseReward = o.baseReward ?? o.reward;
+          const modifiedReward = payOrder({ baseReward }, bond);
+          const modifier = bondModifier(bond);
+          const bandName = bondBand(bond).name;
           return (
             <button
               key={o.id}
@@ -46,7 +53,12 @@ export default function OrdersScreen({ state, dispatch }) {
                   <div className="font-bold text-[#a8431a] text-[13px] leading-tight truncate">{npc.name}{isCrafted && <span className="ml-1 text-[10px] text-[#7a5ab0] font-bold">🔨 craft</span>}</div>
                   <div className="text-[#6a4b31] text-[11px] leading-snug">{o.line}</div>
                 </div>
-                <div className="text-[#c8923a] text-[12px] font-bold whitespace-nowrap">+{o.reward}◉</div>
+                <div className="flex flex-col items-end gap-0.5">
+                  <div className="text-[#c8923a] text-[12px] font-bold whitespace-nowrap">+{modifiedReward}◉</div>
+                  <div className="text-[10px] font-bold whitespace-nowrap" style={{ color: bandName === "Sour" ? "#bb3b2f" : bandName === "Beloved" ? "#d4a017" : bandName === "Liked" ? "#4f6b3a" : "#7a6248" }}>
+                    ×{modifier.toFixed(2)} · {bandName}
+                  </div>
+                </div>
               </div>
               <div className="flex items-center gap-2">
                 {isCrafted ? (

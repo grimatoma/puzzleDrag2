@@ -16,6 +16,9 @@ import * as mood from "./features/mood/slice.js";
 import * as storySlice from "./features/story/slice.js";
 import { INITIAL_STORY_STATE, evaluateStoryTriggers } from "./story.js";
 import { STORY_BUILDING_IDS } from "./features/story/data.js";
+import { NPC_IDS } from "./features/npcs/data.js";
+import { payOrder, gainBond, decayBond, applyGift } from "./features/npcs/bond.js";
+import { pickDialog } from "./features/npcs/dialog.js";
 
 const slices = [crafting, quests, achievements, tutorial, settings, boss, cartography, apprentices, mood, storySlice];
 
@@ -183,8 +186,13 @@ export function initialState() {
     seasonStats: { harvests: 0, upgrades: 0, ordersFilled: 0, coins: 0 },
     _hintsShown: {},
     story: { ...INITIAL_STORY_STATE, flags: {}, queuedBeat: null, beatQueue: [], sandbox: false },
-    npcs: { roster: ["wren"], bonds: { wren: 5 } },
+    npcs: {
+      roster: ["wren"],
+      bonds: { wren: 5, mira: 5, tomas: 5, bram: 5, liss: 5 },
+      giftCooldown: { wren: 0, mira: 0, tomas: 0, bram: 0, liss: 0 },
+    },
     market: { seed: marketSeed, season: 0, prices: driftPrices(marketSeed, 0), prevPrices: null },
+    season: 0,
     runes: 0,
     runeStash: 0,
     shovel: 0,
@@ -455,12 +463,28 @@ function coreReducer(state, action) {
       const usedKeys = remainingOrders.map((x) => x.key);
       const replacement = makeOrder(state.biomeKey, state.level, usedNpcs, usedKeys);
       const xpResult = applyXp(state, 12);
-      // Summer: orders pay multiplied reward
+      // Bond multiplier (Phase 6.1): base reward × bond modifier
+      const npcBond = state.npcs?.bonds?.[o.npc] ?? 5;
+      // Use order.baseReward if present, else fall back to order.reward as the base
+      const orderBase = o.baseReward ?? o.reward;
+      const bondPaid = payOrder({ baseReward: orderBase }, npcBond);
+      // Summer: orders pay multiplied reward (on top of bond)
       const summerMult = ((state.seasonsCycled || 0) % 4 === 1) ? SEASON_EFFECTS.Summer.orderMult : 1;
-      const actualReward = o.reward * summerMult;
+      const actualReward = Math.round(bondPaid * summerMult);
+      // Bump bond +0.3 on delivery (Phase 6.1)
+      const newBond = gainBond(npcBond, 0.3);
+      const updatedNpcs = state.npcs
+        ? { ...state.npcs, bonds: { ...state.npcs.bonds, [o.npc]: newBond } }
+        : state.npcs;
       // Auto-repay debt before crediting coins
       const { coinsCredit, newDebt } = applyDebtRepayment(state, actualReward);
-      let bubble = { id: Date.now(), npc: o.npc, text: summerMult > 1 ? `+${actualReward}◉ (☀️ 2×) — thank you!` : `+${actualReward}◉ — thank you!`, ms: 1600 };
+      // Dialog line from pool (Phase 6.3)
+      const seasonNames = ["spring", "summer", "autumn", "winter"];
+      const currentSeason = seasonNames[(state.seasonsCycled || 0) % 4];
+      const dialogLine = pickDialog(o.npc, currentSeason, newBond, Math.random);
+      let bubble = { id: Date.now(), npc: o.npc,
+        text: summerMult > 1 ? `+${actualReward}◉ (☀️ 2×) — ${dialogLine}` : `+${actualReward}◉ — ${dialogLine}`,
+        ms: 2000 };
       if (xpResult.leveledUp) {
         bubble = { id: Date.now(), npc: "wren", text: `Level ${xpResult.level}! New things await.`, ms: 2400 };
       }
@@ -473,6 +497,7 @@ function coreReducer(state, action) {
         orders: state.orders.map((x) => (x.id === o.id ? replacement : x)),
         seasonStats: { ...state.seasonStats, ordersFilled: state.seasonStats.ordersFilled + 1, coins: state.seasonStats.coins + actualReward },
         workers: state.workers ? { ...state.workers, debt: newDebt } : state.workers,
+        npcs: updatedNpcs,
         bubble,
       };
     }
@@ -636,6 +661,15 @@ function coreReducer(state, action) {
       const housingCount = state.built?.housing?.count ?? (state.built?.housing ? 1 : 0);
       const newPool = (state.workers?.pool ?? 0) + housingCount;
 
+      // ── Phase 6.1: NPC bond decay (−0.1 above 5) + Phase 6.2: reset gift cooldowns ──
+      const decayedNpcs = (() => {
+        if (!state.npcs) return state.npcs;
+        const bonds = { ...state.npcs.bonds };
+        for (const id of NPC_IDS) bonds[id] = decayBond(bonds[id] ?? 5);
+        const giftCooldown = Object.fromEntries(NPC_IDS.map((id) => [id, 0]));
+        return { ...state.npcs, bonds, giftCooldown };
+      })();
+
       const afterSeason = {
         ...state,
         tools,
@@ -650,6 +684,7 @@ function coreReducer(state, action) {
         workers: { ...state.workers, debt: wageDebt, pool: newPool },
         // 5.7: reset per-season free moves on season close
         species: state.species ? { ...state.species, freeMoves: 0 } : state.species,
+        npcs: decayedNpcs,
         bubble: { id: Date.now(), npc: "tomas", text: "Bonus: +1 Reshuffle Horn · +25◉", ms: 2000 },
         market: {
           ...(state.market ?? {}),
@@ -958,6 +993,24 @@ function coreReducer(state, action) {
       };
     }
 
+    case "GIVE_GIFT": {
+      // Phase 6.2: pure gift application via applyGift helper
+      const { npcId, itemKey } = action.payload ?? {};
+      if (!npcId || !itemKey) return state;
+      const giftResult = applyGift(state, npcId, itemKey);
+      if (!giftResult.ok) return state; // cooldown or empty inventory — silent no-op
+      const seasonNamesGift = ["spring", "summer", "autumn", "winter"];
+      const giftSeason = seasonNamesGift[(state.seasonsCycled || 0) % 4];
+      const giftDialog = pickDialog(npcId, giftSeason, giftResult.newState.npcs.bonds[npcId], Math.random);
+      const giftBubble = {
+        id: Date.now(),
+        npc: npcId,
+        text: `${giftDialog} (+${giftResult.delta})`,
+        ms: 2200,
+      };
+      return { ...giftResult.newState, bubble: giftBubble };
+    }
+
     default: {
       if (import.meta.env.DEV) {
         if (action.type === "DEV/ADD_GOLD") {
@@ -978,7 +1031,11 @@ function coreReducer(state, action) {
           const fresh = initialState();
           return { ...fresh, settings: state.settings,
             story: { ...INITIAL_STORY_STATE, flags: {}, queuedBeat: null, beatQueue: [], sandbox: false },
-            npcs: { roster: ["wren"], bonds: { wren: 5 } },
+            npcs: {
+              roster: ["wren"],
+              bonds: { wren: 5, mira: 5, tomas: 5, bram: 5, liss: 5 },
+              giftCooldown: { wren: 0, mira: 0, tomas: 0, bram: 0, liss: 0 },
+            },
             workers: { hired: { hilda: 0, pip: 0, wila: 0, tuck: 0, osric: 0, dren: 0 }, debt: 0, pool: 1 },
             species: defaultSpeciesSlice() };
         }

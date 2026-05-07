@@ -49,7 +49,8 @@ function GiftPicker({ npcKey, inventory, dispatch, onClose }) {
           <button
             key={r.key}
             onClick={() => {
-              dispatch({ type: 'MOOD/GIFT', npc: npcKey, resource: r.key });
+              // Phase 6.2: dispatch GIVE_GIFT (new canonical action) + legacy MOOD/GIFT for compat
+              dispatch({ type: 'GIVE_GIFT', payload: { npcId: npcKey, itemKey: r.key } });
               onClose();
             }}
             title={isFav ? 'Favorite!' : isDislike ? 'Dislikes this' : ''}
@@ -112,7 +113,7 @@ function GiftPicker({ npcKey, inventory, dispatch, onClose }) {
 
 // ── NpcCard ─────────────────────────────────────────────────────────────────
 
-function NpcCard({ npcKey, npcData, bond, inventory, dispatch }) {
+function NpcCard({ npcKey, npcData, bond, inventory, dispatch, giftCooledDown }) {
   const [giftOpen, setGiftOpen] = useState(false);
   const mood = moodForBond(bond);
 
@@ -167,8 +168,10 @@ function NpcCard({ npcKey, npcData, bond, inventory, dispatch }) {
             Orders: ×{mood.modifier.toFixed(2)}
           </span>
           <button
-            onClick={() => setGiftOpen((o) => !o)}
-            className="text-[10px] font-bold px-2 py-1 rounded-lg border-2 border-[#c5a87a] bg-[#f4ecd8] text-[#6a4b31] hover:bg-[#e8d9bc] transition-colors"
+            onClick={() => { if (!giftCooledDown) setGiftOpen((o) => !o); }}
+            disabled={giftCooledDown}
+            title={giftCooledDown ? "Already given a gift this season" : "Give a gift"}
+            className={`text-[10px] font-bold px-2 py-1 rounded-lg border-2 transition-colors ${giftCooledDown ? "border-[#c5a87a]/40 bg-[#e8d9bc]/40 text-[#9a8a72] cursor-not-allowed" : "border-[#c5a87a] bg-[#f4ecd8] text-[#6a4b31] hover:bg-[#e8d9bc]"}`}
           >
             🎁 Gift
           </button>
@@ -191,7 +194,11 @@ function NpcCard({ npcKey, npcData, bond, inventory, dispatch }) {
 // ── Modal ───────────────────────────────────────────────────────────────────
 
 export function MoodPanel({ state, dispatch, showHeader = true, onClose = null }) {
-  const { npcBond = {}, inventory = {} } = state;
+  // Phase 6: prefer state.npcs.bonds (Phase 6.1 canonical), fall back to legacy npcBond
+  const bonds = state.npcs?.bonds ?? state.npcBond ?? {};
+  const giftCooldown = state.npcs?.giftCooldown ?? {};
+  const currentSeason = state.season ?? 0;
+  const { inventory = {} } = state;
 
   const inner = (
     <>
@@ -212,9 +219,10 @@ export function MoodPanel({ state, dispatch, showHeader = true, onClose = null }
             key={key}
             npcKey={key}
             npcData={NPCS[key]}
-            bond={npcBond[key] ?? 1}
+            bond={bonds[key] ?? 5}
             inventory={inventory}
             dispatch={dispatch}
+            giftCooledDown={giftCooldown[key] === currentSeason}
           />
         ))}
       </div>
