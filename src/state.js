@@ -1,7 +1,8 @@
 import { BIOMES, BUILDINGS, NPCS, MAX_TURNS, RECIPES, WORKSHOP_RECIPES, STORAGE_KEYS, SEASON_EFFECTS, DAILY_REWARDS, MINE_ENTRY_TIERS, CAPPED_RESOURCES, UPGRADE_THRESHOLDS, SAVE_SCHEMA_VERSION } from "./constants.js";
 import { sellPriceFor as _sellPriceFor } from "./features/market/pricing.js";
 import { tryClearRatChain } from "./features/farm/rats.js";
-import { tryExtinguishFire } from "./features/farm/hazards.js";
+import { tryExtinguishFire, rollFarmHazard, tickFire, tickWolves } from "./features/farm/hazards.js";
+import { rollHazard, tickHazards } from "./features/mine/hazards.js";
 import { isMysteriousChainValid, spawnMysteriousOre, tickMysteriousOre } from "./features/mine/mysterious_ore.js";
 import { driftPrices, applyTrade } from "./market.js";
 import { currentCap } from "./utils.js";
@@ -572,6 +573,27 @@ function coreReducer(state, action) {
       // Mine: tick mysterious ore countdown on each chain
       if ((afterChain.biome ?? afterChain.biomeKey) === "mine" && afterChain.mysteriousOre) {
         afterChain = tickMysteriousOre(afterChain);
+      }
+      // Hazard tick + spawn (farm: fire/wolves, mine: gas_vent/lava/mole/cave_in)
+      const chainBiome = afterChain.biome ?? afterChain.biomeKey;
+      if (chainBiome === "farm") {
+        afterChain = tickFire(afterChain);
+        afterChain = tickWolves(afterChain);
+        // Roll for a new hazard spawn only when none is currently active
+        const hazardSpawn = rollFarmHazard(afterChain);
+        if (hazardSpawn) {
+          const hazards = { ...afterChain.hazards };
+          if (hazardSpawn.kind === "fire") hazards.fire = { cells: hazardSpawn.cells };
+          else if (hazardSpawn.kind === "wolf") hazards.wolves = { list: [{ row: hazardSpawn.row, col: hazardSpawn.col, scared: false }], scaredTurnsRemaining: 0 };
+          afterChain = { ...afterChain, hazards };
+        }
+      } else if (chainBiome === "mine") {
+        afterChain = tickHazards(afterChain);
+        // Roll for a new mine hazard
+        const mineSpawn = rollHazard(afterChain);
+        if (mineSpawn) {
+          afterChain = { ...afterChain, hazards: { ...(afterChain.hazards ?? {}), ...mineSpawn } };
+        }
       }
       // Story: evaluate resource beats after inventory updated
       return maybeFireResourceBeats(afterChain, state);
