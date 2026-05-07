@@ -229,6 +229,13 @@ export const ALMANAC_TIERS = [
   { reward: { coins: 100, tool: "rare", amt: 1 } },
 ];
 
+// ─── Phase 4 — Inventory soft caps ───────────────────────────────────────────
+export const RESOURCE_CAP_BASE = 200;
+export const RESOURCE_CAP_GRANARY = 500;
+/** The 13 raw farm + mine resources subject to the inventory cap. */
+export const CAPPED_RESOURCES = ["hay","wheat","grain","flour","log","plank",
+  "beam","berry","jam","egg","stone","ore","coal"];
+
 // ─── Phase 3 Economy ──────────────────────────────────────────────────────────
 
 /** Mine entry pricing tiers (§7). */

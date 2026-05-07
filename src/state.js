@@ -1,5 +1,6 @@
-import { BIOMES, BUILDINGS, NPCS, MAX_TURNS, RECIPES, STORAGE_KEYS, SEASON_EFFECTS, DAILY_REWARDS, MINE_ENTRY_TIERS } from "./constants.js";
+import { BIOMES, BUILDINGS, NPCS, MAX_TURNS, RECIPES, STORAGE_KEYS, SEASON_EFFECTS, DAILY_REWARDS, MINE_ENTRY_TIERS, CAPPED_RESOURCES } from "./constants.js";
 import { driftPrices, applyTrade } from "./market.js";
+import { currentCap } from "./utils.js";
 import { WORKER_MAP } from "./features/apprentices/data.js";
 import { computeWorkerEffects } from "./features/apprentices/effects.js";
 import * as crafting from "./features/crafting/slice.js";
@@ -237,6 +238,27 @@ function maybeFireResourceBeats(stateAfter, stateBefore) {
 function coreReducer(state, action) {
   switch (action.type) {
     case "CHAIN_COLLECTED": {
+      // Phase 4.7: support { gains: {key: n, ...} } payload for cap-aware bulk collection
+      if (action.payload?.gains) {
+        const gainsMap = action.payload.gains;
+        const cap = currentCap(state);
+        const cf = { ...(state.seasonStats?.capFloaters ?? {}) };
+        const inv = { ...state.inventory };
+        const floaters = [...(state.floaters ?? [])];
+        for (const [k, n] of Object.entries(gainsMap)) {
+          if (!CAPPED_RESOURCES.includes(k)) { inv[k] = (inv[k] ?? 0) + n; continue; }
+          const cur = inv[k] ?? 0;
+          const next = Math.min(cap, cur + n);
+          inv[k] = next;
+          if (next === cap && cur + n > cap && !cf[k]) {
+            cf[k] = true;
+            floaters.push({ text: `${k} stash full`, ms: 1200 });
+          }
+        }
+        return { ...state, inventory: inv, floaters,
+          seasonStats: { ...state.seasonStats, capFloaters: cf } };
+      }
+
       const { key, gained, upgrades, value, chainLength, noTurn } = action.payload;
       const currentSeason = (state.seasonsCycled || 0) % 4;
       const hintsShown = state._hintsShown || {};
@@ -245,8 +267,13 @@ function coreReducer(state, action) {
       // Tools (e.g. Scythe) emit chain-collected with noTurn:true — just add
       // resources without consuming a turn or triggering seasonal effects.
       if (noTurn) {
+        const capNoTurn = currentCap(state);
         const inventory = { ...state.inventory };
-        inventory[key] = (inventory[key] || 0) + gained;
+        if (CAPPED_RESOURCES.includes(key)) {
+          inventory[key] = Math.min(capNoTurn, (inventory[key] || 0) + gained);
+        } else {
+          inventory[key] = (inventory[key] || 0) + gained;
+        }
         return { ...state, inventory };
       }
 
@@ -282,16 +309,40 @@ function coreReducer(state, action) {
 
       const res = resourceByKey(key);
       const inventory = { ...state.inventory };
+      const chainCap = currentCap(state);
+      const chainCf = { ...(state.seasonStats?.capFloaters ?? {}) };
+      const chainFloaters = [...(state.floaters ?? [])];
 
       // Spring: +harvestBonus% resource bonus (rounded up)
       const springBonus = currentSeason === 0 ? Math.ceil(gained * SEASON_EFFECTS.Spring.harvestBonus) : 0;
       const effectiveGained = gained + springBonus;
-      inventory[key] = (inventory[key] || 0) + effectiveGained;
+      if (CAPPED_RESOURCES.includes(key)) {
+        const cur = inventory[key] ?? 0;
+        const next = Math.min(chainCap, cur + effectiveGained);
+        inventory[key] = next;
+        if (next === chainCap && cur + effectiveGained > chainCap && !chainCf[key]) {
+          chainCf[key] = true;
+          chainFloaters.push({ text: `${key} stash full`, ms: 1200 });
+        }
+      } else {
+        inventory[key] = (inventory[key] || 0) + effectiveGained;
+      }
 
       // Autumn: multiply upgrades
       const effectiveUpgrades = currentSeason === 2 ? upgrades * SEASON_EFFECTS.Autumn.upgradeMult : upgrades;
       if (res?.next && effectiveUpgrades > 0) {
-        inventory[res.next] = (inventory[res.next] || 0) + effectiveUpgrades;
+        const nextKey = res.next;
+        if (CAPPED_RESOURCES.includes(nextKey)) {
+          const cur2 = inventory[nextKey] ?? 0;
+          const next2 = Math.min(chainCap, cur2 + effectiveUpgrades);
+          inventory[nextKey] = next2;
+          if (next2 === chainCap && cur2 + effectiveUpgrades > chainCap && !chainCf[nextKey]) {
+            chainCf[nextKey] = true;
+            chainFloaters.push({ text: `${nextKey} stash full`, ms: 1200 });
+          }
+        } else {
+          inventory[nextKey] = (inventory[nextKey] || 0) + effectiveUpgrades;
+        }
       }
 
       const coinsGain = Math.max(1, Math.floor((effectiveGained * value) / 2));
@@ -327,7 +378,8 @@ function coreReducer(state, action) {
         xp: xpResult.xp,
         level: xpResult.level,
         turnsUsed,
-        seasonStats,
+        seasonStats: { ...seasonStats, capFloaters: chainCf },
+        floaters: chainFloaters,
         bubble,
         _hintsShown: newHintsShown,
         lastChainLength: effectiveChain,
@@ -569,8 +621,15 @@ function coreReducer(state, action) {
 
     // ─── Phase 3 Economy ────────────────────────────────────────────────────────
 
-    case "BUY_RESOURCE":
+    case "BUY_RESOURCE": {
+      const { key: buyKey, qty: buyQty } = action.payload;
+      if (CAPPED_RESOURCES.includes(buyKey)) {
+        const buyingCap = currentCap(state);
+        const currentAmt = state.inventory?.[buyKey] ?? 0;
+        if (currentAmt + buyQty > buyingCap) return state; // cap reached — no debit
+      }
       return applyTrade(state, action);
+    }
     case "SELL_RESOURCE": {
       const afterTrade = applyTrade(state, action);
       if (afterTrade === state) return state; // trade rejected (not enough inventory)
@@ -718,6 +777,21 @@ function coreReducer(state, action) {
         next = { ...next, tools: { ...next.tools, [reward.tool]: cur + (reward.amount ?? 1) } };
       }
       return { ...next, modal: { type: "daily_streak", day: nextDay, reward } };
+    }
+
+    case "MIGRATE/APPLY_CAPS": {
+      // Clamp all capped resources to current cap; no floaters (silent migration)
+      const migCap = currentCap(state);
+      const migInv = { ...state.inventory };
+      let changed = false;
+      for (const k of CAPPED_RESOURCES) {
+        if ((migInv[k] ?? 0) > migCap) {
+          migInv[k] = migCap;
+          changed = true;
+        }
+      }
+      if (!changed) return state;
+      return { ...state, inventory: migInv };
     }
 
     case "WORKERS/BUY_POOL": {

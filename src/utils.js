@@ -1,4 +1,4 @@
-import { UPGRADE_THRESHOLDS, ROWS, COLS, MAX_TURNS } from "./constants.js";
+import { UPGRADE_THRESHOLDS, ROWS, COLS, MAX_TURNS, RESOURCE_CAP_BASE, RESOURCE_CAP_GRANARY } from "./constants.js";
 
 export function clamp(n, a, b) {
   return Math.max(a, Math.min(b, n));
@@ -47,6 +47,11 @@ export function seasonIndexForTurns(turns) {
   if (turns <= 5) return 1; // Summer
   if (turns <= 8) return 2; // Autumn
   return 3;                 // Winter
+}
+
+/** Returns the per-resource inventory cap: 500 with Granary, 200 otherwise. */
+export function currentCap(state) {
+  return state?.built?.granary ? RESOURCE_CAP_GRANARY : RESOURCE_CAP_BASE;
 }
 
 export function runSelfTests() {
