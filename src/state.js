@@ -21,8 +21,10 @@ import { STORY_BUILDING_IDS } from "./features/story/data.js";
 import { NPC_IDS } from "./features/npcs/data.js";
 import { payOrder, gainBond, decayBond, applyGift } from "./features/npcs/bond.js";
 import { pickDialog } from "./features/npcs/dialog.js";
+import * as decorations from "./features/decorations/slice.js";
+import * as portal from "./features/portal/slice.js";
 
-const slices = [crafting, quests, achievements, tutorial, settings, boss, cartography, apprentices, mood, storySlice];
+const slices = [crafting, quests, achievements, tutorial, settings, boss, cartography, apprentices, mood, storySlice, decorations, portal];
 
 // ─── Wages / debt ──────────────────────────────────────────────────────────
 const MAX_DEBT = 9999;
@@ -189,8 +191,12 @@ export function initialState(overrides) {
     quests: rollQuests(saveSeed, 1, "spring"),
     tools: { clear: 2, basic: 1, rare: 1, shuffle: 0, bomb: 0,
              scythe: extraScytheBonus, seedpack: 0, lockbox: 0, reshuffle: 0,
-             startingExtraScythe: !!overrides?.tools?.startingExtraScythe },
-    built: { hearth: true },
+             startingExtraScythe: !!overrides?.tools?.startingExtraScythe,
+             magic_wand: 0, hourglass: 0, magic_seed: 0, magic_fertilizer: 0 },
+    lastChainSnapshot: null,
+    magicFertilizerCharges: 0,
+    built: { hearth: true, decorations: {} },
+    influence: 0,
     bubble: null,
     modal: null,
     pendingView: null,
