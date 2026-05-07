@@ -2,6 +2,7 @@ import { BIOMES, RECIPES } from "../../constants.js";
 import { BOSSES, BOSS_WINDOW_TURNS, bossReward as bossRewardFn } from "../bosses/data.js";
 import { rollWeather } from "../weather/data.js";
 import { awardXp } from "../almanac/data.js";
+import { applyRainBerryBonus, applyHarvestMoonUpgrade } from "../weather/effects.js";
 
 const ALL_RESOURCES = [...BIOMES.farm.resources, ...BIOMES.mine.resources];
 
@@ -247,16 +248,25 @@ export function reduce(state, action) {
         const chainKey = payload.key || "";
         const gained = payload.gained || 0;
 
-        if (wKey === "rain" && chainKey === "berry" && gained > 0) {
-          const inv = { ...(next.inventory || {}) };
-          inv.berry = (inv.berry || 0) + gained;
-          next = { ...next, inventory: inv };
-        } else if (wKey === "harvest_moon" && (payload.upgrades || 0) > 0) {
-          const baseRes = ALL_RESOURCES.find((r) => r.key === chainKey);
-          if (baseRes?.next) {
+        if (wKey === "rain" && gained > 0) {
+          // Use helper: doubles berry yield; other resources unchanged
+          const bonusPayload = applyRainBerryBonus({ [chainKey]: gained }, next.weather);
+          if (bonusPayload[chainKey] !== gained) {
             const inv = { ...(next.inventory || {}) };
-            inv[baseRes.next] = (inv[baseRes.next] || 0) + 1;
+            inv[chainKey] = (inv[chainKey] || 0) + (bonusPayload[chainKey] - gained);
             next = { ...next, inventory: inv };
+          }
+        } else if (wKey === "harvest_moon") {
+          // Spec M-10: +1 upgrade applies to EVERY chain (not just chains with existing upgrades)
+          // applyHarvestMoonUpgrade(0, weather) = 1 — always grants at least 1 upgrade
+          const bonusUpgrades = applyHarvestMoonUpgrade(0, next.weather);
+          if (bonusUpgrades > 0) {
+            const baseRes = ALL_RESOURCES.find((r) => r.key === chainKey);
+            if (baseRes?.next) {
+              const inv = { ...(next.inventory || {}) };
+              inv[baseRes.next] = (inv[baseRes.next] || 0) + bonusUpgrades;
+              next = { ...next, inventory: inv };
+            }
           }
         }
       }
