@@ -24,13 +24,17 @@ describe("Phase 5.2 — state.tileCollection slice", () => {
     }
   });
 
-  it("activeByCategory: grass=hay, wood=log, berry=berry, bird=egg, grain=null", () => {
+  it("activeByCategory: grass=hay, wood=log, berry=berry, bird=egg", () => {
     const s0 = initialState();
     expect(s0.tileCollection.activeByCategory.grass).toBe("hay");
     expect(s0.tileCollection.activeByCategory.wood).toBe("log");
     expect(s0.tileCollection.activeByCategory.berry).toBe("berry");
     expect(s0.tileCollection.activeByCategory.bird).toBe("egg");
-    expect(s0.tileCollection.activeByCategory.grain).toBeNull();
+    // Grain previously started null because wheat was the only entry and
+    // wheat is `chain`-discovered. After REFERENCE_CATALOG canonicalized
+    // Corn/Buckwheat/Rice as `default`, grain auto-activates the first one
+    // (currently grain_corn).
+    expect(s0.tileCollection.activeByCategory.grain).toBe("grain_corn");
   });
 
   it("researchProgress seeded at 0 for every research-method tile type", () => {
