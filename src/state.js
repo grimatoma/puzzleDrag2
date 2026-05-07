@@ -165,10 +165,18 @@ function applyXp(state, xpDelta) {
 function coreReducer(state, action) {
   switch (action.type) {
     case "CHAIN_COLLECTED": {
-      const { key, gained, upgrades, value, chainLength } = action.payload;
+      const { key, gained, upgrades, value, chainLength, noTurn } = action.payload;
       const currentSeason = (state.seasonsCycled || 0) % 4;
       const hintsShown = state._hintsShown || {};
       const effectiveChain = chainLength || gained;
+
+      // Tools (e.g. Scythe) emit chain-collected with noTurn:true — just add
+      // resources without consuming a turn or triggering seasonal effects.
+      if (noTurn) {
+        const inventory = { ...state.inventory };
+        inventory[key] = (inventory[key] || 0) + gained;
+        return { ...state, inventory };
+      }
 
       // Boss board modifier: active boss may require longer chains
       const bossMinChain = state.boss?.minChain || 0;
@@ -286,28 +294,44 @@ function coreReducer(state, action) {
       };
     }
     case "USE_TOOL": {
-      const { key } = action;
+      // Support both action.key (legacy) and action.payload.key (Phase 1+)
+      const key = action.payload?.key ?? action.key;
       if ((state.tools[key] || 0) <= 0) return state;
       const tools = { ...state.tools, [key]: state.tools[key] - 1 };
       if (key === "shuffle") {
-        return { ...state, tools, bubble: { id: Date.now(), npc: "bram", text: "Reshuffle Horn — used!", ms: 1500 } };
+        return {
+          ...state,
+          tools,
+          toolPending: "shuffle",
+          bubble: { id: Date.now(), npc: "bram", text: "Reshuffle Horn — board reshuffled!", ms: 1500 },
+        };
       }
-      const inventory = { ...state.inventory };
-      const biome = BIOMES[state.biomeKey];
-      if (key === "rare") {
-        const r = biome.resources[4] || biome.resources[biome.resources.length - 1];
-        inventory[r.key] = (inventory[r.key] || 0) + 2;
-        return { ...state, tools, inventory, bubble: { id: Date.now(), npc: "bram", text: "Seedpack — +2 rare!", ms: 1500 } };
+      if (key === "clear") {
+        return {
+          ...state,
+          tools,
+          toolPending: "clear",
+          bubble: { id: Date.now(), npc: "bram", text: "Scythe — clearing tiles!", ms: 1500 },
+        };
       }
       if (key === "basic") {
-        const r = biome.resources[0];
-        inventory[r.key] = (inventory[r.key] || 0) + 5;
-        return { ...state, tools, inventory, bubble: { id: Date.now(), npc: "bram", text: "Seedpack — +5 basic!", ms: 1500 } };
+        return {
+          ...state,
+          tools,
+          toolPending: "basic",
+          bubble: { id: Date.now(), npc: "bram", text: "Seedpack — placing seeds!", ms: 1500 },
+        };
       }
-      // key === "clear"
-      const r = biome.resources[0];
-      inventory[r.key] = (inventory[r.key] || 0) + 5;
-      return { ...state, tools, inventory, bubble: { id: Date.now(), npc: "bram", text: "Scythe — clearing tiles!", ms: 1500 } };
+      if (key === "rare") {
+        return {
+          ...state,
+          tools,
+          toolPending: "rare",
+          bubble: { id: Date.now(), npc: "bram", text: "Lockbox — placing rare tiles!", ms: 1500 },
+        };
+      }
+      // Unknown tool key — decrement only
+      return { ...state, tools };
     }
     case "SWITCH_BIOME": {
       const { key } = action;

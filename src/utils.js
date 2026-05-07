@@ -1,11 +1,13 @@
-import { UPGRADE_EVERY, ROWS, COLS, MAX_TURNS } from "./constants.js";
+import { UPGRADE_THRESHOLDS, ROWS, COLS, MAX_TURNS } from "./constants.js";
 
 export function clamp(n, a, b) {
   return Math.max(a, Math.min(b, n));
 }
 
-export function upgradeCountForChain(chainLength) {
-  return Math.floor(chainLength / UPGRADE_EVERY);
+export function upgradeCountForChain(chainLength, resourceKey) {
+  const t = UPGRADE_THRESHOLDS[resourceKey];
+  if (!t) return 0; // terminal or unknown resource
+  return Math.floor(chainLength / t);
 }
 
 export function resourceGainForChain(chainLength) {
@@ -48,9 +50,16 @@ export function seasonIndexForTurns(turns) {
 }
 
 export function runSelfTests() {
-  console.assert(upgradeCountForChain(2) === 0, "2-chain should not upgrade");
-  console.assert(upgradeCountForChain(3) === 1, "3-chain should upgrade once");
-  console.assert(upgradeCountForChain(8) === 2, "8-chain should upgrade twice: cells 3 and 6");
+  // 1.1 — Per-resource upgrade thresholds
+  console.assert(upgradeCountForChain(5,  "hay")   === 0, "5 hay → no upgrade");
+  console.assert(upgradeCountForChain(6,  "hay")   === 1, "6 hay → 1 upgrade");
+  console.assert(upgradeCountForChain(12, "hay")   === 2, "12 hay → 2 upgrades");
+  console.assert(upgradeCountForChain(18, "hay")   === 3, "18 hay → 3 upgrades");
+  console.assert(upgradeCountForChain(4,  "grain") === 1, "grain threshold is 4");
+  console.assert(upgradeCountForChain(5,  "egg")   === 0, "egg is terminal — no upgrade");
+  console.assert(upgradeCountForChain(6,  "egg")   === 0, "egg terminal regardless of length");
+  console.assert(upgradeCountForChain(4,  "wheat") === 0, "wheat threshold is 5, not 4");
+  console.assert(upgradeCountForChain(5,  "wheat") === 1, "5 wheat → 1 upgrade");
   console.assert(clamp(12, 0, 10) === 10, "clamp upper bound failed");
   // 0.1 — Grid size
   console.assert(ROWS === 6, "ROWS must be 6");
