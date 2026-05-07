@@ -1,127 +1,57 @@
-import { MAX_TURNS } from "../../constants.js";
-import { APPRENTICE_MAP } from "./data.js";
-
-const HIRE_REFUND_RATE = 0.25;
+import { WORKER_MAP, totalHired, housingCapacity, checkRequirement } from "./data.js";
 
 export const initial = {
   hiredApprentices: [],
   idleHistory: [],
 };
 
+// Legacy: keep seedHireSeq so state.js can still call it
 let hireSeq = 1;
-
 export function seedHireSeq(savedApprentices) {
   for (const h of (savedApprentices || [])) {
     if (typeof h.id === "number" && h.id >= hireSeq) hireSeq = h.id + 1;
   }
 }
 
-function checkRequirement(app, state) {
-  const req = app.requirement;
-  if (!req) return true;
-  const built = state.built || {};
-  const level = state.level || 1;
-  if (req.orLevel) {
-    return !!(built[req.building]) || level >= req.orLevel;
-  }
-  if (req.building) return !!built[req.building];
-  if (req.level) return level >= req.level;
-  return true;
-}
-
 export function reduce(state, action) {
+  // ─── Phase 4 APP/HIRE ──────────────────────────────────────────────────
   if (action.type === "APP/HIRE") {
-    const { appKey } = action;
-    const app = APPRENTICE_MAP[appKey];
-    if (!app) return state;
-    const alreadyHired = (state.hiredApprentices || []).some((h) => h.app === appKey);
-    if (alreadyHired) return state;
-    if ((state.coins || 0) < app.hireCost) {
-      return {
-        ...state,
-        bubble: { id: Date.now(), npc: "mira", text: `Need ${app.hireCost}◉ to hire ${app.name}.`, ms: 1800 },
-      };
-    }
-    if (!checkRequirement(app, state)) {
-      return {
-        ...state,
-        bubble: { id: Date.now(), npc: "wren", text: `Can't hire ${app.name} yet — requirements not met.`, ms: 1800 },
-      };
-    }
-    const season = Math.floor((state.turnsUsed || 0) / MAX_TURNS);
+    const id = action.payload?.id;
+    const w  = WORKER_MAP[id];
+    if (!w) return state;
+    const cur = state.workers?.hired?.[id] ?? 0;
+    if (cur >= w.maxCount) return state;                              // per-worker cap
+    if (totalHired(state) >= housingCapacity(state)) return state;   // housing cap
+    if ((state.workers?.pool ?? 0) < 1) return state;               // pool gate (4.6)
+    if ((state.coins ?? 0) < w.hireCost) return state;
+    if (!checkRequirement(w, state)) return state;
     return {
       ...state,
-      coins: state.coins - app.hireCost,
-      hiredApprentices: [
-        ...(state.hiredApprentices || []),
-        { id: hireSeq++, app: appKey, since: season },
-      ],
-      bubble: { id: Date.now(), npc: "mira", text: `${app.name} joins the crew!`, ms: 1800 },
+      coins: state.coins - w.hireCost,
+      workers: {
+        ...state.workers,
+        hired: { ...state.workers.hired, [id]: cur + 1 },
+        pool: (state.workers.pool ?? 1) - 1,
+      },
+      bubble: { id: Date.now(), npc: "mira",
+        text: `${w.name} joins the crew! (${cur + 1} of ${w.maxCount})`, ms: 1800 },
     };
   }
 
+  // ─── Phase 4 APP/FIRE ──────────────────────────────────────────────────
   if (action.type === "APP/FIRE") {
-    const { id } = action;
-    const hired = (state.hiredApprentices || []).find((h) => h.id === id);
-    if (!hired) return state;
-    const app = APPRENTICE_MAP[hired.app];
-    const refund = app ? Math.floor(app.hireCost * HIRE_REFUND_RATE) : 0;
+    const id  = action.payload?.id;
+    const cur = state.workers?.hired?.[id] ?? 0;
+    if (cur <= 0) return state;
     return {
       ...state,
-      coins: (state.coins || 0) + refund,
-      hiredApprentices: (state.hiredApprentices || []).filter((h) => h.id !== id),
-      bubble: { id: Date.now(), npc: "mira", text: `${app ? app.name : "Apprentice"} let go. +${refund}◉ refund.`, ms: 1800 },
-    };
-  }
-
-  if (action.type === "CLOSE_SEASON") {
-    let coins = state.coins || 0;
-    let inventory = { ...(state.inventory || {}) };
-    let hiredApprentices = [...(state.hiredApprentices || [])];
-    let idleHistory = [...(state.idleHistory || [])];
-    let bubble = state.bubble;
-    const season = Math.floor((state.turnsUsed || 0) / MAX_TURNS);
-    const gains = {};
-    const firedNames = [];
-
-    const remaining = [];
-    for (const hired of hiredApprentices) {
-      const app = APPRENTICE_MAP[hired.app];
-      if (!app) continue;
-      if (coins < app.wage) {
-        firedNames.push(app.name);
-        continue;
-      }
-      coins -= app.wage;
-      for (const [key, amount] of Object.entries(app.produces)) {
-        if (key === "coins") {
-          coins += amount;
-          gains.coins = (gains.coins || 0) + amount;
-        } else {
-          inventory[key] = (inventory[key] || 0) + amount;
-          gains[key] = (gains[key] || 0) + amount;
-        }
-      }
-      remaining.push(hired);
-    }
-
-    if (firedNames.length > 0) {
-      const names = firedNames.join(", ");
-      bubble = { id: Date.now(), npc: "mira", text: `${names} left — wages unpaid.`, ms: 2800 };
-    }
-
-    if (Object.keys(gains).length > 0) {
-      const entry = { season, gains };
-      idleHistory = [entry, ...idleHistory].slice(0, 5);
-    }
-
-    return {
-      ...state,
-      coins,
-      inventory,
-      hiredApprentices: remaining,
-      idleHistory,
-      bubble,
+      workers: {
+        ...state.workers,
+        hired: { ...state.workers.hired, [id]: cur - 1 },
+        // No pool refund on fire (locked)
+      },
+      bubble: { id: Date.now(), npc: "mira",
+        text: `Let go a ${WORKER_MAP[id]?.name ?? "worker"}.`, ms: 1500 },
     };
   }
 
