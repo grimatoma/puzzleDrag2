@@ -224,19 +224,20 @@ still need to open the browser to understand the failure context?*
 *any* save from any prior build load cleanly into the current build with
 every later-phase slice initialised to spec'd defaults. `SAVE_SCHEMA_VERSION`
 is a single integer that increments by 1 every time a phase changes the save
-shape — currently `11`, one per phase 1..11 (Phase 0 was the v0 baseline).
-Each migration is a pure function `(stateAtVN) => stateAtVN+1` with no
-side effects, no I/O, and no cross-version coupling. On load, if
-`save.version < SAVE_SCHEMA_VERSION`, migrations run in sequence; if a save
-is corrupted (missing `version`, mangled JSON, missing required top-level
-keys) the loader falls back to a fresh `createInitialState()` with a console
-warning naming the corruption. A v0 save (committed as a frozen fixture)
-must round-trip into a fully-playable Phase 11 state.
+shape — currently `12`, one per phase 1..11 plus the Phase 12.5 saved-field
+slot (Phase 0 was the v0 baseline). Each migration is a pure function
+`(stateAtVN) => stateAtVN+1` with no side effects, no I/O, and no
+cross-version coupling. On load, if `save.version < SAVE_SCHEMA_VERSION`,
+migrations run in sequence; if a save is corrupted (missing `version`,
+mangled JSON, missing required top-level keys) the loader falls back to a
+fresh `createInitialState()` with a console warning naming the corruption.
+A v0 save (committed as a frozen fixture) must round-trip into a
+fully-playable Phase 12 state.
 
 **Completion Criteria:**
-- [ ] `SAVE_SCHEMA_VERSION = 11` exported from `src/migrations.js`
-- [ ] `MIGRATIONS` array in `src/migrations.js` with exactly 11 entries
-  indexed 0..10 — `MIGRATIONS[N]` migrates v`N` → v`N+1`
+- [ ] `SAVE_SCHEMA_VERSION = 12` exported from `src/migrations.js`
+- [ ] `MIGRATIONS` array in `src/migrations.js` with exactly 12 entries
+  indexed 0..11 — `MIGRATIONS[N]` migrates v`N` → v`N+1`
 - [ ] Each migration is pure (`(state) => state`), does not mutate input,
   returns a new object
 - [ ] Each migration is idempotent: `M(M(state)) deepEquals M(state)`
@@ -250,7 +251,7 @@ must round-trip into a fully-playable Phase 11 state.
   save shape with `inventory`, `coins`, `turnsUsed`, etc., no story slice)
 - [ ] One additional fixture per "interesting" prior version
   (`save-v3.json`, `save-v6.json`, `save-v9.json`) so the test surface
-  covers mid-pipeline jumps, not just v0 → v11
+  covers mid-pipeline jumps, not just v0 → v12
 - [ ] Migration list is documented in code with a one-line comment per step
   naming the phase that introduced the change
 - [ ] No migration ever *removes* a key from the player's save — only adds
@@ -276,12 +277,12 @@ const fix = (name) => JSON.parse(
 );
 
 describe("Phase 12.2 — save migrations", () => {
-  it("SAVE_SCHEMA_VERSION === 11 (one per phase 1..11)", () => {
-    expect(SAVE_SCHEMA_VERSION).toBe(11);
+  it("SAVE_SCHEMA_VERSION === 12 (phases 1..11 + 12.5 saved-field)", () => {
+    expect(SAVE_SCHEMA_VERSION).toBe(12);
   });
 
-  it("MIGRATIONS array has exactly 11 entries", () => {
-    expect(MIGRATIONS).toHaveLength(11);
+  it("MIGRATIONS array has exactly 12 entries", () => {
+    expect(MIGRATIONS).toHaveLength(12);
     for (const step of MIGRATIONS) expect(typeof step).toBe("function");
   });
 
@@ -302,9 +303,9 @@ describe("Phase 12.2 — save migrations", () => {
     }
   });
 
-  it("v0 save loads cleanly into v11 with all phase slices defaulted", () => {
+  it("v0 save loads cleanly into v12 with all phase slices defaulted", () => {
     const result = migrateSave(fix("save-v0.json"));
-    expect(result.version).toBe(11);
+    expect(result.version).toBe(12);
     expect(result.migratedFrom).toBe(0);
 
     // Phase 2 slice present, default story
@@ -347,10 +348,10 @@ describe("Phase 12.2 — save migrations", () => {
     expect(state.turnsUsed).toBe(6);
   });
 
-  it("mid-pipeline fixtures also reach v11", () => {
+  it("mid-pipeline fixtures also reach v12", () => {
     for (const f of ["save-v3.json", "save-v6.json", "save-v9.json"]) {
       const r = migrateSave(fix(f));
-      expect(r.version).toBe(11);
+      expect(r.version).toBe(12);
     }
   });
 
@@ -379,17 +380,17 @@ Run — confirm: `Cannot find module '../src/migrations.js'` (and the v0
 fixture file does not exist yet).
 
 *Gameplay simulation (returning player whose save was made in the Phase 5
-era loading the Phase 11 build):* A player last opened Hearthwood Vale in
+era loading the Phase 12 build):* A player last opened Hearthwood Vale in
 month 3 of last year — the build at the time had Phases 0–5 shipped (story,
 economy, workers, species). Their localStorage save still has `version: 5`,
 no `quests`, no `weather`, no `hazards`, no `tools.rake`, no `prefs`. They
-return after a six-month break and load the Phase 11 build. The loader
-detects `5 < 11` and walks the migration chain v5→v6→...→v11. Their
+return after a six-month break and load the Phase 12 build. The loader
+detects `5 < 12` and walks the migration chain v5→v6→...→v12. Their
 discovered species, bond with Mira (Liked), 47 hay in inventory, and 230
 coins all survive untouched. They open a fresh boss season and weather
 applies cleanly because Phase 8 default state is now seeded. They never see
 an error message — the only signal that anything happened is a single dev
-console line: `[save] migrated v5 → v11 in 4ms`.
+console line: `[save] migrated v5 → v12 in 4ms`.
 
 Designer reflection: *Does the returning player feel like the dev team cared
 about their save, or like they got punished for taking a break? Is "silent
@@ -402,9 +403,10 @@ the first post-migration session?*
   ```js
   // Phase 12.2 — save schema migrations.
   // SAVE_SCHEMA_VERSION = N means: this build understands save shape vN.
-  // Every phase 1..11 that touched the save shape adds exactly one step.
+  // Every phase 1..11 that touched the save shape adds exactly one step,
+  // plus the Phase 12.5 saved-field slot bump (v11 → v12).
   // Locked rule: migrations are PURE and IDEMPOTENT. No I/O. No mutation.
-  export const SAVE_SCHEMA_VERSION = 11;
+  export const SAVE_SCHEMA_VERSION = 12;
 
   import { createInitialState } from "./state.js";
   import { INITIAL_STORY_STATE } from "./story.js";
@@ -507,18 +509,18 @@ the first post-migration session?*
 
 **Manual Verify Walk-through:**
 1. Open the game on a clean tree. Save (any chain). Inspect localStorage —
-   confirm `version === 11`.
+   confirm `version === 12`.
 2. Manually edit localStorage and set `version: 5`, delete the `quests`,
    `weather`, `hazards`, `tools`, `prefs`, `fertilizerActive` keys. Reload.
-   Confirm dev-console line `[save] migrated v5 → v11`. Confirm the game
+   Confirm dev-console line `[save] migrated v5 → v12`. Confirm the game
    boots with intact inventory + coins + bonds, and all defaulted slices
    present.
 3. Set localStorage to `{}`. Reload. Confirm `[save] corrupted, starting
    fresh: no inventory` warning and a fresh game.
 4. Set localStorage to `null`. Reload. Confirm fresh game, warning printed.
-5. Set localStorage to a v0 fixture by hand. Reload. Confirm v0 → v11 walk.
+5. Set localStorage to a v0 fixture by hand. Reload. Confirm v0 → v12 walk.
 6. In console: `migrateSave(JSON.parse(JSON.stringify(window.gameState)))`.
-   Confirm the result `version === 11` and `migratedFrom === 11` (no-op).
+   Confirm the result `version === 12` and `migratedFrom === 12` (no-op).
 7. `npm test` passes all 12.2 assertions.
 
 ---
@@ -923,24 +925,208 @@ and on-demand bundle inspection on every PR?*
 
 ---
 
+### 12.5 — Silos / Barns building + field-state preservation
+
+**What this delivers:** GAME_SPEC §18 LOCKED says: "Field state saving — Yes —
+Silos/Barns preserve tile layout between sessions." Currently Silos and Barns
+aren't in §11 and the field state isn't preserved. This task introduces both
+buildings and the per-biome saved-field snapshot, so a session that ended
+mid-strategic-board returns to that exact board next time the player enters
+the same biome — the player's Spring board doesn't dissolve when they hop to
+the Mine for a turn.
+
+**Completion Criteria:**
+- [ ] `BUILDINGS` in `src/constants.js` extends with: `silo` (250◉ + 15 plank, lv 4, biome: farm) and `barn` (400◉ + 25 plank + 5 stone, lv 5, biome: mine). Building card descriptions match §18 wording ("preserves the tile layout between sessions")
+- [ ] `state.farm.savedField` and `state.mine.savedField` slots: each holds either `null` or a `{ tiles: string[][], hazards: any[], turnsUsed: 0 }` snapshot
+- [ ] On `CLOSE_SEASON`, if `state.built.silo === true` and current biome is farm, snapshot the current 6×6 tile array into `state.farm.savedField`; same for `barn`/mine
+- [ ] On `SWITCH_BIOME` to a biome whose saved-field is non-null, restore that field instead of generating a fresh fill — restoration includes hazards and turn counter (always reset to 0 since a new session starts)
+- [ ] `SAVE_SCHEMA_VERSION = 12` (was 11 in Phase 12.2 spec — bump and add a one-step migration `v11 → v12` that initialises both saved-field slots to `null`)
+- [ ] Save fixture round-trip (v0 → v12) preserves savedField when present, defaults to null when absent
+
+**Validation Spec — write before code:**
+
+*Tests (red phase) — file `src/__tests__/saved-field.test.js`:*
+```js
+import { describe, it, expect } from "vitest";
+import { rootReducer, createInitialState } from "../state.js";
+import { BUILDINGS } from "../constants.js";
+import { MIGRATIONS, SAVE_SCHEMA_VERSION } from "../migrations.js";
+
+const findBuilding = (id) => BUILDINGS.find(b => b.id === id);
+
+describe("Phase 12.5 — saved-field preservation", () => {
+  it("registers silo and barn buildings with §18 wording", () => {
+    const silo = findBuilding("silo");
+    const barn = findBuilding("barn");
+    expect(silo).toMatchObject({ cost: { coins: 250, plank: 15 },
+      lv: 4, biome: "farm" });
+    expect(barn).toMatchObject({ cost: { coins: 400, plank: 25, stone: 5 },
+      lv: 5, biome: "mine" });
+    expect(silo.desc).toMatch(/preserves the tile layout between sessions/);
+    expect(barn.desc).toMatch(/preserves the tile layout between sessions/);
+  });
+
+  it("fresh state seeds both savedField slots to null", () => {
+    const s = createInitialState();
+    expect(s.farm.savedField).toBeNull();
+    expect(s.mine.savedField).toBeNull();
+  });
+
+  it("CLOSE_SEASON snapshots farm field when silo built", () => {
+    const tiles = [["hay","log","hay","wheat","berry","egg"]];
+    const s0 = { ...createInitialState(),
+      biomeKey: "farm", built: { silo: true },
+      board: { tiles, hazards: [] } };
+    const s1 = rootReducer(s0, { type: "CLOSE_SEASON" });
+    expect(s1.farm.savedField).toMatchObject({ tiles, hazards: [], turnsUsed: 0 });
+  });
+
+  it("CLOSE_SEASON does NOT snapshot when silo not built", () => {
+    const s0 = { ...createInitialState(),
+      biomeKey: "farm", built: {},
+      board: { tiles: [["hay"]], hazards: [] } };
+    const s1 = rootReducer(s0, { type: "CLOSE_SEASON" });
+    expect(s1.farm.savedField).toBeNull();
+  });
+
+  it("SWITCH_BIOME restores saved field when non-null", () => {
+    const tiles = [["wheat","wheat","hay","log","berry","egg"]];
+    const s0 = { ...createInitialState(),
+      biomeKey: "mine",
+      farm: { savedField: { tiles, hazards: [{ id: "vent" }], turnsUsed: 5 } } };
+    const s1 = rootReducer(s0,
+      { type: "SWITCH_BIOME", payload: { biome: "farm" } });
+    expect(s1.board.tiles).toEqual(tiles);
+    expect(s1.board.hazards).toEqual([{ id: "vent" }]);
+    expect(s1.turnsUsed).toBe(0);
+  });
+
+  it("SWITCH_BIOME generates fresh board when slot is null", () => {
+    const s0 = { ...createInitialState(), biomeKey: "mine" };
+    const s1 = rootReducer(s0,
+      { type: "SWITCH_BIOME", payload: { biome: "farm" } });
+    expect(s1.board.tiles).toBeDefined();
+    expect(s1.board.tiles.length).toBeGreaterThan(0);
+    expect(s1.farm.savedField).toBeNull();
+  });
+
+  it("SAVE_SCHEMA_VERSION === 12 and migration v11 → v12 seeds slots", () => {
+    expect(SAVE_SCHEMA_VERSION).toBe(12);
+    const v11 = { version: 11, farm: {}, mine: {} };
+    const v12 = MIGRATIONS[11](v11);
+    expect(v12.farm.savedField).toBeNull();
+    expect(v12.mine.savedField).toBeNull();
+  });
+
+  it("migration is idempotent on already-v12 saves", () => {
+    const v12 = { farm: { savedField: null }, mine: { savedField: null } };
+    const again = MIGRATIONS[11](v12);
+    expect(again).toEqual(v12);
+  });
+});
+```
+Run — confirm: `BUILDINGS does not include silo` and `MIGRATIONS[11] is undefined`.
+
+*Gameplay simulation (player mid-Spring, building strategy on a thick hay
+board):* They've spent 5 turns laying out a 6-chain hay setup top-right and a
+3-chain log setup bottom-left, with one Mysterious Ore tile queued for next
+session. Without Silo, hopping to the Mine to cash a quick session would
+randomise the Farm board on return. With Silo built, they tap Mine, run a
+session, switch back to Farm — the exact board comes up, hay still teed up,
+Mysterious Ore still in position, turn counter at 0 (new session). The Farm
+feels like a place they left, not a place they regenerated.
+
+Designer reflection: *Does field-preservation feel like a meaningful strategic
+investment (200◉ + planks for a "save your work" button) or like a luxury
+tax? Does it change how players treat biome-switching mid-strategy?*
+
+**Implementation:**
+- `src/constants.js:BUILDINGS` — append:
+  ```js
+  { id: "silo", name: "Silo",
+    desc: "Wood-and-stone grain store. Preserves the tile layout between sessions on the Farm.",
+    cost: { coins: 250, plank: 15 }, lv: 4, biome: "farm",
+    x: 1280, y: 380, w: 90, h: 100, color: "#9a6a3a" },
+  { id: "barn", name: "Barn",
+    desc: "Reinforced ore shed. Preserves the tile layout between sessions in the Mine.",
+    cost: { coins: 400, plank: 25, stone: 5 }, lv: 5, biome: "mine",
+    x: 1380, y: 380, w: 90, h: 100, color: "#7a4a2a" },
+  ```
+- `src/state.js:createInitialState()` — extend:
+  `farm: { savedField: null }, mine: { savedField: null }`.
+- `src/state.js:CLOSE_SEASON` — append:
+  ```js
+  let farm = state.farm, mine = state.mine;
+  if (state.biomeKey === "farm" && state.built.silo) {
+    farm = { ...farm, savedField: { tiles: state.board.tiles,
+      hazards: state.board.hazards ?? [], turnsUsed: 0 } };
+  }
+  if (state.biomeKey === "mine" && state.built.barn) {
+    mine = { ...mine, savedField: { tiles: state.board.tiles,
+      hazards: state.board.hazards ?? [], turnsUsed: 0 } };
+  }
+  return { ...next, farm, mine };
+  ```
+- `src/state.js:SWITCH_BIOME` — branch on saved slot:
+  ```js
+  const saved = state[action.payload.biome]?.savedField;
+  const board = saved
+    ? { tiles: saved.tiles, hazards: saved.hazards }
+    : generateBoard(action.payload.biome);
+  return { ...state, biomeKey: action.payload.biome, board, turnsUsed: 0 };
+  ```
+- `src/migrations.js` — append the v11 → v12 step:
+  ```js
+  // v11 → v12: Phase 12.5 — saved-field slots for Silo/Barn
+  (s) => ({ ...s,
+            farm: { ...(s.farm ?? {}), savedField: s.farm?.savedField ?? null },
+            mine: { ...(s.mine ?? {}), savedField: s.mine?.savedField ?? null } }),
+  ```
+  Bump `SAVE_SCHEMA_VERSION = 12`.
+- `src/ui/Town.jsx` (or building-card UI) — render the two new building entries
+  alongside existing ones, gated by `lv` per the existing pattern.
+- `src/textures.js` — register `iconSilo` (tall cylindrical building, conical
+  roof) and `iconBarn` (wide gambrel-roof outbuilding).
+
+**Manual Verify Walk-through:**
+1. Fresh save. Confirm `gameState.farm.savedField === null` and
+   `gameState.mine.savedField === null`.
+2. Build Silo (250◉ + 15 plank). Play 5 turns of Spring forming a distinctive
+   hay-cluster top-right. End the season via `CLOSE_SEASON`.
+3. Confirm `gameState.farm.savedField.tiles` matches the just-played board
+   exactly; `turnsUsed === 0`.
+4. Switch to Mine biome via the map. Play a Mine session. Switch back to Farm.
+5. Confirm the tile layout matches the snapshot exactly — same hay cluster,
+   same Mysterious Ore position, turn counter at 0.
+6. Without Silo (console: `gameState.built.silo = false; gameState.farm.savedField = null`),
+   switch back from Mine to Farm. Confirm a fresh randomised board.
+7. Build Barn in Mine. Repeat the snapshot/restore loop in the Mine biome.
+8. Manually edit localStorage `version: 11`, delete `farm.savedField` and
+   `mine.savedField`. Reload. Confirm migration seeds both to null with no
+   data loss elsewhere.
+9. `npm test src/__tests__/saved-field.test.js` passes all 12.5 assertions.
+
+---
+
 ## Phase 12 Sign-off Gate
 
 Run the full test + build pipeline on a fresh clone (`rm -rf node_modules
 dist coverage && npm ci && npm test && npm run build`) and audit the
-artifacts. Then walk three save-migration scenarios end-to-end (v0 → v11,
-v6 → v11, corrupted → fresh). Before declaring infrastructure done,
+artifacts. Then walk three save-migration scenarios end-to-end (v0 → v12,
+v6 → v12, corrupted → fresh). Before declaring infrastructure done,
 confirm all:
 
 - [ ] 12.1 Completion Criteria all checked
 - [ ] 12.2 Completion Criteria all checked
 - [ ] 12.3 Completion Criteria all checked
 - [ ] 12.4 Completion Criteria all checked
+- [ ] 12.5 Completion Criteria all checked
 - [ ] **All `runSelfTests()` assertions across phases 0–11 are migrated to
   `tests/phase-N-*.test.js` files; `npm test` runs them all** — verified by
   cross-referencing the historic `runSelfTests()` body against the per-phase
   test files; no assertion is silently dropped
 - [ ] **A v0 save fixture (committed at `tests/fixtures/save-v0.json`) loads
-  into the Phase 11 build without data loss** — coins, inventory, turnsUsed,
+  into the Phase 12 build without data loss** — coins, inventory, turnsUsed,
   season survive the migration walk verbatim
 - [ ] **Every PR opened against `main` runs `lint` + `test` + `build` via
   GitHub Actions, and all three are required for merge** — verified by
@@ -956,7 +1142,7 @@ confirm all:
   bonds, story start) without booting the comprehensive Vitest suite
 - [ ] **Migrations are pure and idempotent** — `M(M(state)) deepEquals
   M(state)` holds for every step; running the full pipeline twice on a v0
-  fixture yields the same v11 state
+  fixture yields the same v12 state
 - [ ] **A returning player whose six-month-old save is at v5 sees zero
   errors and zero data loss on first reload** — verified by hand-editing
   localStorage to a v5 shape and reloading the deployed build

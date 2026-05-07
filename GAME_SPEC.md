@@ -376,9 +376,9 @@ Each worker's entry in the data shows the **maximum effect** — the effect when
 | Osric (Smith) | 2 | Ore threshold 6 → 4 | 1 Worker + 4 Ingot + 8 Bread |
 | Dren (Miner) | 2 | Stone threshold 8 → 6 | 1 Worker + 6 Stone + 6 Bread |
 
-### Mine Workers (Phase 6)
+### Mine Workers (Phase 9)
 
-Workers for Mine resources follow the same model; data in `src/features/apprentices/data.js`. Full mine worker catalog from the GDD is deferred to Phase 6.
+Workers for Mine resources follow the same model; data in `src/features/apprentices/data.js`. Full mine worker catalog (Canary, Geologist, +others from REFERENCE_CATALOG §9) is deferred to Phase 9 (Mine Biome) — they ship together with the cavern board, hazards, and Mysterious Ore so the mine biome lands as one playable horizontal slice.
 
 ### Worker Wage
 

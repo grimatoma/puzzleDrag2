@@ -905,6 +905,171 @@ one, but not enough to skip the housing loop entirely?*
 
 ---
 
+### 4.7 — Granary inventory cap effect
+
+**What this delivers:** GAME_SPEC §11 lists Granary's effects as "Unlocks hiring
+Hilda; increases inventory cap." The first half is wired (Phase 4.1–4.6); the
+second half is currently inert (no cap exists). This task introduces a per-resource
+soft cap mechanism. Default cap is 200 per resource key (any chain, order purchase,
+or tool that would push above 200 rounds down to 200 with a quiet "{resource}
+stash full" floater). Building Granary lifts the cap to 500.
+
+**Completion Criteria:**
+- [ ] `RESOURCE_CAP_BASE = 200`, `RESOURCE_CAP_GRANARY = 500` exported from `src/constants.js`
+- [ ] Pure helper `currentCap(state)` in `src/utils.js` returns `RESOURCE_CAP_GRANARY` when `state.built.granary === true`, else `RESOURCE_CAP_BASE`
+- [ ] `CHAIN_COLLECTED` clamps the per-resource gain to `currentCap(state)`; the floater fires "{resource} stash full" exactly once per `CLOSE_SEASON` window per resource (debounced via `state.seasonStats.capFloaters`)
+- [ ] Market `BUY` action rejects (no debit) if the post-purchase amount would exceed cap; UI button is disabled with tooltip "{resource} cap reached"
+- [ ] Save migration step (Phase 12.2 plumbing): caps apply on load — overstocked resources (legacy saves) clamp down to cap with no floater
+- [ ] Cap is a SOFT cap on the 13 farm + mine resources from §10 only — does NOT cap crafted goods, tools, currencies (coins/runes/shovels/influence/bombs)
+
+**Validation Spec — write before code:**
+
+*Tests (red phase) — file `src/__tests__/granary-cap.test.js`:*
+```js
+import { describe, it, expect } from "vitest";
+import { rootReducer, createInitialState } from "../state.js";
+import { currentCap } from "../utils.js";
+import { RESOURCE_CAP_BASE, RESOURCE_CAP_GRANARY } from "../constants.js";
+
+describe("Phase 4.7 — Granary inventory cap", () => {
+  it("base cap is 200, Granary cap is 500", () => {
+    expect(RESOURCE_CAP_BASE).toBe(200);
+    expect(RESOURCE_CAP_GRANARY).toBe(500);
+  });
+
+  it("currentCap reads built.granary", () => {
+    const s = createInitialState();
+    expect(currentCap(s)).toBe(200);
+    expect(currentCap({ ...s, built: { ...s.built, granary: true } })).toBe(500);
+  });
+
+  it("CHAIN_COLLECTED clamps at cap and emits one floater", () => {
+    const s0 = { ...createInitialState(),
+      inventory: { hay: 198 }, seasonStats: { capFloaters: {} } };
+    const s1 = rootReducer(s0,
+      { type: "CHAIN_COLLECTED", payload: { gains: { hay: 10 } } });
+    expect(s1.inventory.hay).toBe(200);
+    expect(s1.seasonStats.capFloaters.hay).toBe(true);
+    expect(s1.floaters?.some(f => /hay stash full/.test(f.text))).toBe(true);
+  });
+
+  it("repeat overflow same season emits no second floater", () => {
+    const s0 = { ...createInitialState(),
+      inventory: { hay: 200 }, seasonStats: { capFloaters: { hay: true } } };
+    const s1 = rootReducer(s0,
+      { type: "CHAIN_COLLECTED", payload: { gains: { hay: 5 } } });
+    expect(s1.floaters?.filter(f => /hay stash full/.test(f.text)).length ?? 0)
+      .toBe(0);
+  });
+
+  it("Market BUY blocks at cap with no debit", () => {
+    const s0 = { ...createInitialState(), coins: 1000,
+      inventory: { hay: 195 },
+      market: { prices: { hay: { buy: 10, sell: 1 } } } };
+    const s1 = rootReducer(s0,
+      { type: "BUY", payload: { key: "hay", qty: 10 } });
+    expect(s1.coins).toBe(1000);
+    expect(s1.inventory.hay).toBe(195);
+  });
+
+  it("Granary build raises cap, allowing further accumulation", () => {
+    const s0 = { ...createInitialState(),
+      built: { granary: true }, inventory: { hay: 200 },
+      seasonStats: { capFloaters: {} } };
+    const s1 = rootReducer(s0,
+      { type: "CHAIN_COLLECTED", payload: { gains: { hay: 50 } } });
+    expect(s1.inventory.hay).toBe(250);
+  });
+
+  it("save migration clamps overstocked legacy state with no floater", () => {
+    const legacy = { ...createInitialState(), inventory: { hay: 999 } };
+    const migrated = rootReducer(legacy, { type: "MIGRATE/APPLY_CAPS" });
+    expect(migrated.inventory.hay).toBe(200);
+    expect(migrated.floaters?.length ?? 0).toBe(0);
+  });
+
+  it("currencies and tools are not capped", () => {
+    const s0 = { ...createInitialState(), coins: 1500, runes: 800,
+      tools: { bomb: 250 } };
+    const s1 = rootReducer(s0, { type: "MIGRATE/APPLY_CAPS" });
+    expect(s1.coins).toBe(1500);
+    expect(s1.runes).toBe(800);
+    expect(s1.tools.bomb).toBe(250);
+  });
+});
+```
+Run — confirm: `currentCap is not a function` and `RESOURCE_CAP_BASE is not exported`.
+
+*Gameplay simulation (player at session 5, hay-rich farmer):* They've been chaining
+hay every turn. Inventory chip shows "hay 197/200" — the readout pair appeared as
+soon as hay passed 100. Next chain commits 6 hay; the gain clamps at +3, a small
+"hay stash full" floater pops, and the chip locks at "200/200". The Market screen
+shows the Buy button on hay greyed out with tooltip "hay cap reached". They head to
+Town and build Granary (300◉ + 20 plank). The chip immediately rereads "200/500".
+A few chains later the chip reads "240/500"; the cap is actively breathing again.
+
+Designer reflection: *Does the soft-clamp-with-quiet-floater feel less punitive
+than a hard reject? When the cap actually bites, do players feel "I should build
+Granary" or "I should stop chaining hay"? The first reaction is the design intent.*
+
+**Implementation:**
+- `src/constants.js` — append:
+  ```js
+  export const RESOURCE_CAP_BASE = 200;
+  export const RESOURCE_CAP_GRANARY = 500;
+  export const CAPPED_RESOURCES = ["hay","wheat","grain","flour","log","plank",
+    "beam","berry","jam","egg","stone","ore","coal"]; // 13 § 10 keys
+  ```
+- `src/utils.js` — append:
+  ```js
+  import { RESOURCE_CAP_BASE, RESOURCE_CAP_GRANARY } from "./constants.js";
+  export function currentCap(state) {
+    return state?.built?.granary ? RESOURCE_CAP_GRANARY : RESOURCE_CAP_BASE;
+  }
+  ```
+- `src/state.js`:
+  - `CHAIN_COLLECTED` — clamp each capped-key gain:
+    ```js
+    const cap = currentCap(state);
+    const cf  = { ...(state.seasonStats?.capFloaters ?? {}) };
+    const inv = { ...state.inventory };
+    const floaters = [...(state.floaters ?? [])];
+    for (const [k, n] of Object.entries(action.payload.gains)) {
+      if (!CAPPED_RESOURCES.includes(k)) { inv[k] = (inv[k] ?? 0) + n; continue; }
+      const cur = inv[k] ?? 0;
+      const next = Math.min(cap, cur + n);
+      inv[k] = next;
+      if (next === cap && cur + n > cap && !cf[k]) {
+        cf[k] = true;
+        floaters.push({ text: `${k} stash full`, ms: 1200 });
+      }
+    }
+    return { ...state, inventory: inv, floaters,
+      seasonStats: { ...state.seasonStats, capFloaters: cf } };
+    ```
+  - `BUY` — guard `if ((inv[key] ?? 0) + qty > cap) return state;`.
+  - `CLOSE_SEASON` — reset `seasonStats.capFloaters = {}`.
+  - `MIGRATE/APPLY_CAPS` — clamp each capped-key value to current cap with no floater.
+- `src/ui/Inventory.jsx` — render each capped row as `"{value}/{cap}"`; rows for
+  uncapped keys (coins, runes, etc.) keep the bare value.
+- `src/migrations.js` — call `MIGRATE/APPLY_CAPS` once during the `migrateSave`
+  pipeline (Phase 12.2 plumbing) so legacy overstocked saves clamp on load.
+
+**Manual Verify Walk-through:**
+1. Fresh save. Repeat hay chains until inventory reads "hay 200/200". Confirm
+   "hay stash full" floater fires on the chain that hits the cap.
+2. Chain hay again — confirm clamp holds, no second floater.
+3. Open Market. Confirm Buy hay button greyed with tooltip "hay cap reached".
+4. Build Granary (300◉ + 20 plank). Confirm Inventory readout updates to
+   "200/500" within 1 frame.
+5. Chain hay past 200. Confirm gain lands as expected; no floater until 500.
+6. Chain to 500. Confirm new "hay stash full" floater fires once, then locks.
+7. Console: `gameState.inventory.hay = 999; rootReducer(gameState,
+   { type: "MIGRATE/APPLY_CAPS" })`. Confirm hay clamps to 500.
+8. `npm test src/__tests__/granary-cap.test.js` passes all 4.7 assertions.
+
+---
+
 ## Phase 4 Sign-off Gate
 
 Play 3 multi-season playthroughs from a fresh save covering: a no-debt run (always
@@ -913,6 +1078,7 @@ order auto-clear the debt), and a max-housing run (build 3+ Housing and hire all
 workers to their caps). Before moving to Phase 5, confirm all:
 
 - [ ] 4.1–4.6 Completion Criteria all checked
+- [ ] 4.7 Completion Criteria all checked
 - [ ] **A fresh save honours §18: pool=1 on day one, +1 pool per Housing
   per season, hires deduct 1 pool, fires don't refund** — verified end-to-end
   on the Workers panel

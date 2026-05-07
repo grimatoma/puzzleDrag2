@@ -281,11 +281,117 @@ assert(countTile(mockGrid, "gem") >= 3, "3 gem tiles placed");
 
 ---
 
+### 1.6 — Reshuffle Horn tool effect + 360° spin animation
+
+**What this delivers:** The `tools.shuffle` slot already exists in state and is
+awarded by Phase 3.5 daily streak and Phase 7.2 almanac tier 4, but `USE_TOOL`
+(`src/state.js:292-293`) only fires a bubble — it never calls `shuffleBoard()`.
+This task wires the actual board shuffle and the §5 full-360° spin animation,
+completing the §5 Reshuffle Horn entry.
+
+**Completion Criteria:**
+- [ ] `USE_TOOL` with key `shuffle` decrements `state.tools.shuffle` by 1 AND
+  emits an action that triggers `GameScene.shuffleBoard()` (already exists at
+  `src/GameScene.js:253`).
+- [ ] `GameScene.shuffleBoard()` runs a 360° (2π rad) rotation tween over 600ms
+  on the board container, easing in-out, before the tile positions swap.
+- [ ] After the tween completes, the board has no overlapping tiles, every cell
+  holds a valid tile, and the post-shuffle board passes the Phase 1.2 dead-board
+  check (auto-shuffles again if no 3-chain available).
+- [ ] No turn is consumed (matches §5 no-turn-cost contract for tools).
+- [ ] Bubble text reads "Reshuffle Horn — board reshuffled!" (was: "Reshuffle
+  Horn — used!" without effect).
+- [ ] Calling `USE_TOOL` with `shuffle: 0` is a referentially-equal no-op (no
+  decrement, no animation, no bubble).
+
+**Validation Spec — write before code:**
+
+*Tests (red phase) — new file `src/__tests__/reshuffle-horn.test.js`:*
+```js
+import { describe, it, expect, vi } from "vitest";
+import { gameReducer, initialState } from "../state.js";
+
+describe("Reshuffle Horn — USE_TOOL { key: 'shuffle' }", () => {
+  it("decrements tools.shuffle by 1 on use", () => {
+    const s = { ...initialState(), tools: { shuffle: 2 } };
+    const after = gameReducer(s, { type: "USE_TOOL", payload: { key: "shuffle" } });
+    expect(after.tools.shuffle).toBe(1);
+  });
+
+  it("is a referentially-equal no-op when count is 0", () => {
+    const s = { ...initialState(), tools: { shuffle: 0 } };
+    const after = gameReducer(s, { type: "USE_TOOL", payload: { key: "shuffle" } });
+    expect(after).toBe(s);
+  });
+
+  it("does not consume a turn", () => {
+    const s = { ...initialState(), tools: { shuffle: 1 }, turnsUsed: 4 };
+    const after = gameReducer(s, { type: "USE_TOOL", payload: { key: "shuffle" } });
+    expect(after.turnsUsed).toBe(4);
+  });
+
+  it("post-shuffle board is fully populated", () => {
+    // Phaser side: mock grid → call shuffleBoard() → assert 6×6 cells all defined.
+    const grid = mockShuffleBoard();
+    for (let r = 0; r < 6; r++) {
+      for (let c = 0; c < 6; c++) expect(grid[r][c]).toBeDefined();
+    }
+  });
+
+  it("rotation tween fires on the board container (600ms, 2π)", () => {
+    const tween = vi.fn();
+    const scene = { tweens: { add: tween }, board: { rotation: 0 } };
+    invokeShuffleAnimation(scene);
+    expect(tween).toHaveBeenCalledWith(expect.objectContaining({
+      duration: 600, rotation: Math.PI * 2,
+    }));
+  });
+});
+```
+Run — confirm failures: USE_TOOL doesn't decrement shuffle, turnsUsed comparison
+trivially passes (animation hook missing).
+
+*Gameplay simulation (stuck mid-game):* Player has a sparse board with one
+playable chain. Tap the Reshuffle Horn. Board spins 360°, lands on a fresh
+layout. No turn used. Designer reflection: *Does the spin feel like the board
+"rolled the dice"? Is 600ms long enough to register but short enough to not
+break flow?*
+
+**Implementation:**
+- `src/state.js:292-293` — extend the `USE_TOOL "shuffle"` branch:
+  - If `state.tools.shuffle <= 0`: return `state` (referentially equal).
+  - Else: decrement, set `toolPending: "shuffle"`, update bubble text.
+- `src/GameScene.js:253` (`shuffleBoard`) — wrap the swap in a rotation tween:
+  ```js
+  this.tweens.add({
+    targets: this.board, rotation: Math.PI * 2,
+    duration: 600, ease: "Sine.easeInOut",
+    onComplete: () => { this._performSwap(); this.board.rotation = 0;
+      if (!this.hasValidChain()) this.shuffleBoard(); }
+  });
+  ```
+- `src/phaserBridge.js` — register a `toolPending: "shuffle"` listener that
+  calls `scene.shuffleBoard()`.
+
+**Manual Verify Walk-through:**
+1. Open browser console: `gameState.tools.shuffle = 1`. Refresh HUD.
+2. Tap the Reshuffle Horn tool button.
+3. Observe a full 360° spin (~600ms ease-in-out) on the board container.
+4. After spin, confirm tile layout differs from pre-tap snapshot.
+5. Confirm `gameState.tools.shuffle === 0`.
+6. Confirm `gameState.turnsUsed` is unchanged from before the tap.
+7. Confirm bubble text reads "Reshuffle Horn — board reshuffled!".
+8. Tap the tool again with count 0 — confirm nothing happens (no animation,
+   no bubble).
+
+---
+
 ## Phase 1 Sign-off Gate
 
 Play 10 full sessions (one full year each). Before moving to [Phase 2](./phase-2-story.md), confirm all:
 
 - [ ] 1.1–1.5 Completion Criteria all checked
+- [ ] 1.6 Completion Criteria all checked
 - [ ] Every upgrade spawns at the endpoint, not at a random position
 - [ ] Stars appear at exactly the threshold position and escalate correctly for 2× and 3×
 - [ ] No session ever deadlocks — auto-shuffle fires before any player action is blocked

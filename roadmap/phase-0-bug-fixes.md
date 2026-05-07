@@ -493,12 +493,104 @@ Before fix: grep will return matches. Run it and confirm.
 
 ---
 
+### 0.13 — Centralise `SEASON_EFFECTS` + fix winter min-chain to 5
+
+**What this delivers:** A single source of truth for the four §6 season effects
+(currently inlined in `src/state.js:186, 207, 211, 271`). Fixes the spec/code
+mismatch where Winter currently rejects chains `< 4` (`src/state.js:186`) but
+§6 specifies `5+`.
+
+**Completion Criteria:**
+- [ ] New export `SEASON_EFFECTS` in `src/constants.js` with shape
+  `{ Spring: { harvestBonus: 0.20 }, Summer: { orderMult: 2 }, Autumn: { upgradeMult: 2 }, Winter: { minChain: 5 } }`
+  (frozen via `Object.freeze`).
+- [ ] `src/state.js` reads season behaviour from `SEASON_EFFECTS` (no inline
+  literals `0.2`, `2`, `< 4`, etc.).
+- [ ] Winter chains of length 4 now yield zero (was: yields hay).
+- [ ] Winter chains of length 5+ yield as normal.
+- [ ] Existing reducer test `"yields nothing in winter with chain < 4"` is
+  updated to `"yields nothing in winter with chain < 5"`.
+
+**Validation Spec — write before code:**
+
+*Tests (red phase) — new file `src/__tests__/season-effects.test.js`:*
+```js
+import { describe, it, expect } from "vitest";
+import { SEASON_EFFECTS } from "../constants.js";
+import { gameReducer, initialState } from "../state.js";
+
+describe("SEASON_EFFECTS — single source of truth", () => {
+  it("has the four §6 seasons with correct shape", () => {
+    expect(SEASON_EFFECTS.Spring.harvestBonus).toBe(0.20);
+    expect(SEASON_EFFECTS.Summer.orderMult).toBe(2);
+    expect(SEASON_EFFECTS.Autumn.upgradeMult).toBe(2);
+    expect(SEASON_EFFECTS.Winter.minChain).toBe(5);
+  });
+
+  it("is frozen", () => {
+    expect(Object.isFrozen(SEASON_EFFECTS)).toBe(true);
+  });
+
+  it("Spring +20% harvest rounds up", () => {
+    // chain of 5 hay × 1.20 = 6 (rounded up)
+    const s = { ...initialState(), seasonsCycled: 0 };
+    const after = gameReducer(s,
+      { type: "CHAIN_COLLECTED", payload: { res: "hay", chain: 5 } });
+    expect(after.inventory.hay).toBe(6);
+  });
+
+  it("Summer doubles order coin rewards", () => {
+    // exercised via TURN_IN_ORDER in summer (seasonsCycled = 1)
+  });
+
+  it("Autumn doubles upgrades", () => {
+    // chain of 6 hay in autumn → 2 wheat (vs 1 baseline)
+  });
+
+  it("Winter chain length 4 yields zero", () => {
+    const s = { ...initialState(), seasonsCycled: 3 };
+    const after = gameReducer(s,
+      { type: "CHAIN_COLLECTED", payload: { res: "hay", chain: 4 } });
+    expect(after.inventory.hay ?? 0).toBe(0);
+  });
+
+  it("Winter chain length 5 yields normally", () => {
+    const s = { ...initialState(), seasonsCycled: 3 };
+    const after = gameReducer(s,
+      { type: "CHAIN_COLLECTED", payload: { res: "hay", chain: 5 } });
+    expect(after.inventory.hay).toBe(5);
+  });
+});
+```
+Run — confirm: `SEASON_EFFECTS is not exported from '../constants.js'`.
+
+**Implementation:**
+- `src/constants.js` — add and freeze `SEASON_EFFECTS` export.
+- `src/state.js:186` — winter min-chain reads `SEASON_EFFECTS.Winter.minChain`
+  (changing the comparison from `< 4` to `< 5`).
+- `src/state.js:207, 211, 271` — replace inline `0.2` / `2` literals with
+  `SEASON_EFFECTS.Spring.harvestBonus`, `.Summer.orderMult`, `.Autumn.upgradeMult`.
+- `src/__tests__/reducers.test.js` — update the assertion label and the chain
+  length used in the winter no-yield test to 4 (still under the 5 threshold;
+  was previously using `< 4`).
+
+**Manual Verify Walk-through:**
+1. Open the game. In the console, set `gameState.seasonsCycled = 3` to force Winter.
+2. Make a 4-chain of hay. Confirm a "❄️" bubble appears and inventory hay is unchanged.
+3. Make a 5-chain of hay. Confirm full +5 hay added.
+4. Reset, set `seasonsCycled = 0` (Spring). Chain 5 hay. Confirm +6 hay.
+5. Set `seasonsCycled = 1` (Summer). Fulfill an order. Confirm coins are doubled.
+6. Set `seasonsCycled = 2` (Autumn). Chain 6 hay. Confirm 2 wheat spawn.
+
+---
+
 ## Phase 0 Sign-off Gate
 
 Before moving to [Phase 1](./phase-1-chain-mechanic.md), every item below must be checked:
 
 - [ ] `runSelfTests()` in the browser console returns zero failures
 - [ ] 0.1–0.12 Completion Criteria all checked
+- [ ] 0.13 Completion Criteria all checked
 - [ ] Manual Verify Walk-throughs performed for all tasks that list them
 - [ ] `npm run build` succeeds with no warnings
 - [ ] Fresh game (cleared localStorage): all NPCs show Warm, orders have 3 distinct NPCs, board is 6×6, 10 turn dots visible
