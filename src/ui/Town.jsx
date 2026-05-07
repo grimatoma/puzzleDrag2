@@ -632,7 +632,10 @@ export function TownView({ state, dispatch }) {
     ? `rgba(180,190,200,${(a * 0.55).toFixed(2)})`
     : `rgba(255,255,255,${a})`;
   // Merge canonical building defs with biome-specific layout overrides
-  const townBuildings = BUILDINGS.map(b => ({ ...b, ...(townConfig.buildingLayout[b.id] || {}) }));
+  // Filter biome-specific buildings so silo only shows on farm view and barn only on mine view
+  const townBuildings = BUILDINGS
+    .filter(b => !b.biome || b.biome === biomeVariant)
+    .map(b => ({ ...b, ...(townConfig.buildingLayout[b.id] || {}) }));
   // Sort by bottom edge so shorter buildings don't clip taller neighbours
   const sortedBuildings = [...townBuildings].sort((a, b) => (a.y + a.h) - (b.y + b.h));
 

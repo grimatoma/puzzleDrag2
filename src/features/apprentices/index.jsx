@@ -18,9 +18,41 @@ function reqLabel(app) {
   return null;
 }
 
+/**
+ * Format a hireCost that may be a number (200◉) or an object ({worker:1, coke:4}).
+ * Returns a plain string like "1 worker · 4 coke · 6 bread".
+ */
+export function formatHireCost(hireCost) {
+  if (typeof hireCost === "number") return `${hireCost}◉`;
+  if (typeof hireCost === "object" && hireCost !== null) {
+    return Object.entries(hireCost)
+      .map(([k, v]) => `${v} ${k}`)
+      .join(" · ");
+  }
+  return String(hireCost);
+}
+
 function effectLabel(worker, hiredCount) {
   const e = worker.effect;
   const slots = String(workerSlotLabel(worker));
+  // Phase 9 workers use object-shape effects without a `type` field
+  if (!e.type) {
+    const parts = [];
+    if (e.hazardSpawnReduce) {
+      for (const [hazard, reduction] of Object.entries(e.hazardSpawnReduce)) {
+        const pct = Math.round(reduction * 100 * hiredCount / worker.maxCount);
+        parts.push(`−${pct}% ${hazard.replace("_", " ")} spawn rate`);
+      }
+    }
+    if (e.poolWeight) {
+      for (const [res, amount] of Object.entries(e.poolWeight)) {
+        const gained = Math.floor(amount * hiredCount / worker.maxCount);
+        parts.push(`+${gained} ${res} spawn weight`);
+      }
+    }
+    if (parts.length === 0) parts.push("Effect active");
+    return `${parts.join(" · ")} · slots: ${slots}`;
+  }
   switch (e.type) {
     case "threshold_reduce": {
       const perHire = (e.from - e.to) / worker.maxCount;
@@ -44,7 +76,10 @@ function WorkerRow({ worker, state, dispatch }) {
   const total = totalHired(state);
   const pool = state.workers?.pool ?? 0;
   const reqMet = checkRequirement(worker, state);
-  const canAfford = (state.coins ?? 0) >= worker.hireCost;
+  // For object hireCost (Phase-9 workers), only check coins if there's a coins field
+  const canAfford = typeof worker.hireCost === "object"
+    ? true // object costs are checked server-side; display only
+    : (state.coins ?? 0) >= worker.hireCost;
   const atWorkerMax = hiredCount >= worker.maxCount;
   const atHousingCap = total >= cap;
   const noPool = pool < 1;
@@ -54,7 +89,7 @@ function WorkerRow({ worker, state, dispatch }) {
   if (atWorkerMax) hireTooltip = `${worker.name}'s slots are full`;
   else if (atHousingCap) hireTooltip = "Build Housing for more capacity";
   else if (noPool) hireTooltip = "Need a Worker (build Housing or wait a season)";
-  else if (!canAfford) hireTooltip = `Need ${worker.hireCost}◉`;
+  else if (!canAfford) hireTooltip = `Need ${formatHireCost(worker.hireCost)}`;
   else if (!reqMet) hireTooltip = "Requirements not met";
 
   return (
@@ -77,6 +112,11 @@ function WorkerRow({ worker, state, dispatch }) {
           {hiredCount} / {workerSlotLabel(worker)}
         </span>
       </div>
+      {worker.description && (
+        <div style={{ fontSize: 10, color: "#5a4a2a", lineHeight: 1.4, fontStyle: "italic" }}>
+          {worker.description}
+        </div>
+      )}
       <div style={{ fontSize: 10, color: "#7a5a3a", lineHeight: 1.3 }}>
         {effectLabel(worker, hiredCount)}
       </div>
@@ -93,7 +133,7 @@ function WorkerRow({ worker, state, dispatch }) {
           </span>
         )}
         <span style={{ marginLeft: "auto", fontSize: 11, fontWeight: 700,
-          color: canAfford ? "#3a7a3a" : "#a85050" }}>{worker.hireCost}◉</span>
+          color: canAfford ? "#3a7a3a" : "#a85050" }}>{formatHireCost(worker.hireCost)}</span>
         <button
           title={hireTooltip}
           disabled={hireDisabled}

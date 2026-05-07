@@ -51,7 +51,7 @@ function SpeciesRow({ row, category, dispatch }) {
         {CATEGORY_ICONS[category] ?? "?"}
       </div>
 
-      {/* Name + status */}
+      {/* Name + status + description */}
       <div className="flex-1 min-w-0">
         <div
           className={`font-bold text-sm truncate ${
@@ -66,6 +66,11 @@ function SpeciesRow({ row, category, dispatch }) {
         <div className={`text-xs mt-0.5 truncate ${row.locked ? "text-[#6a5040]" : "text-[#c8a87a]"}`}>
           {row.status}
         </div>
+        {row.description && !row.locked && (
+          <div className="text-[10px] mt-0.5 text-[#a89070] italic leading-snug line-clamp-2">
+            {row.description}
+          </div>
+        )}
       </div>
 
       {/* Action button */}

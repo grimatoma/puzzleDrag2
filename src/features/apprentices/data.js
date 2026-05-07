@@ -21,6 +21,7 @@ export const WORKERS = [
     maxCount: 3,
     effect: { type: "threshold_reduce", key: "hay", from: 6, to: 3 },
     requirement: { building: "granary" },
+    description: "A tireless farmhand who knows just when to cut the hay. Lowers the chain length needed to upgrade hay tiles.",
   },
   {
     id: "pip",
@@ -33,6 +34,7 @@ export const WORKERS = [
     maxCount: 2,
     effect: { type: "pool_weight", key: "berry", amount: 2 },
     requirement: { building: "inn" },
+    description: "A nimble forager who scouts the hedgerows at dawn. Adds extra berry tiles to the board spawn pool.",
   },
   {
     id: "wila",
@@ -45,6 +47,7 @@ export const WORKERS = [
     maxCount: 2,
     effect: { type: "bonus_yield", key: "jam", amount: 2 },
     requirement: { building: "bakery" },
+    description: "A patient cellarer who turns surplus berries into rich preserves. Yields bonus jam whenever you chain berry tiles.",
   },
   {
     id: "tuck",
@@ -57,6 +60,7 @@ export const WORKERS = [
     maxCount: 1,
     effect: { type: "season_bonus", key: "coins", amount: 30 },
     requirement: { building: "inn" },
+    description: "A sharp-eyed lookout who keeps tabs on trade caravans. Brings in extra coin at the end of each season.",
   },
   {
     id: "osric",
@@ -69,6 +73,7 @@ export const WORKERS = [
     maxCount: 1,
     effect: { type: "threshold_reduce", key: "ore", from: 6, to: 3 },
     requirement: { building: "forge", orLevel: 4 },
+    description: "A forge apprentice who learned the trade at Bram's knee. Halves the chain length needed to smelt ore into ingots.",
   },
   {
     id: "dren",
@@ -81,6 +86,7 @@ export const WORKERS = [
     maxCount: 2,
     effect: { type: "pool_weight", key: "stone", amount: 2 },
     requirement: { level: 2 },
+    description: "A seasoned miner who always finds a richer seam. Adds extra stone tiles to the board spawn pool.",
   },
 
   // ── Phase 9 — Mine workers ──────────────────────────────────────────────────
@@ -98,6 +104,7 @@ export const WORKERS = [
     // At max hire (2): gas_vent spawn rate −50%. Per hire: −25%.
     effect: { hazardSpawnReduce: { gas_vent: 0.5 } },
     requirement: { biomeUnlocked: "mine" },
+    description: "A trained hazard spotter who senses dangerous gas before it builds up. Reduces the chance of gas vent hazards spawning in the mine.",
   },
   {
     id: "geologist",
@@ -111,6 +118,7 @@ export const WORKERS = [
     // At max hire (2): ore +1, gem +1 in pool. 1 hire floors to +0 (0.5 per hire).
     effect: { poolWeight: { ore: 1, gem: 1 } },
     requirement: { biomeUnlocked: "mine" },
+    description: "A seasoned surveyor who knows where the richest veins run. Adds bonus ore and gem tiles to the mine spawn pool.",
   },
 ];
 

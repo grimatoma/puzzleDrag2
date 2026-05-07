@@ -5,6 +5,8 @@ export const BOSSES = [
     season: "winter",
     target: { resource: "log", amount: 30 },
     modifier: { type: "freeze_columns", params: { n: 2 } },
+    description: "A frozen titan stirs in the deep winter wood, its icy breath threatening to snuff out every hearth in the vale. Gather logs quickly before the cold claims the village.",
+    modifierDescription: "Two columns on the board are frozen solid and cannot be chained until thawed.",
   },
   {
     id: "quagmire",
@@ -12,6 +14,8 @@ export const BOSSES = [
     season: "spring",
     target: { resource: "hay", amount: 50 },
     modifier: { type: "respawn_boost", params: { boost: ["log", "hay"], factor: 1.5 } },
+    description: "A boggy creature has swallowed the lower fields, turning fertile soil to mud. Only a bountiful hay harvest can drain its hold on the spring meadows.",
+    modifierDescription: "Log and hay tiles respawn at 1.5× their normal rate, flooding the board with resources.",
   },
   {
     id: "ember_drake",
@@ -19,6 +23,8 @@ export const BOSSES = [
     season: "summer",
     target: { resource: "ingot", amount: 3 },
     modifier: { type: "heat_tiles", params: { spawnPerTurn: 1, burnAfter: 2 } },
+    description: "Scales of cinder and breath of smelting flame — the Ember Drake demands a tribute of forged iron before the summer heat destroys your crops. Prove your craft at the forge.",
+    modifierDescription: "One heat tile spawns each turn; any resource left on a heat tile for 2 turns is burned away.",
   },
   {
     id: "old_stoneface",
@@ -26,6 +32,8 @@ export const BOSSES = [
     season: "autumn",
     target: { resource: "stone", amount: 20 },
     modifier: { type: "rubble_blocks", params: { count: 4 } },
+    description: "An ancient golem has sealed the mountain pass with its bulk, blocking the autumn trade caravans. Quarry enough stone to prove your worth and earn passage through.",
+    modifierDescription: "Four rubble tiles block random board positions; they cannot be chained and must be cleared by adjacent stone chains.",
   },
   {
     id: "mossback",
@@ -33,6 +41,8 @@ export const BOSSES = [
     season: "spring",
     target: { resource: "berry", amount: 30 },
     modifier: { type: "hide_resources", params: { hidden: 4 } },
+    description: "A mossy titan lurks in the spring glades, concealing its weakness beneath layers of overgrowth. Harvest enough berries to expose it and drive it from the vale.",
+    modifierDescription: "Four resource tiles are hidden face-down on the board and only reveal themselves when included in a chain.",
   },
 ];
 

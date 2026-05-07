@@ -12,11 +12,36 @@ export const XP_PER_LEVEL = 150;
  *       (crafting blueprints + cosmetic unlocks at tiers 6–10).
  */
 export const ALMANAC_TIERS = [
-  { tier: 1, level: 1, reward: { coins: 50 } },
-  { tier: 2, level: 2, reward: { tools: { seedpack: 1 } } },
-  { tier: 3, level: 3, reward: { coins: 75, tools: { lockbox: 1 } } },
-  { tier: 4, level: 4, reward: { tools: { reshuffle: 1 } } },
-  { tier: 5, level: 5, reward: { structural: "startingExtraScythe" } },
+  {
+    tier: 1, level: 1,
+    name: "Seedling",
+    description: "Your first entry in the Almanac — you've started keeping records of the vale.",
+    reward: { coins: 50 },
+  },
+  {
+    tier: 2, level: 2,
+    name: "Apprentice Keeper",
+    description: "A seed pack from Mira to help you broaden your harvest.",
+    reward: { tools: { seedpack: 1 } },
+  },
+  {
+    tier: 3, level: 3,
+    name: "Field Scholar",
+    description: "A lockbox of coin and a sturdy lock to keep your stores safe.",
+    reward: { coins: 75, tools: { lockbox: 1 } },
+  },
+  {
+    tier: 4, level: 4,
+    name: "Chronicler",
+    description: "A reshuffle token — handy when the board needs a fresh deal.",
+    reward: { tools: { reshuffle: 1 } },
+  },
+  {
+    tier: 5, level: 5,
+    name: "Master Harvester",
+    description: "A legendary scythe that stays in your toolkit at the start of every new season.",
+    reward: { structural: "startingExtraScythe" },
+  },
 ];
 
 /**

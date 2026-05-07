@@ -15,13 +15,14 @@ function colorForKey(key) {
 }
 
 const STATION_META = {
-  bakery: { label: "Bakery", icon: "🏠", bg: "#8a4a26" },
-  forge:  { label: "Forge",  icon: "⚒",  bg: "#5a6973" },
-  larder: { label: "Larder", icon: "🥫", bg: "#4f6b3a" },
+  bakery:   { label: "Bakery",   icon: "🏠", bg: "#8a4a26" },
+  forge:    { label: "Forge",    icon: "⚒",  bg: "#5a6973" },
+  larder:   { label: "Larder",   icon: "🥫", bg: "#4f6b3a" },
+  workshop: { label: "Workshop", icon: "🔧", bg: "#6a5a3a" },
 };
 
 // Ordered list of all stations
-const STATION_ORDER = ["bakery", "larder", "forge"];
+const STATION_ORDER = ["bakery", "larder", "forge", "workshop"];
 
 function stationBuilt(built, station) {
   return !!(built && built[station]);

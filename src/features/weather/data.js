@@ -1,10 +1,15 @@
 // §9 locked: weather rolls each season UNLESS boss active.
 export const WEATHER_TABLE = [
-  { id: "none",         label: "Clear",        weight: 40, durationMin: 0, durationMax: 0 },
-  { id: "rain",         label: "Rain",         weight: 20, durationMin: 1, durationMax: 3 },
-  { id: "harvest_moon", label: "Harvest Moon", weight: 15, durationMin: 1, durationMax: 2 },
-  { id: "drought",      label: "Drought",      weight: 15, durationMin: 2, durationMax: 3 },
-  { id: "frost",        label: "Frost",        weight: 10, durationMin: 1, durationMax: 3 },
+  { id: "none",         label: "Clear",        weight: 40, durationMin: 0, durationMax: 0,
+    description: "Skies are clear — no weather effects this season." },
+  { id: "rain",         label: "Rain",         weight: 20, durationMin: 1, durationMax: 3,
+    description: "Steady rain doubles the resources collected from berry chains." },
+  { id: "harvest_moon", label: "Harvest Moon", weight: 15, durationMin: 1, durationMax: 2,
+    description: "The Harvest Moon rises — the first 3 chains each turn yield +1 upgrade tier." },
+  { id: "drought",      label: "Drought",      weight: 15, durationMin: 2, durationMax: 3,
+    description: "A dry spell halves wheat and grain spawn rates on the board." },
+  { id: "frost",        label: "Frost",        weight: 10, durationMin: 1, durationMax: 3,
+    description: "Frost creeps across the fields, slowing tile-fall and reducing chain speed." },
 ];
 
 /**

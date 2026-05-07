@@ -20,11 +20,18 @@ function WeatherBadge({ weather }) {
   if (!weather) return null;
   return (
     <div
-      className="flex items-center gap-1.5 px-2 py-1 rounded-lg text-[10px] font-bold text-white mt-3"
+      className="flex flex-col gap-0.5 px-2 py-1.5 rounded-lg text-white mt-3"
       style={{ background: weather.color || "#3a6b8a", opacity: 0.9 }}
     >
-      <span>{weather.emoji}</span>
-      <span>{weather.label} active</span>
+      <div className="flex items-center gap-1.5 text-[10px] font-bold">
+        <span>{weather.emoji}</span>
+        <span>{weather.label} active</span>
+      </div>
+      {weather.description && (
+        <div className="text-[9px] font-normal opacity-90 leading-snug">
+          {weather.description}
+        </div>
+      )}
     </div>
   );
 }
@@ -153,7 +160,7 @@ function BossModal({ boss, weather, dispatch }) {
           className="text-[11px] text-center text-white/50 mb-4"
           style={{ fontFamily: "Arial, sans-serif" }}
         >
-          Victory reward: +200 coins
+          Victory reward: Coins (year-scaled)
         </div>
 
         {/* Weather badge if active */}

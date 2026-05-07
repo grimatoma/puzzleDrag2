@@ -147,7 +147,29 @@ const TOGGLE_ROWS = [
   { key: 'colorBlind',   label: 'Color-Blind Mode' },
 ];
 
+const PALETTE_OPTIONS = [
+  { id: 'default',      label: 'Default' },
+  { id: 'deuteranopia', label: 'Deuteranopia' },
+  { id: 'protanopia',   label: 'Protanopia' },
+  { id: 'tritanopia',   label: 'Tritanopia' },
+];
+
 function SettingsTab({ settings = {}, dispatch }) {
+  const activePalette = settings.palette ?? 'default';
+
+  function handleToggle(key) {
+    dispatch({ type: 'SETTINGS/TOGGLE', key });
+    // Sync colorBlind toggle with palette
+    if (key === 'colorBlind') {
+      const willBeOn = !settings[key];
+      if (willBeOn && activePalette === 'default') {
+        dispatch({ type: 'SET_PALETTE', id: 'deuteranopia' });
+      } else if (!willBeOn && activePalette !== 'default') {
+        dispatch({ type: 'SET_PALETTE', id: 'default' });
+      }
+    }
+  }
+
   return (
     <div className="flex flex-col gap-3">
       <button
@@ -170,10 +192,34 @@ function SettingsTab({ settings = {}, dispatch }) {
             <span className="text-[13px] font-bold" style={{ color: '#2b2218' }}>{label}</span>
             <Toggle
               on={!!settings[key]}
-              onToggle={() => dispatch({ type: 'SETTINGS/TOGGLE', key })}
+              onToggle={() => handleToggle(key)}
             />
           </div>
         ))}
+      </div>
+
+      {/* Palette selector */}
+      <div
+        className="flex flex-col gap-2 py-2 px-3 rounded-xl border-2"
+        style={{ background: '#f4e8d0', borderColor: '#b28b62' }}
+      >
+        <span className="text-[13px] font-bold" style={{ color: '#2b2218' }}>Color Palette</span>
+        <div className="grid grid-cols-2 gap-1.5">
+          {PALETTE_OPTIONS.map(({ id, label }) => (
+            <button
+              key={id}
+              onClick={() => dispatch({ type: 'SET_PALETTE', id })}
+              className="py-1.5 px-2 text-[11px] font-bold rounded-lg border-2 transition-colors"
+              style={
+                activePalette === id
+                  ? { background: '#d6612a', borderColor: '#a84010', color: '#fff' }
+                  : { background: '#e8dcc4', borderColor: '#b28b62', color: '#5a3a20' }
+              }
+            >
+              {label}
+            </button>
+          ))}
+        </div>
       </div>
     </div>
   );

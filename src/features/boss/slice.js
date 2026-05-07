@@ -73,24 +73,28 @@ const WEATHER_META = {
     label: "Rain",
     emoji: "🌧",
     desc: "Rain settles over the vale — berry chains double resources for",
+    description: "Steady rain doubles the resources collected from berry chains.",
     color: "#3a6b8a",
   },
   harvest_moon: {
     label: "Harvest Moon",
     emoji: "🌕",
     desc: "The Harvest Moon rises — first 3 chains each night yield +1 upgrade for",
+    description: "The Harvest Moon rises — the first 3 chains each turn yield +1 upgrade tier.",
     color: "#c8a030",
   },
   drought: {
     label: "Drought",
     emoji: "☀️",
     desc: "A dry spell grips the vale — wheat and grain yields are halved for",
+    description: "A dry spell halves wheat and grain spawn rates on the board.",
     color: "#c8820a",
   },
   frost: {
     label: "Frost",
     emoji: "🌨",
     desc: "Frost creeps across the fields — tile-fall slows for",
+    description: "Frost creeps across the fields, slowing tile-fall and reducing chain speed.",
     color: "#7ab8d4",
   },
 };

@@ -178,6 +178,13 @@ function NpcCard({ npcKey, npcData, bond, inventory, dispatch, giftCooledDown })
         </div>
       </div>
 
+      {/* Persistent favorite gift hint */}
+      {NPC_FAVORITES[npcKey]?.favorite && (
+        <div className="text-[10px] text-[#8a6a3a] mt-0.5">
+          💝 Loves: <span className="font-bold">{NPC_FAVORITES[npcKey].favorite}</span>
+        </div>
+      )}
+
       {/* Inline gift picker */}
       {giftOpen && (
         <GiftPicker
