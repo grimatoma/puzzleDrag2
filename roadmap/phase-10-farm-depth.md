@@ -1168,8 +1168,8 @@ like a strict downgrade?*
 
 ### 10.9 — Validation tests for pre-existing crafting recipes
 
-**What this delivers:** Five recipes already live in `src/constants.js`
-(Honey Roll, Harvest Pie, Tincture, Cobble Path, Lantern) but no phase
+**What this delivers:** Eight recipes already live in `src/constants.js`
+(Bread Loaf, Honey Roll, Harvest Pie, Preserve, Tincture, Iron Hinge, Cobble Path, Lantern) but no phase
 ever wrote tests for them. This task adds a Vitest file that asserts
 each recipe's inputs, station, sell price, and successful craft via
 `CRAFTING/CRAFT_RECIPE` — closing the §11 spec coverage gap that has
@@ -1190,7 +1190,7 @@ existed since Phase 0.
 - [ ] Test file registers in the existing Vitest pipeline (`npm run test`
   picks it up automatically since `vitest` already glob-matches
   `src/**/*.test.js`).
-- [ ] All 5 recipes' tests pass on the *current* codebase (no
+- [ ] All 8 recipes' tests pass on the *current* codebase (no
   implementation work required — this is pure coverage backfill).
 
 **Validation Spec — write before code:**
@@ -1202,8 +1202,8 @@ import { describe, it, expect } from "vitest";
 import { RECIPES } from "../constants.js";
 import { createInitialState, rootReducer, sellPriceFor } from "../state.js";
 
-const PREEXISTING = ["honeyroll", "harvestpie", "tincture",
-                     "cobblepath", "lantern"];
+const PREEXISTING = ["bread", "honeyroll", "harvestpie", "preserve",
+                     "tincture", "hinge", "cobblepath", "lantern"];
 
 describe("Pre-existing crafting recipes — spec backfill", () => {
   for (const id of PREEXISTING) {
@@ -1251,14 +1251,15 @@ already handles them. This task only writes the tests that close the
 coverage gap.
 
 **Manual Verify Walk-through:**
-1. `npm test -- preexisting-recipes` — confirm all 25 assertions
-   (5 recipes × 5 tests each) pass without touching implementation.
-2. Open the game. Open Bakery → confirm Honey Roll and Harvest Pie
-   appear in the recipe list. Stock inputs, craft each. Confirm output
-   appears in inventory.
-3. Open Larder → confirm Tincture in list. Stock + craft. Confirm.
-4. Open Forge → confirm Cobble Path and Lantern in list. Stock + craft
-   both. Confirm.
+1. `npm test -- preexisting-recipes` — confirm all 40 assertions
+   (8 recipes × 5 tests each) pass without touching implementation.
+2. Open the game. Open Bakery → confirm Bread, Honey Roll, and Harvest
+   Pie appear in the recipe list. Stock inputs, craft each. Confirm
+   output appears in inventory.
+3. Open Larder → confirm Preserve and Tincture in list. Stock + craft
+   each. Confirm.
+4. Open Forge → confirm Iron Hinge, Cobble Path, and Lantern in list.
+   Stock + craft each. Confirm.
 5. Sell one of each via Phase 3 Market. Confirm sell prices match the
    §10 asymmetry (≈10% of buy).
 

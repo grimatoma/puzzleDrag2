@@ -261,8 +261,12 @@ before the player has any iron)?*
   - `collectPath()` → after inventory updated, emit `{ type: "resource_total", key, amount }`
     for each resource changed; also emit `resource_total_multi` with the full inventory snapshot
   - `bake()` → emit `{ type: "craft_made", item, count }`
-  - `build()` → emit `{ type: "building_built", id }`, then if all buildings built
-    also emit `{ type: "all_buildings_built", allBuilt: true }`
+  - `build()` → emit `{ type: "building_built", id }`, then if every id in
+    `STORY_BUILDING_IDS` (imported from `src/features/story/data.js` —
+    `["hearth","mill","bakery","inn","granary","larder","forge","caravan_post"]`)
+    is in `state.builtBuildings`, also emit
+    `{ type: "all_buildings_built", allBuilt: true }`. The other 5 §11 buildings
+    (`kitchen`, `housing`, `powder_store`, `portal`, `workshop`) are NOT required.
   - `advanceTurn()` → on season change, emit `{ type: "season_entered", season }`
   - `defeatBoss()` → emit `{ type: "boss_defeated", id }`
   - `applyBeatResult` with `advanceAct: N` → emit `{ type: "act_entered", act: N }` recursively
@@ -454,6 +458,8 @@ in sandbox mode (no progression locked, no further story beats).
 - [ ] After winning, no further story beats fire (all are completed)
 - [ ] Save file persists `isWon` — reloading the won game keeps the banner
 - [ ] Larder progress widget visible in HUD once festival announced (5 progress bars)
+- [ ] `STORY_BUILDING_IDS` exported from `src/features/story/data.js` with exactly
+  these 8 IDs: `["hearth","mill","bakery","inn","granary","larder","forge","caravan_post"]`
 
 **Validation Spec — write before code:**
 
@@ -489,7 +495,11 @@ assert(r === null, "49 log does not win");
 Run — confirm: tests fail because the gating check on `festival_announced` is missing.
 
 *Gameplay simulation (player nearing the end, ~level 12):*
-Player has all 8 buildings built. Festival modal fires: "Mira: Fill the larder — 50
+Player has all 8 *story-required* buildings built — `hearth` (pre-built), `mill`,
+`bakery`, `inn`, `granary`, `larder`, `forge`, `caravan_post` — out of the 13 §11
+buildings (the remaining 5 — `kitchen`, `housing`, `powder_store`, `portal`,
+`workshop` — are unlocked via Phases 3, 4, 8, 10 and NOT required for the festival
+trigger). Festival modal fires: "Mira: Fill the larder — 50
 each of hay, wheat, grain, berry, log." A 5-bar progress widget appears in the HUD.
 Each chain that adds to a larder resource pulses the matching bar. When the last bar
 fills, a slow gold fade washes the screen, particles drift, and the win modal opens.
