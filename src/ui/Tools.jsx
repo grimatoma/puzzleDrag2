@@ -41,6 +41,7 @@ export function ToolsGrid({ tools, onUse }) {
             <div key={t.key} className="relative">
               <button
                 disabled={empty}
+                aria-label={`Use ${t.name}${empty ? " (none left)" : ""}`}
                 onClick={() => {
                   if (longPressOccurred.current) { longPressOccurred.current = false; return; }
                   onUse(t.key);
@@ -122,6 +123,7 @@ export function PortraitToolsBar({ state, dispatch }) {
             <button
               key={t.key}
               disabled={empty}
+              aria-label={`Use ${t.name}${empty ? " (none left)" : ""}`}
               onClick={() => {
                 dispatch({ type: "USE_TOOL", key: t.key });
                 if (t.key === "shuffle") getPhaserScene()?.shuffleBoard();

@@ -102,6 +102,7 @@ export function Hud({ state, dispatch }) {
         onClick={() => dispatch({ type: "OPEN_MODAL", modal: "menu" })}
         className="w-8 h-8 rounded-lg bg-[#f6efe0] border-2 border-[#b28b62] grid place-items-center text-[#6a4b31] font-bold text-[18px] flex-shrink-0"
         data-testid="menu-btn"
+        aria-label="Menu"
       >≡</button>
       {/* Sandbox banner — shown after winning */}
       {(isWon || sandbox) && (

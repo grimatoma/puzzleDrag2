@@ -1,4 +1,4 @@
-import { TILE, BIOMES } from "./constants.js";
+import { TILE, BIOMES, PALETTES } from "./constants.js";
 import { hex } from "./utils.js";
 import { drawFarmTileIcon } from "./textures/farmIcons.js";
 import { drawMineTileIcon } from "./textures/mineIcons.js";
@@ -78,11 +78,79 @@ export function drawTileIcon(ctx, key) {
 
 // ─── Tile + ambient texture generation ───────────────────────────────────────
 
-export function makeTextures(scene) {
+/**
+ * Rebuild only the per-resource tile textures using the given palette id.
+ * Called whenever state.settings.palette changes.
+ */
+export function regenerateTextures(scene, paletteId = "default") {
   const dpr = scene.registry.get("dpr") || 1;
+  const palette = PALETTES[paletteId] ?? PALETTES.default;
   Object.values(BIOMES).forEach((biome) => {
     biome.resources.forEach((r) => {
       [false, true].forEach((selected) => {
+        const key = `tile_${r.key}${selected ? "_sel" : ""}`;
+        // Remove existing cached texture so canvasTexture will recreate it
+        if (scene.textures.exists(key)) scene.textures.remove(key);
+        const tileColor = palette.tiles[r.key] ?? r.color;
+        canvasTexture(scene, key, TILE, TILE, (ctx, w, h) => {
+          ctx.clearRect(0, 0, w, h);
+          ctx.fillStyle = "rgba(0,0,0,.22)";
+          ctx.beginPath();
+          ctx.ellipse(w / 2 + 2, h - 14, 26, 8, 0, 0, Math.PI * 2);
+          ctx.fill();
+          if (selected) {
+            rr(ctx, 3, 1, w - 6, h - 6, 16);
+            ctx.fillStyle = "rgba(255,160,0,.35)";
+            ctx.fill();
+          }
+          rr(ctx, 7, 5, w - 14, h - 14, 14);
+          const baseColor = hex(tileColor);
+          const tileGrad = ctx.createRadialGradient(w / 2 - 8, h / 2 - 12, 4, w / 2, h / 2, w / 2);
+          tileGrad.addColorStop(0, lighten(baseColor, 0.25));
+          tileGrad.addColorStop(1, baseColor);
+          ctx.fillStyle = tileGrad;
+          ctx.fill();
+          if (selected) {
+            ctx.lineWidth = 7;
+            ctx.strokeStyle = "#ffb300";
+            ctx.stroke();
+            rr(ctx, 11, 9, w - 22, h - 22, 11);
+            ctx.lineWidth = 2;
+            ctx.strokeStyle = "rgba(255,240,180,.65)";
+            ctx.stroke();
+          } else {
+            ctx.lineWidth = 3;
+            ctx.strokeStyle = "rgba(255,255,255,.32)";
+            ctx.stroke();
+          }
+          ctx.save();
+          ctx.translate(w / 2, h / 2);
+          drawTileIcon(ctx, r.key);
+          ctx.restore();
+        }, dpr);
+      });
+    });
+  });
+  // Refresh all on-board sprite frames so they pick up the new textures
+  const scene_ = scene;
+  if (scene_.grid) {
+    scene_.grid.flat().forEach((t) => {
+      if (!t) return;
+      const sel = t.selected;
+      const key = `tile_${t.res.key}${sel ? "_sel" : ""}`;
+      t.sprite.setTexture(key);
+    });
+  }
+}
+
+export function makeTextures(scene) {
+  const dpr = scene.registry.get("dpr") || 1;
+  const paletteId = scene.registry.get("palette") ?? "default";
+  const palette = PALETTES[paletteId] ?? PALETTES.default;
+  Object.values(BIOMES).forEach((biome) => {
+    biome.resources.forEach((r) => {
+      [false, true].forEach((selected) => {
+        const tileColor = palette.tiles[r.key] ?? r.color;
         canvasTexture(scene, `tile_${r.key}${selected ? "_sel" : ""}`, TILE, TILE, (ctx, w, h) => {
           ctx.clearRect(0, 0, w, h);
           ctx.fillStyle = "rgba(0,0,0,.22)";
@@ -98,7 +166,7 @@ export function makeTextures(scene) {
           rr(ctx, 7, 5, w - 14, h - 14, 14);
           // Subtle radial backing for the icon tile
           const tileGrad = ctx.createRadialGradient(w / 2 - 8, h / 2 - 12, 4, w / 2, h / 2, w / 2);
-          const baseColor = hex(r.color);
+          const baseColor = hex(tileColor);
           tileGrad.addColorStop(0, lighten(baseColor, 0.25));
           tileGrad.addColorStop(1, baseColor);
           ctx.fillStyle = tileGrad;
