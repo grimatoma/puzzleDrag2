@@ -393,46 +393,6 @@ RECIPES.gold_ring  = RECIPES.goldring;
 // Phase 10.1 — RECIPES.tools aliases WORKSHOP_RECIPES for backwards compat
 RECIPES.tools = WORKSHOP_RECIPES;
 
-// Phase 10.3 — ID normalisation aliases for old save-file keys
-export const RECIPE_ID_ALIASES = {
-  ironframe: "iron_frame",
-  gemcrown:  "gem_crown",
-  goldring:  "gold_ring",
-};
-
-// @deprecated — Use ACHIEVEMENTS from src/features/achievements/data.js instead.
-// This legacy list (20 entries, eventKey/target shape) is kept for the achievements/slice.js
-// trophy system only. New code should use the canonical counter/threshold shape.
-export const ACHIEVEMENTS = [
-  // Harvest
-  { id: "harvest_1",    name: "First Harvest",      desc: "Collect your first resource",            category: "Harvest",  target: 1,    eventKey: "totalHarvested", icon: "🌾", reward: { coins: 25,  xp: 10 } },
-  { id: "harvest_100",  name: "Bountiful",           desc: "Collect 100 resources total",            category: "Harvest",  target: 100,  eventKey: "totalHarvested", icon: "🌿", reward: { coins: 75,  xp: 30 } },
-  { id: "harvest_1000", name: "Field Master",        desc: "Collect 1000 resources total",           category: "Harvest",  target: 1000, eventKey: "totalHarvested", icon: "🏡", reward: { coins: 200, xp: 80 } },
-  { id: "harvest_5000", name: "Granary Full",        desc: "Collect 5000 resources total",           category: "Harvest",  target: 5000, eventKey: "totalHarvested", icon: "🏰", reward: { coins: 500, xp: 200 } },
-  // Chains
-  { id: "chain_3",      name: "Triple Match",        desc: "Form a chain of 3 or more",             category: "Chains",   target: 3,    eventKey: "longestChain",   icon: "🔗", reward: { coins: 20,  xp: 10 } },
-  { id: "chain_6",      name: "Big Chain",           desc: "Form a chain of 6 or more",             category: "Chains",   target: 6,    eventKey: "longestChain",   icon: "⛓", reward: { coins: 60,  xp: 25 } },
-  { id: "chain_10",     name: "Mega Chain",          desc: "Form a chain of 10 or more",            category: "Chains",   target: 10,   eventKey: "longestChain",   icon: "💫", reward: { coins: 150, xp: 60 } },
-  { id: "chain_speed",  name: "Lightning",           desc: "Make 5 chains in one season",           category: "Chains",   target: 5,    eventKey: "chainsThisSeason", icon: "⚡", reward: { coins: 100, xp: 40 } },
-  // Orders
-  { id: "orders_5",     name: "Helpful",             desc: "Fill 5 orders",                         category: "Orders",   target: 5,    eventKey: "totalOrders",    icon: "📦", reward: { coins: 50,  xp: 20 } },
-  { id: "orders_25",    name: "Trusted",             desc: "Fill 25 orders",                        category: "Orders",   target: 25,   eventKey: "totalOrders",    icon: "🤝", reward: { coins: 150, xp: 60 } },
-  { id: "orders_100",   name: "Pillar of the Town",  desc: "Fill 100 orders",                       category: "Orders",   target: 100,  eventKey: "totalOrders",    icon: "🏛", reward: { coins: 400, xp: 150 } },
-  // Buildings
-  { id: "build_2",      name: "Two Bricks",          desc: "Construct 2 buildings",                 category: "Buildings",target: 2,    eventKey: "buildingCount",  icon: "🪵", reward: { coins: 75,  xp: 30 } },
-  { id: "build_5",      name: "Hamlet",              desc: "Construct 5 buildings",                 category: "Buildings",target: 5,    eventKey: "buildingCount",  icon: "🏘", reward: { coins: 200, xp: 80 } },
-  { id: "build_7",      name: "Vale",                desc: "Construct all 7 buildings",             category: "Buildings",target: 7,    eventKey: "buildingCount",  icon: "🌆", reward: { coins: 500, xp: 200 } },
-  // Seasons
-  { id: "seasons_4",    name: "One Cycle",           desc: "Complete 4 seasons",                    category: "Seasons",  target: 4,    eventKey: "seasonsCycled",  icon: "🌀", reward: { coins: 100, xp: 50 } },
-  { id: "seasons_16",   name: "Year",                desc: "Complete 16 seasons (a full year)",     category: "Seasons",  target: 16,   eventKey: "seasonsCycled",  icon: "📅", reward: { coins: 300, xp: 120 } },
-  // Resources
-  { id: "gold_50",      name: "Goldsmith",           desc: "Collect 50 gold",                       category: "Resources",target: 50,   eventKey: "mine_gold",           icon: "✺", reward: { coins: 200, xp: 80 } },
-  { id: "cutgem_10",    name: "Gemcutter",           desc: "Collect 10 cut gems",                   category: "Resources",target: 10,   eventKey: "mine_cutgem",         icon: "✦", reward: { coins: 300, xp: 100 } },
-  // Crafting
-  { id: "craft_1",      name: "First Craft",         desc: "Craft your first recipe",               category: "Crafting", target: 1,    eventKey: "totalCrafted",   icon: "🔨", reward: { coins: 50,  xp: 20 } },
-  { id: "craft_50",     name: "Master Craftsman",    desc: "Craft 50 recipes",                      category: "Crafting", target: 50,   eventKey: "totalCrafted",   icon: "⚒",  reward: { coins: 300, xp: 120 } },
-];
-
 export const MARKET_PRICES = {
   grass_hay:    { buy: 40,  sell: 0  },
   grain_wheat:  { buy: 60,  sell: 2  },
@@ -467,6 +427,11 @@ export const MARKET_PRICES = {
   bread:     { buy: 60,   sell: 4   },
 };
 
+// LEGACY — only used by features/quests/slice.js's `dailies` system. The
+// canonical seasonal-quest pool lives in features/quests/templates.js with
+// a different shape (category/min/max). Don't mix the two; consumers should
+// import from the feature module unless they specifically want the legacy
+// dailies pool.
 export const QUEST_TEMPLATES = [
   { key: "harvest", label: "Harvest 30 hay", target: 30, reward: { coins: 50, almanacXp: 20 } },
   { key: "chain5",  label: "Make 3 chains of 5+", target: 3, reward: { coins: 75, almanacXp: 30 } },
@@ -474,19 +439,6 @@ export const QUEST_TEMPLATES = [
   { key: "build",   label: "Build 1 building", target: 1, reward: { coins: 100, almanacXp: 40 } },
   { key: "craft",   label: "Craft 2 recipes", target: 2, reward: { coins: 80, almanacXp: 35 } },
   { key: "coins",   label: "Earn 200 coins this season", target: 200, reward: { coins: 50, almanacXp: 20 } },
-];
-
-export const ALMANAC_TIERS = [
-  { reward: { coins: 50 } },
-  { reward: { tool: "shuffle", amt: 1 } },
-  { reward: { coins: 75 } },
-  { reward: { tool: "basic", amt: 1 } },
-  { reward: { coins: 100 } },
-  { reward: { tool: "rare", amt: 1 } },
-  { reward: { coins: 150 } },
-  { reward: { tool: "shuffle", amt: 2 } },
-  { reward: { coins: 200 } },
-  { reward: { coins: 100, tool: "rare", amt: 1 } },
 ];
 
 // ─── Phase 4 — Inventory soft caps ───────────────────────────────────────────
