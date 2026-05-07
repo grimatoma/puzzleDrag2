@@ -1,5 +1,6 @@
 
 import { InventoryGrid } from "../../ui/Inventory.jsx";
+import CastlePanel from "../castle/index.jsx";
 
 export const viewKey = "inventory";
 
@@ -14,8 +15,9 @@ export default function InventoryScreen({ state, dispatch }) {
         >✕</button>
       </div>
       <div className="flex-1 overflow-y-auto px-3 py-3">
-        <div className="max-w-[640px] mx-auto">
+        <div className="max-w-[640px] mx-auto flex flex-col gap-3">
           <InventoryGrid inventory={state.inventory} biomeKey={state.biomeKey} orders={state.orders} />
+          <CastlePanel state={state} dispatch={dispatch} />
         </div>
       </div>
     </div>

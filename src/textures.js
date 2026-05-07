@@ -53,7 +53,7 @@ export function canvasTexture(scene, key, w, h, draw, dpr = 1) {
 
 // ─── Per-resource icon drawing ────────────────────────────────────────────────
 
-const FARM_KEYS = new Set(["hay","meadow_grass","spiky_grass","wheat","grain","flour","log","plank","beam","berry","jam","egg","turkey","clover","melon"]);
+const FARM_KEYS = new Set(["hay","meadow_grass","spiky_grass","wheat","grain","flour","log","plank","beam","berry","jam","egg","turkey","clover","melon","carrot","eggplant","turnip","beet","cucumber","squash","mushroom","pepper","broccoli","soup"]);
 const MINE_KEYS = new Set(["stone","cobble","block","ore","ingot","coal","coke","gem","cutgem","gold"]);
 
 export function drawTileIcon(ctx, key) {

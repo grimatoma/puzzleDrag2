@@ -17,7 +17,7 @@ export const ROWS = 6;
 export const MAX_TURNS = 10;
 
 // Phase 12.2 — save schema version (increment when save shape changes)
-export const SAVE_SCHEMA_VERSION = 12;
+export const SAVE_SCHEMA_VERSION = 13;
 
 export const UPGRADE_THRESHOLDS = {
   hay: 6, meadow_grass: 6, spiky_grass: 6,
@@ -26,6 +26,8 @@ export const UPGRADE_THRESHOLDS = {
   berry: 7,
   stone: 8, cobble: 6,
   ore: 6, coal: 7, gem: 5,
+  carrot: 6, eggplant: 6, turnip: 6, beet: 6, cucumber: 6,
+  squash: 6, mushroom: 6, pepper: 6, broccoli: 6,
 };
 
 export const SEASONS = [
@@ -35,7 +37,7 @@ export const SEASONS = [
   { name: "Winter", icon: "snow", bg: 0x78aaca, fill: 0x91d9ff, accent: 0xd9f6ff },
 ];
 
-export const FARM_TILE_POOL = ["hay", "hay", "hay", "log", "log", "wheat", "berry", "berry", "egg"];
+export const FARM_TILE_POOL = ["hay", "hay", "hay", "log", "log", "wheat", "berry", "berry", "egg", "carrot"];
 export const MINE_TILE_POOL = ["stone", "stone", "stone", "ore", "ore", "coal", "dirt", "dirt", "gem"];
 
 export const BIOMES = {
@@ -62,6 +64,16 @@ export const BIOMES = {
       { key: "turkey", label: "Turkey", color: 0xb8743a, dark: 0x5e3818, value: 4, next: null, glyph: "🦃", sway: { amp: 1.2, freq: 0.00050, gust: 0.10 } },
       { key: "clover", label: "Clover", color: 0x6fa450, dark: 0x365e22, value: 5, next: null, glyph: "☘", sway: { amp: 2.5, freq: 0.00080, gust: 0.18 } },
       { key: "melon",  label: "Melon",  color: 0xb3d770, dark: 0x4a6e2a, value: 6, next: null, glyph: "🍈", sway: { amp: 0.8, freq: 0.00030, gust: 0.05 } },
+      { key: "carrot",   label: "Carrot",   color: 0xe88439, dark: 0x7a3e10, value: 4, next: "soup", glyph: "🥕", sway: { amp: 2.0, freq: 0.00050, gust: 0.10 } },
+      { key: "eggplant", label: "Eggplant", color: 0x6b3a8a, dark: 0x301848, value: 4, next: "soup", glyph: "🍆", sway: { amp: 1.8, freq: 0.00048, gust: 0.08 } },
+      { key: "turnip",   label: "Turnip",   color: 0xd87aa0, dark: 0x6e2a4a, value: 4, next: "soup", glyph: "🥬", sway: { amp: 1.6, freq: 0.00050, gust: 0.08 } },
+      { key: "beet",     label: "Beet",     color: 0x6b1a3a, dark: 0x300818, value: 4, next: "soup", glyph: "🫜", sway: { amp: 1.5, freq: 0.00046, gust: 0.07 } },
+      { key: "cucumber", label: "Cucumber", color: 0x4f8c3a, dark: 0x224018, value: 4, next: "soup", glyph: "🥒", sway: { amp: 2.4, freq: 0.00056, gust: 0.10 } },
+      { key: "squash",   label: "Squash",   color: 0xe6c14a, dark: 0x7a5e10, value: 4, next: "soup", glyph: "🎃", sway: { amp: 1.7, freq: 0.00048, gust: 0.08 } },
+      { key: "mushroom", label: "Mushroom", color: 0xc63a3a, dark: 0x601818, value: 4, next: "soup", glyph: "🍄", sway: { amp: 1.5, freq: 0.00044, gust: 0.06 } },
+      { key: "pepper",   label: "Pepper",   color: 0xd83a3a, dark: 0x6e1818, value: 4, next: "soup", glyph: "🌶", sway: { amp: 2.2, freq: 0.00054, gust: 0.10 } },
+      { key: "broccoli", label: "Broccoli", color: 0x4a8a3a, dark: 0x1e3e18, value: 4, next: "soup", glyph: "🥦", sway: { amp: 3.0, freq: 0.00060, gust: 0.12 } },
+      { key: "soup",     label: "Soup",     color: 0xc46a2f, dark: 0x6e3a18, value: 20, next: null, glyph: "🍲" },
     ],
     pool: FARM_TILE_POOL,
   },
@@ -317,6 +329,7 @@ export const MARKET_PRICES = {
   gem:    { buy: 120, sell: 7  },
   cutgem: { buy: 200, sell: 14 },
   gold:   { buy: 100, sell: 5  },
+  soup:   { buy: 220, sell: 20 },
 };
 
 export const QUEST_TEMPLATES = [
@@ -344,9 +357,10 @@ export const ALMANAC_TIERS = [
 // ─── Phase 4 — Inventory soft caps ───────────────────────────────────────────
 export const RESOURCE_CAP_BASE = 200;
 export const RESOURCE_CAP_GRANARY = 500;
-/** The 13 raw farm + mine resources subject to the inventory cap. */
+/** Raw farm + mine resources subject to the inventory cap. */
 export const CAPPED_RESOURCES = ["hay","wheat","grain","flour","log","plank",
-  "beam","berry","jam","egg","stone","ore","coal"];
+  "beam","berry","jam","egg","stone","ore","coal",
+  "carrot","eggplant","turnip","beet","cucumber","squash","mushroom","pepper","broccoli","soup"];
 
 // ─── Phase 3 Economy ──────────────────────────────────────────────────────────
 

@@ -88,6 +88,19 @@ export const WORKERS = [
     requirement: { level: 2 },
     description: "A seasoned miner who always finds a richer seam. Reduces the chain length needed to upgrade stone tiles.",
   },
+  {
+    id: "brenna",
+    name: "Brenna",
+    role: "Vegetable Picker",
+    icon: "🧺",
+    color: "#7a9a3a",
+    wage: 25,
+    hireCost: { worker: 1, hay: 10, bread: 20, stone: 10, ingot: 15 },
+    maxCount: 4,
+    effect: { type: "threshold_reduce_category", category: "vegetables", from: 6, to: 5 },
+    requirement: { building: "kitchen", orLevel: 5 },
+    description: "A cheerful picker who carries baskets full of vegetables back from the rows, shaving a step off every soup-pot's chain.",
+  },
 
   // ── Phase 9 — Mine workers ──────────────────────────────────────────────────
   // Locked rule: max-effect model from Phase 4.

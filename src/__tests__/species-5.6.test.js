@@ -5,6 +5,7 @@ import { BIOMES } from "../constants.js";
 describe("Phase 5.6 — Board pool wiring", () => {
   const baseDefaults = {
     grass: "hay", grain: "wheat", wood: "log", berry: "berry", bird: "egg",
+    vegetables: "carrot",
   };
   const mkState = (overrides = {}, weights = {}) => ({
     species: {
@@ -13,6 +14,7 @@ describe("Phase 5.6 — Board pool wiring", () => {
         hay: true, wheat: true, log: true, berry: true, egg: true,
         grain: true, plank: true, jam: true, turkey: true,
         meadow_grass: true, beam: true, spiky_grass: true, flour: true,
+        carrot: true, eggplant: true, turnip: true, cucumber: true,
       },
       researchProgress: {},
     },

@@ -30,8 +30,9 @@ import { pickDialog } from "./features/npcs/dialog.js";
 import * as decorations from "./features/decorations/slice.js";
 import * as portal from "./features/portal/slice.js";
 import * as market from "./features/market/slice.js";
+import * as castle from "./features/castle/slice.js";
 
-const slices = [crafting, quests, achievements, tutorial, settings, boss, cartography, apprentices, mood, storySlice, decorations, portal, market];
+const slices = [crafting, quests, achievements, tutorial, settings, boss, cartography, apprentices, mood, storySlice, decorations, portal, market, castle];
 
 // ─── Wages / debt ──────────────────────────────────────────────────────────
 const MAX_DEBT = 9999;
@@ -275,6 +276,7 @@ export function initialState(overrides) {
     ...cartography.initial,
     ...apprentices.initial,
     ...mood.initial,
+    ...castle.initial,
     // Phase 12.5 — saved-field slots for Silo/Barn
     farm: { savedField: null },
     mine: { savedField: null },
@@ -1587,6 +1589,8 @@ const SLICE_PRIMARY_ACTIONS = new Set([
   "TUTORIAL/START",
   "TUTORIAL/NEXT",
   "TUTORIAL/SKIP",
+  // Castle Needs contribution is owned by castle/slice
+  "CASTLE/CONTRIBUTE",
 ]);
 
 // Actions where coreReducer intentionally defers to slices (e.g. CRAFTING/CRAFT_RECIPE
