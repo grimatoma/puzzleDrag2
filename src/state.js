@@ -1543,6 +1543,11 @@ function coreReducer(state, action) {
         inventory.supplies = (inventory.supplies || 0) + (action.amount ?? 10);
         return { ...state, inventory };
       }
+      if (action.type === "DEV/BUILD_ALL") {
+        const built = { ...state.built };
+        BUILDINGS.forEach((b) => { built[b.id] = true; });
+        return { ...state, built };
+      }
       if (action.type === "DEV/RESET_GAME") {
         // Wipe all persisted state and reset to initial state, preserving settings.
         clearSave();

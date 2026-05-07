@@ -385,6 +385,7 @@ function AboutTab({ state, dispatch }) {
               <div className="text-[10px] font-bold uppercase tracking-wide mb-1.5" style={{ color: '#7a5a38' }}>Triggers</div>
               <div className="grid grid-cols-2 gap-1.5">
                 <DebugBtn color="red" onClick={() => dispatch({ type: 'BOSS/TRIGGER' })}>🐉 Trigger Boss</DebugBtn>
+                <DebugBtn color="teal" onClick={() => dispatch({ type: 'DEV/BUILD_ALL' })}>🏗 Build All</DebugBtn>
                 <DebugBtn color="slate" onClick={() => {
                   if (confirm('Reset the entire game? This cannot be undone.')) {
                     dispatch({ type: 'DEV/RESET_GAME' });
