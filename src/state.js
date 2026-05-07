@@ -269,6 +269,9 @@ export function initialState(overrides) {
     ...cartography.initial,
     ...apprentices.initial,
     ...mood.initial,
+    // Phase 12.5 — saved-field slots for Silo/Barn
+    farm: { savedField: null },
+    mine: { savedField: null },
   };
   // Hydrate from save if present, but always force board view + clear modals on boot
   const saved = loadSavedState();
@@ -771,20 +774,28 @@ function coreReducer(state, action) {
       return { ...state, tools };
     }
     case "SWITCH_BIOME": {
-      const { key } = action;
+      // Support both legacy action.key and Phase 12.5 action.payload.biome
+      const key = action.key ?? action.payload?.biome;
+      if (!key) return state;
       if (key === state.biomeKey) return state;
       if (key === "mine" && state.level < 2) {
         return { ...state, bubble: { id: Date.now(), npc: "wren", text: "Mine unlocks at Level 2.", ms: 1800 } };
       }
+      // Phase 12.5 — restore saved board if Silo/Barn built and snapshot exists
+      const savedField = state[key]?.savedField ?? null;
+      let boardPatch = {};
+      if (savedField && savedField.tiles) {
+        boardPatch = { board: { tiles: savedField.tiles, hazards: savedField.hazards ?? [] } };
+      }
       const excludeNpcs = [];
       const excludeKeys = [];
-      const replacements = state.orders.map(() => {
+      const replacements = (state.orders ?? []).map(() => {
         const o = makeOrder(key, state.level, excludeNpcs, excludeKeys);
         excludeNpcs.push(o.npc);
         excludeKeys.push(o.key);
         return o;
       });
-      return { ...state, biomeKey: key, orders: replacements };
+      return { ...state, biomeKey: key, orders: replacements, turnsUsed: 0, ...boardPatch };
     }
     case "SET_VIEW": {
       const next = action.view;
@@ -914,10 +925,28 @@ function coreReducer(state, action) {
           prices: newPrices,
         },
       };
+      // Phase 12.5 — snapshot board into saved-field slot when Silo/Barn is built
+      let afterSeasonFarm = afterSeason.farm ?? { savedField: null };
+      let afterSeasonMine = afterSeason.mine ?? { savedField: null };
+      if (state.biomeKey === "farm" && state.built?.silo && state.board) {
+        afterSeasonFarm = { ...afterSeasonFarm, savedField: {
+          tiles: state.board.tiles,
+          hazards: state.board.hazards ?? [],
+          turnsUsed: 0,
+        } };
+      }
+      if (state.biomeKey === "mine" && state.built?.barn && state.board) {
+        afterSeasonMine = { ...afterSeasonMine, savedField: {
+          tiles: state.board.tiles,
+          hazards: state.board.hazards ?? [],
+          turnsUsed: 0,
+        } };
+      }
+      const afterSeasonWithFields = { ...afterSeason, farm: afterSeasonFarm, mine: afterSeasonMine };
       // Story: fire season_entered trigger
-      const newSeasonIndex = (afterSeason.seasonsCycled % 4);
+      const newSeasonIndex = (afterSeasonWithFields.seasonsCycled % 4);
       const seasonNames = ["spring", "summer", "autumn", "winter"];
-      return evaluateAndApplyStoryBeat(afterSeason, { type: "season_entered", season: seasonNames[newSeasonIndex] });
+      return evaluateAndApplyStoryBeat(afterSeasonWithFields, { type: "season_entered", season: seasonNames[newSeasonIndex] });
     }
     case "SESSION_START": {
       // Fire story session_start trigger if intro hasn't been seen yet

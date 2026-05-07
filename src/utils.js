@@ -1,4 +1,4 @@
-import { UPGRADE_THRESHOLDS, ROWS, COLS, MAX_TURNS, RESOURCE_CAP_BASE, RESOURCE_CAP_GRANARY } from "./constants.js";
+import { UPGRADE_THRESHOLDS, RESOURCE_CAP_BASE, RESOURCE_CAP_GRANARY } from "./constants.js";
 
 export function clamp(n, a, b) {
   return Math.max(a, Math.min(b, n));
