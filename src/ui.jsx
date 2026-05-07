@@ -1,6 +1,38 @@
+import React from "react";
 import { getPhaserScene } from "./phaserBridge.js";
 import { Section, CompactOrders } from "./ui/Inventory.jsx";
 import { ToolsGrid } from "./ui/Tools.jsx";
+
+// Per-feature error boundary. A crash in any one feature renders an inline
+// fallback inside that feature's slot and dispatches CLOSE_MODAL so the
+// player can navigate away — the rest of the app (HUD, board, other panels)
+// keeps working. Resets when the active feature changes.
+class FeatureErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { error: null };
+  }
+  static getDerivedStateFromError(error) { return { error }; }
+  componentDidCatch(error, info) {
+    console.error(`[hearth] feature "${this.props.featureKey}" crashed:`, error, info?.componentStack);
+  }
+  componentDidUpdate(prev) {
+    if (prev.featureKey !== this.props.featureKey && this.state.error) {
+      this.setState({ error: null });
+    }
+  }
+  render() {
+    if (this.state.error) {
+      return (
+        <div className="bg-[#3a2715]/90 border border-[#c5a87a] rounded-xl p-4 text-[#f8e7c6] text-[13px] m-4">
+          <div className="font-bold mb-1">This panel hit an error.</div>
+          <div className="opacity-80">The rest of the game is still running. Try closing this panel and reopening.</div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 // ─── Side panel (orders / inventory / tools / biome switcher) ─────────────
 
@@ -97,8 +129,19 @@ export function FeatureModals({ state, dispatch }) {
 
   return (
     <>
-      {alwaysFeatures.map(f => <f.Component key={f.modalKey || f.viewKey} state={state} dispatch={dispatch} />)}
-      {modalFeature && <modalFeature.Component state={state} dispatch={dispatch} />}
+      {alwaysFeatures.map(f => {
+        const k = f.modalKey || f.viewKey;
+        return (
+          <FeatureErrorBoundary key={k} featureKey={k}>
+            <f.Component state={state} dispatch={dispatch} />
+          </FeatureErrorBoundary>
+        );
+      })}
+      {modalFeature && (
+        <FeatureErrorBoundary featureKey={modalFeature.modalKey}>
+          <modalFeature.Component state={state} dispatch={dispatch} />
+        </FeatureErrorBoundary>
+      )}
     </>
   );
 }
@@ -108,7 +151,11 @@ export function FeatureScreens({ state, dispatch }) {
   for (const f of FEATURES) {
     if (f.viewKey && state.view === f.viewKey) {
       const C = f.Component;
-      return <C state={state} dispatch={dispatch} />;
+      return (
+        <FeatureErrorBoundary featureKey={f.viewKey}>
+          <C state={state} dispatch={dispatch} />
+        </FeatureErrorBoundary>
+      );
     }
   }
   return null;
