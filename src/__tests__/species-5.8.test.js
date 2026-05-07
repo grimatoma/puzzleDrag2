@@ -1,8 +1,8 @@
 import { describe, it, expect } from "vitest";
 import { initialState, rootReducer } from "../state.js";
-import { getCategoryViewModel } from "../features/species/effects.js";
+import { getCategoryViewModel } from "../features/tileCollection/effects.js";
 
-describe("Phase 5.8 — Species panel UI (getCategoryViewModel)", () => {
+describe("Phase 5.8 — Tile Collection panel UI (getCategoryViewModel)", () => {
   const rawBase = initialState();
   // Mark tutorial as seen so it doesn't auto-start on the first dispatch
   // and break strict same-reference assertions.
@@ -25,10 +25,10 @@ describe("Phase 5.8 — Species panel UI (getCategoryViewModel)", () => {
     expect(spikyRow.status).toBe("Researching hay: 0 / 50");
   });
 
-  it("B: chain-discovered species shows discovered status", () => {
+  it("B: chain-discovered tile type shows discovered status", () => {
     const b0 = {
       ...base,
-      species: { ...base.species, discovered: { ...base.species.discovered, meadow_grass: true } },
+      tileCollection: { ...base.tileCollection, discovered: { ...base.tileCollection.discovered, meadow_grass: true } },
     };
     const bRows = getCategoryViewModel(b0, "grass");
     const meadowB = bRows.find((r) => r.id === "meadow_grass");
@@ -40,9 +40,9 @@ describe("Phase 5.8 — Species panel UI (getCategoryViewModel)", () => {
   it("C: in-progress research surfaces the live counter", () => {
     const c0 = {
       ...base,
-      species: {
-        ...base.species,
-        researchProgress: { ...base.species.researchProgress, grain: 12 },
+      tileCollection: {
+        ...base.tileCollection,
+        researchProgress: { ...base.tileCollection.researchProgress, grain: 12 },
       },
     };
     const grainRows = getCategoryViewModel(c0, "grain");
@@ -50,36 +50,36 @@ describe("Phase 5.8 — Species panel UI (getCategoryViewModel)", () => {
     expect(grainRow.status).toBe("Researching wheat: 12 / 30");
   });
 
-  it("D: dispatch SET_ACTIVE_SPECIES with discovered species toggles active", () => {
+  it("D: dispatch SET_ACTIVE_TILE with discovered tile type toggles active", () => {
     const d0 = {
       ...base,
-      species: { ...base.species, discovered: { ...base.species.discovered, meadow_grass: true } },
+      tileCollection: { ...base.tileCollection, discovered: { ...base.tileCollection.discovered, meadow_grass: true } },
     };
     const d1 = rootReducer(d0, {
-      type: "SET_ACTIVE_SPECIES",
-      payload: { category: "grass", speciesId: "meadow_grass" },
+      type: "SET_ACTIVE_TILE",
+      payload: { category: "grass", tileId: "meadow_grass" },
     });
-    expect(d1.species.activeByCategory.grass).toBe("meadow_grass");
+    expect(d1.tileCollection.activeByCategory.grass).toBe("meadow_grass");
   });
 
-  it("E: LOCKED — SET_ACTIVE_SPECIES on a locked species is a strict no-op (same ref)", () => {
+  it("E: LOCKED — SET_ACTIVE_TILE on a locked tile type is a strict no-op (same ref)", () => {
     const e1 = rootReducer(base, {
-      type: "SET_ACTIVE_SPECIES",
-      payload: { category: "grass", speciesId: "meadow_grass" },
+      type: "SET_ACTIVE_TILE",
+      payload: { category: "grass", tileId: "meadow_grass" },
     });
     expect(e1).toBe(base);
   });
 
-  it("F: buy-only row has action: 'buy', correct status, and BUY_SPECIES does not auto-activate", () => {
+  it("F: buy-only row has action: 'buy', correct status, and BUY_TILE does not auto-activate", () => {
     const fRows = getCategoryViewModel(base, "bird");
     const cloverRow = fRows.find((r) => r.id === "clover");
     expect(cloverRow.action).toBe("buy");
     expect(cloverRow.status).toBe("Buy 200◉");
 
     const f0 = { ...base, coins: 500 };
-    const f1 = rootReducer(f0, { type: "BUY_SPECIES", payload: { id: "clover" } });
-    expect(f1.species.discovered.clover).toBe(true);
-    expect(f1.species.activeByCategory.bird).not.toBe("clover");
+    const f1 = rootReducer(f0, { type: "BUY_TILE", payload: { id: "clover" } });
+    expect(f1.tileCollection.discovered.clover).toBe(true);
+    expect(f1.tileCollection.activeByCategory.bird).not.toBe("clover");
     expect(f1.coins).toBe(300);
   });
 });

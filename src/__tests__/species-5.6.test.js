@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { getActivePool } from "../features/species/effects.js";
+import { getActivePool } from "../features/tileCollection/effects.js";
 import { BIOMES } from "../constants.js";
 
 describe("Phase 5.6 — Board pool wiring", () => {
@@ -8,7 +8,7 @@ describe("Phase 5.6 — Board pool wiring", () => {
     vegetables: "carrot",
   };
   const mkState = (overrides = {}, weights = {}) => ({
-    species: {
+    tileCollection: {
       activeByCategory: { ...baseDefaults, ...overrides },
       discovered: {
         hay: true, wheat: true, log: true, berry: true, egg: true,
@@ -39,13 +39,13 @@ describe("Phase 5.6 — Board pool wiring", () => {
     expect(r2.filter((k) => k === "hay").length).toBe(3);
   });
 
-  it("D: worker pool_weight stacks when key is the active species", () => {
+  it("D: worker pool_weight stacks when key is the active tile type", () => {
     const r3 = getActivePool(mkState({}, { berry: 2 }), "farm");
     // base 2 + worker 2 = 4
     expect(r3.filter((k) => k === "berry").length).toBe(4);
   });
 
-  it("E: LOCKED — worker pool_weight does NOT add tiles when species is null", () => {
+  it("E: LOCKED — worker pool_weight does NOT add tiles when tile type is null", () => {
     const r4 = getActivePool(mkState({ berry: null }, { berry: 2 }), "farm");
     expect(r4.filter((k) => k === "berry").length).toBe(0);
   });

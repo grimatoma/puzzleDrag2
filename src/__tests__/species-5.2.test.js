@@ -1,86 +1,86 @@
 import { describe, it, expect } from "vitest";
 import { initialState, rootReducer, mergeLoadedState } from "../state.js";
-import { SPECIES } from "../features/species/data.js";
+import { TILE_TYPES } from "../features/tileCollection/data.js";
 
-describe("Phase 5.2 — state.species slice", () => {
-  it("state.species exists at init", () => {
+describe("Phase 5.2 — state.tileCollection slice", () => {
+  it("state.tileCollection exists at init", () => {
     const s0 = initialState();
-    expect(s0.species).toBeTruthy();
+    expect(s0.tileCollection).toBeTruthy();
   });
 
   it("freeMoves starts at 0", () => {
     const s0 = initialState();
-    expect(s0.species.freeMoves).toBe(0);
+    expect(s0.tileCollection.freeMoves).toBe(0);
   });
 
-  it("default species are discovered at init, non-defaults are not", () => {
+  it("default tile types are discovered at init, non-defaults are not", () => {
     const s0 = initialState();
-    for (const sp of SPECIES) {
-      if (sp.discovery.method === "default") {
-        expect(s0.species.discovered[sp.id]).toBe(true);
+    for (const t of TILE_TYPES) {
+      if (t.discovery.method === "default") {
+        expect(s0.tileCollection.discovered[t.id]).toBe(true);
       } else {
-        expect(s0.species.discovered[sp.id]).toBeFalsy();
+        expect(s0.tileCollection.discovered[t.id]).toBeFalsy();
       }
     }
   });
 
   it("activeByCategory: grass=hay, wood=log, berry=berry, bird=egg, grain=null", () => {
     const s0 = initialState();
-    expect(s0.species.activeByCategory.grass).toBe("hay");
-    expect(s0.species.activeByCategory.wood).toBe("log");
-    expect(s0.species.activeByCategory.berry).toBe("berry");
-    expect(s0.species.activeByCategory.bird).toBe("egg");
-    expect(s0.species.activeByCategory.grain).toBeNull();
+    expect(s0.tileCollection.activeByCategory.grass).toBe("hay");
+    expect(s0.tileCollection.activeByCategory.wood).toBe("log");
+    expect(s0.tileCollection.activeByCategory.berry).toBe("berry");
+    expect(s0.tileCollection.activeByCategory.bird).toBe("egg");
+    expect(s0.tileCollection.activeByCategory.grain).toBeNull();
   });
 
-  it("researchProgress seeded at 0 for every research-method species", () => {
+  it("researchProgress seeded at 0 for every research-method tile type", () => {
     const s0 = initialState();
-    for (const sp of SPECIES.filter((s) => s.discovery.method === "research")) {
-      expect(typeof s0.species.researchProgress[sp.id]).toBe("number");
-      expect(s0.species.researchProgress[sp.id]).toBe(0);
+    for (const t of TILE_TYPES.filter((t) => t.discovery.method === "research")) {
+      expect(typeof s0.tileCollection.researchProgress[t.id]).toBe("number");
+      expect(s0.tileCollection.researchProgress[t.id]).toBe(0);
     }
   });
 
-  it("save → load preserves species slice", () => {
+  it("save → load preserves tileCollection slice", () => {
     const s0 = initialState();
     const saved = JSON.parse(JSON.stringify(s0));
     const reload1 = mergeLoadedState(saved);
-    expect(JSON.stringify(reload1.species)).toBe(JSON.stringify(s0.species));
+    expect(JSON.stringify(reload1.tileCollection)).toBe(JSON.stringify(s0.tileCollection));
   });
 
-  it("migration from old save without species slice fills defaults", () => {
+  it("migration from old save without tileCollection slice fills defaults", () => {
     const s0 = initialState();
     const oldSave = { ...JSON.parse(JSON.stringify(s0)) };
-    delete oldSave.species;
+    delete oldSave.tileCollection;
     const migrated = mergeLoadedState(oldSave);
-    expect(migrated.species).toBeTruthy();
-    expect(migrated.species.discovered.hay).toBe(true);
-    expect(migrated.species.activeByCategory.grass).toBe("hay");
-    expect(migrated.species.freeMoves).toBe(0);
+    expect(migrated.tileCollection).toBeTruthy();
+    expect(migrated.tileCollection.discovered.hay).toBe(true);
+    expect(migrated.tileCollection.activeByCategory.grass).toBe("hay");
+    expect(migrated.tileCollection.freeMoves).toBe(0);
   });
 
   it("migration is idempotent", () => {
     const s0 = initialState();
     const oldSave = { ...JSON.parse(JSON.stringify(s0)) };
-    delete oldSave.species;
+    delete oldSave.tileCollection;
     const migrated = mergeLoadedState(oldSave);
     const migrated2 = mergeLoadedState(JSON.parse(JSON.stringify(migrated)));
-    expect(JSON.stringify(migrated2.species)).toBe(JSON.stringify(migrated.species));
+    expect(JSON.stringify(migrated2.tileCollection)).toBe(JSON.stringify(migrated.tileCollection));
   });
 
-  it("DEV/RESET_GAME resets species to defaults", () => {
+  it("DEV/RESET_GAME resets tileCollection to defaults", () => {
     const s0 = initialState();
     const dirty = {
       ...s0,
-      species: {
-        ...s0.species,
-        discovered: { ...s0.species.discovered, wheat: true, meadow_grass: true },
+      tileCollection: {
+        ...s0.tileCollection,
+        discovered: { ...s0.tileCollection.discovered, wheat: true, meadow_grass: true },
         freeMoves: 7,
       },
     };
     const reset = rootReducer(dirty, { type: "DEV/RESET_GAME" });
-    expect(reset.species.discovered.wheat).toBeFalsy();
-    expect(reset.species.discovered.meadow_grass).toBeFalsy();
-    expect(reset.species.freeMoves).toBe(0);
+    expect(reset.tileCollection.discovered.wheat).toBeFalsy();
+    expect(reset.tileCollection.discovered.meadow_grass).toBeFalsy();
+    expect(reset.tileCollection.freeMoves).toBe(0);
   });
 });

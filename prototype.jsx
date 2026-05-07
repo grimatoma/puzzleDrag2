@@ -12,7 +12,7 @@ import { setPhaserScene } from "./src/phaserBridge.js";
 import { announce, getQueue, flushAnnouncements, formatChainAnnouncement, formatModalAnnouncement, formatQuestAnnouncement } from "./src/a11y.js";
 import { handleKeyboard } from "./src/features/a11y/keyboard.js";
 
-function PhaserMount({ dispatch, biomeKey, turnsUsed, seasonsCycled, uiLocked, sceneRef, weather, toolPending, setChainInfo, workers, palette, reducedMotion, species, gameState, grid }) {
+function PhaserMount({ dispatch, biomeKey, turnsUsed, seasonsCycled, uiLocked, sceneRef, weather, toolPending, setChainInfo, workers, palette, reducedMotion, tileCollection, gameState, grid }) {
   const hostRef = useRef(null);
   const gameRef = useRef(null);
   const [loading, setLoading] = useState(true);
@@ -113,7 +113,7 @@ function PhaserMount({ dispatch, biomeKey, turnsUsed, seasonsCycled, uiLocked, s
   useEffect(() => { gameRef.current?.registry.set("workers", workers ?? null); }, [workers]);
   useEffect(() => { gameRef.current?.registry.set("palette", palette ?? "default"); }, [palette]);
   useEffect(() => { gameRef.current?.registry.set("reducedMotion", reducedMotion ?? null); }, [reducedMotion]);
-  useEffect(() => { gameRef.current?.registry.set("speciesActive", species?.activeByCategory ?? null); }, [species?.activeByCategory]);
+  useEffect(() => { gameRef.current?.registry.set("tileCollectionActive", tileCollection?.activeByCategory ?? null); }, [tileCollection?.activeByCategory]);
   // Sync grid state → Phaser registry so hazard engines see real tile keys
   useEffect(() => { gameRef.current?.registry.set("grid", grid ?? null); }, [grid]);
   // Sync biomeRestored flag so GameScene.handleBiomeChange can skip randomize when savedField restored
@@ -361,7 +361,7 @@ export default function App() {
                   workers={state.workers}
                   palette={state.settings?.palette}
                   reducedMotion={state.settings?.reducedMotion}
-                  species={state.species}
+                  tileCollection={state.tileCollection}
                   gameState={state}
                   grid={state.grid}
                 />

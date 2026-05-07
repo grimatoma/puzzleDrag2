@@ -3,7 +3,7 @@
  *
  * Layering order (additive):
  *   1. Base §6 BIOMES[biome].pool
- *   2. Phase 5 species activeFilter (drops inactive species)
+ *   2. Phase 5 tile collection activeFilter (drops inactive tile types)
  *   3. Phase 4 worker pool_weight adds
  *   4. Phase 10.2 farm-only season modifier (this file)
  *
@@ -23,9 +23,9 @@ export function getEffectivePool(state) {
   const biome = BIOMES[state.biome] ?? BIOMES.farm;
   let bag = [...biome.pool];
 
-  // Phase 5 — drop tiles whose species is inactive (if filter provided)
-  if (typeof state.species?.activeFilter === "function") {
-    bag = bag.filter((k) => state.species.activeFilter(k) !== false);
+  // Phase 5 — drop tiles whose tile type is inactive (if filter provided)
+  if (typeof state.tileCollection?.activeFilter === "function") {
+    bag = bag.filter((k) => state.tileCollection.activeFilter(k) !== false);
   }
 
   // Phase 4 — worker pool_weight adds entries

@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from "react";
-import { CATEGORIES, SPECIES_MAP } from "./data.js";
+import { CATEGORIES, TILE_TYPES_MAP } from "./data.js";
 import { getCategoryViewModel } from "./effects.js";
 import { drawTileIcon } from "../../textures.js";
 import { BIOMES } from "../../constants.js";
 import { hex } from "../../utils.js";
 
-export const viewKey = "species";
+export const viewKey = "tileCollection";
 
 const CATEGORY_LABELS = {
   grass: "Grass",
@@ -39,12 +39,12 @@ function lighten(hexColor, amt) {
 
 /**
  * Tiny tile-style portrait that re-uses the same procedural icons rendered
- * onto puzzle tiles, so the species panel matches the in-board art exactly.
+ * onto puzzle tiles, so the tile collection panel matches the in-board art exactly.
  */
-function SpeciesIcon({ speciesId, size = 40, locked = false }) {
+function TileIcon({ tileId, size = 40, locked = false }) {
   const ref = useRef(null);
-  const sp = SPECIES_MAP[speciesId];
-  const key = sp?.baseResource;
+  const t = TILE_TYPES_MAP[tileId];
+  const key = t?.baseResource;
   const res = key ? ALL_FARM_RESOURCES[key] : null;
 
   useEffect(() => {
@@ -103,15 +103,15 @@ function SpeciesIcon({ speciesId, size = 40, locked = false }) {
   );
 }
 
-function SpeciesRow({ row, category, dispatch }) {
+function TileRow({ row, category, dispatch }) {
   const handleAction = () => {
     if (row.action === "toggle") {
       dispatch({
-        type: "SET_ACTIVE_SPECIES",
-        payload: { category, speciesId: row.id },
+        type: "SET_ACTIVE_TILE",
+        payload: { category, tileId: row.id },
       });
     } else if (row.action === "buy") {
-      dispatch({ type: "BUY_SPECIES", payload: { id: row.id } });
+      dispatch({ type: "BUY_TILE", payload: { id: row.id } });
     }
   };
 
@@ -125,9 +125,9 @@ function SpeciesRow({ row, category, dispatch }) {
           : "bg-[#2b1e0f]/40 border-[#8a6040]/50"
       }`}
     >
-      {/* Portrait / silhouette — unique procedural species art */}
+      {/* Portrait / silhouette — unique procedural tile art */}
       <div className="flex-shrink-0">
-        <SpeciesIcon speciesId={row.id} size={40} locked={row.locked} />
+        <TileIcon tileId={row.id} size={40} locked={row.locked} />
       </div>
 
       {/* Name + status + description */}
@@ -176,7 +176,7 @@ function SpeciesRow({ row, category, dispatch }) {
   );
 }
 
-export default function SpeciesPanel({ state, dispatch }) {
+export default function TileCollectionPanel({ state, dispatch }) {
   const [activeTab, setActiveTab] = useState("grass");
 
   const rows = getCategoryViewModel(state, activeTab);
@@ -185,7 +185,7 @@ export default function SpeciesPanel({ state, dispatch }) {
     <div className="flex flex-col h-full bg-gradient-to-b from-[#3a2510] to-[#2b1a0c] text-[#f7e2b6]">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-[#5a3a1a]">
-        <h2 className="text-lg font-bold text-[#ffd248]">Species</h2>
+        <h2 className="text-lg font-bold text-[#ffd248]">Tiles Collection</h2>
         <button
           onClick={() => dispatch({ type: "SET_VIEW", view: "town" })}
           className="text-[#c8a87a] hover:text-white text-xl leading-none"
@@ -212,10 +212,10 @@ export default function SpeciesPanel({ state, dispatch }) {
         ))}
       </div>
 
-      {/* Species rows */}
+      {/* Tile rows */}
       <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-2">
         {rows.map((row) => (
-          <SpeciesRow
+          <TileRow
             key={row.id}
             row={row}
             category={activeTab}
@@ -224,18 +224,18 @@ export default function SpeciesPanel({ state, dispatch }) {
         ))}
         {rows.length === 0 && (
           <div className="text-center text-[#6a5040] text-sm py-8">
-            No species in this category.
+            No tiles in this category.
           </div>
         )}
       </div>
 
       {/* Free moves chip */}
-      {(state.species?.freeMoves ?? 0) > 0 && (
+      {(state.tileCollection?.freeMoves ?? 0) > 0 && (
         <div className="flex-shrink-0 mx-3 mb-3 px-3 py-2 rounded-xl bg-[#4f6b3a]/50 border border-[#a8d44a] text-center">
           <span className="text-[#a8d44a] font-bold">
-            +{state.species.freeMoves} free move{state.species.freeMoves !== 1 ? "s" : ""}
+            +{state.tileCollection.freeMoves} free move{state.tileCollection.freeMoves !== 1 ? "s" : ""}
           </span>
-          <span className="text-[#8ab870] text-xs ml-2">from chained species</span>
+          <span className="text-[#8ab870] text-xs ml-2">from chained tiles</span>
         </div>
       )}
     </div>
