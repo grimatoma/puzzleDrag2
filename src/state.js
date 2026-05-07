@@ -953,7 +953,7 @@ function coreReducer(state, action) {
       }
 
       // ── Pool income from Housing buildings ────────────────────────────────
-      const housingCount = state.built?.housing?.count ?? (state.built?.housing ? 1 : 0);
+      const housingCount = ["housing", "housing2", "housing3"].filter(id => !!state.built?.[id]).length;
       const newPool = (state.workers?.pool ?? 0) + housingCount;
 
       // ── Phase 6.1: NPC bond decay (−0.1 above 5) + Phase 6.2: reset gift cooldowns ──
