@@ -48,6 +48,10 @@ This is a Phaser 3 + React game. React owns the page shell *and* the canonical g
 
 When adding a new slice action, decide which set (if any) it belongs in. The `check-slice-action` skill validates registration.
 
+## Engineering rules
+
+- **No fakes or mocks in production code.** Wire real implementations end-to-end. `vi.mock` and stub state shapes are fine *inside test files only* (under `tests/` or `src/__tests__/`). If you find yourself adding a fake hook, a fake worker, or a stub data row in `src/` to make something compile or "demonstrate" a mechanic, stop and wire the real thing instead — or surface it to the user before shipping.
+
 ## Workflow
 
 - Always merge any PR you open once it has been pushed and the PR exists. Use squash merge by default.
