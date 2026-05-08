@@ -13,6 +13,9 @@ export const initial = {
   mapCurrent:    'home',
   mapVisited:    ['home'],
   mapDiscovered: ['home', 'meadow', 'orchard'],
+  // activeZone mirrors mapCurrent so Phaser registry consumers (GameScene,
+  // StartFarmingModal) can read it without knowing about mapCurrent.
+  activeZone:    'home',
 };
 
 function edgeSet() {
@@ -74,6 +77,7 @@ export function reduce(state, action) {
         mapCurrent: nodeId,
         mapVisited: nextVisited,
         mapDiscovered: nextDiscovered,
+        activeZone: nodeId,
       };
 
       switch (target.kind) {

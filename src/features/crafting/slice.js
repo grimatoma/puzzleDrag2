@@ -1,5 +1,6 @@
 import { RECIPES } from "../../constants.js";
 import { computeWorkerEffects } from "../apprentices/aggregate.js";
+import { locBuilt } from "../../locBuilt.js";
 
 export const initial = { craftedTotals: {} };
 
@@ -28,7 +29,7 @@ export function reduce(state, action) {
   const recipe = RECIPES[recipeKey];
   if (!recipe) return state;
 
-  const built = state.built || {};
+  const built = locBuilt(state);
   if (!built[recipe.station]) return state;
 
   const inputs = effectiveRecipeInputs(state, recipeKey, recipe.inputs);

@@ -45,13 +45,13 @@ describe("Phase 31 — FARM/ENTER: cost gating", () => {
 });
 
 describe("Phase 31 — FARM/ENTER: turn budget", () => {
-  it("uses the active zone's startingTurns by default (zone1 = 16)", () => {
+  it("uses the active zone's startingTurns by default (home = 16)", () => {
     const s = withCoins(createInitialState(), 100);
     const next = rootReducer(s, {
       type: "FARM/ENTER",
       payload: { selectedTiles: [], useFertilizer: false },
     });
-    expect(next.sessionMaxTurns).toBe(ZONES.zone1.startingTurns);
+    expect(next.sessionMaxTurns).toBe(ZONES.home.startingTurns);
     expect(next.sessionMaxTurns).toBe(16);
   });
 
@@ -150,10 +150,10 @@ describe("Phase 31 — expandZoneCategories", () => {
 });
 
 describe("Phase 31 — FARM/ENTER: zone awareness", () => {
-  it("uses Zone 2's 10-turn budget when activeZone is zone2", () => {
+  it("uses quarry's 10-turn budget when activeZone is quarry", () => {
     const s = withCoins(
-      { ...createInitialState(), activeZone: "zone2", unlockedZones: ["zone1", "zone2"] },
-      100,
+      { ...createInitialState(), activeZone: "quarry" },
+      200,
     );
     const next = rootReducer(s, {
       type: "FARM/ENTER",
@@ -162,15 +162,14 @@ describe("Phase 31 — FARM/ENTER: zone awareness", () => {
     expect(next.sessionMaxTurns).toBe(10);
   });
 
-  it("Zone 2 + fertilizer = 20 turns", () => {
+  it("Quarry (10 turns) + fertilizer = 20 turns", () => {
     const s = withCoins(
       {
         ...createInitialState(),
-        activeZone: "zone2",
-        unlockedZones: ["zone1", "zone2"],
+        activeZone: "quarry",
         farmFertilizer: 1,
       },
-      100,
+      200,
     );
     const next = rootReducer(s, {
       type: "FARM/ENTER",

@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { RECIPES, BIOMES } from "../../constants.js";
 import { DECORATIONS } from "../decorations/data.js";
 import IconCanvas, { hasIcon } from "../../ui/IconCanvas.jsx";
+import { locBuilt } from "../../locBuilt.js";
 
 export const viewKey = "crafting";
 
@@ -123,7 +124,7 @@ function canAffordDecor(decor, state) {
 
 function DecorationCard({ decor, state, dispatch }) {
   const affordable = canAffordDecor(decor, state);
-  const count = state.built?.decorations?.[decor.id] ?? 0;
+  const count = locBuilt(state).decorations?.[decor.id] ?? 0;
   const decorIconKey = `decor_${decor.id}`;
   return (
     <div className="bg-[#f6efe0] border-2 border-[#c5a87a] rounded-xl p-2 flex items-center gap-2 relative" style={{ minHeight: 72 }}>

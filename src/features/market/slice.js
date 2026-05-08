@@ -1,4 +1,5 @@
 import { sellPriceFor } from "./pricing.js";
+import { locBuilt } from "../../locBuilt.js";
 
 export const initial = {};
 
@@ -14,7 +15,7 @@ export function reduce(state, action) {
   const { resource, qty = 1 } = action.payload ?? {};
   if (!resource) return state;
   // Caravan Post must be built
-  if (!state.built?.caravan_post) return state;
+  if (!locBuilt(state).caravan_post) return state;
 
   const have = (state.inventory ?? {})[resource] ?? 0;
   if (have < qty) return state;

@@ -36,7 +36,8 @@ describe("new harbor + smokehouse buildings", () => {
       built: {},
     };
     const s1 = rootReducer(s0, { type: "BUILD", building: def });
-    expect(s1.built.harbor_dock).toBe(true);
+    const loc = s1.mapCurrent ?? "home";
+    expect(s1.built[loc]?.harbor_dock).toBe(true);
     expect(s1.coins).toBe(s0.coins - def.cost.coins);
   });
 

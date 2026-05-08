@@ -49,11 +49,11 @@ describe("Phase 32 — nextResourceForZone returns null when the zone has no ove
   });
 
   it("returns null for a resource whose category is not in the zone upgradeMap", () => {
-    // Zone 1 has no `flowers` source in upgradeMap (it's "None" in the table).
+    // Home (basic farm) has no `flowers` source in upgradeMap.
     const flowerRes = findResource("flower_pansy");
     const r = nextResourceForZone({
       currentRes: flowerRes,
-      zoneId: "zone1",
+      zoneId: "home",
       biomeResources: farmResources,
       tileCollectionActive: null,
       categoryOf: CATEGORY_OF,
@@ -62,27 +62,27 @@ describe("Phase 32 — nextResourceForZone returns null when the zone has no ove
   });
 
   it("returns null when the upgrade target is the gold sentinel", () => {
-    // Zone 1: fruits -> gold
+    // Home: fruits -> gold
     const fruitRes = findResource("fruit_apple");
     const r = nextResourceForZone({
       currentRes: fruitRes,
-      zoneId: "zone1",
+      zoneId: "home",
       biomeResources: farmResources,
       tileCollectionActive: null,
       categoryOf: CATEGORY_OF,
     });
     expect(r).toBeNull();
     // Sanity-check: the zone really does say "gold" for fruits.
-    expect(ZONES.zone1.upgradeMap.fruits).toBe(ZONE_UPGRADE_TARGET_GOLD);
+    expect(ZONES.home.upgradeMap.fruits).toBe(ZONE_UPGRADE_TARGET_GOLD);
   });
 });
 
 describe("Phase 32 — nextResourceForZone redirects per the zone upgradeMap", () => {
-  it("Zone 1 chain of grass spawns a bird tile (per request table)", () => {
+  it("Home chain of grass spawns a bird tile (per base farm spec)", () => {
     const grassRes = findResource("grass_hay");
     const r = nextResourceForZone({
       currentRes: grassRes,
-      zoneId: "zone1",
+      zoneId: "home",
       biomeResources: farmResources,
       tileCollectionActive: null,
       categoryOf: CATEGORY_OF,
@@ -91,11 +91,11 @@ describe("Phase 32 — nextResourceForZone redirects per the zone upgradeMap", (
     expect(CATEGORY_OF[r.key]).toBe("bird");
   });
 
-  it("Zone 1 chain of vegetables redirects to fruits (instead of veg .next chain)", () => {
+  it("Home chain of vegetables redirects to fruits (instead of veg .next chain)", () => {
     const vegRes = findResource("veg_carrot");
     const r = nextResourceForZone({
       currentRes: vegRes,
-      zoneId: "zone1",
+      zoneId: "home",
       biomeResources: farmResources,
       tileCollectionActive: null,
       categoryOf: CATEGORY_OF,
@@ -104,23 +104,24 @@ describe("Phase 32 — nextResourceForZone redirects per the zone upgradeMap", (
     expect(CATEGORY_OF[r.key]).toBe("fruits");
   });
 
-  it("Zone 5 chain of flowers redirects to gold (returns null so caller falls back)", () => {
+  it("Orchard chain of flowers redirects to gold (returns null so caller falls back)", () => {
     const flowerRes = findResource("flower_pansy");
     const r = nextResourceForZone({
       currentRes: flowerRes,
-      zoneId: "zone5",
+      zoneId: "orchard",
       biomeResources: farmResources,
       tileCollectionActive: null,
       categoryOf: CATEGORY_OF,
     });
     expect(r).toBeNull();
+    expect(ZONES.orchard.upgradeMap.flowers).toBe(ZONE_UPGRADE_TARGET_GOLD);
   });
 
-  it("Zone 6 chain of cattle redirects to a mounts resource", () => {
+  it("Orchard chain of cattle redirects to a mounts resource", () => {
     const cattleRes = findResource("cattle_cow");
     const r = nextResourceForZone({
       currentRes: cattleRes,
-      zoneId: "zone6",
+      zoneId: "orchard",
       biomeResources: farmResources,
       tileCollectionActive: null,
       categoryOf: CATEGORY_OF,
@@ -132,14 +133,14 @@ describe("Phase 32 — nextResourceForZone redirects per the zone upgradeMap", (
 
 describe("Phase 32 — nextResourceForZone honours the player's active species", () => {
   it("prefers the active species when one is set for the target category", () => {
-    // Zone 1: grass -> birds. Force an active bird species.
+    // Home: grass -> birds. Force an active bird species.
     const allBirds = TILE_TYPES.filter((t) => t.category === "bird");
     expect(allBirds.length).toBeGreaterThan(1);
     const desired = allBirds[allBirds.length - 1];
     const tileCollectionActive = { bird: desired.id };
     const r = nextResourceForZone({
       currentRes: findResource("grass_hay"),
-      zoneId: "zone1",
+      zoneId: "home",
       biomeResources: farmResources,
       tileCollectionActive,
       categoryOf: CATEGORY_OF,

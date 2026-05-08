@@ -1,4 +1,5 @@
 import { MAGIC_TOOLS } from "./data.js";
+import { locBuilt } from "../../locBuilt.js";
 
 export const viewKey = "portal";
 
@@ -6,7 +7,7 @@ export const viewKey = "portal";
 const AUTO_APPLY_TOOLS = new Set(["hourglass", "magic_seed", "magic_fertilizer"]);
 
 export default function PortalScreen({ state, dispatch }) {
-  const portalBuilt = !!state.built?.portal;
+  const portalBuilt = !!locBuilt(state).portal;
   const influence = state.influence ?? 0;
   const tools = state.tools ?? {};
 

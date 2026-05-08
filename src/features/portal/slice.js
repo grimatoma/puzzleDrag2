@@ -1,4 +1,5 @@
 import { MAGIC_TOOLS } from "./data.js";
+import { locBuilt } from "../../locBuilt.js";
 
 export const initial = {};
 
@@ -14,7 +15,7 @@ export function reduce(state, action) {
       const def = MAGIC_TOOLS.find((t) => t.id === id);
       if (!def) return state;
       // Portal must be built
-      if (!state.built?.portal) return state;
+      if (!locBuilt(state).portal) return state;
       // Sufficient influence
       if ((state.influence ?? 0) < def.influenceCost) return state;
       return {
