@@ -3,8 +3,8 @@ import { createInitialState, rootReducer } from "../state.js";
 import { DECORATIONS } from "../features/decorations/data.js";
 
 describe("8.5 — Influence currency + Decoration buildings", () => {
-  it("exactly 3 decorations in catalog", () => {
-    expect(Object.keys(DECORATIONS).length).toBe(3);
+  it("at least 3 decorations in catalog (later PRs added harbor/mine variants)", () => {
+    expect(Object.keys(DECORATIONS).length).toBeGreaterThanOrEqual(3);
   });
 
   it("violet_bed influence = 20", () => {
