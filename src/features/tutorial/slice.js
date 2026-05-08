@@ -74,6 +74,17 @@ export function reduce(state, action) {
     case 'TUTORIAL/NEXT':
       return advanceStep(state);
 
+    case 'TUTORIAL/PREV': {
+      if (!state.tutorial.active) return state;
+      const prev = Math.max(0, state.tutorial.step - 1);
+      if (prev === state.tutorial.step) return state;
+      return {
+        ...state,
+        tutorial: { ...state.tutorial, step: prev },
+        modal: CORNER_STEPS.has(prev) ? null : 'tutorial',
+      };
+    }
+
     case 'TUTORIAL/SKIP':
       return endTutorial(state);
 

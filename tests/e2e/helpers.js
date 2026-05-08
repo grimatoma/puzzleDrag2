@@ -1,9 +1,13 @@
-import { expect } from '@playwright/test';
-
 export async function waitForBoot(page) {
-  // Phaser is lazy-loaded; wait for canvas + the side panel orders
-  await page.waitForSelector('canvas');
-  await expect(page.getByText('Orders')).toBeVisible();
+  // Phaser is lazy-loaded. Wait for the HUD (always rendered) and for the
+  // GameScene to have built its grid. Polling for window.__phaserScene + grid
+  // is more reliable than text content, which moves around between layouts.
+  await page.waitForSelector('[data-testid="hud"]', { timeout: 15_000 });
+  await page.waitForFunction(
+    () => !!(window.__phaserScene && Array.isArray(window.__phaserScene.grid) && window.__phaserScene.grid.length > 0),
+    null,
+    { timeout: 15_000 },
+  );
 }
 
 export async function clearSave(page) {

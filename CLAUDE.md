@@ -24,7 +24,7 @@ This is a Phaser 3 + React game. React owns the page shell *and* the canonical g
 **Key files:**
 - `src/state.js` — external store. Redux-style `coreReducer` + `rawReducer` + `initialState`, with 26 feature slices auto-composed. Defines `SLICE_PRIMARY_ACTIONS` and `ALWAYS_RUN_SLICES` (see below).
 - `src/features/` — 26 feature directories, each with `index.jsx` + `slice.js`, auto-discovered by `src/ui.jsx` via `import.meta.glob`. This is the primary extension point for new game systems.
-- `src/migrations.js` — save migrations; current `SAVE_SCHEMA_VERSION = 15`. Bump and add a forward migration whenever you change the shape of persisted state.
+- `SAVE_SCHEMA_VERSION` (in `src/constants.js`) — bump whenever the persisted save shape changes. Forward migrations are intentionally **not** maintained: `src/state.js` discards saves whose `version` doesn't match, and the player starts fresh.
 - `src/featureFlags.js` — feature toggles.
 - `src/phaserBridge.js` — registry-based mirror that pushes reducer state into the Phaser scene.
 - `src/GameScene.js` — Phaser scene: board rendering, drag input, animations, collapse pipeline. Reads from the bridge; dispatches actions back to the reducer. Board origin is computed dynamically each layout (`this.boardX = Math.round((vw - COLS * this.tileSize) / 2)`).

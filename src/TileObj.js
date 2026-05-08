@@ -1,3 +1,4 @@
+import Phaser from "phaser";
 
 export class TileObj {
   constructor(scene, x, y, col, row, res) {
@@ -8,7 +9,17 @@ export class TileObj {
     this.selected = false;
     this.frozen = false;
     this.rubble = false;
-    this.sprite = scene.add.sprite(x, y, `tile_${res.key}`).setInteractive({ useHandCursor: true });
+    this.sprite = scene.add.sprite(x, y, `tile_${res.key}`);
+    // Slightly larger circular hit area so adjacent-tile drags are forgiving
+    // on touch devices: a radius of ~60% of the tile size overlaps with
+    // neighbouring tile centres just enough that a slightly-off finger still
+    // registers, while pointermove fallback in GameScene catches fast swipes.
+    const hitRadius = Math.round(this.sprite.width * 0.6);
+    this.sprite.setInteractive(
+      new Phaser.Geom.Circle(this.sprite.width / 2, this.sprite.height / 2, hitRadius),
+      Phaser.Geom.Circle.Contains,
+    );
+    this.sprite.input.cursor = "pointer";
     this.sprite.on("pointerdown", () => scene.startPath(this));
     this.sprite.on("pointerover", () => scene.tryAddToPath(this));
 

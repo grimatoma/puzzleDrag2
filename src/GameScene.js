@@ -81,6 +81,24 @@ export class GameScene extends Phaser.Scene {
     this.input.on("pointerupoutside", () => this.endPath());
     this.input.on("gameout", () => this.endPath());
 
+    // Touch-friendly drag fallback: pointerover misses tiles when a finger
+    // moves quickly across the board (touch tracking has lower temporal
+    // resolution than mouse). Hit-test against the grid on every pointermove
+    // while dragging so fast finger swipes still extend the chain.
+    this.input.on("pointermove", (pointer) => {
+      if (!this.dragging || !this.path.length) return;
+      const ts = this.tileSize;
+      if (!ts) return;
+      const col = Math.floor((pointer.worldX - this.boardX) / ts);
+      const row = Math.floor((pointer.worldY - this.boardY) / ts);
+      if (row < 0 || row >= ROWS || col < 0 || col >= COLS) return;
+      const tile = this.grid?.[row]?.[col];
+      if (!tile) return;
+      const last = this.path[this.path.length - 1];
+      if (tile === last) return;
+      this.tryAddToPath(tile);
+    });
+
     // Prevent the browser from hijacking pointer events with its native text/element
     // selection during tile drags (causes the "foggy film" overlay and stuck tile selection).
     const canvas = this.sys.game.canvas;
@@ -993,6 +1011,10 @@ export class GameScene extends Phaser.Scene {
     this.showChainBadge();
     this.showChainStatus();
     this.updateChainBadge();
+    // Subtle haptic tick on drag-start, gated by user setting.
+    if (this.registry.get("hapticsOn") && navigator.vibrate) {
+      try { navigator.vibrate(10); } catch { /* unsupported */ }
+    }
   }
 
   tryAddToPath(tile) {

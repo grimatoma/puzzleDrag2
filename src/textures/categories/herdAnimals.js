@@ -117,53 +117,130 @@ function drawWarthog(ctx) {
 
 function drawSheep(ctx) {
   shadow(ctx, 22);
-  // Legs first
-  ctx.fillStyle = "#1a0a08";
-  ctx.fillRect(-8, 14, 3, 7); ctx.fillRect(-2, 14, 3, 7); ctx.fillRect(6, 14, 3, 7); ctx.fillRect(12, 14, 3, 7);
-  woolBody(ctx, "#fffce8", "#a8a098", "#3a3030");
-  // Head — black face
-  ctx.fillStyle = "#1a0a08";
-  ctx.beginPath(); ctx.ellipse(-14, -2, 6, 7, -0.1, 0, Math.PI*2); ctx.fill();
+  // Legs (dark slim) — drawn first so the wool sits on top
+  ctx.fillStyle = "#2a1a18"; ctx.strokeStyle = "#0a0604"; ctx.lineWidth = 0.8;
+  for (const lx of [-7, -1, 7, 12]) {
+    ctx.fillRect(lx, 13, 3, 9);
+    ctx.strokeRect(lx, 13, 3, 9);
+  }
+  // Hooves
+  ctx.fillStyle = "#0a0604";
+  for (const lx of [-7, -1, 7, 12]) ctx.fillRect(lx, 21, 3, 1.5);
+
+  // Wool body — overlapping fluff circles, off-white with soft shadow
+  woolBody(ctx, "#fffdf0", "#c8c0b4", "#4a3e34");
+
+  // Black face — pear-shaped, tilted slightly down toward snout
+  ctx.fillStyle = "#1f1410";
+  ctx.beginPath(); ctx.ellipse(-13, 0, 6, 7, -0.2, 0, Math.PI*2); ctx.fill();
   ctx.strokeStyle = "#000"; ctx.lineWidth = 1.4; ctx.stroke();
-  // Ear
-  ctx.fillStyle = "#1a0a08";
-  ctx.beginPath(); ctx.ellipse(-15, -8, 2, 3, -0.4, 0, Math.PI*2); ctx.fill();
-  // Snout patch
-  ctx.fillStyle = "#5a4040";
-  ctx.beginPath(); ctx.ellipse(-18, 0, 3, 2, 0, 0, Math.PI*2); ctx.fill();
-  // Eye
-  ctx.fillStyle = "#fff8e0"; ctx.beginPath(); ctx.arc(-15, -3, 1.2, 0, Math.PI*2); ctx.fill();
-  ctx.fillStyle = "#0a0e04"; ctx.beginPath(); ctx.arc(-15, -3, 0.7, 0, Math.PI*2); ctx.fill();
+
+  // Floppy ear tucked against the head
+  ctx.fillStyle = "#1f1410";
+  ctx.beginPath();
+  ctx.moveTo(-11, -4);
+  ctx.quadraticCurveTo(-9, -10, -7, -6);
+  ctx.quadraticCurveTo(-9, -3, -11, -4);
+  ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = "#000"; ctx.lineWidth = 0.8; ctx.stroke();
+
+  // Wool topknot peeking above the face
+  ctx.fillStyle = "#fffdf0";
+  ctx.beginPath(); ctx.arc(-13, -6, 4, Math.PI*1.05, Math.PI*1.95); ctx.fill();
+  ctx.strokeStyle = "#4a3e34"; ctx.lineWidth = 0.8; ctx.stroke();
+
+  // Lighter snout patch with two nostrils
+  ctx.fillStyle = "#3a2a26";
+  ctx.beginPath(); ctx.ellipse(-17, 2, 3, 2.2, 0, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = "#0a0604";
+  ctx.beginPath(); ctx.arc(-18, 2, 0.5, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(-16, 2, 0.5, 0, Math.PI*2); ctx.fill();
+
+  // Eye with bright catch-light so it reads on the dark face
+  ctx.fillStyle = "#fff8e0";
+  ctx.beginPath(); ctx.arc(-14, -2, 1.4, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = "#0a0e04";
+  ctx.beginPath(); ctx.arc(-14, -2, 0.8, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = "#fff";
+  ctx.beginPath(); ctx.arc(-13.6, -2.4, 0.3, 0, Math.PI*2); ctx.fill();
 }
 
 function drawAlpaca(ctx) {
   shadow(ctx, 18);
-  // Long legs
-  ctx.fillStyle = "#a87838";
-  ctx.fillRect(-8, 12, 3, 10); ctx.fillRect(-2, 12, 3, 10); ctx.fillRect(6, 12, 3, 10); ctx.fillRect(12, 12, 3, 10);
-  ctx.strokeStyle = "#3a2008"; ctx.lineWidth = 1.0;
-  ctx.strokeRect(-8, 12, 3, 10); ctx.strokeRect(-2, 12, 3, 10); ctx.strokeRect(6, 12, 3, 10); ctx.strokeRect(12, 12, 3, 10);
-  // Wooly body
-  woolBody(ctx, "#f8e8c8", "#a87838", "#3a2008");
-  // Long curving neck
-  ctx.fillStyle = "#f8e8c8";
+  const wool = "#f5e6c8";
+  const wool2 = "#c69a55";
+  const stroke = "#3a2008";
+
+  // Long legs (slim, paired)
+  ctx.fillStyle = "#a87838"; ctx.strokeStyle = stroke; ctx.lineWidth = 1.0;
+  for (const lx of [-3, 3, 9, 13]) {
+    ctx.fillRect(lx, 10, 2.5, 12);
+    ctx.strokeRect(lx, 10, 2.5, 12);
+  }
+  // Hooves
+  ctx.fillStyle = "#1a0e04";
+  for (const lx of [-3, 3, 9, 13]) ctx.fillRect(lx, 21, 2.5, 1.5);
+
+  // Wooly body — fewer, larger fluff blobs centred over the legs
+  const fluff = (cx, cy, r) => {
+    const g = ctx.createRadialGradient(cx-r*0.4, cy-r*0.4, 1, cx, cy, r);
+    g.addColorStop(0, wool); g.addColorStop(1, wool2);
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2); ctx.fill();
+    ctx.strokeStyle = stroke; ctx.lineWidth = 1.2; ctx.stroke();
+  };
+  fluff(2, 4, 9);
+  fluff(11, 6, 7);
+  fluff(-3, 7, 7);
+
+  // Long S-curved neck — drawn as a tapered stroke
+  ctx.strokeStyle = stroke; ctx.lineWidth = 1.4;
+  ctx.fillStyle = wool;
   ctx.beginPath();
-  ctx.moveTo(-10, 0); ctx.bezierCurveTo(-18, -4, -16, -14, -10, -16);
-  ctx.bezierCurveTo(-4, -14, -6, -4, -8, 4); ctx.closePath(); ctx.fill();
-  ctx.strokeStyle = "#3a2008"; ctx.lineWidth = 1.6; ctx.stroke();
-  // Fluffy head top
-  ctx.fillStyle = "#fffce0";
-  ctx.beginPath(); ctx.arc(-11, -16, 5, 0, Math.PI*2); ctx.fill();
-  ctx.strokeStyle = "#3a2008"; ctx.lineWidth = 1.4; ctx.stroke();
-  // Snout (lower)
-  ctx.fillStyle = "#a87838";
-  ctx.beginPath(); ctx.ellipse(-13, -12, 3, 3, 0, 0, Math.PI*2); ctx.fill();
-  ctx.strokeStyle = "#3a2008"; ctx.lineWidth = 1.2; ctx.stroke();
-  // Ear
-  ctx.fillStyle = "#3a2008";
-  ctx.beginPath(); ctx.moveTo(-11, -20); ctx.lineTo(-9, -23); ctx.lineTo(-7, -19); ctx.closePath(); ctx.fill();
-  // Eye
-  ctx.fillStyle = "#0a0e04"; ctx.beginPath(); ctx.arc(-13, -16, 1.0, 0, Math.PI*2); ctx.fill();
+  // Right edge of neck
+  ctx.moveTo(-4, 2);
+  ctx.bezierCurveTo(-10, -4, -10, -10, -8, -14);
+  // Top of head connector
+  ctx.lineTo(-13, -14);
+  // Left edge of neck
+  ctx.bezierCurveTo(-15, -10, -14, -4, -8, 2);
+  ctx.closePath();
+  ctx.fill(); ctx.stroke();
+
+  // Head — chubby ellipse just above the neck top
+  ctx.fillStyle = wool;
+  ctx.beginPath(); ctx.ellipse(-11, -16, 5.5, 4.5, -0.05, 0, Math.PI*2); ctx.fill();
+  ctx.strokeStyle = stroke; ctx.lineWidth = 1.4; ctx.stroke();
+
+  // Fluffy head topknot
+  ctx.fillStyle = "#fff7df";
+  ctx.beginPath();
+  ctx.arc(-13, -19, 2.4, 0, Math.PI*2);
+  ctx.arc(-9, -19, 2.2, 0, Math.PI*2);
+  ctx.arc(-11, -21, 2.4, 0, Math.PI*2);
+  ctx.fill();
+  ctx.strokeStyle = stroke; ctx.lineWidth = 0.9; ctx.stroke();
+
+  // Two upright ears (banana-shaped)
+  ctx.fillStyle = wool2; ctx.strokeStyle = stroke; ctx.lineWidth = 0.8;
+  ctx.beginPath();
+  ctx.ellipse(-14, -19, 1.2, 3, -0.4, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+  ctx.beginPath();
+  ctx.ellipse(-8, -19, 1.2, 3, 0.4, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+
+  // Snout — slightly darker patch with mouth line
+  ctx.fillStyle = wool2;
+  ctx.beginPath(); ctx.ellipse(-15, -14, 2.2, 1.6, -0.05, 0, Math.PI*2); ctx.fill();
+  ctx.strokeStyle = stroke; ctx.lineWidth = 0.9;
+  ctx.beginPath(); ctx.moveTo(-16, -13.5); ctx.lineTo(-14, -13.5); ctx.stroke();
+
+  // Eye with catch-light
+  ctx.fillStyle = "#fff8e0";
+  ctx.beginPath(); ctx.arc(-11, -16, 1.2, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = "#0a0e04";
+  ctx.beginPath(); ctx.arc(-11, -16, 0.7, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = "#fff";
+  ctx.beginPath(); ctx.arc(-10.7, -16.2, 0.3, 0, Math.PI*2); ctx.fill();
 }
 
 function drawGoat(ctx) {
@@ -205,44 +282,77 @@ function drawGoat(ctx) {
 
 function drawRam(ctx) {
   shadow(ctx, 22);
-  // Legs
-  ctx.fillStyle = "#7a5418";
-  ctx.fillRect(-8, 14, 3, 8); ctx.fillRect(-2, 14, 3, 8); ctx.fillRect(6, 14, 3, 8); ctx.fillRect(12, 14, 3, 8);
-  ctx.fillStyle = "#1a0e04";
-  ctx.fillRect(-8, 21, 3, 1.5); ctx.fillRect(-2, 21, 3, 1.5); ctx.fillRect(6, 21, 3, 1.5); ctx.fillRect(12, 21, 3, 1.5);
-  // Big body
-  woolBody(ctx, "#fffce8", "#a89878", "#3a2810");
-  // Head
-  ctx.fillStyle = "#a87838";
-  ctx.beginPath(); ctx.ellipse(-13, 0, 6, 7, -0.1, 0, Math.PI*2); ctx.fill();
-  ctx.strokeStyle = "#1a0e04"; ctx.lineWidth = 1.6; ctx.stroke();
-  // Massive curled horns
-  ctx.strokeStyle = "#3a2008"; ctx.lineWidth = 4;
-  ctx.fillStyle = "#a87838";
-  // Right horn (from viewer)
-  ctx.save(); ctx.translate(-13, -4);
-  ctx.beginPath();
-  ctx.moveTo(-3, 0); ctx.bezierCurveTo(-12, 0, -12, 8, -6, 10);
-  ctx.bezierCurveTo(0, 10, 0, 4, -4, 4);
-  ctx.stroke();
-  ctx.restore();
-  ctx.save(); ctx.translate(-13, -4);
-  ctx.beginPath();
-  ctx.moveTo(3, 0); ctx.bezierCurveTo(12, 0, 12, 8, 6, 10);
-  ctx.bezierCurveTo(0, 10, 0, 4, 4, 4);
-  ctx.stroke();
-  ctx.restore();
-  // Horn ridges
-  ctx.strokeStyle = "rgba(58,32,8,0.7)"; ctx.lineWidth = 0.8;
-  for (let i = 0; i < 5; i++) {
-    ctx.beginPath(); ctx.arc(-19, -4 + i*2, 2, -0.5, 1.5); ctx.stroke();
-    ctx.beginPath(); ctx.arc(-7, -4 + i*2, 2, 1.5, 3.5); ctx.stroke();
+  const stroke = "#2a1808";
+
+  // Legs (stout)
+  ctx.fillStyle = "#7a5418"; ctx.strokeStyle = stroke; ctx.lineWidth = 1.0;
+  for (const lx of [-7, -1, 7, 12]) {
+    ctx.fillRect(lx, 13, 3, 9);
+    ctx.strokeRect(lx, 13, 3, 9);
   }
-  // Eye
-  ctx.fillStyle = "#fff8e0"; ctx.beginPath(); ctx.arc(-14, -2, 1.2, 0, Math.PI*2); ctx.fill();
-  ctx.fillStyle = "#0a0e04"; ctx.fillRect(-14.4, -3, 0.8, 2);
-  // Snout
-  ctx.fillStyle = "#1a0e04"; ctx.beginPath(); ctx.arc(-18, 2, 1.4, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = "#0a0604";
+  for (const lx of [-7, -1, 7, 12]) ctx.fillRect(lx, 21, 3, 1.5);
+
+  // Powerful wool body (cream + brown)
+  woolBody(ctx, "#fff5d8", "#9c7c44", stroke);
+
+  // Brown head
+  ctx.fillStyle = "#a87838";
+  ctx.beginPath(); ctx.ellipse(-13, 0, 6.5, 7.5, -0.08, 0, Math.PI*2); ctx.fill();
+  ctx.strokeStyle = stroke; ctx.lineWidth = 1.6; ctx.stroke();
+
+  // Curled horns — drawn as filled spirals using stacked arcs from outside in.
+  // Each horn is anchored at the side of the head and spirals back into a
+  // tighter centre, with a darker outline so the silhouette reads.
+  const drawHorn = (ax, ay, mirror) => {
+    ctx.save();
+    ctx.translate(ax, ay);
+    if (mirror) ctx.scale(-1, 1);
+    // Outer thick arc
+    ctx.fillStyle = "#c89858";
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.quadraticCurveTo(-9, -2, -10, 5);
+    ctx.quadraticCurveTo(-9, 11, -3, 11);
+    ctx.quadraticCurveTo(2, 10, 1, 6);
+    ctx.quadraticCurveTo(-1, 3, -3, 5);
+    ctx.lineTo(-1, 0);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = stroke; ctx.lineWidth = 1.4; ctx.stroke();
+    // Spiral ridges
+    ctx.strokeStyle = "rgba(60,36,12,0.8)"; ctx.lineWidth = 0.8;
+    for (let i = 0; i < 4; i++) {
+      ctx.beginPath();
+      ctx.arc(-6 + i*0.6, 5 + i*0.3, 5 - i*0.9, Math.PI*1.05, Math.PI*1.95);
+      ctx.stroke();
+    }
+    ctx.restore();
+  };
+  drawHorn(-13, -4, false); // left horn
+  drawHorn(-13, -4, true);  // right horn (mirrored)
+
+  // Forelock between horns
+  ctx.fillStyle = "#fff5d8";
+  ctx.beginPath();
+  ctx.arc(-13, -7, 2.2, Math.PI*1.05, Math.PI*1.95);
+  ctx.fill();
+  ctx.strokeStyle = stroke; ctx.lineWidth = 0.8; ctx.stroke();
+
+  // Snout — black with two nostrils
+  ctx.fillStyle = "#1a0e04";
+  ctx.beginPath(); ctx.ellipse(-18, 2, 3.2, 2.4, -0.05, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = "#3a2010";
+  ctx.beginPath(); ctx.arc(-19, 1.5, 0.5, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(-17, 1.5, 0.5, 0, Math.PI*2); ctx.fill();
+
+  // Eye — big with horizontal pupil to read as ungulate
+  ctx.fillStyle = "#fff5d0";
+  ctx.beginPath(); ctx.ellipse(-14, -2, 1.6, 1.2, 0, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = "#0a0e04";
+  ctx.fillRect(-15.2, -2.5, 2.4, 1);
+  ctx.fillStyle = "#fff";
+  ctx.beginPath(); ctx.arc(-14.4, -2.4, 0.3, 0, Math.PI*2); ctx.fill();
 }
 
 export const ICONS = {

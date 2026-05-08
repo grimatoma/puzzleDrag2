@@ -84,6 +84,7 @@ function PhaserMount({ dispatch, biomeKey, turnsUsed, seasonsCycled, uiLocked, s
               const scene = game.scene.scenes[0];
               sceneRef.current = scene;
               setPhaserScene(scene);
+              if (typeof window !== "undefined") window.__phaserScene = scene;
               scene.events.on(SCENE_EVENTS.CHAIN_COLLECTED, (payload) => dispatch({ type: "CHAIN_COLLECTED", payload }));
               scene.events.on(SCENE_EVENTS.FERTILIZER_CONSUMED, () => dispatch({ type: "FERTILIZER/CONSUMED" }));
               scene.events.on(SCENE_EVENTS.GRID_SYNC, ({ grid: g }) => dispatch({ type: "GRID/SYNC", payload: { grid: g } }));
@@ -104,6 +105,7 @@ function PhaserMount({ dispatch, biomeKey, turnsUsed, seasonsCycled, uiLocked, s
       gameRef.current = null;
       sceneRef.current = null;
       setPhaserScene(null);
+      if (typeof window !== "undefined") window.__phaserScene = null;
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps -- intentional: Phaser game initialises once on mount; registry syncs handled by separate effects below
 
@@ -117,6 +119,7 @@ function PhaserMount({ dispatch, biomeKey, turnsUsed, seasonsCycled, uiLocked, s
   useEffect(() => { gameRef.current?.registry.set("workers", workers ?? null); }, [workers]);
   useEffect(() => { gameRef.current?.registry.set("palette", palette ?? "default"); }, [palette]);
   useEffect(() => { gameRef.current?.registry.set("reducedMotion", reducedMotion ?? null); }, [reducedMotion]);
+  useEffect(() => { gameRef.current?.registry.set("hapticsOn", gameState?.settings?.hapticsOn ?? true); }, [gameState?.settings?.hapticsOn]);
   useEffect(() => { gameRef.current?.registry.set("tileCollectionActive", tileCollection?.activeByCategory ?? null); }, [tileCollection?.activeByCategory]);
   // Sync grid state → Phaser registry so hazard engines see real tile keys
   useEffect(() => { gameRef.current?.registry.set("grid", grid ?? null); }, [grid]);

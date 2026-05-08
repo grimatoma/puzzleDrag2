@@ -92,8 +92,12 @@ function StepDots({ step, total }) {
 }
 
 function CenterCard({ step, stepData, dispatch }) {
+  const canGoBack = step > 0;
   return (
     <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="tutorial-title"
       style={{
         position: 'absolute',
         inset: 0,
@@ -122,44 +126,70 @@ function CenterCard({ step, stepData, dispatch }) {
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <NpcAvatar npcKey={stepData.npc} size={44} />
-          <div style={{ fontWeight: 700, fontSize: 17, color: '#3e2a1a' }}>{stepData.title}</div>
+          <div id="tutorial-title" style={{ fontWeight: 700, fontSize: 17, color: '#3e2a1a' }}>{stepData.title}</div>
         </div>
 
         <div style={{ fontSize: 14, color: '#5a3e28', lineHeight: 1.55 }}>{stepData.body}</div>
 
         <StepDots step={step} total={STEPS.length} />
 
-        <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 2 }}>
+        <div style={{ display: 'flex', gap: 8, justifyContent: 'space-between', alignItems: 'center', marginTop: 2 }}>
           <button
             onClick={() => dispatch({ type: 'TUTORIAL/SKIP' })}
             style={{
-              background: 'none',
-              border: 'none',
-              color: '#a08060',
+              background: '#e8dcc4',
+              border: '2px solid #b28b62',
+              borderRadius: 10,
+              color: '#5a3a20',
               fontFamily: 'Arial, sans-serif',
               fontSize: 13,
-              cursor: 'pointer',
-              padding: '6px 10px',
-            }}
-          >
-            Skip Tutorial
-          </button>
-          <button
-            onClick={() => dispatch({ type: 'TUTORIAL/NEXT' })}
-            style={{
-              background: '#91bf24',
-              border: 'none',
-              borderRadius: 10,
-              color: '#fff',
-              fontFamily: 'Arial, sans-serif',
               fontWeight: 700,
-              fontSize: 14,
               cursor: 'pointer',
-              padding: '8px 18px',
+              padding: '10px 14px',
+              minHeight: 40,
             }}
           >
-            {stepData.cta} →
+            Skip
           </button>
+          <div style={{ display: 'flex', gap: 8 }}>
+            {canGoBack && (
+              <button
+                onClick={() => dispatch({ type: 'TUTORIAL/PREV' })}
+                aria-label="Previous step"
+                style={{
+                  background: '#e8dcc4',
+                  border: '2px solid #b28b62',
+                  borderRadius: 10,
+                  color: '#5a3a20',
+                  fontFamily: 'Arial, sans-serif',
+                  fontSize: 14,
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  padding: '10px 14px',
+                  minHeight: 40,
+                }}
+              >
+                ← Back
+              </button>
+            )}
+            <button
+              onClick={() => dispatch({ type: 'TUTORIAL/NEXT' })}
+              style={{
+                background: '#91bf24',
+                border: 'none',
+                borderRadius: 10,
+                color: '#fff',
+                fontFamily: 'Arial, sans-serif',
+                fontWeight: 700,
+                fontSize: 14,
+                cursor: 'pointer',
+                padding: '10px 20px',
+                minHeight: 40,
+              }}
+            >
+              {stepData.cta} →
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -194,14 +224,19 @@ function CornerToast({ step, stepData, dispatch }) {
         <button
           onClick={() => dispatch({ type: 'TUTORIAL/SKIP' })}
           style={{
-            background: 'none',
-            border: 'none',
-            color: '#a08060',
+            background: '#e8dcc4',
+            border: '2px solid #b28b62',
+            borderRadius: 8,
+            color: '#5a3a20',
             fontFamily: 'Arial, sans-serif',
-            fontSize: 16,
+            fontSize: 18,
+            fontWeight: 700,
             cursor: 'pointer',
             lineHeight: 1,
-            padding: '0 2px',
+            width: 32,
+            height: 32,
+            display: 'inline-grid',
+            placeItems: 'center',
           }}
           aria-label="Close tutorial"
         >
