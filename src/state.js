@@ -1,4 +1,4 @@
-import { BIOMES, BUILDINGS, NPCS, MAX_TURNS, RECIPES, WORKSHOP_RECIPES, STORAGE_KEYS, SEASON_EFFECTS, DAILY_REWARDS, MINE_ENTRY_TIERS, CAPPED_RESOURCES, UPGRADE_THRESHOLDS, SAVE_SCHEMA_VERSION } from "./constants.js";
+import { BIOMES, BUILDINGS, NPCS, MAX_TURNS, RECIPES, WORKSHOP_RECIPES, STORAGE_KEYS, SEASON_EFFECTS, DAILY_REWARDS, MINE_ENTRY_TIERS, HARBOR_ENTRY_TIERS, CAPPED_RESOURCES, UPGRADE_THRESHOLDS, SAVE_SCHEMA_VERSION } from "./constants.js";
 import { sellPriceFor as _sellPriceFor } from "./features/market/pricing.js";
 import { tryClearRatChain } from "./features/farm/rats.js";
 import { tryExtinguishFire, rollFarmHazard, tickFire, tickWolves } from "./features/farm/hazards.js";
@@ -1263,6 +1263,47 @@ function coreReducer(state, action) {
         return spawnMysteriousOre(mineBase);
       }
       return mineBase;
+    }
+
+    case "HARBOR/ENTER": {
+      // Mirror of MINE/ENTER. Pays a per-trip cost from the chosen tier;
+      // each tier may extend turns and/or boost the trip in other ways.
+      const tier = HARBOR_ENTRY_TIERS.find((t) => t.id === action.payload?.tier);
+      if (!tier) return state;
+      let harborBase;
+      if (tier.id === "free") {
+        if ((state.inventory?.wood_plank ?? 0) < (tier.wood_plank ?? 0)) return state;
+        harborBase = {
+          ...state,
+          biomeKey: "fish",
+          biome: "fish",
+          inventory: { ...state.inventory, wood_plank: state.inventory.wood_plank - tier.wood_plank },
+          sessionMaxTurns: MAX_TURNS,
+        };
+      } else if (tier.id === "better") {
+        if ((state.coins ?? 0) < (tier.coins ?? 0)) return state;
+        if ((state.inventory?.wood_plank ?? 0) < (tier.wood_plank ?? 0)) return state;
+        harborBase = {
+          ...state,
+          biomeKey: "fish",
+          biome: "fish",
+          coins: state.coins - tier.coins,
+          inventory: { ...state.inventory, wood_plank: state.inventory.wood_plank - tier.wood_plank },
+          sessionMaxTurns: MAX_TURNS + 2,
+        };
+      } else if (tier.id === "premium") {
+        if ((state.runes ?? 0) < (tier.runes ?? 0)) return state;
+        harborBase = {
+          ...state,
+          biomeKey: "fish",
+          biome: "fish",
+          runes: state.runes - tier.runes,
+          sessionMaxTurns: MAX_TURNS,
+        };
+      } else {
+        return state;
+      }
+      return { ...harborBase, _needsRefill: true };
     }
 
     case "CRAFT": {
