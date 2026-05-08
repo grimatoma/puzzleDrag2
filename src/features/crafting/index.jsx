@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { RECIPES, BIOMES } from "../../constants.js";
 import { DECORATIONS } from "../decorations/data.js";
+import IconCanvas, { hasIcon } from "../../ui/IconCanvas.jsx";
 
 export const viewKey = "crafting";
 
@@ -16,11 +17,11 @@ function colorForKey(key) {
 }
 
 const STATION_META = {
-  bakery:   { label: "Bakery",   icon: "🏠", bg: "#8a4a26" },
-  forge:    { label: "Forge",    icon: "⚒",  bg: "#5a6973" },
-  larder:   { label: "Larder",   icon: "🥫", bg: "#4f6b3a" },
-  workshop: { label: "Workshop", icon: "🔧", bg: "#6a5a3a" },
-  decor:    { label: "Decor",    icon: "🌸", bg: "#7a3a8a" },
+  bakery:   { label: "Bakery",   iconKey: "station_bakery",   bg: "#8a4a26" },
+  forge:    { label: "Forge",    iconKey: "station_forge",    bg: "#5a6973" },
+  larder:   { label: "Larder",   iconKey: "station_larder",   bg: "#4f6b3a" },
+  workshop: { label: "Workshop", iconKey: "station_workshop", bg: "#6a5a3a" },
+  decor:    { label: "Decor",    iconKey: "station_decor",    bg: "#7a3a8a" },
 };
 
 // Ordered list of all stations (decor appended)
@@ -123,10 +124,19 @@ function canAffordDecor(decor, state) {
 function DecorationCard({ decor, state, dispatch }) {
   const affordable = canAffordDecor(decor, state);
   const count = state.built?.decorations?.[decor.id] ?? 0;
+  const decorIconKey = `decor_${decor.id}`;
   return (
     <div className="bg-[#f6efe0] border-2 border-[#c5a87a] rounded-xl p-2 flex items-center gap-2 relative" style={{ minHeight: 72 }}>
       {count > 0 && (
         <div className="absolute top-1 right-1 text-[10px] text-[#8a785e] font-bold">×{count}</div>
+      )}
+      {hasIcon(decorIconKey) && (
+        <div
+          className="flex-shrink-0 grid place-items-center rounded-lg overflow-hidden"
+          style={{ width: 48, height: 48, background: "rgba(122,58,168,0.12)", border: "1px solid rgba(122,58,168,0.35)" }}
+        >
+          <IconCanvas iconKey={decorIconKey} size={48} />
+        </div>
       )}
       <div className="flex flex-col gap-0.5 flex-1 min-w-0">
         <span className="font-bold text-[11px] text-[#3a2715] leading-tight">{decor.name}</span>
@@ -211,7 +221,9 @@ export default function CraftingScreen({ state, dispatch }) {
               }`}
               style={isActive ? { backgroundColor: m.bg, borderColor: "rgba(255,255,255,0.2)" } : {}}
             >
-              <span>{m.icon}</span>
+              <span style={{ width: 22, height: 22, display: "inline-grid", placeItems: "center" }}>
+                <IconCanvas iconKey={m.iconKey} size={22} />
+              </span>
               <span>{m.label}</span>
               {!isBuilt && <span className="text-[9px] opacity-60">🔒</span>}
             </button>

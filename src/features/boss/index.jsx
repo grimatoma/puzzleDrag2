@@ -23,15 +23,27 @@ function ProgressBar({ value, max, color }) {
   );
 }
 
+function weatherIconKey(weather) {
+  const k = `weather_${weather?.key || weather?.id || ""}`;
+  return hasIcon(k) ? k : null;
+}
+
 function WeatherBadge({ weather }) {
   if (!weather) return null;
+  const wKey = weatherIconKey(weather);
   return (
     <div
       className="flex flex-col gap-0.5 px-2 py-1.5 rounded-lg text-white mt-3"
       style={{ background: weather.color || "#3a6b8a", opacity: 0.9 }}
     >
       <div className="flex items-center gap-1.5 text-[10px] font-bold">
-        <span>{weather.emoji}</span>
+        {wKey ? (
+          <span style={{ width: 18, height: 18, display: "inline-grid", placeItems: "center" }}>
+            <IconCanvas iconKey={wKey} size={18} />
+          </span>
+        ) : (
+          <span>{weather.emoji}</span>
+        )}
         <span>{weather.label} active</span>
       </div>
       {weather.description && (
@@ -87,8 +99,15 @@ function MiniCard({ boss, weather, dispatch }) {
         </div>
         <ProgressBar value={boss.progress} max={boss.targetCount} color="#ff7a00" />
         {weather && (
-          <div className="mt-1 text-[8px] font-bold" style={{ color: weather.color || "#3a6b8a" }}>
-            {weather.emoji} {weather.label}
+          <div className="mt-1 text-[8px] font-bold flex items-center gap-1" style={{ color: weather.color || "#3a6b8a" }}>
+            {weatherIconKey(weather) ? (
+              <span style={{ width: 14, height: 14, display: "inline-grid", placeItems: "center" }}>
+                <IconCanvas iconKey={weatherIconKey(weather)} size={14} />
+              </span>
+            ) : (
+              <span>{weather.emoji}</span>
+            )}
+            <span>{weather.label}</span>
           </div>
         )}
       </div>

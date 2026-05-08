@@ -6,6 +6,7 @@ import { BIOMES } from "../../constants.js";
 import { hex } from "../../utils.js";
 import { FARM_HAZARD_META } from "../farm/hazards.js";
 import { HAZARDS } from "../mine/hazards.js";
+import IconCanvas, { hasIcon } from "../../ui/IconCanvas.jsx";
 
 export const viewKey = "tileCollection";
 
@@ -201,13 +202,16 @@ function TileRow({ row, category, dispatch }) {
 }
 
 function HazardRow({ hazard }) {
+  const hazKey = `hazard_${hazard.id}`;
   return (
     <div className="flex items-start gap-3 p-2 rounded-xl border border-[#7a2a0a]/60 bg-[#2a0e0e]/50">
       <div
-        className="flex-shrink-0 flex items-center justify-center text-2xl rounded-lg bg-[#3a1a0a]/60 border border-[#7a3a1a]/40"
+        className="flex-shrink-0 flex items-center justify-center text-2xl rounded-lg bg-[#3a1a0a]/60 border border-[#7a3a1a]/40 overflow-hidden"
         style={{ width: 40, height: 40 }}
       >
-        {hazard.icon}
+        {hasIcon(hazKey)
+          ? <IconCanvas iconKey={hazKey} size={40} />
+          : hazard.icon}
       </div>
       <div className="flex-1 min-w-0">
         <div className="font-bold text-sm text-[#f7b07a]">
