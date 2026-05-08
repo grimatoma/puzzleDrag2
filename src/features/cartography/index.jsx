@@ -1,6 +1,19 @@
 import { useState, useEffect, useMemo } from 'react';
 import { MAP_NODES, MAP_EDGES, NODE_COLORS, REGIONS, KIND_LABELS } from './data.js';
 import { isAdjacent } from './slice.js';
+import IconCanvas, { hasIcon } from '../../ui/IconCanvas.jsx';
+
+function NodeBadge({ nodeId, fallbackEmoji, size = 22 }) {
+  const k = `map_${nodeId}`;
+  if (hasIcon(k)) {
+    return (
+      <span style={{ width: size, height: size, display: 'inline-grid', placeItems: 'center' }}>
+        <IconCanvas iconKey={k} size={size} />
+      </span>
+    );
+  }
+  return <span>{fallbackEmoji}</span>;
+}
 
 export const viewKey = 'cartography';
 
@@ -472,15 +485,15 @@ function SidePanel({ node, current, visited, discovered, playerLevel, dispatch, 
       >
         <div className="flex items-center gap-1.5">
           <div
-            className="grid place-items-center flex-shrink-0"
+            className="grid place-items-center flex-shrink-0 overflow-hidden"
             style={{
-              width: 22, height: 22, borderRadius: '50%',
+              width: 26, height: 26, borderRadius: '50%',
               background: color,
               border: node.kind === 'boss' ? '2px solid #cc2222' : '2px solid #2a1a0a',
               fontSize: 12, lineHeight: 1,
             }}
           >
-            {node.icon}
+            <NodeBadge nodeId={node.id} fallbackEmoji={node.icon} size={22} />
           </div>
           <div className="flex-1 min-w-0">
             <div style={{ ...labelStyle, fontWeight: 'bold', fontSize: 11, color: '#3a2715', lineHeight: 1.15 }}>

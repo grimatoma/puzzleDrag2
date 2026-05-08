@@ -3,12 +3,13 @@ import { createPortal } from "react-dom";
 import { useTooltip, Tooltip } from "./Tooltip.jsx";
 import { CompactOrders } from "./Inventory.jsx";
 import { getPhaserScene } from "../phaserBridge.js";
+import IconCanvas from "./IconCanvas.jsx";
 
 export const TOOL_DEFS = [
-  { key: "clear", icon: "⚔", name: "Scythe", desc: "Clears tiles from the board and collects +5 basic resources." },
-  { key: "basic", icon: "+", name: "Seedpack", desc: "Instantly adds +5 basic resources to your inventory." },
-  { key: "rare", icon: "★", name: "Lockbox", desc: "Grants +2 rare resources directly to your inventory." },
-  { key: "shuffle", icon: "↻", name: "Reshuffle Horn", desc: "Reshuffles all tiles on the board for a fresh layout." },
+  { key: "clear",   iconKey: "player_clear",   name: "Scythe",         desc: "Clears tiles from the board and collects +5 basic resources." },
+  { key: "basic",   iconKey: "player_basic",   name: "Seedpack",       desc: "Instantly adds +5 basic resources to your inventory." },
+  { key: "rare",    iconKey: "player_rare",    name: "Lockbox",        desc: "Grants +2 rare resources directly to your inventory." },
+  { key: "shuffle", iconKey: "player_shuffle", name: "Reshuffle Horn", desc: "Reshuffles all tiles on the board for a fresh layout." },
 ];
 
 export function ToolsGrid({ tools, onUse }) {
@@ -59,7 +60,7 @@ export function ToolsGrid({ tools, onUse }) {
                 className={`relative w-full rounded-lg border-2 border-[#e6c49a] py-1.5 px-1 flex flex-col items-center gap-0.5 transition-transform ${empty ? "bg-[#9a724d] opacity-40 cursor-not-allowed" : "bg-[#9a724d] hover:bg-[#b8845a] hover:-translate-y-0.5"}`}
               >
                 {amt > 0 && <div className="absolute -top-1 -right-1 bg-[#2b2218] text-white border border-[#f7e2b6] rounded-full px-1.5 text-[10px] font-bold">{amt}</div>}
-                <div className="text-[20px] leading-none text-white">{t.icon}</div>
+                <div style={{ width: 32, height: 32 }}><IconCanvas iconKey={t.iconKey} size={32} /></div>
                 <div className="text-[9px] font-bold text-white">{t.name}</div>
               </button>
             </div>
@@ -80,7 +81,9 @@ export function ToolsGrid({ tools, onUse }) {
       {modalTool && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={() => setModalTool(null)}>
           <div className="bg-[#3d2310] border-2 border-[#e6c49a] rounded-2xl p-5 max-w-[260px] w-full mx-4 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-            <div className="text-[36px] text-center mb-1 leading-none">{modalTool.icon}</div>
+            <div className="grid place-items-center mb-1" style={{ height: 64 }}>
+              <IconCanvas iconKey={modalTool.iconKey} size={64} />
+            </div>
             <div className="text-white font-bold text-[17px] text-center mb-2">{modalTool.name}</div>
             <div className="text-white/80 text-[12px] text-center leading-relaxed">{modalTool.desc}</div>
             <button
@@ -131,7 +134,7 @@ export function PortraitToolsBar({ state, dispatch }) {
               className={`relative flex flex-col items-center gap-0.5 py-2 rounded-lg border-2 border-[#e6c49a] transition-transform ${empty ? "bg-[#9a724d] opacity-40 cursor-not-allowed" : "bg-[#9a724d] hover:bg-[#b8845a] active:-translate-y-0.5"}`}
             >
               {amt > 0 && <div className="absolute -top-1 -right-1 bg-[#2b2218] text-white border border-[#f7e2b6] rounded-full px-1.5 text-[9px] font-bold leading-none py-0.5">{amt}</div>}
-              <div className="text-[18px] leading-none text-white">{t.icon}</div>
+              <div style={{ width: 28, height: 28 }}><IconCanvas iconKey={t.iconKey} size={28} /></div>
               <div className="text-[8px] font-bold text-white/90">{t.name}</div>
             </button>
           );
@@ -165,7 +168,7 @@ export function MobileDock({ state, dispatch }) {
               {totalTools}
             </div>
           )}
-          <span className="text-[20px] leading-none">⚔</span>
+          <div style={{ width: 24, height: 24 }}><IconCanvas iconKey="player_clear" size={24} /></div>
           <span className="text-[9px] font-bold">Tools</span>
         </button>
 

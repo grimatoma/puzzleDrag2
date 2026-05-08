@@ -181,10 +181,15 @@ function NpcCard({ npcKey, npcData, bond, inventory, dispatch, giftCooledDown })
             <span className="font-bold text-[13px] text-[#3a2715]">{npcData.name}</span>
             <span className="text-[10px] text-[#7a6248]">{npcData.role}</span>
             <span
-              className="text-[10px] font-bold px-1.5 py-0.5 rounded-full text-white"
+              className="text-[10px] font-bold px-1.5 py-0.5 rounded-full text-white inline-flex items-center gap-1"
               style={{ backgroundColor: mood.color }}
             >
-              {mood.icon} {mood.name}
+              {hasIcon(`mood_${mood.name.toLowerCase()}`) ? (
+                <span style={{ width: 16, height: 16, display: 'inline-grid', placeItems: 'center' }}>
+                  <IconCanvas iconKey={`mood_${mood.name.toLowerCase()}`} size={16} />
+                </span>
+              ) : null}
+              {mood.name}
             </span>
           </div>
           <HeartsRow bond={bond} />
