@@ -1,6 +1,24 @@
 import { RECIPES } from "../../constants.js";
+import { computeWorkerEffects } from "../apprentices/aggregate.js";
 
 export const initial = { craftedTotals: {} };
+
+/**
+ * Phase 4 — apply per-hire recipe-input reductions from `computeWorkerEffects`
+ * to the recipe's raw input requirements. Each input is floored at 1 so
+ * crafting always costs at least one of every listed resource.
+ */
+function effectiveRecipeInputs(state, recipeKey, recipeInputs) {
+  const agg = computeWorkerEffects(state);
+  const reduce = agg.recipeInputReduce?.[recipeKey];
+  if (!reduce) return recipeInputs;
+  const out = {};
+  for (const [res, need] of Object.entries(recipeInputs)) {
+    const cut = Math.round(reduce[res] ?? 0);
+    out[res] = Math.max(1, need - cut);
+  }
+  return out;
+}
 
 export function reduce(state, action) {
   if (action.type !== "CRAFTING/CRAFT_RECIPE") return state;
@@ -13,13 +31,15 @@ export function reduce(state, action) {
   const built = state.built || {};
   if (!built[recipe.station]) return state;
 
+  const inputs = effectiveRecipeInputs(state, recipeKey, recipe.inputs);
+
   const inv = state.inventory || {};
-  for (const [res, need] of Object.entries(recipe.inputs)) {
+  for (const [res, need] of Object.entries(inputs)) {
     if ((inv[res] || 0) < need) return state;
   }
 
   const newInv = { ...inv };
-  for (const [res, need] of Object.entries(recipe.inputs)) {
+  for (const [res, need] of Object.entries(inputs)) {
     newInv[res] = (newInv[res] || 0) - need;
   }
 

@@ -8,6 +8,12 @@
  *   "pool_weight"      — adds extra copies of a resource to the spawn pool
  *   "bonus_yield"      — adds bonus resources per chain of a type
  *   "season_bonus"     — pays extra coins at season end
+ *   "recipe_input_reduce" — Phase 4 (zones rule overhaul): lowers a recipe's
+ *                           input requirement for a single resource. Shape:
+ *                           `{ type, recipe, input, from, to }`. Each hire
+ *                           contributes `(from - to) / maxCount` toward the
+ *                           reduction (rounded at use time, floored at 1
+ *                           remaining input).
  */
 export const WORKERS = [
   {
