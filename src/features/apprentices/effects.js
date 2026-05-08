@@ -5,8 +5,8 @@ const add  = (b, k, n) => { if (n) b[k] = (b[k] ?? 0) + n; };
 
 export function computeWorkerEffects(state, workerMap = DEFAULT_MAP) {
   const out = ZERO();
-  const hired = state?.workers?.hired ?? {};
-  const debt  = state?.workers?.debt  ?? 0;
+  const hired = state?.townsfolk?.hired ?? {};
+  const debt  = state?.townsfolk?.debt  ?? 0;
   if (debt > 0) return out; // LOCKED: debt > 0 pauses production
 
   for (const [id, raw] of Object.entries(hired)) {

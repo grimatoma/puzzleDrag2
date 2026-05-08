@@ -148,7 +148,7 @@ describe("Phase 9.3 — Hazards (cave-in, gas vent)", () => {
     const cs = {
       ...createInitialState(),
       biome: "mine",
-      workers: { hired: { canary: 2 }, debt: 0 },
+      townsfolk: { hired: { canary: 2 }, debt: 0 },
     };
     const eff = computeWorkerEffects(cs);
     expect(eff.hazardSpawnReduce.gas_vent).toBe(0.5);
@@ -158,7 +158,7 @@ describe("Phase 9.3 — Hazards (cave-in, gas vent)", () => {
     const csOne = {
       ...createInitialState(),
       biome: "mine",
-      workers: { hired: { canary: 1 }, debt: 0 },
+      townsfolk: { hired: { canary: 1 }, debt: 0 },
     };
     expect(computeWorkerEffects(csOne).hazardSpawnReduce.gas_vent).toBe(0.25);
   });

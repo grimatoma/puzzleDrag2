@@ -26,7 +26,7 @@ describe("Reaper apprentice (grain → bread)", () => {
   it("1 hire: grain_flour threshold reduced by 1 (6 → 5)", () => {
     const s = {
       ...createInitialState(),
-      workers: { hired: { reaper: 1 }, debt: 0, pool: 1 },
+      townsfolk: { hired: { reaper: 1 }, debt: 0, pool: 1 },
     };
     const eff = computeWorkerEffects(s);
     expect(eff.thresholdReduce?.grain_flour).toBe(1);
@@ -35,7 +35,7 @@ describe("Reaper apprentice (grain → bread)", () => {
   it("2 hires (max): grain_flour threshold reduced by 2 (6 → 4)", () => {
     const s = {
       ...createInitialState(),
-      workers: { hired: { reaper: 2 }, debt: 0, pool: 2 },
+      townsfolk: { hired: { reaper: 2 }, debt: 0, pool: 2 },
     };
     const eff = computeWorkerEffects(s);
     expect(eff.thresholdReduce?.grain_flour).toBe(2);
@@ -46,10 +46,10 @@ describe("Reaper apprentice (grain → bread)", () => {
       ...createInitialState(),
       coins: 100000,
       built: { bakery: true },
-      workers: { hired: { reaper: 2 }, debt: 0, pool: 5 },
+      townsfolk: { hired: { reaper: 2 }, debt: 0, pool: 5 },
       inventory: { grass_hay: 50, bread: 50, mine_stone: 50 },
     };
     s = rootReducer(s, { type: "APP/HIRE", payload: { id: "reaper" } });
-    expect(s.workers.hired.reaper).toBe(2);
+    expect(s.townsfolk.hired.reaper).toBe(2);
   });
 });

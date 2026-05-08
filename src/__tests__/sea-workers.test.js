@@ -36,7 +36,7 @@ describe("Sea workers — Fisherman + Trawlerman", () => {
   it("1 hire of Fisherman: fish-category thresholds drop by 1", () => {
     const s = {
       ...createInitialState(),
-      workers: { hired: { fisherman: 1 }, debt: 0, pool: 1 },
+      townsfolk: { hired: { fisherman: 1 }, debt: 0, pool: 1 },
     };
     const eff = computeWorkerEffects(s);
     expect(eff.thresholdReduce.fish_sardine).toBe(1);
@@ -49,7 +49,7 @@ describe("Sea workers — Fisherman + Trawlerman", () => {
   it("3 hires of Fisherman (max): fish thresholds drop by 3", () => {
     const s = {
       ...createInitialState(),
-      workers: { hired: { fisherman: 3 }, debt: 0, pool: 3 },
+      townsfolk: { hired: { fisherman: 3 }, debt: 0, pool: 3 },
     };
     const eff = computeWorkerEffects(s);
     expect(eff.thresholdReduce.fish_sardine).toBe(3);
@@ -58,7 +58,7 @@ describe("Sea workers — Fisherman + Trawlerman", () => {
   it("2 hires of Trawlerman (max): +2 sardine / +2 mackerel pool weight", () => {
     const s = {
       ...createInitialState(),
-      workers: { hired: { trawlerman: 2 }, debt: 0, pool: 2 },
+      townsfolk: { hired: { trawlerman: 2 }, debt: 0, pool: 2 },
     };
     const eff = computeWorkerEffects(s);
     expect(eff.effectivePoolWeights.fish_sardine).toBe(2);
@@ -70,10 +70,10 @@ describe("Sea workers — Fisherman + Trawlerman", () => {
       ...createInitialState(),
       coins: 100000,
       level: 5,
-      workers: { hired: { fisherman: 3 }, debt: 0, pool: 5 },
+      townsfolk: { hired: { fisherman: 3 }, debt: 0, pool: 5 },
       inventory: { fish_raw: 99, bread: 99, wood_plank: 99 },
     };
     s = rootReducer(s, { type: "APP/HIRE", payload: { id: "fisherman" } });
-    expect(s.workers.hired.fisherman).toBe(3);
+    expect(s.townsfolk.hired.fisherman).toBe(3);
   });
 });

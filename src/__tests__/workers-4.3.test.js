@@ -21,7 +21,7 @@ function buildPool(base, agg) {
 }
 
 describe("Phase 4.3 — effective thresholds and pool weights", () => {
-  const empty = { workers: { hired: { hilda:0, pip:0, wila:0, tuck:0, osric:0, dren:0 }, debt: 0 } };
+  const empty = { townsfolk: { hired: { hilda:0, pip:0, wila:0, tuck:0, osric:0, dren:0 }, debt: 0 } };
 
   it("no Hilda → hay threshold 6, 3-chain = 0 upgrades", () => {
     const t0 = effThresholds(computeWorkerEffects(empty));
@@ -30,7 +30,7 @@ describe("Phase 4.3 — effective thresholds and pool weights", () => {
   });
 
   it("3 Hilda → hay threshold 3, 3-chain = 1 upgrade", () => {
-    const fullH = { workers: { hired: { ...empty.workers.hired, hilda: 3 }, debt: 0 } };
+    const fullH = { townsfolk: { hired: { ...empty.townsfolk.hired, hilda: 3 }, debt: 0 } };
     const t1 = effThresholds(computeWorkerEffects(fullH));
     expect(t1.grass_hay).toBe(3);
     expect(upgradeCountForChain(3, "grass_hay", t1)).toBe(1);
@@ -44,13 +44,13 @@ describe("Phase 4.3 — effective thresholds and pool weights", () => {
 
   it("full Pip adds 2 berry copies to pool", () => {
     const farmBase = ["grass_hay","grass_hay","grass_hay","wood_log","wood_log","grain_wheat","berry","berry","bird_egg"];
-    const fullPip = { workers: { hired: { ...empty.workers.hired, pip: 2 }, debt: 0 } };
+    const fullPip = { townsfolk: { hired: { ...empty.townsfolk.hired, pip: 2 }, debt: 0 } };
     const pool = buildPool(farmBase, computeWorkerEffects(fullPip));
     expect(pool.filter(k => k === "berry").length).toBe(4);
   });
 
   it("full Wila → +2 jam/chain bonus yield", () => {
-    const fullW = { workers: { hired: { ...empty.workers.hired, wila: 2 }, debt: 0 } };
+    const fullW = { townsfolk: { hired: { ...empty.townsfolk.hired, wila: 2 }, debt: 0 } };
     expect(computeWorkerEffects(fullW).bonusYield.berry_jam).toBe(2);
   });
 

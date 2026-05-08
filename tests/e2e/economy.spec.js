@@ -27,7 +27,7 @@ test('SELL_RESOURCE with debt auto-repays before crediting coins', async ({ page
   await gotoFresh(page, {
     coins: 0,
     inventory: { wood_log: 100 }, // big stockpile
-    workers: { hired: {}, debt: 30, pool: 1 },
+    townsfolk: { hired: {}, debt: 30, pool: 1 },
   });
   // Sell a chunk of wood; the slice routes the proceeds through
   // applyDebtRepayment first. With wood_log price ~5/unit selling 100
@@ -35,7 +35,7 @@ test('SELL_RESOURCE with debt auto-repays before crediting coins', async ({ page
   await dispatchAction(page, { type: 'SELL_RESOURCE', payload: { key: 'wood_log', qty: 20 } });
   await page.waitForTimeout(200);
   const s = await getReactState(page);
-  expect(s.workers.debt).toBeLessThan(30);
+  expect(s.townsfolk.debt).toBeLessThan(30);
 });
 
 test('BUY_RESOURCE with insufficient coins is rejected (no debit)', async ({ page }) => {

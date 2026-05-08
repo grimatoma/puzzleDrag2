@@ -61,28 +61,28 @@ describe("Phase 9.4 — Mine workers (canary, geologist)", () => {
 
   // ── Per-hire computation (canary) ─────────────────────────────────────────
   it("0 canary = 0 gas_vent reduction", () => {
-    const s = { ...createInitialState(), workers: { hired: { canary: 0 }, debt: 0 } };
+    const s = { ...createInitialState(), townsfolk: { hired: { canary: 0 }, debt: 0 } };
     expect(computeWorkerEffects(s).hazardSpawnReduce?.gas_vent ?? 0).toBe(0);
   });
 
   it("1 canary = -25% (0.5 / 2)", () => {
-    const s = { ...createInitialState(), workers: { hired: { canary: 1 }, debt: 0 } };
+    const s = { ...createInitialState(), townsfolk: { hired: { canary: 1 }, debt: 0 } };
     expect(computeWorkerEffects(s).hazardSpawnReduce.gas_vent).toBe(0.25);
   });
 
   it("2 canary = -50% (full)", () => {
-    const s = { ...createInitialState(), workers: { hired: { canary: 2 }, debt: 0 } };
+    const s = { ...createInitialState(), townsfolk: { hired: { canary: 2 }, debt: 0 } };
     expect(computeWorkerEffects(s).hazardSpawnReduce.gas_vent).toBe(0.5);
   });
 
   // ── Per-hire computation (geologist — integer floor) ──────────────────────
   it("1 geologist floors to +0 ore (0.5 → 0 by floor)", () => {
-    const s = { ...createInitialState(), workers: { hired: { geologist: 1 }, debt: 0 } };
+    const s = { ...createInitialState(), townsfolk: { hired: { geologist: 1 }, debt: 0 } };
     expect(computeWorkerEffects(s).effectivePoolWeights?.mine_ore ?? 0).toBe(0);
   });
 
   it("2 geologist (max) = ore +1, gem +1", () => {
-    const s = { ...createInitialState(), workers: { hired: { geologist: 2 }, debt: 0 } };
+    const s = { ...createInitialState(), townsfolk: { hired: { geologist: 2 }, debt: 0 } };
     const e2 = computeWorkerEffects(s);
     expect(e2.effectivePoolWeights.mine_ore).toBe(1);
     expect(e2.effectivePoolWeights.mine_gem).toBe(1);
@@ -90,7 +90,7 @@ describe("Phase 9.4 — Mine workers (canary, geologist)", () => {
 
   // ── Clamped to maxCount ───────────────────────────────────────────────────
   it("5 canary clamps to maxCount=2 (still -50%, never -125%)", () => {
-    const s = { ...createInitialState(), workers: { hired: { canary: 5 }, debt: 0 } };
+    const s = { ...createInitialState(), townsfolk: { hired: { canary: 5 }, debt: 0 } };
     expect(computeWorkerEffects(s).hazardSpawnReduce.gas_vent).toBe(0.5);
   });
 
@@ -99,9 +99,9 @@ describe("Phase 9.4 — Mine workers (canary, geologist)", () => {
     const h = {
       ...createInitialState(),
       built: { hearth: true, decorations: {}, housing: { count: 1 } },
-      workers: { hired: { hilda: 1, canary: 1 }, debt: 0 },
+      townsfolk: { hired: { hilda: 1, canary: 1 }, debt: 0 },
     };
-    const total = Object.values(h.workers.hired).reduce((a, n) => a + n, 0);
+    const total = Object.values(h.townsfolk.hired).reduce((a, n) => a + n, 0);
     const cap = 1 + (h.built.housing?.count ?? 0);
     expect(total).toBeLessThanOrEqual(cap);
   });
@@ -110,7 +110,7 @@ describe("Phase 9.4 — Mine workers (canary, geologist)", () => {
   it("merged aggregator: canary + geologist effects both present", () => {
     const s = {
       ...createInitialState(),
-      workers: { hired: { canary: 2, geologist: 2, hilda: 0 }, debt: 0 },
+      townsfolk: { hired: { canary: 2, geologist: 2, hilda: 0 }, debt: 0 },
     };
     const merged = computeWorkerEffects(s);
     expect(merged.hazardSpawnReduce.gas_vent).toBe(0.5);

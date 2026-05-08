@@ -15,7 +15,7 @@
  *                           reduction (rounded at use time, floored at 1
  *                           remaining input).
  */
-export const WORKERS = [
+export const TOWNSFOLK = [
   {
     id: "hilda",
     name: "Hilda",
@@ -359,32 +359,40 @@ export const WORKERS = [
   },
 ];
 
-export const WORKER_MAP = Object.fromEntries(WORKERS.map((w) => [w.id, w]));
+export const TOWNSFOLK_MAP = Object.fromEntries(TOWNSFOLK.map((w) => [w.id, w]));
 
-// Legacy aliases kept for backward compatibility
-export const APPRENTICES = WORKERS;
-export const APPRENTICE_MAP = WORKER_MAP;
+// Legacy aliases retained so external modules + tests don't all flip in
+// one PR. Phase 5b will introduce a separate `WORKERS` array for the new
+// type-tier; `TOWNSFOLK` and `WORKERS` are deliberately kept as distinct
+// identifiers.
+export const APPRENTICES = TOWNSFOLK;
+export const APPRENTICE_MAP = TOWNSFOLK_MAP;
+export const WORKERS = TOWNSFOLK;
+export const WORKER_MAP = TOWNSFOLK_MAP;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-/** Total workers hired across all types. */
+/** Total townsfolk hired across all types. */
 export function totalHired(state) {
-  return Object.values(state?.workers?.hired ?? {}).reduce((a, n) => a + (n | 0), 0);
+  // state.townsfolk.hired is the canonical source; state.townsfolk.hired is
+  // accepted for callers that haven't been migrated yet (Phase 5a transition).
+  const bag = state?.townsfolk?.hired ?? state?.townsfolk?.hired ?? {};
+  return Object.values(bag).reduce((a, n) => a + (n | 0), 0);
 }
 
-/** Worker capacity from housing buildings. 1 base + 1 per Housing Block. */
+/** Townsfolk capacity from housing buildings. 1 base + 1 per Housing Block. */
 export function housingCapacity(state) {
   const count = ["housing", "housing2", "housing3"]
     .filter(id => !!state?.built?.[id]).length;
   return 1 + count;
 }
 
-/** Returns the display label for a worker's slot count (plain number string). */
+/** Returns the display label for a townsfolk slot count (plain number string). */
 export function workerSlotLabel(worker) {
   return String(worker?.maxCount ?? 0);
 }
 
-/** Check if a worker's requirement is met. */
+/** Check if a townsfolk's requirement is met. */
 export function checkRequirement(worker, state) {
   const req = worker.requirement;
   if (!req) return true;

@@ -19,8 +19,8 @@ export default function TownsfolkScreen({ state, dispatch }) {
       </div>
       <div className="flex gap-1.5 px-3 pt-2 flex-shrink-0 flex-wrap">
         {[
-          { key: "mood", label: "💞 Townsfolk" },
-          { key: "apprentices", label: "🧑‍🌾 Workers" },
+          { key: "mood", label: "💞 Mood" },
+          { key: "apprentices", label: "🧑‍🌾 Townsfolk" },
           { key: "bosses", label: "👹 Foes" },
           { key: "orders", label: "📋 Orders" },
         ].map((item) => (

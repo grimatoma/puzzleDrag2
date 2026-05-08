@@ -91,7 +91,7 @@ function deductInventory(inv, needs) {
 const MAX_DEBT = 9999;
 
 function applyDebtRepayment(state, incomingCoins) {
-  const debt = state.workers?.debt ?? 0;
+  const debt = state.townsfolk?.debt ?? 0;
   if (debt <= 0 || incomingCoins <= 0) return { coinsCredit: incomingCoins, newDebt: debt };
   if (incomingCoins >= debt)           return { coinsCredit: incomingCoins - debt, newDebt: 0 };
   return { coinsCredit: 0, newDebt: debt - incomingCoins };
@@ -368,7 +368,7 @@ export function createFreshState(overrides) {
     // player toggles the fertilizer option in the Start Farming modal.
     farmFertilizer: 0,
     dailyStreak: { lastClaimedDate: null, currentDay: 0 },
-    workers: { hired: { hilda: 0, pip: 0, wila: 0, tuck: 0, osric: 0, dren: 0 }, debt: 0, pool: 1 },
+    townsfolk: { hired: { hilda: 0, pip: 0, wila: 0, tuck: 0, osric: 0, dren: 0 }, debt: 0, pool: 1 },
     tileCollection: defaultTileCollectionSlice(),
     almanac: {
       xp: 0,
@@ -449,14 +449,14 @@ export function initialState(overrides) {
     // Always clear story modal queue on boot — never resume mid-modal
     mergedStory.queuedBeat = null;
     mergedStory.beatQueue = [];
-    // Migrate: old saves without state.workers get the fresh initial shape.
-    const mergedWorkers = saved.workers
+    // Migrate: old saves without state.townsfolk get the fresh initial shape.
+    const mergedWorkers = saved.townsfolk
       ? {
-          hired: { hilda: 0, pip: 0, wila: 0, tuck: 0, osric: 0, dren: 0, ...(saved.workers.hired ?? {}) },
-          debt:  saved.workers.debt  ?? 0,
-          pool:  saved.workers.pool  ?? 1,
+          hired: { hilda: 0, pip: 0, wila: 0, tuck: 0, osric: 0, dren: 0, ...(saved.townsfolk.hired ?? {}) },
+          debt:  saved.townsfolk.debt  ?? 0,
+          pool:  saved.townsfolk.pool  ?? 1,
         }
-      : fresh.workers;
+      : fresh.townsfolk;
     // Migrate: old saves without state.tileCollection get the default shape (also migrates legacy state.species)
     const mergedTileCollection = (() => {
       const freshTC = defaultTileCollectionSlice();
@@ -476,7 +476,7 @@ export function initialState(overrides) {
     if (!FIRE_HAZARD_ENABLED && savedWithoutLegacy.hazards?.fire) {
       savedWithoutLegacy.hazards = { ...savedWithoutLegacy.hazards, fire: null };
     }
-    return { ...fresh, ...savedWithoutLegacy, workers: mergedWorkers, story: mergedStory, tileCollection: mergedTileCollection, view: "town", turnsUsed: 0, modal: null, bubble: null, pendingView: null,
+    return { ...fresh, ...savedWithoutLegacy, townsfolk: mergedWorkers, story: mergedStory, tileCollection: mergedTileCollection, view: "town", turnsUsed: 0, modal: null, bubble: null, pendingView: null,
       seasonStats: { harvests: 0, upgrades: 0, ordersFilled: 0, coins: 0 } };
   }
   return fresh;
@@ -795,7 +795,7 @@ function coreReducer(state, action) {
         almanac: afterOrderAlmanac.almanac,
         orders: state.orders.map((x) => (x.id === o.id ? replacement : x)),
         seasonStats: { ...state.seasonStats, ordersFilled: state.seasonStats.ordersFilled + 1, coins: state.seasonStats.coins + actualReward },
-        workers: state.workers ? { ...state.workers, debt: newDebt } : state.workers,
+        townsfolk: state.townsfolk ? { ...state.townsfolk, debt: newDebt } : state.townsfolk,
         npcs: updatedNpcs,
         bubble,
       };
@@ -1115,9 +1115,9 @@ function coreReducer(state, action) {
 
       // ── Wages (FIRST economic event) ──────────────────────────────────────
       let wageCoins = state.coins;
-      let wageDebt  = state.workers?.debt ?? 0;
+      let wageDebt  = state.townsfolk?.debt ?? 0;
       let totalWages = 0;
-      for (const [id, count] of Object.entries(state.workers?.hired ?? {})) {
+      for (const [id, count] of Object.entries(state.townsfolk?.hired ?? {})) {
         const w = WORKER_MAP[id];
         if (!w || count <= 0) continue;
         totalWages += w.wage * count;
@@ -1133,13 +1133,13 @@ function coreReducer(state, action) {
       // ── season_bonus AFTER wages, AND only when not in debt ───────────────
       let bonusCoins = 0;
       if (wageDebt === 0) {
-        const agg = computeWorkerEffects({ ...state, workers: { ...state.workers, debt: 0 } });
+        const agg = computeWorkerEffects({ ...state, townsfolk: { ...state.townsfolk, debt: 0 } });
         bonusCoins = Math.round(agg.seasonBonus.coins ?? 0);
       }
 
       // ── Pool income from Housing buildings ────────────────────────────────
       const housingCount = ["housing", "housing2", "housing3"].filter(id => !!state.built?.[id]).length;
-      const newPool = (state.workers?.pool ?? 0) + housingCount;
+      const newPool = (state.townsfolk?.pool ?? 0) + housingCount;
 
       // ── Phase 6.1: NPC bond decay (−0.1 above 5) + Phase 6.2: reset gift cooldowns ──
       const decayedNpcs = (() => {
@@ -1161,7 +1161,7 @@ function coreReducer(state, action) {
         view: "town",
         pendingView: null,
         seasonStats: { harvests: 0, upgrades: 0, ordersFilled: 0, coins: 0, capFloaters: {} },
-        workers: { ...state.workers, debt: wageDebt, pool: newPool },
+        townsfolk: { ...state.townsfolk, debt: wageDebt, pool: newPool },
         // Clear fertilizer flag at season end — it was consumed this season
         fertilizerActive: false,
         // 5.7: reset per-season free moves on season close
@@ -1235,11 +1235,11 @@ function coreReducer(state, action) {
       if (afterTrade === state) return state; // trade rejected (not enough inventory)
       // Auto-repay debt from sale proceeds
       const saleProceeds = afterTrade.coins - state.coins;
-      if (saleProceeds > 0 && (state.workers?.debt ?? 0) > 0) {
+      if (saleProceeds > 0 && (state.townsfolk?.debt ?? 0) > 0) {
         const { coinsCredit, newDebt } = applyDebtRepayment(state, saleProceeds);
         return { ...afterTrade,
           coins: state.coins + coinsCredit,
-          workers: afterTrade.workers ? { ...afterTrade.workers, debt: newDebt } : afterTrade.workers,
+          townsfolk: afterTrade.townsfolk ? { ...afterTrade.townsfolk, debt: newDebt } : afterTrade.townsfolk,
         };
       }
       return afterTrade;
@@ -1440,7 +1440,7 @@ function coreReducer(state, action) {
         ...state,
         inventory: { ...state.inventory, [itemId]: owned - sellQty },
         coins: (state.coins ?? 0) + coinsCredit,
-        workers: state.workers ? { ...state.workers, debt: newDebt } : state.workers,
+        townsfolk: state.townsfolk ? { ...state.townsfolk, debt: newDebt } : state.townsfolk,
       };
     }
 
@@ -1598,7 +1598,7 @@ function coreReducer(state, action) {
         dailyStreak: { lastClaimedDate: today, currentDay: nextDay },
         coins: (state.coins ?? 0) + loginCoinsCredit,
         runes: (state.runes ?? 0) + (reward.runes ?? 0),
-        workers: state.workers ? { ...state.workers, debt: loginNewDebt } : state.workers,
+        townsfolk: state.townsfolk ? { ...state.townsfolk, debt: loginNewDebt } : state.townsfolk,
       };
       if (reward.tool) {
         const cur = next.tools?.[reward.tool] ?? 0;
@@ -1634,10 +1634,10 @@ function coreReducer(state, action) {
       return { ...state, inventory: migInv };
     }
 
-    case "WORKERS/BUY_POOL": {
+    case "TOWNSFOLK/BUY_POOL": {
       // DEV-only IAP stub: credits +N worker pool units (default 5)
       const amount = Math.max(0, (action.payload?.amount | 0) || 5);
-      return { ...state, workers: { ...state.workers, pool: (state.workers?.pool ?? 0) + amount } };
+      return { ...state, townsfolk: { ...state.townsfolk, pool: (state.townsfolk?.pool ?? 0) + amount } };
     }
 
     // ─── Phase 5 Tile Collection ─────────────────────────────────────────────────
@@ -1832,7 +1832,7 @@ function coreReducer(state, action) {
             bonds: { wren: 5, mira: 5, tomas: 5, bram: 5, liss: 5 },
             giftCooldown: { wren: 0, mira: 0, tomas: 0, bram: 0, liss: 0 },
           },
-          workers: { hired: { hilda: 0, pip: 0, wila: 0, tuck: 0, osric: 0, dren: 0 }, debt: 0, pool: 1 },
+          townsfolk: { hired: { hilda: 0, pip: 0, wila: 0, tuck: 0, osric: 0, dren: 0 }, debt: 0, pool: 1 },
           tileCollection: defaultTileCollectionSlice() };
       }
       return state;

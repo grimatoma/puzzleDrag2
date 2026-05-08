@@ -201,7 +201,7 @@ export class GameScene extends Phaser.Scene {
       // Clear the pending flag once handled
       this.time.delayedCall(50, () => this.registry.set("toolPending", null));
     });
-    // Sync worker effects on init and whenever state.workers changes
+    // Sync worker effects on init and whenever state.townsfolk changes
     this._syncWorkerEffects();
     onRegistry("changedata-workers", () => this._syncWorkerEffects());
     // Re-render tile textures when the color-blind palette changes
@@ -248,7 +248,7 @@ export class GameScene extends Phaser.Scene {
   // ─── Worker effects sync ─────────────────────────────────────────────────
 
   _syncWorkerEffects() {
-    const workers = this.registry.get("workers") ?? { hired: {}, debt: 0, pool: 0 };
+    const workers = this.registry.get("townsfolk") ?? { hired: {}, debt: 0, pool: 0 };
     const agg = computeWorkerEffects({ workers });
     const eff = {};
     for (const [k, v] of Object.entries(UPGRADE_THRESHOLDS)) {

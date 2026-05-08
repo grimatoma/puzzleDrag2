@@ -35,7 +35,7 @@ test('TURN_IN_ORDER debits inventory and removes the order', async ({ page }) =>
   // Reward reaches the player as coins or pays down debt — we just assert
   // *something* moved (coins or seasonStats). The exact number depends on
   // bond + season multipliers and is covered in unit tests.
-  expect(s.coins + (s.workers?.debt ?? 0) * -1 + 9999).toBeGreaterThan(9999);
+  expect(s.coins + (s.townsfolk?.debt ?? 0) * -1 + 9999).toBeGreaterThan(9999);
 });
 
 test('TURN_IN_ORDER with insufficient inventory is rejected', async ({ page }) => {

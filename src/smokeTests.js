@@ -42,6 +42,6 @@ export const SMOKE_INVARIANTS = [
   },
   {
     name: "fresh state workers debt is 0",
-    check: () => createInitialState().workers.debt === 0,
+    check: () => createInitialState().townsfolk.debt === 0,
   },
 ];
