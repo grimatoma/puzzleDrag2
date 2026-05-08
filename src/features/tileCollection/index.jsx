@@ -265,7 +265,11 @@ export default function TileCollectionPanel({ state, dispatch }) {
                 : "text-[#8a6040] hover:text-[#c8a87a]"
             }`}
           >
-            <span className="block text-base text-center">{CATEGORY_ICONS[cat]}</span>
+            <span className="grid place-items-center mx-auto" style={{ width: 22, height: 22 }}>
+              {hasIcon(`cat_${cat}`)
+                ? <IconCanvas iconKey={`cat_${cat}`} size={22} />
+                : <span className="text-base">{CATEGORY_ICONS[cat]}</span>}
+            </span>
             <span className="block text-center leading-tight">{CATEGORY_LABELS[cat]}</span>
           </button>
         ))}

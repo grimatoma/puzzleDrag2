@@ -29,6 +29,8 @@ import { ICONS as G_MOOD_FACES } from "./categories/moodFaces.js";
 import { ICONS as G_PLAYER_TOOLS } from "./categories/playerTools.js";
 import { ICONS as G_CRAFTING_STATIONS } from "./categories/craftingStations.js";
 import { ICONS as G_HAZARDS } from "./categories/hazards.js";
+import { ICONS as G_TILE_CATEGORIES } from "./categories/tileCategories.js";
+import { ICONS as G_MINE_HAZARDS } from "./categories/mineHazards.js";
 
 export const ICON_REGISTRY = Object.freeze({
   ...G_GRASS,
@@ -56,6 +58,8 @@ export const ICON_REGISTRY = Object.freeze({
   ...G_PLAYER_TOOLS,
   ...G_CRAFTING_STATIONS,
   ...G_HAZARDS,
+  ...G_TILE_CATEGORIES,
+  ...G_MINE_HAZARDS,
 });
 
 export const ICON_KEYS = new Set(Object.keys(ICON_REGISTRY));

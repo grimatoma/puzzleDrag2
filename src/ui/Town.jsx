@@ -2,6 +2,7 @@ import { useState, useRef } from "react";
 import { BIOMES, BUILDINGS } from "../constants.js";
 import { useTooltip, Tooltip } from "./Tooltip.jsx";
 import { MAP_NODES } from "../features/cartography/data.js";
+import IconCanvas from "./IconCanvas.jsx";
 
 function BiomeEntryModal({ biomeKey, level, onEnter, onClose }) {
   const biome = BIOMES[biomeKey];
@@ -16,7 +17,9 @@ function BiomeEntryModal({ biomeKey, level, onEnter, onClose }) {
         className="bg-[#f4ecd8] border-[4px] border-[#b28b62] rounded-[20px] px-8 py-6 max-w-[400px] w-[92vw] shadow-2xl text-center"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="text-[52px] leading-none mb-3">{biomeKey === "farm" ? "🌾" : "⛏"}</div>
+        <div className="grid place-items-center mx-auto mb-3" style={{ width: 96, height: 96 }}>
+          <IconCanvas iconKey={biomeKey === "farm" ? "biome_farm" : "biome_mine"} size={96} />
+        </div>
         <h2 className="font-bold text-[22px] text-[#744d2e] mb-2">{biome.name}</h2>
         <p className="text-[#6a4b31] text-[13px] mb-5 leading-relaxed">{descriptions[biomeKey]}</p>
         {locked ? (
