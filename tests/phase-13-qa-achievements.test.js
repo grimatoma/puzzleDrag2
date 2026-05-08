@@ -43,8 +43,8 @@ describe("Fix 7 — canonical ACHIEVEMENTS list shape", () => {
       "supplies_converted",
       // Fish biome counter — credits fish_* chain harvests.
       "fish_chained",
-      // Mine biome counter — credits mine_* chain harvests.
       "mine_chained",
+      "veg_chained", "fruit_chained", "flower_chained", "herd_chained",
     ]);
     for (const a of ACHIEVEMENTS) {
       expect(valid.has(a.counter), `${a.id} has unknown counter: ${a.counter}`).toBe(true);

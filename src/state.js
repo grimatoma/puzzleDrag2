@@ -394,6 +394,7 @@ export function createFreshState(overrides) {
         festival_won: 0, distinct_resources_chained: 0,
         distinct_buildings_built: 0, supplies_converted: 0,
         fish_chained: 0, mine_chained: 0,
+        veg_chained: 0, fruit_chained: 0, flower_chained: 0, herd_chained: 0,
       },
       unlocked: Object.fromEntries(ACHIEVEMENT_LIST.map((a) => [a.id, false])),
       seenResources: {},
