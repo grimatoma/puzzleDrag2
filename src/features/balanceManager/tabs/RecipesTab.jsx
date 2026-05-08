@@ -159,12 +159,12 @@ export default function RecipesTab({ draft, updateDraft }) {
                     onChange={(v) => patch(key, { station: v })} />
                 </div>
                 <div>
-                  <Label>Tier</Label>
+                  <Label hint="Town-level gate. T2 recipes need town level 3 to craft.">Tier</Label>
                   <NumberField value={eff.tier} min={1} max={5} width={60}
                     onChange={(v) => patch(key, { tier: v })} />
                 </div>
                 <div>
-                  <Label>Glyph</Label>
+                  <Label hint="Emoji icon shown next to this recipe in the crafting UI (cosmetic only).">Glyph</Label>
                   <TextField value={eff.glyph} onChange={(v) => patch(key, { glyph: v })} />
                 </div>
               </div>
@@ -237,10 +237,19 @@ export default function RecipesTab({ draft, updateDraft }) {
   );
 }
 
-function Label({ children }) {
+function Label({ children, hint }) {
   return (
-    <div className="text-[10px] font-bold uppercase tracking-wide mb-0.5" style={{ color: COLORS.inkSubtle }}>
-      {children}
+    <div className="text-[10px] font-bold uppercase tracking-wide mb-0.5 flex items-center gap-1" style={{ color: COLORS.inkSubtle }}>
+      <span>{children}</span>
+      {hint && (
+        <span
+          title={hint}
+          className="cursor-help inline-block w-3.5 h-3.5 leading-[14px] text-center rounded-full text-[9px]"
+          style={{ background: COLORS.parchmentDeep, color: COLORS.inkLight, border: `1px solid ${COLORS.border}` }}
+        >
+          ?
+        </span>
+      )}
     </div>
   );
 }
