@@ -6,6 +6,7 @@ import { tryExtinguishFire, rollFarmHazard, tickFire, tickWolves } from "./featu
 import { tryDeadlyPestsKill } from "./features/farm/deadlyPests.js";
 import { rollHazard, tickHazards } from "./features/mine/hazards.js";
 import { isMysteriousChainValid, spawnMysteriousOre, tickMysteriousOre } from "./features/mine/mysterious_ore.js";
+import { isPearlChainValid, spawnPearl, tickPearl, PEARL_KEY } from "./features/fish/pearl.js";
 import { driftPrices, applyTrade } from "./market.js";
 import { currentCap } from "./utils.js";
 import { WORKER_MAP } from "./features/apprentices/data.js";
@@ -331,6 +332,8 @@ export function createFreshState(overrides) {
     fertilizerActive: false,
     // Phase 9 — Mine biome state
     mysteriousOre: null,
+    // Fish biome — Pearl rune-capture (mirror of mysterious ore).
+    fishPearl: null,
     hazards: { caveIn: null, gasVent: null, lava: null, mole: null,
                // Phase 10.4 — Rat hazard
                rats: [],
@@ -601,6 +604,17 @@ function coreReducer(state, action) {
               mysteriousOre: null,
             };
           }
+        } else if (currentBiome === "fish") {
+          // Pearl capture — chain pearl + ≥2 other fish-category tiles → +1 rune
+          const hasPearl = chainTiles.some((t) => t.key === PEARL_KEY);
+          if (hasPearl && isPearlChainValid(chainTiles)) {
+            return {
+              ...state,
+              runes: (state.runes ?? 0) + 1,
+              fishPearl: null,
+              bubble: { id: Date.now(), npc: "wren", text: "🟣 Pearl captured! +1 Rune.", ms: 2200, priority: 2 },
+            };
+          }
         }
       }
 
@@ -713,6 +727,10 @@ function coreReducer(state, action) {
       // Mine: tick mysterious ore countdown on each chain
       if ((afterChain.biome ?? afterChain.biomeKey) === "mine" && afterChain.mysteriousOre) {
         afterChain = tickMysteriousOre(afterChain);
+      }
+      // Fish: tick pearl countdown on each chain
+      if ((afterChain.biome ?? afterChain.biomeKey) === "fish" && afterChain.fishPearl) {
+        afterChain = tickPearl(afterChain);
       }
       // Hazard tick + spawn (farm: fire/wolves, mine: gas_vent/lava/mole/cave_in)
       const chainBiome = afterChain.biome ?? afterChain.biomeKey;
@@ -1451,19 +1469,23 @@ function coreReducer(state, action) {
       const biomeId = action.id ?? action.payload?.id;
       if (!biomeId || !BIOMES[biomeId]) return state;
       if (biomeId === state.biome) return state;
-      // Mysterious ore is a mine-only mechanic — clear it whenever leaving mine
-      // (i.e. switching to anything that isn't mine).
+      // Mysterious ore is a mine-only mechanic — clear it whenever leaving mine.
+      // Pearl is a fish-only mechanic — clear it whenever leaving fish.
       const enteringMine = biomeId === "mine";
+      const enteringFish = biomeId === "fish";
       const afterSetBiome = {
         ...state,
         biome: biomeId,
         biomeKey: biomeId,
         mysteriousOre: enteringMine ? state.mysteriousOre : null,
+        fishPearl: enteringFish ? state.fishPearl : null,
         _needsRefill: true,
       };
-      // Spawn mysterious ore only when entering mine, and only if a grid exists.
       if (enteringMine && afterSetBiome.grid && afterSetBiome.grid.length > 0) {
         return spawnMysteriousOre(afterSetBiome);
+      }
+      if (enteringFish && afterSetBiome.grid && afterSetBiome.grid.length > 0) {
+        return spawnPearl(afterSetBiome);
       }
       return afterSetBiome;
     }
