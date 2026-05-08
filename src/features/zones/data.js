@@ -36,18 +36,17 @@ export const ZONE_UPGRADE_TARGET_GOLD = "gold";
 
 // Translation from the abstract zone-category names (used in the rules table)
 // to the concrete `category` values that exist on items in
-// `src/features/tileCollection/data.js`. The mapping is one-to-many because
-// our internal model splits some user-level categories — e.g. "trees" covers
-// both the tile-collection `trees` species and the legacy `wood` chain. Note
-// that tileCollection uses `bird` (singular) where the rules table uses
-// `birds` (plural).
+// `src/features/tileCollection/data.js`. Note that tileCollection uses
+// `bird` (singular) where the rules table uses `birds` (plural). Categories
+// like `wood` and `berry` are intentionally excluded — they're resources/
+// items, not tile species, so they never appear in zone tile pickers.
 //
 // Phase 2 uses this to filter the spawn pool by the player's selected tiles
 // in the Start Farming modal.
 export const ZONE_TO_TILE_CATEGORIES = Object.freeze({
   grass: ["grass"],
   grain: ["grain"],
-  trees: ["trees", "wood"],
+  trees: ["trees"],
   birds: ["bird"],
   vegetables: ["vegetables"],
   fruits: ["fruits"],
@@ -167,6 +166,24 @@ export function pickByZoneSeasonDrops({
     if (cat && tileCats.includes(cat)) return r2;
   }
   return null;
+}
+
+/**
+ * Returns true when the zone has an explicit upgrade-map entry for the
+ * source resource's category. Used by the chain pipeline to decide whether
+ * to fall back to the resource's native `next` when `nextResourceForZone`
+ * returns null — when the override is explicit (e.g. fruits → gold), the
+ * caller should respect it and NOT fall back to the native chain.
+ */
+export function zoneHasExplicitUpgradeOverride({ currentRes, zoneId, categoryOf }) {
+  if (!currentRes || !zoneId) return false;
+  const zone = ZONES[zoneId];
+  if (!zone || !zone.upgradeMap) return false;
+  const sourceTileCat = categoryOf?.[currentRes.key];
+  if (!sourceTileCat) return false;
+  const sourceZoneCat = TILE_CATEGORY_TO_ZONE_CATEGORY[sourceTileCat];
+  if (!sourceZoneCat) return false;
+  return Object.prototype.hasOwnProperty.call(zone.upgradeMap, sourceZoneCat);
 }
 
 /**

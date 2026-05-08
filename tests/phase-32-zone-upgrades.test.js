@@ -24,9 +24,9 @@ describe("Phase 32 — TILE_CATEGORY_TO_ZONE_CATEGORY reverse mapping", () => {
     expect(TILE_CATEGORY_TO_ZONE_CATEGORY.bird).toBe("birds");
   });
 
-  it("both wood and trees tile categories map to the trees zone category", () => {
-    expect(TILE_CATEGORY_TO_ZONE_CATEGORY.wood).toBe("trees");
+  it("trees tile category maps to the trees zone category (wood is a resource, not a tile)", () => {
     expect(TILE_CATEGORY_TO_ZONE_CATEGORY.trees).toBe("trees");
+    expect(TILE_CATEGORY_TO_ZONE_CATEGORY.wood).toBeUndefined();
   });
 
   it("every tile category in the mapping has a zone counterpart", () => {

@@ -1,7 +1,11 @@
-// Tile Powers tab — attach predefined power hooks (free moves, coin
-// bonuses, spawn boosts, etc.) to any tile type. The hook library lives
-// in src/config/powerHooks.js; runtime expansion into legacy `effects`
-// fields happens in applyTileOverrides → expandHooksToEffects.
+// Tiles tab — every per-tile attribute lives here:
+//   - discovery method (formerly the "Unlock Hooks" tab)
+//   - what resource the chain produces (per-tile override of base `next`)
+//   - attached power hooks (free moves, coin bonuses, spawn boosts…)
+//
+// The hook library lives in src/config/powerHooks.js; runtime expansion
+// into legacy `effects` fields happens in
+// applyTileOverrides → expandHooksToEffects.
 
 import { useState, useMemo } from "react";
 import { TILE_TYPES, TILE_TYPES_MAP, CATEGORIES } from "../../tileCollection/data.js";
@@ -11,11 +15,21 @@ import {
   COLORS, NumberField, Select, SmallButton, Pill, Card, SearchBar, TileSwatch,
 } from "../shared.jsx";
 
-function resourceKeyOptions() {
+const DISCOVERY_METHODS = [
+  { value: "default",  label: "Default — always available" },
+  { value: "chain",    label: "Chain — long enough chain of source resource" },
+  { value: "research", label: "Research — cumulative chain progress" },
+  { value: "buy",      label: "Buy — purchase with coins" },
+];
+
+function resourceKeyOptions(includeNone = false) {
   const set = new Set();
   for (const b of Object.values(BIOMES)) for (const r of b.resources) set.add(r.key);
-  return [{ value: "", label: "— pick resource —" },
-          ...[...set].sort().map((k) => ({ value: k, label: k }))];
+  const opts = [...set].sort().map((k) => ({ value: k, label: k }));
+  if (includeNone) {
+    return [{ value: "", label: "— use base chain —" }, ...opts];
+  }
+  return [{ value: "", label: "— pick resource —" }, ...opts];
 }
 
 function tileSwatchProps(tileId) {
@@ -35,6 +49,8 @@ export default function PowersTab({ draft, updateDraft }) {
   const [selectedTile, setSelectedTile] = useState(TILE_TYPES[0]?.id);
 
   const resOptions = useMemo(() => resourceKeyOptions(), []);
+  const producesOptions = useMemo(() => resourceKeyOptions(true), []);
+  const sourceOptions = useMemo(() => resourceKeyOptions(), []);
 
   const tilesFiltered = TILE_TYPES.filter((t) => {
     if (categoryFilter !== "all" && t.category !== categoryFilter) return false;
@@ -46,24 +62,49 @@ export default function PowersTab({ draft, updateDraft }) {
   });
 
   const selected = TILE_TYPES_MAP[selectedTile];
-  const draftHooks = draft.tilePowers[selectedTile]?.hooks ?? null;
+  const draftPower = draft.tilePowers[selectedTile] || null;
+  const draftHooks = draftPower?.hooks ?? null;
   // Effective hooks: draft override if any, otherwise the runtime tile's
   // existing hooks (already merged from balance.json).
   const liveHooks = selected?.effects?.hooks || [];
   const hooks = draftHooks ?? liveHooks;
 
-  function setHooksForTile(tileId, hooksArr) {
+  // Per-tile produces-resource override. Empty string = use base chain.
+  const liveProduces = selected?.effects?.producesResource || "";
+  const draftProduces = draftPower && Object.prototype.hasOwnProperty.call(draftPower, "producesResource")
+    ? (draftPower.producesResource || "")
+    : null;
+  const effProduces = draftProduces ?? liveProduces;
+
+  // Discovery / unlock hooks (formerly the Unlocks tab).
+  const draftUnlock = draft.tileUnlocks[selectedTile] || null;
+  const effDiscovery = draftUnlock || selected?.discovery || { method: "default" };
+  const unlockDirty = !!draftUnlock;
+
+  function patchPower(tileId, patch) {
     updateDraft((d) => {
-      if (!hooksArr || hooksArr.length === 0) {
-        // Setting an empty array is a meaningful instruction — "remove all
-        // power hooks from this tile" — so we keep an empty array entry
-        // rather than dropping it. The merge layer will then recompute
-        // `effects` to the base (non-hook) fields.
-        d.tilePowers[tileId] = { hooks: [] };
-      } else {
-        d.tilePowers[tileId] = { hooks: hooksArr };
+      const cur = d.tilePowers[tileId] || {};
+      const next = { ...cur, ...patch };
+      // Drop empty patches so the JSON stays minimal.
+      if (next.hooks && next.hooks.length === 0) delete next.hooks;
+      if (Object.prototype.hasOwnProperty.call(next, "producesResource") && !next.producesResource) {
+        delete next.producesResource;
       }
+      if (Object.keys(next).length === 0) delete d.tilePowers[tileId];
+      else d.tilePowers[tileId] = next;
     });
+  }
+
+  function setHooksForTile(tileId, hooksArr) {
+    if (!hooksArr || hooksArr.length === 0) {
+      // Setting an empty array is a meaningful instruction — "remove all
+      // power hooks from this tile" — so we keep an empty array entry
+      // rather than dropping it. The merge layer will then recompute
+      // `effects` to the base (non-hook) fields.
+      patchPower(tileId, { hooks: [] });
+    } else {
+      patchPower(tileId, { hooks: hooksArr });
+    }
   }
 
   function addHook(hookId) {
@@ -85,8 +126,32 @@ export default function PowersTab({ draft, updateDraft }) {
     setHooksForTile(selectedTile, next);
   }
 
+  function setProduces(tileId, resourceKey) {
+    patchPower(tileId, { producesResource: resourceKey });
+  }
+
+  function patchUnlock(tileId, patch) {
+    updateDraft((d) => {
+      const merged = { ...(d.tileUnlocks[tileId] || {}), ...patch };
+      d.tileUnlocks[tileId] = merged;
+    });
+  }
+
+  function setUnlockMethod(tileId, method) {
+    updateDraft((d) => {
+      d.tileUnlocks[tileId] = { method };
+    });
+  }
+
+  function revertUnlock(tileId) {
+    updateDraft((d) => { delete d.tileUnlocks[tileId]; });
+  }
+
   function revertTile(tileId) {
-    updateDraft((d) => { delete d.tilePowers[tileId]; });
+    updateDraft((d) => {
+      delete d.tilePowers[tileId];
+      delete d.tileUnlocks[tileId];
+    });
   }
 
   return (
@@ -145,13 +210,13 @@ export default function PowersTab({ draft, updateDraft }) {
         </div>
       </div>
 
-      {/* Right: hook editor for the selected tile */}
+      {/* Right: editor for the selected tile */}
       <div className="col-span-8 flex flex-col gap-3 min-h-0 overflow-y-auto pr-1">
         {!selected ? (
           <Card><div style={{ color: COLORS.inkSubtle }}>Select a tile.</div></Card>
         ) : (
           <>
-            <Card accent={draftHooks !== null ? COLORS.ember : COLORS.border}>
+            <Card accent={(draftPower !== null || draftUnlock !== null) ? COLORS.ember : COLORS.border}>
               <div className="flex items-start gap-3">
                 <TileSwatch {...tileSwatchProps(selected.id)} size={48} />
                 <div className="flex-1 min-w-0">
@@ -165,17 +230,132 @@ export default function PowersTab({ draft, updateDraft }) {
                     </code>
                     <Pill>{selected.category}</Pill>
                     <Pill>tier {selected.tier}</Pill>
-                    {draftHooks !== null && <Pill color="#fff" bg={COLORS.ember}>edited</Pill>}
+                    {(draftPower !== null || draftUnlock !== null) && (
+                      <Pill color="#fff" bg={COLORS.ember}>edited</Pill>
+                    )}
                   </div>
                   <div className="text-[11px] italic mt-1" style={{ color: COLORS.inkSubtle }}>
                     {selected.description}
                   </div>
                 </div>
-                {draftHooks !== null && (
+                {(draftPower !== null || draftUnlock !== null) && (
                   <SmallButton variant="ghost" onClick={() => revertTile(selected.id)}>revert</SmallButton>
                 )}
               </div>
             </Card>
+
+            {/* Discovery / Unlock */}
+            <div>
+              <div className="text-[11px] font-bold uppercase tracking-wide mb-1.5" style={{ color: COLORS.inkSubtle }}>
+                Discovery {unlockDirty && <span style={{ color: COLORS.ember }}>· edited</span>}
+              </div>
+              <Card>
+                <div className="grid grid-cols-2 gap-x-3 gap-y-2">
+                  <div className="col-span-2">
+                    <Label>Discovery method</Label>
+                    <Select
+                      value={effDiscovery.method}
+                      options={DISCOVERY_METHODS}
+                      onChange={(v) => setUnlockMethod(selected.id, v)}
+                    />
+                  </div>
+                  {effDiscovery.method === "chain" && (
+                    <>
+                      <div>
+                        <Label>Source resource</Label>
+                        <Select
+                          value={effDiscovery.chainLengthOf ?? ""}
+                          options={sourceOptions}
+                          onChange={(v) => patchUnlock(selected.id, { chainLengthOf: v })}
+                        />
+                      </div>
+                      <div>
+                        <Label>Required chain length</Label>
+                        <NumberField
+                          value={effDiscovery.chainLength ?? 6}
+                          min={1}
+                          max={50}
+                          width={70}
+                          onChange={(v) => patchUnlock(selected.id, { chainLength: v })}
+                        />
+                      </div>
+                    </>
+                  )}
+                  {effDiscovery.method === "research" && (
+                    <>
+                      <div>
+                        <Label>Source resource</Label>
+                        <Select
+                          value={effDiscovery.researchOf ?? ""}
+                          options={sourceOptions}
+                          onChange={(v) => patchUnlock(selected.id, { researchOf: v })}
+                        />
+                      </div>
+                      <div>
+                        <Label>Cumulative chain target</Label>
+                        <NumberField
+                          value={effDiscovery.researchAmount ?? 30}
+                          min={1}
+                          max={500}
+                          width={80}
+                          onChange={(v) => patchUnlock(selected.id, { researchAmount: v })}
+                        />
+                      </div>
+                    </>
+                  )}
+                  {effDiscovery.method === "buy" && (
+                    <div>
+                      <Label>Coin cost</Label>
+                      <NumberField
+                        value={effDiscovery.coinCost ?? 100}
+                        min={0}
+                        max={99999}
+                        width={90}
+                        onChange={(v) => patchUnlock(selected.id, { coinCost: v })}
+                      />
+                    </div>
+                  )}
+                  {unlockDirty && (
+                    <div className="col-span-2">
+                      <SmallButton variant="ghost" onClick={() => revertUnlock(selected.id)}>
+                        revert discovery
+                      </SmallButton>
+                    </div>
+                  )}
+                </div>
+              </Card>
+            </div>
+
+            {/* Produces resource */}
+            <div>
+              <div className="text-[11px] font-bold uppercase tracking-wide mb-1.5" style={{ color: COLORS.inkSubtle }}>
+                Produces resource {draftProduces !== null && <span style={{ color: COLORS.ember }}>· edited</span>}
+              </div>
+              <Card>
+                <div className="text-[11px] mb-2" style={{ color: COLORS.inkSubtle }}>
+                  Picks the resource the chain spawns when this tile is the active species
+                  for its category. Leave at “use base chain” to fall through to the
+                  resource's native upgrade or the active zone's redirect.
+                </div>
+                <div className="flex items-center gap-2">
+                  <Select
+                    value={effProduces}
+                    options={producesOptions}
+                    onChange={(v) => setProduces(selected.id, v)}
+                    width={220}
+                  />
+                  {draftProduces !== null && (
+                    <SmallButton
+                      variant="ghost"
+                      title="Revert to baseline"
+                      onClick={() => patchPower(selected.id, { producesResource: undefined })}
+                    >
+                      ↺
+                    </SmallButton>
+                  )}
+                </div>
+              </Card>
+            </div>
 
             {/* Active hooks */}
             <div>
@@ -289,5 +469,13 @@ function CategoryChip({ active, onClick, children }) {
     >
       {children}
     </button>
+  );
+}
+
+function Label({ children }) {
+  return (
+    <div className="text-[10px] font-bold uppercase tracking-wide mb-0.5" style={{ color: COLORS.inkSubtle }}>
+      {children}
+    </div>
   );
 }

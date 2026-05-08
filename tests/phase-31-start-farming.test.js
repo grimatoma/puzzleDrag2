@@ -124,13 +124,13 @@ describe("Phase 31 — expandZoneCategories", () => {
     expect(expandZoneCategories(["birds"]).has("bird")).toBe(true);
   });
 
-  it("expands trees to both trees and wood", async () => {
+  it("expands trees only to the trees tile category (wood is a resource, not a tile)", async () => {
     const { expandZoneCategories } = await import(
       "../src/features/zones/data.js"
     );
     const set = expandZoneCategories(["trees"]);
     expect(set.has("trees")).toBe(true);
-    expect(set.has("wood")).toBe(true);
+    expect(set.has("wood")).toBe(false);
   });
 
   it("returns an empty set for an empty input", async () => {

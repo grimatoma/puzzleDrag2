@@ -51,14 +51,22 @@ export const CATEGORY_TO_SUBCATEGORY = {
   fish: "water",
 };
 
+// Categories that are not user-facing tile species: their entries exist in
+// TILE_TYPES for backward compatibility, but per the design "wood" and
+// "berry" are really resources/items (logs/planks/beams; berries/jam) — they
+// don't belong in the tile-collection wiki or the start-farming tile picker.
+export const HIDDEN_TILE_CATEGORIES = new Set(["wood", "berry"]);
+
 /** Categories belonging to a sub-category. Unmapped categories fall under
  *  "uncategorized" so the wiki always surfaces them. */
 export function categoriesForSubCategory(sub) {
   if (sub === "hazards") return [];
   if (sub === "uncategorized") {
-    return CATEGORIES.filter((c) => !CATEGORY_TO_SUBCATEGORY[c]);
+    return CATEGORIES.filter((c) => !CATEGORY_TO_SUBCATEGORY[c] && !HIDDEN_TILE_CATEGORIES.has(c));
   }
-  return CATEGORIES.filter((c) => CATEGORY_TO_SUBCATEGORY[c] === sub);
+  return CATEGORIES.filter(
+    (c) => CATEGORY_TO_SUBCATEGORY[c] === sub && !HIDDEN_TILE_CATEGORIES.has(c),
+  );
 }
 
 export const TILE_TYPES = [
