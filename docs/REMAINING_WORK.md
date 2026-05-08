@@ -4,7 +4,7 @@ Snapshot of what's still outstanding from `REFERENCE_CATALOG.md` (now canonical
 for HV expansions). Treat this as a living checklist; cross things off in PRs
 that ship the work.
 
-> **Last updated:** PR #201 — Mine-side prefix rename + cross-chain workers (Grain Trader / Gardener / Orchardist / Farmer) via new `chain_redirect_category` effect type.
+> **Last updated:** Doc-alignment audit — crossed off Mysterious Ore, Mine entry tiers, Daily rewards, and partial cartography/mine-worker progress.
 
 ---
 
@@ -109,7 +109,7 @@ Workers from the catalog not yet implemented:
 | Farmer          | bird → herd animal       | 7 bird = 1 herd        | ✅ Ren (PR #201) |
 | Ratcatcher      | rats → coin              | 10 rats = 1 coin       | Not built — hazard-to-resource conversion not modeled |
 | Sapper          | gas → coin               | 7 gas = 1 coin         | Not built — same |
-| (mine workers)  | (Digger/Excavator/etc.)  | various                | Not built — see Mine-side prefix rename above |
+| (mine workers)  | (Digger/Excavator/etc.)  | various                | ⚠️ partial — Canary + Geologist shipped (`src/features/apprentices/data.js:274-301`); the catalog's Digger / Excavator / Stone Miner / Iron Miner / Coal Miner / Silver Miner / Jeweler / Engineer / Alchemist / Sculptor list is still missing |
 
 **Cross-chain workers — ✅ done in PR #201.** New effect type
 `chain_redirect_category` with `{ fromCategory, toCategory, from, to }`
@@ -196,26 +196,35 @@ tune all of these together.
 
 ## ❎ Other catalog content not yet built
 
-- **§5 Mine — Mysterious Ore countdown mechanic** (rune-spawning timed tile).
-  Not present in the engine.
-- **§5 Mine — Three entry tiers** (free / 100◉+10 shovels / 2 runes). Not
-  modeled; mine sessions are free.
+- **§5 Mine — Mysterious Ore countdown mechanic** — ✅ shipped in
+  `src/features/mine/mysterious_ore.js` (`MYSTERIOUS_ORE_TURNS = 5`,
+  `REQUIRED_DIRT_IN_CHAIN = 2`, full chain validation + countdown + Rune
+  reward).
+- **§5 Mine — Three entry tiers** — ✅ shipped via `MINE_ENTRY_TIERS`
+  (`src/constants.js:481-485`) and the `MINE/ENTER` action
+  (`src/state.js:1223-1252`): free / `100◉ + 10 shovels` / `2 runes`.
 - **§8 Tools — full inventory.** Many tool icons imported via
   `toolsFarm/toolsMine/toolsPortal/toolsSea.js` (PR #191) but only a subset
   have `WORKSHOP_RECIPES` entries. Missing recipes from the catalog: Sapling,
   Trimmer, Plough, Bird Feed, Hoe, Fruit Picker, Milk Churn, Bee, Wheelbarrow,
   Rifle, Terrier, Hound, Stone Hammer, Iron Pick, Explosives, Flint, Water
   Pump, Drill, Magnet, Silver Pick, Coal Transmuter, Diamond Hammer, Gold
-  Pick, Iron Ration, plus all sea tools and most portal/magic tools.
+  Pick, Iron Ration, plus all sea tools and most portal/magic tools (only
+  `magic_wand`, `hourglass`, `magic_seed`, `magic_fertilizer` are wired today).
 - **§10 Building system — many missing buildings.** Catalog enumerates
   Architect, Archaeologist, Sorceress's Hut, Fishing Net, Spice Guild, etc.
   Current `BUILDINGS` array has the core set (~16); catalog implies ~40+.
 - **§11 Castle — passive rune generation.** ~1 rune per 23 h timer with
   Beach property reducing it. Not implemented.
-- **§12 Zones — 6 zones + 1 Castle node.** Currently the game has one Farm
-  scene and one Mine scene; zones aren't a top-level concept.
-- **§13 Quests — Royal quests, Daily rewards, Exploration blockers** beyond
-  the basic quest templates.
+- **§12 Zones — 6 zones + 1 Castle node.** ⚠️ partial. The 9-node
+  cartography slice has shipped (`src/features/cartography/data.js` with
+  regions Hearthlands / Greenfields / The Wilds / Stoneholds / The Deep), so
+  the foundation exists, but the catalog's literal "Zone One … Zone Six"
+  framing isn't realized — our world map uses 9 named nodes, not 6 zones +
+  Castle.
+- **§13 Quests — Royal quests, Exploration blockers** beyond the basic
+  quest templates. Daily rewards have shipped (`DAILY_REWARDS` table in
+  `src/constants.js`).
 - **§14 Monetization** — IAP bundles, watch-ads via Sorceress's Hut, etc.
   Out of scope for any near-term PR.
 
