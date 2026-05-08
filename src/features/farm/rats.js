@@ -12,6 +12,7 @@
 
 import { RAT_SPAWN_THRESHOLDS, RAT_CLEAR_REWARD_PER } from "../../constants.js";
 import { RATS_HAZARD_ENABLED } from "../../featureFlags.js";
+import { hasTag } from "../tileCollection/tags.js";
 
 const PLANT_KEYS = new Set(["grass_hay", "grain_wheat", "grain", "berry"]);
 
@@ -71,10 +72,13 @@ export function tickRats(state) {
       [rat.row + 1, rat.col],
       [rat.row, rat.col - 1],
       [rat.row, rat.col + 1],
-    ].filter(([r, c]) =>
-      r >= 0 && r < rows && c >= 0 && c < cols &&
-      PLANT_KEYS.has(grid[r][c].key),
-    );
+    ].filter(([r, c]) => {
+      if (r < 0 || r >= rows || c < 0 || c >= cols) return false;
+      const k = grid[r][c].key;
+      // Catalog §7: certain species are "avoided by rats" — rats won't eat them.
+      if (hasTag(k, "avoids_rats")) return false;
+      return PLANT_KEYS.has(k);
+    });
     if (adj.length) {
       const [r, c] = adj[0]; // deterministic — first in list
       grid[r][c] = { ...grid[r][c], key: null, _eaten: true };
