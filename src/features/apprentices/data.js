@@ -335,10 +335,6 @@ export const TOWNSFOLK = [
   },
 
   // ── Sea workers — REFERENCE_CATALOG §9 (fish biome) ─────────────────────
-  // First batch: Fisherman (chain reducer for sardines/mackerel) and
-  // Trawlerman (pool-weight booster for fish). The remaining sea-worker
-  // slate (Boatwoman, Harpooner, Oilman, Cook, Chef, Captain, etc.) is
-  // queued for a follow-up.
   {
     id: "fisherman",
     name: "Tova",
@@ -348,8 +344,6 @@ export const TOWNSFOLK = [
     wage: 30,
     hireCost: { worker: 1, fish_raw: 4, bread: 6, wood_plank: 4 },
     maxCount: 3,
-    // Catalog: fish chain → fillet at 5 base, trim by 1 per hire to 2 at max.
-    // We reduce sardine/mackerel/clam/oyster all together via category.
     effect: { type: "threshold_reduce_category", category: "fish", from: 5, to: 2 },
     requirement: { level: 4 },
     description: "An old hand of the surf, knows every reef and tide. Trims a fish off every chain in the harbor.",
@@ -363,11 +357,48 @@ export const TOWNSFOLK = [
     wage: 28,
     hireCost: { worker: 1, fish_raw: 6, bread: 8, wood_plank: 6 },
     maxCount: 2,
-    // Adds extra sardine + mackerel slots to the fish-biome spawn pool.
-    // 1 hire = +1 each (base scalar 0.5 floors to 0; max scales to 2 each).
     effect: { poolWeight: { fish_sardine: 2, fish_mackerel: 2 } },
     requirement: { level: 4 },
     description: "Hauls the long net from dawn to dusk. More sardines and mackerel surface on the harbour board.",
+  },
+  {
+    id: "boatwoman",
+    name: "Sigrid",
+    role: "Boatwoman",
+    icon: "🛶",
+    color: "#3a7080",
+    wage: 28,
+    hireCost: { worker: 1, fish_raw: 4, bread: 8, wood_plank: 6 },
+    maxCount: 2,
+    effect: { type: "bonus_yield", key: "fish_clam", amount: 2 },
+    requirement: { level: 4 },
+    description: "Knows every channel and shoal by the way the boat sits. Hauls in extra clams whenever the line draws fish.",
+  },
+  {
+    id: "harpooner",
+    name: "Bjarni",
+    role: "Harpooner",
+    icon: "🔱",
+    color: "#5a3a18",
+    wage: 35,
+    hireCost: { worker: 1, fish_raw: 6, bread: 8, mine_ingot: 4 },
+    maxCount: 2,
+    effect: { type: "bonus_yield", key: "fish_oyster", amount: 1 },
+    requirement: { level: 5 },
+    description: "Stands at the prow, eye fixed to the deep. Drops a stray oyster into the catch each haul.",
+  },
+  {
+    id: "oilman",
+    name: "Gunnar",
+    role: "Oilman",
+    icon: "🪔",
+    color: "#a86018",
+    wage: 32,
+    hireCost: { worker: 1, fish_kelp: 6, bread: 8, wood_plank: 8 },
+    maxCount: 2,
+    effect: { type: "threshold_reduce", key: "fish_kelp", from: 6, to: 4 },
+    requirement: { level: 5 },
+    description: "Renders kelp into bottled lamp-oil with a slow, patient hand. Trims the chain needed for fish oil.",
   },
 ];
 
