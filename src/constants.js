@@ -29,7 +29,7 @@ export const MAX_TURNS = 10;
 
 // Save schema version. Forward migrations are not maintained — bump this
 // whenever persisted state changes shape and existing saves will be discarded.
-export const SAVE_SCHEMA_VERSION = 18;
+export const SAVE_SCHEMA_VERSION = 19;
 
 export const UPGRADE_THRESHOLDS = {
   grass_hay: 6, grass_meadow: 6, grass_spiky: 6,
@@ -69,6 +69,11 @@ export const UPGRADE_THRESHOLDS = {
   cattle_cow: 6, cattle_longhorn: 6, cattle_triceratops: 6,
   // Mounts → Horseshoe (catalog §4: 10 mounts → 1 horseshoe)
   mount_horse: 10, mount_donkey: 10, mount_moose: 10, mount_mammoth: 10,
+  // Fish biome (MVP) — Sardine/Mackerel/Clam/Kelp chain to fish_raw, then
+  // fillet. Numbers parallel the farm grass→wheat→grain→flour staircase
+  // but slightly cheaper since the fish biome opens later than farm.
+  fish_sardine: 5, fish_mackerel: 5, fish_clam: 5, fish_kelp: 6, fish_oyster: 5,
+  fish_raw: 5, fish_fillet: 4, fish_oil: 6,
 };
 
 export const SEASONS = [
@@ -100,6 +105,16 @@ export const FARM_TILE_POOL = [
   // species-activation pipeline rather than additional pool slots.
 ];
 export const MINE_TILE_POOL = ["mine_stone", "mine_stone", "mine_stone", "mine_ore", "mine_ore", "mine_coal", "mine_dirt", "mine_dirt", "mine_gem"];
+
+// Fish biome (MVP) — sardines / mackerel are most common, kelp is a filler,
+// clam/oyster are mid-rare, fish_raw is rare so it's mostly a chain product.
+export const FISH_TILE_POOL = [
+  "fish_sardine", "fish_sardine", "fish_sardine",
+  "fish_mackerel", "fish_mackerel",
+  "fish_clam", "fish_clam",
+  "fish_kelp", "fish_kelp",
+  "fish_oyster",
+];
 
 export const BIOMES = {
   farm: {
@@ -230,6 +245,29 @@ export const BIOMES = {
       { key: "mine_dirt",   label: "Dirt",   color: 0x7a6850, dark: 0x3e3a36, value: 1,  next: null,     glyph: "◫" },
     ],
     pool: MINE_TILE_POOL,
+  },
+  // Fish biome (MVP) — coastal harbor board. Tide cycle, pearl-rune mechanic
+  // and recipe wiring (chowder, fish oil) are scoped in docs/FISH_BOARD_SCOPE.md
+  // and intentionally not implemented yet. This step adds only the resources,
+  // pool and biome entry so the biome can be entered + chained on.
+  fish: {
+    name: "Harbor",
+    mine_dirt: 0x2a4a6a,
+    dark: 0x18283a,
+    dirtColor: 0x2a4a6a,
+    palette: { bg: 0x2a4a6a, accent: 0x4a8aaa, dim: 0x18283a },
+    tilePool: FISH_TILE_POOL,
+    resources: [
+      { key: "fish_sardine",  label: "Sardine",  color: 0x9ab8c4, dark: 0x4a5e68, value: 1, next: "fish_raw",     glyph: "🐟", sway: { amp: 1.4, freq: 0.00050, gust: 0.08 } },
+      { key: "fish_mackerel", label: "Mackerel", color: 0x4a7a9a, dark: 0x223a4a, value: 2, next: "fish_raw",     glyph: "🐠", sway: { amp: 1.6, freq: 0.00052, gust: 0.10 } },
+      { key: "fish_clam",     label: "Clam",     color: 0xc8a888, dark: 0x705a40, value: 2, next: "fish_raw",     glyph: "🦪", sway: { amp: 0.4, freq: 0.00020, gust: 0.02 } },
+      { key: "fish_oyster",   label: "Oyster",   color: 0xd0c0a8, dark: 0x6a5e48, value: 3, next: "fish_raw",     glyph: "🦪", sway: { amp: 0.4, freq: 0.00020, gust: 0.02 } },
+      { key: "fish_kelp",     label: "Kelp",     color: 0x3a6a3a, dark: 0x1a3818, value: 1, next: "fish_oil",     glyph: "🌿", sway: { amp: 3.0, freq: 0.00060, gust: 0.18 } },
+      { key: "fish_raw",      label: "Fish",     color: 0xb0c8d4, dark: 0x546a78, value: 4, next: "fish_fillet",  glyph: "🐡" },
+      { key: "fish_fillet",   label: "Fillet",   color: 0xe8c8b0, dark: 0x7a604c, value: 8, next: null,           glyph: "▰" },
+      { key: "fish_oil",      label: "Fish Oil", color: 0xe8d050, dark: 0x7a6818, value: 6, next: null,           glyph: "💧" },
+    ],
+    pool: FISH_TILE_POOL,
   },
 };
 
@@ -527,7 +565,7 @@ export const RAT_CLEAR_REWARD_PER = 5;
 // The `default` palette reads back from BIOMES + SEASONS to guarantee zero
 // visual drift versus the Phase 0–10 hex baseline.
 const _defaultTiles = Object.fromEntries(
-  [...BIOMES.farm.resources, ...BIOMES.mine.resources].map((r) => [r.key, r.color]),
+  [...BIOMES.farm.resources, ...BIOMES.mine.resources, ...BIOMES.fish.resources].map((r) => [r.key, r.color]),
 );
 const _defaultSeasons = Object.fromEntries(
   SEASONS.map((s) => [s.name, { bg: s.bg, fill: s.fill, accent: s.accent }]),

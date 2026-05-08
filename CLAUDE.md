@@ -30,7 +30,7 @@ This is a Phaser 3 + React game. React owns the page shell *and* the canonical g
 - `src/GameScene.js` — Phaser scene: board rendering, drag input, animations, collapse pipeline. Reads from the bridge; dispatches actions back to the reducer. Board origin is computed dynamically each layout (`this.boardX = Math.round((vw - COLS * this.tileSize) / 2)`).
 - `src/TileObj.js` — thin wrapper around a single board tile; sprite swap and pulse animation on selection.
 - `src/textures.js` + `src/textures/categories/` — procedural texture generation (Canvas 2D). 16 category modules plus `iconRegistry.js` register textures into Phaser's cache at scene init. No external image assets.
-- `src/constants.js` — board dims (`COLS = 6, ROWS = 6`), per-resource `UPGRADE_THRESHOLDS` (5–10 range, e.g. `grass_hay: 6`, `mount_horse: 10`), turn/season rules, two biomes (Farm and Mine), `MINE_ENTRY_TIERS`, `DAILY_REWARDS`, season color schemes.
+- `src/constants.js` — board dims (`COLS = 6, ROWS = 6`), per-resource `UPGRADE_THRESHOLDS` (5–10 range, e.g. `grass_hay: 6`, `mount_horse: 10`), turn/season rules, three biomes (Farm, Mine, Fish/Harbor — fish is a basic chain biome with no tide/pearl mechanics yet; see `docs/FISH_BOARD_SCOPE.md`), `MINE_ENTRY_TIERS`, `DAILY_REWARDS`, season color schemes.
 - `src/utils.js` — pure helpers: `upgradeCountForChain` (returns `floor(chainLength / threshold)`), color converters, `clamp`, and the `runSelfTests` smoke shim.
 - `src/audio/` — WebAudio engine + `useAudio` hook.
 - `src/a11y.js` — screen-reader announcements + keyboard navigation.

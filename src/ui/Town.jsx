@@ -6,11 +6,15 @@ import IconCanvas from "./IconCanvas.jsx";
 
 function BiomeEntryModal({ biomeKey, level, onEnter, onClose }) {
   const biome = BIOMES[biomeKey];
-  const locked = biomeKey === "mine" && level < 2;
+  const unlockLevel = biomeKey === "mine" ? 2 : biomeKey === "fish" ? 3 : 0;
+  const locked = level < unlockLevel;
   const descriptions = {
     farm: "Tend the fields of Hearthwood Vale. Harvest crops, gather timber, and collect eggs to fulfil the villagers' orders.",
     mine: "Descend into Ironridge depths. Extract stone, smelt ore, and uncover precious gems hidden below.",
+    fish: "Cast nets at Saltspray Harbor. Sardines and clams come in with the tide; longer chains land mackerel and oysters.",
   };
+  const portraitIcons = { farm: "biome_farm", mine: "biome_mine", fish: "biome_fish" };
+  const portraitIcon = portraitIcons[biomeKey] ?? "biome_farm";
   return (
     <div className="absolute inset-0 bg-black/60 grid place-items-center z-50 animate-fadein" onClick={onClose}>
       <div
@@ -18,13 +22,13 @@ function BiomeEntryModal({ biomeKey, level, onEnter, onClose }) {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="grid place-items-center mx-auto mb-3" style={{ width: 96, height: 96 }}>
-          <IconCanvas iconKey={biomeKey === "farm" ? "biome_farm" : "biome_mine"} size={96} />
+          <IconCanvas iconKey={portraitIcon} size={96} />
         </div>
         <h2 className="font-bold text-[22px] text-[#744d2e] mb-2">{biome.name}</h2>
         <p className="text-[#6a4b31] text-[13px] mb-5 leading-relaxed">{descriptions[biomeKey]}</p>
         {locked ? (
           <div className="bg-[#f7d572]/30 border border-[#f7d572] rounded-xl px-4 py-3 text-[#7a5020] font-bold text-[13px] mb-3">
-            🔒 Unlocks at Level 2
+            🔒 Unlocks at Level {unlockLevel}
           </div>
         ) : (
           <button
