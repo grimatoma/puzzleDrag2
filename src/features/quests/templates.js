@@ -38,4 +38,19 @@ export const QUEST_TEMPLATES = [
     targetMin: 1, targetMax: 3,  coinBase: 50, coinPerUnit: 25 },
   { id: "chain_12",      category: "chain",   minLength: 12,    label: "Make a chain of 12+",
     targetMin: 1, targetMax: 2,  coinBase: 80, coinPerUnit: 40 },
+  // ── fish-biome collect templates ────────────────────────────────────────────
+  // Coin bases echo the farm collect-quests; targets sized for the harbor pool.
+  { id: "collect_sardine",  category: "collect", key: "fish_sardine",  label: "Collect {n} sardines",
+    targetMin: 12, targetMax: 30, coinBase: 35, coinPerUnit: 2 },
+  { id: "collect_mackerel", category: "collect", key: "fish_mackerel", label: "Collect {n} mackerel",
+    targetMin: 8,  targetMax: 20, coinBase: 40, coinPerUnit: 3 },
+  { id: "collect_clam",     category: "collect", key: "fish_clam",     label: "Gather {n} clams",
+    targetMin: 6,  targetMax: 14, coinBase: 40, coinPerUnit: 4 },
+  { id: "collect_kelp",     category: "collect", key: "fish_kelp",     label: "Cut {n} kelp",
+    targetMin: 10, targetMax: 22, coinBase: 30, coinPerUnit: 2 },
+  // ── fish-biome craft templates ──────────────────────────────────────────────
+  { id: "craft_chowder",    category: "craft",   item: "chowder",      label: "Cook {n} chowder",
+    targetMin: 1, targetMax: 3, coinBase: 80, coinPerUnit: 40 },
+  { id: "craft_fish_oil",   category: "craft",   item: "fish_oil_bottled", label: "Bottle {n} fish oil",
+    targetMin: 2, targetMax: 5, coinBase: 50, coinPerUnit: 25 },
 ];
