@@ -5,7 +5,7 @@ import { ZONES, ZONE_IDS, DEFAULT_ZONE } from "./data.js";
 
 export const initial = {};
 
-export function reduce(state, action) {
+export function reduce(state) {
   return state;
 }
 
