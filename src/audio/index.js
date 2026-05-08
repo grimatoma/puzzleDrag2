@@ -60,6 +60,17 @@ const SOUNDS = {
   error: {
     steps: [{ freq: 400, freqEnd: 200, dur: 150, type: 'sawtooth', gain: 0.06 }],
   },
+  // Watery whoosh: 180Hz → 90Hz, triangle, 350ms (low + slow for tide flip)
+  tideSplash: {
+    steps: [{ freq: 180, freqEnd: 90, dur: 350, type: 'triangle', gain: 0.07 }],
+  },
+  // Bright shimmer: 1320Hz → 1980Hz then a second high tone, sine
+  pearlCapture: {
+    steps: [
+      { freq: 1320, freqEnd: 1980, dur: 100, type: 'sine', gain: 0.06, gap: 60 },
+      { freq: 2400, dur: 80, type: 'sine', gain: 0.05, gap: 0, delay: 0.120 },
+    ],
+  },
 };
 
 /**
