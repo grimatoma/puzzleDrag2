@@ -3,89 +3,176 @@ import { createPortal } from "react-dom";
 import { useTooltip, Tooltip } from "./Tooltip.jsx";
 import { CompactOrders } from "./Inventory.jsx";
 import { getPhaserScene } from "../phaserBridge.js";
-import IconCanvas from "./IconCanvas.jsx";
+import IconCanvas, { hasIcon } from "./IconCanvas.jsx";
+import { TOOL_CATALOG, TOOL_BY_KEY, TOOL_CATEGORIES, visibleTools, isTapTargetTool } from "./toolRegistry.js";
 
-export const TOOL_DEFS = [
-  { key: "clear",   iconKey: "player_clear",   name: "Scythe",         desc: "Clears tiles from the board and collects +5 basic resources." },
-  { key: "basic",   iconKey: "player_basic",   name: "Seedpack",       desc: "Instantly adds +5 basic resources to your inventory." },
-  { key: "rare",    iconKey: "player_rare",    name: "Lockbox",        desc: "Grants +2 rare resources directly to your inventory." },
-  { key: "shuffle", iconKey: "player_shuffle", name: "Reshuffle Horn", desc: "Reshuffles all tiles on the board for a fresh layout." },
-];
+// Re-exported for back-compat with anything that still imports TOOL_DEFS.
+export const TOOL_DEFS = TOOL_CATALOG;
 
-export function ToolsGrid({ tools, onUse }) {
-  const { tip: tooltipTip, show: showTooltip, hide: hideTooltip, lastTouchTime } = useTooltip();
-  const [modalTool, setModalTool] = useState(null);
+/**
+ * Renders a tool's icon — prefers the canvas icon registry, falls back to the
+ * emoji glyph for tools whose registry icon hasn't been drawn yet.
+ */
+function ToolIcon({ def, size }) {
+  if (def.iconKey && hasIcon(def.iconKey)) {
+    return <div style={{ width: size, height: size }}><IconCanvas iconKey={def.iconKey} size={size} /></div>;
+  }
+  return <div style={{ fontSize: size * 0.7, lineHeight: 1 }}>{def.icon ?? "⚙"}</div>;
+}
+
+/**
+ * Dispatch a tool use, with bridge side-effects for the few tools that need
+ * a synchronous Phaser call (shuffle hits the scene directly so the board
+ * animates the same frame the action lands).
+ */
+function dispatchUseTool(dispatch, key, state) {
+  const isPending = state.toolPending === key;
+  if (isPending) {
+    dispatch({ type: "CANCEL_TOOL" });
+    return;
+  }
+  // Magic tools route through the portal slice exclusively — but they share
+  // the USE_TOOL action; payload.id is what the portal slice listens to.
+  const def = TOOL_BY_KEY[key];
+  const isMagic = def?.category === "magic";
+  if (isMagic) {
+    dispatch({ type: "USE_TOOL", payload: { id: key } });
+  } else {
+    dispatch({ type: "USE_TOOL", key });
+  }
+  if (key === "shuffle") getPhaserScene()?.shuffleBoard();
+}
+
+function ToolButton({ def, count, pending, onClick, onLongPress, showTooltip, hideTooltip, lastTouchTimeRef, size = "md" }) {
   const longPressTimer = useRef(null);
   const longPressOccurred = useRef(false);
 
-  const startLongPress = (t) => {
+  const startLongPress = () => {
     longPressOccurred.current = false;
     longPressTimer.current = setTimeout(() => {
       longPressOccurred.current = true;
-      setModalTool(t);
+      onLongPress?.(def);
     }, 500);
   };
+  const cancelLongPress = () => clearTimeout(longPressTimer.current);
 
-  const cancelLongPress = () => {
-    clearTimeout(longPressTimer.current);
-  };
+  const empty = count === 0;
+  const armed = pending;
+  const iconPx = size === "sm" ? 24 : 32;
+  const sizing = size === "sm"
+    ? { btn: "py-1.5 px-1", name: "text-[8px]" }
+    : { btn: "py-1.5 px-1", name: "text-[9px]" };
 
-  const tooltipDef = tooltipTip ? TOOL_DEFS.find((t) => t.key === tooltipTip.data) : null;
+  return (
+    <button
+      disabled={empty && !armed}
+      aria-label={`${armed ? "Cancel" : "Use"} ${def.name}${empty && !armed ? " (none left)" : ""}`}
+      aria-pressed={armed}
+      onClick={() => {
+        if (longPressOccurred.current) { longPressOccurred.current = false; return; }
+        onClick();
+      }}
+      onMouseEnter={(e) => { if (Date.now() - lastTouchTimeRef.current > 600) showTooltip(def.key, e.currentTarget); }}
+      onMouseLeave={() => { if (Date.now() - lastTouchTimeRef.current > 600) hideTooltip(); }}
+      onTouchStart={(e) => {
+        lastTouchTimeRef.current = Date.now();
+        startLongPress();
+        showTooltip(def.key, e.currentTarget);
+      }}
+      onTouchEnd={() => { cancelLongPress(); hideTooltip(2000); }}
+      onTouchCancel={() => { cancelLongPress(); hideTooltip(2000); }}
+      onTouchMove={() => cancelLongPress()}
+      className={`relative w-full rounded-lg border-2 ${sizing.btn} flex flex-col items-center gap-0.5 transition-transform ${
+        armed
+          ? "border-[#ffd248] bg-[#7a4f1d] shadow-[0_0_0_2px_rgba(255,210,72,0.45),0_0_12px_rgba(255,210,72,0.35)] animate-pulse"
+          : empty
+          ? "border-[#7a5836] bg-[#5e3a1f] opacity-40 cursor-not-allowed"
+          : "border-[#e6c49a] bg-[#9a724d] hover:bg-[#b8845a] hover:-translate-y-0.5"
+      }`}
+    >
+      {count > 0 && (
+        <div className="absolute -top-1 -right-1 bg-[#2b2218] text-white border border-[#f7e2b6] rounded-full px-1.5 text-[10px] font-bold leading-none py-0.5">
+          {count}
+        </div>
+      )}
+      {armed && (
+        <div className="absolute -top-1 -left-1 bg-[#ffd248] text-[#2b1d0e] border border-[#2b1d0e] rounded-full text-[8px] font-bold leading-none px-1 py-0.5">
+          ARMED
+        </div>
+      )}
+      <ToolIcon def={def} size={iconPx} />
+      <div className={`${sizing.name} font-bold text-white`}>{def.name}</div>
+    </button>
+  );
+}
+
+/**
+ * Side-panel grid: shows owned tools, grouped by category.
+ * Always-show field tools so the player sees what they can earn.
+ */
+export function ToolsGrid({ tools, toolPending, onUse }) {
+  const { tip: tooltipTip, show: showTooltip, hide: hideTooltip, lastTouchTime: lastTouchTimeRef } = useTooltip();
+  const [modalTool, setModalTool] = useState(null);
+
+  const visible = visibleTools(tools);
+  const tooltipDef = tooltipTip ? TOOL_BY_KEY[tooltipTip.data] : null;
+
+  const byCategory = TOOL_CATEGORIES.map((cat) => ({
+    ...cat,
+    tools: visible.filter((t) => t.category === cat.key),
+  })).filter((c) => c.tools.length > 0);
 
   return (
     <>
-      <div className="grid grid-cols-2 gap-1.5">
-        {TOOL_DEFS.map((t) => {
-          const amt = tools[t.key] || 0;
-          const empty = amt === 0;
-          return (
-            <div key={t.key} className="relative">
-              <button
-                disabled={empty}
-                aria-label={`Use ${t.name}${empty ? " (none left)" : ""}`}
-                onClick={() => {
-                  if (longPressOccurred.current) { longPressOccurred.current = false; return; }
-                  onUse(t.key);
-                }}
-                onMouseEnter={(e) => { if (Date.now() - lastTouchTime.current > 600) showTooltip(t.key, e.currentTarget); }}
-                onMouseLeave={() => { if (Date.now() - lastTouchTime.current > 600) hideTooltip(); }}
-                onTouchStart={(e) => {
-                  lastTouchTime.current = Date.now();
-                  startLongPress(t);
-                  showTooltip(t.key, e.currentTarget);
-                }}
-                onTouchEnd={() => { cancelLongPress(); hideTooltip(2000); }}
-                onTouchCancel={() => { cancelLongPress(); hideTooltip(2000); }}
-                onTouchMove={() => cancelLongPress()}
-                className={`relative w-full rounded-lg border-2 border-[#e6c49a] py-1.5 px-1 flex flex-col items-center gap-0.5 transition-transform ${empty ? "bg-[#9a724d] opacity-40 cursor-not-allowed" : "bg-[#9a724d] hover:bg-[#b8845a] hover:-translate-y-0.5"}`}
-              >
-                {amt > 0 && <div className="absolute -top-1 -right-1 bg-[#2b2218] text-white border border-[#f7e2b6] rounded-full px-1.5 text-[10px] font-bold">{amt}</div>}
-                <div style={{ width: 32, height: 32 }}><IconCanvas iconKey={t.iconKey} size={32} /></div>
-                <div className="text-[9px] font-bold text-white">{t.name}</div>
-              </button>
+      <div className="flex flex-col gap-2.5">
+        {byCategory.map((cat) => (
+          <div key={cat.key}>
+            <div className="text-[9px] font-bold uppercase tracking-wider text-[#f8e7c6]/70 mb-1 px-0.5">
+              {cat.label}
             </div>
-          );
-        })}
+            <div className="grid grid-cols-2 gap-1.5">
+              {cat.tools.map((def) => (
+                <ToolButton
+                  key={def.key}
+                  def={def}
+                  count={tools[def.key] || 0}
+                  pending={toolPending === def.key}
+                  onClick={() => onUse(def.key)}
+                  onLongPress={(t) => setModalTool(t)}
+                  showTooltip={showTooltip}
+                  hideTooltip={hideTooltip}
+                  lastTouchTimeRef={lastTouchTimeRef}
+                />
+              ))}
+            </div>
+          </div>
+        ))}
       </div>
       {tooltipDef && (
         <Tooltip
           anchorX={tooltipTip.x}
           anchorY={tooltipTip.y}
-          className="z-[9999] w-36 bg-[#2b1d0e] text-white text-[10px] rounded-lg px-2.5 py-2 shadow-lg pointer-events-none border border-[#e6c49a]"
+          className="z-[9999] w-44 bg-[#2b1d0e] text-white text-[10px] rounded-lg px-2.5 py-2 shadow-lg pointer-events-none border border-[#e6c49a]"
           arrowClassName="border-4 border-transparent border-t-[#2b1d0e]"
         >
           <div className="font-bold text-[11px] mb-0.5">{tooltipDef.name}</div>
           <div className="text-white/80 leading-snug">{tooltipDef.desc}</div>
+          {isTapTargetTool(tooltipDef.key) && (
+            <div className="text-[#ffd248] text-[9px] font-bold mt-1">Tap a tile after using.</div>
+          )}
         </Tooltip>
       )}
       {modalTool && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={() => setModalTool(null)}>
-          <div className="bg-[#3d2310] border-2 border-[#e6c49a] rounded-2xl p-5 max-w-[260px] w-full mx-4 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-[#3d2310] border-2 border-[#e6c49a] rounded-2xl p-5 max-w-[280px] w-full mx-4 shadow-2xl" onClick={(e) => e.stopPropagation()}>
             <div className="grid place-items-center mb-1" style={{ height: 64 }}>
-              <IconCanvas iconKey={modalTool.iconKey} size={64} />
+              <ToolIcon def={modalTool} size={64} />
             </div>
             <div className="text-white font-bold text-[17px] text-center mb-2">{modalTool.name}</div>
             <div className="text-white/80 text-[12px] text-center leading-relaxed">{modalTool.desc}</div>
+            {isTapTargetTool(modalTool.key) && (
+              <div className="text-[#ffd248] text-[11px] font-bold text-center mt-2">Tap a tile on the board to apply.</div>
+            )}
             <button
               onClick={() => setModalTool(null)}
               className="mt-4 w-full bg-[#9a724d] hover:bg-[#b8845a] text-white font-bold py-2 rounded-lg border border-[#e6c49a] text-[13px] transition-colors"
@@ -115,31 +202,67 @@ function BottomSheet({ onClose, children }) {
   );
 }
 
+/**
+ * Portrait phone tool bar: a single horizontal scroll strip showing every
+ * owned tool plus the four field starters so the player always has a base set.
+ */
 export function PortraitToolsBar({ state, dispatch }) {
+  const { tip: tooltipTip, show: showTooltip, hide: hideTooltip, lastTouchTime: lastTouchTimeRef } = useTooltip();
+  const [modalTool, setModalTool] = useState(null);
+  const tools = state.tools || {};
+  const list = visibleTools(tools);
+  const tooltipDef = tooltipTip ? TOOL_BY_KEY[tooltipTip.data] : null;
+
   return (
-    <div className="bg-[#3a2715] border-t border-[#b28b62] px-3 py-2 flex-shrink-0">
-      <div className="grid grid-cols-4 gap-2">
-        {TOOL_DEFS.map((t) => {
-          const amt = state.tools[t.key] || 0;
-          const empty = amt === 0;
-          return (
-            <button
-              key={t.key}
-              disabled={empty}
-              aria-label={`Use ${t.name}${empty ? " (none left)" : ""}`}
-              onClick={() => {
-                dispatch({ type: "USE_TOOL", key: t.key });
-                if (t.key === "shuffle") getPhaserScene()?.shuffleBoard();
-              }}
-              className={`relative flex flex-col items-center gap-0.5 py-2 rounded-lg border-2 border-[#e6c49a] transition-transform ${empty ? "bg-[#9a724d] opacity-40 cursor-not-allowed" : "bg-[#9a724d] hover:bg-[#b8845a] active:-translate-y-0.5"}`}
-            >
-              {amt > 0 && <div className="absolute -top-1 -right-1 bg-[#2b2218] text-white border border-[#f7e2b6] rounded-full px-1.5 text-[9px] font-bold leading-none py-0.5">{amt}</div>}
-              <div style={{ width: 28, height: 28 }}><IconCanvas iconKey={t.iconKey} size={28} /></div>
-              <div className="text-[8px] font-bold text-white/90">{t.name}</div>
-            </button>
-          );
-        })}
+    <div className="bg-[#3a2715] border-t border-[#b28b62] px-2 py-2 flex-shrink-0">
+      <div className="flex gap-1.5 overflow-x-auto pb-0.5" style={{ scrollbarWidth: "thin" }}>
+        {list.map((def) => (
+          <div key={def.key} className="flex-shrink-0 w-[64px]">
+            <ToolButton
+              def={def}
+              count={tools[def.key] || 0}
+              pending={state.toolPending === def.key}
+              onClick={() => dispatchUseTool(dispatch, def.key, state)}
+              onLongPress={(t) => setModalTool(t)}
+              showTooltip={showTooltip}
+              hideTooltip={hideTooltip}
+              lastTouchTimeRef={lastTouchTimeRef}
+              size="sm"
+            />
+          </div>
+        ))}
       </div>
+      {tooltipDef && (
+        <Tooltip
+          anchorX={tooltipTip.x}
+          anchorY={tooltipTip.y}
+          className="z-[9999] w-44 bg-[#2b1d0e] text-white text-[10px] rounded-lg px-2.5 py-2 shadow-lg pointer-events-none border border-[#e6c49a]"
+          arrowClassName="border-4 border-transparent border-t-[#2b1d0e]"
+        >
+          <div className="font-bold text-[11px] mb-0.5">{tooltipDef.name}</div>
+          <div className="text-white/80 leading-snug">{tooltipDef.desc}</div>
+        </Tooltip>
+      )}
+      {modalTool && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={() => setModalTool(null)}>
+          <div className="bg-[#3d2310] border-2 border-[#e6c49a] rounded-2xl p-5 max-w-[280px] w-full mx-4 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="grid place-items-center mb-1" style={{ height: 64 }}>
+              <ToolIcon def={modalTool} size={64} />
+            </div>
+            <div className="text-white font-bold text-[17px] text-center mb-2">{modalTool.name}</div>
+            <div className="text-white/80 text-[12px] text-center leading-relaxed">{modalTool.desc}</div>
+            {isTapTargetTool(modalTool.key) && (
+              <div className="text-[#ffd248] text-[11px] font-bold text-center mt-2">Tap a tile on the board to apply.</div>
+            )}
+            <button
+              onClick={() => setModalTool(null)}
+              className="mt-4 w-full bg-[#9a724d] hover:bg-[#b8845a] text-white font-bold py-2 rounded-lg border border-[#e6c49a] text-[13px] transition-colors"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -150,7 +273,9 @@ export function MobileDock({ state, dispatch }) {
   // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: clear local sheet state when leaving board view
   useEffect(() => { if (state.view !== "board") setSheet(null); }, [state.view]);
 
-  const totalTools = Object.values(state.tools || {}).reduce((s, v) => s + v, 0);
+  const totalTools = Object.entries(state.tools || {})
+    .filter(([k, v]) => typeof v === "number" && v > 0 && TOOL_BY_KEY[k])
+    .reduce((s, [, v]) => s + v, 0);
   const readyOrders = (state.orders || []).filter((o) => (state.inventory[o.key] || 0) >= o.need).length;
 
   const closeSheet = () => setSheet(null);
@@ -192,10 +317,12 @@ export function MobileDock({ state, dispatch }) {
           <div className="text-[#f8e7c6] font-bold text-[14px] mb-3">Tools</div>
           <ToolsGrid
             tools={state.tools}
+            toolPending={state.toolPending}
             onUse={(key) => {
-              dispatch({ type: "USE_TOOL", key });
-              if (key === "shuffle") getPhaserScene()?.shuffleBoard();
-              closeSheet();
+              dispatchUseTool(dispatch, key, state);
+              // Keep the sheet open for tap-target tools so the player sees the
+              // armed state, then can dismiss; close immediately for instants.
+              if (!isTapTargetTool(key)) closeSheet();
             }}
           />
         </BottomSheet>
@@ -208,5 +335,35 @@ export function MobileDock({ state, dispatch }) {
         </BottomSheet>
       )}
     </>
+  );
+}
+
+/**
+ * Banner that hovers over the Phaser canvas while an "armed" tap-target
+ * tool is waiting for the player to point at a tile. Lets the player cancel
+ * without scrolling back to the side panel.
+ */
+export function ArmedToolBanner({ state, dispatch }) {
+  const pending = state.toolPending;
+  if (!pending || !isTapTargetTool(pending)) return null;
+  const def = TOOL_BY_KEY[pending];
+  if (!def) return null;
+  return (
+    <div className="absolute top-2 left-1/2 -translate-x-1/2 z-30 pointer-events-auto">
+      <div className="bg-[#2b1d0e]/95 border-2 border-[#ffd248] rounded-xl px-3 py-2 flex items-center gap-2 shadow-lg max-w-[90vw]">
+        <ToolIcon def={def} size={24} />
+        <div className="flex flex-col">
+          <div className="text-[#ffd248] font-bold text-[12px] leading-tight">{def.name} armed</div>
+          <div className="text-white/80 text-[10px] leading-tight">Tap a tile on the board.</div>
+        </div>
+        <button
+          onClick={() => dispatch({ type: "CANCEL_TOOL" })}
+          className="ml-2 bg-[#9a724d] hover:bg-[#b8845a] text-white font-bold text-[11px] px-2 py-1 rounded-md border border-[#e6c49a]"
+          aria-label="Cancel armed tool"
+        >
+          Cancel
+        </button>
+      </div>
+    </div>
   );
 }

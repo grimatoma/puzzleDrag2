@@ -295,7 +295,7 @@ export function createFreshState(overrides) {
   // generate from crypto.getRandomValues when available (better entropy than
   // Math.random's ~30 bits) and fall back to Math.random elsewhere.
   const saveSeed = overrides?.saveSeed ?? generateSaveSeed();
-  // tools with structural flag support — startingExtraScythe grants +1 scythe each session
+  // tools with structural flag support — startingExtraScythe grants +1 Scythe (clear) each session
   const extraScytheBonus = overrides?.tools?.startingExtraScythe ? 1 : 0;
   const fresh = {
     version: SAVE_SCHEMA_VERSION,
@@ -311,18 +311,13 @@ export function createFreshState(overrides) {
     inventory: { supplies: 0 },
     orders: [o1, o2, o3],
     quests: rollQuests(saveSeed, 1, "spring"),
-    tools: { clear: 2, basic: 1, rare: 1, shuffle: 0, bomb: 0,
-             scythe: extraScytheBonus, seedpack: 0, lockbox: 0, reshuffle: 0,
+    tools: { clear: 2 + extraScytheBonus, basic: 1, rare: 1, shuffle: 0, bomb: 0,
              startingExtraScythe: !!overrides?.tools?.startingExtraScythe,
              magic_wand: 0, hourglass: 0, magic_seed: 0, magic_fertilizer: 0,
              water_pump: 0, explosives: 0,
-             // Phase 10.1 — new Workshop farm tools
              rake: 0, axe: 0, fertilizer: 0,
-             // Phase 10.5 — Cat (clears rats)
              cat: 0,
-             // Phase 10.6 — Bird Cage + Scythe (full)
              bird_cage: 0, scythe_full: 0,
-             // Phase 10.8 — Rifle + Hound (wolf counters)
              rifle: 0, hound: 0 },
     toolPending: null,
     fertilizerActive: false,
@@ -773,9 +768,24 @@ function coreReducer(state, action) {
       };
     }
 
+    case "CANCEL_TOOL": {
+      // Refund and disarm an armed tap-target tool. Portal magic_wand also
+      // routes through here so re-clicking it from the panel un-arms it.
+      const pending = state.toolPending;
+      if (!pending) return state;
+      return {
+        ...state,
+        toolPending: null,
+        tools: { ...state.tools, [pending]: (state.tools[pending] ?? 0) + 1 },
+      };
+    }
     case "USE_TOOL": {
       // Support action.payload.id (Phase 9), action.payload.key, or action.key (legacy)
-      const key = action.payload?.id ?? action.payload?.key ?? action.key;
+      const rawKey = action.payload?.id ?? action.payload?.key ?? action.key;
+      // Map dropped legacy aliases onto their canonical counterparts so older
+      // call sites (and any quest/reward shapes still in flight) keep working.
+      const ALIAS = { scythe: "clear", seedpack: "basic", lockbox: "rare", reshuffle: "shuffle" };
+      const key = ALIAS[rawKey] ?? rawKey;
       // Magic tools (hourglass, magic_seed, magic_fertilizer) are handled exclusively
       // by the portal slice — skip them here to avoid double-consume.
       const MAGIC_TOOL_IDS = new Set(["hourglass", "magic_seed", "magic_fertilizer", "magic_wand"]);

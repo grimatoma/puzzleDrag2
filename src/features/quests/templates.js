@@ -27,11 +27,11 @@ export const QUEST_TEMPLATES = [
   { id: "orders_any",    category: "order",                    label: "Deliver {n} orders",
     targetMin: 3, targetMax: 6,  coinBase: 60, coinPerUnit: 15 },
   // ── use-tool ────────────────────────────────────────────────────────────────
-  { id: "tool_scythe",   category: "tool",    tool: "scythe",   label: "Use the Scythe {n} times",
+  { id: "tool_scythe",   category: "tool",    tool: "clear",    label: "Use the Scythe {n} times",
     targetMin: 2, targetMax: 5,  coinBase: 30, coinPerUnit: 10 },
-  { id: "tool_seedpack", category: "tool",    tool: "seedpack", label: "Use the Seedpack {n} times",
+  { id: "tool_seedpack", category: "tool",    tool: "basic",    label: "Use the Seedpack {n} times",
     targetMin: 2, targetMax: 4,  coinBase: 30, coinPerUnit: 15 },
-  { id: "tool_lockbox",  category: "tool",    tool: "lockbox",  label: "Use the Lockbox {n} times",
+  { id: "tool_lockbox",  category: "tool",    tool: "rare",     label: "Use the Lockbox {n} times",
     targetMin: 1, targetMax: 3,  coinBase: 30, coinPerUnit: 20 },
   // ── chain-length ────────────────────────────────────────────────────────────
   { id: "chain_8",       category: "chain",   minLength: 8,     label: "Make a chain of 8+",

@@ -109,15 +109,15 @@ describe("10.6 — USE_TOOL scythe_full", () => {
     expect(s1.turnsUsed).toBe(5);
   });
 
-  it("Phase-1 scythe (key 'clear') is NOT affected", () => {
+  it("Phase-1 Scythe (key 'clear') is NOT affected", () => {
     const grid = makeGridWith([{ key: "grain", count: 5 }, { key: "grass_hay", count: 2 }]);
     const s0 = {
       ...createInitialState(),
       grid,
-      tools: { ...createInitialState().tools, scythe: 1, scythe_full: 1 },
+      tools: { ...createInitialState().tools, clear: 1, scythe_full: 1 },
     };
     const s1 = rootReducer(s0, { type: "USE_TOOL", payload: { id: "scythe_full" } });
-    expect(s1.tools.scythe).toBe(1); // Phase-1 scythe untouched
+    expect(s1.tools.clear).toBe(1); // Phase-1 Scythe untouched
     expect(s1.tools.scythe_full).toBe(0);
   });
 });

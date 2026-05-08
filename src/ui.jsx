@@ -2,6 +2,7 @@ import React from "react";
 import { getPhaserScene } from "./phaserBridge.js";
 import { Section, CompactOrders } from "./ui/Inventory.jsx";
 import { ToolsGrid } from "./ui/Tools.jsx";
+import { TOOL_BY_KEY } from "./ui/toolRegistry.js";
 
 // Per-feature error boundary. A crash in any one feature renders an inline
 // fallback inside that feature's slot and dispatches CLOSE_MODAL so the
@@ -45,10 +46,21 @@ export function SidePanel({ state, dispatch, chainInfo }) {
         </div>
       )}
       <Section title="Tools" titleColor="#f8e7c6">
-        <ToolsGrid tools={state.tools} onUse={(key) => {
-          dispatch({ type: "USE_TOOL", key });
-          if (key === "shuffle") getPhaserScene()?.shuffleBoard();
-        }} />
+        <ToolsGrid
+          tools={state.tools}
+          toolPending={state.toolPending}
+          onUse={(key) => {
+            const isPending = state.toolPending === key;
+            if (isPending) { dispatch({ type: "CANCEL_TOOL" }); return; }
+            const def = TOOL_BY_KEY[key];
+            if (def?.category === "magic") {
+              dispatch({ type: "USE_TOOL", payload: { id: key } });
+            } else {
+              dispatch({ type: "USE_TOOL", key });
+            }
+            if (key === "shuffle") getPhaserScene()?.shuffleBoard();
+          }}
+        />
       </Section>
       <Section title="Orders" titleColor="#f8e7c6">
         <CompactOrders orders={state.orders} inventory={state.inventory} dispatch={dispatch} />

@@ -280,6 +280,28 @@ export const MIGRATIONS = [
     }
     return next;
   },
+
+  // v16 → v17: Drop legacy tool aliases from state.tools by folding their
+  // counts into the canonical keys that the on-board UI actually uses.
+  //   scythe   → clear     (Phase-1 "Scythe" was always wired to USE_TOOL.clear)
+  //   seedpack → basic
+  //   lockbox  → rare
+  //   reshuffle → shuffle
+  //
+  // Idempotent: re-running on a migrated save is a no-op because the legacy
+  // keys have already been removed.
+  (s) => {
+    const tools = s.tools ? { ...s.tools } : {};
+    const ALIAS = { scythe: "clear", seedpack: "basic", lockbox: "rare", reshuffle: "shuffle" };
+    for (const [legacy, canonical] of Object.entries(ALIAS)) {
+      const carry = tools[legacy];
+      if (typeof carry === "number" && carry > 0) {
+        tools[canonical] = (tools[canonical] ?? 0) + carry;
+      }
+      delete tools[legacy];
+    }
+    return { ...s, tools };
+  },
 ];
 
 function isCorrupted(raw) {
