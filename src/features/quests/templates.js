@@ -53,4 +53,22 @@ export const QUEST_TEMPLATES = [
     targetMin: 1, targetMax: 3, coinBase: 80, coinPerUnit: 40 },
   { id: "craft_fish_oil",   category: "craft",   item: "fish_oil_bottled", label: "Bottle {n} fish oil",
     targetMin: 2, targetMax: 5, coinBase: 50, coinPerUnit: 25 },
+  // ── mine-biome collect templates ────────────────────────────────────────────
+  { id: "collect_stone",  category: "collect", key: "mine_stone",  label: "Quarry {n} stone",
+    targetMin: 12, targetMax: 30, coinBase: 35, coinPerUnit: 2 },
+  { id: "collect_ore",    category: "collect", key: "mine_ore",    label: "Mine {n} ore",
+    targetMin: 8,  targetMax: 20, coinBase: 45, coinPerUnit: 3 },
+  { id: "collect_coal",   category: "collect", key: "mine_coal",   label: "Haul {n} coal",
+    targetMin: 8,  targetMax: 18, coinBase: 40, coinPerUnit: 3 },
+  { id: "collect_gem",    category: "collect", key: "mine_gem",    label: "Find {n} gems",
+    targetMin: 4,  targetMax: 10, coinBase: 60, coinPerUnit: 6 },
+  { id: "collect_dirt",   category: "collect", key: "mine_dirt",   label: "Shovel {n} dirt",
+    targetMin: 12, targetMax: 30, coinBase: 25, coinPerUnit: 1 },
+  // ── mine-biome craft templates ──────────────────────────────────────────────
+  { id: "craft_lantern",  category: "craft",   item: "lantern",    label: "Forge {n} lanterns",
+    targetMin: 1, targetMax: 3, coinBase: 50, coinPerUnit: 25 },
+  { id: "craft_goldring", category: "craft",   item: "goldring",   label: "Forge {n} gold rings",
+    targetMin: 1, targetMax: 2, coinBase: 80, coinPerUnit: 50 },
+  { id: "craft_cobblepath", category: "craft", item: "cobblepath", label: "Lay {n} cobble paths",
+    targetMin: 1, targetMax: 3, coinBase: 60, coinPerUnit: 30 },
 ];
