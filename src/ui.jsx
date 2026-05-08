@@ -42,7 +42,14 @@ export function SidePanel({ state, dispatch, chainInfo }) {
     <div className="bg-gradient-to-b from-[#7c4f2c] to-[#6b4225] border-[3px] border-[#e2c19b] rounded-2xl p-3 flex flex-col gap-3 overflow-hidden h-full min-h-0">
       {chainInfo && (
         <div className="bg-[#2b2218]/90 border border-[#ffd248] rounded-xl px-3 py-2 text-[#ffd248] font-bold text-[13px] text-center flex-shrink-0">
-          chain × {chainInfo.count}{chainInfo.upgrades > 0 ? `  +${chainInfo.upgrades}★` : ""}
+          <div>
+            chain × {chainInfo.count}{chainInfo.upgrades > 0 ? `  +${chainInfo.upgrades}★` : ""}
+          </div>
+          {chainInfo.nextTileProgress && chainInfo.nextTileProgress.threshold > 0 && (
+            <div className="text-[11px] text-[#f8e7c6] font-normal mt-0.5">
+              {chainInfo.nextTileProgress.current}/{chainInfo.nextTileProgress.threshold} {chainInfo.nextTileProgress.targetLabel}
+            </div>
+          )}
         </div>
       )}
       <Section title="Tools" titleColor="#f8e7c6">

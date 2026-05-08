@@ -71,6 +71,71 @@ export function expandZoneCategories(zoneCats) {
   return out;
 }
 
+// Reverse of ZONE_TO_TILE_CATEGORIES: given a tile-collection category
+// (e.g. "wood" or "bird"), return the zone-level category it belongs to.
+// Many-to-one for the cases we splice (wood + trees both -> "trees"), but
+// one-to-one for everything else.
+export const TILE_CATEGORY_TO_ZONE_CATEGORY = Object.freeze(
+  Object.entries(ZONE_TO_TILE_CATEGORIES).reduce((acc, [zoneCat, tileCats]) => {
+    for (const t of tileCats) acc[t] = zoneCat;
+    return acc;
+  }, {}),
+);
+
+/**
+ * Per-zone chain-upgrade redirect.
+ *
+ * Given the current chain's source resource, look up the active zone's
+ * `upgradeMap` to find the upgrade-target zone-category and resolve it to a
+ * concrete resource on the supplied biome. Returns `null` when the zone has
+ * no override, the target is the special "gold" sentinel (board-only tile,
+ * not modeled yet), or no matching resource exists on the biome.
+ *
+ * Callers should fall back to the resource's native `.next` chain when this
+ * helper returns `null` so the existing engine behaviour stays intact for
+ * resources/categories the zones config doesn't redirect.
+ */
+export function nextResourceForZone({
+  currentRes,
+  zoneId,
+  biomeResources,
+  tileCollectionActive,
+  categoryOf,
+}) {
+  if (!currentRes || !zoneId) return null;
+  const zone = ZONES[zoneId];
+  if (!zone || !zone.upgradeMap) return null;
+
+  const sourceTileCat = categoryOf?.[currentRes.key];
+  if (!sourceTileCat) return null;
+
+  const sourceZoneCat = TILE_CATEGORY_TO_ZONE_CATEGORY[sourceTileCat];
+  if (!sourceZoneCat) return null;
+
+  const targetZoneCat = zone.upgradeMap[sourceZoneCat];
+  if (!targetZoneCat || targetZoneCat === ZONE_UPGRADE_TARGET_GOLD) return null;
+
+  const targetTileCats = ZONE_TO_TILE_CATEGORIES[targetZoneCat] ?? [];
+
+  // Prefer the player's active species for the target category if any.
+  if (tileCollectionActive) {
+    for (const tc of targetTileCats) {
+      const activeKey = tileCollectionActive[tc];
+      if (!activeKey) continue;
+      const r = biomeResources?.find((res) => res.key === activeKey);
+      if (r) return r;
+    }
+  }
+
+  // Otherwise fall back to the first biome resource whose category matches.
+  for (const r of biomeResources ?? []) {
+    const cat = categoryOf?.[r.key];
+    if (cat && targetTileCats.includes(cat)) return r;
+  }
+
+  return null;
+}
+
 const FARM_ENTRY_COST = Object.freeze({ coins: 50 });
 
 // Helper: empty four-season drop table — each category -> 0 for all seasons.
