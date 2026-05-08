@@ -34,9 +34,10 @@ import * as decorations from "./features/decorations/slice.js";
 import * as portal from "./features/portal/slice.js";
 import * as market from "./features/market/slice.js";
 import * as castle from "./features/castle/slice.js";
+import * as zones from "./features/zones/slice.js";
 import { FIRE_HAZARD_ENABLED } from "./featureFlags.js";
 
-const slices = [crafting, quests, achievements, tutorial, settings, boss, cartography, apprentices, mood, storySlice, decorations, portal, market, castle, fish];
+const slices = [crafting, quests, achievements, tutorial, settings, boss, cartography, apprentices, mood, storySlice, decorations, portal, market, castle, fish, zones];
 
 // Season name lookup, indexed by `state.seasonsCycled % 4`. Was duplicated
 // inline in four places before.
@@ -385,6 +386,7 @@ export function createFreshState(overrides) {
     ...mood.initial,
     ...castle.initial,
     ...fish.initial,
+    ...zones.initial,
     // Phase 12.5 — saved-field slots for Silo/Barn
     farm: { savedField: null },
     mine: { savedField: null },
@@ -1811,6 +1813,9 @@ const SLICE_PRIMARY_ACTIONS = new Set([
   "BOSS/CLOSE",
   // Cartography actions are owned by cartography/slice
   "CARTO/TRAVEL",
+  // Zones actions are owned by zones/slice
+  "ZONE/SELECT",
+  "ZONE/UNLOCK",
   // Story modal dismiss is owned by story/slice
   "STORY/DISMISS_MODAL",
   // Settings actions are owned by settings/slice
