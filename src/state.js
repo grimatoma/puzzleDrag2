@@ -35,10 +35,11 @@ import * as portal from "./features/portal/slice.js";
 import * as market from "./features/market/slice.js";
 import * as castle from "./features/castle/slice.js";
 import * as zones from "./features/zones/slice.js";
+import * as workers from "./features/workers/slice.js";
 import { ZONES } from "./features/zones/data.js";
 import { FIRE_HAZARD_ENABLED } from "./featureFlags.js";
 
-const slices = [crafting, quests, achievements, tutorial, settings, boss, cartography, apprentices, mood, storySlice, decorations, portal, market, castle, fish, zones];
+const slices = [crafting, quests, achievements, tutorial, settings, boss, cartography, apprentices, mood, storySlice, decorations, portal, market, castle, fish, zones, workers];
 
 // Season name lookup, indexed by `state.seasonsCycled % 4`. Was duplicated
 // inline in four places before.
@@ -369,6 +370,11 @@ export function createFreshState(overrides) {
     farmFertilizer: 0,
     dailyStreak: { lastClaimedDate: null, currentDay: 0 },
     townsfolk: { hired: { hilda: 0, pip: 0, wila: 0, tuck: 0, osric: 0, dren: 0 }, debt: 0, pool: 1 },
+    // Phase 5b — type-tier workers (anonymous, stackable). Distinct from
+    // townsfolk (named individuals). Hired count is capped at each
+    // worker's maxCount; per-hire effects accumulate via the apprentices
+    // aggregator's TYPE_WORKERS pass.
+    workers: { hired: { farmer: 0, lumberjack: 0, miner: 0, baker: 0 } },
     tileCollection: defaultTileCollectionSlice(),
     almanac: {
       xp: 0,
@@ -1833,6 +1839,7 @@ function coreReducer(state, action) {
             giftCooldown: { wren: 0, mira: 0, tomas: 0, bram: 0, liss: 0 },
           },
           townsfolk: { hired: { hilda: 0, pip: 0, wila: 0, tuck: 0, osric: 0, dren: 0 }, debt: 0, pool: 1 },
+          workers: { hired: { farmer: 0, lumberjack: 0, miner: 0, baker: 0 } },
           tileCollection: defaultTileCollectionSlice() };
       }
       return state;
@@ -1848,6 +1855,9 @@ function coreReducer(state, action) {
 const SLICE_PRIMARY_ACTIONS = new Set([
   "APP/HIRE",
   "APP/FIRE",
+  // Phase 5b — type-tier workers slice
+  "WORKERS/HIRE",
+  "WORKERS/FIRE",
   "BUILD_DECORATION",
   "SUMMON_MAGIC_TOOL",
   "MARKET/SELL",
