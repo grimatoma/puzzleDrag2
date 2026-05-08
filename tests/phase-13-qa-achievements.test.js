@@ -5,8 +5,8 @@ import { describe, it, expect } from "vitest";
 import { ACHIEVEMENTS } from "../src/features/achievements/data.js";
 
 describe("Fix 7 — canonical ACHIEVEMENTS list shape", () => {
-  it("has exactly 12 entries", () => {
-    expect(ACHIEVEMENTS.length).toBe(12);
+  it("has at least 12 entries (fish-biome PR added 3 more)", () => {
+    expect(ACHIEVEMENTS.length).toBeGreaterThanOrEqual(12);
   });
 
   it("every achievement has id, name, desc, counter, threshold", () => {
@@ -36,11 +36,13 @@ describe("Fix 7 — canonical ACHIEVEMENTS list shape", () => {
     expect(a.desc.length).toBeGreaterThan(0);
   });
 
-  it("all counters are one of the 7 known counter keys", () => {
+  it("all counters are one of the known counter keys", () => {
     const valid = new Set([
       "chains_committed", "orders_fulfilled", "bosses_defeated",
       "festival_won", "distinct_resources_chained", "distinct_buildings_built",
       "supplies_converted",
+      // Fish biome counter — credits fish_* chain harvests.
+      "fish_chained",
     ]);
     for (const a of ACHIEVEMENTS) {
       expect(valid.has(a.counter), `${a.id} has unknown counter: ${a.counter}`).toBe(true);

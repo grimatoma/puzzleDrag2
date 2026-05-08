@@ -366,6 +366,7 @@ export function createFreshState(overrides) {
         chains_committed: 0, orders_fulfilled: 0, bosses_defeated: 0,
         festival_won: 0, distinct_resources_chained: 0,
         distinct_buildings_built: 0, supplies_converted: 0,
+        fish_chained: 0,
       },
       unlocked: Object.fromEntries(ACHIEVEMENT_LIST.map((a) => [a.id, false])),
       seenResources: {},

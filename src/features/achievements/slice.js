@@ -54,6 +54,10 @@ export function reduce(state, action) {
       // Tick canonical achievement counters
       next = tick(next, "chains_committed", 1);
       next = tick(next, "distinct_resources_chained", 1, actualKey);
+      // Fish-biome milestones — credit every fish_* chain by its tile count.
+      if (typeof actualKey === "string" && actualKey.startsWith("fish_") && actualGained > 0) {
+        next = tick(next, "fish_chained", actualGained);
+      }
 
       return next;
     }
