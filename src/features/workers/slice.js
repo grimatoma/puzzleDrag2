@@ -3,7 +3,7 @@
 // Handles WORKERS/HIRE and WORKERS/FIRE action types. Hire deducts the
 // per-type coin cost and increments the hired count (capped at maxCount).
 // Fire decrements with no refund.
-import { TYPE_WORKER_MAP, defaultWorkersSlice } from "./data.js";
+import { TYPE_WORKER_MAP, defaultWorkersSlice, nextHireCost } from "./data.js";
 
 export const initial = defaultWorkersSlice();
 
@@ -17,7 +17,10 @@ export function reduce(state, action) {
     const cur = hired[id] ?? 0;
     if (cur >= def.maxCount) return state;
 
-    const cost = def.hireCost?.coins ?? 0;
+    // Phase 6 — sequential cost ramp. The N-th hire (0-indexed) is priced
+    // by `nextHireCost`: flat by default, linear when `coinsStep` is set,
+    // geometric when `coinsMult` is set.
+    const cost = nextHireCost(def, cur);
     if ((state.coins ?? 0) < cost) return state;
 
     return {
