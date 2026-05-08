@@ -4,7 +4,13 @@ import { upgradeCountForChain, resourceGainForChain, rollResourceWithWeather } f
 import { computeWorkerEffects } from "./features/apprentices/aggregate.js";
 import { applyFrostCollapseDuration } from "./features/weather/effects.js";
 import { CATEGORY_OF } from "./features/tileCollection/data.js";
-import { expandZoneCategories, nextResourceForZone } from "./features/zones/data.js";
+import {
+  expandZoneCategories,
+  nextResourceForZone,
+  pickByZoneSeasonDrops,
+  seasonNameInSession,
+  ZONES,
+} from "./features/zones/data.js";
 const cssColor = (num) => Phaser.Display.Color.IntegerToColor(num).rgba;
 import { rounded, makeTextures, regenerateTextures } from "./textures.js";
 import { TileObj } from "./TileObj.js";
@@ -482,6 +488,29 @@ export class GameScene extends Phaser.Scene {
     return this.resourceByKey(key) ?? this.biome().resources[0];
   }
 
+  // Phase 3b — sample a tile from the active zone's per-(zone, season) drop
+  // table. Returns null when the zone has no entry, the season's table is
+  // empty, the biome isn't farm, or the picker can't resolve any matching
+  // resource. Callers must fall through to the existing weighted pool when
+  // this returns null.
+  _pickFromZoneSeasonDrops() {
+    if (this.biomeKey() !== "farm") return null;
+    const zoneId = this.registry.get("activeZone") ?? null;
+    if (!zoneId || !ZONES[zoneId]) return null;
+    const turnsUsed = this.registry.get("turnsUsed") ?? 0;
+    // Fall back to the existing seasonsCycled-based season name when no
+    // session is active (e.g. tests that don't dispatch FARM/ENTER).
+    const sessionMax = ZONES[zoneId].startingTurns ?? 16;
+    const seasonName = seasonNameInSession(turnsUsed, sessionMax);
+    return pickByZoneSeasonDrops({
+      zoneId,
+      seasonName,
+      biomeResources: this.biome().resources,
+      tileCollectionActive: this.registry.get("tileCollectionActive") ?? null,
+      categoryOf: CATEGORY_OF,
+    });
+  }
+
   // ─── Grid sync helpers ────────────────────────────────────────────────────
 
   _syncGridToState() {
@@ -598,6 +627,11 @@ export class GameScene extends Phaser.Scene {
               res = this.pendingUpgrades.splice(idx, 1)[0].res;
             }
           }
+          // Phase 3b — try the per-(zone, in-session season) drop table
+          // first. Only active on the farm board, only when the active zone
+          // has data for the current season; otherwise fall through to the
+          // existing weighted pool sampler.
+          if (!res) res = this._pickFromZoneSeasonDrops();
           if (!res) res = this._randomFromPool(workerPool, weatherKey);
           const tile = new TileObj(this, x, initial ? y - 500 - Phaser.Math.Between(0, 100) : y - 140, c, r, res);
           tile.sprite.setScale(this.tileSpriteScale);

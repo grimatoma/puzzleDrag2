@@ -82,6 +82,93 @@ export const TILE_CATEGORY_TO_ZONE_CATEGORY = Object.freeze(
   }, {}),
 );
 
+// Names indexed by `seasonIndexInSession` — match `SEASONS` in src/constants.js.
+const SESSION_SEASON_NAMES = Object.freeze(["Spring", "Summer", "Autumn", "Winter"]);
+
+/**
+ * Phase 3b — split a session's `sessionMaxTurns` evenly across the four
+ * seasons and return the season index for the supplied `turnsUsed`. Each
+ * season covers `floor(i+1) * S / 4` - `floor(i * S / 4)` turns; for S=16
+ * that is 4/4/4/4, for S=10 that is 2/3/2/3. Returns 0..3.
+ */
+export function seasonIndexInSession(turnsUsed, sessionMaxTurns) {
+  const t = Math.max(0, Math.min(turnsUsed | 0, (sessionMaxTurns | 0) - 1));
+  const S = Math.max(1, sessionMaxTurns | 0);
+  for (let i = 0; i < 4; i++) {
+    const end = Math.floor(((i + 1) * S) / 4);
+    if (t < end) return i;
+  }
+  return 3;
+}
+
+/**
+ * Convenience: name (Spring/Summer/Autumn/Winter) for the current session
+ * turn. Useful for keying into a zone's seasonDrops table.
+ */
+export function seasonNameInSession(turnsUsed, sessionMaxTurns) {
+  return SESSION_SEASON_NAMES[seasonIndexInSession(turnsUsed, sessionMaxTurns)];
+}
+
+/**
+ * Phase 3b — sample a tile from the active zone's per-(zone, season) drop
+ * table. Returns null when the zone has no entry, the season's table is
+ * empty, or no resource matches the rolled category — in those cases the
+ * caller should fall back to the existing weighted pool.
+ *
+ * The picker is biome-agnostic and pure: callers pass the biome's resource
+ * list, the player's active species map, and a 0..1 random source so tests
+ * can stub it deterministically.
+ */
+export function pickByZoneSeasonDrops({
+  zoneId,
+  seasonName,
+  biomeResources,
+  tileCollectionActive,
+  categoryOf,
+  rng,
+}) {
+  if (!zoneId) return null;
+  const zone = ZONES[zoneId];
+  if (!zone || !zone.seasonDrops) return null;
+  const drops = zone.seasonDrops[seasonName];
+  if (!drops) return null;
+
+  const total = Object.values(drops).reduce((a, b) => a + (b > 0 ? b : 0), 0);
+  if (total <= 0) return null;
+
+  const r = (typeof rng === "function" ? rng() : Math.random()) * total;
+  let acc = 0;
+  let chosenZoneCat = null;
+  for (const [zoneCat, pct] of Object.entries(drops)) {
+    if (pct <= 0) continue;
+    acc += pct;
+    if (r <= acc) {
+      chosenZoneCat = zoneCat;
+      break;
+    }
+  }
+  if (!chosenZoneCat) return null;
+
+  const tileCats = ZONE_TO_TILE_CATEGORIES[chosenZoneCat] ?? [];
+
+  // Prefer the player's active species when set.
+  if (tileCollectionActive) {
+    for (const tc of tileCats) {
+      const activeKey = tileCollectionActive[tc];
+      if (!activeKey) continue;
+      const r2 = biomeResources?.find((res) => res.key === activeKey);
+      if (r2) return r2;
+    }
+  }
+
+  // Otherwise fall back to the first biome resource whose category matches.
+  for (const r2 of biomeResources ?? []) {
+    const cat = categoryOf?.[r2.key];
+    if (cat && tileCats.includes(cat)) return r2;
+  }
+  return null;
+}
+
 /**
  * Per-zone chain-upgrade redirect.
  *
@@ -147,6 +234,46 @@ const emptySeasonDrops = () => ({
   Winter: {},
 });
 
+// Phase 3b — example zone-1 drops illustrating the user-facing mechanic
+// ("trees 20% in Spring, 70% in Winter"). All values are percentages on
+// [0, 1] that sum to 1 within each season. Other zones keep an empty
+// table for now (the sampler falls through to the existing pool when a
+// season has no data).
+const ZONE_1_SEASON_DROPS = {
+  Spring: {
+    grass: 0.20,
+    grain: 0.15,
+    trees: 0.20,
+    birds: 0.05,
+    vegetables: 0.10,
+    fruits: 0.30,
+  },
+  Summer: {
+    grass: 0.10,
+    grain: 0.30,
+    trees: 0.10,
+    birds: 0.15,
+    vegetables: 0.20,
+    fruits: 0.15,
+  },
+  Autumn: {
+    grass: 0.10,
+    grain: 0.15,
+    trees: 0.40,
+    birds: 0.15,
+    vegetables: 0.15,
+    fruits: 0.05,
+  },
+  Winter: {
+    grass: 0.05,
+    grain: 0.05,
+    trees: 0.70,
+    birds: 0.10,
+    vegetables: 0.05,
+    fruits: 0.05,
+  },
+};
+
 export const ZONES = Object.freeze({
   zone1: {
     id: "zone1",
@@ -165,7 +292,7 @@ export const ZONES = Object.freeze({
       fruits: ZONE_UPGRADE_TARGET_GOLD,
     },
     dangers: [],
-    seasonDrops: emptySeasonDrops(),
+    seasonDrops: ZONE_1_SEASON_DROPS,
   },
   zone2: {
     id: "zone2",
