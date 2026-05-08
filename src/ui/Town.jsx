@@ -2,6 +2,7 @@ import { useState, useRef } from "react";
 import { BIOMES, BUILDINGS } from "../constants.js";
 import { useTooltip, Tooltip } from "./Tooltip.jsx";
 import { MAP_NODES } from "../features/cartography/data.js";
+import StartFarmingModal from "../features/zones/StartFarmingModal.jsx";
 import IconCanvas from "./IconCanvas.jsx";
 
 function BiomeEntryModal({ biomeKey, level, onEnter, onClose }) {
@@ -1269,7 +1270,15 @@ export function TownView({ state, dispatch }) {
         </div>
       </div>
 
-      {entryBiome && (
+      {entryBiome === "farm" && (
+        <StartFarmingModal
+          state={state}
+          dispatch={dispatch}
+          onClose={() => setEntryBiome(null)}
+        />
+      )}
+
+      {entryBiome && entryBiome !== "farm" && (
         <BiomeEntryModal
           biomeKey={entryBiome}
           level={state.level}

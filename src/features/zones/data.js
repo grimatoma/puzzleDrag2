@@ -34,6 +34,43 @@ export const ZONE_CATEGORIES = Object.freeze([
 
 export const ZONE_UPGRADE_TARGET_GOLD = "gold";
 
+// Translation from the abstract zone-category names (used in the rules table)
+// to the concrete `category` values that exist on items in
+// `src/features/tileCollection/data.js`. The mapping is one-to-many because
+// our internal model splits some user-level categories — e.g. "trees" covers
+// both the tile-collection `trees` species and the legacy `wood` chain. Note
+// that tileCollection uses `bird` (singular) where the rules table uses
+// `birds` (plural).
+//
+// Phase 2 uses this to filter the spawn pool by the player's selected tiles
+// in the Start Farming modal.
+export const ZONE_TO_TILE_CATEGORIES = Object.freeze({
+  grass: ["grass"],
+  grain: ["grain"],
+  trees: ["trees", "wood"],
+  birds: ["bird"],
+  vegetables: ["vegetables"],
+  fruits: ["fruits"],
+  flowers: ["flowers"],
+  herd_animals: ["herd_animals"],
+  cattle: ["cattle"],
+  mounts: ["mounts"],
+});
+
+/**
+ * Expand a list of zone-category names (e.g. ["birds", "trees"]) into the
+ * concrete tile-collection category set used by the spawn pool filter.
+ */
+export function expandZoneCategories(zoneCats) {
+  const out = new Set();
+  for (const c of zoneCats ?? []) {
+    const targets = ZONE_TO_TILE_CATEGORIES[c];
+    if (!targets) continue;
+    for (const t of targets) out.add(t);
+  }
+  return out;
+}
+
 const FARM_ENTRY_COST = Object.freeze({ coins: 50 });
 
 // Helper: empty four-season drop table — each category -> 0 for all seasons.

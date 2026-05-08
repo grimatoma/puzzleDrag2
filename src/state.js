@@ -35,6 +35,7 @@ import * as portal from "./features/portal/slice.js";
 import * as market from "./features/market/slice.js";
 import * as castle from "./features/castle/slice.js";
 import * as zones from "./features/zones/slice.js";
+import { ZONES } from "./features/zones/data.js";
 import { FIRE_HAZARD_ENABLED } from "./featureFlags.js";
 
 const slices = [crafting, quests, achievements, tutorial, settings, boss, cartography, apprentices, mood, storySlice, decorations, portal, market, castle, fish, zones];
@@ -356,6 +357,16 @@ export function createFreshState(overrides) {
     runeStash: 0,
     shovel: 0,
     sessionMaxTurns: MAX_TURNS,
+    // Phase 2 — Start Farming session config. `selectedTiles` is the up-to-8
+    // categories the player chose to expose on the board this session;
+    // `fertilizerUsed` records whether the session was started with the
+    // turn-doubling fertilizer applied. Both reset on FARM/ENTER.
+    session: { selectedTiles: [], fertilizerUsed: false },
+    // Player-owned stock of farm fertilizer consumables. Distinct from the
+    // workshop `tools.fertilizer` (spawn-injection passive) and from the
+    // portal `tools.magic_fertilizer`. Spent inside FARM/ENTER when the
+    // player toggles the fertilizer option in the Start Farming modal.
+    farmFertilizer: 0,
     dailyStreak: { lastClaimedDate: null, currentDay: 0 },
     workers: { hired: { hilda: 0, pip: 0, wila: 0, tuck: 0, osric: 0, dren: 0 }, debt: 0, pool: 1 },
     tileCollection: defaultTileCollectionSlice(),
@@ -1265,6 +1276,49 @@ function coreReducer(state, action) {
         return { ...state, biome: "mine", biomeKey: "mine", runes: state.runes - 2 };
       }
       return state;
+    }
+
+    case "FARM/ENTER": {
+      // Phase 2 — pay-to-start farming session.
+      // Payload: { selectedTiles: string[], useFertilizer: boolean }
+      // - selectedTiles: zone categories the player chose (1 per type, max 8).
+      //   Filtered by GameScene to bias spawn rotation. Empty array is allowed
+      //   and behaves as "no filter" (legacy entry path).
+      // - useFertilizer: when true, decrement farmFertilizer and double the
+      //   session's turn budget.
+      const payload = action.payload ?? {};
+      const selectedTiles = Array.isArray(payload.selectedTiles)
+        ? payload.selectedTiles.slice(0, 8)
+        : [];
+      const useFertilizer = !!payload.useFertilizer;
+
+      const zoneId = state.activeZone ?? "zone1";
+      const zone = ZONES[zoneId];
+      if (!zone) return state;
+
+      const entryCoins = zone.entryCost?.coins ?? 50;
+      if ((state.coins ?? 0) < entryCoins) return state;
+      if (useFertilizer && (state.farmFertilizer ?? 0) < 1) return state;
+
+      const startingTurns = zone.startingTurns ?? MAX_TURNS;
+      const sessionMaxTurns = startingTurns * (useFertilizer ? 2 : 1);
+
+      return {
+        ...state,
+        biomeKey: "farm",
+        biome: "farm",
+        view: "board",
+        coins: state.coins - entryCoins,
+        farmFertilizer: useFertilizer
+          ? (state.farmFertilizer ?? 0) - 1
+          : (state.farmFertilizer ?? 0),
+        turnsUsed: 0,
+        sessionMaxTurns,
+        session: {
+          selectedTiles,
+          fertilizerUsed: useFertilizer,
+        },
+      };
     }
 
     case "MINE/ENTER": {

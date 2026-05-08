@@ -4,6 +4,7 @@ import { upgradeCountForChain, resourceGainForChain, rollResourceWithWeather } f
 import { computeWorkerEffects } from "./features/apprentices/aggregate.js";
 import { applyFrostCollapseDuration } from "./features/weather/effects.js";
 import { CATEGORY_OF } from "./features/tileCollection/data.js";
+import { expandZoneCategories } from "./features/zones/data.js";
 const cssColor = (num) => Phaser.Display.Color.IntegerToColor(num).rgba;
 import { rounded, makeTextures, regenerateTextures } from "./textures.js";
 import { TileObj } from "./TileObj.js";
@@ -519,12 +520,27 @@ export class GameScene extends Phaser.Scene {
     // by the active tile type: a boost for key K only applies when K is the active
     // tile type in its category (matches getActivePool semantics).
     const tileCollectionActive = this.registry.get("tileCollectionActive") ?? null;
-    const workerPool = this.activePool();
+    let workerPool = this.activePool();
     const poolWeights = this.registry.get("effectivePoolWeights") ?? {};
     for (const [k, n] of Object.entries(poolWeights)) {
       const cat = CATEGORY_OF[k];
       if (cat && tileCollectionActive && tileCollectionActive[cat] !== k) continue;
       for (let i = 0; i < Math.round(n); i++) workerPool.push(k);
+    }
+    // Phase 2 — restrict the spawn pool to the categories the player picked
+    // in the Start Farming modal. Empty/missing list = no filter (legacy
+    // entry path through SWITCH_BIOME / cartography). Mine and fish biomes
+    // ignore this filter; it only applies on the farm board.
+    const sessionSelectedTiles = this.registry.get("sessionSelectedTiles") ?? [];
+    if (this.biomeKey() === "farm" && sessionSelectedTiles.length > 0) {
+      const allowedCats = expandZoneCategories(sessionSelectedTiles);
+      const filtered = workerPool.filter((k) => {
+        const cat = CATEGORY_OF[k];
+        return cat ? allowedCats.has(cat) : true;
+      });
+      // Guard against an over-restrictive selection that would leave no
+      // tiles to spawn — fall back to the unfiltered pool in that case.
+      if (filtered.length > 0) workerPool = filtered;
     }
     // Boss spawnBias: Quagmire pushes extra log/hay tiles into pool.
     // For each resource key, the bias factor adds (bias-1)*baseCount extra copies.
