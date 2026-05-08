@@ -116,6 +116,7 @@ function statusFor(state, t) {
     }
     if (d.method === "research") return `Discovered — researched ${displayKey(d.researchOf)}`;
     if (d.method === "buy") return "Discovered — purchased";
+    if (d.method === "daily") return `Discovered — Day ${d.day} daily reward`;
   }
 
   // Not yet discovered
@@ -128,6 +129,9 @@ function statusFor(state, t) {
   }
   if (d.method === "buy") {
     return `Buy ${d.coinCost}◉`;
+  }
+  if (d.method === "daily") {
+    return `Locked — Day ${d.day} daily reward`;
   }
   return "Locked";
 }
