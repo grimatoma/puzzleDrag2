@@ -13,6 +13,7 @@
 import { RAT_SPAWN_THRESHOLDS, RAT_CLEAR_REWARD_PER } from "../../constants.js";
 import { RATS_HAZARD_ENABLED } from "../../featureFlags.js";
 import { hasTag } from "../tileCollection/tags.js";
+import { computeWorkerEffects } from "../apprentices/aggregate.js";
 
 const PLANT_KEYS = new Set(["grass_hay", "grain_wheat", "grain", "berry"]);
 
@@ -109,7 +110,14 @@ export function tryClearRatChain(state, chain) {
     (r) => !chain.some((c) => c.row === r.row && c.col === r.col),
   );
 
-  const reward = (cleared.length || chain.length) * RAT_CLEAR_REWARD_PER;
+  const baseReward = (cleared.length || chain.length) * RAT_CLEAR_REWARD_PER;
+  // Ratcatcher worker (or any future hazardCoinMultiplier-on-rats worker)
+  // scales the coin reward. Default multiplier is 1× when no buff.
+  let mult = 1;
+  try {
+    mult = computeWorkerEffects(state).hazardCoinMultiplier?.rats ?? 1;
+  } catch { /* aggregator unavailable — fall back to 1× */ }
+  const reward = Math.round(baseReward * mult);
   return {
     hazards: { ...state.hazards, rats: remaining },
     coins: (state.coins ?? 0) + reward,
