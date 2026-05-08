@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  CATEGORIES,
   TILE_TYPES_MAP,
   SUB_CATEGORIES,
   SUB_CATEGORY_LABELS,
@@ -241,16 +240,16 @@ export default function TileCollectionPanel({ state, dispatch }) {
     () => categoriesForSubCategory(subCategory),
     [subCategory],
   );
-  const [activeTab, setActiveTab] = useState(() => visibleCategories[0] ?? null);
+  const [storedActiveTab, setStoredActiveTab] = useState(() => visibleCategories[0] ?? null);
   const tabBarRef = useRef(null);
 
-  // Keep activeTab valid when sub-category changes.
-  useEffect(() => {
-    if (subCategory === "hazards") return;
-    if (!visibleCategories.includes(activeTab)) {
-      setActiveTab(visibleCategories[0] ?? null);
-    }
-  }, [subCategory, visibleCategories, activeTab]);
+  // Derive the visible tab without mutating state inside an effect: when the
+  // user's last selection isn't valid for the current sub-category, fall back
+  // to the first available tab.
+  const activeTab = visibleCategories.includes(storedActiveTab)
+    ? storedActiveTab
+    : (visibleCategories[0] ?? null);
+  const setActiveTab = setStoredActiveTab;
 
   const rows =
     subCategory !== "hazards" && activeTab
