@@ -1,5 +1,6 @@
 
 import { WORKERS, workerSlotLabel, totalHired, housingCapacity, checkRequirement } from "./data.js";
+import IconCanvas, { hasIcon } from "../../ui/IconCanvas.jsx";
 
 export const modalKey = "apprentices";
 
@@ -108,18 +109,54 @@ function WorkerRow({ worker, state, dispatch }) {
     }
   } else if (!reqMet) hireTooltip = "Requirements not met";
 
+  const portraitKey = `char_${worker.id}`;
+  const hasPortrait = hasIcon(portraitKey);
   return (
     <div style={{
-      background: "#fff8e8",
-      border: hiredCount > 0 ? "2px solid #c5a87a" : "2px solid #ddd",
+      background: hiredCount > 0 ? "#fff8e8" : "#faf3e0",
+      border: hiredCount > 0 ? `2px solid ${worker.color || "#c5a87a"}` : "2px solid #ddd",
       borderRadius: 12,
       padding: "8px 10px",
       display: "flex",
-      flexDirection: "column",
-      gap: 3,
+      gap: 10,
       fontFamily: "Arial, sans-serif",
       opacity: !reqMet ? 0.6 : 1,
+      boxShadow: hiredCount > 0 ? `0 1px 4px ${worker.color}33` : "none",
     }}>
+      {/* Portrait column */}
+      {hasPortrait ? (
+        <div style={{
+          flexShrink: 0,
+          width: 56,
+          height: 56,
+          borderRadius: "50%",
+          border: `2px solid ${worker.color || "#c5a87a"}`,
+          background: "#fff",
+          overflow: "hidden",
+          alignSelf: "flex-start",
+          boxShadow: "0 2px 4px rgba(0,0,0,0.12)",
+        }}>
+          <IconCanvas iconKey={portraitKey} size={56} />
+        </div>
+      ) : (
+        <div style={{
+          flexShrink: 0,
+          width: 56,
+          height: 56,
+          borderRadius: "50%",
+          background: worker.color || "#c5a87a",
+          display: "grid",
+          placeItems: "center",
+          color: "#fff",
+          fontSize: 24,
+          fontWeight: 700,
+          border: "2px solid rgba(255,255,255,0.5)",
+        }}>
+          {worker.icon || worker.name[0]}
+        </div>
+      )}
+      {/* Info column */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 3, flex: 1, minWidth: 0 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
         <span style={{ fontSize: 13, fontWeight: 700, color: "#3a2715" }}>{worker.name}</span>
         <span style={{ fontSize: 10, fontWeight: 700, color: "#7a6050", background: "#ede4d0",
@@ -178,6 +215,7 @@ function WorkerRow({ worker, state, dispatch }) {
           </button>
         )}
       </div>
+      </div>
     </div>
   );
 }
@@ -211,6 +249,26 @@ export function ApprenticesPanel({ state, dispatch, showHeader = true, onClose =
           background: "#d4edda", borderRadius: 8, padding: "2px 8px" }}>
           Workers: {pool}
         </span>
+        {(() => {
+          const totalWage = WORKERS.reduce(
+            (sum, w) => sum + (state.workers?.hired?.[w.id] ?? 0) * (w.wage || 0),
+            0,
+          );
+          const totalH = totalHired(state);
+          if (totalH === 0) return null;
+          return (
+            <>
+              <span style={{ fontSize: 12, fontWeight: 700, color: "#7a4a18",
+                background: "#fce8d4", borderRadius: 8, padding: "2px 8px" }}>
+                Hired: {totalH}/{cap}
+              </span>
+              <span style={{ fontSize: 12, fontWeight: 700, color: "#a85050",
+                background: "#fce4cc", borderRadius: 8, padding: "2px 8px" }}>
+                Wages: {totalWage}◉/season
+              </span>
+            </>
+          );
+        })()}
         {debtOwed > 0 && (
           <span style={{ fontSize: 11, fontWeight: 700, color: "#8b0000",
             background: "#f8d7da", borderRadius: 8, padding: "2px 8px",

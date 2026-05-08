@@ -20,6 +20,8 @@ import { ICONS as G_TOOLS_PORTAL } from "./categories/toolsPortal.js";
 import { ICONS as G_TOOLS_SEA } from "./categories/toolsSea.js";
 import { ICONS as EXISTING_FARM } from "./categories/existingFarm.js";
 import { ICONS as EXISTING_MINE } from "./categories/existingMine.js";
+import { ICONS as G_CRAFTED } from "./categories/craftedProducts.js";
+import { ICONS as G_CHARACTERS } from "./categories/characters.js";
 
 export const ICON_REGISTRY = Object.freeze({
   ...G_GRASS,
@@ -38,6 +40,8 @@ export const ICON_REGISTRY = Object.freeze({
   ...G_TOOLS_SEA,
   ...EXISTING_FARM,
   ...EXISTING_MINE,
+  ...G_CRAFTED,
+  ...G_CHARACTERS,
 });
 
 export const ICON_KEYS = new Set(Object.keys(ICON_REGISTRY));
