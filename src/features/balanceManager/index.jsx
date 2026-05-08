@@ -19,6 +19,8 @@ const RecipesTab   = lazy(() => import("./tabs/RecipesTab.jsx"));
 const BuildingsTab = lazy(() => import("./tabs/BuildingsTab.jsx"));
 const PowersTab    = lazy(() => import("./tabs/PowersTab.jsx"));
 const UnlocksTab   = lazy(() => import("./tabs/UnlocksTab.jsx"));
+const ZonesTab     = lazy(() => import("./tabs/ZonesTab.jsx"));
+const WorkersTab   = lazy(() => import("./tabs/WorkersTab.jsx"));
 const ExportTab    = lazy(() => import("./tabs/ExportTab.jsx"));
 
 export const modalKey = "balanceManager";
@@ -36,6 +38,10 @@ const TABS = [
     blurb: "Attach predefined power hooks (free moves, coin bonuses, spawn boosts…) to any tile type." },
   { id: "unlocks",   label: "Unlock Hooks",   icon: "🔓", Component: UnlocksTab,
     blurb: "How each tile is discovered: default, chain length, research grind, or coin purchase." },
+  { id: "zones",     label: "Zones",          icon: "🗺", Component: ZonesTab,
+    blurb: "Per-zone settings: starting turns, entry cost, the chain-upgrade redirect map, and the per-(zone, season) tile drop percentages." },
+  { id: "workers",   label: "Workers",        icon: "🛠", Component: WorkersTab,
+    blurb: "Type-tier worker hire costs (flat / linear / geometric ramp), max count, and effect parameters." },
   { id: "export",    label: "Export · Import",icon: "📤", Component: ExportTab,
     blurb: "Save your draft, download as JSON to commit, or paste a config to import." },
 ];
@@ -50,6 +56,10 @@ function emptyDraft() {
     tilePowers: {},
     tileUnlocks: {},
     tileDescriptions: {},
+    // Phase 6 — Zones tab patches per-zone fields.
+    zones: {},
+    // Phase 6 — Workers tab patches per-id TYPE_WORKERS entries.
+    workers: {},
   };
 }
 

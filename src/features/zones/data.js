@@ -414,3 +414,11 @@ export function zoneCategories(zoneId) {
   if (!z) return [];
   return Object.keys(z.upgradeMap).slice(0, 8);
 }
+
+// Phase 6 — Balance Manager hook. Apply any committed/draft overrides from
+// `src/config/balance.json` + the localStorage draft to the live ZONES table
+// at module load time. Imports are hoisted so the apply call runs after the
+// table is initialised.
+import { BALANCE_OVERRIDES } from "../../constants.js";
+import { applyZoneOverrides } from "../../config/applyOverrides.js";
+applyZoneOverrides(ZONES, BALANCE_OVERRIDES.zones);

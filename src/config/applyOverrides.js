@@ -175,6 +175,108 @@ export function applyTileOverrides(tileTypes, overrides) {
   }
 }
 
+/**
+ * Apply patches to ZONES entries (Phase 6, Balance Manager Zones tab).
+ * Allowed fields per zone: startingTurns, entryCost.coins, upgradeMap,
+ * seasonDrops. Each is whitelisted so unrelated keys can't bleed in.
+ *
+ * `upgradeMap` is replaced wholesale (rather than merged) so the designer
+ * can clear an entry by leaving it absent. `seasonDrops` is merged
+ * per-season so a partial patch only clobbers the named seasons.
+ */
+export function applyZoneOverrides(zones, overrides) {
+  if (!overrides || typeof overrides !== "object") return;
+  for (const [zoneId, patch] of Object.entries(overrides)) {
+    const zone = zones[zoneId];
+    if (!zone || !patch || typeof patch !== "object") continue;
+
+    if (Number.isFinite(patch.startingTurns) && patch.startingTurns >= 1) {
+      zone.startingTurns = Math.floor(patch.startingTurns);
+    }
+    if (patch.entryCost && typeof patch.entryCost === "object") {
+      const coins = Number(patch.entryCost.coins);
+      if (Number.isFinite(coins) && coins >= 0) {
+        zone.entryCost = { ...(zone.entryCost ?? {}), coins: Math.floor(coins) };
+      }
+    }
+    if (patch.upgradeMap && typeof patch.upgradeMap === "object") {
+      const cleaned = {};
+      for (const [src, target] of Object.entries(patch.upgradeMap)) {
+        if (typeof target === "string" && target.length > 0) cleaned[src] = target;
+      }
+      zone.upgradeMap = cleaned;
+    }
+    if (patch.seasonDrops && typeof patch.seasonDrops === "object") {
+      const out = { ...(zone.seasonDrops ?? {}) };
+      for (const [seasonName, table] of Object.entries(patch.seasonDrops)) {
+        if (!table || typeof table !== "object") continue;
+        const cleaned = {};
+        for (const [cat, pct] of Object.entries(table)) {
+          const n = Number(pct);
+          if (Number.isFinite(n) && n >= 0) cleaned[cat] = n;
+        }
+        out[seasonName] = cleaned;
+      }
+      zone.seasonDrops = out;
+    }
+  }
+}
+
+/**
+ * Apply patches to TYPE_WORKERS entries (Phase 6, Balance Manager Workers
+ * tab), keyed by id. Whitelisted fields:
+ *
+ *   hireCost.coins, hireCost.coinsStep, hireCost.coinsMult — see
+ *     `nextHireCost` in src/features/workers/data.js
+ *   maxCount   — clamps the slider in WorkersPanel
+ *   effect     — replaced wholesale; supports any of the apprentices
+ *                aggregator's effect types
+ *
+ * Mutates the supplied workers array in place.
+ */
+export function applyWorkerOverrides(workers, overrides) {
+  if (!Array.isArray(workers) || !overrides || typeof overrides !== "object") return;
+  for (const w of workers) {
+    const patch = overrides[w.id];
+    if (!patch) continue;
+    if (patch.hireCost && typeof patch.hireCost === "object") {
+      const next = { ...(w.hireCost ?? {}) };
+
+      // Explicit-null sentinel removes a ramp field entirely. Null must be
+      // checked before any Number() coercion (Number(null) === 0).
+      if (Object.prototype.hasOwnProperty.call(patch.hireCost, "coinsStep")
+          && patch.hireCost.coinsStep === null) {
+        delete next.coinsStep;
+      } else if (patch.hireCost.coinsStep != null) {
+        const step = Number(patch.hireCost.coinsStep);
+        if (Number.isFinite(step) && step >= 0) next.coinsStep = step;
+      }
+
+      if (Object.prototype.hasOwnProperty.call(patch.hireCost, "coinsMult")
+          && patch.hireCost.coinsMult === null) {
+        delete next.coinsMult;
+      } else if (patch.hireCost.coinsMult != null) {
+        const mult = Number(patch.hireCost.coinsMult);
+        if (Number.isFinite(mult) && mult > 0) next.coinsMult = mult;
+      }
+
+      if (patch.hireCost.coins != null) {
+        const coins = Number(patch.hireCost.coins);
+        if (Number.isFinite(coins) && coins >= 0) next.coins = Math.floor(coins);
+      }
+
+      w.hireCost = next;
+    }
+    if (Number.isFinite(patch.maxCount) && patch.maxCount >= 1) {
+      w.maxCount = Math.floor(patch.maxCount);
+    }
+    if (patch.effect && typeof patch.effect === "object") {
+      // Replace wholesale — designers may switch effect types.
+      w.effect = { ...patch.effect };
+    }
+  }
+}
+
 const HOOK_DERIVED_FIELDS = new Set([
   "freeMoves", "freeMovesIfChain", "coinBonusFlat", "coinBonusPerTile",
   "thresholdReduce", "hooks",
