@@ -9,6 +9,7 @@ import { currentCap } from "./utils.js";
 import { WORKER_MAP } from "./features/apprentices/data.js";
 import { computeWorkerEffects } from "./features/apprentices/aggregate.js";
 import { TILE_TYPES, CATEGORIES, TILE_TYPES_MAP, CATEGORY_OF } from "./features/tileCollection/data.js";
+import { yieldMultiplierFor } from "./features/tileCollection/yieldMultipliers.js";
 import { rollQuests } from "./features/quests/data.js";
 import { ACHIEVEMENTS as ACHIEVEMENT_LIST } from "./features/achievements/data.js";
 import { awardXp } from "./features/almanac/data.js";
@@ -615,7 +616,14 @@ function coreReducer(state, action) {
       addCappedResourceMut(inventory, chainCf, chainFloaters, key, effectiveGained, chainCap);
 
       // Autumn: multiply upgrades
-      const effectiveUpgrades = currentSeason === 2 ? upgrades * SEASON_EFFECTS.Autumn.upgradeMult : upgrades;
+      let effectiveUpgrades = currentSeason === 2 ? upgrades * SEASON_EFFECTS.Autumn.upgradeMult : upgrades;
+      // Catalog §7 yield multiplier — Jackfruit → 2× pie, Triceratops → 2× milk.
+      // Applies only when the chain key has an entry AND the upgrade target
+      // (res.next) matches the entry's productKey (sanity-guard).
+      const yieldMult = yieldMultiplierFor(key);
+      if (yieldMult && res?.next === yieldMult.productKey && effectiveUpgrades > 0) {
+        effectiveUpgrades = effectiveUpgrades * yieldMult.multiplier;
+      }
       if (res?.next && effectiveUpgrades > 0) {
         addCappedResourceMut(inventory, chainCf, chainFloaters, res.next, effectiveUpgrades, chainCap);
       }
