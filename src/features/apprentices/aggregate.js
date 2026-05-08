@@ -15,6 +15,7 @@
  */
 
 import { WORKERS } from "./data.js";
+import { TYPE_WORKERS } from "../workers/data.js";
 import { TILE_TYPES_BY_CATEGORY as SPECIES_BY_CATEGORY } from "../tileCollection/data.js";
 
 /**
@@ -57,11 +58,22 @@ export function computeWorkerEffects(state) {
 
   const hired = state?.townsfolk?.hired ?? {};
   const debt = state?.townsfolk?.debt ?? 0;
-  if (debt > 0) return out; // LOCKED: debt pauses all worker effects
+  // Townsfolk are debt-paused; type-tier workers (Phase 5b) are not, so the
+  // worker loop below runs even when townsfolk wages are owed.
+  const townsfolkActive = !(debt > 0);
 
-  for (const w of WORKERS) {
-    const raw = hired[w.id] ?? 0;
-    const count = Math.max(0, Math.min(raw | 0, w.maxCount));
+  // Phase 5b — also iterate the new type-tier workers (state.workers.hired)
+  // against the TYPE_WORKERS array. Their effect schema is identical to the
+  // legacy type-dispatch so they accumulate on the same channels.
+  const typeHired = state?.workers?.hired ?? {};
+  const ALL = [];
+  if (townsfolkActive) {
+    for (const w of WORKERS) ALL.push({ def: w, count: hired[w.id] ?? 0 });
+  }
+  for (const w of TYPE_WORKERS) ALL.push({ def: w, count: typeHired[w.id] ?? 0 });
+
+  for (const { def: w, count: rawCount } of ALL) {
+    const count = Math.max(0, Math.min(rawCount | 0, w.maxCount));
     if (count === 0) continue;
 
     const e = w.effect;

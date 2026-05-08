@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { MoodPanel } from "../mood/index.jsx";
 import { ApprenticesPanel } from "../apprentices/index.jsx";
+import { WorkersPanel } from "../workers/index.jsx";
 import { CompactOrders } from "../../ui/Inventory.jsx";
 import BossGallery from "../bosses/Gallery.jsx";
 
@@ -21,6 +22,7 @@ export default function TownsfolkScreen({ state, dispatch }) {
         {[
           { key: "mood", label: "💞 Mood" },
           { key: "apprentices", label: "🧑‍🌾 Townsfolk" },
+          { key: "workers", label: "🛠 Workers" },
           { key: "bosses", label: "👹 Foes" },
           { key: "orders", label: "📋 Orders" },
         ].map((item) => (
@@ -39,6 +41,8 @@ export default function TownsfolkScreen({ state, dispatch }) {
             <MoodPanel state={state} dispatch={dispatch} showHeader={false} />
           ) : tab === "apprentices" ? (
             <ApprenticesPanel state={state} dispatch={dispatch} showHeader={false} />
+          ) : tab === "workers" ? (
+            <WorkersPanel state={state} dispatch={dispatch} />
           ) : tab === "bosses" ? (
             <BossGallery state={state} />
           ) : (
