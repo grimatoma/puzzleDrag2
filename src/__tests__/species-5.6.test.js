@@ -22,7 +22,7 @@ describe("Phase 5.6 — Board pool wiring", () => {
       },
       researchProgress: {},
     },
-    workers: { hired: {}, debt: 0 },
+    townsfolk: { hired: {}, debt: 0 },
     registry: { effectivePoolWeights: weights },
   });
 

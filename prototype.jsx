@@ -130,7 +130,7 @@ function PhaserMount({ dispatch, biomeKey, turnsUsed, seasonsCycled, uiLocked, s
   useEffect(() => { gameRef.current?.registry.set("uiLocked", uiLocked); }, [uiLocked]);
   useEffect(() => { gameRef.current?.registry.set("weather", weather); }, [weather]);
   useEffect(() => { gameRef.current?.registry.set("toolPending", toolPending ?? null); }, [toolPending]);
-  useEffect(() => { gameRef.current?.registry.set("workers", workers ?? null); }, [workers]);
+  useEffect(() => { gameRef.current?.registry.set("townsfolk", workers ?? null); }, [workers]);
   useEffect(() => { gameRef.current?.registry.set("palette", palette ?? "default"); }, [palette]);
   useEffect(() => { gameRef.current?.registry.set("reducedMotion", reducedMotion ?? null); }, [reducedMotion]);
   useEffect(() => { gameRef.current?.registry.set("hapticsOn", gameState?.settings?.hapticsOn ?? true); }, [gameState?.settings?.hapticsOn]);
@@ -388,7 +388,7 @@ export default function App() {
                   weather={state.weather}
                   toolPending={state.toolPending}
                   setChainInfo={setChainInfo}
-                  workers={state.workers}
+                  workers={state.townsfolk}
                   palette={state.settings?.palette}
                   reducedMotion={state.settings?.reducedMotion}
                   tileCollection={state.tileCollection}

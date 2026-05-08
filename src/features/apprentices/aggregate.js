@@ -29,7 +29,7 @@ import { TILE_TYPES_BY_CATEGORY as SPECIES_BY_CATEGORY } from "../tileCollection
  *   effectivePoolWeights  { [key]: integer }  — integer-floored pool-weight tilt
  *   hazardSpawnReduce     { [hazardId]: 0..1 } — capped at 1.0
  *
- * @param {object} state - game state with state.workers.hired
+ * @param {object} state - game state with state.townsfolk.hired
  * @returns {object}
  */
 export function computeWorkerEffects(state) {
@@ -55,8 +55,8 @@ export function computeWorkerEffects(state) {
     recipeInputReduce: {},
   };
 
-  const hired = state?.workers?.hired ?? {};
-  const debt = state?.workers?.debt ?? 0;
+  const hired = state?.townsfolk?.hired ?? {};
+  const debt = state?.townsfolk?.debt ?? 0;
   if (debt > 0) return out; // LOCKED: debt pauses all worker effects
 
   for (const w of WORKERS) {

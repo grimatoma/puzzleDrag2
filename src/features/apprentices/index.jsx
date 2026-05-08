@@ -72,10 +72,10 @@ function effectLabel(worker, hiredCount) {
 }
 
 function WorkerRow({ worker, state, dispatch }) {
-  const hiredCount = state.workers?.hired?.[worker.id] ?? 0;
+  const hiredCount = state.townsfolk?.hired?.[worker.id] ?? 0;
   const cap = housingCapacity(state);
   const total = totalHired(state);
-  const pool = state.workers?.pool ?? 0;
+  const pool = state.townsfolk?.pool ?? 0;
   const reqMet = checkRequirement(worker, state);
   const canAfford = (() => {
     if (typeof worker.hireCost === "number") return (state.coins ?? 0) >= worker.hireCost;
@@ -222,14 +222,14 @@ function WorkerRow({ worker, state, dispatch }) {
 
 export function ApprenticesPanel({ state, dispatch, showHeader = true, onClose = null }) {
   const cap = housingCapacity(state);
-  const pool = state.workers?.pool ?? 0;
-  const debtOwed = state.workers?.debt ?? 0;
+  const pool = state.townsfolk?.pool ?? 0;
+  const debtOwed = state.townsfolk?.debt ?? 0;
 
   const inner = (
     <>
       {showHeader && (
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
-          <span style={{ fontSize: 16, fontWeight: 700, color: "#3a2715" }}>Workers</span>
+          <span style={{ fontSize: 16, fontWeight: 700, color: "#3a2715" }}>Townsfolk</span>
           {onClose && (
             <button onClick={onClose} style={{ width: 28, height: 28, borderRadius: 8,
               background: "#fff8e8", border: "2px solid #b28b62", color: "#6a4b31",
@@ -247,11 +247,11 @@ export function ApprenticesPanel({ state, dispatch, showHeader = true, onClose =
         </span>
         <span style={{ fontSize: 12, fontWeight: 700, color: "#3a7a3a",
           background: "#d4edda", borderRadius: 8, padding: "2px 8px" }}>
-          Workers: {pool}
+          Townsfolk: {pool}
         </span>
         {(() => {
           const totalWage = WORKERS.reduce(
-            (sum, w) => sum + (state.workers?.hired?.[w.id] ?? 0) * (w.wage || 0),
+            (sum, w) => sum + (state.townsfolk?.hired?.[w.id] ?? 0) * (w.wage || 0),
             0,
           );
           const totalH = totalHired(state);
@@ -281,12 +281,12 @@ export function ApprenticesPanel({ state, dispatch, showHeader = true, onClose =
       {/* DEV-only IAP stub */}
       {typeof import.meta !== "undefined" && import.meta.env?.DEV && (
         <button
-          onClick={() => dispatch({ type: "WORKERS/BUY_POOL", payload: { amount: 5 } })}
+          onClick={() => dispatch({ type: "TOWNSFOLK/BUY_POOL", payload: { amount: 5 } })}
           style={{ fontSize: 10, padding: "2px 8px", borderRadius: 8, background: "#2a4a8a",
             color: "#fff", border: "none", cursor: "pointer", marginBottom: 8,
             fontFamily: "Arial, sans-serif" }}
         >
-          Buy 5 Workers (debug)
+          Buy 5 Townsfolk (debug)
         </button>
       )}
 

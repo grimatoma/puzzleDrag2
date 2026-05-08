@@ -45,34 +45,34 @@ function bakeryStateWith(hired, inv) {
     inventory: { ...inv },
     tools: {},
     built: { bakery: true },
-    workers: { hired: { test_baker: hired }, debt: 0, pool: 0 },
+    townsfolk: { hired: { test_baker: hired }, debt: 0, pool: 0 },
     craftedTotals: {},
   };
 }
 
 describe("Phase 34 — recipeInputReduce aggregation", () => {
   it("aggregator output always exposes the recipeInputReduce channel", () => {
-    const empty = computeWorkerEffects({ workers: { hired: {}, debt: 0 } });
+    const empty = computeWorkerEffects({ townsfolk: { hired: {}, debt: 0 } });
     expect(empty.recipeInputReduce).toEqual({});
   });
 
   it("0 hires => no reduction", () => {
-    const out = computeWorkerEffects({ workers: { hired: { test_baker: 0 }, debt: 0 } });
+    const out = computeWorkerEffects({ townsfolk: { hired: { test_baker: 0 }, debt: 0 } });
     expect(out.recipeInputReduce).toEqual({});
   });
 
   it("1 hire (scalar = 0.5) accumulates a 1.0 partial reduction (delta=2)", () => {
-    const out = computeWorkerEffects({ workers: { hired: { test_baker: 1 }, debt: 0 } });
+    const out = computeWorkerEffects({ townsfolk: { hired: { test_baker: 1 }, debt: 0 } });
     expect(out.recipeInputReduce.bread.grain_flour).toBeCloseTo(1.0, 6);
   });
 
   it("2 hires (scalar = 1.0) accumulates the full delta of 2", () => {
-    const out = computeWorkerEffects({ workers: { hired: { test_baker: 2 }, debt: 0 } });
+    const out = computeWorkerEffects({ townsfolk: { hired: { test_baker: 2 }, debt: 0 } });
     expect(out.recipeInputReduce.bread.grain_flour).toBeCloseTo(2.0, 6);
   });
 
   it("debt > 0 pauses every effect, including recipe-input-reduce", () => {
-    const out = computeWorkerEffects({ workers: { hired: { test_baker: 2 }, debt: 1 } });
+    const out = computeWorkerEffects({ townsfolk: { hired: { test_baker: 2 }, debt: 1 } });
     expect(out.recipeInputReduce).toEqual({});
   });
 });

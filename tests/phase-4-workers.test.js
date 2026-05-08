@@ -27,18 +27,18 @@ describe("Phase 4 — worker data model", () => {
 describe("Phase 4 — fresh state workers slice", () => {
   it("fresh state has workers.debt === 0", () => {
     const s = createInitialState();
-    expect(s.workers.debt).toBe(0);
+    expect(s.townsfolk.debt).toBe(0);
   });
 
   it("fresh state has workers.pool >= 1", () => {
     const s = createInitialState();
-    expect(s.workers.pool).toBeGreaterThanOrEqual(1);
+    expect(s.townsfolk.pool).toBeGreaterThanOrEqual(1);
   });
 
   it("hired workers default to 0", () => {
     const s = createInitialState();
     for (const id of ["hilda", "pip", "wila", "tuck", "osric", "dren"]) {
-      expect(s.workers.hired[id]).toBe(0);
+      expect(s.townsfolk.hired[id]).toBe(0);
     }
   });
 });
