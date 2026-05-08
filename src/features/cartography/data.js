@@ -84,8 +84,7 @@ export const MAP_NODES = [
     upgradeMap: {
       grass: 'grain', grain: 'vegetables', trees: 'fruits',
       birds: 'herd_animals', vegetables: 'fruits', fruits: GOLD,
-      herd_animals: 'cattle', cattle: 'mounts', mounts: GOLD,
-      flowers: GOLD,
+      herd_animals: GOLD,
     },
     seasonDrops: FARM_SEASON_DROPS_ORCHARD,
     dangers: [],

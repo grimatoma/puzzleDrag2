@@ -104,7 +104,9 @@ describe("Phase 32 — nextResourceForZone redirects per the zone upgradeMap", (
     expect(CATEGORY_OF[r.key]).toBe("fruits");
   });
 
-  it("Orchard chain of flowers redirects to gold (returns null so caller falls back)", () => {
+  it("returns null for flowers on a zone whose upgradeMap has no flowers entry", () => {
+    // Flowers are in ZONE_CATEGORIES but no current zone configures them.
+    // nextResourceForZone returns null and the caller falls back to native .next chain.
     const flowerRes = findResource("flower_pansy");
     const r = nextResourceForZone({
       currentRes: flowerRes,
@@ -114,20 +116,7 @@ describe("Phase 32 — nextResourceForZone redirects per the zone upgradeMap", (
       categoryOf: CATEGORY_OF,
     });
     expect(r).toBeNull();
-    expect(ZONES.orchard.upgradeMap.flowers).toBe(ZONE_UPGRADE_TARGET_GOLD);
-  });
-
-  it("Orchard chain of cattle redirects to a mounts resource", () => {
-    const cattleRes = findResource("cattle_cow");
-    const r = nextResourceForZone({
-      currentRes: cattleRes,
-      zoneId: "orchard",
-      biomeResources: farmResources,
-      tileCollectionActive: null,
-      categoryOf: CATEGORY_OF,
-    });
-    expect(r).toBeTruthy();
-    expect(CATEGORY_OF[r.key]).toBe("mounts");
+    expect(ZONES.orchard.upgradeMap.flowers).toBeUndefined();
   });
 });
 
