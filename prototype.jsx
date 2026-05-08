@@ -70,6 +70,8 @@ function PhaserMount({ dispatch, biomeKey, turnsUsed, seasonsCycled, uiLocked, s
               // Phase 2 — seed the session-selected tile categories so the
               // first fillBoard after preBoot honours the player's modal pick.
               game.registry.set("sessionSelectedTiles", gameState?.session?.selectedTiles ?? []);
+              // Phase 3 — seed the active zone for the chain-upgrade redirect.
+              game.registry.set("activeZone", gameState?.activeZone ?? "zone1");
             },
             postBoot: (game) => {
               // Track host CSS-size changes and resize the game's backing
@@ -113,11 +115,15 @@ function PhaserMount({ dispatch, biomeKey, turnsUsed, seasonsCycled, uiLocked, s
   }, []); // eslint-disable-line react-hooks/exhaustive-deps -- intentional: Phaser game initialises once on mount; registry syncs handled by separate effects below
 
   // Sync React state → Phaser registry
-  // Phase 2 — must precede the biomeKey sync so handleBiomeChange's first
-  // fillBoard call sees the up-to-date player tile selection.
+  // Phase 2/3 — must precede the biomeKey sync so handleBiomeChange's first
+  // fillBoard / chain-update call sees the up-to-date player tile selection
+  // and active zone.
   useEffect(() => {
     gameRef.current?.registry.set("sessionSelectedTiles", gameState?.session?.selectedTiles ?? []);
   }, [gameState?.session?.selectedTiles]);
+  useEffect(() => {
+    gameRef.current?.registry.set("activeZone", gameState?.activeZone ?? "zone1");
+  }, [gameState?.activeZone]);
   useEffect(() => { gameRef.current?.registry.set("biomeKey", biomeKey); }, [biomeKey]);
   useEffect(() => { gameRef.current?.registry.set("turnsUsed", turnsUsed); }, [turnsUsed]);
   useEffect(() => { gameRef.current?.registry.set("seasonsCycled", seasonsCycled); }, [seasonsCycled]);
@@ -360,6 +366,11 @@ export default function App() {
               <div className="hidden max-[1024px]:landscape:block absolute top-2 left-1/2 -translate-x-1/2 z-30 pointer-events-none">
                 <div className="bg-[#2b2218]/90 border border-[#ffd248] rounded-full px-3 py-1 text-[#ffd248] font-bold text-[12px] whitespace-nowrap">
                   chain × {chainInfo.count}{chainInfo.upgrades > 0 ? `  +${chainInfo.upgrades}★` : ""}
+                  {chainInfo.nextTileProgress && chainInfo.nextTileProgress.threshold > 0 && (
+                    <span className="ml-2 text-[10px] text-[#f8e7c6] font-normal">
+                      ({chainInfo.nextTileProgress.current}/{chainInfo.nextTileProgress.threshold} {chainInfo.nextTileProgress.targetLabel})
+                    </span>
+                  )}
                 </div>
               </div>
             )}

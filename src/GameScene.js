@@ -4,7 +4,7 @@ import { upgradeCountForChain, resourceGainForChain, rollResourceWithWeather } f
 import { computeWorkerEffects } from "./features/apprentices/aggregate.js";
 import { applyFrostCollapseDuration } from "./features/weather/effects.js";
 import { CATEGORY_OF } from "./features/tileCollection/data.js";
-import { expandZoneCategories } from "./features/zones/data.js";
+import { expandZoneCategories, nextResourceForZone } from "./features/zones/data.js";
 const cssColor = (num) => Phaser.Display.Color.IntegerToColor(num).rgba;
 import { rounded, makeTextures, regenerateTextures } from "./textures.js";
 import { TileObj } from "./TileObj.js";
@@ -420,6 +420,23 @@ export class GameScene extends Phaser.Scene {
 
   nextResource(res) {
     const resources = this.biome().resources;
+    // Phase 3 — let the active zone's upgradeMap redirect chain upgrades to a
+    // different category (e.g. Zone 1 grass -> birds, vegetables -> fruits).
+    // The helper returns null when the zone has no override or the target is
+    // the special "gold" sentinel; in those cases we fall through to the
+    // resource's native `.next` chain.
+    const zoneId = this.registry.get("activeZone") ?? null;
+    if (zoneId) {
+      const tileCollectionActive = this.registry.get("tileCollectionActive") ?? null;
+      const redirected = nextResourceForZone({
+        currentRes: res,
+        zoneId,
+        biomeResources: resources,
+        tileCollectionActive,
+        categoryOf: CATEGORY_OF,
+      });
+      if (redirected) return redirected;
+    }
     const nextKey = resources.find((r) => r.key === res.key)?.next;
     return nextKey ? resources.find((r) => r.key === nextKey) : null;
   }
@@ -1527,7 +1544,21 @@ export class GameScene extends Phaser.Scene {
     // V.2 — Display autumn-multiplied upgrade count; V.1 — include valid flag for React side panel
     const k = next ? upgradeCountForChain(n, res.key, effThresh) * this._autumnMult() : 0;
     const valid = n === 0 || n >= this._effectiveMinChain();
-    this.events.emit(SCENE_EVENTS.CHAIN_UPDATE, { count: gained, upgrades: k, valid });
+    // Phase 3 — second progress meter: tiles-to-next-spawn, e.g. "9/4 apples"
+    // while chaining carrots in a zone whose upgradeMap redirects to fruits.
+    let nextTileProgress = null;
+    if (next && res) {
+      const threshold = effThresh[res.key] ?? UPGRADE_THRESHOLDS[res.key] ?? 0;
+      if (threshold > 0) {
+        nextTileProgress = {
+          current: n,
+          threshold,
+          targetLabel: next.label ?? next.key ?? "",
+          targetKey: next.key ?? "",
+        };
+      }
+    }
+    this.events.emit(SCENE_EVENTS.CHAIN_UPDATE, { count: gained, upgrades: k, valid, nextTileProgress });
   }
 
   // ─── Juice (chain-length feedback) ────────────────────────────────────────
