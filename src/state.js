@@ -22,6 +22,7 @@ import * as cartography from "./features/cartography/slice.js";
 import * as apprentices from "./features/apprentices/slice.js";
 import * as mood from "./features/mood/slice.js";
 import * as storySlice from "./features/story/slice.js";
+import * as fish from "./features/fish/slice.js";
 import { INITIAL_STORY_STATE, evaluateStoryTriggers } from "./story.js";
 import { STORY_BUILDING_IDS } from "./features/story/data.js";
 import { NPC_IDS } from "./features/npcs/data.js";
@@ -33,7 +34,7 @@ import * as market from "./features/market/slice.js";
 import * as castle from "./features/castle/slice.js";
 import { FIRE_HAZARD_ENABLED } from "./featureFlags.js";
 
-const slices = [crafting, quests, achievements, tutorial, settings, boss, cartography, apprentices, mood, storySlice, decorations, portal, market, castle];
+const slices = [crafting, quests, achievements, tutorial, settings, boss, cartography, apprentices, mood, storySlice, decorations, portal, market, castle, fish];
 
 // Season name lookup, indexed by `state.seasonsCycled % 4`. Was duplicated
 // inline in four places before.
@@ -380,6 +381,7 @@ export function createFreshState(overrides) {
     ...apprentices.initial,
     ...mood.initial,
     ...castle.initial,
+    ...fish.initial,
     // Phase 12.5 — saved-field slots for Silo/Barn
     farm: { savedField: null },
     mine: { savedField: null },
@@ -1746,6 +1748,8 @@ const SLICE_PRIMARY_ACTIONS = new Set([
   "TUTORIAL/SKIP",
   // Castle Needs contribution is owned by castle/slice
   "CASTLE/CONTRIBUTE",
+  // Fish biome tide cycle
+  "FISH/FORCE_TIDE_FLIP",
 ]);
 
 // Actions where coreReducer intentionally defers to slices (e.g. CRAFTING/CRAFT_RECIPE

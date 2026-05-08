@@ -44,6 +44,29 @@ function WeatherChip({ weather }) {
   );
 }
 
+function TideChip({ fish }) {
+  if (!fish) return null;
+  const tide = fish.tide ?? "high";
+  const tideTurn = fish.tideTurn ?? 0;
+  // 3-turn period — show how many turns until the next tide flip.
+  const turnsUntilFlip = Math.max(0, 3 - tideTurn);
+  const isHigh = tide === "high";
+  const label = isHigh ? "High Tide" : "Low Tide";
+  const emoji = isHigh ? "🌊" : "🐚";
+  const bg = isHigh ? "#2a4a6a" : "#5a4838";
+  return (
+    <div
+      className="flex items-center gap-1 rounded-full px-2 py-0.5 text-white flex-shrink-0"
+      style={{ background: bg, fontSize: 10, fontWeight: "bold" }}
+      title={`Tide flips in ${turnsUntilFlip} turn${turnsUntilFlip === 1 ? "" : "s"}.`}
+    >
+      <span>{emoji}</span>
+      <span>{label}</span>
+      <span className="opacity-70">·{turnsUntilFlip}</span>
+    </div>
+  );
+}
+
 function SeasonBar({ season, turnsUsed, turnsLeft, calendarSeason }) {
   return (
     <div className="bg-[#faf0dd] border-2 border-[#b28b62] rounded-full pl-3 pr-2 py-0.5 flex items-center gap-2 min-w-0 flex-1 max-w-[540px]">
@@ -185,6 +208,8 @@ export function Hud({ state, dispatch }) {
       {onBoard && <SeasonBar season={season} turnsUsed={turnsUsed} turnsLeft={turnsLeft} calendarSeason={calendarSeason} />}
       {/* Weather chip — visible on board view when weather is active and no boss overlay covering it */}
       {onBoard && !state.boss && <WeatherChip weather={state.weather} />}
+      {/* Tide chip — visible only on the fish biome */}
+      {onBoard && state.biomeKey === "fish" && <TideChip fish={state.fish} />}
       {/* Larder progress bars — visible when festival announced, on board view */}
       {onBoard && festivalAnnounced && !isWon && (
         <div className="flex-shrink-0">
