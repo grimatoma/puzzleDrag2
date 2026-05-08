@@ -44,6 +44,15 @@ export const BOSSES = [
     description: "A mossy titan lurks in the spring glades, concealing its weakness beneath layers of overgrowth. Harvest enough berries to expose it and drive it from the vale.",
     modifierDescription: "Four resource tiles are hidden face-down on the board and only reveal themselves when included in a chain.",
   },
+  {
+    id: "storm",
+    name: "The Storm",
+    season: "summer",
+    target: { resource: "fish_fillet", amount: 6 },
+    modifier: { type: "min_chain", params: { length: 4 } },
+    description: "A black squall rolls in over Saltspray Harbor — every short cast tears free of the line. Only steady, deliberate pulls bring fillets through the chop.",
+    modifierDescription: "Chains of fewer than 4 fish tiles slip the line: they consume a turn but yield nothing.",
+  },
 ];
 
 // §9 locked: base = 200◉ × year_number; +1 rune (Phase 3 flat drop).
