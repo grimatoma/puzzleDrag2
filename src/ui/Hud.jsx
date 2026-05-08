@@ -3,6 +3,7 @@ import { SEASONS, MAX_TURNS } from "../constants.js";
 import { hex } from "../utils.js";
 import { xpForLevel } from "../state.js";
 import { WEATHER_META } from "../features/boss/slice.js";
+import IconCanvas, { hasIcon } from "./IconCanvas.jsx";
 
 // Mechanical effect active each calendar season (seasonsCycled % 4)
 export const SEASON_EFFECTS = [
@@ -24,13 +25,20 @@ function WeatherChip({ weather }) {
   if (!key || key === "none") return null;
   const meta = WEATHER_META[key];
   if (!meta) return null;
+  const iconKey = `weather_${key}`;
   return (
     <div
       className="flex items-center gap-1 rounded-full px-2 py-0.5 text-white flex-shrink-0"
       style={{ background: meta.color || "#3a6b8a", fontSize: 10, fontWeight: "bold" }}
       title={meta.description || meta.desc || ""}
     >
-      <span>{meta.emoji}</span>
+      {hasIcon(iconKey) ? (
+        <span style={{ width: 14, height: 14, display: "inline-grid", placeItems: "center" }}>
+          <IconCanvas iconKey={iconKey} size={14} />
+        </span>
+      ) : (
+        <span>{meta.emoji}</span>
+      )}
       <span>{meta.label}</span>
     </div>
   );
