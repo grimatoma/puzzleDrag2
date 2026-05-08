@@ -67,6 +67,9 @@ function PhaserMount({ dispatch, biomeKey, turnsUsed, seasonsCycled, uiLocked, s
               // Set before GameScene.create() so the initial fillBoard uses the
               // player's active tile selections instead of the raw base pool.
               game.registry.set("tileCollectionActive", tileCollection?.activeByCategory ?? null);
+              // Phase 2 — seed the session-selected tile categories so the
+              // first fillBoard after preBoot honours the player's modal pick.
+              game.registry.set("sessionSelectedTiles", gameState?.session?.selectedTiles ?? []);
             },
             postBoot: (game) => {
               // Track host CSS-size changes and resize the game's backing
@@ -110,6 +113,11 @@ function PhaserMount({ dispatch, biomeKey, turnsUsed, seasonsCycled, uiLocked, s
   }, []); // eslint-disable-line react-hooks/exhaustive-deps -- intentional: Phaser game initialises once on mount; registry syncs handled by separate effects below
 
   // Sync React state → Phaser registry
+  // Phase 2 — must precede the biomeKey sync so handleBiomeChange's first
+  // fillBoard call sees the up-to-date player tile selection.
+  useEffect(() => {
+    gameRef.current?.registry.set("sessionSelectedTiles", gameState?.session?.selectedTiles ?? []);
+  }, [gameState?.session?.selectedTiles]);
   useEffect(() => { gameRef.current?.registry.set("biomeKey", biomeKey); }, [biomeKey]);
   useEffect(() => { gameRef.current?.registry.set("turnsUsed", turnsUsed); }, [turnsUsed]);
   useEffect(() => { gameRef.current?.registry.set("seasonsCycled", seasonsCycled); }, [seasonsCycled]);
