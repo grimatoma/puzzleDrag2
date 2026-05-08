@@ -12,6 +12,12 @@ export const CASTLE_NEEDS = {
   // Need-key kept as `coal` for save-shape stability (state.castle.contributed.coal);
   // `resource` points to the now-prefixed mine inventory key.
   coal:  { target: 43, label: "Coal",  resource: "mine_coal" },
-  cocoa: { target: 33, label: "Cocoa", resource: "cocoa" },
-  ink:   { target: 12, label: "Ink",   resource: "ink"   },
+  // Need-keys `cocoa` and `ink` are kept for save-shape stability
+  // (state.castle.contributed.cocoa / .ink); the underlying `resource` was
+  // re-pointed to existing farm products because the original `cocoa` and
+  // `ink` resource keys never existed in BIOMES.farm.resources, leaving
+  // the castle progression unfillable. Berry jam and bird eggs are the
+  // closest mid-/low-tier farm analogs already in the game.
+  cocoa: { target: 33, label: "Berry Jam", resource: "berry_jam" },
+  ink:   { target: 12, label: "Bird Egg",  resource: "bird_egg"  },
 };

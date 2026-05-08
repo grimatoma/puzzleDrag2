@@ -500,7 +500,7 @@ export const DAILY_REWARDS = {
   21: { coins: 180 }, 22: { coins: 200 }, 23: { coins: 220 },
   24: { coins: 240 }, 25: { coins: 260 }, 26: { coins: 280 },
   27: { coins: 300 }, 28: { coins: 350 }, 29: { coins: 400 },
-  30: { coins: 1000, runes: 3 },
+  30: { coins: 1000, runes: 3, unlockTile: "cattle_triceratops" },
 };
 
 // ─── Phase 10 — Tile pool seasonal modifiers ──────────────────────────────────

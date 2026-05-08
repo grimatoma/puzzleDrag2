@@ -496,11 +496,9 @@ export const TILE_TYPES = [
   {
     id: "cattle_triceratops", category: "cattle", displayName: "Triceratops",
     baseResource: "cattle_triceratops", tier: 3,
-    discovery: { method: "buy", coinCost: 99999 },
+    discovery: { method: "daily", day: 30 },
     effects: {},
-    // LOCKED: Daily Rewards day 30 — this entry is a placeholder until the
-    // daily-rewards system can grant it directly. coinCost above is a sentinel.
-    description: "Avoided by wolves. Gives two times more milk. Day-30 daily reward (currently locked behind a sentinel cost).",
+    description: "Avoided by wolves. Gives two times more milk. Granted by the Day-30 daily login reward.",
   },
 
   // Mounts (new category)

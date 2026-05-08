@@ -1461,6 +1461,18 @@ function coreReducer(state, action) {
         const cur = next.tools?.[reward.tool] ?? 0;
         next = { ...next, tools: { ...next.tools, [reward.tool]: cur + (reward.amount ?? 1) } };
       }
+      if (reward.unlockTile && TILE_TYPES_MAP[reward.unlockTile]) {
+        const tc = next.tileCollection ?? defaultTileCollectionSlice();
+        if (!tc.discovered?.[reward.unlockTile]) {
+          next = {
+            ...next,
+            tileCollection: {
+              ...tc,
+              discovered: { ...(tc.discovered ?? {}), [reward.unlockTile]: true },
+            },
+          };
+        }
+      }
       return { ...next, modal: { type: "daily_streak", day: nextDay, reward } };
     }
 

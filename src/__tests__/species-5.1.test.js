@@ -30,7 +30,7 @@ describe("Phase 5.1 — Tile Collection data model", () => {
       expect(typeof t.baseResource).toBe("string");
       expect(Number.isInteger(t.tier) && t.tier >= 0).toBe(true);
       expect(t.discovery && typeof t.discovery.method).toBe("string");
-      expect(["default", "chain", "research", "buy"]).toContain(t.discovery.method);
+      expect(["default", "chain", "research", "buy", "daily"]).toContain(t.discovery.method);
     }
   });
 

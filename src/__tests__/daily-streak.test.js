@@ -67,6 +67,15 @@ describe("3.5 — Daily login streak", () => {
     expect(at30.runes).toBe(at29.runes + 3);
   });
 
+  it("LOGIN_TICK: day 30 unlocks Triceratops in tileCollection.discovered", () => {
+    const s0 = initialState();
+    expect(DAILY_REWARDS[30].unlockTile).toBe("cattle_triceratops");
+    expect(s0.tileCollection.discovered.cattle_triceratops).toBeFalsy();
+    const at29 = { ...s0, dailyStreak: { lastClaimedDate: "2026-01-29", currentDay: 29 } };
+    const at30 = gameReducer(at29, { type: "LOGIN_TICK", payload: { today: "2026-01-30" } });
+    expect(at30.tileCollection.discovered.cattle_triceratops).toBe(true);
+  });
+
   it("LOGIN_TICK: day 7 grants 150 coins + shuffle tool", () => {
     const s0 = initialState();
     const at6 = { ...s0, dailyStreak: { lastClaimedDate: "2026-01-06", currentDay: 6 } };
