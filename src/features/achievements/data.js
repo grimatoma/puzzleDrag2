@@ -24,6 +24,10 @@ export const ACHIEVEMENTS = [
   { id: "town_planner",   name: "Town Planner",               desc: "Construct 5 different buildings",                counter: "distinct_buildings_built",   threshold: 5,   target: 5,   reward: { coins: 100 } },
   // supplies_converted
   { id: "supply_chain",   name: "Supply Chain",               desc: "Convert 10 grain bundles into supplies",         counter: "supplies_converted",         threshold: 10,  target: 10,  reward: { coins: 50 } },
+  // fish_chained — fish-biome harvest milestones
+  { id: "first_catch",    name: "First Catch",                desc: "Land your first fish chain at the harbor",       counter: "fish_chained",               threshold: 1,   target: 1,   reward: { coins: 25 } },
+  { id: "tide_runner",    name: "Tide Runner",                desc: "Harvest 50 fish across the harbor",              counter: "fish_chained",               threshold: 50,  target: 50,  reward: { coins: 75 } },
+  { id: "master_angler",  name: "Master Angler",              desc: "Haul in 200 fish across the harbor",             counter: "fish_chained",               threshold: 200, target: 200, reward: { tools: { magic_wand: 1 } } },
 ];
 
 /**
