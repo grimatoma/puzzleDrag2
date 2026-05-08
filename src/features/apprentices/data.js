@@ -253,6 +253,22 @@ export const WORKERS = [
   },
 
   {
+    id: "reaper",
+    name: "Reaper",
+    role: "Reaper",
+    icon: "🌾",
+    color: "#d8b33e",
+    wage: 28,
+    hireCost: { worker: 1, grass_hay: 8, bread: 8, mine_stone: 8 },
+    maxCount: 2,
+    // Catalog §9: "6 grain = 1 bread at max." Our chain ends at flour → bread
+    // at threshold 6; Reaper trims that to 4 at max (per-hire reduces by 1).
+    effect: { type: "threshold_reduce", key: "grain_flour", from: 6, to: 4 },
+    requirement: { building: "bakery", orLevel: 4 },
+    description: "A scythe-keeper who threshes faster than the wind. Cuts two steps off every flour-to-bread chain.",
+  },
+
+  {
     id: "ivar",
     name: "Ivar",
     role: "Beekeeper",

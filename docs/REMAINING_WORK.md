@@ -100,7 +100,7 @@ Workers from the catalog not yet implemented:
 | Worker          | Chain                    | Effect at max          | Status |
 |-----------------|--------------------------|------------------------|--------|
 | Peasant         | grass → hay              | 10 grass = 1 hay       | Not built — grass chain is implicit (hay = the tile and the product) |
-| Reaper          | grain → bread            | 6 grain = 1 bread      | Not built — bread chain is now wired (PR #194), worker missing |
+| Reaper          | grain → bread            | 6 grain = 1 bread      | ✅ shipped — `threshold_reduce` on grain_flour from 6 to 4 at max (`reaper` apprentice). |
 | Lumberjack      | tree → wood              | 1 tree = 1 wood        | Not built — chain length 1 doesn't fit the threshold model |
 | Grain Trader    | grain → vegetable        | 4 grain = 1 vegetable  | ✅ Tilda (PR #201) — `chain_redirect_category` |
 | Gardener        | vegetable → fruit        | 5 vegetable = 1 fruit  | ✅ Marin (PR #201) |
