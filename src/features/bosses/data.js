@@ -62,9 +62,10 @@ export const BOSS_WINDOW_TURNS = 10; // §18 locked: 1 season, not 5
 
 import { applyModifierToFreshGrid } from "./modifiers.js";
 
-// Default board dimensions for modifier init when no live grid is available (e.g. tests)
+// Default board dimensions for modifier init when no live grid is available (e.g. tests).
+// Mirrors COLS/ROWS in src/constants.js — the live grid is 6×6.
 const DEFAULT_ROWS = 6;
-const DEFAULT_COLS = 7;
+const DEFAULT_COLS = 6;
 
 function makeEmptyGrid(rows, cols) {
   return Array.from({ length: rows }, (_, r) =>

@@ -331,7 +331,7 @@ export const WORKSHOP_RECIPES = {
                  effect: "fill_bias", target: "grain",  anim: "shimmer", ms: 600,
                  desc: "Enriches the soil so the next board fill is biased toward grain tiles." },
   // Phase 10.5 — Cat tool (clears all rats, no turn cost)
-  cat:         { name: "Cat",          station: "workshop", inputs: { mine_stone: 2, water: 1 },
+  cat:         { name: "Cat",          station: "workshop", inputs: { mine_stone: 2, mine_dirt: 1 },
                  effect: "clear_hazard", target: "rats", anim: "scatter", ms: 200,
                  desc: "Dispatches a mouser to clear all active rat hazards from the farm in one go." },
   // Phase 10.6 — Bird Cage + full Scythe
