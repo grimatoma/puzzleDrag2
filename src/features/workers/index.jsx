@@ -3,7 +3,7 @@
 // Renders inside the Townsfolk hub screen as the "Workers" tab. Each row
 // shows the worker, hire / fire buttons, the per-hire effect summary, and
 // the current count out of maxCount.
-import { TYPE_WORKERS } from "./data.js";
+import { TYPE_WORKERS, nextHireCost } from "./data.js";
 
 function effectSummary(effect) {
   if (!effect || !effect.type) return "";
@@ -20,7 +20,10 @@ function effectSummary(effect) {
 }
 
 function WorkerRow({ worker, count, coins, dispatch }) {
-  const cost = worker.hireCost?.coins ?? 0;
+  // Phase 6 — show the cost of the *next* hire so the player can see the
+  // ramp build up. When the worker is already at maxCount the ramp call
+  // is moot but we still pass `count` for a stable display.
+  const cost = nextHireCost(worker, count);
   const canHire = coins >= cost && count < worker.maxCount;
   const canFire = count > 0;
   return (
