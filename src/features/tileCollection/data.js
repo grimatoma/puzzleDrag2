@@ -1,4 +1,5 @@
-import { UPGRADE_THRESHOLDS } from "../../constants.js";
+import { UPGRADE_THRESHOLDS, BALANCE_OVERRIDES } from "../../constants.js";
+import { applyTileOverrides } from "../../config/applyOverrides.js";
 
 export const CATEGORIES = [
   "grass", "grain", "wood", "berry", "bird", "vegetables",
@@ -569,6 +570,11 @@ export const TILE_TYPES = [
     description: "A leafy seaweed — the chain feeds into fish oil.",
   },
 ];
+
+// Balance-Manager: apply tile-power, unlock and description overrides in
+// place before the lookup maps below are built, so consumers see the
+// merged data.
+applyTileOverrides(TILE_TYPES, BALANCE_OVERRIDES);
 
 export const TILE_TYPES_MAP = Object.fromEntries(TILE_TYPES.map((t) => [t.id, t]));
 

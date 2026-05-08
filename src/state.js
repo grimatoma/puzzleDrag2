@@ -620,7 +620,15 @@ function coreReducer(state, action) {
         addCappedResourceMut(inventory, chainCf, chainFloaters, res.next, effectiveUpgrades, chainCap);
       }
 
-      const coinsGain = Math.max(1, Math.floor((effectiveGained * value) / 2));
+      // Power-hook coin bonuses (set via Balance Manager → Tile Powers).
+      // `coinBonusFlat` adds a flat amount per chain; `coinBonusPerTile`
+      // scales with chain length. Both are summed across hook entries.
+      const chainTileEffects = TILE_TYPES_MAP[key]?.effects ?? {};
+      const hookFlat = chainTileEffects.coinBonusFlat || 0;
+      const hookPerTile = chainTileEffects.coinBonusPerTile || 0;
+      const coinHookBonus = hookFlat + hookPerTile * effectiveChain;
+
+      const coinsGain = Math.max(1, Math.floor((effectiveGained * value) / 2)) + coinHookBonus;
       // §17 locked: 1 XP per chain (regardless of length/value) into almanac
       const { newState: afterAlmanacXp } = applyAlmanacXp(state, 1);
       const turnsUsed = state.turnsUsed + 1;
@@ -1618,6 +1626,12 @@ function coreReducer(state, action) {
       let freeMoves = tcSlice.freeMoves ?? 0;
       if (grant > 0) {
         freeMoves = freeMoves + grant;
+      }
+      // Conditional "free_turn_after_n" hook: grants extra free moves only
+      // when the chain meets a configured length threshold.
+      const condHook = chainedTile?.effects?.freeMovesIfChain;
+      if (condHook && length >= (condHook.minChain ?? 999)) {
+        freeMoves = freeMoves + (condHook.count ?? 1);
       }
 
       tcSlice = { ...tcSlice, researchProgress: progress, discovered, freeMoves };
