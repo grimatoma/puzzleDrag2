@@ -1,44 +1,56 @@
 import { test, expect } from '@playwright/test';
-import { clearSave, waitForBoot, triggerChainViaScene, getReactState, dispatchAction } from './helpers.js';
-
-test.beforeEach(async ({ page }) => { await clearSave(page); });
+import {
+  gotoFresh, triggerChainViaScene, getReactState, dispatchAction, waitForState, chainUntil,
+} from './helpers.js';
 
 test('navigate to Town shows Hearthwood Vale', async ({ page }) => {
-  await page.goto('/');
-  await waitForBoot(page);
+  await gotoFresh(page);
   await page.getByRole('button', { name: '⌂ Town' }).click();
-  // TownView header always renders exactly "Hearthwood Vale"
   await expect(page.getByText('Hearthwood Vale', { exact: true })).toBeVisible();
-  // Confirm TownView is active via React state
-  const state = await getReactState(page);
-  expect(state.view).toBe('town');
+  const s = await getReactState(page);
+  expect(s.view).toBe('town');
 });
 
 test('open Crafting screen', async ({ page }) => {
-  await page.goto('/');
-  await waitForBoot(page);
+  await gotoFresh(page);
   await page.getByRole('button', { name: '🔨 Craft' }).click();
   await expect(page.getByText(/🔨 Crafting/)).toBeVisible();
 });
 
-test('season bar hides when not on board', async ({ page }) => {
-  await page.goto('/');
-  await waitForBoot(page);
-  await expect(page.getByText('8 left')).toBeVisible();
-  await page.getByRole('button', { name: '⌂ Town' }).click();
-  await expect(page.getByText('8 left')).toHaveCount(0);
+test('open Inventory screen', async ({ page }) => {
+  await gotoFresh(page);
+  await page.getByRole('button', { name: '🎒 Inventory' }).click();
+  await waitForState(page, (s) => s.view === 'inventory');
 });
 
-test('leaving board mid-session triggers season summary modal', async ({ page }) => {
-  await page.goto('/');
-  await waitForBoot(page);
-  // Trigger a chain to advance turn
-  await triggerChainViaScene(page, 3);
-  await page.waitForTimeout(800);
-  // Use dispatchAction to navigate away from board — avoids click interception from overlays
+test('open Quests screen', async ({ page }) => {
+  await gotoFresh(page);
+  await page.getByRole('button', { name: '📜 Quests' }).click();
+  await waitForState(page, (s) => s.view === 'quests');
+});
+
+test('open Map screen', async ({ page }) => {
+  await gotoFresh(page);
+  await page.getByRole('button', { name: '🗺️ Map' }).click();
+  await waitForState(page, (s) => s.view === 'cartography');
+});
+
+test('season bar hides when not on board', async ({ page }) => {
+  await gotoFresh(page);
+  // Switch to board first so the SeasonBar renders.
+  await dispatchAction(page, { type: 'SET_VIEW', view: 'board' });
+  await expect(page.getByTestId('turns-left')).toBeVisible();
   await dispatchAction(page, { type: 'SET_VIEW', view: 'town' });
-  await page.waitForTimeout(500);
-  // SET_VIEW while turnsUsed > 0 triggers season modal (pendingView = 'town', modal = 'season')
-  const state = await getReactState(page);
-  expect(state.modal).toBe('season');
+  await expect(page.getByTestId('turns-left')).toHaveCount(0);
+});
+
+test('reaching MAX_TURNS opens the season summary modal', async ({ page }) => {
+  test.setTimeout(60_000);
+  await gotoFresh(page);
+  await dispatchAction(page, { type: 'SET_VIEW', view: 'board' });
+  // The season modal is set inside CHAIN_COLLECTED when turnsUsed reaches the
+  // session cap. Drive chains until that happens. Fall back to END_TURN if a
+  // chain can't be formed on the current board.
+  const final = await chainUntil(page, (s) => s.modal === 'season', { maxChains: 18 });
+  expect(final.modal).toBe('season');
 });

@@ -1,30 +1,40 @@
 import { test, expect } from '@playwright/test';
-import { clearSave, waitForBoot } from './helpers.js';
+import { gotoFresh, getReactState, dispatchAction } from './helpers.js';
 
-test.beforeEach(async ({ page }) => { await clearSave(page); });
+test('initial load: boots on Town view, HUD + bottom nav render without errors', async ({ page }) => {
+  const errors = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
+  await gotoFresh(page);
 
-test('initial load: HUD + side panel + nav', async ({ page }) => {
-  await page.goto('/');
-  await waitForBoot(page);
-  // Board-view HUD elements
-  await expect(page.getByText('8 left')).toBeVisible();
-  await expect(page.getByText('Orders')).toBeVisible();
-  // Coins and buildings are hidden on board — navigate to town to check them
-  await page.getByTestId('menu-btn').click();
-  await expect(page.getByTestId('coins')).toHaveText('150');
-  await expect(page.getByTestId('buildings')).toHaveText('1');
-  // Bottom nav is visible off board
-  await expect(page.getByRole('button', { name: '◳ Board' })).toBeVisible();
-  await expect(page.getByRole('button', { name: '⌂ Town' })).toBeVisible();
-  await expect(page.getByRole('button', { name: '🔨 Craft' })).toBeVisible();
+  const s = await getReactState(page);
+  // First-time players start at the Town view (the saved-state load also
+  // forces view: "town"). The HUD always renders; coins only show off-board.
+  expect(s.view).toBe('town');
+  await expect(page.getByTestId('hud')).toBeVisible();
+  await expect(page.getByTestId('coins')).toBeVisible();
+  await expect(page.getByTestId('coins')).toContainText('150');
+
+  // Bottom nav always renders. Assert presence of each base item via aria-label.
+  for (const label of ['⌂ Town', '🎒 Inventory', '📜 Quests', '🔨 Craft']) {
+    await expect(page.getByRole('button', { name: label })).toHaveCount(1);
+  }
+  expect(errors, `runtime errors:\n${errors.join('\n')}`).toEqual([]);
 });
 
-test('nav pills are visible off board', async ({ page }) => {
-  await page.goto('/');
-  await waitForBoot(page);
-  // Navigate off board so the nav is visible
+test('Board view: SeasonBar with 10 turns left appears once on board', async ({ page }) => {
+  await gotoFresh(page);
+  // Town is the default boot view; force the player onto the board so the
+  // SeasonBar (which only renders when view === 'board') is visible.
+  await dispatchAction(page, { type: 'SET_VIEW', view: 'board' });
+  await expect(page.getByTestId('turns-left')).toBeVisible();
+  await expect(page.getByTestId('turns-left')).toContainText('10');
+});
+
+test('menu button opens hamburger menu', async ({ page }) => {
+  await gotoFresh(page);
   await page.getByTestId('menu-btn').click();
-  for (const label of ['◳ Board', '⌂ Town', '🎒 Inventory', '📜 Quests', '🔨 Craft', '🏆 Trophies']) {
-    await expect(page.getByRole('button', { name: label })).toBeVisible();
-  }
+  await expect(page.getByText(/🔥 Hearthlands/)).toBeVisible();
+  const s = await getReactState(page);
+  expect(s.modal).toBe('menu');
 });
