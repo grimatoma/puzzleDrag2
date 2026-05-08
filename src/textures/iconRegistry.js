@@ -31,6 +31,7 @@ import { ICONS as G_CRAFTING_STATIONS } from "./categories/craftingStations.js";
 import { ICONS as G_HAZARDS } from "./categories/hazards.js";
 import { ICONS as G_TILE_CATEGORIES } from "./categories/tileCategories.js";
 import { ICONS as G_MINE_HAZARDS } from "./categories/mineHazards.js";
+import { ICONS as G_FISH } from "./categories/fish.js";
 
 export const ICON_REGISTRY = Object.freeze({
   ...G_GRASS,
@@ -60,6 +61,7 @@ export const ICON_REGISTRY = Object.freeze({
   ...G_HAZARDS,
   ...G_TILE_CATEGORIES,
   ...G_MINE_HAZARDS,
+  ...G_FISH,
 });
 
 export const ICON_KEYS = new Set(Object.keys(ICON_REGISTRY));

@@ -81,6 +81,8 @@ export function reduce(state, action) {
           return { ...base, biomeKey: 'farm', view: 'town' };
         case 'mine':
           return { ...base, biomeKey: 'mine', view: 'town' };
+        case 'fish':
+          return { ...base, biomeKey: 'fish', view: 'town' };
         case 'home':
           return { ...base, view: 'town' };
         case 'festival':

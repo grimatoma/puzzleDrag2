@@ -59,11 +59,18 @@ export const MAP_NODES = [
     description: 'Something stirs in the dark. Bring your best chains.',
     activities: ['Boss battles', 'Rare loot'],
   },
+  {
+    id: 'harbor', name: 'Saltspray Harbor', kind: 'fish', icon: '⚓',
+    x: 16, y: 86, level: 3, region: 'coast',
+    description: 'A weather-bleached pier with nets full of sardines and clams. Tide and luck do most of the work.',
+    activities: ['Harvest fish tiles', 'Sardine, mackerel & clams'],
+  },
 ];
 
 export const MAP_EDGES = [
   ['home', 'meadow'],
   ['home', 'orchard'],
+  ['home', 'harbor'],
   ['meadow', 'crossroads'],
   ['orchard', 'crossroads'],
   ['crossroads', 'quarry'],
@@ -79,6 +86,7 @@ export const NODE_COLORS = {
   home:     '#bb3b2f',
   farm:     '#91bf24',
   mine:     '#7c8388',
+  fish:     '#4a8aaa',
   festival: '#c8923a',
   boss:     '#3a1a1a',
   event:    '#5a7a9a',
@@ -91,6 +99,7 @@ export const REGIONS = [
   { id: 'farm',   label: 'Greenfields', cx: 26, cy: 50, rx: 14, ry: 32, fill: '#b8c878' },
   { id: 'wilds',  label: 'The Wilds',   cx: 56, cy: 50, rx: 22, ry: 30, fill: '#c4b888' },
   { id: 'mine',   label: 'Stoneholds',  cx: 72, cy: 30, rx: 22, ry: 18, fill: '#a8a4a0' },
+  { id: 'coast',  label: 'The Coast',   cx: 16, cy: 86, rx: 14, ry: 12, fill: '#9ab8c4' },
   { id: 'boss',   label: 'The Deep',    cx: 90, cy: 72, rx: 12, ry: 16, fill: '#8a5050' },
 ];
 
@@ -98,6 +107,7 @@ export const KIND_LABELS = {
   home:     'Home Village',
   farm:     'Farm Region',
   mine:     'Mine Region',
+  fish:     'Fishing Harbor',
   festival: 'Festival',
   boss:     'Boss Arena',
   event:    'Wayside Event',

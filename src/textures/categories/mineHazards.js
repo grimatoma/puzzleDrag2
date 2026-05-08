@@ -462,6 +462,81 @@ function drawBiomeMine(ctx) {
   });
 }
 
+function drawBiomeFish(ctx) {
+  // Sky / horizon
+  ctx.fillStyle = "#88b8d8";
+  ctx.beginPath();
+  ctx.arc(0, -2, 26, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = "#0a0a0e"; ctx.lineWidth = 1.6;
+  ctx.stroke();
+  // Sea
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(0, -2, 26, 0, Math.PI * 2);
+  ctx.clip();
+  ctx.fillStyle = "#2a4a6a";
+  ctx.fillRect(-26, 6, 52, 30);
+  // Wave caps
+  ctx.strokeStyle = "rgba(220,240,255,0.6)"; ctx.lineWidth = 1.0;
+  for (let y = 8; y < 22; y += 5) {
+    ctx.beginPath();
+    for (let x = -26; x <= 26; x += 5) {
+      const dy = Math.sin((x + y) * 0.4) * 1.0;
+      if (x === -26) ctx.moveTo(x, y + dy);
+      else ctx.lineTo(x, y + dy);
+    }
+    ctx.stroke();
+  }
+  ctx.restore();
+  // Distant island silhouette
+  ctx.fillStyle = "#3a5a78";
+  ctx.beginPath();
+  ctx.moveTo(-22, 6);
+  ctx.lineTo(-18, 0); ctx.lineTo(-12, 4); ctx.lineTo(-8, 6);
+  ctx.closePath();
+  ctx.fill();
+  // Pier post (foreground)
+  ctx.fillStyle = "#7a4a18";
+  ctx.fillRect(-14, 4, 3, 18);
+  ctx.fillRect(-2, 4, 3, 18);
+  ctx.fillRect(10, 4, 3, 18);
+  ctx.strokeStyle = "#3a1c08"; ctx.lineWidth = 1.0;
+  ctx.strokeRect(-14, 4, 3, 18); ctx.strokeRect(-2, 4, 3, 18); ctx.strokeRect(10, 4, 3, 18);
+  // Pier deck
+  ctx.fillStyle = "#a8783a";
+  ctx.fillRect(-16, 0, 30, 4);
+  ctx.strokeStyle = "#3a1c08"; ctx.lineWidth = 1.2;
+  ctx.strokeRect(-16, 0, 30, 4);
+  // Plank lines
+  ctx.strokeStyle = "rgba(58,28,8,0.6)"; ctx.lineWidth = 0.6;
+  for (let i = -10; i <= 8; i += 6) {
+    ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, 4); ctx.stroke();
+  }
+  // Anchor on the deck
+  ctx.strokeStyle = "#1a1010"; ctx.lineWidth = 1.6;
+  ctx.fillStyle = "#3a3a40";
+  ctx.beginPath(); ctx.arc(0, -4, 2.5, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(0, -1); ctx.lineTo(0, -8);
+  ctx.moveTo(-3, -8); ctx.lineTo(3, -8);
+  ctx.moveTo(-4, -4); ctx.bezierCurveTo(-6, -4, -6, -10, 0, -10);
+  ctx.bezierCurveTo(6, -10, 6, -4, 4, -4);
+  ctx.stroke();
+  // Sun on horizon
+  ctx.fillStyle = "#f8d878";
+  ctx.beginPath(); ctx.arc(14, -2, 4, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = "rgba(255,255,255,0.5)";
+  ctx.beginPath(); ctx.arc(14, -2, 4, 0, Math.PI * 2); ctx.stroke();
+  // Seagulls
+  ctx.strokeStyle = "#fff"; ctx.lineWidth = 1.4;
+  [[-12, -14], [4, -16], [-2, -10]].forEach(([gx, gy]) => {
+    ctx.beginPath();
+    ctx.moveTo(gx - 3, gy); ctx.quadraticCurveTo(gx, gy - 2, gx + 3, gy);
+    ctx.stroke();
+  });
+}
+
 export const ICONS = {
   hazard_cave_in:  { label:"Cave-In",  color:"#7a6850", draw:drawCaveIn },
   hazard_gas_vent: { label:"Gas Vent", color:"#5a8028", draw:drawGasVent },
@@ -469,4 +544,5 @@ export const ICONS = {
   hazard_mole:    { label:"Mole",     color:"#3a2818", draw:drawMole },
   biome_farm:     { label:"Farm",     color:"#5a8a26", draw:drawBiomeFarm },
   biome_mine:     { label:"Mine",     color:"#5a4a3a", draw:drawBiomeMine },
+  biome_fish:     { label:"Harbor",   color:"#2a4a6a", draw:drawBiomeFish },
 };

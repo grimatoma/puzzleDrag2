@@ -1323,17 +1323,18 @@ function coreReducer(state, action) {
       const biomeId = action.id ?? action.payload?.id;
       if (!biomeId || !BIOMES[biomeId]) return state;
       if (biomeId === state.biome) return state;
-      // Switching to Farm clears mysteriousOre (mine-only mechanic)
-      const clearMine = biomeId === "farm";
+      // Mysterious ore is a mine-only mechanic — clear it whenever leaving mine
+      // (i.e. switching to anything that isn't mine).
+      const enteringMine = biomeId === "mine";
       const afterSetBiome = {
         ...state,
         biome: biomeId,
         biomeKey: biomeId,
-        mysteriousOre: clearMine ? null : state.mysteriousOre,
+        mysteriousOre: enteringMine ? state.mysteriousOre : null,
         _needsRefill: true,
       };
-      // Spawn mysterious ore when entering mine, if grid is available
-      if (!clearMine && afterSetBiome.grid && afterSetBiome.grid.length > 0) {
+      // Spawn mysterious ore only when entering mine, and only if a grid exists.
+      if (enteringMine && afterSetBiome.grid && afterSetBiome.grid.length > 0) {
         return spawnMysteriousOre(afterSetBiome);
       }
       return afterSetBiome;
