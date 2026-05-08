@@ -62,8 +62,10 @@ export const STORY_BEATS = [
     id: "act2_frostmaw",
     act: 2,
     title: "Frostmaw Wakes",
-    body: "Bram: 'The cold is a creature. Gather 30 logs this season or we burn the rafters.'",
-    trigger: { type: "season_entered", season: "winter" },
+    body: "Bram: 'The cold is a creature. Gather 30 logs or we burn the rafters.'",
+    // Phase 7 — was `season_entered: winter`. The calendar was removed in #289;
+    // this beat now fires when the player has hauled enough firewood total.
+    trigger: { type: "resource_total", key: "wood_log", amount: 30 },
     onComplete: { setFlag: "frostmaw_active", spawnBoss: "frostmaw" },
   },
   {
@@ -170,8 +172,6 @@ function triggerMatches(beat, event, state, totals) {
       return true;
     case "act_entered":
       return event.act === t.act;
-    case "season_entered":
-      return event.season === t.season;
     case "resource_total":
       return (totals[t.key] ?? 0) >= t.amount;
     case "resource_total_multi":

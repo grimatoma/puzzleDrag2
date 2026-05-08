@@ -8,6 +8,7 @@ import {
   expandZoneCategories,
   nextResourceForZone,
   pickByZoneSeasonDrops,
+  seasonIndexInSession,
   seasonNameInSession,
   ZONES,
 } from "./features/zones/data.js";
@@ -353,10 +354,14 @@ export class GameScene extends Phaser.Scene {
   // ─── Background / board frame ─────────────────────────────────────────────
 
   season() {
-    // Phase 7 — calendar season removed. Always return Spring's visual
-    // metadata; future cleanup can hook this to the in-session season for
-    // atmospheric rotation within a run.
-    return SEASONS[0];
+    // Phase 7.1 — visual season rotates within the session. Pick the index
+    // from turnsUsed/sessionMaxTurns so the board palette cycles
+    // Spring -> Winter as the player burns turns.
+    const turnsUsed = this.registry.get("turnsUsed") ?? 0;
+    const sessionMaxTurns = this.registry.get("sessionMaxTurns") ?? null;
+    if (!sessionMaxTurns || sessionMaxTurns < 1) return SEASONS[0];
+    const idx = seasonIndexInSession(turnsUsed, sessionMaxTurns);
+    return SEASONS[idx];
   }
 
   biomeKey() {

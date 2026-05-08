@@ -3,6 +3,7 @@ import { SEASONS, MAX_TURNS } from "../constants.js";
 import { hex } from "../utils.js";
 import { xpForLevel } from "../state.js";
 import { WEATHER_META } from "../features/boss/slice.js";
+import { seasonIndexInSession } from "../features/zones/data.js";
 import IconCanvas, { hasIcon } from "./IconCanvas.jsx";
 
 // Phase 7 — calendar season effects were removed. Keeping the export as an
@@ -164,12 +165,13 @@ function DebugQuickBar({ dispatch }) {
 }
 
 export function Hud({ state, dispatch }) {
-  const { coins, level, xp, turnsUsed, built, view } = state;
+  const { coins, level, xp, turnsUsed, built, view, sessionMaxTurns } = state;
   const onBoard = view === "board";
-  // Phase 7 — calendar season removed; HUD shows the first season's visual
-  // metadata as a static label. A follow-up can hook this to the in-session
-  // season for atmospheric reasons.
-  const season = SEASONS[0];
+  // Phase 7.1 — visual season rotates within the session. Each run cycles
+  // Spring -> Winter as turnsUsed grows; the index lands on Spring whenever
+  // the player isn't on the board.
+  const seasonIdx = onBoard ? seasonIndexInSession(turnsUsed ?? 0, sessionMaxTurns ?? MAX_TURNS) : 0;
+  const season = SEASONS[seasonIdx];
   const xpNeed = xpForLevel(level);
   const xpPct = Math.min(100, (xp / xpNeed) * 100);
   const turnsLeft = MAX_TURNS - turnsUsed;
