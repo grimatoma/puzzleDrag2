@@ -426,6 +426,14 @@ export const RECIPES = {
   stonework:  { name: "Stonework",      inputs: { mine_block: 2, mine_coke: 1 },          tier: 3, station: "forge",  output: "mine_ingot", coins: 300, glyph: "🏗", color: 0x8a8a7a, dark: 0x383828,
                 desc: "Dressed stonework for walls and facades — the final tier of Forge crafting, worth 300 coins." },
   // Phase 10.3 — snake_case aliases so tests and saves can use either form
+  // Fish biome recipes — chowder (hearty soup) + bottled fish oil (tool feed).
+  // Chowder is the larder-tier dish from FISH_BOARD_SCOPE.md; fish oil is a
+  // direct one-step refinery so kelp chains have a sale path beyond the
+  // chain product itself.
+  chowder:    { name: "Chowder",        inputs: { fish_fillet: 2, milk: 1, veg_carrot: 1 },         tier: 2, station: "larder", coins: 280, glyph: "🍲", color: 0xd4b888, dark: 0x6a503a,
+                desc: "A creamy seafood chowder thick with fillet, milk, and root vegetables. Larder favourite at 280 coins." },
+  fish_oil_bottled: { name: "Fish Oil (Bottled)", inputs: { fish_oil: 1, wood_plank: 1 },        tier: 1, station: "workshop", coins: 80, glyph: "💧", color: 0xe8d050, dark: 0x7a6018,
+                desc: "Refined kelp-and-fish oil sealed in a corked plank flask. Used by tinkers and tar-mongers, worth 80 coins." },
   iron_frame: null, // resolved below
   gem_crown:  null,
   gold_ring:  null,
@@ -475,6 +483,14 @@ export const MARKET_PRICES = {
   // `egg` (singular), which is a default bird tile.
   eggs:      { buy: 80,   sell: 5   },
   bread:     { buy: 60,   sell: 4   },
+  // Fish biome — buy/sell pairs follow the same ~10× ratio as the rest
+  // of MARKET_PRICES. Drift logic in features/market expects both columns
+  // populated (buy: 0 would violate the ±15% drift bound).
+  fish_raw:         { buy: 80,   sell: 4   },
+  fish_fillet:      { buy: 200,  sell: 12  },
+  fish_oil:         { buy: 100,  sell: 8   },
+  fish_oil_bottled: { buy: 600,  sell: 80  },
+  chowder:          { buy: 2400, sell: 280 },
 };
 
 // LEGACY — only used by features/quests/slice.js's `dailies` system. The
