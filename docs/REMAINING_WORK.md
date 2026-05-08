@@ -4,126 +4,102 @@ Snapshot of what's still outstanding from `REFERENCE_CATALOG.md` (now canonical
 for HV expansions). Treat this as a living checklist; cross things off in PRs
 that ship the work.
 
-> **Last updated:** Doc-alignment audit — crossed off Mysterious Ore, Mine entry tiers, Daily rewards, and partial cartography/mine-worker progress.
+> **Last updated:** Post-quota PR sweep (PRs #226–#265). Fish biome shipped
+> end-to-end, every catalog §9 worker is now in the roster, slice coverage
+> across the codebase is broadly above 90%, and a sizeable content batch
+> landed (recipes, achievements, decorations, buildings).
 
 ---
 
 ## ✅ Shipped
 
-| PR    | Slice                                                                       |
-|-------|-----------------------------------------------------------------------------|
-| #188  | Catalog content expansion (verbose §7 species tables, missing entries).     |
-| #189  | Vegetables → Soup chain end-to-end + Castle Needs system + Brenna worker.   |
-| #191  | Full design-bundle icon import (16 modules, ~6 000 lines) + 47 placeholder tile-types/resources. Net test health: 19/86 → 86/86 files. |
-| #192  | Fruits → Pie / Flowers → Honey / Herd → Meat / Cattle → Milk / Mounts → Horseshoe chains; 5 new chain-reducer workers. |
-| #193  | Birds → Eggs (split tile vs. product) / Trees → Log (feeds existing wood chain) / Coal in Castle Needs UI. |
-| #194  | Grain → Bread (flour → bread terminal). Category-prefix rename for the 14 farm-side legacy keys (`hay → grass_hay`, `egg → bird_egg`, etc.) with v13 → v14 save migration. Display-layer prefix-strip helpers in `a11y.js` and `tileCollection/effects.js`. |
-| #201  | Mine-side prefix rename for the 11 mine resource keys (`stone → mine_stone`, `coal → mine_coal`, etc.) with v14 → v15 save migration. Cross-chain workers via new `chain_redirect_category` effect type: Grain Trader (grain→veg), Gardener (veg→fruit), Orchardist (fruit→flower), Farmer (bird→herd). Engine integration in `state.js` upgrade path. |
+| PR(s)        | Slice                                                                       |
+|--------------|-----------------------------------------------------------------------------|
+| #188         | Catalog content expansion (verbose §7 species tables, missing entries).     |
+| #189         | Vegetables → Soup chain end-to-end + Castle Needs system + Brenna worker.   |
+| #191         | Full design-bundle icon import (16 modules, ~6 000 lines) + 47 placeholder tile-types/resources. Net test health: 19/86 → 86/86 files. |
+| #192         | Fruits → Pie / Flowers → Honey / Herd → Meat / Cattle → Milk / Mounts → Horseshoe chains; 5 new chain-reducer workers. |
+| #193         | Birds → Eggs (split tile vs. product) / Trees → Log (feeds existing wood chain) / Coal in Castle Needs UI. |
+| #194         | Grain → Bread (flour → bread terminal). Category-prefix rename for the 14 farm-side legacy keys. |
+| #201         | Mine-side prefix rename. Cross-chain workers via new `chain_redirect_category` effect type. |
+| #226         | Save migrations dropped. Tutorial back button + larger touch targets. Sheep / alpaca / ram tile redraws. Touch-drag pointer fallback + tile hit-area. |
+| #227         | **Fish biome MVP** (Saltspray Harbor): `BIOMES.fish`, `FISH_TILE_POOL`, fish thresholds, cartography wiring, biome-entry portrait. |
+| #228         | Fish biome **tide cycle** — 3-turn flip + bottom-row mutation, HUD `TideChip`. |
+| #229         | Fish biome **recipes** — chowder + bottled fish oil + market prices. |
+| #230         | **Reaper** apprentice (grain_flour 6 → 4 at max). |
+| #231–#232,#234,#239,#248,#250–#257 | **Coverage rounds 1–9 + misc** — market / mood / settings / castle / story / tutorial / utils / aggregate / portal / mine hazards / tile collection / a11y keyboard / story.js / pricing / bosses / farm pool. |
+| #233         | **Poultryman** apprentice (`threshold_reduce_category` on bird, 6 → 4). |
+| #235         | Fish biome **Pearl rune-capture** mechanic (mirror of mysterious-ore). |
+| #236         | **Harbor entry tiers** (`HARBOR/ENTER`, mirror of `MINE_ENTRY_TIERS`). |
+| #237         | **Storm boss** (fish biome; `min_chain: 4`). |
+| #238         | Sea workers round 1 — **Fisherman**, **Trawlerman**. |
+| #240         | **Three fish-biome achievements** + `fish_chained` counter. |
+| #241         | Sea workers round 2 — **Boatwoman**, **Harpooner**, **Oilman**. |
+| #242         | **Fish-biome quest templates** (4 collect + 2 craft). |
+| #243         | Sea workers round 3 — **Cook**, **Chef**, **Captain**. |
+| #244         | Sea workers round 4 — **Explorer**, **Navigator**, **Confectioner**, **Deckhand**. |
+| #245         | Mine workers round 1 — **Stone Miner**, **Coal Miner**, **Jeweler**, **Digger**, **Excavator**. |
+| #246         | Mine workers round 2 — **Iron Miner**, **Silver Miner**, **Engineer**, **Alchemist**, **Sculptor**. |
+| #247         | Catalog §9 farm leftovers — **Peasant**, **Lumberjack**. |
+| #249         | Hazard-counter workers — **Ratcatcher** (new `hazardCoinMultiplier`), **Sapper** (cave_in spawn reduce). |
+| #258         | **Mine-biome quest templates** (5 collect + 3 craft). |
+| #259         | Five new decorations (driftwood_arch, pearl_fountain, fishing_dock, cobble_well, smelter_brazier). |
+| #261         | **Three mine-biome achievements** + `mine_chained` counter. |
+| #262         | Per-category achievements (veg / fruit / flower / herd). |
+| #263         | Five workshop tools — Hoe, Stone Hammer, Iron Pick, Bird Feed, Sapling. |
+| #264         | Three new buildings — Harbor Dock, Fishmonger, Smokehouse. |
+| #265         | Per-category achievements round 2 (cattle / mount / tree / bird). |
 
 ---
 
 ## ❎ Outstanding chains
 
-### Sea biome (full new biome)
+### Sea biome — partial
 
-The catalog devotes §6 to a Sea biome with its own counter (voyage supplies),
-ship-navigation puzzle, distinct hazard set (sharks, icebergs, storms,
-whirlpools), and chest mechanics that differ from Farm/Mine. Resources from
-the catalog:
+The MVP fish biome (Saltspray Harbor) shipped in #227, with tide cycle (#228),
+recipes (#229), pearl mechanic (#235), entry tiers (#236), Storm boss (#237),
+and the full sea-worker slate (#238/#241/#243/#244). What's still **not** in
+the catalog spec:
 
-| Tile             | Chain | Product       | Sell  | Buy    | Castle |
-|------------------|-------|---------------|-------|--------|--------|
-| Shallow Water    | 5     | Salt          | 11◉   | 80◉    | —      |
-| Deep Water       | 4     | Water bucket  | 11◉   | 80◉    | —      |
-| Spice Island     | 2     | Spice         | 40◉   | 320◉   | —      |
-| Cocoa Island     | 2     | Cocoa         | 160◉  | 1280◉  | 33     |
-| Squid            | 3     | Ink           | 160◉  | 1280◉  | 12     |
-| Silk Island      | 3     | Silk          | 600◉  | 2000◉  | —      |
-| Sea Serpent      | 4     | Oil           | 600◉  | 2000◉  | —      |
-| Jade Island      | 4     | Jade          | 800◉  | 4000◉  | —      |
-| Oyster/Clam      | 4     | Pearl         | 800◉  | 4000◉  | —      |
+- **Voyage supplies counter** — the catalog frames the Sea biome with its own
+  per-trip "supplies" resource. Today the harbor uses the standard
+  10-turn season; voyage-supplies is unmodelled.
+- **Ship navigation puzzle** — the catalog suggests a chart-based travel
+  metagame distinct from chain harvesting. Not implemented.
+- **Distinct hazards** (sharks, icebergs, storms, whirlpools) — only the
+  Storm boss exists; per-turn hazard pipeline for fish hasn't been built.
+- **Chest mechanics** — catalog references treasure-chest pulls; not
+  implemented.
+- **Catalog tile coverage** — our fish biome ships 5 board tiles
+  (sardine / mackerel / clam / oyster / kelp) plus `fish_pearl`. The
+  catalog lists a richer Sea board: Shallow Water → Salt, Deep Water →
+  Water bucket, Spice / Cocoa / Squid / Silk / Sea Serpent / Jade. Those
+  are not yet on the harbor pool.
 
-Sea workers (catalog §9): Deckhand, Fisherman, Boatwoman, Trawlerman,
-Harpooner, Oilman, Artisan, Buccaneer, Cook, Chef, Navigator, Confectioner,
-Captain, Explorer, Antiquarian, Pirate (16 in total).
+### Bird → Eggs model cleanup (deferred)
 
-Estimated effort: 1–2 weeks. New Phaser scene, new state slice, new
-hazard pipeline, ~16 procedural icons (already imported via `toolsSea.js`),
-~30 chain-product wiring, market prices, save migration.
+Same situation as before; flagged for a balance pass.
 
-### Mine-side category prefix rename — ✅ done in PR #201
+### Grain → Bread short-circuit (deferred)
 
-Resolution: chose the flat `mine_` prefix for every mine-side key (uniform
-namespace, no per-chain sub-categories needed). v14 → v15 save migration
-remaps inventory + tileCollection slice (idempotent). `mine_` was added
-to `CATEGORY_PREFIXES` in `a11y.js` and `tileCollection/effects.js` so
-displays still read "stone" / "coal" / etc. Castle Needs `coal` need-key
-intentionally kept unchanged (state.castle.contributed.coal) — only the
-`resource` field in `CASTLE_NEEDS.coal` points to `mine_coal`.
-
-### Bird → Eggs model cleanup
-
-`egg` (the bird tile) and `bird_egg` (post-rename) currently produces `eggs`
-on a chain ≥ 6, but the design conflates the singular `egg` tile with the
-"eggs" product. PR #193 split them by adding `eggs` as a distinct product;
-PR #194's rename made the tile `bird_egg` to remove the visual pun. There's
-nothing technically broken, but consider:
-
-- Renaming the `bird_egg` tile to `bird_chicken_nest` or similar to fully
-  decouple from the product noun.
-- Or splitting into `bird_egg` (the *raw* bird tile that drops eggs as a
-  by-product) and `bird_egg_carton` (the product). Either is a balance call.
-
-### Grain → Bread short-circuit
-
-Catalog §4: "Grain (6) → Bread". Our chain is 4-tier (`hay →
-grain_wheat → grain → grain_flour → bread`), so reaching bread by chain
-requires a *long* chain hierarchy. PR #194 makes bread reachable as the
-terminal of the existing chain, but a player following the catalog spec
-would expect to chain 6 grain tiles directly into bread.
-
-Options:
-- Keep the 4-tier model (current state — bread is far away).
-- Insert bread between `grain` and `grain_flour` so chains of 6 grain tiles
-  produce 1 bread. Flour becomes a higher-tier product or stays Workshop-only.
-- Bypass: set `grain_wheat.next = "bread"` with a higher threshold. Skips
-  grain/flour entirely for the bread path.
-
-Pick once a balance pass is done.
+Same situation as before; flagged for a balance pass.
 
 ---
 
-## ❎ Outstanding workers (catalog §9)
+## ✅ Outstanding workers (catalog §9) — all shipped
 
-Workers from the catalog not yet implemented:
-
-| Worker          | Chain                    | Effect at max          | Status |
-|-----------------|--------------------------|------------------------|--------|
-| Peasant         | grass → hay              | 10 grass = 1 hay       | Not built — grass chain is implicit (hay = the tile and the product) |
-| Reaper          | grain → bread            | 6 grain = 1 bread      | ✅ shipped — `threshold_reduce` on grain_flour from 6 to 4 at max (`reaper` apprentice). |
-| Lumberjack      | tree → wood              | 1 tree = 1 wood        | Not built — chain length 1 doesn't fit the threshold model |
-| Grain Trader    | grain → vegetable        | 4 grain = 1 vegetable  | ✅ Tilda (PR #201) — `chain_redirect_category` |
-| Gardener        | vegetable → fruit        | 5 vegetable = 1 fruit  | ✅ Marin (PR #201) |
-| Orchardist      | fruit → flower           | 6 fruit = 1 flower     | ✅ Annek (PR #201) |
-| Poultryman      | bird → egg               | 8 bird = 1 egg         | Not built |
-| Farmer          | bird → herd animal       | 7 bird = 1 herd        | ✅ Ren (PR #201) |
-| Ratcatcher      | rats → coin              | 10 rats = 1 coin       | Not built — hazard-to-resource conversion not modeled |
-| Sapper          | gas → coin               | 7 gas = 1 coin         | Not built — same |
-| (mine workers)  | (Digger/Excavator/etc.)  | various                | ⚠️ partial — Canary + Geologist shipped (`src/features/apprentices/data.js:274-301`); the catalog's Digger / Excavator / Stone Miner / Iron Miner / Coal Miner / Silver Miner / Jeweler / Engineer / Alchemist / Sculptor list is still missing |
-
-**Cross-chain workers — ✅ done in PR #201.** New effect type
-`chain_redirect_category` with `{ fromCategory, toCategory, from, to }`
-fields, integrated in `state.js`'s `CHAIN_COLLECTED` upgrade path: when
-a redirect is active and the chained tile's category matches `fromCategory`,
-the upgrade target becomes the active species in `toCategory` instead of
-the source's native `next`, with the redirect's threshold superseding the
-native one. Multiple redirects on the same source category resolve by
-lowest threshold (most generous). Aggregate computed in
-`apprentices/aggregate.js` `computeWorkerEffects()`.
+| Worker          | Status |
+|-----------------|--------|
+| Peasant / Reaper / Lumberjack            | ✅ #247 / #230 / #247 |
+| Grain Trader / Gardener / Orchardist     | ✅ #201 |
+| Poultryman / Farmer                      | ✅ #233 / #201 |
+| Ratcatcher / Sapper                      | ✅ #249 |
+| Mine roster (Digger / Excavator / Stone Miner / Iron Miner / Coal Miner / Silver Miner / Jeweler / Engineer / Alchemist / Sculptor) | ✅ #245 + #246 (plus pre-existing Canary + Geologist) |
+| Sea roster (Deckhand, Fisherman, Boatwoman, Trawlerman, Harpooner, Oilman, Cook, Chef, Navigator, Confectioner, Captain, Explorer) | ✅ #238 / #241 / #243 / #244. Antiquarian / Artisan / Buccaneer / Pirate need a new "treasure" effect type — not yet shipped. |
 
 ---
 
-## ❎ Hazards & traits
+## ❎ Hazards & traits (still unwired)
 
 The §7 species descriptions mention many tags that the engine doesn't yet
 enforce:
@@ -143,9 +119,9 @@ enforce:
 - **Copies last long-chain bonus** — Pig-in-Disguise
 - **Permanent on fields** — Melon
 
-Today these tags are descriptive only. Wiring them up needs:
-- A `tags: ["resistant_swamp", "avoids_rats", ...]` field on each
-  `TILE_TYPES` entry (probably a parallel data export).
+Wiring needs:
+- A `tags: ["resistant_swamp", "avoids_rats", ...]` field on each `TILE_TYPES`
+  entry (probably a parallel data export).
 - Hazard-spawn modifier integrating with `state.hazards` and weather.
 - Chain-resolution interceptor for "long chain gives X" / "auto-collect" /
   "copies last bonus".
@@ -157,74 +133,67 @@ free-move tags). Free-moves are already wired (PR #189).
 
 ## ❎ Castle Needs full hookup
 
-`features/castle/data.js` scaffolds five targets:
-
 | Need  | Target | Status                                                               |
 |-------|--------|----------------------------------------------------------------------|
-| Soup  | 53     | ✅ wired (PR #189) — UI buttons, chain produces it                  |
-| Meat  | 47     | ✅ wired (PR #192) — UI buttons, chain produces it                  |
+| Soup  | 53     | ✅ wired (PR #189) — chain produces it                              |
+| Meat  | 47     | ✅ wired (PR #192) — chain produces it                              |
 | Coal  | 43     | ✅ wired (PR #193 UI; chain has existed since Mine launch)          |
-| Cocoa | 33     | ❌ scaffolded only — Sea biome chain not built                       |
-| Ink   | 12     | ❌ scaffolded only — Sea biome chain not built                       |
-
-Cocoa and Ink unblock once the Sea biome ships.
+| Cocoa | 33     | ⚠️ scaffolded only — re-pointed to `berry_jam` until a real cocoa  |
+|       |        | resource lands (would need a fish-biome / sea-biome resource).      |
+| Ink   | 12     | ⚠️ scaffolded only — re-pointed to `bird_egg`. Could be re-pointed |
+|       |        | to a fish-biome `fish_oil_bottled` once the Sea-biome squid → ink   |
+|       |        | chain ships.                                                         |
 
 ---
 
 ## ❎ Economic balance
 
-PRs #189–#194 carry **placeholder values** for many fields:
+PRs #189–#194 + the fish-biome PRs (#227, #229, #236) carry placeholder
+values for many fields:
 
-- Worker hire costs — picked tier-appropriate amounts from the catalog where
-  possible, but not playtested.
-- Chain thresholds for placeholder tile types in PR #191 (default 6 — replaced
-  per chain in #192/#193, but the 47 imported tile types still default to 6
-  for non-chain entries).
-- `value` fields in `BIOMES.farm.resources` — most new tiles have `value: 1`,
-  meaning no chain-feedback float-text bonus.
-- Spawn pool weights — the new categories each have one slot in
+- Worker hire costs — picked tier-appropriate amounts from the catalog
+  where possible, but not playtested.
+- Chain thresholds for placeholder tile types (default 6 for many imported
+  species).
+- `value` fields in `BIOMES.farm.resources` — many new tiles have
+  `value: 1`, meaning no chain-feedback float-text bonus.
+- Spawn pool weights — most new categories have one slot in
   `FARM_TILE_POOL`; balance may need more (or fewer) per category.
 - Market prices for *raw* new tiles (vegetables, fruits, flowers, herd,
-  cattle, mounts, etc.) — only the **products** have prices; the raw tiles
-  aren't sellable. This may be intentional (catalog only lists product
-  prices), but worth documenting as a deliberate choice.
+  cattle, mounts, etc.) — only the products have prices; the raw tiles
+  aren't sellable. May be intentional, but worth documenting as a
+  deliberate choice.
 
-A focused **balance pass** PR after Sea ships would be the right place to
-tune all of these together.
+A focused **balance pass** PR is the right place to tune all of these
+together once the Sea biome's deeper content (voyage supplies, treasure
+mechanics) lands.
 
 ---
 
 ## ❎ Other catalog content not yet built
 
-- **§5 Mine — Mysterious Ore countdown mechanic** — ✅ shipped in
-  `src/features/mine/mysterious_ore.js` (`MYSTERIOUS_ORE_TURNS = 5`,
-  `REQUIRED_DIRT_IN_CHAIN = 2`, full chain validation + countdown + Rune
-  reward).
-- **§5 Mine — Three entry tiers** — ✅ shipped via `MINE_ENTRY_TIERS`
-  (`src/constants.js:481-485`) and the `MINE/ENTER` action
-  (`src/state.js:1223-1252`): free / `100◉ + 10 shovels` / `2 runes`.
-- **§8 Tools — full inventory.** Many tool icons imported via
-  `toolsFarm/toolsMine/toolsPortal/toolsSea.js` (PR #191) but only a subset
-  have `WORKSHOP_RECIPES` entries. Missing recipes from the catalog: Sapling,
-  Trimmer, Plough, Bird Feed, Hoe, Fruit Picker, Milk Churn, Bee, Wheelbarrow,
-  Rifle, Terrier, Hound, Stone Hammer, Iron Pick, Explosives, Flint, Water
-  Pump, Drill, Magnet, Silver Pick, Coal Transmuter, Diamond Hammer, Gold
-  Pick, Iron Ration, plus all sea tools and most portal/magic tools (only
-  `magic_wand`, `hourglass`, `magic_seed`, `magic_fertilizer` are wired today).
+- **§8 Tools — most of the catalog tool list is wired** (PR #263 added
+  Hoe / Stone Hammer / Iron Pick / Bird Feed / Sapling on top of the
+  earlier rake / axe / fertilizer / cat / scythe / bird_cage / rifle /
+  hound / cobblepath / lantern / etc.). Still missing:
+  Plough, Trimmer, Wheelbarrow, Drill, Magnet, Silver Pick, Coal
+  Transmuter, Diamond Hammer, Gold Pick, Iron Ration, plus all sea tools
+  beyond fish_oil_bottled, and most portal/magic tools (only `magic_wand`,
+  `hourglass`, `magic_seed`, `magic_fertilizer` are wired today).
 - **§10 Building system — many missing buildings.** Catalog enumerates
   Architect, Archaeologist, Sorceress's Hut, Fishing Net, Spice Guild, etc.
-  Current `BUILDINGS` array has the core set (~16); catalog implies ~40+.
+  PR #264 added Harbor Dock, Fishmonger, Smokehouse for ~19 total against
+  the catalog's ~40+.
 - **§11 Castle — passive rune generation.** ~1 rune per 23 h timer with
   Beach property reducing it. Not implemented.
 - **§12 Zones — 6 zones + 1 Castle node.** ⚠️ partial. The 9-node
-  cartography slice has shipped (`src/features/cartography/data.js` with
-  regions Hearthlands / Greenfields / The Wilds / Stoneholds / The Deep), so
-  the foundation exists, but the catalog's literal "Zone One … Zone Six"
-  framing isn't realized — our world map uses 9 named nodes, not 6 zones +
-  Castle.
+  cartography slice has shipped (with an added Saltspray Harbor coast
+  node in #227), so the foundation exists. The catalog's literal
+  "Zone One … Zone Six" framing isn't realized — our world map uses 10
+  named nodes, not 6 zones + Castle.
 - **§13 Quests — Royal quests, Exploration blockers** beyond the basic
-  quest templates. Daily rewards have shipped (`DAILY_REWARDS` table in
-  `src/constants.js`).
+  daily quest templates. Daily rewards shipped (`DAILY_REWARDS` table).
+  Mine + Fish quest templates landed in #258 / #242.
 - **§14 Monetization** — IAP bundles, watch-ads via Sorceress's Hut, etc.
   Out of scope for any near-term PR.
 
