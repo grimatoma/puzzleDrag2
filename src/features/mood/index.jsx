@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { NPCS, BIOMES } from '../../constants.js';
 import { NPC_FAVORITES, moodForBond } from './data.js';
+import IconCanvas, { hasIcon } from '../../ui/IconCanvas.jsx';
 
 export const modalKey = 'mood';
 
@@ -63,15 +64,29 @@ function GiftPicker({ npcKey, inventory, dispatch, onClose }) {
                 : '2px solid rgba(255,255,255,0.25)',
               color: '#fff',
               borderRadius: 8,
-              padding: '2px 7px',
+              padding: '2px 6px 2px 2px',
               fontSize: 10,
               fontWeight: 700,
               position: 'relative',
               cursor: 'pointer',
               fontFamily: 'Arial, sans-serif',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 4,
             }}
           >
-            {r.glyph} {r.label} ×{inventory[r.key]}
+            {hasIcon(r.key) ? (
+              <span style={{
+                width: 22, height: 22, borderRadius: 6,
+                background: 'rgba(255,255,255,0.18)',
+                display: 'inline-grid', placeItems: 'center', flexShrink: 0,
+              }}>
+                <IconCanvas iconKey={r.key} size={22} />
+              </span>
+            ) : (
+              <span>{r.glyph}</span>
+            )}
+            {r.label} ×{inventory[r.key]}
             {isFav && (
               <span
                 style={{
@@ -124,25 +139,41 @@ function NpcCard({ npcKey, npcData, bond, inventory, dispatch, giftCooledDown })
     >
       {/* Top row: avatar + info + gift button */}
       <div className="flex items-center gap-2">
-        {/* Avatar circle */}
-        <div
-          style={{
-            width: 36,
-            height: 36,
-            borderRadius: '50%',
-            backgroundColor: npcData.color,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: '#fff',
-            fontWeight: 700,
-            fontSize: 16,
-            flexShrink: 0,
-            border: '2px solid rgba(255,255,255,0.4)',
-          }}
-        >
-          {npcData.name[0]}
-        </div>
+        {/* Avatar — canvas portrait when available */}
+        {hasIcon(`char_${npcKey}`) ? (
+          <div
+            style={{
+              width: 48,
+              height: 48,
+              borderRadius: '50%',
+              flexShrink: 0,
+              border: `2px solid ${npcData.color}`,
+              boxShadow: '0 2px 6px rgba(0,0,0,0.18)',
+              overflow: 'hidden',
+            }}
+          >
+            <IconCanvas iconKey={`char_${npcKey}`} size={48} />
+          </div>
+        ) : (
+          <div
+            style={{
+              width: 48,
+              height: 48,
+              borderRadius: '50%',
+              backgroundColor: npcData.color,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#fff',
+              fontWeight: 700,
+              fontSize: 20,
+              flexShrink: 0,
+              border: '2px solid rgba(255,255,255,0.4)',
+            }}
+          >
+            {npcData.name[0]}
+          </div>
+        )}
 
         {/* Name / role / mood */}
         <div className="flex-1 min-w-0">
@@ -217,9 +248,37 @@ export function MoodPanel({ state, dispatch, showHeader = true, onClose = null }
           )}
         </div>
       )}
-      <p className="text-[11px] text-[#7a6248] mb-3">
+      <p className="text-[11px] text-[#7a6248] mb-2">
         Higher hearts = better order rewards. Gifts and deliveries grow your bond.
       </p>
+      {/* Aggregate summary banner */}
+      {(() => {
+        const npcKeys = Object.keys(NPCS);
+        const total = npcKeys.reduce((sum, k) => sum + (bonds[k] ?? 5), 0);
+        const avg = npcKeys.length > 0 ? total / npcKeys.length : 0;
+        const beloved = npcKeys.filter((k) => (bonds[k] ?? 5) >= 9).length;
+        const sour = npcKeys.filter((k) => (bonds[k] ?? 5) <= 4).length;
+        return (
+          <div className="flex flex-wrap gap-2 mb-3 text-[10px]">
+            <span className="px-2 py-1 rounded-md font-bold" style={{ background: "#fce8d4", color: "#7a4a2a" }}>
+              Avg bond: {avg.toFixed(1)} ❤
+            </span>
+            {beloved > 0 && (
+              <span className="px-2 py-1 rounded-md font-bold" style={{ background: "#f8d8e8", color: "#a82058" }}>
+                {beloved} beloved
+              </span>
+            )}
+            {sour > 0 && (
+              <span className="px-2 py-1 rounded-md font-bold" style={{ background: "#f0c8c8", color: "#7a3010" }}>
+                ⚠ {sour} sour
+              </span>
+            )}
+            <span className="px-2 py-1 rounded-md" style={{ background: "#ede4d0", color: "#5a4828" }}>
+              Order multiplier scales with average bond.
+            </span>
+          </div>
+        );
+      })()}
       <div className="flex flex-col gap-2">
         {Object.keys(NPCS).map((key) => (
           <NpcCard

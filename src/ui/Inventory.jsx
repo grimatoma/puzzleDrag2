@@ -2,6 +2,7 @@ import { BIOMES, RECIPES } from "../constants.js";
 import { resourceByKey } from "../state.js";
 import { sellPriceFor } from "../features/market/pricing.js";
 import { hex } from "../utils.js";
+import IconCanvas, { hasIcon } from "./IconCanvas.jsx";
 
 export function Section({ title, titleColor = "#f8e7c6", children }) {
   return (
@@ -83,7 +84,11 @@ function InventoryCell({ r, count, compact, orderStatus, orderTotal, marketBuilt
       style={ringStyle}
       title={r.label}
     >
-      <div className={`rounded-md flex-shrink-0 grid place-items-center text-white ${compact ? "w-8 h-8 text-[16px]" : "w-10 h-10 text-[20px]"}`} style={{ backgroundColor: hex(r.color), border: "2px solid rgba(255,255,255,.4)", textShadow: "0 1px 1px rgba(0,0,0,.4)" }}>{r.glyph}</div>
+      <div className={`rounded-md flex-shrink-0 grid place-items-center text-white ${compact ? "w-8 h-8 text-[16px]" : "w-10 h-10 text-[20px]"}`} style={{ backgroundColor: hex(r.color), border: "2px solid rgba(255,255,255,.4)", textShadow: "0 1px 1px rgba(0,0,0,.4)", overflow: "hidden" }}>
+        {hasIcon(r.key)
+          ? <IconCanvas iconKey={r.key} size={compact ? 32 : 40} />
+          : r.glyph}
+      </div>
       <div className="flex flex-col leading-none min-w-0 flex-1">
         <div className={`text-white/80 truncate font-medium ${compact ? "text-[10px]" : "text-[12px]"}`}>{r.label}</div>
         <div className={`text-white font-bold mt-0.5 ${compact ? "text-[14px]" : "text-[18px]"}`} style={{ textShadow: "0 1px 2px rgba(0,0,0,.4)" }}>{count}</div>

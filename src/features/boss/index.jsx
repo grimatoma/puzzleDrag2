@@ -1,8 +1,15 @@
 
 import { BOSS_META } from "./slice.js";
+import IconCanvas, { hasIcon } from "../../ui/IconCanvas.jsx";
 
 export const modalKey = "boss";
 export const alwaysMounted = true;
+
+function bossPortraitKey(boss) {
+  if (!boss) return null;
+  const k = `boss_${boss.key || boss.id}`;
+  return hasIcon(k) ? k : null;
+}
 
 function ProgressBar({ value, max, color }) {
   const pct = max > 0 ? Math.min(100, (value / max) * 100) : 0;
@@ -66,7 +73,13 @@ function MiniCard({ boss, weather, dispatch }) {
           ×
         </button>
         <div className="flex items-center gap-1.5 mb-1 pr-3">
-          <span className="text-[14px]">{boss.emoji}</span>
+          {bossPortraitKey(boss) ? (
+            <div style={{ width: 28, height: 28, borderRadius: "50%", overflow: "hidden", border: "1.5px solid #ff7a00", flexShrink: 0 }}>
+              <IconCanvas iconKey={bossPortraitKey(boss)} size={28} />
+            </div>
+          ) : (
+            <span className="text-[14px]">{boss.emoji}</span>
+          )}
           <span className="text-[10px] font-bold text-[#ff7a00] leading-tight">{boss.name}</span>
         </div>
         <div className="text-[9px] text-white/70 mb-1">
@@ -105,7 +118,17 @@ function BossModal({ boss, weather, year = 1, dispatch }) {
       >
         {/* Header */}
         <div className="flex flex-col items-center gap-1 mb-4">
-          <div className="text-[48px] leading-none mb-1">{boss.emoji}</div>
+          {bossPortraitKey(boss) ? (
+            <div style={{
+              width: 96, height: 96, borderRadius: "50%", overflow: "hidden",
+              border: "3px solid #ff7a00", boxShadow: "0 0 22px rgba(255,122,0,0.45)",
+              marginBottom: 4, background: "rgba(0,0,0,0.35)",
+            }}>
+              <IconCanvas iconKey={bossPortraitKey(boss)} size={96} />
+            </div>
+          ) : (
+            <div className="text-[48px] leading-none mb-1">{boss.emoji}</div>
+          )}
           <div
             className="text-[20px] font-bold text-center leading-tight"
             style={{ color: "#ff7a00", fontFamily: "Arial, sans-serif" }}
