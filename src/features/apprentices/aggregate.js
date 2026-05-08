@@ -47,6 +47,12 @@ export function computeWorkerEffects(state) {
     // `redirectShare` ∈ [0, 1] is hiredCount/maxCount — the engine uses it to
     // decide whether the worker is "fully active" for redirect purposes.
     chainRedirect: {},
+    // Phase 4 (zones rule overhaul): recipe-input reductions. Shape:
+    //   { [recipeKey]: { [inputResourceKey]: number } }
+    // The per-hire delta is `(from - to) / maxCount`; reductions stack across
+    // workers that target the same recipe + input. Crafting code rounds the
+    // accumulated value and floors the remaining required input at 1.
+    recipeInputReduce: {},
   };
 
   const hired = state?.workers?.hired ?? {};
@@ -111,6 +117,17 @@ export function computeWorkerEffects(state) {
           out.seasonBonus[e.key] =
             (out.seasonBonus[e.key] ?? 0) + e.amount * perHireScalar;
           break;
+        case "recipe_input_reduce": {
+          // Per-hire delta = (from - to) / maxCount; multiplied by hired count.
+          // Crafting rounds + floors at 1 remaining input; reductions accumulate
+          // across multiple workers targeting the same recipe + input.
+          if (!e.recipe || !e.input) break;
+          const delta = (e.from - e.to) * perHireScalar;
+          if (!out.recipeInputReduce[e.recipe]) out.recipeInputReduce[e.recipe] = {};
+          out.recipeInputReduce[e.recipe][e.input] =
+            (out.recipeInputReduce[e.recipe][e.input] ?? 0) + delta;
+          break;
+        }
         default:
           break;
       }
