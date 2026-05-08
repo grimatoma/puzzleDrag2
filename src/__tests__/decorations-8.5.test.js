@@ -35,10 +35,11 @@ describe("8.5 — Influence currency + Decoration buildings", () => {
       { ...s0, coins: 200, inventory: { ...s0.inventory, grass_hay: 10 } },
       { type: "BUILD_DECORATION", payload: { id: "violet_bed" } }
     );
+    const loc = s1.mapCurrent ?? "home";
     expect(s1.coins).toBe(140);
     expect(s1.inventory.grass_hay).toBe(6);
     expect(s1.influence).toBe(20);
-    expect(s1.built.decorations.violet_bed).toBe(1);
+    expect(s1.built[loc]?.decorations?.violet_bed).toBe(1);
   });
 
   it("BUILD_DECORATION is repeatable — second build grants same influence again", () => {
@@ -51,8 +52,9 @@ describe("8.5 — Influence currency + Decoration buildings", () => {
       { ...s1, coins: 100, inventory: { ...s1.inventory, grass_hay: 8 } },
       { type: "BUILD_DECORATION", payload: { id: "violet_bed" } }
     );
+    const loc = s2.mapCurrent ?? "home";
     expect(s2.influence).toBe(40);
-    expect(s2.built.decorations.violet_bed).toBe(2);
+    expect(s2.built[loc]?.decorations?.violet_bed).toBe(2);
   });
 
   it("BUILD_DECORATION: no-op when cost unmet (influence/coins/built unchanged)", () => {
@@ -78,7 +80,8 @@ describe("8.5 — Influence currency + Decoration buildings", () => {
       { type: "BUILD_DECORATION", payload: { id: "violet_bed" } }
     );
     const round = JSON.parse(JSON.stringify(s2));
+    const loc = round.mapCurrent ?? "home";
     expect(round.influence).toBe(40);
-    expect(round.built.decorations.violet_bed).toBe(2);
+    expect(round.built[loc]?.decorations?.violet_bed).toBe(2);
   });
 });

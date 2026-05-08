@@ -42,11 +42,12 @@ describe("new harbor + mine decorations", () => {
       influence: 0,
     };
     const s1 = rootReducer(s0, { type: "BUILD_DECORATION", payload: { id: "driftwood_arch" } });
+    const loc = s1.mapCurrent ?? "home";
     expect(s1.coins).toBe(500 - 180);
     expect(s1.inventory.wood_plank).toBe(10 - 4);
     expect(s1.inventory.fish_kelp).toBe(10 - 6);
     expect(s1.influence).toBe(55);
-    expect(s1.built.decorations.driftwood_arch).toBe(1);
+    expect(s1.built[loc]?.decorations?.driftwood_arch).toBe(1);
   });
 
   it("smelter_brazier requires mine_ingot — rejects without enough", () => {

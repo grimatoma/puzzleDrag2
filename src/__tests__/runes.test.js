@@ -77,8 +77,9 @@ describe("3.3 — Runes currency", () => {
   it("Magic Portal BUILD: succeeds with 5 runes and deducts them", () => {
     const s0 = initialState();
     const okPortal = { ...s0, coins: 5000, runes: 5, built: { hearth: true } };
-    const built = gameReducer(okPortal, { type: "BUILD", payload: { id: "portal" } });
-    expect(built.built.portal).toBe(true);
-    expect(built.runes).toBe(0);
+    const result = gameReducer(okPortal, { type: "BUILD", payload: { id: "portal" } });
+    const loc = result.mapCurrent ?? "home";
+    expect(result.built[loc]?.portal).toBe(true);
+    expect(result.runes).toBe(0);
   });
 });

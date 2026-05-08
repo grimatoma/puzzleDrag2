@@ -70,7 +70,7 @@ function PhaserMount({ dispatch, biomeKey, turnsUsed, uiLocked, sceneRef, weathe
               // first fillBoard after preBoot honours the player's modal pick.
               game.registry.set("sessionSelectedTiles", gameState?.session?.selectedTiles ?? []);
               // Phase 3 — seed the active zone for the chain-upgrade redirect.
-              game.registry.set("activeZone", gameState?.activeZone ?? "zone1");
+              game.registry.set("activeZone", gameState?.activeZone ?? gameState?.mapCurrent ?? "home");
             },
             postBoot: (game) => {
               // Track host CSS-size changes and resize the game's backing
@@ -121,7 +121,7 @@ function PhaserMount({ dispatch, biomeKey, turnsUsed, uiLocked, sceneRef, weathe
     gameRef.current?.registry.set("sessionSelectedTiles", gameState?.session?.selectedTiles ?? []);
   }, [gameState?.session?.selectedTiles]);
   useEffect(() => {
-    gameRef.current?.registry.set("activeZone", gameState?.activeZone ?? "zone1");
+    gameRef.current?.registry.set("activeZone", gameState?.activeZone ?? gameState?.mapCurrent ?? "home");
   }, [gameState?.activeZone]);
   useEffect(() => { gameRef.current?.registry.set("biomeKey", biomeKey); }, [biomeKey]);
   useEffect(() => { gameRef.current?.registry.set("turnsUsed", turnsUsed); }, [turnsUsed]);

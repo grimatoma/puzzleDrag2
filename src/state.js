@@ -1,4 +1,5 @@
 import { BIOMES, BUILDINGS, NPCS, MAX_TURNS, RECIPES, WORKSHOP_RECIPES, STORAGE_KEYS, DAILY_REWARDS, MINE_ENTRY_TIERS, HARBOR_ENTRY_TIERS, CAPPED_RESOURCES, UPGRADE_THRESHOLDS, SAVE_SCHEMA_VERSION } from "./constants.js";
+import { locBuilt as _locBuilt } from "./locBuilt.js";
 import { sellPriceFor as _sellPriceFor } from "./features/market/pricing.js";
 import { tryClearRatChain } from "./features/farm/rats.js";
 import { tryExtinguishFire, rollFarmHazard, tickFire, tickWolves } from "./features/farm/hazards.js";
@@ -342,7 +343,7 @@ export function createFreshState(overrides) {
     _biomeRestored: false,
     lastChainSnapshot: null,
     magicFertilizerCharges: 0,
-    built: { hearth: true, decorations: {} },
+    built: { home: { hearth: true, decorations: {} } },
     influence: 0,
     bubble: null,
     modal: null,
@@ -527,6 +528,8 @@ function maybeFireResourceBeats(stateAfter, stateBefore) {
   next = evaluateAndApplyStoryBeat(next, { type: "resource_total_multi" });
   return next;
 }
+
+const locBuilt = _locBuilt;
 
 function coreReducer(state, action) {
   switch (action.type) {
@@ -793,7 +796,7 @@ function coreReducer(state, action) {
       const toolRecipe = WORKSHOP_RECIPES[toolId];
       if (!toolRecipe) return state;
       // Workshop must be built
-      if (!state.built?.workshop) return state;
+      if (!locBuilt(state).workshop) return state;
       if (!hasAllInventory(state, toolRecipe.inputs)) return state;
       return {
         ...state,
@@ -1069,7 +1072,7 @@ function coreReducer(state, action) {
         coins: state.coins - (b.cost.coins || 0),
         runes: (state.runes ?? 0) - runesNeeded,
         inventory,
-        built: { ...state.built, [b.id]: true },
+        built: { ...state.built, [state.mapCurrent]: { ...locBuilt(state), [b.id]: true } },
         almanac: afterBuildAlmanac.almanac,
         bubble,
         _hintsShown: newHintsShown,
@@ -1077,7 +1080,8 @@ function coreReducer(state, action) {
       // Story: fire building_built trigger
       let afterBuildStory = evaluateAndApplyStoryBeat(afterBuild, { type: "building_built", id: b.id });
       // Check if all 8 story-required buildings are now built
-      const allBuilt = STORY_BUILDING_IDS.every((id) => afterBuildStory.built?.[id]);
+      const homeBuilt = afterBuildStory.built?.home ?? {};
+      const allBuilt = STORY_BUILDING_IDS.every((id) => homeBuilt[id]);
       if (allBuilt) {
         afterBuildStory = evaluateAndApplyStoryBeat(afterBuildStory, { type: "all_buildings_built", allBuilt: true });
       }
@@ -1095,7 +1099,7 @@ function coreReducer(state, action) {
       // TODO: if players run out of shuffles entirely, add a season-1 bootstrap grant here.
       let tools = { ...state.tools };
       // Powder Store: grant 2 bombs per season-end
-      if (state.built?.powder_store) {
+      if (locBuilt(state).powder_store) {
         tools = { ...tools, bomb: (tools.bomb ?? 0) + 2 };
       }
 
@@ -1124,7 +1128,7 @@ function coreReducer(state, action) {
       }
 
       // ── Pool income from Housing buildings ────────────────────────────────
-      const housingCount = ["housing", "housing2", "housing3"].filter(id => !!state.built?.[id]).length;
+      const housingCount = ["housing", "housing2", "housing3"].filter(id => !!locBuilt(state)[id]).length;
       const newPool = (state.townsfolk?.pool ?? 0) + housingCount;
 
       // ── Phase 6.1: NPC bond decay (−0.1 above 5) + Phase 6.2: reset gift cooldowns ──
@@ -1163,14 +1167,14 @@ function coreReducer(state, action) {
       // Phase 12.5 — snapshot board into saved-field slot when Silo/Barn is built
       let afterSeasonFarm = afterSeason.farm ?? { savedField: null };
       let afterSeasonMine = afterSeason.mine ?? { savedField: null };
-      if (state.biomeKey === "farm" && state.built?.silo && state.grid) {
+      if (state.biomeKey === "farm" && locBuilt(state).silo && state.grid) {
         afterSeasonFarm = { ...afterSeasonFarm, savedField: {
           tiles: state.grid,
           hazards: state.hazards ?? null,
           turnsUsed: 0,
         } };
       }
-      if (state.biomeKey === "mine" && state.built?.barn && state.grid) {
+      if (state.biomeKey === "mine" && locBuilt(state).barn && state.grid) {
         afterSeasonMine = { ...afterSeasonMine, savedField: {
           tiles: state.grid,
           hazards: state.hazards ?? null,
@@ -1280,7 +1284,7 @@ function coreReducer(state, action) {
         : [];
       const useFertilizer = !!payload.useFertilizer;
 
-      const zoneId = state.activeZone ?? "zone1";
+      const zoneId = state.activeZone ?? state.mapCurrent ?? "home";
       const zone = ZONES[zoneId];
       if (!zone) return state;
 
@@ -1392,7 +1396,7 @@ function coreReducer(state, action) {
       const recipe = RECIPES[craftId];
       if (!recipe) return state;
       // Check station is built (for workshop, check state.built.workshop)
-      if (recipe.station && !state.built?.[recipe.station]) return state;
+      if (recipe.station && !locBuilt(state)[recipe.station]) return state;
       // Scale recipe inputs by craftQty so the shared helpers can do the
       // check + deduct without a qty-aware codepath.
       const scaledInputs = craftQty === 1
@@ -1808,9 +1812,9 @@ function coreReducer(state, action) {
         return { ...state, inventory };
       }
       if (action.type === "DEV/BUILD_ALL") {
-        const built = { ...state.built };
-        BUILDINGS.forEach((b) => { built[b.id] = true; });
-        return { ...state, built };
+        const allIds = {};
+        BUILDINGS.forEach((b) => { allIds[b.id] = true; });
+        return { ...state, built: { ...state.built, [state.mapCurrent]: { ...locBuilt(state), ...allIds } } };
       }
       if (action.type === "DEV/RESET_GAME") {
         // Wipe all persisted state and reset to initial state, preserving settings.
@@ -1860,11 +1864,8 @@ const SLICE_PRIMARY_ACTIONS = new Set([
   "BOSS/MINIMIZE",
   "BOSS/EXPAND",
   "BOSS/CLOSE",
-  // Cartography actions are owned by cartography/slice
+  // Cartography actions are owned by cartography/slice (also sets activeZone)
   "CARTO/TRAVEL",
-  // Zones actions are owned by zones/slice
-  "ZONE/SELECT",
-  "ZONE/UNLOCK",
   // Story modal dismiss is owned by story/slice
   "STORY/DISMISS_MODAL",
   // Settings actions are owned by settings/slice

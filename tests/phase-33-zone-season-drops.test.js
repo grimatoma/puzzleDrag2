@@ -48,15 +48,15 @@ describe("Phase 33 — seasonIndexInSession (turn split)", () => {
   });
 });
 
-describe("Phase 33 — Zone 1 seasonDrops illustrate the user-requested mechanic", () => {
+describe("Phase 33 — Home seasonDrops illustrate the per-zone mechanic", () => {
   it("Spring trees = 20%, Winter trees = 70%", () => {
-    expect(ZONES.zone1.seasonDrops.Spring.trees).toBe(0.20);
-    expect(ZONES.zone1.seasonDrops.Winter.trees).toBe(0.70);
+    expect(ZONES.home.seasonDrops.Spring.trees).toBe(0.20);
+    expect(ZONES.home.seasonDrops.Winter.trees).toBe(0.70);
   });
 
   it("each season's percentages sum to 1", () => {
     for (const season of ["Spring", "Summer", "Autumn", "Winter"]) {
-      const total = Object.values(ZONES.zone1.seasonDrops[season]).reduce(
+      const total = Object.values(ZONES.home.seasonDrops[season]).reduce(
         (a, b) => a + b,
         0,
       );
@@ -67,9 +67,9 @@ describe("Phase 33 — Zone 1 seasonDrops illustrate the user-requested mechanic
 
 describe("Phase 33 — pickByZoneSeasonDrops", () => {
   it("returns null when the zone has no seasonDrops data for that season", () => {
-    // Zone 2 ships with an empty drop table at every season for Phase 3b.
+    // Quarry ships with an empty drop table at every season (mine-only zone).
     const r = pickByZoneSeasonDrops({
-      zoneId: "zone2",
+      zoneId: "quarry",
       seasonName: "Spring",
       biomeResources: farmResources,
       tileCollectionActive: null,
@@ -93,7 +93,7 @@ describe("Phase 33 — pickByZoneSeasonDrops", () => {
     // Synthetic single-category roll using the zone1 spring table but stub
     // rng so we always pick the bucket that contains the cumulative roll.
     const r = pickByZoneSeasonDrops({
-      zoneId: "zone1",
+      zoneId: "home",
       seasonName: "Winter",
       biomeResources: farmResources,
       tileCollectionActive: null,
@@ -108,7 +108,7 @@ describe("Phase 33 — pickByZoneSeasonDrops", () => {
   it("rolls grass when rng falls inside the grass bucket", () => {
     // Zone 1 Spring: grass = 0.20 (first bucket). rng = 0.05 should land in it.
     const r = pickByZoneSeasonDrops({
-      zoneId: "zone1",
+      zoneId: "home",
       seasonName: "Spring",
       biomeResources: farmResources,
       tileCollectionActive: null,
@@ -123,7 +123,7 @@ describe("Phase 33 — pickByZoneSeasonDrops", () => {
     // Spring: grass(.20) + grain(.15) + trees(.20) + birds(.05) + vegetables(.10) + fruits(.30)
     // Cumulative through fruits ends at 1.0; rng=0.95 lands inside fruits.
     const r = pickByZoneSeasonDrops({
-      zoneId: "zone1",
+      zoneId: "home",
       seasonName: "Spring",
       biomeResources: farmResources,
       tileCollectionActive: null,
@@ -136,7 +136,7 @@ describe("Phase 33 — pickByZoneSeasonDrops", () => {
 
   it("falls back to first matching biome resource when no active species is set", () => {
     const r = pickByZoneSeasonDrops({
-      zoneId: "zone1",
+      zoneId: "home",
       seasonName: "Spring",
       biomeResources: farmResources,
       tileCollectionActive: null,

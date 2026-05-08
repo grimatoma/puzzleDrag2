@@ -1,23 +1,24 @@
-// Zone definitions — Phase 1 of the rule overhaul.
+// Zone data — each map node IS a zone.
 //
-// A "zone" is a town container that owns its own farm board (and optionally
-// mine / water boards). Each zone configures:
-//   - startingTurns   : total puzzle turns for a session
-//   - hasFarm/Mine/Water: which biome boards the zone exposes
-//   - upgradeMap      : source category -> spawned upgrade tile category
-//                       (consumed by the chain pipeline in Phase 3)
-//   - dangers         : per-zone hazard list (consumed in a later phase)
-//   - entryCost       : cost to start a farm session
-//   - seasonDrops     : per-season percentage drop rates per category
-//                       (consumed by the spawn pipeline in Phase 3)
+// ZONES is derived from MAP_NODES in cartography/data.js and keyed by node id
+// (e.g. "home", "meadow", "quarry"). All engine code that previously used
+// abstract ids like "zone1" now uses the location id directly.
 //
-// Categories referenced here are the abstract ten the request lists:
+// Zone config fields (defined on each MAP_NODE):
+//   hasFarm / hasMine / hasWater — which puzzle boards the location exposes
+//   startingTurns  — total puzzle turns per session
+//   entryCost      — cost object to start a session
+//   upgradeMap     — source zone-category → spawned upgrade zone-category
+//   seasonDrops    — per-season percentage drop rates per category
+//   dangers        — per-location hazard list
+//   buildings      — building ids available to build at this location
+//
+// Categories (upgradeMap keys / seasonDrops keys):
 //   grass, grain, trees, birds, vegetables, fruits,
 //   flowers, herd_animals, cattle, mounts
-// Plus a special upgrade target "gold" which spawns a gold-coin tile.
-//
-// Phase 1 ships only the schema + data. The engine still uses the global
-// FARM_TILE_POOL / UPGRADE_THRESHOLDS until later phases swap them in.
+// Special upgrade target: "gold" (board-only coin tile, not in inventory).
+
+import { MAP_NODES } from "../cartography/data.js";
 
 export const ZONE_CATEGORIES = Object.freeze([
   "grass",
@@ -34,16 +35,6 @@ export const ZONE_CATEGORIES = Object.freeze([
 
 export const ZONE_UPGRADE_TARGET_GOLD = "gold";
 
-// Translation from the abstract zone-category names (used in the rules table)
-// to the concrete `category` values that exist on items in
-// `src/features/tileCollection/data.js`. The mapping is one-to-many because
-// our internal model splits some user-level categories — e.g. "trees" covers
-// both the tile-collection `trees` species and the legacy `wood` chain. Note
-// that tileCollection uses `bird` (singular) where the rules table uses
-// `birds` (plural).
-//
-// Phase 2 uses this to filter the spawn pool by the player's selected tiles
-// in the Start Farming modal.
 export const ZONE_TO_TILE_CATEGORIES = Object.freeze({
   grass: ["grass"],
   grain: ["grain"],
@@ -58,8 +49,8 @@ export const ZONE_TO_TILE_CATEGORIES = Object.freeze({
 });
 
 /**
- * Expand a list of zone-category names (e.g. ["birds", "trees"]) into the
- * concrete tile-collection category set used by the spawn pool filter.
+ * Expand a list of zone-category names into the concrete tile-collection
+ * category set used by the spawn pool filter.
  */
 export function expandZoneCategories(zoneCats) {
   const out = new Set();
@@ -71,10 +62,6 @@ export function expandZoneCategories(zoneCats) {
   return out;
 }
 
-// Reverse of ZONE_TO_TILE_CATEGORIES: given a tile-collection category
-// (e.g. "wood" or "bird"), return the zone-level category it belongs to.
-// Many-to-one for the cases we splice (wood + trees both -> "trees"), but
-// one-to-one for everything else.
 export const TILE_CATEGORY_TO_ZONE_CATEGORY = Object.freeze(
   Object.entries(ZONE_TO_TILE_CATEGORIES).reduce((acc, [zoneCat, tileCats]) => {
     for (const t of tileCats) acc[t] = zoneCat;
@@ -86,10 +73,8 @@ export const TILE_CATEGORY_TO_ZONE_CATEGORY = Object.freeze(
 const SESSION_SEASON_NAMES = Object.freeze(["Spring", "Summer", "Autumn", "Winter"]);
 
 /**
- * Phase 3b — split a session's `sessionMaxTurns` evenly across the four
- * seasons and return the season index for the supplied `turnsUsed`. Each
- * season covers `floor(i+1) * S / 4` - `floor(i * S / 4)` turns; for S=16
- * that is 4/4/4/4, for S=10 that is 2/3/2/3. Returns 0..3.
+ * Phase 3b — split a session's `sessionMaxTurns` evenly across four seasons
+ * and return the season index for the supplied `turnsUsed`. Returns 0..3.
  */
 export function seasonIndexInSession(turnsUsed, sessionMaxTurns) {
   const t = Math.max(0, Math.min(turnsUsed | 0, (sessionMaxTurns | 0) - 1));
@@ -101,23 +86,13 @@ export function seasonIndexInSession(turnsUsed, sessionMaxTurns) {
   return 3;
 }
 
-/**
- * Convenience: name (Spring/Summer/Autumn/Winter) for the current session
- * turn. Useful for keying into a zone's seasonDrops table.
- */
 export function seasonNameInSession(turnsUsed, sessionMaxTurns) {
   return SESSION_SEASON_NAMES[seasonIndexInSession(turnsUsed, sessionMaxTurns)];
 }
 
 /**
  * Phase 3b — sample a tile from the active zone's per-(zone, season) drop
- * table. Returns null when the zone has no entry, the season's table is
- * empty, or no resource matches the rolled category — in those cases the
- * caller should fall back to the existing weighted pool.
- *
- * The picker is biome-agnostic and pure: callers pass the biome's resource
- * list, the player's active species map, and a 0..1 random source so tests
- * can stub it deterministically.
+ * table. Returns null when the zone has no entry or no resource matches.
  */
 export function pickByZoneSeasonDrops({
   zoneId,
@@ -151,7 +126,6 @@ export function pickByZoneSeasonDrops({
 
   const tileCats = ZONE_TO_TILE_CATEGORIES[chosenZoneCat] ?? [];
 
-  // Prefer the player's active species when set.
   if (tileCollectionActive) {
     for (const tc of tileCats) {
       const activeKey = tileCollectionActive[tc];
@@ -161,7 +135,6 @@ export function pickByZoneSeasonDrops({
     }
   }
 
-  // Otherwise fall back to the first biome resource whose category matches.
   for (const r2 of biomeResources ?? []) {
     const cat = categoryOf?.[r2.key];
     if (cat && tileCats.includes(cat)) return r2;
@@ -170,17 +143,8 @@ export function pickByZoneSeasonDrops({
 }
 
 /**
- * Per-zone chain-upgrade redirect.
- *
- * Given the current chain's source resource, look up the active zone's
- * `upgradeMap` to find the upgrade-target zone-category and resolve it to a
- * concrete resource on the supplied biome. Returns `null` when the zone has
- * no override, the target is the special "gold" sentinel (board-only tile,
- * not modeled yet), or no matching resource exists on the biome.
- *
- * Callers should fall back to the resource's native `.next` chain when this
- * helper returns `null` so the existing engine behaviour stays intact for
- * resources/categories the zones config doesn't redirect.
+ * Per-zone chain-upgrade redirect. Returns null when the zone has no override
+ * or the target is the "gold" sentinel. Callers fall back to native .next chain.
  */
 export function nextResourceForZone({
   currentRes,
@@ -204,7 +168,6 @@ export function nextResourceForZone({
 
   const targetTileCats = ZONE_TO_TILE_CATEGORIES[targetZoneCat] ?? [];
 
-  // Prefer the player's active species for the target category if any.
   if (tileCollectionActive) {
     for (const tc of targetTileCats) {
       const activeKey = tileCollectionActive[tc];
@@ -214,7 +177,6 @@ export function nextResourceForZone({
     }
   }
 
-  // Otherwise fall back to the first biome resource whose category matches.
   for (const r of biomeResources ?? []) {
     const cat = categoryOf?.[r.key];
     if (cat && targetTileCats.includes(cat)) return r;
@@ -223,191 +185,9 @@ export function nextResourceForZone({
   return null;
 }
 
-const FARM_ENTRY_COST = Object.freeze({ coins: 50 });
-
-// Helper: empty four-season drop table — each category -> 0 for all seasons.
-// Per-zone overrides fill in the configured percentages; unfilled cells stay at 0.
-const emptySeasonDrops = () => ({
-  Spring: {},
-  Summer: {},
-  Autumn: {},
-  Winter: {},
-});
-
-// Phase 3b — example zone-1 drops illustrating the user-facing mechanic
-// ("trees 20% in Spring, 70% in Winter"). All values are percentages on
-// [0, 1] that sum to 1 within each season. Other zones keep an empty
-// table for now (the sampler falls through to the existing pool when a
-// season has no data).
-const ZONE_1_SEASON_DROPS = {
-  Spring: {
-    grass: 0.20,
-    grain: 0.15,
-    trees: 0.20,
-    birds: 0.05,
-    vegetables: 0.10,
-    fruits: 0.30,
-  },
-  Summer: {
-    grass: 0.10,
-    grain: 0.30,
-    trees: 0.10,
-    birds: 0.15,
-    vegetables: 0.20,
-    fruits: 0.15,
-  },
-  Autumn: {
-    grass: 0.10,
-    grain: 0.15,
-    trees: 0.40,
-    birds: 0.15,
-    vegetables: 0.15,
-    fruits: 0.05,
-  },
-  Winter: {
-    grass: 0.05,
-    grain: 0.05,
-    trees: 0.70,
-    birds: 0.10,
-    vegetables: 0.05,
-    fruits: 0.05,
-  },
-};
-
-export const ZONES = Object.freeze({
-  zone1: {
-    id: "zone1",
-    name: "Zone 1",
-    startingTurns: 16,
-    hasFarm: true,
-    hasMine: false,
-    hasWater: false,
-    entryCost: FARM_ENTRY_COST,
-    upgradeMap: {
-      grass: "birds",
-      grain: "vegetables",
-      trees: "birds",
-      birds: "herd_animals",
-      vegetables: "fruits",
-      fruits: ZONE_UPGRADE_TARGET_GOLD,
-    },
-    dangers: [],
-    seasonDrops: ZONE_1_SEASON_DROPS,
-  },
-  zone2: {
-    id: "zone2",
-    name: "Zone 2",
-    startingTurns: 10,
-    hasFarm: true,
-    hasMine: true,
-    hasWater: false,
-    entryCost: FARM_ENTRY_COST,
-    upgradeMap: {
-      grass: "birds",
-      grain: "vegetables",
-      trees: "birds",
-      birds: "vegetables",
-      vegetables: "fruits",
-      fruits: ZONE_UPGRADE_TARGET_GOLD,
-    },
-    dangers: [],
-    seasonDrops: emptySeasonDrops(),
-  },
-  zone3: {
-    id: "zone3",
-    name: "Zone 3",
-    startingTurns: 16,
-    hasFarm: true,
-    hasMine: true,
-    hasWater: true,
-    entryCost: FARM_ENTRY_COST,
-    upgradeMap: {
-      grass: "grain",
-      grain: "vegetables",
-      trees: "vegetables",
-      birds: "herd_animals",
-      vegetables: "fruits",
-      fruits: ZONE_UPGRADE_TARGET_GOLD,
-      herd_animals: ZONE_UPGRADE_TARGET_GOLD,
-    },
-    dangers: [],
-    seasonDrops: emptySeasonDrops(),
-  },
-  zone4: {
-    id: "zone4",
-    name: "Zone 4",
-    startingTurns: 10,
-    hasFarm: true,
-    hasMine: true,
-    hasWater: false,
-    entryCost: FARM_ENTRY_COST,
-    upgradeMap: {
-      grass: "grain",
-      grain: "vegetables",
-      trees: "birds",
-      birds: "herd_animals",
-      vegetables: "fruits",
-      fruits: ZONE_UPGRADE_TARGET_GOLD,
-      herd_animals: ZONE_UPGRADE_TARGET_GOLD,
-    },
-    dangers: [],
-    seasonDrops: emptySeasonDrops(),
-  },
-  zone5: {
-    id: "zone5",
-    name: "Zone 5",
-    startingTurns: 16,
-    hasFarm: true,
-    hasMine: true,
-    hasWater: true,
-    entryCost: FARM_ENTRY_COST,
-    upgradeMap: {
-      grass: "grain",
-      grain: "vegetables",
-      trees: "birds",
-      birds: "herd_animals",
-      vegetables: "fruits",
-      fruits: "flowers",
-      flowers: ZONE_UPGRADE_TARGET_GOLD,
-      herd_animals: "cattle",
-      cattle: ZONE_UPGRADE_TARGET_GOLD,
-    },
-    dangers: [],
-    seasonDrops: emptySeasonDrops(),
-  },
-  zone6: {
-    id: "zone6",
-    name: "Zone 6",
-    startingTurns: 16,
-    hasFarm: true,
-    hasMine: false,
-    hasWater: true,
-    entryCost: FARM_ENTRY_COST,
-    upgradeMap: {
-      grass: "grain",
-      grain: "vegetables",
-      trees: "birds",
-      birds: "herd_animals",
-      vegetables: "fruits",
-      fruits: "flowers",
-      flowers: ZONE_UPGRADE_TARGET_GOLD,
-      herd_animals: "cattle",
-      cattle: "mounts",
-      mounts: ZONE_UPGRADE_TARGET_GOLD,
-    },
-    dangers: [],
-    seasonDrops: emptySeasonDrops(),
-  },
-});
-
-export const ZONE_IDS = Object.freeze(Object.keys(ZONES));
-
-export const DEFAULT_ZONE = "zone1";
-
 /**
  * Source categories the zone exposes on the board (keys of upgradeMap).
- * Returns at most 8 entries — the "8 fixed slots, 1 per type" rule from the
- * Start Farming modal. Zones that permit fewer categories simply expose fewer.
+ * Returns at most 8 entries — the "8 fixed slots" rule from the Start Farming modal.
  */
 export function zoneCategories(zoneId) {
   const z = ZONES[zoneId];
@@ -415,10 +195,36 @@ export function zoneCategories(zoneId) {
   return Object.keys(z.upgradeMap).slice(0, 8);
 }
 
+// ZONES is derived from MAP_NODES so node id === zone id.
+// Engine code accesses ZONES[state.mapCurrent] or ZONES[state.activeZone]
+// (activeZone mirrors mapCurrent, set in cartography/slice.js on CARTO/TRAVEL).
+export const ZONES = Object.freeze(
+  Object.fromEntries(
+    MAP_NODES.map((n) => [
+      n.id,
+      Object.freeze({
+        id:           n.id,
+        name:         n.name,
+        hasFarm:      n.hasFarm  ?? false,
+        hasMine:      n.hasMine  ?? false,
+        hasWater:     n.hasWater ?? false,
+        startingTurns: n.startingTurns ?? 16,
+        entryCost:    n.entryCost    ?? { coins: 0 },
+        upgradeMap:   n.upgradeMap   ?? {},
+        seasonDrops:  n.seasonDrops  ?? { Spring: {}, Summer: {}, Autumn: {}, Winter: {} },
+        dangers:      n.dangers      ?? [],
+        buildings:    n.buildings    ?? [],
+      }),
+    ]),
+  ),
+);
+
+export const ZONE_IDS = Object.freeze(Object.keys(ZONES));
+
+export const DEFAULT_ZONE = "home";
+
 // Phase 6 — Balance Manager hook. Apply any committed/draft overrides from
-// `src/config/balance.json` + the localStorage draft to the live ZONES table
-// at module load time. Imports are hoisted so the apply call runs after the
-// table is initialised.
+// `src/config/balance.json` + the localStorage draft to the live ZONES table.
 import { BALANCE_OVERRIDES } from "../../constants.js";
 import { applyZoneOverrides } from "../../config/applyOverrides.js";
 applyZoneOverrides(ZONES, BALANCE_OVERRIDES.zones);

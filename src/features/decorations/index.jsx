@@ -1,4 +1,5 @@
 import { DECORATIONS } from "./data.js";
+import { locBuilt } from "../../locBuilt.js";
 
 function canAfford(decor, state) {
   const { cost } = decor;
@@ -21,7 +22,7 @@ function CostTag({ label, value }) {
 
 function DecorationCard({ decor, state, dispatch }) {
   const affordable = canAfford(decor, state);
-  const count = state.built?.decorations?.[decor.id] ?? 0;
+  const count = locBuilt(state).decorations?.[decor.id] ?? 0;
 
   return (
     <div className="bg-[#f6efe0] border-2 border-[#c5a87a] rounded-xl p-2 flex items-center gap-2 relative" style={{ minHeight: 72 }}>
