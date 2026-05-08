@@ -3,7 +3,7 @@
  * Tests written FIRST (red phase).
  */
 import { describe, it, expect } from "vitest";
-import { SEASON_POOL_MODS, BIOMES, SEASON_EFFECTS } from "../constants.js";
+import { SEASON_POOL_MODS, BIOMES } from "../constants.js";
 import { getEffectivePool } from "../features/farm/pool.js";
 import { createInitialState } from "../state.js";
 
@@ -81,11 +81,6 @@ describe("10.2 — Mine biome ignores farm season mods", () => {
   });
 });
 
-// ── Locked: SEASON_EFFECTS unchanged ─────────────────────────────────────────
-
-describe("10.2 — SEASON_EFFECTS locked (not touched)", () => {
-  it("winter min-chain locked at 5", () => expect(SEASON_EFFECTS.Winter.minChain).toBe(5));
-  it("spring +20% locked", () => expect(SEASON_EFFECTS.Spring.harvestBonus).toBe(0.20));
-  it("summer 2× orders locked", () => expect(SEASON_EFFECTS.Summer.orderMult).toBe(2));
-  it("autumn 2× upgrades locked", () => expect(SEASON_EFFECTS.Autumn.upgradeMult).toBe(2));
-});
+// Phase 7 — the calendar-effect snapshot (winter min-chain, spring +20%,
+// summer 2× orders, autumn 2× upgrades) was deleted along with the
+// SEASON_EFFECTS export it asserted on.

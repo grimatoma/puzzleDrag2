@@ -1,9 +1,9 @@
-export const SEASON_EFFECTS = Object.freeze({
-  Spring: { harvestBonus: 0.20 },
-  Summer: { orderMult: 2 },
-  Autumn: { upgradeMult: 2 },
-  Winter: { minChain: 5 },
-});
+// Phase 7 — calendar season effects removed. The 4-season-of-year cycle no
+// longer drives harvest bonuses, order multipliers, autumn x2 upgrades, or
+// the winter minimum-chain floor. The SEASONS array (visual metadata)
+// remains, and the per-(zone, in-session season) spawn-rate sampler still
+// reads `seasonNameInSession` from features/zones/data.js — those are local
+// to a session and unrelated to the deleted calendar.
 
 export const STORAGE_KEYS = {
   save: "hearth.save.v1",
@@ -29,7 +29,7 @@ export const MAX_TURNS = 10;
 
 // Save schema version. Forward migrations are not maintained — bump this
 // whenever persisted state changes shape and existing saves will be discarded.
-export const SAVE_SCHEMA_VERSION = 23;
+export const SAVE_SCHEMA_VERSION = 24;
 
 export const UPGRADE_THRESHOLDS = {
   grass_hay: 6, grass_meadow: 6, grass_spiky: 6,
@@ -602,7 +602,7 @@ export const DAILY_REWARDS = {
 
 // ─── Phase 10 — Tile pool seasonal modifiers ──────────────────────────────────
 // Applied additively on BIOMES.farm.pool. Locked: ONLY spawn weights.
-// The §6 SEASON_EFFECTS table above is NOT changed here.
+// (Calendar-season effects were removed in Phase 7 — see top of file.)
 export const SEASON_POOL_MODS = {
   Spring: { berry: +1 },
   Summer: { grain_wheat: +1 },

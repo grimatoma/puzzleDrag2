@@ -113,20 +113,9 @@ describe("CHAIN_COLLECTED — gains-map path", () => {
   });
 });
 
-describe("CHAIN_COLLECTED — Spring bonus interacts with cap", () => {
-  it("Spring +20% can push a capped resource to its cap, with one floater", () => {
-    // Spring (seasonsCycled % 4 === 0). gained=20 → bonus=4 → effective=24.
-    // 178 + 24 = 202, capped to 200.
-    const s0 = baseState({ seasonsCycled: 0, inventory: { grass_hay: 178 } });
-    const s1 = rootReducer(s0, {
-      type: "CHAIN_COLLECTED",
-      payload: { key: "grass_hay", gained: 20, upgrades: 0, value: 1, chainLength: 5 },
-    });
-    expect(s1.inventory.grass_hay).toBe(200);
-    expect(s1.seasonStats.capFloaters?.grass_hay).toBe(true);
-    expect(s1.floaters?.filter((f) => /grass_hay stash full/.test(f.text)).length).toBe(1);
-  });
-});
+// Phase 7 — calendar Spring +20% removed; the cap-clamping behaviour is
+// still exercised by the unmultiplied CHAIN_COLLECTED path elsewhere in
+// this file.
 
 describe("CHAIN_COLLECTED — lastChainSnapshot capture", () => {
   it("captures pre-chain inventory/grid/turnsUsed for hourglass rewind", () => {
@@ -303,11 +292,10 @@ describe("CLOSE_SEASON — bookkeeping resets", () => {
     expect(s1.tileCollection.freeMoves).toBe(0);
   });
 
-  it("increments seasonsCycled and reroll quests", () => {
-    const s0 = baseState({ seasonsCycled: 1 });
+  it("rerolls quests (calendar season was removed; quests still rotate per session)", () => {
+    const s0 = baseState();
     const questsBefore = s0.quests;
     const s1 = rootReducer(s0, { type: "CLOSE_SEASON" });
-    expect(s1.seasonsCycled).toBe(2);
     expect(s1.quests).not.toBe(questsBefore);
   });
 

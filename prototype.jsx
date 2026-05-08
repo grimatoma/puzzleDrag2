@@ -13,7 +13,7 @@ import { announce, getQueue, flushAnnouncements, formatChainAnnouncement, format
 import { handleKeyboard } from "./src/features/a11y/keyboard.js";
 import { FIRE_HAZARD_ENABLED } from "./src/featureFlags.js";
 
-function PhaserMount({ dispatch, biomeKey, turnsUsed, seasonsCycled, uiLocked, sceneRef, weather, toolPending, setChainInfo, workers, palette, reducedMotion, tileCollection, gameState, grid }) {
+function PhaserMount({ dispatch, biomeKey, turnsUsed, uiLocked, sceneRef, weather, toolPending, setChainInfo, workers, palette, reducedMotion, tileCollection, gameState, grid }) {
   const hostRef = useRef(null);
   const gameRef = useRef(null);
   const [loading, setLoading] = useState(true);
@@ -60,7 +60,6 @@ function PhaserMount({ dispatch, biomeKey, turnsUsed, seasonsCycled, uiLocked, s
             preBoot: (game) => {
               game.registry.set("biomeKey", biomeKey);
               game.registry.set("turnsUsed", turnsUsed);
-              game.registry.set("seasonsCycled", seasonsCycled);
               game.registry.set("uiLocked", uiLocked);
               game.registry.set("dpr", dpr);
               game.registry.set("renderResolution", dpr);
@@ -126,7 +125,6 @@ function PhaserMount({ dispatch, biomeKey, turnsUsed, seasonsCycled, uiLocked, s
   }, [gameState?.activeZone]);
   useEffect(() => { gameRef.current?.registry.set("biomeKey", biomeKey); }, [biomeKey]);
   useEffect(() => { gameRef.current?.registry.set("turnsUsed", turnsUsed); }, [turnsUsed]);
-  useEffect(() => { gameRef.current?.registry.set("seasonsCycled", seasonsCycled); }, [seasonsCycled]);
   useEffect(() => { gameRef.current?.registry.set("uiLocked", uiLocked); }, [uiLocked]);
   useEffect(() => { gameRef.current?.registry.set("weather", weather); }, [weather]);
   useEffect(() => { gameRef.current?.registry.set("toolPending", toolPending ?? null); }, [toolPending]);
@@ -382,7 +380,6 @@ export default function App() {
                   dispatch={dispatchWithA11y}
                   biomeKey={state.biomeKey}
                   turnsUsed={state.turnsUsed}
-                  seasonsCycled={state.seasonsCycled}
                   uiLocked={uiLocked}
                   sceneRef={sceneRef}
                   weather={state.weather}

@@ -66,9 +66,10 @@ describe("Power hooks at runtime", () => {
       type: "CHAIN_COLLECTED",
       payload: { key: "grass_hay", gained: 5, upgrades: 0, value: 1, chainLength: 5 },
     });
-    // Spring: gained 5 → effectiveGained 6 → coinsGain max(1, floor(6/2)) = 3.
-    // Per-tile hook: 3 × chainLength(5) = 15. Total delta = 18.
-    expect(sAfter.coins - before).toBe(18);
+    // Phase 7 — calendar Spring +20% removed. gained 5 → effectiveGained 5 →
+    // coinsGain max(1, floor(5/2)) = 2. Per-tile hook: 3 × chainLength(5) = 15.
+    // Total delta = 17.
+    expect(sAfter.coins - before).toBe(17);
   });
 
   it("free_turn_after_n grants 1 free move only when chain meets threshold", () => {

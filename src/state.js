@@ -1,4 +1,4 @@
-import { BIOMES, BUILDINGS, NPCS, MAX_TURNS, RECIPES, WORKSHOP_RECIPES, STORAGE_KEYS, SEASON_EFFECTS, DAILY_REWARDS, MINE_ENTRY_TIERS, HARBOR_ENTRY_TIERS, CAPPED_RESOURCES, UPGRADE_THRESHOLDS, SAVE_SCHEMA_VERSION } from "./constants.js";
+import { BIOMES, BUILDINGS, NPCS, MAX_TURNS, RECIPES, WORKSHOP_RECIPES, STORAGE_KEYS, DAILY_REWARDS, MINE_ENTRY_TIERS, HARBOR_ENTRY_TIERS, CAPPED_RESOURCES, UPGRADE_THRESHOLDS, SAVE_SCHEMA_VERSION } from "./constants.js";
 import { sellPriceFor as _sellPriceFor } from "./features/market/pricing.js";
 import { tryClearRatChain } from "./features/farm/rats.js";
 import { tryExtinguishFire, rollFarmHazard, tickFire, tickWolves } from "./features/farm/hazards.js";
@@ -41,9 +41,9 @@ import { FIRE_HAZARD_ENABLED } from "./featureFlags.js";
 
 const slices = [crafting, quests, achievements, tutorial, settings, boss, cartography, apprentices, mood, storySlice, decorations, portal, market, castle, fish, zones, workers];
 
-// Season name lookup, indexed by `state.seasonsCycled % 4`. Was duplicated
-// inline in four places before.
-const SEASON_NAMES = ["spring", "summer", "autumn", "winter"];
+// Phase 7 — SEASON_NAMES used to be the calendar-season index → name lookup.
+// All readers were removed when the calendar was deleted, so the table is
+// gone too.
 
 // ─── Inventory helpers ─────────────────────────────────────────────────────
 
@@ -311,7 +311,10 @@ export function createFreshState(overrides) {
     level,
     xp: 0,
     turnsUsed: 0,
-    seasonsCycled: 0,
+    // Phase 7 — calendar season removed (state.seasonsCycled used to count
+    // the global Spring/Summer/Autumn/Winter cycle). The in-session season
+    // helper in features/zones/data.js is what drives the per-(zone, season)
+    // spawn-rate sampler now.
     inventory: { supplies: 0 },
     orders: [o1, o2, o3],
     quests: rollQuests(saveSeed, 1, "spring"),
@@ -548,12 +551,11 @@ function coreReducer(state, action) {
       }
 
       const { key, gained, upgrades, value, chainLength, noTurn } = action.payload;
-      const currentSeason = (state.seasonsCycled || 0) % 4;
       const hintsShown = state._hintsShown || {};
       const effectiveChain = chainLength || gained;
 
       // Tools (e.g. Scythe) emit chain-collected with noTurn:true — just add
-      // resources without consuming a turn or triggering seasonal effects.
+      // resources without consuming a turn.
       if (noTurn) {
         const capNoTurn = currentCap(state);
         const inventory = { ...state.inventory };
@@ -612,36 +614,16 @@ function coreReducer(state, action) {
         };
       }
 
-      // Winter: chains shorter than minChain tiles yield nothing but still consume the turn
-      if (currentSeason === 3 && effectiveChain < SEASON_EFFECTS.Winter.minChain) {
-        const turnsUsed = state.turnsUsed + 1;
-        const seasonEnded = turnsUsed >= (state.sessionMaxTurns ?? MAX_TURNS);
-        let bubble = state.bubble;
-        if (!hintsShown.winterChain) {
-          bubble = { id: Date.now(), npc: "wren", text: `❄️ Winter: chains need ${SEASON_EFFECTS.Winter.minChain}+ tiles to harvest!`, ms: 2400, priority: 2 };
-        }
-        return {
-          ...state,
-          turnsUsed,
-          bubble,
-          _hintsShown: { ...hintsShown, winterChain: true },
-          modal: seasonEnded ? "season" : state.modal,
-        };
-      }
-
       const res = resourceByKey(key);
       const inventory = { ...state.inventory };
       const chainCap = currentCap(state);
       const chainCf = { ...(state.seasonStats?.capFloaters ?? {}) };
       const chainFloaters = [...(state.floaters ?? [])];
 
-      // Spring: +harvestBonus% resource bonus (rounded up)
-      const springBonus = currentSeason === 0 ? Math.ceil(gained * SEASON_EFFECTS.Spring.harvestBonus) : 0;
-      const effectiveGained = gained + springBonus;
+      const effectiveGained = gained;
       addCappedResourceMut(inventory, chainCf, chainFloaters, key, effectiveGained, chainCap);
 
-      // Autumn: multiply upgrades
-      let effectiveUpgrades = currentSeason === 2 ? upgrades * SEASON_EFFECTS.Autumn.upgradeMult : upgrades;
+      let effectiveUpgrades = upgrades;
       // Catalog §7 yield multiplier — Jackfruit → 2× pie, Triceratops → 2× milk.
       // Applies only when the chain key has an entry AND the upgrade target
       // (res.next) matches the entry's productKey (sanity-guard).
@@ -772,9 +754,7 @@ function coreReducer(state, action) {
       // Use order.baseReward if present, else fall back to order.reward as the base
       const orderBase = o.baseReward ?? o.reward;
       const bondPaid = payOrder({ baseReward: orderBase }, npcBond);
-      // Summer: orders pay multiplied reward (on top of bond)
-      const summerMult = ((state.seasonsCycled || 0) % 4 === 1) ? SEASON_EFFECTS.Summer.orderMult : 1;
-      const actualReward = Math.round(bondPaid * summerMult);
+      const actualReward = bondPaid;
       // Bump bond +0.3 on delivery (Phase 6.1)
       const newBond = gainBond(npcBond, 0.3);
       const updatedNpcs = state.npcs
@@ -782,12 +762,12 @@ function coreReducer(state, action) {
         : state.npcs;
       // Auto-repay debt before crediting coins
       const { coinsCredit, newDebt } = applyDebtRepayment(state, actualReward);
-      // Dialog line from pool (Phase 6.3)
-      const currentSeason = SEASON_NAMES[(state.seasonsCycled || 0) % 4];
-      const dialogLine = pickDialog(o.npc, currentSeason, newBond, Math.random);
+      // Dialog line from pool (Phase 6.3) — calendar season removed; pass null
+      // and let pickDialog fall back to a season-agnostic line.
+      const dialogLine = pickDialog(o.npc, null, newBond, Math.random);
       const orderLeveledUp = afterOrderAlmanac.almanac.level > state.almanac.level;
       let bubble = { id: Date.now(), npc: o.npc,
-        text: summerMult > 1 ? `+${actualReward}◉ (☀️ 2×) — ${dialogLine}` : `+${actualReward}◉ — ${dialogLine}`,
+        text: `+${actualReward}◉ — ${dialogLine}`,
         ms: 2000 };
       if (orderLeveledUp) {
         bubble = { id: Date.now(), npc: "wren", text: `Level ${afterOrderAlmanac.almanac.level}! New things await.`, ms: 2400 };
@@ -1161,7 +1141,6 @@ function coreReducer(state, action) {
         tools,
         coins: wageCoins + bonusCoins + SEASON_END_BONUS_COINS,
         turnsUsed: 0,
-        seasonsCycled: (state.seasonsCycled || 0) + 1,
         sessionMaxTurns: MAX_TURNS,
         modal: null,
         view: "town",
@@ -1198,19 +1177,22 @@ function coreReducer(state, action) {
           turnsUsed: 0,
         } };
       }
-      // Re-roll deterministic 6-slot quests for the new season
-      const newYear = Math.max(1, Math.floor(((afterSeason.seasonsCycled || 0) - 1) / 4) + 1);
-      const newSeasonIndex2 = (afterSeason.seasonsCycled || 0) % 4;
-      const rerolledQuests = rollQuests(state.saveSeed ?? "default", newYear, SEASON_NAMES[newSeasonIndex2]);
+      // Phase 7 — calendar removed: deterministic quest rolling now uses a
+      // monotonically-increasing session counter (state.market.season carries
+      // it forward) so quest content still varies session-to-session.
+      const sessionCounter = (state.market?.season ?? 0) + 1;
+      const rerolledQuests = rollQuests(state.saveSeed ?? "default", sessionCounter, "Spring");
       const afterSeasonWithFields = {
         ...afterSeason,
         farm: afterSeasonFarm,
         mine: afterSeasonMine,
         quests: rerolledQuests,
       };
-      // Story: fire season_entered trigger
-      const newSeasonIndex = (afterSeasonWithFields.seasonsCycled % 4);
-      return evaluateAndApplyStoryBeat(afterSeasonWithFields, { type: "season_entered", season: SEASON_NAMES[newSeasonIndex] });
+      // Story: fire session_ended trigger (was season_entered before the
+      // calendar was deleted). Story content keyed on season names should be
+      // re-keyed in a follow-up; for now we pass null so calendar-bound beats
+      // simply don't fire.
+      return evaluateAndApplyStoryBeat(afterSeasonWithFields, { type: "session_ended", season: null });
     }
     case "SESSION_START": {
       // Always evaluate story beats on session start — each beat checks its own first-time
@@ -1453,8 +1435,10 @@ function coreReducer(state, action) {
     // ── Phase 9 — Mine biome actions ───────────────────────────────────────────
 
     case "ADVANCE_SEASON": {
-      // Used in tests to move to a season boundary so SET_BIOME is allowed.
-      return { ...state, turnsUsed: 0, seasonsCycled: (state.seasonsCycled || 0) + 1 };
+      // Used in tests to move to a session boundary so SET_BIOME is allowed.
+      // Phase 7 — the calendar season was removed; this action just resets
+      // turnsUsed so the next session starts cleanly.
+      return { ...state, turnsUsed: 0 };
     }
 
     case "SET_BIOME": {
@@ -1760,8 +1744,9 @@ function coreReducer(state, action) {
       if (!npcId || !itemKey) return state;
       const giftResult = applyGift(state, npcId, itemKey);
       if (!giftResult.ok) return state; // cooldown or empty inventory — silent no-op
-      const giftSeason = SEASON_NAMES[(state.seasonsCycled || 0) % 4];
-      const giftDialog = pickDialog(npcId, giftSeason, giftResult.newState.npcs.bonds[npcId], Math.random);
+      // Phase 7 — calendar season removed; pickDialog falls back to a
+      // season-agnostic line when given null.
+      const giftDialog = pickDialog(npcId, null, giftResult.newState.npcs.bonds[npcId], Math.random);
       const giftBubble = {
         id: Date.now(),
         npc: npcId,

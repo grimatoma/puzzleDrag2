@@ -5,13 +5,10 @@ import { xpForLevel } from "../state.js";
 import { WEATHER_META } from "../features/boss/slice.js";
 import IconCanvas, { hasIcon } from "./IconCanvas.jsx";
 
-// Mechanical effect active each calendar season (seasonsCycled % 4)
-export const SEASON_EFFECTS = [
-  "🌱 +20% harvest",  // Spring
-  "☀️ 2× order pay",  // Summer
-  "🍂 2× upgrades",   // Autumn
-  "❄️ 4+ chain min",  // Winter
-];
+// Phase 7 — calendar season effects were removed. Keeping the export as an
+// empty list so any lingering imports compile to no-ops; prefer deleting the
+// import entirely in future cleanup.
+export const SEASON_EFFECTS = ["", "", "", ""];
 
 function Pill({ children, className = "" }) {
   return (
@@ -67,12 +64,11 @@ function TideChip({ fish }) {
   );
 }
 
-function SeasonBar({ season, turnsUsed, turnsLeft, calendarSeason }) {
+function SeasonBar({ season, turnsUsed, turnsLeft }) {
   return (
     <div className="bg-[#faf0dd] border-2 border-[#b28b62] rounded-full pl-3 pr-2 py-0.5 flex items-center gap-2 min-w-0 flex-1 max-w-[540px]">
       <div className="flex flex-col items-start">
         <div className="text-[#6a4b31] font-bold text-[12px] landscape:max-[1024px]:text-[10px] whitespace-nowrap leading-tight">{season.name}</div>
-        <div className="text-[10px] landscape:max-[1024px]:text-[8px] text-[#d6612a] font-bold whitespace-nowrap leading-tight">{SEASON_EFFECTS[calendarSeason ?? 0]}</div>
       </div>
       <div className="flex gap-1 flex-1 justify-center min-w-0">
         {Array.from({ length: MAX_TURNS }).map((_, i) => {
@@ -168,10 +164,12 @@ function DebugQuickBar({ dispatch }) {
 }
 
 export function Hud({ state, dispatch }) {
-  const { coins, level, xp, turnsUsed, built, view, seasonsCycled } = state;
+  const { coins, level, xp, turnsUsed, built, view } = state;
   const onBoard = view === "board";
-  const calendarSeason = (seasonsCycled || 0) % 4;
-  const season = SEASONS[calendarSeason];
+  // Phase 7 — calendar season removed; HUD shows the first season's visual
+  // metadata as a static label. A follow-up can hook this to the in-session
+  // season for atmospheric reasons.
+  const season = SEASONS[0];
   const xpNeed = xpForLevel(level);
   const xpPct = Math.min(100, (xp / xpNeed) * 100);
   const turnsLeft = MAX_TURNS - turnsUsed;
@@ -205,7 +203,7 @@ export function Hud({ state, dispatch }) {
           <span className="font-bold text-[14px]" data-testid="buildings">{buildingCount}</span>
         </Pill>
       )}
-      {onBoard && <SeasonBar season={season} turnsUsed={turnsUsed} turnsLeft={turnsLeft} calendarSeason={calendarSeason} />}
+      {onBoard && <SeasonBar season={season} turnsUsed={turnsUsed} turnsLeft={turnsLeft} />}
       {/* Weather chip — visible on board view when weather is active and no boss overlay covering it */}
       {onBoard && !state.boss && <WeatherChip weather={state.weather} />}
       {/* Tide chip — visible only on the fish biome */}
