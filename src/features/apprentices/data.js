@@ -571,6 +571,80 @@ export const TOWNSFOLK = [
     requirement: { biomeUnlocked: "mine" },
     description: "Drives the great pit-bucket. Lifts an extra cobble out of every stone chain.",
   },
+
+  // ── Mine workers — catalog §9 (second batch) ────────────────────────────
+  {
+    id: "iron_miner",
+    name: "Bask",
+    role: "Iron Miner",
+    icon: "🔩",
+    color: "#a89878",
+    wage: 32,
+    hireCost: { worker: 1, mine_ore: 6, bread: 8, mine_coal: 4 },
+    maxCount: 2,
+    // Adds two ore tiles to the spawn pool — pairs with Osric's threshold cut.
+    effect: { type: "pool_weight", key: "mine_ore", amount: 2 },
+    requirement: { biomeUnlocked: "mine" },
+    description: "Knows iron veins by the rust-streak in the dust. Adds extra ore tiles to the mine pool.",
+  },
+  {
+    id: "silver_miner",
+    name: "Eira",
+    role: "Silver Miner",
+    icon: "✺",
+    color: "#d8d8d0",
+    wage: 45,
+    hireCost: { worker: 1, mine_gold: 2, bread: 12, mine_ingot: 4 },
+    maxCount: 1,
+    // Catalog notes silver but our base mine carries gold; gold is rare in
+    // the pool, so this worker seeds it. Single-hire cap keeps it precious.
+    effect: { type: "pool_weight", key: "mine_gold", amount: 1 },
+    requirement: { building: "forge", orLevel: 6 },
+    description: "Sifts pale veins for streaks of bright ore. A single gold tile slips into the mine pool while she works.",
+  },
+  {
+    id: "engineer",
+    name: "Tarek",
+    role: "Engineer",
+    icon: "🛠",
+    color: "#5a6066",
+    wage: 38,
+    hireCost: { worker: 1, mine_stone: 8, mine_ingot: 4, bread: 10 },
+    maxCount: 2,
+    // Mid-tier bonus: extra stone per stone chain — pairs with Stone Miner.
+    effect: { type: "bonus_yield", key: "mine_stone", amount: 1 },
+    requirement: { building: "forge", orLevel: 5 },
+    description: "Plans the shaft braces and rail-tracks. Pulls an extra stone from every quarry chain.",
+  },
+  {
+    id: "alchemist",
+    name: "Yana",
+    role: "Alchemist",
+    icon: "⚗",
+    color: "#5a8028",
+    wage: 42,
+    hireCost: { worker: 1, mine_coal: 6, mine_coke: 2, bread: 10 },
+    maxCount: 2,
+    // Coal yield bonus — gives the coal chain (used by Castle Coal need) a
+    // friendlier ramp without competing with Coal Miner's threshold trim.
+    effect: { type: "bonus_yield", key: "mine_coal", amount: 1 },
+    requirement: { building: "forge", orLevel: 5 },
+    description: "Distils coal-tar and refines coke. Lifts a stray lump of coal from every soot chain.",
+  },
+  {
+    id: "sculptor",
+    name: "Lior",
+    role: "Sculptor",
+    icon: "🗿",
+    color: "#7c8388",
+    wage: 30,
+    hireCost: { worker: 1, mine_block: 2, bread: 8, mine_ingot: 2 },
+    maxCount: 1,
+    // High-tier season bonus: stone-faced patrons pay for finished work.
+    effect: { type: "season_bonus", key: "coins", amount: 50 },
+    requirement: { building: "forge", orLevel: 6 },
+    description: "Carves dressed-stone facades for the trade hall. Patrons drop extra coin into the season's coffer.",
+  },
 ];
 
 export const TOWNSFOLK_MAP = Object.fromEntries(TOWNSFOLK.map((w) => [w.id, w]));
