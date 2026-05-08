@@ -67,10 +67,20 @@ const BOSS_META = {
     minChain: null,
     hiddenTilesTarget: 4,
   },
+  storm: {
+    name: "The Storm",
+    emoji: "🌩",
+    flavor: "A black squall rolls over Saltspray Harbor. Every short cast tears free — only steady, deliberate pulls bring fillets through the chop.",
+    goal: "Land 6 fish fillets in 10 turns. Short chains slip the line.",
+    resource: "fish_fillet",
+    targetCount: 6,
+    turns: BOSS_WINDOW_TURNS,
+    minChain: 4,
+  },
 };
 
-// Seasonal boss rotation — one per year, cycling through the 5 bosses (includes mossback)
-const YEAR_BOSS_ROTATION = ["frostmaw", "quagmire", "ember_drake", "old_stoneface", "mossback"];
+// Seasonal boss rotation — one per year, cycling through the 6 bosses (includes mossback + storm)
+const YEAR_BOSS_ROTATION = ["frostmaw", "quagmire", "ember_drake", "old_stoneface", "mossback", "storm"];
 
 // Heirloom IDs eligible to drop from boss victories (rare/legendary picks)
 
