@@ -354,6 +354,20 @@ export const BUILDINGS = [
     desc: "Reinforced ore shed. Preserves the tile layout between sessions in the Mine.",
     cost: { coins: 400, wood_plank: 25, mine_stone: 5 }, lv: 5, biome: "mine",
     x: 840, y: 260, w: 90, h: 100, color: "#7a4a2a" },
+  // Harbor-themed buildings — visual flavour for the fish biome and
+  // counts toward the "Town Planner" achievement (5 distinct buildings).
+  { id: "harbor_dock", name: "Harbor Dock",
+    desc: "A sturdy plank-and-stone pier where the fishing dinghies tie up. Marks the village as a coastal port.",
+    cost: { coins: 600, wood_plank: 30, mine_stone: 10 }, lv: 3, biome: "fish",
+    x: 60, y: 150, w: 110, h: 80, color: "#3a4a78" },
+  { id: "fishmonger", name: "Fishmonger",
+    desc: "A salt-stained shop where the day's catch is sorted, scaled, and sold. Driver of fish-flavoured orders.",
+    cost: { coins: 800, wood_plank: 30, fish_fillet: 6 }, lv: 4, biome: "fish",
+    x: 210, y: 150, w: 100, h: 90, color: "#7a8aa6" },
+  { id: "smokehouse", name: "Smokehouse",
+    desc: "A peat-fired smoking shed that turns excess fish and meat into long-keeping rations.",
+    cost: { coins: 700, wood_plank: 25, mine_stone: 15 }, lv: 4,
+    x: 350, y: 150, w: 90, h: 100, color: "#5a4030" },
 ];
 
 // Phase 10.1 — Workshop tool recipes (no turn cost, board animation).
