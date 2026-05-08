@@ -71,4 +71,22 @@ export const QUEST_TEMPLATES = [
     targetMin: 1, targetMax: 2, coinBase: 80, coinPerUnit: 50 },
   { id: "craft_cobblepath", category: "craft", item: "cobblepath", label: "Lay {n} cobble paths",
     targetMin: 1, targetMax: 3, coinBase: 60, coinPerUnit: 30 },
+  // ── Animal-category collect templates ───────────────────────────────────────
+  { id: "collect_pig",     category: "collect", key: "herd_pig",      label: "Drive {n} pigs",
+    targetMin: 5,  targetMax: 12, coinBase: 35, coinPerUnit: 4 },
+  { id: "collect_sheep",   category: "collect", key: "herd_sheep",    label: "Lead {n} sheep",
+    targetMin: 5,  targetMax: 12, coinBase: 35, coinPerUnit: 4 },
+  { id: "collect_cow",     category: "collect", key: "cattle_cow",    label: "Milk {n} cows",
+    targetMin: 4,  targetMax: 10, coinBase: 50, coinPerUnit: 6 },
+  { id: "collect_horse",   category: "collect", key: "mount_horse",   label: "Saddle {n} horses",
+    targetMin: 3,  targetMax: 8,  coinBase: 60, coinPerUnit: 8 },
+  { id: "collect_oak",     category: "collect", key: "tree_oak",      label: "Fell {n} oaks",
+    targetMin: 6,  targetMax: 14, coinBase: 30, coinPerUnit: 3 },
+  // ── Animal-product craft templates (upgrade chain end-products) ─────────────
+  { id: "craft_pie",       category: "craft",   item: "pie",          label: "Bake {n} pies",
+    targetMin: 1, targetMax: 3, coinBase: 80, coinPerUnit: 50 },
+  { id: "craft_meat",      category: "craft",   item: "meat",         label: "Stockpile {n} meat",
+    targetMin: 2, targetMax: 5, coinBase: 50, coinPerUnit: 30 },
+  { id: "craft_milk",      category: "craft",   item: "milk",         label: "Bottle {n} milk",
+    targetMin: 2, targetMax: 5, coinBase: 60, coinPerUnit: 35 },
 ];
