@@ -25,12 +25,10 @@ describe("Phase 8 — fresh state weather slot", () => {
   });
 });
 
-describe("Phase 8 — CLOSE_SEASON advances season", () => {
-  it("CLOSE_SEASON increments seasonsCycled", () => {
-    const s = createInitialState();
-    const next = rootReducer(s, { type: "CLOSE_SEASON" });
-    expect(next.seasonsCycled).toBe(1);
-  });
+describe("Phase 8 — CLOSE_SEASON resets the session", () => {
+  // Phase 7 — calendar season removed; CLOSE_SEASON no longer increments
+  // seasonsCycled. The reset semantics (turnsUsed=0, view=town, etc.) still
+  // hold and are exercised below.
 
   it("CLOSE_SEASON resets turnsUsed to 0", () => {
     const s = { ...createInitialState(), turnsUsed: 8 };

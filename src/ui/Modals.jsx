@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { SEASONS, NPCS } from "../constants.js";
-import { SEASON_EFFECTS } from "./Hud.jsx";
+import { NPCS } from "../constants.js";
 import { parseSpeaker } from "../story.js";
 
 function Stat({ v, l }) {
@@ -14,21 +13,15 @@ function Stat({ v, l }) {
 
 export function SeasonModal({ state, dispatch }) {
   if (state.modal !== "season") return null;
-  const calendarSeason = (state.seasonsCycled || 0) % 4;
-  const prevSeason = SEASONS[calendarSeason];
-  const nextCalendarSeason = (calendarSeason + 1) % 4;
-  const nextSeason = SEASONS[nextCalendarSeason];
   const stats = state.seasonStats;
-  const nextEffect = SEASON_EFFECTS[nextCalendarSeason];
+  // Phase 7 — calendar season removed. The end-of-session screen now only
+  // shows the run summary and a "Return to Town" button.
   return (
     <div className="absolute inset-0 bg-black/55 grid place-items-center z-50 animate-fadein" role="dialog" aria-modal="true" aria-labelledby="season-modal-title">
       <div className="bg-[#f4ecd8] border-[4px] border-[#b28b62] rounded-[20px] px-8 py-6 landscape:max-[1024px]:px-4 landscape:max-[1024px]:py-3 max-[640px]:px-4 max-[640px]:py-4 min-w-[360px] max-w-[560px] landscape:max-[1024px]:min-w-0 landscape:max-[1024px]:w-[92vw] max-[640px]:min-w-0 max-[640px]:w-[92vw] landscape:max-[1024px]:max-h-[88vh] max-[640px]:max-h-[85dvh] landscape:max-[1024px]:overflow-y-auto max-[640px]:overflow-y-auto text-center shadow-2xl">
         <div className="text-[48px] landscape:max-[1024px]:text-[28px] max-[640px]:text-[32px] leading-none">🏡</div>
         <h2 id="season-modal-title" className="font-bold text-[26px] landscape:max-[1024px]:text-[18px] max-[640px]:text-[20px] text-[#744d2e] mt-2 landscape:max-[1024px]:mt-1 max-[640px]:mt-1 mb-1 landscape:max-[1024px]:mb-0.5 max-[640px]:mb-0.5">Harvest Complete</h2>
-        <p className="italic text-[#6a4b31] text-[14px] landscape:max-[1024px]:text-[11px] max-[640px]:text-[12px]">{prevSeason.name} is over. Time to head back to town.</p>
-        <div className="my-2 inline-block bg-[#d6612a]/15 border border-[#d6612a]/40 rounded-full px-3 py-1 text-[12px] landscape:max-[1024px]:text-[10px] max-[640px]:text-[11px] font-bold text-[#a8431a]">
-          Next: {nextSeason.name} — {nextEffect}
-        </div>
+        <p className="italic text-[#6a4b31] text-[14px] landscape:max-[1024px]:text-[11px] max-[640px]:text-[12px]">Time to head back to town.</p>
         <div className="flex justify-around gap-2 my-4 landscape:max-[1024px]:my-2 max-[640px]:my-2 p-3 landscape:max-[1024px]:p-2 max-[640px]:p-2 bg-black/[.04] rounded-xl">
           <Stat v={stats.harvests} l="Harvested" />
           <Stat v={stats.upgrades} l="Upgrades ★" />

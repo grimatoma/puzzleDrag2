@@ -1,5 +1,5 @@
 import Phaser from "phaser";
-import { TILE, COLS, ROWS, UPGRADE_THRESHOLDS, SEASONS, BIOMES, SEASON_EFFECTS, CAPPED_RESOURCES, SCENE_EVENTS } from "./constants.js";
+import { TILE, COLS, ROWS, UPGRADE_THRESHOLDS, SEASONS, BIOMES, CAPPED_RESOURCES, SCENE_EVENTS } from "./constants.js";
 import { upgradeCountForChain, resourceGainForChain, rollResourceWithWeather } from "./utils.js";
 import { computeWorkerEffects } from "./features/apprentices/aggregate.js";
 import { applyFrostCollapseDuration } from "./features/weather/effects.js";
@@ -283,18 +283,18 @@ export class GameScene extends Phaser.Scene {
     screenShake(this._motionState(), duration, { shake: () => this.cameras.main.shake(duration, intensity, false) });
   }
 
-  /** Returns the effective minimum chain length for the current season/boss. */
+  /** Returns the effective minimum chain length given the active boss only.
+   *  Phase 7 — winter minimum-chain check was removed with the calendar season. */
   _effectiveMinChain() {
-    const seasonIdx = (this.registry.get("seasonsCycled") || 0) % 4;
-    const winterMin = seasonIdx === 3 ? SEASON_EFFECTS.Winter.minChain : 0;
     const bossMin = this.registry.get("boss")?.minChain ?? 0;
-    return Math.max(3, winterMin, bossMin);
+    return Math.max(3, bossMin);
   }
 
-  /** Returns 2 in Autumn (season index 2), 1 otherwise. */
+  /** Phase 7 — autumn x2 upgrade multiplier was removed with the calendar
+   *  season. Kept as a no-op so legacy callers don't break in this PR; future
+   *  cleanup can inline the constant 1. */
   _autumnMult() {
-    const seasonIdx = (this.registry.get("seasonsCycled") || 0) % 4;
-    return seasonIdx === 2 ? SEASON_EFFECTS.Autumn.upgradeMult : 1;
+    return 1;
   }
 
   // ─── Layout ───────────────────────────────────────────────────────────────
@@ -353,8 +353,10 @@ export class GameScene extends Phaser.Scene {
   // ─── Background / board frame ─────────────────────────────────────────────
 
   season() {
-    const idx = (this.registry.get("seasonsCycled") || 0) % SEASONS.length;
-    return SEASONS[idx];
+    // Phase 7 — calendar season removed. Always return Spring's visual
+    // metadata; future cleanup can hook this to the in-session season for
+    // atmospheric rotation within a run.
+    return SEASONS[0];
   }
 
   biomeKey() {

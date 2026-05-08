@@ -93,44 +93,8 @@ describe("CHAIN_COLLECTED", () => {
     expect(next.inventory.grass_hay).toBe(4);
   });
 
-  it("applies spring +20% bonus (season 0)", () => {
-    const state = minState({ seasonsCycled: 0, npcBond: NEUTRAL_BOND }); // Spring
-    const next = gameReducer(state, {
-      type: "CHAIN_COLLECTED",
-      payload: { key: "grass_hay", gained: 5, upgrades: 0, value: 1, chainLength: 5 },
-    });
-    // Spring bonus: ceil(5 * 0.2) = 1 extra → 6 total
-    expect(next.inventory.grass_hay).toBe(6);
-  });
-
-  it("doubles upgrades in autumn (season 2)", () => {
-    const state = minState({ seasonsCycled: 2 }); // Autumn
-    const next = gameReducer(state, {
-      type: "CHAIN_COLLECTED",
-      payload: { key: "grass_hay", gained: 3, upgrades: 1, value: 1, chainLength: 3 },
-    });
-    // Autumn: 1 upgrade → 2 effective upgrades → 2 wheat
-    expect(next.inventory.grain_wheat).toBe(2);
-  });
-
-  it("yields nothing in winter with chain < 5", () => {
-    const state = minState({ seasonsCycled: 3 }); // Winter
-    const next = gameReducer(state, {
-      type: "CHAIN_COLLECTED",
-      payload: { key: "grass_hay", gained: 4, upgrades: 0, value: 1, chainLength: 4 },
-    });
-    expect(next.inventory.grass_hay).toBeUndefined();
-    expect(next.turnsUsed).toBe(1); // turn still consumed
-  });
-
-  it("collects normally in winter with chain >= 5", () => {
-    const state = minState({ seasonsCycled: 3 }); // Winter
-    const next = gameReducer(state, {
-      type: "CHAIN_COLLECTED",
-      payload: { key: "grass_hay", gained: 5, upgrades: 0, value: 1, chainLength: 5 },
-    });
-    expect(next.inventory.grass_hay).toBe(5);
-  });
+  // Phase 7 — calendar season effects (spring +20%, autumn 2× upgrades,
+  // winter min-chain) were removed; the tests asserting on them are gone.
 
   it("advances turnsUsed and sets season modal when turn limit reached", async () => {
     const { MAX_TURNS } = await import("../constants.js");
@@ -193,24 +157,7 @@ describe("TURN_IN_ORDER", () => {
     expect(next.coins).toBe(state.coins + 30);
   });
 
-  it("doubles reward in summer (season 1)", () => {
-    const order = { id: "o1", npc: "wren", key: "grass_hay", need: 3, reward: 20, line: "test" };
-    const state = minState({
-      seasonsCycled: 1, // Summer
-      inventory: { grass_hay: 5 },
-      orders: [order],
-      npcBond: NEUTRAL_BOND,
-    });
-    const next = gameReducer(state, {
-      type: "TURN_IN_ORDER",
-      id: "o1",
-      npc: order.npc,
-      key: order.key,
-      need: order.need,
-      reward: order.reward,
-    });
-    expect(next.coins).toBe(state.coins + 40); // 2× summer multiplier
-  });
+  // Phase 7 — summer 2× order multiplier removed with the calendar season.
 
   it("does nothing when inventory is insufficient", () => {
     const order = { id: "o1", npc: "wren", key: "grass_hay", need: 10, reward: 30, line: "test" };
@@ -233,25 +180,17 @@ describe("TURN_IN_ORDER", () => {
 });
 
 describe("CLOSE_SEASON", () => {
-  it("resets turnsUsed and increments seasonsCycled", () => {
-    const state = minState({ turnsUsed: 8, seasonsCycled: 1, modal: "season" });
+  it("resets turnsUsed and clears the season modal", () => {
+    const state = minState({ turnsUsed: 8, modal: "season" });
     const next = gameReducer(state, { type: "CLOSE_SEASON" });
     expect(next.turnsUsed).toBe(0);
     expect(next.modal).toBeNull();
     expect(next.view).toBe("town");
   });
 
-  it("increments seasonsCycled from core state", () => {
-    const s0 = minState({ seasonsCycled: 0 });
-    const s1 = gameReducer(s0, { type: "CLOSE_SEASON" });
-    const s2 = gameReducer(s1, { type: "CLOSE_SEASON" });
-    expect(s2.seasonsCycled).toBe(2);
-  });
-
-  it("awards end-of-season coins; shuffles earned via almanac/quests not free per season (spec §11)", () => {
+  it("awards end-of-session coins; shuffles earned via almanac/quests not free per session (spec §11)", () => {
     const state = minState({ tools: { shuffle: 0 } });
     const next = gameReducer(state, { type: "CLOSE_SEASON" });
-    // Spec: no free shuffle per season — shuffles come from almanac/quests only
     expect(next.tools.shuffle).toBe(0);
     expect(next.coins).toBe(state.coins + 25); // SEASON_END_BONUS_COINS
   });
