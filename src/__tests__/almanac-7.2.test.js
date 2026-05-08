@@ -32,20 +32,20 @@ describe("7.2 ALMANAC_TIERS", () => {
   it("tier 2 = +1 Seedpack at level 2", () => {
     expect(ALMANAC_TIERS[1].tier).toBe(2);
     expect(ALMANAC_TIERS[1].level).toBe(2);
-    expect(ALMANAC_TIERS[1].reward.tools?.seedpack).toBe(1);
+    expect(ALMANAC_TIERS[1].reward.tools?.basic).toBe(1);
   });
 
   it("tier 3 = +75 coins + 1 Lockbox at level 3", () => {
     expect(ALMANAC_TIERS[2].tier).toBe(3);
     expect(ALMANAC_TIERS[2].level).toBe(3);
     expect(ALMANAC_TIERS[2].reward.coins).toBe(75);
-    expect(ALMANAC_TIERS[2].reward.tools?.lockbox).toBe(1);
+    expect(ALMANAC_TIERS[2].reward.tools?.rare).toBe(1);
   });
 
   it("tier 4 = +1 Reshuffle Horn at level 4", () => {
     expect(ALMANAC_TIERS[3].tier).toBe(4);
     expect(ALMANAC_TIERS[3].level).toBe(4);
-    expect(ALMANAC_TIERS[3].reward.tools?.reshuffle).toBe(1);
+    expect(ALMANAC_TIERS[3].reward.tools?.shuffle).toBe(1);
   });
 
   it("tier 5 = structural startingExtraScythe at level 5", () => {
@@ -149,34 +149,34 @@ describe("7.2 claimAlmanacTier", () => {
     expect(c.newState.almanac.claimed[3]).toBe(false);
   });
 
-  it("tier 2 reward adds 1 seedpack to tools", () => {
+  it("tier 2 reward adds 1 basic-tile (Seedpack) to tools", () => {
     const s = { ...freshState(), almanac: { ...freshState().almanac, level: 2 },
-      tools: { ...freshState().tools, seedpack: 0 } };
+      tools: { ...freshState().tools, basic: 0 } };
     // First claim tier 1 to not double test
     const c = claimAlmanacTier(s, 2);
     expect(c.ok).toBe(true);
-    expect(c.newState.tools.seedpack).toBe(1);
+    expect(c.newState.tools.basic).toBe(1);
   });
 
-  it("tier 3 reward adds 75 coins and 1 lockbox", () => {
+  it("tier 3 reward adds 75 coins and 1 rare-tile (Lockbox)", () => {
     const s = { ...freshState(), coins: 0,
       almanac: { xp: 450, level: 3,
         claimed: { 1: true, 2: true, 3: false, 4: false, 5: false } },
-      tools: { ...freshState().tools, lockbox: 0 } };
+      tools: { ...freshState().tools, rare: 0 } };
     const c = claimAlmanacTier(s, 3);
     expect(c.ok).toBe(true);
     expect(c.newState.coins).toBe(75);
-    expect(c.newState.tools.lockbox).toBe(1);
+    expect(c.newState.tools.rare).toBe(1);
   });
 
-  it("tier 4 reward adds 1 reshuffle tool", () => {
+  it("tier 4 reward adds 1 Reshuffle Horn (shuffle) tool", () => {
     const s = { ...freshState(), coins: 0,
       almanac: { xp: 600, level: 4,
         claimed: { 1: true, 2: true, 3: true, 4: false, 5: false } },
-      tools: { ...freshState().tools, reshuffle: 0 } };
+      tools: { ...freshState().tools, shuffle: 0 } };
     const c = claimAlmanacTier(s, 4);
     expect(c.ok).toBe(true);
-    expect(c.newState.tools.reshuffle).toBe(1);
+    expect(c.newState.tools.shuffle).toBe(1);
   });
 
   it("tier 5 claim sets startingExtraScythe structural flag", () => {
@@ -208,25 +208,26 @@ describe("7.2 claimAlmanacTier", () => {
 
 // ── 7.2.5 startingExtraScythe session init bonus ───────────────────────────────
 describe("7.2 startingExtraScythe session bonus", () => {
-  it("createInitialState with flag=true gives +1 scythe", () => {
+  it("createInitialState with flag=true gives +1 Scythe (clear)", () => {
     global.localStorage.clear();
     const reborn = createInitialState({
-      tools: { startingExtraScythe: true, scythe: 0, seedpack: 0, lockbox: 0, reshuffle: 0 },
+      tools: { startingExtraScythe: true },
     });
-    expect(reborn.tools.scythe).toBe(1);
+    // Default fresh state seeds clear=2, structural flag adds +1 → 3.
+    expect(reborn.tools.clear).toBe(3);
   });
 
-  it("createInitialState with flag=false gives 0 scythe bonus", () => {
+  it("createInitialState with flag=false gives 0 Scythe bonus", () => {
     global.localStorage.clear();
     const noBonus = createInitialState({
-      tools: { startingExtraScythe: false, scythe: 0, seedpack: 0, lockbox: 0, reshuffle: 0 },
+      tools: { startingExtraScythe: false },
     });
-    expect(noBonus.tools.scythe).toBe(0);
+    expect(noBonus.tools.clear).toBe(2);
   });
 
-  it("createInitialState without flag gives 0 scythe bonus", () => {
+  it("createInitialState without flag gives 0 Scythe bonus", () => {
     global.localStorage.clear();
     const s = createInitialState({ tools: {} });
-    expect(s.tools.scythe).toBe(0);
+    expect(s.tools.clear).toBe(2);
   });
 });

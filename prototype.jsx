@@ -3,7 +3,7 @@ import { COLS, ROWS, TILE, SCENE_EVENTS } from "./src/constants.js";
 import { runSelfTests, currentCap } from "./src/utils.js";
 import { gameReducer, initialState } from "./src/state.js";
 import { Hud } from "./src/ui/Hud.jsx";
-import { MobileDock, PortraitToolsBar } from "./src/ui/Tools.jsx";
+import { MobileDock, PortraitToolsBar, ArmedToolBanner } from "./src/ui/Tools.jsx";
 import { TownView } from "./src/ui/Town.jsx";
 import { SeasonModal, NpcBubble, StoryModal } from "./src/ui/Modals.jsx";
 import { SidePanel, BottomNav, FeatureModals, FeatureScreens } from "./src/ui.jsx";
@@ -355,6 +355,7 @@ export default function App() {
             <div className="flex-1 min-h-0 grid grid-cols-[1fr_300px] gap-3 p-3 max-[1024px]:grid-cols-1 max-[1024px]:gap-0 max-[1024px]:p-0">
               {/* Phaser host — takes the rest. Phaser draws its own background and frame. */}
               <div className="relative min-h-0 min-w-0 overflow-hidden">
+                <ArmedToolBanner state={state} dispatch={dispatchWithA11y} />
                 <PhaserMount
                   dispatch={dispatchWithA11y}
                   biomeKey={state.biomeKey}

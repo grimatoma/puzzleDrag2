@@ -14,12 +14,12 @@ const fix = (name) => JSON.parse(
 );
 
 describe("Phase 12.2 — save migrations", () => {
-  it("SAVE_SCHEMA_VERSION === 16 (phases 1..11 + 12.5 saved-field + Castle Needs + bird/veg prefix)", () => {
-    expect(SAVE_SCHEMA_VERSION).toBe(16);
+  it("SAVE_SCHEMA_VERSION === 17 (phases 1..11 + 12.5 saved-field + Castle Needs + bird/veg prefix + tool-alias drop)", () => {
+    expect(SAVE_SCHEMA_VERSION).toBe(17);
   });
 
-  it("MIGRATIONS array has exactly 16 entries", () => {
-    expect(MIGRATIONS).toHaveLength(16);
+  it("MIGRATIONS array has exactly 17 entries", () => {
+    expect(MIGRATIONS).toHaveLength(17);
     for (const step of MIGRATIONS) expect(typeof step).toBe("function");
   });
 
@@ -40,9 +40,9 @@ describe("Phase 12.2 — save migrations", () => {
     }
   });
 
-  it("v0 save loads cleanly into v16 with all phase slices defaulted", () => {
+  it("v0 save loads cleanly into v17 with all phase slices defaulted", () => {
     const result = migrateSave(fix("save-v0.json"));
-    expect(result.version).toBe(16);
+    expect(result.version).toBe(17);
     expect(result.migratedFrom).toBe(0);
 
     // Phase 2 slice present, default story
@@ -85,10 +85,10 @@ describe("Phase 12.2 — save migrations", () => {
     expect(state.turnsUsed).toBe(6);
   });
 
-  it("mid-pipeline fixtures also reach v16", () => {
+  it("mid-pipeline fixtures also reach v17", () => {
     for (const f of ["save-v3.json", "save-v6.json", "save-v9.json"]) {
       const r = migrateSave(fix(f));
-      expect(r.version).toBe(16);
+      expect(r.version).toBe(17);
     }
   });
 

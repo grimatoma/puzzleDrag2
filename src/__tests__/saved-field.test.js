@@ -61,8 +61,8 @@ describe("Phase 12.5 — saved-field preservation", () => {
     expect(s1.turnsUsed).toBe(0);
   });
 
-  it("SAVE_SCHEMA_VERSION === 16 and migration v11 → v12 seeds slots", () => {
-    expect(SAVE_SCHEMA_VERSION).toBe(16);
+  it("SAVE_SCHEMA_VERSION === 17 and migration v11 → v12 seeds slots", () => {
+    expect(SAVE_SCHEMA_VERSION).toBe(17);
     const v11 = { version: 11, farm: {}, mine: {} };
     const v12 = MIGRATIONS[11](v11);
     expect(v12.farm.savedField).toBeNull();
