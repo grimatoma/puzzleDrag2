@@ -1325,15 +1325,39 @@ export class GameScene extends Phaser.Scene {
     this.events.emit(SCENE_EVENTS.CHAIN_UPDATE, null);
   }
 
-  // ─── Chain progress panel (X/T toward next upgrade product) ──────────────
+  // ─── Chain progress panel (banked + chain toward 1 inventory resource) ──
   //
-  // Sits above the board while dragging. Shows: a horizontal progress bar
-  // labelled "<chain>/<threshold>", the next-tier product icon, and an
-  // "x N earned" badge once the chain has produced upgrades.
+  // Sits above the board while dragging. The meter is intentionally distinct
+  // from the chain-tier upgrade preview (the floating stars on the chain that
+  // indicate when the next-tier tile spawns):
   //
-  // Inventory is also surfaced so the player can see "I have K of these
-  // already, plus what I'm chaining" — matches the pattern from the
-  // reference design where the meter accumulates across owned + selected.
+  //   • The meter tracks the player's *resource accumulation* — banked tiles
+  //     in inventory plus the tiles being chained — toward the cumulative
+  //     count needed to produce one terminal item (e.g. raw hay → bread).
+  //   • The chain stars handle the per-tier tile that lands on the board
+  //     every Nth selection, which is a separate concept.
+  //
+  // The terminal item is found by walking `.next` to the end of the chain;
+  // the threshold is the product of per-tier thresholds along that path.
+
+  /** Walks `res.next` to the terminal product, multiplying per-tier thresholds. */
+  _terminalProductInfo(res) {
+    const effThresh = this.registry.get("effectiveThresholds") ?? UPGRADE_THRESHOLDS;
+    let cur = res;
+    let cumulative = 1;
+    const visited = new Set();
+    while (cur?.next && !visited.has(cur.key)) {
+      visited.add(cur.key);
+      const T = effThresh[cur.key] ?? UPGRADE_THRESHOLDS[cur.key] ?? 0;
+      if (T <= 0) return null;
+      cumulative *= T;
+      const nextRes = this.resourceByKey(cur.next);
+      if (!nextRes) return null;
+      cur = nextRes;
+    }
+    if (cur === res) return null;
+    return { terminal: cur, threshold: cumulative };
+  }
 
   showChainStatus() {
     if (this.chainStatus) return;
@@ -1357,7 +1381,9 @@ export class GameScene extends Phaser.Scene {
 
     this.chainStatusIcon = this.add.image(iconCx, 0, "spark").setScale(0.6);
 
-    // "x N earned" badge — bottom-right of the icon halo
+    // "x N earned" badge — bottom-right of the icon halo, only when the
+    // accumulated count would produce 2+ terminal items (i.e. multiples
+    // beyond the first one in progress).
     const badgeR = 10 * dpr;
     const badgeX = iconCx + iconHaloR - 4 * dpr;
     const badgeY = iconHaloR - 6 * dpr;
@@ -1402,44 +1428,43 @@ export class GameScene extends Phaser.Scene {
     const n = this.path.length;
     if (n === 0) { this.chainStatus.setVisible(false); return; }
     const res = this.path[0].res;
-    const next = this.nextResource(res);
-    const effThresh = this.registry.get("effectiveThresholds") ?? UPGRADE_THRESHOLDS;
-    const T = next ? (effThresh[res.key] ?? 0) : 0;
-    if (!next || T <= 0) { this.chainStatus.setVisible(false); return; }
+    const info = this._terminalProductInfo(res);
+    if (!info) { this.chainStatus.setVisible(false); return; }
+    const { terminal, threshold: T } = info;
+    if (T <= 0) { this.chainStatus.setVisible(false); return; }
     this.chainStatus.setVisible(true);
 
-    // Progress within the current tier; show full bar at the moment a tier
-    // completes before the next tile resets it.
-    const earnedRaw = Math.floor(n / T);
-    const earned = earnedRaw * this._autumnMult();
-    const within = n % T;
-    const displayCurrent = within === 0 && earnedRaw > 0 ? T : within;
+    const inventory = this.registry.get("inventory") ?? {};
+    const banked = inventory[res.key] ?? 0;
+    const total = banked + n;
 
-    this.chainStatusText.setText(`${displayCurrent}/${T}`);
+    const within = total >= T ? T : total % T;
+    const earnedExtra = Math.max(0, Math.floor(total / T) - (total % T === 0 && total > 0 ? 1 : 0));
 
-    const ready = displayCurrent >= T;
+    this.chainStatusText.setText(`${total}/${T}`);
+
+    const ready = total >= T;
     const fillColor = ready ? 0xe39a2f : 0xa8c769;
-    const ratio = Math.min(1, displayCurrent / T);
+    const ratio = Math.min(1, within / T);
     const { x, y, w, h, r } = this.chainStatusBarGeom;
     const fillW = Math.max(0, w * ratio);
     const g = this.chainStatusBarFill;
     g.clear();
     if (fillW > 0) {
       g.fillStyle(fillColor, 1);
-      // Use a rounded rect that won't overflow the inner pill at low fills.
       const rr = Math.min(r, fillW / 2);
       g.fillRoundedRect(x, y - h / 2, fillW, h, rr);
     }
 
-    if (this.chainStatusIcon.texture.key !== `tile_${next.key}`) {
-      this.chainStatusIcon.setTexture(`tile_${next.key}`);
+    if (this.chainStatusIcon.texture.key !== `tile_${terminal.key}`) {
+      this.chainStatusIcon.setTexture(`tile_${terminal.key}`);
     }
     this.chainStatusIcon.setScale(0.42 * this.tileSpriteScale);
 
-    const showBadge = earned > 0;
+    const showBadge = earnedExtra > 0;
     this.chainStatusBadgeBg.setVisible(showBadge);
     this.chainStatusBadge.setVisible(showBadge);
-    if (showBadge) this.chainStatusBadge.setText(`${earned}`);
+    if (showBadge) this.chainStatusBadge.setText(`${earnedExtra}`);
   }
 
   hideChainStatus() {
