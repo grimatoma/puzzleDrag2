@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  CATEGORIES,
   TILE_TYPES_MAP,
   SUB_CATEGORIES,
   SUB_CATEGORY_LABELS,
@@ -237,20 +236,23 @@ function HazardRow({ hazard }) {
 
 export default function TileCollectionPanel({ state, dispatch }) {
   const [subCategory, setSubCategory] = useState("farm");
+  const [activeTabBySub, setActiveTabBySub] = useState({});
+  const tabBarRef = useRef(null);
+
   const visibleCategories = useMemo(
     () => categoriesForSubCategory(subCategory),
     [subCategory],
   );
-  const [activeTab, setActiveTab] = useState(() => visibleCategories[0] ?? null);
-  const tabBarRef = useRef(null);
 
-  // Keep activeTab valid when sub-category changes.
-  useEffect(() => {
-    if (subCategory === "hazards") return;
-    if (!visibleCategories.includes(activeTab)) {
-      setActiveTab(visibleCategories[0] ?? null);
-    }
-  }, [subCategory, visibleCategories, activeTab]);
+  const storedTab = activeTabBySub[subCategory];
+  const activeTab =
+    storedTab && visibleCategories.includes(storedTab)
+      ? storedTab
+      : visibleCategories[0] ?? null;
+
+  function selectActiveTab(cat) {
+    setActiveTabBySub((prev) => ({ ...prev, [subCategory]: cat }));
+  }
 
   const rows =
     subCategory !== "hazards" && activeTab
@@ -306,7 +308,7 @@ export default function TileCollectionPanel({ state, dispatch }) {
           {visibleCategories.map((cat) => (
             <button
               key={cat}
-              onClick={() => setActiveTab(cat)}
+              onClick={() => selectActiveTab(cat)}
               className={`flex-shrink-0 py-2 px-2 text-xs font-bold transition-colors min-w-[52px] ${
                 activeTab === cat
                   ? "bg-[#4f3010] text-[#ffd248] border-b-2 border-[#ffd248]"
