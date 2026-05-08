@@ -63,14 +63,39 @@ function cloneDraft(d) {
   return base;
 }
 
+const SIDEBAR_COLLAPSED_KEY = "hearth.balance.sidebarCollapsed";
+
+function readSidebarCollapsed() {
+  try {
+    if (typeof localStorage === "undefined") return false;
+    return localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === "1";
+  } catch { return false; }
+}
+
+function writeSidebarCollapsed(v) {
+  try {
+    if (typeof localStorage === "undefined") return;
+    localStorage.setItem(SIDEBAR_COLLAPSED_KEY, v ? "1" : "0");
+  } catch { /* storage unavailable */ }
+}
+
 export default function BalanceManagerModal({ state, dispatch }) {
   const isOpen = state.modal === modalKey;
   const [tab, setTab] = useState("resources");
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(readSidebarCollapsed);
   // Initialise the draft from whatever the constants module merged in:
   // committed file + previous localStorage draft. That way, opening the
   // manager always shows the user's full set of overrides as starting point.
   const [draft, setDraft] = useState(() => cloneDraft(BALANCE_OVERRIDES));
   const [savedNotice, setSavedNotice] = useState("");
+
+  const toggleSidebar = useCallback(() => {
+    setSidebarCollapsed((v) => {
+      const next = !v;
+      writeSidebarCollapsed(next);
+      return next;
+    });
+  }, []);
 
   const updateDraft = useCallback((updater) => {
     setDraft((prev) => {
@@ -190,15 +215,25 @@ export default function BalanceManagerModal({ state, dispatch }) {
         </header>
 
         <div className="flex flex-1 min-h-0">
-          {/* Sidebar tabs */}
+          {/* Sidebar tabs (collapsible) */}
           <nav
-            className="flex flex-col gap-1 p-3 flex-shrink-0 overflow-y-auto"
+            className="flex flex-col gap-1 p-3 flex-shrink-0 overflow-y-auto transition-[width] duration-200 relative"
             style={{
-              width: 200,
+              width: sidebarCollapsed ? 56 : 200,
               background: COLORS.parchmentDeep,
               borderRight: `2px solid ${COLORS.border}`,
             }}
           >
+            <button
+              onClick={toggleSidebar}
+              className="self-end mb-1 w-7 h-7 grid place-items-center text-[14px] font-bold rounded-md border-2"
+              style={{ background: COLORS.parchment, borderColor: COLORS.border, color: COLORS.inkLight }}
+              title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+              aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+              aria-expanded={!sidebarCollapsed}
+            >
+              {sidebarCollapsed ? "»" : "«"}
+            </button>
             {TABS.map((t) => {
               const active = t.id === tab;
               return (
@@ -211,9 +246,11 @@ export default function BalanceManagerModal({ state, dispatch }) {
                       ? { background: COLORS.ember, color: "#fff" }
                       : { background: "transparent", color: COLORS.inkLight }
                   }
+                  title={sidebarCollapsed ? t.label : undefined}
+                  aria-label={t.label}
                 >
                   <span className="text-[15px]">{t.icon}</span>
-                  <span className="flex-1">{t.label}</span>
+                  {!sidebarCollapsed && <span className="flex-1">{t.label}</span>}
                 </button>
               );
             })}
@@ -224,16 +261,18 @@ export default function BalanceManagerModal({ state, dispatch }) {
                 className="w-full px-2 py-1.5 text-[10px] font-bold rounded-md border-2 mb-1"
                 style={{ background: COLORS.parchment, borderColor: COLORS.border, color: COLORS.inkLight }}
                 title="Discard local edits and reload from balance.json"
+                aria-label="Reset to committed balance.json"
               >
-                ↺ Reset to Committed
+                {sidebarCollapsed ? "↺" : "↺ Reset to Committed"}
               </button>
               <button
                 onClick={clearAllOverrides}
                 className="w-full px-2 py-1.5 text-[10px] font-bold rounded-md border-2"
                 style={{ background: COLORS.red, borderColor: COLORS.redDeep, color: "#fff" }}
                 title="Wipe every override — restores raw defaults"
+                aria-label="Clear all overrides"
               >
-                ✕ Clear All Overrides
+                {sidebarCollapsed ? "✕" : "✕ Clear All Overrides"}
               </button>
             </div>
           </nav>
