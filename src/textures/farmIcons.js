@@ -968,7 +968,7 @@ export function drawFarmTileIcon(ctx, key) {
     ctx.stroke();
   }
 
-  else if (key === "carrot") {
+  else if (key === "veg_carrot") {
     // Orange tapered root with leafy green top
     // Drop shadow
     ctx.fillStyle = "rgba(0,0,0,0.22)";
@@ -1037,7 +1037,7 @@ export function drawFarmTileIcon(ctx, key) {
     drawSprig(4, 8, 16, "#7ec238", "#2f5410");
   }
 
-  else if (key === "eggplant") {
+  else if (key === "veg_eggplant") {
     // Deep purple bulb with curved green calyx/stem
     // Drop shadow
     ctx.fillStyle = "rgba(0,0,0,0.25)";
@@ -1102,7 +1102,7 @@ export function drawFarmTileIcon(ctx, key) {
     ctx.stroke();
   }
 
-  else if (key === "turnip") {
+  else if (key === "veg_turnip") {
     // Pink/magenta upper, white lower, round root, green leaves on top
     // Drop shadow
     ctx.fillStyle = "rgba(0,0,0,0.22)";
@@ -1175,7 +1175,7 @@ export function drawFarmTileIcon(ctx, key) {
     drawLeaf(3, 7, 13, "#7ec238", "#2f5410");
   }
 
-  else if (key === "beet") {
+  else if (key === "veg_beet") {
     // Dark red-purple round root with red-veined leaves
     // Drop shadow
     ctx.fillStyle = "rgba(0,0,0,0.22)";
@@ -1256,7 +1256,7 @@ export function drawFarmTileIcon(ctx, key) {
     drawBeetLeaf(4, 0, 14, 0.4);
   }
 
-  else if (key === "cucumber") {
+  else if (key === "veg_cucumber") {
     // Long green ribbed cylinder with subtle bumps, tilted
     ctx.save();
     ctx.rotate(-0.4);
@@ -1328,7 +1328,7 @@ export function drawFarmTileIcon(ctx, key) {
     ctx.restore();
   }
 
-  else if (key === "squash") {
+  else if (key === "veg_squash") {
     // Yellow rounded gourd (acorn-squash) with brown stem and ridges
     // Drop shadow
     ctx.fillStyle = "rgba(0,0,0,0.25)";
@@ -1412,7 +1412,7 @@ export function drawFarmTileIcon(ctx, key) {
     ctx.stroke();
   }
 
-  else if (key === "mushroom") {
+  else if (key === "veg_mushroom") {
     // Toadstool — red cap with white spots, white stem
     // Drop shadow
     ctx.fillStyle = "rgba(0,0,0,0.22)";
@@ -1486,7 +1486,7 @@ export function drawFarmTileIcon(ctx, key) {
     ctx.fill();
   }
 
-  else if (key === "pepper") {
+  else if (key === "veg_pepper") {
     // Glossy red bell pepper with green stem
     // Drop shadow
     ctx.fillStyle = "rgba(0,0,0,0.25)";
@@ -1564,7 +1564,7 @@ export function drawFarmTileIcon(ctx, key) {
     ctx.stroke();
   }
 
-  else if (key === "broccoli") {
+  else if (key === "veg_broccoli") {
     // Green clustered florets atop a thicker pale-green stalk
     // Drop shadow
     ctx.fillStyle = "rgba(0,0,0,0.22)";

@@ -14,12 +14,12 @@ const fix = (name) => JSON.parse(
 );
 
 describe("Phase 12.2 — save migrations", () => {
-  it("SAVE_SCHEMA_VERSION === 15 (phases 1..11 + 12.5 saved-field + Castle Needs)", () => {
-    expect(SAVE_SCHEMA_VERSION).toBe(15);
+  it("SAVE_SCHEMA_VERSION === 16 (phases 1..11 + 12.5 saved-field + Castle Needs + bird/veg prefix)", () => {
+    expect(SAVE_SCHEMA_VERSION).toBe(16);
   });
 
-  it("MIGRATIONS array has exactly 15 entries", () => {
-    expect(MIGRATIONS).toHaveLength(15);
+  it("MIGRATIONS array has exactly 16 entries", () => {
+    expect(MIGRATIONS).toHaveLength(16);
     for (const step of MIGRATIONS) expect(typeof step).toBe("function");
   });
 
@@ -40,9 +40,9 @@ describe("Phase 12.2 — save migrations", () => {
     }
   });
 
-  it("v0 save loads cleanly into v15 with all phase slices defaulted", () => {
+  it("v0 save loads cleanly into v16 with all phase slices defaulted", () => {
     const result = migrateSave(fix("save-v0.json"));
-    expect(result.version).toBe(15);
+    expect(result.version).toBe(16);
     expect(result.migratedFrom).toBe(0);
 
     // Phase 2 slice present, default story
@@ -85,11 +85,40 @@ describe("Phase 12.2 — save migrations", () => {
     expect(state.turnsUsed).toBe(6);
   });
 
-  it("mid-pipeline fixtures also reach v15", () => {
+  it("mid-pipeline fixtures also reach v16", () => {
     for (const f of ["save-v3.json", "save-v6.json", "save-v9.json"]) {
       const r = migrateSave(fix(f));
-      expect(r.version).toBe(15);
+      expect(r.version).toBe(16);
     }
+  });
+
+  it("v15→v16 renames bird/vegetable inventory keys with bird_/veg_ prefix", () => {
+    const v15 = {
+      version: 15,
+      inventory: {
+        carrot: 5, eggplant: 3, beet: 2,
+        chicken: 1, rooster: 4, pig_in_disguise: 1,
+        grass_hay: 99, // unrelated key — should pass through
+      },
+      tileCollection: {
+        discovered: { carrot: true, chicken: true, grass_hay: true },
+        researchProgress: { carrot: 12 },
+        activeByCategory: { vegetables: "carrot", bird: "chicken" },
+      },
+    };
+    const out = MIGRATIONS[15]({ ...v15 });
+    expect(out.inventory).toEqual({
+      veg_carrot: 5, veg_eggplant: 3, veg_beet: 2,
+      bird_chicken: 1, bird_rooster: 4, bird_pig_in_disguise: 1,
+      grass_hay: 99,
+    });
+    expect(out.tileCollection.discovered).toEqual({
+      veg_carrot: true, bird_chicken: true, grass_hay: true,
+    });
+    expect(out.tileCollection.researchProgress).toEqual({ veg_carrot: 12 });
+    expect(out.tileCollection.activeByCategory).toEqual({
+      vegetables: "veg_carrot", bird: "bird_chicken",
+    });
   });
 
   it("corrupted save falls back to fresh state with a warning", () => {
