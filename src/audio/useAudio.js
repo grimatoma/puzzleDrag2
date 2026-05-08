@@ -56,6 +56,22 @@ export function useAudio(state) {
     const newCrafted = Object.values(s.craftedTotals || {}).reduce((a, v) => a + v, 0);
     if (newCrafted > prevCrafted) play('upgrade');
 
+    // Fish biome — tide flip (state.fish.tide changes)
+    if (s.fish?.tide && p.fish?.tide && s.fish.tide !== p.fish.tide) {
+      play('tideSplash');
+      if (s?.settings?.hapticsOn && navigator.vibrate) {
+        try { navigator.vibrate(60); } catch { /* unsupported */ }
+      }
+    }
+
+    // Fish biome — pearl capture (rune count goes up while on fish biome)
+    if ((s.runes || 0) > (p.runes || 0) && s.biomeKey === 'fish') {
+      play('pearlCapture');
+      if (s?.settings?.hapticsOn && navigator.vibrate) {
+        try { navigator.vibrate([20, 30, 20]); } catch { /* unsupported */ }
+      }
+    }
+
     prev.current = s;
   });
 
