@@ -1,0 +1,219 @@
+// Apply Balance-Manager overrides on top of the default game constants.
+//
+// The override JSON lives in `src/config/balance.json` (committed) and is
+// optionally augmented by a localStorage draft (`hearth.balance.draft`) that
+// the in-game Balance Manager writes for fast iteration. The committed file
+// is always the source of truth in production builds.
+//
+// All merge functions are pure and mutate-in-place on the passed-in
+// targets — that's deliberate, because the targets are the live module
+// objects exported from constants.js (UPGRADE_THRESHOLDS, BIOMES, RECIPES,
+// BUILDINGS, TILE_TYPES) and downstream code already imported references to
+// them. Reassigning the bindings would not propagate.
+
+import { expandHooksToEffects } from "./powerHooks.js";
+
+const BALANCE_DRAFT_KEY = "hearth.balance.draft";
+
+/** Read the localStorage draft, if any. Safe in non-browser environments. */
+export function readBalanceDraft() {
+  try {
+    if (typeof localStorage === "undefined") return null;
+    const raw = localStorage.getItem(BALANCE_DRAFT_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === "object" ? parsed : null;
+  } catch { return null; }
+}
+
+export function writeBalanceDraft(draft) {
+  try {
+    if (typeof localStorage === "undefined") return;
+    if (draft == null) localStorage.removeItem(BALANCE_DRAFT_KEY);
+    else localStorage.setItem(BALANCE_DRAFT_KEY, JSON.stringify(draft));
+  } catch { /* storage unavailable */ }
+}
+
+/** Shallow-merge two override objects. Values from `b` win. */
+export function mergeOverrides(a, b) {
+  if (!a) return b || {};
+  if (!b) return a || {};
+  const out = { ...a };
+  for (const k of Object.keys(b)) {
+    const av = a[k];
+    const bv = b[k];
+    if (av && typeof av === "object" && !Array.isArray(av)
+        && bv && typeof bv === "object" && !Array.isArray(bv)) {
+      out[k] = { ...av, ...bv };
+    } else {
+      out[k] = bv;
+    }
+  }
+  return out;
+}
+
+/** Apply numeric upgrade-threshold overrides in place. */
+export function applyUpgradeThresholdOverrides(target, overrides) {
+  if (!overrides || typeof overrides !== "object") return;
+  for (const [key, value] of Object.entries(overrides)) {
+    const n = Number(value);
+    if (!Number.isFinite(n) || n < 1) continue;
+    target[key] = Math.floor(n);
+  }
+}
+
+/**
+ * Apply per-resource overrides to BIOMES.*.resources. Allowed fields:
+ * label, color, dark, value, next, glyph, description.
+ * The resource is patched in place across whichever biome it lives in.
+ */
+export function applyResourceOverrides(biomes, overrides) {
+  if (!overrides || typeof overrides !== "object") return;
+  for (const biomeKey of Object.keys(biomes)) {
+    const list = biomes[biomeKey]?.resources;
+    if (!Array.isArray(list)) continue;
+    for (let i = 0; i < list.length; i++) {
+      const r = list[i];
+      const patch = overrides[r.key];
+      if (!patch) continue;
+      if (typeof patch.label === "string") r.label = patch.label;
+      if (Number.isFinite(patch.color)) r.color = patch.color;
+      if (Number.isFinite(patch.dark)) r.dark = patch.dark;
+      if (Number.isFinite(patch.value)) r.value = patch.value;
+      if (Object.prototype.hasOwnProperty.call(patch, "next")) {
+        r.next = patch.next || null;
+      }
+      if (typeof patch.glyph === "string") r.glyph = patch.glyph;
+      if (typeof patch.description === "string") r.description = patch.description;
+    }
+  }
+}
+
+/** Apply patches to RECIPES entries. Fields: name, inputs, tier, station,
+ *  coins, glyph, color, dark, desc, output. */
+export function applyRecipeOverrides(recipes, overrides) {
+  if (!overrides || typeof overrides !== "object") return;
+  for (const [key, patch] of Object.entries(overrides)) {
+    const r = recipes[key];
+    if (!r) continue;
+    if (typeof patch.name === "string") r.name = patch.name;
+    if (patch.inputs && typeof patch.inputs === "object") {
+      // Replace inputs wholesale (rather than merge) so removed lines don't linger.
+      const cleaned = {};
+      for (const [resKey, qty] of Object.entries(patch.inputs)) {
+        const n = Number(qty);
+        if (Number.isFinite(n) && n > 0) cleaned[resKey] = Math.floor(n);
+      }
+      r.inputs = cleaned;
+    }
+    if (Number.isFinite(patch.tier)) r.tier = patch.tier;
+    if (typeof patch.station === "string") r.station = patch.station;
+    if (Number.isFinite(patch.coins)) r.coins = patch.coins;
+    if (typeof patch.glyph === "string") r.glyph = patch.glyph;
+    if (Number.isFinite(patch.color)) r.color = patch.color;
+    if (Number.isFinite(patch.dark)) r.dark = patch.dark;
+    if (typeof patch.desc === "string") r.desc = patch.desc;
+    if (typeof patch.output === "string") r.output = patch.output;
+  }
+}
+
+/** Apply patches to BUILDINGS entries (matched by id). Fields: name, desc,
+ *  cost, lv, color. */
+export function applyBuildingOverrides(buildings, overrides) {
+  if (!overrides || typeof overrides !== "object") return;
+  for (const b of buildings) {
+    const patch = overrides[b.id];
+    if (!patch) continue;
+    if (typeof patch.name === "string") b.name = patch.name;
+    if (typeof patch.desc === "string") b.desc = patch.desc;
+    if (patch.cost && typeof patch.cost === "object") {
+      const cleaned = {};
+      for (const [k, v] of Object.entries(patch.cost)) {
+        const n = Number(v);
+        if (Number.isFinite(n) && n >= 0) cleaned[k] = Math.floor(n);
+      }
+      b.cost = cleaned;
+    }
+    if (Number.isFinite(patch.lv)) b.lv = patch.lv;
+    if (typeof patch.color === "string") b.color = patch.color;
+  }
+}
+
+/**
+ * Apply tile-level overrides to a TILE_TYPES array in place:
+ *   - tilePowers[id] = { hooks: [...] }   →  expanded into tile.effects
+ *   - tileUnlocks[id] = { ... }           →  patched onto tile.discovery
+ *   - tileDescriptions[id] = string       →  replaces tile.description
+ */
+export function applyTileOverrides(tileTypes, overrides) {
+  if (!tileTypes || !Array.isArray(tileTypes)) return;
+  const powers = overrides?.tilePowers || {};
+  const unlocks = overrides?.tileUnlocks || {};
+  const descs = overrides?.tileDescriptions || {};
+
+  for (const tile of tileTypes) {
+    const id = tile.id;
+
+    // Description.
+    if (typeof descs[id] === "string") tile.description = descs[id];
+
+    // Power hooks → expand into legacy effects fields. Preserve any non-hook
+    // fields already on tile.effects (poolWeightDelta from hard-coded defaults
+    // for example).
+    const powerPatch = powers[id];
+    if (powerPatch && Array.isArray(powerPatch.hooks)) {
+      // Strip prior hook-derived fields by recomputing from base (non-hook) effects.
+      const base = stripHookDerivedFields(tile.effects || {});
+      tile.effects = expandHooksToEffects(powerPatch.hooks, base);
+    }
+
+    // Unlock / discovery.
+    const unlockPatch = unlocks[id];
+    if (unlockPatch && typeof unlockPatch === "object") {
+      tile.discovery = sanitizeDiscovery(unlockPatch, tile.discovery);
+    }
+  }
+}
+
+const HOOK_DERIVED_FIELDS = new Set([
+  "freeMoves", "freeMovesIfChain", "coinBonusFlat", "coinBonusPerTile",
+  "thresholdReduce", "hooks",
+]);
+
+function stripHookDerivedFields(effects) {
+  const out = {};
+  for (const k of Object.keys(effects)) {
+    if (!HOOK_DERIVED_FIELDS.has(k)) out[k] = effects[k];
+  }
+  return out;
+}
+
+function sanitizeDiscovery(patch, prev) {
+  const method = patch.method || prev?.method || "default";
+  switch (method) {
+    case "default":
+      return { method: "default" };
+    case "chain": {
+      const chainLengthOf = patch.chainLengthOf || prev?.chainLengthOf;
+      const chainLength = Number.isFinite(patch.chainLength)
+        ? patch.chainLength
+        : (prev?.chainLength ?? 6);
+      return { method: "chain", chainLengthOf, chainLength };
+    }
+    case "research": {
+      const researchOf = patch.researchOf || prev?.researchOf;
+      const researchAmount = Number.isFinite(patch.researchAmount)
+        ? patch.researchAmount
+        : (prev?.researchAmount ?? 30);
+      return { method: "research", researchOf, researchAmount };
+    }
+    case "buy": {
+      const coinCost = Number.isFinite(patch.coinCost)
+        ? patch.coinCost
+        : (prev?.coinCost ?? 100);
+      return { method: "buy", coinCost };
+    }
+    default:
+      return prev || { method: "default" };
+  }
+}

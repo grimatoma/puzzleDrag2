@@ -684,3 +684,33 @@ export function dayKeyForDate(d) {
   const day = String(d.getDate()).padStart(2, "0");
   return `${y}-${m}-${day}`;
 }
+
+// ─── Balance-Manager overrides ─────────────────────────────────────────────
+// The committed `src/config/balance.json` file is merged onto the constants
+// above at module-load time. A localStorage draft (written by the in-game
+// Balance Manager) is layered on top so designers can preview changes
+// without committing. Both layers are optional — the defaults above remain
+// the source of truth in production builds when balance.json is empty.
+import balanceFile from "./config/balance.json";
+import {
+  mergeOverrides,
+  readBalanceDraft,
+  applyUpgradeThresholdOverrides,
+  applyResourceOverrides,
+  applyRecipeOverrides,
+  applyBuildingOverrides,
+} from "./config/applyOverrides.js";
+
+export const BALANCE_OVERRIDES = mergeOverrides(balanceFile, readBalanceDraft());
+
+applyUpgradeThresholdOverrides(UPGRADE_THRESHOLDS, BALANCE_OVERRIDES.upgradeThresholds);
+applyResourceOverrides(BIOMES, BALANCE_OVERRIDES.resources);
+applyRecipeOverrides(RECIPES, BALANCE_OVERRIDES.recipes);
+applyBuildingOverrides(BUILDINGS, BALANCE_OVERRIDES.buildings);
+
+// Recompute tile palette so default-palette renders pick up any color overrides.
+for (const r of [...BIOMES.farm.resources, ...BIOMES.mine.resources, ...BIOMES.fish.resources]) {
+  if (PALETTES.default.tiles[r.key] !== r.color) {
+    PALETTES.default.tiles[r.key] = r.color;
+  }
+}
