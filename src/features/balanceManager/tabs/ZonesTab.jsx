@@ -1,0 +1,218 @@
+// Zones tab — Phase 6 of the rule overhaul.
+//
+// Edits per-zone settings: startingTurns, entry cost (coins), the chain
+// upgrade-map (source category -> target category), and the per-season
+// drop-rate percentages.
+//
+// Patches are stored on `draft.zones[zoneId]`. They merge into the live
+// ZONES table at module load via `applyZoneOverrides` in
+// src/config/applyOverrides.js.
+
+import { useMemo, useState } from "react";
+import { ZONES, ZONE_CATEGORIES, ZONE_UPGRADE_TARGET_GOLD } from "../../zones/data.js";
+import {
+  COLORS, NumberField, Select, SmallButton, Pill, Card, SearchBar,
+} from "../shared.jsx";
+
+const SEASON_NAMES = ["Spring", "Summer", "Autumn", "Winter"];
+
+const TARGET_OPTIONS = [
+  { value: "", label: "— none —" },
+  ...ZONE_CATEGORIES.map((c) => ({ value: c, label: c })),
+  { value: ZONE_UPGRADE_TARGET_GOLD, label: "gold (board-only tile)" },
+];
+
+function Label({ children }) {
+  return (
+    <div className="text-[10px] font-bold uppercase tracking-wide mb-0.5" style={{ color: COLORS.inkSubtle }}>
+      {children}
+    </div>
+  );
+}
+
+export default function ZonesTab({ draft, updateDraft }) {
+  const [search, setSearch] = useState("");
+  const zoneList = useMemo(() => Object.values(ZONES), []);
+  const filtered = useMemo(
+    () => zoneList.filter((z) => {
+      if (!search) return true;
+      const q = search.toLowerCase();
+      return z.id.toLowerCase().includes(q) || (z.name || "").toLowerCase().includes(q);
+    }),
+    [search, zoneList],
+  );
+
+  function patch(zoneId, fields) {
+    updateDraft((d) => {
+      d.zones ??= {};
+      const cur = d.zones[zoneId] || {};
+      const next = { ...cur, ...fields };
+      // Drop empty fields so the patch stays minimal.
+      for (const k of Object.keys(next)) {
+        if (next[k] === "" || next[k] === undefined || next[k] === null) delete next[k];
+      }
+      if (Object.keys(next).length === 0) delete d.zones[zoneId];
+      else d.zones[zoneId] = next;
+    });
+  }
+
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex items-center gap-2">
+        <div className="flex-1">
+          <SearchBar value={search} onChange={setSearch} placeholder="Filter zones…" />
+        </div>
+        <Pill>{filtered.length} of {zoneList.length}</Pill>
+      </div>
+
+      <div className="grid grid-cols-1 gap-3">
+        {filtered.map((z) => {
+          const p = (draft.zones || {})[z.id] || {};
+          const eff = {
+            startingTurns: p.startingTurns ?? z.startingTurns ?? 16,
+            entryCoins:    (p.entryCost?.coins) ?? (z.entryCost?.coins ?? 50),
+            upgradeMap:    p.upgradeMap ?? z.upgradeMap ?? {},
+            seasonDrops:   p.seasonDrops ?? z.seasonDrops ?? {},
+          };
+          const dirty = Object.keys(p).length > 0;
+          // The set of source categories editable on this zone is the union of
+          // the configured map's keys and ZONE_CATEGORIES, so the player can
+          // add an override for a category the zone doesn't ship by default.
+          const sourceCats = Array.from(new Set([
+            ...Object.keys(eff.upgradeMap),
+            ...ZONE_CATEGORIES,
+          ]));
+
+          return (
+            <Card key={z.id} accent={dirty ? COLORS.ember : COLORS.border}>
+              <div className="flex items-start justify-between mb-2 gap-2">
+                <div className="flex items-center gap-2">
+                  <code
+                    className="font-mono text-[10px] px-1.5 py-0.5 rounded"
+                    style={{ background: COLORS.parchmentDeep, color: COLORS.ember }}
+                  >
+                    {z.id}
+                  </code>
+                  <span className="font-bold text-[13px]" style={{ color: COLORS.ink }}>{z.name}</span>
+                </div>
+                {dirty && (
+                  <SmallButton
+                    variant="ghost"
+                    onClick={() => updateDraft((d) => { d.zones ??= {}; delete d.zones[z.id]; })}
+                  >
+                    revert
+                  </SmallButton>
+                )}
+              </div>
+
+              <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 mb-3">
+                <div>
+                  <Label>Starting turns</Label>
+                  <NumberField
+                    value={eff.startingTurns}
+                    min={4}
+                    max={64}
+                    width={70}
+                    onChange={(v) => patch(z.id, { startingTurns: v })}
+                  />
+                </div>
+                <div>
+                  <Label>Entry cost (coins)</Label>
+                  <NumberField
+                    value={eff.entryCoins}
+                    min={0}
+                    max={9999}
+                    width={80}
+                    onChange={(v) => patch(z.id, { entryCost: { coins: v } })}
+                  />
+                </div>
+              </div>
+
+              <div className="mb-3">
+                <Label>Upgrade map · chain redirect</Label>
+                <div className="flex flex-col gap-1">
+                  {sourceCats.map((src) => (
+                    <div key={src} className="flex items-center gap-2">
+                      <code
+                        className="font-mono text-[11px] px-1.5 py-0.5 rounded min-w-[110px]"
+                        style={{ background: COLORS.parchmentDeep, color: COLORS.ink }}
+                      >
+                        {src}
+                      </code>
+                      <span style={{ color: COLORS.inkSubtle }}>→</span>
+                      <Select
+                        value={eff.upgradeMap[src] ?? ""}
+                        options={TARGET_OPTIONS}
+                        width={180}
+                        onChange={(v) => {
+                          const next = { ...eff.upgradeMap };
+                          if (!v) delete next[src];
+                          else next[src] = v;
+                          patch(z.id, { upgradeMap: next });
+                        }}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <Label>Season drops · % per category</Label>
+                <div className="flex flex-col gap-2">
+                  {SEASON_NAMES.map((season) => {
+                    const table = eff.seasonDrops[season] ?? {};
+                    const total = Object.values(table).reduce((a, b) => a + (Number(b) || 0), 0);
+                    return (
+                      <div key={season}>
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-[11px] font-bold" style={{ color: COLORS.ink }}>{season}</span>
+                          <Pill>{total.toFixed(2)} total</Pill>
+                        </div>
+                        <div className="grid grid-cols-2 gap-1">
+                          {ZONE_CATEGORIES.map((cat) => (
+                            <div key={cat} className="flex items-center gap-2">
+                              <code
+                                className="font-mono text-[10px] px-1.5 py-0.5 rounded min-w-[90px]"
+                                style={{ background: COLORS.parchmentDeep, color: COLORS.ink }}
+                              >
+                                {cat}
+                              </code>
+                              <NumberField
+                                value={Number((table[cat] ?? 0).toFixed(3))}
+                                min={0}
+                                max={1}
+                                step={0.05}
+                                width={70}
+                                onChange={(v) => {
+                                  const nextTable = { ...table };
+                                  if (v <= 0) delete nextTable[cat];
+                                  else nextTable[cat] = v;
+                                  const nextDrops = { ...eff.seasonDrops, [season]: nextTable };
+                                  patch(z.id, { seasonDrops: nextDrops });
+                                }}
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="text-[10px] mt-2" style={{ color: COLORS.inkSubtle }}>
+                  Each season's percentages are normalised by the spawn sampler;
+                  setting them to sum to 1.0 keeps the math intuitive but the
+                  engine accepts any non-negative weights.
+                </div>
+              </div>
+            </Card>
+          );
+        })}
+        {filtered.length === 0 && (
+          <div className="text-center py-8 text-[12px] italic" style={{ color: COLORS.inkSubtle }}>
+            No zones match your filter.
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
