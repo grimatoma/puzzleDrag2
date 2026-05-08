@@ -7,6 +7,8 @@ export const CATEGORIES = [
   // weights, market prices, worker effects, and chain → product wiring land in
   // follow-up PRs.
   "fruits", "flowers", "trees", "herd_animals", "cattle", "mounts",
+  // Fish biome category — sardine / mackerel / clam / oyster / kelp.
+  "fish",
 ];
 
 export const TILE_TYPES = [
@@ -529,6 +531,42 @@ export const TILE_TYPES = [
     discovery: { method: "buy", coinCost: 300 },
     effects: {},
     description: "Fifty-eight stars when collected. Single-tile collect. A mean mammoth is just a woolly bully. Buy-only.",
+  },
+  // ── Fish biome (chain reducer category) ────────────────────────────────
+  {
+    id: "fish_sardine", category: "fish", displayName: "Sardine",
+    baseResource: "fish_sardine", tier: 0,
+    discovery: { method: "default" },
+    effects: {},
+    description: "A common shoaling fish, easy to net at high tide.",
+  },
+  {
+    id: "fish_mackerel", category: "fish", displayName: "Mackerel",
+    baseResource: "fish_mackerel", tier: 1,
+    discovery: { method: "default" },
+    effects: {},
+    description: "A fast pelagic fish that runs in summer.",
+  },
+  {
+    id: "fish_clam", category: "fish", displayName: "Clam",
+    baseResource: "fish_clam", tier: 0,
+    discovery: { method: "default" },
+    effects: {},
+    description: "A tide-pool shellfish gathered at low tide.",
+  },
+  {
+    id: "fish_oyster", category: "fish", displayName: "Oyster",
+    baseResource: "fish_oyster", tier: 1,
+    discovery: { method: "default" },
+    effects: {},
+    description: "A rare shellfish that occasionally hides a pearl.",
+  },
+  {
+    id: "fish_kelp", category: "fish", displayName: "Kelp",
+    baseResource: "fish_kelp", tier: 0,
+    discovery: { method: "default" },
+    effects: {},
+    description: "A leafy seaweed — the chain feeds into fish oil.",
   },
 ];
 
