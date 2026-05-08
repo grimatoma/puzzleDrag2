@@ -2,6 +2,7 @@ import { BIOMES, BUILDINGS, NPCS, MAX_TURNS, RECIPES, WORKSHOP_RECIPES, STORAGE_
 import { sellPriceFor as _sellPriceFor } from "./features/market/pricing.js";
 import { tryClearRatChain } from "./features/farm/rats.js";
 import { tryExtinguishFire, rollFarmHazard, tickFire, tickWolves } from "./features/farm/hazards.js";
+import { tryDeadlyPestsKill } from "./features/farm/deadlyPests.js";
 import { rollHazard, tickHazards } from "./features/mine/hazards.js";
 import { isMysteriousChainValid, spawnMysteriousOre, tickMysteriousOre } from "./features/mine/mysterious_ore.js";
 import { driftPrices, applyTrade } from "./market.js";
@@ -547,6 +548,7 @@ function coreReducer(state, action) {
       const chainTiles = action.payload.chain ?? null;
       const currentBiome = state.biome ?? state.biomeKey;
       let fireExtinguishPatch = null;
+      let deadlyPatch = null;
       if (chainTiles && chainTiles.length > 0) {
         if (currentBiome === "farm") {
           // Rat clearing: chain of 3+ rat tiles
@@ -558,6 +560,10 @@ function coreReducer(state, action) {
             }
             return state; // rejected
           }
+          // Catalog §7 "deadly to pests" — Cypress / Beet / Phoenix in chain
+          // exterminate orthogonally-adjacent rats. Captured here and applied
+          // when building afterChain so the standard chain still resolves.
+          deadlyPatch = tryDeadlyPestsKill(state, chainTiles);
           // Fire extinguishing — capture patch to apply when building afterChain
           fireExtinguishPatch = tryExtinguishFire(state, chainTiles);
         } else if (currentBiome === "mine") {
@@ -655,11 +661,23 @@ function coreReducer(state, action) {
       };
 
       const fireCoinBonus = fireExtinguishPatch?.coinsBonus ?? 0;
+      // deadlyPatch kills rats adjacent to chained "deadly_pests" tiles.
+      // Patch is preferred over fireExtinguish for hazards; both also bump coins.
+      const deadlyCoinBonus = deadlyPatch
+        ? (deadlyPatch.coins ?? state.coins) - (state.coins ?? 0)
+        : 0;
+      // If both patches present, deadlyPatch's hazards (sans rats) takes
+      // priority; fire patch updates the fire field within hazards.
+      const mergedHazards = deadlyPatch
+        ? (fireExtinguishPatch
+            ? { ...fireExtinguishPatch.hazards, rats: deadlyPatch.hazards.rats }
+            : deadlyPatch.hazards)
+        : (fireExtinguishPatch ? fireExtinguishPatch.hazards : null);
       let afterChain = {
         ...state,
-        ...(fireExtinguishPatch ? { hazards: fireExtinguishPatch.hazards } : {}),
+        ...(mergedHazards ? { hazards: mergedHazards } : {}),
         inventory,
-        coins: state.coins + coinsGain + fireCoinBonus,
+        coins: state.coins + coinsGain + fireCoinBonus + deadlyCoinBonus,
         xp: afterAlmanacXp.almanac.xp,
         level: afterAlmanacXp.almanac.level,
         almanac: afterAlmanacXp.almanac,
