@@ -645,6 +645,36 @@ export const TOWNSFOLK = [
     requirement: { building: "forge", orLevel: 6 },
     description: "Carves dressed-stone facades for the trade hall. Patrons drop extra coin into the season's coffer.",
   },
+
+  // ── Catalog §9 farm leftovers — Peasant + Lumberjack ───────────────────
+  {
+    id: "peasant",
+    name: "Else",
+    role: "Peasant",
+    icon: "🌾",
+    color: "#7ec63d",
+    wage: 12,
+    hireCost: { worker: 1, grass_hay: 6, bread: 4 },
+    maxCount: 3,
+    effect: { type: "bonus_yield", key: "grass_hay", amount: 1 },
+    requirement: { building: "granary" },
+    description: "Stoops in the meadow at dawn with a small sickle. Pulls an extra bale from every hay chain.",
+  },
+  {
+    id: "lumberjack",
+    name: "Stig",
+    role: "Lumberjack",
+    icon: "🪓",
+    color: "#7a4f24",
+    wage: 22,
+    hireCost: { worker: 1, wood_log: 8, bread: 8 },
+    maxCount: 2,
+    // Bonus_yield on tree_oak — the catalog's "1 tree = 1 wood" cleanly
+    // realised as "extra log per oak chain" in our chain model.
+    effect: { type: "bonus_yield", key: "tree_oak", amount: 1 },
+    requirement: { building: "inn", orLevel: 4 },
+    description: "Splits oaks at the woodline before the sun climbs. Drops an extra log into every tree chain.",
+  },
 ];
 
 export const TOWNSFOLK_MAP = Object.fromEntries(TOWNSFOLK.map((w) => [w.id, w]));
