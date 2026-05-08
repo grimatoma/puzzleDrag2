@@ -37,6 +37,11 @@ export const ACHIEVEMENTS = [
   { id: "orchard_friend", name: "Orchard's Friend",           desc: "Pick 50 fruits across the vale",                  counter: "fruit_chained",              threshold: 50,  target: 50,  reward: { coins: 75 } },
   { id: "pollinator",     name: "Pollinator",                 desc: "Cut 30 flowers from the meadows",                 counter: "flower_chained",             threshold: 30,  target: 30,  reward: { coins: 60 } },
   { id: "herder",         name: "Herder",                     desc: "Drive 30 herd animals from the moors",            counter: "herd_chained",               threshold: 30,  target: 30,  reward: { coins: 60 } },
+  // Cattle / mount / tree / bird category milestones
+  { id: "dairyman",       name: "Dairyman",                   desc: "Drive 30 cattle into the milking shed",          counter: "cattle_chained",             threshold: 30,  target: 30,  reward: { coins: 60 } },
+  { id: "stable_hand",    name: "Stable Hand",                desc: "Lead 30 mounts through the stables",             counter: "mount_chained",              threshold: 30,  target: 30,  reward: { coins: 60 } },
+  { id: "forester",       name: "Forester",                   desc: "Fell 50 trees across the vale",                  counter: "tree_chained",               threshold: 50,  target: 50,  reward: { coins: 75 } },
+  { id: "fowler",         name: "Fowler",                     desc: "Gather 50 birds across the yards",               counter: "bird_chained",               threshold: 50,  target: 50,  reward: { coins: 75 } },
 ];
 
 /**

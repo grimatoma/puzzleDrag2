@@ -45,6 +45,7 @@ describe("Fix 7 — canonical ACHIEVEMENTS list shape", () => {
       "fish_chained",
       "mine_chained",
       "veg_chained", "fruit_chained", "flower_chained", "herd_chained",
+      "cattle_chained", "mount_chained", "tree_chained", "bird_chained",
     ]);
     for (const a of ACHIEVEMENTS) {
       expect(valid.has(a.counter), `${a.id} has unknown counter: ${a.counter}`).toBe(true);
