@@ -261,10 +261,14 @@ export function reduce(state, action) {
         const wKey = next.weather.key;
         const chainKey = payload.key || "";
         const gained = payload.gained || 0;
+        // Helpers in features/weather/effects.js read weather.active, but the
+        // slice persists weather as { key, ... }. Translate at the call site
+        // so rain's berry-double + harvest_moon's +1 upgrade actually fire.
+        const helperWeather = { active: wKey };
 
         if (wKey === "rain" && gained > 0) {
           // Use helper: doubles berry yield; other resources unchanged
-          const bonusPayload = applyRainBerryBonus({ [chainKey]: gained }, next.weather);
+          const bonusPayload = applyRainBerryBonus({ [chainKey]: gained }, helperWeather);
           if (bonusPayload[chainKey] !== gained) {
             const inv = { ...(next.inventory || {}) };
             inv[chainKey] = (inv[chainKey] || 0) + (bonusPayload[chainKey] - gained);
@@ -273,7 +277,7 @@ export function reduce(state, action) {
         } else if (wKey === "harvest_moon") {
           // Spec M-10: +1 upgrade applies to EVERY chain (not just chains with existing upgrades)
           // applyHarvestMoonUpgrade(0, weather) = 1 — always grants at least 1 upgrade
-          const bonusUpgrades = applyHarvestMoonUpgrade(0, next.weather);
+          const bonusUpgrades = applyHarvestMoonUpgrade(0, helperWeather);
           if (bonusUpgrades > 0) {
             const baseRes = ALL_RESOURCES.find((r) => r.key === chainKey);
             if (baseRes?.next) {
