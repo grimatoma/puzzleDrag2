@@ -387,6 +387,22 @@ export const WORKSHOP_RECIPES = {
   hound:       { name: "Hound",        station: "workshop", inputs: { bread: 1, mine_stone: 3 },
                  effect: "scatter_hazard", target: "wolves", anim: "bark", ms: 400,
                  desc: "Scares the wolves away for several turns, buying time to chain away their target tiles." },
+  // Catalog §8 — additional workshop tools.
+  hoe:         { name: "Hoe",          station: "workshop", inputs: { wood_plank: 1, mine_stone: 1 },
+                 effect: "clear_all", target: "veg_carrot", anim: "till",   ms: 300,
+                 desc: "Tills the soil — clears every veg-carrot tile from the board so a fresh fill can roll." },
+  stone_hammer:{ name: "Stone Hammer", station: "workshop", inputs: { mine_stone: 2, wood_plank: 1 },
+                 effect: "clear_all", target: "mine_cobble", anim: "smash", ms: 350,
+                 desc: "Smashes every cobble tile on the board — a fast way to feed the chain into block tier." },
+  iron_pick:   { name: "Iron Pick",    station: "workshop", inputs: { mine_ingot: 1, wood_plank: 1 },
+                 effect: "clear_all", target: "mine_ore", anim: "pick",   ms: 320,
+                 desc: "Bites into ore veins — clears every ore tile so the chain can be re-spawned cleanly." },
+  bird_feed:   { name: "Bird Feed",    station: "workshop", inputs: { grain: 1, grass_hay: 2 },
+                 effect: "fill_bias", target: "bird_egg", anim: "scatter", ms: 500,
+                 desc: "Scatters feed across the field so the next board fill is biased toward bird tiles." },
+  sapling:     { name: "Sapling",      station: "workshop", inputs: { wood_log: 1, grass_hay: 2 },
+                 effect: "fill_bias", target: "tree_oak", anim: "shimmer", ms: 600,
+                 desc: "Plants a sapling that biases the next fill toward oak (and other tree) tiles." },
 };
 
 // NOTE (balance audit, 2026-05): Several bakery recipes appear to sell for
