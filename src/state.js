@@ -32,7 +32,6 @@ import * as portal from "./features/portal/slice.js";
 import * as market from "./features/market/slice.js";
 import * as castle from "./features/castle/slice.js";
 import { FIRE_HAZARD_ENABLED } from "./featureFlags.js";
-import { migrateSave } from "./migrations.js";
 
 const slices = [crafting, quests, achievements, tutorial, settings, boss, cartography, apprentices, mood, storySlice, decorations, portal, market, castle];
 
@@ -279,9 +278,8 @@ export function makeOrder(biomeKey, level, excludeNpcs = [], excludeOrderKeys = 
 
 /**
  * Build a fresh state object with no I/O. This is the side-effect-free core
- * of `initialState`, exported so migrations.js can use it as a corruption
- * fallback without recursing back through localStorage. Callers that want
- * the hydrated-from-save behaviour should use `initialState` instead.
+ * of `initialState`. Callers that want the hydrated-from-save behaviour
+ * should use `initialState` instead.
  */
 export function createFreshState(overrides) {
   const biomeKey = "farm";
@@ -410,12 +408,12 @@ function generateSaveSeed() {
 export function initialState(overrides) {
   const fresh = createFreshState(overrides);
   // Hydrate from save if present, but always force board view + clear modals on boot.
-  // Saves are first run through migrateSave so v0..v(N-1) shapes get upgraded
-  // before the merge below sees them.
+  // Saves whose schema version doesn't match the current version are discarded —
+  // forward migrations are intentionally not maintained. Bump SAVE_SCHEMA_VERSION
+  // whenever the persisted shape changes; existing players will start fresh.
   const raw = loadSavedState();
-  if (raw) {
-    const { state: saved } = migrateSave(raw);
-    if (!saved) return fresh;
+  if (raw && raw.version === SAVE_SCHEMA_VERSION) {
+    const saved = raw;
     // Advance all ID sequences past persisted IDs so new items never collide.
     if (Array.isArray(saved.orders)) {
       for (const o of saved.orders) {
@@ -1743,6 +1741,7 @@ const SLICE_PRIMARY_ACTIONS = new Set([
   // Tutorial actions are owned by tutorial/slice
   "TUTORIAL/START",
   "TUTORIAL/NEXT",
+  "TUTORIAL/PREV",
   "TUTORIAL/SKIP",
   // Castle Needs contribution is owned by castle/slice
   "CASTLE/CONTRIBUTE",

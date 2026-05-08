@@ -1,7 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { rootReducer, createInitialState } from "../state.js";
 import { BUILDINGS } from "../constants.js";
-import { MIGRATIONS, SAVE_SCHEMA_VERSION } from "../migrations.js";
 
 const findBuilding = (id) => BUILDINGS.find(b => b.id === id);
 
@@ -61,17 +60,4 @@ describe("Phase 12.5 — saved-field preservation", () => {
     expect(s1.turnsUsed).toBe(0);
   });
 
-  it("SAVE_SCHEMA_VERSION === 17 and migration v11 → v12 seeds slots", () => {
-    expect(SAVE_SCHEMA_VERSION).toBe(17);
-    const v11 = { version: 11, farm: {}, mine: {} };
-    const v12 = MIGRATIONS[11](v11);
-    expect(v12.farm.savedField).toBeNull();
-    expect(v12.mine.savedField).toBeNull();
-  });
-
-  it("migration is idempotent on already-v12 saves", () => {
-    const v12 = { farm: { savedField: null }, mine: { savedField: null } };
-    const again = MIGRATIONS[11](v12);
-    expect(again).toEqual(v12);
-  });
 });
