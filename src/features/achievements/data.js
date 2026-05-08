@@ -28,6 +28,10 @@ export const ACHIEVEMENTS = [
   { id: "first_catch",    name: "First Catch",                desc: "Land your first fish chain at the harbor",       counter: "fish_chained",               threshold: 1,   target: 1,   reward: { coins: 25 } },
   { id: "tide_runner",    name: "Tide Runner",                desc: "Harvest 50 fish across the harbor",              counter: "fish_chained",               threshold: 50,  target: 50,  reward: { coins: 75 } },
   { id: "master_angler",  name: "Master Angler",              desc: "Haul in 200 fish across the harbor",             counter: "fish_chained",               threshold: 200, target: 200, reward: { tools: { magic_wand: 1 } } },
+  // mine_chained — mine-biome harvest milestones
+  { id: "first_strike",   name: "First Strike",               desc: "Quarry your first mine chain",                  counter: "mine_chained",               threshold: 1,   target: 1,   reward: { coins: 25 } },
+  { id: "deep_digger",    name: "Deep Digger",                desc: "Pull 50 stone / ore / coal / gems from the mine", counter: "mine_chained",            threshold: 50,  target: 50,  reward: { coins: 75 } },
+  { id: "mine_master",    name: "Mine Master",                desc: "Haul 200 mine resources across all veins",      counter: "mine_chained",               threshold: 200, target: 200, reward: { tools: { magic_seed: 1 } } },
 ];
 
 /**
