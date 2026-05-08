@@ -12,7 +12,16 @@ function rr(ctx, x, y, w, h, r) {
   ctx.closePath();
 }
 
+const MINE_HANDLED_KEYS = new Set([
+  "mine_stone", "mine_cobble", "mine_block",
+  "mine_ore", "mine_ingot",
+  "mine_coal", "mine_coke",
+  "mine_gem", "mine_cutgem",
+  "mine_gold",
+]);
+
 export function drawMineTileIcon(ctx, key) {
+  if (!MINE_HANDLED_KEYS.has(key)) return false;
   if (key === "mine_stone") {
     // Faceted gray rock with crevices
     // Shadow
@@ -677,4 +686,5 @@ export function drawMineTileIcon(ctx, key) {
     ctx.arc(-4, -10, 14, Math.PI * 1.1, Math.PI * 1.55);
     ctx.stroke();
   }
+  return true;
 }

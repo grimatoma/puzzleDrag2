@@ -12,7 +12,19 @@ function rr(ctx, x, y, w, h, r) {
   ctx.closePath();
 }
 
+const FARM_HANDLED_KEYS = new Set([
+  "grass_hay", "grain_wheat", "grain", "grain_flour",
+  "wood_log", "wood_plank", "wood_beam",
+  "berry", "berry_jam",
+  "bird_egg", "grass_meadow", "grass_spiky",
+  "bird_turkey", "bird_clover", "bird_melon",
+  "veg_carrot", "veg_eggplant", "veg_turnip", "veg_beet",
+  "veg_cucumber", "veg_squash", "veg_mushroom", "veg_pepper", "veg_broccoli",
+  "soup",
+]);
+
 export function drawFarmTileIcon(ctx, key) {
+  if (!FARM_HANDLED_KEYS.has(key)) return false;
   if (key === "grass_hay") {
     // Golden bundle of dried straw tied with twine
     // Outer dark straw (warm brown)
@@ -1839,4 +1851,5 @@ export function drawFarmTileIcon(ctx, key) {
     ctx.bezierCurveTo(10, -12, 14, -10, 16, -14);
     ctx.stroke();
   }
+  return true;
 }

@@ -69,9 +69,9 @@ export function drawTileIcon(ctx, key) {
   ctx.lineJoin = "round";
   if (drawRegisteredIcon(ctx, key)) return;
   // Legacy fallthrough — keeps any in-tree key not yet in the registry alive.
-  // Both legacy dispatchers no-op for unknown keys, so this is safe.
-  drawFarmTileIcon(ctx, key);
-  drawMineTileIcon(ctx, key);
+  // Each dispatcher returns true if it handled the key.
+  if (drawFarmTileIcon(ctx, key)) return;
+  if (drawMineTileIcon(ctx, key)) return;
   // Glyph fallback — only fires if neither registry nor legacy handled it.
   let res = null;
   for (const biome of Object.values(BIOMES)) {
