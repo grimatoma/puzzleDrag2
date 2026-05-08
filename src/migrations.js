@@ -229,6 +229,57 @@ export const MIGRATIONS = [
     }
     return next;
   },
+
+  // v15 → v16: Bird and vegetable category prefix rename. Brings the
+  // remaining unprefixed farm-side species into the same scheme as PR #194
+  // (farm) / PR #204 (mine).
+  //
+  // Mapping:
+  //   pheasant → bird_pheasant       chicken → bird_chicken
+  //   hen → bird_hen                 rooster → bird_rooster
+  //   wild_goose → bird_wild_goose   goose → bird_goose
+  //   parrot → bird_parrot           phoenix → bird_phoenix
+  //   dodo → bird_dodo               pig_in_disguise → bird_pig_in_disguise
+  //   carrot → veg_carrot            eggplant → veg_eggplant
+  //   turnip → veg_turnip            beet → veg_beet
+  //   cucumber → veg_cucumber        squash → veg_squash
+  //   mushroom → veg_mushroom        pepper → veg_pepper
+  //   broccoli → veg_broccoli
+  //
+  // Idempotent: re-running on a migrated save is a no-op (no old keys left).
+  (s) => {
+    const RENAME = {
+      pheasant: "bird_pheasant", chicken: "bird_chicken", hen: "bird_hen",
+      rooster: "bird_rooster", wild_goose: "bird_wild_goose", goose: "bird_goose",
+      parrot: "bird_parrot", phoenix: "bird_phoenix", dodo: "bird_dodo",
+      pig_in_disguise: "bird_pig_in_disguise",
+      carrot: "veg_carrot", eggplant: "veg_eggplant", turnip: "veg_turnip",
+      beet: "veg_beet", cucumber: "veg_cucumber", squash: "veg_squash",
+      mushroom: "veg_mushroom", pepper: "veg_pepper", broccoli: "veg_broccoli",
+    };
+    const remap = (obj) => {
+      if (!obj || typeof obj !== "object") return obj;
+      const out = {};
+      for (const [k, v] of Object.entries(obj)) {
+        out[RENAME[k] ?? k] = v;
+      }
+      return out;
+    };
+    const next = { ...s };
+    if (s.inventory) next.inventory = remap(s.inventory);
+    if (s.tileCollection) {
+      next.tileCollection = {
+        ...s.tileCollection,
+        discovered: remap(s.tileCollection.discovered),
+        researchProgress: remap(s.tileCollection.researchProgress),
+        activeByCategory: Object.fromEntries(
+          Object.entries(s.tileCollection.activeByCategory ?? {})
+            .map(([cat, val]) => [cat, RENAME[val] ?? val]),
+        ),
+      };
+    }
+    return next;
+  },
 ];
 
 function isCorrupted(raw) {

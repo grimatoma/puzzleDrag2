@@ -5,7 +5,7 @@ import { BIOMES } from "../constants.js";
 describe("Phase 5.6 — Board pool wiring", () => {
   const baseDefaults = {
     grass: "grass_hay", grain: "grain_wheat", wood: "wood_log", berry: "berry", bird: "bird_egg",
-    vegetables: "carrot",
+    vegetables: "veg_carrot",
     fruits: "fruit_apple", flowers: "flower_pansy", trees: "tree_oak",
     herd_animals: "herd_pig", cattle: "cattle_cow", mounts: "mount_horse",
   };
@@ -16,7 +16,7 @@ describe("Phase 5.6 — Board pool wiring", () => {
         grass_hay: true, grain_wheat: true, wood_log: true, berry: true, bird_egg: true,
         grain: true, wood_plank: true, berry_jam: true, bird_turkey: true,
         grass_meadow: true, wood_beam: true, grass_spiky: true, grain_flour: true,
-        carrot: true, eggplant: true, turnip: true, cucumber: true,
+        veg_carrot: true, veg_eggplant: true, veg_turnip: true, veg_cucumber: true,
         fruit_apple: true, flower_pansy: true, tree_oak: true,
         herd_pig: true, cattle_cow: true, mount_horse: true,
       },
