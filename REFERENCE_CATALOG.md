@@ -25,6 +25,10 @@ remaining are marked `[GAP]`.*
 - Chain thresholds convert directly during puzzle play — no buildings required for basic conversions
 - All 3 environments (Farm, Mine, Sea) use the same core line-drawing mechanic
 
+### Implementation status (Hearthwood Vale)
+
+Sections marked **[NOT IMPLEMENTED]** below describe design intent from the source game and are not present in the current codebase. The Sea biome, most magic-portal tools, sea workers, sorceress's hut, and the "Zone One … Zone Six" naming all fall in this bucket. See `docs/REMAINING_WORK.md` for the live implementation roadmap.
+
 ---
 
 ## 1. Core Loop
@@ -201,7 +205,9 @@ days in the season or a quest counter.
 
 ---
 
-## 6. Sea Session
+## 6. Sea Session  **[NOT IMPLEMENTED]**
+
+> The entire Sea biome — Salt / Spice / Cocoa / Ink / Silk / Jade / Pearl chains, ship navigation, sea hazards (Sharks / Icebergs / Storms / Whirlpools), and sea-only chest mechanics — is design intent only. No code path exists.
 
 **Counter**: Voyage supplies / turns.
 **Unique mechanic**: Player controls a **ship** that navigates tiles to reach chests.
@@ -488,7 +494,7 @@ to set up larger manual chains, not just to collect resources.
 | Gold Pick | Collect all gold | 3 Wood + 3 Stone | +116 |
 | Iron Ration | Refill 6 mine supply moves | 3 Buckets + 1 Spice | +116 |
 
-### Sea Tools (most work on 3×3 areas, not board-wide)
+### Sea Tools (most work on 3×3 areas, not board-wide)  **[NOT IMPLEMENTED]**
 
 | Tool | Effect | Craft Cost | ★ |
 |---|---|---|---|
@@ -516,25 +522,27 @@ to set up larger manual chains, not just to collect resources.
 
 ### Portal-Only Magic Tools (all: 232★, Influence cost)
 
-| Tool | Effect |
-|---|---|
-| Magic Wand | Collect all tiles of a chosen type |
-| Hourglass | Undo last move |
-| Golden Idol | Transform all grass into cattle |
-| Golden Carrot | Transform all grass into vegetables |
-| Golden Sheep | Transform all trees into herd animals |
-| Philosopher's Stone | Transform all metals into gold |
-| Rose-colored Glass | Transform all dirt into diamonds |
-| Magic Lamp | Transform all gas into bonus coins |
-| Stone Mirror | Change all rocks to metals |
-| Metal Mirror | Change all metals to rocks |
-| Coal Detector | Collect dirt/rubble, find coal |
-| Silver Detector | Collect dirt/rubble, find silver |
-| Steering Wheel | +5 additional ship moves (sea) |
-| Gold Sextant | Change sandbanks into spice islands |
-| Gold Fish | Change sandbanks into fish |
-| Lucky Medallion | Change whirlpools into coins |
-| Magic Seed | Farm year lasts twice as long |
+> **Implementation note**: only `Magic Wand`, `Hourglass`, `Magic Seed`, and `Magic Fertilizer` are implemented (`src/features/portal/data.js`, influence costs 60–120, not 232★). The 13 entries marked [NOT IMPLEMENTED] are catalog-only.
+
+| Tool | Effect | Status |
+|---|---|---|
+| Magic Wand | Collect all tiles of a chosen type | ✅ implemented |
+| Hourglass | Undo last move | ✅ implemented |
+| Magic Seed | Farm year lasts twice as long | ✅ implemented |
+| Golden Idol | Transform all grass into cattle | [NOT IMPLEMENTED] |
+| Golden Carrot | Transform all grass into vegetables | [NOT IMPLEMENTED] |
+| Golden Sheep | Transform all trees into herd animals | [NOT IMPLEMENTED] |
+| Philosopher's Stone | Transform all metals into gold | [NOT IMPLEMENTED] |
+| Rose-colored Glass | Transform all dirt into diamonds | [NOT IMPLEMENTED] |
+| Magic Lamp | Transform all gas into bonus coins | [NOT IMPLEMENTED] |
+| Stone Mirror | Change all rocks to metals | [NOT IMPLEMENTED] |
+| Metal Mirror | Change all metals to rocks | [NOT IMPLEMENTED] |
+| Coal Detector | Collect dirt/rubble, find coal | [NOT IMPLEMENTED] |
+| Silver Detector | Collect dirt/rubble, find silver | [NOT IMPLEMENTED] |
+| Steering Wheel | +5 additional ship moves (sea) | [NOT IMPLEMENTED] |
+| Gold Sextant | Change sandbanks into spice islands | [NOT IMPLEMENTED] |
+| Gold Fish | Change sandbanks into fish | [NOT IMPLEMENTED] |
+| Lucky Medallion | Change whirlpools into coins | [NOT IMPLEMENTED] |
 
 ---
 
@@ -578,7 +586,9 @@ determines the floor ratio. All hires cost `1 Worker` (generic resource unit) + 
 | Silver Miner | 3/4 | 7 silver = 1 bar | 1 Worker + 12 Bread + 8 Stone + 8 Coal + 16 Silver bar |
 | Sculptor | 3/3 | 10 rubble = 1 coin | 1 Worker + 4 Hay + 4 Bread + 4 Coal + 8 Bombs |
 
-### Sea Workers
+### Sea Workers  **[NOT IMPLEMENTED]**
+
+> No Sea biome exists in code, so none of the 16 sea workers below are implemented.
 
 | Worker | Max | Effect (maxed) | Hire Cost |
 |---|---|---|---|
@@ -629,7 +639,7 @@ and counter hazards.
 - Consumes **Influence (Crowns)** to summon magic tools and rare workers
 - `[GAP]` Whether summons are random draws or player-selected
 
-### The Sorceress's Hut
+### The Sorceress's Hut  **[NOT IMPLEMENTED]**
 - Costs 100◉ to build
 - After building, player watches ads to earn a reward (the free-to-play path to magic tools)
 
@@ -637,11 +647,11 @@ and counter hazards.
 - **Earned by**: building decorations (e.g., Violet Flowers: +20 Influence each), royal quests, social
 - **Spent on**: Magic Portal summons, special unlocks
 
-### Map Blockers
+### Map Blockers  **[NOT IMPLEMENTED]**
 Overworld obstacles (trees, rocks, roads) require resource payments to clear — function as
 quest-like progression gates.
 
-### Property / Territory Upgrades
+### Property / Territory Upgrades  **[NOT IMPLEMENTED]**
 Map-level purchases that modify global parameters:
 - **Beach** (1500◉): castle rune timer −1h; one-time +1 rune on build
 - Each property permanently shortens the Castle's passive rune timer
@@ -656,22 +666,26 @@ Central hub node (not a zone). Two functions:
    reduce it by 1h each
 2. **Castle resource contributions**: certain resources have "Castle Needs: N" targets
 
-| Resource | Castle Needs |
-|---|---|
-| Soup | 53 |
-| Meat | 47 |
-| Coal | 43 |
-| Cocoa | 33 |
-| Ink | 12 |
+| Resource | Castle Needs | Implementation |
+|---|---|---|
+| Soup | 53 | ✅ shipped — vegetable chain → soup |
+| Meat | 47 | ✅ shipped — herd-animal chain → meat |
+| Coal | 43 | ✅ shipped — mine_coal |
+| Cocoa | 33 | ⚠️ no cocoa resource in code; the `cocoa` need-key now points at `berry_jam` (PR #214) |
+| Ink | 12 | ⚠️ no ink resource in code; the `ink` need-key now points at `bird_egg` (PR #214) |
 
 `[GAP]` What the Castle contribution system unlocks — royal quests, Castle upgrades, or
 a separate leaderboard/social mechanic.
+
+> **Passive rune generation [NOT IMPLEMENTED]** — the ~1-rune-per-23h timer and Beach reduction are catalog-only.
 
 ---
 
 ## 12. Zone / World System
 
 The kingdom has **6 zones + 1 Castle node**:
+
+> **[NOT IMPLEMENTED — naming differs]** Hearthwood Vale's cartography slice (`src/features/cartography/data.js`) ships 9 named map nodes (Hearthwood Vale, Greenmeadow, Wild Orchard, The Crossroads, Cracked Quarry, Lanternlit Caves, Drifter's Fairground, Black Forge, The Pit) grouped into 5 regions (Hearthlands / Greenfields / The Wilds / Stoneholds / The Deep). The catalog's "Zone One … Zone Six" framing below is design intent only.
 
 | Zone | Location | Character |
 |---|---|---|
