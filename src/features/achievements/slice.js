@@ -58,6 +58,10 @@ export function reduce(state, action) {
       if (typeof actualKey === "string" && actualKey.startsWith("fish_") && actualGained > 0) {
         next = tick(next, "fish_chained", actualGained);
       }
+      // Mine-biome milestones — credit every mine_* chain by its tile count.
+      if (typeof actualKey === "string" && actualKey.startsWith("mine_") && actualGained > 0) {
+        next = tick(next, "mine_chained", actualGained);
+      }
 
       return next;
     }
