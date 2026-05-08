@@ -50,17 +50,19 @@ describe("decorations slice — coverage gaps", () => {
     const s0 = baseState();
     const s1 = decoReduce(s0, { type: "BUILD_DECORATION", payload: { id: "violet_bed" } });
     const def = DECORATIONS.violet_bed;
+    const loc = s1.mapCurrent ?? "home";
     expect(s1.coins).toBe(1000 - def.cost.coins);
     expect(s1.inventory.grass_hay).toBe(50 - def.cost.grass_hay);
     expect(s1.influence).toBe(def.influence);
-    expect(s1.built.decorations.violet_bed).toBe(1);
+    expect(s1.built[loc]?.decorations?.violet_bed).toBe(1);
   });
 
   it("repeat builds stack the count", () => {
     let s = baseState();
     s = decoReduce(s, { type: "BUILD_DECORATION", payload: { id: "violet_bed" } });
     s = decoReduce(s, { type: "BUILD_DECORATION", payload: { id: "violet_bed" } });
-    expect(s.built.decorations.violet_bed).toBe(2);
+    const loc = s.mapCurrent ?? "home";
+    expect(s.built[loc]?.decorations?.violet_bed).toBe(2);
     expect(s.influence).toBe(DECORATIONS.violet_bed.influence * 2);
   });
 
@@ -74,7 +76,8 @@ describe("decorations slice — coverage gaps", () => {
   it("missing built / inventory slices fall back gracefully", () => {
     const s0 = { coins: 500, inventory: { grass_hay: 10 } };
     const s1 = decoReduce(s0, { type: "BUILD_DECORATION", payload: { id: "violet_bed" } });
-    expect(s1.built.decorations.violet_bed).toBe(1);
+    const loc = s1.mapCurrent ?? "home";
+    expect(s1.built[loc]?.decorations?.violet_bed).toBe(1);
   });
 });
 

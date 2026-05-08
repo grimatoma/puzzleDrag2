@@ -1,4 +1,5 @@
 import { DECORATIONS } from "./data.js";
+import { locBuilt } from "../../locBuilt.js";
 
 export const initial = {};
 
@@ -34,7 +35,9 @@ export function reduce(state, action) {
     newInv[k] = (newInv[k] ?? 0) - v;
   }
 
-  const prevCount = state.built?.decorations?.[id] ?? 0;
+  const loc = state.mapCurrent ?? "home";
+  const lb = locBuilt(state);
+  const prevCount = lb.decorations?.[id] ?? 0;
 
   return {
     ...state,
@@ -43,9 +46,12 @@ export function reduce(state, action) {
     influence: (state.influence ?? 0) + influence,
     built: {
       ...state.built,
-      decorations: {
-        ...(state.built?.decorations ?? {}),
-        [id]: prevCount + 1,
+      [loc]: {
+        ...lb,
+        decorations: {
+          ...(lb.decorations ?? {}),
+          [id]: prevCount + 1,
+        },
       },
     },
   };

@@ -1,4 +1,6 @@
-// Phase 30 — Zones config schema + slice (Phase 1 of the rule overhaul).
+// Phase 30 — Zones config schema + slice.
+// Each map node IS a zone; ZONES is derived from MAP_NODES and keyed by
+// location id (e.g. "home", "meadow", "quarry"), not the old abstract "zone1"-"zone6".
 import { describe, it, expect } from "vitest";
 import {
   ZONES,
@@ -12,62 +14,68 @@ import * as zonesSlice from "../src/features/zones/slice.js";
 import { createInitialState, rootReducer } from "../src/state.js";
 
 describe("Phase 30 — ZONES schema", () => {
-  it("defines zones 1 through 6", () => {
-    expect(ZONE_IDS).toEqual(["zone1", "zone2", "zone3", "zone4", "zone5", "zone6"]);
+  it("ZONE_IDS contains the expected location ids", () => {
+    expect(ZONE_IDS).toContain("home");
+    expect(ZONE_IDS).toContain("meadow");
+    expect(ZONE_IDS).toContain("quarry");
+    expect(ZONE_IDS).toContain("harbor");
+    // No abstract zone1-zone6 ids
+    expect(ZONE_IDS).not.toContain("zone1");
+    expect(ZONE_IDS).not.toContain("zone6");
   });
 
-  it("every zone exposes a farm board", () => {
-    for (const id of ZONE_IDS) {
+  it("farm zones expose a farm board (hasFarm = true)", () => {
+    const farmZones = ZONE_IDS.filter((id) => ZONES[id].hasFarm);
+    expect(farmZones.length).toBeGreaterThan(0);
+    for (const id of farmZones) {
       expect(ZONES[id].hasFarm).toBe(true);
     }
   });
 
-  it("zone starting turns match the request table", () => {
-    expect(ZONES.zone1.startingTurns).toBe(16);
-    expect(ZONES.zone2.startingTurns).toBe(10);
-    expect(ZONES.zone3.startingTurns).toBe(16);
-    expect(ZONES.zone4.startingTurns).toBe(10);
-    expect(ZONES.zone5.startingTurns).toBe(16);
-    expect(ZONES.zone6.startingTurns).toBe(16);
+  it("mine-only zones do not expose a farm board", () => {
+    expect(ZONES.quarry.hasFarm).toBe(false);
+    expect(ZONES.quarry.hasMine).toBe(true);
   });
 
-  it("Has Mine / Has Water flags match the request table", () => {
-    expect(ZONES.zone1.hasMine).toBe(false);
-    expect(ZONES.zone1.hasWater).toBe(false);
-    expect(ZONES.zone2.hasMine).toBe(true);
-    expect(ZONES.zone2.hasWater).toBe(false);
-    expect(ZONES.zone3.hasMine).toBe(true);
-    expect(ZONES.zone3.hasWater).toBe(true);
-    expect(ZONES.zone4.hasMine).toBe(true);
-    expect(ZONES.zone4.hasWater).toBe(false);
-    expect(ZONES.zone5.hasMine).toBe(true);
-    expect(ZONES.zone5.hasWater).toBe(true);
-    expect(ZONES.zone6.hasMine).toBe(false);
-    expect(ZONES.zone6.hasWater).toBe(true);
+  it("zone starting turns — home = 16, quarry = 10", () => {
+    expect(ZONES.home.startingTurns).toBe(16);
+    expect(ZONES.quarry.startingTurns).toBe(10);
   });
 
-  it("every zone charges 50 coins to start a farm session", () => {
-    for (const id of ZONE_IDS) {
-      expect(ZONES[id].entryCost.coins).toBe(50);
-    }
+  it("Has Mine / Has Water flags match the location design", () => {
+    // Home: farm-only, no mine or water
+    expect(ZONES.home.hasMine).toBe(false);
+    expect(ZONES.home.hasWater).toBe(false);
+    // Quarry: mine-only
+    expect(ZONES.quarry.hasMine).toBe(true);
+    expect(ZONES.quarry.hasWater).toBe(false);
+    // Harbor: water-only
+    expect(ZONES.harbor.hasMine).toBe(false);
+    expect(ZONES.harbor.hasWater).toBe(true);
   });
 
-  it("zone 1 upgrade map matches the request row (Grass→Birds, Fruits→Gold, etc.)", () => {
-    const m = ZONES.zone1.upgradeMap;
+  it("farm zones charge 50 coins to start a session, mine zones charge more", () => {
+    expect(ZONES.home.entryCost.coins).toBe(50);
+    expect(ZONES.meadow.entryCost.coins).toBe(50);
+    expect(ZONES.quarry.entryCost.coins).toBeGreaterThan(50);
+  });
+
+  it("home upgrade map matches the base farm spec (Grass→Birds, Fruits→Gold, etc.)", () => {
+    const m = ZONES.home.upgradeMap;
     expect(m.grass).toBe("birds");
     expect(m.grain).toBe("vegetables");
     expect(m.trees).toBe("birds");
     expect(m.birds).toBe("herd_animals");
     expect(m.vegetables).toBe("fruits");
     expect(m.fruits).toBe(ZONE_UPGRADE_TARGET_GOLD);
-    // categories absent from the row should not appear as keys
+    // Advanced categories not present on the basic farm
     expect(m.flowers).toBeUndefined();
     expect(m.cattle).toBeUndefined();
     expect(m.mounts).toBeUndefined();
   });
 
-  it("zone 6 unlocks every category including mounts and flowers", () => {
-    const m = ZONES.zone6.upgradeMap;
+  it("orchard unlocks advanced categories including cattle→mounts and flowers→gold", () => {
+    const m = ZONES.orchard.upgradeMap;
     expect(m.flowers).toBe(ZONE_UPGRADE_TARGET_GOLD);
     expect(m.cattle).toBe("mounts");
     expect(m.mounts).toBe(ZONE_UPGRADE_TARGET_GOLD);
@@ -84,8 +92,9 @@ describe("Phase 30 — ZONES schema", () => {
     }
   });
 
-  it("zoneCategories returns at most 8 source categories per zone", () => {
-    for (const id of ZONE_IDS) {
+  it("zoneCategories returns at most 8 source categories per farm zone", () => {
+    const farmZones = ZONE_IDS.filter((id) => ZONES[id].hasFarm);
+    for (const id of farmZones) {
       const cats = zoneCategories(id);
       expect(cats.length).toBeLessThanOrEqual(8);
       expect(cats.length).toBeGreaterThan(0);
@@ -93,42 +102,43 @@ describe("Phase 30 — ZONES schema", () => {
   });
 });
 
-describe("Phase 30 — zones slice", () => {
-  it("fresh state defaults to zone1, with only zone1 unlocked", () => {
+describe("Phase 30 — zones slice (zone selection via CARTO/TRAVEL)", () => {
+  it("fresh state defaults to DEFAULT_ZONE (home)", () => {
     const s = createInitialState();
     expect(s.activeZone).toBe(DEFAULT_ZONE);
-    expect(s.unlockedZones).toEqual([DEFAULT_ZONE]);
+    expect(s.mapCurrent).toBe(DEFAULT_ZONE);
   });
 
-  it("ZONE/SELECT to an unlocked zone updates activeZone", () => {
+  it("CARTO/TRAVEL to a discovered node updates activeZone and mapCurrent", () => {
+    // Initial state has meadow in mapDiscovered, adjacent to home, level 1
     const s = createInitialState();
-    const unlocked = rootReducer(s, { type: "ZONE/UNLOCK", payload: { id: "zone2" } });
-    expect(unlocked.unlockedZones).toContain("zone2");
-    const next = rootReducer(unlocked, { type: "ZONE/SELECT", payload: { id: "zone2" } });
-    expect(next.activeZone).toBe("zone2");
+    const next = rootReducer(s, { type: "CARTO/TRAVEL", nodeId: "meadow" });
+    expect(next.activeZone).toBe("meadow");
+    expect(next.mapCurrent).toBe("meadow");
   });
 
-  it("ZONE/SELECT to a locked zone leaves activeZone untouched", () => {
+  it("CARTO/TRAVEL to an unknown node leaves activeZone untouched", () => {
     const s = createInitialState();
-    const next = rootReducer(s, { type: "ZONE/SELECT", payload: { id: "zone2" } });
-    expect(next.activeZone).toBe(DEFAULT_ZONE);
-    expect(next.unlockedZones).toEqual([DEFAULT_ZONE]);
-  });
-
-  it("ZONE/SELECT to an unknown zone leaves activeZone untouched", () => {
-    const s = createInitialState();
-    const next = rootReducer(s, { type: "ZONE/SELECT", payload: { id: "ghost" } });
+    const next = rootReducer(s, { type: "CARTO/TRAVEL", nodeId: "ghost" });
     expect(next.activeZone).toBe(DEFAULT_ZONE);
   });
 
-  it("ZONE/UNLOCK on an already-unlocked zone does not duplicate the entry", () => {
+  it("ZONE/SELECT is a no-op (zone selection is done via CARTO/TRAVEL)", () => {
     const s = createInitialState();
-    const next = rootReducer(s, { type: "ZONE/UNLOCK", payload: { id: DEFAULT_ZONE } });
-    expect(next.unlockedZones).toEqual([DEFAULT_ZONE]);
+    const next = rootReducer(s, { type: "ZONE/SELECT", payload: { id: "meadow" } });
+    expect(next.activeZone).toBe(DEFAULT_ZONE);
+  });
+
+  it("ZONE/UNLOCK is a no-op (zone discovery is managed by cartography)", () => {
+    const s = createInitialState();
+    const next = rootReducer(s, { type: "ZONE/UNLOCK", payload: { id: "meadow" } });
+    // activeZone and mapCurrent unchanged
+    expect(next.activeZone).toBe(DEFAULT_ZONE);
+    expect(next.mapCurrent).toBe(DEFAULT_ZONE);
   });
 
   it("slice reducer ignores unknown actions", () => {
-    const start = { activeZone: "zone1", unlockedZones: ["zone1"] };
+    const start = { activeZone: "home" };
     expect(zonesSlice.reduce(start, { type: "FOO" })).toBe(start);
   });
 });

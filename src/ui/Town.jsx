@@ -2,6 +2,7 @@ import { useState, useRef } from "react";
 import { BIOMES, BUILDINGS } from "../constants.js";
 import { useTooltip, Tooltip } from "./Tooltip.jsx";
 import { MAP_NODES } from "../features/cartography/data.js";
+import { ZONES } from "../features/zones/data.js";
 import StartFarmingModal from "../features/zones/StartFarmingModal.jsx";
 import IconCanvas from "./IconCanvas.jsx";
 
@@ -922,10 +923,13 @@ export function TownView({ state, dispatch }) {
   const cc = (a) => biomeVariant === 'mine'
     ? `rgba(180,190,200,${(a * 0.55).toFixed(2)})`
     : `rgba(255,255,255,${a})`;
-  // Merge canonical building defs with biome-specific layout overrides
-  // Filter biome-specific buildings so silo only shows on farm view and barn only on mine view
+  // Zone config for this location controls which puzzle boards and buildings are available.
+  const zoneConfig = ZONES[state.mapCurrent];
+  const locationBuilt = state.built?.[state.mapCurrent] ?? {};
+  // Filter buildings to those available at this location, then by biome.
+  const allowedBuildings = zoneConfig?.buildings ?? BUILDINGS.map(b => b.id);
   const townBuildings = BUILDINGS
-    .filter(b => !b.biome || b.biome === biomeVariant)
+    .filter(b => allowedBuildings.includes(b.id) && (!b.biome || b.biome === biomeVariant))
     .map(b => ({ ...b, ...(townConfig.buildingLayout[b.id] || {}) }));
   // Sort by bottom edge so shorter buildings don't clip taller neighbours
   const sortedBuildings = [...townBuildings].sort((a, b) => (a.y + a.h) - (b.y + b.h));
@@ -1145,50 +1149,76 @@ export function TownView({ state, dispatch }) {
         ))}
       </div>
 
-      {/* Farm Field and Mine — background locations, rendered behind buildings */}
+      {/* Puzzle-board entry buttons — shown only when the zone config enables them */}
       <div className="absolute inset-0 pointer-events-none">
-        {/* Farm Field — upper-left, in the hills */}
-        <button
-          type="button"
-          aria-label="Enter Farm Field"
-          className="absolute cursor-pointer group pointer-events-auto flex flex-col items-center bg-transparent border-0 p-0 focus-visible:outline-2 focus-visible:outline-[#ffd248] focus-visible:rounded"
-          style={{ left: "1.5%", bottom: "50%", width: "22%" }}
-          onClick={() => setEntryBiome("farm")}
-        >
-          <div className="w-full text-center font-bold text-white mb-0.5" style={{ fontSize: "clamp(9px,1vw,13px)", textShadow: "0 1px 3px rgba(0,0,0,.9)" }}>🌾 Farm Field</div>
-          <div
-            className="relative w-full overflow-hidden transition-transform duration-150 group-hover:scale-105"
-            style={{ aspectRatio: "1", borderRadius: "8px", border: "2px solid #2a5010", boxShadow: "0 2px 10px rgba(0,0,0,.45)" }}
+        {/* Farm Field — upper-left, visible only when hasFarm */}
+        {zoneConfig?.hasFarm && (
+          <button
+            type="button"
+            aria-label="Enter Farm Field"
+            className="absolute cursor-pointer group pointer-events-auto flex flex-col items-center bg-transparent border-0 p-0 focus-visible:outline-2 focus-visible:outline-[#ffd248] focus-visible:rounded"
+            style={{ left: "1.5%", bottom: "50%", width: "22%" }}
+            onClick={() => setEntryBiome("farm")}
           >
-            <FarmFieldArt />
-            <div className="absolute inset-0 grid place-items-center opacity-0 group-hover:opacity-100 transition-opacity" style={{ background: "rgba(0,0,0,.45)" }}>
-              <span className="font-bold text-white" style={{ fontSize: "clamp(9px,1vw,13px)" }}>▶ Enter</span>
+            <div className="w-full text-center font-bold text-white mb-0.5" style={{ fontSize: "clamp(9px,1vw,13px)", textShadow: "0 1px 3px rgba(0,0,0,.9)" }}>🌾 Farm Field</div>
+            <div
+              className="relative w-full overflow-hidden transition-transform duration-150 group-hover:scale-105"
+              style={{ aspectRatio: "1", borderRadius: "8px", border: "2px solid #2a5010", boxShadow: "0 2px 10px rgba(0,0,0,.45)" }}
+            >
+              <FarmFieldArt />
+              <div className="absolute inset-0 grid place-items-center opacity-0 group-hover:opacity-100 transition-opacity" style={{ background: "rgba(0,0,0,.45)" }}>
+                <span className="font-bold text-white" style={{ fontSize: "clamp(9px,1vw,13px)" }}>▶ Enter</span>
+              </div>
             </div>
-          </div>
-        </button>
+          </button>
+        )}
 
-        {/* Mine Entrance — upper-right, in the hills */}
-        <button
-          type="button"
-          aria-label={state.level < 2 ? "Mine locked until level 2" : "Enter Mine"}
-          disabled={state.level < 2}
-          className="absolute cursor-pointer group pointer-events-auto flex flex-col items-center bg-transparent border-0 p-0 focus-visible:outline-2 focus-visible:outline-[#ffd248] focus-visible:rounded disabled:cursor-not-allowed"
-          style={{ right: "1.5%", bottom: "50%", width: "22%", opacity: state.level < 2 ? 0.65 : 1 }}
-          onClick={() => setEntryBiome("mine")}
-        >
-          <div className="w-full text-center font-bold text-white mb-0.5" style={{ fontSize: "clamp(9px,1vw,13px)", textShadow: "0 1px 3px rgba(0,0,0,.95)" }}>
-            {state.level < 2 ? "🔒 Mine" : "⛏ Mine"}
-          </div>
-          <div
-            className="relative w-full overflow-hidden transition-transform duration-150 group-hover:scale-105"
-            style={{ aspectRatio: "1", borderRadius: "8px", border: "2px solid #1a1e22", boxShadow: "0 2px 10px rgba(0,0,0,.5)" }}
+        {/* Mine Entrance — upper-right, visible only when hasMine */}
+        {zoneConfig?.hasMine && (
+          <button
+            type="button"
+            aria-label={state.level < 2 ? "Mine locked until level 2" : "Enter Mine"}
+            disabled={state.level < 2}
+            className="absolute cursor-pointer group pointer-events-auto flex flex-col items-center bg-transparent border-0 p-0 focus-visible:outline-2 focus-visible:outline-[#ffd248] focus-visible:rounded disabled:cursor-not-allowed"
+            style={{ right: "1.5%", bottom: "50%", width: "22%", opacity: state.level < 2 ? 0.65 : 1 }}
+            onClick={() => setEntryBiome("mine")}
           >
-            <MineEntranceArt locked={state.level < 2} />
-            <div className="absolute inset-0 grid place-items-center opacity-0 group-hover:opacity-100 transition-opacity" style={{ background: "rgba(0,0,0,.45)" }}>
-              <span className="font-bold text-white" style={{ fontSize: "clamp(9px,1vw,13px)" }}>{state.level < 2 ? "🔒 L2" : "▶ Enter"}</span>
+            <div className="w-full text-center font-bold text-white mb-0.5" style={{ fontSize: "clamp(9px,1vw,13px)", textShadow: "0 1px 3px rgba(0,0,0,.95)" }}>
+              {state.level < 2 ? "🔒 Mine" : "⛏ Mine"}
             </div>
-          </div>
-        </button>
+            <div
+              className="relative w-full overflow-hidden transition-transform duration-150 group-hover:scale-105"
+              style={{ aspectRatio: "1", borderRadius: "8px", border: "2px solid #1a1e22", boxShadow: "0 2px 10px rgba(0,0,0,.5)" }}
+            >
+              <MineEntranceArt locked={state.level < 2} />
+              <div className="absolute inset-0 grid place-items-center opacity-0 group-hover:opacity-100 transition-opacity" style={{ background: "rgba(0,0,0,.45)" }}>
+                <span className="font-bold text-white" style={{ fontSize: "clamp(9px,1vw,13px)" }}>{state.level < 2 ? "🔒 L2" : "▶ Enter"}</span>
+              </div>
+            </div>
+          </button>
+        )}
+
+        {/* Harbor / Water — lower-left, visible only when hasWater */}
+        {zoneConfig?.hasWater && (
+          <button
+            type="button"
+            aria-label="Enter Harbor"
+            className="absolute cursor-pointer group pointer-events-auto flex flex-col items-center bg-transparent border-0 p-0 focus-visible:outline-2 focus-visible:outline-[#ffd248] focus-visible:rounded"
+            style={{ left: "1.5%", bottom: "22%", width: "22%" }}
+            onClick={() => setEntryBiome("fish")}
+          >
+            <div className="w-full text-center font-bold text-white mb-0.5" style={{ fontSize: "clamp(9px,1vw,13px)", textShadow: "0 1px 3px rgba(0,0,0,.9)" }}>⚓ Harbor</div>
+            <div
+              className="relative w-full overflow-hidden transition-transform duration-150 group-hover:scale-105"
+              style={{ aspectRatio: "1", borderRadius: "8px", border: "2px solid #1a3a5a", boxShadow: "0 2px 10px rgba(0,0,0,.45)" }}
+            >
+              <div className="w-full h-full" style={{ background: "linear-gradient(180deg, #4a8aaa 0%, #2a5a7a 60%, #1a3a5a 100%)" }} />
+              <div className="absolute inset-0 grid place-items-center opacity-0 group-hover:opacity-100 transition-opacity" style={{ background: "rgba(0,0,0,.45)" }}>
+                <span className="font-bold text-white" style={{ fontSize: "clamp(9px,1vw,13px)" }}>▶ Enter</span>
+              </div>
+            </div>
+          </button>
+        )}
       </div>
 
       {/* Buildings positioned in the 1100x600 design space, scaled to viewport */}
@@ -1196,8 +1226,8 @@ export function TownView({ state, dispatch }) {
         <svg viewBox="0 0 1100 600" preserveAspectRatio="none" className="w-full h-full" style={{ position: "absolute", inset: 0, pointerEvents: "none" }} />
         <div className="absolute pointer-events-none" style={{ left: 0, right: 0, top: 0, bottom: 0 }}>
           {sortedBuildings.map((b) => {
-            const isBuilt = !!state.built[b.id];
-            const prereqMet = !b.requires || !!state.built[b.requires];
+            const isBuilt = !!locationBuilt[b.id];
+            const prereqMet = !b.requires || !!locationBuilt[b.requires];
             const isLocked = state.level < b.lv || !prereqMet;
             const canAfford = state.coins >= (b.cost.coins || 0) &&
               Object.entries(b.cost).every(([k, v]) => k === "coins" || (state.inventory[k] || 0) >= v);
