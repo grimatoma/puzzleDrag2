@@ -99,6 +99,7 @@ export function reduce(state, action) {
         ...state,
         modal: null,
         view: 'town',
+        viewParams: {},
         turnsUsed: 0,
         pendingView: null,
         seasonStats: { harvests: 0, upgrades: 0, ordersFilled: 0, coins: 0 },

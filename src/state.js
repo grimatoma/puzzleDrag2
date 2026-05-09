@@ -104,7 +104,7 @@ function applyDebtRepayment(state, incomingCoins) {
 // ─── Save/load ─────────────────────────────────────────────────────────────
 // Persisted: everything except volatile UI fields (modal/bubble/view/pendingView).
 const SAVE_KEY = STORAGE_KEYS.save;
-const VOLATILE = new Set(["modal", "bubble", "view", "pendingView", "craftingTab"]);
+const VOLATILE = new Set(["modal", "bubble", "view", "viewParams", "pendingView", "craftingTab"]);
 
 export function loadSavedState() {
   try {
@@ -310,6 +310,7 @@ export function createFreshState(overrides) {
     biome: "farm",
     saveSeed,
     view: "town",
+    viewParams: {},
     coins: 150,
     level,
     xp: 0,
@@ -492,7 +493,7 @@ export function initialState(overrides) {
     if (!FIRE_HAZARD_ENABLED && savedWithoutLegacy.hazards?.fire) {
       savedWithoutLegacy.hazards = { ...savedWithoutLegacy.hazards, fire: null };
     }
-    return { ...fresh, ...savedWithoutLegacy, townsfolk: mergedWorkers, story: mergedStory, tileCollection: mergedTileCollection, view: "town", turnsUsed: 0, modal: null, bubble: null, pendingView: null,
+    return { ...fresh, ...savedWithoutLegacy, townsfolk: mergedWorkers, story: mergedStory, tileCollection: mergedTileCollection, view: "town", viewParams: {}, turnsUsed: 0, modal: null, bubble: null, pendingView: null,
       seasonStats: { harvests: 0, upgrades: 0, ordersFilled: 0, coins: 0 } };
   }
   return fresh;
@@ -1057,12 +1058,42 @@ function coreReducer(state, action) {
     }
     case "SET_VIEW": {
       const next = action.view;
-      return { ...state, view: next, craftingTab: action.craftingTab ?? (next === "crafting" ? state.craftingTab : null) };
+      // Reset viewParams when leaving a view so a fresh visit doesn't inherit
+      // stale sub-tabs (e.g. tile-wiki sub-category from a previous trip).
+      const sameView = next === state.view;
+      const viewParams = action.viewParams ?? (sameView ? state.viewParams : {});
+      return { ...state, view: next, viewParams, craftingTab: action.craftingTab ?? (next === "crafting" ? state.craftingTab : null) };
     }
+    case "SET_VIEW_PARAMS":
+      return { ...state, viewParams: { ...(state.viewParams ?? {}), ...(action.params ?? {}) } };
     case "OPEN_MODAL":
-      return { ...state, modal: action.modal, settingsTab: 'main' };
+      return { ...state, modal: action.modal, settingsTab: action.settingsTab ?? 'main' };
     case "CLOSE_MODAL":
       return { ...state, modal: null, settingsTab: 'main', settingsDebugOpen: false };
+    case "ROUTE/APPLY": {
+      // Apply a router-derived navigation snapshot in one shot. Each branch
+      // matches the equivalent SET_VIEW / OPEN_MODAL / SETTINGS/SET_TAB
+      // semantics so popstate-driven changes look identical to user-driven
+      // ones from the rest of the app's perspective.
+      const r = action.route ?? {};
+      const view = r.view ?? state.view ?? "town";
+      const modal = r.modal ?? null;
+      const incomingViewParams = r.viewParams ?? {};
+      const next = { ...state, view, viewParams: incomingViewParams };
+      if (view === "crafting") {
+        next.craftingTab = incomingViewParams.tab ?? state.craftingTab ?? null;
+      } else {
+        next.craftingTab = null;
+      }
+      next.modal = modal;
+      if (modal === "menu") {
+        next.settingsTab = r.modalParams?.tab ?? 'main';
+      } else {
+        next.settingsTab = 'main';
+        next.settingsDebugOpen = false;
+      }
+      return next;
+    }
     case "BUILD": {
       // Support both legacy action.building (full object) and action.payload.id (lookup by id)
       const b = action.building ?? BUILDINGS.find((x) => x.id === action.payload?.id);
@@ -1174,6 +1205,7 @@ function coreReducer(state, action) {
         sessionMaxTurns: MAX_TURNS,
         modal: null,
         view: "town",
+        viewParams: {},
         pendingView: null,
         seasonStats: { harvests: 0, upgrades: 0, ordersFilled: 0, coins: 0, capFloaters: {} },
         townsfolk: { ...state.townsfolk, debt: wageDebt, pool: newPool },
@@ -1326,6 +1358,7 @@ function coreReducer(state, action) {
         biomeKey: "farm",
         biome: "farm",
         view: "board",
+        viewParams: {},
         coins: state.coins - entryCoins,
         farmFertilizer: useFertilizer
           ? (state.farmFertilizer ?? 0) - 1
