@@ -4,6 +4,11 @@ export const INITIAL_SETTINGS = {
   palette: "default",
   reducedMotion: null, // null = follow OS; true/false = user override
   keyboardCursor: { row: 0, col: 0, active: false },
+  // "low" = bake textures at 1× regardless of devicePixelRatio (pixelated
+  // even on retina, useful for low-power devices). "standard" = current
+  // default (bake at dpr, grow with tileSize). "ultra" = supersampled
+  // (bake at 2× the standard scale for sharper rendering).
+  graphicsQuality: "standard",
 };
 
 export function loadSettings() {
@@ -19,9 +24,10 @@ export function saveSettings(s) {
 
 export function settingsReduce(state, action) {
   switch (action.type) {
-    case "SET_PALETTE":        return { ...state, palette: action.id };
-    case "SET_REDUCED_MOTION": return { ...state, reducedMotion: action.value };
-    case "SET_CURSOR":         return { ...state, keyboardCursor: { ...action.cursor } };
+    case "SET_PALETTE":          return { ...state, palette: action.id };
+    case "SET_REDUCED_MOTION":   return { ...state, reducedMotion: action.value };
+    case "SET_CURSOR":           return { ...state, keyboardCursor: { ...action.cursor } };
+    case "SET_GRAPHICS_QUALITY": return { ...state, graphicsQuality: action.id };
     default: return state;
   }
 }
