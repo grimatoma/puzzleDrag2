@@ -74,11 +74,14 @@ describe("Phase 30 — ZONES schema", () => {
     expect(m.mounts).toBeUndefined();
   });
 
-  it("orchard unlocks advanced categories including cattle→mounts and flowers→gold", () => {
+  it("orchard upgrade map has a tree→fruit focus and caps at herd_animals (no cattle/mounts/flowers)", () => {
     const m = ZONES.orchard.upgradeMap;
-    expect(m.flowers).toBe(ZONE_UPGRADE_TARGET_GOLD);
-    expect(m.cattle).toBe("mounts");
-    expect(m.mounts).toBe(ZONE_UPGRADE_TARGET_GOLD);
+    expect(m.trees).toBe("fruits");          // orchard specialty vs home's trees→birds
+    expect(m.herd_animals).toBe(ZONE_UPGRADE_TARGET_GOLD); // cashed out immediately
+    // Advanced categories not configured on orchard — only present when a zone defines them
+    expect(m.flowers).toBeUndefined();
+    expect(m.cattle).toBeUndefined();
+    expect(m.mounts).toBeUndefined();
   });
 
   it("upgrade targets only point at known categories or the gold sentinel", () => {
