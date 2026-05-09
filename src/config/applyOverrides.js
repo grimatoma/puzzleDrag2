@@ -190,6 +190,15 @@ export function applyZoneOverrides(zones, overrides) {
     const zone = zones[zoneId];
     if (!zone || !patch || typeof patch !== "object") continue;
 
+    if (typeof patch.name === "string" && patch.name.length > 0) {
+      zone.name = patch.name;
+    }
+    if (typeof patch.hasFarm === "boolean") zone.hasFarm = patch.hasFarm;
+    if (typeof patch.hasMine === "boolean") zone.hasMine = patch.hasMine;
+    if (typeof patch.hasWater === "boolean") zone.hasWater = patch.hasWater;
+    if (Array.isArray(patch.buildings)) {
+      zone.buildings = patch.buildings.filter((id) => typeof id === "string" && id.length > 0);
+    }
     if (Number.isFinite(patch.startingTurns) && patch.startingTurns >= 1) {
       zone.startingTurns = Math.floor(patch.startingTurns);
     }

@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { SEASONS, MAX_TURNS } from "../constants.js";
 import { hex } from "../utils.js";
 import { xpForLevel } from "../state.js";
@@ -131,35 +130,14 @@ function LarderWidget({ inventory }) {
   );
 }
 
-function DebugQuickBar({ dispatch }) {
-  const [open, setOpen] = useState(false);
+function DevButton({ title, emoji, onClick }) {
   return (
-    <div className="relative flex-shrink-0">
-      <button
-        onClick={() => setOpen((v) => !v)}
-        className="w-7 h-7 rounded-lg bg-[#2b2218] border-2 border-[#5a3a20] grid place-items-center text-[10px] leading-none"
-        title="Debug tools"
-        aria-label="Debug tools"
-      >🛠</button>
-      {open && (
-        <div className="absolute top-full right-0 mt-1 z-50 flex flex-col gap-1 bg-[#2b2218] border-2 border-[#5a3a20] rounded-xl p-2 shadow-xl min-w-[130px]">
-          {[
-            { label: "🪙 +1k Gold",   action: { type: "DEV/ADD_GOLD",      amount: 1000 } },
-            { label: "🪙 +10k Gold",  action: { type: "DEV/ADD_GOLD",      amount: 10000 } },
-            { label: "✨ +100 XP",    action: { type: "DEV/ADD_XP",        amount: 100 } },
-            { label: "⭐ +1 Level",   action: { type: "DEV/ADD_LEVEL",     amount: 1 } },
-            { label: "📦 Fill All",   action: { type: "DEV/FILL_STORAGE",  amount: 100 } },
-            { label: "🔧 Fill Tools", action: { type: "DEV/FILL_TOOLS",    amount: 5 } },
-          ].map(({ label, action }) => (
-            <button
-              key={label}
-              onClick={() => { dispatch(action); setOpen(false); }}
-              className="text-[10px] font-bold px-2 py-1 rounded-lg bg-[#3a2715] border border-[#5a3a20] text-[#f4ecd8] hover:bg-[#4a3725] text-left"
-            >{label}</button>
-          ))}
-        </div>
-      )}
-    </div>
+    <button
+      onClick={onClick}
+      className="w-7 h-7 rounded-lg bg-[#2b2218] border-2 border-[#5a3a20] grid place-items-center text-[10px] leading-none flex-shrink-0"
+      title={title}
+      aria-label={title}
+    >{emoji}</button>
   );
 }
 
@@ -215,7 +193,8 @@ export function Hud({ state, dispatch }) {
         </div>
       )}
       <div className={`${!onBoard ? "ml-auto" : ""} flex items-center gap-1.5 flex-shrink-0`}>
-        <DebugQuickBar dispatch={dispatch} />
+        <DevButton title="Debug tools" emoji="🛠" onClick={() => dispatch({ type: "OPEN_MODAL", modal: "menu" })} />
+        <DevButton title="Balance Manager" emoji="⚖️" onClick={() => dispatch({ type: "OPEN_MODAL", modal: "balanceManager" })} />
         {!onBoard && (
           <>
             <div className="bg-[#f6efe0] border-2 border-[#b28b62] rounded-full h-[26px] w-[110px] landscape:max-[1024px]:h-[20px] landscape:max-[1024px]:w-[80px] relative overflow-hidden">
