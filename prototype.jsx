@@ -14,7 +14,7 @@ import { announce, getQueue, flushAnnouncements, formatChainAnnouncement, format
 import { handleKeyboard } from "./src/features/a11y/keyboard.js";
 import { FIRE_HAZARD_ENABLED } from "./src/featureFlags.js";
 
-function PhaserMount({ dispatch, biomeKey, turnsUsed, uiLocked, sceneRef, weather, toolPending, setChainInfo, workers, palette, reducedMotion, tileCollection, gameState, grid }) {
+function PhaserMount({ dispatch, biomeKey, turnsUsed, uiLocked, sceneRef, weather, toolPending, setChainInfo, workers, palette, graphicsQuality, reducedMotion, tileCollection, gameState, grid }) {
   const hostRef = useRef(null);
   const gameRef = useRef(null);
   const [loading, setLoading] = useState(true);
@@ -64,6 +64,7 @@ function PhaserMount({ dispatch, biomeKey, turnsUsed, uiLocked, sceneRef, weathe
               game.registry.set("uiLocked", uiLocked);
               game.registry.set("dpr", dpr);
               game.registry.set("renderResolution", dpr);
+              game.registry.set("graphicsQuality", graphicsQuality ?? "standard");
               // Set before GameScene.create() so the initial fillBoard uses the
               // player's active tile selections instead of the raw base pool.
               game.registry.set("tileCollectionActive", tileCollection?.activeByCategory ?? null);
@@ -134,6 +135,7 @@ function PhaserMount({ dispatch, biomeKey, turnsUsed, uiLocked, sceneRef, weathe
   useEffect(() => { gameRef.current?.registry.set("toolPending", toolPending ?? null); }, [toolPending]);
   useEffect(() => { gameRef.current?.registry.set("townsfolk", workers ?? null); }, [workers]);
   useEffect(() => { gameRef.current?.registry.set("palette", palette ?? "default"); }, [palette]);
+  useEffect(() => { gameRef.current?.registry.set("graphicsQuality", graphicsQuality ?? "standard"); }, [graphicsQuality]);
   useEffect(() => { gameRef.current?.registry.set("reducedMotion", reducedMotion ?? null); }, [reducedMotion]);
   useEffect(() => { gameRef.current?.registry.set("hapticsOn", gameState?.settings?.hapticsOn ?? true); }, [gameState?.settings?.hapticsOn]);
   useEffect(() => { gameRef.current?.registry.set("tileCollectionActive", tileCollection?.activeByCategory ?? null); }, [tileCollection?.activeByCategory]);
@@ -392,6 +394,7 @@ export default function App() {
                   setChainInfo={setChainInfo}
                   workers={state.townsfolk}
                   palette={state.settings?.palette}
+                  graphicsQuality={state.settings?.graphicsQuality}
                   reducedMotion={state.settings?.reducedMotion}
                   tileCollection={state.tileCollection}
                   gameState={state}

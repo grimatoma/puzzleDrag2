@@ -82,6 +82,11 @@ export function reduce(state, action) {
       return { ...state, settings };
     }
 
+    case 'SET_GRAPHICS_QUALITY': {
+      const settings = phase11Reduce(state.settings, action);
+      return { ...state, settings };
+    }
+
     case 'SETTINGS/SET_TAB':
       return { ...state, settingsTab: action.tab };
 

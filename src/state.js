@@ -1942,6 +1942,7 @@ const SLICE_PRIMARY_ACTIONS = new Set([
   "SET_PALETTE",
   "SET_REDUCED_MOTION",
   "SET_CURSOR",
+  "SET_GRAPHICS_QUALITY",
   // Tutorial actions are owned by tutorial/slice
   "TUTORIAL/START",
   "TUTORIAL/NEXT",
@@ -1990,6 +1991,7 @@ function runActionEffects(state, action) {
     case "SETTINGS/TOGGLE":
     case "SET_PALETTE":
     case "SET_REDUCED_MOTION":
+    case "SET_GRAPHICS_QUALITY":
       // Persist the settings sub-state to its own localStorage key so it
       // survives a SETTINGS/RESET_SAVE clearing of the main save slot.
       settings.persistSettings(state.settings);
