@@ -259,6 +259,20 @@ export const TOWNSFOLK = [
   },
 
   {
+    id: "poultryman",
+    name: "Idris",
+    role: "Poultryman",
+    icon: "🐓",
+    color: "#a85a3a",
+    wage: 30,
+    hireCost: { worker: 1, grass_hay: 6, bread: 12, mine_stone: 8 },
+    maxCount: 2,
+    effect: { type: "threshold_reduce_category", category: "bird", from: 6, to: 4 },
+    requirement: { building: "granary", orLevel: 5 },
+    description: "Coaxes the flock into laying with a steady hand and an early lamp. Every bird chain comes home a tile shorter.",
+  },
+
+  {
     id: "reaper",
     name: "Reaper",
     role: "Reaper",
@@ -267,8 +281,6 @@ export const TOWNSFOLK = [
     wage: 28,
     hireCost: { worker: 1, grass_hay: 8, bread: 8, mine_stone: 8 },
     maxCount: 2,
-    // Catalog §9: "6 grain = 1 bread at max." Our chain ends at flour → bread
-    // at threshold 6; Reaper trims that to 4 at max (per-hire reduces by 1).
     effect: { type: "threshold_reduce", key: "grain_flour", from: 6, to: 4 },
     requirement: { building: "bakery", orLevel: 4 },
     description: "A scythe-keeper who threshes faster than the wind. Cuts two steps off every flour-to-bread chain.",
