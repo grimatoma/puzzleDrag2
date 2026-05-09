@@ -141,9 +141,10 @@ export function applyBuildingOverrides(buildings, overrides) {
 
 /**
  * Apply tile-level overrides to a TILE_TYPES array in place:
- *   - tilePowers[id] = { hooks: [...] }   →  expanded into tile.effects
- *   - tileUnlocks[id] = { ... }           →  patched onto tile.discovery
- *   - tileDescriptions[id] = string       →  replaces tile.description
+ *   - tilePowers[id] = { hooks: [...] }     →  expanded into tile.effects
+ *   - tilePowers[id].producesResource = key →  tile.effects.producesResource
+ *   - tileUnlocks[id] = { ... }             →  patched onto tile.discovery
+ *   - tileDescriptions[id] = string         →  replaces tile.description
  */
 export function applyTileOverrides(tileTypes, overrides) {
   if (!tileTypes || !Array.isArray(tileTypes)) return;
@@ -165,6 +166,19 @@ export function applyTileOverrides(tileTypes, overrides) {
       // Strip prior hook-derived fields by recomputing from base (non-hook) effects.
       const base = stripHookDerivedFields(tile.effects || {});
       tile.effects = expandHooksToEffects(powerPatch.hooks, base);
+    }
+
+    // Per-tile produces-resource override. GameScene.nextResource consults
+    // tile.effects.producesResource before applying the zone redirect or the
+    // resource's native `.next`. Setting an empty string clears the override.
+    if (powerPatch && Object.prototype.hasOwnProperty.call(powerPatch, "producesResource")) {
+      const v = powerPatch.producesResource;
+      tile.effects = { ...(tile.effects || {}) };
+      if (typeof v === "string" && v.length > 0) {
+        tile.effects.producesResource = v;
+      } else {
+        delete tile.effects.producesResource;
+      }
     }
 
     // Unlock / discovery.

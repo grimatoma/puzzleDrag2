@@ -12,6 +12,63 @@ export const CATEGORIES = [
   "fish",
 ];
 
+// Tiles-wiki sub-category groups. Each tile-collection category lives in
+// exactly one sub-category. The "hazards" sub-category is rendered specially
+// (it lists Farm + Mine hazards rather than tile-type categories), and the
+// "uncategorized" bucket catches any future category that hasn't been mapped
+// yet so nothing silently disappears from the wiki.
+export const SUB_CATEGORIES = ["farm", "mining", "water", "hazards", "uncategorized"];
+
+export const SUB_CATEGORY_LABELS = {
+  farm: "Farm",
+  mining: "Mining",
+  water: "Water",
+  hazards: "Hazards",
+  uncategorized: "Uncategorized",
+};
+
+export const SUB_CATEGORY_ICONS = {
+  farm: "🌾",
+  mining: "⛏",
+  water: "🌊",
+  hazards: "⚠️",
+  uncategorized: "❓",
+};
+
+export const CATEGORY_TO_SUBCATEGORY = {
+  grass: "farm",
+  grain: "farm",
+  wood: "farm",
+  berry: "farm",
+  bird: "farm",
+  vegetables: "farm",
+  fruits: "farm",
+  flowers: "farm",
+  trees: "farm",
+  herd_animals: "farm",
+  cattle: "farm",
+  mounts: "farm",
+  fish: "water",
+};
+
+// Categories that are not user-facing tile species: their entries exist in
+// TILE_TYPES for backward compatibility, but per the design "wood" and
+// "berry" are really resources/items (logs/planks/beams; berries/jam) — they
+// don't belong in the tile-collection wiki or the start-farming tile picker.
+export const HIDDEN_TILE_CATEGORIES = new Set(["wood", "berry"]);
+
+/** Categories belonging to a sub-category. Unmapped categories fall under
+ *  "uncategorized" so the wiki always surfaces them. */
+export function categoriesForSubCategory(sub) {
+  if (sub === "hazards") return [];
+  if (sub === "uncategorized") {
+    return CATEGORIES.filter((c) => !CATEGORY_TO_SUBCATEGORY[c] && !HIDDEN_TILE_CATEGORIES.has(c));
+  }
+  return CATEGORIES.filter(
+    (c) => CATEGORY_TO_SUBCATEGORY[c] === sub && !HIDDEN_TILE_CATEGORIES.has(c),
+  );
+}
+
 export const TILE_TYPES = [
   // Grass
   {

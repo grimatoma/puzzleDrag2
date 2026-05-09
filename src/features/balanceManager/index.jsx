@@ -14,36 +14,47 @@ import { COLORS } from "./shared.jsx";
 // main entry chunk. Each tab becomes its own JS chunk fetched only when
 // the user opens the modal and selects that tab.
 const ResourcesTab = lazy(() => import("./tabs/ResourcesTab.jsx"));
-const ChainsTab    = lazy(() => import("./tabs/ChainsTab.jsx"));
 const RecipesTab   = lazy(() => import("./tabs/RecipesTab.jsx"));
 const BuildingsTab = lazy(() => import("./tabs/BuildingsTab.jsx"));
 const PowersTab    = lazy(() => import("./tabs/PowersTab.jsx"));
-const UnlocksTab   = lazy(() => import("./tabs/UnlocksTab.jsx"));
 const ZonesTab     = lazy(() => import("./tabs/ZonesTab.jsx"));
 const WorkersTab   = lazy(() => import("./tabs/WorkersTab.jsx"));
 const ExportTab    = lazy(() => import("./tabs/ExportTab.jsx"));
 
 export const modalKey = "balanceManager";
 
+// Tabs are grouped under three top-level sections that mirror the game's
+// model: tiles live on the board, resources are inventory currencies, and
+// items are the things crafted from resources (tools count as items).
 const TABS = [
-  { id: "resources", label: "Resources",      icon: "📦", Component: ResourcesTab,
-    blurb: "Names, icons, descriptions, colors, sale value, and the next-tier upgrade target for every resource." },
-  { id: "chains",    label: "Upgrade Chains", icon: "🔗", Component: ChainsTab,
-    blurb: "How many of each tile must be chained to unlock its upgrade. Adjust pacing without renaming things." },
-  { id: "recipes",   label: "Recipes",        icon: "🍳", Component: RecipesTab,
-    blurb: "Crafting recipes: ingredients, station, coin reward, and description." },
-  { id: "buildings", label: "Buildings",      icon: "🏛", Component: BuildingsTab,
-    blurb: "Town building costs and unlock levels." },
-  { id: "powers",    label: "Tile Powers",    icon: "⚡", Component: PowersTab,
-    blurb: "Attach predefined power hooks (free moves, coin bonuses, spawn boosts…) to any tile type." },
-  { id: "unlocks",   label: "Unlock Hooks",   icon: "🔓", Component: UnlocksTab,
-    blurb: "How each tile is discovered: default, chain length, research grind, or coin purchase." },
+  { id: "tiles",     label: "Tiles",          icon: "⚡", Component: PowersTab,
+    section: "tiles",
+    blurb: "Per-tile attributes: discovery method, what resource the chain produces, and any attached power hooks." },
   { id: "zones",     label: "Zones",          icon: "🗺", Component: ZonesTab,
+    section: "tiles",
     blurb: "Per-zone settings: starting turns, entry cost, the chain-upgrade redirect map, and the per-(zone, season) tile drop percentages." },
+  { id: "resources", label: "Resources",      icon: "📦", Component: ResourcesTab,
+    section: "resources",
+    blurb: "Inventory resources — names, icons, descriptions, colors, sale value, and the next-tier upgrade target for every resource." },
+  { id: "recipes",   label: "Recipes",        icon: "🍳", Component: RecipesTab,
+    section: "items",
+    blurb: "Crafted items (and tools): ingredients, station, coin reward, and description." },
+  { id: "buildings", label: "Buildings",      icon: "🏛", Component: BuildingsTab,
+    section: "items",
+    blurb: "Town building costs and unlock levels." },
   { id: "workers",   label: "Workers",        icon: "🛠", Component: WorkersTab,
+    section: "other",
     blurb: "Type-tier worker hire costs (flat / linear / geometric ramp), max count, and effect parameters." },
   { id: "export",    label: "Export · Import",icon: "📤", Component: ExportTab,
+    section: "other",
     blurb: "Save your draft, download as JSON to commit, or paste a config to import." },
+];
+
+const SECTIONS = [
+  { id: "tiles",     label: "Tiles" },
+  { id: "resources", label: "Resources" },
+  { id: "items",     label: "Items" },
+  { id: "other",     label: "Other" },
 ];
 
 function emptyDraft() {
@@ -91,7 +102,7 @@ function writeSidebarCollapsed(v) {
 
 export default function BalanceManagerModal({ state, dispatch }) {
   const isOpen = state.modal === modalKey;
-  const [tab, setTab] = useState("resources");
+  const [tab, setTab] = useState("tiles");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(readSidebarCollapsed);
   // Initialise the draft from whatever the constants module merged in:
   // committed file + previous localStorage draft. That way, opening the
@@ -244,24 +255,46 @@ export default function BalanceManagerModal({ state, dispatch }) {
             >
               {sidebarCollapsed ? "»" : "«"}
             </button>
-            {TABS.map((t) => {
-              const active = t.id === tab;
+            {SECTIONS.map((sec) => {
+              const sectionTabs = TABS.filter((t) => t.section === sec.id);
+              if (sectionTabs.length === 0) return null;
               return (
-                <button
-                  key={t.id}
-                  onClick={() => setTab(t.id)}
-                  className="text-left px-3 py-2 rounded-lg text-[12px] font-bold transition-colors flex items-center gap-2"
-                  style={
-                    active
-                      ? { background: COLORS.ember, color: "#fff" }
-                      : { background: "transparent", color: COLORS.inkLight }
-                  }
-                  title={sidebarCollapsed ? t.label : undefined}
-                  aria-label={t.label}
-                >
-                  <span className="text-[15px]">{t.icon}</span>
-                  {!sidebarCollapsed && <span className="flex-1">{t.label}</span>}
-                </button>
+                <div key={sec.id} className="flex flex-col gap-1">
+                  {!sidebarCollapsed && (
+                    <div
+                      className="px-2 pt-2 pb-1 text-[10px] font-bold uppercase tracking-wider"
+                      style={{ color: COLORS.inkSubtle }}
+                    >
+                      {sec.label}
+                    </div>
+                  )}
+                  {sidebarCollapsed && (
+                    <div
+                      className="mx-2 my-1 h-px"
+                      style={{ background: COLORS.border, opacity: 0.4 }}
+                    />
+                  )}
+                  {sectionTabs.map((t) => {
+                    const active = t.id === tab;
+                    return (
+                      <button
+                        key={t.id}
+                        onClick={() => setTab(t.id)}
+                        className="text-left px-3 py-2 rounded-lg text-[12px] font-bold transition-colors flex items-center gap-2"
+                        style={
+                          active
+                            ? { background: COLORS.ember, color: "#fff" }
+                            : { background: "transparent", color: COLORS.inkLight }
+                        }
+                        title={sidebarCollapsed ? t.label : undefined}
+                        aria-label={t.label}
+                      >
+                        <span className="text-[15px]">{t.icon}</span>
+                        {!sidebarCollapsed && <span className="flex-1">{t.label}</span>}
+                      </button>
+                    );
+                  })}
+                </div>
               );
             })}
 

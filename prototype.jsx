@@ -125,6 +125,9 @@ function PhaserMount({ dispatch, biomeKey, turnsUsed, uiLocked, sceneRef, weathe
   }, [gameState?.activeZone]);
   useEffect(() => { gameRef.current?.registry.set("biomeKey", biomeKey); }, [biomeKey]);
   useEffect(() => { gameRef.current?.registry.set("turnsUsed", turnsUsed); }, [turnsUsed]);
+  // Phase 7.1 — atmospheric in-session season needs the session's turn budget
+  // alongside turnsUsed so GameScene.season() can pick the right palette index.
+  useEffect(() => { gameRef.current?.registry.set("sessionMaxTurns", gameState?.sessionMaxTurns ?? null); }, [gameState?.sessionMaxTurns]);
   useEffect(() => { gameRef.current?.registry.set("uiLocked", uiLocked); }, [uiLocked]);
   useEffect(() => { gameRef.current?.registry.set("weather", weather); }, [weather]);
   useEffect(() => { gameRef.current?.registry.set("toolPending", toolPending ?? null); }, [toolPending]);

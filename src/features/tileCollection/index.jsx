@@ -1,5 +1,11 @@
-import { useEffect, useRef, useState } from "react";
-import { CATEGORIES, TILE_TYPES_MAP } from "./data.js";
+import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  TILE_TYPES_MAP,
+  SUB_CATEGORIES,
+  SUB_CATEGORY_LABELS,
+  SUB_CATEGORY_ICONS,
+  categoriesForSubCategory,
+} from "./data.js";
 import { getCategoryViewModel } from "./effects.js";
 import { drawTileIcon } from "../../textures.js";
 import { BIOMES } from "../../constants.js";
@@ -40,8 +46,6 @@ const CATEGORY_ICONS = {
   mounts: "🐎",
 };
 
-const HAZARD_ICON = "⚠️";
-
 const ALL_FARM_RESOURCES = Object.fromEntries(
   BIOMES.farm.resources.map((r) => [r.key, r]),
 );
@@ -70,7 +74,7 @@ function lighten(hexColor, amt) {
   return `#${lr.toString(16).padStart(2, "0")}${lg.toString(16).padStart(2, "0")}${lb.toString(16).padStart(2, "0")}`;
 }
 
-function TileIcon({ tileId, size = 40, locked = false }) {
+export function TileIcon({ tileId, size = 40, locked = false }) {
   const ref = useRef(null);
   const t = TILE_TYPES_MAP[tileId];
   const key = t?.baseResource;
@@ -231,10 +235,26 @@ function HazardRow({ hazard }) {
 }
 
 export default function TileCollectionPanel({ state, dispatch }) {
-  const [activeTab, setActiveTab] = useState("grass");
+  const [subCategory, setSubCategory] = useState("farm");
+  const visibleCategories = useMemo(
+    () => categoriesForSubCategory(subCategory),
+    [subCategory],
+  );
+  const [storedActiveTab, setStoredActiveTab] = useState(() => visibleCategories[0] ?? null);
   const tabBarRef = useRef(null);
 
-  const rows = activeTab !== "hazards" ? getCategoryViewModel(state, activeTab) : [];
+  // Derive the visible tab without mutating state inside an effect: when the
+  // user's last selection isn't valid for the current sub-category, fall back
+  // to the first available tab.
+  const activeTab = visibleCategories.includes(storedActiveTab)
+    ? storedActiveTab
+    : (visibleCategories[0] ?? null);
+  const setActiveTab = setStoredActiveTab;
+
+  const rows =
+    subCategory !== "hazards" && activeTab
+      ? getCategoryViewModel(state, activeTab)
+      : [];
 
   return (
     <div className="flex flex-col h-full bg-gradient-to-b from-[#3a2510] to-[#2b1a0c] text-[#f7e2b6]">
@@ -249,47 +269,63 @@ export default function TileCollectionPanel({ state, dispatch }) {
         </button>
       </div>
 
-      {/* Category tabs — scrollable row */}
-      <div
-        ref={tabBarRef}
-        className="flex border-b border-[#5a3a1a] flex-shrink-0 overflow-x-auto"
-        style={{ scrollbarWidth: "none" }}
-      >
-        {CATEGORIES.map((cat) => (
-          <button
-            key={cat}
-            onClick={() => setActiveTab(cat)}
-            className={`flex-shrink-0 py-2 px-2 text-xs font-bold transition-colors min-w-[52px] ${
-              activeTab === cat
-                ? "bg-[#4f3010] text-[#ffd248] border-b-2 border-[#ffd248]"
-                : "text-[#8a6040] hover:text-[#c8a87a]"
-            }`}
-          >
-            <span className="grid place-items-center mx-auto" style={{ width: 22, height: 22 }}>
-              {hasIcon(`cat_${cat}`)
-                ? <IconCanvas iconKey={`cat_${cat}`} size={22} />
-                : <span className="text-base">{CATEGORY_ICONS[cat]}</span>}
-            </span>
-            <span className="block text-center leading-tight">{CATEGORY_LABELS[cat]}</span>
-          </button>
-        ))}
-        {/* Hazards tab */}
-        <button
-          onClick={() => setActiveTab("hazards")}
-          className={`flex-shrink-0 py-2 px-2 text-xs font-bold transition-colors min-w-[52px] ${
-            activeTab === "hazards"
-              ? "bg-[#4f1a0a] text-[#ff9a4a] border-b-2 border-[#ff9a4a]"
-              : "text-[#8a4030] hover:text-[#c87a5a]"
-          }`}
-        >
-          <span className="block text-base text-center">{HAZARD_ICON}</span>
-          <span className="block text-center leading-tight">Hazards</span>
-        </button>
+      {/* Sub-category bar */}
+      <div className="flex border-b border-[#5a3a1a] flex-shrink-0 bg-[#231509]">
+        {SUB_CATEGORIES.map((sub) => {
+          const selected = subCategory === sub;
+          const isHaz = sub === "hazards";
+          return (
+            <button
+              key={sub}
+              onClick={() => setSubCategory(sub)}
+              className={`flex-1 py-2 px-2 text-xs font-bold transition-colors flex flex-col items-center min-w-[60px] ${
+                selected
+                  ? isHaz
+                    ? "bg-[#4f1a0a] text-[#ff9a4a] border-b-2 border-[#ff9a4a]"
+                    : "bg-[#4f3010] text-[#ffd248] border-b-2 border-[#ffd248]"
+                  : isHaz
+                    ? "text-[#8a4030] hover:text-[#c87a5a]"
+                    : "text-[#8a6040] hover:text-[#c8a87a]"
+              }`}
+            >
+              <span className="block text-base leading-none">{SUB_CATEGORY_ICONS[sub]}</span>
+              <span className="block text-center leading-tight mt-0.5">{SUB_CATEGORY_LABELS[sub]}</span>
+            </button>
+          );
+        })}
       </div>
+
+      {/* Category tabs — scrollable row (hidden under Hazards) */}
+      {subCategory !== "hazards" && visibleCategories.length > 0 && (
+        <div
+          ref={tabBarRef}
+          className="flex border-b border-[#5a3a1a] flex-shrink-0 overflow-x-auto"
+          style={{ scrollbarWidth: "none" }}
+        >
+          {visibleCategories.map((cat) => (
+            <button
+              key={cat}
+              onClick={() => setActiveTab(cat)}
+              className={`flex-shrink-0 py-2 px-2 text-xs font-bold transition-colors min-w-[52px] ${
+                activeTab === cat
+                  ? "bg-[#4f3010] text-[#ffd248] border-b-2 border-[#ffd248]"
+                  : "text-[#8a6040] hover:text-[#c8a87a]"
+              }`}
+            >
+              <span className="grid place-items-center mx-auto" style={{ width: 22, height: 22 }}>
+                {hasIcon(`cat_${cat}`)
+                  ? <IconCanvas iconKey={`cat_${cat}`} size={22} />
+                  : <span className="text-base">{CATEGORY_ICONS[cat]}</span>}
+              </span>
+              <span className="block text-center leading-tight">{CATEGORY_LABELS[cat]}</span>
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-2">
-        {activeTab === "hazards" ? (
+        {subCategory === "hazards" ? (
           <>
             <div className="text-xs text-[#a87050] text-center py-1 italic">
               Hazards cannot be selected — they appear automatically and must be cleared.
@@ -298,6 +334,10 @@ export default function TileCollectionPanel({ state, dispatch }) {
               <HazardRow key={h.id} hazard={h} />
             ))}
           </>
+        ) : visibleCategories.length === 0 ? (
+          <div className="text-center text-[#6a5040] text-sm py-8">
+            No tile types in this section yet.
+          </div>
         ) : (
           <>
             {rows.map((row) => (
@@ -318,7 +358,7 @@ export default function TileCollectionPanel({ state, dispatch }) {
       </div>
 
       {/* Free moves chip */}
-      {(state.tileCollection?.freeMoves ?? 0) > 0 && activeTab !== "hazards" && (
+      {(state.tileCollection?.freeMoves ?? 0) > 0 && subCategory !== "hazards" && (
         <div className="flex-shrink-0 mx-3 mb-3 px-3 py-2 rounded-xl bg-[#4f6b3a]/50 border border-[#a8d44a] text-center">
           <span className="text-[#a8d44a] font-bold">
             +{state.tileCollection.freeMoves} free move{state.tileCollection.freeMoves !== 1 ? "s" : ""}
