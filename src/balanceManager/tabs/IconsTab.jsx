@@ -46,7 +46,78 @@ function paintIcon(ctx, entry, size) {
   ctx.restore();
 }
 
+// canvas2svg v1.0.16 predates several Canvas2D methods that iconRegistry
+// uses. Polyfill them onto the C2S prototype once so the SVG recorder
+// sees the same surface area as a real CanvasRenderingContext2D.
+let c2sPatched = false;
+function patchC2S() {
+  if (c2sPatched) return;
+  c2sPatched = true;
+  const proto = C2S.prototype;
+  if (!proto.ellipse) {
+    proto.ellipse = function (cx, cy, rx, ry, rot, a0, a1, ccw) {
+      // Approximate the ellipse arc with cubic bezier segments (one per
+      // ≤π/2 sweep). Output is in the same coord space as moveTo/lineTo,
+      // so canvas2svg's path serialization handles it correctly.
+      let delta = a1 - a0;
+      if (ccw && delta > 0) delta -= Math.PI * 2;
+      else if (!ccw && delta < 0) delta += Math.PI * 2;
+      if (Math.abs(delta) > Math.PI * 2) delta = Math.sign(delta) * Math.PI * 2;
+      const segments = Math.max(1, Math.ceil(Math.abs(delta) / (Math.PI / 2)));
+      const segDelta = delta / segments;
+      const cosR = Math.cos(rot);
+      const sinR = Math.sin(rot);
+      const xform = (px, py) => [cx + px * cosR - py * sinR, cy + px * sinR + py * cosR];
+      let theta = a0;
+      const [sx, sy] = xform(rx * Math.cos(theta), ry * Math.sin(theta));
+      this.lineTo(sx, sy);
+      for (let i = 0; i < segments; i++) {
+        const t1 = theta;
+        const t2 = theta + segDelta;
+        const k = (4 / 3) * Math.tan(segDelta / 4);
+        const [c1x, c1y] = xform(
+          rx * (Math.cos(t1) - k * Math.sin(t1)),
+          ry * (Math.sin(t1) + k * Math.cos(t1)),
+        );
+        const [c2x, c2y] = xform(
+          rx * (Math.cos(t2) + k * Math.sin(t2)),
+          ry * (Math.sin(t2) - k * Math.cos(t2)),
+        );
+        const [ex, ey] = xform(rx * Math.cos(t2), ry * Math.sin(t2));
+        this.bezierCurveTo(c1x, c1y, c2x, c2y, ex, ey);
+        theta = t2;
+      }
+    };
+  }
+  if (!proto.roundRect) {
+    proto.roundRect = function (x, y, w, h, r) {
+      const list = Array.isArray(r) ? r : [r, r, r, r];
+      let tl, tr, br, bl;
+      if (list.length === 1) [tl, tr, br, bl] = [list[0], list[0], list[0], list[0]];
+      else if (list.length === 2) [tl, tr, br, bl] = [list[0], list[1], list[0], list[1]];
+      else if (list.length === 3) [tl, tr, br, bl] = [list[0], list[1], list[2], list[1]];
+      else [tl, tr, br, bl] = list;
+      this.moveTo(x + tl, y);
+      this.lineTo(x + w - tr, y);
+      this.quadraticCurveTo(x + w, y, x + w, y + tr);
+      this.lineTo(x + w, y + h - br);
+      this.quadraticCurveTo(x + w, y + h, x + w - br, y + h);
+      this.lineTo(x + bl, y + h);
+      this.quadraticCurveTo(x, y + h, x, y + h - bl);
+      this.lineTo(x, y + tl);
+      this.quadraticCurveTo(x, y, x + tl, y);
+    };
+  }
+  if (!proto.setLineDash) {
+    // No-op: SVG dasharray would require deeper integration with canvas2svg's
+    // style serializer. Solid strokes are an acceptable approximation in the
+    // dev viewer.
+    proto.setLineDash = function () {};
+  }
+}
+
 function renderIconSvg(entry, size) {
+  patchC2S();
   const ctx = new C2S(size, size);
   paintIcon(ctx, entry, size);
   // canvas2svg bakes width/height into the root <svg>. Replace with a
