@@ -144,7 +144,16 @@ const IconCell = memo(function IconCell({ entry, onClick, selected, mode }) {
     if (mode !== "canvas") return;
     const canvas = canvasRef.current;
     if (!canvas) return;
+    // Match the canvas backing store to the device pixel ratio so retina
+    // displays render at native resolution instead of being bilinearly
+    // upscaled from a 56px bitmap.
+    const dpr = (typeof window !== "undefined" ? window.devicePixelRatio : 1) || 1;
+    canvas.width = ICON_SIZE * dpr;
+    canvas.height = ICON_SIZE * dpr;
     const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.scale(dpr, dpr);
     ctx.clearRect(0, 0, ICON_SIZE, ICON_SIZE);
     paintIcon(ctx, entry, ICON_SIZE);
   }, [entry, mode]);
@@ -169,9 +178,7 @@ const IconCell = memo(function IconCell({ entry, onClick, selected, mode }) {
       ) : (
         <canvas
           ref={canvasRef}
-          width={ICON_SIZE}
-          height={ICON_SIZE}
-          style={{ imageRendering: "crisp-edges" }}
+          style={{ width: ICON_SIZE, height: ICON_SIZE, display: "block" }}
         />
       )}
       <div
