@@ -439,6 +439,65 @@ export const TOWNSFOLK = [
     requirement: { level: 6 },
     description: "Reads sky and sea like a chart. Steers the catch toward oyster beds where pearls hide.",
   },
+  {
+    id: "explorer",
+    name: "Sven",
+    role: "Explorer",
+    icon: "🗺",
+    color: "#7a5a18",
+    wage: 38,
+    hireCost: { worker: 1, fish_raw: 5, bread: 10, mine_stone: 8 },
+    maxCount: 2,
+    // Niche: extra clams + kelp tiles in the harbor pool. Object-form
+    // poolWeight scales linearly through the per-hire-floor aggregator.
+    effect: { poolWeight: { fish_clam: 1, fish_kelp: 1 } },
+    requirement: { level: 5 },
+    description: "Charts unmapped coves and tide-pools. Brings home extra clams and kelp from the back-shores.",
+  },
+  {
+    id: "navigator",
+    name: "Astrid",
+    role: "Navigator",
+    icon: "🧭",
+    color: "#3a4a78",
+    wage: 38,
+    hireCost: { worker: 1, fish_raw: 6, bread: 10, mine_ingot: 4 },
+    maxCount: 1,
+    // Catalog: extra coins at season end. Mid-tier bump above Tuck (30)
+    // and below Chef (60).
+    effect: { type: "season_bonus", key: "coins", amount: 45 },
+    requirement: { level: 5 },
+    description: "Reads stars and currents alike. Trims the wasted runs and brings extra coin home each season.",
+  },
+  {
+    id: "confectioner",
+    name: "Inga",
+    role: "Confectioner",
+    icon: "🍬",
+    color: "#d8786a",
+    wage: 30,
+    hireCost: { worker: 1, fish_kelp: 8, bread: 10, milk: 1 },
+    maxCount: 2,
+    // Specialist: extra kelp on chains. Speeds the kelp → fish_oil chain.
+    effect: { type: "bonus_yield", key: "fish_kelp", amount: 2 },
+    requirement: { level: 5 },
+    description: "Boils kelp into salt-sweet candies and lamp oil. Pulls extra kelp from every chain.",
+  },
+  {
+    id: "deckhand",
+    name: "Rolf",
+    role: "Deckhand",
+    icon: "🪢",
+    color: "#5a4a3a",
+    wage: 18,
+    hireCost: { worker: 1, fish_raw: 3, bread: 6, wood_plank: 4 },
+    maxCount: 4,
+    // Broad, shallow pool boost — sardine + mackerel + kelp each get
+    // +1 per max-hire (per-hire fractional, floored to 0 for solo hire).
+    effect: { poolWeight: { fish_sardine: 1, fish_mackerel: 1, fish_kelp: 1 } },
+    requirement: { level: 4 },
+    description: "Hauls lines and scrubs decks from dawn to dark. Keeps the harbour board topped up with the staples.",
+  },
 ];
 
 export const TOWNSFOLK_MAP = Object.fromEntries(TOWNSFOLK.map((w) => [w.id, w]));
