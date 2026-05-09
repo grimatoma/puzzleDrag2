@@ -117,25 +117,28 @@ const TOWN_WALKERS = [
 // Buildings that emit smoke when built (industrial/warm interiors).
 const SMOKE_BUILDINGS = new Set(["hearth", "bakery", "forge"]);
 
-// Per-biome visual config: unique building layouts and terrain paths.
-// Building order within each layout determines z-stacking (later = on top).
+// Per-biome visual config: ordered plot positions and terrain paths.
+// `plots` are indexed slots a player can build into. Plot order within each
+// array determines z-stacking (later = on top). Zones declare a `plotCount`
+// in cartography/data.js to cap how many of these positions are exposed.
 const TOWN_BIOME_CONFIGS = {
   farm: {
     name: "Hearthwood Vale",
-    // Gentle pastoral layout — spread wide, inn prominent at center
-    buildingLayout: {
-      hearth:  { x: 60,  y: 372, w: 88,  h: 90  },
-      mill:    { x: 170, y: 352, w: 84,  h: 106 },
-      bakery:  { x: 295, y: 366, w: 98,  h: 96  },
-      inn:     { x: 442, y: 340, w: 118, h: 124 },
-      granary: { x: 618, y: 356, w: 88,  h: 106 },
-      larder:  { x: 740, y: 380, w: 72,  h: 82  },
-      forge:   { x: 848, y: 366, w: 98,  h: 96  },
-      caravan_post: { x: 966, y: 370, w: 104, h: 86  },
-      housing:  { x: 430, y: 262, w: 80, h: 92 },
-      housing2: { x: 520, y: 262, w: 80, h: 92 },
-      housing3: { x: 610, y: 262, w: 80, h: 92 },
-    },
+    // Gentle pastoral layout — spread wide. Front row first, back row last.
+    plots: [
+      { x: 60,  y: 372, w: 88,  h: 90  },
+      { x: 170, y: 352, w: 84,  h: 106 },
+      { x: 295, y: 366, w: 98,  h: 96  },
+      { x: 442, y: 340, w: 118, h: 124 },
+      { x: 618, y: 356, w: 88,  h: 106 },
+      { x: 740, y: 380, w: 72,  h: 82  },
+      { x: 848, y: 366, w: 98,  h: 96  },
+      { x: 966, y: 370, w: 104, h: 86  },
+      { x: 430, y: 262, w: 80,  h: 92  },
+      { x: 520, y: 262, w: 80,  h: 92  },
+      { x: 610, y: 262, w: 80,  h: 92  },
+      { x: 700, y: 262, w: 80,  h: 92  },
+    ],
     // Gently rolling hills — soft bezier curves
     hill1Path: "M0,305 C120,278 260,248 420,262 C580,276 700,252 860,258 C960,262 1040,252 1100,248 L1100,600 L0,600 Z",
     hill2Path: "M0,368 C140,352 310,342 520,358 C720,373 900,358 1100,352 L1100,600 L0,600 Z",
@@ -144,20 +147,21 @@ const TOWN_BIOME_CONFIGS = {
   },
   mine: {
     name: "Ironridge Camp",
-    // Compact industrial layout — forge dominates center, buildings cluster tightly
-    buildingLayout: {
-      hearth:  { x: 52,  y: 388, w: 82,  h: 86  },
-      granary: { x: 158, y: 378, w: 82,  h: 96  },
-      mill:    { x: 262, y: 382, w: 78,  h: 84  },
-      bakery:  { x: 360, y: 372, w: 92,  h: 96  },
-      forge:   { x: 480, y: 322, w: 120, h: 144 },
-      inn:     { x: 638, y: 354, w: 112, h: 122 },
-      larder:  { x: 784, y: 382, w: 74,  h: 82  },
-      caravan_post: { x: 888, y: 368, w: 104, h: 88  },
-      housing:  { x: 430, y: 262, w: 80, h: 92 },
-      housing2: { x: 520, y: 262, w: 80, h: 92 },
-      housing3: { x: 610, y: 262, w: 80, h: 92 },
-    },
+    // Compact industrial layout — front row first, back row last.
+    plots: [
+      { x: 52,  y: 388, w: 82,  h: 86  },
+      { x: 158, y: 378, w: 82,  h: 96  },
+      { x: 262, y: 382, w: 78,  h: 84  },
+      { x: 360, y: 372, w: 92,  h: 96  },
+      { x: 480, y: 322, w: 120, h: 144 },
+      { x: 638, y: 354, w: 112, h: 122 },
+      { x: 784, y: 382, w: 74,  h: 82  },
+      { x: 888, y: 368, w: 104, h: 88  },
+      { x: 430, y: 262, w: 80,  h: 92  },
+      { x: 520, y: 262, w: 80,  h: 92  },
+      { x: 610, y: 262, w: 80,  h: 92  },
+      { x: 700, y: 262, w: 80,  h: 92  },
+    ],
     // Jagged rocky peaks — angular lineto commands
     hill1Path: "M0,288 L78,252 L142,274 L218,218 L308,258 L418,196 L518,240 L638,206 L738,234 L838,196 L938,224 L1018,210 L1100,216 L1100,600 L0,600 Z",
     hill2Path: "M0,366 C60,348 142,372 228,356 C320,342 420,368 530,358 C652,348 780,370 900,356 C980,346 1052,362 1100,356 L1100,600 L0,600 Z",
@@ -907,6 +911,10 @@ function Cloud({ top, w, h, color, anim, breatheDur }) {
 export function TownView({ state, dispatch }) {
   const [entryBiome, setEntryBiome] = useState(null);
   const [purchaseBuilding, setPurchaseBuilding] = useState(null);
+  // Build flow: when set, the player has chosen a building and is now picking
+  // an empty plot to place it on. Cleared when they confirm or cancel.
+  const [pendingBuilding, setPendingBuilding] = useState(null);
+  const [buildPickerOpen, setBuildPickerOpen] = useState(false);
   const { tip: buildingTip, show: showBuildingTip, hide: hideBuildingTip, handlers: tipHandlers, lastTouchTime } = useTooltip();
   const longPressTimer = useRef(null);
   const longPressActive = useRef(false);
@@ -926,13 +934,49 @@ export function TownView({ state, dispatch }) {
   // Zone config for this location controls which puzzle boards and buildings are available.
   const zoneConfig = ZONES[state.mapCurrent];
   const locationBuilt = state.built?.[state.mapCurrent] ?? {};
+  // Plot system: cap is config-driven via MAP_NODES[i].plotCount, capped to
+  // the visual layout this biome variant exposes.
+  const layoutPlots = townConfig.plots ?? [];
+  const plotCount = Math.min(zoneConfig?.plotCount ?? layoutPlots.length, layoutPlots.length);
+  const storedPlots = locationBuilt._plots ?? {};
+  // Build a normalised plot map { idx -> buildingId | null }, auto-assigning
+  // any legacy buildings that lack an entry (e.g. saves predating the plot
+  // system, or tests that set { hearth: true } without _plots).
+  const RESERVED_KEYS = new Set(["decorations", "_plots"]);
+  const builtIds = Object.keys(locationBuilt).filter(
+    (k) => !RESERVED_KEYS.has(k) && locationBuilt[k] && BUILDINGS.some((b) => b.id === k),
+  );
+  const plotById = {};
+  Object.entries(storedPlots).forEach(([idx, id]) => { plotById[id] = Number(idx); });
+  const plotMap = {};
+  for (let i = 0; i < plotCount; i++) plotMap[i] = storedPlots[i] ?? null;
+  // Auto-assign any built building that doesn't yet have a plot to the first
+  // free index. Render-only — never written back to state.
+  for (const id of builtIds) {
+    if (plotById[id] !== undefined) continue;
+    for (let i = 0; i < plotCount; i++) {
+      if (plotMap[i] == null) { plotMap[i] = id; plotById[id] = i; break; }
+    }
+  }
   // Filter buildings to those available at this location, then by biome.
   const allowedBuildings = zoneConfig?.buildings ?? BUILDINGS.map(b => b.id);
-  const townBuildings = BUILDINGS
-    .filter(b => allowedBuildings.includes(b.id) && (!b.biome || b.biome === biomeVariant))
-    .map(b => ({ ...b, ...(townConfig.buildingLayout[b.id] || {}) }));
-  // Sort by bottom edge so shorter buildings don't clip taller neighbours
-  const sortedBuildings = [...townBuildings].sort((a, b) => (a.y + a.h) - (b.y + b.h));
+  const eligibleBuildings = BUILDINGS.filter(
+    (b) => allowedBuildings.includes(b.id) && (!b.biome || b.biome === biomeVariant)
+  );
+  // Slot rows for rendering: sort by bottom edge so shorter buildings don't
+  // clip taller neighbours.
+  const slotRows = [];
+  for (let i = 0; i < plotCount; i++) {
+    const pos = layoutPlots[i];
+    if (!pos) continue;
+    slotRows.push({ idx: i, ...pos, buildingId: plotMap[i] });
+  }
+  slotRows.sort((a, b) => (a.y + a.h) - (b.y + b.h));
+
+  const occupiedPlots = Object.entries(plotMap)
+    .filter(([, id]) => id != null)
+    .length;
+  const freePlots = plotCount - occupiedPlots;
 
   const builtTipHandlers = (b) => {
     const data = { label: b.name, desc: b.desc, color: b.color };
@@ -1221,51 +1265,46 @@ export function TownView({ state, dispatch }) {
         )}
       </div>
 
-      {/* Buildings positioned in the 1100x600 design space, scaled to viewport */}
+      {/* Plots + buildings positioned in the 1100x600 design space, scaled to viewport */}
       <div className="absolute inset-0 pointer-events-none">
         <svg viewBox="0 0 1100 600" preserveAspectRatio="none" className="w-full h-full" style={{ position: "absolute", inset: 0, pointerEvents: "none" }} />
         <div className="absolute pointer-events-none" style={{ left: 0, right: 0, top: 0, bottom: 0 }}>
-          {sortedBuildings.map((b) => {
-            const isBuilt = !!locationBuilt[b.id];
-            const prereqMet = !b.requires || !!locationBuilt[b.requires];
-            const isLocked = state.level < b.lv || !prereqMet;
-            const canAfford = state.coins >= (b.cost.coins || 0) &&
-              Object.entries(b.cost).every(([k, v]) => k === "coins" || (state.inventory[k] || 0) >= v);
+          {slotRows.map((slot) => {
+            const b = slot.buildingId ? BUILDINGS.find((x) => x.id === slot.buildingId) : null;
+            const isBuilt = !!b;
+            const isPlacing = !!pendingBuilding && !isBuilt;
             const CRAFTING_STATIONS = new Set(["bakery", "forge", "larder"]);
+
             const onClick = () => {
               if (longPressActive.current) { longPressActive.current = false; return; }
-              if (isLocked) return;
-              if (isBuilt && CRAFTING_STATIONS.has(b.id)) {
-                dispatch({ type: "SET_VIEW", view: "crafting", craftingTab: b.id });
+              // Placement mode: clicking an empty plot confirms placement.
+              if (isPlacing) {
+                setPurchaseBuilding({ ...pendingBuilding, _plot: slot.idx });
                 return;
               }
-              if (isBuilt) return;
-              if (!canAfford) return;
-              setPurchaseBuilding(b);
+              if (!isBuilt) return;
+              if (CRAFTING_STATIONS.has(b.id)) {
+                dispatch({ type: "SET_VIEW", view: "crafting", craftingTab: b.id });
+              }
             };
-            const costStr = Object.entries(b.cost).map(([k, v]) => k === "coins" ? `${v}◉` : `${v} ${k}`).join(" · ");
-            const buildingTipData = isBuilt ? null : {
-              label: isLocked ? (!prereqMet ? `🔒 ${b.name} (requires previous Housing)` : `🔒 ${b.name} (Level ${b.lv})`) : `Build ${b.name}: ${costStr}`,
-              desc: b.desc,
-              color: isLocked ? "#f7d572" : canAfford ? "#9bdb6a" : "#f7d572",
-            };
+
             return (
               <div
-                key={b.id}
-                className="absolute cursor-pointer pointer-events-auto"
+                key={slot.idx}
+                className="absolute pointer-events-auto"
                 style={{
-                  left: `${(b.x / 1100) * 100}%`,
-                  bottom: `${((600 - b.y - b.h) / 600) * 100}%`,
-                  width: `${(b.w / 1100) * 100}%`,
+                  left: `${(slot.x / 1100) * 100}%`,
+                  bottom: `${((600 - slot.y - slot.h) / 600) * 100}%`,
+                  width: `${(slot.w / 1100) * 100}%`,
                   aspectRatio: "1",
-                  opacity: isLocked && !isBuilt ? 0.5 : 1,
+                  cursor: isBuilt && CRAFTING_STATIONS.has(b.id) ? "pointer" : isPlacing ? "pointer" : "default",
                 }}
                 onClick={onClick}
-                {...(isBuilt ? builtTipHandlers(b) : buildingTipData ? tipHandlers(buildingTipData) : {})}
+                {...(isBuilt ? builtTipHandlers(b) : {})}
               >
-                <BuildingIllustration id={b.id} isBuilt={isBuilt} />
                 {isBuilt ? (
                   <>
+                    <BuildingIllustration id={b.id} isBuilt={true} />
                     {SMOKE_BUILDINGS.has(b.id) && <BuildingSmoke />}
                     <div
                       className="absolute bottom-full left-0 right-0 text-center font-bold text-white truncate py-0.5 px-1"
@@ -1281,24 +1320,77 @@ export function TownView({ state, dispatch }) {
                     </div>
                   </>
                 ) : (
-                  <>
-                    <div
-                      className="absolute inset-0 rounded-sm grid place-items-center font-bold text-[14px]"
-                      style={{
-                        background: "rgba(0,0,0,.28)",
-                        border: `2px dashed ${isLocked ? "#888" : canAfford ? "#9bdb6a" : "rgba(255,255,255,.35)"}`,
-                        color: isLocked ? "#888" : canAfford ? "#9bdb6a" : "rgba(255,255,255,.5)",
-                      }}
-                    >
-                      {isLocked ? `🔒` : "+"}
-                    </div>
-                  </>
+                  <div
+                    className={`absolute inset-0 rounded-sm grid place-items-center font-bold ${isPlacing ? "animate-pulse" : ""}`}
+                    style={{
+                      background: isPlacing ? "rgba(155,219,106,.18)" : "rgba(0,0,0,.22)",
+                      border: `2px dashed ${isPlacing ? "#9bdb6a" : "rgba(255,255,255,.35)"}`,
+                      color: isPlacing ? "#9bdb6a" : "rgba(255,255,255,.55)",
+                      fontSize: "clamp(10px,1.1vw,14px)",
+                    }}
+                  >
+                    {isPlacing ? "+ Place here" : "Empty plot"}
+                  </div>
                 )}
               </div>
             );
           })}
         </div>
       </div>
+
+      {/* Build button — opens the building picker. Hidden when zone has no plots. */}
+      {plotCount > 0 && (
+        <button
+          type="button"
+          onClick={() => {
+            if (pendingBuilding) {
+              setPendingBuilding(null);
+            } else {
+              setBuildPickerOpen(true);
+            }
+          }}
+          className="absolute z-30 rounded-full font-bold shadow-lg border-[3px] border-white"
+          style={{
+            right: "1.5rem",
+            bottom: "10%",
+            padding: "0.65rem 1.1rem",
+            background: pendingBuilding ? "#c8523a" : "#9bdb6a",
+            color: pendingBuilding ? "#fff" : "#1a2a10",
+            fontSize: "clamp(11px,1.2vw,14px)",
+          }}
+          aria-label={pendingBuilding ? "Cancel placement" : "Build"}
+        >
+          {pendingBuilding
+            ? `✖ Cancel placement`
+            : `🔨 Build  ·  ${freePlots}/${plotCount} plots`}
+        </button>
+      )}
+
+      {/* Placement-mode hint banner */}
+      {pendingBuilding && (
+        <div
+          className="absolute z-30 left-1/2 -translate-x-1/2 px-4 py-2 rounded-full font-bold text-white pointer-events-none"
+          style={{ top: "9%", background: "rgba(15,14,20,.85)", border: "1px solid rgba(155,219,106,.5)", fontSize: "clamp(11px,1.2vw,14px)" }}
+        >
+          📍 Choose an empty plot for <span style={{ color: "#9bdb6a" }}>{pendingBuilding.name}</span>
+        </div>
+      )}
+
+      {/* Building picker modal — choose a building, then a plot */}
+      {buildPickerOpen && (
+        <BuildPicker
+          buildings={eligibleBuildings}
+          state={state}
+          locationBuilt={locationBuilt}
+          freePlots={freePlots}
+          plotCount={plotCount}
+          onPick={(b) => {
+            setBuildPickerOpen(false);
+            setPendingBuilding(b);
+          }}
+          onClose={() => setBuildPickerOpen(false)}
+        />
+      )}
 
       {entryBiome === "farm" && (
         <StartFarmingModal
@@ -1369,8 +1461,9 @@ export function TownView({ state, dispatch }) {
                 className="flex-1 rounded-lg py-2 font-bold"
                 style={{ background: "#9bdb6a", color: "#1a2a10", fontSize: "clamp(11px,1.2vw,14px)" }}
                 onClick={() => {
-                  dispatch({ type: "BUILD", building: purchaseBuilding });
+                  dispatch({ type: "BUILD", building: purchaseBuilding, plot: purchaseBuilding._plot });
                   setPurchaseBuilding(null);
+                  setPendingBuilding(null);
                 }}
               >
                 Buy
@@ -1386,6 +1479,105 @@ export function TownView({ state, dispatch }) {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+function BuildPicker({ buildings, state, locationBuilt, freePlots, plotCount, onPick, onClose }) {
+  const rows = buildings.map((b) => {
+    const isBuilt = !!locationBuilt[b.id];
+    const prereqMet = !b.requires || !!locationBuilt[b.requires];
+    const levelMet = state.level >= b.lv;
+    const canCoin = state.coins >= (b.cost.coins || 0);
+    const canRunes = (state.runes ?? 0) >= (b.cost.runes ?? 0);
+    const canRes = Object.entries(b.cost).every(
+      ([k, v]) => k === "coins" || k === "runes" || (state.inventory[k] || 0) >= v,
+    );
+    const canAfford = canCoin && canRes && canRunes;
+    const reason = isBuilt
+      ? "Already built"
+      : !levelMet
+        ? `Requires level ${b.lv}`
+        : !prereqMet
+          ? `Requires ${b.requires}`
+          : freePlots <= 0
+            ? "No free plots"
+            : !canAfford
+              ? "Not enough resources"
+              : null;
+    const pickable = !reason;
+    return { b, isBuilt, levelMet, prereqMet, canAfford, reason, pickable };
+  });
+
+  return (
+    <div
+      className="absolute inset-0 z-[10000] flex items-center justify-center"
+      style={{ background: "rgba(0,0,0,.6)" }}
+      onClick={onClose}
+    >
+      <div
+        className="rounded-xl border border-white/20 p-4 flex flex-col gap-2"
+        style={{ background: "rgba(15,14,20,.97)", width: "min(440px, 92vw)", maxHeight: "80vh", boxShadow: "0 8px 40px rgba(0,0,0,.7)" }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-baseline justify-between gap-3">
+          <div className="text-white font-bold" style={{ fontSize: "clamp(13px,1.5vw,18px)" }}>Choose a building</div>
+          <div className="text-white/55 font-semibold" style={{ fontSize: "clamp(10px,1.1vw,12px)" }}>
+            {freePlots}/{plotCount} plots free
+          </div>
+        </div>
+        <div className="overflow-y-auto pr-1 flex flex-col gap-2" style={{ maxHeight: "62vh" }}>
+          {rows.map(({ b, isBuilt, reason, pickable }) => {
+            const costStr = Object.entries(b.cost)
+              .map(([k, v]) => k === "coins" ? `${v}◉` : k === "runes" ? `${v} runes` : `${v} ${k}`)
+              .join(" · ");
+            return (
+              <button
+                key={b.id}
+                type="button"
+                disabled={!pickable}
+                onClick={() => pickable && onPick(b)}
+                className="text-left rounded-lg border px-3 py-2 transition-colors"
+                style={{
+                  borderColor: pickable ? "rgba(155,219,106,.55)" : "rgba(255,255,255,.1)",
+                  background: pickable ? "rgba(155,219,106,.08)" : "rgba(255,255,255,.04)",
+                  cursor: pickable ? "pointer" : "not-allowed",
+                  opacity: pickable ? 1 : 0.55,
+                }}
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <div className="font-bold" style={{ color: pickable ? "#9bdb6a" : "#ddd", fontSize: "clamp(11px,1.2vw,14px)" }}>
+                    {b.name}
+                    {isBuilt && <span className="ml-2 text-white/50" style={{ fontSize: "10px" }}>· built</span>}
+                  </div>
+                  <div className="font-semibold text-white/65" style={{ fontSize: "clamp(9px,1vw,11px)" }}>
+                    Lv {b.lv}
+                  </div>
+                </div>
+                {b.desc && (
+                  <div className="text-white/65 leading-snug mt-0.5" style={{ fontSize: "clamp(9px,1vw,11px)" }}>
+                    {b.desc}
+                  </div>
+                )}
+                <div className="mt-1 flex flex-wrap items-center gap-2">
+                  <span className="font-semibold" style={{ color: "#f7d572", fontSize: "clamp(9px,1vw,11px)" }}>{costStr}</span>
+                  {reason && (
+                    <span className="font-semibold" style={{ color: "#e08070", fontSize: "clamp(9px,1vw,11px)" }}>· {reason}</span>
+                  )}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+        <button
+          type="button"
+          onClick={onClose}
+          className="self-end rounded-lg py-1.5 px-3 font-bold mt-1"
+          style={{ background: "rgba(255,255,255,.1)", color: "rgba(255,255,255,.7)", fontSize: "clamp(11px,1.2vw,14px)" }}
+        >
+          Close
+        </button>
+      </div>
     </div>
   );
 }

@@ -51,6 +51,7 @@ export const MAP_NODES = [
       'forge', 'caravan_post', 'kitchen', 'workshop', 'powder_store',
       'portal', 'housing', 'housing2', 'housing3', 'silo',
     ],
+    plotCount: 12,
   },
   {
     id: 'meadow', name: 'Greenmeadow', kind: 'farm', icon: '🌾',
@@ -71,6 +72,7 @@ export const MAP_NODES = [
       'hearth', 'mill', 'granary', 'silo', 'bakery', 'larder',
       'inn', 'housing', 'housing2', 'housing3',
     ],
+    plotCount: 8,
   },
   {
     id: 'orchard', name: 'Wild Orchard', kind: 'farm', icon: '🍎',
@@ -92,6 +94,7 @@ export const MAP_NODES = [
       'hearth', 'mill', 'granary', 'silo', 'bakery', 'larder',
       'inn', 'caravan_post', 'housing', 'housing2', 'housing3',
     ],
+    plotCount: 9,
   },
   {
     id: 'crossroads', name: 'The Crossroads', kind: 'event', icon: '🎲',
@@ -106,6 +109,7 @@ export const MAP_NODES = [
     seasonDrops: empty4Seasons(),
     dangers: [],
     buildings: ['hearth', 'inn', 'caravan_post'],
+    plotCount: 3,
   },
   {
     id: 'quarry', name: 'Cracked Quarry', kind: 'mine', icon: '⛏️',
@@ -123,6 +127,7 @@ export const MAP_NODES = [
       'hearth', 'kitchen', 'workshop', 'forge', 'barn',
       'powder_store', 'inn', 'housing', 'housing2', 'housing3',
     ],
+    plotCount: 8,
   },
   {
     id: 'caves', name: 'Lanternlit Caves', kind: 'mine', icon: '🪨',
@@ -140,6 +145,7 @@ export const MAP_NODES = [
       'hearth', 'kitchen', 'workshop', 'forge', 'barn',
       'powder_store', 'inn', 'caravan_post', 'housing', 'housing2', 'housing3',
     ],
+    plotCount: 9,
   },
   {
     id: 'fairground', name: "Drifter's Fairground", kind: 'festival', icon: '🎪',
@@ -154,6 +160,7 @@ export const MAP_NODES = [
     seasonDrops: empty4Seasons(),
     dangers: [],
     buildings: ['hearth', 'inn', 'caravan_post'],
+    plotCount: 3,
   },
   {
     id: 'forge', name: 'Black Forge', kind: 'mine', icon: '🔥',
@@ -171,6 +178,7 @@ export const MAP_NODES = [
       'hearth', 'forge', 'workshop', 'barn', 'powder_store',
       'portal', 'caravan_post', 'housing', 'housing2', 'housing3',
     ],
+    plotCount: 8,
   },
   {
     id: 'pit', name: 'The Pit', kind: 'boss', icon: '⚔️',
@@ -185,6 +193,7 @@ export const MAP_NODES = [
     seasonDrops: empty4Seasons(),
     dangers: [],
     buildings: ['hearth', 'inn'],
+    plotCount: 2,
   },
   {
     id: 'harbor', name: 'Saltspray Harbor', kind: 'fish', icon: '⚓',
@@ -202,6 +211,7 @@ export const MAP_NODES = [
       'hearth', 'harbor_dock', 'fishmonger', 'smokehouse',
       'inn', 'caravan_post', 'housing', 'housing2', 'housing3',
     ],
+    plotCount: 8,
   },
 ];
 
