@@ -13,6 +13,7 @@ import { WORKER_MAP } from "./features/apprentices/data.js";
 import { computeWorkerEffects } from "./features/apprentices/aggregate.js";
 import { TILE_TYPES, CATEGORIES, TILE_TYPES_MAP, CATEGORY_OF } from "./features/tileCollection/data.js";
 import { yieldMultiplierFor } from "./features/tileCollection/yieldMultipliers.js";
+import { longChainBonusFor } from "./features/tileCollection/longChainBonus.js";
 import { rollQuests } from "./features/quests/data.js";
 import { ACHIEVEMENTS as ACHIEVEMENT_LIST } from "./features/achievements/data.js";
 import { awardXp } from "./features/almanac/data.js";
@@ -655,12 +656,17 @@ function coreReducer(state, action) {
       }
 
       // Power-hook coin bonuses (set via Balance Manager → Tile Powers).
-      // `coinBonusFlat` adds a flat amount per chain; `coinBonusPerTile`
-      // scales with chain length. Both are summed across hook entries.
       const chainTileEffects = TILE_TYPES_MAP[key]?.effects ?? {};
       const hookFlat = chainTileEffects.coinBonusFlat || 0;
       const hookPerTile = chainTileEffects.coinBonusPerTile || 0;
       const coinHookBonus = hookFlat + hookPerTile * effectiveChain;
+
+      // Catalog §7 "long chain gives X" bonuses — Buckwheat → herd, Eggplant
+      // → veg, Goose → veg, Willow → veg, Broccoli → flower, Warthog → mount.
+      const longBonus = longChainBonusFor(key, effectiveChain);
+      if (longBonus) {
+        addCappedResourceMut(inventory, chainCf, chainFloaters, longBonus.bonusKey, longBonus.amount, chainCap);
+      }
 
       const coinsGain = Math.max(1, Math.floor((effectiveGained * value) / 2)) + coinHookBonus;
       // §17 locked: 1 XP per chain (regardless of length/value) into almanac
