@@ -29,6 +29,13 @@ const CATEGORY_LABELS = {
   herd_animals: "Herd",
   cattle: "Cattle",
   mounts: "Mounts",
+  mine_stone: "Stone",
+  mine_ore: "Ore",
+  mine_coal: "Coal",
+  mine_gem: "Gem",
+  mine_gold: "Gold",
+  mine_dirt: "Dirt",
+  fish: "Fish",
 };
 
 const CATEGORY_ICONS = {
@@ -44,10 +51,19 @@ const CATEGORY_ICONS = {
   herd_animals: "🐷",
   cattle: "🐄",
   mounts: "🐎",
+  mine_stone: "🪨",
+  mine_ore: "⛏",
+  mine_coal: "🔥",
+  mine_gem: "💎",
+  mine_gold: "🪙",
+  mine_dirt: "🟫",
+  fish: "🐟",
 };
 
-const ALL_FARM_RESOURCES = Object.fromEntries(
-  BIOMES.farm.resources.map((r) => [r.key, r]),
+// Look up resources across every biome — mine and fish tiles also need
+// their colour/icon in the wiki, not just farm.
+const ALL_RESOURCES = Object.fromEntries(
+  Object.values(BIOMES).flatMap((b) => b.resources.map((r) => [r.key, r])),
 );
 
 const FARM_HAZARD_LIST = [
@@ -78,7 +94,7 @@ export function TileIcon({ tileId, size = 40, locked = false }) {
   const ref = useRef(null);
   const t = TILE_TYPES_MAP[tileId];
   const key = t?.baseResource;
-  const res = key ? ALL_FARM_RESOURCES[key] : null;
+  const res = key ? ALL_RESOURCES[key] : null;
 
   useEffect(() => {
     const canvas = ref.current;
