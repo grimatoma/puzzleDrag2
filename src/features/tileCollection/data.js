@@ -111,13 +111,7 @@ export const TILE_TYPES = [
 
   // (wood and berry are resources/items, not tile species — see BIOMES.farm.resources.)
 
-  // Bird
-  {
-    id: "bird_egg", category: "bird", displayName: "Egg", baseResource: "bird_egg", tier: 0,
-    discovery: { method: "default" },
-    effects: {},
-    description: "Farm eggs gathered from the yard, a staple ingredient in the Bakery's recipes.",
-  },
+  // Bird (egg is a resource/product, not a board tile — see BIOMES.farm.resources)
   {
     id: "bird_turkey", category: "bird", displayName: "Turkey", baseResource: "bird_turkey", tier: 1,
     discovery: { method: "research", researchOf: "bird_egg", researchAmount: 20 },
@@ -131,7 +125,7 @@ export const TILE_TYPES = [
     description: "Lucky clover patches that nest small songbirds, granting 2 extra free moves per season.",
   },
   {
-    id: "bird_melon", category: "bird", displayName: "Melon", baseResource: "bird_melon", tier: 3,
+    id: "bird_melon", category: "fruits", displayName: "Melon", baseResource: "bird_melon", tier: 3,
     discovery: { method: "buy", coinCost: 500 },
     effects: { freeMoves: 5 },
     description: "Plump summer melons that attract whole flocks of birds, granting 5 free moves per season.",
