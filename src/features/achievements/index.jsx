@@ -1,5 +1,6 @@
-import { useState } from "react";
 import { BIOMES } from "../../constants.js";
+
+const TABS = ["trophies", "collection"];
 // Use the canonical achievements list from features/achievements/data.js
 // (12 entries with counter/threshold shape). The constants.js ACHIEVEMENTS
 // list (20 entries) is retained for legacy compatibility but not rendered here.
@@ -140,7 +141,9 @@ const COUNTER_GROUPS = {
 };
 
 export default function AchievementsScreen({ state, dispatch }) {
-  const [tab, setTab] = useState("trophies");
+  const requested = state?.viewParams?.tab;
+  const tab = TABS.includes(requested) ? requested : "trophies";
+  const setTab = (next) => dispatch({ type: "SET_VIEW_PARAMS", params: { tab: next } });
 
   // Canonical: state.achievements.unlocked (from features/achievements/data.js)
   const unlockedMap = state.achievements?.unlocked ?? {};
