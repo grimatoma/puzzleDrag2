@@ -257,6 +257,47 @@ function drawFishOil(ctx) {
   ctx.fill();
 }
 
+function drawPearl(ctx) {
+  shadow(ctx, 14);
+  // Open shell halves cradling the pearl
+  ctx.fillStyle = "#a89878"; ctx.strokeStyle = "#3a2e1a"; ctx.lineWidth = 1.4;
+  ctx.beginPath();
+  ctx.moveTo(-18, 6);
+  ctx.lineTo(-12, 14); ctx.lineTo(0, 16); ctx.lineTo(12, 14); ctx.lineTo(18, 6);
+  ctx.closePath();
+  ctx.fill(); ctx.stroke();
+  // Inner shell glaze
+  ctx.fillStyle = "#f0e0c0";
+  ctx.beginPath();
+  ctx.ellipse(0, 8, 14, 3, 0, 0, Math.PI * 2);
+  ctx.fill();
+  // Pearl orb with iridescent gradient
+  const g = ctx.createRadialGradient(-3, -2, 1, 0, 2, 11);
+  g.addColorStop(0, "#ffffff");
+  g.addColorStop(0.4, "#f4e8f8");
+  g.addColorStop(1, "#9ec0d8");
+  ctx.fillStyle = g;
+  ctx.beginPath();
+  ctx.arc(0, 0, 10, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = "rgba(40,40,80,0.55)"; ctx.lineWidth = 1.2;
+  ctx.stroke();
+  // Specular highlights
+  ctx.fillStyle = "rgba(255,255,255,0.85)";
+  ctx.beginPath();
+  ctx.ellipse(-3, -3, 3, 5, -0.3, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = "rgba(255,255,255,0.5)";
+  ctx.beginPath();
+  ctx.arc(2, 4, 1.4, 0, Math.PI * 2);
+  ctx.fill();
+  // Subtle iridescent ring for that catch-the-eye sheen
+  ctx.strokeStyle = "rgba(220,180,255,0.45)"; ctx.lineWidth = 0.8;
+  ctx.beginPath();
+  ctx.arc(0, 0, 8, 0, Math.PI * 2);
+  ctx.stroke();
+}
+
 export const ICONS = {
   fish_sardine:  { label: "Sardine",  color: "#9ab8c4", draw: drawSardine },
   fish_mackerel: { label: "Mackerel", color: "#4a7a9a", draw: drawMackerel },
@@ -266,4 +307,5 @@ export const ICONS = {
   fish_raw:      { label: "Fish",     color: "#b0c8d4", draw: drawFishRaw },
   fish_fillet:   { label: "Fillet",   color: "#e8c8b0", draw: drawFishFillet },
   fish_oil:      { label: "Fish Oil", color: "#e8d050", draw: drawFishOil },
+  fish_pearl:    { label: "Pearl",    color: "#efe8d8", draw: drawPearl },
 };

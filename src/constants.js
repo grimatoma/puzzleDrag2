@@ -29,7 +29,7 @@ export const MAX_TURNS = 10;
 
 // Save schema version. Forward migrations are not maintained — bump this
 // whenever persisted state changes shape and existing saves will be discarded.
-export const SAVE_SCHEMA_VERSION = 25;
+export const SAVE_SCHEMA_VERSION = 26;
 
 export const UPGRADE_THRESHOLDS = {
   grass_hay: 6, grass_meadow: 6, grass_spiky: 6,
@@ -264,6 +264,10 @@ export const BIOMES = {
       { key: "fish_raw",      label: "Fish",     color: 0xb0c8d4, dark: 0x546a78, value: 4, next: "fish_fillet",  glyph: "🐡" },
       { key: "fish_fillet",   label: "Fillet",   color: 0xe8c8b0, dark: 0x7a604c, value: 8, next: null,           glyph: "▰" },
       { key: "fish_oil",      label: "Fish Oil", color: 0xe8d050, dark: 0x7a6818, value: 6, next: null,           glyph: "💧" },
+      // Pearl is a non-spawnable special tile seeded conditionally by
+      // features/fish/pearl.js — chain it with ≥2 other fish to capture
+      // a Rune (mirror of the mine's mysterious-ore mechanic).
+      { key: "fish_pearl",    label: "Pearl",    color: 0xefe8d8, dark: 0x6a6258, value: 0, next: null,           glyph: "◍" },
     ],
     pool: FISH_TILE_POOL,
   },
