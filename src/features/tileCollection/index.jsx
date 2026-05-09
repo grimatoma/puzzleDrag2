@@ -151,12 +151,9 @@ export function TileIcon({ tileId, size = 40, locked = false }) {
 }
 
 function TileRow({ row, category, dispatch }) {
-  const handleToggle = () => {
-    if (row.action !== "toggle") return;
-    dispatch({
-      type: "SET_ACTIVE_TILE",
-      payload: { category, tileId: row.active ? null : row.id },
-    });
+  const handleSelect = () => {
+    if (row.action !== "toggle" || row.active) return;
+    dispatch({ type: "SET_ACTIVE_TILE", payload: { category, tileId: row.id } });
   };
   const handleBuy = () => {
     dispatch({ type: "BUY_TILE", payload: { id: row.id } });
@@ -164,9 +161,9 @@ function TileRow({ row, category, dispatch }) {
 
   return (
     <div
-      onClick={row.action === "toggle" ? handleToggle : undefined}
+      onClick={row.action === "toggle" && !row.active && !row.locked ? handleSelect : undefined}
       className={`flex items-center gap-3 p-2 rounded-xl border transition-colors ${
-        row.action === "toggle" ? "cursor-pointer" : ""
+        row.action === "toggle" && !row.active && !row.locked ? "cursor-pointer" : ""
       } ${
         row.active
           ? "bg-[#4f6b3a]/40 border-[#a8d44a]"
@@ -204,7 +201,7 @@ function TileRow({ row, category, dispatch }) {
                 ? "border-[#5a4030]/50"
                 : "border-[#8a6040]"
             }`}
-            aria-label={row.active ? "Active — click to deselect" : "Inactive — click to select"}
+            aria-label={row.active ? "Active" : "Inactive — click to select"}
           >
             {row.active && <span className="text-[10px] font-bold">✓</span>}
           </span>
