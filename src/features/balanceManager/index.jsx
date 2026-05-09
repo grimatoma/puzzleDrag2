@@ -20,6 +20,7 @@ const PowersTab    = lazy(() => import("./tabs/PowersTab.jsx"));
 const ZonesTab     = lazy(() => import("./tabs/ZonesTab.jsx"));
 const WorkersTab   = lazy(() => import("./tabs/WorkersTab.jsx"));
 const ExportTab    = lazy(() => import("./tabs/ExportTab.jsx"));
+const IconsTab     = lazy(() => import("./tabs/IconsTab.jsx"));
 
 export const modalKey = "balanceManager";
 
@@ -45,6 +46,9 @@ const TABS = [
   { id: "workers",   label: "Workers",        icon: "🛠", Component: WorkersTab,
     section: "other",
     blurb: "Type-tier worker hire costs (flat / linear / geometric ramp), max count, and effect parameters." },
+  { id: "icons",     label: "Icons",          icon: "🎨", Component: IconsTab,
+    section: "other",
+    blurb: "Browse every procedurally-drawn icon in ICON_REGISTRY. Filter by category, search by key or label, and click to copy the key." },
   { id: "export",    label: "Export · Import",icon: "📤", Component: ExportTab,
     section: "other",
     blurb: "Save your draft, download as JSON to commit, or paste a config to import." },
