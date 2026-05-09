@@ -195,7 +195,7 @@ export function Hud({ state, dispatch }) {
         </div>
       )}
       <div className={`${!onBoard ? "ml-auto" : ""} flex items-center gap-1.5 flex-shrink-0`}>
-        <DevButton title="Debug tools" emoji="🛠" onClick={() => dispatch({ type: "OPEN_MODAL", modal: "menu" })} />
+        <DevButton title="Debug tools" emoji="🛠" onClick={() => dispatch({ type: "SETTINGS/OPEN_DEBUG" })} />
         <DevButton title="Balance Manager" emoji="⚖️" onClick={() => dispatch({ type: "OPEN_MODAL", modal: "balanceManager" })} />
         {!onBoard && (
           <>
