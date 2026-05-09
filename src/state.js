@@ -348,7 +348,7 @@ export function createFreshState(overrides) {
     _biomeRestored: false,
     lastChainSnapshot: null,
     magicFertilizerCharges: 0,
-    built: { home: { hearth: true, decorations: {} } },
+    built: { home: { hearth: true, decorations: {}, _plots: { 0: "hearth" } } },
     influence: 0,
     bubble: null,
     modal: null,
@@ -1106,6 +1106,21 @@ function coreReducer(state, action) {
       const runesNeeded = b.cost.runes ?? 0;
       const canRunes = (state.runes ?? 0) >= runesNeeded;
       if (!canCoin || !canRes || !canRunes) return state;
+      // Plot assignment: validate explicit plot index, otherwise auto-pick first free.
+      const lbForPlot = locBuilt(state);
+      const plots = { ...(lbForPlot._plots ?? {}) };
+      const requestedPlot = action.plot ?? action.payload?.plot;
+      const occupied = (idx) => Object.prototype.hasOwnProperty.call(plots, String(idx));
+      let plotIdx;
+      if (typeof requestedPlot === "number" && requestedPlot >= 0) {
+        if (occupied(requestedPlot)) return state;
+        plotIdx = requestedPlot;
+      } else {
+        // Auto-assign: scan ascending until a free index is found.
+        plotIdx = 0;
+        while (occupied(plotIdx)) plotIdx++;
+      }
+      plots[plotIdx] = b.id;
       const inventory = { ...state.inventory };
       Object.entries(b.cost).forEach(([k, v]) => {
         if (k !== "coins" && k !== "runes") inventory[k] = (inventory[k] || 0) - v;
@@ -1129,7 +1144,7 @@ function coreReducer(state, action) {
         coins: state.coins - (b.cost.coins || 0),
         runes: (state.runes ?? 0) - runesNeeded,
         inventory,
-        built: { ...state.built, [state.mapCurrent]: { ...locBuilt(state), [b.id]: true } },
+        built: { ...state.built, [state.mapCurrent]: { ...locBuilt(state), [b.id]: true, _plots: plots } },
         almanac: afterBuildAlmanac.almanac,
         bubble,
         _hintsShown: newHintsShown,
@@ -1876,8 +1891,18 @@ function coreReducer(state, action) {
       }
       if (action.type === "DEV/BUILD_ALL") {
         const allIds = {};
-        BUILDINGS.forEach((b) => { allIds[b.id] = true; });
-        return { ...state, built: { ...state.built, [state.mapCurrent]: { ...locBuilt(state), ...allIds } } };
+        const plots = { ...(locBuilt(state)._plots ?? {}) };
+        const occupied = (idx) => Object.prototype.hasOwnProperty.call(plots, String(idx));
+        let nextIdx = 0;
+        BUILDINGS.forEach((b) => {
+          allIds[b.id] = true;
+          if (!Object.values(plots).includes(b.id)) {
+            while (occupied(nextIdx)) nextIdx++;
+            plots[nextIdx] = b.id;
+            nextIdx++;
+          }
+        });
+        return { ...state, built: { ...state.built, [state.mapCurrent]: { ...locBuilt(state), ...allIds, _plots: plots } } };
       }
       if (action.type === "DEV/RESET_GAME") {
         // Wipe all persisted state and reset to initial state, preserving settings.

@@ -228,6 +228,7 @@ export const ZONES = Object.freeze(
         seasonDrops:  n.seasonDrops  ?? { Spring: {}, Summer: {}, Autumn: {}, Winter: {} },
         dangers:      n.dangers      ?? [],
         buildings:    n.buildings    ?? [],
+        plotCount:    n.plotCount    ?? (n.buildings?.length ?? 0),
       },
     ]),
   ),
