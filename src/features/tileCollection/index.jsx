@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import {
   TILE_TYPES_MAP,
   SUB_CATEGORIES,
@@ -249,21 +249,30 @@ function HazardRow({ hazard }) {
 }
 
 export default function TileCollectionPanel({ state, dispatch }) {
-  const [subCategory, setSubCategory] = useState("farm");
+  // Sub-category and active category tab live on state.viewParams so the URL
+  // (managed by src/router.js) is the single source of truth — back/forward
+  // and deep links land on the same wiki page they were copied from.
+  const subCategory = state?.viewParams?.sub ?? "farm";
   const visibleCategories = useMemo(
     () => categoriesForSubCategory(subCategory),
     [subCategory],
   );
-  const [storedActiveTab, setStoredActiveTab] = useState(() => visibleCategories[0] ?? null);
   const tabBarRef = useRef(null);
 
-  // Derive the visible tab without mutating state inside an effect: when the
-  // user's last selection isn't valid for the current sub-category, fall back
-  // to the first available tab.
-  const activeTab = visibleCategories.includes(storedActiveTab)
-    ? storedActiveTab
+  // Visible tab: use the URL value when valid for the current sub-category,
+  // otherwise fall back to the first available tab. We never write a default
+  // back into state — the URL stays terse until the user explicitly picks one.
+  const requestedTab = state?.viewParams?.cat;
+  const activeTab = visibleCategories.includes(requestedTab)
+    ? requestedTab
     : (visibleCategories[0] ?? null);
-  const setActiveTab = setStoredActiveTab;
+
+  const setSubCategory = (sub) => {
+    dispatch({ type: "SET_VIEW_PARAMS", params: { sub, cat: null } });
+  };
+  const setActiveTab = (cat) => {
+    dispatch({ type: "SET_VIEW_PARAMS", params: { cat } });
+  };
 
   const rows =
     subCategory !== "hazards" && activeTab
