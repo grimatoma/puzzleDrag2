@@ -129,7 +129,7 @@ function MainTab({ state, dispatch }) {
 
         <ActionBtn
           variant="ember"
-          onClick={() => dispatch({ type: 'OPEN_MODAL', modal: 'balanceManager' })}
+          onClick={() => { window.location.href = `${import.meta.env.BASE_URL}b/`; }}
         >
           ⚖️ Balance Manager
         </ActionBtn>
@@ -404,15 +404,15 @@ function AboutTab({ state, dispatch }) {
             {/* Balance Manager — design-time editor for game constants */}
             <div>
               <div className="text-[10px] font-bold uppercase tracking-wide mb-1.5" style={{ color: '#7a5a38' }}>Game Balance</div>
-              <button
-                onClick={() => dispatch({ type: 'OPEN_MODAL', modal: 'balanceManager' })}
-                className="w-full py-2 text-[12px] font-bold rounded-lg border-2 flex items-center justify-center gap-2"
+              <a
+                href={`${import.meta.env.BASE_URL}b/`}
+                className="w-full py-2 text-[12px] font-bold rounded-lg border-2 flex items-center justify-center gap-2 no-underline"
                 style={{ background: '#d6612a', borderColor: '#a84010', color: '#fff' }}
               >
                 ⚖️ Open Balance Manager
-              </button>
+              </a>
               <div className="mt-1 text-[10px] italic" style={{ color: '#7a5a38' }}>
-                Edit upgrade chains, recipes, building costs, and tile power hooks. Export as JSON to commit.
+                Edit upgrade chains, recipes, building costs, and tile power hooks. Opens at /b/ in this tab; export as JSON to commit.
               </div>
             </div>
           </div>

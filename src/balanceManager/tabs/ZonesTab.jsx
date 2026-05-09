@@ -9,8 +9,8 @@
 // src/config/applyOverrides.js.
 
 import { useMemo, useState } from "react";
-import { ZONES, ZONE_CATEGORIES, ZONE_UPGRADE_TARGET_GOLD } from "../../zones/data.js";
-import { BUILDINGS } from "../../../constants.js";
+import { ZONES, ZONE_CATEGORIES, ZONE_UPGRADE_TARGET_GOLD } from "../../features/zones/data.js";
+import { BUILDINGS } from "../../constants.js";
 import {
   COLORS, NumberField, Select, SmallButton, Pill, Card, SearchBar,
 } from "../shared.jsx";

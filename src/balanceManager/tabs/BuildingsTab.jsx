@@ -2,7 +2,7 @@
 // resource cost map for every town building.
 
 import { useState, useMemo } from "react";
-import { BUILDINGS, BIOMES } from "../../../constants.js";
+import { BUILDINGS, BIOMES } from "../../constants.js";
 import {
   COLORS, NumberField, TextField, TextArea, Select,
   SmallButton, Pill, Card, SearchBar,

@@ -2,7 +2,7 @@
 // so designers can browse, search, and copy icon keys.
 
 import { useState, useMemo, useEffect, useRef, memo } from "react";
-import { ICON_REGISTRY } from "../../../textures/iconRegistry.js";
+import { ICON_REGISTRY } from "../../textures/iconRegistry.js";
 import { COLORS, SearchBar } from "../shared.jsx";
 
 // Derive category buckets from key prefixes (everything before the first "_").
