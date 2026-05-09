@@ -84,14 +84,13 @@ export const SEASONS = [
 ];
 
 // Farm board tile pool. Each entry is one slot in the random fill rotation.
-// Per-category counts intentionally weighted: staple chains (hay, log) get
-// more slots; new chain categories get one each so the player sees them
-// without the board becoming chain-impossible at 6×6 = 36 cells.
+// Per-category counts intentionally weighted: the grass staple gets extra
+// slots; new chain categories get one each so the player sees them without
+// the board becoming chain-impossible at 6×6 = 36 cells. (wood and berry
+// are resources/items, not tile species — see BIOMES.farm.resources.)
 export const FARM_TILE_POOL = [
   "grass_hay", "grass_hay", "grass_hay",
-  "wood_log", "wood_log",
   "grain_wheat",
-  "berry", "berry",
   "bird_egg",
   "veg_carrot",
   "fruit_apple",

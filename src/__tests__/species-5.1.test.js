@@ -8,15 +8,18 @@ describe("Phase 5.1 — Tile Collection data model", () => {
     expect(TILE_TYPES.length).toBeGreaterThanOrEqual(12);
   });
 
-  it("≥6 farm categories (catalog import expanded set)", () => {
+  it("≥6 farm categories (catalog import expanded set; wood/berry are resources, not tiles)", () => {
     expect(CATEGORIES.length).toBeGreaterThanOrEqual(6);
-    for (const c of ["grass", "grain", "wood", "berry", "bird", "vegetables"]) {
+    for (const c of ["grass", "grain", "bird", "vegetables", "fruits", "trees"]) {
       expect(CATEGORIES).toContain(c);
     }
+    // Wood and berry chains are inventory resources/items, not tile species.
+    expect(CATEGORIES).not.toContain("wood");
+    expect(CATEGORIES).not.toContain("berry");
   });
 
   it("each category has ≥1 tile type in TILE_TYPES_BY_CATEGORY", () => {
-    for (const c of ["grass", "grain", "wood", "berry", "bird", "vegetables"]) {
+    for (const c of ["grass", "grain", "bird", "vegetables", "fruits", "trees"]) {
       expect(TILE_TYPES_BY_CATEGORY[c]).toBeTruthy();
       expect(TILE_TYPES_BY_CATEGORY[c].length).toBeGreaterThanOrEqual(1);
     }
@@ -34,10 +37,10 @@ describe("Phase 5.1 — Tile Collection data model", () => {
     }
   });
 
-  it("categories with default tile types: grass, wood, berry, bird, vegetables, grain (catalog canonicalized grain defaults)", () => {
+  it("categories with default tile types: grass, bird, vegetables, grain, fruits, trees", () => {
     // Pre-catalog, grain had no default (wheat was chain-only). REFERENCE_CATALOG §7
     // marks Corn/Buckwheat/Rice as Active so grain now has defaults too.
-    const withDefault = ["grass", "wood", "berry", "bird", "vegetables", "grain"];
+    const withDefault = ["grass", "bird", "vegetables", "grain", "fruits", "trees"];
     for (const c of withDefault) {
       const defaults = TILE_TYPES_BY_CATEGORY[c].filter((t) => t.discovery.method === "default");
       expect(defaults.length).toBeGreaterThanOrEqual(1);
