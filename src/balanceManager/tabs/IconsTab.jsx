@@ -170,7 +170,18 @@ export default function IconsTab() {
             </button>
           ))}
         </div>
-        <div className="flex items-center gap-1 ml-auto flex-shrink-0" role="group" aria-label="Render mode">
+        <div
+          className="flex items-center gap-1 ml-auto flex-shrink-0 px-2 py-1 rounded-lg border-2"
+          role="group"
+          aria-label="Render mode"
+          style={{ background: COLORS.parchmentDeep, borderColor: COLORS.border }}
+        >
+          <span
+            className="text-[10px] font-bold uppercase tracking-wide pr-1"
+            style={{ color: COLORS.inkSubtle }}
+          >
+            Render
+          </span>
           {[
             { id: "canvas", label: "Canvas" },
             { id: "svg", label: "SVG" },
@@ -178,12 +189,12 @@ export default function IconsTab() {
             <button
               key={opt.id}
               onClick={() => setMode(opt.id)}
-              className="px-2 py-1 text-[10px] font-bold rounded-md border-2 transition-colors"
+              className="px-2 py-0.5 text-[10px] font-bold rounded-md border-2 transition-colors"
               aria-pressed={mode === opt.id}
               style={
                 mode === opt.id
                   ? { background: COLORS.ember, borderColor: COLORS.emberDeep, color: "#fff" }
-                  : { background: COLORS.parchmentDeep, borderColor: COLORS.border, color: COLORS.inkLight }
+                  : { background: COLORS.parchment, borderColor: COLORS.border, color: COLORS.inkLight }
               }
             >
               {opt.label}
