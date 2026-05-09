@@ -50,6 +50,16 @@ describe("router.parseHash", () => {
     expect(parseHash("#/townsfolk/bosses").viewParams).toEqual({ tab: "bosses" });
   });
 
+  it("captures the cartography zone segment", () => {
+    expect(parseHash("#/cartography/orchard")).toEqual({
+      view: "cartography",
+      modal: null,
+      viewParams: { zone: "orchard" },
+      modalParams: {},
+    });
+    expect(parseHash("#/cartography").viewParams).toEqual({});
+  });
+
   it("parses a modal query", () => {
     expect(parseHash("#/town?modal=menu")).toEqual({
       view: "town",
@@ -101,6 +111,8 @@ describe("router.buildHash", () => {
       { view: "quests", modal: null, viewParams: { tab: "almanac" }, modalParams: {} },
       { view: "achievements", modal: null, viewParams: { tab: "collection" }, modalParams: {} },
       { view: "townsfolk", modal: null, viewParams: { tab: "bosses" }, modalParams: {} },
+      { view: "cartography", modal: null, viewParams: { zone: "orchard" }, modalParams: {} },
+      { view: "cartography", modal: null, viewParams: {}, modalParams: {} },
       { view: "tileCollection", modal: null, viewParams: { sub: "mine", cat: "mine_stone" }, modalParams: {} },
       { view: "town", modal: "menu", viewParams: {}, modalParams: { tab: "settings" } },
       { view: "board", modal: "boss", viewParams: {}, modalParams: {} },
@@ -137,6 +149,21 @@ describe("router.routeFromState", () => {
       const state = { view, modal: null, viewParams: { tab: "alpha" } };
       expect(routeFromState(state).viewParams).toEqual({ tab: "alpha" });
     }
+  });
+
+  it("projects viewParams.zone onto the cartography route", () => {
+    const state = { view: "cartography", modal: null, viewParams: { zone: "orchard" } };
+    expect(routeFromState(state)).toEqual({
+      view: "cartography",
+      modal: null,
+      viewParams: { zone: "orchard" },
+      modalParams: {},
+    });
+  });
+
+  it("omits zone when not set on the cartography route", () => {
+    const state = { view: "cartography", modal: null, viewParams: {} };
+    expect(routeFromState(state).viewParams).toEqual({});
   });
 
   it("projects settingsTab as modalParams.tab when modal is menu", () => {
@@ -198,6 +225,16 @@ describe("ROUTE/APPLY reducer integration", () => {
     });
     expect(s1.view).toBe("tileCollection");
     expect(s1.viewParams).toEqual({ sub: "mine", cat: "mine_gem" });
+  });
+
+  it("stores the cartography zone in viewParams", () => {
+    const s0 = seenTutorial(initialState());
+    const s1 = gameReducer(s0, {
+      type: "ROUTE/APPLY",
+      route: { view: "cartography", modal: null, viewParams: { zone: "orchard" }, modalParams: {} },
+    });
+    expect(s1.view).toBe("cartography");
+    expect(s1.viewParams).toEqual({ zone: "orchard" });
   });
 });
 

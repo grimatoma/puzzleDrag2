@@ -611,12 +611,17 @@ export default function CartographyScreen({ state, dispatch }) {
   const visited = mapVisited || mapDiscovered;
 
   const isPortrait = useIsPortrait();
-  const [tapped, setTapped] = useState(null);
+  // The "tapped" zone (the one shown in the side panel) lives in viewParams.zone
+  // so each zone has its own URL path (`#/cartography/<zoneId>`). A bad zone id
+  // from a stale URL is silently ignored (no panel shown).
+  const tappedFromUrl = state.viewParams?.zone ?? null;
+  const tapped = tappedFromUrl && MAP_NODES.some(n => n.id === tappedFromUrl) ? tappedFromUrl : null;
   const tappedNode = tapped ? MAP_NODES.find(n => n.id === tapped) : null;
   const currentNode = MAP_NODES.find(n => n.id === mapCurrent);
 
   function handleTap(nodeId) {
-    setTapped(prev => (prev === nodeId ? null : nodeId));
+    const next = nodeId === tapped ? null : nodeId;
+    dispatch({ type: 'SET_VIEW_PARAMS', params: { zone: next } });
   }
 
   // In portrait the panel sits above the map (full width); in landscape it

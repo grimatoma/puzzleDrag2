@@ -10,8 +10,13 @@
 //   #/board
 //   #/crafting/tools
 //   #/tiles/farm/grass
+//   #/cartography/orchard
 //   #/town?modal=menu
 //   #/town?modal=menu&tab=settings
+//
+// The Balance Manager is a separate Vite entry served at `/b/` and has its
+// own hash router (`src/balanceManager/router.js`) — it does not share this
+// view space.
 
 import { useEffect, useRef } from "react";
 
@@ -85,6 +90,9 @@ export function parseHash(hash = "") {
   if (view === "tileCollection") {
     if (segments[1]) viewParams.sub = decodeURIComponent(segments[1]);
     if (segments[2]) viewParams.cat = decodeURIComponent(segments[2]);
+  } else if (view === "cartography") {
+    // Cartography uses a single `zone` segment for the inspected node.
+    if (segments[1]) viewParams.zone = decodeURIComponent(segments[1]);
   } else if (VIEWS_WITH_TAB.has(view)) {
     if (segments[1]) viewParams.tab = decodeURIComponent(segments[1]);
   }
@@ -111,6 +119,8 @@ export function buildHash({ view = "town", modal = null, viewParams = {}, modalP
       segments.push(encodeURIComponent(viewParams.sub));
       if (viewParams.cat) segments.push(encodeURIComponent(viewParams.cat));
     }
+  } else if (safeView === "cartography") {
+    if (viewParams.zone) segments.push(encodeURIComponent(viewParams.zone));
   } else if (VIEWS_WITH_TAB.has(safeView)) {
     if (viewParams.tab) segments.push(encodeURIComponent(viewParams.tab));
   }
@@ -137,6 +147,9 @@ export function routeFromState(state) {
     const tcParams = state.viewParams ?? {};
     if (tcParams.sub) viewParams.sub = tcParams.sub;
     if (tcParams.cat) viewParams.cat = tcParams.cat;
+  } else if (view === "cartography") {
+    const zone = state.viewParams?.zone;
+    if (zone) viewParams.zone = zone;
   } else if (view === "crafting") {
     // craftingTab is the legacy redux home for the crafting station; if a
     // viewParams.tab override is also set (e.g. from ROUTE/APPLY) prefer it
