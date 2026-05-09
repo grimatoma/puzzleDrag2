@@ -498,6 +498,79 @@ export const TOWNSFOLK = [
     requirement: { level: 4 },
     description: "Hauls lines and scrubs decks from dawn to dark. Keeps the harbour board topped up with the staples.",
   },
+
+  // ── Mine workers — catalog §9 (first batch) ─────────────────────────────
+  {
+    id: "stone_miner",
+    name: "Yusuf",
+    role: "Stone Miner",
+    icon: "🪨",
+    color: "#7c8388",
+    wage: 24,
+    hireCost: { worker: 1, mine_stone: 8, bread: 6, mine_coal: 4 },
+    maxCount: 3,
+    // Stacks with Dren on mine_stone — multiple thresholds combine.
+    // Catalog: more aggressive trim than Dren (max 3 hires × 1 ea).
+    effect: { type: "threshold_reduce", key: "mine_cobble", from: 6, to: 3 },
+    requirement: { biomeUnlocked: "mine" },
+    description: "Levers cobble out of the rough quarry walls. Trims the cobble chain so paths come together fast.",
+  },
+  {
+    id: "coal_miner",
+    name: "Kira",
+    role: "Coal Miner",
+    icon: "⬛",
+    color: "#1a1a1a",
+    wage: 28,
+    hireCost: { worker: 1, mine_coal: 8, bread: 8, mine_ingot: 2 },
+    maxCount: 2,
+    effect: { type: "threshold_reduce", key: "mine_coal", from: 7, to: 5 },
+    requirement: { biomeUnlocked: "mine" },
+    description: "Hauls coal from cramped seams. Lowers the chain length needed to bring up coal tiles.",
+  },
+  {
+    id: "jeweler",
+    name: "Adelmo",
+    role: "Jeweler",
+    icon: "💎",
+    color: "#65e5ff",
+    wage: 50,
+    hireCost: { worker: 1, mine_gem: 4, mine_ingot: 4, bread: 12 },
+    maxCount: 2,
+    // Trims the high-tier gem chain (5 → 3 at max). Pairs naturally with
+    // Geologist (poolWeight on mine_gem) for crown plays.
+    effect: { type: "threshold_reduce", key: "mine_gem", from: 5, to: 3 },
+    requirement: { building: "forge", orLevel: 6 },
+    description: "Cuts and sets gems with a steady hand. Shortens the chain needed to lift cut-gem grade stones.",
+  },
+  {
+    id: "digger",
+    name: "Bertil",
+    role: "Digger",
+    icon: "🛠",
+    color: "#7a6850",
+    wage: 18,
+    hireCost: { worker: 1, mine_dirt: 8, bread: 6 },
+    maxCount: 4,
+    // Broad pool boost: more dirt + stone tiles in the rotation.
+    effect: { poolWeight: { mine_dirt: 1, mine_stone: 1 } },
+    requirement: { biomeUnlocked: "mine" },
+    description: "Hands like shovels. Keeps the rough fill flowing — extra dirt and stone every shift.",
+  },
+  {
+    id: "excavator",
+    name: "Mira_E",
+    role: "Excavator",
+    icon: "⚒",
+    color: "#8a6a3a",
+    wage: 35,
+    hireCost: { worker: 1, mine_stone: 10, bread: 8, mine_coke: 4 },
+    maxCount: 2,
+    // Bonus yield on cobble: +1 cobble per stone-chain (whose upgrade is cobble).
+    effect: { type: "bonus_yield", key: "mine_cobble", amount: 1 },
+    requirement: { biomeUnlocked: "mine" },
+    description: "Drives the great pit-bucket. Lifts an extra cobble out of every stone chain.",
+  },
 ];
 
 export const TOWNSFOLK_MAP = Object.fromEntries(TOWNSFOLK.map((w) => [w.id, w]));
