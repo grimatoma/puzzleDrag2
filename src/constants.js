@@ -91,7 +91,7 @@ export const SEASONS = [
 export const FARM_TILE_POOL = [
   "grass_hay", "grass_hay", "grass_hay",
   "grain_wheat",
-  "bird_egg",
+  "bird_pheasant",
   "veg_carrot",
   "fruit_apple",
   "flower_pansy",
@@ -99,9 +99,8 @@ export const FARM_TILE_POOL = [
   "herd_pig",
   "cattle_cow",
   "mount_horse",
-  // Bird category already covered by `egg` slot above; new bird species
-  // (chicken, hen, rooster, …) become alternate active species via the
-  // species-activation pipeline rather than additional pool slots.
+  // Bird category slot uses pheasant as pool key; alternate bird species are
+  // activated via the species-activation pipeline rather than additional pool slots.
 ];
 export const MINE_TILE_POOL = ["mine_stone", "mine_stone", "mine_stone", "mine_ore", "mine_ore", "mine_coal", "mine_dirt", "mine_dirt", "mine_gem"];
 
