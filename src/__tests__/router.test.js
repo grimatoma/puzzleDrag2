@@ -44,6 +44,12 @@ describe("router.parseHash", () => {
     });
   });
 
+  it("captures the quests / achievements / townsfolk sub-tab", () => {
+    expect(parseHash("#/quests/almanac").viewParams).toEqual({ tab: "almanac" });
+    expect(parseHash("#/achievements/collection").viewParams).toEqual({ tab: "collection" });
+    expect(parseHash("#/townsfolk/bosses").viewParams).toEqual({ tab: "bosses" });
+  });
+
   it("parses a modal query", () => {
     expect(parseHash("#/town?modal=menu")).toEqual({
       view: "town",
@@ -92,6 +98,9 @@ describe("router.buildHash", () => {
       { view: "town", modal: null, viewParams: {}, modalParams: {} },
       { view: "inventory", modal: null, viewParams: {}, modalParams: {} },
       { view: "crafting", modal: null, viewParams: { tab: "tools" }, modalParams: {} },
+      { view: "quests", modal: null, viewParams: { tab: "almanac" }, modalParams: {} },
+      { view: "achievements", modal: null, viewParams: { tab: "collection" }, modalParams: {} },
+      { view: "townsfolk", modal: null, viewParams: { tab: "bosses" }, modalParams: {} },
       { view: "tileCollection", modal: null, viewParams: { sub: "mine", cat: "mine_stone" }, modalParams: {} },
       { view: "town", modal: "menu", viewParams: {}, modalParams: { tab: "settings" } },
       { view: "board", modal: "boss", viewParams: {}, modalParams: {} },
@@ -121,6 +130,13 @@ describe("router.routeFromState", () => {
       viewParams: { sub: "fish", cat: "fish" },
       modalParams: {},
     });
+  });
+
+  it("projects viewParams.tab onto the route for tab-bearing views", () => {
+    for (const view of ["quests", "achievements", "townsfolk"]) {
+      const state = { view, modal: null, viewParams: { tab: "alpha" } };
+      expect(routeFromState(state).viewParams).toEqual({ tab: "alpha" });
+    }
   });
 
   it("projects settingsTab as modalParams.tab when modal is menu", () => {

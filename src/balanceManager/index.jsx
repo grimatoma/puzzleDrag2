@@ -26,6 +26,27 @@ const WorkersTab   = lazy(() => import("./tabs/WorkersTab.jsx"));
 const ExportTab    = lazy(() => import("./tabs/ExportTab.jsx"));
 const IconsTab     = lazy(() => import("./tabs/IconsTab.jsx"));
 
+// Hash routing for the Balance Manager. The active tab id is encoded in the
+// URL hash (e.g. `#/recipes`) so that browser back/forward and direct deep
+// links work the same way as the main game's router. Hash-based so the same
+// scheme works under any deploy path (GitHub Pages, sub-paths, etc.).
+function readTabFromHash(validIds) {
+  if (typeof window === "undefined") return null;
+  const raw = String(window.location.hash || "").replace(/^#\/?/, "");
+  const seg = raw.split("/")[0];
+  if (!seg) return null;
+  const decoded = decodeURIComponent(seg);
+  return validIds.includes(decoded) ? decoded : null;
+}
+
+function writeTabToHash(tabId, mode) {
+  if (typeof window === "undefined") return;
+  const desired = `#/${encodeURIComponent(tabId)}`;
+  if (window.location.hash === desired) return;
+  if (mode === "replace") window.history.replaceState(null, "", desired);
+  else window.history.pushState(null, "", desired);
+}
+
 // Tabs are grouped under three top-level sections that mirror the game's
 // model: tiles live on the board, resources are inventory currencies, and
 // items are the things crafted from resources (tools count as items).
@@ -107,8 +128,32 @@ function writeSidebarCollapsed(v) {
 }
 
 export default function BalanceManagerApp() {
-  const [tab, setTab] = useState("tiles");
+  const tabIds = TABS.map((t) => t.id);
+  const [tab, setTab] = useState(() => readTabFromHash(tabIds) ?? "tiles");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(readSidebarCollapsed);
+
+  // Normalise the URL on first mount (e.g. empty hash → `#/tiles`) and listen
+  // for back/forward / hashchange so external history navigation rebinds the
+  // active tab.
+  useEffect(() => {
+    writeTabToHash(tab, "replace");
+    const onPop = () => {
+      const next = readTabFromHash(tabIds);
+      if (next && next !== tab) setTab(next);
+    };
+    window.addEventListener("popstate", onPop);
+    window.addEventListener("hashchange", onPop);
+    return () => {
+      window.removeEventListener("popstate", onPop);
+      window.removeEventListener("hashchange", onPop);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: only run once on mount; subsequent tab changes push through the click handler below
+  }, []);
+
+  const navigateTo = useCallback((nextTab) => {
+    writeTabToHash(nextTab, "push");
+    setTab(nextTab);
+  }, []);
   // Initialise the draft from whatever the constants module merged in:
   // committed file + previous localStorage draft. That way, opening the
   // manager always shows the user's full set of overrides as starting point.
@@ -280,7 +325,7 @@ export default function BalanceManagerApp() {
                     return (
                       <button
                         key={t.id}
-                        onClick={() => setTab(t.id)}
+                        onClick={() => navigateTo(t.id)}
                         className="text-left px-3 py-2 rounded-lg text-[12px] font-bold transition-colors flex items-center gap-2"
                         style={
                           active

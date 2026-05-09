@@ -50,6 +50,16 @@ const VIEW_ALIASES_REVERSE = {
   tileCollection: "tiles",
 };
 
+// Views that accept a single `tab` segment after the view name. Each view's
+// component stores its active tab in state.viewParams.tab (or, for crafting,
+// in the legacy state.craftingTab field that this router projects through).
+const VIEWS_WITH_TAB = new Set([
+  "crafting",
+  "quests",
+  "achievements",
+  "townsfolk",
+]);
+
 function viewFromSegment(seg) {
   if (!seg) return "town";
   const decoded = decodeURIComponent(seg);
@@ -75,7 +85,7 @@ export function parseHash(hash = "") {
   if (view === "tileCollection") {
     if (segments[1]) viewParams.sub = decodeURIComponent(segments[1]);
     if (segments[2]) viewParams.cat = decodeURIComponent(segments[2]);
-  } else if (view === "crafting") {
+  } else if (VIEWS_WITH_TAB.has(view)) {
     if (segments[1]) viewParams.tab = decodeURIComponent(segments[1]);
   }
   const params = new URLSearchParams(queryPart);
@@ -101,7 +111,7 @@ export function buildHash({ view = "town", modal = null, viewParams = {}, modalP
       segments.push(encodeURIComponent(viewParams.sub));
       if (viewParams.cat) segments.push(encodeURIComponent(viewParams.cat));
     }
-  } else if (safeView === "crafting") {
+  } else if (VIEWS_WITH_TAB.has(safeView)) {
     if (viewParams.tab) segments.push(encodeURIComponent(viewParams.tab));
   }
   const path = segments.join("/");
@@ -128,7 +138,13 @@ export function routeFromState(state) {
     if (tcParams.sub) viewParams.sub = tcParams.sub;
     if (tcParams.cat) viewParams.cat = tcParams.cat;
   } else if (view === "crafting") {
-    if (state.craftingTab) viewParams.tab = state.craftingTab;
+    // craftingTab is the legacy redux home for the crafting station; if a
+    // viewParams.tab override is also set (e.g. from ROUTE/APPLY) prefer it
+    // since SET_VIEW carries craftingTab forward verbatim.
+    const tab = state.viewParams?.tab ?? state.craftingTab ?? null;
+    if (tab) viewParams.tab = tab;
+  } else if (VIEWS_WITH_TAB.has(view)) {
+    if (state.viewParams?.tab) viewParams.tab = state.viewParams.tab;
   }
   const modalParams = {};
   if (modal === "menu") {

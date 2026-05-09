@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useEffect, useRef } from "react";
 import { RECIPES, BIOMES } from "../../constants.js";
 import { DECORATIONS } from "../decorations/data.js";
 import IconCanvas, { hasIcon } from "../../ui/IconCanvas.jsx";
@@ -173,22 +173,22 @@ export default function CraftingScreen({ state, dispatch }) {
   // Stations that exist (built or not) — always show all three tabs, but indicate built status
   const builtStations = STATION_ORDER.filter((s) => stationBuilt(built, s));
 
-  // Determine active tab: prefer state.craftingTab if valid, else first built station
-  const [localTab, setLocalTab] = useState(() => {
-    if (craftingTab && STATION_ORDER.includes(craftingTab)) return craftingTab;
-    return builtStations[0] || STATION_ORDER[0];
-  });
+  // Active tab is URL-driven via state.craftingTab (the router projects it
+  // onto `#/crafting/<station>`). When unset (first visit), default to the
+  // first built station and back-fill craftingTab so the URL reflects it.
+  const activeTab = (craftingTab && STATION_ORDER.includes(craftingTab))
+    ? craftingTab
+    : (builtStations[0] || STATION_ORDER[0]);
 
-  // Sync when craftingTab changes (e.g. navigated from town)
-  const prevCraftingTab = useRef(craftingTab);
+  const dispatchedDefaultRef = useRef(false);
   useEffect(() => {
-    if (craftingTab && craftingTab !== prevCraftingTab.current && STATION_ORDER.includes(craftingTab)) {
-      prevCraftingTab.current = craftingTab;
-      setLocalTab(craftingTab);
-    }
-  }, [craftingTab]);
+    if (dispatchedDefaultRef.current) return;
+    if (craftingTab && STATION_ORDER.includes(craftingTab)) return;
+    dispatchedDefaultRef.current = true;
+    dispatch({ type: "SET_VIEW", view: "crafting", craftingTab: activeTab });
+  }, [craftingTab, activeTab, dispatch]);
 
-  const activeTab = localTab;
+  const setActiveTab = (s) => dispatch({ type: "SET_VIEW", view: "crafting", craftingTab: s });
   const stationRecipes = Object.entries(RECIPES).filter(([, r]) => r.station === activeTab);
   const meta = STATION_META[activeTab];
 
@@ -214,7 +214,7 @@ export default function CraftingScreen({ state, dispatch }) {
           return (
             <button
               key={s}
-              onClick={() => setLocalTab(s)}
+              onClick={() => setActiveTab(s)}
               className={`flex-shrink-0 flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg text-[10px] font-bold border-2 transition-colors ${
                 isActive
                   ? "text-white border-transparent"

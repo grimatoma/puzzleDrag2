@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { MoodPanel } from "../mood/index.jsx";
 import { ApprenticesPanel } from "../apprentices/index.jsx";
 import { WorkersPanel } from "../workers/index.jsx";
@@ -7,8 +6,14 @@ import BossGallery from "../bosses/Gallery.jsx";
 
 export const viewKey = "townsfolk";
 
+const TABS = ["mood", "apprentices", "workers", "bosses", "orders"];
+
 export default function TownsfolkScreen({ state, dispatch }) {
-  const [tab, setTab] = useState("mood");
+  // Tab lives in viewParams so the URL (src/router.js) is the single source
+  // of truth — back/forward and deep links land on the same sub-tab.
+  const requested = state?.viewParams?.tab;
+  const tab = TABS.includes(requested) ? requested : "mood";
+  const setTab = (next) => dispatch({ type: "SET_VIEW_PARAMS", params: { tab: next } });
   return (
     <div className="absolute inset-0 bg-gradient-to-b from-[#7c4f2c] to-[#6b4225] border-[3px] border-[#e2c19b] flex flex-col overflow-hidden">
       <div className="flex items-center justify-between px-3 py-2 flex-shrink-0 border-b border-[#e2c19b]/40">

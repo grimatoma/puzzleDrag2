@@ -1,6 +1,7 @@
-import { useState } from "react";
 import { ALMANAC_TIERS } from "../almanac/data.js";
 import { QUEST_TEMPLATES } from "./templates.js";
+
+const TABS = ["daily", "almanac"];
 
 /**
  * Returns a player-facing label for a tier reward.
@@ -144,7 +145,11 @@ function AlmanacTierCard({ idx, tierDef, almanacXp, almanacClaimed, dispatch }) 
 }
 
 export default function QuestsScreen({ state, dispatch, initialTab }) {
-  const [tab, setTab] = useState(initialTab || "daily");
+  // Tab is URL-driven via state.viewParams.tab. `initialTab` is honoured only
+  // when no URL value is present so direct deep links still win.
+  const requested = state?.viewParams?.tab ?? initialTab;
+  const tab = TABS.includes(requested) ? requested : "daily";
+  const setTab = (next) => dispatch({ type: "SET_VIEW_PARAMS", params: { tab: next } });
 
   // New deterministic 6-slot system (canonical); fall back to legacy dailies if absent
   const quests = state.quests ?? state.dailies ?? [];
