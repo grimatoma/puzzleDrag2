@@ -14,6 +14,7 @@ import { RAT_SPAWN_THRESHOLDS, RAT_CLEAR_REWARD_PER } from "../../constants.js";
 import { RATS_HAZARD_ENABLED } from "../../featureFlags.js";
 import { hasTag } from "../tileCollection/tags.js";
 import { computeWorkerEffects } from "../apprentices/aggregate.js";
+import { effectiveRatSpawnRate } from "./attractsRats.js";
 
 const PLANT_KEYS = new Set(["grass_hay", "grain_wheat", "grain", "berry"]);
 
@@ -35,7 +36,10 @@ export function rollRatSpawn(state, rng = Math.random) {
   if ((inv.grain_wheat ?? 0) <= RAT_SPAWN_THRESHOLDS.grain_wheat) return null;
   const rats = state.hazards?.rats ?? [];
   if (rats.length >= RAT_SPAWN_THRESHOLDS.maxActive) return null;
-  if (rng() >= RAT_SPAWN_THRESHOLDS.perFillRate) return null;
+  // Catalog §7: tiles tagged "attracts_rats" (Manna, Jackfruit) bump the
+  // spawn rate by ATTRACT_RATE_BONUS each, capped at 1.0.
+  const rate = effectiveRatSpawnRate(RAT_SPAWN_THRESHOLDS.perFillRate, state.grid);
+  if (rng() >= rate) return null;
 
   // Pick a random non-special, non-rat cell
   const grid = state.grid;
