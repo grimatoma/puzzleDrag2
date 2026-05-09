@@ -62,6 +62,13 @@ export function reduce(state, action) {
       if (typeof actualKey === "string" && actualKey.startsWith("mine_") && actualGained > 0) {
         next = tick(next, "mine_chained", actualGained);
       }
+      // Per-category milestones — prefix-match the chain key.
+      if (typeof actualKey === "string" && actualGained > 0) {
+        if (actualKey.startsWith("veg_")) next = tick(next, "veg_chained", actualGained);
+        else if (actualKey.startsWith("fruit_")) next = tick(next, "fruit_chained", actualGained);
+        else if (actualKey.startsWith("flower_")) next = tick(next, "flower_chained", actualGained);
+        else if (actualKey.startsWith("herd_")) next = tick(next, "herd_chained", actualGained);
+      }
 
       return next;
     }
