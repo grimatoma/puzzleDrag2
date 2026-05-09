@@ -135,11 +135,12 @@ export function TileIcon({ tileId, size = 40, locked = false }) {
 }
 
 function TileRow({ row, category, dispatch }) {
-  const handleActivate = () => {
-    dispatch({ type: "SET_ACTIVE_TILE", payload: { category, tileId: row.id } });
-  };
-  const handleDeactivate = () => {
-    dispatch({ type: "SET_ACTIVE_TILE", payload: { category, tileId: null } });
+  const handleToggle = () => {
+    if (row.action !== "toggle") return;
+    dispatch({
+      type: "SET_ACTIVE_TILE",
+      payload: { category, tileId: row.active ? null : row.id },
+    });
   };
   const handleBuy = () => {
     dispatch({ type: "BUY_TILE", payload: { id: row.id } });
@@ -147,7 +148,10 @@ function TileRow({ row, category, dispatch }) {
 
   return (
     <div
+      onClick={row.action === "toggle" ? handleToggle : undefined}
       className={`flex items-center gap-3 p-2 rounded-xl border transition-colors ${
+        row.action === "toggle" ? "cursor-pointer" : ""
+      } ${
         row.active
           ? "bg-[#4f6b3a]/40 border-[#a8d44a]"
           : row.locked
@@ -175,26 +179,23 @@ function TileRow({ row, category, dispatch }) {
       </div>
 
       <div className="flex-shrink-0 flex flex-col items-end gap-1">
-        {row.action === "toggle" && !row.active && (
-          <button
-            onClick={handleActivate}
-            className="px-2 py-1 rounded-lg bg-[#4f6b3a] text-[#d4f0a4] text-xs font-bold hover:bg-[#5f7b4a] transition-colors"
+        {row.action === "toggle" && (
+          <span
+            className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${
+              row.active
+                ? "bg-[#a8d44a] border-[#a8d44a] text-[#1a2a0a]"
+                : row.locked
+                ? "border-[#5a4030]/50"
+                : "border-[#8a6040]"
+            }`}
+            aria-label={row.active ? "Active — click to deselect" : "Inactive — click to select"}
           >
-            Select
-          </button>
-        )}
-        {row.action === "toggle" && row.active && (
-          <button
-            onClick={handleDeactivate}
-            className="px-2 py-1 rounded-lg bg-[#3a2a1a] text-[#c8a87a] text-xs hover:bg-[#4a3a2a] transition-colors border border-[#6a4030]/50"
-            title="Remove this tile from the board"
-          >
-            ✕ Off
-          </button>
+            {row.active && <span className="text-[10px] font-bold">✓</span>}
+          </span>
         )}
         {row.action === "buy" && (
           <button
-            onClick={handleBuy}
+            onClick={(e) => { e.stopPropagation(); handleBuy(); }}
             className="px-2 py-1 rounded-lg bg-[#8a6a1a] text-[#ffd248] text-xs font-bold hover:bg-[#9a7a2a] transition-colors"
           >
             Buy
