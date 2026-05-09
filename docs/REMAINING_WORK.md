@@ -88,6 +88,7 @@ Same situation as before; flagged for a balance pass.
 
 ## ✅ Outstanding workers (catalog §9) — all shipped
 
+<<<<<<< HEAD
 | Worker          | Status |
 |-----------------|--------|
 | Peasant / Reaper / Lumberjack            | ✅ #247 / #230 / #247 |
@@ -96,6 +97,33 @@ Same situation as before; flagged for a balance pass.
 | Ratcatcher / Sapper                      | ✅ #249 |
 | Mine roster (Digger / Excavator / Stone Miner / Iron Miner / Coal Miner / Silver Miner / Jeweler / Engineer / Alchemist / Sculptor) | ✅ #245 + #246 (plus pre-existing Canary + Geologist) |
 | Sea roster (Deckhand, Fisherman, Boatwoman, Trawlerman, Harpooner, Oilman, Cook, Chef, Navigator, Confectioner, Captain, Explorer) | ✅ #238 / #241 / #243 / #244. Antiquarian / Artisan / Buccaneer / Pirate need a new "treasure" effect type — not yet shipped. |
+=======
+Workers from the catalog not yet implemented:
+
+| Worker          | Chain                    | Effect at max          | Status |
+|-----------------|--------------------------|------------------------|--------|
+| Peasant         | grass → hay              | 10 grass = 1 hay       | Not built — grass chain is implicit (hay = the tile and the product) |
+| Reaper          | grain → bread            | 6 grain = 1 bread      | Not built — bread chain is now wired (PR #194), worker missing |
+| Lumberjack      | tree → wood              | 1 tree = 1 wood        | Not built — chain length 1 doesn't fit the threshold model |
+| Grain Trader    | grain → vegetable        | 4 grain = 1 vegetable  | ✅ Tilda (PR #201) — `chain_redirect_category` |
+| Gardener        | vegetable → fruit        | 5 vegetable = 1 fruit  | ✅ Marin (PR #201) |
+| Orchardist      | fruit → flower           | 6 fruit = 1 flower     | ✅ Annek (PR #201) |
+| Poultryman      | bird → egg               | 8 bird = 1 egg         | Not built |
+| Farmer          | bird → herd animal       | 7 bird = 1 herd        | ✅ Ren (PR #201) |
+| Ratcatcher      | rats → coin              | 10 rats = 1 coin       | Not built — hazard-to-resource conversion not modeled |
+| Sapper          | gas → coin               | 7 gas = 1 coin         | Not built — same |
+| (mine workers)  | (Digger/Excavator/etc.)  | various                | ✅ shipped — Canary, Geologist, Digger, Excavator, Stone Miner, Coal Miner, Jeweler, Iron Miner, Silver Miner, Engineer, Alchemist, Sculptor (full catalog §9 mine list). |
+
+**Cross-chain workers — ✅ done in PR #201.** New effect type
+`chain_redirect_category` with `{ fromCategory, toCategory, from, to }`
+fields, integrated in `state.js`'s `CHAIN_COLLECTED` upgrade path: when
+a redirect is active and the chained tile's category matches `fromCategory`,
+the upgrade target becomes the active species in `toCategory` instead of
+the source's native `next`, with the redirect's threshold superseding the
+native one. Multiple redirects on the same source category resolve by
+lowest threshold (most generous). Aggregate computed in
+`apprentices/aggregate.js` `computeWorkerEffects()`.
+>>>>>>> dcd40fb (Add mine workers: Iron Miner, Silver Miner, Engineer, Alchemist, Sculptor)
 
 ---
 
