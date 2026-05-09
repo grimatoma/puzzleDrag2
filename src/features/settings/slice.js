@@ -49,6 +49,7 @@ const DEFAULT_SETTINGS = {
 export const initial = {
   settings: { ...DEFAULT_SETTINGS, ...(loadSettings() || {}) },
   settingsTab: 'main',
+  settingsDebugOpen: false,
 };
 
 // Reducer is pure: any localStorage writes/clears triggered by these actions
@@ -83,6 +84,9 @@ export function reduce(state, action) {
 
     case 'SETTINGS/SET_TAB':
       return { ...state, settingsTab: action.tab };
+
+    case 'SETTINGS/OPEN_DEBUG':
+      return { ...state, modal: 'menu', settingsTab: 'about', settingsDebugOpen: true };
 
     case 'SETTINGS/RESET_SAVE': {
       // Set flag; prototype.jsx's useEffect performs the actual reload, and

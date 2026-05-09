@@ -1036,7 +1036,7 @@ function coreReducer(state, action) {
     case "OPEN_MODAL":
       return { ...state, modal: action.modal, settingsTab: 'main' };
     case "CLOSE_MODAL":
-      return { ...state, modal: null, settingsTab: 'main' };
+      return { ...state, modal: null, settingsTab: 'main', settingsDebugOpen: false };
     case "BUILD": {
       // Support both legacy action.building (full object) and action.payload.id (lookup by id)
       const b = action.building ?? BUILDINGS.find((x) => x.id === action.payload?.id);
@@ -1870,6 +1870,7 @@ const SLICE_PRIMARY_ACTIONS = new Set([
   "STORY/DISMISS_MODAL",
   // Settings actions are owned by settings/slice
   "SETTINGS/SET_TAB",
+  "SETTINGS/OPEN_DEBUG",
   "SETTINGS/LEAVE_BOARD",
   "SETTINGS/TOGGLE",
   "SETTINGS/RESET_SAVE",

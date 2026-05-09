@@ -259,7 +259,7 @@ function DebugBtn({ children, onClick, color = 'slate' }) {
 // --- About tab ---
 function AboutTab({ state, dispatch }) {
   const [taps, setTaps] = useState(0);
-  const [debugOpen, setDebugOpen] = useState(false);
+  const [debugOpen, setDebugOpen] = useState(state.settingsDebugOpen ?? false);
   const [itemBiome, setItemBiome] = useState('farm');
   const [itemKey, setItemKey] = useState('grass_hay');
 
