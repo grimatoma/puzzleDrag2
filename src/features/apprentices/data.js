@@ -675,6 +675,36 @@ export const TOWNSFOLK = [
     requirement: { building: "inn", orLevel: 4 },
     description: "Splits oaks at the woodline before the sun climbs. Drops an extra log into every tree chain.",
   },
+
+  // ── Hazard-counter workers (catalog §9: Ratcatcher / Sapper) ────────────
+  {
+    id: "ratcatcher",
+    name: "Wenna",
+    role: "Ratcatcher",
+    icon: "🐀",
+    color: "#5a4838",
+    wage: 18,
+    hireCost: { worker: 1, grass_hay: 6, bread: 6 },
+    maxCount: 2,
+    // 2× rat-clear coin payout at max hire (per-hire +0.5).
+    effect: { hazardCoinMultiplier: { rats: 2.0 } },
+    requirement: { building: "inn" },
+    description: "Pads silent through the granary at dusk. Doubles the bounty on every cleared rat-pack.",
+  },
+  {
+    id: "sapper",
+    name: "Yarek",
+    role: "Sapper",
+    icon: "💣",
+    color: "#5a3a14",
+    wage: 22,
+    hireCost: { worker: 1, mine_coal: 4, bread: 8, mine_ingot: 2 },
+    maxCount: 2,
+    // Mirrors Canary's gas_vent reduce, applied to cave_in instead.
+    effect: { hazardSpawnReduce: { cave_in: 0.6 } },
+    requirement: { biomeUnlocked: "mine" },
+    description: "Reads the timber creak before the roof drops. Cuts cave-in spawn rate in half.",
+  },
 ];
 
 export const TOWNSFOLK_MAP = Object.fromEntries(TOWNSFOLK.map((w) => [w.id, w]));

@@ -94,11 +94,13 @@ export function rollHazard(state, rng = Math.random) {
     }
   }
 
-  // Canary reduces gas_vent spawn probability — computed on the fly from workers
-  if (picked.id === "gas_vent") {
+  // Canary reduces gas_vent spawn probability; Sapper does the same for
+  // cave_in. Both go through hazardSpawnReduce in the worker aggregator.
+  if (picked.id === "gas_vent" || picked.id === "cave_in") {
     const workerEffects = computeWorkerEffects(state);
     const reduce = workerEffects.hazardSpawnReduce ?? {};
-    if (reduce.gas_vent && rng() < reduce.gas_vent) return null;
+    const r = reduce[picked.id];
+    if (r && rng() < r) return null;
   }
 
   return { id: picked.id, ...picked.spawn(state.grid ?? [], rng) };

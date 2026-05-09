@@ -16,6 +16,7 @@ describe("computeWorkerEffects — coverage gaps", () => {
       seasonBonus: {},
       effectivePoolWeights: {},
       hazardSpawnReduce: {},
+      hazardCoinMultiplier: {},
       chainRedirect: {},
       recipeInputReduce: {},
     });

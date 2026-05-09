@@ -41,6 +41,10 @@ export function computeWorkerEffects(state) {
     seasonBonus: {},
     effectivePoolWeights: {}, // Phase 9 integer-floored pool tilt
     hazardSpawnReduce: {},    // Phase 9 gas-vent / future hazard reduction
+    // Hazard-clear coin multiplier — workers that scale the coin reward
+    // when the player clears a hazard (e.g. Ratcatcher on rats). Shape:
+    // { [hazardId]: number } with 1.0 = no buff. Aggregator additive past 1.
+    hazardCoinMultiplier: {},
     // Cross-chain redirect: when a worker is hired with `chain_redirect_category`,
     // chain upgrades for every species in `fromCategory` produce a tile from
     // `toCategory` (active species there) instead of the species' native `next`.
@@ -165,6 +169,16 @@ export function computeWorkerEffects(state) {
         const perHire = maxVal / w.maxCount;
         out.effectivePoolWeights[k] =
           (out.effectivePoolWeights[k] ?? 0) + Math.floor(perHire * count);
+      }
+    }
+
+    // hazardCoinMultiplier — additive bonus above 1× per-hire fraction.
+    // e.hazardCoinMultiplier: { [hazardId]: number >= 1 } (max-hire value)
+    if (e.hazardCoinMultiplier) {
+      for (const [k, maxVal] of Object.entries(e.hazardCoinMultiplier)) {
+        const bonus = (maxVal - 1) / w.maxCount; // per-hire bonus above 1×
+        out.hazardCoinMultiplier[k] =
+          (out.hazardCoinMultiplier[k] ?? 1) + bonus * count;
       }
     }
   }
