@@ -4,7 +4,7 @@ import { BIOMES } from "../constants.js";
 
 describe("Phase 5.6 — Board pool wiring", () => {
   const baseDefaults = {
-    grass: "grass_hay", grain: "grain_wheat", wood: "wood_log", berry: "berry", bird: "bird_egg",
+    grass: "grass_hay", grain: "grain_wheat", bird: "bird_egg",
     vegetables: "veg_carrot",
     fruits: "fruit_apple", flowers: "flower_pansy", trees: "tree_oak",
     herd_animals: "herd_pig", cattle: "cattle_cow", mounts: "mount_horse",
@@ -13,9 +13,9 @@ describe("Phase 5.6 — Board pool wiring", () => {
     tileCollection: {
       activeByCategory: { ...baseDefaults, ...overrides },
       discovered: {
-        grass_hay: true, grain_wheat: true, wood_log: true, berry: true, bird_egg: true,
-        grain: true, wood_plank: true, berry_jam: true, bird_turkey: true,
-        grass_meadow: true, wood_beam: true, grass_spiky: true, grain_flour: true,
+        grass_hay: true, grain_wheat: true, bird_egg: true,
+        grain: true, bird_turkey: true,
+        grass_meadow: true, grass_spiky: true, grain_flour: true,
         veg_carrot: true, veg_eggplant: true, veg_turnip: true, veg_cucumber: true,
         fruit_apple: true, flower_pansy: true, tree_oak: true,
         herd_pig: true, cattle_cow: true, mount_horse: true,
@@ -44,14 +44,14 @@ describe("Phase 5.6 — Board pool wiring", () => {
   });
 
   it("D: worker pool_weight stacks when key is the active tile type", () => {
-    const r3 = getActivePool(mkState({}, { berry: 2 }), "farm");
-    // base 2 + worker 2 = 4
-    expect(r3.filter((k) => k === "berry").length).toBe(4);
+    const r3 = getActivePool(mkState({}, { tree_oak: 2 }), "farm");
+    // base 1 (single tree slot) + worker 2 = 3
+    expect(r3.filter((k) => k === "tree_oak").length).toBe(3);
   });
 
   it("E: LOCKED — worker pool_weight does NOT add tiles when tile type is null", () => {
-    const r4 = getActivePool(mkState({ berry: null }, { berry: 2 }), "farm");
-    expect(r4.filter((k) => k === "berry").length).toBe(0);
+    const r4 = getActivePool(mkState({ trees: null }, { tree_oak: 2 }), "farm");
+    expect(r4.filter((k) => k === "tree_oak").length).toBe(0);
   });
 
   it("F: turkey weight ignored when egg is active bird, applied when turkey is active bird", () => {

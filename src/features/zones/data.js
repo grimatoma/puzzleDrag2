@@ -149,28 +149,12 @@ export function pickByZoneSeasonDrops({
 }
 
 /**
- * Returns true when the zone has an explicit upgrade-map entry for the
- * source resource's category. Used by the chain pipeline to decide whether
- * to fall back to the resource's native `next` when `nextResourceForZone`
- * returns null — when the override is explicit (e.g. fruits → gold), the
- * caller should respect it and NOT fall back to the native chain.
- */
-export function zoneHasExplicitUpgradeOverride({ currentRes, zoneId, categoryOf }) {
-  if (!currentRes || !zoneId) return false;
-  const zone = ZONES[zoneId];
-  if (!zone || !zone.upgradeMap) return false;
-  const sourceTileCat = categoryOf?.[currentRes.key];
-  if (!sourceTileCat) return false;
-  const sourceZoneCat = TILE_CATEGORY_TO_ZONE_CATEGORY[sourceTileCat];
-  if (!sourceZoneCat) return false;
-  return Object.prototype.hasOwnProperty.call(zone.upgradeMap, sourceZoneCat);
-}
-
-/**
- * Per-zone chain-upgrade redirect. Returns null when the zone has no override
- * or the target is the "gold" sentinel. Callers should consult
- * `zoneHasExplicitUpgradeOverride` to decide whether to fall back to the
- * resource's native `.next` chain.
+ * Per-zone chain-upgrade redirect for farm tiles. Returns the resource that
+ * should spawn as the next-tier upgrade tile, or null when the zone says no
+ * tile (gold sentinel, no upgradeMap entry, or target category has no
+ * resource on the biome). For farm-category resources (anything in
+ * TILE_CATEGORY_TO_ZONE_CATEGORY) the result is authoritative — the zone
+ * is the only source of upgrade behaviour.
  */
 export function nextResourceForZone({
   currentRes,

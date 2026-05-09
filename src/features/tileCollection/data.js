@@ -2,12 +2,13 @@ import { UPGRADE_THRESHOLDS, BALANCE_OVERRIDES } from "../../constants.js";
 import { applyTileOverrides } from "../../config/applyOverrides.js";
 
 export const CATEGORIES = [
-  "grass", "grain", "wood", "berry", "bird", "vegetables",
-  // Phase: import-icons-placeholders — new categories from REFERENCE_CATALOG §7.
-  // Each adds tile-type entries with placeholder discovery; board-pool spawn
-  // weights, market prices, worker effects, and chain → product wiring land in
-  // follow-up PRs.
+  // Farm tile species. `wood` and `berry` are intentionally absent — they're
+  // resources/items (logs, planks, beams; berries, jam), not board tiles.
+  "grass", "grain", "bird", "vegetables",
   "fruits", "flowers", "trees", "herd_animals", "cattle", "mounts",
+  // Mine tile species — stone/cobble/block, ore/ingot, coal/coke, gem/cutgem,
+  // gold (singleton), dirt (singleton).
+  "mine_stone", "mine_ore", "mine_coal", "mine_gem", "mine_gold", "mine_dirt",
   // Fish biome category — sardine / mackerel / clam / oyster / kelp.
   "fish",
 ];
@@ -38,8 +39,6 @@ export const SUB_CATEGORY_ICONS = {
 export const CATEGORY_TO_SUBCATEGORY = {
   grass: "farm",
   grain: "farm",
-  wood: "farm",
-  berry: "farm",
   bird: "farm",
   vegetables: "farm",
   fruits: "farm",
@@ -48,25 +47,23 @@ export const CATEGORY_TO_SUBCATEGORY = {
   herd_animals: "farm",
   cattle: "farm",
   mounts: "farm",
+  mine_stone: "mining",
+  mine_ore: "mining",
+  mine_coal: "mining",
+  mine_gem: "mining",
+  mine_gold: "mining",
+  mine_dirt: "mining",
   fish: "water",
 };
-
-// Categories that are not user-facing tile species: their entries exist in
-// TILE_TYPES for backward compatibility, but per the design "wood" and
-// "berry" are really resources/items (logs/planks/beams; berries/jam) — they
-// don't belong in the tile-collection wiki or the start-farming tile picker.
-export const HIDDEN_TILE_CATEGORIES = new Set(["wood", "berry"]);
 
 /** Categories belonging to a sub-category. Unmapped categories fall under
  *  "uncategorized" so the wiki always surfaces them. */
 export function categoriesForSubCategory(sub) {
   if (sub === "hazards") return [];
   if (sub === "uncategorized") {
-    return CATEGORIES.filter((c) => !CATEGORY_TO_SUBCATEGORY[c] && !HIDDEN_TILE_CATEGORIES.has(c));
+    return CATEGORIES.filter((c) => !CATEGORY_TO_SUBCATEGORY[c]);
   }
-  return CATEGORIES.filter(
-    (c) => CATEGORY_TO_SUBCATEGORY[c] === sub && !HIDDEN_TILE_CATEGORIES.has(c),
-  );
+  return CATEGORIES.filter((c) => CATEGORY_TO_SUBCATEGORY[c] === sub);
 }
 
 export const TILE_TYPES = [
@@ -112,39 +109,7 @@ export const TILE_TYPES = [
     description: "Finely milled flour, the foundation of the Bakery's most valuable recipes.",
   },
 
-  // Wood
-  {
-    id: "wood_log", category: "wood", displayName: "Log", baseResource: "wood_log", tier: 0,
-    discovery: { method: "default" },
-    effects: {},
-    description: "Freshly felled timber from the vale's surrounding woodland, used in construction and fuel.",
-  },
-  {
-    id: "wood_plank", category: "wood", displayName: "Plank", baseResource: "wood_plank", tier: 1,
-    discovery: { method: "chain", chainLengthOf: "wood_log", chainLength: UPGRADE_THRESHOLDS.wood_log },
-    effects: {},
-    description: "Sawn and smoothed planks ready for carpentry, unlocked through long log chains.",
-  },
-  {
-    id: "wood_beam", category: "wood", displayName: "Beam", baseResource: "wood_beam", tier: 2,
-    discovery: { method: "research", researchOf: "wood_plank", researchAmount: 30 },
-    effects: {},
-    description: "Heavy structural beams for buildings and forge frames, crafted from seasoned planks.",
-  },
-
-  // Berry
-  {
-    id: "berry", category: "berry", displayName: "Berry", baseResource: "berry", tier: 0,
-    discovery: { method: "default" },
-    effects: {},
-    description: "Wild berries gathered from hedgerows and thickets throughout the vale.",
-  },
-  {
-    id: "berry_jam", category: "berry", displayName: "Jam", baseResource: "berry_jam", tier: 1,
-    discovery: { method: "chain", chainLengthOf: "berry", chainLength: UPGRADE_THRESHOLDS.berry },
-    effects: {},
-    description: "Sweet fruit preserves made from long berry harvests, sold for good coin at the Larder.",
-  },
+  // (wood and berry are resources/items, not tile species — see BIOMES.farm.resources.)
 
   // Bird
   {
@@ -625,6 +590,84 @@ export const TILE_TYPES = [
     discovery: { method: "default" },
     effects: {},
     description: "A leafy seaweed — the chain feeds into fish oil.",
+  },
+  // ── Mine biome ─────────────────────────────────────────────────────────
+  {
+    id: "mine_stone", category: "mine_stone", displayName: "Stone",
+    baseResource: "mine_stone", tier: 0,
+    discovery: { method: "default" },
+    effects: {},
+    description: "Common rock chipped from the cavern walls — the staple of every mining run.",
+  },
+  {
+    id: "mine_cobble", category: "mine_stone", displayName: "Cobble",
+    baseResource: "mine_cobble", tier: 1,
+    discovery: { method: "chain", chainLengthOf: "mine_stone", chainLength: UPGRADE_THRESHOLDS.mine_stone },
+    effects: {},
+    description: "Trimmed stone, ready for paving and foundations.",
+  },
+  {
+    id: "mine_block", category: "mine_stone", displayName: "Block",
+    baseResource: "mine_block", tier: 2,
+    discovery: { method: "chain", chainLengthOf: "mine_cobble", chainLength: UPGRADE_THRESHOLDS.mine_cobble },
+    effects: {},
+    description: "Squared masonry blocks — the structural backbone of stout buildings.",
+  },
+  {
+    id: "mine_ore", category: "mine_ore", displayName: "Ore",
+    baseResource: "mine_ore", tier: 0,
+    discovery: { method: "default" },
+    effects: {},
+    description: "Raw metallic ore prised from a vein — smelt in the forge for ingots.",
+  },
+  {
+    id: "mine_ingot", category: "mine_ore", displayName: "Ingot",
+    baseResource: "mine_ingot", tier: 1,
+    discovery: { method: "chain", chainLengthOf: "mine_ore", chainLength: UPGRADE_THRESHOLDS.mine_ore },
+    effects: {},
+    description: "A bar of refined metal, the foundation of forged tools and horseshoes.",
+  },
+  {
+    id: "mine_coal", category: "mine_coal", displayName: "Coal",
+    baseResource: "mine_coal", tier: 0,
+    discovery: { method: "default" },
+    effects: {},
+    description: "Sooty fuel for the forge — long coal chains promote it to coke.",
+  },
+  {
+    id: "mine_coke", category: "mine_coal", displayName: "Coke",
+    baseResource: "mine_coke", tier: 1,
+    discovery: { method: "chain", chainLengthOf: "mine_coal", chainLength: UPGRADE_THRESHOLDS.mine_coal },
+    effects: {},
+    description: "Hot-burning coke, the forge master's preferred fuel.",
+  },
+  {
+    id: "mine_gem", category: "mine_gem", displayName: "Gem",
+    baseResource: "mine_gem", tier: 0,
+    discovery: { method: "default" },
+    effects: {},
+    description: "A rough gemstone glittering in the rock — chain enough to cut a polished stone.",
+  },
+  {
+    id: "mine_cutgem", category: "mine_gem", displayName: "Cut Gem",
+    baseResource: "mine_cutgem", tier: 1,
+    discovery: { method: "chain", chainLengthOf: "mine_gem", chainLength: UPGRADE_THRESHOLDS.mine_gem },
+    effects: {},
+    description: "A faceted gemstone, sold for a small fortune at the market.",
+  },
+  {
+    id: "mine_gold", category: "mine_gold", displayName: "Gold",
+    baseResource: "mine_gold", tier: 0,
+    discovery: { method: "default" },
+    effects: {},
+    description: "A nugget of pure gold pulled from the deeper seams.",
+  },
+  {
+    id: "mine_dirt", category: "mine_dirt", displayName: "Dirt",
+    baseResource: "mine_dirt", tier: 0,
+    discovery: { method: "default" },
+    effects: {},
+    description: "Crumbly dirt that backfills tunnels — needed to clear mysterious ore.",
   },
 ];
 

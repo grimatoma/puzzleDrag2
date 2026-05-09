@@ -24,12 +24,15 @@ describe("Phase 5.2 — state.tileCollection slice", () => {
     }
   });
 
-  it("activeByCategory: grass=hay, wood=log, berry=berry, bird=egg", () => {
+  it("activeByCategory: grass=hay, bird=egg, fruits=apple, trees=oak (wood/berry are resources, not tiles)", () => {
     const s0 = initialState();
     expect(s0.tileCollection.activeByCategory.grass).toBe("grass_hay");
-    expect(s0.tileCollection.activeByCategory.wood).toBe("wood_log");
-    expect(s0.tileCollection.activeByCategory.berry).toBe("berry");
     expect(s0.tileCollection.activeByCategory.bird).toBe("bird_egg");
+    expect(s0.tileCollection.activeByCategory.fruits).toBe("fruit_apple");
+    expect(s0.tileCollection.activeByCategory.tree_oak ?? s0.tileCollection.activeByCategory.trees).toBeDefined();
+    // wood/berry are no longer tile categories.
+    expect(s0.tileCollection.activeByCategory.wood).toBeUndefined();
+    expect(s0.tileCollection.activeByCategory.berry).toBeUndefined();
     // Grain previously started null because wheat was the only entry and
     // wheat is `chain`-discovered. After REFERENCE_CATALOG canonicalized
     // Corn/Buckwheat/Rice as `default`, grain auto-activates the first one

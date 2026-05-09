@@ -10,7 +10,7 @@ import {
   pickByZoneSeasonDrops,
   seasonIndexInSession,
   seasonNameInSession,
-  zoneHasExplicitUpgradeOverride,
+  TILE_CATEGORY_TO_ZONE_CATEGORY,
   ZONES,
 } from "./features/zones/data.js";
 import { TILE_TYPES_MAP } from "./features/tileCollection/data.js";
@@ -438,7 +438,7 @@ export class GameScene extends Phaser.Scene {
 
     // Per-tile produces override (Balance Manager → Tiles tab). When the
     // active tile-type for this resource has `effects.producesResource` set,
-    // it overrides both the zone redirect and the native chain. Multiple
+    // it overrides both the zone config and the native chain. Multiple
     // tile-types can share a base resource; we look up by resource key first
     // since each species' tile-id matches its base-resource key by convention.
     const tileType = TILE_TYPES_MAP?.[res.key];
@@ -448,27 +448,23 @@ export class GameScene extends Phaser.Scene {
       if (produced) return produced;
     }
 
+    // Farm chains are owned by the active zone's upgradeMap. Whatever the
+    // zone says (concrete category, gold sentinel, or "no entry") is the
+    // final answer — we do NOT fall back to the resource's native `.next`.
+    // Mine/water resources aren't represented in TILE_CATEGORY_TO_ZONE_CATEGORY
+    // and so fall through to their native chain below.
     const zoneId = this.registry.get("activeZone") ?? null;
-    if (zoneId) {
+    const sourceTileCat = CATEGORY_OF[res.key];
+    const sourceZoneCat = sourceTileCat ? TILE_CATEGORY_TO_ZONE_CATEGORY[sourceTileCat] : null;
+    if (zoneId && sourceZoneCat) {
       const tileCollectionActive = this.registry.get("tileCollectionActive") ?? null;
-      const redirected = nextResourceForZone({
+      return nextResourceForZone({
         currentRes: res,
         zoneId,
         biomeResources: resources,
         tileCollectionActive,
         categoryOf: CATEGORY_OF,
       });
-      if (redirected) return redirected;
-      // Zones own chain redirects: when the zone explicitly overrides this
-      // category (even to the gold sentinel that has no concrete tile),
-      // respect it and do NOT fall back to the resource's native `.next`.
-      if (zoneHasExplicitUpgradeOverride({
-        currentRes: res,
-        zoneId,
-        categoryOf: CATEGORY_OF,
-      })) {
-        return null;
-      }
     }
     const nextKey = resources.find((r) => r.key === res.key)?.next;
     return nextKey ? resources.find((r) => r.key === nextKey) : null;

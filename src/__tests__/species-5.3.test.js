@@ -21,8 +21,9 @@ describe("Phase 5.3 — SET_ACTIVE_TILE toggle", () => {
       payload: { category: "grass", tileId: "grass_meadow" },
     });
     expect(a1.tileCollection.activeByCategory.grass).toBe("grass_meadow");
-    expect(a1.tileCollection.activeByCategory.wood).toBe("wood_log");
-    expect(a1.tileCollection.activeByCategory.berry).toBe("berry");
+    // Sibling categories untouched.
+    expect(a1.tileCollection.activeByCategory.bird).toBe(seeded.tileCollection.activeByCategory.bird);
+    expect(a1.tileCollection.activeByCategory.fruits).toBe(seeded.tileCollection.activeByCategory.fruits);
   });
 
   it("toggle back to hay — slot still holds exactly one id", () => {
@@ -97,7 +98,7 @@ describe("Phase 5.3 — SET_ACTIVE_TILE toggle", () => {
       type: "SET_ACTIVE_TILE",
       payload: { category: "grass", tileId: "grass_meadow" },
     });
-    for (const c of ["wood", "berry", "bird", "grain"]) {
+    for (const c of ["bird", "grain", "fruits", "trees"]) {
       expect(h1.tileCollection.activeByCategory[c]).toBe(seeded.tileCollection.activeByCategory[c]);
     }
   });
