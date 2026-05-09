@@ -1273,6 +1273,8 @@ export function TownView({ state, dispatch }) {
             const b = slot.buildingId ? BUILDINGS.find((x) => x.id === slot.buildingId) : null;
             const isBuilt = !!b;
             const isPlacing = !!pendingBuilding && !isBuilt;
+            // Empty plots are invisible until the player enters placement mode.
+            if (!isBuilt && !isPlacing) return null;
             const CRAFTING_STATIONS = new Set(["bakery", "forge", "larder"]);
 
             const onClick = () => {
@@ -1537,7 +1539,7 @@ function BuildPicker({ buildings, state, locationBuilt, freePlots, plotCount, on
                 type="button"
                 disabled={!pickable}
                 onClick={() => pickable && onPick(b)}
-                className="text-left rounded-lg border px-3 py-2 transition-colors"
+                className="text-left rounded-lg border px-3 py-2 transition-colors flex items-stretch gap-3"
                 style={{
                   borderColor: pickable ? "rgba(155,219,106,.55)" : "rgba(255,255,255,.1)",
                   background: pickable ? "rgba(155,219,106,.08)" : "rgba(255,255,255,.04)",
@@ -1545,25 +1547,38 @@ function BuildPicker({ buildings, state, locationBuilt, freePlots, plotCount, on
                   opacity: pickable ? 1 : 0.55,
                 }}
               >
-                <div className="flex items-center justify-between gap-2">
-                  <div className="font-bold" style={{ color: pickable ? "#9bdb6a" : "#ddd", fontSize: "clamp(11px,1.2vw,14px)" }}>
-                    {b.name}
-                    {isBuilt && <span className="ml-2 text-white/50" style={{ fontSize: "10px" }}>· built</span>}
-                  </div>
-                  <div className="font-semibold text-white/65" style={{ fontSize: "clamp(9px,1vw,11px)" }}>
-                    Lv {b.lv}
-                  </div>
+                <div
+                  className="relative flex-shrink-0 rounded overflow-hidden"
+                  style={{
+                    width: 56,
+                    height: 56,
+                    background: "rgba(255,255,255,.05)",
+                    border: "1px solid rgba(255,255,255,.1)",
+                  }}
+                >
+                  <BuildingIllustration id={b.id} isBuilt={true} />
                 </div>
-                {b.desc && (
-                  <div className="text-white/65 leading-snug mt-0.5" style={{ fontSize: "clamp(9px,1vw,11px)" }}>
-                    {b.desc}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="font-bold truncate" style={{ color: pickable ? "#9bdb6a" : "#ddd", fontSize: "clamp(11px,1.2vw,14px)" }}>
+                      {b.name}
+                      {isBuilt && <span className="ml-2 text-white/50" style={{ fontSize: "10px" }}>· built</span>}
+                    </div>
+                    <div className="font-semibold text-white/65 flex-shrink-0" style={{ fontSize: "clamp(9px,1vw,11px)" }}>
+                      Lv {b.lv}
+                    </div>
                   </div>
-                )}
-                <div className="mt-1 flex flex-wrap items-center gap-2">
-                  <span className="font-semibold" style={{ color: "#f7d572", fontSize: "clamp(9px,1vw,11px)" }}>{costStr}</span>
-                  {reason && (
-                    <span className="font-semibold" style={{ color: "#e08070", fontSize: "clamp(9px,1vw,11px)" }}>· {reason}</span>
+                  {b.desc && (
+                    <div className="text-white/65 leading-snug mt-0.5" style={{ fontSize: "clamp(9px,1vw,11px)" }}>
+                      {b.desc}
+                    </div>
                   )}
+                  <div className="mt-1 flex flex-wrap items-center gap-2">
+                    <span className="font-semibold" style={{ color: "#f7d572", fontSize: "clamp(9px,1vw,11px)" }}>{costStr}</span>
+                    {reason && (
+                      <span className="font-semibold" style={{ color: "#e08070", fontSize: "clamp(9px,1vw,11px)" }}>· {reason}</span>
+                    )}
+                  </div>
                 </div>
               </button>
             );
