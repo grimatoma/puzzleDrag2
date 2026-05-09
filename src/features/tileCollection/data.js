@@ -96,18 +96,9 @@ export const TILE_TYPES = [
     effects: {},
     description: "Golden stalks of grain unlocked when hay chains grow long enough to harvest properly.",
   },
-  {
-    id: "grain", category: "grain", displayName: "Grain", baseResource: "grain", tier: 1,
-    discovery: { method: "research", researchOf: "grain_wheat", researchAmount: 30 },
-    effects: {},
-    description: "Threshed and hulled wheat, ready for the mill. A key ingredient in bread and baked goods.",
-  },
-  {
-    id: "grain_flour", category: "grain", displayName: "Flour", baseResource: "grain_flour", tier: 2,
-    discovery: { method: "research", researchOf: "grain", researchAmount: 50 },
-    effects: {},
-    description: "Finely milled flour, the foundation of the Bakery's most valuable recipes.",
-  },
+
+  // (grain and grain_flour are resources/items produced by chains, not tile
+  // species — see BIOMES.farm.resources.)
 
   // (wood and berry are resources/items, not tile species — see BIOMES.farm.resources.)
 
@@ -119,10 +110,10 @@ export const TILE_TYPES = [
     description: "Broad-winged turkeys that startle and shuffle the board — each active turkey grants 2 free moves per season.",
   },
   {
-    id: "bird_clover", category: "bird", displayName: "Clover", baseResource: "bird_clover", tier: 2,
+    id: "bird_clover", category: "flowers", displayName: "Clover", baseResource: "bird_clover", tier: 1,
     discovery: { method: "buy", coinCost: 200 },
     effects: { freeMoves: 2 },
-    description: "Lucky clover patches that nest small songbirds, granting 2 extra free moves per season.",
+    description: "A flowering clover patch that draws bees by the dozen — chains feed the honey pot and grant 2 extra free moves per season.",
   },
   {
     id: "bird_melon", category: "fruits", displayName: "Melon", baseResource: "bird_melon", tier: 3,

@@ -43,12 +43,12 @@ describe("Phase 5.8 — Tile Collection panel UI (getCategoryViewModel)", () => 
       ...base,
       tileCollection: {
         ...base.tileCollection,
-        researchProgress: { ...base.tileCollection.researchProgress, grain: 12 },
+        researchProgress: { ...base.tileCollection.researchProgress, grass_spiky: 12 },
       },
     };
-    const grainRows = getCategoryViewModel(c0, "grain");
-    const grainRow = grainRows.find((r) => r.id === "grain");
-    expect(grainRow.status).toBe("Researching wheat: 12 / 30");
+    const grassRows = getCategoryViewModel(c0, "grass");
+    const spikyRow = grassRows.find((r) => r.id === "grass_spiky");
+    expect(spikyRow.status).toBe("Researching hay: 12 / 50");
   });
 
   it("D: dispatch SET_ACTIVE_TILE with discovered tile type toggles active", () => {
@@ -72,7 +72,8 @@ describe("Phase 5.8 — Tile Collection panel UI (getCategoryViewModel)", () => 
   });
 
   it("F: buy-only row has action: 'buy', correct status, and BUY_TILE does not auto-activate", () => {
-    const fRows = getCategoryViewModel(base, "bird");
+    // Clover was reclassified from `bird` to `flowers` — same buy-cost contract.
+    const fRows = getCategoryViewModel(base, "flowers");
     const cloverRow = fRows.find((r) => r.id === "bird_clover");
     expect(cloverRow.action).toBe("buy");
     expect(cloverRow.status).toBe("Buy 200◉");
@@ -80,7 +81,7 @@ describe("Phase 5.8 — Tile Collection panel UI (getCategoryViewModel)", () => 
     const f0 = { ...base, coins: 500 };
     const f1 = rootReducer(f0, { type: "BUY_TILE", payload: { id: "bird_clover" } });
     expect(f1.tileCollection.discovered.bird_clover).toBe(true);
-    expect(f1.tileCollection.activeByCategory.bird).not.toBe("bird_clover");
+    expect(f1.tileCollection.activeByCategory.flowers).not.toBe("bird_clover");
     expect(f1.coins).toBe(300);
   });
 });

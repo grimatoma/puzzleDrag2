@@ -123,7 +123,8 @@ describe("getCategoryViewModel", () => {
 
   it("buy-method undiscovered row shows 'Buy X◉' and action: buy", () => {
     const state = { tileCollection: { discovered: {} } };
-    const rows = getCategoryViewModel(state, "bird");
+    // Clover was reclassified from `bird` to `flowers`; the buy-cost contract is unchanged.
+    const rows = getCategoryViewModel(state, "flowers");
     const clover = rows.find((r) => r.id === "bird_clover");
     expect(clover.locked).toBe(true);
     expect(clover.status).toMatch(/Buy \d+/);
