@@ -163,11 +163,11 @@ export function CompactOrders({ orders, inventory, dispatch }) {
 
 export function InventoryGrid({ inventory, biomeKey, compact, orders = [], state, dispatch }) {
   const allBiomeEntries = BIOMES[biomeKey].resources;
-  // Three buckets — Tiles (raw board species), Resources (chain products /
-  // inventory currency), Items (crafted via recipes). Anything in BIOMES
-  // without a `kind` annotation falls back to "resource" so nothing is lost
-  // from the UI by accident.
-  const tiles = allBiomeEntries.filter((r) => r.kind === "tile");
+  // Inventory shows two buckets — Resources (chain products / inventory
+  // currency: milk, log, jam, pie, ingot…) and Items (crafted via recipes).
+  // Tile species belong in the Tiles Wiki, not here. Entries without a
+  // `kind` annotation fall back to "resource" so nothing is lost from the UI
+  // by accident.
   const resources = allBiomeEntries.filter((r) => r.kind !== "tile");
   const items = Object.entries(RECIPES).filter(([key]) => (inventory[key] || 0) > 0);
   const gridCols = compact ? "grid-cols-2" : "grid-cols-[repeat(auto-fill,minmax(200px,1fr))]";
@@ -194,33 +194,6 @@ export function InventoryGrid({ inventory, biomeKey, compact, orders = [], state
           <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-white/40" /> excess</span>
         </div>
       )}
-      <div>
-        <div className="text-[11px] font-bold text-white/60 uppercase tracking-wider mb-1.5">Tiles</div>
-        {tiles.length === 0 ? (
-          <div className="text-[11px] text-white/40 italic px-1">No tile species on this biome.</div>
-        ) : (
-          <div className={`grid ${gridCols} gap-2`}>
-            {tiles.map((r) => {
-              const p = prices[r.key];
-              return (
-                <InventoryCell
-                  key={r.key}
-                  r={r}
-                  count={inventory[r.key] || 0}
-                  compact={compact}
-                  orderStatus={status[r.key]}
-                  orderTotal={totals[r.key]}
-                  marketBuilt={marketBuilt}
-                  buyPrice={p?.buy ?? 0}
-                  sellPrice={p?.sell ?? 0}
-                  dispatch={dispatch}
-                  tradeKind="resource"
-                />
-              );
-            })}
-          </div>
-        )}
-      </div>
       <div>
         <div className="text-[11px] font-bold text-white/60 uppercase tracking-wider mb-1.5">Resources</div>
         <div className={`grid ${gridCols} gap-2`}>
