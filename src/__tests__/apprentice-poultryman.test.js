@@ -31,7 +31,7 @@ describe("Poultryman apprentice (bird category threshold reduce)", () => {
       townsfolk: { hired: { poultryman: 1 }, debt: 0, pool: 1 },
     };
     const eff = computeWorkerEffects(s);
-    expect(eff.thresholdReduce.bird_egg).toBe(1);
+    expect(eff.thresholdReduce.bird_chicken).toBe(1);
     expect(eff.thresholdReduce.bird_turkey).toBe(1);
     expect(eff.thresholdReduce.bird_chicken).toBe(1);
   });
@@ -42,7 +42,7 @@ describe("Poultryman apprentice (bird category threshold reduce)", () => {
       townsfolk: { hired: { poultryman: 2 }, debt: 0, pool: 2 },
     };
     const eff = computeWorkerEffects(s);
-    expect(eff.thresholdReduce.bird_egg).toBe(2);
+    expect(eff.thresholdReduce.bird_chicken).toBe(2);
     expect(eff.thresholdReduce.bird_turkey).toBe(2);
   });
 
