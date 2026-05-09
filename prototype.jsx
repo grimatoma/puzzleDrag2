@@ -8,6 +8,7 @@ import { TownView } from "./src/ui/Town.jsx";
 import { SeasonModal, NpcBubble, StoryModal } from "./src/ui/Modals.jsx";
 import { SidePanel, BottomNav, FeatureModals, FeatureScreens } from "./src/ui.jsx";
 import { useAudio } from "./src/audio/useAudio.js";
+import { useRouter } from "./src/router.js";
 import { setPhaserScene } from "./src/phaserBridge.js";
 import { announce, getQueue, flushAnnouncements, formatChainAnnouncement, formatModalAnnouncement, formatQuestAnnouncement } from "./src/a11y.js";
 import { handleKeyboard } from "./src/features/a11y/keyboard.js";
@@ -260,6 +261,7 @@ export default function App() {
   const storyModalOpen = !!state.story?.queuedBeat;
   const uiLocked = !!state.modal || state.view !== "board" || storyModalOpen;
   useAudio(state);
+  useRouter(state, dispatch);
 
   // Drain the announce() queue into the aria-live region
   useEffect(() => {

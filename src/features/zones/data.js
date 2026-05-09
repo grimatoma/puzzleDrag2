@@ -208,11 +208,15 @@ export function zoneCategories(zoneId) {
 // ZONES is derived from MAP_NODES so node id === zone id.
 // Engine code accesses ZONES[state.mapCurrent] or ZONES[state.activeZone]
 // (activeZone mirrors mapCurrent, set in cartography/slice.js on CARTO/TRAVEL).
+// Inner zone objects are intentionally NOT frozen — `applyZoneOverrides`
+// mutates them in place so Balance-Manager toggles (hasMine, hasWater, etc.)
+// take effect on the live module export. The outer dict is frozen so the
+// set of zone ids is fixed.
 export const ZONES = Object.freeze(
   Object.fromEntries(
     MAP_NODES.map((n) => [
       n.id,
-      Object.freeze({
+      {
         id:           n.id,
         name:         n.name,
         hasFarm:      n.hasFarm  ?? false,
@@ -224,7 +228,7 @@ export const ZONES = Object.freeze(
         seasonDrops:  n.seasonDrops  ?? { Spring: {}, Summer: {}, Autumn: {}, Winter: {} },
         dangers:      n.dangers      ?? [],
         buildings:    n.buildings    ?? [],
-      }),
+      },
     ]),
   ),
 );

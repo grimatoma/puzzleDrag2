@@ -51,7 +51,7 @@ describe("discoverTileTypesFromChain", () => {
 
 describe("getActivePool", () => {
   const stateWith = (active = {}, registry = {}) => ({
-    tileCollection: { activeByCategory: { grass: "grass_hay", wood: "wood_log", grain: "grain_wheat", berry: "berry", bird: "bird_egg", vegetables: "veg_carrot", fruits: "fruit_apple", flowers: "flower_pansy", trees: "tree_oak", herd_animals: "herd_pig", cattle: "cattle_cow", mounts: "mount_horse", ...active } },
+    tileCollection: { activeByCategory: { grass: "grass_hay", wood: "wood_log", grain: "grain_wheat", berry: "berry", bird: "bird_pheasant", vegetables: "veg_carrot", fruits: "fruit_apple", flowers: "flower_pansy", trees: "tree_oak", herd_animals: "herd_pig", cattle: "cattle_cow", mounts: "mount_horse", ...active } },
     registry,
   });
 

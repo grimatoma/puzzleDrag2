@@ -32,6 +32,16 @@ export const ACHIEVEMENTS = [
   { id: "first_strike",   name: "First Strike",               desc: "Quarry your first mine chain",                  counter: "mine_chained",               threshold: 1,   target: 1,   reward: { coins: 25 } },
   { id: "deep_digger",    name: "Deep Digger",                desc: "Pull 50 stone / ore / coal / gems from the mine", counter: "mine_chained",            threshold: 50,  target: 50,  reward: { coins: 75 } },
   { id: "mine_master",    name: "Mine Master",                desc: "Haul 200 mine resources across all veins",      counter: "mine_chained",               threshold: 200, target: 200, reward: { tools: { magic_seed: 1 } } },
+  // Per-category harvest milestones
+  { id: "veg_patron",     name: "Vegetable Patron",           desc: "Harvest 50 vegetables of any kind",              counter: "veg_chained",                threshold: 50,  target: 50,  reward: { coins: 75 } },
+  { id: "orchard_friend", name: "Orchard's Friend",           desc: "Pick 50 fruits across the vale",                  counter: "fruit_chained",              threshold: 50,  target: 50,  reward: { coins: 75 } },
+  { id: "pollinator",     name: "Pollinator",                 desc: "Cut 30 flowers from the meadows",                 counter: "flower_chained",             threshold: 30,  target: 30,  reward: { coins: 60 } },
+  { id: "herder",         name: "Herder",                     desc: "Drive 30 herd animals from the moors",            counter: "herd_chained",               threshold: 30,  target: 30,  reward: { coins: 60 } },
+  // Cattle / mount / tree / bird category milestones
+  { id: "dairyman",       name: "Dairyman",                   desc: "Drive 30 cattle into the milking shed",          counter: "cattle_chained",             threshold: 30,  target: 30,  reward: { coins: 60 } },
+  { id: "stable_hand",    name: "Stable Hand",                desc: "Lead 30 mounts through the stables",             counter: "mount_chained",              threshold: 30,  target: 30,  reward: { coins: 60 } },
+  { id: "forester",       name: "Forester",                   desc: "Fell 50 trees across the vale",                  counter: "tree_chained",               threshold: 50,  target: 50,  reward: { coins: 75 } },
+  { id: "fowler",         name: "Fowler",                     desc: "Gather 50 birds across the yards",               counter: "bird_chained",               threshold: 50,  target: 50,  reward: { coins: 75 } },
 ];
 
 /**

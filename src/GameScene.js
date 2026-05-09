@@ -83,6 +83,11 @@ export class GameScene extends Phaser.Scene {
     const textResolution = this.registry.get("renderResolution") || 1;
     const addText = this.add.text.bind(this.add);
     this.add.text = (...args) => addText(...args).setResolution(textResolution);
+    // Compute layout first so the initial bake can match the on-screen tile
+    // size on big viewports — otherwise icons get upscaled past 1:1.
+    this.layoutDims();
+    this.bakeScale = Math.max(this.dpr, this.tileSize / TILE_BASE);
+    this.registry.set("bakeScale", this.bakeScale);
     makeTextures(this);
     this.layoutDims();
     this.drawBackground();
@@ -320,9 +325,11 @@ export class GameScene extends Phaser.Scene {
     // Ratio of canvas px to CSS px at current tile size — used for graphics
     // line widths, offsets, and other CSS-pixel design constants.
     this.tileScale = this.tileSize / TILE_BASE;
-    // Sprite display scale: textures are baked at TILE_BASE * dpr canvas px,
-    // so dividing by dpr makes a sprite at scale 1 fill TILE_BASE * dpr.
-    this.tileSpriteScale = this.tileScale / dpr;
+    // Sprite display scale: textures are baked at TILE_BASE * bakeScale
+    // canvas px, so dividing by bakeScale makes a sprite at scale 1 fill
+    // exactly that. bakeScale defaults to dpr until handleResize bumps it.
+    const bakeScale = this.bakeScale || dpr;
+    this.tileSpriteScale = this.tileScale / bakeScale;
     this.boardX = Math.round((vw - COLS * this.tileSize) / 2);
     this.boardY = Math.round((vh - ROWS * this.tileSize) / 2);
   }
@@ -332,6 +339,17 @@ export class GameScene extends Phaser.Scene {
     const prevY = this.boardY;
     const prevSize = this.tileSize;
     this.layoutDims();
+    // If the layout grew past the current bake resolution, rebake tile
+    // textures at the new scale so on-screen tiles stay ≥1:1 with the
+    // baked source. Hysteresis avoids re-baking on tiny resize jitters.
+    const requiredScale = Math.max(this.dpr, this.tileSize / TILE_BASE);
+    if (requiredScale > (this.bakeScale || this.dpr) * 1.05) {
+      this.bakeScale = requiredScale;
+      this.registry.set("bakeScale", requiredScale);
+      const palette = this.registry.get("palette") ?? "default";
+      regenerateTextures(this, palette);
+      this.layoutDims();
+    }
     this.children.list.filter((o) => o.__layer === "bg").forEach((o) => o.destroy());
     this.drawBackground();
     if (this.boardX !== prevX || this.boardY !== prevY || this.tileSize !== prevSize) {

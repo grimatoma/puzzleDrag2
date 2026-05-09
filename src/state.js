@@ -6,12 +6,14 @@ import { tryExtinguishFire, rollFarmHazard, tickFire, tickWolves } from "./featu
 import { tryDeadlyPestsKill } from "./features/farm/deadlyPests.js";
 import { rollHazard, tickHazards } from "./features/mine/hazards.js";
 import { isMysteriousChainValid, spawnMysteriousOre, tickMysteriousOre } from "./features/mine/mysterious_ore.js";
+import { isPearlChainValid, spawnPearl, tickPearl, PEARL_KEY } from "./features/fish/pearl.js";
 import { driftPrices, applyTrade } from "./market.js";
 import { currentCap } from "./utils.js";
 import { WORKER_MAP } from "./features/apprentices/data.js";
 import { computeWorkerEffects } from "./features/apprentices/aggregate.js";
 import { TILE_TYPES, CATEGORIES, TILE_TYPES_MAP, CATEGORY_OF } from "./features/tileCollection/data.js";
 import { yieldMultiplierFor } from "./features/tileCollection/yieldMultipliers.js";
+import { longChainBonusFor } from "./features/tileCollection/longChainBonus.js";
 import { rollQuests } from "./features/quests/data.js";
 import { ACHIEVEMENTS as ACHIEVEMENT_LIST } from "./features/achievements/data.js";
 import { awardXp } from "./features/almanac/data.js";
@@ -102,7 +104,7 @@ function applyDebtRepayment(state, incomingCoins) {
 // ─── Save/load ─────────────────────────────────────────────────────────────
 // Persisted: everything except volatile UI fields (modal/bubble/view/pendingView).
 const SAVE_KEY = STORAGE_KEYS.save;
-const VOLATILE = new Set(["modal", "bubble", "view", "pendingView", "craftingTab"]);
+const VOLATILE = new Set(["modal", "bubble", "view", "viewParams", "pendingView", "craftingTab"]);
 
 export function loadSavedState() {
   try {
@@ -308,6 +310,7 @@ export function createFreshState(overrides) {
     biome: "farm",
     saveSeed,
     view: "town",
+    viewParams: {},
     coins: 150,
     level,
     xp: 0,
@@ -331,6 +334,8 @@ export function createFreshState(overrides) {
     fertilizerActive: false,
     // Phase 9 — Mine biome state
     mysteriousOre: null,
+    // Fish biome — Pearl rune-capture (mirror of mysterious ore).
+    fishPearl: null,
     hazards: { caveIn: null, gasVent: null, lava: null, mole: null,
                // Phase 10.4 — Rat hazard
                rats: [],
@@ -391,6 +396,8 @@ export function createFreshState(overrides) {
         festival_won: 0, distinct_resources_chained: 0,
         distinct_buildings_built: 0, supplies_converted: 0,
         fish_chained: 0, mine_chained: 0,
+        veg_chained: 0, fruit_chained: 0, flower_chained: 0, herd_chained: 0,
+        cattle_chained: 0, mount_chained: 0, tree_chained: 0, bird_chained: 0,
       },
       unlocked: Object.fromEntries(ACHIEVEMENT_LIST.map((a) => [a.id, false])),
       seenResources: {},
@@ -486,7 +493,7 @@ export function initialState(overrides) {
     if (!FIRE_HAZARD_ENABLED && savedWithoutLegacy.hazards?.fire) {
       savedWithoutLegacy.hazards = { ...savedWithoutLegacy.hazards, fire: null };
     }
-    return { ...fresh, ...savedWithoutLegacy, townsfolk: mergedWorkers, story: mergedStory, tileCollection: mergedTileCollection, view: "town", turnsUsed: 0, modal: null, bubble: null, pendingView: null,
+    return { ...fresh, ...savedWithoutLegacy, townsfolk: mergedWorkers, story: mergedStory, tileCollection: mergedTileCollection, view: "town", viewParams: {}, turnsUsed: 0, modal: null, bubble: null, pendingView: null,
       seasonStats: { harvests: 0, upgrades: 0, ordersFilled: 0, coins: 0 } };
   }
   return fresh;
@@ -601,6 +608,17 @@ function coreReducer(state, action) {
               mysteriousOre: null,
             };
           }
+        } else if (currentBiome === "fish") {
+          // Pearl capture — chain pearl + ≥2 other fish-category tiles → +1 rune
+          const hasPearl = chainTiles.some((t) => t.key === PEARL_KEY);
+          if (hasPearl && isPearlChainValid(chainTiles)) {
+            return {
+              ...state,
+              runes: (state.runes ?? 0) + 1,
+              fishPearl: null,
+              bubble: { id: Date.now(), npc: "wren", text: "🟣 Pearl captured! +1 Rune.", ms: 2200, priority: 2 },
+            };
+          }
         }
       }
 
@@ -639,12 +657,17 @@ function coreReducer(state, action) {
       }
 
       // Power-hook coin bonuses (set via Balance Manager → Tile Powers).
-      // `coinBonusFlat` adds a flat amount per chain; `coinBonusPerTile`
-      // scales with chain length. Both are summed across hook entries.
       const chainTileEffects = TILE_TYPES_MAP[key]?.effects ?? {};
       const hookFlat = chainTileEffects.coinBonusFlat || 0;
       const hookPerTile = chainTileEffects.coinBonusPerTile || 0;
       const coinHookBonus = hookFlat + hookPerTile * effectiveChain;
+
+      // Catalog §7 "long chain gives X" bonuses — Buckwheat → herd, Eggplant
+      // → veg, Goose → veg, Willow → veg, Broccoli → flower, Warthog → mount.
+      const longBonus = longChainBonusFor(key, effectiveChain);
+      if (longBonus) {
+        addCappedResourceMut(inventory, chainCf, chainFloaters, longBonus.bonusKey, longBonus.amount, chainCap);
+      }
 
       const coinsGain = Math.max(1, Math.floor((effectiveGained * value) / 2)) + coinHookBonus;
       // §17 locked: 1 XP per chain (regardless of length/value) into almanac
@@ -713,6 +736,10 @@ function coreReducer(state, action) {
       // Mine: tick mysterious ore countdown on each chain
       if ((afterChain.biome ?? afterChain.biomeKey) === "mine" && afterChain.mysteriousOre) {
         afterChain = tickMysteriousOre(afterChain);
+      }
+      // Fish: tick pearl countdown on each chain
+      if ((afterChain.biome ?? afterChain.biomeKey) === "fish" && afterChain.fishPearl) {
+        afterChain = tickPearl(afterChain);
       }
       // Hazard tick + spawn (farm: fire/wolves, mine: gas_vent/lava/mole/cave_in)
       const chainBiome = afterChain.biome ?? afterChain.biomeKey;
@@ -1031,12 +1058,42 @@ function coreReducer(state, action) {
     }
     case "SET_VIEW": {
       const next = action.view;
-      return { ...state, view: next, craftingTab: action.craftingTab ?? (next === "crafting" ? state.craftingTab : null) };
+      // Reset viewParams when leaving a view so a fresh visit doesn't inherit
+      // stale sub-tabs (e.g. tile-wiki sub-category from a previous trip).
+      const sameView = next === state.view;
+      const viewParams = action.viewParams ?? (sameView ? state.viewParams : {});
+      return { ...state, view: next, viewParams, craftingTab: action.craftingTab ?? (next === "crafting" ? state.craftingTab : null) };
     }
+    case "SET_VIEW_PARAMS":
+      return { ...state, viewParams: { ...(state.viewParams ?? {}), ...(action.params ?? {}) } };
     case "OPEN_MODAL":
-      return { ...state, modal: action.modal, settingsTab: 'main' };
+      return { ...state, modal: action.modal, settingsTab: action.settingsTab ?? 'main' };
     case "CLOSE_MODAL":
-      return { ...state, modal: null, settingsTab: 'main' };
+      return { ...state, modal: null, settingsTab: 'main', settingsDebugOpen: false };
+    case "ROUTE/APPLY": {
+      // Apply a router-derived navigation snapshot in one shot. Each branch
+      // matches the equivalent SET_VIEW / OPEN_MODAL / SETTINGS/SET_TAB
+      // semantics so popstate-driven changes look identical to user-driven
+      // ones from the rest of the app's perspective.
+      const r = action.route ?? {};
+      const view = r.view ?? state.view ?? "town";
+      const modal = r.modal ?? null;
+      const incomingViewParams = r.viewParams ?? {};
+      const next = { ...state, view, viewParams: incomingViewParams };
+      if (view === "crafting") {
+        next.craftingTab = incomingViewParams.tab ?? state.craftingTab ?? null;
+      } else {
+        next.craftingTab = null;
+      }
+      next.modal = modal;
+      if (modal === "menu") {
+        next.settingsTab = r.modalParams?.tab ?? 'main';
+      } else {
+        next.settingsTab = 'main';
+        next.settingsDebugOpen = false;
+      }
+      return next;
+    }
     case "BUILD": {
       // Support both legacy action.building (full object) and action.payload.id (lookup by id)
       const b = action.building ?? BUILDINGS.find((x) => x.id === action.payload?.id);
@@ -1148,6 +1205,7 @@ function coreReducer(state, action) {
         sessionMaxTurns: MAX_TURNS,
         modal: null,
         view: "town",
+        viewParams: {},
         pendingView: null,
         seasonStats: { harvests: 0, upgrades: 0, ordersFilled: 0, coins: 0, capFloaters: {} },
         townsfolk: { ...state.townsfolk, debt: wageDebt, pool: newPool },
@@ -1300,6 +1358,7 @@ function coreReducer(state, action) {
         biomeKey: "farm",
         biome: "farm",
         view: "board",
+        viewParams: {},
         coins: state.coins - entryCoins,
         farmFertilizer: useFertilizer
           ? (state.farmFertilizer ?? 0) - 1
@@ -1451,19 +1510,23 @@ function coreReducer(state, action) {
       const biomeId = action.id ?? action.payload?.id;
       if (!biomeId || !BIOMES[biomeId]) return state;
       if (biomeId === state.biome) return state;
-      // Mysterious ore is a mine-only mechanic — clear it whenever leaving mine
-      // (i.e. switching to anything that isn't mine).
+      // Mysterious ore is a mine-only mechanic — clear it whenever leaving mine.
+      // Pearl is a fish-only mechanic — clear it whenever leaving fish.
       const enteringMine = biomeId === "mine";
+      const enteringFish = biomeId === "fish";
       const afterSetBiome = {
         ...state,
         biome: biomeId,
         biomeKey: biomeId,
         mysteriousOre: enteringMine ? state.mysteriousOre : null,
+        fishPearl: enteringFish ? state.fishPearl : null,
         _needsRefill: true,
       };
-      // Spawn mysterious ore only when entering mine, and only if a grid exists.
       if (enteringMine && afterSetBiome.grid && afterSetBiome.grid.length > 0) {
         return spawnMysteriousOre(afterSetBiome);
+      }
+      if (enteringFish && afterSetBiome.grid && afterSetBiome.grid.length > 0) {
+        return spawnPearl(afterSetBiome);
       }
       return afterSetBiome;
     }
@@ -1870,6 +1933,7 @@ const SLICE_PRIMARY_ACTIONS = new Set([
   "STORY/DISMISS_MODAL",
   // Settings actions are owned by settings/slice
   "SETTINGS/SET_TAB",
+  "SETTINGS/OPEN_DEBUG",
   "SETTINGS/LEAVE_BOARD",
   "SETTINGS/TOGGLE",
   "SETTINGS/RESET_SAVE",

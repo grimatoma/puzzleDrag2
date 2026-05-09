@@ -8,9 +8,9 @@
 // applyTileOverrides → expandHooksToEffects.
 
 import { useState, useMemo } from "react";
-import { TILE_TYPES, TILE_TYPES_MAP, CATEGORIES } from "../../tileCollection/data.js";
-import { BIOMES } from "../../../constants.js";
-import { POWER_HOOKS, getPowerHook, defaultParamsFor } from "../../../config/powerHooks.js";
+import { TILE_TYPES, TILE_TYPES_MAP, CATEGORIES } from "../../features/tileCollection/data.js";
+import { BIOMES } from "../../constants.js";
+import { POWER_HOOKS, getPowerHook, defaultParamsFor } from "../../config/powerHooks.js";
 import {
   COLORS, NumberField, Select, SmallButton, Pill, Card, SearchBar, TileSwatch,
 } from "../shared.jsx";

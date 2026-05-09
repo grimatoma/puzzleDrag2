@@ -29,7 +29,7 @@ export const MAX_TURNS = 10;
 
 // Save schema version. Forward migrations are not maintained — bump this
 // whenever persisted state changes shape and existing saves will be discarded.
-export const SAVE_SCHEMA_VERSION = 25;
+export const SAVE_SCHEMA_VERSION = 26;
 
 export const UPGRADE_THRESHOLDS = {
   grass_hay: 6, grass_meadow: 6, grass_spiky: 6,
@@ -91,7 +91,7 @@ export const SEASONS = [
 export const FARM_TILE_POOL = [
   "grass_hay", "grass_hay", "grass_hay",
   "grain_wheat",
-  "bird_egg",
+  "bird_pheasant",
   "veg_carrot",
   "fruit_apple",
   "flower_pansy",
@@ -99,9 +99,8 @@ export const FARM_TILE_POOL = [
   "herd_pig",
   "cattle_cow",
   "mount_horse",
-  // Bird category already covered by `egg` slot above; new bird species
-  // (chicken, hen, rooster, …) become alternate active species via the
-  // species-activation pipeline rather than additional pool slots.
+  // Bird category slot uses pheasant as pool key; alternate bird species are
+  // activated via the species-activation pipeline rather than additional pool slots.
 ];
 export const MINE_TILE_POOL = ["mine_stone", "mine_stone", "mine_stone", "mine_ore", "mine_ore", "mine_coal", "mine_dirt", "mine_dirt", "mine_gem"];
 
@@ -135,7 +134,7 @@ export const BIOMES = {
       { key: "wood_beam",  kind: "resource", label: "Beam",  color: 0x7e4f24, dark: 0x3a1d10, value: 7, next: null,    glyph: "▦" },
       { key: "berry", kind: "resource", label: "Berry", color: 0xa3486a, dark: 0x5e1a3a, value: 3, next: "berry_jam",   glyph: "◉", sway: { amp: 3.5, freq: 0.00090, gust: 0.15 } },
       { key: "berry_jam",   kind: "resource", label: "Jam",   color: 0xd4658c, dark: 0x7a2f50, value: 5, next: null,    glyph: "◎", sway: { amp: 0.8, freq: 0.00025, gust: 0.00 } },
-      { key: "bird_egg",   kind: "tile", label: "Egg",   color: 0xf4ecd8, dark: 0x8a785e, value: 3, next: "eggs",    glyph: "◯", sway: { amp: 1.5, freq: 0.00055, gust: 0.08 } },
+      { key: "bird_egg",   kind: "resource", label: "Egg",   color: 0xf4ecd8, dark: 0x8a785e, value: 3, next: "eggs",    glyph: "◯", sway: { amp: 1.5, freq: 0.00055, gust: 0.08 } },
       { key: "bird_turkey", kind: "tile", label: "Turkey", color: 0xb8743a, dark: 0x5e3818, value: 4, next: "eggs", glyph: "🦃", sway: { amp: 1.2, freq: 0.00050, gust: 0.10 } },
       { key: "bird_clover", kind: "tile", label: "Clover", color: 0x6fa450, dark: 0x365e22, value: 5, next: "eggs", glyph: "☘", sway: { amp: 2.5, freq: 0.00080, gust: 0.18 } },
       { key: "bird_melon",  kind: "tile", label: "Melon",  color: 0xb3d770, dark: 0x4a6e2a, value: 6, next: "eggs", glyph: "🍈", sway: { amp: 0.8, freq: 0.00030, gust: 0.05 } },
@@ -265,6 +264,10 @@ export const BIOMES = {
       { key: "fish_raw",      kind: "resource", label: "Fish",     color: 0xb0c8d4, dark: 0x546a78, value: 4, next: "fish_fillet",  glyph: "🐡" },
       { key: "fish_fillet",   kind: "resource", label: "Fillet",   color: 0xe8c8b0, dark: 0x7a604c, value: 8, next: null,           glyph: "▰" },
       { key: "fish_oil",      kind: "resource", label: "Fish Oil", color: 0xe8d050, dark: 0x7a6818, value: 6, next: null,           glyph: "💧" },
+      // Pearl is a non-spawnable special tile seeded conditionally by
+      // features/fish/pearl.js — chain it with ≥2 other fish to capture
+      // a Rune (mirror of the mine's mysterious-ore mechanic).
+      { key: "fish_pearl",    kind: "tile", label: "Pearl",    color: 0xefe8d8, dark: 0x6a6258, value: 0, next: null,           glyph: "◍" },
     ],
     pool: FISH_TILE_POOL,
   },

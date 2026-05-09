@@ -1,7 +1,7 @@
-// Zones tab — Phase 6 of the rule overhaul.
+// Zones tab — Balance Manager.
 //
-// Edits per-zone settings: startingTurns, entry cost (coins), the chain
-// upgrade-map (source category -> target category), and the per-season
+// Edits per-zone settings: name, board flags (hasFarm/hasMine/hasWater),
+// buildings list, startingTurns, entry cost, upgrade map, and per-season
 // drop-rate percentages.
 //
 // Patches are stored on `draft.zones[zoneId]`. They merge into the live
@@ -9,7 +9,8 @@
 // src/config/applyOverrides.js.
 
 import { useMemo, useState } from "react";
-import { ZONES, ZONE_CATEGORIES, ZONE_UPGRADE_TARGET_GOLD } from "../../zones/data.js";
+import { ZONES, ZONE_CATEGORIES, ZONE_UPGRADE_TARGET_GOLD } from "../../features/zones/data.js";
+import { BUILDINGS } from "../../constants.js";
 import {
   COLORS, NumberField, Select, SmallButton, Pill, Card, SearchBar,
 } from "../shared.jsx";
@@ -27,6 +28,23 @@ function Label({ children }) {
     <div className="text-[10px] font-bold uppercase tracking-wide mb-0.5" style={{ color: COLORS.inkSubtle }}>
       {children}
     </div>
+  );
+}
+
+function Toggle({ value, onChange, label }) {
+  return (
+    <button
+      onClick={() => onChange(!value)}
+      className="flex items-center gap-1.5 px-2 py-1 rounded-lg border-2 text-[10px] font-bold transition-colors"
+      style={{
+        background:   value ? "#91bf24" : COLORS.parchmentDeep,
+        borderColor:  value ? "#6a9010" : COLORS.border,
+        color:        value ? "#fff" : COLORS.inkSubtle,
+      }}
+    >
+      <span>{value ? "✓" : "○"}</span>
+      <span>{label}</span>
+    </button>
   );
 }
 
@@ -69,15 +87,17 @@ export default function ZonesTab({ draft, updateDraft }) {
         {filtered.map((z) => {
           const p = (draft.zones || {})[z.id] || {};
           const eff = {
+            name:          p.name          ?? z.name          ?? z.id,
+            hasFarm:       p.hasFarm       ?? z.hasFarm       ?? false,
+            hasMine:       p.hasMine       ?? z.hasMine       ?? false,
+            hasWater:      p.hasWater      ?? z.hasWater      ?? false,
+            buildings:     p.buildings     ?? z.buildings     ?? [],
             startingTurns: p.startingTurns ?? z.startingTurns ?? 16,
             entryCoins:    (p.entryCost?.coins) ?? (z.entryCost?.coins ?? 50),
-            upgradeMap:    p.upgradeMap ?? z.upgradeMap ?? {},
-            seasonDrops:   p.seasonDrops ?? z.seasonDrops ?? {},
+            upgradeMap:    p.upgradeMap    ?? z.upgradeMap    ?? {},
+            seasonDrops:   p.seasonDrops   ?? z.seasonDrops   ?? {},
           };
           const dirty = Object.keys(p).length > 0;
-          // The set of source categories editable on this zone is the union of
-          // the configured map's keys and ZONE_CATEGORIES, so the player can
-          // add an override for a category the zone doesn't ship by default.
           const sourceCats = Array.from(new Set([
             ...Object.keys(eff.upgradeMap),
             ...ZONE_CATEGORIES,
@@ -85,15 +105,16 @@ export default function ZonesTab({ draft, updateDraft }) {
 
           return (
             <Card key={z.id} accent={dirty ? COLORS.ember : COLORS.border}>
-              <div className="flex items-start justify-between mb-2 gap-2">
-                <div className="flex items-center gap-2">
+              {/* Header */}
+              <div className="flex items-start justify-between mb-3 gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <code
                     className="font-mono text-[10px] px-1.5 py-0.5 rounded"
                     style={{ background: COLORS.parchmentDeep, color: COLORS.ember }}
                   >
                     {z.id}
                   </code>
-                  <span className="font-bold text-[13px]" style={{ color: COLORS.ink }}>{z.name}</span>
+                  <span className="font-bold text-[13px]" style={{ color: COLORS.ink }}>{eff.name}</span>
                 </div>
                 {dirty && (
                   <SmallButton
@@ -105,6 +126,74 @@ export default function ZonesTab({ draft, updateDraft }) {
                 )}
               </div>
 
+              {/* Name */}
+              <div className="mb-3">
+                <Label>Display name</Label>
+                <input
+                  type="text"
+                  value={eff.name}
+                  onChange={(e) => patch(z.id, { name: e.target.value })}
+                  className="w-full text-[11px] px-2 py-1 rounded border outline-none"
+                  style={{
+                    background: COLORS.parchmentDeep,
+                    borderColor: COLORS.border,
+                    color: COLORS.ink,
+                  }}
+                />
+              </div>
+
+              {/* Board toggles */}
+              <div className="mb-3">
+                <Label>Available puzzle boards</Label>
+                <div className="flex flex-wrap gap-1.5">
+                  <Toggle
+                    value={eff.hasFarm}
+                    label="🌾 Farm"
+                    onChange={(v) => patch(z.id, { hasFarm: v })}
+                  />
+                  <Toggle
+                    value={eff.hasMine}
+                    label="⛏ Mine"
+                    onChange={(v) => patch(z.id, { hasMine: v })}
+                  />
+                  <Toggle
+                    value={eff.hasWater}
+                    label="⚓ Harbor"
+                    onChange={(v) => patch(z.id, { hasWater: v })}
+                  />
+                </div>
+              </div>
+
+              {/* Buildings */}
+              <div className="mb-3">
+                <Label>Buildings available in this town</Label>
+                <div className="grid grid-cols-2 gap-1">
+                  {BUILDINGS.map((b) => {
+                    const active = eff.buildings.includes(b.id);
+                    return (
+                      <button
+                        key={b.id}
+                        onClick={() => {
+                          const next = active
+                            ? eff.buildings.filter((id) => id !== b.id)
+                            : [...eff.buildings, b.id];
+                          patch(z.id, { buildings: next });
+                        }}
+                        className="text-[10px] font-bold px-2 py-1 rounded-lg border text-left transition-colors"
+                        style={{
+                          background:  active ? "rgba(145,191,36,0.15)" : COLORS.parchmentDeep,
+                          borderColor: active ? "#6a9010"               : COLORS.border,
+                          color:       active ? "#3a5010"               : COLORS.inkSubtle,
+                        }}
+                      >
+                        {b.name}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Turn budget + entry cost */}
               <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 mb-3">
                 <div>
                   <Label>Starting turns</Label>
@@ -128,6 +217,7 @@ export default function ZonesTab({ draft, updateDraft }) {
                 </div>
               </div>
 
+              {/* Upgrade map */}
               <div className="mb-3">
                 <Label>Upgrade map · chain redirect</Label>
                 <div className="flex flex-col gap-1">
@@ -156,6 +246,7 @@ export default function ZonesTab({ draft, updateDraft }) {
                 </div>
               </div>
 
+              {/* Season drops */}
               <div>
                 <Label>Season drops · % per category</Label>
                 <div className="flex flex-col gap-2">

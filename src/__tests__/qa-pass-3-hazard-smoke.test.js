@@ -4,6 +4,7 @@
  */
 import { describe, it, expect } from "vitest";
 import { createInitialState, rootReducer } from "../state.js";
+import { FIRE_HAZARD_ENABLED } from "../featureFlags.js";
 
 function makeGrid(rows = 6, cols = 6, key = "grass_hay") {
   return Array.from({ length: rows }, () =>
@@ -25,7 +26,7 @@ function dispatchChain(state, n = 3) {
 }
 
 describe("QA Pass 3 — hazard spawn wired into CHAIN_COLLECTED", () => {
-  it("farm: fire can spawn within 200 chains (4% rate)", () => {
+  it.skipIf(!FIRE_HAZARD_ENABLED)("farm: fire can spawn within 200 chains (4% rate)", () => {
     const base = {
       ...createInitialState(),
       biomeKey: "farm",

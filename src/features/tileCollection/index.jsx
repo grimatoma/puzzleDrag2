@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import {
   TILE_TYPES_MAP,
   SUB_CATEGORIES,
@@ -29,6 +29,13 @@ const CATEGORY_LABELS = {
   herd_animals: "Herd",
   cattle: "Cattle",
   mounts: "Mounts",
+  mine_stone: "Stone",
+  mine_ore: "Ore",
+  mine_coal: "Coal",
+  mine_gem: "Gem",
+  mine_gold: "Gold",
+  mine_dirt: "Dirt",
+  fish: "Fish",
 };
 
 const CATEGORY_ICONS = {
@@ -44,10 +51,19 @@ const CATEGORY_ICONS = {
   herd_animals: "🐷",
   cattle: "🐄",
   mounts: "🐎",
+  mine_stone: "🪨",
+  mine_ore: "⛏",
+  mine_coal: "🔥",
+  mine_gem: "💎",
+  mine_gold: "🪙",
+  mine_dirt: "🟫",
+  fish: "🐟",
 };
 
-const ALL_FARM_RESOURCES = Object.fromEntries(
-  BIOMES.farm.resources.map((r) => [r.key, r]),
+// Look up resources across every biome — mine and fish tiles also need
+// their colour/icon in the wiki, not just farm.
+const ALL_RESOURCES = Object.fromEntries(
+  Object.values(BIOMES).flatMap((b) => b.resources.map((r) => [r.key, r])),
 );
 
 const FARM_HAZARD_LIST = [
@@ -78,7 +94,7 @@ export function TileIcon({ tileId, size = 40, locked = false }) {
   const ref = useRef(null);
   const t = TILE_TYPES_MAP[tileId];
   const key = t?.baseResource;
-  const res = key ? ALL_FARM_RESOURCES[key] : null;
+  const res = key ? ALL_RESOURCES[key] : null;
 
   useEffect(() => {
     const canvas = ref.current;
@@ -135,11 +151,9 @@ export function TileIcon({ tileId, size = 40, locked = false }) {
 }
 
 function TileRow({ row, category, dispatch }) {
-  const handleActivate = () => {
+  const handleSelect = () => {
+    if (row.action !== "toggle" || row.active) return;
     dispatch({ type: "SET_ACTIVE_TILE", payload: { category, tileId: row.id } });
-  };
-  const handleDeactivate = () => {
-    dispatch({ type: "SET_ACTIVE_TILE", payload: { category, tileId: null } });
   };
   const handleBuy = () => {
     dispatch({ type: "BUY_TILE", payload: { id: row.id } });
@@ -147,7 +161,10 @@ function TileRow({ row, category, dispatch }) {
 
   return (
     <div
+      onClick={row.action === "toggle" && !row.active && !row.locked ? handleSelect : undefined}
       className={`flex items-center gap-3 p-2 rounded-xl border transition-colors ${
+        row.action === "toggle" && !row.active && !row.locked ? "cursor-pointer" : ""
+      } ${
         row.active
           ? "bg-[#4f6b3a]/40 border-[#a8d44a]"
           : row.locked
@@ -175,26 +192,23 @@ function TileRow({ row, category, dispatch }) {
       </div>
 
       <div className="flex-shrink-0 flex flex-col items-end gap-1">
-        {row.action === "toggle" && !row.active && (
-          <button
-            onClick={handleActivate}
-            className="px-2 py-1 rounded-lg bg-[#4f6b3a] text-[#d4f0a4] text-xs font-bold hover:bg-[#5f7b4a] transition-colors"
+        {row.action === "toggle" && (
+          <span
+            className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${
+              row.active
+                ? "bg-[#a8d44a] border-[#a8d44a] text-[#1a2a0a]"
+                : row.locked
+                ? "border-[#5a4030]/50"
+                : "border-[#8a6040]"
+            }`}
+            aria-label={row.active ? "Active" : "Inactive — click to select"}
           >
-            Select
-          </button>
-        )}
-        {row.action === "toggle" && row.active && (
-          <button
-            onClick={handleDeactivate}
-            className="px-2 py-1 rounded-lg bg-[#3a2a1a] text-[#c8a87a] text-xs hover:bg-[#4a3a2a] transition-colors border border-[#6a4030]/50"
-            title="Remove this tile from the board"
-          >
-            ✕ Off
-          </button>
+            {row.active && <span className="text-[10px] font-bold">✓</span>}
+          </span>
         )}
         {row.action === "buy" && (
           <button
-            onClick={handleBuy}
+            onClick={(e) => { e.stopPropagation(); handleBuy(); }}
             className="px-2 py-1 rounded-lg bg-[#8a6a1a] text-[#ffd248] text-xs font-bold hover:bg-[#9a7a2a] transition-colors"
           >
             Buy
@@ -235,21 +249,30 @@ function HazardRow({ hazard }) {
 }
 
 export default function TileCollectionPanel({ state, dispatch }) {
-  const [subCategory, setSubCategory] = useState("farm");
+  // Sub-category and active category tab live on state.viewParams so the URL
+  // (managed by src/router.js) is the single source of truth — back/forward
+  // and deep links land on the same wiki page they were copied from.
+  const subCategory = state?.viewParams?.sub ?? "farm";
   const visibleCategories = useMemo(
     () => categoriesForSubCategory(subCategory),
     [subCategory],
   );
-  const [storedActiveTab, setStoredActiveTab] = useState(() => visibleCategories[0] ?? null);
   const tabBarRef = useRef(null);
 
-  // Derive the visible tab without mutating state inside an effect: when the
-  // user's last selection isn't valid for the current sub-category, fall back
-  // to the first available tab.
-  const activeTab = visibleCategories.includes(storedActiveTab)
-    ? storedActiveTab
+  // Visible tab: use the URL value when valid for the current sub-category,
+  // otherwise fall back to the first available tab. We never write a default
+  // back into state — the URL stays terse until the user explicitly picks one.
+  const requestedTab = state?.viewParams?.cat;
+  const activeTab = visibleCategories.includes(requestedTab)
+    ? requestedTab
     : (visibleCategories[0] ?? null);
-  const setActiveTab = setStoredActiveTab;
+
+  const setSubCategory = (sub) => {
+    dispatch({ type: "SET_VIEW_PARAMS", params: { sub, cat: null } });
+  };
+  const setActiveTab = (cat) => {
+    dispatch({ type: "SET_VIEW_PARAMS", params: { cat } });
+  };
 
   const rows =
     subCategory !== "hazards" && activeTab

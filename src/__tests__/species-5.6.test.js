@@ -4,7 +4,7 @@ import { BIOMES } from "../constants.js";
 
 describe("Phase 5.6 — Board pool wiring", () => {
   const baseDefaults = {
-    grass: "grass_hay", grain: "grain_wheat", bird: "bird_egg",
+    grass: "grass_hay", grain: "grain_wheat", bird: "bird_pheasant",
     vegetables: "veg_carrot",
     fruits: "fruit_apple", flowers: "flower_pansy", trees: "tree_oak",
     herd_animals: "herd_pig", cattle: "cattle_cow", mounts: "mount_horse",
@@ -13,7 +13,7 @@ describe("Phase 5.6 — Board pool wiring", () => {
     tileCollection: {
       activeByCategory: { ...baseDefaults, ...overrides },
       discovered: {
-        grass_hay: true, grain_wheat: true, bird_egg: true,
+        grass_hay: true, grain_wheat: true, bird_pheasant: true,
         grain: true, bird_turkey: true,
         grass_meadow: true, grass_spiky: true, grain_flour: true,
         veg_carrot: true, veg_eggplant: true, veg_turnip: true, veg_cucumber: true,
@@ -39,7 +39,7 @@ describe("Phase 5.6 — Board pool wiring", () => {
 
   it("C: setting a category to null removes that category's resource", () => {
     const r2 = getActivePool(mkState({ bird: null }), "farm");
-    expect(r2.filter((k) => k === "bird_egg").length).toBe(0);
+    expect(r2.filter((k) => k === "bird_pheasant").length).toBe(0);
     expect(r2.filter((k) => k === "grass_hay").length).toBe(3);
   });
 
