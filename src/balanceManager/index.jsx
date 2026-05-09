@@ -1,13 +1,17 @@
-// Balance Manager — central console for editing tile chains, resources,
-// recipes, building costs and tile power hooks. Edits are kept in a draft
+// Balance Manager — standalone console for editing tile chains, resources,
+// recipes, building costs and tile power hooks. Served from its own page at
+// `/b/` (separate Vite entry, see `b/index.html`). Edits are kept in a draft
 // object stored in localStorage (`hearth.balance.draft`) and applied to the
 // game's constants on next page load. The full draft can be exported as
 // JSON for committing to `src/config/balance.json`.
+//
+// Because both the game and this app share an origin, localStorage drafts
+// written here are picked up by the game on its next load.
 
 import { useState, useMemo, useEffect, useCallback, Suspense, lazy } from "react";
-import { BALANCE_OVERRIDES } from "../../constants.js";
-import { writeBalanceDraft } from "../../config/applyOverrides.js";
-import balanceFile from "../../config/balance.json";
+import { BALANCE_OVERRIDES } from "../constants.js";
+import { writeBalanceDraft } from "../config/applyOverrides.js";
+import balanceFile from "../config/balance.json";
 import { COLORS } from "./shared.jsx";
 
 // Lazy-load tabs so the Balance Manager (a dev-time tool) stays out of the
@@ -21,8 +25,6 @@ const ZonesTab     = lazy(() => import("./tabs/ZonesTab.jsx"));
 const WorkersTab   = lazy(() => import("./tabs/WorkersTab.jsx"));
 const ExportTab    = lazy(() => import("./tabs/ExportTab.jsx"));
 const IconsTab     = lazy(() => import("./tabs/IconsTab.jsx"));
-
-export const modalKey = "balanceManager";
 
 // Tabs are grouped under three top-level sections that mirror the game's
 // model: tiles live on the board, resources are inventory currencies, and
@@ -104,8 +106,7 @@ function writeSidebarCollapsed(v) {
   } catch { /* storage unavailable */ }
 }
 
-export default function BalanceManagerModal({ state, dispatch }) {
-  const isOpen = state.modal === modalKey;
+export default function BalanceManagerApp() {
   const [tab, setTab] = useState("tiles");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(readSidebarCollapsed);
   // Initialise the draft from whatever the constants module merged in:
@@ -152,7 +153,6 @@ export default function BalanceManagerModal({ state, dispatch }) {
 
   // Save on Cmd/Ctrl-S so designers can iterate quickly.
   useEffect(() => {
-    if (!isOpen) return undefined;
     function onKey(e) {
       if ((e.metaKey || e.ctrlKey) && e.key === "s") {
         e.preventDefault();
@@ -161,25 +161,22 @@ export default function BalanceManagerModal({ state, dispatch }) {
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [saveDraft, isOpen]);
-
-  if (!isOpen) return null;
+  }, [saveDraft]);
 
   const activeTab = TABS.find((t) => t.id === tab) ?? TABS[0];
   const ActiveComponent = activeTab.Component;
 
   return (
     <div
-      className="absolute inset-0 grid place-items-center"
-      style={{ background: "rgba(0,0,0,0.62)", zIndex: 80 }}
+      className="fixed inset-0 grid place-items-stretch"
+      style={{ background: COLORS.parchmentDeep }}
     >
       <div
-        className="relative flex flex-col rounded-[20px] shadow-2xl overflow-hidden"
+        className="relative flex flex-col overflow-hidden"
         style={{
           background: COLORS.parchment,
-          border: `4px solid ${COLORS.border}`,
-          width: "min(1100px, 96vw)",
-          height: "min(820px, 92vh)",
+          width: "100%",
+          height: "100%",
         }}
       >
         {/* Header */}
@@ -228,14 +225,14 @@ export default function BalanceManagerModal({ state, dispatch }) {
             >
               ↻ Reload
             </button>
-            <button
-              onClick={() => dispatch({ type: "CLOSE_MODAL" })}
-              className="w-8 h-8 grid place-items-center text-[18px] font-bold rounded-lg border-2"
+            <a
+              href={import.meta.env.BASE_URL}
+              className="px-3 py-1.5 text-[12px] font-bold rounded-lg border-2 no-underline"
               style={{ background: COLORS.parchmentDeep, borderColor: COLORS.border, color: COLORS.inkLight }}
-              aria-label="Close"
+              title="Return to the game"
             >
-              ×
-            </button>
+              ← Back to Game
+            </a>
           </div>
         </header>
 

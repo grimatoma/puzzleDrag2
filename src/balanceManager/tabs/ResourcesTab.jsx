@@ -3,7 +3,7 @@
 // registered in the procedural icon registry.
 
 import { useState, useMemo } from "react";
-import { BIOMES } from "../../../constants.js";
+import { BIOMES } from "../../constants.js";
 import {
   COLORS, NumberField, TextField, TextArea, Select, ColorField,
   SmallButton, Pill, Card, SearchBar, TileSwatch,

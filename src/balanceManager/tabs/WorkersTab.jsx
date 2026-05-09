@@ -6,8 +6,8 @@
 // `applyWorkerOverrides` in src/config/applyOverrides.js.
 
 import { useMemo, useState } from "react";
-import { TYPE_WORKERS } from "../../workers/data.js";
-import { ZONE_CATEGORIES } from "../../zones/data.js";
+import { TYPE_WORKERS } from "../../features/workers/data.js";
+import { ZONE_CATEGORIES } from "../../features/zones/data.js";
 import {
   COLORS, NumberField, Select, SmallButton, Pill, Card, SearchBar, TextArea,
 } from "../shared.jsx";

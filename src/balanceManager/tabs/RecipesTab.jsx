@@ -2,7 +2,7 @@
 // description.
 
 import { useState, useMemo } from "react";
-import { RECIPES, BIOMES } from "../../../constants.js";
+import { RECIPES, BIOMES } from "../../constants.js";
 import {
   COLORS, NumberField, TextField, TextArea, Select,
   SmallButton, Pill, Card, SearchBar,
