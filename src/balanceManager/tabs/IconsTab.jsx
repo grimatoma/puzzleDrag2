@@ -1,7 +1,8 @@
 // Icons viewer tab — renders every entry in ICON_REGISTRY on a canvas cell
-// so designers can browse, search, and copy icon keys.
+// (or as inline SVG) so designers can browse, search, and copy icon keys.
 
 import { useState, useMemo, useEffect, useRef, memo } from "react";
+import C2S from "canvas2svg";
 import { ICON_REGISTRY } from "../../textures/iconRegistry.js";
 import { COLORS, SearchBar } from "../shared.jsx";
 
@@ -24,35 +25,58 @@ const ALL_CATEGORIES = ["all", ...Array.from(new Set(ALL_ENTRIES.map((e) => e.ca
 
 const ICON_SIZE = 56; // px — canvas render size
 
-// Memoised cell: renders one icon to its own <canvas> and shows key + label.
-const IconCell = memo(function IconCell({ entry, onClick, selected }) {
+// Run an icon's draw function against any Canvas-2D-shaped context with the
+// same background tint and centering as the live game.
+function paintIcon(ctx, entry, size) {
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(size / 2, size / 2, size / 2 - 2, 0, Math.PI * 2);
+  ctx.fillStyle = entry.color + "28";
+  ctx.fill();
+  ctx.restore();
+  ctx.save();
+  ctx.translate(size / 2, size / 2);
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+  try {
+    entry.draw(ctx);
+  } catch {
+    // Silently skip broken draw functions in dev viewer.
+  }
+  ctx.restore();
+}
+
+function renderIconSvg(entry, size) {
+  const ctx = new C2S(size, size);
+  paintIcon(ctx, entry, size);
+  // canvas2svg bakes width/height into the root <svg>. Replace with a
+  // viewBox so the SVG scales with its container — confirming it's truly
+  // vector and not a fixed-size raster.
+  return ctx
+    .getSerializedSvg(true)
+    .replace(
+      /<svg([^>]*?)\s+width="[^"]*"\s+height="[^"]*"/,
+      `<svg$1 width="100%" height="100%" viewBox="0 0 ${size} ${size}" preserveAspectRatio="xMidYMid meet"`,
+    );
+}
+
+// Memoised cell: renders one icon to its own <canvas> or inline <svg> and
+// shows key + label.
+const IconCell = memo(function IconCell({ entry, onClick, selected, mode }) {
   const canvasRef = useRef(null);
+  const svgMarkup = useMemo(
+    () => (mode === "svg" ? renderIconSvg(entry, ICON_SIZE) : null),
+    [entry, mode],
+  );
 
   useEffect(() => {
+    if (mode !== "canvas") return;
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
-    const s = ICON_SIZE;
-    ctx.clearRect(0, 0, s, s);
-    // Background circle using the icon's accent color.
-    ctx.save();
-    ctx.beginPath();
-    ctx.arc(s / 2, s / 2, s / 2 - 2, 0, Math.PI * 2);
-    ctx.fillStyle = entry.color + "28"; // 16 % opacity tint
-    ctx.fill();
-    ctx.restore();
-    // Translate to center so draw functions work from (0,0).
-    ctx.save();
-    ctx.translate(s / 2, s / 2);
-    ctx.lineCap = "round";
-    ctx.lineJoin = "round";
-    try {
-      entry.draw(ctx);
-    } catch {
-      // Silently skip broken draw functions in dev viewer.
-    }
-    ctx.restore();
-  }, [entry]);
+    ctx.clearRect(0, 0, ICON_SIZE, ICON_SIZE);
+    paintIcon(ctx, entry, ICON_SIZE);
+  }, [entry, mode]);
 
   return (
     <button
@@ -66,12 +90,19 @@ const IconCell = memo(function IconCell({ entry, onClick, selected }) {
         cursor: "pointer",
       }}
     >
-      <canvas
-        ref={canvasRef}
-        width={ICON_SIZE}
-        height={ICON_SIZE}
-        style={{ imageRendering: "crisp-edges" }}
-      />
+      {mode === "svg" ? (
+        <div
+          style={{ width: ICON_SIZE, height: ICON_SIZE, display: "block" }}
+          dangerouslySetInnerHTML={{ __html: svgMarkup }}
+        />
+      ) : (
+        <canvas
+          ref={canvasRef}
+          width={ICON_SIZE}
+          height={ICON_SIZE}
+          style={{ imageRendering: "crisp-edges" }}
+        />
+      )}
       <div
         className="text-center leading-tight max-w-full"
         style={{ width: ICON_SIZE + 24 }}
@@ -99,6 +130,7 @@ export default function IconsTab() {
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("all");
   const [copiedKey, setCopiedKey] = useState(null);
+  const [mode, setMode] = useState("canvas"); // "canvas" | "svg"
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
@@ -138,7 +170,27 @@ export default function IconsTab() {
             </button>
           ))}
         </div>
-        <div className="text-[11px] italic ml-auto flex-shrink-0" style={{ color: COLORS.inkSubtle }}>
+        <div className="flex items-center gap-1 ml-auto flex-shrink-0" role="group" aria-label="Render mode">
+          {[
+            { id: "canvas", label: "Canvas" },
+            { id: "svg", label: "SVG" },
+          ].map((opt) => (
+            <button
+              key={opt.id}
+              onClick={() => setMode(opt.id)}
+              className="px-2 py-1 text-[10px] font-bold rounded-md border-2 transition-colors"
+              aria-pressed={mode === opt.id}
+              style={
+                mode === opt.id
+                  ? { background: COLORS.ember, borderColor: COLORS.emberDeep, color: "#fff" }
+                  : { background: COLORS.parchmentDeep, borderColor: COLORS.border, color: COLORS.inkLight }
+              }
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+        <div className="text-[11px] italic flex-shrink-0" style={{ color: COLORS.inkSubtle }}>
           {filtered.length} / {ALL_ENTRIES.length} icons
         </div>
       </div>
@@ -170,6 +222,7 @@ export default function IconsTab() {
                 entry={entry}
                 onClick={handleClick}
                 selected={copiedKey === entry.key}
+                mode={mode}
               />
             ))}
           </div>
