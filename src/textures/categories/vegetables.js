@@ -611,14 +611,4 @@ export const ICONS = {
   veg_mushroom: { label:"Mushroom", color:"#c8281a", draw:drawMushroom },
   veg_pepper:   { label:"Pepper",   color:"#c8181a", draw:drawPepper },
   veg_broccoli: { label:"Broccoli", color:"#5a8a26", draw:drawBroccoli },
-  // Bare keys used by BIOMES.farm.resources — share the same draw functions.
-  carrot:   { label:"Carrot",   color:"#e07820", draw:drawCarrot },
-  eggplant: { label:"Eggplant", color:"#582888", draw:drawEggplant },
-  turnip:   { label:"Turnip",   color:"#c8a8b4", draw:drawTurnip },
-  beet:     { label:"Beet",     color:"#a82058", draw:drawBeet },
-  cucumber: { label:"Cucumber", color:"#7eb44a", draw:drawCucumber },
-  squash:   { label:"Squash",   color:"#e09038", draw:drawSquash },
-  mushroom: { label:"Mushroom", color:"#c8281a", draw:drawMushroom },
-  pepper:   { label:"Pepper",   color:"#c8181a", draw:drawPepper },
-  broccoli: { label:"Broccoli", color:"#5a8a26", draw:drawBroccoli },
 };
