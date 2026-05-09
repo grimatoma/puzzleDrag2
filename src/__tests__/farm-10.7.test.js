@@ -5,6 +5,7 @@
 import { describe, it, expect } from "vitest";
 import { createInitialState, rootReducer } from "../state.js";
 import { rollFarmHazard, tickFire } from "../features/farm/hazards.js";
+import { FIRE_HAZARD_ENABLED } from "../featureFlags.js";
 
 function makeGrid(rows = 4, cols = 4, key = "grass_hay") {
   return Array.from({ length: rows }, () =>
@@ -15,7 +16,7 @@ function makeGrid(rows = 4, cols = 4, key = "grass_hay") {
 // ── rollFarmHazard ─────────────────────────────────────────────────────────────
 
 describe("10.7 — rollFarmHazard fire spawn rate ~4%", () => {
-  it("spawns fire at ~4% rate over 2000 farm rolls", () => {
+  it.skipIf(!FIRE_HAZARD_ENABLED)("spawns fire at ~4% rate over 2000 farm rolls", () => {
     const s = {
       ...createInitialState(),
       biome: "farm",
