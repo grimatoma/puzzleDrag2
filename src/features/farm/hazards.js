@@ -39,7 +39,7 @@ const FIRE_SPREAD_RATE  = 0.50;
 const FIRE_MAX_CELLS    = 3;
 const WOLF_SPAWN_RATE   = 0.06;
 const WOLF_MAX_ACTIVE   = 2;
-const WOLF_BIRD_KEYS    = new Set(["bird_egg", "bird_turkey", "bird_clover"]);
+const WOLF_BIRD_KEYS    = new Set(["bird_egg", "bird_turkey"]);
 
 /**
  * Roll for a Farm hazard spawn.

@@ -136,7 +136,10 @@ export const BIOMES = {
       { key: "berry_jam",   kind: "resource", label: "Jam",   color: 0xd4658c, dark: 0x7a2f50, value: 5, next: null,    glyph: "◎", sway: { amp: 0.8, freq: 0.00025, gust: 0.00 } },
       { key: "bird_egg",   kind: "resource", label: "Egg",   color: 0xf4ecd8, dark: 0x8a785e, value: 3, next: "eggs",    glyph: "◯", sway: { amp: 1.5, freq: 0.00055, gust: 0.08 } },
       { key: "bird_turkey", kind: "tile", label: "Turkey", color: 0xb8743a, dark: 0x5e3818, value: 4, next: "eggs", glyph: "🦃", sway: { amp: 1.2, freq: 0.00050, gust: 0.10 } },
-      { key: "bird_clover", kind: "tile", label: "Clover", color: 0x6fa450, dark: 0x365e22, value: 5, next: "eggs", glyph: "☘", sway: { amp: 2.5, freq: 0.00080, gust: 0.18 } },
+      // Clover is a flowering ground-cover, not a bird tile — chains into honey
+      // alongside the other flower species. Key kept as bird_clover for save
+      // compatibility; the tile-type's category is "flowers" in tileCollection.
+      { key: "bird_clover", kind: "tile", label: "Clover", color: 0x6fa450, dark: 0x365e22, value: 5, next: "honey", glyph: "☘", sway: { amp: 2.5, freq: 0.00080, gust: 0.18 } },
       { key: "bird_melon",  kind: "tile", label: "Melon",  color: 0xb3d770, dark: 0x4a6e2a, value: 6, next: "eggs", glyph: "🍈", sway: { amp: 0.8, freq: 0.00030, gust: 0.05 } },
       { key: "veg_carrot",   kind: "tile", label: "Carrot",   color: 0xe88439, dark: 0x7a3e10, value: 4, next: "soup", glyph: "🥕", sway: { amp: 2.0, freq: 0.00050, gust: 0.10 } },
       { key: "veg_eggplant", kind: "tile", label: "Eggplant", color: 0x6b3a8a, dark: 0x301848, value: 4, next: "soup", glyph: "🍆", sway: { amp: 1.8, freq: 0.00048, gust: 0.08 } },
