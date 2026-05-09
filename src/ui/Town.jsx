@@ -1273,6 +1273,8 @@ export function TownView({ state, dispatch }) {
             const b = slot.buildingId ? BUILDINGS.find((x) => x.id === slot.buildingId) : null;
             const isBuilt = !!b;
             const isPlacing = !!pendingBuilding && !isBuilt;
+            // Empty plots are invisible until the player enters placement mode.
+            if (!isBuilt && !isPlacing) return null;
             const CRAFTING_STATIONS = new Set(["bakery", "forge", "larder"]);
 
             const onClick = () => {
