@@ -297,11 +297,6 @@ export function createFreshState(overrides) {
     // `fertilizerUsed` records whether the session was started with the
     // turn-doubling fertilizer applied. Both reset on FARM/ENTER.
     session: { selectedTiles: [], fertilizerUsed: false },
-    // Player-owned stock of farm fertilizer consumables. Distinct from the
-    // workshop `tools.fertilizer` (spawn-injection passive) and from the
-    // portal `tools.magic_fertilizer`. Spent inside FARM/ENTER when the
-    // player toggles the fertilizer option in the Start Farming modal.
-    farmFertilizer: 0,
     dailyStreak: { lastClaimedDate: null, currentDay: 0 },
     townsfolk: { hired: { hilda: 0, pip: 0, wila: 0, tuck: 0, osric: 0, dren: 0 }, debt: 0, pool: 1 },
     // Phase 5b — type-tier workers (anonymous, stackable). Distinct from
@@ -1291,8 +1286,8 @@ function coreReducer(state, action) {
       // - selectedTiles: zone categories the player chose (1 per type, max 8).
       //   Filtered by GameScene to bias spawn rotation. Empty array is allowed
       //   and behaves as "no filter" (legacy entry path).
-      // - useFertilizer: when true, decrement farmFertilizer and double the
-      //   session's turn budget.
+      // - useFertilizer: when true, consume one workshop-crafted fertilizer
+      //   (state.tools.fertilizer) and double the session's turn budget.
       const payload = action.payload ?? {};
       const selectedTiles = Array.isArray(payload.selectedTiles)
         ? payload.selectedTiles.slice(0, 8)
@@ -1305,7 +1300,8 @@ function coreReducer(state, action) {
 
       const entryCoins = zone.entryCost?.coins ?? 50;
       if ((state.coins ?? 0) < entryCoins) return state;
-      if (useFertilizer && (state.farmFertilizer ?? 0) < 1) return state;
+      const fertilizerStock = state.tools?.fertilizer ?? 0;
+      if (useFertilizer && fertilizerStock < 1) return state;
 
       const startingTurns = zone.startingTurns ?? MAX_TURNS;
       const sessionMaxTurns = startingTurns * (useFertilizer ? 2 : 1);
@@ -1317,9 +1313,9 @@ function coreReducer(state, action) {
         view: "board",
         viewParams: {},
         coins: state.coins - entryCoins,
-        farmFertilizer: useFertilizer
-          ? (state.farmFertilizer ?? 0) - 1
-          : (state.farmFertilizer ?? 0),
+        tools: useFertilizer
+          ? { ...state.tools, fertilizer: fertilizerStock - 1 }
+          : state.tools,
         turnsUsed: 0,
         sessionMaxTurns,
         session: {

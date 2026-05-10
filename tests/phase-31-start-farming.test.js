@@ -8,15 +8,15 @@ function withCoins(state, coins) {
   return { ...state, coins };
 }
 
-describe("Phase 31 — fresh state has session + farmFertilizer fields", () => {
+describe("Phase 31 — fresh state has session field", () => {
   it("session starts empty", () => {
     const s = createInitialState();
     expect(s.session).toEqual({ selectedTiles: [], fertilizerUsed: false });
   });
 
-  it("farmFertilizer stock starts at 0", () => {
+  it("workshop fertilizer stock starts at 0", () => {
     const s = createInitialState();
-    expect(s.farmFertilizer).toBe(0);
+    expect(s.tools.fertilizer).toBe(0);
   });
 });
 
@@ -56,17 +56,21 @@ describe("Phase 31 — FARM/ENTER: turn budget", () => {
   });
 
   it("doubles the turn budget when fertilizer is applied", () => {
-    const s = withCoins({ ...createInitialState(), farmFertilizer: 1 }, 100);
+    const base = createInitialState();
+    const s = withCoins(
+      { ...base, tools: { ...base.tools, fertilizer: 1 } },
+      100,
+    );
     const next = rootReducer(s, {
       type: "FARM/ENTER",
       payload: { selectedTiles: [], useFertilizer: true },
     });
     expect(next.sessionMaxTurns).toBe(32);
-    expect(next.farmFertilizer).toBe(0);
+    expect(next.tools.fertilizer).toBe(0);
     expect(next.session.fertilizerUsed).toBe(true);
   });
 
-  it("rejects fertilizer toggle when farmFertilizer === 0", () => {
+  it("rejects fertilizer toggle when tools.fertilizer === 0", () => {
     const s = withCoins(createInitialState(), 100);
     const next = rootReducer(s, {
       type: "FARM/ENTER",
@@ -163,11 +167,12 @@ describe("Phase 31 — FARM/ENTER: zone awareness", () => {
   });
 
   it("Quarry (10 turns) + fertilizer = 20 turns", () => {
+    const base = createInitialState();
     const s = withCoins(
       {
-        ...createInitialState(),
+        ...base,
         activeZone: "quarry",
-        farmFertilizer: 1,
+        tools: { ...base.tools, fertilizer: 1 },
       },
       200,
     );
