@@ -55,22 +55,24 @@ export function SidePanel({ state, dispatch, chainInfo }) {
         </div>
       )}
       <Section title="Tools" titleColor="#f8e7c6">
-        <ToolsGrid
-          tools={state.tools}
-          toolPending={state.toolPending}
-          fertilizerActive={state.fertilizerActive}
-          onUse={(key) => {
-            const isPending = state.toolPending === key;
-            if (isPending) { dispatch({ type: "CANCEL_TOOL" }); return; }
-            const def = TOOL_BY_KEY[key];
-            if (def?.category === "magic") {
-              dispatch({ type: "USE_TOOL", payload: { id: key } });
-            } else {
-              dispatch({ type: "USE_TOOL", key });
-            }
-            if (key === "shuffle") getPhaserScene()?.shuffleBoard();
-          }}
-        />
+        <div className="max-h-[40vh] landscape:max-[1024px]:max-h-[34vh] overflow-y-auto pr-1">
+          <ToolsGrid
+            tools={state.tools}
+            toolPending={state.toolPending}
+            fertilizerActive={state.fertilizerActive}
+            onUse={(key) => {
+              const isPending = state.toolPending === key;
+              if (isPending) { dispatch({ type: "CANCEL_TOOL" }); return; }
+              const def = TOOL_BY_KEY[key];
+              if (def?.category === "magic") {
+                dispatch({ type: "USE_TOOL", payload: { id: key } });
+              } else {
+                dispatch({ type: "USE_TOOL", key });
+              }
+              if (key === "shuffle") getPhaserScene()?.shuffleBoard();
+            }}
+          />
+        </div>
       </Section>
       <Section title="Orders" titleColor="#f8e7c6">
         <CompactOrders orders={state.orders} inventory={state.inventory} dispatch={dispatch} />
