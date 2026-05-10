@@ -12,28 +12,38 @@ describe("Mine workers — second batch (catalog completion)", () => {
 
   it("Iron Miner pool_weight on mine_ore", () => {
     const w = APPRENTICES.find((a) => a.id === "iron_miner");
-    expect(w.effect).toEqual({ type: "pool_weight", key: "mine_ore", amount: 2 });
+    expect(w.abilities).toEqual([
+      { id: "pool_weight_legacy", params: { target: "mine_ore", amount: 2 } },
+    ]);
   });
 
   it("Silver Miner pool_weight on mine_gold (single hire cap)", () => {
     const w = APPRENTICES.find((a) => a.id === "silver_miner");
-    expect(w.effect).toEqual({ type: "pool_weight", key: "mine_gold", amount: 1 });
+    expect(w.abilities).toEqual([
+      { id: "pool_weight_legacy", params: { target: "mine_gold", amount: 1 } },
+    ]);
     expect(w.maxCount).toBe(1);
   });
 
   it("Engineer bonus_yield on mine_stone", () => {
     const w = APPRENTICES.find((a) => a.id === "engineer");
-    expect(w.effect).toEqual({ type: "bonus_yield", key: "mine_stone", amount: 1 });
+    expect(w.abilities).toEqual([
+      { id: "bonus_yield", params: { target: "mine_stone", amount: 1 } },
+    ]);
   });
 
   it("Alchemist bonus_yield on mine_coal", () => {
     const w = APPRENTICES.find((a) => a.id === "alchemist");
-    expect(w.effect).toEqual({ type: "bonus_yield", key: "mine_coal", amount: 1 });
+    expect(w.abilities).toEqual([
+      { id: "bonus_yield", params: { target: "mine_coal", amount: 1 } },
+    ]);
   });
 
   it("Sculptor season_bonus coins 50", () => {
     const w = APPRENTICES.find((a) => a.id === "sculptor");
-    expect(w.effect).toEqual({ type: "season_bonus", key: "coins", amount: 50 });
+    expect(w.abilities).toEqual([
+      { id: "season_bonus", params: { resource: "coins", amount: 50 } },
+    ]);
   });
 
   it("max-hire Iron Miner: poolWeight.mine_ore = 2", () => {

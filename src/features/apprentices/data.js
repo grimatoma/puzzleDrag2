@@ -25,7 +25,9 @@ export const TOWNSFOLK = [
     wage: 15,
     hireCost: { worker: 1, grass_hay: 6, bread: 8 },
     maxCount: 3,
-    effect: { type: "threshold_reduce", key: "grass_hay", from: 6, to: 3 },
+    abilities: [
+      { id: "threshold_reduce", params: { target: "grass_hay", amount: 3 } },
+    ],
     requirement: { building: "granary" },
     description: "A tireless farmhand who knows just when to cut the hay. Lowers the chain length needed to upgrade hay tiles.",
   },
@@ -38,7 +40,9 @@ export const TOWNSFOLK = [
     wage: 12,
     hireCost: { worker: 1, berry: 4, bread: 6 },
     maxCount: 2,
-    effect: { type: "pool_weight", key: "berry", amount: 2 },
+    abilities: [
+      { id: "pool_weight_legacy", params: { target: "berry", amount: 2 } },
+    ],
     requirement: { building: "inn" },
     description: "A nimble forager who scouts the hedgerows at dawn. Adds extra berry tiles to the board spawn pool.",
   },
@@ -51,7 +55,9 @@ export const TOWNSFOLK = [
     wage: 20,
     hireCost: { worker: 1, berry_jam: 3, bread: 8 },
     maxCount: 2,
-    effect: { type: "bonus_yield", key: "berry_jam", amount: 2 },
+    abilities: [
+      { id: "bonus_yield", params: { target: "berry_jam", amount: 2 } },
+    ],
     requirement: { building: "bakery" },
     description: "A patient cellarer who turns surplus berries into rich preserves. Yields bonus jam whenever you chain berry tiles.",
   },
@@ -64,7 +70,9 @@ export const TOWNSFOLK = [
     wage: 20,
     hireCost: { worker: 1, bread: 6 },
     maxCount: 1,
-    effect: { type: "season_bonus", key: "coins", amount: 30 },
+    abilities: [
+      { id: "season_bonus", params: { resource: "coins", amount: 30 } },
+    ],
     requirement: { building: "inn" },
     description: "A sharp-eyed lookout who keeps tabs on trade caravans. Brings in extra coin at the end of each season.",
   },
@@ -77,7 +85,9 @@ export const TOWNSFOLK = [
     wage: 40,
     hireCost: { worker: 1, mine_ingot: 4, bread: 8 },
     maxCount: 2,
-    effect: { type: "threshold_reduce", key: "mine_ore", from: 6, to: 4 },
+    abilities: [
+      { id: "threshold_reduce", params: { target: "mine_ore", amount: 2 } },
+    ],
     requirement: { building: "forge", orLevel: 4 },
     description: "A forge apprentice who learned the trade at Bram's knee. Reduces the chain length needed to smelt ore into ingots.",
   },
@@ -90,7 +100,9 @@ export const TOWNSFOLK = [
     wage: 25,
     hireCost: { worker: 1, mine_stone: 6, bread: 6 },
     maxCount: 2,
-    effect: { type: "threshold_reduce", key: "mine_stone", from: 8, to: 6 },
+    abilities: [
+      { id: "threshold_reduce", params: { target: "mine_stone", amount: 2 } },
+    ],
     requirement: { level: 2 },
     description: "A seasoned miner who always finds a richer seam. Reduces the chain length needed to upgrade stone tiles.",
   },
@@ -103,7 +115,9 @@ export const TOWNSFOLK = [
     wage: 25,
     hireCost: { worker: 1, grass_hay: 10, bread: 20, mine_stone: 10, mine_ingot: 15 },
     maxCount: 4,
-    effect: { type: "threshold_reduce_category", category: "vegetables", from: 6, to: 5 },
+    abilities: [
+      { id: "threshold_reduce_category", params: { category: "vegetables", amount: 1 } },
+    ],
     requirement: { building: "kitchen", orLevel: 5 },
     description: "A cheerful picker who carries baskets full of vegetables back from the rows, shaving a step off every soup-pot's chain.",
   },
@@ -120,7 +134,9 @@ export const TOWNSFOLK = [
     hireCost: { worker: 1, grass_hay: 6, bread: 10, mine_stone: 12, soup: 2 },
     maxCount: 2,
     // Catalog: 7 fruit = 1 pie at max (base 7 → max 6).
-    effect: { type: "threshold_reduce_category", category: "fruits", from: 7, to: 6 },
+    abilities: [
+      { id: "threshold_reduce_category", params: { category: "fruits", amount: 1 } },
+    ],
     requirement: { building: "bakery", orLevel: 5 },
     description: "An orchard climber who knows which limb to coax. Trims a fruit off every pie chain.",
   },
@@ -134,7 +150,9 @@ export const TOWNSFOLK = [
     hireCost: { worker: 1, grass_hay: 4, bread: 10, mine_stone: 12, meat: 16 },
     maxCount: 4,
     // Catalog: 5 herd = 1 meat at max (base 5 → max 4).
-    effect: { type: "threshold_reduce_category", category: "herd_animals", from: 5, to: 4 },
+    abilities: [
+      { id: "threshold_reduce_category", params: { category: "herd_animals", amount: 1 } },
+    ],
     requirement: { building: "kitchen", orLevel: 5 },
     description: "Steady on the moors with a long crook. Trims one animal off every meat chain.",
   },
@@ -148,7 +166,9 @@ export const TOWNSFOLK = [
     hireCost: { worker: 1, grass_hay: 6, soup: 3, meat: 3, mine_ingot: 15 },
     maxCount: 2,
     // Catalog: 6 cattle = 1 milk at max (base 6 → max 5).
-    effect: { type: "threshold_reduce_category", category: "cattle", from: 6, to: 5 },
+    abilities: [
+      { id: "threshold_reduce_category", params: { category: "cattle", amount: 1 } },
+    ],
     requirement: { building: "granary", orLevel: 6 },
     description: "An early riser at the byre — trims one cow off every milk pail.",
   },
@@ -166,7 +186,9 @@ export const TOWNSFOLK = [
     // Catalog: 6 cattle = 1 mount at max — but in our chain model mounts are
     // their own category producing horseshoes (chain 10). We use the rancher
     // as the mount-chain reducer: 10 → 9 at max hire.
-    effect: { type: "threshold_reduce_category", category: "mounts", from: 10, to: 9 },
+    abilities: [
+      { id: "threshold_reduce_category", params: { category: "mounts", amount: 1 } },
+    ],
     requirement: { building: "granary", orLevel: 6 },
     description: "Knows every mount's gait by ear. Shaves a tile off the horseshoe chain.",
   },
@@ -187,13 +209,17 @@ export const TOWNSFOLK = [
     maxCount: 4,
     // Catalog: 4 grain = 1 vegetable at max. Source category `grain`,
     // redirects to first active species in `vegetables`.
-    effect: {
-      type: "chain_redirect_category",
-      fromCategory: "grain",
-      toCategory: "vegetables",
-      from: 5,  // base ratio
-      to: 4,    // catalog max
-    },
+    abilities: [
+      {
+        id: "chain_redirect_category",
+        params: {
+          fromCategory: "grain",
+          toCategory: "vegetables",
+          baseThreshold: 5,
+          minThreshold: 4,
+        },
+      },
+    ],
     requirement: { building: "kitchen", orLevel: 5 },
     description: "A market-savvy trader who barters surplus grain into root crops.",
   },
@@ -207,13 +233,17 @@ export const TOWNSFOLK = [
     hireCost: { worker: 1, grass_hay: 8, bread: 16, mine_stone: 12, soup: 4 },
     maxCount: 3,
     // Catalog: 5 vegetable = 1 fruit at max.
-    effect: {
-      type: "chain_redirect_category",
-      fromCategory: "vegetables",
-      toCategory: "fruits",
-      from: 6,
-      to: 5,
-    },
+    abilities: [
+      {
+        id: "chain_redirect_category",
+        params: {
+          fromCategory: "vegetables",
+          toCategory: "fruits",
+          baseThreshold: 6,
+          minThreshold: 5,
+        },
+      },
+    ],
     requirement: { building: "kitchen", orLevel: 6 },
     description: "A patient gardener who coaxes fruit trees into bearing from a vegetable patch's runoff.",
   },
@@ -227,13 +257,17 @@ export const TOWNSFOLK = [
     hireCost: { worker: 1, grass_hay: 9, bread: 16, mine_stone: 10, soup: 9 },
     maxCount: 2,
     // Catalog: 6 fruit = 1 flower at max.
-    effect: {
-      type: "chain_redirect_category",
-      fromCategory: "fruits",
-      toCategory: "flowers",
-      from: 7,
-      to: 6,
-    },
+    abilities: [
+      {
+        id: "chain_redirect_category",
+        params: {
+          fromCategory: "fruits",
+          toCategory: "flowers",
+          baseThreshold: 7,
+          minThreshold: 6,
+        },
+      },
+    ],
     requirement: { building: "larder", orLevel: 6 },
     description: "Trims orchard branches just so — fruit chains coax flowers into bloom.",
   },
@@ -247,13 +281,17 @@ export const TOWNSFOLK = [
     hireCost: { worker: 1, bread: 12, mine_stone: 10, meat: 8 },
     maxCount: 4,
     // Catalog: 7 bird = 1 herd animal at max.
-    effect: {
-      type: "chain_redirect_category",
-      fromCategory: "bird",
-      toCategory: "herd_animals",
-      from: 8,
-      to: 7,
-    },
+    abilities: [
+      {
+        id: "chain_redirect_category",
+        params: {
+          fromCategory: "bird",
+          toCategory: "herd_animals",
+          baseThreshold: 8,
+          minThreshold: 7,
+        },
+      },
+    ],
     requirement: { building: "granary", orLevel: 6 },
     description: "Cultivates yard flocks alongside livestock — long bird chains drive animals from the brake.",
   },
@@ -267,7 +305,9 @@ export const TOWNSFOLK = [
     wage: 30,
     hireCost: { worker: 1, grass_hay: 6, bread: 12, mine_stone: 8 },
     maxCount: 2,
-    effect: { type: "threshold_reduce_category", category: "bird", from: 6, to: 4 },
+    abilities: [
+      { id: "threshold_reduce_category", params: { category: "bird", amount: 2 } },
+    ],
     requirement: { building: "granary", orLevel: 5 },
     description: "Coaxes the flock into laying with a steady hand and an early lamp. Every bird chain comes home a tile shorter.",
   },
@@ -281,7 +321,9 @@ export const TOWNSFOLK = [
     wage: 28,
     hireCost: { worker: 1, grass_hay: 8, bread: 8, mine_stone: 8 },
     maxCount: 2,
-    effect: { type: "threshold_reduce", key: "grain_flour", from: 6, to: 4 },
+    abilities: [
+      { id: "threshold_reduce", params: { target: "grain_flour", amount: 2 } },
+    ],
     requirement: { building: "bakery", orLevel: 4 },
     description: "A scythe-keeper who threshes faster than the wind. Cuts two steps off every flour-to-bread chain.",
   },
@@ -297,7 +339,9 @@ export const TOWNSFOLK = [
     // brutal without help. Beekeeper fills the gap with a modest reduction.
     hireCost: { worker: 1, grass_hay: 6, bread: 8, soup: 2, berry_jam: 4 },
     maxCount: 2,
-    effect: { type: "threshold_reduce_category", category: "flowers", from: 10, to: 9 },
+    abilities: [
+      { id: "threshold_reduce_category", params: { category: "flowers", amount: 1 } },
+    ],
     requirement: { building: "larder", orLevel: 6 },
     description: "Hums with the hive. Lifts one petal-tile off every honey chain.",
   },
@@ -315,7 +359,9 @@ export const TOWNSFOLK = [
     hireCost: { worker: 1, mine_coke: 4, bread: 6 },
     maxCount: 2,
     // At max hire (2): gas_vent spawn rate −50%. Per hire: −25%.
-    effect: { hazardSpawnReduce: { gas_vent: 0.5 } },
+    abilities: [
+      { id: "hazard_spawn_reduce", params: { hazard: "gas_vent", amount: 0.5 } },
+    ],
     requirement: { biomeUnlocked: "mine" },
     description: "A trained hazard spotter who senses dangerous gas before it builds up. Reduces the chance of gas vent hazards spawning in the mine.",
   },
@@ -329,7 +375,10 @@ export const TOWNSFOLK = [
     hireCost: { worker: 1, mine_ingot: 6, bread: 6 },
     maxCount: 2,
     // At max hire (2): ore +1, gem +1 in pool. 1 hire floors to +0 (0.5 per hire).
-    effect: { poolWeight: { mine_ore: 1, mine_gem: 1 } },
+    abilities: [
+      { id: "pool_weight", params: { target: "mine_ore", amount: 1 } },
+      { id: "pool_weight", params: { target: "mine_gem", amount: 1 } },
+    ],
     requirement: { biomeUnlocked: "mine" },
     description: "A seasoned surveyor who knows where the richest veins run. Adds bonus ore and gem tiles to the mine spawn pool.",
   },
@@ -344,7 +393,9 @@ export const TOWNSFOLK = [
     wage: 30,
     hireCost: { worker: 1, fish_raw: 4, bread: 6, wood_plank: 4 },
     maxCount: 3,
-    effect: { type: "threshold_reduce_category", category: "fish", from: 5, to: 2 },
+    abilities: [
+      { id: "threshold_reduce_category", params: { category: "fish", amount: 3 } },
+    ],
     requirement: { level: 4 },
     description: "An old hand of the surf, knows every reef and tide. Trims a fish off every chain in the harbor.",
   },
@@ -357,7 +408,10 @@ export const TOWNSFOLK = [
     wage: 28,
     hireCost: { worker: 1, fish_raw: 6, bread: 8, wood_plank: 6 },
     maxCount: 2,
-    effect: { poolWeight: { fish_sardine: 2, fish_mackerel: 2 } },
+    abilities: [
+      { id: "pool_weight", params: { target: "fish_sardine", amount: 2 } },
+      { id: "pool_weight", params: { target: "fish_mackerel", amount: 2 } },
+    ],
     requirement: { level: 4 },
     description: "Hauls the long net from dawn to dusk. More sardines and mackerel surface on the harbour board.",
   },
@@ -370,7 +424,9 @@ export const TOWNSFOLK = [
     wage: 28,
     hireCost: { worker: 1, fish_raw: 4, bread: 8, wood_plank: 6 },
     maxCount: 2,
-    effect: { type: "bonus_yield", key: "fish_clam", amount: 2 },
+    abilities: [
+      { id: "bonus_yield", params: { target: "fish_clam", amount: 2 } },
+    ],
     requirement: { level: 4 },
     description: "Knows every channel and shoal by the way the boat sits. Hauls in extra clams whenever the line draws fish.",
   },
@@ -383,7 +439,9 @@ export const TOWNSFOLK = [
     wage: 35,
     hireCost: { worker: 1, fish_raw: 6, bread: 8, mine_ingot: 4 },
     maxCount: 2,
-    effect: { type: "bonus_yield", key: "fish_oyster", amount: 1 },
+    abilities: [
+      { id: "bonus_yield", params: { target: "fish_oyster", amount: 1 } },
+    ],
     requirement: { level: 5 },
     description: "Stands at the prow, eye fixed to the deep. Drops a stray oyster into the catch each haul.",
   },
@@ -396,7 +454,9 @@ export const TOWNSFOLK = [
     wage: 32,
     hireCost: { worker: 1, fish_kelp: 6, bread: 8, wood_plank: 8 },
     maxCount: 2,
-    effect: { type: "threshold_reduce", key: "fish_kelp", from: 6, to: 4 },
+    abilities: [
+      { id: "threshold_reduce", params: { target: "fish_kelp", amount: 2 } },
+    ],
     requirement: { level: 5 },
     description: "Renders kelp into bottled lamp-oil with a slow, patient hand. Trims the chain needed for fish oil.",
   },
@@ -409,7 +469,9 @@ export const TOWNSFOLK = [
     wage: 32,
     hireCost: { worker: 1, fish_raw: 6, bread: 8, mine_stone: 6 },
     maxCount: 2,
-    effect: { type: "bonus_yield", key: "fish_fillet", amount: 1 },
+    abilities: [
+      { id: "bonus_yield", params: { target: "fish_fillet", amount: 1 } },
+    ],
     requirement: { level: 5 },
     description: "Knows every plank of the galley. Drops a clean fillet into the catch each haul.",
   },
@@ -422,7 +484,9 @@ export const TOWNSFOLK = [
     wage: 50,
     hireCost: { worker: 1, fish_fillet: 4, milk: 2, bread: 12 },
     maxCount: 1,
-    effect: { type: "season_bonus", key: "coins", amount: 60 },
+    abilities: [
+      { id: "season_bonus", params: { resource: "coins", amount: 60 } },
+    ],
     requirement: { level: 6 },
     description: "Runs a galley like a ship's captain runs the deck. Brings home extra coin at the end of every season.",
   },
@@ -435,7 +499,9 @@ export const TOWNSFOLK = [
     wage: 55,
     hireCost: { worker: 1, fish_oil: 3, fish_raw: 8, bread: 12 },
     maxCount: 1,
-    effect: { type: "pool_weight", key: "fish_oyster", amount: 2 },
+    abilities: [
+      { id: "pool_weight_legacy", params: { target: "fish_oyster", amount: 2 } },
+    ],
     requirement: { level: 6 },
     description: "Reads sky and sea like a chart. Steers the catch toward oyster beds where pearls hide.",
   },
@@ -450,7 +516,10 @@ export const TOWNSFOLK = [
     maxCount: 2,
     // Niche: extra clams + kelp tiles in the harbor pool. Object-form
     // poolWeight scales linearly through the per-hire-floor aggregator.
-    effect: { poolWeight: { fish_clam: 1, fish_kelp: 1 } },
+    abilities: [
+      { id: "pool_weight", params: { target: "fish_clam", amount: 1 } },
+      { id: "pool_weight", params: { target: "fish_kelp", amount: 1 } },
+    ],
     requirement: { level: 5 },
     description: "Charts unmapped coves and tide-pools. Brings home extra clams and kelp from the back-shores.",
   },
@@ -465,7 +534,9 @@ export const TOWNSFOLK = [
     maxCount: 1,
     // Catalog: extra coins at season end. Mid-tier bump above Tuck (30)
     // and below Chef (60).
-    effect: { type: "season_bonus", key: "coins", amount: 45 },
+    abilities: [
+      { id: "season_bonus", params: { resource: "coins", amount: 45 } },
+    ],
     requirement: { level: 5 },
     description: "Reads stars and currents alike. Trims the wasted runs and brings extra coin home each season.",
   },
@@ -479,7 +550,9 @@ export const TOWNSFOLK = [
     hireCost: { worker: 1, fish_kelp: 8, bread: 10, milk: 1 },
     maxCount: 2,
     // Specialist: extra kelp on chains. Speeds the kelp → fish_oil chain.
-    effect: { type: "bonus_yield", key: "fish_kelp", amount: 2 },
+    abilities: [
+      { id: "bonus_yield", params: { target: "fish_kelp", amount: 2 } },
+    ],
     requirement: { level: 5 },
     description: "Boils kelp into salt-sweet candies and lamp oil. Pulls extra kelp from every chain.",
   },
@@ -494,7 +567,11 @@ export const TOWNSFOLK = [
     maxCount: 4,
     // Broad, shallow pool boost — sardine + mackerel + kelp each get
     // +1 per max-hire (per-hire fractional, floored to 0 for solo hire).
-    effect: { poolWeight: { fish_sardine: 1, fish_mackerel: 1, fish_kelp: 1 } },
+    abilities: [
+      { id: "pool_weight", params: { target: "fish_sardine", amount: 1 } },
+      { id: "pool_weight", params: { target: "fish_mackerel", amount: 1 } },
+      { id: "pool_weight", params: { target: "fish_kelp", amount: 1 } },
+    ],
     requirement: { level: 4 },
     description: "Hauls lines and scrubs decks from dawn to dark. Keeps the harbour board topped up with the staples.",
   },
@@ -511,7 +588,9 @@ export const TOWNSFOLK = [
     maxCount: 3,
     // Stacks with Dren on mine_stone — multiple thresholds combine.
     // Catalog: more aggressive trim than Dren (max 3 hires × 1 ea).
-    effect: { type: "threshold_reduce", key: "mine_cobble", from: 6, to: 3 },
+    abilities: [
+      { id: "threshold_reduce", params: { target: "mine_cobble", amount: 3 } },
+    ],
     requirement: { biomeUnlocked: "mine" },
     description: "Levers cobble out of the rough quarry walls. Trims the cobble chain so paths come together fast.",
   },
@@ -524,7 +603,9 @@ export const TOWNSFOLK = [
     wage: 28,
     hireCost: { worker: 1, mine_coal: 8, bread: 8, mine_ingot: 2 },
     maxCount: 2,
-    effect: { type: "threshold_reduce", key: "mine_coal", from: 7, to: 5 },
+    abilities: [
+      { id: "threshold_reduce", params: { target: "mine_coal", amount: 2 } },
+    ],
     requirement: { biomeUnlocked: "mine" },
     description: "Hauls coal from cramped seams. Lowers the chain length needed to bring up coal tiles.",
   },
@@ -539,7 +620,9 @@ export const TOWNSFOLK = [
     maxCount: 2,
     // Trims the high-tier gem chain (5 → 3 at max). Pairs naturally with
     // Geologist (poolWeight on mine_gem) for crown plays.
-    effect: { type: "threshold_reduce", key: "mine_gem", from: 5, to: 3 },
+    abilities: [
+      { id: "threshold_reduce", params: { target: "mine_gem", amount: 2 } },
+    ],
     requirement: { building: "forge", orLevel: 6 },
     description: "Cuts and sets gems with a steady hand. Shortens the chain needed to lift cut-gem grade stones.",
   },
@@ -553,7 +636,10 @@ export const TOWNSFOLK = [
     hireCost: { worker: 1, mine_dirt: 8, bread: 6 },
     maxCount: 4,
     // Broad pool boost: more dirt + stone tiles in the rotation.
-    effect: { poolWeight: { mine_dirt: 1, mine_stone: 1 } },
+    abilities: [
+      { id: "pool_weight", params: { target: "mine_dirt", amount: 1 } },
+      { id: "pool_weight", params: { target: "mine_stone", amount: 1 } },
+    ],
     requirement: { biomeUnlocked: "mine" },
     description: "Hands like shovels. Keeps the rough fill flowing — extra dirt and stone every shift.",
   },
@@ -567,7 +653,9 @@ export const TOWNSFOLK = [
     hireCost: { worker: 1, mine_stone: 10, bread: 8, mine_coke: 4 },
     maxCount: 2,
     // Bonus yield on cobble: +1 cobble per stone-chain (whose upgrade is cobble).
-    effect: { type: "bonus_yield", key: "mine_cobble", amount: 1 },
+    abilities: [
+      { id: "bonus_yield", params: { target: "mine_cobble", amount: 1 } },
+    ],
     requirement: { biomeUnlocked: "mine" },
     description: "Drives the great pit-bucket. Lifts an extra cobble out of every stone chain.",
   },
@@ -583,7 +671,9 @@ export const TOWNSFOLK = [
     hireCost: { worker: 1, mine_ore: 6, bread: 8, mine_coal: 4 },
     maxCount: 2,
     // Adds two ore tiles to the spawn pool — pairs with Osric's threshold cut.
-    effect: { type: "pool_weight", key: "mine_ore", amount: 2 },
+    abilities: [
+      { id: "pool_weight_legacy", params: { target: "mine_ore", amount: 2 } },
+    ],
     requirement: { biomeUnlocked: "mine" },
     description: "Knows iron veins by the rust-streak in the dust. Adds extra ore tiles to the mine pool.",
   },
@@ -598,7 +688,9 @@ export const TOWNSFOLK = [
     maxCount: 1,
     // Catalog notes silver but our base mine carries gold; gold is rare in
     // the pool, so this worker seeds it. Single-hire cap keeps it precious.
-    effect: { type: "pool_weight", key: "mine_gold", amount: 1 },
+    abilities: [
+      { id: "pool_weight_legacy", params: { target: "mine_gold", amount: 1 } },
+    ],
     requirement: { building: "forge", orLevel: 6 },
     description: "Sifts pale veins for streaks of bright ore. A single gold tile slips into the mine pool while she works.",
   },
@@ -612,7 +704,9 @@ export const TOWNSFOLK = [
     hireCost: { worker: 1, mine_stone: 8, mine_ingot: 4, bread: 10 },
     maxCount: 2,
     // Mid-tier bonus: extra stone per stone chain — pairs with Stone Miner.
-    effect: { type: "bonus_yield", key: "mine_stone", amount: 1 },
+    abilities: [
+      { id: "bonus_yield", params: { target: "mine_stone", amount: 1 } },
+    ],
     requirement: { building: "forge", orLevel: 5 },
     description: "Plans the shaft braces and rail-tracks. Pulls an extra stone from every quarry chain.",
   },
@@ -627,7 +721,9 @@ export const TOWNSFOLK = [
     maxCount: 2,
     // Coal yield bonus — gives the coal chain (used by Castle Coal need) a
     // friendlier ramp without competing with Coal Miner's threshold trim.
-    effect: { type: "bonus_yield", key: "mine_coal", amount: 1 },
+    abilities: [
+      { id: "bonus_yield", params: { target: "mine_coal", amount: 1 } },
+    ],
     requirement: { building: "forge", orLevel: 5 },
     description: "Distils coal-tar and refines coke. Lifts a stray lump of coal from every soot chain.",
   },
@@ -641,7 +737,9 @@ export const TOWNSFOLK = [
     hireCost: { worker: 1, mine_block: 2, bread: 8, mine_ingot: 2 },
     maxCount: 1,
     // High-tier season bonus: stone-faced patrons pay for finished work.
-    effect: { type: "season_bonus", key: "coins", amount: 50 },
+    abilities: [
+      { id: "season_bonus", params: { resource: "coins", amount: 50 } },
+    ],
     requirement: { building: "forge", orLevel: 6 },
     description: "Carves dressed-stone facades for the trade hall. Patrons drop extra coin into the season's coffer.",
   },
@@ -656,7 +754,9 @@ export const TOWNSFOLK = [
     wage: 12,
     hireCost: { worker: 1, grass_hay: 6, bread: 4 },
     maxCount: 3,
-    effect: { type: "bonus_yield", key: "grass_hay", amount: 1 },
+    abilities: [
+      { id: "bonus_yield", params: { target: "grass_hay", amount: 1 } },
+    ],
     requirement: { building: "granary" },
     description: "Stoops in the meadow at dawn with a small sickle. Pulls an extra bale from every hay chain.",
   },
@@ -671,7 +771,9 @@ export const TOWNSFOLK = [
     maxCount: 2,
     // Bonus_yield on tree_oak — the catalog's "1 tree = 1 wood" cleanly
     // realised as "extra log per oak chain" in our chain model.
-    effect: { type: "bonus_yield", key: "tree_oak", amount: 1 },
+    abilities: [
+      { id: "bonus_yield", params: { target: "tree_oak", amount: 1 } },
+    ],
     requirement: { building: "inn", orLevel: 4 },
     description: "Splits oaks at the woodline before the sun climbs. Drops an extra log into every tree chain.",
   },
@@ -687,7 +789,9 @@ export const TOWNSFOLK = [
     hireCost: { worker: 1, grass_hay: 6, bread: 6 },
     maxCount: 2,
     // 2× rat-clear coin payout at max hire (per-hire +0.5).
-    effect: { hazardCoinMultiplier: { rats: 2.0 } },
+    abilities: [
+      { id: "hazard_coin_multiplier", params: { hazard: "rats", multiplier: 2.0 } },
+    ],
     requirement: { building: "inn" },
     description: "Pads silent through the granary at dusk. Doubles the bounty on every cleared rat-pack.",
   },
@@ -701,7 +805,9 @@ export const TOWNSFOLK = [
     hireCost: { worker: 1, mine_coal: 4, bread: 8, mine_ingot: 2 },
     maxCount: 2,
     // Mirrors Canary's gas_vent reduce, applied to cave_in instead.
-    effect: { hazardSpawnReduce: { cave_in: 0.6 } },
+    abilities: [
+      { id: "hazard_spawn_reduce", params: { hazard: "cave_in", amount: 0.6 } },
+    ],
     requirement: { biomeUnlocked: "mine" },
     description: "Reads the timber creak before the roof drops. Cuts cave-in spawn rate in half.",
   },

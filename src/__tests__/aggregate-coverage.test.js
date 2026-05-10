@@ -9,17 +9,18 @@ import { computeWorkerEffects } from "../features/apprentices/aggregate.js";
 describe("computeWorkerEffects — coverage gaps", () => {
   it("returns the empty bag when state has no workers", () => {
     const out = computeWorkerEffects({});
-    expect(out).toEqual({
-      thresholdReduce: {},
-      poolWeight: {},
-      bonusYield: {},
-      seasonBonus: {},
-      effectivePoolWeights: {},
-      hazardSpawnReduce: {},
-      hazardCoinMultiplier: {},
-      chainRedirect: {},
-      recipeInputReduce: {},
-    });
+    // The aggregator now emits a superset of channels (building / tile
+    // contributions also flow through here), but the legacy worker channels
+    // must be exactly empty.
+    expect(out.thresholdReduce).toEqual({});
+    expect(out.poolWeight).toEqual({});
+    expect(out.bonusYield).toEqual({});
+    expect(out.seasonBonus).toEqual({});
+    expect(out.effectivePoolWeights).toEqual({});
+    expect(out.hazardSpawnReduce).toEqual({});
+    expect(out.hazardCoinMultiplier).toEqual({});
+    expect(out.chainRedirect).toEqual({});
+    expect(out.recipeInputReduce).toEqual({});
   });
 
   it("debt > 0 short-circuits all worker effects", () => {
@@ -144,12 +145,12 @@ describe("computeWorkerEffects — coverage gaps", () => {
 
   it("structured effect: object-form poolWeight floors fractional per-hire", () => {
     // geologist has poolWeight {mine_ore: 1, mine_gem: 1} maxCount 2.
-    // 1 hire → perHire = 0.5 → Math.floor(0.5) = 0
+    // 1 hire → perHire = 0.5 → Math.floor(0.5) = 0 (no entry written when zero).
     const s = {
       townsfolk: { hired: { geologist: 1 }, debt: 0, pool: 1 },
     };
     const out = computeWorkerEffects(s);
-    expect(out.effectivePoolWeights.mine_ore).toBe(0);
+    expect(out.effectivePoolWeights.mine_ore ?? 0).toBe(0);
   });
 
   it("structured effect: object-form poolWeight at max-hire scales correctly", () => {

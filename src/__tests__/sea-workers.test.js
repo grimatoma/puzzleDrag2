@@ -13,19 +13,19 @@ describe("Sea workers — Fisherman + Trawlerman", () => {
     const w = APPRENTICES.find((a) => a.id === "fisherman");
     expect(w).toBeDefined();
     expect(w.maxCount).toBe(3);
-    expect(w.effect).toEqual({
-      type: "threshold_reduce_category",
-      category: "fish",
-      from: 5,
-      to: 2,
-    });
+    expect(w.abilities).toEqual([
+      { id: "threshold_reduce_category", params: { category: "fish", amount: 3 } },
+    ]);
   });
 
   it("Trawlerman exists with expected shape", () => {
     const w = APPRENTICES.find((a) => a.id === "trawlerman");
     expect(w).toBeDefined();
     expect(w.maxCount).toBe(2);
-    expect(w.effect.poolWeight).toEqual({ fish_sardine: 2, fish_mackerel: 2 });
+    expect(w.abilities).toEqual([
+      { id: "pool_weight", params: { target: "fish_sardine", amount: 2 } },
+      { id: "pool_weight", params: { target: "fish_mackerel", amount: 2 } },
+    ]);
   });
 
   it("0 hires: no fish-category threshold reduction", () => {

@@ -12,19 +12,25 @@ describe("Sea workers 3 — Cook / Chef / Captain", () => {
 
   it("Cook bonus_yield on fish_fillet", () => {
     const w = APPRENTICES.find((a) => a.id === "cook");
-    expect(w.effect).toEqual({ type: "bonus_yield", key: "fish_fillet", amount: 1 });
+    expect(w.abilities).toEqual([
+      { id: "bonus_yield", params: { target: "fish_fillet", amount: 1 } },
+    ]);
     expect(w.maxCount).toBe(2);
   });
 
   it("Chef season_bonus coins", () => {
     const w = APPRENTICES.find((a) => a.id === "chef");
-    expect(w.effect).toEqual({ type: "season_bonus", key: "coins", amount: 60 });
+    expect(w.abilities).toEqual([
+      { id: "season_bonus", params: { resource: "coins", amount: 60 } },
+    ]);
     expect(w.maxCount).toBe(1);
   });
 
   it("Captain pool_weight on fish_oyster", () => {
     const w = APPRENTICES.find((a) => a.id === "captain");
-    expect(w.effect).toEqual({ type: "pool_weight", key: "fish_oyster", amount: 2 });
+    expect(w.abilities).toEqual([
+      { id: "pool_weight_legacy", params: { target: "fish_oyster", amount: 2 } },
+    ]);
     expect(w.maxCount).toBe(1);
   });
 

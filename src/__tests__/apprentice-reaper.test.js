@@ -8,12 +8,9 @@ describe("Reaper apprentice (grain → bread)", () => {
     const reaper = APPRENTICES.find((w) => w.id === "reaper");
     expect(reaper).toBeDefined();
     expect(reaper.maxCount).toBe(2);
-    expect(reaper.effect).toEqual({
-      type: "threshold_reduce",
-      key: "grain_flour",
-      from: 6,
-      to: 4,
-    });
+    expect(reaper.abilities).toEqual([
+      { id: "threshold_reduce", params: { target: "grain_flour", amount: 2 } },
+    ]);
     expect(reaper.requirement?.building).toBe("bakery");
   });
 

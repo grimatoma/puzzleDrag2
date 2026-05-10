@@ -19,15 +19,21 @@ describe("Phase 4.1 — Worker data model", () => {
 
   it("every farm worker has required shape (mine workers use structured effect format)", () => {
     const farmWorkerIds = new Set(["hilda", "pip", "wila", "tuck", "osric", "dren"]);
+    const allowedAbilityIds = new Set([
+      "threshold_reduce", "pool_weight", "pool_weight_legacy",
+      "bonus_yield", "season_bonus",
+    ]);
     for (const w of WORKERS) {
       expect(typeof w.id).toBe("string");
       expect(typeof w.name).toBe("string");
       expect(Number.isInteger(w.maxCount) && w.maxCount >= 1).toBe(true);
       expect(Number.isInteger(w.wage)).toBe(true);
-      // Farm workers use legacy type-dispatch; mine workers (Phase 9) use structured effects
       if (farmWorkerIds.has(w.id)) {
-        expect(["threshold_reduce", "pool_weight", "bonus_yield", "season_bonus"]
-          .includes(w.effect.type)).toBe(true);
+        expect(Array.isArray(w.abilities)).toBe(true);
+        expect(w.abilities.length).toBeGreaterThan(0);
+        for (const a of w.abilities) {
+          expect(allowedAbilityIds.has(a.id)).toBe(true);
+        }
         // Spec §12: hireCost is an object { worker: 1, <goods> } for all workers
         expect(w.hireCost !== null && typeof w.hireCost === "object").toBe(true);
         expect(w.hireCost.worker).toBe(1);
@@ -37,16 +43,15 @@ describe("Phase 4.1 — Worker data model", () => {
 
   it("Hilda full-slot moves hay 6→3, maxCount=3 (LOCKED max-effect model)", () => {
     const hilda = WORKER_MAP.hilda;
-    expect(hilda.effect.from).toBe(6);
-    expect(hilda.effect.to).toBe(3);
+    // Hilda has a single threshold_reduce ability for grass_hay; max delta = 3.
+    expect(hilda.abilities).toEqual([
+      { id: "threshold_reduce", params: { target: "grass_hay", amount: 3 } },
+    ]);
     expect(hilda.maxCount).toBe(3);
 
-    const fullDelta = hilda.effect.from - hilda.effect.to; // 3
+    const fullDelta = hilda.abilities[0].params.amount; // 3
     const perHire = fullDelta / hilda.maxCount; // 1
     expect(perHire).toBe(1);
-    expect(hilda.effect.from - 1 * perHire).toBe(5);
-    expect(hilda.effect.from - 2 * perHire).toBe(4);
-    expect(hilda.effect.from - 3 * perHire).toBe(3);
   });
 
   it("wages match GAME_SPEC §12", () => {

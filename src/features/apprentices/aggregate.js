@@ -1,187 +1,76 @@
 /**
- * Phase 9.4 — Extended worker-effects aggregator.
+ * Aggregated effects across the player's hired townsfolk + type-tier workers.
  *
- * Handles both the legacy type-dispatch effects (Phase 4) and the new
- * structured effects introduced for mine workers (Phase 9):
- *   - hazardSpawnReduce  : { [hazardId]: 0..1 } decimal reduction
- *   - poolWeight (object): { [resourceKey]: integer extra copies }
+ * Originally a Phase-9 type-dispatch over each worker's `effect` field. Now a
+ * thin wrapper around the unified `aggregateAbilities` engine in
+ * `src/config/abilitiesAggregate.js`. The channel shape returned from this
+ * function is unchanged so existing call sites in state.js / GameScene
+ * (e.g. `workerEffects.thresholdReduce[k]`, `seasonBonus.coins`) keep
+ * working without edits.
  *
- * Locked Phase 4 max-effect model:
- *   per-hire contribution = effect_max / maxCount
- *   hires clamped to maxCount (never over-counts)
+ * Per-source weight model:
+ *   weight = clamp01(hiredCount / maxCount)
  *
- * Locked floor rule for integer pool-weight fields:
- *   Math.floor(perHire * hiredCount) — fractional contributions don't round up.
+ * For abilities whose contribution scales linearly (`threshold_reduce`,
+ * `season_bonus`, etc.), `applyAbilityToChannels` multiplies the catalog
+ * `amount` by `weight` directly. For abilities that floor per-source
+ * (`pool_weight`), it floors `amount * weight` per worker before adding —
+ * preserving the Phase 9 contract that 1/2 hire of a +1 worker contributes 0.
  */
 
 import { WORKERS } from "./data.js";
 import { TYPE_WORKERS } from "../workers/data.js";
 import { TILE_TYPES_BY_CATEGORY as SPECIES_BY_CATEGORY } from "../tileCollection/data.js";
+import { aggregateAbilities } from "../../config/abilitiesAggregate.js";
+
+/**
+ * Build the weighted source list for a worker entity (TYPE_WORKERS or TOWNSFOLK).
+ * Returns null if the worker has no hires (so the aggregator skips it).
+ */
+function workerSource(def, hiredCount) {
+  const count = Math.max(0, Math.min(hiredCount | 0, def.maxCount));
+  if (count === 0) return null;
+  const weight = count / def.maxCount;
+  const abilities = Array.isArray(def.abilities) ? def.abilities : [];
+  if (abilities.length === 0) return null;
+  return { kind: "worker", sourceId: def.id, abilities, weight };
+}
 
 /**
  * Returns an aggregated effects object for the current workforce.
  *
- * Legacy channels (Phase 4):
- *   thresholdReduce   { [key]: number }
- *   bonusYield        { [key]: number }
- *   seasonBonus       { [key]: number }
- *
- * New channels (Phase 9):
- *   effectivePoolWeights  { [key]: integer }  — integer-floored pool-weight tilt
- *   hazardSpawnReduce     { [hazardId]: 0..1 } — capped at 1.0
- *
- * @param {object} state - game state with state.townsfolk.hired
- * @returns {object}
+ * Channels (unchanged from the legacy aggregator):
+ *   thresholdReduce      { [key]: number }
+ *   poolWeight           { [key]: number }   — continuous, used by Phase 4 workers
+ *   bonusYield           { [key]: number }
+ *   seasonBonus          { [key]: number }
+ *   effectivePoolWeights { [key]: integer }  — floored per source
+ *   hazardSpawnReduce    { [hazardId]: 0..1 }
+ *   hazardCoinMultiplier { [hazardId]: number ≥ 1 }
+ *   chainRedirect        { [fromCategory]: { toCategory, threshold, redirectShare } }
+ *   recipeInputReduce    { [recipeKey]: { [input]: number } }
+ *   plus tile/building channels: freeMoves, coinBonusFlat, coinBonusPerTile,
+ *   freeMovesIfChain, seasonEndTools, seasonEndPoolStep, boardPreserveBiomes.
  */
 export function computeWorkerEffects(state) {
-  const out = {
-    thresholdReduce: {},
-    poolWeight: {},          // legacy (Phase 4 type-dispatch)
-    bonusYield: {},
-    seasonBonus: {},
-    effectivePoolWeights: {}, // Phase 9 integer-floored pool tilt
-    hazardSpawnReduce: {},    // Phase 9 gas-vent / future hazard reduction
-    // Hazard-clear coin multiplier — workers that scale the coin reward
-    // when the player clears a hazard (e.g. Ratcatcher on rats). Shape:
-    // { [hazardId]: number } with 1.0 = no buff. Aggregator additive past 1.
-    hazardCoinMultiplier: {},
-    // Cross-chain redirect: when a worker is hired with `chain_redirect_category`,
-    // chain upgrades for every species in `fromCategory` produce a tile from
-    // `toCategory` (active species there) instead of the species' native `next`.
-    // Shape: { [fromCategory]: { toCategory, threshold, redirectShare } }.
-    // `redirectShare` ∈ [0, 1] is hiredCount/maxCount — the engine uses it to
-    // decide whether the worker is "fully active" for redirect purposes.
-    chainRedirect: {},
-    // Phase 4 (zones rule overhaul): recipe-input reductions. Shape:
-    //   { [recipeKey]: { [inputResourceKey]: number } }
-    // The per-hire delta is `(from - to) / maxCount`; reductions stack across
-    // workers that target the same recipe + input. Crafting code rounds the
-    // accumulated value and floors the remaining required input at 1.
-    recipeInputReduce: {},
-  };
-
   const hired = state?.townsfolk?.hired ?? {};
   const debt = state?.townsfolk?.debt ?? 0;
-  // Townsfolk are debt-paused; type-tier workers (Phase 5b) are not, so the
-  // worker loop below runs even when townsfolk wages are owed.
+  // Townsfolk pause when wages are owed; type-tier workers don't.
   const townsfolkActive = !(debt > 0);
 
-  // Phase 5b — also iterate the new type-tier workers (state.workers.hired)
-  // against the TYPE_WORKERS array. Their effect schema is identical to the
-  // legacy type-dispatch so they accumulate on the same channels.
   const typeHired = state?.workers?.hired ?? {};
-  const ALL = [];
+
+  const sources = [];
   if (townsfolkActive) {
-    for (const w of WORKERS) ALL.push({ def: w, count: hired[w.id] ?? 0 });
-  }
-  for (const w of TYPE_WORKERS) ALL.push({ def: w, count: typeHired[w.id] ?? 0 });
-
-  for (const { def: w, count: rawCount } of ALL) {
-    const count = Math.max(0, Math.min(rawCount | 0, w.maxCount));
-    if (count === 0) continue;
-
-    const e = w.effect;
-
-    // ── Legacy type-dispatch (Phase 4 workers) ──────────────────────────────
-    if (e.type) {
-      const perHireScalar = count / w.maxCount;
-      switch (e.type) {
-        case "threshold_reduce":
-          out.thresholdReduce[e.key] =
-            (out.thresholdReduce[e.key] ?? 0) + (e.from - e.to) * perHireScalar;
-          break;
-        case "threshold_reduce_category": {
-          // Generalization of threshold_reduce: applies the same per-species
-          // delta to every species' baseResource within the named category.
-          const list = SPECIES_BY_CATEGORY[e.category] ?? [];
-          const delta = (e.from - e.to) * perHireScalar;
-          for (const sp of list) {
-            const k = sp.baseResource;
-            if (!k) continue;
-            out.thresholdReduce[k] = (out.thresholdReduce[k] ?? 0) + delta;
-          }
-          break;
-        }
-        case "chain_redirect_category": {
-          // Cross-chain reducer: chains in `fromCategory` produce a tile from
-          // `toCategory` instead of the species' native `next`. Threshold for
-          // the redirect is `from` at base hire, scaling linearly to `to` at max.
-          // Effective threshold = from − (from − to) × (hiredCount / maxCount).
-          const eff = e.from - (e.from - e.to) * perHireScalar;
-          const prev = out.chainRedirect[e.fromCategory];
-          // If multiple workers redirect the same source category, take the
-          // lowest threshold (most generous to the player). This is a rare edge
-          // case — by default each fromCategory has at most one redirect worker.
-          if (!prev || eff < prev.threshold) {
-            out.chainRedirect[e.fromCategory] = {
-              toCategory: e.toCategory,
-              threshold: eff,
-              redirectShare: perHireScalar,
-            };
-          }
-          break;
-        }
-        case "pool_weight":
-          out.poolWeight[e.key] =
-            (out.poolWeight[e.key] ?? 0) + e.amount * perHireScalar;
-          break;
-        case "bonus_yield":
-          out.bonusYield[e.key] =
-            (out.bonusYield[e.key] ?? 0) + e.amount * perHireScalar;
-          break;
-        case "season_bonus":
-          out.seasonBonus[e.key] =
-            (out.seasonBonus[e.key] ?? 0) + e.amount * perHireScalar;
-          break;
-        case "recipe_input_reduce": {
-          // Per-hire delta = (from - to) / maxCount; multiplied by hired count.
-          // Crafting rounds + floors at 1 remaining input; reductions accumulate
-          // across multiple workers targeting the same recipe + input.
-          if (!e.recipe || !e.input) break;
-          const delta = (e.from - e.to) * perHireScalar;
-          if (!out.recipeInputReduce[e.recipe]) out.recipeInputReduce[e.recipe] = {};
-          out.recipeInputReduce[e.recipe][e.input] =
-            (out.recipeInputReduce[e.recipe][e.input] ?? 0) + delta;
-          break;
-        }
-        default:
-          break;
-      }
-      continue;
-    }
-
-    // ── Structured effects (Phase 9 mine workers) ───────────────────────────
-
-    // hazardSpawnReduce: continuous decimal — sum, clamp at 1.0
-    if (e.hazardSpawnReduce) {
-      for (const [k, maxVal] of Object.entries(e.hazardSpawnReduce)) {
-        const perHire = maxVal / w.maxCount;
-        out.hazardSpawnReduce[k] = Math.min(
-          1.0,
-          (out.hazardSpawnReduce[k] ?? 0) + perHire * count,
-        );
-      }
-    }
-
-    // poolWeight (object form): integer floor — fractional per-hire floored
-    if (e.poolWeight && typeof e.poolWeight === "object" && !Array.isArray(e.poolWeight)) {
-      for (const [k, maxVal] of Object.entries(e.poolWeight)) {
-        const perHire = maxVal / w.maxCount;
-        out.effectivePoolWeights[k] =
-          (out.effectivePoolWeights[k] ?? 0) + Math.floor(perHire * count);
-      }
-    }
-
-    // hazardCoinMultiplier — additive bonus above 1× per-hire fraction.
-    // e.hazardCoinMultiplier: { [hazardId]: number >= 1 } (max-hire value)
-    if (e.hazardCoinMultiplier) {
-      for (const [k, maxVal] of Object.entries(e.hazardCoinMultiplier)) {
-        const bonus = (maxVal - 1) / w.maxCount; // per-hire bonus above 1×
-        out.hazardCoinMultiplier[k] =
-          (out.hazardCoinMultiplier[k] ?? 1) + bonus * count;
-      }
+    for (const w of WORKERS) {
+      const src = workerSource(w, hired[w.id] ?? 0);
+      if (src) sources.push(src);
     }
   }
+  for (const w of TYPE_WORKERS) {
+    const src = workerSource(w, typeHired[w.id] ?? 0);
+    if (src) sources.push(src);
+  }
 
-  return out;
+  return aggregateAbilities(sources, { speciesByCategory: SPECIES_BY_CATEGORY });
 }

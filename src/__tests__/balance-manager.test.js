@@ -161,12 +161,18 @@ describe("Balance Manager — applyTileOverrides", () => {
     applyTileOverrides(tiles, {
       tilePowers: {
         grass_hay: {
+          // Legacy `hooks` form is translated 1:1 into the new abilities shape.
           hooks: [{ id: "coin_bonus_flat", params: { amount: 10 } }],
         },
       },
     });
     expect(tiles[0].effects.coinBonusFlat).toBe(10);
-    expect(tiles[0].effects.hooks).toEqual([{ id: "coin_bonus_flat", params: { amount: 10 } }]);
+    expect(tiles[0].effects.abilities).toEqual([
+      { id: "coin_bonus_flat", params: { amount: 10 } },
+    ]);
+    expect(tiles[0].abilities).toEqual([
+      { id: "coin_bonus_flat", params: { amount: 10 } },
+    ]);
   });
 
   it("re-applying with a different hook array replaces the previous derived fields", () => {

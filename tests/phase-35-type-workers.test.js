@@ -23,7 +23,7 @@ describe("Phase 5b — TYPE_WORKERS data shape", () => {
 
   it("TYPE_WORKER_MAP indexes by id", () => {
     expect(TYPE_WORKER_MAP.farmer.name).toBe("Farmer");
-    expect(TYPE_WORKER_MAP.baker.effect.type).toBe("recipe_input_reduce");
+    expect(TYPE_WORKER_MAP.baker.abilities[0].id).toBe("recipe_input_reduce");
   });
 });
 

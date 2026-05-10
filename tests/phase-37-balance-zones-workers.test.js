@@ -152,12 +152,18 @@ describe("Phase 37 — applyWorkerOverrides", () => {
     expect(w[0].maxCount).toBe(15); // unchanged because <1 rejected
   });
 
-  it("replaces effect wholesale", () => {
+  it("replaces abilities wholesale", () => {
     const w = freshWorkers();
     applyWorkerOverrides(w, {
-      farmer: { effect: { type: "pool_weight", key: "grain_wheat", amount: 3 } },
+      farmer: {
+        abilities: [
+          { id: "pool_weight_legacy", params: { target: "grain_wheat", amount: 3 } },
+        ],
+      },
     });
-    expect(w[0].effect).toEqual({ type: "pool_weight", key: "grain_wheat", amount: 3 });
+    expect(w[0].abilities).toEqual([
+      { id: "pool_weight_legacy", params: { target: "grain_wheat", amount: 3 } },
+    ]);
   });
 
   it("ignores patches for unknown worker ids", () => {

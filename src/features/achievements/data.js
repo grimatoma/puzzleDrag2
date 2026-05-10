@@ -42,24 +42,30 @@ export const ACHIEVEMENTS = [
   { id: "stable_hand",    name: "Stable Hand",                desc: "Lead 30 mounts through the stables",             counter: "mount_chained",              threshold: 30,  target: 30,  reward: { coins: 60 } },
   { id: "forester",       name: "Forester",                   desc: "Fell 50 trees across the vale",                  counter: "tree_chained",               threshold: 50,  target: 50,  reward: { coins: 75 } },
   { id: "fowler",         name: "Fowler",                     desc: "Gather 50 birds across the yards",               counter: "bird_chained",               threshold: 50,  target: 50,  reward: { coins: 75 } },
+  // Ability-driven achievements (unlocked by the unified abilities pipeline).
+  { id: "powerful_keep",   name: "Powerful Keep",       desc: "Trigger 10 building abilities",                  counter: "building_abilities_triggered", threshold: 10, target: 10, reward: { coins: 100 } },
+  { id: "ability_artisan", name: "Ability Artisan",     desc: "Trigger 5 distinct abilities across the vale",   counter: "distinct_abilities_triggered", threshold: 5,  target: 5,  reward: { coins: 150 } },
+  { id: "season_provider", name: "Season Provider",     desc: "Earn a season-end bonus from a building",         counter: "season_end_building_bonus",    threshold: 1,  target: 1,  reward: { coins: 50 } },
 ];
 
 /**
  * Pure: tick a counter on state.achievements.
- * For distinct_resources_chained and distinct_buildings_built, pass key= to
- * track first-time seen. Other counters increment by value (default 1).
+ * For distinct_resources_chained, distinct_buildings_built, and
+ * distinct_abilities_triggered, pass key= to track first-time seen.
+ * Other counters increment by value (default 1).
  *
  * Returns { newState, unlocked: [ids of newly-unlocked achievements] }.
  */
 export function tickAchievement(state, counter, value = 1, key) {
   const ach = state.achievements ?? {
-    counters: {}, unlocked: {}, seenResources: {}, seenBuildings: {},
+    counters: {}, unlocked: {}, seenResources: {}, seenBuildings: {}, seenAbilities: {},
   };
   let counters = ach.counters;
   let seenResources = ach.seenResources ?? {};
   let seenBuildings = ach.seenBuildings ?? {};
+  let seenAbilities = ach.seenAbilities ?? {};
 
-  // Distinct-resource counter: only tick on first encounter of each key
+  // Distinct-key counters: only tick on first encounter of each key
   if (counter === "distinct_resources_chained" && key) {
     if (seenResources[key]) return { newState: state, unlocked: [] };
     seenResources = { ...seenResources, [key]: true };
@@ -67,6 +73,10 @@ export function tickAchievement(state, counter, value = 1, key) {
   } else if (counter === "distinct_buildings_built" && key) {
     if (seenBuildings[key]) return { newState: state, unlocked: [] };
     seenBuildings = { ...seenBuildings, [key]: true };
+    counters = { ...counters, [counter]: (counters[counter] ?? 0) + 1 };
+  } else if (counter === "distinct_abilities_triggered" && key) {
+    if (seenAbilities[key]) return { newState: state, unlocked: [] };
+    seenAbilities = { ...seenAbilities, [key]: true };
     counters = { ...counters, [counter]: (counters[counter] ?? 0) + 1 };
   } else {
     counters = { ...counters, [counter]: (counters[counter] ?? 0) + value };
@@ -78,7 +88,7 @@ export function tickAchievement(state, counter, value = 1, key) {
   // Check which achievements just crossed their threshold
   const newlyUnlocked = [];
   const unlocked = { ...ach.unlocked };
-  let rewardState = { ...state, achievements: { ...ach, counters, unlocked, seenResources, seenBuildings } };
+  let rewardState = { ...state, achievements: { ...ach, counters, unlocked, seenResources, seenBuildings, seenAbilities } };
   for (const a of ACHIEVEMENTS) {
     if (a.counter !== counter) continue;
     if (unlocked[a.id]) continue; // already unlocked — idempotent
@@ -104,7 +114,7 @@ export function tickAchievement(state, counter, value = 1, key) {
   return {
     newState: {
       ...rewardState,
-      achievements: { ...ach, counters, unlocked, seenResources, seenBuildings },
+      achievements: { ...ach, counters, unlocked, seenResources, seenBuildings, seenAbilities },
     },
     unlocked: newlyUnlocked,
   };

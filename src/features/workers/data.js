@@ -30,12 +30,9 @@ export const TYPE_WORKERS = [
     color: "#4f8c3a",
     hireCost: { coins: 50, coinsStep: 25 },
     maxCount: 10,
-    effect: {
-      type: "threshold_reduce_category",
-      category: "grain",
-      from: 6,
-      to: 5,
-    },
+    abilities: [
+      { id: "threshold_reduce_category", params: { category: "grain", amount: 1 } },
+    ],
     description: "Each hired Farmer trims one tile off the grain chain.",
   },
   {
@@ -46,12 +43,9 @@ export const TYPE_WORKERS = [
     color: "#7a4f1f",
     hireCost: { coins: 60, coinsStep: 30 },
     maxCount: 10,
-    effect: {
-      type: "threshold_reduce_category",
-      category: "trees",
-      from: 6,
-      to: 5,
-    },
+    abilities: [
+      { id: "threshold_reduce_category", params: { category: "trees", amount: 1 } },
+    ],
     description: "Each hired Lumberjack trims one tile off the tree-felling chain.",
   },
   {
@@ -62,12 +56,9 @@ export const TYPE_WORKERS = [
     color: "#7a8490",
     hireCost: { coins: 75, coinsStep: 35 },
     maxCount: 10,
-    effect: {
-      type: "threshold_reduce_category",
-      category: "wood",
-      from: 7,
-      to: 6,
-    },
+    abilities: [
+      { id: "threshold_reduce_category", params: { category: "wood", amount: 1 } },
+    ],
     description: "Each hired Miner trims one tile off the plank-and-beam chain.",
   },
   {
@@ -78,13 +69,9 @@ export const TYPE_WORKERS = [
     color: "#c89b6a",
     hireCost: { coins: 75, coinsMult: 1.4 },
     maxCount: 10,
-    effect: {
-      type: "recipe_input_reduce",
-      recipe: "bread",
-      input: "grain_flour",
-      from: 3,
-      to: 1,
-    },
+    abilities: [
+      { id: "recipe_input_reduce", params: { recipe: "bread", input: "grain_flour", amount: 2 } },
+    ],
     description: "Each hired Baker stretches the bread recipe — needs less flour per loaf.",
   },
 ];

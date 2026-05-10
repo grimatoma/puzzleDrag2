@@ -29,7 +29,7 @@ export const MAX_TURNS = 10;
 
 // Save schema version. Forward migrations are not maintained — bump this
 // whenever persisted state changes shape and existing saves will be discarded.
-export const SAVE_SCHEMA_VERSION = 27;
+export const SAVE_SCHEMA_VERSION = 28;
 
 export const UPGRADE_THRESHOLDS = {
   grass_hay: 6, grass_meadow: 6, grass_spiky: 6,
@@ -336,29 +336,47 @@ export const BUILDINGS = [
   { id: "caravan_post", name: "Caravan Post", desc: "Opens distant trade routes, letting you sell crafted goods to far-off markets.", cost: { coins: 800, wood_plank: 40 }, lv: 8, x: 940, y: 390, w: 110, h: 90, color: "#7e4f24" },
   { id: "kitchen", name: "Kitchen", desc: "Converts surplus grain into supplies. Three supplies grant standard Mine entry.", cost: { coins: 400, wood_plank: 20 }, lv: 2, x: 60, y: 260, w: 90, h: 100, color: "#8a4a26" },
   { id: "workshop", name: "Workshop", desc: "Crafts shovels and other tools from raw materials.", cost: { coins: 500, wood_plank: 20, mine_stone: 10 }, lv: 3, x: 180, y: 265, w: 90, h: 100, color: "#6a5a3a" },
-  { id: "powder_store", name: "Powder Store", desc: "Stockpiles black powder. Produces 2 Bombs at the end of every season.", cost: { coins: 600, mine_stone: 30, mine_ingot: 5 }, lv: 5, x: 310, y: 260, w: 90, h: 100, color: "#3a2a1a" },
+  { id: "powder_store", name: "Powder Store", desc: "Stockpiles black powder. Produces 2 Bombs at the end of every season.", cost: { coins: 600, mine_stone: 30, mine_ingot: 5 }, lv: 5, x: 310, y: 260, w: 90, h: 100, color: "#3a2a1a",
+    abilities: [
+      { id: "grant_tool", params: { tool: "bomb", amount: 2 }, trigger: "season_end" },
+    ] },
   { id: "portal", name: "Magic Portal", desc: "A shimmering gateway. Summons unlock with Influence (Phase 8).", cost: { coins: 2000, runes: 5 }, lv: 8, x: 440, y: 245, w: 100, h: 115, color: "#4a2a7a" },
   { id: "housing", name: "Housing Block",
     desc: "Quarters for hired hands. Each Housing raises your worker capacity by 1.",
     cost: { coins: 300, wood_plank: 25 }, lv: 2,
-    x: 430, y: 262, w: 80, h: 92, color: "#a07a4a" },
+    x: 430, y: 262, w: 80, h: 92, color: "#a07a4a",
+    abilities: [
+      { id: "worker_pool_step", params: { amount: 1 }, trigger: "season_end" },
+    ] },
   { id: "housing2", name: "Housing Block",
     desc: "Quarters for hired hands. Each Housing raises your worker capacity by 1.",
     cost: { coins: 300, wood_plank: 25 }, lv: 2, requires: "housing",
-    x: 520, y: 262, w: 80, h: 92, color: "#a07a4a" },
+    x: 520, y: 262, w: 80, h: 92, color: "#a07a4a",
+    abilities: [
+      { id: "worker_pool_step", params: { amount: 1 }, trigger: "season_end" },
+    ] },
   { id: "housing3", name: "Housing Block",
     desc: "Quarters for hired hands. Each Housing raises your worker capacity by 1.",
     cost: { coins: 300, wood_plank: 25 }, lv: 2, requires: "housing2",
-    x: 610, y: 262, w: 80, h: 92, color: "#a07a4a" },
+    x: 610, y: 262, w: 80, h: 92, color: "#a07a4a",
+    abilities: [
+      { id: "worker_pool_step", params: { amount: 1 }, trigger: "season_end" },
+    ] },
   // Phase 12.5 — §18 LOCKED: Silos/Barns preserve tile layout between sessions
   { id: "silo", name: "Silo",
     desc: "Wood-and-stone grain store. Preserves the tile layout between sessions on the Farm.",
     cost: { coins: 250, wood_plank: 15 }, lv: 4, biome: "farm",
-    x: 710, y: 260, w: 90, h: 100, color: "#9a6a3a" },
+    x: 710, y: 260, w: 90, h: 100, color: "#9a6a3a",
+    abilities: [
+      { id: "preserve_board", params: { biome: "farm" }, trigger: "session_end" },
+    ] },
   { id: "barn", name: "Barn",
     desc: "Reinforced ore shed. Preserves the tile layout between sessions in the Mine.",
     cost: { coins: 400, wood_plank: 25, mine_stone: 5 }, lv: 5, biome: "mine",
-    x: 840, y: 260, w: 90, h: 100, color: "#7a4a2a" },
+    x: 840, y: 260, w: 90, h: 100, color: "#7a4a2a",
+    abilities: [
+      { id: "preserve_board", params: { biome: "mine" }, trigger: "session_end" },
+    ] },
   // Harbor-themed buildings — visual flavour for the fish biome and
   // counts toward the "Town Planner" achievement (5 distinct buildings).
   { id: "harbor_dock", name: "Harbor Dock",

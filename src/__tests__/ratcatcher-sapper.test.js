@@ -10,7 +10,9 @@ describe("Ratcatcher (hazardCoinMultiplier on rats)", () => {
     const w = APPRENTICES.find((a) => a.id === "ratcatcher");
     expect(w).toBeDefined();
     expect(w.maxCount).toBe(2);
-    expect(w.effect).toEqual({ hazardCoinMultiplier: { rats: 2.0 } });
+    expect(w.abilities).toEqual([
+      { id: "hazard_coin_multiplier", params: { hazard: "rats", multiplier: 2.0 } },
+    ]);
   });
 
   it("aggregator: 0 hires → multiplier 1×", () => {
@@ -87,7 +89,9 @@ describe("Sapper (hazardSpawnReduce on cave_in)", () => {
     const w = APPRENTICES.find((a) => a.id === "sapper");
     expect(w).toBeDefined();
     expect(w.maxCount).toBe(2);
-    expect(w.effect).toEqual({ hazardSpawnReduce: { cave_in: 0.6 } });
+    expect(w.abilities).toEqual([
+      { id: "hazard_spawn_reduce", params: { hazard: "cave_in", amount: 0.6 } },
+    ]);
   });
 
   it("aggregator: 1 hire (per-hire +0.3) → 0.3 reduction", () => {
