@@ -779,6 +779,15 @@ function coreReducer(state, action) {
       // by the portal slice — skip them here to avoid double-consume.
       const MAGIC_TOOL_IDS = new Set(["hourglass", "magic_seed", "magic_fertilizer", "magic_wand"]);
       if (MAGIC_TOOL_IDS.has(key)) return state;
+      // Fertilizer disarm: when already armed, refund 1 and clear the flag,
+      // even if the player has spent their last fertilizer arming it.
+      if (key === "fertilizer" && state.fertilizerActive) {
+        return {
+          ...state,
+          tools: { ...state.tools, fertilizer: (state.tools.fertilizer ?? 0) + 1 },
+          fertilizerActive: false,
+        };
+      }
       if ((state.tools[key] || 0) <= 0) return state;
       const tools = { ...state.tools, [key]: state.tools[key] - 1 };
       if (key === "shuffle") {
@@ -852,7 +861,9 @@ function coreReducer(state, action) {
       if (key === "rake" || key === "axe") {
         return { ...state, tools, toolPending: key };
       }
-      // Phase 10.1 — Fertilizer: set flag for next fillBoard (no turn cost)
+      // Phase 10.1 — Fertilizer: arm the flag for next fillBoard (no turn
+      // cost). The matching disarm branch lives above the count check so the
+      // player can cancel even after spending their last fertilizer.
       if (key === "fertilizer") {
         return { ...state, tools, fertilizerActive: true };
       }
