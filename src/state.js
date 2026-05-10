@@ -1,4 +1,4 @@
-import { BIOMES, BUILDINGS, NPCS, MAX_TURNS, RECIPES, WORKSHOP_RECIPES, STORAGE_KEYS, DAILY_REWARDS, MINE_ENTRY_TIERS, HARBOR_ENTRY_TIERS, CAPPED_RESOURCES, UPGRADE_THRESHOLDS, SAVE_SCHEMA_VERSION } from "./constants.js";
+import { BIOMES, BUILDINGS, NPCS, MAX_TURNS, RECIPES, WORKSHOP_RECIPES, DAILY_REWARDS, MINE_ENTRY_TIERS, HARBOR_ENTRY_TIERS, CAPPED_RESOURCES, UPGRADE_THRESHOLDS, SAVE_SCHEMA_VERSION } from "./constants.js";
 import { locBuilt as _locBuilt } from "./locBuilt.js";
 import { sellPriceFor as _sellPriceFor } from "./features/market/pricing.js";
 import { tryClearRatChain } from "./features/farm/rats.js";
@@ -41,6 +41,8 @@ import * as zones from "./features/zones/slice.js";
 import * as workers from "./features/workers/slice.js";
 import { ZONES } from "./features/zones/data.js";
 import { FIRE_HAZARD_ENABLED } from "./featureFlags.js";
+import { loadSavedState, persistStateNow, persistState, flushPersistState, clearSave } from "./state/persistence.js";
+export { loadSavedState, persistStateNow, persistState, flushPersistState, clearSave } from "./state/persistence.js";
 
 const slices = [crafting, quests, achievements, tutorial, settings, boss, cartography, apprentices, mood, storySlice, decorations, portal, market, castle, fish, zones, workers];
 
@@ -99,83 +101,6 @@ function applyDebtRepayment(state, incomingCoins) {
   if (debt <= 0 || incomingCoins <= 0) return { coinsCredit: incomingCoins, newDebt: debt };
   if (incomingCoins >= debt)           return { coinsCredit: incomingCoins - debt, newDebt: 0 };
   return { coinsCredit: 0, newDebt: debt - incomingCoins };
-}
-
-// ─── Save/load ─────────────────────────────────────────────────────────────
-// Persisted: everything except volatile UI fields (modal/bubble/view/pendingView).
-const SAVE_KEY = STORAGE_KEYS.save;
-const VOLATILE = new Set(["modal", "bubble", "view", "viewParams", "pendingView", "craftingTab"]);
-
-export function loadSavedState() {
-  try {
-    const raw = localStorage.getItem(SAVE_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw);
-    return parsed && typeof parsed === "object" ? parsed : null;
-  } catch (e) { console.warn("[hearth] save data corrupt, starting fresh:", e); return null; }
-}
-
-// Synchronous write. Used internally by persistState's flush path and by the
-// page-unload handler. Tests can call this directly to bypass debouncing.
-export function persistStateNow(state) {
-  try {
-    const out = {};
-    for (const k of Object.keys(state)) if (!VOLATILE.has(k)) out[k] = state[k];
-    localStorage.setItem(SAVE_KEY, JSON.stringify(out));
-  } catch { /* storage unavailable (private browsing / quota) */ }
-}
-
-// rAF-coalesced wrapper around persistStateNow. Multiple dispatches in the
-// same animation frame collapse to a single localStorage write — important
-// because a chain-collect or close-season fires several reducer transitions
-// in rapid succession, and JSON.stringify over the entire game state on the
-// hot path was a measurable cost. A pagehide handler flushes any pending
-// state so a tab close right after a dispatch never loses progress.
-let _pendingPersist = null;
-let _persistScheduled = false;
-let _unloadHooked = false;
-
-function _flushPersist() {
-  _persistScheduled = false;
-  if (_pendingPersist === null) return;
-  const s = _pendingPersist;
-  _pendingPersist = null;
-  persistStateNow(s);
-}
-
-export function persistState(state) {
-  _pendingPersist = state;
-  if (!_persistScheduled) {
-    _persistScheduled = true;
-    if (typeof requestAnimationFrame === "function") {
-      requestAnimationFrame(_flushPersist);
-    } else {
-      // Tests / SSR have no rAF; queueMicrotask preserves the intent (flush
-      // before the next macrotask) without making the call synchronous.
-      queueMicrotask(_flushPersist);
-    }
-  }
-  if (!_unloadHooked && typeof window !== "undefined") {
-    _unloadHooked = true;
-    const flushOnExit = () => {
-      if (_pendingPersist) persistStateNow(_pendingPersist);
-      _pendingPersist = null;
-      _persistScheduled = false;
-    };
-    window.addEventListener("pagehide", flushOnExit);
-    window.addEventListener("beforeunload", flushOnExit);
-  }
-}
-
-// Public flush, useful for callers that need a hard sync (tests, debug tools).
-export function flushPersistState() {
-  if (_pendingPersist) persistStateNow(_pendingPersist);
-  _pendingPersist = null;
-  _persistScheduled = false;
-}
-
-export function clearSave() {
-  try { localStorage.removeItem(SAVE_KEY); } catch { /* storage unavailable */ }
 }
 
 // ─── Tile Collection slice helpers ─────────────────────────────────────────

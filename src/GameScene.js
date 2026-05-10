@@ -18,8 +18,9 @@ const cssColor = (num) => Phaser.Display.Color.IntegerToColor(num).rgba;
 import { rounded, makeTextures, regenerateTextures } from "./textures.js";
 import { TileObj } from "./TileObj.js";
 import { getTweenDuration, screenShake } from "./a11y.js";
+import { computeBakeScale, hasValidChain } from "./game/chain.js";
+export { computeBakeScale, hasValidChain } from "./game/chain.js";
 
-const TILE_BASE = TILE; // CSS-pixel design size for one tile; textures are baked at TILE * dpr
 const FLOAT_TEXT_COLOR = 0xffd248;
 
 // Single decorative frame around the tiles, in CSS pixels. Thinner on narrow
@@ -28,51 +29,6 @@ function boardFrameFor(cssVw) {
   return cssVw < 600 ? 8 : 14;
 }
 
-/**
- * Texture bake multiplier from the graphicsQuality setting:
- *   - "low"      → fixed 1× (pixelated on retina; cheapest, no dynamic growth)
- *   - "ultra"    → 2× the standard scale (supersampled, sharpest)
- *   - default ("standard") → bake at devicePixelRatio, growing with tileSize
- *     so on-screen tiles always stay ≥1:1 with the baked source.
- */
-function computeBakeScale(quality, dpr, tileSize) {
-  if (quality === "low") return 1;
-  const standard = Math.max(dpr || 1, (tileSize || TILE_BASE) / TILE_BASE);
-  return quality === "ultra" ? standard * 2 : standard;
-}
-
-/**
- * Pure function — no Phaser dependency. Returns true if the grid contains any
- * cluster of 3+ 4-connected tiles with the same resource key.
- * @param {Array<Array<{res:{key:string}}|null>>} grid
- * @returns {boolean}
- */
-export function hasValidChain(grid) {
-  const rows = grid.length;
-  const cols = rows ? grid[0].length : 0;
-  const visited = Array.from({ length: rows }, () => new Array(cols).fill(false));
-
-  // Spec §4: adjacency includes all 8 directions (diagonals count)
-  const DIRS = [[0, 1], [0, -1], [1, 0], [-1, 0], [1, 1], [1, -1], [-1, 1], [-1, -1]];
-
-  function dfs(r, c, key) {
-    if (r < 0 || r >= rows || c < 0 || c >= cols) return 0;
-    if (visited[r][c]) return 0;
-    if (!grid[r][c] || grid[r][c].res.key !== key) return 0;
-    visited[r][c] = true;
-    let count = 1;
-    for (const [dr, dc] of DIRS) count += dfs(r + dr, c + dc, key);
-    return count;
-  }
-
-  for (let r = 0; r < rows; r++) {
-    for (let c = 0; c < cols; c++) {
-      if (!grid[r][c] || visited[r][c]) continue;
-      if (dfs(r, c, grid[r][c].res.key) >= 3) return true;
-    }
-  }
-  return false;
-}
 
 export class GameScene extends Phaser.Scene {
   constructor() {
