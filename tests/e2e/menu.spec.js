@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { gotoFresh, getReactState, waitForState } from './helpers.js';
+import { gotoFresh, waitForState } from './helpers.js';
 
 test('menu opens, settings/about tabs work', async ({ page }) => {
   await gotoFresh(page);

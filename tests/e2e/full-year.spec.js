@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import {
-  gotoFresh, waitForBoot, dispatchAction, getReactState, triggerChainViaScene,
+  gotoFresh, waitForBoot, dispatchAction, getReactState,
   collectPageErrors, chainUntil,
 } from './helpers.js';
 

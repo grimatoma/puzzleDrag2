@@ -915,7 +915,7 @@ export function TownView({ state, dispatch }) {
   // an empty plot to place it on. Cleared when they confirm or cancel.
   const [pendingBuilding, setPendingBuilding] = useState(null);
   const [buildPickerOpen, setBuildPickerOpen] = useState(false);
-  const { tip: buildingTip, show: showBuildingTip, hide: hideBuildingTip, handlers: tipHandlers, lastTouchTime } = useTooltip();
+  const { tip: buildingTip, show: showBuildingTip, hide: hideBuildingTip, lastTouchTime } = useTooltip();
   const longPressTimer = useRef(null);
   const longPressActive = useRef(false);
   const locConfig = LOCATION_TOWN_CONFIGS[state.mapCurrent];

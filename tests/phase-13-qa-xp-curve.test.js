@@ -2,13 +2,13 @@
  * QA Batch 2 — XP curve + per-source amounts
  * §17 locked: linear 150 XP/level; sources: 1/chain, 5/order, 10/build, 25/boss, 20/quest.
  */
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect } from "vitest";
 import { awardXp, XP_PER_LEVEL } from "../src/features/almanac/data.js";
 import { createInitialState, rootReducer } from "../src/state.js";
 import { BUILDINGS } from "../src/constants.js";
 
 function fresh() {
-  global.localStorage?.clear?.();
+  globalThis.localStorage?.clear?.();
   return createInitialState();
 }
 
@@ -65,7 +65,6 @@ describe("XP per source — CHAIN_COLLECTED (1 XP/chain)", () => {
       turnsUsed: 0,
     };
     // Build a chain-collected action for hay (value ~1)
-    const res = s2.inventory;
     const next = rootReducer(s2, {
       type: "CHAIN_COLLECTED",
       payload: { key: "grass_hay", gained: 5, upgrades: 0, value: 1, chainLength: 5, noTurn: false },

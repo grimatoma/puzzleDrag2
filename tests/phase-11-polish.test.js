@@ -26,8 +26,6 @@ describe("Phase 11 — tools still initialised correctly", () => {
   });
 
   it("CLOSE_SEASON increments shuffle count", () => {
-    const s = createInitialState();
-    const initialShuffle = s.tools.shuffle || 0;
     const next = createInitialState();
     // verify the tools shape is correct
     expect(next.tools.shuffle).toBeDefined();
