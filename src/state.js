@@ -41,7 +41,7 @@ import * as zones from "./features/zones/slice.js";
 import * as workers from "./features/workers/slice.js";
 import { ZONES } from "./features/zones/data.js";
 import { FIRE_HAZARD_ENABLED } from "./featureFlags.js";
-import { loadSavedState, persistStateNow, persistState, flushPersistState, clearSave } from "./state/persistence.js";
+import { loadSavedState, persistState, clearSave } from "./state/persistence.js";
 export { loadSavedState, persistStateNow, persistState, flushPersistState, clearSave } from "./state/persistence.js";
 
 const slices = [crafting, quests, achievements, tutorial, settings, boss, cartography, apprentices, mood, storySlice, decorations, portal, market, castle, fish, zones, workers];
