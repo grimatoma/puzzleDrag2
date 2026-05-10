@@ -10,6 +10,7 @@
 import {
   abilitiesForScope, getAbility, defaultParamsFor,
 } from "../config/abilities.js";
+import { useMemo, useState } from "react";
 import { BIOMES } from "../constants.js";
 import { CATEGORIES } from "../features/tileCollection/data.js";
 import { COLORS, NumberField, Select, SmallButton, Card } from "./shared.jsx";
@@ -127,6 +128,18 @@ function ParamField({ param, value, onChange }) {
 export default function AbilitiesEditor({ scope, abilities, onChange }) {
   const list = Array.isArray(abilities) ? abilities : [];
   const catalog = abilitiesForScope(scope);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [query, setQuery] = useState("");
+
+  const filteredCatalog = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return catalog;
+    return catalog.filter((def) => (
+      def.id.toLowerCase().includes(q)
+      || def.name.toLowerCase().includes(q)
+      || def.desc.toLowerCase().includes(q)
+    ));
+  }, [catalog, query]);
 
   function add(abilityId) {
     const def = getAbility(abilityId);
@@ -202,26 +215,51 @@ export default function AbilitiesEditor({ scope, abilities, onChange }) {
         );
       })}
 
-      <div className="text-[11px] font-bold uppercase tracking-wide mt-2" style={{ color: COLORS.inkSubtle }}>
-        Available · click to attach
+      <div className="flex items-center justify-between gap-2 mt-2">
+        <div className="text-[11px] font-bold uppercase tracking-wide" style={{ color: COLORS.inkSubtle }}>
+          Add ability
+        </div>
+        <SmallButton onClick={() => setPickerOpen((v) => !v)}>
+          {pickerOpen ? "Hide" : "Search & Add"}
+        </SmallButton>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-        {catalog.map((def) => (
-          <button
-            key={def.id}
-            onClick={() => add(def.id)}
-            className="flex flex-col items-start text-left p-2 rounded-lg border-2 transition-colors hover:opacity-90"
-            style={{ background: COLORS.parchment, borderColor: COLORS.border }}
-          >
-            <div className="text-[12px] font-bold" style={{ color: COLORS.ember }}>
-              {def.icon} {def.name}
-            </div>
-            <div className="text-[10px] italic mt-0.5" style={{ color: COLORS.inkSubtle }}>
-              {def.desc}
-            </div>
-          </button>
-        ))}
-      </div>
+
+      {pickerOpen && (
+        <div className="flex flex-col gap-2">
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search abilities by name, id, or description…"
+            className="px-2 py-1.5 rounded border text-[12px]"
+            style={{ background: "#fffaf1", borderColor: COLORS.border, color: COLORS.ink }}
+          />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-64 overflow-y-auto pr-1">
+            {filteredCatalog.map((def) => (
+              <button
+                key={def.id}
+                onClick={() => add(def.id)}
+                className="flex flex-col items-start text-left p-2 rounded-lg border-2 transition-colors hover:opacity-90"
+                style={{ background: COLORS.parchment, borderColor: COLORS.border }}
+              >
+                <div className="text-[12px] font-bold" style={{ color: COLORS.ember }}>
+                  {def.icon} {def.name}
+                </div>
+                <div className="text-[10px] font-mono mt-0.5" style={{ color: COLORS.inkSubtle }}>
+                  {def.id}
+                </div>
+                <div className="text-[10px] italic mt-0.5" style={{ color: COLORS.inkSubtle }}>
+                  {def.desc}
+                </div>
+              </button>
+            ))}
+            {filteredCatalog.length === 0 && (
+              <div className="text-[11px] italic px-1" style={{ color: COLORS.inkSubtle }}>
+                No matching abilities.
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
