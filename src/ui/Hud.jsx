@@ -4,6 +4,7 @@ import { xpForLevel } from "../state.js";
 import { WEATHER_META } from "../features/boss/slice.js";
 import { seasonIndexInSession } from "../features/zones/data.js";
 import IconCanvas, { hasIcon } from "./IconCanvas.jsx";
+import { locBuilt } from "../locBuilt.js";
 
 // Phase 7 — calendar season effects were removed. Keeping the export as an
 // empty list so any lingering imports compile to no-ops; prefer deleting the
@@ -143,7 +144,7 @@ function DevButton({ title, emoji, onClick }) {
 }
 
 export function Hud({ state, dispatch }) {
-  const { coins, level, xp, turnsUsed, built, view, sessionMaxTurns } = state;
+  const { coins, level, xp, turnsUsed, view, sessionMaxTurns } = state;
   const onBoard = view === "board";
   // Phase 7.1 — visual season rotates within the session. Each run cycles
   // Spring -> Winter as turnsUsed grows; the index lands on Spring whenever
@@ -153,7 +154,8 @@ export function Hud({ state, dispatch }) {
   const xpNeed = xpForLevel(level);
   const xpPct = Math.min(100, (xp / xpNeed) * 100);
   const turnsLeft = MAX_TURNS - turnsUsed;
-  const buildingCount = Object.keys(built || {}).length;
+  const builtAtLoc = locBuilt(state);
+  const buildingCount = Object.keys(builtAtLoc).filter((k) => k !== "_plots").length;
   const festivalAnnounced = !!state.story?.flags?.festival_announced;
   const isWon = !!state.story?.flags?.isWon;
   const sandbox = !!state.story?.sandbox;

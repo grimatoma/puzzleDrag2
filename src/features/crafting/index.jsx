@@ -168,7 +168,8 @@ function DecorationCard({ decor, state, dispatch }) {
 }
 
 export default function CraftingScreen({ state, dispatch }) {
-  const { inventory = {}, built = {}, level = 1, craftedTotals = {}, craftingTab } = state;
+  const { inventory = {}, level = 1, craftedTotals = {}, craftingTab } = state;
+  const built = locBuilt(state);
 
   // Stations that exist (built or not) — always show all three tabs, but indicate built status
   const builtStations = STATION_ORDER.filter((s) => stationBuilt(built, s));
