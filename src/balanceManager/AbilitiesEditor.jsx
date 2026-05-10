@@ -13,6 +13,7 @@ import {
 import { useMemo, useState } from "react";
 import { BIOMES } from "../constants.js";
 import { CATEGORIES } from "../features/tileCollection/data.js";
+import { filterAbilityCatalog } from "./abilityPicker.js";
 import { COLORS, NumberField, Select, SmallButton, Card } from "./shared.jsx";
 
 function resourceKeyOptions() {
@@ -132,13 +133,7 @@ export default function AbilitiesEditor({ scope, abilities, onChange }) {
   const [query, setQuery] = useState("");
 
   const filteredCatalog = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return catalog;
-    return catalog.filter((def) => (
-      def.id.toLowerCase().includes(q)
-      || def.name.toLowerCase().includes(q)
-      || def.desc.toLowerCase().includes(q)
-    ));
+    return filterAbilityCatalog(catalog, query);
   }, [catalog, query]);
 
   function add(abilityId) {

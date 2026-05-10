@@ -83,7 +83,7 @@ export function drawTileIcon(ctx, key) {
     ctx.font = 'bold 36px "Newsreader", "Times New Roman", serif';
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillText(res.glyph, 0, 2);
+    ctx.fillText("?", 0, 2);
   }
 }
 

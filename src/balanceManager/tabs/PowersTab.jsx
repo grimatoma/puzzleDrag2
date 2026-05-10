@@ -34,13 +34,13 @@ function resourceKeyOptions(includeNone = false) {
 
 function tileSwatchProps(tileId) {
   const tile = TILE_TYPES_MAP[tileId];
-  if (!tile) return { color: 0x888888, glyph: "?" };
+  if (!tile) return { color: 0x888888 };
   for (const b of Object.values(BIOMES)) {
     for (const r of b.resources) {
-      if (r.key === tile.baseResource) return { color: r.color, glyph: r.glyph };
+      if (r.key === tile.baseResource) return { color: r.color, iconKey: r.key };
     }
   }
-  return { color: 0x888888, glyph: "?" };
+  return { color: 0x888888 };
 }
 
 export default function PowersTab({ draft, updateDraft }) {
@@ -160,7 +160,7 @@ export default function PowersTab({ draft, updateDraft }) {
                     : { background: COLORS.parchment, color: COLORS.inkLight, border: `1px solid ${COLORS.border}` }
                 }
               >
-                <TileSwatch color={sw.color} glyph={sw.glyph} size={22} />
+                <TileSwatch color={sw.color} iconKey={sw.iconKey} size={22} />
                 <div className="flex-1 min-w-0">
                   <div className="font-bold truncate">{t.displayName}</div>
                   <div className="text-[10px] opacity-80 font-mono truncate">{t.id}</div>

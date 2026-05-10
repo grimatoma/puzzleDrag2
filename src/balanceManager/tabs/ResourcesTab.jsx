@@ -10,9 +10,9 @@ import {
 } from "../shared.jsx";
 
 const BIOME_TABS = [
-  { id: "farm", label: "Farm",   icon: "🌾" },
-  { id: "mine", label: "Mine",   icon: "⛏" },
-  { id: "fish", label: "Harbor", icon: "🐟" },
+  { id: "farm", label: "Farm",   iconKey: "grass_hay" },
+  { id: "mine", label: "Mine",   iconKey: "ui_build" },
+  { id: "fish", label: "Harbor", iconKey: "ui_star" },
 ];
 
 export default function ResourcesTab({ draft, updateDraft }) {
@@ -99,7 +99,6 @@ export default function ResourcesTab({ draft, updateDraft }) {
             dark:        patch.dark        ?? r.dark,
             value:       patch.value       ?? r.value,
             next:        patch.next        ?? r.next ?? "",
-            glyph:       patch.glyph       ?? r.glyph ?? "",
             description: patch.description ?? r.description ?? "",
           };
           const tileDescPatch = draft.tileDescriptions[r.key];
@@ -109,7 +108,7 @@ export default function ResourcesTab({ draft, updateDraft }) {
           return (
             <Card key={r.key} accent={dirty ? COLORS.ember : COLORS.border}>
               <div className="flex gap-3">
-                <TileSwatch color={eff.color} glyph={eff.glyph} size={48} />
+                <TileSwatch color={eff.color} iconKey={r.key} size={48} />
                 <div className="flex-1 min-w-0 grid grid-cols-2 gap-x-4 gap-y-1.5">
                   {/* Key (read-only) */}
                   <div className="col-span-2 flex items-center gap-2 mb-1">
@@ -140,11 +139,7 @@ export default function ResourcesTab({ draft, updateDraft }) {
                     <Label>Label</Label>
                     <TextField value={eff.label} onChange={(v) => patchResource(r.key, { label: v })} />
                   </div>
-                  {/* Glyph */}
-                  <div>
-                    <Label>Glyph (emoji)</Label>
-                    <TextField value={eff.glyph} onChange={(v) => patchResource(r.key, { glyph: v })} />
-                  </div>
+
 
                   {/* Sale value */}
                   <div>

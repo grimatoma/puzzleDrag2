@@ -34,41 +34,55 @@ export function formatHireCost(hireCost) {
 }
 
 function effectLabel(worker, hiredCount) {
-  const e = worker.effect;
   const slots = String(workerSlotLabel(worker));
-  // Phase 9 workers use object-shape effects without a `type` field
-  if (!e.type) {
-    const parts = [];
-    if (e.hazardSpawnReduce) {
-      for (const [hazard, reduction] of Object.entries(e.hazardSpawnReduce)) {
-        const pct = Math.round(reduction * 100 * hiredCount / worker.maxCount);
-        parts.push(`−${pct}% ${hazard.replace("_", " ")} spawn rate`);
+  if (!worker.abilities || worker.abilities.length === 0) return `slots: ${slots}`;
+
+  const perHireScalar = worker.maxCount > 0 ? hiredCount / worker.maxCount : 0;
+  const parts = worker.abilities.map(ab => {
+    const p = ab.params || {};
+    switch (ab.id) {
+      case "threshold_reduce_category": {
+        const current = (p.amount * perHireScalar).toFixed(1).replace(/\.0$/, "");
+        return `−${current} ${p.category} chain steps`;
       }
-    }
-    if (e.poolWeight) {
-      for (const [res, amount] of Object.entries(e.poolWeight)) {
-        const gained = Math.floor(amount * hiredCount / worker.maxCount);
-        parts.push(`+${gained} ${res} spawn weight`);
+      case "threshold_reduce": {
+        const current = (p.amount * perHireScalar).toFixed(1).replace(/\.0$/, "");
+        return `−${current} ${p.target} chain steps`;
       }
+      case "recipe_input_reduce": {
+        const current = (p.amount * perHireScalar).toFixed(1).replace(/\.0$/, "");
+        return `−${current} ${p.input} for ${p.recipe}`;
+      }
+      case "pool_weight":
+      case "pool_weight_legacy": {
+        const current = (p.amount * perHireScalar).toFixed(1).replace(/\.0$/, "");
+        return `+${current} ${p.target} weight`;
+      }
+      case "bonus_yield": {
+        const current = (p.amount * perHireScalar).toFixed(1).replace(/\.0$/, "");
+        return `+${current} ${p.target} yield`;
+      }
+      case "season_bonus": {
+        const current = Math.floor(p.amount * perHireScalar);
+        return `+${current} ${p.resource}/season`;
+      }
+      case "hazard_spawn_reduce": {
+        const current = Math.round(p.amount * 100 * perHireScalar);
+        return `−${current}% ${p.hazard} spawn`;
+      }
+      case "hazard_coin_multiplier": {
+        const current = (1 + (p.multiplier - 1) * perHireScalar).toFixed(1).replace(/\.0$/, "");
+        return `${current}x ${p.hazard} bounty`;
+      }
+      case "chain_redirect_category": {
+        return `${p.fromCategory} → ${p.toCategory}`;
+      }
+      default:
+        return ab.id;
     }
-    if (parts.length === 0) parts.push("Effect active");
-    return `${parts.join(" · ")} · slots: ${slots}`;
-  }
-  switch (e.type) {
-    case "threshold_reduce": {
-      const perHire = (e.from - e.to) / worker.maxCount;
-      const current = e.from - hiredCount * perHire;
-      return `${e.key} chain: ${e.from}→${hiredCount === worker.maxCount ? e.to : current} tiles to upgrade · slots: ${slots}`;
-    }
-    case "pool_weight":
-      return `+${(e.amount * hiredCount / worker.maxCount).toFixed(1)} ${e.key} spawn weight · slots: ${slots}`;
-    case "bonus_yield":
-      return `+${(e.amount * hiredCount / worker.maxCount).toFixed(1)} ${e.key} per chain · slots: ${slots}`;
-    case "season_bonus":
-      return `+${(e.amount * hiredCount / worker.maxCount).toFixed(0)}◉ each season · slots: ${slots}`;
-    default:
-      return `slots: ${slots}`;
-  }
+  });
+  
+  return `${parts.join(" · ")} · slots: ${slots}`;
 }
 
 function WorkerRow({ worker, state, dispatch }) {

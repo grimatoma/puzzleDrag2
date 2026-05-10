@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { NPCS } from "../constants.js";
 import { parseSpeaker } from "../story.js";
+import Icon from "./Icon.jsx";
+import RichText from "./RichText.jsx";
 
 function Stat({ v, l }) {
   return (
@@ -19,7 +21,7 @@ export function SeasonModal({ state, dispatch }) {
   return (
     <div className="absolute inset-0 bg-black/55 grid place-items-center z-50 animate-fadein" role="dialog" aria-modal="true" aria-labelledby="season-modal-title">
       <div className="bg-[#f4ecd8] border-[4px] border-[#b28b62] rounded-[20px] px-8 py-6 landscape:max-[1024px]:px-4 landscape:max-[1024px]:py-3 max-[640px]:px-4 max-[640px]:py-4 min-w-[360px] max-w-[560px] landscape:max-[1024px]:min-w-0 landscape:max-[1024px]:w-[92vw] max-[640px]:min-w-0 max-[640px]:w-[92vw] landscape:max-[1024px]:max-h-[88vh] max-[640px]:max-h-[85dvh] landscape:max-[1024px]:overflow-y-auto max-[640px]:overflow-y-auto text-center shadow-2xl">
-        <div className="text-[48px] landscape:max-[1024px]:text-[28px] max-[640px]:text-[32px] leading-none">🏡</div>
+        <Icon iconKey="ui_home" size={48} className="landscape:max-[1024px]:w-[28px] max-[640px]:w-[32px] leading-none" />
         <h2 id="season-modal-title" className="font-bold text-[26px] landscape:max-[1024px]:text-[18px] max-[640px]:text-[20px] text-[#744d2e] mt-2 landscape:max-[1024px]:mt-1 max-[640px]:mt-1 mb-1 landscape:max-[1024px]:mb-0.5 max-[640px]:mb-0.5">Harvest Complete</h2>
         <p className="italic text-[#6a4b31] text-[14px] landscape:max-[1024px]:text-[11px] max-[640px]:text-[12px]">Time to head back to town.</p>
         <div className="flex justify-around gap-2 my-4 landscape:max-[1024px]:my-2 max-[640px]:my-2 p-3 landscape:max-[1024px]:p-2 max-[640px]:p-2 bg-black/[.04] rounded-xl">
@@ -87,7 +89,7 @@ export function StoryModal({ state, dispatch }) {
             boxShadow: "0 0 40px rgba(255,211,76,0.35), 0 8px 32px rgba(0,0,0,0.6)",
           }}
         >
-          <div className="text-[56px] leading-none mb-2">🏆</div>
+          <Icon iconKey="ui_trophy" size={56} className="mb-2" />
           <h2 id="story-win-title" className="font-bold text-[28px] text-[#ffd34c] mb-2">{beat.title}</h2>
           <p className="text-[#f4ecd8] text-[16px] leading-relaxed mb-6 max-w-[420px] mx-auto">{beat.body}</p>
           <button
@@ -172,7 +174,7 @@ export function NpcBubble({ bubble, dispatch }) {
         <div className="w-10 h-10 rounded-full grid place-items-center text-white font-bold text-[16px] flex-shrink-0" style={{ backgroundColor: npc.color, border: "2px solid #fff" }}>{npc.name[0]}</div>
         <div className="flex-1 min-w-0">
           <div className="font-bold text-[#a8431a] text-[12px]">{npc.name} · {npc.role}</div>
-          <div className="text-[#2b2218] text-[13px] leading-snug mt-0.5">{shown.text}</div>
+          <div className="text-[#2b2218] text-[13px] leading-snug mt-0.5"><RichText text={shown.text} /></div>
         </div>
       </div>
     </div>

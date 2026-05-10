@@ -4,6 +4,7 @@ import { useTooltip, Tooltip } from "./Tooltip.jsx";
 import { CompactOrders } from "./Inventory.jsx";
 import { getPhaserScene } from "../phaserBridge.js";
 import IconCanvas, { hasIcon } from "./IconCanvas.jsx";
+import Icon from "./Icon.jsx";
 import { TOOL_CATALOG, TOOL_BY_KEY, TOOL_CATEGORIES, visibleTools, isTapTargetTool } from "./toolRegistry.js";
 
 // Re-exported for back-compat with anything that still imports TOOL_DEFS.
@@ -17,7 +18,7 @@ function ToolIcon({ def, size }) {
   if (def.iconKey && hasIcon(def.iconKey)) {
     return <div style={{ width: size, height: size }}><IconCanvas iconKey={def.iconKey} size={size} /></div>;
   }
-  return <div style={{ fontSize: size * 0.7, lineHeight: 1 }}>{def.icon ?? "⚙"}</div>;
+  return <div style={{ fontSize: size * 0.7, lineHeight: 1 }}><Icon iconKey={def.iconKey ?? "ui_settings"} size={size * 0.7} /></div>;
 }
 
 /**
@@ -318,7 +319,7 @@ export function MobileDock({ state, dispatch }) {
               {readyOrders}
             </div>
           )}
-          <span className="text-[20px] leading-none">📋</span>
+          <span className="text-[20px] leading-none"><Icon iconKey="ui_clipboard" size={20} /></span>
           <span className="text-[9px] font-bold">Orders</span>
         </button>
       </div>

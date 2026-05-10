@@ -67,9 +67,9 @@ const ALL_RESOURCES = Object.fromEntries(
 );
 
 const FARM_HAZARD_LIST = [
-  { id: "rats",  ...FARM_HAZARD_META.rats, icon: "🐀", biome: "Farm" },
-  { id: "fire",  ...FARM_HAZARD_META.fire, icon: "🔥", biome: "Farm" },
-  { id: "wolf",  ...FARM_HAZARD_META.wolf, icon: "🐺", biome: "Farm" },
+  { id: "rats",  ...FARM_HAZARD_META.rats, iconKey: "ui_star", biome: "Farm" },
+  { id: "fire",  ...FARM_HAZARD_META.fire, iconKey: "ui_star", biome: "Farm" },
+  { id: "wolf",  ...FARM_HAZARD_META.wolf, iconKey: "ui_star", biome: "Farm" },
 ];
 
 const MINE_HAZARD_LIST = HAZARDS.map((h) => ({

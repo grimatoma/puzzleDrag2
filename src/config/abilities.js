@@ -42,7 +42,7 @@ export const ABILITIES = Object.freeze([
   {
     id: "threshold_reduce",
     name: "Threshold Reduce",
-    icon: "📉",
+    iconKey: "ui_warning",
     desc: "Reduces the upgrade threshold of a target resource by N (scaled by source weight).",
     scope: ["worker", "tile", "building"],
     trigger: "passive",
@@ -55,7 +55,7 @@ export const ABILITIES = Object.freeze([
   {
     id: "threshold_reduce_category",
     name: "Threshold Reduce (category)",
-    icon: "📉",
+    iconKey: "ui_warning",
     desc: "Reduces the upgrade threshold of every species in a category.",
     scope: ["worker", "building"],
     trigger: "passive",
@@ -68,7 +68,7 @@ export const ABILITIES = Object.freeze([
   {
     id: "pool_weight_legacy",
     name: "Spawn Boost (continuous)",
-    icon: "🌱",
+    iconKey: "grass_spiky",
     desc: "Adds extra spawn-pool weight on a resource. Contribution scales continuously with source weight (used by Phase 4 workers).",
     scope: ["worker"],
     trigger: "on_board_fill",
@@ -81,7 +81,7 @@ export const ABILITIES = Object.freeze([
   {
     id: "pool_weight",
     name: "Spawn Boost",
-    icon: "🌱",
+    iconKey: "grass_spiky",
     desc: "Adds extra spawn-pool weight on a resource. Per-source contribution is floored to integer (used by Phase 9+ workers and tiles).",
     scope: ["worker", "tile", "building"],
     trigger: "on_board_fill",
@@ -94,7 +94,7 @@ export const ABILITIES = Object.freeze([
   {
     id: "bonus_yield",
     name: "Bonus Yield",
-    icon: "🪙",
+    iconKey: "goldring",
     desc: "Adds bonus copies of a resource whenever a chain producing it is collected.",
     scope: ["worker", "tile", "building"],
     trigger: "on_chain_collect",
@@ -107,7 +107,7 @@ export const ABILITIES = Object.freeze([
   {
     id: "season_bonus",
     name: "Season Bonus",
-    icon: "💰",
+    iconKey: "goldring",
     desc: "Pays extra of a resource (typically coins) at season end.",
     scope: ["worker", "building"],
     trigger: "season_end",
@@ -120,7 +120,7 @@ export const ABILITIES = Object.freeze([
   {
     id: "recipe_input_reduce",
     name: "Recipe Input Reduce",
-    icon: "📐",
+    iconKey: "ui_scale",
     desc: "Reduces a recipe's required input quantity for one resource.",
     scope: ["worker", "building"],
     trigger: "passive",
@@ -134,7 +134,7 @@ export const ABILITIES = Object.freeze([
   {
     id: "chain_redirect_category",
     name: "Chain Redirect (category)",
-    icon: "🔀",
+    iconKey: "ui_enter",
     desc: "Chains in the source category produce a tile from the target category instead of the species' native upgrade.",
     scope: ["worker"],
     trigger: "on_chain_commit",
@@ -151,7 +151,7 @@ export const ABILITIES = Object.freeze([
   {
     id: "hazard_spawn_reduce",
     name: "Hazard Spawn Reduce",
-    icon: "🛡",
+    iconKey: "ui_warning",
     desc: "Reduces the spawn rate of a hazard. Capped at 1.0.",
     scope: ["worker", "building"],
     trigger: "passive",
@@ -164,7 +164,7 @@ export const ABILITIES = Object.freeze([
   {
     id: "hazard_coin_multiplier",
     name: "Hazard Coin Multiplier",
-    icon: "💰",
+    iconKey: "goldring",
     desc: "Increases the coin payout when clearing a hazard. Multiplier ≥ 1.",
     scope: ["worker"],
     trigger: "on_chain_commit",
@@ -179,7 +179,7 @@ export const ABILITIES = Object.freeze([
   {
     id: "free_moves",
     name: "Free Moves",
-    icon: "✨",
+    iconKey: "ui_star",
     desc: "Grants N free moves whenever a chain involving this source is collected.",
     scope: ["tile", "building"],
     trigger: "on_chain_collect",
@@ -191,7 +191,7 @@ export const ABILITIES = Object.freeze([
   {
     id: "free_turn_if_chain",
     name: "Free Turn (long chain)",
-    icon: "⏩",
+    iconKey: "ui_enter",
     desc: "Grants 1 free move only when the chain is at least N tiles long.",
     scope: ["tile"],
     trigger: "on_chain_commit",
@@ -203,7 +203,7 @@ export const ABILITIES = Object.freeze([
   {
     id: "coin_bonus_flat",
     name: "Coin Bonus (flat)",
-    icon: "🪙",
+    iconKey: "goldring",
     desc: "Adds N coins on top of the chain reward.",
     scope: ["tile", "building"],
     trigger: "on_chain_commit",
@@ -215,7 +215,7 @@ export const ABILITIES = Object.freeze([
   {
     id: "coin_bonus_per_tile",
     name: "Coin Bonus (per tile)",
-    icon: "💰",
+    iconKey: "goldring",
     desc: "Adds N coins per chained tile — scales with chain length.",
     scope: ["tile"],
     trigger: "on_chain_commit",
@@ -229,7 +229,7 @@ export const ABILITIES = Object.freeze([
   {
     id: "grant_tool",
     name: "Grant Tool",
-    icon: "🧰",
+    iconKey: "ui_build",
     desc: "Grants N copies of a tool at the trigger moment (typically season end).",
     scope: ["building"],
     trigger: "season_end",
@@ -242,7 +242,7 @@ export const ABILITIES = Object.freeze([
   {
     id: "worker_pool_step",
     name: "Worker Pool Step",
-    icon: "🛏",
+    iconKey: "ui_home",
     desc: "Adds N to the townsfolk hiring pool each season end (Housing Block).",
     scope: ["building"],
     trigger: "season_end",
@@ -254,7 +254,7 @@ export const ABILITIES = Object.freeze([
   {
     id: "preserve_board",
     name: "Preserve Board",
-    icon: "🧰",
+    iconKey: "ui_build",
     desc: "Preserves the tile layout between sessions for the named biome (Silo, Barn).",
     scope: ["building"],
     trigger: "session_end",

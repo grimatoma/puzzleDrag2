@@ -1,6 +1,6 @@
 // Shared UI primitives for the Balance Manager. Matches the parchment
-// aesthetic of the rest of the game — cream backgrounds, tan borders,
 // ember-orange accents.
+import Icon from "../ui/Icon.jsx";
 
 export const COLORS = {
   parchment: "#f4ecd8",
@@ -207,7 +207,7 @@ export function hexToCss(n) {
 }
 
 /** Inline tile preview swatch — circle with the resource's color + glyph. */
-export function TileSwatch({ color, glyph, size = 28 }) {
+export function TileSwatch({ color, iconKey, size = 28 }) {
   return (
     <div
       className="rounded-md grid place-items-center flex-shrink-0"
@@ -220,7 +220,7 @@ export function TileSwatch({ color, glyph, size = 28 }) {
       }}
       aria-hidden
     >
-      <span style={{ filter: "drop-shadow(0 1px 0 rgba(0,0,0,0.25))" }}>{glyph || "?"}</span>
+      <Icon iconKey={iconKey} size={Math.floor(size * 0.8)} />
     </div>
   );
 }

@@ -1,4 +1,5 @@
 import { CASTLE_NEEDS } from "./data.js";
+import Icon from "../../ui/Icon.jsx";
 
 // Note: this panel is embedded inside features/inventory/index.jsx (direct
 // default-import) rather than mounted as its own top-level view. Don't add
@@ -40,7 +41,10 @@ export default function CastlePanel({ state, dispatch }) {
         return (
           <div key={key} className="bg-[#f6efe0] border-2 border-[#c5a87a] rounded-lg p-2 flex flex-col gap-1.5">
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold text-[#3a2715]">{need.label}</span>
+              <span className="text-[11px] font-bold text-[#3a2715] flex items-center gap-1">
+                <Icon iconKey={need.resource} size={14} />
+                {need.label}
+              </span>
               <span className="text-[10px] text-[#8a785e]">{value} / {need.target}</span>
             </div>
             <ProgressBar value={value} max={need.target} />

@@ -4,26 +4,31 @@
 // shows the worker, hire / fire buttons, the per-hire effect summary, and
 // the current count out of maxCount.
 import { TYPE_WORKERS, nextHireCost } from "./data.js";
+import Icon from "../../ui/Icon.jsx";
 
-function effectSummary(effect, count, maxCount) {
-  if (!effect || !effect.type) return "";
+function effectSummary(abilities, count, maxCount) {
+  if (!abilities || abilities.length === 0) return "";
   const perHireScalar = maxCount > 0 ? count / maxCount : 0;
-  switch (effect.type) {
-    case "threshold_reduce_category": {
-      const current = +(effect.from - (effect.from - effect.to) * perHireScalar).toFixed(1);
-      return `${effect.category} chain: ${current} (max ${effect.to} at full hire)`;
+  const parts = abilities.map(ab => {
+    const p = ab.params || {};
+    switch (ab.id) {
+      case "threshold_reduce_category": {
+        const current = (p.amount * perHireScalar).toFixed(1).replace(/\.0$/, "");
+        return `−${current} ${p.category} chain steps (max −${p.amount})`;
+      }
+      case "threshold_reduce": {
+        const current = (p.amount * perHireScalar).toFixed(1).replace(/\.0$/, "");
+        return `−${current} ${p.target || p.key} chain steps (max −${p.amount})`;
+      }
+      case "recipe_input_reduce": {
+        const current = (p.amount * perHireScalar).toFixed(1).replace(/\.0$/, "");
+        return `−${current} ${p.input} for ${p.recipe} (max −${p.amount})`;
+      }
+      default:
+        return ab.id;
     }
-    case "threshold_reduce": {
-      const current = +(effect.from - (effect.from - effect.to) * perHireScalar).toFixed(1);
-      return `${effect.key} chain: ${current} (max ${effect.to} at full hire)`;
-    }
-    case "recipe_input_reduce": {
-      const current = +(effect.from - (effect.from - effect.to) * perHireScalar).toFixed(1);
-      return `${effect.recipe} needs ${current} → ${effect.to} ${effect.input} at full hire`;
-    }
-    default:
-      return effect.type;
-  }
+  });
+  return parts.join(" · ");
 }
 
 function WorkerRow({ worker, count, coins, dispatch }) {
@@ -58,7 +63,7 @@ function WorkerRow({ worker, count, coins, dispatch }) {
           flexShrink: 0,
         }}
       >
-        {worker.icon}
+        <Icon iconKey={worker.iconKey} size={28} />
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontWeight: 700, color: "#3a2715", fontSize: 14 }}>
@@ -92,7 +97,7 @@ function WorkerRow({ worker, count, coins, dispatch }) {
             marginTop: 2,
           }}
         >
-          {effectSummary(worker.effect, count, worker.maxCount)}
+          {effectSummary(worker.abilities, count, worker.maxCount)}
         </div>
       </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 4, flexShrink: 0 }}>

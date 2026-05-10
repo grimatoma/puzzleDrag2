@@ -3,6 +3,7 @@ import { resourceByKey } from "../state.js";
 import { sellPriceFor } from "../features/market/pricing.js";
 import { hex } from "../utils.js";
 import IconCanvas, { hasIcon } from "./IconCanvas.jsx";
+import Icon from "./Icon.jsx";
 
 export function Section({ title, titleColor = "#f8e7c6", children }) {
   return (
@@ -87,7 +88,7 @@ function InventoryCell({ r, count, compact, orderStatus, orderTotal, marketBuilt
       <div className={`rounded-md flex-shrink-0 grid place-items-center text-white ${compact ? "w-8 h-8 text-[16px]" : "w-10 h-10 text-[20px]"}`} style={{ backgroundColor: hex(r.color), border: "2px solid rgba(255,255,255,.4)", textShadow: "0 1px 1px rgba(0,0,0,.4)", overflow: "hidden" }}>
         {hasIcon(r.key)
           ? <IconCanvas iconKey={r.key} size={compact ? 32 : 40} />
-          : r.glyph}
+          : <Icon iconKey={r.key} size={compact ? 32 : 40} />}
       </div>
       <div className="flex flex-col leading-none min-w-0 flex-1">
         <div className={`text-white/80 truncate font-medium ${compact ? "text-[10px]" : "text-[12px]"}`}>{r.label}</div>
@@ -140,7 +141,6 @@ export function CompactOrders({ orders, inventory, dispatch }) {
         const done = have >= o.need;
         const res = resourceByKey(o.key);
         const recipe = !res ? RECIPES[o.key] : null;
-        const glyph = res ? res.glyph : recipe?.glyph ?? "?";
         const label = res ? res.label : recipe?.name ?? o.key;
         return (
           <button
@@ -149,7 +149,7 @@ export function CompactOrders({ orders, inventory, dispatch }) {
             className={`flex items-center gap-1.5 rounded-lg px-2 py-1 text-left border transition-colors ${done ? "bg-[#91bf24]/40 border-[#91bf24] text-white" : "bg-[#4a2e18] border-[#7a5038] text-[#f8e7c6]"}`}
           >
             <span className="text-[14px] flex-shrink-0 grid place-items-center w-5 h-5">
-              {hasIcon(o.key) ? <IconCanvas iconKey={o.key} size={20} /> : glyph}
+              <Icon iconKey={o.key} size={20} />
             </span>
             <span className="flex-1 min-w-0 text-[10px] font-bold truncate">{label}</span>
             <span className={`text-[10px] font-bold whitespace-nowrap ${done ? "text-white" : have > 0 ? "text-[#f7c254]" : "text-[#c5a87a]"}`}>
@@ -181,7 +181,7 @@ export function InventoryGrid({ inventory, biomeKey, compact, orders = [], state
     <div className="flex flex-col gap-3">
       {!compact && dispatch && (
         <div className={`px-2.5 py-1.5 rounded-lg border text-[11px] flex items-center gap-2 ${marketBuilt ? "bg-[#2b2218]/60 border-[#e2c19b]/40 text-[#f8e7c6]" : "bg-[#2b2218]/60 border-[#e2c19b]/20 text-[#f8e7c6]/70"}`}>
-          <span className="text-[14px]">🏪</span>
+          <span className="text-[14px]"><Icon iconKey="ui_shop" size={14} /></span>
           <span>
             {marketBuilt
               ? "Caravan Post open — buy and sell directly from your inventory."
@@ -228,7 +228,7 @@ export function InventoryGrid({ inventory, biomeKey, compact, orders = [], state
             {items.map(([key, recipe]) => (
               <InventoryCell
                 key={key}
-                r={{ key, label: recipe.name, color: recipe.color, glyph: recipe.glyph }}
+                r={{ key, label: recipe.name, color: recipe.color }}
                 count={inventory[key] || 0}
                 compact={compact}
                 orderStatus={status[key]}

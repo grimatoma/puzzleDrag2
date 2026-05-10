@@ -7,7 +7,7 @@ import {
   COLORS, NumberField, TextField, TextArea, Select,
   SmallButton, Pill, Card, SearchBar,
 } from "../shared.jsx";
-import IconCanvas, { hasIcon } from "../../ui/IconCanvas.jsx";
+import Icon from "../../ui/Icon.jsx";
 
 const STATIONS = [
   { value: "bakery",   label: "Bakery" },
@@ -17,11 +17,11 @@ const STATIONS = [
 ];
 
 const STATION_FILTERS = [
-  { id: "all",      label: "All",      icon: "🍳" },
-  { id: "bakery",   label: "Bakery",   icon: "🥖" },
-  { id: "larder",   label: "Larder",   icon: "🫙" },
-  { id: "forge",    label: "Forge",    icon: "⚒" },
-  { id: "workshop", label: "Workshop", icon: "🛠" },
+  { id: "all",      label: "All",      iconKey: "ui_star" },
+  { id: "bakery",   label: "Bakery",   iconKey: "ui_star" },
+  { id: "larder",   label: "Larder",   iconKey: "ui_star" },
+  { id: "forge",    label: "Forge",    iconKey: "ui_star" },
+  { id: "workshop", label: "Workshop", iconKey: "ui_devtools" },
 ];
 
 export default function RecipesTab({ draft, updateDraft }) {
@@ -113,7 +113,6 @@ export default function RecipesTab({ draft, updateDraft }) {
             tier: p.tier ?? r.tier ?? 1,
             station: p.station ?? r.station ?? "workshop",
             coins: p.coins ?? r.coins ?? 0,
-            glyph: p.glyph ?? r.glyph ?? "",
             desc: p.desc ?? r.desc ?? "",
           };
           const dirty = Object.keys(p).length > 0;
@@ -122,13 +121,9 @@ export default function RecipesTab({ draft, updateDraft }) {
             <Card key={key} accent={dirty ? COLORS.ember : COLORS.border}>
               <div className="flex items-start justify-between mb-2 gap-2">
                 <div className="flex items-center gap-2 min-w-0">
-                  {hasIcon(key) ? (
-                    <div className="flex-shrink-0 w-8 h-8 rounded grid place-items-center bg-[#e0d4be] text-[20px] overflow-hidden">
-                      <IconCanvas iconKey={key} size={32} />
-                    </div>
-                  ) : (
-                    <span className="text-[20px]">{eff.glyph || "🍳"}</span>
-                  )}
+                  <div className="flex-shrink-0 w-8 h-8 rounded grid place-items-center bg-[#e0d4be] text-[20px] overflow-hidden">
+                    <Icon iconKey={key} size={28} />
+                  </div>
                   <div className="min-w-0">
                     <code
                       className="font-mono text-[10px] px-1.5 py-0.5 rounded inline-block"
@@ -170,10 +165,7 @@ export default function RecipesTab({ draft, updateDraft }) {
                   <NumberField value={eff.tier} min={1} max={5} width={60}
                     onChange={(v) => patch(key, { tier: v })} />
                 </div>
-                <div>
-                  <Label hint="Emoji icon shown next to this recipe in the crafting UI (cosmetic only).">Glyph</Label>
-                  <TextField value={eff.glyph} onChange={(v) => patch(key, { glyph: v })} />
-                </div>
+
               </div>
 
               {/* Inputs editor */}

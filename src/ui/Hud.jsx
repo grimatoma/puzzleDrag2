@@ -5,6 +5,7 @@ import { WEATHER_META } from "../features/boss/slice.js";
 import { seasonIndexInSession } from "../features/zones/data.js";
 import IconCanvas, { hasIcon } from "./IconCanvas.jsx";
 import { locBuilt } from "../locBuilt.js";
+import Icon from "./Icon.jsx";
 
 // Phase 7 — calendar season effects were removed. Keeping the export as an
 // empty list so any lingering imports compile to no-ops; prefer deleting the
@@ -50,7 +51,7 @@ function TideChip({ fish }) {
   const turnsUntilFlip = Math.max(0, 3 - tideTurn);
   const isHigh = tide === "high";
   const label = isHigh ? "High Tide" : "Low Tide";
-  const emoji = isHigh ? "🌊" : "🐚";
+  const iconKey = isHigh ? "ui_water" : "fish_pearl";
   const bg = isHigh ? "#2a4a6a" : "#5a4838";
   return (
     <div
@@ -58,7 +59,7 @@ function TideChip({ fish }) {
       style={{ background: bg, fontSize: 10, fontWeight: "bold" }}
       title={`Tide flips in ${turnsUntilFlip} turn${turnsUntilFlip === 1 ? "" : "s"}.`}
     >
-      <span>{emoji}</span>
+      <Icon iconKey={iconKey} size={12} className="opacity-90" />
       <span>{label}</span>
       <span className="opacity-70">·{turnsUntilFlip}</span>
     </div>
@@ -99,23 +100,23 @@ function SeasonBar({ season, turnsUsed, turnsLeft, sessionMaxTurns }) {
 // (hay, wheat, grain, berry, log) toward the 50-each win threshold.
 
 const LARDER_RESOURCES = [
-  { key: "grass_hay",   icon: "🌾", label: "Hay" },
-  { key: "grain_wheat", icon: "𓂃", label: "Wheat" },
-  { key: "grain", icon: "✿", label: "Grain" },
-  { key: "berry", icon: "◉", label: "Berry" },
-  { key: "wood_log",   icon: "🪵", label: "Log" },
+  { key: "grass_hay",   iconKey: "grass_hay", label: "Hay" },
+  { key: "grain_wheat", iconKey: "grain_wheat", label: "Wheat" },
+  { key: "grain", iconKey: "grain", label: "Grain" },
+  { key: "berry", iconKey: "berry", label: "Berry" },
+  { key: "wood_log",   iconKey: "wood_log", label: "Log" },
 ];
 
 function LarderWidget({ inventory }) {
   return (
     <div className="flex items-center gap-1.5 flex-wrap">
-      {LARDER_RESOURCES.map(({ key, icon }) => {
+      {LARDER_RESOURCES.map(({ key, iconKey }) => {
         const amt = Math.min(50, inventory[key] ?? 0);
         const pct = (amt / 50) * 100;
         const done = amt >= 50;
         return (
           <div key={key} className="flex items-center gap-1 min-w-0">
-            <span className="text-[11px] leading-none">{icon}</span>
+            <Icon iconKey={iconKey} size={14} />
             <div className="w-10 h-2 rounded-full bg-[#3a2715] border border-[#b28b62] overflow-hidden">
               <div
                 className="h-full rounded-full transition-[width] duration-300"
@@ -133,14 +134,14 @@ function LarderWidget({ inventory }) {
   );
 }
 
-function DevButton({ title, emoji, onClick }) {
+function DevButton({ title, iconKey, onClick }) {
   return (
     <button
       onClick={onClick}
-      className="w-7 h-7 rounded-lg bg-[#2b2218] border-2 border-[#5a3a20] grid place-items-center text-[10px] leading-none flex-shrink-0"
+      className="w-7 h-7 rounded-lg bg-[#2b2218] border-2 border-[#5a3a20] grid place-items-center flex-shrink-0"
       title={title}
       aria-label={title}
-    >{emoji}</button>
+    ><Icon iconKey={iconKey} size={14} /></button>
   );
 }
 
@@ -199,8 +200,8 @@ export function Hud({ state, dispatch }) {
         </div>
       )}
       <div className={`${!onBoard ? "ml-auto" : ""} flex items-center gap-1.5 flex-shrink-0`}>
-        <DevButton title="Debug tools" emoji="🛠" onClick={() => dispatch({ type: "SETTINGS/OPEN_DEBUG" })} />
-        <DevButton title="Balance Manager" emoji="⚖️" onClick={() => { window.location.href = `${import.meta.env.BASE_URL}b/`; }} />
+        <DevButton title="Debug tools" iconKey="ui_devtools" onClick={() => dispatch({ type: "SETTINGS/OPEN_DEBUG" })} />
+        <DevButton title="Balance Manager" iconKey="ui_scale" onClick={() => { window.location.href = `${import.meta.env.BASE_URL}b/`; }} />
         {!onBoard && (
           <>
             <div className="bg-[#f6efe0] border-2 border-[#b28b62] rounded-full h-[26px] w-[110px] landscape:max-[1024px]:h-[20px] landscape:max-[1024px]:w-[80px] relative overflow-hidden">

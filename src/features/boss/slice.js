@@ -226,7 +226,7 @@ export function reduce(state, action) {
           runes: (state.runes ?? 0) + (rewardRunes ?? 0),
           bubble: {
             npc: "mira",
-            text: `Victory! +${earnedCoins}◉ awarded.`,
+            text: `Victory! +${earnedCoins}[icon:berry] awarded.`,
             ms: 3200,
             id: Date.now(),
           },

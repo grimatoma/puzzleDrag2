@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { NPCS, BIOMES } from '../../constants.js';
 import { NPC_FAVORITES, moodForBond } from './data.js';
 import IconCanvas, { hasIcon } from '../../ui/IconCanvas.jsx';
+import Icon from "../../ui/Icon.jsx";
 
 export const modalKey = 'mood';
 
@@ -84,7 +85,7 @@ function GiftPicker({ npcKey, inventory, dispatch, onClose }) {
                 <IconCanvas iconKey={r.key} size={22} />
               </span>
             ) : (
-              <span>{r.glyph}</span>
+              <Icon iconKey={r.key} size={14} />
             )}
             {r.label} ×{inventory[r.key]}
             {isFav && (

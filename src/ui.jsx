@@ -4,6 +4,7 @@ import { locBuilt } from "./locBuilt.js";
 import { Section, CompactOrders } from "./ui/Inventory.jsx";
 import { ToolsGrid } from "./ui/Tools.jsx";
 import { TOOL_BY_KEY } from "./ui/toolRegistry.js";
+import Icon from "./ui/Icon.jsx";
 
 // Per-feature error boundary. A crash in any one feature renders an inline
 // fallback inside that feature's slot and dispatches CLOSE_MODAL so the
@@ -83,13 +84,13 @@ export function SidePanel({ state, dispatch, chainInfo }) {
 export function BottomNav({ view, modal, dispatch, state }) {
   const builtAtLoc = locBuilt(state ?? {});
   const baseItems = [
-    { key: "town",        icon: "⌂",   label: "Town" },
-    { key: "inventory",   icon: "🎒",  label: "Inventory" },
-    { key: "crafting",    icon: "🔨",  label: "Craft" },
-    { key: "cartography", icon: "🗺️", label: "Map" },
-    { key: "townsfolk",   icon: "👥",  label: "Townsfolk" },
-    { key: "tileCollection", icon: "🧩",  label: "Tiles" },
-    ...(builtAtLoc.portal ? [{ key: "portal", icon: "🔮", label: "Portal" }] : []),
+    { key: "town",        iconKey: "ui_star",   label: "Town" },
+    { key: "inventory",   iconKey: "ui_inventory",  label: "Inventory" },
+    { key: "crafting",    iconKey: "ui_build",  label: "Craft" },
+    { key: "cartography", iconKey: "ui_map", label: "Map" },
+    { key: "townsfolk",   iconKey: "ui_people",  label: "Townsfolk" },
+    { key: "tileCollection", iconKey: "ui_puzzle",  label: "Tiles" },
+    ...(builtAtLoc.portal ? [{ key: "portal", iconKey: "ui_portal", label: "Portal" }] : []),
   ];
   const items = baseItems;
   const activeKey = modal ? (items.find((i) => i.modal === modal)?.key ?? view) : view;
@@ -107,10 +108,10 @@ export function BottomNav({ view, modal, dispatch, state }) {
                 dispatch({ type: "SET_VIEW", view: it.key });
               }
             }}
-            aria-label={`${it.icon} ${it.label}`}
+            aria-label={it.label}
             className={`flex-1 flex flex-col items-center justify-center gap-0.5 py-1.5 transition-colors ${active ? "bg-[#d6612a] text-white" : "text-[#f7e2b6] hover:bg-white/10"}`}
           >
-            <span className="text-[18px] leading-none">{it.icon}</span>
+            <Icon iconKey={it.iconKey} size={18} />
             <span className="text-[10px] font-bold leading-none whitespace-nowrap">{it.label}</span>
           </button>
         );

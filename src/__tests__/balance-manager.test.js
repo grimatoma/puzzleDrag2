@@ -28,8 +28,8 @@ describe("Balance Manager — override merge layer", () => {
   it("applyResourceOverrides patches BIOMES.*.resources entries by key", () => {
     const biomes = {
       farm: { resources: [
-        { key: "grass_hay", label: "Hay", color: 0xa8c769, value: 1, next: "grain_wheat", glyph: "🌾" },
-        { key: "wood_log",  label: "Log", color: 0x9b6b3e, value: 2, next: "wood_plank",  glyph: "🪵" },
+        { key: "grass_hay", label: "Hay", color: 0xa8c769, value: 1, next: "grain_wheat" },
+        { key: "wood_log",  label: "Log", color: 0x9b6b3e, value: 2, next: "wood_plank" },
       ]},
     };
     applyResourceOverrides(biomes, {

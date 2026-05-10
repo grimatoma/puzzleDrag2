@@ -5,6 +5,7 @@ import { MAP_NODES } from "../features/cartography/data.js";
 import { ZONES } from "../features/zones/data.js";
 import StartFarmingModal from "../features/zones/StartFarmingModal.jsx";
 import IconCanvas from "./IconCanvas.jsx";
+import Icon from "./Icon.jsx";
 
 function BiomeEntryModal({ biomeKey, level, onEnter, onClose }) {
   const biome = BIOMES[biomeKey];
@@ -30,7 +31,7 @@ function BiomeEntryModal({ biomeKey, level, onEnter, onClose }) {
         <p className="text-[#6a4b31] text-[13px] mb-5 leading-relaxed">{descriptions[biomeKey]}</p>
         {locked ? (
           <div className="bg-[#f7d572]/30 border border-[#f7d572] rounded-xl px-4 py-3 text-[#7a5020] font-bold text-[13px] mb-3">
-            🔒 Unlocks at Level {unlockLevel}
+            <div className="flex items-center gap-1.5 justify-center"><Icon iconKey="ui_lock" size={14} /> Unlocks at Level {unlockLevel}</div>
           </div>
         ) : (
           <button
@@ -1204,14 +1205,14 @@ export function TownView({ state, dispatch }) {
             style={{ left: "1.5%", bottom: "50%", width: "22%" }}
             onClick={() => setEntryBiome("farm")}
           >
-            <div className="w-full text-center font-bold text-white mb-0.5" style={{ fontSize: "clamp(9px,1vw,13px)", textShadow: "0 1px 3px rgba(0,0,0,.9)" }}>🌾 Farm Field</div>
+            <div className="w-full flex justify-center items-center gap-1 font-bold text-white mb-0.5" style={{ fontSize: "clamp(9px,1vw,13px)", textShadow: "0 1px 3px rgba(0,0,0,.9)" }}><Icon iconKey="grass_hay" size={12}/> Farm Field</div>
             <div
               className="relative w-full overflow-hidden transition-transform duration-150 group-hover:scale-105"
               style={{ aspectRatio: "1", borderRadius: "8px", border: "2px solid #2a5010", boxShadow: "0 2px 10px rgba(0,0,0,.45)" }}
             >
               <FarmFieldArt />
               <div className="absolute inset-0 grid place-items-center opacity-0 group-hover:opacity-100 transition-opacity" style={{ background: "rgba(0,0,0,.45)" }}>
-                <span className="font-bold text-white" style={{ fontSize: "clamp(9px,1vw,13px)" }}>▶ Enter</span>
+                <span className="font-bold text-white flex items-center gap-1" style={{ fontSize: "clamp(9px,1vw,13px)" }}><Icon iconKey="ui_enter" size={12}/> Enter</span>
               </div>
             </div>
           </button>
@@ -1227,8 +1228,8 @@ export function TownView({ state, dispatch }) {
             style={{ right: "1.5%", bottom: "50%", width: "22%", opacity: state.level < 2 ? 0.65 : 1 }}
             onClick={() => setEntryBiome("mine")}
           >
-            <div className="w-full text-center font-bold text-white mb-0.5" style={{ fontSize: "clamp(9px,1vw,13px)", textShadow: "0 1px 3px rgba(0,0,0,.95)" }}>
-              {state.level < 2 ? "🔒 Mine" : "⛏ Mine"}
+            <div className="w-full flex justify-center items-center gap-1 font-bold text-white mb-0.5" style={{ fontSize: "clamp(9px,1vw,13px)", textShadow: "0 1px 3px rgba(0,0,0,.95)" }}>
+              <Icon iconKey={state.level < 2 ? "ui_lock" : "ui_build"} size={12}/> Mine
             </div>
             <div
               className="relative w-full overflow-hidden transition-transform duration-150 group-hover:scale-105"
@@ -1236,7 +1237,7 @@ export function TownView({ state, dispatch }) {
             >
               <MineEntranceArt locked={state.level < 2} />
               <div className="absolute inset-0 grid place-items-center opacity-0 group-hover:opacity-100 transition-opacity" style={{ background: "rgba(0,0,0,.45)" }}>
-                <span className="font-bold text-white" style={{ fontSize: "clamp(9px,1vw,13px)" }}>{state.level < 2 ? "🔒 L2" : "▶ Enter"}</span>
+                <span className="font-bold text-white flex items-center gap-1" style={{ fontSize: "clamp(9px,1vw,13px)" }}><Icon iconKey={state.level < 2 ? "ui_lock" : "ui_enter"} size={12}/> {state.level < 2 ? "L2" : "Enter"}</span>
               </div>
             </div>
           </button>
@@ -1251,14 +1252,14 @@ export function TownView({ state, dispatch }) {
             style={{ left: "1.5%", bottom: "22%", width: "22%" }}
             onClick={() => setEntryBiome("fish")}
           >
-            <div className="w-full text-center font-bold text-white mb-0.5" style={{ fontSize: "clamp(9px,1vw,13px)", textShadow: "0 1px 3px rgba(0,0,0,.9)" }}>⚓ Harbor</div>
+            <div className="w-full flex justify-center items-center gap-1 font-bold text-white mb-0.5" style={{ fontSize: "clamp(9px,1vw,13px)", textShadow: "0 1px 3px rgba(0,0,0,.9)" }}><Icon iconKey="ui_enter" size={12}/> Harbor</div>
             <div
               className="relative w-full overflow-hidden transition-transform duration-150 group-hover:scale-105"
               style={{ aspectRatio: "1", borderRadius: "8px", border: "2px solid #1a3a5a", boxShadow: "0 2px 10px rgba(0,0,0,.45)" }}
             >
               <div className="w-full h-full" style={{ background: "linear-gradient(180deg, #4a8aaa 0%, #2a5a7a 60%, #1a3a5a 100%)" }} />
               <div className="absolute inset-0 grid place-items-center opacity-0 group-hover:opacity-100 transition-opacity" style={{ background: "rgba(0,0,0,.45)" }}>
-                <span className="font-bold text-white" style={{ fontSize: "clamp(9px,1vw,13px)" }}>▶ Enter</span>
+                <span className="font-bold text-white flex items-center gap-1" style={{ fontSize: "clamp(9px,1vw,13px)" }}><Icon iconKey="ui_enter" size={12}/> Enter</span>
               </div>
             </div>
           </button>
@@ -1363,8 +1364,8 @@ export function TownView({ state, dispatch }) {
           aria-label={pendingBuilding ? "Cancel placement" : "Build"}
         >
           {pendingBuilding
-            ? `✖ Cancel placement`
-            : `🔨 Build  ·  ${freePlots}/${plotCount} plots`}
+            ? <><Icon iconKey="ui_cancel" size={12} className="inline align-text-top mr-1" />Cancel placement</>
+            : <><Icon iconKey="ui_build" size={12} className="inline align-text-top mr-1" />Build  ·  {freePlots}/{plotCount} plots</>}
         </button>
       )}
 
@@ -1374,7 +1375,7 @@ export function TownView({ state, dispatch }) {
           className="absolute z-30 left-1/2 -translate-x-1/2 px-4 py-2 rounded-full font-bold text-white pointer-events-none"
           style={{ top: "9%", background: "rgba(15,14,20,.85)", border: "1px solid rgba(155,219,106,.5)", fontSize: "clamp(11px,1.2vw,14px)" }}
         >
-          📍 Choose an empty plot for <span style={{ color: "#9bdb6a" }}>{pendingBuilding.name}</span>
+          <Icon iconKey="ui_pin" size={12} className="inline align-text-top mr-1" /> Choose an empty plot for <span style={{ color: "#9bdb6a" }}>{pendingBuilding.name}</span>
         </div>
       )}
 

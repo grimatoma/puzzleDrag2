@@ -536,7 +536,7 @@ function coreReducer(state, action) {
               ...state,
               runes: (state.runes ?? 0) + 1,
               fishPearl: null,
-              bubble: { id: Date.now(), npc: "wren", text: "🟣 Pearl captured! +1 Rune.", ms: 2200, priority: 2 },
+              bubble: { id: Date.now(), npc: "wren", text: "[icon:fish_pearl] Pearl captured! +1 Rune.", ms: 2200, priority: 2 },
             };
           }
         }
@@ -607,12 +607,12 @@ function coreReducer(state, action) {
       const leveledUp = afterAlmanacXp.almanac.level > state.almanac.level;
       if (leveledUp) {
         if (afterAlmanacXp.almanac.level === 2) {
-          bubble = { id: Date.now(), npc: "wren", text: "Level 2! ⛏️ Mine biome unlocked — switch with the button below.", ms: 2800, priority: 2 };
+          bubble = { id: Date.now(), npc: "wren", text: "Level 2! [icon:ui_build]️ Mine biome unlocked — switch with the button below.", ms: 2800, priority: 2 };
         } else {
           bubble = { id: Date.now(), npc: "wren", text: `Level ${afterAlmanacXp.almanac.level}! New things await.`, ms: 2400, priority: 2 };
         }
       } else if (effectiveUpgrades > 0 && !hintsShown.upgradeHint) {
-        bubble = { id: Date.now(), npc: "mira", text: "★ Upgrade! Chain 6+ tiles to snowball rare resources.", ms: 2800, priority: 2 };
+        bubble = { id: Date.now(), npc: "mira", text: "[icon:ui_star] Upgrade! Chain 6+ tiles to snowball rare resources.", ms: 2800, priority: 2 };
         newHintsShown = { ...hintsShown, upgradeHint: true };
       }
 
@@ -717,7 +717,7 @@ function coreReducer(state, action) {
       const dialogLine = pickDialog(o.npc, null, newBond, Math.random);
       const orderLeveledUp = afterOrderAlmanac.almanac.level > state.almanac.level;
       let bubble = { id: Date.now(), npc: o.npc,
-        text: `+${actualReward}◉ — ${dialogLine}`,
+        text: `+${actualReward}[icon:berry] — ${dialogLine}`,
         ms: 2000 };
       if (orderLeveledUp) {
         bubble = { id: Date.now(), npc: "wren", text: `Level ${afterOrderAlmanac.almanac.level}! New things await.`, ms: 2400 };
@@ -1062,10 +1062,10 @@ function coreReducer(state, action) {
       let bubble = { id: Date.now(), npc: "mira", text: `${b.name} built! The vale grows warmer.`, ms: 2200 };
       let newHintsShown = hintsShown;
       if (isCraftStation && !hintsShown.craftHint) {
-        bubble = { id: Date.now(), npc: "mira", text: `${b.name} built! 🔨 Tap it in Town to open crafting recipes.`, ms: 2800 };
+        bubble = { id: Date.now(), npc: "mira", text: `${b.name} built! [icon:ui_build] Tap it in Town to open crafting recipes.`, ms: 2800 };
         newHintsShown = { ...hintsShown, craftHint: true };
       } else if (b.id === "inn" && !hintsShown.innHint) {
-        bubble = { id: Date.now(), npc: "wren", text: "Inn built! 🧑‍🌾 You can now hire Helpers from the nav below.", ms: 2800 };
+        bubble = { id: Date.now(), npc: "wren", text: "Inn built! 🧑‍[icon:grass_hay] You can now hire Helpers from the nav below.", ms: 2800 };
         newHintsShown = { ...hintsShown, innHint: true };
       }
       // §17 locked: 10 XP per building into almanac
@@ -1163,7 +1163,7 @@ function coreReducer(state, action) {
         // 5.7: reset per-season free moves on season close
         tileCollection: state.tileCollection ? { ...state.tileCollection, freeMoves: 0 } : state.tileCollection,
         npcs: decayedNpcs,
-        bubble: { id: Date.now(), npc: "tomas", text: "Season ended! +25◉ season bonus.", ms: 2000 },
+        bubble: { id: Date.now(), npc: "tomas", text: "Season ended! +25[icon:berry] season bonus.", ms: 2000 },
         market: {
           ...(state.market ?? {}),
           season: newSeasonNum,

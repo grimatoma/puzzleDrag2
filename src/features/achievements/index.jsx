@@ -6,6 +6,7 @@ const TABS = ["trophies", "collection"];
 // list (20 entries) is retained for legacy compatibility but not rendered here.
 import { ACHIEVEMENTS } from "./data.js";
 import { MAGIC_TOOLS } from "../portal/data.js";
+import Icon from "../../ui/Icon.jsx";
 
 function prettyToolName(key) {
   const magic = MAGIC_TOOLS.find((t) => t.id === key);
@@ -113,7 +114,7 @@ function ResourceChip({ resource, count }) {
       }}
     >
       <div className="text-[18px] leading-none" style={{ textShadow: discovered ? "0 1px 2px rgba(0,0,0,.5)" : "none" }}>
-        {discovered ? resource.glyph : "?"}
+        {discovered ? <Icon iconKey={resource.key} size={24} /> : "?"}
       </div>
       <div className="text-[8px] font-bold leading-tight text-center px-0.5 truncate w-full text-center" style={{ color: textColor }}>
         {discovered ? resource.label : "???"}

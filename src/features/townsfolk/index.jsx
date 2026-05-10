@@ -5,6 +5,7 @@ import { CompactOrders } from "../../ui/Inventory.jsx";
 import BossGallery from "../bosses/Gallery.jsx";
 import { QuestsPanel } from "../quests/index.jsx";
 import CastlePanel from "../castle/index.jsx";
+import Icon from "../../ui/Icon.jsx";
 
 export const viewKey = "townsfolk";
 
@@ -27,20 +28,23 @@ export default function TownsfolkScreen({ state, dispatch }) {
       </div>
       <div className="flex gap-1.5 px-3 pt-2 flex-shrink-0 flex-wrap">
         {[
-          { key: "mood", label: "💞 Mood" },
-          { key: "apprentices", label: "🧑‍🌾 Townsfolk" },
-          { key: "workers", label: "🛠 Workers" },
-          { key: "quests", label: "📜 Quests" },
-          { key: "castle", label: "🏰 Castle" },
-          { key: "bosses", label: "👹 Foes" },
-          { key: "orders", label: "📋 Orders" },
+          { key: "mood", label: "Mood", icon: "ui_heart" },
+          { key: "apprentices", label: "Townsfolk", icon: "ui_people" },
+          { key: "workers", label: "Workers", icon: "ui_build" },
+          { key: "quests", label: "Quests", icon: "ui_clipboard" },
+          { key: "castle", label: "Castle", icon: "ui_home" },
+          { key: "bosses", label: "Foes", icon: "ui_warning" },
+          { key: "orders", label: "Orders", icon: "ui_shop" },
         ].map((item) => (
           <button
             key={item.key}
             onClick={() => setTab(item.key)}
             className={`flex-1 min-w-[80px] py-1.5 rounded-lg text-[11px] font-bold border-2 ${tab === item.key ? "bg-[#8a4a26] border-[#6b3114] text-white" : "bg-[#f7ead8]/20 border-[#e2c19b]/50 text-[#f8e7c6]"}`}
           >
-            {item.label}
+            <div className="flex items-center justify-center gap-1">
+              <Icon iconKey={item.icon} size={12} className={tab === item.key ? "" : "opacity-70"} />
+              {item.label}
+            </div>
           </button>
         ))}
       </div>

@@ -3,6 +3,7 @@ import { RECIPES, BIOMES } from "../../constants.js";
 import { DECORATIONS } from "../decorations/data.js";
 import IconCanvas, { hasIcon } from "../../ui/IconCanvas.jsx";
 import { locBuilt } from "../../locBuilt.js";
+import Icon from "../../ui/Icon.jsx";
 
 export const viewKey = "crafting";
 
@@ -57,11 +58,7 @@ function RecipeCard({ recipeKey, recipe, inventory, built, level, craftedTotals,
         className="flex-shrink-0 grid place-items-center rounded-lg overflow-hidden bg-[#e8d9bc] border border-[#c5a87a]/50 text-[24px]"
         style={{ width: 48, height: 48 }}
       >
-        {hasIcon(recipeKey) ? (
-          <IconCanvas iconKey={recipeKey} size={48} />
-        ) : (
-          <span>{recipe.glyph || "🔧"}</span>
-        )}
+        <Icon iconKey={recipeKey} size={40} />
       </div>
 
       <div className="flex flex-col gap-0.5 flex-1 min-w-0">
