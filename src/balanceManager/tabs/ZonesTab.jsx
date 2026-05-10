@@ -249,45 +249,79 @@ export default function ZonesTab({ draft, updateDraft }) {
               {/* Season drops */}
               <div>
                 <Label>Season drops · % per category</Label>
-                <div className="flex flex-col gap-2">
-                  {SEASON_NAMES.map((season) => {
-                    const table = eff.seasonDrops[season] ?? {};
-                    const total = Object.values(table).reduce((a, b) => a + (Number(b) || 0), 0);
-                    return (
-                      <div key={season}>
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="text-[11px] font-bold" style={{ color: COLORS.ink }}>{season}</span>
-                          <Pill>{total.toFixed(2)} total</Pill>
-                        </div>
-                        <div className="grid grid-cols-2 gap-1">
-                          {ZONE_CATEGORIES.map((cat) => (
-                            <div key={cat} className="flex items-center gap-2">
-                              <code
-                                className="font-mono text-[10px] px-1.5 py-0.5 rounded min-w-[90px]"
-                                style={{ background: COLORS.parchmentDeep, color: COLORS.ink }}
+                <div className="overflow-x-auto rounded-lg border" style={{ borderColor: COLORS.border }}>
+                  <table className="min-w-full text-[10px]">
+                    <thead>
+                      <tr style={{ background: COLORS.parchmentDeep }}>
+                        <th
+                          className="text-left px-2 py-1.5 font-bold whitespace-nowrap"
+                          style={{ color: COLORS.ink, borderBottom: `1px solid ${COLORS.border}` }}
+                        >
+                          Tile Type
+                        </th>
+                        {SEASON_NAMES.map((season) => (
+                          <th
+                            key={season}
+                            className="text-left px-2 py-1.5 font-bold whitespace-nowrap"
+                            style={{ color: COLORS.ink, borderBottom: `1px solid ${COLORS.border}` }}
+                          >
+                            {season}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {ZONE_CATEGORIES.map((cat) => (
+                        <tr key={cat}>
+                          <td className="px-2 py-1.5 align-middle" style={{ borderBottom: `1px solid ${COLORS.border}` }}>
+                            <code
+                              className="font-mono text-[10px] px-1.5 py-0.5 rounded"
+                              style={{ background: COLORS.parchmentDeep, color: COLORS.ink }}
+                            >
+                              {cat}
+                            </code>
+                          </td>
+                          {SEASON_NAMES.map((season) => {
+                            const table = eff.seasonDrops[season] ?? {};
+                            return (
+                              <td
+                                key={`${cat}-${season}`}
+                                className="px-2 py-1.5 align-middle"
+                                style={{ borderBottom: `1px solid ${COLORS.border}` }}
                               >
-                                {cat}
-                              </code>
-                              <NumberField
-                                value={Number((table[cat] ?? 0).toFixed(3))}
-                                min={0}
-                                max={1}
-                                step={0.05}
-                                width={70}
-                                onChange={(v) => {
-                                  const nextTable = { ...table };
-                                  if (v <= 0) delete nextTable[cat];
-                                  else nextTable[cat] = v;
-                                  const nextDrops = { ...eff.seasonDrops, [season]: nextTable };
-                                  patch(z.id, { seasonDrops: nextDrops });
-                                }}
-                              />
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    );
-                  })}
+                                <NumberField
+                                  value={Number(((table[cat] ?? 0)).toFixed(3))}
+                                  min={0}
+                                  max={1}
+                                  step={0.05}
+                                  width={70}
+                                  onChange={(v) => {
+                                    const nextTable = { ...table };
+                                    if (v <= 0) delete nextTable[cat];
+                                    else nextTable[cat] = v;
+                                    const nextDrops = { ...eff.seasonDrops, [season]: nextTable };
+                                    patch(z.id, { seasonDrops: nextDrops });
+                                  }}
+                                />
+                              </td>
+                            );
+                          })}
+                        </tr>
+                      ))}
+                      <tr style={{ background: COLORS.parchmentDeep }}>
+                        <td className="px-2 py-1.5 font-bold" style={{ color: COLORS.ink }}>Total</td>
+                        {SEASON_NAMES.map((season) => {
+                          const table = eff.seasonDrops[season] ?? {};
+                          const total = Object.values(table).reduce((a, b) => a + (Number(b) || 0), 0);
+                          return (
+                            <td key={`total-${season}`} className="px-2 py-1.5">
+                              <Pill>{total.toFixed(2)}</Pill>
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    </tbody>
+                  </table>
                 </div>
                 <div className="text-[10px] mt-2" style={{ color: COLORS.inkSubtle }}>
                   Each season's percentages are normalised by the spawn sampler;
