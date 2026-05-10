@@ -1,19 +1,19 @@
 // Tiles tab — every per-tile attribute lives here:
 //   - discovery method (formerly the "Unlock Hooks" tab)
 //   - what resource the chain produces (per-tile override of base `next`)
-//   - attached power hooks (free moves, coin bonuses, spawn boosts…)
+//   - attached abilities (free moves, coin bonuses, spawn boosts…)
 //
-// The hook library lives in src/config/powerHooks.js; runtime expansion
-// into legacy `effects` fields happens in
-// applyTileOverrides → expandHooksToEffects.
+// Abilities live in src/config/abilities.js. Runtime expansion into the
+// legacy `effects` fields happens in applyTileOverrides →
+// expandAbilitiesToEffects.
 
 import { useState, useMemo } from "react";
 import { TILE_TYPES, TILE_TYPES_MAP, CATEGORIES } from "../../features/tileCollection/data.js";
 import { BIOMES } from "../../constants.js";
-import { POWER_HOOKS, getPowerHook, defaultParamsFor } from "../../config/powerHooks.js";
 import {
   COLORS, NumberField, Select, SmallButton, Pill, Card, SearchBar, TileSwatch,
 } from "../shared.jsx";
+import AbilitiesEditor from "../AbilitiesEditor.jsx";
 
 const DISCOVERY_METHODS = [
   { value: "default",  label: "Default — always available" },
@@ -48,7 +48,6 @@ export default function PowersTab({ draft, updateDraft }) {
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [selectedTile, setSelectedTile] = useState(TILE_TYPES[0]?.id);
 
-  const resOptions = useMemo(() => resourceKeyOptions(), []);
   const producesOptions = useMemo(() => resourceKeyOptions(true), []);
   const sourceOptions = useMemo(() => resourceKeyOptions(), []);
 
@@ -63,11 +62,14 @@ export default function PowersTab({ draft, updateDraft }) {
 
   const selected = TILE_TYPES_MAP[selectedTile];
   const draftPower = draft.tilePowers[selectedTile] || null;
-  const draftHooks = draftPower?.hooks ?? null;
-  // Effective hooks: draft override if any, otherwise the runtime tile's
-  // existing hooks (already merged from balance.json).
-  const liveHooks = selected?.effects?.hooks || [];
-  const hooks = draftHooks ?? liveHooks;
+  // Effective abilities: draft override (preferred), or legacy draft hooks
+  // (translated 1:1), else the runtime tile's `abilities` array.
+  const draftAbilities = draftPower?.abilities ?? null;
+  const draftLegacyHooks = draftPower?.hooks ?? null;
+  const liveAbilities = selected?.abilities || [];
+  const abilities = draftAbilities
+    ?? draftLegacyHooks  // legacy draft entries still flow until next save
+    ?? liveAbilities;
 
   // Per-tile produces-resource override. Empty string = use base chain.
   const liveProduces = selected?.effects?.producesResource || "";
@@ -85,8 +87,14 @@ export default function PowersTab({ draft, updateDraft }) {
     updateDraft((d) => {
       const cur = d.tilePowers[tileId] || {};
       const next = { ...cur, ...patch };
+      // Migration: a draft saved before the rename may carry a legacy
+      // `hooks` array. As soon as the user touches the tile, fold it into
+      // `abilities` and drop `hooks` so subsequent reads are unambiguous.
+      if (Array.isArray(next.hooks) && !Array.isArray(next.abilities)) {
+        next.abilities = next.hooks;
+      }
+      delete next.hooks;
       // Drop empty patches so the JSON stays minimal.
-      if (next.hooks && next.hooks.length === 0) delete next.hooks;
       if (Object.prototype.hasOwnProperty.call(next, "producesResource") && !next.producesResource) {
         delete next.producesResource;
       }
@@ -95,35 +103,12 @@ export default function PowersTab({ draft, updateDraft }) {
     });
   }
 
-  function setHooksForTile(tileId, hooksArr) {
-    if (!hooksArr || hooksArr.length === 0) {
-      // Setting an empty array is a meaningful instruction — "remove all
-      // power hooks from this tile" — so we keep an empty array entry
-      // rather than dropping it. The merge layer will then recompute
-      // `effects` to the base (non-hook) fields.
-      patchPower(tileId, { hooks: [] });
-    } else {
-      patchPower(tileId, { hooks: hooksArr });
-    }
-  }
-
-  function addHook(hookId) {
-    const def = getPowerHook(hookId);
-    if (!def) return;
-    const next = [...hooks, { id: hookId, params: defaultParamsFor(hookId) }];
-    setHooksForTile(selectedTile, next);
-  }
-
-  function removeHookAt(idx) {
-    const next = hooks.filter((_, i) => i !== idx);
-    setHooksForTile(selectedTile, next);
-  }
-
-  function updateParam(idx, paramKey, value) {
-    const next = hooks.map((h, i) =>
-      i === idx ? { ...h, params: { ...(h.params || {}), [paramKey]: value } } : h,
-    );
-    setHooksForTile(selectedTile, next);
+  function setAbilitiesForTile(tileId, list) {
+    // An empty array is a meaningful instruction — "remove all abilities
+    // from this tile" — so we keep an empty array entry rather than
+    // dropping it. The merge layer will then recompute `effects` to the
+    // base (non-ability) fields.
+    patchPower(tileId, { abilities: Array.isArray(list) ? list : [] });
   }
 
   function setProduces(tileId, resourceKey) {
@@ -173,7 +158,11 @@ export default function PowersTab({ draft, updateDraft }) {
         >
           {tilesFiltered.map((t) => {
             const sw = tileSwatchProps(t.id);
-            const hooked = (draft.tilePowers[t.id]?.hooks?.length ?? null) ?? (t.effects?.hooks?.length ?? 0);
+            const draftPow = draft.tilePowers[t.id];
+            const draftCount = Array.isArray(draftPow?.abilities)
+              ? draftPow.abilities.length
+              : (Array.isArray(draftPow?.hooks) ? draftPow.hooks.length : null);
+            const hooked = draftCount ?? (Array.isArray(t.abilities) ? t.abilities.length : 0);
             const active = selectedTile === t.id;
             return (
               <button
@@ -357,97 +346,13 @@ export default function PowersTab({ draft, updateDraft }) {
               </Card>
             </div>
 
-            {/* Active hooks */}
+            {/* Abilities — shared editor (catalog + active list + picker). */}
             <div>
-              <div className="text-[11px] font-bold uppercase tracking-wide mb-1.5" style={{ color: COLORS.inkSubtle }}>
-                Active Power Hooks ({hooks.length})
-              </div>
-              {hooks.length === 0 && (
-                <div className="text-center py-3 text-[12px] italic rounded-lg border-2 border-dashed"
-                  style={{ borderColor: COLORS.border, color: COLORS.inkSubtle }}>
-                  No hooks attached. Pick one below to grant this tile a passive power.
-                </div>
-              )}
-              <div className="flex flex-col gap-2">
-                {hooks.map((hk, idx) => {
-                  const def = getPowerHook(hk.id);
-                  if (!def) {
-                    return (
-                      <Card key={idx}>
-                        <div className="flex items-center justify-between">
-                          <span className="text-[12px]" style={{ color: COLORS.red }}>
-                            ⚠ Unknown hook id: <code>{hk.id}</code>
-                          </span>
-                          <SmallButton variant="danger" onClick={() => removeHookAt(idx)}>remove</SmallButton>
-                        </div>
-                      </Card>
-                    );
-                  }
-                  return (
-                    <Card key={idx}>
-                      <div className="flex items-start justify-between mb-1.5 gap-2">
-                        <div>
-                          <div className="text-[13px] font-bold" style={{ color: COLORS.ember }}>
-                            {def.icon} {def.name}
-                          </div>
-                          <div className="text-[11px] italic" style={{ color: COLORS.inkSubtle }}>
-                            {def.desc}
-                          </div>
-                        </div>
-                        <SmallButton variant="danger" onClick={() => removeHookAt(idx)}>✕</SmallButton>
-                      </div>
-                      <div className="grid grid-cols-2 gap-x-3 gap-y-1.5">
-                        {def.params.map((p) => (
-                          <div key={p.key} className="flex items-center gap-2">
-                            <span className="text-[11px] font-bold flex-shrink-0" style={{ color: COLORS.ink }}>
-                              {p.label}
-                            </span>
-                            {p.type === "int" ? (
-                              <NumberField
-                                value={hk.params?.[p.key] ?? p.default}
-                                min={p.min ?? 0}
-                                max={p.max ?? 9999}
-                                width={70}
-                                onChange={(v) => updateParam(idx, p.key, v)}
-                              />
-                            ) : p.type === "resourceKey" ? (
-                              <Select
-                                value={hk.params?.[p.key] ?? ""}
-                                options={resOptions}
-                                onChange={(v) => updateParam(idx, p.key, v)}
-                              />
-                            ) : null}
-                          </div>
-                        ))}
-                      </div>
-                    </Card>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Available hooks */}
-            <div>
-              <div className="text-[11px] font-bold uppercase tracking-wide mb-1.5" style={{ color: COLORS.inkSubtle }}>
-                Available Hooks · click to attach
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                {POWER_HOOKS.map((def) => (
-                  <button
-                    key={def.id}
-                    onClick={() => addHook(def.id)}
-                    className="flex flex-col items-start text-left p-2 rounded-lg border-2 transition-colors hover:opacity-90"
-                    style={{ background: COLORS.parchment, borderColor: COLORS.border }}
-                  >
-                    <div className="text-[12px] font-bold" style={{ color: COLORS.ember }}>
-                      {def.icon} {def.name}
-                    </div>
-                    <div className="text-[10px] italic mt-0.5" style={{ color: COLORS.inkSubtle }}>
-                      {def.desc}
-                    </div>
-                  </button>
-                ))}
-              </div>
+              <AbilitiesEditor
+                scope="tile"
+                abilities={abilities}
+                onChange={(next) => setAbilitiesForTile(selected.id, next)}
+              />
             </div>
           </>
         )}
