@@ -44,7 +44,7 @@ export function SidePanel({ state, dispatch, chainInfo }) {
       {chainInfo && (
         <div className="bg-[#2b2218]/90 border border-[#ffd248] rounded-xl px-3 py-2 text-[#ffd248] font-bold text-[13px] text-center flex-shrink-0">
           <div>
-            chain × {chainInfo.count}{chainInfo.upgrades > 0 ? `  +${chainInfo.upgrades}★` : ""}
+            chain × {chainInfo.count}{chainInfo.doubled ? " ×2" : ""}{chainInfo.upgrades > 0 ? `  +${chainInfo.upgrades}★` : ""}
           </div>
           {chainInfo.nextTileProgress && chainInfo.nextTileProgress.threshold > 0 && (
             <div className="text-[11px] text-[#f8e7c6] font-normal mt-0.5">

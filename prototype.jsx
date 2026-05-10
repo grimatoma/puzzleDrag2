@@ -371,7 +371,7 @@ export default function App() {
             {chainInfo && (
               <div className="hidden max-[1024px]:landscape:block absolute top-2 left-1/2 -translate-x-1/2 z-30 pointer-events-none">
                 <div className="bg-[#2b2218]/90 border border-[#ffd248] rounded-full px-3 py-1 text-[#ffd248] font-bold text-[12px] whitespace-nowrap">
-                  chain × {chainInfo.count}{chainInfo.upgrades > 0 ? `  +${chainInfo.upgrades}★` : ""}
+                  chain × {chainInfo.count}{chainInfo.doubled ? " ×2" : ""}{chainInfo.upgrades > 0 ? `  +${chainInfo.upgrades}★` : ""}
                   {chainInfo.nextTileProgress && chainInfo.nextTileProgress.threshold > 0 && (
                     <span className="ml-2 text-[10px] text-[#f8e7c6] font-normal">
                       ({chainInfo.nextTileProgress.current}/{chainInfo.nextTileProgress.threshold} {chainInfo.nextTileProgress.targetLabel})
