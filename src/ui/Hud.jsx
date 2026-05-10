@@ -65,14 +65,15 @@ function TideChip({ fish }) {
   );
 }
 
-function SeasonBar({ season, turnsUsed, turnsLeft }) {
+function SeasonBar({ season, turnsUsed, turnsLeft, sessionMaxTurns }) {
+  const pipCount = Math.max(1, sessionMaxTurns | 0);
   return (
     <div className="bg-[#faf0dd] border-2 border-[#b28b62] rounded-full pl-3 pr-2 py-0.5 flex items-center gap-2 min-w-0 flex-1 max-w-[540px]">
       <div className="flex flex-col items-start">
         <div className="text-[#6a4b31] font-bold text-[12px] landscape:max-[1024px]:text-[10px] whitespace-nowrap leading-tight">{season.name}</div>
       </div>
       <div className="flex gap-1 flex-1 justify-center min-w-0">
-        {Array.from({ length: MAX_TURNS }).map((_, i) => {
+        {Array.from({ length: pipCount }).map((_, i) => {
           const filled = i < turnsUsed;
           const current = i === turnsUsed;
           return (
@@ -153,7 +154,8 @@ export function Hud({ state, dispatch }) {
   const season = SEASONS[seasonIdx];
   const xpNeed = xpForLevel(level);
   const xpPct = Math.min(100, (xp / xpNeed) * 100);
-  const turnsLeft = MAX_TURNS - turnsUsed;
+  const effectiveMaxTurns = sessionMaxTurns ?? MAX_TURNS;
+  const turnsLeft = Math.max(0, effectiveMaxTurns - turnsUsed);
   const builtAtLoc = locBuilt(state);
   const buildingCount = Object.keys(builtAtLoc).filter((k) => k !== "_plots").length;
   const festivalAnnounced = !!state.story?.flags?.festival_announced;
@@ -185,7 +187,7 @@ export function Hud({ state, dispatch }) {
           <span className="font-bold text-[14px]" data-testid="buildings">{buildingCount}</span>
         </Pill>
       )}
-      {onBoard && <SeasonBar season={season} turnsUsed={turnsUsed} turnsLeft={turnsLeft} />}
+      {onBoard && <SeasonBar season={season} turnsUsed={turnsUsed} turnsLeft={turnsLeft} sessionMaxTurns={effectiveMaxTurns} />}
       {/* Weather chip — visible on board view when weather is active and no boss overlay covering it */}
       {onBoard && !state.boss && <WeatherChip weather={state.weather} />}
       {/* Tide chip — visible only on the fish biome */}
