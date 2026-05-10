@@ -300,12 +300,12 @@ export class GameScene extends Phaser.Scene {
     const maxByH = (vh - margin * 2) / ROWS;
     // Let the board fill its container — only clamp a hard ceiling so
     // huge ultrawide displays don't render absurdly large tiles.
-    const ceiling = TILE_BASE * 3.2 * dpr;
+    const ceiling = TILE * 3.2 * dpr;
     this.tileSize = Math.max(24 * dpr, Math.min(maxByW, maxByH, ceiling));
     // Ratio of canvas px to CSS px at current tile size — used for graphics
     // line widths, offsets, and other CSS-pixel design constants.
-    this.tileScale = this.tileSize / TILE_BASE;
-    // Sprite display scale: textures are baked at TILE_BASE * bakeScale
+    this.tileScale = this.tileSize / TILE;
+    // Sprite display scale: textures are baked at TILE * bakeScale
     // canvas px, so dividing by bakeScale makes a sprite at scale 1 fill
     // exactly that. bakeScale defaults to dpr until handleResize bumps it.
     const bakeScale = this.bakeScale || dpr;
