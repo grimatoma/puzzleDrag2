@@ -57,6 +57,7 @@ export function SidePanel({ state, dispatch, chainInfo }) {
         <ToolsGrid
           tools={state.tools}
           toolPending={state.toolPending}
+          fertilizerActive={state.fertilizerActive}
           onUse={(key) => {
             const isPending = state.toolPending === key;
             if (isPending) { dispatch({ type: "CANCEL_TOOL" }); return; }

@@ -110,7 +110,18 @@ function ToolButton({ def, count, pending, onClick, onLongPress, showTooltip, hi
  * Side-panel grid: shows owned tools, grouped by category.
  * Always-show field tools so the player sees what they can earn.
  */
-export function ToolsGrid({ tools, toolPending, onUse }) {
+/**
+ * Returns true when a tool's button should render in the "armed" visual state.
+ * Tap-target tools track this through state.toolPending; passive tools (e.g.
+ * fertilizer) flip a dedicated flag when armed and need their own check.
+ */
+function isToolArmed(def, { toolPending, fertilizerActive }) {
+  if (toolPending === def.key) return true;
+  if (def.key === "fertilizer" && fertilizerActive) return true;
+  return false;
+}
+
+export function ToolsGrid({ tools, toolPending, fertilizerActive, onUse }) {
   const { tip: tooltipTip, show: showTooltip, hide: hideTooltip, lastTouchTime: lastTouchTimeRef } = useTooltip();
   const [modalTool, setModalTool] = useState(null);
 
@@ -136,7 +147,7 @@ export function ToolsGrid({ tools, toolPending, onUse }) {
                   key={def.key}
                   def={def}
                   count={tools[def.key] || 0}
-                  pending={toolPending === def.key}
+                  pending={isToolArmed(def, { toolPending, fertilizerActive })}
                   onClick={() => onUse(def.key)}
                   onLongPress={(t) => setModalTool(t)}
                   showTooltip={showTooltip}
@@ -221,7 +232,7 @@ export function PortraitToolsBar({ state, dispatch }) {
             <ToolButton
               def={def}
               count={tools[def.key] || 0}
-              pending={state.toolPending === def.key}
+              pending={isToolArmed(def, { toolPending: state.toolPending, fertilizerActive: state.fertilizerActive })}
               onClick={() => dispatchUseTool(dispatch, def.key, state)}
               onLongPress={(t) => setModalTool(t)}
               showTooltip={showTooltip}
@@ -318,6 +329,7 @@ export function MobileDock({ state, dispatch }) {
           <ToolsGrid
             tools={state.tools}
             toolPending={state.toolPending}
+            fertilizerActive={state.fertilizerActive}
             onUse={(key) => {
               dispatchUseTool(dispatch, key, state);
               // Keep the sheet open for tap-target tools so the player sees the

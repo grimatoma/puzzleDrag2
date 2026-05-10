@@ -149,6 +149,21 @@ describe("10.1 — USE_TOOL (no turn cost)", () => {
     expect(s1.tools.fertilizer).toBe(0);
     expect(s1.turnsUsed).toBe(4);
   });
+
+  it("fertilizer: re-using while active disarms and refunds the fertilizer", () => {
+    const s0 = {
+      ...createInitialState(),
+      tools: { ...createInitialState().tools, fertilizer: 1 },
+      turnsUsed: 4,
+    };
+    const s1 = rootReducer(s0, { type: "USE_TOOL", key: "fertilizer" });
+    expect(s1.fertilizerActive).toBe(true);
+    expect(s1.tools.fertilizer).toBe(0);
+    const s2 = rootReducer(s1, { type: "USE_TOOL", key: "fertilizer" });
+    expect(s2.fertilizerActive).toBe(false);
+    expect(s2.tools.fertilizer).toBe(1);
+    expect(s2.turnsUsed).toBe(4);
+  });
 });
 
 // ── applyToolPending (pure) ───────────────────────────────────────────────────
