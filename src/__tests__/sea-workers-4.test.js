@@ -12,25 +12,36 @@ describe("Sea workers 4 — Explorer / Navigator / Confectioner / Deckhand", () 
 
   it("Explorer poolWeight object shape", () => {
     const w = APPRENTICES.find((a) => a.id === "explorer");
-    expect(w.effect.poolWeight).toEqual({ fish_clam: 1, fish_kelp: 1 });
+    expect(w.abilities).toEqual([
+      { id: "pool_weight", params: { target: "fish_clam", amount: 1 } },
+      { id: "pool_weight", params: { target: "fish_kelp", amount: 1 } },
+    ]);
     expect(w.maxCount).toBe(2);
   });
 
   it("Navigator season_bonus coins 45", () => {
     const w = APPRENTICES.find((a) => a.id === "navigator");
-    expect(w.effect).toEqual({ type: "season_bonus", key: "coins", amount: 45 });
+    expect(w.abilities).toEqual([
+      { id: "season_bonus", params: { resource: "coins", amount: 45 } },
+    ]);
     expect(w.maxCount).toBe(1);
   });
 
   it("Confectioner bonus_yield fish_kelp", () => {
     const w = APPRENTICES.find((a) => a.id === "confectioner");
-    expect(w.effect).toEqual({ type: "bonus_yield", key: "fish_kelp", amount: 2 });
+    expect(w.abilities).toEqual([
+      { id: "bonus_yield", params: { target: "fish_kelp", amount: 2 } },
+    ]);
     expect(w.maxCount).toBe(2);
   });
 
   it("Deckhand poolWeight object shape (sardine/mackerel/kelp)", () => {
     const w = APPRENTICES.find((a) => a.id === "deckhand");
-    expect(w.effect.poolWeight).toEqual({ fish_sardine: 1, fish_mackerel: 1, fish_kelp: 1 });
+    expect(w.abilities).toEqual([
+      { id: "pool_weight", params: { target: "fish_sardine", amount: 1 } },
+      { id: "pool_weight", params: { target: "fish_mackerel", amount: 1 } },
+      { id: "pool_weight", params: { target: "fish_kelp", amount: 1 } },
+    ]);
     expect(w.maxCount).toBe(4);
   });
 

@@ -1,5 +1,7 @@
-import { BIOMES } from "../../constants.js";
+import { BIOMES, BUILDINGS } from "../../constants.js";
 import { tickAchievement } from "./data.js";
+import { getAbility } from "../../config/abilities.js";
+import { locBuilt } from "../../locBuilt.js";
 
 export const initial = {
   trophies: {},      // legacy: kept for save-compat, no longer written to
@@ -95,10 +97,32 @@ export function reduce(state, action) {
     }
 
     case "CLOSE_SEASON": {
-      const next = {
+      let next = {
         ...state,
         chainsThisSeason: 0,
       };
+      // Building abilities firing at season-end. The achievements slice
+      // receives the post-core-reducer state, so `state` here already has the
+      // right `built` map for the action. session_end fires at the same
+      // lifecycle moment as season_end (the silo/barn snapshot lives inside
+      // CLOSE_SEASON), so we tick both triggers here.
+      const built = locBuilt(state) || {};
+      for (const b of BUILDINGS) {
+        if (!built[b.id]) continue;
+        if (!Array.isArray(b.abilities) || b.abilities.length === 0) continue;
+        for (const inst of b.abilities) {
+          const def = getAbility(inst?.id);
+          if (!def) continue;
+          const trigger = inst.trigger || def.trigger;
+          if (trigger !== "season_end" && trigger !== "session_end") continue;
+          next = tick(next, "abilities_triggered", 1);
+          next = tick(next, "building_abilities_triggered", 1);
+          next = tick(next, "distinct_abilities_triggered", 1, inst.id);
+          if (inst.id === "grant_tool" || inst.id === "season_bonus") {
+            next = tick(next, "season_end_building_bonus", 1);
+          }
+        }
+      }
       return next;
     }
 

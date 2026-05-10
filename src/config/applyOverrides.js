@@ -11,7 +11,33 @@
 // BUILDINGS, TILE_TYPES) and downstream code already imported references to
 // them. Reassigning the bindings would not propagate.
 
-import { expandHooksToEffects } from "./powerHooks.js";
+import { expandAbilitiesToEffects } from "./abilitiesAggregate.js";
+
+// Map legacy power-hook ids → unified ability ids. Some ids stayed the
+// same; a few were renamed during the abilities unification.
+const LEGACY_HOOK_TO_ABILITY = Object.freeze({
+  free_moves: "free_moves",
+  free_turn_after_n: "free_turn_if_chain",
+  coin_bonus_flat: "coin_bonus_flat",
+  coin_bonus_per_tile: "coin_bonus_per_tile",
+  pool_weight_boost: "pool_weight",
+  threshold_reduction: "threshold_reduce",
+});
+
+/** Convert a legacy `hooks: [{ id, params }]` array into the new abilities shape. */
+function hooksToAbilities(hooks) {
+  if (!Array.isArray(hooks)) return [];
+  const out = [];
+  for (const h of hooks) {
+    if (!h || typeof h !== "object") continue;
+    const newId = LEGACY_HOOK_TO_ABILITY[h.id];
+    if (!newId) continue;
+    const params = { ...(h.params || {}) };
+    // Param renames: pool_weight_boost / threshold_reduction used `target` already.
+    out.push({ id: newId, params });
+  }
+  return out;
+}
 
 const BALANCE_DRAFT_KEY = "hearth.balance.draft";
 
@@ -118,7 +144,7 @@ export function applyRecipeOverrides(recipes, overrides) {
 }
 
 /** Apply patches to BUILDINGS entries (matched by id). Fields: name, desc,
- *  cost, lv, color. */
+ *  cost, lv, color, abilities. */
 export function applyBuildingOverrides(buildings, overrides) {
   if (!overrides || typeof overrides !== "object") return;
   for (const b of buildings) {
@@ -136,15 +162,24 @@ export function applyBuildingOverrides(buildings, overrides) {
     }
     if (Number.isFinite(patch.lv)) b.lv = patch.lv;
     if (typeof patch.color === "string") b.color = patch.color;
+    // Abilities replace wholesale (rather than merge) so designers can
+    // remove an ability by leaving it out of the override.
+    if (Array.isArray(patch.abilities)) {
+      b.abilities = patch.abilities.filter((a) => a && typeof a === "object" && typeof a.id === "string");
+    }
   }
 }
 
 /**
  * Apply tile-level overrides to a TILE_TYPES array in place:
- *   - tilePowers[id] = { hooks: [...] }     →  expanded into tile.effects
- *   - tilePowers[id].producesResource = key →  tile.effects.producesResource
- *   - tileUnlocks[id] = { ... }             →  patched onto tile.discovery
- *   - tileDescriptions[id] = string         →  replaces tile.description
+ *   - tilePowers[id] = { abilities: [...] }  →  replaces tile.abilities,
+ *                                                recompiles tile.effects
+ *   - tilePowers[id] = { hooks: [...] }      →  legacy form, translated to
+ *                                                abilities (1:1 id mapping
+ *                                                with a few renames)
+ *   - tilePowers[id].producesResource = key  →  tile.effects.producesResource
+ *   - tileUnlocks[id] = { ... }              →  patched onto tile.discovery
+ *   - tileDescriptions[id] = string          →  replaces tile.description
  */
 export function applyTileOverrides(tileTypes, overrides) {
   if (!tileTypes || !Array.isArray(tileTypes)) return;
@@ -158,14 +193,25 @@ export function applyTileOverrides(tileTypes, overrides) {
     // Description.
     if (typeof descs[id] === "string") tile.description = descs[id];
 
-    // Power hooks → expand into legacy effects fields. Preserve any non-hook
-    // fields already on tile.effects (poolWeightDelta from hard-coded defaults
-    // for example).
+    // Power hooks / abilities → replace tile.abilities and recompile tile.effects.
+    // Legacy `hooks` arrays are translated into the new abilities shape.
     const powerPatch = powers[id];
-    if (powerPatch && Array.isArray(powerPatch.hooks)) {
-      // Strip prior hook-derived fields by recomputing from base (non-hook) effects.
-      const base = stripHookDerivedFields(tile.effects || {});
-      tile.effects = expandHooksToEffects(powerPatch.hooks, base);
+    if (powerPatch) {
+      let newAbilities = null;
+      if (Array.isArray(powerPatch.abilities)) {
+        newAbilities = powerPatch.abilities.filter(
+          (a) => a && typeof a === "object" && typeof a.id === "string",
+        );
+      } else if (Array.isArray(powerPatch.hooks)) {
+        // Legacy round-trip — translate hook ids to ability ids.
+        newAbilities = hooksToAbilities(powerPatch.hooks);
+      }
+      if (newAbilities) {
+        tile.abilities = newAbilities;
+        // Strip prior hook/ability-derived fields and recompile from base.
+        const base = stripHookDerivedFields(tile.effects || {});
+        tile.effects = expandAbilitiesToEffects(newAbilities, base);
+      }
     }
 
     // Per-tile produces-resource override. GameScene.nextResource consults
@@ -252,8 +298,8 @@ export function applyZoneOverrides(zones, overrides) {
  *   hireCost.coins, hireCost.coinsStep, hireCost.coinsMult — see
  *     `nextHireCost` in src/features/workers/data.js
  *   maxCount   — clamps the slider in WorkersPanel
- *   effect     — replaced wholesale; supports any of the apprentices
- *                aggregator's effect types
+ *   abilities  — replaced wholesale; an array of `{ id, params }` entries
+ *                drawn from the unified abilities catalog
  *
  * Mutates the supplied workers array in place.
  */
@@ -293,16 +339,16 @@ export function applyWorkerOverrides(workers, overrides) {
     if (Number.isFinite(patch.maxCount) && patch.maxCount >= 1) {
       w.maxCount = Math.floor(patch.maxCount);
     }
-    if (patch.effect && typeof patch.effect === "object") {
-      // Replace wholesale — designers may switch effect types.
-      w.effect = { ...patch.effect };
+    if (Array.isArray(patch.abilities)) {
+      // Replace wholesale — designers may swap or remove abilities.
+      w.abilities = patch.abilities.filter((a) => a && typeof a === "object" && typeof a.id === "string");
     }
   }
 }
 
 const HOOK_DERIVED_FIELDS = new Set([
   "freeMoves", "freeMovesIfChain", "coinBonusFlat", "coinBonusPerTile",
-  "thresholdReduce", "hooks",
+  "thresholdReduce", "hooks", "abilities",
 ]);
 
 function stripHookDerivedFields(effects) {

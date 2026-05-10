@@ -9,12 +9,9 @@ describe("Poultryman apprentice (bird category threshold reduce)", () => {
     expect(w).toBeDefined();
     expect(w.name).toBe("Idris");
     expect(w.maxCount).toBe(2);
-    expect(w.effect).toEqual({
-      type: "threshold_reduce_category",
-      category: "bird",
-      from: 6,
-      to: 4,
-    });
+    expect(w.abilities).toEqual([
+      { id: "threshold_reduce_category", params: { category: "bird", amount: 2 } },
+    ]);
     expect(w.requirement?.building).toBe("granary");
   });
 

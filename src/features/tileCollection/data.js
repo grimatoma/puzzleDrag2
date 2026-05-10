@@ -1,5 +1,6 @@
 import { UPGRADE_THRESHOLDS, BALANCE_OVERRIDES } from "../../constants.js";
 import { applyTileOverrides } from "../../config/applyOverrides.js";
+import { expandAbilitiesToEffects } from "../../config/abilitiesAggregate.js";
 
 export const CATEGORIES = [
   // Farm tile species. `wood` and `berry` are intentionally absent — they're
@@ -78,14 +79,20 @@ export const TILE_TYPES = [
     id: "grass_meadow", category: "grass", displayName: "Meadow Grass",
     baseResource: "grass_meadow", tier: 1,
     discovery: { method: "chain", chainLengthOf: "grass_hay", chainLength: 20 },
-    effects: { poolWeightDelta: { grass_hay: 1 } },
+    abilities: [
+      { id: "pool_weight", params: { target: "grass_hay", amount: 1 } },
+    ],
+    effects: {},
     description: "A lush grass variety that grows in dense clumps, boosting hay tile spawn frequency on the board.",
   },
   {
     id: "grass_spiky", category: "grass", displayName: "Spiky Grass",
     baseResource: "grass_spiky", tier: 2,
     discovery: { method: "research", researchOf: "grass_hay", researchAmount: 50 },
-    effects: { poolWeightDelta: { grass_hay: 2 } },
+    abilities: [
+      { id: "pool_weight", params: { target: "grass_hay", amount: 2 } },
+    ],
+    effects: {},
     description: "A hardy, drought-tolerant grass that spreads quickly, adding two extra hay tiles to every board fill.",
   },
 
@@ -106,19 +113,28 @@ export const TILE_TYPES = [
   {
     id: "bird_turkey", category: "bird", displayName: "Turkey", baseResource: "bird_turkey", tier: 1,
     discovery: { method: "research", researchOf: "bird_egg", researchAmount: 20 },
-    effects: { freeMoves: 2 },
+    abilities: [
+      { id: "free_moves", params: { count: 2 } },
+    ],
+    effects: {},
     description: "Broad-winged turkeys that startle and shuffle the board — each active turkey grants 2 free moves per season.",
   },
   {
     id: "bird_clover", category: "flowers", displayName: "Clover", baseResource: "bird_clover", tier: 1,
     discovery: { method: "buy", coinCost: 200 },
-    effects: { freeMoves: 2 },
+    abilities: [
+      { id: "free_moves", params: { count: 2 } },
+    ],
+    effects: {},
     description: "A flowering clover patch that draws bees by the dozen — chains feed the honey pot and grant 2 extra free moves per season.",
   },
   {
     id: "bird_melon", category: "fruits", displayName: "Melon", baseResource: "bird_melon", tier: 3,
     discovery: { method: "buy", coinCost: 500 },
-    effects: { freeMoves: 5 },
+    abilities: [
+      { id: "free_moves", params: { count: 5 } },
+    ],
+    effects: {},
     description: "Plump summer melons that attract whole flocks of birds, granting 5 free moves per season.",
   },
 
@@ -354,7 +370,10 @@ export const TILE_TYPES = [
     id: "tree_palm", category: "trees", displayName: "Palm Tree",
     baseResource: "tree_palm", tier: 0,
     discovery: { method: "default" },
-    effects: { freeMoves: 2 },
+    abilities: [
+      { id: "free_moves", params: { count: 2 } },
+    ],
+    effects: {},
     description: "Can be collected with coconuts. Two free moves. A tree in the palm of your hand.",
   },
 
@@ -655,6 +674,16 @@ export const TILE_TYPES = [
     description: "Crumbly dirt that backfills tunnels — needed to clear mysterious ore.",
   },
 ];
+
+// Compile each tile's `abilities` array (data-defined) into the legacy
+// `effects` shape that GameScene + state.js read from. Done before the
+// balance-manager override step so overrides can wholesale-replace the
+// abilities and recompile.
+for (const t of TILE_TYPES) {
+  if (Array.isArray(t.abilities) && t.abilities.length > 0) {
+    t.effects = expandAbilitiesToEffects(t.abilities, t.effects || {});
+  }
+}
 
 // Balance-Manager: apply tile-power, unlock and description overrides in
 // place before the lookup maps below are built, so consumers see the

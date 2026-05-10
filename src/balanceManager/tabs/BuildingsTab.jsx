@@ -7,6 +7,7 @@ import {
   COLORS, NumberField, TextField, TextArea, Select,
   SmallButton, Pill, Card, SearchBar,
 } from "../shared.jsx";
+import AbilitiesEditor from "../AbilitiesEditor.jsx";
 
 const COST_KEYS = (() => {
   const out = new Set(["coins", "runes"]);
@@ -58,6 +59,7 @@ export default function BuildingsTab({ draft, updateDraft }) {
             desc: p.desc ?? b.desc,
             cost: p.cost ?? b.cost ?? {},
             lv:   p.lv   ?? b.lv ?? 1,
+            abilities: p.abilities ?? b.abilities ?? [],
           };
           const dirty = Object.keys(p).length > 0;
 
@@ -147,6 +149,14 @@ export default function BuildingsTab({ draft, updateDraft }) {
                   rows={2}
                   value={eff.desc}
                   onChange={(v) => patch(b.id, { desc: v })}
+                />
+              </div>
+
+              <div className="mt-3 pt-3" style={{ borderTop: `1px dashed ${COLORS.border}` }}>
+                <AbilitiesEditor
+                  scope="building"
+                  abilities={eff.abilities}
+                  onChange={(next) => patch(b.id, { abilities: next })}
                 />
               </div>
             </Card>

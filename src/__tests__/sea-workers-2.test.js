@@ -12,17 +12,23 @@ describe("Sea workers 2 — Boatwoman / Harpooner / Oilman", () => {
 
   it("Boatwoman bonus_yield on fish_clam", () => {
     const w = APPRENTICES.find((a) => a.id === "boatwoman");
-    expect(w.effect).toEqual({ type: "bonus_yield", key: "fish_clam", amount: 2 });
+    expect(w.abilities).toEqual([
+      { id: "bonus_yield", params: { target: "fish_clam", amount: 2 } },
+    ]);
   });
 
   it("Harpooner bonus_yield on fish_oyster", () => {
     const w = APPRENTICES.find((a) => a.id === "harpooner");
-    expect(w.effect).toEqual({ type: "bonus_yield", key: "fish_oyster", amount: 1 });
+    expect(w.abilities).toEqual([
+      { id: "bonus_yield", params: { target: "fish_oyster", amount: 1 } },
+    ]);
   });
 
   it("Oilman threshold_reduce on fish_kelp", () => {
     const w = APPRENTICES.find((a) => a.id === "oilman");
-    expect(w.effect).toEqual({ type: "threshold_reduce", key: "fish_kelp", from: 6, to: 4 });
+    expect(w.abilities).toEqual([
+      { id: "threshold_reduce", params: { target: "fish_kelp", amount: 2 } },
+    ]);
   });
 
   it("max-hire Boatwoman: bonusYield.fish_clam scales linearly", () => {

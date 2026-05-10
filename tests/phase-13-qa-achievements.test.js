@@ -46,6 +46,10 @@ describe("Fix 7 — canonical ACHIEVEMENTS list shape", () => {
       "mine_chained",
       "veg_chained", "fruit_chained", "flower_chained", "herd_chained",
       "cattle_chained", "mount_chained", "tree_chained", "bird_chained",
+      // Unified abilities pipeline (Phase: configurable abilities) —
+      // achievements that fire from the building/worker/tile aggregator.
+      "abilities_triggered", "building_abilities_triggered",
+      "distinct_abilities_triggered", "season_end_building_bonus",
     ]);
     for (const a of ACHIEVEMENTS) {
       expect(valid.has(a.counter), `${a.id} has unknown counter: ${a.counter}`).toBe(true);

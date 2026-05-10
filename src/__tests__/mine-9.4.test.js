@@ -9,7 +9,7 @@ describe("Phase 9.4 — Mine workers (canary, geologist)", () => {
     it(`${id} registered in WORKERS with all required fields`, () => {
       const w = WORKER_MAP[id];
       expect(w).toBeTruthy();
-      for (const k of ["id", "name", "role", "maxCount", "effect", "hireCost", "wage"]) {
+      for (const k of ["id", "name", "role", "maxCount", "abilities", "hireCost", "wage"]) {
         expect(w[k]).toBeDefined();
       }
     });
@@ -25,7 +25,9 @@ describe("Phase 9.4 — Mine workers (canary, geologist)", () => {
   });
 
   it("canary full effect = -50% gas vent", () => {
-    expect(WORKER_MAP.canary.effect.hazardSpawnReduce.gas_vent).toBe(0.5);
+    expect(WORKER_MAP.canary.abilities).toEqual([
+      { id: "hazard_spawn_reduce", params: { hazard: "gas_vent", amount: 0.5 } },
+    ]);
   });
 
   it("canary wage = 18", () => {
@@ -45,8 +47,10 @@ describe("Phase 9.4 — Mine workers (canary, geologist)", () => {
 
   it("geologist full effect = ore+1, gem+1", () => {
     const geo = WORKER_MAP.geologist;
-    expect(geo.effect.poolWeight.mine_ore).toBe(1);
-    expect(geo.effect.poolWeight.mine_gem).toBe(1);
+    expect(geo.abilities).toEqual([
+      { id: "pool_weight", params: { target: "mine_ore", amount: 1 } },
+      { id: "pool_weight", params: { target: "mine_gem", amount: 1 } },
+    ]);
   });
 
   it("geologist wage = 30", () => {

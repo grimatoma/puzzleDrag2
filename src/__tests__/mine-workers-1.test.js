@@ -12,31 +12,42 @@ describe("Mine workers — first batch", () => {
 
   it("Stone Miner threshold_reduce on mine_cobble (6 → 3)", () => {
     const w = APPRENTICES.find((a) => a.id === "stone_miner");
-    expect(w.effect).toEqual({ type: "threshold_reduce", key: "mine_cobble", from: 6, to: 3 });
+    expect(w.abilities).toEqual([
+      { id: "threshold_reduce", params: { target: "mine_cobble", amount: 3 } },
+    ]);
     expect(w.maxCount).toBe(3);
   });
 
   it("Coal Miner threshold_reduce on mine_coal (7 → 5)", () => {
     const w = APPRENTICES.find((a) => a.id === "coal_miner");
-    expect(w.effect).toEqual({ type: "threshold_reduce", key: "mine_coal", from: 7, to: 5 });
+    expect(w.abilities).toEqual([
+      { id: "threshold_reduce", params: { target: "mine_coal", amount: 2 } },
+    ]);
     expect(w.maxCount).toBe(2);
   });
 
   it("Jeweler threshold_reduce on mine_gem (5 → 3)", () => {
     const w = APPRENTICES.find((a) => a.id === "jeweler");
-    expect(w.effect).toEqual({ type: "threshold_reduce", key: "mine_gem", from: 5, to: 3 });
+    expect(w.abilities).toEqual([
+      { id: "threshold_reduce", params: { target: "mine_gem", amount: 2 } },
+    ]);
     expect(w.maxCount).toBe(2);
   });
 
   it("Digger pool_weight: dirt + stone", () => {
     const w = APPRENTICES.find((a) => a.id === "digger");
-    expect(w.effect.poolWeight).toEqual({ mine_dirt: 1, mine_stone: 1 });
+    expect(w.abilities).toEqual([
+      { id: "pool_weight", params: { target: "mine_dirt", amount: 1 } },
+      { id: "pool_weight", params: { target: "mine_stone", amount: 1 } },
+    ]);
     expect(w.maxCount).toBe(4);
   });
 
   it("Excavator bonus_yield on mine_cobble", () => {
     const w = APPRENTICES.find((a) => a.id === "excavator");
-    expect(w.effect).toEqual({ type: "bonus_yield", key: "mine_cobble", amount: 1 });
+    expect(w.abilities).toEqual([
+      { id: "bonus_yield", params: { target: "mine_cobble", amount: 1 } },
+    ]);
     expect(w.maxCount).toBe(2);
   });
 

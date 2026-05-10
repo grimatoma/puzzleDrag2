@@ -11,13 +11,17 @@ describe("Peasant + Lumberjack workers", () => {
 
   it("Peasant bonus_yield on grass_hay (max 3)", () => {
     const w = APPRENTICES.find((a) => a.id === "peasant");
-    expect(w.effect).toEqual({ type: "bonus_yield", key: "grass_hay", amount: 1 });
+    expect(w.abilities).toEqual([
+      { id: "bonus_yield", params: { target: "grass_hay", amount: 1 } },
+    ]);
     expect(w.maxCount).toBe(3);
   });
 
   it("Lumberjack bonus_yield on tree_oak (max 2)", () => {
     const w = APPRENTICES.find((a) => a.id === "lumberjack");
-    expect(w.effect).toEqual({ type: "bonus_yield", key: "tree_oak", amount: 1 });
+    expect(w.abilities).toEqual([
+      { id: "bonus_yield", params: { target: "tree_oak", amount: 1 } },
+    ]);
     expect(w.maxCount).toBe(2);
   });
 
