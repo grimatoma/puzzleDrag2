@@ -593,7 +593,7 @@ function coreReducer(state, action) {
       // §17 locked: 1 XP per chain (regardless of length/value) into almanac
       const { newState: afterAlmanacXp } = applyAlmanacXp(state, 1);
       const turnsUsed = state.turnsUsed + 1;
-      const seasonEnded = turnsUsed >= MAX_TURNS;
+      const seasonEnded = turnsUsed >= (state.sessionMaxTurns ?? MAX_TURNS);
       const seasonStats = {
         ...state.seasonStats,
         harvests: state.seasonStats.harvests + effectiveGained,

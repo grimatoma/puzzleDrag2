@@ -67,22 +67,30 @@ function TideChip({ fish }) {
 
 function SeasonBar({ season, turnsUsed, turnsLeft, sessionMaxTurns }) {
   const pipCount = Math.max(1, sessionMaxTurns | 0);
+  // Scale pip dimensions down when the session grants many turns so a
+  // 16- or 32-turn run still fits the bar without the pips bleeding into
+  // the season label or "X left" readout.
+  const dense = pipCount > 12;
+  const pipSize = dense ? 6 : 10;
+  const pipGap = dense ? 2 : 4;
   return (
     <div className="bg-[#faf0dd] border-2 border-[#b28b62] rounded-full pl-3 pr-2 py-0.5 flex items-center gap-2 min-w-0 flex-1 max-w-[540px]">
       <div className="flex flex-col items-start">
         <div className="text-[#6a4b31] font-bold text-[12px] landscape:max-[1024px]:text-[10px] whitespace-nowrap leading-tight">{season.name}</div>
       </div>
-      <div className="flex gap-1 flex-1 justify-center min-w-0">
+      <div className="flex flex-1 justify-center min-w-0" style={{ gap: pipGap }}>
         {Array.from({ length: pipCount }).map((_, i) => {
           const filled = i < turnsUsed;
           const current = i === turnsUsed;
           return (
             <div
               key={i}
-              className={`w-2.5 h-2.5 landscape:max-[1024px]:w-2 landscape:max-[1024px]:h-2 rounded-full border flex-shrink-0 ${filled ? "border-transparent" : "border-[#8a6a3a]"} transition-all`}
+              className={`rounded-full border flex-shrink-0 ${filled ? "border-transparent" : "border-[#8a6a3a]"} transition-all`}
               style={{
+                width: pipSize,
+                height: pipSize,
                 backgroundColor: filled ? hex(season.fill) : "#fff",
-                boxShadow: current ? "0 0 0 2px rgba(255,122,0,.55)" : "none",
+                boxShadow: current ? `0 0 0 ${dense ? 1 : 2}px rgba(255,122,0,.55)` : "none",
                 transform: filled ? "scale(1.05)" : "none",
               }}
             />
