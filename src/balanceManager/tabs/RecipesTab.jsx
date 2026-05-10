@@ -7,6 +7,7 @@ import {
   COLORS, NumberField, TextField, TextArea, Select,
   SmallButton, Pill, Card, SearchBar,
 } from "../shared.jsx";
+import IconCanvas, { hasIcon } from "../../ui/IconCanvas.jsx";
 
 const STATIONS = [
   { value: "bakery",   label: "Bakery" },
@@ -121,7 +122,13 @@ export default function RecipesTab({ draft, updateDraft }) {
             <Card key={key} accent={dirty ? COLORS.ember : COLORS.border}>
               <div className="flex items-start justify-between mb-2 gap-2">
                 <div className="flex items-center gap-2 min-w-0">
-                  <span className="text-[20px]">{eff.glyph || "🍳"}</span>
+                  {hasIcon(key) ? (
+                    <div className="flex-shrink-0 w-8 h-8 rounded grid place-items-center bg-[#e0d4be] text-[20px] overflow-hidden">
+                      <IconCanvas iconKey={key} size={32} />
+                    </div>
+                  ) : (
+                    <span className="text-[20px]">{eff.glyph || "🍳"}</span>
+                  )}
                   <div className="min-w-0">
                     <code
                       className="font-mono text-[10px] px-1.5 py-0.5 rounded inline-block"

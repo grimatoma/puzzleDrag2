@@ -53,6 +53,17 @@ function RecipeCard({ recipeKey, recipe, inventory, built, level, craftedTotals,
         <div className="absolute top-1 right-1 text-[10px] text-[#8a785e] font-bold">×{timesBuilt}</div>
       )}
 
+      <div
+        className="flex-shrink-0 grid place-items-center rounded-lg overflow-hidden bg-[#e8d9bc] border border-[#c5a87a]/50 text-[24px]"
+        style={{ width: 48, height: 48 }}
+      >
+        {hasIcon(recipeKey) ? (
+          <IconCanvas iconKey={recipeKey} size={48} />
+        ) : (
+          <span>{recipe.glyph || "🔧"}</span>
+        )}
+      </div>
+
       <div className="flex flex-col gap-0.5 flex-1 min-w-0">
         <div className="flex items-center gap-1.5 flex-wrap">
           <span className="font-bold text-[11px] text-[#3a2715] leading-tight">{recipe.name}</span>

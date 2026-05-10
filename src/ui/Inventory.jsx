@@ -148,7 +148,9 @@ export function CompactOrders({ orders, inventory, dispatch }) {
             onClick={() => dispatch({ type: "TURN_IN_ORDER", id: o.id, npc: o.npc, key: o.key, need: o.need, reward: o.reward })}
             className={`flex items-center gap-1.5 rounded-lg px-2 py-1 text-left border transition-colors ${done ? "bg-[#91bf24]/40 border-[#91bf24] text-white" : "bg-[#4a2e18] border-[#7a5038] text-[#f8e7c6]"}`}
           >
-            <span className="text-[14px] flex-shrink-0">{glyph}</span>
+            <span className="text-[14px] flex-shrink-0 grid place-items-center w-5 h-5">
+              {hasIcon(o.key) ? <IconCanvas iconKey={o.key} size={20} /> : glyph}
+            </span>
             <span className="flex-1 min-w-0 text-[10px] font-bold truncate">{label}</span>
             <span className={`text-[10px] font-bold whitespace-nowrap ${done ? "text-white" : have > 0 ? "text-[#f7c254]" : "text-[#c5a87a]"}`}>
               {Math.min(have, o.need)}/{o.need}
