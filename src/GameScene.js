@@ -1417,14 +1417,14 @@ export class GameScene extends Phaser.Scene {
 
   updateChainBadge() {
     const n = this.path.length;
-    const gained = resourceGainForChain(n);
     const res = n ? this.path[0].res : null;
     const next = res ? this.nextResource(res) : null;
     const effThresh = this.registry.get("effectiveThresholds") ?? UPGRADE_THRESHOLDS;
     // V.2 — Display autumn-multiplied upgrade count in the badge
     const k = next ? upgradeCountForChain(n, res.key, effThresh) * this._autumnMult() : 0;
     if (this.chainBadge) {
-      this.chainBadgeText.setText(k > 0 ? `chain × ${gained}   +${k}★` : `chain × ${gained}`);
+      const bonus = n >= 6 ? " ×2" : "";
+      this.chainBadgeText.setText(k > 0 ? `chain × ${n}${bonus}   +${k}★` : `chain × ${n}${bonus}`);
     }
     this.updateChainStatus();
     this._emitChainUpdate();
@@ -1593,7 +1593,6 @@ export class GameScene extends Phaser.Scene {
 
   _emitChainUpdate() {
     const n = this.path.length;
-    const gained = resourceGainForChain(n);
     const res = n ? this.path[0].res : null;
     const next = res ? this.nextResource(res) : null;
     const effThresh = this.registry.get("effectiveThresholds") ?? UPGRADE_THRESHOLDS;
@@ -1614,7 +1613,7 @@ export class GameScene extends Phaser.Scene {
         };
       }
     }
-    this.events.emit(SCENE_EVENTS.CHAIN_UPDATE, { count: gained, upgrades: k, valid, nextTileProgress });
+    this.events.emit(SCENE_EVENTS.CHAIN_UPDATE, { count: n, doubled: n >= 6, upgrades: k, valid, nextTileProgress });
   }
 
   // ─── Juice (chain-length feedback) ────────────────────────────────────────
