@@ -724,33 +724,45 @@ export class GameScene extends Phaser.Scene {
     // completed before this one was triggered).
     if (this.board) { this.board.destroy(); this.board = null; }
 
-    // Create board container as tween target + visual spin overlay
-    this.board = this.add.container(cx, cy).setDepth(18);
+    // Create board container as tween target + visual spin overlay.
+    // Keep a local reference so cleanup doesn't race with nested reshuffles.
+    const spinContainer = this.add.container(cx, cy).setDepth(18);
+    this.board = spinContainer;
     const spinOverlay = this.add.rectangle(0, 0, boardW, boardH, 0x2b2218, 0.35);
-    this.board.add(spinOverlay);
+    spinContainer.add(spinOverlay);
+
+    let cleanedUp = false;
+    const finalizeShuffle = () => {
+      if (cleanedUp) return;
+      cleanedUp = true;
+      if (this.board === spinContainer) this.board = null;
+      if (spinContainer.active) spinContainer.destroy();
+      this._performShuffleSwap();
+      // Re-check after a brief delay to let the new tiles animate in
+      this.time.delayedCall(320, () => {
+        if (!hasValidChain(this.grid)) {
+          if (attempt >= 2) {
+            this._forceGuaranteedChain();
+            this._syncGridToState();
+          } else {
+            this.shuffleBoard(attempt + 1);
+          }
+        }
+      });
+    };
 
     this.tweens.add({
-      targets: this.board,
+      targets: spinContainer,
       rotation: Math.PI * 2,
       duration: this._dur(600),
       ease: "Sine.easeInOut",
-      onComplete: () => {
-        this.board.destroy();
-        this.board = null;
-        this._performShuffleSwap();
-        // Re-check after a brief delay to let the new tiles animate in
-        this.time.delayedCall(320, () => {
-          if (!hasValidChain(this.grid)) {
-            if (attempt >= 2) {
-              this._forceGuaranteedChain();
-              this._syncGridToState();
-            } else {
-              this.shuffleBoard(attempt + 1);
-            }
-          }
-        });
-      },
+      onComplete: finalizeShuffle,
+      onStop: finalizeShuffle,
     });
+
+    // Failsafe: if tween callbacks are interrupted (scene transition, pause,
+    // or rapid tool usage), ensure the overlay is removed and board unblocked.
+    this.time.delayedCall(this._dur(600) + 120, finalizeShuffle);
   }
 
   _forceGuaranteedChain() {
