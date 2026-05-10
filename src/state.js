@@ -11,7 +11,6 @@ import { driftPrices, applyTrade } from "./market.js";
 import { currentCap } from "./utils.js";
 import { WORKER_MAP } from "./features/apprentices/data.js";
 import { computeWorkerEffects } from "./features/apprentices/aggregate.js";
-import { aggregateAbilities } from "./config/abilitiesAggregate.js";
 import { TILE_TYPES, CATEGORIES, TILE_TYPES_MAP, CATEGORY_OF } from "./features/tileCollection/data.js";
 import { yieldMultiplierFor } from "./features/tileCollection/yieldMultipliers.js";
 import { longChainBonusFor } from "./features/tileCollection/longChainBonus.js";
@@ -538,22 +537,6 @@ function maybeFireResourceBeats(stateAfter, stateBefore) {
 }
 
 const locBuilt = _locBuilt;
-
-/**
- * Build the aggregator-source list for every BUILDINGS entry currently
- * built in the active map. Each built building contributes its abilities
- * with weight 1.
- */
-function builtBuildingSources(state) {
-  const built = locBuilt(state) || {};
-  const out = [];
-  for (const b of BUILDINGS) {
-    if (!built[b.id]) continue;
-    if (!Array.isArray(b.abilities) || b.abilities.length === 0) continue;
-    out.push({ kind: "building", sourceId: b.id, abilities: b.abilities, weight: 1 });
-  }
-  return out;
-}
 
 function coreReducer(state, action) {
   switch (action.type) {
@@ -1187,10 +1170,11 @@ function coreReducer(state, action) {
       // Spec §11: shuffles are earned via almanac/quests — not free per season.
       // TODO: if players run out of shuffles entirely, add a season-1 bootstrap grant here.
       let tools = { ...state.tools };
-      // Building abilities firing at season end (grant_tool, season_bonus, etc.).
-      // Each built building contributes via the unified aggregator.
-      const buildingAgg = aggregateAbilities(builtBuildingSources(state));
-      for (const [tool, count] of Object.entries(buildingAgg.seasonEndTools ?? {})) {
+      // Unified aggregator: workers + built buildings + active tiles.
+      // Building grant_tool / season_bonus / preserve_board contributions land
+      // on the same channels as worker contributions.
+      const seasonAgg = computeWorkerEffects({ ...state, townsfolk: { ...state.townsfolk, debt: 0 } });
+      for (const [tool, count] of Object.entries(seasonAgg.seasonEndTools ?? {})) {
         if (count > 0) tools[tool] = (tools[tool] ?? 0) + count;
       }
 
@@ -1216,13 +1200,11 @@ function coreReducer(state, action) {
       // contribute to the same `seasonBonus.coins` channel).
       let bonusCoins = 0;
       if (wageDebt === 0) {
-        const workerBonus = computeWorkerEffects({ ...state, townsfolk: { ...state.townsfolk, debt: 0 } }).seasonBonus.coins ?? 0;
-        const buildingBonus = buildingAgg.seasonBonus.coins ?? 0;
-        bonusCoins = Math.round(workerBonus + buildingBonus);
+        bonusCoins = Math.round(seasonAgg.seasonBonus.coins ?? 0);
       }
 
       // ── Pool income from buildings (Housing Block worker_pool_step) ───────
-      const newPool = (state.townsfolk?.pool ?? 0) + (buildingAgg.seasonEndPoolStep ?? 0);
+      const newPool = (state.townsfolk?.pool ?? 0) + (seasonAgg.seasonEndPoolStep ?? 0);
 
       // ── Phase 6.1: NPC bond decay (−0.1 above 5) + Phase 6.2: reset gift cooldowns ──
       const decayedNpcs = (() => {
@@ -1263,7 +1245,7 @@ function coreReducer(state, action) {
       // Barn on mine — driven by the unified abilities aggregator).
       let afterSeasonFarm = afterSeason.farm ?? { savedField: null };
       let afterSeasonMine = afterSeason.mine ?? { savedField: null };
-      const preservedBiomes = buildingAgg.boardPreserveBiomes ?? new Set();
+      const preservedBiomes = seasonAgg.boardPreserveBiomes ?? new Set();
       if (state.biomeKey === "farm" && preservedBiomes.has("farm") && state.grid) {
         afterSeasonFarm = { ...afterSeasonFarm, savedField: {
           tiles: state.grid,
