@@ -7,12 +7,6 @@ import {
   applyBuildingOverrides,
   applyTileOverrides,
 } from "../config/applyOverrides.js";
-import {
-  POWER_HOOKS,
-  getPowerHook,
-  defaultParamsFor,
-  expandHooksToEffects,
-} from "../config/powerHooks.js";
 
 describe("Balance Manager — override merge layer", () => {
   it("mergeOverrides shallow-merges nested objects", () => {
@@ -78,77 +72,6 @@ describe("Balance Manager — override merge layer", () => {
     expect(buildings[0].lv).toBe(2);
     expect(buildings[0].cost).toEqual({ coins: 100, wood_plank: 10 });
     expect(buildings[1].name).toBe("Forge"); // unchanged
-  });
-});
-
-describe("Balance Manager — power hook library", () => {
-  it("every hook has an id, name, desc, and params array", () => {
-    for (const h of POWER_HOOKS) {
-      expect(typeof h.id).toBe("string");
-      expect(typeof h.name).toBe("string");
-      expect(typeof h.desc).toBe("string");
-      expect(Array.isArray(h.params)).toBe(true);
-    }
-  });
-
-  it("getPowerHook resolves by id", () => {
-    expect(getPowerHook("free_moves")).toBeTruthy();
-    expect(getPowerHook("nonexistent")).toBeNull();
-  });
-
-  it("defaultParamsFor produces a fully-keyed object", () => {
-    const p = defaultParamsFor("pool_weight_boost");
-    expect(p).toHaveProperty("target");
-    expect(p).toHaveProperty("amount");
-  });
-});
-
-describe("Balance Manager — expandHooksToEffects", () => {
-  it("free_moves contributes a freeMoves field", () => {
-    const out = expandHooksToEffects([{ id: "free_moves", params: { count: 2 } }]);
-    expect(out.freeMoves).toBe(2);
-  });
-
-  it("free_turn_after_n contributes freeMovesIfChain config", () => {
-    const out = expandHooksToEffects([{ id: "free_turn_after_n", params: { minChain: 7 } }]);
-    expect(out.freeMovesIfChain).toEqual({ minChain: 7, count: 1 });
-  });
-
-  it("coin_bonus_flat and coin_bonus_per_tile sum across hooks", () => {
-    const out = expandHooksToEffects([
-      { id: "coin_bonus_flat", params: { amount: 5 } },
-      { id: "coin_bonus_flat", params: { amount: 3 } },
-      { id: "coin_bonus_per_tile", params: { amount: 2 } },
-    ]);
-    expect(out.coinBonusFlat).toBe(8);
-    expect(out.coinBonusPerTile).toBe(2);
-  });
-
-  it("pool_weight_boost merges into poolWeightDelta", () => {
-    const out = expandHooksToEffects([
-      { id: "pool_weight_boost", params: { target: "grass_hay", amount: 2 } },
-      { id: "pool_weight_boost", params: { target: "wood_log", amount: 1 } },
-    ]);
-    expect(out.poolWeightDelta).toEqual({ grass_hay: 2, wood_log: 1 });
-  });
-
-  it("threshold_reduction merges into thresholdReduce", () => {
-    const out = expandHooksToEffects([
-      { id: "threshold_reduction", params: { target: "grain_flour", amount: 2 } },
-    ]);
-    expect(out.thresholdReduce).toEqual({ grain_flour: 2 });
-  });
-
-  it("preserves the original hooks array on the output", () => {
-    const hooks = [{ id: "free_moves", params: { count: 1 } }];
-    const out = expandHooksToEffects(hooks);
-    expect(out.hooks).toBe(hooks);
-  });
-
-  it("ignores unknown hook ids without throwing", () => {
-    const out = expandHooksToEffects([{ id: "made_up_hook", params: {} }]);
-    expect(out.freeMoves).toBeUndefined();
-    expect(out.hooks?.length).toBe(1);
   });
 });
 

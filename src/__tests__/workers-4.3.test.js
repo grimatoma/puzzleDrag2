@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { computeWorkerEffects } from "../features/apprentices/effects.js";
+import { computeWorkerEffects } from "../features/apprentices/aggregate.js";
 import { upgradeCountForChain } from "../utils.js";
 import { UPGRADE_THRESHOLDS } from "../constants.js";
 

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { computeWorkerEffects } from "../features/apprentices/effects.js";
+import { computeWorkerEffects } from "../features/apprentices/aggregate.js";
 
 describe("Phase 4.2 — computeWorkerEffects pure aggregator", () => {
   const empty = { townsfolk: { hired: { hilda:0, pip:0, wila:0, tuck:0, osric:0, dren:0 }, debt: 0 } };
