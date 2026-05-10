@@ -62,14 +62,7 @@ export default function PowersTab({ draft, updateDraft }) {
 
   const selected = TILE_TYPES_MAP[selectedTile];
   const draftPower = draft.tilePowers[selectedTile] || null;
-  // Effective abilities: draft override (preferred), or legacy draft hooks
-  // (translated 1:1), else the runtime tile's `abilities` array.
-  const draftAbilities = draftPower?.abilities ?? null;
-  const draftLegacyHooks = draftPower?.hooks ?? null;
-  const liveAbilities = selected?.abilities || [];
-  const abilities = draftAbilities
-    ?? draftLegacyHooks  // legacy draft entries still flow until next save
-    ?? liveAbilities;
+  const abilities = draftPower?.abilities ?? selected?.abilities ?? [];
 
   // Per-tile produces-resource override. Empty string = use base chain.
   const liveProduces = selected?.effects?.producesResource || "";
@@ -87,13 +80,6 @@ export default function PowersTab({ draft, updateDraft }) {
     updateDraft((d) => {
       const cur = d.tilePowers[tileId] || {};
       const next = { ...cur, ...patch };
-      // Migration: a draft saved before the rename may carry a legacy
-      // `hooks` array. As soon as the user touches the tile, fold it into
-      // `abilities` and drop `hooks` so subsequent reads are unambiguous.
-      if (Array.isArray(next.hooks) && !Array.isArray(next.abilities)) {
-        next.abilities = next.hooks;
-      }
-      delete next.hooks;
       // Drop empty patches so the JSON stays minimal.
       if (Object.prototype.hasOwnProperty.call(next, "producesResource") && !next.producesResource) {
         delete next.producesResource;
@@ -159,10 +145,9 @@ export default function PowersTab({ draft, updateDraft }) {
           {tilesFiltered.map((t) => {
             const sw = tileSwatchProps(t.id);
             const draftPow = draft.tilePowers[t.id];
-            const draftCount = Array.isArray(draftPow?.abilities)
+            const abilityCount = Array.isArray(draftPow?.abilities)
               ? draftPow.abilities.length
-              : (Array.isArray(draftPow?.hooks) ? draftPow.hooks.length : null);
-            const hooked = draftCount ?? (Array.isArray(t.abilities) ? t.abilities.length : 0);
+              : (Array.isArray(t.abilities) ? t.abilities.length : 0);
             const active = selectedTile === t.id;
             return (
               <button
@@ -180,12 +165,12 @@ export default function PowersTab({ draft, updateDraft }) {
                   <div className="font-bold truncate">{t.displayName}</div>
                   <div className="text-[10px] opacity-80 font-mono truncate">{t.id}</div>
                 </div>
-                {hooked > 0 && (
+                {abilityCount > 0 && (
                   <span
                     className="px-1.5 py-0.5 rounded-full text-[10px] font-bold"
                     style={{ background: active ? "#fff" : COLORS.ember, color: active ? COLORS.ember : "#fff" }}
                   >
-                    ⚡{hooked}
+                    ⚡{abilityCount}
                   </span>
                 )}
               </button>

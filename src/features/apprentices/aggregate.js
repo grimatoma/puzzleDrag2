@@ -1,17 +1,9 @@
 /**
- * Aggregated effects across every ability-bearing source: hired workers,
+ * Aggregated abilities across every ability-bearing source: hired workers,
  * built buildings, and discovered + active tiles.
  *
- * Originally a Phase-9 type-dispatch over each worker's `effect` field. Now a
- * thin wrapper around the unified `aggregateAbilities` engine in
- * `src/config/abilitiesAggregate.js`. The channel shape returned from this
- * function is unchanged from the legacy worker aggregator so existing call
- * sites in state.js / GameScene (e.g. `workerEffects.thresholdReduce[k]`,
- * `seasonBonus.coins`) keep working without edits.
- *
- * The function name is now a slight misnomer (it returns aggregated abilities
- * across all source kinds, not just workers) but the rename was deferred to
- * avoid touching every test/import in the codebase.
+ * The actual aggregation engine lives in `src/config/abilitiesAggregate.js`;
+ * this module just builds the source list and folds it through.
  *
  * Per-source weight model:
  *   - Workers:    weight = hiredCount / maxCount
@@ -29,11 +21,18 @@ import { TYPE_WORKERS } from "../workers/data.js";
 import {
   TILE_TYPES,
   TILE_TYPES_BY_CATEGORY as SPECIES_BY_CATEGORY,
-  TILE_TYPES_MAP,
 } from "../tileCollection/data.js";
 import { BUILDINGS } from "../../constants.js";
 import { locBuilt } from "../../locBuilt.js";
 import { aggregateAbilities } from "../../config/abilitiesAggregate.js";
+import { getAbility } from "../../config/abilities.js";
+
+// Triggers whose contributions the global aggregator should expose as
+// channels. Chain-time triggers (`on_chain_collect`, `on_chain_commit`)
+// are read off the chained tile's per-tile `effects.*` shape directly,
+// so including them here from tile sources would double-count or write
+// dead values to channels nobody reads.
+const TILE_AGGREGATOR_TRIGGERS = new Set(["passive", "on_board_fill"]);
 
 /** Source list for a worker entity (TYPE_WORKERS or TOWNSFOLK). */
 function workerSource(def, hiredCount) {
@@ -59,13 +58,10 @@ export function builtBuildingSources(state) {
 
 /**
  * Source list for every tile that is currently both DISCOVERED and ACTIVE
- * in its category. Tiles fire their abilities passively while active.
- *
- * (Tiles whose abilities only trigger on chain — free_moves, coin_bonus_flat,
- * etc. — also flow through `tile.effects.*` via `expandAbilitiesToEffects`,
- * so the chain-time consumers in state.js read off the chained tile directly.
- * Including them here adds spawn-time / passive contributions like
- * `pool_weight` and `threshold_reduce` to the global aggregator.)
+ * in its category. Only abilities whose trigger fires "passively while
+ * active" (`passive`, `on_board_fill`) are included — chain-time abilities
+ * are read off the per-tile `effects` shape inside CHAIN_COLLECTED /
+ * CHAIN_COMMIT, so feeding them through here would write to dead channels.
  */
 export function discoveredTileSources(state) {
   const discovered = state?.tileCollection?.discovered ?? {};
@@ -75,7 +71,14 @@ export function discoveredTileSources(state) {
     if (!Array.isArray(t.abilities) || t.abilities.length === 0) continue;
     if (!discovered[t.id]) continue;
     if (activeByCategory[t.category] !== t.id) continue;
-    out.push({ kind: "tile", sourceId: t.id, abilities: t.abilities, weight: 1 });
+    const passiveAbilities = t.abilities.filter((inst) => {
+      const def = getAbility(inst?.id);
+      if (!def) return false;
+      const trigger = inst.trigger || def.trigger;
+      return TILE_AGGREGATOR_TRIGGERS.has(trigger);
+    });
+    if (passiveAbilities.length === 0) continue;
+    out.push({ kind: "tile", sourceId: t.id, abilities: passiveAbilities, weight: 1 });
   }
   return out;
 }
@@ -98,7 +101,7 @@ export function discoveredTileSources(state) {
  *   seasonEndPoolStep    integer
  *   boardPreserveBiomes  Set<string>
  */
-export function computeWorkerEffects(state) {
+export function computeAggregatedAbilities(state) {
   const hired = state?.townsfolk?.hired ?? {};
   const debt = state?.townsfolk?.debt ?? 0;
   // Townsfolk pause when wages are owed; type-tier workers don't.
@@ -125,5 +128,6 @@ export function computeWorkerEffects(state) {
   return aggregateAbilities(sources, { speciesByCategory: SPECIES_BY_CATEGORY });
 }
 
-// Re-export TILE_TYPES_MAP so callers don't need a second import line.
-export { TILE_TYPES_MAP };
+// Legacy alias — many tests + a few production files import the original
+// name. Kept as a thin re-export so the rename stays compatible.
+export const computeWorkerEffects = computeAggregatedAbilities;

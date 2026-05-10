@@ -1,19 +1,16 @@
 /**
- * Phase 4 — Worker data model.
- * Each worker has: id, name, role, icon, color, wage, hireCost, maxCount,
- * effect (type + params), requirement.
+ * Townsfolk (named individuals) — id, name, role, icon, color, wage,
+ * hireCost, maxCount, abilities, requirement.
  *
- * effect.type is one of:
- *   "threshold_reduce" — lowers chain upgrade threshold for a resource
- *   "pool_weight"      — adds extra copies of a resource to the spawn pool
- *   "bonus_yield"      — adds bonus resources per chain of a type
- *   "season_bonus"     — pays extra coins at season end
- *   "recipe_input_reduce" — Phase 4 (zones rule overhaul): lowers a recipe's
- *                           input requirement for a single resource. Shape:
- *                           `{ type, recipe, input, from, to }`. Each hire
- *                           contributes `(from - to) / maxCount` toward the
- *                           reduction (rounded at use time, floored at 1
- *                           remaining input).
+ * `abilities` is an array of `{ id, params }` entries drawn from the
+ * unified abilities catalog at `src/config/abilities.js`. The aggregator
+ * in `src/config/abilitiesAggregate.js` folds each hired worker's
+ * abilities into the global channel object, scaled by hiredCount/maxCount.
+ *
+ * Common ability ids used here: threshold_reduce, threshold_reduce_category,
+ * pool_weight, pool_weight_legacy, bonus_yield, season_bonus,
+ * recipe_input_reduce, chain_redirect_category, hazard_spawn_reduce,
+ * hazard_coin_multiplier.
  */
 export const TOWNSFOLK = [
   {

@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { rootReducer, initialState } from "../state.js";
-import { computeWorkerEffects } from "../features/apprentices/effects.js";
+import { computeWorkerEffects } from "../features/apprentices/aggregate.js";
 
 // NOTE: CLOSE_SEASON also adds SEASON_END_BONUS_COINS = 25 (pre-Phase-4 mechanic).
 // Expected coin values include that +25 bonus unless debt absorbs all available coins.
