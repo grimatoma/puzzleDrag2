@@ -2,6 +2,7 @@
 import { NPCS, RECIPES } from "../../constants.js";
 import { resourceByKey } from "../../state.js";
 import { bondBand, bondModifier, payOrder } from "../npcs/bond.js";
+import IconCanvas, { hasIcon } from "../../ui/IconCanvas.jsx";
 
 export const viewKey = "orders";
 
@@ -64,13 +65,17 @@ export default function OrdersScreen({ state, dispatch }) {
                 {isCrafted ? (
                   <div
                     className="w-8 h-8 rounded-md flex-shrink-0 grid place-items-center text-[18px]"
-                    style={{ backgroundColor: cssFromHex(recipe.color), border: "2px solid rgba(255,255,255,.4)" }}
-                  >{recipe.glyph}</div>
+                    style={{ backgroundColor: cssFromHex(recipe.color), border: "2px solid rgba(255,255,255,.4)", overflow: "hidden" }}
+                  >
+                    {hasIcon(o.key) ? <IconCanvas iconKey={o.key} size={32} /> : recipe.glyph}
+                  </div>
                 ) : (
                   <div
-                    className="w-8 h-8 rounded-md flex-shrink-0"
-                    style={{ backgroundColor: cssFromHex(res.color), border: "2px solid rgba(255,255,255,.4)" }}
-                  />
+                    className="w-8 h-8 rounded-md flex-shrink-0 grid place-items-center text-[18px]"
+                    style={{ backgroundColor: cssFromHex(res.color), border: "2px solid rgba(255,255,255,.4)", overflow: "hidden" }}
+                  >
+                    {hasIcon(o.key) && <IconCanvas iconKey={o.key} size={32} />}
+                  </div>
                 )}
                 <div className="flex-1 h-2.5 bg-[#e0d2b0] rounded overflow-hidden">
                   <div
