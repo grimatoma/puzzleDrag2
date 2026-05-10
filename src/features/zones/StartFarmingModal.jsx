@@ -220,7 +220,7 @@ export default function StartFarmingModal({ state, dispatch, onClose }) {
 
   if (!zone) return null;
 
-  const fertilizerStock = state.farmFertilizer ?? 0;
+  const fertilizerStock = state.tools?.fertilizer ?? 0;
   const fertilizerAvailable = fertilizerStock > 0;
   const cost = zone.entryCost?.coins ?? 50;
   const canAfford = (state.coins ?? 0) >= cost;
