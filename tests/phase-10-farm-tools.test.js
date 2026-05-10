@@ -1,7 +1,7 @@
 // Phase 10 — Farm tools, fertilizer, rats, wolves.
 // Migrated from src/__tests__/farm-10.1 through farm-10.8 tests.
 import { describe, it, expect } from "vitest";
-import { WORKSHOP_RECIPES, RECIPES } from "../src/constants.js";
+import { WORKSHOP_RECIPES } from "../src/constants.js";
 import { createInitialState, rootReducer } from "../src/state.js";
 
 describe("Phase 10 — Workshop tool recipes", () => {

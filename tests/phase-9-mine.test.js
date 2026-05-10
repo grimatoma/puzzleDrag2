@@ -2,7 +2,7 @@
 // Migrated from src/__tests__/mine-9.1 through mine-9.6 tests.
 import { describe, it, expect } from "vitest";
 import { BIOMES, MINE_TILE_POOL, MINE_ENTRY_TIERS, UPGRADE_THRESHOLDS } from "../src/constants.js";
-import { createInitialState, rootReducer } from "../src/state.js";
+import { createInitialState } from "../src/state.js";
 
 describe("Phase 9 — Mine biome resources", () => {
   it("MINE_TILE_POOL is defined and non-empty", () => {
