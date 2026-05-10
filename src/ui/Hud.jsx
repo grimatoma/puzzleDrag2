@@ -201,7 +201,7 @@ export function Hud({ state, dispatch }) {
       )}
       <div className={`${!onBoard ? "ml-auto" : ""} flex items-center gap-1.5 flex-shrink-0`}>
         <DevButton title="Debug tools" iconKey="ui_devtools" onClick={() => dispatch({ type: "SETTINGS/OPEN_DEBUG" })} />
-        <DevButton title="Balance Manager" iconKey="ui_scale" onClick={() => { window.location.href = `${import.meta.env.BASE_URL}b/`; }} />
+        <DevButton title="Balance Manager" iconKey="ui_scale" onClick={() => { window.open(`${import.meta.env.BASE_URL}b/`, "_blank", "noopener,noreferrer"); }} />
         {!onBoard && (
           <>
             <div className="bg-[#f6efe0] border-2 border-[#b28b62] rounded-full h-[26px] w-[110px] landscape:max-[1024px]:h-[20px] landscape:max-[1024px]:w-[80px] relative overflow-hidden">

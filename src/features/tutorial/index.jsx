@@ -201,71 +201,78 @@ function CornerToast({ step, stepData, dispatch }) {
     <div
       style={{
         position: 'absolute',
-        top: 12,
-        right: 12,
+        bottom: 64,
+        left: 12,
         zIndex: 60,
         maxWidth: 260,
-        background: '#f4ecd8',
-        border: '3px solid #b28b62',
-        borderRadius: 16,
-        padding: '12px 14px',
-        boxShadow: '0 4px 18px rgba(0,0,0,0.28)',
-        fontFamily: 'Arial, sans-serif',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 10,
+        pointerEvents: 'none',
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'space-between' }}>
+      <div
+        style={{
+          background: '#f4ecd8',
+          border: '3px solid #b28b62',
+          borderRadius: 16,
+          padding: '12px 14px',
+          boxShadow: '0 4px 18px rgba(0,0,0,0.28)',
+          fontFamily: 'Arial, sans-serif',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 10,
+          pointerEvents: 'auto',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <NpcAvatar npcKey={stepData.npc} size={30} />
+            <div style={{ fontWeight: 700, fontSize: 13, color: '#3e2a1a' }}>{stepData.title}</div>
+          </div>
+          <button
+            onClick={() => dispatch({ type: 'TUTORIAL/SKIP' })}
+            style={{
+              background: '#e8dcc4',
+              border: '2px solid #b28b62',
+              borderRadius: 8,
+              color: '#5a3a20',
+              fontFamily: 'Arial, sans-serif',
+              fontSize: 18,
+              fontWeight: 700,
+              cursor: 'pointer',
+              lineHeight: 1,
+              width: 32,
+              height: 32,
+              display: 'inline-grid',
+              placeItems: 'center',
+            }}
+            aria-label="Close tutorial"
+          >
+            ×
+          </button>
+        </div>
+
+        <div style={{ fontSize: 13, color: '#5a3e28', lineHeight: 1.5 }}>{stepData.body}</div>
+
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <NpcAvatar npcKey={stepData.npc} size={30} />
-          <div style={{ fontWeight: 700, fontSize: 13, color: '#3e2a1a' }}>{stepData.title}</div>
+          <div
+            style={{
+              fontSize: 12,
+              color: '#91bf24',
+              fontWeight: 700,
+              animation: 'tutorialPulse 1.4s ease-in-out infinite',
+            }}
+          >
+            👀 {stepData.cta}
+          </div>
+          <StepDots step={step} total={STEPS.length} />
         </div>
-        <button
-          onClick={() => dispatch({ type: 'TUTORIAL/SKIP' })}
-          style={{
-            background: '#e8dcc4',
-            border: '2px solid #b28b62',
-            borderRadius: 8,
-            color: '#5a3a20',
-            fontFamily: 'Arial, sans-serif',
-            fontSize: 18,
-            fontWeight: 700,
-            cursor: 'pointer',
-            lineHeight: 1,
-            width: 32,
-            height: 32,
-            display: 'inline-grid',
-            placeItems: 'center',
-          }}
-          aria-label="Close tutorial"
-        >
-          ×
-        </button>
+
+        <style>{`
+          @keyframes tutorialPulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.45; }
+          }
+        `}</style>
       </div>
-
-      <div style={{ fontSize: 13, color: '#5a3e28', lineHeight: 1.5 }}>{stepData.body}</div>
-
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <div
-          style={{
-            fontSize: 12,
-            color: '#91bf24',
-            fontWeight: 700,
-            animation: 'tutorialPulse 1.4s ease-in-out infinite',
-          }}
-        >
-          👀 {stepData.cta}
-        </div>
-        <StepDots step={step} total={STEPS.length} />
-      </div>
-
-      <style>{`
-        @keyframes tutorialPulse {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0.45; }
-        }
-      `}</style>
     </div>
   );
 }

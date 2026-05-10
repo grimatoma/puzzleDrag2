@@ -150,7 +150,7 @@ export function TileIcon({ tileId, size = 40, locked = false }) {
   );
 }
 
-function TileRow({ row, category, dispatch }) {
+function TileCard({ row, category, dispatch }) {
   const handleSelect = () => {
     if (row.action !== "toggle" || row.active) return;
     dispatch({ type: "SET_ACTIVE_TILE", payload: { category, tileId: row.id } });
@@ -162,88 +162,104 @@ function TileRow({ row, category, dispatch }) {
   return (
     <div
       onClick={row.action === "toggle" && !row.active && !row.locked ? handleSelect : undefined}
-      className={`flex items-center gap-3 p-2 rounded-xl border transition-colors ${
-        row.action === "toggle" && !row.active && !row.locked ? "cursor-pointer" : ""
+      className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border transition-all ${
+        row.action === "toggle" && !row.active && !row.locked
+          ? "cursor-pointer hover:scale-[1.03] hover:shadow-lg hover:shadow-[#ffd248]/10"
+          : ""
       } ${
         row.active
-          ? "bg-[#4f6b3a]/40 border-[#a8d44a]"
+          ? "bg-[#4f6b3a]/40 border-[#a8d44a] shadow-md shadow-[#a8d44a]/15"
           : row.locked
           ? "bg-[#1a1208]/30 border-[#5a4030]/50"
-          : "bg-[#2b1e0f]/40 border-[#8a6040]/50"
+          : "bg-[#2b1e0f]/40 border-[#8a6040]/50 hover:border-[#c8a87a]/60"
       }`}
+      style={{ minHeight: 130 }}
     >
-      <div className="flex-shrink-0">
-        <TileIcon tileId={row.id} size={40} locked={row.locked} />
-      </div>
-
-      <div className="flex-1 min-w-0">
-        <div className={`font-bold text-sm truncate ${row.locked ? "text-[#6a5040]" : "text-[#f7e2b6]"}`}>
-          {row.name}
-          {row.active && <span className="ml-2 text-[#a8d44a] text-xs">● Active</span>}
-        </div>
-        <div className={`text-xs mt-0.5 truncate ${row.locked ? "text-[#6a5040]" : "text-[#c8a87a]"}`}>
-          {row.status}
-        </div>
-        {row.description && !row.locked && (
-          <div className="text-[10px] mt-0.5 text-[#a89070] italic leading-snug line-clamp-2">
-            {row.description}
-          </div>
-        )}
-      </div>
-
-      <div className="flex-shrink-0 flex flex-col items-end gap-1">
-        {row.action === "toggle" && (
+      {/* Active indicator */}
+      {row.active && (
+        <div className="self-end -mt-1 -mr-1">
           <span
-            className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${
-              row.active
-                ? "bg-[#a8d44a] border-[#a8d44a] text-[#1a2a0a]"
-                : row.locked
-                ? "border-[#5a4030]/50"
-                : "border-[#8a6040]"
-            }`}
-            aria-label={row.active ? "Active" : "Inactive — click to select"}
+            className="w-5 h-5 rounded-full bg-[#a8d44a] border-2 border-[#a8d44a] text-[#1a2a0a] flex items-center justify-center"
+            aria-label="Active"
           >
-            {row.active && <span className="text-[10px] font-bold">✓</span>}
+            <span className="text-[10px] font-bold">✓</span>
           </span>
-        )}
-        {row.action === "buy" && (
-          <button
-            onClick={(e) => { e.stopPropagation(); handleBuy(); }}
-            className="px-2 py-1 rounded-lg bg-[#8a6a1a] text-[#ffd248] text-xs font-bold hover:bg-[#9a7a2a] transition-colors"
-          >
-            Buy
-          </button>
-        )}
+        </div>
+      )}
+
+      {/* Tile icon */}
+      <div className="flex-shrink-0">
+        <TileIcon tileId={row.id} size={48} locked={row.locked} />
       </div>
+
+      {/* Name */}
+      <div className={`font-bold text-xs text-center leading-tight ${
+        row.locked ? "text-[#6a5040]" : "text-[#f7e2b6]"
+      }`}>
+        {row.name}
+      </div>
+
+      {/* Status */}
+      <div className={`text-[10px] text-center leading-tight ${
+        row.locked ? "text-[#6a5040]" : "text-[#c8a87a]"
+      }`}>
+        {row.status}
+      </div>
+
+      {/* Description (only when unlocked) */}
+      {row.description && !row.locked && (
+        <div className="text-[9px] text-center text-[#a89070] italic leading-snug line-clamp-2 mt-auto">
+          {row.description}
+        </div>
+      )}
+
+      {/* Buy button */}
+      {row.action === "buy" && (
+        <button
+          onClick={(e) => { e.stopPropagation(); handleBuy(); }}
+          className="mt-auto px-3 py-1 rounded-lg bg-[#8a6a1a] text-[#ffd248] text-[10px] font-bold hover:bg-[#9a7a2a] transition-colors"
+        >
+          Buy
+        </button>
+      )}
     </div>
   );
 }
 
-function HazardRow({ hazard }) {
+function HazardCard({ hazard }) {
   const hazKey = `hazard_${hazard.id}`;
   return (
-    <div className="flex items-start gap-3 p-2 rounded-xl border border-[#7a2a0a]/60 bg-[#2a0e0e]/50">
+    <div className="flex flex-col items-center gap-1.5 p-3 rounded-xl border border-[#7a2a0a]/60 bg-[#2a0e0e]/50" style={{ minHeight: 130 }}>
+      {/* Biome badge */}
+      <div className="self-end -mt-1 -mr-1">
+        <span className="text-[9px] font-bold text-[#8a5040] uppercase tracking-wide bg-[#3a1a0a]/80 px-1.5 py-0.5 rounded">{hazard.biome}</span>
+      </div>
+
+      {/* Hazard icon */}
       <div
-        className="flex-shrink-0 flex items-center justify-center text-2xl rounded-lg bg-[#3a1a0a]/60 border border-[#7a3a1a]/40 overflow-hidden"
-        style={{ width: 40, height: 40 }}
+        className="flex items-center justify-center text-2xl rounded-lg bg-[#3a1a0a]/60 border border-[#7a3a1a]/40 overflow-hidden"
+        style={{ width: 48, height: 48 }}
       >
         {hasIcon(hazKey)
-          ? <IconCanvas iconKey={hazKey} size={40} />
+          ? <IconCanvas iconKey={hazKey} size={48} />
           : hazard.icon}
       </div>
-      <div className="flex-1 min-w-0">
-        <div className="font-bold text-sm text-[#f7b07a]">
-          {hazard.name}
-          <span className="ml-2 text-[10px] font-normal text-[#8a5040] uppercase tracking-wide">{hazard.biome}</span>
-        </div>
-        <div className="text-xs mt-0.5 text-[#c8987a] leading-snug">{hazard.description}</div>
-        {hazard.clearInstruction && (
-          <div className="text-[10px] mt-1 text-[#a07858] italic leading-snug">
-            <span className="text-[#d4a070] not-italic font-semibold">Clear: </span>
-            {hazard.clearInstruction}
-          </div>
-        )}
+
+      {/* Name */}
+      <div className="font-bold text-xs text-center text-[#f7b07a] leading-tight">
+        {hazard.name}
       </div>
+
+      {/* Description */}
+      <div className="text-[10px] text-center text-[#c8987a] leading-snug line-clamp-2">{hazard.description}</div>
+
+      {/* Clear instruction */}
+      {hazard.clearInstruction && (
+        <div className="text-[9px] text-center text-[#a07858] italic leading-snug mt-auto">
+          <span className="text-[#d4a070] not-italic font-semibold">Clear: </span>
+          {hazard.clearInstruction}
+        </div>
+      )}
     </div>
   );
 }
@@ -347,15 +363,20 @@ export default function TileCollectionPanel({ state, dispatch }) {
       )}
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-2">
+      <div className="flex-1 overflow-y-auto p-3">
         {subCategory === "hazards" ? (
           <>
-            <div className="text-xs text-[#a87050] text-center py-1 italic">
+            <div className="text-xs text-[#a87050] text-center py-1 mb-2 italic">
               Hazards cannot be selected — they appear automatically and must be cleared.
             </div>
-            {ALL_HAZARDS.map((h) => (
-              <HazardRow key={h.id} hazard={h} />
-            ))}
+            <div
+              className="grid gap-2"
+              style={{ gridTemplateColumns: "repeat(auto-fill, minmax(110px, 1fr))" }}
+            >
+              {ALL_HAZARDS.map((h) => (
+                <HazardCard key={h.id} hazard={h} />
+              ))}
+            </div>
           </>
         ) : visibleCategories.length === 0 ? (
           <div className="text-center text-[#6a5040] text-sm py-8">
@@ -363,14 +384,19 @@ export default function TileCollectionPanel({ state, dispatch }) {
           </div>
         ) : (
           <>
-            {rows.map((row) => (
-              <TileRow
-                key={row.id}
-                row={row}
-                category={activeTab}
-                dispatch={dispatch}
-              />
-            ))}
+            <div
+              className="grid gap-2"
+              style={{ gridTemplateColumns: "repeat(auto-fill, minmax(110px, 1fr))" }}
+            >
+              {rows.map((row) => (
+                <TileCard
+                  key={row.id}
+                  row={row}
+                  category={activeTab}
+                  dispatch={dispatch}
+                />
+              ))}
+            </div>
             {rows.length === 0 && (
               <div className="text-center text-[#6a5040] text-sm py-8">
                 No tiles in this category.
