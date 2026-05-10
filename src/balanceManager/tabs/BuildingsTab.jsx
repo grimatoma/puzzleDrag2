@@ -8,6 +8,7 @@ import {
   SmallButton, Pill, Card, SearchBar,
 } from "../shared.jsx";
 import AbilitiesEditor from "../AbilitiesEditor.jsx";
+import { BuildingIllustration } from "../../ui/Town.jsx";
 
 const COST_KEYS = (() => {
   const out = new Set(["coins", "runes"]);
@@ -67,6 +68,13 @@ export default function BuildingsTab({ draft, updateDraft }) {
             <Card key={b.id} accent={dirty ? COLORS.ember : COLORS.border}>
               <div className="flex items-start justify-between mb-2 gap-2">
                 <div className="flex items-center gap-2">
+                  <div
+                    className="relative shrink-0 rounded border overflow-hidden"
+                    style={{ width: 36, height: 36, borderColor: COLORS.border, background: COLORS.parchment }}
+                    title={`${eff.name} icon`}
+                  >
+                    <BuildingIllustration id={b.id} isBuilt />
+                  </div>
                   <code
                     className="font-mono text-[10px] px-1.5 py-0.5 rounded"
                     style={{ background: COLORS.parchmentDeep, color: COLORS.ember }}

@@ -218,7 +218,7 @@ const LOCATION_TOWN_CONFIGS = {
   },
 };
 
-function BuildingIllustration({ id, isBuilt }) {
+export function BuildingIllustration({ id, isBuilt }) {
   const f = isBuilt ? {} : { filter: "saturate(0.15) brightness(0.65)" };
   const lit = isBuilt ? "#ffd86b" : "#5a5040";
   const glow = isBuilt ? "#ff8040" : "#3a2020";
