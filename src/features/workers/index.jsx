@@ -5,15 +5,22 @@
 // the current count out of maxCount.
 import { TYPE_WORKERS, nextHireCost } from "./data.js";
 
-function effectSummary(effect) {
+function effectSummary(effect, count, maxCount) {
   if (!effect || !effect.type) return "";
+  const perHireScalar = maxCount > 0 ? count / maxCount : 0;
   switch (effect.type) {
-    case "threshold_reduce_category":
-      return `${effect.category} chain ${effect.from} → ${effect.to} at full hire`;
-    case "threshold_reduce":
-      return `${effect.key} chain ${effect.from} → ${effect.to} at full hire`;
-    case "recipe_input_reduce":
-      return `${effect.recipe} needs ${effect.from} → ${effect.to} ${effect.input} at full hire`;
+    case "threshold_reduce_category": {
+      const current = +(effect.from - (effect.from - effect.to) * perHireScalar).toFixed(1);
+      return `${effect.category} chain: ${current} (max ${effect.to} at full hire)`;
+    }
+    case "threshold_reduce": {
+      const current = +(effect.from - (effect.from - effect.to) * perHireScalar).toFixed(1);
+      return `${effect.key} chain: ${current} (max ${effect.to} at full hire)`;
+    }
+    case "recipe_input_reduce": {
+      const current = +(effect.from - (effect.from - effect.to) * perHireScalar).toFixed(1);
+      return `${effect.recipe} needs ${current} → ${effect.to} ${effect.input} at full hire`;
+    }
     default:
       return effect.type;
   }
@@ -85,7 +92,7 @@ function WorkerRow({ worker, count, coins, dispatch }) {
             marginTop: 2,
           }}
         >
-          {effectSummary(worker.effect)}
+          {effectSummary(worker.effect, count, worker.maxCount)}
         </div>
       </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 4, flexShrink: 0 }}>

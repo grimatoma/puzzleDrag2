@@ -14,7 +14,7 @@ import { announce, getQueue, flushAnnouncements, formatChainAnnouncement, format
 import { handleKeyboard } from "./src/features/a11y/keyboard.js";
 import { FIRE_HAZARD_ENABLED } from "./src/featureFlags.js";
 
-function PhaserMount({ dispatch, biomeKey, turnsUsed, uiLocked, sceneRef, weather, toolPending, setChainInfo, workers, palette, graphicsQuality, reducedMotion, tileCollection, gameState, grid }) {
+function PhaserMount({ dispatch, biomeKey, turnsUsed, uiLocked, sceneRef, weather, toolPending, setChainInfo, workers, typeWorkers, palette, graphicsQuality, reducedMotion, tileCollection, gameState, grid }) {
   const hostRef = useRef(null);
   const gameRef = useRef(null);
   const [loading, setLoading] = useState(true);
@@ -134,6 +134,7 @@ function PhaserMount({ dispatch, biomeKey, turnsUsed, uiLocked, sceneRef, weathe
   useEffect(() => { gameRef.current?.registry.set("weather", weather); }, [weather]);
   useEffect(() => { gameRef.current?.registry.set("toolPending", toolPending ?? null); }, [toolPending]);
   useEffect(() => { gameRef.current?.registry.set("townsfolk", workers ?? null); }, [workers]);
+  useEffect(() => { gameRef.current?.registry.set("typeWorkers", typeWorkers ?? null); }, [typeWorkers]);
   useEffect(() => { gameRef.current?.registry.set("palette", palette ?? "default"); }, [palette]);
   useEffect(() => { gameRef.current?.registry.set("graphicsQuality", graphicsQuality ?? "standard"); }, [graphicsQuality]);
   useEffect(() => { gameRef.current?.registry.set("reducedMotion", reducedMotion ?? null); }, [reducedMotion]);
@@ -393,6 +394,7 @@ export default function App() {
                   toolPending={state.toolPending}
                   setChainInfo={setChainInfo}
                   workers={state.townsfolk}
+                  typeWorkers={state.workers}
                   palette={state.settings?.palette}
                   graphicsQuality={state.settings?.graphicsQuality}
                   reducedMotion={state.settings?.reducedMotion}

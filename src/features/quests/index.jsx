@@ -1,12 +1,9 @@
+import { useState } from "react";
 import { ALMANAC_TIERS } from "../almanac/data.js";
 import { QUEST_TEMPLATES } from "./templates.js";
 
 const TABS = ["daily", "almanac"];
 
-/**
- * Returns a player-facing label for a tier reward.
- * Handles coins, tools object, structural keys, and unknown shapes.
- */
 function rewardLabel(reward) {
   if (!reward) return "?";
   const parts = [];
@@ -25,7 +22,6 @@ function rewardLabel(reward) {
     };
     parts.push(structuralLabels[reward.structural] ?? reward.structural);
   }
-  // Legacy shape used by constants.js ALMANAC_TIERS
   if (reward.tool) {
     parts.push(`+${reward.amt ?? 1} ${reward.tool}`);
   }
@@ -43,7 +39,6 @@ function questLabel(q) {
 
 function QuestCard({ q, dispatch }) {
   const pct = Math.min(100, (q.progress / q.target) * 100);
-  // Support both legacy shape (q.done) and new shape (progress >= target)
   const isDone = q.done ?? (q.progress >= q.target);
   const claimable = isDone && !q.claimed;
   const completed = isDone || q.claimed;
@@ -144,16 +139,92 @@ function AlmanacTierCard({ idx, tierDef, almanacXp, almanacClaimed, dispatch }) 
   );
 }
 
+// Embeddable panel (no screen chrome) — used inside the Townsfolk hub.
+// Uses local useState for tab so it doesn't conflict with the parent view's viewParams.
+export function QuestsPanel({ state, dispatch }) {
+  const [tab, setTab] = useState("daily");
+
+  const quests = state.quests ?? state.dailies ?? [];
+  const almanacXp = state.almanac?.xp ?? state.almanacXp ?? 0;
+  const almanacClaimed = state.almanacClaimed ?? [];
+
+  const currentTier = Math.floor(almanacXp / 100);
+  const nextCost = (currentTier + 1) * 100;
+  const xpIntoTier = almanacXp - currentTier * 100;
+  const xpPct = Math.min(100, (xpIntoTier / 100) * 100);
+
+  return (
+    <div className="flex flex-col gap-2">
+      {/* Sub-tab toggle */}
+      <div className="flex gap-2">
+        {["daily", "almanac"].map((t) => (
+          <button
+            key={t}
+            onClick={() => setTab(t)}
+            className={`px-4 py-1 rounded-full text-[12px] font-bold border-2 transition-colors ${
+              tab === t
+                ? "bg-[#d6612a] border-[#a84010] text-white"
+                : "bg-[#3a2715]/60 border-[#5a3a20] text-[#f8e7c6]/70 hover:bg-[#3a2715]"
+            }`}
+          >
+            {t === "daily" ? "Daily" : "Almanac"}
+          </button>
+        ))}
+      </div>
+
+      {tab === "daily" ? (
+        <div className="flex flex-col gap-2">
+          {[...quests].sort((a, b) => {
+            const aDone = a.done ?? (a.progress >= a.target);
+            const bDone = b.done ?? (b.progress >= b.target);
+            return (bDone && !b.claimed ? 1 : 0) - (aDone && !a.claimed ? 1 : 0);
+          }).map((q) => (
+            <QuestCard key={q.id} q={q} dispatch={dispatch} />
+          ))}
+          <p className="text-[10px] text-[#f8e7c6]/50 text-center mt-1">Next refresh: when season ends</p>
+          <button
+            onClick={() => dispatch({ type: "QUESTS/ROLL_DAILIES" })}
+            className="text-[10px] font-bold py-1 px-3 rounded-lg bg-[#3a2715]/70 border border-[#5a3a20] text-[#f8e7c6]/60 hover:bg-[#3a2715] self-center"
+          >
+            🔄 Reroll (dev)
+          </button>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center gap-2">
+            <div className="flex-1 h-3 rounded-full overflow-hidden" style={{ background: "#3a2715" }}>
+              <div
+                className="h-full transition-[width] duration-300 rounded-full"
+                style={{ width: `${xpPct}%`, background: "#d6612a" }}
+              />
+            </div>
+            <span className="text-[11px] font-bold text-[#f8e7c6] whitespace-nowrap">
+              {almanacXp}✦ / {nextCost > 1000 ? "MAX" : nextCost}
+            </span>
+          </div>
+          {ALMANAC_TIERS.map((tierDef, idx) => (
+            <AlmanacTierCard
+              key={idx}
+              idx={idx}
+              tierDef={tierDef}
+              almanacXp={almanacXp}
+              almanacClaimed={almanacClaimed}
+              dispatch={dispatch}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Full-screen view (standalone, URL-routed tab).
 export default function QuestsScreen({ state, dispatch, initialTab }) {
-  // Tab is URL-driven via state.viewParams.tab. `initialTab` is honoured only
-  // when no URL value is present so direct deep links still win.
   const requested = state?.viewParams?.tab ?? initialTab;
   const tab = TABS.includes(requested) ? requested : "daily";
   const setTab = (next) => dispatch({ type: "SET_VIEW_PARAMS", params: { tab: next } });
 
-  // New deterministic 6-slot system (canonical); fall back to legacy dailies if absent
   const quests = state.quests ?? state.dailies ?? [];
-  // Almanac XP from canonical almanac slice; fall back to legacy almanacXp
   const almanacXp = state.almanac?.xp ?? state.almanacXp ?? 0;
   const almanacClaimed = state.almanacClaimed ?? [];
 
@@ -164,7 +235,6 @@ export default function QuestsScreen({ state, dispatch, initialTab }) {
 
   return (
     <div className="absolute inset-0 bg-gradient-to-b from-[#7c4f2c] to-[#6b4225] border-[3px] border-[#e2c19b] flex flex-col overflow-hidden">
-      {/* Header */}
       <div className="flex items-center justify-between px-3 py-2 flex-shrink-0 border-b border-[#e2c19b]/40">
         <span className="font-bold text-[14px] text-[#f8e7c6]">📜 Quests & Almanac</span>
         <button
@@ -173,7 +243,6 @@ export default function QuestsScreen({ state, dispatch, initialTab }) {
         >✕</button>
       </div>
 
-      {/* Tab toggle */}
       <div className="flex gap-2 px-3 py-2 flex-shrink-0">
         {["daily", "almanac"].map((t) => (
           <button
@@ -190,7 +259,6 @@ export default function QuestsScreen({ state, dispatch, initialTab }) {
         ))}
       </div>
 
-      {/* Body */}
       {tab === "daily" ? (
         <div className="flex-1 overflow-y-auto px-3 pb-3 flex flex-col gap-2">
           {[...quests].sort((a, b) => {
@@ -210,7 +278,6 @@ export default function QuestsScreen({ state, dispatch, initialTab }) {
         </div>
       ) : (
         <div className="flex-1 flex flex-col overflow-hidden px-3 pb-3 gap-2">
-          {/* XP progress bar */}
           <div className="flex-shrink-0 flex items-center gap-2">
             <div className="flex-1 h-3 rounded-full overflow-hidden" style={{ background: "#3a2715" }}>
               <div
@@ -222,7 +289,6 @@ export default function QuestsScreen({ state, dispatch, initialTab }) {
               {almanacXp}✦ / {nextCost > 1000 ? "MAX" : nextCost}
             </span>
           </div>
-          {/* Tier list */}
           <div
             className="flex flex-col gap-2 pb-1 overflow-y-auto"
             style={{ scrollbarWidth: "none", WebkitOverflowScrolling: "touch" }}

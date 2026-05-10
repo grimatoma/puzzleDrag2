@@ -3,10 +3,12 @@ import { ApprenticesPanel } from "../apprentices/index.jsx";
 import { WorkersPanel } from "../workers/index.jsx";
 import { CompactOrders } from "../../ui/Inventory.jsx";
 import BossGallery from "../bosses/Gallery.jsx";
+import { QuestsPanel } from "../quests/index.jsx";
+import CastlePanel from "../castle/index.jsx";
 
 export const viewKey = "townsfolk";
 
-const TABS = ["mood", "apprentices", "workers", "bosses", "orders"];
+const TABS = ["mood", "apprentices", "workers", "quests", "castle", "bosses", "orders"];
 
 export default function TownsfolkScreen({ state, dispatch }) {
   // Tab lives in viewParams so the URL (src/router.js) is the single source
@@ -28,6 +30,8 @@ export default function TownsfolkScreen({ state, dispatch }) {
           { key: "mood", label: "💞 Mood" },
           { key: "apprentices", label: "🧑‍🌾 Townsfolk" },
           { key: "workers", label: "🛠 Workers" },
+          { key: "quests", label: "📜 Quests" },
+          { key: "castle", label: "🏰 Castle" },
           { key: "bosses", label: "👹 Foes" },
           { key: "orders", label: "📋 Orders" },
         ].map((item) => (
@@ -48,6 +52,10 @@ export default function TownsfolkScreen({ state, dispatch }) {
             <ApprenticesPanel state={state} dispatch={dispatch} showHeader={false} />
           ) : tab === "workers" ? (
             <WorkersPanel state={state} dispatch={dispatch} />
+          ) : tab === "quests" ? (
+            <QuestsPanel state={state} dispatch={dispatch} />
+          ) : tab === "castle" ? (
+            <CastlePanel state={state} dispatch={dispatch} />
           ) : tab === "bosses" ? (
             <BossGallery state={state} />
           ) : (

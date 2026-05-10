@@ -1,5 +1,6 @@
 import React from "react";
 import { getPhaserScene } from "./phaserBridge.js";
+import { locBuilt } from "./locBuilt.js";
 import { Section, CompactOrders } from "./ui/Inventory.jsx";
 import { ToolsGrid } from "./ui/Tools.jsx";
 import { TOOL_BY_KEY } from "./ui/toolRegistry.js";
@@ -79,16 +80,15 @@ export function SidePanel({ state, dispatch, chainInfo }) {
 // ─── Bottom nav ───────────────────────────────────────────────────────────
 
 export function BottomNav({ view, modal, dispatch, state }) {
-  const built = state?.built ?? {};
+  const builtAtLoc = locBuilt(state ?? {});
   const baseItems = [
     { key: "town",        icon: "⌂",   label: "Town" },
     { key: "inventory",   icon: "🎒",  label: "Inventory" },
-    { key: "quests",      icon: "📜",  label: "Quests" },
     { key: "crafting",    icon: "🔨",  label: "Craft" },
     { key: "cartography", icon: "🗺️", label: "Map" },
     { key: "townsfolk",   icon: "👥",  label: "Townsfolk" },
     { key: "tileCollection", icon: "🧩",  label: "Tiles" },
-    ...(built.portal       ? [{ key: "portal", icon: "🔮", label: "Portal" }] : []),
+    ...(builtAtLoc.portal ? [{ key: "portal", icon: "🔮", label: "Portal" }] : []),
   ];
   const items = baseItems;
   const activeKey = modal ? (items.find((i) => i.modal === modal)?.key ?? view) : view;
