@@ -1,5 +1,5 @@
 # The Long Return — Hearthwood Vale
-*Master Living Document, v3*
+*Master Living Document, v3.1*
 
 *A story-driven kingdom-rediscovery game built on a match/chain puzzle engine. Mobile / tablet first. Premium with cosmetic IAP and optional timer-skip gems. No pay-to-win.*
 
@@ -277,6 +277,163 @@ No NG+. No carried benefits to fresh starts. The endgame is keeping your kingdom
 6. **Log out.** Come back in 4 hours or tomorrow.
 
 Total: 5–15 minutes per session.
+
+## XVI. Economy and Sinks
+
+The game has a deliberate sink network so wealth always has somewhere to go. Resources, currencies, and time all flow into multiple homes.
+
+### Coin sinks
+
+Coin is the broadest-earned currency, so it needs the most outlets.
+
+**Recurring drains (every real-time tick or game-season):**
+- Charter tithes from binding terms (Stone Tithe, Salt Road, etc.)
+- Caravan tariffs on each visit
+- Festival costs (annual Founder's Day, settlement festivals)
+- Building upkeep on tier-3+ structures
+
+**Tier-by-tier progression sinks:**
+- Tool purchases per round (3 tools selected from inventory; some tools cost coin to keep stocked)
+- Building unlocks (each new structure)
+- Building upgrades (Tier 1 → Tier 2 → Tier 3)
+- Founding new settlements (escalating 1.5× per settlement)
+
+**Late-game money holes:**
+- Hearth-Token earnings spent at the Old Capital
+- Sister-hold investments (boost yields from pledged holds)
+- Decorations (cosmetic but stat-bearing, dozens of slots, scaling cost)
+- Memorial decorations (Bram's brother cairn, Tomas's bench, the Banner)
+- The Banner itself (rebuildable with different emblem at high cost)
+
+### Raw resource sinks
+
+Each resource has outflow so granaries don't sit full.
+
+- **Crafting chains** — grain → bread → festival loaf → wedding pie. Each step consumes the previous.
+- **Building construction** — wood, stone, iron all burned by builds.
+- **Charter audits** — Frostmaw demands logs and forged hinges; the Drake demands stone and coal.
+- **Expedition food costs** — bread, cured meat, apples consumed for turn count.
+- **Hearth-Token requirements** — Old Capital invocation consumes some resources beyond just the tokens.
+- **Storage caps** — granaries have hard ceilings (Tier 1: 200; Tier 2: 500; Tier 3: 1200). Overflow rots.
+- **Hazard losses** — biome hazards in rounds can destroy gathered tiles. Bad management = lost resources, which is itself a sink.
+
+### Embers sinks
+
+- **Spiritual boon tree** — every Coexist-unlocked boon costs Embers.
+- **Keeper offerings** — each Coexisted keeper accepts periodic offerings for continued favor.
+- **Almanac stanzas** — unlocking Wren's full book costs Embers per stanza.
+- **NPC bond gifts** — tier-2 gifts at Bond 8+ cost Embers, not just coin.
+- **Festival blessings** — Founder's Day annual spend for permanent passives.
+- **Healing rituals** — Liss's Chapel uses Embers per use of certain spells.
+
+### Ingots sinks
+
+- **Industrial boon tree** — every Drive-Out-unlocked boon costs Ingots.
+- **High-tier crafting** — steel, alloys, glassworks recipes consume Ingots + raw metal.
+- **Tool tier upgrades** — basic rake → iron rake → steel rake each consumes Ingots.
+- **Conscripted labor** — Standing Army boon costs Ingots per worker per game-season.
+- **Sovereign-tier construction** — late-game forge buildings need Ingots to build and operate.
+
+### Time / turn sinks (the most fundamental)
+
+These run beneath every other sink. Wealth is useless if you can't *act*.
+
+- **Per-round turn budget** — every chain costs one turn; suboptimal chains are wasted yield.
+- **Real-time building ticks** — 4-hour wait or gem-skip; passive bottleneck on tools and refined goods.
+- **Expedition food spend** — turns themselves are bought with food, which is bought with farming time.
+- **Settlement founding gate** — new settlements require previous completion, time-gating expansion.
+
+### Cross-settlement economy notes
+
+Because resources, currencies, and tools are shared across all settlements:
+- A player with 3 well-developed settlements has 3× the building tick output. Production scales with portfolio.
+- Specialization is the natural play: a farm settlement produces food for expeditions; a mine produces iron for tools.
+- The shared pool means no settlement is "wasted" investment — even an old settlement keeps contributing to the kingdom's economy via real-time ticks while you focus elsewhere.
+
+### The always-something-to-spend-on arc
+
+- **Early** (first settlement): tools, first apprentices, first buildings. Coin is tight; food is the bottleneck.
+- **Mid** (2–3 settlements): boons unlock, building tiers compete for spend, charter audits drain on schedule.
+- **Late** (post-Old Capital): Hearth-Token-gated content, sister-hold investments, decoration economy, memorial costs.
+- **Sandbox**: Founder's Day cycles, Quiet Years crises (resource demand spikes), Banner rebuilds, prestige.
+
+The whole loop should feel like there's always one more thing you want and one fewer coin than you need. That tension is the game.
+
+## XVII. Meta-Progression Carryover
+
+When you found a new settlement, **almost everything resets** — buildings, NPCs (different names/arcs), resources for that settlement's local supply, choices, story state, boons unlocked for that settlement's hearth.
+
+But a small set of meta-progression items carry across **all** your settlements as kingdom-wide unlocks:
+
+### Carries across settlements (meta-progression)
+
+- **Achievements and lifetime stats** — "Total hearths lit across all kingdoms," "Most consecutive Coexists," "Longest single expedition." Trophy-level meta-progression for prestige.
+- **Cosmetic unlocks** — banner emblem styles, decoration patterns, NPC outfit variants, building visual variants. Earn once, available everywhere. Purely aesthetic.
+- **Almanac knowledge** — lore stanzas unlocked through any Wren in any settlement stay "known" in your overall codex. Each new settlement's Wren still dictates them fresh (you experience the moment), but you can fast-skip if you've heard them before.
+- **Recipes** — once Mira has taught you festival loaves in any settlement, future Miras start with festival loaves available (no need to re-bond to 5). Bram's heirloom recipes, Liss's tonics, etc., all carry similarly.
+- **Tutorial skip option** — after completing the first settlement's onboarding, subsequent settlements offer "skip tutorial" prompts at appropriate moments. The lighter onboarding becomes lighter still.
+- **Settlement scouting** — once you've completed at least one settlement of a type, you can preview that type's biome options and likely hazards before founding a new one. (Players new to that type get a blind founding choice.)
+- **The shared inventory itself** — all resources, tools, items, coin, Embers, and Ingots pool into a single kingdom-wide stockpile from settlement 1 onward.
+
+### Does NOT carry across settlements (per-settlement state)
+
+- All buildings (rebuild from scratch every time)
+- All NPCs (different names, different arcs)
+- All boons unlocked for that settlement's hearth (zone-specific; tied to that specific Coexist/Drive Out choice)
+- Settlement-specific story flags (the Stranger at the Gate fires per settlement, etc.)
+- Charter terms accepted (each settlement has its own Charter relationship)
+
+The split is intentional: **what's mechanical and progression-coded stays per-settlement; what's narrative knowledge or aesthetic carries forward.** Players retain the *feeling* of expertise without flattening the kingdoms into identical clones.
+
+## XVIII. Order Consequences
+
+Order matters in the new design, though differently than in the original act-gated drafts. With single-type settlements and meta NPC arcs, the order you found and complete settlements has five distinct effects:
+
+### 1. Resource sequencing
+
+What you have on hand when starting a new settlement depends on what previous settlements produced.
+
+- **Farm first** → grain, herds, food. Makes the first Mine or Harbor expedition genuinely viable (you have rations). Makes Mine expeditions deeper from day one.
+- **Mine first** → stone, iron, tools. Makes the first Farm easier (Iron Plow boon, better tools). Makes Harbor settlements faster to build (more refined materials). But Mine expeditions are *shallow* because you have no food yet.
+- **Harbor first** → fish, trade goods. The most unusual opening — you have salt for preservation but no food for expeditions, and no metal for tools. High-texture, low-power start.
+
+### 2. Kingdom-wide NPC arrival timing
+
+The five named NPCs arrive at your **primary settlement** based on triggers from your overall kingdom state. Order affects when:
+
+- **Wren** — always at the start.
+- **Mira** — arrives when you have a bakery built OR 50 grain stored OR a second settlement founded. A farm-first player gets her early.
+- **Tomas** — arrives after Mira AND after the first major expedition (Mine or Harbor) is completed at least once.
+- **Bram** — arrives once a Mine settlement is founded.
+- **Liss** — arrives when herbs become available (a Forest or Marsh farm) OR when a Harbor settlement is founded OR after Frostmaw's first appearance.
+
+Different founding orders give different cast composition early. The NPC whose arc gets the *most* session-time is the one tied to your first founding choices. A Harbor-first player will have Liss arriving very early and her Buried Charter arc may resolve before Mira's Letter even appears.
+
+### 3. Boon tree unlocking sequence
+
+Boons are zone-specific and gated on hearth lit. Order shapes your build:
+
+- Coexist your first farm → unlock farm-spiritual boons before anything else (pollinators, blessing tiles).
+- Drive Out your first mine → unlock mine-industrial boons (steel pick, sapper's charge).
+- A mixed early-game player unlocks a *splash* of boons across both trees; a pure-path player goes deep in one early.
+
+This affects what your puzzle play feels like for the first 5–10 hours. Some players will deliberately mix to gain access to one boon they want from each tree.
+
+### 4. Currency proportions
+
+The Coexist / Drive Out choices across your settlements determine your Ember vs Ingot ratio for the entire game (plus non-zone income). A player who Coexisted their first three settlements has accumulated Embers and very few Ingots. They can buy spiritual boons widely but industrial ones slowly. The opposite for pure Drive Out players.
+
+### 5. The Ember reads your record
+
+At the Old Capital finale, the Ember (or whatever final manifestation we author) reads back your specific journey:
+
+- Which settlement you founded first
+- Which keepers you Coexisted versus Drove Out
+- Which NPC arcs you completed and how
+- Which side events fired and what you chose
+- The Hollow Folk track everything
+
+Charter renewal options at the finale are gated by this record. A player who Coexisted every keeper may unlock a "Living Charter" renewal option. A player who Drove Out every keeper may unlock a "Sovereign Charter" option. Mixed players get the standard options. Players whose record includes specific moral choices (e.g., took in all the refugees, buried Bram's brother peacefully) may unlock special charter terms only available to that path.
 
 ---
 
@@ -762,6 +919,138 @@ Encountered during a specific weather event at the harbor settlement. The dialog
 > **A: Coexist** — "Sing with me."
 > **B: Drive Out** — "The harbor is my charter."
 
+## V. The Banner Emblem (Sandbox Lock-In)
+
+*Triggered after the Old Capital finale, during the transition to sandbox mode.*
+
+Wren (or the player character, if Wren has retired) approaches the Vale's central tower with the final unfinished pennant.
+
+**Wren / Narrator:** "Every kingdom that finishes one charter and begins the next puts a mark on its keep. The Hollow Folk note it. So do your descendants. Choose what your line stands for now."
+
+**Choice prompt:**
+
+> **A: Wheat sheaf** — *"The line keeps. The line feeds."*
+> **B: Hearth-coal** — *"The line remembers."*
+> **C: Iron hinge** — *"The line endures."*
+> **D: Doves** — *"The line is kind."*
+> **E: Salt rope** — *"The line trades fairly."*
+> **F: Hollow door** — *"The line keeps faith with what it does not understand."*
+> **G: Old map** — *"The line knows where it has been."*
+> **H: Your name engraved** — *(only if you've completed all three settlement types AND maxed all five NPC bonds)*
+
+### Mechanical effects
+
+Each emblem grants a permanent passive that persists across all settlements in sandbox mode:
+
+- **Wheat sheaf** — +1 farm yield per round, across all farm settlements.
+- **Hearth-coal** — +1 Almanac stanza capacity. Wren can dictate one additional layer of lore.
+- **Iron hinge** — +1 forge tick output per real-world day.
+- **Doves** — +25% NPC bond gain per gift.
+- **Salt rope** — +10% market margins on every transaction.
+- **Hollow door** — Once per real-world week, a Hollow Folk gift appears (rune fragment, rare seed, or sealed letter).
+- **Old map** — +1 cartography hint per game-season (reveals zone biomes before founding).
+- **Your name engraved** — Purely prestigious. All NPCs reference your name in dialogue. No mechanical bonus.
+
+### Visual / narrative consequences
+
+The chosen emblem appears:
+- On the Vale's central keep banner (visible in every screenshot)
+- On caravan letterhead
+- On the sandbox splash screen when loading any settlement
+- Engraved on the Hearth-Tokens displayed in the Kingdoms hub
+- Referenced by all visiting descendants in sandbox
+
+The Banner can be **changed** later (after a one-time founding cost penalty), but the original choice is preserved in the kingdom's record. The Ember at the Old Capital, if revisited, will note both your original and current banner.
+
+## VI. The Decision Spine — Categorized Summary
+
+The game's decisions fall into six categories. This is the **taxonomy framework** — a tool for organizing choices as content is added, not a fixed enumeration. Each category serves a different design purpose.
+
+### Category 1: Spine choices (one per settlement; define the kingdom)
+
+The major forks that every playthrough must traverse. These are the choices that make two playthroughs feel genuinely different.
+
+- **Settlement name** (at founding) — appears in HUD, letters, finale dialogue.
+- **Biome choice** (at founding) — Prairie/Forest/Marsh/Highland or Mountain/Tundra/Volcanic/Deep Cave or Coastal/Coral/Arctic/Tropical. Determines hazards.
+- **Specialization** (via early building investment) — Crops/Animals/Forestry/Mixed or Stone/Metal/Gem or Fish/Treasure/Trade.
+- **The Hearth Choice — Coexist or Drive Out** (after keeper challenge rounds) — final, defining mechanical and narrative fork.
+
+Total per settlement: 4 spine choices. Across a minimum-viable kingdom (3 settlements): 12 spine choices. Across an ambitious portfolio (6+ settlements): 24+.
+
+### Category 2: Major dilemmas (one-time moral choices)
+
+Kingdom-wide decisions tied to NPC bond beats. Fire once across the entire game per player.
+
+- **Bram's Brother's Tools** (Bond 8 beat) — Bury / Forge to knife / Forge to poker / Give unaltered.
+- **Mira's Letter** (Bond 8 beat) — Encourage to invite / Go decide in person / Stay silent / Ask about her dough.
+- **Liss's Buried Charter** (Bond 8 beat) — Accept original Pact / Propose new terms / Ask what founders would do / Ask about Driven-Out keepers.
+- **The Old Capital final encounter** — Charter renewal terms (TBD specifics; gated by earlier choices).
+
+These are the choices the Ember reads back at the finale.
+
+### Category 3: Recurring rituals (small choices that stack)
+
+Fire many times across the game. Cumulative effect builds personality.
+
+- **Tomas's Lane Naming** (per building placed) — Accept his name / Request own / Decline politely.
+- **Gift Tradition** (at each Bond threshold crossing 5/8/10) — Public ritual / Private gift / Send to a sister hold.
+- **Daily quest acceptance** (per real-time day) — Which quests to take, which to skip; cumulative reputation.
+
+### Category 4: Personal choices (quieter stakes)
+
+Smaller decisions that texture character relationships without major mechanical consequences.
+
+- **Liss's Faith** (mid-game) — Public chapel / Private oratory / Decline.
+- **Pip's Future** — placeholder for adolescent NPC arc; specifics TBD if Pip becomes a character.
+- **Frostmaw's Gift** (after defeating him) — Winter ration / Frost-hound / Cold word / Refuse.
+- **Wila's Decoration Charter** — placeholder for visual aesthetic choice; specifics TBD.
+- **Mira's Recipe Choice** (Bond 5) — Festival loaf / Mother's pie / Stranger's loaf as the kingdom's signature.
+
+### Category 5: Sandbox lock-ins (post-finale, define the epilogue)
+
+Set during or after the Old Capital sequence. Shape the tone of the entire post-game.
+
+- **Wren's Final Question** — How do you describe what you've built? Debt repaid / Home / Starting place / Mine. Locks sandbox tone.
+- **The Banner Emblem** (this section) — Wheat / Hearth-coal / Iron hinge / Doves / Salt rope / Hollow door / Old map / Your name engraved.
+- **Tomas's Final Rest** (player-triggered) — Where to bury, when to grieve. Earns memorial decoration.
+
+### Category 6: Consequence webs (emergent — flag combinations)
+
+These aren't authored choices — they're moments that fire only when specific earlier flags align. They make sandbox feel like the world remembers what you did.
+
+- **Refused stranger + high Liss bond** → Liss returns from the road with the stranger's body for burial. Heals guilt flag.
+- **Hoarded grain + Memory Tithe charter** → Inscription on the keep permanently reads "the line that fed itself first."
+- **Drive Out every keeper + Sovereign Charter** → Hollow Folk visit only once per century in sandbox. The kingdom is on its own.
+- **Coexist every keeper + Living Charter** → Annual keeper convocation festival becomes available.
+
+Web events are content that can be added as the game grows. The framework supports unlimited future web events as new flag combinations become interesting.
+
+### Side events (conditional, off the spine)
+
+These are listed in Part 5 (Quests) but fit the taxonomy as a hybrid of Categories 2 and 4:
+
+- The Stranger at the Gate
+- The Refugees in Winter
+- The Wandering Bard
+- The Ghost Story
+- The Lost Mount
+- The Caravan Choice
+
+Each is a self-contained multi-choice event that can fire conditionally and leaves a flag for future emergent webs.
+
+### Using the taxonomy
+
+As new content is designed, place each new decision in one of the six categories above. This helps balance the game:
+
+- Too few **spine** choices → playthroughs feel identical.
+- Too many **major dilemmas** → emotional fatigue, every choice feels heavy.
+- Too few **recurring rituals** → no texture of accumulated identity.
+- Too few **personal** choices → characters feel transactional.
+- No **sandbox locks** → endgame feels unfinished.
+- No **consequence webs** → emergent surprises don't exist.
+
+The original v1 proposal had 27 named decisions (8 spine, 6 major, 5 recurring, 5 personal, 3 sandbox, 5 webs). v3 has roughly half that, deliberately scoped down. Future expansions and content updates can add new items in each category without breaking the framework.
+
 ---
 
 # PART 5: QUESTS
@@ -1092,4 +1381,4 @@ This section catalogs the technical systems needed to support the narrative cont
 
 ---
 
-*End of Master Living Document v3. This document supersedes v2. All future iterations build from here.*
+*End of Master Living Document v3.1. This document supersedes v3. All future iterations build from here.*
