@@ -36,7 +36,7 @@ import * as market from "./features/market/slice.js";
 import * as castle from "./features/castle/slice.js";
 import * as zones from "./features/zones/slice.js";
 import * as workers from "./features/workers/slice.js";
-import { ZONES } from "./features/zones/data.js";
+import { ZONES, settlementFoundingCost, isSettlementFounded } from "./features/zones/data.js";
 import { FIRE_HAZARD_ENABLED } from "./featureFlags.js";
 import { loadSavedState, persistState, clearSave } from "./state/persistence.js";
 export { loadSavedState, persistStateNow, persistState, flushPersistState, clearSave } from "./state/persistence.js";
@@ -265,6 +265,10 @@ export function createFreshState(overrides) {
     // (the UI falls back to the static MAP_NODES name). The opening beat lets
     // the player name `home`; future founding flows add more entries.
     zoneNames: { home: "" },
+    // Phase 4 — per-zone settlement status. `home` is founded for free; other
+    // zones must be founded (escalating cost) before they count toward the
+    // kingdom. `completed` is derived (see settlementCompleted), not stored.
+    settlements: { home: { founded: true } },
     influence: 0,
     bubble: null,
     modal: null,
@@ -281,11 +285,12 @@ export function createFreshState(overrides) {
     season: 0,
     runes: 0,
     runeStash: 0,
-    // Phase 2 — meta-currencies (kingdom-reframe). These are inert containers
-    // for now: Embers are earned by Coexisting with hearth-keepers, Core Ingots
-    // by Driving them out (Phase 3 fork), and both are spent on per-path boon
-    // trees. Gems are the real-time-crafting skip currency (Phase 5). Heirlooms
-    // are dedicated per-biome story tokens (distinct from `runes`).
+    // Meta-currencies (kingdom-reframe). Embers / Core Ingots are EARNABLE now
+    // (the Frostmaw hearth-keeper fork, Phase 3b — Coexist → Embers, Drive Out
+    // → Core Ingots). Still DEFERRED: spending them on per-path boon trees
+    // (§4.4), the `gems` real-time-crafting skip currency (Phase 5 — earn +
+    // spend), the `heirlooms` per-biome story tokens (Phase 7), and a HUD
+    // display for any of them.
     embers: 0,
     coreIngots: 0,
     gems: 0,
@@ -993,6 +998,19 @@ function coreReducer(state, action) {
       const zoneId = action.payload?.zoneId ?? action.zoneId ?? state.mapCurrent ?? "home";
       const name = String(action.payload?.name ?? action.name ?? "").trim().slice(0, 24);
       return { ...state, zoneNames: { ...(state.zoneNames ?? {}), [zoneId]: name } };
+    }
+    case "FOUND_SETTLEMENT": {
+      const zoneId = action.payload?.zoneId ?? action.zoneId;
+      if (!zoneId || !ZONES[zoneId]) return state;            // unknown zone
+      if (isSettlementFounded(state, zoneId)) return state;   // already founded
+      const cost = settlementFoundingCost(state);
+      if ((state.coins ?? 0) < (cost.coins ?? 0)) return state; // can't afford
+      return {
+        ...state,
+        coins: state.coins - (cost.coins ?? 0),
+        settlements: { ...(state.settlements ?? {}), [zoneId]: { founded: true } },
+        bubble: { id: Date.now(), npc: "wren", text: `${zoneId} is a settlement now. People will come.`, ms: 2200 },
+      };
     }
     case "OPEN_MODAL":
       return { ...state, modal: action.modal, settingsTab: action.settingsTab ?? 'main' };
