@@ -1,49 +1,66 @@
-// Items — discrete objects that sit in your inventory (one or many of each:
-// a rake, a comb, a table…). A "tool" is just an item with a power: the
-// Effect / Target / Anim fields are what make it a tool.
+// Resources & Currency — the "counts of stuff" you accumulate. Two flavours,
+// both just numbers that go up:
+//   • Resources  — fungible amounts held in the per-item inventory
+//                  (kind: "resource" — grain, wood, eggs, crafted goods…).
+//                  These have a chain (grain → flour → bread), a colour, a
+//                  sale value, and can be crafting ingredients.
+//   • Currencies — kingdom-wide counters on the root game state (gold / runes
+//                  / embers / …). Not entries in the ITEMS registry, so they
+//                  are listed for reference rather than edited here.
 //
-// Tiles (board pieces) and resources (currency-like counts) are NOT items —
-// they each have their own tab. This tab only ever lists kinds that aren't
-// "tile" or "resource".
+// Tiles (board pieces) and items (inventory objects / tools) are separate
+// concepts with their own tabs.
 
 import { useState, useMemo } from "react";
 import { ITEMS, RECIPES } from "../../constants.js";
 import {
-  COLORS, NumberField, TextField, TextArea, ColorField,
+  COLORS, NumberField, TextField, TextArea, Select, ColorField,
   SmallButton, Pill, Card, SearchBar, TileSwatch,
 } from "../shared.jsx";
 import Icon from "../../ui/Icon.jsx";
 
-const FILTERS = [
-  { id: "all",   label: "All items", icon: "ui_build" },
-  { id: "tool",  label: "Tools",     icon: "rake"     },
-  { id: "plain", label: "Plain",     icon: "ui_star"  },
+const BIOME_FILTERS = [
+  { value: "all",  label: "All biomes" },
+  { value: "farm", label: "Farm"       },
+  { value: "mine", label: "Mine"       },
+  { value: "fish", label: "Harbor"     },
+  { value: "none", label: "No biome"   },
 ];
 
-// Tiles and resources are excluded — those are separate concepts/tabs.
-function isItem(r) {
-  return r.kind !== "tile" && r.kind !== "resource";
-}
+// Kingdom-wide currency counters. These are root-state numbers, not entries in
+// the ITEMS registry, so there is nothing to patch — they're listed up top so
+// the "counts of stuff" picture is complete.
+const CURRENCIES = [
+  { icon: "🪙", label: "Gold (coins)",    note: "Main coin currency — selling resources, filling orders, daily rewards." },
+  { icon: "🔮", label: "Runes",           note: "From Mysterious Ore in the mine; spent on mine-entry tiers." },
+  { icon: "🔥", label: "Embers",          note: "Kingdom currency earned by Coexisting with a biome keeper." },
+  { icon: "🪨", label: "Core Ingots",     note: "Kingdom currency earned by Driving Out a biome keeper." },
+  { icon: "💎", label: "Gems",            note: "Spent to skip the real-time crafting-queue timer." },
+  { icon: "🏺", label: "Heirloom tokens", note: "Per-biome story tokens: Heirloom Seed · Pact Iron · Tidesinger Pearl." },
+];
 
-// What makes an item a "tool" is that it has a power — a wired effect.
-function isTool(r) {
-  return r.kind === "tool" || !!r.effect;
-}
-
-export default function ItemsTab({ draft, updateDraft }) {
-  const [filter, setFilter] = useState("all");
+export default function ResourcesTab({ draft, updateDraft }) {
+  const [biome, setBiome] = useState("all");
   const [search, setSearch] = useState("");
 
-  const itemEntries = useMemo(
+  const resourceEntries = useMemo(
     () => Object.entries(ITEMS)
-      .filter(([, r]) => isItem(r))
+      .filter(([, r]) => r.kind === "resource")
       .sort((a, b) => a[0].localeCompare(b[0])),
     [],
   );
 
-  const filtered = itemEntries.filter(([key, r]) => {
-    if (filter === "tool" && !isTool(r)) return false;
-    if (filter === "plain" && isTool(r)) return false;
+  // A chain only ever upgrades into a tile or a resource — never an item.
+  const nextOptions = useMemo(() => {
+    const keys = Object.keys(ITEMS)
+      .filter((k) => ITEMS[k].kind === "tile" || ITEMS[k].kind === "resource")
+      .sort();
+    return [{ value: "", label: "— none (terminal) —" }, ...keys.map((k) => ({ value: k, label: k }))];
+  }, []);
+
+  const filtered = resourceEntries.filter(([key, r]) => {
+    if (biome === "none" && r.biome) return false;
+    if (biome !== "all" && biome !== "none" && r.biome !== biome) return false;
     if (search) {
       const q = search.toLowerCase();
       if (!key.toLowerCase().includes(q) && !(r.label || "").toLowerCase().includes(q)) return false;
@@ -78,35 +95,41 @@ export default function ItemsTab({ draft, updateDraft }) {
 
   return (
     <div className="flex flex-col gap-3">
-      {/* Filter (All / Tools / Plain) + search */}
-      <div className="flex items-center gap-2 flex-wrap">
-        <div className="flex gap-1 flex-shrink-0">
-          {FILTERS.map((b) => (
-            <button
-              key={b.id}
-              onClick={() => setFilter(b.id)}
-              className="px-3 py-1.5 text-[12px] font-bold rounded-lg border-2 transition-colors flex items-center gap-1"
-              style={
-                filter === b.id
-                  ? { background: COLORS.ember, borderColor: COLORS.emberDeep, color: "#fff" }
-                  : { background: COLORS.parchmentDeep, borderColor: COLORS.border, color: COLORS.inkLight }
-              }
-            >
-              <Icon iconKey={b.icon} size={16} /> {b.label}
-            </button>
+      {/* Currencies — kingdom-wide counters, reference only */}
+      <Card>
+        <div className="text-[10px] font-bold uppercase tracking-wide mb-1.5" style={{ color: COLORS.inkSubtle }}>
+          Currencies
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-5 gap-y-1">
+          {CURRENCIES.map((c) => (
+            <div key={c.label} className="flex items-start gap-2 text-[11px]" style={{ color: COLORS.inkLight }}>
+              <span className="text-[14px] leading-none flex-shrink-0" aria-hidden>{c.icon}</span>
+              <span><span className="font-bold">{c.label}</span> — {c.note}</span>
+            </div>
           ))}
         </div>
-        <div className="flex-1 min-w-[200px]">
-          <SearchBar value={search} onChange={setSearch} placeholder="Filter items by key or label…" />
+        <div className="text-[10px] italic mt-1.5" style={{ color: COLORS.inkSubtle }}>
+          Counters on the root game state — listed for reference, not edited here.
         </div>
-        <Pill>{filtered.length} of {itemEntries.length}</Pill>
-      </div>
+      </Card>
 
+      {/* Resources — editable ITEMS entries with kind: "resource" */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <div className="text-[11px] font-bold uppercase tracking-wide flex-shrink-0" style={{ color: COLORS.inkSubtle }}>
+          Resources
+        </div>
+        <div className="flex-shrink-0 w-[130px]">
+          <Select value={biome} onChange={setBiome} options={BIOME_FILTERS} />
+        </div>
+        <div className="flex-1 min-w-[200px]">
+          <SearchBar value={search} onChange={setSearch} placeholder="Filter resources by key or label…" />
+        </div>
+        <Pill>{filtered.length} of {resourceEntries.length}</Pill>
+      </div>
       <div className="text-[11px] italic" style={{ color: COLORS.inkSubtle }}>
-        Discrete objects you carry in your inventory. A tool is just an item with a power — the Effect / Target / Anim fields below. (Tiles and resources are not items; see their own tabs.)
+        Fungible amounts held in your inventory — raw goods, intermediates, and crafted products. Many chain into a next tier (grain → flour → bread).
       </div>
 
-      {/* Items list */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
         {filtered.map(([key, r]) => {
           const patch = draft.items[key] || {};
@@ -114,15 +137,11 @@ export default function ItemsTab({ draft, updateDraft }) {
             label:       patch.label       ?? r.label,
             color:       patch.color       ?? r.color,
             value:       patch.value       ?? r.value,
+            next:        patch.next        ?? r.next ?? "",
             desc:        patch.desc        ?? r.desc ?? "",
             description: patch.description ?? r.description ?? "",
-            effect:      patch.effect      ?? r.effect ?? "",
-            target:      patch.target      ?? r.target ?? "",
-            anim:        patch.anim        ?? r.anim ?? "",
-            ms:          patch.ms          ?? r.ms ?? 0,
           };
           const dirty = Object.keys(patch).length > 0;
-          const tool = isTool(r);
           const craftedBy = allCraftingMethods[key] || [];
 
           return (
@@ -130,15 +149,11 @@ export default function ItemsTab({ draft, updateDraft }) {
               <div className="flex gap-3">
                 <TileSwatch color={eff.color || 0xdddddd} iconKey={key} size={48} />
                 <div className="flex-1 min-w-0 grid grid-cols-2 gap-x-4 gap-y-1.5">
-                  {/* Key (read-only) */}
                   <div className="col-span-2 flex items-center gap-2 mb-1">
-                    <code
-                      className="font-mono text-[11px] px-1.5 py-0.5 rounded"
-                      style={{ background: COLORS.parchmentDeep, color: COLORS.ember }}
-                    >
+                    <code className="font-mono text-[11px] px-1.5 py-0.5 rounded" style={{ background: COLORS.parchmentDeep, color: COLORS.ember }}>
                       {key}
                     </code>
-                    <Pill>{tool ? "tool" : (r.kind || "item")}</Pill>
+                    <Pill>{r.kind}</Pill>
                     {r.biome && <Pill>{r.biome}</Pill>}
                     {dirty && <Pill color="#fff" bg={COLORS.ember}>edited</Pill>}
                     {dirty && (
@@ -156,38 +171,15 @@ export default function ItemsTab({ draft, updateDraft }) {
                     <Label>Sale value</Label>
                     <NumberField value={eff.value} min={0} max={9999} onChange={(v) => patchItem(key, { value: v })} width={80} />
                   </div>
+                  <div>
+                    <Label>Color</Label>
+                    <ColorField value={eff.color} onChange={(v) => patchItem(key, { color: v })} />
+                  </div>
+                  <div>
+                    <Label>Next-tier target</Label>
+                    <Select value={eff.next} options={nextOptions} onChange={(v) => patchItem(key, { next: v })} />
+                  </div>
 
-                  {/* Plain items carry a colour swatch; tools draw their own glyph. */}
-                  {!tool && (
-                    <div>
-                      <Label>Color</Label>
-                      <ColorField value={eff.color} onChange={(v) => patchItem(key, { color: v })} />
-                    </div>
-                  )}
-
-                  {/* The power — having one of these is what makes an item a tool. */}
-                  {tool && (
-                    <>
-                      <div>
-                        <Label>Effect (power)</Label>
-                        <TextField value={eff.effect} onChange={(v) => patchItem(key, { effect: v })} />
-                      </div>
-                      <div>
-                        <Label>Target</Label>
-                        <TextField value={eff.target} onChange={(v) => patchItem(key, { target: v })} />
-                      </div>
-                      <div>
-                        <Label>Anim</Label>
-                        <TextField value={eff.anim} onChange={(v) => patchItem(key, { anim: v })} />
-                      </div>
-                      <div>
-                        <Label>Anim MS</Label>
-                        <NumberField value={eff.ms} min={0} max={5000} onChange={(v) => patchItem(key, { ms: v })} width={80} />
-                      </div>
-                    </>
-                  )}
-
-                  {/* Crafting recipes read-only summary */}
                   <div className="col-span-2">
                     <Label>Crafting Recipes</Label>
                     {craftedBy.length === 0 ? (
@@ -209,7 +201,6 @@ export default function ItemsTab({ draft, updateDraft }) {
                     )}
                   </div>
 
-                  {/* Description */}
                   <div className="col-span-2">
                     <Label>Description</Label>
                     <TextArea
@@ -226,7 +217,7 @@ export default function ItemsTab({ draft, updateDraft }) {
         })}
         {filtered.length === 0 && (
           <div className="col-span-full text-center py-8 text-[12px] italic" style={{ color: COLORS.inkSubtle }}>
-            No items match your filter.
+            No resources match your filter.
           </div>
         )}
       </div>
