@@ -7,7 +7,7 @@ describe("Poultryman apprentice (bird category threshold reduce)", () => {
   it("is registered with the expected shape", () => {
     const w = APPRENTICES.find((a) => a.id === "poultryman");
     expect(w).toBeDefined();
-    expect(w.name).toBe("Idris");
+    expect(w.name).toBe("Poultryman");
     expect(w.maxCount).toBe(2);
     expect(w.abilities).toEqual([
       { id: "threshold_reduce_category", params: { category: "bird", amount: 2 } },

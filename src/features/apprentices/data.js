@@ -15,11 +15,10 @@
 export const TOWNSFOLK = [
   {
     id: "hilda",
-    name: "Hilda",
+    name: "Farmhand",
     role: "Farmhand",
     iconKey: "ui_farmer",
     color: "#4f8c3a",
-    wage: 15,
     hireCost: { worker: 1, grass_hay: 6, bread: 8 },
     maxCount: 3,
     abilities: [
@@ -30,11 +29,10 @@ export const TOWNSFOLK = [
   },
   {
     id: "pip",
-    name: "Pip",
+    name: "Forager",
     role: "Forager",
     iconKey: "grass_meadow",
     color: "#7dc45a",
-    wage: 12,
     hireCost: { worker: 1, berry: 4, bread: 6 },
     maxCount: 2,
     abilities: [
@@ -45,11 +43,10 @@ export const TOWNSFOLK = [
   },
   {
     id: "wila",
-    name: "Wila",
+    name: "Cellarer",
     role: "Cellarer",
     iconKey: "honey",
     color: "#c8923a",
-    wage: 20,
     hireCost: { worker: 1, berry_jam: 3, bread: 8 },
     maxCount: 2,
     abilities: [
@@ -60,11 +57,10 @@ export const TOWNSFOLK = [
   },
   {
     id: "tuck",
-    name: "Tuck",
+    name: "Lookout",
     role: "Lookout",
     iconKey: "ui_star",
     color: "#3a6a9a",
-    wage: 20,
     hireCost: { worker: 1, bread: 6 },
     maxCount: 1,
     abilities: [
@@ -75,11 +71,10 @@ export const TOWNSFOLK = [
   },
   {
     id: "osric",
-    name: "Osric",
+    name: "Smith Apprentice",
     role: "Smith Apprentice",
     iconKey: "ui_star",
     color: "#3a3a3a",
-    wage: 40,
     hireCost: { worker: 1, mine_ingot: 4, bread: 8 },
     maxCount: 2,
     abilities: [
@@ -90,11 +85,10 @@ export const TOWNSFOLK = [
   },
   {
     id: "dren",
-    name: "Dren",
+    name: "Miner",
     role: "Miner",
     iconKey: "ui_build",
     color: "#7a8490",
-    wage: 25,
     hireCost: { worker: 1, mine_stone: 6, bread: 6 },
     maxCount: 2,
     abilities: [
@@ -105,11 +99,10 @@ export const TOWNSFOLK = [
   },
   {
     id: "brenna",
-    name: "Brenna",
+    name: "Vegetable Picker",
     role: "Vegetable Picker",
     iconKey: "ui_star",
     color: "#7a9a3a",
-    wage: 25,
     hireCost: { worker: 1, grass_hay: 10, bread: 20, mine_stone: 10, mine_ingot: 15 },
     maxCount: 4,
     abilities: [
@@ -123,11 +116,10 @@ export const TOWNSFOLK = [
 
   {
     id: "fenna",
-    name: "Fenna",
+    name: "Fruit Picker",
     role: "Fruit Picker",
     iconKey: "ui_star",
     color: "#c84a3a",
-    wage: 30,
     hireCost: { worker: 1, grass_hay: 6, bread: 10, mine_stone: 12, soup: 2 },
     maxCount: 2,
     // Catalog: 7 fruit = 1 pie at max (base 7 → max 6).
@@ -139,11 +131,10 @@ export const TOWNSFOLK = [
   },
   {
     id: "garrick",
-    name: "Garrick",
+    name: "Herder",
     role: "Herder",
     iconKey: "ui_star",
     color: "#a86838",
-    wage: 35,
     hireCost: { worker: 1, grass_hay: 4, bread: 10, mine_stone: 12, meat: 16 },
     maxCount: 4,
     // Catalog: 5 herd = 1 meat at max (base 5 → max 4).
@@ -155,11 +146,10 @@ export const TOWNSFOLK = [
   },
   {
     id: "elsa",
-    name: "Elsa",
+    name: "Dairywoman",
     role: "Dairywoman",
     iconKey: "milk",
     color: "#8aa6c4",
-    wage: 40,
     hireCost: { worker: 1, grass_hay: 6, soup: 3, meat: 3, mine_ingot: 15 },
     maxCount: 2,
     // Catalog: 6 cattle = 1 milk at max (base 6 → max 5).
@@ -171,11 +161,10 @@ export const TOWNSFOLK = [
   },
   {
     id: "rusk",
-    name: "Rusk",
+    name: "Rancher",
     role: "Rancher",
     iconKey: "ui_star",
     color: "#a85a3a",
-    wage: 45,
     // Mounts → Horseshoe is a long chain (10) and a high-value product. Hire
     // cost mirrors catalog tier: heavy on bread/stone with a soup-tier check.
     hireCost: { worker: 1, grass_hay: 9, bread: 9, mine_stone: 12, soup: 9 },
@@ -197,11 +186,10 @@ export const TOWNSFOLK = [
 
   {
     id: "tilda",
-    name: "Tilda",
+    name: "Grain Trader",
     role: "Grain Trader",
     iconKey: "grass_hay",
     color: "#c8923a",
-    wage: 25,
     hireCost: { worker: 1, bread: 8, mine_stone: 10, mine_coal: 10 },
     maxCount: 4,
     // Catalog: 4 grain = 1 vegetable at max. Source category `grain`,
@@ -222,11 +210,10 @@ export const TOWNSFOLK = [
   },
   {
     id: "marin",
-    name: "Marin",
+    name: "Gardener",
     role: "Gardener",
     iconKey: "grass_spiky",
     color: "#7eb83a",
-    wage: 30,
     hireCost: { worker: 1, grass_hay: 8, bread: 16, mine_stone: 12, soup: 4 },
     maxCount: 3,
     // Catalog: 5 vegetable = 1 fruit at max.
@@ -246,11 +233,10 @@ export const TOWNSFOLK = [
   },
   {
     id: "annek",
-    name: "Annek",
+    name: "Orchardist",
     role: "Orchardist",
     iconKey: "ui_star",
     color: "#c84a3a",
-    wage: 35,
     hireCost: { worker: 1, grass_hay: 9, bread: 16, mine_stone: 10, soup: 9 },
     maxCount: 2,
     // Catalog: 6 fruit = 1 flower at max.
@@ -270,11 +256,10 @@ export const TOWNSFOLK = [
   },
   {
     id: "ren",
-    name: "Ren",
+    name: "Farmer",
     role: "Farmer",
     iconKey: "ui_star",
     color: "#5a7a3a",
-    wage: 30,
     hireCost: { worker: 1, bread: 12, mine_stone: 10, meat: 8 },
     maxCount: 4,
     // Catalog: 7 bird = 1 herd animal at max.
@@ -295,11 +280,10 @@ export const TOWNSFOLK = [
 
   {
     id: "poultryman",
-    name: "Idris",
+    name: "Poultryman",
     role: "Poultryman",
     iconKey: "ui_star",
     color: "#a85a3a",
-    wage: 30,
     hireCost: { worker: 1, grass_hay: 6, bread: 12, mine_stone: 8 },
     maxCount: 2,
     abilities: [
@@ -315,7 +299,6 @@ export const TOWNSFOLK = [
     role: "Reaper",
     iconKey: "grass_hay",
     color: "#d8b33e",
-    wage: 28,
     hireCost: { worker: 1, grass_hay: 8, bread: 8, mine_stone: 8 },
     maxCount: 2,
     abilities: [
@@ -327,11 +310,10 @@ export const TOWNSFOLK = [
 
   {
     id: "ivar",
-    name: "Ivar",
+    name: "Beekeeper",
     role: "Beekeeper",
     iconKey: "ui_star",
     color: "#e8a020",
-    wage: 35,
     // No catalog worker for flowers → honey, but the chain length (10) is
     // brutal without help. Beekeeper fills the gap with a modest reduction.
     hireCost: { worker: 1, grass_hay: 6, bread: 8, soup: 2, berry_jam: 4 },
@@ -348,11 +330,10 @@ export const TOWNSFOLK = [
   // Per-hire = effect / maxCount. Pool-weight effects floor to integer.
   {
     id: "canary",
-    name: "Canary",
+    name: "Hazard Spotter",
     role: "Hazard Spotter",
     iconKey: "ui_star",
     color: "#f5c842",
-    wage: 18,
     hireCost: { worker: 1, mine_coke: 4, bread: 6 },
     maxCount: 2,
     // At max hire (2): gas_vent spawn rate −50%. Per hire: −25%.
@@ -364,11 +345,10 @@ export const TOWNSFOLK = [
   },
   {
     id: "geologist",
-    name: "Geologist",
+    name: "Surveyor",
     role: "Surveyor",
     iconKey: "ui_star",
     color: "#8a6a3a",
-    wage: 30,
     hireCost: { worker: 1, mine_ingot: 6, bread: 6 },
     maxCount: 2,
     // At max hire (2): ore +1, gem +1 in pool. 1 hire floors to +0 (0.5 per hire).
@@ -383,11 +363,10 @@ export const TOWNSFOLK = [
   // ── Sea workers — REFERENCE_CATALOG §9 (fish biome) ─────────────────────
   {
     id: "fisherman",
-    name: "Tova",
+    name: "Fisherman",
     role: "Fisherman",
     iconKey: "ui_star",
     color: "#3a6b8a",
-    wage: 30,
     hireCost: { worker: 1, fish_raw: 4, bread: 6, wood_plank: 4 },
     maxCount: 3,
     abilities: [
@@ -398,11 +377,10 @@ export const TOWNSFOLK = [
   },
   {
     id: "trawlerman",
-    name: "Halvor",
+    name: "Trawlerman",
     role: "Trawlerman",
     iconKey: "ui_star",
     color: "#5a4a3a",
-    wage: 28,
     hireCost: { worker: 1, fish_raw: 6, bread: 8, wood_plank: 6 },
     maxCount: 2,
     abilities: [
@@ -414,11 +392,10 @@ export const TOWNSFOLK = [
   },
   {
     id: "boatwoman",
-    name: "Sigrid",
+    name: "Boatwoman",
     role: "Boatwoman",
     iconKey: "ui_star",
     color: "#3a7080",
-    wage: 28,
     hireCost: { worker: 1, fish_raw: 4, bread: 8, wood_plank: 6 },
     maxCount: 2,
     abilities: [
@@ -429,11 +406,10 @@ export const TOWNSFOLK = [
   },
   {
     id: "harpooner",
-    name: "Bjarni",
+    name: "Harpooner",
     role: "Harpooner",
     iconKey: "ui_star",
     color: "#5a3a18",
-    wage: 35,
     hireCost: { worker: 1, fish_raw: 6, bread: 8, mine_ingot: 4 },
     maxCount: 2,
     abilities: [
@@ -444,11 +420,10 @@ export const TOWNSFOLK = [
   },
   {
     id: "oilman",
-    name: "Gunnar",
+    name: "Oilman",
     role: "Oilman",
     iconKey: "ui_star",
     color: "#a86018",
-    wage: 32,
     hireCost: { worker: 1, fish_kelp: 6, bread: 8, wood_plank: 8 },
     maxCount: 2,
     abilities: [
@@ -459,11 +434,10 @@ export const TOWNSFOLK = [
   },
   {
     id: "cook",
-    name: "Magnus",
+    name: "Cook",
     role: "Cook",
     iconKey: "ui_star",
     color: "#a8503a",
-    wage: 32,
     hireCost: { worker: 1, fish_raw: 6, bread: 8, mine_stone: 6 },
     maxCount: 2,
     abilities: [
@@ -474,11 +448,10 @@ export const TOWNSFOLK = [
   },
   {
     id: "chef",
-    name: "Halldis",
+    name: "Chef",
     role: "Chef",
     iconKey: "ui_star",
     color: "#d8b878",
-    wage: 50,
     hireCost: { worker: 1, fish_fillet: 4, milk: 2, bread: 12 },
     maxCount: 1,
     abilities: [
@@ -489,11 +462,10 @@ export const TOWNSFOLK = [
   },
   {
     id: "captain",
-    name: "Olaf",
+    name: "Captain",
     role: "Captain",
     iconKey: "ui_star",
     color: "#3a4a78",
-    wage: 55,
     hireCost: { worker: 1, fish_oil: 3, fish_raw: 8, bread: 12 },
     maxCount: 1,
     abilities: [
@@ -504,11 +476,10 @@ export const TOWNSFOLK = [
   },
   {
     id: "explorer",
-    name: "Sven",
+    name: "Explorer",
     role: "Explorer",
     iconKey: "ui_star",
     color: "#7a5a18",
-    wage: 38,
     hireCost: { worker: 1, fish_raw: 5, bread: 10, mine_stone: 8 },
     maxCount: 2,
     // Niche: extra clams + kelp tiles in the harbor pool. Object-form
@@ -522,11 +493,10 @@ export const TOWNSFOLK = [
   },
   {
     id: "navigator",
-    name: "Astrid",
+    name: "Navigator",
     role: "Navigator",
     iconKey: "ui_star",
     color: "#3a4a78",
-    wage: 38,
     hireCost: { worker: 1, fish_raw: 6, bread: 10, mine_ingot: 4 },
     maxCount: 1,
     // Catalog: extra coins at season end. Mid-tier bump above Tuck (30)
@@ -539,11 +509,10 @@ export const TOWNSFOLK = [
   },
   {
     id: "confectioner",
-    name: "Inga",
+    name: "Confectioner",
     role: "Confectioner",
     iconKey: "ui_star",
     color: "#d8786a",
-    wage: 30,
     hireCost: { worker: 1, fish_kelp: 8, bread: 10, milk: 1 },
     maxCount: 2,
     // Specialist: extra kelp on chains. Speeds the kelp → fish_oil chain.
@@ -555,11 +524,10 @@ export const TOWNSFOLK = [
   },
   {
     id: "deckhand",
-    name: "Rolf",
+    name: "Deckhand",
     role: "Deckhand",
     iconKey: "ui_star",
     color: "#5a4a3a",
-    wage: 18,
     hireCost: { worker: 1, fish_raw: 3, bread: 6, wood_plank: 4 },
     maxCount: 4,
     // Broad, shallow pool boost — sardine + mackerel + kelp each get
@@ -576,11 +544,10 @@ export const TOWNSFOLK = [
   // ── Mine workers — catalog §9 (first batch) ─────────────────────────────
   {
     id: "stone_miner",
-    name: "Yusuf",
+    name: "Stone Miner",
     role: "Stone Miner",
     iconKey: "ui_star",
     color: "#7c8388",
-    wage: 24,
     hireCost: { worker: 1, mine_stone: 8, bread: 6, mine_coal: 4 },
     maxCount: 3,
     // Stacks with Dren on mine_stone — multiple thresholds combine.
@@ -593,11 +560,10 @@ export const TOWNSFOLK = [
   },
   {
     id: "coal_miner",
-    name: "Kira",
+    name: "Coal Miner",
     role: "Coal Miner",
     iconKey: "ui_star",
     color: "#1a1a1a",
-    wage: 28,
     hireCost: { worker: 1, mine_coal: 8, bread: 8, mine_ingot: 2 },
     maxCount: 2,
     abilities: [
@@ -608,11 +574,10 @@ export const TOWNSFOLK = [
   },
   {
     id: "jeweler",
-    name: "Adelmo",
+    name: "Jeweler",
     role: "Jeweler",
     iconKey: "ui_star",
     color: "#65e5ff",
-    wage: 50,
     hireCost: { worker: 1, mine_gem: 4, mine_ingot: 4, bread: 12 },
     maxCount: 2,
     // Trims the high-tier gem chain (5 → 3 at max). Pairs naturally with
@@ -625,11 +590,10 @@ export const TOWNSFOLK = [
   },
   {
     id: "digger",
-    name: "Bertil",
+    name: "Digger",
     role: "Digger",
     iconKey: "ui_devtools",
     color: "#7a6850",
-    wage: 18,
     hireCost: { worker: 1, mine_dirt: 8, bread: 6 },
     maxCount: 4,
     // Broad pool boost: more dirt + stone tiles in the rotation.
@@ -642,11 +606,10 @@ export const TOWNSFOLK = [
   },
   {
     id: "excavator",
-    name: "Mira_E",
+    name: "Excavator",
     role: "Excavator",
     iconKey: "ui_star",
     color: "#8a6a3a",
-    wage: 35,
     hireCost: { worker: 1, mine_stone: 10, bread: 8, mine_coke: 4 },
     maxCount: 2,
     // Bonus yield on cobble: +1 cobble per stone-chain (whose upgrade is cobble).
@@ -660,11 +623,10 @@ export const TOWNSFOLK = [
   // ── Mine workers — catalog §9 (second batch) ────────────────────────────
   {
     id: "iron_miner",
-    name: "Bask",
+    name: "Iron Miner",
     role: "Iron Miner",
     iconKey: "ui_star",
     color: "#a89878",
-    wage: 32,
     hireCost: { worker: 1, mine_ore: 6, bread: 8, mine_coal: 4 },
     maxCount: 2,
     // Adds two ore tiles to the spawn pool — pairs with Osric's threshold cut.
@@ -676,11 +638,10 @@ export const TOWNSFOLK = [
   },
   {
     id: "silver_miner",
-    name: "Eira",
+    name: "Silver Miner",
     role: "Silver Miner",
     iconKey: "ui_star",
     color: "#d8d8d0",
-    wage: 45,
     hireCost: { worker: 1, mine_gold: 2, bread: 12, mine_ingot: 4 },
     maxCount: 1,
     // Catalog notes silver but our base mine carries gold; gold is rare in
@@ -693,11 +654,10 @@ export const TOWNSFOLK = [
   },
   {
     id: "engineer",
-    name: "Tarek",
+    name: "Engineer",
     role: "Engineer",
     iconKey: "ui_devtools",
     color: "#5a6066",
-    wage: 38,
     hireCost: { worker: 1, mine_stone: 8, mine_ingot: 4, bread: 10 },
     maxCount: 2,
     // Mid-tier bonus: extra stone per stone chain — pairs with Stone Miner.
@@ -709,11 +669,10 @@ export const TOWNSFOLK = [
   },
   {
     id: "alchemist",
-    name: "Yana",
+    name: "Alchemist",
     role: "Alchemist",
     iconKey: "ui_star",
     color: "#5a8028",
-    wage: 42,
     hireCost: { worker: 1, mine_coal: 6, mine_coke: 2, bread: 10 },
     maxCount: 2,
     // Coal yield bonus — gives the coal chain (used by Castle Coal need) a
@@ -726,11 +685,10 @@ export const TOWNSFOLK = [
   },
   {
     id: "sculptor",
-    name: "Lior",
+    name: "Sculptor",
     role: "Sculptor",
     iconKey: "ui_star",
     color: "#7c8388",
-    wage: 30,
     hireCost: { worker: 1, mine_block: 2, bread: 8, mine_ingot: 2 },
     maxCount: 1,
     // High-tier season bonus: stone-faced patrons pay for finished work.
@@ -744,11 +702,10 @@ export const TOWNSFOLK = [
   // ── Catalog §9 farm leftovers — Peasant + Lumberjack ───────────────────
   {
     id: "peasant",
-    name: "Else",
+    name: "Peasant",
     role: "Peasant",
     iconKey: "grass_hay",
     color: "#7ec63d",
-    wage: 12,
     hireCost: { worker: 1, grass_hay: 6, bread: 4 },
     maxCount: 3,
     abilities: [
@@ -759,11 +716,10 @@ export const TOWNSFOLK = [
   },
   {
     id: "lumberjack",
-    name: "Stig",
+    name: "Lumberjack",
     role: "Lumberjack",
     iconKey: "ui_star",
     color: "#7a4f24",
-    wage: 22,
     hireCost: { worker: 1, wood_log: 8, bread: 8 },
     maxCount: 2,
     // Bonus_yield on tree_oak — the catalog's "1 tree = 1 wood" cleanly
@@ -778,11 +734,10 @@ export const TOWNSFOLK = [
   // ── Hazard-counter workers (catalog §9: Ratcatcher / Sapper) ────────────
   {
     id: "ratcatcher",
-    name: "Wenna",
+    name: "Ratcatcher",
     role: "Ratcatcher",
     iconKey: "ui_star",
     color: "#5a4838",
-    wage: 18,
     hireCost: { worker: 1, grass_hay: 6, bread: 6 },
     maxCount: 2,
     // 2× rat-clear coin payout at max hire (per-hire +0.5).
@@ -794,11 +749,10 @@ export const TOWNSFOLK = [
   },
   {
     id: "sapper",
-    name: "Yarek",
+    name: "Sapper",
     role: "Sapper",
     iconKey: "ui_star",
     color: "#5a3a14",
-    wage: 22,
     hireCost: { worker: 1, mine_coal: 4, bread: 8, mine_ingot: 2 },
     maxCount: 2,
     // Mirrors Canary's gas_vent reduce, applied to cave_in instead.

@@ -1,4 +1,4 @@
-// Phase 4 — Workers / Apprentices: data model, hire, wages.
+// Phase 4 — Workers: data model + hire.
 // Migrated from workers-4.1 through workers-4.6 tests.
 import { describe, it, expect } from "vitest";
 import { WORKERS, WORKER_MAP } from "../src/features/apprentices/data.js";
@@ -19,7 +19,6 @@ describe("Phase 4 — worker data model", () => {
       expect(typeof w.id).toBe("string");
       expect(typeof w.name).toBe("string");
       expect(Number.isInteger(w.maxCount) && w.maxCount >= 1).toBe(true);
-      expect(Number.isInteger(w.wage)).toBe(true);
     }
   });
 });

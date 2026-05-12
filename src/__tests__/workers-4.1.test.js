@@ -27,7 +27,6 @@ describe("Phase 4.1 — Worker data model", () => {
       expect(typeof w.id).toBe("string");
       expect(typeof w.name).toBe("string");
       expect(Number.isInteger(w.maxCount) && w.maxCount >= 1).toBe(true);
-      expect(Number.isInteger(w.wage)).toBe(true);
       if (farmWorkerIds.has(w.id)) {
         expect(Array.isArray(w.abilities)).toBe(true);
         expect(w.abilities.length).toBeGreaterThan(0);
@@ -52,13 +51,6 @@ describe("Phase 4.1 — Worker data model", () => {
     const fullDelta = hilda.abilities[0].params.amount; // 3
     const perHire = fullDelta / hilda.maxCount; // 1
     expect(perHire).toBe(1);
-  });
-
-  it("wages match GAME_SPEC §12", () => {
-    const wages = { hilda: 15, pip: 12, wila: 20, tuck: 20, osric: 40, dren: 25 };
-    for (const [id, wage] of Object.entries(wages)) {
-      expect(WORKER_MAP[id].wage).toBe(wage);
-    }
   });
 
   it("initial state has state.townsfolk with all hired at 0", () => {
