@@ -29,6 +29,7 @@ const WorkersTab   = lazy(() => import("./tabs/WorkersTab.jsx"));
 const KeepersTab   = lazy(() => import("./tabs/KeepersTab.jsx"));
 const NpcsTab      = lazy(() => import("./tabs/NpcsTab.jsx"));
 const StoryTab     = lazy(() => import("./tabs/StoryTab.jsx"));
+const SimulateTab  = lazy(() => import("./tabs/SimulateTab.jsx"));
 const RationsTab   = lazy(() => import("./tabs/RationsTab.jsx"));
 const TuningTab    = lazy(() => import("./tabs/TuningTab.jsx"));
 const BossesTab    = lazy(() => import("./tabs/BossesTab.jsx"));
@@ -88,6 +89,9 @@ const TABS = [
   { id: "story",     label: "Story · Dialogue", iconKey: "ui_star", Component: StoryTab,
     section: "story",
     blurb: "Story beats and side-events: titles, scenes, the narration/dialogue lines, and choice labels. (Triggers and outcomes are not editable here.)" },
+  { id: "simulate",  label: "Simulate",       iconKey: "ui_devtools", Component: SimulateTab,
+    section: "story",
+    blurb: "Walk story beats with arbitrary starting flags / NPC bonds / currencies. Step through dialogue, pick choices, see per-step outcomes, and export the run as a Markdown transcript or JSON choice log." },
   { id: "npcs",      label: "NPCs",           iconKey: "ui_star", Component: NpcsTab,
     section: "story",
     blurb: "Townsfolk gift preferences (loves / likes — the items that raise their bond fastest) and the four bond bands (name + the order-reward modifier at that band)." },
