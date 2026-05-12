@@ -36,12 +36,6 @@ export default function RecipesTab({ draft, updateDraft }) {
     return [...set].filter((k) => typeof k === "string").sort();
   }, []);
 
-  const recipeOptions = useMemo(
-    () => [{ value: "", label: "— pick resource —" },
-            ...allResourceKeys.map((k) => ({ value: k, label: k }))],
-    [allResourceKeys],
-  );
-
   // Filter the RECIPES map: skip alias entries like `iron_frame: RECIPES.ironframe`
   // by tracking object identity.
   const recipeEntries = useMemo(() => {

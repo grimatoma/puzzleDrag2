@@ -4,7 +4,7 @@
 import { useState, useMemo } from "react";
 import { BUILDINGS, BIOMES } from "../../constants.js";
 import {
-  COLORS, NumberField, TextField, TextArea, Select,
+  COLORS, NumberField, TextField, TextArea,
   SmallButton, Pill, Card, SearchBar,
 } from "../shared.jsx";
 import AbilitiesEditor from "../AbilitiesEditor.jsx";
@@ -16,11 +16,6 @@ const COST_KEYS = (() => {
   for (const b of Object.values(BIOMES)) for (const r of b.resources) out.add(r.key);
   return [...out].sort();
 })();
-
-const COST_OPTIONS = [
-  { value: "", label: "— pick resource —" },
-  ...COST_KEYS.map((k) => ({ value: k, label: k })),
-];
 
 export default function BuildingsTab({ draft, updateDraft }) {
   const [search, setSearch] = useState("");
