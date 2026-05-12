@@ -2,10 +2,8 @@ import { TILE } from "../constants.js";
 
 const TILE_BASE = TILE;
 
-export function computeBakeScale(quality, dpr, tileSize) {
-  if (quality === "low") return 1;
-  const standard = Math.max(dpr || 1, (tileSize || TILE_BASE) / TILE_BASE);
-  return quality === "ultra" ? standard * 2 : standard;
+export function computeBakeScale(dpr, tileSize) {
+  return Math.max(dpr || 1, (tileSize || TILE_BASE) / TILE_BASE);
 }
 
 export function hasValidChain(grid) {

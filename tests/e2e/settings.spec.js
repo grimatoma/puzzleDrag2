@@ -2,9 +2,8 @@ import { test, expect } from '@playwright/test';
 import { gotoFresh, getReactState, waitForState, dispatchAction } from './helpers.js';
 
 /**
- * Settings + accessibility flags. The settings slice owns state.settings
- * and persists to its own localStorage key (hearth.settings). Toggles
- * dispatched as SETTINGS/TOGGLE.
+ * Settings flags. The settings slice owns state.settings and persists to its
+ * own localStorage key (hearth.settings). Toggles dispatched as SETTINGS/TOGGLE.
  */
 
 test('SETTINGS/TOGGLE flips the named flag', async ({ page }) => {
@@ -15,14 +14,6 @@ test('SETTINGS/TOGGLE flips the named flag', async ({ page }) => {
   await waitForState(page, (s) => (s.settings?.sfxOn ?? true) !== initial);
   await dispatchAction(page, { type: 'SETTINGS/TOGGLE', key: 'sfxOn' });
   await waitForState(page, (s) => (s.settings?.sfxOn ?? true) === initial);
-});
-
-test('SET_PALETTE persists a colorblind palette pick', async ({ page }) => {
-  await gotoFresh(page);
-  await dispatchAction(page, { type: 'SET_PALETTE', id: 'deuteranopia' });
-  await waitForState(page, (s) => s.settings?.palette === 'deuteranopia');
-  await dispatchAction(page, { type: 'SET_PALETTE', id: 'default' });
-  await waitForState(page, (s) => s.settings?.palette === 'default');
 });
 
 test('Music + haptics toggles persist independently', async ({ page }) => {

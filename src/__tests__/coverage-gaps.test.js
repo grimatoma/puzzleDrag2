@@ -22,12 +22,6 @@ describe("settings slice — coverage gaps", () => {
     expect(s2.settings.sfxOn).toBe(true);
   });
 
-  it("SET_PALETTE delegates to phase11Reduce and replaces settings.palette", () => {
-    const s0 = { settings: { ...baseSettings(), palette: "default" } };
-    const s1 = settingsReduce(s0, { type: "SET_PALETTE", id: "deuteranopia" });
-    expect(s1.settings.palette).toBe("deuteranopia");
-  });
-
   it("SETTINGS/SET_TAB updates settingsTab", () => {
     const s0 = { settings: baseSettings(), settingsTab: "main" };
     const s1 = settingsReduce(s0, { type: "SETTINGS/SET_TAB", tab: "about" });

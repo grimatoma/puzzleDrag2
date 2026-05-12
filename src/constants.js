@@ -29,7 +29,7 @@ export const MAX_TURNS = 10;
 
 // Save schema version. Forward migrations are not maintained — bump this
 // whenever persisted state changes shape and existing saves will be discarded.
-export const SAVE_SCHEMA_VERSION = 30;
+export const SAVE_SCHEMA_VERSION = 31;
 
 export const UPGRADE_THRESHOLDS = {
   grass_hay: 6, grass_meadow: 6, grass_spiky: 6,
@@ -640,9 +640,9 @@ export const RAT_SPAWN_THRESHOLDS = {
 };
 export const RAT_CLEAR_REWARD_PER = 5;
 
-// ─── Phase 11.1 — Color-blind palettes ───────────────────────────────────────
+// ─── Tile / season colour table ──────────────────────────────────────────────
 // The `default` palette reads back from BIOMES + SEASONS to guarantee zero
-// visual drift versus the Phase 0–10 hex baseline.
+// visual drift versus the hex baseline.
 const _defaultTiles = Object.fromEntries(
   [...BIOMES.farm.resources, ...BIOMES.mine.resources, ...BIOMES.fish.resources].map((r) => [r.key, r.color]),
 );
@@ -650,81 +650,11 @@ const _defaultSeasons = Object.fromEntries(
   SEASONS.map((s) => [s.name, { bg: s.bg, fill: s.fill, accent: s.accent }]),
 );
 
-// Accessibility palettes — all adjacency-pair contrast ratios ≥ 3:1 (WCAG AA large text).
-// Pairs checked: hay/log, hay/berry, log/berry, ore/coal.
+// Only the `default` palette remains (the colour-blind variants were removed).
 export const PALETTES = {
   default: {
     tiles: _defaultTiles,
     seasons: _defaultSeasons,
-  },
-
-  // Deuteranopia (M-cone deficiency): straw-yellow hay, warm-brown log, dark-violet berry.
-  // Luminance: hay(0.685) >> log(0.182) >> berry(0.005) — every adjacent pair ≥ 3:1.
-  deuteranopia: {
-    tiles: {
-      grass_hay:    0xf0d860, grass_meadow: 0x88d048, grass_spiky: 0xb0c850,
-      grain_wheat:  0xd4b040, grain:  0xb08828, grain_flour:  0xf4ecd0,
-      wood_log:    0x9a6e30, wood_plank:  0xc49050, wood_beam:   0x6a4218,
-      berry:  0x1a003a, berry_jam:    0x4a1060,
-      bird_egg:    0xf0e8c8, bird_turkey: 0xc06820, bird_clover: 0x70b048, bird_melon: 0xc8e060,
-      mine_stone:  0x9da3a8, mine_cobble: 0xbbc1c6, mine_block:  0x7c8388,
-      mine_ore:    0xe89040, mine_ingot:  0xf8d880,
-      mine_coal:   0x1a1a1a, mine_coke:   0x505060,
-      mine_gem:    0x50d8f8, mine_cutgem: 0xa0f0ff, mine_gold:   0xffd34c,
-      mine_dirt:   0x7a6850,
-    },
-    seasons: {
-      Spring: { bg: 0x5090b0, fill: 0x60b0d0, accent: 0x3870a0 },
-      Summer: { bg: 0x9aba40, fill: 0xd4b030, accent: 0xc09020 },
-      Autumn: { bg: 0x8c5428, fill: 0xb07030, accent: 0x6a3818 },
-      Winter: { bg: 0x607898, fill: 0x80a8cc, accent: 0xc0d8f0 },
-    },
-  },
-
-  // Protanopia (L-cone deficiency): bright-yellow hay, burnt-orange log, midnight-blue berry.
-  // Luminance: hay(0.762) >> log(0.150) >> berry(0.010) — every adjacent pair ≥ 3:1.
-  protanopia: {
-    tiles: {
-      grass_hay:    0xffe060, grass_meadow: 0xa0d850, grass_spiky: 0xc8d058,
-      grain_wheat:  0xf0c840, grain:  0xd0a020, grain_flour:  0xf8f0e0,
-      wood_log:    0xb05018, wood_plank:  0xd07838, wood_beam:   0x783010,
-      berry:  0x001050, berry_jam:    0x002888,
-      bird_egg:    0xf0e8d0, bird_turkey: 0xc06028, bird_clover: 0x80b860, bird_melon: 0xd8e878,
-      mine_stone:  0x9da3a8, mine_cobble: 0xbbc1c6, mine_block:  0x7c8388,
-      mine_ore:    0xa0c8e8, mine_ingot:  0xd8f0ff,
-      mine_coal:   0x0a1020, mine_coke:   0x283848,
-      mine_gem:    0x60e0f8, mine_cutgem: 0xb0f4ff, mine_gold:   0xffd34c,
-      mine_dirt:   0x7a6850,
-    },
-    seasons: {
-      Spring: { bg: 0x40a080, fill: 0x50c8a0, accent: 0x207858 },
-      Summer: { bg: 0xc8b020, fill: 0xe8d030, accent: 0xa08010 },
-      Autumn: { bg: 0xa04820, fill: 0xc86030, accent: 0x782810 },
-      Winter: { bg: 0x304870, fill: 0x5080b0, accent: 0xa0c0e8 },
-    },
-  },
-
-  // Tritanopia (S-cone deficiency): cream-yellow hay, tawny log, dark-violet berry.
-  // Luminance: hay(0.848) >> log(0.215) >> berry(0.005) — every adjacent pair ≥ 3:1.
-  tritanopia: {
-    tiles: {
-      grass_hay:    0xfff070, grass_meadow: 0x90c850, grass_spiky: 0xb8c058,
-      grain_wheat:  0xf0d850, grain:  0xd0b030, grain_flour:  0xfcf4e0,
-      wood_log:    0xb47030, wood_plank:  0xd49050, wood_beam:   0x7a4818,
-      berry:  0x1a003a, berry_jam:    0x48006c,
-      bird_egg:    0xf4ecd8, bird_turkey: 0xc06820, bird_clover: 0x80b048, bird_melon: 0xc8d870,
-      mine_stone:  0x9da3a8, mine_cobble: 0xbbc1c6, mine_block:  0x7c8388,
-      mine_ore:    0xe08820, mine_ingot:  0xf8d060,
-      mine_coal:   0x0c0c14, mine_coke:   0x303040,
-      mine_gem:    0x50d0f0, mine_cutgem: 0xa8f0ff, mine_gold:   0xffd34c,
-      mine_dirt:   0x7a6850,
-    },
-    seasons: {
-      Spring: { bg: 0x609080, fill: 0x78b0a0, accent: 0x406858 },
-      Summer: { bg: 0xb8a820, fill: 0xd8c830, accent: 0x907808 },
-      Autumn: { bg: 0x9a5820, fill: 0xc07030, accent: 0x703808 },
-      Winter: { bg: 0x405868, fill: 0x6090b0, accent: 0xa8c8e0 },
-    },
   },
 };
 
