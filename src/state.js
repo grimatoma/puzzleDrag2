@@ -1,4 +1,4 @@
-import { BIOMES, BUILDINGS, NPCS, MAX_TURNS, RECIPES, WORKSHOP_RECIPES, DAILY_REWARDS, MINE_ENTRY_TIERS, HARBOR_ENTRY_TIERS, CAPPED_RESOURCES, UPGRADE_THRESHOLDS, SAVE_SCHEMA_VERSION } from "./constants.js";
+import { BIOMES, BUILDINGS, NPCS, MAX_TURNS, RECIPES, WORKSHOP_RECIPES, DAILY_REWARDS, MINE_ENTRY_TIERS, HARBOR_ENTRY_TIERS, MIN_EXPEDITION_TURNS, CAPPED_RESOURCES, UPGRADE_THRESHOLDS, SAVE_SCHEMA_VERSION } from "./constants.js";
 import { locBuilt as _locBuilt } from "./locBuilt.js";
 import { sellPriceFor as _sellPriceFor } from "./features/market/pricing.js";
 import { tryClearRatChain } from "./features/farm/rats.js";
@@ -36,7 +36,7 @@ import * as market from "./features/market/slice.js";
 import * as castle from "./features/castle/slice.js";
 import * as zones from "./features/zones/slice.js";
 import * as workers from "./features/workers/slice.js";
-import { ZONES, settlementFoundingCost, isSettlementFounded, displayZoneName, grantEarnedHearthTokens, isOldCapitalUnlocked } from "./features/zones/data.js";
+import { ZONES, settlementFoundingCost, isSettlementFounded, displayZoneName, grantEarnedHearthTokens, isOldCapitalUnlocked, isExpeditionFood, expeditionTurnsFromSupply } from "./features/zones/data.js";
 import { FIRE_HAZARD_ENABLED } from "./featureFlags.js";
 import { loadSavedState, persistState, clearSave } from "./state/persistence.js";
 export { loadSavedState, persistStateNow, persistState, flushPersistState, clearSave } from "./state/persistence.js";
@@ -1320,6 +1320,46 @@ function coreReducer(state, action) {
       };
     }
 
+    case "EXPEDITION/DEPART": {
+      // Phase 5d — supply-structured expedition into a mine/harbor zone (master
+      // doc §VI). Payload: { biomeKey: "mine"|"fish", supply: { foodKey: count } }.
+      // Pack food before the round; each ration is worth a number of turns
+      // (expeditionTurnsForFood, building-boosted); play until they run out.
+      const biomeKey = action.payload?.biomeKey;
+      if (biomeKey !== "mine" && biomeKey !== "fish") return state;
+      const needLevel = biomeKey === "mine" ? 2 : 3;
+      if ((state.level ?? 1) < needLevel) return state;
+      const zoneId = state.activeZone ?? state.mapCurrent ?? "home";
+      const supply = action.payload?.supply ?? {};
+      // Validate: every entry is a real ration the player has enough of.
+      const inv = { ...(state.inventory ?? {}) };
+      for (const [foodKey, rawCount] of Object.entries(supply)) {
+        const n = Math.floor(rawCount);
+        if (n <= 0) continue;
+        if (!isExpeditionFood(foodKey)) return state;
+        if ((inv[foodKey] ?? 0) < n) return state;
+      }
+      const turns = expeditionTurnsFromSupply(state, supply, zoneId);
+      if (turns < MIN_EXPEDITION_TURNS) return state;
+      // Pay the supply, set the turn budget, then run the regular biome switch.
+      for (const [foodKey, rawCount] of Object.entries(supply)) {
+        const n = Math.floor(rawCount);
+        if (n > 0) inv[foodKey] = (inv[foodKey] ?? 0) - n;
+      }
+      const staged = { ...state, inventory: inv, sessionMaxTurns: turns, turnsUsed: 0 };
+      const switched = coreReducer(staged, { type: "SWITCH_BIOME", key: biomeKey });
+      return {
+        ...switched,
+        view: "board",
+        viewParams: {},
+        craftingTab: null,
+        session: { expedition: { zoneId, supply, turns } },
+      };
+    }
+
+    // @deprecated — the free/better/premium tier entry (MINE/ENTER, HARBOR/ENTER,
+    // ENTER_MINE) is superseded by EXPEDITION/DEPART above; no UI dispatches it
+    // anymore. Kept (with its tests) until a focused cleanup pass removes it.
     case "MINE/ENTER": {
       if (!state.story?.flags?.mine_unlocked) return state;
       const tier = MINE_ENTRY_TIERS.find((t) => t.id === action.payload?.tier);

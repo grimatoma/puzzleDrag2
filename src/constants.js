@@ -46,6 +46,7 @@ export const CRAFT_GEM_SKIP_COST = 1;
 // exist in the resource pipeline yet; they'll be added with the round flow
 // (Phase 5d). `fruit_apple` and `bread` are the live keys today.
 export const EXPEDITION_FOOD_TURNS = Object.freeze({
+  supplies:      1,
   fruit_apple:   1,
   bread:         1,
   cured_meat:    2,
@@ -55,6 +56,9 @@ export const EXPEDITION_FOOD_TURNS = Object.freeze({
 });
 // Foods the Smokehouse's "+1 to meat-based foods" modifier applies to.
 export const EXPEDITION_MEAT_FOODS = Object.freeze(["cured_meat"]);
+// An expedition needs at least this many turns of food packed before you can
+// set out (Phase 5d). Tunable.
+export const MIN_EXPEDITION_TURNS = 3;
 
 // Save schema version. Forward migrations are not maintained — bump this
 // whenever persisted state changes shape and existing saves will be discarded.
