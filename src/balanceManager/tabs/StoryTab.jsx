@@ -9,7 +9,7 @@
 
 import { useState } from "react";
 import { STORY_BEATS, SIDE_BEATS, SCENE_THEMES } from "../../story.js";
-import { COLORS, TextField, TextArea, Select, FieldRow, Card, SearchBar } from "../shared.jsx";
+import { COLORS, TextField, TextArea, Select, FieldRow, Card, SearchBar, SmallButton } from "../shared.jsx";
 
 const ALL_BEATS = [
   ...STORY_BEATS.map((b) => ({ ...b, _group: `Act ${b.act ?? "?"}` })),
@@ -57,6 +57,24 @@ export default function StoryTab({ draft, updateDraft }) {
 
   return (
     <div className="flex flex-col gap-3">
+      {/* Link to the full visual tree editor */}
+      <div className="flex items-center justify-between px-3 py-2 rounded-lg border-2"
+        style={{ background: COLORS.parchmentDeep, borderColor: COLORS.border }}>
+        <div>
+          <div className="text-[12px] font-bold" style={{ color: COLORS.ink }}>Visual Tree Editor</div>
+          <div className="text-[10px] italic" style={{ color: COLORS.inkSubtle }}>
+            Decision-tree canvas with pan/zoom, node cards, and branch edges
+          </div>
+        </div>
+        <a
+          href={import.meta.env.BASE_URL.replace(/\/$/, "") + "/story/"}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="no-underline"
+        >
+          <SmallButton variant="primary">Open Tree Editor ↗</SmallButton>
+        </a>
+      </div>
       <SearchBar value={search} onChange={setSearch} placeholder="Filter beats by id / title / act…" />
       <div className="text-[11px] italic" style={{ color: COLORS.inkSubtle }}>
         {filtered.length} of {ALL_BEATS.length} beats. Multi-line dialogue: one row per line, `speaker: text` (use `narrator` for narration).
