@@ -170,48 +170,14 @@ export default function RecipesTab({ draft, updateDraft }) {
 
               {/* Inputs editor */}
               <div className="mb-2">
-                <Label>Ingredients</Label>
-                <div className="flex flex-col gap-1">
-                  {Object.entries(eff.inputs).map(([resKey, qty]) => (
-                    <div key={resKey} className="flex items-center gap-2">
-                      <Select
-                        value={resKey}
-                        options={recipeOptions}
-                        onChange={(v) => {
-                          const next = { ...eff.inputs };
-                          delete next[resKey];
-                          if (v) next[v] = qty;
-                          patchInputs(key, next);
-                        }}
-                      />
-                      <NumberField
-                        value={qty}
-                        min={1}
-                        max={99}
-                        width={60}
-                        onChange={(v) => patchInputs(key, { ...eff.inputs, [resKey]: v })}
-                      />
-                      <SmallButton
-                        variant="danger"
-                        onClick={() => {
-                          const next = { ...eff.inputs };
-                          delete next[resKey];
-                          patchInputs(key, next);
-                        }}
-                      >
-                        ✕
-                      </SmallButton>
-                    </div>
-                  ))}
-                  <SmallButton
-                    onClick={() => {
-                      const empty = allResourceKeys.find((k) => !(k in eff.inputs)) || "";
-                      if (empty) patchInputs(key, { ...eff.inputs, [empty]: 1 });
-                    }}
-                  >
-                    + Add ingredient
-                  </SmallButton>
+                <div className="text-[10px] font-bold uppercase tracking-wide mb-1" style={{ color: COLORS.inkSubtle }}>
+                  Ingredients
                 </div>
+                <IngredientsEditor
+                  ingredients={eff.inputs}
+                  availableKeys={allResourceKeys}
+                  onChange={(nextInputs) => patchInputs(key, nextInputs)}
+                />
               </div>
 
               <div>
@@ -248,6 +214,109 @@ function Label({ children, hint }) {
         >
           ?
         </span>
+      )}
+    </div>
+  );
+}
+
+function IngredientsEditor({ ingredients, availableKeys, onChange }) {
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [query, setQuery] = useState("");
+
+  const available = availableKeys.filter(
+    (k) => !(k in ingredients) && k.toLowerCase().includes(query.toLowerCase())
+  );
+
+  function updateIngredient(resKey, qty) {
+    const next = { ...ingredients };
+    if (qty === null || qty === undefined || qty <= 0) {
+      delete next[resKey];
+    } else {
+      next[resKey] = qty;
+    }
+    onChange(next);
+  }
+
+  return (
+    <div className="flex flex-col gap-2">
+      {Object.keys(ingredients).length === 0 && (
+        <div
+          className="text-center py-3 text-[12px] italic rounded-lg border-2 border-dashed"
+          style={{ borderColor: COLORS.border, color: COLORS.inkSubtle }}
+        >
+          No ingredients added.
+        </div>
+      )}
+
+      {Object.entries(ingredients).map(([resKey, qty]) => (
+        <Card key={resKey}>
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <Icon iconKey={resKey} size={20} />
+              <span className="text-[12px] font-bold" style={{ color: COLORS.ink }}>
+                {resKey}
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <NumberField
+                value={qty}
+                min={1}
+                max={9999}
+                width={70}
+                onChange={(v) => updateIngredient(resKey, v)}
+              />
+              <SmallButton variant="danger" onClick={() => updateIngredient(resKey, null)}>
+                ✕
+              </SmallButton>
+            </div>
+          </div>
+        </Card>
+      ))}
+
+      <div className="flex items-center justify-between gap-2 mt-1">
+        <div className="text-[11px] font-bold uppercase tracking-wide" style={{ color: COLORS.inkSubtle }}>
+          Add Ingredient
+        </div>
+        <SmallButton onClick={() => setPickerOpen((v) => !v)}>
+          {pickerOpen ? "Hide" : "Search & Add"}
+        </SmallButton>
+      </div>
+
+      {pickerOpen && (
+        <div className="flex flex-col gap-2">
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search resources & recipes…"
+            className="px-2 py-1.5 rounded border text-[12px]"
+            style={{ background: "#fffaf1", borderColor: COLORS.border, color: COLORS.ink }}
+          />
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-2 max-h-64 overflow-y-auto pr-1">
+            {available.map((k) => (
+              <button
+                key={k}
+                onClick={() => {
+                  updateIngredient(k, 1);
+                  setQuery("");
+                }}
+                className="flex items-center gap-2 text-left p-2 rounded-lg border-2 transition-colors hover:opacity-90"
+                style={{ background: COLORS.parchment, borderColor: COLORS.border }}
+              >
+                <div className="flex-shrink-0 flex items-center justify-center w-8 h-8 rounded bg-[#e0d4be]">
+                  <Icon iconKey={k} size={24} />
+                </div>
+                <div className="text-[12px] font-bold truncate flex-1 min-w-0" style={{ color: COLORS.ink }}>
+                  {k}
+                </div>
+              </button>
+            ))}
+            {available.length === 0 && (
+              <div className="text-[11px] italic px-1 col-span-full" style={{ color: COLORS.inkSubtle }}>
+                No matching ingredients.
+              </div>
+            )}
+          </div>
+        </div>
       )}
     </div>
   );
