@@ -24,7 +24,6 @@ import { ICONS as G_CRAFTED } from "./categories/craftedProducts.js";
 import { ICONS as G_CHARACTERS } from "./categories/characters.js";
 import { ICONS as G_MAP_NODES } from "./categories/mapNodes.js";
 import { ICONS as G_DECORATIONS } from "./categories/decorations.js";
-import { ICONS as G_WEATHER } from "./categories/weather.js";
 import { ICONS as G_MOOD_FACES } from "./categories/moodFaces.js";
 import { ICONS as G_PLAYER_TOOLS } from "./categories/playerTools.js";
 import { ICONS as G_CRAFTING_STATIONS } from "./categories/craftingStations.js";
@@ -56,7 +55,6 @@ export const ICON_REGISTRY = Object.freeze({
   ...G_CHARACTERS,
   ...G_MAP_NODES,
   ...G_DECORATIONS,
-  ...G_WEATHER,
   ...G_MOOD_FACES,
   ...G_PLAYER_TOOLS,
   ...G_CRAFTING_STATIONS,

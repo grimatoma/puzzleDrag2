@@ -1,9 +1,7 @@
 import { SEASONS, MAX_TURNS } from "../constants.js";
 import { hex } from "../utils.js";
 import { xpForLevel } from "../state.js";
-import { WEATHER_META } from "../features/boss/slice.js";
 import { seasonIndexInSession } from "../features/zones/data.js";
-import IconCanvas, { hasIcon } from "./IconCanvas.jsx";
 import { locBuilt } from "../locBuilt.js";
 import Icon from "./Icon.jsx";
 
@@ -15,31 +13,6 @@ export const SEASON_EFFECTS = ["", "", "", ""];
 function Pill({ children, className = "" }) {
   return (
     <div className={`bg-[#f6efe0] border-2 border-[#b28b62] rounded-full px-3 py-1 flex items-center gap-1.5 text-[#6a4b31] ${className}`}>{children}</div>
-  );
-}
-
-function WeatherChip({ weather }) {
-  if (!weather) return null;
-  const key = weather?.key ?? weather ?? null;
-  if (!key || key === "none") return null;
-  const meta = WEATHER_META[key];
-  if (!meta) return null;
-  const iconKey = `weather_${key}`;
-  return (
-    <div
-      className="flex items-center gap-1 rounded-full px-2 py-0.5 text-white flex-shrink-0"
-      style={{ background: meta.color || "#3a6b8a", fontSize: 10, fontWeight: "bold" }}
-      title={meta.description || meta.desc || ""}
-    >
-      {hasIcon(iconKey) ? (
-        <span style={{ width: 14, height: 14, display: "inline-grid", placeItems: "center" }}>
-          <IconCanvas iconKey={iconKey} size={14} />
-        </span>
-      ) : (
-        <span>{meta.emoji}</span>
-      )}
-      <span>{meta.label}</span>
-    </div>
   );
 }
 
@@ -189,8 +162,6 @@ export function Hud({ state, dispatch }) {
         </Pill>
       )}
       {onBoard && <SeasonBar season={season} turnsUsed={turnsUsed} turnsLeft={turnsLeft} sessionMaxTurns={effectiveMaxTurns} />}
-      {/* Weather chip — visible on board view when weather is active and no boss overlay covering it */}
-      {onBoard && !state.boss && <WeatherChip weather={state.weather} />}
       {/* Tide chip — visible only on the fish biome */}
       {onBoard && state.biomeKey === "fish" && <TideChip fish={state.fish} />}
       {/* Larder progress bars — visible when festival announced, on board view */}
