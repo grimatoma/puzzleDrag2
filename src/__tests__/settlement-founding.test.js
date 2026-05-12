@@ -45,7 +45,7 @@ describe("FOUND_SETTLEMENT", () => {
     let s = { ...createInitialState(), coins: 5000 };
     const cost = settlementFoundingCost(s).coins;
     s = rootReducer(s, { type: "FOUND_SETTLEMENT", payload: { zoneId: "meadow" } });
-    expect(s.settlements.meadow).toEqual({ founded: true });
+    expect(s.settlements.meadow).toMatchObject({ founded: true }); // Phase 5e adds a `biome`
     expect(isSettlementFounded(s, "meadow")).toBe(true);
     expect(s.coins).toBe(5000 - cost);
     expect(foundedSettlementCount(s)).toBe(2);
