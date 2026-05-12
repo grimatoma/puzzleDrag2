@@ -54,7 +54,7 @@ const TABS = [
     blurb: "The biomes a settlement can be founded as (4 per type): name, icon, the two hazards that appear in every round there, and the resource bonus." },
   { id: "items", label: "Items",      iconKey: "ui_star", Component: ItemsTab,
     section: "items",
-    blurb: "All game items, tools, and resources — names, icons, descriptions, colors, sale value, and powers." },
+    blurb: "Three views — Tiles (board pieces + chain targets), Resources (inventory amounts + kingdom currencies), Items (tools and other inventory objects). Edit labels, icons, colors, sale value, tool powers." },
   { id: "recipes",   label: "Recipes",        iconKey: "ui_star", Component: RecipesTab,
     section: "items",
     blurb: "Crafted items (and tools): ingredients, station, coin reward, and description." },
