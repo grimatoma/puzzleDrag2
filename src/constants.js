@@ -32,6 +32,12 @@ export const MAX_TURNS = 10;
 // in-game calendar is involved — it tracks wall-clock elapsed time.
 export const AUDIT_BOSS_COOLDOWN_DAYS = 3;
 
+// Phase 5 — real-time crafting queue (alongside the instant CRAFT_RECIPE). A
+// queued craft is ready this many wall-clock hours after it's queued; spending
+// CRAFT_GEM_SKIP_COST gems finishes it instantly. Both tunable.
+export const CRAFT_QUEUE_HOURS = 4;
+export const CRAFT_GEM_SKIP_COST = 1;
+
 // Save schema version. Forward migrations are not maintained — bump this
 // whenever persisted state changes shape and existing saves will be discarded.
 export const SAVE_SCHEMA_VERSION = 34;

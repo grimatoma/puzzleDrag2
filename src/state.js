@@ -1854,6 +1854,12 @@ const SLICE_PRIMARY_ACTIONS = new Set([
   // Story modal dismiss / choice picks are owned by story/slice
   "STORY/DISMISS_MODAL",
   "STORY/PICK_CHOICE",
+  // Phase 5 — real-time crafting queue (crafting/slice). Instant CRAFT_RECIPE
+  // stays in ALWAYS_RUN_SLICES (coreReducer fires its `craft_made` story beat);
+  // these queue actions are handled only by the slice.
+  "CRAFTING/QUEUE_RECIPE",
+  "CRAFTING/CLAIM_CRAFT",
+  "CRAFTING/SKIP_CRAFT",
   // Settings actions are owned by settings/slice
   "SETTINGS/SET_TAB",
   "SETTINGS/OPEN_DEBUG",

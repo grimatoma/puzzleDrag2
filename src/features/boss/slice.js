@@ -188,6 +188,9 @@ export function reduce(state, action) {
           bossesDefeated: (state.bossesDefeated || 0) + 1,
           coins: (state.coins || 0) + earnedCoins,
           runes: (state.runes ?? 0) + (rewardRunes ?? 0),
+          // Phase 5 — a gem per boss win (the current gem source until more
+          // land later; tunable). Gems pay to skip a real-time craft.
+          gems: (state.gems ?? 0) + 1,
           bubble: {
             npc: "mira",
             text: `Victory! +${earnedCoins}[icon:berry] awarded.`,
