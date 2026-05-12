@@ -151,8 +151,6 @@ const TOGGLE_ROWS = [
   { key: 'sfxOn',        label: 'Sound Effects' },
   { key: 'musicOn',      label: 'Music' },
   { key: 'hapticsOn',    label: 'Haptics' },
-  { key: 'reducedMotion',label: 'Reduced Motion' },
-  { key: 'colorBlind',   label: 'Color-Blind Mode' },
 ];
 
 const PALETTE_OPTIONS = [
@@ -174,15 +172,6 @@ function SettingsTab({ settings = {}, dispatch }) {
 
   function handleToggle(key) {
     dispatch({ type: 'SETTINGS/TOGGLE', key });
-    // Sync colorBlind toggle with palette
-    if (key === 'colorBlind') {
-      const willBeOn = !settings[key];
-      if (willBeOn && activePalette === 'default') {
-        dispatch({ type: 'SET_PALETTE', id: 'deuteranopia' });
-      } else if (!willBeOn && activePalette !== 'default') {
-        dispatch({ type: 'SET_PALETTE', id: 'default' });
-      }
-    }
   }
 
   return (

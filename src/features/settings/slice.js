@@ -39,10 +39,7 @@ const DEFAULT_SETTINGS = {
   sfxOn: true,
   musicOn: true,
   hapticsOn: true,
-  // Phase 11: reducedMotion defaults to null (follow OS), not false
-  reducedMotion: null,
-  colorBlind: false,
-  // Phase 11: palette + keyboardCursor merged from PHASE11_INITIAL
+  // palette + graphicsQuality merged from PHASE11_INITIAL
   ...PHASE11_INITIAL,
 };
 
@@ -66,18 +63,6 @@ export function reduce(state, action) {
 
     // Phase 11.1 — Color palette
     case 'SET_PALETTE': {
-      const settings = phase11Reduce(state.settings, action);
-      return { ...state, settings };
-    }
-
-    // Phase 11.4 — Reduced motion
-    case 'SET_REDUCED_MOTION': {
-      const settings = phase11Reduce(state.settings, action);
-      return { ...state, settings };
-    }
-
-    // Phase 11.2 — Keyboard cursor
-    case 'SET_CURSOR': {
       const settings = phase11Reduce(state.settings, action);
       return { ...state, settings };
     }

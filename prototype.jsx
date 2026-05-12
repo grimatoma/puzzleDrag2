@@ -12,7 +12,7 @@ import { useRouter } from "./src/router.js";
 import { setPhaserScene } from "./src/phaserBridge.js";
 import { FIRE_HAZARD_ENABLED } from "./src/featureFlags.js";
 
-function PhaserMount({ dispatch, biomeKey, turnsUsed, uiLocked, sceneRef, toolPending, setChainInfo, workers, typeWorkers, palette, graphicsQuality, reducedMotion, tileCollection, gameState, grid }) {
+function PhaserMount({ dispatch, biomeKey, turnsUsed, uiLocked, sceneRef, toolPending, setChainInfo, workers, typeWorkers, palette, graphicsQuality, tileCollection, gameState, grid }) {
   const hostRef = useRef(null);
   const gameRef = useRef(null);
   const [loading, setLoading] = useState(true);
@@ -129,7 +129,6 @@ function PhaserMount({ dispatch, biomeKey, turnsUsed, uiLocked, sceneRef, toolPe
   useEffect(() => { gameRef.current?.registry.set("typeWorkers", typeWorkers ?? null); }, [typeWorkers]);
   useEffect(() => { gameRef.current?.registry.set("palette", palette ?? "default"); }, [palette]);
   useEffect(() => { gameRef.current?.registry.set("graphicsQuality", graphicsQuality ?? "standard"); }, [graphicsQuality]);
-  useEffect(() => { gameRef.current?.registry.set("reducedMotion", reducedMotion ?? null); }, [reducedMotion]);
   useEffect(() => { gameRef.current?.registry.set("hapticsOn", gameState?.settings?.hapticsOn ?? true); }, [gameState?.settings?.hapticsOn]);
   useEffect(() => { gameRef.current?.registry.set("tileCollectionActive", tileCollection?.activeByCategory ?? null); }, [tileCollection?.activeByCategory]);
   // Sync grid state → Phaser registry so hazard engines see real tile keys
@@ -243,7 +242,6 @@ export default function App() {
                   typeWorkers={state.workers}
                   palette={state.settings?.palette}
                   graphicsQuality={state.settings?.graphicsQuality}
-                  reducedMotion={state.settings?.reducedMotion}
                   tileCollection={state.tileCollection}
                   gameState={state}
                   grid={state.grid}
