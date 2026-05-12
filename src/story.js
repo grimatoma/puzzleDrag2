@@ -15,10 +15,11 @@ export const INITIAL_STORY_STATE = {
 // theme's gradient behind the panel so different beats feel like different
 // places/times without needing camera work or new texture art (§2.42).
 export const SCENE_THEMES = Object.freeze({
-  ruin:   { label: "A cold ruin",   bg: "radial-gradient(120% 100% at 50% 0%, #2c3640 0%, #161b21 60%, #0c0f12 100%)" },
-  hearth: { label: "By the hearth", bg: "radial-gradient(120% 100% at 50% 100%, #5a2f12 0%, #2a1a0e 55%, #120c07 100%)" },
-  night:  { label: "Deep night",    bg: "linear-gradient(180deg, #0c1530 0%, #0a0f22 60%, #06070f 100%)" },
-  dawn:   { label: "First light",   bg: "linear-gradient(180deg, #b9663a 0%, #6a3a1f 45%, #281710 100%)" },
+  ruin:   { label: "A cold ruin",     bg: "radial-gradient(120% 100% at 50% 0%, #2c3640 0%, #161b21 60%, #0c0f12 100%)" },
+  hearth: { label: "By the hearth",   bg: "radial-gradient(120% 100% at 50% 100%, #5a2f12 0%, #2a1a0e 55%, #120c07 100%)" },
+  night:  { label: "Deep night",      bg: "linear-gradient(180deg, #0c1530 0%, #0a0f22 60%, #06070f 100%)" },
+  dawn:   { label: "First light",     bg: "linear-gradient(180deg, #b9663a 0%, #6a3a1f 45%, #281710 100%)" },
+  frost:  { label: "The frozen wood", bg: "radial-gradient(120% 100% at 50% 10%, #2a4a5a 0%, #142a36 55%, #07121a 100%)" },
 });
 
 /** Returns the scene theme object for a beat, or null. */
@@ -216,6 +217,47 @@ export const SIDE_BEATS = [
       { speaker: null, text: "She reads it aloud, low and even — the bakery, the new name over the door, the smell of the place." },
       { speaker: "mira", text: "\"...and there's a settlement again, Edrin. They call it {settlement}. There's room.\"" },
       { speaker: "mira", text: "I still don't know how to end it. But it helped, hearing it out loud. I'll decide when I'm ready." },
+    ],
+  },
+
+  // ── The Frostmaw, after the fight: the hearth-keeper choice (Coexist / Drive Out) ──
+  // Queued by features/boss/slice.js on the first Frostmaw victory. The choice
+  // sets the player's keeper path (`keeper_path_coexist` | `keeper_path_driveout`)
+  // and grants the path's meta-currency (Embers | Core Ingots). Later phases hang
+  // a per-path boon tree off these flags.
+  {
+    id: "frostmaw_keeper",
+    title: "The Hearth-Keeper",
+    scene: "frost",
+    lines: [
+      { speaker: null, text: "The Frostmaw does not fall so much as settle — frost crackling down to a low blue glow that does not melt." },
+      { speaker: "wren", text: "It's not a beast. Not really. It kept this hearth cold so nothing else could take it. ...Now it's waiting on you." },
+      { speaker: null, text: "The cold leans toward {settlement} like it's listening." },
+      { speaker: "wren", text: "We can let it stay — bind it to the hearth, the way it's always been. Or we break its hold for good and take what's left of its core. Your call." },
+    ],
+    choices: [
+      { id: "coexist", label: "Let it stay. The hearth can share its warmth.",
+        outcome: { setFlag: ["keeper_choice_made", "keeper_path_coexist"], embers: 5, queueBeat: "frostmaw_keeper_coexist" } },
+      { id: "drive_out", label: "Break its hold. The hearth is ours alone.",
+        outcome: { setFlag: ["keeper_choice_made", "keeper_path_driveout"], coreIngots: 5, queueBeat: "frostmaw_keeper_driveout" } },
+    ],
+  },
+  {
+    id: "frostmaw_keeper_coexist",
+    title: "The Hearth-Keeper",
+    scene: "frost",
+    lines: [
+      { speaker: null, text: "The blue glow folds itself into the hearthstone and goes quiet. The wood at the settlement's edge stays rimed and still — guarded." },
+      { speaker: "wren", text: "It'll tend the cold edges. That's worth something — Embers, the old word for it. We can draw on them, in time." },
+    ],
+  },
+  {
+    id: "frostmaw_keeper_driveout",
+    title: "The Hearth-Keeper",
+    scene: "frost",
+    lines: [
+      { speaker: null, text: "Wren works the frost-core loose with the iron tongs. It comes away as dense grey ingots — Core Ingots — colder than they have any right to be." },
+      { speaker: "wren", text: "The hearth's ours, clean. No guardian on the edges now, mind. We can make something of the core — in time." },
     ],
   },
 ];
