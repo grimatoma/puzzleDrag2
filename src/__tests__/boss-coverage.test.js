@@ -1,7 +1,7 @@
 // Boss slice coverage fillins. Pre-PR coverage: 62% statement.
 // Targets the BOSS_META branches, BOSS/* lifecycle actions,
-// CHAIN_COLLECTED + weather bonus paths, CRAFTING/CRAFT_RECIPE for
-// ember_drake, and CLOSE_SEASON's boss / weather scheduling.
+// CHAIN_COLLECTED progress, CRAFTING/CRAFT_RECIPE for ember_drake,
+// and CLOSE_SEASON's boss scheduling.
 
 import { describe, it, expect } from "vitest";
 import { reduce as bossReduce } from "../features/boss/slice.js";
@@ -10,8 +10,6 @@ const baseState = (over = {}) => ({
   boss: null,
   bossPending: false,
   bossMinimized: false,
-  weather: null,
-  weatherTurnsLeft: 0,
   bossesDefeated: 0,
   _bossSeasonCount: 0,
   _bossResolvedThisSeason: false,
@@ -166,44 +164,11 @@ describe("boss slice — CHAIN_COLLECTED progress + auto-resolve", () => {
     expect(s1.coins).toBeGreaterThan(0);
   });
 
-  it("CHAIN_COLLECTED with no boss + active rain weather doubles berry yield", () => {
-    const s0 = baseState({
-      weather: { key: "rain", description: "" },
-      weatherTurnsLeft: 3,
-      inventory: { berry: 0 },
-    });
-    const s1 = bossReduce(s0, {
-      type: "CHAIN_COLLECTED",
-      payload: { key: "berry", gained: 4 },
-    });
-    // Rain doubles berry: bonus = +4 added to inventory[berry]
-    expect(s1.inventory.berry).toBe(4);
-    // weatherTurnsLeft decremented by 1
-    expect(s1.weatherTurnsLeft).toBe(2);
-  });
-
-  it("CHAIN_COLLECTED with active harvest_moon adds an upgrade tier to the chain product", () => {
-    const s0 = baseState({
-      weather: { key: "harvest_moon", description: "" },
-      weatherTurnsLeft: 3,
-      inventory: {},
-    });
-    const s1 = bossReduce(s0, {
-      type: "CHAIN_COLLECTED",
-      payload: { key: "grass_hay", gained: 3 },
-    });
-    // hay's next is grain_wheat — harvest moon grants +1 upgrade tile
-    expect(s1.inventory.grain_wheat ?? 0).toBeGreaterThan(0);
-  });
-
-  it("CHAIN_COLLECTED decrements weatherTurnsLeft and clears weather at 0", () => {
-    const s0 = baseState({
-      weather: { key: "drought", description: "" },
-      weatherTurnsLeft: 1,
-    });
-    const s1 = bossReduce(s0, { type: "CHAIN_COLLECTED", payload: { key: "anything", gained: 1 } });
-    expect(s1.weatherTurnsLeft).toBe(0);
-    expect(s1.weather).toBeNull();
+  it("CHAIN_COLLECTED with no boss is a passive copy", () => {
+    const s0 = baseState({ inventory: { berry: 0 } });
+    const s1 = bossReduce(s0, { type: "CHAIN_COLLECTED", payload: { key: "berry", gained: 4 } });
+    expect(s1.inventory.berry).toBe(0);
+    expect(s1.boss).toBeNull();
   });
 });
 

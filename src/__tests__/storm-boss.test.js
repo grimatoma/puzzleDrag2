@@ -6,8 +6,6 @@ const baseState = (over = {}) => ({
   boss: null,
   bossPending: false,
   bossMinimized: false,
-  weather: null,
-  weatherTurnsLeft: 0,
   bossesDefeated: 0,
   _bossSeasonCount: 0,
   _bossResolvedThisSeason: false,

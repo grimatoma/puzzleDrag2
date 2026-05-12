@@ -9,7 +9,7 @@ import {
   canExtendChain,
   upgradeCountForChain,
   resourceGainForChain,
-  rollResourceWithWeather,
+  rollResource,
   hex,
   makeBubble,
   seasonIndexForTurns,
@@ -62,28 +62,11 @@ describe("utils — chain math", () => {
     expect(resourceGainForChain(10)).toBe(20);
   });
 
-  it("rollResourceWithWeather without weather just samples the pool", () => {
-    const k = rollResourceWithWeather(["grass_hay"], null, () => 0.5);
-    expect(k).toBe("grass_hay");
-  });
-
-  it("rollResourceWithWeather drought re-rolls a wheat/grain pick when first random < 0.5", () => {
-    // First call picks index 0 (wheat); rand() < 0.5 triggers re-roll;
-    // second pick is the second resource in the pool.
-    const seq = [0, 0.4, 0.99]; // 1st pick → 0, 0.4 < 0.5 reroll, 2nd pick → 0.99
-    let i = 0;
-    const rand = () => seq[i++];
-    const pool = ["grain_wheat", "grass_hay"];
-    const k = rollResourceWithWeather(pool, "drought", rand);
-    expect(k).toBe("grass_hay");
-  });
-
-  it("rollResourceWithWeather drought does NOT re-roll when first rand >= 0.5 on the gate", () => {
-    const seq = [0, 0.7]; // pick wheat, gate fails (>=0.5), keep wheat
-    let i = 0;
-    const rand = () => seq[i++];
-    const k = rollResourceWithWeather(["grain_wheat", "grass_hay"], "drought", rand);
-    expect(k).toBe("grain_wheat");
+  it("rollResource samples the pool by index using the supplied RNG", () => {
+    const pool = ["grass_hay", "wood_log", "berry"];
+    expect(rollResource(pool, () => 0)).toBe("grass_hay");
+    expect(rollResource(pool, () => 0.5)).toBe("wood_log");
+    expect(rollResource(pool, () => 0.99)).toBe("berry");
   });
 });
 

@@ -1,10 +1,6 @@
-import { BIOMES, RECIPES } from "../../constants.js";
+import { RECIPES } from "../../constants.js";
 import { BOSSES, BOSS_WINDOW_TURNS, bossReward as bossRewardFn } from "../bosses/data.js";
-import { rollWeather } from "../weather/data.js";
 import { awardXp } from "../almanac/data.js";
-import { applyRainBerryBonus, applyHarvestMoonUpgrade } from "../weather/effects.js";
-
-const ALL_RESOURCES = [...BIOMES.farm.resources, ...BIOMES.mine.resources];
 
 // Build BOSS_META from the canonical BOSSES list (features/bosses/data.js)
 // Preserving UI-only fields (emoji, flavor, goal) inline while sourcing turns
@@ -84,55 +80,14 @@ const YEAR_BOSS_ROTATION = ["frostmaw", "quagmire", "ember_drake", "old_stonefac
 
 // Heirloom IDs eligible to drop from boss victories (rare/legendary picks)
 
-// WEATHER_META: all 5 weather types from the canonical weather table.
-const WEATHER_META = {
-  rain: {
-    label: "Rain",
-    emoji: "🌧",
-    desc: "Rain settles over the vale — berry chains double resources for",
-    description: "Steady rain doubles the resources collected from berry chains.",
-    color: "#3a6b8a",
-  },
-  harvest_moon: {
-    label: "Harvest Moon",
-    emoji: "🌕",
-    desc: "The Harvest Moon rises — first 3 chains each night yield +1 upgrade for",
-    description: "The Harvest Moon rises — the first 3 chains each turn yield +1 upgrade tier.",
-    color: "#c8a030",
-  },
-  drought: {
-    label: "Drought",
-    emoji: "☀️",
-    desc: "A dry spell grips the vale — wheat and grain yields are halved for",
-    description: "A dry spell halves wheat and grain spawn rates on the board.",
-    color: "#c8820a",
-  },
-  frost: {
-    label: "Frost",
-    emoji: "🌨",
-    desc: "Frost creeps across the fields — tile-fall slows for",
-    description: "Frost creeps across the fields, slowing tile-fall and reducing chain speed.",
-    color: "#7ab8d4",
-  },
-};
-
 export const initial = {
   boss: null,
   bossPending: false,
   bossMinimized: false,
-  weather: null,
-  weatherTurnsLeft: 0,
   bossesDefeated: 0,
   _bossSeasonCount: 0,
   _bossResolvedThisSeason: false,
 };
-
-// eslint-disable-next-line no-unused-vars
-function pickRandomWeather() {
-  // Legacy stub kept for reference — use rollWeatherEvent() instead
-  const keys = Object.keys(WEATHER_META).filter((k) => k !== "none");
-  return keys[Math.floor(Math.random() * keys.length)];
-}
 
 function triggerBoss(state, bossKey) {
   const meta = BOSS_META[bossKey];
@@ -266,49 +221,6 @@ export function reduce(state, action) {
         }
       }
 
-      // Apply active weather bonus before decrementing turns
-      if (next.weather && (next.weatherTurnsLeft || 0) > 0) {
-        const wKey = next.weather.key;
-        const chainKey = payload.key || "";
-        const gained = payload.gained || 0;
-        // Helpers in features/weather/effects.js read weather.active, but the
-        // slice persists weather as { key, ... }. Translate at the call site
-        // so rain's berry-double + harvest_moon's +1 upgrade actually fire.
-        const helperWeather = { active: wKey };
-
-        if (wKey === "rain" && gained > 0) {
-          // Use helper: doubles berry yield; other resources unchanged
-          const bonusPayload = applyRainBerryBonus({ [chainKey]: gained }, helperWeather);
-          if (bonusPayload[chainKey] !== gained) {
-            const inv = { ...(next.inventory || {}) };
-            inv[chainKey] = (inv[chainKey] || 0) + (bonusPayload[chainKey] - gained);
-            next = { ...next, inventory: inv };
-          }
-        } else if (wKey === "harvest_moon") {
-          // Spec M-10: +1 upgrade applies to EVERY chain (not just chains with existing upgrades)
-          // applyHarvestMoonUpgrade(0, weather) = 1 — always grants at least 1 upgrade
-          const bonusUpgrades = applyHarvestMoonUpgrade(0, helperWeather);
-          if (bonusUpgrades > 0) {
-            const baseRes = ALL_RESOURCES.find((r) => r.key === chainKey);
-            if (baseRes?.next) {
-              const inv = { ...(next.inventory || {}) };
-              inv[baseRes.next] = (inv[baseRes.next] || 0) + bonusUpgrades;
-              next = { ...next, inventory: inv };
-            }
-          }
-        }
-      }
-
-      // Decrement weather turns
-      if (next.weatherTurnsLeft > 0) {
-        const wLeft = next.weatherTurnsLeft - 1;
-        next = {
-          ...next,
-          weatherTurnsLeft: wLeft,
-          weather: wLeft <= 0 ? null : next.weather,
-        };
-      }
-
       return next;
     }
 
@@ -342,32 +254,13 @@ export function reduce(state, action) {
 
       // Trigger a seasonal boss climax at the end of every 4th season (1 year).
       // Skip if a boss was already resolved this season to avoid two boss events in one beat.
+      // NOTE: this season-based cadence is slated for a Phase 3 rework — bosses
+      // (Frostmaw etc.) will appear on a real-day cooldown once a story goal is met.
       if (seasonCount % 4 === 0 && !next.boss && !next._bossResolvedThisSeason) {
         const yearIndex = Math.floor(seasonCount / 4) - 1;
         const bossKey = YEAR_BOSS_ROTATION[yearIndex % YEAR_BOSS_ROTATION.length];
         next = triggerBoss(next, bossKey);
-        // No weather roll this season — the boss is the event
         return next;
-      }
-
-      // Roll weather using the canonical 5-entry weighted table from features/weather/data.js
-      if (!next.weather) {
-        const rolled = rollWeather(Math.random);
-        if (rolled.active) {
-          const weatherMeta = WEATHER_META[rolled.active];
-          const weatherTurns = rolled.turnsRemaining;
-          next = {
-            ...next,
-            weather: { key: rolled.active, ...weatherMeta, turns: weatherTurns },
-            weatherTurnsLeft: weatherTurns,
-            bubble: {
-              npc: "mira",
-              text: `${weatherMeta.emoji} ${weatherMeta.desc} ${weatherTurns} turn${weatherTurns > 1 ? "s" : ""}.`,
-              ms: 3000,
-              id: Date.now(),
-            },
-          };
-        }
       }
 
       // Reset the per-season resolved flag at end of every season
@@ -380,4 +273,4 @@ export function reduce(state, action) {
   }
 }
 
-export { BOSS_META, WEATHER_META };
+export { BOSS_META };

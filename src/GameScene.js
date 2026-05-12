@@ -1,8 +1,7 @@
 import Phaser from "phaser";
 import { TILE, COLS, ROWS, UPGRADE_THRESHOLDS, SEASONS, BIOMES, CAPPED_RESOURCES, SCENE_EVENTS } from "./constants.js";
-import { upgradeCountForChain, resourceGainForChain, rollResourceWithWeather } from "./utils.js";
+import { upgradeCountForChain, resourceGainForChain, rollResource } from "./utils.js";
 import { computeWorkerEffects } from "./features/apprentices/aggregate.js";
-import { applyFrostCollapseDuration } from "./features/weather/effects.js";
 import { CATEGORY_OF } from "./features/tileCollection/data.js";
 import {
   expandZoneCategories,
@@ -496,17 +495,15 @@ export class GameScene extends Phaser.Scene {
   }
 
   randomResource() {
-    const weather = this.registry.get("weather");
-    const weatherKey = weather?.key ?? weather ?? null;
     const pool = this.activePool();
     if (pool.length === 0) return this.biome().resources[0];
-    const key = rollResourceWithWeather(pool, weatherKey);
+    const key = rollResource(pool);
     return this.resourceByKey(key) ?? this.biome().resources[0];
   }
 
-  _randomFromPool(pool, weatherKey) {
+  _randomFromPool(pool) {
     const safePool = pool.length ? pool : this.biome().pool;
-    const key = rollResourceWithWeather(safePool, weatherKey);
+    const key = rollResource(safePool);
     return this.resourceByKey(key) ?? this.biome().resources[0];
   }
 
@@ -578,12 +575,6 @@ export class GameScene extends Phaser.Scene {
 
   fillBoard(initial = false) {
     const ts = this.tileSize;
-    const weather = this.registry.get("weather");
-    const weatherKey = weather?.key ?? weather ?? null;
-    // Frost doubles collapse/fill tween duration (visual only). Use helper for consistency.
-    const baseFillMs = 210;
-    const frostFillMs = !initial ? applyFrostCollapseDuration(baseFillMs, weather) : baseFillMs;
-    const frostBonus = frostFillMs - baseFillMs;
     // Build worker-boosted, tile-collection-substituted pool. Worker boosts are gated
     // by the active tile type: a boost for key K only applies when K is the active
     // tile type in its category (matches getActivePool semantics).
@@ -654,11 +645,11 @@ export class GameScene extends Phaser.Scene {
           // has data for the current season; otherwise fall through to the
           // existing weighted pool sampler.
           if (!res) res = this._pickFromZoneSeasonDrops();
-          if (!res) res = this._randomFromPool(workerPool, weatherKey);
+          if (!res) res = this._randomFromPool(workerPool);
           const tile = new TileObj(this, x, initial ? y - 500 - Phaser.Math.Between(0, 100) : y - 140, c, r, res);
           tile.sprite.setScale(this.tileSpriteScale);
           this.grid[r][c] = tile;
-          this.tweens.add({ targets: tile.sprite, y, duration: this._dur((initial ? 450 + r * 28 : 210) + frostBonus), ease: "Back.Out" });
+          this.tweens.add({ targets: tile.sprite, y, duration: this._dur(initial ? 450 + r * 28 : 210), ease: "Back.Out" });
         }
       }
     }
@@ -675,13 +666,13 @@ export class GameScene extends Phaser.Scene {
         const fireTile = new TileObj(this, fx, initial ? fy - 500 : fy - 140, fc, fr, fireRes);
         fireTile.sprite.setScale(this.tileSpriteScale);
         this.grid[fr][fc] = fireTile;
-        this.tweens.add({ targets: fireTile.sprite, y: fy, duration: this._dur((initial ? 450 + fr * 28 : 210) + frostBonus), ease: "Back.Out" });
+        this.tweens.add({ targets: fireTile.sprite, y: fy, duration: this._dur(initial ? 450 + fr * 28 : 210), ease: "Back.Out" });
       }
     }
 
     // 1.2 — Dead-board auto-shuffle: after every non-initial fill, check for valid chains.
     if (!initial) {
-      const delay = frostBonus ? 350 : 240;
+      const delay = 240;
       this.time.delayedCall(delay, () => {
         if (!hasValidChain(this.grid)) {
           this.floatText("No moves — reshuffled!", this.boardX + (COLS * ts) / 2, this.boardY - 24 * this.dpr);
