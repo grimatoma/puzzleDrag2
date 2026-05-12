@@ -14,7 +14,7 @@ import { announce, getQueue, flushAnnouncements, formatChainAnnouncement, format
 import { handleKeyboard } from "./src/features/a11y/keyboard.js";
 import { FIRE_HAZARD_ENABLED } from "./src/featureFlags.js";
 
-function PhaserMount({ dispatch, biomeKey, turnsUsed, uiLocked, sceneRef, weather, toolPending, setChainInfo, workers, typeWorkers, palette, graphicsQuality, reducedMotion, tileCollection, gameState, grid }) {
+function PhaserMount({ dispatch, biomeKey, turnsUsed, uiLocked, sceneRef, toolPending, setChainInfo, workers, typeWorkers, palette, graphicsQuality, reducedMotion, tileCollection, gameState, grid }) {
   const hostRef = useRef(null);
   const gameRef = useRef(null);
   const [loading, setLoading] = useState(true);
@@ -131,7 +131,6 @@ function PhaserMount({ dispatch, biomeKey, turnsUsed, uiLocked, sceneRef, weathe
   // alongside turnsUsed so GameScene.season() can pick the right palette index.
   useEffect(() => { gameRef.current?.registry.set("sessionMaxTurns", gameState?.sessionMaxTurns ?? null); }, [gameState?.sessionMaxTurns]);
   useEffect(() => { gameRef.current?.registry.set("uiLocked", uiLocked); }, [uiLocked]);
-  useEffect(() => { gameRef.current?.registry.set("weather", weather); }, [weather]);
   useEffect(() => { gameRef.current?.registry.set("toolPending", toolPending ?? null); }, [toolPending]);
   useEffect(() => { gameRef.current?.registry.set("townsfolk", workers ?? null); }, [workers]);
   useEffect(() => { gameRef.current?.registry.set("typeWorkers", typeWorkers ?? null); }, [typeWorkers]);
@@ -390,7 +389,6 @@ export default function App() {
                   turnsUsed={state.turnsUsed}
                   uiLocked={uiLocked}
                   sceneRef={sceneRef}
-                  weather={state.weather}
                   toolPending={state.toolPending}
                   setChainInfo={setChainInfo}
                   workers={state.townsfolk}
