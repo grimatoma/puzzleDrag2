@@ -1,7 +1,7 @@
 import { SEASONS, MAX_TURNS } from "../constants.js";
 import { hex } from "../utils.js";
 import { xpForLevel } from "../state.js";
-import { seasonIndexInSession } from "../features/zones/data.js";
+import { seasonIndexInSession, hearthTokenCount } from "../features/zones/data.js";
 import { locBuilt } from "../locBuilt.js";
 import Icon from "./Icon.jsx";
 
@@ -10,9 +10,37 @@ import Icon from "./Icon.jsx";
 // import entirely in future cleanup.
 export const SEASON_EFFECTS = ["", "", "", ""];
 
-function Pill({ children, className = "" }) {
+function Pill({ children, className = "", title }) {
   return (
-    <div className={`bg-[#f6efe0] border-2 border-[#b28b62] rounded-full px-3 py-1 flex items-center gap-1.5 text-[#6a4b31] ${className}`}>{children}</div>
+    <div title={title} className={`bg-[#f6efe0] border-2 border-[#b28b62] rounded-full px-3 py-1 flex items-center gap-1.5 text-[#6a4b31] ${className}`}>{children}</div>
+  );
+}
+
+// Phase 5 — kingdom meta-currencies + Hearth-Token progress, surfaced in the
+// town/map HUD (not on the board — irrelevant during a round). Each chip only
+// appears once the player actually has some, so a fresh kingdom stays uncluttered.
+function MetaPills({ state }) {
+  const embers = state.embers ?? 0;
+  const ingots = state.coreIngots ?? 0;
+  const gems = state.gems ?? 0;
+  const tokens = hearthTokenCount(state);
+  const hasCurrency = embers > 0 || ingots > 0 || gems > 0;
+  if (!hasCurrency && tokens === 0) return null;
+  return (
+    <>
+      {hasCurrency && (
+        <Pill title="Kingdom currencies — Embers (Coexist), Core Ingots (Drive Out), Gems (timer skip)">
+          {embers > 0 && <span className="font-bold text-[13px]">🔥 {embers}</span>}
+          {ingots > 0 && <span className="font-bold text-[13px]"><span className="inline-block w-3 h-3 rounded-[2px] bg-[#8a8f95] border border-[#5a5e62] align-[-1px] mr-0.5" />{ingots}</span>}
+          {gems > 0 && <span className="font-bold text-[13px]">💎 {gems}</span>}
+        </Pill>
+      )}
+      {tokens > 0 && (
+        <Pill title="Hearth-Tokens — collect all 3 (farm + mine + harbor) to open the Old Capital">
+          <span className="font-bold text-[13px]">🏛️ {tokens}/3</span>
+        </Pill>
+      )}
+    </>
   );
 }
 
@@ -161,6 +189,7 @@ export function Hud({ state, dispatch }) {
           <span className="font-bold text-[14px]" data-testid="buildings">{buildingCount}</span>
         </Pill>
       )}
+      {!onBoard && <MetaPills state={state} />}
       {onBoard && <SeasonBar season={season} turnsUsed={turnsUsed} turnsLeft={turnsLeft} sessionMaxTurns={effectiveMaxTurns} />}
       {/* Tide chip — visible only on the fish biome */}
       {onBoard && state.biomeKey === "fish" && <TideChip fish={state.fish} />}
