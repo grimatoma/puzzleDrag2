@@ -138,6 +138,11 @@ export default function TownGround({ plan, theme, biomeVariant, builtLots }) {
           </g>
         );
       })}
+      {/* Puzzle-board fixtures (farm field / mine entrance / harbor) get a
+          solid shadow pad — they're permanent parts of the settlement. */}
+      {(plan.boards || []).map((b, i) => (
+        <ellipse key={`bpad${i}`} cx={b.cx} cy={b.cy + b.h / 2 - 4} rx={b.w * 0.5} ry={Math.max(8, b.h * 0.12)} fill={pal.shadow} />
+      ))}
 
       {/* Street furniture. */}
       {plan.props.map((p, i) => {
