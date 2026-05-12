@@ -10,10 +10,9 @@
 import {
   abilitiesForScope, getAbility, defaultParamsFor,
 } from "../config/abilities.js";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { BIOMES } from "../constants.js";
 import { CATEGORIES } from "../features/tileCollection/data.js";
-import { filterAbilityCatalog } from "./abilityPicker.js";
 import { COLORS, NumberField, Select, SmallButton, Card, SearchAndAddPicker } from "./shared.jsx";
 
 function resourceKeyOptions() {

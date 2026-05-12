@@ -355,7 +355,7 @@ export const BIOMES = {
 // that relies on BIOMES.farm.resources being an array of item objects.
 for (const b of Object.values(BIOMES)) {
   b.resources = Object.entries(ITEMS)
-    .filter(([_, item]) => item.biome === b.name.toLowerCase() || (b.name === "Harbor" && item.biome === "fish"))
+    .filter(([, item]) => item.biome === b.name.toLowerCase() || (b.name === "Harbor" && item.biome === "fish"))
     .map(([key, item]) => ({ key, ...item }));
 }
 
@@ -517,8 +517,7 @@ export const RECIPES = {
 // ── Backward-compatible aliases ────────────────────────────────────────────
 // Old code and tests reference RECIPES by item key (e.g. RECIPES["bread"]).
 // Generate aliases: for each recipe, RECIPES[recipe.item] → same object.
-// Also create legacy camelCase aliases (iron_frame → ironframe, etc.).
-for (const [recId, rec] of Object.entries(RECIPES)) {
+for (const rec of Object.values(RECIPES)) {
   if (rec.item && !RECIPES[rec.item]) RECIPES[rec.item] = rec;
 }
 // Add backward-compatible computed properties to each recipe. Old code reads

@@ -4,23 +4,20 @@
 import { useState, useMemo } from "react";
 import { BUILDINGS, BIOMES } from "../../constants.js";
 import {
-  COLORS, NumberField, TextField, TextArea, Select,
+  COLORS, NumberField, TextField, TextArea,
   SmallButton, Pill, Card, SearchBar, SearchAndAddPicker,
 } from "../shared.jsx";
 import AbilitiesEditor from "../AbilitiesEditor.jsx";
 import { BuildingIllustration } from "../../ui/Town.jsx";
 import Icon from "../../ui/Icon.jsx";
 
+// Canonical cost-key list, derived from the live data (every biome resource +
+// the two currencies) — never hardcoded. Feeds the CostEditor's add picker.
 const COST_KEYS = (() => {
   const out = new Set(["coins", "runes"]);
   for (const b of Object.values(BIOMES)) for (const r of b.resources) out.add(r.key);
   return [...out].sort();
 })();
-
-const COST_OPTIONS = [
-  { value: "", label: "— pick resource —" },
-  ...COST_KEYS.map((k) => ({ value: k, label: k })),
-];
 
 export default function BuildingsTab({ draft, updateDraft }) {
   const [search, setSearch] = useState("");
