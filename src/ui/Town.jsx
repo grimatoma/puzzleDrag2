@@ -1,8 +1,10 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useMemo } from "react";
 import { BIOMES, BUILDINGS, EXPEDITION_FOOD_TURNS, MIN_EXPEDITION_TURNS } from "../constants.js";
 import { useTooltip, Tooltip } from "./Tooltip.jsx";
 import { ZONES, displayZoneName, expeditionTurnsForFood, expeditionTurnsFromSupply } from "../features/zones/data.js";
 import StartFarmingModal from "../features/zones/StartFarmingModal.jsx";
+import { buildTownPlan } from "../townLayout.js";
+import TownGround from "./TownGround.jsx";
 import IconCanvas from "./IconCanvas.jsx";
 import Icon from "./Icon.jsx";
 
@@ -1021,10 +1023,17 @@ export function TownView({ state, dispatch }) {
   // Zone config for this location controls which puzzle boards and buildings are available.
   const zoneConfig = ZONES[state.mapCurrent];
   const locationBuilt = state.built?.[state.mapCurrent] ?? {};
-  // Plot system: cap is config-driven via MAP_NODES[i].plotCount, capped to
-  // the visual layout this biome variant exposes.
-  const layoutPlots = townConfig.plots ?? [];
-  const plotCount = Math.min(zoneConfig?.plotCount ?? layoutPlots.length, layoutPlots.length);
+  // Town UX redesign — a procedural town *plan* (plaza + streets + a planned
+  // grid of building lots) replaces the old hand-scattered plot positions. The
+  // building-render below still consumes a flat `layoutPlots` of {x,y,w,h}, so
+  // we just project the plan's lots into that shape.
+  const requestedPlots = Math.max(1, zoneConfig?.plotCount ?? 12);
+  const townPlan = useMemo(
+    () => buildTownPlan({ zoneId: state.mapCurrent, plotCount: requestedPlots }),
+    [state.mapCurrent, requestedPlots],
+  );
+  const layoutPlots = townPlan.lots.map((l) => ({ x: l.cx - l.w / 2, y: l.cy - l.h / 2, w: l.w, h: l.h }));
+  const plotCount = layoutPlots.length;
   const storedPlots = locationBuilt._plots ?? {};
   // Build a normalised plot map { idx -> buildingId | null }, auto-assigning
   // any legacy buildings that lack an entry (e.g. saves predating the plot
@@ -1064,6 +1073,9 @@ export function TownView({ state, dispatch }) {
     .filter(([, id]) => id != null)
     .length;
   const freePlots = plotCount - occupiedPlots;
+  const builtLotIndices = new Set(
+    Object.entries(plotMap).filter(([, id]) => id != null).map(([i]) => Number(i)),
+  );
 
   const builtTipHandlers = (b) => {
     const data = { label: b.name, desc: b.desc, color: b.color };
@@ -1262,10 +1274,15 @@ export function TownView({ state, dispatch }) {
           <ellipse cx="576" cy="382" rx="6" ry="2.5" fill="#484c50" opacity="0.33" />
         </>}
 
-        {/* Road */}
+        {/* Road (legacy foreground path — now sits under the town floor; kept until a cleanup pass) */}
         <path d={roadPath} stroke={theme.road} strokeWidth="20" fill="none" strokeLinecap="round" opacity="0.85" />
         <path d={roadPath} stroke={theme.roadLine} strokeWidth="2" fill="none" strokeDasharray="6 8" />
       </svg>
+
+      {/* Town plan — paved plaza, street network, lot pads, street furniture.
+          Sits over the hills/decor backdrop so the place reads as a planned
+          settlement in a valley. Buildings (below) are positioned onto its lots. */}
+      <TownGround plan={townPlan} theme={theme} biomeVariant={biomeVariant} builtLots={builtLotIndices} />
 
       {/* Header */}
       <div className="absolute top-3 left-4 landscape:max-[1024px]:top-2 landscape:max-[1024px]:left-3 font-bold text-[20px] landscape:max-[1024px]:text-[15px]" style={{ color: theme.textColor }}>{locationName}</div>
