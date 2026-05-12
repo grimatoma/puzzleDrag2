@@ -1,6 +1,6 @@
 // Phase 6 — Balance Manager override functions for the new config sections.
 import { describe, it, expect } from "vitest";
-import { applyExpeditionOverrides, applyBiomeOverrides, sanitizeTuning } from "../config/applyOverrides.js";
+import { applyExpeditionOverrides, applyBiomeOverrides, sanitizeTuning, applyNpcOverrides } from "../config/applyOverrides.js";
 
 describe("applyExpeditionOverrides", () => {
   it("merges foodTurns (tune + add) and replaces meatFoods wholesale", () => {
@@ -59,5 +59,34 @@ describe("sanitizeTuning", () => {
     expect(sanitizeTuning({ maxTurns: 0, auditBossCooldownDays: -1, foundingGrowth: 0, homeBiome: "", craftGemSkipCost: "x" })).toEqual({});
     expect(sanitizeTuning(undefined)).toEqual({});
     expect(sanitizeTuning("nope")).toEqual({});
+  });
+});
+
+describe("applyNpcOverrides", () => {
+  it("patches gift prefs (re-deriving favoriteGift) and bond bands; ignores unknowns", () => {
+    const npcData = {
+      mira: { id: "mira", displayName: "Mira", loves: ["bread"], likes: ["honey"], favoriteGift: "bread" },
+    };
+    const bondBands = [
+      { lo: 1, hi: 4, name: "Sour", modifier: 0.7 },
+      { lo: 5, hi: 6, name: "Warm", modifier: 1.0 },
+    ];
+    applyNpcOverrides(npcData, bondBands, {
+      byId: { mira: { displayName: "Mira the Baker", loves: ["cake", "bread"], likes: ["jam"] }, ghost: { loves: ["x"] } },
+      bands: [{ name: "Bitter", modifier: 0.5 }, { modifier: 1.1 }],
+    });
+    expect(npcData.mira.displayName).toBe("Mira the Baker");
+    expect(npcData.mira.loves).toEqual(["cake", "bread"]);
+    expect(npcData.mira.likes).toEqual(["jam"]);
+    expect(npcData.mira.favoriteGift).toBe("cake");   // re-derived
+    expect(npcData.ghost).toBeUndefined();            // unknown id ignored
+    expect(bondBands[0]).toMatchObject({ name: "Bitter", modifier: 0.5 });
+    expect(bondBands[1]).toMatchObject({ name: "Warm", modifier: 1.1 }); // name untouched
+  });
+  it("is a no-op on a missing override object", () => {
+    const npcData = { mira: { loves: ["bread"], favoriteGift: "bread" } };
+    const before = JSON.stringify(npcData);
+    applyNpcOverrides(npcData, [], undefined);
+    expect(JSON.stringify(npcData)).toBe(before);
   });
 });

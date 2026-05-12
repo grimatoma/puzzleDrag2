@@ -17,10 +17,14 @@ const NPC_RAW = {
   wren:  { id: "wren",  displayName: "Wren",        loves: ["wood_plank", "mine_ingot"], likes: ["wood_log", "bread"]  },
 };
 
-export const NPC_DATA = Object.freeze(
-  Object.fromEntries(
-    Object.entries(NPC_RAW).map(([id, d]) => [id, Object.freeze({ ...d, favoriteGift: d.loves[0] })]),
-  ),
+// Not frozen — `applyNpcOverrides` (Balance Manager) mutates this in place.
+export const NPC_DATA = Object.fromEntries(
+  Object.entries(NPC_RAW).map(([id, d]) => [id, { ...d, loves: [...d.loves], likes: [...d.likes], favoriteGift: d.loves[0] }]),
 );
 
 export const NPC_IDS = Object.freeze(["wren", "mira", "tomas", "bram", "liss"]);
+
+// Phase 6 — Balance Manager "NPCs" tab: gift prefs + bond bands.
+import { BALANCE_OVERRIDES } from "../../constants.js";
+import { applyNpcOverrides } from "../../config/applyOverrides.js";
+applyNpcOverrides(NPC_DATA, BOND_BANDS, BALANCE_OVERRIDES.npcs);

@@ -26,6 +26,7 @@ const ZonesTab     = lazy(() => import("./tabs/ZonesTab.jsx"));
 const BiomesTab    = lazy(() => import("./tabs/BiomesTab.jsx"));
 const WorkersTab   = lazy(() => import("./tabs/WorkersTab.jsx"));
 const KeepersTab   = lazy(() => import("./tabs/KeepersTab.jsx"));
+const NpcsTab      = lazy(() => import("./tabs/NpcsTab.jsx"));
 const RationsTab   = lazy(() => import("./tabs/RationsTab.jsx"));
 const TuningTab    = lazy(() => import("./tabs/TuningTab.jsx"));
 const ExportTab    = lazy(() => import("./tabs/ExportTab.jsx"));
@@ -65,6 +66,9 @@ const TABS = [
   { id: "tuning",    label: "Tuning",         iconKey: "ui_devtools", Component: TuningTab,
     section: "other",
     blurb: "Loose top-level constants: round length, audit-boss cooldown, craft-queue timer + gem-skip cost, expedition floor, settlement founding cost ramp, and the home biome." },
+  { id: "npcs",      label: "NPCs",           iconKey: "ui_star", Component: NpcsTab,
+    section: "story",
+    blurb: "Townsfolk gift preferences (loves / likes — the items that raise their bond fastest) and the four bond bands (name + the order-reward modifier at that band)." },
   { id: "keepers",   label: "Keepers",        iconKey: "ui_star", Component: KeepersTab,
     section: "story",
     blurb: "The biome keepers (Deer-Spirit / Stone-Knocker / Tidesinger): names, the building threshold at which they appear, and the Coexist / Drive Out dialogue + rewards." },
@@ -100,10 +104,11 @@ function emptyDraft() {
     workers: {},
     // Phase 6 — Keepers tab patches per-type KEEPERS entries.
     keepers: {},
-    // Phase 6 — Expedition Rations / Settlement Biomes / Tuning tabs.
+    // Phase 6 — Expedition Rations / Settlement Biomes / Tuning / NPCs tabs.
     expedition: {},
     biomes: {},
     tuning: {},
+    npcs: {},
   };
 }
 
