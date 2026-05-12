@@ -6,7 +6,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { STORY_BEATS, SIDE_BEATS, SCENE_THEMES } from "../story.js";
-import { readBalanceDraft, writeBalanceDraft } from "../config/applyOverrides.js";
+import { writeBalanceDraft } from "../config/applyOverrides.js";
 import { BALANCE_OVERRIDES } from "../constants.js";
 
 // ─── Colors ──────────────────────────────────────────────────────────────────
@@ -812,6 +812,7 @@ export default function StoryEditorApp() {
   const [savedNotice, setSavedNotice] = useState("");
   const [zoom, setZoom] = useState(1);
   const [pan, setPan]   = useState({ x: 20, y: 20 });
+  const [dragging, setDragging] = useState(false); // cursor mirror of isDragging (a ref can't drive render)
   const isDragging = useRef(false);
   const dragStart  = useRef(null);
   const canvasRef  = useRef(null);
@@ -839,6 +840,7 @@ export default function StoryEditorApp() {
   const onMouseDown = useCallback(e => {
     if (e.target !== canvasRef.current && !e.target.closest("[data-canvas-bg]")) return;
     isDragging.current = true;
+    setDragging(true);
     dragStart.current = { x: e.clientX - pan.x, y: e.clientY - pan.y };
   }, [pan]);
 
@@ -847,7 +849,7 @@ export default function StoryEditorApp() {
       if (!isDragging.current) return;
       setPan({ x: e.clientX - dragStart.current.x, y: e.clientY - dragStart.current.y });
     };
-    const onUp = () => { isDragging.current = false; };
+    const onUp = () => { isDragging.current = false; setDragging(false); };
     window.addEventListener("mousemove", onMove);
     window.addEventListener("mouseup", onUp);
     return () => { window.removeEventListener("mousemove", onMove); window.removeEventListener("mouseup", onUp); };
@@ -944,7 +946,7 @@ export default function StoryEditorApp() {
           onMouseDown={onMouseDown}
           onWheel={onWheel}
           style={{ flex: 1, position: "relative", overflow: "hidden",
-            background: C.canvas, cursor: isDragging.current ? "grabbing" : "grab",
+            background: C.canvas, cursor: dragging ? "grabbing" : "grab",
             backgroundImage: `radial-gradient(circle, ${C.canvasRule} 1px, transparent 1px)`,
             backgroundSize: `${20 * zoom}px ${20 * zoom}px`,
             backgroundPosition: `${pan.x}px ${pan.y}px`,

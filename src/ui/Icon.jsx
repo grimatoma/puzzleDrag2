@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { ICON_REGISTRY, drawIcon } from "../textures/iconRegistry.js";
 
 // Global cache mapping size -> { key -> dataUri }
@@ -75,6 +75,7 @@ export default function Icon({ iconKey, size = 24, className = "", style = {}, t
       return uri;
     }
 
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- syncs local state with the ICON_CACHE external store + the `icon-cache-cleared` event
     setDataUri(getOrBake());
 
     const handleCacheCleared = () => {
