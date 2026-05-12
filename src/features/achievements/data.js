@@ -15,8 +15,6 @@ export const ACHIEVEMENTS = [
   // bosses_defeated
   { id: "first_blood",    name: "First Blood",                desc: "Defeat your first seasonal boss",                counter: "bosses_defeated",            threshold: 1,   target: 1,   reward: { coins: 200 } },
   { id: "champion",       name: "Champion",                   desc: "Defeat 4 seasonal bosses",                       counter: "bosses_defeated",            threshold: 4,   target: 4,   reward: { tools: { magic_wand: 1 } } },
-  // festival_won
-  { id: "true_keeper",    name: "True Keeper of the Vale",    desc: "Win the harvest festival",                       counter: "festival_won",               threshold: 1,   target: 1,   reward: { coins: 500 } },
   // distinct_resources_chained
   { id: "naturalist",     name: "Naturalist",                 desc: "Chain 8 different resource types",               counter: "distinct_resources_chained", threshold: 8,   target: 8,   reward: { coins: 75 } },
   { id: "polymath",       name: "Polymath",                   desc: "Chain 15 different resource types",              counter: "distinct_resources_chained", threshold: 15,  target: 15,  reward: { tools: { magic_seed: 1 } } },
