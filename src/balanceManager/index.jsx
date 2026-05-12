@@ -24,6 +24,7 @@ const BuildingsTab = lazy(() => import("./tabs/BuildingsTab.jsx"));
 const PowersTab    = lazy(() => import("./tabs/PowersTab.jsx"));
 const ZonesTab     = lazy(() => import("./tabs/ZonesTab.jsx"));
 const WorkersTab   = lazy(() => import("./tabs/WorkersTab.jsx"));
+const KeepersTab   = lazy(() => import("./tabs/KeepersTab.jsx"));
 const ExportTab    = lazy(() => import("./tabs/ExportTab.jsx"));
 const IconsTab     = lazy(() => import("./tabs/IconsTab.jsx"));
 
@@ -52,6 +53,9 @@ const TABS = [
   { id: "workers",   label: "Workers",        iconKey: "ui_devtools", Component: WorkersTab,
     section: "other",
     blurb: "Type-tier worker hire costs (flat / linear / geometric ramp), max count, and effect parameters." },
+  { id: "keepers",   label: "Keepers",        iconKey: "ui_star", Component: KeepersTab,
+    section: "story",
+    blurb: "The biome keepers (Deer-Spirit / Stone-Knocker / Tidesinger): names, the building threshold at which they appear, and the Coexist / Drive Out dialogue + rewards." },
   { id: "icons",     label: "Icons",          iconKey: "ui_star", Component: IconsTab,
     section: "other",
     blurb: "Browse every procedurally-drawn icon in ICON_REGISTRY. Filter by category, search by key or label, and click to copy the key." },
@@ -64,6 +68,7 @@ const SECTIONS = [
   { id: "tiles",     label: "Tiles" },
   { id: "resources", label: "Resources" },
   { id: "items",     label: "Items" },
+  { id: "story",     label: "Story" },
   { id: "other",     label: "Other" },
 ];
 
@@ -81,6 +86,8 @@ function emptyDraft() {
     zones: {},
     // Phase 6 — Workers tab patches per-id TYPE_WORKERS entries.
     workers: {},
+    // Phase 6 — Keepers tab patches per-type KEEPERS entries.
+    keepers: {},
   };
 }
 
