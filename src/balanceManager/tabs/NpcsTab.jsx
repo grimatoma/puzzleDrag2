@@ -10,7 +10,7 @@
 import { useMemo, useState } from "react";
 import { NPC_DATA, NPC_IDS, BOND_BANDS } from "../../features/npcs/data.js";
 import { BIOMES, RECIPES } from "../../constants.js";
-import { COLORS, TextField, NumberField, FieldRow, Card, SmallButton } from "../shared.jsx";
+import { COLORS, TextField, NumberField, FieldRow, Card, SmallButton, SearchAndAddPicker } from "../shared.jsx";
 import Icon from "../../ui/Icon.jsx";
 
 export default function NpcsTab({ draft, updateDraft }) {
@@ -110,12 +110,22 @@ export default function NpcsTab({ draft, updateDraft }) {
 }
 
 function ListEditor({ items, availableKeys, onChange }) {
-  const [pickerOpen, setPickerOpen] = useState(false);
-  const [query, setQuery] = useState("");
-
-  const available = availableKeys.filter(
-    (k) => !items.includes(k) && k.toLowerCase().includes(query.toLowerCase())
-  );
+  const availableOptions = useMemo(() => {
+    return availableKeys.filter((k) => !items.includes(k)).map((k) => ({
+      id: k,
+      searchText: k,
+      renderNode: (
+        <div className="flex items-center gap-2 w-full">
+          <div className="flex-shrink-0 flex items-center justify-center w-6 h-6 rounded bg-[#e0d4be]">
+            <Icon iconKey={k} size={18} />
+          </div>
+          <div className="text-[11px] font-bold truncate flex-1 min-w-0" style={{ color: COLORS.ink }}>
+            {k}
+          </div>
+        </div>
+      )
+    }));
+  }, [items, availableKeys]);
 
   function addItem(k) {
     onChange([...items, k]);
@@ -164,45 +174,13 @@ function ListEditor({ items, availableKeys, onChange }) {
         })}
       </div>
 
-      <div className="flex items-center justify-between gap-2 mt-1">
-        <SmallButton onClick={() => setPickerOpen((v) => !v)}>
-          {pickerOpen ? "Hide" : "+ Add Item"}
-        </SmallButton>
-      </div>
-
-      {pickerOpen && (
-        <div className="flex flex-col gap-2">
-          <input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search items…"
-            className="px-2 py-1.5 rounded border text-[12px]"
-            style={{ background: "#fffaf1", borderColor: COLORS.border, color: COLORS.ink }}
-          />
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-2 max-h-48 overflow-y-auto pr-1">
-            {available.map((k) => (
-              <button
-                key={k}
-                onClick={() => { addItem(k); setQuery(""); }}
-                className="flex items-center gap-2 text-left p-1.5 rounded-lg border-2 transition-colors hover:opacity-90"
-                style={{ background: COLORS.parchment, borderColor: COLORS.border }}
-              >
-                <div className="flex-shrink-0 flex items-center justify-center w-6 h-6 rounded bg-[#e0d4be]">
-                  <Icon iconKey={k} size={18} />
-                </div>
-                <div className="text-[11px] font-bold truncate flex-1 min-w-0" style={{ color: COLORS.ink }}>
-                  {k}
-                </div>
-              </button>
-            ))}
-            {available.length === 0 && (
-              <div className="text-[11px] italic px-1 col-span-full" style={{ color: COLORS.inkSubtle }}>
-                No matching items.
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+      <SearchAndAddPicker
+        label="Add Item"
+        placeholder="Search items…"
+        options={availableOptions}
+        onSelect={addItem}
+        gridClass="grid-cols-2 md:grid-cols-3"
+      />
     </div>
   );
 }
