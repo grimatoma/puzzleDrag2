@@ -7,5 +7,6 @@
   "buildings": {},
   "tilePowers": {},
   "tileUnlocks": {},
-  "tileDescriptions": {}
+  "tileDescriptions": {},
+  "keepers": {}
 }

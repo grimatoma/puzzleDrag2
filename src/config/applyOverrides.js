@@ -346,6 +346,41 @@ export function applyWorkerOverrides(workers, overrides) {
   }
 }
 
+/**
+ * Apply patches to the KEEPERS table (Phase 6, Balance Manager Keepers tab),
+ * keyed by settlement type ('farm' | 'mine' | 'harbor'). Whitelisted fields:
+ *   name, title, icon, appearsAfterBuildings,
+ *   intro (array of strings — replaced wholesale),
+ *   coexist/driveout: { label, pitch (array), embers, coreIngots }
+ * Mutates the supplied keepers object in place.
+ */
+export function applyKeeperOverrides(keepers, overrides) {
+  if (!keepers || !overrides || typeof overrides !== "object") return;
+  const strArray = (v) => (Array.isArray(v) ? v.map((x) => String(x)).filter((s) => s.length > 0) : null);
+  const patchPath = (target, patch) => {
+    if (!target || !patch || typeof patch !== "object") return;
+    if (typeof patch.label === "string") target.label = patch.label;
+    const pitch = strArray(patch.pitch);
+    if (pitch) target.pitch = pitch;
+    if (Number.isFinite(patch.embers) && patch.embers >= 0) target.embers = Math.floor(patch.embers);
+    if (Number.isFinite(patch.coreIngots) && patch.coreIngots >= 0) target.coreIngots = Math.floor(patch.coreIngots);
+  };
+  for (const [type, patch] of Object.entries(overrides)) {
+    const k = keepers[type];
+    if (!k || !patch || typeof patch !== "object") continue;
+    if (typeof patch.name === "string") k.name = patch.name;
+    if (typeof patch.title === "string") k.title = patch.title;
+    if (typeof patch.icon === "string") k.icon = patch.icon;
+    if (Number.isFinite(patch.appearsAfterBuildings) && patch.appearsAfterBuildings >= 0) {
+      k.appearsAfterBuildings = Math.floor(patch.appearsAfterBuildings);
+    }
+    const intro = strArray(patch.intro);
+    if (intro) k.intro = intro;
+    if (patch.coexist) patchPath(k.coexist, patch.coexist);
+    if (patch.driveout) patchPath(k.driveout, patch.driveout);
+  }
+}
+
 const HOOK_DERIVED_FIELDS = new Set([
   "freeMoves", "freeMovesIfChain", "coinBonusFlat", "coinBonusPerTile",
   "thresholdReduce", "hooks", "abilities",

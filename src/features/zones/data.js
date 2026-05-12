@@ -456,8 +456,38 @@ export function resolveBiomeChoice(type, wanted) {
   return list.find((b) => b.id === wanted) ?? list[0] ?? null;
 }
 
+// ─── Keeper encounters (Phase 6a) ────────────────────────────────────────────
+// `state.settlements[zoneId].keeperPath` is 'coexist' | 'driveout' once faced.
+
+/** Count of "real" buildings at a zone (excludes _plots / decorations bookkeeping). */
+export function builtCountAt(state, zoneId) {
+  const built = state?.built?.[zoneId] ?? {};
+  return Object.keys(built).filter((k) => k !== "_plots" && k !== "decorations" && built[k]).length;
+}
+
+/** The keeper path chosen at `zoneId` ('coexist' | 'driveout'), or null if unfaced. */
+export function settlementKeeperPath(state, zoneId) {
+  const p = state?.settlements?.[zoneId]?.keeperPath;
+  return p === "coexist" || p === "driveout" ? p : null;
+}
+
+/**
+ * True when `zoneId`'s keeper is ready to be faced — the settlement is founded,
+ * has a keeper type, hasn't faced it yet, and has built up enough (per the
+ * keeper's `appearsAfterBuildings`).
+ */
+export function keeperReadyFor(state, zoneId) {
+  if (!isSettlementFounded(state, zoneId)) return false;
+  if (settlementKeeperPath(state, zoneId)) return false;
+  const type = settlementTypeForZone(zoneId);
+  const keeper = type && keeperForType(type);
+  if (!keeper) return false;
+  return builtCountAt(state, zoneId) >= (keeper.appearsAfterBuildings ?? 4);
+}
+
 // Phase 6 — Balance Manager hook. Apply any committed/draft overrides from
 // `src/config/balance.json` + the localStorage draft to the live ZONES table.
 import { BALANCE_OVERRIDES, EXPEDITION_FOOD_TURNS, EXPEDITION_MEAT_FOODS, SETTLEMENT_BIOMES, DEFAULT_HOME_BIOME } from "../../constants.js";
+import { keeperForType } from "../../keepers.js";
 import { applyZoneOverrides } from "../../config/applyOverrides.js";
 applyZoneOverrides(ZONES, BALANCE_OVERRIDES.zones);

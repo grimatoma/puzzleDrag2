@@ -10,7 +10,10 @@ import {
   settlementTypeForZone,
   settlementBiome,
   biomesForType,
+  settlementKeeperPath,
+  keeperReadyFor,
 } from '../zones/data.js';
+import { keeperForType } from '../../keepers.js';
 
 const formatHazard = (h) => String(h).split('_').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
 import IconCanvas, { hasIcon } from '../../ui/IconCanvas.jsx';
@@ -383,8 +386,57 @@ function BiomePicker({ node, type, cost, dispatch, onClose }) {
   );
 }
 
+// Phase 6a — the keeper encounter overlay. Step 1: the keeper's intro + the two
+// choices (with the reward shown). Step 2: the chosen path's pitch + Done.
+function KeeperEncounterModal({ node, type, dispatch, onClose }) {
+  const keeper = keeperForType(type);
+  const [chosen, setChosen] = useState(null); // null | 'coexist' | 'driveout'
+  if (!keeper) { onClose(); return null; }
+  const pick = (path) => { dispatch({ type: 'KEEPER/CONFRONT', payload: { zoneId: node.id, path } }); setChosen(path); };
+  const info = chosen ? (chosen === 'coexist' ? keeper.coexist : keeper.driveout) : null;
+  return (
+    <div className="fixed inset-0 z-[60] bg-black/65 grid place-items-center p-3" onClick={chosen ? onClose : undefined}>
+      <div className="bg-[#f4ecd8] border-[4px] border-[#b28b62] rounded-[18px] px-5 py-4 w-[min(460px,95vw)] max-h-[90vh] overflow-y-auto shadow-2xl" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center gap-2 mb-2">
+          <span className="text-[26px] leading-none">{keeper.icon}</span>
+          <div><div className="font-bold text-[17px] text-[#744d2e] leading-tight">{keeper.name}</div>
+            <div className="text-[11px] italic text-[#8a6a45]">{keeper.title} · at {node.name}</div></div>
+        </div>
+        {!chosen ? (
+          <>
+            <div className="flex flex-col gap-1.5 text-[12px] text-[#3a2715] leading-snug mb-3">
+              {keeper.intro.map((line, i) => <p key={i}>{line}</p>)}
+            </div>
+            <div className="flex flex-col gap-2">
+              <button onClick={() => pick('coexist')} className="text-left bg-[#dfeecd] hover:bg-[#e8f3d6] border-2 border-[#6a9a3a] rounded-xl px-3 py-2 transition-colors">
+                <div className="flex items-center justify-between"><span className="font-bold text-[13px] text-[#1f3a10]">🤝 Coexist</span><span className="text-[11px] font-bold text-[#6a4f10] bg-[#f2d98a] border border-[#b09a50] rounded-full px-2 py-0.5">+{keeper.coexist.embers ?? 0} 🔥 Embers</span></div>
+                <div className="text-[12px] text-[#3a4a20] mt-0.5">"{keeper.coexist.label}"</div>
+              </button>
+              <button onClick={() => pick('driveout')} className="text-left bg-[#e4ddd0] hover:bg-[#ece6da] border-2 border-[#9a8a6a] rounded-xl px-3 py-2 transition-colors">
+                <div className="flex items-center justify-between"><span className="font-bold text-[13px] text-[#3a2715]">⚔ Drive Out</span><span className="text-[11px] font-bold text-[#3a3e42] bg-[#cdd1d4] border border-[#8a8f95] rounded-full px-2 py-0.5">+{keeper.driveout.coreIngots ?? 0} ▣ Core Ingots</span></div>
+                <div className="text-[12px] text-[#4a3a2a] mt-0.5">"{keeper.driveout.label}"</div>
+              </button>
+            </div>
+            <button onClick={onClose} className="w-full mt-3 bg-[#9a724d] hover:bg-[#b8845a] text-white font-bold py-1.5 rounded-lg border border-[#e6c49a] text-[12px] transition-colors">Not yet</button>
+          </>
+        ) : (
+          <>
+            <div className={`text-[11px] font-bold uppercase tracking-wide mb-1 ${chosen === 'coexist' ? 'text-[#3a7a1a]' : 'text-[#6a5a3a]'}`}>{chosen === 'coexist' ? '🤝 You chose to coexist' : '⚔ You drove the keeper out'}</div>
+            <div className="flex flex-col gap-1.5 text-[12px] text-[#3a2715] leading-snug mb-3">
+              {(info?.pitch ?? []).map((line, i) => <p key={i}>{line}</p>)}
+              <p className="font-bold text-[#5a7a1a]">{chosen === 'coexist' ? `+${keeper.coexist.embers ?? 0} Embers` : `+${keeper.driveout.coreIngots ?? 0} Core Ingots`} added to your kingdom.</p>
+            </div>
+            <button onClick={onClose} className="w-full bg-[#91bf24] hover:bg-[#a3d028] text-white font-bold py-2 rounded-lg border-2 border-white text-[13px] transition-colors">Done</button>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function FoundSettlementControl({ node, visitedSet, state, dispatch, fullWidth }) {
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [keeperOpen, setKeeperOpen] = useState(false);
   if (!node || !SETTLEABLE_KINDS.has(node.kind)) return null;
   if (!visitedSet.has(node.id)) return null;
   const box = {
@@ -394,9 +446,26 @@ function FoundSettlementControl({ node, visitedSet, state, dispatch, fullWidth }
   if (isSettlementFounded(state, node.id)) {
     const done = settlementCompleted(state, node.id);
     const b = settlementBiome(state, node.id);
+    const type = settlementTypeForZone(node.id);
+    const keeper = type && keeperForType(type);
+    const path = settlementKeeperPath(state, node.id);
+    const ready = keeperReadyFor(state, node.id);
     return (
-      <div style={{ ...box, background: done ? '#a8d4a0' : '#cbe0b8', border: '1.5px solid #6a9a3a', color: '#1f3a10' }}>
-        ✓ Settled{b ? ` · ${b.icon} ${b.name}` : ''}{done ? ' · Complete' : ''}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 4, width: fullWidth ? '100%' : undefined }}>
+        <div style={{ ...box, background: done ? '#a8d4a0' : '#cbe0b8', border: '1.5px solid #6a9a3a', color: '#1f3a10' }}>
+          ✓ Settled{b ? ` · ${b.icon} ${b.name}` : ''}{done ? ' · Complete' : ''}
+        </div>
+        {path && keeper && (
+          <div style={{ ...box, fontSize: 9, background: path === 'coexist' ? '#dfeecd' : '#e4ddd0', border: '1.5px solid #9a8a6a', color: '#3a2715' }}>
+            {path === 'coexist' ? '🤝' : '⚔'} {keeper.name} · {path === 'coexist' ? 'Coexisting' : 'Driven out'}
+          </div>
+        )}
+        {ready && keeper && (
+          <button onClick={() => setKeeperOpen(true)} style={{ ...box, background: 'linear-gradient(to bottom, #7a3a8a, #5a2a6a)', border: '2px solid #4a1a5a', color: 'white', cursor: 'pointer' }}>
+            ⚔ Face {keeper.name}
+          </button>
+        )}
+        {keeperOpen && keeper && <KeeperEncounterModal node={node} type={type} dispatch={dispatch} onClose={() => setKeeperOpen(false)} />}
       </div>
     );
   }
