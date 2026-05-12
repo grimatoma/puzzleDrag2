@@ -36,7 +36,7 @@ import * as market from "./features/market/slice.js";
 import * as castle from "./features/castle/slice.js";
 import * as zones from "./features/zones/slice.js";
 import * as workers from "./features/workers/slice.js";
-import { ZONES, settlementFoundingCost, isSettlementFounded } from "./features/zones/data.js";
+import { ZONES, settlementFoundingCost, isSettlementFounded, displayZoneName } from "./features/zones/data.js";
 import { FIRE_HAZARD_ENABLED } from "./featureFlags.js";
 import { loadSavedState, persistState, clearSave } from "./state/persistence.js";
 export { loadSavedState, persistStateNow, persistState, flushPersistState, clearSave } from "./state/persistence.js";
@@ -1009,7 +1009,7 @@ function coreReducer(state, action) {
         ...state,
         coins: state.coins - (cost.coins ?? 0),
         settlements: { ...(state.settlements ?? {}), [zoneId]: { founded: true } },
-        bubble: { id: Date.now(), npc: "wren", text: `${zoneId} is a settlement now. People will come.`, ms: 2200 },
+        bubble: { id: Date.now(), npc: "wren", text: `${displayZoneName(state, zoneId)} is a settlement now. People will come.`, ms: 2200 },
       };
     }
     case "OPEN_MODAL":

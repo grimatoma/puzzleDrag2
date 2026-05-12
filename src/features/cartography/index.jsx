@@ -1,7 +1,16 @@
 import { useState, useEffect, useMemo } from 'react';
 import { MAP_NODES, MAP_EDGES, NODE_COLORS, REGIONS, KIND_LABELS } from './data.js';
 import { isAdjacent } from './slice.js';
+import {
+  isSettlementFounded,
+  settlementFoundingCost,
+  settlementCompleted,
+} from '../zones/data.js';
 import IconCanvas, { hasIcon } from '../../ui/IconCanvas.jsx';
+
+// Zone kinds that are real settlements (and so can be founded). boss / event /
+// festival nodes aren't.
+const SETTLEABLE_KINDS = new Set(['home', 'farm', 'mine', 'fish']);
 
 function NodeBadge({ nodeId, fallbackEmoji, size = 22 }) {
   const k = `map_${nodeId}`;
@@ -308,6 +317,49 @@ function StatusBadge({ status, target }) {
   );
 }
 
+// Phase 4 — settlement founding affordance on the map (the "Kingdoms hub"
+// extension). Shows "✓ Settled" once a zone is founded, or a "Found this
+// settlement · N◉" button for a visited-but-unfounded settleable zone.
+//
+// DEFERRED: founding is recorded but not yet *enforced* — you can still build
+// and play at an unfounded zone (see features/zones/data.js for the in-code
+// note), and there's no equivalent CTA in the Town view; only the map surfaces
+// founding for now. Wire enforcement + a Town-view prompt in a follow-up.
+function FoundSettlementControl({ node, visitedSet, state, dispatch, fullWidth }) {
+  if (!node || !SETTLEABLE_KINDS.has(node.kind)) return null;
+  if (!visitedSet.has(node.id)) return null;
+  const box = {
+    ...labelStyle, fontSize: 10, padding: '5px 8px', borderRadius: 9,
+    textAlign: 'center', lineHeight: 1.25, width: fullWidth ? '100%' : undefined, fontWeight: 'bold',
+  };
+  if (isSettlementFounded(state, node.id)) {
+    const done = settlementCompleted(state, node.id);
+    return (
+      <div style={{ ...box, background: done ? '#a8d4a0' : '#cbe0b8', border: '1.5px solid #6a9a3a', color: '#1f3a10' }}>
+        ✓ Settled{done ? ' · Complete' : ''}
+      </div>
+    );
+  }
+  const cost = settlementFoundingCost(state).coins;
+  const canAfford = (state?.coins ?? 0) >= cost;
+  return (
+    <button
+      onClick={() => canAfford && dispatch({ type: 'FOUND_SETTLEMENT', payload: { zoneId: node.id } })}
+      disabled={!canAfford}
+      title={canAfford ? `Found ${node.name}` : `Need ${cost}◉ to found this settlement`}
+      style={{
+        ...box,
+        background: canAfford ? 'linear-gradient(to bottom, #c8923a, #a06a1a)' : '#cbb98c',
+        border: canAfford ? '2px solid #7a4f10' : '2px solid #a08850',
+        color: canAfford ? 'white' : '#7c5a3a',
+        cursor: canAfford ? 'pointer' : 'not-allowed',
+      }}
+    >
+      🏗 Found · {cost}◉
+    </button>
+  );
+}
+
 function ActionControl({ status, node, isCurrent, canFastTravel, canUnlock, onTravel, fullWidth }) {
   const w = fullWidth ? '100%' : undefined;
   const baseBox = {
@@ -372,7 +424,7 @@ function ActionControl({ status, node, isCurrent, canFastTravel, canUnlock, onTr
   );
 }
 
-function SidePanel({ node, current, visited, discovered, playerLevel, dispatch, compact }) {
+function SidePanel({ node, current, visited, discovered, playerLevel, dispatch, compact, state }) {
   if (!node) {
     return (
       <div
@@ -439,6 +491,7 @@ function SidePanel({ node, current, visited, discovered, playerLevel, dispatch, 
             </div>
           </div>
           <StatusBadge status={status} target={node} playerLevel={playerLevel} />
+          <FoundSettlementControl node={node} visitedSet={visitedSet} state={state} dispatch={dispatch} fullWidth />
         </div>
 
         {/* Body: description + activities */}
@@ -505,6 +558,7 @@ function SidePanel({ node, current, visited, discovered, playerLevel, dispatch, 
           </div>
         </div>
         <StatusBadge status={status} target={node} playerLevel={playerLevel} />
+        <FoundSettlementControl node={node} visitedSet={visitedSet} state={state} dispatch={dispatch} fullWidth />
       </div>
 
       <div style={{ ...labelStyle, fontSize: 10, color: '#3a2715', lineHeight: 1.35 }}>
@@ -643,6 +697,7 @@ export default function CartographyScreen({ state, dispatch }) {
         playerLevel={level}
         dispatch={dispatch}
         compact={isPortrait}
+        state={state}
       />
     </div>
   );
