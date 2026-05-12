@@ -10,12 +10,30 @@ export const INITIAL_STORY_STATE = {
   choiceLog: [],
 };
 
+// ─── Cutscene scenes ─────────────────────────────────────────────────────────
+// A beat may carry `scene: "<key>"`; the dialogue modal renders the matching
+// theme's gradient behind the panel so different beats feel like different
+// places/times without needing camera work or new texture art (§2.42).
+export const SCENE_THEMES = Object.freeze({
+  ruin:   { label: "A cold ruin",   bg: "radial-gradient(120% 100% at 50% 0%, #2c3640 0%, #161b21 60%, #0c0f12 100%)" },
+  hearth: { label: "By the hearth", bg: "radial-gradient(120% 100% at 50% 100%, #5a2f12 0%, #2a1a0e 55%, #120c07 100%)" },
+  night:  { label: "Deep night",    bg: "linear-gradient(180deg, #0c1530 0%, #0a0f22 60%, #06070f 100%)" },
+  dawn:   { label: "First light",   bg: "linear-gradient(180deg, #b9663a 0%, #6a3a1f 45%, #281710 100%)" },
+});
+
+/** Returns the scene theme object for a beat, or null. */
+export function beatScene(beat) {
+  const key = beat?.scene;
+  return (typeof key === "string" && SCENE_THEMES[key]) || null;
+}
+
 export const STORY_BEATS = [
   // ── Act 1 ──────────────────────────────────────────────────────────────────
   {
     id: "act1_arrival",
     act: 1,
     title: "A Cold Hearth",
+    scene: "ruin",
     // Phase 1 — multi-line dialogue form (the doc's Wren opening). Each line
     // is { speaker, text }; speaker is an NPC id (or null for narration).
     lines: [
@@ -35,6 +53,7 @@ export const STORY_BEATS = [
     id: "act1_light_hearth",
     act: 1,
     title: "First Light",
+    scene: "hearth",
     body: "Wren: 'The Hearth is alive again. Mira will be here soon.'",
     trigger: { type: "resource_total", key: "grass_hay", amount: 20 },
     onComplete: { setFlag: "hearth_lit", spawnNPC: "mira" },
@@ -126,8 +145,12 @@ export const STORY_BEATS = [
   {
     id: "act3_win",
     act: 3,
-    title: "The Vale Lives",
-    body: "The festival larder is full. Hearthwood Vale lives again. (Sandbox mode continues.)",
+    title: "The Settlement Lives",
+    scene: "dawn",
+    // {settlement} is replaced at render time with the player-chosen name.
+    // (The recurring-festival / Old-Capital-finale rework is a later phase;
+    // for now this stays the act-3 milestone, just no longer "the vale".)
+    body: "The festival larder is full. {settlement} lives again — and there is more of the old kingdom still to find. (Sandbox mode continues.)",
     trigger: {
       type: "resource_total_multi",
       req: { grass_hay: 50, grain_wheat: 50, grain: 50, berry: 50, wood_log: 50 },
@@ -394,6 +417,17 @@ export function beatChoices(beat) {
 export function beatIsContinueOnly(beat) {
   const cs = beatChoices(beat);
   return cs.length === 1 && cs[0].id === "continue";
+}
+
+/**
+ * Replaces `{token}` placeholders in dialogue text. Unknown tokens are left
+ * verbatim. Currently the modal supplies `{ settlement }` (the player's home
+ * settlement name); more vars can be added without touching this function.
+ */
+export function interpolateBeatText(text, vars = {}) {
+  return String(text ?? "").replace(/\{(\w+)\}/g, (m, k) =>
+    Object.prototype.hasOwnProperty.call(vars, k) ? String(vars[k]) : m
+  );
 }
 
 /**
