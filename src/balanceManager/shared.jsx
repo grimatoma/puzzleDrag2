@@ -1,5 +1,6 @@
 // Shared UI primitives for the Balance Manager. Matches the parchment
 // ember-orange accents.
+import { useState } from "react";
 import Icon from "../ui/Icon.jsx";
 
 export const COLORS = {
@@ -221,6 +222,64 @@ export function TileSwatch({ color, iconKey, size = 28 }) {
       aria-hidden
     >
       <Icon iconKey={iconKey} size={Math.floor(size * 0.8)} />
+    </div>
+  );
+}
+
+export function SearchAndAddPicker({
+  label = "Add Item",
+  placeholder = "Search...",
+  options = [],
+  onSelect,
+  gridClass = "grid-cols-2 md:grid-cols-3"
+}) {
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [query, setQuery] = useState("");
+
+  const filtered = options.filter((o) => o.searchText.toLowerCase().includes(query.toLowerCase()));
+
+  return (
+    <div className="flex flex-col gap-2 w-full">
+      <div className="flex items-center justify-between gap-2 mt-1">
+        <div className="text-[11px] font-bold uppercase tracking-wide" style={{ color: COLORS.inkSubtle }}>
+          {label}
+        </div>
+        <SmallButton onClick={() => setPickerOpen((v) => !v)}>
+          {pickerOpen ? "Hide" : "+ Add"}
+        </SmallButton>
+      </div>
+
+      {pickerOpen && (
+        <div className="flex flex-col gap-2">
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder={placeholder}
+            className="px-2 py-1.5 rounded border text-[12px]"
+            style={{ background: "#fffaf1", borderColor: COLORS.border, color: COLORS.ink }}
+          />
+          <div className={`grid gap-2 max-h-64 overflow-y-auto pr-1 ${gridClass}`}>
+            {filtered.map((o) => (
+              <button
+                key={o.id}
+                onClick={() => {
+                  onSelect(o.id);
+                  setQuery("");
+                }}
+                className="text-left p-1.5 rounded-lg border-2 transition-colors hover:opacity-90 min-w-0"
+                style={{ background: COLORS.parchment, borderColor: COLORS.border }}
+              >
+                {o.renderNode}
+              </button>
+            ))}
+            {filtered.length === 0 && (
+              <div className="text-[11px] italic px-1 col-span-full" style={{ color: COLORS.inkSubtle }}>
+                No matching items.
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
