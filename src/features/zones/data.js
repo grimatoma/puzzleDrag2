@@ -260,8 +260,8 @@ export function displayZoneName(state, zoneId) {
 // isSettlementFounded), and there is no Kingdoms-hub UI on the cartography map
 // that surfaces founded/completed status or a "Found this settlement" button.
 // Wire both of those in 4b.
-export const SETTLEMENT_FOUNDING_BASE_COINS = 300;
-export const SETTLEMENT_FOUNDING_GROWTH = 1.7;
+export let SETTLEMENT_FOUNDING_BASE_COINS = 300; // Balance Manager: tuning.foundingBaseCoins
+export let SETTLEMENT_FOUNDING_GROWTH = 1.7;   // Balance Manager: tuning.foundingGrowth
 
 /** Number of zones the player has founded. */
 export function foundedSettlementCount(state) {
@@ -487,7 +487,10 @@ export function keeperReadyFor(state, zoneId) {
 
 // Phase 6 — Balance Manager hook. Apply any committed/draft overrides from
 // `src/config/balance.json` + the localStorage draft to the live ZONES table.
-import { BALANCE_OVERRIDES, EXPEDITION_FOOD_TURNS, EXPEDITION_MEAT_FOODS, SETTLEMENT_BIOMES, DEFAULT_HOME_BIOME } from "../../constants.js";
+import { BALANCE_OVERRIDES, EXPEDITION_FOOD_TURNS, EXPEDITION_MEAT_FOODS, SETTLEMENT_BIOMES, DEFAULT_HOME_BIOME, TUNING_OVERRIDES } from "../../constants.js";
 import { keeperForType } from "../../keepers.js";
 import { applyZoneOverrides } from "../../config/applyOverrides.js";
 applyZoneOverrides(ZONES, BALANCE_OVERRIDES.zones);
+// Phase 6 — Balance Manager "Tuning" section: the founding-cost constants.
+if ("foundingBaseCoins" in TUNING_OVERRIDES) SETTLEMENT_FOUNDING_BASE_COINS = TUNING_OVERRIDES.foundingBaseCoins;
+if ("foundingGrowth" in TUNING_OVERRIDES) SETTLEMENT_FOUNDING_GROWTH = TUNING_OVERRIDES.foundingGrowth;

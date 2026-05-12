@@ -25,18 +25,18 @@ export const SCENE_EVENTS = Object.freeze({
 export const TILE = 74;
 export const COLS = 6;
 export const ROWS = 6;
-export const MAX_TURNS = 10;
+export let MAX_TURNS = 10;            // Balance Manager: tuning.maxTurns
 
 // Phase 3 — audit-boss cadence. Once the Frostmaw story flag is set, an audit
 // boss reappears on a real-time cooldown of this many days (tunable). No
 // in-game calendar is involved — it tracks wall-clock elapsed time.
-export const AUDIT_BOSS_COOLDOWN_DAYS = 3;
+export let AUDIT_BOSS_COOLDOWN_DAYS = 3; // Balance Manager: tuning.auditBossCooldownDays
 
 // Phase 5 — real-time crafting queue (alongside the instant CRAFT_RECIPE). A
 // queued craft is ready this many wall-clock hours after it's queued; spending
 // CRAFT_GEM_SKIP_COST gems finishes it instantly. Both tunable.
-export const CRAFT_QUEUE_HOURS = 4;
-export const CRAFT_GEM_SKIP_COST = 1;
+export let CRAFT_QUEUE_HOURS = 4;       // Balance Manager: tuning.craftQueueHours
+export let CRAFT_GEM_SKIP_COST = 1;     // Balance Manager: tuning.craftGemSkipCost
 
 // Phase 5 — expedition rations (master doc §VI). Mine/Harbor rounds are
 // supply-structured: you bring food before the round, each unit is worth this
@@ -60,7 +60,7 @@ export const EXPEDITION_FOOD_TURNS = {
 export const EXPEDITION_MEAT_FOODS = ["cured_meat"];
 // An expedition needs at least this many turns of food packed before you can
 // set out (Phase 5d). Tunable.
-export const MIN_EXPEDITION_TURNS = 3;
+export let MIN_EXPEDITION_TURNS = 3;    // Balance Manager: tuning.minExpeditionTurns
 
 // Phase 5e — settlement biomes (master doc §IV). A biome is chosen at founding
 // and fixes the two hazards that appear in every round at that settlement, plus
@@ -88,7 +88,7 @@ export const SETTLEMENT_BIOMES = Object.freeze({
   ],
 });
 // The biome `home` is treated as (it's pre-founded, never goes through the picker).
-export const DEFAULT_HOME_BIOME = "prairie";
+export let DEFAULT_HOME_BIOME = "prairie"; // Balance Manager: tuning.homeBiome
 
 // Save schema version. Forward migrations are not maintained — bump this
 // whenever persisted state changes shape and existing saves will be discarded.
@@ -745,6 +745,7 @@ import {
   applyBuildingOverrides,
   applyExpeditionOverrides,
   applyBiomeOverrides,
+  sanitizeTuning,
 } from "./config/applyOverrides.js";
 
 export const BALANCE_OVERRIDES = mergeOverrides(balanceFile, readBalanceDraft());
@@ -755,6 +756,19 @@ applyRecipeOverrides(RECIPES, BALANCE_OVERRIDES.recipes);
 applyBuildingOverrides(BUILDINGS, BALANCE_OVERRIDES.buildings);
 applyExpeditionOverrides(EXPEDITION_FOOD_TURNS, EXPEDITION_MEAT_FOODS, BALANCE_OVERRIDES.expedition);
 applyBiomeOverrides(SETTLEMENT_BIOMES, BALANCE_OVERRIDES.biomes);
+
+// Phase 6 — the Balance Manager "Tuning" section: loose top-level constants.
+// `TUNING_OVERRIDES` is the validated subset; the `export let`s above (and the
+// SETTLEMENT_FOUNDING_* ones in features/zones/data.js) are reassigned from it.
+export const TUNING_OVERRIDES = sanitizeTuning(BALANCE_OVERRIDES.tuning);
+if ("maxTurns" in TUNING_OVERRIDES) MAX_TURNS = TUNING_OVERRIDES.maxTurns;
+if ("auditBossCooldownDays" in TUNING_OVERRIDES) AUDIT_BOSS_COOLDOWN_DAYS = TUNING_OVERRIDES.auditBossCooldownDays;
+if ("craftQueueHours" in TUNING_OVERRIDES) CRAFT_QUEUE_HOURS = TUNING_OVERRIDES.craftQueueHours;
+if ("craftGemSkipCost" in TUNING_OVERRIDES) CRAFT_GEM_SKIP_COST = TUNING_OVERRIDES.craftGemSkipCost;
+if ("minExpeditionTurns" in TUNING_OVERRIDES) MIN_EXPEDITION_TURNS = TUNING_OVERRIDES.minExpeditionTurns;
+if ("homeBiome" in TUNING_OVERRIDES && (SETTLEMENT_BIOMES.farm ?? []).some((b) => b.id === TUNING_OVERRIDES.homeBiome)) {
+  DEFAULT_HOME_BIOME = TUNING_OVERRIDES.homeBiome;
+}
 
 // Recompute tile palette so default-palette renders pick up any color overrides.
 for (const r of [...BIOMES.farm.resources, ...BIOMES.mine.resources, ...BIOMES.fish.resources]) {
