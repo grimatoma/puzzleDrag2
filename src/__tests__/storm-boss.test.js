@@ -59,12 +59,16 @@ describe("Storm boss (fish biome)", () => {
     expect(s1.coins).toBeGreaterThan(0);
   });
 
-  it("year rotation includes Storm so the season-clock will eventually trigger it", () => {
-    // Year 6 (seasonCount 24 → yearIndex 5) cycles back through; Storm is the 6th entry,
-    // so seasonCount === 24 maps to yearIndex 5 → Storm.
-    const s0 = baseState({ _bossSeasonCount: 23, _bossResolvedThisSeason: false });
+  it("the audit-boss rotation includes Storm (auditBossSeq 5 → Storm)", () => {
+    // YEAR_BOSS_ROTATION is [frostmaw, quagmire, ember_drake, old_stoneface, mossback, storm];
+    // with the Frostmaw flag armed and the cooldown elapsed, seq 5 maps to Storm.
+    const s0 = baseState({
+      story: { flags: { frostmaw_active: true } },
+      lastAuditBossAt: 1,
+      auditBossSeq: 5,
+    });
     const s1 = bossReduce(s0, { type: "CLOSE_SEASON" });
-    expect(s1._bossSeasonCount).toBe(24);
     expect(s1.boss?.key).toBe("storm");
+    expect(s1.auditBossSeq).toBe(6);
   });
 });

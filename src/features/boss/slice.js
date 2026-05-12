@@ -1,6 +1,8 @@
-import { RECIPES } from "../../constants.js";
+import { RECIPES, AUDIT_BOSS_COOLDOWN_DAYS } from "../../constants.js";
 import { BOSSES, BOSS_WINDOW_TURNS, bossReward as bossRewardFn } from "../bosses/data.js";
 import { awardXp } from "../almanac/data.js";
+
+const AUDIT_BOSS_COOLDOWN_MS = AUDIT_BOSS_COOLDOWN_DAYS * 24 * 60 * 60 * 1000;
 
 // Build BOSS_META from the canonical BOSSES list (features/bosses/data.js)
 // Preserving UI-only fields (emoji, flavor, goal) inline while sourcing turns
@@ -87,6 +89,11 @@ export const initial = {
   bossesDefeated: 0,
   _bossSeasonCount: 0,
   _bossResolvedThisSeason: false,
+  // Phase 3 — audit-boss cadence. `lastAuditBossAt` is the wall-clock ms of the
+  // last audit-boss trigger (0 = never armed). `auditBossSeq` cycles the boss
+  // rotation. Gated by the `frostmaw_active` story flag.
+  lastAuditBossAt: 0,
+  auditBossSeq: 0,
 };
 
 function triggerBoss(state, bossKey) {
@@ -252,15 +259,21 @@ export function reduce(state, action) {
         next = { ...next, boss: { ...next.boss, turnsLeft } };
       }
 
-      // Trigger a seasonal boss climax at the end of every 4th season (1 year).
-      // Skip if a boss was already resolved this season to avoid two boss events in one beat.
-      // NOTE: this season-based cadence is slated for a Phase 3 rework — bosses
-      // (Frostmaw etc.) will appear on a real-day cooldown once a story goal is met.
-      if (seasonCount % 4 === 0 && !next.boss && !next._bossResolvedThisSeason) {
-        const yearIndex = Math.floor(seasonCount / 4) - 1;
-        const bossKey = YEAR_BOSS_ROTATION[yearIndex % YEAR_BOSS_ROTATION.length];
-        next = triggerBoss(next, bossKey);
-        return next;
+      // Phase 3 — audit-boss cadence (replaces the old "every 4th season"
+      // year-rotation climax). Once the Frostmaw story flag is set, an audit
+      // boss reappears on a real-day cooldown. The first time the clock is
+      // armed it just starts ticking (no boss yet); thereafter, when the
+      // cooldown elapses at a season-end, the next boss in the rotation fires.
+      const auditArmed = !!(next.story?.flags?.frostmaw_active);
+      if (auditArmed && !next.boss && !next._bossResolvedThisSeason) {
+        if ((next.lastAuditBossAt ?? 0) === 0) {
+          next = { ...next, lastAuditBossAt: Date.now() };
+        } else if (Date.now() - next.lastAuditBossAt >= AUDIT_BOSS_COOLDOWN_MS) {
+          const seq = next.auditBossSeq ?? 0;
+          const bossKey = YEAR_BOSS_ROTATION[seq % YEAR_BOSS_ROTATION.length];
+          next = triggerBoss(next, bossKey);
+          return { ...next, lastAuditBossAt: Date.now(), auditBossSeq: seq + 1 };
+        }
       }
 
       // Reset the per-season resolved flag at end of every season
