@@ -745,10 +745,12 @@ import {
   applyBuildingOverrides,
   applyExpeditionOverrides,
   applyBiomeOverrides,
+  applyDailyRewardOverrides,
   sanitizeTuning,
 } from "./config/applyOverrides.js";
 
 export const BALANCE_OVERRIDES = mergeOverrides(balanceFile, readBalanceDraft());
+applyDailyRewardOverrides(DAILY_REWARDS, BALANCE_OVERRIDES.dailyRewards);
 
 applyUpgradeThresholdOverrides(UPGRADE_THRESHOLDS, BALANCE_OVERRIDES.upgradeThresholds);
 applyResourceOverrides(BIOMES, BALANCE_OVERRIDES.resources);
