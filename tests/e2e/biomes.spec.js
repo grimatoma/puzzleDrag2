@@ -9,7 +9,7 @@ import { gotoFresh, getReactState, waitForState, dispatchAction } from './helper
  */
 
 test('SWITCH_BIOME farm → mine: biomeKey + grid swap, hazards initialised', async ({ page }) => {
-  await gotoFresh(page, { level: 5, coins: 2000, inventory: { shovel: 20 } });
+  await gotoFresh(page, { level: 5, coins: 2000 });
   await dispatchAction(page, { type: 'SET_VIEW', view: 'board' });
   const before = await getReactState(page);
   expect(before.biome).toBe('farm');

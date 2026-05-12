@@ -1,28 +1,10 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { rootReducer, createInitialState } from "../state.js";
-import { RECIPES, MINE_ENTRY_TIERS, MAX_TURNS } from "../constants.js";
+import { MINE_ENTRY_TIERS, MAX_TURNS } from "../constants.js";
 
 beforeEach(() => global.localStorage.clear());
 
 describe("Phase 3.6 — Mine entry tiers", () => {
-  it("registers shovel recipe at workshop tier 1", () => {
-    expect(RECIPES.shovel).toMatchObject({
-      inputs: { wood_plank: 1, mine_stone: 1 }, tier: 1, station: "workshop", coins: 25,
-    });
-  });
-
-  it("fresh state seeds shovel = 0", () => {
-    expect(createInitialState().shovel).toBe(0);
-  });
-
-  it("crafts 1 shovel for 1 plank + 1 stone", () => {
-    const s0 = { ...createInitialState(), inventory: { wood_plank: 2, mine_stone: 2 }, built: { hearth: true, workshop: true } };
-    const s1 = rootReducer(s0, { type: "CRAFT", payload: { id: "shovel", qty: 1 } });
-    expect(s1.shovel).toBe(1);
-    expect(s1.inventory.wood_plank).toBe(1);
-    expect(s1.inventory.mine_stone).toBe(1);
-  });
-
   it("MINE_ENTRY_TIERS lists three tiers in spec order", () => {
     expect(MINE_ENTRY_TIERS.map((t) => t.id)).toEqual(["free", "better", "premium"]);
   });
@@ -44,50 +26,33 @@ describe("Phase 3.6 — Mine entry tiers", () => {
     expect(r.inventory.supplies).toBe(2);
   });
 
-  it("better tier consumes 100 coins + 10 shovels and extends session by 2 turns", () => {
+  it("better tier consumes 100 coins and extends session by 2 turns", () => {
     const s = {
       ...createInitialState(),
       coins: 150,
-      shovel: 12,
       story: { flags: { mine_unlocked: true } },
     };
     const r = rootReducer(s, { type: "MINE/ENTER", payload: { tier: "better" } });
     expect(r.biomeKey).toBe("mine");
     expect(r.coins).toBe(50);
-    expect(r.shovel).toBe(2);
     expect(r.sessionMaxTurns).toBe(MAX_TURNS + 2);
-  });
-
-  it("better tier rejected when shovels short", () => {
-    const s = {
-      ...createInitialState(),
-      coins: 100,
-      shovel: 9,
-      story: { flags: { mine_unlocked: true } },
-    };
-    const r = rootReducer(s, { type: "MINE/ENTER", payload: { tier: "better" } });
-    expect(r.biomeKey).toBe("farm");
-    expect(r.coins).toBe(100);
-    expect(r.shovel).toBe(9);
   });
 
   it("better tier rejected when coins short", () => {
     const s = {
       ...createInitialState(),
       coins: 50,
-      shovel: 10,
       story: { flags: { mine_unlocked: true } },
     };
     const r = rootReducer(s, { type: "MINE/ENTER", payload: { tier: "better" } });
     expect(r.biomeKey).toBe("farm");
   });
 
-  it("premium tier consumes 2 runes only, no supplies/shovels/coins", () => {
+  it("premium tier consumes 2 runes only, no supplies/coins", () => {
     const s = {
       ...createInitialState(),
       runes: 3,
       coins: 0,
-      shovel: 0,
       inventory: { supplies: 0 },
       story: { flags: { mine_unlocked: true } },
     };

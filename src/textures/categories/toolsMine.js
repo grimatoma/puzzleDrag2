@@ -272,22 +272,6 @@ function drawLantern(ctx) {
   ctx.beginPath(); ctx.arc(0, 0, 22, 0, Math.PI*2); ctx.fill();
 }
 
-function drawShovel(ctx) {
-  shadow(ctx, 16);
-  woodHandle(ctx, 12, -18, -8, 14, 4);
-  ctx.save(); ctx.translate(-10, 16); ctx.rotate(Math.PI/2 + Math.atan2(-18 - 14, 12 - (-8)));
-  const g = ctx.createLinearGradient(0, -2, 0, 14);
-  g.addColorStop(0, "#a8a8b0"); g.addColorStop(0.5, "#5a5a62"); g.addColorStop(1, "#1a1a1e");
-  ctx.fillStyle = g;
-  ctx.beginPath();
-  ctx.moveTo(-7, -2); ctx.lineTo(7, -2); ctx.lineTo(8, 8); ctx.bezierCurveTo(8, 14, -8, 14, -8, 8);
-  ctx.closePath(); ctx.fill();
-  ctx.strokeStyle = "#1a1a1e"; ctx.lineWidth = 1.6; ctx.stroke();
-  ctx.fillStyle = "rgba(255,255,255,0.4)";
-  ctx.beginPath(); ctx.ellipse(-3, 4, 1.5, 5, -0.2, 0, Math.PI*2); ctx.fill();
-  ctx.restore();
-}
-
 function drawPan(ctx) {
   shadow(ctx, 22);
   // Pan body — wide shallow
@@ -471,7 +455,6 @@ export const ICONS = {
   mine_cart:      { label:"Mine Cart",      color:"#7a4818", draw:drawMineCart },
   helmet:         { label:"Helmet",         color:"#f8c040", draw:drawHelmet },
   lantern:        { label:"Lantern",        color:"#f8c040", draw:drawLantern },
-  shovel:         { label:"Shovel",         color:"#a8a8b0", draw:drawShovel },
   gold_pan:       { label:"Gold Pan",       color:"#a8a8b0", draw:drawPan },
   canary:         { label:"Canary",         color:"#f8d040", draw:drawCanary },
   rope_coil:      { label:"Rope Coil",      color:"#a87838", draw:drawRopeCoil },

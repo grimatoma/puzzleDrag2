@@ -335,7 +335,7 @@ export const BUILDINGS = [
   { id: "forge", name: "Forge", desc: "Smith metal goods — hinges, lanterns, rings, and more — for high coin rewards.", cost: { coins: 1200, mine_stone: 60, mine_ingot: 20 }, lv: 8, x: 800, y: 380, w: 100, h: 100, color: "#5a6973" },
   { id: "caravan_post", name: "Caravan Post", desc: "Opens distant trade routes, letting you sell crafted goods to far-off markets.", cost: { coins: 800, wood_plank: 40 }, lv: 8, x: 940, y: 390, w: 110, h: 90, color: "#7e4f24" },
   { id: "kitchen", name: "Kitchen", desc: "Converts surplus grain into supplies. Three supplies grant standard Mine entry.", cost: { coins: 400, wood_plank: 20 }, lv: 2, x: 60, y: 260, w: 90, h: 100, color: "#8a4a26" },
-  { id: "workshop", name: "Workshop", desc: "Crafts shovels and other tools from raw materials.", cost: { coins: 500, wood_plank: 20, mine_stone: 10 }, lv: 3, x: 180, y: 265, w: 90, h: 100, color: "#6a5a3a" },
+  { id: "workshop", name: "Workshop", desc: "Crafts tools from raw materials.", cost: { coins: 500, wood_plank: 20, mine_stone: 10 }, lv: 3, x: 180, y: 265, w: 90, h: 100, color: "#6a5a3a" },
   { id: "powder_store", name: "Powder Store", desc: "Stockpiles black powder. Produces 2 Bombs at the end of every season.", cost: { coins: 600, mine_stone: 30, mine_ingot: 5 }, lv: 5, x: 310, y: 260, w: 90, h: 100, color: "#3a2a1a",
     abilities: [
       { id: "grant_tool", params: { tool: "bomb", amount: 2 }, trigger: "season_end" },
@@ -448,8 +448,6 @@ export const WORKSHOP_RECIPES = {
 // (crafting unlocks orders/quests, not coin profit) or stale data — flagged
 // for design review before any code-side rebalance. See REFERENCE_CATALOG §4.
 export const RECIPES = {
-  shovel:     { name: "Shovel",          inputs: { wood_plank: 1, mine_stone: 1 },          tier: 1, station: "workshop", coins: 25,
-                desc: "A sturdy digging tool sold for 25 coins. Essential for farm maintenance and mine entry." },
   water_pump: { name: "Water Pump",      inputs: { wood_plank: 1, mine_stone: 1 },          tier: 2, station: "workshop", coins: 0, tool: "water_pump",
                 desc: "Crafts a water pump tool that can irrigate farm tiles, boosting grain yield for one turn." },
   explosives: { name: "Explosives",      inputs: { grass_hay: 1, mine_dirt: 1 },             tier: 2, station: "workshop", coins: 0, tool: "explosives",
@@ -588,7 +586,7 @@ export const CAPPED_RESOURCES = ["grass_hay","grain_wheat","grain","grain_flour"
 /** Mine entry pricing tiers (§7). */
 export const MINE_ENTRY_TIERS = [
   { id: "free",    supplies: 3,               label: "Standard" },
-  { id: "better",  coins: 100, shovels: 10,   label: "Better"   },
+  { id: "better",  coins: 100,                label: "Better"   },
   { id: "premium", runes: 2,                  label: "Premium"  },
 ];
 

@@ -290,7 +290,6 @@ export function createFreshState(overrides) {
     season: 0,
     runes: 0,
     runeStash: 0,
-    shovel: 0,
     sessionMaxTurns: MAX_TURNS,
     // Phase 2 — Start Farming session config. `selectedTiles` is the up-to-8
     // categories the player chose to expose on the board this session;
@@ -1340,13 +1339,12 @@ function coreReducer(state, action) {
           sessionMaxTurns: MAX_TURNS,
         };
       } else if (tier.id === "better") {
-        if ((state.coins ?? 0) < 100 || (state.shovel ?? 0) < 10) return state;
+        if ((state.coins ?? 0) < 100) return state;
         mineBase = {
           ...state,
           biomeKey: "mine",
           biome: "mine",
           coins: state.coins - 100,
-          shovel: state.shovel - 10,
           sessionMaxTurns: MAX_TURNS + 2,
         };
       } else if (tier.id === "premium") {
@@ -1416,10 +1414,6 @@ function coreReducer(state, action) {
         : Object.fromEntries(Object.entries(recipe.inputs).map(([k, n]) => [k, n * craftQty]));
       if (!hasAllInventory(state, scaledInputs)) return state;
       const newInv = deductInventory(state.inventory ?? {}, scaledInputs);
-      // shovel is tracked as state.shovel (not inventory)
-      if (craftId === "shovel") {
-        return { ...state, inventory: newInv, shovel: (state.shovel ?? 0) + craftQty };
-      }
       // Credit crafted output to inventory
       newInv[craftId] = (newInv[craftId] ?? 0) + craftQty;
       return { ...state, inventory: newInv };
