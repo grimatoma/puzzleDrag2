@@ -148,26 +148,6 @@ describe("CHAIN_COLLECTED — seasonStats accumulation", () => {
   });
 });
 
-describe("CLOSE_SEASON — pool income from housing", () => {
-  it("adds 1 to workers.pool per built housing tier", () => {
-    const s0 = baseState({
-      built: { housing: true, housing2: true, housing3: false },
-      townsfolk: { hired: {}, debt: 0, pool: 1 },
-    });
-    const s1 = rootReducer(s0, { type: "CLOSE_SEASON" });
-    expect(s1.townsfolk.pool).toBe(3); // 1 + 2 housings built
-  });
-
-  it("doesn't change pool when no housing is built", () => {
-    const s0 = baseState({
-      built: {},
-      townsfolk: { hired: {}, debt: 0, pool: 4 },
-    });
-    const s1 = rootReducer(s0, { type: "CLOSE_SEASON" });
-    expect(s1.townsfolk.pool).toBe(4);
-  });
-});
-
 describe("CLOSE_SEASON — Powder Store grants bombs", () => {
   it("grants 2 bombs at season end when powder_store is built", () => {
     const s0 = baseState({

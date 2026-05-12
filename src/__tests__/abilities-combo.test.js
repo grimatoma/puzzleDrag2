@@ -54,19 +54,10 @@ describe("Combination — full season-end with built buildings", () => {
     return { ...state, built: { ...state.built, [map]: builtForMap } };
   }
 
-  it("housing × 3 increases the townsfolk pool by 3 at season end", () => {
-    let s = createInitialState();
-    s = withBuilt(s, ["hearth", "housing", "housing2", "housing3"]);
-    s = { ...s, townsfolk: { ...s.townsfolk, debt: 0, pool: 1 } };
-    const before = s.townsfolk.pool;
-    const after = rootReducer(s, { type: "CLOSE_SEASON" });
-    expect(after.townsfolk.pool - before).toBe(3);
-  });
-
   it("powder_store grants 2 bombs at season end via grant_tool ability", () => {
     let s = createInitialState();
     s = withBuilt(s, ["hearth", "powder_store"]);
-    s = { ...s, tools: { ...s.tools, bomb: 0 }, townsfolk: { ...s.townsfolk, debt: 0 } };
+    s = { ...s, tools: { ...s.tools, bomb: 0 } };
     const after = rootReducer(s, { type: "CLOSE_SEASON" });
     expect(after.tools.bomb).toBe(2);
   });
@@ -79,7 +70,6 @@ describe("Combination — full season-end with built buildings", () => {
       ...s,
       biomeKey: "farm",
       grid,
-      townsfolk: { ...s.townsfolk, debt: 0 },
       farm: { savedField: null },
     };
     const after = rootReducer(s, { type: "CLOSE_SEASON" });

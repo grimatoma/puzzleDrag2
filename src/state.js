@@ -9,7 +9,7 @@ import { isMysteriousChainValid, spawnMysteriousOre, tickMysteriousOre } from ".
 import { isPearlChainValid, spawnPearl, tickPearl, PEARL_KEY } from "./features/fish/pearl.js";
 import { driftPrices, applyTrade } from "./market.js";
 import { currentCap } from "./utils.js";
-import { computeWorkerEffects } from "./features/apprentices/aggregate.js";
+import { computeWorkerEffects } from "./features/workers/aggregate.js";
 import { TILE_TYPES, CATEGORIES, TILE_TYPES_MAP, CATEGORY_OF } from "./features/tileCollection/data.js";
 import { yieldMultiplierFor } from "./features/tileCollection/yieldMultipliers.js";
 import { longChainBonusFor } from "./features/tileCollection/longChainBonus.js";
@@ -23,7 +23,6 @@ import * as tutorial from "./features/tutorial/slice.js";
 import * as settings from "./features/settings/slice.js";
 import * as boss from "./features/boss/slice.js";
 import * as cartography from "./features/cartography/slice.js";
-import * as apprentices from "./features/apprentices/slice.js";
 import * as storySlice from "./features/story/slice.js";
 import * as fish from "./features/fish/slice.js";
 import { INITIAL_STORY_STATE, evaluateStoryTriggers } from "./story.js";
@@ -42,7 +41,7 @@ import { FIRE_HAZARD_ENABLED } from "./featureFlags.js";
 import { loadSavedState, persistState, clearSave } from "./state/persistence.js";
 export { loadSavedState, persistStateNow, persistState, flushPersistState, clearSave } from "./state/persistence.js";
 
-const slices = [crafting, quests, achievements, tutorial, settings, boss, cartography, apprentices, storySlice, decorations, portal, market, castle, fish, zones, workers];
+const slices = [crafting, quests, achievements, tutorial, settings, boss, cartography, storySlice, decorations, portal, market, castle, fish, zones, workers];
 
 // Phase 7 — SEASON_NAMES used to be the calendar-season index → name lookup.
 // All readers were removed when the calendar was deleted, so the table is
@@ -285,11 +284,9 @@ export function createFreshState(overrides) {
     // turn-doubling fertilizer applied. Both reset on FARM/ENTER.
     session: { selectedTiles: [], fertilizerUsed: false },
     dailyStreak: { lastClaimedDate: null, currentDay: 0 },
-    townsfolk: { hired: { hilda: 0, pip: 0, wila: 0, tuck: 0, osric: 0, dren: 0 }, pool: 1 },
-    // Phase 5b — type-tier workers (anonymous, stackable). Distinct from
-    // townsfolk (named individuals). Hired count is capped at each
-    // worker's maxCount; per-hire effects accumulate via the apprentices
-    // aggregator's TYPE_WORKERS pass.
+    // Type-tier workers (anonymous, stackable). Hired count is capped at
+    // each worker's maxCount; per-hire effects accumulate via the worker
+    // abilities aggregator (features/workers/aggregate.js).
     workers: { hired: { farmer: 0, lumberjack: 0, miner: 0, baker: 0 } },
     tileCollection: defaultTileCollectionSlice(),
     almanac: {
@@ -317,7 +314,6 @@ export function createFreshState(overrides) {
     ...settings.initial,
     ...boss.initial,
     ...cartography.initial,
-    ...apprentices.initial,
     ...castle.initial,
     ...fish.initial,
     ...zones.initial,
@@ -362,7 +358,6 @@ export function initialState(overrides) {
         if (!isNaN(n) && n >= orderIdSeq) orderIdSeq = n + 1;
       }
     }
-    apprentices.seedHireSeq(saved.hiredApprentices);
     quests.seedQuestIdSeq(saved.dailies);
     // Merge saved story with INITIAL_STORY_STATE so older saves gain new beat fields.
     // Merge saved story: spread defaults first, then saved, then always clear volatile beat queue/modal on boot
@@ -372,13 +367,6 @@ export function initialState(overrides) {
     // Always clear story modal queue on boot — never resume mid-modal
     mergedStory.queuedBeat = null;
     mergedStory.beatQueue = [];
-    // Migrate: old saves without state.townsfolk get the fresh initial shape.
-    const mergedWorkers = saved.townsfolk
-      ? {
-          hired: { hilda: 0, pip: 0, wila: 0, tuck: 0, osric: 0, dren: 0, ...(saved.townsfolk.hired ?? {}) },
-          pool:  saved.townsfolk.pool  ?? 1,
-        }
-      : fresh.townsfolk;
     // Migrate: old saves without state.tileCollection get the default shape (also migrates legacy state.species)
     const mergedTileCollection = (() => {
       const freshTC = defaultTileCollectionSlice();
@@ -398,7 +386,7 @@ export function initialState(overrides) {
     if (!FIRE_HAZARD_ENABLED && savedWithoutLegacy.hazards?.fire) {
       savedWithoutLegacy.hazards = { ...savedWithoutLegacy.hazards, fire: null };
     }
-    return { ...fresh, ...savedWithoutLegacy, townsfolk: mergedWorkers, story: mergedStory, tileCollection: mergedTileCollection, view: "town", viewParams: {}, turnsUsed: 0, modal: null, bubble: null, pendingView: null,
+    return { ...fresh, ...savedWithoutLegacy, story: mergedStory, tileCollection: mergedTileCollection, view: "town", viewParams: {}, turnsUsed: 0, modal: null, bubble: null, pendingView: null,
       seasonStats: { harvests: 0, upgrades: 0, ordersFilled: 0, coins: 0 } };
   }
   return fresh;
@@ -1095,9 +1083,6 @@ function coreReducer(state, action) {
       // contribute to the same `seasonBonus.coins` channel) ────────────────
       const bonusCoins = Math.round(seasonAgg.seasonBonus.coins ?? 0);
 
-      // ── Pool income from buildings (Housing Block worker_pool_step) ───────
-      const newPool = (state.townsfolk?.pool ?? 0) + (seasonAgg.seasonEndPoolStep ?? 0);
-
       // ── Phase 6.1: NPC bond decay (−0.1 above 5) + Phase 6.2: reset gift cooldowns ──
       const decayedNpcs = (() => {
         if (!state.npcs) return state.npcs;
@@ -1118,7 +1103,6 @@ function coreReducer(state, action) {
         viewParams: {},
         pendingView: null,
         seasonStats: { harvests: 0, upgrades: 0, ordersFilled: 0, coins: 0, capFloaters: {} },
-        townsfolk: { ...state.townsfolk, pool: newPool },
         // Clear fertilizer flag at season end — it was consumed this season
         fertilizerActive: false,
         // 5.7: reset per-season free moves on season close
@@ -1585,12 +1569,6 @@ function coreReducer(state, action) {
       return { ...state, inventory: migInv };
     }
 
-    case "TOWNSFOLK/BUY_POOL": {
-      // DEV-only IAP stub: credits +N worker pool units (default 5)
-      const amount = Math.max(0, (action.payload?.amount | 0) || 5);
-      return { ...state, townsfolk: { ...state.townsfolk, pool: (state.townsfolk?.pool ?? 0) + amount } };
-    }
-
     // ─── Phase 5 Tile Collection ─────────────────────────────────────────────────
 
     case "SET_ACTIVE_TILE": {
@@ -1794,7 +1772,6 @@ function coreReducer(state, action) {
             bonds: { wren: 5, mira: 5, tomas: 5, bram: 5, liss: 5 },
             giftCooldown: { wren: 0, mira: 0, tomas: 0, bram: 0, liss: 0 },
           },
-          townsfolk: { hired: { hilda: 0, pip: 0, wila: 0, tuck: 0, osric: 0, dren: 0 }, pool: 1 },
           workers: { hired: { farmer: 0, lumberjack: 0, miner: 0, baker: 0 } },
           tileCollection: defaultTileCollectionSlice() };
       }
@@ -1809,9 +1786,7 @@ function coreReducer(state, action) {
 // Referential-equality no-op semantics are preserved: if every slice also returns the same
 // state for a rejected action, the final result still === the original state.
 const SLICE_PRIMARY_ACTIONS = new Set([
-  "APP/HIRE",
-  "APP/FIRE",
-  // Phase 5b — type-tier workers slice
+  // Type-tier workers slice
   "WORKERS/HIRE",
   "WORKERS/FIRE",
   "BUILD_DECORATION",

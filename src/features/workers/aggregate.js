@@ -16,8 +16,7 @@
  * (`pool_weight`), it floors `amount * weight` per source before adding.
  */
 
-import { WORKERS } from "./data.js";
-import { TYPE_WORKERS } from "../workers/data.js";
+import { TYPE_WORKERS } from "./data.js";
 import {
   TILE_TYPES,
   TILE_TYPES_BY_CATEGORY as SPECIES_BY_CATEGORY,
@@ -34,7 +33,7 @@ import { getAbility } from "../../config/abilities.js";
 // dead values to channels nobody reads.
 const TILE_AGGREGATOR_TRIGGERS = new Set(["passive", "on_board_fill"]);
 
-/** Source list for a worker entity (TYPE_WORKERS or TOWNSFOLK). */
+/** Source list for a worker entity (TYPE_WORKERS). */
 function workerSource(def, hiredCount) {
   const count = Math.max(0, Math.min(hiredCount | 0, def.maxCount));
   if (count === 0) return null;
@@ -102,14 +101,9 @@ export function discoveredTileSources(state) {
  *   boardPreserveBiomes  Set<string>
  */
 export function computeAggregatedAbilities(state) {
-  const hired = state?.townsfolk?.hired ?? {};
   const typeHired = state?.workers?.hired ?? {};
 
   const sources = [];
-  for (const w of WORKERS) {
-    const src = workerSource(w, hired[w.id] ?? 0);
-    if (src) sources.push(src);
-  }
   for (const w of TYPE_WORKERS) {
     const src = workerSource(w, typeHired[w.id] ?? 0);
     if (src) sources.push(src);

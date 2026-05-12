@@ -4,7 +4,7 @@
 // slice. No vi.mock; the production worker definition shipped in #284
 // (Phase 5b) is the system under test.
 import { describe, it, expect } from "vitest";
-import { computeWorkerEffects } from "../src/features/apprentices/aggregate.js";
+import { computeWorkerEffects } from "../src/features/workers/aggregate.js";
 import { reduce as craftingReduce } from "../src/features/crafting/slice.js";
 import { TYPE_WORKER_MAP } from "../src/features/workers/data.js";
 import { RECIPES } from "../src/constants.js";
@@ -17,7 +17,6 @@ function bakeryStateWith(bakers, inv) {
     inventory: { ...inv },
     tools: {},
     built: { bakery: true },
-    townsfolk: { hired: {}, debt: 0, pool: 0 },
     workers: { hired: { baker: bakers } },
     craftedTotals: {},
   };
@@ -25,26 +24,18 @@ function bakeryStateWith(bakers, inv) {
 
 describe("Phase 34 — recipeInputReduce aggregation (real Baker)", () => {
   it("aggregator output always exposes the recipeInputReduce channel", () => {
-    const empty = computeWorkerEffects({ townsfolk: { hired: {}, debt: 0 }, workers: { hired: {} } });
+    const empty = computeWorkerEffects({ workers: { hired: {} } });
     expect(empty.recipeInputReduce).toEqual({});
   });
 
   it("0 hires => no reduction", () => {
-    const out = computeWorkerEffects({ townsfolk: { hired: {}, debt: 0 }, workers: { hired: { baker: 0 } } });
+    const out = computeWorkerEffects({ workers: { hired: { baker: 0 } } });
     expect(out.recipeInputReduce).toEqual({});
   });
 
   it("Baker effect lives on the bread / grain_flour cell", () => {
-    const out = computeWorkerEffects({ townsfolk: { hired: {}, debt: 0 }, workers: { hired: { baker: BAKER.maxCount } } });
+    const out = computeWorkerEffects({ workers: { hired: { baker: BAKER.maxCount } } });
     // (from - to) * (count / maxCount) = (3 - 1) * 1.0 = 2.0 at full hire
-    expect(out.recipeInputReduce.bread.grain_flour).toBeCloseTo(2.0, 6);
-  });
-
-  it("Townsfolk debt does NOT pause the type-tier Baker (Phase 5b invariant)", () => {
-    const out = computeWorkerEffects({
-      townsfolk: { hired: { hilda: 3 }, debt: 50 },
-      workers: { hired: { baker: BAKER.maxCount } },
-    });
     expect(out.recipeInputReduce.bread.grain_flour).toBeCloseTo(2.0, 6);
   });
 });

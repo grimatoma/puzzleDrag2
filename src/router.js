@@ -42,7 +42,6 @@ export const KNOWN_VIEWS = new Set([
 export const KNOWN_MODALS = new Set([
   "menu",
   "boss",
-  "apprentices",
   "tutorial",
 ]);
 
