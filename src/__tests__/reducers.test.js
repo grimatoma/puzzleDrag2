@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { gameReducer, initialState } from "../state.js";
-import { reduce as moodReduce } from "../features/mood/slice.js";
 import { reduce as bossReduce } from "../features/boss/slice.js";
 import { reduce as apprenticesReduce, seedHireSeq } from "../features/apprentices/slice.js";
 import { seedQuestIdSeq } from "../features/quests/slice.js";
@@ -13,9 +12,6 @@ function freshState() {
   global.localStorage.clear();
   return initialState();
 }
-
-// Neutral bond (5 = Warm, modifier 1.00) so mood slice adds 0 extra coins.
-const NEUTRAL_BOND = { mira: 5, tomas: 5, bram: 5, liss: 5, wren: 5 };
 
 function minState(overrides = {}) {
   return {
@@ -36,7 +32,6 @@ function minState(overrides = {}) {
     pendingView: null,
     seasonStats: { harvests: 0, upgrades: 0, ordersFilled: 0, coins: 0 },
     _hintsShown: {},
-    npcBond: NEUTRAL_BOND,
     almanac: { xp: 0, level: 1 },
     ...overrides,
   };
@@ -89,25 +84,6 @@ describe("CHAIN_COLLECTED", () => {
 });
 
 describe("TURN_IN_ORDER", () => {
-  it("increases npcBond by 0.3 via mood slice", () => {
-    const order = { id: "o1", npc: "mira", key: "grass_hay", need: 5, reward: 100, line: "test" };
-    const state = minState({
-      seasonsCycled: 2,
-      inventory: { grass_hay: 10 },
-      orders: [order],
-      npcBond: { ...NEUTRAL_BOND, mira: 5 },
-    });
-    const next = gameReducer(state, {
-      type: "TURN_IN_ORDER",
-      id: "o1",
-      npc: order.npc,
-      key: order.key,
-      need: order.need,
-      reward: order.reward,
-    });
-    expect(next.npcBond.mira).toBeCloseTo(5.3, 5);
-  });
-
   it("deducts inventory and adds reward coins", () => {
     const order = { id: "o1", npc: "wren", key: "grass_hay", need: 5, reward: 30, line: "test" };
     const state = minState({
@@ -196,26 +172,6 @@ describe("USE_TOOL", () => {
   });
 });
 
-// ─── mood slice ───────────────────────────────────────────────────────────────
-
-describe("mood/slice TURN_IN_ORDER", () => {
-  it("increases npc bond when order is turned in", () => {
-    const state = { npcBond: { wren: 5 }, coins: 0 };
-    const next = moodReduce(state, {
-      type: "TURN_IN_ORDER",
-      npc: "wren",
-      reward: 30,
-    });
-    expect(next.npcBond.wren).toBeGreaterThan(5);
-  });
-
-  it("is a no-op when npc field is missing", () => {
-    const state = { npcBond: { wren: 5 }, coins: 0 };
-    const next = moodReduce(state, { type: "TURN_IN_ORDER" });
-    expect(next).toBe(state);
-  });
-});
-
 // ─── boss/Ember Drake ─────────────────────────────────────────────────────────
 
 describe("boss Ember Drake — CRAFTING/CRAFT_RECIPE", () => {
@@ -293,12 +249,11 @@ describe("seedQuestIdSeq", () => {
 // ─── DEV/RESET_GAME ──────────────────────────────────────────────────────────
 
 describe("DEV/RESET_GAME", () => {
-  it("resets coins to initial, clears trophies, and resets npcBond", () => {
-    const s = minState({ coins: 999, trophies: { chain_10: "claimed" }, npcBond: { mira: 9, tomas: 5, bram: 5, liss: 5, wren: 5 } });
+  it("resets coins to initial and clears trophies", () => {
+    const s = minState({ coins: 999, trophies: { chain_10: "claimed" } });
     const next = gameReducer(s, { type: "DEV/RESET_GAME" });
     expect(next.coins).toBe(150); // initialState default
     expect(Object.keys(next.trophies || {}).length).toBe(0);
-    expect(next.npcBond.mira).toBe(5);
   });
 });
 
@@ -349,22 +304,23 @@ describe("initialState", () => {
   it("all NPCs start at Warm bond (5)", () => {
     const state = freshState();
     for (const npc of ["mira", "tomas", "bram", "liss", "wren"]) {
-      expect(state.npcBond[npc]).toBe(5);
+      expect(state.npcs.bonds[npc]).toBe(5);
     }
   });
 });
 
 describe("NPC bond decay", () => {
   it("bond above 5 decays toward 5 over multiple seasons", () => {
-    let s = minState({ npcBond: { ...NEUTRAL_BOND, mira: 7 } });
+    let s = freshState();
+    s = { ...s, npcs: { ...s.npcs, bonds: { ...s.npcs.bonds, mira: 7 } } };
     for (let i = 0; i < 10; i++) s = gameReducer(s, { type: "CLOSE_SEASON" });
-    expect(s.npcBond.mira).toBeLessThan(7);
-    expect(s.npcBond.mira).toBeGreaterThanOrEqual(5);
+    expect(s.npcs.bonds.mira).toBeLessThan(7);
+    expect(s.npcs.bonds.mira).toBeGreaterThanOrEqual(5);
   });
 
   it("bond exactly 5 stays at 5 after multiple seasons", () => {
-    let s = minState({ npcBond: { ...NEUTRAL_BOND, mira: 5 } });
+    let s = freshState();
     for (let i = 0; i < 10; i++) s = gameReducer(s, { type: "CLOSE_SEASON" });
-    expect(s.npcBond.mira).toBe(5);
+    expect(s.npcs.bonds.mira).toBe(5);
   });
 });

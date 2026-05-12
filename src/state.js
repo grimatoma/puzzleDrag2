@@ -25,7 +25,6 @@ import * as settings from "./features/settings/slice.js";
 import * as boss from "./features/boss/slice.js";
 import * as cartography from "./features/cartography/slice.js";
 import * as apprentices from "./features/apprentices/slice.js";
-import * as mood from "./features/mood/slice.js";
 import * as storySlice from "./features/story/slice.js";
 import * as fish from "./features/fish/slice.js";
 import { INITIAL_STORY_STATE, evaluateStoryTriggers } from "./story.js";
@@ -44,7 +43,7 @@ import { FIRE_HAZARD_ENABLED } from "./featureFlags.js";
 import { loadSavedState, persistState, clearSave } from "./state/persistence.js";
 export { loadSavedState, persistStateNow, persistState, flushPersistState, clearSave } from "./state/persistence.js";
 
-const slices = [crafting, quests, achievements, tutorial, settings, boss, cartography, apprentices, mood, storySlice, decorations, portal, market, castle, fish, zones, workers];
+const slices = [crafting, quests, achievements, tutorial, settings, boss, cartography, apprentices, storySlice, decorations, portal, market, castle, fish, zones, workers];
 
 // Phase 7 — SEASON_NAMES used to be the calendar-season index → name lookup.
 // All readers were removed when the calendar was deleted, so the table is
@@ -330,7 +329,6 @@ export function createFreshState(overrides) {
     ...boss.initial,
     ...cartography.initial,
     ...apprentices.initial,
-    ...mood.initial,
     ...castle.initial,
     ...fish.initial,
     ...zones.initial,
@@ -1870,8 +1868,6 @@ const SLICE_PRIMARY_ACTIONS = new Set([
   "BUILD_DECORATION",
   "SUMMON_MAGIC_TOOL",
   "MARKET/SELL",
-  // Mood (gift) is owned by mood/slice
-  "MOOD/GIFT",
   // Quest claim and almanac actions are owned by quests/slice
   "QUESTS/CLAIM_QUEST",
   "QUESTS/CLAIM_ALMANAC",
