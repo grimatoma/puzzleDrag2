@@ -36,13 +36,6 @@ describe("Phase 4.2 — computeWorkerEffects pure aggregator", () => {
     expect(out.thresholdReduce.veg_carrot).toBe(1);
   });
 
-  it("debt > 0 suppresses ALL effects", () => {
-    const inDebt = { townsfolk: { hired: { ...empty.townsfolk.hired, hilda: 3, tuck: 1 }, debt: 5 } };
-    const rD = computeWorkerEffects(inDebt);
-    expect(rD.thresholdReduce.grass_hay ?? 0).toBe(0);
-    expect(rD.seasonBonus.coins   ?? 0).toBe(0);
-  });
-
   it("over-hired clamped to full-slot", () => {
     const over = { townsfolk: { hired: { ...empty.townsfolk.hired, hilda: 99 }, debt: 0 } };
     expect(computeWorkerEffects(over).thresholdReduce.grass_hay).toBe(3);

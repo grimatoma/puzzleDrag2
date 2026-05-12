@@ -219,7 +219,7 @@ export class GameScene extends Phaser.Scene {
   // ─── Worker effects sync ─────────────────────────────────────────────────
 
   _syncWorkerEffects() {
-    const townsfolk = this.registry.get("townsfolk") ?? { hired: {}, debt: 0, pool: 0 };
+    const townsfolk = this.registry.get("townsfolk") ?? { hired: {}, pool: 0 };
     const typeWorkers = this.registry.get("typeWorkers") ?? { hired: {} };
     const agg = computeWorkerEffects({ townsfolk, workers: typeWorkers });
     const eff = {};

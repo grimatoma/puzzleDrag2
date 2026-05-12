@@ -188,7 +188,6 @@ function WorkerRow({ worker, state, dispatch }) {
         {effectLabel(worker, hiredCount)}
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 2, flexWrap: "wrap" }}>
-        <span style={{ fontSize: 10, color: "#9a8a72" }}>{worker.wage}◉/season</span>
         {reqLabel(worker) && (
           <span style={{
             fontSize: 9, fontWeight: 700, padding: "1px 6px", borderRadius: 8,
@@ -237,7 +236,6 @@ function WorkerRow({ worker, state, dispatch }) {
 export function ApprenticesPanel({ state, dispatch, showHeader = true, onClose = null }) {
   const cap = housingCapacity(state);
   const pool = state.townsfolk?.pool ?? 0;
-  const debtOwed = state.townsfolk?.debt ?? 0;
 
   const inner = (
     <>
@@ -264,32 +262,15 @@ export function ApprenticesPanel({ state, dispatch, showHeader = true, onClose =
           Townsfolk: {pool}
         </span>
         {(() => {
-          const totalWage = WORKERS.reduce(
-            (sum, w) => sum + (state.townsfolk?.hired?.[w.id] ?? 0) * (w.wage || 0),
-            0,
-          );
           const totalH = totalHired(state);
           if (totalH === 0) return null;
           return (
-            <>
-              <span style={{ fontSize: 12, fontWeight: 700, color: "#7a4a18",
-                background: "#fce8d4", borderRadius: 8, padding: "2px 8px" }}>
-                Hired: {totalH}/{cap}
-              </span>
-              <span style={{ fontSize: 12, fontWeight: 700, color: "#a85050",
-                background: "#fce4cc", borderRadius: 8, padding: "2px 8px" }}>
-                Wages: {totalWage}◉/season
-              </span>
-            </>
+            <span style={{ fontSize: 12, fontWeight: 700, color: "#7a4a18",
+              background: "#fce8d4", borderRadius: 8, padding: "2px 8px" }}>
+              Hired: {totalH}/{cap}
+            </span>
           );
         })()}
-        {debtOwed > 0 && (
-          <span style={{ fontSize: 11, fontWeight: 700, color: "#8b0000",
-            background: "#f8d7da", borderRadius: 8, padding: "2px 8px",
-            title: "Wages unpaid — workers are idle" }}>
-            Debt: {debtOwed}◉ — idle
-          </span>
-        )}
       </div>
 
       {/* DEV-only IAP stub */}

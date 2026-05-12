@@ -61,10 +61,9 @@ describe("Phase 4.1 — Worker data model", () => {
     }
   });
 
-  it("initial state has state.townsfolk with debt=0 and all hired at 0", () => {
+  it("initial state has state.townsfolk with all hired at 0", () => {
     const s0 = initialState();
     expect(s0.townsfolk).toBeTruthy();
-    expect(s0.townsfolk.debt).toBe(0);
     const ids = ["hilda", "pip", "wila", "tuck", "osric", "dren"];
     for (const id of ids) {
       expect(s0.townsfolk.hired[id]).toBe(0);

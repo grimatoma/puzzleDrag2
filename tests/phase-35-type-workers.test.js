@@ -110,12 +110,12 @@ describe("Phase 5b — Aggregator composes townsfolk + type-workers", () => {
     expect(out.recipeInputReduce.bread.grain_flour).toBeCloseTo(2.0, 6);
   });
 
-  it("townsfolk debt does NOT pause type-tier workers", () => {
-    const s = { townsfolk: { hired: { hilda: 3 }, debt: 50 }, workers: { hired: { farmer: 5 } } };
+  it("type-tier workers compose with townsfolk on the same channel", () => {
+    const s = { townsfolk: { hired: { hilda: 3 } }, workers: { hired: { farmer: 5 } } };
     const out = computeWorkerEffects(s);
-    // Townsfolk paused → Hilda's grass_hay reduction is empty.
-    expect(out.thresholdReduce.grass_hay ?? 0).toBe(0);
-    // Workers still active → Farmer's grain reduction lands.
+    // Hilda's grass_hay reduction lands…
+    expect(out.thresholdReduce.grass_hay ?? 0).toBeGreaterThan(0);
+    // …and the Farmer's grain reduction lands on its own key.
     const grainHas = Object.keys(out.thresholdReduce).some((k) => k.startsWith("grain"));
     expect(grainHas).toBe(true);
   });

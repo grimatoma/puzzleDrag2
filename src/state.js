@@ -9,7 +9,6 @@ import { isMysteriousChainValid, spawnMysteriousOre, tickMysteriousOre } from ".
 import { isPearlChainValid, spawnPearl, tickPearl, PEARL_KEY } from "./features/fish/pearl.js";
 import { driftPrices, applyTrade } from "./market.js";
 import { currentCap } from "./utils.js";
-import { WORKER_MAP } from "./features/apprentices/data.js";
 import { computeWorkerEffects } from "./features/apprentices/aggregate.js";
 import { TILE_TYPES, CATEGORIES, TILE_TYPES_MAP, CATEGORY_OF } from "./features/tileCollection/data.js";
 import { yieldMultiplierFor } from "./features/tileCollection/yieldMultipliers.js";
@@ -90,16 +89,6 @@ function deductInventory(inv, needs) {
     next[k] = (next[k] ?? 0) - n;
   }
   return next;
-}
-
-// ─── Wages / debt ──────────────────────────────────────────────────────────
-const MAX_DEBT = 9999;
-
-function applyDebtRepayment(state, incomingCoins) {
-  const debt = state.townsfolk?.debt ?? 0;
-  if (debt <= 0 || incomingCoins <= 0) return { coinsCredit: incomingCoins, newDebt: debt };
-  if (incomingCoins >= debt)           return { coinsCredit: incomingCoins - debt, newDebt: 0 };
-  return { coinsCredit: 0, newDebt: debt - incomingCoins };
 }
 
 // ─── Tile Collection slice helpers ─────────────────────────────────────────
@@ -296,7 +285,7 @@ export function createFreshState(overrides) {
     // turn-doubling fertilizer applied. Both reset on FARM/ENTER.
     session: { selectedTiles: [], fertilizerUsed: false },
     dailyStreak: { lastClaimedDate: null, currentDay: 0 },
-    townsfolk: { hired: { hilda: 0, pip: 0, wila: 0, tuck: 0, osric: 0, dren: 0 }, debt: 0, pool: 1 },
+    townsfolk: { hired: { hilda: 0, pip: 0, wila: 0, tuck: 0, osric: 0, dren: 0 }, pool: 1 },
     // Phase 5b — type-tier workers (anonymous, stackable). Distinct from
     // townsfolk (named individuals). Hired count is capped at each
     // worker's maxCount; per-hire effects accumulate via the apprentices
@@ -387,7 +376,6 @@ export function initialState(overrides) {
     const mergedWorkers = saved.townsfolk
       ? {
           hired: { hilda: 0, pip: 0, wila: 0, tuck: 0, osric: 0, dren: 0, ...(saved.townsfolk.hired ?? {}) },
-          debt:  saved.townsfolk.debt  ?? 0,
           pool:  saved.townsfolk.pool  ?? 1,
         }
       : fresh.townsfolk;
@@ -707,8 +695,6 @@ function coreReducer(state, action) {
       const updatedNpcs = state.npcs
         ? { ...state.npcs, bonds: { ...state.npcs.bonds, [o.npc]: newBond } }
         : state.npcs;
-      // Auto-repay debt before crediting coins
-      const { coinsCredit, newDebt } = applyDebtRepayment(state, actualReward);
       // Dialog line from pool (Phase 6.3) — calendar season removed; pass null
       // and let pickDialog fall back to a season-agnostic line.
       const dialogLine = pickDialog(o.npc, null, newBond, Math.random);
@@ -722,13 +708,12 @@ function coreReducer(state, action) {
       return {
         ...state,
         inventory,
-        coins: state.coins + coinsCredit,
+        coins: state.coins + actualReward,
         xp: afterOrderAlmanac.almanac.xp,
         level: afterOrderAlmanac.almanac.level,
         almanac: afterOrderAlmanac.almanac,
         orders: state.orders.map((x) => (x.id === o.id ? replacement : x)),
         seasonStats: { ...state.seasonStats, ordersFilled: state.seasonStats.ordersFilled + 1, coins: state.seasonStats.coins + actualReward },
-        townsfolk: state.townsfolk ? { ...state.townsfolk, debt: newDebt } : state.townsfolk,
         npcs: updatedNpcs,
         bubble,
       };
@@ -1101,35 +1086,14 @@ function coreReducer(state, action) {
       // Unified aggregator: workers + built buildings + active tiles.
       // Building grant_tool / season_bonus / preserve_board contributions land
       // on the same channels as worker contributions.
-      const seasonAgg = computeWorkerEffects({ ...state, townsfolk: { ...state.townsfolk, debt: 0 } });
+      const seasonAgg = computeWorkerEffects(state);
       for (const [tool, count] of Object.entries(seasonAgg.seasonEndTools ?? {})) {
         if (count > 0) tools[tool] = (tools[tool] ?? 0) + count;
       }
 
-      // ── Wages (FIRST economic event) ──────────────────────────────────────
-      let wageCoins = state.coins;
-      let wageDebt  = state.townsfolk?.debt ?? 0;
-      let totalWages = 0;
-      for (const [id, count] of Object.entries(state.townsfolk?.hired ?? {})) {
-        const w = WORKER_MAP[id];
-        if (!w || count <= 0) continue;
-        totalWages += w.wage * count;
-      }
-      if (wageCoins >= totalWages) {
-        wageCoins -= totalWages;
-      } else {
-        wageDebt += (totalWages - wageCoins);
-        wageCoins = 0;
-      }
-      wageDebt = Math.min(wageDebt, MAX_DEBT);
-
-      // ── season_bonus AFTER wages, AND only when not in debt ───────────────
-      // Worker season_bonus + building season_bonus abilities (which both
-      // contribute to the same `seasonBonus.coins` channel).
-      let bonusCoins = 0;
-      if (wageDebt === 0) {
-        bonusCoins = Math.round(seasonAgg.seasonBonus.coins ?? 0);
-      }
+      // ── season_bonus — worker + building season_bonus abilities (which both
+      // contribute to the same `seasonBonus.coins` channel) ────────────────
+      const bonusCoins = Math.round(seasonAgg.seasonBonus.coins ?? 0);
 
       // ── Pool income from buildings (Housing Block worker_pool_step) ───────
       const newPool = (state.townsfolk?.pool ?? 0) + (seasonAgg.seasonEndPoolStep ?? 0);
@@ -1146,7 +1110,7 @@ function coreReducer(state, action) {
       const afterSeason = {
         ...state,
         tools,
-        coins: wageCoins + bonusCoins + SEASON_END_BONUS_COINS,
+        coins: state.coins + bonusCoins + SEASON_END_BONUS_COINS,
         turnsUsed: 0,
         sessionMaxTurns: MAX_TURNS,
         modal: null,
@@ -1154,7 +1118,7 @@ function coreReducer(state, action) {
         viewParams: {},
         pendingView: null,
         seasonStats: { harvests: 0, upgrades: 0, ordersFilled: 0, coins: 0, capFloaters: {} },
-        townsfolk: { ...state.townsfolk, debt: wageDebt, pool: newPool },
+        townsfolk: { ...state.townsfolk, pool: newPool },
         // Clear fertilizer flag at season end — it was consumed this season
         fertilizerActive: false,
         // 5.7: reset per-season free moves on season close
@@ -1230,18 +1194,7 @@ function coreReducer(state, action) {
       return applyTrade(state, action);
     }
     case "SELL_RESOURCE": {
-      const afterTrade = applyTrade(state, action);
-      if (afterTrade === state) return state; // trade rejected (not enough inventory)
-      // Auto-repay debt from sale proceeds
-      const saleProceeds = afterTrade.coins - state.coins;
-      if (saleProceeds > 0 && (state.townsfolk?.debt ?? 0) > 0) {
-        const { coinsCredit, newDebt } = applyDebtRepayment(state, saleProceeds);
-        return { ...afterTrade,
-          coins: state.coins + coinsCredit,
-          townsfolk: afterTrade.townsfolk ? { ...afterTrade.townsfolk, debt: newDebt } : afterTrade.townsfolk,
-        };
-      }
-      return afterTrade;
+      return applyTrade(state, action);
     }
 
     case "CONVERT_TO_SUPPLY": {
@@ -1431,12 +1384,10 @@ function coreReducer(state, action) {
       if (owned < sellQty) return state;
       const price = _sellPriceFor(itemId);
       const proceeds = price * sellQty;
-      const { coinsCredit, newDebt } = applyDebtRepayment(state, proceeds);
       return {
         ...state,
         inventory: { ...state.inventory, [itemId]: owned - sellQty },
-        coins: (state.coins ?? 0) + coinsCredit,
-        townsfolk: state.townsfolk ? { ...state.townsfolk, debt: newDebt } : state.townsfolk,
+        coins: (state.coins ?? 0) + proceeds,
       };
     }
 
@@ -1594,13 +1545,11 @@ function coreReducer(state, action) {
       }
       const reward = DAILY_REWARDS[nextDay] ?? { coins: 25 };
       const rewardCoins = reward.coins ?? 0;
-      const { coinsCredit: loginCoinsCredit, newDebt: loginNewDebt } = applyDebtRepayment(state, rewardCoins);
       let next = {
         ...state,
         dailyStreak: { lastClaimedDate: today, currentDay: nextDay },
-        coins: (state.coins ?? 0) + loginCoinsCredit,
+        coins: (state.coins ?? 0) + rewardCoins,
         runes: (state.runes ?? 0) + (reward.runes ?? 0),
-        townsfolk: state.townsfolk ? { ...state.townsfolk, debt: loginNewDebt } : state.townsfolk,
       };
       if (reward.tool) {
         const cur = next.tools?.[reward.tool] ?? 0;
@@ -1845,7 +1794,7 @@ function coreReducer(state, action) {
             bonds: { wren: 5, mira: 5, tomas: 5, bram: 5, liss: 5 },
             giftCooldown: { wren: 0, mira: 0, tomas: 0, bram: 0, liss: 0 },
           },
-          townsfolk: { hired: { hilda: 0, pip: 0, wila: 0, tuck: 0, osric: 0, dren: 0 }, debt: 0, pool: 1 },
+          townsfolk: { hired: { hilda: 0, pip: 0, wila: 0, tuck: 0, osric: 0, dren: 0 }, pool: 1 },
           workers: { hired: { farmer: 0, lumberjack: 0, miner: 0, baker: 0 } },
           tileCollection: defaultTileCollectionSlice() };
       }

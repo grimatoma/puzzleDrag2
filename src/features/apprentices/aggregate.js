@@ -103,18 +103,12 @@ export function discoveredTileSources(state) {
  */
 export function computeAggregatedAbilities(state) {
   const hired = state?.townsfolk?.hired ?? {};
-  const debt = state?.townsfolk?.debt ?? 0;
-  // Townsfolk pause when wages are owed; type-tier workers don't.
-  const townsfolkActive = !(debt > 0);
-
   const typeHired = state?.workers?.hired ?? {};
 
   const sources = [];
-  if (townsfolkActive) {
-    for (const w of WORKERS) {
-      const src = workerSource(w, hired[w.id] ?? 0);
-      if (src) sources.push(src);
-    }
+  for (const w of WORKERS) {
+    const src = workerSource(w, hired[w.id] ?? 0);
+    if (src) sources.push(src);
   }
   for (const w of TYPE_WORKERS) {
     const src = workerSource(w, typeHired[w.id] ?? 0);
