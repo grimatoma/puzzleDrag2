@@ -36,7 +36,8 @@ import * as market from "./features/market/slice.js";
 import * as castle from "./features/castle/slice.js";
 import * as zones from "./features/zones/slice.js";
 import * as workers from "./features/workers/slice.js";
-import { ZONES, settlementFoundingCost, isSettlementFounded, displayZoneName, grantEarnedHearthTokens, isOldCapitalUnlocked, isExpeditionFood, expeditionTurnsFromSupply, settlementTypeForZone, resolveBiomeChoice } from "./features/zones/data.js";
+import { ZONES, settlementFoundingCost, isSettlementFounded, displayZoneName, grantEarnedHearthTokens, isOldCapitalUnlocked, isExpeditionFood, expeditionTurnsFromSupply, settlementTypeForZone, resolveBiomeChoice, keeperReadyFor } from "./features/zones/data.js";
+import { keeperForType, keeperPathInfo } from "./keepers.js";
 import { FIRE_HAZARD_ENABLED } from "./featureFlags.js";
 import { loadSavedState, persistState, clearSave } from "./state/persistence.js";
 export { loadSavedState, persistStateNow, persistState, flushPersistState, clearSave } from "./state/persistence.js";
@@ -1015,6 +1016,37 @@ function coreReducer(state, action) {
         settlements: { ...(state.settlements ?? {}), [zoneId]: { founded: true, biome: biome.id } },
         bubble: { id: Date.now(), npc: "wren", text: `${displayZoneName(state, zoneId)} is a ${biome.name} settlement now. People will come.`, ms: 2400 },
       };
+    }
+    case "KEEPER/CONFRONT": {
+      // Phase 6a — face a settlement's keeper and choose Coexist (Embers, the
+      // biome keeps its wild gifts) or Drive Out (Core Ingots, it goes orderly).
+      // Final per settlement. Sets settlements[zoneId].keeperPath + a
+      // `keeper_<zoneId>_<path>` flag (for future per-path boon trees).
+      const zoneId = action.payload?.zoneId ?? action.zoneId;
+      const path = action.payload?.path ?? action.path;
+      if (path !== "coexist" && path !== "driveout") return state;
+      if (!zoneId || !keeperReadyFor(state, zoneId)) return state; // unfounded / already faced / not built up enough
+      const type = settlementTypeForZone(zoneId);
+      const keeper = keeperForType(type);
+      const info = keeperPathInfo(type, path);
+      if (!keeper || !info) return state;
+      const prevEntry = state.settlements?.[zoneId] ?? { founded: true };
+      const where = displayZoneName(state, zoneId);
+      let next = {
+        ...state,
+        settlements: { ...(state.settlements ?? {}), [zoneId]: { ...prevEntry, keeperPath: path } },
+        story: { ...state.story, flags: { ...(state.story?.flags ?? {}), [`keeper_${zoneId}_${path}`]: true } },
+        bubble: {
+          id: Date.now(), npc: "wren", ms: 3000,
+          text: path === "coexist"
+            ? `${keeper.name} stays — its blessing rests on ${where}.`
+            : `${keeper.name} withdraws. ${where} is yours alone now.`,
+        },
+      };
+      if (path === "coexist") next = { ...next, embers: (state.embers ?? 0) + (info.embers ?? 0) };
+      else next = { ...next, coreIngots: (state.coreIngots ?? 0) + (info.coreIngots ?? 0) };
+      // Let a future story beat react ("you faced a keeper"); no-op until one exists.
+      return evaluateAndApplyStoryBeat(next, { type: "keeper_confronted", zoneId, path, keeper: keeper.id });
     }
     case "OPEN_MODAL":
       return { ...state, modal: action.modal, settingsTab: action.settingsTab ?? 'main' };
