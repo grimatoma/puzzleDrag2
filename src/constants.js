@@ -29,7 +29,7 @@ export const MAX_TURNS = 10;
 
 // Save schema version. Forward migrations are not maintained — bump this
 // whenever persisted state changes shape and existing saves will be discarded.
-export const SAVE_SCHEMA_VERSION = 33;
+export const SAVE_SCHEMA_VERSION = 34;
 
 export const UPGRADE_THRESHOLDS = {
   grass_hay: 6, grass_meadow: 6, grass_spiky: 6,
@@ -282,7 +282,7 @@ export const NPCS = {
     role: "Baker",
     color: "#d6612a",
     lines: [
-      "Sundown's coming — bring me {n} {r} for the apprentices' supper.",
+      "Sundown's coming — bring me {n} {r} for the workers' supper.",
       "I've kneaded all morning. Could you spare {n} {r}?",
       "The honey-rolls won't make themselves. {n} {r}, please.",
     ],
@@ -329,8 +329,8 @@ export const BUILDINGS = [
   { id: "hearth", name: "Hearth", desc: "The heart of the village. Keeps folk warm and anchors the community.", cost: { coins: 0 }, lv: 1, x: 60, y: 360, w: 90, h: 110, color: "#a8431a", built: true },
   { id: "mill", name: "Mill", desc: "Grinds grain into flour, enabling the grain → flour upgrade chain.", cost: { coins: 200, wood_plank: 30 }, lv: 1, x: 200, y: 380, w: 80, h: 90, color: "#c8923a" },
   { id: "bakery", name: "Bakery", desc: "Craft baked goods — bread, honey rolls, harvest pies — to sell for coins.", cost: { coins: 500, wood_plank: 40, mine_stone: 10 }, lv: 1, x: 320, y: 360, w: 100, h: 110, color: "#8a4a26" },
-  { id: "inn", name: "Inn", desc: "Lodgings for helpers. Unlocks apprentice hiring: Pip (Forager) and Tuck (Lookout).", cost: { coins: 400, wood_plank: 20 }, lv: 2, x: 470, y: 350, w: 110, h: 130, color: "#4f6b3a" },
-  { id: "granary", name: "Granary", desc: "Keeps the harvest safe. Unlocks Hilda the Farmhand apprentice.", cost: { coins: 300, wood_plank: 20 }, lv: 1, x: 600, y: 380, w: 80, h: 100, color: "#c5a87a" },
+  { id: "inn", name: "Inn", desc: "Lodgings for helpers and travelling traders.", cost: { coins: 400, wood_plank: 20 }, lv: 2, x: 470, y: 350, w: 110, h: 130, color: "#4f6b3a" },
+  { id: "granary", name: "Granary", desc: "Keeps the harvest safe and dry between sessions.", cost: { coins: 300, wood_plank: 20 }, lv: 1, x: 600, y: 380, w: 80, h: 100, color: "#c5a87a" },
   { id: "larder", name: "Larder", desc: "Preserve and bottle your harvest. Craft preserve jars and berry tinctures for coins.", cost: { coins: 700, wood_plank: 30, mine_stone: 20 }, lv: 3, x: 700, y: 395, w: 70, h: 85, color: "#4f6b3a" },
   { id: "forge", name: "Forge", desc: "Smith metal goods — hinges, lanterns, rings, and more — for high coin rewards.", cost: { coins: 1200, mine_stone: 60, mine_ingot: 20 }, lv: 8, x: 800, y: 380, w: 100, h: 100, color: "#5a6973" },
   { id: "caravan_post", name: "Caravan Post", desc: "Opens distant trade routes, letting you sell crafted goods to far-off markets.", cost: { coins: 800, wood_plank: 40 }, lv: 8, x: 940, y: 390, w: 110, h: 90, color: "#7e4f24" },
@@ -342,21 +342,21 @@ export const BUILDINGS = [
     ] },
   { id: "portal", name: "Magic Portal", desc: "A shimmering gateway. Summons unlock with Influence (Phase 8).", cost: { coins: 2000, runes: 5 }, lv: 8, x: 440, y: 245, w: 100, h: 115, color: "#4a2a7a" },
   { id: "housing", name: "Housing Block",
-    desc: "Quarters for hired hands. Each Housing raises your worker capacity by 1.",
+    desc: "Lodging for the settlement's hired hands.",
     cost: { coins: 300, wood_plank: 25 }, lv: 2,
     x: 430, y: 262, w: 80, h: 92, color: "#a07a4a",
     abilities: [
       { id: "worker_pool_step", params: { amount: 1 }, trigger: "season_end" },
     ] },
   { id: "housing2", name: "Housing Block",
-    desc: "Quarters for hired hands. Each Housing raises your worker capacity by 1.",
+    desc: "Lodging for the settlement's hired hands.",
     cost: { coins: 300, wood_plank: 25 }, lv: 2, requires: "housing",
     x: 520, y: 262, w: 80, h: 92, color: "#a07a4a",
     abilities: [
       { id: "worker_pool_step", params: { amount: 1 }, trigger: "season_end" },
     ] },
   { id: "housing3", name: "Housing Block",
-    desc: "Quarters for hired hands. Each Housing raises your worker capacity by 1.",
+    desc: "Lodging for the settlement's hired hands.",
     cost: { coins: 300, wood_plank: 25 }, lv: 2, requires: "housing2",
     x: 610, y: 262, w: 80, h: 92, color: "#a07a4a",
     abilities: [
@@ -399,7 +399,7 @@ export const BUILDINGS = [
 export const WORKSHOP_RECIPES = {
   rake:        { name: "Rake",          station: "workshop", inputs: { wood_plank: 1 },
                  effect: "clear_all", target: "grass_hay",   anim: "sweep",   ms: 300,
-                 desc: "Clears all hay tiles from the board in one sweep. Used by Hilda to tidy overgrown fields." },
+                 desc: "Clears all hay tiles from the board in one sweep — handy for tidying an overgrown field." },
   axe:         { name: "Axe",          station: "workshop", inputs: { mine_stone: 1 },
                  effect: "clear_all", target: "wood_log",   anim: "chops",   ms: 200,
                  desc: "Fells all log tiles on the board instantly. Handy when the wood supply is blocking upgrades." },

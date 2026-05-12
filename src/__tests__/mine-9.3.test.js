@@ -7,7 +7,6 @@ import {
   clearCaveIn,
 } from "../features/mine/hazards.js";
 import { createInitialState } from "../state.js";
-import { computeWorkerEffects } from "../features/apprentices/aggregate.js";
 
 function makeGrid(rows = 6, cols = 6) {
   return Array.from({ length: rows }, () =>
@@ -141,26 +140,6 @@ describe("Phase 9.3 — Hazards (cave-in, gas vent)", () => {
     g = tickHazards(g);
     expect(g.hazards.gasVent).toBeNull();
     expect(g.turnsUsed).toBe(1);
-  });
-
-  // ── Canary worker reduces gas vent spawn rate ─────────────────────────────
-  it("2 canaries reduce gas_vent rate by 50%", () => {
-    const cs = {
-      ...createInitialState(),
-      biome: "mine",
-      townsfolk: { hired: { canary: 2 }, debt: 0 },
-    };
-    const eff = computeWorkerEffects(cs);
-    expect(eff.hazardSpawnReduce.gas_vent).toBe(0.5);
-  });
-
-  it("1 canary = 25% reduction", () => {
-    const csOne = {
-      ...createInitialState(),
-      biome: "mine",
-      townsfolk: { hired: { canary: 1 }, debt: 0 },
-    };
-    expect(computeWorkerEffects(csOne).hazardSpawnReduce.gas_vent).toBe(0.25);
   });
 
   // ── Save/load round-trip ───────────────────────────────────────────────────

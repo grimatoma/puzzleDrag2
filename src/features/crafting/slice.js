@@ -1,5 +1,5 @@
 import { RECIPES } from "../../constants.js";
-import { computeWorkerEffects } from "../apprentices/aggregate.js";
+import { computeWorkerEffects } from "../workers/aggregate.js";
 import { locBuilt } from "../../locBuilt.js";
 
 export const initial = { craftedTotals: {} };

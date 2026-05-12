@@ -1,15 +1,14 @@
-// Phase 5b — Type-tier workers.
+// Type-tier workers — the game's worker system.
 //
-// Distinct from `src/features/apprentices/` (TOWNSFOLK), which models the
-// named individuals — Hilda, Pip, Wila, etc. — with personalities and
-// one-off requirements. Type-tier workers are anonymous, generic roles
-// (Farmer, Lumberjack, Miner, Baker) that the player hires by type. Each
-// type has a high `maxCount` and a stackable per-hire effect.
+// Anonymous, generic roles (Farmer, Lumberjack, Miner, Baker) that the
+// player hires by type. Each type has a high `maxCount` and a stackable
+// per-hire effect: hiring more of a type shaves more tiles off the
+// matching chain (or stretches the matching recipe).
 //
-// Effect schema is shared with apprentices/aggregate.js — `threshold_reduce_category`
-// and `recipe_input_reduce` both iterate per-hire from `(from - to) / maxCount`,
-// so type workers and townsfolk reductions accumulate additively on the
-// same channel (e.g. a Farmer + Brenna both shrink the vegetables chain).
+// Abilities are folded through `features/workers/aggregate.js` alongside
+// building + active-tile abilities. `threshold_reduce_category` and
+// `recipe_input_reduce` iterate per-hire from `(amount) * hired / maxCount`,
+// so worker reductions accumulate additively on the shared channel.
 //
 // Hire-cost ramp (config-driven). The cost of hiring the N-th worker of a
 // type (0-indexed; the very first hire is N=0) is computed by

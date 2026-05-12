@@ -1,7 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { gameReducer, initialState } from "../state.js";
 import { reduce as bossReduce } from "../features/boss/slice.js";
-import { reduce as apprenticesReduce, seedHireSeq } from "../features/apprentices/slice.js";
 import { seedQuestIdSeq } from "../features/quests/slice.js";
 import { resourceGainForChain } from "../utils.js";
 
@@ -215,29 +214,6 @@ describe("boss/slice CLOSE_SEASON", () => {
 });
 
 // ─── ID sequence seeding ─────────────────────────────────────────────────────
-
-describe("seedHireSeq", () => {
-  it("advances past the highest saved apprentice id", () => {
-    // If saved apprentices have ids 1, 2, 3, next hire should get id >= 4
-    const saved = [{ id: 3, app: "pip", since: 0 }];
-    seedHireSeq(saved);
-    const state = {
-      hiredApprentices: saved,
-      coins: 9999,
-      level: 5,
-      built: { inn: true },
-      turnsUsed: 0,
-    };
-    const next = apprenticesReduce(state, { type: "APP/HIRE", appKey: "pip" });
-    // pip is already hired — hire should be rejected
-    expect(next).toBe(state);
-  });
-
-  it("handles empty saved list gracefully", () => {
-    expect(() => seedHireSeq([])).not.toThrow();
-    expect(() => seedHireSeq(null)).not.toThrow();
-  });
-});
 
 describe("seedQuestIdSeq", () => {
   it("handles empty saved list gracefully", () => {

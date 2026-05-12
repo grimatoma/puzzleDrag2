@@ -7,7 +7,7 @@
  * Pool weights (total 100): cave_in 25, gas_vent 40, lava 20, mole 15
  */
 
-import { computeWorkerEffects } from "../apprentices/aggregate.js";
+import { computeWorkerEffects } from "../workers/aggregate.js";
 
 export const HAZARD_BASE_RATE = 0.05;
 

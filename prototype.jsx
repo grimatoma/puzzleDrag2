@@ -12,7 +12,7 @@ import { useRouter } from "./src/router.js";
 import { setPhaserScene } from "./src/phaserBridge.js";
 import { FIRE_HAZARD_ENABLED } from "./src/featureFlags.js";
 
-function PhaserMount({ dispatch, biomeKey, turnsUsed, uiLocked, sceneRef, toolPending, setChainInfo, workers, typeWorkers, tileCollection, gameState, grid }) {
+function PhaserMount({ dispatch, biomeKey, turnsUsed, uiLocked, sceneRef, toolPending, setChainInfo, workers, tileCollection, gameState, grid }) {
   const hostRef = useRef(null);
   const gameRef = useRef(null);
   const [loading, setLoading] = useState(true);
@@ -124,8 +124,7 @@ function PhaserMount({ dispatch, biomeKey, turnsUsed, uiLocked, sceneRef, toolPe
   useEffect(() => { gameRef.current?.registry.set("sessionMaxTurns", gameState?.sessionMaxTurns ?? null); }, [gameState?.sessionMaxTurns]);
   useEffect(() => { gameRef.current?.registry.set("uiLocked", uiLocked); }, [uiLocked]);
   useEffect(() => { gameRef.current?.registry.set("toolPending", toolPending ?? null); }, [toolPending]);
-  useEffect(() => { gameRef.current?.registry.set("townsfolk", workers ?? null); }, [workers]);
-  useEffect(() => { gameRef.current?.registry.set("typeWorkers", typeWorkers ?? null); }, [typeWorkers]);
+  useEffect(() => { gameRef.current?.registry.set("workers", workers ?? null); }, [workers]);
   useEffect(() => { gameRef.current?.registry.set("hapticsOn", gameState?.settings?.hapticsOn ?? true); }, [gameState?.settings?.hapticsOn]);
   useEffect(() => { gameRef.current?.registry.set("tileCollectionActive", tileCollection?.activeByCategory ?? null); }, [tileCollection?.activeByCategory]);
   // Sync grid state → Phaser registry so hazard engines see real tile keys
@@ -235,8 +234,7 @@ export default function App() {
                   sceneRef={sceneRef}
                   toolPending={state.toolPending}
                   setChainInfo={setChainInfo}
-                  workers={state.townsfolk}
-                  typeWorkers={state.workers}
+                  workers={state.workers}
                   tileCollection={state.tileCollection}
                   gameState={state}
                   grid={state.grid}

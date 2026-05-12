@@ -1,7 +1,7 @@
 import Phaser from "phaser";
 import { TILE, COLS, ROWS, UPGRADE_THRESHOLDS, SEASONS, BIOMES, CAPPED_RESOURCES, SCENE_EVENTS } from "./constants.js";
 import { upgradeCountForChain, resourceGainForChain, rollResource } from "./utils.js";
-import { computeWorkerEffects } from "./features/apprentices/aggregate.js";
+import { computeWorkerEffects } from "./features/workers/aggregate.js";
 import { CATEGORY_OF } from "./features/tileCollection/data.js";
 import {
   expandZoneCategories,
@@ -176,7 +176,7 @@ export class GameScene extends Phaser.Scene {
       // Clear the pending flag once handled
       this.time.delayedCall(50, () => this.registry.set("toolPending", null));
     });
-    // Sync worker effects on init and whenever state.townsfolk changes
+    // Sync worker effects on init and whenever state.workers changes
     this._syncWorkerEffects();
     onRegistry("changedata-workers", () => this._syncWorkerEffects());
     // Swap on-board tiles to match the newly active tile type in their category,
@@ -219,9 +219,8 @@ export class GameScene extends Phaser.Scene {
   // ─── Worker effects sync ─────────────────────────────────────────────────
 
   _syncWorkerEffects() {
-    const townsfolk = this.registry.get("townsfolk") ?? { hired: {}, pool: 0 };
-    const typeWorkers = this.registry.get("typeWorkers") ?? { hired: {} };
-    const agg = computeWorkerEffects({ townsfolk, workers: typeWorkers });
+    const workers = this.registry.get("workers") ?? { hired: {} };
+    const agg = computeWorkerEffects({ workers });
     const eff = {};
     for (const [k, v] of Object.entries(UPGRADE_THRESHOLDS)) {
       eff[k] = Math.max(1, v - (agg.thresholdReduce[k] ?? 0));

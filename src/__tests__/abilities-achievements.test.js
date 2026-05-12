@@ -15,7 +15,6 @@ describe("Abilities → achievements counters", () => {
   it("powder_store fires a season_end ability — building_abilities_triggered increments by 1", () => {
     let s = createInitialState();
     s = withBuilt(s, ["hearth", "powder_store"]);
-    s = { ...s, townsfolk: { ...s.townsfolk, debt: 0 } };
     const after = rootReducer(s, { type: "CLOSE_SEASON" });
     expect(after.achievements?.counters?.building_abilities_triggered ?? 0).toBe(1);
     expect(after.achievements?.counters?.abilities_triggered ?? 0).toBe(1);
@@ -24,7 +23,6 @@ describe("Abilities → achievements counters", () => {
   it("housing × 3 + powder_store fire 4 building abilities at once", () => {
     let s = createInitialState();
     s = withBuilt(s, ["hearth", "housing", "housing2", "housing3", "powder_store"]);
-    s = { ...s, townsfolk: { ...s.townsfolk, debt: 0 } };
     const after = rootReducer(s, { type: "CLOSE_SEASON" });
     expect(after.achievements.counters.building_abilities_triggered).toBe(4);
     // Two distinct ability ids fired: worker_pool_step + grant_tool.
@@ -38,7 +36,6 @@ describe("Abilities → achievements counters", () => {
       ...s,
       biomeKey: "farm",
       grid: [["grass_hay"]],
-      townsfolk: { ...s.townsfolk, debt: 0 },
       farm: { savedField: null },
     };
     const after = rootReducer(s, { type: "CLOSE_SEASON" });
@@ -49,7 +46,6 @@ describe("Abilities → achievements counters", () => {
   it("crossing the powerful_keep threshold (10 building abilities) unlocks it", () => {
     let s = createInitialState();
     s = withBuilt(s, ["hearth", "housing", "housing2", "housing3", "powder_store"]);
-    s = { ...s, townsfolk: { ...s.townsfolk, debt: 0 } };
     // Each season fires 4 building abilities; 3 seasons → 12 ≥ 10.
     let next = s;
     for (let i = 0; i < 3; i++) {

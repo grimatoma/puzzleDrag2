@@ -8,7 +8,7 @@ import {
   computeWorkerEffects,
   discoveredTileSources,
   builtBuildingSources,
-} from "../features/apprentices/aggregate.js";
+} from "../features/workers/aggregate.js";
 
 function withTile(state, tileId, category) {
   const tc = state.tileCollection ?? { discovered: {}, activeByCategory: {} };
@@ -77,17 +77,11 @@ describe("computeWorkerEffects — tile contributions land on global channels", 
     expect(eff.effectivePoolWeights.grass_hay).toBe(2);
   });
 
-  it("worker + tile pool_weight contributions stack on the same key", () => {
+  it("tile pool_weight surfaces in effectivePoolWeights for the active key", () => {
     let s = createInitialState();
-    s = withTile(s, "grass_meadow", "grass"); // tile +1
-    s = {
-      ...s,
-      townsfolk: { hired: { trawlerman: 0, deckhand: 0 }, debt: 0, pool: 0 },
-    };
-    // Add a synthetic test scenario: hire a worker that boosts grass_hay.
-    // No default worker boosts grass_hay, but iron_miner boosts mine_ore;
-    // we focus the assertion on the tile-only contribution since stacking
-    // on shared keys is exercised in abilities-combo.test.js.
+    s = withTile(s, "grass_meadow", "grass"); // grass_meadow has pool_weight grass_hay +1
+    // Stacking with worker/building sources on a shared key is exercised in
+    // abilities-combo.test.js; here we pin the tile-only contribution.
     const eff = computeWorkerEffects(s);
     expect(eff.effectivePoolWeights.grass_hay).toBe(1);
   });

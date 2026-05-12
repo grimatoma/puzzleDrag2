@@ -13,7 +13,7 @@
 import { RAT_SPAWN_THRESHOLDS, RAT_CLEAR_REWARD_PER } from "../../constants.js";
 import { RATS_HAZARD_ENABLED } from "../../featureFlags.js";
 import { hasTag } from "../tileCollection/tags.js";
-import { computeWorkerEffects } from "../apprentices/aggregate.js";
+import { computeWorkerEffects } from "../workers/aggregate.js";
 import { effectiveRatSpawnRate } from "./attractsRats.js";
 
 const PLANT_KEYS = new Set(["grass_hay", "grain_wheat", "grain", "berry"]);
