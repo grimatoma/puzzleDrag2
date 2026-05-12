@@ -9,6 +9,7 @@ import {
 } from "../shared.jsx";
 import AbilitiesEditor from "../AbilitiesEditor.jsx";
 import { BuildingIllustration } from "../../ui/Town.jsx";
+import Icon from "../../ui/Icon.jsx";
 
 const COST_KEYS = (() => {
   const out = new Set(["coins", "runes"]);
@@ -107,48 +108,13 @@ export default function BuildingsTab({ draft, updateDraft }) {
               </div>
 
               <div className="mb-2">
-                <Label>Build cost</Label>
-                <div className="flex flex-col gap-1">
-                  {Object.entries(eff.cost).map(([resKey, qty]) => (
-                    <div key={resKey} className="flex items-center gap-2">
-                      <Select
-                        value={resKey}
-                        options={COST_OPTIONS}
-                        onChange={(v) => {
-                          const next = { ...eff.cost };
-                          delete next[resKey];
-                          if (v) next[v] = qty;
-                          patch(b.id, { cost: next });
-                        }}
-                      />
-                      <NumberField
-                        value={qty}
-                        min={0}
-                        max={9999}
-                        width={70}
-                        onChange={(v) => patch(b.id, { cost: { ...eff.cost, [resKey]: v } })}
-                      />
-                      <SmallButton
-                        variant="danger"
-                        onClick={() => {
-                          const next = { ...eff.cost };
-                          delete next[resKey];
-                          patch(b.id, { cost: next });
-                        }}
-                      >
-                        ✕
-                      </SmallButton>
-                    </div>
-                  ))}
-                  <SmallButton
-                    onClick={() => {
-                      const empty = COST_KEYS.find((k) => !(k in eff.cost)) || "";
-                      if (empty) patch(b.id, { cost: { ...eff.cost, [empty]: 1 } });
-                    }}
-                  >
-                    + Add cost line
-                  </SmallButton>
+                <div className="text-[10px] font-bold uppercase tracking-wide mb-1" style={{ color: COLORS.inkSubtle }}>
+                  Build cost
                 </div>
+                <CostEditor
+                  cost={eff.cost}
+                  onChange={(nextCost) => patch(b.id, { cost: nextCost })}
+                />
               </div>
 
               <div>
@@ -184,6 +150,109 @@ function Label({ children }) {
   return (
     <div className="text-[10px] font-bold uppercase tracking-wide mb-0.5" style={{ color: COLORS.inkSubtle }}>
       {children}
+    </div>
+  );
+}
+
+function CostEditor({ cost, onChange }) {
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [query, setQuery] = useState("");
+
+  const available = COST_KEYS.filter(
+    (k) => !(k in cost) && k.toLowerCase().includes(query.toLowerCase())
+  );
+
+  function updateCost(resKey, qty) {
+    const next = { ...cost };
+    if (qty === null || qty === undefined || qty <= 0) {
+      delete next[resKey];
+    } else {
+      next[resKey] = qty;
+    }
+    onChange(next);
+  }
+
+  return (
+    <div className="flex flex-col gap-2">
+      {Object.keys(cost).length === 0 && (
+        <div
+          className="text-center py-3 text-[12px] italic rounded-lg border-2 border-dashed"
+          style={{ borderColor: COLORS.border, color: COLORS.inkSubtle }}
+        >
+          No costs added.
+        </div>
+      )}
+
+      {Object.entries(cost).map(([resKey, qty]) => (
+        <Card key={resKey}>
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <Icon iconKey={resKey} size={20} />
+              <span className="text-[12px] font-bold" style={{ color: COLORS.ink }}>
+                {resKey}
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <NumberField
+                value={qty}
+                min={1}
+                max={9999}
+                width={70}
+                onChange={(v) => updateCost(resKey, v)}
+              />
+              <SmallButton variant="danger" onClick={() => updateCost(resKey, null)}>
+                ✕
+              </SmallButton>
+            </div>
+          </div>
+        </Card>
+      ))}
+
+      <div className="flex items-center justify-between gap-2 mt-1">
+        <div className="text-[11px] font-bold uppercase tracking-wide" style={{ color: COLORS.inkSubtle }}>
+          Add Cost
+        </div>
+        <SmallButton onClick={() => setPickerOpen((v) => !v)}>
+          {pickerOpen ? "Hide" : "Search & Add"}
+        </SmallButton>
+      </div>
+
+      {pickerOpen && (
+        <div className="flex flex-col gap-2">
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search resources…"
+            className="px-2 py-1.5 rounded border text-[12px]"
+            style={{ background: "#fffaf1", borderColor: COLORS.border, color: COLORS.ink }}
+          />
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-2 max-h-64 overflow-y-auto pr-1">
+            {available.map((k) => (
+              <button
+                key={k}
+                onClick={() => {
+                  updateCost(k, 1);
+                  setQuery("");
+                }}
+                className="flex items-center gap-2 text-left p-2 rounded-lg border-2 transition-colors hover:opacity-90"
+                style={{ background: COLORS.parchment, borderColor: COLORS.border }}
+              >
+                <div className="flex-shrink-0 flex items-center justify-center w-8 h-8 rounded bg-[#e0d4be]">
+                  <Icon iconKey={k} size={24} />
+                </div>
+                <div className="text-[12px] font-bold truncate flex-1 min-w-0" style={{ color: COLORS.ink }}>
+                  {k}
+                </div>
+              </button>
+            ))}
+            {available.length === 0 && (
+              <div className="text-[11px] italic px-1 col-span-full" style={{ color: COLORS.inkSubtle }}>
+                No matching resources.
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
