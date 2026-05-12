@@ -39,12 +39,6 @@ describe("7.3 ACHIEVEMENTS manifest", () => {
     expect(a.threshold).toBe(4);
     expect(a.counter).toBe("bosses_defeated");
   });
-
-  it("true_keeper tracks festival_won", () => {
-    const a = ACHIEVEMENTS.find((x) => x.id === "true_keeper");
-    expect(a).toBeDefined();
-    expect(a.counter).toBe("festival_won");
-  });
 });
 
 // ── 7.3.2 Fresh state ─────────────────────────────────────────────────────────
@@ -167,17 +161,6 @@ describe("7.3 champion achievement (threshold 4)", () => {
     for (let i = 0; i < 4; i++) s = tickAchievement(s, "bosses_defeated").newState;
     const r = tickAchievement(s, "bosses_defeated");
     expect(r.unlocked.length).toBe(0);
-  });
-});
-
-// ── 7.3.7 festival_won / true_keeper ──────────────────────────────────────────
-describe("7.3 festival_won and true_keeper", () => {
-  it("first festival win increments counter and unlocks true_keeper", () => {
-    const s = freshState();
-    const r = tickAchievement(s, "festival_won");
-    expect(r.newState.achievements.counters.festival_won).toBe(1);
-    expect(r.newState.achievements.unlocked.true_keeper).toBe(true);
-    expect(r.unlocked).toContain("true_keeper");
   });
 });
 

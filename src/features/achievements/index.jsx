@@ -135,7 +135,6 @@ const COUNTER_GROUPS = {
   chains_committed: "Chains",
   orders_fulfilled: "Orders",
   bosses_defeated: "Bosses",
-  festival_won: "Festival",
   distinct_resources_chained: "Resources",
   distinct_buildings_built: "Buildings",
   supplies_converted: "Supplies",
