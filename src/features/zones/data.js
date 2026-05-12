@@ -413,8 +413,51 @@ export function grantEarnedHearthTokens(state) {
   return next;
 }
 
+// ─── Settlement biomes (Phase 5e, master doc §IV) ────────────────────────────
+// A biome is picked at founding; it fixes the settlement's two hazards + a
+// resource bonus. `home`'s biome is implicit (DEFAULT_HOME_BIOME) since it's
+// pre-founded and never goes through the picker.
+//
+// DEFERRED: the chosen biome's hazards aren't yet wired into the board's hazard
+// spawning — GameScene still reads the static per-zone `ZONES[zoneId].dangers`.
+// Swap that for `settlementHazards(state, zoneId)` in a follow-on. The biome
+// `bonus` is descriptive only (not yet a spawn-rate multiplier).
+
+/** Biome options available when founding a settlement of `type`. */
+export function biomesForType(type) {
+  return SETTLEMENT_BIOMES[type] ?? [];
+}
+
+/** The biome id chosen for `zoneId` (or DEFAULT_HOME_BIOME for home), else null. */
+export function settlementBiomeId(state, zoneId) {
+  const stored = state?.settlements?.[zoneId]?.biome;
+  if (stored) return stored;
+  return zoneId === DEFAULT_ZONE ? DEFAULT_HOME_BIOME : null;
+}
+
+/** The full biome def ({ id, name, icon, hazards, bonus }) for `zoneId`, else null. */
+export function settlementBiome(state, zoneId) {
+  const id = settlementBiomeId(state, zoneId);
+  if (!id) return null;
+  const type = settlementTypeForZone(zoneId);
+  return (SETTLEMENT_BIOMES[type] ?? []).find((b) => b.id === id) ?? null;
+}
+
+/** Hazards that appear in every round at `zoneId` — the biome's, falling back to the static per-zone list. */
+export function settlementHazards(state, zoneId) {
+  const b = settlementBiome(state, zoneId);
+  if (b && Array.isArray(b.hazards)) return b.hazards;
+  return ZONES[zoneId]?.dangers ?? [];
+}
+
+/** Pick a biome for `type`: the one matching `wanted`, else the first option, else null. */
+export function resolveBiomeChoice(type, wanted) {
+  const list = SETTLEMENT_BIOMES[type] ?? [];
+  return list.find((b) => b.id === wanted) ?? list[0] ?? null;
+}
+
 // Phase 6 — Balance Manager hook. Apply any committed/draft overrides from
 // `src/config/balance.json` + the localStorage draft to the live ZONES table.
-import { BALANCE_OVERRIDES, EXPEDITION_FOOD_TURNS, EXPEDITION_MEAT_FOODS } from "../../constants.js";
+import { BALANCE_OVERRIDES, EXPEDITION_FOOD_TURNS, EXPEDITION_MEAT_FOODS, SETTLEMENT_BIOMES, DEFAULT_HOME_BIOME } from "../../constants.js";
 import { applyZoneOverrides } from "../../config/applyOverrides.js";
 applyZoneOverrides(ZONES, BALANCE_OVERRIDES.zones);

@@ -36,7 +36,7 @@ import * as market from "./features/market/slice.js";
 import * as castle from "./features/castle/slice.js";
 import * as zones from "./features/zones/slice.js";
 import * as workers from "./features/workers/slice.js";
-import { ZONES, settlementFoundingCost, isSettlementFounded, displayZoneName, grantEarnedHearthTokens, isOldCapitalUnlocked, isExpeditionFood, expeditionTurnsFromSupply } from "./features/zones/data.js";
+import { ZONES, settlementFoundingCost, isSettlementFounded, displayZoneName, grantEarnedHearthTokens, isOldCapitalUnlocked, isExpeditionFood, expeditionTurnsFromSupply, settlementTypeForZone, resolveBiomeChoice } from "./features/zones/data.js";
 import { FIRE_HAZARD_ENABLED } from "./featureFlags.js";
 import { loadSavedState, persistState, clearSave } from "./state/persistence.js";
 export { loadSavedState, persistStateNow, persistState, flushPersistState, clearSave } from "./state/persistence.js";
@@ -1005,11 +1005,15 @@ function coreReducer(state, action) {
       if (isSettlementFounded(state, zoneId)) return state;   // already founded
       const cost = settlementFoundingCost(state);
       if ((state.coins ?? 0) < (cost.coins ?? 0)) return state; // can't afford
+      // Phase 5e — pick the biome at founding (the picker passes payload.biome;
+      // a missing/unknown choice falls back to the first option for the type).
+      const biome = resolveBiomeChoice(settlementTypeForZone(zoneId), action.payload?.biome);
+      if (!biome) return state;
       return {
         ...state,
         coins: state.coins - (cost.coins ?? 0),
-        settlements: { ...(state.settlements ?? {}), [zoneId]: { founded: true } },
-        bubble: { id: Date.now(), npc: "wren", text: `${displayZoneName(state, zoneId)} is a settlement now. People will come.`, ms: 2200 },
+        settlements: { ...(state.settlements ?? {}), [zoneId]: { founded: true, biome: biome.id } },
+        bubble: { id: Date.now(), npc: "wren", text: `${displayZoneName(state, zoneId)} is a ${biome.name} settlement now. People will come.`, ms: 2400 },
       };
     }
     case "OPEN_MODAL":
