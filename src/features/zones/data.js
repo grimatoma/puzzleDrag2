@@ -250,6 +250,62 @@ export function displayZoneName(state, zoneId) {
   return ZONES[id]?.name ?? id;
 }
 
+// ─── Settlement founding (Phase 4) ───────────────────────────────────────────
+// `home` is founded for free; founding any other zone costs an escalating coin
+// price. These constants are tunable (mocked starting values).
+//
+// DEFERRED (Phase 4b): founding is recorded in state + dispatchable via
+// FOUND_SETTLEMENT, but it is NOT yet *enforced* — building/playing at a
+// not-yet-founded zone is still allowed (BUILD / StartFarming don't gate on
+// isSettlementFounded), and there is no Kingdoms-hub UI on the cartography map
+// that surfaces founded/completed status or a "Found this settlement" button.
+// Wire both of those in 4b.
+export const SETTLEMENT_FOUNDING_BASE_COINS = 300;
+export const SETTLEMENT_FOUNDING_GROWTH = 1.7;
+
+/** Number of zones the player has founded. */
+export function foundedSettlementCount(state) {
+  const map = state?.settlements ?? {};
+  return Object.values(map).filter((s) => s && s.founded).length;
+}
+
+/** True if `zoneId` has been founded (or is `home`, which is always founded). */
+export function isSettlementFounded(state, zoneId) {
+  if (zoneId === DEFAULT_ZONE) return true;
+  return !!(state?.settlements?.[zoneId]?.founded);
+}
+
+/**
+ * Coin cost to found the *next* settlement, given how many are already founded.
+ * The k-th founding (k = current founded count, so the 2nd settlement is k=1)
+ * costs `base * growth^(k-1)`.
+ */
+export function settlementFoundingCost(state) {
+  const k = Math.max(1, foundedSettlementCount(state));
+  return { coins: Math.round(SETTLEMENT_FOUNDING_BASE_COINS * Math.pow(SETTLEMENT_FOUNDING_GROWTH, k - 1)) };
+}
+
+/**
+ * A settlement is "complete" once at least half of the buildings available at
+ * that zone have been built there. (Mocked threshold; tunable. Feeds the
+ * Phase-7 metaplot — how many settlements have been completed.)
+ */
+export function settlementCompleted(state, zoneId) {
+  const z = ZONES[zoneId];
+  if (!z) return false;
+  const need = (z.buildings ?? []).filter((b) => b !== "_plots");
+  if (need.length === 0) return false;
+  const built = state?.built?.[zoneId] ?? {};
+  const have = need.filter((b) => built[b]).length;
+  return have >= Math.ceil(need.length / 2);
+}
+
+/** Count of zones that are both founded and completed. */
+export function completedSettlementCount(state) {
+  const map = state?.settlements ?? {};
+  return Object.keys(map).filter((id) => map[id]?.founded && settlementCompleted(state, id)).length;
+}
+
 // Phase 6 — Balance Manager hook. Apply any committed/draft overrides from
 // `src/config/balance.json` + the localStorage draft to the live ZONES table.
 import { BALANCE_OVERRIDES } from "../../constants.js";

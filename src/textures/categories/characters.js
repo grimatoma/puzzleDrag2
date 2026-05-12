@@ -1710,7 +1710,12 @@ export const ICONS = {
   char_bram:  { label:"Bram",         color:"#5a6973", draw:drawBram },
   char_liss:  { label:"Sister Liss",  color:"#8d3a5c", draw:drawLiss },
   char_wren:  { label:"Wren",         color:"#4f6b3a", draw:drawWren },
-  // Workers
+  // DEPRECATED — these `char_*` portraits (and their draw* fns below) were used
+  // by the old features/apprentices/ named-worker roster, which was removed in
+  // Phase 0. Nothing references `char_<workerId>` anymore; they're baked into
+  // the Phaser texture cache but never drawn. TODO: prune the lot (entries +
+  // the matching drawHilda/… functions) in a focused follow-up. The 5 named-NPC
+  // portraits above (char_mira … char_wren) stay.
   char_hilda:    { label:"Hilda",     color:"#4f8c3a", draw:drawHilda },
   char_pip:      { label:"Pip",       color:"#7dc45a", draw:drawPip },
   char_wila:     { label:"Wila",      color:"#c8923a", draw:drawWila },
