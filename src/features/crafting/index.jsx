@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { RECIPES, BIOMES } from "../../constants.js";
 import { DECORATIONS } from "../decorations/data.js";
 import IconCanvas, { hasIcon } from "../../ui/IconCanvas.jsx";
@@ -114,6 +114,68 @@ function RecipeCard({ recipeKey, recipe, inventory, built, level, craftedTotals,
         >
           {!levelOk ? "🔒 L3" : !stationOk ? "No station" : "CRAFT"}
         </button>
+        {/* Phase 5 — queue this craft to finish in real time (frees the inputs now). */}
+        <button
+          disabled={!craftable}
+          onClick={() => dispatch({ type: "CRAFTING/QUEUE_RECIPE", payload: { key: recipeKey }, recipeKey })}
+          title="Queue — ready in 4h (or skip with a gem)"
+          className={`text-[9px] font-bold px-2 py-0.5 rounded-md border ${
+            craftable
+              ? "bg-[#e8d4a8] border-[#b08040] text-[#6a4a18] hover:bg-[#f0e0bc]"
+              : "bg-[#ddd] border-[#bbb] text-[#888] cursor-not-allowed"
+          }`}
+        >
+          ⏳ Queue 4h
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// Phase 5 — the in-progress craft queue strip shown atop the crafting screen.
+function CraftQueueStrip({ queue, gems, dispatch }) {
+  // `now` lives in state (refreshed on a slow interval) so the countdown ticks
+  // and we never call the impure Date.now() during render.
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 30_000);
+    return () => clearInterval(t);
+  }, []);
+  if (!queue || queue.length === 0) return null;
+  const fmt = (ms) => {
+    if (ms <= 0) return "Ready!";
+    const h = Math.floor(ms / 3_600_000);
+    const m = Math.floor((ms % 3_600_000) / 60_000);
+    return h > 0 ? `${h}h ${m}m` : `${m}m`;
+  };
+  return (
+    <div className="bg-[#3a2715]/60 border-b border-[#e2c19b]/40 px-3 py-2">
+      <div className="text-[10px] font-bold uppercase tracking-widest text-[#e2c19b] mb-1">In the workshop · {queue.length}</div>
+      <div className="flex flex-col gap-1">
+        {queue.map((entry, i) => {
+          const recipe = RECIPES[entry.key];
+          const ready = (entry.readyAt ?? Infinity) <= now;
+          return (
+            <div key={`${entry.key}-${entry.queuedAt}-${i}`} className="flex items-center gap-2 bg-[#f6efe0] rounded-lg px-2 py-1">
+              <Icon iconKey={entry.key} size={20} />
+              <span className="text-[11px] font-bold text-[#3a2715] flex-1 min-w-0 truncate">{recipe?.name ?? entry.key}</span>
+              <span className={`text-[10px] font-bold ${ready ? "text-[#3a7a3a]" : "text-[#8a785e]"}`}>{fmt((entry.readyAt ?? 0) - now)}</span>
+              <button
+                disabled={!ready}
+                onClick={() => dispatch({ type: "CRAFTING/CLAIM_CRAFT", payload: { idx: i } })}
+                className={`text-[10px] font-bold px-2 py-0.5 rounded-md border-2 ${ready ? "bg-[#91bf24] border-[#6a9010] text-white" : "bg-[#ccc] border-[#aaa] text-[#666] cursor-not-allowed"}`}
+              >Claim</button>
+              {!ready && (
+                <button
+                  disabled={(gems ?? 0) < 1}
+                  onClick={() => dispatch({ type: "CRAFTING/SKIP_CRAFT", payload: { idx: i } })}
+                  title={(gems ?? 0) < 1 ? "Need a gem" : "Skip with a gem"}
+                  className={`text-[10px] font-bold px-2 py-0.5 rounded-md border ${(gems ?? 0) >= 1 ? "bg-[#bfe0ff] border-[#5a8acc] text-[#1a3a5a]" : "bg-[#ddd] border-[#bbb] text-[#888] cursor-not-allowed"}`}
+                >Skip 💎</button>
+              )}
+            </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -213,6 +275,9 @@ export default function CraftingScreen({ state, dispatch }) {
           ✕
         </button>
       </div>
+
+      {/* Phase 5 — real-time craft queue */}
+      <CraftQueueStrip queue={state.craftQueue} gems={state.gems} dispatch={dispatch} />
 
       {/* Station tabs */}
       <div className="flex gap-1 px-2 py-2 flex-shrink-0 overflow-x-auto">
