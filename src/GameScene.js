@@ -53,7 +53,7 @@ export class GameScene extends Phaser.Scene {
     // Compute layout first so the initial bake can match the on-screen tile
     // size on big viewports — otherwise icons get upscaled past 1:1.
     this.layoutDims();
-    this.bakeScale = computeBakeScale(this.registry.get("graphicsQuality"), this.dpr, this.tileSize);
+    this.bakeScale = computeBakeScale(this.dpr, this.tileSize);
     this.registry.set("bakeScale", this.bakeScale);
     makeTextures(this);
     this.layoutDims();
@@ -179,20 +179,6 @@ export class GameScene extends Phaser.Scene {
     // Sync worker effects on init and whenever state.townsfolk changes
     this._syncWorkerEffects();
     onRegistry("changedata-workers", () => this._syncWorkerEffects());
-    // Re-render tile textures when the color-blind palette changes
-    onRegistry("changedata-palette", (_p, value) => {
-      regenerateTextures(this, value ?? "default");
-    });
-    // Re-render textures at the new bake resolution when the player changes
-    // graphics quality in settings.
-    onRegistry("changedata-graphicsQuality", (_p, value) => {
-      this.bakeScale = computeBakeScale(value, this.dpr, this.tileSize);
-      this.registry.set("bakeScale", this.bakeScale);
-      const palette = this.registry.get("palette") ?? "default";
-      regenerateTextures(this, palette);
-      this.layoutDims();
-      this.repositionTiles();
-    });
     // Swap on-board tiles to match the newly active tile type in their category,
     // so picking a new tile type in the panel immediately rerenders the puzzle.
     onRegistry("changedata-tileCollectionActive", (_p, value, prev) => {
@@ -314,13 +300,11 @@ export class GameScene extends Phaser.Scene {
     // If the layout grew past the current bake resolution, rebake tile
     // textures at the new scale so on-screen tiles stay ≥1:1 with the
     // baked source. Hysteresis avoids re-baking on tiny resize jitters.
-    const quality = this.registry.get("graphicsQuality");
-    const requiredScale = computeBakeScale(quality, this.dpr, this.tileSize);
+    const requiredScale = computeBakeScale(this.dpr, this.tileSize);
     if (requiredScale > (this.bakeScale || this.dpr) * 1.05) {
       this.bakeScale = requiredScale;
       this.registry.set("bakeScale", requiredScale);
-      const palette = this.registry.get("palette") ?? "default";
-      regenerateTextures(this, palette);
+      regenerateTextures(this);
       this.layoutDims();
     }
     this.children.list.filter((o) => o.__layer === "bg").forEach((o) => o.destroy());

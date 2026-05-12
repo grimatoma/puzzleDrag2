@@ -1895,8 +1895,6 @@ const SLICE_PRIMARY_ACTIONS = new Set([
   "SETTINGS/TOGGLE",
   "SETTINGS/RESET_SAVE",
   "SETTINGS/SHOW_TUTORIAL",
-  "SET_PALETTE",
-  "SET_GRAPHICS_QUALITY",
   // Tutorial actions are owned by tutorial/slice
   "TUTORIAL/START",
   "TUTORIAL/NEXT",
@@ -1943,8 +1941,6 @@ function rawReducer(state, action) {
 function runActionEffects(state, action) {
   switch (action.type) {
     case "SETTINGS/TOGGLE":
-    case "SET_PALETTE":
-    case "SET_GRAPHICS_QUALITY":
       // Persist the settings sub-state to its own localStorage key so it
       // survives a SETTINGS/RESET_SAVE clearing of the main save slot.
       settings.persistSettings(state.settings);

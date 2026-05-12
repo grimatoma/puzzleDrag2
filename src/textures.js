@@ -1,4 +1,4 @@
-import { TILE, BIOMES, PALETTES } from "./constants.js";
+import { TILE, BIOMES } from "./constants.js";
 import { hex } from "./utils.js";
 import { drawFarmTileIcon } from "./textures/farmIcons.js";
 import { drawMineTileIcon } from "./textures/mineIcons.js";
@@ -100,20 +100,18 @@ function bakeScaleFor(scene) {
 }
 
 /**
- * Rebuild only the per-resource tile textures using the given palette id.
- * Called whenever state.settings.palette changes or when the layout grows
+ * Rebuild only the per-resource tile textures. Called when the layout grows
  * past the previously baked tile resolution.
  */
-export function regenerateTextures(scene, paletteId = "default") {
+export function regenerateTextures(scene) {
   const dpr = bakeScaleFor(scene);
-  const palette = PALETTES[paletteId] ?? PALETTES.default;
   Object.values(BIOMES).forEach((biome) => {
     biome.resources.forEach((r) => {
       [false, true].forEach((selected) => {
         const key = `tile_${r.key}${selected ? "_sel" : ""}`;
         // Remove existing cached texture so canvasTexture will recreate it
         if (scene.textures.exists(key)) scene.textures.remove(key);
-        const tileColor = palette.tiles[r.key] ?? r.color;
+        const tileColor = r.color;
         canvasTexture(scene, key, TILE, TILE, (ctx, w, h) => {
           ctx.clearRect(0, 0, w, h);
           ctx.fillStyle = "rgba(0,0,0,.22)";
@@ -233,12 +231,10 @@ function bakeFireTile(scene, dpr) {
 
 export function makeTextures(scene) {
   const dpr = bakeScaleFor(scene);
-  const paletteId = scene.registry.get("palette") ?? "default";
-  const palette = PALETTES[paletteId] ?? PALETTES.default;
   Object.values(BIOMES).forEach((biome) => {
     biome.resources.forEach((r) => {
       [false, true].forEach((selected) => {
-        const tileColor = palette.tiles[r.key] ?? r.color;
+        const tileColor = r.color;
         canvasTexture(scene, `tile_${r.key}${selected ? "_sel" : ""}`, TILE, TILE, (ctx, w, h) => {
           ctx.clearRect(0, 0, w, h);
           ctx.fillStyle = "rgba(0,0,0,.22)";

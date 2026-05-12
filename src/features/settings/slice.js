@@ -1,6 +1,4 @@
 import { STORAGE_KEYS } from "../../constants.js";
-// Phase 11: import INITIAL_SETTINGS so the slice extends it (not duplicates it)
-import { INITIAL_SETTINGS as PHASE11_INITIAL, settingsReduce as phase11Reduce } from "../../settings.js";
 const STORAGE_KEY = STORAGE_KEYS.settings;
 
 function loadSettings() {
@@ -39,8 +37,6 @@ const DEFAULT_SETTINGS = {
   sfxOn: true,
   musicOn: true,
   hapticsOn: true,
-  // palette + graphicsQuality merged from PHASE11_INITIAL
-  ...PHASE11_INITIAL,
 };
 
 export const initial = {
@@ -58,17 +54,6 @@ export function reduce(state, action) {
         ...state.settings,
         [action.key]: !state.settings[action.key],
       };
-      return { ...state, settings };
-    }
-
-    // Phase 11.1 — Color palette
-    case 'SET_PALETTE': {
-      const settings = phase11Reduce(state.settings, action);
-      return { ...state, settings };
-    }
-
-    case 'SET_GRAPHICS_QUALITY': {
-      const settings = phase11Reduce(state.settings, action);
       return { ...state, settings };
     }
 

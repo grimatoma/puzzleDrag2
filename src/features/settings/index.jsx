@@ -148,28 +148,12 @@ function MainTab({ state, dispatch }) {
 
 // --- Settings tab ---
 const TOGGLE_ROWS = [
-  { key: 'sfxOn',        label: 'Sound Effects' },
-  { key: 'musicOn',      label: 'Music' },
-  { key: 'hapticsOn',    label: 'Haptics' },
-];
-
-const PALETTE_OPTIONS = [
-  { id: 'default',      label: 'Default' },
-  { id: 'deuteranopia', label: 'Deuteranopia' },
-  { id: 'protanopia',   label: 'Protanopia' },
-  { id: 'tritanopia',   label: 'Tritanopia' },
-];
-
-const QUALITY_OPTIONS = [
-  { id: 'low',      label: 'Low',      hint: 'Pixelated, fastest' },
-  { id: 'standard', label: 'Standard', hint: 'Matches your display' },
-  { id: 'ultra',    label: 'Ultra',    hint: 'Supersampled, sharpest' },
+  { key: 'sfxOn',     label: 'Sound Effects' },
+  { key: 'musicOn',   label: 'Music' },
+  { key: 'hapticsOn', label: 'Haptics' },
 ];
 
 function SettingsTab({ settings = {}, dispatch }) {
-  const activePalette = settings.palette ?? 'default';
-  const activeQuality = settings.graphicsQuality ?? 'standard';
-
   function handleToggle(key) {
     dispatch({ type: 'SETTINGS/TOGGLE', key });
   }
@@ -184,7 +168,7 @@ function SettingsTab({ settings = {}, dispatch }) {
         ← Back
       </button>
       <div className="text-[13px] font-bold text-center" style={{ color: '#7a5a38' }}>
-        Audio · Motion · Accessibility
+        Audio
       </div>
       <div className="flex flex-col gap-2">
         {TOGGLE_ROWS.map(({ key, label }) => (
@@ -200,57 +184,6 @@ function SettingsTab({ settings = {}, dispatch }) {
             />
           </div>
         ))}
-      </div>
-
-      {/* Graphics quality */}
-      <div
-        className="flex flex-col gap-2 py-2 px-3 rounded-xl border-2"
-        style={{ background: '#f4e8d0', borderColor: '#b28b62' }}
-      >
-        <span className="text-[13px] font-bold" style={{ color: '#2b2218' }}>Graphics Quality</span>
-        <div className="grid grid-cols-3 gap-1.5">
-          {QUALITY_OPTIONS.map(({ id, label, hint }) => (
-            <button
-              key={id}
-              onClick={() => dispatch({ type: 'SET_GRAPHICS_QUALITY', id })}
-              className="flex flex-col items-center justify-center py-1.5 px-2 rounded-lg border-2 transition-colors"
-              aria-pressed={activeQuality === id}
-              title={hint}
-              style={
-                activeQuality === id
-                  ? { background: '#d6612a', borderColor: '#a84010', color: '#fff' }
-                  : { background: '#e8dcc4', borderColor: '#b28b62', color: '#5a3a20' }
-              }
-            >
-              <span className="text-[11px] font-bold leading-tight">{label}</span>
-              <span className="text-[9px] italic leading-tight opacity-80">{hint}</span>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Palette selector */}
-      <div
-        className="flex flex-col gap-2 py-2 px-3 rounded-xl border-2"
-        style={{ background: '#f4e8d0', borderColor: '#b28b62' }}
-      >
-        <span className="text-[13px] font-bold" style={{ color: '#2b2218' }}>Color Palette</span>
-        <div className="grid grid-cols-2 gap-1.5">
-          {PALETTE_OPTIONS.map(({ id, label }) => (
-            <button
-              key={id}
-              onClick={() => dispatch({ type: 'SET_PALETTE', id })}
-              className="py-1.5 px-2 text-[11px] font-bold rounded-lg border-2 transition-colors"
-              style={
-                activePalette === id
-                  ? { background: '#d6612a', borderColor: '#a84010', color: '#fff' }
-                  : { background: '#e8dcc4', borderColor: '#b28b62', color: '#5a3a20' }
-              }
-            >
-              {label}
-            </button>
-          ))}
-        </div>
       </div>
     </div>
   );
