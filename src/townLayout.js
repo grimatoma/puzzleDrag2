@@ -50,10 +50,27 @@ const PLAZA = { cx: 552, cy: 350, rx: 134, ry: 84 };
  * (≥ 1); the layout fills the front row first (it's the most prominent),
  * then mid, then back. Lot 0 is the hearth — placed on the plaza edge.
  */
-export function buildTownPlan({ zoneId = "home", plotCount = 12 } = {}) {
+export function buildTownPlan({ zoneId = "home", plotCount = 12, boardKinds = [] } = {}) {
   const rng = seededRng(zoneId);
   const j = (amt) => (rng() - 0.5) * 2 * amt; // ±amt jitter
   const n = Math.max(1, Math.floor(plotCount));
+  const kinds = Array.isArray(boardKinds) ? boardKinds : [];
+
+  // Puzzle-board fixtures (farm field / mine entrance / harbor) sit in the
+  // town's wings rather than floating over the UI: the farm out to the left,
+  // the mine tunnelling into the hillside on the right, the harbor at the
+  // lower-left water's edge. When a wing is occupied, the building rows below
+  // give it room.
+  const BOARD_SPOTS = {
+    farm: { cx: 118, cy: 286, w: 152, h: 142 },
+    mine: { cx: W - 116, cy: 232, w: 162, h: 150 },
+    fish: { cx: 132, cy: 446, w: 140, h: 130 },
+  };
+  const boards = kinds.filter((k) => BOARD_SPOTS[k]).map((k) => ({ kind: k, ...BOARD_SPOTS[k] }));
+  const hasLeftBoard = kinds.includes("farm") || kinds.includes("fish");
+  const hasRightBoard = kinds.includes("mine");
+  const leftStart = hasLeftBoard ? 210 : 100;   // building rows' left clusters start here
+  const rightEnd = hasRightBoard ? W - 210 : W - 100;
 
   // Decide how many lots land in each row. Front row gets the lion's share;
   // mid next; back last — but never more than each row's cap.
@@ -89,8 +106,8 @@ export function buildTownPlan({ zoneId = "home", plotCount = 12 } = {}) {
       const cx = x0 + (x1 - x0) * t + j(12);
       lots.push({ index: next++, cx, cy: cy + j(8), w: row.w, h: row.h, row: row.name });
     };
-    for (let k = 0; k < half; k++)       place(k, half, 100, leftSpanEnd);
-    for (let k = 0; k < cnt - half; k++) place(k, cnt - half, rightSpanStart, W - 100);
+    for (let k = 0; k < half; k++)       place(k, half, leftStart, leftSpanEnd);
+    for (let k = 0; k < cnt - half; k++) place(k, cnt - half, rightSpanStart, rightEnd);
   }
 
   // Streets: a paved band along each row + a vertical lane connecting them
@@ -117,11 +134,12 @@ export function buildTownPlan({ zoneId = "home", plotCount = 12 } = {}) {
 
   // Walking-villager graph: a waypoint at each row's left end, centre (on the
   // connector), and right end, plus the plaza — edges run along the lanes and
-  // the connector. The villager sim (Town.jsx, PR 2) walks this.
+  // the connector. The villager sim (Town.jsx) walks this. The end columns pull
+  // in when a wing holds a puzzle-board fixture, so folk don't tread on it.
   const waypoints = [];
   const wp = (x, y) => { waypoints.push({ x, y }); return waypoints.length - 1; };
   const rowYs = [ROWS[0].streetY, ROWS[1].streetY, ROWS[2].streetY];
-  const cols = [120, PLAZA.cx, W - 120];
+  const cols = [hasLeftBoard ? 215 : 120, PLAZA.cx, hasRightBoard ? W - 215 : W - 120];
   const grid = rowYs.map((y) => cols.map((x) => wp(x, y)));
   const plazaWp = wp(PLAZA.cx, PLAZA.cy + 6);
   const edges = [];
@@ -138,6 +156,7 @@ export function buildTownPlan({ zoneId = "home", plotCount = 12 } = {}) {
     well: { cx: PLAZA.cx, cy: PLAZA.cy - 8, r: 16 },
     streets,
     lots: lots.slice(0, n),
+    boards,
     props,
     waypoints, edges,
   };
