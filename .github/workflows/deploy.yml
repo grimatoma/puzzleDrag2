@@ -6,6 +6,12 @@ on:
   pull_request:
     types: [closed]
     branches: [main]
+  # Auto-Merge Setup merges PRs with GITHUB_TOKEN, and pushes attributed to
+  # GITHUB_TOKEN don't trigger workflows — so the `push`/`pull_request` events
+  # above are skipped for bot-merged PRs and the site never re-deploys. Run
+  # hourly as a safety net (and `workflow_dispatch` for an immediate publish).
+  schedule:
+    - cron: "0 * * * *"
   workflow_dispatch:
 
 permissions:
