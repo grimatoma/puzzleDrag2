@@ -23,8 +23,10 @@ const RecipesTab   = lazy(() => import("./tabs/RecipesTab.jsx"));
 const BuildingsTab = lazy(() => import("./tabs/BuildingsTab.jsx"));
 const PowersTab    = lazy(() => import("./tabs/PowersTab.jsx"));
 const ZonesTab     = lazy(() => import("./tabs/ZonesTab.jsx"));
+const BiomesTab    = lazy(() => import("./tabs/BiomesTab.jsx"));
 const WorkersTab   = lazy(() => import("./tabs/WorkersTab.jsx"));
 const KeepersTab   = lazy(() => import("./tabs/KeepersTab.jsx"));
+const RationsTab   = lazy(() => import("./tabs/RationsTab.jsx"));
 const ExportTab    = lazy(() => import("./tabs/ExportTab.jsx"));
 const IconsTab     = lazy(() => import("./tabs/IconsTab.jsx"));
 
@@ -41,6 +43,9 @@ const TABS = [
   { id: "zones",     label: "Zones",          iconKey: "ui_star", Component: ZonesTab,
     section: "tiles",
     blurb: "Per-zone settings: starting turns, entry cost, the chain-upgrade redirect map, and the per-(zone, season) tile drop percentages." },
+  { id: "biomes",    label: "Settlement Biomes", iconKey: "ui_star", Component: BiomesTab,
+    section: "tiles",
+    blurb: "The biomes a settlement can be founded as (4 per type): name, icon, the two hazards that appear in every round there, and the resource bonus." },
   { id: "resources", label: "Resources",      iconKey: "ui_star", Component: ResourcesTab,
     section: "resources",
     blurb: "Inventory resources — names, icons, descriptions, colors, sale value, and the next-tier upgrade target for every resource." },
@@ -50,6 +55,9 @@ const TABS = [
   { id: "buildings", label: "Buildings",      iconKey: "ui_star", Component: BuildingsTab,
     section: "items",
     blurb: "Town building costs and unlock levels." },
+  { id: "rations",   label: "Expedition Rations", iconKey: "ui_star", Component: RationsTab,
+    section: "items",
+    blurb: "Food values for supply-structured mine/harbor expeditions: how many turns each ration is worth, and which foods count as 'meat' for the Smokehouse +1 modifier." },
   { id: "workers",   label: "Workers",        iconKey: "ui_devtools", Component: WorkersTab,
     section: "other",
     blurb: "Type-tier worker hire costs (flat / linear / geometric ramp), max count, and effect parameters." },
@@ -88,6 +96,9 @@ function emptyDraft() {
     workers: {},
     // Phase 6 — Keepers tab patches per-type KEEPERS entries.
     keepers: {},
+    // Phase 6 — Expedition Rations / Settlement Biomes tabs.
+    expedition: {},
+    biomes: {},
   };
 }
 
