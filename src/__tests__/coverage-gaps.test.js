@@ -64,13 +64,6 @@ describe("settings slice — coverage gaps", () => {
     expect(s1.bubble?.npc).toBe("wren");
   });
 
-  it("SETTINGS/EASTER_EGG fires the mira bubble", () => {
-    const s0 = { settings: baseSettings() };
-    const s1 = settingsReduce(s0, { type: "SETTINGS/EASTER_EGG" });
-    expect(s1.bubble?.npc).toBe("mira");
-    expect(s1.bubble?.text).toMatch(/secret/);
-  });
-
   it("SETTINGS/SHOW_TUTORIAL replays the tutorial when the slice is present", () => {
     const s0 = {
       settings: baseSettings(),

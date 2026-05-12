@@ -292,19 +292,9 @@ function DebugBtn({ children, onClick, color = 'slate' }) {
 
 // --- About tab ---
 function AboutTab({ state, dispatch }) {
-  const [taps, setTaps] = useState(0);
   const [debugOpen, setDebugOpen] = useState(state.settingsDebugOpen ?? false);
   const [itemBiome, setItemBiome] = useState('farm');
   const [itemKey, setItemKey] = useState('grass_hay');
-
-  function handleFireTap() {
-    const next = taps + 1;
-    setTaps(next);
-    if (next >= 5) {
-      setTaps(0);
-      dispatch({ type: 'SETTINGS/EASTER_EGG' });
-    }
-  }
 
   const biomeResources = BIOMES[itemBiome]?.resources ?? [];
 
@@ -317,14 +307,7 @@ function AboutTab({ state, dispatch }) {
       >
         ← Back
       </button>
-      <button
-        onClick={handleFireTap}
-        className="text-[48px] leading-none select-none focus:outline-none"
-        style={{ background: 'none', border: 'none', cursor: 'pointer' }}
-        aria-label="Secret hearth"
-      >
-        🔥
-      </button>
+      <div className="text-[48px] leading-none select-none" aria-hidden="true">🔥</div>
       <div className="text-[16px] font-bold" style={{ color: '#2b2218' }}>Hearthlands · v0.1.0</div>
       <div className="text-[11px] italic" style={{ color: '#7a5a38' }}>Hearthwood Vale</div>
       <p className="text-[12px] max-w-[280px]" style={{ color: '#5a3a20' }}>
