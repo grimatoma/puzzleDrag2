@@ -83,12 +83,14 @@ export function reduce(state, action) {
       const choiceId = action.payload?.choiceId ?? action.choiceId;
       const choice = beatChoices(beat).find((c) => c.id === choiceId);
       if (!choice) return state;
+      // `value` is optional free-text supplied by prompt-style beats (e.g. the
+      // settlement name) so the finale can read it back from the log.
+      const value = action.payload?.value ?? action.value;
 
       // Record the choice for the finale's "the Ember reads your record".
-      const choiceLog = [
-        ...(state.story?.choiceLog ?? []),
-        { beatId: beat.id, choiceId: choice.id, ts: Date.now() },
-      ];
+      const entry = { beatId: beat.id, choiceId: choice.id, ts: Date.now() };
+      if (value !== undefined) entry.value = value;
+      const choiceLog = [...(state.story?.choiceLog ?? []), entry];
 
       // Apply the choice's outcome (flags / bonds / resources / queued beat),
       // then dismiss the current modal.
@@ -98,9 +100,10 @@ export function reduce(state, action) {
     }
 
     case "STORY/DISMISS_MODAL": {
-      // ESC / backdrop dismissal — only honoured for continue-only beats.
+      // ESC / backdrop dismissal — only for continue-only beats with no prompt
+      // (a real choice, or an input prompt, needs an explicit submit).
       const beat = state.story?.queuedBeat;
-      if (beat && !beatIsContinueOnly(beat)) return state;
+      if (beat && (beat.prompt || !beatIsContinueOnly(beat))) return state;
       // Record it as the implicit "continue" pick so the log stays consistent.
       const choiceLog = [
         ...(state.story?.choiceLog ?? []),

@@ -51,6 +51,34 @@ function speakerColor(key) {
   return key && NPCS[key] ? NPCS[key].color : "#d6a060";
 }
 
+/** Free-text prompt (e.g. naming a settlement). Remounted per beat via key. */
+function PromptInput({ prompt, onSubmit }) {
+  const [draft, setDraft] = useState("");
+  const submit = () => onSubmit(draft.trim());
+  return (
+    <form
+      onSubmit={(e) => { e.preventDefault(); submit(); }}
+      className="flex gap-2"
+    >
+      <input
+        type="text"
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        placeholder={prompt.placeholder || ""}
+        maxLength={24}
+        autoFocus
+        className="flex-1 min-w-0 bg-[#0f0a06] text-[#f4ecd8] border-2 border-[#b28b62] rounded-xl px-3 py-2 text-[15px] outline-none focus:border-[#ffd34c]"
+      />
+      <button
+        type="submit"
+        className="bg-[#ffd34c] hover:bg-[#ffe880] text-[#3a2a0e] border-[3px] border-[#b28b62] rounded-xl px-5 py-2 text-[15px] font-bold shadow-lg transition-colors whitespace-nowrap"
+      >
+        {prompt.buttonLabel || "OK"}
+      </button>
+    </form>
+  );
+}
+
 /** Renders the stacked dialogue lines (speaker label + text per line). */
 function DialogueLines({ lines }) {
   return (
@@ -88,9 +116,10 @@ export function StoryModal({ state, dispatch }) {
   const isWin = beat?.id === "act3_win";
   const backdropRef = useRef(null);
 
-  // ESC key — only honoured on continue-only beats (a real choice needs a pick).
+  // ESC — only on continue-only beats with no input prompt (a real choice or a
+  // prompt needs an explicit click/submit).
   useEffect(() => {
-    if (!beat || !beatIsContinueOnly(beat)) return;
+    if (!beat || beat.prompt || !beatIsContinueOnly(beat)) return;
     const handler = (e) => {
       if (e.key === "Escape") dispatch({ type: "STORY/DISMISS_MODAL" });
     };
@@ -103,10 +132,17 @@ export function StoryModal({ state, dispatch }) {
   const lines = beatLines(beat);
   const choices = beatChoices(beat);
   const continueOnly = beatIsContinueOnly(beat);
+  const prompt = beat.prompt && typeof beat.prompt === "object" ? beat.prompt : null;
   const headSpeaker = lines.find((l) => l.speaker)?.speaker ?? null;
   const npc = headSpeaker ? NPCS[headSpeaker] : null;
 
   const pick = (choiceId) => dispatch({ type: "STORY/PICK_CHOICE", payload: { choiceId } });
+  const submitPrompt = (value) => {
+    if (prompt?.kind === "name_settlement") {
+      dispatch({ type: "SET_SETTLEMENT_NAME", payload: { zoneId: prompt.zoneId, name: value } });
+    }
+    dispatch({ type: "STORY/PICK_CHOICE", payload: { choiceId: "continue", value } });
+  };
 
   if (isWin) {
     // Win modal: gold border, larger panel, slow fade-in
@@ -176,8 +212,10 @@ export function StoryModal({ state, dispatch }) {
         {/* Body — stacked dialogue lines */}
         <DialogueLines lines={lines} />
 
-        {/* Choices */}
-        {continueOnly ? (
+        {/* Footer — input prompt, single Continue, or a column of choices */}
+        {prompt ? (
+          <PromptInput key={beat.id} prompt={prompt} onSubmit={submitPrompt} />
+        ) : continueOnly ? (
           <div className="flex justify-end">
             <button
               onClick={() => pick("continue")}

@@ -1,8 +1,7 @@
 import { useState, useRef } from "react";
 import { BIOMES, BUILDINGS } from "../constants.js";
 import { useTooltip, Tooltip } from "./Tooltip.jsx";
-import { MAP_NODES } from "../features/cartography/data.js";
-import { ZONES } from "../features/zones/data.js";
+import { ZONES, displayZoneName } from "../features/zones/data.js";
 import StartFarmingModal from "../features/zones/StartFarmingModal.jsx";
 import IconCanvas from "./IconCanvas.jsx";
 import Icon from "./Icon.jsx";
@@ -924,8 +923,7 @@ export function TownView({ state, dispatch }) {
   const themeKey = locConfig?.themeKey ?? biomeVariant;
   const theme = TOWN_THEMES[themeKey] || TOWN_THEMES.farm;
   const townConfig = TOWN_BIOME_CONFIGS[biomeVariant];
-  const currentNode = MAP_NODES.find(n => n.id === state.mapCurrent);
-  const locationName = currentNode?.name ?? townConfig.name;
+  const locationName = displayZoneName(state, state.mapCurrent) || townConfig.name;
   const hill1Path = locConfig?.hill1Path ?? townConfig.hill1Path;
   const hill2Path = locConfig?.hill2Path ?? townConfig.hill2Path;
   const roadPath = locConfig?.roadPath ?? townConfig.roadPath;

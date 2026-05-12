@@ -238,6 +238,18 @@ export const ZONE_IDS = Object.freeze(Object.keys(ZONES));
 
 export const DEFAULT_ZONE = "home";
 
+/**
+ * Display name for a zone: the player-chosen `state.zoneNames[zoneId]` if set
+ * (and non-blank), otherwise the static map-node name, otherwise the id.
+ * Used wherever the settlement name is shown (Town header, etc).
+ */
+export function displayZoneName(state, zoneId) {
+  const id = zoneId ?? state?.mapCurrent ?? DEFAULT_ZONE;
+  const custom = state?.zoneNames?.[id];
+  if (typeof custom === "string" && custom.trim()) return custom.trim();
+  return ZONES[id]?.name ?? id;
+}
+
 // Phase 6 — Balance Manager hook. Apply any committed/draft overrides from
 // `src/config/balance.json` + the localStorage draft to the live ZONES table.
 import { BALANCE_OVERRIDES } from "../../constants.js";

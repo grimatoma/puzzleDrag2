@@ -261,6 +261,10 @@ export function createFreshState(overrides) {
     lastChainSnapshot: null,
     magicFertilizerCharges: 0,
     built: { home: { hearth: true, decorations: {}, _plots: { 0: "hearth" } } },
+    // Player-chosen settlement names, keyed by zone id. Empty string = unnamed
+    // (the UI falls back to the static MAP_NODES name). The opening beat lets
+    // the player name `home`; future founding flows add more entries.
+    zoneNames: { home: "" },
     influence: 0,
     bubble: null,
     modal: null,
@@ -967,6 +971,13 @@ function coreReducer(state, action) {
     }
     case "SET_VIEW_PARAMS":
       return { ...state, viewParams: { ...(state.viewParams ?? {}), ...(action.params ?? {}) } };
+    case "SET_SETTLEMENT_NAME": {
+      // The only thing a player names is a settlement (a zone). Empty/blank
+      // clears back to "unnamed" (UI then shows the static MAP_NODES name).
+      const zoneId = action.payload?.zoneId ?? action.zoneId ?? state.mapCurrent ?? "home";
+      const name = String(action.payload?.name ?? action.name ?? "").trim().slice(0, 24);
+      return { ...state, zoneNames: { ...(state.zoneNames ?? {}), [zoneId]: name } };
+    }
     case "OPEN_MODAL":
       return { ...state, modal: action.modal, settingsTab: action.settingsTab ?? 'main' };
     case "CLOSE_MODAL":
