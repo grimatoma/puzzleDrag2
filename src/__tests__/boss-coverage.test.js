@@ -238,11 +238,26 @@ describe("boss slice — CLOSE_SEASON scheduling", () => {
     expect(s1.bossesDefeated).toBe(0); // lost
   });
 
-  it("CLOSE_SEASON every 4th season triggers the next year's boss", () => {
-    const s0 = baseState({ _bossSeasonCount: 3 }); // → 4 after tick
+  it("CLOSE_SEASON does NOT spawn an audit boss without the frostmaw_active flag", () => {
+    const s0 = baseState({ _bossSeasonCount: 3, lastAuditBossAt: 1 });
     const s1 = bossReduce(s0, { type: "CLOSE_SEASON" });
-    expect(s1.boss?.key).toBeTruthy();
+    expect(s1.boss).toBeNull();
     expect(s1._bossSeasonCount).toBe(4);
+  });
+
+  it("CLOSE_SEASON arms the audit clock the first time (no boss yet) when frostmaw_active is set", () => {
+    const s0 = baseState({ story: { flags: { frostmaw_active: true } }, lastAuditBossAt: 0 });
+    const s1 = bossReduce(s0, { type: "CLOSE_SEASON" });
+    expect(s1.boss).toBeNull();
+    expect(s1.lastAuditBossAt).toBeGreaterThan(0);
+  });
+
+  it("CLOSE_SEASON spawns the next audit boss once the cooldown has elapsed", () => {
+    const s0 = baseState({ story: { flags: { frostmaw_active: true } }, lastAuditBossAt: 1, auditBossSeq: 0 });
+    const s1 = bossReduce(s0, { type: "CLOSE_SEASON" });
+    expect(s1.boss?.key).toBe("frostmaw"); // YEAR_BOSS_ROTATION[0]
+    expect(s1.auditBossSeq).toBe(1);
+    expect(s1.lastAuditBossAt).toBeGreaterThan(1);
   });
 
   it("CLOSE_SEASON with _bossResolvedThisSeason set skips the schedule and resets the flag", () => {

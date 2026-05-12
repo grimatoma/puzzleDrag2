@@ -27,6 +27,11 @@ export const COLS = 6;
 export const ROWS = 6;
 export const MAX_TURNS = 10;
 
+// Phase 3 — audit-boss cadence. Once the Frostmaw story flag is set, an audit
+// boss reappears on a real-time cooldown of this many days (tunable). No
+// in-game calendar is involved — it tracks wall-clock elapsed time.
+export const AUDIT_BOSS_COOLDOWN_DAYS = 3;
+
 // Save schema version. Forward migrations are not maintained — bump this
 // whenever persisted state changes shape and existing saves will be discarded.
 export const SAVE_SCHEMA_VERSION = 34;
