@@ -49,7 +49,7 @@ describe("Fix 7 — canonical ACHIEVEMENTS list shape", () => {
       // Unified abilities pipeline (Phase: configurable abilities) —
       // achievements that fire from the building/worker/tile aggregator.
       "abilities_triggered", "building_abilities_triggered",
-      "distinct_abilities_triggered", "season_end_building_bonus",
+      "distinct_abilities_triggered",
     ]);
     for (const a of ACHIEVEMENTS) {
       expect(valid.has(a.counter), `${a.id} has unknown counter: ${a.counter}`).toBe(true);

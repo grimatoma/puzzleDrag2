@@ -19,7 +19,6 @@ describe("Abilities → achievements counters", () => {
     const after = rootReducer(s, { type: "CLOSE_SEASON" });
     expect(after.achievements?.counters?.building_abilities_triggered ?? 0).toBe(1);
     expect(after.achievements?.counters?.abilities_triggered ?? 0).toBe(1);
-    expect(after.achievements?.counters?.season_end_building_bonus ?? 0).toBe(1);
   });
 
   it("housing × 3 + powder_store fire 4 building abilities at once", () => {
@@ -45,9 +44,6 @@ describe("Abilities → achievements counters", () => {
     const after = rootReducer(s, { type: "CLOSE_SEASON" });
     expect(after.achievements.counters.building_abilities_triggered).toBe(1);
     expect(after.achievements.counters.distinct_abilities_triggered).toBe(1);
-    // preserve_board is not a "season_end_building_bonus" — only grant_tool /
-    // season_bonus count for that achievement.
-    expect(after.achievements.counters.season_end_building_bonus ?? 0).toBe(0);
   });
 
   it("crossing the powerful_keep threshold (10 building abilities) unlocks it", () => {

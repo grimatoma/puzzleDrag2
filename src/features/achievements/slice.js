@@ -118,9 +118,6 @@ export function reduce(state, action) {
           next = tick(next, "abilities_triggered", 1);
           next = tick(next, "building_abilities_triggered", 1);
           next = tick(next, "distinct_abilities_triggered", 1, inst.id);
-          if (inst.id === "grant_tool" || inst.id === "season_bonus") {
-            next = tick(next, "season_end_building_bonus", 1);
-          }
         }
       }
       return next;
