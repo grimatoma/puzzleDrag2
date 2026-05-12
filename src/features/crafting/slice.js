@@ -1,4 +1,4 @@
-import { RECIPES, CRAFT_QUEUE_HOURS, CRAFT_GEM_SKIP_COST } from "../../constants.js";
+import { RECIPES, ITEMS, CRAFT_QUEUE_HOURS, CRAFT_GEM_SKIP_COST } from "../../constants.js";
 import { computeWorkerEffects } from "../workers/aggregate.js";
 import { locBuilt } from "../../locBuilt.js";
 
@@ -53,16 +53,17 @@ function payInputs(inv, inputs) {
 function grantCraftOutput(state, recipeKey, recipe, baseInventory) {
   const inv = { ...(baseInventory ?? state.inventory ?? {}) };
   let tools = state.tools;
-  if (recipe.tool) {
-    tools = { ...(state.tools || {}), [recipe.tool]: ((state.tools || {})[recipe.tool] ?? 0) + 1 };
+  const itemDef = ITEMS[recipe.item];
+  if (itemDef?.kind === "tool") {
+    tools = { ...(state.tools || {}), [recipe.item]: ((state.tools || {})[recipe.item] ?? 0) + 1 };
   } else {
-    inv[recipeKey] = (inv[recipeKey] || 0) + 1;
+    inv[recipe.item] = (inv[recipe.item] || 0) + 1;
   }
   return {
     ...state,
     inventory: inv,
     tools,
-    coins: (state.coins || 0) + (recipe.coins || 0),
+    coins: (state.coins || 0) + (itemDef?.value || 0),
     craftedTotals: {
       ...state.craftedTotals,
       [recipeKey]: ((state.craftedTotals || {})[recipeKey] || 0) + 1,
@@ -79,7 +80,7 @@ export function reduce(state, action) {
       if (!paid) return state;
       const inv = payInputs(state.inventory || {}, paid.inputs);
       const next = grantCraftOutput(state, recipeKey, paid.recipe, inv);
-      return { ...next, bubble: { npc: "mira", text: `Crafted ${paid.recipe.name}!`, ms: 1500, id: Date.now() } };
+      return { ...next, bubble: { npc: "mira", text: `Crafted ${ITEMS[paid.recipe.item]?.label}!`, ms: 1500, id: Date.now() } };
     }
 
     // ── Phase 5 — real-time crafting queue ──────────────────────────────────
@@ -93,7 +94,7 @@ export function reduce(state, action) {
         ...state,
         inventory: inv,
         craftQueue: [...(state.craftQueue ?? []), { key: recipeKey, queuedAt: now, readyAt: now + CRAFT_QUEUE_MS }],
-        bubble: { npc: "mira", text: `Queued ${paid.recipe.name} — ready in ${CRAFT_QUEUE_HOURS}h.`, ms: 1800, id: Date.now() },
+        bubble: { npc: "mira", text: `Queued ${ITEMS[paid.recipe.item]?.label} — ready in ${CRAFT_QUEUE_HOURS}h.`, ms: 1800, id: Date.now() },
       };
     }
     case "CRAFTING/CLAIM_CRAFT": {
@@ -115,7 +116,7 @@ export function reduce(state, action) {
       return {
         ...next,
         craftQueue: queue.filter((_, i) => i !== idx),
-        bubble: { npc: "mira", text: `Crafted ${recipe.name}!`, ms: 1500, id: Date.now() },
+        bubble: { npc: "mira", text: `Crafted ${ITEMS[recipe.item]?.label}!`, ms: 1500, id: Date.now() },
       };
     }
     case "CRAFTING/SKIP_CRAFT": {
@@ -130,7 +131,7 @@ export function reduce(state, action) {
       return {
         ...next,
         craftQueue: queue.filter((_, i) => i !== idx),
-        bubble: { npc: "mira", text: `Skipped ahead — crafted ${recipe.name}!`, ms: 1600, id: Date.now() },
+        bubble: { npc: "mira", text: `Skipped ahead — crafted ${ITEMS[recipe.item]?.label}!`, ms: 1600, id: Date.now() },
       };
     }
 

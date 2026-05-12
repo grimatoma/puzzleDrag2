@@ -1,4 +1,4 @@
-import { BIOMES, BUILDINGS, NPCS, MAX_TURNS, RECIPES, WORKSHOP_RECIPES, DAILY_REWARDS, MINE_ENTRY_TIERS, HARBOR_ENTRY_TIERS, MIN_EXPEDITION_TURNS, CAPPED_RESOURCES, UPGRADE_THRESHOLDS, SAVE_SCHEMA_VERSION } from "./constants.js";
+import { BIOMES, BUILDINGS, NPCS, MAX_TURNS, RECIPES, DAILY_REWARDS, MINE_ENTRY_TIERS, HARBOR_ENTRY_TIERS, MIN_EXPEDITION_TURNS, CAPPED_RESOURCES, UPGRADE_THRESHOLDS, SAVE_SCHEMA_VERSION, ITEMS } from "./constants.js";
 import { locBuilt as _locBuilt } from "./locBuilt.js";
 import { sellPriceFor as _sellPriceFor } from "./features/market/pricing.js";
 import { tryClearRatChain } from "./features/farm/rats.js";
@@ -174,10 +174,10 @@ export function makeOrder(biomeKey, level, excludeNpcs = [], excludeOrderKeys = 
     const craftedCandidates = craftedPool.filter((k) => !excludeOrderKeys.includes(k));
     const craftedPickPool = craftedCandidates.length ? craftedCandidates : craftedPool;
     key = craftedPickPool[Math.floor(Math.random() * craftedPickPool.length)];
-    const recipe = RECIPES[key];
+    const itemDef = ITEMS[key];
     need = 1 + Math.floor(Math.random() * 3); // 1–3 crafted items
-    reward = Math.round(need * (recipe?.coins || 100) * 1.5);
-    resourceLabel = (recipe?.name || key).toLowerCase();
+    reward = Math.round(need * (itemDef?.value || 100) * 1.5);
+    resourceLabel = (itemDef?.label || key).toLowerCase();
   } else {
     const candidates = biome.pool.filter((k, i, a) => a.indexOf(k) === i);
     const resourceCandidates = candidates.filter((k) => !excludeOrderKeys.includes(k));
@@ -736,7 +736,7 @@ function coreReducer(state, action) {
       // Phase 10.1 — craft a Workshop tool (rake / axe / fertilizer / cat / etc.)
       const toolId = action.id ?? action.payload?.id;
       if (!toolId) return state;
-      const toolRecipe = WORKSHOP_RECIPES[toolId];
+      const toolRecipe = Object.values(RECIPES).find((r) => r.item === toolId && r.station === "workshop");
       if (!toolRecipe) return state;
       // Workshop must be built
       if (!locBuilt(state).workshop) return state;

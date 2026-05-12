@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { RECIPES, BIOMES } from "../../constants.js";
+import { RECIPES, BIOMES, ITEMS } from "../../constants.js";
 import { DECORATIONS } from "../decorations/data.js";
 import IconCanvas, { hasIcon } from "../../ui/IconCanvas.jsx";
 import { locBuilt } from "../../locBuilt.js";
@@ -48,6 +48,9 @@ function RecipeCard({ recipeKey, recipe, inventory, built, level, craftedTotals,
   const levelOk = !(recipe.tier === 2 && level < 3);
   const timesBuilt = (craftedTotals || {})[recipeKey] || 0;
 
+  const itemDef = ITEMS[recipe.item] || {};
+  const itemName = itemDef.label || recipe.item;
+
   return (
     <div className="bg-[#f6efe0] border-2 border-[#c5a87a] rounded-xl p-2 flex items-center gap-2 relative" style={{ minHeight: 72 }}>
       {timesBuilt > 0 && (
@@ -58,12 +61,12 @@ function RecipeCard({ recipeKey, recipe, inventory, built, level, craftedTotals,
         className="flex-shrink-0 grid place-items-center rounded-lg overflow-hidden bg-[#e8d9bc] border border-[#c5a87a]/50 text-[24px]"
         style={{ width: 48, height: 48 }}
       >
-        <Icon iconKey={recipeKey} size={40} />
+        <Icon iconKey={recipe.item} size={40} />
       </div>
 
       <div className="flex flex-col gap-0.5 flex-1 min-w-0">
         <div className="flex items-center gap-1.5 flex-wrap">
-          <span className="font-bold text-[11px] text-[#3a2715] leading-tight">{recipe.name}</span>
+          <span className="font-bold text-[11px] text-[#3a2715] leading-tight">{itemName}</span>
           {recipe.tier === 2 && (
             <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full text-white bg-[#c8923a]">T2</span>
           )}
@@ -95,13 +98,11 @@ function RecipeCard({ recipeKey, recipe, inventory, built, level, craftedTotals,
       </div>
 
       <div className="flex flex-col items-end gap-1 flex-shrink-0">
-        {recipe.coins != null
-          ? <span className="text-[10px] font-bold text-[#c8923a]">+{recipe.coins}◉</span>
-          : recipe.tool
-            ? <span className="text-[10px] font-bold text-[#6a8a3a]">→ {recipe.name}</span>
-            : recipe.effect
-              ? <span className="text-[10px] font-bold text-[#5a7aaa]">🛠 {recipe.name}</span>
-              : null
+        {itemDef.value != null && itemDef.kind !== "tool"
+          ? <span className="text-[10px] font-bold text-[#c8923a]">+{itemDef.value}◉</span>
+          : itemDef.kind === "tool"
+            ? <span className="text-[10px] font-bold text-[#6a8a3a]">→ {itemName}</span>
+            : null
         }
         <button
           disabled={!craftable}
@@ -154,11 +155,12 @@ function CraftQueueStrip({ queue, gems, dispatch }) {
       <div className="flex flex-col gap-1">
         {queue.map((entry, i) => {
           const recipe = RECIPES[entry.key];
+          const itemDef = ITEMS[recipe?.item] || {};
           const ready = (entry.readyAt ?? Infinity) <= now;
           return (
             <div key={`${entry.key}-${entry.queuedAt}-${i}`} className="flex items-center gap-2 bg-[#f6efe0] rounded-lg px-2 py-1">
-              <Icon iconKey={entry.key} size={20} />
-              <span className="text-[11px] font-bold text-[#3a2715] flex-1 min-w-0 truncate">{recipe?.name ?? entry.key}</span>
+              <Icon iconKey={recipe?.item || entry.key} size={20} />
+              <span className="text-[11px] font-bold text-[#3a2715] flex-1 min-w-0 truncate">{itemDef.label ?? recipe?.item ?? entry.key}</span>
               <span className={`text-[10px] font-bold ${ready ? "text-[#3a7a3a]" : "text-[#8a785e]"}`}>{fmt((entry.readyAt ?? 0) - now)}</span>
               <button
                 disabled={!ready}

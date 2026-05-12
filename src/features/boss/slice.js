@@ -254,7 +254,8 @@ export function reduce(state, action) {
     case "CRAFTING/CRAFT_RECIPE": {
       if (!state.boss || state.boss.resource !== "mine_ingot") return state;
       const recipe = RECIPES[action.payload?.key];
-      if (!recipe || recipe.output !== "mine_ingot") return state;
+      // Count any forge recipe that consumes mine_ingot as an input ingredient.
+      if (!recipe || !recipe.inputs?.mine_ingot) return state;
       const newProgress = Math.min(state.boss.targetCount, (state.boss.progress || 0) + 1);
       const updatedBoss = { ...state.boss, progress: newProgress };
       if (newProgress >= state.boss.targetCount) {

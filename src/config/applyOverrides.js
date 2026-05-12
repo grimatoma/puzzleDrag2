@@ -89,17 +89,42 @@ export function applyUpgradeThresholdOverrides(target, overrides) {
 }
 
 /**
- * Apply per-resource overrides to BIOMES.*.resources. Allowed fields:
- * label, color, dark, value, next, glyph, description.
- * The resource is patched in place across whichever biome it lives in.
+ * Apply per-item overrides to ITEMS. Allowed fields:
+ * label, color, dark, value, next, glyph, description, effect, target, anim, ms, desc
+ * The item is patched in place.
+ */
+export function applyItemOverrides(items, overrides) {
+  if (!overrides || typeof overrides !== "object") return;
+  for (const [key, patch] of Object.entries(overrides)) {
+    const item = items[key];
+    if (!item) continue;
+    if (typeof patch.label === "string") item.label = patch.label;
+    if (Number.isFinite(patch.color)) item.color = patch.color;
+    if (Number.isFinite(patch.dark)) item.dark = patch.dark;
+    if (Number.isFinite(patch.value)) item.value = patch.value;
+    if (Object.prototype.hasOwnProperty.call(patch, "next")) {
+      item.next = patch.next || null;
+    }
+    if (typeof patch.glyph === "string") item.glyph = patch.glyph;
+    if (typeof patch.description === "string") item.description = patch.description;
+    if (typeof patch.desc === "string") item.desc = patch.desc;
+    if (typeof patch.effect === "string") item.effect = patch.effect;
+    if (typeof patch.target === "string") item.target = patch.target;
+    if (typeof patch.anim === "string") item.anim = patch.anim;
+    if (Number.isFinite(patch.ms)) item.ms = patch.ms;
+  }
+}
+
+/**
+ * Legacy compat — applyResourceOverrides patches BIOMES.*.resources entries.
+ * The new code uses applyItemOverrides on the ITEMS dict, but some tests
+ * still call this on the old { farm: { resources: [...] } } shape.
  */
 export function applyResourceOverrides(biomes, overrides) {
   if (!overrides || typeof overrides !== "object") return;
-  for (const biomeKey of Object.keys(biomes)) {
-    const list = biomes[biomeKey]?.resources;
-    if (!Array.isArray(list)) continue;
-    for (let i = 0; i < list.length; i++) {
-      const r = list[i];
+  for (const b of Object.values(biomes)) {
+    if (!Array.isArray(b.resources)) continue;
+    for (const r of b.resources) {
       const patch = overrides[r.key];
       if (!patch) continue;
       if (typeof patch.label === "string") r.label = patch.label;
@@ -115,14 +140,13 @@ export function applyResourceOverrides(biomes, overrides) {
   }
 }
 
-/** Apply patches to RECIPES entries. Fields: name, inputs, tier, station,
- *  coins, glyph, color, dark, desc, output. */
+/** Apply patches to RECIPES entries. Fields: item, inputs, tier, station, coins. */
 export function applyRecipeOverrides(recipes, overrides) {
   if (!overrides || typeof overrides !== "object") return;
   for (const [key, patch] of Object.entries(overrides)) {
     const r = recipes[key];
     if (!r) continue;
-    if (typeof patch.name === "string") r.name = patch.name;
+    if (typeof patch.item === "string") r.item = patch.item;
     if (patch.inputs && typeof patch.inputs === "object") {
       // Replace inputs wholesale (rather than merge) so removed lines don't linger.
       const cleaned = {};
@@ -134,12 +158,8 @@ export function applyRecipeOverrides(recipes, overrides) {
     }
     if (Number.isFinite(patch.tier)) r.tier = patch.tier;
     if (typeof patch.station === "string") r.station = patch.station;
+    // Legacy compat: coins can be patched directly on the recipe object.
     if (Number.isFinite(patch.coins)) r.coins = patch.coins;
-    if (typeof patch.glyph === "string") r.glyph = patch.glyph;
-    if (Number.isFinite(patch.color)) r.color = patch.color;
-    if (Number.isFinite(patch.dark)) r.dark = patch.dark;
-    if (typeof patch.desc === "string") r.desc = patch.desc;
-    if (typeof patch.output === "string") r.output = patch.output;
   }
 }
 

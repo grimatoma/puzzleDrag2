@@ -18,7 +18,7 @@ import { parseHash, useBalanceRouter } from "./router.js";
 // Lazy-load tabs so the Balance Manager (a dev-time tool) stays out of the
 // main entry chunk. Each tab becomes its own JS chunk fetched only when
 // the user opens the modal and selects that tab.
-const ResourcesTab = lazy(() => import("./tabs/ResourcesTab.jsx"));
+const ItemsTab = lazy(() => import("./tabs/ItemsTab.jsx"));
 const RecipesTab   = lazy(() => import("./tabs/RecipesTab.jsx"));
 const BuildingsTab = lazy(() => import("./tabs/BuildingsTab.jsx"));
 const PowersTab    = lazy(() => import("./tabs/PowersTab.jsx"));
@@ -52,9 +52,9 @@ const TABS = [
   { id: "biomes",    label: "Settlement Biomes", iconKey: "ui_star", Component: BiomesTab,
     section: "tiles",
     blurb: "The biomes a settlement can be founded as (4 per type): name, icon, the two hazards that appear in every round there, and the resource bonus." },
-  { id: "resources", label: "Resources",      iconKey: "ui_star", Component: ResourcesTab,
-    section: "resources",
-    blurb: "Inventory resources — names, icons, descriptions, colors, sale value, and the next-tier upgrade target for every resource." },
+  { id: "items", label: "Items",      iconKey: "ui_star", Component: ItemsTab,
+    section: "items",
+    blurb: "All game items, tools, and resources — names, icons, descriptions, colors, sale value, and powers." },
   { id: "recipes",   label: "Recipes",        iconKey: "ui_star", Component: RecipesTab,
     section: "items",
     blurb: "Crafted items (and tools): ingredients, station, coin reward, and description." },
@@ -98,7 +98,6 @@ const TABS = [
 
 const SECTIONS = [
   { id: "tiles",     label: "Tiles" },
-  { id: "resources", label: "Resources" },
   { id: "items",     label: "Items" },
   { id: "story",     label: "Story" },
   { id: "other",     label: "Other" },
@@ -108,7 +107,7 @@ function emptyDraft() {
   return {
     version: 1,
     upgradeThresholds: {},
-    resources: {},
+    items: {},
     recipes: {},
     buildings: {},
     tilePowers: {},

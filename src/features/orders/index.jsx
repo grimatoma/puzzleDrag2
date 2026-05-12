@@ -1,6 +1,5 @@
 
-import { NPCS, RECIPES } from "../../constants.js";
-import { resourceByKey } from "../../state.js";
+import { NPCS, ITEMS } from "../../constants.js";
 import { bondBand, bondModifier, payOrder } from "../npcs/bond.js";
 import IconCanvas, { hasIcon } from "../../ui/IconCanvas.jsx";
 import Icon from "../../ui/Icon.jsx";
@@ -28,10 +27,8 @@ export default function OrdersScreen({ state, dispatch }) {
           const have = inventory[o.key] || 0;
           const done = have >= o.need;
           const npc = NPCS[o.npc];
-          const res = resourceByKey(o.key);
-          const recipe = !res ? RECIPES[o.key] : null;
-          const pct = Math.min(100, (have / o.need) * 100);
-          const isCrafted = !!recipe;
+          const itemDef = ITEMS[o.key] || {};
+          const isCrafted = itemDef.kind === "resource" && !itemDef.biome;
           // Phase 6.1: bond chip
           const bond = state.npcs?.bonds?.[o.npc] ?? 5;
           const baseReward = o.baseReward ?? o.reward;
@@ -66,14 +63,14 @@ export default function OrdersScreen({ state, dispatch }) {
                 {isCrafted ? (
                   <div
                     className="w-8 h-8 rounded-md flex-shrink-0 grid place-items-center text-[18px]"
-                    style={{ backgroundColor: cssFromHex(recipe.color), border: "2px solid rgba(255,255,255,.4)", overflow: "hidden" }}
+                    style={{ backgroundColor: cssFromHex(itemDef.color || 0xd49060), border: "2px solid rgba(255,255,255,.4)", overflow: "hidden" }}
                   >
                     <Icon iconKey={o.key} size={32} />
                   </div>
                 ) : (
                   <div
                     className="w-8 h-8 rounded-md flex-shrink-0 grid place-items-center text-[18px]"
-                    style={{ backgroundColor: cssFromHex(res.color), border: "2px solid rgba(255,255,255,.4)", overflow: "hidden" }}
+                    style={{ backgroundColor: cssFromHex(itemDef.color || 0x888888), border: "2px solid rgba(255,255,255,.4)", overflow: "hidden" }}
                   >
                     {hasIcon(o.key) && <IconCanvas iconKey={o.key} size={32} />}
                   </div>
@@ -81,7 +78,7 @@ export default function OrdersScreen({ state, dispatch }) {
                 <div className="flex-1 h-2.5 bg-[#e0d2b0] rounded overflow-hidden">
                   <div
                     className="h-full transition-[width] duration-300"
-                    style={{ width: `${pct}%`, backgroundColor: done ? "#4f6b3a" : "#d6612a" }}
+                    style={{ width: `${Math.min(100, (have / o.need) * 100)}%`, backgroundColor: done ? "#4f6b3a" : "#d6612a" }}
                   />
                 </div>
                 <div className="text-[#6a4b31] text-[12px] font-bold whitespace-nowrap min-w-[44px] text-right">

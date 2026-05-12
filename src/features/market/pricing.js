@@ -4,7 +4,7 @@
  * Convention: 10% of the recipe's listed coin value, rounded half-up
  * (standard Math.round — 0.5 rounds to 1 in JS).
  */
-import { RECIPES } from "../../constants.js";
+import { ITEMS } from "../../constants.js";
 
 export const SELL_RATE = 0.10;
 
@@ -15,7 +15,7 @@ export const SELL_RATE = 0.10;
  * @returns {number}
  */
 export function sellPriceFor(itemId) {
-  const r = RECIPES[itemId];
-  if (!r || !r.coins) return 0;
-  return Math.round(r.coins * SELL_RATE);
+  const item = ITEMS[itemId];
+  if (!item || !item.value) return 0;
+  return Math.round(item.value * SELL_RATE);
 }

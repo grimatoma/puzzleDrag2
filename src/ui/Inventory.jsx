@@ -1,4 +1,4 @@
-import { BIOMES, RECIPES } from "../constants.js";
+import { BIOMES, RECIPES, ITEMS } from "../constants.js";
 import { resourceByKey } from "../state.js";
 import { sellPriceFor } from "../features/market/pricing.js";
 import { hex } from "../utils.js";
@@ -139,9 +139,8 @@ export function CompactOrders({ orders, inventory, dispatch }) {
       {orders.map((o) => {
         const have = inventory[o.key] || 0;
         const done = have >= o.need;
-        const res = resourceByKey(o.key);
-        const recipe = !res ? RECIPES[o.key] : null;
-        const label = res ? res.label : recipe?.name ?? o.key;
+        const res = ITEMS[o.key];
+        const label = res ? res.label : o.key;
         return (
           <button
             key={o.id}
@@ -171,7 +170,12 @@ export function InventoryGrid({ inventory, biomeKey, compact, orders = [], state
   // `kind` annotation fall back to "resource" so nothing is lost from the UI
   // by accident.
   const resources = allBiomeEntries.filter((r) => r.kind !== "tile");
-  const items = Object.entries(RECIPES).filter(([key]) => (inventory[key] || 0) > 0);
+  const items = Object.entries(ITEMS).filter(([key, item]) => 
+    (inventory[key] || 0) > 0 && 
+    !resources.find(r => r.key === key) &&
+    item.kind !== "tile" &&
+    item.kind !== "tool"
+  );
   const gridCols = compact ? "grid-cols-2" : "grid-cols-[repeat(auto-fill,minmax(200px,1fr))]";
   const { status, totals } = orderStatusByKey(orders, inventory);
   const marketBuilt = !!state?.built?.caravan_post;
@@ -225,10 +229,10 @@ export function InventoryGrid({ inventory, biomeKey, compact, orders = [], state
           <div className="text-[11px] text-white/40 italic px-1">No items yet — craft something!</div>
         ) : (
           <div className={`grid ${gridCols} gap-2`}>
-            {items.map(([key, recipe]) => (
+            {items.map(([key, item]) => (
               <InventoryCell
                 key={key}
-                r={{ key, label: recipe.name, color: recipe.color }}
+                r={{ key, label: item.label, color: item.color }}
                 count={inventory[key] || 0}
                 compact={compact}
                 orderStatus={status[key]}

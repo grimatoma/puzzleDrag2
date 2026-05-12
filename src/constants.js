@@ -92,7 +92,7 @@ export let DEFAULT_HOME_BIOME = "prairie"; // Balance Manager: tuning.homeBiome
 
 // Save schema version. Forward migrations are not maintained — bump this
 // whenever persisted state changes shape and existing saves will be discarded.
-export const SAVE_SCHEMA_VERSION = 34;
+export const SAVE_SCHEMA_VERSION = 35;
 
 export const UPGRADE_THRESHOLDS = {
   grass_hay: 6, grass_meadow: 6, grass_spiky: 6,
@@ -177,6 +177,150 @@ export const FISH_TILE_POOL = [
   "fish_oyster",
 ];
 
+export const ITEMS = {
+  // Farm tiles/resources
+  grass_hay:          { kind: "tile", biome: "farm", label: "Hay",          color: 0xa8c769, dark: 0x4f6b3a, value: 1, next: "grain_wheat", sway: { amp: 4.0, freq: 0.00060, gust: 0.20 } },
+  grass_meadow:       { kind: "tile", biome: "farm", label: "Meadow Grass", color: 0x7fb24a, dark: 0x3e5a18, value: 1, next: "grain_wheat", sway: { amp: 4.5, freq: 0.00058, gust: 0.22 } },
+  grass_spiky:        { kind: "tile", biome: "farm", label: "Spiky Grass",  color: 0x9bb55a, dark: 0x4a5e1c, value: 1, next: "grain_wheat", sway: { amp: 2.5, freq: 0.00075, gust: 0.18 } },
+  grain_wheat:        { kind: "tile", biome: "farm", label: "Wheat", color: 0xdab947, dark: 0x7e5e1a, value: 2, next: "grain", sway: { amp: 5.0, freq: 0.00065, gust: 0.22 } },
+  grain:              { kind: "resource", biome: "farm", label: "Grain", color: 0xc8923a, dark: 0x5e3e10, value: 4, next: "grain_flour", sway: { amp: 1.2, freq: 0.00035, gust: 0.08 } },
+  grain_flour:        { kind: "resource", biome: "farm", label: "Flour", color: 0xf4e3c0, dark: 0x8a6a3a, value: 6, next: "bread" },
+  wood_log:           { kind: "resource", biome: "farm", label: "Log",   color: 0x9b6b3e, dark: 0x5e3a1d, value: 2, next: "wood_plank" },
+  wood_plank:         { kind: "resource", biome: "farm", label: "Plank", color: 0xc98c50, dark: 0x5e3a1d, value: 4, next: "wood_beam" },
+  wood_beam:          { kind: "resource", biome: "farm", label: "Beam",  color: 0x7e4f24, dark: 0x3a1d10, value: 7, next: null },
+  berry:              { kind: "resource", biome: "farm", label: "Berry", color: 0xa3486a, dark: 0x5e1a3a, value: 3, next: "berry_jam", sway: { amp: 3.5, freq: 0.00090, gust: 0.15 } },
+  berry_jam:          { kind: "resource", biome: "farm", label: "Jam",   color: 0xd4658c, dark: 0x7a2f50, value: 5, next: null },
+  bird_egg:           { kind: "resource", biome: "farm", label: "Egg",   color: 0xf4ecd8, dark: 0x8a785e, value: 3, next: "eggs", sway: { amp: 1.5, freq: 0.00055, gust: 0.08 } },
+  bird_turkey:        { kind: "tile", biome: "farm", label: "Turkey", color: 0xb8743a, dark: 0x5e3818, value: 4, next: "eggs", sway: { amp: 1.2, freq: 0.00050, gust: 0.10 } },
+  bird_clover:        { kind: "tile", biome: "farm", label: "Clover", color: 0x6fa450, dark: 0x365e22, value: 5, next: "honey", sway: { amp: 2.5, freq: 0.00080, gust: 0.18 } },
+  bird_melon:         { kind: "tile", biome: "farm", label: "Melon",  color: 0xb3d770, dark: 0x4a6e2a, value: 6, next: "eggs", sway: { amp: 0.8, freq: 0.00030, gust: 0.05 } },
+  veg_carrot:         { kind: "tile", biome: "farm", label: "Carrot",   color: 0xe88439, dark: 0x7a3e10, value: 4, next: "soup", sway: { amp: 2.0, freq: 0.00050, gust: 0.10 } },
+  veg_eggplant:       { kind: "tile", biome: "farm", label: "Eggplant", color: 0x6b3a8a, dark: 0x301848, value: 4, next: "soup", sway: { amp: 1.8, freq: 0.00048, gust: 0.08 } },
+  veg_turnip:         { kind: "tile", biome: "farm", label: "Turnip",   color: 0xd87aa0, dark: 0x6e2a4a, value: 4, next: "soup", sway: { amp: 1.6, freq: 0.00050, gust: 0.08 } },
+  veg_beet:           { kind: "tile", biome: "farm", label: "Beet",     color: 0x6b1a3a, dark: 0x300818, value: 4, next: "soup", sway: { amp: 1.5, freq: 0.00046, gust: 0.07 } },
+  veg_cucumber:       { kind: "tile", biome: "farm", label: "Cucumber", color: 0x4f8c3a, dark: 0x224018, value: 4, next: "soup", sway: { amp: 2.4, freq: 0.00056, gust: 0.10 } },
+  veg_squash:         { kind: "tile", biome: "farm", label: "Squash",   color: 0xe6c14a, dark: 0x7a5e10, value: 4, next: "soup", sway: { amp: 1.7, freq: 0.00048, gust: 0.08 } },
+  veg_mushroom:       { kind: "tile", biome: "farm", label: "Mushroom", color: 0xc63a3a, dark: 0x601818, value: 4, next: "soup", sway: { amp: 1.5, freq: 0.00044, gust: 0.06 } },
+  veg_pepper:         { kind: "tile", biome: "farm", label: "Pepper",   color: 0xd83a3a, dark: 0x6e1818, value: 4, next: "soup", sway: { amp: 2.2, freq: 0.00054, gust: 0.10 } },
+  veg_broccoli:       { kind: "tile", biome: "farm", label: "Broccoli", color: 0x4a8a3a, dark: 0x1e3e18, value: 4, next: "soup", sway: { amp: 3.0, freq: 0.00060, gust: 0.12 } },
+  soup:               { kind: "resource", biome: "farm", label: "Soup",     color: 0xc46a2f, dark: 0x6e3a18, value: 20, next: null },
+  pie:                { kind: "resource", biome: "farm", label: "Pie",       color: 0xb05428, dark: 0x582818, value: 90,  next: null },
+  honey:              { kind: "resource", biome: "farm", label: "Honey",     color: 0xe8a020, dark: 0x745010, value: 300, next: null },
+  meat:               { kind: "resource", biome: "farm", label: "Meat",      color: 0xc44848, dark: 0x682424, value: 21,  next: null },
+  milk:               { kind: "resource", biome: "farm", label: "Milk",      color: 0xfaf6ec, dark: 0x807e74, value: 100, next: null },
+  horseshoe:          { kind: "resource", biome: "farm", label: "Horseshoe", color: 0x8a8a90, dark: 0x46464a, value: 400, next: null },
+  eggs:               { kind: "resource", biome: "farm", label: "Eggs",      color: 0xf8efd0, dark: 0x807660, value: 5, next: null },
+  bread:              { kind: "resource", biome: "farm", label: "Bread Loaf", color: 0xd49060, dark: 0x7a4a28, value: 125, next: null, desc: "A wholesome loaf baked from flour and eggs, sold for 125 coins at the Bakery." },
+
+  grass_heather:      { kind: "tile", biome: "farm", label: "Heather",      color: 0x7a4f8a, dark: 0x3a2548, value: 1, next: null, sway: { amp: 2.5, freq: 0.00060, gust: 0.10 } },
+  grain_corn:         { kind: "tile", biome: "farm", label: "Corn",         color: 0xf4c84a, dark: 0x7a6020, value: 1, next: null, sway: { amp: 4.0, freq: 0.00060, gust: 0.18 } },
+  grain_buckwheat:    { kind: "tile", biome: "farm", label: "Buckwheat",    color: 0x9ab548, dark: 0x4a5820, value: 1, next: null, sway: { amp: 3.5, freq: 0.00058, gust: 0.16 } },
+  grain_manna:        { kind: "tile", biome: "farm", label: "Manna",        color: 0xf8e8c0, dark: 0x7a6e58, value: 1, next: null, sway: { amp: 1.5, freq: 0.00040, gust: 0.06 } },
+  grain_rice:         { kind: "tile", biome: "farm", label: "Rice",         color: 0xc8d878, dark: 0x60683c, value: 1, next: null, sway: { amp: 3.0, freq: 0.00056, gust: 0.14 } },
+  fruit_apple:        { kind: "tile", biome: "farm", label: "Apple",        color: 0xd4543a, dark: 0x6a2a18, value: 1, next: "pie", sway: { amp: 1.2, freq: 0.00040, gust: 0.06 } },
+  fruit_pear:         { kind: "tile", biome: "farm", label: "Pear",         color: 0xbcc436, dark: 0x5e6018, value: 1, next: "pie", sway: { amp: 1.2, freq: 0.00040, gust: 0.06 } },
+  fruit_golden_apple: { kind: "tile", biome: "farm", label: "Golden Apple", color: 0xf4c430, dark: 0x7a6010, value: 1, next: "pie", sway: { amp: 1.2, freq: 0.00040, gust: 0.06 } },
+  fruit_blackberry:   { kind: "tile", biome: "farm", label: "Blackberry",   color: 0x3a1a4a, dark: 0x180a20, value: 1, next: "pie", sway: { amp: 1.0, freq: 0.00038, gust: 0.05 } },
+  fruit_rambutan:     { kind: "tile", biome: "farm", label: "Rambutan",     color: 0xd8344a, dark: 0x6a1820, value: 1, next: "pie", sway: { amp: 1.4, freq: 0.00042, gust: 0.07 } },
+  fruit_starfruit:    { kind: "tile", biome: "farm", label: "Starfruit",    color: 0xe8c83c, dark: 0x726018, value: 1, next: "pie", sway: { amp: 1.0, freq: 0.00040, gust: 0.05 } },
+  fruit_coconut:      { kind: "tile", biome: "farm", label: "Coconut",      color: 0x5e3a14, dark: 0x2e1c08, value: 1, next: "pie", sway: { amp: 0.8, freq: 0.00030, gust: 0.04 } },
+  fruit_lemon:        { kind: "tile", biome: "farm", label: "Lemon",        color: 0xf4d030, dark: 0x7a6818, value: 1, next: "pie", sway: { amp: 1.2, freq: 0.00042, gust: 0.06 } },
+  fruit_jackfruit:    { kind: "tile", biome: "farm", label: "Jackfruit",    color: 0xa8a040, dark: 0x52501c, value: 1, next: "pie", sway: { amp: 1.0, freq: 0.00038, gust: 0.05 } },
+  flower_pansy:       { kind: "tile", biome: "farm", label: "Pansy",        color: 0x7a3aa8, dark: 0x3c1c54, value: 1, next: "honey", sway: { amp: 2.6, freq: 0.00070, gust: 0.14 } },
+  flower_water_lily:  { kind: "tile", biome: "farm", label: "Water Lily",   color: 0xe890c0, dark: 0x70486a, value: 1, next: "honey", sway: { amp: 0.8, freq: 0.00026, gust: 0.04 } },
+  tree_oak:           { kind: "tile", biome: "farm", label: "Oak",          color: 0x3a6818, dark: 0x1a3008, value: 1, next: "wood_log", sway: { amp: 1.6, freq: 0.00030, gust: 0.10 } },
+  tree_birch:         { kind: "tile", biome: "farm", label: "Birch",        color: 0xa8c038, dark: 0x546018, value: 1, next: "wood_log", sway: { amp: 2.2, freq: 0.00034, gust: 0.12 } },
+  tree_willow:        { kind: "tile", biome: "farm", label: "Willow",       color: 0x5a8a18, dark: 0x2a4008, value: 1, next: "wood_log", sway: { amp: 3.0, freq: 0.00038, gust: 0.18 } },
+  tree_fir:           { kind: "tile", biome: "farm", label: "Fir",          color: 0x2a5008, dark: 0x142404, value: 1, next: "wood_log", sway: { amp: 0.6, freq: 0.00024, gust: 0.04 } },
+  tree_cypress:       { kind: "tile", biome: "farm", label: "Cypress",      color: 0x1a3a08, dark: 0x0a1804, value: 1, next: "wood_log", sway: { amp: 0.4, freq: 0.00020, gust: 0.02 } },
+  tree_palm:          { kind: "tile", biome: "farm", label: "Palm Tree",    color: 0x5a8a18, dark: 0x2a4008, value: 1, next: "wood_log", sway: { amp: 2.8, freq: 0.00040, gust: 0.16 } },
+  bird_pheasant:      { kind: "tile", biome: "farm", label: "Pheasant",     color: 0x8a4a18, dark: 0x44230a, value: 1, next: "eggs", sway: { amp: 1.0, freq: 0.00040, gust: 0.05 } },
+  bird_chicken:       { kind: "tile", biome: "farm", label: "Chicken",      color: 0xf0d8a0, dark: 0x786a48, value: 1, next: "eggs", sway: { amp: 1.0, freq: 0.00040, gust: 0.05 } },
+  bird_hen:           { kind: "tile", biome: "farm", label: "Hen",          color: 0xa86838, dark: 0x52321a, value: 1, next: "eggs", sway: { amp: 1.0, freq: 0.00040, gust: 0.05 } },
+  bird_rooster:       { kind: "tile", biome: "farm", label: "Rooster",      color: 0xd81818, dark: 0x6a0a0a, value: 1, next: "eggs", sway: { amp: 1.2, freq: 0.00044, gust: 0.06 } },
+  bird_wild_goose:    { kind: "tile", biome: "farm", label: "Wild Goose",   color: 0xa89878, dark: 0x524a3a, value: 1, next: "eggs", sway: { amp: 1.2, freq: 0.00044, gust: 0.06 } },
+  bird_goose:         { kind: "tile", biome: "farm", label: "Goose",        color: 0xfffce8, dark: 0x807e74, value: 1, next: "eggs", sway: { amp: 1.2, freq: 0.00044, gust: 0.06 } },
+  bird_parrot:        { kind: "tile", biome: "farm", label: "Parrot",       color: 0xd81818, dark: 0x6a0a0a, value: 1, next: "eggs", sway: { amp: 1.4, freq: 0.00046, gust: 0.07 } },
+  bird_phoenix:       { kind: "tile", biome: "farm", label: "Phoenix",      color: 0xf8a020, dark: 0x7c500e, value: 1, next: "eggs", sway: { amp: 1.6, freq: 0.00050, gust: 0.10 } },
+  bird_dodo:          { kind: "tile", biome: "farm", label: "Dodo",         color: 0xa89878, dark: 0x524a3a, value: 1, next: "eggs", sway: { amp: 0.8, freq: 0.00036, gust: 0.04 } },
+  bird_pig_in_disguise: { kind: "tile", biome: "farm", label: "Pig in Disguise", color: 0xe88a98, dark: 0x72424a, value: 1, next: "eggs", sway: { amp: 0.8, freq: 0.00036, gust: 0.04 } },
+  herd_pig:           { kind: "tile", biome: "farm", label: "Pig",          color: 0xe88a98, dark: 0x72424a, value: 1, next: "meat", sway: { amp: 0.6, freq: 0.00028, gust: 0.04 } },
+  herd_hog:           { kind: "tile", biome: "farm", label: "Hog",          color: 0xa87838, dark: 0x523a1a, value: 1, next: "meat", sway: { amp: 0.6, freq: 0.00028, gust: 0.04 } },
+  herd_boar:          { kind: "tile", biome: "farm", label: "Boar",         color: 0x241408, dark: 0x100804, value: 1, next: "meat", sway: { amp: 0.6, freq: 0.00028, gust: 0.04 } },
+  herd_warthog:       { kind: "tile", biome: "farm", label: "Warthog",      color: 0x5a4828, dark: 0x2c2412, value: 1, next: "meat", sway: { amp: 0.6, freq: 0.00028, gust: 0.04 } },
+  herd_sheep:         { kind: "tile", biome: "farm", label: "Sheep",        color: 0xfffce8, dark: 0x807e74, value: 1, next: "meat", sway: { amp: 0.6, freq: 0.00028, gust: 0.04 } },
+  herd_alpaca:        { kind: "tile", biome: "farm", label: "Alpaca",       color: 0xf8e8c8, dark: 0x7c7264, value: 1, next: "meat", sway: { amp: 0.6, freq: 0.00028, gust: 0.04 } },
+  herd_goat:          { kind: "tile", biome: "farm", label: "Goat",         color: 0xd8c098, dark: 0x6c604a, value: 1, next: "meat", sway: { amp: 0.6, freq: 0.00028, gust: 0.04 } },
+  herd_ram:           { kind: "tile", biome: "farm", label: "Ram",          color: 0xa87838, dark: 0x523a1a, value: 1, next: "meat", sway: { amp: 0.6, freq: 0.00028, gust: 0.04 } },
+  cattle_cow:         { kind: "tile", biome: "farm", label: "Cow",          color: 0xfffce8, dark: 0x807e74, value: 1, next: "milk", sway: { amp: 0.4, freq: 0.00022, gust: 0.03 } },
+  cattle_longhorn:    { kind: "tile", biome: "farm", label: "Longhorn",     color: 0xd89048, dark: 0x6a4820, value: 1, next: "milk", sway: { amp: 0.4, freq: 0.00022, gust: 0.03 } },
+  cattle_triceratops: { kind: "tile", biome: "farm", label: "Triceratops",  color: 0x5a8a28, dark: 0x2c4414, value: 1, next: "milk", sway: { amp: 0.4, freq: 0.00022, gust: 0.03 } },
+  mount_horse:        { kind: "tile", biome: "farm", label: "Horse",        color: 0xa86838, dark: 0x52321a, value: 1, next: "horseshoe", sway: { amp: 0.4, freq: 0.00022, gust: 0.03 } },
+  mount_donkey:       { kind: "tile", biome: "farm", label: "Donkey",       color: 0x8a8478, dark: 0x44423a, value: 1, next: "horseshoe", sway: { amp: 0.4, freq: 0.00022, gust: 0.03 } },
+  mount_moose:        { kind: "tile", biome: "farm", label: "Moose",        color: 0x5a3814, dark: 0x2c1c0a, value: 1, next: "horseshoe", sway: { amp: 0.4, freq: 0.00022, gust: 0.03 } },
+  mount_mammoth:      { kind: "tile", biome: "farm", label: "Mammoth",      color: 0xa87838, dark: 0x523a1a, value: 1, next: "horseshoe", sway: { amp: 0.4, freq: 0.00022, gust: 0.03 } },
+
+  // Mine tiles/resources
+  mine_stone:  { kind: "tile", biome: "mine", label: "Stone",  color: 0x9da3a8, dark: 0x3e4348, value: 1,  next: "mine_cobble" },
+  mine_cobble: { kind: "resource", biome: "mine", label: "Cobble", color: 0xbbc1c6, dark: 0x4e5358, value: 3,  next: "mine_block" },
+  mine_block:  { kind: "resource", biome: "mine", label: "Block",  color: 0x7c8388, dark: 0x2a2e32, value: 6,  next: null },
+  mine_ore:    { kind: "tile", biome: "mine", label: "Ore",    color: 0xb6a3a3, dark: 0x5e4040, value: 3,  next: "mine_ingot", sway: { amp: 0.4, freq: 0.00020, gust: 0.00 } },
+  mine_ingot:  { kind: "resource", biome: "mine", label: "Ingot",  color: 0xe8e0d8, dark: 0x6a5a50, value: 6,  next: null },
+  mine_coal:   { kind: "tile", biome: "mine", label: "Coal",   color: 0x333333, dark: 0x000000, value: 2,  next: "mine_coke" },
+  mine_coke:   { kind: "resource", biome: "mine", label: "Coke",   color: 0x5a5a60, dark: 0x1a1a20, value: 4,  next: null },
+  mine_gem:    { kind: "tile", biome: "mine", label: "Gem",    color: 0x65e5ff, dark: 0x1686a3, value: 7,  next: "mine_cutgem", sway: { amp: 1.2, freq: 0.00028, gust: 0.04 } },
+  mine_cutgem: { kind: "resource", biome: "mine", label: "CutGem", color: 0xa3f0ff, dark: 0x1686a3, value: 14, next: null, sway: { amp: 1.2, freq: 0.00028, gust: 0.04 } },
+  mine_gold:   { kind: "tile", biome: "mine", label: "Gold",   color: 0xffd34c, dark: 0x946b11, value: 5,  next: null, sway: { amp: 1.0, freq: 0.00024, gust: 0.04 } },
+  mine_dirt:   { kind: "tile", biome: "mine", label: "Dirt",   color: 0x7a6850, dark: 0x3e3a36, value: 1,  next: null },
+
+  // Harbor tiles/resources
+  fish_sardine:  { kind: "tile", biome: "fish", label: "Sardine",  color: 0x9ab8c4, dark: 0x4a5e68, value: 1, next: "fish_raw", sway: { amp: 1.4, freq: 0.00050, gust: 0.08 } },
+  fish_mackerel: { kind: "tile", biome: "fish", label: "Mackerel", color: 0x4a7a9a, dark: 0x223a4a, value: 2, next: "fish_raw", sway: { amp: 1.6, freq: 0.00052, gust: 0.10 } },
+  fish_clam:     { kind: "tile", biome: "fish", label: "Clam",     color: 0xc8a888, dark: 0x705a40, value: 2, next: "fish_raw", sway: { amp: 0.4, freq: 0.00020, gust: 0.02 } },
+  fish_oyster:   { kind: "tile", biome: "fish", label: "Oyster",   color: 0xd0c0a8, dark: 0x6a5e48, value: 3, next: "fish_raw", sway: { amp: 0.4, freq: 0.00020, gust: 0.02 } },
+  fish_kelp:     { kind: "tile", biome: "fish", label: "Kelp",     color: 0x3a6a3a, dark: 0x1a3818, value: 1, next: "fish_oil", sway: { amp: 3.0, freq: 0.00060, gust: 0.18 } },
+  fish_raw:      { kind: "resource", biome: "fish", label: "Fish",     color: 0xb0c8d4, dark: 0x546a78, value: 4, next: "fish_fillet" },
+  fish_fillet:   { kind: "resource", biome: "fish", label: "Fillet",   color: 0xe8c8b0, dark: 0x7a604c, value: 8, next: null },
+  fish_oil:      { kind: "resource", biome: "fish", label: "Fish Oil", color: 0xe8d050, dark: 0x7a6818, value: 6, next: null },
+  fish_pearl:    { kind: "tile", biome: "fish", label: "Pearl",    color: 0xefe8d8, dark: 0x6a6258, value: 0, next: null },
+
+  // Tools
+  rake:        { kind: "tool", label: "Rake", effect: "clear_all", target: "grass_hay", anim: "sweep", ms: 300, desc: "Clears all hay tiles from the board in one sweep — handy for tidying an overgrown field." },
+  axe:         { kind: "tool", label: "Axe", effect: "clear_all", target: "wood_log", anim: "chops", ms: 200, desc: "Fells all log tiles on the board instantly. Handy when the wood supply is blocking upgrades." },
+  fertilizer:  { kind: "tool", label: "Fertilizer", effect: "fill_bias", target: "grain", anim: "shimmer", ms: 600, desc: "Enriches the soil so the next board fill is biased toward grain tiles." },
+  cat:         { kind: "tool", label: "Cat", effect: "clear_hazard", target: "rats", anim: "scatter", ms: 200, desc: "Dispatches a mouser to clear all active rat hazards from the farm in one go." },
+  bird_cage:   { kind: "tool", label: "Bird Cage", effect: "clear_all", target: "bird_egg", anim: "cage", ms: 300, desc: "Sweeps all egg tiles from the board — useful when bird tiles are flooding the farm." },
+  scythe_full: { kind: "tool", label: "Scythe (full)", effect: "clear_all", target: "grain", anim: "sweep", ms: 300, desc: "Harvests all grain tiles at once, clearing the board for a fresh fill." },
+  rifle:       { kind: "tool", label: "Rifle", effect: "clear_hazard", target: "wolves", anim: "shot", ms: 300, desc: "Drives off all active wolves permanently, ending the wolf hazard immediately." },
+  hound:       { kind: "tool", label: "Hound", effect: "scatter_hazard", target: "wolves", anim: "bark", ms: 400, desc: "Scares the wolves away for several turns, buying time to chain away their target tiles." },
+  hoe:         { kind: "tool", label: "Hoe", effect: "clear_all", target: "veg_carrot", anim: "till", ms: 300, desc: "Tills the soil — clears every veg-carrot tile from the board so a fresh fill can roll." },
+  stone_hammer:{ kind: "tool", label: "Stone Hammer", effect: "clear_all", target: "mine_cobble", anim: "smash", ms: 350, desc: "Smashes every cobble tile on the board — a fast way to feed the chain into block tier." },
+  iron_pick:   { kind: "tool", label: "Iron Pick", effect: "clear_all", target: "mine_ore", anim: "pick", ms: 320, desc: "Bites into ore veins — clears every ore tile so the chain can be re-spawned cleanly." },
+  bird_feed:   { kind: "tool", label: "Bird Feed", effect: "fill_bias", target: "bird_egg", anim: "scatter", ms: 500, desc: "Scatters feed across the field so the next board fill is biased toward bird tiles." },
+  sapling:     { kind: "tool", label: "Sapling", effect: "fill_bias", target: "tree_oak", anim: "shimmer", ms: 600, desc: "Plants a sapling that biases the next fill toward oak (and other tree) tiles." },
+  water_pump:  { kind: "tool", label: "Water Pump", effect: "water_pump", desc: "Crafts a water pump tool that can irrigate farm tiles, boosting grain yield for one turn." },
+  explosives:  { kind: "tool", label: "Explosives", effect: "explosives", desc: "Crafts a bundle of explosives that clears a 3×3 area of tiles from the mine board." },
+
+  // Crafted Products
+  honeyroll:  { kind: "resource", label: "Honey Roll", color: 0xf0c050, dark: 0x8a6010, value: 175, desc: "A sweet honey roll glazed with jam, commanding 175 coins at market." },
+  harvestpie: { kind: "resource", label: "Harvest Pie", color: 0xd4784a, dark: 0x6a3018, value: 175, desc: "A hearty harvest pie filled with jam and egg, prized by townsfolk for 175 coins." },
+  preserve:   { kind: "resource", label: "Preserve Jar", color: 0x9a6888, dark: 0x502848, value: 100, desc: "Bottled berry preserves sealed with egg-white, fetching 100 coins at the Larder." },
+  tincture:   { kind: "resource", label: "Berry Tincture", color: 0x6b8a3a, dark: 0x304018, value: 125, desc: "A medicinal berry tincture used by Sister Liss, sold for 125 coins." },
+  iron_hinge: { kind: "resource", label: "Iron Hinge", color: 0x7a8a96, dark: 0x2a3a46, value: 175, desc: "A forged iron hinge used in building construction. Story note: Bram requests these for the Caravan Post." },
+  cobblepath: { kind: "resource", label: "Cobble Path", color: 0x9a9a8a, dark: 0x404038, value: 200, desc: "Laid cobblestones that pave trade paths, sold to caravans for 200 coins." },
+  lantern:    { kind: "resource", label: "Iron Lantern", color: 0xd4783a, dark: 0x6a2800, value: 150, desc: "A wrought-iron lantern that lights the evening market, selling for 150 coins." },
+  goldring:   { kind: "resource", label: "Gold Ring", color: 0xffd34c, dark: 0x886810, value: 225, desc: "A gleaming gold ring favoured by merchants, commanding 225 coins at the forge." },
+  gemcrown:   { kind: "resource", label: "Gem Crown", color: 0x65e5ff, dark: 0x1060a0, value: 325, desc: "A jewelled crown set with cut gems — the Forge's most prestigious commission, worth 325 coins." },
+  ironframe:  { kind: "resource", label: "Iron Frame", color: 0x6a7a86, dark: 0x2a3040, value: 275, desc: "A structural iron frame used in advanced buildings and caravan reinforcement, worth 275 coins." },
+  stonework:  { kind: "resource", label: "Stonework", color: 0x8a8a7a, dark: 0x383828, value: 300, desc: "Dressed stonework for walls and facades — the final tier of Forge crafting, worth 300 coins." },
+  chowder:    { kind: "resource", label: "Chowder", color: 0xd4b888, dark: 0x6a503a, value: 280, desc: "A creamy seafood chowder thick with fillet, milk, and root vegetables. Larder favourite at 280 coins." },
+  fish_oil_bottled: { kind: "resource", label: "Fish Oil (Bottled)", color: 0xe8d050, dark: 0x7a6018, value: 80, desc: "Refined kelp-and-fish oil sealed in a corked plank flask. Used by tinkers and tar-mongers, worth 80 coins." }
+};
+// Underscore-variant aliases for ITEMS (tests and orders use both forms).
+ITEMS.iron_frame = ITEMS.ironframe;
+ITEMS.gem_crown  = ITEMS.gemcrown;
+ITEMS.gold_ring  = ITEMS.goldring;
+
 export const BIOMES = {
   farm: {
     name: "Farm",
@@ -185,107 +329,6 @@ export const BIOMES = {
     dirtColor: 0x6d4a2f,
     palette: { bg: 0x7dbd48, accent: 0x5daa35, dim: 0x3e2a1a },
     tilePool: FARM_TILE_POOL,
-    resources: [
-      { key: "grass_hay",          kind: "tile", label: "Hay",          color: 0xa8c769, dark: 0x4f6b3a, value: 1, next: "grain_wheat", sway: { amp: 4.0, freq: 0.00060, gust: 0.20 } },
-      { key: "grass_meadow", kind: "tile", label: "Meadow Grass", color: 0x7fb24a, dark: 0x3e5a18, value: 1, next: "grain_wheat", sway: { amp: 4.5, freq: 0.00058, gust: 0.22 } },
-      { key: "grass_spiky",  kind: "tile", label: "Spiky Grass",  color: 0x9bb55a, dark: 0x4a5e1c, value: 1, next: "grain_wheat", sway: { amp: 2.5, freq: 0.00075, gust: 0.18 } },
-      { key: "grain_wheat", kind: "tile", label: "Wheat", color: 0xdab947, dark: 0x7e5e1a, value: 2, next: "grain", sway: { amp: 5.0, freq: 0.00065, gust: 0.22 } },
-      { key: "grain", kind: "resource", label: "Grain", color: 0xc8923a, dark: 0x5e3e10, value: 4, next: "grain_flour", sway: { amp: 1.2, freq: 0.00035, gust: 0.08 } },
-      { key: "grain_flour", kind: "resource", label: "Flour", color: 0xf4e3c0, dark: 0x8a6a3a, value: 6, next: "bread", sway: { amp: 1.0, freq: 0.00030, gust: 0.05 } },
-      { key: "wood_log",   kind: "resource", label: "Log",   color: 0x9b6b3e, dark: 0x5e3a1d, value: 2, next: "wood_plank" },
-      { key: "wood_plank", kind: "resource", label: "Plank", color: 0xc98c50, dark: 0x5e3a1d, value: 4, next: "wood_beam" },
-      { key: "wood_beam",  kind: "resource", label: "Beam",  color: 0x7e4f24, dark: 0x3a1d10, value: 7, next: null },
-      { key: "berry", kind: "resource", label: "Berry", color: 0xa3486a, dark: 0x5e1a3a, value: 3, next: "berry_jam", sway: { amp: 3.5, freq: 0.00090, gust: 0.15 } },
-      { key: "berry_jam",   kind: "resource", label: "Jam",   color: 0xd4658c, dark: 0x7a2f50, value: 5, next: null, sway: { amp: 0.8, freq: 0.00025, gust: 0.00 } },
-      { key: "bird_egg",   kind: "resource", label: "Egg",   color: 0xf4ecd8, dark: 0x8a785e, value: 3, next: "eggs", sway: { amp: 1.5, freq: 0.00055, gust: 0.08 } },
-      { key: "bird_turkey", kind: "tile", label: "Turkey", color: 0xb8743a, dark: 0x5e3818, value: 4, next: "eggs", sway: { amp: 1.2, freq: 0.00050, gust: 0.10 } },
-      // Clover is a flowering ground-cover, not a bird tile — chains into honey
-      // alongside the other flower species. Key kept as bird_clover for save
-      // compatibility; the tile-type's category is "flowers" in tileCollection.
-      { key: "bird_clover", kind: "tile", label: "Clover", color: 0x6fa450, dark: 0x365e22, value: 5, next: "honey", sway: { amp: 2.5, freq: 0.00080, gust: 0.18 } },
-      { key: "bird_melon",  kind: "tile", label: "Melon",  color: 0xb3d770, dark: 0x4a6e2a, value: 6, next: "eggs", sway: { amp: 0.8, freq: 0.00030, gust: 0.05 } },
-      { key: "veg_carrot",   kind: "tile", label: "Carrot",   color: 0xe88439, dark: 0x7a3e10, value: 4, next: "soup", sway: { amp: 2.0, freq: 0.00050, gust: 0.10 } },
-      { key: "veg_eggplant", kind: "tile", label: "Eggplant", color: 0x6b3a8a, dark: 0x301848, value: 4, next: "soup", sway: { amp: 1.8, freq: 0.00048, gust: 0.08 } },
-      { key: "veg_turnip",   kind: "tile", label: "Turnip",   color: 0xd87aa0, dark: 0x6e2a4a, value: 4, next: "soup", sway: { amp: 1.6, freq: 0.00050, gust: 0.08 } },
-      { key: "veg_beet",     kind: "tile", label: "Beet",     color: 0x6b1a3a, dark: 0x300818, value: 4, next: "soup", sway: { amp: 1.5, freq: 0.00046, gust: 0.07 } },
-      { key: "veg_cucumber", kind: "tile", label: "Cucumber", color: 0x4f8c3a, dark: 0x224018, value: 4, next: "soup", sway: { amp: 2.4, freq: 0.00056, gust: 0.10 } },
-      { key: "veg_squash",   kind: "tile", label: "Squash",   color: 0xe6c14a, dark: 0x7a5e10, value: 4, next: "soup", sway: { amp: 1.7, freq: 0.00048, gust: 0.08 } },
-      { key: "veg_mushroom", kind: "tile", label: "Mushroom", color: 0xc63a3a, dark: 0x601818, value: 4, next: "soup", sway: { amp: 1.5, freq: 0.00044, gust: 0.06 } },
-      { key: "veg_pepper",   kind: "tile", label: "Pepper",   color: 0xd83a3a, dark: 0x6e1818, value: 4, next: "soup", sway: { amp: 2.2, freq: 0.00054, gust: 0.10 } },
-      { key: "veg_broccoli", kind: "tile", label: "Broccoli", color: 0x4a8a3a, dark: 0x1e3e18, value: 4, next: "soup", sway: { amp: 3.0, freq: 0.00060, gust: 0.12 } },
-      { key: "soup",     kind: "resource", label: "Soup",     color: 0xc46a2f, dark: 0x6e3a18, value: 20, next: null },
-      // Phase: wire-all-chains — terminal chain products from REFERENCE_CATALOG §4.
-      { key: "pie",       kind: "resource", label: "Pie",       color: 0xb05428, dark: 0x582818, value: 90,  next: null },
-      { key: "honey",     kind: "resource", label: "Honey",     color: 0xe8a020, dark: 0x745010, value: 300, next: null },
-      { key: "meat",      kind: "resource", label: "Meat",      color: 0xc44848, dark: 0x682424, value: 21,  next: null },
-      { key: "milk",      kind: "resource", label: "Milk",      color: 0xfaf6ec, dark: 0x807e74, value: 100, next: null },
-      { key: "horseshoe", kind: "resource", label: "Horseshoe", color: 0x8a8a90, dark: 0x46464a, value: 400, next: null },
-      { key: "eggs",      kind: "resource", label: "Eggs",      color: 0xf8efd0, dark: 0x807660, value: 5, next: null },
-      { key: "bread",     kind: "resource", label: "Bread",     color: 0xc89048, dark: 0x6a4820, value: 4, next: null },
-
-      // ─── Catalog-import placeholders (assets-only PR) ─────────────────────
-      // Resources for every new tile-type in REFERENCE_CATALOG §7. They
-      // render via the design-bundle iconRegistry and have placeholder
-      // value/next — they don't spawn on the board yet (FARM_TILE_POOL is
-      // unchanged), they don't sell at market, and there's no chain → product
-      // wiring. Those follow in dedicated chain PRs.
-      // Grass
-      { key: "grass_heather",      kind: "tile", label: "Heather",      color: 0x7a4f8a, dark: 0x3a2548, value: 1, next: null, sway: { amp: 2.5, freq: 0.00060, gust: 0.10 } },
-      // Grain
-      { key: "grain_corn",         kind: "tile", label: "Corn",         color: 0xf4c84a, dark: 0x7a6020, value: 1, next: null, sway: { amp: 4.0, freq: 0.00060, gust: 0.18 } },
-      { key: "grain_buckwheat",    kind: "tile", label: "Buckwheat",    color: 0x9ab548, dark: 0x4a5820, value: 1, next: null, sway: { amp: 3.5, freq: 0.00058, gust: 0.16 } },
-      { key: "grain_manna",        kind: "tile", label: "Manna",        color: 0xf8e8c0, dark: 0x7a6e58, value: 1, next: null, sway: { amp: 1.5, freq: 0.00040, gust: 0.06 } },
-      { key: "grain_rice",         kind: "tile", label: "Rice",         color: 0xc8d878, dark: 0x60683c, value: 1, next: null, sway: { amp: 3.0, freq: 0.00056, gust: 0.14 } },
-      // Fruits
-      { key: "fruit_apple",        kind: "tile", label: "Apple",        color: 0xd4543a, dark: 0x6a2a18, value: 1, next: "pie", sway: { amp: 1.2, freq: 0.00040, gust: 0.06 } },
-      { key: "fruit_pear",         kind: "tile", label: "Pear",         color: 0xbcc436, dark: 0x5e6018, value: 1, next: "pie", sway: { amp: 1.2, freq: 0.00040, gust: 0.06 } },
-      { key: "fruit_golden_apple", kind: "tile", label: "Golden Apple", color: 0xf4c430, dark: 0x7a6010, value: 1, next: "pie", sway: { amp: 1.2, freq: 0.00040, gust: 0.06 } },
-      { key: "fruit_blackberry",   kind: "tile", label: "Blackberry",   color: 0x3a1a4a, dark: 0x180a20, value: 1, next: "pie", sway: { amp: 1.0, freq: 0.00038, gust: 0.05 } },
-      { key: "fruit_rambutan",     kind: "tile", label: "Rambutan",     color: 0xd8344a, dark: 0x6a1820, value: 1, next: "pie", sway: { amp: 1.4, freq: 0.00042, gust: 0.07 } },
-      { key: "fruit_starfruit",    kind: "tile", label: "Starfruit",    color: 0xe8c83c, dark: 0x726018, value: 1, next: "pie", sway: { amp: 1.0, freq: 0.00040, gust: 0.05 } },
-      { key: "fruit_coconut",      kind: "tile", label: "Coconut",      color: 0x5e3a14, dark: 0x2e1c08, value: 1, next: "pie", sway: { amp: 0.8, freq: 0.00030, gust: 0.04 } },
-      { key: "fruit_lemon",        kind: "tile", label: "Lemon",        color: 0xf4d030, dark: 0x7a6818, value: 1, next: "pie", sway: { amp: 1.2, freq: 0.00042, gust: 0.06 } },
-      { key: "fruit_jackfruit",    kind: "tile", label: "Jackfruit",    color: 0xa8a040, dark: 0x52501c, value: 1, next: "pie", sway: { amp: 1.0, freq: 0.00038, gust: 0.05 } },
-      // Flowers
-      { key: "flower_pansy",       kind: "tile", label: "Pansy",        color: 0x7a3aa8, dark: 0x3c1c54, value: 1, next: "honey", sway: { amp: 2.6, freq: 0.00070, gust: 0.14 } },
-      { key: "flower_water_lily",  kind: "tile", label: "Water Lily",   color: 0xe890c0, dark: 0x70486a, value: 1, next: "honey", sway: { amp: 0.8, freq: 0.00026, gust: 0.04 } },
-      // Trees (distinct from existing log/plank/beam wood chain)
-      { key: "tree_oak",           kind: "tile", label: "Oak",          color: 0x3a6818, dark: 0x1a3008, value: 1, next: "wood_log", sway: { amp: 1.6, freq: 0.00030, gust: 0.10 } },
-      { key: "tree_birch",         kind: "tile", label: "Birch",        color: 0xa8c038, dark: 0x546018, value: 1, next: "wood_log", sway: { amp: 2.2, freq: 0.00034, gust: 0.12 } },
-      { key: "tree_willow",        kind: "tile", label: "Willow",       color: 0x5a8a18, dark: 0x2a4008, value: 1, next: "wood_log", sway: { amp: 3.0, freq: 0.00038, gust: 0.18 } },
-      { key: "tree_fir",           kind: "tile", label: "Fir",          color: 0x2a5008, dark: 0x142404, value: 1, next: "wood_log", sway: { amp: 0.6, freq: 0.00024, gust: 0.04 } },
-      { key: "tree_cypress",       kind: "tile", label: "Cypress",      color: 0x1a3a08, dark: 0x0a1804, value: 1, next: "wood_log", sway: { amp: 0.4, freq: 0.00020, gust: 0.02 } },
-      { key: "tree_palm",          kind: "tile", label: "Palm Tree",    color: 0x5a8a18, dark: 0x2a4008, value: 1, next: "wood_log", sway: { amp: 2.8, freq: 0.00040, gust: 0.16 } },
-      // Birds (extends existing `bird` category)
-      { key: "bird_pheasant",      kind: "tile", label: "Pheasant",     color: 0x8a4a18, dark: 0x44230a, value: 1, next: "eggs", sway: { amp: 1.0, freq: 0.00040, gust: 0.05 } },
-      { key: "bird_chicken",       kind: "tile", label: "Chicken",      color: 0xf0d8a0, dark: 0x786a48, value: 1, next: "eggs", sway: { amp: 1.0, freq: 0.00040, gust: 0.05 } },
-      { key: "bird_hen",           kind: "tile", label: "Hen",          color: 0xa86838, dark: 0x52321a, value: 1, next: "eggs", sway: { amp: 1.0, freq: 0.00040, gust: 0.05 } },
-      { key: "bird_rooster",       kind: "tile", label: "Rooster",      color: 0xd81818, dark: 0x6a0a0a, value: 1, next: "eggs", sway: { amp: 1.2, freq: 0.00044, gust: 0.06 } },
-      { key: "bird_wild_goose",    kind: "tile", label: "Wild Goose",   color: 0xa89878, dark: 0x524a3a, value: 1, next: "eggs", sway: { amp: 1.2, freq: 0.00044, gust: 0.06 } },
-      { key: "bird_goose",         kind: "tile", label: "Goose",        color: 0xfffce8, dark: 0x807e74, value: 1, next: "eggs", sway: { amp: 1.2, freq: 0.00044, gust: 0.06 } },
-      { key: "bird_parrot",        kind: "tile", label: "Parrot",       color: 0xd81818, dark: 0x6a0a0a, value: 1, next: "eggs", sway: { amp: 1.4, freq: 0.00046, gust: 0.07 } },
-      { key: "bird_phoenix",       kind: "tile", label: "Phoenix",      color: 0xf8a020, dark: 0x7c500e, value: 1, next: "eggs", sway: { amp: 1.6, freq: 0.00050, gust: 0.10 } },
-      { key: "bird_dodo",          kind: "tile", label: "Dodo",         color: 0xa89878, dark: 0x524a3a, value: 1, next: "eggs", sway: { amp: 0.8, freq: 0.00036, gust: 0.04 } },
-      { key: "bird_pig_in_disguise", kind: "tile", label: "Pig in Disguise", color: 0xe88a98, dark: 0x72424a, value: 1, next: "eggs", sway: { amp: 0.8, freq: 0.00036, gust: 0.04 } },
-      // Herd Animals
-      { key: "herd_pig",           kind: "tile", label: "Pig",          color: 0xe88a98, dark: 0x72424a, value: 1, next: "meat", sway: { amp: 0.6, freq: 0.00028, gust: 0.04 } },
-      { key: "herd_hog",           kind: "tile", label: "Hog",          color: 0xa87838, dark: 0x523a1a, value: 1, next: "meat", sway: { amp: 0.6, freq: 0.00028, gust: 0.04 } },
-      { key: "herd_boar",          kind: "tile", label: "Boar",         color: 0x241408, dark: 0x100804, value: 1, next: "meat", sway: { amp: 0.6, freq: 0.00028, gust: 0.04 } },
-      { key: "herd_warthog",       kind: "tile", label: "Warthog",      color: 0x5a4828, dark: 0x2c2412, value: 1, next: "meat", sway: { amp: 0.6, freq: 0.00028, gust: 0.04 } },
-      { key: "herd_sheep",         kind: "tile", label: "Sheep",        color: 0xfffce8, dark: 0x807e74, value: 1, next: "meat", sway: { amp: 0.6, freq: 0.00028, gust: 0.04 } },
-      { key: "herd_alpaca",        kind: "tile", label: "Alpaca",       color: 0xf8e8c8, dark: 0x7c7264, value: 1, next: "meat", sway: { amp: 0.6, freq: 0.00028, gust: 0.04 } },
-      { key: "herd_goat",          kind: "tile", label: "Goat",         color: 0xd8c098, dark: 0x6c604a, value: 1, next: "meat", sway: { amp: 0.6, freq: 0.00028, gust: 0.04 } },
-      { key: "herd_ram",           kind: "tile", label: "Ram",          color: 0xa87838, dark: 0x523a1a, value: 1, next: "meat", sway: { amp: 0.6, freq: 0.00028, gust: 0.04 } },
-      // Cattle
-      { key: "cattle_cow",         kind: "tile", label: "Cow",          color: 0xfffce8, dark: 0x807e74, value: 1, next: "milk", sway: { amp: 0.4, freq: 0.00022, gust: 0.03 } },
-      { key: "cattle_longhorn",    kind: "tile", label: "Longhorn",     color: 0xd89048, dark: 0x6a4820, value: 1, next: "milk", sway: { amp: 0.4, freq: 0.00022, gust: 0.03 } },
-      { key: "cattle_triceratops", kind: "tile", label: "Triceratops",  color: 0x5a8a28, dark: 0x2c4414, value: 1, next: "milk", sway: { amp: 0.4, freq: 0.00022, gust: 0.03 } },
-      // Mounts
-      { key: "mount_horse",        kind: "tile", label: "Horse",        color: 0xa86838, dark: 0x52321a, value: 1, next: "horseshoe", sway: { amp: 0.4, freq: 0.00022, gust: 0.03 } },
-      { key: "mount_donkey",       kind: "tile", label: "Donkey",       color: 0x8a8478, dark: 0x44423a, value: 1, next: "horseshoe", sway: { amp: 0.4, freq: 0.00022, gust: 0.03 } },
-      { key: "mount_moose",        kind: "tile", label: "Moose",        color: 0x5a3814, dark: 0x2c1c0a, value: 1, next: "horseshoe", sway: { amp: 0.4, freq: 0.00022, gust: 0.03 } },
-      { key: "mount_mammoth",      kind: "tile", label: "Mammoth",      color: 0xa87838, dark: 0x523a1a, value: 1, next: "horseshoe", sway: { amp: 0.4, freq: 0.00022, gust: 0.03 } },
-    ],
     pool: FARM_TILE_POOL,
   },
   mine: {
@@ -295,25 +338,8 @@ export const BIOMES = {
     dirtColor: 0x3e3a36,
     palette: { bg: 0x2a2c30, accent: 0x6a7280, dim: 0x121316 },
     tilePool: MINE_TILE_POOL,
-    resources: [
-      { key: "mine_stone",  kind: "tile", label: "Stone",  color: 0x9da3a8, dark: 0x3e4348, value: 1,  next: "mine_cobble" },
-      { key: "mine_cobble", kind: "resource", label: "Cobble", color: 0xbbc1c6, dark: 0x4e5358, value: 3,  next: "mine_block" },
-      { key: "mine_block",  kind: "resource", label: "Block",  color: 0x7c8388, dark: 0x2a2e32, value: 6,  next: null },
-      { key: "mine_ore",    kind: "tile", label: "Ore",    color: 0xb6a3a3, dark: 0x5e4040, value: 3,  next: "mine_ingot", sway: { amp: 0.4, freq: 0.00020, gust: 0.00 } },
-      { key: "mine_ingot",  kind: "resource", label: "Ingot",  color: 0xe8e0d8, dark: 0x6a5a50, value: 6,  next: null },
-      { key: "mine_coal",   kind: "tile", label: "Coal",   color: 0x333333, dark: 0x000000, value: 2,  next: "mine_coke" },
-      { key: "mine_coke",   kind: "resource", label: "Coke",   color: 0x5a5a60, dark: 0x1a1a20, value: 4,  next: null },
-      { key: "mine_gem",    kind: "tile", label: "Gem",    color: 0x65e5ff, dark: 0x1686a3, value: 7,  next: "mine_cutgem", sway: { amp: 1.2, freq: 0.00028, gust: 0.04 } },
-      { key: "mine_cutgem", kind: "resource", label: "CutGem", color: 0xa3f0ff, dark: 0x1686a3, value: 14, next: null, sway: { amp: 1.2, freq: 0.00028, gust: 0.04 } },
-      { key: "mine_gold",   kind: "tile", label: "Gold",   color: 0xffd34c, dark: 0x946b11, value: 5,  next: null, sway: { amp: 1.0, freq: 0.00024, gust: 0.04 } },
-      { key: "mine_dirt",   kind: "tile", label: "Dirt",   color: 0x7a6850, dark: 0x3e3a36, value: 1,  next: null },
-    ],
     pool: MINE_TILE_POOL,
   },
-  // Fish biome (MVP) — coastal harbor board. Tide cycle, pearl-rune mechanic
-  // and recipe wiring (chowder, fish oil) are scoped in docs/FISH_BOARD_SCOPE.md
-  // and intentionally not implemented yet. This step adds only the resources,
-  // pool and biome entry so the biome can be entered + chained on.
   fish: {
     name: "Harbor",
     mine_dirt: 0x2a4a6a,
@@ -321,23 +347,18 @@ export const BIOMES = {
     dirtColor: 0x2a4a6a,
     palette: { bg: 0x2a4a6a, accent: 0x4a8aaa, dim: 0x18283a },
     tilePool: FISH_TILE_POOL,
-    resources: [
-      { key: "fish_sardine",  kind: "tile", label: "Sardine",  color: 0x9ab8c4, dark: 0x4a5e68, value: 1, next: "fish_raw", sway: { amp: 1.4, freq: 0.00050, gust: 0.08 } },
-      { key: "fish_mackerel", kind: "tile", label: "Mackerel", color: 0x4a7a9a, dark: 0x223a4a, value: 2, next: "fish_raw", sway: { amp: 1.6, freq: 0.00052, gust: 0.10 } },
-      { key: "fish_clam",     kind: "tile", label: "Clam",     color: 0xc8a888, dark: 0x705a40, value: 2, next: "fish_raw", sway: { amp: 0.4, freq: 0.00020, gust: 0.02 } },
-      { key: "fish_oyster",   kind: "tile", label: "Oyster",   color: 0xd0c0a8, dark: 0x6a5e48, value: 3, next: "fish_raw", sway: { amp: 0.4, freq: 0.00020, gust: 0.02 } },
-      { key: "fish_kelp",     kind: "tile", label: "Kelp",     color: 0x3a6a3a, dark: 0x1a3818, value: 1, next: "fish_oil", sway: { amp: 3.0, freq: 0.00060, gust: 0.18 } },
-      { key: "fish_raw",      kind: "resource", label: "Fish",     color: 0xb0c8d4, dark: 0x546a78, value: 4, next: "fish_fillet" },
-      { key: "fish_fillet",   kind: "resource", label: "Fillet",   color: 0xe8c8b0, dark: 0x7a604c, value: 8, next: null },
-      { key: "fish_oil",      kind: "resource", label: "Fish Oil", color: 0xe8d050, dark: 0x7a6818, value: 6, next: null },
-      // Pearl is a non-spawnable special tile seeded conditionally by
-      // features/fish/pearl.js — chain it with ≥2 other fish to capture
-      // a Rune (mirror of the mine's mysterious-ore mechanic).
-      { key: "fish_pearl",    kind: "tile", label: "Pearl",    color: 0xefe8d8, dark: 0x6a6258, value: 0, next: null },
-    ],
     pool: FISH_TILE_POOL,
   },
 };
+
+// Reattach resources to BIOMES dynamically so we don't break downstream code
+// that relies on BIOMES.farm.resources being an array of item objects.
+for (const b of Object.values(BIOMES)) {
+  b.resources = Object.entries(ITEMS)
+    .filter(([_, item]) => item.biome === b.name.toLowerCase() || (b.name === "Harbor" && item.biome === "fish"))
+    .map(([key, item]) => ({ key, ...item }));
+}
+
 
 export const NPCS = {
   mira: {
@@ -456,114 +477,88 @@ export const BUILDINGS = [
     x: 350, y: 150, w: 90, h: 100, color: "#5a4030" },
 ];
 
-// Phase 10.1 — Workshop tool recipes (no turn cost, board animation).
-// §5 lists "1 Wood" for Rake; impl uses `plank` because the §6 wood chain
-// names the base tile "wood_log" and the first upgrade "wood_plank".
-export const WORKSHOP_RECIPES = {
-  rake:        { name: "Rake",          station: "workshop", inputs: { wood_plank: 1 },
-                 effect: "clear_all", target: "grass_hay",   anim: "sweep",   ms: 300,
-                 desc: "Clears all hay tiles from the board in one sweep — handy for tidying an overgrown field." },
-  axe:         { name: "Axe",          station: "workshop", inputs: { mine_stone: 1 },
-                 effect: "clear_all", target: "wood_log",   anim: "chops",   ms: 200,
-                 desc: "Fells all log tiles on the board instantly. Handy when the wood supply is blocking upgrades." },
-  fertilizer:  { name: "Fertilizer",   station: "workshop", inputs: { grass_hay: 1, mine_dirt: 1 },
-                 effect: "fill_bias", target: "grain",  anim: "shimmer", ms: 600,
-                 desc: "Enriches the soil so the next board fill is biased toward grain tiles." },
-  // Phase 10.5 — Cat tool (clears all rats, no turn cost)
-  cat:         { name: "Cat",          station: "workshop", inputs: { mine_stone: 2, mine_dirt: 1 },
-                 effect: "clear_hazard", target: "rats", anim: "scatter", ms: 200,
-                 desc: "Dispatches a mouser to clear all active rat hazards from the farm in one go." },
-  // Phase 10.6 — Bird Cage + full Scythe
-  bird_cage:   { name: "Bird Cage",    station: "workshop", inputs: { grass_hay: 1 },
-                 effect: "clear_all", target: "bird_egg",   anim: "cage",    ms: 300,
-                 desc: "Sweeps all egg tiles from the board — useful when bird tiles are flooding the farm." },
-  scythe_full: { name: "Scythe (full)", station: "workshop", inputs: { mine_stone: 1 },
-                 effect: "clear_all", target: "grain", anim: "sweep",   ms: 300,
-                 desc: "Harvests all grain tiles at once, clearing the board for a fresh fill." },
-  // Phase 10.8 — Wolf counters
-  rifle:       { name: "Rifle",        station: "workshop", inputs: { wood_plank: 1, mine_stone: 1, mine_ingot: 1 },
-                 effect: "clear_hazard", target: "wolves", anim: "shot",    ms: 300,
-                 desc: "Drives off all active wolves permanently, ending the wolf hazard immediately." },
-  hound:       { name: "Hound",        station: "workshop", inputs: { bread: 1, mine_stone: 3 },
-                 effect: "scatter_hazard", target: "wolves", anim: "bark", ms: 400,
-                 desc: "Scares the wolves away for several turns, buying time to chain away their target tiles." },
-  // Catalog §8 — additional workshop tools.
-  hoe:         { name: "Hoe",          station: "workshop", inputs: { wood_plank: 1, mine_stone: 1 },
-                 effect: "clear_all", target: "veg_carrot", anim: "till",   ms: 300,
-                 desc: "Tills the soil — clears every veg-carrot tile from the board so a fresh fill can roll." },
-  stone_hammer:{ name: "Stone Hammer", station: "workshop", inputs: { mine_stone: 2, wood_plank: 1 },
-                 effect: "clear_all", target: "mine_cobble", anim: "smash", ms: 350,
-                 desc: "Smashes every cobble tile on the board — a fast way to feed the chain into block tier." },
-  iron_pick:   { name: "Iron Pick",    station: "workshop", inputs: { mine_ingot: 1, wood_plank: 1 },
-                 effect: "clear_all", target: "mine_ore", anim: "pick",   ms: 320,
-                 desc: "Bites into ore veins — clears every ore tile so the chain can be re-spawned cleanly." },
-  bird_feed:   { name: "Bird Feed",    station: "workshop", inputs: { grain: 1, grass_hay: 2 },
-                 effect: "fill_bias", target: "bird_egg", anim: "scatter", ms: 500,
-                 desc: "Scatters feed across the field so the next board fill is biased toward bird tiles." },
-  sapling:     { name: "Sapling",      station: "workshop", inputs: { wood_log: 1, grass_hay: 2 },
-                 effect: "fill_bias", target: "tree_oak", anim: "shimmer", ms: 600,
-                 desc: "Plants a sapling that biases the next fill toward oak (and other tree) tiles." },
-};
-
-// NOTE (balance audit, 2026-05): Several bakery recipes appear to sell for
-// less than the raw market value of their inputs (e.g. bread = 125 coins for
-// 3 flour + 1 egg; selling those raw nets ~370). This may be intentional
-// (crafting unlocks orders/quests, not coin profit) or stale data — flagged
-// for design review before any code-side rebalance. See REFERENCE_CATALOG §4.
 export const RECIPES = {
-  water_pump: { name: "Water Pump",      inputs: { wood_plank: 1, mine_stone: 1 },          tier: 2, station: "workshop", coins: 0, tool: "water_pump",
-                desc: "Crafts a water pump tool that can irrigate farm tiles, boosting grain yield for one turn." },
-  explosives: { name: "Explosives",      inputs: { grass_hay: 1, mine_dirt: 1 },             tier: 2, station: "workshop", coins: 0, tool: "explosives",
-                desc: "Crafts a bundle of explosives that clears a 3×3 area of tiles from the mine board." },
-  bread:      { name: "Bread Loaf",     inputs: { grain_flour: 3, bird_egg: 1 },            tier: 1, station: "bakery", coins: 125, color: 0xd49060, dark: 0x7a4a28,
-                desc: "A wholesome loaf baked from flour and eggs, sold for 125 coins at the Bakery." },
-  honeyroll:  { name: "Honey Roll",     inputs: { grain_flour: 2, bird_egg: 1, berry_jam: 1 },   tier: 2, station: "bakery", coins: 175, color: 0xf0c050, dark: 0x8a6010,
-                desc: "A sweet honey roll glazed with jam, commanding 175 coins at market." },
-  harvestpie: { name: "Harvest Pie",    inputs: { grain_flour: 2, berry_jam: 1, bird_egg: 1 },   tier: 2, station: "bakery", coins: 175, color: 0xd4784a, dark: 0x6a3018,
-                desc: "A hearty harvest pie filled with jam and egg, prized by townsfolk for 175 coins." },
-  preserve:   { name: "Preserve Jar",   inputs: { berry_jam: 2, bird_egg: 1 },             tier: 1, station: "larder", coins: 100, color: 0x9a6888, dark: 0x502848,
-                desc: "Bottled berry preserves sealed with egg-white, fetching 100 coins at the Larder." },
-  tincture:   { name: "Berry Tincture", inputs: { berry: 3, berry_jam: 1 },           tier: 1, station: "larder", coins: 125, color: 0x6b8a3a, dark: 0x304018,
-                desc: "A medicinal berry tincture used by Sister Liss, sold for 125 coins." },
-  iron_hinge: { name: "Iron Hinge",     inputs: { mine_ingot: 2, mine_coke: 1 },          tier: 2, station: "forge",  output: "mine_ingot", coins: 175,  color: 0x7a8a96, dark: 0x2a3a46,
-                desc: "A forged iron hinge used in building construction. Story note: Bram requests these for the Caravan Post." },
-  cobblepath: { name: "Cobble Path",    inputs: { mine_stone: 5, wood_plank: 2 },         tier: 1, station: "forge",  output: "mine_ingot", coins: 200, color: 0x9a9a8a, dark: 0x404038,
-                desc: "Laid cobblestones that pave trade paths, sold to caravans for 200 coins." },
-  lantern:    { name: "Iron Lantern",   inputs: { mine_ingot: 1, mine_coke: 1, wood_plank: 1 },tier: 2, station: "forge",  output: "mine_ingot", coins: 150, color: 0xd4783a, dark: 0x6a2800,
-                desc: "A wrought-iron lantern that lights the evening market, selling for 150 coins." },
-  goldring:   { name: "Gold Ring",      inputs: { mine_gold: 1, mine_ingot: 2 },          tier: 2, station: "forge",  output: "mine_ingot", coins: 225, color: 0xffd34c, dark: 0x886810,
-                desc: "A gleaming gold ring favoured by merchants, commanding 225 coins at the forge." },
-  gemcrown:   { name: "Gem Crown",      inputs: { mine_cutgem: 1, mine_gold: 2 },         tier: 2, station: "forge",  output: "mine_ingot", coins: 325, color: 0x65e5ff, dark: 0x1060a0,
-                desc: "A jewelled crown set with cut gems — the Forge's most prestigious commission, worth 325 coins." },
-  ironframe:  { name: "Iron Frame",     inputs: { wood_beam: 2, mine_ingot: 1 },          tier: 3, station: "forge",  output: "mine_ingot", coins: 275, color: 0x6a7a86, dark: 0x2a3040,
-                desc: "A structural iron frame used in advanced buildings and caravan reinforcement, worth 275 coins." },
-  stonework:  { name: "Stonework",      inputs: { mine_block: 2, mine_coke: 1 },          tier: 3, station: "forge",  output: "mine_ingot", coins: 300, color: 0x8a8a7a, dark: 0x383828,
-                desc: "Dressed stonework for walls and facades — the final tier of Forge crafting, worth 300 coins." },
-  // Phase 10.3 — snake_case aliases so tests and saves can use either form
-  // Fish biome recipes — chowder (hearty soup) + bottled fish oil (tool feed).
-  // Chowder is the larder-tier dish from FISH_BOARD_SCOPE.md; fish oil is a
-  // direct one-step refinery so kelp chains have a sale path beyond the
-  // chain product itself.
-  chowder:    { name: "Chowder",        inputs: { fish_fillet: 2, milk: 1, veg_carrot: 1 },         tier: 2, station: "larder", coins: 280, color: 0xd4b888, dark: 0x6a503a,
-                desc: "A creamy seafood chowder thick with fillet, milk, and root vegetables. Larder favourite at 280 coins." },
-  fish_oil_bottled: { name: "Fish Oil (Bottled)", inputs: { fish_oil: 1, wood_plank: 1 },        tier: 1, station: "workshop", coins: 80, color: 0xe8d050, dark: 0x7a6018,
-                desc: "Refined kelp-and-fish oil sealed in a corked plank flask. Used by tinkers and tar-mongers, worth 80 coins." },
-  iron_frame: null, // resolved below
-  gem_crown:  null,
-  gold_ring:  null,
+  // Workshop recipes (Tools)
+  rec_rake:        { item: "rake",          station: "workshop", inputs: { wood_plank: 1 } },
+  rec_axe:         { item: "axe",           station: "workshop", inputs: { mine_stone: 1 } },
+  rec_fertilizer:  { item: "fertilizer",    station: "workshop", inputs: { grass_hay: 1, mine_dirt: 1 } },
+  rec_cat:         { item: "cat",           station: "workshop", inputs: { mine_stone: 2, mine_dirt: 1 } },
+  rec_bird_cage:   { item: "bird_cage",     station: "workshop", inputs: { grass_hay: 1 } },
+  rec_scythe_full: { item: "scythe_full",   station: "workshop", inputs: { mine_stone: 1 } },
+  rec_rifle:       { item: "rifle",         station: "workshop", inputs: { wood_plank: 1, mine_stone: 1, mine_ingot: 1 } },
+  rec_hound:       { item: "hound",         station: "workshop", inputs: { bread: 1, mine_stone: 3 } },
+  rec_hoe:         { item: "hoe",           station: "workshop", inputs: { wood_plank: 1, mine_stone: 1 } },
+  rec_stone_hammer:{ item: "stone_hammer",  station: "workshop", inputs: { mine_stone: 2, wood_plank: 1 } },
+  rec_iron_pick:   { item: "iron_pick",     station: "workshop", inputs: { mine_ingot: 1, wood_plank: 1 } },
+  rec_bird_feed:   { item: "bird_feed",     station: "workshop", inputs: { grain: 1, grass_hay: 2 } },
+  rec_sapling:     { item: "sapling",       station: "workshop", inputs: { wood_log: 1, grass_hay: 2 } },
+
+  // Tools in workshop originally from RECIPES
+  rec_water_pump:  { item: "water_pump",    station: "workshop", tier: 2, inputs: { wood_plank: 1, mine_stone: 1 } },
+  rec_explosives:  { item: "explosives",    station: "workshop", tier: 2, inputs: { grass_hay: 1, mine_dirt: 1 } },
+
+  // Crafted goods
+  rec_bread:       { item: "bread",         station: "bakery", tier: 1, inputs: { grain_flour: 3, bird_egg: 1 } },
+  rec_honeyroll:   { item: "honeyroll",     station: "bakery", tier: 2, inputs: { grain_flour: 2, bird_egg: 1, berry_jam: 1 } },
+  rec_harvestpie:  { item: "harvestpie",    station: "bakery", tier: 2, inputs: { grain_flour: 2, berry_jam: 1, bird_egg: 1 } },
+  rec_preserve:    { item: "preserve",      station: "larder", tier: 1, inputs: { berry_jam: 2, bird_egg: 1 } },
+  rec_tincture:    { item: "tincture",      station: "larder", tier: 1, inputs: { berry: 3, berry_jam: 1 } },
+  rec_iron_hinge:  { item: "iron_hinge",    station: "forge",  tier: 2, inputs: { mine_ingot: 2, mine_coke: 1 } },
+  rec_cobblepath:  { item: "cobblepath",    station: "forge",  tier: 1, inputs: { mine_stone: 5, wood_plank: 2 } },
+  rec_lantern:     { item: "lantern",       station: "forge",  tier: 2, inputs: { mine_ingot: 1, mine_coke: 1, wood_plank: 1 } },
+  rec_goldring:    { item: "goldring",      station: "forge",  tier: 2, inputs: { mine_gold: 1, mine_ingot: 2 } },
+  rec_gemcrown:    { item: "gemcrown",      station: "forge",  tier: 2, inputs: { mine_cutgem: 1, mine_gold: 2 } },
+  rec_ironframe:   { item: "ironframe",     station: "forge",  tier: 3, inputs: { wood_beam: 2, mine_ingot: 1 } },
+  rec_stonework:   { item: "stonework",     station: "forge",  tier: 3, inputs: { mine_block: 2, mine_coke: 1 } },
+  rec_chowder:     { item: "chowder",       station: "larder", tier: 2, inputs: { fish_fillet: 2, milk: 1, veg_carrot: 1 } },
+  rec_fish_oil_bot:{ item: "fish_oil_bottled", station: "workshop", tier: 1, inputs: { fish_oil: 1, wood_plank: 1 } },
 };
-// Merge WORKSHOP_RECIPES into RECIPES so all 11 workshop recipes are top-level entries.
-// (Previously they lived only in WORKSHOP_RECIPES; the crafting screen's
-// Object.entries(RECIPES).filter(station==="workshop") would only see 3.)
-Object.assign(RECIPES, WORKSHOP_RECIPES);
 
-// Resolve snake_case aliases to the same objects (no data duplication)
-RECIPES.iron_frame = RECIPES.ironframe;
-RECIPES.gem_crown  = RECIPES.gemcrown;
-RECIPES.gold_ring  = RECIPES.goldring;
+// ── Backward-compatible aliases ────────────────────────────────────────────
+// Old code and tests reference RECIPES by item key (e.g. RECIPES["bread"]).
+// Generate aliases: for each recipe, RECIPES[recipe.item] → same object.
+// Also create legacy camelCase aliases (iron_frame → ironframe, etc.).
+for (const [recId, rec] of Object.entries(RECIPES)) {
+  if (rec.item && !RECIPES[rec.item]) RECIPES[rec.item] = rec;
+}
+// Add backward-compatible computed properties to each recipe. Old code reads
+// recipe.name, recipe.coins, recipe.tool, recipe.color, recipe.effect etc.
+// These are now sourced from ITEMS[recipe.item].
+for (const rec of Object.values(RECIPES)) {
+  if (!rec.item) continue;
+  const itemDef = ITEMS[rec.item];
+  if (!itemDef) continue;
+  // Legacy compat getters — only add if not already set by the recipe itself.
+  if (rec.name === undefined)   rec.name   = itemDef.label;
+  if (rec.coins === undefined)  rec.coins  = itemDef.value ?? 0;
+  if (rec.color === undefined)  rec.color  = itemDef.color;
+  if (rec.effect === undefined) rec.effect = itemDef.effect;
+  if (rec.target === undefined) rec.target = itemDef.target;
+  if (rec.anim === undefined)   rec.anim   = itemDef.anim;
+  if (rec.ms === undefined)     rec.ms     = itemDef.ms;
+  if (rec.desc === undefined)   rec.desc   = itemDef.desc;
+  // tool property: if the item is a tool, set recipe.tool = item key
+  if (itemDef.kind === "tool" && rec.tool === undefined) rec.tool = rec.item;
+}
+// Explicit retro-compatibility aliases for underscore variants.
+RECIPES.rec_iron_frame = RECIPES.rec_ironframe;
+RECIPES.rec_gem_crown  = RECIPES.rec_gemcrown;
+RECIPES.rec_gold_ring  = RECIPES.rec_goldring;
+RECIPES.iron_frame     = RECIPES.rec_ironframe;
+RECIPES.gem_crown      = RECIPES.rec_gemcrown;
+RECIPES.gold_ring      = RECIPES.rec_goldring;
 
-// Phase 10.1 — RECIPES.tools aliases WORKSHOP_RECIPES for backwards compat
+// Legacy WORKSHOP_RECIPES export — a view keyed by item-name over workshop
+// recipes. Tests and a few call sites still import this.
+export const WORKSHOP_RECIPES = Object.fromEntries(
+  Object.values(RECIPES)
+    .filter((r) => r.station === "workshop")
+    .map((r) => [r.item, r])
+);
+
+// Legacy RECIPES.tools alias (tests reference RECIPES.tools.rake etc.)
 RECIPES.tools = WORKSHOP_RECIPES;
+
 
 export const MARKET_PRICES = {
   grass_hay:    { buy: 40,  sell: 0  },
@@ -740,7 +735,7 @@ import {
   mergeOverrides,
   readBalanceDraft,
   applyUpgradeThresholdOverrides,
-  applyResourceOverrides,
+  applyItemOverrides,
   applyRecipeOverrides,
   applyBuildingOverrides,
   applyExpeditionOverrides,
@@ -753,7 +748,7 @@ export const BALANCE_OVERRIDES = mergeOverrides(balanceFile, readBalanceDraft())
 applyDailyRewardOverrides(DAILY_REWARDS, BALANCE_OVERRIDES.dailyRewards);
 
 applyUpgradeThresholdOverrides(UPGRADE_THRESHOLDS, BALANCE_OVERRIDES.upgradeThresholds);
-applyResourceOverrides(BIOMES, BALANCE_OVERRIDES.resources);
+applyItemOverrides(ITEMS, BALANCE_OVERRIDES.items);
 applyRecipeOverrides(RECIPES, BALANCE_OVERRIDES.recipes);
 applyBuildingOverrides(BUILDINGS, BALANCE_OVERRIDES.buildings);
 applyExpeditionOverrides(EXPEDITION_FOOD_TURNS, EXPEDITION_MEAT_FOODS, BALANCE_OVERRIDES.expedition);
