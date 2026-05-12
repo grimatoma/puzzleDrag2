@@ -27,6 +27,7 @@ const BiomesTab    = lazy(() => import("./tabs/BiomesTab.jsx"));
 const WorkersTab   = lazy(() => import("./tabs/WorkersTab.jsx"));
 const KeepersTab   = lazy(() => import("./tabs/KeepersTab.jsx"));
 const NpcsTab      = lazy(() => import("./tabs/NpcsTab.jsx"));
+const StoryTab     = lazy(() => import("./tabs/StoryTab.jsx"));
 const RationsTab   = lazy(() => import("./tabs/RationsTab.jsx"));
 const TuningTab    = lazy(() => import("./tabs/TuningTab.jsx"));
 const ExportTab    = lazy(() => import("./tabs/ExportTab.jsx"));
@@ -66,6 +67,9 @@ const TABS = [
   { id: "tuning",    label: "Tuning",         iconKey: "ui_devtools", Component: TuningTab,
     section: "other",
     blurb: "Loose top-level constants: round length, audit-boss cooldown, craft-queue timer + gem-skip cost, expedition floor, settlement founding cost ramp, and the home biome." },
+  { id: "story",     label: "Story · Dialogue", iconKey: "ui_star", Component: StoryTab,
+    section: "story",
+    blurb: "Story beats and side-events: titles, scenes, the narration/dialogue lines, and choice labels. (Triggers and outcomes are not editable here.)" },
   { id: "npcs",      label: "NPCs",           iconKey: "ui_star", Component: NpcsTab,
     section: "story",
     blurb: "Townsfolk gift preferences (loves / likes — the items that raise their bond fastest) and the four bond bands (name + the order-reward modifier at that band)." },
@@ -104,11 +108,12 @@ function emptyDraft() {
     workers: {},
     // Phase 6 — Keepers tab patches per-type KEEPERS entries.
     keepers: {},
-    // Phase 6 — Expedition Rations / Settlement Biomes / Tuning / NPCs tabs.
+    // Phase 6 — Expedition Rations / Settlement Biomes / Tuning / NPCs / Story tabs.
     expedition: {},
     biomes: {},
     tuning: {},
     npcs: {},
+    story: {},
   };
 }
 

@@ -1,6 +1,6 @@
 // Phase 6 — Balance Manager override functions for the new config sections.
 import { describe, it, expect } from "vitest";
-import { applyExpeditionOverrides, applyBiomeOverrides, sanitizeTuning, applyNpcOverrides } from "../config/applyOverrides.js";
+import { applyExpeditionOverrides, applyBiomeOverrides, sanitizeTuning, applyNpcOverrides, applyStoryOverrides } from "../config/applyOverrides.js";
 
 describe("applyExpeditionOverrides", () => {
   it("merges foodTurns (tune + add) and replaces meatFoods wholesale", () => {
@@ -88,5 +88,34 @@ describe("applyNpcOverrides", () => {
     const before = JSON.stringify(npcData);
     applyNpcOverrides(npcData, [], undefined);
     expect(JSON.stringify(npcData)).toBe(before);
+  });
+});
+
+describe("applyStoryOverrides", () => {
+  it("patches title / scene / body / lines / choice labels across both lists", () => {
+    const storyBeats = [{ id: "a1", title: "Old", scene: "ruin", body: "old body", choices: [{ id: "x", label: "L1", outcome: { setFlag: "f" } }] }];
+    const sideBeats = [{ id: "s1", title: "Side", lines: [{ speaker: "wren", text: "hi" }] }];
+    applyStoryOverrides(storyBeats, sideBeats, {
+      beats: {
+        a1: { title: "New", scene: "dawn", body: "new body", choices: { x: { label: "Pick me" }, ghost: { label: "ignored" } } },
+        s1: { lines: [{ speaker: "mira", text: "line one" }, { text: "narration" }, { speaker: "bram", text: "" }] },
+        nope: { title: "no such beat" },
+      },
+    });
+    expect(storyBeats[0].title).toBe("New");
+    expect(storyBeats[0].scene).toBe("dawn");
+    expect(storyBeats[0].body).toBe("new body");
+    expect(storyBeats[0].choices[0].label).toBe("Pick me");
+    expect(storyBeats[0].choices[0].outcome).toEqual({ setFlag: "f" }); // outcome untouched
+    expect(sideBeats[0].lines).toEqual([{ speaker: "mira", text: "line one" }, { speaker: null, text: "narration" }]); // empty-text line dropped
+  });
+  it("clears body/scene when set to empty; no-op on a missing override", () => {
+    const beats = [{ id: "a1", title: "T", scene: "ruin", body: "b" }];
+    applyStoryOverrides(beats, [], { beats: { a1: { scene: "", body: "" } } });
+    expect(beats[0].scene).toBeUndefined();
+    expect(beats[0].body).toBeUndefined();
+    const before = JSON.stringify(beats);
+    applyStoryOverrides(beats, [], undefined);
+    expect(JSON.stringify(beats)).toBe(before);
   });
 });

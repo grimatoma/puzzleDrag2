@@ -491,6 +491,39 @@ export function applyNpcOverrides(npcData, bondBands, overrides) {
   }
 }
 
+/**
+ * Apply patches to story beats (Phase 6, Balance Manager Story tab). `overrides`:
+ *   { beats: { <beatId>: { title, scene, body,
+ *                          lines: [{ speaker, text }],
+ *                          choices: { <choiceId>: { label } } } } }
+ * Only the *presentation* fields are editable here — triggers, onComplete
+ * effects, and choice outcomes are deliberately left alone. `lines` replaces
+ * wholesale. Searches both STORY_BEATS and SIDE_BEATS. Mutates beats in place.
+ */
+export function applyStoryOverrides(storyBeats, sideBeats, overrides) {
+  if (!overrides || typeof overrides !== "object" || !overrides.beats || typeof overrides.beats !== "object") return;
+  const all = [...(Array.isArray(storyBeats) ? storyBeats : []), ...(Array.isArray(sideBeats) ? sideBeats : [])];
+  for (const [beatId, patch] of Object.entries(overrides.beats)) {
+    const beat = all.find((b) => b && b.id === beatId);
+    if (!beat || !patch || typeof patch !== "object") continue;
+    if (typeof patch.title === "string" && patch.title.length > 0) beat.title = patch.title;
+    if (typeof patch.scene === "string") beat.scene = patch.scene.length > 0 ? patch.scene : undefined;
+    if (typeof patch.body === "string") beat.body = patch.body.length > 0 ? patch.body : undefined;
+    if (Array.isArray(patch.lines)) {
+      const cleaned = patch.lines
+        .filter((l) => l && typeof l === "object" && typeof l.text === "string" && l.text.length > 0)
+        .map((l) => ({ speaker: (typeof l.speaker === "string" && l.speaker.length > 0) ? l.speaker : null, text: l.text }));
+      beat.lines = cleaned.length > 0 ? cleaned : undefined;
+    }
+    if (patch.choices && typeof patch.choices === "object" && Array.isArray(beat.choices)) {
+      for (const [choiceId, cp] of Object.entries(patch.choices)) {
+        const ch = beat.choices.find((c) => c && c.id === choiceId);
+        if (ch && cp && typeof cp.label === "string" && cp.label.length > 0) ch.label = cp.label;
+      }
+    }
+  }
+}
+
 const HOOK_DERIVED_FIELDS = new Set([
   "freeMoves", "freeMovesIfChain", "coinBonusFlat", "coinBonusPerTile",
   "thresholdReduce", "hooks", "abilities",

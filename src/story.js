@@ -1,6 +1,9 @@
 // ─── Story state slice ────────────────────────────────────────────────────────
 // Pure helpers: no Phaser, no DOM, fully testable in Vitest.
 
+import { BALANCE_OVERRIDES } from "./constants.js";
+import { applyStoryOverrides } from "./config/applyOverrides.js";
+
 export const INITIAL_STORY_STATE = {
   act: 1,
   beat: "act1_arrival",
@@ -261,6 +264,10 @@ export const SIDE_BEATS = [
     ],
   },
 ];
+
+// Phase 6 — Balance Manager "Story" tab: presentation-only patches (titles,
+// scenes, body/lines, choice labels) from `balance.json`'s `story` section.
+applyStoryOverrides(STORY_BEATS, SIDE_BEATS, BALANCE_OVERRIDES.story);
 
 // ─── Pure helpers ────────────────────────────────────────────────────────────
 
