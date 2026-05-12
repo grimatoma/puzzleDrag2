@@ -1,49 +1,137 @@
 import { useState, useRef } from "react";
-import { BIOMES, BUILDINGS } from "../constants.js";
+import { BIOMES, BUILDINGS, EXPEDITION_FOOD_TURNS, MIN_EXPEDITION_TURNS } from "../constants.js";
 import { useTooltip, Tooltip } from "./Tooltip.jsx";
-import { ZONES, displayZoneName } from "../features/zones/data.js";
+import { ZONES, displayZoneName, expeditionTurnsForFood, expeditionTurnsFromSupply } from "../features/zones/data.js";
 import StartFarmingModal from "../features/zones/StartFarmingModal.jsx";
 import IconCanvas from "./IconCanvas.jsx";
 import Icon from "./Icon.jsx";
 
-function BiomeEntryModal({ biomeKey, level, onEnter, onClose }) {
+const FOOD_LABELS = {
+  supplies: "Supplies", fruit_apple: "Apple", bread: "Bread", cured_meat: "Cured Meat",
+  festival_loaf: "Festival Loaf", wedding_pie: "Wedding Pie", iron_ration: "Iron Ration",
+};
+
+// Phase 5d — mine/harbor entry is a supply-structured expedition (master doc
+// §VI): pack food before the round, each ration is worth a number of turns
+// (building-boosted), play until they run out. (Farm rounds go through
+// StartFarmingModal — they're year-structured, no supply.)
+function BiomeEntryModal({ biomeKey, state, dispatch, onClose }) {
   const biome = BIOMES[biomeKey];
+  const level = state.level ?? 1;
   const unlockLevel = biomeKey === "mine" ? 2 : biomeKey === "fish" ? 3 : 0;
   const locked = level < unlockLevel;
+  const zoneId = state.activeZone ?? state.mapCurrent ?? "home";
   const descriptions = {
-    farm: "Tend the fields of Hearthwood Vale. Harvest crops, gather timber, and collect eggs to fulfil the villagers' orders.",
-    mine: "Descend into Ironridge depths. Extract stone, smelt ore, and uncover precious gems hidden below.",
-    fish: "Cast nets at Saltspray Harbor. Sardines and clams come in with the tide; longer chains land mackerel and oysters.",
+    mine: "Descend into the depths. Stone, ore, and gems wait below — but you only stay as long as your provisions last.",
+    fish: "Cast off from the harbor. Fish come in with the tide; longer trips land the rare catches. Pack enough food for the voyage.",
   };
-  const portraitIcons = { farm: "biome_farm", mine: "biome_mine", fish: "biome_fish" };
-  const portraitIcon = portraitIcons[biomeKey] ?? "biome_farm";
+  const portraitIcon = biomeKey === "mine" ? "biome_mine" : "biome_fish";
+
+  // Foods the player currently holds, with this zone's per-ration turn value.
+  const available = Object.keys(EXPEDITION_FOOD_TURNS)
+    .map((key) => ({ key, have: state.inventory?.[key] ?? 0, per: expeditionTurnsForFood(state, key, zoneId) }))
+    .filter((f) => f.have > 0);
+
+  const [supply, setSupply] = useState({});
+  const totalTurns = expeditionTurnsFromSupply(state, supply, zoneId);
+  const canDepart = !locked && totalTurns >= MIN_EXPEDITION_TURNS;
+
+  const built = state.built?.[zoneId] ?? {};
+  const bonuses = [];
+  if (built.larder) bonuses.push("Larder +1");
+  if (biomeKey === "mine" && built.mining_camp) bonuses.push("Mining Camp +1");
+  if (biomeKey === "fish" && (built.pier || built.harbor_dock)) bonuses.push("Pier +1");
+
+  const setCount = (key, n, max) => setSupply((s) => {
+    const v = Math.max(0, Math.min(n, max));
+    const next = { ...s };
+    if (v <= 0) delete next[key]; else next[key] = v;
+    return next;
+  });
+  const packAll = () => setSupply(Object.fromEntries(available.map((f) => [f.key, f.have])));
+  const depart = () => { dispatch({ type: "EXPEDITION/DEPART", payload: { biomeKey, supply } }); onClose(); };
+
   return (
     <div className="absolute inset-0 bg-black/60 grid place-items-center z-50 animate-fadein" onClick={onClose}>
       <div
-        className="bg-[#f4ecd8] border-[4px] border-[#b28b62] rounded-[20px] px-8 py-6 max-w-[400px] w-[92vw] shadow-2xl text-center"
+        className="bg-[#f4ecd8] border-[4px] border-[#b28b62] rounded-[20px] px-6 py-5 max-w-[420px] w-[94vw] shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="grid place-items-center mx-auto mb-3" style={{ width: 96, height: 96 }}>
-          <IconCanvas iconKey={portraitIcon} size={96} />
+        <div className="flex items-center gap-3 mb-2">
+          <div className="grid place-items-center flex-shrink-0" style={{ width: 56, height: 56 }}>
+            <IconCanvas iconKey={portraitIcon} size={56} />
+          </div>
+          <div className="min-w-0">
+            <h2 className="font-bold text-[19px] text-[#744d2e] leading-tight">{biome.name}</h2>
+            <p className="text-[#6a4b31] text-[12px] leading-snug">{descriptions[biomeKey]}</p>
+          </div>
         </div>
-        <h2 className="font-bold text-[22px] text-[#744d2e] mb-2">{biome.name}</h2>
-        <p className="text-[#6a4b31] text-[13px] mb-5 leading-relaxed">{descriptions[biomeKey]}</p>
+
         {locked ? (
-          <div className="bg-[#f7d572]/30 border border-[#f7d572] rounded-xl px-4 py-3 text-[#7a5020] font-bold text-[13px] mb-3">
+          <div className="bg-[#f7d572]/30 border border-[#f7d572] rounded-xl px-4 py-3 text-[#7a5020] font-bold text-[13px] my-3 text-center">
             <div className="flex items-center gap-1.5 justify-center"><Icon iconKey="ui_lock" size={14} /> Unlocks at Level {unlockLevel}</div>
           </div>
         ) : (
-          <button
-            onClick={onEnter}
-            className="w-full mb-3 bg-[#91bf24] hover:bg-[#a3d028] text-white border-[3px] border-white rounded-2xl px-8 py-2.5 text-[16px] font-bold shadow-lg transition-colors"
-          >
-            Enter {biome.name}
-          </button>
+          <>
+            {/* Provisions packer */}
+            <div className="flex items-center justify-between mt-3 mb-1.5">
+              <span className="font-bold text-[12px] uppercase tracking-wide text-[#8a6a45]">Pack provisions</span>
+              {available.length > 0 && (
+                <button onClick={packAll} className="text-[11px] font-bold text-[#5a7a20] hover:text-[#3a5a10] underline">Pack all</button>
+              )}
+            </div>
+            {available.length === 0 ? (
+              <div className="bg-[#efe4cc] border border-[#c5a87a] rounded-lg px-3 py-3 text-[12px] text-[#7a5a3a] text-center">
+                You have no provisions. Bake bread, gather apples, or buy supplies first.
+              </div>
+            ) : (
+              <div className="flex flex-col gap-1 max-h-[180px] overflow-y-auto pr-0.5">
+                {available.map((f) => {
+                  const n = supply[f.key] ?? 0;
+                  return (
+                    <div key={f.key} className="flex items-center gap-2 bg-[#efe4cc] border border-[#c5a87a] rounded-lg px-2 py-1.5">
+                      <span className="grid place-items-center flex-shrink-0" style={{ width: 26, height: 26 }}>
+                        <Icon iconKey={f.key} size={24} />
+                      </span>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-bold text-[12px] text-[#3a2715] leading-tight truncate">{FOOD_LABELS[f.key] ?? f.key}</div>
+                        <div className="text-[10px] text-[#8a785e]">have {f.have} · {f.per} turn{f.per === 1 ? "" : "s"} each</div>
+                      </div>
+                      <div className="flex items-center gap-1 flex-shrink-0">
+                        <button onClick={() => setCount(f.key, n - 1, f.have)} disabled={n <= 0}
+                          className={`w-6 h-6 rounded-md border-2 font-bold text-[14px] leading-none ${n <= 0 ? "bg-[#ddd] border-[#bbb] text-[#999]" : "bg-[#f6efe0] border-[#b28b62] text-[#6a4b31]"}`}>−</button>
+                        <span className="w-6 text-center font-bold text-[13px] text-[#3a2715]">{n}</span>
+                        <button onClick={() => setCount(f.key, n + 1, f.have)} disabled={n >= f.have}
+                          className={`w-6 h-6 rounded-md border-2 font-bold text-[14px] leading-none ${n >= f.have ? "bg-[#ddd] border-[#bbb] text-[#999]" : "bg-[#91bf24] border-[#6a9010] text-white"}`}>+</button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Turn-budget readout */}
+            <div className="mt-3 rounded-xl border-2 border-[#b28b62] bg-[#fff7e6] px-3 py-2 text-center">
+              <div className="text-[11px] uppercase tracking-wide text-[#8a6a45] font-bold">Expedition length</div>
+              <div className={`text-[22px] font-extrabold leading-tight ${canDepart ? "text-[#5a7a1a]" : "text-[#9a3a2a]"}`}>{totalTurns} turn{totalTurns === 1 ? "" : "s"}</div>
+              {bonuses.length > 0 && (
+                <div className="flex flex-wrap gap-1 justify-center mt-1">
+                  {bonuses.map((b) => (
+                    <span key={b} className="text-[9px] font-bold text-[#3a2c0e] bg-[#e6d2a0] border border-[#b09a50] rounded-full px-1.5 py-0.5">🏠 {b}/food</span>
+                  ))}
+                </div>
+              )}
+              {!canDepart && <div className="text-[10px] text-[#9a3a2a] mt-1">Pack at least {MIN_EXPEDITION_TURNS} turns of food.</div>}
+            </div>
+
+            <button onClick={depart} disabled={!canDepart}
+              className={`w-full mt-3 mb-2 border-[3px] rounded-2xl px-8 py-2.5 text-[16px] font-bold shadow-lg transition-colors ${canDepart ? "bg-[#91bf24] hover:bg-[#a3d028] text-white border-white" : "bg-[#cbb98c] text-[#7c5a3a] border-[#a08850] cursor-not-allowed"}`}>
+              Set out →
+            </button>
+          </>
         )}
-        <button
-          onClick={onClose}
-          className="w-full bg-[#9a724d] hover:bg-[#b8845a] text-white font-bold py-2 rounded-lg border border-[#e6c49a] text-[13px] transition-colors"
-        >
+        <button onClick={onClose}
+          className="w-full bg-[#9a724d] hover:bg-[#b8845a] text-white font-bold py-2 rounded-lg border border-[#e6c49a] text-[13px] transition-colors">
           Close
         </button>
       </div>
@@ -1404,12 +1492,8 @@ export function TownView({ state, dispatch }) {
       {entryBiome && entryBiome !== "farm" && (
         <BiomeEntryModal
           biomeKey={entryBiome}
-          level={state.level}
-          onEnter={() => {
-            dispatch({ type: "SWITCH_BIOME", key: entryBiome });
-            dispatch({ type: "SET_VIEW", view: "board" });
-            setEntryBiome(null);
-          }}
+          state={state}
+          dispatch={dispatch}
           onClose={() => setEntryBiome(null)}
         />
       )}
