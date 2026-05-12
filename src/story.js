@@ -438,6 +438,8 @@ export function interpolateBeatText(text, vars = {}) {
  *   bondDelta:  { npc: string, amount: n }   — add to that NPC's bond (clamped 0..10)
  *   resources:  { [key]: n }                 — add to inventory (clamped ≥ 0)
  *   coins:      n                            — add to coins (clamped ≥ 0)
+ *   embers / coreIngots / gems: n            — add to that meta-currency (clamped ≥ 0)
+ *   heirlooms:  { [key]: n }                 — add to the heirlooms map (clamped ≥ 0)
  *   queueBeat:  string                       — append a beat id to the modal queue
  * A falsy `outcome` is a no-op.
  */
@@ -475,6 +477,19 @@ export function applyChoiceOutcome(gameState, outcome) {
 
   if (Number.isFinite(outcome.coins)) {
     next = { ...next, coins: Math.max(0, (next.coins ?? 0) + outcome.coins) };
+  }
+  for (const key of ["embers", "coreIngots", "gems"]) {
+    if (Number.isFinite(outcome[key])) {
+      next = { ...next, [key]: Math.max(0, (next[key] ?? 0) + outcome[key]) };
+    }
+  }
+  if (outcome.heirlooms && typeof outcome.heirlooms === "object") {
+    const heirlooms = { ...(next.heirlooms ?? {}) };
+    for (const [k, v] of Object.entries(outcome.heirlooms)) {
+      if (!Number.isFinite(v)) continue;
+      heirlooms[k] = Math.max(0, (heirlooms[k] ?? 0) + v);
+    }
+    next = { ...next, heirlooms };
   }
 
   if (typeof outcome.queueBeat === "string") {
