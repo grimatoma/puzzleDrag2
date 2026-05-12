@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { ITEMS, RECIPES, BIOMES } from "../../constants.js";
+import { ITEMS, RECIPES } from "../../constants.js";
 import {
   COLORS, NumberField, TextField, TextArea, Select, ColorField,
   SmallButton, Pill, Card, SearchBar, TileSwatch,

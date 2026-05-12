@@ -7,7 +7,7 @@
 // / BOND_BANDS on next load via `applyNpcOverrides`. Loves/likes are entered as
 // comma-separated item keys.
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { NPC_DATA, NPC_IDS, BOND_BANDS } from "../../features/npcs/data.js";
 import { BIOMES, RECIPES } from "../../constants.js";
 import { COLORS, TextField, NumberField, FieldRow, Card, SmallButton, SearchAndAddPicker } from "../shared.jsx";

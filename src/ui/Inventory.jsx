@@ -1,5 +1,4 @@
-import { BIOMES, RECIPES, ITEMS } from "../constants.js";
-import { resourceByKey } from "../state.js";
+import { BIOMES, ITEMS } from "../constants.js";
 import { sellPriceFor } from "../features/market/pricing.js";
 import { hex } from "../utils.js";
 import IconCanvas, { hasIcon } from "./IconCanvas.jsx";

@@ -74,24 +74,6 @@ export default function RecipesTab({ draft, updateDraft }) {
     });
   }
 
-  // Find items that can be assigned to new recipes
-  const createOptions = useMemo(() => {
-    return allItemKeys.map((k) => ({
-      id: k,
-      searchText: k,
-      renderNode: (
-        <div className="flex items-center gap-2 w-full">
-          <div className="flex-shrink-0 flex items-center justify-center w-8 h-8 rounded bg-[#e0d4be]">
-            <Icon iconKey={k} size={24} />
-          </div>
-          <div className="text-[12px] font-bold truncate flex-1 min-w-0" style={{ color: COLORS.ink }}>
-            {k}
-          </div>
-        </div>
-      )
-    }));
-  }, [allItemKeys]);
-
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center gap-2 flex-wrap">
@@ -121,7 +103,6 @@ export default function RecipesTab({ draft, updateDraft }) {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
         {filtered.map(([recId, eff]) => {
           const dirty = eff._isDraft;
-          const targetItem = ITEMS[eff.item];
           const isNew = !RECIPES[recId];
 
           return (
