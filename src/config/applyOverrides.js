@@ -459,6 +459,38 @@ export function sanitizeTuning(o) {
   return out;
 }
 
+/**
+ * Apply patches to NPC data (Phase 6, Balance Manager NPCs tab). `overrides`:
+ *   { byId: { <npcId>: { displayName, loves: [itemKey], likes: [itemKey] } },
+ *     bands: [ { name, modifier }, ... ]   (positional — matches BOND_BANDS) }
+ * `loves`/`likes` replace wholesale; `favoriteGift` is re-derived from
+ * `loves[0]`. Band `lo`/`hi` ranges are intentionally not editable. Mutates the
+ * passed-in `npcData` / `bondBands` in place.
+ */
+export function applyNpcOverrides(npcData, bondBands, overrides) {
+  if (!overrides || typeof overrides !== "object") return;
+  const strArr = (v) => (Array.isArray(v) ? v.filter((x) => typeof x === "string" && x.length > 0) : null);
+  if (overrides.byId && typeof overrides.byId === "object" && npcData) {
+    for (const [id, patch] of Object.entries(overrides.byId)) {
+      const d = npcData[id];
+      if (!d || !patch || typeof patch !== "object") continue;
+      if (typeof patch.displayName === "string" && patch.displayName.length > 0) d.displayName = patch.displayName;
+      const loves = strArr(patch.loves); if (loves) d.loves = loves;
+      const likes = strArr(patch.likes); if (likes) d.likes = likes;
+      if (Array.isArray(d.loves) && d.loves.length > 0) d.favoriteGift = d.loves[0];
+    }
+  }
+  if (Array.isArray(overrides.bands) && Array.isArray(bondBands)) {
+    overrides.bands.forEach((patch, i) => {
+      const band = bondBands[i];
+      if (!band || !patch || typeof patch !== "object") return;
+      if (typeof patch.name === "string" && patch.name.length > 0) band.name = patch.name;
+      const m = Number(patch.modifier);
+      if (Number.isFinite(m) && m > 0) band.modifier = m;
+    });
+  }
+}
+
 const HOOK_DERIVED_FIELDS = new Set([
   "freeMoves", "freeMovesIfChain", "coinBonusFlat", "coinBonusPerTile",
   "thresholdReduce", "hooks", "abilities",
