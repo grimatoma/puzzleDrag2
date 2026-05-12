@@ -28,12 +28,6 @@ describe("settings slice — coverage gaps", () => {
     expect(s1.settings.palette).toBe("deuteranopia");
   });
 
-  it("SET_REDUCED_MOTION updates settings.reducedMotion", () => {
-    const s0 = { settings: { ...baseSettings(), reducedMotion: null } };
-    const s1 = settingsReduce(s0, { type: "SET_REDUCED_MOTION", value: true });
-    expect(s1.settings.reducedMotion).toBe(true);
-  });
-
   it("SETTINGS/SET_TAB updates settingsTab", () => {
     const s0 = { settings: baseSettings(), settingsTab: "main" };
     const s1 = settingsReduce(s0, { type: "SETTINGS/SET_TAB", tab: "about" });
