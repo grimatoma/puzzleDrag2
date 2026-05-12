@@ -524,6 +524,59 @@ export function applyStoryOverrides(storyBeats, sideBeats, overrides) {
   }
 }
 
+/**
+ * Apply patches to BOSSES entries (Phase 6, Balance Manager Bosses tab), by id.
+ * Editable: name, season, description, modifierDescription, targetAmount
+ * (→ target.amount). The modifier type/params drive board logic — left alone.
+ */
+export function applyBossOverrides(bosses, overrides) {
+  if (!Array.isArray(bosses) || !overrides || typeof overrides !== "object") return;
+  for (const b of bosses) {
+    const patch = overrides[b.id];
+    if (!patch || typeof patch !== "object") continue;
+    if (typeof patch.name === "string" && patch.name.length > 0) b.name = patch.name;
+    if (typeof patch.season === "string" && patch.season.length > 0) b.season = patch.season;
+    if (typeof patch.description === "string") b.description = patch.description;
+    if (typeof patch.modifierDescription === "string") b.modifierDescription = patch.modifierDescription;
+    const ta = Number(patch.targetAmount);
+    if (Number.isFinite(ta) && ta >= 1) b.target = { ...(b.target ?? {}), amount: Math.floor(ta) };
+  }
+}
+
+/**
+ * Apply patches to ACHIEVEMENTS entries (Phase 6, Balance Manager Achievements
+ * tab), by id. Editable: name, desc, threshold, target, rewardCoins
+ * (→ reward.coins). The `counter` it watches is left alone.
+ */
+export function applyAchievementOverrides(achievements, overrides) {
+  if (!Array.isArray(achievements) || !overrides || typeof overrides !== "object") return;
+  for (const a of achievements) {
+    const patch = overrides[a.id];
+    if (!patch || typeof patch !== "object") continue;
+    if (typeof patch.name === "string" && patch.name.length > 0) a.name = patch.name;
+    if (typeof patch.desc === "string") a.desc = patch.desc;
+    const th = Number(patch.threshold), tg = Number(patch.target), rc = Number(patch.rewardCoins);
+    if (Number.isFinite(th) && th >= 1) a.threshold = Math.floor(th);
+    if (Number.isFinite(tg) && tg >= 1) a.target = Math.floor(tg);
+    if (Number.isFinite(rc) && rc >= 0) a.reward = { ...(a.reward ?? {}), coins: Math.floor(rc) };
+  }
+}
+
+/**
+ * Apply patches to DAILY_REWARDS entries (Phase 6, Balance Manager Daily
+ * Rewards tab), keyed by day number. Editable: coins, runes (added if absent).
+ * Tool / unlockTile drops are left alone.
+ */
+export function applyDailyRewardOverrides(dailyRewards, overrides) {
+  if (!dailyRewards || typeof dailyRewards !== "object" || !overrides || typeof overrides !== "object") return;
+  for (const [day, patch] of Object.entries(overrides)) {
+    const entry = dailyRewards[day];
+    if (!entry || typeof entry !== "object" || !patch || typeof patch !== "object") continue;
+    if ("coins" in patch) { const n = Number(patch.coins); if (Number.isFinite(n) && n >= 0) entry.coins = Math.floor(n); }
+    if ("runes" in patch) { const n = Number(patch.runes); if (Number.isFinite(n) && n >= 0) entry.runes = Math.floor(n); }
+  }
+}
+
 const HOOK_DERIVED_FIELDS = new Set([
   "freeMoves", "freeMovesIfChain", "coinBonusFlat", "coinBonusPerTile",
   "thresholdReduce", "hooks", "abilities",

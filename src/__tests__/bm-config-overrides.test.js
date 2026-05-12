@@ -1,6 +1,6 @@
 // Phase 6 — Balance Manager override functions for the new config sections.
 import { describe, it, expect } from "vitest";
-import { applyExpeditionOverrides, applyBiomeOverrides, sanitizeTuning, applyNpcOverrides, applyStoryOverrides } from "../config/applyOverrides.js";
+import { applyExpeditionOverrides, applyBiomeOverrides, sanitizeTuning, applyNpcOverrides, applyStoryOverrides, applyBossOverrides, applyAchievementOverrides, applyDailyRewardOverrides } from "../config/applyOverrides.js";
 
 describe("applyExpeditionOverrides", () => {
   it("merges foodTurns (tune + add) and replaces meatFoods wholesale", () => {
@@ -117,5 +117,38 @@ describe("applyStoryOverrides", () => {
     const before = JSON.stringify(beats);
     applyStoryOverrides(beats, [], undefined);
     expect(JSON.stringify(beats)).toBe(before);
+  });
+});
+
+describe("applyBossOverrides", () => {
+  it("patches name/season/descriptions/target.amount; modifier untouched", () => {
+    const bosses = [{ id: "frostmaw", name: "Frostmaw", season: "winter", target: { resource: "wood_log", amount: 30 }, modifier: { type: "freeze_columns", params: { n: 2 } }, description: "old", modifierDescription: "old mod" }];
+    applyBossOverrides(bosses, { frostmaw: { name: "The Frostmaw", season: "spring", targetAmount: 45, description: "new", modifierDescription: "new mod" }, ghost: { name: "x" } });
+    expect(bosses[0]).toMatchObject({ name: "The Frostmaw", season: "spring", description: "new", modifierDescription: "new mod" });
+    expect(bosses[0].target).toEqual({ resource: "wood_log", amount: 45 });
+    expect(bosses[0].modifier).toEqual({ type: "freeze_columns", params: { n: 2 } });
+  });
+});
+
+describe("applyAchievementOverrides", () => {
+  it("patches name/desc/threshold/target/reward.coins; counter untouched", () => {
+    const ach = [{ id: "first_steps", name: "First Steps", desc: "old", counter: "chains_committed", threshold: 1, target: 1, reward: { coins: 25 } }];
+    applyAchievementOverrides(ach, { first_steps: { name: "Baby Steps", desc: "new", threshold: 2, target: 5, rewardCoins: 50 }, ghost: { name: "x" } });
+    expect(ach[0]).toMatchObject({ name: "Baby Steps", desc: "new", threshold: 2, target: 5, counter: "chains_committed" });
+    expect(ach[0].reward).toEqual({ coins: 50 });
+  });
+});
+
+describe("applyDailyRewardOverrides", () => {
+  it("patches coins/runes per day (adding runes if absent); leaves tool drops alone", () => {
+    const rewards = { 1: { coins: 25 }, 5: { tool: "rare", amount: 1 }, 14: { coins: 300, runes: 1 } };
+    applyDailyRewardOverrides(rewards, { 1: { coins: 40, runes: 1 }, 5: { coins: 60 }, 14: { runes: 3 }, 99: { coins: 1 } });
+    expect(rewards[1]).toEqual({ coins: 40, runes: 1 });
+    expect(rewards[5]).toEqual({ tool: "rare", amount: 1, coins: 60 });
+    expect(rewards[14]).toEqual({ coins: 300, runes: 3 });
+    expect(rewards[99]).toBeUndefined(); // no such day
+    const before = JSON.stringify(rewards);
+    applyDailyRewardOverrides(rewards, undefined);
+    expect(JSON.stringify(rewards)).toBe(before);
   });
 });

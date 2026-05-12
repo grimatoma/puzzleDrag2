@@ -30,6 +30,9 @@ const NpcsTab      = lazy(() => import("./tabs/NpcsTab.jsx"));
 const StoryTab     = lazy(() => import("./tabs/StoryTab.jsx"));
 const RationsTab   = lazy(() => import("./tabs/RationsTab.jsx"));
 const TuningTab    = lazy(() => import("./tabs/TuningTab.jsx"));
+const BossesTab    = lazy(() => import("./tabs/BossesTab.jsx"));
+const AchievementsTab = lazy(() => import("./tabs/AchievementsTab.jsx"));
+const DailyRewardsTab = lazy(() => import("./tabs/DailyRewardsTab.jsx"));
 const ExportTab    = lazy(() => import("./tabs/ExportTab.jsx"));
 const IconsTab     = lazy(() => import("./tabs/IconsTab.jsx"));
 
@@ -67,6 +70,15 @@ const TABS = [
   { id: "tuning",    label: "Tuning",         iconKey: "ui_devtools", Component: TuningTab,
     section: "other",
     blurb: "Loose top-level constants: round length, audit-boss cooldown, craft-queue timer + gem-skip cost, expedition floor, settlement founding cost ramp, and the home biome." },
+  { id: "bosses",    label: "Bosses",         iconKey: "ui_star", Component: BossesTab,
+    section: "other",
+    blurb: "Seasonal bosses: name, season, the target resource amount to clear, and the flavour / modifier descriptions. (Modifier types and params drive board logic and aren't editable here.)" },
+  { id: "achievements", label: "Achievements", iconKey: "ui_star", Component: AchievementsTab,
+    section: "other",
+    blurb: "Achievement names, descriptions, the count threshold to unlock, and the coin reward. (Which counter each one watches isn't editable here.)" },
+  { id: "dailyRewards", label: "Daily Rewards", iconKey: "ui_star", Component: DailyRewardsTab,
+    section: "other",
+    blurb: "The 30-day login reward track: tune the coin / rune amounts per day. (Tool and tile-unlock drops aren't editable here.)" },
   { id: "story",     label: "Story · Dialogue", iconKey: "ui_star", Component: StoryTab,
     section: "story",
     blurb: "Story beats and side-events: titles, scenes, the narration/dialogue lines, and choice labels. (Triggers and outcomes are not editable here.)" },
@@ -114,6 +126,10 @@ function emptyDraft() {
     tuning: {},
     npcs: {},
     story: {},
+    // Phase 6 — Bosses / Achievements / Daily Rewards tabs.
+    bosses: {},
+    achievements: {},
+    dailyRewards: {},
   };
 }
 
