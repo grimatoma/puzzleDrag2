@@ -112,12 +112,6 @@ export function reduce(state, action) {
       };
     }
 
-    case 'SETTINGS/EASTER_EGG':
-      return {
-        ...state,
-        bubble: { id: Date.now(), npc: 'mira', text: 'You found the secret hearth ♥', ms: 2000 },
-      };
-
     case 'SETTINGS/SHOW_TUTORIAL': {
       // The persisted tutorial-seen flag is cleared by runActionEffects.
       const next = { ...state, modal: 'tutorial' };

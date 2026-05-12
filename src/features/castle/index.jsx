@@ -29,10 +29,9 @@ export default function CastlePanel({ state, dispatch }) {
         const value = contributed[key] ?? 0;
         const have = inventory[need.resource] ?? 0;
         const remaining = Math.max(0, need.target - value);
-        // Wired contribute targets — all five needs now point at real
+        // Wired contribute targets — all three needs point at real
         // farm/mine resources: soup (vegetables), meat (herd animals),
-        // coal (mine), berry_jam (berry chain, need-key `cocoa`), and
-        // bird_egg (bird chain, need-key `ink`).
+        // and coal (mine).
         const wired = true;
         const complete = value >= need.target;
         const canContribute1 = wired && have >= 1 && !complete;
