@@ -45,7 +45,8 @@ export const CRAFT_GEM_SKIP_COST = 1;
 // `wedding_pie` / `iron_ration` are forward-declared here — those recipes don't
 // exist in the resource pipeline yet; they'll be added with the round flow
 // (Phase 5d). `fruit_apple` and `bread` are the live keys today.
-export const EXPEDITION_FOOD_TURNS = Object.freeze({
+// Not frozen — `applyExpeditionOverrides` (Balance Manager) mutates this in place.
+export const EXPEDITION_FOOD_TURNS = {
   supplies:      1,
   fruit_apple:   1,
   bread:         1,
@@ -53,9 +54,10 @@ export const EXPEDITION_FOOD_TURNS = Object.freeze({
   festival_loaf: 2,
   wedding_pie:   3,
   iron_ration:   4,
-});
+};
 // Foods the Smokehouse's "+1 to meat-based foods" modifier applies to.
-export const EXPEDITION_MEAT_FOODS = Object.freeze(["cured_meat"]);
+// Not frozen — replaced/edited via `applyExpeditionOverrides`.
+export const EXPEDITION_MEAT_FOODS = ["cured_meat"];
 // An expedition needs at least this many turns of food packed before you can
 // set out (Phase 5d). Tunable.
 export const MIN_EXPEDITION_TURNS = 3;
@@ -741,6 +743,8 @@ import {
   applyResourceOverrides,
   applyRecipeOverrides,
   applyBuildingOverrides,
+  applyExpeditionOverrides,
+  applyBiomeOverrides,
 } from "./config/applyOverrides.js";
 
 export const BALANCE_OVERRIDES = mergeOverrides(balanceFile, readBalanceDraft());
@@ -749,6 +753,8 @@ applyUpgradeThresholdOverrides(UPGRADE_THRESHOLDS, BALANCE_OVERRIDES.upgradeThre
 applyResourceOverrides(BIOMES, BALANCE_OVERRIDES.resources);
 applyRecipeOverrides(RECIPES, BALANCE_OVERRIDES.recipes);
 applyBuildingOverrides(BUILDINGS, BALANCE_OVERRIDES.buildings);
+applyExpeditionOverrides(EXPEDITION_FOOD_TURNS, EXPEDITION_MEAT_FOODS, BALANCE_OVERRIDES.expedition);
+applyBiomeOverrides(SETTLEMENT_BIOMES, BALANCE_OVERRIDES.biomes);
 
 // Recompute tile palette so default-palette renders pick up any color overrides.
 for (const r of [...BIOMES.farm.resources, ...BIOMES.mine.resources, ...BIOMES.fish.resources]) {

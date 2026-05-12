@@ -381,6 +381,53 @@ export function applyKeeperOverrides(keepers, overrides) {
   }
 }
 
+/**
+ * Apply patches to the expedition-ration tables (Phase 6, Balance Manager
+ * Expedition Rations tab). `overrides`:
+ *   { foodTurns: { <foodKey>: turns }, meatFoods: [<foodKey>...] }
+ * `foodTurns` is merged (so existing keys can be tuned and new keys added);
+ * `meatFoods`, if an array, replaces wholesale. Mutates both targets in place.
+ */
+export function applyExpeditionOverrides(foodTurns, meatFoods, overrides) {
+  if (!overrides || typeof overrides !== "object") return;
+  if (overrides.foodTurns && typeof overrides.foodTurns === "object" && foodTurns) {
+    for (const [key, val] of Object.entries(overrides.foodTurns)) {
+      const n = Number(val);
+      if (typeof key === "string" && key.length > 0 && Number.isFinite(n) && n >= 0) foodTurns[key] = Math.floor(n);
+    }
+  }
+  if (Array.isArray(overrides.meatFoods) && Array.isArray(meatFoods)) {
+    const cleaned = overrides.meatFoods.filter((k) => typeof k === "string" && k.length > 0);
+    meatFoods.length = 0;
+    meatFoods.push(...cleaned);
+  }
+}
+
+/**
+ * Apply patches to the SETTLEMENT_BIOMES table (Phase 6, Balance Manager
+ * Settlement Biomes tab), keyed by type then biome id:
+ *   { farm: { prairie: { name, icon, hazards: [a, b], bonus } }, mine: {...}, harbor: {...} }
+ * Each matched biome is patched in place (hazards replace wholesale).
+ */
+export function applyBiomeOverrides(settlementBiomes, overrides) {
+  if (!settlementBiomes || !overrides || typeof overrides !== "object") return;
+  for (const [type, byId] of Object.entries(overrides)) {
+    const list = settlementBiomes[type];
+    if (!Array.isArray(list) || !byId || typeof byId !== "object") continue;
+    for (const [biomeId, patch] of Object.entries(byId)) {
+      const b = list.find((x) => x.id === biomeId);
+      if (!b || !patch || typeof patch !== "object") continue;
+      if (typeof patch.name === "string" && patch.name.length > 0) b.name = patch.name;
+      if (typeof patch.icon === "string" && patch.icon.length > 0) b.icon = patch.icon;
+      if (typeof patch.bonus === "string" && patch.bonus.length > 0) b.bonus = patch.bonus;
+      if (Array.isArray(patch.hazards)) {
+        const cleaned = patch.hazards.filter((h) => typeof h === "string" && h.length > 0);
+        if (cleaned.length > 0) b.hazards = cleaned;
+      }
+    }
+  }
+}
+
 const HOOK_DERIVED_FIELDS = new Set([
   "freeMoves", "freeMovesIfChain", "coinBonusFlat", "coinBonusPerTile",
   "thresholdReduce", "hooks", "abilities",

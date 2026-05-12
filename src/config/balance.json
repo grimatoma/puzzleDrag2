@@ -8,5 +8,7 @@
   "tilePowers": {},
   "tileUnlocks": {},
   "tileDescriptions": {},
-  "keepers": {}
+  "keepers": {},
+  "expedition": {},
+  "biomes": {}
 }
