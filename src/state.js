@@ -36,7 +36,7 @@ import * as market from "./features/market/slice.js";
 import * as castle from "./features/castle/slice.js";
 import * as zones from "./features/zones/slice.js";
 import * as workers from "./features/workers/slice.js";
-import { ZONES, settlementFoundingCost, isSettlementFounded, displayZoneName } from "./features/zones/data.js";
+import { ZONES, settlementFoundingCost, isSettlementFounded, displayZoneName, grantEarnedHearthTokens, isOldCapitalUnlocked } from "./features/zones/data.js";
 import { FIRE_HAZARD_ENABLED } from "./featureFlags.js";
 import { loadSavedState, persistState, clearSave } from "./state/persistence.js";
 export { loadSavedState, persistStateNow, persistState, flushPersistState, clearSave } from "./state/persistence.js";
@@ -1102,6 +1102,22 @@ function coreReducer(state, action) {
       const allBuilt = STORY_BUILDING_IDS.every((id) => homeBuilt[id]);
       if (allBuilt) {
         afterBuildStory = evaluateAndApplyStoryBeat(afterBuildStory, { type: "all_buildings_built", allBuilt: true });
+      }
+      // Phase 5b — a completed settlement earns its type's Hearth-Token; the
+      // third one opens the Old Capital on the map. (The Old Capital's *finale*
+      // is TBD per the master doc, so the unlock just surfaces a stub node + a
+      // bubble — no dialogue beat yet.)
+      const earnedHeirlooms = grantEarnedHearthTokens(afterBuildStory);
+      if (earnedHeirlooms !== afterBuildStory.heirlooms) {
+        const justUnlockedCapital = !isOldCapitalUnlocked(afterBuildStory) &&
+          isOldCapitalUnlocked({ ...afterBuildStory, heirlooms: earnedHeirlooms });
+        afterBuildStory = {
+          ...afterBuildStory,
+          heirlooms: earnedHeirlooms,
+          bubble: justUnlockedCapital
+            ? { id: Date.now(), npc: "tomas", text: "Three Hearth-Tokens. The old road to the Capital opens.", ms: 2800 }
+            : { id: Date.now(), npc: "wren", text: "A Hearth-Token — the kingdom remembers this place.", ms: 2400 },
+        };
       }
       return afterBuildStory;
     }
