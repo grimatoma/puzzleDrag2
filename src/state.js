@@ -1806,8 +1806,9 @@ const SLICE_PRIMARY_ACTIONS = new Set([
   "BOSS/CLOSE",
   // Cartography actions are owned by cartography/slice (also sets activeZone)
   "CARTO/TRAVEL",
-  // Story modal dismiss is owned by story/slice
+  // Story modal dismiss / choice picks are owned by story/slice
   "STORY/DISMISS_MODAL",
+  "STORY/PICK_CHOICE",
   // Settings actions are owned by settings/slice
   "SETTINGS/SET_TAB",
   "SETTINGS/OPEN_DEBUG",

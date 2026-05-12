@@ -5,6 +5,9 @@ export const INITIAL_STORY_STATE = {
   act: 1,
   beat: "act1_arrival",
   flags: {},
+  // Phase 1 — persisted record of every choice the player has made, in
+  // order. Each entry: { beatId, choiceId, ts }. Read by the finale.
+  choiceLog: [],
 };
 
 export const STORY_BEATS = [
@@ -13,7 +16,15 @@ export const STORY_BEATS = [
     id: "act1_arrival",
     act: 1,
     title: "A Cold Hearth",
-    body: "Wren: 'The vale was abandoned years ago. Bring me 20 hay — we'll light the Hearth.'",
+    // Phase 1 — multi-line dialogue form (the doc's Wren opening). Each line
+    // is { speaker, text }; speaker is an NPC id (or null for narration).
+    lines: [
+      { speaker: null, text: "You step through a doorway that has not been a doorway in years. A figure waits by a cold stone hollow." },
+      { speaker: "wren", text: "Took you long enough." },
+      { speaker: "wren", text: "This was the Hearth — or it will be again, if you've still got the hands for it." },
+      { speaker: null, text: "She presses a pair of iron tongs into your palm." },
+      { speaker: "wren", text: "Bring me 20 hay. We light it tonight." },
+    ],
     trigger: { type: "session_start" },
     onComplete: { setFlag: "intro_seen" },
   },
@@ -312,6 +323,138 @@ const SPEAKER_MAP = {
  * Returns null if no recognisable speaker prefix.
  */
 export function parseSpeaker(body) {
-  const m = body.match(/^([A-Z][a-zA-Z ]+?):/);
+  const m = String(body ?? "").match(/^([A-Z][a-zA-Z ]+?):/);
   return m ? (SPEAKER_MAP[m[1]] ?? null) : null;
+}
+
+/**
+ * Strips a recognised "Speaker: " prefix and surrounding single quotes from a
+ * legacy `body` string so the dialogue UI can render clean text alongside the
+ * parsed speaker. Lines authored directly in `lines[]` form are already clean,
+ * so this is a no-op on them.
+ *   "Wren: 'bring me hay'" → "bring me hay"
+ *   "The larder is full."  → "The larder is full."
+ */
+export function stripSpeakerPrefix(text) {
+  let t = String(text ?? "");
+  const m = t.match(/^([A-Z][a-zA-Z ]+?):\s*(.*)$/s);
+  if (m && SPEAKER_MAP[m[1]]) t = m[2];
+  // Trim a single matched pair of wrapping single quotes (the legacy style).
+  const q = t.match(/^'(.*)'$/s);
+  if (q) t = q[1];
+  return t.trim();
+}
+
+// ─── Dialogue + choice schema (Phase 1) ──────────────────────────────────────
+
+/**
+ * Normalised line list for a beat. New beats author `lines: [{speaker, text}]`
+ * directly; legacy beats carry a single `body: "Speaker: '...'"` string which
+ * we project into one clean line.
+ * @returns {Array<{ speaker: string|null, text: string }>}
+ */
+export function beatLines(beat) {
+  if (beat && Array.isArray(beat.lines) && beat.lines.length > 0) {
+    return beat.lines.map((l) => ({
+      speaker: l?.speaker ?? null,
+      text: String(l?.text ?? ""),
+    }));
+  }
+  if (beat && typeof beat.body === "string") {
+    return [{ speaker: parseSpeaker(beat.body), text: stripSpeakerPrefix(beat.body) }];
+  }
+  return [];
+}
+
+/**
+ * Normalised choice list for a beat. A beat with no authored `choices` gets a
+ * single "continue" choice (the legacy "Continue" button). Each choice:
+ *   { id, label, outcome? }
+ * where `outcome` (optional) is consumed by `applyChoiceOutcome`.
+ * @returns {Array<{ id: string, label: string, outcome?: object }>}
+ */
+export function beatChoices(beat) {
+  if (beat && Array.isArray(beat.choices) && beat.choices.length > 0) {
+    return beat.choices.map((c, i) => ({
+      id: c?.id ?? `choice_${i}`,
+      label: String(c?.label ?? "Continue"),
+      outcome: c?.outcome ?? null,
+    }));
+  }
+  return [{ id: "continue", label: String(beat?.continueLabel ?? "Continue"), outcome: null }];
+}
+
+/**
+ * True when the beat presents exactly the single implicit "Continue" choice
+ * (i.e. it can be dismissed without a decision — ESC / backdrop ok).
+ */
+export function beatIsContinueOnly(beat) {
+  const cs = beatChoices(beat);
+  return cs.length === 1 && cs[0].id === "continue";
+}
+
+/**
+ * Pure. Applies a choice's `outcome` to the full game state. Does not mutate.
+ * Supported outcome keys (all optional, all composable):
+ *   setFlag:    string | string[]            — set story flag(s) true
+ *   clearFlag:  string | string[]            — set story flag(s) false
+ *   bondDelta:  { npc: string, amount: n }   — add to that NPC's bond (clamped 0..10)
+ *   resources:  { [key]: n }                 — add to inventory (clamped ≥ 0)
+ *   coins:      n                            — add to coins (clamped ≥ 0)
+ *   queueBeat:  string                       — append a beat id to the modal queue
+ * A falsy `outcome` is a no-op.
+ */
+export function applyChoiceOutcome(gameState, outcome) {
+  if (!outcome || typeof outcome !== "object") return gameState;
+  let next = { ...gameState };
+
+  const setFlags = (val, on) => {
+    const keys = Array.isArray(val) ? val : [val];
+    const flags = { ...(next.story?.flags ?? {}) };
+    for (const k of keys) if (typeof k === "string" && k) flags[k] = on;
+    next = { ...next, story: { ...next.story, flags } };
+  };
+  if (outcome.setFlag) setFlags(outcome.setFlag, true);
+  if (outcome.clearFlag) setFlags(outcome.clearFlag, false);
+
+  if (outcome.bondDelta && typeof outcome.bondDelta === "object") {
+    const { npc, amount } = outcome.bondDelta;
+    if (typeof npc === "string" && Number.isFinite(amount)) {
+      const bonds = { ...(next.npcs?.bonds ?? {}) };
+      const cur = Number.isFinite(bonds[npc]) ? bonds[npc] : 5;
+      bonds[npc] = Math.max(0, Math.min(10, cur + amount));
+      next = { ...next, npcs: { ...next.npcs, bonds } };
+    }
+  }
+
+  if (outcome.resources && typeof outcome.resources === "object") {
+    const inventory = { ...(next.inventory ?? {}) };
+    for (const [k, v] of Object.entries(outcome.resources)) {
+      if (!Number.isFinite(v)) continue;
+      inventory[k] = Math.max(0, (inventory[k] ?? 0) + v);
+    }
+    next = { ...next, inventory };
+  }
+
+  if (Number.isFinite(outcome.coins)) {
+    next = { ...next, coins: Math.max(0, (next.coins ?? 0) + outcome.coins) };
+  }
+
+  if (typeof outcome.queueBeat === "string") {
+    const beat = STORY_BEATS.find((b) => b.id === outcome.queueBeat);
+    if (beat) {
+      const queue = next.story?.beatQueue ?? [];
+      const open = !!next.story?.queuedBeat;
+      next = {
+        ...next,
+        story: {
+          ...next.story,
+          queuedBeat: open ? next.story.queuedBeat : beat,
+          beatQueue: open ? [...queue, beat] : queue,
+        },
+      };
+    }
+  }
+
+  return next;
 }

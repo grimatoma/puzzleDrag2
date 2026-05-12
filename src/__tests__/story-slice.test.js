@@ -4,6 +4,7 @@ import {
   STORY_BEATS,
   isBeatComplete,
   nextPendingBeat,
+  beatLines,
 } from "../story.js";
 
 describe("2.1 — INITIAL_STORY_STATE", () => {
@@ -30,7 +31,9 @@ describe("2.1 — STORY_BEATS shape", () => {
       expect(b.id, `beat ${b.id} missing id`).toBeTruthy();
       expect(b.act, `beat ${b.id} missing act`).toBeTruthy();
       expect(b.title, `beat ${b.id} missing title`).toBeTruthy();
-      expect(b.body, `beat ${b.id} missing body`).toBeTruthy();
+      // A beat carries content either as a legacy `body` string or as the
+      // newer `lines[]` form — `beatLines` normalises both.
+      expect(beatLines(b).length, `beat ${b.id} has no dialogue lines`).toBeGreaterThan(0);
       expect(b.trigger, `beat ${b.id} missing trigger`).toBeTruthy();
     }
   });
