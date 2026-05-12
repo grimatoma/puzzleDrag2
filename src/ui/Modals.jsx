@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { NPCS } from "../constants.js";
-import { parseSpeaker } from "../story.js";
+import { beatLines, beatChoices, beatIsContinueOnly } from "../story.js";
 import Icon from "./Icon.jsx";
 import RichText from "./RichText.jsx";
 
@@ -42,21 +42,55 @@ export function SeasonModal({ state, dispatch }) {
   );
 }
 
-// ─── Story Modal (task 2.3) ───────────────────────────────────────────────────
+// ─── Story / Dialogue Modal ───────────────────────────────────────────────────
+
+function speakerName(key) {
+  return key && NPCS[key] ? NPCS[key].name : null;
+}
+function speakerColor(key) {
+  return key && NPCS[key] ? NPCS[key].color : "#d6a060";
+}
+
+/** Renders the stacked dialogue lines (speaker label + text per line). */
+function DialogueLines({ lines }) {
+  return (
+    <div className="flex flex-col gap-3 mb-5">
+      {lines.map((line, i) => {
+        const prev = i > 0 ? lines[i - 1].speaker : undefined;
+        const showLabel = line.speaker && line.speaker !== prev;
+        return (
+          <div key={i}>
+            {showLabel && (
+              <div
+                className="text-[12px] font-bold uppercase tracking-widest mb-0.5"
+                style={{ color: speakerColor(line.speaker) }}
+              >
+                {speakerName(line.speaker)}
+              </div>
+            )}
+            <p className={`text-[15px] leading-relaxed ${line.speaker ? "text-[#f4ecd8]" : "text-[#bd9a72] italic"}`}>
+              <RichText text={line.text} />
+            </p>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
 /**
  * Renders when state.story.queuedBeat is set.
  * Blocks tile drag / turn advance (handled by App.jsx checking state.story.queuedBeat).
- * Dismissable via "Continue" button or ESC key.
+ * Continue-only beats also dismiss via ESC; multi-choice beats require a pick.
  */
 export function StoryModal({ state, dispatch }) {
   const beat = state.story?.queuedBeat;
   const isWin = beat?.id === "act3_win";
   const backdropRef = useRef(null);
 
-  // ESC key to dismiss
+  // ESC key — only honoured on continue-only beats (a real choice needs a pick).
   useEffect(() => {
-    if (!beat) return;
+    if (!beat || !beatIsContinueOnly(beat)) return;
     const handler = (e) => {
       if (e.key === "Escape") dispatch({ type: "STORY/DISMISS_MODAL" });
     };
@@ -66,8 +100,13 @@ export function StoryModal({ state, dispatch }) {
 
   if (!beat) return null;
 
-  const speakerKey = parseSpeaker(beat.body);
-  const npc = speakerKey ? NPCS[speakerKey] : null;
+  const lines = beatLines(beat);
+  const choices = beatChoices(beat);
+  const continueOnly = beatIsContinueOnly(beat);
+  const headSpeaker = lines.find((l) => l.speaker)?.speaker ?? null;
+  const npc = headSpeaker ? NPCS[headSpeaker] : null;
+
+  const pick = (choiceId) => dispatch({ type: "STORY/PICK_CHOICE", payload: { choiceId } });
 
   if (isWin) {
     // Win modal: gold border, larger panel, slow fade-in
@@ -80,7 +119,6 @@ export function StoryModal({ state, dispatch }) {
         className="absolute inset-0 bg-black/65 grid place-items-center z-[60]"
         style={{ animation: "fadein 0.8s ease both" }}
       >
-        {/* Particle suggestion: golden sparkles via CSS */}
         <div
           className="relative rounded-[24px] px-10 py-8 max-w-[600px] w-[94vw] text-center shadow-2xl"
           style={{
@@ -91,9 +129,11 @@ export function StoryModal({ state, dispatch }) {
         >
           <Icon iconKey="ui_trophy" size={56} className="mb-2" />
           <h2 id="story-win-title" className="font-bold text-[28px] text-[#ffd34c] mb-2">{beat.title}</h2>
-          <p className="text-[#f4ecd8] text-[16px] leading-relaxed mb-6 max-w-[420px] mx-auto">{beat.body}</p>
+          <div className="text-[#f4ecd8] text-[16px] leading-relaxed mb-6 max-w-[420px] mx-auto">
+            {lines.map((l, i) => <p key={i}><RichText text={l.text} /></p>)}
+          </div>
           <button
-            onClick={() => dispatch({ type: "STORY/DISMISS_MODAL" })}
+            onClick={() => pick("continue")}
             autoFocus
             className="bg-[#ffd34c] hover:bg-[#ffe880] text-[#3a2a0e] border-[3px] border-[#ffd34c] rounded-2xl px-10 py-3 text-[18px] font-bold shadow-lg transition-colors"
           >
@@ -130,25 +170,37 @@ export function StoryModal({ state, dispatch }) {
               ✦
             </div>
           )}
-          <div>
-            {npc && <div className="text-[#d6a060] text-[12px] font-bold uppercase tracking-widest">{npc.name}</div>}
-            <div id="story-modal-title" className="text-[#ffd34c] font-bold text-[20px] leading-tight">{beat.title}</div>
+          <div id="story-modal-title" className="text-[#ffd34c] font-bold text-[20px] leading-tight">{beat.title}</div>
+        </div>
+
+        {/* Body — stacked dialogue lines */}
+        <DialogueLines lines={lines} />
+
+        {/* Choices */}
+        {continueOnly ? (
+          <div className="flex justify-end">
+            <button
+              onClick={() => pick("continue")}
+              autoFocus
+              className="bg-[#ffd34c] hover:bg-[#ffe880] text-[#3a2a0e] border-[3px] border-[#b28b62] rounded-xl px-7 py-2 text-[15px] font-bold shadow-lg transition-colors"
+            >
+              {choices[0].label}
+            </button>
           </div>
-        </div>
-
-        {/* Body */}
-        <p className="text-[#f4ecd8] text-[15px] leading-relaxed mb-5">{beat.body}</p>
-
-        {/* Continue button */}
-        <div className="flex justify-end">
-          <button
-            onClick={() => dispatch({ type: "STORY/DISMISS_MODAL" })}
-            autoFocus
-            className="bg-[#ffd34c] hover:bg-[#ffe880] text-[#3a2a0e] border-[3px] border-[#b28b62] rounded-xl px-7 py-2 text-[15px] font-bold shadow-lg transition-colors"
-          >
-            Continue
-          </button>
-        </div>
+        ) : (
+          <div className="flex flex-col gap-2">
+            {choices.map((c, i) => (
+              <button
+                key={c.id}
+                onClick={() => pick(c.id)}
+                autoFocus={i === 0}
+                className="bg-[#3a2715] hover:bg-[#4a3320] text-[#f4ecd8] border-2 border-[#b28b62] hover:border-[#ffd34c] rounded-xl px-5 py-2.5 text-[14px] font-semibold text-left shadow transition-colors"
+              >
+                {c.label}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
