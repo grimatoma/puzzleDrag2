@@ -306,6 +306,52 @@ export function completedSettlementCount(state) {
   return Object.keys(map).filter((id) => map[id]?.founded && settlementCompleted(state, id)).length;
 }
 
+// ─── Expedition rations (Phase 5, master doc §VI) ────────────────────────────
+// Mine/Harbor rounds are supply-structured: bring food, each unit is worth a
+// number of turns, and buildings (Larder, Smokehouse, Mining Camp / Pier) bump
+// it. This is the value layer; the round flow that *consumes* a food stockpile
+// to set a round's turn budget lands in Phase 5d.
+//
+// DEFERRED: NPC-bond modifiers (the doc has e.g. "Mira bond 10 → Iron Rations
+// +1") and building *tiers* (Larder is "+1 per tier" — there are no building
+// tiers yet, so it counts as +1) are not applied. Mining Camp / Pier use the
+// doc's ids `mining_camp` / `pier` plus the live `harbor_dock` (the existing
+// pier-equivalent building).
+
+/** Is `foodKey` a recognised expedition ration? */
+export function isExpeditionFood(foodKey) {
+  return Object.prototype.hasOwnProperty.call(EXPEDITION_FOOD_TURNS, foodKey);
+}
+
+/**
+ * Turns one unit of `foodKey` is worth on an expedition from `zoneId`,
+ * including that zone's building bonuses (master doc §VI). 0 if it isn't food.
+ */
+export function expeditionTurnsForFood(state, foodKey, zoneId = state?.mapCurrent ?? DEFAULT_ZONE) {
+  const base = EXPEDITION_FOOD_TURNS[foodKey];
+  if (base == null) return 0;
+  let turns = base;
+  const built = state?.built?.[zoneId] ?? {};
+  if (built.larder) turns += 1;                                            // Larder: +1 (per tier — no tiers yet)
+  if (built.smokehouse && EXPEDITION_MEAT_FOODS.includes(foodKey)) turns += 1; // Smokehouse: +1 to meat
+  const type = settlementTypeForZone(zoneId);
+  if (type === "mine" && built.mining_camp) turns += 1;                    // Mining Camp: +1 to all (mine only)
+  if (type === "harbor" && (built.pier || built.harbor_dock)) turns += 1;  // Pier: +1 to all (harbor only)
+  return turns;
+}
+
+/**
+ * Total turn budget a `{ foodKey: count }` supply stockpile buys for an
+ * expedition from `zoneId` — the sum of per-food turns × counts.
+ */
+export function expeditionTurnsFromSupply(state, supply, zoneId = state?.mapCurrent ?? DEFAULT_ZONE) {
+  let total = 0;
+  for (const [foodKey, count] of Object.entries(supply ?? {})) {
+    total += expeditionTurnsForFood(state, foodKey, zoneId) * Math.max(0, Math.floor(count));
+  }
+  return total;
+}
+
 // ─── Hearth-Tokens + the Old Capital gate (Phase 5b, master doc §III) ─────────
 // Each completed settlement yields a token keyed by its *type*; collecting all
 // three opens the Old Capital. `state.heirlooms.<token>` doubles as the
@@ -369,6 +415,6 @@ export function grantEarnedHearthTokens(state) {
 
 // Phase 6 — Balance Manager hook. Apply any committed/draft overrides from
 // `src/config/balance.json` + the localStorage draft to the live ZONES table.
-import { BALANCE_OVERRIDES } from "../../constants.js";
+import { BALANCE_OVERRIDES, EXPEDITION_FOOD_TURNS, EXPEDITION_MEAT_FOODS } from "../../constants.js";
 import { applyZoneOverrides } from "../../config/applyOverrides.js";
 applyZoneOverrides(ZONES, BALANCE_OVERRIDES.zones);
