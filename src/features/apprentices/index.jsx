@@ -172,9 +172,7 @@ function WorkerRow({ worker, state, dispatch }) {
       {/* Info column */}
       <div style={{ display: "flex", flexDirection: "column", gap: 3, flex: 1, minWidth: 0 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-        <span style={{ fontSize: 13, fontWeight: 700, color: "#3a2715" }}>{worker.name}</span>
-        <span style={{ fontSize: 10, fontWeight: 700, color: "#7a6050", background: "#ede4d0",
-          borderRadius: 8, padding: "1px 6px" }}>{worker.role}</span>
+        <span style={{ fontSize: 13, fontWeight: 700, color: "#3a2715" }}>{worker.role}</span>
         <span style={{ fontSize: 11, fontWeight: 700, color: "#6a9010", marginLeft: "auto" }}>
           {hiredCount} / {workerSlotLabel(worker)}
         </span>
@@ -241,7 +239,7 @@ export function ApprenticesPanel({ state, dispatch, showHeader = true, onClose =
     <>
       {showHeader && (
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
-          <span style={{ fontSize: 16, fontWeight: 700, color: "#3a2715" }}>Townsfolk</span>
+          <span style={{ fontSize: 16, fontWeight: 700, color: "#3a2715" }}>Workers</span>
           {onClose && (
             <button onClick={onClose} style={{ width: 28, height: 28, borderRadius: 8,
               background: "#fff8e8", border: "2px solid #b28b62", color: "#6a4b31",
@@ -259,7 +257,7 @@ export function ApprenticesPanel({ state, dispatch, showHeader = true, onClose =
         </span>
         <span style={{ fontSize: 12, fontWeight: 700, color: "#3a7a3a",
           background: "#d4edda", borderRadius: 8, padding: "2px 8px" }}>
-          Townsfolk: {pool}
+          Labor pool: {pool}
         </span>
         {(() => {
           const totalH = totalHired(state);
@@ -281,7 +279,7 @@ export function ApprenticesPanel({ state, dispatch, showHeader = true, onClose =
             color: "#fff", border: "none", cursor: "pointer", marginBottom: 8,
             fontFamily: "Arial, sans-serif" }}
         >
-          Buy 5 Townsfolk (debug)
+          Buy 5 labor (debug)
         </button>
       )}
 

@@ -27,7 +27,7 @@ export default function TownsfolkScreen({ state, dispatch }) {
       </div>
       <div className="flex gap-1.5 px-3 pt-2 flex-shrink-0 flex-wrap">
         {[
-          { key: "apprentices", label: "Townsfolk", icon: "ui_people" },
+          { key: "apprentices", label: "Labor", icon: "ui_people" },
           { key: "workers", label: "Workers", icon: "ui_build" },
           { key: "quests", label: "Quests", icon: "ui_clipboard" },
           { key: "castle", label: "Castle", icon: "ui_home" },

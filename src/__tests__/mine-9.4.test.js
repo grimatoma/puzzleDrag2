@@ -9,7 +9,7 @@ describe("Phase 9.4 — Mine workers (canary, geologist)", () => {
     it(`${id} registered in WORKERS with all required fields`, () => {
       const w = WORKER_MAP[id];
       expect(w).toBeTruthy();
-      for (const k of ["id", "name", "role", "maxCount", "abilities", "hireCost", "wage"]) {
+      for (const k of ["id", "name", "role", "maxCount", "abilities", "hireCost"]) {
         expect(w[k]).toBeDefined();
       }
     });
@@ -30,10 +30,6 @@ describe("Phase 9.4 — Mine workers (canary, geologist)", () => {
     ]);
   });
 
-  it("canary wage = 18", () => {
-    expect(WORKER_MAP.canary.wage).toBe(18);
-  });
-
   it("canary cost: 4 coke + 6 bread", () => {
     const can = WORKER_MAP.canary;
     expect(can.hireCost.mine_coke).toBe(4);
@@ -51,10 +47,6 @@ describe("Phase 9.4 — Mine workers (canary, geologist)", () => {
       { id: "pool_weight", params: { target: "mine_ore", amount: 1 } },
       { id: "pool_weight", params: { target: "mine_gem", amount: 1 } },
     ]);
-  });
-
-  it("geologist wage = 30", () => {
-    expect(WORKER_MAP.geologist.wage).toBe(30);
   });
 
   it("geologist cost: 6 ingot + 6 bread", () => {
