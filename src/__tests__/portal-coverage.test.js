@@ -117,7 +117,7 @@ describe("portal slice — coverage gaps", () => {
 
   it("USE_TOOL with non-magic id → no-op (handled by core)", () => {
     const s0 = baseState();
-    const s1 = portalReduce(s0, { type: "USE_TOOL", payload: { id: "shovel" } });
+    const s1 = portalReduce(s0, { type: "USE_TOOL", payload: { id: "rake" } });
     expect(s1).toBe(s0);
   });
 

@@ -49,7 +49,7 @@ export const TOOL_CATALOG = [
     desc: "Drives off all active wolves immediately." },
   { key: "hound",       category: "workshop", iconKey: "hound",         name: "Hound",        armed: "instant",
     desc: "Scares the wolves for five turns so you can clear their target tiles." },
-  { key: "water_pump",  category: "workshop", iconKey: "shovel",        name: "Water Pump",   armed: "instant",
+  { key: "water_pump",  category: "workshop", iconKey: "water_pump",    name: "Water Pump",   armed: "instant",
     desc: "Floods all lava cells, converting them to stone rubble." },
   { key: "explosives",  category: "workshop", iconKey: "dynamite",      name: "Explosives",   armed: "instant",
     desc: "Clears every cave-in and mole hazard from the mine." },

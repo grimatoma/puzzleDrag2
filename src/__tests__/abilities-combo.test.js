@@ -22,10 +22,10 @@ describe("Combination — building + worker + tile abilities stack on shared cha
     const out = aggregateAbilities([
       { kind: "building", abilities: [{ id: "grant_tool", params: { tool: "bomb", amount: 2 } }], weight: 1 },
       { kind: "building", abilities: [{ id: "grant_tool", params: { tool: "bomb", amount: 3 } }], weight: 1 },
-      { kind: "building", abilities: [{ id: "grant_tool", params: { tool: "shovel", amount: 1 } }], weight: 1 },
+      { kind: "building", abilities: [{ id: "grant_tool", params: { tool: "rake", amount: 1 } }], weight: 1 },
     ], ctx());
     expect(out.seasonEndTools.bomb).toBe(5);
-    expect(out.seasonEndTools.shovel).toBe(1);
+    expect(out.seasonEndTools.rake).toBe(1);
   });
 
   it("tile coin_bonus_flat + tile coin_bonus_per_tile contribute to separate channels", () => {

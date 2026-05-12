@@ -45,7 +45,8 @@ function toolOptions() {
   return [
     { value: "", label: "— pick tool —" },
     { value: "bomb", label: "bomb" },
-    { value: "shovel", label: "shovel" },
+    { value: "rake", label: "rake" },
+    { value: "water_pump", label: "water_pump" },
     { value: "magic_wand", label: "magic_wand" },
     { value: "magic_seed", label: "magic_seed" },
   ];
