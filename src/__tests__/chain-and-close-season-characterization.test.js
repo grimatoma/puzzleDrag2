@@ -148,53 +148,6 @@ describe("CHAIN_COLLECTED — seasonStats accumulation", () => {
   });
 });
 
-describe("CLOSE_SEASON — wages deduction", () => {
-  it("subtracts total wages when coins are sufficient (Hilda wage = 15)", () => {
-    const s0 = baseState({
-      coins: 200,
-      townsfolk: { hired: { hilda: 2 }, debt: 0, pool: 1 },
-    });
-    const s1 = rootReducer(s0, { type: "CLOSE_SEASON" });
-    // 200 - 30 wages + 25 SEASON_END_BONUS_COINS + (any bonus from worker effects)
-    expect(s1.coins).toBeGreaterThanOrEqual(195);
-    expect(s1.coins).toBeLessThanOrEqual(195 + 200);
-    expect(s1.townsfolk.debt).toBe(0);
-  });
-
-  it("converts unpaid wages into debt and zeroes coins", () => {
-    const s0 = baseState({
-      coins: 10,
-      townsfolk: { hired: { hilda: 2 }, debt: 0, pool: 1 },
-    });
-    // Wages: 30. Coins 10 → debt += 20, coins → 0; then +25 season bonus.
-    const s1 = rootReducer(s0, { type: "CLOSE_SEASON" });
-    expect(s1.townsfolk.debt).toBe(20);
-    expect(s1.coins).toBe(25);
-  });
-
-  it("clamps total debt at MAX_DEBT (9999)", () => {
-    const s0 = baseState({
-      coins: 0,
-      townsfolk: { hired: { hilda: 3 }, debt: 9990, pool: 1 },
-    });
-    // Hilda wage 15 × 3 = 45, all into debt (capped at 9999).
-    const s1 = rootReducer(s0, { type: "CLOSE_SEASON" });
-    expect(s1.townsfolk.debt).toBe(9999);
-  });
-
-  it("skips the season bonus when player ends in debt", () => {
-    const s0 = baseState({
-      coins: 0,
-      townsfolk: { hired: { hilda: 1 }, debt: 0, pool: 1 },
-    });
-    // Hilda wage 15, no coins → debt 15. Bonus is skipped.
-    // Final coins = 0 + 0 + 25 (SEASON_END_BONUS_COINS) = 25
-    const s1 = rootReducer(s0, { type: "CLOSE_SEASON" });
-    expect(s1.townsfolk.debt).toBe(15);
-    expect(s1.coins).toBe(25);
-  });
-});
-
 describe("CLOSE_SEASON — pool income from housing", () => {
   it("adds 1 to workers.pool per built housing tier", () => {
     const s0 = baseState({

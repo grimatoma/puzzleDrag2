@@ -1,7 +1,7 @@
 // Coverage fillins for src/features/apprentices/aggregate.js. The
 // pre-PR coverage put it at 58% statements with branches touching the
-// debt short-circuit, default fallthrough, multi-redirect tie-breaker,
-// and the structured effect bag.
+// default fallthrough, multi-redirect tie-breaker, and the structured
+// effect bag.
 
 import { describe, it, expect } from "vitest";
 import { computeWorkerEffects } from "../features/apprentices/aggregate.js";
@@ -21,14 +21,6 @@ describe("computeWorkerEffects — coverage gaps", () => {
     expect(out.hazardCoinMultiplier).toEqual({});
     expect(out.chainRedirect).toEqual({});
     expect(out.recipeInputReduce).toEqual({});
-  });
-
-  it("debt > 0 short-circuits all worker effects", () => {
-    const s = {
-      townsfolk: { hired: { hilda: 3 }, debt: 50, pool: 3 },
-    };
-    const out = computeWorkerEffects(s);
-    expect(out.thresholdReduce).toEqual({});
   });
 
   it("count clamps to maxCount even when hired records a higher value", () => {

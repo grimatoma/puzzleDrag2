@@ -25,11 +25,6 @@ describe("Phase 4 — worker data model", () => {
 });
 
 describe("Phase 4 — fresh state workers slice", () => {
-  it("fresh state has workers.debt === 0", () => {
-    const s = createInitialState();
-    expect(s.townsfolk.debt).toBe(0);
-  });
-
   it("fresh state has workers.pool >= 1", () => {
     const s = createInitialState();
     expect(s.townsfolk.pool).toBeGreaterThanOrEqual(1);

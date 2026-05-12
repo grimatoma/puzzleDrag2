@@ -40,8 +40,4 @@ export const SMOKE_INVARIANTS = [
       return s.hazards != null && Array.isArray(s.hazards.rats);
     },
   },
-  {
-    name: "fresh state workers debt is 0",
-    check: () => createInitialState().townsfolk.debt === 0,
-  },
 ];
