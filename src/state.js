@@ -25,7 +25,7 @@ import * as boss from "./features/boss/slice.js";
 import * as cartography from "./features/cartography/slice.js";
 import * as storySlice from "./features/story/slice.js";
 import * as fish from "./features/fish/slice.js";
-import { INITIAL_STORY_STATE, evaluateStoryTriggers } from "./story.js";
+import { INITIAL_STORY_STATE, evaluateStoryTriggers, evaluateSideBeats } from "./story.js";
 import { STORY_BUILDING_IDS } from "./features/story/data.js";
 import { NPC_IDS } from "./features/npcs/data.js";
 import { payOrder, gainBond, decayBond, applyGift } from "./features/npcs/bond.js";
@@ -415,13 +415,20 @@ function applyAlmanacXp(state, amount) {
 // ─── Story trigger integration ────────────────────────────────────────────────
 // evaluateAndApplyStoryBeat: given a game event, evaluate triggers against current story
 // state and, if a beat fires, apply all side effects and queue the modal.
-// Returns the updated state (no mutation).
+// Also evaluates the opportunistic side-beat list (Bond-8 arcs etc.) on the
+// "settle moment" events. Returns the updated state (no mutation).
 function evaluateAndApplyStoryBeat(state, event) {
   const totals = state.inventory ?? {};
-  const result = evaluateStoryTriggers(state.story ?? { ...INITIAL_STORY_STATE, flags: {} }, event, totals);
-  if (!result) return state;
-  // Delegate to the story slice reducer with a synthetic action
-  return storySlice.reduce(state, { type: "STORY/BEAT_FIRED", payload: result });
+  let next = state;
+  const result = evaluateStoryTriggers(next.story ?? { ...INITIAL_STORY_STATE, flags: {} }, event, totals);
+  if (result) next = storySlice.reduce(next, { type: "STORY/BEAT_FIRED", payload: result });
+  // Side beats (bond arcs / side events) fire opportunistically on session
+  // start/end without blocking the main story.
+  if (event.type === "session_start" || event.type === "session_ended") {
+    const sideResult = evaluateSideBeats(next, event);
+    if (sideResult) next = storySlice.reduce(next, { type: "STORY/BEAT_FIRED", payload: sideResult });
+  }
+  return next;
 }
 
 // Emit resource_total events for changed inventory keys

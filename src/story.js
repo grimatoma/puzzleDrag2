@@ -159,7 +159,73 @@ export const STORY_BEATS = [
   },
 ];
 
+// ─── Side beats ──────────────────────────────────────────────────────────────
+// Opportunistic beats — Bond-8 personal arcs (Phase 2) and, later, random side
+// events (§4.15). Unlike STORY_BEATS, they are NOT act-ordered: each fires the
+// next "settle moment" (session start/end) once its trigger condition is met,
+// without blocking the main story. Resolution beats (queued via a choice's
+// `queueBeat` outcome) carry no `trigger`. `onComplete.setFlag` marks the
+// triggering beat as fired so it never re-queues.
+export const SIDE_BEATS = [
+  // ── Mira's Letter (Bond-8) ────────────────────────────────────────────────
+  {
+    id: "mira_letter_1",
+    title: "Mira's Letter",
+    scene: "hearth",
+    lines: [
+      { speaker: "mira", text: "Can I show you something? I've been... not sending it." },
+      { speaker: null, text: "She unfolds a sheet of paper, soft and re-creased a hundred times over." },
+      { speaker: "mira", text: "It's for my brother. Edrin. He went south before the kingdom emptied — said he'd be back by harvest. That was a long string of harvests ago." },
+      { speaker: "mira", text: "If I send it and there's no answer... that's a worse kind of quiet than not knowing. I keep telling myself I'll decide tomorrow." },
+    ],
+    trigger: { type: "bond_at_least", npc: "mira", amount: 8 },
+    choices: [
+      { id: "send", label: "Send it. He'd want to hear from you.",
+        outcome: { setFlag: ["mira_letter_resolved", "mira_letter_sent"], bondDelta: { npc: "mira", amount: 1 }, queueBeat: "mira_letter_sent" } },
+      { id: "keep", label: "Keep it. There's no hurry.",
+        outcome: { setFlag: ["mira_letter_resolved", "mira_letter_kept"], queueBeat: "mira_letter_kept" } },
+      { id: "read", label: "Read it to me first?",
+        outcome: { setFlag: ["mira_letter_resolved", "mira_letter_read"], bondDelta: { npc: "mira", amount: 0.5 }, queueBeat: "mira_letter_read" } },
+    ],
+    onComplete: { setFlag: "mira_letter_seen" },
+  },
+  {
+    id: "mira_letter_sent",
+    title: "Mira's Letter",
+    scene: "hearth",
+    lines: [
+      { speaker: null, text: "Mira folds the letter into the next caravan satchel before she can talk herself out of it." },
+      { speaker: "mira", text: "There. Gone. If anything ever comes back addressed to {settlement}, you'll be the first to hear it. I mean that." },
+      { speaker: null, text: "She slides a fresh loaf across the counter on her way out, the way she does when words run short." },
+    ],
+  },
+  {
+    id: "mira_letter_kept",
+    title: "Mira's Letter",
+    scene: "hearth",
+    lines: [
+      { speaker: null, text: "Mira tucks the letter back inside her apron, just over the flour-dust." },
+      { speaker: "mira", text: "Some doors you want to know are still there before you knock. ...Thank you. For not pushing." },
+    ],
+  },
+  {
+    id: "mira_letter_read",
+    title: "Mira's Letter",
+    scene: "hearth",
+    lines: [
+      { speaker: null, text: "She reads it aloud, low and even — the bakery, the new name over the door, the smell of the place." },
+      { speaker: "mira", text: "\"...and there's a settlement again, Edrin. They call it {settlement}. There's room.\"" },
+      { speaker: "mira", text: "I still don't know how to end it. But it helped, hearing it out loud. I'll decide when I'm ready." },
+    ],
+  },
+];
+
 // ─── Pure helpers ────────────────────────────────────────────────────────────
+
+/** Find a beat by id across both the main and side beat lists. */
+export function findBeat(id) {
+  return STORY_BEATS.find((b) => b.id === id) || SIDE_BEATS.find((b) => b.id === id) || null;
+}
 
 /**
  * Returns the auto-generated fired-flag key for a beat.
@@ -256,6 +322,51 @@ export function evaluateStoryTriggers(state, event, totals = {}) {
   }
 
   return { firedBeat: next, newFlags, sideEffects: next.onComplete ?? {} };
+}
+
+// ─── Side-beat trigger evaluation ────────────────────────────────────────────
+
+const SIDE_SETTLE_EVENTS = new Set(["session_start", "session_ended"]);
+
+/** True if a side beat has already fired (by its onComplete.setFlag or fired marker). */
+function sideBeatFired(flags, beat) {
+  const key = beat.onComplete?.setFlag ?? firedFlagKey(beat.id);
+  return !!flags?.[key];
+}
+
+function sideTriggerMatches(beat, event, gameState) {
+  const t = beat.trigger;
+  if (!t) return false; // resolution beats (queued via choices) have no trigger
+  switch (t.type) {
+    case "bond_at_least":
+      // State-driven: fires the next settle moment once the bond threshold holds.
+      if (!SIDE_SETTLE_EVENTS.has(event.type)) return false;
+      return (gameState?.npcs?.bonds?.[t.npc] ?? 0) >= t.amount;
+    default:
+      return false;
+  }
+}
+
+/**
+ * Evaluates the SIDE_BEATS list against a game event. Fires at most one side
+ * beat per call (the first un-fired beat whose trigger matches). Returns the
+ * same `{ firedBeat, newFlags, sideEffects }` shape as evaluateStoryTriggers
+ * so callers can reuse the STORY/BEAT_FIRED machinery, or null.
+ *
+ * @param {object} gameState — full game state (needs `.story.flags`, `.npcs`)
+ * @param {object} event     — game event { type, ... }
+ */
+export function evaluateSideBeats(gameState, event) {
+  const flags = gameState?.story?.flags ?? {};
+  for (const beat of SIDE_BEATS) {
+    if (sideBeatFired(flags, beat)) continue;
+    if (!sideTriggerMatches(beat, event, gameState)) continue;
+    const newFlags = { ...flags };
+    if (beat.onComplete?.setFlag) newFlags[beat.onComplete.setFlag] = true;
+    else newFlags[firedFlagKey(beat.id)] = true;
+    return { firedBeat: beat, newFlags, sideEffects: beat.onComplete ?? {} };
+  }
+  return null;
 }
 
 // ─── Beat result applicator ───────────────────────────────────────────────────
@@ -493,7 +604,7 @@ export function applyChoiceOutcome(gameState, outcome) {
   }
 
   if (typeof outcome.queueBeat === "string") {
-    const beat = STORY_BEATS.find((b) => b.id === outcome.queueBeat);
+    const beat = findBeat(outcome.queueBeat);
     if (beat) {
       const queue = next.story?.beatQueue ?? [];
       const open = !!next.story?.queuedBeat;
