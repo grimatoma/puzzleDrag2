@@ -38,6 +38,24 @@ export const AUDIT_BOSS_COOLDOWN_DAYS = 3;
 export const CRAFT_QUEUE_HOURS = 4;
 export const CRAFT_GEM_SKIP_COST = 1;
 
+// Phase 5 — expedition rations (master doc §VI). Mine/Harbor rounds are
+// supply-structured: you bring food before the round, each unit is worth this
+// many base turns, and buildings/NPC-bonds bump it (see expeditionTurnsForFood
+// in features/zones/data.js). Tunable. `cured_meat` / `festival_loaf` /
+// `wedding_pie` / `iron_ration` are forward-declared here — those recipes don't
+// exist in the resource pipeline yet; they'll be added with the round flow
+// (Phase 5d). `fruit_apple` and `bread` are the live keys today.
+export const EXPEDITION_FOOD_TURNS = Object.freeze({
+  fruit_apple:   1,
+  bread:         1,
+  cured_meat:    2,
+  festival_loaf: 2,
+  wedding_pie:   3,
+  iron_ration:   4,
+});
+// Foods the Smokehouse's "+1 to meat-based foods" modifier applies to.
+export const EXPEDITION_MEAT_FOODS = Object.freeze(["cured_meat"]);
+
 // Save schema version. Forward migrations are not maintained — bump this
 // whenever persisted state changes shape and existing saves will be discarded.
 export const SAVE_SCHEMA_VERSION = 34;
