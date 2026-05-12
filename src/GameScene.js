@@ -16,7 +16,6 @@ import { TILE_TYPES_MAP } from "./features/tileCollection/data.js";
 const cssColor = (num) => Phaser.Display.Color.IntegerToColor(num).rgba;
 import { rounded, makeTextures, regenerateTextures } from "./textures.js";
 import { TileObj } from "./TileObj.js";
-import { getTweenDuration, screenShake } from "./a11y.js";
 import { computeBakeScale, hasValidChain } from "./game/chain.js";
 export { computeBakeScale, hasValidChain } from "./game/chain.js";
 
@@ -252,22 +251,16 @@ export class GameScene extends Phaser.Scene {
     this.registry.set("seasonBonus",          agg.seasonBonus);
   }
 
-  // ─── Motion helpers ──────────────────────────────────────────────────────
+  // ─── Tween / shake helpers ───────────────────────────────────────────────
 
-  /** Returns a minimal state-like object for the a11y motion helpers. */
-  _motionState() {
-    return { settings: { reducedMotion: this.registry.get("reducedMotion") ?? null } };
-  }
-
-  /** getTweenDuration wrapper reading reducedMotion from registry. */
+  /** Tween-duration passthrough (kept as a hook for future motion prefs). */
   _dur(base) {
-    return getTweenDuration(this._motionState(), base);
+    return base;
   }
 
-  /** screenShake wrapper — no-op when reducedMotion is on. */
+  /** Camera shake helper. */
   _shake(duration, intensity) {
-    // a11y.screenShake passes (intensity, 0.005) to camera.shake; we preserve the full params.
-    screenShake(this._motionState(), duration, { shake: () => this.cameras.main.shake(duration, intensity, false) });
+    this.cameras.main.shake(duration, intensity, false);
   }
 
   /** Returns the effective minimum chain length given the active boss only.

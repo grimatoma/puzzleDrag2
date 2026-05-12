@@ -1,5 +1,4 @@
-// Phase 11 — Polish: settings, a11y, motion, keyboard.
-// Migrated from src/__tests__/phase-11.1 through phase-11.4 tests.
+// Phase 11 — Polish: settings + tools smoke checks.
 import { describe, it, expect } from "vitest";
 import { createInitialState } from "../src/state.js";
 import { MAX_TURNS } from "../src/constants.js";
