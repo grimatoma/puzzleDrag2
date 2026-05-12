@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { NPCS } from "../constants.js";
-import { beatLines, beatChoices, beatIsContinueOnly } from "../story.js";
+import { beatLines, beatChoices, beatIsContinueOnly, beatScene, interpolateBeatText } from "../story.js";
+import { displayZoneName } from "../features/zones/data.js";
 import Icon from "./Icon.jsx";
 import RichText from "./RichText.jsx";
 
@@ -129,10 +130,12 @@ export function StoryModal({ state, dispatch }) {
 
   if (!beat) return null;
 
-  const lines = beatLines(beat);
+  const settlement = displayZoneName(state, "home");
+  const lines = beatLines(beat).map((l) => ({ ...l, text: interpolateBeatText(l.text, { settlement }) }));
   const choices = beatChoices(beat);
   const continueOnly = beatIsContinueOnly(beat);
   const prompt = beat.prompt && typeof beat.prompt === "object" ? beat.prompt : null;
+  const scene = beatScene(beat);
   const headSpeaker = lines.find((l) => l.speaker)?.speaker ?? null;
   const npc = headSpeaker ? NPCS[headSpeaker] : null;
 
@@ -152,8 +155,8 @@ export function StoryModal({ state, dispatch }) {
         role="dialog"
         aria-modal="true"
         aria-labelledby="story-win-title"
-        className="absolute inset-0 bg-black/65 grid place-items-center z-[60]"
-        style={{ animation: "fadein 0.8s ease both" }}
+        className="absolute inset-0 grid place-items-center z-[60]"
+        style={{ animation: "fadein 0.8s ease both", background: scene?.bg ?? "rgba(0,0,0,0.65)" }}
       >
         <div
           className="relative rounded-[24px] px-10 py-8 max-w-[600px] w-[94vw] text-center shadow-2xl"
@@ -186,7 +189,8 @@ export function StoryModal({ state, dispatch }) {
       role="dialog"
       aria-modal="true"
       aria-labelledby="story-modal-title"
-      className="absolute inset-0 bg-black/60 grid place-items-center z-[60] animate-fadein"
+      className="absolute inset-0 grid place-items-center z-[60] animate-fadein"
+      style={{ background: scene?.bg ?? "rgba(0,0,0,0.6)" }}
     >
       <div
         className="rounded-[20px] px-7 py-6 max-w-[480px] w-[94vw] shadow-2xl"

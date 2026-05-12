@@ -1,5 +1,6 @@
 // Phase 1 — dialogue + choice schema: beatLines / beatChoices /
-// stripSpeakerPrefix / applyChoiceOutcome, plus the STORY/PICK_CHOICE reducer.
+// stripSpeakerPrefix / applyChoiceOutcome / beatScene / interpolateBeatText,
+// plus the STORY/PICK_CHOICE reducer.
 import { describe, it, expect } from "vitest";
 import {
   beatLines,
@@ -7,6 +8,9 @@ import {
   beatIsContinueOnly,
   stripSpeakerPrefix,
   applyChoiceOutcome,
+  beatScene,
+  interpolateBeatText,
+  SCENE_THEMES,
   STORY_BEATS,
 } from "../story.js";
 import { reduce as storyReduce } from "../features/story/slice.js";
@@ -44,6 +48,49 @@ describe("beatLines", () => {
     const lines = beatLines(arrival);
     expect(lines.length).toBeGreaterThan(1);
     expect(lines.some((l) => l.speaker === "wren")).toBe(true);
+  });
+});
+
+describe("beatScene / SCENE_THEMES", () => {
+  it("returns null for a beat with no scene", () => {
+    expect(beatScene({})).toBeNull();
+    expect(beatScene({ scene: "not_a_real_scene" })).toBeNull();
+  });
+  it("returns the matching theme object", () => {
+    const t = beatScene({ scene: "ruin" });
+    expect(t).toBe(SCENE_THEMES.ruin);
+    expect(typeof t.bg).toBe("string");
+  });
+  it("every SCENE_THEMES entry has a bg string", () => {
+    for (const [k, v] of Object.entries(SCENE_THEMES)) {
+      expect(typeof v.bg, `${k}.bg`).toBe("string");
+      expect(v.bg.length).toBeGreaterThan(0);
+    }
+  });
+  it("act1_arrival uses the 'ruin' scene; act3_win uses 'dawn'", () => {
+    expect(STORY_BEATS.find((b) => b.id === "act1_arrival").scene).toBe("ruin");
+    expect(STORY_BEATS.find((b) => b.id === "act3_win").scene).toBe("dawn");
+  });
+  it("every authored beat scene resolves to a known theme", () => {
+    for (const b of STORY_BEATS) {
+      if (b.scene) expect(SCENE_THEMES[b.scene], `${b.id} scene ${b.scene}`).toBeTruthy();
+    }
+  });
+});
+
+describe("interpolateBeatText", () => {
+  it("replaces known {tokens}", () => {
+    expect(interpolateBeatText("Welcome to {settlement}.", { settlement: "Brackenfell" })).toBe("Welcome to Brackenfell.");
+  });
+  it("leaves unknown tokens verbatim", () => {
+    expect(interpolateBeatText("Hello {unknown}.", { settlement: "X" })).toBe("Hello {unknown}.");
+  });
+  it("handles text with no tokens, and non-string input", () => {
+    expect(interpolateBeatText("plain text", {})).toBe("plain text");
+    expect(interpolateBeatText(undefined, {})).toBe("");
+  });
+  it("act3_win's body carries a {settlement} token", () => {
+    expect(STORY_BEATS.find((b) => b.id === "act3_win").body).toContain("{settlement}");
   });
 });
 
