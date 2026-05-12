@@ -281,6 +281,15 @@ export function createFreshState(overrides) {
     season: 0,
     runes: 0,
     runeStash: 0,
+    // Phase 2 — meta-currencies (kingdom-reframe). These are inert containers
+    // for now: Embers are earned by Coexisting with hearth-keepers, Core Ingots
+    // by Driving them out (Phase 3 fork), and both are spent on per-path boon
+    // trees. Gems are the real-time-crafting skip currency (Phase 5). Heirlooms
+    // are dedicated per-biome story tokens (distinct from `runes`).
+    embers: 0,
+    coreIngots: 0,
+    gems: 0,
+    heirlooms: { heirloomSeed: 0, pactIron: 0, tidesingerPearl: 0 },
     sessionMaxTurns: MAX_TURNS,
     // Phase 2 — Start Farming session config. `selectedTiles` is the up-to-8
     // categories the player chose to expose on the board this session;
