@@ -306,6 +306,67 @@ export function completedSettlementCount(state) {
   return Object.keys(map).filter((id) => map[id]?.founded && settlementCompleted(state, id)).length;
 }
 
+// ─── Hearth-Tokens + the Old Capital gate (Phase 5b, master doc §III) ─────────
+// Each completed settlement yields a token keyed by its *type*; collecting all
+// three opens the Old Capital. `state.heirlooms.<token>` doubles as the
+// per-type latch — once > 0 the token has been earned.
+//
+// DEFERRED: the doc says a settlement "completes" only once its keeper has been
+// faced (the Coexist / Drive Out choice — Deer-Spirit for farms, Stone-Knocker
+// for mines, Tidesinger for harbors). Those per-biome keepers don't exist yet
+// (only the Frostmaw audit boss), so for now `settlementCompleted` (≥ half the
+// zone's buildings built + founded) is the bar. Tighten when the keepers land.
+// The Old Capital finale itself is intentionally undefined per the doc — the
+// map node is a locked stub.
+const _KIND_BY_ID = Object.fromEntries(MAP_NODES.map((n) => [n.id, n.kind]));
+
+/** A zone's settlement type — 'farm' | 'mine' | 'harbor' — or null if it isn't a settlement. */
+export function settlementTypeForZone(zoneId) {
+  const kind = _KIND_BY_ID[zoneId];
+  if (kind === "home" || kind === "farm") return "farm";
+  if (kind === "mine") return "mine";
+  if (kind === "fish") return "harbor";
+  return null;
+}
+
+export const HEARTH_TOKEN_FOR_TYPE = Object.freeze({
+  farm: "heirloomSeed",
+  mine: "pactIron",
+  harbor: "tidesingerPearl",
+});
+
+/** All three Hearth-Tokens collected → the Old Capital is reachable. */
+export function isOldCapitalUnlocked(state) {
+  const h = state?.heirlooms ?? {};
+  return Object.values(HEARTH_TOKEN_FOR_TYPE).every((tok) => (h[tok] ?? 0) >= 1);
+}
+
+/** How many of the three Hearth-Tokens the player holds (0–3). */
+export function hearthTokenCount(state) {
+  const h = state?.heirlooms ?? {};
+  return Object.values(HEARTH_TOKEN_FOR_TYPE).filter((tok) => (h[tok] ?? 0) >= 1).length;
+}
+
+/**
+ * Given a state, return an updated `heirlooms` object that has the Hearth-Token
+ * for every founded + completed settlement (idempotent — never removes one).
+ * Returns the original reference if nothing changed.
+ */
+export function grantEarnedHearthTokens(state) {
+  const map = state?.settlements ?? {};
+  const h = state?.heirlooms ?? {};
+  let next = h;
+  for (const zoneId of Object.keys(map)) {
+    if (!map[zoneId]?.founded || !settlementCompleted(state, zoneId)) continue;
+    const type = settlementTypeForZone(zoneId);
+    const tok = type && HEARTH_TOKEN_FOR_TYPE[type];
+    if (!tok || (next[tok] ?? 0) >= 1) continue;
+    if (next === h) next = { ...h };
+    next[tok] = 1;
+  }
+  return next;
+}
+
 // Phase 6 — Balance Manager hook. Apply any committed/draft overrides from
 // `src/config/balance.json` + the localStorage draft to the live ZONES table.
 import { BALANCE_OVERRIDES } from "../../constants.js";

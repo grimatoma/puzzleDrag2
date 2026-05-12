@@ -5,11 +5,13 @@ import {
   isSettlementFounded,
   settlementFoundingCost,
   settlementCompleted,
+  isOldCapitalUnlocked,
+  hearthTokenCount,
 } from '../zones/data.js';
 import IconCanvas, { hasIcon } from '../../ui/IconCanvas.jsx';
 
 // Zone kinds that are real settlements (and so can be founded). boss / event /
-// festival nodes aren't.
+// festival / capital nodes aren't.
 const SETTLEABLE_KINDS = new Set(['home', 'farm', 'mine', 'fish']);
 
 function NodeBadge({ nodeId, fallbackEmoji, size = 22 }) {
@@ -49,7 +51,10 @@ function useIsPortrait() {
   return portrait;
 }
 
-function getNodeStatus(node, visitedSet, discoveredSet, current, playerLevel) {
+function getNodeStatus(node, visitedSet, discoveredSet, current, playerLevel, oldCapitalUnlocked) {
+  // The Old Capital is gated by Hearth-Tokens, not by traversal/level: always
+  // visible, locked until all three tokens are held, then a "finale" stub.
+  if (node.requiresHearthTokens) return oldCapitalUnlocked ? 'capital-ready' : 'capital-locked';
   if (node.id === current) return 'current';
   if (visitedSet.has(node.id)) return 'visited';
   if (discoveredSet.has(node.id)) {
@@ -95,7 +100,7 @@ function ReadyGlow({ cx, cy }) {
   return <circle cx={cx} cy={cy} r="5.6" fill="none" stroke="#f5e09a" strokeWidth="0.6" opacity={opacity} />;
 }
 
-function MapSvg({ nodes, edges, visited, discovered, current, tapped, playerLevel, onTap }) {
+function MapSvg({ nodes, edges, visited, discovered, current, tapped, playerLevel, onTap, oldCapitalUnlocked }) {
   const visitedSet    = useMemo(() => new Set(visited),    [visited]);
   const discoveredSet = useMemo(() => new Set(discovered), [discovered]);
 
@@ -172,7 +177,7 @@ function MapSvg({ nodes, edges, visited, discovered, current, tapped, playerLeve
   });
 
   const nodeElements = nodes.map(node => {
-    const status = getNodeStatus(node, visitedSet, discoveredSet, current, playerLevel);
+    const status = getNodeStatus(node, visitedSet, discoveredSet, current, playerLevel, oldCapitalUnlocked);
     const isTapped = node.id === tapped;
     const color    = NODE_COLORS[node.kind] || '#888';
 
@@ -187,18 +192,22 @@ function MapSvg({ nodes, edges, visited, discovered, current, tapped, playerLeve
 
     // Sizes & visual treatment per status
     const isCurrent = status === 'current';
-    const isVisited = status === 'visited' || isCurrent;
+    const isVisited = status === 'visited' || isCurrent || status === 'capital-ready';
+    const showGlow  = status === 'discovered-ready' || status === 'capital-ready';
     const r = isVisited ? 4.2 : 3.2;
     const interactable = status !== 'hidden';
 
     const labelFill = isVisited ? '#2a1505' : '#6a4b31';
     const labelOpacity = isVisited ? 1 : 0.85;
-    const fillOpacity = status === 'discovered-locked' || status === 'discovered-unreachable' ? 0.5 : 0.95;
+    const fillOpacity =
+      status === 'discovered-locked' || status === 'discovered-unreachable' || status === 'capital-locked' ? 0.5 : 0.95;
 
     const strokeColor =
       isCurrent                       ? '#f5a623' :
       status === 'discovered-ready'   ? '#f5e09a' :
+      status === 'capital-ready'      ? '#d4af37' :
       status === 'discovered-locked'  ? '#9a3a2a' :
+      status === 'capital-locked'     ? '#7c5a3a' :
       status === 'discovered-unreachable' ? '#7c5a3a' :
       '#2a1a0a';
     const strokeW = isCurrent ? 1.2 : 0.7;
@@ -210,7 +219,7 @@ function MapSvg({ nodes, edges, visited, discovered, current, tapped, playerLeve
         style={{ cursor: interactable ? 'pointer' : 'default' }}
       >
         {isCurrent && <PulseRing cx={node.x} cy={node.y} />}
-        {status === 'discovered-ready' && !isTapped && <ReadyGlow cx={node.x} cy={node.y} />}
+        {showGlow && !isTapped && <ReadyGlow cx={node.x} cy={node.y} />}
         {isTapped && !isCurrent && (
           <circle cx={node.x} cy={node.y} r={r + 2.2} fill="none" stroke="#f5e09a" strokeWidth="0.9" />
         )}
@@ -290,7 +299,7 @@ function MapSvg({ nodes, edges, visited, discovered, current, tapped, playerLeve
 
 const labelStyle = { fontFamily: 'Arial, sans-serif', color: '#5a3a20' };
 
-function StatusBadge({ status, target }) {
+function StatusBadge({ status, target, tokenCount = 0 }) {
   let bg, fg, text;
   switch (status) {
     case 'current':
@@ -303,6 +312,10 @@ function StatusBadge({ status, target }) {
       bg = '#d4a585'; fg = '#5a2a1a'; text = `🔒 Requires Level ${target.level}`; break;
     case 'discovered-unreachable':
       bg = '#c8b890'; fg = '#5a3a20'; text = '↯ No path from here'; break;
+    case 'capital-locked':
+      bg = '#cdb56a'; fg = '#3a2c0e'; text = `🏛️ Hearth-Tokens ${tokenCount}/3`; break;
+    case 'capital-ready':
+      bg = '#e6c95a'; fg = '#3a2c0e'; text = '🏛️ The Old Capital awaits'; break;
     case 'hidden':
     default:
       bg = '#b89a72'; fg = '#3a2715'; text = '？ Unknown territory'; break;
@@ -410,6 +423,20 @@ function ActionControl({ status, node, isCurrent, canFastTravel, canUnlock, onTr
       </div>
     );
   }
+  if (status === 'capital-locked') {
+    return (
+      <div style={{ ...baseBox, background: '#e0d2a0', border: '2px solid #b09a50', color: '#5a4a1a', fontSize: 9, fontWeight: 'bold' }}>
+        Collect all 3 Hearth-Tokens
+      </div>
+    );
+  }
+  if (status === 'capital-ready') {
+    return (
+      <div style={{ ...baseBox, background: '#e6c95a', border: '2px solid #a88a2a', color: '#3a2c0e', fontWeight: 'bold' }}>
+        🏛️ Finale — coming soon
+      </div>
+    );
+  }
   if (status === 'discovered-unreachable') {
     return (
       <div style={{ ...baseBox, background: '#d4b585', border: '2px solid #b08040', color: '#7c4f2c', fontSize: 9 }}>
@@ -449,7 +476,9 @@ function SidePanel({ node, current, visited, discovered, playerLevel, dispatch, 
 
   const visitedSet    = new Set(visited);
   const discoveredSet = new Set(discovered);
-  const status = getNodeStatus(node, visitedSet, discoveredSet, current, playerLevel);
+  const capitalUnlocked = isOldCapitalUnlocked(state);
+  const tokenCount = hearthTokenCount(state);
+  const status = getNodeStatus(node, visitedSet, discoveredSet, current, playerLevel, capitalUnlocked);
   const color = NODE_COLORS[node.kind] || '#888';
   const isCurrent = status === 'current';
   const canFastTravel = status === 'visited';
@@ -490,7 +519,7 @@ function SidePanel({ node, current, visited, discovered, playerLevel, dispatch, 
               </div>
             </div>
           </div>
-          <StatusBadge status={status} target={node} playerLevel={playerLevel} />
+          <StatusBadge status={status} target={node} tokenCount={tokenCount} />
           <FoundSettlementControl node={node} visitedSet={visitedSet} state={state} dispatch={dispatch} fullWidth />
         </div>
 
@@ -557,7 +586,7 @@ function SidePanel({ node, current, visited, discovered, playerLevel, dispatch, 
             </div>
           </div>
         </div>
-        <StatusBadge status={status} target={node} playerLevel={playerLevel} />
+        <StatusBadge status={status} target={node} tokenCount={tokenCount} />
         <FoundSettlementControl node={node} visitedSet={visitedSet} state={state} dispatch={dispatch} fullWidth />
       </div>
 
@@ -713,6 +742,7 @@ export default function CartographyScreen({ state, dispatch }) {
         tapped={tapped}
         playerLevel={level}
         onTap={handleTap}
+        oldCapitalUnlocked={isOldCapitalUnlocked(state)}
       />
     </div>
   );

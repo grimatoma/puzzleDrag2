@@ -213,6 +213,22 @@ export const MAP_NODES = [
     ],
     plotCount: 8,
   },
+  {
+    // Phase 5b — the meta-endgame destination (master doc §III "The Old
+    // Capital"). It is NOT travelled to like a normal zone: it stays visible on
+    // the map but locked until the player holds all three Hearth-Tokens, then
+    // shows a "finale coming soon" stub (the finale itself is TBD per the doc).
+    id: 'oldcapital', name: 'The Old Capital', kind: 'capital', icon: '🏛️',
+    x: 93, y: 50, level: 1, region: 'capital',
+    description: 'The first hearth of the old kingdom — dark for an age. They say the Ember still waits there.',
+    activities: ['Requires all 3 Hearth-Tokens', 'The Long Return ends here'],
+    requiresHearthTokens: true,
+    hasFarm: false, hasMine: false, hasWater: false,
+    startingTurns: 0,
+    entryCost: { coins: 0 },
+    buildings: [],
+    plotCount: 0,
+  },
 ];
 
 export const MAP_EDGES = [
@@ -228,6 +244,8 @@ export const MAP_EDGES = [
   ['fairground', 'forge'],
   ['fairground', 'pit'],
   ['forge', 'pit'],
+  ['forge', 'oldcapital'],
+  ['pit', 'oldcapital'],
 ];
 
 export const NODE_COLORS = {
@@ -238,6 +256,7 @@ export const NODE_COLORS = {
   festival: '#c8923a',
   boss:     '#3a1a1a',
   event:    '#5a7a9a',
+  capital:  '#d4af37',
 };
 
 // Background zone tints, drawn as soft circles behind the node graph.
@@ -249,6 +268,7 @@ export const REGIONS = [
   { id: 'mine',   label: 'Stoneholds',  cx: 72, cy: 30, rx: 22, ry: 18, fill: '#a8a4a0' },
   { id: 'coast',  label: 'The Coast',   cx: 16, cy: 86, rx: 14, ry: 12, fill: '#9ab8c4' },
   { id: 'boss',   label: 'The Deep',    cx: 90, cy: 72, rx: 12, ry: 16, fill: '#8a5050' },
+  { id: 'capital', label: 'The Old Capital', cx: 93, cy: 50, rx: 7, ry: 18, fill: '#cdb56a' },
 ];
 
 export const KIND_LABELS = {
@@ -259,4 +279,5 @@ export const KIND_LABELS = {
   festival: 'Festival',
   boss:     'Boss Arena',
   event:    'Wayside Event',
+  capital:  'The Old Capital',
 };
