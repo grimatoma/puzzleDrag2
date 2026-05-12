@@ -21,7 +21,6 @@ function minState(overrides = {}) {
     pendingView: null,
     seasonStats: { harvests: 0, upgrades: 0, ordersFilled: 0, coins: 0 },
     _hintsShown: {},
-    npcBond: { mira: 5, tomas: 5, bram: 5, liss: 5, wren: 5 },
     ...overrides,
   };
 }

@@ -1,4 +1,3 @@
-import { MoodPanel } from "../mood/index.jsx";
 import { ApprenticesPanel } from "../apprentices/index.jsx";
 import { WorkersPanel } from "../workers/index.jsx";
 import { CompactOrders } from "../../ui/Inventory.jsx";
@@ -9,13 +8,13 @@ import Icon from "../../ui/Icon.jsx";
 
 export const viewKey = "townsfolk";
 
-const TABS = ["mood", "apprentices", "workers", "quests", "castle", "bosses", "orders"];
+const TABS = ["apprentices", "workers", "quests", "castle", "bosses", "orders"];
 
 export default function TownsfolkScreen({ state, dispatch }) {
   // Tab lives in viewParams so the URL (src/router.js) is the single source
   // of truth — back/forward and deep links land on the same sub-tab.
   const requested = state?.viewParams?.tab;
-  const tab = TABS.includes(requested) ? requested : "mood";
+  const tab = TABS.includes(requested) ? requested : "apprentices";
   const setTab = (next) => dispatch({ type: "SET_VIEW_PARAMS", params: { tab: next } });
   return (
     <div className="absolute inset-0 bg-gradient-to-b from-[#7c4f2c] to-[#6b4225] border-[3px] border-[#e2c19b] flex flex-col overflow-hidden">
@@ -28,7 +27,6 @@ export default function TownsfolkScreen({ state, dispatch }) {
       </div>
       <div className="flex gap-1.5 px-3 pt-2 flex-shrink-0 flex-wrap">
         {[
-          { key: "mood", label: "Mood", icon: "ui_heart" },
           { key: "apprentices", label: "Townsfolk", icon: "ui_people" },
           { key: "workers", label: "Workers", icon: "ui_build" },
           { key: "quests", label: "Quests", icon: "ui_clipboard" },
@@ -50,9 +48,7 @@ export default function TownsfolkScreen({ state, dispatch }) {
       </div>
       <div className="flex-1 min-h-0 overflow-y-auto px-3 py-3">
         <div className="max-w-[640px] mx-auto">
-          {tab === "mood" ? (
-            <MoodPanel state={state} dispatch={dispatch} showHeader={false} />
-          ) : tab === "apprentices" ? (
+          {tab === "apprentices" ? (
             <ApprenticesPanel state={state} dispatch={dispatch} showHeader={false} />
           ) : tab === "workers" ? (
             <WorkersPanel state={state} dispatch={dispatch} />

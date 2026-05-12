@@ -43,7 +43,6 @@ export const KNOWN_MODALS = new Set([
   "menu",
   "boss",
   "apprentices",
-  "mood",
   "tutorial",
 ]);
 
