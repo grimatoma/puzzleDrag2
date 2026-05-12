@@ -1,6 +1,7 @@
 import { RECIPES, AUDIT_BOSS_COOLDOWN_DAYS } from "../../constants.js";
 import { BOSSES, BOSS_WINDOW_TURNS, bossReward as bossRewardFn } from "../bosses/data.js";
 import { awardXp } from "../almanac/data.js";
+import { applyChoiceOutcome } from "../../story.js";
 
 const AUDIT_BOSS_COOLDOWN_MS = AUDIT_BOSS_COOLDOWN_DAYS * 24 * 60 * 60 * 1000;
 
@@ -163,6 +164,7 @@ export function reduce(state, action) {
 
     case "BOSS/RESOLVE": {
       const won = !!action.won;
+      const defeatedKey = state.boss?.key; // capture before `base` clears it
       const base = {
         ...state,
         boss: null,
@@ -181,7 +183,7 @@ export function reduce(state, action) {
         const earnedCoins = rewardCoins > 0 ? rewardCoins : 200 * year; // guaranteed-win floor
         // §17 locked: 25 XP per boss win into almanac
         const { newState: afterBossXp } = awardXp(base, 25);
-        return {
+        let result = {
           ...afterBossXp,
           bossesDefeated: (state.bossesDefeated || 0) + 1,
           coins: (state.coins || 0) + earnedCoins,
@@ -193,6 +195,21 @@ export function reduce(state, action) {
             id: Date.now(),
           },
         };
+        // Phase 3 — the Frostmaw is the hearth-keeper. On the first victory,
+        // queue the Coexist / Drive Out choice (which sets the keeper path +
+        // grants its meta-currency). On later victories, top up the path's
+        // currency quietly.
+        if (defeatedKey === "frostmaw") {
+          const flags = result.story?.flags ?? {};
+          if (!flags.keeper_choice_made) {
+            result = applyChoiceOutcome(result, { queueBeat: "frostmaw_keeper" });
+          } else if (flags.keeper_path_coexist) {
+            result = { ...result, embers: (result.embers ?? 0) + 2 };
+          } else if (flags.keeper_path_driveout) {
+            result = { ...result, coreIngots: (result.coreIngots ?? 0) + 2 };
+          }
+        }
+        return result;
       }
       return {
         ...base,
