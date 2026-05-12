@@ -1,6 +1,6 @@
 // Phase 6 — Balance Manager override functions for the new config sections.
 import { describe, it, expect } from "vitest";
-import { applyExpeditionOverrides, applyBiomeOverrides } from "../config/applyOverrides.js";
+import { applyExpeditionOverrides, applyBiomeOverrides, sanitizeTuning } from "../config/applyOverrides.js";
 
 describe("applyExpeditionOverrides", () => {
   it("merges foodTurns (tune + add) and replaces meatFoods wholesale", () => {
@@ -42,5 +42,22 @@ describe("applyBiomeOverrides", () => {
     const before = JSON.stringify(biomes);
     applyBiomeOverrides(biomes, undefined);
     expect(JSON.stringify(biomes)).toBe(before);
+  });
+});
+
+describe("sanitizeTuning", () => {
+  it("keeps only valid keys, floors integers, allows craftGemSkipCost 0", () => {
+    expect(sanitizeTuning({
+      maxTurns: 14, auditBossCooldownDays: 5.9, craftQueueHours: 6, craftGemSkipCost: 0,
+      minExpeditionTurns: 4, foundingBaseCoins: 500, foundingGrowth: 1.6, homeBiome: "marsh",
+    })).toEqual({
+      maxTurns: 14, auditBossCooldownDays: 5, craftQueueHours: 6, craftGemSkipCost: 0,
+      minExpeditionTurns: 4, foundingBaseCoins: 500, foundingGrowth: 1.6, homeBiome: "marsh",
+    });
+  });
+  it("drops invalid values and a non-object input", () => {
+    expect(sanitizeTuning({ maxTurns: 0, auditBossCooldownDays: -1, foundingGrowth: 0, homeBiome: "", craftGemSkipCost: "x" })).toEqual({});
+    expect(sanitizeTuning(undefined)).toEqual({});
+    expect(sanitizeTuning("nope")).toEqual({});
   });
 });

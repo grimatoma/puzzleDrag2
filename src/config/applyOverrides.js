@@ -428,6 +428,37 @@ export function applyBiomeOverrides(settlementBiomes, overrides) {
   }
 }
 
+/**
+ * Validate the Balance Manager "Tuning" section (loose top-level constants).
+ * Returns a clean object containing only the keys that passed validation; the
+ * caller (constants.js / zones/data.js) reassigns the matching `export let`s.
+ *   maxTurns, auditBossCooldownDays, craftQueueHours, craftGemSkipCost,
+ *   minExpeditionTurns, foundingBaseCoins  — positive integers
+ *   foundingGrowth                         — positive number
+ *   homeBiome                              — non-empty string
+ */
+export function sanitizeTuning(o) {
+  const out = {};
+  if (!o || typeof o !== "object") return out;
+  const posInt = (v) => (Number.isFinite(Number(v)) && Number(v) >= 1 ? Math.floor(Number(v)) : undefined);
+  const intFields = {
+    maxTurns: "maxTurns", auditBossCooldownDays: "auditBossCooldownDays",
+    craftQueueHours: "craftQueueHours", craftGemSkipCost: "craftGemSkipCost",
+    minExpeditionTurns: "minExpeditionTurns", foundingBaseCoins: "foundingBaseCoins",
+  };
+  for (const k of Object.keys(intFields)) {
+    const n = posInt(o[k]);
+    if (n !== undefined) out[k] = n;
+  }
+  // craftGemSkipCost may be 0 (free skip); allow it explicitly.
+  if (Number.isFinite(Number(o.craftGemSkipCost)) && Number(o.craftGemSkipCost) >= 0) {
+    out.craftGemSkipCost = Math.floor(Number(o.craftGemSkipCost));
+  }
+  if (Number.isFinite(Number(o.foundingGrowth)) && Number(o.foundingGrowth) > 0) out.foundingGrowth = Number(o.foundingGrowth);
+  if (typeof o.homeBiome === "string" && o.homeBiome.length > 0) out.homeBiome = o.homeBiome;
+  return out;
+}
+
 const HOOK_DERIVED_FIELDS = new Set([
   "freeMoves", "freeMovesIfChain", "coinBonusFlat", "coinBonusPerTile",
   "thresholdReduce", "hooks", "abilities",
