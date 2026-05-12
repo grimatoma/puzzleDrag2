@@ -5,6 +5,7 @@ import { ZONES, displayZoneName, expeditionTurnsForFood, expeditionTurnsFromSupp
 import StartFarmingModal from "../features/zones/StartFarmingModal.jsx";
 import { buildTownPlan } from "../townLayout.js";
 import TownGround from "./TownGround.jsx";
+import TownVillagers from "./TownVillagers.jsx";
 import IconCanvas from "./IconCanvas.jsx";
 import Icon from "./Icon.jsx";
 
@@ -1283,6 +1284,10 @@ export function TownView({ state, dispatch }) {
           Sits over the hills/decor backdrop so the place reads as a planned
           settlement in a valley. Buildings (below) are positioned onto its lots. */}
       <TownGround plan={townPlan} theme={theme} biomeVariant={biomeVariant} builtLots={builtLotIndices} />
+
+      {/* Townsfolk walking the streets between buildings (NPCs hang near their
+          own building when it's built). `key` re-seeds on a zone change. */}
+      <TownVillagers key={state.mapCurrent} plan={townPlan} buildings={plotById} />
 
       {/* Header */}
       <div className="absolute top-3 left-4 landscape:max-[1024px]:top-2 landscape:max-[1024px]:left-3 font-bold text-[20px] landscape:max-[1024px]:text-[15px]" style={{ color: theme.textColor }}>{locationName}</div>
