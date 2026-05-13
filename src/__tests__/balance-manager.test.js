@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   mergeOverrides,
   applyUpgradeThresholdOverrides,
-  applyResourceOverrides,
+  applyItemOverrides,
   applyRecipeOverrides,
   applyBuildingOverrides,
   applyTileOverrides,
@@ -25,28 +25,24 @@ describe("Balance Manager — override merge layer", () => {
     expect(target.wood_log).toBe(5); // < 1 rejected
   });
 
-  it("applyResourceOverrides patches BIOMES.*.resources entries by key", () => {
-    const biomes = {
-      farm: { resources: [
-        { key: "grass_hay", label: "Hay", color: 0xa8c769, value: 1, next: "grain_wheat" },
-        { key: "wood_log",  label: "Log", color: 0x9b6b3e, value: 2, next: "wood_plank" },
-      ]},
+  it("applyItemOverrides patches ITEMS entries by key", () => {
+    const items = {
+      grass_hay: { label: "Hay", color: 0xa8c769, value: 1, next: "grain_wheat" },
+      wood_log:  { label: "Log", color: 0x9b6b3e, value: 2, next: "wood_plank" },
     };
-    applyResourceOverrides(biomes, {
+    applyItemOverrides(items, {
       grass_hay: { label: "Straw", value: 3, next: "wood_log" },
     });
-    expect(biomes.farm.resources[0].label).toBe("Straw");
-    expect(biomes.farm.resources[0].value).toBe(3);
-    expect(biomes.farm.resources[0].next).toBe("wood_log");
-    expect(biomes.farm.resources[1].label).toBe("Log"); // unchanged
+    expect(items.grass_hay.label).toBe("Straw");
+    expect(items.grass_hay.value).toBe(3);
+    expect(items.grass_hay.next).toBe("wood_log");
+    expect(items.wood_log.label).toBe("Log"); // unchanged
   });
 
-  it("applyResourceOverrides treats `next: null/empty` as terminal", () => {
-    const biomes = {
-      farm: { resources: [{ key: "grass_hay", label: "Hay", next: "grain_wheat" }] },
-    };
-    applyResourceOverrides(biomes, { grass_hay: { next: null } });
-    expect(biomes.farm.resources[0].next).toBeNull();
+  it("applyItemOverrides treats `next: null/empty` as terminal", () => {
+    const items = { grass_hay: { label: "Hay", next: "grain_wheat" } };
+    applyItemOverrides(items, { grass_hay: { next: null } });
+    expect(items.grass_hay.next).toBeNull();
   });
 
   it("applyRecipeOverrides replaces inputs wholesale and rejects bad qty", () => {

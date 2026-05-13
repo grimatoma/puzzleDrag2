@@ -115,31 +115,6 @@ export function applyItemOverrides(items, overrides) {
   }
 }
 
-/**
- * Legacy compat — applyResourceOverrides patches BIOMES.*.resources entries.
- * The new code uses applyItemOverrides on the ITEMS dict, but some tests
- * still call this on the old { farm: { resources: [...] } } shape.
- */
-export function applyResourceOverrides(biomes, overrides) {
-  if (!overrides || typeof overrides !== "object") return;
-  for (const b of Object.values(biomes)) {
-    if (!Array.isArray(b.resources)) continue;
-    for (const r of b.resources) {
-      const patch = overrides[r.key];
-      if (!patch) continue;
-      if (typeof patch.label === "string") r.label = patch.label;
-      if (Number.isFinite(patch.color)) r.color = patch.color;
-      if (Number.isFinite(patch.dark)) r.dark = patch.dark;
-      if (Number.isFinite(patch.value)) r.value = patch.value;
-      if (Object.prototype.hasOwnProperty.call(patch, "next")) {
-        r.next = patch.next || null;
-      }
-      if (typeof patch.glyph === "string") r.glyph = patch.glyph;
-      if (typeof patch.description === "string") r.description = patch.description;
-    }
-  }
-}
-
 /** Apply patches to RECIPES entries. Fields: item, inputs, tier, station, coins. */
 export function applyRecipeOverrides(recipes, overrides) {
   if (!overrides || typeof overrides !== "object") return;

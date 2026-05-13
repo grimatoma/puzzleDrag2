@@ -23,6 +23,7 @@ Status legend: **[ ]** not started · **[~]** partial · **[deferred]** there's 
 - **Audit cadence** — day-cooldown audit-boss trigger (replaced the seasonal climax).
 - **Town redesign** — a procedural town plan (plaza + streets + a planned lot grid + street furniture); walking villagers on the street graph; the farm/mine/harbor entrances moved onto town lots.
 - **Balance Manager** — config tabs for every shipped data table: Tiles, Zones, Settlement Biomes, Resources, Items, Recipes, Buildings, Expedition Rations, Story·Dialogue (→ `/story/`), NPCs, Keepers, Boons (read-only), Workers, Tuning, Bosses, Achievements, Daily Rewards (+ Icons / Export / Simulate).
+- **Tech-debt sweep (Wave H)** — queued-craft `CLAIM_CRAFT` / `SKIP_CRAFT` now fire `craft_made` from coreReducer and bump `totalCrafted` from the crafting slice (achievements, story beats, `ember_drake` boss progress all advance for queued completions); pruned the 18 unused `char_*` apprentice portrait textures + their `draw*` functions (≈900 lines); collapsed the legacy `applyResourceOverrides` into `applyItemOverrides` (tests migrated, function deleted).
 
 ---
 
@@ -81,21 +82,18 @@ Status legend: **[ ]** not started · **[~]** partial · **[deferred]** there's 
 
 ## 8. Cleanup / tech debt (`DEFERRED:` notes in the code)
 
-- [deferred] Prune the ~18 unused `char_*` apprentice portrait textures + their `draw*` fns in `textures/categories/characters.js`.
-- [deferred] Remove the dead tier-entry actions + tests.
-- [deferred] Queued-craft completion (`CLAIM_CRAFT` / `SKIP_CRAFT`) doesn't fire the `craft_made` story trigger / feed `ember_drake` boss progress / bump `totalCrafted` — only instant `CRAFT_RECIPE` does. Fix with `coreReducer` CLAIM/SKIP cases.
-- [ ] 4 longstanding lint problems (`Icon.jsx` `React` unused + a setState-in-effect; `RichText.jsx` `React` unused; a `prototype.jsx` exhaustive-deps warning).
-- [ ] Converge the legacy `applyResourceOverrides` (kept for tests) with the new `applyItemOverrides`.
+- [deferred] Remove the dead tier-entry actions (`MINE/ENTER` / `HARBOR/ENTER` / `ENTER_MINE`) + their tests.
+- [ ] A handful of lint errors remain in code merged after Wave A — setState-in-effect in `FlagsTab.jsx` / `Inspector.jsx` / `Modals.jsx`, refs-during-render in `storyEditor/index.jsx`, and a `prototype.jsx` exhaustive-deps warning. The original Icon.jsx + RichText.jsx unused-`React` issues are gone (the perf-pass commits cleaned them up). Decide per case whether each warrants a refactor vs. a documented disable.
 
 ---
 
 ## Recommended next 4–5
 
-The Wave A playable spine (keeper-completes-settlement + Hearth-Token, founding enforcement + Town CTA, boon trees) is in `main` as of `11d040a`. From here:
+Wave A (the playable spine) and Wave H (tech-debt sweep — queued-craft event hookup, prune unused char_* portraits, converge `applyResourceOverrides` → `applyItemOverrides`) have landed. The dead tier-entry actions (`MINE/ENTER` / `HARBOR/ENTER` / `ENTER_MINE`) remain — they're harmless until the expedition flow gets revisited. Next:
 
-1. **Tech-debt sweep** — queued-craft completion fires `craft_made` (claim/skip currently silent re: story / `ember_drake` / `totalCrafted`); prune the ~18 unused `char_*` apprentice portraits; remove the dead tier-entry actions + their tests; converge `applyResourceOverrides` → `applyItemOverrides`. Small, isolated; clears the deferred-list before bigger features build on top.
-2. **Keeper iteration** — Drive Out as a hazard-to-outlast round (reuses the boss machinery), and a side-beat / map auto-prompt for the encounter so players don't have to seek out the "Face the keeper" button. Pays off the boon trees with more interesting paths.
-3. **Recurring festival** — turn the one-shot act-3 "Harvest Festival" into a day-cooldown event that grants small rewards. Reuses the audit-boss cadence pattern.
-4. **Daily quest pools per NPC** — extend `makeOrder` with Mira/Bram/Liss/Tomas/Wren templates from Part 5 §I, plus a Quests BM tab. Gives the per-NPC bonds something narrative to do alongside boons.
+1. **Keeper iteration** — Drive Out as a hazard-to-outlast round (reuses the boss machinery), and a side-beat / map auto-prompt for the encounter so players don't have to seek out the "Face the keeper" button. Pays off the boon trees with more interesting paths.
+2. **Recurring festival** — turn the one-shot act-3 "Harvest Festival" into a day-cooldown event that grants small rewards. Reuses the audit-boss cadence pattern.
+3. **Daily quest pools per NPC** — extend `makeOrder` with Mira/Bram/Liss/Tomas/Wren templates from Part 5 §I, plus a Quests BM tab. Gives the per-NPC bonds something narrative to do alongside boons.
+4. **Expedition flow loose ends** — remove the dead tier-entry actions + their tests now `EXPEDITION/DEPART` fully supersedes them; wire the NPC-bond / building-tier food modifiers; add the forward-declared recipes (`cured_meat`, `festival_loaf`, `wedding_pie`, `iron_ration`).
 
 Heavier / needs design input — hold for a dedicated session: the **Hollow Pact / Charter metaplot** + the **Old Capital finale**, and reconciling the **phase-39 boss overhaul**.

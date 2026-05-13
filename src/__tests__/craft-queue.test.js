@@ -92,6 +92,40 @@ describe("CRAFTING/SKIP_CRAFT", () => {
   });
 });
 
+describe("queued completions bump totalCrafted + fire craft_made", () => {
+  // Wave H — H1: claim/skip used to silently complete without bumping the
+  // achievements counter or firing the craft_made event. coreReducer now
+  // emits craft_made for both paths; the crafting slice bumps totalCrafted.
+  it("CLAIM_CRAFT bumps totalCrafted by 1", () => {
+    let s = rootReducer(bakeryReady(), { type: "CRAFTING/QUEUE_RECIPE", payload: { key: RECIPE_KEY } });
+    s = { ...s, craftQueue: [{ ...s.craftQueue[0], readyAt: Date.now() - 1000 }] };
+    const before = s.totalCrafted ?? 0;
+    s = rootReducer(s, { type: "CRAFTING/CLAIM_CRAFT", payload: { idx: 0 } });
+    expect(s.totalCrafted).toBe(before + 1);
+  });
+
+  it("SKIP_CRAFT bumps totalCrafted by 1", () => {
+    let s = rootReducer({ ...bakeryReady(), gems: 2 }, { type: "CRAFTING/QUEUE_RECIPE", payload: { key: RECIPE_KEY } });
+    const before = s.totalCrafted ?? 0;
+    s = rootReducer(s, { type: "CRAFTING/SKIP_CRAFT", payload: { idx: 0 } });
+    expect(s.totalCrafted).toBe(before + 1);
+  });
+
+  it("a rejected CLAIM_CRAFT does NOT bump totalCrafted (entry not ready)", () => {
+    const s0 = rootReducer(bakeryReady(), { type: "CRAFTING/QUEUE_RECIPE", payload: { key: RECIPE_KEY } });
+    const before = s0.totalCrafted ?? 0;
+    const s1 = rootReducer(s0, { type: "CRAFTING/CLAIM_CRAFT", payload: { idx: 0 } });
+    expect(s1.totalCrafted ?? 0).toBe(before);
+  });
+
+  it("a rejected SKIP_CRAFT does NOT bump totalCrafted (no gems)", () => {
+    const s0 = rootReducer({ ...bakeryReady(), gems: 0 }, { type: "CRAFTING/QUEUE_RECIPE", payload: { key: RECIPE_KEY } });
+    const before = s0.totalCrafted ?? 0;
+    const s1 = rootReducer(s0, { type: "CRAFTING/SKIP_CRAFT", payload: { idx: 0 } });
+    expect(s1.totalCrafted ?? 0).toBe(before);
+  });
+});
+
 describe("gems are earnable from boss wins", () => {
   it("a boss victory grants a gem", () => {
     const s0 = { ...createInitialState(), boss: { key: "storm", resource: "fish_fillet", targetCount: 6, progress: 6, turnsLeft: 5 }, modal: "boss", gems: 0 };

@@ -124,6 +124,10 @@ export function reduce(state, action) {
     }
 
     case "CRAFTING/CRAFT_RECIPE": {
+      // Instant craft — bump unconditionally; the slice's CRAFT_RECIPE always
+      // succeeds (state.js's coreReducer + crafting slice both validate inputs).
+      // Queued completions (CLAIM_CRAFT / SKIP_CRAFT) handle their own bump
+      // in the crafting slice itself, where the validation lives.
       return { ...state, totalCrafted: (state.totalCrafted || 0) + 1 };
     }
 

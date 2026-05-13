@@ -98,14 +98,10 @@ export function reduce(state, action) {
       };
     }
     case "CRAFTING/CLAIM_CRAFT": {
-      // DEFERRED: claiming/skipping a queued craft does not yet fire the
-      // `craft_made` story trigger, feed boss progress (ember_drake counts
-      // mine_ingot crafts), or bump `totalCrafted` (achievements) — only the
-      // instant CRAFT_RECIPE does (story/boss via coreReducer dispatching
-      // `craft_made`; totalCrafted via the achievements slice's CRAFT_RECIPE
-      // case). It matters only if a beat/boss/achievement ever keys on a recipe
-      // the player solely queues; fix by adding coreReducer CLAIM_CRAFT /
-      // SKIP_CRAFT cases that emit a `craft_made` event for the queued key.
+      // Queue-completion path. coreReducer (src/state.js) fires the
+      // `craft_made` event for story beats + ember_drake boss progress;
+      // we also bump achievements `totalCrafted` here so the queued path
+      // contributes to the same counter as the instant CRAFT_RECIPE.
       const idx = action.payload?.idx ?? action.idx;
       const queue = state.craftQueue ?? [];
       const entry = queue[idx];
@@ -116,6 +112,7 @@ export function reduce(state, action) {
       return {
         ...next,
         craftQueue: queue.filter((_, i) => i !== idx),
+        totalCrafted: (next.totalCrafted || 0) + 1,
         bubble: { npc: "mira", text: `Crafted ${ITEMS[recipe.item]?.label}!`, ms: 1500, id: Date.now() },
       };
     }
@@ -131,6 +128,7 @@ export function reduce(state, action) {
       return {
         ...next,
         craftQueue: queue.filter((_, i) => i !== idx),
+        totalCrafted: (next.totalCrafted || 0) + 1,
         bubble: { npc: "mira", text: `Skipped ahead — crafted ${ITEMS[recipe.item]?.label}!`, ms: 1600, id: Date.now() },
       };
     }
