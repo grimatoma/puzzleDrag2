@@ -64,7 +64,18 @@ export default function NpcsTab({ draft, updateDraft }) {
             likes: Array.isArray(p.likes) ? p.likes : d.likes,
           };
           return (
-            <Card key={id} title={`${eff.displayName} (${id})`}>
+            <Card key={id}>
+              <div className="flex items-center gap-3 mb-2">
+                <div
+                  className="flex-shrink-0 flex items-center justify-center rounded-full overflow-hidden"
+                  style={{ width: 48, height: 48, background: COLORS.parchmentDeep, border: `2px solid ${COLORS.border}` }}
+                >
+                  <Icon iconKey={`char_${id}`} size={44} />
+                </div>
+                <div className="text-[12px] font-bold uppercase tracking-wide" style={{ color: COLORS.inkSubtle }}>
+                  {eff.displayName} ({id})
+                </div>
+              </div>
               <FieldRow label="Display name">
                 <TextField value={eff.displayName} onChange={(v) => patchNpc(id, { displayName: v })} width={200} />
               </FieldRow>

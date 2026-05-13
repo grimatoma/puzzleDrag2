@@ -11,6 +11,7 @@ import {
   COLORS, NumberField, SmallButton, Pill, Card, SearchBar,
 } from "../shared.jsx";
 import AbilitiesEditor from "../AbilitiesEditor.jsx";
+import Icon from "../../ui/Icon.jsx";
 
 function Label({ children }) {
   return (
@@ -79,7 +80,12 @@ export default function WorkersTab({ draft, updateDraft }) {
             <Card key={w.id} accent={dirty ? COLORS.ember : COLORS.border}>
               <div className="flex items-start justify-between mb-2 gap-2">
                 <div className="flex items-center gap-2">
-                  <span style={{ fontSize: 18 }}>{w.icon}</span>
+                  <div
+                    className="flex-shrink-0 flex items-center justify-center rounded"
+                    style={{ width: 32, height: 32, background: COLORS.parchmentDeep }}
+                  >
+                    <Icon iconKey={w.iconKey} size={26} />
+                  </div>
                   <code
                     className="font-mono text-[10px] px-1.5 py-0.5 rounded"
                     style={{ background: COLORS.parchmentDeep, color: COLORS.ember }}

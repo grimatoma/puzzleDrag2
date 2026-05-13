@@ -6,6 +6,8 @@
 // between the hills/decor backdrop and the building illustrations so the town
 // reads as a planned settlement in a valley rather than scattered buildings.
 
+import { memo } from "react";
+
 // Floor / pavement colours per biome family (the streets themselves use the
 // theme's `road` / `roadLine` so they tie into the existing palette).
 function groundPalette(biomeVariant) {
@@ -81,7 +83,7 @@ function Planter({ x, y, pal }) {
 
 const PROP_COMPONENTS = { well: Well, lamppost: Lamppost, signpost: Signpost, cart: Cart, planter: Planter };
 
-export default function TownGround({ plan, theme, biomeVariant, builtLots }) {
+function TownGround({ plan, theme, biomeVariant, builtLots }) {
   if (!plan) return null;
   const pal = groundPalette(biomeVariant);
   const road = theme?.road || pal.pave;
@@ -152,3 +154,5 @@ export default function TownGround({ plan, theme, biomeVariant, builtLots }) {
     </svg>
   );
 }
+
+export default memo(TownGround);

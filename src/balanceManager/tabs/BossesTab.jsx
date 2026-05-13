@@ -7,6 +7,8 @@
 
 import { BOSSES } from "../../features/bosses/data.js";
 import { COLORS, TextField, TextArea, NumberField, FieldRow, Card } from "../shared.jsx";
+import Icon from "../../ui/Icon.jsx";
+import { ICON_REGISTRY } from "../../textures/iconRegistry.js";
 
 export default function BossesTab({ draft, updateDraft }) {
   function patch(id, fields) {
@@ -30,8 +32,25 @@ export default function BossesTab({ draft, updateDraft }) {
           description: p.description ?? b.description ?? "",
           modifierDescription: p.modifierDescription ?? b.modifierDescription ?? "",
         };
+        const portraitKey = `boss_${b.id}`;
+        const hasPortrait = !!ICON_REGISTRY[portraitKey];
         return (
-          <Card key={b.id} title={`${eff.name} (${b.id})`}>
+          <Card key={b.id}>
+            <div className="flex items-center gap-3 mb-2">
+              <div
+                className="flex-shrink-0 flex items-center justify-center rounded-full overflow-hidden"
+                style={{ width: 48, height: 48, background: COLORS.parchmentDeep, border: `2px solid ${COLORS.border}` }}
+              >
+                {hasPortrait ? (
+                  <Icon iconKey={portraitKey} size={44} />
+                ) : (
+                  <span className="text-[18px] opacity-50">?</span>
+                )}
+              </div>
+              <div className="text-[12px] font-bold uppercase tracking-wide" style={{ color: COLORS.inkSubtle }}>
+                {eff.name} ({b.id})
+              </div>
+            </div>
             <FieldRow label="Name"><TextField value={eff.name} onChange={(v) => patch(b.id, { name: v })} width={200} /></FieldRow>
             <FieldRow label="Season"><TextField value={eff.season} onChange={(v) => patch(b.id, { season: v })} width={120} /></FieldRow>
             <FieldRow label="Target amount" hint={`resource: ${b.target?.resource ?? "?"}`}><NumberField value={eff.targetAmount} onChange={(v) => patch(b.id, { targetAmount: v })} min={1} max={99999} /></FieldRow>

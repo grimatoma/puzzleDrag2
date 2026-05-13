@@ -9,7 +9,7 @@
 // NOTE: render this with `key={zoneId}` from the parent so a zone change
 // re-mounts it (the villagers re-seed from the new town plan).
 
-import { useEffect, useMemo, useRef } from "react";
+import { memo, useEffect, useMemo, useRef } from "react";
 
 const W = 1100, H = 600;
 
@@ -51,7 +51,7 @@ function seedVillagers(wps, adj) {
   return list;
 }
 
-export default function TownVillagers({ plan, buildings }) {
+function TownVillagers({ plan, buildings }) {
   const { wps, adj } = useMemo(() => makeGraph(plan), [plan]);
   const villagers = useMemo(() => seedVillagers(wps, adj), [wps, adj]);
   const stageRef = useRef(null);
@@ -166,3 +166,5 @@ export default function TownVillagers({ plan, buildings }) {
     </div>
   );
 }
+
+export default memo(TownVillagers);

@@ -14,6 +14,11 @@ const FOOD_LABELS = {
   supplies: "Supplies", fruit_apple: "Apple", bread: "Bread", cured_meat: "Cured Meat",
   festival_loaf: "Festival Loaf", wedding_pie: "Wedding Pie", iron_ration: "Iron Ration",
 };
+const EMPTY_OBJECT = Object.freeze({});
+const RESERVED_BUILDING_KEYS = new Set(["decorations", "_plots"]);
+const BUILDING_IDS = new Set(BUILDINGS.map((b) => b.id));
+const ALL_BUILDING_IDS = BUILDINGS.map((b) => b.id);
+const CRAFTING_STATIONS = new Set(["bakery", "forge", "larder"]);
 
 // Phase 5d — mine/harbor entry is a supply-structured expedition (master doc
 // §VI): pack food before the round, each ration is worth a number of turns
@@ -1093,7 +1098,7 @@ export function TownView({ state, dispatch }) {
     : `rgba(255,255,255,${a})`;
   // Zone config for this location controls which puzzle boards and buildings are available.
   const zoneConfig = ZONES[state.mapCurrent];
-  const locationBuilt = state.built?.[state.mapCurrent] ?? {};
+  const locationBuilt = state.built?.[state.mapCurrent] ?? EMPTY_OBJECT;
   // Town UX redesign — a procedural town *plan* (plaza + streets + a planned
   // grid of building lots) replaces the old hand-scattered plot positions. The
   // building-render below still consumes a flat `layoutPlots` of {x,y,w,h}, so
@@ -1104,50 +1109,60 @@ export function TownView({ state, dispatch }) {
     const boardKinds = [z?.hasFarm && "farm", z?.hasMine && "mine", z?.hasWater && "fish"].filter(Boolean);
     return buildTownPlan({ zoneId: state.mapCurrent, plotCount: requestedPlots, boardKinds });
   }, [state.mapCurrent, requestedPlots]);
-  const layoutPlots = townPlan.lots.map((l) => ({ x: l.cx - l.w / 2, y: l.cy - l.h / 2, w: l.w, h: l.h }));
+  const layoutPlots = useMemo(
+    () => townPlan.lots.map((l) => ({ x: l.cx - l.w / 2, y: l.cy - l.h / 2, w: l.w, h: l.h })),
+    [townPlan],
+  );
   const plotCount = layoutPlots.length;
-  const storedPlots = locationBuilt._plots ?? {};
+  const storedPlots = locationBuilt._plots ?? EMPTY_OBJECT;
   // Build a normalised plot map { idx -> buildingId | null }, auto-assigning
   // any legacy buildings that lack an entry (e.g. saves predating the plot
   // system, or tests that set { hearth: true } without _plots).
-  const RESERVED_KEYS = new Set(["decorations", "_plots"]);
-  const builtIds = Object.keys(locationBuilt).filter(
-    (k) => !RESERVED_KEYS.has(k) && locationBuilt[k] && BUILDINGS.some((b) => b.id === k),
-  );
-  const plotById = {};
-  Object.entries(storedPlots).forEach(([idx, id]) => { plotById[id] = Number(idx); });
-  const plotMap = {};
-  for (let i = 0; i < plotCount; i++) plotMap[i] = storedPlots[i] ?? null;
-  // Auto-assign any built building that doesn't yet have a plot to the first
-  // free index. Render-only — never written back to state.
-  for (const id of builtIds) {
-    if (plotById[id] !== undefined) continue;
-    for (let i = 0; i < plotCount; i++) {
-      if (plotMap[i] == null) { plotMap[i] = id; plotById[id] = i; break; }
+  const { plotById, slotRows, occupiedPlots, builtLotIndices } = useMemo(() => {
+    const builtIds = Object.keys(locationBuilt).filter(
+      (k) => !RESERVED_BUILDING_KEYS.has(k) && locationBuilt[k] && BUILDING_IDS.has(k),
+    );
+    const nextPlotById = {};
+    Object.entries(storedPlots).forEach(([idx, id]) => { nextPlotById[id] = Number(idx); });
+    const nextPlotMap = {};
+    for (let i = 0; i < plotCount; i++) nextPlotMap[i] = storedPlots[i] ?? null;
+    // Auto-assign any built building that doesn't yet have a plot to the first
+    // free index. Render-only — never written back to state.
+    for (const id of builtIds) {
+      if (nextPlotById[id] !== undefined) continue;
+      for (let i = 0; i < plotCount; i++) {
+        if (nextPlotMap[i] == null) { nextPlotMap[i] = id; nextPlotById[id] = i; break; }
+      }
     }
-  }
-  // Filter buildings to those available at this location, then by biome.
-  const allowedBuildings = zoneConfig?.buildings ?? BUILDINGS.map(b => b.id);
-  const eligibleBuildings = BUILDINGS.filter(
-    (b) => allowedBuildings.includes(b.id) && (!b.biome || b.biome === biomeVariant)
-  );
-  // Slot rows for rendering: sort by bottom edge so shorter buildings don't
-  // clip taller neighbours.
-  const slotRows = [];
-  for (let i = 0; i < plotCount; i++) {
-    const pos = layoutPlots[i];
-    if (!pos) continue;
-    slotRows.push({ idx: i, ...pos, buildingId: plotMap[i] });
-  }
-  slotRows.sort((a, b) => (a.y + a.h) - (b.y + b.h));
 
-  const occupiedPlots = Object.entries(plotMap)
-    .filter(([, id]) => id != null)
-    .length;
-  const freePlots = plotCount - occupiedPlots;
-  const builtLotIndices = new Set(
-    Object.entries(plotMap).filter(([, id]) => id != null).map(([i]) => Number(i)),
+    const rows = [];
+    for (let i = 0; i < plotCount; i++) {
+      const pos = layoutPlots[i];
+      if (!pos) continue;
+      rows.push({ idx: i, ...pos, buildingId: nextPlotMap[i] });
+    }
+    rows.sort((a, b) => (a.y + a.h) - (b.y + b.h));
+
+    const occupied = Object.entries(nextPlotMap).filter(([, id]) => id != null).length;
+    const lots = new Set(
+      Object.entries(nextPlotMap).filter(([, id]) => id != null).map(([i]) => Number(i)),
+    );
+
+    return {
+      plotById: nextPlotById,
+      slotRows: rows,
+      occupiedPlots: occupied,
+      builtLotIndices: lots,
+    };
+  }, [layoutPlots, locationBuilt, plotCount, storedPlots]);
+
+  // Filter buildings to those available at this location, then by biome.
+  const allowedBuildings = zoneConfig?.buildings ?? ALL_BUILDING_IDS;
+  const eligibleBuildings = useMemo(
+    () => BUILDINGS.filter((b) => allowedBuildings.includes(b.id) && (!b.biome || b.biome === biomeVariant)),
+    [allowedBuildings, biomeVariant],
   );
+  const freePlots = plotCount - occupiedPlots;
 
   const builtTipHandlers = (b) => {
     const data = { label: b.name, desc: b.desc, color: b.color };
@@ -1432,8 +1447,6 @@ export function TownView({ state, dispatch }) {
             const isPlacing = !!pendingBuilding && !isBuilt;
             // Empty plots are invisible until the player enters placement mode.
             if (!isBuilt && !isPlacing) return null;
-            const CRAFTING_STATIONS = new Set(["bakery", "forge", "larder"]);
-
             const onClick = () => {
               if (longPressActive.current) { longPressActive.current = false; return; }
               // Placement mode: clicking an empty plot confirms placement.
