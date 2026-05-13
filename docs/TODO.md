@@ -16,11 +16,13 @@ Status legend: **[ ]** not started · **[~]** partial · **[deferred]** there's 
 - **Story system** — multi-line dialogue + choices schema; `STORY_BEATS`/`SIDE_BEATS`; the rewritten Wren opening + settlement naming; cutscene scenes; the Frostmaw Coexist/Drive-Out fork; side-beat infra + Mira's Letter Bond-8 arc. A full-page **visual decision-tree story editor at `/story/`** (edit titles/scenes/lines/choices + outcomes, author new branches & side beats) + a Simulate tab.
 - **Currencies & bonds** — `embers` / `coreIngots` / `gems` / `heirlooms`; multi-tier gift prefs (`loves`/`likes`) + bond bands.
 - **Keepers** — Deer-Spirit / Stone-Knocker / Tidesinger encounter config (`src/keepers.js`), `KEEPER/CONFRONT`, a "Face the keeper" affordance on the map.
-- **Settlements** — founding (`FOUND_SETTLEMENT`, escalating cost), biomes (`SETTLEMENT_BIOMES` + a biome picker), Hearth-Tokens → the Old-Capital map gate.
+- **Settlements** — founding (`FOUND_SETTLEMENT`, escalating cost), biomes (`SETTLEMENT_BIOMES` + a shared biome picker reused by map + Town), Hearth-Tokens → the Old-Capital map gate. Founding is now **enforced** reducer-side: `BUILD` / `FARM/ENTER` / `EXPEDITION/DEPART` refuse at unfounded zones, and `FOUND_SETTLEMENT` requires a prior completed settlement (skips `home`). Town view shows a centered "🏗 Found this settlement · N◉" CTA at unfounded zones, with an explanatory chip when the gate blocks.
+- **Keeper → settlement completion** — `settlementCompleted` now requires both ≥half buildings AND a keeper choice (`coexist` / `driveout`). `KEEPER/CONFRONT` mints the type's Hearth-Token when it flips a settlement complete, and overrides its own bubble with the Old-Capital unlock message when the third token lands.
+- **Boon trees** (Part 1 §X) — six catalogs (3 zone types × 2 paths, 3 boons each) in `src/features/boons/`. `BOON/PURCHASE` deducts Embers (Coexist) or Core Ingots (Drive Out), is gated by the corresponding `keeper_<zone>_<path>` flag, and stacks multiplicatively. Three effect types live: `coin_gain_mult` (chains), `bond_gain_mult` (gifts + order turn-ins), `chain_yield_mult` (resource amount per chain). Full-screen view at `state.view = "boons"` with a ✨ Boons shortcut in the Town header once any keeper has been faced; read-only BM Boons tab in the Story section.
 - **Economy** — real-time crafting queue + gem-skip; the Items registry (`ITEMS`); expedition-supply model for mine/harbor (`EXPEDITION/DEPART` + a "Pack provisions" packer) + the `EXPEDITION_FOOD_TURNS` table.
 - **Audit cadence** — day-cooldown audit-boss trigger (replaced the seasonal climax).
 - **Town redesign** — a procedural town plan (plaza + streets + a planned lot grid + street furniture); walking villagers on the street graph; the farm/mine/harbor entrances moved onto town lots.
-- **Balance Manager** — config tabs for every shipped data table: Tiles, Zones, Settlement Biomes, Resources, Items, Recipes, Buildings, Expedition Rations, Story·Dialogue (→ `/story/`), NPCs, Keepers, Workers, Tuning, Bosses, Achievements, Daily Rewards (+ Icons / Export / Simulate).
+- **Balance Manager** — config tabs for every shipped data table: Tiles, Zones, Settlement Biomes, Resources, Items, Recipes, Buildings, Expedition Rations, Story·Dialogue (→ `/story/`), NPCs, Keepers, Boons (read-only), Workers, Tuning, Bosses, Achievements, Daily Rewards (+ Icons / Export / Simulate).
 
 ---
 
@@ -28,8 +30,7 @@ Status legend: **[ ]** not started · **[~]** partial · **[deferred]** there's 
 
 "The Long Return" as a *multi-settlement metaplot* barely exists yet; the story is still essentially the single home-Vale arc (act 1/2/3).
 
-- [ ] **Hollow Pact / Charter** (Part 2 §III, Part 4 §III, Part 2 §V) — the six pact terms; violation tracking (every Drive-Out breaks term 5); charter audits; the finale's "Ember reads your record" → offers the next century's Charter terms shaped by your choices (order, currency proportions, who you drove out). *Today: `keeper_<zone>_<path>` flags + Embers/Ingots are recorded but nothing consumes them.*
-- [ ] **Boon trees** (Part 1 §X) — spend Embers (Coexist) / Core Ingots (Drive Out) on 3–5 per-path zone boons. Catalogs + a spending screen + a BM "Boons" tab.
+- [ ] **Hollow Pact / Charter** (Part 2 §III, Part 4 §III, Part 2 §V) — the six pact terms; violation tracking (every Drive-Out breaks term 5); charter audits; the finale's "Ember reads your record" → offers the next century's Charter terms shaped by your choices (order, currency proportions, who you drove out). *Today: `keeper_<zone>_<path>` flags + Embers/Ingots are recorded; boons spend them, but the Charter itself doesn't read them yet.*
 - [ ] **Kingdom story phases** (Part 4 §III: First Light → Network Wakes → Charter Stirs → Old Capital → Sandbox) + cross-settlement NPC-arrival timing / order consequences (Part 4 §XVIII).
 - [ ] **More Bond-8 arcs** (Part 4 §II) — Bram's Brother's Tools, Liss's Buried Charter, Tomas's recurring Lane-Naming. *(Only Mira's Letter exists.)*
 - [ ] **Banner Emblem** (Part 4 §V) — post-finale sandbox lock-in (5 emblem choices).
@@ -39,9 +40,7 @@ Status legend: **[ ]** not started · **[~]** partial · **[deferred]** there's 
 
 ## 2. Settlement & world systems
 
-- [deferred] **Keeper choice should *complete* a settlement** — `settlementCompleted` is "≥ half a zone's buildings built"; per the doc it should also need the keeper Coexist/Drive-Out choice. (Then grant the Hearth-Token off that, and re-run `grantEarnedHearthTokens` from `KEEPER/CONFRONT`.)
-- [~] **Keeper iteration** — Drive Out should be a high-difficulty round with the keeper as a hazard to outlast (currently a direct claim); encounters should *appear/trigger* (a side-beat or map prompt) rather than only being reachable via the "Face the keeper" button; add the Bramble-Folk (forest-biome keeper variant).
-- [deferred] **Founding enforcement** — founding isn't *enforced* (you can build/play at an unfounded zone); no Town-view "Found this settlement" CTA; the doc's "must have completed ≥ 1 prior settlement before founding the next" progression gate isn't enforced.
+- [~] **Keeper iteration** — Drive Out should be a high-difficulty round with the keeper as a hazard to outlast (currently a direct claim); encounters should *appear/trigger* (a side-beat or map prompt) rather than only being reachable via the "Face the keeper" button. *(Bramble-Folk forest-biome keeper variant is out of scope for now — sticking to three keepers / three Hearth-Tokens.)*
 - [deferred] **Biome hazards → GameScene** — `SETTLEMENT_BIOMES` exist but the chosen biome's hazards aren't fed to the board's hazard spawning (still reads the static `ZONES[].dangers`); the biome `bonus` is descriptive, not a real spawn multiplier. *(Skipped for now by request.)*
 - [~] **Expedition flow loose ends** — remove the dead tier-entry actions (`MINE/ENTER` / `HARBOR/ENTER` / `ENTER_MINE`) + their tests now `EXPEDITION/DEPART` superseded them; NPC-bond food modifiers (Mira bond 10 → Iron Rations +1) + building-tier modifiers (Larder +1/tier) aren't applied; the forward-declared food recipes (`cured_meat`, `festival_loaf`, `wedding_pie`, `iron_ration`) don't exist in the resource pipeline yet.
 - [ ] **Tool crossover matrix** (Part 1 §IX) — tools doing different things per zone (rake → weeds in farm / dust in mine, etc.) is only partially there.
@@ -77,7 +76,7 @@ Status legend: **[ ]** not started · **[~]** partial · **[deferred]** there's 
 
 ## 7. Balance Manager polish
 
-- [ ] **Bosses** → modifier params · **Achievements** → the `counter` · **Daily Rewards** → tool/tile-unlock drops · **NPCs** → order-line templates + `GIFT_DELTAS`.
+- [ ] **Bosses** → modifier params · **Achievements** → the `counter` · **Daily Rewards** → tool/tile-unlock drops · **NPCs** → order-line templates + `GIFT_DELTAS` · **Boons** → editable name/desc/cost/effect params (the tab ships read-only; needs an `applyBoonOverrides` paralleling `applyKeeperOverrides`).
 - [ ] Maybe a **Map/cartography** tab (zone positions, edges, regions) and an **Abilities-catalog** viewer.
 
 ## 8. Cleanup / tech debt (`DEFERRED:` notes in the code)
@@ -92,9 +91,11 @@ Status legend: **[ ]** not started · **[~]** partial · **[deferred]** there's 
 
 ## Recommended next 4–5
 
-1. **Keeper choice → settlement completion** + grant the Hearth-Token off it + a "keeper ready" trigger. Small; ties the Phase-4/5/6 work into one playable spine (found → build → face keeper → token → Old Capital).
-2. **Boon trees** — spend Embers/Ingots on per-path zone boons. The currencies and `keeper_*` flags already exist; gives them a payoff; contained + a clean BM "Boons" tab.
-3. **Founding enforcement + a Town-view "Found this settlement" CTA** — closes the obvious hole; small.
-4. **Recurring festival** — turn the dead "act-3 win = festival" into an ongoing event.
+The Wave A playable spine (keeper-completes-settlement + Hearth-Token, founding enforcement + Town CTA, boon trees) is in `main` as of `11d040a`. From here:
+
+1. **Tech-debt sweep** — queued-craft completion fires `craft_made` (claim/skip currently silent re: story / `ember_drake` / `totalCrafted`); prune the ~18 unused `char_*` apprentice portraits; remove the dead tier-entry actions + their tests; converge `applyResourceOverrides` → `applyItemOverrides`. Small, isolated; clears the deferred-list before bigger features build on top.
+2. **Keeper iteration** — Drive Out as a hazard-to-outlast round (reuses the boss machinery), and a side-beat / map auto-prompt for the encounter so players don't have to seek out the "Face the keeper" button. Pays off the boon trees with more interesting paths.
+3. **Recurring festival** — turn the one-shot act-3 "Harvest Festival" into a day-cooldown event that grants small rewards. Reuses the audit-boss cadence pattern.
+4. **Daily quest pools per NPC** — extend `makeOrder` with Mira/Bram/Liss/Tomas/Wren templates from Part 5 §I, plus a Quests BM tab. Gives the per-NPC bonds something narrative to do alongside boons.
 
 Heavier / needs design input — hold for a dedicated session: the **Hollow Pact / Charter metaplot** + the **Old Capital finale**, and reconciling the **phase-39 boss overhaul**.
