@@ -20,16 +20,17 @@
 // that are set by a beat/choice keep `triggers: []`; the mechanism is here for
 // new, standalone flags.
 //
-// Supported trigger conditions (mirrors the beat triggers in src/story.js):
-//   session_start | session_ended
+// Supported trigger conditions (see `conditionMatches` in src/story.js — the
+// same vocabulary beat triggers use):
+//   session_start | session_ended | all_buildings_built
 //   act_entered          { act }
 //   resource_total       { key, amount }
 //   resource_total_multi { req: { key: amount, … } }
 //   craft_made           { item, count? }
 //   building_built       { id }
 //   boss_defeated        { id }
-//   all_buildings_built
 //   bond_at_least        { npc, amount }            (settle moments only)
+//   flag_set / flag_cleared { flag }                (a flag flipped by a flag)
 
 import { conditionMatches } from "./story.js";
 import { BALANCE_OVERRIDES } from "./constants.js";
@@ -126,7 +127,7 @@ function flagTriggerMatches(trigger, event, gameState) {
     if (event.type !== "session_start" && event.type !== "session_ended") return false;
     return (gameState?.npcs?.bonds?.[trigger.npc] ?? 0) >= trigger.amount;
   }
-  return conditionMatches(trigger, event, gameState?.inventory ?? {});
+  return conditionMatches(trigger, event, gameState?.inventory ?? {}, gameState?.story?.flags ?? {});
 }
 
 /**

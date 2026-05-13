@@ -13,7 +13,16 @@
 import { useState, useMemo } from "react";
 import { STORY_BEATS, SIDE_BEATS, firedFlagKey } from "../../story.js";
 import { STORY_FLAGS, isRegisteredFlag, flagCategory as registryFlagCategory, FLAG_CATEGORIES } from "../../flags.js";
-import { COLORS } from "../shared.jsx";
+import { NPCS } from "../../constants.js";
+import { COLORS, TextField, NumberField, SmallButton } from "../shared.jsx";
+
+const NPC_KEYS = Object.keys(NPCS ?? {});
+
+/** Effective triggers for a flag = the `draft.flags.byId.<id>.triggers` override, else the registry's. */
+function effectiveFlagTriggers(def, draft) {
+  const ov = draft?.flags?.byId?.[def?.id];
+  return (ov && Array.isArray(ov.triggers)) ? ov.triggers : (def?.triggers || []);
+}
 
 // Curated reads — `state.story.flags.X` references in slices / triggers / UI
 // that the beat/registry data can't tell us about. Keep in sync with the codebase.
@@ -45,7 +54,7 @@ const ALL_BEATS = [
 ];
 
 /** Scan beats + registry → { name → { name, def, setBy:[], clearedBy:[], readBy:[] } }. */
-function collectFlags() {
+function collectFlags(draft) {
   const flags = {};
   const ensure = (name) => (flags[name] ||= { name, def: null, setBy: [], clearedBy: [], readBy: [] });
   const asList = (v) => (Array.isArray(v) ? v : v ? [v] : []);
@@ -58,11 +67,12 @@ function collectFlags() {
     }
   }
   // Fold in the registry: attach `def`, ensure every registered flag exists,
-  // and record a "trigger" set-by for any flag that declares triggers.
+  // and record a "trigger" set-by for any flag that declares triggers (the live
+  // override draft takes precedence over the registry default).
   for (const def of STORY_FLAGS) {
     const f = ensure(def.id);
     f.def = def;
-    for (const t of (def.triggers || [])) f.setBy.push({ type: "trigger", trigger: t });
+    for (const t of effectiveFlagTriggers(def, draft)) f.setBy.push({ type: "trigger", trigger: t });
   }
   for (const f of Object.values(flags)) {
     if (FLAG_READS[f.name]) f.readBy = FLAG_READS[f.name].slice();
@@ -89,8 +99,86 @@ function triggerLabel(t) {
     case "building_built": return `build ${t.id}`;
     case "boss_defeated": return `defeat ${t.id}`;
     case "bond_at_least": return `${t.npc} bond ≥ ${t.amount}`;
+    case "flag_set": return `flag ${t.flag} set`;
+    case "flag_cleared": return `flag ${t.flag} cleared`;
     default: return t.type;
   }
+}
+
+// ─── trigger-row editor (Flags tab) ──────────────────────────────────────────
+
+const FLAG_TRIGGER_TYPES = [
+  { value: "flag_set",             label: "Flag set" },
+  { value: "resource_total",       label: "Resource ≥ N" },
+  { value: "resource_total_multi", label: "Resources ≥ N" },
+  { value: "craft_made",           label: "Item crafted" },
+  { value: "building_built",       label: "Building built" },
+  { value: "boss_defeated",        label: "Boss defeated" },
+  { value: "bond_at_least",        label: "NPC bond ≥ N" },
+  { value: "act_entered",          label: "Act entered" },
+  { value: "all_buildings_built",  label: "All buildings built" },
+  { value: "session_start",        label: "Session start" },
+  { value: "session_ended",        label: "Session end" },
+];
+function defaultFlagTrigger(type) {
+  switch (type) {
+    case "flag_set":             return { type: "flag_set", flag: STORY_FLAGS[0]?.id || "hearth_lit" };
+    case "resource_total":       return { type: "resource_total", key: "wood_log", amount: 10 };
+    case "resource_total_multi": return { type: "resource_total_multi", req: { wood_log: 10 } };
+    case "craft_made":           return { type: "craft_made", item: "bread" };
+    case "building_built":       return { type: "building_built", id: "mill" };
+    case "boss_defeated":        return { type: "boss_defeated", id: "frostmaw" };
+    case "bond_at_least":        return { type: "bond_at_least", npc: NPC_KEYS[0] || "wren", amount: 8 };
+    case "act_entered":          return { type: "act_entered", act: 2 };
+    default:                     return { type };  // session_start / session_ended / all_buildings_built
+  }
+}
+const miniSel = "text-[11px] rounded border outline-none px-1 py-0.5";
+
+function TriggerRow({ trigger, onChange, onRemove }) {
+  const t = trigger && typeof trigger === "object" && trigger.type ? trigger : { type: "session_start" };
+  return (
+    <div className="rounded-lg p-2 flex flex-wrap items-center gap-1.5" style={{ background: "rgba(62,114,54,0.06)", border: "1px solid rgba(62,114,54,0.25)" }}>
+      <span style={{ color: "#3e7236", fontSize: 13 }}>⚡</span>
+      <select value={t.type} onChange={(e) => onChange(defaultFlagTrigger(e.target.value))} className={miniSel} style={{ borderColor: COLORS.border, color: COLORS.ink }}>
+        {FLAG_TRIGGER_TYPES.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+      </select>
+      {(t.type === "flag_set" || t.type === "flag_cleared") && (
+        <TextField value={t.flag || ""} onChange={(v) => onChange({ type: t.type, flag: v })} placeholder="flag_name" width={140} />
+      )}
+      {t.type === "resource_total" && <>
+        <TextField value={t.key || ""} onChange={(v) => onChange({ ...t, key: v })} placeholder="resource id" width={120} />
+        <span className="text-[11px]" style={{ color: COLORS.inkSubtle }}>≥</span>
+        <NumberField value={t.amount ?? 1} onChange={(v) => onChange({ ...t, amount: v })} min={1} max={99999} width={60} />
+      </>}
+      {t.type === "resource_total_multi" && (
+        <textarea rows={2} className="text-[10px] rounded border outline-none px-1.5 py-1 font-mono" style={{ borderColor: COLORS.border, color: COLORS.ink, flex: "1 1 160px" }}
+          value={Object.entries(t.req || {}).map(([k, v]) => `${k} ${v}`).join("\n")} placeholder={"wood_log 20\niron_ingot 5"}
+          onChange={(e) => { const req = {}; for (const line of e.target.value.split("\n")) { const m = line.trim().match(/^(\S+)\s+(\d+)$/); if (m) req[m[1]] = Number(m[2]); } onChange({ type: "resource_total_multi", req }); }} />
+      )}
+      {t.type === "craft_made" && <>
+        <TextField value={t.item || ""} onChange={(v) => onChange(t.count > 1 ? { type: "craft_made", item: v, count: t.count } : { type: "craft_made", item: v })} placeholder="recipe id" width={110} />
+        <span className="text-[11px]" style={{ color: COLORS.inkSubtle }}>×</span>
+        <NumberField value={t.count ?? 1} onChange={(v) => onChange(v > 1 ? { type: "craft_made", item: t.item || "", count: v } : { type: "craft_made", item: t.item || "" })} min={1} max={999} width={50} />
+      </>}
+      {(t.type === "building_built" || t.type === "boss_defeated") && (
+        <TextField value={t.id || ""} onChange={(v) => onChange({ type: t.type, id: v })} placeholder={t.type === "boss_defeated" ? "boss id" : "building id"} width={130} />
+      )}
+      {t.type === "bond_at_least" && <>
+        <select value={t.npc || NPC_KEYS[0] || "wren"} onChange={(e) => onChange({ type: "bond_at_least", npc: e.target.value, amount: t.amount || 8 })} className={miniSel} style={{ borderColor: COLORS.border, color: COLORS.ink }}>
+          {NPC_KEYS.map((k) => <option key={k} value={k}>{NPCS[k]?.name || k}</option>)}
+        </select>
+        <span className="text-[11px]" style={{ color: COLORS.inkSubtle }}>≥</span>
+        <NumberField value={t.amount ?? 8} onChange={(v) => onChange({ type: "bond_at_least", npc: t.npc || NPC_KEYS[0] || "wren", amount: v })} min={1} max={999} width={50} />
+      </>}
+      {t.type === "act_entered" && (
+        <select value={t.act || 2} onChange={(e) => onChange({ type: "act_entered", act: Number(e.target.value) })} className={miniSel} style={{ borderColor: COLORS.border, color: COLORS.ink }}>
+          <option value={1}>Act I</option><option value={2}>Act II</option><option value={3}>Act III</option>
+        </select>
+      )}
+      <button onClick={onRemove} title="Remove this trigger" className="ml-auto text-[14px] leading-none px-1 font-bold" style={{ color: COLORS.redDeep }}>×</button>
+    </div>
+  );
 }
 
 // ─── Small atoms ─────────────────────────────────────────────────────────────
@@ -122,12 +210,21 @@ function SourceLine({ s }) {
 
 // ─── Inspector ───────────────────────────────────────────────────────────────
 
-function Inspector({ flag }) {
+function Inspector({ flag, draft, updateDraft }) {
   if (!flag) return <div className="flex-1 grid place-items-center text-[12px] italic" style={{ color: COLORS.inkSubtle }}>Select a flag to inspect.</div>;
   const cat = flagCategory(flag.name);
   const def = flag.def;
   const setCount = flag.setBy.length, readCount = flag.readBy.length;
-  const triggers = def?.triggers || [];
+  const triggers = def ? effectiveFlagTriggers(def, draft) : [];
+  const overridden = !!draft?.flags?.byId?.[flag.name]?.triggers;
+  const setTriggers = (id, next) => updateDraft((d) => {
+    d.flags ??= {}; d.flags.byId ??= {};
+    const ov = { ...(d.flags.byId[id] || {}) };
+    if (next && next.length > 0) ov.triggers = next; else delete ov.triggers;
+    if (Object.keys(ov).length === 0) delete d.flags.byId[id]; else d.flags.byId[id] = ov;
+    if (Object.keys(d.flags.byId).length === 0) delete d.flags.byId;
+    if (Object.keys(d.flags).length === 0) delete d.flags;
+  });
   return (
     <div className="w-[360px] flex-shrink-0 border-l-2 overflow-y-auto p-4 flex flex-col gap-4" style={{ background: "#fff", borderColor: COLORS.border }}>
       <div>
@@ -143,22 +240,32 @@ function Inspector({ flag }) {
         </div>
       </div>
 
-      {def && (
+      {def ? (
         <div>
-          <div className="text-[10px] font-bold uppercase tracking-wide mb-1.5 flex items-baseline justify-between" style={{ color: COLORS.inkSubtle }}><span>Triggers</span><span style={{ fontFamily: "ui-monospace,monospace" }}>{triggers.length}</span></div>
+          <div className="text-[10px] font-bold uppercase tracking-wide mb-1.5 flex items-baseline gap-2" style={{ color: COLORS.inkSubtle }}>
+            <span>Triggers</span><span style={{ fontFamily: "ui-monospace,monospace" }}>{triggers.length}</span>
+            {overridden && <span className="px-1.5 py-0.5 rounded-full text-[8px]" style={{ background: "rgba(214,97,42,0.14)", color: COLORS.emberDeep }}>OVERRIDDEN</span>}
+            <SmallButton className="ml-auto" onClick={() => setTriggers(flag.name, [...triggers, { type: "session_start" }])}>+ Add</SmallButton>
+            {overridden && <SmallButton onClick={() => setTriggers(flag.name, null)} title="Discard the override; revert to the registry's triggers">Reset</SmallButton>}
+          </div>
+          <div className="text-[10px] italic mb-1.5" style={{ color: COLORS.inkSubtle }}>
+            Game events that flip this flag on (it stays set once true). For a dialog that should fire after this, give a beat a <code style={{ fontFamily: "ui-monospace,monospace" }}>flag_set</code> trigger in the Story editor. Edits write <code style={{ fontFamily: "ui-monospace,monospace" }}>draft.flags.byId.{flag.name}.triggers</code>.
+          </div>
           {triggers.length === 0 ? (
-            <div className="text-[11px] italic" style={{ color: COLORS.inkSubtle }}>No event triggers — this flag is set by {flag.setBy.some((s) => s.type === "choice") ? "a choice outcome" : flag.setBy.some((s) => s.type === "beat") ? "a beat's onComplete" : "code"}. Add one in <code style={{ fontFamily: "ui-monospace,monospace" }}>src/flags.js</code> (or <code style={{ fontFamily: "ui-monospace,monospace" }}>balance.json → flags.byId.{flag.name}.triggers</code>).</div>
+            <div className="text-[11px] italic" style={{ color: COLORS.inkSubtle }}>No triggers — this flag is set by {flag.setBy.some((s) => s.type === "choice") ? "a choice outcome" : flag.setBy.some((s) => s.type === "beat") ? "a beat's onComplete" : "code"}. Add one above to make it event-driven too.</div>
           ) : (
             <div className="flex flex-col gap-1.5">
               {triggers.map((t, i) => (
-                <div key={i} className="rounded-lg p-2 flex items-center gap-2" style={{ background: "rgba(62,114,54,0.07)", border: "1px solid rgba(62,114,54,0.3)" }}>
-                  <span style={{ color: "#3e7236", fontSize: 13 }}>⚡</span>
-                  <span className="text-[11px]" style={{ color: COLORS.ink }}>{triggerLabel(t)}</span>
-                  <span className="ml-auto text-[9px]" style={{ fontFamily: "ui-monospace,monospace", color: COLORS.inkSubtle }}>{t.type}</span>
-                </div>
+                <TriggerRow key={i} trigger={t}
+                  onChange={(next) => setTriggers(flag.name, triggers.map((x, j) => (j === i ? next : x)))}
+                  onRemove={() => setTriggers(flag.name, triggers.filter((_, j) => j !== i))} />
               ))}
             </div>
           )}
+        </div>
+      ) : (
+        <div className="text-[11px] italic rounded-lg p-2" style={{ color: COLORS.inkSubtle, background: "rgba(0,0,0,0.03)" }}>
+          Ad-hoc flag — not in the registry, so it can&apos;t take editable triggers. Add it to <code style={{ fontFamily: "ui-monospace,monospace" }}>src/flags.js</code> (or <code style={{ fontFamily: "ui-monospace,monospace" }}>balance.json → flags.new</code>) first.
         </div>
       )}
 
@@ -227,8 +334,8 @@ const CATS = [
 ];
 const catChipColor = (id) => (id === "auto" ? AUTO_CAT.color : (FLAG_CATEGORIES[id]?.color || COLORS.inkSubtle));
 
-export default function FlagsTab() {
-  const allFlags = useMemo(() => collectFlags(), []);
+export default function FlagsTab({ draft = {}, updateDraft = () => {} }) {
+  const allFlags = useMemo(() => collectFlags(draft), [draft]);
   const [cat, setCat] = useState("all");
   const [q, setQ] = useState("");
   const [onlyOrphans, setOnlyOrphans] = useState(false);
@@ -325,7 +432,7 @@ export default function FlagsTab() {
             })}
           </div>
         </div>
-        <Inspector flag={selectedFlag} />
+        <Inspector flag={selectedFlag} draft={draft} updateDraft={updateDraft} />
       </div>
     </div>
   );

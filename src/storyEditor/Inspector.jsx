@@ -1,8 +1,9 @@
 // Story Tree Editor — the side inspector.
 // Edits the selected beat: presentation (title / scene / body / lines), the
 // full choice list (add / remove / label / whitelisted outcome — flags, bond,
-// currency, queueBeat target), and — for author-created draft beats — the
-// trigger and onComplete.setFlag, plus delete.
+// currency, queueBeat target), the **trigger** (when the dialog fires — full
+// game-event vocabulary, incl. `flag_set`) + `repeat`, and — for author-created
+// draft beats — onComplete.setFlag, plus delete.
 
 import { useState } from "react";
 import {
@@ -11,6 +12,7 @@ import {
   effectiveBeat, effectiveChoices, allBeatIds, findIncomingChoice,
   FieldLabel, TextInput, Btn,
 } from "./shared.jsx";
+import { STORY_FLAGS } from "../flags.js";
 
 // ─── tiny styled atoms ───────────────────────────────────────────────────────
 
@@ -230,28 +232,140 @@ function ChoicesBlock({ beatId, draft, onEditBeat, onNewBranch }) {
   );
 }
 
-// ─── trigger editor (draft beats only) ───────────────────────────────────────
+// ─── trigger editor (all beats) ──────────────────────────────────────────────
 
-function TriggerEditor({ beatId, beat, onEditBeat }) {
-  const t = beat?.trigger;
-  const isBond = t?.type === "bond_at_least";
-  return (
-    <Section title="Trigger" hint="(draft side beats: bond gate, or no trigger = queued by a choice)">
-      <Row label="Mode">
-        <select style={selStyle} value={isBond ? "bond" : "queued"}
-          onChange={(e) => onEditBeat(beatId, { trigger: e.target.value === "bond" ? { type: "bond_at_least", npc: "wren", amount: 8 } : undefined })}>
-          <option value="queued">Queued by a choice (no trigger)</option>
-          <option value="bond">Fires on bond ≥ N</option>
-        </select>
-      </Row>
-      {isBond && (
+const TRIGGER_TYPES = [
+  { value: "none",                 label: "— no trigger (queued by a choice) —" },
+  { value: "flag_set",             label: "After a flag is set" },
+  { value: "resource_total",       label: "Resource total ≥ N" },
+  { value: "resource_total_multi", label: "Several resource totals ≥ N" },
+  { value: "craft_made",           label: "An item is crafted" },
+  { value: "building_built",       label: "A building is built" },
+  { value: "boss_defeated",        label: "A boss is defeated" },
+  { value: "bond_at_least",        label: "NPC bond ≥ N (resolves at settle)" },
+  { value: "act_entered",          label: "An act is entered" },
+  { value: "all_buildings_built",  label: "All buildings are built" },
+  { value: "session_start",        label: "Every session start" },
+  { value: "session_ended",        label: "Every session end" },
+];
+const FLAG_OPTIONS = STORY_FLAGS.map((f) => f.id);
+
+function defaultTriggerFor(type) {
+  switch (type) {
+    case "flag_set":             return { type: "flag_set", flag: FLAG_OPTIONS[0] || "hearth_lit" };
+    case "resource_total":       return { type: "resource_total", key: "wood_log", amount: 10 };
+    case "resource_total_multi": return { type: "resource_total_multi", req: { wood_log: 10 } };
+    case "craft_made":           return { type: "craft_made", item: "bread" };
+    case "building_built":       return { type: "building_built", id: "mill" };
+    case "boss_defeated":        return { type: "boss_defeated", id: "frostmaw" };
+    case "bond_at_least":        return { type: "bond_at_least", npc: "wren", amount: 8 };
+    case "act_entered":          return { type: "act_entered", act: 2 };
+    case "all_buildings_built":  return { type: "all_buildings_built" };
+    case "session_start":        return { type: "session_start" };
+    case "session_ended":        return { type: "session_ended" };
+    default:                     return undefined;
+  }
+}
+
+const taStyle = { padding: "5px 7px", borderRadius: 6, border: `1.5px solid ${C.border}`, background: "#fff",
+  font: "400 11px/1.4 ui-monospace,monospace", color: C.ink, outline: "none", resize: "vertical", boxSizing: "border-box" };
+
+function TriggerFields({ trigger, onChange }) {
+  const t = trigger;
+  switch (t.type) {
+    case "flag_set":
+    case "flag_cleared":
+      return (
+        <Row label="Flag">
+          <input list="story-flag-options" style={{ ...selStyle, flex: 1, fontFamily: "ui-monospace,monospace" }} value={t.flag || ""}
+            placeholder="flag_name" onChange={(e) => onChange({ ...t, flag: e.target.value })} />
+          <datalist id="story-flag-options">{FLAG_OPTIONS.map((f) => <option key={f} value={f} />)}</datalist>
+        </Row>
+      );
+    case "resource_total":
+      return (
+        <Row label="Resource">
+          <input style={{ ...selStyle, flex: 1, fontFamily: "ui-monospace,monospace" }} value={t.key || ""} placeholder="e.g. wood_log"
+            onChange={(e) => onChange({ ...t, key: e.target.value })} />
+          <span style={{ font: "600 11px/1 system-ui", color: C.inkSubtle }}>≥</span>
+          <NumberField step="1" width={56} value={Number.isFinite(t.amount) ? t.amount : undefined}
+            onCommit={(n) => onChange({ ...t, amount: Number.isFinite(n) && n > 0 ? Math.trunc(n) : 1 })} />
+        </Row>
+      );
+    case "resource_total_multi": {
+      const text = Object.entries(t.req || {}).map(([k, v]) => `${k} ${v}`).join("\n");
+      return (
+        <Row label="Resources">
+          <textarea rows={3} value={text} placeholder={"wood_log 20\niron_ingot 5"} style={{ ...taStyle, flex: 1 }}
+            onChange={(e) => {
+              const req = {};
+              for (const line of e.target.value.split("\n")) {
+                const m = line.trim().match(/^(\S+)\s+(\d+)$/);
+                if (m) req[m[1]] = Number(m[2]);
+              }
+              onChange({ type: "resource_total_multi", req });
+            }} />
+        </Row>
+      );
+    }
+    case "craft_made":
+      return (
+        <Row label="Item">
+          <input style={{ ...selStyle, flex: 1, fontFamily: "ui-monospace,monospace" }} value={t.item || ""} placeholder="recipe id, e.g. bread"
+            onChange={(e) => onChange(t.count > 1 ? { type: "craft_made", item: e.target.value, count: t.count } : { type: "craft_made", item: e.target.value })} />
+          <span style={{ font: "600 11px/1 system-ui", color: C.inkSubtle }}>×</span>
+          <NumberField step="1" width={44} value={Number.isFinite(t.count) && t.count > 1 ? t.count : undefined}
+            onCommit={(n) => onChange(Number.isFinite(n) && n > 1 ? { type: "craft_made", item: t.item || "", count: Math.trunc(n) } : { type: "craft_made", item: t.item || "" })} />
+        </Row>
+      );
+    case "building_built":
+      return <Row label="Building"><input style={{ ...selStyle, flex: 1, fontFamily: "ui-monospace,monospace" }} value={t.id || ""} placeholder="building id, e.g. mill" onChange={(e) => onChange({ type: "building_built", id: e.target.value })} /></Row>;
+    case "boss_defeated":
+      return <Row label="Boss"><input style={{ ...selStyle, flex: 1, fontFamily: "ui-monospace,monospace" }} value={t.id || ""} placeholder="boss id, e.g. frostmaw" onChange={(e) => onChange({ type: "boss_defeated", id: e.target.value })} /></Row>;
+    case "bond_at_least":
+      return (
         <Row label="Bond ≥">
-          <select style={selStyle} value={t.npc || "wren"}
-            onChange={(e) => onEditBeat(beatId, { trigger: { type: "bond_at_least", npc: e.target.value, amount: t.amount || 8 } })}>
+          <select style={selStyle} value={t.npc || "wren"} onChange={(e) => onChange({ type: "bond_at_least", npc: e.target.value, amount: t.amount || 8 })}>
             {NPC_KEYS.map((k) => <option key={k} value={k}>{NPCS[k].name}</option>)}
           </select>
           <NumberField step="1" width={50} value={Number.isFinite(t.amount) ? t.amount : 8}
-            onCommit={(n) => onEditBeat(beatId, { trigger: { type: "bond_at_least", npc: t.npc || "wren", amount: Number.isFinite(n) && n > 0 ? Math.trunc(n) : 8 } })} />
+            onCommit={(n) => onChange({ type: "bond_at_least", npc: t.npc || "wren", amount: Number.isFinite(n) && n > 0 ? Math.trunc(n) : 8 })} />
+        </Row>
+      );
+    case "act_entered":
+      return (
+        <Row label="Act">
+          <select style={selStyle} value={t.act || 2} onChange={(e) => onChange({ type: "act_entered", act: Number(e.target.value) })}>
+            <option value={1}>I</option><option value={2}>II</option><option value={3}>III</option>
+          </select>
+        </Row>
+      );
+    default:
+      return null; // session_start / session_ended / all_buildings_built — no extra args
+  }
+}
+
+function TriggerEditor({ beatId, beat, isMainChain, onEditBeat }) {
+  const t = beat?.trigger;
+  const type = t?.type || "none";
+  const setTrigger = (next) => onEditBeat(beatId, { trigger: next ?? undefined });
+  return (
+    <Section title="Trigger" accent={isMainChain ? undefined : C.ember}
+      hint={isMainChain ? "(built-in story beat — overriding the trigger can break act order; “no trigger” reverts to the built-in)" : "(when does this dialog fire?)"}>
+      <Row label="When">
+        <select style={{ ...selStyle, flex: 1, minWidth: 0 }} value={type}
+          onChange={(e) => { const v = e.target.value; setTrigger(v === "none" ? undefined : defaultTriggerFor(v)); }}>
+          {TRIGGER_TYPES.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+        </select>
+      </Row>
+      {t && <TriggerFields trigger={t} onChange={(next) => setTrigger(next)} />}
+      {!isMainChain && (
+        <Row label="Repeat">
+          <label style={{ display: "flex", alignItems: "center", gap: 6, font: "400 11px/1.3 system-ui", color: type === "none" ? C.inkSubtle : C.inkLight }}>
+            <input type="checkbox" checked={!!beat.repeat} disabled={type === "none"}
+              onChange={(e) => onEditBeat(beatId, { repeat: e.target.checked || undefined })} />
+            re-fires every time the trigger matches {type === "none" ? "(needs a trigger)" : (t && ["resource_total", "resource_total_multi", "bond_at_least", "flag_set", "flag_cleared"].includes(t.type) ? "— at most once per settle for state conditions" : "")}
+          </label>
         </Row>
       )}
     </Section>
@@ -375,9 +489,10 @@ export default function Inspector({ beatId, draft, isDraft, onEditBeat, onNewBra
 
         <ChoicesBlock beatId={beatId} draft={draft} onEditBeat={onEditBeat} onNewBranch={onNewBranch} />
 
+        <TriggerEditor beatId={beatId} beat={beat} isMainChain={!isSide} onEditBeat={onEditBeat} />
+
         {isDraft ? (
           <>
-            <TriggerEditor beatId={beatId} beat={beat} onEditBeat={onEditBeat} />
             <Section title="On complete · setFlag" hint="(flags marked true when this beat finishes)">
               <Row label="Flags"><FlagTags value={beat.onComplete?.setFlag}
                 onChange={(v) => onEditBeat(beatId, { onComplete: v ? { setFlag: v } : null })} placeholder="flag_on_done" /></Row>
@@ -390,17 +505,12 @@ export default function Inspector({ beatId, draft, isDraft, onEditBeat, onNewBra
             </Section>
           </>
         ) : (
-          (beat.onComplete || beat.trigger) && (
-            <Section title="Built-in effects" hint="(read-only — edit in src/story.js)">
-              {beat.trigger && (
-                <div style={{ font: "400 10px/1.5 ui-monospace,monospace", color: C.inkLight }}>
-                  trigger: {JSON.stringify(beat.trigger)}
-                </div>
-              )}
-              {beat.onComplete && Object.entries(beat.onComplete).map(([k, v]) => (
+          beat.onComplete && (
+            <Section title="Built-in onComplete" hint="(read-only — edit in src/story.js)">
+              {Object.entries(beat.onComplete).map(([k, v]) => (
                 <div key={k} style={{ display: "flex", gap: 6 }}>
                   <span style={{ font: "600 9px/1.5 ui-monospace,monospace", color: C.inkSubtle, flexShrink: 0 }}>{k}:</span>
-                  <span style={{ font: "400 9px/1.5 ui-monospace,monospace", color: C.inkLight }}>{Array.isArray(v) ? v.join(", ") : String(v)}</span>
+                  <span style={{ font: "400 9px/1.5 ui-monospace,monospace", color: C.inkLight }}>{typeof v === "object" ? JSON.stringify(v) : (Array.isArray(v) ? v.join(", ") : String(v))}</span>
                 </div>
               ))}
             </Section>

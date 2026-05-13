@@ -429,13 +429,12 @@ function evaluateAndApplyStoryBeat(state, event) {
   let next = state;
   const result = evaluateStoryTriggers(next.story ?? { ...INITIAL_STORY_STATE, flags: {} }, event, totals);
   if (result) next = storySlice.reduce(next, { type: "STORY/BEAT_FIRED", payload: result });
-  // Side beats (bond arcs / side events) fire opportunistically on session
-  // start/end without blocking the main story.
-  if (event.type === "session_start" || event.type === "session_ended") {
-    const sideResult = evaluateSideBeats(next, event);
-    if (sideResult) next = storySlice.reduce(next, { type: "STORY/BEAT_FIRED", payload: sideResult });
-  }
-  // Registered flag triggers fire *after* the beat evaluator (beats own the
+  // Side beats (bond arcs / side events / editor-authored dialogs) react to any
+  // event without blocking the main story. `bond_at_least` triggers still only
+  // resolve at settle moments (gated inside sideTriggerMatches).
+  const sideResult = evaluateSideBeats(next, event);
+  if (sideResult) next = storySlice.reduce(next, { type: "STORY/BEAT_FIRED", payload: sideResult });
+  // Registered flag triggers fire *after* the beat evaluators (beats own the
   // strict story ordering; flags just react). No-op unless a flag in
   // src/flags.js declares a matching trigger.
   next = applyFlagTriggers(next, event);

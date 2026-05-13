@@ -577,22 +577,22 @@ export function sanitizeChoiceArray(raw) {
   return out;
 }
 
-/** Sanitised side-beat trigger — only the `bond_at_least` form the editor exposes. */
-export function sanitizeBeatTrigger(raw) {
-  if (!raw || typeof raw !== "object") return undefined;
-  if (raw.type === "bond_at_least" && typeof raw.npc === "string" && raw.npc.length > 0) {
-    const amt = Number(raw.amount);
-    if (Number.isFinite(amt) && amt > 0) return { type: "bond_at_least", npc: raw.npc, amount: Math.trunc(amt) };
-  }
-  return undefined;
-}
-
 /**
- * Sanitised flag trigger — the full game-event vocabulary (mirrors
- * `conditionMatches` in src/story.js + the state-driven `bond_at_least`).
+ * Sanitise a trigger condition to the known vocabulary — shared by beat triggers
+ * (`beat.trigger`, one per beat) and flag triggers (`STORY_FLAGS[i].triggers[]`),
+ * since both speak the same language (see `conditionMatches` in src/story.js):
+ *   session_start | session_ended | all_buildings_built          (no args)
+ *   act_entered          { act }
+ *   resource_total       { key, amount }
+ *   resource_total_multi { req: { key: amount, … } }
+ *   craft_made           { item, count? }
+ *   building_built       { id }
+ *   boss_defeated        { id }
+ *   bond_at_least        { npc, amount }      (state — fires at the next settle)
+ *   flag_set / flag_cleared { flag }          (state — checked on the next event)
  * Returns undefined if the shape is unrecognised / incomplete.
  */
-export function sanitizeFlagTrigger(raw) {
+export function sanitizeTrigger(raw) {
   if (!raw || typeof raw !== "object" || typeof raw.type !== "string") return undefined;
   const posInt = (v) => { const n = Number(v); return Number.isFinite(n) && n > 0 ? Math.trunc(n) : null; };
   const str = (v) => (typeof v === "string" && v.trim().length > 0 ? v.trim() : null);
@@ -628,9 +628,23 @@ export function sanitizeFlagTrigger(raw) {
       const npc = str(raw.npc), amount = posInt(raw.amount);
       return npc && amount ? { type: "bond_at_least", npc, amount } : undefined;
     }
+    case "flag_set":
+    case "flag_cleared": {
+      const flag = str(raw.flag); return flag ? { type: raw.type, flag } : undefined;
+    }
     default:
       return undefined;
   }
+}
+
+// Back-compat aliases — `applyStoryOverrides` (one trigger per beat) and
+// `applyFlagOverrides` (an array of triggers) both want the same vocabulary.
+export const sanitizeBeatTrigger = sanitizeTrigger;
+export const sanitizeFlagTrigger = sanitizeTrigger;
+
+/** `repeat` field on a beat: true (re-fires) or undefined (one-shot). */
+export function sanitizeBeatRepeat(raw) {
+  return raw === true ? true : undefined;
 }
 
 /** Sanitised array of flag triggers (drops bad entries). */
@@ -688,6 +702,7 @@ export function applyStoryOverrides(storyBeats, sideBeats, overrides) {
       if (choices && choices.length > 0) beat.choices = choices;
       const trigger = sanitizeBeatTrigger(raw.trigger);
       if (trigger) beat.trigger = trigger;
+      if (sanitizeBeatRepeat(raw.repeat)) beat.repeat = true;
       const onComplete = sanitizeBeatOnComplete(raw.onComplete);
       if (onComplete) beat.onComplete = onComplete;
       side.push(beat);
@@ -714,6 +729,9 @@ export function applyStoryOverrides(storyBeats, sideBeats, overrides) {
         }
       }
       if (patch.trigger) { const t = sanitizeBeatTrigger(patch.trigger); if (t) beat.trigger = t; }
+      if (Object.prototype.hasOwnProperty.call(patch, "repeat")) {
+        if (sanitizeBeatRepeat(patch.repeat)) beat.repeat = true; else delete beat.repeat;
+      }
       if (Object.prototype.hasOwnProperty.call(patch, "onComplete")) {
         const oc = sanitizeBeatOnComplete(patch.onComplete);
         if (oc) beat.onComplete = { ...(beat.onComplete || {}), ...oc };
