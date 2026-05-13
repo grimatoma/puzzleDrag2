@@ -18,12 +18,15 @@ export default function StoryTab() {
       <div className="rounded-xl border-2 p-5" style={{ background: COLORS.parchment, borderColor: COLORS.border, boxShadow: "0 1px 0 rgba(0,0,0,0.08)" }}>
         <div className="text-[18px] font-bold" style={{ color: COLORS.ink }}>Story &amp; Dialogue · Visual Tree Editor</div>
         <p className="text-[13px] leading-relaxed mt-2" style={{ color: COLORS.inkLight }}>
-          Beat editing now lives in the full-page <b>decision-tree editor</b> — a pan/zoom canvas of every
-          beat as a node card, with branch edges, a searchable beat list, and a side inspector for the
-          title / scene / dialogue lines / choice labels. It writes to the same draft as this Balance
-          Manager (the <code style={{ fontFamily: "ui-monospace,monospace" }}>hearth.balance.draft</code> key),
-          so edits flow through <code style={{ fontFamily: "ui-monospace,monospace" }}>applyStoryOverrides</code> exactly
-          as before — just bring your edits over there.
+          Beat editing lives in the full-page <b>decision-tree editor</b> — a pan/zoom canvas of every
+          beat as a node card, with branch edges, a searchable beat list, and a side inspector. From there you can
+          edit the title / scene / dialogue lines, <b>add · remove · re-label choices and edit their outcomes</b>
+          {" "}(flags, bond, currency, branch target), <b>author whole new dialogue branches &amp; side beats</b>,
+          and collapse / expand forks to tidy the map. It writes to the same draft as this Balance Manager
+          (the <code style={{ fontFamily: "ui-monospace,monospace" }}>hearth.balance.draft</code> key) — beat patches go to
+          {" "}<code style={{ fontFamily: "ui-monospace,monospace" }}>story.beats</code> and new beats to
+          {" "}<code style={{ fontFamily: "ui-monospace,monospace" }}>story.newBeats</code>, both picked up by
+          {" "}<code style={{ fontFamily: "ui-monospace,monospace" }}>applyStoryOverrides</code> on the game's next load.
         </p>
         <div className="text-[11px] italic mt-2" style={{ color: COLORS.inkSubtle }}>{counts}</div>
         <div className="mt-4 flex items-center gap-3">

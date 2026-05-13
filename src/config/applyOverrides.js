@@ -511,34 +511,158 @@ export function applyNpcOverrides(npcData, bondBands, overrides) {
   }
 }
 
+// ─── Story-beat sanitizers ───────────────────────────────────────────────────
+// Shared by applyStoryOverrides and the /story/ editor's draft schema.
+
+/** A story flag list value: trims, drops blanks, collapses a 1-element array to a string. */
+function sanitizeFlagList(v) {
+  const arr = Array.isArray(v) ? v : (typeof v === "string" ? [v] : []);
+  const clean = [];
+  for (const s of arr) {
+    if (typeof s !== "string") continue;
+    const t = s.trim();
+    if (t.length > 0 && !clean.includes(t)) clean.push(t);
+  }
+  if (clean.length === 0) return null;
+  return clean.length === 1 ? clean[0] : clean;
+}
+
+/** Normalised dialogue line list, or undefined if empty. */
+export function sanitizeBeatLines(raw) {
+  if (!Array.isArray(raw)) return undefined;
+  const cleaned = raw
+    .filter((l) => l && typeof l === "object" && typeof l.text === "string" && l.text.length > 0)
+    .map((l) => ({ speaker: (typeof l.speaker === "string" && l.speaker.length > 0) ? l.speaker : null, text: l.text }));
+  return cleaned.length > 0 ? cleaned : undefined;
+}
+
 /**
- * Apply patches to story beats (Phase 6, Balance Manager Story tab). `overrides`:
- *   { beats: { <beatId>: { title, scene, body,
- *                          lines: [{ speaker, text }],
- *                          choices: { <choiceId>: { label } } } } }
- * Only the *presentation* fields are editable here — triggers, onComplete
- * effects, and choice outcomes are deliberately left alone. `lines` replaces
- * wholesale. Searches both STORY_BEATS and SIDE_BEATS. Mutates beats in place.
+ * Whitelist a choice `outcome` to the keys the editor exposes:
+ *   setFlag / clearFlag (string | string[]), bondDelta { npc, amount },
+ *   embers / coreIngots / gems (int), queueBeat (string).
+ * Returns undefined if nothing survives.
+ */
+export function sanitizeChoiceOutcome(raw) {
+  if (!raw || typeof raw !== "object") return undefined;
+  const out = {};
+  const sf = sanitizeFlagList(raw.setFlag); if (sf) out.setFlag = sf;
+  const cf = sanitizeFlagList(raw.clearFlag); if (cf) out.clearFlag = cf;
+  if (raw.bondDelta && typeof raw.bondDelta === "object" && typeof raw.bondDelta.npc === "string" && raw.bondDelta.npc.length > 0) {
+    const amt = Number(raw.bondDelta.amount);
+    if (Number.isFinite(amt) && amt !== 0) out.bondDelta = { npc: raw.bondDelta.npc, amount: amt };
+  }
+  for (const k of ["embers", "coreIngots", "gems"]) {
+    const n = Number(raw[k]);
+    if (Number.isFinite(n) && n !== 0) out[k] = Math.trunc(n);
+  }
+  if (typeof raw.queueBeat === "string" && raw.queueBeat.trim().length > 0) out.queueBeat = raw.queueBeat.trim();
+  return Object.keys(out).length === 0 ? undefined : out;
+}
+
+/** Sanitised choice list (array form): `[{ id, label, outcome? }]`. */
+export function sanitizeChoiceArray(raw) {
+  if (!Array.isArray(raw)) return null;
+  const out = [];
+  const seen = new Set();
+  raw.forEach((c, i) => {
+    if (!c || typeof c !== "object") return;
+    let id = (typeof c.id === "string" && c.id.trim().length > 0) ? c.id.trim() : `choice_${i + 1}`;
+    if (seen.has(id)) id = `${id}_${i + 1}`;
+    seen.add(id);
+    const choice = { id, label: (typeof c.label === "string" && c.label.length > 0) ? c.label : "Continue" };
+    const outcome = sanitizeChoiceOutcome(c.outcome);
+    if (outcome) choice.outcome = outcome;
+    out.push(choice);
+  });
+  return out;
+}
+
+/** Sanitised side-beat trigger — only the `bond_at_least` form the editor exposes. */
+export function sanitizeBeatTrigger(raw) {
+  if (!raw || typeof raw !== "object") return undefined;
+  if (raw.type === "bond_at_least" && typeof raw.npc === "string" && raw.npc.length > 0) {
+    const amt = Number(raw.amount);
+    if (Number.isFinite(amt) && amt > 0) return { type: "bond_at_least", npc: raw.npc, amount: Math.trunc(amt) };
+  }
+  return undefined;
+}
+
+/** Sanitised `onComplete` — only `setFlag` is editable from the /story/ editor. */
+export function sanitizeBeatOnComplete(raw) {
+  if (!raw || typeof raw !== "object") return undefined;
+  const sf = sanitizeFlagList(raw.setFlag);
+  return sf ? { setFlag: sf } : undefined;
+}
+
+/**
+ * Apply patches to story beats (Balance Manager / `/story/` editor). `overrides`:
+ *   {
+ *     newBeats: [ { id, title, scene?, body?|lines?, choices?, trigger?, onComplete? } ],
+ *     beats:    { <beatId>: { title?, scene?, body?, lines?,
+ *                             choices?: { <choiceId>: { label } } | [ { id, label, outcome? } ],
+ *                             trigger?, onComplete? } }
+ *   }
+ * `newBeats` entries are appended to SIDE_BEATS (a draft side beat — optional
+ * `bond_at_least` trigger, or no trigger for a resolution branch queued by a
+ * choice's `queueBeat`). `beats` patches existing *and* just-created beats:
+ *   - presentation: title / scene / body / lines (lines replace wholesale)
+ *   - choices: an ARRAY replaces the choice list wholesale (label + whitelisted
+ *     outcome editable); an OBJECT is the legacy label-only patch map
+ *   - trigger / onComplete: only the editor-exposed forms (see sanitizers)
+ * Searches both STORY_BEATS and SIDE_BEATS. Mutates beats in place.
  */
 export function applyStoryOverrides(storyBeats, sideBeats, overrides) {
-  if (!overrides || typeof overrides !== "object" || !overrides.beats || typeof overrides.beats !== "object") return;
-  const all = [...(Array.isArray(storyBeats) ? storyBeats : []), ...(Array.isArray(sideBeats) ? sideBeats : [])];
-  for (const [beatId, patch] of Object.entries(overrides.beats)) {
-    const beat = all.find((b) => b && b.id === beatId);
-    if (!beat || !patch || typeof patch !== "object") continue;
-    if (typeof patch.title === "string" && patch.title.length > 0) beat.title = patch.title;
-    if (typeof patch.scene === "string") beat.scene = patch.scene.length > 0 ? patch.scene : undefined;
-    if (typeof patch.body === "string") beat.body = patch.body.length > 0 ? patch.body : undefined;
-    if (Array.isArray(patch.lines)) {
-      const cleaned = patch.lines
-        .filter((l) => l && typeof l === "object" && typeof l.text === "string" && l.text.length > 0)
-        .map((l) => ({ speaker: (typeof l.speaker === "string" && l.speaker.length > 0) ? l.speaker : null, text: l.text }));
-      beat.lines = cleaned.length > 0 ? cleaned : undefined;
+  if (!overrides || typeof overrides !== "object") return;
+  const story = Array.isArray(storyBeats) ? storyBeats : [];
+  const side = Array.isArray(sideBeats) ? sideBeats : [];
+
+  // 1 — author-created beats (always side beats).
+  if (Array.isArray(overrides.newBeats)) {
+    const taken = new Set([...story, ...side].map((b) => b && b.id).filter(Boolean));
+    for (const raw of overrides.newBeats) {
+      if (!raw || typeof raw !== "object") continue;
+      const id = typeof raw.id === "string" ? raw.id.trim() : "";
+      if (!id || taken.has(id)) continue;
+      taken.add(id);
+      const beat = { id, side: true, draft: true };
+      beat.title = (typeof raw.title === "string" && raw.title.length > 0) ? raw.title : id;
+      if (typeof raw.scene === "string" && raw.scene.length > 0) beat.scene = raw.scene;
+      const lines = sanitizeBeatLines(raw.lines);
+      if (lines) beat.lines = lines;
+      else if (typeof raw.body === "string" && raw.body.length > 0) beat.body = raw.body;
+      const choices = sanitizeChoiceArray(raw.choices);
+      if (choices && choices.length > 0) beat.choices = choices;
+      const trigger = sanitizeBeatTrigger(raw.trigger);
+      if (trigger) beat.trigger = trigger;
+      const onComplete = sanitizeBeatOnComplete(raw.onComplete);
+      if (onComplete) beat.onComplete = onComplete;
+      side.push(beat);
     }
-    if (patch.choices && typeof patch.choices === "object" && Array.isArray(beat.choices)) {
-      for (const [choiceId, cp] of Object.entries(patch.choices)) {
-        const ch = beat.choices.find((c) => c && c.id === choiceId);
-        if (ch && cp && typeof cp.label === "string" && cp.label.length > 0) ch.label = cp.label;
+  }
+
+  // 2 — patch existing / just-created beats.
+  if (overrides.beats && typeof overrides.beats === "object") {
+    const all = [...story, ...side];
+    for (const [beatId, patch] of Object.entries(overrides.beats)) {
+      const beat = all.find((b) => b && b.id === beatId);
+      if (!beat || !patch || typeof patch !== "object") continue;
+      if (typeof patch.title === "string" && patch.title.length > 0) beat.title = patch.title;
+      if (typeof patch.scene === "string") beat.scene = patch.scene.length > 0 ? patch.scene : undefined;
+      if (typeof patch.body === "string") beat.body = patch.body.length > 0 ? patch.body : undefined;
+      if (Array.isArray(patch.lines)) beat.lines = sanitizeBeatLines(patch.lines);
+      if (Array.isArray(patch.choices)) {
+        const arr = sanitizeChoiceArray(patch.choices);
+        beat.choices = (arr && arr.length > 0) ? arr : undefined;
+      } else if (patch.choices && typeof patch.choices === "object" && Array.isArray(beat.choices)) {
+        for (const [choiceId, cp] of Object.entries(patch.choices)) {
+          const ch = beat.choices.find((c) => c && c.id === choiceId);
+          if (ch && cp && typeof cp.label === "string" && cp.label.length > 0) ch.label = cp.label;
+        }
+      }
+      if (patch.trigger) { const t = sanitizeBeatTrigger(patch.trigger); if (t) beat.trigger = t; }
+      if (Object.prototype.hasOwnProperty.call(patch, "onComplete")) {
+        const oc = sanitizeBeatOnComplete(patch.onComplete);
+        if (oc) beat.onComplete = { ...(beat.onComplete || {}), ...oc };
       }
     }
   }

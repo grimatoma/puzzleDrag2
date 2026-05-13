@@ -1,6 +1,6 @@
 // Phase 6 — Balance Manager override functions for the new config sections.
 import { describe, it, expect } from "vitest";
-import { applyExpeditionOverrides, applyBiomeOverrides, sanitizeTuning, applyNpcOverrides, applyStoryOverrides, applyBossOverrides, applyAchievementOverrides, applyDailyRewardOverrides } from "../config/applyOverrides.js";
+import { applyExpeditionOverrides, applyBiomeOverrides, sanitizeTuning, applyNpcOverrides, applyStoryOverrides, applyBossOverrides, applyAchievementOverrides, applyDailyRewardOverrides, sanitizeChoiceOutcome, sanitizeChoiceArray, sanitizeBeatTrigger, sanitizeBeatOnComplete } from "../config/applyOverrides.js";
 
 describe("applyExpeditionOverrides", () => {
   it("merges foodTurns (tune + add) and replaces meatFoods wholesale", () => {
@@ -117,6 +117,71 @@ describe("applyStoryOverrides", () => {
     const before = JSON.stringify(beats);
     applyStoryOverrides(beats, [], undefined);
     expect(JSON.stringify(beats)).toBe(before);
+  });
+  it("array-form choices replace the list wholesale, with whitelisted outcomes", () => {
+    const beats = [{ id: "a1", title: "T", choices: [{ id: "x", label: "old", outcome: { setFlag: "f" } }] }];
+    applyStoryOverrides(beats, [], { beats: { a1: { choices: [
+      { id: "x", label: "kept", outcome: { setFlag: ["a", "b"], bondDelta: { npc: "mira", amount: 0.5 }, embers: 3, evil: "drop me" } },
+      { id: "", label: "auto-id", outcome: { queueBeat: "  res1  " } },
+      { label: "no-id", outcome: { coreIngots: 0 } }, // 0 currency dropped → empty outcome → no outcome key
+    ] } } });
+    expect(beats[0].choices).toEqual([
+      { id: "x", label: "kept", outcome: { setFlag: ["a", "b"], bondDelta: { npc: "mira", amount: 0.5 }, embers: 3 } },
+      { id: "choice_2", label: "auto-id", outcome: { queueBeat: "res1" } },
+      { id: "choice_3", label: "no-id" },
+    ]);
+  });
+  it("an empty choices array clears the fork", () => {
+    const beats = [{ id: "a1", title: "T", choices: [{ id: "x", label: "y" }] }];
+    applyStoryOverrides(beats, [], { beats: { a1: { choices: [] } } });
+    expect(beats[0].choices).toBeUndefined();
+  });
+  it("newBeats append to the side list as draft side beats; dup / blank ids skipped", () => {
+    const story = [{ id: "a1", title: "A1" }];
+    const side = [{ id: "s1", title: "S1" }];
+    applyStoryOverrides(story, side, { newBeats: [
+      { id: "branch_a", title: "Branch A", lines: [{ speaker: "wren", text: "hi" }, { text: "" }], choices: [{ id: "go", label: "Go", outcome: { setFlag: "did_a", queueBeat: "branch_b" } }] },
+      { id: "branch_b", body: "Wren: 'done.'", trigger: { type: "bond_at_least", npc: "mira", amount: 6 }, onComplete: { setFlag: ["done_b"] } },
+      { id: "a1", title: "dup — ignored" },
+      { id: "  ", title: "blank — ignored" },
+      "not an object",
+    ] });
+    expect(side).toHaveLength(3);
+    expect(side[1]).toEqual({ id: "branch_a", side: true, draft: true, title: "Branch A", lines: [{ speaker: "wren", text: "hi" }], choices: [{ id: "go", label: "Go", outcome: { setFlag: "did_a", queueBeat: "branch_b" } }] });
+    expect(side[2]).toEqual({ id: "branch_b", side: true, draft: true, title: "branch_b", body: "Wren: 'done.'", trigger: { type: "bond_at_least", npc: "mira", amount: 6 }, onComplete: { setFlag: "done_b" } });
+    expect(story).toHaveLength(1); // dup id didn't overwrite the built-in
+  });
+  it("a beats[] patch can target a just-created newBeat", () => {
+    const side = [];
+    applyStoryOverrides([], side, {
+      newBeats: [{ id: "draft1", title: "Draft 1" }],
+      beats: { draft1: { title: "Renamed", scene: "frost", choices: [{ id: "c1", label: "Pick" }] } },
+    });
+    expect(side[0]).toMatchObject({ id: "draft1", title: "Renamed", scene: "frost", choices: [{ id: "c1", label: "Pick" }] });
+  });
+});
+
+describe("story-beat sanitizers", () => {
+  it("sanitizeChoiceOutcome whitelists keys and drops zeros / blanks", () => {
+    expect(sanitizeChoiceOutcome({ setFlag: " a ", clearFlag: ["", "  "], bondDelta: { npc: "wren", amount: 0 }, embers: 0, coreIngots: 4.7, gems: -2, queueBeat: " b ", junk: 1 }))
+      .toEqual({ setFlag: "a", coreIngots: 4, gems: -2, queueBeat: "b" });
+    expect(sanitizeChoiceOutcome({ embers: 0 })).toBeUndefined();
+    expect(sanitizeChoiceOutcome(null)).toBeUndefined();
+    expect(sanitizeChoiceOutcome({ setFlag: ["x", "y", "x"] })).toEqual({ setFlag: ["x", "y"] });
+  });
+  it("sanitizeChoiceArray auto-ids, dedups, and defaults the label", () => {
+    expect(sanitizeChoiceArray([{ label: "A" }, { id: "go" }, { id: "go", label: "again" }, "nope", null]))
+      .toEqual([{ id: "choice_1", label: "A" }, { id: "go", label: "Continue" }, { id: "go_3", label: "again" }]);
+    expect(sanitizeChoiceArray("x")).toBeNull();
+  });
+  it("sanitizeBeatTrigger only accepts a positive bond_at_least", () => {
+    expect(sanitizeBeatTrigger({ type: "bond_at_least", npc: "mira", amount: 7.9 })).toEqual({ type: "bond_at_least", npc: "mira", amount: 7 });
+    expect(sanitizeBeatTrigger({ type: "bond_at_least", npc: "mira", amount: 0 })).toBeUndefined();
+    expect(sanitizeBeatTrigger({ type: "resource_total", key: "x", amount: 5 })).toBeUndefined();
+  });
+  it("sanitizeBeatOnComplete keeps only setFlag", () => {
+    expect(sanitizeBeatOnComplete({ setFlag: ["a"], spawnNPC: "mira" })).toEqual({ setFlag: "a" });
+    expect(sanitizeBeatOnComplete({ spawnNPC: "mira" })).toBeUndefined();
   });
 });
 
