@@ -23,6 +23,7 @@ import {
   branchingRowCenterY, MY, NH, Btn,
 } from "./shared.jsx";
 import Inspector from "./Inspector.jsx";
+import PreviewModal from "./PreviewModal.jsx";
 
 // ─── edges ───────────────────────────────────────────────────────────────────
 
@@ -274,7 +275,18 @@ function ExpandedCard({ node, beat, selected, draft }) {
   );
 }
 
-function TreeNode({ node, beat, selectedId, collapsed, hiddenCount, showCollapse, onSelect, onToggleCollapse, draft }) {
+function PreviewPlay({ onPlay }) {
+  return (
+    <button onClick={(e) => { e.stopPropagation(); onPlay(); }} title="Preview this dialogue (walk the branch)"
+      style={{ position: "absolute", bottom: -10, right: -10, zIndex: 4, width: 22, height: 22, borderRadius: "50%",
+        border: `1.5px solid ${C.emberDeep}`, background: C.ember, color: "#fff", font: "9px/1 system-ui", cursor: "pointer",
+        display: "grid", placeItems: "center", paddingLeft: 1, boxShadow: "0 1px 3px rgba(40,28,10,0.25)" }}>
+      ▶
+    </button>
+  );
+}
+
+function TreeNode({ node, beat, selectedId, collapsed, hiddenCount, showCollapse, onSelect, onToggleCollapse, onPreview, draft }) {
   const selected = node.id === selectedId;
   let Inner;
   if (node.draft || node.expanded) Inner = <ExpandedCard node={node} beat={beat} selected={selected} draft={draft} />;
@@ -285,6 +297,7 @@ function TreeNode({ node, beat, selectedId, collapsed, hiddenCount, showCollapse
       onClick={() => onSelect(node.id)}>
       <TriggerChip beat={beat} accent={actColor(beat)} />
       {showCollapse && <CollapseToggle collapsed={collapsed} hiddenCount={hiddenCount} onToggle={() => onToggleCollapse(node.id)} />}
+      <PreviewPlay onPlay={() => onPreview(node.id)} />
       {Inner}
     </div>
   );
@@ -401,6 +414,7 @@ export default function StoryEditorApp() {
   const [pan, setPan] = useState({ x: 20, y: 20 });
   const [dragging, setDragging] = useState(false);
   const [collapsed, setCollapsed] = useState(() => readCollapsed());
+  const [previewBeatId, setPreviewBeatId] = useState(null);
   const isDragging = useRef(false);
   const dragStart = useRef(null);
   const canvasRef = useRef(null);
@@ -599,14 +613,22 @@ export default function StoryEditorApp() {
             {view.nodes.map((node) => (
               <TreeNode key={node.id} node={node} beat={effectiveBeat(node.id, draft)} selectedId={selectedId}
                 collapsed={collapsed.has(node.id)} hiddenCount={view.hiddenCounts[node.id] || 0}
-                showCollapse={collapsible.has(node.id)} onSelect={setSelectedId} onToggleCollapse={toggleCollapse} draft={draft} />
+                showCollapse={collapsible.has(node.id)} onSelect={setSelectedId} onToggleCollapse={toggleCollapse}
+                onPreview={setPreviewBeatId} draft={draft} />
             ))}
           </div>
         </div>
 
         <Inspector beatId={selectedId} draft={draft} isDraft={selIsDraft}
-          onEditBeat={editBeat} onNewBranch={onNewBranch} onDeleteBeat={deleteDraftBeat} onSelect={setSelectedId} />
+          onEditBeat={editBeat} onNewBranch={onNewBranch} onDeleteBeat={deleteDraftBeat}
+          onSelect={setSelectedId} onPreview={setPreviewBeatId} />
       </div>
+
+      {previewBeatId && (
+        <PreviewModal key={previewBeatId} startBeatId={previewBeatId} draft={draft}
+          onClose={() => setPreviewBeatId(null)}
+          onOpenInEditor={(id) => setSelectedId(id)} />
+      )}
     </div>
   );
 }

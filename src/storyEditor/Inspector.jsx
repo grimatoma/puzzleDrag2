@@ -260,7 +260,7 @@ function TriggerEditor({ beatId, beat, onEditBeat }) {
 
 // ─── inspector shell ─────────────────────────────────────────────────────────
 
-export default function Inspector({ beatId, draft, isDraft, onEditBeat, onNewBranch, onDeleteBeat, onSelect }) {
+export default function Inspector({ beatId, draft, isDraft, onEditBeat, onNewBranch, onDeleteBeat, onSelect, onPreview }) {
   const beat = effectiveBeat(beatId, draft);
   if (!beat) {
     return (
@@ -306,7 +306,11 @@ export default function Inspector({ beatId, draft, isDraft, onEditBeat, onNewBra
               RESOLUTION
             </span>
           )}
-          <span style={{ marginLeft: "auto", font: "500 9px/1 ui-monospace,monospace", color: C.inkSubtle }}>{beatId}</span>
+          <button onClick={() => onPreview && onPreview(beatId)} title="Preview this dialogue (walk the branch)"
+            style={{ marginLeft: "auto", display: "inline-flex", alignItems: "center", gap: 4, padding: "3px 9px", borderRadius: 999,
+              border: `1.5px solid ${C.emberDeep}`, background: C.ember, color: "#fff", font: "700 9px/1 system-ui",
+              letterSpacing: "0.06em", textTransform: "uppercase", cursor: "pointer" }}>▶ Preview</button>
+          <span style={{ width: "100%", textAlign: "right", marginTop: 2, font: "500 9px/1 ui-monospace,monospace", color: C.inkSubtle }}>{beatId}</span>
         </div>
         {ts && (
           <div style={{ display: "flex", alignItems: "center", gap: 5, padding: "4px 7px", borderRadius: 6,
