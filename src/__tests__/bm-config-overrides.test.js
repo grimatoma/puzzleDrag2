@@ -1,6 +1,6 @@
 // Phase 6 — Balance Manager override functions for the new config sections.
 import { describe, it, expect } from "vitest";
-import { applyExpeditionOverrides, applyBiomeOverrides, sanitizeTuning, applyNpcOverrides, applyStoryOverrides, applyBossOverrides, applyAchievementOverrides, applyDailyRewardOverrides, sanitizeChoiceOutcome, sanitizeChoiceArray, sanitizeBeatTrigger, sanitizeBeatOnComplete } from "../config/applyOverrides.js";
+import { applyExpeditionOverrides, applyBiomeOverrides, sanitizeTuning, applyNpcOverrides, applyStoryOverrides, applyBossOverrides, applyAchievementOverrides, applyDailyRewardOverrides, sanitizeChoiceOutcome, sanitizeChoiceArray, sanitizeBeatTrigger, sanitizeBeatOnComplete, applyFlagOverrides, sanitizeFlagTrigger, sanitizeFlagTriggerArray } from "../config/applyOverrides.js";
 
 describe("applyExpeditionOverrides", () => {
   it("merges foodTurns (tune + add) and replaces meatFoods wholesale", () => {
@@ -182,6 +182,67 @@ describe("story-beat sanitizers", () => {
   it("sanitizeBeatOnComplete keeps only setFlag", () => {
     expect(sanitizeBeatOnComplete({ setFlag: ["a"], spawnNPC: "mira" })).toEqual({ setFlag: "a" });
     expect(sanitizeBeatOnComplete({ spawnNPC: "mira" })).toBeUndefined();
+  });
+});
+
+describe("flag-trigger sanitizers", () => {
+  it("sanitizeFlagTrigger accepts the full event vocabulary, rejects junk", () => {
+    expect(sanitizeFlagTrigger({ type: "session_start" })).toEqual({ type: "session_start" });
+    expect(sanitizeFlagTrigger({ type: "all_buildings_built", extra: 1 })).toEqual({ type: "all_buildings_built" });
+    expect(sanitizeFlagTrigger({ type: "act_entered", act: "3" })).toEqual({ type: "act_entered", act: 3 });
+    expect(sanitizeFlagTrigger({ type: "act_entered", act: 0 })).toBeUndefined();
+    expect(sanitizeFlagTrigger({ type: "resource_total", key: " wood_log ", amount: 30.9 })).toEqual({ type: "resource_total", key: "wood_log", amount: 30 });
+    expect(sanitizeFlagTrigger({ type: "resource_total", key: "", amount: 5 })).toBeUndefined();
+    expect(sanitizeFlagTrigger({ type: "resource_total_multi", req: { a: 2, b: 0, "": 3 } })).toEqual({ type: "resource_total_multi", req: { a: 2 } });
+    expect(sanitizeFlagTrigger({ type: "resource_total_multi", req: { b: 0 } })).toBeUndefined();
+    expect(sanitizeFlagTrigger({ type: "craft_made", item: "bread" })).toEqual({ type: "craft_made", item: "bread" });
+    expect(sanitizeFlagTrigger({ type: "craft_made", item: "bread", count: 3 })).toEqual({ type: "craft_made", item: "bread", count: 3 });
+    expect(sanitizeFlagTrigger({ type: "building_built", id: "mill" })).toEqual({ type: "building_built", id: "mill" });
+    expect(sanitizeFlagTrigger({ type: "boss_defeated", id: "frostmaw" })).toEqual({ type: "boss_defeated", id: "frostmaw" });
+    expect(sanitizeFlagTrigger({ type: "bond_at_least", npc: "mira", amount: 8 })).toEqual({ type: "bond_at_least", npc: "mira", amount: 8 });
+    expect(sanitizeFlagTrigger({ type: "bond_at_least", npc: "mira" })).toBeUndefined();
+    expect(sanitizeFlagTrigger({ type: "season_entered", season: "winter" })).toBeUndefined();
+    expect(sanitizeFlagTrigger(null)).toBeUndefined();
+  });
+  it("sanitizeFlagTriggerArray drops bad entries", () => {
+    expect(sanitizeFlagTriggerArray([{ type: "session_start" }, { type: "junk" }, null, { type: "building_built", id: "mill" }]))
+      .toEqual([{ type: "session_start" }, { type: "building_built", id: "mill" }]);
+    expect(sanitizeFlagTriggerArray("nope")).toBeUndefined();
+  });
+});
+
+describe("applyFlagOverrides", () => {
+  const reg = () => [
+    { id: "f1", label: "F1", description: "d1", category: "story", default: false, source: "beat:x", triggers: [] },
+    { id: "f2", label: "F2", category: "mira", default: false, source: "choice:y", triggers: [{ type: "session_start" }] },
+  ];
+  it("patches metadata + replaces triggers; ignores unknown ids / bad category", () => {
+    const flags = reg();
+    applyFlagOverrides(flags, { byId: {
+      f1: { label: "Renamed", description: "new", category: "frostmaw", default: true, triggers: [{ type: "building_built", id: "mill" }, { type: "junk" }] },
+      f2: { category: "not-a-cat", triggers: "not-an-array" },
+      ghost: { label: "ignored" },
+    } });
+    expect(flags[0]).toMatchObject({ id: "f1", label: "Renamed", description: "new", category: "frostmaw", default: true, triggers: [{ type: "building_built", id: "mill" }] });
+    expect(flags[1]).toMatchObject({ id: "f2", category: "mira", triggers: [{ type: "session_start" }] }); // unchanged
+    expect(flags).toHaveLength(2);
+  });
+  it("appends new flags from flags.new (dup / blank ids skipped)", () => {
+    const flags = reg();
+    applyFlagOverrides(flags, { new: [
+      { id: "f3", label: "F3", category: "story", triggers: [{ type: "act_entered", act: 2 }] },
+      { id: "f1", label: "dup — ignored" },
+      { id: "  ", label: "blank — ignored" },
+      "nope",
+    ] });
+    expect(flags).toHaveLength(3);
+    expect(flags[2]).toEqual({ id: "f3", label: "F3", category: "story", default: false, source: "override", triggers: [{ type: "act_entered", act: 2 }] });
+  });
+  it("no-op on a non-array registry or falsy overrides", () => {
+    const flags = reg(); const before = JSON.stringify(flags);
+    applyFlagOverrides(flags, undefined);
+    applyFlagOverrides(null, { byId: { f1: { label: "x" } } });
+    expect(JSON.stringify(flags)).toBe(before);
   });
 });
 

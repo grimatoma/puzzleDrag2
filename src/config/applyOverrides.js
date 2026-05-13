@@ -587,6 +587,60 @@ export function sanitizeBeatTrigger(raw) {
   return undefined;
 }
 
+/**
+ * Sanitised flag trigger — the full game-event vocabulary (mirrors
+ * `conditionMatches` in src/story.js + the state-driven `bond_at_least`).
+ * Returns undefined if the shape is unrecognised / incomplete.
+ */
+export function sanitizeFlagTrigger(raw) {
+  if (!raw || typeof raw !== "object" || typeof raw.type !== "string") return undefined;
+  const posInt = (v) => { const n = Number(v); return Number.isFinite(n) && n > 0 ? Math.trunc(n) : null; };
+  const str = (v) => (typeof v === "string" && v.trim().length > 0 ? v.trim() : null);
+  switch (raw.type) {
+    case "session_start":
+    case "session_ended":
+    case "all_buildings_built":
+      return { type: raw.type };
+    case "act_entered": {
+      const act = posInt(raw.act); return act ? { type: "act_entered", act } : undefined;
+    }
+    case "resource_total": {
+      const key = str(raw.key), amount = posInt(raw.amount);
+      return key && amount ? { type: "resource_total", key, amount } : undefined;
+    }
+    case "resource_total_multi": {
+      if (!raw.req || typeof raw.req !== "object") return undefined;
+      const req = {};
+      for (const [k, v] of Object.entries(raw.req)) { const a = posInt(v); if (str(k) && a) req[k] = a; }
+      return Object.keys(req).length > 0 ? { type: "resource_total_multi", req } : undefined;
+    }
+    case "craft_made": {
+      const item = str(raw.item); if (!item) return undefined;
+      const count = posInt(raw.count); return count ? { type: "craft_made", item, count } : { type: "craft_made", item };
+    }
+    case "building_built": {
+      const id = str(raw.id); return id ? { type: "building_built", id } : undefined;
+    }
+    case "boss_defeated": {
+      const id = str(raw.id); return id ? { type: "boss_defeated", id } : undefined;
+    }
+    case "bond_at_least": {
+      const npc = str(raw.npc), amount = posInt(raw.amount);
+      return npc && amount ? { type: "bond_at_least", npc, amount } : undefined;
+    }
+    default:
+      return undefined;
+  }
+}
+
+/** Sanitised array of flag triggers (drops bad entries). */
+export function sanitizeFlagTriggerArray(raw) {
+  if (!Array.isArray(raw)) return undefined;
+  const out = [];
+  for (const t of raw) { const s = sanitizeFlagTrigger(t); if (s) out.push(s); }
+  return out;
+}
+
 /** Sanitised `onComplete` — only `setFlag` is editable from the /story/ editor. */
 export function sanitizeBeatOnComplete(raw) {
   if (!raw || typeof raw !== "object") return undefined;
@@ -664,6 +718,51 @@ export function applyStoryOverrides(storyBeats, sideBeats, overrides) {
         const oc = sanitizeBeatOnComplete(patch.onComplete);
         if (oc) beat.onComplete = { ...(beat.onComplete || {}), ...oc };
       }
+    }
+  }
+}
+
+const FLAG_CATEGORY_KEYS = new Set(["story", "frostmaw", "mira", "misc"]);
+
+/**
+ * Apply patches to the STORY_FLAGS registry. `overrides`:
+ *   {
+ *     byId: { <flagId>: { label?, description?, category?, default?, triggers?:[…] } },
+ *     new:  [ { id, label?, description?, category?, default?, triggers?:[…] } ]
+ *   }
+ * Editable: label / description / category (story|frostmaw|mira|misc) / default
+ * (boolean) / triggers (replaced wholesale, each sanitized to the known event
+ * vocabulary). `new` entries are appended (dup / blank ids skipped). The flag
+ * `id`s and `source` are not editable here. Mutates the registry array in place.
+ */
+export function applyFlagOverrides(flags, overrides) {
+  if (!Array.isArray(flags) || !overrides || typeof overrides !== "object") return;
+  const patchOne = (def, patch) => {
+    if (!def || !patch || typeof patch !== "object") return;
+    if (typeof patch.label === "string" && patch.label.length > 0) def.label = patch.label;
+    if (typeof patch.description === "string") def.description = patch.description;
+    if (typeof patch.category === "string" && FLAG_CATEGORY_KEYS.has(patch.category)) def.category = patch.category;
+    if (typeof patch.default === "boolean") def.default = patch.default;
+    if ("triggers" in patch) { const t = sanitizeFlagTriggerArray(patch.triggers); if (t) def.triggers = t; }
+    if (!Array.isArray(def.triggers)) def.triggers = [];
+  };
+  if (overrides.byId && typeof overrides.byId === "object") {
+    for (const [id, patch] of Object.entries(overrides.byId)) {
+      const def = flags.find((f) => f && f.id === id);
+      if (def) patchOne(def, patch);
+    }
+  }
+  if (Array.isArray(overrides.new)) {
+    const taken = new Set(flags.map((f) => f && f.id).filter(Boolean));
+    for (const raw of overrides.new) {
+      if (!raw || typeof raw !== "object") continue;
+      const id = typeof raw.id === "string" ? raw.id.trim() : "";
+      if (!id || taken.has(id)) continue;
+      taken.add(id);
+      const def = { id, label: (typeof raw.label === "string" && raw.label.length > 0) ? raw.label : id,
+        category: "misc", default: false, source: "override", triggers: [] };
+      patchOne(def, raw);
+      flags.push(def);
     }
   }
 }

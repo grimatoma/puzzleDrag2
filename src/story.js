@@ -313,21 +313,26 @@ export function nextPendingBeat(state) {
 // ─── Trigger evaluator ────────────────────────────────────────────────────────
 
 /**
- * Returns true if the beat's trigger matches the given game event.
+ * Returns true if a trigger *condition* matches a game event. Shared by the
+ * story-beat evaluator and the flag-trigger evaluator (src/flags.js) so both
+ * speak the same event vocabulary. (`bond_at_least` is state-driven and lives
+ * with its callers, not here, since it needs the bonds snapshot.)
+ * @param {object} t      — trigger condition `{ type, ...fields }`
+ * @param {object} event  — game event `{ type, ...fields }`
+ * @param {object} totals — inventory snapshot (resource key → amount)
  */
-function triggerMatches(beat, event, state, totals) {
-  const t = beat.trigger;
-  if (t.type !== event.type) return false;
-
+export function conditionMatches(t, event, totals = {}) {
+  if (!t || t.type !== event?.type) return false;
   switch (t.type) {
     case "session_start":
+    case "session_ended":
       return true;
     case "act_entered":
       return event.act === t.act;
     case "resource_total":
       return (totals[t.key] ?? 0) >= t.amount;
     case "resource_total_multi":
-      return Object.entries(t.req).every(([k, v]) => (totals[k] ?? 0) >= v);
+      return Object.entries(t.req || {}).every(([k, v]) => (totals[k] ?? 0) >= v);
     case "craft_made":
       return event.item === t.item && (event.count ?? 1) >= (t.count ?? 1);
     case "building_built":
@@ -359,7 +364,7 @@ export function evaluateStoryTriggers(state, event, totals = {}) {
   // Extra guard for the win beat: festival must be announced first
   if (next.id === "act3_win" && !state.flags.festival_announced) return null;
 
-  if (!triggerMatches(next, event, state, totals)) return null;
+  if (!next.trigger || !conditionMatches(next.trigger, event, totals)) return null;
 
   const newFlags = { ...state.flags };
   if (next.onComplete?.setFlag) {

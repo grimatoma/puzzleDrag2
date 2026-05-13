@@ -1,20 +1,22 @@
-// Balance Manager · Flags tab — read-only audit of every story flag.
+// Balance Manager · Flags tab — audit of every story flag.
 //
-// Story flags have no registry: a flag pops into existence the moment a beat's
-// `onComplete.setFlag` or a choice's `outcome.setFlag` fires (`state.story.flags`
-// starts `{}`, default-false). This tab scans STORY_BEATS + SIDE_BEATS for every
-// flag that's set/cleared and pairs it with a curated list of the codebase reads
-// (`state.story.flags.X` references that aren't derivable from the beat data),
-// so you can spot orphans — "set but never read" (dead flag / typo) and "read
-// but never set" (broken guard). Editing flag metadata (descriptions, defaults,
-// rename) would need a real FLAGS registry in the game first — out of scope here.
+// Flags now have a real registry (src/flags.js → STORY_FLAGS): id, label,
+// description, category, default, where it's set (`source`), and optional
+// declarative `triggers` (game events that flip it). This tab pairs that
+// registry with a scan of STORY_BEATS + SIDE_BEATS (who actually sets/clears
+// each flag) and a curated map of codebase reads, so you can see — per flag —
+// its metadata + triggers + set-by / read-by, and spot orphans ("set · never
+// read" → dead flag / typo, "read · never set" → broken guard). Editing the
+// metadata/triggers is done in src/flags.js or via `balance.json` →
+// `flags.byId.<id>` / `flags.new` (a UI for it can come later).
 
 import { useState, useMemo } from "react";
 import { STORY_BEATS, SIDE_BEATS, firedFlagKey } from "../../story.js";
+import { STORY_FLAGS, isRegisteredFlag, flagCategory as registryFlagCategory, FLAG_CATEGORIES } from "../../flags.js";
 import { COLORS } from "../shared.jsx";
 
 // Curated reads — `state.story.flags.X` references in slices / triggers / UI
-// that the beat data can't tell us about. Keep in sync with the codebase.
+// that the beat/registry data can't tell us about. Keep in sync with the codebase.
 const FLAG_READS = {
   festival_announced:   [{ where: "src/story.js", note: "act3_win trigger guard" }, { where: "src/ui/Hud.jsx", note: "festival larder progress HUD" }],
   isWon:                [{ where: "src/ui/Hud.jsx", note: "win banner + sandbox affordances" }],
@@ -25,13 +27,16 @@ const FLAG_READS = {
   frostmaw_active:      [{ where: "src/features/boss/slice.js", note: "audit-boss cadence gate" }, { where: "src/features/bosses/Gallery.jsx", note: "boss gallery state" }],
 };
 
+const AUTO_CAT = { id: "auto", label: "Auto · system", color: COLORS.slate };
+
+/** Resolved category for a flag name: registry first, then `_fired_` auto, then a heuristic. */
 function flagCategory(name) {
-  if (name.startsWith("_fired_")) return { id: "auto",  label: "Auto · system",  color: COLORS.slate };
-  if (name.startsWith("keeper_")) return { id: "keep",  label: "Frostmaw arc",   color: "#7a8b5e" };
-  if (name.startsWith("mira_"))   return { id: "mira",  label: "Mira arc",       color: "#c9863a" };
-  const progression = new Set(["intro_seen", "hearth_lit", "first_craft", "first_iron", "mill_built", "frostmaw_active", "mine_revealed", "mine_unlocked", "caravan_open", "festival_announced", "isWon"]);
-  if (progression.has(name) || name.endsWith("_built") || name.endsWith("_lit") || name.endsWith("_active")) return { id: "story", label: "Progression", color: COLORS.emberDeep };
-  return { id: "misc", label: "Misc", color: COLORS.inkSubtle };
+  if (isRegisteredFlag(name)) return registryFlagCategory(name);
+  if (name.startsWith("_fired_")) return AUTO_CAT;
+  if (name.startsWith("keeper_")) return { id: "frostmaw", ...FLAG_CATEGORIES.frostmaw };
+  if (name.startsWith("mira_"))   return { id: "mira",     ...FLAG_CATEGORIES.mira };
+  if (name.endsWith("_built") || name.endsWith("_lit") || name.endsWith("_active")) return { id: "story", ...FLAG_CATEGORIES.story };
+  return { id: "misc", ...FLAG_CATEGORIES.misc };
 }
 
 const ALL_BEATS = [
@@ -39,10 +44,10 @@ const ALL_BEATS = [
   ...SIDE_BEATS.map((b) => ({ ...b, _group: "Side events" })),
 ];
 
-/** Scan beat data → { name → { name, setBy:[], clearedBy:[], readBy:[] } }. */
+/** Scan beats + registry → { name → { name, def, setBy:[], clearedBy:[], readBy:[] } }. */
 function collectFlags() {
   const flags = {};
-  const ensure = (name) => (flags[name] ||= { name, setBy: [], clearedBy: [], readBy: [] });
+  const ensure = (name) => (flags[name] ||= { name, def: null, setBy: [], clearedBy: [], readBy: [] });
   const asList = (v) => (Array.isArray(v) ? v : v ? [v] : []);
   for (const b of ALL_BEATS) {
     for (const k of asList(b.onComplete?.setFlag)) ensure(k).setBy.push({ type: "beat", beatId: b.id, beatTitle: b.title || b.id });
@@ -52,12 +57,40 @@ function collectFlags() {
       for (const k of asList(c.outcome?.clearFlag)) ensure(k).clearedBy.push({ type: "choice", beatId: b.id, beatTitle: b.title || b.id, choiceId: c.id, choiceLabel: c.label });
     }
   }
+  // Fold in the registry: attach `def`, ensure every registered flag exists,
+  // and record a "trigger" set-by for any flag that declares triggers.
+  for (const def of STORY_FLAGS) {
+    const f = ensure(def.id);
+    f.def = def;
+    for (const t of (def.triggers || [])) f.setBy.push({ type: "trigger", trigger: t });
+  }
   for (const f of Object.values(flags)) {
     if (FLAG_READS[f.name]) f.readBy = FLAG_READS[f.name].slice();
     if (f.name.startsWith("_fired_")) f.readBy.push({ where: "src/story.js", note: "beat-progress tracking (isBeatComplete / nextPendingBeat)" });
+    // A flag used as a beat's onComplete.setFlag doubles as that beat's
+    // completion marker, so it's read by the beat evaluator.
+    if (f.setBy.some((s) => s.type === "beat")) f.readBy.push({ where: "src/story.js", note: "beat / side-beat completion marker (isBeatComplete · sideBeatFired)" });
   }
-  for (const k of Object.keys(FLAG_READS)) if (!flags[k]) flags[k] = { name: k, setBy: [], clearedBy: [], readBy: FLAG_READS[k].slice() };
+  for (const k of Object.keys(FLAG_READS)) if (!flags[k]) flags[k] = { name: k, def: null, setBy: [], clearedBy: [], readBy: FLAG_READS[k].slice() };
   return Object.values(flags).sort((a, b) => a.name.localeCompare(b.name));
+}
+
+/** One-line summary of a flag trigger condition. */
+function triggerLabel(t) {
+  if (!t || typeof t !== "object") return String(t);
+  switch (t.type) {
+    case "session_start": return "session start";
+    case "session_ended": return "session end";
+    case "all_buildings_built": return "all buildings built";
+    case "act_entered": return `enter Act ${["", "I", "II", "III"][t.act] || t.act}`;
+    case "resource_total": return `${t.key} ≥ ${t.amount}`;
+    case "resource_total_multi": return Object.entries(t.req || {}).map(([k, v]) => `${k} ≥ ${v}`).join(" & ");
+    case "craft_made": return `craft ${t.item}${t.count > 1 ? ` ×${t.count}` : ""}`;
+    case "building_built": return `build ${t.id}`;
+    case "boss_defeated": return `defeat ${t.id}`;
+    case "bond_at_least": return `${t.npc} bond ≥ ${t.amount}`;
+    default: return t.type;
+  }
 }
 
 // ─── Small atoms ─────────────────────────────────────────────────────────────
@@ -69,6 +102,14 @@ function Tag({ children, color = COLORS.inkSubtle, bg = COLORS.parchmentDeep }) 
   return <span className="inline-block px-1.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wide whitespace-nowrap" style={{ color, background: bg, border: `1px solid ${color}33` }}>{children}</span>;
 }
 function SourceLine({ s }) {
+  if (s.type === "trigger") {
+    return (
+      <div className="text-[11px] leading-snug" style={{ color: COLORS.ink }}>
+        <span style={{ color: "#3e7236", fontWeight: 700 }}>⚡ </span>
+        <span>on </span><span style={{ fontFamily: "ui-monospace,monospace", color: COLORS.inkSubtle }}>{triggerLabel(s.trigger)}</span>
+      </div>
+    );
+  }
   const isChoice = s.type === "choice";
   return (
     <div className="text-[11px] leading-snug" style={{ color: COLORS.ink }}>
@@ -84,29 +125,63 @@ function SourceLine({ s }) {
 function Inspector({ flag }) {
   if (!flag) return <div className="flex-1 grid place-items-center text-[12px] italic" style={{ color: COLORS.inkSubtle }}>Select a flag to inspect.</div>;
   const cat = flagCategory(flag.name);
+  const def = flag.def;
   const setCount = flag.setBy.length, readCount = flag.readBy.length;
+  const triggers = def?.triggers || [];
   return (
     <div className="w-[360px] flex-shrink-0 border-l-2 overflow-y-auto p-4 flex flex-col gap-4" style={{ background: "#fff", borderColor: COLORS.border }}>
       <div>
-        <div className="flex items-center gap-1.5 mb-1"><CatDot name={flag.name} /><span className="text-[10px] font-bold uppercase tracking-wide" style={{ color: cat.color }}>{cat.label}</span></div>
-        <div className="text-[16px] font-bold break-all" style={{ fontFamily: "ui-monospace,monospace", color: COLORS.ink }}>{flag.name}</div>
-        <div className="text-[10px] italic mt-1" style={{ color: COLORS.inkSubtle }}>Boolean · default <b>false</b> on a new run (flags aren't persisted in a registry).</div>
+        <div className="flex items-center gap-1.5 mb-1">
+          <CatDot name={flag.name} /><span className="text-[10px] font-bold uppercase tracking-wide" style={{ color: cat.color }}>{cat.label}</span>
+          {def ? <Tag color="#3e7236" bg="rgba(62,114,54,0.12)">registered</Tag> : <Tag color={COLORS.inkSubtle}>ad-hoc</Tag>}
+        </div>
+        <div className="text-[16px] font-bold break-all" style={{ fontFamily: "ui-monospace,monospace", color: COLORS.ink }}>{def?.label || flag.name}</div>
+        <div className="text-[10px]" style={{ fontFamily: "ui-monospace,monospace", color: COLORS.inkSubtle }}>{flag.name}</div>
+        {def?.description && <div className="text-[11px] leading-snug mt-1.5" style={{ color: COLORS.ink }}>{def.description}</div>}
+        <div className="text-[10px] italic mt-1.5" style={{ color: COLORS.inkSubtle }}>
+          Boolean · default <b>{def?.default ? "true" : "false"}</b>{def?.source ? <> · source <code style={{ fontFamily: "ui-monospace,monospace" }}>{def.source}</code></> : (def ? null : <> · not in the registry (src/flags.js)</>)}
+        </div>
       </div>
+
+      {def && (
+        <div>
+          <div className="text-[10px] font-bold uppercase tracking-wide mb-1.5 flex items-baseline justify-between" style={{ color: COLORS.inkSubtle }}><span>Triggers</span><span style={{ fontFamily: "ui-monospace,monospace" }}>{triggers.length}</span></div>
+          {triggers.length === 0 ? (
+            <div className="text-[11px] italic" style={{ color: COLORS.inkSubtle }}>No event triggers — this flag is set by {flag.setBy.some((s) => s.type === "choice") ? "a choice outcome" : flag.setBy.some((s) => s.type === "beat") ? "a beat's onComplete" : "code"}. Add one in <code style={{ fontFamily: "ui-monospace,monospace" }}>src/flags.js</code> (or <code style={{ fontFamily: "ui-monospace,monospace" }}>balance.json → flags.byId.{flag.name}.triggers</code>).</div>
+          ) : (
+            <div className="flex flex-col gap-1.5">
+              {triggers.map((t, i) => (
+                <div key={i} className="rounded-lg p-2 flex items-center gap-2" style={{ background: "rgba(62,114,54,0.07)", border: "1px solid rgba(62,114,54,0.3)" }}>
+                  <span style={{ color: "#3e7236", fontSize: 13 }}>⚡</span>
+                  <span className="text-[11px]" style={{ color: COLORS.ink }}>{triggerLabel(t)}</span>
+                  <span className="ml-auto text-[9px]" style={{ fontFamily: "ui-monospace,monospace", color: COLORS.inkSubtle }}>{t.type}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       <div>
         <div className="text-[10px] font-bold uppercase tracking-wide mb-1.5 flex items-baseline justify-between" style={{ color: COLORS.inkSubtle }}><span>Set by</span><span style={{ fontFamily: "ui-monospace,monospace" }}>{setCount}</span></div>
         {setCount === 0 ? (
           <div className="rounded-lg p-2 text-[11px] leading-snug" style={{ background: "rgba(194,59,34,0.06)", border: "1px dashed rgba(194,59,34,0.35)" }}>
-            <b style={{ color: COLORS.redDeep }}>✕ Nothing sets this flag.</b><br /><span style={{ color: COLORS.inkSubtle }} className="italic">It's only referenced by a read — likely a typo or dead guard.</span>
+            <b style={{ color: COLORS.redDeep }}>✕ Nothing sets this flag.</b><br /><span style={{ color: COLORS.inkSubtle }} className="italic">{def ? "Registered but no beat / choice / trigger sets it — wire one up." : "It's only referenced by a read — likely a typo or dead guard."}</span>
           </div>
         ) : (
           <div className="flex flex-col gap-1.5">
             {flag.setBy.map((s, i) => (
-              <div key={i} className="rounded-lg p-2" style={{ background: s.type === "choice" ? "rgba(214,97,42,0.06)" : COLORS.parchment, border: `1px solid ${s.type === "choice" ? "rgba(214,97,42,0.3)" : COLORS.border}` }}>
-                <div className="flex items-center gap-1.5 mb-0.5"><Tag color={s.type === "choice" ? COLORS.emberDeep : COLORS.inkSubtle}>{s.type === "choice" ? "Choice outcome" : s.type === "auto" ? "Implicit fired marker" : "Beat onComplete"}</Tag><span className="ml-auto text-[9px]" style={{ fontFamily: "ui-monospace,monospace", color: COLORS.inkSubtle }}>{s.beatId}</span></div>
-                <div className="text-[12px]" style={{ color: COLORS.ink }}>{s.beatTitle}</div>
-                {s.type === "choice" && <div className="text-[10px] italic mt-0.5" style={{ color: COLORS.inkSubtle }}>“{s.choiceLabel}”</div>}
-              </div>
+              s.type === "trigger" ? (
+                <div key={i} className="rounded-lg p-2 flex items-center gap-2" style={{ background: "rgba(62,114,54,0.07)", border: "1px solid rgba(62,114,54,0.3)" }}>
+                  <Tag color="#3e7236">Flag trigger</Tag><span className="text-[11px]" style={{ color: COLORS.ink }}>{triggerLabel(s.trigger)}</span>
+                </div>
+              ) : (
+                <div key={i} className="rounded-lg p-2" style={{ background: s.type === "choice" ? "rgba(214,97,42,0.06)" : COLORS.parchment, border: `1px solid ${s.type === "choice" ? "rgba(214,97,42,0.3)" : COLORS.border}` }}>
+                  <div className="flex items-center gap-1.5 mb-0.5"><Tag color={s.type === "choice" ? COLORS.emberDeep : COLORS.inkSubtle}>{s.type === "choice" ? "Choice outcome" : s.type === "auto" ? "Implicit fired marker" : "Beat onComplete"}</Tag><span className="ml-auto text-[9px]" style={{ fontFamily: "ui-monospace,monospace", color: COLORS.inkSubtle }}>{s.beatId}</span></div>
+                  <div className="text-[12px]" style={{ color: COLORS.ink }}>{s.beatTitle}</div>
+                  {s.type === "choice" && <div className="text-[10px] italic mt-0.5" style={{ color: COLORS.inkSubtle }}>“{s.choiceLabel}”</div>}
+                </div>
+              )
             ))}
           </div>
         )}
@@ -143,13 +218,14 @@ function Inspector({ flag }) {
 // ─── Tab ─────────────────────────────────────────────────────────────────────
 
 const CATS = [
-  { id: "all",   label: "All" },
-  { id: "story", label: "Progression" },
-  { id: "keep",  label: "Frostmaw arc" },
-  { id: "mira",  label: "Mira arc" },
-  { id: "auto",  label: "Auto" },
-  { id: "misc",  label: "Misc" },
+  { id: "all",      label: "All" },
+  { id: "story",    label: "Progression" },
+  { id: "frostmaw", label: "Frostmaw arc" },
+  { id: "mira",     label: "Mira arc" },
+  { id: "auto",     label: "Auto" },
+  { id: "misc",     label: "Misc" },
 ];
+const catChipColor = (id) => (id === "auto" ? AUTO_CAT.color : (FLAG_CATEGORIES[id]?.color || COLORS.inkSubtle));
 
 export default function FlagsTab() {
   const allFlags = useMemo(() => collectFlags(), []);
@@ -182,7 +258,7 @@ export default function FlagsTab() {
       <div className="flex flex-wrap items-center gap-3 px-3 py-2 rounded-lg border-2 flex-shrink-0" style={{ background: COLORS.parchmentDeep, borderColor: COLORS.border }}>
         <div>
           <div className="text-[12px] font-bold" style={{ color: COLORS.ink }}>Story Flags</div>
-          <div className="text-[10px] italic" style={{ color: COLORS.inkSubtle }}>Read-only audit — booleans set by beats/choices, read by triggers, slices &amp; UI gates. (No registry: editable metadata would need a FLAGS table in the game first.)</div>
+          <div className="text-[10px] italic" style={{ color: COLORS.inkSubtle }}>Registry (<code style={{ fontFamily: "ui-monospace,monospace" }}>src/flags.js</code> → STORY_FLAGS) — metadata + event <b>triggers</b>, joined with a scan of who actually sets/reads each flag. Orphans flagged. Edit in <code style={{ fontFamily: "ui-monospace,monospace" }}>src/flags.js</code> or <code style={{ fontFamily: "ui-monospace,monospace" }}>balance.json → flags</code>.</div>
         </div>
         <div className="flex items-center gap-2 ml-1">
           <span className="text-[20px] font-bold" style={{ fontFamily: "ui-monospace,monospace", color: COLORS.ink }}>{shown.length}</span>
@@ -204,7 +280,7 @@ export default function FlagsTab() {
           return (
             <button key={c.id} onClick={() => setCat(c.id)} className="px-2.5 py-1 rounded-full text-[11px] font-bold flex items-center gap-1.5 border transition-colors"
               style={{ background: active ? COLORS.ink : "#fff", color: active ? "#fff" : COLORS.ink, borderColor: active ? COLORS.ink : COLORS.border }}>
-              {c.id !== "all" && <span className="inline-block rounded-[2px]" style={{ width: 6, height: 6, background: flagCategory(c.id === "keep" ? "keeper_x" : c.id === "mira" ? "mira_x" : c.id === "auto" ? "_fired_x" : c.id === "story" ? "intro_seen" : "zz").color }} />}
+              {c.id !== "all" && <span className="inline-block rounded-[2px]" style={{ width: 6, height: 6, background: catChipColor(c.id) }} />}
               {c.label}<span className="text-[9px]" style={{ fontFamily: "ui-monospace,monospace", opacity: 0.7 }}>{catCount(c.id)}</span>
             </button>
           );
