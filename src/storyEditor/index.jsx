@@ -97,7 +97,7 @@ function TriggerChip({ beat, accent }) {
   if (!ts) return null;
   const tone = ts.kind === "queued-code" ? { fg: C.emberDeep, bd: C.emberDeep } : { fg: C.ink, bd: accent || "#8b6845" };
   return (
-    <div style={{ position: "absolute", top: -10, left: 10, zIndex: 3, display: "inline-flex", alignItems: "center", gap: 5,
+    <div style={{ zIndex: 3, display: "inline-flex", alignItems: "center", gap: 5,
       padding: "3px 8px 3px 7px", borderRadius: 999, background: "#fff", border: `1.5px solid ${tone.bd}`, color: tone.fg,
       font: "700 9px/1 system-ui", letterSpacing: "0.06em", textTransform: "uppercase", whiteSpace: "nowrap",
       boxShadow: "0 1px 2px rgba(40,28,10,0.15)", maxWidth: "calc(100% - 20px)" }}>
@@ -138,7 +138,7 @@ function CompactNode({ node, beat, selected }) {
     <div style={{ width: "100%", height: "100%", borderRadius: 10,
       background: selected ? "linear-gradient(180deg,#fff 0%,#fbf6ea 100%)" : "#fff",
       border: selected ? `2px solid ${ring}` : "1.5px solid #ddd0b4",
-      boxShadow: selected ? `0 0 0 3px ${hexAlpha(ring, 0.2)}, 0 8px 16px -6px rgba(40,28,10,0.22)` : "0 2px 6px -2px rgba(40,28,10,0.12)",
+      boxShadow: selected ? `0 0 0 5px ${hexAlpha(ring, 0.32)}, 0 14px 26px -8px rgba(40,28,10,0.32)` : "0 2px 6px -2px rgba(40,28,10,0.12)",
       overflow: "hidden", position: "relative" }}>
       <div style={{ height: 4, background: ring }} />
       <div style={{ padding: "7px 9px", height: node.h - 24, display: "flex", flexDirection: "column", gap: 3 }}>
@@ -180,7 +180,7 @@ function BranchingNode({ beat, selected }) {
     <div style={{ width: "100%", height: "100%", borderRadius: 12,
       background: selected ? "linear-gradient(180deg,#fff,#fbf6ea)" : "#fff",
       border: `${selected ? 2 : 1.5}px solid ${ring}`,
-      boxShadow: selected ? `0 0 0 4px ${hexAlpha(ring, 0.18)}, 0 12px 24px -8px rgba(40,28,10,0.26)` : `0 0 0 2px ${hexAlpha(ring, 0.1)}, 0 4px 10px -4px rgba(40,28,10,0.18)`,
+      boxShadow: selected ? `0 0 0 6px ${hexAlpha(ring, 0.28)}, 0 14px 28px -8px rgba(40,28,10,0.32)` : `0 0 0 2px ${hexAlpha(ring, 0.1)}, 0 4px 10px -4px rgba(40,28,10,0.18)`,
       overflow: "hidden", display: "flex", flexDirection: "column" }}>
       <div style={{ height: HEADER, padding: "10px 12px", display: "flex", flexDirection: "column", gap: 4,
         background: "linear-gradient(180deg,rgba(255,255,255,0.6),transparent)", borderBottom: "1px solid rgba(200,180,140,0.3)", position: "relative" }}>
@@ -246,7 +246,7 @@ function ExpandedCard({ node, beat, selected, draft }) {
   return (
     <div style={{ width: "100%", height: "100%", borderRadius: 12, background: "#fff",
       border: selected ? `2px solid ${accent}` : `1.5px solid ${isDraftNode ? hexAlpha(accent, 0.6) : "#c8b48a"}`,
-      boxShadow: selected ? `0 0 0 3px ${hexAlpha(accent, 0.15)}, 0 10px 20px -8px rgba(40,28,10,0.22)` : `0 6px 14px -6px rgba(40,28,10,0.18), 0 0 0 3px ${hexAlpha(accent, 0.05)}`,
+      boxShadow: selected ? `0 0 0 6px ${hexAlpha(accent, 0.28)}, 0 14px 26px -8px rgba(40,28,10,0.3)` : `0 6px 14px -6px rgba(40,28,10,0.18), 0 0 0 3px ${hexAlpha(accent, 0.05)}`,
       overflow: "hidden", display: "flex", flexDirection: "column" }}>
       <div style={{ padding: "8px 10px", background: `linear-gradient(180deg,${hexAlpha(accent, 0.1)},${hexAlpha(accent, 0.02)})`,
         borderBottom: `1px solid ${hexAlpha(accent, 0.25)}`, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
@@ -320,7 +320,7 @@ function DragHandle({ dragging, onMouseDown, onTouchStart }) {
     <button data-drag-handle="1" title="Drag to move card"
       onMouseDown={onMouseDown}
       onTouchStart={onTouchStart}
-      style={{ position: "absolute", top: -10, left: 13, zIndex: 6, width: 22, height: 22, borderRadius: 999,
+      style={{ zIndex: 6, width: 22, height: 22, borderRadius: 999, flexShrink: 0,
         border: `1.5px solid ${C.border}`, background: dragging ? C.ember : "#fff", color: dragging ? "#fff" : C.inkSubtle,
         cursor: dragging ? "grabbing" : "grab", font: "700 12px/1 system-ui", display: "grid", placeItems: "center",
         boxShadow: "0 1px 3px rgba(40,28,10,0.18)", touchAction: "none" }}>
@@ -329,17 +329,19 @@ function DragHandle({ dragging, onMouseDown, onTouchStart }) {
   );
 }
 
-function TreeNode({ node, beat, selectedId, collapsed, hiddenCount, showCollapse, dragging, warningCount, onNodeMouseDown, onNodeTouchStart, onToggleCollapse, onPreview, draft }) {
+function TreeNode({ node, beat, selectedId, collapsed, hiddenCount, showCollapse, dragging, warningCount, onNodeMouseDown, onNodeTouchStart, onToggleCollapse, onPreview, onSelect, draft }) {
   const selected = node.id === selectedId;
   let Inner;
   if (node.draft || node.expanded) Inner = <ExpandedCard node={node} beat={beat} selected={selected} draft={draft} />;
   else if (node.branching) Inner = <BranchingNode beat={beat} selected={selected} />;
   else Inner = <CompactNode node={node} beat={beat} selected={selected} />;
   return (
-    <div data-story-node="1" style={{ position: "absolute", left: node.x, top: node.y, width: node.w, height: node.h, cursor: "default", touchAction: "none" }}>
+    <div data-story-node="1" onClick={() => onSelect(node.id)} style={{ position: "absolute", left: node.x, top: node.y, width: node.w, height: node.h, cursor: "default", touchAction: "none" }}>
       <WarningBadge count={warningCount} />
-      <DragHandle dragging={dragging} onMouseDown={(e) => onNodeMouseDown(e, node)} onTouchStart={(e) => onNodeTouchStart(e, node)} />
-      <TriggerChip beat={beat} accent={actColor(beat)} />
+      <div style={{ position: "absolute", top: -10, left: 10, right: 10, display: "flex", alignItems: "center", gap: 6 }}>
+        <DragHandle dragging={dragging} onMouseDown={(e) => onNodeMouseDown(e, node)} onTouchStart={(e) => onNodeTouchStart(e, node)} />
+        <TriggerChip beat={beat} accent={actColor(beat)} />
+      </div>
       {showCollapse && <CollapseToggle collapsed={collapsed} hiddenCount={hiddenCount} onToggle={() => onToggleCollapse(node.id)} />}
       <PreviewPlay onPlay={() => onPreview(node.id)} />
       {Inner}
@@ -1005,7 +1007,7 @@ export default function StoryEditorApp() {
                 showCollapse={collapsible.has(node.id)} dragging={draggingNodeId === node.id}
                 warningCount={warningsByBeat[node.id]?.length || 0}
                 onNodeMouseDown={onNodeMouseDown} onNodeTouchStart={onNodeTouchStart} onToggleCollapse={toggleCollapse}
-                onPreview={setPreviewBeatId} draft={draft} />
+                onPreview={setPreviewBeatId} onSelect={setSelectedId} draft={draft} />
             ))}
           </div>
         </div>
