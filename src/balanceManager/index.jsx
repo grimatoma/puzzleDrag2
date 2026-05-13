@@ -18,6 +18,7 @@ import { parseHash, useBalanceRouter } from "./router.js";
 // Lazy-load tabs so the Balance Manager (a dev-time tool) stays out of the
 // main entry chunk. Each tab becomes its own JS chunk fetched only when
 // the user opens the modal and selects that tab.
+const ResourcesTab = lazy(() => import("./tabs/ResourcesTab.jsx"));
 const ItemsTab = lazy(() => import("./tabs/ItemsTab.jsx"));
 const RecipesTab   = lazy(() => import("./tabs/RecipesTab.jsx"));
 const BuildingsTab = lazy(() => import("./tabs/BuildingsTab.jsx"));
@@ -28,6 +29,8 @@ const WorkersTab   = lazy(() => import("./tabs/WorkersTab.jsx"));
 const KeepersTab   = lazy(() => import("./tabs/KeepersTab.jsx"));
 const NpcsTab      = lazy(() => import("./tabs/NpcsTab.jsx"));
 const StoryTab     = lazy(() => import("./tabs/StoryTab.jsx"));
+const SimulateTab  = lazy(() => import("./tabs/SimulateTab.jsx"));
+const FlagsTab     = lazy(() => import("./tabs/FlagsTab.jsx"));
 const RationsTab   = lazy(() => import("./tabs/RationsTab.jsx"));
 const TuningTab    = lazy(() => import("./tabs/TuningTab.jsx"));
 const BossesTab    = lazy(() => import("./tabs/BossesTab.jsx"));
@@ -39,22 +42,27 @@ const IconsTab     = lazy(() => import("./tabs/IconsTab.jsx"));
 // Hash routing for the Balance Manager lives in `./router.js` — kept separate
 // from `src/router.js` because the Balance Manager is its own page (`/b/`).
 //
-// Tabs are grouped under three top-level sections that mirror the game's
-// model: tiles live on the board, resources are inventory currencies, and
-// items are the things crafted from resources (tools count as items).
+// The game's object model has three separate concepts, and each gets its own
+// tab (and sidebar section): Tiles (board pieces), Resources & Currency (the
+// counts of stuff you accumulate), and Items (discrete inventory objects;
+// a tool is just an item with a power). Recipes / Buildings / Rations sit
+// alongside Items as the other inventory-economy editors.
 const TABS = [
   { id: "tiles",     label: "Tiles",          iconKey: "ui_star", Component: PowersTab,
     section: "tiles",
-    blurb: "Per-tile attributes: discovery method, what resource the chain produces, and any attached power hooks." },
+    blurb: "Board pieces. Per-tile attributes: basics (label, colour, sale value, base chain target, tiles-wiki blurb), discovery method, what resource the chain produces, and any attached power hooks." },
   { id: "zones",     label: "Zones",          iconKey: "ui_star", Component: ZonesTab,
     section: "tiles",
     blurb: "Per-zone settings: starting turns, entry cost, the chain-upgrade redirect map, and the per-(zone, season) tile drop percentages." },
   { id: "biomes",    label: "Settlement Biomes", iconKey: "ui_star", Component: BiomesTab,
     section: "tiles",
     blurb: "The biomes a settlement can be founded as (4 per type): name, icon, the two hazards that appear in every round there, and the resource bonus." },
+  { id: "resources", label: "Resources & Currency", iconKey: "ui_star", Component: ResourcesTab,
+    section: "resources",
+    blurb: "Resources & currency — the counts of stuff you accumulate: inventory amounts (grain, wood, eggs, crafted goods…) with their colours, chains and sale values, plus a reference list of the kingdom currency counters (gold / runes / embers / …)." },
   { id: "items", label: "Items",      iconKey: "ui_star", Component: ItemsTab,
     section: "items",
-    blurb: "All game items, tools, and resources — names, icons, descriptions, colors, sale value, and powers." },
+    blurb: "Items — discrete objects that sit in your inventory. A tool is just an item with a power (its effect / target / anim). Filter by All / Tools / Plain. Tiles and resources are separate concepts with their own tabs." },
   { id: "recipes",   label: "Recipes",        iconKey: "ui_star", Component: RecipesTab,
     section: "items",
     blurb: "Crafted items (and tools): ingredients, station, coin reward, and description." },
@@ -81,7 +89,13 @@ const TABS = [
     blurb: "The 30-day login reward track: tune the coin / rune amounts per day. (Tool and tile-unlock drops aren't editable here.)" },
   { id: "story",     label: "Story · Dialogue", iconKey: "ui_star", Component: StoryTab,
     section: "story",
-    blurb: "Story beats and side-events: titles, scenes, the narration/dialogue lines, and choice labels. (Triggers and outcomes are not editable here.)" },
+    blurb: "Beat editing moved to the full-page visual decision-tree editor at /story/ — pan/zoom canvas, node cards, branch edges, side inspector. (Writes to the same draft, so overrides flow through identically.)" },
+  { id: "simulate",  label: "Simulate",       iconKey: "ui_devtools", Component: SimulateTab,
+    section: "story",
+    blurb: "Walk story beats with arbitrary starting flags / NPC bonds / currencies. Step through dialogue, pick choices, see per-step outcomes, and export the run as a Markdown transcript or JSON choice log." },
+  { id: "flags",     label: "Flags",          iconKey: "ui_devtools", Component: FlagsTab,
+    section: "story",
+    blurb: "Read-only audit of every story flag: which beat / choice sets it, which trigger / slice / UI reads it, and orphan warnings (set-but-never-read, read-but-never-set). Filter by category, search, or only-orphans." },
   { id: "npcs",      label: "NPCs",           iconKey: "ui_star", Component: NpcsTab,
     section: "story",
     blurb: "Townsfolk gift preferences (loves / likes — the items that raise their bond fastest) and the four bond bands (name + the order-reward modifier at that band)." },
@@ -98,6 +112,7 @@ const TABS = [
 
 const SECTIONS = [
   { id: "tiles",     label: "Tiles" },
+  { id: "resources", label: "Resources" },
   { id: "items",     label: "Items" },
   { id: "story",     label: "Story" },
   { id: "other",     label: "Other" },

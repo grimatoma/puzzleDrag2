@@ -313,31 +313,47 @@ export function nextPendingBeat(state) {
 // ─── Trigger evaluator ────────────────────────────────────────────────────────
 
 /**
- * Returns true if the beat's trigger matches the given game event.
+ * Returns true if a trigger *condition* matches a game event (+ current state).
+ * Shared by the story-beat evaluator, the side-beat evaluator, and the
+ * flag-trigger evaluator (src/flags.js) so they all speak one vocabulary.
+ *
+ * Two flavours of condition:
+ *  - **event conditions** (`craft_made`, `building_built`, `boss_defeated`,
+ *    `act_entered`, `session_start/ended`, `all_buildings_built`): must match
+ *    `event.type` exactly — they fire when that event happens.
+ *  - **state conditions** (`resource_total`, `resource_total_multi`,
+ *    `flag_set`, `flag_cleared`): a predicate on current state; matches on
+ *    *any* event once the predicate holds (so a beat with such a trigger fires
+ *    the next time anything happens after the condition becomes true). NB:
+ *    `bond_at_least` is also state-driven but its bonds snapshot lives with the
+ *    callers, so they handle it themselves.
+ *
+ * @param {object} t      — trigger condition `{ type, ...fields }`
+ * @param {object} event  — game event `{ type, ...fields }`
+ * @param {object} totals — inventory snapshot (resource key → amount)
+ * @param {object} flags  — `state.story.flags` (for flag_set / flag_cleared)
  */
-function triggerMatches(beat, event, state, totals) {
-  const t = beat.trigger;
-  if (t.type !== event.type) return false;
-
+export function conditionMatches(t, event, totals = {}, flags = {}) {
+  if (!t) return false;
+  // state conditions — checked regardless of which event fired
+  switch (t.type) {
+    case "resource_total":       return (totals[t.key] ?? 0) >= t.amount;
+    case "resource_total_multi": return Object.entries(t.req || {}).every(([k, v]) => (totals[k] ?? 0) >= v);
+    case "flag_set":             return !!flags[t.flag];
+    case "flag_cleared":         return !!t.flag && !flags[t.flag];
+    default: break;
+  }
+  // event conditions — must match the event's type
+  if (t.type !== event?.type) return false;
   switch (t.type) {
     case "session_start":
-      return true;
-    case "act_entered":
-      return event.act === t.act;
-    case "resource_total":
-      return (totals[t.key] ?? 0) >= t.amount;
-    case "resource_total_multi":
-      return Object.entries(t.req).every(([k, v]) => (totals[k] ?? 0) >= v);
-    case "craft_made":
-      return event.item === t.item && (event.count ?? 1) >= (t.count ?? 1);
-    case "building_built":
-      return event.id === t.id;
-    case "boss_defeated":
-      return event.id === t.id;
-    case "all_buildings_built":
-      return event.allBuilt === true;
-    default:
-      return false;
+    case "session_ended":      return true;
+    case "act_entered":        return event.act === t.act;
+    case "craft_made":         return event.item === t.item && (event.count ?? 1) >= (t.count ?? 1);
+    case "building_built":     return event.id === t.id;
+    case "boss_defeated":      return event.id === t.id;
+    case "all_buildings_built":return event.allBuilt === true;
+    default:                   return false;
   }
 }
 
@@ -359,7 +375,7 @@ export function evaluateStoryTriggers(state, event, totals = {}) {
   // Extra guard for the win beat: festival must be announced first
   if (next.id === "act3_win" && !state.flags.festival_announced) return null;
 
-  if (!triggerMatches(next, event, state, totals)) return null;
+  if (!next.trigger || !conditionMatches(next.trigger, event, totals, state.flags ?? {})) return null;
 
   const newFlags = { ...state.flags };
   if (next.onComplete?.setFlag) {
@@ -376,6 +392,9 @@ export function evaluateStoryTriggers(state, event, totals = {}) {
 // ─── Side-beat trigger evaluation ────────────────────────────────────────────
 
 const SIDE_SETTLE_EVENTS = new Set(["session_start", "session_ended"]);
+// Predicate-style conditions (true as long as some state holds), as opposed to
+// the discrete event conditions (`craft_made`, `building_built`, …).
+const STATE_CONDITION_TYPES = new Set(["resource_total", "resource_total_multi", "bond_at_least", "flag_set", "flag_cleared"]);
 
 /** True if a side beat has already fired (by its onComplete.setFlag or fired marker). */
 function sideBeatFired(flags, beat) {
@@ -386,35 +405,46 @@ function sideBeatFired(flags, beat) {
 function sideTriggerMatches(beat, event, gameState) {
   const t = beat.trigger;
   if (!t) return false; // resolution beats (queued via choices) have no trigger
-  switch (t.type) {
-    case "bond_at_least":
-      // State-driven: fires the next settle moment once the bond threshold holds.
-      if (!SIDE_SETTLE_EVENTS.has(event.type)) return false;
-      return (gameState?.npcs?.bonds?.[t.npc] ?? 0) >= t.amount;
-    default:
-      return false;
+  if (t.type === "bond_at_least") {
+    // State-driven via the bonds snapshot (not in `conditionMatches`) — fires
+    // the next settle moment once the bond threshold holds.
+    if (!SIDE_SETTLE_EVENTS.has(event.type)) return false;
+    return (gameState?.npcs?.bonds?.[t.npc] ?? 0) >= t.amount;
   }
+  // A `repeat` beat on a perpetual predicate would re-fire on every event, so
+  // pin those re-fires to settle moments. One-shot beats (and beats on discrete
+  // event conditions) can match on any event — the fired-marker stops repeats.
+  if (beat.repeat && STATE_CONDITION_TYPES.has(t.type) && !SIDE_SETTLE_EVENTS.has(event.type)) return false;
+  return conditionMatches(t, event, gameState?.inventory ?? {}, gameState?.story?.flags ?? {});
+}
+
+function fireSideBeat(beat, flags) {
+  const newFlags = { ...flags };
+  if (beat.onComplete?.setFlag) newFlags[beat.onComplete.setFlag] = true;
+  else if (!beat.repeat) newFlags[firedFlagKey(beat.id)] = true; // repeat beats keep no permanent marker
+  return { firedBeat: beat, newFlags, sideEffects: beat.onComplete ?? {} };
 }
 
 /**
  * Evaluates the SIDE_BEATS list against a game event. Fires at most one side
- * beat per call (the first un-fired beat whose trigger matches). Returns the
- * same `{ firedBeat, newFlags, sideEffects }` shape as evaluateStoryTriggers
- * so callers can reuse the STORY/BEAT_FIRED machinery, or null.
+ * beat per call: the first un-fired one-shot beat whose trigger matches, else
+ * the first matching `repeat` beat. Returns the same
+ * `{ firedBeat, newFlags, sideEffects }` shape as evaluateStoryTriggers so
+ * callers can reuse the STORY/BEAT_FIRED machinery, or null.
  *
- * @param {object} gameState — full game state (needs `.story.flags`, `.npcs`)
+ * @param {object} gameState — full game state (needs `.story.flags`, `.inventory`, `.npcs`)
  * @param {object} event     — game event { type, ... }
  */
 export function evaluateSideBeats(gameState, event) {
   const flags = gameState?.story?.flags ?? {};
+  let repeatCandidate = null;
   for (const beat of SIDE_BEATS) {
-    if (sideBeatFired(flags, beat)) continue;
     if (!sideTriggerMatches(beat, event, gameState)) continue;
-    const newFlags = { ...flags };
-    if (beat.onComplete?.setFlag) newFlags[beat.onComplete.setFlag] = true;
-    else newFlags[firedFlagKey(beat.id)] = true;
-    return { firedBeat: beat, newFlags, sideEffects: beat.onComplete ?? {} };
+    if (beat.repeat === true) { if (!repeatCandidate) repeatCandidate = beat; continue; }
+    if (sideBeatFired(flags, beat)) continue;
+    return fireSideBeat(beat, flags);
   }
+  if (repeatCandidate) return fireSideBeat(repeatCandidate, flags);
   return null;
 }
 

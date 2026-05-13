@@ -1,17 +1,21 @@
 // Tiles tab — every per-tile attribute lives here:
+//   - tile basics (label, colour, sale value, base chain target, tiles-wiki blurb)
 //   - discovery method (formerly the "Unlock Hooks" tab)
 //   - what resource the chain produces (per-tile override of base `next`)
 //   - attached abilities (free moves, coin bonuses, spawn boosts…)
 //
-// Abilities live in src/config/abilities.js. Runtime expansion into the
-// legacy `effects` fields happens in applyTileOverrides →
+// Tiles are board pieces only — you never own them; they sit on the grid and
+// chain into a next tier. (Resources and items are separate concepts with
+// their own tabs.) Abilities live in src/config/abilities.js. Runtime
+// expansion into the legacy `effects` fields happens in applyTileOverrides →
 // expandAbilitiesToEffects.
 
 import { useState, useMemo } from "react";
 import { TILE_TYPES, TILE_TYPES_MAP, CATEGORIES } from "../../features/tileCollection/data.js";
-import { BIOMES } from "../../constants.js";
+import { BIOMES, ITEMS } from "../../constants.js";
 import {
-  COLORS, NumberField, Select, SmallButton, Pill, Card, SearchBar, TileSwatch,
+  COLORS, NumberField, TextField, TextArea, Select, ColorField,
+  SmallButton, Pill, Card, SearchBar, TileSwatch,
 } from "../shared.jsx";
 import AbilitiesEditor from "../AbilitiesEditor.jsx";
 
@@ -50,6 +54,13 @@ export default function PowersTab({ draft, updateDraft }) {
 
   const producesOptions = useMemo(() => resourceKeyOptions(true), []);
   const sourceOptions = useMemo(() => resourceKeyOptions(), []);
+  // Base chain target — a tile chains into another tile or a resource.
+  const chainTargetOptions = useMemo(() => {
+    const keys = Object.keys(ITEMS)
+      .filter((k) => ITEMS[k].kind === "tile" || ITEMS[k].kind === "resource")
+      .sort();
+    return [{ value: "", label: "— none (terminal) —" }, ...keys.map((k) => ({ value: k, label: k }))];
+  }, []);
 
   const tilesFiltered = TILE_TYPES.filter((t) => {
     if (categoryFilter !== "all" && t.category !== categoryFilter) return false;
@@ -75,6 +86,21 @@ export default function PowersTab({ draft, updateDraft }) {
   const draftUnlock = draft.tileUnlocks[selectedTile] || null;
   const effDiscovery = draftUnlock || selected?.discovery || { method: "default" };
   const unlockDirty = !!draftUnlock;
+
+  // Basic per-tile metadata — label / colour / sale value / base chain target /
+  // tiles-wiki blurb. These patch the shared ITEMS overrides + the
+  // tileDescriptions map, the same plumbing as every other tile attribute here.
+  const itemRow = ITEMS[selectedTile];
+  const itemPatch = draft.items[selectedTile] || null;
+  const descPatch = draft.tileDescriptions[selectedTile];
+  const metaDirty = !!itemPatch || descPatch !== undefined;
+  const effMeta = {
+    label: itemPatch?.label ?? itemRow?.label ?? "",
+    color: itemPatch?.color ?? itemRow?.color,
+    value: itemPatch?.value ?? itemRow?.value ?? 0,
+    next:  itemPatch?.next  ?? itemRow?.next  ?? "",
+    desc:  descPatch ?? itemRow?.description ?? "",
+  };
 
   function patchPower(tileId, patch) {
     updateDraft((d) => {
@@ -118,10 +144,39 @@ export default function PowersTab({ draft, updateDraft }) {
     updateDraft((d) => { delete d.tileUnlocks[tileId]; });
   }
 
+  function patchItemMeta(tileId, fields) {
+    updateDraft((d) => {
+      const cur = d.items[tileId] || {};
+      const next = { ...cur, ...fields };
+      // Drop empty patches so the JSON stays minimal.
+      for (const k of Object.keys(next)) {
+        if (next[k] === "" || next[k] === undefined) delete next[k];
+      }
+      if (Object.keys(next).length === 0) delete d.items[tileId];
+      else d.items[tileId] = next;
+    });
+  }
+
+  function patchTileDesc(tileId, value) {
+    updateDraft((d) => {
+      if (!value) delete d.tileDescriptions[tileId];
+      else d.tileDescriptions[tileId] = value;
+    });
+  }
+
+  function revertBasics(tileId) {
+    updateDraft((d) => {
+      delete d.items[tileId];
+      delete d.tileDescriptions[tileId];
+    });
+  }
+
   function revertTile(tileId) {
     updateDraft((d) => {
       delete d.tilePowers[tileId];
       delete d.tileUnlocks[tileId];
+      delete d.items[tileId];
+      delete d.tileDescriptions[tileId];
     });
   }
 
@@ -190,7 +245,7 @@ export default function PowersTab({ draft, updateDraft }) {
           <Card><div style={{ color: COLORS.inkSubtle }}>Select a tile.</div></Card>
         ) : (
           <>
-            <Card accent={(draftPower !== null || draftUnlock !== null) ? COLORS.ember : COLORS.border}>
+            <Card accent={(draftPower !== null || draftUnlock !== null || metaDirty) ? COLORS.ember : COLORS.border}>
               <div className="flex items-start gap-3">
                 <TileSwatch {...tileSwatchProps(selected.id)} size={48} />
                 <div className="flex-1 min-w-0">
@@ -204,7 +259,7 @@ export default function PowersTab({ draft, updateDraft }) {
                     </code>
                     <Pill>{selected.category}</Pill>
                     <Pill>tier {selected.tier}</Pill>
-                    {(draftPower !== null || draftUnlock !== null) && (
+                    {(draftPower !== null || draftUnlock !== null || metaDirty) && (
                       <Pill color="#fff" bg={COLORS.ember}>edited</Pill>
                     )}
                   </div>
@@ -212,11 +267,56 @@ export default function PowersTab({ draft, updateDraft }) {
                     {selected.description}
                   </div>
                 </div>
-                {(draftPower !== null || draftUnlock !== null) && (
+                {(draftPower !== null || draftUnlock !== null || metaDirty) && (
                   <SmallButton variant="ghost" onClick={() => revertTile(selected.id)}>revert</SmallButton>
                 )}
               </div>
             </Card>
+
+            {/* Tile basics — label / colour / sale value / base chain target / wiki blurb */}
+            {itemRow && (
+              <div>
+                <div className="text-[11px] font-bold uppercase tracking-wide mb-1.5" style={{ color: COLORS.inkSubtle }}>
+                  Tile basics {metaDirty && <span style={{ color: COLORS.ember }}>· edited</span>}
+                </div>
+                <Card>
+                  <div className="grid grid-cols-2 gap-x-3 gap-y-2">
+                    <div>
+                      <Label>Label</Label>
+                      <TextField value={effMeta.label} onChange={(v) => patchItemMeta(selected.id, { label: v })} />
+                    </div>
+                    <div>
+                      <Label>Sale value</Label>
+                      <NumberField value={effMeta.value} min={0} max={9999} width={90}
+                        onChange={(v) => patchItemMeta(selected.id, { value: v })} />
+                    </div>
+                    <div>
+                      <Label>Color</Label>
+                      <ColorField value={effMeta.color} onChange={(v) => patchItemMeta(selected.id, { color: v })} />
+                    </div>
+                    <div>
+                      <Label>Base chain target</Label>
+                      <Select value={effMeta.next} options={chainTargetOptions}
+                        onChange={(v) => patchItemMeta(selected.id, { next: v })} />
+                    </div>
+                    <div className="col-span-2">
+                      <Label>Tile-collection description</Label>
+                      <TextArea
+                        rows={2}
+                        value={effMeta.desc}
+                        placeholder="Long-form description for the Tile Collection screen."
+                        onChange={(v) => patchTileDesc(selected.id, v)}
+                      />
+                    </div>
+                    {metaDirty && (
+                      <div className="col-span-2">
+                        <SmallButton variant="ghost" onClick={() => revertBasics(selected.id)}>revert basics</SmallButton>
+                      </div>
+                    )}
+                  </div>
+                </Card>
+              </div>
+            )}
 
             {/* Discovery / Unlock */}
             <div>
