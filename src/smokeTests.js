@@ -4,12 +4,11 @@
 
 import { createInitialState } from "./state.js";
 import { INITIAL_STORY_STATE } from "./story.js";
-import { MAX_TURNS } from "./constants.js";
 
 export const SMOKE_INVARIANTS = [
   {
-    name: "MAX_TURNS === 10",
-    check: () => MAX_TURNS === 10,
+    name: "fresh state has no active farm run",
+    check: () => createInitialState().farmRun === null,
   },
   {
     name: "fresh state has NPC roster with wren",

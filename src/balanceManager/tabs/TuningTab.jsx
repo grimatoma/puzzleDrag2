@@ -4,10 +4,10 @@
 // `draft.tuning` (a flat object) and are validated by `sanitizeTuning` in
 // src/config/applyOverrides.js, then reassigned onto the matching `export let`s
 // in src/constants.js (and src/features/zones/data.js for the founding ones) on
-// next load. An unset field falls back to its current (possibly already
+// next load. Per-zone turn budgets live on the Zones tab. An unset field falls back to its current (possibly already
 // overridden) value.
 
-import { MAX_TURNS, AUDIT_BOSS_COOLDOWN_DAYS, CRAFT_QUEUE_HOURS, CRAFT_GEM_SKIP_COST, MIN_EXPEDITION_TURNS, DEFAULT_HOME_BIOME, SETTLEMENT_BIOMES } from "../../constants.js";
+import { CRAFT_QUEUE_HOURS, CRAFT_GEM_SKIP_COST, MIN_EXPEDITION_TURNS, DEFAULT_HOME_BIOME, SETTLEMENT_BIOMES } from "../../constants.js";
 import { SETTLEMENT_FOUNDING_BASE_COINS, SETTLEMENT_FOUNDING_GROWTH } from "../../features/zones/data.js";
 import { COLORS, NumberField, Select, FieldRow, Card } from "../shared.jsx";
 
@@ -28,11 +28,6 @@ export default function TuningTab({ draft, updateDraft }) {
 
   return (
     <div className="flex flex-col gap-3">
-      <Card title="Rounds & bosses">
-        <FieldRow label="Round length (turns)" hint="MAX_TURNS — base turns per round before fertilizer/supply">{num("maxTurns", MAX_TURNS, { min: 1, max: 99 })}</FieldRow>
-        <FieldRow label="Audit-boss cooldown (days)" hint="AUDIT_BOSS_COOLDOWN_DAYS — wall-clock days before the audit boss reappears">{num("auditBossCooldownDays", AUDIT_BOSS_COOLDOWN_DAYS, { min: 1, max: 365 })}</FieldRow>
-      </Card>
-
       <Card title="Crafting queue">
         <FieldRow label="Queue timer (hours)" hint="CRAFT_QUEUE_HOURS — wall-clock hours a queued craft takes">{num("craftQueueHours", CRAFT_QUEUE_HOURS, { min: 1, max: 240 })}</FieldRow>
         <FieldRow label="Gem skip cost" hint="CRAFT_GEM_SKIP_COST — gems to finish a queued craft instantly">{num("craftGemSkipCost", CRAFT_GEM_SKIP_COST, { min: 0, max: 999 })}</FieldRow>

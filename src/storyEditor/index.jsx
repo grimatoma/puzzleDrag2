@@ -521,6 +521,7 @@ function LeftRail({ draft, selectedId, onlineIds, collapsed, onToggleCollapsed, 
 
 function MiniMap({ nodes, bounds, selectedId, zoom, pan, canvasRef, onPanTo }) {
   const W = 180, H = 112, PAD = 8;
+  const activePointerId = useRef(null);
   const scale = Math.min((W - PAD * 2) / Math.max(1, bounds.w), (H - PAD * 2) / Math.max(1, bounds.h));
   const rect = canvasRef.current ? canvasRef.current.getBoundingClientRect() : null;
   const view = rect ? {
@@ -530,17 +531,47 @@ function MiniMap({ nodes, bounds, selectedId, zoom, pan, canvasRef, onPanTo }) {
     h: rect.height / Math.max(zoom, 0.01),
   } : null;
   const toSvg = (x, y) => ({ x: PAD + x * scale, y: PAD + y * scale });
-  const onPointer = (e) => {
+  const centerAt = (e) => {
     const box = e.currentTarget.getBoundingClientRect();
-    const worldX = Math.max(0, (e.clientX - box.left - PAD) / scale);
-    const worldY = Math.max(0, (e.clientY - box.top - PAD) / scale);
+    const worldX = Math.min(bounds.w, Math.max(0, (e.clientX - box.left - PAD) / scale));
+    const worldY = Math.min(bounds.h, Math.max(0, (e.clientY - box.top - PAD) / scale));
     onPanTo(worldX, worldY);
   };
+  const onPointerDown = (e) => {
+    e.stopPropagation();
+    e.preventDefault();
+    activePointerId.current = e.pointerId;
+    e.currentTarget.setPointerCapture?.(e.pointerId);
+    centerAt(e);
+  };
+  const onPointerMove = (e) => {
+    if (activePointerId.current !== e.pointerId) return;
+    e.stopPropagation();
+    e.preventDefault();
+    centerAt(e);
+  };
+  const endPointer = (e) => {
+    if (activePointerId.current !== e.pointerId) return;
+    e.stopPropagation();
+    e.preventDefault();
+    e.currentTarget.releasePointerCapture?.(e.pointerId);
+    activePointerId.current = null;
+  };
+  const clearPointer = (e) => {
+    if (activePointerId.current === e.pointerId) activePointerId.current = null;
+  };
+  const suppressFallbackEvents = (e) => {
+    e.stopPropagation();
+    e.preventDefault();
+  };
   return (
-    <div title="Mini map · click to center the canvas" style={{ position: "absolute", left: 16, bottom: 16, zIndex: 10, width: W, height: H,
+    <div data-minimap="1" title="Mini map · click or drag to center the canvas"
+      onMouseDown={suppressFallbackEvents} onTouchStart={suppressFallbackEvents}
+      style={{ position: "absolute", left: 16, bottom: 16, zIndex: 10, width: W, height: H,
       borderRadius: 8, border: `1.5px solid ${C.border}`, background: "rgba(255,255,255,0.92)",
-      boxShadow: "0 3px 10px rgba(40,28,10,0.12)", overflow: "hidden" }}>
-      <svg width={W} height={H} onMouseDown={onPointer} style={{ display: "block", cursor: "crosshair" }}>
+      boxShadow: "0 3px 10px rgba(40,28,10,0.12)", overflow: "hidden", touchAction: "none" }}>
+      <svg width={W} height={H} onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={endPointer} onPointerCancel={endPointer}
+        onLostPointerCapture={clearPointer} style={{ display: "block", cursor: "crosshair", touchAction: "none" }}>
         <rect x={PAD} y={PAD} width={bounds.w * scale} height={bounds.h * scale} rx="3" fill="rgba(240,232,212,0.8)" stroke={C.canvasRule} />
         {nodes.map((n) => {
           const p = toSvg(n.x, n.y);
@@ -556,7 +587,7 @@ function MiniMap({ nodes, bounds, selectedId, zoom, pan, canvasRef, onPanTo }) {
       <div style={{ position: "absolute", left: 7, top: 5, font: "700 8px/1 system-ui",
         color: C.inkSubtle, letterSpacing: "0.08em", textTransform: "uppercase", pointerEvents: "none" }}>Mini map</div>
       <div style={{ position: "absolute", right: 7, bottom: 5, font: "500 8px/1 system-ui",
-        color: C.inkSubtle, pointerEvents: "none" }}>click to center</div>
+        color: C.inkSubtle, pointerEvents: "none" }}>drag to pan</div>
     </div>
   );
 }
@@ -661,6 +692,7 @@ export default function StoryEditorApp() {
 
   // canvas pan/zoom
   const onMouseDown = useCallback((e) => {
+    if (e.target.closest("[data-minimap]")) return;
     if (e.target !== canvasRef.current && !e.target.closest("[data-canvas-bg]")) return;
     isDragging.current = true; setDragging(true);
     dragStart.current = { x: e.clientX - pan.x, y: e.clientY - pan.y };
@@ -750,6 +782,7 @@ export default function StoryEditorApp() {
     const onTouchStart = e => {
       if (e.touches.length === 1) {
         const t = e.touches[0];
+        if (t.target.closest("[data-minimap]")) { touchState.current = null; return; }
         if (t.target.closest("[data-story-node],button,a,input,textarea,select")) { touchState.current = null; return; }
         if (t.target !== el && !t.target.closest("[data-canvas-bg]")) { touchState.current = null; return; }
         touchState.current = { mode: "pan", startX: t.clientX - panRef.current.x, startY: t.clientY - panRef.current.y };

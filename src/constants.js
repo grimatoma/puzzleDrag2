@@ -25,12 +25,6 @@ export const SCENE_EVENTS = Object.freeze({
 export const TILE = 74;
 export const COLS = 6;
 export const ROWS = 6;
-export let MAX_TURNS = 10;            // Balance Manager: tuning.maxTurns
-
-// Phase 3 — audit-boss cadence. Once the Frostmaw story flag is set, an audit
-// boss reappears on a real-time cooldown of this many days (tunable). No
-// in-game calendar is involved — it tracks wall-clock elapsed time.
-export let AUDIT_BOSS_COOLDOWN_DAYS = 3; // Balance Manager: tuning.auditBossCooldownDays
 
 // Phase 5 — real-time crafting queue (alongside the instant CRAFT_RECIPE). A
 // queued craft is ready this many wall-clock hours after it's queued; spending
@@ -92,17 +86,15 @@ export let DEFAULT_HOME_BIOME = "prairie"; // Balance Manager: tuning.homeBiome
 
 // Save schema version. Forward migrations are not maintained — bump this
 // whenever persisted state changes shape and existing saves will be discarded.
-export const SAVE_SCHEMA_VERSION = 36;
+export const SAVE_SCHEMA_VERSION = 37;
 
 export const UPGRADE_THRESHOLDS = {
   grass_hay: 6, grass_meadow: 6, grass_spiky: 6,
   grain_wheat: 5, grain: 4,
   wood_log: 5, wood_plank: 4,
-  // Flour → Bread (catalog §4: "Grain (6) → Bread"). Our existing model
-  // has hay → wheat → grain → flour as the grass-then-grain chain; bread
-  // is appended as the terminal tier so the catalog target is reachable
-  // via long chains. The bakery recipe (3 flour + 1 egg → 1 bread) remains
-  // as a faster alternative path.
+  // Flour and bread remain late recipe/resources, not the Act 1 spine.
+  // The current board progression is zone/category-driven rather than a
+  // fixed legacy staple-chain tutorial.
   grain_flour: 6,
   berry: 7,
   mine_stone: 8, mine_cobble: 6,
@@ -133,7 +125,7 @@ export const UPGRADE_THRESHOLDS = {
   // Mounts → Horseshoe (catalog §4: 10 mounts → 1 horseshoe)
   mount_horse: 10, mount_donkey: 10, mount_moose: 10, mount_mammoth: 10,
   // Fish biome (MVP) — Sardine/Mackerel/Clam/Kelp chain to fish_raw, then
-  // fillet. Numbers parallel the farm grass→wheat→grain→flour staircase
+  // fillet. Numbers sit in the same 5-ish range as other early resources,
   // but slightly cheaper since the fish biome opens later than farm.
   fish_sardine: 5, fish_mackerel: 5, fish_clam: 5, fish_kelp: 6, fish_oyster: 5,
   fish_raw: 5, fish_fillet: 4, fish_oil: 6,
@@ -179,12 +171,12 @@ export const FISH_TILE_POOL = [
 
 export const ITEMS = {
   // Farm tiles/resources
-  grass_hay:          { kind: "tile", biome: "farm", label: "Hay",          color: 0xa8c769, dark: 0x4f6b3a, value: 1, next: "grain_wheat", sway: { amp: 4.0, freq: 0.00060, gust: 0.20 } },
-  grass_meadow:       { kind: "tile", biome: "farm", label: "Meadow Grass", color: 0x7fb24a, dark: 0x3e5a18, value: 1, next: "grain_wheat", sway: { amp: 4.5, freq: 0.00058, gust: 0.22 } },
-  grass_spiky:        { kind: "tile", biome: "farm", label: "Spiky Grass",  color: 0x9bb55a, dark: 0x4a5e1c, value: 1, next: "grain_wheat", sway: { amp: 2.5, freq: 0.00075, gust: 0.18 } },
-  grain_wheat:        { kind: "tile", biome: "farm", label: "Wheat", color: 0xdab947, dark: 0x7e5e1a, value: 2, next: "grain", sway: { amp: 5.0, freq: 0.00065, gust: 0.22 } },
-  grain:              { kind: "resource", biome: "farm", label: "Grain", color: 0xc8923a, dark: 0x5e3e10, value: 4, next: "grain_flour", sway: { amp: 1.2, freq: 0.00035, gust: 0.08 } },
-  grain_flour:        { kind: "resource", biome: "farm", label: "Flour", color: 0xf4e3c0, dark: 0x8a6a3a, value: 6, next: "bread" },
+  grass_hay:          { kind: "tile", biome: "farm", label: "Hay",          color: 0xa8c769, dark: 0x4f6b3a, value: 1, next: null, sway: { amp: 4.0, freq: 0.00060, gust: 0.20 } },
+  grass_meadow:       { kind: "tile", biome: "farm", label: "Meadow Grass", color: 0x7fb24a, dark: 0x3e5a18, value: 1, next: null, sway: { amp: 4.5, freq: 0.00058, gust: 0.22 } },
+  grass_spiky:        { kind: "tile", biome: "farm", label: "Spiky Grass",  color: 0x9bb55a, dark: 0x4a5e1c, value: 1, next: null, sway: { amp: 2.5, freq: 0.00075, gust: 0.18 } },
+  grain_wheat:        { kind: "tile", biome: "farm", label: "Wheat", color: 0xdab947, dark: 0x7e5e1a, value: 2, next: null, sway: { amp: 5.0, freq: 0.00065, gust: 0.22 } },
+  grain:              { kind: "resource", biome: "farm", label: "Grain", color: 0xc8923a, dark: 0x5e3e10, value: 4, next: null, sway: { amp: 1.2, freq: 0.00035, gust: 0.08 } },
+  grain_flour:        { kind: "resource", biome: "farm", label: "Flour", color: 0xf4e3c0, dark: 0x8a6a3a, value: 6, next: null },
   wood_log:           { kind: "resource", biome: "farm", label: "Log",   color: 0x9b6b3e, dark: 0x5e3a1d, value: 2, next: "wood_plank" },
   wood_plank:         { kind: "resource", biome: "farm", label: "Plank", color: 0xc98c50, dark: 0x5e3a1d, value: 4, next: "wood_beam" },
   wood_beam:          { kind: "resource", biome: "farm", label: "Beam",  color: 0x7e4f24, dark: 0x3a1d10, value: 7, next: null },
@@ -411,11 +403,11 @@ export const NPCS = {
 
 export const BUILDINGS = [
   { id: "hearth", name: "Hearth", desc: "The heart of the village. Keeps folk warm and anchors the community.", cost: { coins: 0 }, lv: 1, x: 60, y: 360, w: 90, h: 110, color: "#a8431a", built: true },
-  { id: "mill", name: "Mill", desc: "Grinds grain into flour, enabling the grain → flour upgrade chain.", cost: { coins: 200, wood_plank: 30 }, lv: 1, x: 200, y: 380, w: 80, h: 90, color: "#c8923a" },
+  { id: "mill", name: "Mill", desc: "Grinds and sorts harvest goods for better town recipes.", cost: { coins: 200, wood_plank: 30 }, lv: 1, x: 200, y: 380, w: 80, h: 90, color: "#c8923a" },
   { id: "bakery", name: "Bakery", desc: "Craft baked goods — bread, honey rolls, harvest pies — to sell for coins.", cost: { coins: 500, wood_plank: 40, mine_stone: 10 }, lv: 1, x: 320, y: 360, w: 100, h: 110, color: "#8a4a26" },
-  { id: "inn", name: "Inn", desc: "Lodgings for helpers and travelling traders.", cost: { coins: 400, wood_plank: 20 }, lv: 2, x: 470, y: 350, w: 110, h: 130, color: "#4f6b3a" },
-  { id: "granary", name: "Granary", desc: "Keeps the harvest safe and dry between sessions.", cost: { coins: 300, wood_plank: 20 }, lv: 1, x: 600, y: 380, w: 80, h: 100, color: "#c5a87a" },
-  { id: "larder", name: "Larder", desc: "Preserve and bottle your harvest. Craft preserve jars and berry tinctures for coins.", cost: { coins: 700, wood_plank: 30, mine_stone: 20 }, lv: 3, x: 700, y: 395, w: 70, h: 85, color: "#4f6b3a" },
+  { id: "inn", name: "Inn", desc: "Lodgings for helpers and travelling traders.", cost: { coins: 250, wood_plank: 15 }, lv: 2, x: 470, y: 350, w: 110, h: 130, color: "#4f6b3a" },
+  { id: "granary", name: "Granary", desc: "Keeps the harvest safe and adds +1 turn to farm sessions at this settlement.", cost: { coins: 150, wood_plank: 10 }, lv: 1, x: 600, y: 380, w: 80, h: 100, color: "#c5a87a" },
+  { id: "larder", name: "Larder", desc: "Preserve and bottle your harvest. Craft preserve jars and berry tinctures for coins.", cost: { coins: 250, wood_plank: 15 }, lv: 2, x: 700, y: 395, w: 70, h: 85, color: "#4f6b3a" },
   { id: "forge", name: "Forge", desc: "Smith metal goods — hinges, lanterns, rings, and more — for high coin rewards.", cost: { coins: 1200, mine_stone: 60, mine_ingot: 20 }, lv: 8, x: 800, y: 380, w: 100, h: 100, color: "#5a6973" },
   { id: "caravan_post", name: "Caravan Post", desc: "Opens distant trade routes, letting you sell crafted goods to far-off markets.", cost: { coins: 800, wood_plank: 40 }, lv: 8, x: 940, y: 390, w: 110, h: 90, color: "#7e4f24" },
   { id: "kitchen", name: "Kitchen", desc: "Converts surplus grain into supplies. Three supplies grant standard Mine entry.", cost: { coins: 400, wood_plank: 20 }, lv: 2, x: 60, y: 260, w: 90, h: 100, color: "#8a4a26" },
@@ -757,8 +749,6 @@ applyBiomeOverrides(SETTLEMENT_BIOMES, BALANCE_OVERRIDES.biomes);
 // `TUNING_OVERRIDES` is the validated subset; the `export let`s above (and the
 // SETTLEMENT_FOUNDING_* ones in features/zones/data.js) are reassigned from it.
 export const TUNING_OVERRIDES = sanitizeTuning(BALANCE_OVERRIDES.tuning);
-if ("maxTurns" in TUNING_OVERRIDES) MAX_TURNS = TUNING_OVERRIDES.maxTurns;
-if ("auditBossCooldownDays" in TUNING_OVERRIDES) AUDIT_BOSS_COOLDOWN_DAYS = TUNING_OVERRIDES.auditBossCooldownDays;
 if ("craftQueueHours" in TUNING_OVERRIDES) CRAFT_QUEUE_HOURS = TUNING_OVERRIDES.craftQueueHours;
 if ("craftGemSkipCost" in TUNING_OVERRIDES) CRAFT_GEM_SKIP_COST = TUNING_OVERRIDES.craftGemSkipCost;
 if ("minExpeditionTurns" in TUNING_OVERRIDES) MIN_EXPEDITION_TURNS = TUNING_OVERRIDES.minExpeditionTurns;

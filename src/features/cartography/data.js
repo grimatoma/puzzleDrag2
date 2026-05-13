@@ -5,7 +5,7 @@
 // `activities` are bullet points describing what the player can do there.
 //
 // Each node IS a zone: it embeds the zone config (hasFarm/hasMine/hasWater,
-// startingTurns, upgradeMap, seasonDrops, dangers, entryCost, buildings)
+// baseTurns, upgradeMap, seasonDrops, dangers, entryCost, buildings)
 // that was previously spread across the separate ZONES table in zones/data.js.
 
 const GOLD = "gold";
@@ -38,7 +38,7 @@ export const MAP_NODES = [
     activities: ['Manage town', 'Craft & build', 'Turn in orders'],
     // Zone config
     hasFarm: true, hasMine: false, hasWater: false,
-    startingTurns: 16,
+    baseTurns: 10,
     entryCost: { coins: 50 },
     upgradeMap: {
       grass: 'birds', grain: 'vegetables', trees: 'birds',
@@ -60,7 +60,7 @@ export const MAP_NODES = [
     activities: ['Harvest farm tiles', 'Common resources'],
     // Zone config
     hasFarm: true, hasMine: false, hasWater: false,
-    startingTurns: 16,
+    baseTurns: 10,
     entryCost: { coins: 50 },
     upgradeMap: {
       grass: 'birds', grain: 'vegetables', trees: 'birds',
@@ -81,7 +81,7 @@ export const MAP_NODES = [
     activities: ['Harvest farm tiles', 'Higher-tier crops'],
     // Zone config
     hasFarm: true, hasMine: false, hasWater: false,
-    startingTurns: 16,
+    baseTurns: 12,
     entryCost: { coins: 50 },
     upgradeMap: {
       grass: 'grain', grain: 'vegetables', trees: 'fruits',
@@ -103,7 +103,7 @@ export const MAP_NODES = [
     activities: ['Random encounters', 'Story bits'],
     // Zone config — no puzzle boards
     hasFarm: false, hasMine: false, hasWater: false,
-    startingTurns: 0,
+    baseTurns: 0,
     entryCost: { coins: 0 },
     upgradeMap: {},
     seasonDrops: empty4Seasons(),
@@ -118,7 +118,7 @@ export const MAP_NODES = [
     activities: ['Harvest mine tiles', 'Ore & stone'],
     // Zone config
     hasFarm: false, hasMine: true, hasWater: false,
-    startingTurns: 10,
+    baseTurns: 10,
     entryCost: { coins: 100 },
     upgradeMap: {},
     seasonDrops: empty4Seasons(),
@@ -136,7 +136,7 @@ export const MAP_NODES = [
     activities: ['Harvest mine tiles', 'Rare gems'],
     // Zone config
     hasFarm: false, hasMine: true, hasWater: false,
-    startingTurns: 16,
+    baseTurns: 12,
     entryCost: { coins: 100 },
     upgradeMap: {},
     seasonDrops: empty4Seasons(),
@@ -154,7 +154,7 @@ export const MAP_NODES = [
     activities: ['Festival rewards', 'Limited-time offers'],
     // Zone config — no puzzle boards
     hasFarm: false, hasMine: false, hasWater: false,
-    startingTurns: 0,
+    baseTurns: 0,
     entryCost: { coins: 0 },
     upgradeMap: {},
     seasonDrops: empty4Seasons(),
@@ -169,7 +169,7 @@ export const MAP_NODES = [
     activities: ['Advanced crafting', 'Boss-tier resources'],
     // Zone config
     hasFarm: false, hasMine: true, hasWater: false,
-    startingTurns: 16,
+    baseTurns: 12,
     entryCost: { coins: 200 },
     upgradeMap: {},
     seasonDrops: empty4Seasons(),
@@ -187,7 +187,7 @@ export const MAP_NODES = [
     activities: ['Boss battles', 'Rare loot'],
     // Zone config — no puzzle boards
     hasFarm: false, hasMine: false, hasWater: false,
-    startingTurns: 0,
+    baseTurns: 0,
     entryCost: { coins: 0 },
     upgradeMap: {},
     seasonDrops: empty4Seasons(),
@@ -202,7 +202,7 @@ export const MAP_NODES = [
     activities: ['Harvest fish tiles', 'Sardine, mackerel & clams'],
     // Zone config
     hasFarm: false, hasMine: false, hasWater: true,
-    startingTurns: 16,
+    baseTurns: 12,
     entryCost: { coins: 50 },
     upgradeMap: {},
     seasonDrops: empty4Seasons(),
@@ -224,7 +224,7 @@ export const MAP_NODES = [
     activities: ['Requires all 3 Hearth-Tokens', 'The Long Return ends here'],
     requiresHearthTokens: true,
     hasFarm: false, hasMine: false, hasWater: false,
-    startingTurns: 0,
+    baseTurns: 0,
     entryCost: { coins: 0 },
     buildings: [],
     plotCount: 0,

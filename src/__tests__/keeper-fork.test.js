@@ -40,7 +40,7 @@ describe("keeper beats — shape", () => {
   });
 });
 
-describe("Frostmaw victory → keeper fork (through the reducer)", () => {
+describe("legacy Frostmaw boss no longer drives keeper rewards", () => {
   const withFrostmawActive = (over = {}) => {
     const s = createInitialState();
     return {
@@ -51,50 +51,22 @@ describe("Frostmaw victory → keeper fork (through the reducer)", () => {
     };
   };
 
-  it("first Frostmaw win queues the keeper choice modal", () => {
+  it("first Frostmaw win pays boss rewards without queueing the keeper choice modal", () => {
     const s = rootReducer(withFrostmawActive(), { type: "BOSS/RESOLVE", won: true });
     expect(s.boss).toBeNull();
-    expect(s.story.queuedBeat?.id).toBe("frostmaw_keeper");
-    expect(s.story.flags.keeper_choice_made).toBeUndefined(); // not yet — that's the choice
-  });
-
-  it("Coexist: grants 5 Embers, sets the coexist path, queues the coexist resolution", () => {
-    let s = rootReducer(withFrostmawActive(), { type: "BOSS/RESOLVE", won: true });
-    s = rootReducer(s, { type: "STORY/PICK_CHOICE", payload: { choiceId: "coexist" } });
-    expect(s.embers).toBe(5);
-    expect(s.coreIngots).toBe(0);
-    expect(s.story.flags.keeper_choice_made).toBe(true);
-    expect(s.story.flags.keeper_path_coexist).toBe(true);
-    expect(s.story.flags.keeper_path_driveout).toBeUndefined();
-    expect(s.story.queuedBeat?.id).toBe("frostmaw_keeper_coexist");
-    s = rootReducer(s, { type: "STORY/PICK_CHOICE", payload: { choiceId: "continue" } });
     expect(s.story.queuedBeat).toBeNull();
-  });
-
-  it("Drive Out: grants 5 Core Ingots, sets the driveout path, queues the driveout resolution", () => {
-    let s = rootReducer(withFrostmawActive(), { type: "BOSS/RESOLVE", won: true });
-    s = rootReducer(s, { type: "STORY/PICK_CHOICE", payload: { choiceId: "drive_out" } });
-    expect(s.coreIngots).toBe(5);
+    expect(s.story.flags.keeper_choice_made).toBeUndefined();
     expect(s.embers).toBe(0);
-    expect(s.story.flags.keeper_path_driveout).toBe(true);
-    expect(s.story.queuedBeat?.id).toBe("frostmaw_keeper_driveout");
+    expect(s.coreIngots).toBe(0);
   });
 
-  it("a later Frostmaw win on the Coexist path tops up Embers (+2), no modal", () => {
+  it("later Frostmaw wins do not top up keeper currencies", () => {
     const s = rootReducer(
       withFrostmawActive({ story: { ...createInitialState().story, flags: { keeper_choice_made: true, keeper_path_coexist: true } }, embers: 5 }),
       { type: "BOSS/RESOLVE", won: true },
     );
-    expect(s.embers).toBe(7);
-    expect(s.story.queuedBeat).toBeNull();
-  });
-
-  it("a later Frostmaw win on the Drive Out path tops up Core Ingots (+2), no modal", () => {
-    const s = rootReducer(
-      withFrostmawActive({ story: { ...createInitialState().story, flags: { keeper_choice_made: true, keeper_path_driveout: true } }, coreIngots: 5 }),
-      { type: "BOSS/RESOLVE", won: true },
-    );
-    expect(s.coreIngots).toBe(7);
+    expect(s.embers).toBe(5);
+    expect(s.coreIngots).toBe(0);
     expect(s.story.queuedBeat).toBeNull();
   });
 

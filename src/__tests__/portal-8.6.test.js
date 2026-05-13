@@ -63,18 +63,18 @@ describe("8.6 — Magic Portal summons", () => {
     expect(r2.tools.hourglass ?? 0).toBe(s2.tools.hourglass);
   });
 
-  it("USE_TOOL magic_seed: adds 5 turns to sessionMaxTurns, consumes tool", () => {
+  it("USE_TOOL magic_seed: adds 5 turns to active farmRun, consumes tool", () => {
     const s3 = {
       ...createInitialState(),
       tools: { ...createInitialState().tools, magic_seed: 1 },
-      sessionMaxTurns: 10,
+      farmRun: { zoneId: "home", turnBudget: 10, turnsRemaining: 4, startedAt: 1 },
     };
     const r3 = rootReducer(s3, {
       type: "USE_TOOL",
       payload: { id: "magic_seed" },
     });
-    // Spec H-15: extension must update sessionMaxTurns (the field checked by turn-end logic)
-    expect(r3.sessionMaxTurns).toBe(15);
+    expect(r3.farmRun.turnBudget).toBe(15);
+    expect(r3.farmRun.turnsRemaining).toBe(9);
     expect(r3.tools.magic_seed).toBe(0);
   });
 

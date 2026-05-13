@@ -232,7 +232,7 @@ export function applyTileOverrides(tileTypes, overrides) {
 
 /**
  * Apply patches to ZONES entries (Phase 6, Balance Manager Zones tab).
- * Allowed fields per zone: startingTurns, entryCost.coins, upgradeMap,
+ * Allowed fields per zone: baseTurns, entryCost.coins, upgradeMap,
  * seasonDrops. Each is whitelisted so unrelated keys can't bleed in.
  *
  * `upgradeMap` is replaced wholesale (rather than merged) so the designer
@@ -254,8 +254,8 @@ export function applyZoneOverrides(zones, overrides) {
     if (Array.isArray(patch.buildings)) {
       zone.buildings = patch.buildings.filter((id) => typeof id === "string" && id.length > 0);
     }
-    if (Number.isFinite(patch.startingTurns) && patch.startingTurns >= 1) {
-      zone.startingTurns = Math.floor(patch.startingTurns);
+    if (Number.isFinite(patch.baseTurns) && patch.baseTurns >= 1) {
+      zone.baseTurns = Math.floor(patch.baseTurns);
     }
     if (patch.entryCost && typeof patch.entryCost === "object") {
       const coins = Number(patch.entryCost.coins);
@@ -427,8 +427,8 @@ export function applyBiomeOverrides(settlementBiomes, overrides) {
  * Validate the Balance Manager "Tuning" section (loose top-level constants).
  * Returns a clean object containing only the keys that passed validation; the
  * caller (constants.js / zones/data.js) reassigns the matching `export let`s.
- *   maxTurns, auditBossCooldownDays, craftQueueHours, craftGemSkipCost,
- *   minExpeditionTurns, foundingBaseCoins  — positive integers
+ *   craftQueueHours, craftGemSkipCost, minExpeditionTurns,
+ *   foundingBaseCoins                      — positive integers
  *   foundingGrowth                         — positive number
  *   homeBiome                              — non-empty string
  */
@@ -437,7 +437,6 @@ export function sanitizeTuning(o) {
   if (!o || typeof o !== "object") return out;
   const posInt = (v) => (Number.isFinite(Number(v)) && Number(v) >= 1 ? Math.floor(Number(v)) : undefined);
   const intFields = {
-    maxTurns: "maxTurns", auditBossCooldownDays: "auditBossCooldownDays",
     craftQueueHours: "craftQueueHours", craftGemSkipCost: "craftGemSkipCost",
     minExpeditionTurns: "minExpeditionTurns", foundingBaseCoins: "foundingBaseCoins",
   };

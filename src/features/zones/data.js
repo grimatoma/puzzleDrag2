@@ -6,7 +6,7 @@
 //
 // Zone config fields (defined on each MAP_NODE):
 //   hasFarm / hasMine / hasWater — which puzzle boards the location exposes
-//   startingTurns  — total puzzle turns per session
+//   baseTurns      — base puzzle turns per session before local bonuses
 //   entryCost      — cost object to start a session
 //   upgradeMap     — source zone-category → spawned upgrade zone-category
 //   seasonDrops    — per-season percentage drop rates per category
@@ -79,12 +79,12 @@ export const TILE_CATEGORY_TO_ZONE_CATEGORY = Object.freeze(
 const SESSION_SEASON_NAMES = Object.freeze(["Spring", "Summer", "Autumn", "Winter"]);
 
 /**
- * Phase 3b — split a session's `sessionMaxTurns` evenly across four seasons
- * and return the season index for the supplied `turnsUsed`. Returns 0..3.
+ * Phase 3b — split a session's `turnBudget` evenly across four seasons and
+ * return the season index for the supplied `turnsUsed`. Returns 0..3.
  */
-export function seasonIndexInSession(turnsUsed, sessionMaxTurns) {
-  const t = Math.max(0, Math.min(turnsUsed | 0, (sessionMaxTurns | 0) - 1));
-  const S = Math.max(1, sessionMaxTurns | 0);
+export function seasonIndexInSession(turnsUsed, turnBudget) {
+  const t = Math.max(0, Math.min(turnsUsed | 0, (turnBudget | 0) - 1));
+  const S = Math.max(1, turnBudget | 0);
   for (let i = 0; i < 4; i++) {
     const end = Math.floor(((i + 1) * S) / 4);
     if (t < end) return i;
@@ -92,8 +92,29 @@ export function seasonIndexInSession(turnsUsed, sessionMaxTurns) {
   return 3;
 }
 
-export function seasonNameInSession(turnsUsed, sessionMaxTurns) {
-  return SESSION_SEASON_NAMES[seasonIndexInSession(turnsUsed, sessionMaxTurns)];
+export function seasonNameInSession(turnsUsed, turnBudget) {
+  return SESSION_SEASON_NAMES[seasonIndexInSession(turnsUsed, turnBudget)];
+}
+
+export function zoneBaseTurns(zoneOrId) {
+  const zone = typeof zoneOrId === "string" ? ZONES[zoneOrId] : zoneOrId;
+  const raw = zone?.baseTurns ?? 10;
+  return Math.max(0, Math.floor(Number(raw) || 0));
+}
+
+export function turnBudgetAdditiveBonusForZone(state, zoneId) {
+  const built = state?.built?.[zoneId] ?? {};
+  let bonus = 0;
+  if (built.granary) bonus += 1;
+  return bonus;
+}
+
+export function turnBudgetForZone(state, zoneId, opts = {}) {
+  const baseTurns = opts.baseTurns ?? zoneBaseTurns(zoneId);
+  const additive = opts.additiveBonus ?? turnBudgetAdditiveBonusForZone(state, zoneId);
+  const bonusTurns = opts.bonusTurns ?? 0;
+  const multiplier = opts.multiplier ?? (opts.useFertilizer ? 2 : 1);
+  return Math.max(1, Math.floor((baseTurns + additive + bonusTurns) * multiplier));
 }
 
 /**
@@ -222,7 +243,7 @@ export const ZONES = Object.freeze(
         hasFarm:      n.hasFarm  ?? false,
         hasMine:      n.hasMine  ?? false,
         hasWater:     n.hasWater ?? false,
-        startingTurns: n.startingTurns ?? 16,
+        baseTurns:    n.baseTurns ?? 10,
         entryCost:    n.entryCost    ?? { coins: 0 },
         upgradeMap:   n.upgradeMap   ?? {},
         seasonDrops:  n.seasonDrops  ?? { Spring: {}, Summer: {}, Autumn: {}, Winter: {} },
@@ -287,8 +308,8 @@ export function settlementFoundingCost(state) {
 
 /**
  * A settlement is "complete" once two conditions hold:
- *   1. at least half of the buildings available at the zone have been built, AND
- *   2. its keeper has been faced (Coexist or Drive Out — `settlementKeeperPath()`
+ *   1. enough local buildings are built to draw its keeper, AND
+ *   2. its keeper has been resolved (Coexist or Drive Out — `settlementKeeperPath()`
  *      returns a non-null value).
  *
  * Settlements without a keeper type (e.g. crossroads, fairground — non-biome
@@ -301,11 +322,16 @@ export function settlementCompleted(state, zoneId) {
   if (need.length === 0) return false;
   const built = state?.built?.[zoneId] ?? {};
   const have = need.filter((b) => built[b]).length;
-  if (have < Math.ceil(need.length / 2)) return false;
+  const type = settlementTypeForZone(zoneId);
+  const keeper = type && keeperForType(type);
+  const neededBuildings = keeper
+    ? Math.max(1, keeper.appearsAfterBuildings ?? 4)
+    : Math.ceil(need.length / 2);
+  if (have < neededBuildings) return false;
   // Keeper gate: if this zone has a settlement type (farm/mine/harbor), require
   // the keeper choice be made. Non-settlement zones (rare; mostly defensive)
   // skip the gate.
-  if (settlementTypeForZone(zoneId) && !settlementKeeperPath(state, zoneId)) return false;
+  if (type && !settlementKeeperPath(state, zoneId)) return false;
   return true;
 }
 
@@ -367,9 +393,9 @@ export function expeditionTurnsFromSupply(state, supply, zoneId = state?.mapCurr
 // per-type latch — once > 0 the token has been earned.
 //
 // Phase 6a wired the keeper gate into `settlementCompleted` (above): a zone
-// only "completes" once half its buildings are up AND its keeper has been
-// faced. `grantEarnedHearthTokens` runs from both BUILD (after a building
-// pushes the count past half) and KEEPER/CONFRONT (when the keeper choice
+// only "completes" once enough buildings are up AND its keeper has been
+// resolved. `grantEarnedHearthTokens` runs from both BUILD (after a building
+// reaches the keeper threshold) and KEEPER/CONFRONT (when the keeper choice
 // is the gating step). The Old Capital finale itself is intentionally
 // undefined per the master doc — the map node is a locked stub.
 const _KIND_BY_ID = Object.fromEntries(MAP_NODES.map((n) => [n.id, n.kind]));

@@ -34,7 +34,7 @@ describe("Phase 5.4 — Chain-length discovery", () => {
     expect(c1.discoveredIds[0]).toBe("grain_wheat");
   });
 
-  it("D: exactly UPGRADE_THRESHOLDS.grass_hay hay → wheat only", () => {
+  it("D: exactly UPGRADE_THRESHOLDS.grass_hay discovers wheat only", () => {
     const d1 = discoverTileTypesFromChain(base, { resourceKey: "grass_hay", chainLength: UPGRADE_THRESHOLDS.grass_hay });
     expect(d1.discoveredIds.length).toBe(1);
     expect(d1.discoveredIds[0]).toBe("grain_wheat");

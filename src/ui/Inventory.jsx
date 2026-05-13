@@ -1,6 +1,7 @@
 import { BIOMES, ITEMS } from "../constants.js";
 import { sellPriceFor } from "../features/market/pricing.js";
 import { hex } from "../utils.js";
+import { locBuilt } from "../locBuilt.js";
 import IconCanvas, { hasIcon } from "./IconCanvas.jsx";
 import Icon from "./Icon.jsx";
 
@@ -177,7 +178,7 @@ export function InventoryGrid({ inventory, biomeKey, compact, orders = [], state
   );
   const gridCols = compact ? "grid-cols-2" : "grid-cols-[repeat(auto-fill,minmax(200px,1fr))]";
   const { status, totals } = orderStatusByKey(orders, inventory);
-  const marketBuilt = !!state?.built?.caravan_post;
+  const marketBuilt = !!locBuilt(state).caravan_post;
   const prices = state?.market?.prices ?? {};
 
   return (

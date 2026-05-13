@@ -59,20 +59,28 @@ export const STORY_BEATS = [
     onComplete: { setFlag: "hearth_lit", spawnNPC: "mira" },
   },
   {
-    id: "act1_first_bread",
+    id: "act1_first_order",
     act: 1,
-    title: "Bread for the Vale",
-    body: "Mira: 'Bake a loaf with me — I'll show you the oven.'",
-    trigger: { type: "craft_made", item: "bread", count: 1 },
-    onComplete: { setFlag: "first_craft", spawnNPC: "tomas" },
+    title: "The First Delivery",
+    body: "Mira: 'There. Someone asked, you answered, and the Vale knows it can ask again.'",
+    trigger: { type: "order_fulfilled", count: 1 },
+    onComplete: { setFlag: "first_order", spawnNPC: "tomas" },
   },
   {
-    id: "act1_build_mill",
+    id: "act1_build_granary",
     act: 1,
-    title: "The Mill Stands",
-    body: "Tomas: 'A mill! Now we won't starve come winter.'",
-    trigger: { type: "building_built", id: "mill" },
-    onComplete: { setFlag: "mill_built", advanceAct: 2 },
+    title: "Room For Tomorrow",
+    body: "Tomas: 'A granary means you are not just surviving the field. You are planning the next one.'",
+    trigger: { type: "building_built", id: "granary" },
+    onComplete: { setFlag: "granary_built" },
+  },
+  {
+    id: "act1_keeper_trial",
+    act: 1,
+    title: "The Keeper At The Fence",
+    body: "Wren: 'The old keeper has noticed us. Settle this, and the road beyond the Vale can open.'",
+    trigger: { type: "keeper_confronted", zoneId: "home" },
+    onComplete: { setFlag: "home_keeper_resolved", advanceAct: 2 },
   },
   // ── Act 2 ──────────────────────────────────────────────────────────────────
   {
@@ -94,19 +102,19 @@ export const STORY_BEATS = [
   {
     id: "act2_frostmaw",
     act: 2,
-    title: "Frostmaw Wakes",
-    body: "Bram: 'The cold is a creature. Gather 30 logs or we burn the rafters.'",
-    // Phase 7 — was `season_entered: winter`. The calendar was removed in #289;
-    // this beat now fires when the player has hauled enough firewood total.
-    trigger: { type: "resource_total", key: "wood_log", amount: 30 },
-    onComplete: { setFlag: "frostmaw_active", spawnBoss: "frostmaw" },
+    title: "Quarry Foothold",
+    body: "Bram: 'That stone is not just stone. It is road, wall, kiln, and promise.'",
+    // Save-compat id: this was the Frostmaw audit-boss beat. Keeper Trials now
+    // own boss progression, so Act 2 uses the quarry as the next-zone tutorial.
+    trigger: { type: "resource_total", key: "mine_stone", amount: 20 },
+    onComplete: { setFlag: "quarry_foothold" },
   },
   {
     id: "act2_liss_arrives",
     act: 2,
     title: "The Healer",
     body: "Sister Liss: 'A child has fever. I need berries.'",
-    trigger: { type: "boss_defeated", id: "frostmaw" },
+    trigger: { type: "resource_total_multi", req: { mine_stone: 20, berry: 10 } },
     onComplete: { spawnNPC: "liss", advanceAct: 3 },
   },
   // ── Act 3 ──────────────────────────────────────────────────────────────────
@@ -219,11 +227,9 @@ export const SIDE_BEATS = [
     ],
   },
 
-  // ── The Frostmaw, after the fight: the hearth-keeper choice (Coexist / Drive Out) ──
-  // Queued by features/boss/slice.js on the first Frostmaw victory. The choice
-  // sets the player's keeper path (`keeper_path_coexist` | `keeper_path_driveout`)
-  // and grants the path's meta-currency (Embers | Core Ingots). Later phases hang
-  // a per-path boon tree off these flags.
+  // ── Legacy Frostmaw side fork ──────────────────────────────────────────────
+  // Kept for save/editor compatibility. Live keeper choices now resolve through
+  // settlement Keeper Trials/Pacts rather than a post-boss modal.
   {
     id: "frostmaw_keeper",
     title: "The Hearth-Keeper",
@@ -314,7 +320,7 @@ export function nextPendingBeat(state) {
  * flag-trigger evaluator (src/flags.js) so they all speak one vocabulary.
  *
  * Two flavours of condition:
- *  - **event conditions** (`craft_made`, `building_built`, `boss_defeated`,
+ *  - **event conditions** (`craft_made`, `building_built`, `order_fulfilled`, `keeper_confronted`, `boss_defeated`,
  *    `act_entered`, `session_start/ended`, `all_buildings_built`): must match
  *    `event.type` exactly — they fire when that event happens.
  *  - **state conditions** (`resource_total`, `resource_total_multi`,
@@ -347,6 +353,8 @@ export function conditionMatches(t, event, totals = {}, flags = {}) {
     case "act_entered":        return event.act === t.act;
     case "craft_made":         return event.item === t.item && (event.count ?? 1) >= (t.count ?? 1);
     case "building_built":     return event.id === t.id;
+    case "order_fulfilled":    return (event.count ?? 1) >= (t.count ?? 1);
+    case "keeper_confronted":  return (!t.zoneId || event.zoneId === t.zoneId) && (!t.path || event.path === t.path);
     case "boss_defeated":      return event.id === t.id;
     case "all_buildings_built":return event.allBuilt === true;
     default:                   return false;

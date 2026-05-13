@@ -48,15 +48,15 @@ describe("applyBiomeOverrides", () => {
 describe("sanitizeTuning", () => {
   it("keeps only valid keys, floors integers, allows craftGemSkipCost 0", () => {
     expect(sanitizeTuning({
-      maxTurns: 14, auditBossCooldownDays: 5.9, craftQueueHours: 6, craftGemSkipCost: 0,
+      craftQueueHours: 6, craftGemSkipCost: 0,
       minExpeditionTurns: 4, foundingBaseCoins: 500, foundingGrowth: 1.6, homeBiome: "marsh",
     })).toEqual({
-      maxTurns: 14, auditBossCooldownDays: 5, craftQueueHours: 6, craftGemSkipCost: 0,
+      craftQueueHours: 6, craftGemSkipCost: 0,
       minExpeditionTurns: 4, foundingBaseCoins: 500, foundingGrowth: 1.6, homeBiome: "marsh",
     });
   });
   it("drops invalid values and a non-object input", () => {
-    expect(sanitizeTuning({ maxTurns: 0, auditBossCooldownDays: -1, foundingGrowth: 0, homeBiome: "", craftGemSkipCost: "x" })).toEqual({});
+    expect(sanitizeTuning({ retiredAuditBossCooldownDays: 5, foundingGrowth: 0, homeBiome: "", craftGemSkipCost: "x" })).toEqual({});
     expect(sanitizeTuning(undefined)).toEqual({});
     expect(sanitizeTuning("nope")).toEqual({});
   });

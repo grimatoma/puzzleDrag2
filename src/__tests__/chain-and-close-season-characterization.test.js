@@ -81,7 +81,7 @@ describe("CHAIN_COLLECTED — boss min-chain rejection", () => {
     const s0 = baseState({
       boss: { id: "drake", emoji: "🐲", minChain: 5 },
       turnsUsed: 9,
-      sessionMaxTurns: 10,
+      farmRun: { zoneId: "home", turnBudget: 10, turnsRemaining: 1, startedAt: 1 },
     });
     const s1 = rootReducer(s0, {
       type: "CHAIN_COLLECTED",

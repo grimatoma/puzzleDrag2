@@ -45,14 +45,14 @@ describe("Phase 31 — FARM/ENTER: cost gating", () => {
 });
 
 describe("Phase 31 — FARM/ENTER: turn budget", () => {
-  it("uses the active zone's startingTurns by default (home = 16)", () => {
+  it("uses the active zone's baseTurns by default (home = 10)", () => {
     const s = withCoins(createInitialState(), 100);
     const next = rootReducer(s, {
       type: "FARM/ENTER",
       payload: { selectedTiles: [], useFertilizer: false },
     });
-    expect(next.sessionMaxTurns).toBe(ZONES.home.startingTurns);
-    expect(next.sessionMaxTurns).toBe(16);
+    expect(next.farmRun.turnBudget).toBe(ZONES.home.baseTurns);
+    expect(next.farmRun.turnsRemaining).toBe(10);
   });
 
   it("doubles the turn budget when fertilizer is applied", () => {
@@ -65,9 +65,26 @@ describe("Phase 31 — FARM/ENTER: turn budget", () => {
       type: "FARM/ENTER",
       payload: { selectedTiles: [], useFertilizer: true },
     });
-    expect(next.sessionMaxTurns).toBe(32);
+    expect(next.farmRun.turnBudget).toBe(20);
     expect(next.tools.fertilizer).toBe(0);
     expect(next.session.fertilizerUsed).toBe(true);
+  });
+
+  it("applies building bonuses before fertilizer multipliers", () => {
+    const base = createInitialState();
+    const s = withCoins(
+      {
+        ...base,
+        built: { ...base.built, home: { ...base.built.home, granary: true } },
+        tools: { ...base.tools, fertilizer: 1 },
+      },
+      100,
+    );
+    const next = rootReducer(s, {
+      type: "FARM/ENTER",
+      payload: { selectedTiles: [], useFertilizer: true },
+    });
+    expect(next.farmRun.turnBudget).toBe(22);
   });
 
   it("rejects fertilizer toggle when tools.fertilizer === 0", () => {
@@ -78,7 +95,7 @@ describe("Phase 31 — FARM/ENTER: turn budget", () => {
     });
     expect(next.coins).toBe(100); // not deducted
     expect(next.view).not.toBe("board");
-    expect(next.sessionMaxTurns).toBe(s.sessionMaxTurns);
+    expect(next.farmRun).toBeNull();
   });
 });
 
@@ -154,25 +171,25 @@ describe("Phase 31 — expandZoneCategories", () => {
 });
 
 describe("Phase 31 — FARM/ENTER: zone awareness", () => {
-  // Phase 6a — FARM/ENTER refuses at unfounded zones; pre-found quarry.
-  const quarryFounded = (over = {}) => ({
+  // Phase 6a — FARM/ENTER refuses at unfounded zones; pre-found meadow.
+  const meadowFounded = (over = {}) => ({
     ...createInitialState(),
-    activeZone: "quarry",
-    settlements: { home: { founded: true }, quarry: { founded: true, biome: "tundra" } },
+    activeZone: "meadow",
+    settlements: { home: { founded: true }, meadow: { founded: true, biome: "prairie" } },
     ...over,
   });
 
-  it("uses quarry's 10-turn budget when activeZone is quarry", () => {
-    const s = withCoins(quarryFounded(), 200);
+  it("uses meadow's base turn budget when activeZone is meadow", () => {
+    const s = withCoins(meadowFounded(), 200);
     const next = rootReducer(s, {
       type: "FARM/ENTER",
       payload: { selectedTiles: [], useFertilizer: false },
     });
-    expect(next.sessionMaxTurns).toBe(10);
+    expect(next.farmRun.turnBudget).toBe(ZONES.meadow.baseTurns);
   });
 
-  it("Quarry (10 turns) + fertilizer = 20 turns", () => {
-    const base = quarryFounded();
+  it("Meadow base turns + fertilizer doubles the run budget", () => {
+    const base = meadowFounded();
     const s = withCoins(
       {
         ...base,
@@ -184,6 +201,6 @@ describe("Phase 31 — FARM/ENTER: zone awareness", () => {
       type: "FARM/ENTER",
       payload: { selectedTiles: [], useFertilizer: true },
     });
-    expect(next.sessionMaxTurns).toBe(20);
+    expect(next.farmRun.turnBudget).toBe(ZONES.meadow.baseTurns * 2);
   });
 });

@@ -2,16 +2,11 @@
 // Each settlement type has a guardian "made conscious by the founding bargain."
 // Once a settlement is built up its keeper appears; the player chooses to
 //   • Coexist — the keeper stays, the biome keeps its wild gifts → Embers
-//   • Drive Out — the keeper withdraws, the biome goes orderly → Core Ingots
-// The choice is final per settlement (found another of that type to try the
-// other path). This config is the source of truth for the encounter dialogue
-// and rewards, and is overridable via `balance.json`'s `keepers` section (the
-// Balance Manager exposes it for editing).
-//
-// DEFERRED: per the doc, Drive Out should be a high-difficulty round with the
-// keeper as a hazard to outlast — for now it's a direct claim. (Phase 6a wired
-// the keeper choice into `settlementCompleted` and Hearth-Token grant; the
-// hazard-round variant lands in a follow-up.)
+//   • Drive Out — starts an opt-in Keeper Trial; win to claim Core Ingots
+// The choice is final once resolved per settlement (found another of that type
+// to try the other path). This config is the source of truth for encounter
+// dialogue and rewards, and is overridable via `balance.json`'s `keepers`
+// section (the Balance Manager exposes it for editing).
 
 import { BALANCE_OVERRIDES } from "./constants.js";
 import { applyKeeperOverrides } from "./config/applyOverrides.js";

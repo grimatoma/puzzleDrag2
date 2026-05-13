@@ -34,11 +34,11 @@ describe("effectiveBeat", () => {
   it("allBeatIds includes built-ins + drafts; findIncomingChoice walks effective data", () => {
     const d = draftWith({
       newBeats: [{ id: "res_new", title: "Res New" }],
-      beats: { act1_first_bread: { choices: [{ id: "c1", label: "go", outcome: { queueBeat: "res_new" } }] } },
+      beats: { act1_first_order: { choices: [{ id: "c1", label: "go", outcome: { queueBeat: "res_new" } }] } },
     });
     expect(allBeatIds(d)).toContain("res_new");
     const inc = findIncomingChoice("res_new", d);
-    expect(inc).toMatchObject({ parentId: "act1_first_bread", choice: { id: "c1" } });
+    expect(inc).toMatchObject({ parentId: "act1_first_order", choice: { id: "c1" } });
     expect(findIncomingChoice("mira_letter_sent", emptyDraft())).toMatchObject({ parentId: "mira_letter_1", choice: { id: "send" } });
   });
   it("suppressed side beats are hidden from effective editor data", () => {
@@ -92,10 +92,10 @@ describe("deriveGraph", () => {
   it("re-points a choice edge when queueBeat changes; adds an edge into a new draft beat", () => {
     const d = draftWith({
       newBeats: [{ id: "branch_a", title: "A" }],
-      beats: { act1_first_bread: { choices: [{ id: "c1", label: "x", outcome: { queueBeat: "branch_a" } }] } },
+      beats: { act1_first_order: { choices: [{ id: "c1", label: "x", outcome: { queueBeat: "branch_a" } }] } },
     });
     const g = deriveGraph(d);
-    expect(g.edges).toContainEqual(expect.objectContaining({ from: "act1_first_bread", to: "branch_a", kind: "choice", choice: "c1" }));
+    expect(g.edges).toContainEqual(expect.objectContaining({ from: "act1_first_order", to: "branch_a", kind: "choice", choice: "c1" }));
   });
 });
 
@@ -139,7 +139,7 @@ describe("focusedChainSubset", () => {
     expect(ids.has("act1_arrival")).toBe(true);
     expect(ids.has("act3_win")).toBe(true);
     expect(ids.has("mira_letter_1")).toBe(true);
-    expect(ids.has("frostmaw_keeper")).toBe(true);
+    expect(ids.has("frostmaw_keeper")).toBe(false);
     expect(ids.has("mira_letter_sent")).toBe(false);
     expect(v.edges).toContainEqual(expect.objectContaining({ from: "act2_bram_arrives", to: "mira_letter_1", side: true }));
     expect(v.edges.some((e) => e.from === "mira_letter_1" && e.kind === "choice")).toBe(false);

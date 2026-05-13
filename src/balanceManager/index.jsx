@@ -53,7 +53,7 @@ const TABS = [
     blurb: "Board pieces. Per-tile attributes: basics (label, colour, sale value, base chain target, tiles-wiki blurb), discovery method, what resource the chain produces, and any attached power hooks." },
   { id: "zones",     label: "Zones",          iconKey: "ui_star", Component: ZonesTab,
     section: "tiles",
-    blurb: "Per-zone settings: starting turns, entry cost, the chain-upgrade redirect map, and the per-(zone, season) tile drop percentages." },
+    blurb: "Per-zone settings: base turns, entry cost, the chain-upgrade redirect map, and the per-(zone, season) tile drop percentages." },
   { id: "biomes",    label: "Settlement Biomes", iconKey: "ui_star", Component: BiomesTab,
     section: "tiles",
     blurb: "The biomes a settlement can be founded as (4 per type): name, icon, the two hazards that appear in every round there, and the resource bonus." },

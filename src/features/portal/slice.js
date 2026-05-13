@@ -50,18 +50,23 @@ export function reduce(state, action) {
           grid: snap.grid ?? state.grid,
           inventory: snap.inventory ?? state.inventory,
           turnsUsed: snap.turnsUsed ?? state.turnsUsed,
+          farmRun: snap.farmRun ?? state.farmRun,
           lastChainSnapshot: null,
         };
       }
 
-      // Magic Seed — +5 turns (extends sessionMaxTurns so turn-end check honors it)
+      // Magic Seed — +5 turns to the active board run.
       if (id === "magic_seed") {
         const count = state.tools?.[id] ?? 0;
-        if (count <= 0) return state;
+        if (count <= 0 || !state.farmRun) return state;
         return {
           ...state,
           tools: { ...state.tools, [id]: count - 1 },
-          sessionMaxTurns: (state.sessionMaxTurns ?? 10) + 5,
+          farmRun: {
+            ...state.farmRun,
+            turnBudget: (state.farmRun.turnBudget ?? 0) + 5,
+            turnsRemaining: (state.farmRun.turnsRemaining ?? 0) + 5,
+          },
         };
       }
 

@@ -1,4 +1,4 @@
-import { SEASONS, MAX_TURNS } from "../constants.js";
+import { SEASONS } from "../constants.js";
 import { hex } from "../utils.js";
 import { xpForLevel } from "../state.js";
 import { seasonIndexInSession, hearthTokenCount } from "../features/zones/data.js";
@@ -67,8 +67,8 @@ function TideChip({ fish }) {
   );
 }
 
-function SeasonBar({ season, turnsUsed, turnsLeft, sessionMaxTurns }) {
-  const pipCount = Math.max(1, sessionMaxTurns | 0);
+function SeasonBar({ season, turnsUsed, turnsLeft, turnBudget }) {
+  const pipCount = Math.max(1, turnBudget | 0);
   return (
     <div className="bg-[#faf0dd] border-2 border-[#b28b62] rounded-full pl-3 pr-2 py-0.5 flex items-center gap-2 min-w-0 flex-1 max-w-[540px]">
       <div className="flex flex-col items-start">
@@ -147,17 +147,17 @@ function DevButton({ title, iconKey, onClick }) {
 }
 
 export function Hud({ state, dispatch }) {
-  const { coins, level, xp, turnsUsed, view, sessionMaxTurns } = state;
+  const { coins, level, xp, turnsUsed, view } = state;
   const onBoard = view === "board";
+  const turnBudget = state.farmRun?.turnBudget ?? 0;
+  const turnsRemaining = state.farmRun?.turnsRemaining ?? Math.max(0, turnBudget - (turnsUsed ?? 0));
   // Phase 7.1 — visual season rotates within the session. Each run cycles
   // Spring -> Winter as turnsUsed grows; the index lands on Spring whenever
   // the player isn't on the board.
-  const seasonIdx = onBoard ? seasonIndexInSession(turnsUsed ?? 0, sessionMaxTurns ?? MAX_TURNS) : 0;
+  const seasonIdx = onBoard ? seasonIndexInSession(turnsUsed ?? 0, turnBudget || 1) : 0;
   const season = SEASONS[seasonIdx];
   const xpNeed = xpForLevel(level);
   const xpPct = Math.min(100, (xp / xpNeed) * 100);
-  const effectiveMaxTurns = sessionMaxTurns ?? MAX_TURNS;
-  const turnsLeft = Math.max(0, effectiveMaxTurns - turnsUsed);
   const builtAtLoc = locBuilt(state);
   const buildingCount = Object.keys(builtAtLoc).filter((k) => k !== "_plots").length;
   const festivalAnnounced = !!state.story?.flags?.festival_announced;
@@ -190,7 +190,7 @@ export function Hud({ state, dispatch }) {
         </Pill>
       )}
       {!onBoard && <MetaPills state={state} />}
-      {onBoard && <SeasonBar season={season} turnsUsed={turnsUsed} turnsLeft={turnsLeft} sessionMaxTurns={effectiveMaxTurns} />}
+      {onBoard && <SeasonBar season={season} turnsUsed={turnsUsed} turnsLeft={turnsRemaining} turnBudget={turnBudget || 1} />}
       {/* Tide chip — visible only on the fish biome */}
       {onBoard && state.biomeKey === "fish" && <TideChip fish={state.fish} />}
       {/* Larder progress bars — visible when festival announced, on board view */}

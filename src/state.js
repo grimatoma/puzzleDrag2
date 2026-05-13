@@ -1,4 +1,4 @@
-import { BIOMES, BUILDINGS, NPCS, MAX_TURNS, RECIPES, DAILY_REWARDS, MINE_ENTRY_TIERS, HARBOR_ENTRY_TIERS, MIN_EXPEDITION_TURNS, CAPPED_RESOURCES, UPGRADE_THRESHOLDS, SAVE_SCHEMA_VERSION, ITEMS, CRAFT_GEM_SKIP_COST } from "./constants.js";
+import { BIOMES, BUILDINGS, NPCS, RECIPES, DAILY_REWARDS, MINE_ENTRY_TIERS, HARBOR_ENTRY_TIERS, MIN_EXPEDITION_TURNS, CAPPED_RESOURCES, UPGRADE_THRESHOLDS, SAVE_SCHEMA_VERSION, ITEMS, CRAFT_GEM_SKIP_COST } from "./constants.js";
 import { locBuilt as _locBuilt } from "./locBuilt.js";
 import { sellPriceFor as _sellPriceFor } from "./features/market/pricing.js";
 import { tryClearRatChain } from "./features/farm/rats.js";
@@ -11,6 +11,7 @@ import { driftPrices, applyTrade } from "./market.js";
 import { currentCap } from "./utils.js";
 import { computeWorkerEffects } from "./features/workers/aggregate.js";
 import { TILE_TYPES, CATEGORIES, TILE_TYPES_MAP, CATEGORY_OF } from "./features/tileCollection/data.js";
+import { discoverTileTypesFromChain } from "./features/tileCollection/effects.js";
 import { yieldMultiplierFor } from "./features/tileCollection/yieldMultipliers.js";
 import { longChainBonusFor } from "./features/tileCollection/longChainBonus.js";
 import { rollQuests } from "./features/quests/data.js";
@@ -39,7 +40,7 @@ import * as zones from "./features/zones/slice.js";
 import * as workers from "./features/workers/slice.js";
 import * as boons from "./features/boons/slice.js";
 import { boonEffectMult } from "./features/boons/data.js";
-import { ZONES, settlementFoundingCost, isSettlementFounded, displayZoneName, grantEarnedHearthTokens, isOldCapitalUnlocked, isExpeditionFood, expeditionTurnsFromSupply, settlementTypeForZone, resolveBiomeChoice, keeperReadyFor, completedSettlementCount, DEFAULT_ZONE } from "./features/zones/data.js";
+import { ZONES, settlementFoundingCost, isSettlementFounded, displayZoneName, grantEarnedHearthTokens, isOldCapitalUnlocked, isExpeditionFood, expeditionTurnsFromSupply, settlementTypeForZone, resolveBiomeChoice, keeperReadyFor, completedSettlementCount, DEFAULT_ZONE, turnBudgetForZone, zoneBaseTurns } from "./features/zones/data.js";
 import { keeperForType, keeperPathInfo } from "./keepers.js";
 import { FIRE_HAZARD_ENABLED } from "./featureFlags.js";
 import { loadSavedState, persistState, clearSave } from "./state/persistence.js";
@@ -151,9 +152,10 @@ export function resourceByKey(key) {
   return null;
 }
 
-function pickNpcKey(excludeKeys = []) {
-  const all = Object.keys(NPCS).filter((k) => !excludeKeys.includes(k));
-  const pool = all.length ? all : Object.keys(NPCS);
+function pickNpcKey(excludeKeys = [], roster = Object.keys(NPCS)) {
+  const allowed = Array.isArray(roster) && roster.length ? roster.filter((k) => NPCS[k]) : Object.keys(NPCS);
+  const all = allowed.filter((k) => !excludeKeys.includes(k));
+  const pool = all.length ? all : allowed;
   return pool[Math.floor(Math.random() * pool.length)];
 }
 
@@ -165,7 +167,7 @@ const CRAFTED_FARM_POOL = ["bread", "honeyroll", "harvestpie", "preserve", "tinc
 const CRAFTED_MINE_POOL = ["iron_hinge", "cobblepath", "lantern", "goldring", "gemcrown", "ironframe", "stonework"];
 
 let orderIdSeq = 1;
-export function makeOrder(biomeKey, level, excludeNpcs = [], excludeOrderKeys = []) {
+export function makeOrder(biomeKey, level, excludeNpcs = [], excludeOrderKeys = [], npcRoster = Object.keys(NPCS)) {
   const biome = BIOMES[biomeKey];
 
   // At level 3+, 30% chance for a crafted item order
@@ -193,7 +195,7 @@ export function makeOrder(biomeKey, level, excludeNpcs = [], excludeOrderKeys = 
     resourceLabel = res.label.toLowerCase();
   }
 
-  const npc = pickNpcKey(excludeNpcs);
+  const npc = pickNpcKey(excludeNpcs, npcRoster);
   const lines = NPCS[npc].lines;
   const line = lines[Math.floor(Math.random() * lines.length)]
     .replace("{n}", need)
@@ -209,9 +211,10 @@ export function makeOrder(biomeKey, level, excludeNpcs = [], excludeOrderKeys = 
 export function createFreshState(overrides) {
   const biomeKey = "farm";
   const level = 1;
-  const o1 = makeOrder(biomeKey, level);
-  const o2 = makeOrder(biomeKey, level, [o1.npc], [o1.key]);
-  const o3 = makeOrder(biomeKey, level, [o1.npc, o2.npc], [o1.key, o2.key]);
+  const initialRoster = ["wren"];
+  const o1 = makeOrder(biomeKey, level, [], [], initialRoster);
+  const o2 = makeOrder(biomeKey, level, [o1.npc], [o1.key], initialRoster);
+  const o3 = makeOrder(biomeKey, level, [o1.npc, o2.npc], [o1.key, o2.key], initialRoster);
   const marketSeed = Math.floor(Math.random() * 1e9);
   // saveSeed: stable per-save identifier for deterministic quest rolls.
   // If overrides supply one (e.g. from a loaded save), keep it; otherwise
@@ -231,6 +234,7 @@ export function createFreshState(overrides) {
     level,
     xp: 0,
     turnsUsed: 0,
+    farmRun: null,
     // Phase 7 — calendar season removed (state.seasonsCycled used to count
     // the global Spring/Summer/Autumn/Winter cycle). The in-session season
     // helper in features/zones/data.js is what drives the per-(zone, season)
@@ -299,12 +303,13 @@ export function createFreshState(overrides) {
     coreIngots: 0,
     gems: 0,
     heirlooms: { heirloomSeed: 0, pactIron: 0, tidesingerPearl: 0 },
-    sessionMaxTurns: MAX_TURNS,
     // Phase 2 — Start Farming session config. `selectedTiles` is the up-to-8
     // categories the player chose to expose on the board this session;
     // `fertilizerUsed` records whether the session was started with the
     // turn-doubling fertilizer applied. Both reset on FARM/ENTER.
     session: { selectedTiles: [], fertilizerUsed: false },
+    keeperTrials: {},
+    activeTrial: null,
     dailyStreak: { lastClaimedDate: null, currentDay: 0 },
     // Type-tier workers (anonymous, stackable). Hired count is capped at
     // each worker's maxCount; per-hire effects accumulate via the worker
@@ -409,7 +414,7 @@ export function initialState(overrides) {
     if (!FIRE_HAZARD_ENABLED && savedWithoutLegacy.hazards?.fire) {
       savedWithoutLegacy.hazards = { ...savedWithoutLegacy.hazards, fire: null };
     }
-    return { ...fresh, ...savedWithoutLegacy, story: mergedStory, tileCollection: mergedTileCollection, view: "town", viewParams: {}, turnsUsed: 0, modal: null, bubble: null, pendingView: null,
+    return { ...fresh, ...savedWithoutLegacy, story: mergedStory, tileCollection: mergedTileCollection, view: "town", viewParams: {}, turnsUsed: 0, farmRun: null, activeTrial: null, modal: null, bubble: null, pendingView: null,
       seasonStats: { harvests: 0, upgrades: 0, ordersFilled: 0, coins: 0 } };
   }
   return fresh;
@@ -445,9 +450,18 @@ function tickStoryRepeatCooldowns(state) {
 // "settle moment" events. Returns the updated state (no mutation).
 function evaluateAndApplyStoryBeat(state, event) {
   let next = tickStoryRepeatCooldowns(state);
+  const actBefore = next.story?.act;
   const totals = next.inventory ?? {};
   const result = evaluateStoryTriggers(next.story ?? { ...INITIAL_STORY_STATE, flags: {} }, event, totals);
   if (result) next = storySlice.reduce(next, { type: "STORY/BEAT_FIRED", payload: result });
+  if (next.pendingBossKey) {
+    const bossKey = next.pendingBossKey;
+    const { pendingBossKey, ...withoutPendingBoss } = next;
+    next = boss.reduce(withoutPendingBoss, { type: "BOSS/TRIGGER", bossKey });
+  }
+  if (result && next.story?.act !== actBefore) {
+    next = evaluateAndApplyStoryBeat(next, { type: "act_entered", act: next.story?.act });
+  }
   // Side beats (bond arcs / side events / editor-authored dialogs) react to any
   // event without blocking the main story. `bond_at_least` triggers still only
   // resolve at settle moments (gated inside sideTriggerMatches).
@@ -486,6 +500,292 @@ function maybeFireResourceBeats(stateAfter, stateBefore) {
 }
 
 const locBuilt = _locBuilt;
+
+function boardTurnPatch(state, count = 1) {
+  const freeMoves = state.tileCollection?.freeMoves ?? 0;
+  if (freeMoves > 0) {
+    return {
+      turnsUsed: state.turnsUsed ?? 0,
+      farmRun: state.farmRun ?? null,
+      tileCollection: {
+        ...state.tileCollection,
+        freeMoves: freeMoves - 1,
+      },
+      ended: false,
+      consumedFreeMove: true,
+    };
+  }
+  const turnsUsed = (state.turnsUsed ?? 0) + count;
+  if (!state.farmRun) return { turnsUsed, farmRun: null, ended: false };
+  const turnsRemaining = Math.max(0, (state.farmRun.turnsRemaining ?? 0) - count);
+  const farmRun = { ...state.farmRun, turnsRemaining };
+  return { turnsUsed, farmRun, ended: turnsRemaining <= 0 };
+}
+
+function applyTileCollectionChainEffects(state, key, length) {
+  if (!key || !length) return state;
+  let tcSlice = state.tileCollection ?? defaultTileCollectionSlice();
+  let progress = tcSlice.researchProgress ?? {};
+  let discovered = tcSlice.discovered ?? {};
+  let activeByCategory = tcSlice.activeByCategory ?? {};
+  let bubble = state.bubble;
+
+  const chainDiscovery = discoverTileTypesFromChain(
+    { ...state, tileCollection: tcSlice },
+    { resourceKey: key, chainLength: length },
+  );
+  if (chainDiscovery.discoveredIds.length > 0) {
+    discovered = chainDiscovery.newDiscoveredMap;
+    activeByCategory = { ...activeByCategory };
+    for (const id of chainDiscovery.discoveredIds) {
+      const t = TILE_TYPES_MAP[id];
+      if (t && activeByCategory[t.category] == null) activeByCategory[t.category] = id;
+    }
+    const first = TILE_TYPES_MAP[chainDiscovery.discoveredIds[0]];
+    if (first) bubble = { id: Date.now() + first.id.length, npc: "wren", text: `New tile type: ${first.displayName}`, ms: 2200 };
+  }
+
+  for (const t of TILE_TYPES) {
+    if (t.discovery?.method !== "research") continue;
+    if (t.discovery.researchOf !== key) continue;
+    if (discovered[t.id]) continue;
+    const cur = progress[t.id] ?? 0;
+    const next = cur + length;
+    const capped = Math.min(next, t.discovery.researchAmount);
+    progress = { ...progress, [t.id]: capped };
+    if (next >= t.discovery.researchAmount) {
+      discovered = { ...discovered, [t.id]: true };
+      if (activeByCategory[t.category] == null) {
+        activeByCategory = { ...activeByCategory, [t.category]: t.id };
+      }
+      bubble = { id: Date.now() + t.id.length, npc: "wren", text: `New tile type: ${t.displayName}`, ms: 2200 };
+    }
+  }
+
+  const chainedTile = TILE_TYPES_MAP[key];
+  let freeMoves = tcSlice.freeMoves ?? 0;
+  const grant = chainedTile?.effects?.freeMoves ?? 0;
+  if (grant > 0) freeMoves += grant;
+  const condHook = chainedTile?.effects?.freeMovesIfChain;
+  if (condHook && length >= (condHook.minChain ?? 999)) {
+    freeMoves += condHook.count ?? 1;
+  }
+
+  return {
+    ...state,
+    tileCollection: { ...tcSlice, researchProgress: progress, discovered, activeByCategory, freeMoves },
+    bubble,
+  };
+}
+
+function biomeForSettlementType(type) {
+  if (type === "mine") return "mine";
+  if (type === "harbor") return "fish";
+  return "farm";
+}
+
+function keeperTrialDefinition(state, zoneId, path = "driveout") {
+  const type = settlementTypeForZone(zoneId);
+  const keeper = keeperForType(type);
+  const info = keeperPathInfo(type, path);
+  if (!keeper || !info) return null;
+  const biomeKey = biomeForSettlementType(type);
+  const goalByType = {
+    farm: { resource: "grass_hay", amount: 25 },
+    mine: { resource: "mine_stone", amount: 20 },
+    harbor: { resource: "fish_raw", amount: 20 },
+  };
+  const baseBudgetByType = { farm: 12, mine: 10, harbor: 10 };
+  const goal = goalByType[type] ?? goalByType.farm;
+  return {
+    keeperKey: keeper.id,
+    keeperType: type,
+    keeperName: keeper.name,
+    zoneId,
+    path,
+    status: "active",
+    pressure: state.keeperTrials?.[zoneId]?.pressure ?? 0,
+    entryCost: {},
+    turnBudget: baseBudgetByType[type] ?? 10,
+    turnsRemaining: baseBudgetByType[type] ?? 10,
+    boardRules: { minChain: type === "farm" ? 4 : 3, biomeKey },
+    goal,
+    progress: 0,
+    pressureRules: { lossPressure: 1 },
+    winReward: path === "coexist"
+      ? { embers: info.embers ?? 0 }
+      : { coreIngots: info.coreIngots ?? 0 },
+    lossPenalty: { pressure: 1 },
+  };
+}
+
+function bossMirrorForTrial(trial) {
+  if (!trial) return null;
+  return {
+    key: trial.keeperKey,
+    name: trial.keeperName,
+    emoji: "◆",
+    resource: trial.goal.resource,
+    targetCount: trial.goal.amount,
+    progress: trial.progress ?? 0,
+    turnsLeft: trial.turnsRemaining ?? trial.turnBudget,
+    minChain: trial.boardRules?.minChain ?? 3,
+    goal: `Collect ${trial.goal.amount} ${trial.goal.resource} before the trial ends.`,
+    flavor: "Keeper Trial",
+    description: "A special board with keeper rules.",
+    isKeeperTrial: true,
+  };
+}
+
+function finalizeKeeperPath(state, zoneId, path) {
+  if (path !== "coexist" && path !== "driveout") return state;
+  if (!zoneId || !keeperReadyFor(state, zoneId)) return state;
+  const type = settlementTypeForZone(zoneId);
+  const keeper = keeperForType(type);
+  const info = keeperPathInfo(type, path);
+  if (!keeper || !info) return state;
+  const prevEntry = state.settlements?.[zoneId] ?? { founded: true };
+  const where = displayZoneName(state, zoneId);
+  let next = {
+    ...state,
+    activeTrial: null,
+    boss: state.boss?.isKeeperTrial ? null : state.boss,
+    bossMinimized: state.boss?.isKeeperTrial ? false : state.bossMinimized,
+    settlements: { ...(state.settlements ?? {}), [zoneId]: { ...prevEntry, keeperPath: path } },
+    keeperTrials: {
+      ...(state.keeperTrials ?? {}),
+      [zoneId]: { ...(state.keeperTrials?.[zoneId] ?? {}), status: "won", path, pressure: 0 },
+    },
+    story: { ...state.story, flags: { ...(state.story?.flags ?? {}), [`keeper_${zoneId}_${path}`]: true } },
+    bubble: {
+      id: Date.now(), npc: "wren", ms: 3000,
+      text: path === "coexist"
+        ? `${keeper.name} stays — its blessing rests on ${where}.`
+        : `${keeper.name} withdraws. ${where} is yours alone now.`,
+    },
+  };
+  if (path === "coexist") {
+    next = { ...next, embers: (state.embers ?? 0) + (info.embers ?? 0) };
+  } else {
+    next = {
+      ...next,
+      bossesDefeated: (state.bossesDefeated || 0) + 1,
+      coreIngots: (state.coreIngots ?? 0) + (info.coreIngots ?? 0),
+      achievements: {
+        ...(state.achievements ?? {}),
+        counters: {
+          ...(state.achievements?.counters ?? {}),
+          bosses_defeated: (state.achievements?.counters?.bosses_defeated ?? 0) + 1,
+        },
+      },
+    };
+  }
+  const earnedHeirlooms = grantEarnedHearthTokens(next);
+  if (earnedHeirlooms !== next.heirlooms) {
+    const justUnlockedCapital = !isOldCapitalUnlocked(next) &&
+      isOldCapitalUnlocked({ ...next, heirlooms: earnedHeirlooms });
+    next = {
+      ...next,
+      heirlooms: earnedHeirlooms,
+      bubble: justUnlockedCapital
+        ? { id: Date.now(), npc: "tomas", text: "Three Hearth-Tokens. The old road to the Capital opens.", ms: 2800 }
+        : next.bubble,
+    };
+  }
+  return evaluateAndApplyStoryBeat(next, { type: "keeper_confronted", zoneId, path, keeper: keeper.id });
+}
+
+function startKeeperTrial(state, zoneId, path = "driveout") {
+  if (path === "coexist") return finalizeKeeperPath(state, zoneId, path);
+  if (!zoneId || !keeperReadyFor(state, zoneId)) return state;
+  const trial = keeperTrialDefinition(state, zoneId, path);
+  if (!trial) return state;
+  const biomeKey = trial.boardRules?.biomeKey ?? "farm";
+  const farmRun = {
+    zoneId,
+    turnBudget: trial.turnBudget,
+    turnsRemaining: trial.turnBudget,
+    startedAt: Date.now(),
+    mode: "keeperTrial",
+    trialKey: trial.keeperKey,
+  };
+  return {
+    ...state,
+    activeTrial: trial,
+    keeperTrials: { ...(state.keeperTrials ?? {}), [zoneId]: trial },
+    boss: bossMirrorForTrial(trial),
+    bossMinimized: true,
+    modal: null,
+    view: "board",
+    viewParams: {},
+    biomeKey,
+    biome: biomeKey,
+    turnsUsed: 0,
+    farmRun,
+    session: { selectedTiles: [], fertilizerUsed: false, trial: { zoneId, keeperKey: trial.keeperKey } },
+    bubble: { id: Date.now(), npc: "wren", text: `${trial.keeperName} waits on a trial board. Meet its rules to drive it out.`, ms: 2600 },
+  };
+}
+
+function resolveKeeperTrial(state, won) {
+  const trial = state.activeTrial;
+  if (!trial) return state;
+  if (won) {
+    return finalizeKeeperPath({
+      ...state,
+      farmRun: null,
+      turnsUsed: 0,
+      modal: null,
+      view: "town",
+      viewParams: {},
+    }, trial.zoneId, trial.path);
+  }
+  const pressure = (trial.pressure ?? 0) + (trial.lossPenalty?.pressure ?? 1);
+  return {
+    ...state,
+    activeTrial: null,
+    boss: state.boss?.isKeeperTrial ? null : state.boss,
+    bossMinimized: state.boss?.isKeeperTrial ? false : state.bossMinimized,
+    keeperTrials: {
+      ...(state.keeperTrials ?? {}),
+      [trial.zoneId]: { ...trial, status: "lost", pressure, turnsRemaining: 0 },
+    },
+    farmRun: null,
+    turnsUsed: 0,
+    modal: "season",
+    view: "town",
+    viewParams: {},
+    bubble: { id: Date.now(), npc: "wren", text: `${trial.keeperName} holds for now. Regroup and try again.`, ms: 2600 },
+  };
+}
+
+function applyKeeperTrialChainProgress(state, resourceKey, amount, turnPatch) {
+  const trial = state.activeTrial;
+  if (!trial) return state;
+  let nextTrial = {
+    ...trial,
+    turnsRemaining: turnPatch.farmRun?.turnsRemaining ?? trial.turnsRemaining,
+  };
+  if (resourceKey === trial.goal?.resource) {
+    nextTrial = {
+      ...nextTrial,
+      progress: Math.min(trial.goal.amount, (trial.progress ?? 0) + amount),
+    };
+  }
+  let next = {
+    ...state,
+    activeTrial: nextTrial,
+    keeperTrials: { ...(state.keeperTrials ?? {}), [trial.zoneId]: nextTrial },
+    boss: state.boss?.isKeeperTrial ? bossMirrorForTrial(nextTrial) : state.boss,
+  };
+  if ((nextTrial.progress ?? 0) >= (nextTrial.goal?.amount ?? Infinity)) {
+    return resolveKeeperTrial(next, true);
+  }
+  if (turnPatch.ended) {
+    return resolveKeeperTrial(next, false);
+  }
+  return next;
+}
 
 function coreReducer(state, action) {
   switch (action.type) {
@@ -574,14 +874,17 @@ function coreReducer(state, action) {
       // Boss board modifier: active boss may require longer chains
       const bossMinChain = state.boss?.minChain || 0;
       if (bossMinChain > 0 && effectiveChain < bossMinChain) {
-        const turnsUsed = state.turnsUsed + 1;
-        const seasonEnded = turnsUsed >= (state.sessionMaxTurns ?? MAX_TURNS);
-        return {
+        const turn = boardTurnPatch(state);
+        const next = {
           ...state,
-          turnsUsed,
+          turnsUsed: turn.turnsUsed,
+          farmRun: turn.farmRun,
+          lastBoardActionConsumedFreeMove: !!turn.consumedFreeMove,
+          ...(turn.tileCollection ? { tileCollection: turn.tileCollection } : {}),
           bubble: { id: Date.now(), npc: "mira", text: `${state.boss.emoji} Challenge: chains need ${bossMinChain}+ tiles!`, ms: 2200, priority: 2 },
-          modal: seasonEnded ? "season" : state.modal,
+          modal: turn.ended ? "season" : state.modal,
         };
+        return applyKeeperTrialChainProgress(next, null, 0, turn);
       }
 
       const res = resourceByKey(key);
@@ -631,8 +934,7 @@ function coreReducer(state, action) {
         : baseCoinsGain;
       // §17 locked: 1 XP per chain (regardless of length/value) into almanac
       const { newState: afterAlmanacXp } = applyAlmanacXp(state, 1);
-      const turnsUsed = state.turnsUsed + 1;
-      const seasonEnded = turnsUsed >= MAX_TURNS;
+      const turn = boardTurnPatch(state);
       const seasonStats = {
         ...state.seasonStats,
         harvests: state.seasonStats.harvests + effectiveGained,
@@ -660,6 +962,7 @@ function coreReducer(state, action) {
         inventory: state.inventory,
         grid: state.grid ?? null,
         turnsUsed: state.turnsUsed,
+        farmRun: state.farmRun ?? null,
       };
 
       const fireCoinBonus = fireExtinguishPatch?.coinsBonus ?? 0;
@@ -683,15 +986,23 @@ function coreReducer(state, action) {
         xp: afterAlmanacXp.almanac.xp,
         level: afterAlmanacXp.almanac.level,
         almanac: afterAlmanacXp.almanac,
-        turnsUsed,
+        turnsUsed: turn.turnsUsed,
+        farmRun: turn.farmRun,
+        lastBoardActionConsumedFreeMove: !!turn.consumedFreeMove,
+        ...(turn.tileCollection ? { tileCollection: turn.tileCollection } : {}),
         seasonStats: { ...seasonStats, capFloaters: chainCf },
         floaters: chainFloaters,
         bubble,
         _hintsShown: newHintsShown,
         lastChainLength: effectiveChain,
         lastChainSnapshot,
-        modal: seasonEnded ? "season" : state.modal,
+        modal: turn.ended ? "season" : state.modal,
       };
+      afterChain = applyTileCollectionChainEffects(afterChain, key, effectiveChain);
+      afterChain = applyKeeperTrialChainProgress(afterChain, key, effectiveGained, turn);
+      if (state.activeTrial && !afterChain.activeTrial) {
+        return maybeFireResourceBeats(afterChain, state);
+      }
       // Mine: tick mysterious ore countdown on each chain
       if ((afterChain.biome ?? afterChain.biomeKey) === "mine" && afterChain.mysteriousOre) {
         afterChain = tickMysteriousOre(afterChain);
@@ -735,7 +1046,7 @@ function coreReducer(state, action) {
       const remainingOrders = state.orders.filter((x) => x.id !== o.id);
       const usedNpcs = remainingOrders.map((x) => x.npc);
       const usedKeys = remainingOrders.map((x) => x.key);
-      const replacement = makeOrder(state.biomeKey, state.level, usedNpcs, usedKeys);
+      const replacement = makeOrder(state.biomeKey, state.level, usedNpcs, usedKeys, state.npcs?.roster);
       // §17 locked: 5 XP per order into almanac
       const { newState: afterOrderAlmanac } = applyAlmanacXp(state, 5);
       // Bond multiplier (Phase 6.1): base reward × bond modifier
@@ -759,7 +1070,7 @@ function coreReducer(state, action) {
       if (orderLeveledUp) {
         bubble = { id: Date.now(), npc: "wren", text: `Level ${afterOrderAlmanac.almanac.level}! New things await.`, ms: 2400 };
       }
-      return {
+      const afterOrder = {
         ...state,
         inventory,
         coins: state.coins + actualReward,
@@ -771,6 +1082,7 @@ function coreReducer(state, action) {
         npcs: updatedNpcs,
         bubble,
       };
+      return evaluateAndApplyStoryBeat(afterOrder, { type: "order_fulfilled", id: o.id, key: o.key, npc: o.npc, count: 1 });
     }
     case "CRAFT_TOOL": {
       // Phase 10.1 — craft a Workshop tool (rake / axe / fertilizer / cat / etc.)
@@ -1007,6 +1319,13 @@ function coreReducer(state, action) {
       if (key === "mine" && state.level < 2) {
         return { ...state, bubble: { id: Date.now(), npc: "wren", text: "Mine unlocks at Level 2.", ms: 1800 } };
       }
+      const activeZone = state.activeZone ?? state.mapCurrent ?? DEFAULT_ZONE;
+      if (key === "mine" && !ZONES[activeZone]?.hasMine) {
+        return { ...state, bubble: { id: Date.now(), npc: "wren", text: "Travel to a mining settlement before opening the mine board.", ms: 2200 } };
+      }
+      if (key === "fish" && !ZONES[activeZone]?.hasWater) {
+        return { ...state, bubble: { id: Date.now(), npc: "wren", text: "Travel to a harbor before opening the fishing board.", ms: 2200 } };
+      }
       // Phase 12.5 — restore saved board if Silo/Barn built and snapshot exists
       const savedField = state[key]?.savedField ?? null;
       let boardPatch = {};
@@ -1016,7 +1335,7 @@ function coreReducer(state, action) {
       const excludeNpcs = [];
       const excludeKeys = [];
       const replacements = (state.orders ?? []).map(() => {
-        const o = makeOrder(key, state.level, excludeNpcs, excludeKeys);
+        const o = makeOrder(key, state.level, excludeNpcs, excludeKeys, state.npcs?.roster);
         excludeNpcs.push(o.npc);
         excludeKeys.push(o.key);
         return o;
@@ -1069,55 +1388,20 @@ function coreReducer(state, action) {
       };
     }
     case "KEEPER/CONFRONT": {
-      // Phase 6a — face a settlement's keeper and choose Coexist (Embers, the
-      // biome keeps its wild gifts) or Drive Out (Core Ingots, it goes orderly).
-      // Final per settlement. Sets settlements[zoneId].keeperPath + a
-      // `keeper_<zoneId>_<path>` flag (consumed by per-path boon trees).
-      //
-      // Because `settlementCompleted` now requires both ≥ half buildings AND a
-      // keeper choice, the keeper choice is often the gating step that flips
-      // a settlement complete. Re-run `grantEarnedHearthTokens` here so the
-      // token lands in the same tick (idempotent — won't double-grant).
       const zoneId = action.payload?.zoneId ?? action.zoneId;
       const path = action.payload?.path ?? action.path;
-      if (path !== "coexist" && path !== "driveout") return state;
-      if (!zoneId || !keeperReadyFor(state, zoneId)) return state; // unfounded / already faced / not built up enough
-      const type = settlementTypeForZone(zoneId);
-      const keeper = keeperForType(type);
-      const info = keeperPathInfo(type, path);
-      if (!keeper || !info) return state;
-      const prevEntry = state.settlements?.[zoneId] ?? { founded: true };
-      const where = displayZoneName(state, zoneId);
-      let next = {
-        ...state,
-        settlements: { ...(state.settlements ?? {}), [zoneId]: { ...prevEntry, keeperPath: path } },
-        story: { ...state.story, flags: { ...(state.story?.flags ?? {}), [`keeper_${zoneId}_${path}`]: true } },
-        bubble: {
-          id: Date.now(), npc: "wren", ms: 3000,
-          text: path === "coexist"
-            ? `${keeper.name} stays — its blessing rests on ${where}.`
-            : `${keeper.name} withdraws. ${where} is yours alone now.`,
-        },
-      };
-      if (path === "coexist") next = { ...next, embers: (state.embers ?? 0) + (info.embers ?? 0) };
-      else next = { ...next, coreIngots: (state.coreIngots ?? 0) + (info.coreIngots ?? 0) };
-      // Hearth-Token grant: if this keeper choice flips the settlement to
-      // complete, mint the token now. If the choice also collected the third
-      // token, override the keeper bubble with the Old-Capital unlock message.
-      const earnedHeirlooms = grantEarnedHearthTokens(next);
-      if (earnedHeirlooms !== next.heirlooms) {
-        const justUnlockedCapital = !isOldCapitalUnlocked(next) &&
-          isOldCapitalUnlocked({ ...next, heirlooms: earnedHeirlooms });
-        next = {
-          ...next,
-          heirlooms: earnedHeirlooms,
-          bubble: justUnlockedCapital
-            ? { id: Date.now(), npc: "tomas", text: "Three Hearth-Tokens. The old road to the Capital opens.", ms: 2800 }
-            : next.bubble,
-        };
-      }
-      // Let a future story beat react ("you faced a keeper"); no-op until one exists.
-      return evaluateAndApplyStoryBeat(next, { type: "keeper_confronted", zoneId, path, keeper: keeper.id });
+      return startKeeperTrial(state, zoneId, path);
+    }
+    case "KEEPER/START_TRIAL": {
+      const zoneId = action.payload?.zoneId ?? action.zoneId;
+      return startKeeperTrial(state, zoneId, action.payload?.path ?? action.path ?? "driveout");
+    }
+    case "KEEPER/APPEASE": {
+      const zoneId = action.payload?.zoneId ?? action.zoneId;
+      return finalizeKeeperPath(state, zoneId, "coexist");
+    }
+    case "KEEPER/TRIAL_RESOLVE": {
+      return resolveKeeperTrial(state, action.payload?.won ?? action.won);
     }
     case "OPEN_MODAL":
       return { ...state, modal: action.modal, settingsTab: action.settingsTab ?? 'main' };
@@ -1273,7 +1557,9 @@ function coreReducer(state, action) {
         tools,
         coins: state.coins + bonusCoins + SEASON_END_BONUS_COINS,
         turnsUsed: 0,
-        sessionMaxTurns: MAX_TURNS,
+        farmRun: null,
+        activeTrial: null,
+        boss: state.boss?.isKeeperTrial ? null : state.boss,
         modal: null,
         view: "town",
         viewParams: {},
@@ -1396,6 +1682,10 @@ function coreReducer(state, action) {
 
     case "ENTER_MINE": {
       if (!state.story?.flags?.mine_unlocked) return state;
+      const zoneId = state.activeZone ?? state.mapCurrent ?? DEFAULT_ZONE;
+      if (!ZONES[zoneId]?.hasMine) {
+        return { ...state, bubble: { id: Date.now(), npc: "wren", text: "Travel to a mining settlement before entering the mine.", ms: 2200 } };
+      }
       const mode = action.payload?.mode ?? "standard";
       if (mode === "standard") {
         if ((state.inventory.supplies ?? 0) < 3) return state;
@@ -1430,6 +1720,12 @@ function coreReducer(state, action) {
       const zoneId = state.activeZone ?? state.mapCurrent ?? "home";
       const zone = ZONES[zoneId];
       if (!zone) return state;
+      if (!zone.hasFarm) {
+        return {
+          ...state,
+          bubble: { id: Date.now(), npc: "wren", text: `${displayZoneName(state, zoneId)} does not have farm fields.`, ms: 2200 },
+        };
+      }
       // Founding gate (Phase 6a): can't start a farming session at an unfounded zone.
       if (!isSettlementFounded(state, zoneId)) {
         return {
@@ -1443,8 +1739,7 @@ function coreReducer(state, action) {
       const fertilizerStock = state.tools?.fertilizer ?? 0;
       if (useFertilizer && fertilizerStock < 1) return state;
 
-      const startingTurns = zone.startingTurns ?? MAX_TURNS;
-      const sessionMaxTurns = startingTurns * (useFertilizer ? 2 : 1);
+      const turnBudget = turnBudgetForZone(state, zoneId, { useFertilizer });
 
       return {
         ...state,
@@ -1457,7 +1752,15 @@ function coreReducer(state, action) {
           ? { ...state.tools, fertilizer: fertilizerStock - 1 }
           : state.tools,
         turnsUsed: 0,
-        sessionMaxTurns,
+        farmRun: {
+          zoneId,
+          turnBudget,
+          turnsRemaining: turnBudget,
+          startedAt: Date.now(),
+          mode: "normal",
+        },
+        activeTrial: null,
+        boss: state.boss?.isKeeperTrial ? null : state.boss,
         session: {
           selectedTiles,
           fertilizerUsed: useFertilizer,
@@ -1498,7 +1801,20 @@ function coreReducer(state, action) {
         const n = Math.floor(rawCount);
         if (n > 0) inv[foodKey] = (inv[foodKey] ?? 0) - n;
       }
-      const staged = { ...state, inventory: inv, sessionMaxTurns: turns, turnsUsed: 0 };
+      const staged = {
+        ...state,
+        inventory: inv,
+        turnsUsed: 0,
+        farmRun: {
+          zoneId,
+          turnBudget: turns,
+          turnsRemaining: turns,
+          startedAt: Date.now(),
+          mode: "expedition",
+        },
+        activeTrial: null,
+        boss: state.boss?.isKeeperTrial ? null : state.boss,
+      };
       const switched = coreReducer(staged, { type: "SWITCH_BIOME", key: biomeKey });
       return {
         ...switched,
@@ -1517,6 +1833,13 @@ function coreReducer(state, action) {
       const tier = MINE_ENTRY_TIERS.find((t) => t.id === action.payload?.tier);
       if (!tier) return state;
       let mineBase;
+      const zoneId = state.activeZone ?? state.mapCurrent ?? "quarry";
+      if (!ZONES[zoneId]?.hasMine) {
+        return { ...state, bubble: { id: Date.now(), npc: "wren", text: "Travel to a mining settlement before entering the mine.", ms: 2200 } };
+      }
+      const baseTurns = zoneBaseTurns(zoneId || "quarry");
+      const tierBonus = tier.turnBonus ?? (tier.id === "better" ? 2 : 0);
+      const turnBudget = Math.max(1, baseTurns + tierBonus);
       if (tier.id === "free") {
         if ((state.inventory.supplies ?? 0) < 3) return state;
         mineBase = {
@@ -1524,7 +1847,6 @@ function coreReducer(state, action) {
           biomeKey: "mine",
           biome: "mine",
           inventory: { ...state.inventory, supplies: state.inventory.supplies - 3 },
-          sessionMaxTurns: MAX_TURNS,
         };
       } else if (tier.id === "better") {
         if ((state.coins ?? 0) < 100) return state;
@@ -1533,14 +1855,18 @@ function coreReducer(state, action) {
           biomeKey: "mine",
           biome: "mine",
           coins: state.coins - 100,
-          sessionMaxTurns: MAX_TURNS + 2,
         };
       } else if (tier.id === "premium") {
         if ((state.runes ?? 0) < 2) return state;
-        mineBase = { ...state, biomeKey: "mine", biome: "mine", runes: state.runes - 2, sessionMaxTurns: MAX_TURNS };
+        mineBase = { ...state, biomeKey: "mine", biome: "mine", runes: state.runes - 2 };
       } else {
         return state;
       }
+      mineBase = {
+        ...mineBase,
+        turnsUsed: 0,
+        farmRun: { zoneId, turnBudget, turnsRemaining: turnBudget, startedAt: Date.now(), mode: "mine" },
+      };
       // Spawn mysterious ore on mine entry if grid is available
       if (mineBase.grid && mineBase.grid.length > 0) {
         return spawnMysteriousOre(mineBase);
@@ -1554,6 +1880,13 @@ function coreReducer(state, action) {
       const tier = HARBOR_ENTRY_TIERS.find((t) => t.id === action.payload?.tier);
       if (!tier) return state;
       let harborBase;
+      const zoneId = state.activeZone ?? state.mapCurrent ?? "harbor";
+      if (!ZONES[zoneId]?.hasWater) {
+        return { ...state, bubble: { id: Date.now(), npc: "wren", text: "Travel to a harbor before fishing.", ms: 2200 } };
+      }
+      const baseTurns = zoneBaseTurns(zoneId || "harbor");
+      const tierBonus = tier.turnBonus ?? (tier.id === "better" ? 2 : 0);
+      const turnBudget = Math.max(1, baseTurns + tierBonus);
       if (tier.id === "free") {
         if ((state.inventory?.wood_plank ?? 0) < (tier.wood_plank ?? 0)) return state;
         harborBase = {
@@ -1561,7 +1894,6 @@ function coreReducer(state, action) {
           biomeKey: "fish",
           biome: "fish",
           inventory: { ...state.inventory, wood_plank: state.inventory.wood_plank - tier.wood_plank },
-          sessionMaxTurns: MAX_TURNS,
         };
       } else if (tier.id === "better") {
         if ((state.coins ?? 0) < (tier.coins ?? 0)) return state;
@@ -1572,7 +1904,6 @@ function coreReducer(state, action) {
           biome: "fish",
           coins: state.coins - tier.coins,
           inventory: { ...state.inventory, wood_plank: state.inventory.wood_plank - tier.wood_plank },
-          sessionMaxTurns: MAX_TURNS + 2,
         };
       } else if (tier.id === "premium") {
         if ((state.runes ?? 0) < (tier.runes ?? 0)) return state;
@@ -1581,12 +1912,16 @@ function coreReducer(state, action) {
           biomeKey: "fish",
           biome: "fish",
           runes: state.runes - tier.runes,
-          sessionMaxTurns: MAX_TURNS,
         };
       } else {
         return state;
       }
-      return { ...harborBase, _needsRefill: true };
+      return {
+        ...harborBase,
+        turnsUsed: 0,
+        farmRun: { zoneId, turnBudget, turnsRemaining: turnBudget, startedAt: Date.now(), mode: "harbor" },
+        _needsRefill: true,
+      };
     }
 
     case "CRAFT": {
@@ -1903,12 +2238,15 @@ function coreReducer(state, action) {
     }
 
     case "END_TURN": {
-      const fm = state.tileCollection?.freeMoves ?? 0;
-      if (fm > 0) {
-        return { ...state, tileCollection: { ...state.tileCollection, freeMoves: fm - 1 } };
-        // turnsUsed NOT incremented — free move spent
-      }
-      return { ...state, turnsUsed: (state.turnsUsed ?? 0) + 1 };
+      const turn = boardTurnPatch(state);
+      return {
+        ...state,
+        turnsUsed: turn.turnsUsed,
+        farmRun: turn.farmRun,
+        ...(turn.tileCollection ? { tileCollection: turn.tileCollection } : {}),
+        modal: turn.ended ? "season" : state.modal,
+        lastBoardActionConsumedFreeMove: !!turn.consumedFreeMove,
+      };
     }
 
     case "BUY_TILE": {

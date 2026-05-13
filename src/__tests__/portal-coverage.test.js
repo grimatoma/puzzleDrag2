@@ -15,7 +15,7 @@ describe("portal slice — coverage gaps", () => {
     grid: null,
     inventory: {},
     turnsUsed: 0,
-    sessionMaxTurns: 10,
+    farmRun: null,
     lastChainSnapshot: null,
     magicFertilizerCharges: 0,
     fertilizerActive: false,
@@ -82,10 +82,11 @@ describe("portal slice — coverage gaps", () => {
     expect(s1).toBe(s0);
   });
 
-  it("USE_TOOL magic_seed: extends sessionMaxTurns by 5", () => {
-    const s0 = baseState({ tools: { magic_seed: 1 }, sessionMaxTurns: 10 });
+  it("USE_TOOL magic_seed: extends the active farmRun by 5", () => {
+    const s0 = baseState({ tools: { magic_seed: 1 }, farmRun: { zoneId: "home", turnBudget: 10, turnsRemaining: 4, startedAt: 1 } });
     const s1 = portalReduce(s0, { type: "USE_TOOL", payload: { id: "magic_seed" } });
-    expect(s1.sessionMaxTurns).toBe(15);
+    expect(s1.farmRun.turnBudget).toBe(15);
+    expect(s1.farmRun.turnsRemaining).toBe(9);
     expect(s1.tools.magic_seed).toBe(0);
   });
 

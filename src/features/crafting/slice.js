@@ -45,7 +45,7 @@ function payInputs(inv, inputs) {
 }
 
 /**
- * Grant the output of a completed craft onto `state` (inventory/tools + coins +
+ * Grant the output of a completed craft onto `state` (inventory/tools +
  * craftedTotals) and return the new state. Shared by instant CRAFT_RECIPE,
  * CLAIM_CRAFT, and SKIP_CRAFT. `baseInventory` lets callers pass an already
  * input-deducted inventory (the queue path deducted at queue time).
@@ -63,7 +63,6 @@ function grantCraftOutput(state, recipeKey, recipe, baseInventory) {
     ...state,
     inventory: inv,
     tools,
-    coins: (state.coins || 0) + (itemDef?.value || 0),
     craftedTotals: {
       ...state.craftedTotals,
       [recipeKey]: ((state.craftedTotals || {})[recipeKey] || 0) + 1,

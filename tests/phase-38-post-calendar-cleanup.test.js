@@ -16,15 +16,15 @@ describe("Phase 38 — story beats no longer use the calendar", () => {
     expect(lingering).toEqual([]);
   });
 
-  it("act2_frostmaw is now keyed on a wood_log resource_total trigger", () => {
+  it("act2_frostmaw now points at quarry progress instead of the legacy boss", () => {
     const frostmaw = STORY_BEATS.find((b) => b.id === "act2_frostmaw");
     expect(frostmaw).toBeTruthy();
     expect(frostmaw.trigger.type).toBe("resource_total");
-    expect(frostmaw.trigger.key).toBe("wood_log");
-    expect(frostmaw.trigger.amount).toBeGreaterThanOrEqual(10);
+    expect(frostmaw.trigger.key).toBe("mine_stone");
+    expect(frostmaw.onComplete.spawnBoss).toBeUndefined();
   });
 
-  it("act2_frostmaw fires once total wood_log gathered hits the threshold", () => {
+  it("act2_frostmaw fires once total mine_stone gathered hits the threshold", () => {
     const frostmaw = STORY_BEATS.find((b) => b.id === "act2_frostmaw");
     const need = frostmaw.trigger.amount;
     // evaluateStoryTriggers walks the queue sequentially; fast-forward by
@@ -37,8 +37,8 @@ describe("Phase 38 — story beats no longer use the calendar", () => {
     }
     const result = evaluateStoryTriggers(
       { flags, act: 2 },
-      { type: "resource_total", key: "wood_log", amount: need },
-      { wood_log: need },
+      { type: "resource_total", key: "mine_stone", amount: need },
+      { mine_stone: need },
     );
     expect(result?.firedBeat?.id).toBe("act2_frostmaw");
   });

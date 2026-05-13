@@ -1,7 +1,7 @@
 // Zones tab — Balance Manager.
 //
 // Edits per-zone settings: name, board flags (hasFarm/hasMine/hasWater),
-// buildings list, startingTurns, entry cost, upgrade map, and per-season
+// buildings list, baseTurns, entry cost, upgrade map, and per-session-season
 // drop-rate percentages.
 //
 // Patches are stored on `draft.zones[zoneId]`. They merge into the live
@@ -92,7 +92,7 @@ export default function ZonesTab({ draft, updateDraft }) {
             hasMine:       p.hasMine       ?? z.hasMine       ?? false,
             hasWater:      p.hasWater      ?? z.hasWater      ?? false,
             buildings:     p.buildings     ?? z.buildings     ?? [],
-            startingTurns: p.startingTurns ?? z.startingTurns ?? 16,
+            baseTurns:     p.baseTurns     ?? z.baseTurns ?? 10,
             entryCoins:    (p.entryCost?.coins) ?? (z.entryCost?.coins ?? 50),
             upgradeMap:    p.upgradeMap    ?? z.upgradeMap    ?? {},
             seasonDrops:   p.seasonDrops   ?? z.seasonDrops   ?? {},
@@ -196,13 +196,13 @@ export default function ZonesTab({ draft, updateDraft }) {
               {/* Turn budget + entry cost */}
               <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 mb-3">
                 <div>
-                  <Label>Starting turns</Label>
+                  <Label>Base turns</Label>
                   <NumberField
-                    value={eff.startingTurns}
+                    value={eff.baseTurns}
                     min={4}
                     max={64}
                     width={70}
-                    onChange={(v) => patch(z.id, { startingTurns: v })}
+                    onChange={(v) => patch(z.id, { baseTurns: v })}
                   />
                 </div>
                 <div>

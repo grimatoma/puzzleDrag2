@@ -1,7 +1,7 @@
-// Phase 0 — Grid dimensions, turn count, and clamp helper.
+// Phase 0 — Grid dimensions, local session season index, and clamp helper.
 // Migrated from runSelfTests() assertions 0.1 and 0.2.
 import { describe, it, expect } from "vitest";
-import { ROWS, COLS, MAX_TURNS } from "../src/constants.js";
+import { ROWS, COLS } from "../src/constants.js";
 import { clamp, seasonIndexForTurns } from "../src/utils.js";
 
 describe("Phase 0 — grid dimensions", () => {
@@ -9,8 +9,7 @@ describe("Phase 0 — grid dimensions", () => {
   it("COLS === 6", () => expect(COLS).toBe(6));
 });
 
-describe("Phase 0 — turn count", () => {
-  it("MAX_TURNS === 10", () => expect(MAX_TURNS).toBe(10));
+describe("Phase 0 — local session season index", () => {
   it("turn 0 → Spring (index 0)", () => expect(seasonIndexForTurns(0)).toBe(0));
   it("turn 3 → Summer (index 1)", () => expect(seasonIndexForTurns(3)).toBe(1));
   it("turn 6 → Autumn (index 2)", () => expect(seasonIndexForTurns(6)).toBe(2));

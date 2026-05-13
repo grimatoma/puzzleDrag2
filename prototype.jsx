@@ -63,6 +63,7 @@ function PhaserMount({ dispatch, biomeKey, turnsUsed, uiLocked, boardActive, sce
             preBoot: (game) => {
               game.registry.set("biomeKey", biomeKey);
               game.registry.set("turnsUsed", turnsUsed);
+              game.registry.set("turnBudget", gameState?.farmRun?.turnBudget ?? null);
               game.registry.set("uiLocked", uiLocked);
               game.registry.set("dpr", dpr);
               game.registry.set("renderResolution", dpr);
@@ -130,9 +131,9 @@ function PhaserMount({ dispatch, biomeKey, turnsUsed, uiLocked, boardActive, sce
   useEffect(() => { setBoardRuntimeActive(gameRef.current, boardActive); }, [boardActive]);
   useEffect(() => { gameRef.current?.registry.set("biomeKey", biomeKey); }, [biomeKey]);
   useEffect(() => { gameRef.current?.registry.set("turnsUsed", turnsUsed); }, [turnsUsed]);
-  // Phase 7.1 — atmospheric in-session season needs the session's turn budget
-  // alongside turnsUsed so GameScene.season() can pick the right palette index.
-  useEffect(() => { gameRef.current?.registry.set("sessionMaxTurns", gameState?.sessionMaxTurns ?? null); }, [gameState?.sessionMaxTurns]);
+  // Phase 7.1 — atmospheric in-session season needs the active run's turn
+  // budget alongside turnsUsed so GameScene.season() can pick the palette.
+  useEffect(() => { gameRef.current?.registry.set("turnBudget", gameState?.farmRun?.turnBudget ?? null); }, [gameState?.farmRun?.turnBudget]);
   useEffect(() => { gameRef.current?.registry.set("uiLocked", uiLocked); }, [uiLocked]);
   useEffect(() => { gameRef.current?.registry.set("toolPending", toolPending ?? null); }, [toolPending]);
   useEffect(() => { gameRef.current?.registry.set("workers", workers ?? null); }, [workers]);

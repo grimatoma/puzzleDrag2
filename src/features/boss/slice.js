@@ -1,9 +1,6 @@
-import { RECIPES, AUDIT_BOSS_COOLDOWN_DAYS } from "../../constants.js";
+import { RECIPES } from "../../constants.js";
 import { BOSSES, BOSS_WINDOW_TURNS, bossReward as bossRewardFn } from "../bosses/data.js";
 import { awardXp } from "../almanac/data.js";
-import { applyChoiceOutcome } from "../../story.js";
-
-const AUDIT_BOSS_COOLDOWN_MS = AUDIT_BOSS_COOLDOWN_DAYS * 24 * 60 * 60 * 1000;
 
 // Build BOSS_META from the canonical BOSSES list (features/bosses/data.js)
 // Preserving UI-only fields (emoji, flavor, goal) inline while sourcing turns
@@ -78,7 +75,8 @@ const BOSS_META = {
   },
 };
 
-// Seasonal boss rotation — one per year, cycling through the 6 bosses (includes mossback + storm)
+// Legacy manual boss rotation. Automatic seasonal/audit spawning is deferred;
+// Keeper Trials are the primary boss structure.
 const YEAR_BOSS_ROTATION = ["frostmaw", "quagmire", "ember_drake", "old_stoneface", "mossback", "storm"];
 
 // Heirloom IDs eligible to drop from boss victories (rare/legendary picks)
@@ -90,9 +88,8 @@ export const initial = {
   bossesDefeated: 0,
   _bossSeasonCount: 0,
   _bossResolvedThisSeason: false,
-  // Phase 3 — audit-boss cadence. `lastAuditBossAt` is the wall-clock ms of the
-  // last audit-boss trigger (0 = never armed). `auditBossSeq` cycles the boss
-  // rotation. Gated by the `frostmaw_active` story flag.
+  // Legacy audit fields retained for save compatibility and tests. CLOSE_SEASON
+  // no longer schedules bosses from these values.
   lastAuditBossAt: 0,
   auditBossSeq: 0,
 };
@@ -148,6 +145,7 @@ export function reduce(state, action) {
 
     case "BOSS/REJECT": {
       if (!state.boss) return state;
+      if (state.boss.isKeeperTrial) return state;
       return {
         ...state,
         boss: null,
@@ -164,7 +162,6 @@ export function reduce(state, action) {
 
     case "BOSS/RESOLVE": {
       const won = !!action.won;
-      const defeatedKey = state.boss?.key; // capture before `base` clears it
       const base = {
         ...state,
         boss: null,
@@ -198,20 +195,6 @@ export function reduce(state, action) {
             id: Date.now(),
           },
         };
-        // Phase 3 — the Frostmaw is the hearth-keeper. On the first victory,
-        // queue the Coexist / Drive Out choice (which sets the keeper path +
-        // grants its meta-currency). On later victories, top up the path's
-        // currency quietly.
-        if (defeatedKey === "frostmaw") {
-          const flags = result.story?.flags ?? {};
-          if (!flags.keeper_choice_made) {
-            result = applyChoiceOutcome(result, { queueBeat: "frostmaw_keeper" });
-          } else if (flags.keeper_path_coexist) {
-            result = { ...result, embers: (result.embers ?? 0) + 2 };
-          } else if (flags.keeper_path_driveout) {
-            result = { ...result, coreIngots: (result.coreIngots ?? 0) + 2 };
-          }
-        }
         return result;
       }
       return {
@@ -226,6 +209,7 @@ export function reduce(state, action) {
     }
 
     case "CHAIN_COLLECTED": {
+      if (state.boss?.isKeeperTrial) return state;
       let next = { ...state };
       const payload = action.payload || {};
 
@@ -252,6 +236,7 @@ export function reduce(state, action) {
     }
 
     case "CRAFTING/CRAFT_RECIPE": {
+      if (state.boss?.isKeeperTrial) return state;
       if (!state.boss || state.boss.resource !== "mine_ingot") return state;
       const recipe = RECIPES[action.payload?.key];
       // Count any forge recipe that consumes mine_ingot as an input ingredient.
@@ -280,22 +265,8 @@ export function reduce(state, action) {
         next = { ...next, boss: { ...next.boss, turnsLeft } };
       }
 
-      // Phase 3 — audit-boss cadence (replaces the old "every 4th season"
-      // year-rotation climax). Once the Frostmaw story flag is set, an audit
-      // boss reappears on a real-day cooldown. The first time the clock is
-      // armed it just starts ticking (no boss yet); thereafter, when the
-      // cooldown elapses at a season-end, the next boss in the rotation fires.
-      const auditArmed = !!(next.story?.flags?.frostmaw_active);
-      if (auditArmed && !next.boss && !next._bossResolvedThisSeason) {
-        if ((next.lastAuditBossAt ?? 0) === 0) {
-          next = { ...next, lastAuditBossAt: Date.now() };
-        } else if (Date.now() - next.lastAuditBossAt >= AUDIT_BOSS_COOLDOWN_MS) {
-          const seq = next.auditBossSeq ?? 0;
-          const bossKey = YEAR_BOSS_ROTATION[seq % YEAR_BOSS_ROTATION.length];
-          next = triggerBoss(next, bossKey);
-          return { ...next, lastAuditBossAt: Date.now(), auditBossSeq: seq + 1 };
-        }
-      }
+      // Random seasonal bosses are deferred; keeper trials are now the primary
+      // boss structure. Manual BOSS/TRIGGER remains for debug/testing.
 
       // Reset the per-season resolved flag at end of every season
       next = { ...next, _bossResolvedThisSeason: false };

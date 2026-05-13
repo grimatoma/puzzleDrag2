@@ -235,8 +235,8 @@ No hybrid boons. Each hearth choice unlocks 3–5 zone-specific boons for the ch
 
 **Bosses appear as encounters, not gates.** They show up on the map when conditions align; you choose when to engage:
 
-- **The Keepers** — confronted to make the Coexist / Drive Out choice at each settlement.
-- **Frostmaw** — winter audit, appears each in-game winter at the active settlement until faced.
+- **The Keepers** — zone bosses confronted through opt-in Keeper Trials or resolved through Pacts.
+- **Frostmaw** — a possible Keeper identity/ruleset, implemented through the same Trial engine rather than a winter audit.
 - **The Drake** — lives in deep tundra-mine biome, encountered in late expeditions there.
 - **The Tidesinger's Test** — at certain Harbor biomes during specific weather events.
 - **The Ember** (Old Capital finale) — mechanics TBD.
@@ -309,9 +309,9 @@ Coin is the broadest-earned currency, so it needs the most outlets.
 
 Each resource has outflow so granaries don't sit full.
 
-- **Crafting chains** — grain → bread → festival loaf → wedding pie. Each step consumes the previous.
+- **Crafting sinks** — late recipes like bread, festival loaf, and wedding pie consume stored ingredients, but they are not the Act 1 resource spine.
 - **Building construction** — wood, stone, iron all burned by builds.
-- **Charter audits** — Frostmaw demands logs and forged hinges; the Drake demands stone and coal.
+- **Keeper pressure** — unresolved Keepers can make demands, dampen bonuses, or block expansion rewards until their Trial or Pact is resolved.
 - **Expedition food costs** — bread, cured meat, apples consumed for turn count.
 - **Hearth-Token requirements** — Old Capital invocation consumes some resources beyond just the tokens.
 - **Storage caps** — granaries have hard ceilings (Tier 1: 200; Tier 2: 500; Tier 3: 1200). Overflow rots.
@@ -852,7 +852,7 @@ The overall narrative arc plays out across settlements, gated by player progress
 - Found second settlement (different type)
 - Meet Bram (if mine) or Liss (if other)
 - Make second Coexist/Drive Out
-- Frostmaw appears for the first time (winter audit at Settlement 1)
+- The next Keeper Trial becomes available once the new settlement is ready
 - Liss reveals existence of Hollow Pact texts (Liss bond 5)
 
 ### Phase 3 — The Charter Stirs (Settlement 3-4)
@@ -1099,7 +1099,7 @@ These are the major quest beats from Part 4 (above), each one a substantial even
 Major story milestones, kingdom-wide:
 
 - **The Smoke on the Horizon** (after 2nd settlement founded) — kingdom-wide notification. NPCs comment on it.
-- **Frostmaw's First Audit** (winter 1 after founding) — Frostmaw appears at primary settlement. Player must engage or defer.
+- **Keeper Trial Available** — a settlement's Keeper offers an opt-in special board with local rules, rewards, and pressure.
 - **The Buried Charter** (Liss Bond 8) — full reveal of Hollow Pact.
 - **All Three Hearth-Tokens Collected** — Old Capital map location appears.
 - **The Long Return** — Old Capital final encounter.

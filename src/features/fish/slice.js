@@ -7,7 +7,7 @@
 //   tide:     "high" | "low"   — current tide state
 //   tideTurn: number           — turns elapsed under the current tide
 //
-// The slice reacts to END_TURN: it ticks tideTurn whenever the player is
+// The slice reacts to committed board actions: it ticks tideTurn whenever the player is
 // on the fish biome, and flips + mutates the bottom row when tideTurn
 // crosses TIDE_PERIOD. We do NOT touch turnsUsed — that's coreReducer's
 // responsibility — only the tide bookkeeping and grid bottom row.
@@ -61,7 +61,7 @@ function mutateBottomRow(grid, pool) {
 
 export function reduce(state, action) {
   if (!state.fish) return state;
-  if (action.type !== "END_TURN" && action.type !== "FISH/FORCE_TIDE_FLIP") {
+  if (action.type !== "END_TURN" && action.type !== "CHAIN_COLLECTED" && action.type !== "FISH/FORCE_TIDE_FLIP") {
     return state;
   }
   // FISH/FORCE_TIDE_FLIP is a debug/test affordance.
@@ -76,9 +76,9 @@ export function reduce(state, action) {
   }
   // Only tick + maybe flip when the player is actively on the fish board.
   if (state.biomeKey !== "fish") return state;
-  // Tide bookkeeping ticks per END_TURN dispatch on the fish biome. The
-  // free-move case (END_TURN with tileCollection.freeMoves > 0) ticks an
-  // extra time — accepted as a minor edge case for MVP; rare in practice.
+  if (state.lastBoardActionConsumedFreeMove) return state;
+  if (action.type === "CHAIN_COLLECTED" && (action.payload?.noTurn || action.payload?.gains)) return state;
+  // Tide bookkeeping ticks once per committed, turn-consuming board action.
   const nextTideTurn = (state.fish.tideTurn ?? 0) + 1;
   if (nextTideTurn < TIDE_PERIOD) {
     return { ...state, fish: { ...state.fish, tideTurn: nextTideTurn } };

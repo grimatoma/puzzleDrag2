@@ -60,14 +60,14 @@ describe("CHAIN_COLLECTED", () => {
   // Phase 7 — calendar season effects (spring +20%, autumn 2× upgrades,
   // winter min-chain) were removed; the tests asserting on them are gone.
 
-  it("advances turnsUsed and sets season modal when turn limit reached", async () => {
-    const { MAX_TURNS } = await import("../constants.js");
-    const state = minState({ turnsUsed: MAX_TURNS - 1 });
+  it("advances turnsUsed and sets season modal when farmRun turns run out", () => {
+    const state = minState({ turnsUsed: 9, farmRun: { zoneId: "home", turnBudget: 10, turnsRemaining: 1, startedAt: 1 } });
     const next = gameReducer(state, {
       type: "CHAIN_COLLECTED",
       payload: { key: "grass_hay", gained: 3, upgrades: 0, value: 1, chainLength: 4 },
     });
-    expect(next.turnsUsed).toBe(MAX_TURNS);
+    expect(next.turnsUsed).toBe(10);
+    expect(next.farmRun.turnsRemaining).toBe(0);
     expect(next.modal).toBe("season");
   });
 

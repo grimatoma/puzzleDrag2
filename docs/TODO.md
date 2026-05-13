@@ -92,8 +92,8 @@ Status legend: **[ ]** not started · **[~]** partial · **[deferred]** there's 
 
 Wave A (the playable spine) and Wave H (tech-debt sweep — queued-craft event hookup, prune unused char_* portraits, converge `applyResourceOverrides` → `applyItemOverrides`) have landed. The dead tier-entry actions (`MINE/ENTER` / `HARBOR/ENTER` / `ENTER_MINE`) remain — they're harmless until the expedition flow gets revisited. Next:
 
-1. **Keeper iteration** — Drive Out as a hazard-to-outlast round (reuses the boss machinery), and a side-beat / map auto-prompt for the encounter so players don't have to seek out the "Face the keeper" button. Pays off the boon trees with more interesting paths.
-2. **Recurring festival** — turn the one-shot act-3 "Harvest Festival" into a day-cooldown event that grants small rewards. Reuses the audit-boss cadence pattern.
+1. **Keeper iteration** — Drive Out as a hazard-to-outlast round, and a side-beat / map auto-prompt for the encounter so players don't have to seek out the "Face the keeper" button. Pays off the boon trees with more interesting paths.
+2. **Recurring festival** — turn the one-shot act-3 "Harvest Festival" into a day-cooldown event that grants small rewards.
 3. **Daily quest pools per NPC** — extend `makeOrder` with Mira/Bram/Liss/Tomas/Wren templates from Part 5 §I, plus a Quests BM tab. Gives the per-NPC bonds something narrative to do alongside boons.
 4. **Expedition flow loose ends** — remove the dead tier-entry actions + their tests now `EXPEDITION/DEPART` fully supersedes them; wire the NPC-bond / building-tier food modifiers; add the forward-declared recipes (`cured_meat`, `festival_loaf`, `wedding_pie`, `iron_ration`).
 

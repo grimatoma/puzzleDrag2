@@ -49,7 +49,7 @@ export function reduce(state, action) {
   // Auto-start on very first action (exclude meta/biome actions that may fire before
   // the player has a chance to see the board — prevents spurious auto-start in tests
   // and during biome-switch no-ops).
-  const TUTORIAL_SKIP_ACTIONS = new Set(['@@INIT', 'TUTORIAL/START', 'SET_BIOME', 'ADVANCE_SEASON']);
+  const TUTORIAL_SKIP_ACTIONS = new Set(['@@INIT', 'SESSION_START', 'TUTORIAL/START', 'SET_BIOME', 'ADVANCE_SEASON']);
   if (
     !state.tutorial.seen &&
     !state.tutorial.active &&

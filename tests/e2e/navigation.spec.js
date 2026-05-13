@@ -38,19 +38,18 @@ test('open Map screen', async ({ page }) => {
 test('season bar hides when not on board', async ({ page }) => {
   await gotoFresh(page);
   // Switch to board first so the SeasonBar renders.
-  await dispatchAction(page, { type: 'SET_VIEW', view: 'board' });
+  await dispatchAction(page, { type: 'FARM/ENTER', payload: { selectedTiles: [], useFertilizer: false } });
   await expect(page.getByTestId('turns-left')).toBeVisible();
   await dispatchAction(page, { type: 'SET_VIEW', view: 'town' });
   await expect(page.getByTestId('turns-left')).toHaveCount(0);
 });
 
-test('reaching MAX_TURNS opens the season summary modal', async ({ page }) => {
+test('spending the farmRun turn budget opens the season summary modal', async ({ page }) => {
   test.setTimeout(60_000);
   await gotoFresh(page);
-  await dispatchAction(page, { type: 'SET_VIEW', view: 'board' });
-  // The season modal is set inside CHAIN_COLLECTED when turnsUsed reaches the
-  // session cap. Drive chains until that happens. Fall back to END_TURN if a
-  // chain can't be formed on the current board.
+  await dispatchAction(page, { type: 'FARM/ENTER', payload: { selectedTiles: [], useFertilizer: false } });
+  // The season modal is set inside CHAIN_COLLECTED when turnsRemaining reaches 0.
+  // Drive chains until that happens.
   const final = await chainUntil(page, (s) => s.modal === 'season', { maxChains: 18 });
   expect(final.modal).toBe('season');
 });

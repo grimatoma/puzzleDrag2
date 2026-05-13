@@ -77,7 +77,7 @@ export function triggerSummary(beat) {
       default:                     return { icon: "?", label: t.type, kind: "trigger" };
     }
   }
-  const hints = { frostmaw_keeper: { icon: "⚔", label: "Frostmaw defeated", kind: "queued-code" } };
+  const hints = { frostmaw_keeper: { icon: "⚔", label: "Legacy Frostmaw fork", kind: "queued-code" } };
   return hints[beat?.id] ?? null;
 }
 
@@ -395,19 +395,20 @@ export const LAYOUT_NODES = [
   // Act I
   { id: "act1_arrival",       x: 32,   y: MY },
   { id: "act1_light_hearth",  x: 216,  y: MY },
-  { id: "act1_first_bread",   x: 400,  y: MY },
-  { id: "act1_build_mill",    x: 584,  y: MY },
+  { id: "act1_first_order",   x: 400,  y: MY },
+  { id: "act1_build_granary", x: 584,  y: MY },
+  { id: "act1_keeper_trial",  x: 768,  y: MY },
   // Act II
-  { id: "act2_bram_arrives",  x: 784,  y: MY },
-  { id: "act2_first_hinge",   x: 968,  y: MY },
-  { id: "act2_frostmaw",      x: 1152, y: MY },
-  { id: "act2_liss_arrives",  x: 1336, y: MY },
+  { id: "act2_bram_arrives",  x: 968,  y: MY },
+  { id: "act2_first_hinge",   x: 1152, y: MY },
+  { id: "act2_frostmaw",      x: 1336, y: MY },
+  { id: "act2_liss_arrives",  x: 1520, y: MY },
   // Act III
-  { id: "act3_mine_found",    x: 1536, y: MY },
-  { id: "act3_mine_opened",   x: 1720, y: MY },
-  { id: "act3_caravan",       x: 1904, y: MY },
-  { id: "act3_festival",      x: 2088, y: MY },
-  { id: "act3_win",           x: 2272, y: MY },
+  { id: "act3_mine_found",    x: 1720, y: MY },
+  { id: "act3_mine_opened",   x: 1904, y: MY },
+  { id: "act3_caravan",       x: 2088, y: MY },
+  { id: "act3_festival",      x: 2272, y: MY },
+  { id: "act3_win",           x: 2456, y: MY },
   // Side: Mira's Letter (the fork sits below Act II)
   { id: "mira_letter_1",      x: 1000, y: 580 },
   { id: "mira_letter_sent",   x: 1300, y: 500 },
@@ -421,9 +422,10 @@ export const LAYOUT_NODES = [
 
 export const LAYOUT_TRIGGER_EDGES = [
   { from: "act1_arrival",      to: "act1_light_hearth" },
-  { from: "act1_light_hearth", to: "act1_first_bread" },
-  { from: "act1_first_bread",  to: "act1_build_mill" },
-  { from: "act1_build_mill",   to: "act2_bram_arrives" },
+  { from: "act1_light_hearth", to: "act1_first_order" },
+  { from: "act1_first_order",  to: "act1_build_granary" },
+  { from: "act1_build_granary", to: "act1_keeper_trial" },
+  { from: "act1_keeper_trial", to: "act2_bram_arrives" },
   { from: "act2_bram_arrives", to: "act2_first_hinge" },
   { from: "act2_first_hinge",  to: "act2_frostmaw" },
   { from: "act2_frostmaw",     to: "act2_liss_arrives" },
@@ -434,10 +436,9 @@ export const LAYOUT_TRIGGER_EDGES = [
   { from: "act3_festival",     to: "act3_win" },
   // visual hints for where the side forks hang off the main spine
   { from: "act2_bram_arrives", to: "mira_letter_1",   side: true },
-  { from: "act2_frostmaw",     to: "frostmaw_keeper", side: true },
 ];
 
-const CANVAS_W_BASE = 2500;
+const CANVAS_W_BASE = 2700;
 const CANVAS_H_BASE = 1150;
 
 const NODE_W_COMPACT = NW, NODE_H_COMPACT = NH;

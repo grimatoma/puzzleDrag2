@@ -331,12 +331,12 @@ export class GameScene extends Phaser.Scene {
 
   season() {
     // Phase 7.1 — visual season rotates within the session. Pick the index
-    // from turnsUsed/sessionMaxTurns so the board palette cycles
+    // from turnsUsed/turnBudget so the board palette cycles
     // Spring -> Winter as the player burns turns.
     const turnsUsed = this.registry.get("turnsUsed") ?? 0;
-    const sessionMaxTurns = this.registry.get("sessionMaxTurns") ?? null;
-    if (!sessionMaxTurns || sessionMaxTurns < 1) return SEASONS[0];
-    const idx = seasonIndexInSession(turnsUsed, sessionMaxTurns);
+    const turnBudget = this.registry.get("turnBudget") ?? null;
+    if (!turnBudget || turnBudget < 1) return SEASONS[0];
+    const idx = seasonIndexInSession(turnsUsed, turnBudget);
     return SEASONS[idx];
   }
 
@@ -495,8 +495,8 @@ export class GameScene extends Phaser.Scene {
     const turnsUsed = this.registry.get("turnsUsed") ?? 0;
     // Fall back to the existing seasonsCycled-based season name when no
     // session is active (e.g. tests that don't dispatch FARM/ENTER).
-    const sessionMax = ZONES[zoneId].startingTurns ?? 16;
-    const seasonName = seasonNameInSession(turnsUsed, sessionMax);
+    const turnBudget = this.registry.get("turnBudget") ?? ZONES[zoneId].baseTurns ?? 10;
+    const seasonName = seasonNameInSession(turnsUsed, turnBudget);
     return pickByZoneSeasonDrops({
       zoneId,
       seasonName,

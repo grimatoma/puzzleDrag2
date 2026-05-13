@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { ZONES, zoneCategories, DEFAULT_ZONE, ZONE_TO_TILE_CATEGORIES } from "./data.js";
+import { ZONES, zoneCategories, DEFAULT_ZONE, ZONE_TO_TILE_CATEGORIES, turnBudgetAdditiveBonusForZone, turnBudgetForZone, zoneBaseTurns } from "./data.js";
 import { TILE_TYPES_BY_CATEGORY, TILE_TYPES_MAP } from "../tileCollection/data.js";
 import { TileIcon } from "../tileCollection/index.jsx";
 
@@ -224,7 +224,9 @@ export default function StartFarmingModal({ state, dispatch, onClose }) {
   const fertilizerAvailable = fertilizerStock > 0;
   const cost = zone.entryCost?.coins ?? 50;
   const canAfford = (state.coins ?? 0) >= cost;
-  const turns = zone.startingTurns * (useFertilizer ? 2 : 1);
+  const baseTurns = zoneBaseTurns(zone);
+  const buildingTurns = turnBudgetAdditiveBonusForZone(state, zoneId);
+  const turns = turnBudgetForZone(state, zoneId, { useFertilizer });
   const okTileCount =
     !mustPick || selected.size === MAX_SLOTS;
   const canStart = canAfford && okTileCount;
@@ -296,6 +298,9 @@ export default function StartFarmingModal({ state, dispatch, onClose }) {
           <div className="flex items-center justify-between text-[13px] text-[#3a2715]">
             <span className="font-bold">Turns this session</span>
             <span className="font-mono font-bold text-[16px]">{turns}</span>
+          </div>
+          <div className="mt-0.5 text-[11px] text-[#6a4b31]">
+            Base {baseTurns}{buildingTurns > 0 ? ` + buildings ${buildingTurns}` : ""}{useFertilizer ? " × fertilizer" : ""}
           </div>
           <label className="flex items-center gap-2 mt-2 text-[12px] text-[#3a2715]">
             <input

@@ -92,7 +92,7 @@ export function reduce(state, action) {
     }
 
     case "BOSS/RESOLVE": {
-      if (action.payload?.won === true) return tick(state, "bosses_defeated", 1);
+      if ((action.payload?.won ?? action.won) === true) return tick(state, "bosses_defeated", 1);
       return state;
     }
 

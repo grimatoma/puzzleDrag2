@@ -370,7 +370,7 @@ function KeeperEncounterModal({ node, type, dispatch, onClose }) {
                 <div className="text-[12px] text-[#3a4a20] mt-0.5">"{keeper.coexist.label}"</div>
               </button>
               <button onClick={() => pick('driveout')} className="text-left bg-[#e4ddd0] hover:bg-[#ece6da] border-2 border-[#9a8a6a] rounded-xl px-3 py-2 transition-colors">
-                <div className="flex items-center justify-between"><span className="font-bold text-[13px] text-[#3a2715]">⚔ Drive Out</span><span className="text-[11px] font-bold text-[#3a3e42] bg-[#cdd1d4] border border-[#8a8f95] rounded-full px-2 py-0.5">+{keeper.driveout.coreIngots ?? 0} ▣ Core Ingots</span></div>
+                <div className="flex items-center justify-between"><span className="font-bold text-[13px] text-[#3a2715]">⚔ Trial</span><span className="text-[11px] font-bold text-[#3a3e42] bg-[#cdd1d4] border border-[#8a8f95] rounded-full px-2 py-0.5">+{keeper.driveout.coreIngots ?? 0} ▣ Core Ingots</span></div>
                 <div className="text-[12px] text-[#4a3a2a] mt-0.5">"{keeper.driveout.label}"</div>
               </button>
             </div>
@@ -378,10 +378,10 @@ function KeeperEncounterModal({ node, type, dispatch, onClose }) {
           </>
         ) : (
           <>
-            <div className={`text-[11px] font-bold uppercase tracking-wide mb-1 ${chosen === 'coexist' ? 'text-[#3a7a1a]' : 'text-[#6a5a3a]'}`}>{chosen === 'coexist' ? '🤝 You chose to coexist' : '⚔ You drove the keeper out'}</div>
+            <div className={`text-[11px] font-bold uppercase tracking-wide mb-1 ${chosen === 'coexist' ? 'text-[#3a7a1a]' : 'text-[#6a5a3a]'}`}>{chosen === 'coexist' ? '🤝 You chose to coexist' : '⚔ Keeper trial started'}</div>
             <div className="flex flex-col gap-1.5 text-[12px] text-[#3a2715] leading-snug mb-3">
               {(info?.pitch ?? []).map((line, i) => <p key={i}>{line}</p>)}
-              <p className="font-bold text-[#5a7a1a]">{chosen === 'coexist' ? `+${keeper.coexist.embers ?? 0} Embers` : `+${keeper.driveout.coreIngots ?? 0} Core Ingots`} added to your kingdom.</p>
+              <p className="font-bold text-[#5a7a1a]">{chosen === 'coexist' ? `+${keeper.coexist.embers ?? 0} Embers added to your kingdom.` : `Win the trial to claim ${keeper.driveout.coreIngots ?? 0} Core Ingots.`}</p>
             </div>
             <button onClick={onClose} className="w-full bg-[#91bf24] hover:bg-[#a3d028] text-white font-bold py-2 rounded-lg border-2 border-white text-[13px] transition-colors">Done</button>
           </>

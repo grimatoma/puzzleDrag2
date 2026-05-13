@@ -37,21 +37,23 @@ function MiniCard({ boss, dispatch }) {
         }}
         onClick={() => dispatch({ type: "BOSS/EXPAND" })}
       >
-        <button
-          type="button"
-          aria-label="Reject challenge"
-          onClick={(e) => {
-            e.stopPropagation();
-            dispatch({ type: "BOSS/REJECT" });
-          }}
-          className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full text-white text-[11px] font-bold flex items-center justify-center leading-none shadow"
-          style={{
-            background: "#a8431a",
-            border: "1.5px solid #ff9a50",
-          }}
-        >
-          ×
-        </button>
+        {!boss.isKeeperTrial && (
+          <button
+            type="button"
+            aria-label="Reject challenge"
+            onClick={(e) => {
+              e.stopPropagation();
+              dispatch({ type: "BOSS/REJECT" });
+            }}
+            className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full text-white text-[11px] font-bold flex items-center justify-center leading-none shadow"
+            style={{
+              background: "#a8431a",
+              border: "1.5px solid #ff9a50",
+            }}
+          >
+            ×
+          </button>
+        )}
         <div className="flex items-center gap-1.5 mb-1 pr-3">
           {bossPortraitKey(boss) ? (
             <div style={{ width: 28, height: 28, borderRadius: "50%", overflow: "hidden", border: "1.5px solid #ff7a00", flexShrink: 0 }}>
@@ -200,19 +202,21 @@ function BossModal({ boss, year = 1, dispatch }) {
           >
             ACCEPT THE CHALLENGE
           </button>
-          <button
-            onClick={() => dispatch({ type: "BOSS/REJECT" })}
-            className="w-full py-2 rounded-xl font-bold text-[12px] transition-colors"
-            style={{
-              background: "transparent",
-              border: "1px solid rgba(168,67,26,0.6)",
-              color: "rgba(255,255,255,0.7)",
-              fontFamily: "Arial, sans-serif",
-              letterSpacing: "0.05em",
-            }}
-          >
-            DECLINE
-          </button>
+          {!boss.isKeeperTrial && (
+            <button
+              onClick={() => dispatch({ type: "BOSS/REJECT" })}
+              className="w-full py-2 rounded-xl font-bold text-[12px] transition-colors"
+              style={{
+                background: "transparent",
+                border: "1px solid rgba(168,67,26,0.6)",
+                color: "rgba(255,255,255,0.7)",
+                fontFamily: "Arial, sans-serif",
+                letterSpacing: "0.05em",
+              }}
+            >
+              DECLINE
+            </button>
+          )}
         </div>
       </div>
     </div>

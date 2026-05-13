@@ -13,7 +13,7 @@ function freshZones() {
     zone1: {
       id: "zone1",
       name: "Zone 1",
-      startingTurns: 16,
+      baseTurns: 16,
       entryCost: { coins: 50 },
       upgradeMap: { grass: "birds", grain: "vegetables" },
       seasonDrops: {
@@ -48,20 +48,20 @@ describe("Phase 37 — applyZoneOverrides", () => {
     const z = freshZones();
     applyZoneOverrides(z, undefined);
     applyZoneOverrides(z, {});
-    expect(z.zone1.startingTurns).toBe(16);
+    expect(z.zone1.baseTurns).toBe(16);
     expect(z.zone1.entryCost.coins).toBe(50);
   });
 
-  it("patches startingTurns and floors fractional input", () => {
+  it("patches baseTurns and floors fractional input", () => {
     const z = freshZones();
-    applyZoneOverrides(z, { zone1: { startingTurns: 12.7 } });
-    expect(z.zone1.startingTurns).toBe(12);
+    applyZoneOverrides(z, { zone1: { baseTurns: 12.7 } });
+    expect(z.zone1.baseTurns).toBe(12);
   });
 
-  it("rejects starting turns < 1", () => {
+  it("rejects base turns < 1", () => {
     const z = freshZones();
-    applyZoneOverrides(z, { zone1: { startingTurns: 0 } });
-    expect(z.zone1.startingTurns).toBe(16);
+    applyZoneOverrides(z, { zone1: { baseTurns: 0 } });
+    expect(z.zone1.baseTurns).toBe(16);
   });
 
   it("patches entryCost.coins while preserving sibling fields", () => {
@@ -104,8 +104,8 @@ describe("Phase 37 — applyZoneOverrides", () => {
 
   it("ignores patches for unknown zone ids", () => {
     const z = freshZones();
-    applyZoneOverrides(z, { zoneX: { startingTurns: 99 } });
-    expect(z.zone1.startingTurns).toBe(16);
+    applyZoneOverrides(z, { zoneX: { baseTurns: 99 } });
+    expect(z.zone1.baseTurns).toBe(16);
   });
 });
 

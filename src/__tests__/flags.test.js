@@ -10,7 +10,7 @@ import { conditionMatches } from "../story.js";
 describe("STORY_FLAGS registry", () => {
   it("has the progression + arc flags, each with a well-formed entry", () => {
     const ids = new Set(STORY_FLAGS.map((f) => f.id));
-    for (const id of ["intro_seen", "hearth_lit", "mill_built", "frostmaw_active", "mine_unlocked", "festival_announced", "isWon",
+    for (const id of ["intro_seen", "hearth_lit", "first_order", "granary_built", "home_keeper_resolved", "quarry_foothold", "frostmaw_active", "mine_unlocked", "festival_announced", "isWon",
       "mira_letter_seen", "mira_letter_sent", "keeper_choice_made", "keeper_path_coexist", "keeper_path_driveout"]) {
       expect(ids.has(id)).toBe(true);
     }

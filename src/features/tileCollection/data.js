@@ -104,7 +104,7 @@ export const TILE_TYPES = [
     description: "Golden stalks of grain unlocked when hay chains grow long enough to harvest properly.",
   },
 
-  // (grain and grain_flour are resources/items produced by chains, not tile
+  // (grain and grain_flour are late resources/recipe ingredients, not tile
   // species — see BIOMES.farm.resources.)
 
   // (wood and berry are resources/items, not tile species — see BIOMES.farm.resources.)

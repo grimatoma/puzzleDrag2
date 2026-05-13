@@ -37,9 +37,9 @@ describe("Phase 30 — ZONES schema", () => {
     expect(ZONES.quarry.hasMine).toBe(true);
   });
 
-  it("zone starting turns — home = 16, quarry = 10", () => {
-    expect(ZONES.home.startingTurns).toBe(16);
-    expect(ZONES.quarry.startingTurns).toBe(10);
+  it("zone base turns — home = 10, quarry = 10", () => {
+    expect(ZONES.home.baseTurns).toBe(10);
+    expect(ZONES.quarry.baseTurns).toBe(10);
   });
 
   it("Has Mine / Has Water flags match the location design", () => {

@@ -2,7 +2,7 @@
 // both just numbers that go up:
 //   • Resources  — fungible amounts held in the per-item inventory
 //                  (kind: "resource" — grain, wood, eggs, crafted goods…).
-//                  These have a chain (grain → flour → bread), a colour, a
+//                  These may have upgrade products, a colour, a
 //                  sale value, and can be crafting ingredients.
 //   • Currencies — kingdom-wide counters on the root game state (gold / runes
 //                  / embers / …). Not entries in the ITEMS registry, so they
@@ -127,7 +127,7 @@ export default function ResourcesTab({ draft, updateDraft }) {
         <Pill>{filtered.length} of {resourceEntries.length}</Pill>
       </div>
       <div className="text-[11px] italic" style={{ color: COLORS.inkSubtle }}>
-        Fungible amounts held in your inventory — raw goods, intermediates, and crafted products. Many chain into a next tier (grain → flour → bread).
+        Fungible amounts held in your inventory — raw goods, intermediates, and crafted products. Some upgrade into a next tier depending on the active zone rules.
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
