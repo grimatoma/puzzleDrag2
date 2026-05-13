@@ -27,6 +27,49 @@ const P = {
 const speakerName = (k) => (k && NPCS[k] ? NPCS[k].name : null);
 const speakerColor = (k) => (k && NPCS[k] ? NPCS[k].color : P.iron);
 
+const flagArr = (v) => Array.isArray(v) ? v : (typeof v === "string" && v ? [v] : []);
+
+function blankPreviewState() {
+  const bonds = {};
+  for (const k of Object.keys(NPCS)) bonds[k] = 5;
+  return { flags: {}, bonds, embers: 0, coreIngots: 0, gems: 0 };
+}
+
+function applyFlagList(flags, value, on) {
+  const next = { ...flags };
+  for (const f of flagArr(value)) next[f] = on;
+  return next;
+}
+
+function applyPreviewEffects(sim, beat, choice) {
+  let next = { ...sim, flags: { ...sim.flags }, bonds: { ...sim.bonds } };
+  if (beat?.onComplete?.setFlag) next.flags = applyFlagList(next.flags, beat.onComplete.setFlag, true);
+  const o = choice?.outcome || {};
+  if (o.setFlag) next.flags = applyFlagList(next.flags, o.setFlag, true);
+  if (o.clearFlag) next.flags = applyFlagList(next.flags, o.clearFlag, false);
+  if (o.bondDelta?.npc && Number.isFinite(o.bondDelta.amount)) {
+    const cur = Number.isFinite(next.bonds[o.bondDelta.npc]) ? next.bonds[o.bondDelta.npc] : 5;
+    next.bonds[o.bondDelta.npc] = Math.max(0, Math.min(10, cur + o.bondDelta.amount));
+  }
+  for (const key of ["embers", "coreIngots", "gems"]) {
+    if (Number.isFinite(o[key])) next[key] = Math.max(0, (next[key] || 0) + o[key]);
+  }
+  return next;
+}
+
+function firstTriggeredByPreviewState(sim, draft, visited) {
+  for (const id of allBeatIds(draft)) {
+    if (visited.has(id)) continue;
+    const b = effectiveBeat(id, draft);
+    const t = b?.trigger;
+    if (!t) continue;
+    if (t.type === "flag_set" && sim.flags[t.flag]) return id;
+    if (t.type === "flag_cleared" && t.flag && !sim.flags[t.flag]) return id;
+    if (t.type === "bond_at_least" && (sim.bonds[t.npc] ?? 0) >= t.amount) return id;
+  }
+  return null;
+}
+
 function outcomeBadges(outcome) {
   const o = outcome || {};
   const out = [];
@@ -85,6 +128,7 @@ function Lines({ lines }) {
 export default function PreviewModal({ startBeatId, draft, onClose, onOpenInEditor }) {
   const [path, setPath] = useState([startBeatId]);
   const [ended, setEnded] = useState(null); // { choice } once a terminal choice is taken
+  const [simPath, setSimPath] = useState(() => [blankPreviewState()]);
   useEffect(() => {
     const onKey = (e) => { if (e.key === "Escape") onClose(); };
     window.addEventListener("keydown", onKey);
@@ -94,6 +138,7 @@ export default function PreviewModal({ startBeatId, draft, onClose, onOpenInEdit
   const knownIds = useMemo(() => new Set(allBeatIds(draft)), [draft]);
   const currentId = path[path.length - 1];
   const beat = effectiveBeat(currentId, draft);
+  const sim = simPath[simPath.length - 1] || blankPreviewState();
 
   if (!beat) {
     return (
@@ -115,9 +160,13 @@ export default function PreviewModal({ startBeatId, draft, onClose, onOpenInEdit
   const ts = triggerSummary(beat);
 
   const pick = (c) => {
+    const nextSim = applyPreviewEffects(sim, beat, c);
     const target = c?.outcome?.queueBeat;
-    if (target && knownIds.has(target)) { setPath((p) => [...p, target]); setEnded(null); }
-    else setEnded({ choice: c });
+    if (target && knownIds.has(target)) { setPath((p) => [...p, target]); setSimPath((p) => [...p, nextSim]); setEnded(null); return; }
+    const triggered = firstTriggeredByPreviewState(nextSim, draft, new Set(path));
+    if (triggered) { setPath((p) => [...p, triggered]); setSimPath((p) => [...p, nextSim]); setEnded(null); return; }
+    setSimPath((p) => [...p.slice(0, path.length), nextSim]);
+    setEnded({ choice: c });
   };
 
   return (
@@ -132,7 +181,7 @@ export default function PreviewModal({ startBeatId, draft, onClose, onOpenInEdit
           {path.map((id, i) => (
             <span key={`${id}-${i}`} style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
               {i > 0 && <span style={{ color: P.parchFaint, fontSize: 10 }}>›</span>}
-              <button onClick={() => { setPath(path.slice(0, i + 1)); setEnded(null); }}
+              <button onClick={() => { setPath(path.slice(0, i + 1)); setSimPath(simPath.slice(0, i + 1)); setEnded(null); }}
                 style={{ border: "none", background: "transparent", cursor: "pointer", padding: 0,
                   font: `${i === path.length - 1 ? "600" : "400"} 11px/1.2 ${SERIF}`,
                   color: i === path.length - 1 ? P.goldSoft : P.parchDim, textDecoration: i === path.length - 1 ? "none" : "underline" }}>
@@ -141,8 +190,8 @@ export default function PreviewModal({ startBeatId, draft, onClose, onOpenInEdit
             </span>
           ))}
           <span style={{ marginLeft: "auto", display: "flex", gap: 5 }}>
-            {path.length > 1 && <SmallBtn onClick={() => { setPath(path.slice(0, -1)); setEnded(null); }}>← Back</SmallBtn>}
-            {(path.length > 1 || ended) && <SmallBtn onClick={() => { setPath([startBeatId]); setEnded(null); }}>↺ Restart</SmallBtn>}
+            {path.length > 1 && <SmallBtn onClick={() => { setPath(path.slice(0, -1)); setSimPath(simPath.slice(0, -1)); setEnded(null); }}>← Back</SmallBtn>}
+            {(path.length > 1 || ended) && <SmallBtn onClick={() => { setPath([startBeatId]); setSimPath([blankPreviewState()]); setEnded(null); }}>↺ Restart</SmallBtn>}
             <SmallBtn onClick={() => { onOpenInEditor && onOpenInEditor(currentId); onClose(); }}>Open in editor ▸</SmallBtn>
             <SmallBtn onClick={onClose} tone="close">✕</SmallBtn>
           </span>
@@ -210,6 +259,8 @@ export default function PreviewModal({ startBeatId, draft, onClose, onOpenInEdit
 
         <div style={{ marginTop: 12, flexShrink: 0, font: "italic 400 10px/1.3 system-ui", color: P.parchFaint }}>
           Preview only — nothing is saved or dispatched. <code style={{ fontFamily: "ui-monospace,monospace" }}>{currentId}</code> · {choices.length} {choices.length === 1 ? "choice" : "choices"} · settlement → “{SAMPLE_SETTLEMENT}”
+          {Object.keys(sim.flags).length > 0 && <> · flags {Object.entries(sim.flags).filter(([, v]) => v).map(([k]) => k).slice(0, 4).join(", ") || "none"}</>}
+          {(sim.embers || sim.coreIngots || sim.gems) ? <> · ✸ {sim.embers} ◈ {sim.coreIngots} ◆ {sim.gems}</> : null}
         </div>
       </div>
     </Backdrop>

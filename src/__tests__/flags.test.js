@@ -4,6 +4,7 @@ import {
   STORY_FLAGS, FLAG_CATEGORIES, flagDef, isRegisteredFlag, flagCategory,
   initialFlagState, evaluateFlagTriggers, applyFlagTriggers,
 } from "../flags.js";
+import { applyFlagOverrides } from "../config/applyOverrides.js";
 import { conditionMatches } from "../story.js";
 
 describe("STORY_FLAGS registry", () => {
@@ -23,6 +24,15 @@ describe("STORY_FLAGS registry", () => {
     }
     // no duplicate ids
     expect(new Set(STORY_FLAGS.map((f) => f.id)).size).toBe(STORY_FLAGS.length);
+  });
+  it("applyFlagOverrides supports new flags and metadata patches", () => {
+    const flags = [{ id: "old_flag", label: "Old", category: "misc", default: false, triggers: [] }];
+    applyFlagOverrides(flags, {
+      byId: { old_flag: { label: "Renamed", description: "desc", category: "story", default: true, triggers: [{ type: "session_start" }] } },
+      new: [{ id: "new_flag", label: "New", description: "new desc", category: "mira", default: true, triggers: [{ type: "flag_set", flag: "old_flag" }] }],
+    });
+    expect(flags[0]).toMatchObject({ id: "old_flag", label: "Renamed", description: "desc", category: "story", default: true, triggers: [{ type: "session_start" }] });
+    expect(flags[1]).toMatchObject({ id: "new_flag", label: "New", description: "new desc", category: "mira", default: true, source: "override", triggers: [{ type: "flag_set", flag: "old_flag" }] });
   });
   it("lookups + category resolution", () => {
     expect(flagDef("hearth_lit")).toMatchObject({ id: "hearth_lit", category: "story" });

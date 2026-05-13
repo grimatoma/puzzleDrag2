@@ -140,6 +140,7 @@ function emptyDraft() {
     tuning: {},
     npcs: {},
     story: {},
+    flags: {},
     // Phase 6 — Bosses / Achievements / Daily Rewards tabs.
     bosses: {},
     achievements: {},

@@ -5,11 +5,12 @@
 // game-event vocabulary, incl. `flag_set`) + `repeat`, and — for author-created
 // draft beats — onComplete.setFlag, plus delete.
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   C, NPCS, NPC_KEYS, Portrait, actColor, triggerSummary,
   SCENE_OPTS, linesToText, textToLines,
   effectiveBeat, effectiveChoices, allBeatIds, findIncomingChoice,
+  editorLinesForBeat, knownStoryFlagIds, storyWarningsForBeat, validateDraftBeatId,
   FieldLabel, TextInput, Btn,
 } from "./shared.jsx";
 import { STORY_FLAGS } from "../flags.js";
@@ -78,21 +79,24 @@ const packFlags = (arr) => {
   return c.length === 0 ? undefined : (c.length === 1 ? c[0] : c);
 };
 
-function FlagTags({ value, onChange, placeholder = "flag_name", tone = C.emberDeep }) {
+function FlagTags({ value, onChange, placeholder = "flag_name", tone = C.emberDeep, knownFlags }) {
   const arr = asFlagArr(value);
   const [draftFlag, setDraftFlag] = useState("");
   const add = () => { const t = draftFlag.trim(); if (t && !arr.includes(t)) onChange(packFlags([...arr, t])); setDraftFlag(""); };
   return (
     <>
-      {arr.map((f) => (
+      {arr.map((f) => {
+        const unknown = knownFlags && f && !f.startsWith("_fired_") && !knownFlags.has(f);
+        return (
         <span key={f} style={{ display: "inline-flex", alignItems: "center", gap: 3,
-          padding: "2px 3px 2px 6px", borderRadius: 999, background: `${tone}1a`, border: `1px solid ${tone}55`,
-          font: "600 9.5px/1 ui-monospace,monospace", color: tone }}>
-          ⚐ {f}
+          padding: "2px 3px 2px 6px", borderRadius: 999, background: unknown ? "rgba(194,59,34,0.08)" : `${tone}1a`, border: `1px solid ${unknown ? C.red : `${tone}55`}`,
+          font: "600 9.5px/1 ui-monospace,monospace", color: unknown ? C.redDeep : tone }} title={unknown ? "Unregistered flag" : undefined}>
+          {unknown ? "⚠" : "⚐"} {f}
           <button onClick={() => onChange(packFlags(arr.filter((x) => x !== f)))}
-            style={{ border: "none", background: "transparent", color: tone, cursor: "pointer", fontSize: 12, lineHeight: 1, padding: "0 1px" }}>×</button>
+            style={{ border: "none", background: "transparent", color: unknown ? C.redDeep : tone, cursor: "pointer", fontSize: 12, lineHeight: 1, padding: "0 1px" }}>×</button>
         </span>
-      ))}
+        );
+      })}
       <input value={draftFlag} placeholder={placeholder}
         onChange={(e) => setDraftFlag(e.target.value)}
         onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); add(); } }}
@@ -128,12 +132,13 @@ function OutcomeEditor({ outcome, draft, currentBeatId, onChange, onNewBranch })
   const bond = o.bondDelta && typeof o.bondDelta === "object" ? o.bondDelta : {};
   const beatOpts = allBeatIds(draft).filter((id) => id !== currentBeatId);
   const queueKnown = o.queueBeat ? beatOpts.includes(o.queueBeat) : false;
+  const knownFlags = knownStoryFlagIds(draft);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 7, padding: "8px 9px", borderRadius: 7,
       background: "rgba(43,34,24,0.03)", border: `1px solid ${C.border}55` }}>
-      <Row label="Set flags"><FlagTags value={o.setFlag} onChange={(v) => set({ setFlag: v })} placeholder="flag_set" /></Row>
-      <Row label="Clear flags"><FlagTags value={o.clearFlag} onChange={(v) => set({ clearFlag: v })} placeholder="flag_clear" tone={C.inkSubtle} /></Row>
+      <Row label="Set flags"><FlagTags value={o.setFlag} onChange={(v) => set({ setFlag: v })} placeholder="flag_set" knownFlags={knownFlags} /></Row>
+      <Row label="Clear flags"><FlagTags value={o.clearFlag} onChange={(v) => set({ clearFlag: v })} placeholder="flag_clear" tone={C.inkSubtle} knownFlags={knownFlags} /></Row>
       <Row label="Bond Δ">
         <select value={bond.npc || ""} style={selStyle}
           onChange={(e) => set({ bondDelta: e.target.value ? { npc: e.target.value, amount: Number.isFinite(bond.amount) ? bond.amount : 1 } : undefined })}>
@@ -176,7 +181,7 @@ function OutcomeEditor({ outcome, draft, currentBeatId, onChange, onNewBranch })
 
 // ─── one choice card ─────────────────────────────────────────────────────────
 
-function ChoiceCard({ index, choice, draft, currentBeatId, onChange, onDelete, onNewBranch }) {
+function ChoiceCard({ index, choice, draft, currentBeatId, onChange, onDelete, onNewBranch, onMoveUp, onMoveDown, canMoveUp, canMoveDown }) {
   const o = choice.outcome || {};
   const target = o.queueBeat;
   return (
@@ -187,8 +192,14 @@ function ChoiceCard({ index, choice, draft, currentBeatId, onChange, onDelete, o
           background: C.ember, color: "#fff", font: "700 9px/1 ui-monospace,monospace" }}>{"ABCDEFGH"[index] || "•"}</span>
         <span style={{ font: "600 9px/1 ui-monospace,monospace", color: C.emberDeep }}>{choice.id}</span>
         {target && <span style={{ marginLeft: 4, font: "500 9px/1 system-ui", color: C.inkSubtle }}>→ {target}</span>}
+        <button onClick={onMoveUp} disabled={!canMoveUp} title="Move choice up"
+          style={{ marginLeft: "auto", border: `1px solid ${C.border}`, background: canMoveUp ? "#fff" : "rgba(255,255,255,0.45)", color: canMoveUp ? C.inkLight : C.inkSubtle,
+            cursor: canMoveUp ? "pointer" : "not-allowed", font: "700 10px/1 system-ui", padding: "2px 5px", borderRadius: 4 }}>↑</button>
+        <button onClick={onMoveDown} disabled={!canMoveDown} title="Move choice down"
+          style={{ border: `1px solid ${C.border}`, background: canMoveDown ? "#fff" : "rgba(255,255,255,0.45)", color: canMoveDown ? C.inkLight : C.inkSubtle,
+            cursor: canMoveDown ? "pointer" : "not-allowed", font: "700 10px/1 system-ui", padding: "2px 5px", borderRadius: 4 }}>↓</button>
         <button onClick={onDelete} title="Delete this choice"
-          style={{ marginLeft: "auto", border: "none", background: "transparent", color: C.redDeep,
+          style={{ border: "none", background: "transparent", color: C.redDeep,
             cursor: "pointer", font: "700 13px/1 system-ui", padding: "0 2px" }}>×</button>
       </div>
       <div style={{ padding: "7px 8px", display: "flex", flexDirection: "column", gap: 7 }}>
@@ -207,6 +218,13 @@ function ChoiceCard({ index, choice, draft, currentBeatId, onChange, onDelete, o
 function ChoicesBlock({ beatId, draft, onEditBeat, onNewBranch }) {
   const choices = effectiveChoices(beatId, draft);
   const writeChoices = (arr) => onEditBeat(beatId, { choices: arr.length ? arr : undefined });
+  const moveChoice = (from, to) => {
+    if (to < 0 || to >= choices.length) return;
+    const next = choices.slice();
+    const [item] = next.splice(from, 1);
+    next.splice(to, 0, item);
+    writeChoices(next);
+  };
 
   const usedIds = new Set(choices.map((c) => c.id));
   const nextId = () => { let i = 1; while (usedIds.has(`choice_${i}`)) i += 1; return `choice_${i}`; };
@@ -223,7 +241,9 @@ function ChoicesBlock({ beatId, draft, onEditBeat, onNewBranch }) {
           <ChoiceCard key={c.id} index={i} choice={c} draft={draft} currentBeatId={beatId}
             onChange={(nextChoice) => writeChoices(choices.map((x, j) => (j === i ? nextChoice : x)))}
             onDelete={() => writeChoices(choices.filter((_, j) => j !== i))}
-            onNewBranch={(choiceId) => onNewBranch(beatId, choiceId)} />
+            onNewBranch={(choiceId) => onNewBranch(beatId, choiceId)}
+            onMoveUp={() => moveChoice(i, i - 1)} onMoveDown={() => moveChoice(i, i + 1)}
+            canMoveUp={i > 0} canMoveDown={i < choices.length - 1} />
         ))}
       </div>
       <Btn tone="ember" style={{ alignSelf: "flex-start" }}
@@ -270,16 +290,20 @@ function defaultTriggerFor(type) {
 const taStyle = { padding: "5px 7px", borderRadius: 6, border: `1.5px solid ${C.border}`, background: "#fff",
   font: "400 11px/1.4 ui-monospace,monospace", color: C.ink, outline: "none", resize: "vertical", boxSizing: "border-box" };
 
-function TriggerFields({ trigger, onChange }) {
+function TriggerFields({ trigger, onChange, knownFlags }) {
   const t = trigger;
   switch (t.type) {
     case "flag_set":
     case "flag_cleared":
       return (
         <Row label="Flag">
-          <input list="story-flag-options" style={{ ...selStyle, flex: 1, fontFamily: "ui-monospace,monospace" }} value={t.flag || ""}
+          <input list="story-flag-options" style={{ ...selStyle, flex: 1, fontFamily: "ui-monospace,monospace",
+              borderColor: t.flag && knownFlags && !knownFlags.has(t.flag) ? C.red : C.border }} value={t.flag || ""}
             placeholder="flag_name" onChange={(e) => onChange({ ...t, flag: e.target.value })} />
           <datalist id="story-flag-options">{FLAG_OPTIONS.map((f) => <option key={f} value={f} />)}</datalist>
+          {t.flag && knownFlags && !knownFlags.has(t.flag) && (
+            <span style={{ font: "600 9px/1.2 system-ui", color: C.redDeep }}>⚠ unregistered</span>
+          )}
         </Row>
       );
     case "resource_total":
@@ -345,10 +369,11 @@ function TriggerFields({ trigger, onChange }) {
   }
 }
 
-function TriggerEditor({ beatId, beat, isMainChain, onEditBeat }) {
+function TriggerEditor({ beatId, beat, draft, isMainChain, onEditBeat }) {
   const t = beat?.trigger;
   const type = t?.type || "none";
   const setTrigger = (next) => onEditBeat(beatId, { trigger: next ?? undefined });
+  const knownFlags = knownStoryFlagIds(draft);
   return (
     <Section title="Trigger" accent={isMainChain ? undefined : C.ember}
       hint={isMainChain ? "(built-in story beat — overriding the trigger can break act order; “no trigger” reverts to the built-in)" : "(when does this dialog fire?)"}>
@@ -358,7 +383,7 @@ function TriggerEditor({ beatId, beat, isMainChain, onEditBeat }) {
           {TRIGGER_TYPES.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
         </select>
       </Row>
-      {t && <TriggerFields trigger={t} onChange={(next) => setTrigger(next)} />}
+      {t && <TriggerFields trigger={t} onChange={(next) => setTrigger(next)} knownFlags={knownFlags} />}
       {!isMainChain && (
         <Row label="Repeat">
           <label style={{ display: "flex", alignItems: "center", gap: 6, font: "400 11px/1.3 system-ui", color: type === "none" ? C.inkSubtle : C.inkLight }}>
@@ -374,8 +399,10 @@ function TriggerEditor({ beatId, beat, isMainChain, onEditBeat }) {
 
 // ─── inspector shell ─────────────────────────────────────────────────────────
 
-export default function Inspector({ beatId, draft, isDraft, onEditBeat, onNewBranch, onDeleteBeat, onSelect, onPreview }) {
+export default function Inspector({ beatId, draft, isDraft, onEditBeat, onNewBranch, onDeleteBeat, onRenameBeat, onSelect, onPreview }) {
   const beat = effectiveBeat(beatId, draft);
+  const [draftId, setDraftId] = useState(beatId || "");
+  useEffect(() => { setDraftId(beatId || ""); }, [beatId]);
   if (!beat) {
     return (
       <div style={{ width: 340, flexShrink: 0, background: C.parchment, borderLeft: `2px solid ${C.border}`,
@@ -389,14 +416,15 @@ export default function Inspector({ beatId, draft, isDraft, onEditBeat, onNewBra
 
   const valTitle = beat.title ?? beatId;
   const valScene = beat.scene ?? "";
-  const valBody  = beat.body ?? "";
-  const valLines = Array.isArray(beat.lines) ? beat.lines : null;
+  const valLines = editorLinesForBeat(beat);
 
   const ts = triggerSummary(beat);
   const ring = actColor(beat);
   const isSide = !!(beat.side || !beat.act);
   const incoming = findIncomingChoice(beatId, draft);
   const unreached = isDraft && !beat.trigger && !incoming;
+  const warnings = storyWarningsForBeat(beatId, draft);
+  const idCheck = isDraft ? validateDraftBeatId(draft, beatId, draftId) : { ok: true };
 
   return (
     <div style={{ width: 340, flexShrink: 0, background: C.parchment, borderLeft: `2px solid ${C.border}`,
@@ -452,6 +480,17 @@ export default function Inspector({ beatId, draft, isDraft, onEditBeat, onNewBra
             ⚠ Nothing leads here. Point a choice’s “Leads to” at <code style={{ fontFamily: "ui-monospace,monospace" }}>{beatId}</code>, or give this beat a bond trigger.
           </div>
         )}
+        {warnings.length > 0 && (
+          <div style={{ marginTop: 4, display: "flex", flexDirection: "column", gap: 3 }}>
+            {warnings.slice(0, 4).map((w, i) => (
+              <div key={i} style={{ padding: "4px 7px", borderRadius: 6, background: "rgba(194,59,34,0.07)",
+                border: "1px dashed rgba(194,59,34,0.35)", font: "400 10px/1.35 system-ui", color: C.redDeep }}>
+                ⚠ {w.message}
+              </div>
+            ))}
+            {warnings.length > 4 && <div style={{ font: "400 10px/1.3 system-ui", color: C.redDeep }}>+{warnings.length - 4} more warnings</div>}
+          </div>
+        )}
       </div>
 
       {/* fields */}
@@ -460,6 +499,19 @@ export default function Inspector({ beatId, draft, isDraft, onEditBeat, onNewBra
           <FieldLabel>Title</FieldLabel>
           <TextInput value={valTitle} onChange={(e) => onEditBeat(beatId, { title: e.target.value })} />
         </label>
+
+        {isDraft && (
+          <Section title="Draft id" hint="(saved id used by queueBeat links)">
+            <div style={{ display: "flex", gap: 6 }}>
+              <TextInput value={draftId} onChange={(e) => setDraftId(e.target.value)} style={{ fontFamily: "ui-monospace,monospace" }} />
+              <Btn tone="ghost" disabled={!idCheck.ok || draftId.trim() === beatId}
+                onClick={() => idCheck.ok && onRenameBeat && onRenameBeat(beatId, draftId.trim())}>Rename</Btn>
+            </div>
+            {!idCheck.ok && (
+              <div style={{ font: "400 10px/1.35 system-ui", color: C.redDeep }}>⚠ {idCheck.message}</div>
+            )}
+          </Section>
+        )}
 
         <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
           <FieldLabel>Scene</FieldLabel>
@@ -471,30 +523,22 @@ export default function Inspector({ beatId, draft, isDraft, onEditBeat, onNewBra
         </label>
 
         <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-          <FieldLabel hint="(single line — used only if Lines is empty)">Body</FieldLabel>
-          <textarea rows={2} value={valBody} placeholder="e.g. Mira: 'Bake a loaf with me.'"
-            onChange={(e) => onEditBeat(beatId, { body: e.target.value })}
-            style={{ padding: "6px 8px", borderRadius: 6, border: `1.5px solid ${C.border}`, background: "#fff",
-              font: "400 11px/1.4 system-ui", color: C.ink, outline: "none", resize: "vertical", width: "100%", boxSizing: "border-box" }} />
-        </label>
-
-        <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-          <FieldLabel hint="(one “speaker: text” per row — narrator for narration)">Lines</FieldLabel>
-          <textarea rows={6} value={valLines ? linesToText(valLines) : ""}
+          <FieldLabel hint={beat.body && !Array.isArray(beat.lines) ? "(converted from legacy Body on edit)" : "(one “speaker: text” per row — narrator for narration)"}>Lines</FieldLabel>
+          <textarea rows={6} value={linesToText(valLines)}
             placeholder={"narrator: She presses tongs into your palm.\nwren: Took you long enough."}
-            onChange={(e) => { const arr = textToLines(e.target.value); onEditBeat(beatId, { lines: arr.length ? arr : undefined }); }}
+            onChange={(e) => { const arr = textToLines(e.target.value); onEditBeat(beatId, { lines: arr.length ? arr : undefined, body: undefined }); }}
             style={{ padding: "6px 8px", borderRadius: 6, border: `1.5px solid ${C.border}`, background: "#fff",
               font: "400 11px/1.45 system-ui", color: C.ink, outline: "none", resize: "vertical", width: "100%", boxSizing: "border-box" }} />
         </label>
 
         <ChoicesBlock beatId={beatId} draft={draft} onEditBeat={onEditBeat} onNewBranch={onNewBranch} />
 
-        <TriggerEditor beatId={beatId} beat={beat} isMainChain={!isSide} onEditBeat={onEditBeat} />
+        <TriggerEditor beatId={beatId} beat={beat} draft={draft} isMainChain={!isSide} onEditBeat={onEditBeat} />
 
         {isDraft ? (
           <>
             <Section title="On complete · setFlag" hint="(flags marked true when this beat finishes)">
-              <Row label="Flags"><FlagTags value={beat.onComplete?.setFlag}
+              <Row label="Flags"><FlagTags value={beat.onComplete?.setFlag} knownFlags={knownStoryFlagIds(draft)}
                 onChange={(v) => onEditBeat(beatId, { onComplete: v ? { setFlag: v } : null })} placeholder="flag_on_done" /></Row>
             </Section>
             <Section title="Danger zone">

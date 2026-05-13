@@ -21,6 +21,7 @@ import {
   cloneDraft, deriveGraph, visibleSubset, collapsibleIds,
   readCollapsed, writeCollapsed, readNodePositions, writeNodePositions, DRAFT_LANE_Y,
   branchingRowCenterY, MY, NH, Btn,
+  collectStoryWarnings, renameDraftBeatInDraft, storySlicesEqual,
 } from "./shared.jsx";
 import Inspector from "./Inspector.jsx";
 import PreviewModal from "./PreviewModal.jsx";
@@ -286,15 +287,29 @@ function PreviewPlay({ onPlay }) {
   );
 }
 
-function TreeNode({ node, beat, selectedId, collapsed, hiddenCount, showCollapse, dragging, onNodeMouseDown, onToggleCollapse, onPreview, draft }) {
+function WarningBadge({ count }) {
+  if (!count) return null;
+  return (
+    <div title={`${count} validation warning${count === 1 ? "" : "s"}`} style={{ position: "absolute", top: -10, left: -10, zIndex: 5,
+      minWidth: 20, height: 20, padding: "0 5px", borderRadius: 999, border: `1.5px solid ${C.redDeep}`,
+      background: "#fff3ed", color: C.redDeep, display: "grid", placeItems: "center",
+      font: "700 10px/1 system-ui", boxShadow: "0 1px 3px rgba(40,28,10,0.18)" }}>
+      ⚠{count > 1 ? count : ""}
+    </div>
+  );
+}
+
+function TreeNode({ node, beat, selectedId, collapsed, hiddenCount, showCollapse, dragging, warningCount, onNodeMouseDown, onNodeTouchStart, onToggleCollapse, onPreview, draft }) {
   const selected = node.id === selectedId;
   let Inner;
   if (node.draft || node.expanded) Inner = <ExpandedCard node={node} beat={beat} selected={selected} draft={draft} />;
   else if (node.branching) Inner = <BranchingNode beat={beat} selected={selected} />;
   else Inner = <CompactNode node={node} beat={beat} selected={selected} />;
   return (
-    <div style={{ position: "absolute", left: node.x, top: node.y, width: node.w, height: node.h, cursor: dragging ? "grabbing" : "grab" }}
-      onMouseDown={(e) => onNodeMouseDown(e, node)}>
+    <div data-story-node="1" style={{ position: "absolute", left: node.x, top: node.y, width: node.w, height: node.h, cursor: dragging ? "grabbing" : "grab", touchAction: "none" }}
+      onMouseDown={(e) => onNodeMouseDown(e, node)}
+      onTouchStart={(e) => onNodeTouchStart(e, node)}>
+      <WarningBadge count={warningCount} />
       <TriggerChip beat={beat} accent={actColor(beat)} />
       {showCollapse && <CollapseToggle collapsed={collapsed} hiddenCount={hiddenCount} onToggle={() => onToggleCollapse(node.id)} />}
       <PreviewPlay onPlay={() => onPreview(node.id)} />
@@ -408,6 +423,7 @@ function stripEmpty(obj) {
 
 export default function StoryEditorApp() {
   const [draft, setDraft] = useState(() => cloneDraft(BALANCE_OVERRIDES));
+  const [savedDraft, setSavedDraft] = useState(() => cloneDraft(BALANCE_OVERRIDES));
   const [selectedId, setSelectedId] = useState(null);
   const [savedNotice, setSavedNotice] = useState("");
   const [zoom, setZoom] = useState(1);
@@ -432,11 +448,19 @@ export default function StoryEditorApp() {
     e.preventDefault();                                 // no text selection while dragging
     nodeDrag.current = { id: node.id, sx: e.clientX, sy: e.clientY, nx: node.x, ny: node.y, moved: false };
   }, []);
+  const onNodeTouchStart = useCallback((e, node) => {
+    if (e.touches.length !== 1 || e.target.closest("button,a,input,textarea,select")) return;
+    e.stopPropagation();
+    e.preventDefault();
+    const t = e.touches[0];
+    nodeDrag.current = { id: node.id, touchId: t.identifier, sx: t.clientX, sy: t.clientY, nx: node.x, ny: node.y, moved: false, touch: true };
+  }, []);
 
-  const isDirty = JSON.stringify(draft) !== JSON.stringify(BALANCE_OVERRIDES);
+  const isDirty = !storySlicesEqual(draft, savedDraft);
 
   const saveDraft = useCallback(() => {
     writeBalanceDraft(draft);
+    setSavedDraft(cloneDraft(draft));
     setSavedNotice("Saved · reload game to apply");
     setTimeout(() => setSavedNotice(""), 2400);
   }, [draft]);
@@ -472,6 +496,40 @@ export default function StoryEditorApp() {
     window.addEventListener("mousemove", onMove); window.addEventListener("mouseup", onUp);
     return () => { window.removeEventListener("mousemove", onMove); window.removeEventListener("mouseup", onUp); };
   }, [moveNode, zoom]);
+  useEffect(() => {
+    const z = zoom || 1;
+    const touchById = (list, id) => {
+      for (let i = 0; i < list.length; i += 1) if (list[i].identifier === id) return list[i];
+      return null;
+    };
+    const onMove = (e) => {
+      const nd = nodeDrag.current;
+      if (!nd?.touch) return;
+      const t = touchById(e.touches, nd.touchId);
+      if (!t) return;
+      e.preventDefault();
+      if (!nd.moved && (Math.abs(t.clientX - nd.sx) > 3 || Math.abs(t.clientY - nd.sy) > 3)) { nd.moved = true; setDraggingNodeId(nd.id); }
+      if (nd.moved) moveNode(nd.id, nd.nx + (t.clientX - nd.sx) / z, nd.ny + (t.clientY - nd.sy) / z);
+    };
+    const onEnd = (e) => {
+      const nd = nodeDrag.current;
+      if (!nd?.touch) return;
+      const stillActive = touchById(e.touches, nd.touchId);
+      if (stillActive) return;
+      e.preventDefault();
+      nodeDrag.current = null;
+      setDraggingNodeId(null);
+      if (!nd.moved) setSelectedId(nd.id);
+    };
+    window.addEventListener("touchmove", onMove, { passive: false });
+    window.addEventListener("touchend", onEnd, { passive: false });
+    window.addEventListener("touchcancel", onEnd, { passive: false });
+    return () => {
+      window.removeEventListener("touchmove", onMove);
+      window.removeEventListener("touchend", onEnd);
+      window.removeEventListener("touchcancel", onEnd);
+    };
+  }, [moveNode, zoom]);
   const onWheel = useCallback((e) => { e.preventDefault(); setZoom((z) => Math.min(2, Math.max(0.3, z + (e.deltaY > 0 ? -0.08 : 0.08)))); }, []);
 
   // Touch: one-finger pan, two-finger pinch-zoom (with focal point)
@@ -486,6 +544,7 @@ export default function StoryEditorApp() {
     const onTouchStart = e => {
       if (e.touches.length === 1) {
         const t = e.touches[0];
+        if (t.target.closest("[data-story-node],button,a,input,textarea,select")) { touchState.current = null; return; }
         if (t.target !== el && !t.target.closest("[data-canvas-bg]")) { touchState.current = null; return; }
         touchState.current = { mode: "pan", startX: t.clientX - panRef.current.x, startY: t.clientY - panRef.current.y };
         isDragging.current = true;
@@ -594,6 +653,16 @@ export default function StoryEditorApp() {
       let n = 2; while (taken.has(`${base}_${n}`)) n += 1; return `${base}_${n}`;
     };
     const newId = pickFree(draft);
+    let placedNearSource = null;
+    if (opts.queuedBy) {
+      const sourceGraph = deriveGraph(draft, nodePositions);
+      const source = sourceGraph.nodes.find((n) => n.id === opts.queuedBy.beatId);
+      if (source) {
+        const row = effectiveChoices(opts.queuedBy.beatId, draft).findIndex((c) => c.id === opts.queuedBy.choiceId);
+        const rowY = row >= 0 && source.branching ? source.y + branchingRowCenterY(row) - 96 : source.y + source.h / 2 - 96;
+        placedNearSource = { x: Math.round(source.x + source.w + 90), y: Math.round(rowY) };
+      }
+    }
     setDraft((prev) => {
       const d = cloneDraft(prev);
       d.story ??= {};
@@ -613,9 +682,16 @@ export default function StoryEditorApp() {
       }
       return d;
     });
+    if (placedNearSource) {
+      setNodePositions((prev) => {
+        const next = { ...prev, [newId]: placedNearSource };
+        writeNodePositions(next);
+        return next;
+      });
+    }
     setSelectedId(newId);
     return newId;
-  }, [draft]);
+  }, [draft, nodePositions]);
 
   const deleteDraftBeat = useCallback((beatId) => {
     setDraft((prev) => {
@@ -645,6 +721,31 @@ export default function StoryEditorApp() {
     setSelectedId((cur) => (cur === beatId ? null : cur));
   }, []);
 
+  const renameDraftBeat = useCallback((oldId, nextId) => {
+    const result = renameDraftBeatInDraft(draft, oldId, nextId);
+    if (!result.ok || !result.changed) return result;
+    const newId = result.id;
+    setDraft(result.draft);
+    setNodePositions((prev) => {
+      if (!prev[oldId]) return prev;
+      const next = { ...prev, [newId]: prev[oldId] };
+      delete next[oldId];
+      writeNodePositions(next);
+      return next;
+    });
+    setCollapsed((prev) => {
+      if (!prev.has(oldId)) return prev;
+      const next = new Set(prev);
+      next.delete(oldId);
+      next.add(newId);
+      writeCollapsed(next);
+      return next;
+    });
+    setSelectedId((cur) => (cur === oldId ? newId : cur));
+    setPreviewBeatId((cur) => (cur === oldId ? newId : cur));
+    return result;
+  }, [draft]);
+
   const onNewBranch = useCallback((parentBeatId, choiceId) => createDraftBeat({ queuedBy: { beatId: parentBeatId, choiceId } }), [createDraftBeat]);
 
   const toggleCollapse = useCallback((nodeId) => {
@@ -657,6 +758,24 @@ export default function StoryEditorApp() {
   const view = useMemo(() => visibleSubset(fullGraph.nodes, fullGraph.edges, collapsed), [fullGraph, collapsed]);
   const nodeById = useMemo(() => new Map(view.nodes.map((n) => [n.id, n])), [view]);
   const onlineIds = useMemo(() => new Set(fullGraph.nodes.map((n) => n.id)), [fullGraph]);
+  const warningsByBeat = useMemo(() => collectStoryWarnings(draft), [draft]);
+  const fitToScreen = useCallback(() => {
+    const el = canvasRef.current;
+    if (!el || view.nodes.length === 0) return;
+    const rect = el.getBoundingClientRect();
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    for (const n of view.nodes) {
+      minX = Math.min(minX, n.x); minY = Math.min(minY, n.y);
+      maxX = Math.max(maxX, n.x + n.w); maxY = Math.max(maxY, n.y + n.h);
+    }
+    const pad = 80;
+    const nextZoom = Math.min(1.6, Math.max(0.3, Math.min(rect.width / Math.max(1, maxX - minX + pad * 2), rect.height / Math.max(1, maxY - minY + pad * 2))));
+    setZoom(nextZoom);
+    setPan({
+      x: Math.round((rect.width - (maxX - minX) * nextZoom) / 2 - minX * nextZoom),
+      y: Math.round((rect.height - (maxY - minY) * nextZoom) / 2 - minY * nextZoom),
+    });
+  }, [view.nodes]);
 
   const selIsDraft = selectedId ? isDraftBeat(draft, selectedId) : false;
 
@@ -705,6 +824,7 @@ export default function StoryEditorApp() {
             <span style={{ font: "600 10px/1 system-ui", color: C.inkSubtle, alignSelf: "center", minWidth: 32, textAlign: "center" }}>{Math.round(zoom * 100)}%</span>
             <button onClick={() => setZoom((z) => Math.max(0.3, z - 0.1))} style={{ width: 28, height: 28, borderRadius: 5, border: `1px solid ${C.border}`, background: C.parchment, color: C.ink, font: "700 16px/1 system-ui", cursor: "pointer" }}>−</button>
             <button onClick={() => { setZoom(1); setPan({ x: 20, y: 20 }); }} style={{ width: 28, height: 28, borderRadius: 5, border: `1px solid ${C.border}`, background: C.parchment, color: C.inkSubtle, font: "400 9px/1 system-ui", cursor: "pointer" }}>↺</button>
+            <button onClick={fitToScreen} title="Fit visible cards to screen" style={{ width: 36, height: 28, borderRadius: 5, border: `1px solid ${C.border}`, background: C.parchment, color: C.inkSubtle, font: "700 9px/1 system-ui", cursor: "pointer" }}>Fit</button>
           </div>
 
           <div style={{ position: "absolute", transform: `translate(${pan.x}px,${pan.y}px) scale(${zoom})`, transformOrigin: "0 0", width: fullGraph.bounds.w, height: fullGraph.bounds.h }}>
@@ -724,7 +844,8 @@ export default function StoryEditorApp() {
               <TreeNode key={node.id} node={node} beat={effectiveBeat(node.id, draft)} selectedId={selectedId}
                 collapsed={collapsed.has(node.id)} hiddenCount={view.hiddenCounts[node.id] || 0}
                 showCollapse={collapsible.has(node.id)} dragging={draggingNodeId === node.id}
-                onNodeMouseDown={onNodeMouseDown} onToggleCollapse={toggleCollapse}
+                warningCount={warningsByBeat[node.id]?.length || 0}
+                onNodeMouseDown={onNodeMouseDown} onNodeTouchStart={onNodeTouchStart} onToggleCollapse={toggleCollapse}
                 onPreview={setPreviewBeatId} draft={draft} />
             ))}
           </div>
@@ -732,6 +853,7 @@ export default function StoryEditorApp() {
 
         <Inspector beatId={selectedId} draft={draft} isDraft={selIsDraft}
           onEditBeat={editBeat} onNewBranch={onNewBranch} onDeleteBeat={deleteDraftBeat}
+          onRenameBeat={renameDraftBeat}
           onSelect={setSelectedId} onPreview={setPreviewBeatId} />
       </div>
 

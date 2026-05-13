@@ -2,7 +2,8 @@
 // Pure(ish) module: no app state, just data + tiny presentational helpers used
 // by both the canvas (index.jsx) and the inspector (Inspector.jsx).
 
-import { STORY_BEATS, SIDE_BEATS, SCENE_THEMES } from "../story.js";
+import { STORY_BEATS, SIDE_BEATS, SCENE_THEMES, beatLines } from "../story.js";
+import { STORY_FLAGS } from "../flags.js";
 import {
   sanitizeBeatLines, sanitizeChoiceArray, sanitizeChoiceOutcome,
   sanitizeBeatTrigger, sanitizeBeatOnComplete,
@@ -115,6 +116,131 @@ export const textToLines = (str) =>
     return { speaker: null, text: row.trim() };
   });
 
+export const DRAFT_BEAT_ID_RE = /^[a-z][a-z0-9_]*$/;
+export const FLAG_ID_RE = /^[a-z_][a-z0-9_]*$/;
+
+const stable = (v) => {
+  if (Array.isArray(v)) return v.map(stable);
+  if (v && typeof v === "object") {
+    const out = {};
+    for (const k of Object.keys(v).sort()) {
+      const sv = stable(v[k]);
+      if (sv === undefined) continue;
+      if (Array.isArray(sv) && sv.length === 0) continue;
+      if (sv && typeof sv === "object" && !Array.isArray(sv) && Object.keys(sv).length === 0) continue;
+      out[k] = sv;
+    }
+    return out;
+  }
+  return v;
+};
+
+export function normalizedStorySlice(draft) {
+  return stable(draft?.story || {});
+}
+
+export function storySlicesEqual(a, b) {
+  return JSON.stringify(normalizedStorySlice(a)) === JSON.stringify(normalizedStorySlice(b));
+}
+
+export function knownStoryFlagIds(draft) {
+  const ids = new Set(STORY_FLAGS.map((f) => f?.id).filter(Boolean));
+  const add = (id) => { if (typeof id === "string" && id.trim()) ids.add(id.trim()); };
+  for (const f of draft?.flags?.new || []) add(f?.id);
+  for (const id of Object.keys(draft?.flags?.byId || {})) add(id);
+  return ids;
+}
+
+export function validateDraftBeatId(draft, currentId, nextId) {
+  const id = String(nextId ?? "").trim();
+  if (!id) return { ok: false, id, message: "Beat id is required." };
+  if (!DRAFT_BEAT_ID_RE.test(id)) return { ok: false, id, message: "Use lowercase letters, numbers, and underscores; start with a letter." };
+  if (id !== currentId && allBeatIds(draft).includes(id)) return { ok: false, id, message: "That beat id is already in use." };
+  return { ok: true, id, message: "" };
+}
+
+function rewriteChoiceTargets(choices, oldId, newId) {
+  if (!Array.isArray(choices)) return choices;
+  return choices.map((c) => {
+    if (!c?.outcome || c.outcome.queueBeat !== oldId) return c;
+    return { ...c, outcome: { ...c.outcome, queueBeat: newId } };
+  });
+}
+
+export function renameDraftBeatInDraft(draft, oldId, newId) {
+  const check = validateDraftBeatId(draft, oldId, newId);
+  if (!check.ok) return { draft, ok: false, message: check.message };
+  if (oldId === check.id) return { draft, ok: true, id: oldId, changed: false };
+  if (!isDraftBeat(draft, oldId)) return { draft, ok: false, message: "Only draft beats can be renamed." };
+
+  const d = cloneDraft(draft);
+  d.story ??= {};
+  const idx = draftBeatIndex(d, oldId);
+  if (idx < 0) return { draft, ok: false, message: "Draft beat not found." };
+  const arr = d.story.newBeats.slice();
+  arr[idx] = { ...arr[idx], id: check.id };
+  d.story.newBeats = arr.map((b) => Array.isArray(b?.choices) ? { ...b, choices: rewriteChoiceTargets(b.choices, oldId, check.id) } : b);
+
+  if (d.story.beats) {
+    const beats = {};
+    for (const [beatId, patch] of Object.entries(d.story.beats)) {
+      const nextPatch = { ...patch };
+      if (Array.isArray(nextPatch.choices)) nextPatch.choices = rewriteChoiceTargets(nextPatch.choices, oldId, check.id);
+      beats[beatId] = nextPatch;
+    }
+    d.story.beats = beats;
+  }
+  return { draft: d, ok: true, id: check.id, changed: true };
+}
+
+const flagList = (value) => Array.isArray(value) ? value : (typeof value === "string" && value ? [value] : []);
+
+function addFlagWarnings(list, knownFlags, warnings, context) {
+  for (const raw of flagList(list)) {
+    const id = String(raw || "").trim();
+    if (!id || id.startsWith("_fired_") || knownFlags.has(id)) continue;
+    warnings.push({ type: "unknownFlag", flag: id, message: `${context} references unregistered flag "${id}".` });
+  }
+}
+
+export function storyWarningsForBeat(beatId, draft) {
+  const beat = effectiveBeat(beatId, draft);
+  if (!beat) return [];
+  const ids = new Set(allBeatIds(draft));
+  const knownFlags = knownStoryFlagIds(draft);
+  const warnings = [];
+
+  if (beat.trigger && (beat.trigger.type === "flag_set" || beat.trigger.type === "flag_cleared")) {
+    addFlagWarnings(beat.trigger.flag, knownFlags, warnings, `${beat.trigger.type} trigger`);
+  }
+  addFlagWarnings(beat.onComplete?.setFlag, knownFlags, warnings, "onComplete.setFlag");
+
+  for (const c of effectiveChoices(beatId, draft)) {
+    const target = c?.outcome?.queueBeat;
+    if (target && !ids.has(target)) {
+      warnings.push({ type: "missingBeat", target, choiceId: c.id, message: `Choice "${c.label || c.id}" leads to missing beat "${target}".` });
+    }
+    addFlagWarnings(c?.outcome?.setFlag, knownFlags, warnings, `Choice "${c.label || c.id}" setFlag`);
+    addFlagWarnings(c?.outcome?.clearFlag, knownFlags, warnings, `Choice "${c.label || c.id}" clearFlag`);
+  }
+  return warnings;
+}
+
+export function collectStoryWarnings(draft) {
+  const byBeat = {};
+  for (const id of allBeatIds(draft)) {
+    const warnings = storyWarningsForBeat(id, draft);
+    if (warnings.length > 0) byBeat[id] = warnings;
+  }
+  return byBeat;
+}
+
+export function editorLinesForBeat(beat) {
+  if (!beat) return [];
+  if (Array.isArray(beat.lines) && beat.lines.length > 0) return beat.lines;
+  return beatLines(beat);
+}
+
 // Re-export the canonical sanitizers so callers don't reach into config/.
 export { sanitizeBeatLines, sanitizeChoiceArray, sanitizeChoiceOutcome, sanitizeBeatTrigger, sanitizeBeatOnComplete };
 
@@ -122,7 +248,7 @@ export { sanitizeBeatLines, sanitizeChoiceArray, sanitizeChoiceOutcome, sanitize
 
 const DRAFT_KEYS = ["upgradeThresholds", "items", "recipes", "buildings",
   "tilePowers", "tileUnlocks", "tileDescriptions", "zones", "workers", "keepers",
-  "expedition", "biomes", "tuning", "npcs", "story", "bosses", "achievements", "dailyRewards"];
+  "expedition", "biomes", "tuning", "npcs", "story", "flags", "bosses", "achievements", "dailyRewards"];
 
 export function emptyDraft() {
   const d = { version: 1 };

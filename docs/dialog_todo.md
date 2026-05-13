@@ -20,23 +20,23 @@ priority. (Engine = `src/story.js`, `src/flags.js`, `src/state.js`; editor =
 
 ## Likely worth doing soon
 
-- [ ] **Touch-drag cards** — touch currently only pans the canvas (from #384);
+- [x] **Touch-drag cards** — touch currently only pans the canvas (from #384);
       mouse-drag works, touch doesn't pick up cards.
-- [ ] **Reorder choices** in the inspector (↑/↓) — can add/remove/relabel but not
+- [x] **Reorder choices** in the inspector (↑/↓) — can add/remove/relabel but not
       reorder; order shows on the fork card and in-game.
-- [ ] **Rename a draft beat's id** — once created it's a fixed auto-id; a rename
+- [x] **Rename a draft beat's id** — once created it's a fixed auto-id; a rename
       should re-point any `queueBeat` that references it.
-- [ ] **Flags tab: "+ New flag"** + inline **metadata editing**
+- [x] **Flags tab: "+ New flag"** + inline **metadata editing**
       (label / description / category / default). `applyFlagOverrides` already
       supports all of it (`flags.byId.<id>` / `flags.new`); only trigger-editing
       is exposed in the UI today, so adding a flag means hand-editing
       `src/flags.js` or `balance.json`.
-- [ ] **Preview that tracks state** — the ▶ preview just follows `queueBeat`, so
+- [x] **Preview that tracks state** — the ▶ preview just follows `queueBeat`, so
       a `flag_set`-triggered downstream beat (or `act3_win`'s flag guard) won't
       appear in the walk. The Balance-Manager **Simulate** tab *does* track
       flags / bonds / resources — either cross-link them ("Open in Simulate" next
       to "Open in editor") or fold the state-tracking into the preview.
-- [ ] **Validation / warnings**: the `flag_set` trigger picker accepts any string
+- [x] **Validation / warnings**: the `flag_set` trigger picker accepts any string
       (typos, unregistered flags) with no warning; a choice's "Leads to" can point
       at a missing beat — the preview flags `⚠`, the canvas doesn't.
 
@@ -44,35 +44,42 @@ priority. (Engine = `src/story.js`, `src/flags.js`, `src/state.js`; editor =
 
 - [ ] Refactor `src/ui/Modals.jsx`'s in-game story modal into a prop-driven
       component the preview reuses — so the preview is pixel-identical and can't
-      drift from the in-game look.
+      drift from the in-game look. **Deferred:** live modal refactor is higher-risk
+      and was not needed for the functional preview/state work completed here.
 - [ ] Canvas QoL: "fit to screen" / a minimap, smarter auto-placement for new
       branch beats (near the choice that queues them), keyboard nav between nodes.
+      **Partial:** fit-to-screen and near-source branch placement are implemented;
+      minimap and keyboard nav remain deferred.
 - [ ] `flag_set` fires on the **next** event after a flag flips, not the same
       dispatch — usually invisible; making it instant needs flag-change-event
       plumbing (deliberately deferred).
 - [ ] `repeat` cooldown — currently re-fires per-event (discrete triggers) or
       per-settle (state triggers); no "at most once per N turns" option.
-- [ ] Flags tab cross-ref: "beats this flag triggers" (the inverse of the
+- [x] Flags tab cross-ref: "beats this flag triggers" (the inverse of the
       trigger list).
 - [ ] Disable / suppress a built-in side beat (e.g. turn the Mira arc off) —
       built-ins are editable but can't be switched off.
 
 ## Known rough edges / tech debt
 
-- [ ] **Perpetual "Unsaved changes"** badge in `/story/` — pre-existing cosmetic
+- [x] **Perpetual "Unsaved changes"** badge in `/story/` — pre-existing cosmetic
       bug: `cloneDraft(BALANCE_OVERRIDES)` normalizes the shape so it's never
       `===` the source. Fix by comparing only the `story` slice (or normalized
       shapes).
-- [ ] **`body` vs `lines`** — both fields show; if `lines` is non-empty, `body`
+- [x] **`body` vs `lines`** — both fields show; if `lines` is non-empty, `body`
       is silently ignored. Collapse to one.
 - [ ] **`FLAG_READS`** (the "where the codebase reads this flag" map in
-      `FlagsTab.jsx`) is hand-maintained and drifts as code changes.
+      `FlagsTab.jsx`) is hand-maintained and drifts as code changes. **Partial:**
+      the tab now derives the inverse "beats this flag triggers" cross-reference,
+      but non-story code reads still use the curated map.
 - [ ] **No React-component tests** (no RTL in the repo) — the editor UI is only
       smoke-tested via headless Chromium, not in CI. The *engine*
       (`deriveGraph`, `effectiveBeat`, `conditionMatches`, the sanitizers,
       `evaluateSideBeats` / `evaluateFlagTriggers`) is well unit-tested; the *UI*
       leans on manual QA. A small e2e — "author a dialog → save → reload game →
-      it fires" — would cover the seam.
+      it fires" — would cover the seam. **Partial:** pure helper tests were added
+      for rename/warnings/flag override seams; true e2e was not practical in this
+      environment because `node`/`npm` are unavailable.
 - [ ] `/story/` editor doesn't live-sync the `hearth.balance.draft` localStorage
       key if you also edit it in the Balance Manager in another tab — a refresh
       fixes it (single-user, low risk).

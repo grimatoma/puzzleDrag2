@@ -3,6 +3,7 @@ import { describe, it, expect } from "vitest";
 import {
   effectiveBeat, effectiveChoices, allBeatIds, findIncomingChoice, isDraftBeat,
   deriveGraph, visibleSubset, collapsibleIds, cloneDraft, emptyDraft,
+  collectStoryWarnings, renameDraftBeatInDraft, storySlicesEqual, validateDraftBeatId,
 } from "../storyEditor/shared.jsx";
 
 const draftWith = (story) => ({ ...emptyDraft(), story });
@@ -132,5 +133,47 @@ describe("cloneDraft", () => {
     expect(c.version).toBe(2);
     expect(c.junk).toBeUndefined();   // unknown keys dropped
     expect(cloneDraft(null)).toEqual(emptyDraft());
+  });
+});
+
+describe("story editor draft utilities", () => {
+  it("compares only normalized story data for dirty state", () => {
+    const a = emptyDraft();
+    const b = { version: 1 };
+    expect(storySlicesEqual(a, b)).toBe(true);
+    const c = draftWith({ beats: { act1_arrival: { title: "Changed" } } });
+    expect(storySlicesEqual(a, c)).toBe(false);
+  });
+
+  it("validates and renames draft beat ids, rewriting queueBeat references", () => {
+    const d = draftWith({
+      newBeats: [
+        { id: "branch_a", title: "A", choices: [{ id: "next", label: "Next", outcome: { queueBeat: "branch_b" } }] },
+        { id: "branch_b", title: "B" },
+      ],
+      beats: { mira_letter_1: { choices: [{ id: "send", label: "Send", outcome: { queueBeat: "branch_b" } }] } },
+    });
+    expect(validateDraftBeatId(d, "branch_b", "bad-id").ok).toBe(false);
+    expect(validateDraftBeatId(d, "branch_b", "act1_arrival").ok).toBe(false);
+
+    const result = renameDraftBeatInDraft(d, "branch_b", "branch_renamed");
+    expect(result.ok).toBe(true);
+    expect(isDraftBeat(result.draft, "branch_renamed")).toBe(true);
+    expect(isDraftBeat(result.draft, "branch_b")).toBe(false);
+    expect(effectiveChoices("branch_a", result.draft)[0].outcome.queueBeat).toBe("branch_renamed");
+    expect(effectiveChoices("mira_letter_1", result.draft)[0].outcome.queueBeat).toBe("branch_renamed");
+  });
+
+  it("collects missing beat and unknown flag warnings", () => {
+    const d = draftWith({
+      newBeats: [{ id: "branch_a", title: "A", trigger: { type: "flag_set", flag: "typo_flag" } }],
+      beats: {
+        act1_arrival: { choices: [{ id: "go", label: "Go", outcome: { queueBeat: "missing_beat", setFlag: "unknown_flag" } }] },
+      },
+    });
+    const warnings = collectStoryWarnings(d);
+    expect(warnings.act1_arrival.some((w) => w.type === "missingBeat" && w.target === "missing_beat")).toBe(true);
+    expect(warnings.act1_arrival.some((w) => w.type === "unknownFlag" && w.flag === "unknown_flag")).toBe(true);
+    expect(warnings.branch_a.some((w) => w.type === "unknownFlag" && w.flag === "typo_flag")).toBe(true);
   });
 });
