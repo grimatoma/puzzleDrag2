@@ -54,30 +54,63 @@ describe("grantEarnedHearthTokens", () => {
     const s = createInitialState();
     expect(grantEarnedHearthTokens(s)).toBe(s.heirlooms);
   });
-  it("grants the type token for each founded + completed settlement (idempotent)", () => {
-    // Build out enough of home (a farm-type Vale) to count as completed.
+  it("grants the type token only when the keeper has been faced (idempotent)", () => {
+    // Build out enough of home (a farm-type Vale) to count as 'half built'.
     const homeBuildings = ["hearth", "mill", "bakery", "inn", "granary", "larder", "forge", "caravan_post"];
     const built = {};
     for (const b of homeBuildings) built[b] = true;
-    const s = { ...createInitialState(), built: { ...createInitialState().built, home: built } };
-    const h = grantEarnedHearthTokens(s);
+    const base = { ...createInitialState(), built: { ...createInitialState().built, home: built } };
+    // Half-built but no keeper choice → settlement is not yet complete; no token.
+    expect(grantEarnedHearthTokens(base)).toBe(base.heirlooms);
+    // After Coexist: settlement completes → token granted.
+    const withKeeper = { ...base, settlements: { ...(base.settlements ?? {}), home: { founded: true, biome: "temperate_vale", keeperPath: "coexist" } } };
+    const h = grantEarnedHearthTokens(withKeeper);
     expect(h.heirloomSeed).toBe(1);
     expect(h.pactIron).toBe(0);
     // Idempotent: re-running over a state that already has the token is a no-op ref.
-    const s2 = { ...s, heirlooms: h };
+    const s2 = { ...withKeeper, heirlooms: h };
     expect(grantEarnedHearthTokens(s2)).toBe(h);
   });
 });
 
-describe("BUILD grants a Hearth-Token when a settlement completes", () => {
-  it("finishing the 8th of home's 16 buildings yields the heirloomSeed + a bubble", () => {
+describe("Hearth-Token grant path", () => {
+  it("BUILD without a prior keeper choice does NOT grant the token", () => {
     // Pre-place 7 buildings (7/16 → not yet complete).
     const seven = ["hearth", "mill", "bakery", "inn", "granary", "larder", "forge"];
     const built = { decorations: {}, _plots: {} };
     seven.forEach((b, i) => { built[b] = true; built._plots[i] = b; });
     const s0 = { ...createInitialState(), coins: 99999, built: { ...createInitialState().built, home: built } };
     expect(s0.heirlooms.heirloomSeed).toBe(0);
-    // BUILD accepts a full `building` object directly (bypasses the BUILDINGS table).
+    // BUILD the 8th — half is built, but no keeper has been faced.
+    const s1 = rootReducer(s0, { type: "BUILD", building: { id: "caravan_post", name: "Caravan Post", cost: { coins: 0 } } });
+    expect(s1.built.home.caravan_post).toBe(true);
+    expect(s1.heirlooms.heirloomSeed).toBe(0); // gated on the keeper choice
+  });
+
+  it("KEEPER/CONFRONT grants the token when half buildings are already up", () => {
+    // 8/16 buildings + founded → ready for the keeper.
+    const homeBuildings = ["hearth", "mill", "bakery", "inn", "granary", "larder", "forge", "caravan_post"];
+    const built = { decorations: {}, _plots: {} };
+    homeBuildings.forEach((b, i) => { built[b] = true; built._plots[i] = b; });
+    const s0 = { ...createInitialState(), built: { ...createInitialState().built, home: built } };
+    expect(s0.heirlooms.heirloomSeed).toBe(0);
+    const s1 = rootReducer(s0, { type: "KEEPER/CONFRONT", payload: { zoneId: "home", path: "coexist" } });
+    expect(s1.settlements.home.keeperPath).toBe("coexist");
+    expect(s1.heirlooms.heirloomSeed).toBe(1);
+  });
+
+  it("BUILD after the keeper choice — the 8th building grants the token", () => {
+    // 7/16 buildings + founded + keeper already faced → the 8th flips it complete.
+    const seven = ["hearth", "mill", "bakery", "inn", "granary", "larder", "forge"];
+    const built = { decorations: {}, _plots: {} };
+    seven.forEach((b, i) => { built[b] = true; built._plots[i] = b; });
+    const s0 = {
+      ...createInitialState(),
+      coins: 99999,
+      built: { ...createInitialState().built, home: built },
+      settlements: { home: { founded: true, biome: "temperate_vale", keeperPath: "coexist" } },
+    };
+    expect(s0.heirlooms.heirloomSeed).toBe(0);
     const s1 = rootReducer(s0, { type: "BUILD", building: { id: "caravan_post", name: "Caravan Post", cost: { coins: 0 } } });
     expect(s1.built.home.caravan_post).toBe(true);
     expect(s1.heirlooms.heirloomSeed).toBe(1);

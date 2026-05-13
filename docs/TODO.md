@@ -49,7 +49,7 @@ Status legend: **[ ]** not started · **[~]** partial · **[deferred]** there's 
 
 ## 3. Phase-6 content (onboarding · townsfolk · side events · festival)
 
-- [~] **Walking townsfolk** — done (they walk the streets), but they don't follow NPC *daily schedules* (the doc has detailed ones — Wren at the hearth mornings, to the Inn for tea midday, …); no goal-driven errands (Mira carrying bread bakery→inn); clicking a villager doesn't open dialogue; depth-sorting with buildings is missing (see §6).
+- [~] **Walking townsfolk** — done (they walk the streets), but: no goal-driven errands (Mira carrying bread bakery→inn); clicking a villager doesn't open dialogue; depth-sorting with buildings is missing (see §6).
 - [~] **Modular tutorial framework** — there's a tutorial slice + a "Welcome" modal; the doc wants a framework where any feature can register steps.
 - [ ] **Random side events / wayside encounters** (Part 4 §IV, Part 5 §IV) — the `SIDE_BEATS` infra exists (bond arcs); the `crossroads` (event) and `fairground` (festival) map nodes have no content/mechanics.
 - [ ] **Recurring festival** — currently the one-time "Harvest Festival" *is* the act-3 win condition; the doc wants it recurring on a cadence (reuse the audit-boss day-cooldown pattern).
@@ -77,7 +77,6 @@ Status legend: **[ ]** not started · **[~]** partial · **[deferred]** there's 
 
 ## 7. Balance Manager polish
 
-- [~] **Story·Dialogue** — the visual `/story/` editor covers titles/scenes/lines/choices+outcomes/new beats; still missing: editing triggers, and the input-`prompt` beats.
 - [ ] **Bosses** → modifier params · **Achievements** → the `counter` · **Daily Rewards** → tool/tile-unlock drops · **NPCs** → order-line templates + `GIFT_DELTAS`.
 - [ ] Maybe a **Map/cartography** tab (zone positions, edges, regions) and an **Abilities-catalog** viewer.
 
@@ -96,7 +95,6 @@ Status legend: **[ ]** not started · **[~]** partial · **[deferred]** there's 
 1. **Keeper choice → settlement completion** + grant the Hearth-Token off it + a "keeper ready" trigger. Small; ties the Phase-4/5/6 work into one playable spine (found → build → face keeper → token → Old Capital).
 2. **Boon trees** — spend Embers/Ingots on per-path zone boons. The currencies and `keeper_*` flags already exist; gives them a payoff; contained + a clean BM "Boons" tab.
 3. **Founding enforcement + a Town-view "Found this settlement" CTA** — closes the obvious hole; small.
-4. **NPC daily schedules** for the town villagers — makes the town feel like a real place; reuses the existing villager sim.
-5. **Recurring festival** — turn the dead "act-3 win = festival" into an ongoing event.
+4. **Recurring festival** — turn the dead "act-3 win = festival" into an ongoing event.
 
 Heavier / needs design input — hold for a dedicated session: the **Hollow Pact / Charter metaplot** + the **Old Capital finale**, and reconciling the **phase-39 boss overhaul**.

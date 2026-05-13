@@ -27,6 +27,7 @@ const ZonesTab     = lazy(() => import("./tabs/ZonesTab.jsx"));
 const BiomesTab    = lazy(() => import("./tabs/BiomesTab.jsx"));
 const WorkersTab   = lazy(() => import("./tabs/WorkersTab.jsx"));
 const KeepersTab   = lazy(() => import("./tabs/KeepersTab.jsx"));
+const BoonsTab     = lazy(() => import("./tabs/BoonsTab.jsx"));
 const NpcsTab      = lazy(() => import("./tabs/NpcsTab.jsx"));
 const StoryTab     = lazy(() => import("./tabs/StoryTab.jsx"));
 const SimulateTab  = lazy(() => import("./tabs/SimulateTab.jsx"));
@@ -102,6 +103,9 @@ const TABS = [
   { id: "keepers",   label: "Keepers",        iconKey: "ui_star", Component: KeepersTab,
     section: "story",
     blurb: "The biome keepers (Deer-Spirit / Stone-Knocker / Tidesinger): names, the building threshold at which they appear, and the Coexist / Drive Out dialogue + rewards." },
+  { id: "boons",     label: "Boons",          iconKey: "ui_star", Component: BoonsTab,
+    section: "story",
+    blurb: "Per-path zone boons unlocked by facing keepers — spend Embers (Coexist) or Core Ingots (Drive Out) for run-wide perks. Read-only catalog for now; editing wires up later." },
   { id: "icons",     label: "Icons",          iconKey: "ui_star", Component: IconsTab,
     section: "other",
     blurb: "Browse every procedurally-drawn icon in ICON_REGISTRY. Filter by category, search by key or label, and click to copy the key." },

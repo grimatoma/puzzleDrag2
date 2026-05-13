@@ -154,11 +154,16 @@ describe("Phase 31 — expandZoneCategories", () => {
 });
 
 describe("Phase 31 — FARM/ENTER: zone awareness", () => {
+  // Phase 6a — FARM/ENTER refuses at unfounded zones; pre-found quarry.
+  const quarryFounded = (over = {}) => ({
+    ...createInitialState(),
+    activeZone: "quarry",
+    settlements: { home: { founded: true }, quarry: { founded: true, biome: "tundra" } },
+    ...over,
+  });
+
   it("uses quarry's 10-turn budget when activeZone is quarry", () => {
-    const s = withCoins(
-      { ...createInitialState(), activeZone: "quarry" },
-      200,
-    );
+    const s = withCoins(quarryFounded(), 200);
     const next = rootReducer(s, {
       type: "FARM/ENTER",
       payload: { selectedTiles: [], useFertilizer: false },
@@ -167,11 +172,10 @@ describe("Phase 31 — FARM/ENTER: zone awareness", () => {
   });
 
   it("Quarry (10 turns) + fertilizer = 20 turns", () => {
-    const base = createInitialState();
+    const base = quarryFounded();
     const s = withCoins(
       {
         ...base,
-        activeZone: "quarry",
         tools: { ...base.tools, fertilizer: 1 },
       },
       200,

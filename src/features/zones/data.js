@@ -286,9 +286,13 @@ export function settlementFoundingCost(state) {
 }
 
 /**
- * A settlement is "complete" once at least half of the buildings available at
- * that zone have been built there. (Mocked threshold; tunable. Feeds the
- * Phase-7 metaplot — how many settlements have been completed.)
+ * A settlement is "complete" once two conditions hold:
+ *   1. at least half of the buildings available at the zone have been built, AND
+ *   2. its keeper has been faced (Coexist or Drive Out — `settlementKeeperPath()`
+ *      returns a non-null value).
+ *
+ * Settlements without a keeper type (e.g. crossroads, fairground — non-biome
+ * map nodes) only need (1). Zones that have no buildings can never complete.
  */
 export function settlementCompleted(state, zoneId) {
   const z = ZONES[zoneId];
@@ -297,7 +301,12 @@ export function settlementCompleted(state, zoneId) {
   if (need.length === 0) return false;
   const built = state?.built?.[zoneId] ?? {};
   const have = need.filter((b) => built[b]).length;
-  return have >= Math.ceil(need.length / 2);
+  if (have < Math.ceil(need.length / 2)) return false;
+  // Keeper gate: if this zone has a settlement type (farm/mine/harbor), require
+  // the keeper choice be made. Non-settlement zones (rare; mostly defensive)
+  // skip the gate.
+  if (settlementTypeForZone(zoneId) && !settlementKeeperPath(state, zoneId)) return false;
+  return true;
 }
 
 /** Count of zones that are both founded and completed. */
@@ -357,13 +366,12 @@ export function expeditionTurnsFromSupply(state, supply, zoneId = state?.mapCurr
 // three opens the Old Capital. `state.heirlooms.<token>` doubles as the
 // per-type latch — once > 0 the token has been earned.
 //
-// DEFERRED: the doc says a settlement "completes" only once its keeper has been
-// faced (the Coexist / Drive Out choice — Deer-Spirit for farms, Stone-Knocker
-// for mines, Tidesinger for harbors). Those per-biome keepers don't exist yet
-// (only the Frostmaw audit boss), so for now `settlementCompleted` (≥ half the
-// zone's buildings built + founded) is the bar. Tighten when the keepers land.
-// The Old Capital finale itself is intentionally undefined per the doc — the
-// map node is a locked stub.
+// Phase 6a wired the keeper gate into `settlementCompleted` (above): a zone
+// only "completes" once half its buildings are up AND its keeper has been
+// faced. `grantEarnedHearthTokens` runs from both BUILD (after a building
+// pushes the count past half) and KEEPER/CONFRONT (when the keeper choice
+// is the gating step). The Old Capital finale itself is intentionally
+// undefined per the master doc — the map node is a locked stub.
 const _KIND_BY_ID = Object.fromEntries(MAP_NODES.map((n) => [n.id, n.kind]));
 
 /** A zone's settlement type — 'farm' | 'mine' | 'harbor' — or null if it isn't a settlement. */

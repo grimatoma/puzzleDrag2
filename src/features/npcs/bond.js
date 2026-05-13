@@ -1,4 +1,5 @@
 import { BOND_BANDS, NPC_DATA } from "./data.js";
+import { boonEffectMult } from "../boons/data.js";
 
 const clamp = (n, lo, hi) => Math.min(hi, Math.max(lo, n));
 
@@ -40,7 +41,7 @@ export function applyGift(state, npcId, itemKey) {
   if ((state.inventory[itemKey] ?? 0) <= 0) return { ok: false };
   if (state.npcs.giftCooldown[npcId] === state.season) return { ok: false };
   const tier = giftTier(npcId, itemKey);
-  const delta = GIFT_DELTAS[tier];
+  const delta = GIFT_DELTAS[tier] * boonEffectMult(state, "bond_gain_mult");
   const newState = {
     ...state,
     inventory: { ...state.inventory, [itemKey]: state.inventory[itemKey] - 1 },

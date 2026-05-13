@@ -7,6 +7,7 @@ beforeEach(() => global.localStorage.clear());
 
 // A state ready to set out on a mine expedition from `quarry` with `bread` in
 // the larder. `biomeKey` is forced off "mine" so SWITCH_BIOME's no-op guard passes.
+// Phase 6a — quarry/harbor must be founded to depart; pre-found them here.
 function ready(over = {}) {
   return {
     ...createInitialState(),
@@ -15,6 +16,11 @@ function ready(over = {}) {
     mapCurrent: "quarry",
     activeZone: "quarry",
     inventory: { ...createInitialState().inventory, bread: 6, fruit_apple: 4 },
+    settlements: {
+      home: { founded: true },
+      quarry: { founded: true, biome: "tundra" },
+      harbor: { founded: true, biome: "kelp_coast" },
+    },
     story: { ...createInitialState().story, flags: { ...createInitialState().story.flags, mine_unlocked: true } },
     ...over,
   };

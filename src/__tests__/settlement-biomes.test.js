@@ -59,20 +59,34 @@ describe("settlementBiomeId / settlementBiome / settlementHazards", () => {
 });
 
 describe("FOUND_SETTLEMENT picks the biome", () => {
+  // Phase 6a — second founding requires the first (home) be complete; pre-build
+  // and pre-keeper home so the progression gate doesn't fire.
+  const homeCompleted = (over = {}) => {
+    const built = { decorations: {}, _plots: {} };
+    for (const b of ["hearth", "mill", "bakery", "inn", "granary", "larder", "forge", "caravan_post"]) built[b] = true;
+    return {
+      ...createInitialState(),
+      coins: 9999,
+      built: { ...createInitialState().built, home: built },
+      settlements: { home: { founded: true, biome: DEFAULT_HOME_BIOME, keeperPath: "coexist" } },
+      ...over,
+    };
+  };
+
   it("records the chosen biome", () => {
-    let s = { ...createInitialState(), coins: 9999 };
+    let s = homeCompleted();
     s = rootReducer(s, { type: "FOUND_SETTLEMENT", payload: { zoneId: "meadow", biome: "forest" } });
     expect(s.settlements.meadow).toMatchObject({ founded: true, biome: "forest" });
     expect(settlementBiomeId(s, "meadow")).toBe("forest");
     expect(settlementHazards(s, "meadow")).toEqual(SETTLEMENT_BIOMES.farm.find((b) => b.id === "forest").hazards);
   });
   it("works for a mine zone", () => {
-    let s = { ...createInitialState(), coins: 9999 };
+    let s = homeCompleted();
     s = rootReducer(s, { type: "FOUND_SETTLEMENT", payload: { zoneId: "quarry", biome: "tundra" } });
     expect(s.settlements.quarry).toMatchObject({ founded: true, biome: "tundra" });
   });
   it("a missing/unknown biome falls back to the first option for the type", () => {
-    let s = { ...createInitialState(), coins: 9999 };
+    let s = homeCompleted();
     s = rootReducer(s, { type: "FOUND_SETTLEMENT", payload: { zoneId: "meadow" } });
     expect(s.settlements.meadow.biome).toBe(SETTLEMENT_BIOMES.farm[0].id);
   });

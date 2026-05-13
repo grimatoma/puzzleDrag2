@@ -9,9 +9,9 @@
 // Balance Manager exposes it for editing).
 //
 // DEFERRED: per the doc, Drive Out should be a high-difficulty round with the
-// keeper as a hazard to outlast — for now it's a direct claim. And facing the
-// keeper doesn't yet gate `settlementCompleted` (still ≥half buildings);
-// tighten that once the encounter is wired through the UI everywhere.
+// keeper as a hazard to outlast — for now it's a direct claim. (Phase 6a wired
+// the keeper choice into `settlementCompleted` and Hearth-Token grant; the
+// hazard-round variant lands in a follow-up.)
 
 import { BALANCE_OVERRIDES } from "./constants.js";
 import { applyKeeperOverrides } from "./config/applyOverrides.js";

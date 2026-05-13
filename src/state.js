@@ -37,13 +37,15 @@ import * as market from "./features/market/slice.js";
 import * as castle from "./features/castle/slice.js";
 import * as zones from "./features/zones/slice.js";
 import * as workers from "./features/workers/slice.js";
-import { ZONES, settlementFoundingCost, isSettlementFounded, displayZoneName, grantEarnedHearthTokens, isOldCapitalUnlocked, isExpeditionFood, expeditionTurnsFromSupply, settlementTypeForZone, resolveBiomeChoice, keeperReadyFor } from "./features/zones/data.js";
+import * as boons from "./features/boons/slice.js";
+import { boonEffectMult } from "./features/boons/data.js";
+import { ZONES, settlementFoundingCost, isSettlementFounded, displayZoneName, grantEarnedHearthTokens, isOldCapitalUnlocked, isExpeditionFood, expeditionTurnsFromSupply, settlementTypeForZone, resolveBiomeChoice, keeperReadyFor, completedSettlementCount, DEFAULT_ZONE } from "./features/zones/data.js";
 import { keeperForType, keeperPathInfo } from "./keepers.js";
 import { FIRE_HAZARD_ENABLED } from "./featureFlags.js";
 import { loadSavedState, persistState, clearSave } from "./state/persistence.js";
 export { loadSavedState, persistStateNow, persistState, flushPersistState, clearSave } from "./state/persistence.js";
 
-const slices = [crafting, quests, achievements, tutorial, settings, boss, cartography, storySlice, decorations, portal, market, castle, fish, zones, workers];
+const slices = [crafting, quests, achievements, tutorial, settings, boss, cartography, storySlice, decorations, portal, market, castle, fish, zones, workers, boons];
 
 // Phase 7 — SEASON_NAMES used to be the calendar-season index → name lookup.
 // All readers were removed when the calendar was deleted, so the table is
@@ -337,6 +339,7 @@ export function createFreshState(overrides) {
     ...castle.initial,
     ...fish.initial,
     ...zones.initial,
+    ...boons.initial,
     // Phase 12.5 — saved-field slots for Silo/Barn
     farm: { savedField: null },
     mine: { savedField: null },
@@ -587,7 +590,12 @@ function coreReducer(state, action) {
       const chainCf = { ...(state.seasonStats?.capFloaters ?? {}) };
       const chainFloaters = [...(state.floaters ?? [])];
 
-      const effectiveGained = gained;
+      // Phase 6b — chain_yield_mult boons scale the resource amount the chain
+      // adds to inventory. Floored to keep counts integer, never below `gained`.
+      const yieldMultBoon = boonEffectMult(state, "chain_yield_mult");
+      const effectiveGained = yieldMultBoon > 1
+        ? Math.max(gained, Math.floor(gained * yieldMultBoon))
+        : gained;
       addCappedResourceMut(inventory, chainCf, chainFloaters, key, effectiveGained, chainCap);
 
       let effectiveUpgrades = upgrades;
@@ -615,7 +623,12 @@ function coreReducer(state, action) {
         addCappedResourceMut(inventory, chainCf, chainFloaters, longBonus.bonusKey, longBonus.amount, chainCap);
       }
 
-      const coinsGain = Math.max(1, Math.floor((effectiveGained * value) / 2)) + coinHookBonus;
+      const baseCoinsGain = Math.max(1, Math.floor((effectiveGained * value) / 2)) + coinHookBonus;
+      // Phase 6b — coin_gain_mult boons scale chain coin reward.
+      const coinMultBoon = boonEffectMult(state, "coin_gain_mult");
+      const coinsGain = coinMultBoon > 1
+        ? Math.floor(baseCoinsGain * coinMultBoon)
+        : baseCoinsGain;
       // §17 locked: 1 XP per chain (regardless of length/value) into almanac
       const { newState: afterAlmanacXp } = applyAlmanacXp(state, 1);
       const turnsUsed = state.turnsUsed + 1;
@@ -731,8 +744,8 @@ function coreReducer(state, action) {
       const orderBase = o.baseReward ?? o.reward;
       const bondPaid = payOrder({ baseReward: orderBase }, npcBond);
       const actualReward = bondPaid;
-      // Bump bond +0.3 on delivery (Phase 6.1)
-      const newBond = gainBond(npcBond, 0.3);
+      // Bump bond +0.3 on delivery (Phase 6.1) — scaled by any owned bond_gain_mult boons.
+      const newBond = gainBond(npcBond, 0.3 * boonEffectMult(state, "bond_gain_mult"));
       const updatedNpcs = state.npcs
         ? { ...state.npcs, bonds: { ...state.npcs.bonds, [o.npc]: newBond } }
         : state.npcs;
@@ -1031,6 +1044,17 @@ function coreReducer(state, action) {
       const zoneId = action.payload?.zoneId ?? action.zoneId;
       if (!zoneId || !ZONES[zoneId]) return state;            // unknown zone
       if (isSettlementFounded(state, zoneId)) return state;   // already founded
+      // Progression gate (Phase 6a): the player must have completed at least one
+      // prior settlement before founding the next. `home` is auto-founded so the
+      // first time a player faces this gate is when founding settlement #2 —
+      // they need home (or some other founded zone) finished first. Skipped
+      // entirely for `home`, which is always founded.
+      if (zoneId !== DEFAULT_ZONE && completedSettlementCount(state) < 1) {
+        return {
+          ...state,
+          bubble: { id: Date.now(), npc: "wren", text: "Complete your first settlement before founding the next.", ms: 2400 },
+        };
+      }
       const cost = settlementFoundingCost(state);
       if ((state.coins ?? 0) < (cost.coins ?? 0)) return state; // can't afford
       // Phase 5e — pick the biome at founding (the picker passes payload.biome;
@@ -1048,7 +1072,12 @@ function coreReducer(state, action) {
       // Phase 6a — face a settlement's keeper and choose Coexist (Embers, the
       // biome keeps its wild gifts) or Drive Out (Core Ingots, it goes orderly).
       // Final per settlement. Sets settlements[zoneId].keeperPath + a
-      // `keeper_<zoneId>_<path>` flag (for future per-path boon trees).
+      // `keeper_<zoneId>_<path>` flag (consumed by per-path boon trees).
+      //
+      // Because `settlementCompleted` now requires both ≥ half buildings AND a
+      // keeper choice, the keeper choice is often the gating step that flips
+      // a settlement complete. Re-run `grantEarnedHearthTokens` here so the
+      // token lands in the same tick (idempotent — won't double-grant).
       const zoneId = action.payload?.zoneId ?? action.zoneId;
       const path = action.payload?.path ?? action.path;
       if (path !== "coexist" && path !== "driveout") return state;
@@ -1072,6 +1101,21 @@ function coreReducer(state, action) {
       };
       if (path === "coexist") next = { ...next, embers: (state.embers ?? 0) + (info.embers ?? 0) };
       else next = { ...next, coreIngots: (state.coreIngots ?? 0) + (info.coreIngots ?? 0) };
+      // Hearth-Token grant: if this keeper choice flips the settlement to
+      // complete, mint the token now. If the choice also collected the third
+      // token, override the keeper bubble with the Old-Capital unlock message.
+      const earnedHeirlooms = grantEarnedHearthTokens(next);
+      if (earnedHeirlooms !== next.heirlooms) {
+        const justUnlockedCapital = !isOldCapitalUnlocked(next) &&
+          isOldCapitalUnlocked({ ...next, heirlooms: earnedHeirlooms });
+        next = {
+          ...next,
+          heirlooms: earnedHeirlooms,
+          bubble: justUnlockedCapital
+            ? { id: Date.now(), npc: "tomas", text: "Three Hearth-Tokens. The old road to the Capital opens.", ms: 2800 }
+            : next.bubble,
+        };
+      }
       // Let a future story beat react ("you faced a keeper"); no-op until one exists.
       return evaluateAndApplyStoryBeat(next, { type: "keeper_confronted", zoneId, path, keeper: keeper.id });
     }
@@ -1107,6 +1151,14 @@ function coreReducer(state, action) {
       // Support both legacy action.building (full object) and action.payload.id (lookup by id)
       const b = action.building ?? BUILDINGS.find((x) => x.id === action.payload?.id);
       if (!b) return state;
+      // Founding gate (Phase 6a): can't build at a zone that hasn't been founded.
+      // `home` is auto-founded so this only catches the player at meadow/quarry/etc.
+      if (!isSettlementFounded(state, state.mapCurrent)) {
+        return {
+          ...state,
+          bubble: { id: Date.now(), npc: "wren", text: `Found ${displayZoneName(state, state.mapCurrent)} before you build here.`, ms: 2400 },
+        };
+      }
       const canCoin = state.coins >= (b.cost.coins || 0);
       const canRes = Object.entries(b.cost).every(
         ([k, v]) => k === "coins" || k === "runes" || (state.inventory[k] || 0) >= v,
@@ -1355,6 +1407,13 @@ function coreReducer(state, action) {
       const zoneId = state.activeZone ?? state.mapCurrent ?? "home";
       const zone = ZONES[zoneId];
       if (!zone) return state;
+      // Founding gate (Phase 6a): can't start a farming session at an unfounded zone.
+      if (!isSettlementFounded(state, zoneId)) {
+        return {
+          ...state,
+          bubble: { id: Date.now(), npc: "wren", text: `Found ${displayZoneName(state, zoneId)} before you farm here.`, ms: 2400 },
+        };
+      }
 
       const entryCoins = zone.entryCost?.coins ?? 50;
       if ((state.coins ?? 0) < entryCoins) return state;
@@ -1393,6 +1452,13 @@ function coreReducer(state, action) {
       const needLevel = biomeKey === "mine" ? 2 : 3;
       if ((state.level ?? 1) < needLevel) return state;
       const zoneId = state.activeZone ?? state.mapCurrent ?? "home";
+      // Founding gate (Phase 6a): can't depart on an expedition from an unfounded zone.
+      if (!isSettlementFounded(state, zoneId)) {
+        return {
+          ...state,
+          bubble: { id: Date.now(), npc: "wren", text: `Found ${displayZoneName(state, zoneId)} before you depart from here.`, ms: 2400 },
+        };
+      }
       const supply = action.payload?.supply ?? {};
       // Validate: every entry is a real ration the player has enough of.
       const inv = { ...(state.inventory ?? {}) };
@@ -1995,6 +2061,8 @@ const SLICE_PRIMARY_ACTIONS = new Set([
   "CASTLE/CONTRIBUTE",
   // Fish biome tide cycle
   "FISH/FORCE_TIDE_FLIP",
+  // Boon trees — purchase a per-path zone boon (deducts Embers / Core Ingots)
+  "BOON/PURCHASE",
 ]);
 
 // Actions where coreReducer intentionally defers to slices (e.g. CRAFTING/CRAFT_RECIPE
