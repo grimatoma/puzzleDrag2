@@ -69,6 +69,9 @@ export function triggerSummary(beat) {
       case "boss_defeated":        return { icon: "⚔", label: `Defeat ${t.id}`, kind: "trigger" };
       case "all_buildings_built":  return { icon: "▥", label: "All buildings", kind: "trigger" };
       case "bond_at_least":        return { icon: "♥", label: `${NPCS[t.npc]?.name || t.npc} bond ≥ ${t.amount}`, kind: "trigger" };
+      case "session_ended":        return { icon: "■", label: "Session end", kind: "trigger" };
+      case "flag_set":             return { icon: "⚐", label: `flag ${t.flag}`, kind: "trigger" };
+      case "flag_cleared":         return { icon: "⚑", label: `flag ${t.flag} off`, kind: "trigger" };
       default:                     return { icon: "?", label: t.type, kind: "trigger" };
     }
   }
@@ -180,6 +183,7 @@ export function effectiveBeat(beatId, draft) {
       merged.choices = base.choices.map((c) => ({ ...c, label: ov.choices[c.id]?.label ?? c.label }));
     }
     if (ov.trigger) { const t = sanitizeBeatTrigger(ov.trigger); if (t) merged.trigger = t; }
+    if (Object.prototype.hasOwnProperty.call(ov, "repeat")) merged.repeat = ov.repeat === true ? true : undefined;
     if (Object.prototype.hasOwnProperty.call(ov, "onComplete")) {
       const oc = sanitizeBeatOnComplete(ov.onComplete);
       if (oc) merged.onComplete = { ...(base.onComplete || {}), ...oc };

@@ -159,6 +159,25 @@ describe("applyStoryOverrides", () => {
     });
     expect(side[0]).toMatchObject({ id: "draft1", title: "Renamed", scene: "frost", choices: [{ id: "c1", label: "Pick" }] });
   });
+  it("trigger + repeat are sanitised on newBeats and beats[] patches", () => {
+    const story = [{ id: "a1", title: "A", trigger: { type: "session_start" } }];
+    const side = [];
+    applyStoryOverrides(story, side, {
+      newBeats: [{ id: "d1", title: "D1", trigger: { type: "building_built", id: "mill" }, repeat: true },
+                 { id: "d2", title: "D2", trigger: { type: "flag_set", flag: " mine_unlocked " } }],
+      beats: { a1: { trigger: { type: "resource_total", key: "wood_log", amount: 30 }, repeat: true },
+               d1: { repeat: false } },   // turn the repeat back off
+    });
+    expect(story[0].trigger).toEqual({ type: "resource_total", key: "wood_log", amount: 30 });
+    expect(story[0].repeat).toBe(true);
+    const d1 = side.find((b) => b.id === "d1"), d2 = side.find((b) => b.id === "d2");
+    expect(d1).toMatchObject({ id: "d1", trigger: { type: "building_built", id: "mill" } });
+    expect(d1.repeat).toBeUndefined();   // newBeat set repeat:true, beats[] patch cleared it
+    expect(d2).toMatchObject({ id: "d2", trigger: { type: "flag_set", flag: "mine_unlocked" } });
+    // a bad trigger in a patch is ignored (keeps the prior one)
+    applyStoryOverrides(story, [], { beats: { a1: { trigger: { type: "no_such" } } } });
+    expect(story[0].trigger).toEqual({ type: "resource_total", key: "wood_log", amount: 30 });
+  });
 });
 
 describe("story-beat sanitizers", () => {
@@ -174,10 +193,15 @@ describe("story-beat sanitizers", () => {
       .toEqual([{ id: "choice_1", label: "A" }, { id: "go", label: "Continue" }, { id: "go_3", label: "again" }]);
     expect(sanitizeChoiceArray("x")).toBeNull();
   });
-  it("sanitizeBeatTrigger only accepts a positive bond_at_least", () => {
+  it("sanitizeBeatTrigger accepts the full trigger vocabulary (alias of sanitizeTrigger)", () => {
     expect(sanitizeBeatTrigger({ type: "bond_at_least", npc: "mira", amount: 7.9 })).toEqual({ type: "bond_at_least", npc: "mira", amount: 7 });
     expect(sanitizeBeatTrigger({ type: "bond_at_least", npc: "mira", amount: 0 })).toBeUndefined();
-    expect(sanitizeBeatTrigger({ type: "resource_total", key: "x", amount: 5 })).toBeUndefined();
+    expect(sanitizeBeatTrigger({ type: "resource_total", key: "x", amount: 5 })).toEqual({ type: "resource_total", key: "x", amount: 5 });
+    expect(sanitizeBeatTrigger({ type: "building_built", id: "mill" })).toEqual({ type: "building_built", id: "mill" });
+    expect(sanitizeBeatTrigger({ type: "flag_set", flag: " hearth_lit " })).toEqual({ type: "flag_set", flag: "hearth_lit" });
+    expect(sanitizeBeatTrigger({ type: "flag_set" })).toBeUndefined();
+    expect(sanitizeBeatTrigger({ type: "season_entered" })).toBeUndefined();
+    expect(sanitizeBeatTrigger === sanitizeFlagTrigger).toBe(true);   // same sanitizer
   });
   it("sanitizeBeatOnComplete keeps only setFlag", () => {
     expect(sanitizeBeatOnComplete({ setFlag: ["a"], spawnNPC: "mira" })).toEqual({ setFlag: "a" });
