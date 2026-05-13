@@ -19,7 +19,7 @@ import {
   effectiveBeat, effectiveChoices, findIncomingChoice, allBeatIds,
   draftBeats, draftBeatIndex, isDraftBeat,
   cloneDraft, deriveGraph, visibleSubset, collapsibleIds,
-  readCollapsed, writeCollapsed, DRAFT_LANE_Y,
+  readCollapsed, writeCollapsed, readNodePositions, writeNodePositions, DRAFT_LANE_Y,
   branchingRowCenterY, MY, NH, Btn,
 } from "./shared.jsx";
 import Inspector from "./Inspector.jsx";
@@ -286,15 +286,15 @@ function PreviewPlay({ onPlay }) {
   );
 }
 
-function TreeNode({ node, beat, selectedId, collapsed, hiddenCount, showCollapse, onSelect, onToggleCollapse, onPreview, draft }) {
+function TreeNode({ node, beat, selectedId, collapsed, hiddenCount, showCollapse, dragging, onNodeMouseDown, onToggleCollapse, onPreview, draft }) {
   const selected = node.id === selectedId;
   let Inner;
   if (node.draft || node.expanded) Inner = <ExpandedCard node={node} beat={beat} selected={selected} draft={draft} />;
   else if (node.branching) Inner = <BranchingNode beat={beat} selected={selected} />;
   else Inner = <CompactNode node={node} beat={beat} selected={selected} />;
   return (
-    <div style={{ position: "absolute", left: node.x, top: node.y, width: node.w, height: node.h, cursor: "pointer" }}
-      onClick={() => onSelect(node.id)}>
+    <div style={{ position: "absolute", left: node.x, top: node.y, width: node.w, height: node.h, cursor: dragging ? "grabbing" : "grab" }}
+      onMouseDown={(e) => onNodeMouseDown(e, node)}>
       <TriggerChip beat={beat} accent={actColor(beat)} />
       {showCollapse && <CollapseToggle collapsed={collapsed} hiddenCount={hiddenCount} onToggle={() => onToggleCollapse(node.id)} />}
       <PreviewPlay onPlay={() => onPreview(node.id)} />
@@ -415,9 +415,23 @@ export default function StoryEditorApp() {
   const [dragging, setDragging] = useState(false);
   const [collapsed, setCollapsed] = useState(() => readCollapsed());
   const [previewBeatId, setPreviewBeatId] = useState(null);
+  const [nodePositions, setNodePositions] = useState(() => readNodePositions());
+  const [draggingNodeId, setDraggingNodeId] = useState(null);
   const isDragging = useRef(false);
   const dragStart = useRef(null);
+  const nodeDrag = useRef(null);
   const canvasRef = useRef(null);
+
+  const moveNode = useCallback((id, x, y) => {
+    setNodePositions((prev) => { const next = { ...prev, [id]: { x: Math.round(x), y: Math.round(y) } }; writeNodePositions(next); return next; });
+  }, []);
+  const resetLayout = useCallback(() => { setNodePositions({}); writeNodePositions({}); }, []);
+  const onNodeMouseDown = useCallback((e, node) => {
+    if (e.target.closest("button")) return;            // a node button (▶ / collapse) — leave it alone
+    e.stopPropagation();                                // don't let the canvas start a pan
+    e.preventDefault();                                 // no text selection while dragging
+    nodeDrag.current = { id: node.id, sx: e.clientX, sy: e.clientY, nx: node.x, ny: node.y, moved: false };
+  }, []);
 
   const isDirty = JSON.stringify(draft) !== JSON.stringify(BALANCE_OVERRIDES);
 
@@ -440,11 +454,24 @@ export default function StoryEditorApp() {
     dragStart.current = { x: e.clientX - pan.x, y: e.clientY - pan.y };
   }, [pan]);
   useEffect(() => {
-    const onMove = (e) => { if (isDragging.current) setPan({ x: e.clientX - dragStart.current.x, y: e.clientY - dragStart.current.y }); };
-    const onUp = () => { isDragging.current = false; setDragging(false); };
+    const z = zoom || 1;
+    const onMove = (e) => {
+      const nd = nodeDrag.current;
+      if (nd) {
+        if (!nd.moved && (Math.abs(e.clientX - nd.sx) > 3 || Math.abs(e.clientY - nd.sy) > 3)) { nd.moved = true; setDraggingNodeId(nd.id); }
+        if (nd.moved) moveNode(nd.id, nd.nx + (e.clientX - nd.sx) / z, nd.ny + (e.clientY - nd.sy) / z);
+        return;
+      }
+      if (isDragging.current) setPan({ x: e.clientX - dragStart.current.x, y: e.clientY - dragStart.current.y });
+    };
+    const onUp = () => {
+      const nd = nodeDrag.current;
+      if (nd) { nodeDrag.current = null; setDraggingNodeId(null); if (!nd.moved) setSelectedId(nd.id); return; }
+      isDragging.current = false; setDragging(false);
+    };
     window.addEventListener("mousemove", onMove); window.addEventListener("mouseup", onUp);
     return () => { window.removeEventListener("mousemove", onMove); window.removeEventListener("mouseup", onUp); };
-  }, []);
+  }, [moveNode, zoom]);
   const onWheel = useCallback((e) => { e.preventDefault(); setZoom((z) => Math.min(2, Math.max(0.3, z + (e.deltaY > 0 ? -0.08 : 0.08)))); }, []);
 
   // Touch: one-finger pan, two-finger pinch-zoom (with focal point)
@@ -625,7 +652,7 @@ export default function StoryEditorApp() {
   }, []);
 
   // ── graph ──
-  const fullGraph = useMemo(() => deriveGraph(draft), [draft]);
+  const fullGraph = useMemo(() => deriveGraph(draft, nodePositions), [draft, nodePositions]);
   const collapsible = useMemo(() => collapsibleIds(fullGraph.edges), [fullGraph]);
   const view = useMemo(() => visibleSubset(fullGraph.nodes, fullGraph.edges, collapsed), [fullGraph, collapsed]);
   const nodeById = useMemo(() => new Map(view.nodes.map((n) => [n.id, n])), [view]);
@@ -647,7 +674,13 @@ export default function StoryEditorApp() {
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           {savedNotice && <span style={{ font: "700 10px/1 system-ui", padding: "4px 9px", borderRadius: 6, background: C.green, color: "#fff" }}>{savedNotice}</span>}
           {isDirty && !savedNotice && <span style={{ font: "700 10px/1 system-ui", padding: "4px 9px", borderRadius: 6, background: C.ember, color: "#fff" }}>Unsaved changes</span>}
-          <span style={{ font: "400 10px/1 system-ui", color: "rgba(244,217,160,0.5)" }}>Scroll / pinch = zoom · Drag = pan · ⌘S = save</span>
+          <span style={{ font: "400 10px/1 system-ui", color: "rgba(244,217,160,0.5)" }}>Drag a card to move it · scroll / pinch = zoom · ⌘S = save</span>
+          {Object.keys(nodePositions).length > 0 && (
+            <button onClick={resetLayout} title="Snap every card back to its default position"
+              style={{ padding: "6px 12px", borderRadius: 7, border: `2px solid ${C.border}`, background: C.parchmentDeep, color: C.inkLight, font: "700 11px/1 system-ui", cursor: "pointer" }}>
+              ⤓ Reset layout ({Object.keys(nodePositions).length})
+            </button>
+          )}
           {collapsed.size > 0 && (
             <button onClick={() => { setCollapsed(new Set()); writeCollapsed(new Set()); }}
               style={{ padding: "6px 12px", borderRadius: 7, border: `2px solid ${C.border}`, background: C.parchmentDeep, color: C.inkLight, font: "700 11px/1 system-ui", cursor: "pointer" }}>
@@ -690,7 +723,8 @@ export default function StoryEditorApp() {
             {view.nodes.map((node) => (
               <TreeNode key={node.id} node={node} beat={effectiveBeat(node.id, draft)} selectedId={selectedId}
                 collapsed={collapsed.has(node.id)} hiddenCount={view.hiddenCounts[node.id] || 0}
-                showCollapse={collapsible.has(node.id)} onSelect={setSelectedId} onToggleCollapse={toggleCollapse}
+                showCollapse={collapsible.has(node.id)} dragging={draggingNodeId === node.id}
+                onNodeMouseDown={onNodeMouseDown} onToggleCollapse={toggleCollapse}
                 onPreview={setPreviewBeatId} draft={draft} />
             ))}
           </div>
