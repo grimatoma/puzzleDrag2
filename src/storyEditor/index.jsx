@@ -26,6 +26,18 @@ import {
 import Inspector from "./Inspector.jsx";
 import PreviewModal from "./PreviewModal.jsx";
 
+const INSPECTOR_COLLAPSED_KEY = "hearth.story.inspectorCollapsed";
+
+function readInspectorCollapsed() {
+  try { return localStorage.getItem(INSPECTOR_COLLAPSED_KEY) === "1"; }
+  catch { return false; }
+}
+
+function writeInspectorCollapsed(v) {
+  try { localStorage.setItem(INSPECTOR_COLLAPSED_KEY, v ? "1" : "0"); }
+  catch {}
+}
+
 function builtInSideSubtreeIds(startId) {
   const ids = new Set();
   const stack = [startId];
@@ -512,6 +524,7 @@ export default function StoryEditorApp() {
   const [nodePositions, setNodePositions] = useState(() => readNodePositions());
   const [draggingNodeId, setDraggingNodeId] = useState(null);
   const [toolsOpen, setToolsOpen] = useState(false);
+  const [inspectorCollapsed, setInspectorCollapsed] = useState(() => readInspectorCollapsed());
   const isDragging = useRef(false);
   const dragStart = useRef(null);
   const nodeDrag = useRef(null);
@@ -1030,10 +1043,34 @@ export default function StoryEditorApp() {
           </div>
         </div>
 
-        <Inspector beatId={selectedId} draft={draft} isDraft={selIsDraft}
-          onEditBeat={editBeat} onNewBranch={onNewBranch} onDeleteBeat={deleteDraftBeat}
-          onSuppressBeat={suppressBuiltInBeat} onRenameBeat={renameDraftBeat}
-          onSelect={setSelectedId} onPreview={setPreviewBeatId} />
+        <div style={{ position: "relative", display: "flex", flexShrink: 0 }}>
+          <button
+            onClick={() => {
+              setInspectorCollapsed((prev) => {
+                const next = !prev;
+                writeInspectorCollapsed(next);
+                return next;
+              });
+            }}
+            title={inspectorCollapsed ? "Expand inspector" : "Collapse inspector"}
+            aria-label={inspectorCollapsed ? "Expand inspector" : "Collapse inspector"}
+            aria-expanded={!inspectorCollapsed}
+            style={{
+              position: "absolute", left: -26, top: 12, zIndex: 20,
+              width: 22, height: 30, borderRadius: "6px 0 0 6px", border: `1.5px solid ${C.border}`,
+              borderRight: 0, background: C.parchmentDeep, color: C.inkSubtle,
+              font: "700 12px/1 system-ui", cursor: "pointer",
+            }}
+          >
+            {inspectorCollapsed ? "◂" : "▸"}
+          </button>
+          <div style={{ width: inspectorCollapsed ? 0 : 390, overflow: "hidden", transition: "width 160ms ease" }}>
+            <Inspector beatId={selectedId} draft={draft} isDraft={selIsDraft}
+              onEditBeat={editBeat} onNewBranch={onNewBranch} onDeleteBeat={deleteDraftBeat}
+              onSuppressBeat={suppressBuiltInBeat} onRenameBeat={renameDraftBeat}
+              onSelect={setSelectedId} onPreview={setPreviewBeatId} />
+          </div>
+        </div>
       </div>
 
       {previewBeatId && (
