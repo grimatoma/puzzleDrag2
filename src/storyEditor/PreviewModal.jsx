@@ -10,7 +10,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { beatLines, interpolateBeatText } from "../story.js";
 import { NPCS, effectiveBeat, effectiveChoices, triggerSummary, allBeatIds } from "./shared.jsx";
-import { StoryStagePanel } from "../ui/Modals.jsx";
+import { StoryStagePanel, TapCue } from "../ui/Modals.jsx";
 
 const SERIF = '"Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, "Times New Roman", serif';
 const SAMPLE_SETTLEMENT = "Hearthhollow";
@@ -151,6 +151,7 @@ export default function PreviewModal({ startBeatId, draft, onClose, onOpenInEdit
   const [path, setPath] = useState([startBeatId]);
   const [ended, setEnded] = useState(null); // { choice } once a terminal choice is taken
   const [simPath, setSimPath] = useState(() => [blankPreviewState()]);
+  const [lineProgress, setLineProgress] = useState({ beatId: startBeatId, step: 0 });
   useEffect(() => {
     const onKey = (e) => { if (e.key === "Escape") onClose(); };
     window.addEventListener("keydown", onKey);
@@ -161,6 +162,7 @@ export default function PreviewModal({ startBeatId, draft, onClose, onOpenInEdit
   const currentId = path[path.length - 1];
   const beat = effectiveBeat(currentId, draft);
   const sim = simPath[simPath.length - 1] || blankPreviewState();
+  const lineStep = lineProgress.beatId === currentId ? lineProgress.step : 0;
 
   if (!beat) {
     return (
@@ -174,7 +176,10 @@ export default function PreviewModal({ startBeatId, draft, onClose, onOpenInEdit
   }
 
   const lines = beatLines(beat).map((l) => ({ speaker: l?.speaker ?? null, text: interpolateBeatText(l?.text ?? "", { settlement: SAMPLE_SETTLEMENT }) }));
-  const speaker = lines.find((l) => l.speaker)?.speaker || null;
+  const canStepDialogue = lines.length > 1;
+  const atLastLine = lineStep >= lines.length - 1;
+  const visibleLines = canStepDialogue ? [lines[Math.max(0, Math.min(lineStep, lines.length - 1))]] : lines;
+  const revealFooter = !canStepDialogue || atLastLine || !!ended;
   const isPrompt = !!beat.prompt;
   const rawChoices = effectiveChoices(currentId, draft);
   const choices = isPrompt ? rawChoices : (rawChoices.length ? rawChoices : [{ id: "continue", label: "Continue" }]);
@@ -219,10 +224,17 @@ export default function PreviewModal({ startBeatId, draft, onClose, onOpenInEdit
         {ts && <div style={{ marginBottom: 8, color: "#dac6a2", font: "600 9px/1 system-ui", letterSpacing: "0.06em", textTransform: "uppercase" }}>{ts.icon} {ts.label}</div>}
         <StoryStagePanel
           beat={beat}
-          npc={speaker ? { key: speaker, ...(NPCS[speaker] || { name: speaker, color: P.iron }) } : null}
-          lines={lines}
-          footer={<PreviewFooter beat={beat} choices={choices} ended={ended} knownIds={knownIds} draft={draft} isPrompt={isPrompt} onPick={pick} />}
-          footKind={ended ? "continue" : isPrompt ? "prompt" : "choices"}
+          lines={visibleLines}
+          footer={revealFooter
+            ? <PreviewFooter beat={beat} choices={choices} ended={ended} knownIds={knownIds} draft={draft} isPrompt={isPrompt} onPick={pick} />
+            : (
+              <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                <button onClick={() => setLineProgress((p) => ({ beatId: currentId, step: Math.min(lines.length - 1, (p.beatId === currentId ? p.step : 0) + 1) }))} autoFocus aria-label="Continue dialogue" style={{ border: "none", background: "transparent", padding: 0, cursor: "pointer" }}>
+                  <TapCue label="Next line" />
+                </button>
+              </div>
+            )}
+          footKind={revealFooter ? (ended ? "continue" : isPrompt ? "prompt" : "choices") : "continue"}
         />
 
         <div style={{ marginTop: 12, flexShrink: 0, font: "italic 400 10px/1.3 system-ui", color: P.parchFaint }}>

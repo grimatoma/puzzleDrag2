@@ -30,7 +30,6 @@ const KeepersTab   = lazy(() => import("./tabs/KeepersTab.jsx"));
 const BoonsTab     = lazy(() => import("./tabs/BoonsTab.jsx"));
 const NpcsTab      = lazy(() => import("./tabs/NpcsTab.jsx"));
 const StoryTab     = lazy(() => import("./tabs/StoryTab.jsx"));
-const SimulateTab  = lazy(() => import("./tabs/SimulateTab.jsx"));
 const FlagsTab     = lazy(() => import("./tabs/FlagsTab.jsx"));
 const RationsTab   = lazy(() => import("./tabs/RationsTab.jsx"));
 const TuningTab    = lazy(() => import("./tabs/TuningTab.jsx"));
@@ -91,9 +90,6 @@ const TABS = [
   { id: "story",     label: "Story · Dialogue", iconKey: "ui_star", Component: StoryTab,
     section: "story",
     blurb: "Beat editing moved to the full-page visual decision-tree editor at /story/ — pan/zoom canvas, node cards, branch edges, side inspector. (Writes to the same draft, so overrides flow through identically.)" },
-  { id: "simulate",  label: "Simulate",       iconKey: "ui_devtools", Component: SimulateTab,
-    section: "story",
-    blurb: "Walk story beats with arbitrary starting flags / NPC bonds / currencies. Step through dialogue, pick choices, see per-step outcomes, and export the run as a Markdown transcript or JSON choice log." },
   { id: "flags",     label: "Flags",          iconKey: "ui_devtools", Component: FlagsTab,
     section: "story",
     blurb: "Read-only audit of every story flag: which beat / choice sets it, which trigger / slice / UI reads it, and orphan warnings (set-but-never-read, read-but-never-set). Filter by category, search, or only-orphans." },

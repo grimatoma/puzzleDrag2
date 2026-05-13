@@ -13,7 +13,7 @@ Status legend: **[ ]** not started · **[~]** partial · **[deferred]** there's 
 ## Done so far (high level)
 
 - **Cleanup** — removed the apprentices feature, season-of-the-year effects, weather rolls, the shovel resource, a11y/quality settings, dead achievements, etc.
-- **Story system** — multi-line dialogue + choices schema; `STORY_BEATS`/`SIDE_BEATS`; the rewritten Wren opening + settlement naming; cutscene scenes; the Frostmaw Coexist/Drive-Out fork; side-beat infra + Mira's Letter Bond-8 arc. A full-page **visual decision-tree story editor at `/story/`** (edit titles/scenes/lines/choices + outcomes, author new branches & side beats) + a Simulate tab.
+- **Story system** — multi-line dialogue + choices schema; `STORY_BEATS`/`SIDE_BEATS`; the rewritten Wren opening + settlement naming; cutscene scenes; the Frostmaw Coexist/Drive-Out fork; side-beat infra + Mira's Letter Bond-8 arc. A full-page **visual decision-tree story editor at `/story/`** (edit titles/scenes/lines/choices + outcomes, author new branches & side beats).
 - **Currencies & bonds** — `embers` / `coreIngots` / `gems` / `heirlooms`; multi-tier gift prefs (`loves`/`likes`) + bond bands.
 - **Keepers** — Deer-Spirit / Stone-Knocker / Tidesinger encounter config (`src/keepers.js`), `KEEPER/CONFRONT`, a "Face the keeper" affordance on the map.
 - **Settlements** — founding (`FOUND_SETTLEMENT`, escalating cost), biomes (`SETTLEMENT_BIOMES` + a shared biome picker reused by map + Town), Hearth-Tokens → the Old-Capital map gate. Founding is now **enforced** reducer-side: `BUILD` / `FARM/ENTER` / `EXPEDITION/DEPART` refuse at unfounded zones, and `FOUND_SETTLEMENT` requires a prior completed settlement (skips `home`). Town view shows a centered "🏗 Found this settlement · N◉" CTA at unfounded zones, with an explanatory chip when the gate blocks.
@@ -22,7 +22,7 @@ Status legend: **[ ]** not started · **[~]** partial · **[deferred]** there's 
 - **Economy** — real-time crafting queue + gem-skip; the Items registry (`ITEMS`); expedition-supply model for mine/harbor (`EXPEDITION/DEPART` + a "Pack provisions" packer) + the `EXPEDITION_FOOD_TURNS` table.
 - **Audit cadence** — day-cooldown audit-boss trigger (replaced the seasonal climax).
 - **Town redesign** — a procedural town plan (plaza + streets + a planned lot grid + street furniture); walking villagers on the street graph; the farm/mine/harbor entrances moved onto town lots.
-- **Balance Manager** — config tabs for every shipped data table: Tiles, Zones, Settlement Biomes, Resources, Items, Recipes, Buildings, Expedition Rations, Story·Dialogue (→ `/story/`), NPCs, Keepers, Boons (read-only), Workers, Tuning, Bosses, Achievements, Daily Rewards (+ Icons / Export / Simulate).
+- **Balance Manager** — config tabs for every shipped data table: Tiles, Zones, Settlement Biomes, Resources, Items, Recipes, Buildings, Expedition Rations, Story·Dialogue (→ `/story/`), NPCs, Keepers, Boons (read-only), Workers, Tuning, Bosses, Achievements, Daily Rewards (+ Icons / Export).
 - **Tech-debt sweep (Wave H)** — queued-craft `CLAIM_CRAFT` / `SKIP_CRAFT` now fire `craft_made` from coreReducer and bump `totalCrafted` from the crafting slice (achievements, story beats, `ember_drake` boss progress all advance for queued completions); pruned the 18 unused `char_*` apprentice portrait textures + their `draw*` functions (≈900 lines); collapsed the legacy `applyResourceOverrides` into `applyItemOverrides` (tests migrated, function deleted).
 
 ---

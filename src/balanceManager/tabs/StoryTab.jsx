@@ -36,9 +36,6 @@ export default function StoryTab() {
           <a href={STORY_EDITOR_URL} className="text-[11px] underline" style={{ color: COLORS.inkSubtle }}>{STORY_EDITOR_URL}</a>
         </div>
       </div>
-      <div className="text-[11px] italic" style={{ color: COLORS.inkSubtle }}>
-        Tip: the <b>Simulate</b> tab (next to this one) walks a beat from any start state and records the path + outcomes.
-      </div>
     </div>
   );
 }

@@ -74,6 +74,7 @@ const SC = {
 };
 
 function speakerName(key) { return key && NPCS[key] ? NPCS[key].name : null; }
+function speakerRole(key) { return key && NPCS[key] ? NPCS[key].role : null; }
 function speakerColor(key) { return key && NPCS[key] ? NPCS[key].color : SC.iron; }
 function speakerIconKey(key) { return key ? `char_${key}` : null; }
 
@@ -99,7 +100,7 @@ function StoryPill({ children, tone = "iron" }) {
 }
 
 /** Painterly placeholder portrait — a light highlight + dark shade over the NPC's base colour. */
-function StoryPortrait({ npcKey, size = 56 }) {
+export function StoryPortrait({ npcKey, size = 56 }) {
   const npc = npcKey ? NPCS[npcKey] : null;
   const iconKey = speakerIconKey(npcKey);
   if (iconKey && hasIcon(iconKey)) {
@@ -127,8 +128,8 @@ function StoryPortrait({ npcKey, size = 56 }) {
   );
 }
 
-/** Stacked dialogue lines — speaker label (once per run of lines) + the line text. */
-function DialogueLines({ lines, compact = false }) {
+/** Stacked dialogue lines — each authored turn owns its speaker portrait. */
+export function DialogueLines({ lines, compact = false }) {
   return (
     <div className="flex flex-col" style={{ gap: compact ? 8 : 12 }}>
       {lines.map((line, i) => {
@@ -140,21 +141,28 @@ function DialogueLines({ lines, compact = false }) {
               {line.speaker ? <StoryPortrait npcKey={line.speaker} size={compact ? 22 : 28} /> : null}
             </div>
             <div style={{ minWidth: 0 }}>
-            {showLabel && (
-              <div className="font-bold uppercase" style={{ fontSize: 11, letterSpacing: "0.08em", marginBottom: 3, color: speakerColor(line.speaker) }}>
-                {speakerName(line.speaker)}
-              </div>
-            )}
-            <p
-              style={{
-                margin: 0, fontFamily: STORY_SERIF, textWrap: "pretty",
-                fontSize: compact ? 14 : 16, lineHeight: 1.5,
-                fontStyle: line.speaker ? "normal" : "italic",
-                color: line.speaker ? SC.parchment : SC.narration,
-              }}
-            >
-              <RichText text={line.text} />
-            </p>
+              {showLabel && (
+                <>
+                  <div className="font-bold uppercase" style={{ fontSize: 11, letterSpacing: "0.08em", marginBottom: speakerRole(line.speaker) ? 1 : 3, color: speakerColor(line.speaker) }}>
+                    {speakerName(line.speaker)}
+                  </div>
+                  {speakerRole(line.speaker) && (
+                    <div style={{ fontSize: 11, color: SC.parchmentDim, marginBottom: 4 }}>
+                      {speakerRole(line.speaker)}
+                    </div>
+                  )}
+                </>
+              )}
+              <p
+                style={{
+                  margin: 0, fontFamily: STORY_SERIF, textWrap: "pretty",
+                  fontSize: compact ? 14 : 16, lineHeight: 1.5,
+                  fontStyle: line.speaker ? "normal" : "italic",
+                  color: line.speaker ? SC.parchment : SC.narration,
+                }}
+              >
+                <RichText text={line.text} />
+              </p>
             </div>
           </div>
         );
@@ -164,7 +172,7 @@ function DialogueLines({ lines, compact = false }) {
 }
 
 /** "Tap to continue" cue with a slow pulsing dot. */
-function TapCue({ label = "Tap to continue" }) {
+export function TapCue({ label = "Tap to continue" }) {
   return (
     <span
       className="inline-flex items-center gap-2 rounded-full"
@@ -249,7 +257,7 @@ function ChoiceButton({ choice, index, onPick }) {
 }
 
 /** Free-text prompt footer (e.g. naming a settlement). Remounted per beat via key. */
-function PromptInput({ prompt, onSubmit }) {
+export function PromptInput({ prompt, onSubmit }) {
   const [draft, setDraft] = useState("");
   const max = Number.isFinite(prompt.maxLength) ? prompt.maxLength : 24;
   return (
@@ -291,7 +299,7 @@ function PromptInput({ prompt, onSubmit }) {
 }
 
 /** The dark parchment-and-iron stage used by the center-stage modal forms. */
-export function StoryStagePanel({ beat, npc, lines, footer, footKind, sceneLabel }) {
+export function StoryStagePanel({ beat, lines, footer, footKind, sceneLabel }) {
   return (
     <div
       className="w-[92vw] max-w-[460px] shadow-2xl flex flex-col"
@@ -313,20 +321,11 @@ export function StoryStagePanel({ beat, npc, lines, footer, footKind, sceneLabel
         )}
       </div>
 
-      {/* Speaker row */}
-      {npc && (
-        <div className="flex items-center gap-3.5 mb-3.5" style={{ flexShrink: 0 }}>
-          <StoryPortrait npcKey={npc.key} size={56} />
-          <div>
-            <div style={{ fontWeight: 600, fontSize: 14, letterSpacing: "0.05em", textTransform: "uppercase", color: npc.color }}>{npc.name}</div>
-            {npc.role && <div style={{ fontSize: 12, color: SC.parchmentDim, marginTop: 3 }}>{npc.role}</div>}
-          </div>
-        </div>
-      )}
-
       {/* Dialogue — scrolls if the beat is long */}
       <div id="story-modal-body" className="flex-1 min-h-0 overflow-y-auto" style={{ marginBottom: 16 }}>
-        <DialogueLines lines={lines} />
+        {lines.length > 0
+          ? <DialogueLines lines={lines} />
+          : <p style={{ margin: 0, fontFamily: STORY_SERIF, fontSize: 14, lineHeight: 1.5, fontStyle: "italic", color: SC.narration }}>(this beat has no authored lines)</p>}
       </div>
 
       {/* Footer */}
@@ -536,7 +535,7 @@ export function StoryModal({ state, dispatch }) {
       className="absolute inset-0 grid place-items-center z-[60] animate-fadein"
       style={{ background: scene?.bg ?? "rgba(0,0,0,0.6)" }}
     >
-      <StoryStagePanel beat={beat} npc={npc} lines={visibleLines} footer={footer} footKind={footKind} sceneLabel={scene?.label} />
+      <StoryStagePanel beat={beat} lines={visibleLines} footer={footer} footKind={footKind} sceneLabel={scene?.label} />
     </div>
   );
 }
