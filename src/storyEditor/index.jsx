@@ -447,6 +447,83 @@ export default function StoryEditorApp() {
   }, []);
   const onWheel = useCallback((e) => { e.preventDefault(); setZoom((z) => Math.min(2, Math.max(0.3, z + (e.deltaY > 0 ? -0.08 : 0.08)))); }, []);
 
+  // Touch: one-finger pan, two-finger pinch-zoom (with focal point)
+  const panRef = useRef(pan);
+  const zoomRef = useRef(zoom);
+  useEffect(() => { panRef.current = pan; zoomRef.current = zoom; });
+  const touchState = useRef(null);
+  useEffect(() => {
+    const el = canvasRef.current;
+    if (!el) return;
+    const clampZoom = z => Math.min(2, Math.max(0.3, z));
+    const onTouchStart = e => {
+      if (e.touches.length === 1) {
+        const t = e.touches[0];
+        if (t.target !== el && !t.target.closest("[data-canvas-bg]")) { touchState.current = null; return; }
+        touchState.current = { mode: "pan", startX: t.clientX - panRef.current.x, startY: t.clientY - panRef.current.y };
+        isDragging.current = true;
+        setDragging(true);
+      } else if (e.touches.length >= 2) {
+        e.preventDefault();
+        const [a, b] = e.touches;
+        const rect = el.getBoundingClientRect();
+        touchState.current = {
+          mode: "pinch",
+          dist: Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY),
+          startZoom: zoomRef.current,
+          startPan: { ...panRef.current },
+          rect,
+          midX: (a.clientX + b.clientX) / 2,
+          midY: (a.clientY + b.clientY) / 2,
+        };
+        isDragging.current = false;
+        setDragging(false);
+      }
+    };
+    const onTouchMove = e => {
+      const st = touchState.current;
+      if (!st) return;
+      if (st.mode === "pan" && e.touches.length === 1) {
+        e.preventDefault();
+        const t = e.touches[0];
+        setPan({ x: t.clientX - st.startX, y: t.clientY - st.startY });
+      } else if (st.mode === "pinch" && e.touches.length >= 2) {
+        e.preventDefault();
+        const [a, b] = e.touches;
+        const dist = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY) || st.dist;
+        const newZoom = clampZoom(st.startZoom * (dist / st.dist));
+        const midX = (a.clientX + b.clientX) / 2;
+        const midY = (a.clientY + b.clientY) / 2;
+        // Content-space point under the original midpoint stays under the current midpoint.
+        const cx = (st.midX - st.rect.left - st.startPan.x) / st.startZoom;
+        const cy = (st.midY - st.rect.top  - st.startPan.y) / st.startZoom;
+        setZoom(newZoom);
+        setPan({ x: midX - st.rect.left - cx * newZoom, y: midY - st.rect.top - cy * newZoom });
+      }
+    };
+    const onTouchEnd = e => {
+      if (e.touches.length === 0) {
+        touchState.current = null;
+        isDragging.current = false;
+        setDragging(false);
+      } else if (e.touches.length === 1 && touchState.current?.mode === "pinch") {
+        // Drop from pinch back to single-finger pan.
+        const t = e.touches[0];
+        touchState.current = { mode: "pan", startX: t.clientX - panRef.current.x, startY: t.clientY - panRef.current.y };
+      }
+    };
+    el.addEventListener("touchstart", onTouchStart, { passive: false });
+    el.addEventListener("touchmove", onTouchMove, { passive: false });
+    el.addEventListener("touchend", onTouchEnd);
+    el.addEventListener("touchcancel", onTouchEnd);
+    return () => {
+      el.removeEventListener("touchstart", onTouchStart);
+      el.removeEventListener("touchmove", onTouchMove);
+      el.removeEventListener("touchend", onTouchEnd);
+      el.removeEventListener("touchcancel", onTouchEnd);
+    };
+  }, []);
+
   // ── beat edits ──
   const editBeat = useCallback((beatId, fields) => {
     setDraft((prev) => {
@@ -570,7 +647,7 @@ export default function StoryEditorApp() {
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           {savedNotice && <span style={{ font: "700 10px/1 system-ui", padding: "4px 9px", borderRadius: 6, background: C.green, color: "#fff" }}>{savedNotice}</span>}
           {isDirty && !savedNotice && <span style={{ font: "700 10px/1 system-ui", padding: "4px 9px", borderRadius: 6, background: C.ember, color: "#fff" }}>Unsaved changes</span>}
-          <span style={{ font: "400 10px/1 system-ui", color: "rgba(244,217,160,0.5)" }}>Scroll = zoom · Drag = pan · ⌘S = save</span>
+          <span style={{ font: "400 10px/1 system-ui", color: "rgba(244,217,160,0.5)" }}>Scroll / pinch = zoom · Drag = pan · ⌘S = save</span>
           {collapsed.size > 0 && (
             <button onClick={() => { setCollapsed(new Set()); writeCollapsed(new Set()); }}
               style={{ padding: "6px 12px", borderRadius: 7, border: `2px solid ${C.border}`, background: C.parchmentDeep, color: C.inkLight, font: "700 11px/1 system-ui", cursor: "pointer" }}>
@@ -588,7 +665,7 @@ export default function StoryEditorApp() {
           onNewBeat={() => createDraftBeat({ triggered: true })} />
 
         <div ref={canvasRef} data-canvas-bg="1" onMouseDown={onMouseDown} onWheel={onWheel}
-          style={{ flex: 1, position: "relative", overflow: "hidden", background: C.canvas, cursor: dragging ? "grabbing" : "grab",
+          style={{ flex: 1, position: "relative", overflow: "hidden", touchAction: "none", background: C.canvas, cursor: dragging ? "grabbing" : "grab",
             backgroundImage: `radial-gradient(circle, ${C.canvasRule} 1px, transparent 1px)`, backgroundSize: `${20 * zoom}px ${20 * zoom}px`, backgroundPosition: `${pan.x}px ${pan.y}px` }}>
           <div style={{ position: "absolute", bottom: 16, right: 16, zIndex: 10, display: "flex", gap: 4, background: "#fff", borderRadius: 8, border: `1.5px solid ${C.border}`, padding: 4 }}>
             <button onClick={() => setZoom((z) => Math.min(2, z + 0.1))} style={{ width: 28, height: 28, borderRadius: 5, border: `1px solid ${C.border}`, background: C.parchment, color: C.ink, font: "700 16px/1 system-ui", cursor: "pointer" }}>+</button>
