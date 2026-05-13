@@ -397,7 +397,7 @@ function TriggerEditor({ beatId, beat, draft, isMainChain, onEditBeat }) {
         <Row label="Cooldown">
           <NumberField step="1" width={48} value={Number.isFinite(beat.repeatCooldown) ? beat.repeatCooldown : undefined}
             onCommit={(n) => onEditBeat(beatId, { repeatCooldown: Number.isFinite(n) && n > 0 ? Math.trunc(n) : undefined })} />
-          <span style={{ font: "400 10px/1.3 system-ui", color: C.inkSubtle }}>story events after firing</span>
+          <span style={{ font: "400 10px/1.3 system-ui", color: C.inkSubtle }}>story checks to wait before this can fire again</span>
         </Row>
       )}
     </Section>
@@ -558,10 +558,10 @@ export default function Inspector({ beatId, draft, isDraft, onEditBeat, onNewBra
         ) : (
           <>
           {isSide && (
-            <Section title="Built-in side beat" hint="(suppressing hides it from runtime and editor graph)">
-              <Btn tone="danger" style={{ alignSelf: "flex-start" }}
-                onClick={() => { if (typeof window === "undefined" || window.confirm(`Suppress built-in side beat “${beat.title || beatId}”?`)) onSuppressBeat && onSuppressBeat(beatId); }}>
-                Suppress this beat
+            <Section title="Built-in side beat" hint="(disables this side arc in the saved draft; restore from the header)">
+              <Btn tone="ghost" style={{ alignSelf: "flex-start", color: C.redDeep, borderColor: C.redDeep }}
+                onClick={() => { if (typeof window === "undefined" || window.confirm(`Disable built-in side beat “${beat.title || beatId}” in this draft?`)) onSuppressBeat && onSuppressBeat(beatId); }}>
+                Disable side beat
               </Btn>
             </Section>
           )}

@@ -226,7 +226,7 @@ export default function PreviewModal({ startBeatId, draft, onClose, onOpenInEdit
         />
 
         <div style={{ marginTop: 12, flexShrink: 0, font: "italic 400 10px/1.3 system-ui", color: P.parchFaint }}>
-          Preview only — nothing is saved or dispatched. <code style={{ fontFamily: "ui-monospace,monospace" }}>{currentId}</code> · {choices.length} {choices.length === 1 ? "choice" : "choices"} · settlement → “{SAMPLE_SETTLEMENT}”
+          Lightweight preview — choices, flags, bonds, currencies, and simple downstream triggers are simulated; full resource gates still need an in-game check. <code style={{ fontFamily: "ui-monospace,monospace" }}>{currentId}</code> · {choices.length} {choices.length === 1 ? "choice" : "choices"} · settlement → “{SAMPLE_SETTLEMENT}”
           {Object.keys(sim.flags).length > 0 && <> · flags {Object.entries(sim.flags).filter(([, v]) => v).map(([k]) => k).slice(0, 4).join(", ") || "none"}</>}
           {(sim.embers || sim.coreIngots || sim.gems) ? <> · ✸ {sim.embers} ◈ {sim.coreIngots} ◆ {sim.gems}</> : null}
         </div>

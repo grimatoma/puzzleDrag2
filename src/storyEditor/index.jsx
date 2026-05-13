@@ -315,6 +315,20 @@ function WarningBadge({ count }) {
   );
 }
 
+function DragHandle({ dragging, onMouseDown, onTouchStart }) {
+  return (
+    <button data-drag-handle="1" title="Drag to move card"
+      onMouseDown={onMouseDown}
+      onTouchStart={onTouchStart}
+      style={{ position: "absolute", top: -10, left: 13, zIndex: 6, width: 22, height: 22, borderRadius: 999,
+        border: `1.5px solid ${C.border}`, background: dragging ? C.ember : "#fff", color: dragging ? "#fff" : C.inkSubtle,
+        cursor: dragging ? "grabbing" : "grab", font: "700 12px/1 system-ui", display: "grid", placeItems: "center",
+        boxShadow: "0 1px 3px rgba(40,28,10,0.18)", touchAction: "none" }}>
+      ⋮⋮
+    </button>
+  );
+}
+
 function TreeNode({ node, beat, selectedId, collapsed, hiddenCount, showCollapse, dragging, warningCount, onNodeMouseDown, onNodeTouchStart, onToggleCollapse, onPreview, draft }) {
   const selected = node.id === selectedId;
   let Inner;
@@ -322,10 +336,9 @@ function TreeNode({ node, beat, selectedId, collapsed, hiddenCount, showCollapse
   else if (node.branching) Inner = <BranchingNode beat={beat} selected={selected} />;
   else Inner = <CompactNode node={node} beat={beat} selected={selected} />;
   return (
-    <div data-story-node="1" style={{ position: "absolute", left: node.x, top: node.y, width: node.w, height: node.h, cursor: dragging ? "grabbing" : "grab", touchAction: "none" }}
-      onMouseDown={(e) => onNodeMouseDown(e, node)}
-      onTouchStart={(e) => onNodeTouchStart(e, node)}>
+    <div data-story-node="1" style={{ position: "absolute", left: node.x, top: node.y, width: node.w, height: node.h, cursor: "default", touchAction: "none" }}>
       <WarningBadge count={warningCount} />
+      <DragHandle dragging={dragging} onMouseDown={(e) => onNodeMouseDown(e, node)} onTouchStart={(e) => onNodeTouchStart(e, node)} />
       <TriggerChip beat={beat} accent={actColor(beat)} />
       {showCollapse && <CollapseToggle collapsed={collapsed} hiddenCount={hiddenCount} onToggle={() => onToggleCollapse(node.id)} />}
       <PreviewPlay onPlay={() => onPreview(node.id)} />
@@ -445,7 +458,7 @@ function MiniMap({ nodes, bounds, selectedId, zoom, pan, canvasRef, onPanTo }) {
     onPanTo(worldX, worldY);
   };
   return (
-    <div style={{ position: "absolute", left: 16, bottom: 16, zIndex: 10, width: W, height: H,
+    <div title="Mini map · click to center the canvas" style={{ position: "absolute", left: 16, bottom: 16, zIndex: 10, width: W, height: H,
       borderRadius: 8, border: `1.5px solid ${C.border}`, background: "rgba(255,255,255,0.92)",
       boxShadow: "0 3px 10px rgba(40,28,10,0.12)", overflow: "hidden" }}>
       <svg width={W} height={H} onMouseDown={onPointer} style={{ display: "block", cursor: "crosshair" }}>
@@ -462,7 +475,9 @@ function MiniMap({ nodes, bounds, selectedId, zoom, pan, canvasRef, onPanTo }) {
         })()}
       </svg>
       <div style={{ position: "absolute", left: 7, top: 5, font: "700 8px/1 system-ui",
-        color: C.inkSubtle, letterSpacing: "0.08em", textTransform: "uppercase", pointerEvents: "none" }}>Map</div>
+        color: C.inkSubtle, letterSpacing: "0.08em", textTransform: "uppercase", pointerEvents: "none" }}>Mini map</div>
+      <div style={{ position: "absolute", right: 7, bottom: 5, font: "500 8px/1 system-ui",
+        color: C.inkSubtle, pointerEvents: "none" }}>click to center</div>
     </div>
   );
 }
@@ -494,6 +509,7 @@ export default function StoryEditorApp() {
   const [previewBeatId, setPreviewBeatId] = useState(null);
   const [nodePositions, setNodePositions] = useState(() => readNodePositions());
   const [draggingNodeId, setDraggingNodeId] = useState(null);
+  const [toolsOpen, setToolsOpen] = useState(false);
   const isDragging = useRef(false);
   const dragStart = useRef(null);
   const nodeDrag = useRef(null);
@@ -504,13 +520,13 @@ export default function StoryEditorApp() {
   }, []);
   const resetLayout = useCallback(() => { setNodePositions({}); writeNodePositions({}); }, []);
   const onNodeMouseDown = useCallback((e, node) => {
-    if (e.target.closest("button")) return;            // a node button (▶ / collapse) — leave it alone
+    if (!e.target.closest("[data-drag-handle]")) return;
     e.stopPropagation();                                // don't let the canvas start a pan
     e.preventDefault();                                 // no text selection while dragging
     nodeDrag.current = { id: node.id, sx: e.clientX, sy: e.clientY, nx: node.x, ny: node.y, moved: false };
   }, []);
   const onNodeTouchStart = useCallback((e, node) => {
-    if (e.touches.length !== 1 || e.target.closest("button,a,input,textarea,select")) return;
+    if (e.touches.length !== 1 || !e.target.closest("[data-drag-handle]")) return;
     e.stopPropagation();
     e.preventDefault();
     const t = e.touches[0];
@@ -921,28 +937,33 @@ export default function StoryEditorApp() {
             <div style={{ font: "400 10px/1 system-ui", color: "rgba(244,217,160,0.6)", marginTop: 2 }}>Hearthlands · beats · choices · branches</div>
           </div>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <div style={{ position: "relative", display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
           {savedNotice && <span style={{ font: "700 10px/1 system-ui", padding: "4px 9px", borderRadius: 6, background: C.green, color: "#fff" }}>{savedNotice}</span>}
           {isDirty && !savedNotice && <span style={{ font: "700 10px/1 system-ui", padding: "4px 9px", borderRadius: 6, background: C.ember, color: "#fff" }}>Unsaved changes</span>}
-          <span style={{ font: "400 10px/1 system-ui", color: "rgba(244,217,160,0.5)" }}>Drag a card to move it · scroll / pinch = zoom · ⌘S = save</span>
-          {Object.keys(nodePositions).length > 0 && (
-            <button onClick={resetLayout} title="Snap every card back to its default position"
-              style={{ padding: "6px 12px", borderRadius: 7, border: `2px solid ${C.border}`, background: C.parchmentDeep, color: C.inkLight, font: "700 11px/1 system-ui", cursor: "pointer" }}>
-              ⤓ Reset layout ({Object.keys(nodePositions).length})
+          <span style={{ font: "400 10px/1 system-ui", color: "rgba(244,217,160,0.5)" }}>Drag by the handle · arrows move selection · Enter previews · ⌘S saves</span>
+          <span style={{ position: "relative", display: "inline-flex" }}>
+            <button onClick={() => setToolsOpen((v) => !v)} title="Layout and story-editor utilities"
+              style={{ padding: "6px 12px", borderRadius: 7, border: `2px solid ${C.border}`, background: toolsOpen ? C.parchment : C.parchmentDeep, color: C.inkLight, font: "700 11px/1 system-ui", cursor: "pointer" }}>
+              Tools ▾
             </button>
-          )}
-          {collapsed.size > 0 && (
-            <button onClick={() => { setCollapsed(new Set()); writeCollapsed(new Set()); }}
-              style={{ padding: "6px 12px", borderRadius: 7, border: `2px solid ${C.border}`, background: C.parchmentDeep, color: C.inkLight, font: "700 11px/1 system-ui", cursor: "pointer" }}>
-              ⊕ Expand all ({collapsed.size})
-            </button>
-          )}
-          {suppressedCount > 0 && (
-            <button onClick={restoreSuppressedBeats} title="Restore all suppressed built-in side beats"
-              style={{ padding: "6px 12px", borderRadius: 7, border: `2px solid ${C.redDeep}`, background: C.parchmentDeep, color: C.redDeep, font: "700 11px/1 system-ui", cursor: "pointer" }}>
-              Restore side beats ({suppressedCount})
-            </button>
-          )}
+            {toolsOpen && (
+              <div style={{ position: "absolute", right: 0, top: 34, zIndex: 30, minWidth: 210, padding: 8, borderRadius: 8,
+                border: `1.5px solid ${C.border}`, background: "#fff", boxShadow: "0 10px 26px rgba(28,18,8,0.22)", display: "flex", flexDirection: "column", gap: 6 }}>
+                <button onClick={() => { resetLayout(); setToolsOpen(false); }} disabled={Object.keys(nodePositions).length === 0}
+                  style={{ textAlign: "left", padding: "7px 9px", borderRadius: 6, border: `1px solid ${C.border}`, background: Object.keys(nodePositions).length ? C.parchment : "rgba(0,0,0,0.03)", color: Object.keys(nodePositions).length ? C.ink : C.inkSubtle, font: "600 11px/1 system-ui", cursor: Object.keys(nodePositions).length ? "pointer" : "not-allowed" }}>
+                  Reset layout {Object.keys(nodePositions).length ? `(${Object.keys(nodePositions).length})` : ""}
+                </button>
+                <button onClick={() => { setCollapsed(new Set()); writeCollapsed(new Set()); setToolsOpen(false); }} disabled={collapsed.size === 0}
+                  style={{ textAlign: "left", padding: "7px 9px", borderRadius: 6, border: `1px solid ${C.border}`, background: collapsed.size ? C.parchment : "rgba(0,0,0,0.03)", color: collapsed.size ? C.ink : C.inkSubtle, font: "600 11px/1 system-ui", cursor: collapsed.size ? "pointer" : "not-allowed" }}>
+                  Expand all {collapsed.size ? `(${collapsed.size})` : ""}
+                </button>
+                <button onClick={() => { restoreSuppressedBeats(); setToolsOpen(false); }} disabled={suppressedCount === 0}
+                  style={{ textAlign: "left", padding: "7px 9px", borderRadius: 6, border: `1px solid ${suppressedCount ? C.redDeep : C.border}`, background: suppressedCount ? "#fff" : "rgba(0,0,0,0.03)", color: suppressedCount ? C.redDeep : C.inkSubtle, font: "600 11px/1 system-ui", cursor: suppressedCount ? "pointer" : "not-allowed" }}>
+                  Restore disabled side beats {suppressedCount ? `(${suppressedCount})` : ""}
+                </button>
+              </div>
+            )}
+          </span>
           <button onClick={saveDraft} style={{ padding: "6px 14px", borderRadius: 7, border: `2px solid ${C.greenDeep}`, background: C.green, color: "#fff", font: "700 11px/1 system-ui", cursor: "pointer" }}>💾 Save Draft</button>
           <a href={import.meta.env.BASE_URL + "b/#/story"} style={{ padding: "6px 14px", borderRadius: 7, border: `2px solid ${C.border}`, background: C.parchmentDeep, color: C.inkLight, font: "700 11px/1 system-ui", textDecoration: "none" }}>← Balance Manager</a>
           <a href={import.meta.env.BASE_URL} style={{ padding: "6px 14px", borderRadius: 7, border: `2px solid ${C.border}`, background: C.parchmentDeep, color: C.inkLight, font: "700 11px/1 system-ui", textDecoration: "none" }}>← Back to Game</a>
