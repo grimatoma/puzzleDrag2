@@ -624,7 +624,25 @@ export default function StoryEditorApp() {
       window.removeEventListener("touchcancel", onEnd);
     };
   }, [moveNode, zoom]);
-  const onWheel = useCallback((e) => { e.preventDefault(); setZoom((z) => Math.min(2, Math.max(0.3, z + (e.deltaY > 0 ? -0.08 : 0.08)))); }, []);
+  const onWheel = useCallback((e) => {
+    e.preventDefault();
+    const rect = canvasRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const pointerX = e.clientX - rect.left;
+    const pointerY = e.clientY - rect.top;
+    const step = e.deltaY > 0 ? -0.08 : 0.08;
+    setZoom((z) => {
+      const current = z || 1;
+      const next = Math.min(2, Math.max(0.3, current + step));
+      if (next === current) return current;
+      setPan((p) => {
+        const worldX = (pointerX - p.x) / current;
+        const worldY = (pointerY - p.y) / current;
+        return { x: pointerX - worldX * next, y: pointerY - worldY * next };
+      });
+      return next;
+    });
+  }, []);
 
   // Touch: one-finger pan, two-finger pinch-zoom (with focal point)
   const panRef = useRef(pan);
