@@ -502,6 +502,10 @@ export default function Inspector({ beatId, draft, isDraft, onEditBeat, onNewBra
 
       {/* fields */}
       <div style={{ flex: 1, overflowY: "auto", padding: "12px 14px 18px", display: "flex", flexDirection: "column", gap: 14 }}>
+        <div style={{ padding: "7px 9px", borderRadius: 7, background: "rgba(43,34,24,0.05)", border: `1px solid ${C.border}99`,
+          font: "400 10px/1.4 system-ui", color: C.inkSubtle }}>
+          Edit fields directly in this panel: text inputs save as you type, dropdowns/checkboxes save on change, and choice outcomes are edited inside each choice card.
+        </div>
         <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
           <FieldLabel>Title</FieldLabel>
           <TextInput value={valTitle} onChange={(e) => onEditBeat(beatId, { title: e.target.value })} />
