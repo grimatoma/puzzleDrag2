@@ -63,6 +63,7 @@ function grantCraftOutput(state, recipeKey, recipe, baseInventory) {
     ...state,
     inventory: inv,
     tools,
+    coins: (state.coins ?? 0) + (recipe.coins ?? 0),
     craftedTotals: {
       ...state.craftedTotals,
       [recipeKey]: ((state.craftedTotals || {})[recipeKey] || 0) + 1,

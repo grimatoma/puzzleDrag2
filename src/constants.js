@@ -306,7 +306,11 @@ export const ITEMS = {
   ironframe:  { kind: "resource", label: "Iron Frame", color: 0x6a7a86, dark: 0x2a3040, value: 275, desc: "A structural iron frame used in advanced buildings and caravan reinforcement, worth 275 coins." },
   stonework:  { kind: "resource", label: "Stonework", color: 0x8a8a7a, dark: 0x383828, value: 300, desc: "Dressed stonework for walls and facades — the final tier of Forge crafting, worth 300 coins." },
   chowder:    { kind: "resource", label: "Chowder", color: 0xd4b888, dark: 0x6a503a, value: 280, desc: "A creamy seafood chowder thick with fillet, milk, and root vegetables. Larder favourite at 280 coins." },
-  fish_oil_bottled: { kind: "resource", label: "Fish Oil (Bottled)", color: 0xe8d050, dark: 0x7a6018, value: 80, desc: "Refined kelp-and-fish oil sealed in a corked plank flask. Used by tinkers and tar-mongers, worth 80 coins." }
+  fish_oil_bottled: { kind: "resource", label: "Fish Oil (Bottled)", color: 0xe8d050, dark: 0x7a6018, value: 80, desc: "Refined kelp-and-fish oil sealed in a corked plank flask. Used by tinkers and tar-mongers, worth 80 coins." },
+  cured_meat:    { kind: "resource", biome: "farm", label: "Cured Meat",    color: 0x8a4a26, dark: 0x4a2618, value: 45,  desc: "Salted and dried meat that lasts for weeks. Each unit grants 2 turns on expeditions." },
+  iron_ration:   { kind: "resource", biome: "mine", label: "Iron Ration",   color: 0x5a5a60, dark: 0x2a2a30, value: 120, desc: "A calorie-dense, hard-packed block of dried grain and fat. Each unit grants 4 turns on expeditions." },
+  festival_loaf: { kind: "resource", biome: "farm", label: "Festival Loaf", color: 0xd49060, dark: 0x7a4a28, value: 60,  desc: "A rich, fruit-studded bread baked for seasonal feasts. Each unit grants 2 turns on expeditions." },
+  wedding_pie:   { kind: "resource", biome: "farm", label: "Wedding Pie",  color: 0xb05428, dark: 0x582818, value: 180, desc: "A massive, multi-layered berry pie traditionally served at Hearthwood weddings. Each unit grants 3 turns on expeditions." }
 };
 // Underscore-variant aliases for ITEMS (tests and orders use both forms).
 ITEMS.iron_frame = ITEMS.ironframe;
@@ -504,6 +508,10 @@ export const RECIPES = {
   rec_stonework:   { item: "stonework",     station: "forge",  tier: 3, inputs: { mine_block: 2, mine_coke: 1 } },
   rec_chowder:     { item: "chowder",       station: "larder", tier: 2, inputs: { fish_fillet: 2, milk: 1, veg_carrot: 1 } },
   rec_fish_oil_bot:{ item: "fish_oil_bottled", station: "workshop", tier: 1, inputs: { fish_oil: 1, wood_plank: 1 } },
+  rec_cured_meat:  { item: "cured_meat",    station: "smokehouse", tier: 1, inputs: { meat: 2, mine_coal: 1 } },
+  rec_festival_loaf:{ item: "festival_loaf", station: "bakery",     tier: 2, inputs: { grain_flour: 3, berry: 2, bird_egg: 1 } },
+  rec_wedding_pie: { item: "wedding_pie",   station: "bakery",     tier: 3, inputs: { pie: 1, honey: 1, berry_jam: 2 } },
+  rec_iron_ration: { item: "iron_ration",   station: "kitchen",    tier: 2, inputs: { grain: 5, meat: 1, mine_ingot: 1 } },
 };
 
 // ── Backward-compatible aliases ────────────────────────────────────────────
@@ -591,6 +599,10 @@ export const MARKET_PRICES = {
   fish_oil:         { buy: 100,  sell: 8   },
   fish_oil_bottled: { buy: 600,  sell: 80  },
   chowder:          { buy: 2400, sell: 280 },
+  cured_meat:       { buy: 400,  sell: 45  },
+  iron_ration:      { buy: 1200, sell: 120 },
+  festival_loaf:    { buy: 600,  sell: 60  },
+  wedding_pie:      { buy: 1800, sell: 180 },
 };
 
 // LEGACY — only used by features/quests/slice.js's `dailies` system. The

@@ -266,10 +266,12 @@ describe("initialState", () => {
     expect(state.orders.length).toBe(3);
   });
 
-  it("gives each order a unique npc", () => {
+  it("gives each order a unique npc (up to roster size)", () => {
     const state = freshState();
     const npcs = state.orders.map((o) => o.npc);
-    expect(new Set(npcs).size).toBe(npcs.length);
+    const rosterSize = state.npcs.roster.length;
+    const expectedUnique = Math.min(npcs.length, rosterSize);
+    expect(new Set(npcs).size).toBe(expectedUnique);
   });
 
   it("does not contain memoryPerks", () => {

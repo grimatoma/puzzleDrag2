@@ -16,14 +16,14 @@ function makeGrid(rows = 4, cols = 4) {
 
 describe("QA-Pass4 Fix1 — SWITCH_BIOME syncs state.biome", () => {
   it("SWITCH_BIOME farm→mine sets state.biome to 'mine'", () => {
-    const s0 = { ...createInitialState(), biomeKey: "farm", biome: "farm", level: 2 };
+    const s0 = { ...createInitialState(), mapCurrent: "quarry", activeZone: "quarry", biomeKey: "farm", biome: "farm", level: 2 };
     const s1 = rootReducer(s0, { type: "SWITCH_BIOME", payload: { biome: "mine" } });
     expect(s1.biome).toBe("mine");
     expect(s1.biomeKey).toBe("mine");
   });
 
   it("SWITCH_BIOME mine→farm sets state.biome to 'farm'", () => {
-    const s0 = { ...createInitialState(), biomeKey: "mine", biome: "mine", level: 2 };
+    const s0 = { ...createInitialState(), mapCurrent: "quarry", activeZone: "quarry", biomeKey: "mine", biome: "mine", level: 2 };
     const s1 = rootReducer(s0, { type: "SWITCH_BIOME", payload: { biome: "farm" } });
     expect(s1.biome).toBe("farm");
     expect(s1.biomeKey).toBe("farm");
@@ -32,6 +32,8 @@ describe("QA-Pass4 Fix1 — SWITCH_BIOME syncs state.biome", () => {
   it("after SWITCH_BIOME to mine, rollFarmHazard returns null (no farm hazards)", () => {
     const s0 = {
       ...createInitialState(),
+      mapCurrent: "quarry",
+      activeZone: "quarry",
       biomeKey: "farm",
       biome: "farm",
       level: 2,
@@ -51,6 +53,8 @@ describe("QA-Pass4 Fix1 — ENTER_MINE syncs state.biome", () => {
   it("ENTER_MINE standard sets state.biome to 'mine'", () => {
     const s0 = {
       ...createInitialState(),
+      mapCurrent: "quarry",
+      activeZone: "quarry",
       biomeKey: "farm",
       biome: "farm",
       story: { flags: { mine_unlocked: true } },
@@ -64,6 +68,8 @@ describe("QA-Pass4 Fix1 — ENTER_MINE syncs state.biome", () => {
   it("ENTER_MINE premium sets state.biome to 'mine'", () => {
     const s0 = {
       ...createInitialState(),
+      mapCurrent: "quarry",
+      activeZone: "quarry",
       biomeKey: "farm",
       biome: "farm",
       story: { flags: { mine_unlocked: true } },

@@ -40,7 +40,7 @@ import * as zones from "./features/zones/slice.js";
 import * as workers from "./features/workers/slice.js";
 import * as boons from "./features/boons/slice.js";
 import { boonEffectMult } from "./features/boons/data.js";
-import { ZONES, settlementFoundingCost, isSettlementFounded, displayZoneName, grantEarnedHearthTokens, isOldCapitalUnlocked, isExpeditionFood, expeditionTurnsFromSupply, settlementTypeForZone, resolveBiomeChoice, keeperReadyFor, completedSettlementCount, DEFAULT_ZONE, turnBudgetForZone, zoneBaseTurns } from "./features/zones/data.js";
+import { ZONES, settlementFoundingCost, isSettlementFounded, displayZoneName, grantEarnedHearthTokens, isOldCapitalUnlocked, isExpeditionFood, expeditionTurnsFromSupply, settlementTypeForZone, resolveBiomeChoice, keeperReadyFor, completedSettlementCount, DEFAULT_ZONE, turnBudgetForZone, zoneBaseTurns, settlementHazards } from "./features/zones/data.js";
 import { keeperForType, keeperPathInfo } from "./keepers.js";
 import { FIRE_HAZARD_ENABLED } from "./featureFlags.js";
 import { loadSavedState, persistState, clearSave } from "./state/persistence.js";
@@ -1017,7 +1017,9 @@ function coreReducer(state, action) {
         afterChain = tickFire(afterChain);
         afterChain = tickWolves(afterChain);
         // Roll for a new hazard spawn only when none is currently active
-        const hazardSpawn = rollFarmHazard(afterChain);
+        const zoneId = afterChain.activeZone ?? afterChain.mapCurrent ?? "home";
+        const allowed = settlementHazards(afterChain, zoneId);
+        const hazardSpawn = rollFarmHazard(afterChain, Math.random, allowed);
         if (hazardSpawn) {
           const hazards = { ...afterChain.hazards };
           if (hazardSpawn.kind === "fire") hazards.fire = { cells: hazardSpawn.cells };
@@ -1027,7 +1029,9 @@ function coreReducer(state, action) {
       } else if (chainBiome === "mine") {
         afterChain = tickHazards(afterChain);
         // Roll for a new mine hazard
-        const mineSpawn = rollHazard(afterChain);
+        const zoneId = afterChain.activeZone ?? afterChain.mapCurrent ?? "home";
+        const allowed = settlementHazards(afterChain, zoneId);
+        const mineSpawn = rollHazard(afterChain, Math.random, allowed);
         if (mineSpawn) {
           afterChain = { ...afterChain, hazards: { ...(afterChain.hazards ?? {}), ...mineSpawn } };
         }

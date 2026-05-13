@@ -35,7 +35,7 @@ describe("2.2 — evaluateStoryTriggers: basic matching", () => {
 describe("2.2 — evaluateStoryTriggers: resource_total", () => {
   const afterArrival = {
     ...INITIAL_STORY_STATE,
-    flags: { intro_seen: true },
+    flags: { intro_seen: true, first_harvest: true },
     beat: "act1_light_hearth",
   };
 

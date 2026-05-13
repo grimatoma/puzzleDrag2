@@ -62,6 +62,8 @@ describe("QA Pass 3 — hazard spawn wired into CHAIN_COLLECTED", () => {
   it("mine: hazard can spawn within 200 chains (5% rate)", () => {
     const base = {
       ...createInitialState(),
+      activeZone: "quarry",
+      mapCurrent: "quarry",
       biomeKey: "mine",
       biome: "mine",
       grid: makeGrid(),
@@ -71,7 +73,7 @@ describe("QA Pass 3 — hazard spawn wired into CHAIN_COLLECTED", () => {
     let s = base;
     let spawned = false;
     for (let i = 0; i < 200; i++) {
-      s = { ...dispatchChain(s, 3), biome: "mine", biomeKey: "mine" };
+      s = { ...dispatchChain(s, 3), activeZone: "quarry", mapCurrent: "quarry", biome: "mine", biomeKey: "mine" };
       if (s.hazards?.gasVent || s.hazards?.caveIn || s.hazards?.lava || s.hazards?.mole) {
         spawned = true;
         break;

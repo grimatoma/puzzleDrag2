@@ -29,6 +29,8 @@ describe("3.2 — Supply chain (grain → supplies → Mine entry)", () => {
     const s0 = initialState();
     const noUnlock = {
       ...s0,
+      mapCurrent: "quarry",
+      activeZone: "quarry",
       inventory: { ...s0.inventory, supplies: 5 },
       story: { flags: {} },
       biomeKey: "farm",
@@ -41,6 +43,8 @@ describe("3.2 — Supply chain (grain → supplies → Mine entry)", () => {
     const s0 = initialState();
     const noSupply = {
       ...s0,
+      mapCurrent: "quarry",
+      activeZone: "quarry",
       inventory: { ...s0.inventory, supplies: 2 },
       story: { flags: { mine_unlocked: true } },
       biomeKey: "farm",
@@ -53,6 +57,8 @@ describe("3.2 — Supply chain (grain → supplies → Mine entry)", () => {
     const s0 = initialState();
     const ready = {
       ...s0,
+      mapCurrent: "quarry",
+      activeZone: "quarry",
       inventory: { ...s0.inventory, supplies: 4 },
       story: { flags: { mine_unlocked: true } },
       biomeKey: "farm",

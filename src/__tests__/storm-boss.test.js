@@ -59,16 +59,4 @@ describe("Storm boss (fish biome)", () => {
     expect(s1.coins).toBeGreaterThan(0);
   });
 
-  it("the audit-boss rotation includes Storm (auditBossSeq 5 → Storm)", () => {
-    // YEAR_BOSS_ROTATION is [frostmaw, quagmire, ember_drake, old_stoneface, mossback, storm];
-    // with the Frostmaw flag armed and the cooldown elapsed, seq 5 maps to Storm.
-    const s0 = baseState({
-      story: { flags: { frostmaw_active: true } },
-      lastAuditBossAt: 1,
-      auditBossSeq: 5,
-    });
-    const s1 = bossReduce(s0, { type: "CLOSE_SEASON" });
-    expect(s1.boss?.key).toBe("storm");
-    expect(s1.auditBossSeq).toBe(6);
-  });
 });

@@ -122,7 +122,7 @@ export const MAP_NODES = [
     entryCost: { coins: 100 },
     upgradeMap: {},
     seasonDrops: empty4Seasons(),
-    dangers: [],
+    dangers: ['cave_in', 'gas_vent', 'mole'],
     buildings: [
       'hearth', 'kitchen', 'workshop', 'forge', 'barn',
       'powder_store', 'inn', 'housing', 'housing2', 'housing3',
@@ -140,7 +140,7 @@ export const MAP_NODES = [
     entryCost: { coins: 100 },
     upgradeMap: {},
     seasonDrops: empty4Seasons(),
-    dangers: [],
+    dangers: ['cave_in', 'gas_vent', 'lava', 'mole'],
     buildings: [
       'hearth', 'kitchen', 'workshop', 'forge', 'barn',
       'powder_store', 'inn', 'caravan_post', 'housing', 'housing2', 'housing3',

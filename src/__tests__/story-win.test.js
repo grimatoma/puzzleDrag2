@@ -8,6 +8,7 @@ import { evaluateStoryTriggers, INITIAL_STORY_STATE, firedFlagKey } from "../sto
 // the auto-generated _fired_<id> marker so nextPendingBeat can skip them.
 const preAnnounceFlags = {
   intro_seen: true,
+  first_harvest: true,
   hearth_lit: true,
   first_order: true,
   granary_built: true,

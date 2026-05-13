@@ -71,9 +71,10 @@ function hazardsActive(state) {
  * Roll for a hazard spawn. Returns a hazard descriptor or null.
  * @param {object} state
  * @param {() => number} [rng]
+ * @param {string[]} [allowedHazards]
  * @returns {object|null}
  */
-export function rollHazard(state, rng = Math.random) {
+export function rollHazard(state, rng = Math.random, allowedHazards = ["cave_in", "gas_vent", "lava", "mole"]) {
   if (state.biome !== "mine") return null;
   if (state.boss) return null;
   if (hazardsActive(state) > 0) return null;
@@ -82,11 +83,14 @@ export function rollHazard(state, rng = Math.random) {
   let rate = HAZARD_BASE_RATE;
   if (rng() >= rate) return null;
 
-  // Pick hazard by weight
-  const total = HAZARDS.reduce((a, h) => a + h.weight, 0);
+  // Filter by allowedHazards and pick by weight
+  const pool = HAZARDS.filter((h) => allowedHazards.includes(h.id));
+  if (pool.length === 0) return null;
+
+  const total = pool.reduce((a, h) => a + h.weight, 0);
   let r = rng() * total;
-  let picked = HAZARDS[0];
-  for (const h of HAZARDS) {
+  let picked = pool[0];
+  for (const h of pool) {
     r -= h.weight;
     if (r <= 0) {
       picked = h;

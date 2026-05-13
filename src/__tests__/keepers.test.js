@@ -89,11 +89,17 @@ describe("KEEPER/CONFRONT", () => {
     expect(s.bubble?.text).toMatch(/Deer-Spirit/i);
     expect(keeperReadyFor(s, "home")).toBe(false);         // faced now
   });
-  it("Drive Out: records the path, grants Core Ingots, sets the flag", () => {
-    const s = rootReducer(homeReady(), { type: "KEEPER/CONFRONT", payload: { zoneId: "home", path: "driveout" } });
-    expect(settlementKeeperPath(s, "home")).toBe("driveout");
-    expect(s.coreIngots).toBe(KEEPERS.farm.driveout.coreIngots);
-    expect(s.story.flags.keeper_home_driveout).toBe(true);
+  it("Drive Out: starts a keeper trial, and rewards on resolution", () => {
+    const s1 = rootReducer(homeReady(), { type: "KEEPER/CONFRONT", payload: { zoneId: "home", path: "driveout" } });
+    expect(s1.activeTrial).toMatchObject({ zoneId: "home", path: "driveout", status: "active" });
+    expect(s1.farmRun.mode).toBe("keeperTrial");
+    
+    // Resolve the trial successfully
+    const s2 = rootReducer(s1, { type: "KEEPER/TRIAL_RESOLVE", payload: { won: true } });
+    expect(settlementKeeperPath(s2, "home")).toBe("driveout");
+    expect(s2.coreIngots).toBe(KEEPERS.farm.driveout.coreIngots);
+    expect(s2.story.flags.keeper_home_driveout).toBe(true);
+    expect(s2.activeTrial).toBeNull();
   });
 
   it("rejects: not built up enough, bad path, unfounded zone, already faced", () => {

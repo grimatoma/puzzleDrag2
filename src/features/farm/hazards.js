@@ -48,9 +48,10 @@ const WOLF_BIRD_KEYS    = new Set(["bird_egg", "bird_turkey"]);
  *
  * @param {object} state
  * @param {() => number} [rng]
+ * @param {string[]} [allowedHazards]
  * @returns {object|null}
  */
-export function rollFarmHazard(state, rng = Math.random) {
+export function rollFarmHazard(state, rng = Math.random, allowedHazards = ["fire", "wolf", "rats"]) {
   if (state.biome !== "farm") return null;
   if (state.boss) return null;
 
@@ -60,7 +61,7 @@ export function rollFarmHazard(state, rng = Math.random) {
   const wolves = state.hazards?.wolves;
 
   // Fire spawn gate
-  if (FIRE_HAZARD_ENABLED && !fire && (rats.length === 0) && !wolves) {
+  if (FIRE_HAZARD_ENABLED && allowedHazards.includes("fire") && !fire && (rats.length === 0) && !wolves) {
     if ((fire?.cells?.length ?? 0) < FIRE_MAX_CELLS) {
       if (rng() < FIRE_SPAWN_RATE) {
         const grid = state.grid;
@@ -75,7 +76,7 @@ export function rollFarmHazard(state, rng = Math.random) {
   }
 
   // Wolf spawn gate (independent roll, but still single-active cap)
-  if (!wolves && rats.length === 0 && !fire) {
+  if (allowedHazards.includes("wolf") && !wolves && rats.length === 0 && !fire) {
     const inv = state.inventory ?? {};
     const birdRich = (inv.bird_egg ?? 0) > 30 || (inv.bird_turkey ?? 0) > 5;
     if (birdRich) {

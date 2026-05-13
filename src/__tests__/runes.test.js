@@ -27,6 +27,8 @@ describe("3.3 — Runes currency", () => {
     const s0 = initialState();
     const ready = {
       ...s0,
+      mapCurrent: "quarry",
+      activeZone: "quarry",
       runes: 3,
       inventory: { ...s0.inventory, supplies: 0 },
       story: { flags: { mine_unlocked: true } },
@@ -42,6 +44,8 @@ describe("3.3 — Runes currency", () => {
     const s0 = initialState();
     const broke = {
       ...s0,
+      mapCurrent: "quarry",
+      activeZone: "quarry",
       runes: 1,
       inventory: { ...s0.inventory, supplies: 0 },
       story: { flags: { mine_unlocked: true } },

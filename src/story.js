@@ -50,6 +50,18 @@ export const STORY_BEATS = [
     onComplete: { setFlag: "intro_seen" },
   },
   {
+    id: "act1_first_harvest",
+    act: 1,
+    title: "The First Harvest",
+    scene: "ruin",
+    lines: [
+      { speaker: "wren", text: "There. The first of many. This land was dead, but it still remembers how to grow." },
+      { speaker: "wren", text: "Mira will be here soon. She'll need that hay for the workers' fires." },
+    ],
+    trigger: { type: "resource_total", key: "grass_hay", amount: 1 },
+    onComplete: { setFlag: "first_harvest" },
+  },
+  {
     id: "act1_light_hearth",
     act: 1,
     title: "First Light",
@@ -175,6 +187,19 @@ export const STORY_BEATS = [
 // `queueBeat` outcome) carry no `trigger`. `onComplete.setFlag` marks the
 // triggering beat as fired so it never re-queues.
 export const SIDE_BEATS = [
+  // ── Onboarding (Beat 4) ───────────────────────────────────────────────────
+  {
+    id: "tutorial_beat_4",
+    title: "The Rhythm of the Vale",
+    scene: "ruin",
+    lines: [
+      { speaker: "wren", text: "Every move you make on that board spends time. See the counter? When it hits zero, the season turns." },
+      { speaker: "wren", text: "Harvest what you can, but remember: we're not just collecting hay. We're building a home. Every scrap counts toward the next construction." },
+    ],
+    trigger: { type: "resource_total", key: "grass_hay", amount: 5 },
+    onComplete: { setFlag: "tutorial_beat_4" },
+  },
+
   // ── Mira's Letter (Bond-8) ────────────────────────────────────────────────
   {
     id: "mira_letter_1",
@@ -477,8 +502,8 @@ export function applyBeatResult(gameState, sideEffects) {
     next = {
       ...next,
       story: {
-        ...next.story,
-        flags: { ...next.story.flags, [sideEffects.setFlag]: true },
+        ...(next.story ?? {}),
+        flags: { ...(next.story?.flags ?? {}), [sideEffects.setFlag]: true },
       },
     };
   }
@@ -492,7 +517,7 @@ export function applyBeatResult(gameState, sideEffects) {
       next = {
         ...next,
         npcs: {
-          ...next.npcs,
+          ...(next.npcs ?? {}),
           roster: [...roster, npc],
           bonds: { ...bonds, [npc]: bonds[npc] ?? 5 },
         },
@@ -515,7 +540,7 @@ export function applyBeatResult(gameState, sideEffects) {
   if (sideEffects.advanceAct) {
     next = {
       ...next,
-      story: { ...next.story, act: sideEffects.advanceAct },
+      story: { ...(next.story ?? {}), act: sideEffects.advanceAct },
     };
   }
 
