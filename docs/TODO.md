@@ -78,6 +78,7 @@ Status legend: **[ ]** not started · **[~]** partial · **[deferred]** there's 
 ## 7. Balance Manager polish
 
 - [ ] **Bosses** → modifier params · **Achievements** → the `counter` · **Daily Rewards** → tool/tile-unlock drops · **NPCs** → order-line templates + `GIFT_DELTAS` · **Boons** → editable name/desc/cost/effect params (the tab ships read-only; needs an `applyBoonOverrides` paralleling `applyKeeperOverrides`).
+- [ ] **Story editor graph readability pass** — add a per-conversation-chain focus mode (show one chain + immediate choice fan-out), with optional global/stitched view for debugging cross-chain links.
 - [ ] Maybe a **Map/cartography** tab (zone positions, edges, regions) and an **Abilities-catalog** viewer.
 
 ## 8. Cleanup / tech debt (`DEFERRED:` notes in the code)

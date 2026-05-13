@@ -587,6 +587,67 @@ export function visibleSubset(nodes, edges, collapsed) {
   return { nodes: nodes.filter((n) => visible.has(n.id)), edges: edges.filter(edgeVisible), hiddenCounts };
 }
 
+/**
+ * Focus the graph to one conversation chain. The anchor's plain trigger spine
+ * stays visible, and only the immediate choice / side-fork fan-out from that
+ * spine is included. If the anchor is already inside a choice result, focus the
+ * parent fork so sibling outcomes stay visible for comparison.
+ */
+export function focusedChainSubset(nodes, edges, anchorId) {
+  if (!Array.isArray(nodes) || nodes.length === 0) return { nodes: [], edges: [], hiddenCounts: {} };
+  const nodeIds = new Set(nodes.map((n) => n.id));
+  let anchor = nodeIds.has(anchorId) ? anchorId : nodes[0].id;
+
+  const incomingChoice = new Map();
+  for (const e of edges) if (e.kind === "choice" && nodeIds.has(e.from) && nodeIds.has(e.to) && !incomingChoice.has(e.to)) incomingChoice.set(e.to, e.from);
+  const choiceAncestors = new Set();
+  while (incomingChoice.has(anchor) && !choiceAncestors.has(anchor)) {
+    choiceAncestors.add(anchor);
+    anchor = incomingChoice.get(anchor);
+  }
+
+  const mainAdj = new Map();
+  const addMain = (a, b) => {
+    if (!mainAdj.has(a)) mainAdj.set(a, []);
+    mainAdj.get(a).push(b);
+  };
+  for (const e of edges) {
+    if (e.kind !== "trigger" || e.side || !nodeIds.has(e.from) || !nodeIds.has(e.to)) continue;
+    addMain(e.from, e.to);
+    addMain(e.to, e.from);
+  }
+
+  const chain = new Set([anchor]);
+  const q = [anchor];
+  while (q.length) {
+    const id = q.shift();
+    for (const next of (mainAdj.get(id) || [])) {
+      if (chain.has(next)) continue;
+      chain.add(next);
+      q.push(next);
+    }
+  }
+
+  const visible = new Set(chain);
+  const edgeKeys = new Set();
+  const includeEdge = (e) => edgeKeys.add(`${e.from}|${e.to}|${e.kind}|${e.choice || ""}`);
+  for (const e of edges) {
+    if (!nodeIds.has(e.from) || !nodeIds.has(e.to)) continue;
+    if (chain.has(e.from) && chain.has(e.to) && e.kind === "trigger" && !e.side) {
+      includeEdge(e);
+    } else if (chain.has(e.from) && (e.kind === "choice" || e.side)) {
+      visible.add(e.to);
+      includeEdge(e);
+    }
+  }
+
+  return {
+    nodes: nodes.filter((n) => visible.has(n.id)),
+    edges: edges.filter((e) => visible.has(e.from) && visible.has(e.to) && edgeKeys.has(`${e.from}|${e.to}|${e.kind}|${e.choice || ""}`)),
+    hiddenCounts: {},
+  };
+}
+
 export function directionalNodeId(nodes, selectedId, dir) {
   const list = Array.isArray(nodes) ? nodes : [];
   if (list.length === 0) return null;

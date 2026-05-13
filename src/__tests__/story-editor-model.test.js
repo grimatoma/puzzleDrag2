@@ -2,7 +2,7 @@
 import { describe, it, expect } from "vitest";
 import {
   effectiveBeat, effectiveChoices, allBeatIds, findIncomingChoice, isDraftBeat,
-  deriveGraph, visibleSubset, collapsibleIds, cloneDraft, emptyDraft,
+  deriveGraph, visibleSubset, focusedChainSubset, collapsibleIds, cloneDraft, emptyDraft,
   collectStoryWarnings, renameDraftBeatInDraft, storySlicesEqual, validateDraftBeatId,
   isBeatSuppressed, directionalNodeId,
 } from "../storyEditor/shared.jsx";
@@ -127,6 +127,33 @@ describe("visibleSubset / collapse", () => {
     expect(cs.has("frostmaw_keeper")).toBe(true);
     expect(cs.has("act2_bram_arrives")).toBe(true);   // source of a side hint edge
     expect(cs.has("act1_light_hearth")).toBe(false);  // only a plain trigger edge out
+  });
+});
+
+describe("focusedChainSubset", () => {
+  const g = deriveGraph(emptyDraft());
+
+  it("keeps the selected main spine and only immediate side forks", () => {
+    const v = focusedChainSubset(g.nodes, g.edges, "act2_first_hinge");
+    const ids = new Set(v.nodes.map((n) => n.id));
+    expect(ids.has("act1_arrival")).toBe(true);
+    expect(ids.has("act3_win")).toBe(true);
+    expect(ids.has("mira_letter_1")).toBe(true);
+    expect(ids.has("frostmaw_keeper")).toBe(true);
+    expect(ids.has("mira_letter_sent")).toBe(false);
+    expect(v.edges).toContainEqual(expect.objectContaining({ from: "act2_bram_arrives", to: "mira_letter_1", side: true }));
+    expect(v.edges.some((e) => e.from === "mira_letter_1" && e.kind === "choice")).toBe(false);
+  });
+
+  it("focuses a side conversation fork when a choice result is selected", () => {
+    const v = focusedChainSubset(g.nodes, g.edges, "mira_letter_sent");
+    const ids = new Set(v.nodes.map((n) => n.id));
+    expect(ids.has("mira_letter_1")).toBe(true);
+    expect(ids.has("mira_letter_sent")).toBe(true);
+    expect(ids.has("mira_letter_kept")).toBe(true);
+    expect(ids.has("act2_bram_arrives")).toBe(false);
+    expect(ids.has("act3_win")).toBe(false);
+    expect(v.edges.filter((e) => e.from === "mira_letter_1" && e.kind === "choice").length).toBe(3);
   });
 });
 

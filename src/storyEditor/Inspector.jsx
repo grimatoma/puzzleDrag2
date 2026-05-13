@@ -413,7 +413,7 @@ export default function Inspector({ beatId, draft, isDraft, onEditBeat, onNewBra
   if (!beat) {
     return (
       <div style={{ width: 340, flexShrink: 0, background: C.parchment, borderLeft: `2px solid ${C.border}`,
-        display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+        boxSizing: "border-box", display: "flex", alignItems: "center", justifyContent: "center", padding: 24, height: "100%", minHeight: 0 }}>
         <p style={{ font: "italic 400 12px/1.5 Georgia,serif", color: C.inkSubtle, textAlign: "center" }}>
           Select a beat on the canvas or in the sidebar to inspect and edit it.
         </p>
@@ -436,7 +436,7 @@ export default function Inspector({ beatId, draft, isDraft, onEditBeat, onNewBra
 
   return (
     <div style={{ width: 340, flexShrink: 0, background: C.parchment, borderLeft: `2px solid ${C.border}`,
-      display: "flex", flexDirection: "column", minHeight: 0 }}>
+      boxSizing: "border-box", display: "flex", flexDirection: "column", height: "100%", minHeight: 0 }}>
       {/* header */}
       <div style={{ padding: "11px 14px 10px", borderBottom: `1px solid ${C.border}` }}>
         <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 7, flexWrap: "wrap" }}>

@@ -18,7 +18,7 @@ import {
   C, NPCS, Portrait, actColor, hexAlpha, triggerSummary,
   effectiveBeat, effectiveChoices, findIncomingChoice, allBeatIds,
   draftBeats, draftBeatIndex, isDraftBeat,
-  cloneDraft, deriveGraph, visibleSubset, collapsibleIds,
+  cloneDraft, deriveGraph, visibleSubset, focusedChainSubset, collapsibleIds,
   readCollapsed, writeCollapsed, readNodePositions, writeNodePositions, DRAFT_LANE_Y,
   branchingRowCenterY, MY, NH, Btn, directionalNodeId,
   collectStoryWarnings, renameDraftBeatInDraft, storySlicesEqual,
@@ -27,6 +27,9 @@ import Inspector from "./Inspector.jsx";
 import PreviewModal from "./PreviewModal.jsx";
 
 const INSPECTOR_COLLAPSED_KEY = "hearth.story.inspectorCollapsed";
+const LEFT_RAIL_COLLAPSED_KEY = "hearth.story.leftRailCollapsed";
+const GRAPH_VIEW_MODE_KEY = "hearth.story.graphViewMode";
+const INSPECTOR_W = 340;
 
 function readInspectorCollapsed() {
   try { return localStorage.getItem(INSPECTOR_COLLAPSED_KEY) === "1"; }
@@ -35,6 +38,26 @@ function readInspectorCollapsed() {
 
 function writeInspectorCollapsed(v) {
   try { localStorage.setItem(INSPECTOR_COLLAPSED_KEY, v ? "1" : "0"); }
+  catch {}
+}
+
+function readLeftRailCollapsed() {
+  try { return localStorage.getItem(LEFT_RAIL_COLLAPSED_KEY) === "1"; }
+  catch { return false; }
+}
+
+function writeLeftRailCollapsed(v) {
+  try { localStorage.setItem(LEFT_RAIL_COLLAPSED_KEY, v ? "1" : "0"); }
+  catch {}
+}
+
+function readGraphViewMode() {
+  try { return localStorage.getItem(GRAPH_VIEW_MODE_KEY) === "full" ? "full" : "chain"; }
+  catch { return "chain"; }
+}
+
+function writeGraphViewMode(v) {
+  try { localStorage.setItem(GRAPH_VIEW_MODE_KEY, v === "full" ? "full" : "chain"); }
   catch {}
 }
 
@@ -401,7 +424,7 @@ function GroupHeader({ color, label, count }) {
   );
 }
 
-function LeftRail({ draft, selectedId, onlineIds, onSelect, onNewBeat }) {
+function LeftRail({ draft, selectedId, onlineIds, collapsed, onToggleCollapsed, onSelect, onNewBeat }) {
   const [search, setSearch] = useState("");
   const q = search.trim().toLowerCase();
   const dBeats = draftBeats(draft);
@@ -419,9 +442,51 @@ function LeftRail({ draft, selectedId, onlineIds, onSelect, onNewBeat }) {
     { id: "side", label: "Side events",        color: C.violet,  ids: SIDE_BEATS.map((b) => b.id).filter((id) => knownIds.has(id)) },
   ];
 
+  if (collapsed) {
+    return (
+      <div style={{ width: 44, flexShrink: 0, background: C.parchmentDeep, borderRight: `2px solid ${C.border}`,
+        display: "flex", flexDirection: "column", alignItems: "center", gap: 8, padding: "10px 6px", minHeight: 0 }}>
+        <button
+          onClick={onToggleCollapsed}
+          title="Expand beat list"
+          aria-label="Expand beat list"
+          aria-expanded={false}
+          style={{ width: 28, height: 28, borderRadius: 7, border: `1.5px solid ${C.border}`, background: "#fff",
+            color: C.inkSubtle, font: "700 13px/1 system-ui", cursor: "pointer" }}
+        >
+          &#8250;
+        </button>
+        <button
+          onClick={onNewBeat}
+          title="New beat"
+          aria-label="New beat"
+          style={{ width: 28, height: 28, borderRadius: 7, border: `1.5px solid ${C.emberDeep}`, background: C.ember,
+            color: "#fff", font: "700 15px/1 system-ui", cursor: "pointer" }}
+        >
+          +
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div style={{ width: 224, flexShrink: 0, background: C.parchmentDeep, borderRight: `2px solid ${C.border}`, display: "flex", flexDirection: "column", minHeight: 0 }}>
       <div style={{ padding: "10px 10px 8px", borderBottom: `1px solid ${C.border}`, display: "flex", flexDirection: "column", gap: 7 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <button
+            onClick={onToggleCollapsed}
+            title="Collapse beat list"
+            aria-label="Collapse beat list"
+            aria-expanded={true}
+            style={{ width: 26, height: 26, borderRadius: 7, border: `1.5px solid ${C.border}`, background: "#fff",
+              color: C.inkSubtle, font: "700 12px/1 system-ui", cursor: "pointer", flexShrink: 0 }}
+          >
+            &#8249;
+          </button>
+          <div style={{ font: "700 10px/1 system-ui", letterSpacing: "0.12em", textTransform: "uppercase", color: C.inkSubtle }}>
+            Beats
+          </div>
+        </div>
         <div style={{ position: "relative" }}>
           <input placeholder="Search beats…" value={search} onChange={(e) => setSearch(e.target.value)}
             style={{ width: "100%", padding: "6px 8px 6px 26px", borderRadius: 7, border: `1.5px solid ${C.border}`, background: "#fff",
@@ -525,10 +590,26 @@ export default function StoryEditorApp() {
   const [draggingNodeId, setDraggingNodeId] = useState(null);
   const [toolsOpen, setToolsOpen] = useState(false);
   const [inspectorCollapsed, setInspectorCollapsed] = useState(() => readInspectorCollapsed());
+  const [leftRailCollapsed, setLeftRailCollapsed] = useState(() => readLeftRailCollapsed());
+  const [graphViewMode, setGraphViewMode] = useState(() => readGraphViewMode());
   const isDragging = useRef(false);
   const dragStart = useRef(null);
   const nodeDrag = useRef(null);
   const canvasRef = useRef(null);
+
+  const toggleLeftRail = useCallback(() => {
+    setLeftRailCollapsed((prev) => {
+      const next = !prev;
+      writeLeftRailCollapsed(next);
+      return next;
+    });
+  }, []);
+
+  const setGraphMode = useCallback((mode) => {
+    const next = mode === "full" ? "full" : "chain";
+    setGraphViewMode(next);
+    writeGraphViewMode(next);
+  }, []);
 
   const moveNode = useCallback((id, x, y) => {
     setNodePositions((prev) => { const next = { ...prev, [id]: { x: Math.round(x), y: Math.round(y) } }; writeNodePositions(next); return next; });
@@ -903,8 +984,12 @@ export default function StoryEditorApp() {
 
   // ── graph ──
   const fullGraph = useMemo(() => deriveGraph(draft, nodePositions), [draft, nodePositions]);
-  const collapsible = useMemo(() => collapsibleIds(fullGraph.edges), [fullGraph]);
-  const view = useMemo(() => visibleSubset(fullGraph.nodes, fullGraph.edges, collapsed), [fullGraph, collapsed]);
+  const focusedGraph = useMemo(() => focusedChainSubset(fullGraph.nodes, fullGraph.edges, selectedId), [fullGraph, selectedId]);
+  const graph = useMemo(() => (
+    graphViewMode === "full" ? fullGraph : { ...focusedGraph, bounds: fullGraph.bounds }
+  ), [focusedGraph, fullGraph, graphViewMode]);
+  const collapsible = useMemo(() => collapsibleIds(graph.edges), [graph]);
+  const view = useMemo(() => visibleSubset(graph.nodes, graph.edges, collapsed), [graph, collapsed]);
   const nodeById = useMemo(() => new Map(view.nodes.map((n) => [n.id, n])), [view]);
   const onlineIds = useMemo(() => new Set(fullGraph.nodes.map((n) => n.id)), [fullGraph]);
   const warningsByBeat = useMemo(() => collectStoryWarnings(draft), [draft]);
@@ -974,6 +1059,22 @@ export default function StoryEditorApp() {
           {savedNotice && <span style={{ font: "700 10px/1 system-ui", padding: "4px 9px", borderRadius: 6, background: C.green, color: "#fff" }}>{savedNotice}</span>}
           {isDirty && !savedNotice && <span style={{ font: "700 10px/1 system-ui", padding: "4px 9px", borderRadius: 6, background: C.ember, color: "#fff" }}>Unsaved changes</span>}
           <span style={{ font: "400 10px/1 system-ui", color: "rgba(244,217,160,0.5)" }}>Drag by the handle · arrows move selection · Enter previews · ⌘S saves</span>
+          <span role="group" aria-label="Graph focus mode" style={{ display: "inline-flex", padding: 2, borderRadius: 8, border: `1.5px solid ${C.border}`, background: C.parchmentDeep }}>
+            {[
+              ["chain", "Current Chain"],
+              ["full", "Full Graph"],
+            ].map(([mode, label]) => (
+              <button key={mode} onClick={() => setGraphMode(mode)}
+                aria-pressed={graphViewMode === mode}
+                title={mode === "chain" ? "Show the selected conversation chain and immediate choices" : "Show every story beat and cross-link"}
+                style={{ padding: "5px 9px", borderRadius: 6, border: "none",
+                  background: graphViewMode === mode ? C.ember : "transparent",
+                  color: graphViewMode === mode ? "#fff" : C.inkLight,
+                  font: "700 10px/1 system-ui", cursor: "pointer" }}>
+                {label}
+              </button>
+            ))}
+          </span>
           <span style={{ position: "relative", display: "inline-flex" }}>
             <button onClick={() => setToolsOpen((v) => !v)} title="Layout and story-editor utilities"
               style={{ padding: "6px 12px", borderRadius: 7, border: `2px solid ${C.border}`, background: toolsOpen ? C.parchment : C.parchmentDeep, color: C.inkLight, font: "700 11px/1 system-ui", cursor: "pointer" }}>
@@ -1004,7 +1105,8 @@ export default function StoryEditorApp() {
       </header>
 
       <div style={{ flex: 1, display: "flex", minHeight: 0 }}>
-        <LeftRail draft={draft} selectedId={selectedId} onlineIds={onlineIds} onSelect={setSelectedId}
+        <LeftRail draft={draft} selectedId={selectedId} onlineIds={onlineIds}
+          collapsed={leftRailCollapsed} onToggleCollapsed={toggleLeftRail} onSelect={setSelectedId}
           onNewBeat={() => createDraftBeat({ triggered: true })} />
 
         <div ref={canvasRef} data-canvas-bg="1" onMouseDown={onMouseDown} onWheel={onWheel}
@@ -1017,9 +1119,9 @@ export default function StoryEditorApp() {
             <button onClick={() => { setZoom(1); setPan({ x: 20, y: 20 }); }} style={{ width: 28, height: 28, borderRadius: 5, border: `1px solid ${C.border}`, background: C.parchment, color: C.inkSubtle, font: "400 9px/1 system-ui", cursor: "pointer" }}>↺</button>
             <button onClick={fitToScreen} title="Fit visible cards to screen" style={{ width: 36, height: 28, borderRadius: 5, border: `1px solid ${C.border}`, background: C.parchment, color: C.inkSubtle, font: "700 9px/1 system-ui", cursor: "pointer" }}>Fit</button>
           </div>
-          <MiniMap nodes={view.nodes} bounds={fullGraph.bounds} selectedId={selectedId} zoom={zoom} pan={pan} canvasRef={canvasRef} onPanTo={panToWorld} />
+          <MiniMap nodes={view.nodes} bounds={graph.bounds} selectedId={selectedId} zoom={zoom} pan={pan} canvasRef={canvasRef} onPanTo={panToWorld} />
 
-          <div style={{ position: "absolute", transform: `translate(${pan.x}px,${pan.y}px) scale(${zoom})`, transformOrigin: "0 0", width: fullGraph.bounds.w, height: fullGraph.bounds.h }}>
+          <div style={{ position: "absolute", transform: `translate(${pan.x}px,${pan.y}px) scale(${zoom})`, transformOrigin: "0 0", width: graph.bounds.w, height: graph.bounds.h }}>
             {ACT_LABELS.map((al) => (
               <div key={al.label} style={{ position: "absolute", top: MY - 32, left: al.x, font: "700 11px/1 system-ui", letterSpacing: "0.1em", textTransform: "uppercase", color: al.color, opacity: 0.85 }}>{al.label}</div>
             ))}
@@ -1028,7 +1130,7 @@ export default function StoryEditorApp() {
               <div style={{ position: "absolute", left: 32, top: DRAFT_LANE_Y - 30, font: "700 11px/1 system-ui", letterSpacing: "0.1em", textTransform: "uppercase", color: "#6b8e9e", opacity: 0.9 }}>Drafts · author-created beats</div>
             )}
 
-            <svg style={{ position: "absolute", left: 0, top: 0, width: fullGraph.bounds.w, height: fullGraph.bounds.h, overflow: "visible", pointerEvents: "none" }}>
+            <svg style={{ position: "absolute", left: 0, top: 0, width: graph.bounds.w, height: graph.bounds.h, overflow: "visible", pointerEvents: "none" }}>
               {view.edges.map((edge, i) => <TreeEdge key={i} edge={edge} nodeById={nodeById} draft={draft} />)}
             </svg>
 
@@ -1043,7 +1145,7 @@ export default function StoryEditorApp() {
           </div>
         </div>
 
-        <div style={{ position: "relative", display: "flex", flexShrink: 0 }}>
+        <div style={{ position: "relative", display: "flex", flexShrink: 0, minHeight: 0 }}>
           <button
             onClick={() => {
               setInspectorCollapsed((prev) => {
@@ -1064,7 +1166,7 @@ export default function StoryEditorApp() {
           >
             {inspectorCollapsed ? "◂" : "▸"}
           </button>
-          <div style={{ width: inspectorCollapsed ? 0 : 390, overflow: "hidden", transition: "width 160ms ease" }}>
+          <div style={{ width: inspectorCollapsed ? 0 : INSPECTOR_W, overflow: "hidden", transition: "width 160ms ease", display: "flex", minHeight: 0 }}>
             <Inspector beatId={selectedId} draft={draft} isDraft={selIsDraft}
               onEditBeat={editBeat} onNewBranch={onNewBranch} onDeleteBeat={deleteDraftBeat}
               onSuppressBeat={suppressBuiltInBeat} onRenameBeat={renameDraftBeat}
