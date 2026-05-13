@@ -38,8 +38,6 @@ export const STORY_BEATS = [
     act: 1,
     title: "A Cold Hearth",
     scene: "ruin",
-    // Phase 1 — multi-line dialogue form (the doc's Wren opening). Each line
-    // is { speaker, text }; speaker is an NPC id (or null for narration).
     lines: [
       { speaker: null, text: "You step through a doorway that has not been a doorway in years. A figure waits by a cold stone hollow." },
       { speaker: "wren", text: "Took you long enough." },
@@ -47,8 +45,6 @@ export const STORY_BEATS = [
       { speaker: null, text: "She presses a pair of iron tongs into your palm." },
       { speaker: "wren", text: "Bring me 20 hay — we light it tonight. But first this place needs a name. Yours, now." },
     ],
-    // A `prompt` replaces the Continue/choice buttons with an input. The
-    // submit dispatches SET_SETTLEMENT_NAME then STORY/PICK_CHOICE.
     prompt: { kind: "name_settlement", zoneId: "home", placeholder: "Name your settlement…", buttonLabel: "Found it" },
     trigger: { type: "session_start" },
     onComplete: { setFlag: "intro_seen" },

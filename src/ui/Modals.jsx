@@ -424,6 +424,7 @@ function WinBeat({ beat, lines, sceneBg, onContinue }) {
  */
 export function StoryModal({ state, dispatch }) {
   const beat = state.story?.queuedBeat;
+  const [lineStep, setLineStep] = useState(0);
 
   const continueOnly = beat ? beatIsContinueOnly(beat) : false;
   const hasPrompt = !!(beat?.prompt && typeof beat.prompt === "object");
@@ -436,14 +437,19 @@ export function StoryModal({ state, dispatch }) {
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
   }, [beat, hasPrompt, continueOnly, dispatch]);
+  useEffect(() => { setLineStep(0); }, [beat?.id]);
 
   if (!beat) return null;
 
   const settlement = displayZoneName(state, "home");
   const lines = beatLines(beat).map((l) => ({ ...l, text: interpolateBeatText(l.text, { settlement }) }));
+  const canStepDialogue = lines.length > 1;
+  const atLastLine = lineStep >= lines.length - 1;
+  const visibleLines = canStepDialogue ? [lines[Math.max(0, Math.min(lineStep, lines.length - 1))]] : lines;
+  const revealFooter = !canStepDialogue || atLastLine;
   const choices = beatChoices(beat);
   const scene = beatScene(beat);
-  const headSpeakerKey = lines.find((l) => l.speaker)?.speaker ?? null;
+  const headSpeakerKey = visibleLines.find((l) => l.speaker)?.speaker ?? lines.find((l) => l.speaker)?.speaker ?? null;
   const baseNpc = headSpeakerKey ? NPCS[headSpeakerKey] : null;
   const npc = baseNpc ? { key: headSpeakerKey, ...baseNpc } : null;
 
@@ -467,7 +473,16 @@ export function StoryModal({ state, dispatch }) {
 
   // 3) Center-stage modal — multi-line beats, prompts, and branching choices.
   let footer, footKind;
-  if (hasPrompt) {
+  if (!revealFooter) {
+    footer = (
+      <div className="flex justify-end items-center gap-3">
+        <button onClick={() => setLineStep((n) => Math.min(lines.length - 1, n + 1))} autoFocus aria-label="Continue dialogue" className="rounded-full outline-none transition-transform active:scale-95">
+          <TapCue label="Next line" />
+        </button>
+      </div>
+    );
+    footKind = "continue";
+  } else if (hasPrompt) {
     footer = <PromptInput key={beat.id} prompt={beat.prompt} onSubmit={submitPrompt} />;
     footKind = "prompt";
   } else if (continueOnly) {
@@ -506,7 +521,7 @@ export function StoryModal({ state, dispatch }) {
       className="absolute inset-0 grid place-items-center z-[60] animate-fadein"
       style={{ background: scene?.bg ?? "rgba(0,0,0,0.6)" }}
     >
-      <StoryStagePanel beat={beat} npc={npc} lines={lines} footer={footer} footKind={footKind} sceneLabel={scene?.label} />
+      <StoryStagePanel beat={beat} npc={npc} lines={visibleLines} footer={footer} footKind={footKind} sceneLabel={scene?.label} />
     </div>
   );
 }
