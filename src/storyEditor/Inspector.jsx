@@ -8,7 +8,7 @@
 import { useEffect, useState } from "react";
 import {
   C, NPCS, NPC_KEYS, Portrait, actColor, triggerSummary,
-  SCENE_OPTS, linesToText, textToLines,
+  SCENE_OPTS,
   effectiveBeat, effectiveChoices, allBeatIds, findIncomingChoice,
   editorLinesForBeat, knownStoryFlagIds, storyWarningsForBeat, validateDraftBeatId,
   FieldLabel, TextInput, Btn,
@@ -424,6 +424,7 @@ export default function Inspector({ beatId, draft, isDraft, onEditBeat, onNewBra
   const valTitle = beat.title ?? beatId;
   const valScene = beat.scene ?? "";
   const valLines = editorLinesForBeat(beat);
+  const updateLines = (next) => onEditBeat(beatId, { lines: next.length ? next : undefined, body: undefined });
 
   const ts = triggerSummary(beat);
   const ring = actColor(beat);
@@ -533,14 +534,39 @@ export default function Inspector({ beatId, draft, isDraft, onEditBeat, onNewBra
           </select>
         </label>
 
-        <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-          <FieldLabel hint={beat.body && !Array.isArray(beat.lines) ? "(converted from legacy Body on edit)" : "(one “speaker: text” per row — narrator for narration)"}>Lines</FieldLabel>
-          <textarea rows={6} value={linesToText(valLines)}
-            placeholder={"narrator: She presses tongs into your palm.\nwren: Took you long enough."}
-            onChange={(e) => { const arr = textToLines(e.target.value); onEditBeat(beatId, { lines: arr.length ? arr : undefined, body: undefined }); }}
-            style={{ padding: "6px 8px", borderRadius: 6, border: `1.5px solid ${C.border}`, background: "#fff",
-              font: "400 11px/1.45 system-ui", color: C.ink, outline: "none", resize: "vertical", width: "100%", boxSizing: "border-box" }} />
-        </label>
+        <Section title="Lines" hint={beat.body && !Array.isArray(beat.lines) ? "(converted from legacy Body on edit)" : "(cards let you set speaker, reorder, add, remove)"}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
+            {(valLines || []).map((line, idx) => (
+              <div key={`line-${idx}`} style={{ border: `1px solid ${C.border}99`, borderRadius: 8, background: "#fff", padding: 7 }}>
+                <div style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 6 }}>
+                  <Portrait npcKey={line?.speaker} size={18} />
+                  <select value={line?.speaker || ""} onChange={(e) => {
+                    const next = valLines.slice();
+                    next[idx] = { ...next[idx], speaker: e.target.value || null };
+                    updateLines(next);
+                  }} style={selStyle}>
+                    <option value="">Narrator</option>
+                    {NPC_KEYS.map((k) => <option key={k} value={k}>{NPCS[k]?.name || k}</option>)}
+                  </select>
+                  <Btn tone="ghost" disabled={idx === 0} onClick={() => {
+                    if (idx === 0) return;
+                    const next = valLines.slice(); [next[idx - 1], next[idx]] = [next[idx], next[idx - 1]]; updateLines(next);
+                  }}>↑</Btn>
+                  <Btn tone="ghost" disabled={idx === valLines.length - 1} onClick={() => {
+                    if (idx >= valLines.length - 1) return;
+                    const next = valLines.slice(); [next[idx + 1], next[idx]] = [next[idx], next[idx + 1]]; updateLines(next);
+                  }}>↓</Btn>
+                  <Btn tone="danger" onClick={() => updateLines(valLines.filter((_, i) => i !== idx))}>Remove</Btn>
+                </div>
+                <textarea rows={2} value={line?.text || ""} placeholder="Dialogue text…"
+                  onChange={(e) => { const next = valLines.slice(); next[idx] = { ...next[idx], text: e.target.value }; updateLines(next); }}
+                  style={{ padding: "6px 8px", borderRadius: 6, border: `1.5px solid ${C.border}`, background: "#fff",
+                    font: "400 11px/1.45 system-ui", color: C.ink, outline: "none", resize: "vertical", width: "100%", boxSizing: "border-box" }} />
+              </div>
+            ))}
+            <Btn tone="ghost" onClick={() => updateLines([...(valLines || []), { speaker: null, text: "" }])}>+ Add line</Btn>
+          </div>
+        </Section>
 
         <ChoicesBlock beatId={beatId} draft={draft} onEditBeat={onEditBeat} onNewBranch={onNewBranch} />
 

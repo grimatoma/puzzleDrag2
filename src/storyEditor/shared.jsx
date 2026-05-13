@@ -4,6 +4,7 @@
 
 import { STORY_BEATS, SIDE_BEATS, SCENE_THEMES, beatLines } from "../story.js";
 import { STORY_FLAGS } from "../flags.js";
+import IconCanvas, { hasIcon } from "../ui/IconCanvas.jsx";
 import {
   sanitizeBeatLines, sanitizeChoiceArray, sanitizeChoiceOutcome,
   sanitizeBeatTrigger, sanitizeBeatOnComplete, sanitizeBeatRepeatCooldown,
@@ -32,11 +33,11 @@ export const C = {
 // ─── NPC data ────────────────────────────────────────────────────────────────
 
 export const NPCS = {
-  wren:  { name: "Wren",        color: "#7a8b5e", initial: "W", bg: "linear-gradient(160deg,#8a9d6b,#4a5638)" },
-  mira:  { name: "Mira",        color: "#c9863a", initial: "M", bg: "linear-gradient(160deg,#e0a364,#7a4a1f)" },
-  tomas: { name: "Old Tomas",   color: "#a36a6a", initial: "T", bg: "linear-gradient(160deg,#b88080,#5a3232)" },
-  bram:  { name: "Bram",        color: "#8a5040", initial: "B", bg: "linear-gradient(160deg,#a45a3a,#3a1a0e)" },
-  liss:  { name: "Sister Liss", color: "#7e7aa6", initial: "L", bg: "linear-gradient(160deg,#948fc4,#3e3a5e)" },
+  wren:  { name: "Wren",        color: "#7a8b5e", initial: "W", bg: "linear-gradient(160deg,#8a9d6b,#4a5638)", iconKey: "char_wren" },
+  mira:  { name: "Mira",        color: "#c9863a", initial: "M", bg: "linear-gradient(160deg,#e0a364,#7a4a1f)", iconKey: "char_mira" },
+  tomas: { name: "Old Tomas",   color: "#a36a6a", initial: "T", bg: "linear-gradient(160deg,#b88080,#5a3232)", iconKey: "char_tomas" },
+  bram:  { name: "Bram",        color: "#8a5040", initial: "B", bg: "linear-gradient(160deg,#a45a3a,#3a1a0e)", iconKey: "char_bram" },
+  liss:  { name: "Sister Liss", color: "#7e7aa6", initial: "L", bg: "linear-gradient(160deg,#948fc4,#3e3a5e)", iconKey: "char_liss" },
 };
 export const NPC_KEYS = Object.keys(NPCS);
 
@@ -84,6 +85,13 @@ export function triggerSummary(beat) {
 
 export function Portrait({ npcKey, size = 24 }) {
   const npc = NPCS[npcKey];
+  if (npc?.iconKey && hasIcon(npc.iconKey)) {
+    return (
+      <div style={{ width: size, height: size, borderRadius: "50%", overflow: "hidden", border: "1.5px solid rgba(255,255,255,0.4)", flexShrink: 0 }} title={npc.name}>
+        <IconCanvas iconKey={npc.iconKey} size={size} rounded background="#2a1e10" />
+      </div>
+    );
+  }
   const style = {
     width: size, height: size, borderRadius: "50%", flexShrink: 0,
     display: "grid", placeItems: "center",

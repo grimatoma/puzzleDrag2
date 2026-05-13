@@ -3,6 +3,7 @@ import { NPCS } from "../constants.js";
 import { beatLines, beatChoices, beatIsContinueOnly, beatScene, interpolateBeatText } from "../story.js";
 import { displayZoneName } from "../features/zones/data.js";
 import Icon from "./Icon.jsx";
+import IconCanvas, { hasIcon } from "./IconCanvas.jsx";
 import RichText from "./RichText.jsx";
 
 function Stat({ v, l }) {
@@ -74,6 +75,7 @@ const SC = {
 
 function speakerName(key) { return key && NPCS[key] ? NPCS[key].name : null; }
 function speakerColor(key) { return key && NPCS[key] ? NPCS[key].color : SC.iron; }
+function speakerIconKey(key) { return key ? `char_${key}` : null; }
 
 /** A small uppercase pill — outcome badges and beat meta tags. */
 function StoryPill({ children, tone = "iron" }) {
@@ -99,6 +101,14 @@ function StoryPill({ children, tone = "iron" }) {
 /** Painterly placeholder portrait — a light highlight + dark shade over the NPC's base colour. */
 function StoryPortrait({ npcKey, size = 56 }) {
   const npc = npcKey ? NPCS[npcKey] : null;
+  const iconKey = speakerIconKey(npcKey);
+  if (iconKey && hasIcon(iconKey)) {
+    return (
+      <div className="rounded-full overflow-hidden flex-shrink-0" aria-hidden="true" style={{ width: size, height: size, border: "2px solid #f0e6cf" }}>
+        <IconCanvas iconKey={iconKey} size={size} rounded background="#2a1e10" />
+      </div>
+    );
+  }
   const base = npc ? npc.color : "#5a4a30";
   return (
     <div
@@ -125,7 +135,11 @@ function DialogueLines({ lines, compact = false }) {
         const prev = i > 0 ? lines[i - 1].speaker : undefined;
         const showLabel = line.speaker && line.speaker !== prev;
         return (
-          <div key={i}>
+          <div key={i} style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
+            <div style={{ width: compact ? 22 : 28, paddingTop: 1, flexShrink: 0 }}>
+              {line.speaker ? <StoryPortrait npcKey={line.speaker} size={compact ? 22 : 28} /> : null}
+            </div>
+            <div style={{ minWidth: 0 }}>
             {showLabel && (
               <div className="font-bold uppercase" style={{ fontSize: 11, letterSpacing: "0.08em", marginBottom: 3, color: speakerColor(line.speaker) }}>
                 {speakerName(line.speaker)}
@@ -141,6 +155,7 @@ function DialogueLines({ lines, compact = false }) {
             >
               <RichText text={line.text} />
             </p>
+            </div>
           </div>
         );
       })}
