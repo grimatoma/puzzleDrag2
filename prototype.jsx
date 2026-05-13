@@ -12,7 +12,16 @@ import { useRouter } from "./src/router.js";
 import { setPhaserScene } from "./src/phaserBridge.js";
 import { FIRE_HAZARD_ENABLED } from "./src/featureFlags.js";
 
-function PhaserMount({ dispatch, biomeKey, turnsUsed, uiLocked, sceneRef, toolPending, setChainInfo, workers, tileCollection, gameState, grid }) {
+function setBoardRuntimeActive(game, active) {
+  if (!game || game.__boardRuntimeActive === active) return;
+  const scene = game.scene?.getScene?.("GameScene") ?? game.scene?.scenes?.[0];
+  if (!scene) return;
+  if (active) game.scene.wake("GameScene");
+  else game.scene.sleep("GameScene");
+  game.__boardRuntimeActive = active;
+}
+
+function PhaserMount({ dispatch, biomeKey, turnsUsed, uiLocked, boardActive, sceneRef, toolPending, setChainInfo, workers, tileCollection, gameState, grid }) {
   const hostRef = useRef(null);
   const gameRef = useRef(null);
   const [loading, setLoading] = useState(true);
@@ -87,6 +96,7 @@ function PhaserMount({ dispatch, biomeKey, turnsUsed, uiLocked, sceneRef, toolPe
               scene.events.on(SCENE_EVENTS.FERTILIZER_CONSUMED, () => dispatch({ type: "FERTILIZER/CONSUMED" }));
               scene.events.on(SCENE_EVENTS.GRID_SYNC, ({ grid: g }) => dispatch({ type: "GRID/SYNC", payload: { grid: g } }));
               scene.events.on(SCENE_EVENTS.CHAIN_UPDATE, (data) => setChainInfo(data));
+              setBoardRuntimeActive(game, boardActive);
               setLoading(false);
             },
           },
@@ -117,6 +127,7 @@ function PhaserMount({ dispatch, biomeKey, turnsUsed, uiLocked, sceneRef, toolPe
   useEffect(() => {
     gameRef.current?.registry.set("activeZone", gameState?.activeZone ?? gameState?.mapCurrent ?? "home");
   }, [gameState?.activeZone]);
+  useEffect(() => { setBoardRuntimeActive(gameRef.current, boardActive); }, [boardActive]);
   useEffect(() => { gameRef.current?.registry.set("biomeKey", biomeKey); }, [biomeKey]);
   useEffect(() => { gameRef.current?.registry.set("turnsUsed", turnsUsed); }, [turnsUsed]);
   // Phase 7.1 — atmospheric in-session season needs the session's turn budget
@@ -231,6 +242,7 @@ export default function App() {
                   biomeKey={state.biomeKey}
                   turnsUsed={state.turnsUsed}
                   uiLocked={uiLocked}
+                  boardActive={state.view === "board"}
                   sceneRef={sceneRef}
                   toolPending={state.toolPending}
                   setChainInfo={setChainInfo}

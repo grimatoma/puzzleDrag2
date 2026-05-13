@@ -9,7 +9,7 @@
 // NOTE: render this with `key={zoneId}` from the parent so a zone change
 // re-mounts it (the villagers re-seed from the new town plan).
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef } from "react";
 
 const W = 1100, H = 600;
 
@@ -53,6 +53,12 @@ function seedVillagers(wps, adj) {
 
 export default function TownVillagers({ plan, buildings }) {
   const { wps, adj } = useMemo(() => makeGraph(plan), [plan]);
+  const villagers = useMemo(() => seedVillagers(wps, adj), [wps, adj]);
+  const stageRef = useRef(null);
+  const stageSizeRef = useRef({ w: 0, h: 0 });
+  const villagerRefs = useRef([]);
+  const bodyRefs = useRef([]);
+  const headRefs = useRef([]);
 
   // "Home" waypoint per named NPC, from their building's lot (if built). Read
   // live by the running sim via a ref so a new build doesn't restart it.
@@ -70,69 +76,89 @@ export default function TownVillagers({ plan, buildings }) {
   const homeWpRef = useRef(homeWp);
   useEffect(() => { homeWpRef.current = homeWp; }, [homeWp]);
 
-  // Lazy-seeded — re-runs on remount, which the parent triggers per zone via `key`.
-  const [villagers, setVillagers] = useState(() => seedVillagers(wps, adj));
+  useEffect(() => {
+    const stage = stageRef.current;
+    if (!stage) return undefined;
+    const measure = () => {
+      stageSizeRef.current = { w: stage.clientWidth || 0, h: stage.clientHeight || 0 };
+    };
+    measure();
+    if (typeof ResizeObserver !== "function") return undefined;
+    const ro = new ResizeObserver(measure);
+    ro.observe(stage);
+    return () => ro.disconnect();
+  }, []);
 
   useEffect(() => {
-    if (!wps.length) return undefined;
+    if (!wps.length || !villagers.length) return undefined;
     let raf = 0, last = performance.now();
     const step = (now) => {
       raf = requestAnimationFrame(step);
       const dt = Math.min(0.05, Math.max(0, (now - last) / 1000));
       last = now;
       const hw = homeWpRef.current;
-      setVillagers((prev) => prev.map((src) => {
-        const v = { ...src };
-        v.bob = src.bob + dt * 9;
-        if (now < v.pauseUntil) return v;
-        const len = Math.max(1, d2(wps[v.from], wps[v.to]));
-        v.t = src.t + (v.speed * dt) / len;
-        if (v.t >= 1) {
-          v.t = 0; v.from = v.to;
-          const nbrs = adj[v.from] || [];
-          const home = v.npcId ? hw[v.npcId] : undefined;
-          if (home != null && home !== v.from && Math.random() < 0.4 && nbrs.length) {
-            v.to = nbrs.reduce((best, n) => (d2(wps[n], wps[home]) < d2(wps[best], wps[home]) ? n : best), nbrs[0]);
-          } else {
-            v.to = nbrs.length ? nbrs[Math.floor(Math.random() * nbrs.length)] : v.from;
+      for (let i = 0; i < villagers.length; i++) {
+        const v = villagers[i];
+        v.bob += dt * 9;
+        if (now >= v.pauseUntil) {
+          const len = Math.max(1, d2(wps[v.from], wps[v.to]));
+          v.t += (v.speed * dt) / len;
+          if (v.t >= 1) {
+            v.t = 0; v.from = v.to;
+            const nbrs = adj[v.from] || [];
+            const home = v.npcId ? hw[v.npcId] : undefined;
+            if (home != null && home !== v.from && Math.random() < 0.4 && nbrs.length) {
+              v.to = nbrs.reduce((best, n) => (d2(wps[n], wps[home]) < d2(wps[best], wps[home]) ? n : best), nbrs[0]);
+            } else {
+              v.to = nbrs.length ? nbrs[Math.floor(Math.random() * nbrs.length)] : v.from;
+            }
+            if (Math.random() < 0.3) v.pauseUntil = now + 700 + Math.random() * 2200;
           }
-          if (Math.random() < 0.3) v.pauseUntil = now + 700 + Math.random() * 2200;
+          const A = wps[v.from], B = wps[v.to];
+          const nx = A.x + (B.x - A.x) * v.t;
+          const ny = A.y + (B.y - A.y) * v.t;
+          if (Math.abs(nx - v.x) > 0.05) v.facing = nx > v.x ? 1 : -1;
+          v.x = nx; v.y = ny;
         }
-        const A = wps[v.from], B = wps[v.to];
-        const nx = A.x + (B.x - A.x) * v.t;
-        const ny = A.y + (B.y - A.y) * v.t;
-        if (Math.abs(nx - v.x) > 0.05) v.facing = nx > v.x ? 1 : -1;
-        v.x = nx; v.y = ny;
-        return v;
-      }));
+        const el = villagerRefs.current[i];
+        if (!el) continue;
+        const bob = Math.sin(v.bob) * 1.2;
+        const sway = Math.sin(v.bob * 1.1) * 2.5;
+        const stage = stageSizeRef.current;
+        el.style.transform = `translate3d(${(v.x / W) * stage.w}px, ${((v.y + bob) / H) * stage.h}px, 0) translate(-50%, -100%) scaleX(${v.facing})`;
+        const body = bodyRefs.current[i];
+        const head = headRefs.current[i];
+        if (body) body.style.transform = `translateX(-50%) rotate(${sway * 0.3}deg)`;
+        if (head) head.style.transform = `translateX(-50%) translateX(${sway * 0.15}px)`;
+      }
     };
-    raf = requestAnimationFrame(step);
+    step(performance.now());
     return () => cancelAnimationFrame(raf);
-  }, [wps, adj]);
+  }, [wps, adj, villagers]);
 
   if (!plan || !villagers.length) return null;
 
   return (
-    <div className="absolute inset-0 pointer-events-none z-[18]" aria-hidden="true">
+    <div ref={stageRef} className="absolute inset-0 pointer-events-none z-[18]" aria-hidden="true">
       {villagers.map((v, i) => {
-        const bob = Math.sin(v.bob) * 1.2;
-        const sway = Math.sin(v.bob * 1.1) * 2.5;
         const size = v.npcId ? 22 : 18;
         return (
           <div
             key={i}
+            ref={(el) => { villagerRefs.current[i] = el; }}
             style={{
               position: "absolute",
-              left: `${(v.x / W) * 100}%`,
-              top: `${((v.y + bob) / H) * 100}%`,
+              left: 0,
+              top: 0,
               width: size, height: size * 1.6,
-              transform: `translate(-50%, -100%) scaleX(${v.facing})`,
+              transform: `translate3d(0, 0, 0) translate(-50%, -100%) scaleX(${v.facing})`,
               transformOrigin: "bottom center",
+              willChange: "transform",
             }}
           >
             <div style={{ position: "absolute", left: "50%", bottom: -1, transform: "translateX(-50%)", width: size * 0.72, height: size * 0.22, borderRadius: "50%", background: "rgba(0,0,0,0.20)" }} />
-            <div style={{ position: "absolute", left: "50%", bottom: 0, transform: `translateX(-50%) rotate(${sway * 0.3}deg)`, width: size * 0.6, height: size * 0.8, borderRadius: `${size * 0.3}px ${size * 0.3}px ${size * 0.18}px ${size * 0.18}px`, background: v.color, boxShadow: "inset -2px -2px 3px rgba(0,0,0,0.18)" }} />
-            <div style={{ position: "absolute", left: "50%", bottom: size * 0.76, transform: `translateX(-50%) translateX(${sway * 0.15}px)`, width: size * 0.5, height: size * 0.5, borderRadius: "50%", background: "#e8c79a", boxShadow: "inset -1.5px -1.5px 2px rgba(0,0,0,0.2)" }} />
+            <div ref={(el) => { bodyRefs.current[i] = el; }} style={{ position: "absolute", left: "50%", bottom: 0, transform: "translateX(-50%)", width: size * 0.6, height: size * 0.8, borderRadius: `${size * 0.3}px ${size * 0.3}px ${size * 0.18}px ${size * 0.18}px`, background: v.color, boxShadow: "inset -2px -2px 3px rgba(0,0,0,0.18)" }} />
+            <div ref={(el) => { headRefs.current[i] = el; }} style={{ position: "absolute", left: "50%", bottom: size * 0.76, transform: "translateX(-50%)", width: size * 0.5, height: size * 0.5, borderRadius: "50%", background: "#e8c79a", boxShadow: "inset -1.5px -1.5px 2px rgba(0,0,0,0.2)" }} />
             <div style={{ position: "absolute", left: "50%", bottom: size * 1.02, transform: "translateX(-50%)", width: size * 0.5, height: size * 0.26, borderRadius: `${size * 0.25}px ${size * 0.25}px 0 0`, background: "rgba(48,36,24,0.85)" }} />
           </div>
         );
