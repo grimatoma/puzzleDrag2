@@ -26,6 +26,7 @@ import * as cartography from "./features/cartography/slice.js";
 import * as storySlice from "./features/story/slice.js";
 import * as fish from "./features/fish/slice.js";
 import { INITIAL_STORY_STATE, evaluateStoryTriggers, evaluateSideBeats } from "./story.js";
+import { initialFlagState, applyFlagTriggers } from "./flags.js";
 import { STORY_BUILDING_IDS } from "./features/story/data.js";
 import { NPC_IDS } from "./features/npcs/data.js";
 import { payOrder, gainBond, decayBond, applyGift } from "./features/npcs/bond.js";
@@ -276,7 +277,7 @@ export function createFreshState(overrides) {
     pendingView: null,
     seasonStats: { harvests: 0, upgrades: 0, ordersFilled: 0, coins: 0 },
     _hintsShown: {},
-    story: { ...INITIAL_STORY_STATE, flags: {}, queuedBeat: null, beatQueue: [], sandbox: false },
+    story: { ...INITIAL_STORY_STATE, flags: { ...initialFlagState() }, queuedBeat: null, beatQueue: [], sandbox: false },
     npcs: {
       roster: ["wren"],
       bonds: { wren: 5, mira: 5, tomas: 5, bram: 5, liss: 5 },
@@ -382,7 +383,7 @@ export function initialState(overrides) {
     // Merge saved story: spread defaults first, then saved, then always clear volatile beat queue/modal on boot
     const mergedStory = saved.story
       ? { ...INITIAL_STORY_STATE, queuedBeat: null, beatQueue: [], sandbox: false, ...saved.story }
-      : { ...INITIAL_STORY_STATE, flags: {}, queuedBeat: null, beatQueue: [], sandbox: false };
+      : { ...INITIAL_STORY_STATE, flags: { ...initialFlagState() }, queuedBeat: null, beatQueue: [], sandbox: false };
     // Always clear story modal queue on boot — never resume mid-modal
     mergedStory.queuedBeat = null;
     mergedStory.beatQueue = [];
@@ -434,6 +435,10 @@ function evaluateAndApplyStoryBeat(state, event) {
     const sideResult = evaluateSideBeats(next, event);
     if (sideResult) next = storySlice.reduce(next, { type: "STORY/BEAT_FIRED", payload: sideResult });
   }
+  // Registered flag triggers fire *after* the beat evaluator (beats own the
+  // strict story ordering; flags just react). No-op unless a flag in
+  // src/flags.js declares a matching trigger.
+  next = applyFlagTriggers(next, event);
   return next;
 }
 
@@ -1903,7 +1908,7 @@ function coreReducer(state, action) {
         clearSave();
         const fresh = initialState();
         return { ...fresh, settings: state.settings,
-          story: { ...INITIAL_STORY_STATE, flags: {}, queuedBeat: null, beatQueue: [], sandbox: false },
+          story: { ...INITIAL_STORY_STATE, flags: { ...initialFlagState() }, queuedBeat: null, beatQueue: [], sandbox: false },
           npcs: {
             roster: ["wren"],
             bonds: { wren: 5, mira: 5, tomas: 5, bram: 5, liss: 5 },
