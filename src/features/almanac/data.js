@@ -7,9 +7,7 @@
 export const XP_PER_LEVEL = 150;
 
 /**
- * Phase 7 ships tiers 1–5. §16 calls for 10 tiers total.
- * TODO: phase 11+ extends to tier 10 per GAME_SPEC §16
- *       (crafting blueprints + cosmetic unlocks at tiers 6–10).
+ * Phase 7 ships tiers 1–5. Phase 11+ extends to tier 10 per GAME_SPEC §16.
  */
 export const ALMANAC_TIERS = [
   {
@@ -41,6 +39,36 @@ export const ALMANAC_TIERS = [
     name: "Master Harvester",
     description: "A legendary scythe that stays in your toolkit at the start of every new season.",
     reward: { structural: "startingExtraScythe" },
+  },
+  {
+    tier: 6, level: 6,
+    name: "Village Architect",
+    description: "Plans for expanding the village. Unlocks an extra blueprint slot for crafting.",
+    reward: { coins: 150, structural: "extraBlueprintSlot" },
+  },
+  {
+    tier: 7, level: 7,
+    name: "Merchant Prince",
+    description: "A golden seal for trade. Increases the value of all delivered orders by 10%.",
+    reward: { structural: "goldSeal", coins: 250 },
+  },
+  {
+    tier: 8, level: 8,
+    name: "Timekeeper",
+    description: "An ancient hourglass that grants an extra turn in every farm and mine session.",
+    reward: { structural: "extraTurn", tools: { rare: 2 } },
+  },
+  {
+    tier: 9, level: 9,
+    name: "Vale Guardian",
+    description: "A significant grant from the Capital to honor your stewardship.",
+    reward: { coins: 500, tools: { shuffle: 2, rare: 1 } },
+  },
+  {
+    tier: 10, level: 10,
+    name: "Keeper of the Hearth",
+    description: "The highest honor. You have mastered the ways of the vale.",
+    reward: { coins: 1000, runes: 1, tools: { basic: 5, rare: 3, shuffle: 1 } },
   },
 ];
 
@@ -90,8 +118,13 @@ export function claimAlmanacTier(state, tier) {
       next.tools[k] = (next.tools[k] ?? 0) + v;
     }
   }
-  if (def.reward.structural === "startingExtraScythe") {
-    next = { ...next, tools: { ...next.tools, startingExtraScythe: true } };
+  if (def.reward.runes) {
+    next = { ...next, runes: (next.runes ?? 0) + def.reward.runes };
+  }
+  if (def.reward.structural) {
+    // Structural flags are latched in state.tools for now, or state directly.
+    // extraTurn and goldSeal are flags the game logic can check.
+    next = { ...next, tools: { ...next.tools, [def.reward.structural]: true } };
   }
 
   return { ok: true, newState: next };

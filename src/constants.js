@@ -512,6 +512,7 @@ export const RECIPES = {
   rec_festival_loaf:{ item: "festival_loaf", station: "bakery",     tier: 2, inputs: { grain_flour: 3, berry: 2, bird_egg: 1 } },
   rec_wedding_pie: { item: "wedding_pie",   station: "bakery",     tier: 3, inputs: { pie: 1, honey: 1, berry_jam: 2 } },
   rec_iron_ration: { item: "iron_ration",   station: "kitchen",    tier: 2, inputs: { grain: 5, meat: 1, mine_ingot: 1 } },
+  rec_supplies:    { item: "supplies",      station: "kitchen",    tier: 1, inputs: { grain: 5 } },
 };
 
 // ── Backward-compatible aliases ────────────────────────────────────────────

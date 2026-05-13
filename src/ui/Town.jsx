@@ -1,7 +1,7 @@
 import { useState, useRef, useMemo } from "react";
 import { BIOMES, BUILDINGS, EXPEDITION_FOOD_TURNS, MIN_EXPEDITION_TURNS } from "../constants.js";
 import { useTooltip, Tooltip } from "./Tooltip.jsx";
-import { ZONES, displayZoneName, expeditionTurnsForFood, expeditionTurnsFromSupply, isSettlementFounded, settlementFoundingCost, settlementTypeForZone, completedSettlementCount, DEFAULT_ZONE } from "../features/zones/data.js";
+import { ZONES, displayZoneName, expeditionTurnsForFood, expeditionTurnsFromSupply, isSettlementFounded, settlementFoundingCost, settlementTypeForZone, completedSettlementCount, DEFAULT_ZONE, settlementHazards } from "../features/zones/data.js";
 import BiomePicker from "../features/zones/BiomePicker.jsx";
 import StartFarmingModal from "../features/zones/StartFarmingModal.jsx";
 import { buildTownPlan } from "../townLayout.js";
@@ -132,6 +132,26 @@ function BiomeEntryModal({ biomeKey, state, dispatch, onClose }) {
               )}
               {!canDepart && <div className="text-[10px] text-[#9a3a2a] mt-1">Pack at least {MIN_EXPEDITION_TURNS} turns of food.</div>}
             </div>
+
+            {/* Hazards / Dangers list */}
+            {(() => {
+              const hazards = settlementHazards(state, zoneId);
+              if (hazards.length === 0) return null;
+              return (
+                <div className="mt-2.5 flex flex-col gap-1">
+                  <div className="text-[10px] uppercase tracking-wider text-[#9a3a2a] font-bold flex items-center gap-1">
+                    <Icon iconKey="hazard_smoke" size={10} /> Active Dangers
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {hazards.map((h) => (
+                      <span key={h} className="text-[10px] font-bold bg-[#9a3a2a]/10 text-[#9a3a2a] border border-[#9a3a2a]/30 rounded-lg px-2 py-0.5 capitalize">
+                        ⚠️ {h.replace("_", " ")}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
 
             <button onClick={depart} disabled={!canDepart}
               className={`w-full mt-3 mb-2 border-[3px] rounded-2xl px-8 py-2.5 text-[16px] font-bold shadow-lg transition-colors ${canDepart ? "bg-[#91bf24] hover:bg-[#a3d028] text-white border-white" : "bg-[#cbb98c] text-[#7c5a3a] border-[#a08850] cursor-not-allowed"}`}>

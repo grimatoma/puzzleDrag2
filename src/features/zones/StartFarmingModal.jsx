@@ -1,7 +1,8 @@
 import { useState, useMemo } from "react";
-import { ZONES, zoneCategories, DEFAULT_ZONE, ZONE_TO_TILE_CATEGORIES, turnBudgetAdditiveBonusForZone, turnBudgetForZone, zoneBaseTurns } from "./data.js";
+import { ZONES, zoneCategories, DEFAULT_ZONE, ZONE_TO_TILE_CATEGORIES, turnBudgetAdditiveBonusForZone, turnBudgetForZone, zoneBaseTurns, settlementHazards } from "./data.js";
 import { TILE_TYPES_BY_CATEGORY, TILE_TYPES_MAP } from "../tileCollection/data.js";
 import { TileIcon } from "../tileCollection/index.jsx";
+import Icon from "../../ui/Icon.jsx";
 
 const CATEGORY_LABEL = {
   grass: "Grass",
@@ -293,6 +294,26 @@ export default function StartFarmingModal({ state, dispatch, onClose }) {
             />
           ))}
         </div>
+
+        {/* Hazards / Dangers list */}
+        {(() => {
+          const hazards = settlementHazards(state, zoneId);
+          if (hazards.length === 0) return null;
+          return (
+            <div className="mb-3 flex flex-col gap-1">
+              <div className="text-[10px] uppercase tracking-wider text-[#9a3a2a] font-bold flex items-center gap-1">
+                ⚠️ Active Dangers
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {hazards.map((h) => (
+                  <span key={h} className="text-[10px] font-bold bg-[#9a3a2a]/10 text-[#9a3a2a] border border-[#9a3a2a]/30 rounded-lg px-2 py-0.5 capitalize">
+                    {h.replace("_", " ")}
+                  </span>
+                ))}
+              </div>
+            </div>
+          );
+        })()}
 
         <div className="bg-[#fffaf1]/70 border border-[#d8c8a8] rounded-xl px-3 py-2 mb-3">
           <div className="flex items-center justify-between text-[13px] text-[#3a2715]">

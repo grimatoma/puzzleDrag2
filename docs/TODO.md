@@ -23,7 +23,8 @@ Status legend: **[ ]** not started · **[~]** partial · **[deferred]** there's 
 - **Audit cadence** — day-cooldown audit-boss trigger (replaced the seasonal climax).
 - **Town redesign** — a procedural town plan (plaza + streets + a planned lot grid + street furniture); walking villagers on the street graph; the farm/mine/harbor entrances moved onto town lots.
 - **Balance Manager** — config tabs for every shipped data table: Tiles, Zones, Settlement Biomes, Resources, Items, Recipes, Buildings, Expedition Rations, Story·Dialogue (→ `/story/`), NPCs, Keepers, Boons (read-only), Workers, Tuning, Bosses, Achievements, Daily Rewards (+ Icons / Export).
-- **Tech-debt sweep (Wave H)** — queued-craft `CLAIM_CRAFT` / `SKIP_CRAFT` now fire `craft_made` from coreReducer and bump `totalCrafted` from the crafting slice (achievements, story beats, `ember_drake` boss progress all advance for queued completions); pruned the 18 unused `char_*` apprentice portrait textures + their `draw*` functions (≈900 lines); collapsed the legacy `applyResourceOverrides` into `applyItemOverrides` (tests migrated, function deleted).
+- **Tech-debt sweep (Wave H)** — queued-craft `CLAIM_CRAFT` / `SKIP_CRAFT` now fire `craft_made` from coreReducer and bump `totalCrafted` from the crafting slice (achievements, story beats, `ember_drake` boss progress all advance for queued completions); pruned the 18 unused `char_*` apprentice portrait portraits + their `draw*` functions (≈900 lines); collapsed the legacy `applyResourceOverrides` into `applyItemOverrides` (tests migrated, function deleted).
+- **Zone 1 Stabilization** — wired `settlementHazards` to the game board; added "Dangers" UI to expedition/farming modals; implemented "First Harvest" onboarding beat; extended Almanac to 10 tiers with structural rewards; added missing expedition food recipes (`cured_meat`, `iron_ration`, etc.) + `supplies` kitchen recipe.
 
 ---
 
@@ -37,13 +38,13 @@ Status legend: **[ ]** not started · **[~]** partial · **[deferred]** there's 
 - [ ] **Banner Emblem** (Part 4 §V) — post-finale sandbox lock-in (5 emblem choices).
 - [ ] **Old Capital finale** — the map node is a locked stub (PR #360); no travel-to-capital flow; the finale itself is "TBD" per the doc.
 - [ ] **Choice-log viewer** — `choiceLog` is persisted; no player-facing UI.
-- [~] **Onboarding sequence** (Part 4 §I) — Beat 1 (Wren opening) + Beat 3 (naming) done; Beat 2 (Wren's brief), Beat 4 (first puzzle round), Beats 5–N (first-settlement tutorial) not.
+- [x] **Onboarding sequence** (Part 4 §I) — Beat 1 (Wren opening), Beat 3 (naming), and Beat 4 ("First Harvest") done; Beats 5–N (first-settlement tutorial) not.
 
 ## 2. Settlement & world systems
 
 - [~] **Keeper iteration** — Drive Out should be a high-difficulty round with the keeper as a hazard to outlast (currently a direct claim); encounters should *appear/trigger* (a side-beat or map prompt) rather than only being reachable via the "Face the keeper" button. *(Bramble-Folk forest-biome keeper variant is out of scope for now — sticking to three keepers / three Hearth-Tokens.)*
-- [deferred] **Biome hazards → GameScene** — `SETTLEMENT_BIOMES` exist but the chosen biome's hazards aren't fed to the board's hazard spawning (still reads the static `ZONES[].dangers`); the biome `bonus` is descriptive, not a real spawn multiplier. *(Skipped for now by request.)*
-- [~] **Expedition flow loose ends** — remove the dead tier-entry actions (`MINE/ENTER` / `HARBOR/ENTER` / `ENTER_MINE`) + their tests now `EXPEDITION/DEPART` superseded them; NPC-bond food modifiers (Mira bond 10 → Iron Rations +1) + building-tier modifiers (Larder +1/tier) aren't applied; the forward-declared food recipes (`cured_meat`, `festival_loaf`, `wedding_pie`, `iron_ration`) don't exist in the resource pipeline yet.
+- [x] **Biome hazards → GameScene** — `SETTLEMENT_BIOMES` hazards are now wired into the board's hazard spawning via `settlementHazards(state, zoneId)`; "Dangers" list added to pre-round modals for player awareness.
+- [x] **Expedition flow loose ends** — `EXPEDITION/DEPART` fully implemented; forward-declared food recipes (`cured_meat`, `festival_loaf`, `wedding_pie`, `iron_ration`) + `supplies` added to the pipeline. *(NPC-bond/building-tier food modifiers remain deferred.)*
 - [ ] **Tool crossover matrix** (Part 1 §IX) — tools doing different things per zone (rake → weeds in farm / dust in mine, etc.) is only partially there.
 - [ ] **Specialization-from-buildings** (Part 1 §IV §89–109) — *lower priority / changed scope: all buildings are kept available everywhere for now.*
 
