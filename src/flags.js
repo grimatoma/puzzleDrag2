@@ -12,9 +12,10 @@
 //     default: false, source: "trigger",
 //     triggers: [{ type: "building_built", id: "caravan_post" }] }
 //
-// `evaluateFlagTriggers` runs *after* the story-beat evaluator on every game
-// event (see src/state.js → evaluateAndApplyStoryBeat), so beats always get
-// first crack. ⚠ Do NOT put a trigger on a flag that a beat uses as its
+// `evaluateFlagTriggers` runs *after* the first story-beat evaluator pass on
+// every game event (see src/state.js → evaluateAndApplyStoryBeat). Flag flips
+// cascade within that dispatch, then flag-conditioned beats get one narrowly
+// filtered follow-up pass. ⚠ Do NOT put a trigger on a flag that a beat uses as its
 // `onComplete.setFlag` — those flags double as "beat completed" markers and the
 // strict beat ordering would fight an out-of-order flag flip. The flags below
 // that are set by a beat/choice keep `triggers: []`; the mechanism is here for
@@ -151,13 +152,24 @@ export function evaluateFlagTriggers(gameState, event) {
 
 /**
  * Convenience: returns `gameState` with any flag triggers fired by `event`
- * applied to `story.flags`. Does not mutate. (Used by state.js.)
+ * applied to `story.flags`. Flag triggers can depend on other flags, so this
+ * settles to a fixed point within the same dispatch. Does not mutate.
  */
+export function applyFlagTriggersWithResult(gameState, event) {
+  let next = gameState;
+  const changed = {};
+  for (let i = 0; i < STORY_FLAGS.length; i += 1) {
+    const result = evaluateFlagTriggers(next, event);
+    if (!result) break;
+    Object.assign(changed, result.changed);
+    next = {
+      ...next,
+      story: { ...next.story, flags: { ...(next.story?.flags ?? {}), ...result.changed } },
+    };
+  }
+  return Object.keys(changed).length > 0 ? { state: next, changed } : { state: gameState, changed: null };
+}
+
 export function applyFlagTriggers(gameState, event) {
-  const result = evaluateFlagTriggers(gameState, event);
-  if (!result) return gameState;
-  return {
-    ...gameState,
-    story: { ...gameState.story, flags: { ...(gameState.story?.flags ?? {}), ...result.changed } },
-  };
+  return applyFlagTriggersWithResult(gameState, event).state;
 }

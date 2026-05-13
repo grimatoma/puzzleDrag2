@@ -2,7 +2,7 @@
 import { describe, it, expect } from "vitest";
 import {
   STORY_FLAGS, FLAG_CATEGORIES, flagDef, isRegisteredFlag, flagCategory,
-  initialFlagState, evaluateFlagTriggers, applyFlagTriggers,
+  initialFlagState, evaluateFlagTriggers, applyFlagTriggers, applyFlagTriggersWithResult,
 } from "../flags.js";
 import { applyFlagOverrides } from "../config/applyOverrides.js";
 import { conditionMatches } from "../story.js";
@@ -96,6 +96,19 @@ describe("evaluateFlagTriggers", () => {
       // no trigger match → returns the same reference
       expect(applyFlagTriggers(before, { type: "craft_made", item: "x" })).toBe(before);
     } finally { STORY_FLAGS.pop(); }
+  });
+  it("flag triggers cascade through flag_set in the same dispatch", () => {
+    STORY_FLAGS.push(
+      { id: "test_parent", label: "parent", category: "misc", default: false, triggers: [{ type: "session_start" }] },
+      { id: "test_child", label: "child", category: "misc", default: false, triggers: [{ type: "flag_set", flag: "test_parent" }] },
+    );
+    try {
+      const before = { story: { flags: {} }, inventory: {}, npcs: { bonds: {} } };
+      const result = applyFlagTriggersWithResult(before, { type: "session_start" });
+      expect(result.changed).toEqual({ test_parent: true, test_child: true });
+      expect(result.state.story.flags).toEqual({ test_parent: true, test_child: true });
+      expect(before.story.flags).toEqual({});
+    } finally { STORY_FLAGS.pop(); STORY_FLAGS.pop(); }
   });
 });
 

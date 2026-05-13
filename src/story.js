@@ -368,9 +368,10 @@ export function conditionMatches(t, event, totals = {}, flags = {}) {
  * @param {object} totals — inventory snapshot (resource key → amount)
  * @returns {{ firedBeat, newFlags, sideEffects } | null}
  */
-export function evaluateStoryTriggers(state, event, totals = {}) {
+export function evaluateStoryTriggers(state, event, totals = {}, opts = {}) {
   const next = nextPendingBeat(state);
   if (!next) return null;
+  if (opts.onlyFlagConditions && next.trigger?.type !== "flag_set" && next.trigger?.type !== "flag_cleared") return null;
 
   // Extra guard for the win beat: festival must be announced first
   if (next.id === "act3_win" && !state.flags.festival_announced) return null;
@@ -436,11 +437,13 @@ function fireSideBeat(beat, flags) {
  *
  * @param {object} gameState — full game state (needs `.story.flags`, `.inventory`, `.npcs`)
  * @param {object} event     — game event { type, ... }
+ * @param {object} opts      — optional `{ onlyFlagConditions: true }`
  */
-export function evaluateSideBeats(gameState, event) {
+export function evaluateSideBeats(gameState, event, opts = {}) {
   const flags = gameState?.story?.flags ?? {};
   let repeatCandidate = null;
   for (const beat of SIDE_BEATS) {
+    if (opts.onlyFlagConditions && beat.trigger?.type !== "flag_set" && beat.trigger?.type !== "flag_cleared") continue;
     if (!sideTriggerMatches(beat, event, gameState)) continue;
     if (beat.repeat === true) { if (!repeatCandidate) repeatCandidate = beat; continue; }
     if (sideBeatFired(flags, beat)) continue;

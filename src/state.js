@@ -26,7 +26,7 @@ import * as cartography from "./features/cartography/slice.js";
 import * as storySlice from "./features/story/slice.js";
 import * as fish from "./features/fish/slice.js";
 import { INITIAL_STORY_STATE, evaluateStoryTriggers, evaluateSideBeats } from "./story.js";
-import { initialFlagState, applyFlagTriggers } from "./flags.js";
+import { initialFlagState, applyFlagTriggersWithResult } from "./flags.js";
 import { STORY_BUILDING_IDS } from "./features/story/data.js";
 import { NPC_IDS } from "./features/npcs/data.js";
 import { payOrder, gainBond, decayBond, applyGift } from "./features/npcs/bond.js";
@@ -450,10 +450,17 @@ function evaluateAndApplyStoryBeat(state, event) {
   // resolve at settle moments (gated inside sideTriggerMatches).
   const sideResult = evaluateSideBeats(next, event);
   if (sideResult) next = storySlice.reduce(next, { type: "STORY/BEAT_FIRED", payload: sideResult });
-  // Registered flag triggers fire *after* the beat evaluators (beats own the
-  // strict story ordering; flags just react). No-op unless a flag in
-  // src/flags.js declares a matching trigger.
-  next = applyFlagTriggers(next, event);
+  // Registered flag triggers fire after the first beat passes. If they flip a
+  // flag, give flag_set/flag_cleared beats one immediate follow-up pass without
+  // replaying unrelated event/resource triggers.
+  const flagResult = applyFlagTriggersWithResult(next, event);
+  next = flagResult.state;
+  if (flagResult.changed) {
+    const storyFlagResult = evaluateStoryTriggers(next.story ?? { ...INITIAL_STORY_STATE, flags: {} }, event, next.inventory ?? {}, { onlyFlagConditions: true });
+    if (storyFlagResult) next = storySlice.reduce(next, { type: "STORY/BEAT_FIRED", payload: storyFlagResult });
+    const sideFlagResult = evaluateSideBeats(next, event, { onlyFlagConditions: true });
+    if (sideFlagResult) next = storySlice.reduce(next, { type: "STORY/BEAT_FIRED", payload: sideFlagResult });
+  }
   return next;
 }
 

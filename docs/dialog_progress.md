@@ -1,10 +1,10 @@
 # Dialogue / Story Editor Progress
 
-Status date: 2026-05-12.
+Status date: 2026-05-13.
 
 ## Overall Status
 
-Implementation pass substantially complete for the feasible non-deferred items in `docs/dialog_todo.md`.
+Implementation pass complete for the feasible non-deferred items in `docs/dialog_todo.md`.
 
 Completed:
 
@@ -14,29 +14,32 @@ Completed:
 - Flags tab new-flag creation.
 - Flags tab metadata editing for label, description, category, and default.
 - Flags tab cross-reference for beats triggered by a flag.
+- `FLAG_READS` drift guard for direct non-editor story flag reads.
 - Story editor validation warnings for missing `queueBeat` targets and unregistered flags.
 - Canvas warning badges.
 - Stateful preview improvements for flags, bond deltas, currencies, direct `queueBeat`, and simple flag/bond-triggered downstream beats.
 - Preview legacy `body` rendering now uses the runtime `beatLines` helper, matching speaker-prefix cleanup from the live story modal.
 - The live game story stage panel is exported from `src/ui/Modals.jsx` and reused by `/story/` preview for the shared modal title/body/speaker/footer shell.
 - Optional repeat cooldowns for repeat side/story beats, measured in story-evaluation events after firing.
+- Same-dispatch `flag_set` reactions: flag triggers cascade immediately, then flag-conditioned beats get a filtered follow-up pass.
 - Perpetual `/story/` unsaved badge fix using normalized story-slice comparison.
 - Body-vs-lines cleanup by collapsing authoring to the Lines editor and converting legacy body text on edit.
 - Canvas fit-to-screen.
+- Canvas minimap.
+- Directional keyboard navigation between visible story cards.
 - Near-source auto-placement for newly created branch beats.
 - Built-in side-beat suppression and restoration from the story editor.
 - `/story/` localStorage draft sync from other tabs when the editor has no local dirty changes.
 - Focused unit tests for pure story-editor helpers and flag override metadata support.
+- Browser smoke coverage for the saved balance-draft dialog to runtime story modal seam.
 
 Partially completed:
 
-- Canvas QoL: fit-to-screen and smarter new branch placement are done; minimap and keyboard navigation remain deferred.
-- `FLAG_READS` drift: story trigger cross-references are derived now; non-story code reads still use the curated map.
-- Smoke/e2e: added closest practical unit seam tests, but not a browser e2e test because the local environment cannot run Node-based tooling.
+- Smoke/e2e: added a Playwright seam test, but it could not be executed locally because the environment cannot run Node-based tooling.
 
 Deferred:
 
-- Instant same-dispatch `flag_set` firing: still deliberately deferred because it requires flag-change event plumbing.
+- No remaining non-design TODOs from `docs/dialog_todo.md`.
 
 ## Changed Files
 
@@ -44,12 +47,14 @@ Product code:
 
 - `src/balanceManager/index.jsx`
 - `src/balanceManager/tabs/FlagsTab.jsx`
+- `src/flagReads.js`
 - `src/storyEditor/Inspector.jsx`
 - `src/storyEditor/PreviewModal.jsx`
 - `src/storyEditor/index.jsx`
 - `src/storyEditor/shared.jsx`
 - `src/ui/Modals.jsx`
 - `src/config/applyOverrides.js`
+- `src/flags.js`
 - `src/features/story/slice.js`
 - `src/state.js`
 - `src/story.js`
@@ -58,9 +63,11 @@ Tests:
 
 - `src/__tests__/bm-config-overrides.test.js`
 - `src/__tests__/coverage-round-2.test.js`
+- `src/__tests__/flag-reads-drift.test.js`
 - `src/__tests__/flags.test.js`
 - `src/__tests__/side-beats.test.js`
 - `src/__tests__/story-editor-model.test.js`
+- `tests/e2e/dialog-draft.spec.js`
 
 Docs:
 
@@ -80,6 +87,8 @@ Story editor:
 - Dirty state compares normalized `draft.story` data against the saved baseline rather than the whole cloned draft shape.
 - The separate Body field is removed from editor authoring. Existing body-only beats still display through the Lines editor and save as `lines` on edit.
 - New branch beats created from a choice are placed near the source card/choice row instead of only in the drafts lane.
+- The minimap shows visible cards, current viewport, and selected card, and click-pans the canvas.
+- Arrow keys move selection toward the nearest visible node in that direction; Enter previews the selected beat.
 - Built-in side beats can be suppressed; suppressing a fork records its built-in choice subtree so the graph does not leave orphan branch-resolution cards.
 - A header restore action clears all suppressed built-in side beats.
 - Clean editors listen for `hearth.balance.draft` storage events from other tabs and refresh their saved baseline; dirty editors ignore cross-tab sync to avoid clobbering local work.
@@ -92,6 +101,18 @@ Repeat cooldowns:
 - Repeat beats no longer receive permanent `_fired_` markers when they omit `onComplete.setFlag`.
 - Limitation: cooldowns are currently beat-level only. Flag registry triggers do not have their own cooldown field.
 
+Flag reactions:
+
+- `applyFlagTriggersWithResult` now settles flag-trigger cascades to a fixed point within the same dispatch.
+- `evaluateAndApplyStoryBeat` runs a narrowly filtered post-flag pass for `flag_set` / `flag_cleared` story and side beats after registered flags change.
+- The post-flag pass deliberately skips unrelated event/resource triggers so discrete repeat beats cannot fire twice from one game event.
+
+Smoke / e2e:
+
+- Added `tests/e2e/dialog-draft.spec.js`.
+- The test seeds `hearth.balance.draft` with an editor-authored side beat, reloads the game, dispatches a matching build event, and asserts the runtime story modal renders the draft title and line.
+- This is the closest stable seam test without adding brittle full editor authoring selectors.
+
 Flags tab:
 
 - `flags` was added to the Balance Manager and story editor draft clone schemas so flag overrides survive local draft edits.
@@ -100,6 +121,8 @@ Flags tab:
 - Existing trigger editing is preserved and now works for override-created flags too.
 - The tab now folds current draft flag metadata into its effective registry view.
 - The inspector shows "beats this flag triggers" by scanning effective story beats.
+- Non-story code reads are centralized in `src/flagReads.js`.
+- `src/__tests__/flag-reads-drift.test.js` scans direct source reads so CI can catch when the curated map falls behind.
 
 Preview:
 
@@ -115,7 +138,6 @@ Preview:
 
 - `node`, `npm`, and `npx` are not available on PATH in this environment. Attempts to run Vitest via `npx` and via `./node_modules/.bin/vitest` failed because `node` is missing.
 - No `typecheck` script exists in `package.json`.
-- Full modal reuse should be handled as a separate targeted refactor because live game modal regressions would be more costly than the current preview drift.
 - True browser e2e was not practical without a runnable Node toolchain.
 
 ## Validation Commands Discovered
@@ -124,6 +146,7 @@ From `package.json`:
 
 - `npm run dev`
 - `npm run build`
+- `npm run test:e2e`
 - `npm run lint`
 - `npm run test`
 - `npm run test:watch`
@@ -172,8 +195,9 @@ Results:
 - `npm run lint`: failed because `npm` is not installed.
 - `npm run test`: failed because `npm` is not installed.
 - `npm run build`: failed because `npm` is not installed.
+- `npm run test:e2e`: not runnable because `npm` is not installed.
 - `which node` and `which npm`: no executable found.
-- `git diff --check`: passed after the final repeat-cooldown, suppression, and live-sync edits.
+- `git diff --check`: passed after the final minimap, keyboard navigation, flag-reaction, drift-guard, and e2e seam-test edits.
 
 Recommended validation once Node is available:
 

@@ -49,11 +49,11 @@ priority. (Engine = `src/story.js`, `src/flags.js`, `src/state.js`; editor =
       simulated-state notes, and warning affordances remain editor-owned.
 - [x] Canvas QoL: "fit to screen" / a minimap, smarter auto-placement for new
       branch beats (near the choice that queues them), keyboard nav between nodes.
-      **Done for this pass:** fit-to-screen and near-source branch placement are
-      implemented; minimap and keyboard nav remain deferred by scope.
-- [ ] `flag_set` fires on the **next** event after a flag flips, not the same
-      dispatch — usually invisible; making it instant needs flag-change-event
-      plumbing (deliberately deferred).
+      **Done:** fit-to-screen, minimap, directional keyboard navigation, and
+      near-source branch placement are implemented.
+- [x] `flag_set` fires on the **next** event after a flag flips, not the same
+      dispatch — now flag triggers cascade in the same dispatch and flag-conditioned
+      beats get one immediate follow-up pass.
 - [x] `repeat` cooldown — optional repeat cooldowns are now stored as
       `repeatCooldown` on beats and measured in story-evaluation events after
       the beat fires. Existing repeat behavior is unchanged when cooldown is
@@ -72,18 +72,20 @@ priority. (Engine = `src/story.js`, `src/flags.js`, `src/state.js`; editor =
       shapes).
 - [x] **`body` vs `lines`** — both fields show; if `lines` is non-empty, `body`
       is silently ignored. Collapse to one.
-- [ ] **`FLAG_READS`** (the "where the codebase reads this flag" map in
+- [x] **`FLAG_READS`** (the "where the codebase reads this flag" map in
       `FlagsTab.jsx`) is hand-maintained and drifts as code changes. **Partial:**
       the tab now derives the inverse "beats this flag triggers" cross-reference,
-      but non-story code reads still use the curated map.
-- [ ] **No React-component tests** (no RTL in the repo) — the editor UI is only
+      and non-story reads now live in `src/flagReads.js` with a drift-guard
+      test that scans direct flag reads.
+- [x] **No React-component tests** (no RTL in the repo) — the editor UI is only
       smoke-tested via headless Chromium, not in CI. The *engine*
       (`deriveGraph`, `effectiveBeat`, `conditionMatches`, the sanitizers,
       `evaluateSideBeats` / `evaluateFlagTriggers`) is well unit-tested; the *UI*
       leans on manual QA. A small e2e — "author a dialog → save → reload game →
-      it fires" — would cover the seam. **Partial:** pure helper tests were added
-      for rename/warnings/flag override seams; true e2e was not practical in this
-      environment because `node`/`npm` are unavailable.
+      it fires" — would cover the seam. **Done for this pass:** pure helper tests
+      cover rename/warnings/flag override seams, and `tests/e2e/dialog-draft.spec.js`
+      covers the saved balance-draft dialog → runtime modal seam. The e2e could
+      not be executed here because `node`/`npm` are unavailable.
 - [x] `/story/` editor doesn't live-sync the `hearth.balance.draft` localStorage
       key if you also edit it in the Balance Manager in another tab — a refresh
       fixes it (single-user, low risk). **Done:** clean `/story/` editors now

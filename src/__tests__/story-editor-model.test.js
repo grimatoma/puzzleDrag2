@@ -4,7 +4,7 @@ import {
   effectiveBeat, effectiveChoices, allBeatIds, findIncomingChoice, isDraftBeat,
   deriveGraph, visibleSubset, collapsibleIds, cloneDraft, emptyDraft,
   collectStoryWarnings, renameDraftBeatInDraft, storySlicesEqual, validateDraftBeatId,
-  isBeatSuppressed,
+  isBeatSuppressed, directionalNodeId,
 } from "../storyEditor/shared.jsx";
 
 const draftWith = (story) => ({ ...emptyDraft(), story });
@@ -127,6 +127,23 @@ describe("visibleSubset / collapse", () => {
     expect(cs.has("frostmaw_keeper")).toBe(true);
     expect(cs.has("act2_bram_arrives")).toBe(true);   // source of a side hint edge
     expect(cs.has("act1_light_hearth")).toBe(false);  // only a plain trigger edge out
+  });
+});
+
+describe("directionalNodeId", () => {
+  it("selects the nearest node in the requested direction", () => {
+    const nodes = [
+      { id: "center", x: 100, y: 100, w: 40, h: 40 },
+      { id: "right", x: 220, y: 106, w: 40, h: 40 },
+      { id: "far_right", x: 400, y: 90, w: 40, h: 40 },
+      { id: "down", x: 110, y: 230, w: 40, h: 40 },
+      { id: "left", x: 0, y: 100, w: 40, h: 40 },
+    ];
+    expect(directionalNodeId(nodes, "center", "right")).toBe("right");
+    expect(directionalNodeId(nodes, "center", "down")).toBe("down");
+    expect(directionalNodeId(nodes, "center", "left")).toBe("left");
+    expect(directionalNodeId(nodes, "center", "up")).toBe("center");
+    expect(directionalNodeId(nodes, null, "right")).toBe("center");
   });
 });
 

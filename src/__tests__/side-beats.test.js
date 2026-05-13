@@ -12,6 +12,7 @@ import {
   STORY_BEATS,
 } from "../story.js";
 import { rootReducer, createInitialState } from "../state.js";
+import { STORY_FLAGS } from "../flags.js";
 
 beforeEach(() => global.localStorage.clear());
 
@@ -100,6 +101,20 @@ describe("editor-authored side beats — event triggers, flag_set, repeat", () =
       expect(evaluateSideBeats(gs(), { type: "craft_made", item: "x" })).toBeNull();           // flag not set
       const r = evaluateSideBeats(gs({ story: { flags: { mine_unlocked: true } } }), { type: "craft_made", item: "x" });
       expect(r?.firedBeat?.id).toBe("_t_after_flag");
+    });
+  });
+
+  it("a flag_set side beat can fire in the same dispatch as a flag trigger", () => {
+    STORY_FLAGS.push({ id: "_t_instant_flag", label: "Instant", category: "misc", default: false, triggers: [{ type: "session_start" }] });
+    withSideBeats([{ id: "_t_after_instant_flag", title: "Instant side", lines: [{ text: "hi" }], trigger: { type: "flag_set", flag: "_t_instant_flag" } }], () => {
+      try {
+        const s0 = createInitialState();
+        const s1 = rootReducer({ ...s0, story: { ...s0.story, flags: { ...s0.story.flags, intro_seen: true } } }, { type: "SESSION_START" });
+        expect(s1.story.flags._t_instant_flag).toBe(true);
+        expect(s1.story.queuedBeat?.id).toBe("_t_after_instant_flag");
+      } finally {
+        STORY_FLAGS.pop();
+      }
     });
   });
 

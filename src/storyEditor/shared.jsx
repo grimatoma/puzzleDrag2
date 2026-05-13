@@ -579,6 +579,34 @@ export function visibleSubset(nodes, edges, collapsed) {
   return { nodes: nodes.filter((n) => visible.has(n.id)), edges: edges.filter(edgeVisible), hiddenCounts };
 }
 
+export function directionalNodeId(nodes, selectedId, dir) {
+  const list = Array.isArray(nodes) ? nodes : [];
+  if (list.length === 0) return null;
+  const cur = list.find((n) => n.id === selectedId);
+  if (!cur) return list[0].id;
+  const cx = cur.x + cur.w / 2;
+  const cy = cur.y + cur.h / 2;
+  let best = null;
+  for (const n of list) {
+    if (!n || n.id === cur.id) continue;
+    const nx = n.x + n.w / 2;
+    const ny = n.y + n.h / 2;
+    const dx = nx - cx;
+    const dy = ny - cy;
+    const ok =
+      (dir === "left" && dx < -12) ||
+      (dir === "right" && dx > 12) ||
+      (dir === "up" && dy < -12) ||
+      (dir === "down" && dy > 12);
+    if (!ok) continue;
+    const primary = (dir === "left" || dir === "right") ? Math.abs(dx) : Math.abs(dy);
+    const secondary = (dir === "left" || dir === "right") ? Math.abs(dy) : Math.abs(dx);
+    const score = primary + secondary * 0.65;
+    if (!best || score < best.score) best = { id: n.id, score };
+  }
+  return best?.id || cur.id;
+}
+
 // ─── View-preference persistence (collapse state · dragged node positions) ───
 
 const COLLAPSE_KEY = "hearth.story.collapsed";

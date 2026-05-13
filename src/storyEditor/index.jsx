@@ -20,7 +20,7 @@ import {
   draftBeats, draftBeatIndex, isDraftBeat,
   cloneDraft, deriveGraph, visibleSubset, collapsibleIds,
   readCollapsed, writeCollapsed, readNodePositions, writeNodePositions, DRAFT_LANE_Y,
-  branchingRowCenterY, MY, NH, Btn,
+  branchingRowCenterY, MY, NH, Btn, directionalNodeId,
   collectStoryWarnings, renameDraftBeatInDraft, storySlicesEqual,
 } from "./shared.jsx";
 import Inspector from "./Inspector.jsx";
@@ -423,6 +423,46 @@ function LeftRail({ draft, selectedId, onlineIds, onSelect, onNewBeat }) {
           );
         })}
       </div>
+    </div>
+  );
+}
+
+function MiniMap({ nodes, bounds, selectedId, zoom, pan, canvasRef, onPanTo }) {
+  const W = 180, H = 112, PAD = 8;
+  const scale = Math.min((W - PAD * 2) / Math.max(1, bounds.w), (H - PAD * 2) / Math.max(1, bounds.h));
+  const rect = canvasRef.current ? canvasRef.current.getBoundingClientRect() : null;
+  const view = rect ? {
+    x: -pan.x / Math.max(zoom, 0.01),
+    y: -pan.y / Math.max(zoom, 0.01),
+    w: rect.width / Math.max(zoom, 0.01),
+    h: rect.height / Math.max(zoom, 0.01),
+  } : null;
+  const toSvg = (x, y) => ({ x: PAD + x * scale, y: PAD + y * scale });
+  const onPointer = (e) => {
+    const box = e.currentTarget.getBoundingClientRect();
+    const worldX = Math.max(0, (e.clientX - box.left - PAD) / scale);
+    const worldY = Math.max(0, (e.clientY - box.top - PAD) / scale);
+    onPanTo(worldX, worldY);
+  };
+  return (
+    <div style={{ position: "absolute", left: 16, bottom: 16, zIndex: 10, width: W, height: H,
+      borderRadius: 8, border: `1.5px solid ${C.border}`, background: "rgba(255,255,255,0.92)",
+      boxShadow: "0 3px 10px rgba(40,28,10,0.12)", overflow: "hidden" }}>
+      <svg width={W} height={H} onMouseDown={onPointer} style={{ display: "block", cursor: "crosshair" }}>
+        <rect x={PAD} y={PAD} width={bounds.w * scale} height={bounds.h * scale} rx="3" fill="rgba(240,232,212,0.8)" stroke={C.canvasRule} />
+        {nodes.map((n) => {
+          const p = toSvg(n.x, n.y);
+          return <rect key={n.id} x={p.x} y={p.y} width={Math.max(2, n.w * scale)} height={Math.max(2, n.h * scale)}
+            rx="1" fill={n.id === selectedId ? C.ember : (n.draft ? "#6b8e9e" : C.inkSubtle)} opacity={n.id === selectedId ? 1 : 0.65} />;
+        })}
+        {view && (() => {
+          const p = toSvg(view.x, view.y);
+          return <rect x={p.x} y={p.y} width={Math.max(4, view.w * scale)} height={Math.max(4, view.h * scale)}
+            fill="none" stroke={C.emberDeep} strokeWidth="1.5" strokeDasharray="3 2" />;
+        })()}
+      </svg>
+      <div style={{ position: "absolute", left: 7, top: 5, font: "700 8px/1 system-ui",
+        color: C.inkSubtle, letterSpacing: "0.08em", textTransform: "uppercase", pointerEvents: "none" }}>Map</div>
     </div>
   );
 }
@@ -837,6 +877,36 @@ export default function StoryEditorApp() {
       y: Math.round((rect.height - (maxY - minY) * nextZoom) / 2 - minY * nextZoom),
     });
   }, [view.nodes]);
+  const panToWorld = useCallback((worldX, worldY) => {
+    const el = canvasRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    setPan({ x: Math.round(rect.width / 2 - worldX * zoom), y: Math.round(rect.height / 2 - worldY * zoom) });
+  }, [zoom]);
+  const selectAndCenter = useCallback((id) => {
+    if (!id) return;
+    setSelectedId(id);
+    const node = view.nodes.find((n) => n.id === id);
+    if (node) panToWorld(node.x + node.w / 2, node.y + node.h / 2);
+  }, [panToWorld, view.nodes]);
+
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      const tag = e.target?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || tag === "BUTTON" || tag === "A" || e.target?.isContentEditable) return;
+      const map = { ArrowLeft: "left", ArrowRight: "right", ArrowUp: "up", ArrowDown: "down" };
+      if (map[e.key]) {
+        e.preventDefault();
+        selectAndCenter(directionalNodeId(view.nodes, selectedId, map[e.key]));
+      } else if (e.key === "Enter" && selectedId) {
+        e.preventDefault();
+        setPreviewBeatId(selectedId);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [selectedId, selectAndCenter, view.nodes]);
 
   const selIsDraft = selectedId ? isDraftBeat(draft, selectedId) : false;
 
@@ -893,6 +963,7 @@ export default function StoryEditorApp() {
             <button onClick={() => { setZoom(1); setPan({ x: 20, y: 20 }); }} style={{ width: 28, height: 28, borderRadius: 5, border: `1px solid ${C.border}`, background: C.parchment, color: C.inkSubtle, font: "400 9px/1 system-ui", cursor: "pointer" }}>↺</button>
             <button onClick={fitToScreen} title="Fit visible cards to screen" style={{ width: 36, height: 28, borderRadius: 5, border: `1px solid ${C.border}`, background: C.parchment, color: C.inkSubtle, font: "700 9px/1 system-ui", cursor: "pointer" }}>Fit</button>
           </div>
+          <MiniMap nodes={view.nodes} bounds={fullGraph.bounds} selectedId={selectedId} zoom={zoom} pan={pan} canvasRef={canvasRef} onPanTo={panToWorld} />
 
           <div style={{ position: "absolute", transform: `translate(${pan.x}px,${pan.y}px) scale(${zoom})`, transformOrigin: "0 0", width: fullGraph.bounds.w, height: fullGraph.bounds.h }}>
             {ACT_LABELS.map((al) => (
