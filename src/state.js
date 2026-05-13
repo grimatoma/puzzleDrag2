@@ -420,13 +420,29 @@ function applyAlmanacXp(state, amount) {
 }
 
 // ─── Story trigger integration ────────────────────────────────────────────────
+function tickStoryRepeatCooldowns(state) {
+  const cooldowns = state.story?.repeatCooldowns;
+  if (!cooldowns || typeof cooldowns !== "object" || Object.keys(cooldowns).length === 0) return state;
+
+  const nextCooldowns = {};
+  for (const [id, raw] of Object.entries(cooldowns)) {
+    const n = Number(raw);
+    if (Number.isFinite(n) && n > 1) nextCooldowns[id] = Math.trunc(n) - 1;
+  }
+
+  const nextStory = { ...state.story };
+  if (Object.keys(nextCooldowns).length > 0) nextStory.repeatCooldowns = nextCooldowns;
+  else delete nextStory.repeatCooldowns;
+  return { ...state, story: nextStory };
+}
+
 // evaluateAndApplyStoryBeat: given a game event, evaluate triggers against current story
 // state and, if a beat fires, apply all side effects and queue the modal.
 // Also evaluates the opportunistic side-beat list (Bond-8 arcs etc.) on the
 // "settle moment" events. Returns the updated state (no mutation).
 function evaluateAndApplyStoryBeat(state, event) {
-  const totals = state.inventory ?? {};
-  let next = state;
+  let next = tickStoryRepeatCooldowns(state);
+  const totals = next.inventory ?? {};
   const result = evaluateStoryTriggers(next.story ?? { ...INITIAL_STORY_STATE, flags: {} }, event, totals);
   if (result) next = storySlice.reduce(next, { type: "STORY/BEAT_FIRED", payload: result });
   // Side beats (bond arcs / side events / editor-authored dialogs) react to any

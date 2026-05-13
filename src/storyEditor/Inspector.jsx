@@ -388,9 +388,16 @@ function TriggerEditor({ beatId, beat, draft, isMainChain, onEditBeat }) {
         <Row label="Repeat">
           <label style={{ display: "flex", alignItems: "center", gap: 6, font: "400 11px/1.3 system-ui", color: type === "none" ? C.inkSubtle : C.inkLight }}>
             <input type="checkbox" checked={!!beat.repeat} disabled={type === "none"}
-              onChange={(e) => onEditBeat(beatId, { repeat: e.target.checked || undefined })} />
+              onChange={(e) => onEditBeat(beatId, { repeat: e.target.checked || undefined, repeatCooldown: e.target.checked ? beat.repeatCooldown : undefined })} />
             re-fires every time the trigger matches {type === "none" ? "(needs a trigger)" : (t && ["resource_total", "resource_total_multi", "bond_at_least", "flag_set", "flag_cleared"].includes(t.type) ? "— at most once per settle for state conditions" : "")}
           </label>
+        </Row>
+      )}
+      {!isMainChain && beat.repeat && type !== "none" && (
+        <Row label="Cooldown">
+          <NumberField step="1" width={48} value={Number.isFinite(beat.repeatCooldown) ? beat.repeatCooldown : undefined}
+            onCommit={(n) => onEditBeat(beatId, { repeatCooldown: Number.isFinite(n) && n > 0 ? Math.trunc(n) : undefined })} />
+          <span style={{ font: "400 10px/1.3 system-ui", color: C.inkSubtle }}>story events after firing</span>
         </Row>
       )}
     </Section>
@@ -399,7 +406,7 @@ function TriggerEditor({ beatId, beat, draft, isMainChain, onEditBeat }) {
 
 // ─── inspector shell ─────────────────────────────────────────────────────────
 
-export default function Inspector({ beatId, draft, isDraft, onEditBeat, onNewBranch, onDeleteBeat, onRenameBeat, onSelect, onPreview }) {
+export default function Inspector({ beatId, draft, isDraft, onEditBeat, onNewBranch, onDeleteBeat, onSuppressBeat, onRenameBeat, onSelect, onPreview }) {
   const beat = effectiveBeat(beatId, draft);
   const [draftId, setDraftId] = useState(beatId || "");
   useEffect(() => { setDraftId(beatId || ""); }, [beatId]);
@@ -549,7 +556,16 @@ export default function Inspector({ beatId, draft, isDraft, onEditBeat, onNewBra
             </Section>
           </>
         ) : (
-          beat.onComplete && (
+          <>
+          {isSide && (
+            <Section title="Built-in side beat" hint="(suppressing hides it from runtime and editor graph)">
+              <Btn tone="danger" style={{ alignSelf: "flex-start" }}
+                onClick={() => { if (typeof window === "undefined" || window.confirm(`Suppress built-in side beat “${beat.title || beatId}”?`)) onSuppressBeat && onSuppressBeat(beatId); }}>
+                Suppress this beat
+              </Btn>
+            </Section>
+          )}
+          {beat.onComplete && (
             <Section title="Built-in onComplete" hint="(read-only — edit in src/story.js)">
               {Object.entries(beat.onComplete).map(([k, v]) => (
                 <div key={k} style={{ display: "flex", gap: 6 }}>
@@ -558,7 +574,8 @@ export default function Inspector({ beatId, draft, isDraft, onEditBeat, onNewBra
                 </div>
               ))}
             </Section>
-          )
+          )}
+          </>
         )}
 
         {/* speakers preview */}

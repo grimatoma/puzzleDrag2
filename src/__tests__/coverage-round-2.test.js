@@ -130,6 +130,17 @@ describe("story slice — coverage gaps", () => {
     expect(setKeys.length).toBeGreaterThan(0);
   });
 
+  it("STORY/BEAT_FIRED keeps repeat beats unstamped and records cooldowns", () => {
+    const beat = { id: "foo_repeat", repeat: true };
+    const s0 = baseState();
+    const s1 = storyReduce(s0, {
+      type: "STORY/BEAT_FIRED",
+      payload: { firedBeat: beat, newFlags: {}, sideEffects: {}, repeatCooldown: 3 },
+    });
+    expect(Object.keys(s1.story.flags)).toEqual([]);
+    expect(s1.story.repeatCooldowns.foo_repeat).toBe(3);
+  });
+
   it("STORY/BEAT_FIRED with an existing modal queues into beatQueue", () => {
     const earlier = { id: "earlier_beat" };
     const s0 = baseState({ story: { ...baseState().story, queuedBeat: earlier } });

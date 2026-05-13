@@ -129,6 +129,16 @@ describe("editor-authored side beats — event triggers, flag_set, repeat", () =
       expect(evaluateSideBeats(set, { type: "session_ended" })?.firedBeat?.id).toBe("_t_repeat_flag");
     });
   });
+
+  it("a repeat beat with cooldown waits for the cooldown to expire", () => {
+    withSideBeats([{ id: "_t_repeat_cd", title: "CD", lines: [{ text: "x" }], repeat: true, repeatCooldown: 2, trigger: { type: "craft_made", item: "bread" } }], () => {
+      const r = evaluateSideBeats(gs(), { type: "craft_made", item: "bread" });
+      expect(r?.firedBeat?.id).toBe("_t_repeat_cd");
+      expect(r.repeatCooldown).toBe(2);
+      expect(evaluateSideBeats(gs({ story: { flags: {}, repeatCooldowns: { _t_repeat_cd: 1 } } }), { type: "craft_made", item: "bread" })).toBeNull();
+      expect(evaluateSideBeats(gs({ story: { flags: {}, repeatCooldowns: { _t_repeat_cd: 0 } } }), { type: "craft_made", item: "bread" })?.firedBeat?.id).toBe("_t_repeat_cd");
+    });
+  });
 });
 
 describe("conditionMatches — flag_set / flag_cleared (state conditions)", () => {

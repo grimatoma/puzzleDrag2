@@ -4,6 +4,7 @@ import {
   effectiveBeat, effectiveChoices, allBeatIds, findIncomingChoice, isDraftBeat,
   deriveGraph, visibleSubset, collapsibleIds, cloneDraft, emptyDraft,
   collectStoryWarnings, renameDraftBeatInDraft, storySlicesEqual, validateDraftBeatId,
+  isBeatSuppressed,
 } from "../storyEditor/shared.jsx";
 
 const draftWith = (story) => ({ ...emptyDraft(), story });
@@ -39,6 +40,13 @@ describe("effectiveBeat", () => {
     const inc = findIncomingChoice("res_new", d);
     expect(inc).toMatchObject({ parentId: "act1_first_bread", choice: { id: "c1" } });
     expect(findIncomingChoice("mira_letter_sent", emptyDraft())).toMatchObject({ parentId: "mira_letter_1", choice: { id: "send" } });
+  });
+  it("suppressed side beats are hidden from effective editor data", () => {
+    const d = draftWith({ suppressedBeats: ["mira_letter_1"] });
+    expect(isBeatSuppressed(d, "mira_letter_1")).toBe(true);
+    expect(effectiveBeat("mira_letter_1", d)).toBeNull();
+    expect(allBeatIds(d)).not.toContain("mira_letter_1");
+    expect(deriveGraph(d).nodes.some((n) => n.id === "mira_letter_1")).toBe(false);
   });
 });
 

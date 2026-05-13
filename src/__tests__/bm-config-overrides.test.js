@@ -1,6 +1,6 @@
 // Phase 6 — Balance Manager override functions for the new config sections.
 import { describe, it, expect } from "vitest";
-import { applyExpeditionOverrides, applyBiomeOverrides, sanitizeTuning, applyNpcOverrides, applyStoryOverrides, applyBossOverrides, applyAchievementOverrides, applyDailyRewardOverrides, sanitizeChoiceOutcome, sanitizeChoiceArray, sanitizeBeatTrigger, sanitizeBeatOnComplete, applyFlagOverrides, sanitizeFlagTrigger, sanitizeFlagTriggerArray } from "../config/applyOverrides.js";
+import { applyExpeditionOverrides, applyBiomeOverrides, sanitizeTuning, applyNpcOverrides, applyStoryOverrides, applyBossOverrides, applyAchievementOverrides, applyDailyRewardOverrides, sanitizeChoiceOutcome, sanitizeChoiceArray, sanitizeBeatTrigger, sanitizeBeatOnComplete, sanitizeBeatRepeatCooldown, applyFlagOverrides, sanitizeFlagTrigger, sanitizeFlagTriggerArray } from "../config/applyOverrides.js";
 
 describe("applyExpeditionOverrides", () => {
   it("merges foodTurns (tune + add) and replaces meatFoods wholesale", () => {
@@ -163,20 +163,29 @@ describe("applyStoryOverrides", () => {
     const story = [{ id: "a1", title: "A", trigger: { type: "session_start" } }];
     const side = [];
     applyStoryOverrides(story, side, {
-      newBeats: [{ id: "d1", title: "D1", trigger: { type: "building_built", id: "mill" }, repeat: true },
+      newBeats: [{ id: "d1", title: "D1", trigger: { type: "building_built", id: "mill" }, repeat: true, repeatCooldown: 3 },
                  { id: "d2", title: "D2", trigger: { type: "flag_set", flag: " mine_unlocked " } }],
       beats: { a1: { trigger: { type: "resource_total", key: "wood_log", amount: 30 }, repeat: true },
-               d1: { repeat: false } },   // turn the repeat back off
+               d1: { repeat: false, repeatCooldown: 0 } },   // turn the repeat back off
     });
     expect(story[0].trigger).toEqual({ type: "resource_total", key: "wood_log", amount: 30 });
     expect(story[0].repeat).toBe(true);
     const d1 = side.find((b) => b.id === "d1"), d2 = side.find((b) => b.id === "d2");
     expect(d1).toMatchObject({ id: "d1", trigger: { type: "building_built", id: "mill" } });
     expect(d1.repeat).toBeUndefined();   // newBeat set repeat:true, beats[] patch cleared it
+    expect(d1.repeatCooldown).toBeUndefined();
     expect(d2).toMatchObject({ id: "d2", trigger: { type: "flag_set", flag: "mine_unlocked" } });
     // a bad trigger in a patch is ignored (keeps the prior one)
     applyStoryOverrides(story, [], { beats: { a1: { trigger: { type: "no_such" } } } });
     expect(story[0].trigger).toEqual({ type: "resource_total", key: "wood_log", amount: 30 });
+  });
+  it("suppresses built-in side beats without deleting draft side beats", () => {
+    const side = [
+      { id: "mira_letter_1", title: "Mira", side: true },
+      { id: "draft_side", title: "Draft", side: true, draft: true },
+    ];
+    applyStoryOverrides([], side, { suppressedBeats: ["mira_letter_1", "draft_side"] });
+    expect(side).toEqual([{ id: "draft_side", title: "Draft", side: true, draft: true }]);
   });
 });
 
@@ -206,6 +215,13 @@ describe("story-beat sanitizers", () => {
   it("sanitizeBeatOnComplete keeps only setFlag", () => {
     expect(sanitizeBeatOnComplete({ setFlag: ["a"], spawnNPC: "mira" })).toEqual({ setFlag: "a" });
     expect(sanitizeBeatOnComplete({ spawnNPC: "mira" })).toBeUndefined();
+  });
+  it("sanitizeBeatRepeatCooldown keeps positive whole story-event counts", () => {
+    expect(sanitizeBeatRepeatCooldown(2.9)).toBe(2);
+    expect(sanitizeBeatRepeatCooldown("4")).toBe(4);
+    expect(sanitizeBeatRepeatCooldown(0)).toBeUndefined();
+    expect(sanitizeBeatRepeatCooldown(-1)).toBeUndefined();
+    expect(sanitizeBeatRepeatCooldown("x")).toBeUndefined();
   });
 });
 

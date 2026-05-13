@@ -405,6 +405,7 @@ function sideBeatFired(flags, beat) {
 function sideTriggerMatches(beat, event, gameState) {
   const t = beat.trigger;
   if (!t) return false; // resolution beats (queued via choices) have no trigger
+  if (beat.repeat && (gameState?.story?.repeatCooldowns?.[beat.id] ?? 0) > 0) return false;
   if (t.type === "bond_at_least") {
     // State-driven via the bonds snapshot (not in `conditionMatches`) — fires
     // the next settle moment once the bond threshold holds.
@@ -422,7 +423,8 @@ function fireSideBeat(beat, flags) {
   const newFlags = { ...flags };
   if (beat.onComplete?.setFlag) newFlags[beat.onComplete.setFlag] = true;
   else if (!beat.repeat) newFlags[firedFlagKey(beat.id)] = true; // repeat beats keep no permanent marker
-  return { firedBeat: beat, newFlags, sideEffects: beat.onComplete ?? {} };
+  const repeatCooldown = beat.repeat && Number.isFinite(beat.repeatCooldown) && beat.repeatCooldown > 0 ? Math.trunc(beat.repeatCooldown) : undefined;
+  return { firedBeat: beat, newFlags, sideEffects: beat.onComplete ?? {}, repeatCooldown };
 }
 
 /**

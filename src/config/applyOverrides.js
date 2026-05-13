@@ -647,6 +647,12 @@ export function sanitizeBeatRepeat(raw) {
   return raw === true ? true : undefined;
 }
 
+/** Optional repeat cooldown, measured in story-evaluation events after fire. */
+export function sanitizeBeatRepeatCooldown(raw) {
+  const n = Number(raw);
+  return Number.isFinite(n) && n > 0 ? Math.trunc(n) : undefined;
+}
+
 /** Sanitised array of flag triggers (drops bad entries). */
 export function sanitizeFlagTriggerArray(raw) {
   if (!Array.isArray(raw)) return undefined;
@@ -665,10 +671,11 @@ export function sanitizeBeatOnComplete(raw) {
 /**
  * Apply patches to story beats (Balance Manager / `/story/` editor). `overrides`:
  *   {
- *     newBeats: [ { id, title, scene?, body?|lines?, choices?, trigger?, onComplete? } ],
+ *     suppressedBeats: [ <built-in side beat id> ],
+ *     newBeats: [ { id, title, scene?, body?|lines?, choices?, trigger?, repeat?, repeatCooldown?, onComplete? } ],
  *     beats:    { <beatId>: { title?, scene?, body?, lines?,
  *                             choices?: { <choiceId>: { label } } | [ { id, label, outcome? } ],
- *                             trigger?, onComplete? } }
+ *                             trigger?, repeat?, repeatCooldown?, onComplete? } }
  *   }
  * `newBeats` entries are appended to SIDE_BEATS (a draft side beat — optional
  * `bond_at_least` trigger, or no trigger for a resolution branch queued by a
@@ -683,6 +690,15 @@ export function applyStoryOverrides(storyBeats, sideBeats, overrides) {
   if (!overrides || typeof overrides !== "object") return;
   const story = Array.isArray(storyBeats) ? storyBeats : [];
   const side = Array.isArray(sideBeats) ? sideBeats : [];
+  const suppressed = new Set(Array.isArray(overrides.suppressedBeats)
+    ? overrides.suppressedBeats.map((id) => (typeof id === "string" ? id.trim() : "")).filter(Boolean)
+    : []);
+
+  if (suppressed.size > 0) {
+    for (let i = side.length - 1; i >= 0; i -= 1) {
+      if (side[i] && !side[i].draft && suppressed.has(side[i].id)) side.splice(i, 1);
+    }
+  }
 
   // 1 — author-created beats (always side beats).
   if (Array.isArray(overrides.newBeats)) {
@@ -703,6 +719,8 @@ export function applyStoryOverrides(storyBeats, sideBeats, overrides) {
       const trigger = sanitizeBeatTrigger(raw.trigger);
       if (trigger) beat.trigger = trigger;
       if (sanitizeBeatRepeat(raw.repeat)) beat.repeat = true;
+      const repeatCooldown = sanitizeBeatRepeatCooldown(raw.repeatCooldown);
+      if (repeatCooldown) beat.repeatCooldown = repeatCooldown;
       const onComplete = sanitizeBeatOnComplete(raw.onComplete);
       if (onComplete) beat.onComplete = onComplete;
       side.push(beat);
@@ -731,6 +749,10 @@ export function applyStoryOverrides(storyBeats, sideBeats, overrides) {
       if (patch.trigger) { const t = sanitizeBeatTrigger(patch.trigger); if (t) beat.trigger = t; }
       if (Object.prototype.hasOwnProperty.call(patch, "repeat")) {
         if (sanitizeBeatRepeat(patch.repeat)) beat.repeat = true; else delete beat.repeat;
+      }
+      if (Object.prototype.hasOwnProperty.call(patch, "repeatCooldown")) {
+        const cd = sanitizeBeatRepeatCooldown(patch.repeatCooldown);
+        if (cd) beat.repeatCooldown = cd; else delete beat.repeatCooldown;
       }
       if (Object.prototype.hasOwnProperty.call(patch, "onComplete")) {
         const oc = sanitizeBeatOnComplete(patch.onComplete);

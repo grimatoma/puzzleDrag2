@@ -276,7 +276,7 @@ function PromptInput({ prompt, onSubmit }) {
 }
 
 /** The dark parchment-and-iron stage used by the center-stage modal forms. */
-function StagePanel({ beat, npc, lines, footer, footKind, sceneLabel }) {
+export function StoryStagePanel({ beat, npc, lines, footer, footKind, sceneLabel }) {
   return (
     <div
       className="w-[92vw] max-w-[460px] shadow-2xl flex flex-col"
@@ -506,7 +506,7 @@ export function StoryModal({ state, dispatch }) {
       className="absolute inset-0 grid place-items-center z-[60] animate-fadein"
       style={{ background: scene?.bg ?? "rgba(0,0,0,0.6)" }}
     >
-      <StagePanel beat={beat} npc={npc} lines={lines} footer={footer} footKind={footKind} sceneLabel={scene?.label} />
+      <StoryStagePanel beat={beat} npc={npc} lines={lines} footer={footer} footKind={footKind} sceneLabel={scene?.label} />
     </div>
   );
 }

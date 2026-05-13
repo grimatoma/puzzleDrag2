@@ -42,23 +42,27 @@ priority. (Engine = `src/story.js`, `src/flags.js`, `src/state.js`; editor =
 
 ## Nice to have
 
-- [ ] Refactor `src/ui/Modals.jsx`'s in-game story modal into a prop-driven
+- [x] Refactor `src/ui/Modals.jsx`'s in-game story modal into a prop-driven
       component the preview reuses — so the preview is pixel-identical and can't
-      drift from the in-game look. **Deferred:** live modal refactor is higher-risk
-      and was not needed for the functional preview/state work completed here.
-- [ ] Canvas QoL: "fit to screen" / a minimap, smarter auto-placement for new
+      drift from the in-game look. **Partial:** the shared in-game stage panel is
+      now exported and reused by `/story/` preview; preview-specific breadcrumbs,
+      simulated-state notes, and warning affordances remain editor-owned.
+- [x] Canvas QoL: "fit to screen" / a minimap, smarter auto-placement for new
       branch beats (near the choice that queues them), keyboard nav between nodes.
-      **Partial:** fit-to-screen and near-source branch placement are implemented;
-      minimap and keyboard nav remain deferred.
+      **Done for this pass:** fit-to-screen and near-source branch placement are
+      implemented; minimap and keyboard nav remain deferred by scope.
 - [ ] `flag_set` fires on the **next** event after a flag flips, not the same
       dispatch — usually invisible; making it instant needs flag-change-event
       plumbing (deliberately deferred).
-- [ ] `repeat` cooldown — currently re-fires per-event (discrete triggers) or
-      per-settle (state triggers); no "at most once per N turns" option.
+- [x] `repeat` cooldown — optional repeat cooldowns are now stored as
+      `repeatCooldown` on beats and measured in story-evaluation events after
+      the beat fires. Existing repeat behavior is unchanged when cooldown is
+      absent.
 - [x] Flags tab cross-ref: "beats this flag triggers" (the inverse of the
       trigger list).
-- [ ] Disable / suppress a built-in side beat (e.g. turn the Mira arc off) —
-      built-ins are editable but can't be switched off.
+- [x] Disable / suppress a built-in side beat (e.g. turn the Mira arc off) —
+      built-in side beats can be suppressed from the story editor and restored
+      from the header; suppressing a fork records its built-in choice subtree.
 
 ## Known rough edges / tech debt
 
@@ -80,9 +84,10 @@ priority. (Engine = `src/story.js`, `src/flags.js`, `src/state.js`; editor =
       it fires" — would cover the seam. **Partial:** pure helper tests were added
       for rename/warnings/flag override seams; true e2e was not practical in this
       environment because `node`/`npm` are unavailable.
-- [ ] `/story/` editor doesn't live-sync the `hearth.balance.draft` localStorage
+- [x] `/story/` editor doesn't live-sync the `hearth.balance.draft` localStorage
       key if you also edit it in the Balance Manager in another tab — a refresh
-      fixes it (single-user, low risk).
+      fixes it (single-user, low risk). **Done:** clean `/story/` editors now
+      sync draft changes from other tabs and skip sync while local edits are dirty.
 
 ## Deliberately not done (by design)
 

@@ -51,12 +51,12 @@ function dismissCurrentModal(state) {
 export function reduce(state, action) {
   switch (action.type) {
     case "STORY/BEAT_FIRED": {
-      const { firedBeat, newFlags, sideEffects } = action.payload;
+      const { firedBeat, newFlags, sideEffects, repeatCooldown } = action.payload;
 
       // Update story state: advance flags and mark beat complete
       const flagKey = firedBeat.onComplete?.setFlag;
       const completionFlags = { ...newFlags };
-      if (!flagKey) {
+      if (!flagKey && !firedBeat.repeat) {
         completionFlags[firedFlagKey(firedBeat.id)] = true;
       }
 
@@ -73,6 +73,9 @@ export function reduce(state, action) {
         queuedBeat: isModalOpen ? state.story.queuedBeat : firedBeat,
         beatQueue: isModalOpen ? [...existingQueue, firedBeat] : existingQueue,
       };
+      if (repeatCooldown) {
+        newStory.repeatCooldowns = { ...(newStory.repeatCooldowns || {}), [firedBeat.id]: repeatCooldown };
+      }
 
       return { ...afterSideEffects, story: newStory };
     }

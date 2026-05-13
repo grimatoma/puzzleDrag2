@@ -17,10 +17,15 @@ Completed:
 - Story editor validation warnings for missing `queueBeat` targets and unregistered flags.
 - Canvas warning badges.
 - Stateful preview improvements for flags, bond deltas, currencies, direct `queueBeat`, and simple flag/bond-triggered downstream beats.
+- Preview legacy `body` rendering now uses the runtime `beatLines` helper, matching speaker-prefix cleanup from the live story modal.
+- The live game story stage panel is exported from `src/ui/Modals.jsx` and reused by `/story/` preview for the shared modal title/body/speaker/footer shell.
+- Optional repeat cooldowns for repeat side/story beats, measured in story-evaluation events after firing.
 - Perpetual `/story/` unsaved badge fix using normalized story-slice comparison.
 - Body-vs-lines cleanup by collapsing authoring to the Lines editor and converting legacy body text on edit.
 - Canvas fit-to-screen.
 - Near-source auto-placement for newly created branch beats.
+- Built-in side-beat suppression and restoration from the story editor.
+- `/story/` localStorage draft sync from other tabs when the editor has no local dirty changes.
 - Focused unit tests for pure story-editor helpers and flag override metadata support.
 
 Partially completed:
@@ -31,11 +36,7 @@ Partially completed:
 
 Deferred:
 
-- Reusable in-game modal preview component: deferred because it touches live modal behavior and is higher-risk than the completed functional preview improvements.
-- Repeat cooldowns: deferred pending a product/schema decision on whether cooldowns are measured in turns, events, sessions, or settle moments.
 - Instant same-dispatch `flag_set` firing: still deliberately deferred because it requires flag-change event plumbing.
-- Built-in side-beat disable/suppress remains unimplemented.
-- Story editor live sync across multiple tabs remains unimplemented.
 
 ## Changed Files
 
@@ -47,10 +48,18 @@ Product code:
 - `src/storyEditor/PreviewModal.jsx`
 - `src/storyEditor/index.jsx`
 - `src/storyEditor/shared.jsx`
+- `src/ui/Modals.jsx`
+- `src/config/applyOverrides.js`
+- `src/features/story/slice.js`
+- `src/state.js`
+- `src/story.js`
 
 Tests:
 
+- `src/__tests__/bm-config-overrides.test.js`
+- `src/__tests__/coverage-round-2.test.js`
 - `src/__tests__/flags.test.js`
+- `src/__tests__/side-beats.test.js`
 - `src/__tests__/story-editor-model.test.js`
 
 Docs:
@@ -71,6 +80,17 @@ Story editor:
 - Dirty state compares normalized `draft.story` data against the saved baseline rather than the whole cloned draft shape.
 - The separate Body field is removed from editor authoring. Existing body-only beats still display through the Lines editor and save as `lines` on edit.
 - New branch beats created from a choice are placed near the source card/choice row instead of only in the drafts lane.
+- Built-in side beats can be suppressed; suppressing a fork records its built-in choice subtree so the graph does not leave orphan branch-resolution cards.
+- A header restore action clears all suppressed built-in side beats.
+- Clean editors listen for `hearth.balance.draft` storage events from other tabs and refresh their saved baseline; dirty editors ignore cross-tab sync to avoid clobbering local work.
+
+Repeat cooldowns:
+
+- `repeatCooldown` is sanitized through `applyStoryOverrides` for `newBeats` and `beats` patches.
+- Repeat side beats with a cooldown skip matching triggers while `state.story.repeatCooldowns[beatId]` is positive.
+- Cooldowns tick down on each story-evaluation event and are stored separately from completion flags.
+- Repeat beats no longer receive permanent `_fired_` markers when they omit `onComplete.setFlag`.
+- Limitation: cooldowns are currently beat-level only. Flag registry triggers do not have their own cooldown field.
 
 Flags tab:
 
@@ -85,6 +105,8 @@ Preview:
 
 - Preview keeps a lightweight simulated state for flags, bonds, and supported currencies.
 - Picking a choice applies beat `onComplete.setFlag` and choice outcomes.
+- Dialogue lines are derived with the runtime `beatLines` helper, so legacy body-only beats get the same speaker-prefix cleanup as the live game modal.
+- The preview reuses the exported `StoryStagePanel` from the live modal implementation while keeping editor-only chrome outside that shared component.
 - Direct `queueBeat` still wins.
 - If there is no direct queue target, preview can continue into the first unvisited beat whose `flag_set`, `flag_cleared`, or `bond_at_least` trigger matches the simulated state.
 - Limitation: this is not a full game-state simulation for inventory/resource gates or act-order main-chain progression.
@@ -93,7 +115,6 @@ Preview:
 
 - `node`, `npm`, and `npx` are not available on PATH in this environment. Attempts to run Vitest via `npx` and via `./node_modules/.bin/vitest` failed because `node` is missing.
 - No `typecheck` script exists in `package.json`.
-- Repeat cooldowns need product semantics before implementation.
 - Full modal reuse should be handled as a separate targeted refactor because live game modal regressions would be more costly than the current preview drift.
 - True browser e2e was not practical without a runnable Node toolchain.
 
@@ -139,14 +160,20 @@ Attempted:
 - `npx vitest run src/__tests__/flags.test.js src/__tests__/story-triggers.test.js src/__tests__/story-dialogue.test.js src/__tests__/story-engine-coverage.test.js`
 - `./node_modules/.bin/vitest run src/__tests__/story-editor-model.test.js`
 - `./node_modules/.bin/vitest run src/__tests__/flags.test.js src/__tests__/story-triggers.test.js src/__tests__/story-dialogue.test.js src/__tests__/story-engine-coverage.test.js`
+- `npm run lint`
+- `npm run test`
+- `npm run build`
 - `git diff --check`
 
 Results:
 
 - Vitest via `npx`: failed because `npx` is not installed.
 - Vitest via local binary: failed because `node` is not installed.
+- `npm run lint`: failed because `npm` is not installed.
+- `npm run test`: failed because `npm` is not installed.
+- `npm run build`: failed because `npm` is not installed.
 - `which node` and `which npm`: no executable found.
-- `git diff --check`: passed.
+- `git diff --check`: passed after the final repeat-cooldown, suppression, and live-sync edits.
 
 Recommended validation once Node is available:
 
@@ -160,4 +187,3 @@ Recommended validation once Node is available:
 - The preview is intentionally a lightweight state simulation, not a full runtime replay.
 - Flags tab imports effective story editor helpers to scan draft-aware references; this keeps behavior consistent but broadens the dependency surface.
 - Browser interaction changes could not be executed locally because the Node runtime is missing.
-

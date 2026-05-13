@@ -6,7 +6,7 @@ import { STORY_BEATS, SIDE_BEATS, SCENE_THEMES, beatLines } from "../story.js";
 import { STORY_FLAGS } from "../flags.js";
 import {
   sanitizeBeatLines, sanitizeChoiceArray, sanitizeChoiceOutcome,
-  sanitizeBeatTrigger, sanitizeBeatOnComplete,
+  sanitizeBeatTrigger, sanitizeBeatOnComplete, sanitizeBeatRepeatCooldown,
 } from "../config/applyOverrides.js";
 
 // ─── Colours ─────────────────────────────────────────────────────────────────
@@ -242,7 +242,7 @@ export function editorLinesForBeat(beat) {
 }
 
 // Re-export the canonical sanitizers so callers don't reach into config/.
-export { sanitizeBeatLines, sanitizeChoiceArray, sanitizeChoiceOutcome, sanitizeBeatTrigger, sanitizeBeatOnComplete };
+export { sanitizeBeatLines, sanitizeChoiceArray, sanitizeChoiceOutcome, sanitizeBeatTrigger, sanitizeBeatOnComplete, sanitizeBeatRepeatCooldown };
 
 // ─── Draft (override-doc) helpers ────────────────────────────────────────────
 
@@ -282,6 +282,15 @@ export function isDraftBeat(draft, beatId) {
   return draftBeatIndex(draft, beatId) >= 0;
 }
 
+export function suppressedBeatIds(draft) {
+  const ids = draft?.story?.suppressedBeats;
+  return new Set(Array.isArray(ids) ? ids.filter((id) => typeof id === "string" && id.trim()).map((id) => id.trim()) : []);
+}
+
+export function isBeatSuppressed(draft, beatId) {
+  return suppressedBeatIds(draft).has(beatId);
+}
+
 const BUILTIN_BEAT = (id) =>
   STORY_BEATS.find((b) => b.id === id) || SIDE_BEATS.find((b) => b.id === id) || null;
 
@@ -293,9 +302,14 @@ const BUILTIN_BEAT = (id) =>
 export function effectiveBeat(beatId, draft) {
   if (!beatId) return null;
   const fromDraft = draftBeats(draft).find((b) => b && b.id === beatId);
+  if (!fromDraft && isBeatSuppressed(draft, beatId)) return null;
   const base = fromDraft || BUILTIN_BEAT(beatId);
   if (!base) return null;
   const merged = { ...base };
+  if (Object.prototype.hasOwnProperty.call(merged, "repeatCooldown")) {
+    const cd = sanitizeBeatRepeatCooldown(merged.repeatCooldown);
+    if (cd) merged.repeatCooldown = cd; else delete merged.repeatCooldown;
+  }
   const ov = (draft?.story?.beats || {})[beatId];
   if (ov && typeof ov === "object") {
     if (typeof ov.title === "string" && ov.title.length > 0) merged.title = ov.title;
@@ -310,6 +324,10 @@ export function effectiveBeat(beatId, draft) {
     }
     if (ov.trigger) { const t = sanitizeBeatTrigger(ov.trigger); if (t) merged.trigger = t; }
     if (Object.prototype.hasOwnProperty.call(ov, "repeat")) merged.repeat = ov.repeat === true ? true : undefined;
+    if (Object.prototype.hasOwnProperty.call(ov, "repeatCooldown")) {
+      const cd = sanitizeBeatRepeatCooldown(ov.repeatCooldown);
+      if (cd) merged.repeatCooldown = cd; else delete merged.repeatCooldown;
+    }
     if (Object.prototype.hasOwnProperty.call(ov, "onComplete")) {
       const oc = sanitizeBeatOnComplete(ov.onComplete);
       if (oc) merged.onComplete = { ...(base.onComplete || {}), ...oc };
@@ -326,9 +344,10 @@ export function effectiveChoices(beatId, draft) {
 
 /** Every beat id known to the editor (built-ins + drafts). */
 export function allBeatIds(draft) {
+  const suppressed = suppressedBeatIds(draft);
   return [
     ...STORY_BEATS.map((b) => b.id),
-    ...SIDE_BEATS.map((b) => b.id),
+    ...SIDE_BEATS.map((b) => b.id).filter((id) => !suppressed.has(id)),
     ...draftBeats(draft).map((b) => b && b.id).filter(Boolean),
   ];
 }
@@ -444,12 +463,14 @@ export function nodeKind(beatId, draft, isDraftNode) {
  */
 export function deriveGraph(draft, positions = {}) {
   const dBeats = draftBeats(draft);
+  const suppressed = suppressedBeatIds(draft);
   const pos = (positions && typeof positions === "object") ? positions : {};
   const at = (id, dx, dy) => ({ x: Number.isFinite(pos[id]?.x) ? pos[id].x : dx, y: Number.isFinite(pos[id]?.y) ? pos[id].y : dy });
 
   const placed = [];
   const known = new Set();
   for (const ln of LAYOUT_NODES) {
+    if (suppressed.has(ln.id)) continue;
     if (known.has(ln.id)) continue;
     known.add(ln.id);
     placed.push({ id: ln.id, draft: false, ...at(ln.id, ln.x, ln.y) });

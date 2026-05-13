@@ -12,7 +12,7 @@
 
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { STORY_BEATS, SIDE_BEATS } from "../story.js";
-import { writeBalanceDraft } from "../config/applyOverrides.js";
+import { readBalanceDraft, writeBalanceDraft } from "../config/applyOverrides.js";
 import { BALANCE_OVERRIDES } from "../constants.js";
 import {
   C, NPCS, Portrait, actColor, hexAlpha, triggerSummary,
@@ -25,6 +25,22 @@ import {
 } from "./shared.jsx";
 import Inspector from "./Inspector.jsx";
 import PreviewModal from "./PreviewModal.jsx";
+
+function builtInSideSubtreeIds(startId) {
+  const ids = new Set();
+  const stack = [startId];
+  const sideById = new Map(SIDE_BEATS.map((b) => [b.id, b]));
+  while (stack.length > 0) {
+    const id = stack.pop();
+    if (!id || ids.has(id) || !sideById.has(id)) continue;
+    ids.add(id);
+    for (const c of (sideById.get(id).choices || [])) {
+      const target = c?.outcome?.queueBeat;
+      if (sideById.has(target)) stack.push(target);
+    }
+  }
+  return ids.size > 0 ? ids : new Set([startId]);
+}
 
 // ─── edges ───────────────────────────────────────────────────────────────────
 
@@ -362,13 +378,18 @@ function LeftRail({ draft, selectedId, onlineIds, onSelect, onNewBeat }) {
   const [search, setSearch] = useState("");
   const q = search.trim().toLowerCase();
   const dBeats = draftBeats(draft);
-  const matches = (id) => !q || id.toLowerCase().includes(q) || (effectiveBeat(id, draft)?.title || "").toLowerCase().includes(q);
+  const knownIds = new Set(allBeatIds(draft));
+  const matches = (id) => {
+    const beat = effectiveBeat(id, draft);
+    if (!beat) return false;
+    return !q || id.toLowerCase().includes(q) || (beat.title || "").toLowerCase().includes(q);
+  };
 
   const groups = [
     { id: 1,      label: "Act I · Roots",     color: "#7a8b5e", ids: STORY_BEATS.filter((b) => b.act === 1).map((b) => b.id) },
     { id: 2,      label: "Act II · Iron",      color: "#c9863a", ids: STORY_BEATS.filter((b) => b.act === 2).map((b) => b.id) },
     { id: 3,      label: "Act III · Kingdom",  color: "#a8431a", ids: STORY_BEATS.filter((b) => b.act === 3).map((b) => b.id) },
-    { id: "side", label: "Side events",        color: C.violet,  ids: SIDE_BEATS.map((b) => b.id) },
+    { id: "side", label: "Side events",        color: C.violet,  ids: SIDE_BEATS.map((b) => b.id).filter((id) => knownIds.has(id)) },
   ];
 
   return (
@@ -457,6 +478,8 @@ export default function StoryEditorApp() {
   }, []);
 
   const isDirty = !storySlicesEqual(draft, savedDraft);
+  const dirtyRef = useRef(isDirty);
+  useEffect(() => { dirtyRef.current = isDirty; }, [isDirty]);
 
   const saveDraft = useCallback(() => {
     writeBalanceDraft(draft);
@@ -470,6 +493,19 @@ export default function StoryEditorApp() {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [saveDraft]);
+
+  useEffect(() => {
+    const onStorage = (e) => {
+      if (e.key !== "hearth.balance.draft" || dirtyRef.current) return;
+      const next = cloneDraft(readBalanceDraft() || BALANCE_OVERRIDES);
+      setDraft(next);
+      setSavedDraft(cloneDraft(next));
+      setSavedNotice("Synced from Balance Manager");
+      setTimeout(() => setSavedNotice(""), 1800);
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, []);
 
   // canvas pan/zoom
   const onMouseDown = useCallback((e) => {
@@ -721,6 +757,30 @@ export default function StoryEditorApp() {
     setSelectedId((cur) => (cur === beatId ? null : cur));
   }, []);
 
+  const suppressBuiltInBeat = useCallback((beatId) => {
+    setDraft((prev) => {
+      const d = cloneDraft(prev);
+      d.story ??= {};
+      const ids = new Set(Array.isArray(d.story.suppressedBeats) ? d.story.suppressedBeats : []);
+      for (const id of builtInSideSubtreeIds(beatId)) ids.add(id);
+      d.story.suppressedBeats = [...ids].sort();
+      return d;
+    });
+    setCollapsed((prev) => { if (!prev.has(beatId)) return prev; const n = new Set(prev); n.delete(beatId); writeCollapsed(n); return n; });
+    setSelectedId((cur) => (cur === beatId ? null : cur));
+    setPreviewBeatId((cur) => (cur === beatId ? null : cur));
+  }, []);
+
+  const restoreSuppressedBeats = useCallback(() => {
+    setDraft((prev) => {
+      const d = cloneDraft(prev);
+      if (!d.story?.suppressedBeats) return d;
+      delete d.story.suppressedBeats;
+      if (d.story && Object.keys(d.story).length === 0) delete d.story;
+      return d;
+    });
+  }, []);
+
   const renameDraftBeat = useCallback((oldId, nextId) => {
     const result = renameDraftBeatInDraft(draft, oldId, nextId);
     if (!result.ok || !result.changed) return result;
@@ -759,6 +819,7 @@ export default function StoryEditorApp() {
   const nodeById = useMemo(() => new Map(view.nodes.map((n) => [n.id, n])), [view]);
   const onlineIds = useMemo(() => new Set(fullGraph.nodes.map((n) => n.id)), [fullGraph]);
   const warningsByBeat = useMemo(() => collectStoryWarnings(draft), [draft]);
+  const suppressedCount = Array.isArray(draft?.story?.suppressedBeats) ? draft.story.suppressedBeats.length : 0;
   const fitToScreen = useCallback(() => {
     const el = canvasRef.current;
     if (!el || view.nodes.length === 0) return;
@@ -804,6 +865,12 @@ export default function StoryEditorApp() {
             <button onClick={() => { setCollapsed(new Set()); writeCollapsed(new Set()); }}
               style={{ padding: "6px 12px", borderRadius: 7, border: `2px solid ${C.border}`, background: C.parchmentDeep, color: C.inkLight, font: "700 11px/1 system-ui", cursor: "pointer" }}>
               ⊕ Expand all ({collapsed.size})
+            </button>
+          )}
+          {suppressedCount > 0 && (
+            <button onClick={restoreSuppressedBeats} title="Restore all suppressed built-in side beats"
+              style={{ padding: "6px 12px", borderRadius: 7, border: `2px solid ${C.redDeep}`, background: C.parchmentDeep, color: C.redDeep, font: "700 11px/1 system-ui", cursor: "pointer" }}>
+              Restore side beats ({suppressedCount})
             </button>
           )}
           <button onClick={saveDraft} style={{ padding: "6px 14px", borderRadius: 7, border: `2px solid ${C.greenDeep}`, background: C.green, color: "#fff", font: "700 11px/1 system-ui", cursor: "pointer" }}>💾 Save Draft</button>
@@ -853,7 +920,7 @@ export default function StoryEditorApp() {
 
         <Inspector beatId={selectedId} draft={draft} isDraft={selIsDraft}
           onEditBeat={editBeat} onNewBranch={onNewBranch} onDeleteBeat={deleteDraftBeat}
-          onRenameBeat={renameDraftBeat}
+          onSuppressBeat={suppressBuiltInBeat} onRenameBeat={renameDraftBeat}
           onSelect={setSelectedId} onPreview={setPreviewBeatId} />
       </div>
 
