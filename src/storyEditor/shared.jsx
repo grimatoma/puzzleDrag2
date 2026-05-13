@@ -232,8 +232,12 @@ export function branchingRowCenterY(idx) {
 }
 
 // Hand-positioned layout for the canonical beats. Edge `kind:"choice"` rows are
-// *derived from data* now (see deriveGraph) — only `kind:"trigger"` edges live
-// here, plus the node boxes.
+// Hand-positioned starting layout for the canonical beats — `{ id, x, y }` only.
+// Render *type* (compact / fork / resolution) is derived from each beat's data
+// in deriveGraph (a beat with choices → fork; a trigger-less endpoint →
+// resolution; otherwise compact). Positions can be dragged in the editor (saved
+// under `hearth.story.layout`). Edge `kind:"choice"` rows are derived from data;
+// only `kind:"trigger"` edges live in LAYOUT_TRIGGER_EDGES.
 export const LAYOUT_NODES = [
   // Act I
   { id: "act1_arrival",       x: 32,   y: MY },
@@ -251,15 +255,15 @@ export const LAYOUT_NODES = [
   { id: "act3_caravan",       x: 1904, y: MY },
   { id: "act3_festival",      x: 2088, y: MY },
   { id: "act3_win",           x: 2272, y: MY },
-  // Side: Mira's Letter (branching below Act II)
-  { id: "mira_letter_1",      x: 1000, y: 580, branching: true },
-  { id: "mira_letter_sent",   x: 1300, y: 500, expanded: true },
-  { id: "mira_letter_read",   x: 1300, y: 740, expanded: true },
-  { id: "mira_letter_kept",   x: 1300, y: 980, expanded: true },
-  // Side: Frostmaw Keeper
-  { id: "frostmaw_keeper",          x: 1620, y: 580, branching: true },
-  { id: "frostmaw_keeper_coexist",  x: 1950, y: 500, expanded: true },
-  { id: "frostmaw_keeper_driveout", x: 1950, y: 740, expanded: true },
+  // Side: Mira's Letter (the fork sits below Act II)
+  { id: "mira_letter_1",      x: 1000, y: 580 },
+  { id: "mira_letter_sent",   x: 1300, y: 500 },
+  { id: "mira_letter_read",   x: 1300, y: 740 },
+  { id: "mira_letter_kept",   x: 1300, y: 980 },
+  // Side: The Hearth-Keeper
+  { id: "frostmaw_keeper",          x: 1620, y: 580 },
+  { id: "frostmaw_keeper_coexist",  x: 1950, y: 500 },
+  { id: "frostmaw_keeper_driveout", x: 1950, y: 740 },
 ];
 
 export const LAYOUT_TRIGGER_EDGES = [
@@ -283,44 +287,56 @@ export const LAYOUT_TRIGGER_EDGES = [
 const CANVAS_W_BASE = 2500;
 const CANVAS_H_BASE = 1150;
 
-/**
- * Build the canvas graph from the live draft. Returns:
- *   { nodes:[{id,x,y,w,h,branching?,expanded?,draft?}], edges:[{from,to,kind,choice?,side?}], bounds:{w,h} }
- * - Static beats keep their hand-positioned boxes (heights re-derived for forks).
- * - Author-created beats are auto-placed in a "Drafts" lane below the canvas.
- * - `kind:"trigger"` edges come from LAYOUT; `kind:"choice"` edges are derived
- *   from each beat's effective `choices[].outcome.queueBeat`.
- */
-export function deriveGraph(draft) {
-  const dBeats = draftBeats(draft);
+const NODE_W_COMPACT = NW, NODE_H_COMPACT = NH;
+const NODE_W_RESOLUTION = 264, NODE_H_RESOLUTION = 192;
+const NODE_W_FORK = 240;
 
-  const nodes = [];
+/**
+ * Render type for a beat, derived from its data:
+ *  - `branching` (fork) — it has choices; shows a choice row per option.
+ *  - `expanded` (resolution / dialogue card) — a draft beat, or a built-in beat
+ *    with no trigger (a branch endpoint queued via a choice); shows the dialogue.
+ *  - `compact` — everything else (trigger-fired mid-chain beats).
+ */
+export function nodeKind(beatId, draft, isDraftNode) {
+  const beat = effectiveBeat(beatId, draft);
+  if (Array.isArray(beat?.choices) && beat.choices.length > 0) return "branching";
+  if (isDraftNode || !beat?.trigger) return "expanded";
+  return "compact";
+}
+
+/**
+ * Build the canvas graph from the live draft (+ a `positions` map of
+ * drag-saved overrides). Returns:
+ *   { nodes:[{id,x,y,w,h,branching,expanded,draft}], edges:[{from,to,kind,choice?,side?}], bounds:{w,h} }
+ * - Positions: `positions[id]` overrides the static layout (and the auto-placed
+ *   "Drafts" lane for author-created beats).
+ * - Render type/size is derived (see `nodeKind`) — a fork's height scales with
+ *   its choice count.
+ * - `kind:"trigger"` edges come from LAYOUT_TRIGGER_EDGES; `kind:"choice"` edges
+ *   are derived from each beat's effective `choices[].outcome.queueBeat`.
+ */
+export function deriveGraph(draft, positions = {}) {
+  const dBeats = draftBeats(draft);
+  const pos = (positions && typeof positions === "object") ? positions : {};
+  const at = (id, dx, dy) => ({ x: Number.isFinite(pos[id]?.x) ? pos[id].x : dx, y: Number.isFinite(pos[id]?.y) ? pos[id].y : dy });
+
+  const placed = [];
   const known = new Set();
   for (const ln of LAYOUT_NODES) {
     if (known.has(ln.id)) continue;
     known.add(ln.id);
-    let w = NW, h = NH;
-    if (ln.branching) {
-      const n = effectiveChoices(ln.id, draft).length || 1;
-      w = 240; h = branchingNodeHeight(n);
-    } else if (ln.expanded) {
-      w = 260; h = 188;
-    }
-    nodes.push({ id: ln.id, x: ln.x, y: ln.y, w, h, branching: !!ln.branching, expanded: !!ln.expanded, draft: false });
+    placed.push({ id: ln.id, draft: false, ...at(ln.id, ln.x, ln.y) });
   }
-  // draft beats → "Drafts" lane
   let dIdx = 0;
   for (const b of dBeats) {
     if (!b || typeof b.id !== "string" || known.has(b.id)) continue;
     known.add(b.id);
     const col = dIdx % 6, row = Math.floor(dIdx / 6);
     dIdx += 1;
-    nodes.push({
-      id: b.id, kind: "draft", draft: true, expanded: true,
-      x: 32 + col * 300, y: DRAFT_LANE_Y + row * 220, w: 264, h: 196,
-    });
+    placed.push({ id: b.id, draft: true, ...at(b.id, 32 + col * 300, DRAFT_LANE_Y + row * 220) });
   }
-  const nodeIds = new Set(nodes.map((n) => n.id));
+  const nodeIds = new Set(placed.map((n) => n.id));
 
   const edges = [];
   const seen = new Set();
@@ -332,15 +348,24 @@ export function deriveGraph(draft) {
     edges.push(e);
   };
   for (const e of LAYOUT_TRIGGER_EDGES) push({ from: e.from, to: e.to, kind: "trigger", side: !!e.side });
-  for (const n of nodes) {
+  for (const n of placed) {
     for (const c of effectiveChoices(n.id, draft)) {
       const target = c?.outcome?.queueBeat;
       if (typeof target === "string") push({ from: n.id, to: target, kind: "choice", choice: c.id });
     }
   }
 
+  const nodes = placed.map((p) => {
+    const kind = nodeKind(p.id, draft, p.draft);
+    const choiceCount = effectiveChoices(p.id, draft).length;
+    const branching = kind === "branching", expanded = kind === "expanded";
+    const w = branching ? NODE_W_FORK : (expanded ? NODE_W_RESOLUTION : NODE_W_COMPACT);
+    const h = branching ? branchingNodeHeight(Math.max(1, choiceCount)) : (expanded ? NODE_H_RESOLUTION : NODE_H_COMPACT);
+    return { ...p, w, h, branching, expanded };
+  });
+
   let maxX = CANVAS_W_BASE, maxY = CANVAS_H_BASE;
-  for (const n of nodes) { maxX = Math.max(maxX, n.x + n.w + 60); maxY = Math.max(maxY, n.y + n.h + 60); }
+  for (const n of nodes) { maxX = Math.max(maxX, n.x + n.w + 80); maxY = Math.max(maxY, n.y + n.h + 80); }
   return { nodes, edges, bounds: { w: maxX, h: maxY } };
 }
 
@@ -407,9 +432,10 @@ export function visibleSubset(nodes, edges, collapsed) {
   return { nodes: nodes.filter((n) => visible.has(n.id)), edges: edges.filter(edgeVisible), hiddenCounts };
 }
 
-// ─── Collapse-state persistence ──────────────────────────────────────────────
+// ─── View-preference persistence (collapse state · dragged node positions) ───
 
 const COLLAPSE_KEY = "hearth.story.collapsed";
+const LAYOUT_KEY = "hearth.story.layout";
 
 export function readCollapsed() {
   try {
@@ -423,6 +449,27 @@ export function writeCollapsed(set) {
   try {
     if (typeof localStorage === "undefined") return;
     localStorage.setItem(COLLAPSE_KEY, JSON.stringify([...set]));
+  } catch { /* storage unavailable */ }
+}
+
+/** `{ [beatId]: { x, y } }` of dragged node positions (overrides the static layout). */
+export function readNodePositions() {
+  try {
+    if (typeof localStorage === "undefined") return {};
+    const raw = localStorage.getItem(LAYOUT_KEY);
+    const obj = raw ? JSON.parse(raw) : {};
+    if (!obj || typeof obj !== "object") return {};
+    const out = {};
+    for (const [k, v] of Object.entries(obj)) {
+      if (typeof k === "string" && v && Number.isFinite(v.x) && Number.isFinite(v.y)) out[k] = { x: v.x, y: v.y };
+    }
+    return out;
+  } catch { return {}; }
+}
+export function writeNodePositions(map) {
+  try {
+    if (typeof localStorage === "undefined") return;
+    localStorage.setItem(LAYOUT_KEY, JSON.stringify(map || {}));
   } catch { /* storage unavailable */ }
 }
 

@@ -54,6 +54,32 @@ describe("deriveGraph", () => {
     // a trigger edge stays a trigger edge
     expect(g.edges).toContainEqual(expect.objectContaining({ from: "act1_arrival", to: "act1_light_hearth", kind: "trigger" }));
   });
+  it("derives the card kind from data: beats with choices are forks, trigger-less endpoints are resolutions", () => {
+    const d = draftWith({
+      newBeats: [
+        { id: "branch_leaf", title: "Leaf" },                                                   // draft, no choices
+        { id: "branch_fork", title: "Fork", choices: [{ id: "a", label: "A" }, { id: "b", label: "B" }] }, // draft with choices
+      ],
+      beats: { act1_arrival: { choices: [{ id: "c1", label: "x" }] } },                          // give a built-in beat a choice
+    });
+    const g = deriveGraph(d);
+    const by = (id) => g.nodes.find((n) => n.id === id);
+    expect(by("mira_letter_1")).toMatchObject({ branching: true, expanded: false });             // built-in fork (has choices)
+    expect(by("frostmaw_keeper")).toMatchObject({ branching: true });                            // built-in fork (has choices)
+    expect(by("mira_letter_sent")).toMatchObject({ branching: false, expanded: true });          // trigger-less endpoint → resolution
+    expect(by("act1_light_hearth")).toMatchObject({ branching: false, expanded: false });        // mid-chain (has a trigger) → compact
+    expect(by("branch_fork")).toMatchObject({ branching: true });                                // draft with choices → fork
+    expect(by("mira_letter_1").h).toBeGreaterThan(by("branch_fork").h);                          // 3 choice rows taller than 2
+    expect(by("branch_leaf")).toMatchObject({ expanded: true });
+    expect(by("act1_arrival")).toMatchObject({ branching: true });                               // override added a choice → now a fork
+  });
+  it("position overrides shift a node off its default spot", () => {
+    const g = deriveGraph(emptyDraft(), { act1_arrival: { x: 999, y: 777 }, mira_letter_1: { x: 1, y: 2 } });
+    expect(g.nodes.find((n) => n.id === "act1_arrival")).toMatchObject({ x: 999, y: 777 });
+    expect(g.nodes.find((n) => n.id === "mira_letter_1")).toMatchObject({ x: 1, y: 2 });
+    // a node with no override keeps its layout default
+    expect(g.nodes.find((n) => n.id === "act1_light_hearth")).toMatchObject({ x: 216 });
+  });
   it("re-points a choice edge when queueBeat changes; adds an edge into a new draft beat", () => {
     const d = draftWith({
       newBeats: [{ id: "branch_a", title: "A" }],
