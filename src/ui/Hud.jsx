@@ -36,14 +36,15 @@ function MetaPills({ state }) {
     <>
       {hasCurrency && (
         <Pill size="md" title="Kingdom currencies — Embers (Coexist), Core Ingots (Drive Out), Gems (timer skip)">
-          {embers > 0 && <span className="flex items-center gap-1">🔥 {embers}</span>}
-          {ingots > 0 && <span className="flex items-center gap-1"><span className="inline-block w-3 h-3 rounded-[2px] bg-[#8a8f95] border border-[#5a5e62]" />{ingots}</span>}
-          {gems > 0 && <span className="flex items-center gap-1">💎 {gems}</span>}
+          {embers > 0 && <span className="flex items-center gap-1"><Icon iconKey="ui_ember" size={14} />{embers}</span>}
+          {ingots > 0 && <span className="flex items-center gap-1"><Icon iconKey="ui_ingot" size={14} />{ingots}</span>}
+          {gems > 0 && <span className="flex items-center gap-1"><Icon iconKey="ui_gem" size={14} />{gems}</span>}
         </Pill>
       )}
       {tokens > 0 && (
         <Pill size="md" title="Hearth-Tokens — collect all 3 (farm + mine + harbor) to open the Old Capital">
-          <span>🏛️ {tokens}/3</span>
+          <Icon iconKey="ui_hearth_token" size={14} />
+          <span className="tabular-nums">{tokens}/3</span>
         </Pill>
       )}
     </>
@@ -220,14 +221,10 @@ export function Hud({ state, dispatch }) {
           <SeasonBar season={season} turnsUsed={turnsUsed} turnsLeft={turnsRemaining} turnBudget={turnBudget || 1} />
         ) : (
           <div className="flex items-center gap-1.5 flex-wrap justify-center">
-            <Pill
-              size="md"
-              leading={<span className="w-5 h-5 rounded-full bg-[#ffc239] grid place-items-center text-[#7a5638] text-[12px] font-bold leading-none">$</span>}
-            >
+            <Pill size="md" leading={<Icon iconKey="ui_coin" size={18} />}>
               <span className="font-bold text-[15px] tabular-nums" data-testid="coins">{coins.toLocaleString()}</span>
             </Pill>
-            <Pill size="md">
-              <span className="font-bold text-[14px]">⌂</span>
+            <Pill size="md" leading={<Icon iconKey="ui_building" size={16} />}>
               <span className="font-bold text-[14px] tabular-nums" data-testid="buildings">{buildingCount}</span>
             </Pill>
             <MetaPills state={state} />

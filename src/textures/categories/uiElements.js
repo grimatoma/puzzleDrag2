@@ -421,6 +421,154 @@ function drawFarmer(ctx) {
   ctx.fill();
 }
 
+// ─── Kingdom-currency glyphs (Vol I #04 — kill emoji from production HUD) ──
+
+function drawEmber(ctx) {
+  // Layered flame: outer orange, inner gold, hot white core.
+  ctx.fillStyle = "#c83a0a";
+  ctx.beginPath();
+  ctx.moveTo(0, -16);
+  ctx.bezierCurveTo(10, -10, 12, 0, 8, 8);
+  ctx.bezierCurveTo(6, 13, -6, 13, -8, 8);
+  ctx.bezierCurveTo(-12, 0, -10, -10, 0, -16);
+  ctx.fill();
+  ctx.fillStyle = "#ff8a25";
+  ctx.beginPath();
+  ctx.moveTo(0, -10);
+  ctx.bezierCurveTo(6, -6, 7, 2, 4, 7);
+  ctx.bezierCurveTo(2, 10, -2, 10, -4, 7);
+  ctx.bezierCurveTo(-7, 2, -6, -6, 0, -10);
+  ctx.fill();
+  ctx.fillStyle = "#ffd86b";
+  ctx.beginPath();
+  ctx.arc(0, 2, 3, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+function drawGem(ctx) {
+  // Faceted diamond — light top, dark side, bright facet line.
+  ctx.fillStyle = "#7ad3ff";
+  ctx.beginPath();
+  ctx.moveTo(0, -12);
+  ctx.lineTo(11, -3);
+  ctx.lineTo(0, 13);
+  ctx.lineTo(-11, -3);
+  ctx.closePath();
+  ctx.fill();
+  ctx.fillStyle = "#3a98d8";
+  ctx.beginPath();
+  ctx.moveTo(0, -12);
+  ctx.lineTo(11, -3);
+  ctx.lineTo(0, 0);
+  ctx.closePath();
+  ctx.fill();
+  ctx.fillStyle = "#bff0ff";
+  ctx.beginPath();
+  ctx.moveTo(-4, -7);
+  ctx.lineTo(-1, -10);
+  ctx.lineTo(0, -2);
+  ctx.lineTo(-3, -2);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = "#1e6aa0";
+  ctx.lineWidth = 1.4;
+  ctx.beginPath();
+  ctx.moveTo(0, -12);
+  ctx.lineTo(11, -3);
+  ctx.lineTo(0, 13);
+  ctx.lineTo(-11, -3);
+  ctx.closePath();
+  ctx.stroke();
+}
+
+function drawIngot(ctx) {
+  // Trapezoidal silver ingot with a top highlight.
+  ctx.fillStyle = "#7a808a";
+  ctx.beginPath();
+  ctx.moveTo(-12, 4);
+  ctx.lineTo(-9, -5);
+  ctx.lineTo(9, -5);
+  ctx.lineTo(12, 4);
+  ctx.closePath();
+  ctx.fill();
+  ctx.fillStyle = "#b8bcc3";
+  ctx.beginPath();
+  ctx.moveTo(-9, -5);
+  ctx.lineTo(9, -5);
+  ctx.lineTo(11, -3);
+  ctx.lineTo(-11, -3);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = "#3a4048";
+  ctx.lineWidth = 1.4;
+  ctx.beginPath();
+  ctx.moveTo(-12, 4);
+  ctx.lineTo(-9, -5);
+  ctx.lineTo(9, -5);
+  ctx.lineTo(12, 4);
+  ctx.closePath();
+  ctx.stroke();
+}
+
+function drawHearthToken(ctx) {
+  // A small pediment-and-columns "civic" mark, evoking the Old Capital.
+  ctx.fillStyle = "#e2b24a";
+  ctx.fillRect(-12, 6, 24, 4);
+  ctx.fillRect(-9, -2, 3, 8);
+  ctx.fillRect(-2, -2, 3, 8);
+  ctx.fillRect(5, -2, 3, 8);
+  ctx.beginPath();
+  ctx.moveTo(-13, -4);
+  ctx.lineTo(13, -4);
+  ctx.lineTo(0, -14);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = "#7a5a18";
+  ctx.lineWidth = 1.2;
+  ctx.beginPath();
+  ctx.moveTo(-13, -4);
+  ctx.lineTo(13, -4);
+  ctx.lineTo(0, -14);
+  ctx.closePath();
+  ctx.stroke();
+}
+
+function drawCoinChip(ctx) {
+  // Disc with a centered $ mark — used by the Hud coin pill.
+  ctx.fillStyle = "#ffc239";
+  ctx.beginPath();
+  ctx.arc(0, 0, 12, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = "#a8780a";
+  ctx.lineWidth = 1.4;
+  ctx.beginPath();
+  ctx.arc(0, 0, 12, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.fillStyle = "#7a5638";
+  ctx.font = "bold 16px ui-sans-serif, system-ui, sans-serif";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText("$", 0, 1);
+}
+
+function drawBuildingChip(ctx) {
+  // Little house silhouette — Hud "buildings" chip without emoji.
+  ctx.fillStyle = "#c8845a";
+  ctx.beginPath();
+  ctx.moveTo(-12, -2);
+  ctx.lineTo(0, -12);
+  ctx.lineTo(12, -2);
+  ctx.closePath();
+  ctx.fill();
+  ctx.fillStyle = "#a86838";
+  ctx.fillRect(-10, -2, 20, 12);
+  ctx.fillStyle = "#3a2715";
+  ctx.fillRect(-3, 3, 6, 7);
+  ctx.strokeStyle = "#3a2715";
+  ctx.lineWidth = 1.4;
+  ctx.strokeRect(-10, -2, 20, 12);
+}
+
 export const ICONS = {
   ui_lock: { label: "Lock", color: "#e0a020", draw: drawLock },
   ui_enter: { label: "Enter", color: "#ffffff", draw: drawEnterArrow },
@@ -444,4 +592,11 @@ export const ICONS = {
   ui_devtools: { label: "Dev Tools", color: "#8a9a9a", draw: drawDevTools },
   ui_heart: { label: "Heart", color: "#ff4444", draw: drawHeart },
   ui_farmer: { label: "Farmer", color: "#4f8c3a", draw: drawFarmer },
+  // Vol I #04 — currency / civic icons that replace 🔥 💎 🏛️ ⌂ $ in the HUD.
+  ui_ember: { label: "Ember", color: "#d6612a", draw: drawEmber },
+  ui_gem: { label: "Gem", color: "#7ad3ff", draw: drawGem },
+  ui_ingot: { label: "Core Ingot", color: "#b8bcc3", draw: drawIngot },
+  ui_hearth_token: { label: "Hearth Token", color: "#e2b24a", draw: drawHearthToken },
+  ui_coin: { label: "Coin", color: "#ffc239", draw: drawCoinChip },
+  ui_building: { label: "Building", color: "#c8845a", draw: drawBuildingChip },
 };
