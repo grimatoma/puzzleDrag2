@@ -4,7 +4,6 @@ import { displayZoneName } from "../features/zones/data.js";
 import { buildTownPlan } from "../townLayout.js";
 import TownGround from "./TownGround.jsx";
 import TownVillagers from "./TownVillagers.jsx";
-import IconCanvas from "./IconCanvas.jsx";
 import Icon from "./Icon.jsx";
 import { BuildingIllustration, FarmFieldArt, MineEntranceArt, Cloud, BuildingSmoke, HearthGlow } from "./BuildingIllustration.jsx";
 import { BiomeEntryModal } from "./modals/BiomeEntryModal.jsx";
@@ -149,7 +148,10 @@ export function TownView({ state, dispatch }) {
           );
         })}
 
-        {/* Regular Buildings Layer */}
+        {/* Regular Buildings Layer — only render built buildings as full
+            illustrations; empty plots are shown as dashed markers by
+            TownGround so the town reads as "planned but not yet built"
+            rather than a row of grey silhouettes. */}
         {buildingLots.map((b) => {
           const isBuilt = built[b.id] > 0;
           return (
@@ -158,12 +160,15 @@ export function TownView({ state, dispatch }) {
               className="absolute pointer-events-auto transition-transform hover:scale-105 active:scale-95 cursor-pointer"
               style={{ left: b.x, top: b.y, width: b.w, height: b.h, zIndex: Math.floor(b.baseY) }}
               onClick={() => isBuilt ? null : setPurchaseBuilding(b.id)}
+              aria-label={isBuilt ? BUILDINGS.find(x => x.id === b.id)?.name : `Empty plot — build ${BUILDINGS.find(x => x.id === b.id)?.name ?? ''}`}
             >
-              <div className="relative w-full h-full pointer-events-none">
-                <BuildingIllustration id={b.id} isBuilt={isBuilt} />
-                {SMOKE_BUILDINGS.has(b.id) && isBuilt && <BuildingSmoke />}
-                {b.id === 'hearth' && isBuilt && <HearthGlow />}
-              </div>
+              {isBuilt && (
+                <div className="relative w-full h-full pointer-events-none">
+                  <BuildingIllustration id={b.id} isBuilt={true} />
+                  {SMOKE_BUILDINGS.has(b.id) && <BuildingSmoke />}
+                  {b.id === 'hearth' && <HearthGlow />}
+                </div>
+              )}
             </div>
           );
         })}
@@ -185,49 +190,24 @@ export function TownView({ state, dispatch }) {
             </div>
           </div>
           
-          <div className="flex gap-2">
-            <div className="bg-black/40 backdrop-blur-md rounded-xl px-3 py-1.5 border border-white/10 flex items-center gap-2">
-              <Icon iconKey="resource_coin" size={16} />
-              <span className="text-white font-bold">{state.coins ?? 0}</span>
+          {maxPopulation > 0 && (
+            <div className="flex gap-2">
+              <div className="bg-black/40 backdrop-blur-md rounded-xl px-3 py-1.5 border border-white/10 flex items-center gap-2">
+                <Icon iconKey="ui_population" size={16} />
+                <span className="text-white font-bold">{population}/{maxPopulation}</span>
+              </div>
             </div>
-            <div className="bg-black/40 backdrop-blur-md rounded-xl px-3 py-1.5 border border-white/10 flex items-center gap-2">
-              <Icon iconKey="ui_population" size={16} />
-              <span className="text-white font-bold">{population}/{maxPopulation}</span>
-            </div>
-          </div>
+          )}
         </div>
 
         <div className="flex flex-col gap-2 pointer-events-auto items-end">
           <button
             onClick={() => dispatch({ type: "UI/CLOSE_TOWN" })}
             className="w-10 h-10 rounded-full bg-black/40 backdrop-blur-md border border-white/10 flex items-center justify-center text-white hover:bg-white/20 transition-colors"
+            aria-label="Close town view"
           >
             <Icon iconKey="ui_close" size={20} />
           </button>
-          
-          <div className="flex flex-col gap-2">
-            {Object.keys(BOARD_META).map(key => {
-              const meta = BOARD_META[key];
-              const isUnlocked = state.level >= (key === "mine" ? 2 : key === "fish" ? 3 : 0);
-              return (
-                <button
-                  key={key}
-                  onClick={() => setEntryBiome(key)}
-                  className="group relative flex items-center gap-2 bg-black/40 backdrop-blur-md rounded-xl p-1.5 border border-white/10 hover:bg-white/20 transition-all overflow-hidden"
-                >
-                  <div className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center bg-white/5">
-                    <IconCanvas iconKey={meta.icon} size={32} />
-                  </div>
-                  <span className="text-white text-xs font-bold pr-2">{meta.label}</span>
-                  {!isUnlocked && (
-                    <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
-                      <Icon iconKey="ui_lock" size={12} />
-                    </div>
-                  )}
-                </button>
-              );
-            })}
-          </div>
         </div>
       </div>
 

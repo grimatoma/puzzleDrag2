@@ -24,7 +24,7 @@ export default function TownsfolkScreen({ state, dispatch }) {
           className="w-7 h-7 rounded-lg bg-[#f6efe0] border-2 border-[#b28b62] grid place-items-center text-[#6a4b31] font-bold text-[14px]"
         >✕</button>
       </div>
-      <div className="flex gap-1.5 px-3 pt-2 flex-shrink-0 flex-wrap">
+      <div className="flex gap-1 px-2 pt-2 flex-shrink-0">
         {[
           { key: "workers", label: "Workers", icon: "ui_build" },
           { key: "quests", label: "Quests", icon: "ui_clipboard" },
@@ -35,7 +35,7 @@ export default function TownsfolkScreen({ state, dispatch }) {
           <button
             key={item.key}
             onClick={() => setTab(item.key)}
-            className={`flex-1 min-w-[80px] py-1.5 rounded-lg text-[11px] font-bold border-2 ${tab === item.key ? "bg-[#8a4a26] border-[#6b3114] text-white" : "bg-[#f7ead8]/20 border-[#e2c19b]/50 text-[#f8e7c6]"}`}
+            className={`flex-1 min-w-0 px-1 py-1.5 rounded-lg text-[11px] font-bold border-2 ${tab === item.key ? "bg-[#8a4a26] border-[#6b3114] text-white" : "bg-[#f7ead8]/20 border-[#e2c19b]/50 text-[#f8e7c6]"}`}
           >
             <div className="flex items-center justify-center gap-1">
               <Icon iconKey={item.icon} size={12} className={tab === item.key ? "" : "opacity-70"} />

@@ -152,7 +152,7 @@ export function WorkersPanel({ state, dispatch }) {
       <div
         style={{
           fontSize: 12,
-          color: "#6a4b31",
+          color: "#f8e7c6",
           lineHeight: 1.4,
           padding: "0 4px",
         }}
