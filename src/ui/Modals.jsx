@@ -6,6 +6,7 @@ import Icon from "./Icon.jsx";
 import IconCanvas, { hasIcon } from "./IconCanvas.jsx";
 import RichText from "./RichText.jsx";
 import Button from "./primitives/Button.jsx";
+import { ParchmentDialog } from "./primitives/Dialog.jsx";
 
 function Stat({ v, l }) {
   return (
@@ -19,26 +20,33 @@ function Stat({ v, l }) {
 export function SeasonModal({ state, dispatch }) {
   if (state.modal !== "season") return null;
   const stats = state.seasonStats;
-  // Phase 7 — calendar season removed. The end-of-session screen now only
-  // shows the run summary and a "Return to Town" button.
+  const close = () => dispatch({ type: "CLOSE_SEASON" });
   return (
-    <div className="absolute inset-0 bg-black/55 grid place-items-center z-50 animate-fadein" role="dialog" aria-modal="true" aria-labelledby="season-modal-title">
-      <div className="bg-[#f4ecd8] border-[4px] border-[#b28b62] rounded-[20px] px-8 py-6 landscape:max-[1024px]:px-4 landscape:max-[1024px]:py-3 max-[640px]:px-4 max-[640px]:py-4 min-w-[360px] max-w-[560px] landscape:max-[1024px]:min-w-0 landscape:max-[1024px]:w-[92vw] max-[640px]:min-w-0 max-[640px]:w-[92vw] landscape:max-[1024px]:max-h-[88vh] max-[640px]:max-h-[85dvh] landscape:max-[1024px]:overflow-y-auto max-[640px]:overflow-y-auto text-center shadow-2xl">
-        <Icon iconKey="ui_home" size={48} className="landscape:max-[1024px]:w-[28px] max-[640px]:w-[32px] leading-none" />
-        <h2 id="season-modal-title" className="font-bold text-[26px] landscape:max-[1024px]:text-[18px] max-[640px]:text-[20px] text-[#744d2e] mt-2 landscape:max-[1024px]:mt-1 max-[640px]:mt-1 mb-1 landscape:max-[1024px]:mb-0.5 max-[640px]:mb-0.5">Harvest Complete</h2>
-        <p className="italic text-[#6a4b31] text-[14px] landscape:max-[1024px]:text-[11px] max-[640px]:text-[12px]">Time to head back to town.</p>
-        <div className="flex justify-around gap-2 my-4 landscape:max-[1024px]:my-2 max-[640px]:my-2 p-3 landscape:max-[1024px]:p-2 max-[640px]:p-2 bg-black/[.04] rounded-xl">
+    <ParchmentDialog open size="md" onClose={close} labelledBy="season-modal-title">
+      <div className="text-center px-6 pt-6">
+        <Icon iconKey="ui_home" size={48} className="leading-none" />
+        <ParchmentDialog.Title id="season-modal-title" className="!pt-2 !text-[var(--ember-deep)] !text-[24px]">
+          Harvest Complete
+        </ParchmentDialog.Title>
+        <p className="italic text-[var(--ink-warm)] text-[14px] landscape:max-[1024px]:text-[12px]">
+          Time to head back to town.
+        </p>
+      </div>
+      <ParchmentDialog.Body className="!text-center !py-3">
+        <div className="flex justify-around gap-2 p-3 bg-black/[.04] rounded-xl">
           <Stat v={stats.harvests} l="Harvested" />
           <Stat v={stats.upgrades} l="Upgrades ★" />
           <Stat v={stats.ordersFilled} l="Orders" />
           <Stat v={`+${stats.coins}`} l="Coins" />
         </div>
-        <p className="text-[12px] landscape:max-[1024px]:text-[10px] max-[640px]:text-[11px] text-[#8a785e] mb-3 landscape:max-[1024px]:mb-2 max-[640px]:mb-2">Return bonus: +25◉</p>
-        <Button tone="moss" size="lg" onClick={() => dispatch({ type: "CLOSE_SEASON" })}>
+        <p className="text-[12px] text-[var(--ink-mute)] mt-3">Return bonus: +25◉</p>
+      </ParchmentDialog.Body>
+      <ParchmentDialog.Actions>
+        <Button tone="moss" size="lg" autoFocus onClick={close}>
           Return to Town
         </Button>
-      </div>
-    </div>
+      </ParchmentDialog.Actions>
+    </ParchmentDialog>
   );
 }
 
