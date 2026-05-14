@@ -134,6 +134,13 @@ function isToolArmed(def, { toolPending, fertilizerActive }) {
  */
 function ToolDetailAndTooltip({ modalTool, setModalTool, tooltipTip }) {
   const tooltipDef = tooltipTip ? TOOL_BY_KEY[tooltipTip.data] : null;
+  // Vol II Polish — Esc dismisses every modal with a Close button.
+  useEffect(() => {
+    if (!modalTool) return undefined;
+    const onKey = (e) => { if (e.key === "Escape") setModalTool(null); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [modalTool, setModalTool]);
   return (
     <>
       {tooltipDef && (
