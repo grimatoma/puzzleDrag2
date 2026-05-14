@@ -126,44 +126,16 @@ function isToolArmed(def, { toolPending, fertilizerActive }) {
   return false;
 }
 
-export function ToolsGrid({ tools, toolPending, fertilizerActive, onUse }) {
-  const { tip: tooltipTip, show: showTooltip, hide: hideTooltip, lastTouchTime: lastTouchTimeRef } = useTooltip();
-  const [modalTool, setModalTool] = useState(null);
-
-  const visible = visibleTools(tools);
+/**
+ * Shared tool tooltip + detail-modal manager. Three tool surfaces wanted the
+ * same tooltip on hover, the same long-press → rich detail modal, and the
+ * same close affordance — keeping all of that in one place is the audit's
+ * Vol I #07 ask.
+ */
+function ToolDetailAndTooltip({ modalTool, setModalTool, tooltipTip }) {
   const tooltipDef = tooltipTip ? TOOL_BY_KEY[tooltipTip.data] : null;
-
-  const byCategory = TOOL_CATEGORIES.map((cat) => ({
-    ...cat,
-    tools: visible.filter((t) => t.category === cat.key),
-  })).filter((c) => c.tools.length > 0);
-
   return (
     <>
-      <div className="flex flex-col gap-2.5">
-        {byCategory.map((cat) => (
-          <div key={cat.key}>
-            <div className="text-[9px] font-bold uppercase tracking-wider text-[#f8e7c6]/70 mb-1 px-0.5">
-              {cat.label}
-            </div>
-            <div className="grid grid-cols-2 gap-1.5">
-              {cat.tools.map((def) => (
-                <ToolButton
-                  key={def.key}
-                  def={def}
-                  count={tools[def.key] || 0}
-                  pending={isToolArmed(def, { toolPending, fertilizerActive })}
-                  onClick={() => onUse(def.key)}
-                  onLongPress={(t) => setModalTool(t)}
-                  showTooltip={showTooltip}
-                  hideTooltip={hideTooltip}
-                  lastTouchTimeRef={lastTouchTimeRef}
-                />
-              ))}
-            </div>
-          </div>
-        ))}
-      </div>
       {tooltipDef && (
         <Tooltip
           anchorX={tooltipTip.x}
@@ -199,6 +171,88 @@ export function ToolsGrid({ tools, toolPending, fertilizerActive, onUse }) {
   );
 }
 
+/**
+ * ToolStrip — the one tools surface (Vol I #07). `layout` picks shape:
+ *
+ *   "grid" — desktop side panel (2-col, grouped by category)
+ *   "rail" — phone portrait horizontal scroll strip (64px cards)
+ *   "sheet"— mobile dock bottom-sheet variant (same as "grid", looser
+ *            gap, no category labels)
+ *
+ * Same ToolButton across all three. Same tooltip + detail modal.
+ */
+export function ToolStrip({ tools, toolPending, fertilizerActive, onUse, layout = "grid" }) {
+  const { tip: tooltipTip, show: showTooltip, hide: hideTooltip, lastTouchTime: lastTouchTimeRef } = useTooltip();
+  const [modalTool, setModalTool] = useState(null);
+
+  const visible = visibleTools(tools);
+  const size = layout === "rail" ? "sm" : "md";
+
+  const renderButton = (def) => (
+    <ToolButton
+      key={def.key}
+      def={def}
+      count={tools[def.key] || 0}
+      pending={isToolArmed(def, { toolPending, fertilizerActive })}
+      onClick={() => onUse(def.key)}
+      onLongPress={(t) => setModalTool(t)}
+      showTooltip={showTooltip}
+      hideTooltip={hideTooltip}
+      lastTouchTimeRef={lastTouchTimeRef}
+      size={size}
+    />
+  );
+
+  let body;
+  if (layout === "rail") {
+    body = (
+      <div className="flex gap-1.5 overflow-x-auto pb-0.5" style={{ scrollbarWidth: "thin", touchAction: "pan-x" }}>
+        {visible.map((def) => (
+          <div key={def.key} className="flex-shrink-0 w-[64px]">{renderButton(def)}</div>
+        ))}
+      </div>
+    );
+  } else {
+    // grid + sheet share the category-grouped 2-col layout. The sheet variant
+    // omits category headers since it's a focused popup.
+    const byCategory = TOOL_CATEGORIES.map((cat) => ({
+      ...cat,
+      tools: visible.filter((t) => t.category === cat.key),
+    })).filter((c) => c.tools.length > 0);
+    body = (
+      <div className="flex flex-col gap-2.5">
+        {byCategory.map((cat) => (
+          <div key={cat.key}>
+            {layout === "grid" && (
+              <div className="text-[9px] font-bold uppercase tracking-wider text-[#f8e7c6]/70 mb-1 px-0.5">
+                {cat.label}
+              </div>
+            )}
+            <div className="grid grid-cols-2 gap-1.5">
+              {cat.tools.map(renderButton)}
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  return (
+    <>
+      {body}
+      <ToolDetailAndTooltip modalTool={modalTool} setModalTool={setModalTool} tooltipTip={tooltipTip} />
+    </>
+  );
+}
+
+/**
+ * Back-compat alias. Existing callers import { ToolsGrid }; new code should
+ * use <ToolStrip layout="grid" />.
+ */
+export function ToolsGrid(props) {
+  return <ToolStrip layout="grid" {...props} />;
+}
+
 function BottomSheet({ onClose, children }) {
   return createPortal(
     <div className="fixed inset-0 z-50 flex flex-col justify-end" onClick={onClose}>
@@ -218,61 +272,19 @@ function BottomSheet({ onClose, children }) {
 /**
  * Portrait phone tool bar: a single horizontal scroll strip showing every
  * owned tool plus the four field starters so the player always has a base set.
+ * Body is now <ToolStrip layout="rail" /> — same buttons, same tooltip, same
+ * long-press detail modal as the desktop grid (Vol I #07).
  */
 export function PortraitToolsBar({ state, dispatch }) {
-  const { tip: tooltipTip, show: showTooltip, hide: hideTooltip, lastTouchTime: lastTouchTimeRef } = useTooltip();
-  const [modalTool, setModalTool] = useState(null);
-  const tools = state.tools || {};
-  const list = visibleTools(tools);
-  const tooltipDef = tooltipTip ? TOOL_BY_KEY[tooltipTip.data] : null;
-
   return (
     <div className="bg-[#3a2715] border-t border-[#b28b62] px-2 py-2 flex-shrink-0">
-      <div className="flex gap-1.5 overflow-x-auto pb-0.5" style={{ scrollbarWidth: "thin" }}>
-        {list.map((def) => (
-          <div key={def.key} className="flex-shrink-0 w-[64px]">
-            <ToolButton
-              def={def}
-              count={tools[def.key] || 0}
-              pending={isToolArmed(def, { toolPending: state.toolPending, fertilizerActive: state.fertilizerActive })}
-              onClick={() => dispatchUseTool(dispatch, def.key, state)}
-              onLongPress={(t) => setModalTool(t)}
-              showTooltip={showTooltip}
-              hideTooltip={hideTooltip}
-              lastTouchTimeRef={lastTouchTimeRef}
-              size="sm"
-            />
-          </div>
-        ))}
-      </div>
-      {tooltipDef && (
-        <Tooltip
-          anchorX={tooltipTip.x}
-          anchorY={tooltipTip.y}
-          className="z-[9999] w-44 bg-[#2b1d0e] text-white text-[10px] rounded-lg px-2.5 py-2 shadow-lg pointer-events-none border border-[#e6c49a]"
-          arrowClassName="border-4 border-transparent border-t-[#2b1d0e]"
-        >
-          <div className="font-bold text-[11px] mb-0.5">{tooltipDef.name}</div>
-          <div className="text-white/80 leading-snug">{tooltipDef.desc}</div>
-        </Tooltip>
-      )}
-      {modalTool && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={() => setModalTool(null)}>
-          <div className="bg-[#3d2310] border-2 border-[#e6c49a] rounded-2xl p-5 max-w-[280px] w-full mx-4 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-            <div className="grid place-items-center mb-1" style={{ height: 64 }}>
-              <ToolIcon def={modalTool} size={64} />
-            </div>
-            <div className="text-white font-bold text-[17px] text-center mb-2">{modalTool.name}</div>
-            <div className="text-white/80 text-[12px] text-center leading-relaxed">{modalTool.desc}</div>
-            {isTapTargetTool(modalTool.key) && (
-              <div className="text-[#ffd248] text-[11px] font-bold text-center mt-2">Tap a tile on the board to apply.</div>
-            )}
-            <div className="mt-4">
-              <Button tone="iron" size="md" block onClick={() => setModalTool(null)}>Close</Button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ToolStrip
+        layout="rail"
+        tools={state.tools || {}}
+        toolPending={state.toolPending}
+        fertilizerActive={state.fertilizerActive}
+        onUse={(key) => dispatchUseTool(dispatch, key, state)}
+      />
     </div>
   );
 }
@@ -325,7 +337,8 @@ export function MobileDock({ state, dispatch }) {
       {sheet === "tools" && (
         <BottomSheet onClose={closeSheet}>
           <div className="text-[#f8e7c6] font-bold text-[14px] mb-3">Tools</div>
-          <ToolsGrid
+          <ToolStrip
+            layout="sheet"
             tools={state.tools}
             toolPending={state.toolPending}
             fertilizerActive={state.fertilizerActive}
