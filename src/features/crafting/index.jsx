@@ -262,7 +262,16 @@ export default function CraftingScreen({ state, dispatch }) {
   }, [craftingTab, activeTab, dispatch]);
 
   const setActiveTab = (s) => dispatch({ type: "SET_VIEW", view: "crafting", craftingTab: s });
-  const stationRecipes = Object.entries(RECIPES).filter(([, r]) => r.station === activeTab);
+  // RECIPES contains each recipe under multiple keys (canonical `rec_*` plus
+  // legacy item-name aliases like `axe` for `rec_axe`). Insertion order puts
+  // canonical keys first, so deduping by recipe identity keeps the `rec_*` key.
+  const seenRecipes = new Set();
+  const stationRecipes = Object.entries(RECIPES).filter(([, r]) => {
+    if (!r || typeof r !== "object" || r.station !== activeTab) return false;
+    if (seenRecipes.has(r)) return false;
+    seenRecipes.add(r);
+    return true;
+  });
   const meta = STATION_META[activeTab];
 
   return (
