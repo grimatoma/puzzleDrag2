@@ -44,6 +44,7 @@ export const KNOWN_MODALS = new Set([
   "menu",
   "boss",
   "tutorial",
+  "debug",
 ]);
 
 // Short alias used in URLs in place of the longer camelCase view key.
