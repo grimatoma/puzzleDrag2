@@ -127,13 +127,6 @@ function MainTab({ state, dispatch }) {
           ⚙ Settings
         </ActionBtn>
 
-        <ActionBtn
-          variant="ember"
-          onClick={() => { window.location.href = `${import.meta.env.BASE_URL}b/`; }}
-        >
-          ⚖️ Balance Manager
-        </ActionBtn>
-
         <ActionBtn onClick={() => dispatch({ type: 'SETTINGS/SET_TAB', tab: 'about' })}>
           ℹ About
         </ActionBtn>
