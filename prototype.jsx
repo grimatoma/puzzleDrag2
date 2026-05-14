@@ -238,7 +238,7 @@ export default function App() {
 
       {/* Vol II §06 Tablet — aspect-ratio guard now only kicks in at desktop
        *  widths (≥1024). Below that the card fills the viewport. */}
-      <div className="relative w-full max-w-[1280px] min-[1024px]:aspect-[5/4] max-h-[100dvh] max-[1023px]:max-h-none max-[1023px]:w-full max-[1023px]:h-full max-[1023px]:max-w-none bg-[#3a2715] rounded-2xl max-[1023px]:rounded-none overflow-hidden shadow-2xl border border-white/10 flex flex-col" style={{ zIndex: 1 }}>
+      <div data-game-host="true" className="relative w-full max-w-[1280px] min-[1024px]:aspect-[5/4] max-h-[100dvh] max-[1023px]:max-h-none max-[1023px]:w-full max-[1023px]:h-full max-[1023px]:max-w-none bg-[#3a2715] rounded-2xl max-[1023px]:rounded-none overflow-hidden shadow-2xl border border-white/10 flex flex-col" style={{ zIndex: 1 }}>
         {/* HUD bar */}
         <Hud state={state} dispatch={dispatch} />
 

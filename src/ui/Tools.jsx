@@ -1,11 +1,10 @@
 import { useEffect, useRef, useState } from "react";
-import { createPortal } from "react-dom";
 import { useTooltip, Tooltip } from "./Tooltip.jsx";
 import { CompactOrders } from "./Inventory.jsx";
 import { getPhaserScene } from "../phaserBridge.js";
 import IconCanvas, { hasIcon } from "./IconCanvas.jsx";
-import Icon from "./Icon.jsx";
 import Button from "./primitives/Button.jsx";
+import BottomSheet from "./primitives/BottomSheet.jsx";
 import TabBar from "./primitives/TabBar.jsx";
 import { TOOL_CATALOG, TOOL_BY_KEY, TOOL_CATEGORIES, visibleTools, isTapTargetTool } from "./toolRegistry.js";
 
@@ -261,22 +260,6 @@ export function ToolsGrid(props) {
   return <ToolStrip layout="grid" {...props} />;
 }
 
-function BottomSheet({ onClose, children }) {
-  return createPortal(
-    <div className="fixed inset-0 z-50 flex flex-col justify-end" onClick={onClose}>
-      <div className="absolute inset-0 bg-black/50" />
-      <div
-        className="relative bg-[#3a2715] border-t-2 border-[#b28b62] rounded-t-2xl p-4 max-h-[60dvh] overflow-y-auto"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="w-10 h-1 bg-[#b28b62] rounded-full mx-auto mb-4" />
-        {children}
-      </div>
-    </div>,
-    document.body
-  );
-}
-
 /**
  * Portrait phone tool bar: a single horizontal scroll strip showing every
  * owned tool plus the four field starters so the player always has a base set.
@@ -337,30 +320,24 @@ export function MobileDock({ state, dispatch }) {
     <>
       <TabBar items={items} density="dock" testId="mobile-dock" />
 
-      {sheet === "tools" && (
-        <BottomSheet onClose={closeSheet}>
-          <div className="text-[#f8e7c6] font-bold text-[14px] mb-3">Tools</div>
-          <ToolStrip
-            layout="sheet"
-            tools={state.tools}
-            toolPending={state.toolPending}
-            fertilizerActive={state.fertilizerActive}
-            onUse={(key) => {
-              dispatchUseTool(dispatch, key, state);
-              // Keep the sheet open for tap-target tools so the player sees the
-              // armed state, then can dismiss; close immediately for instants.
-              if (!isTapTargetTool(key)) closeSheet();
-            }}
-          />
-        </BottomSheet>
-      )}
+      <BottomSheet open={sheet === "tools"} onClose={closeSheet} title="Tools">
+        <ToolStrip
+          layout="sheet"
+          tools={state.tools}
+          toolPending={state.toolPending}
+          fertilizerActive={state.fertilizerActive}
+          onUse={(key) => {
+            dispatchUseTool(dispatch, key, state);
+            // Keep the sheet open for tap-target tools so the player sees the
+            // armed state, then can dismiss; close immediately for instants.
+            if (!isTapTargetTool(key)) closeSheet();
+          }}
+        />
+      </BottomSheet>
 
-      {sheet === "orders" && (
-        <BottomSheet onClose={closeSheet}>
-          <div className="text-[#f8e7c6] font-bold text-[14px] mb-3">Orders</div>
-          <CompactOrders orders={state.orders} inventory={state.inventory} dispatch={dispatch} />
-        </BottomSheet>
-      )}
+      <BottomSheet open={sheet === "orders"} onClose={closeSheet} title="Orders">
+        <CompactOrders orders={state.orders} inventory={state.inventory} dispatch={dispatch} />
+      </BottomSheet>
     </>
   );
 }
