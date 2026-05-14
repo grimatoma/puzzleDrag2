@@ -3,6 +3,7 @@ import { BIOMES, EXPEDITION_FOOD_TURNS, MIN_EXPEDITION_TURNS } from "../../const
 import { expeditionTurnsForFood, expeditionTurnsFromSupply } from "../../features/zones/data.js";
 import IconCanvas from "../IconCanvas.jsx";
 import Icon from "../Icon.jsx";
+import Stepper from "../primitives/Stepper.jsx";
 import { FOOD_LABELS } from "../townData.js";
 
 export function BiomeEntryModal({ biomeKey, state, dispatch, onClose }) {
@@ -85,11 +86,16 @@ export function BiomeEntryModal({ biomeKey, state, dispatch, onClose }) {
                           <span className="text-[10px] text-[#8a6a45] leading-none mt-0.5">{f.per} turns / ration</span>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <button onClick={() => setCount(f.key, n - 1, f.have)} className="w-6 h-6 flex items-center justify-center bg-[#b28b62] text-white rounded font-bold text-[14px]">-</button>
-                        <span className="min-w-[2.5rem] text-center font-bold text-[#5a3a2a] text-[13px]">{n} / {f.have}</span>
-                        <button onClick={() => setCount(f.key, n + 1, f.have)} className="w-6 h-6 flex items-center justify-center bg-[#b28b62] text-white rounded font-bold text-[14px]">+</button>
-                      </div>
+                      {/* Vol II §02 — was 24×24 (failed tap-target floor); */}
+                      {/* Stepper buttons are 32×32 with long-press accelerator. */}
+                      <Stepper
+                        value={n}
+                        min={0}
+                        max={f.have}
+                        onChange={(v) => setCount(f.key, v, f.have)}
+                        suffix={` / ${f.have}`}
+                        ariaLabel={`Pack ${FOOD_LABELS[f.key] || f.key}`}
+                      />
                     </div>
                   );
                 })}
