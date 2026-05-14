@@ -1,5 +1,5 @@
 /**
- * Phase 7.2 — 5-tier almanac with structural reward at tier 5
+ * Phase 7.2 — almanac with the original five-tier spine plus later tiers
  * Tests run RED first; implementation in src/features/almanac/data.js
  */
 import { describe, it, expect } from "vitest";
@@ -19,8 +19,8 @@ describe("7.2 XP_PER_LEVEL", () => {
 });
 
 describe("7.2 ALMANAC_TIERS", () => {
-  it("Phase 7 ships exactly 5 tiers", () => {
-    expect(ALMANAC_TIERS.length).toBe(5);
+  it("ships the extended 10-tier almanac track", () => {
+    expect(ALMANAC_TIERS.length).toBe(10);
   });
 
   it("tier 1 = +50 coins at level 1", () => {

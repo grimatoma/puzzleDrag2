@@ -104,8 +104,10 @@ describe("utils — formatters and helpers", () => {
 
   it("currentCap: granary built → high cap; otherwise base cap", () => {
     const high = currentCap({ built: { granary: true } });
+    const highNested = currentCap({ mapCurrent: "home", built: { home: { granary: true } } });
     const low = currentCap({ built: {} });
     expect(high).toBeGreaterThan(low);
+    expect(highNested).toBe(high);
     // null-safe
     expect(currentCap(undefined)).toBe(low);
     expect(currentCap(null)).toBe(low);

@@ -24,7 +24,7 @@ function effectiveRecipeInputs(state, recipeKey, recipeInputs) {
 }
 
 /** Can the player pay for `recipeKey` right now (station built + inputs in hand)? */
-function canPayForRecipe(state, recipeKey) {
+export function canPayForRecipe(state, recipeKey) {
   const recipe = RECIPES[recipeKey];
   if (!recipe) return null;
   const built = locBuilt(state);

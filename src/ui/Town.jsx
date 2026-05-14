@@ -1112,7 +1112,6 @@ export function TownView({ state, dispatch }) {
   const locationName = displayZoneName(state, state.mapCurrent) || townConfig.name;
   const hill1Path = locConfig?.hill1Path ?? townConfig.hill1Path;
   const hill2Path = locConfig?.hill2Path ?? townConfig.hill2Path;
-  const roadPath = locConfig?.roadPath ?? townConfig.roadPath;
   const cc = (a) => biomeVariant === 'mine'
     ? `rgba(180,190,200,${(a * 0.55).toFixed(2)})`
     : `rgba(255,255,255,${a})`;

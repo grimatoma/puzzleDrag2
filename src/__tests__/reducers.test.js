@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { gameReducer, initialState } from "../state.js";
 import { reduce as bossReduce } from "../features/boss/slice.js";
+import { canPayForRecipe } from "../features/crafting/slice.js";
 import { seedQuestIdSeq } from "../features/quests/slice.js";
 import { resourceGainForChain } from "../utils.js";
 
@@ -174,8 +175,9 @@ describe("USE_TOOL", () => {
 // ─── boss/Ember Drake ─────────────────────────────────────────────────────────
 
 describe("boss Ember Drake — CRAFTING/CRAFT_RECIPE", () => {
-  const drakeState = () => minState({
+  const drakeState = (overrides = {}) => minState({
     boss: { key: "ember_drake", resource: "mine_ingot", progress: 0, targetCount: 5, turnsLeft: 5, name: "Ember Drake", emoji: "🔥", goal: "", flavor: "", minChain: null },
+    ...overrides,
   });
 
   it("bread does not increment Drake progress", () => {
@@ -184,7 +186,12 @@ describe("boss Ember Drake — CRAFTING/CRAFT_RECIPE", () => {
   });
 
   it("iron_hinge (forge output) increments Drake progress", () => {
-    const s = gameReducer(drakeState(), { type: "CRAFTING/CRAFT_RECIPE", payload: { key: "iron_hinge" } });
+    const ready = drakeState({
+      built: { forge: true },
+      inventory: { mine_ingot: 2, mine_coke: 1 },
+    });
+    expect(canPayForRecipe(ready, "rec_iron_hinge")).toBeTruthy();
+    const s = gameReducer(ready, { type: "CRAFTING/CRAFT_RECIPE", payload: { key: "rec_iron_hinge" } });
     expect(s.boss.progress).toBe(1);
   });
 });

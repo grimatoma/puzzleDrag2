@@ -4,8 +4,9 @@ import {
   effectiveBeat, effectiveChoices, allBeatIds, findIncomingChoice, isDraftBeat,
   deriveGraph, visibleSubset, focusedChainSubset, collapsibleIds, cloneDraft, emptyDraft,
   collectStoryWarnings, renameDraftBeatInDraft, storySlicesEqual, validateDraftBeatId,
-  isBeatSuppressed, directionalNodeId,
+  isBeatSuppressed, directionalNodeId, knownStoryFlagIds,
 } from "../storyEditor/shared.jsx";
+import { applyPreviewEffects, blankPreviewState, firstTriggeredByPreviewState, previewStateSummary } from "../storyEditor/previewModel.js";
 
 const draftWith = (story) => ({ ...emptyDraft(), story });
 
@@ -227,5 +228,57 @@ describe("story editor draft utilities", () => {
     expect(warnings.act1_arrival.some((w) => w.type === "missingBeat" && w.target === "missing_beat")).toBe(true);
     expect(warnings.act1_arrival.some((w) => w.type === "unknownFlag" && w.flag === "unknown_flag")).toBe(true);
     expect(warnings.branch_a.some((w) => w.type === "unknownFlag" && w.flag === "typo_flag")).toBe(true);
+  });
+
+  it("includes draft-created flags in editor validation and pickers", () => {
+    const d = { ...emptyDraft(), flags: { new: [{ id: "custom_oath", label: "Custom Oath" }] } };
+    expect(knownStoryFlagIds(d).has("custom_oath")).toBe(true);
+    const withTrigger = draftWith({ newBeats: [{ id: "branch_a", trigger: { type: "flag_set", flag: "custom_oath" } }] });
+    withTrigger.flags = d.flags;
+    expect(collectStoryWarnings(withTrigger).branch_a ?? []).toEqual([]);
+  });
+});
+
+describe("story editor preview model", () => {
+  it("applies choice outcomes using runtime story semantics", () => {
+    const sim = blankPreviewState({ wren: {}, mira: {} });
+    const next = applyPreviewEffects(
+      sim,
+      { onComplete: { setFlag: ["beat_seen"] } },
+      { outcome: {
+        setFlag: ["a", "b"],
+        clearFlag: "c",
+        bondDelta: { npc: "wren", amount: 8 },
+        resources: { wood_log: 3 },
+        coins: 12,
+        embers: 2,
+        coreIngots: 1,
+        gems: 4,
+        heirlooms: { crown: 1 },
+      } },
+    );
+    expect(next.flags).toMatchObject({ beat_seen: true, a: true, b: true, c: false });
+    expect(next.bonds.wren).toBe(10);
+    expect(next.resources.wood_log).toBe(3);
+    expect(next.coins).toBe(12);
+    expect(next.embers).toBe(2);
+    expect(next.coreIngots).toBe(1);
+    expect(next.gems).toBe(4);
+    expect(next.heirlooms.crown).toBe(1);
+  });
+
+  it("finds downstream beats unlocked by preview state", () => {
+    const d = draftWith({
+      newBeats: [
+        { id: "source", choices: [{ id: "go", label: "Go", outcome: { setFlag: "custom_oath" } }] },
+        { id: "flag_followup", title: "Flag", trigger: { type: "flag_set", flag: "custom_oath" } },
+        { id: "resource_followup", title: "Resource", trigger: { type: "resource_total", key: "wood_log", amount: 3 } },
+      ],
+    });
+    const flagged = applyPreviewEffects(blankPreviewState(), null, { outcome: { setFlag: "custom_oath" } });
+    expect(firstTriggeredByPreviewState(flagged, d, new Set(["source"]))).toBe("flag_followup");
+    const resourced = applyPreviewEffects(blankPreviewState(), null, { outcome: { resources: { wood_log: 3 } } });
+    expect(firstTriggeredByPreviewState(resourced, d, new Set(["source", "flag_followup"]))).toBe("resource_followup");
+    expect(previewStateSummary(resourced).join(" ")).toContain("wood_log");
   });
 });

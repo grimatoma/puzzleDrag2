@@ -29,6 +29,7 @@ export const KNOWN_VIEWS = new Set([
   "quests",
   "crafting",
   "cartography",
+  "chronicle",
   "townsfolk",
   "tileCollection",
   "achievements",

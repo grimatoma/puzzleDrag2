@@ -106,6 +106,7 @@ export default function PhaserMap({
   // Keep the onNodeTap handler current so the scene event listener always
   // dispatches to the latest closure.
   const onNodeTapRef = useRef(onNodeTap);
+  // eslint-disable-next-line react-hooks/immutability -- imperative Phaser bridge reads the latest React callback.
   useEffect(() => { onNodeTapRef.current = onNodeTap; }, [onNodeTap]);
 
   // Push payload / tapped updates into the scene.

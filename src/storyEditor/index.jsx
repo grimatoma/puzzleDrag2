@@ -21,7 +21,7 @@ import {
   cloneDraft, deriveGraph, visibleSubset, focusedChainSubset, collapsibleIds,
   readCollapsed, writeCollapsed, readNodePositions, writeNodePositions, DRAFT_LANE_Y,
   branchingRowCenterY, MY, NH, Btn, directionalNodeId,
-  collectStoryWarnings, renameDraftBeatInDraft, storySlicesEqual,
+  collectStoryWarnings, renameDraftBeatInDraft, storySlicesEqual, DRAFT_BEAT_ID_RE,
 } from "./shared.jsx";
 import Inspector from "./Inspector.jsx";
 import PreviewModal from "./PreviewModal.jsx";
@@ -38,7 +38,9 @@ function readInspectorCollapsed() {
 
 function writeInspectorCollapsed(v) {
   try { localStorage.setItem(INSPECTOR_COLLAPSED_KEY, v ? "1" : "0"); }
-  catch {}
+  catch {
+    // localStorage can be disabled in private/browser-test contexts.
+  }
 }
 
 function readLeftRailCollapsed() {
@@ -48,7 +50,9 @@ function readLeftRailCollapsed() {
 
 function writeLeftRailCollapsed(v) {
   try { localStorage.setItem(LEFT_RAIL_COLLAPSED_KEY, v ? "1" : "0"); }
-  catch {}
+  catch {
+    // localStorage can be disabled in private/browser-test contexts.
+  }
 }
 
 function readGraphViewMode() {
@@ -58,7 +62,9 @@ function readGraphViewMode() {
 
 function writeGraphViewMode(v) {
   try { localStorage.setItem(GRAPH_VIEW_MODE_KEY, v === "full" ? "full" : "chain"); }
-  catch {}
+  catch {
+    // localStorage can be disabled in private/browser-test contexts.
+  }
 }
 
 function builtInSideSubtreeIds(startId) {
@@ -519,16 +525,15 @@ function LeftRail({ draft, selectedId, onlineIds, collapsed, onToggleCollapsed, 
   );
 }
 
-function MiniMap({ nodes, bounds, selectedId, zoom, pan, canvasRef, onPanTo }) {
+function MiniMap({ nodes, bounds, selectedId, zoom, pan, canvasSize, onPanTo }) {
   const W = 180, H = 112, PAD = 8;
   const activePointerId = useRef(null);
   const scale = Math.min((W - PAD * 2) / Math.max(1, bounds.w), (H - PAD * 2) / Math.max(1, bounds.h));
-  const rect = canvasRef.current ? canvasRef.current.getBoundingClientRect() : null;
-  const view = rect ? {
+  const view = canvasSize ? {
     x: -pan.x / Math.max(zoom, 0.01),
     y: -pan.y / Math.max(zoom, 0.01),
-    w: rect.width / Math.max(zoom, 0.01),
-    h: rect.height / Math.max(zoom, 0.01),
+    w: canvasSize.width / Math.max(zoom, 0.01),
+    h: canvasSize.height / Math.max(zoom, 0.01),
   } : null;
   const toSvg = (x, y) => ({ x: PAD + x * scale, y: PAD + y * scale });
   const centerAt = (e) => {
@@ -614,6 +619,7 @@ export default function StoryEditorApp() {
   const [savedNotice, setSavedNotice] = useState("");
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 20, y: 20 });
+  const [canvasSize, setCanvasSize] = useState(null);
   const [dragging, setDragging] = useState(false);
   const [collapsed, setCollapsed] = useState(() => readCollapsed());
   const [previewBeatId, setPreviewBeatId] = useState(null);
@@ -778,6 +784,22 @@ export default function StoryEditorApp() {
   useEffect(() => {
     const el = canvasRef.current;
     if (!el) return;
+    const update = () => {
+      const rect = el.getBoundingClientRect();
+      setCanvasSize({ width: rect.width, height: rect.height });
+    };
+    update();
+    const ro = typeof ResizeObserver !== "undefined" ? new ResizeObserver(update) : null;
+    ro?.observe(el);
+    window.addEventListener("resize", update);
+    return () => {
+      ro?.disconnect();
+      window.removeEventListener("resize", update);
+    };
+  }, []);
+  useEffect(() => {
+    const el = canvasRef.current;
+    if (!el) return;
     const clampZoom = z => Math.min(2, Math.max(0.3, z));
     const onTouchStart = e => {
       if (e.touches.length === 1) {
@@ -884,8 +906,10 @@ export default function StoryEditorApp() {
   const createDraftBeat = useCallback((opts = {}) => {
     // pick a free id from the current snapshot (single-user UI — no real race),
     // re-checked inside the updater for paranoia.
-    const base = (opts.idHint && /^[a-z0-9_]+$/i.test(opts.idHint)) ? opts.idHint
+    const rawBase = (opts.idHint && /^[a-z0-9_]+$/i.test(opts.idHint)) ? opts.idHint
       : (opts.queuedBy ? `${opts.queuedBy.beatId}_${opts.queuedBy.choiceId}` : "side_beat");
+    const cleanedBase = rawBase.toLowerCase().replace(/[^a-z0-9_]+/g, "_").replace(/^_+|_+$/g, "");
+    const base = DRAFT_BEAT_ID_RE.test(cleanedBase) ? cleanedBase : `branch_${cleanedBase || "beat"}`;
     const pickFree = (d) => {
       const taken = new Set(allBeatIds(d));
       if (!taken.has(base)) return base;
@@ -1152,7 +1176,7 @@ export default function StoryEditorApp() {
             <button onClick={() => { setZoom(1); setPan({ x: 20, y: 20 }); }} style={{ width: 28, height: 28, borderRadius: 5, border: `1px solid ${C.border}`, background: C.parchment, color: C.inkSubtle, font: "400 9px/1 system-ui", cursor: "pointer" }}>↺</button>
             <button onClick={fitToScreen} title="Fit visible cards to screen" style={{ width: 36, height: 28, borderRadius: 5, border: `1px solid ${C.border}`, background: C.parchment, color: C.inkSubtle, font: "700 9px/1 system-ui", cursor: "pointer" }}>Fit</button>
           </div>
-          <MiniMap nodes={view.nodes} bounds={graph.bounds} selectedId={selectedId} zoom={zoom} pan={pan} canvasRef={canvasRef} onPanTo={panToWorld} />
+          <MiniMap nodes={view.nodes} bounds={graph.bounds} selectedId={selectedId} zoom={zoom} pan={pan} canvasSize={canvasSize} onPanTo={panToWorld} />
 
           <div style={{ position: "absolute", transform: `translate(${pan.x}px,${pan.y}px) scale(${zoom})`, transformOrigin: "0 0", width: graph.bounds.w, height: graph.bounds.h }}>
             {ACT_LABELS.map((al) => (

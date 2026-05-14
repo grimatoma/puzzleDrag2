@@ -1,4 +1,4 @@
-import { BIOMES, BUILDINGS, NPCS, RECIPES, DAILY_REWARDS, MINE_ENTRY_TIERS, HARBOR_ENTRY_TIERS, MIN_EXPEDITION_TURNS, CAPPED_RESOURCES, UPGRADE_THRESHOLDS, SAVE_SCHEMA_VERSION, ITEMS, CRAFT_GEM_SKIP_COST } from "./constants.js";
+import { BIOMES, BUILDINGS, NPCS, RECIPES, DAILY_REWARDS, MIN_EXPEDITION_TURNS, CAPPED_RESOURCES, UPGRADE_THRESHOLDS, SAVE_SCHEMA_VERSION, ITEMS, CRAFT_GEM_SKIP_COST } from "./constants.js";
 import { locBuilt as _locBuilt } from "./locBuilt.js";
 import { sellPriceFor as _sellPriceFor } from "./features/market/pricing.js";
 import { tryClearRatChain } from "./features/farm/rats.js";
@@ -40,7 +40,7 @@ import * as zones from "./features/zones/slice.js";
 import * as workers from "./features/workers/slice.js";
 import * as boons from "./features/boons/slice.js";
 import { boonEffectMult } from "./features/boons/data.js";
-import { ZONES, settlementFoundingCost, isSettlementFounded, displayZoneName, grantEarnedHearthTokens, isOldCapitalUnlocked, isExpeditionFood, expeditionTurnsFromSupply, settlementTypeForZone, resolveBiomeChoice, keeperReadyFor, completedSettlementCount, DEFAULT_ZONE, turnBudgetForZone, zoneBaseTurns, settlementHazards } from "./features/zones/data.js";
+import { ZONES, settlementFoundingCost, isSettlementFounded, displayZoneName, grantEarnedHearthTokens, isOldCapitalUnlocked, isExpeditionFood, expeditionTurnsFromSupply, settlementTypeForZone, resolveBiomeChoice, keeperReadyFor, completedSettlementCount, DEFAULT_ZONE, turnBudgetForZone, settlementHazards } from "./features/zones/data.js";
 import { keeperForType, keeperPathInfo } from "./keepers.js";
 import { FIRE_HAZARD_ENABLED } from "./featureFlags.js";
 import { loadSavedState, persistState, clearSave } from "./state/persistence.js";
@@ -459,7 +459,8 @@ function evaluateAndApplyStoryBeat(state, event) {
   if (result) next = storySlice.reduce(next, { type: "STORY/BEAT_FIRED", payload: result });
   if (next.pendingBossKey) {
     const bossKey = next.pendingBossKey;
-    const { pendingBossKey, ...withoutPendingBoss } = next;
+    const withoutPendingBoss = { ...next };
+    delete withoutPendingBoss.pendingBossKey;
     next = boss.reduce(withoutPendingBoss, { type: "BOSS/TRIGGER", bossKey });
   }
   if (result && next.story?.act !== actBefore) {
@@ -1634,8 +1635,9 @@ function coreReducer(state, action) {
     }
     case "CRAFTING/CRAFT_RECIPE": {
       // Story: crafted items can trigger story beats (forwarded to next action handlers below)
-      const craftKey = action.payload?.key;
+      const craftKey = action.recipeKey ?? action.payload?.key;
       if (!craftKey) return state;
+      if (!crafting.canPayForRecipe(state, craftKey)) return state;
       return evaluateAndApplyStoryBeat(state, { type: "craft_made", item: craftKey, count: 1 });
     }
     case "CRAFTING/CLAIM_CRAFT": {
@@ -2327,6 +2329,14 @@ const ALWAYS_RUN_SLICES = new Set([
   "USE_TOOL",  // magic tool variants (hourglass, magic_seed, magic_fertilizer) handled in portal/slice
 ]);
 
+function shouldAlwaysRunSlices(state, action) {
+  if (action.type === "CRAFTING/CRAFT_RECIPE") {
+    const craftKey = action.recipeKey ?? action.payload?.key;
+    return !!crafting.canPayForRecipe(state, craftKey);
+  }
+  return ALWAYS_RUN_SLICES.has(action.type);
+}
+
 function rawReducer(state, action) {
   // 1. Core reducer mutates the canonical game state for known actions.
   // 2. Then every feature slice sees the action against the post-core state,
@@ -2340,7 +2350,7 @@ function rawReducer(state, action) {
   const afterCore = coreReducer(state, action);
   const needSlices = afterCore !== state
     || SLICE_PRIMARY_ACTIONS.has(action.type)
-    || ALWAYS_RUN_SLICES.has(action.type);
+    || shouldAlwaysRunSlices(state, action);
   if (!needSlices) return state;
   const afterSlices = slices.reduce((s, slice) => slice.reduce(s, action), afterCore);
   // Preserve referential equality for true no-ops: if nothing changed, return original state.

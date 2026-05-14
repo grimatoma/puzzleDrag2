@@ -122,6 +122,13 @@ describe("applyBeatResult — every side-effect branch", () => {
     expect(r.story.flags.foo).toBe(true);
   });
 
+  it("setFlag accepts multiple completion flags", () => {
+    const state = { story: { ...INITIAL_STORY_STATE } };
+    const r = applyBeatResult(state, { setFlag: ["foo", "bar"] });
+    expect(r.story.flags.foo).toBe(true);
+    expect(r.story.flags.bar).toBe(true);
+  });
+
   it("spawnNPC adds to roster + seeds bond at 5 (idempotent)", () => {
     const state = { npcs: { roster: [], bonds: {} } };
     const r1 = applyBeatResult(state, { spawnNPC: "mira" });

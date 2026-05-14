@@ -311,6 +311,10 @@ export function firedFlagKey(beatId) {
   return `_fired_${beatId}`;
 }
 
+function flagList(value) {
+  return Array.isArray(value) ? value.filter(Boolean) : (value ? [value] : []);
+}
+
 /**
  * Returns true if the given beat has been completed.
  * Beats with an explicit onComplete.setFlag use that flag.
@@ -323,7 +327,8 @@ export function isBeatComplete(state, beatId) {
   if (!beat) return false;
   // Check explicit flag first; fall back to auto-generated fired marker.
   const explicitKey = beat.onComplete?.setFlag;
-  if (explicitKey) return !!state.flags[explicitKey];
+  const explicitFlags = flagList(explicitKey);
+  if (explicitFlags.length > 0) return explicitFlags.some((flag) => !!state.flags[flag]);
   return !!state.flags[firedFlagKey(beatId)];
 }
 
@@ -408,8 +413,9 @@ export function evaluateStoryTriggers(state, event, totals = {}, opts = {}) {
   if (!next.trigger || !conditionMatches(next.trigger, event, totals, state.flags ?? {})) return null;
 
   const newFlags = { ...state.flags };
-  if (next.onComplete?.setFlag) {
-    newFlags[next.onComplete.setFlag] = true;
+  const setFlags = flagList(next.onComplete?.setFlag);
+  if (setFlags.length > 0) {
+    for (const flag of setFlags) newFlags[flag] = true;
   } else {
     // Beats without an explicit flag get an auto-generated fired marker
     // so they are never re-triggered.
@@ -428,8 +434,9 @@ const STATE_CONDITION_TYPES = new Set(["resource_total", "resource_total_multi",
 
 /** True if a side beat has already fired (by its onComplete.setFlag or fired marker). */
 function sideBeatFired(flags, beat) {
-  const key = beat.onComplete?.setFlag ?? firedFlagKey(beat.id);
-  return !!flags?.[key];
+  const explicitFlags = flagList(beat.onComplete?.setFlag);
+  if (explicitFlags.length > 0) return explicitFlags.some((flag) => !!flags?.[flag]);
+  return !!flags?.[firedFlagKey(beat.id)];
 }
 
 function sideTriggerMatches(beat, event, gameState) {
@@ -451,8 +458,12 @@ function sideTriggerMatches(beat, event, gameState) {
 
 function fireSideBeat(beat, flags) {
   const newFlags = { ...flags };
-  if (beat.onComplete?.setFlag) newFlags[beat.onComplete.setFlag] = true;
-  else if (!beat.repeat) newFlags[firedFlagKey(beat.id)] = true; // repeat beats keep no permanent marker
+  const setFlags = flagList(beat.onComplete?.setFlag);
+  if (setFlags.length > 0) {
+    for (const flag of setFlags) newFlags[flag] = true;
+  } else if (!beat.repeat) {
+    newFlags[firedFlagKey(beat.id)] = true; // repeat beats keep no permanent marker
+  }
   const repeatCooldown = beat.repeat && Number.isFinite(beat.repeatCooldown) && beat.repeatCooldown > 0 ? Math.trunc(beat.repeatCooldown) : undefined;
   return { firedBeat: beat, newFlags, sideEffects: beat.onComplete ?? {}, repeatCooldown };
 }
@@ -498,12 +509,16 @@ export function applyBeatResult(gameState, sideEffects) {
   let next = { ...gameState };
 
   // --- setFlag ---
-  if (sideEffects.setFlag) {
+  const setFlags = flagList(sideEffects.setFlag);
+  if (setFlags.length > 0) {
     next = {
       ...next,
       story: {
         ...(next.story ?? {}),
-        flags: { ...(next.story?.flags ?? {}), [sideEffects.setFlag]: true },
+        flags: {
+          ...(next.story?.flags ?? {}),
+          ...Object.fromEntries(setFlags.map((flag) => [flag, true])),
+        },
       },
     };
   }

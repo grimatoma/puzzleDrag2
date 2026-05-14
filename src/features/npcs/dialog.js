@@ -499,7 +499,13 @@ export function pickDialog(npcId, season, bond, rng, state = null) {
   if (state) {
     const reactivePool = DIALOG_POOLS?.[npcId]?.reactive;
     if (Array.isArray(reactivePool)) {
-      const active = reactivePool.filter(entry => entry.req(state));
+      const active = reactivePool.filter(entry => {
+        try {
+          return entry.req(state);
+        } catch {
+          return false;
+        }
+      });
       // 30% chance to pick a reactive line if any are active
       const roll = typeof rng === "function" ? rng() : Math.random();
       if (active.length > 0 && roll < 0.35) {
@@ -510,7 +516,13 @@ export function pickDialog(npcId, season, bond, rng, state = null) {
   }
 
   const bandName = bondBand(bond).name;
-  const pool = DIALOG_POOLS?.[npcId]?.[season]?.[bandName];
+  const npcPools = DIALOG_POOLS?.[npcId];
+  let pool = npcPools?.[season]?.[bandName];
+  if ((!Array.isArray(pool) || pool.length === 0) && !season && npcPools) {
+    pool = Object.entries(npcPools)
+      .filter(([key]) => key !== "reactive")
+      .flatMap(([, seasonalPools]) => seasonalPools?.[bandName] ?? []);
+  }
   if (!Array.isArray(pool) || pool.length === 0) {
     const name = NPC_DATA[npcId]?.displayName ?? npcId;
     console.warn(`[dialog] missing ${npcId}.${season}.${bandName} — falling back`);

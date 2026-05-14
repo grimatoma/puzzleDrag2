@@ -439,6 +439,11 @@ function WinBeat({ beat, lines, sceneBg, onContinue }) {
 export function StoryModal({ state, dispatch }) {
   const beat = state.story?.queuedBeat;
   const [lineStep, setLineStep] = useState(0);
+  const [lastBeatId, setLastBeatId] = useState(beat?.id || "");
+  if ((beat?.id || "") !== lastBeatId) {
+    setLastBeatId(beat?.id || "");
+    setLineStep(0);
+  }
 
   const continueOnly = beat ? beatIsContinueOnly(beat) : false;
   const hasPrompt = !!(beat?.prompt && typeof beat.prompt === "object");
@@ -451,7 +456,6 @@ export function StoryModal({ state, dispatch }) {
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
   }, [beat, hasPrompt, continueOnly, dispatch]);
-  useEffect(() => { setLineStep(0); }, [beat?.id]);
 
   if (!beat) return null;
 

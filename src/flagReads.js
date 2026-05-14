@@ -2,6 +2,9 @@
 // references directly; this map covers guards in reducers and UI that are not
 // visible from the registry or beat data.
 export const FLAG_READS = Object.freeze({
+  hearth_lit:           [{ where: "src/features/npcs/dialog.js", note: "Wren reactive town dialog" }, { where: "src/ui/Town.jsx", note: "ambient Hearth building state" }],
+  first_order:          [{ where: "src/features/npcs/dialog.js", note: "Tomas reactive town dialog" }],
+  granary_built:        [{ where: "src/features/npcs/dialog.js", note: "Wren reactive town dialog" }],
   festival_announced:   [{ where: "src/story.js", note: "act3_win trigger guard" }, { where: "src/ui/Hud.jsx", note: "festival larder progress HUD" }],
   isWon:                [{ where: "src/ui/Hud.jsx", note: "win banner + sandbox affordances" }],
   mine_unlocked:        [{ where: "src/state.js", note: "gates mine-only actions" }],

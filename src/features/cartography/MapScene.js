@@ -1,5 +1,5 @@
 import Phaser from "phaser";
-import { MAP_NODES, MAP_EDGES, REGIONS, NODE_COLORS } from "./data.js";
+import { MAP_NODES, MAP_EDGES, REGIONS } from "./data.js";
 import { drawIcon } from "../../textures/iconRegistry.js";
 import { isAdjacent } from "./slice.js";
 
@@ -430,17 +430,13 @@ export class MapScene extends Phaser.Scene {
     const { ax, ay, bx, by } = endpoints(na, nb);
     const { mx, my } = midpoint(ax, ay, bx, by, view);
 
-    let color = 0x8a6a50, alpha = 0.20, width = 2;
-    let dash = [3, 7];
-    if (status === "traveled") {
-      color = 0x6a3a18; alpha = 0.95; width = 4; dash = null;
-    } else if (status === "unlockable") {
-      color = 0xc87a28; alpha = 0.92; width = 3; dash = [10, 6];
-    } else if (status === "discovered") {
-      color = 0x8a6a50; alpha = 0.55; width = 2; dash = [6, 6];
-    } else {
-      color = 0x8a6a50; alpha = 0.16; width = 2; dash = [2, 8];
-    }
+    const styleByStatus = {
+      traveled: { color: 0x6a3a18, alpha: 0.95, width: 4, dash: null },
+      unlockable: { color: 0xc87a28, alpha: 0.92, width: 3, dash: [10, 6] },
+      discovered: { color: 0x8a6a50, alpha: 0.55, width: 2, dash: [6, 6] },
+      hidden: { color: 0x8a6a50, alpha: 0.16, width: 2, dash: [2, 8] },
+    };
+    const { color, alpha, width, dash } = styleByStatus[status] || styleByStatus.hidden;
 
     line.lineStyle(width, color, alpha);
     if (dash) {
@@ -745,7 +741,7 @@ export class MapScene extends Phaser.Scene {
       this.drawEdge(view, status);
     }
 
-    for (const [id, view] of this.nodeViews) {
+    for (const [, view] of this.nodeViews) {
       const node = view.node;
       const status = computeStatus(node, visited, discovered, current, playerLevel, oldCapitalUnlocked);
       this.paintNodeStatus(view, status, current, founded, keeperPaths);

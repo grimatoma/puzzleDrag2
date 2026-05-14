@@ -298,11 +298,6 @@ export class GameScene extends Phaser.Scene {
     return base;
   }
 
-  /** Camera shake helper. */
-  _shake(duration, intensity) {
-    this.cameras.main.shake(duration, intensity, false);
-  }
-
   /** AAA Juice: Particle burst for resource collection. */
   emitCollectParticles(x, y, colorStr, count = 10) {
     const color = Phaser.Display.Color.HexStringToColor(colorStr).color;

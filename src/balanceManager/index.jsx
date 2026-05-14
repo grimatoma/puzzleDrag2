@@ -92,7 +92,7 @@ const TABS = [
     blurb: "Beat editing moved to the full-page visual decision-tree editor at /story/ — pan/zoom canvas, node cards, branch edges, side inspector. (Writes to the same draft, so overrides flow through identically.)" },
   { id: "flags",     label: "Flags",          iconKey: "ui_devtools", Component: FlagsTab,
     section: "story",
-    blurb: "Read-only audit of every story flag: which beat / choice sets it, which trigger / slice / UI reads it, and orphan warnings (set-but-never-read, read-but-never-set). Filter by category, search, or only-orphans." },
+    blurb: "Audit and edit story flags: create custom flags, override metadata/triggers, see which beats and systems set or read each flag, and catch orphan warnings." },
   { id: "npcs",      label: "NPCs",           iconKey: "ui_star", Component: NpcsTab,
     section: "story",
     blurb: "Townsfolk gift preferences (loves / likes — the items that raise their bond fastest) and the four bond bands (name + the order-reward modifier at that band)." },

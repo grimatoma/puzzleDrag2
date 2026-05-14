@@ -1,5 +1,5 @@
 /**
- * QA Pass 4 — Fix 1: SWITCH_BIOME / ENTER_MINE keep state.biome in sync
+ * QA Pass 4 — Fix 1: SWITCH_BIOME / EXPEDITION/DEPART keep state.biome in sync
  *
  * C-01: both reducers were only updating biomeKey, leaving state.biome as "farm"
  * so rollFarmHazard kept spawning hazards during mine sessions.
@@ -49,33 +49,43 @@ describe("QA-Pass4 Fix1 — SWITCH_BIOME syncs state.biome", () => {
   });
 });
 
-describe("QA-Pass4 Fix1 — ENTER_MINE syncs state.biome", () => {
-  it("ENTER_MINE standard sets state.biome to 'mine'", () => {
+describe("QA-Pass4 Fix1 — EXPEDITION/DEPART syncs state.biome", () => {
+  it("EXPEDITION/DEPART to mine sets state.biome to 'mine'", () => {
     const s0 = {
       ...createInitialState(),
+      level: 5,
+      mapCurrent: "quarry",
+      activeZone: "quarry",
+      biomeKey: "farm",
+      biome: "farm",
+      story: { flags: { mine_unlocked: true } },
+      inventory: { ...createInitialState().inventory, bread: 5 },
+      settlements: {
+        ...createInitialState().settlements,
+        quarry: { founded: true, biome: "tundra" },
+      },
+    };
+    const s1 = rootReducer(s0, { type: "EXPEDITION/DEPART", payload: { biomeKey: "mine", supply: { bread: 3 } } });
+    expect(s1.biome).toBe("mine");
+    expect(s1.biomeKey).toBe("mine");
+  });
+
+  it("EXPEDITION/DEPART with supplies sets state.biome to 'mine'", () => {
+    const s0 = {
+      ...createInitialState(),
+      level: 5,
       mapCurrent: "quarry",
       activeZone: "quarry",
       biomeKey: "farm",
       biome: "farm",
       story: { flags: { mine_unlocked: true } },
       inventory: { ...createInitialState().inventory, supplies: 5 },
+      settlements: {
+        ...createInitialState().settlements,
+        quarry: { founded: true, biome: "tundra" },
+      },
     };
-    const s1 = rootReducer(s0, { type: "ENTER_MINE", payload: { mode: "standard" } });
-    expect(s1.biome).toBe("mine");
-    expect(s1.biomeKey).toBe("mine");
-  });
-
-  it("ENTER_MINE premium sets state.biome to 'mine'", () => {
-    const s0 = {
-      ...createInitialState(),
-      mapCurrent: "quarry",
-      activeZone: "quarry",
-      biomeKey: "farm",
-      biome: "farm",
-      story: { flags: { mine_unlocked: true } },
-      runes: 5,
-    };
-    const s1 = rootReducer(s0, { type: "ENTER_MINE", payload: { mode: "premium" } });
+    const s1 = rootReducer(s0, { type: "EXPEDITION/DEPART", payload: { biomeKey: "mine", supply: { supplies: 3 } } });
     expect(s1.biome).toBe("mine");
     expect(s1.biomeKey).toBe("mine");
   });

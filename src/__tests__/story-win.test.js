@@ -1,11 +1,11 @@
 import { describe, it, expect } from "vitest";
-import { evaluateStoryTriggers, INITIAL_STORY_STATE, firedFlagKey } from "../story.js";
+import { evaluateStoryTriggers, INITIAL_STORY_STATE } from "../story.js";
 
 // ─── 2.5 — Harvest Festival win condition ────────────────────────────────────
 
 // All flags set except festival_announced (pre-announce state).
-// Beats without an explicit setFlag (act2_bram_arrives, act2_liss_arrives) use
-// the auto-generated _fired_<id> marker so nextPendingBeat can skip them.
+// Arrival beats now stamp their roster flags directly, so nextPendingBeat can
+// skip them once those flags are present.
 const preAnnounceFlags = {
   intro_seen: true,
   first_harvest: true,
@@ -13,10 +13,10 @@ const preAnnounceFlags = {
   first_order: true,
   granary_built: true,
   home_keeper_resolved: true,
-  [firedFlagKey("act2_bram_arrives")]: true,
+  bram_arrived: true,
   first_iron: true,
   quarry_foothold: true,
-  [firedFlagKey("act2_liss_arrives")]: true,
+  liss_arrived: true,
   mine_revealed: true,
   mine_unlocked: true,
   caravan_open: true,

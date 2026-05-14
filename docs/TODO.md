@@ -79,23 +79,23 @@ Status legend: **[ ]** not started · **[~]** partial · **[deferred]** there's 
 ## 7. Balance Manager polish
 
 - [ ] **Bosses** → modifier params · **Achievements** → the `counter` · **Daily Rewards** → tool/tile-unlock drops · **NPCs** → order-line templates + `GIFT_DELTAS` · **Boons** → editable name/desc/cost/effect params (the tab ships read-only; needs an `applyBoonOverrides` paralleling `applyKeeperOverrides`).
-- [ ] **Story editor graph readability pass** — add a per-conversation-chain focus mode (show one chain + immediate choice fan-out), with optional global/stitched view for debugging cross-chain links.
+- [x] **Story editor graph readability pass** — per-conversation-chain focus mode plus global/stitched view controls are live in `/story/`.
 - [ ] Maybe a **Map/cartography** tab (zone positions, edges, regions) and an **Abilities-catalog** viewer.
 
 ## 8. Cleanup / tech debt (`DEFERRED:` notes in the code)
 
-- [deferred] Remove the dead tier-entry actions (`MINE/ENTER` / `HARBOR/ENTER` / `ENTER_MINE`) + their tests.
+- [x] Remove the dead tier-entry actions (`MINE/ENTER` / `HARBOR/ENTER` / `ENTER_MINE`) + their tests.
 - [ ] A handful of lint errors remain in code merged after Wave A — setState-in-effect in `FlagsTab.jsx` / `Inspector.jsx` / `Modals.jsx`, refs-during-render in `storyEditor/index.jsx`, and a `prototype.jsx` exhaustive-deps warning. The original Icon.jsx + RichText.jsx unused-`React` issues are gone (the perf-pass commits cleaned them up). Decide per case whether each warrants a refactor vs. a documented disable.
 
 ---
 
 ## Recommended next 4–5
 
-Wave A (the playable spine) and Wave H (tech-debt sweep — queued-craft event hookup, prune unused char_* portraits, converge `applyResourceOverrides` → `applyItemOverrides`) have landed. The dead tier-entry actions (`MINE/ENTER` / `HARBOR/ENTER` / `ENTER_MINE`) remain — they're harmless until the expedition flow gets revisited. Next:
+Wave A (the playable spine) and Wave H (tech-debt sweep — queued-craft event hookup, prune unused char_* portraits, converge `applyResourceOverrides` → `applyItemOverrides`) have landed. The dead tier-entry actions (`MINE/ENTER` / `HARBOR/ENTER` / `ENTER_MINE`) have been removed; expedition departure is the canonical mine/harbor entry flow. Next:
 
 1. **Keeper iteration** — Drive Out as a hazard-to-outlast round, and a side-beat / map auto-prompt for the encounter so players don't have to seek out the "Face the keeper" button. Pays off the boon trees with more interesting paths.
 2. **Recurring festival** — turn the one-shot act-3 "Harvest Festival" into a day-cooldown event that grants small rewards.
 3. **Daily quest pools per NPC** — extend `makeOrder` with Mira/Bram/Liss/Tomas/Wren templates from Part 5 §I, plus a Quests BM tab. Gives the per-NPC bonds something narrative to do alongside boons.
-4. **Expedition flow loose ends** — remove the dead tier-entry actions + their tests now `EXPEDITION/DEPART` fully supersedes them; wire the NPC-bond / building-tier food modifiers; add the forward-declared recipes (`cured_meat`, `festival_loaf`, `wedding_pie`, `iron_ration`).
+4. **Expedition flow loose ends** — wire the NPC-bond / building-tier food modifiers; add the forward-declared recipes (`cured_meat`, `festival_loaf`, `wedding_pie`, `iron_ration`).
 
 Heavier / needs design input — hold for a dedicated session: the **Hollow Pact / Charter metaplot** + the **Old Capital finale**, and reconciling the **phase-39 boss overhaul**.

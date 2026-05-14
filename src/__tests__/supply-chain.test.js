@@ -3,7 +3,26 @@ import { gameReducer, initialState } from "../state.js";
 
 beforeEach(() => global.localStorage.clear());
 
-describe("3.2 — Supply chain (grain → supplies → Mine entry)", () => {
+function readyMineState(over = {}) {
+  const s0 = initialState();
+  return {
+    ...s0,
+    level: 5,
+    mapCurrent: "quarry",
+    activeZone: "quarry",
+    biomeKey: "farm",
+    biome: "farm",
+    inventory: { ...s0.inventory, supplies: 5 },
+    story: { ...s0.story, flags: { ...s0.story.flags, mine_unlocked: true } },
+    settlements: {
+      ...s0.settlements,
+      quarry: { founded: true, biome: "tundra" },
+    },
+    ...over,
+  };
+}
+
+describe("3.2 — Supply chain (grain → supplies → expedition rations)", () => {
   it("supplies start at 0 in initial state", () => {
     const s0 = initialState();
     expect(s0.inventory.supplies).toBe(0);
@@ -25,45 +44,29 @@ describe("3.2 — Supply chain (grain → supplies → Mine entry)", () => {
     expect(same.inventory.supplies).toBe(0);
   });
 
-  it("ENTER_MINE standard: blocked without mine_unlocked flag", () => {
-    const s0 = initialState();
-    const noUnlock = {
-      ...s0,
-      mapCurrent: "quarry",
-      activeZone: "quarry",
-      inventory: { ...s0.inventory, supplies: 5 },
-      story: { flags: {} },
-      biomeKey: "farm",
-    };
-    const blocked = gameReducer(noUnlock, { type: "ENTER_MINE", payload: { mode: "standard" } });
+  it("EXPEDITION/DEPART: blocked before the quarry settlement is founded", () => {
+    const blocked = gameReducer(
+      readyMineState({
+        settlements: { ...initialState().settlements, quarry: { founded: false, biome: "tundra" } },
+      }),
+      { type: "EXPEDITION/DEPART", payload: { biomeKey: "mine", supply: { supplies: 5 } } },
+    );
     expect(blocked.biomeKey).toBe("farm");
   });
 
-  it("ENTER_MINE standard: blocked with <3 supplies", () => {
-    const s0 = initialState();
-    const noSupply = {
-      ...s0,
-      mapCurrent: "quarry",
-      activeZone: "quarry",
-      inventory: { ...s0.inventory, supplies: 2 },
-      story: { flags: { mine_unlocked: true } },
-      biomeKey: "farm",
-    };
-    const blocked = gameReducer(noSupply, { type: "ENTER_MINE", payload: { mode: "standard" } });
+  it("EXPEDITION/DEPART: blocked with fewer than the minimum supply turns", () => {
+    const blocked = gameReducer(
+      readyMineState({ inventory: { ...initialState().inventory, supplies: 2 } }),
+      { type: "EXPEDITION/DEPART", payload: { biomeKey: "mine", supply: { supplies: 2 } } },
+    );
     expect(blocked.biomeKey).toBe("farm");
   });
 
-  it("ENTER_MINE standard: succeeds with 3+ supplies and mine_unlocked", () => {
-    const s0 = initialState();
-    const ready = {
-      ...s0,
-      mapCurrent: "quarry",
-      activeZone: "quarry",
-      inventory: { ...s0.inventory, supplies: 4 },
-      story: { flags: { mine_unlocked: true } },
-      biomeKey: "farm",
-    };
-    const entered = gameReducer(ready, { type: "ENTER_MINE", payload: { mode: "standard" } });
+  it("EXPEDITION/DEPART: succeeds with 3+ supply rations", () => {
+    const entered = gameReducer(
+      readyMineState({ inventory: { ...initialState().inventory, supplies: 4 } }),
+      { type: "EXPEDITION/DEPART", payload: { biomeKey: "mine", supply: { supplies: 3 } } },
+    );
     expect(entered.biomeKey).toBe("mine");
     expect(entered.inventory.supplies).toBe(1);
   });

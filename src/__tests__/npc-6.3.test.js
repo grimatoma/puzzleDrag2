@@ -74,6 +74,13 @@ describe("6.3 — bond band routing", () => {
 });
 
 describe("6.3 — fallback on missing cell", () => {
+  it("pickDialog without a season uses season-agnostic NPC pools", () => {
+    const phrase = pickDialog("mira", null, 5, mulberry32(99));
+    const allWarm = SEASONS.flatMap((season) => DIALOG_POOLS.mira[season].Warm);
+    expect(allWarm.includes(phrase)).toBe(true);
+    expect(phrase).not.toContain("'...'");
+  });
+
   it("pickDialog returns a non-empty string and does not throw for missing cell", () => {
     // Force a missing cell by calling with an invalid npc key
     let result;

@@ -9,9 +9,10 @@ describe("Phase 4.7 — Granary inventory cap", () => {
     expect(RESOURCE_CAP_GRANARY).toBe(500);
   });
 
-  it("currentCap reads built.granary", () => {
+  it("currentCap reads the active settlement's granary", () => {
     const s = createInitialState();
     expect(currentCap(s)).toBe(200);
+    expect(currentCap({ ...s, built: { ...s.built, home: { ...s.built.home, granary: true } } })).toBe(500);
     expect(currentCap({ ...s, built: { ...s.built, granary: true } })).toBe(500);
   });
 
@@ -46,7 +47,7 @@ describe("Phase 4.7 — Granary inventory cap", () => {
 
   it("Granary build raises cap, allowing further accumulation", () => {
     const s0 = { ...createInitialState(),
-      built: { granary: true }, inventory: { grass_hay: 200 },
+      built: { ...createInitialState().built, home: { granary: true } }, inventory: { grass_hay: 200 },
       seasonStats: { capFloaters: {} } };
     const s1 = rootReducer(s0,
       { type: "CHAIN_COLLECTED", payload: { gains: { grass_hay: 50 } } });

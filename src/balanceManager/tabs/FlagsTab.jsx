@@ -7,10 +7,10 @@
 // each flag) and a curated map of codebase reads, so you can see — per flag —
 // its metadata + triggers + set-by / read-by, and spot orphans ("set · never
 // read" → dead flag / typo, "read · never set" → broken guard). Editing the
-// metadata/triggers is done in src/flags.js or via `balance.json` →
-// `flags.byId.<id>` / `flags.new` (a UI for it can come later).
+// metadata/triggers edits are persisted through the same draft override shape
+// used by `balance.json`: `flags.byId.<id>` / `flags.new`.
 
-import { useEffect, useState, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { firedFlagKey } from "../../story.js";
 import { STORY_FLAGS, isRegisteredFlag, flagCategory as registryFlagCategory, FLAG_CATEGORIES } from "../../flags.js";
 import { FLAG_READS } from "../../flagReads.js";
@@ -46,6 +46,62 @@ function flagDefs(draft) {
     defs.push(applyPatch({ id, label: id, category: "misc", default: false, source: "override", triggers: [] }, raw));
   }
   return defs;
+}
+
+function renameFlagValue(value, oldId, newId) {
+  if (Array.isArray(value)) {
+    if (!value.includes(oldId)) return value;
+    const next = value.map((flag) => (flag === oldId ? newId : flag)).filter(Boolean);
+    return [...new Set(next)];
+  }
+  return value === oldId ? newId : value;
+}
+
+function renameTriggerFlag(trigger, oldId, newId) {
+  if (!trigger || typeof trigger !== "object") return trigger;
+  if ((trigger.type === "flag_set" || trigger.type === "flag_cleared") && trigger.flag === oldId) {
+    return { ...trigger, flag: newId };
+  }
+  return trigger;
+}
+
+function renameFlagReferencesInDraft(draft, oldId, newId) {
+  const patchBeat = (beat) => {
+    if (!beat || typeof beat !== "object") return beat;
+    let changed = false;
+    const next = { ...beat };
+    const trigger = renameTriggerFlag(next.trigger, oldId, newId);
+    if (trigger !== next.trigger) { next.trigger = trigger; changed = true; }
+    if (next.onComplete?.setFlag) {
+      const setFlag = renameFlagValue(next.onComplete.setFlag, oldId, newId);
+      if (setFlag !== next.onComplete.setFlag) { next.onComplete = { ...next.onComplete, setFlag }; changed = true; }
+    }
+    if (Array.isArray(next.choices)) {
+      const choices = next.choices.map((choice) => {
+        const outcome = choice?.outcome;
+        if (!outcome || typeof outcome !== "object") return choice;
+        const setFlag = renameFlagValue(outcome.setFlag, oldId, newId);
+        const clearFlag = renameFlagValue(outcome.clearFlag, oldId, newId);
+        if (setFlag === outcome.setFlag && clearFlag === outcome.clearFlag) return choice;
+        changed = true;
+        return { ...choice, outcome: { ...outcome, setFlag, clearFlag } };
+      });
+      if (choices !== next.choices) next.choices = choices;
+    }
+    return changed ? next : beat;
+  };
+
+  if (draft.story?.newBeats) draft.story.newBeats = draft.story.newBeats.map(patchBeat);
+  if (draft.story?.beats) {
+    for (const id of Object.keys(draft.story.beats)) draft.story.beats[id] = patchBeat(draft.story.beats[id]);
+  }
+  const patchTriggerList = (triggers) => Array.isArray(triggers) ? triggers.map((t) => renameTriggerFlag(t, oldId, newId)) : triggers;
+  if (draft.flags?.new) draft.flags.new = draft.flags.new.map((flag) => flag ? { ...flag, triggers: patchTriggerList(flag.triggers) } : flag);
+  if (draft.flags?.byId) {
+    for (const id of Object.keys(draft.flags.byId)) {
+      if (draft.flags.byId[id]?.triggers) draft.flags.byId[id] = { ...draft.flags.byId[id], triggers: patchTriggerList(draft.flags.byId[id].triggers) };
+    }
+  }
 }
 
 /** Effective triggers for a flag after local draft metadata/triggers are folded in. */
@@ -233,8 +289,13 @@ function SourceLine({ s }) {
 // ─── Inspector ───────────────────────────────────────────────────────────────
 
 function Inspector({ flag, draft, updateDraft, onSelect }) {
-  const [idDraft, setIdDraft] = useState(flag?.name || "");
-  useEffect(() => { setIdDraft(flag?.name || ""); }, [flag?.name]);
+  const flagName = flag?.name || "";
+  const [idDraft, setIdDraft] = useState(flagName);
+  const [lastFlagName, setLastFlagName] = useState(flagName);
+  if (flagName !== lastFlagName) {
+    setLastFlagName(flagName);
+    setIdDraft(flagName);
+  }
   if (!flag) return <div className="flex-1 grid place-items-center text-[12px] italic" style={{ color: COLORS.inkSubtle }}>Select a flag to inspect.</div>;
   const cat = flagCategory(flag.name, draft);
   const def = flag.def;
@@ -274,6 +335,7 @@ function Inspector({ flag, draft, updateDraft, onSelect }) {
       const idx = d.flags.new.findIndex((f) => f?.id === flag.name);
       if (idx < 0) return;
       d.flags.new[idx] = { ...d.flags.new[idx], id };
+      renameFlagReferencesInDraft(d, flag.name, id);
     });
     onSelect?.(id);
   };
@@ -507,7 +569,7 @@ export default function FlagsTab({ draft = {}, updateDraft = () => {} }) {
       <div className="flex flex-wrap items-center gap-3 px-3 py-2 rounded-lg border-2 flex-shrink-0" style={{ background: COLORS.parchmentDeep, borderColor: COLORS.border }}>
         <div>
           <div className="text-[12px] font-bold" style={{ color: COLORS.ink }}>Story Flags</div>
-          <div className="text-[10px] italic" style={{ color: COLORS.inkSubtle }}>Registry (<code style={{ fontFamily: "ui-monospace,monospace" }}>src/flags.js</code> → STORY_FLAGS) — metadata + event <b>triggers</b>, joined with a scan of who actually sets/reads each flag. Orphans flagged. Edit in <code style={{ fontFamily: "ui-monospace,monospace" }}>src/flags.js</code> or <code style={{ fontFamily: "ui-monospace,monospace" }}>balance.json → flags</code>.</div>
+          <div className="text-[10px] italic" style={{ color: COLORS.inkSubtle }}>Registry (<code style={{ fontFamily: "ui-monospace,monospace" }}>src/flags.js</code> → STORY_FLAGS) plus draft overrides. Create custom flags, edit metadata/triggers inline, and scan who sets/reads each flag. Orphans flagged.</div>
         </div>
         <div className="flex items-center gap-2 ml-1">
           <span className="text-[20px] font-bold" style={{ fontFamily: "ui-monospace,monospace", color: COLORS.ink }}>{shown.length}</span>

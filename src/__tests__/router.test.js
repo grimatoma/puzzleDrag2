@@ -16,6 +16,7 @@ describe("router.parseHash", () => {
       viewParams: {},
       modalParams: {},
     });
+    expect(parseHash("#/chronicle").view).toBe("chronicle");
   });
 
   it("falls back to town for an unknown view", () => {
@@ -113,6 +114,7 @@ describe("router.buildHash", () => {
       { view: "townsfolk", modal: null, viewParams: { tab: "bosses" }, modalParams: {} },
       { view: "cartography", modal: null, viewParams: { zone: "orchard" }, modalParams: {} },
       { view: "cartography", modal: null, viewParams: {}, modalParams: {} },
+      { view: "chronicle", modal: null, viewParams: {}, modalParams: {} },
       { view: "tileCollection", modal: null, viewParams: { sub: "mine", cat: "mine_stone" }, modalParams: {} },
       { view: "town", modal: "menu", viewParams: {}, modalParams: { tab: "settings" } },
       { view: "board", modal: "boss", viewParams: {}, modalParams: {} },

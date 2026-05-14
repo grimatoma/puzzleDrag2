@@ -67,9 +67,11 @@ describe("CRAFTING/CRAFT_RECIPE — tool-output recipes", () => {
       ...createInitialState(),
       built: { workshop: true },
       inventory: { wood_plank: 0, mine_stone: 0 },
+      totalCrafted: 0,
     };
     const beforeTools = s0.tools?.water_pump ?? 0;
     const s1 = rootReducer(s0, { type: "CRAFTING/CRAFT_RECIPE", recipeKey: "water_pump" });
     expect(s1.tools.water_pump ?? 0).toBe(beforeTools);
+    expect(s1.totalCrafted ?? 0).toBe(0);
   });
 });

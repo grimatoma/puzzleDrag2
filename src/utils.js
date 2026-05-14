@@ -1,4 +1,5 @@
 import { UPGRADE_THRESHOLDS, RESOURCE_CAP_BASE, RESOURCE_CAP_GRANARY } from "./constants.js";
+import { locBuilt } from "./locBuilt.js";
 
 export function clamp(n, a, b) {
   return Math.max(a, Math.min(b, n));
@@ -93,7 +94,8 @@ export function seasonIndexForTurns(turns) {
 
 /** Returns the per-resource inventory cap: 500 with Granary, 200 otherwise. */
 export function currentCap(state) {
-  return state?.built?.granary ? RESOURCE_CAP_GRANARY : RESOURCE_CAP_BASE;
+  const built = state ? locBuilt(state) : {};
+  return (built?.granary || state?.built?.granary) ? RESOURCE_CAP_GRANARY : RESOURCE_CAP_BASE;
 }
 
 // runSelfTests — thin smoke shim for in-game console use (<50ms).

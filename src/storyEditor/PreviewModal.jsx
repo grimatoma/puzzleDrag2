@@ -10,6 +10,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { beatLines, interpolateBeatText } from "../story.js";
 import { NPCS, effectiveBeat, effectiveChoices, triggerSummary, allBeatIds } from "./shared.jsx";
+import { applyPreviewEffects, blankPreviewState, firstTriggeredByPreviewState, previewStateSummary } from "./previewModel.js";
 import { StoryStagePanel, TapCue } from "../ui/Modals.jsx";
 
 const SERIF = '"Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, "Times New Roman", serif';
@@ -25,56 +26,16 @@ const P = {
   ember: "#e88a5e",
 };
 
-const flagArr = (v) => Array.isArray(v) ? v : (typeof v === "string" && v ? [v] : []);
-
-function blankPreviewState() {
-  const bonds = {};
-  for (const k of Object.keys(NPCS)) bonds[k] = 5;
-  return { flags: {}, bonds, embers: 0, coreIngots: 0, gems: 0 };
-}
-
-function applyFlagList(flags, value, on) {
-  const next = { ...flags };
-  for (const f of flagArr(value)) next[f] = on;
-  return next;
-}
-
-function applyPreviewEffects(sim, beat, choice) {
-  let next = { ...sim, flags: { ...sim.flags }, bonds: { ...sim.bonds } };
-  if (beat?.onComplete?.setFlag) next.flags = applyFlagList(next.flags, beat.onComplete.setFlag, true);
-  const o = choice?.outcome || {};
-  if (o.setFlag) next.flags = applyFlagList(next.flags, o.setFlag, true);
-  if (o.clearFlag) next.flags = applyFlagList(next.flags, o.clearFlag, false);
-  if (o.bondDelta?.npc && Number.isFinite(o.bondDelta.amount)) {
-    const cur = Number.isFinite(next.bonds[o.bondDelta.npc]) ? next.bonds[o.bondDelta.npc] : 5;
-    next.bonds[o.bondDelta.npc] = Math.max(0, Math.min(10, cur + o.bondDelta.amount));
-  }
-  for (const key of ["embers", "coreIngots", "gems"]) {
-    if (Number.isFinite(o[key])) next[key] = Math.max(0, (next[key] || 0) + o[key]);
-  }
-  return next;
-}
-
-function firstTriggeredByPreviewState(sim, draft, visited) {
-  for (const id of allBeatIds(draft)) {
-    if (visited.has(id)) continue;
-    const b = effectiveBeat(id, draft);
-    const t = b?.trigger;
-    if (!t) continue;
-    if (t.type === "flag_set" && sim.flags[t.flag]) return id;
-    if (t.type === "flag_cleared" && t.flag && !sim.flags[t.flag]) return id;
-    if (t.type === "bond_at_least" && (sim.bonds[t.npc] ?? 0) >= t.amount) return id;
-  }
-  return null;
-}
-
 function outcomeBadges(outcome) {
   const o = outcome || {};
   const out = [];
   if (o.bondDelta && o.bondDelta.npc) out.push({ k: "bond", t: "ember", label: `♥ ${o.bondDelta.amount > 0 ? "+" : ""}${o.bondDelta.amount} ${NPCS[o.bondDelta.npc]?.name || o.bondDelta.npc}` });
+  if (o.coins) out.push({ k: "coin", t: "gold", label: `¢ ${o.coins > 0 ? "+" : ""}${o.coins} Coins` });
   if (o.embers) out.push({ k: "emb", t: "gold", label: `✸ ${o.embers > 0 ? "+" : ""}${o.embers} Embers` });
   if (o.coreIngots) out.push({ k: "core", t: "gold", label: `◈ ${o.coreIngots > 0 ? "+" : ""}${o.coreIngots} Core Ingots` });
   if (o.gems) out.push({ k: "gem", t: "gold", label: `◆ ${o.gems > 0 ? "+" : ""}${o.gems} Gems` });
+  for (const [key, amount] of Object.entries(o.resources || {})) if (Number.isFinite(amount) && amount) out.push({ k: `res-${key}`, t: "iron", label: `${amount > 0 ? "+" : ""}${amount} ${key}` });
+  for (const [key, amount] of Object.entries(o.heirlooms || {})) if (Number.isFinite(amount) && amount) out.push({ k: `heir-${key}`, t: "slate", label: `${amount > 0 ? "+" : ""}${amount} ${key}` });
   for (const f of (Array.isArray(o.setFlag) ? o.setFlag : (o.setFlag ? [o.setFlag] : []))) out.push({ k: `sf-${f}`, t: "iron", label: `⚐ ${f}` });
   for (const f of (Array.isArray(o.clearFlag) ? o.clearFlag : (o.clearFlag ? [o.clearFlag] : []))) out.push({ k: `cf-${f}`, t: "slate", label: `⚑ ${f} off` });
   return out;
@@ -184,6 +145,7 @@ export default function PreviewModal({ startBeatId, draft, onClose, onOpenInEdit
   const rawChoices = effectiveChoices(currentId, draft);
   const choices = isPrompt ? rawChoices : (rawChoices.length ? rawChoices : [{ id: "continue", label: "Continue" }]);
   const ts = triggerSummary(beat);
+  const stateBits = previewStateSummary(sim);
 
   const pick = (c) => {
     const nextSim = applyPreviewEffects(sim, beat, c);
@@ -238,9 +200,8 @@ export default function PreviewModal({ startBeatId, draft, onClose, onOpenInEdit
         />
 
         <div style={{ marginTop: 12, flexShrink: 0, font: "italic 400 10px/1.3 system-ui", color: P.parchFaint }}>
-          Lightweight preview — choices, flags, bonds, currencies, and simple downstream triggers are simulated; full resource gates still need an in-game check. <code style={{ fontFamily: "ui-monospace,monospace" }}>{currentId}</code> · {choices.length} {choices.length === 1 ? "choice" : "choices"} · settlement → “{SAMPLE_SETTLEMENT}”
-          {Object.keys(sim.flags).length > 0 && <> · flags {Object.entries(sim.flags).filter(([, v]) => v).map(([k]) => k).slice(0, 4).join(", ") || "none"}</>}
-          {(sim.embers || sim.coreIngots || sim.gems) ? <> · ✸ {sim.embers} ◈ {sim.coreIngots} ◆ {sim.gems}</> : null}
+          Preview follows queued beats and state-triggered follow-ups using the editor draft state. <code style={{ fontFamily: "ui-monospace,monospace" }}>{currentId}</code> · {choices.length} {choices.length === 1 ? "choice" : "choices"} · settlement → “{SAMPLE_SETTLEMENT}”
+          {stateBits.length > 0 && <> · {stateBits.join(" · ")}</>}
         </div>
       </div>
     </Backdrop>

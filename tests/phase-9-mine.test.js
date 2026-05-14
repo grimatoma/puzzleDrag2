@@ -1,7 +1,7 @@
-// Phase 9 — Mine biome: hazards, mine entry tiers, mysterious ore.
+// Phase 9 — Mine biome: hazards, expedition food, mysterious ore.
 // Migrated from src/__tests__/mine-9.1 through mine-9.6 tests.
 import { describe, it, expect } from "vitest";
-import { BIOMES, MINE_TILE_POOL, MINE_ENTRY_TIERS, UPGRADE_THRESHOLDS } from "../src/constants.js";
+import { BIOMES, EXPEDITION_FOOD_TURNS, MIN_EXPEDITION_TURNS, MINE_TILE_POOL, UPGRADE_THRESHOLDS } from "../src/constants.js";
 import { createInitialState } from "../src/state.js";
 
 describe("Phase 9 — Mine biome resources", () => {
@@ -43,15 +43,12 @@ describe("Phase 9 — fresh state mine hazards", () => {
   });
 });
 
-describe("Phase 9 — Mine entry tiers", () => {
-  it("MINE_ENTRY_TIERS is defined with at least 2 tiers", () => {
-    expect(Array.isArray(MINE_ENTRY_TIERS)).toBe(true);
-    expect(MINE_ENTRY_TIERS.length).toBeGreaterThanOrEqual(2);
+describe("Phase 9 — Expedition food model", () => {
+  it("MIN_EXPEDITION_TURNS is defined", () => {
+    expect(MIN_EXPEDITION_TURNS).toBeGreaterThan(0);
   });
 
-  it("has a free tier requiring supplies", () => {
-    const free = MINE_ENTRY_TIERS.find(t => t.id === "free");
-    expect(free).toBeDefined();
-    expect(free.supplies).toBeGreaterThan(0);
+  it("supplies remain a one-turn ration for expeditions", () => {
+    expect(EXPEDITION_FOOD_TURNS.supplies).toBe(1);
   });
 });

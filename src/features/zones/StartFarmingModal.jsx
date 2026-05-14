@@ -2,7 +2,6 @@ import { useState, useMemo } from "react";
 import { ZONES, zoneCategories, DEFAULT_ZONE, ZONE_TO_TILE_CATEGORIES, turnBudgetAdditiveBonusForZone, turnBudgetForZone, zoneBaseTurns, settlementHazards } from "./data.js";
 import { TILE_TYPES_BY_CATEGORY, TILE_TYPES_MAP } from "../tileCollection/data.js";
 import { TileIcon } from "../tileCollection/index.jsx";
-import Icon from "../../ui/Icon.jsx";
 
 const CATEGORY_LABEL = {
   grass: "Grass",

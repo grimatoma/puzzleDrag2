@@ -5,7 +5,7 @@
 // game-event vocabulary, incl. `flag_set`) + `repeat`, and — for author-created
 // draft beats — onComplete.setFlag, plus delete.
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   C, NPCS, NPC_KEYS, Portrait, actColor, triggerSummary,
   SCENE_OPTS,
@@ -292,6 +292,7 @@ const taStyle = { padding: "5px 7px", borderRadius: 6, border: `1.5px solid ${C.
 
 function TriggerFields({ trigger, onChange, knownFlags }) {
   const t = trigger;
+  const flagOptions = knownFlags ? Array.from(knownFlags).filter((f) => !f.startsWith("_fired_")).sort() : FLAG_OPTIONS;
   switch (t.type) {
     case "flag_set":
     case "flag_cleared":
@@ -300,7 +301,7 @@ function TriggerFields({ trigger, onChange, knownFlags }) {
           <input list="story-flag-options" style={{ ...selStyle, flex: 1, fontFamily: "ui-monospace,monospace",
               borderColor: t.flag && knownFlags && !knownFlags.has(t.flag) ? C.red : C.border }} value={t.flag || ""}
             placeholder="flag_name" onChange={(e) => onChange({ ...t, flag: e.target.value })} />
-          <datalist id="story-flag-options">{FLAG_OPTIONS.map((f) => <option key={f} value={f} />)}</datalist>
+          <datalist id="story-flag-options">{flagOptions.map((f) => <option key={f} value={f} />)}</datalist>
           {t.flag && knownFlags && !knownFlags.has(t.flag) && (
             <span style={{ font: "600 9px/1.2 system-ui", color: C.redDeep }}>⚠ unregistered</span>
           )}
@@ -409,7 +410,11 @@ function TriggerEditor({ beatId, beat, draft, isMainChain, onEditBeat }) {
 export default function Inspector({ beatId, draft, isDraft, onEditBeat, onNewBranch, onDeleteBeat, onSuppressBeat, onRenameBeat, onSelect, onPreview }) {
   const beat = effectiveBeat(beatId, draft);
   const [draftId, setDraftId] = useState(beatId || "");
-  useEffect(() => { setDraftId(beatId || ""); }, [beatId]);
+  const [lastBeatId, setLastBeatId] = useState(beatId || "");
+  if ((beatId || "") !== lastBeatId) {
+    setLastBeatId(beatId || "");
+    setDraftId(beatId || "");
+  }
   if (!beat) {
     return (
       <div style={{ width: 340, flexShrink: 0, background: C.parchment, borderLeft: `2px solid ${C.border}`,

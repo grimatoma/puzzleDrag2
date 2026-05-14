@@ -23,38 +23,6 @@ describe("3.3 — Runes currency", () => {
     expect(s2.runes).toBe(2);
   });
 
-  it("ENTER_MINE premium: consumes 2 runes, no supplies needed", () => {
-    const s0 = initialState();
-    const ready = {
-      ...s0,
-      mapCurrent: "quarry",
-      activeZone: "quarry",
-      runes: 3,
-      inventory: { ...s0.inventory, supplies: 0 },
-      story: { flags: { mine_unlocked: true } },
-      biomeKey: "farm",
-    };
-    const entered = gameReducer(ready, { type: "ENTER_MINE", payload: { mode: "premium" } });
-    expect(entered.biomeKey).toBe("mine");
-    expect(entered.runes).toBe(1);
-    expect(entered.inventory.supplies ?? 0).toBe(0);
-  });
-
-  it("ENTER_MINE premium: blocked with <2 runes", () => {
-    const s0 = initialState();
-    const broke = {
-      ...s0,
-      mapCurrent: "quarry",
-      activeZone: "quarry",
-      runes: 1,
-      inventory: { ...s0.inventory, supplies: 0 },
-      story: { flags: { mine_unlocked: true } },
-      biomeKey: "farm",
-    };
-    const blocked = gameReducer(broke, { type: "ENTER_MINE", payload: { mode: "premium" } });
-    expect(blocked.biomeKey).toBe("farm");
-  });
-
   it("ACTIVATE_RUNE_WILDCARD: decrements runeStash and arms toolPending", () => {
     const s0 = initialState();
     const stash = { ...s0, runeStash: 2, toolPending: null };
