@@ -179,64 +179,77 @@ export function Hud({ state, dispatch }) {
   const isWon = !!state.story?.flags?.isWon;
   const sandbox = !!state.story?.sandbox;
   const showDevButtons = devModeEnabled();
+  // Vol I #02 — Three explicit zones (left chrome / center context / right
+  // status). Each zone owns one job:
+  //   left   = identity & shell controls (menu, sandbox tag, dev escape hatches)
+  //   center = the player's current focus (SeasonBar on the board; coin chip in town)
+  //   right  = run/season status (tide + larder on board; XP + level in town)
+  // The wrapper is no longer `flex-wrap`: zones can each wrap internally if
+  // they overflow, but the structural row count stays 1 down to ~360px.
   return (
-    <div className="flex items-center gap-2 px-3 py-2 bg-[var(--bark-mid)] border-b-2 border-[#2a1d0f] text-[var(--ink-warm)] flex-wrap" data-testid="hud">
-      {/* Menu — 32px visual disc inside a 44×44 hit area (Vol II §02). */}
-      <button
-        onClick={() => dispatch({ type: "OPEN_MODAL", modal: "menu" })}
-        className="relative grid place-items-center flex-shrink-0"
-        style={{ width: 44, height: 44 }}
-        data-testid="menu-btn"
-        aria-label="Menu"
-      >
-        <span className="w-8 h-8 rounded-lg bg-[var(--paper)] border-2 border-[var(--iron)] grid place-items-center text-[var(--ink-warm)] font-bold text-[18px]">≡</span>
-      </button>
-      {/* Sandbox banner — shown after winning */}
-      {(isWon || sandbox) && (
-        <Pill tone="gold" variant="solid" size="sm" className="flex-shrink-0">
-          Sandbox Mode
-        </Pill>
-      )}
-      {!onBoard && (
-        <Pill
-          size="md"
-          leading={<span className="w-5 h-5 rounded-full bg-[#ffc239] grid place-items-center text-[#7a5638] text-[12px] font-bold leading-none">$</span>}
+    <div
+      className="flex items-center gap-2 px-3 py-2 bg-[var(--bark-mid)] border-b-2 border-[#2a1d0f] text-[var(--ink-warm)]"
+      data-testid="hud"
+    >
+      {/* ── Left zone ─────────────────────────────────────────────── */}
+      <div className="flex items-center gap-2 flex-shrink-0 min-w-0">
+        {/* Menu — 32px visual disc inside a 44×44 hit area (Vol II §02). */}
+        <button
+          onClick={() => dispatch({ type: "OPEN_MODAL", modal: "menu" })}
+          className="relative grid place-items-center flex-shrink-0"
+          style={{ width: 44, height: 44 }}
+          data-testid="menu-btn"
+          aria-label="Menu"
         >
-          <span className="font-bold text-[15px] tabular-nums" data-testid="coins">{coins.toLocaleString()}</span>
-        </Pill>
-      )}
-      {!onBoard && (
-        <Pill size="md">
-          <span className="font-bold text-[14px]">⌂</span>
-          <span className="font-bold text-[14px] tabular-nums" data-testid="buildings">{buildingCount}</span>
-        </Pill>
-      )}
-      {!onBoard && <MetaPills state={state} />}
-      {onBoard && <SeasonBar season={season} turnsUsed={turnsUsed} turnsLeft={turnsRemaining} turnBudget={turnBudget || 1} />}
-      {/* Tide chip — visible only on the fish biome */}
-      {onBoard && state.biomeKey === "fish" && <TideChip fish={state.fish} />}
-      {/* Larder progress bars — visible when festival announced, on board view */}
-      {onBoard && festivalAnnounced && !isWon && (
-        <div className="flex-shrink-0">
-          <LarderWidget inventory={state.inventory || {}} />
-        </div>
-      )}
-      <div className={`${!onBoard ? "ml-auto" : ""} flex items-center gap-1.5 flex-shrink-0`}>
+          <span className="w-8 h-8 rounded-lg bg-[var(--paper)] border-2 border-[var(--iron)] grid place-items-center text-[var(--ink-warm)] font-bold text-[18px]">≡</span>
+        </button>
+        {(isWon || sandbox) && (
+          <Pill tone="gold" variant="solid" size="sm" className="flex-shrink-0">Sandbox</Pill>
+        )}
         {showDevButtons && (
           <>
             <DevButton title="Debug tools" iconKey="ui_devtools" onClick={() => dispatch({ type: "SETTINGS/OPEN_DEBUG" })} />
             <DevButton title="Balance Manager" iconKey="ui_scale" onClick={() => { window.open(`${import.meta.env.BASE_URL}b/`, "_blank", "noopener,noreferrer"); }} />
           </>
         )}
+      </div>
+
+      {/* ── Center zone ──────────────────────────────────────────── */}
+      <div className="flex-1 min-w-0 flex items-center justify-center gap-2">
+        {onBoard ? (
+          <SeasonBar season={season} turnsUsed={turnsUsed} turnsLeft={turnsRemaining} turnBudget={turnBudget || 1} />
+        ) : (
+          <div className="flex items-center gap-1.5 flex-wrap justify-center">
+            <Pill
+              size="md"
+              leading={<span className="w-5 h-5 rounded-full bg-[#ffc239] grid place-items-center text-[#7a5638] text-[12px] font-bold leading-none">$</span>}
+            >
+              <span className="font-bold text-[15px] tabular-nums" data-testid="coins">{coins.toLocaleString()}</span>
+            </Pill>
+            <Pill size="md">
+              <span className="font-bold text-[14px]">⌂</span>
+              <span className="font-bold text-[14px] tabular-nums" data-testid="buildings">{buildingCount}</span>
+            </Pill>
+            <MetaPills state={state} />
+          </div>
+        )}
+      </div>
+
+      {/* ── Right zone ───────────────────────────────────────────── */}
+      <div className="flex items-center gap-1.5 flex-shrink-0">
+        {onBoard && state.biomeKey === "fish" && <TideChip fish={state.fish} />}
+        {onBoard && festivalAnnounced && !isWon && (
+          <LarderWidget inventory={state.inventory || {}} />
+        )}
         {!onBoard && (
           <>
-            <div className="bg-[var(--paper)] border-2 border-[var(--iron)] rounded-full h-[26px] w-[110px] landscape:max-[1024px]:h-[20px] landscape:max-[1024px]:w-[80px] relative overflow-hidden">
+            <div className="bg-[var(--paper)] border-2 border-[var(--iron)] rounded-full h-[26px] w-[110px] landscape:max-[1024px]:h-[20px] landscape:max-[1024px]:w-[80px] relative overflow-hidden" aria-label={`Experience ${xp} of ${xpNeed}`}>
               <div className="h-full bg-gradient-to-r from-[#ff8b25] to-[#ffb347] transition-[width] duration-300" style={{ width: `${xpPct}%` }} />
               <div className="absolute inset-0 grid place-items-center text-[11px] landscape:max-[1024px]:text-[9px] font-bold text-white tabular-nums" style={{ textShadow: "0 1px 2px rgba(0,0,0,.4)" }}>
                 {xp} / {xpNeed}
               </div>
             </div>
-            <div className="w-9 h-9 landscape:max-[1024px]:w-7 landscape:max-[1024px]:h-7 rounded-full bg-[#bb3b2f] border-[3px] border-[#ffe2a3] grid place-items-center text-white font-bold text-[16px] landscape:max-[1024px]:text-[12px] tabular-nums">
+            <div className="w-9 h-9 landscape:max-[1024px]:w-7 landscape:max-[1024px]:h-7 rounded-full bg-[#bb3b2f] border-[3px] border-[#ffe2a3] grid place-items-center text-white font-bold text-[16px] landscape:max-[1024px]:text-[12px] tabular-nums" aria-label={`Level ${level}`}>
               {level}
             </div>
           </>
