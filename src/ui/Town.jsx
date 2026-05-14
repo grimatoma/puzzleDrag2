@@ -988,159 +988,188 @@ export function BuildingIllustration({ id, isBuilt }) {
   return illustrations[id] || null;
 }
 
+// Farm Field — drawn as a fenced parcel that sits *on* the town floor rather
+// than a square poster floating above it. The background is transparent so the
+// town's actual sky shows through; only the barn, silo, tilled plot and fence
+// occupy the tile. Used in the wing position from townLayout.js boards.
 function FarmFieldArt() {
   return (
-    <svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMax meet" className="absolute inset-0 w-full h-full">
-      {/* Sky */}
-      <rect width="100" height="42" fill="#bce088" />
-      <rect width="100" height="20" fill="#d8eea8" opacity="0.55" />
-      {/* Sun */}
-      <circle cx="83" cy="13" r="5" fill="#f7d254" opacity="0.9" />
-      <circle cx="83" cy="13" r="8" fill="#f7d254" opacity="0.25" />
-      {/* Distant rolling hills */}
-      <path d="M0,40 Q22,30 44,36 T88,34 L100,32 L100,52 L0,52 Z" fill="#5a8a25" />
-      <path d="M0,46 Q25,38 55,44 T100,42 L100,56 L0,56 Z" fill="#4a7a18" />
-      {/* Foreground field */}
-      <rect y="50" width="100" height="50" fill="#3a6e10" />
-      <path d="M0,50 Q20,52 40,50 T100,52 L100,72 L0,72 Z" fill="#5a8e20" />
-      {[0,1,2,3,4,5,6].map((i) => (
-        <line key={i} x1="0" y1={56 + i * 7} x2="100" y2={58 + i * 7} stroke="#f4d460" strokeWidth="0.7" opacity="0.45" />
+    <svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMax meet" className="absolute inset-0 w-full h-full overflow-visible">
+      {/* Soft cast shadow under the parcel — anchors it to the ground. */}
+      <ellipse cx="50" cy="96" rx="46" ry="5" fill="rgba(20,16,8,0.26)" />
+
+      {/* Tilled parcel — a low, wedge-shaped plot of green field that the barn
+          and silo sit on. No sky/hills inside the tile; we let the town show
+          through everywhere except where there's actually a farm. */}
+      <path d="M4,82 Q50,72 96,82 L96,94 Q50,98 4,94 Z" fill="#6aa028" stroke="#3a6010" strokeWidth="0.6" />
+      <path d="M4,82 Q50,72 96,82 L96,86 Q50,80 4,86 Z" fill="#82b838" opacity="0.7" />
+      {/* Crop rows for texture */}
+      {[0,1,2,3].map((i) => (
+        <path key={i} d={`M${10 - i * 0.5},${86 + i * 2.2} Q50,${82 + i * 2.2} ${90 + i * 0.5},${86 + i * 2.2}`}
+          fill="none" stroke="#f4d460" strokeWidth="0.5" opacity="0.55" />
       ))}
-      {/* Red barn — body */}
-      <rect x="14" y="44" width="34" height="32" fill="#a82820" stroke="#5a1010" strokeWidth="0.7" />
-      {/* Roof */}
-      <polygon points="11,46 31,30 51,46" fill="#7a1810" stroke="#4a0a08" strokeWidth="0.7" />
-      <line x1="11" y1="46" x2="31" y2="30" stroke="#5a0e08" strokeWidth="0.4" />
-      <line x1="51" y1="46" x2="31" y2="30" stroke="#5a0e08" strokeWidth="0.4" />
+
+      {/* Red barn — body. Slightly lifted on a sill so it doesn't look pasted. */}
+      <rect x="22" y="50" width="32" height="32" fill="#a82820" stroke="#5a1010" strokeWidth="0.7" />
+      <polygon points="19,52 38,34 57,52" fill="#7a1810" stroke="#4a0a08" strokeWidth="0.7" />
+      <line x1="19" y1="52" x2="38" y2="34" stroke="#5a0e08" strokeWidth="0.4" />
+      <line x1="57" y1="52" x2="38" y2="34" stroke="#5a0e08" strokeWidth="0.4" />
       {/* Hayloft door */}
-      <rect x="27" y="34" width="8" height="10" fill="#3a1008" stroke="#1a0808" strokeWidth="0.4" />
-      <line x1="31" y1="34" x2="31" y2="44" stroke="#f4ecd0" strokeWidth="0.3" />
+      <rect x="34" y="38" width="8" height="10" fill="#3a1008" stroke="#1a0808" strokeWidth="0.4" />
+      <line x1="38" y1="38" x2="38" y2="48" stroke="#f4ecd0" strokeWidth="0.3" />
       {/* White trim band */}
-      <rect x="14" y="56" width="34" height="1.3" fill="#f4ecd0" opacity="0.9" />
+      <rect x="22" y="62" width="32" height="1.3" fill="#f4ecd0" opacity="0.9" />
       {/* Main door with white cross */}
-      <rect x="25" y="59" width="12" height="17" fill="#3a1008" stroke="#1a0808" strokeWidth="0.4" />
-      <line x1="25" y1="59" x2="37" y2="76" stroke="#f4ecd0" strokeWidth="0.5" />
-      <line x1="37" y1="59" x2="25" y2="76" stroke="#f4ecd0" strokeWidth="0.5" />
-      <line x1="31" y1="59" x2="31" y2="76" stroke="#f4ecd0" strokeWidth="0.4" />
+      <rect x="32" y="65" width="12" height="17" fill="#3a1008" stroke="#1a0808" strokeWidth="0.4" />
+      <line x1="32" y1="65" x2="44" y2="82" stroke="#f4ecd0" strokeWidth="0.5" />
+      <line x1="44" y1="65" x2="32" y2="82" stroke="#f4ecd0" strokeWidth="0.5" />
+      <line x1="38" y1="65" x2="38" y2="82" stroke="#f4ecd0" strokeWidth="0.4" />
       {/* Side windows with shutters */}
-      <rect x="16" y="49" width="5" height="5" fill="#f7d254" stroke="#3a1008" strokeWidth="0.4" />
-      <line x1="18.5" y1="49" x2="18.5" y2="54" stroke="#3a1008" strokeWidth="0.3" />
-      <line x1="16" y1="51.5" x2="21" y2="51.5" stroke="#3a1008" strokeWidth="0.3" />
-      <rect x="41" y="49" width="5" height="5" fill="#f7d254" stroke="#3a1008" strokeWidth="0.4" />
-      <line x1="43.5" y1="49" x2="43.5" y2="54" stroke="#3a1008" strokeWidth="0.3" />
-      <line x1="41" y1="51.5" x2="46" y2="51.5" stroke="#3a1008" strokeWidth="0.3" />
+      <rect x="24" y="54" width="5" height="5" fill="#f7d254" stroke="#3a1008" strokeWidth="0.4" />
+      <line x1="26.5" y1="54" x2="26.5" y2="59" stroke="#3a1008" strokeWidth="0.3" />
+      <line x1="24" y1="56.5" x2="29" y2="56.5" stroke="#3a1008" strokeWidth="0.3" />
+      <rect x="47" y="54" width="5" height="5" fill="#f7d254" stroke="#3a1008" strokeWidth="0.4" />
+      <line x1="49.5" y1="54" x2="49.5" y2="59" stroke="#3a1008" strokeWidth="0.3" />
+      <line x1="47" y1="56.5" x2="52" y2="56.5" stroke="#3a1008" strokeWidth="0.3" />
       {/* Weather vane */}
-      <line x1="31" y1="30" x2="31" y2="22" stroke="#3a3838" strokeWidth="0.6" />
-      <polygon points="31,21 35,23 31,25 27,23" fill="#3a3838" />
+      <line x1="38" y1="34" x2="38" y2="26" stroke="#3a3838" strokeWidth="0.6" />
+      <polygon points="38,25 42,27 38,29 34,27" fill="#3a3838" />
+
       {/* Silo */}
-      <rect x="51" y="50" width="10" height="26" fill="#c0b8a0" stroke="#7a7260" strokeWidth="0.5" />
-      <line x1="51" y1="58" x2="61" y2="58" stroke="#9a9282" strokeWidth="0.4" />
-      <line x1="51" y1="66" x2="61" y2="66" stroke="#9a9282" strokeWidth="0.4" />
-      <ellipse cx="56" cy="76" rx="5" ry="1.6" fill="#7a7260" />
-      <path d="M51,50 Q56,42 61,50 Z" fill="#7a8a8a" stroke="#5a6a6a" strokeWidth="0.4" />
-      {/* Apple tree */}
-      <rect x="93" y="58" width="2" height="12" fill="#5a3818" />
-      <ellipse cx="94" cy="56" rx="6" ry="6" fill="#3a7a20" />
-      <circle cx="91" cy="54" r="1" fill="#e03820" opacity="0.85" />
-      <circle cx="96" cy="58" r="0.9" fill="#d02818" opacity="0.85" />
-      {/* Wooden fence */}
-      {[0,1,2,3,4,5,6,7,8].map((i) => (
-        <rect key={i} x={5 + i * 11} y="78" width="1.6" height="9" fill="#9a6828" />
+      <rect x="57" y="54" width="10" height="28" fill="#c0b8a0" stroke="#7a7260" strokeWidth="0.5" />
+      <line x1="57" y1="62" x2="67" y2="62" stroke="#9a9282" strokeWidth="0.4" />
+      <line x1="57" y1="70" x2="67" y2="70" stroke="#9a9282" strokeWidth="0.4" />
+      <ellipse cx="62" cy="82" rx="5" ry="1.6" fill="#7a7260" />
+      <path d="M57,54 Q62,46 67,54 Z" fill="#7a8a8a" stroke="#5a6a6a" strokeWidth="0.4" />
+
+      {/* Apple tree — sits on the parcel's right edge so the canopy reads
+          against whatever sky/hill is behind it. */}
+      <rect x="80" y="60" width="2" height="14" fill="#5a3818" />
+      <ellipse cx="81" cy="58" rx="7" ry="7" fill="#3a7a20" />
+      <ellipse cx="79" cy="56" rx="3" ry="3" fill="#4a8a28" opacity="0.7" />
+      <circle cx="77" cy="56" r="1" fill="#e03820" opacity="0.85" />
+      <circle cx="83" cy="60" r="0.9" fill="#d02818" opacity="0.85" />
+      <circle cx="80" cy="61" r="0.8" fill="#e84020" opacity="0.85" />
+
+      {/* Wooden split-rail fence around the parcel. */}
+      {[0,1,2,3,4,5,6,7,8,9].map((i) => (
+        <rect key={i} x={6 + i * 10} y="80" width="1.4" height="10" fill="#9a6828" />
       ))}
-      <line x1="2" y1="81" x2="100" y2="81" stroke="#9a6828" strokeWidth="0.9" />
-      <line x1="2" y1="85" x2="100" y2="85" stroke="#9a6828" strokeWidth="0.9" />
-      {/* Hay bale */}
-      <ellipse cx="76" cy="83" rx="9" ry="4.5" fill="#d4a838" stroke="#9a7820" strokeWidth="0.5" />
-      <line x1="67" y1="80.5" x2="85" y2="80.5" stroke="#9a7820" strokeWidth="0.4" />
-      <line x1="67" y1="84" x2="85" y2="84" stroke="#9a7820" strokeWidth="0.4" />
-      {/* Wildflowers */}
-      <circle cx="8" cy="92" r="0.9" fill="#ff7070" />
-      <circle cx="42" cy="94" r="0.9" fill="#ffffff" />
-      <circle cx="62" cy="92" r="0.9" fill="#f0a0e0" />
+      <path d="M4,84 Q50,80 96,84" fill="none" stroke="#9a6828" strokeWidth="1" />
+      <path d="M4,88 Q50,84 96,88" fill="none" stroke="#9a6828" strokeWidth="1" />
+
+      {/* Gate at front of fence — implies you walk in through here. */}
+      <rect x="44" y="83" width="12" height="0.9" fill="#b88a40" />
+      <rect x="44" y="86" width="12" height="0.9" fill="#b88a40" />
+      <line x1="44" y1="82" x2="56" y2="89" stroke="#b88a40" strokeWidth="0.7" />
+      <rect x="43" y="80" width="1.4" height="11" fill="#6a4818" />
+      <rect x="55.6" y="80" width="1.4" height="11" fill="#6a4818" />
+
+      {/* Hay bale and props on/near the parcel. */}
+      <ellipse cx="14" cy="88" rx="6" ry="3" fill="#d4a838" stroke="#9a7820" strokeWidth="0.5" />
+      <line x1="8" y1="86.5" x2="20" y2="86.5" stroke="#9a7820" strokeWidth="0.4" />
+      <line x1="8" y1="89.5" x2="20" y2="89.5" stroke="#9a7820" strokeWidth="0.4" />
+      <ellipse cx="86" cy="89" rx="5" ry="2.5" fill="#d4a838" stroke="#9a7820" strokeWidth="0.5" />
+
+      {/* Wildflowers along the fenceline. */}
+      <circle cx="12" cy="93" r="0.8" fill="#ff7070" />
+      <circle cx="34" cy="94" r="0.8" fill="#ffffff" />
+      <circle cx="68" cy="93" r="0.8" fill="#f0a0e0" />
+      <circle cx="92" cy="94" r="0.8" fill="#ffd640" />
     </svg>
   );
 }
 
+// Mine — tunnelled into the right-hand hillside. The cliff face shares the
+// town's rock palette so the entrance reads as part of the hill, not a
+// poster pasted on the sky. Background is transparent; sky-pixels of the
+// town show through above the rock.
 function MineEntranceArt({ locked }) {
   const lanternFill = locked ? "#5a4830" : "#c86820";
-  const lanternGlow = locked ? "rgba(120,110,90,.0)" : "rgba(248,160,64,.22)";
+  const lanternGlow = locked ? "rgba(120,110,90,.0)" : "rgba(248,160,64,.32)";
   return (
-    <svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMax meet" className="absolute inset-0 w-full h-full">
-      {/* Dusk sky */}
-      <rect width="100" height="40" fill="#3a3e44" />
-      <rect width="100" height="14" fill="#52565c" opacity="0.6" />
-      {/* Mountain silhouette */}
-      <polygon points="0,38 20,14 36,30 54,8 72,24 100,16 100,46 0,46" fill="#48464a" />
-      <polygon points="12,30 20,14 28,28" fill="#5a585e" opacity="0.65" />
-      <polygon points="46,18 54,8 62,22" fill="#6a686e" opacity="0.55" />
-      {/* Snow caps */}
-      <polygon points="18,16 20,14 22,16" fill="#d8d0c8" opacity="0.7" />
-      <polygon points="52,10 54,8 56,10" fill="#d8d0c8" opacity="0.7" />
-      {/* Cliff base */}
-      <rect y="42" width="100" height="58" fill="#5c5860" />
-      <path d="M0,58 Q30,52 60,56 T100,54 L100,64 L0,64 Z" fill="#48464c" opacity="0.55" />
-      <path d="M0,72 Q35,68 70,72 T100,70 L100,80 L0,80 Z" fill="#3a3840" opacity="0.45" />
-      {/* Ore vein */}
-      <line x1="6" y1="54" x2="22" y2="62" stroke="#9ad8f0" strokeWidth="0.6" opacity="0.5" />
-      <line x1="78" y1="50" x2="92" y2="58" stroke="#d8f0fc" strokeWidth="0.5" opacity="0.5" />
-      {/* Mine tunnel */}
-      <rect x="36" y="48" width="28" height="38" fill="#0a0a0c" />
+    <svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMax meet" className="absolute inset-0 w-full h-full overflow-visible">
+      {/* Soft cast shadow at the foot of the cliff. */}
+      <ellipse cx="50" cy="96" rx="48" ry="5" fill="rgba(12,10,8,0.34)" />
+
+      {/* Rocky outcrop carved out of the hillside. The top edge is jagged
+          so it reads as a continuation of the town's rocky horizon, not a
+          rectangle. */}
+      <path d="M0,42 L8,32 L18,38 L28,24 L40,34 L52,18 L66,30 L78,22 L88,32 L96,26 L100,30 L100,94 L0,94 Z"
+        fill="#5e5a5c" stroke="#3a3a3e" strokeWidth="0.6" />
+      <path d="M0,56 Q26,50 52,54 T100,52 L100,64 L0,64 Z" fill="#48464c" opacity="0.6" />
+      <path d="M0,72 Q30,68 60,72 T100,70 L100,82 L0,82 Z" fill="#3a3840" opacity="0.45" />
+      {/* Highlight stripes — lit slabs catching the daylight. */}
+      <polygon points="8,32 18,38 14,40 6,38" fill="#74707a" opacity="0.55" />
+      <polygon points="40,34 52,18 56,24 44,38" fill="#74707a" opacity="0.5" />
+      <polygon points="78,22 88,32 84,34 76,28" fill="#74707a" opacity="0.5" />
+      {/* Ore veins flickering in the rockface. */}
+      <line x1="6" y1="56" x2="22" y2="64" stroke="#9ad8f0" strokeWidth="0.6" opacity="0.5" />
+      <line x1="74" y1="48" x2="92" y2="58" stroke="#d8f0fc" strokeWidth="0.5" opacity="0.5" />
+      <line x1="82" y1="64" x2="94" y2="74" stroke="#9ad8f0" strokeWidth="0.5" opacity="0.4" />
+
+      {/* Mine tunnel — dark mouth bored into the rock. */}
+      <rect x="36" y="48" width="28" height="40" fill="#0a0a0c" />
       <ellipse cx="50" cy="48" rx="14" ry="6" fill="#0a0a0c" />
       <ellipse cx="50" cy="56" rx="9" ry="4" fill="#1a1a1c" opacity="0.85" />
-      {/* Timber posts */}
-      <rect x="32" y="44" width="5" height="44" fill="#6a4828" stroke="#3a2810" strokeWidth="0.4" />
-      <rect x="63" y="44" width="5" height="44" fill="#6a4828" stroke="#3a2810" strokeWidth="0.4" />
-      <line x1="34.5" y1="44" x2="34.5" y2="88" stroke="#5a3818" strokeWidth="0.3" opacity="0.8" />
-      <line x1="65.5" y1="44" x2="65.5" y2="88" stroke="#5a3818" strokeWidth="0.3" opacity="0.8" />
-      {/* Header beam */}
+      {/* Inner gloom — fades the deeper you look. */}
+      <ellipse cx="50" cy="64" rx="6" ry="14" fill="#040406" opacity="0.7" />
+
+      {/* Timber posts and header beam. */}
+      <rect x="32" y="44" width="5" height="46" fill="#6a4828" stroke="#3a2810" strokeWidth="0.4" />
+      <rect x="63" y="44" width="5" height="46" fill="#6a4828" stroke="#3a2810" strokeWidth="0.4" />
+      <line x1="34.5" y1="44" x2="34.5" y2="90" stroke="#5a3818" strokeWidth="0.3" opacity="0.8" />
+      <line x1="65.5" y1="44" x2="65.5" y2="90" stroke="#5a3818" strokeWidth="0.3" opacity="0.8" />
       <rect x="29" y="42" width="42" height="6" fill="#7a5830" stroke="#3a2810" strokeWidth="0.4" />
       <rect x="29" y="42" width="42" height="1.4" fill="#9a7848" opacity="0.6" />
       {/* Knee braces */}
       <line x1="36" y1="50" x2="44" y2="44" stroke="#5a3818" strokeWidth="1.8" strokeLinecap="round" />
       <line x1="64" y1="50" x2="56" y2="44" stroke="#5a3818" strokeWidth="1.8" strokeLinecap="round" />
-      {/* Sign board */}
-      <rect x="42" y="34" width="16" height="7" fill="#7a5828" stroke="#4a3018" strokeWidth="0.5" />
-      <line x1="44" y1="36.2" x2="56" y2="36.2" stroke="#4a3018" strokeWidth="0.4" />
-      <line x1="44" y1="38.8" x2="56" y2="38.8" stroke="#4a3018" strokeWidth="0.4" />
-      {/* Lanterns */}
-      <circle cx="34" cy="52" r="6" fill={lanternGlow} />
+
+      {/* Lanterns — only lit when the mine is unlocked. */}
+      <circle cx="34" cy="52" r="7" fill={lanternGlow} />
       <line x1="34" y1="44" x2="34" y2="48" stroke="#3a2810" strokeWidth="0.6" />
       <rect x="31" y="48" width="6" height="6" fill={lanternFill} stroke="#5a3010" strokeWidth="0.4" />
       <ellipse cx="34" cy="48.5" rx="2.6" ry="0.7" fill={locked ? "#7a6850" : "#f8a040"} opacity="0.85" />
-      <circle cx="66" cy="52" r="6" fill={lanternGlow} />
+      <circle cx="66" cy="52" r="7" fill={lanternGlow} />
       <line x1="66" y1="44" x2="66" y2="48" stroke="#3a2810" strokeWidth="0.6" />
       <rect x="63" y="48" width="6" height="6" fill={lanternFill} stroke="#5a3010" strokeWidth="0.4" />
       <ellipse cx="66" cy="48.5" rx="2.6" ry="0.7" fill={locked ? "#7a6850" : "#f8a040"} opacity="0.85" />
-      {/* Cart tracks */}
-      <line x1="0" y1="86" x2="100" y2="86" stroke="#7a6848" strokeWidth="0.9" />
-      <line x1="0" y1="90" x2="100" y2="90" stroke="#7a6848" strokeWidth="0.9" />
-      {[0,1,2,3,4,5,6,7,8,9].map((i) => (
-        <line key={i} x1={6 + i * 10} y1="85" x2={6 + i * 10} y2="91" stroke="#5a4828" strokeWidth="0.6" />
+
+      {/* Cart tracks emerging from the tunnel — line up with the dirt path
+          that TownGround draws below, so the cart looks like it rolls out
+          onto the village road. */}
+      <line x1="32" y1="88" x2="100" y2="92" stroke="#7a6848" strokeWidth="0.9" />
+      <line x1="32" y1="92" x2="100" y2="96" stroke="#7a6848" strokeWidth="0.9" />
+      {[0,1,2,3,4,5,6].map((i) => (
+        <line key={i} x1={36 + i * 9} y1={87 + i * 0.4} x2={36 + i * 9} y2={93 + i * 0.5} stroke="#5a4828" strokeWidth="0.55" />
       ))}
-      {/* Mine cart */}
-      <rect x="14" y="76" width="18" height="10" rx="1" fill="#4a3a26" stroke="#2a1a08" strokeWidth="0.4" />
-      <rect x="14" y="76" width="18" height="2.5" fill="#665040" />
-      <ellipse cx="23" cy="76" rx="9" ry="2.5" fill="#78889a" />
-      <ellipse cx="20" cy="74.5" rx="3.5" ry="1.2" fill="#a0c0d0" opacity="0.75" />
-      <circle cx="22" cy="73.5" r="0.6" fill="#d8f0fc" />
-      <circle cx="18" cy="88" r="2.6" fill="none" stroke="#3a2810" strokeWidth="0.9" />
-      <circle cx="18" cy="88" r="0.9" fill="#3a2810" />
-      <circle cx="28" cy="88" r="2.6" fill="none" stroke="#3a2810" strokeWidth="0.9" />
-      <circle cx="28" cy="88" r="0.9" fill="#3a2810" />
-      {/* Pickaxe leaning */}
+
+      {/* Mine cart parked outside. */}
+      <rect x="40" y="78" width="18" height="10" rx="1" fill="#4a3a26" stroke="#2a1a08" strokeWidth="0.4" />
+      <rect x="40" y="78" width="18" height="2.5" fill="#665040" />
+      <ellipse cx="49" cy="78" rx="9" ry="2.5" fill="#78889a" />
+      <ellipse cx="46" cy="76.5" rx="3.5" ry="1.2" fill="#a0c0d0" opacity="0.75" />
+      <circle cx="48" cy="75.5" r="0.6" fill="#d8f0fc" />
+      <circle cx="44" cy="90" r="2.6" fill="none" stroke="#3a2810" strokeWidth="0.9" />
+      <circle cx="44" cy="90" r="0.9" fill="#3a2810" />
+      <circle cx="54" cy="90" r="2.6" fill="none" stroke="#3a2810" strokeWidth="0.9" />
+      <circle cx="54" cy="90" r="0.9" fill="#3a2810" />
+
+      {/* Pickaxe leaning against a timber, and a small tailings heap. */}
       <line x1="74" y1="58" x2="78" y2="84" stroke="#7a5830" strokeWidth="1.3" strokeLinecap="round" />
       <path d="M70,58 L78,55 L82,57 L74,60 Z" fill="#9aa0a8" stroke="#5a606a" strokeWidth="0.4" />
-      {/* Tailings pile */}
-      <ellipse cx="86" cy="86" rx="13" ry="3.5" fill="#3a3a3a" opacity="0.6" />
-      <polygon points="78,84 86,76 94,84" fill="#5a585e" />
-      <polygon points="82,82 86,78 90,82" fill="#6a686e" opacity="0.7" />
-      <circle cx="86" cy="80" r="0.7" fill="#a0c0d0" />
-      <circle cx="89" cy="83" r="0.6" fill="#c8e4f8" opacity="0.8" />
-      {/* Smoke wisps from tunnel */}
+      <ellipse cx="84" cy="86" rx="11" ry="3" fill="#3a3a3a" opacity="0.6" />
+      <polygon points="78,84 84,76 92,84" fill="#5a585e" />
+      <polygon points="80,82 84,78 88,82" fill="#6a686e" opacity="0.7" />
+      <circle cx="84" cy="80" r="0.7" fill="#a0c0d0" />
+      <circle cx="88" cy="83" r="0.6" fill="#c8e4f8" opacity="0.8" />
+
+      {/* Smoke wisps from the tunnel when the mine is operating. */}
       {!locked && <>
-        <ellipse cx="48" cy="28" rx="2.5" ry="4" fill="rgba(180,170,160,.3)" />
-        <ellipse cx="52" cy="22" rx="2" ry="3" fill="rgba(180,170,160,.22)" />
-        <ellipse cx="55" cy="16" rx="1.6" ry="2.5" fill="rgba(180,170,160,.15)" />
+        <ellipse cx="48" cy="32" rx="2.5" ry="4" fill="rgba(180,170,160,.32)" />
+        <ellipse cx="52" cy="24" rx="2" ry="3" fill="rgba(180,170,160,.24)" />
+        <ellipse cx="55" cy="18" rx="1.6" ry="2.5" fill="rgba(180,170,160,.16)" />
       </>}
     </svg>
   );
@@ -1545,10 +1574,11 @@ export function TownView({ state, dispatch }) {
       {/* "Found this settlement" CTA — only renders for visited-but-unfounded settleable zones. */}
       <FoundSettlementBanner state={state} dispatch={dispatch} />
 
-      {/* Puzzle-board fixtures — the farm field, mine entrance and harbor now
-          sit on lots in the town's wings (from townPlan.boards) rather than
-          floating in the corners. Same 1100×600 placement convention as the
-          building illustrations below. */}
+      {/* Puzzle-board fixtures — the farm field, mine entrance and harbor sit
+          on grounded lots in the town's wings (from townPlan.boards) and tie
+          into the road network via short dirt paths drawn by TownGround. The
+          interactive element is the scene itself — no boxed UI card — with a
+          hanging wooden signpost above and a soft glow on hover. */}
       <div className="absolute inset-0 pointer-events-none">
         {(townPlan.boards || []).map((b) => {
           const meta = BOARD_META[b.kind];
@@ -1560,26 +1590,55 @@ export function TownView({ state, dispatch }) {
               type="button"
               aria-label={locked ? `${meta.label} (locked until level 2)` : `Enter ${meta.label}`}
               disabled={locked}
-              className="absolute cursor-pointer group pointer-events-auto flex flex-col items-center bg-transparent border-0 p-0 focus-visible:outline-2 focus-visible:outline-[#ffd248] focus-visible:rounded disabled:cursor-not-allowed"
+              className="absolute cursor-pointer group pointer-events-auto bg-transparent border-0 p-0 focus-visible:outline-2 focus-visible:outline-[#ffd248] focus-visible:rounded disabled:cursor-not-allowed"
               style={{
                 left: `${((b.cx - b.w / 2) / 1100) * 100}%`,
                 bottom: `${((600 - (b.cy + b.h / 2)) / 600) * 100}%`,
                 width: `${(b.w / 1100) * 100}%`,
                 aspectRatio: "1",
-                opacity: locked ? 0.7 : 1,
+                opacity: locked ? 0.78 : 1,
+                zIndex: Math.floor(b.cy + b.h / 2),
               }}
               onClick={() => setEntryBiome(b.kind)}
             >
+              {/* The scene itself is the affordance. A soft golden glow on
+                  hover stands in for the old dark overlay. The SVG art uses
+                  `xMidYMax meet`, so the visible content occupies the lower
+                  half of this square — the signpost/glow are placed against
+                  that visible region, not the empty-transparent top half. */}
               <div
-                className="relative w-full overflow-hidden transition-transform duration-150 group-hover:scale-[1.03]"
-                style={{ aspectRatio: "1", borderRadius: "10px", border: `2.5px solid ${meta.border}`, boxShadow: "0 3px 12px rgba(0,0,0,.4)" }}
+                className="relative w-full transition-transform duration-150 group-hover:scale-[1.04]"
+                style={{ aspectRatio: "1", filter: locked ? "saturate(0.55) brightness(0.78)" : "none", transformOrigin: "50% 80%" }}
               >
+                {/* Glow halo — only over the visible art band on the lower half. */}
+                <div className="absolute left-[6%] right-[6%] opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none rounded-[8%]"
+                  style={{ top: "30%", bottom: "4%", boxShadow: locked ? "0 0 0 2px rgba(180,180,180,.5) inset" : "0 0 30px 8px rgba(255,210,72,.55)" }} />
                 {meta.art(locked)}
-                <div className="absolute inset-x-0 top-0 flex justify-center items-center gap-1 font-bold text-white py-0.5" style={{ background: "rgba(0,0,0,.5)", fontSize: "clamp(7px,0.85vw,11px)", borderRadius: "8px 8px 0 0" }}>
-                  <Icon iconKey={locked ? "ui_lock" : meta.icon} size={11} /> {meta.label}
+                {/* Hanging wooden signpost — a plank on a post tucked just
+                    above the scene's tallest element so the label reads as
+                    part of the town's signage, not a UI chip. */}
+                <div className="absolute left-1/2 -translate-x-1/2 flex flex-col items-center pointer-events-none"
+                  style={{ top: "20%", width: "82%" }}>
+                  <div
+                    className="flex items-center justify-center gap-1 font-bold text-[#f6ecd4] px-2 py-0.5 rounded-sm whitespace-nowrap"
+                    style={{
+                      background: "linear-gradient(180deg, #8a5a2a 0%, #5a3a18 100%)",
+                      border: "1.5px solid #3a2410",
+                      boxShadow: "0 2px 4px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,220,160,.25)",
+                      fontSize: "clamp(8px,0.85vw,11px)",
+                      textShadow: "0 1px 1px rgba(0,0,0,.7)",
+                    }}
+                  >
+                    <Icon iconKey={locked ? "ui_lock" : meta.icon} size={11} /> {meta.label}
+                  </div>
                 </div>
-                <div className="absolute inset-0 grid place-items-center opacity-0 group-hover:opacity-100 transition-opacity" style={{ background: "rgba(0,0,0,.4)" }}>
-                  <span className="font-bold text-white flex items-center gap-1" style={{ fontSize: "clamp(8px,0.95vw,12px)" }}><Icon iconKey={locked ? "ui_lock" : "ui_enter"} size={11} /> {locked ? "Level 2" : "Enter"}</span>
+                {/* Enter hint that floats over the scene on hover. */}
+                <div className="absolute left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"
+                  style={{ top: "58%", filter: "drop-shadow(0 2px 4px rgba(0,0,0,.6))" }}>
+                  <span className="font-bold text-white flex items-center gap-1 px-2 py-0.5 rounded-full whitespace-nowrap"
+                    style={{ background: "rgba(0,0,0,.55)", fontSize: "clamp(8px,0.95vw,12px)" }}>
+                    <Icon iconKey={locked ? "ui_lock" : "ui_enter"} size={11} /> {locked ? "Level 2" : "Enter"}
+                  </span>
                 </div>
               </div>
             </button>
