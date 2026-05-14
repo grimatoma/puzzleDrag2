@@ -12,7 +12,6 @@ import {
   TILE_CATEGORY_TO_ZONE_CATEGORY,
   ZONES,
 } from "./features/zones/data.js";
-import { TILE_TYPES_MAP } from "./features/tileCollection/data.js";
 const cssColor = (num) => Phaser.Display.Color.IntegerToColor(num).rgba;
 import { rounded, makeTextures, regenerateTextures } from "./textures.js";
 import { TileObj } from "./TileObj.js";
@@ -409,18 +408,6 @@ export class GameScene extends Phaser.Scene {
 
   nextResource(res) {
     const resources = this.biome().resources;
-
-    // Per-tile produces override (Balance Manager → Tiles tab). When the
-    // active tile-type for this resource has `effects.producesResource` set,
-    // it overrides both the zone config and the native chain. Multiple
-    // tile-types can share a base resource; we look up by resource key first
-    // since each species' tile-id matches its base-resource key by convention.
-    const tileType = TILE_TYPES_MAP?.[res.key];
-    const producesKey = tileType?.effects?.producesResource;
-    if (producesKey) {
-      const produced = resources.find((r) => r.key === producesKey);
-      if (produced) return produced;
-    }
 
     // Farm chains are owned by the active zone's upgradeMap. Whatever the
     // zone says (concrete category, gold sentinel, or "no entry") is the
