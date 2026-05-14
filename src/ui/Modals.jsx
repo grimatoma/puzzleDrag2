@@ -365,7 +365,17 @@ function StoryBar({ line, npc, onContinue }) {
       {/* Sits above the game's bottom nav bar (~44px) so the caption clears it. */}
       <div
         className="absolute"
-        style={{ left: "50%", bottom: 56, width: "calc(100% - 24px)", maxWidth: 640, animation: "storyBarIn 360ms cubic-bezier(.2,.7,.2,1) both" }}
+        style={{
+          left: "50%",
+          // Vol II §04 #16 — anchor above whatever chrome is mounted at the
+          // bottom (BottomNav / MobileDock / PortraitToolsBar), plus the
+          // safe-area inset. No more hardcoded `bottom: 56` that drifted off
+          // the BottomNav at non-default zooms.
+          bottom: "calc(var(--chrome-bottom, 0px) + var(--safe-bottom, 0px) + 12px)",
+          width: "calc(100% - 24px)",
+          maxWidth: 640,
+          animation: "storyBarIn 360ms cubic-bezier(.2,.7,.2,1) both",
+        }}
       >
         <div
           role="button"
@@ -573,7 +583,13 @@ export function NpcBubble({ bubble, dispatch }) {
       aria-label={`Dismiss ${npc.name}'s message`}
       onClick={dismiss}
       onKeyDown={onKey}
-      className="absolute bottom-28 landscape:max-[1024px]:bottom-20 left-1/2 -translate-x-1/2 bg-[#f4ecd8] border-[3px] border-[#5a3a20] rounded-2xl px-4 py-3 landscape:max-[1024px]:px-3 landscape:max-[1024px]:py-2 max-w-[460px] landscape:max-[1024px]:max-w-[320px] shadow-2xl z-40 animate-bubblein cursor-pointer"
+      className="absolute left-1/2 -translate-x-1/2 bg-[#f4ecd8] border-[3px] border-[#5a3a20] rounded-2xl px-4 py-3 landscape:max-[1024px]:px-3 landscape:max-[1024px]:py-2 max-w-[460px] landscape:max-[1024px]:max-w-[320px] shadow-2xl z-40 animate-bubblein cursor-pointer"
+      style={{
+        // Vol II §04 #16 — float ~32px above the bottom chrome regardless of
+        // which surface is mounted. Previously hardcoded `bottom-28` /
+        // `landscape:bottom-20`, which only worked when BottomNav was visible.
+        bottom: "calc(var(--chrome-bottom, 0px) + var(--safe-bottom, 0px) + 32px)",
+      }}
     >
       {/* Screen-reader live region is on the inner block so the dismiss button
        *  doesn't double-announce. */}

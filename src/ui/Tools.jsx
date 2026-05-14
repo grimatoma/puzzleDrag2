@@ -6,6 +6,7 @@ import { getPhaserScene } from "../phaserBridge.js";
 import IconCanvas, { hasIcon } from "./IconCanvas.jsx";
 import Icon from "./Icon.jsx";
 import Button from "./primitives/Button.jsx";
+import useChromeRect from "./primitives/useChromeRect.js";
 import { TOOL_CATALOG, TOOL_BY_KEY, TOOL_CATEGORIES, visibleTools, isTapTargetTool } from "./toolRegistry.js";
 
 // Re-exported for back-compat with anything that still imports TOOL_DEFS.
@@ -298,6 +299,8 @@ export function PortraitToolsBar({ state, dispatch }) {
 
 export function MobileDock({ state, dispatch }) {
   const [sheet, setSheet] = useState(null); // "tools" | "orders" | null
+  // Vol II §04 #16 — same chrome-bottom contract as BottomNav.
+  const dockRef = useChromeRect("--chrome-bottom");
 
   // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: clear local sheet state when leaving board view
   useEffect(() => { if (state.view !== "board") setSheet(null); }, [state.view]);
@@ -311,7 +314,7 @@ export function MobileDock({ state, dispatch }) {
 
   return (
     <>
-      <div className="flex border-t-2 border-[#b28b62] bg-[#3a2715]">
+      <div ref={dockRef} className="flex border-t-2 border-[#b28b62] bg-[#3a2715]" style={{ paddingBottom: "var(--safe-bottom, 0px)" }}>
         {/* Tools */}
         <button
           className="flex-1 flex flex-col items-center justify-center gap-0.5 py-2.5 relative text-[#f8e7c6]"

@@ -6,6 +6,7 @@ import { locBuilt } from "../locBuilt.js";
 import Icon from "./Icon.jsx";
 import Pill from "./primitives/Pill.jsx";
 import ProgressTrack from "./primitives/ProgressTrack.jsx";
+import useChromeRect from "./primitives/useChromeRect.js";
 
 // Phase 7 — calendar season effects were removed. Keeping the export as an
 // empty list so any lingering imports compile to no-ops; prefer deleting the
@@ -180,6 +181,10 @@ export function Hud({ state, dispatch }) {
   const isWon = !!state.story?.flags?.isWon;
   const sandbox = !!state.story?.sandbox;
   const showDevButtons = devModeEnabled();
+  // Vol II §04 #16 — publish the HUD's measured height as --chrome-top so
+  // bottom-anchored floating elements (StoryBar, NpcBubble) don't need to
+  // hard-code an offset that drifts when the HUD wraps.
+  const hudRef = useChromeRect("--chrome-top");
   // Vol I #02 — Three explicit zones (left chrome / center context / right
   // status). Each zone owns one job:
   //   left   = identity & shell controls (menu, sandbox tag, dev escape hatches)
@@ -189,6 +194,7 @@ export function Hud({ state, dispatch }) {
   // they overflow, but the structural row count stays 1 down to ~360px.
   return (
     <div
+      ref={hudRef}
       className="flex items-center gap-2 px-3 py-2 bg-[var(--bark-mid)] border-b-2 border-[#2a1d0f] text-[var(--ink-warm)]"
       data-testid="hud"
     >

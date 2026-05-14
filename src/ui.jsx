@@ -6,6 +6,7 @@ import { ToolsGrid } from "./ui/Tools.jsx";
 import { TOOL_BY_KEY } from "./ui/toolRegistry.js";
 import Icon from "./ui/Icon.jsx";
 import ChainBadge from "./ui/primitives/ChainBadge.jsx";
+import useChromeRect from "./ui/primitives/useChromeRect.js";
 
 // Per-feature error boundary. A crash in any one feature renders an inline
 // fallback inside that feature's slot and dispatches CLOSE_MODAL so the
@@ -74,6 +75,9 @@ export function SidePanel({ state, dispatch, chainInfo }) {
 // ─── Bottom nav ───────────────────────────────────────────────────────────
 
 export function BottomNav({ view, modal, dispatch, state }) {
+  // Vol II §04 #16 — write our measured height into --chrome-bottom so
+  // StoryBar / NpcBubble anchor cleanly above us.
+  const navRef = useChromeRect("--chrome-bottom");
   // Vol I #03 — reserve all 8 slots from session start. Portal renders locked
   // until built so the row width never shifts on the player. Locked slot taps
   // surface a tooltip instead of switching view.
@@ -97,6 +101,7 @@ export function BottomNav({ view, modal, dispatch, state }) {
   const activeKey = modal ? (items.find((i) => i.modal === modal)?.key ?? view) : view;
   return (
     <div
+      ref={navRef}
       data-testid="bottom-nav"
       className="flex w-full bg-[#2b2218]/95 border-t-2 border-[#f7e2b6] flex-shrink-0 shadow-[0_-4px_12px_rgba(0,0,0,.25)]"
       style={{
