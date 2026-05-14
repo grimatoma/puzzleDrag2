@@ -281,8 +281,10 @@ export default function App() {
           <FeatureScreens state={state} dispatch={dispatch} />
         </div>
 
-        {/* Bottom nav — full-width bar at the bottom of every view */}
-        <BottomNav view={state.view} modal={state.modal} dispatch={dispatch} state={state} />
+        {/* Bottom nav — hidden on the main game board */}
+        {state.view !== "board" && (
+          <BottomNav view={state.view} modal={state.modal} dispatch={dispatch} state={state} />
+        )}
 
         {/* NPC bubble */}
         <NpcBubble bubble={state.bubble} dispatch={dispatch} />
