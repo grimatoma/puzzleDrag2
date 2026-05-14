@@ -5,6 +5,7 @@ import { seasonIndexInSession, hearthTokenCount } from "../features/zones/data.j
 import { locBuilt } from "../locBuilt.js";
 import Icon from "./Icon.jsx";
 import Pill from "./primitives/Pill.jsx";
+import ProgressTrack from "./primitives/ProgressTrack.jsx";
 
 // Phase 7 — calendar season effects were removed. Keeping the export as an
 // empty list so any lingering imports compile to no-ops; prefer deleting the
@@ -172,7 +173,6 @@ export function Hud({ state, dispatch }) {
   const seasonIdx = onBoard ? seasonIndexInSession(turnsUsed ?? 0, turnBudget || 1) : 0;
   const season = SEASONS[seasonIdx];
   const xpNeed = xpForLevel(level);
-  const xpPct = Math.min(100, (xp / xpNeed) * 100);
   const builtAtLoc = locBuilt(state);
   const buildingCount = Object.keys(builtAtLoc).filter((k) => k !== "_plots").length;
   const festivalAnnounced = !!state.story?.flags?.festival_announced;
@@ -243,12 +243,17 @@ export function Hud({ state, dispatch }) {
         )}
         {!onBoard && (
           <>
-            <div className="bg-[var(--paper)] border-2 border-[var(--iron)] rounded-full h-[26px] w-[110px] landscape:max-[1024px]:h-[20px] landscape:max-[1024px]:w-[80px] relative overflow-hidden" aria-label={`Experience ${xp} of ${xpNeed}`}>
-              <div className="h-full bg-gradient-to-r from-[#ff8b25] to-[#ffb347] transition-[width] duration-300" style={{ width: `${xpPct}%` }} />
-              <div className="absolute inset-0 grid place-items-center text-[11px] landscape:max-[1024px]:text-[9px] font-bold text-white tabular-nums" style={{ textShadow: "0 1px 2px rgba(0,0,0,.4)" }}>
-                {xp} / {xpNeed}
-              </div>
-            </div>
+            <ProgressTrack
+              value={xp}
+              max={xpNeed}
+              style="bar"
+              size="sm"
+              tone="ember"
+              showValue="inside"
+              width={110}
+              ariaLabel={`Experience ${xp} of ${xpNeed}`}
+              className="landscape:max-[1024px]:!w-[80px]"
+            />
             <div className="w-9 h-9 landscape:max-[1024px]:w-7 landscape:max-[1024px]:h-7 rounded-full bg-[#bb3b2f] border-[3px] border-[#ffe2a3] grid place-items-center text-white font-bold text-[16px] landscape:max-[1024px]:text-[12px] tabular-nums" aria-label={`Level ${level}`}>
               {level}
             </div>
