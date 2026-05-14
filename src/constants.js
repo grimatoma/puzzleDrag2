@@ -645,24 +645,6 @@ export const CAPPED_RESOURCES = ["grass_hay","grain_wheat","grain","grain_flour"
 
 // ─── Phase 3 Economy ──────────────────────────────────────────────────────────
 
-/** Mine entry pricing tiers (§7). */
-export const MINE_ENTRY_TIERS = [
-  { id: "free",    supplies: 3,               label: "Standard" },
-  { id: "better",  coins: 100,                label: "Better"   },
-  { id: "premium", runes: 2,                  label: "Premium"  },
-];
-
-/** Harbor (fish biome) entry pricing tiers — mirrors MINE_ENTRY_TIERS. */
-export const HARBOR_ENTRY_TIERS = [
-  // "Standard" charters a small dinghy with 3 planks of lumber for the
-  // pier repair tax. Free of coins; matches mine "free" tier shape.
-  { id: "free",    wood_plank: 3,                       label: "Standard" },
-  // "Charter" pays the harbourmaster + tackle for an extended trip —
-  // +2 turns. Mirrors mine's "better" 100◉ + supplies tier.
-  { id: "better",  coins: 150, wood_plank: 5,           label: "Charter"  },
-  // "Premium" hires a deepwater navigator for a single rune. Standard turns.
-  { id: "premium", runes: 2,                            label: "Premium"  },
-];
 
 /** Daily login-streak reward ladder (GAME_SPEC §16 — locked). */
 export const DAILY_REWARDS = {

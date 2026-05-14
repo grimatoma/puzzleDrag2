@@ -3,6 +3,18 @@ import { NPC_DATA } from "./data.js";
 
 export const DIALOG_POOLS = {
   mira: {
+    reactive: [
+      {
+        id: "mira_hearth_unlit",
+        text: "Mira: 'It's cold in here. We need that Hearth lit if we're going to survive the first frost.'",
+        req: (s) => !s.story?.flags?.hearth_lit
+      },
+      {
+        id: "mira_bakery_built",
+        text: "Mira: 'The ovens are finally hot. The smell of fresh bread... it feels like a real home now.'",
+        req: (s) => s.built?.home?._plots && Object.values(s.built.home._plots).includes("bakery")
+      }
+    ],
     spring: {
       Sour: [
         "Mira: 'The dough won't rise without help.'",
@@ -181,6 +193,13 @@ export const DIALOG_POOLS = {
         "Old Tomas: 'I've made it to another winter. You helped.'",
         "Old Tomas: 'Come spring, I'll show you the queen cell. A privilege few share.'",
       ],
+    reactive: [
+      {
+        id: "tomas_first_order",
+        text: "Old Tomas: 'The Vale is talking. They see the smoke from your Hearth, and they're starting to hope.'",
+        req: (s) => s.story?.flags?.first_order
+      }
+    ],
     },
   },
 
@@ -455,15 +474,41 @@ export const DIALOG_POOLS = {
         "Wren: 'You'll see spring because of what we built. That's what scouts are for.'",
       ],
     },
+    reactive: [
+      {
+        id: "wren_no_granary",
+        text: "Wren: 'The Hearth is lit, but we've got nowhere to store the surplus. A Granary should be next on your list.'",
+        req: (s) => s.story?.flags?.hearth_lit && !s.story?.flags?.granary_built
+      },
+      {
+        id: "wren_village_growing",
+        text: "Wren: 'Look at this place. A few weeks ago it was just ruins. Now... it's a settlement.'",
+        req: (s) => Object.keys(s.built?.home?._plots || {}).length >= 4
+      }
+    ],
   },
 };
 
 /**
  * Pick a dialog phrase for (npcId, season, bond, rng).
+ * Now checks for 'reactive' lines first if a state object is provided.
  * Pure: given the same rng function (and thus same seed), returns the same phrase.
- * Falls back to a generic string if the cell is missing.
  */
-export function pickDialog(npcId, season, bond, rng) {
+export function pickDialog(npcId, season, bond, rng, state = null) {
+  // 1. Try reactive lines first if we have state
+  if (state) {
+    const reactivePool = DIALOG_POOLS?.[npcId]?.reactive;
+    if (Array.isArray(reactivePool)) {
+      const active = reactivePool.filter(entry => entry.req(state));
+      // 30% chance to pick a reactive line if any are active
+      const roll = typeof rng === "function" ? rng() : Math.random();
+      if (active.length > 0 && roll < 0.35) {
+        const idx = Math.floor((roll / 0.35) * active.length);
+        return active[Math.max(0, Math.min(idx, active.length - 1))].text;
+      }
+    }
+  }
+
   const bandName = bondBand(bond).name;
   const pool = DIALOG_POOLS?.[npcId]?.[season]?.[bandName];
   if (!Array.isArray(pool) || pool.length === 0) {

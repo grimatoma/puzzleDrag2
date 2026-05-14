@@ -91,6 +91,7 @@ export function BottomNav({ view, modal, dispatch, state }) {
     { key: "crafting",    iconKey: "ui_build",  label: "Craft" },
     { key: "cartography", iconKey: "ui_map", label: "Map" },
     { key: "townsfolk",   iconKey: "ui_people",  label: "Townsfolk" },
+    { key: "chronicle",   iconKey: "ui_clipboard", label: "Chronicle" },
     { key: "tileCollection", iconKey: "ui_puzzle",  label: "Tiles" },
     ...(builtAtLoc.portal ? [{ key: "portal", iconKey: "ui_portal", label: "Portal" }] : []),
   ];

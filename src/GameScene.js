@@ -178,11 +178,28 @@ export class GameScene extends Phaser.Scene {
     // Sync worker effects on init and whenever state.workers changes
     this._syncWorkerEffects();
     onRegistry("changedata-workers", () => this._syncWorkerEffects());
-    // Swap on-board tiles to match the newly active tile type in their category,
-    // so picking a new tile type in the panel immediately rerenders the puzzle.
+
+    // Swap on-board tiles to match the newly active tile type in their category
     onRegistry("changedata-tileCollectionActive", (_p, value, prev) => {
       this.handleActiveTileChange(value, prev);
     });
+
+    // AAA Juice: Particle emitters for collection and impact VFX
+    this.sparkEmitter = this.add.particles(0, 0, "spark", {
+      speed: { min: 80, max: 200 },
+      scale: { start: 0.5, end: 0 },
+      alpha: { start: 1, end: 0 },
+      lifespan: 700,
+      rotate: { min: 0, max: 360 },
+      gravityY: 400,
+      frequency: -1, // manual emit only
+    }).setDepth(100);
+
+    // AAA Juice: Hazard Atmospherics
+    this.hazardVignette = this.add.graphics().setDepth(150);
+    onRegistry("changedata-hazardFire", () => this._updateHazardAtmosphere());
+    onRegistry("changedata-hazardRats", () => this._updateHazardAtmosphere());
+    this._updateHazardAtmosphere();
   }
 
   /**
@@ -235,7 +252,46 @@ export class GameScene extends Phaser.Scene {
     this.registry.set("seasonBonus",          agg.seasonBonus);
   }
 
-  // ─── Tween / shake helpers ───────────────────────────────────────────────
+  _shake(duration = 200, intensity = 0.005) {
+    this.cameras.main.shake(duration, intensity);
+  }
+
+  _updateHazardAtmosphere() {
+    if (!this.hazardVignette) return;
+    const fire = this.registry.get("hazardFire");
+    const rats = this.registry.get("hazardRats");
+    const hasFire = !!(fire?.cells?.length);
+    const hasRats = !!(rats?.length);
+
+    if (this._hazardTimer) { this._hazardTimer.remove(); this._hazardTimer = null; }
+
+    if (!hasFire && !hasRats) {
+      this.hazardVignette.clear();
+      return;
+    }
+
+    this._hazardTimer = this.time.addEvent({
+      delay: 120,
+      callback: () => {
+        if (!this.hazardVignette) return;
+        this.hazardVignette.clear();
+        const w = this.scale.width;
+        const h = this.scale.height;
+        if (hasFire) {
+          const alpha = 0.06 + Math.random() * 0.08;
+          this.hazardVignette.fillStyle(0xff6600, alpha);
+          this.hazardVignette.fillRect(0, 0, w, h);
+        }
+        if (hasRats) {
+          this.hazardVignette.fillStyle(0x666666, hasFire ? 0.05 : 0.12);
+          this.hazardVignette.fillRect(0, 0, w, h);
+        }
+      },
+      loop: true,
+    });
+  }
+
+  // ─── Building illustrations ──────────────────────────────────────────────
 
   /** Tween-duration passthrough (kept as a hook for future motion prefs). */
   _dur(base) {
@@ -245,6 +301,22 @@ export class GameScene extends Phaser.Scene {
   /** Camera shake helper. */
   _shake(duration, intensity) {
     this.cameras.main.shake(duration, intensity, false);
+  }
+
+  /** AAA Juice: Particle burst for resource collection. */
+  emitCollectParticles(x, y, colorStr, count = 10) {
+    const color = Phaser.Display.Color.HexStringToColor(colorStr).color;
+    this.sparkEmitter.setParticleTint(color);
+    this.sparkEmitter.explode(Math.min(25, count * 2), x, y);
+    
+    // Also a quick scale pulse on the board for extra weight
+    this.tweens.add({
+      targets: this.board,
+      scale: 1.015,
+      duration: 60,
+      yoyo: true,
+      ease: "Quad.Out"
+    });
   }
 
   /** Returns the effective minimum chain length given the active boss only.
@@ -1340,7 +1412,17 @@ export class GameScene extends Phaser.Scene {
 
     this.path.forEach((tile, i) => {
       this.grid[tile.row][tile.col] = null;
-      this.tweens.add({ targets: tile.sprite, scale: 0, angle: Phaser.Math.Between(-25, 25), alpha: 0, duration: this._dur(180 + i * 15), onComplete: () => tile.destroy() });
+      this.tweens.add({
+        targets: tile.sprite,
+        scale: 0,
+        angle: Phaser.Math.Between(-25, 25),
+        alpha: 0,
+        duration: this._dur(180 + i * 15),
+        onComplete: () => {
+          this.emitCollectParticles(tile.x, tile.y, res.color || "#ffffff", 2);
+          tile.destroy();
+        }
+      });
     });
 
     // Emit to React — use raw upgrade count (state.js applies autumnMult itself); gained is full amount (state.js caps it).

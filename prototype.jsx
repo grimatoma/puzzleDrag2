@@ -152,6 +152,8 @@ function PhaserMount({ dispatch, biomeKey, turnsUsed, uiLocked, boardActive, sce
   useEffect(() => { gameRef.current?.registry.set("inventoryCap", currentCap(gameState) ?? 200); }, [gameState]);
   // Sync hazards.fire so GameScene.fillBoard can overlay fire tiles on the board
   useEffect(() => { gameRef.current?.registry.set("hazardFire", FIRE_HAZARD_ENABLED ? (gameState?.hazards?.fire ?? null) : null); }, [gameState?.hazards?.fire]);
+  // Sync hazards.rats so GameScene can render atmospheric mist
+  useEffect(() => { gameRef.current?.registry.set("hazardRats", gameState?.hazards?.rats ?? null); }, [gameState?.hazards?.rats]);
   // Sync magicFertilizerCharges so GameScene.fillBoard can apply the bias for each fill charge
   useEffect(() => { gameRef.current?.registry.set("magicFertilizerCharges", gameState?.magicFertilizerCharges ?? 0); }, [gameState?.magicFertilizerCharges]);
 

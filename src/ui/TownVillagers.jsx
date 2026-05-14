@@ -126,6 +126,7 @@ function TownVillagers({ plan, buildings }) {
         const sway = Math.sin(v.bob * 1.1) * 2.5;
         const stage = stageSizeRef.current;
         el.style.transform = `translate3d(${(v.x / W) * stage.w}px, ${((v.y + bob) / H) * stage.h}px, 0) translate(-50%, -100%) scaleX(${v.facing})`;
+        el.style.zIndex = Math.floor(v.y);
         const body = bodyRefs.current[i];
         const head = headRefs.current[i];
         if (body) body.style.transform = `translateX(-50%) rotate(${sway * 0.3}deg)`;
@@ -139,7 +140,7 @@ function TownVillagers({ plan, buildings }) {
   if (!plan || !villagers.length) return null;
 
   return (
-    <div ref={stageRef} className="absolute inset-0 pointer-events-none z-[18]" aria-hidden="true">
+    <div ref={stageRef} className="absolute inset-0 pointer-events-none" aria-hidden="true">
       {villagers.map((v, i) => {
         const size = v.npcId ? 22 : 18;
         return (

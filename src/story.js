@@ -101,7 +101,7 @@ export const STORY_BEATS = [
     title: "The Smith",
     body: "Bram: 'I need a forge. The vale needs iron.'",
     trigger: { type: "act_entered", act: 2 },
-    onComplete: { spawnNPC: "bram" },
+    onComplete: { spawnNPC: "bram", setFlag: "bram_arrived" },
   },
   {
     id: "act2_first_hinge",
@@ -127,7 +127,7 @@ export const STORY_BEATS = [
     title: "The Healer",
     body: "Sister Liss: 'A child has fever. I need berries.'",
     trigger: { type: "resource_total_multi", req: { mine_stone: 20, berry: 10 } },
-    onComplete: { spawnNPC: "liss", advanceAct: 3 },
+    onComplete: { spawnNPC: "liss", setFlag: "liss_arrived", advanceAct: 3 },
   },
   // ── Act 3 ──────────────────────────────────────────────────────────────────
   {

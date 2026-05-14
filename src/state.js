@@ -32,6 +32,7 @@ import { STORY_BUILDING_IDS } from "./features/story/data.js";
 import { NPC_IDS } from "./features/npcs/data.js";
 import { payOrder, gainBond, decayBond, applyGift } from "./features/npcs/bond.js";
 import { pickDialog } from "./features/npcs/dialog.js";
+import { driftPrices, pickMarketEvent } from "./market.js";
 import * as decorations from "./features/decorations/slice.js";
 import * as portal from "./features/portal/slice.js";
 import * as market from "./features/market/slice.js";
@@ -1069,7 +1070,7 @@ function coreReducer(state, action) {
         : state.npcs;
       // Dialog line from pool (Phase 6.3) — calendar season removed; pass null
       // and let pickDialog fall back to a season-agnostic line.
-      const dialogLine = pickDialog(o.npc, null, newBond, Math.random);
+      const dialogLine = pickDialog(o.npc, null, newBond, Math.random, state);
       const orderLeveledUp = afterOrderAlmanac.almanac.level > state.almanac.level;
       let bubble = { id: Date.now(), npc: o.npc,
         text: `+${actualReward}[icon:berry] — ${dialogLine}`,
@@ -1534,7 +1535,8 @@ function coreReducer(state, action) {
     case "CLOSE_SEASON": {
       const newSeasonNum = (state.market?.season ?? 0) + 1;
       const mSeed = state.market?.seed ?? 0;
-      const newPrices = driftPrices(mSeed, newSeasonNum);
+      const newEvent = pickMarketEvent(mSeed, newSeasonNum);
+      const newPrices = driftPrices(mSeed, newSeasonNum, newEvent);
       // Spec §11: shuffles are earned via almanac/quests — not free per season.
       // TODO: if players run out of shuffles entirely, add a season-1 bootstrap grant here.
       let tools = { ...state.tools };
@@ -1577,12 +1579,15 @@ function coreReducer(state, action) {
         // 5.7: reset per-season free moves on season close
         tileCollection: state.tileCollection ? { ...state.tileCollection, freeMoves: 0 } : state.tileCollection,
         npcs: decayedNpcs,
-        bubble: { id: Date.now(), npc: "tomas", text: "Season ended! +25[icon:berry] season bonus.", ms: 2000 },
+        bubble: newEvent
+          ? { id: Date.now(), npc: "tomas", text: `Market News: ${newEvent.label}! ${newEvent.desc}`, ms: 4000 }
+          : { id: Date.now(), npc: "tomas", text: "Season ended! +25[icon:berry] season bonus.", ms: 2000 },
         market: {
           ...(state.market ?? {}),
           season: newSeasonNum,
           prevPrices: state.market?.prices ?? null,
           prices: newPrices,
+          event: newEvent,
         },
       };
       // Phase 12.5 — snapshot board into saved-field slot for any biome whose
@@ -1685,29 +1690,6 @@ function coreReducer(state, action) {
           supplies: (state.inventory.supplies ?? 0) + qty,
         },
       };
-    }
-
-    case "ENTER_MINE": {
-      if (!state.story?.flags?.mine_unlocked) return state;
-      const zoneId = state.activeZone ?? state.mapCurrent ?? DEFAULT_ZONE;
-      if (!ZONES[zoneId]?.hasMine) {
-        return { ...state, bubble: { id: Date.now(), npc: "wren", text: "Travel to a mining settlement before entering the mine.", ms: 2200 } };
-      }
-      const mode = action.payload?.mode ?? "standard";
-      if (mode === "standard") {
-        if ((state.inventory.supplies ?? 0) < 3) return state;
-        return {
-          ...state,
-          biome: "mine",
-          biomeKey: "mine",
-          inventory: { ...state.inventory, supplies: state.inventory.supplies - 3 },
-        };
-      }
-      if (mode === "premium") {
-        if ((state.runes ?? 0) < 2) return state;
-        return { ...state, biome: "mine", biomeKey: "mine", runes: state.runes - 2 };
-      }
-      return state;
     }
 
     case "FARM/ENTER": {
@@ -1832,104 +1814,6 @@ function coreReducer(state, action) {
       };
     }
 
-    // @deprecated — the free/better/premium tier entry (MINE/ENTER, HARBOR/ENTER,
-    // ENTER_MINE) is superseded by EXPEDITION/DEPART above; no UI dispatches it
-    // anymore. Kept (with its tests) until a focused cleanup pass removes it.
-    case "MINE/ENTER": {
-      if (!state.story?.flags?.mine_unlocked) return state;
-      const tier = MINE_ENTRY_TIERS.find((t) => t.id === action.payload?.tier);
-      if (!tier) return state;
-      let mineBase;
-      const zoneId = state.activeZone ?? state.mapCurrent ?? "quarry";
-      if (!ZONES[zoneId]?.hasMine) {
-        return { ...state, bubble: { id: Date.now(), npc: "wren", text: "Travel to a mining settlement before entering the mine.", ms: 2200 } };
-      }
-      const baseTurns = zoneBaseTurns(zoneId || "quarry");
-      const tierBonus = tier.turnBonus ?? (tier.id === "better" ? 2 : 0);
-      const turnBudget = Math.max(1, baseTurns + tierBonus);
-      if (tier.id === "free") {
-        if ((state.inventory.supplies ?? 0) < 3) return state;
-        mineBase = {
-          ...state,
-          biomeKey: "mine",
-          biome: "mine",
-          inventory: { ...state.inventory, supplies: state.inventory.supplies - 3 },
-        };
-      } else if (tier.id === "better") {
-        if ((state.coins ?? 0) < 100) return state;
-        mineBase = {
-          ...state,
-          biomeKey: "mine",
-          biome: "mine",
-          coins: state.coins - 100,
-        };
-      } else if (tier.id === "premium") {
-        if ((state.runes ?? 0) < 2) return state;
-        mineBase = { ...state, biomeKey: "mine", biome: "mine", runes: state.runes - 2 };
-      } else {
-        return state;
-      }
-      mineBase = {
-        ...mineBase,
-        turnsUsed: 0,
-        farmRun: { zoneId, turnBudget, turnsRemaining: turnBudget, startedAt: Date.now(), mode: "mine" },
-      };
-      // Spawn mysterious ore on mine entry if grid is available
-      if (mineBase.grid && mineBase.grid.length > 0) {
-        return spawnMysteriousOre(mineBase);
-      }
-      return mineBase;
-    }
-
-    case "HARBOR/ENTER": {
-      // Mirror of MINE/ENTER. Pays a per-trip cost from the chosen tier;
-      // each tier may extend turns and/or boost the trip in other ways.
-      const tier = HARBOR_ENTRY_TIERS.find((t) => t.id === action.payload?.tier);
-      if (!tier) return state;
-      let harborBase;
-      const zoneId = state.activeZone ?? state.mapCurrent ?? "harbor";
-      if (!ZONES[zoneId]?.hasWater) {
-        return { ...state, bubble: { id: Date.now(), npc: "wren", text: "Travel to a harbor before fishing.", ms: 2200 } };
-      }
-      const baseTurns = zoneBaseTurns(zoneId || "harbor");
-      const tierBonus = tier.turnBonus ?? (tier.id === "better" ? 2 : 0);
-      const turnBudget = Math.max(1, baseTurns + tierBonus);
-      if (tier.id === "free") {
-        if ((state.inventory?.wood_plank ?? 0) < (tier.wood_plank ?? 0)) return state;
-        harborBase = {
-          ...state,
-          biomeKey: "fish",
-          biome: "fish",
-          inventory: { ...state.inventory, wood_plank: state.inventory.wood_plank - tier.wood_plank },
-        };
-      } else if (tier.id === "better") {
-        if ((state.coins ?? 0) < (tier.coins ?? 0)) return state;
-        if ((state.inventory?.wood_plank ?? 0) < (tier.wood_plank ?? 0)) return state;
-        harborBase = {
-          ...state,
-          biomeKey: "fish",
-          biome: "fish",
-          coins: state.coins - tier.coins,
-          inventory: { ...state.inventory, wood_plank: state.inventory.wood_plank - tier.wood_plank },
-        };
-      } else if (tier.id === "premium") {
-        if ((state.runes ?? 0) < (tier.runes ?? 0)) return state;
-        harborBase = {
-          ...state,
-          biomeKey: "fish",
-          biome: "fish",
-          runes: state.runes - tier.runes,
-        };
-      } else {
-        return state;
-      }
-      return {
-        ...harborBase,
-        turnsUsed: 0,
-        farmRun: { zoneId, turnBudget, turnsRemaining: turnBudget, startedAt: Date.now(), mode: "harbor" },
-        _needsRefill: true,
-      };
-    }
 
     case "CRAFT": {
       const { id: craftId, qty: craftQty = 1 } = action.payload ?? {};
@@ -2283,7 +2167,7 @@ function coreReducer(state, action) {
       if (!giftResult.ok) return state; // cooldown or empty inventory — silent no-op
       // Phase 7 — calendar season removed; pickDialog falls back to a
       // season-agnostic line when given null.
-      const giftDialog = pickDialog(npcId, null, giftResult.newState.npcs.bonds[npcId], Math.random);
+      const giftDialog = pickDialog(npcId, null, giftResult.newState.npcs.bonds[npcId], Math.random, state);
       const giftBubble = {
         id: Date.now(),
         npc: npcId,

@@ -220,7 +220,7 @@ const TOWN_THEMES = {
 };
 
 // Buildings that emit smoke when built (industrial/warm interiors).
-const SMOKE_BUILDINGS = new Set(["hearth", "bakery", "forge"]);
+const SMOKE_BUILDINGS = new Set(["hearth", "bakery", "forge", "kitchen"]);
 
 // Puzzle-board fixtures placed on lots in the town (see townLayout.js
 // `boards`): label / nav icon / lot border / the art that fills the tile.
@@ -1381,19 +1381,12 @@ export function TownView({ state, dispatch }) {
           <ellipse cx="576" cy="382" rx="6" ry="2.5" fill="#484c50" opacity="0.33" />
         </>}
 
-        {/* Road (legacy foreground path — now sits under the town floor; kept until a cleanup pass) */}
-        <path d={roadPath} stroke={theme.road} strokeWidth="20" fill="none" strokeLinecap="round" opacity="0.85" />
-        <path d={roadPath} stroke={theme.roadLine} strokeWidth="2" fill="none" strokeDasharray="6 8" />
       </svg>
 
       {/* Town plan — paved plaza, street network, lot pads, street furniture.
           Sits over the hills/decor backdrop so the place reads as a planned
           settlement in a valley. Buildings (below) are positioned onto its lots. */}
       <TownGround plan={townPlan} theme={theme} biomeVariant={biomeVariant} builtLots={builtLotIndices} />
-
-      {/* Townsfolk walking the streets between buildings (NPCs hang near their
-          own building when it's built). `key` re-seeds on a zone change. */}
-      <TownVillagers key={state.mapCurrent} plan={townPlan} buildings={plotById} />
 
       {/* Header */}
       <div className="absolute top-3 left-4 landscape:max-[1024px]:top-2 landscape:max-[1024px]:left-3 font-bold text-[20px] landscape:max-[1024px]:text-[15px]" style={{ color: theme.textColor }}>{locationName}</div>
@@ -1461,6 +1454,8 @@ export function TownView({ state, dispatch }) {
       <div className="absolute inset-0 pointer-events-none">
         <svg viewBox="0 0 1100 600" preserveAspectRatio="none" className="w-full h-full" style={{ position: "absolute", inset: 0, pointerEvents: "none" }} />
         <div className="absolute pointer-events-none" style={{ left: 0, right: 0, top: 0, bottom: 0 }}>
+          {/* Townsfolk walking the streets (depth-sorted with buildings via z-index) */}
+          <TownVillagers key={state.mapCurrent} plan={townPlan} buildings={plotById} />
           {slotRows.map((slot) => {
             const b = slot.buildingId ? BUILDINGS.find((x) => x.id === slot.buildingId) : null;
             const isBuilt = !!b;
@@ -1490,6 +1485,7 @@ export function TownView({ state, dispatch }) {
                   width: `${(slot.w / 1100) * 100}%`,
                   aspectRatio: "1",
                   cursor: isBuilt && CRAFTING_STATIONS.has(b.id) ? "pointer" : isPlacing ? "pointer" : "default",
+                  zIndex: Math.floor(slot.y + slot.h),
                 }}
                 onClick={onClick}
                 {...(isBuilt ? builtTipHandlers(b) : {})}
@@ -1498,6 +1494,7 @@ export function TownView({ state, dispatch }) {
                   <>
                     <BuildingIllustration id={b.id} isBuilt={true} />
                     {SMOKE_BUILDINGS.has(b.id) && <BuildingSmoke />}
+                    {b.id === "hearth" && state.story?.flags?.hearth_lit && <HearthGlow />}
                     <div
                       className="absolute bottom-full left-0 right-0 text-center font-bold text-white truncate py-0.5 px-1"
                       style={{
@@ -1800,6 +1797,21 @@ function BuildingSmoke() {
           }}
         />
       ))}
+    </div>
+  );
+}
+function HearthGlow() {
+  return (
+    <div className="absolute inset-0 pointer-events-none grid place-items-center">
+      <div
+        className="rounded-full blur-xl"
+        style={{
+          width: "120%",
+          height: "120%",
+          background: "radial-gradient(circle, rgba(255,160,0,0.22) 0%, rgba(255,100,0,0.08) 50%, transparent 100%)",
+          animation: "hearthPulse 4s ease-in-out infinite",
+        }}
+      />
     </div>
   );
 }
