@@ -4,9 +4,8 @@ import { locBuilt } from "./locBuilt.js";
 import { Section, CompactOrders } from "./ui/Inventory.jsx";
 import { ToolsGrid } from "./ui/Tools.jsx";
 import { TOOL_BY_KEY } from "./ui/toolRegistry.js";
-import Icon from "./ui/Icon.jsx";
 import ChainBadge from "./ui/primitives/ChainBadge.jsx";
-import useChromeRect from "./ui/primitives/useChromeRect.js";
+import TabBar from "./ui/primitives/TabBar.jsx";
 
 // Per-feature error boundary. A crash in any one feature renders an inline
 // fallback inside that feature's slot and dispatches CLOSE_MODAL so the
@@ -75,20 +74,35 @@ export function SidePanel({ state, dispatch, chainInfo }) {
 // ─── Bottom nav ───────────────────────────────────────────────────────────
 
 export function BottomNav({ view, modal, dispatch, state }) {
-  // Vol II §04 #16 — write our measured height into --chrome-bottom so
-  // StoryBar / NpcBubble anchor cleanly above us.
-  const navRef = useChromeRect("--chrome-bottom");
   // Vol I #03 — reserve all 8 slots from session start. Portal renders locked
   // until built so the row width never shifts on the player. Locked slot taps
   // surface a tooltip instead of switching view.
-  const builtAtLoc = locBuilt(state ?? {});
-  const items = [
+  const s = state ?? {};
+  const builtAtLoc = locBuilt(s);
+  // Vol II Polish #8 — surface ready-order count + chronicle "new beat" hint
+  // as a presence dot. Counts are conservative — only ready (not "needed")
+  // orders qualify, so the badge means "you can act now".
+  const readyOrders = (s.orders || []).filter((o) => (s.inventory?.[o.key] ?? 0) >= o.need).length;
+  const hasNewChronicle = !!(s.story?.chronicle?.hasUnseen);
+  const navItems = [
     { key: "town",        iconKey: "ui_star",     label: "Town" },
-    { key: "inventory",   iconKey: "ui_inventory",label: "Inventory" },
+    {
+      key: "inventory",
+      iconKey: "ui_inventory",
+      label: "Inventory",
+      badge: readyOrders > 0 ? readyOrders : null,
+      badgeTone: "moss",
+    },
     { key: "crafting",    iconKey: "ui_build",    label: "Craft" },
     { key: "cartography", iconKey: "ui_map",      label: "Map" },
     { key: "townsfolk",   iconKey: "ui_people",   label: "Townsfolk" },
-    { key: "chronicle",   iconKey: "ui_clipboard",label: "Chronicle" },
+    {
+      key: "chronicle",
+      iconKey: "ui_clipboard",
+      label: "Chronicle",
+      badge: hasNewChronicle ? "" : null,
+      badgeTone: "ember",
+    },
     { key: "tileCollection", iconKey: "ui_puzzle",label: "Tiles" },
     {
       key: "portal",
@@ -98,62 +112,14 @@ export function BottomNav({ view, modal, dispatch, state }) {
       unlockHint: "Build the Portal in town to unlock.",
     },
   ];
-  const activeKey = modal ? (items.find((i) => i.modal === modal)?.key ?? view) : view;
-  return (
-    <div
-      ref={navRef}
-      data-testid="bottom-nav"
-      className="flex w-full bg-[#2b2218]/95 border-t-2 border-[#f7e2b6] flex-shrink-0 shadow-[0_-4px_12px_rgba(0,0,0,.25)]"
-      style={{
-        // Sit above the home-indicator on iOS; pads the nav by safe-area-inset-bottom
-        // so the bottom edge of the tab labels never lands in the gesture zone.
-        paddingBottom: "var(--safe-bottom, 0px)",
-      }}
-    >
-      {items.map((it) => {
-        const active = activeKey === it.key;
-        const locked = !!it.locked;
-        const onClick = () => {
-          if (locked) return; // tooltip via title attribute does the explaining
-          if (it.modal) dispatch({ type: "OPEN_MODAL", modal: it.modal });
-          else dispatch({ type: "SET_VIEW", view: it.key });
-        };
-        // Active-state contrast: the old `bg-[#d6612a]` flood crushed the
-        // icon. Use a top-edge accent + a soft 12% wash so the icon's outline
-        // stays readable (Vol II §06 #9).
-        const cls = locked
-          ? "text-[#f7e2b6]/40 cursor-not-allowed"
-          : active
-          ? "text-white bg-[#d6612a]/15 border-t-2 border-[#d6612a] -mt-[2px]"
-          : "text-[#f7e2b6] hover:bg-white/10 border-t-2 border-transparent -mt-[2px]";
-        return (
-          <button
-            key={it.key}
-            data-testid={`bottom-nav-${it.key}`}
-            onClick={onClick}
-            aria-label={locked ? `${it.label} (locked) — ${it.unlockHint}` : it.label}
-            aria-disabled={locked || undefined}
-            title={locked ? it.unlockHint : undefined}
-            className={`flex-1 flex flex-col items-center justify-center gap-0.5 py-2.5 transition-colors relative ${cls}`}
-            style={{ minHeight: 48 }}
-          >
-            <span className="relative">
-              <Icon iconKey={it.iconKey} size={18} />
-              {locked && (
-                <span
-                  aria-hidden="true"
-                  className="absolute -bottom-0.5 -right-1.5 text-[10px] leading-none text-[#f7e2b6]/70"
-                >
-                  🔒
-                </span>
-              )}
-            </span>
-            <span className="text-[10px] font-bold leading-none whitespace-nowrap">{it.label}</span>
-          </button>
-        );
-      })}
-    </div>
-  );
+  const activeKey = modal ? view : view;
+  const items = navItems.map((it) => ({
+    ...it,
+    active: activeKey === it.key,
+    testId: `bottom-nav-${it.key}`,
+    onClick: () => dispatch({ type: "SET_VIEW", view: it.key }),
+  }));
+  return <TabBar items={items} density="nav" testId="bottom-nav" />;
 }
 
 // ─── Feature extension points ─────────────────────────────────────────────

@@ -6,7 +6,7 @@ import { getPhaserScene } from "../phaserBridge.js";
 import IconCanvas, { hasIcon } from "./IconCanvas.jsx";
 import Icon from "./Icon.jsx";
 import Button from "./primitives/Button.jsx";
-import useChromeRect from "./primitives/useChromeRect.js";
+import TabBar from "./primitives/TabBar.jsx";
 import { TOOL_CATALOG, TOOL_BY_KEY, TOOL_CATEGORIES, visibleTools, isTapTargetTool } from "./toolRegistry.js";
 
 // Re-exported for back-compat with anything that still imports TOOL_DEFS.
@@ -299,8 +299,6 @@ export function PortraitToolsBar({ state, dispatch }) {
 
 export function MobileDock({ state, dispatch }) {
   const [sheet, setSheet] = useState(null); // "tools" | "orders" | null
-  // Vol II §04 #16 — same chrome-bottom contract as BottomNav.
-  const dockRef = useChromeRect("--chrome-bottom");
 
   // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: clear local sheet state when leaving board view
   useEffect(() => { if (state.view !== "board") setSheet(null); }, [state.view]);
@@ -312,37 +310,32 @@ export function MobileDock({ state, dispatch }) {
 
   const closeSheet = () => setSheet(null);
 
+  // Vol II §04 #07 — the dock is just a TabBar in "dock" density (bigger
+  // targets, fewer items). Same primitive, same chrome-bottom contract.
+  const items = [
+    {
+      key: "tools",
+      iconKey: "player_clear",
+      label: "Tools",
+      active: sheet === "tools",
+      badge: totalTools > 0 ? totalTools : null,
+      badgeTone: "ember",
+      onClick: () => setSheet(sheet === "tools" ? null : "tools"),
+    },
+    {
+      key: "orders",
+      iconKey: "ui_clipboard",
+      label: "Orders",
+      active: sheet === "orders",
+      badge: readyOrders > 0 ? readyOrders : null,
+      badgeTone: "moss",
+      onClick: () => setSheet(sheet === "orders" ? null : "orders"),
+    },
+  ];
+
   return (
     <>
-      <div ref={dockRef} className="flex border-t-2 border-[#b28b62] bg-[#3a2715]" style={{ paddingBottom: "var(--safe-bottom, 0px)" }}>
-        {/* Tools */}
-        <button
-          className="flex-1 flex flex-col items-center justify-center gap-0.5 py-2.5 relative text-[#f8e7c6]"
-          onClick={() => setSheet(sheet === "tools" ? null : "tools")}
-        >
-          {totalTools > 0 && (
-            <div className="absolute top-1.5 right-[calc(50%-14px)] bg-[#d6612a] text-white text-[9px] font-bold rounded-full min-w-[16px] h-[16px] flex items-center justify-center px-1">
-              {totalTools}
-            </div>
-          )}
-          <div style={{ width: 24, height: 24 }}><IconCanvas iconKey="player_clear" size={24} /></div>
-          <span className="text-[9px] font-bold">Tools</span>
-        </button>
-
-        {/* Orders */}
-        <button
-          className="flex-1 flex flex-col items-center justify-center gap-0.5 py-2.5 relative text-[#f8e7c6]"
-          onClick={() => setSheet(sheet === "orders" ? null : "orders")}
-        >
-          {readyOrders > 0 && (
-            <div className="absolute top-1.5 right-[calc(50%-14px)] bg-[#91bf24] text-white text-[9px] font-bold rounded-full min-w-[16px] h-[16px] flex items-center justify-center px-1">
-              {readyOrders}
-            </div>
-          )}
-          <span className="text-[20px] leading-none"><Icon iconKey="ui_clipboard" size={20} /></span>
-          <span className="text-[9px] font-bold">Orders</span>
-        </button>
-      </div>
+      <TabBar items={items} density="dock" testId="mobile-dock" />
 
       {sheet === "tools" && (
         <BottomSheet onClose={closeSheet}>
