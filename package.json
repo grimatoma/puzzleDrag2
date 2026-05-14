@@ -3,17 +3,24 @@
   "private": true,
   "version": "0.0.1",
   "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint src/ prototype.jsx",
+    "test:unit": "vitest run",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test",
+    "test:e2e:smoke": "playwright test tests/e2e/smoke.spec.js tests/e2e/navigation.spec.js tests/e2e/dialog-draft.spec.js tests/e2e/story-editor.spec.js",
+    "test:e2e:full": "playwright test",
     "test:e2e:headed": "playwright test --headed",
-    "test:e2e:install": "playwright install chromium"
+    "test:e2e:install": "playwright install --with-deps chromium",
+    "test:all": "npm run lint && npm run test:unit && npm run build && npm run test:e2e:smoke"
   },
   "dependencies": {
     "canvas2svg": "^1.0.16",

@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { gotoFresh, getReactState, waitForState, dispatchAction } from './helpers.js';
+import { gotoFresh, enterBoard, getReactState, waitForState, dispatchAction } from './helpers.js';
 
 /**
  * Tools coverage. The tools panel is reachable from the MobileDock (📦 Tools
@@ -17,7 +17,7 @@ test('USE_TOOL "rake" instant: removes all hay tiles + decrements count', async 
     coins: 100,
     inventory: { wood_plank: 0 },
   });
-  await dispatchAction(page, { type: 'SET_VIEW', view: 'board' });
+  await enterBoard(page);
   // Direct dispatch — exercises the reducer path without depending on the
   // bottom-sheet click flow (which is fiddly under iOS device emulation).
   await dispatchAction(page, { type: 'USE_TOOL', payload: { id: 'rake' } });
@@ -26,7 +26,7 @@ test('USE_TOOL "rake" instant: removes all hay tiles + decrements count', async 
 
 test('USE_TOOL with no tool inventory is a no-op', async ({ page }) => {
   await gotoFresh(page, { tools: { rake: 0 } });
-  await dispatchAction(page, { type: 'SET_VIEW', view: 'board' });
+  await enterBoard(page);
   const before = await getReactState(page);
   await dispatchAction(page, { type: 'USE_TOOL', payload: { id: 'rake' } });
   await page.waitForTimeout(150);
@@ -38,7 +38,7 @@ test('USE_TOOL with no tool inventory is a no-op', async ({ page }) => {
 
 test('USE_TOOL tap-target arms toolPending, CANCEL_TOOL refunds it', async ({ page }) => {
   await gotoFresh(page, { tools: { magic_wand: 1 } });
-  await dispatchAction(page, { type: 'SET_VIEW', view: 'board' });
+  await enterBoard(page);
   // Magic wand is routed through the portal slice; arming sets toolPending.
   await dispatchAction(page, { type: 'USE_TOOL', payload: { id: 'magic_wand' } });
   await waitForState(page, (s) => s.toolPending === 'magic_wand');

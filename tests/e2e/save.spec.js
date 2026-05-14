@@ -1,24 +1,25 @@
 import { test, expect } from '@playwright/test';
 import {
-  gotoFresh, waitForBoot, triggerChainViaScene, getReactState, dispatchAction,
+  gotoFresh, waitForAppBoot, dispatchAction, getReactState,
 } from './helpers.js';
 
 test('state persists across reload', async ({ page }) => {
-  await gotoFresh(page);
-  await dispatchAction(page, { type: 'SET_VIEW', view: 'board' });
-  // Land a chain to grow coins beyond the seeded baseline.
-  await triggerChainViaScene(page, 3);
+  await gotoFresh(page, { coins: 1000, inventory: { grass_hay: 0 } });
+  await dispatchAction(page, { type: 'BUY_RESOURCE', payload: { key: 'grass_hay', qty: 1 } });
   // Persistence is rAF-coalesced — give it a frame to flush.
   await page.waitForTimeout(800);
   const before = await getReactState(page);
-  expect(before.coins, 'coins grew after chain').toBeGreaterThan(150);
+  expect(before.inventory?.grass_hay, 'resource bought before reload').toBe(1);
+  expect(before.coins, 'coins debited before reload').toBeLessThan(1000);
 
   // Reload without re-seeding (the helper is gated on `hearth.e2e.seeded` so
   // the live save survives this round-trip).
   await page.reload();
-  await waitForBoot(page);
+  await waitForAppBoot(page);
   const after = await getReactState(page);
-  // turnsUsed resets on boot but coins / inventory / season counters persist.
+  // Reloads return to Town while preserving persistent resources.
+  expect(after.view).toBe('town');
   expect(after.turnsUsed).toBe(0);
   expect(after.coins).toBe(before.coins);
+  expect(after.inventory?.grass_hay).toBe(1);
 });

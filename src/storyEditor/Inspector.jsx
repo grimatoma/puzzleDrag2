@@ -185,17 +185,17 @@ function ChoiceCard({ index, choice, draft, currentBeatId, onChange, onDelete, o
   const o = choice.outcome || {};
   const target = o.queueBeat;
   return (
-    <div style={{ borderRadius: 8, border: `1.5px solid ${C.border}`, background: "#fff", overflow: "hidden" }}>
+    <div data-testid="story-choice-card" style={{ borderRadius: 8, border: `1.5px solid ${C.border}`, background: "#fff", overflow: "hidden" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "5px 8px",
         background: "rgba(214,97,42,0.07)", borderBottom: `1px solid ${C.border}66` }}>
         <span style={{ width: 17, height: 17, borderRadius: "50%", flexShrink: 0, display: "grid", placeItems: "center",
           background: C.ember, color: "#fff", font: "700 9px/1 ui-monospace,monospace" }}>{"ABCDEFGH"[index] || "•"}</span>
         <span style={{ font: "600 9px/1 ui-monospace,monospace", color: C.emberDeep }}>{choice.id}</span>
         {target && <span style={{ marginLeft: 4, font: "500 9px/1 system-ui", color: C.inkSubtle }}>→ {target}</span>}
-        <button onClick={onMoveUp} disabled={!canMoveUp} title="Move choice up"
+        <button data-testid={`story-choice-${index}-up`} onClick={onMoveUp} disabled={!canMoveUp} title="Move choice up"
           style={{ marginLeft: "auto", border: `1px solid ${C.border}`, background: canMoveUp ? "#fff" : "rgba(255,255,255,0.45)", color: canMoveUp ? C.inkLight : C.inkSubtle,
             cursor: canMoveUp ? "pointer" : "not-allowed", font: "700 10px/1 system-ui", padding: "2px 5px", borderRadius: 4 }}>↑</button>
-        <button onClick={onMoveDown} disabled={!canMoveDown} title="Move choice down"
+        <button data-testid={`story-choice-${index}-down`} onClick={onMoveDown} disabled={!canMoveDown} title="Move choice down"
           style={{ border: `1px solid ${C.border}`, background: canMoveDown ? "#fff" : "rgba(255,255,255,0.45)", color: canMoveDown ? C.inkLight : C.inkSubtle,
             cursor: canMoveDown ? "pointer" : "not-allowed", font: "700 10px/1 system-ui", padding: "2px 5px", borderRadius: 4 }}>↓</button>
         <button onClick={onDelete} title="Delete this choice"
@@ -203,7 +203,7 @@ function ChoiceCard({ index, choice, draft, currentBeatId, onChange, onDelete, o
             cursor: "pointer", font: "700 13px/1 system-ui", padding: "0 2px" }}>×</button>
       </div>
       <div style={{ padding: "7px 8px", display: "flex", flexDirection: "column", gap: 7 }}>
-        <TextInput value={choice.label} placeholder="Choice label (player-facing)"
+        <TextInput data-testid={`story-choice-${index}-label`} value={choice.label} placeholder="Choice label (player-facing)"
           onChange={(e) => onChange({ ...choice, label: e.target.value })} style={{ font: "400 11.5px/1.3 Georgia,serif" }} />
         <OutcomeEditor outcome={o} draft={draft} currentBeatId={currentBeatId}
           onChange={(nextOutcome) => onChange({ ...choice, outcome: nextOutcome })}
@@ -246,7 +246,7 @@ function ChoicesBlock({ beatId, draft, onEditBeat, onNewBranch }) {
             canMoveUp={i > 0} canMoveDown={i < choices.length - 1} />
         ))}
       </div>
-      <Btn tone="ember" style={{ alignSelf: "flex-start" }}
+      <Btn data-testid="story-add-choice" tone="ember" style={{ alignSelf: "flex-start" }}
         onClick={() => writeChoices([...choices, { id: nextId(), label: "New choice" }])}>+ Add choice</Btn>
     </Section>
   );
@@ -461,7 +461,7 @@ export default function Inspector({ beatId, draft, isDraft, onEditBeat, onNewBra
               RESOLUTION
             </span>
           )}
-          <button onClick={() => onPreview && onPreview(beatId)} title="Preview this dialogue (walk the branch)"
+          <button data-testid="story-inspector-preview" onClick={() => onPreview && onPreview(beatId)} title="Preview this dialogue (walk the branch)"
             style={{ marginLeft: "auto", display: "inline-flex", alignItems: "center", gap: 4, padding: "3px 9px", borderRadius: 999,
               border: `1.5px solid ${C.emberDeep}`, background: C.ember, color: "#fff", font: "700 9px/1 system-ui",
               letterSpacing: "0.06em", textTransform: "uppercase", cursor: "pointer" }}>▶ Preview</button>
@@ -520,8 +520,8 @@ export default function Inspector({ beatId, draft, isDraft, onEditBeat, onNewBra
         {isDraft && (
           <Section title="Draft id" hint="(saved id used by queueBeat links)">
             <div style={{ display: "flex", gap: 6 }}>
-              <TextInput value={draftId} onChange={(e) => setDraftId(e.target.value)} style={{ fontFamily: "ui-monospace,monospace" }} />
-              <Btn tone="ghost" disabled={!idCheck.ok || draftId.trim() === beatId}
+              <TextInput data-testid="story-draft-id-input" value={draftId} onChange={(e) => setDraftId(e.target.value)} style={{ fontFamily: "ui-monospace,monospace" }} />
+              <Btn data-testid="story-draft-rename" tone="ghost" disabled={!idCheck.ok || draftId.trim() === beatId}
                 onClick={() => idCheck.ok && onRenameBeat && onRenameBeat(beatId, draftId.trim())}>Rename</Btn>
             </div>
             {!idCheck.ok && (

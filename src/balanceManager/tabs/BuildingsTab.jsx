@@ -8,7 +8,7 @@ import {
   SmallButton, Pill, Card, SearchBar, SearchAndAddPicker,
 } from "../shared.jsx";
 import AbilitiesEditor from "../AbilitiesEditor.jsx";
-import { BuildingIllustration } from "../../ui/Town.jsx";
+import { BuildingIllustration } from "../../ui/BuildingIllustration.jsx";
 import Icon from "../../ui/Icon.jsx";
 
 // Canonical cost-key list, derived from the live data (every biome resource +

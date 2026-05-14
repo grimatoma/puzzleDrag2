@@ -98,12 +98,13 @@ export function BottomNav({ view, modal, dispatch, state }) {
   const items = baseItems;
   const activeKey = modal ? (items.find((i) => i.modal === modal)?.key ?? view) : view;
   return (
-    <div className="flex w-full bg-[#2b2218]/95 border-t-2 border-[#f7e2b6] flex-shrink-0 shadow-[0_-4px_12px_rgba(0,0,0,.25)]">
+    <div data-testid="bottom-nav" className="flex w-full bg-[#2b2218]/95 border-t-2 border-[#f7e2b6] flex-shrink-0 shadow-[0_-4px_12px_rgba(0,0,0,.25)]">
       {items.map((it) => {
         const active = activeKey === it.key;
         return (
           <button
             key={it.key}
+            data-testid={`bottom-nav-${it.key}`}
             onClick={() => {
               if (it.modal) {
                 dispatch({ type: "OPEN_MODAL", modal: it.modal });

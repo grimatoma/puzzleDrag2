@@ -6,8 +6,6 @@ import {
   isOldCapitalUnlocked 
 } from "../features/zones/data.js";
 import { keeperForType, keeperPathInfo } from "../keepers.js";
-import { INITIAL_STORY_STATE } from "../story.js";
-import { initialFlagState } from "../flags.js";
 import { evaluateAndApplyStoryBeat } from "./storyEffects.js";
 
 function biomeForSettlementType(type) {

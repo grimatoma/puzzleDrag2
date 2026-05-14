@@ -40,9 +40,10 @@ export function NumberField({ value, onChange, min = 0, max = 9999, step = 1, wi
   );
 }
 
-export function TextField({ value, onChange, placeholder = "", width = "100%" }) {
+export function TextField({ value, onChange, placeholder = "", width = "100%", ...rest }) {
   return (
     <input
+      {...rest}
       type="text"
       value={value ?? ""}
       placeholder={placeholder}
@@ -58,9 +59,10 @@ export function TextField({ value, onChange, placeholder = "", width = "100%" })
   );
 }
 
-export function TextArea({ value, onChange, rows = 3, placeholder = "" }) {
+export function TextArea({ value, onChange, rows = 3, placeholder = "", ...rest }) {
   return (
     <textarea
+      {...rest}
       value={value ?? ""}
       placeholder={placeholder}
       rows={rows}
@@ -119,7 +121,7 @@ export function ColorField({ value, onChange }) {
   );
 }
 
-export function SmallButton({ children, onClick, variant = "default", disabled = false, title, className = "" }) {
+export function SmallButton({ children, onClick, variant = "default", disabled = false, title, className = "", ...rest }) {
   const styles = {
     default: { background: COLORS.parchmentDeep, borderColor: COLORS.border, color: COLORS.inkLight },
     primary: { background: COLORS.ember, borderColor: COLORS.emberDeep, color: "#fff" },
@@ -129,6 +131,7 @@ export function SmallButton({ children, onClick, variant = "default", disabled =
   };
   return (
     <button
+      {...rest}
       onClick={onClick}
       disabled={disabled}
       title={title}

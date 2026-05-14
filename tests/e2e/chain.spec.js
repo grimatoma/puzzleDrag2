@@ -1,12 +1,12 @@
 import { test, expect } from '@playwright/test';
 import {
-  gotoFresh, triggerChainViaScene, getReactState, waitForState, dispatchAction,
+  gotoFresh, enterBoard, triggerChainViaScene, getReactState, waitForState,
 } from './helpers.js';
 
 test('drag-chain via scene API: turn advances and inventory grows', async ({ page }) => {
   test.setTimeout(60_000);
   await gotoFresh(page);
-  await dispatchAction(page, { type: 'SET_VIEW', view: 'board' });
+  await enterBoard(page);
   const before = await getReactState(page);
   expect(before.turnsUsed).toBe(0);
   // Allow up to two attempts — under parallel execution the very first chain
@@ -20,6 +20,7 @@ test('drag-chain via scene API: turn advances and inventory grows', async ({ pag
 
 test('chain via touch: simulate drag on canvas', async ({ page }) => {
   await gotoFresh(page);
+  await enterBoard(page);
   const positions = await page.evaluate(() => {
     const scene = window.__phaserScene;
     if (!scene) return null;
@@ -67,16 +68,16 @@ test('chain via touch: simulate drag on canvas', async ({ page }) => {
   await page.waitForTimeout(800);
 
   // Synthetic pointer events don't always go through Phaser's input plugin
-  // reliably across machines. Log the outcome rather than fail — the
+  // reliably across machines. Keep this as a no-crash touch smoke — the
   // scene-API test above already covers the chain → state loop.
   const after = await getReactState(page);
-  console.log('After touch drag, turnsUsed:', after.turnsUsed);
+  expect(after.view).toBe('board');
 });
 
 test('multiple chains accumulate coins and turns', async ({ page }) => {
   test.setTimeout(60_000);
   await gotoFresh(page);
-  await dispatchAction(page, { type: 'SET_VIEW', view: 'board' });
+  await enterBoard(page);
   const before = await getReactState(page);
   // Play 3 chains; each commits +1 turn and credits coins per harvested tile.
   for (let i = 0; i < 3; i++) await triggerChainViaScene(page, 3);

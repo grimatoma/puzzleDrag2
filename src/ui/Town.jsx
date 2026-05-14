@@ -1,9 +1,6 @@
-import { useState, useRef, useMemo } from "react";
-import { BIOMES, BUILDINGS, EXPEDITION_FOOD_TURNS, MIN_EXPEDITION_TURNS } from "../constants.js";
-import { useTooltip, Tooltip } from "./Tooltip.jsx";
-import { ZONES, displayZoneName, expeditionTurnsForFood, expeditionTurnsFromSupply, isSettlementFounded, settlementFoundingCost, settlementTypeForZone, completedSettlementCount, DEFAULT_ZONE, settlementHazards } from "../features/zones/data.js";
-import BiomePicker from "../features/zones/BiomePicker.jsx";
-import StartFarmingModal from "../features/zones/StartFarmingModal.jsx";
+import { useState, useMemo } from "react";
+import { BUILDINGS } from "../constants.js";
+import { displayZoneName } from "../features/zones/data.js";
 import { buildTownPlan } from "../townLayout.js";
 import TownGround from "./TownGround.jsx";
 import TownVillagers from "./TownVillagers.jsx";
@@ -13,8 +10,7 @@ import { BuildingIllustration, FarmFieldArt, MineEntranceArt, Cloud, BuildingSmo
 import { BiomeEntryModal } from "./modals/BiomeEntryModal.jsx";
 import { FoundSettlementBanner } from "./banners/FoundSettlementBanner.jsx";
 import {
-  FOOD_LABELS, EMPTY_OBJECT, RESERVED_BUILDING_KEYS, BUILDING_IDS, ALL_BUILDING_IDS, CRAFTING_STATIONS,
-  SMOKE_BUILDINGS, TOWN_THEMES, TOWN_BIOME_CONFIGS, LOCATION_TOWN_CONFIGS
+  ALL_BUILDING_IDS, SMOKE_BUILDINGS, TOWN_THEMES, TOWN_BIOME_CONFIGS, LOCATION_TOWN_CONFIGS
 } from "./townData.js";
 
 const BOARD_META = {
@@ -26,9 +22,7 @@ const BOARD_META = {
 export function TownView({ state, dispatch }) {
   const [entryBiome, setEntryBiome] = useState(null);
   const [purchaseBuilding, setPurchaseBuilding] = useState(null);
-  const [showHazardInfo, setShowHazardInfo] = useState(null);
   const [activeTab, setActiveTab] = useState("built"); // "built" | "build" | "events"
-  const scrollRef = useRef(null);
 
   const level = state.level ?? 1;
   const zoneId = state.mapCurrent ?? "home";
@@ -54,9 +48,29 @@ export function TownView({ state, dispatch }) {
     return true;
   });
 
-  const townPlan = buildTownPlan(zoneId, built);
-
-  const hazard = settlementHazards[zoneId];
+  const townPlan = useMemo(() => buildTownPlan({
+    zoneId,
+    plotCount: ALL_BUILDING_IDS.length,
+    boardKinds: Object.keys(BOARD_META),
+  }), [zoneId]);
+  const buildingLots = useMemo(() => ALL_BUILDING_IDS.map((id, index) => {
+    const lot = townPlan.lots[index] || townPlan.lots[townPlan.lots.length - 1];
+    return {
+      id,
+      index,
+      x: lot.cx - lot.w / 2,
+      y: lot.cy - lot.h / 2,
+      w: lot.w,
+      h: lot.h,
+      baseY: lot.cy + lot.h / 2,
+    };
+  }), [townPlan]);
+  const builtLotIndexes = useMemo(() => new Set(
+    buildingLots.filter((b) => built[b.id] > 0).map((b) => b.index),
+  ), [buildingLots, built]);
+  const villagerBuildings = useMemo(() => Object.fromEntries(
+    buildingLots.filter((b) => built[b.id] > 0).map((b) => [b.id, b.index]),
+  ), [buildingLots, built]);
 
   return (
     <div className="relative w-full h-full overflow-hidden flex flex-col" style={{ background: colors.bg }}>
@@ -68,11 +82,11 @@ export function TownView({ state, dispatch }) {
         <Cloud top="10%" w={220} h={70} color={colors.sunGlow} anim="cloudFloat 80s linear infinite" />
       </div>
 
-      <TownGround theme={theme} colors={colors} biomeCfg={biomeCfg} />
+      <TownGround plan={townPlan} theme={colors} biomeVariant={theme.biomeVariant} builtLots={builtLotIndexes} />
 
       {/* Buildings Layer */}
       <div className="absolute inset-0 pointer-events-none">
-        {townPlan.map((b) => {
+        {buildingLots.map((b) => {
           const isBuilt = built[b.id] > 0;
           return (
             <div
@@ -91,7 +105,7 @@ export function TownView({ state, dispatch }) {
         })}
       </div>
 
-      <TownVillagers state={state} zoneId={zoneId} built={built} />
+      <TownVillagers key={zoneId} plan={townPlan} buildings={villagerBuildings} />
 
       {/* UI Overlays */}
       <div className="absolute top-0 left-0 right-0 p-4 flex justify-between items-start pointer-events-none">

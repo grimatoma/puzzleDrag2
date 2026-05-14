@@ -383,24 +383,24 @@ function Inspector({ flag, draft, updateDraft, onSelect }) {
             <div>
               <div className="text-[10px] font-bold mb-1" style={{ color: COLORS.inkSubtle }}>Id</div>
               <div className="flex gap-1.5">
-                <TextField value={idDraft} onChange={setIdDraft} placeholder="flag_id" width="100%" />
-                <SmallButton disabled={!!validateNewId(idDraft) || idDraft.trim() === flag.name} onClick={() => renameNewFlag(idDraft)}>Rename</SmallButton>
+                <TextField data-testid="flag-id-input" value={idDraft} onChange={setIdDraft} placeholder="flag_id" width="100%" />
+                <SmallButton data-testid="flag-rename" disabled={!!validateNewId(idDraft) || idDraft.trim() === flag.name} onClick={() => renameNewFlag(idDraft)}>Rename</SmallButton>
               </div>
               {validateNewId(idDraft) && <div className="text-[10px] mt-1" style={{ color: COLORS.redDeep }}>⚠ {validateNewId(idDraft)}</div>}
             </div>
           )}
           <div>
             <div className="text-[10px] font-bold mb-1" style={{ color: COLORS.inkSubtle }}>Label</div>
-            <TextField value={def.label || ""} onChange={(v) => updateMeta({ label: v })} placeholder={flag.name} width="100%" />
+            <TextField data-testid="flag-label-input" value={def.label || ""} onChange={(v) => updateMeta({ label: v })} placeholder={flag.name} width="100%" />
           </div>
           <div>
             <div className="text-[10px] font-bold mb-1" style={{ color: COLORS.inkSubtle }}>Description</div>
-            <TextArea value={def.description || ""} onChange={(v) => updateMeta({ description: v })} rows={3} placeholder="What does this flag mean?" />
+            <TextArea data-testid="flag-description-input" value={def.description || ""} onChange={(v) => updateMeta({ description: v })} rows={3} placeholder="What does this flag mean?" />
           </div>
           <div className="flex items-center gap-2">
             <div className="flex-1 min-w-0">
               <div className="text-[10px] font-bold mb-1" style={{ color: COLORS.inkSubtle }}>Category</div>
-              <select value={def.category || "misc"} onChange={(e) => updateMeta({ category: e.target.value })} className={miniSel} style={{ borderColor: COLORS.border, color: COLORS.ink, width: "100%" }}>
+              <select data-testid="flag-category-select" value={def.category || "misc"} onChange={(e) => updateMeta({ category: e.target.value })} className={miniSel} style={{ borderColor: COLORS.border, color: COLORS.ink, width: "100%" }}>
                 {FLAG_CATEGORY_KEYS.map((k) => <option key={k} value={k}>{FLAG_CATEGORIES[k].label}</option>)}
               </select>
             </div>

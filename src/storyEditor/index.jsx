@@ -358,7 +358,7 @@ function WarningBadge({ count }) {
 
 function DragHandle({ dragging, onMouseDown, onTouchStart }) {
   return (
-    <button data-drag-handle="1" title="Drag to move card"
+    <button data-drag-handle="1" data-testid="story-node-drag-handle" title="Drag to move card"
       onMouseDown={onMouseDown}
       onTouchStart={onTouchStart}
       style={{ zIndex: 6, width: 22, height: 22, borderRadius: 999, flexShrink: 0,
@@ -377,7 +377,7 @@ function TreeNode({ node, beat, selectedId, collapsed, hiddenCount, showCollapse
   else if (node.branching) Inner = <BranchingNode beat={beat} selected={selected} />;
   else Inner = <CompactNode node={node} beat={beat} selected={selected} />;
   return (
-    <div data-story-node="1" onClick={() => onSelect(node.id)} style={{ position: "absolute", left: node.x, top: node.y, width: node.w, height: node.h, cursor: "default", touchAction: "none" }}>
+    <div data-story-node="1" data-story-node-id={node.id} data-testid={`story-node-${node.id}`} onClick={() => onSelect(node.id)} style={{ position: "absolute", left: node.x, top: node.y, width: node.w, height: node.h, cursor: "default", touchAction: "none" }}>
       <WarningBadge count={warningCount} />
       <div style={{ position: "absolute", top: -10, left: 10, right: 10, display: "flex", alignItems: "center", gap: 6 }}>
         <DragHandle dragging={dragging} onMouseDown={(e) => onNodeMouseDown(e, node)} onTouchStart={(e) => onNodeTouchStart(e, node)} />
@@ -499,7 +499,7 @@ function LeftRail({ draft, selectedId, onlineIds, collapsed, onToggleCollapsed, 
               font: "400 11px/1 system-ui", color: C.ink, outline: "none", boxSizing: "border-box" }} />
           <span style={{ position: "absolute", left: 8, top: "50%", transform: "translateY(-50%)", color: C.inkSubtle, fontSize: 12 }}>🔍</span>
         </div>
-        <Btn tone="ember" onClick={onNewBeat} style={{ width: "100%", padding: "7px 10px", font: "700 11px/1 system-ui" }}>✦ New beat</Btn>
+        <Btn tone="ember" data-testid="story-new-beat" onClick={onNewBeat} style={{ width: "100%", padding: "7px 10px", font: "700 11px/1 system-ui" }}>✦ New beat</Btn>
       </div>
       <div style={{ flex: 1, overflowY: "auto", padding: "4px 0 16px" }}>
         {dBeats.length > 0 && (
@@ -661,7 +661,6 @@ export default function StoryEditorApp() {
   const onNodeTouchStart = useCallback((e, node) => {
     if (e.touches.length !== 1 || !e.target.closest("[data-drag-handle]")) return;
     e.stopPropagation();
-    e.preventDefault();
     const t = e.touches[0];
     nodeDrag.current = { id: node.id, touchId: t.identifier, sx: t.clientX, sy: t.clientY, nx: node.x, ny: node.y, moved: false, touch: true };
   }, []);
@@ -1155,7 +1154,7 @@ export default function StoryEditorApp() {
               </div>
             )}
           </span>
-          <button onClick={saveDraft} style={{ padding: "6px 14px", borderRadius: 7, border: `2px solid ${C.greenDeep}`, background: C.green, color: "#fff", font: "700 11px/1 system-ui", cursor: "pointer" }}>💾 Save Draft</button>
+          <button data-testid="story-save-draft" onClick={saveDraft} style={{ padding: "6px 14px", borderRadius: 7, border: `2px solid ${C.greenDeep}`, background: C.green, color: "#fff", font: "700 11px/1 system-ui", cursor: "pointer" }}>💾 Save Draft</button>
           <a href={import.meta.env.BASE_URL + "b/#/story"} style={{ padding: "6px 14px", borderRadius: 7, border: `2px solid ${C.border}`, background: C.parchmentDeep, color: C.inkLight, font: "700 11px/1 system-ui", textDecoration: "none" }}>← Balance Manager</a>
           <a href={import.meta.env.BASE_URL} style={{ padding: "6px 14px", borderRadius: 7, border: `2px solid ${C.border}`, background: C.parchmentDeep, color: C.inkLight, font: "700 11px/1 system-ui", textDecoration: "none" }}>← Back to Game</a>
         </div>
@@ -1166,7 +1165,7 @@ export default function StoryEditorApp() {
           collapsed={leftRailCollapsed} onToggleCollapsed={toggleLeftRail} onSelect={setSelectedId}
           onNewBeat={() => createDraftBeat({ triggered: true })} />
 
-        <div ref={canvasRef} data-canvas-bg="1" onMouseDown={onMouseDown} onWheel={onWheel}
+        <div ref={canvasRef} data-canvas-bg="1" data-testid="story-canvas" onMouseDown={onMouseDown} onWheel={onWheel}
           style={{ flex: 1, position: "relative", overflow: "hidden", touchAction: "none", background: C.canvas, cursor: dragging ? "grabbing" : "grab",
             backgroundImage: `radial-gradient(circle, ${C.canvasRule} 1px, transparent 1px)`, backgroundSize: `${20 * zoom}px ${20 * zoom}px`, backgroundPosition: `${pan.x}px ${pan.y}px` }}>
           <div style={{ position: "absolute", bottom: 16, right: 16, zIndex: 10, display: "flex", gap: 4, background: "#fff", borderRadius: 8, border: `1.5px solid ${C.border}`, padding: 4 }}>
@@ -1174,7 +1173,7 @@ export default function StoryEditorApp() {
             <span style={{ font: "600 10px/1 system-ui", color: C.inkSubtle, alignSelf: "center", minWidth: 32, textAlign: "center" }}>{Math.round(zoom * 100)}%</span>
             <button onClick={() => setZoom((z) => Math.max(0.3, z - 0.1))} style={{ width: 28, height: 28, borderRadius: 5, border: `1px solid ${C.border}`, background: C.parchment, color: C.ink, font: "700 16px/1 system-ui", cursor: "pointer" }}>−</button>
             <button onClick={() => { setZoom(1); setPan({ x: 20, y: 20 }); }} style={{ width: 28, height: 28, borderRadius: 5, border: `1px solid ${C.border}`, background: C.parchment, color: C.inkSubtle, font: "400 9px/1 system-ui", cursor: "pointer" }}>↺</button>
-            <button onClick={fitToScreen} title="Fit visible cards to screen" style={{ width: 36, height: 28, borderRadius: 5, border: `1px solid ${C.border}`, background: C.parchment, color: C.inkSubtle, font: "700 9px/1 system-ui", cursor: "pointer" }}>Fit</button>
+            <button data-testid="story-fit" onClick={fitToScreen} title="Fit visible cards to screen" style={{ width: 36, height: 28, borderRadius: 5, border: `1px solid ${C.border}`, background: C.parchment, color: C.inkSubtle, font: "700 9px/1 system-ui", cursor: "pointer" }}>Fit</button>
           </div>
           <MiniMap nodes={view.nodes} bounds={graph.bounds} selectedId={selectedId} zoom={zoom} pan={pan} canvasSize={canvasSize} onPanTo={panToWorld} />
 

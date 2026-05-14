@@ -1,50 +1,63 @@
 // E2E helpers for Hearthwood Vale.
 //
-// The game state lives in a `useReducer` hook in prototype.jsx. We don't have
-// a global window export of `dispatch` or `state`, so for any test that needs
-// to drive state changes deterministically we walk the React fiber tree to
-// reach the dispatch function (see `dispatchAction` and `getReactState`).
-//
-// For UI-driven tests prefer the role/testid selectors and let Playwright
-// drive the click path — that's where the regressions hide. Reach for the
-// fiber bridge only when a flow is hard to reach via UI alone.
+// The app exposes a tiny test bridge only when Vite runs with VITE_E2E=1.
+// That keeps production clean while making tests independent from React's
+// private fiber internals.
 
 import { expect } from '@playwright/test';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+
+const constantsPath = fileURLToPath(new URL('../../src/constants.js', import.meta.url));
+const constantsSource = readFileSync(constantsPath, 'utf8');
+const SAVE_SCHEMA_VERSION = Number(constantsSource.match(/export const SAVE_SCHEMA_VERSION = (\d+);/)?.[1]);
+if (!Number.isFinite(SAVE_SCHEMA_VERSION)) {
+  throw new Error('Could not read SAVE_SCHEMA_VERSION from src/constants.js');
+}
 
 // ─── Boot / setup ──────────────────────────────────────────────────────────
 
-export async function waitForBoot(page) {
-  // Phaser is lazy-loaded. Wait for the HUD (always rendered) and for the
-  // GameScene to have built its grid. Polling for window.__phaserScene + grid
-  // is more reliable than text content, which moves around between layouts.
-  await page.waitForSelector('[data-testid="hud"]', { timeout: 15_000 });
-  await page.waitForFunction(
-    () => !!(window.__phaserScene && Array.isArray(window.__phaserScene.grid) && window.__phaserScene.grid.length > 0),
-    null,
-    { timeout: 15_000 },
-  );
-  // The story modal can intercept early clicks on first session — dismiss it
-  // if present so callers don't have to litter `closeStoryModal` everywhere.
-  await closeStoryModalIfOpen(page);
+function normalizeBuiltForSave(built) {
+  if (!built || typeof built !== 'object') return undefined;
+  if (built.home || built.meadow || built.river || built.forest || built.mountain) return built;
+  const home = { hearth: true, decorations: {}, _plots: { 0: 'hearth' } };
+  for (const [id, value] of Object.entries(built)) {
+    if (id === 'decorations' && value && typeof value === 'object') home.decorations = value;
+    else if (id === '_plots' && value && typeof value === 'object') home._plots = value;
+    else if (value) home[id] = value;
+  }
+  return { home };
+}
+
+function normalizeOverridesForSave(overrides = {}) {
+  const baseStory = {
+    act: 1,
+    beat: 'act1_arrival',
+    flags: { intro_seen: true, _fired_act1_arrival: true },
+  };
+  const out = { ...overrides, version: SAVE_SCHEMA_VERSION };
+  out.story = {
+    ...baseStory,
+    ...(overrides.story || {}),
+    flags: { ...baseStory.flags, ...(overrides.story?.flags || {}) },
+    queuedBeat: null,
+    beatQueue: [],
+    sandbox: false,
+  };
+  const built = normalizeBuiltForSave(overrides.built);
+  if (built) out.built = built;
+  return out;
 }
 
 /**
- * Wipes any existing save and pre-seeds a "quiet" baseline:
+ * Wipes any existing save and pre-seeds a quiet baseline:
  *   - tutorial flag set so the tutorial overlay doesn't auto-start
- *   - story `intro_seen` flag set so the act-1 modal doesn't grab focus
- *   - any caller-supplied state overrides shallow-merged on top
- *
- * Pass overrides like `{ inventory: { wood_plank: 5 }, built: { workshop: true } }`
- * to seed a state that lets you exercise a downstream feature without first
- * grinding chains. Keys merge top-level only — nested objects are replaced
- * wholesale.
+ *   - story intro fired so the act-1 modal doesn't grab focus
+ *   - caller overrides shallow-merged on top, with legacy flat `built` values
+ *     converted to the current zone-scoped `built.home` shape
  */
 export async function seedQuietSave(page, overrides = {}) {
-  // The init script runs on every navigation (including page.reload). We
-  // gate seeding on a `hearth.e2e.seeded` marker so an in-flight save
-  // produced during the test isn't clobbered when the page reloads —
-  // the persistence path tests need that round-trip to actually work.
-  await page.addInitScript((data) => {
+  await page.addInitScript(({ data }) => {
     try {
       if (localStorage.getItem('hearth.e2e.seeded') === '1') return;
       Object.keys(localStorage)
@@ -52,84 +65,78 @@ export async function seedQuietSave(page, overrides = {}) {
         .forEach((k) => localStorage.removeItem(k));
       localStorage.setItem('hearth.tutorial.seen', '1');
       localStorage.setItem('hearth.e2e.seeded', '1');
-      const baseStory = { act: 1, beat: 'act1_arrival', flags: { intro_seen: true, _fired_act1_arrival: true } };
-      // SAVE_SCHEMA_VERSION must match src/constants.js — the loader discards
-      // saves whose version doesn't match and falls back to a fresh state.
-      // Bump this whenever you bump SAVE_SCHEMA_VERSION in constants.
-      const SAVE_VERSION = 20;
-      if (data && Object.keys(data).length > 0) {
-        const out = { version: SAVE_VERSION, story: baseStory, ...data };
-        if (data.story) {
-          out.story = {
-            ...baseStory,
-            ...data.story,
-            flags: { ...baseStory.flags, ...(data.story.flags || {}) },
-          };
-        }
-        localStorage.setItem('hearth.save.v1', JSON.stringify(out));
-      } else {
-        localStorage.setItem('hearth.save.v1', JSON.stringify({ version: SAVE_VERSION, story: baseStory }));
-      }
-    } catch {}
-  }, overrides);
+      localStorage.setItem('hearth.save.v1', JSON.stringify(data));
+    } catch {
+      // Some browser modes disable localStorage; tests will fail at boot if so.
+    }
+  }, { data: normalizeOverridesForSave(overrides) });
 }
 
-/** Wipe save + seed quiet flags + navigate + wait. Single call for most specs. */
+export async function waitForAppBoot(page) {
+  await page.waitForSelector('#root', { timeout: 15_000 });
+  await page.waitForFunction(
+    () => !!(window.__hearthE2E?.getState && window.__hearthE2E?.dispatch && window.__hearthE2E.getState()?.view),
+    null,
+    { timeout: 15_000 },
+  );
+  await page.waitForSelector('[data-testid="hud"]', { timeout: 15_000 });
+  await closeStoryModalIfOpen(page);
+}
+
+export async function waitForBoardBoot(page) {
+  await waitForState(page, (s) => s.view === 'board', { timeout: 10_000 });
+  await page.waitForSelector('canvas', { state: 'attached', timeout: 15_000 });
+  await page.waitForFunction(
+    () => !!(window.__phaserScene && Array.isArray(window.__phaserScene.grid) && window.__phaserScene.grid.length > 0),
+    null,
+    { timeout: 15_000 },
+  );
+}
+
+/** Back-compat alias for specs that only need app readiness. */
+export async function waitForBoot(page) {
+  await waitForAppBoot(page);
+}
+
+/** Wipe save + seed quiet flags + navigate + wait for the Town-first app. */
 export async function gotoFresh(page, overrides = {}) {
   await seedQuietSave(page, overrides);
   await page.goto('/');
-  await waitForBoot(page);
+  await waitForAppBoot(page);
 }
 
-/** Legacy alias retained so the older specs keep working unchanged. */
+/** Legacy alias retained so older specs can seed before their own navigation. */
 export async function clearSave(page) {
   await seedQuietSave(page);
 }
 
-// ─── React fiber bridge ────────────────────────────────────────────────────
+export async function enterBoard(page, payload = {}) {
+  await dispatchAction(page, {
+    type: 'FARM/ENTER',
+    payload: { selectedTiles: [], useFertilizer: false, ...payload },
+  });
+  await waitForBoardBoot(page);
+}
+
+// ─── Test bridge ────────────────────────────────────────────────────────────
 
 export async function getReactState(page) {
   return await page.evaluate(() => {
-    const root = document.getElementById('root');
-    const fk = Object.keys(root).find((k) => k.startsWith('__reactContainer'));
-    let node = root[fk].stateNode.current.child;
-    while (node) {
-      if (node.memoizedState) {
-        let h = node.memoizedState;
-        while (h) {
-          if (h.memoizedState && typeof h.memoizedState === 'object' && 'view' in h.memoizedState) {
-            return h.memoizedState;
-          }
-          h = h.next;
-        }
-      }
-      node = node.child || (node.return && node.return.sibling);
-      if (!node) break;
+    if (!window.__hearthE2E?.getState) {
+      throw new Error('Missing window.__hearthE2E bridge. Start Vite with VITE_E2E=1.');
     }
-    return null;
+    return window.__hearthE2E.getState();
   });
 }
 
 export async function dispatchAction(page, action) {
   await page.evaluate((act) => {
-    const root = document.getElementById('root');
-    const fk = Object.keys(root).find((k) => k.startsWith('__reactContainer'));
-    let node = root[fk].stateNode.current.child;
-    while (node) {
-      if (node.memoizedState) {
-        let h = node.memoizedState;
-        while (h) {
-          if (h.queue && typeof h.queue.dispatch === 'function' && h.memoizedState && 'view' in h.memoizedState) {
-            h.queue.dispatch(act);
-            return;
-          }
-          h = h.next;
-        }
-      }
-      node = node.child || (node.return && node.return.sibling);
-      if (!node) break;
+    if (!window.__hearthE2E?.dispatch) {
+      throw new Error('Missing window.__hearthE2E bridge. Start Vite with VITE_E2E=1.');
     }
+    window.__hearthE2E.dispatch(act);
   }, action);
+  await page.waitForTimeout(0);
 }
 
 /** Wait for a state predicate to become true. Polls every 50ms. */
@@ -141,7 +148,7 @@ export async function waitForState(page, predicate, { timeout = 5000 } = {}) {
     await page.waitForTimeout(50);
   }
   const final = await getReactState(page);
-  throw new Error(`waitForState timed out after ${timeout}ms. Final state.view=${final?.view} modal=${final?.modal}`);
+  throw new Error(`waitForState timed out after ${timeout}ms. Final state.view=${final?.view} modal=${final?.modal} queuedBeat=${final?.story?.queuedBeat?.id}`);
 }
 
 // ─── Modals / overlays ─────────────────────────────────────────────────────
@@ -150,23 +157,15 @@ export async function waitForState(page, predicate, { timeout = 5000 } = {}) {
 export async function closeStoryModalIfOpen(page) {
   const modal = page.locator('[role="dialog"][aria-labelledby="story-modal-title"]');
   if (await modal.count() === 0) return;
-  // The story modal renders an explicit close/continue button.
-  const btn = modal.getByRole('button').first();
-  if (await btn.count() > 0) {
-    await btn.click().catch(() => {});
-    await page.waitForTimeout(120);
-  }
-  // Belt-and-braces: dispatch CLOSE_MODAL in case the click missed.
-  await dispatchAction(page, { type: 'CLOSE_MODAL' });
+  await dispatchAction(page, { type: 'STORY/DISMISS_MODAL' });
+  await page.waitForTimeout(120);
 }
 
 // ─── Chains / board interaction ────────────────────────────────────────────
 
 /**
- * Find a same-key chain of length `n` on the current board (4-direction
- * adjacency, mirroring the runtime's path validator) and play it through
- * the scene API. Returns `{ ok, type, length }` on success or
- * `{ error }` on failure.
+ * Find a same-key chain of length `n` on the current board and play it through
+ * the scene API. Returns `{ ok, type, length }` on success or `{ error }`.
  */
 export async function triggerChainViaScene(page, length = 3) {
   const result = await page.evaluate(async (n) => {
@@ -176,9 +175,6 @@ export async function triggerChainViaScene(page, length = 3) {
     if (!grid?.length) return { error: 'no grid' };
     const tiles = grid.flat().filter(Boolean);
     if (!tiles.length) return { error: 'no tiles' };
-    // 8-direction adjacency mirrors GameScene.tryAddToPath (which accepts
-    // diagonals). Restricting to 4-direction here misses many valid chains
-    // and exhausts the helper after 2-3 plays even though the board is full.
     const DIRS = [[-1, -1], [-1, 0], [-1, 1], [0, -1], [0, 1], [1, -1], [1, 0], [1, 1]];
     const neighbors = (t) => DIRS.map(([dr, dc]) => grid[t.row + dr]?.[t.col + dc]).filter(Boolean);
     for (const start of tiles) {
@@ -204,20 +200,10 @@ export async function triggerChainViaScene(page, length = 3) {
     }
     return { error: 'no chain found' };
   }, length);
-  // Allow Phaser to settle (collapse + reducer flush). Collapse animations
-  // run ~250-400ms; refill is debounced to next frame. 600ms is comfortably
-  // past both, so the next call sees a stable grid with new tiles.
   await page.waitForTimeout(700);
   return result;
 }
 
-/**
- * Repeatedly chain on the current board until `predicate(state)` is true,
- * or `maxChains` attempts have been made. Returns the final state.
- *
- * If a chain can't be formed at the given length, falls back to length 3 and
- * eventually dispatches END_TURN to keep progress moving.
- */
 export async function chainUntil(page, predicate, { length = 3, maxChains = 30 } = {}) {
   for (let i = 0; i < maxChains; i++) {
     const s = await getReactState(page);
@@ -245,14 +231,7 @@ export async function expectCoinsAtLeast(page, n) {
 }
 
 // ─── Page error guard ──────────────────────────────────────────────────────
-/**
- * Hook a `pageerror` + `console.error` listener and return a getter that
- * resolves to the collected list. Use at the top of a test:
- *
- *   const errors = collectPageErrors(page);
- *   …test body…
- *   expect(errors(), 'no runtime errors').toEqual([]);
- */
+
 export function collectPageErrors(page) {
   const errors = [];
   page.on('pageerror', (e) => errors.push(`pageerror: ${e.message}`));

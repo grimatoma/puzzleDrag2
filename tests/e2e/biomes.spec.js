@@ -1,31 +1,35 @@
 import { test, expect } from '@playwright/test';
-import { gotoFresh, getReactState, waitForState, dispatchAction } from './helpers.js';
+import { gotoFresh, enterBoard, getReactState, waitForState, dispatchAction } from './helpers.js';
 
 /**
  * Biome switching coverage. The game runs three boards: Farm (default),
  * Mine (level 2+, entry tiered), Fish/Saltspray Harbor (added in this
- * session). Switching is done via SWITCH_BIOME which writes a new state.grid
- * and clears the previous board's hazards.
+ * session). E2E uses SET_BIOME at a turn boundary so the test covers the
+ * board-state contract without requiring map travel/expedition setup.
  */
 
-test('SWITCH_BIOME farm → mine: biomeKey + grid swap, hazards initialised', async ({ page }) => {
+test('SET_BIOME farm → mine: biomeKey + grid swap, hazards initialised', async ({ page }) => {
   await gotoFresh(page, { level: 5, coins: 2000 });
-  await dispatchAction(page, { type: 'SET_VIEW', view: 'board' });
+  await enterBoard(page);
   const before = await getReactState(page);
   expect(before.biome).toBe('farm');
-  await dispatchAction(page, { type: 'SWITCH_BIOME', key: 'mine' });
+  await dispatchAction(page, { type: 'SET_BIOME', id: 'mine' });
   await waitForState(page, (s) => s.biome === 'mine');
   const after = await getReactState(page);
-  // mysteriousOre is reset on biome enter (line 1411 in state.js).
-  expect(after.mysteriousOre).toBeNull();
+  // Mine entry seeds the mysterious ore timer/position when a grid exists.
+  expect(after.mysteriousOre).toEqual(expect.objectContaining({
+    row: expect.any(Number),
+    col: expect.any(Number),
+    turnsRemaining: expect.any(Number),
+  }));
   // hazards is preserved object shape.
   expect(after.hazards).toBeTruthy();
 });
 
-test('SWITCH_BIOME farm → fish: tide bookkeeping initialised', async ({ page }) => {
+test('SET_BIOME farm → fish: tide bookkeeping initialised', async ({ page }) => {
   await gotoFresh(page, { level: 5, coins: 2000 });
-  await dispatchAction(page, { type: 'SET_VIEW', view: 'board' });
-  await dispatchAction(page, { type: 'SWITCH_BIOME', key: 'fish' });
+  await enterBoard(page);
+  await dispatchAction(page, { type: 'SET_BIOME', id: 'fish' });
   await waitForState(page, (s) => s.biome === 'fish');
   const s = await getReactState(page);
   // Fish slice owns state.fish — initialised with tide:'high', tideTurn:0.
@@ -35,8 +39,8 @@ test('SWITCH_BIOME farm → fish: tide bookkeeping initialised', async ({ page }
 
 test('FISH/FORCE_TIDE_FLIP toggles tide and rotates bottom row', async ({ page }) => {
   await gotoFresh(page, { level: 5, coins: 2000 });
-  await dispatchAction(page, { type: 'SET_VIEW', view: 'board' });
-  await dispatchAction(page, { type: 'SWITCH_BIOME', key: 'fish' });
+  await enterBoard(page);
+  await dispatchAction(page, { type: 'SET_BIOME', id: 'fish' });
   await waitForState(page, (s) => s.biome === 'fish');
   const before = await getReactState(page);
   await dispatchAction(page, { type: 'FISH/FORCE_TIDE_FLIP' });
@@ -47,9 +51,9 @@ test('FISH/FORCE_TIDE_FLIP toggles tide and rotates bottom row', async ({ page }
 
 test('SET_BIOME with invalid key is a no-op', async ({ page }) => {
   await gotoFresh(page, { level: 5, coins: 2000 });
-  await dispatchAction(page, { type: 'SET_VIEW', view: 'board' });
+  await enterBoard(page);
   const before = await getReactState(page);
-  await dispatchAction(page, { type: 'SWITCH_BIOME', key: 'not_a_biome' });
+  await dispatchAction(page, { type: 'SET_BIOME', id: 'not_a_biome' });
   await page.waitForTimeout(200);
   const after = await getReactState(page);
   expect(after.biome).toBe(before.biome);

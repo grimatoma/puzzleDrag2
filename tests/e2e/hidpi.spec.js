@@ -1,15 +1,12 @@
 import { test, expect } from '@playwright/test';
-import { clearSave, dispatchAction } from './helpers.js';
+import { clearSave, enterBoard, waitForAppBoot } from './helpers.js';
 
 test.beforeEach(async ({ page }) => { await clearSave(page); });
 
 test('canvas backing store renders at devicePixelRatio× CSS size', async ({ page }) => {
   await page.goto('/');
-  await page.waitForSelector('canvas', { state: 'attached' });
-  // Default view is "town" which wraps the board in an invisible container;
-  // switch to board so the canvas has real layout dimensions to inspect.
-  await dispatchAction(page, { type: 'SET_VIEW', view: 'board' });
-  await page.waitForTimeout(200);
+  await waitForAppBoot(page);
+  await enterBoard(page);
 
   const info = await page.evaluate(() => {
     const c = document.querySelector('canvas');
@@ -36,9 +33,8 @@ test('canvas backing store renders at devicePixelRatio× CSS size', async ({ pag
 
 test('pointer hit testing maps CSS coords through dpr to world space', async ({ page }) => {
   await page.goto('/');
-  await page.waitForSelector('canvas', { state: 'attached' });
-  await dispatchAction(page, { type: 'SET_VIEW', view: 'board' });
-  await page.waitForTimeout(200);
+  await waitForAppBoot(page);
+  await enterBoard(page);
 
   const result = await page.evaluate(() => {
     const scene = window.__phaserScene;

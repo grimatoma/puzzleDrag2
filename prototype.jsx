@@ -179,10 +179,27 @@ export default function App() {
   const [state, dispatch] = useReducer(gameReducer, undefined, initialState);
   const [chainInfo, setChainInfo] = useState(null);
   const sceneRef = useRef(null);
+  const e2eStateRef = useRef(state);
   const storyModalOpen = !!state.story?.queuedBeat;
   const uiLocked = !!state.modal || state.view !== "board" || storyModalOpen;
   useAudio(state);
   useRouter(state, dispatch);
+
+  useEffect(() => {
+    e2eStateRef.current = state;
+  }, [state]);
+
+  useEffect(() => {
+    if (!import.meta.env.VITE_E2E || typeof window === "undefined") return undefined;
+    const bridge = {
+      getState: () => e2eStateRef.current,
+      dispatch: (action) => dispatch(action),
+    };
+    window.__hearthE2E = bridge;
+    return () => {
+      if (window.__hearthE2E === bridge) delete window.__hearthE2E;
+    };
+  }, [dispatch]);
 
   // Fire session_start story beat on first mount
   useEffect(() => {

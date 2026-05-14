@@ -35,7 +35,7 @@ test('Bakery: crafting bread debits flour+egg and credits inventory.bread', asyn
   const s = await getReactState(page);
   expect(s.inventory.grain_flour).toBe(3);
   expect(s.inventory.bird_egg).toBe(1);
-  expect(s.craftedTotals?.bread).toBe(1);
+  expect((s.craftedTotals?.rec_bread ?? 0) + (s.craftedTotals?.bread ?? 0)).toBe(1);
 });
 
 test('Workshop: crafting water_pump credits state.tools, NOT inventory (PR #274 routing)', async ({ page }) => {

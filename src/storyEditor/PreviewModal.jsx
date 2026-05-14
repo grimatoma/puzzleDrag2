@@ -225,7 +225,7 @@ const closeBtnStyle = {
 
 function Backdrop({ children, onClose }) {
   return (
-    <div onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 9999, display: "grid", placeItems: "center",
+    <div role="dialog" aria-modal="true" onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 9999, display: "grid", placeItems: "center",
       background: "rgba(10,7,4,0.62)", backdropFilter: "blur(2px)", padding: 20 }}>
       {children}
     </div>

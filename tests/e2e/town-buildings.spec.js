@@ -18,13 +18,13 @@ test('Building Bakery via BUILD action debits coins and adds to state.built', as
     inventory: { wood_plank: 50, mine_stone: 50, mine_ingot: 10 },
   });
   const before = await getReactState(page);
-  expect(before.built?.bakery).toBeFalsy();
+  expect(before.built?.home?.bakery).toBeFalsy();
 
   await dispatchAction(page, { type: 'BUILD', payload: { id: 'bakery' } });
-  await waitForState(page, (s) => !!s.built?.bakery, { timeout: 2000 });
+  await waitForState(page, (s) => !!s.built?.home?.bakery, { timeout: 2000 });
   const after = await getReactState(page);
   expect(after.coins).toBeLessThan(before.coins);
-  expect(after.built.bakery).toBe(true);
+  expect(after.built.home.bakery).toBe(true);
 });
 
 test('BUILD with insufficient coins is rejected', async ({ page }) => {
@@ -36,7 +36,7 @@ test('BUILD with insufficient coins is rejected', async ({ page }) => {
   await dispatchAction(page, { type: 'BUILD', payload: { id: 'bakery' } });
   await page.waitForTimeout(150);
   const s = await getReactState(page);
-  expect(s.built?.bakery).toBeFalsy();
+  expect(s.built?.home?.bakery).toBeFalsy();
 });
 
 test('BUILD with insufficient inventory inputs is rejected', async ({ page }) => {
@@ -48,7 +48,7 @@ test('BUILD with insufficient inventory inputs is rejected', async ({ page }) =>
   await dispatchAction(page, { type: 'BUILD', payload: { id: 'bakery' } });
   await page.waitForTimeout(150);
   const s = await getReactState(page);
-  expect(s.built?.bakery).toBeFalsy();
+  expect(s.built?.home?.bakery).toBeFalsy();
   expect(s.coins).toBe(5000); // not debited
 });
 
