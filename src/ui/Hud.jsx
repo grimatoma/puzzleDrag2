@@ -1,3 +1,4 @@
+import { useRef, useState } from "react";
 import { SEASONS } from "../constants.js";
 import { hex } from "../utils.js";
 import { xpForLevel } from "../state.js";
@@ -6,6 +7,7 @@ import { locBuilt } from "../locBuilt.js";
 import Icon from "./Icon.jsx";
 import Pill from "./primitives/Pill.jsx";
 import ProgressTrack from "./primitives/ProgressTrack.jsx";
+import ResourceCell from "./primitives/ResourceCell.jsx";
 import useChromeRect from "./primitives/useChromeRect.js";
 
 // Phase 7 — calendar season effects were removed. Keeping the export as an
@@ -119,30 +121,69 @@ const LARDER_RESOURCES = [
 ];
 
 function LarderWidget({ inventory }) {
-  // Vol II §02 — the 9px label was sub-perceptual on standard DPR. Bumped to
-  // 11px tabular-nums so the count reads at arm's length.
+  // Vol II §02 Tap-target #4 — the 5 bars were a non-tappable status strip.
+  // Wrap the row in a 44h button that surfaces a breakdown popover, so the
+  // larder is one tap-target instead of zero, and the player can drill in.
+  const [open, setOpen] = useState(false);
+  const wrapRef = useRef(null);
   return (
-    <div className="flex items-center gap-1.5 flex-wrap" aria-label="Larder progress toward festival target">
-      {LARDER_RESOURCES.map(({ key, iconKey, label }) => {
-        const amt = Math.min(50, inventory[key] ?? 0);
-        const pct = (amt / 50) * 100;
-        const done = amt >= 50;
-        return (
-          <div key={key} className="flex items-center gap-1 min-w-0" title={`${label}: ${amt}/50`}>
-            <Icon iconKey={iconKey} size={14} />
-            <div className="w-10 h-2 rounded-full bg-[var(--bark-shade)] border border-[var(--iron)] overflow-hidden">
-              <div
-                className="h-full rounded-full transition-[width] duration-300"
-                style={{
-                  width: `${pct}%`,
-                  background: done ? "var(--gold-amber)" : "var(--ember-deep)",
-                }}
-              />
-            </div>
-            <span className="text-[11px] font-bold text-[var(--parchment-soft)] leading-none tabular-nums">{amt}</span>
-          </div>
-        );
-      })}
+    <div className="relative">
+      <button
+        ref={wrapRef}
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex items-center gap-1.5 flex-wrap rounded-lg hover:bg-white/5 active:scale-[0.99] transition-transform"
+        style={{ minHeight: 44, padding: "0 6px" }}
+        aria-label="Larder progress toward festival target"
+        aria-expanded={open}
+        aria-haspopup="dialog"
+      >
+        {LARDER_RESOURCES.map(({ key, iconKey, label }) => (
+          <ResourceCell
+            key={key}
+            resource={{ key, iconKey, label }}
+            count={inventory[key] ?? 0}
+            max={50}
+            density="micro"
+            tone="ember"
+          />
+        ))}
+      </button>
+      {open && (
+        <div
+          role="dialog"
+          aria-label="Larder breakdown"
+          className="absolute right-0 top-full mt-1 z-40 w-[220px] bg-[var(--bark-shade)] border-2 border-[var(--iron)] rounded-xl p-2.5 shadow-2xl flex flex-col gap-1.5"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="text-[10px] font-bold uppercase tracking-wider text-[var(--parchment-soft)]/70">Larder · festival goal</div>
+          {LARDER_RESOURCES.map(({ key, iconKey, label }) => {
+            const amt = Math.min(50, inventory[key] ?? 0);
+            const pct = (amt / 50) * 100;
+            const done = amt >= 50;
+            return (
+              <div key={key} className="flex items-center gap-2">
+                <Icon iconKey={iconKey} size={16} />
+                <span className="text-[11px] font-bold text-[var(--parchment-soft)] flex-1">{label}</span>
+                <div className="w-16 h-1.5 rounded-full bg-black/30 border border-[var(--iron)] overflow-hidden">
+                  <div
+                    className="h-full rounded-full"
+                    style={{ width: `${pct}%`, background: done ? "var(--gold-amber)" : "var(--ember-deep)" }}
+                  />
+                </div>
+                <span className="text-[11px] font-bold tabular-nums text-[var(--parchment-soft)] min-w-[34px] text-right">{amt}/50</span>
+              </div>
+            );
+          })}
+          <button
+            type="button"
+            onClick={() => setOpen(false)}
+            className="text-[10px] uppercase tracking-wider text-[var(--parchment-soft)]/60 hover:text-[var(--parchment-soft)] self-end mt-0.5"
+          >
+            close
+          </button>
+        </div>
+      )}
     </div>
   );
 }

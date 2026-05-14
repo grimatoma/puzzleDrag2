@@ -5,6 +5,7 @@ import IconCanvas from "../IconCanvas.jsx";
 import Icon from "../Icon.jsx";
 import Stepper from "../primitives/Stepper.jsx";
 import Button from "../primitives/Button.jsx";
+import ResourceCell from "../primitives/ResourceCell.jsx";
 import { ParchmentDialog } from "../primitives/Dialog.jsx";
 import { FOOD_LABELS } from "../townData.js";
 
@@ -78,24 +79,23 @@ export function BiomeEntryModal({ biomeKey, state, dispatch, onClose }) {
               <div className="flex flex-col gap-1 max-h-[220px] overflow-y-auto pr-0.5" style={{ overscrollBehavior: "contain" }}>
                 {available.map((f) => {
                   const n = supply[f.key] ?? 0;
+                  const label = FOOD_LABELS[f.key] || f.key;
                   return (
-                    <div key={f.key} className="flex items-center justify-between bg-white/40 border border-[#d4c5a8] rounded-lg px-3 py-1.5">
-                      <div className="flex items-center gap-2">
-                        <Icon iconKey={f.key} size={18} />
-                        <div className="flex flex-col">
-                          <span className="font-bold text-[12px] text-[#5a3a2a] leading-none">{FOOD_LABELS[f.key] || f.key}</span>
-                          <span className="text-[10px] text-[var(--ink-mute)] leading-none mt-0.5">{f.per} turns / ration</span>
-                        </div>
-                      </div>
-                      <Stepper
-                        value={n}
-                        min={0}
-                        max={f.have}
-                        onChange={(v) => setCount(f.key, v, f.have)}
-                        suffix={` / ${f.have}`}
-                        ariaLabel={`Pack ${FOOD_LABELS[f.key] || f.key}`}
-                      />
-                    </div>
+                    <ResourceCell
+                      key={f.key}
+                      resource={{ key: f.key, label, sub: `${f.per} turns / ration` }}
+                      density="row"
+                      trailing={
+                        <Stepper
+                          value={n}
+                          min={0}
+                          max={f.have}
+                          onChange={(v) => setCount(f.key, v, f.have)}
+                          suffix={` / ${f.have}`}
+                          ariaLabel={`Pack ${label}`}
+                        />
+                      }
+                    />
                   );
                 })}
               </div>

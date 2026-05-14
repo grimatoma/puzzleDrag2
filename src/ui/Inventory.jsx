@@ -1,10 +1,10 @@
 import { BIOMES, ITEMS } from "../constants.js";
 import { sellPriceFor } from "../features/market/pricing.js";
-import { hex } from "../utils.js";
 import { locBuilt } from "../locBuilt.js";
-import IconCanvas, { hasIcon } from "./IconCanvas.jsx";
 import Icon from "./Icon.jsx";
 import Banner from "./primitives/Banner.jsx";
+import ResourceCell from "./primitives/ResourceCell.jsx";
+import TradeStepper from "./primitives/TradeStepper.jsx";
 
 export function Section({ title, titleColor = "#f8e7c6", children }) {
   return (
@@ -32,113 +32,63 @@ function orderStatusByKey(orders, inventory) {
   return { status, totals };
 }
 
-function TradeButton({ label, price, disabled, onClick, variant }) {
-  // Vol II §02: 18h × 46w was below the 24px WCAG floor *and* the 44pt HIG
-  // floor. Lifted to ~32h (px-2 py-1.5 + 11px font), with a leading glyph so
-  // Buy and Sell read at a glance even for color-blind players.
-  const enabledClass = variant === "buy"
-    ? "bg-[#3a82c4] border-[#235a8a] text-white hover:bg-[#4a95da]"
-    : "bg-[#91bf24] border-[#6a9010] text-white hover:bg-[#a3d028]";
-  const disabledClass = "bg-[#7a6b53] border-[#5a4d3a] text-[#c5b89e] cursor-not-allowed opacity-70";
-  const glyph = variant === "buy" ? "+" : "−";
-  return (
-    <button
-      type="button"
-      disabled={disabled}
-      onClick={(e) => { e.stopPropagation(); if (!disabled) onClick(); }}
-      className={`text-[11px] font-bold px-2 py-1.5 rounded-md border-[1.5px] leading-none whitespace-nowrap tabular-nums inline-flex items-center gap-1 ${disabled ? disabledClass : enabledClass}`}
-    >
-      <span aria-hidden="true">{glyph}</span>
-      <span>{label}</span>
-      <span className="opacity-90">{price}◉</span>
-    </button>
-  );
+function statusTag(status, total) {
+  if (status === "ready") return `✓ Order ${total}`;
+  if (status === "needed") return `↑ Need ${total}`;
+  if (status === "excess") return "− Excess";
+  return null;
 }
 
 function InventoryCell({ r, count, compact, orderStatus, orderTotal, marketBuilt, buyPrice, sellPrice, dispatch, tradeKind }) {
-  // Visual states layered on top of the base cell.
-  const ready  = orderStatus === "ready";
-  const needed = orderStatus === "needed";
-  const excess = !orderStatus && count > 0;
-  const ringStyle = ready
-    ? { boxShadow: "0 0 0 2px #91bf24, 0 0 12px rgba(145,191,36,.55)" }
-    : needed
-    ? { boxShadow: "0 0 0 2px #f7c254" }
-    : excess
-    ? { boxShadow: "0 0 0 1px rgba(255,255,255,.18)" }
-    : {};
-  // Vol I #05 — pair status color with a glyph so the readout survives
-  // deuteranopia (currently the green/amber distinction is color-only).
-  const tagText = ready
-    ? `✓ Order ${orderTotal}`
-    : needed
-    ? `↑ Need ${orderTotal}`
-    : excess
-    ? "− Excess"
-    : null;
-  const tagColor = ready ? "bg-[#91bf24]" : needed ? "bg-[#f7c254] text-[#3a2715]" : "bg-white/20";
-  const showBuy  = !compact && tradeKind === "resource" && buyPrice  > 0;
-  const showSell = !compact && sellPrice > 0;
-  const showTrade = (showBuy || showSell) && dispatch;
-  const sellTitle = !marketBuilt
+  // Vol II §07 Accessibility #4 — pair color status with a glyph so the
+  // ready / needed / excess readout survives deuteranopia. ResourceCell's
+  // statusTag handles the glyph; "excess" only shows when there's stash but
+  // no open order wants it.
+  const status = orderStatus
+    ? orderStatus
+    : count > 0
+      ? "excess"
+      : undefined;
+  const tag = statusTag(status, orderTotal);
+
+  // Vol II §02 — TradeButton vertical 18h stack was a double failure (under
+  // 24px WCAG and under 44pt HIG). One inline TradeStepper at 32×32 buttons
+  // collapses Buy + Sell into a single tap-friendly row.
+  const showTrade = !compact && dispatch && (buyPrice > 0 || sellPrice > 0);
+  const reasonBuy = !marketBuilt ? "Build the Caravan Post to trade" : "";
+  const reasonSell = !marketBuilt
     ? "Build the Caravan Post to trade"
     : count <= 0
-    ? "Nothing to sell"
-    : "";
-  const buyTitle = !marketBuilt
-    ? "Build the Caravan Post to trade"
-    : "";
+      ? "Nothing to sell"
+      : "";
+
+  const trade = showTrade ? (
+    <TradeStepper
+      count={count}
+      buyPrice={buyPrice}
+      sellPrice={sellPrice}
+      canBuy={!!marketBuilt && tradeKind === "resource" && buyPrice > 0}
+      canSell={!!marketBuilt && count > 0 && sellPrice > 0}
+      reasonBuy={reasonBuy}
+      reasonSell={reasonSell}
+      onBuy={(qty) => dispatch({ type: "BUY_RESOURCE", payload: { key: r.key, qty } })}
+      onSell={(qty) => dispatch(
+        tradeKind === "resource"
+          ? { type: "SELL_RESOURCE", payload: { key: r.key, qty } }
+          : { type: "SELL_ITEM", id: r.key, qty }
+      )}
+    />
+  ) : null;
+
   return (
-    <div
-      className={`relative bg-[#b68d64] border-2 border-[#e6c49a] rounded-lg flex items-center gap-2.5 ${compact ? "p-1.5" : "p-2"} transition-shadow`}
-      style={ringStyle}
-      title={r.label}
-    >
-      <div className={`rounded-md flex-shrink-0 grid place-items-center text-white ${compact ? "w-8 h-8 text-[16px]" : "w-10 h-10 text-[20px]"}`} style={{ backgroundColor: hex(r.color), border: "2px solid rgba(255,255,255,.4)", textShadow: "0 1px 1px rgba(0,0,0,.4)", overflow: "hidden" }}>
-        {hasIcon(r.key)
-          ? <IconCanvas iconKey={r.key} size={compact ? 32 : 40} />
-          : <Icon iconKey={r.key} size={compact ? 32 : 40} />}
-      </div>
-      <div className="flex flex-col leading-none min-w-0 flex-1">
-        <div className={`text-white/80 truncate font-medium ${compact ? "text-[10px]" : "text-[12px]"}`}>{r.label}</div>
-        <div className={`text-white font-bold mt-0.5 ${compact ? "text-[14px]" : "text-[18px]"}`} style={{ textShadow: "0 1px 2px rgba(0,0,0,.4)" }}>{count}</div>
-      </div>
-      {showTrade && (
-        <div className="flex flex-col gap-1 flex-shrink-0">
-          {showBuy && (
-            <span title={buyTitle}>
-              <TradeButton
-                label="Buy"
-                price={buyPrice}
-                variant="buy"
-                disabled={!marketBuilt}
-                onClick={() => dispatch({ type: "BUY_RESOURCE", payload: { key: r.key, qty: 1 } })}
-              />
-            </span>
-          )}
-          {showSell && (
-            <span title={sellTitle}>
-              <TradeButton
-                label="Sell"
-                price={sellPrice}
-                variant="sell"
-                disabled={!marketBuilt || count <= 0}
-                onClick={() => dispatch(
-                  tradeKind === "resource"
-                    ? { type: "SELL_RESOURCE", payload: { key: r.key, qty: 1 } }
-                    : { type: "SELL_ITEM", id: r.key, qty: 1 }
-                )}
-              />
-            </span>
-          )}
-        </div>
-      )}
-      {tagText && (
-        <div className={`absolute -top-1.5 -right-1.5 px-1.5 py-[1px] rounded-full text-[9px] font-bold text-white ${tagColor}`} style={{ textShadow: "0 1px 1px rgba(0,0,0,.4)" }}>
-          {tagText}
-        </div>
-      )}
-    </div>
+    <ResourceCell
+      resource={r}
+      count={count}
+      density={compact ? "compact" : "comfortable"}
+      status={status}
+      statusTag={tag}
+      trade={trade}
+    />
   );
 }
 
@@ -151,20 +101,16 @@ export function CompactOrders({ orders, inventory, dispatch }) {
         const res = ITEMS[o.key];
         const label = res ? res.label : o.key;
         return (
-          <button
+          <ResourceCell
             key={o.id}
+            resource={{ key: o.key, label }}
+            count={`${Math.min(have, o.need)}/${o.need}`}
+            density="row"
+            variant="order"
+            done={done}
+            status={done ? "ready" : have > 0 ? "needed" : undefined}
             onClick={() => dispatch({ type: "TURN_IN_ORDER", id: o.id, npc: o.npc, key: o.key, need: o.need, reward: o.reward })}
-            className={`flex items-center gap-1.5 rounded-lg px-2 py-1 text-left border transition-colors ${done ? "bg-[#91bf24]/40 border-[#91bf24] text-white" : "bg-[#4a2e18] border-[#7a5038] text-[#f8e7c6]"}`}
-          >
-            <span className="text-[14px] flex-shrink-0 grid place-items-center w-5 h-5">
-              <Icon iconKey={o.key} size={20} />
-            </span>
-            <span className="flex-1 min-w-0 text-[10px] font-bold truncate">{label}</span>
-            <span className={`text-[10px] font-bold whitespace-nowrap ${done ? "text-white" : have > 0 ? "text-[#f7c254]" : "text-[#c5a87a]"}`}>
-              {Math.min(have, o.need)}/{o.need}
-            </span>
-            {done && <span className="text-[9px] text-white font-bold">✓</span>}
-          </button>
+          />
         );
       })}
     </div>
@@ -179,8 +125,8 @@ export function InventoryGrid({ inventory, biomeKey, compact, orders = [], state
   // `kind` annotation fall back to "resource" so nothing is lost from the UI
   // by accident.
   const resources = allBiomeEntries.filter((r) => r.kind !== "tile");
-  const items = Object.entries(ITEMS).filter(([key, item]) => 
-    (inventory[key] || 0) > 0 && 
+  const items = Object.entries(ITEMS).filter(([key, item]) =>
+    (inventory[key] || 0) > 0 &&
     !resources.find(r => r.key === key) &&
     item.kind !== "tile" &&
     item.kind !== "tool"
