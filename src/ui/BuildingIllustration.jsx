@@ -693,122 +693,127 @@ export function BuildingIllustration({ id, isBuilt }) {
   return illustrations[id] || null;
 }
 
+// Farm Field — drawn as a fenced parcel that sits *on* the town floor rather
+// than a square poster floating above it. The background is transparent so the
+// town's actual sky shows through; only the barn, silo, tilled plot and fence
+// occupy the tile. Used in the wing position from townLayout.js boards.
 export function FarmFieldArt() {
   return (
-    <svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMax meet" className="absolute inset-0 w-full h-full">
-      {/* Sky */}
-      <rect width="100" height="42" fill="#bce088" />
-      <rect width="100" height="20" fill="#d8eea8" opacity="0.55" />
-      {/* Sun */}
-      <circle cx="83" cy="13" r="5" fill="#f7d254" opacity="0.9" />
-      <circle cx="83" cy="13" r="8" fill="#f7d254" opacity="0.25" />
-      {/* Distant rolling hills */}
-      <path d="M0,40 Q22,30 44,36 T88,34 L100,32 L100,52 L0,52 Z" fill="#5a8a25" />
-      <path d="M0,46 Q25,38 55,44 T100,42 L100,56 L0,56 Z" fill="#4a7a18" />
-      {/* Foreground field */}
-      <rect y="50" width="100" height="50" fill="#3a6e10" />
-      <path d="M0,50 Q20,52 40,50 T100,52 L100,72 L0,72 Z" fill="#5a8e20" />
-      {[0,1,2,3,4,5,6].map((i) => (
-        <line key={i} x1="0" y1={56 + i * 7} x2="100" y2={58 + i * 7} stroke="#f4d460" strokeWidth="0.7" opacity="0.45" />
+    <svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMax meet" className="absolute inset-0 w-full h-full overflow-visible">
+      {/* Soft cast shadow under the parcel — anchors it to the ground. */}
+      <ellipse cx="50" cy="96" rx="46" ry="5" fill="rgba(20,16,8,0.26)" />
+
+      {/* Tilled parcel — a low, wedge-shaped plot of green field that the barn
+          and silo sit on. No sky/hills inside the tile; we let the town show
+          through everywhere except where there's actually a farm. */}
+      <path d="M4,82 Q50,72 96,82 L96,94 Q50,98 4,94 Z" fill="#6aa028" stroke="#3a6010" strokeWidth="0.6" />
+      <path d="M4,82 Q50,72 96,82 L96,86 Q50,80 4,86 Z" fill="#82b838" opacity="0.7" />
+      {/* Crop rows for texture */}
+      {[0,1,2,3].map((i) => (
+        <path key={i} d={`M${10 - i * 0.5},${86 + i * 2.2} Q50,${82 + i * 2.2} ${90 + i * 0.5},${86 + i * 2.2}`}
+          fill="none" stroke="#f4d460" strokeWidth="0.5" opacity="0.55" />
       ))}
-      {/* Red barn — body */}
-      <rect x="14" y="44" width="34" height="32" fill="#a82820" stroke="#5a1010" strokeWidth="0.7" />
-      {/* Roof */}
-      <polygon points="11,46 31,30 51,46" fill="#7a1810" stroke="#4a0a08" strokeWidth="0.7" />
-      <line x1="11" y1="46" x2="31" y2="30" stroke="#5a0e08" strokeWidth="0.4" />
-      <line x1="51" y1="46" x2="31" y2="30" stroke="#5a0e08" strokeWidth="0.4" />
+
+      {/* Red barn — body. Slightly lifted on a sill so it doesn't look pasted. */}
+      <rect x="22" y="50" width="32" height="32" fill="#a82820" stroke="#5a1010" strokeWidth="0.7" />
+      <polygon points="19,52 38,34 57,52" fill="#7a1810" stroke="#4a0a08" strokeWidth="0.7" />
+      <line x1="19" y1="52" x2="38" y2="34" stroke="#5a0e08" strokeWidth="0.4" />
+      <line x1="57" y1="52" x2="38" y2="34" stroke="#5a0e08" strokeWidth="0.4" />
       {/* Hayloft door */}
-      <rect x="27" y="34" width="8" height="10" fill="#3a1008" stroke="#1a0808" strokeWidth="0.4" />
-      <line x1="31" y1="34" x2="31" y2="44" stroke="#f4ecd0" strokeWidth="0.3" />
+      <rect x="34" y="38" width="8" height="10" fill="#3a1008" stroke="#1a0808" strokeWidth="0.4" />
+      <line x1="38" y1="38" x2="38" y2="48" stroke="#f4ecd0" strokeWidth="0.3" />
       {/* White trim band */}
-      <rect x="14" y="56" width="34" height="1.3" fill="#f4ecd0" opacity="0.9" />
+      <rect x="22" y="62" width="32" height="1.3" fill="#f4ecd0" opacity="0.9" />
       {/* Main door with white cross */}
-      <rect x="25" y="59" width="12" height="17" fill="#3a1008" stroke="#1a0808" strokeWidth="0.4" />
-      <line x1="25" y1="59" x2="37" y2="76" stroke="#f4ecd0" strokeWidth="0.5" />
-      <line x1="37" y1="59" x2="25" y2="76" stroke="#f4ecd0" strokeWidth="0.5" />
-      <line x1="31" y1="59" x2="31" y2="76" stroke="#f4ecd0" strokeWidth="0.4" />
+      <rect x="32" y="65" width="12" height="17" fill="#3a1008" stroke="#1a0808" strokeWidth="0.4" />
+      <line x1="32" y1="65" x2="44" y2="82" stroke="#f4ecd0" strokeWidth="0.5" />
+      <line x1="44" y1="65" x2="32" y2="82" stroke="#f4ecd0" strokeWidth="0.5" />
+      <line x1="38" y1="65" x2="38" y2="82" stroke="#f4ecd0" strokeWidth="0.4" />
       {/* Side windows with shutters */}
-      <rect x="16" y="49" width="5" height="5" fill="#f7d254" stroke="#3a1008" strokeWidth="0.4" />
-      <line x1="18.5" y1="49" x2="18.5" y2="54" stroke="#3a1008" strokeWidth="0.3" />
-      <line x1="16" y1="51.5" x2="21" y2="51.5" stroke="#3a1008" strokeWidth="0.3" />
-      <rect x="41" y="49" width="5" height="5" fill="#f7d254" stroke="#3a1008" strokeWidth="0.4" />
-      <line x1="43.5" y1="49" x2="43.5" y2="54" stroke="#3a1008" strokeWidth="0.3" />
-      <line x1="41" y1="51.5" x2="46" y2="51.5" stroke="#3a1008" strokeWidth="0.3" />
+      <rect x="24" y="54" width="5" height="5" fill="#f7d254" stroke="#3a1008" strokeWidth="0.4" />
+      <line x1="26.5" y1="54" x2="26.5" y2="59" stroke="#3a1008" strokeWidth="0.3" />
+      <line x1="24" y1="56.5" x2="29" y2="56.5" stroke="#3a1008" strokeWidth="0.3" />
+      <rect x="47" y="54" width="5" height="5" fill="#f7d254" stroke="#3a1008" strokeWidth="0.4" />
+      <line x1="49.5" y1="54" x2="49.5" y2="59" stroke="#3a1008" strokeValue="0.3" />
+      <line x1="47" y1="56.5" x2="52" y2="56.5" stroke="#3a1008" strokeWidth="0.3" />
       {/* Weather vane */}
-      <line x1="31" y1="30" x2="31" y2="22" stroke="#3a3838" strokeWidth="0.6" />
-      <polygon points="31,21 35,23 31,25 27,23" fill="#3a3838" />
+      <line x1="38" y1="34" x2="38" y2="26" stroke="#3a3838" strokeWidth="0.6" />
+      <polygon points="38,25 42,27 38,29 34,27" fill="#3a3838" />
+
       {/* Silo */}
-      <rect x="51" y="50" width="10" height="26" fill="#c0b8a0" stroke="#7a7260" strokeWidth="0.5" />
-      <line x1="51" y1="58" x2="61" y2="58" stroke="#9a9282" strokeWidth="0.4" />
-      <line x1="51" y1="66" x2="61" y2="66" stroke="#9a9282" strokeWidth="0.4" />
-      <ellipse cx="56" cy="76" rx="5" ry="1.6" fill="#7a7260" />
-      <path d="M51,50 Q56,42 61,50 Z" fill="#7a8a8a" stroke="#5a6a6a" strokeWidth="0.4" />
-      {/* Apple tree */}
-      <rect x="93" y="58" width="2" height="12" fill="#5a3818" />
-      <ellipse cx="94" cy="56" rx="6" ry="6" fill="#3a7a20" />
-      <circle cx="91" cy="54" r="1" fill="#e03820" opacity="0.85" />
-      <circle cx="96" cy="58" r="0.9" fill="#d02818" opacity="0.85" />
-      {/* Wooden fence */}
-      {[0,1,2,3,4,5,6,7,8].map((i) => (
-        <rect key={i} x={5 + i * 11} y="78" width="1.6" height="9" fill="#9a6828" />
+      <rect x="57" y="54" width="10" height="28" fill="#c0b8a0" stroke="#7a7260" strokeWidth="0.5" />
+      <line x1="57" y1="62" x2="67" y2="62" stroke="#9a9282" strokeWidth="0.4" />
+      <line x1="57" y1="70" x2="67" y2="70" stroke="#9a9282" strokeWidth="0.4" />
+      <ellipse cx="62" cy="82" rx="5" ry="1.6" fill="#7a7260" />
+      <path d="M57,54 Q62,46 67,54 Z" fill="#7a8a8a" stroke="#5a6a6a" strokeWidth="0.4" />
+
+      {/* Apple tree — sits on the parcel's right edge so the canopy reads
+          against whatever sky/hill is behind it. */}
+      <rect x="80" y="60" width="2" height="14" fill="#5a3818" />
+      <ellipse cx="81" cy="58" rx="7" ry="7" fill="#3a7a20" />
+      <ellipse cx="79" cy="56" rx="3" ry="3" fill="#4a8a28" opacity="0.7" />
+      <circle cx="77" cy="56" r="1" fill="#e03820" opacity="0.85" />
+      <circle cx="83" cy="60" r="0.9" fill="#d02818" opacity="0.85" />
+      <circle cx="80" cy="61" r="0.8" fill="#e84020" opacity="0.85" />
+
+      {/* Wooden split-rail fence around the parcel. */}
+      {[0,1,2,3,4,5,6,7,8,9].map((i) => (
+        <rect key={i} x={6 + i * 10} y="80" width="1.4" height="10" fill="#9a6828" />
       ))}
-      <line x1="2" y1="81" x2="100" y2="81" stroke="#9a6828" strokeWidth="0.9" />
-      <line x1="2" y1="85" x2="100" y2="85" stroke="#9a6828" strokeWidth="0.9" />
-      {/* Hay bale */}
-      <ellipse cx="76" cy="83" rx="9" ry="4.5" fill="#d4a838" stroke="#9a7820" strokeWidth="0.5" />
-      <line x1="67" y1="80.5" x2="85" y2="80.5" stroke="#9a7820" strokeWidth="0.4" />
-      <line x1="67" y1="84" x2="85" y2="84" stroke="#9a7820" strokeWidth="0.4" />
-      {/* Wildflowers */}
-      <circle cx="8" cy="92" r="0.9" fill="#ff7070" />
-      <circle cx="42" cy="94" r="0.9" fill="#ffffff" />
-      <circle cx="62" cy="92" r="0.9" fill="#f0a0e0" />
+      <path d="M4,84 Q50,80 96,84" fill="none" stroke="#9a6828" strokeWidth="1" />
+      <path d="M4,88 Q50,84 96,88" fill="none" stroke="#9a6828" strokeWidth="1" />
+
+      {/* Gate at front of fence — implies you walk in through here. */}
+      <rect x="44" y="83" width="12" height="0.9" fill="#b88a40" />
+      <rect x="44" y="86" width="12" height="0.9" fill="#b88a40" />
+      <line x1="44" y1="82" x2="56" y2="89" stroke="#b88a40" strokeWidth="0.7" />
+      <rect x="43" y="80" width="1.4" height="11" fill="#6a4818" />
+      <rect x="55.6" y="80" width="1.4" height="11" fill="#6a4818" />
+
+      {/* Hay bale and props on/near the parcel. */}
+      <ellipse cx="14" cy="88" rx="6" ry="3" fill="#d4a838" stroke="#9a7820" strokeWidth="0.5" />
+      <line x1="8" y1="86.5" x2="20" y2="86.5" stroke="#9a7820" strokeWidth="0.4" />
+      <line x1="8" y1="89.5" x2="20" y2="89.5" stroke="#9a7820" strokeWidth="0.4" />
+      <ellipse cx="86" cy="89" rx="5" ry="2.5" fill="#d4a838" stroke="#9a7820" strokeWidth="0.5" />
+
+      {/* Wildflowers along the fenceline. */}
+      <circle cx="12" cy="93" r="0.8" fill="#ff7070" />
+      <circle cx="34" cy="94" r="0.9" fill="#ffffff" />
+      <circle cx="68" cy="93" r="0.8" fill="#f0a0e0" />
+      <circle cx="92" cy="94" r="0.8" fill="#ffd640" />
     </svg>
   );
 }
 
 export function MineEntranceArt({ locked }) {
   const lanternFill = locked ? "#5a4830" : "#c86820";
-  const lanternGlow = locked ? "rgba(120,110,90,.0)" : "rgba(248,160,64,.22)";
+  const lanternGlow = locked ? "rgba(120,110,90,.0)" : "rgba(248,160,64,.32)";
   return (
-    <svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMax meet" className="absolute inset-0 w-full h-full">
-      {/* Dusk sky */}
-      <rect width="100" height="40" fill="#3a3e44" />
-      <rect width="100" height="14" fill="#52565c" opacity="0.6" />
-      {/* Mountain silhouette */}
-      <polygon points="0,38 20,14 36,30 54,8 72,24 100,16 100,46 0,46" fill="#48464a" />
-      <polygon points="12,30 20,14 28,28" fill="#5a585e" opacity="0.65" />
-      <polygon points="46,18 54,8 62,22" fill="#6a686e" opacity="0.55" />
-      {/* Snow caps */}
-      <polygon points="18,16 20,14 22,16" fill="#d8d0c8" opacity="0.7" />
-      <polygon points="52,10 54,8 56,10" fill="#d8d0c8" opacity="0.7" />
-      {/* Cliff base */}
-      <rect y="42" width="100" height="58" fill="#5c5860" />
-      <path d="M0,58 Q30,52 60,56 T100,54 L100,64 L0,64 Z" fill="#48464c" opacity="0.55" />
-      <path d="M0,72 Q35,68 70,72 T100,70 L100,80 L0,80 Z" fill="#3a3840" opacity="0.45" />
-      {/* Ore vein */}
-      <line x1="6" y1="54" x2="22" y2="62" stroke="#9ad8f0" strokeWidth="0.6" opacity="0.5" />
-      <line x1="78" y1="50" x2="92" y2="58" stroke="#d8f0fc" strokeWidth="0.5" opacity="0.5" />
-      {/* Mine tunnel */}
-      <rect x="36" y="48" width="28" height="38" fill="#0a0a0c" />
+    <svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMax meet" className="absolute inset-0 w-full h-full overflow-visible">
+      <ellipse cx="50" cy="96" rx="48" ry="5" fill="rgba(12,10,8,0.34)" />
+      <path d="M0,42 L8,32 L18,38 L28,24 L40,34 L52,18 L66,30 L78,22 L88,32 L96,26 L100,30 L100,94 L0,94 Z"
+        fill="#5e5a5c" stroke="#3a3a3e" strokeWidth="0.6" />
+      <path d="M0,56 Q26,50 52,54 T100,52 L100,64 L0,64 Z" fill="#48464c" opacity="0.6" />
+      <path d="M0,72 Q30,68 60,72 T100,70 L100,82 L0,82 Z" fill="#3a3840" opacity="0.45" />
+      <polygon points="8,32 18,38 14,40 6,38" fill="#74707a" opacity="0.55" />
+      <polygon points="40,34 52,18 56,24 44,38" fill="#74707a" opacity="0.5" />
+      <polygon points="78,22 88,32 84,34 76,28" fill="#74707a" opacity="0.5" />
+      <line x1="6" y1="56" x2="22" y2="64" stroke="#9ad8f0" strokeWidth="0.6" opacity="0.5" />
+      <line x1="74" y1="48" x2="92" y2="58" stroke="#d8f0fc" strokeWidth="0.5" opacity="0.5" />
+      <line x1="82" y1="64" x2="94" y2="74" stroke="#9ad8f0" strokeWidth="0.5" opacity="0.4" />
+      <rect x="36" y="48" width="28" height="40" fill="#0a0a0c" />
       <ellipse cx="50" cy="48" rx="14" ry="6" fill="#0a0a0c" />
       <ellipse cx="50" cy="56" rx="9" ry="4" fill="#1a1a1c" opacity="0.85" />
-      {/* Timber posts */}
-      <rect x="32" y="44" width="5" height="44" fill="#6a4828" stroke="#3a2810" strokeWidth="0.4" />
-      <rect x="63" y="44" width="5" height="44" fill="#6a4828" stroke="#3a2810" strokeWidth="0.4" />
-      <line x1="34.5" y1="44" x2="34.5" y2="88" stroke="#5a3818" strokeWidth="0.3" opacity="0.8" />
-      <line x1="65.5" y1="44" x2="65.5" y2="88" stroke="#5a3818" strokeWidth="0.3" opacity="0.8" />
-      {/* Header beam */}
+      <ellipse cx="50" cy="64" rx="6" ry="14" fill="#040406" opacity="0.7" />
+      <rect x="32" y="44" width="5" height="46" fill="#6a4828" stroke="#3a2810" strokeWidth="0.4" />
+      <rect x="63" y="44" width="5" height="46" fill="#6a4828" stroke="#3a2810" strokeWidth="0.4" />
+      <line x1="34.5" y1="44" x2="34.5" y2="90" stroke="#5a3818" strokeWidth="0.3" opacity="0.8" />
+      <line x1="65.5" y1="44" x2="65.5" y2="90" stroke="#5a3818" strokeWidth="0.3" opacity="0.8" />
       <rect x="29" y="42" width="42" height="6" fill="#7a5830" stroke="#3a2810" strokeWidth="0.4" />
       <rect x="29" y="42" width="42" height="1.4" fill="#9a7848" opacity="0.6" />
-      {/* Knee braces */}
       <line x1="36" y1="50" x2="44" y2="44" stroke="#5a3818" strokeWidth="1.8" strokeLinecap="round" />
       <line x1="64" y1="50" x2="56" y2="44" stroke="#5a3818" strokeWidth="1.8" strokeLinecap="round" />
-      {/* Sign board */}
-      <rect x="42" y="34" width="16" height="7" fill="#7a5828" stroke="#4a3018" strokeWidth="0.5" />
-      <line x1="44" y1="36.2" x2="56" y2="36.2" stroke="#4a3018" strokeWidth="0.4" />
-      <line x1="44" y1="38.8" x2="56" y2="38.8" stroke="#4a3018" strokeWidth="0.4" />
-      {/* Lanterns */}
-      <circle cx="34" cy="52" r="6" fill={lanternGlow} />
+      <circle cx="34" cy="52" r="7" fill={lanternGlow} />
       <line x1="34" y1="44" x2="34" y2="48" stroke="#3a2810" strokeWidth="0.6" />
       <rect x="31" y="48" width="6" height="6" fill={lanternFill} stroke="#5a3010" strokeWidth="0.4" />
       <ellipse cx="34" cy="48.5" rx="2.6" ry="0.7" fill={locked ? "#7a6850" : "#f8a040"} opacity="0.85" />

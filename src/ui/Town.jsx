@@ -84,15 +84,79 @@ export function TownView({ state, dispatch }) {
 
       <TownGround plan={townPlan} theme={colors} biomeVariant={theme.biomeVariant} builtLots={builtLotIndexes} />
 
-      {/* Buildings Layer */}
+      {/* Puzzle-board fixtures — the farm field, mine entrance and harbor sit
+          on grounded lots in the town's wings (from townPlan.boards) and tie
+          into the road network via short dirt paths drawn by TownGround. The
+          interactive element is the scene itself — no boxed UI card — with a
+          hanging wooden signpost above and a soft glow on hover. */}
       <div className="absolute inset-0 pointer-events-none">
+        {(townPlan.boards || []).map((b) => {
+          const meta = BOARD_META[b.kind];
+          const locked = state.level < (b.kind === "mine" ? 2 : b.kind === "fish" ? 3 : 0);
+          if (!meta) return null;
+          return (
+            <button
+              key={b.kind}
+              type="button"
+              aria-label={locked ? `${meta.label} (locked until level 2)` : `Enter ${meta.label}`}
+              disabled={locked}
+              className="absolute cursor-pointer group pointer-events-auto bg-transparent border-0 p-0 focus-visible:outline-2 focus-visible:outline-[#ffd248] focus-visible:rounded disabled:cursor-not-allowed"
+              style={{
+                left: `${((b.cx - b.w / 2) / 1100) * 100}%`,
+                top: `${(b.cy - b.h / 2) / 600 * 100}%`,
+                width: `${(b.w / 1100) * 100}%`,
+                height: `${(b.h / 600) * 100}%`,
+                opacity: locked ? 0.78 : 1,
+                zIndex: Math.floor(b.cy + b.h / 2),
+              }}
+              onClick={() => setEntryBiome(b.kind)}
+            >
+              <div
+                className="relative w-full h-full transition-transform duration-150 group-hover:scale-[1.04]"
+                style={{ filter: locked ? "saturate(0.55) brightness(0.78)" : "none", transformOrigin: "50% 80%" }}
+              >
+                {/* Glow halo */}
+                <div className="absolute left-[6%] right-[6%] opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none rounded-[8%]"
+                  style={{ top: "30%", bottom: "4%", boxShadow: locked ? "0 0 0 2px rgba(180,180,180,.5) inset" : "0 0 30px 8px rgba(255,210,72,.55)" }} />
+                {meta.art(locked)}
+                
+                {/* Hanging wooden signpost */}
+                <div className="absolute left-1/2 -translate-x-1/2 flex flex-col items-center pointer-events-none"
+                  style={{ top: "20%", width: "82%" }}>
+                  <div
+                    className="flex items-center justify-center gap-1 font-bold text-[#f6ecd4] px-2 py-0.5 rounded-sm whitespace-nowrap"
+                    style={{
+                      background: "linear-gradient(180deg, #8a5a2a 0%, #5a3a18 100%)",
+                      border: "1.5px solid #3a2410",
+                      boxShadow: "0 2px 4px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,220,160,.25)",
+                      fontSize: "clamp(8px,0.85vw,11px)",
+                      textShadow: "0 1px 1px rgba(0,0,0,.7)",
+                    }}
+                  >
+                    <Icon iconKey={locked ? "ui_lock" : meta.icon} size={11} /> {meta.label}
+                  </div>
+                </div>
+                {/* Enter hint */}
+                <div className="absolute left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"
+                  style={{ top: "58%", filter: "drop-shadow(0 2px 4px rgba(0,0,0,.6))" }}>
+                  <span className="font-bold text-white flex items-center gap-1 px-2 py-0.5 rounded-full whitespace-nowrap"
+                    style={{ background: "rgba(0,0,0,.55)", fontSize: "clamp(8px,0.95vw,12px)" }}>
+                    <Icon iconKey={locked ? "ui_lock" : "ui_enter"} size={11} /> {locked ? "Level 2" : "Enter"}
+                  </span>
+                </div>
+              </div>
+            </button>
+          );
+        })}
+
+        {/* Regular Buildings Layer */}
         {buildingLots.map((b) => {
           const isBuilt = built[b.id] > 0;
           return (
             <div
               key={b.id}
               className="absolute pointer-events-auto transition-transform hover:scale-105 active:scale-95 cursor-pointer"
-              style={{ left: b.x, top: b.y, width: b.w, height: b.h }}
+              style={{ left: b.x, top: b.y, width: b.w, height: b.h, zIndex: Math.floor(b.baseY) }}
               onClick={() => isBuilt ? null : setPurchaseBuilding(b.id)}
             >
               <div className="relative w-full h-full pointer-events-none">
@@ -104,6 +168,7 @@ export function TownView({ state, dispatch }) {
           );
         })}
       </div>
+
 
       <TownVillagers key={zoneId} plan={townPlan} buildings={villagerBuildings} />
 

@@ -108,6 +108,24 @@ function TownGround({ plan, theme, biomeVariant, builtLots }) {
         opacity="0.5"
       />
 
+      {/* Worn dirt tracks linking each board (farm field / mine mouth /
+          harbor) into the road network. Rendered before the paved streets
+          so the join reads as the road meeting the track, not the other way
+          around. */}
+      {(plan.boardPaths || []).map((p, i) => {
+        const mx = (p.x1 + p.x2) / 2 + (p.curve ?? 0);
+        const my = (p.y1 + p.y2) / 2;
+        const d = `M${p.x1},${p.y1} Q${mx},${my} ${p.x2},${p.y2}`;
+        const w = p.width ?? 22;
+        return (
+          <g key={`bp${i}`}>
+            <path d={d} stroke={pal.floorEdge} strokeWidth={w + 6} strokeLinecap="round" fill="none" opacity="0.55" />
+            <path d={d} stroke="#a89270" strokeWidth={w} strokeLinecap="round" fill="none" opacity="0.85" />
+            <path d={d} stroke="#7a6444" strokeWidth="1.2" strokeLinecap="round" strokeDasharray="3 6" fill="none" opacity="0.5" />
+          </g>
+        );
+      })}
+
       {/* Streets — paved bands with a faint centre line. */}
       {plan.streets.map((s, i) => (
         <g key={`s${i}`}>
