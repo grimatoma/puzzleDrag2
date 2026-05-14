@@ -370,11 +370,11 @@ export default function SettingsModal({ state, dispatch }) {
 
   return (
     <div
-      className="absolute inset-0 grid place-items-center"
-      style={{ background: 'rgba(0,0,0,0.55)', zIndex: 70 }}
+      className="absolute inset-0 grid place-items-center pointer-events-none"
+      style={{ background: 'rgba(0,0,0,0.35)', zIndex: 70 }}
     >
       <div
-        className="relative p-5 rounded-[20px] overflow-y-auto shadow-2xl"
+        className="relative p-5 rounded-[20px] overflow-y-auto shadow-2xl pointer-events-auto"
         style={{
           background: '#f4ecd8',
           border: '4px solid #b28b62',
