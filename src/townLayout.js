@@ -56,17 +56,34 @@ export function buildTownPlan({ zoneId = "home", plotCount = 12, boardKinds = []
   const n = Math.max(1, Math.floor(plotCount));
   const kinds = Array.isArray(boardKinds) ? boardKinds : [];
 
-  // Puzzle-board fixtures (farm field / mine entrance / harbor) sit in the
-  // town's wings rather than floating over the UI: the farm out to the left,
-  // the mine tunnelling into the hillside on the right, the harbor at the
-  // lower-left water's edge. When a wing is occupied, the building rows below
-  // give it room.
+  // Puzzle-board fixtures (farm field / mine entrance / harbor) sit on lots in
+  // the town's wings rather than floating over the UI: the farm out to the
+  // left, the mine tunnelling into the right-hand hillside, the harbor at the
+  // lower-left water's edge. Each board is grounded — its base lands on the
+  // packed-earth town floor and a short dirt path links it to the road
+  // network below (see `boardPaths`) so it reads as part of the settlement.
   const BOARD_SPOTS = {
-    farm: { cx: 118, cy: 286, w: 152, h: 142 },
-    mine: { cx: W - 116, cy: 232, w: 162, h: 150 },
-    fish: { cx: 132, cy: 446, w: 140, h: 130 },
+    farm: { cx: 134, cy: 268, w: 168, h: 156 },
+    mine: { cx: W - 128, cy: 218, w: 178, h: 162 },
+    fish: { cx: 148, cy: 438, w: 152, h: 138 },
   };
   const boards = kinds.filter((k) => BOARD_SPOTS[k]).map((k) => ({ kind: k, ...BOARD_SPOTS[k] }));
+
+  // Short dirt paths that tie each board into the main road network. Rendered
+  // by TownGround beneath the building lots so the connection reads as a
+  // worn track from the village out to the field / mine mouth / harbor.
+  const boardPaths = boards.map((b) => {
+    const baseY = b.cy + b.h / 2 - 6; // a hair above the board's drawn base
+    if (b.kind === "mine") {
+      // Curve down from the mine mouth out to the front street on the right.
+      return { kind: b.kind, x1: b.cx, y1: baseY, x2: W - 60, y2: ROWS[2].streetY, width: 26, curve: -28 };
+    }
+    if (b.kind === "fish") {
+      return { kind: b.kind, x1: b.cx, y1: baseY, x2: PLAZA.cx - PLAZA.rx - 10, y2: ROWS[2].streetY, width: 22, curve: 14 };
+    }
+    // Farm: connect down into the front street on the left.
+    return { kind: b.kind, x1: b.cx, y1: baseY, x2: 60, y2: ROWS[2].streetY, width: 26, curve: 22 };
+  });
   const hasLeftBoard = kinds.includes("farm") || kinds.includes("fish");
   const hasRightBoard = kinds.includes("mine");
   const leftStart = hasLeftBoard ? 210 : 100;   // building rows' left clusters start here
@@ -157,6 +174,7 @@ export function buildTownPlan({ zoneId = "home", plotCount = 12, boardKinds = []
     streets,
     lots: lots.slice(0, n),
     boards,
+    boardPaths,
     props,
     waypoints, edges,
   };
