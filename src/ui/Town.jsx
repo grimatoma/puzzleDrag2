@@ -220,7 +220,7 @@ const TOWN_THEMES = {
 };
 
 // Buildings that emit smoke when built (industrial/warm interiors).
-const SMOKE_BUILDINGS = new Set(["hearth", "bakery", "forge", "kitchen"]);
+const SMOKE_BUILDINGS = new Set(["hearth", "bakery", "forge", "kitchen", "smokehouse"]);
 
 // Puzzle-board fixtures placed on lots in the town (see townLayout.js
 // `boards`): label / nav icon / lot border / the art that fills the tile.
@@ -842,6 +842,144 @@ export function BuildingIllustration({ id, isBuilt }) {
         <rect x="76" y="48" width="6" height="14" rx="1" fill="none" stroke="#3a2008" strokeWidth="0.8" />
         {isBuilt && <ellipse cx="79" cy="50" rx="3" ry="1" fill="#f8a040" opacity="0.85" />}
         <line x1="79" y1="42" x2="79" y2="48" stroke="#3a2008" strokeWidth="1" />
+      </svg>
+    ),
+    harbor_dock: (
+      <svg viewBox="0 0 100 100" className="absolute inset-0 w-full h-full" preserveAspectRatio="xMidYMax meet" style={f}>
+        {shadow(50, 44)}
+        <rect x="0" y="68" width="100" height="32" fill="#3a5a82" />
+        <path d="M0,74 Q12,71 24,74 T48,74 T72,74 T96,74 L100,74 L100,78 L0,78 Z" fill="#5a7aa6" opacity="0.7" />
+        <path d="M0,82 Q15,79 30,82 T60,82 T90,82 L100,82 L100,86 L0,86 Z" fill="#7a9ac6" opacity="0.55" />
+        <path d="M0,90 Q14,87 28,90 T56,90 T84,90 L100,90 L100,94 L0,94 Z" fill="#9ab8d8" opacity="0.4" />
+        <rect x="14" y="62" width="6" height="38" fill="#6a6a72" />
+        <ellipse cx="17" cy="62" rx="3.5" ry="1.4" fill="#7a7a82" />
+        <rect x="32" y="60" width="6" height="40" fill="#6a6a72" />
+        <ellipse cx="35" cy="60" rx="3.5" ry="1.4" fill="#7a7a82" />
+        <rect x="50" y="62" width="6" height="38" fill="#6a6a72" />
+        <ellipse cx="53" cy="62" rx="3.5" ry="1.4" fill="#7a7a82" />
+        <rect x="68" y="60" width="6" height="40" fill="#6a6a72" />
+        <ellipse cx="71" cy="60" rx="3.5" ry="1.4" fill="#7a7a82" />
+        <rect x="86" y="62" width="6" height="38" fill="#6a6a72" />
+        <ellipse cx="89" cy="62" rx="3.5" ry="1.4" fill="#7a7a82" />
+        <rect x="4" y="56" width="92" height="10" rx="1" fill="#8a6038" />
+        <rect x="4" y="56" width="92" height="10" rx="1" fill="none" stroke="#5a3818" strokeWidth="1" />
+        {[16, 28, 40, 52, 64, 76, 88].map((x) => (
+          <line key={x} x1={x} y1="56" x2={x} y2="66" stroke="#5a3818" strokeWidth="0.6" opacity="0.6" />
+        ))}
+        <rect x="8" y="42" width="6" height="14" fill="#4a4a52" />
+        <ellipse cx="11" cy="42" rx="4" ry="1.4" fill="#5a5a62" />
+        <ellipse cx="11" cy="42" rx="4" ry="1.4" fill="none" stroke="#2a2a32" strokeWidth="0.6" />
+        <path d="M14,46 Q22,42 30,48" fill="none" stroke="#a89070" strokeWidth="1.4" />
+        <path d="M24,52 L62,52 Q68,60 60,60 L24,60 Q18,60 24,52 Z" fill={isBuilt ? "#8a4828" : "#4a3828"} />
+        <path d="M24,52 L62,52 Q68,60 60,60 L24,60 Q18,60 24,52 Z" fill="none" stroke="#5a2818" strokeWidth="1" />
+        <line x1="26" y1="56" x2="60" y2="56" stroke="#5a2818" strokeWidth="0.5" opacity="0.6" />
+        <line x1="42" y1="52" x2="42" y2="38" stroke="#5a4828" strokeWidth="1.2" />
+        {isBuilt && <polygon points="42,38 54,42 42,48" fill="#e8d8a0" stroke="#9a7a3a" strokeWidth="0.6" />}
+        <line x1="92" y1="56" x2="92" y2="34" stroke="#4a3828" strokeWidth="1.5" />
+        <rect x="88" y="28" width="8" height="8" rx="1" fill={lit} />
+        <line x1="88" y1="32" x2="96" y2="32" stroke="#3a2818" strokeWidth="0.5" />
+        <line x1="92" y1="28" x2="92" y2="36" stroke="#3a2818" strokeWidth="0.5" />
+        <rect x="88" y="28" width="8" height="8" rx="1" fill="none" stroke="#3a2818" strokeWidth="0.8" />
+        <rect x="87" y="26" width="10" height="3" rx="0.5" fill="#3a2818" />
+        {isBuilt && <>
+          <path d="M56,22 Q60,19 64,22 Q60,20 56,22" fill="#3a3a48" />
+          <path d="M68,16 Q72,13 76,16 Q72,14 68,16" fill="#3a3a48" />
+        </>}
+      </svg>
+    ),
+    fishmonger: (
+      <svg viewBox="0 0 100 100" className="absolute inset-0 w-full h-full" preserveAspectRatio="xMidYMax meet" style={f}>
+        {shadow()}
+        <rect x="70" y="14" width="8" height="22" rx="1" fill="#6a6a78" />
+        <rect x="68" y="12" width="12" height="4" rx="1" fill="#4a4a58" />
+        <polygon points="6,38 50,12 94,38" fill="#3a4a68" />
+        <polygon points="6,38 50,12 94,38" fill="none" stroke="#1a2a48" strokeWidth="1.5" />
+        <line x1="50" y1="12" x2="28" y2="25" stroke="#1a2a48" strokeWidth="1" opacity="0.55" />
+        <line x1="50" y1="12" x2="72" y2="25" stroke="#1a2a48" strokeWidth="1" opacity="0.55" />
+        <rect x="8" y="38" width="84" height="60" rx="2" fill="#9aa8c0" />
+        <line x1="8" y1="52" x2="92" y2="52" stroke="rgba(0,0,0,.08)" strokeWidth="1" />
+        <line x1="8" y1="68" x2="92" y2="68" stroke="rgba(0,0,0,.08)" strokeWidth="1" />
+        <line x1="8" y1="84" x2="92" y2="84" stroke="rgba(0,0,0,.08)" strokeWidth="1" />
+        <rect x="8" y="56" width="84" height="10" fill="#c83838" />
+        {[14, 26, 38, 50, 62, 74, 86].map((x) => (
+          <rect key={x} x={x} y="56" width="6" height="10" fill="#f4f0e6" />
+        ))}
+        <rect x="6" y="54" width="88" height="4" rx="1" fill="#6a4a2a" />
+        <rect x="6" y="64" width="88" height="3" rx="1" fill="#6a4a2a" />
+        <rect x="14" y="42" width="14" height="10" rx="1" fill={lit} />
+        <line x1="21" y1="42" x2="21" y2="52" stroke="#7a6a4a" strokeWidth="1" />
+        <line x1="14" y1="47" x2="28" y2="47" stroke="#7a6a4a" strokeWidth="1" />
+        <rect x="14" y="42" width="14" height="10" rx="1" fill="none" stroke="#7a6a4a" strokeWidth="1.2" />
+        <rect x="72" y="42" width="14" height="10" rx="1" fill={lit} />
+        <line x1="79" y1="42" x2="79" y2="52" stroke="#7a6a4a" strokeWidth="1" />
+        <line x1="72" y1="47" x2="86" y2="47" stroke="#7a6a4a" strokeWidth="1" />
+        <rect x="72" y="42" width="14" height="10" rx="1" fill="none" stroke="#7a6a4a" strokeWidth="1.2" />
+        <rect x="14" y="70" width="32" height="18" rx="1" fill="#cfd8e0" />
+        <rect x="14" y="70" width="32" height="18" rx="1" fill="none" stroke="#6a7280" strokeWidth="1.2" />
+        <rect x="14" y="70" width="32" height="3" fill="#e0e8ee" />
+        {isBuilt && <>
+          <path d="M18,80 Q22,76 28,80 Q26,82 22,82 Q24,80 22,79 Q20,80 18,80 Z" fill="#7aa8c8" />
+          <circle cx="20" cy="79" r="0.6" fill="#1a2a48" />
+          <path d="M30,82 Q34,78 40,82 Q38,84 34,84 Q36,82 34,81 Q32,82 30,82 Z" fill="#a8c8d8" />
+          <circle cx="32" cy="81" r="0.6" fill="#1a2a48" />
+          <path d="M22,86 Q26,82 32,86 Q30,88 26,88 Q28,86 26,85 Q24,86 22,86 Z" fill="#8ab8c8" />
+        </>}
+        <rect x="14" y="88" width="32" height="10" fill="#8a6a4a" />
+        <rect x="14" y="88" width="32" height="10" fill="none" stroke="#5a3a1a" strokeWidth="1" />
+        <line x1="22" y1="88" x2="22" y2="98" stroke="#5a3a1a" strokeWidth="0.6" opacity="0.5" />
+        <line x1="30" y1="88" x2="30" y2="98" stroke="#5a3a1a" strokeWidth="0.6" opacity="0.5" />
+        <line x1="38" y1="88" x2="38" y2="98" stroke="#5a3a1a" strokeWidth="0.6" opacity="0.5" />
+        <rect x="56" y="74" width="26" height="24" rx="1" fill="#5a4030" />
+        <rect x="56" y="74" width="26" height="24" rx="1" fill="none" stroke="#3a2018" strokeWidth="1.5" />
+        <line x1="69" y1="74" x2="69" y2="98" stroke="#3a2018" strokeWidth="1" />
+        <circle cx="64" cy="86" r="1.5" fill="#c8923a" />
+        <circle cx="74" cy="86" r="1.5" fill="#c8923a" />
+        <rect x="8" y="38" width="84" height="60" rx="2" fill="none" stroke="#5a6878" strokeWidth="2" />
+        {isBuilt && <ellipse cx="78" cy="32" rx="6" ry="2" fill="#f4f0e6" opacity="0.5" />}
+      </svg>
+    ),
+    smokehouse: (
+      <svg viewBox="0 0 100 100" className="absolute inset-0 w-full h-full" preserveAspectRatio="xMidYMax meet" style={f}>
+        {shadow(50, 36)}
+        <rect x="34" y="6" width="14" height="34" rx="1" fill="#3a2820" />
+        <rect x="32" y="4" width="18" height="5" rx="1" fill="#1a1008" />
+        <rect x="36" y="10" width="10" height="3" fill="#1a1008" />
+        <polygon points="10,44 50,22 90,44" fill="#4a3020" />
+        <polygon points="10,44 50,22 90,44" fill="none" stroke="#2a1808" strokeWidth="1.5" />
+        <line x1="50" y1="22" x2="30" y2="33" stroke="#2a1808" strokeWidth="1" opacity="0.55" />
+        <line x1="50" y1="22" x2="70" y2="33" stroke="#2a1808" strokeWidth="1" opacity="0.55" />
+        <rect x="12" y="44" width="76" height="54" rx="2" fill="#6a4838" />
+        <rect x="12" y="44" width="76" height="54" rx="2" fill="none" stroke="#3a2008" strokeWidth="2" />
+        <line x1="12" y1="58" x2="88" y2="58" stroke="#3a2008" strokeWidth="0.6" opacity="0.35" />
+        <line x1="12" y1="72" x2="88" y2="72" stroke="#3a2008" strokeWidth="0.6" opacity="0.35" />
+        <line x1="12" y1="86" x2="88" y2="86" stroke="#3a2008" strokeWidth="0.6" opacity="0.35" />
+        <line x1="28" y1="44" x2="28" y2="98" stroke="#3a2008" strokeWidth="0.6" opacity="0.35" />
+        <line x1="50" y1="44" x2="50" y2="98" stroke="#3a2008" strokeWidth="0.6" opacity="0.35" />
+        <line x1="72" y1="44" x2="72" y2="98" stroke="#3a2008" strokeWidth="0.6" opacity="0.35" />
+        <rect x="18" y="50" width="18" height="14" rx="1" fill={glow} />
+        <rect x="18" y="50" width="18" height="14" rx="1" fill="none" stroke="#2a1808" strokeWidth="1.2" />
+        <line x1="18" y1="55" x2="36" y2="55" stroke="#2a1808" strokeWidth="0.6" opacity="0.6" />
+        {isBuilt && <>
+          <path d="M22,56 Q23,52 25,56 Q26,54 28,56" fill="none" stroke="#1a1008" strokeWidth="1" />
+          <ellipse cx="22" cy="60" rx="1.4" ry="2" fill="#c8a070" />
+          <ellipse cx="28" cy="61" rx="1.2" ry="1.8" fill="#a88060" />
+          <ellipse cx="33" cy="59" rx="1.4" ry="2" fill="#c8a070" />
+        </>}
+        <rect x="64" y="50" width="18" height="14" rx="1" fill={glow} />
+        <rect x="64" y="50" width="18" height="14" rx="1" fill="none" stroke="#2a1808" strokeWidth="1.2" />
+        <line x1="64" y1="55" x2="82" y2="55" stroke="#2a1808" strokeWidth="0.6" opacity="0.6" />
+        {isBuilt && <>
+          <ellipse cx="68" cy="60" rx="1.4" ry="2" fill="#c8a070" />
+          <ellipse cx="73" cy="61" rx="1.2" ry="1.8" fill="#a88060" />
+          <ellipse cx="78" cy="59" rx="1.4" ry="2" fill="#c8a070" />
+        </>}
+        <path d="M38,98 L38,74 L62,74 L62,98 Z" fill="#3a2008" />
+        <path d="M38,98 L38,74 L62,74 L62,98 Z" fill="none" stroke="#1a1008" strokeWidth="1.5" />
+        <line x1="50" y1="74" x2="50" y2="98" stroke="#1a1008" strokeWidth="1" />
+        <rect x="40" y="78" width="8" height="6" rx="0.5" fill={glow} />
+        <rect x="52" y="78" width="8" height="6" rx="0.5" fill={glow} />
+        <circle cx="46" cy="89" r="1.5" fill="#c8923a" />
+        <circle cx="54" cy="89" r="1.5" fill="#c8923a" />
       </svg>
     ),
   };
