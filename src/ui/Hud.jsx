@@ -4,16 +4,21 @@ import { xpForLevel } from "../state.js";
 import { seasonIndexInSession, hearthTokenCount } from "../features/zones/data.js";
 import { locBuilt } from "../locBuilt.js";
 import Icon from "./Icon.jsx";
+import Pill from "./primitives/Pill.jsx";
 
 // Phase 7 — calendar season effects were removed. Keeping the export as an
 // empty list so any lingering imports compile to no-ops; prefer deleting the
 // import entirely in future cleanup.
 export const SEASON_EFFECTS = ["", "", "", ""];
 
-function Pill({ children, className = "", title }) {
-  return (
-    <div title={title} className={`bg-[#f6efe0] border-2 border-[#b28b62] rounded-full px-3 py-1 flex items-center gap-1.5 text-[#6a4b31] ${className}`}>{children}</div>
-  );
+// Dev/Balance buttons are gated to URL `?debug=1` or Vite's dev-only mode so
+// they don't ship to players (Vol I #01 — Balance Manager opens a new tab,
+// players will tap it).
+function devModeEnabled() {
+  if (import.meta.env?.DEV) return true;
+  if (typeof window === "undefined") return false;
+  try { return new URLSearchParams(window.location.search).has("debug"); }
+  catch { return false; }
 }
 
 // Phase 5 — kingdom meta-currencies + Hearth-Token progress, surfaced in the
@@ -29,15 +34,15 @@ function MetaPills({ state }) {
   return (
     <>
       {hasCurrency && (
-        <Pill title="Kingdom currencies — Embers (Coexist), Core Ingots (Drive Out), Gems (timer skip)">
-          {embers > 0 && <span className="font-bold text-[13px]">🔥 {embers}</span>}
-          {ingots > 0 && <span className="font-bold text-[13px]"><span className="inline-block w-3 h-3 rounded-[2px] bg-[#8a8f95] border border-[#5a5e62] align-[-1px] mr-0.5" />{ingots}</span>}
-          {gems > 0 && <span className="font-bold text-[13px]">💎 {gems}</span>}
+        <Pill size="md" title="Kingdom currencies — Embers (Coexist), Core Ingots (Drive Out), Gems (timer skip)">
+          {embers > 0 && <span className="flex items-center gap-1">🔥 {embers}</span>}
+          {ingots > 0 && <span className="flex items-center gap-1"><span className="inline-block w-3 h-3 rounded-[2px] bg-[#8a8f95] border border-[#5a5e62]" />{ingots}</span>}
+          {gems > 0 && <span className="flex items-center gap-1">💎 {gems}</span>}
         </Pill>
       )}
       {tokens > 0 && (
-        <Pill title="Hearth-Tokens — collect all 3 (farm + mine + harbor) to open the Old Capital">
-          <span className="font-bold text-[13px]">🏛️ {tokens}/3</span>
+        <Pill size="md" title="Hearth-Tokens — collect all 3 (farm + mine + harbor) to open the Old Capital">
+          <span>🏛️ {tokens}/3</span>
         </Pill>
       )}
     </>
@@ -53,28 +58,30 @@ function TideChip({ fish }) {
   const isHigh = tide === "high";
   const label = isHigh ? "High Tide" : "Low Tide";
   const iconKey = isHigh ? "ui_water" : "fish_pearl";
-  const bg = isHigh ? "#2a4a6a" : "#5a4838";
+  // Tide is high → indigo (cool, full); low → ember (warm, drained).
   return (
-    <div
-      className="flex items-center gap-1 rounded-full px-2 py-0.5 text-white flex-shrink-0"
-      style={{ background: bg, fontSize: 10, fontWeight: "bold" }}
+    <Pill
+      tone={isHigh ? "indigo" : "ember"}
+      variant="solid"
+      size="sm"
+      leading={<Icon iconKey={iconKey} size={12} className="opacity-90" />}
       title={`Tide flips in ${turnsUntilFlip} turn${turnsUntilFlip === 1 ? "" : "s"}.`}
+      className="flex-shrink-0"
     >
-      <Icon iconKey={iconKey} size={12} className="opacity-90" />
       <span>{label}</span>
       <span className="opacity-70">·{turnsUntilFlip}</span>
-    </div>
+    </Pill>
   );
 }
 
 function SeasonBar({ season, turnsUsed, turnsLeft, turnBudget }) {
   const pipCount = Math.max(1, turnBudget | 0);
   return (
-    <div className="bg-[#faf0dd] border-2 border-[#b28b62] rounded-full pl-3 pr-2 py-0.5 flex items-center gap-2 min-w-0 flex-1 max-w-[540px]">
+    <div className="bg-[#faf0dd] border-2 border-[var(--iron)] rounded-full pl-3 pr-2 py-0.5 flex items-center gap-2 min-w-0 flex-1 max-w-[540px]">
       <div className="flex flex-col items-start">
-        <div className="text-[#6a4b31] font-bold text-[12px] landscape:max-[1024px]:text-[10px] whitespace-nowrap leading-tight">{season.name}</div>
+        <div className="text-[var(--ink-warm)] font-bold text-[12px] landscape:max-[1024px]:text-[10px] whitespace-nowrap leading-tight">{season.name}</div>
       </div>
-      <div className="flex gap-1 flex-1 justify-center min-w-0">
+      <div className="flex gap-1 flex-1 justify-center min-w-0" role="progressbar" aria-valuemin={0} aria-valuemax={pipCount} aria-valuenow={turnsUsed} aria-label="Turns used">
         {Array.from({ length: pipCount }).map((_, i) => {
           const filled = i < turnsUsed;
           const current = i === turnsUsed;
@@ -91,7 +98,7 @@ function SeasonBar({ season, turnsUsed, turnsLeft, turnBudget }) {
           );
         })}
       </div>
-      <div className="text-[#6a4b31] font-bold text-[12px] landscape:max-[1024px]:text-[10px] whitespace-nowrap pl-1 border-l border-[#b28b62] ml-1" data-testid="turns-left">{turnsLeft} left</div>
+      <div className="text-[var(--ink-warm)] font-bold text-[12px] landscape:max-[1024px]:text-[10px] whitespace-nowrap pl-1 border-l border-[var(--iron)] ml-1 tabular-nums" data-testid="turns-left">{turnsLeft} left</div>
     </div>
   );
 }
@@ -109,25 +116,27 @@ const LARDER_RESOURCES = [
 ];
 
 function LarderWidget({ inventory }) {
+  // Vol II §02 — the 9px label was sub-perceptual on standard DPR. Bumped to
+  // 11px tabular-nums so the count reads at arm's length.
   return (
-    <div className="flex items-center gap-1.5 flex-wrap">
-      {LARDER_RESOURCES.map(({ key, iconKey }) => {
+    <div className="flex items-center gap-1.5 flex-wrap" aria-label="Larder progress toward festival target">
+      {LARDER_RESOURCES.map(({ key, iconKey, label }) => {
         const amt = Math.min(50, inventory[key] ?? 0);
         const pct = (amt / 50) * 100;
         const done = amt >= 50;
         return (
-          <div key={key} className="flex items-center gap-1 min-w-0">
+          <div key={key} className="flex items-center gap-1 min-w-0" title={`${label}: ${amt}/50`}>
             <Icon iconKey={iconKey} size={14} />
-            <div className="w-10 h-2 rounded-full bg-[#3a2715] border border-[#b28b62] overflow-hidden">
+            <div className="w-10 h-2 rounded-full bg-[var(--bark-shade)] border border-[var(--iron)] overflow-hidden">
               <div
                 className="h-full rounded-full transition-[width] duration-300"
                 style={{
                   width: `${pct}%`,
-                  background: done ? "#ffd34c" : "#a8431a",
+                  background: done ? "var(--gold-amber)" : "var(--ember-deep)",
                 }}
               />
             </div>
-            <span className="text-[9px] font-bold text-[#f8e7c6] leading-none">{amt}</span>
+            <span className="text-[11px] font-bold text-[var(--parchment-soft)] leading-none tabular-nums">{amt}</span>
           </div>
         );
       })}
@@ -136,13 +145,19 @@ function LarderWidget({ inventory }) {
 }
 
 function DevButton({ title, iconKey, onClick }) {
+  // 28×28 visual circle inside a 44×44 hit area (Vol II §02 tap-target floor).
   return (
     <button
       onClick={onClick}
-      className="w-7 h-7 rounded-lg bg-[#2b2218] border-2 border-[#5a3a20] grid place-items-center flex-shrink-0"
+      className="relative grid place-items-center flex-shrink-0"
+      style={{ width: 44, height: 44 }}
       title={title}
       aria-label={title}
-    ><Icon iconKey={iconKey} size={14} /></button>
+    >
+      <span className="w-7 h-7 rounded-lg bg-[var(--bark)] border-2 border-[var(--iron-deep)] grid place-items-center">
+        <Icon iconKey={iconKey} size={14} />
+      </span>
+    </button>
   );
 }
 
@@ -163,30 +178,37 @@ export function Hud({ state, dispatch }) {
   const festivalAnnounced = !!state.story?.flags?.festival_announced;
   const isWon = !!state.story?.flags?.isWon;
   const sandbox = !!state.story?.sandbox;
+  const showDevButtons = devModeEnabled();
   return (
-    <div className="flex items-center gap-2 px-3 py-2 bg-[#5b3b20] border-b-2 border-[#2a1d0f] text-[#6a4b31] flex-wrap" data-testid="hud">
+    <div className="flex items-center gap-2 px-3 py-2 bg-[var(--bark-mid)] border-b-2 border-[#2a1d0f] text-[var(--ink-warm)] flex-wrap" data-testid="hud">
+      {/* Menu — 32px visual disc inside a 44×44 hit area (Vol II §02). */}
       <button
         onClick={() => dispatch({ type: "OPEN_MODAL", modal: "menu" })}
-        className="w-8 h-8 rounded-lg bg-[#f6efe0] border-2 border-[#b28b62] grid place-items-center text-[#6a4b31] font-bold text-[18px] flex-shrink-0"
+        className="relative grid place-items-center flex-shrink-0"
+        style={{ width: 44, height: 44 }}
         data-testid="menu-btn"
         aria-label="Menu"
-      >≡</button>
+      >
+        <span className="w-8 h-8 rounded-lg bg-[var(--paper)] border-2 border-[var(--iron)] grid place-items-center text-[var(--ink-warm)] font-bold text-[18px]">≡</span>
+      </button>
       {/* Sandbox banner — shown after winning */}
       {(isWon || sandbox) && (
-        <div className="bg-[#ffd34c] border-2 border-[#b28b62] rounded-full px-3 py-0.5 text-[#3a2a0e] font-bold text-[11px] flex-shrink-0">
+        <Pill tone="gold" variant="solid" size="sm" className="flex-shrink-0">
           Sandbox Mode
-        </div>
-      )}
-      {!onBoard && (
-        <Pill>
-          <span className="w-5 h-5 rounded-full bg-[#ffc239] grid place-items-center text-[#7a5638] text-[12px] font-bold leading-none">$</span>
-          <span className="font-bold text-[15px]" data-testid="coins">{coins.toLocaleString()}</span>
         </Pill>
       )}
       {!onBoard && (
-        <Pill>
+        <Pill
+          size="md"
+          leading={<span className="w-5 h-5 rounded-full bg-[#ffc239] grid place-items-center text-[#7a5638] text-[12px] font-bold leading-none">$</span>}
+        >
+          <span className="font-bold text-[15px] tabular-nums" data-testid="coins">{coins.toLocaleString()}</span>
+        </Pill>
+      )}
+      {!onBoard && (
+        <Pill size="md">
           <span className="font-bold text-[14px]">⌂</span>
-          <span className="font-bold text-[14px]" data-testid="buildings">{buildingCount}</span>
+          <span className="font-bold text-[14px] tabular-nums" data-testid="buildings">{buildingCount}</span>
         </Pill>
       )}
       {!onBoard && <MetaPills state={state} />}
@@ -200,17 +222,21 @@ export function Hud({ state, dispatch }) {
         </div>
       )}
       <div className={`${!onBoard ? "ml-auto" : ""} flex items-center gap-1.5 flex-shrink-0`}>
-        <DevButton title="Debug tools" iconKey="ui_devtools" onClick={() => dispatch({ type: "SETTINGS/OPEN_DEBUG" })} />
-        <DevButton title="Balance Manager" iconKey="ui_scale" onClick={() => { window.open(`${import.meta.env.BASE_URL}b/`, "_blank", "noopener,noreferrer"); }} />
+        {showDevButtons && (
+          <>
+            <DevButton title="Debug tools" iconKey="ui_devtools" onClick={() => dispatch({ type: "SETTINGS/OPEN_DEBUG" })} />
+            <DevButton title="Balance Manager" iconKey="ui_scale" onClick={() => { window.open(`${import.meta.env.BASE_URL}b/`, "_blank", "noopener,noreferrer"); }} />
+          </>
+        )}
         {!onBoard && (
           <>
-            <div className="bg-[#f6efe0] border-2 border-[#b28b62] rounded-full h-[26px] w-[110px] landscape:max-[1024px]:h-[20px] landscape:max-[1024px]:w-[80px] relative overflow-hidden">
+            <div className="bg-[var(--paper)] border-2 border-[var(--iron)] rounded-full h-[26px] w-[110px] landscape:max-[1024px]:h-[20px] landscape:max-[1024px]:w-[80px] relative overflow-hidden">
               <div className="h-full bg-gradient-to-r from-[#ff8b25] to-[#ffb347] transition-[width] duration-300" style={{ width: `${xpPct}%` }} />
-              <div className="absolute inset-0 grid place-items-center text-[11px] landscape:max-[1024px]:text-[9px] font-bold text-white" style={{ textShadow: "0 1px 2px rgba(0,0,0,.4)" }}>
+              <div className="absolute inset-0 grid place-items-center text-[11px] landscape:max-[1024px]:text-[9px] font-bold text-white tabular-nums" style={{ textShadow: "0 1px 2px rgba(0,0,0,.4)" }}>
                 {xp} / {xpNeed}
               </div>
             </div>
-            <div className="w-9 h-9 landscape:max-[1024px]:w-7 landscape:max-[1024px]:h-7 rounded-full bg-[#bb3b2f] border-[3px] border-[#ffe2a3] grid place-items-center text-white font-bold text-[16px] landscape:max-[1024px]:text-[12px]">
+            <div className="w-9 h-9 landscape:max-[1024px]:w-7 landscape:max-[1024px]:h-7 rounded-full bg-[#bb3b2f] border-[3px] border-[#ffe2a3] grid place-items-center text-white font-bold text-[16px] landscape:max-[1024px]:text-[12px] tabular-nums">
               {level}
             </div>
           </>

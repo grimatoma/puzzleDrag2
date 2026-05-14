@@ -32,18 +32,24 @@ function orderStatusByKey(orders, inventory) {
 }
 
 function TradeButton({ label, price, disabled, onClick, variant }) {
+  // Vol II §02: 18h × 46w was below the 24px WCAG floor *and* the 44pt HIG
+  // floor. Lifted to ~32h (px-2 py-1.5 + 11px font), with a leading glyph so
+  // Buy and Sell read at a glance even for color-blind players.
   const enabledClass = variant === "buy"
     ? "bg-[#3a82c4] border-[#235a8a] text-white hover:bg-[#4a95da]"
     : "bg-[#91bf24] border-[#6a9010] text-white hover:bg-[#a3d028]";
   const disabledClass = "bg-[#7a6b53] border-[#5a4d3a] text-[#c5b89e] cursor-not-allowed opacity-70";
+  const glyph = variant === "buy" ? "+" : "−";
   return (
     <button
       type="button"
       disabled={disabled}
       onClick={(e) => { e.stopPropagation(); if (!disabled) onClick(); }}
-      className={`text-[9px] font-bold px-1.5 py-0.5 rounded-md border-[1.5px] leading-none whitespace-nowrap ${disabled ? disabledClass : enabledClass}`}
+      className={`text-[11px] font-bold px-2 py-1.5 rounded-md border-[1.5px] leading-none whitespace-nowrap tabular-nums inline-flex items-center gap-1 ${disabled ? disabledClass : enabledClass}`}
     >
-      {label} {price}◉
+      <span aria-hidden="true">{glyph}</span>
+      <span>{label}</span>
+      <span className="opacity-90">{price}◉</span>
     </button>
   );
 }
@@ -60,12 +66,14 @@ function InventoryCell({ r, count, compact, orderStatus, orderTotal, marketBuilt
     : excess
     ? { boxShadow: "0 0 0 1px rgba(255,255,255,.18)" }
     : {};
+  // Vol I #05 — pair status color with a glyph so the readout survives
+  // deuteranopia (currently the green/amber distinction is color-only).
   const tagText = ready
     ? `✓ Order ${orderTotal}`
     : needed
-    ? `Need ${orderTotal}`
+    ? `↑ Need ${orderTotal}`
     : excess
-    ? "Excess"
+    ? "− Excess"
     : null;
   const tagColor = ready ? "bg-[#91bf24]" : needed ? "bg-[#f7c254] text-[#3a2715]" : "bg-white/20";
   const showBuy  = !compact && tradeKind === "resource" && buyPrice  > 0;
@@ -195,9 +203,9 @@ export function InventoryGrid({ inventory, biomeKey, compact, orders = [], state
       )}
       {orders.length > 0 && (
         <div className="flex items-center gap-3 text-[10px] text-white/70 px-1 -mb-1">
-          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-[#91bf24]" /> ready</span>
-          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-[#f7c254]" /> needed</span>
-          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-white/40" /> excess</span>
+          <span className="flex items-center gap-1"><span aria-hidden="true" className="w-2 h-2 rounded-full bg-[#91bf24]" /> <span aria-hidden="true">✓</span> ready</span>
+          <span className="flex items-center gap-1"><span aria-hidden="true" className="w-2 h-2 rounded-full bg-[#f7c254]" /> <span aria-hidden="true">↑</span> needed</span>
+          <span className="flex items-center gap-1"><span aria-hidden="true" className="w-2 h-2 rounded-full bg-white/40" /> <span aria-hidden="true">−</span> excess</span>
         </div>
       )}
       <div>

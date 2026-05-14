@@ -5,6 +5,7 @@ import { Section, CompactOrders } from "./ui/Inventory.jsx";
 import { ToolsGrid } from "./ui/Tools.jsx";
 import { TOOL_BY_KEY } from "./ui/toolRegistry.js";
 import Icon from "./ui/Icon.jsx";
+import ChainBadge from "./ui/primitives/ChainBadge.jsx";
 
 // Per-feature error boundary. A crash in any one feature renders an inline
 // fallback inside that feature's slot and dispatches CLOSE_MODAL so the
@@ -42,18 +43,7 @@ class FeatureErrorBoundary extends React.Component {
 export function SidePanel({ state, dispatch, chainInfo }) {
   return (
     <div className="bg-gradient-to-b from-[#7c4f2c] to-[#6b4225] border-[3px] border-[#e2c19b] rounded-2xl p-3 flex flex-col gap-3 overflow-hidden h-full min-h-0">
-      {chainInfo && (
-        <div className="bg-[#2b2218]/90 border border-[#ffd248] rounded-xl px-3 py-2 text-[#ffd248] font-bold text-[13px] text-center flex-shrink-0">
-          <div>
-            chain × {chainInfo.count}{chainInfo.doubled ? " ×2" : ""}{chainInfo.upgrades > 0 ? `  +${chainInfo.upgrades}★` : ""}
-          </div>
-          {chainInfo.nextTileProgress && chainInfo.nextTileProgress.threshold > 0 && (
-            <div className="text-[11px] text-[#f8e7c6] font-normal mt-0.5">
-              {chainInfo.nextTileProgress.current}/{chainInfo.nextTileProgress.threshold} {chainInfo.nextTileProgress.targetLabel}
-            </div>
-          )}
-        </div>
-      )}
+      <ChainBadge chainInfo={chainInfo} layout="side" />
       <Section title="Tools" titleColor="#f8e7c6">
         <div className="max-h-[40vh] landscape:max-[1024px]:max-h-[34vh] overflow-y-auto pr-1">
           <ToolsGrid
@@ -84,38 +74,75 @@ export function SidePanel({ state, dispatch, chainInfo }) {
 // ─── Bottom nav ───────────────────────────────────────────────────────────
 
 export function BottomNav({ view, modal, dispatch, state }) {
+  // Vol I #03 — reserve all 8 slots from session start. Portal renders locked
+  // until built so the row width never shifts on the player. Locked slot taps
+  // surface a tooltip instead of switching view.
   const builtAtLoc = locBuilt(state ?? {});
-  const baseItems = [
-    { key: "town",        iconKey: "ui_star",   label: "Town" },
-    { key: "inventory",   iconKey: "ui_inventory",  label: "Inventory" },
-    { key: "crafting",    iconKey: "ui_build",  label: "Craft" },
-    { key: "cartography", iconKey: "ui_map", label: "Map" },
-    { key: "townsfolk",   iconKey: "ui_people",  label: "Townsfolk" },
-    { key: "chronicle",   iconKey: "ui_clipboard", label: "Chronicle" },
-    { key: "tileCollection", iconKey: "ui_puzzle",  label: "Tiles" },
-    ...(builtAtLoc.portal ? [{ key: "portal", iconKey: "ui_portal", label: "Portal" }] : []),
+  const items = [
+    { key: "town",        iconKey: "ui_star",     label: "Town" },
+    { key: "inventory",   iconKey: "ui_inventory",label: "Inventory" },
+    { key: "crafting",    iconKey: "ui_build",    label: "Craft" },
+    { key: "cartography", iconKey: "ui_map",      label: "Map" },
+    { key: "townsfolk",   iconKey: "ui_people",   label: "Townsfolk" },
+    { key: "chronicle",   iconKey: "ui_clipboard",label: "Chronicle" },
+    { key: "tileCollection", iconKey: "ui_puzzle",label: "Tiles" },
+    {
+      key: "portal",
+      iconKey: "ui_portal",
+      label: "Portal",
+      locked: !builtAtLoc.portal,
+      unlockHint: "Build the Portal in town to unlock.",
+    },
   ];
-  const items = baseItems;
   const activeKey = modal ? (items.find((i) => i.modal === modal)?.key ?? view) : view;
   return (
-    <div data-testid="bottom-nav" className="flex w-full bg-[#2b2218]/95 border-t-2 border-[#f7e2b6] flex-shrink-0 shadow-[0_-4px_12px_rgba(0,0,0,.25)]">
+    <div
+      data-testid="bottom-nav"
+      className="flex w-full bg-[#2b2218]/95 border-t-2 border-[#f7e2b6] flex-shrink-0 shadow-[0_-4px_12px_rgba(0,0,0,.25)]"
+      style={{
+        // Sit above the home-indicator on iOS; pads the nav by safe-area-inset-bottom
+        // so the bottom edge of the tab labels never lands in the gesture zone.
+        paddingBottom: "var(--safe-bottom, 0px)",
+      }}
+    >
       {items.map((it) => {
         const active = activeKey === it.key;
+        const locked = !!it.locked;
+        const onClick = () => {
+          if (locked) return; // tooltip via title attribute does the explaining
+          if (it.modal) dispatch({ type: "OPEN_MODAL", modal: it.modal });
+          else dispatch({ type: "SET_VIEW", view: it.key });
+        };
+        // Active-state contrast: the old `bg-[#d6612a]` flood crushed the
+        // icon. Use a top-edge accent + a soft 12% wash so the icon's outline
+        // stays readable (Vol II §06 #9).
+        const cls = locked
+          ? "text-[#f7e2b6]/40 cursor-not-allowed"
+          : active
+          ? "text-white bg-[#d6612a]/15 border-t-2 border-[#d6612a] -mt-[2px]"
+          : "text-[#f7e2b6] hover:bg-white/10 border-t-2 border-transparent -mt-[2px]";
         return (
           <button
             key={it.key}
             data-testid={`bottom-nav-${it.key}`}
-            onClick={() => {
-              if (it.modal) {
-                dispatch({ type: "OPEN_MODAL", modal: it.modal });
-              } else {
-                dispatch({ type: "SET_VIEW", view: it.key });
-              }
-            }}
-            aria-label={it.label}
-            className={`flex-1 flex flex-col items-center justify-center gap-0.5 py-1.5 transition-colors ${active ? "bg-[#d6612a] text-white" : "text-[#f7e2b6] hover:bg-white/10"}`}
+            onClick={onClick}
+            aria-label={locked ? `${it.label} (locked) — ${it.unlockHint}` : it.label}
+            aria-disabled={locked || undefined}
+            title={locked ? it.unlockHint : undefined}
+            className={`flex-1 flex flex-col items-center justify-center gap-0.5 py-2.5 transition-colors relative ${cls}`}
+            style={{ minHeight: 48 }}
           >
-            <Icon iconKey={it.iconKey} size={18} />
+            <span className="relative">
+              <Icon iconKey={it.iconKey} size={18} />
+              {locked && (
+                <span
+                  aria-hidden="true"
+                  className="absolute -bottom-0.5 -right-1.5 text-[10px] leading-none text-[#f7e2b6]/70"
+                >
+                  🔒
+                </span>
+              )}
+            </span>
             <span className="text-[10px] font-bold leading-none whitespace-nowrap">{it.label}</span>
           </button>
         );

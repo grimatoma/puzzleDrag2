@@ -558,9 +558,28 @@ export function NpcBubble({ bubble, dispatch }) {
   if (!shown) return null;
   const npc = NPCS[shown.npc];
   if (!npc) return null;
+  // Vol II §02 #7 — the 1.8s timer was the only exit. Player can now tap or
+  // press Enter/Space/Escape to dismiss early. The wrapper drops its old
+  // `pointer-events-none` so the tap is captured.
+  const dismiss = () => dispatch({ type: "DISMISS_BUBBLE", id: shown.id });
+  const onKey = (e) => {
+    if (e.key === "Enter" || e.key === " " || e.key === "Escape") {
+      e.preventDefault();
+      dismiss();
+    }
+  };
   return (
-    <div role="status" aria-live="polite" className="absolute bottom-28 landscape:max-[1024px]:bottom-20 left-1/2 -translate-x-1/2 bg-[#f4ecd8] border-[3px] border-[#5a3a20] rounded-2xl px-4 py-3 landscape:max-[1024px]:px-3 landscape:max-[1024px]:py-2 max-w-[460px] landscape:max-[1024px]:max-w-[320px] shadow-2xl z-40 animate-bubblein pointer-events-none">
-      <div className="flex gap-2.5 items-start">
+    <div
+      role="button"
+      tabIndex={0}
+      aria-label={`Dismiss ${npc.name}'s message`}
+      onClick={dismiss}
+      onKeyDown={onKey}
+      className="absolute bottom-28 landscape:max-[1024px]:bottom-20 left-1/2 -translate-x-1/2 bg-[#f4ecd8] border-[3px] border-[#5a3a20] rounded-2xl px-4 py-3 landscape:max-[1024px]:px-3 landscape:max-[1024px]:py-2 max-w-[460px] landscape:max-[1024px]:max-w-[320px] shadow-2xl z-40 animate-bubblein cursor-pointer"
+    >
+      {/* Screen-reader live region is on the inner block so the dismiss button
+       *  doesn't double-announce. */}
+      <div role="status" aria-live="polite" className="flex gap-2.5 items-start">
         <div className="w-10 h-10 rounded-full grid place-items-center text-white font-bold text-[16px] flex-shrink-0" style={{ backgroundColor: npc.color, border: "2px solid #fff" }}>{npc.name[0]}</div>
         <div className="flex-1 min-w-0">
           <div className="font-bold text-[#a8431a] text-[12px]">{npc.name} · {npc.role}</div>

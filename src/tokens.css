@@ -1,0 +1,88 @@
+/* Hearthlands design tokens — single source of truth for surfaces, accents,
+ * chrome offsets, and a11y rules. Lifted out of Modals.jsx's `SC` palette
+ * so every surface can pull from the same vocabulary.
+ *
+ * Bound to the audit's parchment-and-iron system (UX Audit Vol II §04 #17).
+ * When adding a new color, add it here first and reference via var(--…) —
+ * don't inline `bg-[#…]` in new code.
+ */
+
+:root {
+  /* ── Surfaces ─────────────────────────────────────────────────────────── */
+  --parchment:        #f0e6cf;
+  --parchment-warm:   #f4ecd8;
+  --parchment-soft:   #f8e7c6;
+  --parchment-dim:    rgba(240, 230, 207, 0.55);
+  --parchment-faint:  rgba(240, 230, 207, 0.35);
+  --paper:            #f6efe0;
+  --bark:             #2b2218;
+  --bark-deep:        #1a110a;
+  --bark-shade:       #3a2715;
+  --bark-mid:         #5b3b20;
+  --bark-light:       #6b4225;
+  --bark-warm:        #9a724d;
+
+  /* ── Strokes ──────────────────────────────────────────────────────────── */
+  --iron:             #b28b62;
+  --iron-soft:        #e6c49a;
+  --iron-deep:        #5a3a20;
+
+  /* ── Ink ──────────────────────────────────────────────────────────────── */
+  --ink:              #2b2218;
+  --ink-strong:       #3a2715;
+  --ink-warm:         #6a4b31;
+  --ink-mute:         #8a785e;
+  --narration:        rgba(189, 154, 114, 0.95);
+
+  /* ── Accents — single saturation, hue varies ──────────────────────────── */
+  --ember:            #d6612a;
+  --ember-deep:       #a8431a;
+  --ember-soft:       #e88a5e;
+  --gold:             #e2b24a;
+  --gold-soft:        #f0c965;
+  --gold-amber:       #ffd248;
+  --moss:             #91bf24;
+  --moss-deep:        #6a9010;
+  --indigo:           #38406b;
+  --rose:             #9c3a4a;
+  --slate:            #bcc6d8;
+
+  /* ── Chrome offsets — owned by whichever surface mounts at top/bottom.
+   *    The HUD writes --chrome-top; BottomNav/MobileDock write --chrome-bottom.
+   *    Floating elements (StoryBar, NpcBubble) anchor to these instead of
+   *    hard-coding `bottom: 56`. Default 0 so layout never breaks when a
+   *    surface is unmounted. (Vol II §04 #16) */
+  --safe-bottom:      env(safe-area-inset-bottom, 0px);
+  --safe-top:         env(safe-area-inset-top, 0px);
+  --chrome-bottom:    0px;
+  --chrome-top:       0px;
+
+  /* ── Tap target floor — Vol II §02. Visual chrome may be smaller; the
+   *    interactive *hit box* (button/[role=button]) targets this minimum. */
+  --tap-min:          44px;
+}
+
+/* ── Reduced motion gate (Vol I #09 / Vol II §07 Accessibility) ──────────
+ * Anything purely decorative — dust motes, the armed-tool pulse — pauses
+ * for players who have asked the OS to reduce motion. Functional motion
+ * (story dialog slide-in, fade) stays so the UI still reads as responsive.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .motion-decorative,
+  .motion-decorative * {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* ── Focus ring (Vol II §06 #2) — Tailwind defaults strip outlines but
+ *    nothing replaces them. Apply a 2px ember ring on keyboard-only focus
+ *    so tab-navigation through modals is visible. Mouse users don't see it. */
+:focus-visible {
+  outline: 2px solid var(--ember);
+  outline-offset: 2px;
+  border-radius: inherit;
+}
+button:focus:not(:focus-visible) {
+  outline: none;
+}

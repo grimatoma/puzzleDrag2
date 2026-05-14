@@ -83,24 +83,27 @@ function ToolButton({ def, count, pending, onClick, onLongPress, showTooltip, hi
       onTouchEnd={() => { cancelLongPress(); hideTooltip(2000); }}
       onTouchCancel={() => { cancelLongPress(); hideTooltip(2000); }}
       onTouchMove={() => cancelLongPress()}
-      className={`relative w-full rounded-lg border-2 ${sizing.btn} flex flex-col items-center gap-0.5 transition-transform ${
+      className={`relative w-full rounded-lg border-2 ${sizing.btn} flex flex-col items-center gap-0.5 transition-transform motion-decorative ${
         armed
-          ? "border-[#ffd248] bg-[#7a4f1d] shadow-[0_0_0_2px_rgba(255,210,72,0.45),0_0_12px_rgba(255,210,72,0.35)] animate-pulse"
+          ? "border-[#ffd248] bg-[#7a4f1d] shadow-[0_0_0_2px_rgba(255,210,72,0.45),0_0_12px_rgba(255,210,72,0.35)] motion-safe:animate-pulse"
           : empty
           ? "border-[#7a5836] bg-[#5e3a1f] opacity-40 cursor-not-allowed"
           : "border-[#e6c49a] bg-[#9a724d] hover:bg-[#b8845a] hover:-translate-y-0.5"
       }`}
     >
+      {/* Count badge — pointer-events-none so a corner-tap reads as a tool tap,
+       *  not a badge tap (Vol II §02). */}
       {count > 0 && (
-        <div className="absolute -top-1 -right-1 bg-[#2b2218] text-white border border-[#f7e2b6] rounded-full px-1.5 text-[10px] font-bold leading-none py-0.5">
+        <div
+          className="absolute -top-1 -right-1 bg-[var(--bark)] text-white border border-[var(--parchment-soft)] rounded-full px-1.5 text-[10px] font-bold leading-none py-0.5 tabular-nums pointer-events-none"
+          aria-hidden="true"
+        >
           {count}
         </div>
       )}
-      {armed && (
-        <div className="absolute -top-1 -left-1 bg-[#ffd248] text-[#2b1d0e] border border-[#2b1d0e] rounded-full text-[8px] font-bold leading-none px-1 py-0.5">
-          ARMED
-        </div>
-      )}
+      {/* The standalone "ARMED" mini-pill is removed — the over-canvas
+       *  ArmedToolBanner already says the same thing at a glanceable size, and
+       *  the button's own glow ring marks the armed state (Vol I #07, Vol II §02). */}
       <ToolIcon def={def} size={iconPx} />
       <div className={`${sizing.name} font-bold text-white`}>{def.name}</div>
     </button>
@@ -361,8 +364,12 @@ export function ArmedToolBanner({ state, dispatch }) {
   if (!pending || !isTapTargetTool(pending)) return null;
   const def = TOOL_BY_KEY[pending];
   if (!def) return null;
+  // Vol II §02 + §03: the banner wrapper sat with pointer-events: auto, which
+  // ate chain-drag touchmove events when a drag started in the top row and
+  // passed under the banner. The wrapper and inner card are now non-interactive
+  // — only the Cancel button absorbs taps. Cancel is bumped to ~44h (py-2.5).
   return (
-    <div className="absolute top-2 left-1/2 -translate-x-1/2 z-30 pointer-events-auto">
+    <div className="absolute top-2 left-1/2 -translate-x-1/2 z-30 pointer-events-none">
       <div className="bg-[#2b1d0e]/95 border-2 border-[#ffd248] rounded-xl px-3 py-2 flex items-center gap-2 shadow-lg max-w-[90vw]">
         <ToolIcon def={def} size={24} />
         <div className="flex flex-col">
@@ -371,7 +378,7 @@ export function ArmedToolBanner({ state, dispatch }) {
         </div>
         <button
           onClick={() => dispatch({ type: "CANCEL_TOOL" })}
-          className="ml-2 bg-[#9a724d] hover:bg-[#b8845a] text-white font-bold text-[11px] px-2 py-1 rounded-md border border-[#e6c49a]"
+          className="ml-2 bg-[#9a724d] hover:bg-[#b8845a] text-white font-bold text-[12px] px-3 py-2 rounded-md border border-[#e6c49a] pointer-events-auto"
           aria-label="Cancel armed tool"
         >
           Cancel

@@ -7,6 +7,7 @@ import { MobileDock, PortraitToolsBar, ArmedToolBanner } from "./src/ui/Tools.js
 import { TownView } from "./src/ui/Town.jsx";
 import { SeasonModal, NpcBubble, StoryModal } from "./src/ui/Modals.jsx";
 import { SidePanel, BottomNav, FeatureModals, FeatureScreens } from "./src/ui.jsx";
+import ChainBadge from "./src/ui/primitives/ChainBadge.jsx";
 import { useAudio } from "./src/audio/useAudio.js";
 import { useRouter } from "./src/router.js";
 import { setPhaserScene } from "./src/phaserBridge.js";
@@ -212,10 +213,13 @@ export default function App() {
 
   return (
     <div className="h-full w-full bg-[#2a1d0f] text-[#2b2218] grid place-items-center" style={{ position: "relative", overflow: "hidden" }}>
-      {/* Ambient dust motes — behind all chrome */}
+      {/* Ambient dust motes — behind all chrome. Marked motion-decorative so
+       *  prefers-reduced-motion users see a still page instead of 14 concurrent
+       *  particle animations (Vol I #09, Vol II §07 Accessibility). */}
       {DUST_MOTES.map((m) => (
         <div
           key={m.id}
+          className="motion-decorative"
           style={{
             position: "absolute",
             left: m.left,
@@ -240,19 +244,13 @@ export default function App() {
         <div className="flex-1 min-h-0 relative">
           {/* Board + side panel grid — always mounted to keep Phaser alive, hidden when in town view */}
           <div className={`absolute inset-0 flex flex-col ${state.view === "board" ? "" : "invisible"}`}>
-            {/* Chain badge overlay for phone landscape — React handles it since Phaser badge gets clipped */}
-            {chainInfo && (
-              <div className="hidden max-[1024px]:landscape:block absolute top-2 left-1/2 -translate-x-1/2 z-30 pointer-events-none">
-                <div className="bg-[#2b2218]/90 border border-[#ffd248] rounded-full px-3 py-1 text-[#ffd248] font-bold text-[12px] whitespace-nowrap">
-                  chain × {chainInfo.count}{chainInfo.doubled ? " ×2" : ""}{chainInfo.upgrades > 0 ? `  +${chainInfo.upgrades}★` : ""}
-                  {chainInfo.nextTileProgress && chainInfo.nextTileProgress.threshold > 0 && (
-                    <span className="ml-2 text-[10px] text-[#f8e7c6] font-normal">
-                      ({chainInfo.nextTileProgress.current}/{chainInfo.nextTileProgress.threshold} {chainInfo.nextTileProgress.targetLabel})
-                    </span>
-                  )}
-                </div>
-              </div>
-            )}
+            {/* Chain badge overlay for phone landscape — Phaser badge clips
+             *  off-canvas at landscape:max-[1024px], so we paint one in React.
+             *  Renders the same <ChainBadge> the desktop SidePanel uses, so the
+             *  two readouts can't drift on formatting (Vol II §04 #11). */}
+            <div className="hidden max-[1024px]:landscape:block">
+              <ChainBadge chainInfo={chainInfo} layout="overlay" />
+            </div>
             <div className="flex-1 min-h-0 grid grid-cols-[1fr_300px] gap-3 p-3 max-[1024px]:grid-cols-1 max-[1024px]:gap-0 max-[1024px]:p-0">
               {/* Phaser host — takes the rest. Phaser draws its own background and frame. */}
               <div className="relative min-h-0 min-w-0 overflow-hidden">
