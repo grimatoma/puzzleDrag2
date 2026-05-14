@@ -5,6 +5,7 @@ import { CompactOrders } from "./Inventory.jsx";
 import { getPhaserScene } from "../phaserBridge.js";
 import IconCanvas, { hasIcon } from "./IconCanvas.jsx";
 import Icon from "./Icon.jsx";
+import Button from "./primitives/Button.jsx";
 import { TOOL_CATALOG, TOOL_BY_KEY, TOOL_CATEGORIES, visibleTools, isTapTargetTool } from "./toolRegistry.js";
 
 // Re-exported for back-compat with anything that still imports TOOL_DEFS.
@@ -188,12 +189,9 @@ export function ToolsGrid({ tools, toolPending, fertilizerActive, onUse }) {
             {isTapTargetTool(modalTool.key) && (
               <div className="text-[#ffd248] text-[11px] font-bold text-center mt-2">Tap a tile on the board to apply.</div>
             )}
-            <button
-              onClick={() => setModalTool(null)}
-              className="mt-4 w-full bg-[#9a724d] hover:bg-[#b8845a] text-white font-bold py-2 rounded-lg border border-[#e6c49a] text-[13px] transition-colors"
-            >
-              Close
-            </button>
+            <div className="mt-4">
+              <Button tone="iron" size="md" block onClick={() => setModalTool(null)}>Close</Button>
+            </div>
           </div>
         </div>
       )}
@@ -269,12 +267,9 @@ export function PortraitToolsBar({ state, dispatch }) {
             {isTapTargetTool(modalTool.key) && (
               <div className="text-[#ffd248] text-[11px] font-bold text-center mt-2">Tap a tile on the board to apply.</div>
             )}
-            <button
-              onClick={() => setModalTool(null)}
-              className="mt-4 w-full bg-[#9a724d] hover:bg-[#b8845a] text-white font-bold py-2 rounded-lg border border-[#e6c49a] text-[13px] transition-colors"
-            >
-              Close
-            </button>
+            <div className="mt-4">
+              <Button tone="iron" size="md" block onClick={() => setModalTool(null)}>Close</Button>
+            </div>
           </div>
         </div>
       )}
@@ -376,13 +371,11 @@ export function ArmedToolBanner({ state, dispatch }) {
           <div className="text-[#ffd248] font-bold text-[12px] leading-tight">{def.name} armed</div>
           <div className="text-white/80 text-[10px] leading-tight">Tap a tile on the board.</div>
         </div>
-        <button
-          onClick={() => dispatch({ type: "CANCEL_TOOL" })}
-          className="ml-2 bg-[#9a724d] hover:bg-[#b8845a] text-white font-bold text-[12px] px-3 py-2 rounded-md border border-[#e6c49a] pointer-events-auto"
-          aria-label="Cancel armed tool"
-        >
-          Cancel
-        </button>
+        <div className="ml-2 pointer-events-auto">
+          <Button tone="iron" size="sm" onClick={() => dispatch({ type: "CANCEL_TOOL" })} aria-label="Cancel armed tool">
+            Cancel
+          </Button>
+        </div>
       </div>
     </div>
   );

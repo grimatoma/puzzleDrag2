@@ -5,6 +5,7 @@ import { displayZoneName } from "../features/zones/data.js";
 import Icon from "./Icon.jsx";
 import IconCanvas, { hasIcon } from "./IconCanvas.jsx";
 import RichText from "./RichText.jsx";
+import Button from "./primitives/Button.jsx";
 
 function Stat({ v, l }) {
   return (
@@ -33,12 +34,9 @@ export function SeasonModal({ state, dispatch }) {
           <Stat v={`+${stats.coins}`} l="Coins" />
         </div>
         <p className="text-[12px] landscape:max-[1024px]:text-[10px] max-[640px]:text-[11px] text-[#8a785e] mb-3 landscape:max-[1024px]:mb-2 max-[640px]:mb-2">Return bonus: +25◉</p>
-        <button
-          onClick={() => dispatch({ type: "CLOSE_SEASON" })}
-          className="bg-[#91bf24] hover:bg-[#a3d028] text-white border-[3px] border-white rounded-2xl px-8 landscape:max-[1024px]:px-5 max-[640px]:px-5 py-2.5 landscape:max-[1024px]:py-1.5 max-[640px]:py-2 text-[16px] landscape:max-[1024px]:text-[13px] max-[640px]:text-[14px] font-bold shadow-lg"
-        >
+        <Button tone="moss" size="lg" onClick={() => dispatch({ type: "CLOSE_SEASON" })}>
           Return to Town
-        </button>
+        </Button>
       </div>
     </div>
   );
@@ -418,15 +416,7 @@ function WinBeat({ beat, lines, sceneBg, onContinue }) {
             </p>
           ))}
         </div>
-        <button
-          onClick={onContinue}
-          autoFocus
-          className="rounded-2xl font-bold uppercase transition-[filter] hover:brightness-110"
-          style={{ padding: "12px 40px", background: `linear-gradient(180deg, ${SC.goldSoft}, ${SC.gold})`, border: `1px solid ${SC.gold}`,
-                   color: SC.ink, fontSize: 16, letterSpacing: "0.04em", boxShadow: "0 6px 16px -4px rgba(226,178,74,0.45)" }}
-        >
-          Continue
-        </button>
+        <Button tone="gold" size="lg" autoFocus onClick={onContinue}>Continue</Button>
       </div>
     </div>
   );

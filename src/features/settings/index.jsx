@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import Button from "../../ui/primitives/Button.jsx";
 
 export const modalKey = "menu";
 
@@ -20,22 +21,15 @@ function Toggle({ on, onToggle }) {
 }
 
 // --- Action button ---
+// Thin wrapper over the design-system <Button> so the call sites stay terse
+// (`<ActionBtn variant="primary">`) while the underlying styling moves to one
+// place (Vol II §04 #09).
+const VARIANT_TONE = { primary: "moss", danger: "ember", default: "iron", ember: "ember" };
 function ActionBtn({ children, onClick, variant = 'default', className = '' }) {
-  const styles = {
-    primary:  { background: '#5a9e4b', borderColor: '#3e7236', color: '#fff' },
-    danger:   { background: '#c23b22', borderColor: '#8f2a18', color: '#fff' },
-    default:  { background: '#e8dcc4', borderColor: '#b28b62', color: '#5a3a20' },
-    ember:    { background: '#d6612a', borderColor: '#a84010', color: '#fff' },
-  };
-  const s = styles[variant] || styles.default;
   return (
-    <button
-      onClick={onClick}
-      className={`w-full py-2 px-4 text-[13px] font-bold rounded-xl border-2 transition-colors ${className}`}
-      style={s}
-    >
+    <Button tone={VARIANT_TONE[variant] || "iron"} size="md" block onClick={onClick} className={className}>
       {children}
-    </button>
+    </Button>
   );
 }
 
