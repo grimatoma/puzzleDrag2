@@ -185,7 +185,10 @@ export function InventoryGrid({ inventory, biomeKey, compact, orders = [], state
     item.kind !== "tile" &&
     item.kind !== "tool"
   );
-  const gridCols = compact ? "grid-cols-2" : "grid-cols-[repeat(auto-fill,minmax(200px,1fr))]";
+  // Vol II §06 Tablet #2 — auto-fit with min(200px, 100%) so 768-tablet
+  // portrait gets 3 columns naturally, and a narrow ≤200px viewport still
+  // shows the cell at full width instead of clipping.
+  const gridCols = compact ? "grid-cols-2" : "grid-cols-[repeat(auto-fit,minmax(min(200px,100%),1fr))]";
   const { status, totals } = orderStatusByKey(orders, inventory);
   const marketBuilt = !!locBuilt(state).caravan_post;
   const prices = state?.market?.prices ?? {};

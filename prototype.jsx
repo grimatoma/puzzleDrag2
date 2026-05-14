@@ -236,7 +236,9 @@ export default function App() {
         />
       ))}
 
-      <div className="relative w-full max-w-[1280px] aspect-[5/4] max-h-[100dvh] max-[1024px]:aspect-auto max-[1024px]:max-h-none max-[1024px]:w-full max-[1024px]:h-full max-[1024px]:max-w-none bg-[#3a2715] rounded-2xl max-[1024px]:rounded-none overflow-hidden shadow-2xl border border-white/10 flex flex-col" style={{ zIndex: 1 }}>
+      {/* Vol II §06 Tablet — aspect-ratio guard now only kicks in at desktop
+       *  widths (≥1024). Below that the card fills the viewport. */}
+      <div className="relative w-full max-w-[1280px] min-[1024px]:aspect-[5/4] max-h-[100dvh] max-[1023px]:max-h-none max-[1023px]:w-full max-[1023px]:h-full max-[1023px]:max-w-none bg-[#3a2715] rounded-2xl max-[1023px]:rounded-none overflow-hidden shadow-2xl border border-white/10 flex flex-col" style={{ zIndex: 1 }}>
         {/* HUD bar */}
         <Hud state={state} dispatch={dispatch} />
 
@@ -244,14 +246,19 @@ export default function App() {
         <div className="flex-1 min-h-0 relative">
           {/* Board + side panel grid — always mounted to keep Phaser alive, hidden when in town view */}
           <div className={`absolute inset-0 flex flex-col ${state.view === "board" ? "" : "invisible"}`}>
-            {/* Chain badge overlay for phone landscape — Phaser badge clips
-             *  off-canvas at landscape:max-[1024px], so we paint one in React.
-             *  Renders the same <ChainBadge> the desktop SidePanel uses, so the
-             *  two readouts can't drift on formatting (Vol II §04 #11). */}
-            <div className="hidden max-[1024px]:landscape:block">
+            {/* Chain badge overlay for phone landscape — the Phaser badge
+             *  clips off-canvas only on phones (<768) in landscape, so we
+             *  paint a React overlay there. The same <ChainBadge> renders
+             *  inside the SidePanel everywhere else (Vol II §04 #11). */}
+            <div className="hidden max-[767px]:landscape:block">
               <ChainBadge chainInfo={chainInfo} layout="overlay" />
             </div>
-            <div className="flex-1 min-h-0 grid grid-cols-[1fr_300px] gap-3 p-3 max-[1024px]:grid-cols-1 max-[1024px]:gap-0 max-[1024px]:p-0">
+            {/* Vol II §06 Tablet #1 — the side panel returns at the md band
+             *  (≥768px). Tablets in portrait (768–1024) now get the desktop
+             *  layout with side panel; phones (<768) get the MobileDock.
+             *  Side panel slims to 240px on the tablet band so the board
+             *  keeps ~480px of width even at 768. */}
+            <div className="flex-1 min-h-0 grid grid-cols-[1fr_240px] min-[1024px]:grid-cols-[1fr_300px] gap-3 p-3 max-[767px]:grid-cols-1 max-[767px]:gap-0 max-[767px]:p-0">
               {/* Phaser host — takes the rest. Phaser draws its own background and frame. */}
               <div className="relative min-h-0 min-w-0 overflow-hidden">
                 <ArmedToolBanner state={state} dispatch={dispatch} />
@@ -270,17 +277,17 @@ export default function App() {
                   grid={state.grid}
                 />
               </div>
-              {/* Side panel — hidden on mobile, replaced by MobileDock */}
-              <div className="min-h-0 max-[1024px]:hidden">
+              {/* Side panel — hidden on phones (<768), replaced by MobileDock. */}
+              <div className="min-h-0 max-[767px]:hidden">
                 <SidePanel state={state} dispatch={dispatch} chainInfo={chainInfo} />
               </div>
             </div>
-            {/* Portrait phone tools bar — board is width-limited so canvas height can shrink */}
-            <div className="hidden portrait:max-[1024px]:block flex-shrink-0">
+            {/* Portrait phone tools bar — phones only, never tablets. */}
+            <div className="hidden portrait:max-[767px]:block flex-shrink-0">
               <PortraitToolsBar state={state} dispatch={dispatch} />
             </div>
-            {/* Mobile dock — only visible on mobile, in board view */}
-            <div className="hidden max-[1024px]:block flex-shrink-0">
+            {/* Mobile dock — phones only (<768), in board view */}
+            <div className="hidden max-[767px]:block flex-shrink-0">
               <MobileDock state={state} dispatch={dispatch} />
             </div>
           </div>
