@@ -1450,7 +1450,8 @@ export function TownView({ state, dispatch }) {
       </div>
 
       {/* Plots + buildings positioned in the 1100x600 design space, scaled to viewport */}
-      <div className="absolute inset-0 pointer-events-none">
+      {/* isolation:isolate creates a stacking context so per-building zIndex (derived from y, up to ~700) doesn't escape and cover modals/tooltips. */}
+      <div className="absolute inset-0 pointer-events-none" style={{ isolation: "isolate" }}>
         <svg viewBox="0 0 1100 600" preserveAspectRatio="none" className="w-full h-full" style={{ position: "absolute", inset: 0, pointerEvents: "none" }} />
         <div className="absolute pointer-events-none" style={{ left: 0, right: 0, top: 0, bottom: 0 }}>
           {/* Townsfolk walking the streets (depth-sorted with buildings via z-index) */}
