@@ -1414,7 +1414,7 @@ function coreReducer(state, action) {
     case "OPEN_MODAL":
       return { ...state, modal: action.modal, settingsTab: action.settingsTab ?? 'main' };
     case "CLOSE_MODAL":
-      return { ...state, modal: null, settingsTab: 'main', settingsDebugOpen: false };
+      return { ...state, modal: null, settingsTab: 'main' };
     case "ROUTE/APPLY": {
       // Apply a router-derived navigation snapshot in one shot. Each branch
       // matches the equivalent SET_VIEW / OPEN_MODAL / SETTINGS/SET_TAB
@@ -1435,7 +1435,6 @@ function coreReducer(state, action) {
         next.settingsTab = r.modalParams?.tab ?? 'main';
       } else {
         next.settingsTab = 'main';
-        next.settingsDebugOpen = false;
       }
       return next;
     }
