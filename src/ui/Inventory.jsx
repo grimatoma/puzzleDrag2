@@ -4,6 +4,7 @@ import { hex } from "../utils.js";
 import { locBuilt } from "../locBuilt.js";
 import IconCanvas, { hasIcon } from "./IconCanvas.jsx";
 import Icon from "./Icon.jsx";
+import Banner from "./primitives/Banner.jsx";
 
 export function Section({ title, titleColor = "#f8e7c6", children }) {
   return (
@@ -192,14 +193,14 @@ export function InventoryGrid({ inventory, biomeKey, compact, orders = [], state
   return (
     <div className="flex flex-col gap-3">
       {!compact && dispatch && (
-        <div className={`px-2.5 py-1.5 rounded-lg border text-[11px] flex items-center gap-2 ${marketBuilt ? "bg-[#2b2218]/60 border-[#e2c19b]/40 text-[#f8e7c6]" : "bg-[#2b2218]/60 border-[#e2c19b]/20 text-[#f8e7c6]/70"}`}>
-          <span className="text-[14px]"><Icon iconKey="ui_shop" size={14} /></span>
-          <span>
-            {marketBuilt
-              ? "Caravan Post open — buy and sell directly from your inventory."
-              : "Build the Caravan Post in town to enable trading from your inventory."}
-          </span>
-        </div>
+        <Banner
+          tone={marketBuilt ? "success" : "info"}
+          icon={<Icon iconKey="ui_shop" size={14} />}
+        >
+          {marketBuilt
+            ? "Caravan Post open — buy and sell directly from your inventory."
+            : "Build the Caravan Post in town to enable trading from your inventory."}
+        </Banner>
       )}
       {orders.length > 0 && (
         <div className="flex items-center gap-3 text-[10px] text-white/70 px-1 -mb-1">
