@@ -1134,9 +1134,19 @@ export class GameScene extends Phaser.Scene {
     this.showChainStatus();
     this.updateChainBadge();
     // Subtle haptic tick on drag-start, gated by user setting.
-    if (this.registry.get("hapticsOn") && navigator.vibrate) {
-      try { navigator.vibrate(10); } catch { /* unsupported */ }
-    }
+    this._haptic(10);
+  }
+
+  /**
+   * Single point for chain-related haptic ticks (Audit Vol II §03 Gesture #5,
+   * Vol II §07 Gesture-model #7). All chain feel goes through here so a
+   * future "haptic intensity" setting can scale a single source. Silently
+   * no-ops when haptics are off or the API is unavailable.
+   */
+  _haptic(pattern) {
+    if (!this.registry.get("hapticsOn")) return;
+    if (typeof navigator === "undefined" || !navigator.vibrate) return;
+    try { navigator.vibrate(pattern); } catch { /* unsupported */ }
   }
 
   tryAddToPath(tile) {
@@ -1158,11 +1168,37 @@ export class GameScene extends Phaser.Scene {
   }
 
   addToPath(tile) {
+    // Detect a threshold cross — when the chain's upgrade count ticks up
+    // (e.g. 5th hay tile when threshold is 5). The cross gets a stronger
+    // burst than a routine extend so the player feels the milestone in
+    // their fingertip (Audit Vol II §03 Gesture #5).
+    const prevUpgrades = this._currentChainUpgrades();
     tile.setSelected(true);
     tile.pulse();
     this.path.push(tile);
     this.redrawPath();
     this.updateChainBadge();
+    const nextUpgrades = this._currentChainUpgrades();
+    if (nextUpgrades > prevUpgrades) {
+      // Threshold cross — a short [20,30,20] burst patterns as "tick-tick-tick"
+      // on Android Chrome / TWAs, distinct from the flat 10ms extend tick.
+      this._haptic([20, 30, 20]);
+    } else if (this.path.length > 1) {
+      // Routine chain extend — keep it light so a 12-chain isn't a buzz fest.
+      this._haptic(10);
+    }
+  }
+
+  /** Helper used by addToPath to detect threshold crosses without
+   *  duplicating the (effThresh × autumnMult) recipe in _emitChainUpdate. */
+  _currentChainUpgrades() {
+    const n = this.path.length;
+    if (!n) return 0;
+    const res = this.path[0].res;
+    const next = this.nextResource(res);
+    if (!next) return 0;
+    const effThresh = this.registry.get("effectiveThresholds") ?? UPGRADE_THRESHOLDS;
+    return upgradeCountForChain(n, res.key, effThresh) * this._autumnMult();
   }
 
   redrawPath() {
