@@ -37,6 +37,14 @@ const DEFAULT_SETTINGS = {
   sfxOn: true,
   musicOn: true,
   hapticsOn: true,
+  // Vol II §07 Responsive #10 — "Larger tiles" board-scale setting. The
+  // viewport disables pinch-zoom (correct for a game), so vision-impaired
+  // players had no fallback. 100 / 110 / 125 maps to the Phaser camera zoom.
+  boardScale: 100,
+  // Vol II §07 A11y #7 — explicit override of the OS prefers-reduced-motion.
+  // "auto" honors the OS pref; "on" forces reduced; "off" forces full motion
+  // even when the OS is asking for less. Defaults to auto.
+  reduceMotion: "auto",
 };
 
 export const initial = {
@@ -53,6 +61,12 @@ export function reduce(state, action) {
         ...state.settings,
         [action.key]: !state.settings[action.key],
       };
+      return { ...state, settings };
+    }
+
+    case 'SETTINGS/SET': {
+      // Generic set for non-boolean settings (boardScale, reduceMotion).
+      const settings = { ...state.settings, [action.key]: action.value };
       return { ...state, settings };
     }
 

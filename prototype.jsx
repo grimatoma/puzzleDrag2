@@ -139,6 +139,27 @@ function PhaserMount({ dispatch, biomeKey, turnsUsed, uiLocked, boardActive, sce
   useEffect(() => { gameRef.current?.registry.set("toolPending", toolPending ?? null); }, [toolPending]);
   useEffect(() => { gameRef.current?.registry.set("workers", workers ?? null); }, [workers]);
   useEffect(() => { gameRef.current?.registry.set("hapticsOn", gameState?.settings?.hapticsOn ?? true); }, [gameState?.settings?.hapticsOn]);
+  // Vol II §07 Responsive #10 — Larger-tiles setting flows into the Phaser
+  // scene's tileSize multiplier; trigger a relayout when it flips so the
+  // change lands immediately without waiting for a window resize.
+  useEffect(() => {
+    const scale = gameState?.settings?.boardScale ?? 100;
+    const game = gameRef.current;
+    if (!game) return;
+    game.registry.set("boardScale", scale);
+    const scene = game.scene?.getScene?.("Main");
+    scene?.handleResize?.();
+  }, [gameState?.settings?.boardScale]);
+  // Vol II §07 A11y #7 — Reduce-motion override. "auto" leaves the
+  // @media (prefers-reduced-motion) gate alone; "on" / "off" force a class
+  // on <html> that wins over the OS pref via CSS specificity.
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    const mode = gameState?.settings?.reduceMotion ?? "auto";
+    const root = document.documentElement;
+    root.classList.toggle("reduce-motion-force", mode === "on");
+    root.classList.toggle("reduce-motion-allow", mode === "off");
+  }, [gameState?.settings?.reduceMotion]);
   useEffect(() => { gameRef.current?.registry.set("tileCollectionActive", tileCollection?.activeByCategory ?? null); }, [tileCollection?.activeByCategory]);
   // Sync grid state → Phaser registry so hazard engines see real tile keys
   useEffect(() => { gameRef.current?.registry.set("grid", grid ?? null); }, [grid]);

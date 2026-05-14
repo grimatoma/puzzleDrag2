@@ -344,7 +344,12 @@ export class GameScene extends Phaser.Scene {
     // Let the board fill its container — only clamp a hard ceiling so
     // huge ultrawide displays don't render absurdly large tiles.
     const ceiling = TILE * 3.2 * dpr;
-    this.tileSize = Math.max(24 * dpr, Math.min(maxByW, maxByH, ceiling));
+    // Vol II §07 Responsive #10 — "Larger tiles" setting scales the board
+    // for low-vision players who can't pinch-zoom (user-scalable=no). The
+    // multiplier overflows the natural fit on purpose: at 125% the board
+    // extends past the viewport edges, which is the intended zoom effect.
+    const boardScale = ((this.registry.get("boardScale") ?? 100) / 100);
+    this.tileSize = Math.max(24 * dpr, Math.min(maxByW, maxByH, ceiling)) * boardScale;
     // Ratio of canvas px to CSS px at current tile size — used for graphics
     // line widths, offsets, and other CSS-pixel design constants.
     this.tileScale = this.tileSize / TILE;

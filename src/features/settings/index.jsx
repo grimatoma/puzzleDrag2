@@ -139,9 +139,55 @@ const TOGGLE_ROWS = [
   { key: 'hapticsOn', label: 'Haptics' },
 ];
 
+const BOARD_SCALE_OPTIONS = [
+  { value: 100, label: '100%' },
+  { value: 110, label: '110%' },
+  { value: 125, label: '125%' },
+];
+
+const REDUCE_MOTION_OPTIONS = [
+  { value: 'auto', label: 'Auto' },
+  { value: 'on',   label: 'On' },
+  { value: 'off',  label: 'Off' },
+];
+
+function SegmentedRow({ label, sub, options, value, onChange }) {
+  return (
+    <div
+      className="flex items-center justify-between gap-3 py-2 px-3 rounded-xl border-2"
+      style={{ background: '#f4e8d0', borderColor: '#b28b62' }}
+    >
+      <div className="flex flex-col min-w-0">
+        <span className="text-[13px] font-bold" style={{ color: '#2b2218' }}>{label}</span>
+        {sub && <span className="text-[10px]" style={{ color: '#7a5a38' }}>{sub}</span>}
+      </div>
+      <div className="flex flex-shrink-0 rounded-lg border-2 overflow-hidden" style={{ borderColor: '#b28b62' }}>
+        {options.map((opt) => {
+          const active = opt.value === value;
+          return (
+            <button
+              key={String(opt.value)}
+              type="button"
+              onClick={() => onChange(opt.value)}
+              aria-pressed={active}
+              className={`px-3 py-1.5 text-[12px] font-bold transition-colors ${active ? 'bg-[#d6612a] text-white' : 'bg-white/50 text-[#5a3a20] hover:bg-white/70'}`}
+              style={{ minHeight: 32 }}
+            >
+              {opt.label}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function SettingsTab({ settings = {}, dispatch }) {
   function handleToggle(key) {
     dispatch({ type: 'SETTINGS/TOGGLE', key });
+  }
+  function handleSet(key, value) {
+    dispatch({ type: 'SETTINGS/SET', key, value });
   }
 
   return (
@@ -170,6 +216,26 @@ function SettingsTab({ settings = {}, dispatch }) {
             />
           </div>
         ))}
+      </div>
+
+      <div className="text-[13px] font-bold text-center mt-1" style={{ color: '#7a5a38' }}>
+        Accessibility
+      </div>
+      <div className="flex flex-col gap-2">
+        <SegmentedRow
+          label="Larger tiles"
+          sub="Zoom the board for easier reading."
+          options={BOARD_SCALE_OPTIONS}
+          value={settings.boardScale ?? 100}
+          onChange={(v) => handleSet('boardScale', v)}
+        />
+        <SegmentedRow
+          label="Reduce motion"
+          sub="Auto follows your OS setting."
+          options={REDUCE_MOTION_OPTIONS}
+          value={settings.reduceMotion ?? 'auto'}
+          onChange={(v) => handleSet('reduceMotion', v)}
+        />
       </div>
     </div>
   );

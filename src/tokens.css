@@ -66,13 +66,24 @@
  * Anything purely decorative — dust motes, the armed-tool pulse — pauses
  * for players who have asked the OS to reduce motion. Functional motion
  * (story dialog slide-in, fade) stays so the UI still reads as responsive.
+ *
+ * Vol II §07 A11y #7 — the in-game Settings → "Reduce motion" override
+ * wins over the OS pref both ways:
+ *   .reduce-motion-force → force reduced even if OS doesn't ask
+ *   .reduce-motion-allow → force motion-full even if OS does ask
+ * Settings → "Auto" applies neither class and the @media rule decides.
  */
 @media (prefers-reduced-motion: reduce) {
-  .motion-decorative,
-  .motion-decorative * {
+  html:not(.reduce-motion-allow) .motion-decorative,
+  html:not(.reduce-motion-allow) .motion-decorative * {
     animation: none !important;
     transition: none !important;
   }
+}
+html.reduce-motion-force .motion-decorative,
+html.reduce-motion-force .motion-decorative * {
+  animation: none !important;
+  transition: none !important;
 }
 
 /* ── Focus ring (Vol II §06 #2) — Tailwind defaults strip outlines but
