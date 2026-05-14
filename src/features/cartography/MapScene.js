@@ -492,8 +492,12 @@ export class MapScene extends Phaser.Scene {
       const capitalSeals = this.add.graphics();
 
       // Hit area: a generous transparent circle so taps are easy.
+      // Phaser hit-area geometry is in local space where (0,0) is the
+      // top-left of the GameObject's display bounds (not its origin), so
+      // the circle centre must be the zone's half-size, otherwise taps
+      // register up-and-left of the medallion's visual centre.
       const hit = this.add.zone(0, 0, 96, 96);
-      hit.setInteractive(new Phaser.Geom.Circle(0, 0, 48), Phaser.Geom.Circle.Contains);
+      hit.setInteractive(new Phaser.Geom.Circle(48, 48, 48), Phaser.Geom.Circle.Contains);
       hit.setData("nodeId", node.id);
       hit.input.cursor = "pointer";
 
