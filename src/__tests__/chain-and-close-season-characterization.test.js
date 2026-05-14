@@ -209,7 +209,7 @@ describe("CLOSE_SEASON — bookkeeping resets", () => {
     });
     const s1 = rootReducer(s0, { type: "CLOSE_SEASON" });
     expect(s1.turnsUsed).toBe(0);
-    expect(s1.seasonStats).toEqual({ harvests: 0, upgrades: 0, ordersFilled: 0, coins: 0, capFloaters: {} });
+    expect(s1.seasonStats).toEqual({ harvests: 0, upgrades: 0, ordersFilled: 0, coins: 0, bestChain: 0, capFloaters: {} });
   });
 
   it("clears fertilizerActive at season end", () => {

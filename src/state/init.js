@@ -105,7 +105,7 @@ export function createFreshState(overrides) {
     bubble: null,
     modal: null,
     pendingView: null,
-    seasonStats: { harvests: 0, upgrades: 0, ordersFilled: 0, coins: 0 },
+    seasonStats: { harvests: 0, upgrades: 0, ordersFilled: 0, coins: 0, bestChain: 0 },
     _hintsShown: {},
     story: { ...INITIAL_STORY_STATE, flags: { ...initialFlagState() }, queuedBeat: null, beatQueue: [], sandbox: false },
     npcs: {
@@ -206,7 +206,7 @@ export function initialState(overrides) {
       modal: null, 
       bubble: null, 
       pendingView: null,
-      seasonStats: { harvests: 0, upgrades: 0, ordersFilled: 0, coins: 0 } 
+      seasonStats: { harvests: 0, upgrades: 0, ordersFilled: 0, coins: 0, bestChain: 0 } 
     };
   }
   return fresh;

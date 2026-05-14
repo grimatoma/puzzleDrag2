@@ -298,6 +298,9 @@ function coreReducer(state, action) {
         harvests: state.seasonStats.harvests + effectiveGained,
         upgrades: state.seasonStats.upgrades + effectiveUpgrades,
         coins: state.seasonStats.coins + coinsGain,
+        // Vol II §07 — bestChain feeds the run-summary "best moment" card so
+        // we can celebrate the player's peak without instrumenting a replay.
+        bestChain: Math.max(state.seasonStats?.bestChain ?? 0, effectiveChain),
       };
 
       let bubble = state.bubble;
@@ -926,7 +929,7 @@ function coreReducer(state, action) {
         view: "town",
         viewParams: {},
         pendingView: null,
-        seasonStats: { harvests: 0, upgrades: 0, ordersFilled: 0, coins: 0, capFloaters: {} },
+        seasonStats: { harvests: 0, upgrades: 0, ordersFilled: 0, coins: 0, bestChain: 0, capFloaters: {} },
         // Clear fertilizer flag at season end — it was consumed this season
         fertilizerActive: false,
         // 5.7: reset per-season free moves on season close

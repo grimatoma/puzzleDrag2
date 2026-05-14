@@ -8,39 +8,114 @@ import RichText from "./RichText.jsx";
 import Button from "./primitives/Button.jsx";
 import { ParchmentDialog } from "./primitives/Dialog.jsx";
 
-function Stat({ v, l }) {
+const STAT_TILE_COLORS = {
+  iron:  { bg: "#fff",    bd: "var(--iron)",  fg: "var(--ember-deep)" },
+  gold:  { bg: "#fff7df", bd: "var(--gold)",  fg: "#3a2a0e" },
+  moss:  { bg: "#eaf6c8", bd: "var(--moss)",  fg: "var(--moss-deep)" },
+  ember: { bg: "#fbe2d3", bd: "var(--ember)", fg: "var(--ember-deep)" },
+};
+
+function StatTile({ v, l, tone = "iron" }) {
+  // Vol II §07 Polish #1 — every numeric chip is tabular-nums so a
+  // 4-digit coin count doesn't shift the row vs a 3-digit one.
+  const colors = STAT_TILE_COLORS[tone] || STAT_TILE_COLORS.iron;
   return (
-    <div>
-      <div className="font-bold text-[22px] landscape:max-[1024px]:text-[16px] max-[640px]:text-[18px] text-[#a8431a]">{v}</div>
-      <div className="uppercase tracking-widest text-[10px] landscape:max-[1024px]:text-[8px] max-[640px]:text-[9px] text-[#8a785e]">{l}</div>
+    <div
+      className="flex-1 flex flex-col items-center justify-center rounded-xl border-2 py-2.5 px-2 min-w-0"
+      style={{ background: colors.bg, borderColor: colors.bd }}
+    >
+      <div className="font-bold text-[22px] landscape:max-[1024px]:text-[18px] tabular-nums leading-none" style={{ color: colors.fg }}>{v}</div>
+      <div className="uppercase tracking-widest text-[9px] mt-1.5 text-center" style={{ color: "var(--ink-mute)" }}>{l}</div>
     </div>
   );
 }
 
+const BIOME_LABELS = {
+  farm: "Farm Run",
+  mine: "Mine Expedition",
+  fish: "Harbor Voyage",
+};
+
+// Order the player's session beats as a small ribbon at the bottom of the
+// summary — "you talked to Mira, you saw a new beat, you found ore" — so
+// the run feels like *something happened*, not just a number reset. Each
+// entry is one line max.
+function sessionBeatList(state) {
+  const list = [];
+  const stats = state.seasonStats ?? {};
+  if (stats.bestChain && stats.bestChain >= 6) {
+    list.push({ icon: "ui_star", text: `Longest chain — ${stats.bestChain} tiles`, tone: "gold" });
+  }
+  if (stats.ordersFilled > 0) {
+    list.push({ icon: "ui_clipboard", text: `${stats.ordersFilled} order${stats.ordersFilled === 1 ? "" : "s"} fulfilled`, tone: "moss" });
+  }
+  if ((stats.upgrades ?? 0) >= 3) {
+    list.push({ icon: "ui_star", text: `${stats.upgrades} upgrade tiles spawned`, tone: "gold" });
+  }
+  return list;
+}
+
 export function SeasonModal({ state, dispatch }) {
   if (state.modal !== "season") return null;
-  const stats = state.seasonStats;
+  const stats = state.seasonStats ?? {};
   const close = () => dispatch({ type: "CLOSE_SEASON" });
+  const biomeLabel = BIOME_LABELS[state.biomeKey] || "Harvest";
+  const turnBudget = state.farmRun?.turnBudget ?? 10;
+  const beats = sessionBeatList(state);
+  const bestChain = stats.bestChain ?? 0;
+
+  // Vol II §07 — promote the bare 4-stat row into a proper "run-summary"
+  // moment. Hero header with biome, four stat tiles in two rows on phone /
+  // one row on tablet+, a "best moment" card if the player hit a notable
+  // chain, and a beat ribbon so the recap feels like a real bookend.
   return (
     <ParchmentDialog open size="md" onClose={close} labelledBy="season-modal-title">
       <div className="text-center px-6 pt-6">
         <Icon iconKey="ui_home" size={48} className="leading-none" />
-        <ParchmentDialog.Title id="season-modal-title" className="!pt-2 !text-[var(--ember-deep)] !text-[24px]">
-          Harvest Complete
+        <ParchmentDialog.Title id="season-modal-title" className="!pt-2 !text-[var(--ember-deep)] !text-[26px]">
+          {biomeLabel} Complete
         </ParchmentDialog.Title>
-        <p className="italic text-[var(--ink-warm)] text-[14px] landscape:max-[1024px]:text-[12px]">
-          Time to head back to town.
+        <p className="italic text-[var(--ink-warm)] text-[13px] mt-1">
+          {turnBudget} turn{turnBudget === 1 ? "" : "s"} · the hearth is yours again
         </p>
       </div>
-      <ParchmentDialog.Body className="!text-center !py-3">
-        <div className="flex justify-around gap-2 p-3 bg-black/[.04] rounded-xl">
-          <Stat v={stats.harvests} l="Harvested" />
-          <Stat v={stats.upgrades} l="Upgrades ★" />
-          <Stat v={stats.ordersFilled} l="Orders" />
-          <Stat v={`+${stats.coins}`} l="Coins" />
+
+      <ParchmentDialog.Body className="!py-3">
+        <div className="grid grid-cols-2 min-[420px]:grid-cols-4 gap-2 mb-3">
+          <StatTile v={stats.harvests ?? 0}    l="Harvested" />
+          <StatTile v={stats.upgrades ?? 0}    l="Upgrades ★" tone="gold" />
+          <StatTile v={stats.ordersFilled ?? 0} l="Orders" tone="moss" />
+          <StatTile v={`+${stats.coins ?? 0}`}  l="Coins" tone="ember" />
         </div>
-        <p className="text-[12px] text-[var(--ink-mute)] mt-3">Return bonus: +25◉</p>
+
+        {bestChain >= 5 && (
+          <div className="bg-gradient-to-r from-[#fff7df] to-[#f4e8d0] border-2 border-[var(--gold)] rounded-xl px-3 py-2.5 mb-3 flex items-center gap-3">
+            <Icon iconKey="ui_star" size={28} />
+            <div className="flex-1 min-w-0">
+              <div className="text-[10px] font-bold uppercase tracking-widest text-[#7a5a38]">Best moment</div>
+              <div className="text-[16px] font-bold text-[var(--ember-deep)] leading-tight">{bestChain}-tile chain</div>
+            </div>
+            {bestChain >= 10 && (
+              <div className="text-[11px] font-bold text-[var(--gold)] uppercase tracking-wider">Legendary</div>
+            )}
+          </div>
+        )}
+
+        {beats.length > 0 && (
+          <div className="flex flex-col gap-1 mt-2">
+            <div className="text-[10px] font-bold uppercase tracking-widest text-[var(--ink-mute)] px-1">What happened</div>
+            {beats.map((b, i) => (
+              <div key={i} className="flex items-center gap-2 bg-white/40 border border-[var(--iron-soft)] rounded-lg px-2.5 py-1.5">
+                <Icon iconKey={b.icon} size={14} />
+                <span className="text-[12px] text-[var(--ink-strong)] flex-1">{b.text}</span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div className="text-[12px] text-[var(--ink-mute)] mt-3 text-center">Return bonus: +25◉</div>
       </ParchmentDialog.Body>
+
       <ParchmentDialog.Actions>
         <Button tone="moss" size="lg" autoFocus onClick={close}>
           Return to Town
