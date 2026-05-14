@@ -50,14 +50,6 @@ export default function ResourcesTab({ draft, updateDraft }) {
     [],
   );
 
-  // A chain only ever upgrades into a tile or a resource — never an item.
-  const nextOptions = useMemo(() => {
-    const keys = Object.keys(ITEMS)
-      .filter((k) => ITEMS[k].kind === "tile" || ITEMS[k].kind === "resource")
-      .sort();
-    return [{ value: "", label: "— none (terminal) —" }, ...keys.map((k) => ({ value: k, label: k }))];
-  }, []);
-
   const filtered = resourceEntries.filter(([key, r]) => {
     if (biome === "none" && r.biome) return false;
     if (biome !== "all" && biome !== "none" && r.biome !== biome) return false;
@@ -137,7 +129,6 @@ export default function ResourcesTab({ draft, updateDraft }) {
             label:       patch.label       ?? r.label,
             color:       patch.color       ?? r.color,
             value:       patch.value       ?? r.value,
-            next:        patch.next        ?? r.next ?? "",
             desc:        patch.desc        ?? r.desc ?? "",
             description: patch.description ?? r.description ?? "",
           };
@@ -175,11 +166,6 @@ export default function ResourcesTab({ draft, updateDraft }) {
                     <Label>Color</Label>
                     <ColorField value={eff.color} onChange={(v) => patchItem(key, { color: v })} />
                   </div>
-                  <div>
-                    <Label>Next-tier target</Label>
-                    <Select value={eff.next} options={nextOptions} onChange={(v) => patchItem(key, { next: v })} />
-                  </div>
-
                   <div className="col-span-2">
                     <Label>Crafting Recipes</Label>
                     {craftedBy.length === 0 ? (
