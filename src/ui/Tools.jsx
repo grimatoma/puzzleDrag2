@@ -48,11 +48,24 @@ function dispatchUseTool(dispatch, key, state) {
 function ToolButton({ def, count, pending, onClick, onLongPress, showTooltip, hideTooltip, lastTouchTimeRef, size = "md" }) {
   const longPressTimer = useRef(null);
   const longPressOccurred = useRef(false);
+  const tooltipShownRef = useRef(false);
+  const touchStartRef = useRef(0);
+
+  // Vol II §03 Gesture #3 + §07 Gesture #4 — tap and long-press were racing.
+  // The tooltip flashed on touchstart and the arm fired on touchend, so a
+  // fast tap showed a flicker then armed; a deliberate hold showed the
+  // tooltip *and* armed on release. The rule now:
+  //   - under 400 ms hold      → arm; suppress the tooltip
+  //   - 400 ms+ → long-press   → inspect modal opens; suppress the arm
+  // Mutually exclusive — exactly one fires per touch.
+  const ARM_VS_INSPECT_MS = 400;
 
   const startLongPress = () => {
     longPressOccurred.current = false;
     longPressTimer.current = setTimeout(() => {
       longPressOccurred.current = true;
+      hideTooltip();
+      tooltipShownRef.current = false;
       onLongPress?.(def);
     }, 500);
   };
@@ -78,12 +91,38 @@ function ToolButton({ def, count, pending, onClick, onLongPress, showTooltip, hi
       onMouseLeave={() => { if (Date.now() - lastTouchTimeRef.current > 600) hideTooltip(); }}
       onTouchStart={(e) => {
         lastTouchTimeRef.current = Date.now();
+        touchStartRef.current = Date.now();
+        tooltipShownRef.current = false;
         startLongPress();
-        showTooltip(def.key, e.currentTarget);
+        // Delay the tooltip until we know this is an inspect, not an arm —
+        // tooltip only appears if the press is still down at the 400ms mark.
+        const target = e.currentTarget;
+        const key = def.key;
+        setTimeout(() => {
+          if (Date.now() - touchStartRef.current >= ARM_VS_INSPECT_MS && touchStartRef.current > 0) {
+            showTooltip(key, target);
+            tooltipShownRef.current = true;
+          }
+        }, ARM_VS_INSPECT_MS);
       }}
-      onTouchEnd={() => { cancelLongPress(); hideTooltip(2000); }}
-      onTouchCancel={() => { cancelLongPress(); hideTooltip(2000); }}
-      onTouchMove={() => cancelLongPress()}
+      onTouchEnd={() => {
+        cancelLongPress();
+        const heldMs = Date.now() - touchStartRef.current;
+        touchStartRef.current = 0;
+        if (heldMs < ARM_VS_INSPECT_MS) {
+          // Fast tap — never even showed the tooltip; nothing to dismiss.
+          if (tooltipShownRef.current) { hideTooltip(); tooltipShownRef.current = false; }
+        } else if (tooltipShownRef.current) {
+          // Inspect tap — let the tooltip linger briefly then fade.
+          hideTooltip(2000);
+        }
+      }}
+      onTouchCancel={() => {
+        cancelLongPress();
+        touchStartRef.current = 0;
+        if (tooltipShownRef.current) { hideTooltip(); tooltipShownRef.current = false; }
+      }}
+      onTouchMove={() => { cancelLongPress(); touchStartRef.current = 0; }}
       className={`relative w-full rounded-lg border-2 ${sizing.btn} flex flex-col items-center gap-0.5 transition-transform motion-decorative ${
         armed
           ? "border-[#ffd248] bg-[#7a4f1d] shadow-[0_0_0_2px_rgba(255,210,72,0.45),0_0_12px_rgba(255,210,72,0.35)] motion-safe:animate-pulse"

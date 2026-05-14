@@ -305,18 +305,36 @@ export function PromptInput({ prompt, onSubmit }) {
 }
 
 /** The dark parchment-and-iron stage used by the center-stage modal forms. */
-export function StoryStagePanel({ beat, lines, footer, footKind, sceneLabel }) {
+export function StoryStagePanel({ beat, lines, footer, footKind, sceneLabel, onClose }) {
+  // Vol II §02 Tap-target #9 — continue-only beats already accept Esc, but
+  // there's no on-screen close affordance. A 32×32 X in the top-right gives
+  // the player an explicit out without learning the keyboard shortcut. Only
+  // shows when onClose is supplied (the parent decides which beat shapes
+  // allow early dismissal — choices and prompts must commit).
   return (
     <div
-      className="w-[92vw] max-w-[460px] shadow-2xl flex flex-col"
+      className="relative w-[92vw] max-w-[460px] shadow-2xl flex flex-col"
       style={{ background: "linear-gradient(180deg, #221710 0%, #1a110a 100%)", border: `1px solid ${SC.panelEdge}`,
                borderRadius: 22, padding: "18px 18px 16px", maxHeight: "88dvh", animation: "storyDialogIn 360ms cubic-bezier(.2,.7,.2,1) both" }}
     >
+      {onClose && (
+        <button
+          type="button"
+          onClick={onClose}
+          className="absolute top-2 right-2 grid place-items-center rounded-lg text-[var(--parchment-soft)]/70 hover:text-[var(--parchment-soft)] hover:bg-white/5 active:scale-95"
+          style={{ width: 32, height: 32, lineHeight: 1, fontSize: 16, fontWeight: 700, zIndex: 1 }}
+          aria-label="Close"
+          title="Close (Esc)"
+        >
+          ×
+        </button>
+      )}
+
       {/* Gold hairline */}
       <div style={{ height: 1, background: "linear-gradient(90deg, transparent, rgba(226,178,74,0.5), transparent)", marginBottom: 14, flexShrink: 0 }} />
 
       {/* Header: title + beat meta */}
-      <div className="flex justify-between items-baseline gap-3 mb-3.5" style={{ flexShrink: 0 }}>
+      <div className="flex justify-between items-baseline gap-3 mb-3.5" style={{ flexShrink: 0, paddingRight: onClose ? 28 : 0 }}>
         <div id="story-modal-title" style={{ fontFamily: STORY_SERIF, fontWeight: 600, fontSize: 21, lineHeight: 1.15, color: SC.goldSoft }}>
           {beat.title}
         </div>
@@ -547,7 +565,14 @@ export function StoryModal({ state, dispatch }) {
       className="absolute inset-0 grid place-items-center z-[60] animate-fadein"
       style={{ background: scene?.bg ?? "rgba(0,0,0,0.6)" }}
     >
-      <StoryStagePanel beat={beat} lines={visibleLines} footer={footer} footKind={footKind} sceneLabel={scene?.label} />
+      <StoryStagePanel
+        beat={beat}
+        lines={visibleLines}
+        footer={footer}
+        footKind={footKind}
+        sceneLabel={scene?.label}
+        onClose={continueOnly && !hasPrompt ? () => dispatch({ type: "STORY/DISMISS_MODAL" }) : undefined}
+      />
     </div>
   );
 }
