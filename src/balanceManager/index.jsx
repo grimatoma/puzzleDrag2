@@ -40,7 +40,6 @@ const AchievementsTab = lazy(() => import("./tabs/AchievementsTab.jsx"));
 const DailyRewardsTab = lazy(() => import("./tabs/DailyRewardsTab.jsx"));
 const ExportTab    = lazy(() => import("./tabs/ExportTab.jsx"));
 const IconsTab     = lazy(() => import("./tabs/IconsTab.jsx"));
-const ChainsTab    = lazy(() => import("./tabs/ChainsTab.jsx"));
 
 // Hash routing for the Balance Manager lives in `./router.js` — kept separate
 // from `src/router.js` because the Balance Manager is its own page (`/b/`).
@@ -60,9 +59,6 @@ const TABS = [
   { id: "biomes",    label: "Settlement Biomes", iconKey: "ui_star", Component: BiomesTab,
     section: "tiles",
     blurb: "The biomes a settlement can be founded as (4 per type): name, icon, the two hazards that appear in every round there, and the resource bonus." },
-  { id: "chains",    label: "Upgrade Chains", iconKey: "ui_star", Component: ChainsTab,
-    section: "tiles",
-    blurb: "Visualise every per-item upgrade chain (ITEMS[*].next) — chain length, summed sale value, branch / orphan callouts. Read-only, but reflects the current draft." },
   { id: "resources", label: "Resources & Currency", iconKey: "ui_star", Component: ResourcesTab,
     section: "resources",
     blurb: "Resources & currency — the counts of stuff you accumulate: inventory amounts (grain, wood, eggs, crafted goods…) with their colours, chains and sale values, plus a reference list of the kingdom currency counters (gold / runes / embers / …)." },
