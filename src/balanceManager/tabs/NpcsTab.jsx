@@ -12,8 +12,25 @@ import { NPC_DATA, NPC_IDS, BOND_BANDS } from "../../features/npcs/data.js";
 import { BIOMES, RECIPES } from "../../constants.js";
 import { COLORS, TextField, NumberField, FieldRow, Card, SmallButton, SearchAndAddPicker } from "../shared.jsx";
 import Icon from "../../ui/Icon.jsx";
+import { renderStoryMarkdown } from "../../storyEditor/exportMarkdown.js";
+
+function downloadNpcScript(npcId, displayName, draft) {
+  if (typeof document === "undefined") return;
+  const md = renderStoryMarkdown(draft, { speakerKey: npcId });
+  const blob = new Blob([md], { type: "text/markdown;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `hearth-${npcId}-script.md`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
 
 export default function NpcsTab({ draft, updateDraft }) {
+  // Capture the draft reference so the per-card export uses the live state.
+  const liveDraft = draft;
   function patchNpc(id, fields) {
     updateDraft((d) => {
       d.npcs ??= {};
@@ -72,9 +89,14 @@ export default function NpcsTab({ draft, updateDraft }) {
                 >
                   <Icon iconKey={`char_${id}`} size={44} />
                 </div>
-                <div className="text-[12px] font-bold uppercase tracking-wide" style={{ color: COLORS.inkSubtle }}>
+                <div className="text-[12px] font-bold uppercase tracking-wide flex-1" style={{ color: COLORS.inkSubtle }}>
                   {eff.displayName} ({id})
                 </div>
+                <SmallButton
+                  onClick={() => downloadNpcScript(id, eff.displayName, liveDraft)}
+                  title={`Export every dialogue line spoken by ${eff.displayName} as a markdown script`}>
+                  ⬇ Lines.md
+                </SmallButton>
               </div>
               <FieldRow label="Display name">
                 <TextField value={eff.displayName} onChange={(v) => patchNpc(id, { displayName: v })} width={200} />
