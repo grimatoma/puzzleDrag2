@@ -12,6 +12,13 @@ import {
 } from "../shared.jsx";
 import AbilitiesEditor from "../AbilitiesEditor.jsx";
 import Icon from "../../ui/Icon.jsx";
+import { workerCostLadder } from "../workerCosts.js";
+
+const RAMP_TONE = {
+  flat:      { bg: "rgba(43,34,24,0.06)",  fg: COLORS.inkLight },
+  linear:    { bg: "rgba(226,178,74,0.18)", fg: "#7a5810" },
+  geometric: { bg: "rgba(194,59,34,0.14)",  fg: COLORS.redDeep },
+};
 
 function Label({ children }) {
   return (
@@ -136,6 +143,10 @@ export default function WorkersTab({ draft, updateDraft }) {
                 </div>
               </div>
 
+              <CostCurve worker={{ ...w,
+                hireCost: { coins: eff.coins, coinsStep: eff.coinsStep > 0 ? eff.coinsStep : undefined, coinsMult: eff.coinsMult !== 1 ? eff.coinsMult : undefined },
+                maxCount: eff.maxCount }} />
+
               <div className="mt-2 pt-3" style={{ borderTop: `1px dashed ${COLORS.border}` }}>
                 <AbilitiesEditor
                   scope="worker"
@@ -151,6 +162,45 @@ export default function WorkersTab({ draft, updateDraft }) {
             No workers match your filter.
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+function CostCurve({ worker }) {
+  const ladder = workerCostLadder(worker);
+  if (!ladder || ladder.ladder.length === 0) return null;
+  const tone = RAMP_TONE[ladder.ramp.kind] || RAMP_TONE.flat;
+  const maxCost = Math.max(1, ...ladder.ladder.map((l) => l.cost));
+  return (
+    <div className="mt-2 pt-2" style={{ borderTop: `1px dashed ${COLORS.border}` }}>
+      <div className="flex items-baseline gap-2 mb-1.5">
+        <span className="text-[10px] font-bold uppercase tracking-wide" style={{ color: COLORS.inkSubtle }}>
+          Cost curve
+        </span>
+        <span className="px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide rounded"
+          style={{ background: tone.bg, color: tone.fg }}
+          title={ladder.ramp.hint}>
+          {ladder.ramp.label}
+        </span>
+        <span className="text-[10px] italic" style={{ color: COLORS.inkSubtle }}>
+          Σ {ladder.totalCost.toLocaleString()}◉ to max
+        </span>
+      </div>
+      <div className="flex items-end gap-1" style={{ height: 48 }}>
+        {ladder.ladder.map((row) => {
+          const h = Math.max(2, Math.round((row.cost / maxCost) * 44));
+          return (
+            <div key={row.n} className="flex flex-col items-center" style={{ flex: 1 }} title={`Hire #${row.n + 1}: ${row.cost}◉ (Σ ${row.cumulative})`}>
+              <div className="w-full rounded-t"
+                style={{ height: h, background: tone.fg, opacity: 0.7 }} />
+            </div>
+          );
+        })}
+      </div>
+      <div className="flex justify-between mt-1 text-[9px] font-mono" style={{ color: COLORS.inkSubtle }}>
+        <span>#1: {ladder.ladder[0].cost}◉</span>
+        <span>#{ladder.ladder.length}: {ladder.ladder[ladder.ladder.length - 1].cost}◉</span>
       </div>
     </div>
   );
