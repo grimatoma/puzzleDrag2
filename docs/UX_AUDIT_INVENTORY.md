@@ -23,68 +23,74 @@ Legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[-]` skipped (delibera
 - **C36–C41** — icon library (47 icons across 6 sets)
 - **B35–B51** — all 17 component primitives
 
-### Status (initial)
+### Status
 
-**Foundation (must land first):**
-- [ ] B51 — `tokens.css` with parchment/iron/ink/ember/gold/moss/indigo/rose palette + spacing + type scale; expose through Tailwind theme.extend
-- [ ] B50 — Safe-area CSS vars (`--chrome-top`, `--chrome-bottom`, `--safe-bottom`)
+**Foundation:**
+- [x] B51 — `tokens.css` (PR #406)
+- [x] B50 — Safe-area CSS vars + `useChromeEdge` hook (PR #406)
 
-**Primitives (B35–B49, B42 split into Icon + library):**
-- [ ] B42 — `<Icon>` resolution: registry → SVG sprite → dev placeholder
-- [ ] B35 — `<Pill>` (tone × variant × size, anchored)
-- [ ] B43 — `<Button>` (tone × size × variant)
-- [ ] B44 — `<Banner>` (info/success/warning/danger)
-- [ ] B45 — `<ChainBadge>` (side/overlay-top/inline)
-- [ ] B46 — `<ProgressTrack>` (bar/pips/ring)
-- [ ] B37 — `<Stepper>` with long-press accelerator + presets
-- [ ] B40 — `<ResourceCell>` (micro/compact/comfortable density)
-- [ ] B38 — `<ParchmentDialog>` + `<StoryDialog>`
-- [ ] B39 — `<BottomSheet>` with snap points + drag-to-dismiss
-- [ ] B47 — `<Popover>` (trigger × density, rich → sheet on phone)
-- [ ] B48 — `<Screen>` scaffold (Filters / Body / FooterBar)
-- [ ] B49 — `<Toast>` + `useNotifier()` queue
-- [ ] B41 — `<TabBar>` (dock/nav densities, reserves locked slots)
-- [ ] B36 — `<ToolStrip>` (grid/rail/sheet layouts)
+**Primitives (PR #407):**
+- [x] B42 — `<Icon>` registry/SVG/placeholder resolution
+- [x] B35 — `<Pill>`
+- [x] B43 — `<Button>`
+- [x] B44 — `<Banner>`
+- [x] B45 — `<ChainBadge>`
+- [x] B46 — `<ProgressTrack>`
+- [x] B37 — `<Stepper>`
+- [x] B40 — `<ResourceCell>`
+- [x] B38 — `<ParchmentDialog>` + `<StoryDialog>`
+- [x] B39 — `<BottomSheet>`
+- [x] B47 — `<Popover>`
+- [x] B48 — `<Screen>`
+- [x] B49 — `<Toast>` + `useNotifier()`
+- [x] B41 — `<TabBar>`
+- [x] B36 — `<ToolStrip>`
 
-**Icon library (C36–C41 — 47 icons total):**
-- [ ] C36 — 12 tile icons (grass, hay, wheat, dirt, stone, ore, fish, horse, rune, fire, ice, pearl)
-- [ ] C37 — 6 currency icons (coin, ember, ingot, gem, hearth-token, building-token)
-- [ ] C38 — 8 tool icons (hoe, watering can, rake, firebreak, axe, pick, flee-stone, net)
-- [ ] C39 — 10 building icons (bakery, smithy, scriptorium, tea house, kitchen, market, dock, silo, inn, stable)
-- [ ] C40 — 6 hazard icons (rats, fire, frost, blight, storm, keeper)
-- [ ] C41 — 5 NPC busts (Mira, Bram, Liss, Tomas, Wren)
+**Icon library (PR #407 — 47 design icons):**
+- [x] C36–C41 — 12 tile + 6 currency + 8 tool + 10 building + 6 hazard + 5 NPC
 
 **Audit fixes (A series):**
-- [-] A1 — Strip dev-only UI from HUD *(skipped per user direction — keep dev buttons)*
-- [ ] A2 — Rebuild HUD as 3 zones (left=identity, center=run state, right=progression)
-- [ ] A3 — Stop bottom nav width changing; reserve 8 slots with locked Portal
-- [ ] A4 — Pick one icon system; remove emoji from production
-- [ ] A5 — Pair every status color with a glyph
-- [ ] A6 — Adopt 44pt tap-target floor
-- [ ] A7 — One `<ToolStrip>` primitive (use B36)
-- [ ] A8 — Two modal chromes via B38
-- [-] A9 — Reduce-motion *(no code to remove; user inverted to "remove" and none exists)*
-- [ ] A10 — Onboard chain mechanic on the board (threshold pulses)
-- [ ] A16 — Split Town.jsx monolith
-- [ ] A17 — Sandbox Mode pill → settlement-name caption
-- [ ] A18 — Tide chip on harbor town view too
-- [ ] A19 — Armed state: collapse 5 signals down to 2
-- [ ] A20 — Tool info on desktop (right-click or info tap)
-- [ ] A28 — 600ms crossfade on theme container transitions
+- [-] A1 — Strip dev-only UI *(skipped per user direction)*
+- [x] A2 — HUD 3 zones (PR #411)
+- [x] A3 — BottomNav 8 reserved slots + locked Portal (PR #409)
+- [x] A4 — Emoji scrub across production UI (PRs #411, #412, #414)
+- [x] A5 — Status glyphs paired with color (PR #412)
+- [x] A6 — 44pt tap-target floor (PRs #412, #415)
+- [x] A7 — `<ToolStrip>` consolidated (PR #410)
+- [x] A8 — `<ParchmentDialog>` for Season + BiomeEntry (PR #413)
+- [-] A9 — Reduce-motion *(no code existed to remove)*
+- [x] A10 — Threshold pulses on board (PR #408)
+- [x] A14 — Notifier queue unified (PR #416)
+- [x] A16 — Town split (PR #418)
+- [x] A17 — Sandbox → italic settlement-name suffix (PR #411)
+- [x] A18 — Tide chip extended to harbor town view (PR #411)
+- [x] A19 — Armed state collapsed to one ring + dim-others (PR #410)
+- [x] A20 — Right-click / long-press inspect (PR #410)
+- [x] A21 — Inventory filter / sort / search (PR #417)
+- [x] A23 / B58 — NpcBubble tap-to-dismiss-early (PR #416)
+- [x] A27 — Provisions packer presets (PR #415)
+- [x] A28 — 600ms theme crossfade (PR #418)
+- [x] A34 — Tabular numerals (PR #411)
+- [x] A35 — Pluralize turn/turns (PR #414)
+- [x] A36 — Drop double-border retina artifact (PR #414)
+- [x] A37 — Menu glyph labelled (PR #411)
+- [x] A38 — Return-bonus visual weight (PR #413)
+- [x] A39 — Skeleton board (PR #414)
+- [x] A40 — Inventory cell tappable (PR #412)
+- [x] A41 — Esc dismiss everywhere (PR #413)
+- [x] B82 — BottomNav orders-ready badge (PR #409)
+- [x] B71 / B72 — Global :active + :focus-visible (PR #406)
+- [x] B67 — `md` (≥768px) breakpoint registered (PR #406)
 
-**Quick wins (A34–A41):**
-- [ ] A34 — Tabular numerals on every numeric chip
-- [ ] A35 — Pluralize "turn" / "turns" globally
-- [ ] A36 — Drop double-border-radius subpixel artifact
-- [ ] A37 — Menu glyph ≡ gets a name (label or crest)
-- [ ] A38 — "+25◉ return bonus" visual weight in SeasonModal
-- [ ] A39 — Skeleton board (6×6 pulsing squares) ~250ms instead of "Loading board…"
-- [ ] A40 — Inventory cell itself tappable → detail
-- [ ] A41 — Esc dismisses every modal with a Close button
+**Queued:**
+- [ ] A29 — `useFocusTrap` on Settings / Debug / Tutorial holdouts
+- [ ] A31 — WCAG AA contrast pass
+- [ ] C2 — Run summary screen
+- [ ] C3 — Charter / Choice-log viewer
 
-### Out of scope (for now)
+### Out of scope (deferred)
 
-A11–A15, A21–A27, A29–A33, B1–B34, B52–B85, C1–C35, C42–C51. Listed in the tables below as informational reference.
+A11–A13, A15, A22, A24–A26, A29 (until queued), A30–A33, B1–B34 (informational), B52–B85, C1, C4–C35, C42–C51.
 
 ---
 
