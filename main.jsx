@@ -2,6 +2,9 @@ import "./src/index.css";
 import React from "react";
 import { createRoot } from "react-dom/client";
 import PuzzleCraftStylePhaserPrototype from "./prototype.jsx";
+import { registerDesignIcons } from "./src/ui/icons/index.jsx";
+
+registerDesignIcons();
 
 // Top-level error boundary so a thrown render in any feature modal/screen
 // doesn't crash the whole tree. Logs to console (caught by any external
