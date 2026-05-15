@@ -26,12 +26,6 @@ function emptyNpcRow() {
   return { lines: 0, words: 0, beats: new Set(), bondDelta: 0 };
 }
 
-function isOnMainSpine(beat, beatId) {
-  if (!beat) return false;
-  if (isFinite(beat.act)) return true;
-  return false;
-}
-
 /**
  * Compute the stats blob for a draft. Pure: same draft → same numbers.
  */

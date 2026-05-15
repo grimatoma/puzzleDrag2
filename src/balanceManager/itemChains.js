@@ -83,9 +83,9 @@ export function computeItemChains(items, thresholds = {}) {
   const incoming = incomingMap(items);
   let terminalCount = 0;
   let branchedCount = 0;
-  for (const [id, item] of Object.entries(items || {})) {
+  for (const item of Object.values(items || {})) {
     if (!item || typeof item.next === "string" && item.next) continue;
-    if (item) terminalCount += 1;
+    terminalCount += 1;
   }
   for (const ids of incoming.values()) if (ids.length > 1) branchedCount += 1;
   let orphanCount = 0;

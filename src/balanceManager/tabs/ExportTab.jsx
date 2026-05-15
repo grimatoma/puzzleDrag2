@@ -47,8 +47,7 @@ export default function ExportTab({ draft, updateDraft }) {
   const [snapshotName, setSnapshotName] = useState("");
   const [snapshotMessage, setSnapshotMessage] = useState("");
   const [snapshotError, setSnapshotError] = useState("");
-  const [snapshotsTick, setSnapshotsTick] = useState(0);
-  const snapshots = useMemo(() => listSnapshots(), [snapshotsTick]);
+  const [snapshots, setSnapshots] = useState(() => listSnapshots());
   const [diffOpen, setDiffOpen] = useState(new Set());
   const diff = useMemo(() => draftDiff(balanceFile, draft), [draft]);
   const diffSections = useMemo(() => Object.entries(diff.sections).sort(([a], [b]) => a.localeCompare(b)), [diff]);
@@ -84,7 +83,7 @@ export default function ExportTab({ draft, updateDraft }) {
     } catch { /* clipboard unavailable */ }
   }
 
-  function bumpSnapshots() { setSnapshotsTick((n) => n + 1); }
+  function bumpSnapshots() { setSnapshots(listSnapshots()); }
 
   function flashSnapshot(message) {
     setSnapshotMessage(message);
