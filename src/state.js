@@ -39,6 +39,7 @@ import * as castle from "./features/castle/slice.js";
 import * as zones from "./features/zones/slice.js";
 import * as workers from "./features/workers/slice.js";
 import * as boons from "./features/boons/slice.js";
+import * as runSummary from "./features/runSummary/slice.js";
 import { boonEffectMult } from "./features/boons/data.js";
 import { ZONES, settlementFoundingCost, isSettlementFounded, displayZoneName, grantEarnedHearthTokens, isOldCapitalUnlocked, isExpeditionFood, expeditionTurnsFromSupply, settlementTypeForZone, resolveBiomeChoice, keeperReadyFor, completedSettlementCount, DEFAULT_ZONE, turnBudgetForZone, settlementHazards } from "./features/zones/data.js";
 import { keeperForType, keeperPathInfo } from "./keepers.js";
@@ -54,7 +55,7 @@ export { evaluateAndApplyStoryBeat, maybeFireResourceBeats };
 import { createFreshState, generateSaveSeed, initialState } from "./state/init.js";
 export { createFreshState, generateSaveSeed, initialState };
 
-const slices = [crafting, quests, achievements, tutorial, settings, boss, cartography, storySlice, decorations, portal, market, castle, fish, zones, workers, boons];
+const slices = [crafting, quests, achievements, tutorial, settings, boss, cartography, storySlice, decorations, portal, market, castle, fish, zones, workers, boons, runSummary];
 
 // Phase 7 — SEASON_NAMES used to be the calendar-season index → name lookup.
 // All readers were removed when the calendar was deleted, so the table is
@@ -1675,6 +1676,9 @@ const SLICE_PRIMARY_ACTIONS = new Set([
   "FISH/FORCE_TIDE_FLIP",
   // Boon trees — purchase a per-path zone boon (deducts Embers / Core Ingots)
   "BOON/PURCHASE",
+  // Run summary modal open/close — owned by runSummary/slice
+  "RUN_SUMMARY/OPEN",
+  "RUN_SUMMARY/CLOSE",
 ]);
 
 // Actions where coreReducer intentionally defers to slices (e.g. CRAFTING/CRAFT_RECIPE
