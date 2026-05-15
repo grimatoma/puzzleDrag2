@@ -35,9 +35,9 @@ describe("Phase 34 — recipeInputReduce aggregation (real Baker)", () => {
 
   it("Baker effect lives on the bread / grain_flour cell", () => {
     const out = computeWorkerEffects({ workers: { hired: { baker: BAKER.maxCount } } });
-    // amount * count = 2 * 10 = 20 raw reduction at full hire
-    // (crafting/slice.js floors the recipe input at 1, so net effect saturates fast)
-    expect(out.recipeInputReduce.bread.grain_flour).toBe(2 * BAKER.maxCount);
+    // amount * count = 1 * 10 = 10 raw reduction at full hire
+    // (crafting/slice.js floors the recipe input at 1)
+    expect(out.recipeInputReduce.bread.grain_flour).toBe(1 * BAKER.maxCount);
   });
 });
 
@@ -50,9 +50,16 @@ describe("Phase 34 — CRAFTING/CRAFT_RECIPE applies the reduction (floored at 1
     expect(next.inventory.bird_egg).toBe(4);
   });
 
-  it("a single Baker (amount=2 per hire) drops the recipe to 1 flour (floored)", () => {
-    // 1 Baker → 2 flour reduction → max(1, 3-2) = 1 flour required.
+  it("a single Baker (amount=1 per hire) trims one flour off the recipe", () => {
+    // 1 Baker → 1 flour reduction → max(1, 3-1) = 2 flour required.
     const s = bakeryStateWith(1, { grain_flour: 5, bird_egg: 5 });
+    const next = craftingReduce(s, { type: "CRAFTING/CRAFT_RECIPE", payload: { key: "bread" } });
+    expect(next.inventory.grain_flour).toBe(5 - 2);
+  });
+
+  it("two Bakers trim two flour off the recipe", () => {
+    // 2 Bakers → 2 flour reduction → max(1, 3-2) = 1 flour required.
+    const s = bakeryStateWith(2, { grain_flour: 5, bird_egg: 5 });
     const next = craftingReduce(s, { type: "CRAFTING/CRAFT_RECIPE", payload: { key: "bread" } });
     expect(next.inventory.grain_flour).toBe(5 - 1);
   });
