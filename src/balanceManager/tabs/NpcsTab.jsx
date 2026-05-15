@@ -226,7 +226,6 @@ function ListEditor({ items, availableKeys, onChange }) {
 // punishing inactivity is at the current ramp.
 function BondDecayProjection() {
   const ladder = projectBondLadder({ bonds: [10, 8, 6, 5], ticks: 12 });
-  const maxBond = 10;
   return (
     <Card title="Bond decay projection (12 inactivity ticks)">
       <div className="text-[11px] italic mb-2" style={{ color: COLORS.inkSubtle }}>
