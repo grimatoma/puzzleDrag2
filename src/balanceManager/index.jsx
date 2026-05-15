@@ -14,6 +14,7 @@ import { writeBalanceDraft } from "../config/applyOverrides.js";
 import balanceFile from "../config/balance.json";
 import { COLORS } from "./shared.jsx";
 import { parseHash, useBalanceRouter } from "./router.js";
+import { useDraftHistory } from "./useDraftHistory.js";
 
 // Lazy-load tabs so the Balance Manager (a dev-time tool) stays out of the
 // main entry chunk. Each tab becomes its own JS chunk fetched only when
@@ -190,7 +191,10 @@ export default function BalanceManagerApp() {
   // Initialise the draft from whatever the constants module merged in:
   // committed file + previous localStorage draft. That way, opening the
   // manager always shows the user's full set of overrides as starting point.
-  const [draft, setDraft] = useState(() => cloneDraft(BALANCE_OVERRIDES));
+  const {
+    state: draft, setState: setDraft, undo, redo, reset: resetDraft,
+    canUndo, canRedo,
+  } = useDraftHistory(() => cloneDraft(BALANCE_OVERRIDES));
   const [savedNotice, setSavedNotice] = useState("");
 
   const toggleSidebar = useCallback(() => {
@@ -207,7 +211,7 @@ export default function BalanceManagerApp() {
       updater(next);
       return next;
     });
-  }, []);
+  }, [setDraft]);
 
   const isDirty = useMemo(() => {
     return JSON.stringify(draft) !== JSON.stringify(BALANCE_OVERRIDES);
@@ -221,25 +225,27 @@ export default function BalanceManagerApp() {
 
   const resetToCommitted = useCallback(() => {
     if (!confirm("Reset to the committed balance.json? Your unsaved edits will be lost.")) return;
-    setDraft(cloneDraft(balanceFile));
-  }, []);
+    resetDraft(cloneDraft(balanceFile));
+  }, [resetDraft]);
 
   const clearAllOverrides = useCallback(() => {
     if (!confirm("Clear EVERY override? The game will revert to its default constants on next reload.")) return;
-    setDraft(emptyDraft());
-  }, []);
+    resetDraft(emptyDraft());
+  }, [resetDraft]);
 
-  // Save on Cmd/Ctrl-S so designers can iterate quickly.
+  // Save on Cmd/Ctrl-S + undo/redo on Cmd/Ctrl-Z / Cmd/Ctrl-Shift-Z.
   useEffect(() => {
     function onKey(e) {
-      if ((e.metaKey || e.ctrlKey) && e.key === "s") {
-        e.preventDefault();
-        saveDraft();
-      }
+      const mod = e.metaKey || e.ctrlKey;
+      if (!mod) return;
+      const key = e.key.toLowerCase();
+      if (key === "s") { e.preventDefault(); saveDraft(); return; }
+      if (key === "z" && !e.shiftKey) { e.preventDefault(); undo(); return; }
+      if ((key === "z" && e.shiftKey) || key === "y") { e.preventDefault(); redo(); return; }
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [saveDraft]);
+  }, [saveDraft, undo, redo]);
 
   const activeTab = TABS.find((t) => t.id === tab) ?? TABS[0];
   const ActiveComponent = activeTab.Component;
@@ -287,6 +293,29 @@ export default function BalanceManagerApp() {
                 Unsaved changes
               </span>
             )}
+            <div className="flex items-center rounded-lg border-2 overflow-hidden" style={{ borderColor: COLORS.border }}>
+              <button
+                onClick={() => undo()}
+                disabled={!canUndo}
+                title="Undo (Cmd/Ctrl-Z)"
+                aria-label="Undo last change"
+                className="px-2 py-1.5 text-[12px] font-bold transition-opacity"
+                style={{ background: COLORS.parchmentDeep, color: canUndo ? COLORS.inkLight : COLORS.inkSubtle, opacity: canUndo ? 1 : 0.4, cursor: canUndo ? "pointer" : "not-allowed" }}
+              >
+                ↶
+              </button>
+              <span aria-hidden style={{ width: 1, alignSelf: "stretch", background: COLORS.border }} />
+              <button
+                onClick={() => redo()}
+                disabled={!canRedo}
+                title="Redo (Cmd/Ctrl-Shift-Z)"
+                aria-label="Redo last undone change"
+                className="px-2 py-1.5 text-[12px] font-bold transition-opacity"
+                style={{ background: COLORS.parchmentDeep, color: canRedo ? COLORS.inkLight : COLORS.inkSubtle, opacity: canRedo ? 1 : 0.4, cursor: canRedo ? "pointer" : "not-allowed" }}
+              >
+                ↷
+              </button>
+            </div>
             <button
               onClick={saveDraft}
               className="px-3 py-1.5 text-[12px] font-bold rounded-lg border-2"

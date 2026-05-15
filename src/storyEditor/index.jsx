@@ -25,6 +25,7 @@ import {
 } from "./shared.jsx";
 import Inspector from "./Inspector.jsx";
 import PreviewModal from "./PreviewModal.jsx";
+import { useDraftHistory } from "../balanceManager/useDraftHistory.js";
 
 const INSPECTOR_COLLAPSED_KEY = "hearth.story.inspectorCollapsed";
 const LEFT_RAIL_COLLAPSED_KEY = "hearth.story.leftRailCollapsed";
@@ -613,7 +614,10 @@ function stripEmpty(obj) {
 // ─── app ─────────────────────────────────────────────────────────────────────
 
 export default function StoryEditorApp() {
-  const [draft, setDraft] = useState(() => cloneDraft(BALANCE_OVERRIDES));
+  const {
+    state: draft, setState: setDraft, undo, redo, reset: resetDraft,
+    canUndo, canRedo,
+  } = useDraftHistory(() => cloneDraft(BALANCE_OVERRIDES));
   const [savedDraft, setSavedDraft] = useState(() => cloneDraft(BALANCE_OVERRIDES));
   const [selectedId, setSelectedId] = useState(null);
   const [savedNotice, setSavedNotice] = useState("");
@@ -678,23 +682,32 @@ export default function StoryEditorApp() {
   }, [draft]);
 
   useEffect(() => {
-    const onKey = (e) => { if ((e.metaKey || e.ctrlKey) && e.key === "s") { e.preventDefault(); saveDraft(); } };
+    const onKey = (e) => {
+      if (!(e.metaKey || e.ctrlKey)) return;
+      const key = e.key.toLowerCase();
+      if (key === "s") { e.preventDefault(); saveDraft(); return; }
+      const tag = e.target?.tagName;
+      const isTextInput = tag === "INPUT" || tag === "TEXTAREA" || e.target?.isContentEditable;
+      if (isTextInput) return;
+      if (key === "z" && !e.shiftKey) { e.preventDefault(); undo(); return; }
+      if ((key === "z" && e.shiftKey) || key === "y") { e.preventDefault(); redo(); return; }
+    };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [saveDraft]);
+  }, [saveDraft, undo, redo]);
 
   useEffect(() => {
     const onStorage = (e) => {
       if (e.key !== "hearth.balance.draft" || dirtyRef.current) return;
       const next = cloneDraft(readBalanceDraft() || BALANCE_OVERRIDES);
-      setDraft(next);
+      resetDraft(next);
       setSavedDraft(cloneDraft(next));
       setSavedNotice("Synced from Balance Manager");
       setTimeout(() => setSavedNotice(""), 1800);
     };
     window.addEventListener("storage", onStorage);
     return () => window.removeEventListener("storage", onStorage);
-  }, []);
+  }, [resetDraft]);
 
   // canvas pan/zoom
   const onMouseDown = useCallback((e) => {
@@ -1115,7 +1128,17 @@ export default function StoryEditorApp() {
         <div style={{ position: "relative", display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
           {savedNotice && <span style={{ font: "700 10px/1 system-ui", padding: "4px 9px", borderRadius: 6, background: C.green, color: "#fff" }}>{savedNotice}</span>}
           {isDirty && !savedNotice && <span style={{ font: "700 10px/1 system-ui", padding: "4px 9px", borderRadius: 6, background: C.ember, color: "#fff" }}>Unsaved changes</span>}
-          <span style={{ font: "400 10px/1 system-ui", color: "rgba(244,217,160,0.5)" }}>Drag by the handle · arrows move selection · Enter previews · ⌘S saves</span>
+          <span style={{ font: "400 10px/1 system-ui", color: "rgba(244,217,160,0.5)" }}>Drag handle · arrows navigate · Enter previews · ⌘Z undo · ⌘S saves</span>
+          <span role="group" aria-label="Undo and redo" style={{ display: "inline-flex", padding: 2, borderRadius: 8, border: `1.5px solid ${C.border}`, background: C.parchmentDeep }}>
+            <button onClick={() => undo()} disabled={!canUndo} title="Undo (Cmd/Ctrl-Z)" aria-label="Undo last change"
+              style={{ padding: "5px 9px", borderRadius: 6, border: "none", background: "transparent",
+                color: canUndo ? C.inkLight : C.inkSubtle, opacity: canUndo ? 1 : 0.4,
+                font: "700 12px/1 system-ui", cursor: canUndo ? "pointer" : "not-allowed" }}>↶</button>
+            <button onClick={() => redo()} disabled={!canRedo} title="Redo (Cmd/Ctrl-Shift-Z)" aria-label="Redo last undone change"
+              style={{ padding: "5px 9px", borderRadius: 6, border: "none", background: "transparent",
+                color: canRedo ? C.inkLight : C.inkSubtle, opacity: canRedo ? 1 : 0.4,
+                font: "700 12px/1 system-ui", cursor: canRedo ? "pointer" : "not-allowed" }}>↷</button>
+          </span>
           <span role="group" aria-label="Graph focus mode" style={{ display: "inline-flex", padding: 2, borderRadius: 8, border: `1.5px solid ${C.border}`, background: C.parchmentDeep }}>
             {[
               ["chain", "Current Chain"],
