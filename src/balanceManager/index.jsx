@@ -272,8 +272,23 @@ export default function BalanceManagerApp() {
   const diagnostics = useMemo(() => runDiagnostics(draft), [draft]);
 
   const handlePaletteSelect = useCallback((entry) => {
-    if (entry?.tab) navigateTo(entry.tab);
-  }, [navigateTo]);
+    if (!entry) return;
+    if (entry.kind === "action" && entry.actionId) {
+      switch (entry.actionId) {
+        case "save":         saveDraft(); return;
+        case "undo":         undo(); return;
+        case "redo":         redo(); return;
+        case "preview":
+          saveDraft();
+          setTimeout(() => window.open(import.meta.env.BASE_URL, "_blank", "noopener"), 100);
+          return;
+        case "shortcuts":    setShortcutsOpen(true); return;
+        case "diagnostics":  setDiagnosticsOpen(true); return;
+        default:             /* unknown action, fall through to tab nav */ break;
+      }
+    }
+    if (entry.tab) navigateTo(entry.tab);
+  }, [navigateTo, saveDraft, undo, redo]);
 
   return (
     <div

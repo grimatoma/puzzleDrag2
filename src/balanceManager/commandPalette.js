@@ -28,9 +28,31 @@ function asArrayValues(obj) {
  * entry's `tab` is the Balance Manager tab id (e.g. `recipes`, `bosses`) the
  * palette should navigate to when the entry is picked.
  */
-export function buildCommandIndex({ items = ITEMS, npcs = NPCS, buildings = BUILDINGS, recipes = RECIPES, biomes = BIOMES, keepers = KEEPERS, workers = TYPE_WORKERS, bosses = BOSSES, achievements = ACHIEVEMENTS, zones = ZONES, storyBeats = STORY_BEATS, sideBeats = SIDE_BEATS, flags = STORY_FLAGS } = {}) {
+/**
+ * Built-in quick actions — typed entries the palette includes alongside
+ * the catalog index. Each carries `kind: 'action'` and a `tab` like the
+ * navigable entries, plus an optional `actionId` the host can intercept
+ * to run something instead of (or in addition to) the tab navigation.
+ */
+export const QUICK_ACTIONS = Object.freeze([
+  { id: "save", actionId: "save", label: "Save draft", sublabel: "action · ⌘S", tab: "tiles",
+    keywords: ["save", "draft", "persist", "action"] },
+  { id: "undo", actionId: "undo", label: "Undo last change", sublabel: "action · ⌘Z", tab: "tiles",
+    keywords: ["undo", "revert", "back", "action"] },
+  { id: "redo", actionId: "redo", label: "Redo", sublabel: "action · ⌘⇧Z", tab: "tiles",
+    keywords: ["redo", "forward", "action"] },
+  { id: "preview", actionId: "preview", label: "Save & preview in game", sublabel: "action · opens new tab", tab: "tiles",
+    keywords: ["preview", "test", "game", "live"] },
+  { id: "shortcuts", actionId: "shortcuts", label: "Show keyboard shortcuts", sublabel: "action · ?", tab: "tiles",
+    keywords: ["shortcuts", "help", "keys", "?"] },
+  { id: "diagnostics", actionId: "diagnostics", label: "Show audits summary", sublabel: "action · header pill", tab: "tiles",
+    keywords: ["audit", "validate", "check", "lint", "diag"] },
+]);
+
+export function buildCommandIndex({ items = ITEMS, npcs = NPCS, buildings = BUILDINGS, recipes = RECIPES, biomes = BIOMES, keepers = KEEPERS, workers = TYPE_WORKERS, bosses = BOSSES, achievements = ACHIEVEMENTS, zones = ZONES, storyBeats = STORY_BEATS, sideBeats = SIDE_BEATS, flags = STORY_FLAGS, includeActions = true } = {}) {
   const entries = [];
   const push = (entry) => entries.push(entry);
+  if (includeActions) for (const action of QUICK_ACTIONS) push({ kind: "action", ...action });
 
   for (const [id, item] of Object.entries(items || {})) {
     push({ id, kind: "tile", tab: "tiles",
