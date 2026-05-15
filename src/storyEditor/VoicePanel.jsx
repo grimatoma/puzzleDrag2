@@ -4,7 +4,7 @@
 // otherwise invisible until a writer compares two acts by hand.
 
 import { useMemo } from "react";
-import { C, NPCS, Portrait } from "./shared.jsx";
+import { C, Portrait } from "./shared.jsx";
 import { computeVoiceFingerprints } from "./voiceFingerprint.js";
 
 const PUNCT_LABEL = {

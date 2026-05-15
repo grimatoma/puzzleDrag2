@@ -19,7 +19,7 @@ import {
 } from "../shared.jsx";
 import Icon from "../../ui/Icon.jsx";
 import { buildItemReferenceIndex } from "../itemReferences.js";
-import { findColorClashes, paletteSummary, hexString } from "../palettePicker.js";
+import { findColorClashes, paletteSummary } from "../palettePicker.js";
 
 const BIOME_FILTERS = [
   { value: "all",  label: "All biomes" },
