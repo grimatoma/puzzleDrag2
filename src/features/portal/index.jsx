@@ -12,13 +12,13 @@ export default function PortalScreen({ state, dispatch }) {
   const tools = state.tools ?? {};
 
   return (
-    <div className="absolute inset-0 bg-gradient-to-b from-[#2a1a4a] to-[#1a1030] border-[3px] border-[#9a7ac8] flex flex-col overflow-hidden">
+    <div className="hl-panel hl-panel--arcane">
       {/* Header */}
-      <div className="flex items-center justify-between px-3 py-2 flex-shrink-0 border-b border-[#9a7ac8]/40">
-        <span className="font-bold text-[14px] text-[#e8d8f8]">🔮 Magic Portal</span>
+      <div className="hl-panel-header">
+        <span className="hl-panel-title">🔮 Magic Portal</span>
         <button
           onClick={() => dispatch({ type: "SET_VIEW", view: "town" })}
-          className="w-7 h-7 rounded-lg bg-[#3a2a5a] border-2 border-[#9a7ac8] grid place-items-center text-[#e8d8f8] font-bold text-[14px]"
+          className="hl-panel-close"
         >
           ✕
         </button>
@@ -26,19 +26,19 @@ export default function PortalScreen({ state, dispatch }) {
 
       {/* Influence display */}
       {portalBuilt && (
-        <div className="px-3 py-1.5 flex-shrink-0 border-b border-[#9a7ac8]/30">
-          <span className="text-[12px] font-bold text-[#c8a8f8]">✨ Influence: {influence}</span>
+        <div className="px-3 py-1.5 flex-shrink-0 border-b border-[#8a6aa8]/40">
+          <span className="text-[12px] font-bold text-on-panel">✨ Influence: {influence}</span>
         </div>
       )}
 
       {!portalBuilt ? (
         <div className="flex-1 grid place-items-center px-4">
-          <p className="italic text-[#c8a8f8]/70 text-[12px] text-center">
+          <p className="hl-empty">
             Build the Magic Portal in town to unlock summoning.
           </p>
         </div>
       ) : (
-        <div className="flex-1 overflow-y-auto p-2">
+        <div className="hl-panel-body p-2">
           <div className="flex flex-col gap-2">
             {MAGIC_TOOLS.map((tool) => {
               const count = tools[tool.id] ?? 0;
@@ -49,14 +49,14 @@ export default function PortalScreen({ state, dispatch }) {
               return (
                 <div
                   key={tool.id}
-                  className="bg-[#3a2a5a] border-2 border-[#9a7ac8] rounded-xl p-3 flex flex-col gap-2"
+                  className="hl-card p-3 gap-2"
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex flex-col gap-0.5 flex-1">
-                      <span className="font-bold text-[12px] text-[#e8d8f8]">{tool.name}</span>
-                      <span className="text-[10px] text-[#c8a8f8]/80 leading-tight">{tool.effect}</span>
+                      <span className="hl-card-title text-[12px]">{tool.name}</span>
+                      <span className="text-[10px] text-on-panel-dim leading-tight">{tool.effect}</span>
                     </div>
-                    <span className="text-[11px] font-bold text-[#c8a8f8] flex-shrink-0">×{count}</span>
+                    <span className="text-[11px] font-bold text-on-panel-dim flex-shrink-0">×{count}</span>
                   </div>
 
                   <div className="flex gap-2">

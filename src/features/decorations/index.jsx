@@ -14,7 +14,7 @@ function canAfford(decor, state) {
 
 function CostTag({ label, value }) {
   return (
-    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-[#3a2715]/60 text-[#f8e7c6] border border-[#e2c19b]/30">
+    <span className="hl-cost-tag">
       {value} {label}
     </span>
   );
@@ -25,12 +25,12 @@ function DecorationCard({ decor, state, dispatch }) {
   const count = locBuilt(state).decorations?.[decor.id] ?? 0;
 
   return (
-    <div className="bg-[#f6efe0] border-2 border-[#c5a87a] rounded-xl p-2 flex items-center gap-2 relative" style={{ minHeight: 72 }}>
+    <div className="hl-card !flex-row items-center gap-2 relative" style={{ minHeight: 72 }}>
       {count > 0 && (
-        <div className="absolute top-1 right-1 text-[10px] text-[#8a785e] font-bold">×{count}</div>
+        <div className="absolute top-1 right-1 text-[10px] text-on-panel-faint font-bold">×{count}</div>
       )}
       <div className="flex flex-col gap-0.5 flex-1 min-w-0">
-        <span className="font-bold text-[11px] text-[#3a2715] leading-tight">{decor.name}</span>
+        <span className="hl-card-title leading-tight">{decor.name}</span>
         <div className="flex flex-wrap gap-1 mt-0.5">
           {Object.entries(decor.cost).map(([k, v]) => (
             <CostTag key={k} label={k === "coins" ? "◉" : k} value={v} />
@@ -38,15 +38,11 @@ function DecorationCard({ decor, state, dispatch }) {
         </div>
       </div>
       <div className="flex flex-col items-end gap-1 flex-shrink-0">
-        <span className="text-[10px] font-bold text-[#9a6abf]">+{decor.influence} influence</span>
+        <span className="text-[10px] font-bold text-[#7a3a8a]">+{decor.influence} influence</span>
         <button
           disabled={!affordable}
           onClick={() => dispatch({ type: "BUILD_DECORATION", payload: { id: decor.id } })}
-          className={`text-[10px] font-bold px-2.5 py-1 rounded-lg border-2 transition-colors ${
-            affordable
-              ? "bg-[#91bf24] border-[#6a9010] text-white hover:bg-[#a3d028]"
-              : "bg-[#ccc] border-[#aaa] text-[#666] cursor-not-allowed"
-          }`}
+          className="hl-btn hl-btn--sm hl-btn--go"
         >
           Build
         </button>
@@ -57,20 +53,20 @@ function DecorationCard({ decor, state, dispatch }) {
 
 export default function DecorationsScreen({ state, dispatch }) {
   return (
-    <div className="absolute inset-0 bg-gradient-to-b from-[#ead7b3] to-[#d4b585] border-[3px] border-[#b28b62] flex flex-col overflow-hidden">
+    <div className="hl-panel">
       {/* Header */}
-      <div className="flex items-center justify-between px-3 py-2 flex-shrink-0 border-b border-[#b28b62]/40">
-        <span className="font-bold text-[14px] text-[#3a2715]">🌸 Decorations</span>
+      <div className="hl-panel-header">
+        <span className="hl-panel-title">🌸 Decorations</span>
         <button
           onClick={() => dispatch({ type: "SET_VIEW", view: "town" })}
-          className="w-7 h-7 rounded-lg bg-[#f6efe0] border-2 border-[#b28b62] grid place-items-center text-[#6a4b31] font-bold text-[14px]"
+          className="hl-panel-close"
         >
           ✕
         </button>
       </div>
 
       {/* Decoration list */}
-      <div className="flex-1 overflow-y-auto p-2">
+      <div className="hl-panel-body !px-2">
         <div className="grid grid-cols-2 portrait:grid-cols-1 gap-2">
           {Object.values(DECORATIONS).map((decor) => (
             <DecorationCard

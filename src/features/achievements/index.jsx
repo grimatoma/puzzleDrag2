@@ -58,25 +58,24 @@ function TrophyCard({ achievement, current, trophyState }) {
   const claimed  = trophyState === "claimed";
   const pct = Math.min(100, (current / target) * 100);
 
-  let cardBg = "bg-[#3a2715]";
-  let borderCls = "border-[#c5a87a]/50";
-  if (claimed)        { cardBg = "bg-[#91bf24]/30"; borderCls = "border-[#91bf24]/60"; }
-  else if (unlocked)  { cardBg = "bg-[#5b3b20]"; borderCls = "border-[#c5a87a]"; }
+  let borderCls = "";
+  if (claimed)        { borderCls = "!border-[#91bf24]"; }
+  else if (unlocked)  { borderCls = "!border-[#c5a87a]"; }
 
   return (
-    <div className={`${cardBg} border ${borderCls} rounded-xl p-2 flex gap-2 items-center min-h-[72px] transition-colors`}>
+    <div className={`hl-card !flex-row gap-2 items-center min-h-[72px] transition-colors ${borderCls}`}>
       {/* Icon */}
-      <div className={`text-[22px] w-8 flex-shrink-0 text-center leading-none flex items-center justify-center ${!unlocked ? "grayscale opacity-40" : ""}`}>
+      <div className={`text-[22px] w-8 flex-shrink-0 text-center leading-none flex items-center justify-center ${!unlocked ? "grayscale opacity-40 text-on-panel-faint" : ""}`}>
         {unlocked ? icon : <LockGlyph size={18} />}
       </div>
 
       {/* Middle */}
       <div className="flex-1 min-w-0 flex flex-col gap-0.5">
-        <div className="font-bold text-[12px] text-[#f8e7c6] leading-tight truncate">{name}</div>
-        <div className="text-[10px] text-[#c5a87a]/80 leading-snug line-clamp-1">{desc}</div>
+        <div className="hl-card-title text-[12px] leading-tight truncate">{name}</div>
+        <div className="hl-card-meta text-[10px] leading-snug line-clamp-1">{desc}</div>
         {/* Progress bar */}
         <div className="flex items-center gap-1.5 mt-0.5">
-          <div className="flex-1 h-1.5 bg-[#2a1d0f] rounded-full overflow-hidden">
+          <div className="flex-1 h-1.5 bg-[#3a2715]/25 rounded-full overflow-hidden">
             <div
               className="h-full rounded-full transition-[width] duration-500"
               style={{
@@ -85,7 +84,7 @@ function TrophyCard({ achievement, current, trophyState }) {
               }}
             />
           </div>
-          <div className="text-[9px] text-[#c5a87a] whitespace-nowrap font-bold">
+          <div className="text-[9px] text-on-panel-dim whitespace-nowrap font-bold">
             {Math.min(current, target)}/{target}
           </div>
         </div>
@@ -94,7 +93,7 @@ function TrophyCard({ achievement, current, trophyState }) {
       {/* Right: reward */}
       <div className="flex flex-col items-end gap-1 flex-shrink-0">
         {achievement.reward && (
-          <div className="text-[9px] text-[#c8923a] font-bold whitespace-nowrap leading-tight">
+          <div className="text-[9px] text-[#a8722a] font-bold whitespace-nowrap leading-tight">
             {achievement.reward.coins ? `+${achievement.reward.coins}◉` : ""}
             {achievement.reward.xp ? ` +${achievement.reward.xp}xp` : ""}
             {achievement.reward.tools
@@ -119,8 +118,8 @@ function TrophyCard({ achievement, current, trophyState }) {
 
 function ResourceChip({ resource, count }) {
   const discovered = count > 0;
-  const bg = discovered ? hexColor(resource.color) : "#3a2715";
-  const textColor = discovered ? "#fff" : "#6a4b31";
+  const bg = discovered ? hexColor(resource.color) : "#d8c4a0";
+  const textColor = discovered ? "#fff" : "#5b3b20";
 
   return (
     <div
@@ -129,8 +128,8 @@ function ResourceChip({ resource, count }) {
         width: 52,
         height: 62,
         backgroundColor: bg,
-        borderColor: discovered ? "rgba(255,255,255,0.3)" : "#5a3a25",
-        opacity: discovered ? 1 : 0.55,
+        borderColor: discovered ? "rgba(255,255,255,0.3)" : "#b28b62",
+        opacity: discovered ? 1 : 0.7,
       }}
     >
       <div className="text-[18px] leading-none" style={{ textShadow: discovered ? "0 1px 2px rgba(0,0,0,.5)" : "none" }}>
@@ -177,34 +176,30 @@ export default function AchievementsScreen({ state, dispatch }) {
   const unlockedCount = ACHIEVEMENTS.filter((a) => unlockedMap[a.id]).length;
 
   return (
-    <div className="absolute inset-0 bg-gradient-to-b from-[#ead7b3] to-[#d4b585] border-[3px] border-[#b28b62] rounded-2xl flex flex-col overflow-hidden">
+    <div className="hl-panel">
       {/* Header */}
-      <div className="flex items-center justify-between px-3 py-2 flex-shrink-0 border-b border-[#b28b62]/40">
-        <span className="font-bold text-[14px] text-[#3a2715]">🏆 Trophies</span>
+      <div className="hl-panel-header">
+        <span className="hl-panel-title">🏆 Trophies</span>
         <button
           onClick={() => dispatch({ type: "SET_VIEW", view: "town" })}
-          className="w-7 h-7 rounded-lg bg-[#f6efe0] border-2 border-[#b28b62] grid place-items-center text-[#6a4b31] font-bold text-[14px]"
+          className="hl-panel-close"
         >
           ✕
         </button>
       </div>
 
       {/* Tab toggle */}
-      <div className="flex gap-1.5 px-3 py-1.5 flex-shrink-0">
+      <div className="hl-tabs">
         {["trophies", "collection"].map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
-            className={`px-3 py-1 rounded-full text-[11px] font-bold transition-colors border ${
-              tab === t
-                ? "bg-[#d6612a] text-white border-[#d6612a]"
-                : "bg-[#f6efe0]/80 text-[#5b3b20] border-[#b28b62] hover:bg-[#f6efe0]"
-            }`}
+            className={`hl-tab ${tab === t ? "is-active" : ""}`}
           >
             {t === "trophies" ? "Trophies" : "Collection"}
           </button>
         ))}
-        <div className="ml-auto text-[10px] text-[#5b3b20] flex items-center">
+        <div className="ml-auto text-[10px] text-on-panel-dim flex items-center">
           {tab === "trophies"
             ? `${unlockedCount}/${ACHIEVEMENTS.length} unlocked`
             : `${discoveredCount}/${ALL_RESOURCES.length} discovered`}
@@ -219,7 +214,7 @@ export default function AchievementsScreen({ state, dispatch }) {
             if (!group.length) return null;
             return (
               <div key={grp} className="mb-2">
-                <div className="text-[10px] font-bold text-[#c8923a] uppercase tracking-widest px-1 mb-1">{grp}</div>
+                <div className="hl-section-label px-1 mb-1">{grp}</div>
                 <div className="grid grid-cols-3 portrait:grid-cols-2 gap-1.5">
                   {group.map((a) => (
                     <TrophyCard
@@ -244,7 +239,7 @@ export default function AchievementsScreen({ state, dispatch }) {
             <div className="flex flex-wrap gap-1.5 px-2 py-1.5">
               {/* Farm resources */}
               <div className="flex flex-col gap-1 justify-center">
-                <div className="text-[9px] text-[#c8923a] font-bold uppercase tracking-widest px-0.5">Farm</div>
+                <div className="hl-section-label !text-[9px] px-0.5">Farm</div>
                 <div className="flex flex-wrap gap-1.5">
                   {BIOMES.farm.resources.map((r) => (
                     <ResourceChip key={r.key} resource={r} count={collected[r.key] || 0} />
@@ -252,10 +247,10 @@ export default function AchievementsScreen({ state, dispatch }) {
                 </div>
               </div>
               {/* Divider */}
-              <div className="w-px bg-[#c5a87a]/30 mx-1 self-stretch" />
+              <div className="w-px bg-[var(--panel-divider)] mx-1 self-stretch" />
               {/* Mine resources */}
               <div className="flex flex-col gap-1 justify-center">
-                <div className="text-[9px] text-[#c8923a] font-bold uppercase tracking-widest px-0.5">Mine</div>
+                <div className="hl-section-label !text-[9px] px-0.5">Mine</div>
                 <div className="flex flex-wrap gap-1.5">
                   {BIOMES.mine.resources.map((r) => (
                     <ResourceChip key={r.key} resource={r} count={collected[r.key] || 0} />
@@ -265,9 +260,9 @@ export default function AchievementsScreen({ state, dispatch }) {
             </div>
           </div>
           {/* Footer strip */}
-          <div className="flex-shrink-0 px-3 py-1.5 border-t border-[#b28b62]/40 text-[11px] text-[#5b3b20] font-bold flex gap-3">
+          <div className="flex-shrink-0 px-3 py-1.5 border-t border-[var(--panel-divider)] text-[11px] text-on-panel-dim font-bold flex gap-3">
             <span>Discovered {discoveredCount}/{ALL_RESOURCES.length}</span>
-            <span className="text-[#5b3b20]/60">·</span>
+            <span className="text-on-panel-faint">·</span>
             <span>Total harvested: {totalLifetime.toLocaleString()}</span>
           </div>
         </div>

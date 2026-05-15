@@ -1,0 +1,236 @@
+/*
+ * components.css — global UI component layer (`hl-` = Hearthlands).
+ *
+ * One place to adjust the look of every panel, card, header, tab, and
+ * label in the app. Built on the semantic tokens in tokens.css.
+ *
+ * THE CONTRAST RULE
+ * -----------------
+ * Feature panels are LIGHT parchment, so text on them is DARK ink. The
+ * classes below set the right colour for their surface so callers never
+ * repeat the dark-ink-on-dark-brown bug that made section labels vanish.
+ *
+ * Surfaces, lightest → darkest:
+ *   .hl-card   paper, raised      (rows / tiles)
+ *   .hl-panel  parchment          (the screen itself)
+ *   .hl-well   brown tint, sunk   (sub-sections inside a panel)
+ *
+ * Prefer these classes over ad-hoc Tailwind colour utilities or hex for
+ * any UI chrome. Hard-coded hex stays fine inside the canvas / SVG
+ * artwork modules (src/ui/icons, src/ui/buildings, src/ui/town).
+ */
+
+@layer components {
+  /* ══ Full-screen feature panel ═══════════════════════════════════════ */
+
+  .hl-panel {
+    @apply absolute inset-0 flex flex-col overflow-hidden;
+    background: linear-gradient(180deg, var(--panel-top) 0%, var(--panel-bottom) 100%);
+    border: 3px solid var(--panel-border);
+    color: var(--on-panel);
+  }
+  .hl-panel--arcane {
+    background: linear-gradient(180deg, var(--panel-arcane-top) 0%, var(--panel-arcane-bottom) 100%);
+    border-color: var(--panel-arcane-border);
+  }
+
+  /* Panel look WITHOUT the full-screen positioning — for side rails and
+     embedded panel-styled containers that set their own layout. */
+  .hl-surface {
+    background: linear-gradient(180deg, var(--panel-top) 0%, var(--panel-bottom) 100%);
+    border: 1px solid var(--panel-border);
+    color: var(--on-panel);
+  }
+
+  /* Header strip — title + close button live here. */
+  .hl-panel-header {
+    @apply flex items-center justify-between gap-2 px-3 flex-shrink-0;
+    min-height: 46px;
+    border-bottom: 1px solid var(--panel-divider);
+  }
+  .hl-panel-title {
+    @apply font-bold text-large m-0 truncate;
+    color: var(--on-panel);
+  }
+  .hl-panel--arcane .hl-panel-title { color: #3a2150; }
+
+  /* Close ✕ button — light chip defined by its iron border. */
+  .hl-panel-close {
+    @apply inline-grid place-items-center flex-shrink-0 rounded-md font-bold text-large;
+    width: 32px;
+    height: 32px;
+    background: var(--card-bg);
+    border: 2px solid var(--card-border-strong);
+    color: var(--on-panel-dim);
+  }
+  .hl-panel-close:hover { background: var(--card-bg-hover); }
+  .hl-panel--arcane .hl-panel-close { border-color: var(--panel-arcane-border); }
+
+  /* Sub-header strip for search / filters / sort. */
+  .hl-panel-toolbar {
+    @apply flex flex-wrap items-center gap-2 px-3 py-2 flex-shrink-0;
+    background: var(--panel-toolbar);
+    border-bottom: 1px solid var(--panel-divider);
+  }
+
+  /* Scrolling content region. */
+  .hl-panel-body {
+    @apply flex-1 min-h-0 overflow-y-auto px-3 py-3;
+    overscroll-behavior: contain;
+  }
+
+  /* ══ Tabs ════════════════════════════════════════════════════════════ */
+
+  .hl-tabs {
+    @apply flex items-center gap-1.5 px-3 py-2 flex-shrink-0 flex-wrap;
+  }
+  .hl-tab {
+    @apply inline-flex items-center justify-center gap-1 px-3 py-1.5 rounded-pill;
+    @apply text-caption font-bold border-2 transition-colors cursor-pointer;
+    background: var(--well-bg);
+    border-color: transparent;
+    color: var(--on-panel-dim);
+  }
+  .hl-tab:hover { color: var(--on-panel); }
+  .hl-tab.is-active {
+    background: var(--ember);
+    border-color: var(--ember-hot);
+    color: #fff;
+  }
+
+  /* ══ Typography on panels ════════════════════════════════════════════ */
+
+  /* Uppercase section divider label — the element that was invisible. */
+  .hl-section-label {
+    @apply text-caption font-bold uppercase tracking-wider;
+    color: var(--on-panel-label);
+  }
+  .hl-title      { @apply text-h3 font-bold;      color: var(--on-panel); }
+  .hl-heading    { @apply text-body-lg font-bold; color: var(--on-panel); }
+  .hl-text       { @apply text-body;              color: var(--on-panel); }
+  .hl-text-dim   { @apply text-body;              color: var(--on-panel-dim); }
+  .hl-text-faint { @apply text-caption;           color: var(--on-panel-faint); }
+
+  /* Empty / no-results state. */
+  .hl-empty {
+    @apply text-body italic px-1 py-3 text-center;
+    color: var(--on-panel-faint);
+  }
+
+  .hl-divider {
+    @apply w-full;
+    height: 1px;
+    background: var(--panel-divider);
+  }
+
+  /* ══ Inset well (a sub-section sunk into a panel) ════════════════════ */
+
+  .hl-well {
+    @apply rounded-lg p-3 flex flex-col gap-2;
+    background: var(--well-bg);
+    border: 1px solid var(--well-border);
+    color: var(--on-panel);
+  }
+
+  /* ══ Light cards (rows / tiles inside panels and dialogs) ════════════ */
+
+  .hl-card {
+    @apply rounded-lg p-2.5 flex flex-col;
+    background: var(--card-bg);
+    border: 2px solid var(--card-border);
+    color: var(--on-panel);
+  }
+  .hl-card--interactive { @apply cursor-pointer transition-colors; }
+  .hl-card--interactive:hover {
+    background: var(--card-bg-hover);
+    border-color: var(--card-border-strong);
+  }
+  .hl-card-title { @apply text-body font-bold;  color: var(--on-panel); }
+  .hl-card-text  { @apply text-body;            color: var(--on-panel); }
+  .hl-card-meta  { @apply text-caption;         color: var(--on-panel-dim); }
+  .hl-card-faint { @apply text-caption;         color: var(--on-panel-faint); }
+
+  /* ══ Form controls ══════════════════════════════════════════════════ */
+
+  .hl-input {
+    @apply w-full h-9 px-3 rounded-md text-body;
+    background: var(--card-bg);
+    border: 1px solid var(--card-border-strong);
+    color: var(--on-panel);
+  }
+  .hl-input::placeholder { color: var(--on-panel-faint); }
+  .hl-input:focus {
+    outline: none;
+    border-color: var(--ember);
+    box-shadow: 0 0 0 2px rgba(214, 97, 42, 0.35);
+  }
+
+  /* ══ Buttons ════════════════════════════════════════════════════════
+   * Hand-rolled pale buttons vanish on the parchment panel. Use these:
+   * every variant has a solid, defined surface with guaranteed contrast.
+   * ════════════════════════════════════════════════════════════════════ */
+
+  .hl-btn {
+    @apply inline-flex items-center justify-center gap-1 px-3 py-1.5;
+    @apply text-caption font-bold rounded-lg border-2 transition-colors cursor-pointer;
+    white-space: nowrap;
+  }
+  .hl-btn--sm { @apply px-2.5 py-1 text-micro rounded-md; }
+
+  /* Solid green — craft / build / confirm affordance. */
+  .hl-btn--go { background: #5e8c1e; border-color: #3f6010; color: #fff; }
+  .hl-btn--go:hover:not(:disabled) { background: #6da028; }
+
+  /* Solid ember — primary action. */
+  .hl-btn--primary { background: var(--ember); border-color: var(--ember-hot); color: #fff; }
+  .hl-btn--primary:hover:not(:disabled) { background: var(--ember-soft); }
+
+  /* Outlined — secondary action on a light surface. */
+  .hl-btn--ghost {
+    background: var(--card-bg);
+    border-color: var(--card-border-strong);
+    color: var(--on-panel-dim);
+  }
+  .hl-btn--ghost:hover:not(:disabled) { background: var(--card-bg-hover); color: var(--on-panel); }
+
+  /* Disabled — muted but still clearly visible against parchment. */
+  .hl-btn:disabled {
+    background: #c4b08a;
+    border-color: #a48f64;
+    color: #6d5a3a;
+    cursor: not-allowed;
+  }
+
+  /* ══ Cost / requirement chips ═══════════════════════════════════════ */
+
+  /* Neutral cost chip. */
+  .hl-cost-tag {
+    @apply inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-micro font-bold;
+    background: var(--well-bg);
+    border: 1px solid var(--well-border);
+    color: var(--on-panel);
+  }
+
+  /* Requirement chip — `--ok` when the player has enough, `--missing`
+     otherwise. Both keep dark text so they read on the light card. */
+  .hl-chip {
+    @apply inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-micro font-bold border;
+  }
+  .hl-chip--ok {
+    background: rgba(94, 140, 30, 0.20);
+    border-color: rgba(94, 140, 30, 0.60);
+    color: #3a5410;
+  }
+  .hl-chip--missing {
+    background: rgba(156, 58, 58, 0.14);
+    border-color: rgba(156, 58, 58, 0.45);
+    color: #8a3326;
+  }
+
+  /* ══ Modal backdrop ═════════════════════════════════════════════════ */
+
+  .hl-backdrop {
+    @apply fixed inset-0 z-50 grid place-items-center p-3;
+    background: rgba(0, 0, 0, 0.55);
+  }
+}

@@ -36,6 +36,21 @@ export default {
         "bg-dark":        "var(--bg-dark)",
         "bg-frame":       "var(--bg-frame)",
         "bg-warm":        "var(--bg-warm)",
+
+        /* Semantic UI chrome — pairs with the .hl-* component classes. */
+        "panel-border":   "var(--panel-border)",
+        "card-bg":        "var(--card-bg)",
+        "card-border":    "var(--card-border)",
+        "well-bg":        "var(--well-bg)",
+        "well-border":    "var(--well-border)",
+        "on-panel":       "var(--on-panel)",
+        "on-panel-dim":   "var(--on-panel-dim)",
+        "on-panel-faint": "var(--on-panel-faint)",
+        "on-panel-label": "var(--on-panel-label)",
+        "on-dark":        "var(--on-dark)",
+        "on-dark-dim":    "var(--on-dark-dim)",
+        "on-dark-faint":  "var(--on-dark-faint)",
+        "on-dark-label":  "var(--on-dark-label)",
       },
       fontSize: {
         micro:    ["var(--text-micro)",   { lineHeight: "var(--leading-tight)" }],

@@ -23,8 +23,8 @@ export default function CastlePanel({ state, dispatch }) {
   const inventory = state?.inventory ?? {};
 
   return (
-    <div className="bg-[#b28b62]/15 border border-[#b28b62]/50 rounded-xl p-3 flex flex-col gap-2">
-      <div className="font-bold text-[12px] text-[#3a2715] tracking-wide">🏰 Castle Needs</div>
+    <div className="hl-well">
+      <div className="hl-section-label">🏰 Castle Needs</div>
       {Object.entries(CASTLE_NEEDS).map(([key, need]) => {
         const value = contributed[key] ?? 0;
         const have = inventory[need.resource] ?? 0;
@@ -38,27 +38,23 @@ export default function CastlePanel({ state, dispatch }) {
         const canContributeAll = wired && have >= 1 && remaining > 0;
         const allAmount = Math.min(have, remaining);
         return (
-          <div key={key} className="bg-[#f6efe0] border-2 border-[#c5a87a] rounded-lg p-2 flex flex-col gap-1.5">
+          <div key={key} className="hl-card gap-1.5">
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold text-[#3a2715] flex items-center gap-1">
+              <span className="hl-card-title flex items-center gap-1">
                 <Icon iconKey={need.resource} size={14} />
                 {need.label}
               </span>
-              <span className="text-[10px] text-[#8a785e]">{value} / {need.target}</span>
+              <span className="hl-card-meta tabular-nums">{value} / {need.target}</span>
             </div>
             <ProgressBar value={value} max={need.target} />
             {wired && (
               <div className="flex items-center justify-between gap-2 mt-0.5">
-                <span className="text-[10px] text-[#8a785e]">Have: {have}</span>
+                <span className="hl-card-meta">Have: {have}</span>
                 <div className="flex gap-1">
                   <button
                     disabled={!canContribute1}
                     onClick={() => dispatch({ type: "CASTLE/CONTRIBUTE", payload: { key, amount: 1 } })}
-                    className={`text-[10px] font-bold px-2 py-1 rounded-lg border-2 ${
-                      canContribute1
-                        ? "bg-[#91bf24] border-[#6a9010] text-white hover:bg-[#a3d028]"
-                        : "bg-[#ccc] border-[#aaa] text-[#666] cursor-not-allowed"
-                    }`}
+                    className="hl-btn hl-btn--sm hl-btn--go"
                   >
                     Contribute 1
                   </button>
@@ -66,11 +62,7 @@ export default function CastlePanel({ state, dispatch }) {
                     <button
                       disabled={!canContributeAll}
                       onClick={() => dispatch({ type: "CASTLE/CONTRIBUTE", payload: { key, amount: allAmount } })}
-                      className={`text-[10px] font-bold px-2 py-1 rounded-lg border-2 ${
-                        canContributeAll
-                          ? "bg-[#c8923a] border-[#8a5e1e] text-white hover:bg-[#dba450]"
-                          : "bg-[#ccc] border-[#aaa] text-[#666] cursor-not-allowed"
-                      }`}
+                      className="hl-btn hl-btn--sm hl-btn--primary"
                     >
                       All ({allAmount})
                     </button>

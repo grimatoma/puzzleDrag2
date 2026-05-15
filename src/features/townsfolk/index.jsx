@@ -16,15 +16,15 @@ export default function TownsfolkScreen({ state, dispatch }) {
   const tab = TABS.includes(requested) ? requested : "workers";
   const setTab = (next) => dispatch({ type: "SET_VIEW_PARAMS", params: { tab: next } });
   return (
-    <div className="absolute inset-0 bg-gradient-to-b from-[#ead7b3] to-[#d4b585] border-[3px] border-[#b28b62] flex flex-col overflow-hidden">
-      <div className="flex items-center justify-between px-3 py-2 flex-shrink-0 border-b border-[#b28b62]/40">
-        <span className="font-bold text-[14px] text-[#3a2715]">👥 Townsfolk</span>
+    <div className="hl-panel">
+      <div className="hl-panel-header">
+        <span className="hl-panel-title">👥 Townsfolk</span>
         <button
           onClick={() => dispatch({ type: "SET_VIEW", view: "town" })}
-          className="w-7 h-7 rounded-lg bg-[#f6efe0] border-2 border-[#b28b62] grid place-items-center text-[#6a4b31] font-bold text-[14px]"
+          className="hl-panel-close"
         >✕</button>
       </div>
-      <div className="flex gap-1.5 px-3 pt-2 flex-shrink-0 flex-wrap">
+      <div className="hl-tabs">
         {[
           { key: "workers", label: "Workers", icon: "ui_build" },
           { key: "quests", label: "Quests", icon: "ui_clipboard" },
@@ -35,7 +35,7 @@ export default function TownsfolkScreen({ state, dispatch }) {
           <button
             key={item.key}
             onClick={() => setTab(item.key)}
-            className={`flex-1 min-w-[80px] py-1.5 rounded-lg text-[11px] font-bold border-2 ${tab === item.key ? "bg-[#8a4a26] border-[#6b3114] text-white" : "bg-[#f6efe0]/80 border-[#b28b62] text-[#5b3b20]"}`}
+            className={`hl-tab flex-1 min-w-[80px] ${tab === item.key ? "is-active" : ""}`}
           >
             <div className="flex items-center justify-center gap-1">
               <Icon iconKey={item.icon} size={12} className={tab === item.key ? "" : "opacity-70"} />
@@ -44,7 +44,7 @@ export default function TownsfolkScreen({ state, dispatch }) {
           </button>
         ))}
       </div>
-      <div className="flex-1 min-h-0 overflow-y-auto px-3 py-3">
+      <div className="hl-panel-body">
         <div className="max-w-[640px] mx-auto">
           {tab === "workers" ? (
             <WorkersPanel state={state} dispatch={dispatch} />

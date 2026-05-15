@@ -160,7 +160,7 @@ function SettingsTab({ settings = {}, dispatch }) {
       >
         ← Back
       </button>
-      <div className="text-[13px] font-bold text-center" style={{ color: '#7a5a38' }}>
+      <div className="hl-section-label text-center">
         Audio
       </div>
       <div className="flex flex-col gap-2">

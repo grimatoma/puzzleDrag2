@@ -110,6 +110,52 @@
   --motion-fast:      120ms;
   --motion-med:       240ms;
   --motion-slow:      600ms;
+
+  /* ════════════════════════════════════════════════════════════════════
+   * SEMANTIC UI CHROME — single source of truth for the panel/card system.
+   *
+   * Feature panels are LIGHT parchment with DARK ink text. The contrast
+   * bug came from dark `ink` text sitting on dark brown panels; the fix
+   * is one consistent light surface so ink always reads. Cards are paper
+   * (a shade lighter, raised); wells are a brown tint (sunk).
+   *
+   * The `.hl-*` classes in components.css bind text colour to surface so
+   * callers never repeat the mismatch.
+   * ════════════════════════════════════════════════════════════════════ */
+
+  /* ── Light feature panel (full-screen views) ─────────────────────── */
+  --panel-top:           #ead7b3;   /* parchment, gradient start */
+  --panel-bottom:        #d4b585;   /* gradient end              */
+  --panel-border:        #b28b62;   /* iron frame                */
+  --panel-toolbar:       rgba(178, 139, 98, 0.14);  /* search/filter strip */
+  --panel-divider:       rgba(178, 139, 98, 0.40);
+
+  /* Arcane variant (Portal) — light panel, violet frame + accents. */
+  --panel-arcane-top:    #ddd0ea;
+  --panel-arcane-bottom: #c4b2dc;
+  --panel-arcane-border: #8a6aa8;
+
+  /* ── Inset wells (sub-sections sunk into a panel) ────────────────── */
+  --well-bg:             rgba(120, 85, 50, 0.16);
+  --well-border:         rgba(120, 85, 50, 0.30);
+
+  /* ── Light cards (rows / tiles inside panels & dialogs) ──────────── */
+  --card-bg:             #faf0dd;
+  --card-bg-hover:       #fff7e6;
+  --card-border:         #c8a482;
+  --card-border-strong:  #b28b62;
+
+  /* ── Text on LIGHT chrome (panels, cards, dialogs) ───────────────── */
+  --on-panel:            #3a2715;   /* primary  (alias of --ink)      */
+  --on-panel-dim:        #5b3b20;   /* secondary                      */
+  --on-panel-faint:      #7a5638;   /* tertiary                       */
+  --on-panel-label:      #8a4a26;   /* section labels — warm accent   */
+
+  /* ── Text on DARK chrome (HUD, dark dialogs, board) ──────────────── */
+  --on-dark:             #f4e6c5;   /* primary                        */
+  --on-dark-dim:         #d8c3a0;   /* secondary                      */
+  --on-dark-faint:       #b39b76;   /* tertiary                       */
+  --on-dark-label:       #eccb7c;   /* section labels / soft accent   */
 }
 
 /*

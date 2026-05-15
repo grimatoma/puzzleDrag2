@@ -107,10 +107,10 @@ export default function BoonScreen({ state, dispatch }) {
       <div className="max-w-[760px] mx-auto px-4 py-5">
         <div className="flex items-center justify-between mb-3">
           <div>
-            <div className="font-bold text-[22px] text-[#3a2715] flex items-center gap-2">
+            <div className="hl-title flex items-center gap-2">
               <Icon iconKey="ui_star" size={22} /> Boons
             </div>
-            <div className="text-[12px] text-[#6a4b31]">Spend Embers (Coexist) or Core Ingots (Drive Out) on per-path perks earned from facing keepers.</div>
+            <div className="hl-text-dim text-caption">Spend Embers (Coexist) or Core Ingots (Drive Out) on per-path perks earned from facing keepers.</div>
           </div>
           <button
             type="button"
@@ -121,7 +121,7 @@ export default function BoonScreen({ state, dispatch }) {
             ← Back to Town
           </button>
         </div>
-        <div className="flex items-center gap-3 mb-3 text-[13px] font-bold text-[#3a2715]">
+        <div className="flex items-center gap-3 mb-3 text-body font-bold text-on-panel">
           <span>You hold:</span>
           <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 border" style={{ background: "#f2d98a", borderColor: "#b09a50" }}>
             <DesignIcon iconKey="design.currency.ember" size={14} />
@@ -151,13 +151,13 @@ export default function BoonScreen({ state, dispatch }) {
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div className="flex flex-col gap-2">
-            <div className="font-bold text-[14px] text-[#1f3a10]">{PATH_LABELS.coexist}</div>
+            <div className="hl-heading">{PATH_LABELS.coexist}</div>
             {coexistList.map((b) => (
               <BoonCard key={b.id} state={state} dispatch={dispatch} boon={{ ...b, catalogKey: `${type}_coexist` }} />
             ))}
           </div>
           <div className="flex flex-col gap-2">
-            <div className="font-bold text-[14px] text-[#3a2715]">{PATH_LABELS.driveout}</div>
+            <div className="hl-heading">{PATH_LABELS.driveout}</div>
             {driveoutList.map((b) => (
               <BoonCard key={b.id} state={state} dispatch={dispatch} boon={{ ...b, catalogKey: `${type}_driveout` }} />
             ))}

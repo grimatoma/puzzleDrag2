@@ -119,19 +119,19 @@ export default function InventoryScreen({ state, dispatch }) {
   const compact = compactOverride != null ? compactOverride : isPhone;
 
   return (
-    <div className="absolute inset-0 z-10 bg-gradient-to-b from-[#ead7b3] to-[#d4b585] border-[3px] border-[#b28b62] flex flex-col overflow-hidden">
-      <div className="flex items-center justify-between px-3 py-2 flex-shrink-0 border-b border-[#b28b62]/40">
-        <span className="font-bold text-[14px] text-[#3a2715]">Inventory</span>
+    <div className="hl-panel z-10">
+      <div className="hl-panel-header">
+        <span className="hl-panel-title">Inventory</span>
         <button
           type="button"
           onClick={() => dispatch({ type: "SET_VIEW", view: "town" })}
-          className="w-7 h-7 rounded-lg bg-[#f6efe0] border-2 border-[#b28b62] grid place-items-center text-[#6a4b31] font-bold text-[14px]"
+          className="hl-panel-close"
         >✕</button>
       </div>
 
-      <div className="flex flex-col gap-2 px-3 pt-3 pb-2 flex-shrink-0 border-b border-[#b28b62]/30 bg-[#b28b62]/12">
+      <div className="hl-panel-toolbar flex-col !items-stretch gap-2 pt-3 pb-2">
         <div className="relative flex items-center">
-          <span className="absolute left-2.5 text-[#8a6a4a] pointer-events-none">
+          <span className="absolute left-2.5 text-on-panel-faint pointer-events-none">
             <SearchIcon />
           </span>
           <input
@@ -140,14 +140,14 @@ export default function InventoryScreen({ state, dispatch }) {
             onChange={(e) => setQueryInput(e.target.value)}
             placeholder="Search resources..."
             aria-label="Search resources"
-            className="w-full h-9 pl-8 pr-8 rounded-md bg-[#f6efe0] border border-[#b28b62] text-[13px] text-[#3a2715] placeholder:text-[#8a6a4a] focus:outline-none focus:ring-2 focus:ring-[#d6612a]/50"
+            className="hl-input pl-8 pr-8"
           />
           {queryInput && (
             <button
               type="button"
               onClick={() => setQueryInput("")}
               aria-label="Clear search"
-              className="absolute right-2 grid place-items-center w-6 h-6 text-[#6a4b31] hover:text-[#3a2715]"
+              className="absolute right-2 grid place-items-center w-6 h-6 text-on-panel-dim hover:text-on-panel"
             >
               <ClearIcon />
             </button>
@@ -175,7 +175,7 @@ export default function InventoryScreen({ state, dispatch }) {
           </div>
 
           <div className="flex items-center gap-1 ml-auto">
-            <span className="text-caption text-[#5b3b20] mr-1 hidden sm:inline">Sort</span>
+            <span className="text-caption text-on-panel-dim mr-1 hidden sm:inline">Sort</span>
             {SORTS.map((s) => {
               const active = sort === s.key;
               return (
@@ -186,7 +186,7 @@ export default function InventoryScreen({ state, dispatch }) {
                   size="sm"
                   onClick={() => setSort(s.key)}
                   aria-pressed={active}
-                  className={active ? "" : "text-[#3a2715] hover:bg-[#3a2715]/10"}
+                  className={active ? "" : "text-on-panel hover:bg-[#3a2715]/10"}
                 >
                   {s.label}
                 </Button>
@@ -200,7 +200,7 @@ export default function InventoryScreen({ state, dispatch }) {
                 onClick={() => setCompactOverride(!compact)}
                 aria-label={compact ? "Switch to grid view" : "Switch to list view"}
                 aria-pressed={compact}
-                className="text-[#3a2715] hover:bg-[#3a2715]/10 ml-1"
+                className="text-on-panel hover:bg-[#3a2715]/10 ml-1"
               >
                 {compact ? "Grid" : "List"}
               </Button>
@@ -209,7 +209,7 @@ export default function InventoryScreen({ state, dispatch }) {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-3 py-3">
+      <div className="hl-panel-body">
         <div className="max-w-[640px] mx-auto flex flex-col gap-3">
           <InventoryGrid
             inventory={state.inventory}

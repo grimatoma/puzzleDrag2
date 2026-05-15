@@ -27,9 +27,9 @@ class FeatureErrorBoundary extends React.Component {
   render() {
     if (this.state.error) {
       return (
-        <div className="bg-[#3a2715]/90 border border-[#c5a87a] rounded-xl p-4 text-[#f8e7c6] text-[13px] m-4">
-          <div className="font-bold mb-1">This panel hit an error.</div>
-          <div className="opacity-80">The rest of the game is still running. Try closing this panel and reopening.</div>
+        <div className="hl-card m-4">
+          <div className="hl-card-title mb-1">This panel hit an error.</div>
+          <div className="hl-card-meta">The rest of the game is still running. Try closing this panel and reopening.</div>
         </div>
       );
     }
@@ -41,7 +41,7 @@ class FeatureErrorBoundary extends React.Component {
 
 export function SidePanel({ state, dispatch, chainInfo }) {
   return (
-    <div className="bg-gradient-to-b from-[#ead7b3] to-[#d4b585] border-[3px] border-[#b28b62] rounded-2xl p-3 flex flex-col gap-3 overflow-hidden h-full min-h-0">
+    <div className="hl-surface rounded-2xl p-3 flex flex-col gap-3 overflow-hidden h-full min-h-0">
       {chainInfo && (
         <div className="bg-[#2b2218]/90 border border-[#ffd248] rounded-xl px-3 py-2 text-[#ffd248] font-bold text-[13px] text-center flex-shrink-0">
           <div>

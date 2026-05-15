@@ -43,17 +43,7 @@ function WorkerRow({ worker, count, coins, dispatch }) {
   const canHire = coins >= cost && count < worker.maxCount;
   const canFire = count > 0;
   return (
-    <div
-      style={{
-        display: "flex",
-        gap: 10,
-        alignItems: "center",
-        background: "#fffaf1",
-        border: "2px solid #d8c8a8",
-        borderRadius: 12,
-        padding: "8px 10px",
-      }}
-    >
+    <div className="hl-card !flex-row items-center gap-2.5 !p-2">
       <div
         style={{
           width: 38,
@@ -70,32 +60,18 @@ function WorkerRow({ worker, count, coins, dispatch }) {
         <Icon iconKey={worker.iconKey} size={28} />
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontWeight: 700, color: "#3a2715", fontSize: 14 }}>
+        <div className="hl-card-title">
           {worker.name}
-          <span
-            style={{
-              marginLeft: 8,
-              fontSize: 11,
-              color: "#7a5a3a",
-              fontWeight: 600,
-            }}
-          >
+          <span className="hl-card-meta tabular-nums" style={{ marginLeft: 8, fontWeight: 600 }}>
             {count} / {worker.maxCount}
           </span>
         </div>
-        <div
-          style={{
-            fontSize: 11,
-            color: "#6a4b31",
-            lineHeight: 1.3,
-            marginTop: 2,
-          }}
-        >
+        <div className="hl-card-meta" style={{ lineHeight: 1.3, marginTop: 2 }}>
           {worker.description}
         </div>
         <div
+          className="text-micro"
           style={{
-            fontSize: 10,
             color: "#3a7a3a",
             fontWeight: 600,
             marginTop: 2,
@@ -153,14 +129,7 @@ export function WorkersPanel({ state, dispatch }) {
   const coins = state?.coins ?? 0;
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-      <div
-        style={{
-          fontSize: 12,
-          color: "#6a4b31",
-          lineHeight: 1.4,
-          padding: "0 4px",
-        }}
-      >
+      <div className="hl-text-dim" style={{ lineHeight: 1.4, padding: "0 4px" }}>
         Anonymous, stackable workers. Each hire reduces the listed chain
         (or recipe input) by a whole tile, stacking up to the max count.
       </div>

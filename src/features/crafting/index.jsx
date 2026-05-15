@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { RECIPES, BIOMES, ITEMS } from "../../constants.js";
+import { RECIPES, ITEMS } from "../../constants.js";
 import { DECORATIONS } from "../decorations/data.js";
 import IconCanvas, { hasIcon } from "../../ui/IconCanvas.jsx";
 import { locBuilt } from "../../locBuilt.js";
@@ -15,17 +15,6 @@ function LockGlyph({ size = 12 }) {
       <path d="M8 11V8a4 4 0 0 1 8 0v3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
     </svg>
   );
-}
-
-const ALL_RESOURCES = [
-  ...BIOMES.farm.resources,
-  ...BIOMES.mine.resources,
-];
-
-function colorForKey(key) {
-  const r = ALL_RESOURCES.find((x) => x.key === key);
-  if (!r) return "#888";
-  return "#" + r.color.toString(16).padStart(6, "0");
 }
 
 const STATION_META = {
@@ -62,9 +51,9 @@ function RecipeCard({ recipeKey, recipe, inventory, built, level, craftedTotals,
   const itemName = itemDef.label || recipe.item;
 
   return (
-    <div className="bg-[#f6efe0] border-2 border-[#c5a87a] rounded-xl p-2 flex items-center gap-2 relative" style={{ minHeight: 72 }}>
+    <div className="hl-card !flex-row !border-2 items-center gap-2 relative" style={{ minHeight: 72 }}>
       {timesBuilt > 0 && (
-        <div className="absolute top-1 right-1 text-[10px] text-[#8a785e] font-bold">×{timesBuilt}</div>
+        <div className="absolute top-1 right-1 text-[10px] text-on-panel-faint font-bold">×{timesBuilt}</div>
       )}
 
       <div
@@ -76,31 +65,25 @@ function RecipeCard({ recipeKey, recipe, inventory, built, level, craftedTotals,
 
       <div className="flex flex-col gap-0.5 flex-1 min-w-0">
         <div className="flex items-center gap-1.5 flex-wrap">
-          <span className="font-bold text-[11px] text-[#3a2715] leading-tight">{itemName}</span>
+          <span className="hl-card-title text-[11px] leading-tight">{itemName}</span>
           {recipe.tier === 2 && (
-            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full text-white bg-[#c8923a]">T2</span>
+            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-gold text-[#3a2710]">T2</span>
           )}
         </div>
         {recipe.desc && (
-          <p className="text-xs text-stone-500 leading-tight">{recipe.desc}</p>
+          <p className="hl-card-meta text-xs leading-tight">{recipe.desc}</p>
         )}
 
         <div className="flex flex-wrap gap-1 mt-0.5">
           {Object.entries(recipe.inputs).map(([res, need]) => {
             const have = (inventory || {})[res] || 0;
             const enough = have >= need;
-            const bg = colorForKey(res);
             return (
               <span
                 key={res}
-                className="text-[10px] font-bold px-1.5 py-0.5 rounded text-white"
-                style={{
-                  backgroundColor: bg,
-                  opacity: enough ? 1 : 0.45,
-                  border: "1px solid rgba(255,255,255,0.3)",
-                }}
+                className={`hl-chip ${enough ? "hl-chip--ok" : "hl-chip--missing"}`}
               >
-                {res} ×{need}
+                {ITEMS[res]?.label || res} ×{need}
               </span>
             );
           })}
@@ -109,19 +92,15 @@ function RecipeCard({ recipeKey, recipe, inventory, built, level, craftedTotals,
 
       <div className="flex flex-col items-end gap-1 flex-shrink-0">
         {itemDef.value != null && itemDef.kind !== "tool"
-          ? <span className="text-[10px] font-bold text-[#c8923a]">+{itemDef.value}◉</span>
+          ? <span className="text-[10px] font-bold text-[#a8722a]">+{itemDef.value}◉</span>
           : itemDef.kind === "tool"
-            ? <span className="text-[10px] font-bold text-[#6a8a3a]">→ {itemName}</span>
+            ? <span className="text-[10px] font-bold text-[#4f6b3a]">→ {itemName}</span>
             : null
         }
         <button
           disabled={!craftable}
           onClick={() => dispatch({ type: "CRAFTING/CRAFT_RECIPE", payload: { key: recipeKey }, recipeKey })}
-          className={`text-[10px] font-bold px-2.5 py-1 rounded-lg border-2 transition-colors ${
-            craftable
-              ? "bg-[#91bf24] border-[#6a9010] text-white hover:bg-[#a3d028]"
-              : "bg-[#ccc] border-[#aaa] text-[#666] cursor-not-allowed"
-          }`}
+          className="hl-btn hl-btn--sm hl-btn--go"
         >
           {!levelOk ? <span className="inline-flex items-center gap-1"><LockGlyph size={10} /> L3</span> : !stationOk ? "No station" : "CRAFT"}
         </button>
@@ -130,11 +109,7 @@ function RecipeCard({ recipeKey, recipe, inventory, built, level, craftedTotals,
           disabled={!craftable}
           onClick={() => dispatch({ type: "CRAFTING/QUEUE_RECIPE", payload: { key: recipeKey }, recipeKey })}
           title="Queue — ready in 4h (or skip with a gem)"
-          className={`text-[9px] font-bold px-2 py-0.5 rounded-md border ${
-            craftable
-              ? "bg-[#e8d4a8] border-[#b08040] text-[#6a4a18] hover:bg-[#f0e0bc]"
-              : "bg-[#ddd] border-[#bbb] text-[#888] cursor-not-allowed"
-          }`}
+          className="hl-btn hl-btn--sm hl-btn--ghost"
         >
           ⏳ Queue 4h
         </button>
@@ -160,29 +135,29 @@ function CraftQueueStrip({ queue, gems, dispatch }) {
     return h > 0 ? `${h}h ${m}m` : `${m}m`;
   };
   return (
-    <div className="bg-[#b28b62]/20 border-b border-[#b28b62]/40 px-3 py-2">
-      <div className="text-[10px] font-bold uppercase tracking-widest text-[#5b3b20] mb-1">In the workshop · {queue.length}</div>
+    <div className="bg-[var(--panel-toolbar)] border-b border-[var(--panel-divider)] px-3 py-2">
+      <div className="hl-section-label mb-1">In the workshop · {queue.length}</div>
       <div className="flex flex-col gap-1">
         {queue.map((entry, i) => {
           const recipe = RECIPES[entry.key];
           const itemDef = ITEMS[recipe?.item] || {};
           const ready = (entry.readyAt ?? Infinity) <= now;
           return (
-            <div key={`${entry.key}-${entry.queuedAt}-${i}`} className="flex items-center gap-2 bg-[#f6efe0] rounded-lg px-2 py-1">
+            <div key={`${entry.key}-${entry.queuedAt}-${i}`} className="flex items-center gap-2 bg-[var(--card-bg)] border border-[var(--card-border)] rounded-lg px-2 py-1">
               <Icon iconKey={recipe?.item || entry.key} size={20} />
-              <span className="text-[11px] font-bold text-[#3a2715] flex-1 min-w-0 truncate">{itemDef.label ?? recipe?.item ?? entry.key}</span>
-              <span className={`text-[10px] font-bold ${ready ? "text-[#3a7a3a]" : "text-[#8a785e]"}`}>{fmt((entry.readyAt ?? 0) - now)}</span>
+              <span className="text-[11px] font-bold text-on-panel flex-1 min-w-0 truncate">{itemDef.label ?? recipe?.item ?? entry.key}</span>
+              <span className={`text-[10px] font-bold ${ready ? "text-[#3a7a3a]" : "text-on-panel-faint"}`}>{fmt((entry.readyAt ?? 0) - now)}</span>
               <button
                 disabled={!ready}
                 onClick={() => dispatch({ type: "CRAFTING/CLAIM_CRAFT", payload: { idx: i } })}
-                className={`text-[10px] font-bold px-2 py-0.5 rounded-md border-2 ${ready ? "bg-[#91bf24] border-[#6a9010] text-white" : "bg-[#ccc] border-[#aaa] text-[#666] cursor-not-allowed"}`}
+                className="hl-btn hl-btn--sm hl-btn--go"
               >Claim</button>
               {!ready && (
                 <button
                   disabled={(gems ?? 0) < 1}
                   onClick={() => dispatch({ type: "CRAFTING/SKIP_CRAFT", payload: { idx: i } })}
                   title={(gems ?? 0) < 1 ? "Need a gem" : "Skip with a gem"}
-                  className={`text-[10px] font-bold px-2 py-0.5 rounded-md border ${(gems ?? 0) >= 1 ? "bg-[#bfe0ff] border-[#5a8acc] text-[#1a3a5a]" : "bg-[#ddd] border-[#bbb] text-[#888] cursor-not-allowed"}`}
+                  className="hl-btn hl-btn--sm hl-btn--ghost"
                 ><span className="inline-flex items-center gap-1">Skip <DesignIcon iconKey="design.currency.gem" size={10} /></span></button>
               )}
             </div>
@@ -209,9 +184,9 @@ function DecorationCard({ decor, state, dispatch }) {
   const count = locBuilt(state).decorations?.[decor.id] ?? 0;
   const decorIconKey = `decor_${decor.id}`;
   return (
-    <div className="bg-[#f6efe0] border-2 border-[#c5a87a] rounded-xl p-2 flex items-center gap-2 relative" style={{ minHeight: 72 }}>
+    <div className="hl-card !flex-row !border-2 items-center gap-2 relative" style={{ minHeight: 72 }}>
       {count > 0 && (
-        <div className="absolute top-1 right-1 text-[10px] text-[#8a785e] font-bold">×{count}</div>
+        <div className="absolute top-1 right-1 text-[10px] text-on-panel-faint font-bold">×{count}</div>
       )}
       {hasIcon(decorIconKey) && (
         <div
@@ -222,25 +197,21 @@ function DecorationCard({ decor, state, dispatch }) {
         </div>
       )}
       <div className="flex flex-col gap-0.5 flex-1 min-w-0">
-        <span className="font-bold text-[11px] text-[#3a2715] leading-tight">{decor.name}</span>
+        <span className="hl-card-title text-[11px] leading-tight">{decor.name}</span>
         <div className="flex flex-wrap gap-1 mt-0.5">
           {Object.entries(decor.cost).map(([k, v]) => (
-            <span key={k} className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-[#3a2715]/60 text-[#f8e7c6] border border-[#e2c19b]/30">
+            <span key={k} className="hl-cost-tag">
               {v} {k === "coins" ? "◉" : k}
             </span>
           ))}
         </div>
       </div>
       <div className="flex flex-col items-end gap-1 flex-shrink-0">
-        <span className="text-[10px] font-bold text-[#9a6abf]">+{decor.influence} influence</span>
+        <span className="text-[10px] font-bold text-[#7a3a8a]">+{decor.influence} influence</span>
         <button
           disabled={!affordable}
           onClick={() => dispatch({ type: "BUILD_DECORATION", payload: { id: decor.id } })}
-          className={`text-[10px] font-bold px-2.5 py-1 rounded-lg border-2 transition-colors ${
-            affordable
-              ? "bg-[#91bf24] border-[#6a9010] text-white hover:bg-[#a3d028]"
-              : "bg-[#ccc] border-[#aaa] text-[#666] cursor-not-allowed"
-          }`}
+          className="hl-btn hl-btn--sm hl-btn--go"
         >
           Build
         </button>
@@ -285,13 +256,13 @@ export default function CraftingScreen({ state, dispatch }) {
   const meta = STATION_META[activeTab];
 
   return (
-    <div className="absolute inset-0 bg-gradient-to-b from-[#ead7b3] to-[#d4b585] border-[3px] border-[#b28b62] flex flex-col overflow-hidden">
+    <div className="hl-panel">
       {/* Header */}
-      <div className="flex items-center justify-between px-3 py-2 flex-shrink-0 border-b border-[#b28b62]/40">
-        <span className="font-bold text-[14px] text-[#3a2715]">🔨 Crafting</span>
+      <div className="hl-panel-header">
+        <span className="hl-panel-title">🔨 Crafting</span>
         <button
           onClick={() => dispatch({ type: "SET_VIEW", view: "town" })}
-          className="w-7 h-7 rounded-lg bg-[#f6efe0] border-2 border-[#b28b62] grid place-items-center text-[#6a4b31] font-bold text-[14px]"
+          className="hl-panel-close"
         >
           ✕
         </button>
@@ -301,7 +272,7 @@ export default function CraftingScreen({ state, dispatch }) {
       <CraftQueueStrip queue={state.craftQueue} gems={state.gems} dispatch={dispatch} />
 
       {/* Station tabs */}
-      <div className="flex gap-1 px-2 py-2 flex-shrink-0 overflow-x-auto">
+      <div className="hl-tabs !flex-nowrap overflow-x-auto">
         {STATION_ORDER.map((s) => {
           const m = STATION_META[s];
           const isActive = activeTab === s;
@@ -310,11 +281,7 @@ export default function CraftingScreen({ state, dispatch }) {
             <button
               key={s}
               onClick={() => setActiveTab(s)}
-              className={`flex-shrink-0 flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg text-[10px] font-bold border-2 transition-colors ${
-                isActive
-                  ? "text-white border-transparent"
-                  : "bg-[#f6efe0]/80 border-[#b28b62] text-[#5b3b20] hover:bg-[#f6efe0]"
-              }`}
+              className={`hl-tab flex-shrink-0 ${isActive ? "is-active" : ""}`}
               style={isActive ? { backgroundColor: m.bg, borderColor: "rgba(255,255,255,0.2)" } : {}}
             >
               <span style={{ width: 22, height: 22, display: "inline-grid", placeItems: "center" }}>
@@ -329,7 +296,7 @@ export default function CraftingScreen({ state, dispatch }) {
 
       {/* Content for active tab */}
       {activeTab === "decor" ? (
-        <div className="flex-1 overflow-y-auto p-2">
+        <div className="hl-panel-body !px-2">
           <div className="grid grid-cols-2 portrait:grid-cols-1 gap-2">
             {Object.values(DECORATIONS).map((decor) => (
               <DecorationCard key={decor.id} decor={decor} state={state} dispatch={dispatch} />
@@ -338,12 +305,12 @@ export default function CraftingScreen({ state, dispatch }) {
         </div>
       ) : !stationBuilt(built, activeTab) ? (
         <div className="flex-1 grid place-items-center px-4">
-          <p className="italic text-[#5b3b20]/80 text-[12px] text-center">
+          <p className="hl-empty">
             Build the {meta.label} in town to unlock these recipes.
           </p>
         </div>
       ) : (
-        <div className="flex-1 overflow-y-auto p-2">
+        <div className="hl-panel-body !px-2">
           <div className="grid grid-cols-2 portrait:grid-cols-1 gap-2">
             {stationRecipes.map(([key, recipe]) => (
               <RecipeCard
