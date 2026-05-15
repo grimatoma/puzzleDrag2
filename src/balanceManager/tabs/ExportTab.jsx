@@ -6,6 +6,8 @@ import { COLORS, SmallButton, Card } from "../shared.jsx";
 import {
   listSnapshots, saveSnapshot, loadSnapshot, deleteSnapshot,
 } from "../snapshots.js";
+import { draftDiff, summariseTotals } from "../diff.js";
+import balanceFile from "../../config/balance.json";
 
 function pruneEmpty(obj) {
   if (!obj || typeof obj !== "object") return obj;
@@ -47,6 +49,17 @@ export default function ExportTab({ draft, updateDraft }) {
   const [snapshotError, setSnapshotError] = useState("");
   const [snapshotsTick, setSnapshotsTick] = useState(0);
   const snapshots = useMemo(() => listSnapshots(), [snapshotsTick]);
+  const [diffOpen, setDiffOpen] = useState(new Set());
+  const diff = useMemo(() => draftDiff(balanceFile, draft), [draft]);
+  const diffSections = useMemo(() => Object.entries(diff.sections).sort(([a], [b]) => a.localeCompare(b)), [diff]);
+
+  const toggleSection = (name) => {
+    setDiffOpen((prev) => {
+      const next = new Set(prev);
+      if (next.has(name)) next.delete(name); else next.add(name);
+      return next;
+    });
+  };
 
   const pretty = useMemo(() => {
     const cleaned = pruneEmpty(draft);
@@ -178,6 +191,54 @@ export default function ExportTab({ draft, updateDraft }) {
             );
           })}
         </div>
+      </Card>
+
+      <Card title="Diff vs committed balance.json">
+        <div className="flex items-center gap-2 mb-2 flex-wrap">
+          <span className="text-[11px] font-bold uppercase tracking-wide" style={{ color: COLORS.inkSubtle }}>
+            {summariseTotals(diff.totals)}
+          </span>
+          {diff.totals.added > 0 && <span className="text-[11px] px-2 py-0.5 rounded-full font-bold" style={{ background: "rgba(90,158,75,0.16)", color: COLORS.greenDeep, border: `1px solid ${COLORS.greenDeep}55` }}>+{diff.totals.added}</span>}
+          {diff.totals.modified > 0 && <span className="text-[11px] px-2 py-0.5 rounded-full font-bold" style={{ background: "rgba(214,97,42,0.12)", color: COLORS.ember, border: `1px solid ${COLORS.ember}55` }}>~{diff.totals.modified}</span>}
+          {diff.totals.removed > 0 && <span className="text-[11px] px-2 py-0.5 rounded-full font-bold" style={{ background: "rgba(194,59,34,0.10)", color: COLORS.red, border: `1px solid ${COLORS.red}55` }}>−{diff.totals.removed}</span>}
+        </div>
+        {diffSections.length === 0 && (
+          <div className="text-[11px] italic" style={{ color: COLORS.inkSubtle }}>
+            Draft matches the committed file — nothing new to ship.
+          </div>
+        )}
+        {diffSections.map(([name, section]) => {
+          const open = diffOpen.has(name);
+          const counts = [
+            section.added.length && `+${section.added.length}`,
+            section.modified.length && `~${section.modified.length}`,
+            section.removed.length && `−${section.removed.length}`,
+          ].filter(Boolean).join(" ");
+          return (
+            <div key={name} className="border-2 rounded-lg mb-1.5 overflow-hidden"
+              style={{ borderColor: COLORS.border, background: COLORS.parchmentDeep }}>
+              <button onClick={() => toggleSection(name)}
+                className="w-full flex items-center justify-between px-3 py-1.5 text-left"
+                style={{ background: open ? "#fff5e6" : "transparent", color: COLORS.ink, cursor: "pointer", border: "none" }}>
+                <span className="font-bold text-[12px]">{open ? "▾" : "▸"} {name === "_root" ? "(top-level)" : name}</span>
+                <span className="text-[10px] font-mono" style={{ color: COLORS.inkSubtle }}>{counts}</span>
+              </button>
+              {open && (
+                <div className="px-3 py-2 text-[11px] font-mono" style={{ background: "#fff", borderTop: `1px solid ${COLORS.border}` }}>
+                  {section.added.map((e) => (
+                    <div key={`a-${e.key}`} style={{ color: COLORS.greenDeep }}>+ {e.key}</div>
+                  ))}
+                  {section.modified.map((e) => (
+                    <div key={`m-${e.key}`} style={{ color: COLORS.ember }}>~ {e.key}</div>
+                  ))}
+                  {section.removed.map((e) => (
+                    <div key={`r-${e.key}`} style={{ color: COLORS.red }}>− {e.key}</div>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
       </Card>
 
       <Card title="Export">
