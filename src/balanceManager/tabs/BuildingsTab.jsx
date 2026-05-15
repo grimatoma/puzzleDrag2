@@ -10,6 +10,7 @@ import {
 import AbilitiesEditor from "../AbilitiesEditor.jsx";
 import { BuildingIllustration } from "../../ui/Town.jsx";
 import Icon from "../../ui/Icon.jsx";
+import { analyseBuildingCosts } from "../buildingCosts.js";
 
 // Canonical cost-key list, derived from the live data (every biome resource +
 // the two currencies) — never hardcoded. Feeds the CostEditor's add picker.
@@ -21,6 +22,8 @@ const COST_KEYS = (() => {
 
 export default function BuildingsTab({ draft, updateDraft }) {
   const [search, setSearch] = useState("");
+  const [analysisOpen, setAnalysisOpen] = useState(false);
+  const analysis = useMemo(() => analyseBuildingCosts(), []);
 
   const filtered = useMemo(
     () => BUILDINGS.filter((b) => {
@@ -47,8 +50,37 @@ export default function BuildingsTab({ draft, updateDraft }) {
         <div className="flex-1">
           <SearchBar value={search} onChange={setSearch} placeholder="Filter buildings…" />
         </div>
+        <SmallButton onClick={() => setAnalysisOpen((v) => !v)}>
+          {analysisOpen ? "Hide" : "Show"} cost summary
+        </SmallButton>
         <Pill>{filtered.length} of {BUILDINGS.length}</Pill>
       </div>
+
+      {analysisOpen && (
+        <Card title="Total town cost — every building summed">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-3">
+            <CostStat label="Coins" value={analysis.totals.coins.toLocaleString()} accent="warm" />
+            <CostStat label="Runes" value={analysis.totals.runes} accent="cool" />
+            <CostStat label="Embers" value={analysis.totals.embers} accent="warm" />
+            <CostStat label="Core ingots" value={analysis.totals.coreIngots} accent="cool" />
+          </div>
+          <div className="text-[10px] uppercase tracking-wide font-bold mb-1" style={{ color: COLORS.inkSubtle }}>
+            Resources demanded ({analysis.perResource.length})
+          </div>
+          <div className="flex flex-col gap-1.5">
+            {analysis.perResource.map((r) => (
+              <div key={r.key} className="flex items-center gap-2 text-[11px]" style={{ color: COLORS.ink }}>
+                <Icon iconKey={r.key} size={14} />
+                <span className="font-bold" style={{ minWidth: 130 }}>{r.label}</span>
+                <span className="font-mono" style={{ color: COLORS.emberDeep, minWidth: 60 }}>{r.qty.toLocaleString()}</span>
+                <span className="text-[10px] italic" style={{ color: COLORS.inkSubtle }}>
+                  used by {r.usedBy.length} building{r.usedBy.length === 1 ? "" : "s"}
+                </span>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
         {filtered.map((b) => {
@@ -222,6 +254,22 @@ function CostEditor({ cost, onChange }) {
         onSelect={(k) => updateCost(k, 1)}
         gridClass="grid-cols-2 md:grid-cols-3"
       />
+    </div>
+  );
+}
+
+
+function CostStat({ label, value, accent }) {
+  const tone = accent === "warm"
+    ? { bg: "#fff5e6", fg: COLORS.ember, border: COLORS.ember }
+    : { bg: "#eef6ea", fg: COLORS.greenDeep, border: COLORS.greenDeep };
+  return (
+    <div
+      className="flex flex-col items-center justify-center px-2 py-2 rounded-lg border-2"
+      style={{ background: tone.bg, borderColor: `${tone.border}55` }}
+    >
+      <div className="text-[18px] font-bold" style={{ color: tone.fg }}>{value}</div>
+      <div className="text-[10px] uppercase tracking-wide font-bold text-center" style={{ color: COLORS.inkSubtle }}>{label}</div>
     </div>
   );
 }
