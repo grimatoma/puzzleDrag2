@@ -4,7 +4,8 @@
 import { useState, useMemo, useEffect, useRef, memo } from "react";
 import C2S from "canvas2svg";
 import { ICON_REGISTRY } from "../../textures/iconRegistry.js";
-import { COLORS, SearchBar } from "../shared.jsx";
+import { COLORS, SearchBar, SmallButton, Pill } from "../shared.jsx";
+import { auditIconCoverage, coverageRatio } from "../iconCoverage.js";
 
 // Derive category buckets from key prefixes (everything before the first "_").
 // Keys with no underscore fall into "other".
@@ -209,6 +210,9 @@ export default function IconsTab() {
   const [category, setCategory] = useState("all");
   const [copiedKey, setCopiedKey] = useState(null);
   const [mode, setMode] = useState("canvas"); // "canvas" | "svg"
+  const [coverageOpen, setCoverageOpen] = useState(false);
+  const coverage = useMemo(() => auditIconCoverage(), []);
+  const coveragePct = Math.round(coverageRatio(coverage) * 100);
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
@@ -227,6 +231,43 @@ export default function IconsTab() {
 
   return (
     <div className="flex flex-col gap-3 h-full">
+      {/* Coverage audit — surfaces ITEMS entries whose iconKey isn't in
+          the registry (silent placeholder fallback in-game). */}
+      <div className="rounded-lg border-2 p-2 flex items-center gap-2 flex-shrink-0"
+        style={{ background: COLORS.parchmentDeep, borderColor: COLORS.border }}>
+        <span className="text-[11px] font-bold uppercase tracking-wide" style={{ color: COLORS.inkSubtle }}>
+          Item icon coverage
+        </span>
+        <Pill color="#fff" bg={coverage.missing.length === 0 ? COLORS.greenDeep : COLORS.ember}>
+          {coveragePct}% · {coverage.ok.length}/{coverage.total}
+        </Pill>
+        {coverage.missing.length > 0 && (
+          <span className="text-[11px]" style={{ color: COLORS.inkLight }}>
+            {coverage.missing.length} item{coverage.missing.length === 1 ? "" : "s"} have no icon — silent placeholder in-game.
+          </span>
+        )}
+        {coverage.missing.length > 0 && (
+          <SmallButton className="ml-auto" onClick={() => setCoverageOpen((v) => !v)}>
+            {coverageOpen ? "Hide" : "Show"} missing
+          </SmallButton>
+        )}
+      </div>
+      {coverageOpen && coverage.missing.length > 0 && (
+        <div className="rounded-lg border-2 p-2 flex-shrink-0" style={{ background: "#fff", borderColor: COLORS.border, maxHeight: 120, overflowY: "auto" }}>
+          <ul className="grid grid-cols-2 md:grid-cols-3 gap-x-3 gap-y-0.5 text-[10px]" style={{ color: COLORS.ink }}>
+            {coverage.missing.map((m) => (
+              <li key={m.id}>
+                <code style={{ color: COLORS.emberDeep }}>{m.id}</code>
+                {" · "}
+                <span style={{ color: COLORS.inkLight }}>{m.label}</span>
+                {" — wants "}
+                <code style={{ color: COLORS.inkSubtle }}>{m.iconKey}</code>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       {/* Controls row */}
       <div className="flex items-center gap-3 flex-wrap flex-shrink-0">
         <div className="flex-1 min-w-[160px] max-w-[320px]">
