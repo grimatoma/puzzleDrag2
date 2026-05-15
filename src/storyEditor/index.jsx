@@ -28,6 +28,7 @@ import PreviewModal from "./PreviewModal.jsx";
 import ValidationPanel from "./ValidationPanel.jsx";
 import PathsPanel from "./PathsPanel.jsx";
 import PlaythroughPanel from "./PlaythroughPanel.jsx";
+import FindReplacePanel from "./FindReplacePanel.jsx";
 import { renderStoryMarkdown } from "./exportMarkdown.js";
 import { useDraftHistory } from "../balanceManager/useDraftHistory.js";
 
@@ -664,6 +665,7 @@ export default function StoryEditorApp() {
   const validationBtnRef = useRef(null);
   const [pathsOpen, setPathsOpen] = useState(false);
   const [playthroughOpen, setPlaythroughOpen] = useState(false);
+  const [findOpen, setFindOpen] = useState(false);
   const [inspectorCollapsed, setInspectorCollapsed] = useState(() => readInspectorCollapsed());
   const [leftRailCollapsed, setLeftRailCollapsed] = useState(() => readLeftRailCollapsed());
   const [graphViewMode, setGraphViewMode] = useState(() => readGraphViewMode());
@@ -720,6 +722,7 @@ export default function StoryEditorApp() {
       if (!(e.metaKey || e.ctrlKey)) return;
       const key = e.key.toLowerCase();
       if (key === "s") { e.preventDefault(); saveDraft(); return; }
+      if (key === "f") { e.preventDefault(); setFindOpen((v) => !v); return; }
       const tag = e.target?.tagName;
       const isTextInput = tag === "INPUT" || tag === "TEXTAREA" || e.target?.isContentEditable;
       if (isTextInput) return;
@@ -1192,6 +1195,13 @@ export default function StoryEditorApp() {
                 color: canRedo ? C.inkLight : C.inkSubtle, opacity: canRedo ? 1 : 0.4,
                 font: "700 12px/1 system-ui", cursor: canRedo ? "pointer" : "not-allowed" }}>↷</button>
           </span>
+          <button onClick={() => setFindOpen(true)}
+            title="Find &amp; replace across every beat's title, lines, and choice labels (Cmd/Ctrl-F)"
+            aria-label="Open find and replace"
+            style={{ padding: "6px 12px", borderRadius: 7, border: `2px solid ${C.border}`,
+              background: C.parchmentDeep, color: C.inkLight, font: "700 11px/1 system-ui", cursor: "pointer" }}>
+            🔎 Find
+          </button>
           <button ref={validationBtnRef} onClick={openValidation}
             title={totalWarnings > 0 ? `${totalWarnings} validation issue${totalWarnings === 1 ? "" : "s"} found` : "No validation issues"}
             aria-label={`Open validation panel — ${totalWarnings} issues`}
@@ -1363,6 +1373,10 @@ export default function StoryEditorApp() {
         onJumpToBeat={(id) => selectAndCenter(id)} />
       <PlaythroughPanel open={playthroughOpen} draft={draft} anchorBeatId={selectedId}
         onClose={() => setPlaythroughOpen(false)}
+        onJumpToBeat={(id) => selectAndCenter(id)} />
+      <FindReplacePanel open={findOpen} draft={draft}
+        onClose={() => setFindOpen(false)}
+        onApply={(nextDraft) => setDraft(nextDraft, { commit: true })}
         onJumpToBeat={(id) => selectAndCenter(id)} />
     </div>
   );
