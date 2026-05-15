@@ -27,6 +27,7 @@ import Inspector from "./Inspector.jsx";
 import PreviewModal from "./PreviewModal.jsx";
 import ValidationPanel from "./ValidationPanel.jsx";
 import PathsPanel from "./PathsPanel.jsx";
+import PlaythroughPanel from "./PlaythroughPanel.jsx";
 import { renderStoryMarkdown } from "./exportMarkdown.js";
 import { useDraftHistory } from "../balanceManager/useDraftHistory.js";
 
@@ -662,6 +663,7 @@ export default function StoryEditorApp() {
   const [validationAnchorRect, setValidationAnchorRect] = useState(null);
   const validationBtnRef = useRef(null);
   const [pathsOpen, setPathsOpen] = useState(false);
+  const [playthroughOpen, setPlaythroughOpen] = useState(false);
   const [inspectorCollapsed, setInspectorCollapsed] = useState(() => readInspectorCollapsed());
   const [leftRailCollapsed, setLeftRailCollapsed] = useState(() => readLeftRailCollapsed());
   const [graphViewMode, setGraphViewMode] = useState(() => readGraphViewMode());
@@ -1253,6 +1255,16 @@ export default function StoryEditorApp() {
                     font: "600 11px/1 system-ui", cursor: selectedId ? "pointer" : "not-allowed" }}>
                   ⤳ Walk paths from selection
                 </button>
+                <button onClick={() => { setPlaythroughOpen(true); setToolsOpen(false); }}
+                  disabled={!selectedId}
+                  title={selectedId ? "Walk every strategy (first / kindest / cruelest / richest / bargain) from the selected beat" : "Select a beat on the canvas first"}
+                  style={{ textAlign: "left", padding: "7px 9px", borderRadius: 6,
+                    border: `1px solid ${C.border}`,
+                    background: selectedId ? C.parchment : "rgba(0,0,0,0.03)",
+                    color: selectedId ? C.ink : C.inkSubtle,
+                    font: "600 11px/1 system-ui", cursor: selectedId ? "pointer" : "not-allowed" }}>
+                  ▷ Compare playthroughs
+                </button>
                 <button onClick={() => { exportMarkdown(); setToolsOpen(false); }}
                   title="Download every beat as a markdown screenplay for proofreading"
                   style={{ textAlign: "left", padding: "7px 9px", borderRadius: 6, border: `1px solid ${C.border}`, background: C.parchment, color: C.ink, font: "600 11px/1 system-ui", cursor: "pointer" }}>
@@ -1348,6 +1360,9 @@ export default function StoryEditorApp() {
         onJumpToBeat={(id) => selectAndCenter(id)} />
       <PathsPanel open={pathsOpen} draft={draft} anchorBeatId={selectedId}
         onClose={() => setPathsOpen(false)}
+        onJumpToBeat={(id) => selectAndCenter(id)} />
+      <PlaythroughPanel open={playthroughOpen} draft={draft} anchorBeatId={selectedId}
+        onClose={() => setPlaythroughOpen(false)}
         onJumpToBeat={(id) => selectAndCenter(id)} />
     </div>
   );
