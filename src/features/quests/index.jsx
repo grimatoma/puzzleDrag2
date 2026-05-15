@@ -4,6 +4,23 @@ import { QUEST_TEMPLATES } from "./templates.js";
 
 const TABS = ["daily", "almanac"];
 
+function CheckGlyph({ size = 12 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M5 12.5l4.5 4.5L19 7" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function LockGlyph({ size = 14 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <rect x="5" y="11" width="14" height="9" rx="2" stroke="currentColor" strokeWidth="2" />
+      <path d="M8 11V8a4 4 0 0 1 8 0v3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 function rewardLabel(reward) {
   if (!reward) return "?";
   const parts = [];
@@ -81,7 +98,7 @@ function QuestCard({ q, dispatch }) {
             : "bg-[#e0d2b0] border-[#c5a87a] text-[#a88a5a] cursor-not-allowed"
         }`}
       >
-        {q.claimed ? "✓ CLAIMED" : "CLAIM"}
+        {q.claimed ? <span className="inline-flex items-center gap-1 justify-center"><CheckGlyph size={11} /> CLAIMED</span> : "CLAIM"}
       </button>
     </div>
   );
@@ -108,7 +125,7 @@ function AlmanacTierCard({ idx, tierDef, almanacXp, almanacClaimed, dispatch }) 
       }`}
     >
       <div className="flex items-center gap-2">
-        <div className="text-[18px] leading-none flex-shrink-0">{claimed ? "✓" : claimable ? icon : "🔒"}</div>
+        <div className="text-[18px] leading-none flex-shrink-0 flex items-center justify-center">{claimed ? <CheckGlyph size={16} /> : claimable ? icon : <LockGlyph size={16} />}</div>
         <div className="flex-1 min-w-0">
           <div className="text-[11px] font-bold text-[#f8e7c6]">
             Tier {tier}{tierDef.name ? ` — ${tierDef.name}` : ""}
@@ -133,7 +150,7 @@ function AlmanacTierCard({ idx, tierDef, almanacXp, almanacClaimed, dispatch }) 
             : "bg-[#2a1d0f] border-[#3a2715] text-white/30 cursor-not-allowed"
         }`}
       >
-        {claimed ? "✓ Claimed" : claimable ? "CLAIM" : "🔒"}
+        {claimed ? <span className="inline-flex items-center gap-1 justify-center"><CheckGlyph size={9} /> Claimed</span> : claimable ? "CLAIM" : <span className="inline-flex justify-center"><LockGlyph size={10} /></span>}
       </button>
     </div>
   );

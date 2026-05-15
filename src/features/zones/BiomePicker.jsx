@@ -32,7 +32,14 @@ export default function BiomePicker({ node, type, cost, dispatch, onClose }) {
               </div>
               <div className="flex flex-wrap gap-1 mt-1">
                 {b.hazards.map((h) => (
-                  <span key={h} className="text-[9px] font-bold text-[#7a1a1a] bg-[#e8c4c4] border border-[#a05050] rounded-full px-1.5 py-0.5">⚠ {formatHazard(h)}</span>
+                  <span key={h} className="inline-flex items-center gap-1 text-[9px] font-bold text-[#7a1a1a] bg-[#e8c4c4] border border-[#a05050] rounded-full px-1.5 py-0.5">
+                    <svg width="9" height="9" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                      <path d="M12 3 L22 20 H2 Z" stroke="currentColor" strokeWidth="2.4" strokeLinejoin="round" />
+                      <path d="M12 10 V14" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" />
+                      <circle cx="12" cy="17" r="1.2" fill="currentColor" />
+                    </svg>
+                    {formatHazard(h)}
+                  </span>
                 ))}
               </div>
             </button>

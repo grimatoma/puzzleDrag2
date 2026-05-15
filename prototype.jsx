@@ -12,6 +12,29 @@ import { useRouter } from "./src/router.js";
 import { setPhaserScene } from "./src/phaserBridge.js";
 import { FIRE_HAZARD_ENABLED } from "./src/featureFlags.js";
 
+function BoardSkeleton() {
+  return (
+    <div
+      className="absolute inset-0 grid place-items-center"
+      role="status"
+      aria-label="Loading board"
+    >
+      <div
+        className="grid gap-[6px]"
+        style={{ gridTemplateColumns: `repeat(${COLS}, minmax(0, 1fr))` }}
+      >
+        {Array.from({ length: COLS * ROWS }, (_, i) => (
+          <div
+            key={i}
+            className="w-8 h-8 sm:w-10 sm:h-10 rounded-md bg-iron-deep/30 animate-pulse"
+            style={{ animationDelay: `${(i % COLS) * 60}ms` }}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function setBoardRuntimeActive(game, active) {
   if (!game || game.__boardRuntimeActive === active) return;
   const scene = game.scene?.getScene?.("GameScene") ?? game.scene?.scenes?.[0];
@@ -159,9 +182,7 @@ function PhaserMount({ dispatch, biomeKey, turnsUsed, uiLocked, boardActive, sce
 
   return (
     <div ref={hostRef} className="w-full h-full relative">
-      {loading && (
-        <div className="absolute inset-0 grid place-items-center text-[#f8e7c6] text-[12px]">Loading board…</div>
-      )}
+      {loading && <BoardSkeleton />}
     </div>
   );
 }

@@ -8,6 +8,23 @@ import { ACHIEVEMENTS } from "./data.js";
 import { MAGIC_TOOLS } from "../portal/data.js";
 import Icon from "../../ui/Icon.jsx";
 
+function CheckGlyph({ size = 12 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M5 12.5l4.5 4.5L19 7" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function LockGlyph({ size = 18 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <rect x="5" y="11" width="14" height="9" rx="2" stroke="currentColor" strokeWidth="2" />
+      <path d="M8 11V8a4 4 0 0 1 8 0v3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 function prettyToolName(key) {
   const magic = MAGIC_TOOLS.find((t) => t.id === key);
   if (magic) return magic.name;
@@ -49,8 +66,8 @@ function TrophyCard({ achievement, current, trophyState }) {
   return (
     <div className={`${cardBg} border ${borderCls} rounded-xl p-2 flex gap-2 items-center min-h-[72px] transition-colors`}>
       {/* Icon */}
-      <div className={`text-[22px] w-8 flex-shrink-0 text-center leading-none ${!unlocked ? "grayscale opacity-40" : ""}`}>
-        {unlocked ? icon : "🔒"}
+      <div className={`text-[22px] w-8 flex-shrink-0 text-center leading-none flex items-center justify-center ${!unlocked ? "grayscale opacity-40" : ""}`}>
+        {unlocked ? icon : <LockGlyph size={18} />}
       </div>
 
       {/* Middle */}
@@ -88,7 +105,10 @@ function TrophyCard({ achievement, current, trophyState }) {
           </div>
         )}
         {claimed && (
-          <div className="text-[9px] font-bold text-[#91bf24]">✓ Done</div>
+          <div className="text-[9px] font-bold text-[#91bf24] inline-flex items-center gap-1">
+            <CheckGlyph size={10} />
+            Done
+          </div>
         )}
       </div>
     </div>
@@ -120,8 +140,8 @@ function ResourceChip({ resource, count }) {
         {discovered ? resource.label : "???"}
       </div>
       {discovered && (
-        <div className="text-[8px] font-bold" style={{ color: "rgba(255,255,255,0.85)" }}>
-          ✓{count}
+        <div className="text-[8px] font-bold inline-flex items-center gap-0.5" style={{ color: "rgba(255,255,255,0.85)" }}>
+          <CheckGlyph size={8} />{count}
         </div>
       )}
     </div>

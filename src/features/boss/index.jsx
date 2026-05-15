@@ -23,6 +23,16 @@ function ProgressBar({ value, max, color }) {
   );
 }
 
+function WarningGlyph({ size = 14 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M12 3 L22 20 H2 Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+      <path d="M12 10 V14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <circle cx="12" cy="17" r="1" fill="currentColor" />
+    </svg>
+  );
+}
+
 function MiniCard({ boss, dispatch }) {
   return (
     <div
@@ -134,7 +144,7 @@ function BossModal({ boss, year = 1, dispatch }) {
             className="rounded-xl p-3 mb-4 flex items-start gap-2"
             style={{ background: "rgba(168,67,26,0.18)", border: "1px solid rgba(168,67,26,0.4)" }}
           >
-            <span className="text-[14px] flex-shrink-0">⚠️</span>
+            <span className="flex-shrink-0 text-[#f8c894]"><WarningGlyph size={14} /></span>
             <div
               className="text-[11px] text-[#f8c894] leading-snug"
               style={{ fontFamily: "Arial, sans-serif" }}
