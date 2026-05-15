@@ -69,9 +69,9 @@ export const TYPE_WORKERS = [
     hireCost: { coins: 75, coinsMult: 1.4 },
     maxCount: 10,
     abilities: [
-      { id: "recipe_input_reduce", params: { recipe: "bread", input: "grain_flour", amount: 2 } },
+      { id: "recipe_input_reduce", params: { recipe: "bread", input: "grain_flour", amount: 1 } },
     ],
-    description: "Each hired Baker stretches the bread recipe — needs less flour per loaf.",
+    description: "Each hired Baker trims one flour off the bread recipe.",
   },
 ];
 

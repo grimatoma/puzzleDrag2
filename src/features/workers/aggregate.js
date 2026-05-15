@@ -33,13 +33,31 @@ import { getAbility } from "../../config/abilities.js";
 // dead values to channels nobody reads.
 const TILE_AGGREGATOR_TRIGGERS = new Set(["passive", "on_board_fill"]);
 
+// Worker abilities whose effect is discrete per hire — each hired worker
+// contributes its full `amount` (not a fractional share). Implemented by
+// pre-multiplying `amount` by `maxCount`, so the aggregator's
+// `amount * weight = amount * (count / maxCount)` collapses to
+// `amount * count` for these abilities. Other ability types continue to
+// scale by the fractional weight as before.
+const PER_HIRE_DISCRETE_ABILITIES = new Set([
+  "threshold_reduce",
+  "threshold_reduce_category",
+  "recipe_input_reduce",
+]);
+
 /** Source list for a worker entity (TYPE_WORKERS). */
 function workerSource(def, hiredCount) {
   const count = Math.max(0, Math.min(hiredCount | 0, def.maxCount));
   if (count === 0) return null;
   const weight = count / def.maxCount;
-  const abilities = Array.isArray(def.abilities) ? def.abilities : [];
-  if (abilities.length === 0) return null;
+  const rawAbilities = Array.isArray(def.abilities) ? def.abilities : [];
+  if (rawAbilities.length === 0) return null;
+  const abilities = rawAbilities.map((ab) => {
+    if (!ab || !PER_HIRE_DISCRETE_ABILITIES.has(ab.id)) return ab;
+    const p = ab.params || {};
+    const baseAmount = Number(p.amount) || 0;
+    return { ...ab, params: { ...p, amount: baseAmount * def.maxCount } };
+  });
   return { kind: "worker", sourceId: def.id, abilities, weight };
 }
 

@@ -8,21 +8,25 @@ import Icon from "../../ui/Icon.jsx";
 
 function effectSummary(abilities, count, maxCount) {
   if (!abilities || abilities.length === 0) return "";
-  const perHireScalar = maxCount > 0 ? count / maxCount : 0;
+  const safeCount = Math.max(0, Math.min(count | 0, maxCount));
   const parts = abilities.map(ab => {
     const p = ab.params || {};
+    const amount = Number(p.amount) || 0;
     switch (ab.id) {
       case "threshold_reduce_category": {
-        const current = (p.amount * perHireScalar).toFixed(1).replace(/\.0$/, "");
-        return `−${current} ${p.category} chain steps (max −${p.amount})`;
+        const current = amount * safeCount;
+        const max = amount * maxCount;
+        return `−${current} ${p.category} chain steps (max −${max})`;
       }
       case "threshold_reduce": {
-        const current = (p.amount * perHireScalar).toFixed(1).replace(/\.0$/, "");
-        return `−${current} ${p.target || p.key} chain steps (max −${p.amount})`;
+        const current = amount * safeCount;
+        const max = amount * maxCount;
+        return `−${current} ${p.target || p.key} chain steps (max −${max})`;
       }
       case "recipe_input_reduce": {
-        const current = (p.amount * perHireScalar).toFixed(1).replace(/\.0$/, "");
-        return `−${current} ${p.input} for ${p.recipe} (max −${p.amount})`;
+        const current = amount * safeCount;
+        const max = amount * maxCount;
+        return `−${current} ${p.input} for ${p.recipe} (max −${max})`;
       }
       default:
         return ab.id;
@@ -158,8 +162,7 @@ export function WorkersPanel({ state, dispatch }) {
         }}
       >
         Anonymous, stackable workers. Each hire reduces the listed chain
-        (or recipe input) by an even per-hire share until you reach the
-        max count.
+        (or recipe input) by a whole tile, stacking up to the max count.
       </div>
       {TYPE_WORKERS.map((w) => (
         <WorkerRow
