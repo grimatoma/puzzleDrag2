@@ -16,6 +16,7 @@ import { COLORS } from "./shared.jsx";
 import { parseHash, useBalanceRouter } from "./router.js";
 import { useDraftHistory } from "./useDraftHistory.js";
 import CommandPalette from "./CommandPalette.jsx";
+import ShortcutsOverlay from "./ShortcutsOverlay.jsx";
 
 // Lazy-load tabs so the Balance Manager (a dev-time tool) stays out of the
 // main entry chunk. Each tab becomes its own JS chunk fetched only when
@@ -185,6 +186,7 @@ export default function BalanceManagerApp() {
   const [tab, setTab] = useState(() => parseHash(typeof window !== "undefined" ? window.location.hash : "", tabIds).tab ?? "tiles");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(readSidebarCollapsed);
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
 
   // Bind the active tab to the URL hash. On mount this normalises the hash
   // (e.g. empty → `#/tiles`); subsequent `setTab` calls push history entries,
@@ -239,9 +241,18 @@ export default function BalanceManagerApp() {
     resetDraft(emptyDraft());
   }, [resetDraft]);
 
-  // Save on Cmd/Ctrl-S, undo/redo on Cmd/Ctrl-Z, command palette on Cmd/Ctrl-K.
+  // Save on Cmd/Ctrl-S, undo/redo on Cmd/Ctrl-Z, command palette on
+  // Cmd/Ctrl-K, shortcuts overlay on `?`.
   useEffect(() => {
     function onKey(e) {
+      // ? has no modifier — handle it before bailing out on the no-mod case.
+      if (e.key === "?" && !e.metaKey && !e.ctrlKey && !e.altKey) {
+        const tag = e.target?.tagName;
+        if (tag === "INPUT" || tag === "TEXTAREA" || e.target?.isContentEditable) return;
+        e.preventDefault();
+        setShortcutsOpen((v) => !v);
+        return;
+      }
       const mod = e.metaKey || e.ctrlKey;
       if (!mod) return;
       const key = e.key.toLowerCase();
@@ -364,6 +375,15 @@ export default function BalanceManagerApp() {
             >
               ↻ Reload
             </button>
+            <button
+              onClick={() => setShortcutsOpen(true)}
+              className="px-2 py-1.5 text-[14px] font-bold rounded-lg border-2"
+              style={{ background: COLORS.parchmentDeep, borderColor: COLORS.border, color: COLORS.inkLight }}
+              title="Show keyboard shortcuts (?)"
+              aria-label="Show keyboard shortcuts"
+            >
+              ?
+            </button>
             <a
               href={import.meta.env.BASE_URL}
               className="px-3 py-1.5 text-[12px] font-bold rounded-lg border-2 no-underline"
@@ -461,6 +481,7 @@ export default function BalanceManagerApp() {
           </nav>
 
           <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} onSelect={handlePaletteSelect} />
+          <ShortcutsOverlay open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
 
           {/* Active tab content */}
           <main className="flex-1 flex flex-col min-w-0">
