@@ -1,4 +1,5 @@
 import { useState, useMemo, useRef } from "react";
+import { createPortal } from "react-dom";
 import { ZONES, zoneCategories, DEFAULT_ZONE, ZONE_TO_TILE_CATEGORIES, turnBudgetAdditiveBonusForZone, turnBudgetForZone, zoneBaseTurns, settlementHazards } from "./data.js";
 import { TILE_TYPES_BY_CATEGORY, TILE_TYPES_MAP } from "../tileCollection/data.js";
 import { TileIcon } from "../tileCollection/index.jsx";
@@ -272,9 +273,9 @@ export default function StartFarmingModal({ state, dispatch, onClose }) {
     onClose?.();
   }
 
-  return (
+  return createPortal(
     <div
-      className="absolute inset-0 bg-black/60 grid place-items-center z-50 animate-fadein"
+      className="fixed inset-0 bg-black/60 grid place-items-center z-50 animate-fadein"
       onClick={onClose}
     >
       <div
@@ -389,6 +390,7 @@ export default function StartFarmingModal({ state, dispatch, onClose }) {
           />
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
