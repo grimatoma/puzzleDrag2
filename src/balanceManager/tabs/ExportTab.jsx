@@ -3,6 +3,11 @@
 
 import { useState, useMemo } from "react";
 import { COLORS, SmallButton, Card } from "../shared.jsx";
+import {
+  listSnapshots, saveSnapshot, loadSnapshot, deleteSnapshot,
+} from "../snapshots.js";
+import { draftDiff, summariseTotals } from "../diff.js";
+import balanceFile from "../../config/balance.json";
 
 function pruneEmpty(obj) {
   if (!obj || typeof obj !== "object") return obj;
@@ -22,9 +27,39 @@ function pruneEmpty(obj) {
   return out;
 }
 
+function relativeTime(iso) {
+  if (!iso) return "";
+  const t = Date.parse(iso);
+  if (!Number.isFinite(t)) return "";
+  const diff = Math.max(0, Date.now() - t);
+  const min = Math.floor(diff / 60_000);
+  if (min < 1) return "just now";
+  if (min < 60) return `${min}m ago`;
+  const hr = Math.floor(min / 60);
+  if (hr < 24) return `${hr}h ago`;
+  const day = Math.floor(hr / 24);
+  return `${day}d ago`;
+}
+
 export default function ExportTab({ draft, updateDraft }) {
   const [importText, setImportText] = useState("");
   const [importError, setImportError] = useState("");
+  const [snapshotName, setSnapshotName] = useState("");
+  const [snapshotMessage, setSnapshotMessage] = useState("");
+  const [snapshotError, setSnapshotError] = useState("");
+  const [snapshotsTick, setSnapshotsTick] = useState(0);
+  const snapshots = useMemo(() => listSnapshots(), [snapshotsTick]);
+  const [diffOpen, setDiffOpen] = useState(new Set());
+  const diff = useMemo(() => draftDiff(balanceFile, draft), [draft]);
+  const diffSections = useMemo(() => Object.entries(diff.sections).sort(([a], [b]) => a.localeCompare(b)), [diff]);
+
+  const toggleSection = (name) => {
+    setDiffOpen((prev) => {
+      const next = new Set(prev);
+      if (next.has(name)) next.delete(name); else next.add(name);
+      return next;
+    });
+  };
 
   const pretty = useMemo(() => {
     const cleaned = pruneEmpty(draft);
@@ -47,6 +82,47 @@ export default function ExportTab({ draft, updateDraft }) {
     try {
       navigator.clipboard?.writeText(pretty);
     } catch { /* clipboard unavailable */ }
+  }
+
+  function bumpSnapshots() { setSnapshotsTick((n) => n + 1); }
+
+  function flashSnapshot(message) {
+    setSnapshotMessage(message);
+    setSnapshotError("");
+    setTimeout(() => setSnapshotMessage(""), 2400);
+  }
+
+  function handleSaveSnapshot() {
+    const result = saveSnapshot(snapshotName, draft);
+    if (!result.ok) {
+      setSnapshotError(result.message);
+      return;
+    }
+    setSnapshotName("");
+    setSnapshotError("");
+    flashSnapshot(`Saved snapshot “${result.name}”`);
+    bumpSnapshots();
+  }
+
+  function handleLoadSnapshot(name) {
+    const loaded = loadSnapshot(name);
+    if (!loaded) {
+      setSnapshotError(`Could not load snapshot “${name}”.`);
+      return;
+    }
+    if (!confirm(`Replace the current draft with snapshot “${name}”? Your unsaved tab edits will be lost.`)) return;
+    updateDraft((d) => {
+      for (const k of Object.keys(d)) delete d[k];
+      Object.assign(d, loaded);
+    });
+    flashSnapshot(`Loaded snapshot “${name}”`);
+  }
+
+  function handleDeleteSnapshot(name) {
+    if (!confirm(`Delete snapshot “${name}”? This cannot be undone.`)) return;
+    deleteSnapshot(name);
+    flashSnapshot(`Deleted snapshot “${name}”`);
+    bumpSnapshots();
   }
 
   function applyImport() {
@@ -117,6 +193,54 @@ export default function ExportTab({ draft, updateDraft }) {
         </div>
       </Card>
 
+      <Card title="Diff vs committed balance.json">
+        <div className="flex items-center gap-2 mb-2 flex-wrap">
+          <span className="text-[11px] font-bold uppercase tracking-wide" style={{ color: COLORS.inkSubtle }}>
+            {summariseTotals(diff.totals)}
+          </span>
+          {diff.totals.added > 0 && <span className="text-[11px] px-2 py-0.5 rounded-full font-bold" style={{ background: "rgba(90,158,75,0.16)", color: COLORS.greenDeep, border: `1px solid ${COLORS.greenDeep}55` }}>+{diff.totals.added}</span>}
+          {diff.totals.modified > 0 && <span className="text-[11px] px-2 py-0.5 rounded-full font-bold" style={{ background: "rgba(214,97,42,0.12)", color: COLORS.ember, border: `1px solid ${COLORS.ember}55` }}>~{diff.totals.modified}</span>}
+          {diff.totals.removed > 0 && <span className="text-[11px] px-2 py-0.5 rounded-full font-bold" style={{ background: "rgba(194,59,34,0.10)", color: COLORS.red, border: `1px solid ${COLORS.red}55` }}>−{diff.totals.removed}</span>}
+        </div>
+        {diffSections.length === 0 && (
+          <div className="text-[11px] italic" style={{ color: COLORS.inkSubtle }}>
+            Draft matches the committed file — nothing new to ship.
+          </div>
+        )}
+        {diffSections.map(([name, section]) => {
+          const open = diffOpen.has(name);
+          const counts = [
+            section.added.length && `+${section.added.length}`,
+            section.modified.length && `~${section.modified.length}`,
+            section.removed.length && `−${section.removed.length}`,
+          ].filter(Boolean).join(" ");
+          return (
+            <div key={name} className="border-2 rounded-lg mb-1.5 overflow-hidden"
+              style={{ borderColor: COLORS.border, background: COLORS.parchmentDeep }}>
+              <button onClick={() => toggleSection(name)}
+                className="w-full flex items-center justify-between px-3 py-1.5 text-left"
+                style={{ background: open ? "#fff5e6" : "transparent", color: COLORS.ink, cursor: "pointer", border: "none" }}>
+                <span className="font-bold text-[12px]">{open ? "▾" : "▸"} {name === "_root" ? "(top-level)" : name}</span>
+                <span className="text-[10px] font-mono" style={{ color: COLORS.inkSubtle }}>{counts}</span>
+              </button>
+              {open && (
+                <div className="px-3 py-2 text-[11px] font-mono" style={{ background: "#fff", borderTop: `1px solid ${COLORS.border}` }}>
+                  {section.added.map((e) => (
+                    <div key={`a-${e.key}`} style={{ color: COLORS.greenDeep }}>+ {e.key}</div>
+                  ))}
+                  {section.modified.map((e) => (
+                    <div key={`m-${e.key}`} style={{ color: COLORS.ember }}>~ {e.key}</div>
+                  ))}
+                  {section.removed.map((e) => (
+                    <div key={`r-${e.key}`} style={{ color: COLORS.red }}>− {e.key}</div>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </Card>
+
       <Card title="Export">
         <div className="flex items-center gap-2 mb-2">
           <SmallButton variant="primary" onClick={downloadJson}>⬇ Download balance.json</SmallButton>
@@ -133,6 +257,52 @@ export default function ExportTab({ draft, updateDraft }) {
         >
 {pretty}
         </pre>
+      </Card>
+
+      <Card title="Snapshots — named presets">
+        <p className="text-[12px] mb-2" style={{ color: COLORS.inkLight }}>
+          Save the current draft under a name (e.g. <em>easy mode</em>, <em>tight economy</em>) and reload it
+          later. Snapshots stay on this device — they aren't part of <code>balance.json</code> until you load
+          one and download.
+        </p>
+        <div className="flex items-center gap-2 mb-2">
+          <input
+            value={snapshotName}
+            placeholder="Snapshot name…"
+            onChange={(e) => { setSnapshotName(e.target.value); setSnapshotError(""); }}
+            onKeyDown={(e) => { if (e.key === "Enter" && snapshotName.trim()) handleSaveSnapshot(); }}
+            className="flex-1 px-2 py-1 text-[12px] rounded border-2"
+            style={{ background: "#fff", borderColor: COLORS.border, color: COLORS.ink }}
+          />
+          <SmallButton variant="primary" onClick={handleSaveSnapshot} disabled={!snapshotName.trim()}>
+            💾 Save snapshot
+          </SmallButton>
+        </div>
+        {snapshotMessage && (
+          <div className="text-[11px] font-bold mb-2" style={{ color: COLORS.greenDeep }}>{snapshotMessage}</div>
+        )}
+        {snapshotError && (
+          <div className="text-[11px] font-bold mb-2" style={{ color: COLORS.red }}>⚠ {snapshotError}</div>
+        )}
+        {snapshots.length === 0 ? (
+          <div className="text-[11px] italic" style={{ color: COLORS.inkSubtle }}>No snapshots yet — save one above to keep this draft around.</div>
+        ) : (
+          <ul className="flex flex-col gap-1.5">
+            {snapshots.map((s) => (
+              <li key={s.name} className="flex items-center gap-2 px-2 py-1.5 rounded-lg border-2"
+                style={{ background: "#fff", borderColor: COLORS.border }}>
+                <div className="flex-1 min-w-0">
+                  <div className="text-[12px] font-bold truncate" style={{ color: COLORS.ink }}>{s.name}</div>
+                  <div className="text-[10px]" style={{ color: COLORS.inkSubtle }}>
+                    Saved {relativeTime(s.savedAt)}
+                  </div>
+                </div>
+                <SmallButton onClick={() => handleLoadSnapshot(s.name)}>Load</SmallButton>
+                <SmallButton variant="danger" onClick={() => handleDeleteSnapshot(s.name)}>Delete</SmallButton>
+              </li>
+            ))}
+          </ul>
+        )}
       </Card>
 
       <Card title="Import (paste a balance.json)">

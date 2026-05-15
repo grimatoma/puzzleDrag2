@@ -235,7 +235,10 @@ describe("story editor draft utilities", () => {
     expect(knownStoryFlagIds(d).has("custom_oath")).toBe(true);
     const withTrigger = draftWith({ newBeats: [{ id: "branch_a", trigger: { type: "flag_set", flag: "custom_oath" } }] });
     withTrigger.flags = d.flags;
-    expect(collectStoryWarnings(withTrigger).branch_a ?? []).toEqual([]);
+    // The draft-known flag should not raise an unknownFlag warning; an
+    // emptyBeat warning is fine (the beat is intentionally bare in this test).
+    const flagWarnings = (collectStoryWarnings(withTrigger).branch_a ?? []).filter((w) => w.type === "unknownFlag");
+    expect(flagWarnings).toEqual([]);
   });
 });
 

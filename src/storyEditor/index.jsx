@@ -25,6 +25,10 @@ import {
 } from "./shared.jsx";
 import Inspector from "./Inspector.jsx";
 import PreviewModal from "./PreviewModal.jsx";
+import ValidationPanel from "./ValidationPanel.jsx";
+import PathsPanel from "./PathsPanel.jsx";
+import { renderStoryMarkdown } from "./exportMarkdown.js";
+import { useDraftHistory } from "../balanceManager/useDraftHistory.js";
 
 const INSPECTOR_COLLAPSED_KEY = "hearth.story.inspectorCollapsed";
 const LEFT_RAIL_COLLAPSED_KEY = "hearth.story.leftRailCollapsed";
@@ -400,16 +404,23 @@ const ACT_LABELS = [
 
 // ─── left rail ───────────────────────────────────────────────────────────────
 
-function RailRow({ beatId, draft, selectedId, onlineIds, onSelect }) {
+function RailRow({ beatId, draft, selectedId, onlineIds, onSelect, matchKind }) {
   const beat = effectiveBeat(beatId, draft);
   const isSel = beatId === selectedId;
   const choices = beat?.choices || [];
+  const matchPill = matchKind && matchKind !== "any" && matchKind !== "id" && matchKind !== "title"
+    ? (matchKind === "lines" ? "💬" : matchKind === "choices" ? "⑂" : null)
+    : null;
   return (
     <div onClick={() => onSelect(beatId)} style={{ padding: "5px 12px 5px 22px", cursor: "pointer",
       background: isSel ? "rgba(214,97,42,0.12)" : "transparent",
       borderLeft: `3px solid ${isSel ? actColor(beat) : "transparent"}`, display: "flex", alignItems: "center", gap: 7 }}>
       <span style={{ font: "500 11px/1.3 system-ui", color: isSel ? C.ink : C.inkLight, fontWeight: isSel ? 600 : 500,
         flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{beat?.title || beatId}</span>
+      {matchPill && (
+        <span title={matchKind === "lines" ? "Search matches dialogue lines" : "Search matches a choice label"}
+          style={{ font: "600 8px/1 system-ui", color: C.inkSubtle, padding: "1px 4px", borderRadius: 3, background: "rgba(214,97,42,0.10)" }}>{matchPill}</span>
+      )}
       {!onlineIds.has(beatId) && (
         <span style={{ font: "600 8px/1 system-ui", color: C.inkSubtle, flexShrink: 0, padding: "1px 4px", borderRadius: 3, background: "rgba(0,0,0,0.06)" }}>OFF</span>
       )}
@@ -430,16 +441,34 @@ function GroupHeader({ color, label, count }) {
   );
 }
 
+function searchKindForBeat(beat, id, q) {
+  if (!q) return "any";
+  if (id.toLowerCase().includes(q)) return "id";
+  if ((beat?.title || "").toLowerCase().includes(q)) return "title";
+  const lineHits = (beat?.lines || []).reduce((n, l) => n + ((l?.text || "").toLowerCase().includes(q) ? 1 : 0), 0);
+  if (lineHits) return "lines";
+  const choiceHits = (beat?.choices || []).reduce((n, c) => n + ((c?.label || "").toLowerCase().includes(q) ? 1 : 0), 0);
+  if (choiceHits) return "choices";
+  return null;
+}
+
 function LeftRail({ draft, selectedId, onlineIds, collapsed, onToggleCollapsed, onSelect, onNewBeat }) {
   const [search, setSearch] = useState("");
   const q = search.trim().toLowerCase();
   const dBeats = draftBeats(draft);
   const knownIds = new Set(allBeatIds(draft));
-  const matches = (id) => {
-    const beat = effectiveBeat(id, draft);
-    if (!beat) return false;
-    return !q || id.toLowerCase().includes(q) || (beat.title || "").toLowerCase().includes(q);
-  };
+  const beatMatchKinds = useMemo(() => {
+    const out = new Map();
+    if (!q) return out;
+    for (const id of knownIds) {
+      const beat = effectiveBeat(id, draft);
+      const kind = searchKindForBeat(beat, id, q);
+      if (kind) out.set(id, kind);
+    }
+    return out;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [q, draft]);
+  const matches = (id) => !q || beatMatchKinds.has(id);
 
   const groups = [
     { id: 1,      label: "Act I · Roots",     color: "#7a8b5e", ids: STORY_BEATS.filter((b) => b.act === 1).map((b) => b.id) },
@@ -506,7 +535,7 @@ function LeftRail({ draft, selectedId, onlineIds, collapsed, onToggleCollapsed, 
           <div>
             <GroupHeader color="#6b8e9e" label="Drafts (this override)" count={dBeats.filter((b) => matches(b.id)).length} />
             {dBeats.filter((b) => matches(b.id)).map((b) => (
-              <RailRow key={b.id} beatId={b.id} draft={draft} selectedId={selectedId} onlineIds={onlineIds} onSelect={onSelect} />
+              <RailRow key={b.id} beatId={b.id} draft={draft} selectedId={selectedId} onlineIds={onlineIds} onSelect={onSelect} matchKind={beatMatchKinds.get(b.id)} />
             ))}
           </div>
         )}
@@ -516,7 +545,7 @@ function LeftRail({ draft, selectedId, onlineIds, collapsed, onToggleCollapsed, 
           return (
             <div key={g.id}>
               <GroupHeader color={g.color} label={g.label} count={ids.length} />
-              {ids.map((id) => <RailRow key={id} beatId={id} draft={draft} selectedId={selectedId} onlineIds={onlineIds} onSelect={onSelect} />)}
+              {ids.map((id) => <RailRow key={id} beatId={id} draft={draft} selectedId={selectedId} onlineIds={onlineIds} onSelect={onSelect} matchKind={beatMatchKinds.get(id)} />)}
             </div>
           );
         })}
@@ -613,7 +642,10 @@ function stripEmpty(obj) {
 // ─── app ─────────────────────────────────────────────────────────────────────
 
 export default function StoryEditorApp() {
-  const [draft, setDraft] = useState(() => cloneDraft(BALANCE_OVERRIDES));
+  const {
+    state: draft, setState: setDraft, undo, redo, reset: resetDraft,
+    canUndo, canRedo,
+  } = useDraftHistory(() => cloneDraft(BALANCE_OVERRIDES));
   const [savedDraft, setSavedDraft] = useState(() => cloneDraft(BALANCE_OVERRIDES));
   const [selectedId, setSelectedId] = useState(null);
   const [savedNotice, setSavedNotice] = useState("");
@@ -626,6 +658,10 @@ export default function StoryEditorApp() {
   const [nodePositions, setNodePositions] = useState(() => readNodePositions());
   const [draggingNodeId, setDraggingNodeId] = useState(null);
   const [toolsOpen, setToolsOpen] = useState(false);
+  const [validationOpen, setValidationOpen] = useState(false);
+  const [validationAnchorRect, setValidationAnchorRect] = useState(null);
+  const validationBtnRef = useRef(null);
+  const [pathsOpen, setPathsOpen] = useState(false);
   const [inspectorCollapsed, setInspectorCollapsed] = useState(() => readInspectorCollapsed());
   const [leftRailCollapsed, setLeftRailCollapsed] = useState(() => readLeftRailCollapsed());
   const [graphViewMode, setGraphViewMode] = useState(() => readGraphViewMode());
@@ -678,23 +714,32 @@ export default function StoryEditorApp() {
   }, [draft]);
 
   useEffect(() => {
-    const onKey = (e) => { if ((e.metaKey || e.ctrlKey) && e.key === "s") { e.preventDefault(); saveDraft(); } };
+    const onKey = (e) => {
+      if (!(e.metaKey || e.ctrlKey)) return;
+      const key = e.key.toLowerCase();
+      if (key === "s") { e.preventDefault(); saveDraft(); return; }
+      const tag = e.target?.tagName;
+      const isTextInput = tag === "INPUT" || tag === "TEXTAREA" || e.target?.isContentEditable;
+      if (isTextInput) return;
+      if (key === "z" && !e.shiftKey) { e.preventDefault(); undo(); return; }
+      if ((key === "z" && e.shiftKey) || key === "y") { e.preventDefault(); redo(); return; }
+    };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [saveDraft]);
+  }, [saveDraft, undo, redo]);
 
   useEffect(() => {
     const onStorage = (e) => {
       if (e.key !== "hearth.balance.draft" || dirtyRef.current) return;
       const next = cloneDraft(readBalanceDraft() || BALANCE_OVERRIDES);
-      setDraft(next);
+      resetDraft(next);
       setSavedDraft(cloneDraft(next));
       setSavedNotice("Synced from Balance Manager");
       setTimeout(() => setSavedNotice(""), 1800);
     };
     window.addEventListener("storage", onStorage);
     return () => window.removeEventListener("storage", onStorage);
-  }, []);
+  }, [resetDraft]);
 
   // canvas pan/zoom
   const onMouseDown = useCallback((e) => {
@@ -1050,7 +1095,26 @@ export default function StoryEditorApp() {
   const nodeById = useMemo(() => new Map(view.nodes.map((n) => [n.id, n])), [view]);
   const onlineIds = useMemo(() => new Set(fullGraph.nodes.map((n) => n.id)), [fullGraph]);
   const warningsByBeat = useMemo(() => collectStoryWarnings(draft), [draft]);
+  const totalWarnings = useMemo(() => Object.values(warningsByBeat).reduce((s, arr) => s + arr.length, 0), [warningsByBeat]);
   const suppressedCount = Array.isArray(draft?.story?.suppressedBeats) ? draft.story.suppressedBeats.length : 0;
+  const openValidation = useCallback(() => {
+    setValidationAnchorRect(validationBtnRef.current?.getBoundingClientRect() || null);
+    setValidationOpen(true);
+  }, []);
+
+  const exportMarkdown = useCallback(() => {
+    if (typeof document === "undefined") return;
+    const md = renderStoryMarkdown(draft);
+    const blob = new Blob([md], { type: "text/markdown;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "hearthlands-story.md";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }, [draft]);
   const fitToScreen = useCallback(() => {
     const el = canvasRef.current;
     if (!el || view.nodes.length === 0) return;
@@ -1115,7 +1179,33 @@ export default function StoryEditorApp() {
         <div style={{ position: "relative", display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
           {savedNotice && <span style={{ font: "700 10px/1 system-ui", padding: "4px 9px", borderRadius: 6, background: C.green, color: "#fff" }}>{savedNotice}</span>}
           {isDirty && !savedNotice && <span style={{ font: "700 10px/1 system-ui", padding: "4px 9px", borderRadius: 6, background: C.ember, color: "#fff" }}>Unsaved changes</span>}
-          <span style={{ font: "400 10px/1 system-ui", color: "rgba(244,217,160,0.5)" }}>Drag by the handle · arrows move selection · Enter previews · ⌘S saves</span>
+          <span style={{ font: "400 10px/1 system-ui", color: "rgba(244,217,160,0.5)" }}>Drag handle · arrows navigate · Enter previews · ⌘Z undo · ⌘S saves</span>
+          <span role="group" aria-label="Undo and redo" style={{ display: "inline-flex", padding: 2, borderRadius: 8, border: `1.5px solid ${C.border}`, background: C.parchmentDeep }}>
+            <button onClick={() => undo()} disabled={!canUndo} title="Undo (Cmd/Ctrl-Z)" aria-label="Undo last change"
+              style={{ padding: "5px 9px", borderRadius: 6, border: "none", background: "transparent",
+                color: canUndo ? C.inkLight : C.inkSubtle, opacity: canUndo ? 1 : 0.4,
+                font: "700 12px/1 system-ui", cursor: canUndo ? "pointer" : "not-allowed" }}>↶</button>
+            <button onClick={() => redo()} disabled={!canRedo} title="Redo (Cmd/Ctrl-Shift-Z)" aria-label="Redo last undone change"
+              style={{ padding: "5px 9px", borderRadius: 6, border: "none", background: "transparent",
+                color: canRedo ? C.inkLight : C.inkSubtle, opacity: canRedo ? 1 : 0.4,
+                font: "700 12px/1 system-ui", cursor: canRedo ? "pointer" : "not-allowed" }}>↷</button>
+          </span>
+          <button ref={validationBtnRef} onClick={openValidation}
+            title={totalWarnings > 0 ? `${totalWarnings} validation issue${totalWarnings === 1 ? "" : "s"} found` : "No validation issues"}
+            aria-label={`Open validation panel — ${totalWarnings} issues`}
+            style={{ position: "relative", padding: "6px 12px", borderRadius: 7,
+              border: `2px solid ${totalWarnings > 0 ? "#f4d9a0" : C.border}`,
+              background: totalWarnings > 0 ? "rgba(244,217,160,0.15)" : C.parchmentDeep,
+              color: totalWarnings > 0 ? "#f4d9a0" : C.inkLight,
+              font: "700 11px/1 system-ui", cursor: "pointer" }}>
+            ⚠ Issues
+            {totalWarnings > 0 && (
+              <span style={{ marginLeft: 6, font: "700 10px/1 system-ui", padding: "2px 6px",
+                borderRadius: 999, background: "rgba(244,217,160,0.25)", color: "#f4d9a0" }}>
+                {totalWarnings}
+              </span>
+            )}
+          </button>
           <span role="group" aria-label="Graph focus mode" style={{ display: "inline-flex", padding: 2, borderRadius: 8, border: `1.5px solid ${C.border}`, background: C.parchmentDeep }}>
             {[
               ["chain", "Current Chain"],
@@ -1151,6 +1241,22 @@ export default function StoryEditorApp() {
                 <button onClick={() => { restoreSuppressedBeats(); setToolsOpen(false); }} disabled={suppressedCount === 0}
                   style={{ textAlign: "left", padding: "7px 9px", borderRadius: 6, border: `1px solid ${suppressedCount ? C.redDeep : C.border}`, background: suppressedCount ? "#fff" : "rgba(0,0,0,0.03)", color: suppressedCount ? C.redDeep : C.inkSubtle, font: "600 11px/1 system-ui", cursor: suppressedCount ? "pointer" : "not-allowed" }}>
                   Restore disabled side beats {suppressedCount ? `(${suppressedCount})` : ""}
+                </button>
+                <div style={{ height: 1, background: C.border, margin: "2px 0" }} />
+                <button onClick={() => { setPathsOpen(true); setToolsOpen(false); }}
+                  disabled={!selectedId}
+                  title={selectedId ? "Enumerate every reachable resolution from the selected beat" : "Select a beat on the canvas first"}
+                  style={{ textAlign: "left", padding: "7px 9px", borderRadius: 6,
+                    border: `1px solid ${selectedId ? C.border : C.border}`,
+                    background: selectedId ? C.parchment : "rgba(0,0,0,0.03)",
+                    color: selectedId ? C.ink : C.inkSubtle,
+                    font: "600 11px/1 system-ui", cursor: selectedId ? "pointer" : "not-allowed" }}>
+                  ⤳ Walk paths from selection
+                </button>
+                <button onClick={() => { exportMarkdown(); setToolsOpen(false); }}
+                  title="Download every beat as a markdown screenplay for proofreading"
+                  style={{ textAlign: "left", padding: "7px 9px", borderRadius: 6, border: `1px solid ${C.border}`, background: C.parchment, color: C.ink, font: "600 11px/1 system-ui", cursor: "pointer" }}>
+                  ⬇ Export script as markdown
                 </button>
               </div>
             )}
@@ -1237,6 +1343,12 @@ export default function StoryEditorApp() {
           onClose={() => setPreviewBeatId(null)}
           onOpenInEditor={(id) => setSelectedId(id)} />
       )}
+      <ValidationPanel open={validationOpen} draft={draft} anchorRect={validationAnchorRect}
+        onClose={() => setValidationOpen(false)}
+        onJumpToBeat={(id) => selectAndCenter(id)} />
+      <PathsPanel open={pathsOpen} draft={draft} anchorBeatId={selectedId}
+        onClose={() => setPathsOpen(false)}
+        onJumpToBeat={(id) => selectAndCenter(id)} />
     </div>
   );
 }

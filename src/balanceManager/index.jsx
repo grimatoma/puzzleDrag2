@@ -14,6 +14,8 @@ import { writeBalanceDraft } from "../config/applyOverrides.js";
 import balanceFile from "../config/balance.json";
 import { COLORS } from "./shared.jsx";
 import { parseHash, useBalanceRouter } from "./router.js";
+import { useDraftHistory } from "./useDraftHistory.js";
+import CommandPalette from "./CommandPalette.jsx";
 
 // Lazy-load tabs so the Balance Manager (a dev-time tool) stays out of the
 // main entry chunk. Each tab becomes its own JS chunk fetched only when
@@ -38,6 +40,7 @@ const AchievementsTab = lazy(() => import("./tabs/AchievementsTab.jsx"));
 const DailyRewardsTab = lazy(() => import("./tabs/DailyRewardsTab.jsx"));
 const ExportTab    = lazy(() => import("./tabs/ExportTab.jsx"));
 const IconsTab     = lazy(() => import("./tabs/IconsTab.jsx"));
+const ChainsTab    = lazy(() => import("./tabs/ChainsTab.jsx"));
 
 // Hash routing for the Balance Manager lives in `./router.js` — kept separate
 // from `src/router.js` because the Balance Manager is its own page (`/b/`).
@@ -57,6 +60,9 @@ const TABS = [
   { id: "biomes",    label: "Settlement Biomes", iconKey: "ui_star", Component: BiomesTab,
     section: "tiles",
     blurb: "The biomes a settlement can be founded as (4 per type): name, icon, the two hazards that appear in every round there, and the resource bonus." },
+  { id: "chains",    label: "Upgrade Chains", iconKey: "ui_star", Component: ChainsTab,
+    section: "tiles",
+    blurb: "Visualise every per-item upgrade chain (ITEMS[*].next) — chain length, summed sale value, branch / orphan callouts. Read-only, but reflects the current draft." },
   { id: "resources", label: "Resources & Currency", iconKey: "ui_star", Component: ResourcesTab,
     section: "resources",
     blurb: "Resources & currency — the counts of stuff you accumulate: inventory amounts (grain, wood, eggs, crafted goods…) with their colours, chains and sale values, plus a reference list of the kingdom currency counters (gold / runes / embers / …)." },
@@ -178,6 +184,7 @@ export default function BalanceManagerApp() {
   const tabIds = useMemo(() => TABS.map((t) => t.id), []);
   const [tab, setTab] = useState(() => parseHash(typeof window !== "undefined" ? window.location.hash : "", tabIds).tab ?? "tiles");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(readSidebarCollapsed);
+  const [paletteOpen, setPaletteOpen] = useState(false);
 
   // Bind the active tab to the URL hash. On mount this normalises the hash
   // (e.g. empty → `#/tiles`); subsequent `setTab` calls push history entries,
@@ -190,7 +197,10 @@ export default function BalanceManagerApp() {
   // Initialise the draft from whatever the constants module merged in:
   // committed file + previous localStorage draft. That way, opening the
   // manager always shows the user's full set of overrides as starting point.
-  const [draft, setDraft] = useState(() => cloneDraft(BALANCE_OVERRIDES));
+  const {
+    state: draft, setState: setDraft, undo, redo, reset: resetDraft,
+    canUndo, canRedo,
+  } = useDraftHistory(() => cloneDraft(BALANCE_OVERRIDES));
   const [savedNotice, setSavedNotice] = useState("");
 
   const toggleSidebar = useCallback(() => {
@@ -207,7 +217,7 @@ export default function BalanceManagerApp() {
       updater(next);
       return next;
     });
-  }, []);
+  }, [setDraft]);
 
   const isDirty = useMemo(() => {
     return JSON.stringify(draft) !== JSON.stringify(BALANCE_OVERRIDES);
@@ -221,28 +231,35 @@ export default function BalanceManagerApp() {
 
   const resetToCommitted = useCallback(() => {
     if (!confirm("Reset to the committed balance.json? Your unsaved edits will be lost.")) return;
-    setDraft(cloneDraft(balanceFile));
-  }, []);
+    resetDraft(cloneDraft(balanceFile));
+  }, [resetDraft]);
 
   const clearAllOverrides = useCallback(() => {
     if (!confirm("Clear EVERY override? The game will revert to its default constants on next reload.")) return;
-    setDraft(emptyDraft());
-  }, []);
+    resetDraft(emptyDraft());
+  }, [resetDraft]);
 
-  // Save on Cmd/Ctrl-S so designers can iterate quickly.
+  // Save on Cmd/Ctrl-S, undo/redo on Cmd/Ctrl-Z, command palette on Cmd/Ctrl-K.
   useEffect(() => {
     function onKey(e) {
-      if ((e.metaKey || e.ctrlKey) && e.key === "s") {
-        e.preventDefault();
-        saveDraft();
-      }
+      const mod = e.metaKey || e.ctrlKey;
+      if (!mod) return;
+      const key = e.key.toLowerCase();
+      if (key === "s") { e.preventDefault(); saveDraft(); return; }
+      if (key === "k") { e.preventDefault(); setPaletteOpen((v) => !v); return; }
+      if (key === "z" && !e.shiftKey) { e.preventDefault(); undo(); return; }
+      if ((key === "z" && e.shiftKey) || key === "y") { e.preventDefault(); redo(); return; }
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [saveDraft]);
+  }, [saveDraft, undo, redo]);
 
   const activeTab = TABS.find((t) => t.id === tab) ?? TABS[0];
   const ActiveComponent = activeTab.Component;
+
+  const handlePaletteSelect = useCallback((entry) => {
+    if (entry?.tab) navigateTo(entry.tab);
+  }, [navigateTo]);
 
   return (
     <div
@@ -287,6 +304,39 @@ export default function BalanceManagerApp() {
                 Unsaved changes
               </span>
             )}
+            <button
+              onClick={() => setPaletteOpen(true)}
+              className="flex items-center gap-2 px-2 py-1.5 text-[12px] font-bold rounded-lg border-2"
+              style={{ background: COLORS.parchmentDeep, borderColor: COLORS.border, color: COLORS.inkLight }}
+              title="Search across every tab (Cmd/Ctrl-K)"
+              aria-label="Open command palette"
+            >
+              🔎 Search
+              <span className="text-[10px] font-mono px-1.5 py-0.5 rounded" style={{ background: COLORS.parchment, color: COLORS.inkSubtle, border: `1px solid ${COLORS.border}` }}>⌘K</span>
+            </button>
+            <div className="flex items-center rounded-lg border-2 overflow-hidden" style={{ borderColor: COLORS.border }}>
+              <button
+                onClick={() => undo()}
+                disabled={!canUndo}
+                title="Undo (Cmd/Ctrl-Z)"
+                aria-label="Undo last change"
+                className="px-2 py-1.5 text-[12px] font-bold transition-opacity"
+                style={{ background: COLORS.parchmentDeep, color: canUndo ? COLORS.inkLight : COLORS.inkSubtle, opacity: canUndo ? 1 : 0.4, cursor: canUndo ? "pointer" : "not-allowed" }}
+              >
+                ↶
+              </button>
+              <span aria-hidden style={{ width: 1, alignSelf: "stretch", background: COLORS.border }} />
+              <button
+                onClick={() => redo()}
+                disabled={!canRedo}
+                title="Redo (Cmd/Ctrl-Shift-Z)"
+                aria-label="Redo last undone change"
+                className="px-2 py-1.5 text-[12px] font-bold transition-opacity"
+                style={{ background: COLORS.parchmentDeep, color: canRedo ? COLORS.inkLight : COLORS.inkSubtle, opacity: canRedo ? 1 : 0.4, cursor: canRedo ? "pointer" : "not-allowed" }}
+              >
+                ↷
+              </button>
+            </div>
             <button
               onClick={saveDraft}
               className="px-3 py-1.5 text-[12px] font-bold rounded-lg border-2"
@@ -398,6 +448,8 @@ export default function BalanceManagerApp() {
               </button>
             </div>
           </nav>
+
+          <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} onSelect={handlePaletteSelect} />
 
           {/* Active tab content */}
           <main className="flex-1 flex flex-col min-w-0">
