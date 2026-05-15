@@ -12,6 +12,7 @@ import { COLORS, SmallButton } from "../shared.jsx";
 import { renderStoryMarkdown } from "../../storyEditor/exportMarkdown.js";
 import { groupedStoryWarnings } from "../../storyEditor/shared.jsx";
 import StatsPanel from "../../storyEditor/StatsPanel.jsx";
+import BondTimelinePanel from "../../storyEditor/BondTimelinePanel.jsx";
 
 const STORY_EDITOR_URL = import.meta.env.BASE_URL.replace(/\/$/, "") + "/story/";
 
@@ -90,6 +91,17 @@ export default function StoryTab({ draft }) {
           Story analytics
         </div>
         <StatsPanel draft={draft} />
+      </div>
+
+      <div className="rounded-xl border-2 p-4" style={{ background: COLORS.parchment, borderColor: COLORS.border }}>
+        <div className="text-[12px] font-bold uppercase tracking-wide mb-2" style={{ color: COLORS.inkSubtle }}>
+          Bond timeline
+        </div>
+        <p className="text-[12px] mb-2" style={{ color: COLORS.inkLight }}>
+          Every choice that nudges an NPC's bond, walked in story order with running totals.
+          Spot relationships that swing too hard one way, or ones the player never gets a chance to repair.
+        </p>
+        <BondTimelinePanel draft={draft} />
       </div>
 
       <div className="rounded-xl border-2 p-4" style={{ background: COLORS.parchment, borderColor: COLORS.border }}>
