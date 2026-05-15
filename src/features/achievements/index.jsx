@@ -177,10 +177,10 @@ export default function AchievementsScreen({ state, dispatch }) {
   const unlockedCount = ACHIEVEMENTS.filter((a) => unlockedMap[a.id]).length;
 
   return (
-    <div className="absolute inset-0 bg-gradient-to-b from-[#7c4f2c] to-[#6b4225] border-[3px] border-[#e2c19b] rounded-2xl flex flex-col overflow-hidden">
+    <div className="absolute inset-0 bg-gradient-to-b from-[#ead7b3] to-[#d4b585] border-[3px] border-[#b28b62] rounded-2xl flex flex-col overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between px-3 py-2 flex-shrink-0 border-b border-[#e2c19b]/40">
-        <span className="font-bold text-[14px] text-[#f8e7c6]">🏆 Trophies</span>
+      <div className="flex items-center justify-between px-3 py-2 flex-shrink-0 border-b border-[#b28b62]/40">
+        <span className="font-bold text-[14px] text-[#3a2715]">🏆 Trophies</span>
         <button
           onClick={() => dispatch({ type: "SET_VIEW", view: "town" })}
           className="w-7 h-7 rounded-lg bg-[#f6efe0] border-2 border-[#b28b62] grid place-items-center text-[#6a4b31] font-bold text-[14px]"
@@ -198,13 +198,13 @@ export default function AchievementsScreen({ state, dispatch }) {
             className={`px-3 py-1 rounded-full text-[11px] font-bold transition-colors border ${
               tab === t
                 ? "bg-[#d6612a] text-white border-[#d6612a]"
-                : "bg-[#3a2715] text-[#c5a87a] border-[#c5a87a]/40 hover:bg-[#4a2e18]"
+                : "bg-[#f6efe0]/80 text-[#5b3b20] border-[#b28b62] hover:bg-[#f6efe0]"
             }`}
           >
             {t === "trophies" ? "Trophies" : "Collection"}
           </button>
         ))}
-        <div className="ml-auto text-[10px] text-[#c5a87a] flex items-center">
+        <div className="ml-auto text-[10px] text-[#5b3b20] flex items-center">
           {tab === "trophies"
             ? `${unlockedCount}/${ACHIEVEMENTS.length} unlocked`
             : `${discoveredCount}/${ALL_RESOURCES.length} discovered`}
@@ -265,9 +265,9 @@ export default function AchievementsScreen({ state, dispatch }) {
             </div>
           </div>
           {/* Footer strip */}
-          <div className="flex-shrink-0 px-3 py-1.5 border-t border-[#e2c19b]/30 text-[11px] text-[#c5a87a] font-bold flex gap-3">
+          <div className="flex-shrink-0 px-3 py-1.5 border-t border-[#b28b62]/40 text-[11px] text-[#5b3b20] font-bold flex gap-3">
             <span>Discovered {discoveredCount}/{ALL_RESOURCES.length}</span>
-            <span className="text-[#c5a87a]/60">·</span>
+            <span className="text-[#5b3b20]/60">·</span>
             <span>Total harvested: {totalLifetime.toLocaleString()}</span>
           </div>
         </div>

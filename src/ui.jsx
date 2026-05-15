@@ -41,7 +41,7 @@ class FeatureErrorBoundary extends React.Component {
 
 export function SidePanel({ state, dispatch, chainInfo }) {
   return (
-    <div className="bg-gradient-to-b from-[#7c4f2c] to-[#6b4225] border-[3px] border-[#e2c19b] rounded-2xl p-3 flex flex-col gap-3 overflow-hidden h-full min-h-0">
+    <div className="bg-gradient-to-b from-[#ead7b3] to-[#d4b585] border-[3px] border-[#b28b62] rounded-2xl p-3 flex flex-col gap-3 overflow-hidden h-full min-h-0">
       {chainInfo && (
         <div className="bg-[#2b2218]/90 border border-[#ffd248] rounded-xl px-3 py-2 text-[#ffd248] font-bold text-[13px] text-center flex-shrink-0">
           <div>
@@ -54,7 +54,7 @@ export function SidePanel({ state, dispatch, chainInfo }) {
           )}
         </div>
       )}
-      <Section title="Tools" titleColor="#f8e7c6">
+      <Section title="Tools" titleColor="#3a2715">
         <div className="max-h-[40vh] landscape:max-[1024px]:max-h-[34vh] overflow-y-auto pr-1">
           <ToolsGrid
             tools={state.tools}
@@ -74,7 +74,7 @@ export function SidePanel({ state, dispatch, chainInfo }) {
           />
         </div>
       </Section>
-      <Section title="Orders" titleColor="#f8e7c6">
+      <Section title="Orders" titleColor="#3a2715">
         <CompactOrders orders={state.orders} inventory={state.inventory} dispatch={dispatch} />
       </Section>
     </div>

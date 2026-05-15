@@ -121,21 +121,21 @@ function AlmanacTierCard({ idx, tierDef, almanacXp, almanacClaimed, dispatch }) 
           ? "bg-[#c5a87a]/40 border-[#c5a87a]"
           : claimable
           ? "bg-[#f6efe0] border-[#d6612a]"
-          : "bg-[#3a2715]/60 border-[#5a3a20]"
+          : "bg-[#d4b585]/40 border-[#b28b62]/60"
       }`}
     >
       <div className="flex items-center gap-2">
         <div className="text-[18px] leading-none flex-shrink-0 flex items-center justify-center">{claimed ? <CheckGlyph size={16} /> : claimable ? icon : <LockGlyph size={16} />}</div>
         <div className="flex-1 min-w-0">
-          <div className="text-[11px] font-bold text-[#f8e7c6]">
+          <div className="text-[11px] font-bold text-[#3a2715]">
             Tier {tier}{tierDef.name ? ` — ${tierDef.name}` : ""}
           </div>
-          <div className="text-[10px] font-bold text-[#c8923a]">{rewardStr}</div>
+          <div className="text-[10px] font-bold text-[#a8722a]">{rewardStr}</div>
         </div>
-        <div className="text-[9px] text-[#f8e7c6]/60 flex-shrink-0">{cost}✦</div>
+        <div className="text-[9px] text-[#5b3b20]/70 flex-shrink-0">{cost}✦</div>
       </div>
       {tierDef.description && (
-        <div className="text-[9px] text-[#f8e7c6]/70 italic leading-snug">
+        <div className="text-[9px] text-[#5b3b20]/80 italic leading-snug">
           {tierDef.description}
         </div>
       )}
@@ -147,7 +147,7 @@ function AlmanacTierCard({ idx, tierDef, almanacXp, almanacClaimed, dispatch }) 
             ? "bg-[#c5a87a] border-[#a88a5a] text-white/60 cursor-default"
             : claimable
             ? "bg-[#d6612a] border-[#a84010] text-white hover:bg-[#e8722a]"
-            : "bg-[#2a1d0f] border-[#3a2715] text-white/30 cursor-not-allowed"
+            : "bg-[#b28b62]/30 border-[#b28b62]/60 text-[#5b3b20]/50 cursor-not-allowed"
         }`}
       >
         {claimed ? <span className="inline-flex items-center gap-1 justify-center"><CheckGlyph size={9} /> Claimed</span> : claimable ? "CLAIM" : <span className="inline-flex justify-center"><LockGlyph size={10} /></span>}
@@ -181,7 +181,7 @@ export function QuestsPanel({ state, dispatch }) {
             className={`px-4 py-1 rounded-full text-[12px] font-bold border-2 transition-colors ${
               tab === t
                 ? "bg-[#d6612a] border-[#a84010] text-white"
-                : "bg-[#3a2715]/60 border-[#5a3a20] text-[#f8e7c6]/70 hover:bg-[#3a2715]"
+                : "bg-[#f6efe0]/80 border-[#b28b62] text-[#5b3b20] hover:bg-[#f6efe0]"
             }`}
           >
             {t === "daily" ? "Daily" : "Almanac"}
@@ -198,10 +198,10 @@ export function QuestsPanel({ state, dispatch }) {
           }).map((q) => (
             <QuestCard key={q.id} q={q} dispatch={dispatch} />
           ))}
-          <p className="text-[10px] text-[#f8e7c6]/50 text-center mt-1">Next refresh: when season ends</p>
+          <p className="text-[10px] text-[#5b3b20]/70 text-center mt-1">Next refresh: when season ends</p>
           <button
             onClick={() => dispatch({ type: "QUESTS/ROLL_DAILIES" })}
-            className="text-[10px] font-bold py-1 px-3 rounded-lg bg-[#3a2715]/70 border border-[#5a3a20] text-[#f8e7c6]/60 hover:bg-[#3a2715] self-center"
+            className="text-[10px] font-bold py-1 px-3 rounded-lg bg-[#f6efe0]/80 border border-[#b28b62] text-[#5b3b20] hover:bg-[#f6efe0] self-center"
           >
             🔄 Reroll (dev)
           </button>
@@ -215,7 +215,7 @@ export function QuestsPanel({ state, dispatch }) {
                 style={{ width: `${xpPct}%`, background: "#d6612a" }}
               />
             </div>
-            <span className="text-[11px] font-bold text-[#f8e7c6] whitespace-nowrap">
+            <span className="text-[11px] font-bold text-[#3a2715] whitespace-nowrap">
               {almanacXp}✦ / {nextCost > 1000 ? "MAX" : nextCost}
             </span>
           </div>
@@ -251,9 +251,9 @@ export default function QuestsScreen({ state, dispatch, initialTab }) {
   const xpPct = Math.min(100, (xpIntoTier / 100) * 100);
 
   return (
-    <div className="absolute inset-0 bg-gradient-to-b from-[#7c4f2c] to-[#6b4225] border-[3px] border-[#e2c19b] flex flex-col overflow-hidden">
-      <div className="flex items-center justify-between px-3 py-2 flex-shrink-0 border-b border-[#e2c19b]/40">
-        <span className="font-bold text-[14px] text-[#f8e7c6]">📜 Quests & Almanac</span>
+    <div className="absolute inset-0 bg-gradient-to-b from-[#ead7b3] to-[#d4b585] border-[3px] border-[#b28b62] flex flex-col overflow-hidden">
+      <div className="flex items-center justify-between px-3 py-2 flex-shrink-0 border-b border-[#b28b62]/40">
+        <span className="font-bold text-[14px] text-[#3a2715]">📜 Quests & Almanac</span>
         <button
           onClick={() => dispatch({ type: "SET_VIEW", view: "town" })}
           className="w-7 h-7 rounded-lg bg-[#f6efe0] border-2 border-[#b28b62] grid place-items-center text-[#6a4b31] font-bold text-[14px]"
@@ -268,7 +268,7 @@ export default function QuestsScreen({ state, dispatch, initialTab }) {
             className={`px-4 py-1 rounded-full text-[12px] font-bold border-2 transition-colors ${
               tab === t
                 ? "bg-[#d6612a] border-[#a84010] text-white"
-                : "bg-[#3a2715]/60 border-[#5a3a20] text-[#f8e7c6]/70 hover:bg-[#3a2715]"
+                : "bg-[#f6efe0]/80 border-[#b28b62] text-[#5b3b20] hover:bg-[#f6efe0]"
             }`}
           >
             {t === "daily" ? "Daily" : "Almanac"}
@@ -285,10 +285,10 @@ export default function QuestsScreen({ state, dispatch, initialTab }) {
           }).map((q) => (
             <QuestCard key={q.id} q={q} dispatch={dispatch} />
           ))}
-          <p className="text-[10px] text-[#f8e7c6]/50 text-center mt-1">Next refresh: when season ends</p>
+          <p className="text-[10px] text-[#5b3b20]/70 text-center mt-1">Next refresh: when season ends</p>
           <button
             onClick={() => dispatch({ type: "QUESTS/ROLL_DAILIES" })}
-            className="text-[10px] font-bold py-1 px-3 rounded-lg bg-[#3a2715]/70 border border-[#5a3a20] text-[#f8e7c6]/60 hover:bg-[#3a2715] self-center"
+            className="text-[10px] font-bold py-1 px-3 rounded-lg bg-[#f6efe0]/80 border border-[#b28b62] text-[#5b3b20] hover:bg-[#f6efe0] self-center"
           >
             🔄 Reroll (dev)
           </button>
@@ -302,7 +302,7 @@ export default function QuestsScreen({ state, dispatch, initialTab }) {
                 style={{ width: `${xpPct}%`, background: "#d6612a" }}
               />
             </div>
-            <span className="text-[11px] font-bold text-[#f8e7c6] whitespace-nowrap">
+            <span className="text-[11px] font-bold text-[#3a2715] whitespace-nowrap">
               {almanacXp}✦ / {nextCost > 1000 ? "MAX" : nextCost}
             </span>
           </div>
