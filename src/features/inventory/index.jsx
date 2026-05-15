@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { InventoryGrid } from "../../ui/Inventory.jsx";
 import Pill from "../../ui/primitives/Pill.jsx";
 import Button from "../../ui/primitives/Button.jsx";
@@ -44,39 +44,47 @@ function useDebounced(value, delay) {
 }
 
 function useRecentOrder(inventory) {
-  const orderRef = useRef([]);
-  const prevRef = useRef(null);
+  const [state, setState] = useState(() => ({
+    order: Object.keys(inventory || {}).filter((k) => (inventory[k] || 0) > 0),
+    snapshot: { ...(inventory || {}) },
+  }));
 
-  return useMemo(() => {
-    const prev = prevRef.current;
-    const next = [];
-    const seen = new Set();
-    if (prev) {
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- track inventory deltas for "recent" sort ordering
+    setState((prev) => {
+      const seen = new Set();
+      const next = [];
       for (const key of Object.keys(inventory || {})) {
-        const before = prev[key] || 0;
+        const before = prev.snapshot[key] || 0;
         const after = inventory[key] || 0;
         if (after > before) {
           next.push(key);
           seen.add(key);
         }
       }
-    }
-    for (const key of orderRef.current) {
-      if (!seen.has(key) && (inventory[key] || 0) > 0) {
-        next.push(key);
-        seen.add(key);
+      for (const key of prev.order) {
+        if (!seen.has(key) && (inventory[key] || 0) > 0) {
+          next.push(key);
+          seen.add(key);
+        }
       }
-    }
-    for (const key of Object.keys(inventory || {})) {
-      if (!seen.has(key) && (inventory[key] || 0) > 0) {
-        next.push(key);
-        seen.add(key);
+      for (const key of Object.keys(inventory || {})) {
+        if (!seen.has(key) && (inventory[key] || 0) > 0) {
+          next.push(key);
+          seen.add(key);
+        }
       }
-    }
-    orderRef.current = next;
-    prevRef.current = { ...inventory };
-    return next;
+      const sameOrder =
+        prev.order.length === next.length && prev.order.every((k, i) => k === next[i]);
+      const sameSnapshot =
+        Object.keys(prev.snapshot).length === Object.keys(inventory || {}).length &&
+        Object.keys(inventory || {}).every((k) => (prev.snapshot[k] || 0) === (inventory[k] || 0));
+      if (sameOrder && sameSnapshot) return prev;
+      return { order: next, snapshot: { ...(inventory || {}) } };
+    });
   }, [inventory]);
+
+  return state.order;
 }
 
 function SearchIcon() {
