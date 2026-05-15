@@ -93,12 +93,12 @@ describe("Phase 4 — WORKERS/FIRE", () => {
 describe("Phase 4 — Aggregator folds type-workers into the effects channels", () => {
   it("a hired Farmer contributes to thresholdReduce on grain species", () => {
     const out = computeWorkerEffects({ workers: { hired: { farmer: 5 } } });
-    // Farmer is threshold_reduce_category on "grain". With 5/10 hired,
-    // perHireScalar = 0.5, delta = (amount) * 0.5 = 0.5 per grain species.
+    // Farmer is threshold_reduce_category on "grain" with amount=1 per hire.
+    // 5 hired Farmers → 5 whole-tile reduction per grain species.
     const grainKeys = Object.keys(out.thresholdReduce).filter((k) => k.startsWith("grain"));
     expect(grainKeys.length).toBeGreaterThan(0);
     for (const k of grainKeys) {
-      expect(out.thresholdReduce[k]).toBeCloseTo(0.5, 6);
+      expect(out.thresholdReduce[k]).toBe(5);
     }
   });
 
@@ -107,21 +107,21 @@ describe("Phase 4 — Aggregator folds type-workers into the effects channels", 
     const treeKeys = Object.keys(out.thresholdReduce).filter((k) => k.startsWith("tree"));
     expect(treeKeys.length).toBeGreaterThan(0);
     for (const k of treeKeys) {
-      expect(out.thresholdReduce[k]).toBeCloseTo(1.0, 6);
+      expect(out.thresholdReduce[k]).toBe(10);
     }
   });
 
-  it("a Baker hired to maxCount drops the bread flour cost from 3 to 1", () => {
+  it("a Baker hired to maxCount contributes amount*count to recipeInputReduce", () => {
     const out = computeWorkerEffects({ workers: { hired: { baker: 10 } } });
-    // Baker: recipe_input_reduce bread/grain_flour from 3 to 1 at full hire.
-    // perHireScalar = 1.0, delta = 2 → recipeInputReduce.bread.grain_flour = 2.
-    expect(out.recipeInputReduce.bread.grain_flour).toBeCloseTo(2.0, 6);
+    // Baker: recipe_input_reduce bread/grain_flour, amount=2 per hire.
+    // 10 hired Bakers → 20 raw reduction (crafting/slice.js floors recipe at 1).
+    expect(out.recipeInputReduce.bread.grain_flour).toBe(20);
   });
 
   it("multiple type-workers compose independently on their own channels", () => {
     const out = computeWorkerEffects({ workers: { hired: { farmer: 10, baker: 10 } } });
     const grainHas = Object.keys(out.thresholdReduce).some((k) => k.startsWith("grain"));
     expect(grainHas).toBe(true);
-    expect(out.recipeInputReduce.bread.grain_flour).toBeCloseTo(2.0, 6);
+    expect(out.recipeInputReduce.bread.grain_flour).toBe(20);
   });
 });
