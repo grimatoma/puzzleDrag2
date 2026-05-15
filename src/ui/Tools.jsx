@@ -1,42 +1,77 @@
-import { useEffect, useRef, useState } from "react";
-import { createPortal } from "react-dom";
-import { useTooltip, Tooltip } from "./Tooltip.jsx";
+import { useEffect, useState } from "react";
 import { CompactOrders } from "./Inventory.jsx";
 import { getPhaserScene } from "../phaserBridge.js";
-import IconCanvas, { hasIcon } from "./IconCanvas.jsx";
+import IconCanvas from "./IconCanvas.jsx";
 import Icon from "./Icon.jsx";
-import { TOOL_CATALOG, TOOL_BY_KEY, TOOL_CATEGORIES, visibleTools, isTapTargetTool } from "./toolRegistry.js";
+import ToolStrip from "./primitives/ToolStrip.jsx";
+import BottomSheet from "./primitives/BottomSheet.jsx";
+import { TOOL_CATALOG, TOOL_BY_KEY, visibleTools, isTapTargetTool } from "./toolRegistry.js";
 
-// Re-exported for back-compat with anything that still imports TOOL_DEFS.
 export const TOOL_DEFS = TOOL_CATALOG;
 
-/**
- * Renders a tool's icon — prefers the canvas icon registry, falls back to the
- * emoji glyph for tools whose registry icon hasn't been drawn yet.
- */
-function ToolIcon({ def, size }) {
-  if (def.iconKey && hasIcon(def.iconKey)) {
-    return <div style={{ width: size, height: size }}><IconCanvas iconKey={def.iconKey} size={size} /></div>;
-  }
-  return <div style={{ fontSize: size * 0.7, lineHeight: 1 }}><Icon iconKey={def.iconKey ?? "ui_settings"} size={size * 0.7} /></div>;
+function buildToolList(toolsState, { toolPending, fertilizerActive }) {
+  const tools = toolsState || {};
+  return visibleTools(tools).map((def) => {
+    const count = tools[def.key] || 0;
+    const armed =
+      toolPending === def.key ||
+      (def.key === "fertilizer" && !!fertilizerActive);
+    return {
+      key: def.key,
+      iconKey: def.iconKey,
+      label: def.name,
+      count,
+      category: def.category,
+      def,
+      disabled: count === 0 && !armed,
+      armed,
+    };
+  });
 }
 
-/**
- * Dispatch a tool use, with bridge side-effects for the few tools that need
- * a synchronous Phaser call (shuffle hits the scene directly so the board
- * animates the same frame the action lands).
- */
+function ToolInspectSheet({ tool, onClose }) {
+  if (!tool) return null;
+  return (
+    <BottomSheet
+      open={!!tool}
+      onClose={onClose}
+      snapPoints={[0.4, 0.7]}
+      initialSnap={0.4}
+      title={tool.name}
+      dismissible
+    >
+      <div className="flex flex-col items-center gap-3 pt-2">
+        <div style={{ width: 64, height: 64 }}>
+          <IconCanvas iconKey={tool.iconKey} size={64} />
+        </div>
+        <div className="text-body-lg text-ink text-center leading-relaxed">
+          {tool.desc}
+        </div>
+        {isTapTargetTool(tool.key) && (
+          <div className="text-caption font-bold text-ember text-center">
+            Tap a tile on the board to apply.
+          </div>
+        )}
+        <button
+          type="button"
+          onClick={onClose}
+          className="mt-2 w-full bg-bg-warm hover:bg-bg-frame text-cream font-bold py-2 rounded-md border border-cream-soft text-body"
+        >
+          Close
+        </button>
+      </div>
+    </BottomSheet>
+  );
+}
+
 function dispatchUseTool(dispatch, key, state) {
   const isPending = state.toolPending === key;
   if (isPending) {
     dispatch({ type: "CANCEL_TOOL" });
     return;
   }
-  // Magic tools route through the portal slice exclusively — but they share
-  // the USE_TOOL action; payload.id is what the portal slice listens to.
   const def = TOOL_BY_KEY[key];
-  const isMagic = def?.category === "magic";
-  if (isMagic) {
+  if (def?.category === "magic") {
     dispatch({ type: "USE_TOOL", payload: { id: key } });
   } else {
     dispatch({ type: "USE_TOOL", key });
@@ -44,339 +79,144 @@ function dispatchUseTool(dispatch, key, state) {
   if (key === "shuffle") getPhaserScene()?.shuffleBoard();
 }
 
-function ToolButton({ def, count, pending, onClick, onLongPress, showTooltip, hideTooltip, lastTouchTimeRef, size = "md" }) {
-  const longPressTimer = useRef(null);
-  const longPressOccurred = useRef(false);
-
-  const startLongPress = () => {
-    longPressOccurred.current = false;
-    longPressTimer.current = setTimeout(() => {
-      longPressOccurred.current = true;
-      onLongPress?.(def);
-    }, 500);
-  };
-  const cancelLongPress = () => clearTimeout(longPressTimer.current);
-
-  const empty = count === 0;
-  const armed = pending;
-  const iconPx = size === "sm" ? 24 : 32;
-  const sizing = size === "sm"
-    ? { btn: "py-1.5 px-1", name: "text-[8px]" }
-    : { btn: "py-1.5 px-1", name: "text-[9px]" };
-
-  return (
-    <button
-      disabled={empty && !armed}
-      aria-label={`${armed ? "Cancel" : "Use"} ${def.name}${empty && !armed ? " (none left)" : ""}`}
-      aria-pressed={armed}
-      onClick={() => {
-        if (longPressOccurred.current) { longPressOccurred.current = false; return; }
-        onClick();
-      }}
-      onMouseEnter={(e) => { if (Date.now() - lastTouchTimeRef.current > 600) showTooltip(def.key, e.currentTarget); }}
-      onMouseLeave={() => { if (Date.now() - lastTouchTimeRef.current > 600) hideTooltip(); }}
-      onTouchStart={(e) => {
-        lastTouchTimeRef.current = Date.now();
-        startLongPress();
-        showTooltip(def.key, e.currentTarget);
-      }}
-      onTouchEnd={() => { cancelLongPress(); hideTooltip(2000); }}
-      onTouchCancel={() => { cancelLongPress(); hideTooltip(2000); }}
-      onTouchMove={() => cancelLongPress()}
-      className={`relative w-full rounded-lg border-2 ${sizing.btn} flex flex-col items-center gap-0.5 transition-transform ${
-        armed
-          ? "border-[#ffd248] bg-[#7a4f1d] shadow-[0_0_0_2px_rgba(255,210,72,0.45),0_0_12px_rgba(255,210,72,0.35)] animate-pulse"
-          : empty
-          ? "border-[#7a5836] bg-[#5e3a1f] opacity-40 cursor-not-allowed"
-          : "border-[#e6c49a] bg-[#9a724d] hover:bg-[#b8845a] hover:-translate-y-0.5"
-      }`}
-    >
-      {count > 0 && (
-        <div className="absolute -top-1 -right-1 bg-[#2b2218] text-white border border-[#f7e2b6] rounded-full px-1.5 text-[10px] font-bold leading-none py-0.5">
-          {count}
-        </div>
-      )}
-      {armed && (
-        <div className="absolute -top-1 -left-1 bg-[#ffd248] text-[#2b1d0e] border border-[#2b1d0e] rounded-full text-[8px] font-bold leading-none px-1 py-0.5">
-          ARMED
-        </div>
-      )}
-      <ToolIcon def={def} size={iconPx} />
-      <div className={`${sizing.name} font-bold text-white`}>{def.name}</div>
-    </button>
-  );
-}
-
-/**
- * Side-panel grid: shows owned tools, grouped by category.
- * Always-show field tools so the player sees what they can earn.
- */
-/**
- * Returns true when a tool's button should render in the "armed" visual state.
- * Tap-target tools track this through state.toolPending; passive tools (e.g.
- * fertilizer) flip a dedicated flag when armed and need their own check.
- */
-function isToolArmed(def, { toolPending, fertilizerActive }) {
-  if (toolPending === def.key) return true;
-  if (def.key === "fertilizer" && fertilizerActive) return true;
-  return false;
-}
-
 export function ToolsGrid({ tools, toolPending, fertilizerActive, onUse }) {
-  const { tip: tooltipTip, show: showTooltip, hide: hideTooltip, lastTouchTime: lastTouchTimeRef } = useTooltip();
-  const [modalTool, setModalTool] = useState(null);
-
-  const visible = visibleTools(tools);
-  const tooltipDef = tooltipTip ? TOOL_BY_KEY[tooltipTip.data] : null;
-
-  const byCategory = TOOL_CATEGORIES.map((cat) => ({
-    ...cat,
-    tools: visible.filter((t) => t.category === cat.key),
-  })).filter((c) => c.tools.length > 0);
-
+  const [inspectKey, setInspectKey] = useState(null);
+  const list = buildToolList(tools, { toolPending, fertilizerActive });
+  const inspectTool = inspectKey ? TOOL_BY_KEY[inspectKey] : null;
   return (
     <>
-      <div className="flex flex-col gap-2.5">
-        {byCategory.map((cat) => (
-          <div key={cat.key}>
-            <div className="text-[9px] font-bold uppercase tracking-wider text-[#f8e7c6]/70 mb-1 px-0.5">
-              {cat.label}
-            </div>
-            <div className="grid grid-cols-2 gap-1.5">
-              {cat.tools.map((def) => (
-                <ToolButton
-                  key={def.key}
-                  def={def}
-                  count={tools[def.key] || 0}
-                  pending={isToolArmed(def, { toolPending, fertilizerActive })}
-                  onClick={() => onUse(def.key)}
-                  onLongPress={(t) => setModalTool(t)}
-                  showTooltip={showTooltip}
-                  hideTooltip={hideTooltip}
-                  lastTouchTimeRef={lastTouchTimeRef}
-                />
-              ))}
-            </div>
-          </div>
-        ))}
-      </div>
-      {tooltipDef && (
-        <Tooltip
-          anchorX={tooltipTip.x}
-          anchorY={tooltipTip.y}
-          className="z-[9999] w-44 bg-[#2b1d0e] text-white text-[10px] rounded-lg px-2.5 py-2 shadow-lg pointer-events-none border border-[#e6c49a]"
-          arrowClassName="border-4 border-transparent border-t-[#2b1d0e]"
-        >
-          <div className="font-bold text-[11px] mb-0.5">{tooltipDef.name}</div>
-          <div className="text-white/80 leading-snug">{tooltipDef.desc}</div>
-          {isTapTargetTool(tooltipDef.key) && (
-            <div className="text-[#ffd248] text-[9px] font-bold mt-1">Tap a tile after using.</div>
-          )}
-        </Tooltip>
-      )}
-      {modalTool && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={() => setModalTool(null)}>
-          <div className="bg-[#3d2310] border-2 border-[#e6c49a] rounded-2xl p-5 max-w-[280px] w-full mx-4 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-            <div className="grid place-items-center mb-1" style={{ height: 64 }}>
-              <ToolIcon def={modalTool} size={64} />
-            </div>
-            <div className="text-white font-bold text-[17px] text-center mb-2">{modalTool.name}</div>
-            <div className="text-white/80 text-[12px] text-center leading-relaxed">{modalTool.desc}</div>
-            {isTapTargetTool(modalTool.key) && (
-              <div className="text-[#ffd248] text-[11px] font-bold text-center mt-2">Tap a tile on the board to apply.</div>
-            )}
-            <button
-              onClick={() => setModalTool(null)}
-              className="mt-4 w-full bg-[#9a724d] hover:bg-[#b8845a] text-white font-bold py-2 rounded-lg border border-[#e6c49a] text-[13px] transition-colors"
-            >
-              Close
-            </button>
-          </div>
-        </div>
-      )}
+      <ToolStrip
+        layout="grid"
+        tools={list}
+        armedKey={toolPending}
+        onUse={onUse}
+        onInspect={(key) => setInspectKey(key)}
+        grouped
+      />
+      <ToolInspectSheet tool={inspectTool} onClose={() => setInspectKey(null)} />
     </>
   );
 }
 
-function BottomSheet({ onClose, children }) {
-  return createPortal(
-    <div className="fixed inset-0 z-50 flex flex-col justify-end" onClick={onClose}>
-      <div className="absolute inset-0 bg-black/50" />
-      <div
-        className="relative bg-[#3a2715] border-t-2 border-[#b28b62] rounded-t-2xl p-4 max-h-[60dvh] overflow-y-auto"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="w-10 h-1 bg-[#b28b62] rounded-full mx-auto mb-4" />
-        {children}
-      </div>
-    </div>,
-    document.body
-  );
-}
-
-/**
- * Portrait phone tool bar: a single horizontal scroll strip showing every
- * owned tool plus the four field starters so the player always has a base set.
- */
 export function PortraitToolsBar({ state, dispatch }) {
-  const { tip: tooltipTip, show: showTooltip, hide: hideTooltip, lastTouchTime: lastTouchTimeRef } = useTooltip();
-  const [modalTool, setModalTool] = useState(null);
-  const tools = state.tools || {};
-  const list = visibleTools(tools);
-  const tooltipDef = tooltipTip ? TOOL_BY_KEY[tooltipTip.data] : null;
-
+  const [inspectKey, setInspectKey] = useState(null);
+  const list = buildToolList(state.tools, {
+    toolPending: state.toolPending,
+    fertilizerActive: state.fertilizerActive,
+  });
+  const inspectTool = inspectKey ? TOOL_BY_KEY[inspectKey] : null;
   return (
-    <div className="bg-[#3a2715] border-t border-[#b28b62] px-2 py-2 flex-shrink-0">
-      <div className="flex gap-1.5 overflow-x-auto pb-0.5" style={{ scrollbarWidth: "thin" }}>
-        {list.map((def) => (
-          <div key={def.key} className="flex-shrink-0 w-[64px]">
-            <ToolButton
-              def={def}
-              count={tools[def.key] || 0}
-              pending={isToolArmed(def, { toolPending: state.toolPending, fertilizerActive: state.fertilizerActive })}
-              onClick={() => dispatchUseTool(dispatch, def.key, state)}
-              onLongPress={(t) => setModalTool(t)}
-              showTooltip={showTooltip}
-              hideTooltip={hideTooltip}
-              lastTouchTimeRef={lastTouchTimeRef}
-              size="sm"
-            />
-          </div>
-        ))}
-      </div>
-      {tooltipDef && (
-        <Tooltip
-          anchorX={tooltipTip.x}
-          anchorY={tooltipTip.y}
-          className="z-[9999] w-44 bg-[#2b1d0e] text-white text-[10px] rounded-lg px-2.5 py-2 shadow-lg pointer-events-none border border-[#e6c49a]"
-          arrowClassName="border-4 border-transparent border-t-[#2b1d0e]"
-        >
-          <div className="font-bold text-[11px] mb-0.5">{tooltipDef.name}</div>
-          <div className="text-white/80 leading-snug">{tooltipDef.desc}</div>
-        </Tooltip>
-      )}
-      {modalTool && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={() => setModalTool(null)}>
-          <div className="bg-[#3d2310] border-2 border-[#e6c49a] rounded-2xl p-5 max-w-[280px] w-full mx-4 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-            <div className="grid place-items-center mb-1" style={{ height: 64 }}>
-              <ToolIcon def={modalTool} size={64} />
-            </div>
-            <div className="text-white font-bold text-[17px] text-center mb-2">{modalTool.name}</div>
-            <div className="text-white/80 text-[12px] text-center leading-relaxed">{modalTool.desc}</div>
-            {isTapTargetTool(modalTool.key) && (
-              <div className="text-[#ffd248] text-[11px] font-bold text-center mt-2">Tap a tile on the board to apply.</div>
-            )}
-            <button
-              onClick={() => setModalTool(null)}
-              className="mt-4 w-full bg-[#9a724d] hover:bg-[#b8845a] text-white font-bold py-2 rounded-lg border border-[#e6c49a] text-[13px] transition-colors"
-            >
-              Close
-            </button>
-          </div>
-        </div>
-      )}
+    <div className="bg-bg-frame border-t border-iron px-2 py-2 flex-shrink-0">
+      <ToolStrip
+        layout="rail"
+        tools={list}
+        armedKey={state.toolPending}
+        onUse={(key) => dispatchUseTool(dispatch, key, state)}
+        onInspect={(key) => setInspectKey(key)}
+      />
+      <ToolInspectSheet tool={inspectTool} onClose={() => setInspectKey(null)} />
     </div>
   );
 }
 
 export function MobileDock({ state, dispatch }) {
-  const [sheet, setSheet] = useState(null); // "tools" | "orders" | null
+  const [sheet, setSheet] = useState(null);
+  const [inspectKey, setInspectKey] = useState(null);
 
-  // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: clear local sheet state when leaving board view
-  useEffect(() => { if (state.view !== "board") setSheet(null); }, [state.view]);
+  useEffect(() => {
+    if (state.view === "board") return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: clear local sheet + inspect state when leaving board view
+    setSheet(null);
+    setInspectKey(null);
+  }, [state.view]);
 
   const totalTools = Object.entries(state.tools || {})
     .filter(([k, v]) => typeof v === "number" && v > 0 && TOOL_BY_KEY[k])
     .reduce((s, [, v]) => s + v, 0);
-  const readyOrders = (state.orders || []).filter((o) => (state.inventory[o.key] || 0) >= o.need).length;
+  const readyOrders = (state.orders || []).filter(
+    (o) => (state.inventory[o.key] || 0) >= o.need,
+  ).length;
 
   const closeSheet = () => setSheet(null);
+  const list = buildToolList(state.tools, {
+    toolPending: state.toolPending,
+    fertilizerActive: state.fertilizerActive,
+  });
+  const inspectTool = inspectKey ? TOOL_BY_KEY[inspectKey] : null;
 
   return (
     <>
-      <div className="flex border-t-2 border-[#b28b62] bg-[#3a2715]">
-        {/* Tools */}
+      <div className="flex border-t-2 border-iron bg-bg-frame">
         <button
-          className="flex-1 flex flex-col items-center justify-center gap-0.5 py-2.5 relative text-[#f8e7c6]"
+          type="button"
+          className="flex-1 flex flex-col items-center justify-center gap-0.5 py-2.5 relative text-cream"
           onClick={() => setSheet(sheet === "tools" ? null : "tools")}
         >
           {totalTools > 0 && (
-            <div className="absolute top-1.5 right-[calc(50%-14px)] bg-[#d6612a] text-white text-[9px] font-bold rounded-full min-w-[16px] h-[16px] flex items-center justify-center px-1">
+            <div className="absolute top-1.5 right-[calc(50%-14px)] bg-ember text-cream text-[9px] font-bold rounded-full min-w-[16px] h-[16px] flex items-center justify-center px-1">
               {totalTools}
             </div>
           )}
-          <div style={{ width: 24, height: 24 }}><IconCanvas iconKey="player_clear" size={24} /></div>
+          <div style={{ width: 24, height: 24 }}>
+            <IconCanvas iconKey="player_clear" size={24} />
+          </div>
           <span className="text-[9px] font-bold">Tools</span>
         </button>
 
-        {/* Orders */}
         <button
-          className="flex-1 flex flex-col items-center justify-center gap-0.5 py-2.5 relative text-[#f8e7c6]"
+          type="button"
+          className="flex-1 flex flex-col items-center justify-center gap-0.5 py-2.5 relative text-cream"
           onClick={() => setSheet(sheet === "orders" ? null : "orders")}
         >
           {readyOrders > 0 && (
-            <div className="absolute top-1.5 right-[calc(50%-14px)] bg-[#91bf24] text-white text-[9px] font-bold rounded-full min-w-[16px] h-[16px] flex items-center justify-center px-1">
+            <div className="absolute top-1.5 right-[calc(50%-14px)] bg-moss text-cream text-[9px] font-bold rounded-full min-w-[16px] h-[16px] flex items-center justify-center px-1">
               {readyOrders}
             </div>
           )}
-          <span className="text-[20px] leading-none"><Icon iconKey="ui_clipboard" size={20} /></span>
+          <span className="text-[20px] leading-none">
+            <Icon iconKey="ui_clipboard" size={20} />
+          </span>
           <span className="text-[9px] font-bold">Orders</span>
         </button>
       </div>
 
-      {sheet === "tools" && (
-        <BottomSheet onClose={closeSheet}>
-          <div className="text-[#f8e7c6] font-bold text-[14px] mb-3">Tools</div>
-          <ToolsGrid
-            tools={state.tools}
-            toolPending={state.toolPending}
-            fertilizerActive={state.fertilizerActive}
-            onUse={(key) => {
-              dispatchUseTool(dispatch, key, state);
-              // Keep the sheet open for tap-target tools so the player sees the
-              // armed state, then can dismiss; close immediately for instants.
-              if (!isTapTargetTool(key)) closeSheet();
-            }}
-          />
-        </BottomSheet>
-      )}
+      <BottomSheet
+        open={sheet === "tools"}
+        onClose={closeSheet}
+        snapPoints={[0.5, 0.9]}
+        initialSnap={0.5}
+        title="Tools"
+        dismissible
+      >
+        <ToolStrip
+          layout="sheet"
+          tools={list}
+          armedKey={state.toolPending}
+          onUse={(key) => {
+            dispatchUseTool(dispatch, key, state);
+            if (!isTapTargetTool(key)) closeSheet();
+          }}
+          onInspect={(key) => setInspectKey(key)}
+          grouped
+        />
+      </BottomSheet>
 
-      {sheet === "orders" && (
-        <BottomSheet onClose={closeSheet}>
-          <div className="text-[#f8e7c6] font-bold text-[14px] mb-3">Orders</div>
-          <CompactOrders orders={state.orders} inventory={state.inventory} dispatch={dispatch} />
-        </BottomSheet>
-      )}
+      <BottomSheet
+        open={sheet === "orders"}
+        onClose={closeSheet}
+        snapPoints={[0.5, 0.9]}
+        initialSnap={0.5}
+        title="Orders"
+        dismissible
+      >
+        <CompactOrders
+          orders={state.orders}
+          inventory={state.inventory}
+          dispatch={dispatch}
+        />
+      </BottomSheet>
+
+      <ToolInspectSheet tool={inspectTool} onClose={() => setInspectKey(null)} />
     </>
-  );
-}
-
-/**
- * Banner that hovers over the Phaser canvas while an "armed" tap-target
- * tool is waiting for the player to point at a tile. Lets the player cancel
- * without scrolling back to the side panel.
- */
-export function ArmedToolBanner({ state, dispatch }) {
-  const pending = state.toolPending;
-  if (!pending || !isTapTargetTool(pending)) return null;
-  const def = TOOL_BY_KEY[pending];
-  if (!def) return null;
-  return (
-    <div className="absolute top-2 left-1/2 -translate-x-1/2 z-30 pointer-events-auto">
-      <div className="bg-[#2b1d0e]/95 border-2 border-[#ffd248] rounded-xl px-3 py-2 flex items-center gap-2 shadow-lg max-w-[90vw]">
-        <ToolIcon def={def} size={24} />
-        <div className="flex flex-col">
-          <div className="text-[#ffd248] font-bold text-[12px] leading-tight">{def.name} armed</div>
-          <div className="text-white/80 text-[10px] leading-tight">Tap a tile on the board.</div>
-        </div>
-        <button
-          onClick={() => dispatch({ type: "CANCEL_TOOL" })}
-          className="ml-2 bg-[#9a724d] hover:bg-[#b8845a] text-white font-bold text-[11px] px-2 py-1 rounded-md border border-[#e6c49a]"
-          aria-label="Cancel armed tool"
-        >
-          Cancel
-        </button>
-      </div>
-    </div>
   );
 }
