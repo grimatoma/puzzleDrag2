@@ -2,7 +2,7 @@ import Phaser from "phaser";
 import { TILE, COLS, ROWS, UPGRADE_THRESHOLDS, SEASONS, BIOMES, CAPPED_RESOURCES, SCENE_EVENTS } from "./constants.js";
 import { upgradeCountForChain, resourceGainForChain, rollResource } from "./utils.js";
 import { computeWorkerEffects } from "./features/workers/aggregate.js";
-import { CATEGORY_OF } from "./features/tileCollection/data.js";
+import { CATEGORY_OF, TILE_TYPES_MAP } from "./features/tileCollection/data.js";
 import {
   expandZoneCategories,
   nextResourceForZone,
@@ -481,6 +481,14 @@ export class GameScene extends Phaser.Scene {
 
   nextResource(res) {
     const resources = this.biome().resources;
+
+    // Per-tile "Produces Resource" override (Balance Manager → Tiles tab) is
+    // authoritative — it names the chain's upgrade target outright, ahead of
+    // the zone redirect and the resource's native `.next`.
+    const producesKey = TILE_TYPES_MAP[res.key]?.effects?.producesResource;
+    if (producesKey) {
+      return resources.find((r) => r.key === producesKey) ?? null;
+    }
 
     // Farm chains are owned by the active zone's upgradeMap. Whatever the
     // zone says (concrete category, gold sentinel, or "no entry") is the
