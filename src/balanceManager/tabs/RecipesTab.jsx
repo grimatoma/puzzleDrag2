@@ -5,6 +5,7 @@ import {
   SmallButton, Pill, Card, SearchBar, SearchAndAddPicker,
 } from "../shared.jsx";
 import Icon from "../../ui/Icon.jsx";
+import { traceRecipe, collectUpstreamRecipes, countRawInputs } from "../recipeGraph.js";
 
 const STATIONS = [
   { value: "bakery",   label: "Bakery" },
@@ -24,6 +25,12 @@ const STATION_FILTERS = [
 export default function RecipesTab({ draft, updateDraft }) {
   const [stationFilter, setStationFilter] = useState("all");
   const [search, setSearch] = useState("");
+  const [openTrees, setOpenTrees] = useState(new Set());
+  const toggleTree = (id) => setOpenTrees((prev) => {
+    const next = new Set(prev);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    return next;
+  });
 
   const allItemKeys = useMemo(() => {
     return Object.keys(ITEMS).sort();
@@ -169,6 +176,8 @@ export default function RecipesTab({ draft, updateDraft }) {
                   onChange={(nextInputs) => patchInputs(recId, nextInputs)}
                 />
               </div>
+
+              <DependencyTrace recipeId={recId} open={openTrees.has(recId)} onToggle={() => toggleTree(recId)} />
             </Card>
           );
         })}
@@ -270,6 +279,57 @@ function IngredientsEditor({ ingredients, availableKeys, onChange }) {
         onSelect={(k) => updateIngredient(k, 1)}
         gridClass="grid-cols-2 md:grid-cols-3"
       />
+    </div>
+  );
+}
+
+function DependencyTrace({ recipeId, open, onToggle }) {
+  const tree = useMemo(() => (open ? traceRecipe(recipeId) : null), [recipeId, open]);
+  return (
+    <div className="mt-2 pt-2" style={{ borderTop: `1px dashed ${COLORS.border}` }}>
+      <button onClick={onToggle}
+        className="text-[10px] font-bold uppercase tracking-wide"
+        style={{ color: COLORS.inkSubtle, background: "transparent", border: "none", cursor: "pointer", padding: 0 }}>
+        {open ? "▾" : "▸"} Trace upstream dependencies
+      </button>
+      {open && tree && (
+        <div className="mt-2 p-2 rounded-lg border" style={{ background: "#fffaf3", borderColor: COLORS.border }}>
+          <div className="text-[10px] mb-2" style={{ color: COLORS.inkSubtle }}>
+            {collectUpstreamRecipes(tree).length} upstream recipe{collectUpstreamRecipes(tree).length === 1 ? "" : "s"} · {countRawInputs(tree)} raw input{countRawInputs(tree) === 1 ? "" : "s"}
+          </div>
+          <TreeNode node={tree} depth={0} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function TreeNode({ node, depth }) {
+  if (!node) return null;
+  return (
+    <div style={{ marginLeft: depth * 14 }}>
+      <div className="flex items-center gap-1.5 text-[11px]" style={{ color: COLORS.ink }}>
+        <span className="font-mono text-[10px] px-1 py-0.5 rounded" style={{ background: COLORS.parchmentDeep, color: COLORS.emberDeep }}>
+          {node.recipeId}
+        </span>
+        <span className="italic" style={{ color: COLORS.inkSubtle }}>→ {node.output}</span>
+        {node.station && <Pill>{node.station}</Pill>}
+        {node.cyclical && <span className="text-[10px] font-bold" style={{ color: COLORS.red }}>↻ cycle</span>}
+      </div>
+      {node.ingredients?.map((ing, i) => (
+        <div key={`${ing.id}-${i}`} className="mt-0.5">
+          <div className="flex items-center gap-1.5 text-[10px]" style={{ marginLeft: 12, color: COLORS.inkLight }}>
+            <Icon iconKey={ing.id} size={12} />
+            <span>{ing.label}</span>
+            <span className="font-mono" style={{ color: COLORS.inkSubtle }}>×{ing.qty}</span>
+            {ing.raw && <span className="font-bold uppercase tracking-wide" style={{ color: COLORS.greenDeep, fontSize: 8 }}>RAW</span>}
+            {ing.truncated && <span className="italic" style={{ color: COLORS.red }}>(truncated)</span>}
+          </div>
+          {ing.sources.map((src, j) => (
+            <TreeNode key={`${src.recipeId}-${j}`} node={src} depth={depth + 1} />
+          ))}
+        </div>
+      ))}
     </div>
   );
 }
