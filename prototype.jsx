@@ -5,7 +5,7 @@ import { gameReducer, initialState } from "./src/state.js";
 import { Hud } from "./src/ui/Hud.jsx";
 import { MobileDock, PortraitToolsBar } from "./src/ui/Tools.jsx";
 import { TownView } from "./src/ui/Town.jsx";
-import { SeasonModal, NpcBubble, StoryModal } from "./src/ui/Modals.jsx";
+import { NpcBubble, StoryModal } from "./src/ui/Modals.jsx";
 import { SidePanel, BottomNav, FeatureModals, FeatureScreens } from "./src/ui.jsx";
 import { useAudio } from "./src/audio/useAudio.js";
 import { useRouter } from "./src/router.js";
@@ -318,8 +318,7 @@ export default function App() {
         {/* NPC bubble */}
         <NpcBubble bubble={state.bubble} dispatch={dispatch} />
 
-        {/* Season modal */}
-        <SeasonModal state={state} dispatch={dispatch} />
+        {/* Run summary now owns the season-end recap (see features/runSummary). */}
 
         {/* Story modal — highest z-index, blocks all interaction */}
         <StoryModal state={state} dispatch={dispatch} />
