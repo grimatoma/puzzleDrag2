@@ -249,6 +249,7 @@ export default function ZonesTab({ draft, updateDraft }) {
               {/* Season drops */}
               <div>
                 <Label>Season drops · % per category</Label>
+                <SeasonStackedBars seasonDrops={eff.seasonDrops} />
                 <div className="overflow-x-auto rounded-lg border" style={{ borderColor: COLORS.border }}>
                   <table className="min-w-full text-[10px]">
                     <thead>
@@ -338,6 +339,66 @@ export default function ZonesTab({ draft, updateDraft }) {
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+// Inline stacked-bar visualisation for the per-season drop table — same
+// data the table edits, just rendered as a stacked horizontal bar per
+// season so designers can see the seasonal mix at a glance.
+const CATEGORY_TONE = {
+  grass:      "#7a8b5e",
+  grain:      "#dab947",
+  trees:      "#7a4f1f",
+  birds:      "#a36a6a",
+  vegetables: "#6b3a8a",
+  fruits:     "#a8431a",
+  flowers:    "#d8589a",
+  herd:       "#5a6973",
+  cattle:     "#c8923a",
+  mount:      "#3a4a78",
+  stone:      "#6a7280",
+  ore:        "#a06030",
+  coal:       "#181820",
+  ingot:      "#b8b8c8",
+  dirt:       "#3e3a36",
+  gem:        "#5a3d83",
+  fish:       "#3a8aa0",
+  kelp:       "#4a7a4a",
+  clam:       "#a89c7a",
+  oyster:     "#7a9eaa",
+  default:    "#8a6a3a",
+};
+function colorFor(cat) { return CATEGORY_TONE[cat] || CATEGORY_TONE.default; }
+
+function SeasonStackedBars({ seasonDrops }) {
+  if (!seasonDrops || typeof seasonDrops !== "object") return null;
+  const seasons = ["Spring", "Summer", "Autumn", "Winter"];
+  return (
+    <div className="grid gap-1 mb-2" style={{ gridTemplateColumns: "60px 1fr 50px" }}>
+      {seasons.map((season) => {
+        const table = seasonDrops[season] || {};
+        const entries = Object.entries(table).filter(([, v]) => Number(v) > 0).sort((a, b) => b[1] - a[1]);
+        const total = entries.reduce((s, [, v]) => s + Number(v), 0);
+        return (
+          <div key={season} className="contents">
+            <span className="text-[10px] font-bold uppercase tracking-wide self-center" style={{ color: COLORS.inkSubtle }}>
+              {season}
+            </span>
+            <div className="flex w-full rounded overflow-hidden" style={{ height: 18, background: COLORS.parchmentDeep, border: `1px solid ${COLORS.border}` }}>
+              {total === 0
+                ? <span className="text-[9px] italic text-center w-full self-center" style={{ color: COLORS.inkSubtle }}>empty</span>
+                : entries.map(([cat, v]) => (
+                  <div key={cat} title={`${cat}: ${(Number(v) * 100).toFixed(0)}%`}
+                    style={{ width: `${(Number(v) / total) * 100}%`, background: colorFor(cat) }} />
+                ))}
+            </div>
+            <span className="text-[10px] font-mono text-right self-center" style={{ color: COLORS.inkSubtle }}>
+              Σ {total.toFixed(2)}
+            </span>
+          </div>
+        );
+      })}
     </div>
   );
 }
