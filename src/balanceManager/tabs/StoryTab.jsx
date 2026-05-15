@@ -11,6 +11,7 @@ import { STORY_BEATS, SIDE_BEATS } from "../../story.js";
 import { COLORS, SmallButton } from "../shared.jsx";
 import { renderStoryMarkdown } from "../../storyEditor/exportMarkdown.js";
 import { groupedStoryWarnings } from "../../storyEditor/shared.jsx";
+import StatsPanel from "../../storyEditor/StatsPanel.jsx";
 
 const STORY_EDITOR_URL = import.meta.env.BASE_URL.replace(/\/$/, "") + "/story/";
 
@@ -82,6 +83,13 @@ export default function StoryTab({ draft }) {
             </div>
           ))}
         </div>
+      </div>
+
+      <div className="rounded-xl border-2 p-4" style={{ background: COLORS.parchment, borderColor: COLORS.border }}>
+        <div className="text-[12px] font-bold uppercase tracking-wide mb-2" style={{ color: COLORS.inkSubtle }}>
+          Story analytics
+        </div>
+        <StatsPanel draft={draft} />
       </div>
 
       <div className="rounded-xl border-2 p-4" style={{ background: COLORS.parchment, borderColor: COLORS.border }}>
