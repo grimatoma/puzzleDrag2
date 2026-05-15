@@ -13,6 +13,7 @@ import { renderStoryMarkdown } from "../../storyEditor/exportMarkdown.js";
 import { groupedStoryWarnings } from "../../storyEditor/shared.jsx";
 import StatsPanel from "../../storyEditor/StatsPanel.jsx";
 import BondTimelinePanel from "../../storyEditor/BondTimelinePanel.jsx";
+import HeatmapPanel from "../../storyEditor/HeatmapPanel.jsx";
 
 const STORY_EDITOR_URL = import.meta.env.BASE_URL.replace(/\/$/, "") + "/story/";
 
@@ -91,6 +92,17 @@ export default function StoryTab({ draft }) {
           Story analytics
         </div>
         <StatsPanel draft={draft} />
+      </div>
+
+      <div className="rounded-xl border-2 p-4" style={{ background: COLORS.parchment, borderColor: COLORS.border }}>
+        <div className="text-[12px] font-bold uppercase tracking-wide mb-2" style={{ color: COLORS.inkSubtle }}>
+          Choice-outcome heatmap
+        </div>
+        <p className="text-[12px] mb-2" style={{ color: COLORS.inkLight }}>
+          Distribution of choice rewards across Act I, II, III, side beats, and drafts.
+          Spot pacing imbalances at a glance — uneven ember drops, flag-setter concentration, NPC bond bias.
+        </p>
+        <HeatmapPanel draft={draft} />
       </div>
 
       <div className="rounded-xl border-2 p-4" style={{ background: COLORS.parchment, borderColor: COLORS.border }}>
