@@ -8,8 +8,29 @@
 // src/config/applyOverrides.js (paralleling applyKeeperOverrides), then this
 // tab can edit name/desc/cost/effect params.
 
+import { useMemo, useState } from "react";
 import { BOONS } from "../../features/boons/data.js";
-import { COLORS, Card } from "../shared.jsx";
+import { COLORS, Card, SearchBar } from "../shared.jsx";
+
+function summariseBoons() {
+  let totalCount = 0;
+  let totalEmbers = 0;
+  let totalCore = 0;
+  const perCatalog = [];
+  for (const [catalogKey, list] of Object.entries(BOONS || {})) {
+    let embers = 0;
+    let core = 0;
+    for (const b of list) {
+      embers += b?.cost?.embers || 0;
+      core += b?.cost?.coreIngots || 0;
+    }
+    totalCount += list.length;
+    totalEmbers += embers;
+    totalCore += core;
+    perCatalog.push({ catalogKey, count: list.length, embers, core });
+  }
+  return { totalCount, totalEmbers, totalCore, perCatalog };
+}
 
 const PATH_LABEL = { coexist: "🤝 Coexist", driveout: "⚔ Drive Out" };
 const TYPE_LABEL = { farm: "Farm", mine: "Mine", harbor: "Harbor" };
@@ -32,11 +53,44 @@ function EffectStr({ effect }) {
 }
 
 export default function BoonsTab() {
+  const summary = useMemo(summariseBoons, []);
+  const [search, setSearch] = useState("");
+  const q = search.trim().toLowerCase();
   return (
     <div className="flex flex-col gap-3">
+      <Card>
+        <div className="grid grid-cols-3 gap-2 mb-2">
+          <div className="flex flex-col items-center justify-center px-2 py-2 rounded-lg border-2"
+            style={{ background: COLORS.parchmentDeep, borderColor: COLORS.border }}>
+            <div className="text-[18px] font-bold" style={{ color: COLORS.ink }}>{summary.totalCount}</div>
+            <div className="text-[10px] uppercase font-bold" style={{ color: COLORS.inkSubtle }}>Total boons</div>
+          </div>
+          <div className="flex flex-col items-center justify-center px-2 py-2 rounded-lg border-2"
+            style={{ background: "rgba(214,97,42,0.10)", borderColor: COLORS.ember }}>
+            <div className="text-[18px] font-bold" style={{ color: COLORS.emberDeep }}>🔥 {summary.totalEmbers}</div>
+            <div className="text-[10px] uppercase font-bold" style={{ color: COLORS.inkSubtle }}>Total embers</div>
+          </div>
+          <div className="flex flex-col items-center justify-center px-2 py-2 rounded-lg border-2"
+            style={{ background: "rgba(150,165,190,0.14)", borderColor: COLORS.border }}>
+            <div className="text-[18px] font-bold" style={{ color: COLORS.inkLight }}>▣ {summary.totalCore}</div>
+            <div className="text-[10px] uppercase font-bold" style={{ color: COLORS.inkSubtle }}>Total core ingots</div>
+          </div>
+        </div>
+        <div className="flex flex-col gap-0.5">
+          {summary.perCatalog.map((row) => (
+            <div key={row.catalogKey} className="flex items-center gap-3 text-[11px]">
+              <code className="font-mono" style={{ color: COLORS.emberDeep, minWidth: 110 }}>{row.catalogKey}</code>
+              <span style={{ color: COLORS.inkLight }}>{row.count} boon{row.count === 1 ? "" : "s"}</span>
+              <span className="font-mono" style={{ color: COLORS.inkSubtle, minWidth: 80 }}>🔥 {row.embers}</span>
+              <span className="font-mono" style={{ color: COLORS.inkSubtle, minWidth: 80 }}>▣ {row.core}</span>
+            </div>
+          ))}
+        </div>
+      </Card>
       <div className="text-[11px] italic" style={{ color: COLORS.inkSubtle }}>
         Read-only browser. Boons are purchased in-game from the Boons screen after the player faces a settlement's keeper. Editing names / costs / effects wires up in a follow-up.
       </div>
+      <SearchBar value={search} onChange={setSearch} placeholder="Filter by id, name, description, effect…" />
       {Object.entries(BOONS).map(([catalogKey, list]) => {
         const [type, path] = catalogKey.split("_");
         return (
@@ -52,7 +106,11 @@ export default function BoonsTab() {
                 </tr>
               </thead>
               <tbody>
-                {list.map((b) => (
+                {list.filter((b) => {
+                  if (!q) return true;
+                  return (b.id || "").toLowerCase().includes(q) || (b.name || "").toLowerCase().includes(q)
+                    || (b.desc || "").toLowerCase().includes(q) || (b.effect?.type || "").toLowerCase().includes(q);
+                }).map((b) => (
                   <tr key={b.id} style={{ borderTop: `1px solid ${COLORS.border}` }}>
                     <td className="px-2 py-1"><code style={{ fontSize: 11 }}>{b.id}</code></td>
                     <td className="px-2 py-1 font-bold">{b.name}</td>
