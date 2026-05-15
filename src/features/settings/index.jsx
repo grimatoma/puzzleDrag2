@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import useFocusTrap from "../../ui/primitives/useFocusTrap.js";
 
 export const modalKey = "menu";
 
@@ -207,7 +208,11 @@ function AboutTab({ dispatch }) {
 
 // --- Root modal ---
 export default function SettingsModal({ state, dispatch }) {
-  if (state.modal !== 'menu') return null;
+  const open = state.modal === 'menu';
+  const panelRef = useRef(null);
+  const close = () => dispatch({ type: 'CLOSE_MODAL' });
+  useFocusTrap(panelRef, open, close);
+  if (!open) return null;
 
   const tab = state.settingsTab || 'main';
   const settings = state.settings || {};
@@ -218,7 +223,12 @@ export default function SettingsModal({ state, dispatch }) {
       style={{ background: 'rgba(0,0,0,0.35)', zIndex: 70 }}
     >
       <div
-        className="relative p-5 rounded-[20px] overflow-y-auto shadow-2xl pointer-events-auto"
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Menu"
+        tabIndex={-1}
+        className="relative p-5 rounded-[20px] overflow-y-auto shadow-2xl pointer-events-auto outline-none"
         style={{
           background: '#f4ecd8',
           border: '4px solid #b28b62',
@@ -228,7 +238,7 @@ export default function SettingsModal({ state, dispatch }) {
       >
         {/* Close button */}
         <button
-          onClick={() => dispatch({ type: 'CLOSE_MODAL' })}
+          onClick={close}
           className="absolute top-3 right-3 w-7 h-7 rounded-lg grid place-items-center text-[16px] font-bold border-2"
           style={{ background: '#e8dcc4', borderColor: '#b28b62', color: '#5a3a20' }}
           aria-label="Close"

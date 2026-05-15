@@ -1,17 +1,26 @@
 // Shared biome-founding picker. Used from the cartography map view and from
 // the Town view's "Found this settlement" CTA — same dispatch, same data.
 
+import { useRef } from "react";
 import { biomesForType } from "./data.js";
+import useFocusTrap from "../../ui/primitives/useFocusTrap.js";
 
 const formatHazard = (h) =>
   String(h).split("_").map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
 
 export default function BiomePicker({ node, type, cost, dispatch, onClose }) {
   const options = biomesForType(type);
+  const panelRef = useRef(null);
+  useFocusTrap(panelRef, true, onClose);
   return (
     <div className="fixed inset-0 z-[60] bg-black/55 grid place-items-center p-3" onClick={onClose}>
       <div
-        className="bg-[#f4ecd8] border-[4px] border-[#b28b62] rounded-[18px] px-5 py-4 w-[min(440px,94vw)] max-h-[88vh] overflow-y-auto shadow-2xl"
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label={`Found ${node.name}`}
+        tabIndex={-1}
+        className="bg-[#f4ecd8] border-[4px] border-[#b28b62] rounded-[18px] px-5 py-4 w-[min(440px,94vw)] max-h-[88vh] overflow-y-auto shadow-2xl outline-none"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="text-center mb-1">

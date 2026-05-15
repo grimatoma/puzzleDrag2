@@ -198,7 +198,7 @@ export function Hud({ state, dispatch }) {
 
   return (
     <div
-      className="flex items-center gap-2 px-3 py-2 bg-ink-soft border-b-2 border-bg-darker text-ink-mid"
+      className="flex items-center gap-2 px-3 py-2 bg-ink-soft border-b-2 border-bg-darker text-cream"
       data-testid="hud"
     >
       <div className="flex items-center gap-2 flex-shrink-0 min-w-0">

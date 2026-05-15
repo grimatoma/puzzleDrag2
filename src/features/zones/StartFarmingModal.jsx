@@ -1,7 +1,8 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { ZONES, zoneCategories, DEFAULT_ZONE, ZONE_TO_TILE_CATEGORIES, turnBudgetAdditiveBonusForZone, turnBudgetForZone, zoneBaseTurns, settlementHazards } from "./data.js";
 import { TILE_TYPES_BY_CATEGORY, TILE_TYPES_MAP } from "../tileCollection/data.js";
 import { TileIcon } from "../tileCollection/index.jsx";
+import useFocusTrap from "../../ui/primitives/useFocusTrap.js";
 
 const CATEGORY_LABEL = {
   grass: "Grass",
@@ -124,6 +125,8 @@ function TileChooserPopup({ zoneCategory, state, dispatch, onClose }) {
     [state, zoneCategory],
   );
   const active = state?.tileCollection?.activeByCategory ?? {};
+  const panelRef = useRef(null);
+  useFocusTrap(panelRef, true, onClose);
 
   function pick(row) {
     // Clear sibling tile-collection categories that share this zone slot, so
@@ -147,7 +150,12 @@ function TileChooserPopup({ zoneCategory, state, dispatch, onClose }) {
       onClick={onClose}
     >
       <div
-        className="bg-[#f4ecd8] border-[4px] border-[#b28b62] rounded-[16px] px-4 py-3 max-w-[420px] w-[92vw] max-h-[80vh] overflow-y-auto shadow-2xl"
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label={`Choose ${label} tile`}
+        tabIndex={-1}
+        className="bg-[#f4ecd8] border-[4px] border-[#b28b62] rounded-[16px] px-4 py-3 max-w-[420px] w-[92vw] max-h-[80vh] overflow-y-auto shadow-2xl outline-none"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-2">
@@ -207,6 +215,8 @@ export default function StartFarmingModal({ state, dispatch, onClose }) {
   const zoneId = state.activeZone ?? DEFAULT_ZONE;
   const zone = ZONES[zoneId];
   const cats = useMemo(() => zoneCategories(zoneId), [zoneId]);
+  const startPanelRef = useRef(null);
+  useFocusTrap(startPanelRef, !!zone, onClose);
 
   // When zone exposes <= 8 categories every slot is auto-selected and
   // locked. When it exposes more, the player picks 8.
@@ -268,7 +278,12 @@ export default function StartFarmingModal({ state, dispatch, onClose }) {
       onClick={onClose}
     >
       <div
-        className="bg-[#f4ecd8] border-[4px] border-[#b28b62] rounded-[20px] px-6 py-5 max-w-[460px] w-[94vw] shadow-2xl relative"
+        ref={startPanelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label={`Start Farming — ${zone.name}`}
+        tabIndex={-1}
+        className="bg-[#f4ecd8] border-[4px] border-[#b28b62] rounded-[20px] px-6 py-5 max-w-[460px] w-[94vw] shadow-2xl relative outline-none"
         onClick={(e) => e.stopPropagation()}
       >
         <h2 className="font-bold text-[20px] text-[#744d2e] text-center mb-1">
