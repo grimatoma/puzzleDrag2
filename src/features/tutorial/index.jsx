@@ -1,4 +1,6 @@
+import { useRef } from 'react';
 import { NPCS } from '../../constants.js';
+import useFocusTrap from '../../ui/primitives/useFocusTrap.js';
 
 export const modalKey = 'tutorial';
 export const alwaysMounted = true;
@@ -93,11 +95,10 @@ function StepDots({ step, total }) {
 
 function CenterCard({ step, stepData, dispatch }) {
   const canGoBack = step > 0;
+  const panelRef = useRef(null);
+  useFocusTrap(panelRef, true, () => dispatch({ type: 'TUTORIAL/SKIP' }));
   return (
     <div
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="tutorial-title"
       style={{
         position: 'absolute',
         inset: 0,
@@ -108,6 +109,11 @@ function CenterCard({ step, stepData, dispatch }) {
       }}
     >
       <div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="tutorial-title"
+        tabIndex={-1}
         style={{
           background: '#f4ecd8',
           border: '4px solid #b28b62',
@@ -122,6 +128,7 @@ function CenterCard({ step, stepData, dispatch }) {
           gap: 14,
           minWidth: 300,
           fontFamily: 'Arial, sans-serif',
+          outline: 'none',
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>

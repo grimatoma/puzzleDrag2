@@ -1,6 +1,8 @@
 
+import { useRef } from "react";
 import { BOSS_META } from "./slice.js";
 import IconCanvas, { hasIcon } from "../../ui/IconCanvas.jsx";
+import useFocusTrap from "../../ui/primitives/useFocusTrap.js";
 
 export const modalKey = "boss";
 export const alwaysMounted = true;
@@ -88,6 +90,9 @@ function BossModal({ boss, year = 1, dispatch }) {
   const pct = boss.targetCount > 0
     ? Math.min(100, Math.round((boss.progress / boss.targetCount) * 100))
     : 0;
+  const panelRef = useRef(null);
+  const closable = !boss.isKeeperTrial;
+  useFocusTrap(panelRef, true, closable ? () => dispatch({ type: "BOSS/REJECT" }) : undefined);
 
   return (
     <div
@@ -95,7 +100,12 @@ function BossModal({ boss, year = 1, dispatch }) {
       style={{ background: "rgba(0,0,0,0.72)" }}
     >
       <div
-        className="rounded-[20px] p-5 shadow-2xl text-white overflow-y-auto"
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label={boss.name || "Boss encounter"}
+        tabIndex={-1}
+        className="rounded-[20px] p-5 shadow-2xl text-white overflow-y-auto outline-none"
         style={{
           background: "linear-gradient(to bottom, #3a2715, #1a0d05)",
           border: "4px solid #a8431a",

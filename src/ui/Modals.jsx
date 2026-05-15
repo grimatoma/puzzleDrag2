@@ -38,7 +38,7 @@ export function SeasonModal({ state, dispatch }) {
           <Stat v={stats.ordersFilled} l="Orders" />
           <Stat v={`+${stats.coins}`} l="Coins" />
         </div>
-        <p className="text-gold text-body-lg font-semibold tabular-nums mt-3">+25◉ return bonus</p>
+        <p className="text-ink-soft text-body-lg font-semibold tabular-nums mt-3 inline-block px-3 py-1 rounded-md bg-gold-soft/40 border border-iron-edge">+25◉ return bonus</p>
       </ParchmentDialog.Body>
       <ParchmentDialog.Actions sticky>
         <Button tone="ember" size="md" onClick={close}>Return to Town</Button>

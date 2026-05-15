@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { MAP_NODES, KIND_LABELS } from "./data.js";
 import { isAdjacent } from "./slice.js";
 import { loreFor, HEARTH_TOKENS } from "./lore.js";
@@ -16,6 +16,7 @@ import {
 } from "../zones/data.js";
 import { keeperForType } from "../../keepers.js";
 import BiomePicker from "../zones/BiomePicker.jsx";
+import useFocusTrap from "../../ui/primitives/useFocusTrap.js";
 
 export const viewKey = "cartography";
 
@@ -61,6 +62,8 @@ function getNodeStatus(node, visitedSet, discoveredSet, current, playerLevel, ol
 function KeeperEncounterModal({ node, type, dispatch, onClose }) {
   const keeper = keeperForType(type);
   const [chosen, setChosen] = useState(null);
+  const panelRef = useRef(null);
+  useFocusTrap(panelRef, !!keeper, onClose);
   if (!keeper) { onClose(); return null; }
   const pick = (path) => {
     dispatch({ type: "KEEPER/CONFRONT", payload: { zoneId: node.id, path } });
@@ -70,7 +73,12 @@ function KeeperEncounterModal({ node, type, dispatch, onClose }) {
   return (
     <div className="fixed inset-0 z-[60] bg-black/65 grid place-items-center p-3" onClick={chosen ? onClose : undefined}>
       <div
-        className="bg-[#f4ecd8] border-[4px] border-[#b28b62] rounded-[18px] px-5 py-4 w-[min(460px,95vw)] max-h-[90vh] overflow-y-auto shadow-2xl"
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label={`${keeper.name} encounter`}
+        tabIndex={-1}
+        className="bg-[#f4ecd8] border-[4px] border-[#b28b62] rounded-[18px] px-5 py-4 w-[min(460px,95vw)] max-h-[90vh] overflow-y-auto shadow-2xl outline-none"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center gap-2 mb-2">

@@ -48,7 +48,7 @@ function ToolInspectSheet({ tool, onClose }) {
           {tool.desc}
         </div>
         {isTapTargetTool(tool.key) && (
-          <div className="text-caption font-bold text-ember text-center">
+          <div className="text-caption font-bold text-ink-soft text-center">
             Tap a tile on the board to apply.
           </div>
         )}

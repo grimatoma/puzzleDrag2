@@ -200,7 +200,7 @@ export function CompactOrders({ orders, inventory, dispatch }) {
               <Icon iconKey={o.key} size={20} />
             </span>
             <span className="flex-1 min-w-0 text-[10px] font-bold truncate">{label}</span>
-            <span className={`text-[10px] font-bold whitespace-nowrap tabular-nums ${done ? "text-white" : have > 0 ? "text-gold" : "text-parchment-dim"}`}>
+            <span className={`text-[10px] font-bold whitespace-nowrap tabular-nums ${done ? "text-white" : have > 0 ? "text-cream" : "text-parchment"}`}>
               {Math.min(have, o.need)}/{o.need}
             </span>
             {done && (
