@@ -491,7 +491,7 @@ export function branchingRowCenterY(idx) {
 // in deriveGraph (a beat with choices → fork; a trigger-less endpoint →
 // resolution; otherwise compact). Positions can be dragged in the editor (saved
 // under `hearth.story.layout`). Edge `kind:"choice"` rows are derived from data;
-// only `kind:"trigger"` edges live in LAYOUT_TRIGGER_EDGES.
+// main-spine `kind:"trigger"` edges are derived from STORY_BEATS order.
 export const LAYOUT_NODES = [
   // Act I
   { id: "act1_arrival",       x: 32,   y: MY },
@@ -521,22 +521,13 @@ export const LAYOUT_NODES = [
   { id: "frostmaw_keeper_driveout", x: 1950, y: 740 },
 ];
 
-export const LAYOUT_TRIGGER_EDGES = [
-  { from: "act1_arrival",      to: "act1_light_hearth" },
-  { from: "act1_light_hearth", to: "act1_first_order" },
-  { from: "act1_first_order",  to: "act1_build_granary" },
-  { from: "act1_build_granary", to: "act1_keeper_trial" },
-  { from: "act1_keeper_trial", to: "act2_bram_arrives" },
-  { from: "act2_bram_arrives", to: "act2_first_hinge" },
-  { from: "act2_first_hinge",  to: "act2_frostmaw" },
-  { from: "act2_frostmaw",     to: "act2_liss_arrives" },
-  { from: "act2_liss_arrives", to: "act3_mine_found" },
-  { from: "act3_mine_found",   to: "act3_mine_opened" },
-  { from: "act3_mine_opened",  to: "act3_caravan" },
-  { from: "act3_caravan",      to: "act3_festival" },
-  { from: "act3_festival",     to: "act3_win" },
-  // visual hints for where the side forks hang off the main spine
-  { from: "act2_bram_arrives", to: "mira_letter_1",   side: true },
+// Decorative side-fork hints — dotted `side` edges marking where an
+// opportunistic side beat hangs off the main spine. These are deliberately
+// NOT real connections: a side beat fires on its own trigger, not from the
+// source beat, so they stay hand-authored here. The real main-spine trigger
+// edges are derived from STORY_BEATS order in deriveGraph.
+export const LAYOUT_SIDE_HINT_EDGES = [
+  { from: "act2_bram_arrives", to: "mira_letter_1", side: true },
 ];
 
 const CANVAS_W_BASE = 2700;
@@ -568,8 +559,10 @@ export function nodeKind(beatId, draft, isDraftNode) {
  *   "Drafts" lane for author-created beats).
  * - Render type/size is derived (see `nodeKind`) — a fork's height scales with
  *   its choice count.
- * - `kind:"trigger"` edges come from LAYOUT_TRIGGER_EDGES; `kind:"choice"` edges
- *   are derived from each beat's effective `choices[].outcome.queueBeat`.
+ * - main-spine `kind:"trigger"` edges are derived from STORY_BEATS order
+ *   (each placed beat → the next placed beat — no edge is invented where the
+ *   data has none); side-fork hints come from LAYOUT_SIDE_HINT_EDGES.
+ *   `kind:"choice"` edges are derived from `choices[].outcome.queueBeat`.
  */
 export function deriveGraph(draft, positions = {}) {
   const dBeats = draftBeats(draft);
@@ -604,7 +597,16 @@ export function deriveGraph(draft, positions = {}) {
     seen.add(k);
     edges.push(e);
   };
-  for (const e of LAYOUT_TRIGGER_EDGES) push({ from: e.from, to: e.to, kind: "trigger", side: !!e.side });
+  // Main-spine trigger edges, derived from real data: STORY_BEATS fire in
+  // array order (nextPendingBeat walks them sequentially), so connect each
+  // placed story beat to the next placed one. Beats absent from the canvas
+  // (e.g. act1_first_harvest) are skipped so the visible spine stays whole
+  // without inventing a link between beats the data doesn't connect.
+  const spine = STORY_BEATS.map((b) => b && b.id).filter((id) => nodeIds.has(id));
+  for (let i = 0; i + 1 < spine.length; i++) {
+    push({ from: spine[i], to: spine[i + 1], kind: "trigger", side: false });
+  }
+  for (const e of LAYOUT_SIDE_HINT_EDGES) push({ from: e.from, to: e.to, kind: "trigger", side: !!e.side });
   for (const n of placed) {
     for (const c of effectiveChoices(n.id, draft)) {
       const target = c?.outcome?.queueBeat;
