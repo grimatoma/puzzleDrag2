@@ -403,16 +403,23 @@ const ACT_LABELS = [
 
 // ─── left rail ───────────────────────────────────────────────────────────────
 
-function RailRow({ beatId, draft, selectedId, onlineIds, onSelect }) {
+function RailRow({ beatId, draft, selectedId, onlineIds, onSelect, matchKind }) {
   const beat = effectiveBeat(beatId, draft);
   const isSel = beatId === selectedId;
   const choices = beat?.choices || [];
+  const matchPill = matchKind && matchKind !== "any" && matchKind !== "id" && matchKind !== "title"
+    ? (matchKind === "lines" ? "💬" : matchKind === "choices" ? "⑂" : null)
+    : null;
   return (
     <div onClick={() => onSelect(beatId)} style={{ padding: "5px 12px 5px 22px", cursor: "pointer",
       background: isSel ? "rgba(214,97,42,0.12)" : "transparent",
       borderLeft: `3px solid ${isSel ? actColor(beat) : "transparent"}`, display: "flex", alignItems: "center", gap: 7 }}>
       <span style={{ font: "500 11px/1.3 system-ui", color: isSel ? C.ink : C.inkLight, fontWeight: isSel ? 600 : 500,
         flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{beat?.title || beatId}</span>
+      {matchPill && (
+        <span title={matchKind === "lines" ? "Search matches dialogue lines" : "Search matches a choice label"}
+          style={{ font: "600 8px/1 system-ui", color: C.inkSubtle, padding: "1px 4px", borderRadius: 3, background: "rgba(214,97,42,0.10)" }}>{matchPill}</span>
+      )}
       {!onlineIds.has(beatId) && (
         <span style={{ font: "600 8px/1 system-ui", color: C.inkSubtle, flexShrink: 0, padding: "1px 4px", borderRadius: 3, background: "rgba(0,0,0,0.06)" }}>OFF</span>
       )}
@@ -433,16 +440,34 @@ function GroupHeader({ color, label, count }) {
   );
 }
 
+function searchKindForBeat(beat, id, q) {
+  if (!q) return "any";
+  if (id.toLowerCase().includes(q)) return "id";
+  if ((beat?.title || "").toLowerCase().includes(q)) return "title";
+  const lineHits = (beat?.lines || []).reduce((n, l) => n + ((l?.text || "").toLowerCase().includes(q) ? 1 : 0), 0);
+  if (lineHits) return "lines";
+  const choiceHits = (beat?.choices || []).reduce((n, c) => n + ((c?.label || "").toLowerCase().includes(q) ? 1 : 0), 0);
+  if (choiceHits) return "choices";
+  return null;
+}
+
 function LeftRail({ draft, selectedId, onlineIds, collapsed, onToggleCollapsed, onSelect, onNewBeat }) {
   const [search, setSearch] = useState("");
   const q = search.trim().toLowerCase();
   const dBeats = draftBeats(draft);
   const knownIds = new Set(allBeatIds(draft));
-  const matches = (id) => {
-    const beat = effectiveBeat(id, draft);
-    if (!beat) return false;
-    return !q || id.toLowerCase().includes(q) || (beat.title || "").toLowerCase().includes(q);
-  };
+  const beatMatchKinds = useMemo(() => {
+    const out = new Map();
+    if (!q) return out;
+    for (const id of knownIds) {
+      const beat = effectiveBeat(id, draft);
+      const kind = searchKindForBeat(beat, id, q);
+      if (kind) out.set(id, kind);
+    }
+    return out;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [q, draft]);
+  const matches = (id) => !q || beatMatchKinds.has(id);
 
   const groups = [
     { id: 1,      label: "Act I · Roots",     color: "#7a8b5e", ids: STORY_BEATS.filter((b) => b.act === 1).map((b) => b.id) },
@@ -509,7 +534,7 @@ function LeftRail({ draft, selectedId, onlineIds, collapsed, onToggleCollapsed, 
           <div>
             <GroupHeader color="#6b8e9e" label="Drafts (this override)" count={dBeats.filter((b) => matches(b.id)).length} />
             {dBeats.filter((b) => matches(b.id)).map((b) => (
-              <RailRow key={b.id} beatId={b.id} draft={draft} selectedId={selectedId} onlineIds={onlineIds} onSelect={onSelect} />
+              <RailRow key={b.id} beatId={b.id} draft={draft} selectedId={selectedId} onlineIds={onlineIds} onSelect={onSelect} matchKind={beatMatchKinds.get(b.id)} />
             ))}
           </div>
         )}
@@ -519,7 +544,7 @@ function LeftRail({ draft, selectedId, onlineIds, collapsed, onToggleCollapsed, 
           return (
             <div key={g.id}>
               <GroupHeader color={g.color} label={g.label} count={ids.length} />
-              {ids.map((id) => <RailRow key={id} beatId={id} draft={draft} selectedId={selectedId} onlineIds={onlineIds} onSelect={onSelect} />)}
+              {ids.map((id) => <RailRow key={id} beatId={id} draft={draft} selectedId={selectedId} onlineIds={onlineIds} onSelect={onSelect} matchKind={beatMatchKinds.get(id)} />)}
             </div>
           );
         })}
