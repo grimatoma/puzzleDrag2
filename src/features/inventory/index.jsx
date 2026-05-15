@@ -119,9 +119,9 @@ export default function InventoryScreen({ state, dispatch }) {
   const compact = compactOverride != null ? compactOverride : isPhone;
 
   return (
-    <div className="absolute inset-0 z-10 bg-gradient-to-b from-[#7c4f2c] to-[#6b4225] border-[3px] border-[#e2c19b] flex flex-col overflow-hidden">
-      <div className="flex items-center justify-between px-3 py-2 flex-shrink-0 border-b border-[#e2c19b]/40">
-        <span className="font-bold text-[14px] text-[#f8e7c6]">Inventory</span>
+    <div className="absolute inset-0 z-10 bg-gradient-to-b from-[#ead7b3] to-[#d4b585] border-[3px] border-[#b28b62] flex flex-col overflow-hidden">
+      <div className="flex items-center justify-between px-3 py-2 flex-shrink-0 border-b border-[#b28b62]/40">
+        <span className="font-bold text-[14px] text-[#3a2715]">Inventory</span>
         <button
           type="button"
           onClick={() => dispatch({ type: "SET_VIEW", view: "town" })}
@@ -129,7 +129,7 @@ export default function InventoryScreen({ state, dispatch }) {
         >✕</button>
       </div>
 
-      <div className="flex flex-col gap-2 px-3 pt-3 pb-2 flex-shrink-0 border-b border-[#e2c19b]/30 bg-[#5a3820]/40">
+      <div className="flex flex-col gap-2 px-3 pt-3 pb-2 flex-shrink-0 border-b border-[#b28b62]/30 bg-[#b28b62]/12">
         <div className="relative flex items-center">
           <span className="absolute left-2.5 text-[#8a6a4a] pointer-events-none">
             <SearchIcon />
@@ -175,7 +175,7 @@ export default function InventoryScreen({ state, dispatch }) {
           </div>
 
           <div className="flex items-center gap-1 ml-auto">
-            <span className="text-caption text-[#e2c19b] mr-1 hidden sm:inline">Sort</span>
+            <span className="text-caption text-[#5b3b20] mr-1 hidden sm:inline">Sort</span>
             {SORTS.map((s) => {
               const active = sort === s.key;
               return (
@@ -186,7 +186,7 @@ export default function InventoryScreen({ state, dispatch }) {
                   size="sm"
                   onClick={() => setSort(s.key)}
                   aria-pressed={active}
-                  className={active ? "" : "text-[#f8e7c6] hover:bg-[#f8e7c6]/10"}
+                  className={active ? "" : "text-[#3a2715] hover:bg-[#3a2715]/10"}
                 >
                   {s.label}
                 </Button>
@@ -200,7 +200,7 @@ export default function InventoryScreen({ state, dispatch }) {
                 onClick={() => setCompactOverride(!compact)}
                 aria-label={compact ? "Switch to grid view" : "Switch to list view"}
                 aria-pressed={compact}
-                className="text-[#f8e7c6] hover:bg-[#f8e7c6]/10 ml-1"
+                className="text-[#3a2715] hover:bg-[#3a2715]/10 ml-1"
               >
                 {compact ? "Grid" : "List"}
               </Button>

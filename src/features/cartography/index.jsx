@@ -534,20 +534,20 @@ function HearthTokensStrip({ state }) {
 
 function HeaderBar({ currentNode, visitedCount, totalCount, state, onClose }) {
   return (
-    <div className="flex items-center justify-between px-3 py-2 flex-shrink-0 border-b border-[#e2c19b]/40 gap-2">
+    <div className="flex items-center justify-between px-3 py-2 flex-shrink-0 border-b border-[#b28b62]/40 gap-2">
       <div className="flex flex-col min-w-0">
-        <span className="font-bold text-[14px] text-[#f8e7c6] truncate">
+        <span className="font-bold text-[14px] text-[#3a2715] truncate">
           🗺 The Hearthwood
         </span>
         {currentNode && (
-          <span className="text-[10px] italic text-[#e2c19b]/80 truncate">
+          <span className="text-[10px] italic text-[#5b3b20]/85 truncate">
             your smoke rises from {currentNode.name}
           </span>
         )}
       </div>
       <div className="flex items-center gap-2 flex-shrink-0">
         <HearthTokensStrip state={state} />
-        <span className="text-[10px] text-[#e2c19b]/70 hidden sm:inline">
+        <span className="text-[10px] text-[#5b3b20]/80 hidden sm:inline">
           {visitedCount} / {totalCount} known
         </span>
         <button
@@ -655,7 +655,7 @@ export default function CartographyScreen({ state, dispatch }) {
   );
 
   return (
-    <div className="absolute inset-0 bg-gradient-to-b from-[#7c4f2c] to-[#6b4225] border-[3px] border-[#e2c19b] flex flex-col overflow-hidden">
+    <div className="absolute inset-0 bg-gradient-to-b from-[#ead7b3] to-[#d4b585] border-[3px] border-[#b28b62] flex flex-col overflow-hidden">
       <HeaderBar
         currentNode={currentNode}
         visitedCount={visited.length}

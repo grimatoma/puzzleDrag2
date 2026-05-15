@@ -160,8 +160,8 @@ function CraftQueueStrip({ queue, gems, dispatch }) {
     return h > 0 ? `${h}h ${m}m` : `${m}m`;
   };
   return (
-    <div className="bg-[#3a2715]/60 border-b border-[#e2c19b]/40 px-3 py-2">
-      <div className="text-[10px] font-bold uppercase tracking-widest text-[#e2c19b] mb-1">In the workshop · {queue.length}</div>
+    <div className="bg-[#b28b62]/20 border-b border-[#b28b62]/40 px-3 py-2">
+      <div className="text-[10px] font-bold uppercase tracking-widest text-[#5b3b20] mb-1">In the workshop · {queue.length}</div>
       <div className="flex flex-col gap-1">
         {queue.map((entry, i) => {
           const recipe = RECIPES[entry.key];
@@ -285,10 +285,10 @@ export default function CraftingScreen({ state, dispatch }) {
   const meta = STATION_META[activeTab];
 
   return (
-    <div className="absolute inset-0 bg-gradient-to-b from-[#7c4f2c] to-[#6b4225] border-[3px] border-[#e2c19b] flex flex-col overflow-hidden">
+    <div className="absolute inset-0 bg-gradient-to-b from-[#ead7b3] to-[#d4b585] border-[3px] border-[#b28b62] flex flex-col overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between px-3 py-2 flex-shrink-0 border-b border-[#e2c19b]/40">
-        <span className="font-bold text-[14px] text-[#f8e7c6]">🔨 Crafting</span>
+      <div className="flex items-center justify-between px-3 py-2 flex-shrink-0 border-b border-[#b28b62]/40">
+        <span className="font-bold text-[14px] text-[#3a2715]">🔨 Crafting</span>
         <button
           onClick={() => dispatch({ type: "SET_VIEW", view: "town" })}
           className="w-7 h-7 rounded-lg bg-[#f6efe0] border-2 border-[#b28b62] grid place-items-center text-[#6a4b31] font-bold text-[14px]"
@@ -313,7 +313,7 @@ export default function CraftingScreen({ state, dispatch }) {
               className={`flex-shrink-0 flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg text-[10px] font-bold border-2 transition-colors ${
                 isActive
                   ? "text-white border-transparent"
-                  : "bg-[#3a2715]/60 border-[#5a3a20] text-[#f8e7c6]/60 hover:bg-[#3a2715]/80"
+                  : "bg-[#f6efe0]/80 border-[#b28b62] text-[#5b3b20] hover:bg-[#f6efe0]"
               }`}
               style={isActive ? { backgroundColor: m.bg, borderColor: "rgba(255,255,255,0.2)" } : {}}
             >
@@ -338,7 +338,7 @@ export default function CraftingScreen({ state, dispatch }) {
         </div>
       ) : !stationBuilt(built, activeTab) ? (
         <div className="flex-1 grid place-items-center px-4">
-          <p className="italic text-[#f8e7c6]/70 text-[12px] text-center">
+          <p className="italic text-[#5b3b20]/80 text-[12px] text-center">
             Build the {meta.label} in town to unlock these recipes.
           </p>
         </div>

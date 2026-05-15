@@ -9,7 +9,7 @@ import Icon from "../../ui/Icon.jsx";
 function ProgressBar({ value, max }) {
   const pct = max > 0 ? Math.min(100, Math.max(0, (value / max) * 100)) : 0;
   return (
-    <div className="h-2 rounded-full bg-[#3a2715]/40 overflow-hidden border border-[#c5a87a]/40">
+    <div className="h-2 rounded-full bg-[#3a2715]/25 overflow-hidden border border-[#b28b62]/50">
       <div
         className="h-full bg-gradient-to-r from-[#c8923a] to-[#f0c068]"
         style={{ width: `${pct}%` }}
@@ -23,8 +23,8 @@ export default function CastlePanel({ state, dispatch }) {
   const inventory = state?.inventory ?? {};
 
   return (
-    <div className="bg-[#3a2715]/60 border border-[#c5a87a]/50 rounded-xl p-3 flex flex-col gap-2">
-      <div className="font-bold text-[12px] text-[#f8e7c6] tracking-wide">🏰 Castle Needs</div>
+    <div className="bg-[#b28b62]/15 border border-[#b28b62]/50 rounded-xl p-3 flex flex-col gap-2">
+      <div className="font-bold text-[12px] text-[#3a2715] tracking-wide">🏰 Castle Needs</div>
       {Object.entries(CASTLE_NEEDS).map(([key, need]) => {
         const value = contributed[key] ?? 0;
         const have = inventory[need.resource] ?? 0;
