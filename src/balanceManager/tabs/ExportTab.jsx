@@ -9,6 +9,7 @@ import {
 import { draftDiff, summariseTotals } from "../diff.js";
 import balanceFile from "../../config/balance.json";
 import { CATALOG_EXPORTS } from "../csvExport.js";
+import { runCatalogAudit, groupFindings } from "../catalogAudit.js";
 
 function pruneEmpty(obj) {
   if (!obj || typeof obj !== "object") return obj;
@@ -52,6 +53,10 @@ export default function ExportTab({ draft, updateDraft }) {
   const [diffOpen, setDiffOpen] = useState(new Set());
   const diff = useMemo(() => draftDiff(balanceFile, draft), [draft]);
   const diffSections = useMemo(() => Object.entries(diff.sections).sort(([a], [b]) => a.localeCompare(b)), [diff]);
+
+  const [auditOpen, setAuditOpen] = useState(false);
+  const auditFindings = useMemo(() => runCatalogAudit(), []);
+  const auditGroups = useMemo(() => groupFindings(auditFindings).filter((g) => g.items.length > 0), [auditFindings]);
 
   const toggleSection = (name) => {
     setDiffOpen((prev) => {
@@ -270,6 +275,42 @@ export default function ExportTab({ draft, updateDraft }) {
         >
 {pretty}
         </pre>
+      </Card>
+
+      <Card title="Catalog audit — gaps &amp; broken references">
+        <div className="flex items-center gap-2 mb-2">
+          <span className="text-[11px]" style={{ color: COLORS.inkLight }}>
+            {auditFindings.length === 0
+              ? "✓ No gaps or broken references detected."
+              : `${auditFindings.length} finding${auditFindings.length === 1 ? "" : "s"} across ${auditGroups.length} categor${auditGroups.length === 1 ? "y" : "ies"}.`}
+          </span>
+          {auditFindings.length > 0 && (
+            <SmallButton className="ml-auto" onClick={() => setAuditOpen((v) => !v)}>
+              {auditOpen ? "Hide" : "Show"}
+            </SmallButton>
+          )}
+        </div>
+        {auditOpen && auditGroups.map((g) => (
+          <div key={g.category} className="mb-2">
+            <div className="text-[11px] font-bold uppercase tracking-wide mb-1" style={{ color: COLORS.inkSubtle }}>
+              {g.label} <span className="font-normal opacity-70">({g.items.length})</span>
+            </div>
+            <ul className="flex flex-col gap-1">
+              {g.items.slice(0, 12).map((f, i) => (
+                <li key={`${f.category}-${f.owner}-${f.detail}-${i}`} className="text-[11px]" style={{ color: COLORS.ink }}>
+                  <code className="font-mono text-[10px]" style={{ color: COLORS.emberDeep }}>{f.owner}</code>
+                  {" — "}
+                  <span style={{ color: COLORS.inkLight }}>{f.message}</span>
+                </li>
+              ))}
+              {g.items.length > 12 && (
+                <li className="text-[10px] italic" style={{ color: COLORS.inkSubtle }}>
+                  +{g.items.length - 12} more
+                </li>
+              )}
+            </ul>
+          </div>
+        ))}
       </Card>
 
       <Card title="CSV exports — open in a spreadsheet">
