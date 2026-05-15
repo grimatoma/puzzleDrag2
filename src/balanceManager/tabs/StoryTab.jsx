@@ -15,6 +15,7 @@ import StatsPanel from "../../storyEditor/StatsPanel.jsx";
 import BondTimelinePanel from "../../storyEditor/BondTimelinePanel.jsx";
 import HeatmapPanel from "../../storyEditor/HeatmapPanel.jsx";
 import VoicePanel from "../../storyEditor/VoicePanel.jsx";
+import { computeLocalizationReport, summariseLocalization, L10N_THRESHOLDS } from "../../storyEditor/localizationReport.js";
 
 const STORY_EDITOR_URL = import.meta.env.BASE_URL.replace(/\/$/, "") + "/story/";
 
@@ -42,6 +43,8 @@ export default function StoryTab({ draft }) {
     return { speakerKey: filterSpeaker };
   }, [filterSpeaker]);
   const markdown = useMemo(() => previewOpen ? renderStoryMarkdown(draft, exportOpts) : "", [draft, previewOpen, exportOpts]);
+  const l10nReport = useMemo(() => computeLocalizationReport(draft), [draft]);
+  const l10nSummary = useMemo(() => summariseLocalization(l10nReport), [l10nReport]);
   const draftBeats = Array.isArray(draft?.story?.newBeats) ? draft.story.newBeats.length : 0;
   const draftBeatOverrides = Object.keys(draft?.story?.beats || {}).length;
   const suppressed = Array.isArray(draft?.story?.suppressedBeats) ? draft.story.suppressedBeats.length : 0;
@@ -110,6 +113,50 @@ export default function StoryTab({ draft }) {
           Spot pacing imbalances at a glance — uneven ember drops, flag-setter concentration, NPC bond bias.
         </p>
         <HeatmapPanel draft={draft} />
+      </div>
+
+      <div className="rounded-xl border-2 p-4" style={{ background: COLORS.parchment, borderColor: COLORS.border }}>
+        <div className="flex items-center gap-2 mb-2">
+          <span className="text-[12px] font-bold uppercase tracking-wide" style={{ color: COLORS.inkSubtle }}>
+            Localization length report
+          </span>
+          <span className="text-[10px]" style={{ color: COLORS.inkSubtle }}>
+            line cap {L10N_THRESHOLDS.lineWarn}/{L10N_THRESHOLDS.lineErr}c · choice cap {L10N_THRESHOLDS.choiceWarn}/{L10N_THRESHOLDS.choiceErr}c · DE expansion {Math.round(L10N_THRESHOLDS.expansionFactor * 100)}%
+          </span>
+        </div>
+        {l10nSummary.total === 0 ? (
+          <div className="text-[11px] italic" style={{ color: COLORS.greenDeep }}>
+            ✓ No lines / choices exceed the localization thresholds.
+          </div>
+        ) : (
+          <>
+            <div className="text-[11px] mb-2" style={{ color: COLORS.inkLight }}>
+              {l10nSummary.veryLong} very-long · {l10nSummary.long} long · sorted worst-first.
+            </div>
+            <ul className="flex flex-col gap-1">
+              {l10nReport.slice(0, 18).map((r, i) => (
+                <li key={`${r.beatId}-${r.field}-${i}`} className="text-[11px]" style={{ color: COLORS.ink }}>
+                  <span className="px-1 py-0.5 rounded font-mono text-[9px]"
+                    style={{ background: r.severity === "very long" ? "rgba(194,59,34,0.12)" : "rgba(226,178,74,0.18)",
+                      color: r.severity === "very long" ? COLORS.red : "#7a5810" }}>
+                    {r.chars}c → ~{r.translated}c
+                  </span>
+                  <span className="mx-1 italic" style={{ color: COLORS.inkSubtle }}>
+                    {r.field} · {r.beatTitle}
+                  </span>
+                  <span style={{ color: COLORS.inkLight }}>
+                    {r.text.slice(0, 80)}{r.text.length > 80 ? "…" : ""}
+                  </span>
+                </li>
+              ))}
+              {l10nReport.length > 18 && (
+                <li className="text-[10px] italic" style={{ color: COLORS.inkSubtle }}>
+                  +{l10nReport.length - 18} more
+                </li>
+              )}
+            </ul>
+          </>
+        )}
       </div>
 
       <div className="rounded-xl border-2 p-4" style={{ background: COLORS.parchment, borderColor: COLORS.border }}>
