@@ -27,9 +27,16 @@ export default function Chronicle({ state, dispatch }) {
       <div className="flex items-center gap-3 border-b border-[#e2c19b]/30 pb-3 mb-4 relative z-10">
         <Icon iconKey="ui_clipboard" size={24} className="text-[#d6612a]" />
         <h1 className="text-xl font-bold font-serif tracking-tight">Chronicle of the Vale</h1>
-        <button 
+        <button
+          onClick={() => dispatch({ type: "SET_VIEW", view: "charter" })}
+          className="ml-auto bg-white/5 hover:bg-white/10 px-3 py-1.5 rounded-md transition-colors text-xs font-semibold uppercase tracking-wide text-[#e2c19b] border border-[#e2c19b]/20"
+          title="View Charter"
+        >
+          View Charter
+        </button>
+        <button
           onClick={() => dispatch({ type: "SET_VIEW", view: "town" })}
-          className="ml-auto bg-white/5 hover:bg-white/10 p-2 rounded-full transition-colors group"
+          className="bg-white/5 hover:bg-white/10 p-2 rounded-full transition-colors group"
           title="Return to Town"
         >
           <Icon iconKey="ui_cancel" size={18} className="group-hover:scale-110 transition-transform" />
