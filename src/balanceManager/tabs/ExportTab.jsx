@@ -8,6 +8,7 @@ import {
 } from "../snapshots.js";
 import { draftDiff, summariseTotals } from "../diff.js";
 import balanceFile from "../../config/balance.json";
+import { CATALOG_EXPORTS } from "../csvExport.js";
 
 function pruneEmpty(obj) {
   if (!obj || typeof obj !== "object") return obj;
@@ -71,6 +72,19 @@ export default function ExportTab({ draft, updateDraft }) {
     const a = document.createElement("a");
     a.href = url;
     a.download = "balance.json";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  function downloadCsv(catalog) {
+    const csv = catalog.build();
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `hearth-${catalog.id}.csv`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -256,6 +270,20 @@ export default function ExportTab({ draft, updateDraft }) {
         >
 {pretty}
         </pre>
+      </Card>
+
+      <Card title="CSV exports — open in a spreadsheet">
+        <p className="text-[12px] mb-2" style={{ color: COLORS.inkLight }}>
+          One-click downloads of each catalog as RFC-4180 CSV. Useful for crunching numbers (sums,
+          pivot tables, what-if charts) in Google Sheets / Excel without round-tripping through JSON.
+        </p>
+        <div className="flex flex-wrap gap-1.5">
+          {CATALOG_EXPORTS.map((cat) => (
+            <SmallButton key={cat.id} onClick={() => downloadCsv(cat)}>
+              ⬇ {cat.label}
+            </SmallButton>
+          ))}
+        </div>
       </Card>
 
       <Card title="Snapshots — named presets">
