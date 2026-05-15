@@ -1,11 +1,48 @@
 import { BIOMES, ITEMS } from "../constants.js";
 import { sellPriceFor } from "../features/market/pricing.js";
 import { locBuilt } from "../locBuilt.js";
+import { iconLabel } from "../textures/iconRegistry.js";
 import Icon from "./Icon.jsx";
 import ResourceCell from "./primitives/ResourceCell.jsx";
 import Stepper from "./primitives/Stepper.jsx";
 import Pill from "./primitives/Pill.jsx";
 import Banner from "./primitives/Banner.jsx";
+
+export function labelFor(key, fallback) {
+  return iconLabel(key) || ITEMS[key]?.label || fallback || key;
+}
+
+function sortKeys(keys, sort, inventory, recentOrder) {
+  const arr = [...keys];
+  if (sort === "alpha") {
+    arr.sort((a, b) => labelFor(a).localeCompare(labelFor(b)));
+  } else if (sort === "recent") {
+    const rank = (k) => {
+      const idx = recentOrder ? recentOrder.indexOf(k) : -1;
+      return idx === -1 ? Number.POSITIVE_INFINITY : idx;
+    };
+    arr.sort((a, b) => {
+      const ra = rank(a);
+      const rb = rank(b);
+      if (ra !== rb) return ra - rb;
+      return labelFor(a).localeCompare(labelFor(b));
+    });
+  } else {
+    arr.sort((a, b) => {
+      const ca = inventory[a] || 0;
+      const cb = inventory[b] || 0;
+      if (cb !== ca) return cb - ca;
+      return labelFor(a).localeCompare(labelFor(b));
+    });
+  }
+  return arr;
+}
+
+function matchesQuery(key, label, query) {
+  if (!query) return true;
+  const q = query.toLowerCase();
+  return key.toLowerCase().includes(q) || label.toLowerCase().includes(q);
+}
 
 export function Section({ title, titleColor = "#f8e7c6", children }) {
   return (
@@ -178,7 +215,18 @@ export function CompactOrders({ orders, inventory, dispatch }) {
   );
 }
 
-export function InventoryGrid({ inventory, biomeKey, compact, orders = [], state, dispatch }) {
+export function InventoryGrid({
+  inventory,
+  biomeKey,
+  compact,
+  orders = [],
+  state,
+  dispatch,
+  filter = "all",
+  sort = "count",
+  query = "",
+  recentOrder,
+}) {
   const allBiomeEntries = BIOMES[biomeKey].resources;
   const resources = allBiomeEntries.filter((r) => r.kind !== "tile");
   const items = Object.entries(ITEMS).filter(([key, item]) =>
@@ -187,10 +235,47 @@ export function InventoryGrid({ inventory, biomeKey, compact, orders = [], state
     item.kind !== "tile" &&
     item.kind !== "tool"
   );
-  const gridCols = compact ? "grid-cols-2" : "grid-cols-[repeat(auto-fill,minmax(240px,1fr))]";
+  const gridCols = compact ? "grid-cols-1" : "grid-cols-[repeat(auto-fill,minmax(240px,1fr))]";
   const { status, totals } = orderStatusByKey(orders, inventory);
   const marketBuilt = !!locBuilt(state).caravan_post;
   const prices = state?.market?.prices ?? {};
+
+  const showResources = filter === "all" || filter === "chain" || filter === "sellable";
+  const showItems = filter === "all" || filter === "items" || filter === "sellable";
+
+  const resourceCellsBy = new Map(resources.map((r) => [r.key, r]));
+  const itemDefsByKey = new Map(items.map(([key, item]) => [key, item]));
+
+  const visibleResourceKeys = showResources
+    ? resources
+        .map((r) => r.key)
+        .filter((key) => {
+          if (!matchesQuery(key, labelFor(key, resourceCellsBy.get(key)?.label), query)) return false;
+          if (filter === "sellable") {
+            const p = prices[key];
+            return (p?.sell ?? 0) > 0;
+          }
+          return true;
+        })
+    : [];
+
+  const visibleItemKeys = showItems
+    ? items
+        .map(([key]) => key)
+        .filter((key) => {
+          if (!matchesQuery(key, labelFor(key, itemDefsByKey.get(key)?.label), query)) return false;
+          if (filter === "sellable") return sellPriceFor(key) > 0;
+          return true;
+        })
+    : [];
+
+  const sortedResourceKeys = sortKeys(visibleResourceKeys, sort, inventory, recentOrder);
+  const sortedItemKeys = sortKeys(visibleItemKeys, sort, inventory, recentOrder);
+
+  const noResults =
+    sortedResourceKeys.length === 0 &&
+    sortedItemKeys.length === 0 &&
+    (query.length > 0 || filter !== "all");
 
   return (
     <div className="flex flex-col gap-3">
@@ -211,53 +296,68 @@ export function InventoryGrid({ inventory, biomeKey, compact, orders = [], state
           <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-iron-soft" /> excess</span>
         </div>
       )}
-      <div>
-        <div className="text-caption font-bold text-ink-soft uppercase tracking-wider mb-1.5">Resources</div>
-        <div className={`grid ${gridCols} gap-2`}>
-          {resources.map((r) => {
-            const p = prices[r.key];
-            return (
-              <InventoryCell
-                key={r.key}
-                r={r}
-                count={inventory[r.key] || 0}
-                compact={compact}
-                orderStatus={status[r.key]}
-                orderTotal={totals[r.key]}
-                marketBuilt={marketBuilt}
-                buyPrice={p?.buy ?? 0}
-                sellPrice={p?.sell ?? 0}
-                dispatch={dispatch}
-                tradeKind="resource"
-              />
-            );
-          })}
+      {noResults && (
+        <div className="text-body text-ink-light italic px-1 py-2">
+          No matches{query ? ` for "${query}"` : ""}.
         </div>
-      </div>
-      <div>
-        <div className="text-caption font-bold text-ink-soft uppercase tracking-wider mb-1.5">Items</div>
-        {items.length === 0 ? (
-          <div className="text-caption text-ink-light italic px-1">No items yet — craft something!</div>
-        ) : (
+      )}
+      {showResources && sortedResourceKeys.length > 0 && (
+        <div>
+          <div className="text-caption font-bold text-ink-soft uppercase tracking-wider mb-1.5">Resources</div>
           <div className={`grid ${gridCols} gap-2`}>
-            {items.map(([key, item]) => (
-              <InventoryCell
-                key={key}
-                r={{ key, label: item.label, color: item.color }}
-                count={inventory[key] || 0}
-                compact={compact}
-                orderStatus={status[key]}
-                orderTotal={totals[key]}
-                marketBuilt={marketBuilt}
-                buyPrice={0}
-                sellPrice={sellPriceFor(key)}
-                dispatch={dispatch}
-                tradeKind="item"
-              />
-            ))}
+            {sortedResourceKeys.map((key) => {
+              const r = resourceCellsBy.get(key);
+              const p = prices[key];
+              return (
+                <InventoryCell
+                  key={key}
+                  r={r}
+                  count={inventory[key] || 0}
+                  compact={compact}
+                  orderStatus={status[key]}
+                  orderTotal={totals[key]}
+                  marketBuilt={marketBuilt}
+                  buyPrice={p?.buy ?? 0}
+                  sellPrice={p?.sell ?? 0}
+                  dispatch={dispatch}
+                  tradeKind="resource"
+                />
+              );
+            })}
           </div>
-        )}
-      </div>
+        </div>
+      )}
+      {showItems && (
+        <div>
+          <div className="text-caption font-bold text-ink-soft uppercase tracking-wider mb-1.5">Items</div>
+          {items.length === 0 ? (
+            <div className="text-caption text-ink-light italic px-1">No items yet — craft something!</div>
+          ) : sortedItemKeys.length === 0 ? (
+            <div className="text-caption text-ink-light italic px-1">No items match the current filter.</div>
+          ) : (
+            <div className={`grid ${gridCols} gap-2`}>
+              {sortedItemKeys.map((key) => {
+                const item = itemDefsByKey.get(key);
+                return (
+                  <InventoryCell
+                    key={key}
+                    r={{ key, label: item.label, color: item.color }}
+                    count={inventory[key] || 0}
+                    compact={compact}
+                    orderStatus={status[key]}
+                    orderTotal={totals[key]}
+                    marketBuilt={marketBuilt}
+                    buyPrice={0}
+                    sellPrice={sellPriceFor(key)}
+                    dispatch={dispatch}
+                    tradeKind="item"
+                  />
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
