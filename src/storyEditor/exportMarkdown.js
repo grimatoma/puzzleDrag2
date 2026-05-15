@@ -18,7 +18,7 @@
 // to test, no React or DOM dependencies.
 
 import { STORY_BEATS, SIDE_BEATS } from "../story.js";
-import { effectiveBeat, allBeatIds, draftBeats, NPCS, triggerSummary, isDraftBeat } from "./shared.jsx";
+import { effectiveBeat, allBeatIds, draftBeats, NPCS, triggerSummary, isDraftBeat, effectiveChoices } from "./shared.jsx";
 
 const ACT_LABEL = { 1: "Act I · Roots", 2: "Act II · Iron", 3: "Act III · Kingdom" };
 
@@ -139,19 +139,67 @@ export function compareBeatOrder(aId, bId, draft) {
 }
 
 /**
+ * Filter beat ids to those reachable from `startBeatId` through queueBeat
+ * choices (DFS with cycle detection). Used to scope the markdown export
+ * to one branch of the tree.
+ */
+export function reachableBeatIds(startBeatId, draft) {
+  const seen = new Set();
+  const stack = [startBeatId];
+  while (stack.length > 0) {
+    const id = stack.pop();
+    if (!id || seen.has(id)) continue;
+    seen.add(id);
+    for (const c of effectiveChoices(id, draft)) {
+      const target = c?.outcome?.queueBeat;
+      if (typeof target === "string" && !seen.has(target)) stack.push(target);
+    }
+  }
+  return seen;
+}
+
+/**
+ * Return true if a beat has any dialogue lines spoken by `speakerKey`. A
+ * `speakerKey` of `null` matches narrator lines.
+ */
+function beatMentionsSpeaker(beat, speakerKey) {
+  if (!beat || !Array.isArray(beat.lines)) return false;
+  for (const line of beat.lines) {
+    if (!line || typeof line.text !== "string" || line.text.trim().length === 0) continue;
+    if ((line.speaker || null) === speakerKey) return true;
+  }
+  return false;
+}
+
+/**
  * Render every beat in the draft (built-ins, sides, author-created drafts —
  * minus suppressed side beats) as a single markdown document. Sectioned by
  * Act / Side / Drafts so writers can scan straight to the part they're
  * editing.
+ *
+ * Optional filters in `opts`:
+ *   - `speakerKey`: only include beats with ≥1 dialogue line by this speaker
+ *     (use `null` for narration-only beats).
+ *   - `rootBeatId`: only include beats reachable through queueBeat from this
+ *     beat — useful for exporting a single branch.
  */
-export function renderStoryMarkdown(draft) {
-  const ids = [...allBeatIds(draft)].sort((a, b) => compareBeatOrder(a, b, draft));
-  if (ids.length === 0) return "# Hearthlands · Story Script\n\n_(no beats)_\n";
+export function renderStoryMarkdown(draft, opts = {}) {
+  const reachable = opts.rootBeatId ? reachableBeatIds(opts.rootBeatId, draft) : null;
+  let ids = [...allBeatIds(draft)].sort((a, b) => compareBeatOrder(a, b, draft));
+  if (reachable) ids = ids.filter((id) => reachable.has(id));
+  if (opts.speakerKey !== undefined) {
+    ids = ids.filter((id) => beatMentionsSpeaker(effectiveBeat(id, draft), opts.speakerKey));
+  }
+  if (ids.length === 0) return "# Hearthlands · Story Script\n\n_(no beats matched the filter)_\n";
 
   const parts = [];
   parts.push("# Hearthlands · Story Script");
+  const filterBits = [];
+  if (opts.speakerKey !== undefined) filterBits.push(`speaker: ${opts.speakerKey === null ? "Narrator" : (NPCS[opts.speakerKey]?.name || opts.speakerKey)}`);
+  if (opts.rootBeatId) filterBits.push(`branch from \`${opts.rootBeatId}\``);
   parts.push("");
-  parts.push(`_${ids.length} beats · exported from the Story Tree Editor._`);
+  const filterTag = filterBits.length > 0 ? ` · filtered (${filterBits.join("; ")})` : "";
+  parts.push(`_${ids.length} beats · exported from the Story Tree Editor${filterTag}._`);
   parts.push("");
 
   let currentSection = "";

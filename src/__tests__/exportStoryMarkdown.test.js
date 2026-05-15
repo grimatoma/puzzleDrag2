@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { renderStoryMarkdown, compareBeatOrder } from "../storyEditor/exportMarkdown.js";
+import { renderStoryMarkdown, compareBeatOrder, reachableBeatIds } from "../storyEditor/exportMarkdown.js";
 import { emptyDraft } from "../storyEditor/shared.jsx";
 
 const draftWith = (story) => ({ ...emptyDraft(), story });
@@ -123,6 +123,86 @@ describe("renderStoryMarkdown", () => {
     const md = renderStoryMarkdown(emptyDraft());
     expect(typeof md).toBe("string");
     expect(md.length).toBeGreaterThan(0);
+  });
+});
+
+describe("renderStoryMarkdown — filters", () => {
+  it("filters by speaker (only beats with that NPC's lines survive)", () => {
+    const d = draftWith({
+      newBeats: [
+        { id: "branch_wren", title: "Wren branch", lines: [{ speaker: "wren", text: "Hi." }] },
+        { id: "branch_mira", title: "Mira branch", lines: [{ speaker: "mira", text: "Hi." }] },
+      ],
+    });
+    const md = renderStoryMarkdown(d, { speakerKey: "wren" });
+    expect(md).toContain("Wren branch");
+    expect(md).not.toContain("Mira branch");
+    expect(md).toMatch(/speaker: Wren/);
+  });
+
+  it("speakerKey: null filters to narrator-only beats", () => {
+    const d = draftWith({
+      newBeats: [
+        { id: "branch_n", title: "Narrator", lines: [{ speaker: null, text: "Silent night." }] },
+        { id: "branch_w", title: "Wren", lines: [{ speaker: "wren", text: "Hi." }] },
+      ],
+    });
+    const md = renderStoryMarkdown(d, { speakerKey: null });
+    expect(md).toContain("Narrator");
+    expect(md).not.toContain("## Draft · Wren");
+  });
+
+  it("filters by rootBeatId (only reachable beats survive)", () => {
+    const d = draftWith({
+      newBeats: [
+        { id: "root", title: "Root", lines: [{ speaker: null, text: "..." }],
+          choices: [{ id: "x", label: "x", outcome: { queueBeat: "leaf" } }] },
+        { id: "leaf", title: "Leaf", lines: [{ speaker: null, text: "..." }] },
+        { id: "elsewhere", title: "Elsewhere", lines: [{ speaker: null, text: "..." }] },
+      ],
+    });
+    const md = renderStoryMarkdown(d, { rootBeatId: "root" });
+    expect(md).toContain("Root");
+    expect(md).toContain("Leaf");
+    expect(md).not.toContain("Elsewhere");
+    expect(md).toMatch(/branch from `root`/);
+  });
+
+  it("returns a fallback message when no beats match the filter", () => {
+    const md = renderStoryMarkdown(emptyDraft(), { speakerKey: "nobody_with_this_id" });
+    expect(md).toMatch(/no beats matched/i);
+  });
+});
+
+describe("reachableBeatIds", () => {
+  it("DFS-walks queueBeat targets and returns the set", () => {
+    const d = draftWith({
+      newBeats: [
+        { id: "a", title: "A", lines: [{ speaker: null, text: "..." }],
+          choices: [{ id: "x", label: "x", outcome: { queueBeat: "b" } }] },
+        { id: "b", title: "B", lines: [{ speaker: null, text: "..." }],
+          choices: [{ id: "y", label: "y", outcome: { queueBeat: "c" } }] },
+        { id: "c", title: "C", lines: [{ speaker: null, text: "..." }] },
+        { id: "z", title: "Z", lines: [{ speaker: null, text: "..." }] },
+      ],
+    });
+    const reachable = reachableBeatIds("a", d);
+    expect(reachable.has("a")).toBe(true);
+    expect(reachable.has("b")).toBe(true);
+    expect(reachable.has("c")).toBe(true);
+    expect(reachable.has("z")).toBe(false);
+  });
+
+  it("is cycle-safe", () => {
+    const d = draftWith({
+      newBeats: [
+        { id: "a", title: "A", lines: [{ speaker: null, text: "a" }],
+          choices: [{ id: "x", label: "x", outcome: { queueBeat: "b" } }] },
+        { id: "b", title: "B", lines: [{ speaker: null, text: "b" }],
+          choices: [{ id: "y", label: "y", outcome: { queueBeat: "a" } }] },
+      ],
+    });
+    expect([...reachableBeatIds("a", d)].sort()).toEqual(["a", "b"]);
   });
 });
 
