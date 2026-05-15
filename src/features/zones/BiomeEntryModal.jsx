@@ -3,6 +3,7 @@ import { BIOMES, EXPEDITION_FOOD_TURNS, MIN_EXPEDITION_TURNS } from "../../const
 import { expeditionTurnsForFood, expeditionTurnsFromSupply, settlementHazards } from "./data.js";
 import { ParchmentDialog } from "../../ui/primitives/Dialog.jsx";
 import Button from "../../ui/primitives/Button.jsx";
+import Stepper from "../../ui/primitives/Stepper.jsx";
 import IconCanvas from "../../ui/IconCanvas.jsx";
 import Icon from "../../ui/Icon.jsx";
 
@@ -89,12 +90,16 @@ export default function BiomeEntryModal({ biomeKey, state, dispatch, onClose }) 
                         <div className="font-bold text-caption text-ink leading-tight truncate">{FOOD_LABELS[f.key] ?? f.key}</div>
                         <div className="text-micro text-ink-light">have {f.have} · {f.per} turn{f.per === 1 ? "" : "s"} each</div>
                       </div>
-                      <div className="flex items-center gap-1 flex-shrink-0">
-                        <button onClick={() => setCount(f.key, n - 1, f.have)} disabled={n <= 0}
-                          className={`w-6 h-6 rounded-md border-2 font-bold text-body leading-none ${n <= 0 ? "bg-[#ddd] border-[#bbb] text-[#999]" : "bg-paper-soft border-iron text-ink-mid"}`}>−</button>
-                        <span className="w-6 text-center font-bold text-caption text-ink">{n}</span>
-                        <button onClick={() => setCount(f.key, n + 1, f.have)} disabled={n >= f.have}
-                          className={`w-6 h-6 rounded-md border-2 font-bold text-body leading-none ${n >= f.have ? "bg-[#ddd] border-[#bbb] text-[#999]" : "bg-moss border-[#6a9010] text-white"}`}>+</button>
+                      <div className="flex-shrink-0">
+                        <Stepper
+                          size="md"
+                          min={0}
+                          max={f.have}
+                          accelerator
+                          value={n}
+                          onChange={(v) => setCount(f.key, v, f.have)}
+                          presets={[1, 5, 10, "max"]}
+                        />
                       </div>
                     </div>
                   );
