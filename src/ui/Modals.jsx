@@ -5,12 +5,14 @@ import { displayZoneName } from "../features/zones/data.js";
 import Icon from "./Icon.jsx";
 import IconCanvas, { hasIcon } from "./IconCanvas.jsx";
 import RichText from "./RichText.jsx";
+import { ParchmentDialog } from "./primitives/Dialog.jsx";
+import Button from "./primitives/Button.jsx";
 
 function Stat({ v, l }) {
   return (
     <div>
-      <div className="font-bold text-[22px] landscape:max-[1024px]:text-[16px] max-[640px]:text-[18px] text-[#a8431a]">{v}</div>
-      <div className="uppercase tracking-widest text-[10px] landscape:max-[1024px]:text-[8px] max-[640px]:text-[9px] text-[#8a785e]">{l}</div>
+      <div className="font-bold text-h2 max-[640px]:text-large text-ember tabular-nums">{v}</div>
+      <div className="uppercase tracking-widest text-micro text-ink-light">{l}</div>
     </div>
   );
 }
@@ -18,29 +20,29 @@ function Stat({ v, l }) {
 export function SeasonModal({ state, dispatch }) {
   if (state.modal !== "season") return null;
   const stats = state.seasonStats;
-  // Phase 7 — calendar season removed. The end-of-session screen now only
-  // shows the run summary and a "Return to Town" button.
+  const close = () => dispatch({ type: "CLOSE_SEASON" });
   return (
-    <div className="absolute inset-0 bg-black/55 grid place-items-center z-50 animate-fadein" role="dialog" aria-modal="true" aria-labelledby="season-modal-title">
-      <div className="bg-[#f4ecd8] border-[4px] border-[#b28b62] rounded-[20px] px-8 py-6 landscape:max-[1024px]:px-4 landscape:max-[1024px]:py-3 max-[640px]:px-4 max-[640px]:py-4 min-w-[360px] max-w-[560px] landscape:max-[1024px]:min-w-0 landscape:max-[1024px]:w-[92vw] max-[640px]:min-w-0 max-[640px]:w-[92vw] landscape:max-[1024px]:max-h-[88vh] max-[640px]:max-h-[85dvh] landscape:max-[1024px]:overflow-y-auto max-[640px]:overflow-y-auto text-center shadow-2xl">
-        <Icon iconKey="ui_home" size={48} className="landscape:max-[1024px]:w-[28px] max-[640px]:w-[32px] leading-none" />
-        <h2 id="season-modal-title" className="font-bold text-[26px] landscape:max-[1024px]:text-[18px] max-[640px]:text-[20px] text-[#744d2e] mt-2 landscape:max-[1024px]:mt-1 max-[640px]:mt-1 mb-1 landscape:max-[1024px]:mb-0.5 max-[640px]:mb-0.5">Harvest Complete</h2>
-        <p className="italic text-[#6a4b31] text-[14px] landscape:max-[1024px]:text-[11px] max-[640px]:text-[12px]">Time to head back to town.</p>
-        <div className="flex justify-around gap-2 my-4 landscape:max-[1024px]:my-2 max-[640px]:my-2 p-3 landscape:max-[1024px]:p-2 max-[640px]:p-2 bg-black/[.04] rounded-xl">
+    <ParchmentDialog open onClose={close} size="md">
+      <ParchmentDialog.Title>
+        <span className="flex flex-col items-center text-center gap-1">
+          <Icon iconKey="ui_home" size={48} className="leading-none" />
+          <span className="block">Harvest Complete</span>
+          <span className="block italic text-body text-ink-mid font-normal">Time to head back to town.</span>
+        </span>
+      </ParchmentDialog.Title>
+      <ParchmentDialog.Body className="text-center">
+        <div className="flex justify-around gap-2 my-2 p-3 bg-black/[.04] rounded-xl">
           <Stat v={stats.harvests} l="Harvested" />
           <Stat v={stats.upgrades} l="Upgrades ★" />
           <Stat v={stats.ordersFilled} l="Orders" />
           <Stat v={`+${stats.coins}`} l="Coins" />
         </div>
-        <p className="text-[12px] landscape:max-[1024px]:text-[10px] max-[640px]:text-[11px] text-[#8a785e] mb-3 landscape:max-[1024px]:mb-2 max-[640px]:mb-2">Return bonus: +25◉</p>
-        <button
-          onClick={() => dispatch({ type: "CLOSE_SEASON" })}
-          className="bg-[#91bf24] hover:bg-[#a3d028] text-white border-[3px] border-white rounded-2xl px-8 landscape:max-[1024px]:px-5 max-[640px]:px-5 py-2.5 landscape:max-[1024px]:py-1.5 max-[640px]:py-2 text-[16px] landscape:max-[1024px]:text-[13px] max-[640px]:text-[14px] font-bold shadow-lg"
-        >
-          Return to Town
-        </button>
-      </div>
-    </div>
+        <p className="text-gold text-body-lg font-semibold tabular-nums mt-3">+25◉ return bonus</p>
+      </ParchmentDialog.Body>
+      <ParchmentDialog.Actions sticky>
+        <Button tone="ember" size="md" onClick={close}>Return to Town</Button>
+      </ParchmentDialog.Actions>
+    </ParchmentDialog>
   );
 }
 
@@ -299,18 +301,30 @@ export function PromptInput({ prompt, onSubmit }) {
 }
 
 /** The dark parchment-and-iron stage used by the center-stage modal forms. */
-export function StoryStagePanel({ beat, lines, footer, footKind, sceneLabel }) {
+export function StoryStagePanel({ beat, lines, footer, footKind, sceneLabel, onClose }) {
   return (
     <div
-      className="w-[92vw] max-w-[460px] shadow-2xl flex flex-col"
+      className="w-[92vw] max-w-[460px] shadow-2xl flex flex-col relative"
       style={{ background: "linear-gradient(180deg, #221710 0%, #1a110a 100%)", border: `1px solid ${SC.panelEdge}`,
                borderRadius: 22, padding: "18px 18px 16px", maxHeight: "88dvh", animation: "storyDialogIn 360ms cubic-bezier(.2,.7,.2,1) both" }}
     >
-      {/* Gold hairline */}
+      {onClose && (
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Close"
+          className="absolute top-2 right-2 grid place-items-center rounded-full outline-none hover:bg-white/10 transition-colors"
+          style={{ width: 32, height: 32, color: SC.parchmentFaint }}
+        >
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+            <path d="M2 2L12 12M12 2L2 12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+          </svg>
+        </button>
+      )}
+
       <div style={{ height: 1, background: "linear-gradient(90deg, transparent, rgba(226,178,74,0.5), transparent)", marginBottom: 14, flexShrink: 0 }} />
 
-      {/* Header: title + beat meta */}
-      <div className="flex justify-between items-baseline gap-3 mb-3.5" style={{ flexShrink: 0 }}>
+      <div className="flex justify-between items-baseline gap-3 mb-3.5" style={{ flexShrink: 0, paddingRight: onClose ? 36 : 0 }}>
         <div id="story-modal-title" style={{ fontFamily: STORY_SERIF, fontWeight: 600, fontSize: 21, lineHeight: 1.15, color: SC.goldSoft }}>
           {beat.title}
         </div>
@@ -539,7 +553,14 @@ export function StoryModal({ state, dispatch }) {
       className="absolute inset-0 grid place-items-center z-[60] animate-fadein"
       style={{ background: scene?.bg ?? "rgba(0,0,0,0.6)" }}
     >
-      <StoryStagePanel beat={beat} lines={visibleLines} footer={footer} footKind={footKind} sceneLabel={scene?.label} />
+      <StoryStagePanel
+        beat={beat}
+        lines={visibleLines}
+        footer={footer}
+        footKind={footKind}
+        sceneLabel={scene?.label}
+        onClose={continueOnly && !hasPrompt ? () => dispatch({ type: "STORY/DISMISS_MODAL" }) : undefined}
+      />
     </div>
   );
 }
