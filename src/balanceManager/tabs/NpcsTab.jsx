@@ -13,6 +13,7 @@ import { BIOMES, RECIPES } from "../../constants.js";
 import { COLORS, TextField, NumberField, FieldRow, Card, SmallButton, SearchAndAddPicker } from "../shared.jsx";
 import Icon from "../../ui/Icon.jsx";
 import { renderStoryMarkdown } from "../../storyEditor/exportMarkdown.js";
+import { projectBondLadder } from "../bondProjection.js";
 
 function downloadNpcScript(npcId, displayName, draft) {
   if (typeof document === "undefined") return;
@@ -69,6 +70,7 @@ export default function NpcsTab({ draft, updateDraft }) {
 
   return (
     <div className="flex flex-col gap-4">
+      <BondDecayProjection />
       <div className="flex flex-col gap-2">
         <div className="text-[12px] font-bold uppercase tracking-wider" style={{ color: COLORS.inkSubtle }}>Gift preferences</div>
         {NPC_IDS.map((id) => {
@@ -215,5 +217,43 @@ function ListEditor({ items, availableKeys, onChange }) {
         gridClass="grid-cols-2 md:grid-cols-3"
       />
     </div>
+  );
+}
+
+// Bond decay projection — the canonical decayBond runs once per inactivity
+// tick (Spring/Autumn season-roll). Shows what happens to four reference
+// starting bonds (10/8/6/5) over 12 ticks so the designer can see how
+// punishing inactivity is at the current ramp.
+function BondDecayProjection() {
+  const ladder = projectBondLadder({ bonds: [10, 8, 6, 5], ticks: 12 });
+  const maxBond = 10;
+  return (
+    <Card title="Bond decay projection (12 inactivity ticks)">
+      <div className="text-[11px] italic mb-2" style={{ color: COLORS.inkSubtle }}>
+        Canonical decayBond runs once per Spring/Autumn season-roll. Bonds above 5 lose 0.1 per tick (§14 floor at 5/warm).
+      </div>
+      <div className="flex flex-col gap-1">
+        {ladder.map((row) => (
+          <div key={row.start} className="flex items-center gap-2 text-[11px]">
+            <span className="font-mono" style={{ color: COLORS.inkSubtle, width: 96 }}>
+              start {row.start.toFixed(1)} → {row.end.toFixed(1)}
+            </span>
+            <div className="flex-1 h-2 rounded relative" style={{ background: COLORS.parchmentDeep }}>
+              {row.trajectory.map((v, i) => (
+                <div key={i} style={{ position: "absolute",
+                  left: `${(i / (row.trajectory.length - 1)) * 100}%`,
+                  top: 0, bottom: 0,
+                  width: 1, background: i === 0 ? COLORS.emberDeep : (v <= 5 ? COLORS.greenDeep : COLORS.ember),
+                  opacity: i === 0 ? 1 : 0.6,
+                }} />
+              ))}
+            </div>
+            <span className="font-mono text-right" style={{ minWidth: 100, color: COLORS.inkSubtle }}>
+              floor in {row.ticksToFloor === Infinity ? "∞" : row.ticksToFloor} tick{row.ticksToFloor === 1 ? "" : "s"}
+            </span>
+          </div>
+        ))}
+      </div>
+    </Card>
   );
 }
