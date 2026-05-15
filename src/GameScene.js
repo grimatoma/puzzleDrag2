@@ -1329,6 +1329,80 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
+  _spawnMinChainPulse(tile) {
+    const radius = (this.tileSize ?? 48) * 0.55;
+    const pulse = this.add.graphics().setDepth(6);
+    pulse.fillStyle(0x91bf24, 0.55);
+    pulse.fillCircle(tile.x, tile.y, radius);
+    pulse.setScale(0);
+    this._cuePulses.push(pulse);
+    this.tweens.add({
+      targets: pulse,
+      scale: { from: 0, to: 1.2 },
+      duration: 260,
+      ease: "Back.Out",
+      onComplete: () => {
+        this.tweens.add({
+          targets: pulse,
+          scale: 0.85,
+          alpha: 0,
+          duration: 340,
+          ease: "Sine.Out",
+          onComplete: () => {
+            const idx = this._cuePulses.indexOf(pulse);
+            if (idx >= 0) this._cuePulses.splice(idx, 1);
+            pulse.destroy();
+          },
+        });
+      },
+    });
+  }
+
+  _spawnUpgradePulse(tile, tierCount) {
+    const radius = (this.tileSize ?? 48) * 0.6;
+    const halo = this.add.graphics().setDepth(6);
+    halo.fillStyle(0xffd248, 0.7);
+    halo.fillCircle(tile.x, tile.y, radius);
+    halo.setScale(0);
+    this._cuePulses.push(halo);
+    this.tweens.add({
+      targets: halo,
+      scale: 1.3,
+      alpha: 0,
+      duration: 700,
+      ease: "Sine.Out",
+      onComplete: () => {
+        const idx = this._cuePulses.indexOf(halo);
+        if (idx >= 0) this._cuePulses.splice(idx, 1);
+        halo.destroy();
+      },
+    });
+
+    const label = `+${tierCount}★`;
+    const fontPx = Math.max(14, Math.round(18 * this.tileScale));
+    const text = this.add.text(tile.x, tile.y - radius * 0.7, label, {
+      fontFamily: "system-ui, -apple-system, sans-serif",
+      fontSize: `${fontPx}px`,
+      fontStyle: "bold",
+      color: "#ffd248",
+      stroke: "#3a2715",
+      strokeThickness: Math.max(2, Math.round(3 * this.tileScale)),
+    }).setOrigin(0.5, 1).setDepth(13);
+    this._cuePulses.push(text);
+    this.tweens.add({
+      targets: text,
+      y: tile.y - radius * 0.7 - 22 * this.tileScale,
+      alpha: 0,
+      duration: 900,
+      ease: "Sine.Out",
+      onComplete: () => {
+        const idx = this._cuePulses.indexOf(text);
+        if (idx >= 0) this._cuePulses.splice(idx, 1);
+        text.destroy();
+      },
+    });
+  }
+
   dimUnselectableTiles(key) {
     for (let r = 0; r < ROWS; r++) {
       for (let c = 0; c < COLS; c++) {
