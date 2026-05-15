@@ -363,6 +363,19 @@ function WarningBadge({ count }) {
   );
 }
 
+function ModifiedBadge({ isModified }) {
+  if (!isModified) return null;
+  return (
+    <div title="This beat has a draft override (patch lives in story.beats[id])"
+      style={{ position: "absolute", bottom: -10, left: -10, zIndex: 5,
+        width: 18, height: 18, borderRadius: 999, border: `1.5px solid ${C.emberDeep}`,
+        background: C.ember, color: "#fff", display: "grid", placeItems: "center",
+        font: "700 10px/1 system-ui", boxShadow: "0 1px 3px rgba(40,28,10,0.18)" }}>
+      ◆
+    </div>
+  );
+}
+
 function DragHandle({ dragging, onMouseDown, onTouchStart }) {
   return (
     <button data-drag-handle="1" title="Drag to move card"
@@ -377,7 +390,7 @@ function DragHandle({ dragging, onMouseDown, onTouchStart }) {
   );
 }
 
-function TreeNode({ node, beat, selectedId, collapsed, hiddenCount, showCollapse, dragging, warningCount, onNodeMouseDown, onNodeTouchStart, onToggleCollapse, onPreview, onSelect, draft }) {
+function TreeNode({ node, beat, selectedId, collapsed, hiddenCount, showCollapse, dragging, warningCount, isModified, onNodeMouseDown, onNodeTouchStart, onToggleCollapse, onPreview, onSelect, draft }) {
   const selected = node.id === selectedId;
   let Inner;
   if (node.draft || node.expanded) Inner = <ExpandedCard node={node} beat={beat} selected={selected} draft={draft} />;
@@ -386,6 +399,7 @@ function TreeNode({ node, beat, selectedId, collapsed, hiddenCount, showCollapse
   return (
     <div data-story-node="1" onClick={() => onSelect(node.id)} style={{ position: "absolute", left: node.x, top: node.y, width: node.w, height: node.h, cursor: "default", touchAction: "none" }}>
       <WarningBadge count={warningCount} />
+      <ModifiedBadge isModified={isModified} />
       <div style={{ position: "absolute", top: -10, left: 10, right: 10, display: "flex", alignItems: "center", gap: 6 }}>
         <DragHandle dragging={dragging} onMouseDown={(e) => onNodeMouseDown(e, node)} onTouchStart={(e) => onNodeTouchStart(e, node)} />
         <TriggerChip beat={beat} accent={actColor(beat)} />
@@ -1363,6 +1377,7 @@ export default function StoryEditorApp() {
                 collapsed={collapsed.has(node.id)} hiddenCount={view.hiddenCounts[node.id] || 0}
                 showCollapse={collapsible.has(node.id)} dragging={draggingNodeId === node.id}
                 warningCount={warningsByBeat[node.id]?.length || 0}
+                isModified={!!(draft?.story?.beats && Object.prototype.hasOwnProperty.call(draft.story.beats, node.id))}
                 onNodeMouseDown={onNodeMouseDown} onNodeTouchStart={onNodeTouchStart} onToggleCollapse={toggleCollapse}
                 onPreview={setPreviewBeatId} onSelect={setSelectedId} draft={draft} />
             ))}
