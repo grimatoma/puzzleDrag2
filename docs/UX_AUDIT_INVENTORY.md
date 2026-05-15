@@ -70,6 +70,8 @@ Legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[-]` skipped (delibera
 - [x] A23 / B58 — NpcBubble tap-to-dismiss-early (PR #416)
 - [x] A27 — Provisions packer presets (PR #415)
 - [x] A28 — 600ms theme crossfade (PR #418)
+- [x] A29 — `useFocusTrap` on holdout modals (PR #422)
+- [x] A31 — WCAG AA contrast fixes (PR #422)
 - [x] A34 — Tabular numerals (PR #411)
 - [x] A35 — Pluralize turn/turns (PR #414)
 - [x] A36 — Drop double-border retina artifact (PR #414)
@@ -82,15 +84,17 @@ Legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[-]` skipped (delibera
 - [x] B71 / B72 — Global :active + :focus-visible (PR #406)
 - [x] B67 — `md` (≥768px) breakpoint registered (PR #406)
 
-**Queued:**
-- [ ] A29 — `useFocusTrap` on Settings / Debug / Tutorial holdouts
-- [ ] A31 — WCAG AA contrast pass
-- [ ] C2 — Run summary screen
-- [ ] C3 — Charter / Choice-log viewer
+**Content features (C series):**
+- [x] C2 — Run summary screen (PR #421)
+- [x] C3 — Charter / Choice-log viewer (PR #420)
+
+### Scope complete
+
+Every item from the user's authorized scope has landed across 17 PRs (#406–#422). Suggestions for follow-up work (A11, A22, A26, A30, A32, A33, B25–B34, B62, B64, C10–C35) remain available in the tables below for reference.
 
 ### Out of scope (deferred)
 
-A11–A13, A15, A22, A24–A26, A29 (until queued), A30–A33, B1–B34 (informational), B52–B85, C1, C4–C35, C42–C51.
+A11–A13, A15, A22, A24–A26, A30, A32, A33, B1–B34 (informational), B52–B85, C1, C4–C35, C42–C51.
 
 ---
 
