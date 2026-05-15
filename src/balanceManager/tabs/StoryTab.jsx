@@ -8,9 +8,9 @@
 
 import { useMemo, useState } from "react";
 import { STORY_BEATS, SIDE_BEATS } from "../../story.js";
-import { COLORS, SmallButton } from "../shared.jsx";
+import { COLORS, SmallButton, Select } from "../shared.jsx";
 import { renderStoryMarkdown } from "../../storyEditor/exportMarkdown.js";
-import { groupedStoryWarnings } from "../../storyEditor/shared.jsx";
+import { groupedStoryWarnings, NPCS } from "../../storyEditor/shared.jsx";
 import StatsPanel from "../../storyEditor/StatsPanel.jsx";
 import BondTimelinePanel from "../../storyEditor/BondTimelinePanel.jsx";
 import HeatmapPanel from "../../storyEditor/HeatmapPanel.jsx";
@@ -34,7 +34,13 @@ export default function StoryTab({ draft }) {
   const counts = `${STORY_BEATS.length} story beat${STORY_BEATS.length === 1 ? "" : "s"} · ${SIDE_BEATS.length} side event${SIDE_BEATS.length === 1 ? "" : "s"}`;
   const { total: warningTotal } = useMemo(() => groupedStoryWarnings(draft), [draft]);
   const [previewOpen, setPreviewOpen] = useState(false);
-  const markdown = useMemo(() => previewOpen ? renderStoryMarkdown(draft) : "", [draft, previewOpen]);
+  const [filterSpeaker, setFilterSpeaker] = useState("__all__");   // 'all' | '__narrator__' | npc key
+  const exportOpts = useMemo(() => {
+    if (filterSpeaker === "__all__") return undefined;
+    if (filterSpeaker === "__narrator__") return { speakerKey: null };
+    return { speakerKey: filterSpeaker };
+  }, [filterSpeaker]);
+  const markdown = useMemo(() => previewOpen ? renderStoryMarkdown(draft, exportOpts) : "", [draft, previewOpen, exportOpts]);
   const draftBeats = Array.isArray(draft?.story?.newBeats) ? draft.story.newBeats.length : 0;
   const draftBeatOverrides = Object.keys(draft?.story?.beats || {}).length;
   const suppressed = Array.isArray(draft?.story?.suppressedBeats) ? draft.story.suppressedBeats.length : 0;
@@ -124,13 +130,23 @@ export default function StoryTab({ draft }) {
           Render every beat (built-ins + draft overrides + author-created drafts) as a single markdown screenplay
           — handy for proofreading the full arc, sharing with a writer in Google Docs, or diffing two drafts in plain text.
         </p>
-        <div className="mt-3 flex items-center gap-2">
-          <SmallButton variant="primary" onClick={() => downloadMarkdown(renderStoryMarkdown(draft))}>
+        <div className="mt-3 flex items-center gap-2 flex-wrap">
+          <SmallButton variant="primary" onClick={() => downloadMarkdown(renderStoryMarkdown(draft, exportOpts))}>
             ⬇ Download story.md
           </SmallButton>
           <SmallButton onClick={() => setPreviewOpen((v) => !v)}>
             {previewOpen ? "Hide preview" : "Preview ↓"}
           </SmallButton>
+          <span className="text-[11px] font-bold uppercase tracking-wide ml-2" style={{ color: COLORS.inkSubtle }}>
+            Speaker filter
+          </span>
+          <div style={{ width: 160 }}>
+            <Select value={filterSpeaker} onChange={setFilterSpeaker} options={[
+              { value: "__all__", label: "Every speaker" },
+              { value: "__narrator__", label: "Narrator only" },
+              ...Object.keys(NPCS).map((k) => ({ value: k, label: NPCS[k].name })),
+            ]} />
+          </div>
         </div>
         {previewOpen && (
           <pre className="mt-3 text-[11px] font-mono p-3 rounded-lg border-2 overflow-auto"
