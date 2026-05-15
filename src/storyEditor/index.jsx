@@ -29,6 +29,7 @@ import ValidationPanel from "./ValidationPanel.jsx";
 import PathsPanel from "./PathsPanel.jsx";
 import PlaythroughPanel from "./PlaythroughPanel.jsx";
 import FindReplacePanel from "./FindReplacePanel.jsx";
+import { templateMenu, buildBeatFromTemplate } from "./beatTemplates.js";
 import { renderStoryMarkdown } from "./exportMarkdown.js";
 import { useDraftHistory } from "../balanceManager/useDraftHistory.js";
 
@@ -454,8 +455,10 @@ function searchKindForBeat(beat, id, q) {
   return null;
 }
 
-function LeftRail({ draft, selectedId, onlineIds, collapsed, onToggleCollapsed, onSelect, onNewBeat }) {
+function LeftRail({ draft, selectedId, onlineIds, collapsed, onToggleCollapsed, onSelect, onNewBeat, onNewBeatFromTemplate }) {
   const [search, setSearch] = useState("");
+  const [templatePickerOpen, setTemplatePickerOpen] = useState(false);
+  const templates = useMemo(() => templateMenu(), []);
   const q = search.trim().toLowerCase();
   const dBeats = draftBeats(draft);
   const knownIds = new Set(allBeatIds(draft));
@@ -531,6 +534,30 @@ function LeftRail({ draft, selectedId, onlineIds, collapsed, onToggleCollapsed, 
           <span style={{ position: "absolute", left: 8, top: "50%", transform: "translateY(-50%)", color: C.inkSubtle, fontSize: 12 }}>🔍</span>
         </div>
         <Btn tone="ember" onClick={onNewBeat} style={{ width: "100%", padding: "7px 10px", font: "700 11px/1 system-ui" }}>✦ New beat</Btn>
+        <div style={{ position: "relative" }}>
+          <Btn tone="ghost" onClick={() => setTemplatePickerOpen((v) => !v)}
+            style={{ width: "100%", padding: "6px 10px", font: "600 10px/1 system-ui" }}>
+            {templatePickerOpen ? "▾" : "▸"} From template…
+          </Btn>
+          {templatePickerOpen && (
+            <div style={{ marginTop: 4, padding: 4, borderRadius: 7, background: "#fff",
+              border: `1.5px solid ${C.border}`, display: "flex", flexDirection: "column", gap: 2 }}>
+              {templates.map((t) => (
+                <button key={t.id}
+                  onClick={() => { setTemplatePickerOpen(false); onNewBeatFromTemplate && onNewBeatFromTemplate(t.id); }}
+                  title={t.blurb}
+                  style={{ textAlign: "left", padding: "5px 8px", borderRadius: 5, border: `1px solid ${C.border}`,
+                    background: C.parchment, color: C.ink, cursor: "pointer",
+                    font: "500 10px/1.3 system-ui" }}>
+                  <div style={{ fontWeight: 600 }}>{t.label}</div>
+                  <div style={{ font: "italic 400 9px/1.3 system-ui", color: C.inkSubtle, marginTop: 1 }}>
+                    {t.blurb}
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
       <div style={{ flex: 1, overflowY: "auto", padding: "4px 0 16px" }}>
         {dBeats.length > 0 && (
@@ -981,8 +1008,14 @@ export default function StoryEditorApp() {
       d.story ??= {};
       d.story.newBeats ??= [];
       const id = allBeatIds(d).includes(newId) ? pickFree(d) : newId;
-      const beat = { id, title: opts.triggered ? "New side beat" : "New branch", lines: [] };
+      let beat = { id, title: opts.triggered ? "New side beat" : "New branch", lines: [] };
       if (opts.triggered) beat.trigger = { type: "bond_at_least", npc: "wren", amount: 8 };
+      // If the caller passed a template id, prefill the beat from that
+      // template's preset (preserving the auto-generated id).
+      if (opts.templateId) {
+        const fromTemplate = buildBeatFromTemplate(opts.templateId, opts.templateOptions || {});
+        if (fromTemplate) beat = { id, ...fromTemplate };
+      }
       d.story.newBeats = [...d.story.newBeats, beat];
       if (opts.queuedBy) {
         d.story.beats ??= {};
@@ -1297,7 +1330,8 @@ export default function StoryEditorApp() {
       <div style={{ flex: 1, display: "flex", minHeight: 0 }}>
         <LeftRail draft={draft} selectedId={selectedId} onlineIds={onlineIds}
           collapsed={leftRailCollapsed} onToggleCollapsed={toggleLeftRail} onSelect={setSelectedId}
-          onNewBeat={() => createDraftBeat({ triggered: true })} />
+          onNewBeat={() => createDraftBeat({ triggered: true })}
+          onNewBeatFromTemplate={(templateId) => createDraftBeat({ templateId })} />
 
         <div ref={canvasRef} data-canvas-bg="1" onMouseDown={onMouseDown} onWheel={onWheel}
           style={{ flex: 1, position: "relative", overflow: "hidden", touchAction: "none", background: C.canvas, cursor: dragging ? "grabbing" : "grab",
