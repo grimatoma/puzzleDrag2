@@ -31,7 +31,15 @@ const KIND_TONE = {
 const DEFAULT_TONE = { bg: COLORS.parchmentDeep, fg: COLORS.inkLight, label: "ENTRY" };
 
 export default function CommandPalette({ open, onClose, onSelect }) {
-  const [query, setQuery] = useState("");
+  // Mount the stateful inner component only while open — that way query /
+  // cursor reset to their initial values on every open without needing a
+  // setState-in-effect (forbidden by react-hooks/set-state-in-effect).
+  if (!open) return null;
+  return <PaletteImpl onClose={onClose} onSelect={onSelect} />;
+}
+
+function PaletteImpl({ onClose, onSelect }) {
+  const [query, setQueryRaw] = useState("");
   const [cursor, setCursor] = useState(0);
   const inputRef = useRef(null);
   const listRef = useRef(null);
@@ -39,25 +47,20 @@ export default function CommandPalette({ open, onClose, onSelect }) {
   const index = useMemo(() => buildCommandIndex(), []);
   const results = useMemo(() => searchCommandIndex(index, query, 12), [index, query]);
 
-  useEffect(() => {
-    if (open) {
-      setQuery("");
-      setCursor(0);
-      const id = setTimeout(() => inputRef.current?.focus(), 0);
-      return () => clearTimeout(id);
-    }
-    return undefined;
-  }, [open]);
+  // setQuery + cursor reset live together so it's an event handler rather
+  // than an effect — eliminates the react-hooks/set-state-in-effect violation.
+  const setQuery = (next) => { setQueryRaw(next); setCursor(0); };
 
-  useEffect(() => { setCursor(0); }, [query]);
+  useEffect(() => {
+    const id = setTimeout(() => inputRef.current?.focus(), 0);
+    return () => clearTimeout(id);
+  }, []);
 
   useEffect(() => {
     if (!listRef.current) return;
     const el = listRef.current.querySelector(`[data-row-index="${cursor}"]`);
     if (el && typeof el.scrollIntoView === "function") el.scrollIntoView({ block: "nearest" });
   }, [cursor, results.length]);
-
-  if (!open) return null;
 
   const pick = (entry) => {
     if (!entry) return;

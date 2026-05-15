@@ -945,7 +945,7 @@ export default function StoryEditorApp() {
       if (d.story && Object.keys(d.story).length === 0) delete d.story;
       return d;
     });
-  }, []);
+  }, [setDraft]);
 
   // ── create a draft beat. opts: { triggered?:bool, queuedBy?:{beatId,choiceId}, idHint? } ──
   const createDraftBeat = useCallback((opts = {}) => {
@@ -999,7 +999,7 @@ export default function StoryEditorApp() {
     }
     setSelectedId(newId);
     return newId;
-  }, [draft, nodePositions]);
+  }, [draft, nodePositions, setDraft]);
 
   const deleteDraftBeat = useCallback((beatId) => {
     setDraft((prev) => {
@@ -1027,7 +1027,7 @@ export default function StoryEditorApp() {
     });
     setCollapsed((prev) => { if (!prev.has(beatId)) return prev; const n = new Set(prev); n.delete(beatId); writeCollapsed(n); return n; });
     setSelectedId((cur) => (cur === beatId ? null : cur));
-  }, []);
+  }, [setDraft]);
 
   const suppressBuiltInBeat = useCallback((beatId) => {
     setDraft((prev) => {
@@ -1041,7 +1041,7 @@ export default function StoryEditorApp() {
     setCollapsed((prev) => { if (!prev.has(beatId)) return prev; const n = new Set(prev); n.delete(beatId); writeCollapsed(n); return n; });
     setSelectedId((cur) => (cur === beatId ? null : cur));
     setPreviewBeatId((cur) => (cur === beatId ? null : cur));
-  }, []);
+  }, [setDraft]);
 
   const restoreSuppressedBeats = useCallback(() => {
     setDraft((prev) => {
@@ -1051,7 +1051,7 @@ export default function StoryEditorApp() {
       if (d.story && Object.keys(d.story).length === 0) delete d.story;
       return d;
     });
-  }, []);
+  }, [setDraft]);
 
   const renameDraftBeat = useCallback((oldId, nextId) => {
     const result = renameDraftBeatInDraft(draft, oldId, nextId);
@@ -1076,7 +1076,7 @@ export default function StoryEditorApp() {
     setSelectedId((cur) => (cur === oldId ? newId : cur));
     setPreviewBeatId((cur) => (cur === oldId ? newId : cur));
     return result;
-  }, [draft]);
+  }, [draft, setDraft]);
 
   const onNewBranch = useCallback((parentBeatId, choiceId) => createDraftBeat({ queuedBy: { beatId: parentBeatId, choiceId } }), [createDraftBeat]);
 
