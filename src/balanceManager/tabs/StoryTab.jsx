@@ -14,6 +14,7 @@ import { groupedStoryWarnings, NPCS } from "../../storyEditor/shared.jsx";
 import StatsPanel from "../../storyEditor/StatsPanel.jsx";
 import BondTimelinePanel from "../../storyEditor/BondTimelinePanel.jsx";
 import HeatmapPanel from "../../storyEditor/HeatmapPanel.jsx";
+import VoicePanel from "../../storyEditor/VoicePanel.jsx";
 
 const STORY_EDITOR_URL = import.meta.env.BASE_URL.replace(/\/$/, "") + "/story/";
 
@@ -109,6 +110,17 @@ export default function StoryTab({ draft }) {
           Spot pacing imbalances at a glance — uneven ember drops, flag-setter concentration, NPC bond bias.
         </p>
         <HeatmapPanel draft={draft} />
+      </div>
+
+      <div className="rounded-xl border-2 p-4" style={{ background: COLORS.parchment, borderColor: COLORS.border }}>
+        <div className="text-[12px] font-bold uppercase tracking-wide mb-2" style={{ color: COLORS.inkSubtle }}>
+          Voice fingerprints
+        </div>
+        <p className="text-[12px] mb-2" style={{ color: COLORS.inkLight }}>
+          Per-speaker lexical statistics — line count, average line length, vocabulary ratio,
+          top line-opening words, ending punctuation distribution. Useful for catching voice drift.
+        </p>
+        <VoicePanel draft={draft} />
       </div>
 
       <div className="rounded-xl border-2 p-4" style={{ background: COLORS.parchment, borderColor: COLORS.border }}>
