@@ -211,11 +211,46 @@ function addFlagWarnings(list, knownFlags, warnings, context) {
   }
 }
 
-export function storyWarningsForBeat(beatId, draft) {
+/**
+ * Catalog of warning types the validation panel groups by. Keeping the list
+ * here so the panel and tests can introspect the full taxonomy (instead of
+ * discovering types ad-hoc from whatever warnings happen to be produced).
+ */
+export const STORY_WARNING_TYPES = Object.freeze({
+  missingBeat:        { label: "Missing beat targets",     hint: "Choices that point at beat ids that don't exist." },
+  unknownFlag:        { label: "Unregistered flags",       hint: "Flags referenced by a trigger/outcome that don't exist in src/flags.js or the draft's flag overrides." },
+  orphanBeat:         { label: "Orphan draft beats",       hint: "Author-created beats with no trigger and no choice pointing at them — they will never fire in-game." },
+  emptyBeat:          { label: "Empty beats",              hint: "Beats with no dialogue lines, no body text, and no choices." },
+  duplicateChoice:    { label: "Duplicate choice ids",     hint: "A beat with two choices that share the same id (only the first will survive the runtime sanitizer)." },
+  emptyChoiceLabel:   { label: "Choices with no label",    hint: "Choice options whose label text is blank — players see a dead button." },
+  triggerLoop:        { label: "Trigger / queue loops",    hint: "A queueBeat target eventually loops back to the same beat without ending — risks an infinite re-fire cascade." },
+});
+
+function detectChoiceLoop(beatId, draft, beatIndex) {
+  const seen = new Set();
+  const visit = (id) => {
+    if (!id || seen.has(id)) return id && id === beatId;
+    seen.add(id);
+    const choices = beatIndex.get(id)?.choices;
+    if (!Array.isArray(choices)) return false;
+    for (const c of choices) {
+      const next = c?.outcome?.queueBeat;
+      if (next === beatId) return true;
+      if (next && visit(next)) return true;
+    }
+    return false;
+  };
+  return visit(beatId);
+}
+
+export function storyWarningsForBeat(beatId, draft, ctx) {
   const beat = effectiveBeat(beatId, draft);
   if (!beat) return [];
-  const ids = new Set(allBeatIds(draft));
-  const knownFlags = knownStoryFlagIds(draft);
+  const ids = ctx?.ids || new Set(allBeatIds(draft));
+  const knownFlags = ctx?.knownFlags || knownStoryFlagIds(draft);
+  const beatIndex = ctx?.beatIndex; // optional Map(id → beat) for loop detection
+  const incoming = ctx?.incomingTargets; // optional Map(id → boolean) for orphan detection
+  const isDraft = isDraftBeat(draft, beatId);
   const warnings = [];
 
   if (beat.trigger && (beat.trigger.type === "flag_set" || beat.trigger.type === "flag_cleared")) {
@@ -223,24 +258,90 @@ export function storyWarningsForBeat(beatId, draft) {
   }
   addFlagWarnings(beat.onComplete?.setFlag, knownFlags, warnings, "onComplete.setFlag");
 
-  for (const c of effectiveChoices(beatId, draft)) {
+  const choices = effectiveChoices(beatId, draft);
+  const linesArr = Array.isArray(beat.lines) ? beat.lines : [];
+  const hasContent = linesArr.some((l) => l && typeof l.text === "string" && l.text.trim().length > 0)
+    || (typeof beat.body === "string" && beat.body.trim().length > 0)
+    || choices.length > 0;
+  if (!hasContent) {
+    warnings.push({ type: "emptyBeat", message: `Beat "${beat.title || beatId}" has no dialogue lines, no body text, and no choices.` });
+  }
+
+  const seenChoiceIds = new Set();
+  for (const c of choices) {
     const target = c?.outcome?.queueBeat;
     if (target && !ids.has(target)) {
       warnings.push({ type: "missingBeat", target, choiceId: c.id, message: `Choice "${c.label || c.id}" leads to missing beat "${target}".` });
     }
+    if (typeof c?.id === "string" && c.id) {
+      if (seenChoiceIds.has(c.id)) {
+        warnings.push({ type: "duplicateChoice", choiceId: c.id, message: `Beat "${beat.title || beatId}" has two choices with id "${c.id}".` });
+      } else seenChoiceIds.add(c.id);
+    }
+    if (typeof c?.label !== "string" || c.label.trim().length === 0) {
+      warnings.push({ type: "emptyChoiceLabel", choiceId: c?.id, message: `Choice "${c?.id || "(no id)"}" in "${beat.title || beatId}" has an empty label.` });
+    }
     addFlagWarnings(c?.outcome?.setFlag, knownFlags, warnings, `Choice "${c.label || c.id}" setFlag`);
     addFlagWarnings(c?.outcome?.clearFlag, knownFlags, warnings, `Choice "${c.label || c.id}" clearFlag`);
+  }
+
+  if (isDraft && !beat.trigger && incoming && !incoming.has(beatId)) {
+    warnings.push({ type: "orphanBeat", message: `Draft beat "${beat.title || beatId}" has no trigger and nothing leads to it — it can never fire.` });
+  }
+
+  if (beatIndex && choices.length > 0 && detectChoiceLoop(beatId, draft, beatIndex)) {
+    warnings.push({ type: "triggerLoop", message: `Beat "${beat.title || beatId}" can be queued from one of its own descendants — choice chain loops back to itself.` });
   }
   return warnings;
 }
 
 export function collectStoryWarnings(draft) {
+  const ids = new Set(allBeatIds(draft));
+  const knownFlags = knownStoryFlagIds(draft);
+  const beatIndex = new Map();
+  const incomingTargets = new Set();
+  for (const id of ids) {
+    const beat = effectiveBeat(id, draft);
+    if (!beat) continue;
+    beatIndex.set(id, beat);
+    for (const c of (Array.isArray(beat.choices) ? beat.choices : [])) {
+      const t = c?.outcome?.queueBeat;
+      if (typeof t === "string") incomingTargets.add(t);
+    }
+  }
+  const ctx = { ids, knownFlags, beatIndex, incomingTargets };
   const byBeat = {};
-  for (const id of allBeatIds(draft)) {
-    const warnings = storyWarningsForBeat(id, draft);
+  for (const id of ids) {
+    const warnings = storyWarningsForBeat(id, draft, ctx);
     if (warnings.length > 0) byBeat[id] = warnings;
   }
   return byBeat;
+}
+
+/**
+ * Flatten the per-beat warnings map into `[{ beatId, warning, beat }]` rows
+ * grouped by warning type — convenient for rendering in the validation panel.
+ * Returns `{ groups: [{ type, label, hint, items: [...] }], total }`.
+ */
+export function groupedStoryWarnings(draft, byBeat) {
+  const map = byBeat || collectStoryWarnings(draft);
+  const byType = new Map();
+  let total = 0;
+  for (const [beatId, warnings] of Object.entries(map)) {
+    for (const w of warnings) {
+      total += 1;
+      if (!byType.has(w.type)) byType.set(w.type, []);
+      byType.get(w.type).push({ beatId, warning: w });
+    }
+  }
+  const groups = [];
+  for (const [type, items] of byType) {
+    const meta = STORY_WARNING_TYPES[type] || { label: type, hint: "" };
+    items.sort((a, b) => a.beatId.localeCompare(b.beatId));
+    groups.push({ type, label: meta.label, hint: meta.hint, items });
+  }
+  groups.sort((a, b) => a.label.localeCompare(b.label));
+  return { groups, total };
 }
 
 export function editorLinesForBeat(beat) {

@@ -25,6 +25,7 @@ import {
 } from "./shared.jsx";
 import Inspector from "./Inspector.jsx";
 import PreviewModal from "./PreviewModal.jsx";
+import ValidationPanel from "./ValidationPanel.jsx";
 import { useDraftHistory } from "../balanceManager/useDraftHistory.js";
 
 const INSPECTOR_COLLAPSED_KEY = "hearth.story.inspectorCollapsed";
@@ -630,6 +631,9 @@ export default function StoryEditorApp() {
   const [nodePositions, setNodePositions] = useState(() => readNodePositions());
   const [draggingNodeId, setDraggingNodeId] = useState(null);
   const [toolsOpen, setToolsOpen] = useState(false);
+  const [validationOpen, setValidationOpen] = useState(false);
+  const [validationAnchorRect, setValidationAnchorRect] = useState(null);
+  const validationBtnRef = useRef(null);
   const [inspectorCollapsed, setInspectorCollapsed] = useState(() => readInspectorCollapsed());
   const [leftRailCollapsed, setLeftRailCollapsed] = useState(() => readLeftRailCollapsed());
   const [graphViewMode, setGraphViewMode] = useState(() => readGraphViewMode());
@@ -1063,7 +1067,12 @@ export default function StoryEditorApp() {
   const nodeById = useMemo(() => new Map(view.nodes.map((n) => [n.id, n])), [view]);
   const onlineIds = useMemo(() => new Set(fullGraph.nodes.map((n) => n.id)), [fullGraph]);
   const warningsByBeat = useMemo(() => collectStoryWarnings(draft), [draft]);
+  const totalWarnings = useMemo(() => Object.values(warningsByBeat).reduce((s, arr) => s + arr.length, 0), [warningsByBeat]);
   const suppressedCount = Array.isArray(draft?.story?.suppressedBeats) ? draft.story.suppressedBeats.length : 0;
+  const openValidation = useCallback(() => {
+    setValidationAnchorRect(validationBtnRef.current?.getBoundingClientRect() || null);
+    setValidationOpen(true);
+  }, []);
   const fitToScreen = useCallback(() => {
     const el = canvasRef.current;
     if (!el || view.nodes.length === 0) return;
@@ -1139,6 +1148,22 @@ export default function StoryEditorApp() {
                 color: canRedo ? C.inkLight : C.inkSubtle, opacity: canRedo ? 1 : 0.4,
                 font: "700 12px/1 system-ui", cursor: canRedo ? "pointer" : "not-allowed" }}>↷</button>
           </span>
+          <button ref={validationBtnRef} onClick={openValidation}
+            title={totalWarnings > 0 ? `${totalWarnings} validation issue${totalWarnings === 1 ? "" : "s"} found` : "No validation issues"}
+            aria-label={`Open validation panel — ${totalWarnings} issues`}
+            style={{ position: "relative", padding: "6px 12px", borderRadius: 7,
+              border: `2px solid ${totalWarnings > 0 ? "#f4d9a0" : C.border}`,
+              background: totalWarnings > 0 ? "rgba(244,217,160,0.15)" : C.parchmentDeep,
+              color: totalWarnings > 0 ? "#f4d9a0" : C.inkLight,
+              font: "700 11px/1 system-ui", cursor: "pointer" }}>
+            ⚠ Issues
+            {totalWarnings > 0 && (
+              <span style={{ marginLeft: 6, font: "700 10px/1 system-ui", padding: "2px 6px",
+                borderRadius: 999, background: "rgba(244,217,160,0.25)", color: "#f4d9a0" }}>
+                {totalWarnings}
+              </span>
+            )}
+          </button>
           <span role="group" aria-label="Graph focus mode" style={{ display: "inline-flex", padding: 2, borderRadius: 8, border: `1.5px solid ${C.border}`, background: C.parchmentDeep }}>
             {[
               ["chain", "Current Chain"],
@@ -1260,6 +1285,9 @@ export default function StoryEditorApp() {
           onClose={() => setPreviewBeatId(null)}
           onOpenInEditor={(id) => setSelectedId(id)} />
       )}
+      <ValidationPanel open={validationOpen} draft={draft} anchorRect={validationAnchorRect}
+        onClose={() => setValidationOpen(false)}
+        onJumpToBeat={(id) => selectAndCenter(id)} />
     </div>
   );
 }
