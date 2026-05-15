@@ -346,6 +346,17 @@ export default function BalanceManagerApp() {
               💾 Save Draft
             </button>
             <button
+              onClick={() => {
+                saveDraft();
+                setTimeout(() => window.open(import.meta.env.BASE_URL, "_blank", "noopener"), 100);
+              }}
+              className="px-3 py-1.5 text-[12px] font-bold rounded-lg border-2"
+              style={{ background: COLORS.parchmentDeep, borderColor: COLORS.border, color: COLORS.inkLight }}
+              title="Save the draft and open the game in a new tab to test the overrides live."
+            >
+              ▶ Save &amp; preview
+            </button>
+            <button
               onClick={() => location.reload()}
               className="px-3 py-1.5 text-[12px] font-bold rounded-lg border-2"
               style={{ background: COLORS.parchmentDeep, borderColor: COLORS.border, color: COLORS.inkLight }}
