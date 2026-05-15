@@ -15,6 +15,7 @@ import balanceFile from "../config/balance.json";
 import { COLORS } from "./shared.jsx";
 import { parseHash, useBalanceRouter } from "./router.js";
 import { useDraftHistory } from "./useDraftHistory.js";
+import CommandPalette from "./CommandPalette.jsx";
 
 // Lazy-load tabs so the Balance Manager (a dev-time tool) stays out of the
 // main entry chunk. Each tab becomes its own JS chunk fetched only when
@@ -179,6 +180,7 @@ export default function BalanceManagerApp() {
   const tabIds = useMemo(() => TABS.map((t) => t.id), []);
   const [tab, setTab] = useState(() => parseHash(typeof window !== "undefined" ? window.location.hash : "", tabIds).tab ?? "tiles");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(readSidebarCollapsed);
+  const [paletteOpen, setPaletteOpen] = useState(false);
 
   // Bind the active tab to the URL hash. On mount this normalises the hash
   // (e.g. empty → `#/tiles`); subsequent `setTab` calls push history entries,
@@ -233,13 +235,14 @@ export default function BalanceManagerApp() {
     resetDraft(emptyDraft());
   }, [resetDraft]);
 
-  // Save on Cmd/Ctrl-S + undo/redo on Cmd/Ctrl-Z / Cmd/Ctrl-Shift-Z.
+  // Save on Cmd/Ctrl-S, undo/redo on Cmd/Ctrl-Z, command palette on Cmd/Ctrl-K.
   useEffect(() => {
     function onKey(e) {
       const mod = e.metaKey || e.ctrlKey;
       if (!mod) return;
       const key = e.key.toLowerCase();
       if (key === "s") { e.preventDefault(); saveDraft(); return; }
+      if (key === "k") { e.preventDefault(); setPaletteOpen((v) => !v); return; }
       if (key === "z" && !e.shiftKey) { e.preventDefault(); undo(); return; }
       if ((key === "z" && e.shiftKey) || key === "y") { e.preventDefault(); redo(); return; }
     }
@@ -249,6 +252,10 @@ export default function BalanceManagerApp() {
 
   const activeTab = TABS.find((t) => t.id === tab) ?? TABS[0];
   const ActiveComponent = activeTab.Component;
+
+  const handlePaletteSelect = useCallback((entry) => {
+    if (entry?.tab) navigateTo(entry.tab);
+  }, [navigateTo]);
 
   return (
     <div
@@ -293,6 +300,16 @@ export default function BalanceManagerApp() {
                 Unsaved changes
               </span>
             )}
+            <button
+              onClick={() => setPaletteOpen(true)}
+              className="flex items-center gap-2 px-2 py-1.5 text-[12px] font-bold rounded-lg border-2"
+              style={{ background: COLORS.parchmentDeep, borderColor: COLORS.border, color: COLORS.inkLight }}
+              title="Search across every tab (Cmd/Ctrl-K)"
+              aria-label="Open command palette"
+            >
+              🔎 Search
+              <span className="text-[10px] font-mono px-1.5 py-0.5 rounded" style={{ background: COLORS.parchment, color: COLORS.inkSubtle, border: `1px solid ${COLORS.border}` }}>⌘K</span>
+            </button>
             <div className="flex items-center rounded-lg border-2 overflow-hidden" style={{ borderColor: COLORS.border }}>
               <button
                 onClick={() => undo()}
@@ -427,6 +444,8 @@ export default function BalanceManagerApp() {
               </button>
             </div>
           </nav>
+
+          <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} onSelect={handlePaletteSelect} />
 
           {/* Active tab content */}
           <main className="flex-1 flex flex-col min-w-0">
