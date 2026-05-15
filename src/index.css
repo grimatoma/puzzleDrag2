@@ -58,6 +58,11 @@
   100% { transform: translate(-50%, -40px) scale(1.6); opacity: 0; }
 }
 
+@keyframes townThemeFade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
 @keyframes hearthPulse {
   0%, 100% { transform: scale(0.9); opacity: 0.6; }
   50% { transform: scale(1.1); opacity: 1; }
