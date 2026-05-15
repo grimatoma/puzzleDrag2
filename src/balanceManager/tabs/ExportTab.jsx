@@ -11,6 +11,7 @@ import balanceFile from "../../config/balance.json";
 import { CATALOG_EXPORTS } from "../csvExport.js";
 import { runCatalogAudit, groupFindings } from "../catalogAudit.js";
 import { renderDraftChangelog } from "../changelogExport.js";
+import { analyseDraftSize, formatBytes } from "../draftSize.js";
 
 function pruneEmpty(obj) {
   if (!obj || typeof obj !== "object") return obj;
@@ -58,6 +59,8 @@ export default function ExportTab({ draft, updateDraft }) {
   const [auditOpen, setAuditOpen] = useState(false);
   const auditFindings = useMemo(() => runCatalogAudit(), []);
   const auditGroups = useMemo(() => groupFindings(auditFindings).filter((g) => g.items.length > 0), [auditFindings]);
+
+  const sizeAnalysis = useMemo(() => analyseDraftSize(draft), [draft]);
 
   const toggleSection = (name) => {
     setDiffOpen((prev) => {
@@ -188,6 +191,30 @@ export default function ExportTab({ draft, updateDraft }) {
           <li>When happy, click <strong>Download JSON</strong> below and replace <code>src/config/balance.json</code> with it. Commit and ship.</li>
           <li>Use <strong>✕ Clear All Overrides</strong> in the sidebar to wipe the local draft and revert to defaults.</li>
         </ol>
+      </Card>
+
+      <Card title={`Draft size — ${formatBytes(sizeAnalysis.total)} JSON`}>
+        {sizeAnalysis.sections.length === 0 ? (
+          <div className="text-[11px] italic" style={{ color: COLORS.inkSubtle }}>Empty draft.</div>
+        ) : (
+          <div className="flex flex-col gap-1">
+            {sizeAnalysis.sections.filter((s) => s.bytes > 0).map((s) => (
+              <div key={s.key} className="flex items-center gap-2 text-[11px]">
+                <span className="font-mono w-[140px]" style={{ color: COLORS.inkLight }}>{s.key}</span>
+                <div className="flex-1 h-2 rounded" style={{ background: COLORS.parchmentDeep }}>
+                  <div style={{ width: `${Math.max(2, s.share * 100)}%`, height: "100%",
+                    background: COLORS.ember, borderRadius: 4 }} />
+                </div>
+                <span className="font-mono text-right" style={{ minWidth: 80, color: COLORS.inkSubtle }}>
+                  {formatBytes(s.bytes)}
+                </span>
+                <span className="font-mono text-right" style={{ minWidth: 50, color: COLORS.inkSubtle }}>
+                  {s.keyCount} keys
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
       </Card>
 
       <Card title="Override summary">
