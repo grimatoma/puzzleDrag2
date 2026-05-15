@@ -4,7 +4,7 @@ import { locBuilt } from "./locBuilt.js";
 import { Section, CompactOrders } from "./ui/Inventory.jsx";
 import { ToolsGrid } from "./ui/Tools.jsx";
 import { TOOL_BY_KEY } from "./ui/toolRegistry.js";
-import Icon from "./ui/Icon.jsx";
+import TabBar, { Tab } from "./ui/primitives/TabBar.jsx";
 
 // Per-feature error boundary. A crash in any one feature renders an inline
 // fallback inside that feature's slot and dispatches CLOSE_MODAL so the
@@ -83,43 +83,34 @@ export function SidePanel({ state, dispatch, chainInfo }) {
 
 // ─── Bottom nav ───────────────────────────────────────────────────────────
 
-export function BottomNav({ view, modal, dispatch, state }) {
+export function BottomNav({ view, dispatch, state }) {
   const builtAtLoc = locBuilt(state ?? {});
-  const baseItems = [
-    { key: "town",        iconKey: "ui_star",   label: "Town" },
-    { key: "inventory",   iconKey: "ui_inventory",  label: "Inventory" },
-    { key: "crafting",    iconKey: "ui_build",  label: "Craft" },
-    { key: "cartography", iconKey: "ui_map", label: "Map" },
-    { key: "townsfolk",   iconKey: "ui_people",  label: "Townsfolk" },
-    { key: "chronicle",   iconKey: "ui_clipboard", label: "Chronicle" },
-    { key: "tileCollection", iconKey: "ui_puzzle",  label: "Tiles" },
-    ...(builtAtLoc.portal ? [{ key: "portal", iconKey: "ui_portal", label: "Portal" }] : []),
-  ];
-  const items = baseItems;
-  const activeKey = modal ? (items.find((i) => i.modal === modal)?.key ?? view) : view;
+  const orders = state?.orders ?? [];
+  const inventory = state?.inventory ?? {};
+  const ordersReady = orders.filter((o) => (inventory[o.key] ?? 0) >= o.need).length;
+  const ordersBadge = ordersReady > 0 ? { count: ordersReady, tone: "moss" } : undefined;
+  // Chronicle badge skipped: no `lastChronicleViewedAt` (or equivalent) field
+  // exists in state, and the brief forbids adding new state for this slot.
   return (
-    <div className="flex w-full bg-[#2b2218]/95 border-t-2 border-[#f7e2b6] flex-shrink-0 shadow-[0_-4px_12px_rgba(0,0,0,.25)]">
-      {items.map((it) => {
-        const active = activeKey === it.key;
-        return (
-          <button
-            key={it.key}
-            onClick={() => {
-              if (it.modal) {
-                dispatch({ type: "OPEN_MODAL", modal: it.modal });
-              } else {
-                dispatch({ type: "SET_VIEW", view: it.key });
-              }
-            }}
-            aria-label={it.label}
-            className={`flex-1 flex flex-col items-center justify-center gap-0.5 py-1.5 transition-colors ${active ? "bg-[#d6612a] text-white" : "text-[#f7e2b6] hover:bg-white/10"}`}
-          >
-            <Icon iconKey={it.iconKey} size={18} />
-            <span className="text-[10px] font-bold leading-none whitespace-nowrap">{it.label}</span>
-          </button>
-        );
-      })}
-    </div>
+    <TabBar
+      current={view}
+      onSelect={(key) => dispatch({ type: "SET_VIEW", view: key })}
+    >
+      <Tab itemKey="town" iconKey="ui_star" label="Town" />
+      <Tab itemKey="inventory" iconKey="ui_inventory" label="Inventory" badge={ordersBadge} />
+      <Tab itemKey="crafting" iconKey="ui_build" label="Craft" />
+      <Tab itemKey="cartography" iconKey="ui_map" label="Map" />
+      <Tab itemKey="townsfolk" iconKey="ui_people" label="Townsfolk" />
+      <Tab itemKey="chronicle" iconKey="ui_clipboard" label="Chronicle" />
+      <Tab itemKey="tileCollection" iconKey="ui_puzzle" label="Tiles" />
+      <Tab
+        itemKey="portal"
+        iconKey="ui_portal"
+        label="Portal"
+        locked={!builtAtLoc.portal}
+        unlockHint="Build the Portal"
+      />
+    </TabBar>
   );
 }
 
