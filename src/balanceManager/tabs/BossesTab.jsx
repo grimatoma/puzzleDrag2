@@ -6,9 +6,17 @@
 // live BOSSES list on next load via `applyBossOverrides`.
 
 import { BOSSES } from "../../features/bosses/data.js";
-import { COLORS, TextField, TextArea, NumberField, FieldRow, Card } from "../shared.jsx";
+import { COLORS, TextField, TextArea, NumberField, FieldRow, Card, Pill } from "../shared.jsx";
 import Icon from "../../ui/Icon.jsx";
 import { ICON_REGISTRY } from "../../textures/iconRegistry.js";
+import { assessBoss } from "../bossBalance.js";
+
+const TIER_TONE = {
+  gentle:  { bg: "rgba(90,158,75,0.16)",  fg: COLORS.greenDeep },
+  steady:  { bg: "rgba(226,178,74,0.18)", fg: "#7a5810" },
+  hard:    { bg: "rgba(214,97,42,0.18)",  fg: COLORS.emberDeep },
+  brutal:  { bg: "rgba(194,59,34,0.18)",  fg: COLORS.red },
+};
 
 export default function BossesTab({ draft, updateDraft }) {
   function patch(id, fields) {
@@ -34,6 +42,8 @@ export default function BossesTab({ draft, updateDraft }) {
         };
         const portraitKey = `boss_${b.id}`;
         const hasPortrait = !!ICON_REGISTRY[portraitKey];
+        const assessment = assessBoss({ ...b, target: { ...(b.target || {}), amount: eff.targetAmount } });
+        const tone = TIER_TONE[assessment.tier.id] || TIER_TONE.steady;
         return (
           <Card key={b.id}>
             <div className="flex items-center gap-3 mb-2">
@@ -47,8 +57,21 @@ export default function BossesTab({ draft, updateDraft }) {
                   <span className="text-[18px] opacity-50">?</span>
                 )}
               </div>
-              <div className="text-[12px] font-bold uppercase tracking-wide" style={{ color: COLORS.inkSubtle }}>
-                {eff.name} ({b.id})
+              <div className="flex-1 min-w-0">
+                <div className="text-[12px] font-bold uppercase tracking-wide" style={{ color: COLORS.inkSubtle }}>
+                  {eff.name} ({b.id})
+                </div>
+                <div className="flex flex-wrap items-center gap-1 mt-1">
+                  <span className="text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded"
+                    style={{ background: tone.bg, color: tone.fg }}
+                    title={assessment.tier.hint}>
+                    {assessment.tier.label} · {assessment.perTurnTarget}/turn
+                  </span>
+                  <Pill>{assessment.modifier.label}</Pill>
+                  <span className="text-[10px] italic" style={{ color: COLORS.inkSubtle }}>
+                    {assessment.marginBands.bonusMargin50}+ → +50% reward · {assessment.marginBands.bonusMargin100}+ → max
+                  </span>
+                </div>
               </div>
             </div>
             <FieldRow label="Name"><TextField value={eff.name} onChange={(v) => patch(b.id, { name: v })} width={200} /></FieldRow>
