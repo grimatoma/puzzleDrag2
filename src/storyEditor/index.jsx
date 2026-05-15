@@ -26,6 +26,7 @@ import {
 import Inspector from "./Inspector.jsx";
 import PreviewModal from "./PreviewModal.jsx";
 import ValidationPanel from "./ValidationPanel.jsx";
+import { renderStoryMarkdown } from "./exportMarkdown.js";
 import { useDraftHistory } from "../balanceManager/useDraftHistory.js";
 
 const INSPECTOR_COLLAPSED_KEY = "hearth.story.inspectorCollapsed";
@@ -1073,6 +1074,20 @@ export default function StoryEditorApp() {
     setValidationAnchorRect(validationBtnRef.current?.getBoundingClientRect() || null);
     setValidationOpen(true);
   }, []);
+
+  const exportMarkdown = useCallback(() => {
+    if (typeof document === "undefined") return;
+    const md = renderStoryMarkdown(draft);
+    const blob = new Blob([md], { type: "text/markdown;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "hearthlands-story.md";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }, [draft]);
   const fitToScreen = useCallback(() => {
     const el = canvasRef.current;
     if (!el || view.nodes.length === 0) return;
@@ -1199,6 +1214,12 @@ export default function StoryEditorApp() {
                 <button onClick={() => { restoreSuppressedBeats(); setToolsOpen(false); }} disabled={suppressedCount === 0}
                   style={{ textAlign: "left", padding: "7px 9px", borderRadius: 6, border: `1px solid ${suppressedCount ? C.redDeep : C.border}`, background: suppressedCount ? "#fff" : "rgba(0,0,0,0.03)", color: suppressedCount ? C.redDeep : C.inkSubtle, font: "600 11px/1 system-ui", cursor: suppressedCount ? "pointer" : "not-allowed" }}>
                   Restore disabled side beats {suppressedCount ? `(${suppressedCount})` : ""}
+                </button>
+                <div style={{ height: 1, background: C.border, margin: "2px 0" }} />
+                <button onClick={() => { exportMarkdown(); setToolsOpen(false); }}
+                  title="Download every beat as a markdown screenplay for proofreading"
+                  style={{ textAlign: "left", padding: "7px 9px", borderRadius: 6, border: `1px solid ${C.border}`, background: C.parchment, color: C.ink, font: "600 11px/1 system-ui", cursor: "pointer" }}>
+                  ⬇ Export script as markdown
                 </button>
               </div>
             )}
