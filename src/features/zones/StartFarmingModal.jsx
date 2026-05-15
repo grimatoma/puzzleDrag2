@@ -301,7 +301,12 @@ export default function StartFarmingModal({ state, dispatch, onClose }) {
           return (
             <div className="mb-3 flex flex-col gap-1">
               <div className="text-[10px] uppercase tracking-wider text-[#9a3a2a] font-bold flex items-center gap-1">
-                ⚠️ Active Dangers
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M12 3 L22 20 H2 Z" stroke="currentColor" strokeWidth="2.4" strokeLinejoin="round" />
+                  <path d="M12 10 V14" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" />
+                  <circle cx="12" cy="17" r="1.2" fill="currentColor" />
+                </svg>
+                Active Dangers
               </div>
               <div className="flex flex-wrap gap-1.5">
                 {hazards.map((h) => (

@@ -11,22 +11,41 @@ import {
   boonOwned,
 } from "./data.js";
 import Icon from "../../ui/Icon.jsx";
+import DesignIcon from "../../ui/primitives/Icon.jsx";
 
 export const viewKey = "boons";
 
 // Tabbing by zone-type keeps the catalog reasonable on small screens.
 const TYPE_LABELS = { farm: "Farm", mine: "Mine", harbor: "Harbor" };
-const PATH_LABELS = { coexist: "🤝 Coexist", driveout: "⚔ Drive Out" };
+const PATH_LABELS = { coexist: "Coexist", driveout: "Drive Out" };
 const PATH_COLOR = {
   coexist: { bg: "#dfeecd", border: "#6a9a3a", text: "#1f3a10" },
   driveout: { bg: "#e4ddd0", border: "#9a8a6a", text: "#3a2715" },
 };
 
+function CheckGlyph({ size = 10 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M5 12.5l4.5 4.5L19 7" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 function CostBadge({ cost }) {
   return (
-    <span className="text-[11px] font-bold rounded-full px-2 py-0.5 border" style={{ background: "#f2d98a", borderColor: "#b09a50", color: "#6a4f10" }}>
-      {(cost.embers ?? 0) > 0 && <>🔥 {cost.embers}</>}
-      {(cost.coreIngots ?? 0) > 0 && <>▣ {cost.coreIngots}</>}
+    <span className="inline-flex items-center gap-1 text-[11px] font-bold rounded-full px-2 py-0.5 border" style={{ background: "#f2d98a", borderColor: "#b09a50", color: "#6a4f10" }}>
+      {(cost.embers ?? 0) > 0 && (
+        <span className="inline-flex items-center gap-0.5">
+          <DesignIcon iconKey="design.currency.ember" size={12} />
+          {cost.embers}
+        </span>
+      )}
+      {(cost.coreIngots ?? 0) > 0 && (
+        <span className="inline-flex items-center gap-0.5">
+          <DesignIcon iconKey="design.currency.ingot" size={12} />
+          {cost.coreIngots}
+        </span>
+      )}
     </span>
   );
 }
@@ -49,7 +68,10 @@ function BoonCard({ state, dispatch, boon }) {
       <div className="flex items-center justify-between gap-2">
         <div className="font-bold text-[14px]">{boon.name}</div>
         {owned ? (
-          <span className="text-[10px] font-bold rounded-full px-2 py-0.5 border" style={{ background: "#a8d4a0", borderColor: "#3a7a1a", color: "#1f3a10" }}>✓ Owned</span>
+          <span className="inline-flex items-center gap-1 text-[10px] font-bold rounded-full px-2 py-0.5 border" style={{ background: "#a8d4a0", borderColor: "#3a7a1a", color: "#1f3a10" }}>
+            <CheckGlyph size={10} />
+            Owned
+          </span>
         ) : (
           <CostBadge cost={boon.cost} />
         )}
@@ -88,7 +110,7 @@ export default function BoonScreen({ state, dispatch }) {
             <div className="font-bold text-[22px] text-[#3a2715] flex items-center gap-2">
               <Icon iconKey="ui_star" size={22} /> Boons
             </div>
-            <div className="text-[12px] text-[#6a4b31]">Spend 🔥 Embers (Coexist) or ▣ Core Ingots (Drive Out) on per-path perks earned from facing keepers.</div>
+            <div className="text-[12px] text-[#6a4b31]">Spend Embers (Coexist) or Core Ingots (Drive Out) on per-path perks earned from facing keepers.</div>
           </div>
           <button
             type="button"
@@ -101,8 +123,14 @@ export default function BoonScreen({ state, dispatch }) {
         </div>
         <div className="flex items-center gap-3 mb-3 text-[13px] font-bold text-[#3a2715]">
           <span>You hold:</span>
-          <span className="rounded-full px-2 py-0.5 border" style={{ background: "#f2d98a", borderColor: "#b09a50" }}>🔥 {state.embers ?? 0}</span>
-          <span className="rounded-full px-2 py-0.5 border" style={{ background: "#cdd1d4", borderColor: "#8a8f95" }}>▣ {state.coreIngots ?? 0}</span>
+          <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 border" style={{ background: "#f2d98a", borderColor: "#b09a50" }}>
+            <DesignIcon iconKey="design.currency.ember" size={14} />
+            {state.embers ?? 0}
+          </span>
+          <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 border" style={{ background: "#cdd1d4", borderColor: "#8a8f95" }}>
+            <DesignIcon iconKey="design.currency.ingot" size={14} />
+            {state.coreIngots ?? 0}
+          </span>
         </div>
         <div className="flex gap-1 mb-3">
           {Object.entries(TYPE_LABELS).map(([k, label]) => (

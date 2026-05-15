@@ -61,8 +61,11 @@ export default function BossGallery({ state }) {
                     {boss.season}
                   </span>
                   {defeated && (
-                    <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-[#5a8a26] text-white">
-                      ✓ Defeated
+                    <span className="inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-[#5a8a26] text-white">
+                      <svg width="9" height="9" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                        <path d="M5 12.5l4.5 4.5L19 7" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                      Defeated
                     </span>
                   )}
                   {active && (

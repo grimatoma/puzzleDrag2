@@ -4,8 +4,18 @@ import { DECORATIONS } from "../decorations/data.js";
 import IconCanvas, { hasIcon } from "../../ui/IconCanvas.jsx";
 import { locBuilt } from "../../locBuilt.js";
 import Icon from "../../ui/Icon.jsx";
+import DesignIcon from "../../ui/primitives/Icon.jsx";
 
 export const viewKey = "crafting";
+
+function LockGlyph({ size = 12 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <rect x="5" y="11" width="14" height="9" rx="2" stroke="currentColor" strokeWidth="2" />
+      <path d="M8 11V8a4 4 0 0 1 8 0v3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  );
+}
 
 const ALL_RESOURCES = [
   ...BIOMES.farm.resources,
@@ -113,7 +123,7 @@ function RecipeCard({ recipeKey, recipe, inventory, built, level, craftedTotals,
               : "bg-[#ccc] border-[#aaa] text-[#666] cursor-not-allowed"
           }`}
         >
-          {!levelOk ? "🔒 L3" : !stationOk ? "No station" : "CRAFT"}
+          {!levelOk ? <span className="inline-flex items-center gap-1"><LockGlyph size={10} /> L3</span> : !stationOk ? "No station" : "CRAFT"}
         </button>
         {/* Phase 5 — queue this craft to finish in real time (frees the inputs now). */}
         <button
@@ -173,7 +183,7 @@ function CraftQueueStrip({ queue, gems, dispatch }) {
                   onClick={() => dispatch({ type: "CRAFTING/SKIP_CRAFT", payload: { idx: i } })}
                   title={(gems ?? 0) < 1 ? "Need a gem" : "Skip with a gem"}
                   className={`text-[10px] font-bold px-2 py-0.5 rounded-md border ${(gems ?? 0) >= 1 ? "bg-[#bfe0ff] border-[#5a8acc] text-[#1a3a5a]" : "bg-[#ddd] border-[#bbb] text-[#888] cursor-not-allowed"}`}
-                >Skip 💎</button>
+                ><span className="inline-flex items-center gap-1">Skip <DesignIcon iconKey="design.currency.gem" size={10} /></span></button>
               )}
             </div>
           );
@@ -311,7 +321,7 @@ export default function CraftingScreen({ state, dispatch }) {
                 <IconCanvas iconKey={m.iconKey} size={22} />
               </span>
               <span>{m.label}</span>
-              {!isBuilt && <span className="text-[9px] opacity-60">🔒</span>}
+              {!isBuilt && <span className="opacity-60"><LockGlyph size={10} /></span>}
             </button>
           );
         })}
