@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { NPCS } from "../constants.js";
 import { beatLines, beatChoices, beatIsContinueOnly, beatScene, interpolateBeatText } from "../story.js";
 import { displayZoneName } from "../features/zones/data.js";
@@ -7,6 +7,7 @@ import IconCanvas, { hasIcon } from "./IconCanvas.jsx";
 import RichText from "./RichText.jsx";
 import { ParchmentDialog } from "./primitives/Dialog.jsx";
 import Button from "./primitives/Button.jsx";
+import { useNotifier } from "./primitives/Toast.jsx";
 
 function Stat({ v, l }) {
   return (
@@ -568,26 +569,20 @@ export function StoryModal({ state, dispatch }) {
 // ─── NpcBubble ────────────────────────────────────────────────────────────────
 
 export function NpcBubble({ bubble, dispatch }) {
-  const [shown, setShown] = useState(null);
+  const notifier = useNotifier();
+  const lastIdRef = useRef(null);
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- syncing local display state with incoming bubble prop
-    if (!bubble) { setShown(null); return; }
-    setShown(bubble);
+    if (!bubble || bubble.id === lastIdRef.current) return;
+    lastIdRef.current = bubble.id;
+    const npc = NPCS[bubble.npc];
+    const npcLabel = npc ? `${npc.name} · ${npc.role}` : bubble.npc;
+    notifier.bubble({
+      npcKey: npcLabel,
+      text: bubble.text,
+      duration: bubble.ms || 1800,
+    });
     const t = setTimeout(() => dispatch({ type: "DISMISS_BUBBLE", id: bubble.id }), bubble.ms || 1800);
     return () => clearTimeout(t);
-  }, [bubble, dispatch]);
-  if (!shown) return null;
-  const npc = NPCS[shown.npc];
-  if (!npc) return null;
-  return (
-    <div role="status" aria-live="polite" className="absolute bottom-28 landscape:max-[1024px]:bottom-20 left-1/2 -translate-x-1/2 bg-[#f4ecd8] border-[3px] border-[#5a3a20] rounded-2xl px-4 py-3 landscape:max-[1024px]:px-3 landscape:max-[1024px]:py-2 max-w-[460px] landscape:max-[1024px]:max-w-[320px] shadow-2xl z-40 animate-bubblein pointer-events-none">
-      <div className="flex gap-2.5 items-start">
-        <div className="w-10 h-10 rounded-full grid place-items-center text-white font-bold text-[16px] flex-shrink-0" style={{ backgroundColor: npc.color, border: "2px solid #fff" }}>{npc.name[0]}</div>
-        <div className="flex-1 min-w-0">
-          <div className="font-bold text-[#a8431a] text-[12px]">{npc.name} · {npc.role}</div>
-          <div className="text-[#2b2218] text-[13px] leading-snug mt-0.5"><RichText text={shown.text} /></div>
-        </div>
-      </div>
-    </div>
-  );
+  }, [bubble, dispatch, notifier]);
+  return null;
 }

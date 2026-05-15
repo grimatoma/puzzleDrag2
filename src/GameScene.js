@@ -1787,6 +1787,7 @@ export class GameScene extends Phaser.Scene {
     const t = this.add.text(x, y, msg, { fontFamily: "Arial", fontSize: `${22 * dpr}px`, color: cssColor(FLOAT_TEXT_COLOR), fontStyle: "bold", stroke: "#000", strokeThickness: 5 * dpr }).setOrigin(0.5).setDepth(20).setScale(0.7);
     this.tweens.add({ targets: t, scale: 1, duration: 120, ease: "Back.Out" });
     this.tweens.add({ targets: t, y: y - 58 * dpr, alpha: 0, delay: 120, duration: 780, onComplete: () => t.destroy() });
+    this.events.emit(SCENE_EVENTS.CHAIN_FLOAT_TEXT, { text: msg });
   }
 
   // Called every frame by Phaser. Drives the per-tile ambient sway.

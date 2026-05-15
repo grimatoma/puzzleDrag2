@@ -11,6 +11,8 @@ import { useAudio } from "./src/audio/useAudio.js";
 import { useRouter } from "./src/router.js";
 import { setPhaserScene } from "./src/phaserBridge.js";
 import { FIRE_HAZARD_ENABLED } from "./src/featureFlags.js";
+import { useNotifier } from "./src/ui/primitives/Toast.jsx";
+import { useA11yBridge } from "./src/a11y.js";
 
 function BoardSkeleton() {
   return (
@@ -48,6 +50,9 @@ function PhaserMount({ dispatch, biomeKey, turnsUsed, uiLocked, boardActive, sce
   const hostRef = useRef(null);
   const gameRef = useRef(null);
   const [loading, setLoading] = useState(true);
+  const notifier = useNotifier();
+  const notifierRef = useRef(notifier);
+  useEffect(() => { notifierRef.current = notifier; }, [notifier]);
 
   useEffect(() => {
     if (!hostRef.current || gameRef.current) return;
@@ -120,6 +125,9 @@ function PhaserMount({ dispatch, biomeKey, turnsUsed, uiLocked, boardActive, sce
               scene.events.on(SCENE_EVENTS.FERTILIZER_CONSUMED, () => dispatch({ type: "FERTILIZER/CONSUMED" }));
               scene.events.on(SCENE_EVENTS.GRID_SYNC, ({ grid: g }) => dispatch({ type: "GRID/SYNC", payload: { grid: g } }));
               scene.events.on(SCENE_EVENTS.CHAIN_UPDATE, (data) => setChainInfo(data));
+              scene.events.on(SCENE_EVENTS.CHAIN_FLOAT_TEXT, ({ text }) => {
+                notifierRef.current?.toast?.({ text, tone: "moss", duration: 1600 });
+              });
               setBoardRuntimeActive(game, boardActive);
               setLoading(false);
             },
@@ -204,6 +212,7 @@ export default function App() {
   const uiLocked = !!state.modal || state.view !== "board" || storyModalOpen;
   useAudio(state);
   useRouter(state, dispatch);
+  useA11yBridge();
 
   // Fire session_start story beat on first mount
   useEffect(() => {

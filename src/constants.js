@@ -20,6 +20,7 @@ export const SCENE_EVENTS = Object.freeze({
   CHAIN_UPDATE: "chain-update",
   GRID_SYNC: "grid-sync",
   FERTILIZER_CONSUMED: "fertilizer-consumed",
+  CHAIN_FLOAT_TEXT: "chain-float-text",
 });
 
 export const TILE = 74;
