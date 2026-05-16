@@ -29,6 +29,7 @@ import ValidationPanel from "./ValidationPanel.jsx";
 import PathsPanel from "./PathsPanel.jsx";
 import PlaythroughPanel from "./PlaythroughPanel.jsx";
 import FindReplacePanel from "./FindReplacePanel.jsx";
+import { templateMenu, buildBeatFromTemplate } from "./beatTemplates.js";
 import { renderStoryMarkdown } from "./exportMarkdown.js";
 import { useDraftHistory } from "../balanceManager/useDraftHistory.js";
 
@@ -362,6 +363,19 @@ function WarningBadge({ count }) {
   );
 }
 
+function ModifiedBadge({ isModified }) {
+  if (!isModified) return null;
+  return (
+    <div title="This beat has a draft override (patch lives in story.beats[id])"
+      style={{ position: "absolute", bottom: -10, left: -10, zIndex: 5,
+        width: 18, height: 18, borderRadius: 999, border: `1.5px solid ${C.emberDeep}`,
+        background: C.ember, color: "#fff", display: "grid", placeItems: "center",
+        font: "700 10px/1 system-ui", boxShadow: "0 1px 3px rgba(40,28,10,0.18)" }}>
+      ◆
+    </div>
+  );
+}
+
 function DragHandle({ dragging, onMouseDown, onTouchStart }) {
   return (
     <button data-drag-handle="1" title="Drag to move card"
@@ -376,7 +390,7 @@ function DragHandle({ dragging, onMouseDown, onTouchStart }) {
   );
 }
 
-function TreeNode({ node, beat, selectedId, collapsed, hiddenCount, showCollapse, dragging, warningCount, onNodeMouseDown, onNodeTouchStart, onToggleCollapse, onPreview, onSelect, draft }) {
+function TreeNode({ node, beat, selectedId, collapsed, hiddenCount, showCollapse, dragging, warningCount, isModified, onNodeMouseDown, onNodeTouchStart, onToggleCollapse, onPreview, onSelect, draft }) {
   const selected = node.id === selectedId;
   let Inner;
   if (node.draft || node.expanded) Inner = <ExpandedCard node={node} beat={beat} selected={selected} draft={draft} />;
@@ -385,6 +399,7 @@ function TreeNode({ node, beat, selectedId, collapsed, hiddenCount, showCollapse
   return (
     <div data-story-node="1" onClick={() => onSelect(node.id)} style={{ position: "absolute", left: node.x, top: node.y, width: node.w, height: node.h, cursor: "default", touchAction: "none" }}>
       <WarningBadge count={warningCount} />
+      <ModifiedBadge isModified={isModified} />
       <div style={{ position: "absolute", top: -10, left: 10, right: 10, display: "flex", alignItems: "center", gap: 6 }}>
         <DragHandle dragging={dragging} onMouseDown={(e) => onNodeMouseDown(e, node)} onTouchStart={(e) => onNodeTouchStart(e, node)} />
         <TriggerChip beat={beat} accent={actColor(beat)} />
@@ -454,8 +469,10 @@ function searchKindForBeat(beat, id, q) {
   return null;
 }
 
-function LeftRail({ draft, selectedId, onlineIds, collapsed, onToggleCollapsed, onSelect, onNewBeat }) {
+function LeftRail({ draft, selectedId, onlineIds, collapsed, onToggleCollapsed, onSelect, onNewBeat, onNewBeatFromTemplate }) {
   const [search, setSearch] = useState("");
+  const [templatePickerOpen, setTemplatePickerOpen] = useState(false);
+  const templates = useMemo(() => templateMenu(), []);
   const q = search.trim().toLowerCase();
   const dBeats = draftBeats(draft);
   const knownIds = new Set(allBeatIds(draft));
@@ -531,6 +548,30 @@ function LeftRail({ draft, selectedId, onlineIds, collapsed, onToggleCollapsed, 
           <span style={{ position: "absolute", left: 8, top: "50%", transform: "translateY(-50%)", color: C.inkSubtle, fontSize: 12 }}>🔍</span>
         </div>
         <Btn tone="ember" onClick={onNewBeat} style={{ width: "100%", padding: "7px 10px", font: "700 11px/1 system-ui" }}>✦ New beat</Btn>
+        <div style={{ position: "relative" }}>
+          <Btn tone="ghost" onClick={() => setTemplatePickerOpen((v) => !v)}
+            style={{ width: "100%", padding: "6px 10px", font: "600 10px/1 system-ui" }}>
+            {templatePickerOpen ? "▾" : "▸"} From template…
+          </Btn>
+          {templatePickerOpen && (
+            <div style={{ marginTop: 4, padding: 4, borderRadius: 7, background: "#fff",
+              border: `1.5px solid ${C.border}`, display: "flex", flexDirection: "column", gap: 2 }}>
+              {templates.map((t) => (
+                <button key={t.id}
+                  onClick={() => { setTemplatePickerOpen(false); onNewBeatFromTemplate && onNewBeatFromTemplate(t.id); }}
+                  title={t.blurb}
+                  style={{ textAlign: "left", padding: "5px 8px", borderRadius: 5, border: `1px solid ${C.border}`,
+                    background: C.parchment, color: C.ink, cursor: "pointer",
+                    font: "500 10px/1.3 system-ui" }}>
+                  <div style={{ fontWeight: 600 }}>{t.label}</div>
+                  <div style={{ font: "italic 400 9px/1.3 system-ui", color: C.inkSubtle, marginTop: 1 }}>
+                    {t.blurb}
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
       <div style={{ flex: 1, overflowY: "auto", padding: "4px 0 16px" }}>
         {dBeats.length > 0 && (
@@ -981,8 +1022,14 @@ export default function StoryEditorApp() {
       d.story ??= {};
       d.story.newBeats ??= [];
       const id = allBeatIds(d).includes(newId) ? pickFree(d) : newId;
-      const beat = { id, title: opts.triggered ? "New side beat" : "New branch", lines: [] };
+      let beat = { id, title: opts.triggered ? "New side beat" : "New branch", lines: [] };
       if (opts.triggered) beat.trigger = { type: "bond_at_least", npc: "wren", amount: 8 };
+      // If the caller passed a template id, prefill the beat from that
+      // template's preset (preserving the auto-generated id).
+      if (opts.templateId) {
+        const fromTemplate = buildBeatFromTemplate(opts.templateId, opts.templateOptions || {});
+        if (fromTemplate) beat = { id, ...fromTemplate };
+      }
       d.story.newBeats = [...d.story.newBeats, beat];
       if (opts.queuedBy) {
         d.story.beats ??= {};
@@ -1284,6 +1331,11 @@ export default function StoryEditorApp() {
             )}
           </span>
           <button onClick={saveDraft} style={{ padding: "6px 14px", borderRadius: 7, border: `2px solid ${C.greenDeep}`, background: C.green, color: "#fff", font: "700 11px/1 system-ui", cursor: "pointer" }}>💾 Save Draft</button>
+          <button onClick={() => { saveDraft(); setTimeout(() => window.open(import.meta.env.BASE_URL, "_blank", "noopener"), 100); }}
+            title="Save the draft and launch the game in a new tab to walk the story live"
+            style={{ padding: "6px 14px", borderRadius: 7, border: `2px solid ${C.border}`, background: C.parchmentDeep, color: C.inkLight, font: "700 11px/1 system-ui", cursor: "pointer" }}>
+            ▶ Save &amp; preview
+          </button>
           <a href={import.meta.env.BASE_URL + "b/#/story"} style={{ padding: "6px 14px", borderRadius: 7, border: `2px solid ${C.border}`, background: C.parchmentDeep, color: C.inkLight, font: "700 11px/1 system-ui", textDecoration: "none" }}>← Balance Manager</a>
           <a href={import.meta.env.BASE_URL} style={{ padding: "6px 14px", borderRadius: 7, border: `2px solid ${C.border}`, background: C.parchmentDeep, color: C.inkLight, font: "700 11px/1 system-ui", textDecoration: "none" }}>← Back to Game</a>
         </div>
@@ -1292,7 +1344,8 @@ export default function StoryEditorApp() {
       <div style={{ flex: 1, display: "flex", minHeight: 0 }}>
         <LeftRail draft={draft} selectedId={selectedId} onlineIds={onlineIds}
           collapsed={leftRailCollapsed} onToggleCollapsed={toggleLeftRail} onSelect={setSelectedId}
-          onNewBeat={() => createDraftBeat({ triggered: true })} />
+          onNewBeat={() => createDraftBeat({ triggered: true })}
+          onNewBeatFromTemplate={(templateId) => createDraftBeat({ templateId })} />
 
         <div ref={canvasRef} data-canvas-bg="1" onMouseDown={onMouseDown} onWheel={onWheel}
           style={{ flex: 1, position: "relative", overflow: "hidden", touchAction: "none", background: C.canvas, cursor: dragging ? "grabbing" : "grab",
@@ -1324,6 +1377,7 @@ export default function StoryEditorApp() {
                 collapsed={collapsed.has(node.id)} hiddenCount={view.hiddenCounts[node.id] || 0}
                 showCollapse={collapsible.has(node.id)} dragging={draggingNodeId === node.id}
                 warningCount={warningsByBeat[node.id]?.length || 0}
+                isModified={!!(draft?.story?.beats && Object.prototype.hasOwnProperty.call(draft.story.beats, node.id))}
                 onNodeMouseDown={onNodeMouseDown} onNodeTouchStart={onNodeTouchStart} onToggleCollapse={toggleCollapse}
                 onPreview={setPreviewBeatId} onSelect={setSelectedId} draft={draft} />
             ))}

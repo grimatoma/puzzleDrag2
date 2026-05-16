@@ -14,6 +14,7 @@ import { BUILDINGS } from "../../constants.js";
 import {
   COLORS, NumberField, Select, SmallButton, Pill, Card, SearchBar,
 } from "../shared.jsx";
+import { simulatePool, variancePerCategory } from "../poolSimulator.js";
 
 const SEASON_NAMES = ["Spring", "Summer", "Autumn", "Winter"];
 
@@ -249,6 +250,8 @@ export default function ZonesTab({ draft, updateDraft }) {
               {/* Season drops */}
               <div>
                 <Label>Season drops · % per category</Label>
+                <SeasonStackedBars seasonDrops={eff.seasonDrops} />
+                <SeasonRollSim seasonDrops={eff.seasonDrops} />
                 <div className="overflow-x-auto rounded-lg border" style={{ borderColor: COLORS.border }}>
                   <table className="min-w-full text-[10px]">
                     <thead>
@@ -337,6 +340,120 @@ export default function ZonesTab({ draft, updateDraft }) {
             No zones match your filter.
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+// Inline stacked-bar visualisation for the per-season drop table — same
+// data the table edits, just rendered as a stacked horizontal bar per
+// season so designers can see the seasonal mix at a glance.
+const CATEGORY_TONE = {
+  grass:      "#7a8b5e",
+  grain:      "#dab947",
+  trees:      "#7a4f1f",
+  birds:      "#a36a6a",
+  vegetables: "#6b3a8a",
+  fruits:     "#a8431a",
+  flowers:    "#d8589a",
+  herd:       "#5a6973",
+  cattle:     "#c8923a",
+  mount:      "#3a4a78",
+  stone:      "#6a7280",
+  ore:        "#a06030",
+  coal:       "#181820",
+  ingot:      "#b8b8c8",
+  dirt:       "#3e3a36",
+  gem:        "#5a3d83",
+  fish:       "#3a8aa0",
+  kelp:       "#4a7a4a",
+  clam:       "#a89c7a",
+  oyster:     "#7a9eaa",
+  default:    "#8a6a3a",
+};
+function colorFor(cat) { return CATEGORY_TONE[cat] || CATEGORY_TONE.default; }
+
+function SeasonStackedBars({ seasonDrops }) {
+  if (!seasonDrops || typeof seasonDrops !== "object") return null;
+  const seasons = ["Spring", "Summer", "Autumn", "Winter"];
+  return (
+    <div className="grid gap-1 mb-2" style={{ gridTemplateColumns: "60px 1fr 50px" }}>
+      {seasons.map((season) => {
+        const table = seasonDrops[season] || {};
+        const entries = Object.entries(table).filter(([, v]) => Number(v) > 0).sort((a, b) => b[1] - a[1]);
+        const total = entries.reduce((s, [, v]) => s + Number(v), 0);
+        return (
+          <div key={season} className="contents">
+            <span className="text-[10px] font-bold uppercase tracking-wide self-center" style={{ color: COLORS.inkSubtle }}>
+              {season}
+            </span>
+            <div className="flex w-full rounded overflow-hidden" style={{ height: 18, background: COLORS.parchmentDeep, border: `1px solid ${COLORS.border}` }}>
+              {total === 0
+                ? <span className="text-[9px] italic text-center w-full self-center" style={{ color: COLORS.inkSubtle }}>empty</span>
+                : entries.map(([cat, v]) => (
+                  <div key={cat} title={`${cat}: ${(Number(v) * 100).toFixed(0)}%`}
+                    style={{ width: `${(Number(v) / total) * 100}%`, background: colorFor(cat) }} />
+                ))}
+            </div>
+            <span className="text-[10px] font-mono text-right self-center" style={{ color: COLORS.inkSubtle }}>
+              Σ {total.toFixed(2)}
+            </span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// Monte-Carlo roll preview — picks 1,000 tiles from the season's weights
+// and reports the largest target↔actual variance. Reseeds on click so
+// the writer can repeat-sample.
+function SeasonRollSim({ seasonDrops }) {
+  const [seed, setSeed] = useState(1);
+  const [picks, setPicks] = useState(1000);
+  const seasons = ["Spring", "Summer", "Autumn", "Winter"];
+  // Simple LCG to keep things deterministic per seed without pulling in the
+  // helper export (we only need a callable rng here for the picker UI).
+  function makeRng(s) { let t = (s >>> 0) || 1; return () => { t = (t + 0x6d2b79f5) >>> 0; let r = Math.imul(t ^ (t >>> 15), 1 | t); r = (r + Math.imul(r ^ (r >>> 7), 61 | r)) ^ r; return ((r ^ (r >>> 14)) >>> 0) / 4294967296; }; }
+  return (
+    <div className="mt-2 p-2 rounded-lg border" style={{ background: "#fffaf3", borderColor: COLORS.border }}>
+      <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+        <span className="text-[10px] font-bold uppercase tracking-wide" style={{ color: COLORS.inkSubtle }}>
+          Monte-Carlo roll · {picks} picks per season
+        </span>
+        <Select value={picks} onChange={(v) => setPicks(Number(v))} options={[
+          { value: 100, label: "100" }, { value: 500, label: "500" },
+          { value: 1000, label: "1,000" }, { value: 5000, label: "5,000" },
+        ]} width={80} />
+        <SmallButton onClick={() => setSeed((s) => s + 1)}>↻ Reseed</SmallButton>
+      </div>
+      <div className="grid gap-1" style={{ gridTemplateColumns: "60px 1fr" }}>
+        {seasons.map((season) => {
+          const weights = seasonDrops?.[season] || {};
+          const sim = simulatePool({ weights, pickCount: picks, rng: makeRng(seed * 1000 + season.length) });
+          const variance = variancePerCategory(weights, sim);
+          const worst = variance[0];
+          if (!worst || sim.picks === 0) {
+            return (
+              <div key={season} className="contents">
+                <span className="text-[10px] font-bold uppercase tracking-wide self-center" style={{ color: COLORS.inkSubtle }}>{season}</span>
+                <span className="text-[10px] italic self-center" style={{ color: COLORS.inkSubtle }}>empty</span>
+              </div>
+            );
+          }
+          const drift = Math.abs(worst.delta * 100);
+          const tone = drift < 3 ? COLORS.greenDeep : drift < 8 ? "#7a5810" : COLORS.red;
+          return (
+            <div key={season} className="contents">
+              <span className="text-[10px] font-bold uppercase tracking-wide self-center" style={{ color: COLORS.inkSubtle }}>{season}</span>
+              <div className="text-[10px] flex items-center gap-2">
+                <span style={{ color: tone, fontFamily: "ui-monospace,monospace" }}>
+                  worst drift · {worst.category}: target {Math.round(worst.target * 100)}% → actual {Math.round(worst.actual * 100)}% (Δ {worst.delta > 0 ? "+" : ""}{Math.round(worst.delta * 100)}pp)
+                </span>
+              </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );

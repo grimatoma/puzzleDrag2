@@ -16,6 +16,8 @@ import { COLORS } from "./shared.jsx";
 import { parseHash, useBalanceRouter } from "./router.js";
 import { useDraftHistory } from "./useDraftHistory.js";
 import CommandPalette from "./CommandPalette.jsx";
+import ShortcutsOverlay from "./ShortcutsOverlay.jsx";
+import { runDiagnostics } from "./diagnostics.js";
 
 // Lazy-load tabs so the Balance Manager (a dev-time tool) stays out of the
 // main entry chunk. Each tab becomes its own JS chunk fetched only when
@@ -181,6 +183,8 @@ export default function BalanceManagerApp() {
   const [tab, setTab] = useState(() => parseHash(typeof window !== "undefined" ? window.location.hash : "", tabIds).tab ?? "tiles");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(readSidebarCollapsed);
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  const [diagnosticsOpen, setDiagnosticsOpen] = useState(false);
 
   // Bind the active tab to the URL hash. On mount this normalises the hash
   // (e.g. empty → `#/tiles`); subsequent `setTab` calls push history entries,
@@ -235,9 +239,18 @@ export default function BalanceManagerApp() {
     resetDraft(emptyDraft());
   }, [resetDraft]);
 
-  // Save on Cmd/Ctrl-S, undo/redo on Cmd/Ctrl-Z, command palette on Cmd/Ctrl-K.
+  // Save on Cmd/Ctrl-S, undo/redo on Cmd/Ctrl-Z, command palette on
+  // Cmd/Ctrl-K, shortcuts overlay on `?`.
   useEffect(() => {
     function onKey(e) {
+      // ? has no modifier — handle it before bailing out on the no-mod case.
+      if (e.key === "?" && !e.metaKey && !e.ctrlKey && !e.altKey) {
+        const tag = e.target?.tagName;
+        if (tag === "INPUT" || tag === "TEXTAREA" || e.target?.isContentEditable) return;
+        e.preventDefault();
+        setShortcutsOpen((v) => !v);
+        return;
+      }
       const mod = e.metaKey || e.ctrlKey;
       if (!mod) return;
       const key = e.key.toLowerCase();
@@ -252,10 +265,26 @@ export default function BalanceManagerApp() {
 
   const activeTab = TABS.find((t) => t.id === tab) ?? TABS[0];
   const ActiveComponent = activeTab.Component;
+  const diagnostics = useMemo(() => runDiagnostics(draft), [draft]);
 
   const handlePaletteSelect = useCallback((entry) => {
-    if (entry?.tab) navigateTo(entry.tab);
-  }, [navigateTo]);
+    if (!entry) return;
+    if (entry.kind === "action" && entry.actionId) {
+      switch (entry.actionId) {
+        case "save":         saveDraft(); return;
+        case "undo":         undo(); return;
+        case "redo":         redo(); return;
+        case "preview":
+          saveDraft();
+          setTimeout(() => window.open(import.meta.env.BASE_URL, "_blank", "noopener"), 100);
+          return;
+        case "shortcuts":    setShortcutsOpen(true); return;
+        case "diagnostics":  setDiagnosticsOpen(true); return;
+        default:             /* unknown action, fall through to tab nav */ break;
+      }
+    }
+    if (entry.tab) navigateTo(entry.tab);
+  }, [navigateTo, saveDraft, undo, redo]);
 
   return (
     <div
@@ -342,12 +371,54 @@ export default function BalanceManagerApp() {
               💾 Save Draft
             </button>
             <button
+              onClick={() => {
+                saveDraft();
+                setTimeout(() => window.open(import.meta.env.BASE_URL, "_blank", "noopener"), 100);
+              }}
+              className="px-3 py-1.5 text-[12px] font-bold rounded-lg border-2"
+              style={{ background: COLORS.parchmentDeep, borderColor: COLORS.border, color: COLORS.inkLight }}
+              title="Save the draft and open the game in a new tab to test the overrides live."
+            >
+              ▶ Save &amp; preview
+            </button>
+            <button
               onClick={() => location.reload()}
               className="px-3 py-1.5 text-[12px] font-bold rounded-lg border-2"
               style={{ background: COLORS.parchmentDeep, borderColor: COLORS.border, color: COLORS.inkLight }}
               title="Reload the page to apply the saved draft."
             >
               ↻ Reload
+            </button>
+            <button
+              onClick={() => setDiagnosticsOpen((v) => !v)}
+              className="relative flex items-center gap-1 px-2 py-1.5 text-[12px] font-bold rounded-lg border-2"
+              style={{
+                background:
+                  diagnostics.worstStatus === "error" ? "rgba(194,59,34,0.10)"
+                  : diagnostics.worstStatus === "warn" ? "rgba(226,178,74,0.18)"
+                  : "rgba(90,158,75,0.12)",
+                borderColor:
+                  diagnostics.worstStatus === "error" ? COLORS.red
+                  : diagnostics.worstStatus === "warn" ? "#a08020"
+                  : COLORS.greenDeep,
+                color:
+                  diagnostics.worstStatus === "error" ? COLORS.red
+                  : diagnostics.worstStatus === "warn" ? "#7a5810"
+                  : COLORS.greenDeep,
+              }}
+              title="Show audits summary"
+              aria-label="Open diagnostics"
+            >
+              {diagnostics.worstStatus === "ok" ? "✓" : diagnostics.worstStatus === "warn" ? "⚠" : "✕"} Audits
+            </button>
+            <button
+              onClick={() => setShortcutsOpen(true)}
+              className="px-2 py-1.5 text-[14px] font-bold rounded-lg border-2"
+              style={{ background: COLORS.parchmentDeep, borderColor: COLORS.border, color: COLORS.inkLight }}
+              title="Show keyboard shortcuts (?)"
+              aria-label="Show keyboard shortcuts"
+            >
+              ?
             </button>
             <a
               href={import.meta.env.BASE_URL}
@@ -446,6 +517,45 @@ export default function BalanceManagerApp() {
           </nav>
 
           <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} onSelect={handlePaletteSelect} />
+          <ShortcutsOverlay open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
+          {diagnosticsOpen && (
+            <div onClick={() => setDiagnosticsOpen(false)}
+              style={{ position: "fixed", inset: 0, background: "rgba(20,12,6,0.32)", zIndex: 49 }} aria-hidden>
+              <div onClick={(e) => e.stopPropagation()}
+                style={{ position: "absolute", top: 64, right: 12, width: 360, padding: 12, borderRadius: 10,
+                  background: "#fff", border: `1.5px solid ${COLORS.border}`,
+                  boxShadow: "0 18px 40px -10px rgba(28,18,8,0.32)" }}>
+                <div style={{ font: "700 10px/1 system-ui", letterSpacing: "0.12em", textTransform: "uppercase",
+                  color: COLORS.inkLight, marginBottom: 8 }}>
+                  Audits — {diagnostics.worstStatus === "ok" ? "all green" : diagnostics.worstStatus === "warn" ? "warnings present" : "broken references"}
+                </div>
+                <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 4 }}>
+                  {diagnostics.sections.map((s) => {
+                    const tone = s.status === "error"
+                      ? { bg: "rgba(194,59,34,0.10)", fg: COLORS.red, label: "ERR" }
+                      : s.status === "warn"
+                        ? { bg: "rgba(226,178,74,0.16)", fg: "#7a5810", label: "WARN" }
+                        : { bg: "rgba(90,158,75,0.12)", fg: COLORS.greenDeep, label: "OK" };
+                    return (
+                      <li key={s.id}
+                        style={{ padding: "6px 8px", borderRadius: 6, border: `1px solid ${COLORS.border}33`,
+                          display: "flex", alignItems: "center", gap: 6 }}>
+                        <span style={{ font: "700 8px/1 system-ui", letterSpacing: "0.1em",
+                          padding: "2px 6px", borderRadius: 999, background: tone.bg, color: tone.fg }}>
+                          {tone.label}
+                        </span>
+                        <span style={{ font: "600 11px/1.2 system-ui", color: COLORS.ink }}>{s.label}</span>
+                        <span style={{ font: "500 10px/1.2 system-ui", color: COLORS.inkSubtle, marginLeft: "auto",
+                          textAlign: "right" }}>
+                          {s.summary}
+                        </span>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            </div>
+          )}
 
           {/* Active tab content */}
           <main className="flex-1 flex flex-col min-w-0">

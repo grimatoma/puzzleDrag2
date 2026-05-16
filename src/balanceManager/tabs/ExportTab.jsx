@@ -8,6 +8,10 @@ import {
 } from "../snapshots.js";
 import { draftDiff, summariseTotals } from "../diff.js";
 import balanceFile from "../../config/balance.json";
+import { CATALOG_EXPORTS } from "../csvExport.js";
+import { runCatalogAudit, groupFindings } from "../catalogAudit.js";
+import { renderDraftChangelog } from "../changelogExport.js";
+import { analyseDraftSize, formatBytes } from "../draftSize.js";
 
 function pruneEmpty(obj) {
   if (!obj || typeof obj !== "object") return obj;
@@ -52,6 +56,12 @@ export default function ExportTab({ draft, updateDraft }) {
   const diff = useMemo(() => draftDiff(balanceFile, draft), [draft]);
   const diffSections = useMemo(() => Object.entries(diff.sections).sort(([a], [b]) => a.localeCompare(b)), [diff]);
 
+  const [auditOpen, setAuditOpen] = useState(false);
+  const auditFindings = useMemo(() => runCatalogAudit(), []);
+  const auditGroups = useMemo(() => groupFindings(auditFindings).filter((g) => g.items.length > 0), [auditFindings]);
+
+  const sizeAnalysis = useMemo(() => analyseDraftSize(draft), [draft]);
+
   const toggleSection = (name) => {
     setDiffOpen((prev) => {
       const next = new Set(prev);
@@ -71,6 +81,19 @@ export default function ExportTab({ draft, updateDraft }) {
     const a = document.createElement("a");
     a.href = url;
     a.download = "balance.json";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  function downloadCsv(catalog) {
+    const csv = catalog.build();
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `hearth-${catalog.id}.csv`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -170,6 +193,30 @@ export default function ExportTab({ draft, updateDraft }) {
         </ol>
       </Card>
 
+      <Card title={`Draft size — ${formatBytes(sizeAnalysis.total)} JSON`}>
+        {sizeAnalysis.sections.length === 0 ? (
+          <div className="text-[11px] italic" style={{ color: COLORS.inkSubtle }}>Empty draft.</div>
+        ) : (
+          <div className="flex flex-col gap-1">
+            {sizeAnalysis.sections.filter((s) => s.bytes > 0).map((s) => (
+              <div key={s.key} className="flex items-center gap-2 text-[11px]">
+                <span className="font-mono w-[140px]" style={{ color: COLORS.inkLight }}>{s.key}</span>
+                <div className="flex-1 h-2 rounded" style={{ background: COLORS.parchmentDeep }}>
+                  <div style={{ width: `${Math.max(2, s.share * 100)}%`, height: "100%",
+                    background: COLORS.ember, borderRadius: 4 }} />
+                </div>
+                <span className="font-mono text-right" style={{ minWidth: 80, color: COLORS.inkSubtle }}>
+                  {formatBytes(s.bytes)}
+                </span>
+                <span className="font-mono text-right" style={{ minWidth: 50, color: COLORS.inkSubtle }}>
+                  {s.keyCount} keys
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </Card>
+
       <Card title="Override summary">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
           {sections.map((s) => {
@@ -200,6 +247,16 @@ export default function ExportTab({ draft, updateDraft }) {
           {diff.totals.added > 0 && <span className="text-[11px] px-2 py-0.5 rounded-full font-bold" style={{ background: "rgba(90,158,75,0.16)", color: COLORS.greenDeep, border: `1px solid ${COLORS.greenDeep}55` }}>+{diff.totals.added}</span>}
           {diff.totals.modified > 0 && <span className="text-[11px] px-2 py-0.5 rounded-full font-bold" style={{ background: "rgba(214,97,42,0.12)", color: COLORS.ember, border: `1px solid ${COLORS.ember}55` }}>~{diff.totals.modified}</span>}
           {diff.totals.removed > 0 && <span className="text-[11px] px-2 py-0.5 rounded-full font-bold" style={{ background: "rgba(194,59,34,0.10)", color: COLORS.red, border: `1px solid ${COLORS.red}55` }}>−{diff.totals.removed}</span>}
+          {(diff.totals.added + diff.totals.modified + diff.totals.removed) > 0 && (
+            <SmallButton className="ml-auto"
+              onClick={() => {
+                const md = renderDraftChangelog(balanceFile, draft, { diff });
+                navigator.clipboard?.writeText(md);
+              }}
+              title="Copy a markdown changelog of the current diff to clipboard">
+              📋 Copy changelog md
+            </SmallButton>
+          )}
         </div>
         {diffSections.length === 0 && (
           <div className="text-[11px] italic" style={{ color: COLORS.inkSubtle }}>
@@ -256,6 +313,56 @@ export default function ExportTab({ draft, updateDraft }) {
         >
 {pretty}
         </pre>
+      </Card>
+
+      <Card title="Catalog audit — gaps &amp; broken references">
+        <div className="flex items-center gap-2 mb-2">
+          <span className="text-[11px]" style={{ color: COLORS.inkLight }}>
+            {auditFindings.length === 0
+              ? "✓ No gaps or broken references detected."
+              : `${auditFindings.length} finding${auditFindings.length === 1 ? "" : "s"} across ${auditGroups.length} categor${auditGroups.length === 1 ? "y" : "ies"}.`}
+          </span>
+          {auditFindings.length > 0 && (
+            <SmallButton className="ml-auto" onClick={() => setAuditOpen((v) => !v)}>
+              {auditOpen ? "Hide" : "Show"}
+            </SmallButton>
+          )}
+        </div>
+        {auditOpen && auditGroups.map((g) => (
+          <div key={g.category} className="mb-2">
+            <div className="text-[11px] font-bold uppercase tracking-wide mb-1" style={{ color: COLORS.inkSubtle }}>
+              {g.label} <span className="font-normal opacity-70">({g.items.length})</span>
+            </div>
+            <ul className="flex flex-col gap-1">
+              {g.items.slice(0, 12).map((f, i) => (
+                <li key={`${f.category}-${f.owner}-${f.detail}-${i}`} className="text-[11px]" style={{ color: COLORS.ink }}>
+                  <code className="font-mono text-[10px]" style={{ color: COLORS.emberDeep }}>{f.owner}</code>
+                  {" — "}
+                  <span style={{ color: COLORS.inkLight }}>{f.message}</span>
+                </li>
+              ))}
+              {g.items.length > 12 && (
+                <li className="text-[10px] italic" style={{ color: COLORS.inkSubtle }}>
+                  +{g.items.length - 12} more
+                </li>
+              )}
+            </ul>
+          </div>
+        ))}
+      </Card>
+
+      <Card title="CSV exports — open in a spreadsheet">
+        <p className="text-[12px] mb-2" style={{ color: COLORS.inkLight }}>
+          One-click downloads of each catalog as RFC-4180 CSV. Useful for crunching numbers (sums,
+          pivot tables, what-if charts) in Google Sheets / Excel without round-tripping through JSON.
+        </p>
+        <div className="flex flex-wrap gap-1.5">
+          {CATALOG_EXPORTS.map((cat) => (
+            <SmallButton key={cat.id} onClick={() => downloadCsv(cat)}>
+              ⬇ {cat.label}
+            </SmallButton>
+          ))}
+        </div>
       </Card>
 
       <Card title="Snapshots — named presets">

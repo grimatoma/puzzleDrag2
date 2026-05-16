@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
-  buildCommandIndex, scoreEntry, searchCommandIndex,
+  buildCommandIndex, scoreEntry, searchCommandIndex, QUICK_ACTIONS,
 } from "../balanceManager/commandPalette.js";
 
 describe("buildCommandIndex", () => {
@@ -31,8 +31,21 @@ describe("buildCommandIndex", () => {
     expect(flag.tab).toBe("flags");
   });
 
+  it("includes quick-action entries by default with kind='action'", () => {
+    const idx = buildCommandIndex();
+    const actions = idx.filter((e) => e.kind === "action");
+    expect(actions.length).toBe(QUICK_ACTIONS.length);
+    expect(actions.every((a) => typeof a.actionId === "string")).toBe(true);
+  });
+
+  it("includeActions=false omits the quick actions", () => {
+    const idx = buildCommandIndex({ includeActions: false });
+    expect(idx.some((e) => e.kind === "action")).toBe(false);
+  });
+
   it("supports dependency injection (callers can pass synthetic catalogs)", () => {
     const idx = buildCommandIndex({
+      includeActions: false,
       items: { test_item: { label: "Test Item", effect: "boom" } },
       recipes: { test_recipe: { name: "Test Recipe", station: "anvil", coins: 7 } },
       buildings: [{ id: "test_b", label: "Test Building", level: 2, coins: 100 }],

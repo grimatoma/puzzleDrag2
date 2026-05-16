@@ -19,6 +19,7 @@ import {
 } from "../shared.jsx";
 import Icon from "../../ui/Icon.jsx";
 import { buildItemReferenceIndex } from "../itemReferences.js";
+import { findColorClashes, paletteSummary } from "../palettePicker.js";
 
 const BIOME_FILTERS = [
   { value: "all",  label: "All biomes" },
@@ -89,6 +90,14 @@ export default function ResourcesTab({ draft, updateDraft }) {
   // Cross-reference index — used by the "Where used" line on each resource card.
   const referenceIndex = useMemo(() => buildItemReferenceIndex(), []);
 
+  // Colour-clash audit — surfaces tiles whose palette entries are
+  // perceptually too close to another item's. Pure read; toggleable
+  // because it's a niche audit rather than everyday info.
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  const clashes = useMemo(() => findColorClashes(), []);
+  const palette = useMemo(() => paletteSummary(), []);
+  const clashRows = useMemo(() => clashes.filter((c) => c.peers.length > 0).slice(0, 24), [clashes]);
+
   return (
     <div className="flex flex-col gap-3">
       {/* Currencies — kingdom-wide counters, reference only */}
@@ -107,6 +116,49 @@ export default function ResourcesTab({ draft, updateDraft }) {
         <div className="text-[10px] italic mt-1.5" style={{ color: COLORS.inkSubtle }}>
           Counters on the root game state — listed for reference, not edited here.
         </div>
+      </Card>
+
+      {/* Palette clash audit — toggleable */}
+      <Card>
+        <div className="flex items-center gap-2 mb-1.5">
+          <span className="text-[11px] font-bold uppercase tracking-wide" style={{ color: COLORS.inkSubtle }}>
+            Palette audit
+          </span>
+          <span className="text-[11px]" style={{ color: COLORS.inkLight }}>
+            {palette.clashingItems} of {palette.totalItems} items have a perceptually close peer ({palette.totalClashes} pairs at threshold {palette.threshold})
+          </span>
+          <SmallButton className="ml-auto" onClick={() => setPaletteOpen((v) => !v)}>
+            {paletteOpen ? "Hide" : "Show"}
+          </SmallButton>
+        </div>
+        {paletteOpen && (
+          <div className="flex flex-col gap-1.5">
+            {clashRows.length === 0 ? (
+              <div className="text-[11px] italic" style={{ color: COLORS.inkSubtle }}>No clashes at the current threshold.</div>
+            ) : clashRows.map((row) => (
+              <div key={row.id} className="flex items-center gap-2 text-[11px]">
+                <span className="font-mono" style={{ color: COLORS.inkSubtle, width: 130 }}>{row.id}</span>
+                <span className="inline-block rounded border" style={{ width: 20, height: 14, background: row.hex, borderColor: COLORS.border }} />
+                <span style={{ fontFamily: "ui-monospace,monospace", color: COLORS.inkSubtle, width: 64 }}>{row.hex}</span>
+                <span className="flex flex-wrap gap-1">
+                  {row.peers.slice(0, 5).map((p) => (
+                    <span key={p.id} className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded"
+                      style={{ background: COLORS.parchmentDeep, color: COLORS.inkLight, border: `1px solid ${COLORS.border}` }}>
+                      <span style={{ width: 8, height: 8, background: p.hex, borderRadius: 2, border: `1px solid ${COLORS.border}` }} />
+                      {p.id}
+                      <span className="font-mono" style={{ color: COLORS.inkSubtle }}>~{p.distance}</span>
+                    </span>
+                  ))}
+                </span>
+              </div>
+            ))}
+            {clashes.filter((c) => c.peers.length > 0).length > clashRows.length && (
+              <div className="text-[10px] italic" style={{ color: COLORS.inkSubtle }}>
+                +{clashes.filter((c) => c.peers.length > 0).length - clashRows.length} more (showing the top 24).
+              </div>
+            )}
+          </div>
+        )}
       </Card>
 
       {/* Resources — editable ITEMS entries with kind: "resource" */}
