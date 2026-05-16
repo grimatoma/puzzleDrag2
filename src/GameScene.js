@@ -299,25 +299,28 @@ export class GameScene extends Phaser.Scene {
   }
 
   /** AAA Juice: Particle burst for resource collection. */
-  emitCollectParticles(x, y, colorStr, count = 10) {
-    const color = Phaser.Display.Color.HexStringToColor(colorStr).color;
-    this.sparkEmitter.setParticleTint(color);
-    this.sparkEmitter.explode(Math.min(25, count * 2), x, y);
+  emitCollectParticles(x, y, colorInput = "#ffffff", count = 10) {
+    const color = typeof colorInput === "string"
+      ? Phaser.Display.Color.HexStringToColor(colorInput).color
+      : (colorInput?.color ?? (Number.isFinite(colorInput) ? colorInput : 0xffffff));
+    if (this.sparkEmitter?.active) {
+      this.sparkEmitter.setParticleTint(color);
+      this.sparkEmitter.explode(Math.min(25, count * 2), x, y);
+    }
 
     // Optional weight pulse — only when the shuffle container is alive. Phaser's
     // Tween constructor reads targets.length synchronously, so passing a null
     // target (the default state outside shuffleBoard) throws inside this
     // tween's onComplete and aborts the rest of the frame's tween/time work,
     // which is what was leaving the board stuck mid-collapse after a chain.
-    if (this.board && this.board.active) {
-      this.tweens.add({
-        targets: this.board,
-        scale: 1.015,
-        duration: 60,
-        yoyo: true,
-        ease: "Quad.Out"
-      });
-    }
+    if (!this.board?.active) return;
+    this.tweens.add({
+      targets: this.board,
+      scale: 1.015,
+      duration: 60,
+      yoyo: true,
+      ease: "Quad.Out"
+    });
   }
 
   /** Returns the effective minimum chain length given the active boss only.

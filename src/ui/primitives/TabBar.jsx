@@ -46,11 +46,14 @@ export function Tab({
       ? "relative flex flex-col items-center justify-center gap-1 px-3 min-h-tap min-w-[88px] flex-1"
       : "relative flex-1 flex flex-col items-center justify-center gap-0.5 min-h-tap py-1";
 
+  // Solid colours only — Tailwind opacity modifiers (`/85`) on var()-based
+  // token colours emit invalid CSS and silently fall back to inherited
+  // text colour, which reads black against the dark nav.
   const stateCls = active
-    ? "bg-cream/[0.06] text-cream"
+    ? "bg-white/[0.07] text-cream"
     : locked
-    ? "text-cream/40"
-    : "text-cream/85 hover:bg-cream/[0.04]";
+    ? "text-on-dark-faint"
+    : "text-on-dark-dim hover:bg-white/[0.04]";
 
   const onClick = () => {
     if (locked) return;
@@ -77,7 +80,7 @@ export function Tab({
       <span className="inline-flex items-center justify-center relative">
         <Icon iconKey={iconKey} size={iconSize} />
         {locked && (
-          <span className="absolute -bottom-1 -right-1 text-cream/70">
+          <span className="absolute -bottom-1 -right-1 text-on-dark-faint">
             <LockGlyph />
           </span>
         )}
@@ -101,8 +104,8 @@ export default function TabBar({
 }) {
   const containerCls =
     density === "dock"
-      ? "flex items-stretch justify-around w-full bg-bg-dark/95 border-t-2 border-cream-soft pb-safe-bottom shadow-[0_-4px_12px_rgba(0,0,0,.25)]"
-      : "flex items-stretch w-full bg-bg-dark/95 border-t-2 border-cream-soft pb-safe-bottom shadow-[0_-4px_12px_rgba(0,0,0,.25)]";
+      ? "flex items-stretch justify-around w-full bg-bg-dark border-t-2 border-cream-soft pb-safe-bottom shadow-[0_-4px_12px_rgba(0,0,0,.25)]"
+      : "flex items-stretch w-full bg-bg-dark border-t-2 border-cream-soft pb-safe-bottom shadow-[0_-4px_12px_rgba(0,0,0,.25)]";
 
   const tabs = Children.map(children, (child) => {
     if (!isValidElement(child)) return child;

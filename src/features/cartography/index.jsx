@@ -655,7 +655,7 @@ export default function CartographyScreen({ state, dispatch }) {
   );
 
   return (
-    <div className="absolute inset-0 bg-gradient-to-b from-[#ead7b3] to-[#d4b585] border-[3px] border-[#b28b62] flex flex-col overflow-hidden">
+    <div className="hl-panel">
       <HeaderBar
         currentNode={currentNode}
         visitedCount={visited.length}

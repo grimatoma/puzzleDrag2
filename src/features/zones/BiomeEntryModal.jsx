@@ -68,13 +68,13 @@ export default function BiomeEntryModal({ biomeKey, state, dispatch, onClose }) 
         ) : (
           <>
             <div className="flex items-center justify-between mb-1.5">
-              <span className="font-bold text-caption uppercase tracking-wide text-ink-light">Pack provisions</span>
+              <span className="hl-section-label">Pack provisions</span>
               {available.length > 0 && (
                 <button onClick={packAll} className="text-caption font-bold text-[#5a7a20] hover:text-[#3a5a10] underline">Pack all</button>
               )}
             </div>
             {available.length === 0 ? (
-              <div className="bg-[#efe4cc] border border-[#c5a87a] rounded-lg px-3 py-3 text-caption text-ink-light text-center">
+              <div className="hl-well text-caption text-on-panel-faint text-center">
                 You have no provisions. Bake bread, gather apples, or buy supplies first.
               </div>
             ) : (
@@ -82,13 +82,13 @@ export default function BiomeEntryModal({ biomeKey, state, dispatch, onClose }) 
                 {available.map((f) => {
                   const n = supply[f.key] ?? 0;
                   return (
-                    <div key={f.key} className="flex items-center gap-2 bg-[#efe4cc] border border-[#c5a87a] rounded-lg px-2 py-1.5">
+                    <div key={f.key} className="hl-card !flex-row items-center gap-2 !p-2">
                       <span className="grid place-items-center flex-shrink-0" style={{ width: 26, height: 26 }}>
                         <Icon iconKey={f.key} size={24} />
                       </span>
                       <div className="flex-1 min-w-0">
-                        <div className="font-bold text-caption text-ink leading-tight truncate">{FOOD_LABELS[f.key] ?? f.key}</div>
-                        <div className="text-micro text-ink-light">have {f.have} · {f.per} turn{f.per === 1 ? "" : "s"} each</div>
+                        <div className="font-bold text-caption text-on-panel leading-tight truncate">{FOOD_LABELS[f.key] ?? f.key}</div>
+                        <div className="text-micro text-on-panel-faint">have {f.have} · {f.per} turn{f.per === 1 ? "" : "s"} each</div>
                       </div>
                       <div className="flex-shrink-0">
                         <Stepper
@@ -107,8 +107,8 @@ export default function BiomeEntryModal({ biomeKey, state, dispatch, onClose }) 
               </div>
             )}
 
-            <div className="mt-3 rounded-xl border-2 border-iron bg-[#fff7e6] px-3 py-2 text-center">
-              <div className="text-micro uppercase tracking-wide text-ink-light font-bold">Expedition length</div>
+            <div className="hl-card mt-3 !items-center text-center !p-2">
+              <div className="hl-section-label !text-micro">Expedition length</div>
               <div className={`text-h2 font-extrabold leading-tight ${canDepart ? "text-[#5a7a1a]" : "text-[#9a3a2a]"}`}>{totalTurns} turn{totalTurns === 1 ? "" : "s"}</div>
               {bonuses.length > 0 && (
                 <div className="flex flex-wrap gap-1 justify-center mt-1">

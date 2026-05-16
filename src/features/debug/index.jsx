@@ -67,7 +67,7 @@ export default function DebugModal({ state, dispatch }) {
         </button>
 
         <div className="flex flex-col gap-3 text-left">
-          <div className="text-[18px] font-bold text-center" style={{ color: '#2b2218' }}>
+          <div className="text-[18px] font-bold text-center text-on-panel">
             🛠 Debug Tools
           </div>
 
@@ -86,7 +86,7 @@ export default function DebugModal({ state, dispatch }) {
 
           {/* Currency */}
           <div>
-            <div className="text-[10px] font-bold uppercase tracking-wide mb-1.5" style={{ color: '#7a5a38' }}>Money & XP</div>
+            <div className="hl-section-label !text-[10px] mb-1.5">Money & XP</div>
             <div className="grid grid-cols-2 gap-1.5">
               <DebugBtn color="mine_gold" onClick={() => dispatch({ type: 'DEV/ADD_GOLD', amount: 1000 })}>🪙 +1,000 Gold</DebugBtn>
               <DebugBtn color="mine_gold" onClick={() => dispatch({ type: 'DEV/ADD_GOLD', amount: 10000 })}>🪙 +10,000 Gold</DebugBtn>
@@ -101,7 +101,7 @@ export default function DebugModal({ state, dispatch }) {
 
           {/* Items */}
           <div>
-            <div className="text-[10px] font-bold uppercase tracking-wide mb-1.5" style={{ color: '#7a5a38' }}>Items</div>
+            <div className="hl-section-label !text-[10px] mb-1.5">Items</div>
             <div className="grid grid-cols-2 gap-1.5 mb-1.5">
               <DebugBtn color="green" onClick={() => dispatch({ type: 'DEV/FILL_STORAGE', amount: 100 })}>📦 +100 Every Item</DebugBtn>
               <DebugBtn color="slate" onClick={() => dispatch({ type: 'DEV/FILL_TOOLS', amount: 5 })}>🔧 +5 Every Tool</DebugBtn>
@@ -132,8 +132,7 @@ export default function DebugModal({ state, dispatch }) {
               <select
                 value={itemKey}
                 onChange={(e) => setItemKey(e.target.value)}
-                className="w-full py-1 px-2 text-[11px] rounded border-2"
-                style={{ background: '#fff', borderColor: '#b28b62', color: '#2b2218' }}
+                className="hl-input !h-auto py-1 !text-[11px]"
               >
                 {biomeResources.map((r) => (
                   <option key={r.key} value={r.key}>{r.label} ({r.key})</option>
@@ -149,7 +148,7 @@ export default function DebugModal({ state, dispatch }) {
 
           {/* Triggers & Reset */}
           <div>
-            <div className="text-[10px] font-bold uppercase tracking-wide mb-1.5" style={{ color: '#7a5a38' }}>Triggers</div>
+            <div className="hl-section-label !text-[10px] mb-1.5">Triggers</div>
             <div className="grid grid-cols-2 gap-1.5">
               <DebugBtn color="red" onClick={() => dispatch({ type: 'BOSS/TRIGGER' })}>🐉 Trigger Boss</DebugBtn>
               <DebugBtn color="teal" onClick={() => dispatch({ type: 'DEV/BUILD_ALL' })}>🏗 Build All</DebugBtn>
@@ -163,7 +162,7 @@ export default function DebugModal({ state, dispatch }) {
 
           {/* Balance Manager — design-time editor for game constants */}
           <div>
-            <div className="text-[10px] font-bold uppercase tracking-wide mb-1.5" style={{ color: '#7a5a38' }}>Game Balance</div>
+            <div className="hl-section-label !text-[10px] mb-1.5">Game Balance</div>
             <a
               href={`${import.meta.env.BASE_URL}b/`}
               className="w-full py-2 text-[12px] font-bold rounded-lg border-2 flex items-center justify-center gap-2 no-underline"
@@ -171,7 +170,7 @@ export default function DebugModal({ state, dispatch }) {
             >
               ⚖️ Open Balance Manager
             </a>
-            <div className="mt-1 text-[10px] italic" style={{ color: '#7a5a38' }}>
+            <div className="mt-1 text-[10px] italic text-on-panel-faint">
               Edit upgrade chains, recipes, building costs, and tile power hooks. Opens at /b/ in this tab; export as JSON to commit.
             </div>
           </div>

@@ -74,7 +74,7 @@ function QuestCard({ q, dispatch }) {
             <span className="relative inline-flex h-3 w-3 rounded-full bg-[#d6612a]" />
           </span>
         )}
-        <span className="text-[11px] font-bold text-[#c8923a] whitespace-nowrap">
+        <span className="text-[11px] font-bold text-[#a8722a] whitespace-nowrap">
           +{q.reward.coins}◉{q.reward.almanacXp ? ` +${q.reward.almanacXp}✦` : ""}
         </span>
       </div>
@@ -90,13 +90,7 @@ function QuestCard({ q, dispatch }) {
       <button
         disabled={!claimable}
         onClick={() => claimable && dispatch({ type: "QUESTS/CLAIM_QUEST", id: q.id })}
-        className={`text-[11px] font-bold py-1 rounded-lg border-2 transition-colors ${
-          q.claimed
-            ? "bg-[#c5a87a] border-[#a88a5a] text-white/70 cursor-default"
-            : claimable
-            ? "bg-[#91bf24] border-[#6a9010] text-white hover:bg-[#a3d028] animate-pulse"
-            : "bg-[#e0d2b0] border-[#c5a87a] text-[#a88a5a] cursor-not-allowed"
-        }`}
+        className={`hl-btn hl-btn--go ${claimable ? "animate-pulse" : ""}`}
       >
         {q.claimed ? <span className="inline-flex items-center gap-1 justify-center"><CheckGlyph size={11} /> CLAIMED</span> : "CLAIM"}
       </button>
@@ -142,13 +136,7 @@ function AlmanacTierCard({ idx, tierDef, almanacXp, almanacClaimed, dispatch }) 
       <button
         disabled={!claimable}
         onClick={() => claimable && dispatch({ type: "QUESTS/CLAIM_ALMANAC", tier })}
-        className={`text-[9px] font-bold px-2 py-0.5 rounded-md border self-end ${
-          claimed
-            ? "bg-[#c5a87a] border-[#a88a5a] text-white/60 cursor-default"
-            : claimable
-            ? "bg-[#d6612a] border-[#a84010] text-white hover:bg-[#e8722a]"
-            : "bg-[#b28b62]/30 border-[#b28b62]/60 text-[#5b3b20]/50 cursor-not-allowed"
-        }`}
+        className="hl-btn hl-btn--sm hl-btn--primary self-end"
       >
         {claimed ? <span className="inline-flex items-center gap-1 justify-center"><CheckGlyph size={9} /> Claimed</span> : claimable ? "CLAIM" : <span className="inline-flex justify-center"><LockGlyph size={10} /></span>}
       </button>
@@ -178,11 +166,7 @@ export function QuestsPanel({ state, dispatch }) {
           <button
             key={t}
             onClick={() => setTab(t)}
-            className={`px-4 py-1 rounded-full text-[12px] font-bold border-2 transition-colors ${
-              tab === t
-                ? "bg-[#d6612a] border-[#a84010] text-white"
-                : "bg-[#f6efe0]/80 border-[#b28b62] text-[#5b3b20] hover:bg-[#f6efe0]"
-            }`}
+            className={`hl-tab ${tab === t ? "is-active" : ""}`}
           >
             {t === "daily" ? "Daily" : "Almanac"}
           </button>
@@ -198,10 +182,10 @@ export function QuestsPanel({ state, dispatch }) {
           }).map((q) => (
             <QuestCard key={q.id} q={q} dispatch={dispatch} />
           ))}
-          <p className="text-[10px] text-[#5b3b20]/70 text-center mt-1">Next refresh: when season ends</p>
+          <p className="text-[10px] text-on-panel-dim text-center mt-1">Next refresh: when season ends</p>
           <button
             onClick={() => dispatch({ type: "QUESTS/ROLL_DAILIES" })}
-            className="text-[10px] font-bold py-1 px-3 rounded-lg bg-[#f6efe0]/80 border border-[#b28b62] text-[#5b3b20] hover:bg-[#f6efe0] self-center"
+            className="hl-tab self-center"
           >
             🔄 Reroll (dev)
           </button>
@@ -251,25 +235,21 @@ export default function QuestsScreen({ state, dispatch, initialTab }) {
   const xpPct = Math.min(100, (xpIntoTier / 100) * 100);
 
   return (
-    <div className="absolute inset-0 bg-gradient-to-b from-[#ead7b3] to-[#d4b585] border-[3px] border-[#b28b62] flex flex-col overflow-hidden">
-      <div className="flex items-center justify-between px-3 py-2 flex-shrink-0 border-b border-[#b28b62]/40">
-        <span className="font-bold text-[14px] text-[#3a2715]">📜 Quests & Almanac</span>
+    <div className="hl-panel">
+      <div className="hl-panel-header">
+        <span className="hl-panel-title">📜 Quests & Almanac</span>
         <button
           onClick={() => dispatch({ type: "SET_VIEW", view: "town" })}
-          className="w-7 h-7 rounded-lg bg-[#f6efe0] border-2 border-[#b28b62] grid place-items-center text-[#6a4b31] font-bold text-[14px]"
+          className="hl-panel-close"
         >✕</button>
       </div>
 
-      <div className="flex gap-2 px-3 py-2 flex-shrink-0">
+      <div className="hl-tabs">
         {["daily", "almanac"].map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
-            className={`px-4 py-1 rounded-full text-[12px] font-bold border-2 transition-colors ${
-              tab === t
-                ? "bg-[#d6612a] border-[#a84010] text-white"
-                : "bg-[#f6efe0]/80 border-[#b28b62] text-[#5b3b20] hover:bg-[#f6efe0]"
-            }`}
+            className={`hl-tab ${tab === t ? "is-active" : ""}`}
           >
             {t === "daily" ? "Daily" : "Almanac"}
           </button>
@@ -285,10 +265,10 @@ export default function QuestsScreen({ state, dispatch, initialTab }) {
           }).map((q) => (
             <QuestCard key={q.id} q={q} dispatch={dispatch} />
           ))}
-          <p className="text-[10px] text-[#5b3b20]/70 text-center mt-1">Next refresh: when season ends</p>
+          <p className="text-[10px] text-on-panel-dim text-center mt-1">Next refresh: when season ends</p>
           <button
             onClick={() => dispatch({ type: "QUESTS/ROLL_DAILIES" })}
-            className="text-[10px] font-bold py-1 px-3 rounded-lg bg-[#f6efe0]/80 border border-[#b28b62] text-[#5b3b20] hover:bg-[#f6efe0] self-center"
+            className="hl-tab self-center"
           >
             🔄 Reroll (dev)
           </button>

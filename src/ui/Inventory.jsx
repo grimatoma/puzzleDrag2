@@ -290,20 +290,20 @@ export function InventoryGrid({
         </Banner>
       )}
       {orders.length > 0 && (
-        <div className="flex items-center gap-3 text-caption text-ink-soft px-1 -mb-1">
+        <div className="flex items-center gap-3 text-caption text-on-panel-dim px-1 -mb-1">
           <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-moss" /> ready</span>
           <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-gold" /> needed</span>
           <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-iron-soft" /> excess</span>
         </div>
       )}
       {noResults && (
-        <div className="text-body text-ink-light italic px-1 py-2">
+        <div className="hl-empty px-1">
           No matches{query ? ` for "${query}"` : ""}.
         </div>
       )}
       {showResources && sortedResourceKeys.length > 0 && (
         <div>
-          <div className="text-caption font-bold text-ink-soft uppercase tracking-wider mb-1.5">Resources</div>
+          <div className="hl-section-label mb-1.5">Resources</div>
           <div className={`grid ${gridCols} gap-2`}>
             {sortedResourceKeys.map((key) => {
               const r = resourceCellsBy.get(key);
@@ -329,11 +329,11 @@ export function InventoryGrid({
       )}
       {showItems && (
         <div>
-          <div className="text-caption font-bold text-ink-soft uppercase tracking-wider mb-1.5">Items</div>
+          <div className="hl-section-label mb-1.5">Items</div>
           {items.length === 0 ? (
-            <div className="text-caption text-ink-light italic px-1">No items yet — craft something!</div>
+            <div className="hl-text-faint italic px-1">No items yet — craft something!</div>
           ) : sortedItemKeys.length === 0 ? (
-            <div className="text-caption text-ink-light italic px-1">No items match the current filter.</div>
+            <div className="hl-text-faint italic px-1">No items match the current filter.</div>
           ) : (
             <div className={`grid ${gridCols} gap-2`}>
               {sortedItemKeys.map((key) => {

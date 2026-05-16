@@ -12,7 +12,7 @@ export default function BossGallery({ state }) {
   const flags = state?.story?.flags ?? {};
   return (
     <div className="flex flex-col gap-3">
-      <p className="text-[11px] text-[#7a6248] italic">
+      <p className="hl-empty !py-1 !text-left">
         Five seasonal foes test the vale across the year. Each demands a tribute and warps the board while present.
       </p>
       <div className="grid grid-cols-1 gap-3">
@@ -24,10 +24,10 @@ export default function BossGallery({ state }) {
           return (
             <div
               key={boss.id}
-              className="rounded-xl p-3 flex gap-3"
+              className="hl-card !flex-row gap-3"
               style={{
-                background: defeated ? "rgba(58,40,20,0.6)" : "rgba(28,12,4,0.65)",
-                border: `2px solid ${active ? "#ff7a00" : accent}`,
+                borderColor: active ? "#ff7a00" : accent,
+                opacity: defeated ? 0.85 : 1,
                 boxShadow: active ? "0 0 14px rgba(255,122,0,0.4)" : "none",
               }}
             >
@@ -51,7 +51,7 @@ export default function BossGallery({ state }) {
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-[14px] font-bold" style={{ color: "#f8e7c6" }}>
+                  <span className="hl-card-title">
                     {boss.name}
                   </span>
                   <span
@@ -74,19 +74,19 @@ export default function BossGallery({ state }) {
                     </span>
                   )}
                 </div>
-                <div className="text-[10px] mt-1 leading-snug" style={{ color: "#e2c19b" }}>
+                <div className="hl-card-meta mt-1 leading-snug">
                   {boss.description}
                 </div>
-                <div className="text-[10px] mt-2 flex flex-wrap gap-2">
+                <div className="mt-2 flex flex-wrap gap-2">
                   <span
-                    className="px-1.5 py-0.5 rounded-md font-bold"
-                    style={{ background: "rgba(255,122,0,0.18)", color: "#ffae6a", border: "1px solid rgba(255,122,0,0.4)" }}
+                    className="hl-cost-tag"
+                    style={{ background: "rgba(214,97,42,0.16)", color: "#8a4a26", borderColor: "rgba(214,97,42,0.45)" }}
                   >
                     Tribute: {boss.target.amount} {boss.target.resource}
                   </span>
                   <span
-                    className="px-1.5 py-0.5 rounded-md italic"
-                    style={{ background: "rgba(168,67,26,0.18)", color: "#f8c894" }}
+                    className="hl-cost-tag italic"
+                    style={{ background: "rgba(168,67,26,0.14)", color: "#7a3a1a", borderColor: "rgba(168,67,26,0.35)" }}
                   >
                     {boss.modifierDescription}
                   </span>

@@ -101,7 +101,7 @@ function TileSlot({ category, selected, locked, activeTileId, onToggle, onChoose
         <span className="mt-1 leading-tight text-center">
           {activeTile ? activeTile.displayName : label}
         </span>
-        <span className="text-[10px] text-[#6a4b31] leading-tight mt-0.5 truncate max-w-full">
+        <span className="text-[10px] text-on-panel-faint leading-tight mt-0.5 truncate max-w-full">
           {activeTile ? label : "Pick a tile"}
         </span>
       </button>
@@ -160,20 +160,20 @@ function TileChooserPopup({ zoneCategory, state, dispatch, onClose }) {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-2">
-          <h3 className="font-bold text-[16px] text-[#744d2e]">
+          <h3 className="font-bold text-[16px] text-on-panel-dim">
             Choose {label} tile
           </h3>
           <button
             type="button"
             onClick={onClose}
-            className="text-[#744d2e] text-xl leading-none hover:text-[#3a2715]"
+            className="text-on-panel-dim text-xl leading-none hover:text-on-panel"
             aria-label="Close"
           >
             ✕
           </button>
         </div>
         {rows.length === 0 ? (
-          <p className="text-[#6a4b31] text-[13px] text-center py-6">
+          <p className="text-on-panel-faint text-[13px] text-center py-6">
             No {label} tiles unlocked yet. Visit the Tiles Wiki to research or
             buy new variants.
           </p>
@@ -275,7 +275,7 @@ export default function StartFarmingModal({ state, dispatch, onClose }) {
 
   return createPortal(
     <div
-      className="fixed inset-0 bg-black/60 grid place-items-center z-50 animate-fadein"
+      className="hl-backdrop animate-fadein"
       onClick={onClose}
     >
       <div
@@ -287,10 +287,10 @@ export default function StartFarmingModal({ state, dispatch, onClose }) {
         className="bg-[#f4ecd8] border-[4px] border-[#b28b62] rounded-[20px] px-6 py-5 max-w-[460px] w-[94vw] shadow-2xl relative outline-none"
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 className="font-bold text-[20px] text-[#744d2e] text-center mb-1">
+        <h2 className="font-bold text-[20px] text-on-panel-dim text-center mb-1">
           Start Farming — {zone.name}
         </h2>
-        <p className="text-[#6a4b31] text-[12px] text-center mb-3 leading-relaxed">
+        <p className="text-on-panel-faint text-[12px] text-center mb-3 leading-relaxed">
           {mustPick
             ? `Pick ${MAX_SLOTS} tile types to bring to the field. Tap ✎ to swap a tile variant.`
             : `These ${cats.length} tile types will be on the field. Tap a slot to pick a variant.`}
@@ -335,15 +335,15 @@ export default function StartFarmingModal({ state, dispatch, onClose }) {
           );
         })()}
 
-        <div className="bg-[#fffaf1]/70 border border-[#d8c8a8] rounded-xl px-3 py-2 mb-3">
-          <div className="flex items-center justify-between text-[13px] text-[#3a2715]">
+        <div className="hl-card mb-3 !p-2.5">
+          <div className="flex items-center justify-between text-[13px] text-on-panel">
             <span className="font-bold">Turns this session</span>
             <span className="font-mono font-bold text-[16px]">{turns}</span>
           </div>
-          <div className="mt-0.5 text-[11px] text-[#6a4b31]">
+          <div className="mt-0.5 text-[11px] text-on-panel-faint">
             Base {baseTurns}{buildingTurns > 0 ? ` + buildings ${buildingTurns}` : ""}{useFertilizer ? " × fertilizer" : ""}
           </div>
-          <label className="flex items-center gap-2 mt-2 text-[12px] text-[#3a2715]">
+          <label className="flex items-center gap-2 mt-2 text-[12px] text-on-panel">
             <input
               type="checkbox"
               checked={useFertilizer}
@@ -357,7 +357,7 @@ export default function StartFarmingModal({ state, dispatch, onClose }) {
         </div>
 
         <div className="flex items-center justify-between mb-3 text-[13px]">
-          <span className="text-[#3a2715] font-bold">Cost to start</span>
+          <span className="text-on-panel font-bold">Cost to start</span>
           <span
             className={`font-mono font-bold text-[15px] ${canAfford ? "text-[#2a5010]" : "text-[#a02020]"}`}
           >

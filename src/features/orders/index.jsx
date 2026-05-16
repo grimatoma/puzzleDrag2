@@ -14,15 +14,15 @@ export default function OrdersScreen({ state, dispatch }) {
   const { orders, inventory } = state;
 
   return (
-    <div className="absolute inset-0 bg-gradient-to-b from-[#ead7b3] to-[#d4b585] border-[3px] border-[#b28b62] flex flex-col overflow-hidden">
-      <div className="flex items-center justify-between px-3 py-2 flex-shrink-0 border-b border-[#b28b62]/40">
-        <span className="font-bold text-[14px] text-[#3a2715]">📋 Orders</span>
+    <div className="hl-panel">
+      <div className="hl-panel-header">
+        <span className="hl-panel-title">📋 Orders</span>
         <button
           onClick={() => dispatch({ type: "SET_VIEW", view: "town" })}
-          className="w-7 h-7 rounded-lg bg-[#f6efe0] border-2 border-[#b28b62] grid place-items-center text-[#6a4b31] font-bold text-[14px]"
+          className="hl-panel-close"
         >✕</button>
       </div>
-      <div className="flex-1 overflow-y-auto px-3 py-3 flex flex-col gap-2">
+      <div className="hl-panel-body flex flex-col gap-2">
         {orders.map((o) => {
           const have = inventory[o.key] || 0;
           const done = have >= o.need;

@@ -162,16 +162,16 @@ function TileCard({ row, category, dispatch }) {
   return (
     <div
       onClick={row.action === "toggle" && !row.active && !row.locked ? handleSelect : undefined}
-      className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border transition-all ${
+      className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 transition-all ${
         row.action === "toggle" && !row.active && !row.locked
-          ? "cursor-pointer hover:scale-[1.03] hover:shadow-lg hover:shadow-[#ffd248]/10"
+          ? "cursor-pointer hover:scale-[1.03] hover:shadow-lg"
           : ""
       } ${
         row.active
-          ? "bg-[#4f6b3a]/40 border-[#a8d44a] shadow-md shadow-[#a8d44a]/15"
+          ? "bg-[#dfeecd] border-[#6a9a3a] shadow-md shadow-[#a8d44a]/25"
           : row.locked
-          ? "bg-[#1a1208]/30 border-[#5a4030]/50"
-          : "bg-[#2b1e0f]/40 border-[#8a6040]/50 hover:border-[#c8a87a]/60"
+          ? "bg-[var(--well-bg)] border-[var(--well-border)] opacity-70"
+          : "bg-[var(--card-bg)] border-[var(--card-border)] hover:border-[var(--card-border-strong)]"
       }`}
       style={{ minHeight: 130 }}
     >
@@ -194,21 +194,21 @@ function TileCard({ row, category, dispatch }) {
 
       {/* Name */}
       <div className={`font-bold text-xs text-center leading-tight ${
-        row.locked ? "text-[#6a5040]" : "text-[#f7e2b6]"
+        row.locked ? "text-on-panel-faint" : "text-on-panel"
       }`}>
         {row.name}
       </div>
 
       {/* Status */}
       <div className={`text-[10px] text-center leading-tight ${
-        row.locked ? "text-[#6a5040]" : "text-[#c8a87a]"
+        row.locked ? "text-on-panel-faint" : "text-on-panel-dim"
       }`}>
         {row.status}
       </div>
 
       {/* Description (only when unlocked) */}
       {row.description && !row.locked && (
-        <div className="text-[9px] text-center text-[#a89070] italic leading-snug line-clamp-2 mt-auto">
+        <div className="text-[9px] text-center text-on-panel-faint italic leading-snug line-clamp-2 mt-auto">
           {row.description}
         </div>
       )}
@@ -229,15 +229,15 @@ function TileCard({ row, category, dispatch }) {
 function HazardCard({ hazard }) {
   const hazKey = `hazard_${hazard.id}`;
   return (
-    <div className="flex flex-col items-center gap-1.5 p-3 rounded-xl border border-[#7a2a0a]/60 bg-[#2a0e0e]/50" style={{ minHeight: 130 }}>
+    <div className="flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 border-[#b5503a] bg-[#f1ddc8]" style={{ minHeight: 130 }}>
       {/* Biome badge */}
       <div className="self-end -mt-1 -mr-1">
-        <span className="text-[9px] font-bold text-[#8a5040] uppercase tracking-wide bg-[#3a1a0a]/80 px-1.5 py-0.5 rounded">{hazard.biome}</span>
+        <span className="text-[9px] font-bold text-white uppercase tracking-wide bg-[#9c3a2a] px-1.5 py-0.5 rounded">{hazard.biome}</span>
       </div>
 
       {/* Hazard icon */}
       <div
-        className="flex items-center justify-center text-2xl rounded-lg bg-[#3a1a0a]/60 border border-[#7a3a1a]/40 overflow-hidden"
+        className="flex items-center justify-center text-2xl rounded-lg bg-[#e7c8a8] border border-[#b5503a]/50 overflow-hidden"
         style={{ width: 48, height: 48 }}
       >
         {hasIcon(hazKey)
@@ -246,17 +246,17 @@ function HazardCard({ hazard }) {
       </div>
 
       {/* Name */}
-      <div className="font-bold text-xs text-center text-[#f7b07a] leading-tight">
+      <div className="font-bold text-xs text-center text-[#8a2a14] leading-tight">
         {hazard.name}
       </div>
 
       {/* Description */}
-      <div className="text-[10px] text-center text-[#c8987a] leading-snug line-clamp-2">{hazard.description}</div>
+      <div className="text-[10px] text-center text-on-panel-dim leading-snug line-clamp-2">{hazard.description}</div>
 
       {/* Clear instruction */}
       {hazard.clearInstruction && (
-        <div className="text-[9px] text-center text-[#a07858] italic leading-snug mt-auto">
-          <span className="text-[#d4a070] not-italic font-semibold">Clear: </span>
+        <div className="text-[9px] text-center text-on-panel-faint italic leading-snug mt-auto">
+          <span className="text-[#8a4a26] not-italic font-semibold">Clear: </span>
           {hazard.clearInstruction}
         </div>
       )}
@@ -296,20 +296,20 @@ export default function TileCollectionPanel({ state, dispatch }) {
       : [];
 
   return (
-    <div className="flex flex-col h-full bg-gradient-to-b from-[#3a2510] to-[#2b1a0c] text-[#f7e2b6]">
+    <div className="hl-panel">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-[#5a3a1a]">
-        <h2 className="text-lg font-bold text-[#ffd248]">Tiles Wiki</h2>
+      <div className="hl-panel-header">
+        <h2 className="hl-panel-title">Tiles Wiki</h2>
         <button
           onClick={() => dispatch({ type: "SET_VIEW", view: "town" })}
-          className="text-[#c8a87a] hover:text-white text-xl leading-none"
+          className="hl-panel-close"
         >
           ✕
         </button>
       </div>
 
       {/* Sub-category bar */}
-      <div className="flex border-b border-[#5a3a1a] flex-shrink-0 bg-[#231509]">
+      <div className="flex border-b border-[var(--panel-divider)] flex-shrink-0 bg-[var(--panel-toolbar)]">
         {SUB_CATEGORIES.map((sub) => {
           const selected = subCategory === sub;
           const isHaz = sub === "hazards";
@@ -320,11 +320,11 @@ export default function TileCollectionPanel({ state, dispatch }) {
               className={`flex-1 py-2 px-2 text-xs font-bold transition-colors flex flex-col items-center min-w-[60px] ${
                 selected
                   ? isHaz
-                    ? "bg-[#4f1a0a] text-[#ff9a4a] border-b-2 border-[#ff9a4a]"
-                    : "bg-[#4f3010] text-[#ffd248] border-b-2 border-[#ffd248]"
+                    ? "bg-[#9c3a2a] text-white border-b-2 border-[#9c3a2a]"
+                    : "bg-[var(--ember)] text-white border-b-2 border-[var(--ember-hot)]"
                   : isHaz
-                    ? "text-[#8a4030] hover:text-[#c87a5a]"
-                    : "text-[#8a6040] hover:text-[#c8a87a]"
+                    ? "text-[#9c3a2a] hover:text-[#8a2a14]"
+                    : "text-on-panel-dim hover:text-on-panel"
               }`}
             >
               <span className="block text-base leading-none">{SUB_CATEGORY_ICONS[sub]}</span>
@@ -338,7 +338,7 @@ export default function TileCollectionPanel({ state, dispatch }) {
       {subCategory !== "hazards" && visibleCategories.length > 0 && (
         <div
           ref={tabBarRef}
-          className="flex border-b border-[#5a3a1a] flex-shrink-0 overflow-x-auto"
+          className="flex border-b border-[var(--panel-divider)] flex-shrink-0 overflow-x-auto"
           style={{ scrollbarWidth: "none" }}
         >
           {visibleCategories.map((cat) => (
@@ -347,8 +347,8 @@ export default function TileCollectionPanel({ state, dispatch }) {
               onClick={() => setActiveTab(cat)}
               className={`flex-shrink-0 py-2 px-2 text-xs font-bold transition-colors min-w-[52px] ${
                 activeTab === cat
-                  ? "bg-[#4f3010] text-[#ffd248] border-b-2 border-[#ffd248]"
-                  : "text-[#8a6040] hover:text-[#c8a87a]"
+                  ? "bg-[var(--ember)] text-white border-b-2 border-[var(--ember-hot)]"
+                  : "text-on-panel-dim hover:text-on-panel"
               }`}
             >
               <span className="grid place-items-center mx-auto" style={{ width: 22, height: 22 }}>
@@ -363,10 +363,10 @@ export default function TileCollectionPanel({ state, dispatch }) {
       )}
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto p-3">
+      <div className="hl-panel-body">
         {subCategory === "hazards" ? (
           <>
-            <div className="text-xs text-[#a87050] text-center py-1 mb-2 italic">
+            <div className="text-xs text-on-panel-dim text-center py-1 mb-2 italic">
               Hazards cannot be selected — they appear automatically and must be cleared.
             </div>
             <div
@@ -379,7 +379,7 @@ export default function TileCollectionPanel({ state, dispatch }) {
             </div>
           </>
         ) : visibleCategories.length === 0 ? (
-          <div className="text-center text-[#6a5040] text-sm py-8">
+          <div className="hl-empty text-sm py-8">
             No tile types in this section yet.
           </div>
         ) : (
@@ -398,7 +398,7 @@ export default function TileCollectionPanel({ state, dispatch }) {
               ))}
             </div>
             {rows.length === 0 && (
-              <div className="text-center text-[#6a5040] text-sm py-8">
+              <div className="hl-empty text-sm py-8">
                 No tiles in this category.
               </div>
             )}
@@ -408,11 +408,11 @@ export default function TileCollectionPanel({ state, dispatch }) {
 
       {/* Free moves chip */}
       {(state.tileCollection?.freeMoves ?? 0) > 0 && subCategory !== "hazards" && (
-        <div className="flex-shrink-0 mx-3 mb-3 px-3 py-2 rounded-xl bg-[#4f6b3a]/50 border border-[#a8d44a] text-center">
-          <span className="text-[#a8d44a] font-bold">
+        <div className="flex-shrink-0 mx-3 mb-3 px-3 py-2 rounded-xl bg-[#dfeecd] border-2 border-[#6a9a3a] text-center">
+          <span className="text-[#2f5a14] font-bold">
             +{state.tileCollection.freeMoves} free move{state.tileCollection.freeMoves !== 1 ? "s" : ""}
           </span>
-          <span className="text-[#8ab870] text-xs ml-2">from chained tiles</span>
+          <span className="text-[#4a6a20] text-xs ml-2">from chained tiles</span>
         </div>
       )}
     </div>

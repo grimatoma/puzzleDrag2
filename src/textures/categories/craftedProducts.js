@@ -612,14 +612,123 @@ function drawMineDirt(ctx) {
   ctx.fill();
 }
 
+// Cured meat — a salt-rubbed ham, twine-wrapped for hanging. Distinct from
+// `meat` (a hot roasted drumstick): drier, darker, dusted with cure salt.
+function drawCuredMeat(ctx) {
+  drawShadow(ctx, 20, 4);
+  ctx.save();
+  ctx.rotate(0.18);
+  // Ham body — teardrop
+  const ham = ctx.createRadialGradient(-2, 2, 3, 0, 6, 24);
+  ham.addColorStop(0, "#c46a3a");
+  ham.addColorStop(0.5, "#9a4a22");
+  ham.addColorStop(1, "#4a2110");
+  ctx.fillStyle = ham;
+  ctx.beginPath();
+  ctx.moveTo(0, -14);
+  ctx.bezierCurveTo(16, -12, 20, 12, 2, 20);
+  ctx.bezierCurveTo(-18, 16, -16, -8, 0, -14);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = "#2e1408";
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  // Bone nub at the narrow top
+  ctx.fillStyle = "#f1e7cf";
+  ctx.beginPath();
+  ctx.ellipse(0, -15, 3.4, 4, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = "#8a6a3a";
+  ctx.lineWidth = 1.4;
+  ctx.stroke();
+  // Twine wraps
+  ctx.strokeStyle = "#d8c08a";
+  ctx.lineWidth = 1.8;
+  ctx.lineCap = "round";
+  [-2, 6].forEach((dy) => {
+    ctx.beginPath();
+    ctx.ellipse(1, dy, 13, 4.5, 0.15, 0, Math.PI * 2);
+    ctx.stroke();
+  });
+  // Cure-salt flecks
+  ctx.fillStyle = "rgba(255,252,240,0.9)";
+  [[-6, 0], [4, -4], [8, 8], [-3, 10], [2, 4], [10, 2]].forEach(([x, y]) => {
+    ctx.beginPath();
+    ctx.arc(x, y, 1, 0, Math.PI * 2);
+    ctx.fill();
+  });
+  // Sheen
+  ctx.fillStyle = "rgba(255,210,170,0.45)";
+  ctx.beginPath();
+  ctx.ellipse(-4, -2, 5, 2.4, -0.4, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+}
+
+// Festival loaf — a plain loaf studded with fruit and finished with a
+// sugar-glaze drizzle.
+function drawFestivalLoaf(ctx) {
+  drawBread(ctx);
+  const berries = [[-9, -3, "#b81850"], [-1, -7, "#d8a020"], [7, -4, "#7a2e8a"], [11, 1, "#b81850"], [-5, 3, "#7a2e8a"]];
+  berries.forEach(([x, y, c]) => {
+    ctx.fillStyle = c;
+    ctx.beginPath();
+    ctx.arc(x, y, 2.2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "rgba(255,255,255,0.6)";
+    ctx.beginPath();
+    ctx.arc(x - 0.7, y - 0.8, 0.7, 0, Math.PI * 2);
+    ctx.fill();
+  });
+  // Sugar-glaze drizzle
+  ctx.strokeStyle = "rgba(255,250,235,0.85)";
+  ctx.lineWidth = 1.2;
+  ctx.lineCap = "round";
+  ctx.beginPath();
+  ctx.moveTo(-13, 0);
+  ctx.bezierCurveTo(-6, 5, 6, -3, 13, 2);
+  ctx.stroke();
+}
+
+// Wedding pie — a lattice pie ringed with piped-cream rosettes and a
+// sugar-flower topper.
+function drawWeddingPie(ctx) {
+  drawPie(ctx);
+  // Piped-cream rosettes around the rim
+  ctx.fillStyle = "#fff6e4";
+  [[-13, 5], [-4, 8], [5, 8], [13, 5], [0, 9]].forEach(([x, y]) => {
+    ctx.beginPath();
+    ctx.arc(x, y, 2.4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = "rgba(180,140,90,0.5)";
+    ctx.lineWidth = 0.8;
+    ctx.stroke();
+  });
+  // Sugar-flower topper
+  ctx.fillStyle = "#fff6e4";
+  for (let i = 0; i < 5; i++) {
+    const a = (i / 5) * Math.PI * 2 - Math.PI / 2;
+    ctx.beginPath();
+    ctx.arc(Math.cos(a) * 3.2, -15 + Math.sin(a) * 3.2, 2, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.fillStyle = "#e8b020";
+  ctx.beginPath();
+  ctx.arc(0, -15, 2, 0, Math.PI * 2);
+  ctx.fill();
+}
+
 export const ICONS = {
-  soup:      { label:"Soup",      color:"#c46a2f", draw:drawSoup },
-  pie:       { label:"Pie",       color:"#b05428", draw:drawPie },
-  honey:     { label:"Honey",     color:"#e8a020", draw:drawHoney },
-  meat:      { label:"Meat",      color:"#c44848", draw:drawMeat },
-  milk:      { label:"Milk",      color:"#faf6ec", draw:drawMilk },
-  horseshoe: { label:"Horseshoe", color:"#8a8a90", draw:drawHorseshoe },
-  eggs:      { label:"Eggs",      color:"#f8efd0", draw:drawEggs },
-  bread:     { label:"Bread",     color:"#c89048", draw:drawBread },
-  mine_dirt: { label:"Dirt",      color:"#7a6850", draw:drawMineDirt },
+  soup:          { label:"Soup",          color:"#c46a2f", draw:drawSoup },
+  pie:           { label:"Pie",           color:"#b05428", draw:drawPie },
+  honey:         { label:"Honey",         color:"#e8a020", draw:drawHoney },
+  meat:          { label:"Meat",          color:"#c44848", draw:drawMeat },
+  milk:          { label:"Milk",          color:"#faf6ec", draw:drawMilk },
+  horseshoe:     { label:"Horseshoe",     color:"#8a8a90", draw:drawHorseshoe },
+  eggs:          { label:"Eggs",          color:"#f8efd0", draw:drawEggs },
+  bread:         { label:"Bread",         color:"#c89048", draw:drawBread },
+  mine_dirt:     { label:"Dirt",          color:"#7a6850", draw:drawMineDirt },
+  cured_meat:    { label:"Cured Meat",    color:"#9a4a22", draw:drawCuredMeat },
+  festival_loaf: { label:"Festival Loaf", color:"#d49060", draw:drawFestivalLoaf },
+  wedding_pie:   { label:"Wedding Pie",   color:"#b05428", draw:drawWeddingPie },
 };
