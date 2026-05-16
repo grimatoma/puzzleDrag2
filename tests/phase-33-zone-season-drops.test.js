@@ -49,9 +49,15 @@ describe("Phase 33 — seasonIndexInSession (turn split)", () => {
 });
 
 describe("Phase 33 — Home seasonDrops illustrate the per-zone mechanic", () => {
-  it("Spring trees = 20%, Winter trees = 70%", () => {
+  it("Spring trees = 20%, Winter trees = 73%", () => {
     expect(ZONES.home.seasonDrops.Spring.trees).toBe(0.20);
-    expect(ZONES.home.seasonDrops.Winter.trees).toBe(0.70);
+    expect(ZONES.home.seasonDrops.Winter.trees).toBe(0.73);
+  });
+
+  it("fruit is a rare drop on the general farm — under 5% every season", () => {
+    for (const season of ["Spring", "Summer", "Autumn", "Winter"]) {
+      expect(ZONES.home.seasonDrops[season].fruits).toBeLessThan(0.05);
+    }
   });
 
   it("each season's percentages sum to 1", () => {
@@ -98,7 +104,7 @@ describe("Phase 33 — pickByZoneSeasonDrops", () => {
       biomeResources: farmResources,
       tileCollectionActive: null,
       categoryOf: CATEGORY_OF,
-      rng: () => 0.5, // 0.5 * 1.0 = 0.5 — lands inside trees (0.05+0.05+0.70 cumulative = 0.80)
+      rng: () => 0.5, // 0.5 * 1.0 = 0.5 — lands inside trees (0.05+0.05+0.73 cumulative = 0.83)
     });
     expect(r).toBeTruthy();
     // Trees zone-category maps to the tile-collection categories trees AND wood.
@@ -106,7 +112,7 @@ describe("Phase 33 — pickByZoneSeasonDrops", () => {
   });
 
   it("rolls grass when rng falls inside the grass bucket", () => {
-    // Zone 1 Spring: grass = 0.20 (first bucket). rng = 0.05 should land in it.
+    // Zone 1 Spring: grass = 0.38 (first bucket). rng = 0.05 should land in it.
     const r = pickByZoneSeasonDrops({
       zoneId: "home",
       seasonName: "Spring",
@@ -119,16 +125,16 @@ describe("Phase 33 — pickByZoneSeasonDrops", () => {
     expect(CATEGORY_OF[r.key]).toBe("grass");
   });
 
-  it("rolls fruits when rng lands in the largest Spring bucket", () => {
-    // Spring: grass(.20) + grain(.15) + trees(.20) + birds(.05) + vegetables(.10) + fruits(.30)
-    // Cumulative through fruits ends at 1.0; rng=0.95 lands inside fruits.
+  it("rolls fruits when rng lands in the rare fruit bucket", () => {
+    // Spring: grass(.38) + grain(.20) + trees(.20) + birds(.05) + vegetables(.13) + fruits(.04)
+    // Cumulative through fruits ends at 1.0; rng=0.98 lands inside the 4% fruit bucket.
     const r = pickByZoneSeasonDrops({
       zoneId: "home",
       seasonName: "Spring",
       biomeResources: farmResources,
       tileCollectionActive: null,
       categoryOf: CATEGORY_OF,
-      rng: () => 0.95,
+      rng: () => 0.98,
     });
     expect(r).toBeTruthy();
     expect(CATEGORY_OF[r.key]).toBe("fruits");

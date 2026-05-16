@@ -15,11 +15,13 @@ const empty4Seasons = () => ({
 });
 
 // Hearthwood Vale / Greenmeadow season drop rates (Spring-heavy grass, Winter-heavy trees).
+// Fruit is intentionally a rare drop on the general farm (always < 5%) — the
+// Wild Orchard zone is the place to farm fruit (see FARM_SEASON_DROPS_ORCHARD).
 const FARM_SEASON_DROPS_TEMPERATE = {
-  Spring: { grass: 0.20, grain: 0.15, trees: 0.20, birds: 0.05, vegetables: 0.10, fruits: 0.30 },
-  Summer: { grass: 0.10, grain: 0.30, trees: 0.10, birds: 0.15, vegetables: 0.20, fruits: 0.15 },
-  Autumn: { grass: 0.10, grain: 0.15, trees: 0.40, birds: 0.15, vegetables: 0.15, fruits: 0.05 },
-  Winter: { grass: 0.05, grain: 0.05, trees: 0.70, birds: 0.10, vegetables: 0.05, fruits: 0.05 },
+  Spring: { grass: 0.38, grain: 0.20, trees: 0.20, birds: 0.05, vegetables: 0.13, fruits: 0.04 },
+  Summer: { grass: 0.12, grain: 0.38, trees: 0.10, birds: 0.15, vegetables: 0.21, fruits: 0.04 },
+  Autumn: { grass: 0.10, grain: 0.15, trees: 0.42, birds: 0.15, vegetables: 0.15, fruits: 0.03 },
+  Winter: { grass: 0.05, grain: 0.05, trees: 0.73, birds: 0.10, vegetables: 0.05, fruits: 0.02 },
 };
 
 // Wild Orchard — fruit and tree heavy all year.
