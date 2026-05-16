@@ -12,6 +12,7 @@ import { useRouter } from "./src/router.js";
 import { setPhaserScene } from "./src/phaserBridge.js";
 import { FIRE_HAZARD_ENABLED } from "./src/featureFlags.js";
 import { useNotifier } from "./src/ui/primitives/Toast.jsx";
+import Icon from "./src/ui/primitives/Icon.jsx";
 import { useA11yBridge } from "./src/a11y.js";
 
 function BoardSkeleton() {
@@ -269,6 +270,20 @@ export default function App() {
             <div className="flex-1 min-h-0 grid grid-cols-[1fr_300px] gap-3 p-3 max-[1024px]:grid-cols-1 max-[1024px]:gap-0 max-[1024px]:p-0">
               {/* Phaser host — takes the rest. Phaser draws its own background and frame. */}
               <div className="relative min-h-0 min-w-0 overflow-hidden">
+                {/* Live chain-yield readout — resources the in-progress chain will collect. */}
+                {chainInfo && chainInfo.count > 0 && chainInfo.resourceKey && (
+                  <div className="absolute top-2 left-2 z-30 pointer-events-none flex items-center gap-1.5 bg-[#2b2218]/92 border border-[#ffd248] rounded-xl px-2.5 py-1.5 shadow-lg">
+                    <Icon iconKey={chainInfo.resourceKey} size={26} title={chainInfo.resourceLabel || chainInfo.resourceKey} />
+                    <span className="text-[#ffd248] font-bold text-[15px] leading-none tabular-nums">
+                      +{chainInfo.count}
+                    </span>
+                    {chainInfo.resourceLabel && (
+                      <span className="text-[#f8e7c6] font-bold text-[11px] leading-none">
+                        {chainInfo.resourceLabel}
+                      </span>
+                    )}
+                  </div>
+                )}
                 <PhaserMount
                   dispatch={dispatch}
                   biomeKey={state.biomeKey}
