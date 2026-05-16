@@ -68,6 +68,7 @@ export class GameScene extends Phaser.Scene {
     // while dragging so fast finger swipes still extend the chain.
     this.input.on("pointermove", (pointer) => {
       if (!this.dragging || !this.path.length) return;
+      this._positionGrassHover(pointer.worldX, pointer.worldY);
       const ts = this.tileSize;
       if (!ts) return;
       const col = Math.floor((pointer.worldX - this.boardX) / ts);
@@ -1142,6 +1143,7 @@ export class GameScene extends Phaser.Scene {
     this.dimUnselectableTiles(tile.res.key);
     this.showChainBadge();
     this.showChainStatus();
+    this.showGrassHover();
     this.updateChainBadge();
     // Subtle haptic tick on drag-start, gated by user setting.
     if (this.registry.get("hapticsOn") && navigator.vibrate) {
@@ -1548,12 +1550,14 @@ export class GameScene extends Phaser.Scene {
       this.chainBadgeText.setText(k > 0 ? `chain × ${n}   +${k}★` : `chain × ${n}`);
     }
     this.updateChainStatus();
+    this.updateGrassHover();
     this._emitChainUpdate();
   }
 
   hideChainBadge() {
     if (this.chainBadge) { this.chainBadge.destroy(); this.chainBadge = null; this.chainBadgeText = null; }
     this.hideChainStatus();
+    this.hideGrassHover();
     this.events.emit(SCENE_EVENTS.CHAIN_UPDATE, null);
   }
 
@@ -1712,6 +1716,61 @@ export class GameScene extends Phaser.Scene {
     this.chainStatusBadgeBg = null;
   }
 
+  // ─── Grass hover (cursor-following spawn preview) ─────────────────────────
+  //
+  // A small badge that trails the player's finger/cursor while dragging,
+  // showing how many next-tier ("grass") tiles the chain will spawn on
+  // collect — i.e. `upgradeCountForChain`. Display-only: it visualizes the
+  // existing tier-upgrade spawn, it does not change any mechanic.
+
+  showGrassHover() {
+    if (this.grassHover) return;
+    const dpr = this.dpr;
+    const w = 62 * dpr;
+    const h = 34 * dpr;
+    this.grassHover = this.add.container(0, 0).setDepth(60);
+    const bg = rounded(this, -w / 2, -h / 2, w, h, 12 * dpr, 0x2b2218, 0.92, 0xa8c769, 2 * dpr);
+    this.grassHoverIcon = this.add.image(-w / 2 + 17 * dpr, 0, "spark").setScale(0.5);
+    this.grassHoverText = this.add.text(2 * dpr, 0, "", {
+      fontFamily: "Arial", fontSize: `${15 * dpr}px`, color: "#cfe88f", fontStyle: "bold",
+    }).setOrigin(0, 0.5);
+    this.grassHover.add([bg, this.grassHoverIcon, this.grassHoverText]);
+    this.grassHover.setVisible(false);
+    if (this.path.length) this._positionGrassHover(this.path[0].x, this.path[0].y);
+  }
+
+  updateGrassHover() {
+    if (!this.grassHover) return;
+    const n = this.path.length;
+    const res = n ? this.path[0].res : null;
+    const next = res ? this.nextResource(res) : null;
+    const effThresh = this.registry.get("effectiveThresholds") ?? UPGRADE_THRESHOLDS;
+    const k = next ? upgradeCountForChain(n, res.key, effThresh) : 0;
+    if (!next || k <= 0) { this.grassHover.setVisible(false); return; }
+    this.grassHover.setVisible(true);
+    const tex = `tile_${next.key}`;
+    if (this.textures.exists(tex) && this.grassHoverIcon.texture.key !== tex) {
+      this.grassHoverIcon.setTexture(tex);
+    }
+    this.grassHoverIcon.setScale(0.4 * (this.tileSpriteScale ?? 1));
+    this.grassHoverText.setText(`×${k}`);
+  }
+
+  _positionGrassHover(x, y) {
+    if (!this.grassHover) return;
+    const dpr = this.dpr;
+    const minY = 20 * dpr;
+    this.grassHover.setPosition(x, Math.max(minY, y - 46 * dpr));
+  }
+
+  hideGrassHover() {
+    if (!this.grassHover) return;
+    this.grassHover.destroy();
+    this.grassHover = null;
+    this.grassHoverIcon = null;
+    this.grassHoverText = null;
+  }
+
   _emitChainUpdate() {
     const n = this.path.length;
     const res = n ? this.path[0].res : null;
@@ -1734,7 +1793,14 @@ export class GameScene extends Phaser.Scene {
         };
       }
     }
-    this.events.emit(SCENE_EVENTS.CHAIN_UPDATE, { count: n, upgrades: k, valid, nextTileProgress });
+    this.events.emit(SCENE_EVENTS.CHAIN_UPDATE, {
+      count: n,
+      upgrades: k,
+      valid,
+      nextTileProgress,
+      resourceKey: res?.key ?? null,
+      resourceLabel: res?.label ?? null,
+    });
   }
 
   // ─── Juice (chain-length feedback) ────────────────────────────────────────
