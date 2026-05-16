@@ -1744,9 +1744,12 @@ export class GameScene extends Phaser.Scene {
     const n = this.path.length;
     const res = n ? this.path[0].res : null;
     const next = res ? this.nextResource(res) : null;
+    // No `next` means this resource can't upgrade — nothing will ever spawn.
+    if (!next) { this.grassHover.setVisible(false); return; }
     const effThresh = this.registry.get("effectiveThresholds") ?? UPGRADE_THRESHOLDS;
-    const k = next ? upgradeCountForChain(n, res.key, effThresh) : 0;
-    if (!next || k <= 0) { this.grassHover.setVisible(false); return; }
+    const k = upgradeCountForChain(n, res.key, effThresh);
+    // Stays visible (and trails the cursor) for the whole drag so the spawn
+    // count can be watched ticking up from 0.
     this.grassHover.setVisible(true);
     const tex = `tile_${next.key}`;
     if (this.textures.exists(tex) && this.grassHoverIcon.texture.key !== tex) {
