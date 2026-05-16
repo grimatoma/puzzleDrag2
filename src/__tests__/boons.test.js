@@ -40,20 +40,20 @@ function withDriveoutSomewhere(over = {}) {
 }
 
 describe("BOONS catalog shape", () => {
-  it("has six catalogs (3 types × 2 paths), each with 3 boons", () => {
+  it("has six catalogs (3 types × 2 paths), each with 2 boons", () => {
     expect(Object.keys(BOONS).sort()).toEqual([
       "farm_coexist", "farm_driveout",
       "harbor_coexist", "harbor_driveout",
       "mine_coexist", "mine_driveout",
     ].sort());
     for (const list of Object.values(BOONS)) {
-      expect(list).toHaveLength(3);
+      expect(list).toHaveLength(2);
       for (const b of list) {
         expect(typeof b.id).toBe("string");
         expect(typeof b.name).toBe("string");
         expect(typeof b.desc).toBe("string");
         expect(b.cost.embers || b.cost.coreIngots).toBeGreaterThan(0);
-        expect(b.effect.type).toMatch(/^(coin_gain_mult|bond_gain_mult|chain_yield_mult)$/);
+        expect(b.effect.type).toMatch(/^(coin_gain_mult|bond_gain_mult)$/);
         expect(b.effect.params.mult).toBeGreaterThan(1); // upward-only effects for now
       }
     }

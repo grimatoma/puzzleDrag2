@@ -12,7 +12,6 @@ import { currentCap } from "./utils.js";
 import { computeWorkerEffects } from "./features/workers/aggregate.js";
 import { TILE_TYPES, CATEGORIES, TILE_TYPES_MAP, CATEGORY_OF } from "./features/tileCollection/data.js";
 import { discoverTileTypesFromChain } from "./features/tileCollection/effects.js";
-import { yieldMultiplierFor } from "./features/tileCollection/yieldMultipliers.js";
 import { longChainBonusFor } from "./features/tileCollection/longChainBonus.js";
 import { rollQuests } from "./features/quests/data.js";
 import { ACHIEVEMENTS as ACHIEVEMENT_LIST } from "./features/achievements/data.js";
@@ -255,24 +254,10 @@ function coreReducer(state, action) {
       const chainCf = { ...(state.seasonStats?.capFloaters ?? {}) };
       const chainFloaters = [...(state.floaters ?? [])];
 
-      // Phase 6b — chain_yield_mult boons scale the resource amount the chain
-      // adds to inventory. Floored to keep counts integer, never below `gained`.
-      const yieldMultBoon = boonEffectMult(state, "chain_yield_mult");
-      const effectiveGained = yieldMultBoon > 1
-        ? Math.max(gained, Math.floor(gained * yieldMultBoon))
-        : gained;
-      addCappedResourceMut(inventory, chainCf, chainFloaters, key, effectiveGained, chainCap);
+      addCappedResourceMut(inventory, chainCf, chainFloaters, key, gained, chainCap);
 
-      let effectiveUpgrades = upgrades;
-      // Catalog §7 yield multiplier — Jackfruit → 2× pie, Triceratops → 2× milk.
-      // Applies only when the chain key has an entry AND the upgrade target
-      // (res.next) matches the entry's productKey (sanity-guard).
-      const yieldMult = yieldMultiplierFor(key);
-      if (yieldMult && res?.next === yieldMult.productKey && effectiveUpgrades > 0) {
-        effectiveUpgrades = effectiveUpgrades * yieldMult.multiplier;
-      }
-      if (res?.next && effectiveUpgrades > 0) {
-        addCappedResourceMut(inventory, chainCf, chainFloaters, res.next, effectiveUpgrades, chainCap);
+      if (res?.next && upgrades > 0) {
+        addCappedResourceMut(inventory, chainCf, chainFloaters, res.next, upgrades, chainCap);
       }
 
       // Power-hook coin bonuses (set via Balance Manager → Tile Powers).
@@ -288,7 +273,7 @@ function coreReducer(state, action) {
         addCappedResourceMut(inventory, chainCf, chainFloaters, longBonus.bonusKey, longBonus.amount, chainCap);
       }
 
-      const baseCoinsGain = Math.max(1, Math.floor((effectiveGained * value) / 2)) + coinHookBonus;
+      const baseCoinsGain = Math.max(1, Math.floor((gained * value) / 2)) + coinHookBonus;
       // Phase 6b — coin_gain_mult boons scale chain coin reward.
       const coinMultBoon = boonEffectMult(state, "coin_gain_mult");
       const coinsGain = coinMultBoon > 1
@@ -299,8 +284,8 @@ function coreReducer(state, action) {
       const turn = boardTurnPatch(state);
       const seasonStats = {
         ...state.seasonStats,
-        harvests: state.seasonStats.harvests + effectiveGained,
-        upgrades: state.seasonStats.upgrades + effectiveUpgrades,
+        harvests: state.seasonStats.harvests + gained,
+        upgrades: state.seasonStats.upgrades + upgrades,
         coins: state.seasonStats.coins + coinsGain,
       };
 
@@ -314,7 +299,7 @@ function coreReducer(state, action) {
         } else {
           bubble = { id: Date.now(), npc: "wren", text: `Level ${afterAlmanacXp.almanac.level}! New things await.`, ms: 2400, priority: 2 };
         }
-      } else if (effectiveUpgrades > 0 && !hintsShown.upgradeHint) {
+      } else if (upgrades > 0 && !hintsShown.upgradeHint) {
         bubble = { id: Date.now(), npc: "mira", text: "[icon:ui_star] Upgrade! Chain 6+ tiles to snowball rare resources.", ms: 2800, priority: 2 };
         newHintsShown = { ...hintsShown, upgradeHint: true };
       }
@@ -361,7 +346,7 @@ function coreReducer(state, action) {
         modal: turn.ended ? "season" : state.modal,
       };
       afterChain = applyTileCollectionChainEffects(afterChain, key, effectiveChain);
-      afterChain = applyKeeperTrialChainProgress(afterChain, key, effectiveGained, turn);
+      afterChain = applyKeeperTrialChainProgress(afterChain, key, gained, turn);
       if (state.activeTrial && !afterChain.activeTrial) {
         return maybeFireResourceBeats(afterChain, state);
       }
