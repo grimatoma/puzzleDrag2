@@ -1748,11 +1748,9 @@ export class GameScene extends Phaser.Scene {
     if (!next) { this.grassHover.setVisible(false); return; }
     const effThresh = this.registry.get("effectiveThresholds") ?? UPGRADE_THRESHOLDS;
     const k = upgradeCountForChain(n, res.key, effThresh);
-    // Stays visible (and trails the cursor) for the whole drag; dims while the
-    // chain is still too short to spawn anything so the count can be watched
-    // ticking up.
+    // Stays visible (and trails the cursor) for the whole drag so the spawn
+    // count can be watched ticking up from 0.
     this.grassHover.setVisible(true);
-    this.grassHover.setAlpha(k > 0 ? 1 : 0.55);
     const tex = `tile_${next.key}`;
     if (this.textures.exists(tex) && this.grassHoverIcon.texture.key !== tex) {
       this.grassHoverIcon.setTexture(tex);
