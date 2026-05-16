@@ -62,10 +62,6 @@ export function upgradeCountForChain(chainLength, resourceKey, thresholdMap = UP
   return Math.floor(chainLength / t);
 }
 
-export function resourceGainForChain(chainLength) {
-  return chainLength * (chainLength >= 6 ? 2 : 1);
-}
-
 /**
  * Sample a resource key from a weighted pool (the pool uses repetition for
  * weighting — a key appearing 3× is 3× as likely).

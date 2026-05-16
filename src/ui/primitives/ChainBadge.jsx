@@ -13,7 +13,7 @@ function ChipRow({ children, layout }) {
 
 export default function ChainBadge({ layout = "side", chainInfo, className = "" }) {
   if (!chainInfo) return null;
-  const { count = 0, doubled = false, upgrades = 0, nextTileProgress } = chainInfo;
+  const { count = 0, upgrades = 0, nextTileProgress } = chainInfo;
 
   const wrapCls = [LAYOUT_WRAP[layout] || LAYOUT_WRAP.side, "tabular-nums", className].filter(Boolean).join(" ");
 
@@ -24,11 +24,6 @@ export default function ChainBadge({ layout = "side", chainInfo, className = "" 
           <span className="font-bold">chain</span>
           <span className="ml-1 font-bold">{count}</span>
         </Pill>
-        {doubled && (
-          <Pill tone="ember" variant="solid" size="sm">
-            <span className="font-bold">x2</span>
-          </Pill>
-        )}
         {upgrades > 0 && (
           <Pill tone="moss" variant="solid" size="sm">
             <span className="font-bold">+{upgrades}*</span>

@@ -1,6 +1,6 @@
 import Phaser from "phaser";
 import { TILE, COLS, ROWS, UPGRADE_THRESHOLDS, SEASONS, BIOMES, CAPPED_RESOURCES, SCENE_EVENTS } from "./constants.js";
-import { upgradeCountForChain, resourceGainForChain, rollResource } from "./utils.js";
+import { upgradeCountForChain, rollResource } from "./utils.js";
 import { computeWorkerEffects } from "./features/workers/aggregate.js";
 import { CATEGORY_OF, TILE_TYPES_MAP } from "./features/tileCollection/data.js";
 import {
@@ -328,13 +328,6 @@ export class GameScene extends Phaser.Scene {
   _effectiveMinChain() {
     const bossMin = this.registry.get("boss")?.minChain ?? 0;
     return Math.max(3, bossMin);
-  }
-
-  /** Phase 7 — autumn x2 upgrade multiplier was removed with the calendar
-   *  season. Kept as a no-op so legacy callers don't break in this PR; future
-   *  cleanup can inline the constant 1. */
-  _autumnMult() {
-    return 1;
   }
 
   // ─── Layout ───────────────────────────────────────────────────────────────
@@ -1457,11 +1450,8 @@ export class GameScene extends Phaser.Scene {
     const res = this.path[0].res;
     const next = this.nextResource(res);
     const effThresholds = this.registry.get("effectiveThresholds") ?? UPGRADE_THRESHOLDS;
-    // V.2 — rawUpgrades goes to React (state.js multiplies by autumnMult itself);
-    //        displayedUpgrades is shown in float text, badge, and star count.
-    const rawUpgrades = next ? upgradeCountForChain(this.path.length, res.key, effThresholds) : 0;
-    const displayedUpgrades = rawUpgrades * this._autumnMult();
-    const gained = resourceGainForChain(this.path.length);
+    const upgrades = next ? upgradeCountForChain(this.path.length, res.key, effThresholds) : 0;
+    const gained = this.path.length;
     // Bonus yields: add per-resource bonus if this chain contained that resource
     const bonusYields = this.registry.get("bonusYields") ?? {};
     const bonusGains = {};
@@ -1477,7 +1467,7 @@ export class GameScene extends Phaser.Scene {
     const actualGain = isCapped ? Math.max(0, Math.min(cap - currentAmt, wouldGain)) : wouldGain;
     const overCap = wouldGain - actualGain > 0;
 
-    const floatSuffix = displayedUpgrades > 0 ? `  ★×${displayedUpgrades}` : "";
+    const floatSuffix = upgrades > 0 ? `  ★×${upgrades}` : "";
     const bonusText = Object.entries(bonusGains).filter(([k]) => k !== res.key).map(([k, n]) => `  +${n} ${k}★`).join("");
     this.floatText(`+${actualGain} ${res.label}${overCap ? " ⓘ" : ""}${floatSuffix}${bonusText}`, this.path[this.path.length - 1].x, this.path[this.path.length - 1].y);
 
@@ -1487,10 +1477,9 @@ export class GameScene extends Phaser.Scene {
     this.radialFlash(this.path[this.path.length - 1].x, this.path[this.path.length - 1].y, this.path.length);
 
     // Queue upgrade tiles to spawn at the endpoint after board collapse.
-    // V.2 — queue displayedUpgrades tiles so the player sees the full autumn-boosted count drop.
-    if (next && displayedUpgrades > 0) {
+    if (next && upgrades > 0) {
       const endpointTile = this.path[this.path.length - 1];
-      for (let u = 0; u < displayedUpgrades; u++) {
+      for (let u = 0; u < upgrades; u++) {
         this.pendingUpgrades.push({ res: next, col: endpointTile.col, row: endpointTile.row });
       }
       this.upgradeBurst(endpointTile.x, endpointTile.y);
@@ -1511,11 +1500,11 @@ export class GameScene extends Phaser.Scene {
       });
     });
 
-    // Emit to React — use raw upgrade count (state.js applies autumnMult itself); gained is full amount (state.js caps it).
+    // Emit to React — gained is the full amount (state.js caps it).
     const totalGained = gained + (bonusGains[res.key] ?? 0);
     // Include tile positions so the reducer can extinguish fire/hazard cells
     const chainTiles = this.path.map(t => ({ key: t.res.key, row: t.row, col: t.col }));
-    this.events.emit(SCENE_EVENTS.CHAIN_COLLECTED, { key: res.key, gained: totalGained, upgrades: rawUpgrades, chainLength: this.path.length, value: res.value, chain: chainTiles });
+    this.events.emit(SCENE_EVENTS.CHAIN_COLLECTED, { key: res.key, gained: totalGained, upgrades, chainLength: this.path.length, value: res.value, chain: chainTiles });
 
     this.pathLines.forEach((l) => l.destroy());
     this.pathStars.forEach((s) => s.destroy());
@@ -1554,11 +1543,9 @@ export class GameScene extends Phaser.Scene {
     const res = n ? this.path[0].res : null;
     const next = res ? this.nextResource(res) : null;
     const effThresh = this.registry.get("effectiveThresholds") ?? UPGRADE_THRESHOLDS;
-    // V.2 — Display autumn-multiplied upgrade count in the badge
-    const k = next ? upgradeCountForChain(n, res.key, effThresh) * this._autumnMult() : 0;
+    const k = next ? upgradeCountForChain(n, res.key, effThresh) : 0;
     if (this.chainBadge) {
-      const bonus = n >= 6 ? " ×2" : "";
-      this.chainBadgeText.setText(k > 0 ? `chain × ${n}${bonus}   +${k}★` : `chain × ${n}${bonus}`);
+      this.chainBadgeText.setText(k > 0 ? `chain × ${n}   +${k}★` : `chain × ${n}`);
     }
     this.updateChainStatus();
     this._emitChainUpdate();
@@ -1730,8 +1717,8 @@ export class GameScene extends Phaser.Scene {
     const res = n ? this.path[0].res : null;
     const next = res ? this.nextResource(res) : null;
     const effThresh = this.registry.get("effectiveThresholds") ?? UPGRADE_THRESHOLDS;
-    // V.2 — Display autumn-multiplied upgrade count; V.1 — include valid flag for React side panel
-    const k = next ? upgradeCountForChain(n, res.key, effThresh) * this._autumnMult() : 0;
+    // V.1 — include valid flag for React side panel
+    const k = next ? upgradeCountForChain(n, res.key, effThresh) : 0;
     const valid = n === 0 || n >= this._effectiveMinChain();
     // Phase 3 — second progress meter: tiles-to-next-spawn, e.g. "9/4 apples"
     // while chaining carrots in a zone whose upgradeMap redirects to fruits.
@@ -1747,7 +1734,7 @@ export class GameScene extends Phaser.Scene {
         };
       }
     }
-    this.events.emit(SCENE_EVENTS.CHAIN_UPDATE, { count: n, doubled: n >= 6, upgrades: k, valid, nextTileProgress });
+    this.events.emit(SCENE_EVENTS.CHAIN_UPDATE, { count: n, upgrades: k, valid, nextTileProgress });
   }
 
   // ─── Juice (chain-length feedback) ────────────────────────────────────────

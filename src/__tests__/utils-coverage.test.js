@@ -8,7 +8,6 @@ import {
   isAdjacent,
   canExtendChain,
   upgradeCountForChain,
-  resourceGainForChain,
   rollResource,
   hex,
   makeBubble,
@@ -53,13 +52,6 @@ describe("utils — chain math", () => {
     expect(upgradeCountForChain(2, "grass_hay")).toBe(0);
     // Terminal / unknown key
     expect(upgradeCountForChain(99, "no_such_key")).toBe(0);
-  });
-
-  it("resourceGainForChain doubles for chain length >= 6", () => {
-    expect(resourceGainForChain(3)).toBe(3);
-    expect(resourceGainForChain(5)).toBe(5);
-    expect(resourceGainForChain(6)).toBe(12);
-    expect(resourceGainForChain(10)).toBe(20);
   });
 
   it("rollResource samples the pool by index using the supplied RNG", () => {

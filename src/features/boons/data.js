@@ -14,42 +14,35 @@
 export const BOON_EFFECTS = Object.freeze([
   "coin_gain_mult",     // chain-collected coin reward × params.mult
   "bond_gain_mult",     // bond gains from gifts/orders × params.mult
-  "chain_yield_mult",   // resource amount per chain × params.mult
 ]);
 
 /**
  * One catalog of boons. Keyed by `${type}_${path}` (e.g. `farm_coexist`).
  * Each entry is `{ id, name, desc, cost: { embers?, coreIngots? }, effect: { type, params } }`.
- * Designed so each path has three options of escalating cost and impact.
+ * Designed so each path has two options of escalating cost and impact.
  */
 export const BOONS = Object.freeze({
   farm_coexist: [
     { id: "deer_blessing",    name: "Deer-Blessing",        desc: "The herd remembers your name. Villager bonds rise 20% faster.", cost: { embers: 3 }, effect: { type: "bond_gain_mult", params: { mult: 1.2 } } },
-    { id: "field_abundance",  name: "Field Abundance",      desc: "Wild gifts spill over each harvest. Chain yields +10%.",       cost: { embers: 5 }, effect: { type: "chain_yield_mult", params: { mult: 1.1 } } },
     { id: "hearth_thrift",    name: "Hearth-Thrift",        desc: "Bountiful seasons. Coin gains +15%.",                          cost: { embers: 8 }, effect: { type: "coin_gain_mult", params: { mult: 1.15 } } },
   ],
   farm_driveout: [
-    { id: "tilled_order",     name: "Tilled Order",         desc: "Disciplined fields. Chain yields +15%.",                       cost: { coreIngots: 3 }, effect: { type: "chain_yield_mult", params: { mult: 1.15 } } },
     { id: "iron_market",      name: "Iron Market",          desc: "Predictable trade. Coin gains +20%.",                          cost: { coreIngots: 5 }, effect: { type: "coin_gain_mult", params: { mult: 1.2 } } },
     { id: "drilled_corps",    name: "Drilled Corps",        desc: "Loyal villagers. Bond gains +10%.",                            cost: { coreIngots: 8 }, effect: { type: "bond_gain_mult", params: { mult: 1.1 } } },
   ],
   mine_coexist: [
-    { id: "stone_pact",       name: "Stone-Pact",           desc: "The Knocker shows you the seams. Chain yields +15%.",          cost: { embers: 3 }, effect: { type: "chain_yield_mult", params: { mult: 1.15 } } },
     { id: "deep_friendship",  name: "Deep Friendship",      desc: "Underground company. Bond gains +15%.",                        cost: { embers: 5 }, effect: { type: "bond_gain_mult", params: { mult: 1.15 } } },
     { id: "vein_richness",    name: "Vein-Richness",        desc: "Generous earth. Coin gains +20%.",                             cost: { embers: 8 }, effect: { type: "coin_gain_mult", params: { mult: 1.2 } } },
   ],
   mine_driveout: [
-    { id: "industrial_reach", name: "Industrial Reach",     desc: "Strip mining unbothered. Chain yields +20%.",                  cost: { coreIngots: 3 }, effect: { type: "chain_yield_mult", params: { mult: 1.2 } } },
     { id: "ingot_thrift",     name: "Ingot Thrift",         desc: "Efficient smelters. Coin gains +20%.",                         cost: { coreIngots: 5 }, effect: { type: "coin_gain_mult", params: { mult: 1.2 } } },
     { id: "foreman_drills",   name: "Foreman's Drills",     desc: "Bond gains +10%.",                                             cost: { coreIngots: 8 }, effect: { type: "bond_gain_mult", params: { mult: 1.1 } } },
   ],
   harbor_coexist: [
-    { id: "tide_blessing",    name: "Tide-Blessing",        desc: "The singer hums when you cast. Chain yields +10%.",            cost: { embers: 3 }, effect: { type: "chain_yield_mult", params: { mult: 1.1 } } },
     { id: "sailor_amity",     name: "Sailor's Amity",       desc: "Friends in every port. Bond gains +20%.",                      cost: { embers: 5 }, effect: { type: "bond_gain_mult", params: { mult: 1.2 } } },
     { id: "pearl_trove",      name: "Pearl Trove",          desc: "Lucky catches. Coin gains +15%.",                              cost: { embers: 8 }, effect: { type: "coin_gain_mult", params: { mult: 1.15 } } },
   ],
   harbor_driveout: [
-    { id: "stilled_waves",    name: "Stilled Waves",        desc: "Predictable seas. Chain yields +20%.",                         cost: { coreIngots: 3 }, effect: { type: "chain_yield_mult", params: { mult: 1.2 } } },
     { id: "harbor_tariff",    name: "Harbor Tariff",        desc: "Tax on all comings. Coin gains +25%.",                         cost: { coreIngots: 5 }, effect: { type: "coin_gain_mult", params: { mult: 1.25 } } },
     { id: "press_gang",       name: "Press-Gang",           desc: "Conscripted crews. Bond gains +5%.",                           cost: { coreIngots: 8 }, effect: { type: "bond_gain_mult", params: { mult: 1.05 } } },
   ],
