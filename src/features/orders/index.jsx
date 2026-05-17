@@ -3,6 +3,7 @@ import { NPCS, ITEMS } from "../../constants.js";
 import { bondBand, bondModifier, payOrder } from "../npcs/bond.js";
 import IconCanvas, { hasIcon } from "../../ui/IconCanvas.jsx";
 import Icon from "../../ui/Icon.jsx";
+import FeaturePanel from "../../ui/primitives/FeaturePanel.jsx";
 
 export const viewKey = "orders";
 
@@ -14,15 +15,13 @@ export default function OrdersScreen({ state, dispatch }) {
   const { orders, inventory } = state;
 
   return (
-    <div className="hl-panel">
-      <div className="hl-panel-header">
-        <span className="hl-panel-title">📋 Orders</span>
-        <button
-          onClick={() => dispatch({ type: "SET_VIEW", view: "town" })}
-          className="hl-panel-close"
-        >✕</button>
-      </div>
-      <div className="hl-panel-body flex flex-col gap-2">
+    <FeaturePanel>
+      <FeaturePanel.Header
+        title="📋 Orders"
+        onClose={() => dispatch({ type: "SET_VIEW", view: "town" })}
+        closeLabel="Close orders"
+      />
+      <FeaturePanel.Body className="flex flex-col gap-2">
         {orders.map((o) => {
           const have = inventory[o.key] || 0;
           const done = have >= o.need;
@@ -96,7 +95,7 @@ export default function OrdersScreen({ state, dispatch }) {
             </button>
           );
         })}
-      </div>
-    </div>
+      </FeaturePanel.Body>
+    </FeaturePanel>
   );
 }

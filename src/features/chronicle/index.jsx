@@ -1,5 +1,6 @@
 import Icon from "../../ui/Icon.jsx";
 import { STORY_BEATS } from "../../story.js";
+import FeaturePanel from "../../ui/primitives/FeaturePanel.jsx";
 
 export const viewKey = "chronicle";
 
@@ -16,7 +17,7 @@ export default function Chronicle({ state, dispatch }) {
   });
 
   return (
-    <div className="hl-panel">
+    <FeaturePanel>
       {/* Background decoration */}
       <div className="absolute inset-0 opacity-[0.04] pointer-events-none overflow-hidden">
         <div className="absolute -top-20 -right-20 transform rotate-12">
@@ -24,7 +25,7 @@ export default function Chronicle({ state, dispatch }) {
         </div>
       </div>
 
-      <div className="hl-panel-header relative z-10">
+      <FeaturePanel.Header className="relative z-10">
         <div className="flex items-center gap-3 min-w-0">
           <Icon iconKey="ui_clipboard" size={24} className="text-[#d6612a]" />
           <h1 className="hl-panel-title font-serif tracking-tight">Chronicle of the Vale</h1>
@@ -37,17 +38,15 @@ export default function Chronicle({ state, dispatch }) {
           >
             View Charter
           </button>
-          <button
+          <FeaturePanel.CloseButton
             onClick={() => dispatch({ type: "SET_VIEW", view: "town" })}
-            className="hl-panel-close"
             title="Return to Town"
-          >
-            ✕
-          </button>
+            label="Return to Town"
+          />
         </div>
-      </div>
+      </FeaturePanel.Header>
 
-      <div className="hl-panel-body relative z-10">
+      <FeaturePanel.Body className="relative z-10">
         {completedBeats.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center px-8">
             <Icon iconKey="ui_star" size={48} className="mb-4 opacity-30" />
@@ -78,13 +77,13 @@ export default function Chronicle({ state, dispatch }) {
             })}
           </div>
         )}
-      </div>
+      </FeaturePanel.Body>
 
       <div className="pt-3 pb-3 px-3 border-t border-[var(--panel-divider)] text-center relative z-10 flex-shrink-0">
         <p className="text-[10px] text-on-panel-faint font-bold uppercase tracking-widest italic">
           — The record of your impact —
         </p>
       </div>
-    </div>
+    </FeaturePanel>
   );
 }

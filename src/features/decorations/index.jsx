@@ -1,5 +1,6 @@
 import { DECORATIONS } from "./data.js";
 import { locBuilt } from "../../locBuilt.js";
+import FeaturePanel from "../../ui/primitives/FeaturePanel.jsx";
 
 function canAfford(decor, state) {
   const { cost } = decor;
@@ -53,20 +54,15 @@ function DecorationCard({ decor, state, dispatch }) {
 
 export default function DecorationsScreen({ state, dispatch }) {
   return (
-    <div className="hl-panel">
-      {/* Header */}
-      <div className="hl-panel-header">
-        <span className="hl-panel-title">🌸 Decorations</span>
-        <button
-          onClick={() => dispatch({ type: "SET_VIEW", view: "town" })}
-          className="hl-panel-close"
-        >
-          ✕
-        </button>
-      </div>
+    <FeaturePanel>
+      <FeaturePanel.Header
+        title="🌸 Decorations"
+        onClose={() => dispatch({ type: "SET_VIEW", view: "town" })}
+        closeLabel="Close decorations"
+      />
 
       {/* Decoration list */}
-      <div className="hl-panel-body !px-2">
+      <FeaturePanel.Body className="!px-2">
         <div className="grid grid-cols-2 portrait:grid-cols-1 gap-2">
           {Object.values(DECORATIONS).map((decor) => (
             <DecorationCard
@@ -77,7 +73,7 @@ export default function DecorationsScreen({ state, dispatch }) {
             />
           ))}
         </div>
-      </div>
-    </div>
+      </FeaturePanel.Body>
+    </FeaturePanel>
   );
 }

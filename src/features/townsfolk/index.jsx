@@ -4,6 +4,7 @@ import BossGallery from "../bosses/Gallery.jsx";
 import { QuestsPanel } from "../quests/index.jsx";
 import CastlePanel from "../castle/index.jsx";
 import Icon from "../../ui/Icon.jsx";
+import FeaturePanel from "../../ui/primitives/FeaturePanel.jsx";
 
 export const viewKey = "townsfolk";
 
@@ -16,15 +17,13 @@ export default function TownsfolkScreen({ state, dispatch }) {
   const tab = TABS.includes(requested) ? requested : "workers";
   const setTab = (next) => dispatch({ type: "SET_VIEW_PARAMS", params: { tab: next } });
   return (
-    <div className="hl-panel">
-      <div className="hl-panel-header">
-        <span className="hl-panel-title">👥 Townsfolk</span>
-        <button
-          onClick={() => dispatch({ type: "SET_VIEW", view: "town" })}
-          className="hl-panel-close"
-        >✕</button>
-      </div>
-      <div className="hl-tabs">
+    <FeaturePanel>
+      <FeaturePanel.Header
+        title="👥 Townsfolk"
+        onClose={() => dispatch({ type: "SET_VIEW", view: "town" })}
+        closeLabel="Close townsfolk"
+      />
+      <FeaturePanel.Tabs>
         {[
           { key: "workers", label: "Workers", icon: "ui_build" },
           { key: "quests", label: "Quests", icon: "ui_clipboard" },
@@ -32,19 +31,20 @@ export default function TownsfolkScreen({ state, dispatch }) {
           { key: "bosses", label: "Foes", icon: "ui_warning" },
           { key: "orders", label: "Orders", icon: "ui_shop" },
         ].map((item) => (
-          <button
+          <FeaturePanel.Tab
             key={item.key}
             onClick={() => setTab(item.key)}
-            className={`hl-tab flex-1 min-w-[80px] ${tab === item.key ? "is-active" : ""}`}
+            active={tab === item.key}
+            className="flex-1 min-w-[80px]"
           >
             <div className="flex items-center justify-center gap-1">
               <Icon iconKey={item.icon} size={12} className={tab === item.key ? "" : "opacity-70"} />
               {item.label}
             </div>
-          </button>
+          </FeaturePanel.Tab>
         ))}
-      </div>
-      <div className="hl-panel-body">
+      </FeaturePanel.Tabs>
+      <FeaturePanel.Body>
         <div className="max-w-[640px] mx-auto">
           {tab === "workers" ? (
             <WorkersPanel state={state} dispatch={dispatch} />
@@ -58,7 +58,7 @@ export default function TownsfolkScreen({ state, dispatch }) {
             <CompactOrders orders={state.orders || []} inventory={state.inventory || {}} dispatch={dispatch} />
           )}
         </div>
-      </div>
-    </div>
+      </FeaturePanel.Body>
+    </FeaturePanel>
   );
 }

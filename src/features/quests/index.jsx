@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { ALMANAC_TIERS } from "../almanac/data.js";
 import { QUEST_TEMPLATES } from "./templates.js";
+import FeaturePanel from "../../ui/primitives/FeaturePanel.jsx";
 
 const TABS = ["daily", "almanac"];
 
@@ -163,13 +164,13 @@ export function QuestsPanel({ state, dispatch }) {
       {/* Sub-tab toggle */}
       <div className="flex gap-2">
         {["daily", "almanac"].map((t) => (
-          <button
+          <FeaturePanel.Tab
             key={t}
             onClick={() => setTab(t)}
-            className={`hl-tab ${tab === t ? "is-active" : ""}`}
+            active={tab === t}
           >
             {t === "daily" ? "Daily" : "Almanac"}
-          </button>
+          </FeaturePanel.Tab>
         ))}
       </div>
 
@@ -235,26 +236,24 @@ export default function QuestsScreen({ state, dispatch, initialTab }) {
   const xpPct = Math.min(100, (xpIntoTier / 100) * 100);
 
   return (
-    <div className="hl-panel">
-      <div className="hl-panel-header">
-        <span className="hl-panel-title">📜 Quests & Almanac</span>
-        <button
-          onClick={() => dispatch({ type: "SET_VIEW", view: "town" })}
-          className="hl-panel-close"
-        >✕</button>
-      </div>
+    <FeaturePanel>
+      <FeaturePanel.Header
+        title="📜 Quests & Almanac"
+        onClose={() => dispatch({ type: "SET_VIEW", view: "town" })}
+        closeLabel="Close quests"
+      />
 
-      <div className="hl-tabs">
+      <FeaturePanel.Tabs>
         {["daily", "almanac"].map((t) => (
-          <button
+          <FeaturePanel.Tab
             key={t}
             onClick={() => setTab(t)}
-            className={`hl-tab ${tab === t ? "is-active" : ""}`}
+            active={tab === t}
           >
             {t === "daily" ? "Daily" : "Almanac"}
-          </button>
+          </FeaturePanel.Tab>
         ))}
-      </div>
+      </FeaturePanel.Tabs>
 
       {tab === "daily" ? (
         <div className="flex-1 overflow-y-auto px-3 pb-3 flex flex-col gap-2">
@@ -303,6 +302,6 @@ export default function QuestsScreen({ state, dispatch, initialTab }) {
           </div>
         </div>
       )}
-    </div>
+    </FeaturePanel>
   );
 }

@@ -13,6 +13,7 @@ import { hex } from "../../utils.js";
 import { FARM_HAZARD_META } from "../farm/hazards.js";
 import { HAZARDS } from "../mine/hazards.js";
 import IconCanvas, { hasIcon } from "../../ui/IconCanvas.jsx";
+import FeaturePanel from "../../ui/primitives/FeaturePanel.jsx";
 
 export const viewKey = "tileCollection";
 
@@ -296,17 +297,14 @@ export default function TileCollectionPanel({ state, dispatch }) {
       : [];
 
   return (
-    <div className="hl-panel">
+    <FeaturePanel>
       {/* Header */}
-      <div className="hl-panel-header">
-        <h2 className="hl-panel-title">Tiles Wiki</h2>
-        <button
-          onClick={() => dispatch({ type: "SET_VIEW", view: "town" })}
-          className="hl-panel-close"
-        >
-          ✕
-        </button>
-      </div>
+      <FeaturePanel.Header
+        title="Tiles Wiki"
+        titleAs="h2"
+        onClose={() => dispatch({ type: "SET_VIEW", view: "town" })}
+        closeLabel="Close tiles wiki"
+      />
 
       {/* Sub-category bar */}
       <div className="flex border-b border-[var(--panel-divider)] flex-shrink-0 bg-[var(--panel-toolbar)]">
@@ -363,7 +361,7 @@ export default function TileCollectionPanel({ state, dispatch }) {
       )}
 
       {/* Content */}
-      <div className="hl-panel-body">
+      <FeaturePanel.Body>
         {subCategory === "hazards" ? (
           <>
             <div className="text-xs text-on-panel-dim text-center py-1 mb-2 italic">
@@ -404,7 +402,7 @@ export default function TileCollectionPanel({ state, dispatch }) {
             )}
           </>
         )}
-      </div>
+      </FeaturePanel.Body>
 
       {/* Free moves chip */}
       {(state.tileCollection?.freeMoves ?? 0) > 0 && subCategory !== "hazards" && (
@@ -415,6 +413,6 @@ export default function TileCollectionPanel({ state, dispatch }) {
           <span className="text-[#4a6a20] text-xs ml-2">from chained tiles</span>
         </div>
       )}
-    </div>
+    </FeaturePanel>
   );
 }

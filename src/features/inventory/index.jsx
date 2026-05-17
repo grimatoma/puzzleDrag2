@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { InventoryGrid } from "../../ui/Inventory.jsx";
 import Pill from "../../ui/primitives/Pill.jsx";
 import Button from "../../ui/primitives/Button.jsx";
+import FeaturePanel from "../../ui/primitives/FeaturePanel.jsx";
 
 export const viewKey = "inventory";
 
@@ -119,17 +120,14 @@ export default function InventoryScreen({ state, dispatch }) {
   const compact = compactOverride != null ? compactOverride : isPhone;
 
   return (
-    <div className="hl-panel z-10">
-      <div className="hl-panel-header">
-        <span className="hl-panel-title">Inventory</span>
-        <button
-          type="button"
-          onClick={() => dispatch({ type: "SET_VIEW", view: "town" })}
-          className="hl-panel-close"
-        >✕</button>
-      </div>
+    <FeaturePanel className="z-10">
+      <FeaturePanel.Header
+        title="Inventory"
+        onClose={() => dispatch({ type: "SET_VIEW", view: "town" })}
+        closeLabel="Close inventory"
+      />
 
-      <div className="hl-panel-toolbar flex-col !items-stretch gap-2 pt-3 pb-2">
+      <FeaturePanel.Toolbar className="flex-col !items-stretch gap-2 pt-3 pb-2">
         <div className="relative flex items-center">
           <span className="absolute left-2.5 text-on-panel-faint pointer-events-none">
             <SearchIcon />
@@ -207,9 +205,9 @@ export default function InventoryScreen({ state, dispatch }) {
             )}
           </div>
         </div>
-      </div>
+      </FeaturePanel.Toolbar>
 
-      <div className="hl-panel-body">
+      <FeaturePanel.Body>
         <div className="max-w-[640px] mx-auto flex flex-col gap-3">
           <InventoryGrid
             inventory={state.inventory}
@@ -224,7 +222,7 @@ export default function InventoryScreen({ state, dispatch }) {
             compact={compact}
           />
         </div>
-      </div>
-    </div>
+      </FeaturePanel.Body>
+    </FeaturePanel>
   );
 }
