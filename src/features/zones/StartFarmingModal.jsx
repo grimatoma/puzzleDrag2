@@ -1,9 +1,9 @@
 import { useState, useMemo, useRef } from "react";
-import { createPortal } from "react-dom";
 import { ZONES, zoneCategories, DEFAULT_ZONE, ZONE_TO_TILE_CATEGORIES, turnBudgetAdditiveBonusForZone, turnBudgetForZone, zoneBaseTurns, settlementHazards } from "./data.js";
 import { TILE_TYPES_BY_CATEGORY, TILE_TYPES_MAP } from "../tileCollection/data.js";
 import { TileIcon } from "../tileCollection/index.jsx";
 import useFocusTrap from "../../ui/primitives/useFocusTrap.js";
+import { ParchmentDialog } from "../../ui/primitives/Dialog.jsx";
 
 const CATEGORY_LABEL = {
   grass: "Grass",
@@ -216,8 +216,6 @@ export default function StartFarmingModal({ state, dispatch, onClose }) {
   const zoneId = state.activeZone ?? DEFAULT_ZONE;
   const zone = ZONES[zoneId];
   const cats = useMemo(() => zoneCategories(zoneId), [zoneId]);
-  const startPanelRef = useRef(null);
-  useFocusTrap(startPanelRef, !!zone, onClose);
 
   // When zone exposes <= 8 categories every slot is auto-selected and
   // locked. When it exposes more, the player picks 8.
@@ -273,20 +271,9 @@ export default function StartFarmingModal({ state, dispatch, onClose }) {
     onClose?.();
   }
 
-  return createPortal(
-    <div
-      className="hl-backdrop animate-fadein"
-      onClick={onClose}
-    >
-      <div
-        ref={startPanelRef}
-        role="dialog"
-        aria-modal="true"
-        aria-label={`Start Farming — ${zone.name}`}
-        tabIndex={-1}
-        className="bg-[#f4ecd8] border-[4px] border-[#b28b62] rounded-[20px] px-6 py-5 max-w-[460px] w-[94vw] shadow-2xl relative outline-none"
-        onClick={(e) => e.stopPropagation()}
-      >
+  return (
+    <ParchmentDialog open onClose={onClose} size="lg" ariaLabel={`Start Farming — ${zone.name}`} backdropClassName="animate-fadein">
+      <ParchmentDialog.Body className="relative !px-6 !py-5">
         <h2 className="font-bold text-[20px] text-on-panel-dim text-center mb-1">
           Start Farming — {zone.name}
         </h2>
@@ -389,8 +376,7 @@ export default function StartFarmingModal({ state, dispatch, onClose }) {
             onClose={() => setChooserCat(null)}
           />
         )}
-      </div>
-    </div>,
-    document.body
+      </ParchmentDialog.Body>
+    </ParchmentDialog>
   );
 }
