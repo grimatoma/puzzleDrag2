@@ -7,6 +7,7 @@ const TABS = ["trophies", "collection"];
 import { ACHIEVEMENTS } from "./data.js";
 import { MAGIC_TOOLS } from "../portal/data.js";
 import Icon from "../../ui/Icon.jsx";
+import FeaturePanel from "../../ui/primitives/FeaturePanel.jsx";
 
 function CheckGlyph({ size = 12 }) {
   return (
@@ -176,35 +177,30 @@ export default function AchievementsScreen({ state, dispatch }) {
   const unlockedCount = ACHIEVEMENTS.filter((a) => unlockedMap[a.id]).length;
 
   return (
-    <div className="hl-panel">
-      {/* Header */}
-      <div className="hl-panel-header">
-        <span className="hl-panel-title">🏆 Trophies</span>
-        <button
-          onClick={() => dispatch({ type: "SET_VIEW", view: "town" })}
-          className="hl-panel-close"
-        >
-          ✕
-        </button>
-      </div>
+    <FeaturePanel>
+      <FeaturePanel.Header
+        title="🏆 Trophies"
+        onClose={() => dispatch({ type: "SET_VIEW", view: "town" })}
+        closeLabel="Close trophies"
+      />
 
       {/* Tab toggle */}
-      <div className="hl-tabs">
+      <FeaturePanel.Tabs>
         {["trophies", "collection"].map((t) => (
-          <button
+          <FeaturePanel.Tab
             key={t}
             onClick={() => setTab(t)}
-            className={`hl-tab ${tab === t ? "is-active" : ""}`}
+            active={tab === t}
           >
             {t === "trophies" ? "Trophies" : "Collection"}
-          </button>
+          </FeaturePanel.Tab>
         ))}
         <div className="ml-auto text-[10px] text-on-panel-dim flex items-center">
           {tab === "trophies"
             ? `${unlockedCount}/${ACHIEVEMENTS.length} unlocked`
             : `${discoveredCount}/${ALL_RESOURCES.length} discovered`}
         </div>
-      </div>
+      </FeaturePanel.Tabs>
 
       {/* Body */}
       {tab === "trophies" ? (
@@ -267,6 +263,6 @@ export default function AchievementsScreen({ state, dispatch }) {
           </div>
         </div>
       )}
-    </div>
+    </FeaturePanel>
   );
 }

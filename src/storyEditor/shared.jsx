@@ -9,26 +9,11 @@ import {
   sanitizeBeatLines, sanitizeChoiceArray, sanitizeChoiceOutcome,
   sanitizeBeatTrigger, sanitizeBeatOnComplete, sanitizeBeatRepeatCooldown,
 } from "../config/applyOverrides.js";
+import { UI_COLORS } from "../ui/primitives/palette.js";
 
 // ─── Colours ─────────────────────────────────────────────────────────────────
 
-export const C = {
-  parchment:     "#f4ecd8",
-  parchmentDeep: "#e8dcc4",
-  border:        "#b28b62",
-  ink:           "#2b2218",
-  inkLight:      "#5a3a20",
-  inkSubtle:     "#7a5a38",
-  ember:         "#d6612a",
-  emberDeep:     "#a84010",
-  green:         "#5a9e4b",
-  greenDeep:     "#3e7236",
-  red:           "#c23b22",
-  redDeep:       "#8f2c19",
-  violet:        "#7e7aa6",
-  canvas:        "#f0e8d4",
-  canvasRule:    "#ddd0b4",
-};
+export const C = UI_COLORS;
 
 // ─── NPC data ────────────────────────────────────────────────────────────────
 

@@ -1,5 +1,6 @@
-import { useState, useEffect, useRef } from "react";
-import useFocusTrap from "../../ui/primitives/useFocusTrap.js";
+import { useState, useEffect } from "react";
+import { ParchmentDialog } from "../../ui/primitives/Dialog.jsx";
+import FeaturePanel from "../../ui/primitives/FeaturePanel.jsx";
 
 export const modalKey = "menu";
 
@@ -209,48 +210,27 @@ function AboutTab({ dispatch }) {
 // --- Root modal ---
 export default function SettingsModal({ state, dispatch }) {
   const open = state.modal === 'menu';
-  const panelRef = useRef(null);
   const close = () => dispatch({ type: 'CLOSE_MODAL' });
-  useFocusTrap(panelRef, open, close);
   if (!open) return null;
 
   const tab = state.settingsTab || 'main';
   const settings = state.settings || {};
 
   return (
-    <div
-      className="absolute inset-0 grid place-items-center pointer-events-none"
-      style={{ background: 'rgba(0,0,0,0.35)', zIndex: 70 }}
-    >
-      <div
-        ref={panelRef}
-        role="dialog"
-        aria-modal="true"
-        aria-label="Menu"
-        tabIndex={-1}
-        className="relative p-5 rounded-[20px] overflow-y-auto shadow-2xl pointer-events-auto outline-none"
-        style={{
-          background: '#f4ecd8',
-          border: '4px solid #b28b62',
-          width: 'min(540px, 92vw)',
-          maxHeight: '85vh',
-        }}
-      >
+    <ParchmentDialog open={open} onClose={close} size="lg" ariaLabel="Menu" backdropClassName="z-[70]">
+      <ParchmentDialog.Body className="relative !p-5">
         {/* Close button */}
-        <button
+        <FeaturePanel.CloseButton
           onClick={close}
-          className="absolute top-3 right-3 w-7 h-7 rounded-lg grid place-items-center text-[16px] font-bold border-2"
-          style={{ background: '#e8dcc4', borderColor: '#b28b62', color: '#5a3a20' }}
+          className="absolute top-3 right-3"
           aria-label="Close"
-        >
-          ×
-        </button>
+        />
 
         {/* Tab content */}
         {tab === 'main' && <MainTab state={state} dispatch={dispatch} />}
         {tab === 'settings' && <SettingsTab settings={settings} dispatch={dispatch} />}
         {tab === 'about' && <AboutTab dispatch={dispatch} />}
-      </div>
-    </div>
+      </ParchmentDialog.Body>
+    </ParchmentDialog>
   );
 }

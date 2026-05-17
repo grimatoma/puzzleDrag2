@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { ALMANAC_TIERS } from "../almanac/data.js";
 import { QUEST_TEMPLATES } from "./templates.js";
+import FeaturePanel from "../../ui/primitives/FeaturePanel.jsx";
+import ActionCard, { ProgressBar } from "../../ui/primitives/ActionCard.jsx";
 
 const TABS = ["daily", "almanac"];
 
@@ -55,19 +57,18 @@ function questLabel(q) {
 }
 
 function QuestCard({ q, dispatch }) {
-  const pct = Math.min(100, (q.progress / q.target) * 100);
   const isDone = q.done ?? (q.progress >= q.target);
   const claimable = isDone && !q.claimed;
   const completed = isDone || q.claimed;
 
   return (
-    <div
-      className={`bg-[#f6efe0] border-2 rounded-xl p-2.5 flex flex-col gap-2 max-w-sm w-full self-center transition-all duration-300 ${
-        completed ? "border-[#d6612a] shadow-[0_0_0_2px_rgba(214,97,42,.25)]" : "border-[#c5a87a]"
+    <ActionCard
+      className={`max-w-sm w-full self-center transition-all duration-300 ${
+        completed ? "!border-[#d6612a] shadow-[0_0_0_2px_rgba(214,97,42,.25)]" : ""
       }`}
     >
       <div className="flex items-start justify-between gap-2">
-        <span className="font-bold text-[12px] text-[#3a2715] leading-snug flex-1">{questLabel(q)}</span>
+        <ActionCard.Title className="text-[12px] flex-1">{questLabel(q)}</ActionCard.Title>
         {claimable && (
           <span className="relative mr-1 mt-0.5">
             <span className="absolute inline-flex h-3 w-3 rounded-full bg-[#f1b34c] opacity-75 animate-ping" />
@@ -79,12 +80,7 @@ function QuestCard({ q, dispatch }) {
         </span>
       </div>
       <div className="flex items-center gap-2">
-        <div className="flex-1 h-2.5 rounded-full overflow-hidden" style={{ background: "#3a2715" }}>
-          <div
-            className="h-full transition-[width] duration-300 rounded-full"
-            style={{ width: `${pct}%`, background: "#d6612a" }}
-          />
-        </div>
+        <ProgressBar value={q.progress} max={q.target} className="flex-1" />
         <span className="text-[11px] font-bold text-[#6a4b31] whitespace-nowrap">{q.progress}/{q.target}</span>
       </div>
       <button
@@ -94,7 +90,7 @@ function QuestCard({ q, dispatch }) {
       >
         {q.claimed ? <span className="inline-flex items-center gap-1 justify-center"><CheckGlyph size={11} /> CLAIMED</span> : "CLAIM"}
       </button>
-    </div>
+    </ActionCard>
   );
 }
 
@@ -109,21 +105,19 @@ function AlmanacTierCard({ idx, tierDef, almanacXp, almanacClaimed, dispatch }) 
   const icon = tier >= 8 ? "🔺" : tier >= 5 ? "△" : "◈";
 
   return (
-    <div
-      className={`flex flex-col gap-1 p-2.5 rounded-xl border-2 w-full ${
-        claimed
-          ? "bg-[#c5a87a]/40 border-[#c5a87a]"
-          : claimable
-          ? "bg-[#f6efe0] border-[#d6612a]"
-          : "bg-[#d4b585]/40 border-[#b28b62]/60"
-      }`}
+    <ActionCard
+      className="gap-1 w-full"
+      style={{
+        background: claimed ? "rgba(197,168,122,0.4)" : claimable ? "var(--card-bg)" : "rgba(212,181,133,0.4)",
+        borderColor: claimed ? "#c5a87a" : claimable ? "var(--ember)" : "rgba(178,139,98,0.6)",
+      }}
     >
       <div className="flex items-center gap-2">
         <div className="text-[18px] leading-none flex-shrink-0 flex items-center justify-center">{claimed ? <CheckGlyph size={16} /> : claimable ? icon : <LockGlyph size={16} />}</div>
         <div className="flex-1 min-w-0">
-          <div className="text-[11px] font-bold text-[#3a2715]">
+          <ActionCard.Title className="text-[11px]">
             Tier {tier}{tierDef.name ? ` — ${tierDef.name}` : ""}
-          </div>
+          </ActionCard.Title>
           <div className="text-[10px] font-bold text-[#a8722a]">{rewardStr}</div>
         </div>
         <div className="text-[9px] text-[#5b3b20]/70 flex-shrink-0">{cost}✦</div>
@@ -140,7 +134,7 @@ function AlmanacTierCard({ idx, tierDef, almanacXp, almanacClaimed, dispatch }) 
       >
         {claimed ? <span className="inline-flex items-center gap-1 justify-center"><CheckGlyph size={9} /> Claimed</span> : claimable ? "CLAIM" : <span className="inline-flex justify-center"><LockGlyph size={10} /></span>}
       </button>
-    </div>
+    </ActionCard>
   );
 }
 
@@ -156,20 +150,19 @@ export function QuestsPanel({ state, dispatch }) {
   const currentTier = Math.floor(almanacXp / 100);
   const nextCost = (currentTier + 1) * 100;
   const xpIntoTier = almanacXp - currentTier * 100;
-  const xpPct = Math.min(100, (xpIntoTier / 100) * 100);
 
   return (
     <div className="flex flex-col gap-2">
       {/* Sub-tab toggle */}
       <div className="flex gap-2">
         {["daily", "almanac"].map((t) => (
-          <button
+          <FeaturePanel.Tab
             key={t}
             onClick={() => setTab(t)}
-            className={`hl-tab ${tab === t ? "is-active" : ""}`}
+            active={tab === t}
           >
             {t === "daily" ? "Daily" : "Almanac"}
-          </button>
+          </FeaturePanel.Tab>
         ))}
       </div>
 
@@ -193,12 +186,7 @@ export function QuestsPanel({ state, dispatch }) {
       ) : (
         <div className="flex flex-col gap-2">
           <div className="flex items-center gap-2">
-            <div className="flex-1 h-3 rounded-full overflow-hidden" style={{ background: "#3a2715" }}>
-              <div
-                className="h-full transition-[width] duration-300 rounded-full"
-                style={{ width: `${xpPct}%`, background: "#d6612a" }}
-              />
-            </div>
+            <ProgressBar value={xpIntoTier} max={100} className="flex-1 h-3" />
             <span className="text-[11px] font-bold text-[#3a2715] whitespace-nowrap">
               {almanacXp}✦ / {nextCost > 1000 ? "MAX" : nextCost}
             </span>
@@ -232,29 +220,26 @@ export default function QuestsScreen({ state, dispatch, initialTab }) {
   const currentTier = Math.floor(almanacXp / 100);
   const nextCost = (currentTier + 1) * 100;
   const xpIntoTier = almanacXp - currentTier * 100;
-  const xpPct = Math.min(100, (xpIntoTier / 100) * 100);
 
   return (
-    <div className="hl-panel">
-      <div className="hl-panel-header">
-        <span className="hl-panel-title">📜 Quests & Almanac</span>
-        <button
-          onClick={() => dispatch({ type: "SET_VIEW", view: "town" })}
-          className="hl-panel-close"
-        >✕</button>
-      </div>
+    <FeaturePanel>
+      <FeaturePanel.Header
+        title="📜 Quests & Almanac"
+        onClose={() => dispatch({ type: "SET_VIEW", view: "town" })}
+        closeLabel="Close quests"
+      />
 
-      <div className="hl-tabs">
+      <FeaturePanel.Tabs>
         {["daily", "almanac"].map((t) => (
-          <button
+          <FeaturePanel.Tab
             key={t}
             onClick={() => setTab(t)}
-            className={`hl-tab ${tab === t ? "is-active" : ""}`}
+            active={tab === t}
           >
             {t === "daily" ? "Daily" : "Almanac"}
-          </button>
+          </FeaturePanel.Tab>
         ))}
-      </div>
+      </FeaturePanel.Tabs>
 
       {tab === "daily" ? (
         <div className="flex-1 overflow-y-auto px-3 pb-3 flex flex-col gap-2">
@@ -276,12 +261,7 @@ export default function QuestsScreen({ state, dispatch, initialTab }) {
       ) : (
         <div className="flex-1 flex flex-col overflow-hidden px-3 pb-3 gap-2">
           <div className="flex-shrink-0 flex items-center gap-2">
-            <div className="flex-1 h-3 rounded-full overflow-hidden" style={{ background: "#3a2715" }}>
-              <div
-                className="h-full transition-[width] duration-300 rounded-full"
-                style={{ width: `${xpPct}%`, background: "#d6612a" }}
-              />
-            </div>
+            <ProgressBar value={xpIntoTier} max={100} className="flex-1 h-3" />
             <span className="text-[11px] font-bold text-[#3a2715] whitespace-nowrap">
               {almanacXp}✦ / {nextCost > 1000 ? "MAX" : nextCost}
             </span>
@@ -303,6 +283,6 @@ export default function QuestsScreen({ state, dispatch, initialTab }) {
           </div>
         </div>
       )}
-    </div>
+    </FeaturePanel>
   );
 }

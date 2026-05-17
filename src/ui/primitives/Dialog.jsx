@@ -58,14 +58,14 @@ function useDialogBehavior(open, onClose, panelRef) {
   }, [open, onClose, panelRef]);
 }
 
-function BackdropShell({ open, onClose, children }) {
+function BackdropShell({ open, onClose, className = "", children }) {
   if (!open) return null;
   const onBackdrop = (e) => {
     if (e.target === e.currentTarget && onClose) onClose();
   };
   return createPortal(
     <div
-      className="fixed inset-0 z-50 grid place-items-center bg-black/55"
+      className={`hl-backdrop ${className}`}
       style={{ animation: "fadein 200ms ease-out both" }}
       onMouseDown={onBackdrop}
     >
@@ -89,7 +89,16 @@ function PanelIn({ children, style }) {
   );
 }
 
-export function ParchmentDialog({ open, onClose, size = "md", tone = "parchment", children, className = "" }) {
+export function ParchmentDialog({
+  open,
+  onClose,
+  size = "md",
+  tone = "parchment",
+  ariaLabel,
+  backdropClassName = "",
+  children,
+  className = "",
+}) {
   const panelRef = useRef(null);
   const titleId = useId();
   const stickyRef = useRef(false);
@@ -98,13 +107,14 @@ export function ParchmentDialog({ open, onClose, size = "md", tone = "parchment"
   useDialogBehavior(open, onClose, panelRef);
   if (!open) return null;
   return (
-    <BackdropShell open={open} onClose={onClose}>
+    <BackdropShell open={open} onClose={onClose} className={backdropClassName}>
       <PanelIn>
         <div
           ref={panelRef}
           role="dialog"
           aria-modal="true"
-          aria-labelledby={titleId}
+          aria-labelledby={ariaLabel ? undefined : titleId}
+          aria-label={ariaLabel}
           tabIndex={-1}
           className={`${bgCls} border-[4px] border-iron w-[92vw] ${sizeCls} max-h-[88dvh] flex flex-col shadow-2xl outline-none ${className}`}
           style={{ borderRadius: 20 }}
@@ -124,20 +134,21 @@ export function ParchmentDialog({ open, onClose, size = "md", tone = "parchment"
   );
 }
 
-export function StoryDialog({ open, onClose, size = "md", children, className = "" }) {
+export function StoryDialog({ open, onClose, size = "md", ariaLabel, backdropClassName = "", children, className = "" }) {
   const panelRef = useRef(null);
   const titleId = useId();
   const sizeCls = SIZES[size] || SIZES.md;
   useDialogBehavior(open, onClose, panelRef);
   if (!open) return null;
   return (
-    <BackdropShell open={open} onClose={onClose}>
+    <BackdropShell open={open} onClose={onClose} className={backdropClassName}>
       <PanelIn>
         <div
           ref={panelRef}
           role="dialog"
           aria-modal="true"
-          aria-labelledby={titleId}
+          aria-labelledby={ariaLabel ? undefined : titleId}
+          aria-label={ariaLabel}
           tabIndex={-1}
           className={`w-[92vw] ${sizeCls} max-h-[88dvh] flex flex-col shadow-2xl outline-none border border-panel-edge ${className}`}
           style={{

@@ -1,5 +1,7 @@
 import { DECORATIONS } from "./data.js";
 import { locBuilt } from "../../locBuilt.js";
+import FeaturePanel from "../../ui/primitives/FeaturePanel.jsx";
+import { CostChip } from "../../ui/primitives/Chip.jsx";
 
 function canAfford(decor, state) {
   const { cost } = decor;
@@ -10,14 +12,6 @@ function canAfford(decor, state) {
     if ((inv[k] ?? 0) < v) return false;
   }
   return true;
-}
-
-function CostTag({ label, value }) {
-  return (
-    <span className="hl-cost-tag">
-      {value} {label}
-    </span>
-  );
 }
 
 function DecorationCard({ decor, state, dispatch }) {
@@ -33,7 +27,7 @@ function DecorationCard({ decor, state, dispatch }) {
         <span className="hl-card-title leading-tight">{decor.name}</span>
         <div className="flex flex-wrap gap-1 mt-0.5">
           {Object.entries(decor.cost).map(([k, v]) => (
-            <CostTag key={k} label={k === "coins" ? "◉" : k} value={v} />
+            <CostChip key={k}>{v} {k === "coins" ? "◉" : k}</CostChip>
           ))}
         </div>
       </div>
@@ -53,20 +47,15 @@ function DecorationCard({ decor, state, dispatch }) {
 
 export default function DecorationsScreen({ state, dispatch }) {
   return (
-    <div className="hl-panel">
-      {/* Header */}
-      <div className="hl-panel-header">
-        <span className="hl-panel-title">🌸 Decorations</span>
-        <button
-          onClick={() => dispatch({ type: "SET_VIEW", view: "town" })}
-          className="hl-panel-close"
-        >
-          ✕
-        </button>
-      </div>
+    <FeaturePanel>
+      <FeaturePanel.Header
+        title="🌸 Decorations"
+        onClose={() => dispatch({ type: "SET_VIEW", view: "town" })}
+        closeLabel="Close decorations"
+      />
 
       {/* Decoration list */}
-      <div className="hl-panel-body !px-2">
+      <FeaturePanel.Body className="!px-2">
         <div className="grid grid-cols-2 portrait:grid-cols-1 gap-2">
           {Object.values(DECORATIONS).map((decor) => (
             <DecorationCard
@@ -77,7 +66,7 @@ export default function DecorationsScreen({ state, dispatch }) {
             />
           ))}
         </div>
-      </div>
-    </div>
+      </FeaturePanel.Body>
+    </FeaturePanel>
   );
 }

@@ -1,5 +1,6 @@
 import { BOSSES } from "./data.js";
 import IconCanvas, { hasIcon } from "../../ui/IconCanvas.jsx";
+import { CostChip, RewardChip } from "../../ui/primitives/Chip.jsx";
 
 const SEASON_ACCENT = {
   spring: "#5daa35",
@@ -61,12 +62,12 @@ export default function BossGallery({ state }) {
                     {boss.season}
                   </span>
                   {defeated && (
-                    <span className="inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-[#5a8a26] text-white">
+                    <RewardChip className="text-[9px] uppercase tracking-wider bg-[#5a8a26] border-[#5a8a26] text-white">
                       <svg width="9" height="9" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                         <path d="M5 12.5l4.5 4.5L19 7" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
                       </svg>
                       Defeated
-                    </span>
+                    </RewardChip>
                   )}
                   {active && (
                     <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-[#ff7a00] text-white animate-pulse">
@@ -78,18 +79,17 @@ export default function BossGallery({ state }) {
                   {boss.description}
                 </div>
                 <div className="mt-2 flex flex-wrap gap-2">
-                  <span
-                    className="hl-cost-tag"
+                  <CostChip
                     style={{ background: "rgba(214,97,42,0.16)", color: "#8a4a26", borderColor: "rgba(214,97,42,0.45)" }}
                   >
                     Tribute: {boss.target.amount} {boss.target.resource}
-                  </span>
-                  <span
-                    className="hl-cost-tag italic"
+                  </CostChip>
+                  <CostChip
+                    className="italic"
                     style={{ background: "rgba(168,67,26,0.14)", color: "#7a3a1a", borderColor: "rgba(168,67,26,0.35)" }}
                   >
                     {boss.modifierDescription}
-                  </span>
+                  </CostChip>
                 </div>
               </div>
             </div>

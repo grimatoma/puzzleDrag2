@@ -17,6 +17,7 @@ import {
 import { keeperForType } from "../../keepers.js";
 import BiomePicker from "../zones/BiomePicker.jsx";
 import useFocusTrap from "../../ui/primitives/useFocusTrap.js";
+import FeaturePanel from "../../ui/primitives/FeaturePanel.jsx";
 
 export const viewKey = "cartography";
 
@@ -655,7 +656,7 @@ export default function CartographyScreen({ state, dispatch }) {
   );
 
   return (
-    <div className="hl-panel">
+    <FeaturePanel>
       <HeaderBar
         currentNode={currentNode}
         visitedCount={visited.length}
@@ -692,6 +693,6 @@ export default function CartographyScreen({ state, dispatch }) {
 
         <LegendBar />
       </div>
-    </div>
+    </FeaturePanel>
   );
 }

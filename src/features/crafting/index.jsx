@@ -5,6 +5,8 @@ import IconCanvas, { hasIcon } from "../../ui/IconCanvas.jsx";
 import { locBuilt } from "../../locBuilt.js";
 import Icon from "../../ui/Icon.jsx";
 import DesignIcon from "../../ui/primitives/Icon.jsx";
+import FeaturePanel from "../../ui/primitives/FeaturePanel.jsx";
+import { CostChip, RequirementChip } from "../../ui/primitives/Chip.jsx";
 
 export const viewKey = "crafting";
 
@@ -79,12 +81,9 @@ function RecipeCard({ recipeKey, recipe, inventory, built, level, craftedTotals,
             const have = (inventory || {})[res] || 0;
             const enough = have >= need;
             return (
-              <span
-                key={res}
-                className={`hl-chip ${enough ? "hl-chip--ok" : "hl-chip--missing"}`}
-              >
+              <RequirementChip key={res} ok={enough}>
                 {ITEMS[res]?.label || res} ×{need}
-              </span>
+              </RequirementChip>
             );
           })}
         </div>
@@ -200,9 +199,9 @@ function DecorationCard({ decor, state, dispatch }) {
         <span className="hl-card-title text-[11px] leading-tight">{decor.name}</span>
         <div className="flex flex-wrap gap-1 mt-0.5">
           {Object.entries(decor.cost).map(([k, v]) => (
-            <span key={k} className="hl-cost-tag">
+            <CostChip key={k}>
               {v} {k === "coins" ? "◉" : k}
-            </span>
+            </CostChip>
           ))}
         </div>
       </div>
@@ -256,32 +255,28 @@ export default function CraftingScreen({ state, dispatch }) {
   const meta = STATION_META[activeTab];
 
   return (
-    <div className="hl-panel">
-      {/* Header */}
-      <div className="hl-panel-header">
-        <span className="hl-panel-title">🔨 Crafting</span>
-        <button
-          onClick={() => dispatch({ type: "SET_VIEW", view: "town" })}
-          className="hl-panel-close"
-        >
-          ✕
-        </button>
-      </div>
+    <FeaturePanel>
+      <FeaturePanel.Header
+        title="🔨 Crafting"
+        onClose={() => dispatch({ type: "SET_VIEW", view: "town" })}
+        closeLabel="Close crafting"
+      />
 
       {/* Phase 5 — real-time craft queue */}
       <CraftQueueStrip queue={state.craftQueue} gems={state.gems} dispatch={dispatch} />
 
       {/* Station tabs */}
-      <div className="hl-tabs !flex-nowrap overflow-x-auto">
+      <FeaturePanel.Tabs className="!flex-nowrap overflow-x-auto">
         {STATION_ORDER.map((s) => {
           const m = STATION_META[s];
           const isActive = activeTab === s;
           const isBuilt = s === "decor" ? true : stationBuilt(built, s);
           return (
-            <button
+            <FeaturePanel.Tab
               key={s}
               onClick={() => setActiveTab(s)}
-              className={`hl-tab flex-shrink-0 ${isActive ? "is-active" : ""}`}
+              active={isActive}
+              className="flex-shrink-0"
               style={isActive ? { backgroundColor: m.bg, borderColor: "rgba(255,255,255,0.2)" } : {}}
             >
               <span style={{ width: 22, height: 22, display: "inline-grid", placeItems: "center" }}>
@@ -289,20 +284,20 @@ export default function CraftingScreen({ state, dispatch }) {
               </span>
               <span>{m.label}</span>
               {!isBuilt && <span className="opacity-60"><LockGlyph size={10} /></span>}
-            </button>
+            </FeaturePanel.Tab>
           );
         })}
-      </div>
+      </FeaturePanel.Tabs>
 
       {/* Content for active tab */}
       {activeTab === "decor" ? (
-        <div className="hl-panel-body !px-2">
+        <FeaturePanel.Body className="!px-2">
           <div className="grid grid-cols-2 portrait:grid-cols-1 gap-2">
             {Object.values(DECORATIONS).map((decor) => (
               <DecorationCard key={decor.id} decor={decor} state={state} dispatch={dispatch} />
             ))}
           </div>
-        </div>
+        </FeaturePanel.Body>
       ) : !stationBuilt(built, activeTab) ? (
         <div className="flex-1 grid place-items-center px-4">
           <p className="hl-empty">
@@ -310,7 +305,7 @@ export default function CraftingScreen({ state, dispatch }) {
           </p>
         </div>
       ) : (
-        <div className="hl-panel-body !px-2">
+        <FeaturePanel.Body className="!px-2">
           <div className="grid grid-cols-2 portrait:grid-cols-1 gap-2">
             {stationRecipes.map(([key, recipe]) => (
               <RecipeCard
@@ -325,8 +320,8 @@ export default function CraftingScreen({ state, dispatch }) {
               />
             ))}
           </div>
-        </div>
+        </FeaturePanel.Body>
       )}
-    </div>
+    </FeaturePanel>
   );
 }

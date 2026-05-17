@@ -1,5 +1,6 @@
 import { MAGIC_TOOLS } from "./data.js";
 import { locBuilt } from "../../locBuilt.js";
+import FeaturePanel from "../../ui/primitives/FeaturePanel.jsx";
 
 export const viewKey = "portal";
 
@@ -12,17 +13,12 @@ export default function PortalScreen({ state, dispatch }) {
   const tools = state.tools ?? {};
 
   return (
-    <div className="hl-panel hl-panel--arcane">
-      {/* Header */}
-      <div className="hl-panel-header">
-        <span className="hl-panel-title">🔮 Magic Portal</span>
-        <button
-          onClick={() => dispatch({ type: "SET_VIEW", view: "town" })}
-          className="hl-panel-close"
-        >
-          ✕
-        </button>
-      </div>
+    <FeaturePanel tone="arcane">
+      <FeaturePanel.Header
+        title="🔮 Magic Portal"
+        onClose={() => dispatch({ type: "SET_VIEW", view: "town" })}
+        closeLabel="Close portal"
+      />
 
       {/* Influence display */}
       {portalBuilt && (
@@ -38,7 +34,7 @@ export default function PortalScreen({ state, dispatch }) {
           </p>
         </div>
       ) : (
-        <div className="hl-panel-body p-2">
+        <FeaturePanel.Body className="p-2">
           <div className="flex flex-col gap-2">
             {MAGIC_TOOLS.map((tool) => {
               const count = tools[tool.id] ?? 0;
@@ -90,8 +86,8 @@ export default function PortalScreen({ state, dispatch }) {
               );
             })}
           </div>
-        </div>
+        </FeaturePanel.Body>
       )}
-    </div>
+    </FeaturePanel>
   );
 }

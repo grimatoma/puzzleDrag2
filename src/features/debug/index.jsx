@@ -1,6 +1,7 @@
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { BIOMES } from "../../constants.js";
-import useFocusTrap from "../../ui/primitives/useFocusTrap.js";
+import { ParchmentDialog } from "../../ui/primitives/Dialog.jsx";
+import FeaturePanel from "../../ui/primitives/FeaturePanel.jsx";
 
 export const modalKey = "debug";
 
@@ -30,41 +31,20 @@ export default function DebugModal({ state, dispatch }) {
   const [itemBiome, setItemBiome] = useState('farm');
   const [itemKey, setItemKey] = useState('grass_hay');
   const open = state.modal === 'debug';
-  const panelRef = useRef(null);
   const close = () => dispatch({ type: 'CLOSE_MODAL' });
-  useFocusTrap(panelRef, open, close);
 
   if (!open) return null;
 
   const biomeResources = BIOMES[itemBiome]?.resources ?? [];
 
   return (
-    <div
-      className="absolute inset-0 grid place-items-center pointer-events-none"
-      style={{ background: 'rgba(0,0,0,0.35)', zIndex: 70 }}
-    >
-      <div
-        ref={panelRef}
-        role="dialog"
-        aria-modal="true"
-        aria-label="Debug Tools"
-        tabIndex={-1}
-        className="relative p-5 rounded-[20px] overflow-y-auto shadow-2xl pointer-events-auto outline-none"
-        style={{
-          background: '#f4ecd8',
-          border: '4px solid #b28b62',
-          width: 'min(540px, 92vw)',
-          maxHeight: '85vh',
-        }}
-      >
-        <button
+    <ParchmentDialog open={open} onClose={close} size="lg" ariaLabel="Debug Tools" backdropClassName="z-[70]">
+      <ParchmentDialog.Body className="relative !p-5">
+        <FeaturePanel.CloseButton
           onClick={close}
-          className="absolute top-3 right-3 w-7 h-7 rounded-lg grid place-items-center text-[16px] font-bold border-2"
-          style={{ background: '#e8dcc4', borderColor: '#b28b62', color: '#5a3a20' }}
+          className="absolute top-3 right-3"
           aria-label="Close"
-        >
-          ×
-        </button>
+        />
 
         <div className="flex flex-col gap-3 text-left">
           <div className="text-[18px] font-bold text-center text-on-panel">
@@ -175,7 +155,7 @@ export default function DebugModal({ state, dispatch }) {
             </div>
           </div>
         </div>
-      </div>
-    </div>
+      </ParchmentDialog.Body>
+    </ParchmentDialog>
   );
 }
