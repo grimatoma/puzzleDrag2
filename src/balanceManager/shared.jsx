@@ -2,6 +2,13 @@
 // ember-orange accents.
 import { useState } from "react";
 import Icon from "../ui/Icon.jsx";
+import {
+  NumberInput as BaseNumberInput,
+  SearchInput as BaseSearchInput,
+  SelectField as BaseSelectField,
+  TextArea as BaseTextArea,
+  TextInput as BaseTextInput,
+} from "../ui/primitives/Field.jsx";
 
 export const COLORS = {
   parchment: "#f4ecd8",
@@ -22,79 +29,56 @@ export const COLORS = {
 
 export function NumberField({ value, onChange, min = 0, max = 9999, step = 1, width = 70 }) {
   return (
-    <input
-      type="number"
+    <BaseNumberInput
       value={value ?? 0}
       min={min}
       max={max}
       step={step}
       onChange={(e) => onChange(Number(e.target.value))}
-      className="px-1.5 py-1 text-[12px] font-mono rounded border-2 text-right focus:outline-none focus:ring-2 focus:ring-[#d6612a]/40"
-      style={{
-        background: "#fff",
-        borderColor: COLORS.border,
-        color: COLORS.ink,
-        width,
-      }}
+      className="!h-auto px-1.5 py-1 text-[12px]"
+      style={{ width }}
     />
   );
 }
 
 export function TextField({ value, onChange, placeholder = "", width = "100%" }) {
   return (
-    <input
-      type="text"
+    <BaseTextInput
       value={value ?? ""}
       placeholder={placeholder}
       onChange={(e) => onChange(e.target.value)}
-      className="px-2 py-1 text-[12px] rounded border-2 focus:outline-none focus:ring-2 focus:ring-[#d6612a]/40"
-      style={{
-        background: "#fff",
-        borderColor: COLORS.border,
-        color: COLORS.ink,
-        width,
-      }}
+      className="!h-auto px-2 py-1 text-[12px]"
+      style={{ width }}
     />
   );
 }
 
 export function TextArea({ value, onChange, rows = 3, placeholder = "" }) {
   return (
-    <textarea
+    <BaseTextArea
       value={value ?? ""}
       placeholder={placeholder}
       rows={rows}
       onChange={(e) => onChange(e.target.value)}
-      className="w-full px-2 py-1 text-[12px] rounded border-2 focus:outline-none focus:ring-2 focus:ring-[#d6612a]/40"
-      style={{
-        background: "#fff",
-        borderColor: COLORS.border,
-        color: COLORS.ink,
-        resize: "vertical",
-      }}
+      className="w-full px-2 py-1 text-[12px]"
     />
   );
 }
 
 export function Select({ value, onChange, options, width = "100%" }) {
   return (
-    <select
+    <BaseSelectField
       value={value ?? ""}
       onChange={(e) => onChange(e.target.value)}
-      className="px-2 py-1 text-[12px] rounded border-2 focus:outline-none focus:ring-2 focus:ring-[#d6612a]/40"
-      style={{
-        background: "#fff",
-        borderColor: COLORS.border,
-        color: COLORS.ink,
-        width,
-      }}
+      className="!h-auto px-2 py-1 text-[12px]"
+      style={{ width }}
     >
       {options.map((opt) => (
         <option key={opt.value ?? "_none"} value={opt.value ?? ""}>
           {opt.label}
         </option>
       ))}
-    </select>
+    </BaseSelectField>
   );
 }
 
@@ -187,17 +171,13 @@ export function Card({ children, className = "", title, accent }) {
 
 export function SearchBar({ value, onChange, placeholder = "Search…" }) {
   return (
-    <div className="relative w-full">
-      <input
-        type="text"
-        value={value}
-        placeholder={placeholder}
-        onChange={(e) => onChange(e.target.value)}
-        className="w-full pl-7 pr-3 py-1.5 text-[12px] rounded-lg border-2 focus:outline-none focus:ring-2 focus:ring-[#d6612a]/40"
-        style={{ background: "#fff", borderColor: COLORS.border, color: COLORS.ink }}
-      />
-      <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[12px]" style={{ color: COLORS.inkSubtle }}>🔍</span>
-    </div>
+    <BaseSearchInput
+      value={value}
+      placeholder={placeholder}
+      onChange={(e) => onChange(e.target.value)}
+      onClear={() => onChange("")}
+      inputClassName="!h-auto py-1.5 text-[12px]"
+    />
   );
 }
 
@@ -251,12 +231,12 @@ export function SearchAndAddPicker({
 
       {pickerOpen && (
         <div className="flex flex-col gap-2">
-          <input
+          <BaseSearchInput
             value={query}
             onChange={(e) => setQuery(e.target.value)}
+            onClear={() => setQuery("")}
             placeholder={placeholder}
-            className="px-2 py-1.5 rounded border text-[12px]"
-            style={{ background: "#fffaf1", borderColor: COLORS.border, color: COLORS.ink }}
+            inputClassName="!h-auto py-1.5 text-[12px]"
           />
           <div className={`grid gap-2 max-h-64 overflow-y-auto pr-1 ${gridClass}`}>
             {filtered.map((o) => (

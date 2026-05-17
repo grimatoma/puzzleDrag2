@@ -3,6 +3,7 @@ import { InventoryGrid } from "../../ui/Inventory.jsx";
 import Pill from "../../ui/primitives/Pill.jsx";
 import Button from "../../ui/primitives/Button.jsx";
 import FeaturePanel from "../../ui/primitives/FeaturePanel.jsx";
+import { SearchInput } from "../../ui/primitives/Field.jsx";
 
 export const viewKey = "inventory";
 
@@ -88,23 +89,6 @@ function useRecentOrder(inventory) {
   return state.order;
 }
 
-function SearchIcon() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <circle cx="11" cy="11" r="6" stroke="currentColor" strokeWidth="2" />
-      <path d="M20 20l-3.5-3.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function ClearIcon() {
-  return (
-    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" />
-    </svg>
-  );
-}
-
 export default function InventoryScreen({ state, dispatch }) {
   const biomeKey = state.biomeKey ?? "farm";
   const isPhone = usePhoneViewport();
@@ -128,29 +112,13 @@ export default function InventoryScreen({ state, dispatch }) {
       />
 
       <FeaturePanel.Toolbar className="flex-col !items-stretch gap-2 pt-3 pb-2">
-        <div className="relative flex items-center">
-          <span className="absolute left-2.5 text-on-panel-faint pointer-events-none">
-            <SearchIcon />
-          </span>
-          <input
-            type="search"
-            value={queryInput}
-            onChange={(e) => setQueryInput(e.target.value)}
-            placeholder="Search resources..."
-            aria-label="Search resources"
-            className="hl-input pl-8 pr-8"
-          />
-          {queryInput && (
-            <button
-              type="button"
-              onClick={() => setQueryInput("")}
-              aria-label="Clear search"
-              className="absolute right-2 grid place-items-center w-6 h-6 text-on-panel-dim hover:text-on-panel"
-            >
-              <ClearIcon />
-            </button>
-          )}
-        </div>
+        <SearchInput
+          value={queryInput}
+          onChange={(e) => setQueryInput(e.target.value)}
+          onClear={() => setQueryInput("")}
+          placeholder="Search resources..."
+          ariaLabel="Search resources"
+        />
 
         <div className="flex items-center justify-between gap-2 flex-wrap">
           <div className="flex flex-wrap items-center gap-1.5">
