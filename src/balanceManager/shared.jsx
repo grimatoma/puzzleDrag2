@@ -9,23 +9,9 @@ import {
   TextArea as BaseTextArea,
   TextInput as BaseTextInput,
 } from "../ui/primitives/Field.jsx";
+import { UI_COLORS } from "../ui/primitives/palette.js";
 
-export const COLORS = {
-  parchment: "#f4ecd8",
-  parchmentDeep: "#e8dcc4",
-  border: "#b28b62",
-  borderDeep: "#8b6845",
-  ink: "#2b2218",
-  inkLight: "#5a3a20",
-  inkSubtle: "#7a5a38",
-  ember: "#d6612a",
-  emberDeep: "#a84010",
-  green: "#5a9e4b",
-  greenDeep: "#3e7236",
-  red: "#c23b22",
-  redDeep: "#8f2a18",
-  slate: "#5a5e66",
-};
+export const COLORS = UI_COLORS;
 
 export function NumberField({ value, onChange, min = 0, max = 9999, step = 1, width = 70 }) {
   return (
