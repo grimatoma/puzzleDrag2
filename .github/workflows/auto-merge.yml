@@ -15,7 +15,7 @@ jobs:
       - name: Enable auto-merge for pull request
         if: github.actor == 'grimatoma' || github.event.pull_request.author_association == 'OWNER'
         run: |
-          gh pr merge --auto --squash "${{ github.event.pull_request.number }}"
+          gh pr merge --auto --merge "${{ github.event.pull_request.number }}"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
