@@ -12,6 +12,7 @@ import {
 } from "./data.js";
 import Icon from "../../ui/Icon.jsx";
 import DesignIcon from "../../ui/primitives/Icon.jsx";
+import ActionCard from "../../ui/primitives/ActionCard.jsx";
 
 export const viewKey = "boons";
 
@@ -56,8 +57,8 @@ function BoonCard({ state, dispatch, boon }) {
   const canBuy = !owned && unlocked && canAffordBoon(state, boon);
   const color = PATH_COLOR[boon.catalogKey?.split("_")[1]] ?? PATH_COLOR.coexist;
   return (
-    <div
-      className="rounded-xl border-2 p-3 flex flex-col gap-1"
+    <ActionCard
+      className="gap-1"
       style={{
         background: owned ? "#cbe0b8" : color.bg,
         borderColor: owned ? "#3a7a1a" : color.border,
@@ -94,7 +95,7 @@ function BoonCard({ state, dispatch, boon }) {
           {!unlocked ? "Path not chosen yet" : !canAffordBoon(state, boon) ? "Insufficient" : "Claim"}
         </button>
       )}
-    </div>
+    </ActionCard>
   );
 }
 

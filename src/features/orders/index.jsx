@@ -4,6 +4,7 @@ import { bondBand, bondModifier, payOrder } from "../npcs/bond.js";
 import IconCanvas, { hasIcon } from "../../ui/IconCanvas.jsx";
 import Icon from "../../ui/Icon.jsx";
 import FeaturePanel from "../../ui/primitives/FeaturePanel.jsx";
+import ActionCard, { ProgressBar } from "../../ui/primitives/ActionCard.jsx";
 
 export const viewKey = "orders";
 
@@ -35,10 +36,16 @@ export default function OrdersScreen({ state, dispatch }) {
           const modifier = bondModifier(bond);
           const bandName = bondBand(bond).name;
           return (
-            <button
+            <ActionCard
+              as="button"
               key={o.id}
               onClick={() => dispatch({ type: "TURN_IN_ORDER", id: o.id })}
-              className={`text-left rounded-xl border-2 px-3 py-3 flex flex-col gap-2 transition-transform hover:-translate-y-0.5 ${done ? "bg-[#cfe4a3] border-[#91bf24]" : isCrafted ? "bg-[#e8d8f7] border-[#9a7ab8]" : "bg-[#f7ead8] border-[#c5a87a]"}`}
+              interactive
+              className="!p-3 transition-transform hover:-translate-y-0.5"
+              style={{
+                background: done ? "#cfe4a3" : isCrafted ? "#e8d8f7" : "#f7ead8",
+                borderColor: done ? "#91bf24" : isCrafted ? "#9a7ab8" : "#c5a87a",
+              }}
             >
               <div className="flex items-center gap-2.5">
                 <div
@@ -74,12 +81,13 @@ export default function OrdersScreen({ state, dispatch }) {
                     {hasIcon(o.key) && <IconCanvas iconKey={o.key} size={32} />}
                   </div>
                 )}
-                <div className="flex-1 h-2.5 bg-[#e0d2b0] rounded overflow-hidden">
-                  <div
-                    className="h-full transition-[width] duration-300"
-                    style={{ width: `${Math.min(100, (have / o.need) * 100)}%`, backgroundColor: done ? "#4f6b3a" : "#d6612a" }}
-                  />
-                </div>
+                <ProgressBar
+                  value={have}
+                  max={o.need}
+                  color={done ? "#4f6b3a" : "var(--ember)"}
+                  className="flex-1"
+                  trackClassName="bg-[#e0d2b0]"
+                />
                 <div className="text-[#6a4b31] text-[12px] font-bold whitespace-nowrap min-w-[44px] text-right">
                   {have}/{o.need}
                 </div>
@@ -92,7 +100,7 @@ export default function OrdersScreen({ state, dispatch }) {
                   </svg>
                 </div>
               )}
-            </button>
+            </ActionCard>
           );
         })}
       </FeaturePanel.Body>
