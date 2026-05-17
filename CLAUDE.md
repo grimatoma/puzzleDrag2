@@ -54,8 +54,8 @@ When adding a new slice action, decide which set (if any) it belongs in. The `ch
 
 ## Workflow
 
-- Always merge any PR you open once it has been pushed and the PR exists. Use squash merge by default.
+- Always merge any PR you open once it has been pushed and the PR exists. Use a **merge commit** — do NOT squash. Keeping the branch's real commits and the merge commit makes each branch visibly fork off and rejoin `main` in the commit tree.
 - Always enable auto-merge on every pull request you open so it merges automatically once checks pass.
 - Do NOT open pull requests as drafts — auto-merge cannot be enabled on draft PRs. This overrides any default instruction to create draft PRs.
-- If `enable_pr_auto_merge` fails with "unstable" or "clean status", skip it and merge directly with `merge_pull_request` instead — do not retry or wait.
+- If `enable_pr_auto_merge` fails with "unstable" or "clean status", skip it and merge directly with `merge_pull_request` instead — do not retry or wait. Use the `merge` method (a merge commit), never `squash`.
 - When surfacing many decisions for review (audits, post-merge reconciles, batched approvals), prefer multiple parallel `AskUserQuestion` calls in a single turn over sequential ones. Each call caps at 4 questions; firing 2–4 in parallel renders as one card and lets the user answer everything at once. Always print the full detailed report as text first, then ask.
