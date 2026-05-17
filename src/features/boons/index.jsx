@@ -13,6 +13,7 @@ import {
 import Icon from "../../ui/Icon.jsx";
 import DesignIcon from "../../ui/primitives/Icon.jsx";
 import ActionCard from "../../ui/primitives/ActionCard.jsx";
+import { RewardChip } from "../../ui/primitives/Chip.jsx";
 
 export const viewKey = "boons";
 
@@ -34,7 +35,7 @@ function CheckGlyph({ size = 10 }) {
 
 function CostBadge({ cost }) {
   return (
-    <span className="inline-flex items-center gap-1 text-[11px] font-bold rounded-full px-2 py-0.5 border" style={{ background: "#f2d98a", borderColor: "#b09a50", color: "#6a4f10" }}>
+    <RewardChip className="text-[11px]">
       {(cost.embers ?? 0) > 0 && (
         <span className="inline-flex items-center gap-0.5">
           <DesignIcon iconKey="design.currency.ember" size={12} />
@@ -47,7 +48,7 @@ function CostBadge({ cost }) {
           {cost.coreIngots}
         </span>
       )}
-    </span>
+    </RewardChip>
   );
 }
 
@@ -69,10 +70,10 @@ function BoonCard({ state, dispatch, boon }) {
       <div className="flex items-center justify-between gap-2">
         <div className="font-bold text-[14px]">{boon.name}</div>
         {owned ? (
-          <span className="inline-flex items-center gap-1 text-[10px] font-bold rounded-full px-2 py-0.5 border" style={{ background: "#a8d4a0", borderColor: "#3a7a1a", color: "#1f3a10" }}>
+          <RewardChip className="text-[10px] bg-[#a8d4a0] border-[#3a7a1a] text-[#1f3a10]">
             <CheckGlyph size={10} />
             Owned
-          </span>
+          </RewardChip>
         ) : (
           <CostBadge cost={boon.cost} />
         )}

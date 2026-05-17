@@ -1,6 +1,7 @@
 import { DECORATIONS } from "./data.js";
 import { locBuilt } from "../../locBuilt.js";
 import FeaturePanel from "../../ui/primitives/FeaturePanel.jsx";
+import { CostChip } from "../../ui/primitives/Chip.jsx";
 
 function canAfford(decor, state) {
   const { cost } = decor;
@@ -11,14 +12,6 @@ function canAfford(decor, state) {
     if ((inv[k] ?? 0) < v) return false;
   }
   return true;
-}
-
-function CostTag({ label, value }) {
-  return (
-    <span className="hl-cost-tag">
-      {value} {label}
-    </span>
-  );
 }
 
 function DecorationCard({ decor, state, dispatch }) {
@@ -34,7 +27,7 @@ function DecorationCard({ decor, state, dispatch }) {
         <span className="hl-card-title leading-tight">{decor.name}</span>
         <div className="flex flex-wrap gap-1 mt-0.5">
           {Object.entries(decor.cost).map(([k, v]) => (
-            <CostTag key={k} label={k === "coins" ? "◉" : k} value={v} />
+            <CostChip key={k}>{v} {k === "coins" ? "◉" : k}</CostChip>
           ))}
         </div>
       </div>

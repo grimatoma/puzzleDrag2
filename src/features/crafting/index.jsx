@@ -6,6 +6,7 @@ import { locBuilt } from "../../locBuilt.js";
 import Icon from "../../ui/Icon.jsx";
 import DesignIcon from "../../ui/primitives/Icon.jsx";
 import FeaturePanel from "../../ui/primitives/FeaturePanel.jsx";
+import { CostChip, RequirementChip } from "../../ui/primitives/Chip.jsx";
 
 export const viewKey = "crafting";
 
@@ -80,12 +81,9 @@ function RecipeCard({ recipeKey, recipe, inventory, built, level, craftedTotals,
             const have = (inventory || {})[res] || 0;
             const enough = have >= need;
             return (
-              <span
-                key={res}
-                className={`hl-chip ${enough ? "hl-chip--ok" : "hl-chip--missing"}`}
-              >
+              <RequirementChip key={res} ok={enough}>
                 {ITEMS[res]?.label || res} ×{need}
-              </span>
+              </RequirementChip>
             );
           })}
         </div>
@@ -201,9 +199,9 @@ function DecorationCard({ decor, state, dispatch }) {
         <span className="hl-card-title text-[11px] leading-tight">{decor.name}</span>
         <div className="flex flex-wrap gap-1 mt-0.5">
           {Object.entries(decor.cost).map(([k, v]) => (
-            <span key={k} className="hl-cost-tag">
+            <CostChip key={k}>
               {v} {k === "coins" ? "◉" : k}
-            </span>
+            </CostChip>
           ))}
         </div>
       </div>

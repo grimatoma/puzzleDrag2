@@ -4,6 +4,7 @@
 import { biomesForType } from "./data.js";
 import { ParchmentDialog } from "../../ui/primitives/Dialog.jsx";
 import Button from "../../ui/primitives/Button.jsx";
+import { RewardChip } from "../../ui/primitives/Chip.jsx";
 
 const formatHazard = (h) =>
   String(h).split("_").map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
@@ -27,7 +28,7 @@ export default function BiomePicker({ node, type, cost, dispatch, onClose }) {
               <div className="flex items-center gap-2">
                 <span className="text-[22px] leading-none">{b.icon}</span>
                 <span className="font-bold text-[14px] text-on-panel flex-1">{b.name}</span>
-                <span className="text-[10px] font-bold text-[#1f3a10] bg-[#cbe0b8] border border-[#6a9a3a] rounded-full px-2 py-0.5">+ {b.bonus}</span>
+                <RewardChip className="text-[#1f3a10] bg-[#cbe0b8] border-[#6a9a3a]">+ {b.bonus}</RewardChip>
               </div>
               <div className="flex flex-wrap gap-1 mt-1">
                 {b.hazards.map((h) => (
