@@ -4,6 +4,7 @@ import { TILE_TYPES_BY_CATEGORY, TILE_TYPES_MAP } from "../tileCollection/data.j
 import { TileIcon } from "../tileCollection/index.jsx";
 import useFocusTrap from "../../ui/primitives/useFocusTrap.js";
 import { ParchmentDialog } from "../../ui/primitives/Dialog.jsx";
+import Button from "../../ui/primitives/Button.jsx";
 
 const CATEGORY_LABEL = {
   grass: "Grass",
@@ -352,21 +353,23 @@ export default function StartFarmingModal({ state, dispatch, onClose }) {
           </span>
         </div>
 
-        <button
-          type="button"
+        <Button
+          tone="moss"
+          size="lg"
+          block
           onClick={handleStart}
           disabled={!canStart}
-          className="w-full mb-2 bg-[#91bf24] hover:bg-[#a3d028] disabled:bg-[#9a9a8a] disabled:cursor-not-allowed text-white border-[3px] border-white rounded-2xl px-8 py-2.5 text-[16px] font-bold shadow-lg transition-colors"
+          className="mb-2 !rounded-2xl shadow-lg"
         >
           {canAfford ? `Start (${cost}◉)` : "Not enough coin"}
-        </button>
-        <button
-          type="button"
+        </Button>
+        <Button
+          tone="iron"
+          block
           onClick={onClose}
-          className="w-full bg-[#9a724d] hover:bg-[#b8845a] text-white font-bold py-2 rounded-lg border border-[#e6c49a] text-[13px] transition-colors"
         >
           Cancel
-        </button>
+        </Button>
 
         {chooserCat && (
           <TileChooserPopup

@@ -3,6 +3,7 @@
 
 import { biomesForType } from "./data.js";
 import { ParchmentDialog } from "../../ui/primitives/Dialog.jsx";
+import Button from "../../ui/primitives/Button.jsx";
 
 const formatHazard = (h) =>
   String(h).split("_").map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
@@ -45,7 +46,7 @@ export default function BiomePicker({ node, type, cost, dispatch, onClose }) {
         </div>
       </ParchmentDialog.Body>
       <ParchmentDialog.Actions>
-        <button onClick={onClose} className="hl-btn hl-btn--ghost w-full">Cancel</button>
+        <Button tone="ghost" variant="ghost" block onClick={onClose}>Cancel</Button>
       </ParchmentDialog.Actions>
     </ParchmentDialog>
   );

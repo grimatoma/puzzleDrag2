@@ -193,6 +193,14 @@
   }
   .hl-btn--ghost:hover:not(:disabled) { background: var(--card-bg-hover); color: var(--on-panel); }
 
+  /* Neutral brown — cancel / back affordance. */
+  .hl-btn--neutral { background: #9a724d; border-color: #e6c49a; color: #fff; }
+  .hl-btn--neutral:hover:not(:disabled) { background: #b8845a; }
+
+  /* Destructive action. */
+  .hl-btn--danger { background: #9a3a2a; border-color: #6f251b; color: #fff; }
+  .hl-btn--danger:hover:not(:disabled) { background: #b24a36; }
+
   /* Disabled — muted but still clearly visible against parchment. */
   .hl-btn:disabled {
     background: #c4b08a;
