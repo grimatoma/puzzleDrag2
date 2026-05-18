@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { MAP_NODES, KIND_LABELS } from "./data.js";
 import { isAdjacent } from "./slice.js";
 import { loreFor, HEARTH_TOKENS } from "./lore.js";
@@ -16,7 +16,8 @@ import {
 } from "../zones/data.js";
 import { keeperForType } from "../../keepers.js";
 import BiomePicker from "../zones/BiomePicker.jsx";
-import useFocusTrap from "../../ui/primitives/useFocusTrap.js";
+import Button from "../../ui/primitives/Button.jsx";
+import { ParchmentDialog } from "../../ui/primitives/Dialog.jsx";
 import FeaturePanel from "../../ui/primitives/FeaturePanel.jsx";
 
 export const viewKey = "cartography";
@@ -63,8 +64,6 @@ function getNodeStatus(node, visitedSet, discoveredSet, current, playerLevel, ol
 function KeeperEncounterModal({ node, type, dispatch, onClose }) {
   const keeper = keeperForType(type);
   const [chosen, setChosen] = useState(null);
-  const panelRef = useRef(null);
-  useFocusTrap(panelRef, !!keeper, onClose);
   if (!keeper) { onClose(); return null; }
   const pick = (path) => {
     dispatch({ type: "KEEPER/CONFRONT", payload: { zoneId: node.id, path } });
@@ -72,16 +71,15 @@ function KeeperEncounterModal({ node, type, dispatch, onClose }) {
   };
   const info = chosen ? (chosen === "coexist" ? keeper.coexist : keeper.driveout) : null;
   return (
-    <div className="fixed inset-0 z-[60] bg-black/65 grid place-items-center p-3" onClick={chosen ? onClose : undefined}>
-      <div
-        ref={panelRef}
-        role="dialog"
-        aria-modal="true"
-        aria-label={`${keeper.name} encounter`}
-        tabIndex={-1}
-        className="bg-[#f4ecd8] border-[4px] border-[#b28b62] rounded-[18px] px-5 py-4 w-[min(460px,95vw)] max-h-[90vh] overflow-y-auto shadow-2xl outline-none"
-        onClick={(e) => e.stopPropagation()}
-      >
+    <ParchmentDialog
+      open
+      onClose={onClose}
+      closeOnBackdrop={!!chosen}
+      size="md"
+      ariaLabel={`${keeper.name} encounter`}
+      backdropClassName="z-[60] !bg-black/65"
+    >
+      <ParchmentDialog.Body className="!px-5 !py-4">
         <div className="flex items-center gap-2 mb-2">
           <span className="text-[26px] leading-none">{keeper.icon}</span>
           <div>
@@ -136,16 +134,13 @@ function KeeperEncounterModal({ node, type, dispatch, onClose }) {
                   : `Win the trial to claim ${keeper.driveout.coreIngots ?? 0} Core Ingots.`}
               </p>
             </div>
-            <button
-              onClick={onClose}
-              className="w-full bg-[#91bf24] hover:bg-[#a3d028] text-white font-bold py-2 rounded-lg border-2 border-white text-[13px] transition-colors"
-            >
+            <Button tone="moss" size="md" block onClick={onClose}>
               Done
-            </button>
+            </Button>
           </>
         )}
-      </div>
-    </div>
+      </ParchmentDialog.Body>
+    </ParchmentDialog>
   );
 }
 

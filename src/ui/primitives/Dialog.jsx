@@ -58,10 +58,10 @@ function useDialogBehavior(open, onClose, panelRef) {
   }, [open, onClose, panelRef]);
 }
 
-function BackdropShell({ open, onClose, className = "", children }) {
+function BackdropShell({ open, onClose, closeOnBackdrop = true, className = "", children }) {
   if (!open) return null;
   const onBackdrop = (e) => {
-    if (e.target === e.currentTarget && onClose) onClose();
+    if (closeOnBackdrop && e.target === e.currentTarget && onClose) onClose();
   };
   return createPortal(
     <div
@@ -96,6 +96,7 @@ export function ParchmentDialog({
   tone = "parchment",
   ariaLabel,
   backdropClassName = "",
+  closeOnBackdrop = true,
   children,
   className = "",
 }) {
@@ -107,7 +108,7 @@ export function ParchmentDialog({
   useDialogBehavior(open, onClose, panelRef);
   if (!open) return null;
   return (
-    <BackdropShell open={open} onClose={onClose} className={backdropClassName}>
+    <BackdropShell open={open} onClose={onClose} closeOnBackdrop={closeOnBackdrop} className={backdropClassName}>
       <PanelIn>
         <div
           ref={panelRef}
@@ -134,14 +135,23 @@ export function ParchmentDialog({
   );
 }
 
-export function StoryDialog({ open, onClose, size = "md", ariaLabel, backdropClassName = "", children, className = "" }) {
+export function StoryDialog({
+  open,
+  onClose,
+  size = "md",
+  ariaLabel,
+  backdropClassName = "",
+  closeOnBackdrop = true,
+  children,
+  className = "",
+}) {
   const panelRef = useRef(null);
   const titleId = useId();
   const sizeCls = SIZES[size] || SIZES.md;
   useDialogBehavior(open, onClose, panelRef);
   if (!open) return null;
   return (
-    <BackdropShell open={open} onClose={onClose} className={backdropClassName}>
+    <BackdropShell open={open} onClose={onClose} closeOnBackdrop={closeOnBackdrop} className={backdropClassName}>
       <PanelIn>
         <div
           ref={panelRef}

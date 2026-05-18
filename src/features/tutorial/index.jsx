@@ -1,6 +1,6 @@
-import { useRef } from 'react';
 import { NPCS } from '../../constants.js';
-import useFocusTrap from '../../ui/primitives/useFocusTrap.js';
+import Button from '../../ui/primitives/Button.jsx';
+import { ParchmentDialog } from '../../ui/primitives/Dialog.jsx';
 
 export const modalKey = 'tutorial';
 export const alwaysMounted = true;
@@ -95,111 +95,84 @@ function StepDots({ step, total }) {
 
 function CenterCard({ step, stepData, dispatch }) {
   const canGoBack = step > 0;
-  const panelRef = useRef(null);
-  useFocusTrap(panelRef, true, () => dispatch({ type: 'TUTORIAL/SKIP' }));
   return (
-    <div
-      style={{
-        position: 'absolute',
-        inset: 0,
-        background: 'rgba(0,0,0,0.4)',
-        display: 'grid',
-        placeItems: 'center',
-        zIndex: 60,
-      }}
+    <ParchmentDialog
+      open
+      onClose={() => dispatch({ type: 'TUTORIAL/SKIP' })}
+      size="md"
+      ariaLabel={stepData.title}
+      backdropClassName="z-[60] !bg-black/40"
     >
-      <div
-        ref={panelRef}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="tutorial-title"
-        tabIndex={-1}
-        style={{
-          background: '#f4ecd8',
-          border: '4px solid #b28b62',
-          borderRadius: 20,
-          padding: 20,
-          maxWidth: 480,
-          maxHeight: '85vh',
-          overflowY: 'auto',
-          boxShadow: '0 8px 32px rgba(0,0,0,0.35)',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 14,
-          minWidth: 300,
-          fontFamily: 'Arial, sans-serif',
-          outline: 'none',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+      <ParchmentDialog.Title className="!pb-2">
+        <span className="flex items-center gap-3">
           <NpcAvatar npcKey={stepData.npc} size={44} />
-          <div id="tutorial-title" style={{ fontWeight: 700, fontSize: 17, color: '#3e2a1a' }}>{stepData.title}</div>
-        </div>
+          <span>{stepData.title}</span>
+        </span>
+      </ParchmentDialog.Title>
 
-        <div style={{ fontSize: 14, color: '#5a3e28', lineHeight: 1.55 }}>{stepData.body}</div>
+      <ParchmentDialog.Body className="!pt-0 !pb-3 flex flex-col gap-3">
+        <div className="text-body-lg leading-relaxed text-ink-soft">{stepData.body}</div>
 
         <StepDots step={step} total={STEPS.length} />
+      </ParchmentDialog.Body>
 
-        <div style={{ display: 'flex', gap: 8, justifyContent: 'space-between', alignItems: 'center', marginTop: 2 }}>
-          <button
-            onClick={() => dispatch({ type: 'TUTORIAL/SKIP' })}
-            style={{
-              background: '#e8dcc4',
-              border: '2px solid #b28b62',
-              borderRadius: 10,
-              color: '#5a3a20',
-              fontFamily: 'Arial, sans-serif',
-              fontSize: 13,
-              fontWeight: 700,
-              cursor: 'pointer',
-              padding: '10px 14px',
-              minHeight: 40,
-            }}
-          >
-            Skip
-          </button>
-          <div style={{ display: 'flex', gap: 8 }}>
-            {canGoBack && (
-              <button
-                onClick={() => dispatch({ type: 'TUTORIAL/PREV' })}
-                aria-label="Previous step"
-                style={{
-                  background: '#e8dcc4',
-                  border: '2px solid #b28b62',
-                  borderRadius: 10,
-                  color: '#5a3a20',
-                  fontFamily: 'Arial, sans-serif',
-                  fontSize: 14,
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  padding: '10px 14px',
-                  minHeight: 40,
-                }}
-              >
-                ← Back
-              </button>
-            )}
-            <button
-              onClick={() => dispatch({ type: 'TUTORIAL/NEXT' })}
-              style={{
-                background: '#91bf24',
-                border: 'none',
-                borderRadius: 10,
-                color: '#fff',
-                fontFamily: 'Arial, sans-serif',
-                fontWeight: 700,
-                fontSize: 14,
-                cursor: 'pointer',
-                padding: '10px 20px',
-                minHeight: 40,
-              }}
+      <ParchmentDialog.Actions className="!justify-between">
+        <Button
+          tone="iron"
+          variant="soft"
+          size="md"
+          onClick={() => dispatch({ type: 'TUTORIAL/SKIP' })}
+        >
+          Skip
+        </Button>
+        <div className="flex gap-2">
+          {canGoBack && (
+            <Button
+              tone="iron"
+              variant="soft"
+              size="md"
+              onClick={() => dispatch({ type: 'TUTORIAL/PREV' })}
+              aria-label="Previous step"
             >
-              {stepData.cta} →
-            </button>
-          </div>
+              ← Back
+            </Button>
+          )}
+          <Button
+            tone="moss"
+            size="md"
+            onClick={() => dispatch({ type: 'TUTORIAL/NEXT' })}
+          >
+            {stepData.cta} →
+          </Button>
         </div>
-      </div>
-    </div>
+      </ParchmentDialog.Actions>
+    </ParchmentDialog>
+  );
+}
+
+function CornerToastButton({ children, onClick, ariaLabel, primary = false }) {
+  return (
+    <button
+      onClick={onClick}
+      aria-label={ariaLabel}
+      style={{
+        background: primary ? '#91bf24' : '#e8dcc4',
+        border: primary ? 'none' : '2px solid #b28b62',
+        borderRadius: 8,
+        color: primary ? '#fff' : '#5a3a20',
+        fontFamily: 'Arial, sans-serif',
+        fontSize: 18,
+        fontWeight: 700,
+        cursor: 'pointer',
+        lineHeight: 1,
+        width: 32,
+        height: 32,
+        display: 'inline-grid',
+        placeItems: 'center',
+      }}
+    >
+      {children}
+    </button>
   );
 }
 
@@ -234,27 +207,12 @@ function CornerToast({ step, stepData, dispatch }) {
             <NpcAvatar npcKey={stepData.npc} size={30} />
             <div style={{ fontWeight: 700, fontSize: 13, color: '#3e2a1a' }}>{stepData.title}</div>
           </div>
-          <button
+          <CornerToastButton
             onClick={() => dispatch({ type: 'TUTORIAL/SKIP' })}
-            style={{
-              background: '#e8dcc4',
-              border: '2px solid #b28b62',
-              borderRadius: 8,
-              color: '#5a3a20',
-              fontFamily: 'Arial, sans-serif',
-              fontSize: 18,
-              fontWeight: 700,
-              cursor: 'pointer',
-              lineHeight: 1,
-              width: 32,
-              height: 32,
-              display: 'inline-grid',
-              placeItems: 'center',
-            }}
-            aria-label="Close tutorial"
+            ariaLabel="Close tutorial"
           >
             ×
-          </button>
+          </CornerToastButton>
         </div>
 
         <div style={{ fontSize: 13, color: '#5a3e28', lineHeight: 1.5 }}>{stepData.body}</div>

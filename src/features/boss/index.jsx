@@ -1,8 +1,8 @@
 
-import { useRef } from "react";
 import { BOSS_META } from "./slice.js";
 import IconCanvas, { hasIcon } from "../../ui/IconCanvas.jsx";
-import useFocusTrap from "../../ui/primitives/useFocusTrap.js";
+import { StoryDialog } from "../../ui/primitives/Dialog.jsx";
+import { ProgressBar } from "../../ui/primitives/ActionCard.jsx";
 
 export const modalKey = "boss";
 export const alwaysMounted = true;
@@ -11,18 +11,6 @@ function bossPortraitKey(boss) {
   if (!boss) return null;
   const k = `boss_${boss.key || boss.id}`;
   return hasIcon(k) ? k : null;
-}
-
-function ProgressBar({ value, max, color }) {
-  const pct = max > 0 ? Math.min(100, (value / max) * 100) : 0;
-  return (
-    <div className="w-full h-3 rounded-full overflow-hidden" style={{ background: "#1a0d05" }}>
-      <div
-        className="h-full rounded-full transition-[width] duration-300"
-        style={{ width: `${pct}%`, background: color || "#ff7a00" }}
-      />
-    </div>
-  );
 }
 
 function WarningGlyph({ size = 14 }) {
@@ -90,29 +78,19 @@ function BossModal({ boss, year = 1, dispatch }) {
   const pct = boss.targetCount > 0
     ? Math.min(100, Math.round((boss.progress / boss.targetCount) * 100))
     : 0;
-  const panelRef = useRef(null);
   const closable = !boss.isKeeperTrial;
-  useFocusTrap(panelRef, true, closable ? () => dispatch({ type: "BOSS/REJECT" }) : undefined);
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center"
-      style={{ background: "rgba(0,0,0,0.72)" }}
+    <StoryDialog
+      open
+      onClose={closable ? () => dispatch({ type: "BOSS/REJECT" }) : undefined}
+      closeOnBackdrop={closable}
+      size="lg"
+      ariaLabel={boss.name || "Boss encounter"}
+      backdropClassName="z-50 !bg-black/70"
+      className="!border-[4px] !border-[#a8431a]"
     >
-      <div
-        ref={panelRef}
-        role="dialog"
-        aria-modal="true"
-        aria-label={boss.name || "Boss encounter"}
-        tabIndex={-1}
-        className="rounded-[20px] p-5 shadow-2xl text-white overflow-y-auto outline-none"
-        style={{
-          background: "linear-gradient(to bottom, #3a2715, #1a0d05)",
-          border: "4px solid #a8431a",
-          width: "min(540px, 92vw)",
-          maxHeight: "85vh",
-        }}
-      >
+      <StoryDialog.Body className="!p-5">
         {/* Header */}
         <div className="flex flex-col items-center gap-1 mb-4">
           {bossPortraitKey(boss) ? (
@@ -238,8 +216,8 @@ function BossModal({ boss, year = 1, dispatch }) {
             </button>
           )}
         </div>
-      </div>
-    </div>
+      </StoryDialog.Body>
+    </StoryDialog>
   );
 }
 
