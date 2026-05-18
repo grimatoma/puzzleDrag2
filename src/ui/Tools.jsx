@@ -1,8 +1,6 @@
 import { useEffect, useState } from "react";
-import { CompactOrders } from "./Inventory.jsx";
 import { getPhaserScene } from "../phaserBridge.js";
 import IconCanvas from "./IconCanvas.jsx";
-import Icon from "./Icon.jsx";
 import ToolStrip from "./primitives/ToolStrip.jsx";
 import BottomSheet from "./primitives/BottomSheet.jsx";
 import { TOOL_CATALOG, TOOL_BY_KEY, visibleTools, isTapTargetTool } from "./toolRegistry.js";
@@ -133,10 +131,6 @@ export function MobileDock({ state, dispatch }) {
   const totalTools = Object.entries(state.tools || {})
     .filter(([k, v]) => typeof v === "number" && v > 0 && TOOL_BY_KEY[k])
     .reduce((s, [, v]) => s + v, 0);
-  const readyOrders = (state.orders || []).filter(
-    (o) => (state.inventory[o.key] || 0) >= o.need,
-  ).length;
-
   const closeSheet = () => setSheet(null);
   const list = buildToolList(state.tools, {
     toolPending: state.toolPending,
@@ -162,22 +156,6 @@ export function MobileDock({ state, dispatch }) {
           </div>
           <span className="text-[9px] font-bold">Tools</span>
         </button>
-
-        <button
-          type="button"
-          className="flex-1 flex flex-col items-center justify-center gap-0.5 py-2.5 relative text-cream"
-          onClick={() => setSheet(sheet === "orders" ? null : "orders")}
-        >
-          {readyOrders > 0 && (
-            <div className="absolute top-1.5 right-[calc(50%-14px)] bg-moss text-cream text-[9px] font-bold rounded-full min-w-[16px] h-[16px] flex items-center justify-center px-1">
-              {readyOrders}
-            </div>
-          )}
-          <span className="text-[20px] leading-none">
-            <Icon iconKey="ui_clipboard" size={20} />
-          </span>
-          <span className="text-[9px] font-bold">Orders</span>
-        </button>
       </div>
 
       <BottomSheet
@@ -198,21 +176,6 @@ export function MobileDock({ state, dispatch }) {
           }}
           onInspect={(key) => setInspectKey(key)}
           grouped
-        />
-      </BottomSheet>
-
-      <BottomSheet
-        open={sheet === "orders"}
-        onClose={closeSheet}
-        snapPoints={[0.5, 0.9]}
-        initialSnap={0.5}
-        title="Orders"
-        dismissible
-      >
-        <CompactOrders
-          orders={state.orders}
-          inventory={state.inventory}
-          dispatch={dispatch}
         />
       </BottomSheet>
 
