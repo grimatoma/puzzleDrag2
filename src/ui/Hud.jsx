@@ -10,70 +10,6 @@ import ProgressTrack from "./primitives/ProgressTrack.jsx";
 
 export const SEASON_EFFECTS = ["", "", "", ""];
 
-const LARDER_RESOURCES = [
-  { key: "grass_hay",   iconKey: "grass_hay", label: "Hay" },
-  { key: "grain_wheat", iconKey: "grain_wheat", label: "Wheat" },
-  { key: "grain",       iconKey: "grain",       label: "Grain" },
-  { key: "berry",       iconKey: "berry",       label: "Berry" },
-  { key: "wood_log",    iconKey: "wood_log",    label: "Log" },
-];
-
-function StashContent({ state, inventory, festivalAnnounced }) {
-  const embers = state.embers ?? 0;
-  const ingots = state.coreIngots ?? 0;
-  const gems = state.gems ?? 0;
-  const tokens = hearthTokenCount(state);
-  const rows = [
-    embers > 0 && { iconKey: "design.currency.ember",        label: "Embers",        value: embers },
-    ingots > 0 && { iconKey: "design.currency.ingot",        label: "Core Ingots",   value: ingots },
-    gems   > 0 && { iconKey: "design.currency.gem",          label: "Gems",          value: gems },
-    tokens > 0 && { iconKey: "design.currency.hearth-token", label: "Hearth-Tokens", value: `${tokens}/3` },
-  ].filter(Boolean);
-
-  return (
-    <div className="flex flex-col gap-3 min-w-[220px]">
-      <div>
-        <div className="text-caption font-semibold text-ink-mid mb-1.5">Stash</div>
-        {rows.length === 0 ? (
-          <div className="text-caption text-ink-light">Empty.</div>
-        ) : (
-          <div className="flex flex-col gap-1">
-            {rows.map((r) => (
-              <div key={r.label} className="flex items-center justify-between gap-3">
-                <span className="inline-flex items-center gap-1.5">
-                  <Icon iconKey={r.iconKey} size={16} />
-                  <span className="text-body">{r.label}</span>
-                </span>
-                <span className="tabular-nums font-semibold text-body">{r.value}</span>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-      {festivalAnnounced && (
-        <div className="border-t border-iron-edge pt-2">
-          <div className="text-caption font-semibold text-ink-mid mb-1.5">Larder · target 50</div>
-          <div className="flex flex-col gap-1.5">
-            {LARDER_RESOURCES.map(({ key, iconKey, label }) => {
-              const amt = Math.min(50, inventory[key] ?? 0);
-              return (
-                <div key={key} className="flex items-center gap-2">
-                  <LegacyIcon iconKey={iconKey} size={14} />
-                  <span className="text-caption flex-1">{label}</span>
-                  <div className="w-24">
-                    <ProgressTrack value={amt} max={50} style="bar" tone={amt >= 50 ? "gold" : "ember"} size="xs" />
-                  </div>
-                  <span className="tabular-nums text-caption w-8 text-right">{amt}</span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
 function TideContent({ fish }) {
   const tide = fish?.tide ?? "high";
   const tideTurn = fish?.tideTurn ?? 0;
@@ -189,11 +125,9 @@ export function Hud({ state, dispatch }) {
   const xpPct = Math.min(100, (xp / xpNeed) * 100);
   const builtAtLoc = locBuilt(state);
   const buildingCount = Object.keys(builtAtLoc).filter((k) => k !== "_plots").length;
-  const festivalAnnounced = !!state.story?.flags?.festival_announced;
   const isWon = !!state.story?.flags?.isWon;
   const sandbox = !!state.story?.sandbox || isWon;
   const settlementName = state.settlement?.name ?? "Hearthwood Vale";
-  const inventory = state.inventory || {};
   const showTide = state.biomeKey === "fish" && (onBoard || view === "town");
 
   return (
@@ -221,24 +155,6 @@ export function Hud({ state, dispatch }) {
       <div className="flex items-center gap-2 flex-1 justify-center min-w-0 flex-wrap">
         {onBoard && (
           <SeasonRing season={season} turnsUsed={turnsUsed} turnsLeft={turnsRemaining} turnBudget={turnBudget || 1} />
-        )}
-        {onBoard && (
-          <Popover
-            density="rich"
-            content={<StashContent state={state} inventory={inventory} festivalAnnounced={festivalAnnounced} />}
-            anchor={
-              <Pill
-                interactive
-                tone="iron"
-                variant="solid"
-                size="sm"
-                leading={<Icon iconKey="design.currency.coin" size={14} />}
-                title="Stash — currencies, tokens, larder"
-              >
-                <span className="tabular-nums">Stash</span>
-              </Pill>
-            }
-          />
         )}
         {showTide && <TideChip fish={state.fish} />}
       </div>
