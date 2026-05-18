@@ -1,5 +1,5 @@
 import { useState, useRef, useMemo, useEffect } from "react";
-import { BUILDINGS } from "../constants.js";
+import { BUILDINGS, ITEMS } from "../constants.js";
 import { useTooltip, Tooltip } from "./Tooltip.jsx";
 import { ZONES, displayZoneName, isSettlementFounded, settlementFoundingCost, settlementTypeForZone, completedSettlementCount, DEFAULT_ZONE } from "../features/zones/data.js";
 import BiomePicker from "../features/zones/BiomePicker.jsx";
@@ -13,6 +13,15 @@ import BuildingIllustration from "./buildings/index.jsx";
 import { TOWN_THEMES, SMOKE_BUILDINGS, TOWN_BIOME_CONFIGS, LOCATION_TOWN_CONFIGS } from "./town/config.js";
 import { FarmFieldArt, MineEntranceArt } from "./town/decor.jsx";
 import { FarmTerrainDecor, MineTerrainDecor } from "./town/terrain.jsx";
+import {
+  BrowserDetailLayout,
+  BrowserGrid,
+  BrowserItemButton,
+  CostGrid,
+  DetailActionButton,
+  DetailPane,
+} from "./primitives/BrowserDetail.jsx";
+import FeaturePanel from "./primitives/FeaturePanel.jsx";
 
 export { BuildingIllustration };
 
@@ -535,45 +544,34 @@ export function TownView({ state, dispatch }) {
           onClick={() => setPurchaseBuilding(null)}
         >
           <div
-            className="rounded-xl border border-white/20 p-5 flex flex-col gap-3"
-            style={{ background: "rgba(15,14,20,.96)", minWidth: 260, maxWidth: 340, boxShadow: "0 8px 40px rgba(0,0,0,.7)" }}
+            className="w-[min(380px,92vw)]"
             onClick={e => e.stopPropagation()}
           >
-            <div className="text-white font-bold" style={{ fontSize: "clamp(13px,1.5vw,18px)" }}>{purchaseBuilding.name}</div>
-            {purchaseBuilding.desc && (
-              <div className="text-white/70 leading-snug" style={{ fontSize: "clamp(10px,1.1vw,13px)" }}>{purchaseBuilding.desc}</div>
-            )}
-            <div className="flex flex-wrap gap-2 mt-1">
-              {Object.entries(purchaseBuilding.cost).map(([k, v]) => (
-                <span
-                  key={k}
-                  className="rounded px-2 py-0.5 font-semibold"
-                  style={{ background: "rgba(255,255,255,.08)", color: "#9bdb6a", fontSize: "clamp(10px,1.1vw,13px)" }}
-                >
-                  {k === "coins" ? `${v} ◉` : `${v} ${k}`}
-                </span>
-              ))}
-            </div>
-            <div className="flex gap-2 mt-1">
-              <button
-                className="flex-1 rounded-lg py-2 font-bold"
-                style={{ background: "#9bdb6a", color: "#1a2a10", fontSize: "clamp(11px,1.2vw,14px)" }}
-                onClick={() => {
-                  dispatch({ type: "BUILD", building: purchaseBuilding, plot: purchaseBuilding._plot });
-                  setPurchaseBuilding(null);
-                  setPendingBuilding(null);
-                }}
-              >
-                Buy
-              </button>
-              <button
-                className="flex-1 rounded-lg py-2 font-bold"
-                style={{ background: "rgba(255,255,255,.1)", color: "rgba(255,255,255,.7)", fontSize: "clamp(11px,1.2vw,14px)" }}
-                onClick={() => setPurchaseBuilding(null)}
-              >
-                Cancel
-              </button>
-            </div>
+            <DetailPane
+              eyebrow={`Plot ${purchaseBuilding._plot + 1}`}
+              title={purchaseBuilding.name}
+              description={purchaseBuilding.desc}
+              icon={<BuildingPreview building={purchaseBuilding} />}
+              actions={
+                <>
+                  <DetailActionButton
+                    tone="moss"
+                    onClick={() => {
+                      dispatch({ type: "BUILD", building: purchaseBuilding, plot: purchaseBuilding._plot });
+                      setPurchaseBuilding(null);
+                      setPendingBuilding(null);
+                    }}
+                  >
+                    Buy
+                  </DetailActionButton>
+                  <DetailActionButton tone="iron" variant="soft" onClick={() => setPurchaseBuilding(null)}>
+                    Cancel
+                  </DetailActionButton>
+                </>
+              }
+            >
+              <CostGrid entries={buildingCostEntries(purchaseBuilding, state)} title="Build cost" />
+            </DetailPane>
           </div>
         </div>
       )}
@@ -581,8 +579,27 @@ export function TownView({ state, dispatch }) {
   );
 }
 
-function BuildPicker({ buildings, state, locationBuilt, freePlots, plotCount, onPick, onClose }) {
-  const rows = buildings.map((b) => {
+function BuildingPreview({ building }) {
+  return (
+    <div className="relative w-full h-full overflow-hidden rounded-md bg-[var(--well-bg)]">
+      <BuildingIllustration id={building.id} isBuilt={true} />
+    </div>
+  );
+}
+
+function buildingCostEntries(building, state) {
+  return Object.entries(building?.cost ?? {}).map(([key, amount]) => ({
+    key,
+    label: key === "coins" ? "Coins" : key === "runes" ? "Runes" : ITEMS[key]?.label || key,
+    amount,
+    have: key === "coins" ? state.coins ?? 0 : key === "runes" ? state.runes ?? 0 : state.inventory?.[key] ?? 0,
+    showHave: true,
+    check: true,
+  }));
+}
+
+function buildingRows(buildings, state, locationBuilt, freePlots) {
+  return buildings.map((b) => {
     const isBuilt = !!locationBuilt[b.id];
     const prereqMet = !b.requires || !!locationBuilt[b.requires];
     const levelMet = state.level >= b.lv;
@@ -603,9 +620,14 @@ function BuildPicker({ buildings, state, locationBuilt, freePlots, plotCount, on
             : !canAfford
               ? "Not enough resources"
               : null;
-    const pickable = !reason;
-    return { b, isBuilt, levelMet, prereqMet, canAfford, reason, pickable };
+    return { b, isBuilt, levelMet, prereqMet, canAfford, reason, pickable: !reason };
   });
+}
+
+function BuildPicker({ buildings, state, locationBuilt, freePlots, plotCount, onPick, onClose }) {
+  const rows = buildingRows(buildings, state, locationBuilt, freePlots);
+  const [selectedId, setSelectedId] = useState(rows[0]?.b.id ?? null);
+  const selected = rows.find((r) => r.b.id === selectedId) ?? rows[0] ?? null;
 
   return (
     <div
@@ -614,80 +636,59 @@ function BuildPicker({ buildings, state, locationBuilt, freePlots, plotCount, on
       onClick={onClose}
     >
       <div
-        className="rounded-xl border border-white/20 p-4 flex flex-col gap-2"
-        style={{ background: "rgba(15,14,20,.97)", width: "min(440px, 92vw)", maxHeight: "80vh", boxShadow: "0 8px 40px rgba(0,0,0,.7)" }}
+        className="hl-panel !relative !inset-auto rounded-xl"
+        style={{ width: "min(880px, 94vw)", height: "min(620px, 86vh)", boxShadow: "0 8px 40px rgba(0,0,0,.7)" }}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-baseline justify-between gap-3">
-          <div className="text-white font-bold" style={{ fontSize: "clamp(13px,1.5vw,18px)" }}>Choose a building</div>
-          <div className="text-white/55 font-semibold" style={{ fontSize: "clamp(10px,1.1vw,12px)" }}>
-            {freePlots}/{plotCount} plots free
-          </div>
-        </div>
-        <div className="overflow-y-auto pr-1 flex flex-col gap-2" style={{ maxHeight: "62vh" }}>
-          {rows.map(({ b, isBuilt, reason, pickable }) => {
-            const costStr = Object.entries(b.cost)
-              .map(([k, v]) => k === "coins" ? `${v}◉` : k === "runes" ? `${v} runes` : `${v} ${k}`)
-              .join(" · ");
-            return (
-              <button
-                key={b.id}
-                type="button"
-                disabled={!pickable}
-                onClick={() => pickable && onPick(b)}
-                className="text-left rounded-lg border px-3 py-2 transition-colors flex items-stretch gap-3"
-                style={{
-                  borderColor: pickable ? "rgba(155,219,106,.55)" : "rgba(255,255,255,.1)",
-                  background: pickable ? "rgba(155,219,106,.08)" : "rgba(255,255,255,.04)",
-                  cursor: pickable ? "pointer" : "not-allowed",
-                  opacity: pickable ? 1 : 0.55,
-                }}
+        <FeaturePanel.Header
+          title="Choose a building"
+          onClose={onClose}
+          actions={<span className="hl-card-meta tabular-nums">{freePlots}/{plotCount} plots free</span>}
+        />
+        <FeaturePanel.Body>
+          <BrowserDetailLayout
+            browser={
+              <BrowserGrid min={170}>
+                {rows.map(({ b, isBuilt, reason }) => (
+                  <BrowserItemButton
+                    key={b.id}
+                    selected={selected?.b.id === b.id}
+                    muted={!!reason}
+                    icon={<BuildingPreview building={b} />}
+                    title={b.name}
+                    subtitle={isBuilt ? "Built" : reason || `Level ${b.lv}`}
+                    onClick={() => setSelectedId(b.id)}
+                  />
+                ))}
+              </BrowserGrid>
+            }
+            detail={
+              <DetailPane
+                eyebrow={`Level ${selected?.b.lv ?? 1}`}
+                title={selected?.b.name}
+                description={selected?.b.desc}
+                status={selected?.reason || "Ready to place"}
+                icon={selected ? <BuildingPreview building={selected.b} /> : null}
+                actions={
+                  <>
+                    <DetailActionButton
+                      tone="moss"
+                      disabled={!selected?.pickable}
+                      onClick={() => selected?.pickable && onPick(selected.b)}
+                    >
+                      Build
+                    </DetailActionButton>
+                    <DetailActionButton tone="iron" variant="soft" onClick={onClose}>
+                      Close
+                    </DetailActionButton>
+                  </>
+                }
               >
-                <div
-                  className="relative flex-shrink-0 rounded overflow-hidden"
-                  style={{
-                    width: 56,
-                    height: 56,
-                    background: "rgba(255,255,255,.05)",
-                    border: "1px solid rgba(255,255,255,.1)",
-                  }}
-                >
-                  <BuildingIllustration id={b.id} isBuilt={true} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="font-bold truncate" style={{ color: pickable ? "#9bdb6a" : "#ddd", fontSize: "clamp(11px,1.2vw,14px)" }}>
-                      {b.name}
-                      {isBuilt && <span className="ml-2 text-white/50" style={{ fontSize: "10px" }}>· built</span>}
-                    </div>
-                    <div className="font-semibold text-white/65 flex-shrink-0" style={{ fontSize: "clamp(9px,1vw,11px)" }}>
-                      Lv {b.lv}
-                    </div>
-                  </div>
-                  {b.desc && (
-                    <div className="text-white/65 leading-snug mt-0.5" style={{ fontSize: "clamp(9px,1vw,11px)" }}>
-                      {b.desc}
-                    </div>
-                  )}
-                  <div className="mt-1 flex flex-wrap items-center gap-2">
-                    <span className="font-semibold" style={{ color: "#f7d572", fontSize: "clamp(9px,1vw,11px)" }}>{costStr}</span>
-                    {reason && (
-                      <span className="font-semibold" style={{ color: "#e08070", fontSize: "clamp(9px,1vw,11px)" }}>· {reason}</span>
-                    )}
-                  </div>
-                </div>
-              </button>
-            );
-          })}
-        </div>
-        <button
-          type="button"
-          onClick={onClose}
-          className="self-end rounded-lg py-1.5 px-3 font-bold mt-1"
-          style={{ background: "rgba(255,255,255,.1)", color: "rgba(255,255,255,.7)", fontSize: "clamp(11px,1.2vw,14px)" }}
-        >
-          Close
-        </button>
+                {selected && <CostGrid entries={buildingCostEntries(selected.b, state)} title="Build cost" />}
+              </DetailPane>
+            }
+          />
+        </FeaturePanel.Body>
       </div>
     </div>
   );

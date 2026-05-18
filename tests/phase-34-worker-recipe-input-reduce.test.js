@@ -5,7 +5,7 @@
 // (Phase 5b) is the system under test.
 import { describe, it, expect } from "vitest";
 import { computeWorkerEffects } from "../src/features/workers/aggregate.js";
-import { reduce as craftingReduce } from "../src/features/crafting/slice.js";
+import { effectiveRecipeInputs, reduce as craftingReduce } from "../src/features/crafting/slice.js";
 import { TYPE_WORKER_MAP } from "../src/features/workers/data.js";
 import { RECIPES } from "../src/constants.js";
 
@@ -38,6 +38,14 @@ describe("Phase 34 — recipeInputReduce aggregation (real Baker)", () => {
     // amount * count = 1 * 10 = 10 raw reduction at full hire
     // (crafting/slice.js floors the recipe input at 1)
     expect(out.recipeInputReduce.bread.grain_flour).toBe(1 * BAKER.maxCount);
+  });
+
+  it("effectiveRecipeInputs resolves canonical rec_* aliases for UI display", () => {
+    const s = bakeryStateWith(1, { grain_flour: 5, bird_egg: 5 });
+    expect(effectiveRecipeInputs(s, "rec_bread", RECIPES.rec_bread.inputs)).toEqual({
+      grain_flour: 2,
+      bird_egg: 1,
+    });
   });
 });
 

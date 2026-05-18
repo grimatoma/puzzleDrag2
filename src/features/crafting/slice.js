@@ -11,9 +11,10 @@ const CRAFT_QUEUE_MS = CRAFT_QUEUE_HOURS * 60 * 60 * 1000;
  * to the recipe's raw input requirements. Each input is floored at 1 so
  * crafting always costs at least one of every listed resource.
  */
-function effectiveRecipeInputs(state, recipeKey, recipeInputs) {
+export function effectiveRecipeInputs(state, recipeKey, recipeInputs) {
   const agg = computeWorkerEffects(state);
-  const reduce = agg.recipeInputReduce?.[recipeKey];
+  const itemKey = RECIPES[recipeKey]?.item;
+  const reduce = agg.recipeInputReduce?.[recipeKey] ?? (itemKey ? agg.recipeInputReduce?.[itemKey] : null);
   if (!reduce) return recipeInputs;
   const out = {};
   for (const [res, need] of Object.entries(recipeInputs)) {

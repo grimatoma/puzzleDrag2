@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   TILE_TYPES_MAP,
   SUB_CATEGORIES,
@@ -6,7 +6,7 @@ import {
   SUB_CATEGORY_ICONS,
   categoriesForSubCategory,
 } from "./data.js";
-import { getCategoryViewModel } from "./effects.js";
+import { displayKey, getCategoryViewModel, getTileDetailViewModel } from "./effects.js";
 import { drawTileIcon } from "../../textures.js";
 import { BIOMES } from "../../constants.js";
 import { hex } from "../../utils.js";
@@ -15,6 +15,15 @@ import { HAZARDS } from "../mine/hazards.js";
 import IconCanvas, { hasIcon } from "../../ui/IconCanvas.jsx";
 import FeaturePanel from "../../ui/primitives/FeaturePanel.jsx";
 import SegmentedControl from "../../ui/primitives/SegmentedControl.jsx";
+import {
+  AbilitySummary,
+  BrowserDetailLayout,
+  BrowserGrid,
+  BrowserItemButton,
+  DetailActionButton,
+  DetailPane,
+  DetailProgress,
+} from "../../ui/primitives/BrowserDetail.jsx";
 
 export const viewKey = "tileCollection";
 
@@ -152,79 +161,86 @@ export function TileIcon({ tileId, size = 40, locked = false }) {
   );
 }
 
-function TileCard({ row, category, dispatch }) {
-  const handleSelect = () => {
-    if (row.action !== "toggle" || row.active) return;
-    dispatch({ type: "SET_ACTIVE_TILE", payload: { category, tileId: row.id } });
-  };
-  const handleBuy = () => {
-    dispatch({ type: "BUY_TILE", payload: { id: row.id } });
-  };
+function TileListItem({ row, selected, onSelect }) {
+  return (
+    <BrowserItemButton
+      selected={selected}
+      muted={row.locked}
+      icon={<TileIcon tileId={row.id} size={38} locked={row.locked} />}
+      title={row.name}
+      subtitle={row.active ? "Active" : row.locked ? "Locked" : "Unlocked"}
+      onClick={onSelect}
+      aria-label={`View ${row.name}`}
+    />
+  );
+}
+
+function TileDetail({ detail, category, state, dispatch }) {
+  if (!detail) return <DetailPane empty="Select a tile to inspect it." />;
+
+  const d = detail.discovery || {};
+  const canBuy = detail.action === "buy" && !detail.actionDisabled;
+  const canActivate = detail.action === "activate";
+
+  const action = detail.action === "buy" ? (
+    <DetailActionButton
+      tone="gold"
+      disabled={!canBuy}
+      onClick={() => dispatch({ type: "BUY_TILE", payload: { id: detail.id } })}
+    >
+      {detail.actionLabel}
+    </DetailActionButton>
+  ) : detail.action === "activate" ? (
+    <DetailActionButton
+      tone="moss"
+      disabled={!canActivate}
+      onClick={() => dispatch({ type: "SET_ACTIVE_TILE", payload: { category, tileId: detail.id } })}
+    >
+      Activate
+    </DetailActionButton>
+  ) : (
+    <DetailActionButton tone={detail.active ? "moss" : "iron"} disabled>
+      {detail.actionLabel}
+    </DetailActionButton>
+  );
 
   return (
-    <div
-      onClick={row.action === "toggle" && !row.active && !row.locked ? handleSelect : undefined}
-      className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 transition-all ${
-        row.action === "toggle" && !row.active && !row.locked
-          ? "cursor-pointer hover:scale-[1.03] hover:shadow-lg"
-          : ""
-      } ${
-        row.active
-          ? "bg-[#dfeecd] border-[#6a9a3a] shadow-md shadow-[#a8d44a]/25"
-          : row.locked
-          ? "bg-[var(--well-bg)] border-[var(--well-border)] opacity-70"
-          : "bg-[var(--card-bg)] border-[var(--card-border)] hover:border-[var(--card-border-strong)]"
-      }`}
-      style={{ minHeight: 130 }}
+    <DetailPane
+      eyebrow={`Tier ${detail.tier}`}
+      title={detail.name}
+      status={detail.status}
+      description={detail.description}
+      icon={<TileIcon tileId={detail.id} size={68} locked={detail.locked} />}
+      actions={action}
     >
-      {/* Active indicator */}
-      {row.active && (
-        <div className="self-end -mt-1 -mr-1">
-          <span
-            className="w-5 h-5 rounded-full bg-[#a8d44a] border-2 border-[#a8d44a] text-[#1a2a0a] flex items-center justify-center"
-            aria-label="Active"
-          >
-            <span className="text-[10px] font-bold">✓</span>
-          </span>
+      {d.method === "research" && !detail.discovered && (
+        <DetailProgress
+          label={`Researching ${displayKey(d.researchOf)}`}
+          value={detail.researchProgress}
+          max={d.researchAmount}
+        />
+      )}
+      {d.method === "buy" && !detail.discovered && (
+        <div className="hl-well">
+          <div className="hl-section-label">Cost</div>
+          <div className={`hl-heading tabular-nums ${canBuy ? "text-[#3a5410]" : "text-[#9c3a2a]"}`}>
+            {(state.coins ?? 0).toLocaleString()} / {(d.coinCost ?? 0).toLocaleString()} coins
+          </div>
         </div>
       )}
-
-      {/* Tile icon */}
-      <div className="flex-shrink-0">
-        <TileIcon tileId={row.id} size={48} locked={row.locked} />
-      </div>
-
-      {/* Name */}
-      <div className={`font-bold text-xs text-center leading-tight ${
-        row.locked ? "text-on-panel-faint" : "text-on-panel"
-      }`}>
-        {row.name}
-      </div>
-
-      {/* Status */}
-      <div className={`text-[10px] text-center leading-tight ${
-        row.locked ? "text-on-panel-faint" : "text-on-panel-dim"
-      }`}>
-        {row.status}
-      </div>
-
-      {/* Description (only when unlocked) */}
-      {row.description && !row.locked && (
-        <div className="text-[9px] text-center text-on-panel-faint italic leading-snug line-clamp-2 mt-auto">
-          {row.description}
+      {d.method === "chain" && !detail.discovered && (
+        <div className="hl-well">
+          <div className="hl-section-label">Discovery</div>
+          <div className="hl-text-dim">
+            Make a chain of {d.chainLength} {displayKey(d.chainLengthOf)}.
+          </div>
         </div>
       )}
-
-      {/* Buy button */}
-      {row.action === "buy" && (
-        <button
-          onClick={(e) => { e.stopPropagation(); handleBuy(); }}
-          className="mt-auto px-3 py-1 rounded-lg bg-[#8a6a1a] text-[#ffd248] text-[10px] font-bold hover:bg-[#9a7a2a] transition-colors"
-        >
-          Buy
-        </button>
-      )}
-    </div>
+      <div>
+        <div className="hl-section-label mb-1.5">Bonuses</div>
+        <AbilitySummary abilities={detail.abilities} effects={detail.effects} />
+      </div>
+    </DetailPane>
   );
 }
 
@@ -276,6 +292,7 @@ export default function TileCollectionPanel({ state, dispatch }) {
     [subCategory],
   );
   const tabBarRef = useRef(null);
+  const [selectedTileId, setSelectedTileId] = useState(null);
 
   // Visible tab: use the URL value when valid for the current sub-category,
   // otherwise fall back to the first available tab. We never write a default
@@ -296,6 +313,8 @@ export default function TileCollectionPanel({ state, dispatch }) {
     subCategory !== "hazards" && activeTab
       ? getCategoryViewModel(state, activeTab)
       : [];
+  const selectedRow = rows.find((r) => r.id === selectedTileId) ?? rows[0] ?? null;
+  const detail = selectedRow ? getTileDetailViewModel(state, selectedRow.id) : null;
 
   return (
     <FeaturePanel>
@@ -383,26 +402,23 @@ export default function TileCollectionPanel({ state, dispatch }) {
             No tile types in this section yet.
           </div>
         ) : (
-          <>
-            <div
-              className="grid gap-2"
-              style={{ gridTemplateColumns: "repeat(auto-fill, minmax(110px, 1fr))" }}
-            >
-              {rows.map((row) => (
-                <TileCard
-                  key={row.id}
-                  row={row}
-                  category={activeTab}
-                  dispatch={dispatch}
-                />
-              ))}
-            </div>
-            {rows.length === 0 && (
-              <div className="hl-empty text-sm py-8">
-                No tiles in this category.
-              </div>
+          <BrowserDetailLayout
+            browser={rows.length === 0 ? (
+              <div className="hl-empty text-sm py-8">No tiles in this category.</div>
+            ) : (
+              <BrowserGrid min={132}>
+                {rows.map((row) => (
+                  <TileListItem
+                    key={row.id}
+                    row={row}
+                    selected={selectedRow?.id === row.id}
+                    onSelect={() => setSelectedTileId(row.id)}
+                  />
+                ))}
+              </BrowserGrid>
             )}
-          </>
+            detail={<TileDetail detail={detail} category={activeTab} state={state} dispatch={dispatch} />}
+          />
         )}
       </FeaturePanel.Body>
 

@@ -1,4 +1,4 @@
-import { SAVE_SCHEMA_VERSION, NPCS } from "../constants.js";
+import { SAVE_SCHEMA_VERSION } from "../constants.js";
 import { rollQuests } from "../features/quests/data.js";
 import { INITIAL_STORY_STATE } from "../story.js";
 import { initialFlagState } from "../flags.js";
@@ -11,10 +11,8 @@ import * as tutorial from "../features/tutorial/slice.js";
 import * as settings from "../features/settings/slice.js";
 import * as boss from "../features/boss/slice.js";
 import * as cartography from "../features/cartography/slice.js";
-import * as storySlice from "../features/story/slice.js";
 import * as fish from "../features/fish/slice.js";
 import * as zones from "../features/zones/slice.js";
-import * as workers from "../features/workers/slice.js";
 import * as castle from "../features/castle/slice.js";
 import * as boons from "../features/boons/slice.js";
 import { driftPrices } from "../market.js";
