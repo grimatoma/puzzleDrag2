@@ -764,7 +764,10 @@ function coreReducer(state, action) {
       // semantics so popstate-driven changes look identical to user-driven
       // ones from the rest of the app's perspective.
       const r = action.route ?? {};
-      const view = r.view ?? state.view ?? "town";
+      const rawView = r.view ?? state.view ?? "town";
+      // Safety: don't navigate to board via URL if there's no active run —
+      // avoids a broken green-screen on reload after a session has ended.
+      const view = rawView === "board" && !(state.farmRun?.turnsRemaining > 0) ? "town" : rawView;
       const modal = r.modal ?? null;
       const incomingViewParams = r.viewParams ?? {};
       const next = { ...state, view, viewParams: incomingViewParams };

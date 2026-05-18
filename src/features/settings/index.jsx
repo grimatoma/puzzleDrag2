@@ -62,7 +62,6 @@ async function toggleFullscreen() {
 
 function MainTab({ state, dispatch }) {
   const [fs, setFs] = useState(isFullscreen());
-  const [confirmLeave, setConfirmLeave] = useState(false);
   useEffect(() => {
     const sync = () => setFs(isFullscreen());
     document.addEventListener("fullscreenchange", sync);
@@ -73,8 +72,6 @@ function MainTab({ state, dispatch }) {
     };
   }, []);
 
-  const onBoard = state?.view === 'board';
-
   return (
     <div className="flex flex-col items-center gap-3 pt-1">
       <div className="text-center">
@@ -83,39 +80,6 @@ function MainTab({ state, dispatch }) {
       </div>
 
       <div className="w-full flex flex-col gap-2 max-w-[320px]">
-        {onBoard && (
-          confirmLeave ? (
-            <div
-              className="w-full flex flex-col gap-2 py-3 px-3 rounded-xl border-2"
-              style={{ background: '#f4e8d0', borderColor: '#c23b22' }}
-            >
-              <span className="text-[12px] font-bold text-center" style={{ color: '#5a3a20' }}>
-                Leave the board? Your current run will not be saved.
-              </span>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => dispatch({ type: 'SETTINGS/LEAVE_BOARD' })}
-                  className="flex-1 py-1.5 text-[12px] font-bold rounded-lg border-2"
-                  style={{ background: '#c23b22', borderColor: '#8f2a18', color: '#fff' }}
-                >
-                  Leave
-                </button>
-                <button
-                  onClick={() => setConfirmLeave(false)}
-                  className="flex-1 py-1.5 text-[12px] font-bold rounded-lg border-2"
-                  style={{ background: '#e8dcc4', borderColor: '#b28b62', color: '#5a3a20' }}
-                >
-                  Stay
-                </button>
-              </div>
-            </div>
-          ) : (
-            <ActionBtn onClick={() => setConfirmLeave(true)}>
-              ⌂ Go to Town
-            </ActionBtn>
-          )
-        )}
-
         <ActionBtn onClick={() => dispatch({ type: 'SETTINGS/SHOW_TUTORIAL' })}>
           📖 Show Tutorial
         </ActionBtn>
@@ -209,9 +173,10 @@ function AboutTab({ dispatch }) {
 
 // --- Root modal ---
 export default function SettingsModal({ state, dispatch }) {
-  const open = state.modal === 'menu';
+  const open = state.modal === 'menu' || state.modal === 'leaveBoard';
   const close = () => dispatch({ type: 'CLOSE_MODAL' });
   if (!open) return null;
+  const leavingBoard = state.modal === 'leaveBoard';
 
   const tab = state.settingsTab || 'main';
   const settings = state.settings || {};
@@ -227,7 +192,32 @@ export default function SettingsModal({ state, dispatch }) {
         />
 
         {/* Tab content */}
-        {tab === 'main' && <MainTab state={state} dispatch={dispatch} />}
+        {leavingBoard ? (
+          <div
+            className="w-full flex flex-col gap-3 py-3 px-3 rounded-xl border-2"
+            style={{ background: '#f4e8d0', borderColor: '#c23b22' }}
+          >
+            <span className="text-[13px] font-bold text-center" style={{ color: '#5a3a20' }}>
+              Leave the board? Your current run will not be saved.
+            </span>
+            <div className="flex gap-2">
+              <button
+                onClick={() => dispatch({ type: 'SETTINGS/LEAVE_BOARD' })}
+                className="flex-1 py-2 text-[12px] font-bold rounded-lg border-2"
+                style={{ background: '#c23b22', borderColor: '#8f2a18', color: '#fff' }}
+              >
+                Leave
+              </button>
+              <button
+                onClick={close}
+                className="flex-1 py-2 text-[12px] font-bold rounded-lg border-2"
+                style={{ background: '#e8dcc4', borderColor: '#b28b62', color: '#5a3a20' }}
+              >
+                Stay
+              </button>
+            </div>
+          </div>
+        ) : (tab === 'main' && <MainTab state={state} dispatch={dispatch} />)}
         {tab === 'settings' && <SettingsTab settings={settings} dispatch={dispatch} />}
         {tab === 'about' && <AboutTab dispatch={dispatch} />}
       </ParchmentDialog.Body>
