@@ -14,6 +14,52 @@ import { FIRE_HAZARD_ENABLED } from "./src/featureFlags.js";
 import { useNotifier } from "./src/ui/primitives/Toast.jsx";
 import Icon from "./src/ui/primitives/Icon.jsx";
 import { useA11yBridge } from "./src/a11y.js";
+import { BIOMES } from "./src/constants.js";
+
+function BoardInfoPanel({ chainInfo, inspectedTool, armedTool, inventory, biomeKey }) {
+  const biomeResources = BIOMES[biomeKey]?.resources ?? [];
+  const hasSelection = !!(chainInfo && chainInfo.count > 0 && chainInfo.resourceKey);
+  return (
+    <div className="bg-[#efe6d8] border border-[#b78655] rounded-xl p-3 min-h-[92px]">
+      {hasSelection ? (
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <Icon iconKey={chainInfo.resourceKey} size={34} title={chainInfo.resourceLabel || chainInfo.resourceKey} />
+            <div className="bg-[#9cc33d] border border-[#7a8e3a] rounded-lg px-3 py-1.5 text-white font-bold text-[24px] leading-none tabular-nums min-w-[120px] text-center">
+              {chainInfo.nextTileProgress?.current ?? chainInfo.count}/{chainInfo.nextTileProgress?.threshold ?? 0}
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Icon iconKey={chainInfo.resourceKey} size={34} />
+            <span className="bg-black/80 rounded-md px-2 py-0.5 text-white text-[20px] leading-none tabular-nums">
+              {inventory?.[chainInfo.resourceKey] ?? 0}
+            </span>
+          </div>
+        </div>
+      ) : inspectedTool ? (
+        <div>
+          <div className="font-bold text-[34px] leading-none text-[#5a3a21]">{inspectedTool.name}</div>
+          <div className="text-[15px] text-[#5a3a21] leading-tight mt-1">{inspectedTool.desc}</div>
+          <div className={`text-[16px] font-bold mt-2 ${armedTool?.key === inspectedTool.key ? "text-[#2e7d32]" : "text-[#8f8172]"}`}>
+            {armedTool?.key === inspectedTool.key ? "ARMED" : "Touch to use"}
+          </div>
+        </div>
+      ) : (
+        <div>
+          <div className="font-bold text-[16px] text-[#5a3a21] mb-2">Collectable resources</div>
+          <div className="flex flex-wrap gap-2">
+            {biomeResources.slice(0, 8).map((res) => (
+              <div key={res.key} className="flex items-center gap-1.5 bg-white/70 border border-[#d0b28e] rounded-md px-2 py-1">
+                <Icon iconKey={res.key} size={18} />
+                <span className="text-[12px] text-[#5a3a21]">{inventory?.[res.key] ?? 0}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 function BoardSkeleton() {
   return (
@@ -213,8 +259,19 @@ const DUST_MOTES = Array.from({ length: 14 }, (_, i) => ({
 export default function App() {
   const [state, dispatch] = useReducer(gameReducer, undefined, initialState);
   const [chainInfo, setChainInfo] = useState(null);
+  const [inspectedTool, setInspectedTool] = useState(null);
   const sceneRef = useRef(null);
   const storyModalOpen = !!state.story?.queuedBeat;
+  const armedTool = state.toolPending ? state.tools ? { key: state.toolPending, count: state.tools[state.toolPending] ?? 0 } : null : null;
+  const infoPanelEl = (
+    <BoardInfoPanel
+      chainInfo={chainInfo}
+      inspectedTool={inspectedTool}
+      armedTool={armedTool}
+      inventory={state.inventory}
+      biomeKey={state.biomeKey}
+    />
+  );
   const uiLocked = !!state.modal || state.view !== "board" || storyModalOpen;
   useAudio(state);
   useRouter(state, dispatch);
@@ -275,20 +332,6 @@ export default function App() {
             <div className="flex-1 min-h-0 grid grid-cols-[1fr_300px] gap-3 p-3 max-[1024px]:grid-cols-1 max-[1024px]:gap-0 max-[1024px]:p-0">
               {/* Phaser host — takes the rest. Phaser draws its own background and frame. */}
               <div className="relative min-h-0 min-w-0 overflow-hidden">
-                {/* Live chain-yield readout — resources the in-progress chain will collect. */}
-                {chainInfo && chainInfo.count > 0 && chainInfo.resourceKey && (
-                  <div className="absolute top-2 left-2 z-30 pointer-events-none flex items-center gap-1.5 bg-[#2b2218]/92 border border-[#ffd248] rounded-xl px-2.5 py-1.5 shadow-lg">
-                    <Icon iconKey={chainInfo.resourceKey} size={26} title={chainInfo.resourceLabel || chainInfo.resourceKey} />
-                    <span className="text-[#ffd248] font-bold text-[15px] leading-none tabular-nums">
-                      +{chainInfo.count}
-                    </span>
-                    {chainInfo.resourceLabel && (
-                      <span className="text-[#f8e7c6] font-bold text-[11px] leading-none">
-                        {chainInfo.resourceLabel}
-                      </span>
-                    )}
-                  </div>
-                )}
                 <PhaserMount
                   dispatch={dispatch}
                   biomeKey={state.biomeKey}
@@ -306,16 +349,19 @@ export default function App() {
               </div>
               {/* Side panel — hidden on mobile, replaced by MobileDock */}
               <div className="min-h-0 max-[1024px]:hidden">
-                <SidePanel state={state} dispatch={dispatch} chainInfo={chainInfo} />
+                <SidePanel state={state} dispatch={dispatch} chainInfo={chainInfo} infoPanel={infoPanelEl} onInspectChange={setInspectedTool} />
               </div>
+            </div>
+            <div className="hidden max-[1024px]:block px-2 pb-2">
+              {infoPanelEl}
             </div>
             {/* Portrait phone tools bar — board is width-limited so canvas height can shrink */}
             <div className="hidden portrait:max-[1024px]:block flex-shrink-0">
-              <PortraitToolsBar state={state} dispatch={dispatch} />
+              <PortraitToolsBar state={state} dispatch={dispatch} onInspectChange={setInspectedTool} />
             </div>
             {/* Mobile dock — only visible on mobile, in board view */}
             <div className="hidden max-[1024px]:block flex-shrink-0">
-              <MobileDock state={state} dispatch={dispatch} />
+              <MobileDock state={state} dispatch={dispatch} onInspectChange={setInspectedTool} />
             </div>
           </div>
 
