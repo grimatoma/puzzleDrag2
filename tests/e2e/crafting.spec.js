@@ -18,6 +18,15 @@ async function openCraftingTab(page, tab) {
   await page.waitForTimeout(150);
 }
 
+async function selectRecipe(page, name) {
+  await page.getByRole('button', { name: new RegExp(`View recipe ${name}`, 'i') }).click();
+  await page.waitForTimeout(100);
+}
+
+function detailCraftButton(page) {
+  return page.locator('.hl-detail-pane').getByRole('button', { name: /^Craft$/i });
+}
+
 test('Bakery: crafting bread debits flour+egg and credits inventory.bread', async ({ page }) => {
   await gotoFresh(page, {
     coins: 500,
@@ -26,16 +35,14 @@ test('Bakery: crafting bread debits flour+egg and credits inventory.bread', asyn
   });
   await openCraftingTab(page, 'bakery');
 
-  // The recipe card wraps "Bread Loaf" three ancestors deep — span > flex-col >
-  // outer card. Reach the card and click its CRAFT button.
-  const breadRow = page.getByText('Bread Loaf').locator('xpath=ancestor::div[contains(@class, "rounded-xl")][1]');
-  await breadRow.getByRole('button', { name: 'CRAFT' }).click();
+  await selectRecipe(page, 'Bread Loaf');
+  await detailCraftButton(page).click();
 
   await waitForState(page, (s) => (s.inventory?.bread ?? 0) >= 1);
   const s = await getReactState(page);
   expect(s.inventory.grain_flour).toBe(3);
   expect(s.inventory.bird_egg).toBe(1);
-  expect(s.craftedTotals?.bread).toBe(1);
+  expect((s.craftedTotals?.bread ?? 0) + (s.craftedTotals?.rec_bread ?? 0)).toBe(1);
 });
 
 test('Workshop: crafting water_pump credits state.tools, NOT inventory (PR #274 routing)', async ({ page }) => {
@@ -47,8 +54,8 @@ test('Workshop: crafting water_pump credits state.tools, NOT inventory (PR #274 
   });
   await openCraftingTab(page, 'workshop');
 
-  const row = page.getByText('Water Pump').locator('xpath=ancestor::div[contains(@class, "rounded-xl")][1]');
-  await row.getByRole('button', { name: 'CRAFT' }).click();
+  await selectRecipe(page, 'Water Pump');
+  await detailCraftButton(page).click();
 
   await waitForState(page, (s) => (s.tools?.water_pump ?? 0) >= 1);
   const s = await getReactState(page);
@@ -67,8 +74,8 @@ test('Workshop: crafting explosives also routes to state.tools', async ({ page }
   });
   await openCraftingTab(page, 'workshop');
 
-  const row = page.getByText('Explosives').locator('xpath=ancestor::div[contains(@class, "rounded-xl")][1]');
-  await row.getByRole('button', { name: 'CRAFT' }).click();
+  await selectRecipe(page, 'Explosives');
+  await detailCraftButton(page).click();
 
   await waitForState(page, (s) => (s.tools?.explosives ?? 0) >= 1);
   const s = await getReactState(page);
@@ -83,9 +90,8 @@ test('CRAFT button is disabled when inputs are missing', async ({ page }) => {
   });
   await openCraftingTab(page, 'bakery');
 
-  const breadRow = page.getByText('Bread Loaf').locator('xpath=ancestor::div[contains(@class, "rounded-xl")][1]');
-  const btn = breadRow.getByRole('button', { name: /CRAFT|No station|🔒/ });
-  await expect(btn).toBeDisabled();
+  await selectRecipe(page, 'Bread Loaf');
+  await expect(detailCraftButton(page)).toBeDisabled();
 });
 
 test('CRAFTING/CRAFT_RECIPE dispatch with no station built is rejected', async ({ page }) => {

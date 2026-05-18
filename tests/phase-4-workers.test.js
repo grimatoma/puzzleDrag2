@@ -7,7 +7,17 @@ import { TYPE_WORKERS, TYPE_WORKER_MAP } from "../src/features/workers/data.js";
 import { computeWorkerEffects } from "../src/features/workers/aggregate.js";
 
 function withCoins(coins) {
-  return { ...createInitialState(), coins };
+  return {
+    ...createInitialState(),
+    coins,
+    inventory: {
+      grass_hay: 100,
+      wood_log: 100,
+      mine_stone: 100,
+      grain_flour: 100,
+      bird_egg: 100,
+    },
+  };
 }
 
 describe("Phase 4 — TYPE_WORKERS data shape", () => {
@@ -20,6 +30,7 @@ describe("Phase 4 — TYPE_WORKERS data shape", () => {
     for (const w of TYPE_WORKERS) {
       expect(w.maxCount).toBeGreaterThanOrEqual(10);
       expect(w.hireCost.coins).toBeGreaterThan(0);
+      expect(Object.keys(w.hireCost.resources || {}).length).toBeGreaterThan(0);
     }
   });
 
@@ -41,7 +52,16 @@ describe("Phase 4 — WORKERS/HIRE", () => {
     const s = withCoins(100);
     const next = rootReducer(s, { type: "WORKERS/HIRE", payload: { id: "farmer" } });
     expect(next.coins).toBe(50);
+    expect(next.inventory.grass_hay).toBe(98);
     expect(next.workers.hired.farmer).toBe(1);
+  });
+
+  it("rejects hire when role resources are short without debiting coins", () => {
+    const s = { ...withCoins(100), inventory: { grass_hay: 1 } };
+    const next = rootReducer(s, { type: "WORKERS/HIRE", payload: { id: "farmer" } });
+    expect(next.coins).toBe(100);
+    expect(next.inventory.grass_hay).toBe(1);
+    expect(next.workers.hired.farmer).toBe(0);
   });
 
   it("rejects hire when coins are short", () => {

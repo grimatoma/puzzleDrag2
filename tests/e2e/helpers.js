@@ -10,6 +10,10 @@
 // fiber bridge only when a flow is hard to reach via UI alone.
 
 import { expect } from '@playwright/test';
+import { readFileSync } from 'node:fs';
+
+const constantsSource = readFileSync(new URL('../../src/constants.js', import.meta.url), 'utf8');
+const SAVE_SCHEMA_VERSION = Number(constantsSource.match(/export const SAVE_SCHEMA_VERSION = (\d+);/)?.[1] ?? 0);
 
 // ─── Boot / setup ──────────────────────────────────────────────────────────
 
@@ -44,7 +48,7 @@ export async function seedQuietSave(page, overrides = {}) {
   // gate seeding on a `hearth.e2e.seeded` marker so an in-flight save
   // produced during the test isn't clobbered when the page reloads —
   // the persistence path tests need that round-trip to actually work.
-  await page.addInitScript((data) => {
+  await page.addInitScript(({ overrides: data, saveVersion }) => {
     try {
       if (localStorage.getItem('hearth.e2e.seeded') === '1') return;
       Object.keys(localStorage)
@@ -53,12 +57,8 @@ export async function seedQuietSave(page, overrides = {}) {
       localStorage.setItem('hearth.tutorial.seen', '1');
       localStorage.setItem('hearth.e2e.seeded', '1');
       const baseStory = { act: 1, beat: 'act1_arrival', flags: { intro_seen: true, _fired_act1_arrival: true } };
-      // SAVE_SCHEMA_VERSION must match src/constants.js — the loader discards
-      // saves whose version doesn't match and falls back to a fresh state.
-      // Bump this whenever you bump SAVE_SCHEMA_VERSION in constants.
-      const SAVE_VERSION = 20;
       if (data && Object.keys(data).length > 0) {
-        const out = { version: SAVE_VERSION, story: baseStory, ...data };
+        const out = { version: saveVersion, story: baseStory, ...data };
         if (data.story) {
           out.story = {
             ...baseStory,
@@ -68,10 +68,10 @@ export async function seedQuietSave(page, overrides = {}) {
         }
         localStorage.setItem('hearth.save.v1', JSON.stringify(out));
       } else {
-        localStorage.setItem('hearth.save.v1', JSON.stringify({ version: SAVE_VERSION, story: baseStory }));
+        localStorage.setItem('hearth.save.v1', JSON.stringify({ version: saveVersion, story: baseStory }));
       }
     } catch {}
-  }, overrides);
+  }, { overrides, saveVersion: SAVE_SCHEMA_VERSION });
 }
 
 /** Wipe save + seed quiet flags + navigate + wait. Single call for most specs. */

@@ -12,6 +12,7 @@ import {
 } from "../shared.jsx";
 import AbilitiesEditor from "../AbilitiesEditor.jsx";
 import Icon from "../../ui/Icon.jsx";
+import { ITEMS } from "../../constants.js";
 
 function Label({ children }) {
   return (
@@ -19,6 +20,22 @@ function Label({ children }) {
       {children}
     </div>
   );
+}
+
+function formatResources(resources) {
+  return Object.entries(resources || {}).map(([k, v]) => `${k}:${v}`).join(", ");
+}
+
+function parseResources(text) {
+  const out = {};
+  for (const part of String(text || "").split(",")) {
+    const [rawKey, rawValue] = part.split(":").map((s) => s?.trim());
+    const value = Number(rawValue);
+    if (rawKey && ITEMS[rawKey] && Number.isFinite(value) && value > 0) {
+      out[rawKey] = Math.floor(value);
+    }
+  }
+  return out;
 }
 
 export default function WorkersTab({ draft, updateDraft }) {
@@ -61,6 +78,8 @@ export default function WorkersTab({ draft, updateDraft }) {
             coins:      p.hireCost?.coins      ?? w.hireCost?.coins      ?? 0,
             coinsStep:  p.hireCost?.coinsStep  ?? w.hireCost?.coinsStep  ?? 0,
             coinsMult:  p.hireCost?.coinsMult  ?? w.hireCost?.coinsMult  ?? 1,
+            resources:  p.hireCost?.resources  ?? w.hireCost?.resources  ?? {},
+            resourcesStepEvery: p.hireCost?.resourcesStepEvery ?? w.hireCost?.resourcesStepEvery ?? 3,
             maxCount:   p.maxCount ?? w.maxCount ?? 1,
             abilities:  p.abilities ?? w.abilities ?? [],
           };
@@ -70,6 +89,8 @@ export default function WorkersTab({ draft, updateDraft }) {
             const nextCost = { coins: eff.coins };
             if (eff.coinsStep > 0) nextCost.coinsStep = eff.coinsStep;
             if (eff.coinsMult !== 1) nextCost.coinsMult = eff.coinsMult;
+            if (Object.keys(eff.resources).length > 0) nextCost.resources = eff.resources;
+            if (eff.resourcesStepEvery > 0) nextCost.resourcesStepEvery = eff.resourcesStepEvery;
             nextCost[field] = value;
             if ((nextCost.coinsStep ?? 0) <= 0) delete nextCost.coinsStep;
             if ((nextCost.coinsMult ?? 1) === 1) delete nextCost.coinsMult;
@@ -132,6 +153,23 @@ export default function WorkersTab({ draft, updateDraft }) {
                   <NumberField
                     value={eff.maxCount} min={1} max={50} width={70}
                     onChange={(v) => patch(w.id, { maxCount: v })}
+                  />
+                </div>
+                <div>
+                  <Label>resource step</Label>
+                  <NumberField
+                    value={eff.resourcesStepEvery} min={1} max={20} width={70}
+                    onChange={(v) => patchHireCost("resourcesStepEvery", v)}
+                  />
+                </div>
+                <div className="col-span-3">
+                  <Label>resources (key:amount, ...)</Label>
+                  <input
+                    className="w-full rounded px-2 py-1 font-mono text-[11px]"
+                    style={{ background: COLORS.parchmentDeep, border: `1px solid ${COLORS.border}`, color: COLORS.ink }}
+                    value={formatResources(eff.resources)}
+                    onChange={(e) => patchHireCost("resources", parseResources(e.target.value))}
+                    placeholder="grass_hay:2, wood_log:1"
                   />
                 </div>
               </div>

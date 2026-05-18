@@ -290,7 +290,8 @@ export function applyZoneOverrides(zones, overrides) {
  * Apply patches to TYPE_WORKERS entries (Phase 6, Balance Manager Workers
  * tab), keyed by id. Whitelisted fields:
  *
- *   hireCost.coins, hireCost.coinsStep, hireCost.coinsMult — see
+ *   hireCost.coins, hireCost.coinsStep, hireCost.coinsMult,
+ *   hireCost.resources, hireCost.resourcesStepEvery — see
  *     `nextHireCost` in src/features/workers/data.js
  *   maxCount   — clamps the slider in WorkersPanel
  *   abilities  — replaced wholesale; an array of `{ id, params }` entries
@@ -327,6 +328,20 @@ export function applyWorkerOverrides(workers, overrides) {
       if (patch.hireCost.coins != null) {
         const coins = Number(patch.hireCost.coins);
         if (Number.isFinite(coins) && coins >= 0) next.coins = Math.floor(coins);
+      }
+
+      if (patch.hireCost.resources && typeof patch.hireCost.resources === "object") {
+        const resources = {};
+        for (const [key, value] of Object.entries(patch.hireCost.resources)) {
+          const amount = Number(value);
+          if (key && Number.isFinite(amount) && amount > 0) resources[key] = Math.floor(amount);
+        }
+        next.resources = resources;
+      }
+
+      if (patch.hireCost.resourcesStepEvery != null) {
+        const step = Number(patch.hireCost.resourcesStepEvery);
+        if (Number.isFinite(step) && step >= 1) next.resourcesStepEvery = Math.floor(step);
       }
 
       w.hireCost = next;

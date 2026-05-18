@@ -45,7 +45,7 @@ export default function TownsfolkScreen({ state, dispatch }) {
         ))}
       </FeaturePanel.Tabs>
       <FeaturePanel.Body>
-        <div className="max-w-[640px] mx-auto">
+        <div className="w-full h-full min-h-0 mx-auto">
           {tab === "workers" ? (
             <WorkersPanel state={state} dispatch={dispatch} />
           ) : tab === "quests" ? (

@@ -96,7 +96,7 @@ const CATEGORY_PREFIXES = [
   "mine_",
 ];
 
-function displayKey(k) {
+export function displayKey(k) {
   if (typeof k !== "string") return k;
   for (const p of CATEGORY_PREFIXES) {
     if (k.startsWith(p)) return k.slice(p.length);
@@ -155,7 +155,64 @@ export function getCategoryViewModel(state, category) {
       locked,
       status: statusFor(state, t),
       action,
+      discovery: t.discovery ?? {},
+      researchProgress: state.tileCollection?.researchProgress?.[t.id] ?? 0,
+      effects: t.effects ?? {},
+      abilities: t.abilities ?? [],
+      tier: t.tier ?? 0,
+      baseResource: t.baseResource,
       description: t.description ?? null,
     };
   });
+}
+
+export function getTileDetailViewModel(state, tileId) {
+  const t = TILE_TYPES_MAP[tileId];
+  if (!t) return null;
+  const category = t.category;
+  const discovered = !!state.tileCollection?.discovered?.[t.id];
+  const active = discovered && state.tileCollection?.activeByCategory?.[category] === t.id;
+  const d = t.discovery ?? {};
+  const researchProgress = state.tileCollection?.researchProgress?.[t.id] ?? 0;
+  let action = null;
+  let actionLabel = "Locked";
+  let disabled = true;
+  if (discovered) {
+    action = active ? "active" : "activate";
+    actionLabel = active ? "Active" : "Activate";
+    disabled = active;
+  } else if (d.method === "buy") {
+    action = "buy";
+    actionLabel = `Buy ${d.coinCost ?? 0}◉`;
+    disabled = (state.coins ?? 0) < (d.coinCost ?? 0);
+  } else if (d.method === "research") {
+    action = "research";
+    actionLabel = `Research ${researchProgress} / ${d.researchAmount}`;
+  } else if (d.method === "chain") {
+    action = "chain";
+    actionLabel = `Chain ${d.chainLength} ${displayKey(d.chainLengthOf)}`;
+  } else if (d.method === "daily") {
+    action = "daily";
+    actionLabel = `Day ${d.day} reward`;
+  }
+
+  return {
+    id: t.id,
+    category,
+    name: t.displayName,
+    active,
+    locked: !discovered,
+    discovered,
+    status: statusFor(state, t),
+    action,
+    actionLabel,
+    actionDisabled: disabled,
+    discovery: d,
+    researchProgress,
+    effects: t.effects ?? {},
+    abilities: t.abilities ?? [],
+    tier: t.tier ?? 0,
+    baseResource: t.baseResource,
+    description: t.description ?? null,
+  };
 }

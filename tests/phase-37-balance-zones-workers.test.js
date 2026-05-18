@@ -29,14 +29,14 @@ function freshWorkers() {
     {
       id: "farmer",
       name: "Farmer",
-      hireCost: { coins: 50, coinsStep: 25 },
+      hireCost: { coins: 50, coinsStep: 25, resources: { grass_hay: 2 }, resourcesStepEvery: 3 },
       maxCount: 10,
       effect: { type: "threshold_reduce_category", category: "grain", from: 6, to: 5 },
     },
     {
       id: "baker",
       name: "Baker",
-      hireCost: { coins: 75, coinsMult: 1.4 },
+      hireCost: { coins: 75, coinsMult: 1.4, resources: { grain_flour: 1, bird_egg: 1 }, resourcesStepEvery: 3 },
       maxCount: 10,
       effect: { type: "recipe_input_reduce", recipe: "bread", input: "grain_flour", from: 3, to: 1 },
     },
@@ -122,6 +122,14 @@ describe("Phase 37 — applyWorkerOverrides", () => {
     expect(w[0].hireCost.coins).toBe(60);
     // Sibling step preserved.
     expect(w[0].hireCost.coinsStep).toBe(25);
+    expect(w[0].hireCost.resources).toEqual({ grass_hay: 2 });
+  });
+
+  it("patches resource costs and resource step", () => {
+    const w = freshWorkers();
+    applyWorkerOverrides(w, { farmer: { hireCost: { resources: { wood_log: 2.9, nope: 0 }, resourcesStepEvery: 4.8 } } });
+    expect(w[0].hireCost.resources).toEqual({ wood_log: 2 });
+    expect(w[0].hireCost.resourcesStepEvery).toBe(4);
   });
 
   it("can replace coinsStep with a new positive value", () => {

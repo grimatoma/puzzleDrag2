@@ -159,7 +159,7 @@ function PhaserMount({ dispatch, biomeKey, turnsUsed, uiLocked, boardActive, sce
   }, [gameState?.session?.selectedTiles]);
   useEffect(() => {
     gameRef.current?.registry.set("activeZone", gameState?.activeZone ?? gameState?.mapCurrent ?? "home");
-  }, [gameState?.activeZone]);
+  }, [gameState?.activeZone, gameState?.mapCurrent]);
   useEffect(() => { setBoardRuntimeActive(gameRef.current, boardActive); }, [boardActive]);
   useEffect(() => { gameRef.current?.registry.set("biomeKey", biomeKey); }, [biomeKey]);
   useEffect(() => { gameRef.current?.registry.set("turnsUsed", turnsUsed); }, [turnsUsed]);

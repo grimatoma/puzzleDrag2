@@ -1,12 +1,21 @@
 import { useEffect, useRef, useState } from "react";
 import { RECIPES, ITEMS } from "../../constants.js";
 import { DECORATIONS } from "../decorations/data.js";
+import { effectiveRecipeInputs } from "./slice.js";
 import IconCanvas, { hasIcon } from "../../ui/IconCanvas.jsx";
 import { locBuilt } from "../../locBuilt.js";
 import Icon from "../../ui/Icon.jsx";
 import DesignIcon from "../../ui/primitives/Icon.jsx";
 import FeaturePanel from "../../ui/primitives/FeaturePanel.jsx";
-import { CostChip, RequirementChip } from "../../ui/primitives/Chip.jsx";
+import { CostChip } from "../../ui/primitives/Chip.jsx";
+import {
+  BrowserDetailLayout,
+  BrowserGrid,
+  BrowserItemButton,
+  CostGrid,
+  DetailActionButton,
+  DetailPane,
+} from "../../ui/primitives/BrowserDetail.jsx";
 
 export const viewKey = "crafting";
 
@@ -34,17 +43,18 @@ function stationBuilt(built, station) {
   return !!(built && built[station]);
 }
 
-function canCraft(recipe, inventory, built, level) {
+function canCraft(recipe, inputs, inventory, built, level) {
   if (recipe.tier === 2 && level < 3) return false;
   if (!stationBuilt(built, recipe.station)) return false;
-  for (const [res, need] of Object.entries(recipe.inputs)) {
+  for (const [res, need] of Object.entries(inputs)) {
     if ((inventory[res] || 0) < need) return false;
   }
   return true;
 }
 
-function RecipeCard({ recipeKey, recipe, inventory, built, level, craftedTotals, dispatch }) {
-  const craftable = canCraft(recipe, inventory, built, level);
+function RecipeBrowserItem({ recipeKey, recipe, selected, inventory, built, level, craftedTotals, state, onSelect }) {
+  const inputs = effectiveRecipeInputs(state, recipeKey, recipe.inputs);
+  const craftable = canCraft(recipe, inputs, inventory, built, level);
   const stationOk = stationBuilt(built, recipe.station);
   const levelOk = !(recipe.tier === 2 && level < 3);
   const timesBuilt = (craftedTotals || {})[recipeKey] || 0;
@@ -53,67 +63,80 @@ function RecipeCard({ recipeKey, recipe, inventory, built, level, craftedTotals,
   const itemName = itemDef.label || recipe.item;
 
   return (
-    <div className="hl-card !flex-row !border-2 items-center gap-2 relative" style={{ minHeight: 72 }}>
-      {timesBuilt > 0 && (
-        <div className="absolute top-1 right-1 text-[10px] text-on-panel-faint font-bold">×{timesBuilt}</div>
+    <BrowserItemButton
+      selected={selected}
+      muted={!craftable}
+      icon={<Icon iconKey={recipe.item} size={36} />}
+      title={itemName}
+      subtitle={!levelOk ? "Level 3" : !stationOk ? "No station" : craftable ? "Ready" : "Missing inputs"}
+      count={timesBuilt > 0 ? `x${timesBuilt}` : null}
+      onClick={onSelect}
+      aria-label={`View recipe ${itemName}`}
+    />
+  );
+}
+
+function RecipeDetail({ recipeKey, recipe, inventory, built, level, state, dispatch }) {
+  if (!recipe) return <DetailPane empty="Select a recipe to inspect it." />;
+  const inputs = effectiveRecipeInputs(state, recipeKey, recipe.inputs);
+  const craftable = canCraft(recipe, inputs, inventory, built, level);
+  const stationOk = stationBuilt(built, recipe.station);
+  const levelOk = !(recipe.tier === 2 && level < 3);
+  const itemDef = ITEMS[recipe.item] || {};
+  const itemName = itemDef.label || recipe.item;
+  const entries = Object.entries(inputs).map(([res, need]) => ({
+    key: res,
+    label: ITEMS[res]?.label || res,
+    amount: need,
+    have: (inventory || {})[res] || 0,
+    showHave: true,
+    check: true,
+    ok: ((inventory || {})[res] || 0) >= need,
+  }));
+  const rawChanged = Object.entries(inputs).some(([res, need]) => need !== recipe.inputs[res]);
+
+  return (
+    <DetailPane
+      eyebrow={STATION_META[recipe.station]?.label ?? recipe.station}
+      title={itemName}
+      status={!levelOk ? "Requires level 3" : !stationOk ? "Station not built" : craftable ? "Ready to craft" : "Missing inputs"}
+      description={recipe.desc || itemDef.desc}
+      icon={<Icon iconKey={recipe.item} size={64} />}
+      actions={
+        <>
+          <DetailActionButton
+            tone="moss"
+            disabled={!craftable}
+            onClick={() => dispatch({ type: "CRAFTING/CRAFT_RECIPE", payload: { key: recipeKey }, recipeKey })}
+          >
+            Craft
+          </DetailActionButton>
+          <DetailActionButton
+            tone="iron"
+            variant="soft"
+            disabled={!craftable}
+            title="Queue — ready in 4h (or skip with a gem)"
+            onClick={() => dispatch({ type: "CRAFTING/QUEUE_RECIPE", payload: { key: recipeKey }, recipeKey })}
+          >
+            Queue 4h
+          </DetailActionButton>
+        </>
+      }
+    >
+      <CostGrid entries={entries} title={rawChanged ? "Inputs after worker bonuses" : "Inputs"} />
+      {itemDef.value != null && itemDef.kind !== "tool" && (
+        <div className="hl-well">
+          <div className="hl-section-label">Sell value</div>
+          <div className="hl-heading">+{itemDef.value} coins</div>
+        </div>
       )}
-
-      <div
-        className="flex-shrink-0 grid place-items-center rounded-lg overflow-hidden bg-[#e8d9bc] border border-[#c5a87a]/50 text-[24px]"
-        style={{ width: 48, height: 48 }}
-      >
-        <Icon iconKey={recipe.item} size={40} />
-      </div>
-
-      <div className="flex flex-col gap-0.5 flex-1 min-w-0">
-        <div className="flex items-center gap-1.5 flex-wrap">
-          <span className="hl-card-title text-[11px] leading-tight">{itemName}</span>
-          {recipe.tier === 2 && (
-            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-gold text-[#3a2710]">T2</span>
-          )}
+      {itemDef.kind === "tool" && (
+        <div className="hl-well">
+          <div className="hl-section-label">Output</div>
+          <div className="hl-text-dim">Adds one {itemName} to your tools.</div>
         </div>
-        {recipe.desc && (
-          <p className="hl-card-meta text-xs leading-tight">{recipe.desc}</p>
-        )}
-
-        <div className="flex flex-wrap gap-1 mt-0.5">
-          {Object.entries(recipe.inputs).map(([res, need]) => {
-            const have = (inventory || {})[res] || 0;
-            const enough = have >= need;
-            return (
-              <RequirementChip key={res} ok={enough}>
-                {ITEMS[res]?.label || res} ×{need}
-              </RequirementChip>
-            );
-          })}
-        </div>
-      </div>
-
-      <div className="flex flex-col items-end gap-1 flex-shrink-0">
-        {itemDef.value != null && itemDef.kind !== "tool"
-          ? <span className="text-[10px] font-bold text-[#a8722a]">+{itemDef.value}◉</span>
-          : itemDef.kind === "tool"
-            ? <span className="text-[10px] font-bold text-[#4f6b3a]">→ {itemName}</span>
-            : null
-        }
-        <button
-          disabled={!craftable}
-          onClick={() => dispatch({ type: "CRAFTING/CRAFT_RECIPE", payload: { key: recipeKey }, recipeKey })}
-          className="hl-btn hl-btn--sm hl-btn--go"
-        >
-          {!levelOk ? <span className="inline-flex items-center gap-1"><LockGlyph size={10} /> L3</span> : !stationOk ? "No station" : "CRAFT"}
-        </button>
-        {/* Phase 5 — queue this craft to finish in real time (frees the inputs now). */}
-        <button
-          disabled={!craftable}
-          onClick={() => dispatch({ type: "CRAFTING/QUEUE_RECIPE", payload: { key: recipeKey }, recipeKey })}
-          title="Queue — ready in 4h (or skip with a gem)"
-          className="hl-btn hl-btn--sm hl-btn--ghost"
-        >
-          ⏳ Queue 4h
-        </button>
-      </div>
-    </div>
+      )}
+    </DetailPane>
   );
 }
 
@@ -253,6 +276,8 @@ export default function CraftingScreen({ state, dispatch }) {
     return true;
   });
   const meta = STATION_META[activeTab];
+  const [selectedRecipeKey, setSelectedRecipeKey] = useState(null);
+  const selectedRecipeEntry = stationRecipes.find(([key]) => key === selectedRecipeKey) ?? stationRecipes[0] ?? null;
 
   return (
     <FeaturePanel>
@@ -305,21 +330,42 @@ export default function CraftingScreen({ state, dispatch }) {
           </p>
         </div>
       ) : (
-        <FeaturePanel.Body className="!px-2">
-          <div className="grid grid-cols-2 portrait:grid-cols-1 gap-2">
-            {stationRecipes.map(([key, recipe]) => (
-              <RecipeCard
-                key={key}
-                recipeKey={key}
-                recipe={recipe}
+        <FeaturePanel.Body>
+          <BrowserDetailLayout
+            browser={
+              stationRecipes.length === 0 ? (
+                <div className="hl-empty">No recipes at this station.</div>
+              ) : (
+                <BrowserGrid min={170}>
+                  {stationRecipes.map(([key, recipe]) => (
+                    <RecipeBrowserItem
+                      key={key}
+                      recipeKey={key}
+                      recipe={recipe}
+                      selected={selectedRecipeEntry?.[0] === key}
+                      inventory={inventory}
+                      built={built}
+                      level={level}
+                      craftedTotals={craftedTotals}
+                      state={state}
+                      onSelect={() => setSelectedRecipeKey(key)}
+                    />
+                  ))}
+                </BrowserGrid>
+              )
+            }
+            detail={
+              <RecipeDetail
+                recipeKey={selectedRecipeEntry?.[0]}
+                recipe={selectedRecipeEntry?.[1]}
                 inventory={inventory}
                 built={built}
                 level={level}
-                craftedTotals={craftedTotals}
+                state={state}
                 dispatch={dispatch}
               />
-            ))}
-          </div>
+            }
+          />
         </FeaturePanel.Body>
       )}
     </FeaturePanel>

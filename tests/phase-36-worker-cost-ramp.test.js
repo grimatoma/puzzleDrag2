@@ -3,12 +3,26 @@
 // in `src/features/workers/data.js`.
 import { describe, it, expect } from "vitest";
 import { rootReducer, createInitialState } from "../src/state.js";
-import { TYPE_WORKER_MAP, nextHireCost } from "../src/features/workers/data.js";
+import { TYPE_WORKER_MAP, nextHireCost, nextHireResourceCost } from "../src/features/workers/data.js";
 
 const FARMER = TYPE_WORKER_MAP.farmer;
 const LUMBERJACK = TYPE_WORKER_MAP.lumberjack;
 const MINER = TYPE_WORKER_MAP.miner;
 const BAKER = TYPE_WORKER_MAP.baker;
+
+function workerState(coins) {
+  return {
+    ...createInitialState(),
+    coins,
+    inventory: {
+      grass_hay: 10000,
+      wood_log: 10000,
+      mine_stone: 10000,
+      grain_flour: 10000,
+      bird_egg: 10000,
+    },
+  };
+}
 
 describe("Phase 36 — nextHireCost helper", () => {
   it("returns flat base when no ramp keys are set", () => {
@@ -39,6 +53,13 @@ describe("Phase 36 — nextHireCost helper", () => {
     expect(nextHireCost(FARMER, -3)).toBe(50);
   });
 
+  it("ramps resource costs every three hires", () => {
+    expect(nextHireResourceCost(FARMER, 0)).toEqual({ grass_hay: 2 });
+    expect(nextHireResourceCost(FARMER, 2)).toEqual({ grass_hay: 2 });
+    expect(nextHireResourceCost(FARMER, 3)).toEqual({ grass_hay: 4 });
+    expect(nextHireResourceCost(BAKER, 6)).toEqual({ grain_flour: 3, bird_egg: 3 });
+  });
+
   it("Lumberjack and Miner ramp linearly per their step", () => {
     expect(nextHireCost(LUMBERJACK, 0)).toBe(60);
     expect(nextHireCost(LUMBERJACK, 1)).toBe(90);
@@ -49,7 +70,7 @@ describe("Phase 36 — nextHireCost helper", () => {
 
 describe("Phase 36 — WORKERS/HIRE deducts the ramped cost", () => {
   it("first Farmer costs 50; second costs 75; third costs 100", () => {
-    let s = { ...createInitialState(), coins: 1000 };
+    let s = workerState(1000);
     s = rootReducer(s, { type: "WORKERS/HIRE", payload: { id: "farmer" } });
     expect(s.coins).toBe(950);
     s = rootReducer(s, { type: "WORKERS/HIRE", payload: { id: "farmer" } });
@@ -60,7 +81,7 @@ describe("Phase 36 — WORKERS/HIRE deducts the ramped cost", () => {
 
   it("rejects when ramped cost exceeds coins", () => {
     // 7 farmers cost 50+75+100+125+150+175+200 = 875. 8th costs 225.
-    let s = { ...createInitialState(), coins: 875 + 100 };
+    let s = workerState(875 + 100);
     for (let i = 0; i < 7; i++) {
       s = rootReducer(s, { type: "WORKERS/HIRE", payload: { id: "farmer" } });
     }
@@ -73,7 +94,7 @@ describe("Phase 36 — WORKERS/HIRE deducts the ramped cost", () => {
   });
 
   it("Baker geometric ramp: 1st=75, 2nd=105", () => {
-    let s = { ...createInitialState(), coins: 1000 };
+    let s = workerState(1000);
     s = rootReducer(s, { type: "WORKERS/HIRE", payload: { id: "baker" } });
     expect(s.coins).toBe(925); // 1000 - 75
     s = rootReducer(s, { type: "WORKERS/HIRE", payload: { id: "baker" } });
@@ -81,7 +102,7 @@ describe("Phase 36 — WORKERS/HIRE deducts the ramped cost", () => {
   });
 
   it("total cost of hiring all 10 farmers matches the linear sum", () => {
-    let s = { ...createInitialState(), coins: 100000 };
+    let s = workerState(100000);
     const startCoins = s.coins;
     for (let i = 0; i < 10; i++) {
       s = rootReducer(s, { type: "WORKERS/HIRE", payload: { id: "farmer" } });

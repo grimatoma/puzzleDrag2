@@ -150,6 +150,139 @@
   .hl-card-meta  { @apply text-caption;         color: var(--on-panel-dim); }
   .hl-card-faint { @apply text-caption;         color: var(--on-panel-faint); }
 
+  /* ══ Browser + detail feature layout ════════════════════════════════ */
+
+  .hl-browser-detail {
+    @apply flex flex-col gap-3 w-full h-full min-h-0;
+  }
+  .hl-browser-toolbar {
+    @apply flex-shrink-0;
+  }
+  .hl-browser-detail__body {
+    @apply flex-1 min-h-0 grid gap-3;
+    grid-template-columns: minmax(280px, 1fr) minmax(300px, 380px);
+  }
+  .hl-browser-list,
+  .hl-browser-pane {
+    @apply min-h-0 overflow-y-auto;
+    overscroll-behavior: contain;
+  }
+  .hl-browser-list {
+    @apply pr-1;
+  }
+  .hl-browser-pane {
+    @apply pl-1;
+  }
+  @media (max-width: 980px), (max-height: 520px) {
+    .hl-browser-detail__body {
+      @apply flex flex-col overflow-hidden;
+    }
+    .hl-browser-list {
+      @apply overflow-y-auto pr-0 pl-0 flex-shrink-0;
+      max-height: clamp(180px, 42dvh, 360px);
+    }
+    .hl-browser-pane {
+      @apply overflow-y-auto pr-0 pl-0 flex-1;
+      min-height: 220px;
+    }
+  }
+
+  .hl-browser-item {
+    @apply w-full min-h-tap rounded-lg border-2 p-2 flex items-center gap-2 text-left;
+    @apply transition-colors cursor-pointer;
+    background: var(--card-bg);
+    border-color: var(--card-border);
+    color: var(--on-panel);
+  }
+  .hl-browser-item:hover {
+    background: var(--card-bg-hover);
+    border-color: var(--card-border-strong);
+  }
+  .hl-browser-item.is-selected {
+    border-color: var(--moss);
+    box-shadow: 0 0 0 2px rgba(145, 191, 36, 0.24);
+  }
+  .hl-browser-item.is-muted {
+    opacity: 0.62;
+  }
+  .hl-browser-item__icon {
+    @apply flex-shrink-0 grid place-items-center rounded-md overflow-hidden;
+    width: 42px;
+    height: 42px;
+    background: var(--well-bg);
+    border: 1px solid var(--well-border);
+  }
+  .hl-browser-item__main {
+    @apply flex-1 min-w-0 flex flex-col gap-0.5;
+  }
+  .hl-browser-item__title {
+    @apply text-body font-bold truncate;
+    color: var(--on-panel);
+  }
+  .hl-browser-item__subtitle {
+    @apply text-caption truncate;
+    color: var(--on-panel-dim);
+  }
+  .hl-browser-item__meta {
+    @apply flex-shrink-0 flex flex-col items-end gap-0.5 text-caption font-bold;
+    color: var(--on-panel-dim);
+  }
+
+  .hl-detail-pane {
+    @apply rounded-lg border-2 p-3 flex flex-col gap-3;
+    background: var(--card-bg);
+    border-color: var(--card-border-strong);
+    color: var(--on-panel);
+  }
+  .hl-detail-pane__header {
+    @apply flex items-start gap-3 min-w-0;
+  }
+  .hl-detail-pane__icon {
+    @apply flex-shrink-0 grid place-items-center rounded-lg overflow-hidden;
+    width: 76px;
+    height: 76px;
+    background: var(--well-bg);
+    border: 1px solid var(--well-border);
+  }
+  .hl-detail-pane__eyebrow {
+    @apply text-caption font-bold uppercase tracking-wider;
+    color: var(--on-panel-label);
+  }
+  .hl-detail-pane__title {
+    @apply text-h3 font-bold m-0;
+    color: var(--on-panel);
+  }
+  .hl-detail-pane__status {
+    @apply text-caption font-semibold mt-1;
+    color: var(--on-panel-dim);
+  }
+  .hl-detail-pane__description {
+    @apply text-body leading-normal m-0;
+    color: var(--on-panel-dim);
+  }
+  .hl-detail-pane__content {
+    @apply flex flex-col gap-3;
+  }
+  .hl-detail-pane__actions {
+    @apply mt-auto pt-2 border-t flex flex-col gap-2;
+    border-color: var(--panel-divider);
+  }
+  .hl-ability-list {
+    @apply flex flex-col gap-1 text-body;
+    color: var(--on-panel-dim);
+  }
+  .hl-ability-list li {
+    @apply pl-3 relative;
+  }
+  .hl-ability-list li::before {
+    content: "";
+    @apply absolute left-0 rounded-full;
+    top: 0.65em;
+    width: 5px;
+    height: 5px;
+    background: var(--moss);
+  }
+
   /* ══ Form controls ══════════════════════════════════════════════════ */
 
   .hl-input {

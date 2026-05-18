@@ -176,7 +176,7 @@ export default function InventoryScreen({ state, dispatch }) {
       </FeaturePanel.Toolbar>
 
       <FeaturePanel.Body>
-        <div className="max-w-[640px] mx-auto flex flex-col gap-3">
+        <div className="w-full h-full min-h-0 flex flex-col gap-3">
           <InventoryGrid
             inventory={state.inventory}
             biomeKey={biomeKey}

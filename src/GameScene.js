@@ -66,6 +66,13 @@ export class GameScene extends Phaser.Scene {
     // moves quickly across the board (touch tracking has lower temporal
     // resolution than mouse). Hit-test against the grid on every pointermove
     // while dragging so fast finger swipes still extend the chain.
+    //
+    // The hit test is circular (radius matches the sprite's interactive
+    // circle in TileObj), not the full square cell. A square cell registers
+    // its corners, so a diagonal swipe through the point where 4 tiles meet
+    // snags on whichever off-diagonal tile's corner the finger clips. The
+    // circle leaves the corners as a neutral gutter, so diagonal moves go
+    // straight from tile to diagonal tile without grabbing an intermediate.
     this.input.on("pointermove", (pointer) => {
       if (!this.dragging || !this.path.length) return;
       this._positionGrassHover(pointer.worldX, pointer.worldY);
@@ -78,6 +85,12 @@ export class GameScene extends Phaser.Scene {
       if (!tile) return;
       const last = this.path[this.path.length - 1];
       if (tile === last) return;
+      // Reject corner clips: only register when the finger is within the
+      // tile's circular hit area (0.6 × tile size, same as TileObj).
+      const dx = pointer.worldX - tile.x;
+      const dy = pointer.worldY - tile.y;
+      const hitR = ts * 0.6;
+      if (dx * dx + dy * dy > hitR * hitR) return;
       this.tryAddToPath(tile);
     });
 

@@ -1,12 +1,18 @@
+import { useState } from "react";
 import { BIOMES, ITEMS } from "../constants.js";
 import { sellPriceFor } from "../features/market/pricing.js";
 import { locBuilt } from "../locBuilt.js";
 import { iconLabel } from "../textures/iconRegistry.js";
 import Icon from "./Icon.jsx";
-import ResourceCell from "./primitives/ResourceCell.jsx";
-import Stepper from "./primitives/Stepper.jsx";
 import Pill from "./primitives/Pill.jsx";
 import Banner from "./primitives/Banner.jsx";
+import {
+  BrowserDetailLayout,
+  BrowserGrid,
+  BrowserItemButton,
+  DetailActionButton,
+  DetailPane,
+} from "./primitives/BrowserDetail.jsx";
 
 export function labelFor(key, fallback) {
   return iconLabel(key) || ITEMS[key]?.label || fallback || key;
@@ -73,33 +79,6 @@ function orderStatusByKey(orders, inventory) {
   return { status, totals };
 }
 
-function TradeStepper({ count, marketBuilt, buyEnabled, sellEnabled, onBuy, onSell, buyPrice, sellPrice }) {
-  const handleChange = (next) => {
-    const delta = next - count;
-    if (delta > 0 && buyEnabled) onBuy();
-    else if (delta < 0 && sellEnabled) onSell();
-  };
-  const max = buyEnabled ? undefined : count;
-  const disabled = !marketBuilt || (!buyEnabled && !sellEnabled);
-  const suffixParts = [];
-  if (sellEnabled) suffixParts.push(`sell ${sellPrice}`);
-  if (buyEnabled) suffixParts.push(`buy ${buyPrice}`);
-  return (
-    <div onClick={(e) => e.stopPropagation()}>
-      <Stepper
-        size="sm"
-        value={count}
-        min={0}
-        max={max}
-        accelerator
-        disabled={disabled}
-        onChange={handleChange}
-        suffix={suffixParts.join(" · ")}
-      />
-    </div>
-  );
-}
-
 function StatusPill({ status, total }) {
   if (status === "ready") {
     return (
@@ -125,59 +104,84 @@ function StatusPill({ status, total }) {
   return null;
 }
 
-function InventoryCell({ r, count, compact, orderStatus, orderTotal, marketBuilt, buyPrice, sellPrice, dispatch, tradeKind }) {
-  const showBuy = !compact && tradeKind === "resource" && buyPrice > 0;
-  const showSell = !compact && sellPrice > 0;
-  const showTrade = (showBuy || showSell) && !!dispatch;
-
+function InventoryBrowserItem({ entry, selected, onSelect }) {
+  const { key, label, count, orderStatus } = entry;
   let derivedStatus = orderStatus;
   if (!derivedStatus && count > 0) derivedStatus = "excess";
+  return (
+    <BrowserItemButton
+      selected={selected}
+      icon={<Icon iconKey={key} size={34} title={label} />}
+      title={label}
+      subtitle={entry.kind === "item" ? "Item" : "Resource"}
+      count={count}
+      status={derivedStatus}
+      onClick={onSelect}
+      aria-label={`View ${label}`}
+    />
+  );
+}
 
-  const onTap = () => {
-    // TODO(A40): wire INSPECT_RESOURCE dispatch once detail sheet exists.
-    if (dispatch) dispatch({ type: "INSPECT_RESOURCE", key: r.key });
-  };
-
-  const sellHandler = () => {
-    if (!dispatch) return;
-    if (tradeKind === "resource") {
-      dispatch({ type: "SELL_RESOURCE", payload: { key: r.key, qty: 1 } });
+function InventoryDetail({ entry, marketBuilt, dispatch }) {
+  if (!entry) return <DetailPane empty="Select a resource to inspect it." />;
+  const { key, label, count, sellPrice, buyPrice, kind, orderStatus, orderTotal } = entry;
+  const canBuy = kind === "resource" && marketBuilt && buyPrice > 0;
+  const canSell = marketBuilt && sellPrice > 0 && count > 0;
+  const sell = () => {
+    if (kind === "resource") {
+      dispatch({ type: "SELL_RESOURCE", payload: { key, qty: 1 } });
     } else {
-      dispatch({ type: "SELL_ITEM", id: r.key, qty: 1 });
+      dispatch({ type: "SELL_ITEM", id: key, qty: 1 });
     }
   };
-  const buyHandler = () => {
-    if (!dispatch) return;
-    dispatch({ type: "BUY_RESOURCE", payload: { key: r.key, qty: 1 } });
-  };
-
-  const pill = derivedStatus ? <StatusPill status={derivedStatus} total={orderTotal} /> : null;
-
-  const actions = showTrade ? (
-    <div className="flex items-center gap-2">
-      {pill}
-      <TradeStepper
-        count={count}
-        marketBuilt={marketBuilt}
-        buyEnabled={showBuy && marketBuilt}
-        sellEnabled={showSell && marketBuilt && count > 0}
-        onBuy={buyHandler}
-        onSell={sellHandler}
-        buyPrice={buyPrice}
-        sellPrice={sellPrice}
-      />
-    </div>
-  ) : pill;
+  const buy = () => dispatch({ type: "BUY_RESOURCE", payload: { key, qty: 1 } });
+  const status = orderStatus ? <StatusPill status={orderStatus} total={orderTotal} /> : null;
 
   return (
-    <ResourceCell
-      resourceKey={r.key}
-      count={count}
-      density={compact ? "compact" : "comfortable"}
-      status={derivedStatus}
-      actions={actions}
-      onTap={onTap}
-    />
+    <DetailPane
+      eyebrow={kind === "item" ? "Item" : "Resource"}
+      title={label}
+      status={`${count.toLocaleString()} in storage`}
+      icon={<Icon iconKey={key} size={64} title={label} />}
+      actions={
+        <>
+          <DetailActionButton
+            tone="moss"
+            disabled={!canSell}
+            onClick={sell}
+          >
+            Sell {sellPrice > 0 ? `+${sellPrice}◉` : ""}
+          </DetailActionButton>
+          {kind === "resource" && (
+            <DetailActionButton
+              tone="gold"
+              disabled={!canBuy}
+              onClick={buy}
+            >
+              Buy {buyPrice > 0 ? `${buyPrice}◉` : ""}
+            </DetailActionButton>
+          )}
+        </>
+      }
+    >
+      <div className="hl-well">
+        <div className="hl-section-label mb-1.5">Market</div>
+        <div className="flex flex-wrap gap-2">
+          {status}
+          <Pill tone={marketBuilt ? "moss" : "iron"} variant="soft" size="sm">
+            {marketBuilt ? "Caravan Post open" : "Build Caravan Post"}
+          </Pill>
+        </div>
+      </div>
+      {orderStatus && (
+        <div className="hl-well">
+          <div className="hl-section-label mb-1.5">Orders</div>
+          <div className="hl-text-dim">
+            Current orders ask for {orderTotal} {label}.
+          </div>
+        </div>
+      )}
+    </DetailPane>
   );
 }
 
@@ -235,10 +239,10 @@ export function InventoryGrid({
     item.kind !== "tile" &&
     item.kind !== "tool"
   );
-  const gridCols = compact ? "grid-cols-1" : "grid-cols-[repeat(auto-fill,minmax(240px,1fr))]";
   const { status, totals } = orderStatusByKey(orders, inventory);
   const marketBuilt = !!locBuilt(state).caravan_post;
   const prices = state?.market?.prices ?? {};
+  const [selectedKey, setSelectedKey] = useState(null);
 
   const showResources = filter === "all" || filter === "chain" || filter === "sellable";
   const showItems = filter === "all" || filter === "items" || filter === "sellable";
@@ -271,14 +275,44 @@ export function InventoryGrid({
 
   const sortedResourceKeys = sortKeys(visibleResourceKeys, sort, inventory, recentOrder);
   const sortedItemKeys = sortKeys(visibleItemKeys, sort, inventory, recentOrder);
+  const entries = [];
+  for (const key of sortedResourceKeys) {
+    const r = resourceCellsBy.get(key);
+    const p = prices[key] ?? {};
+    entries.push({
+      key,
+      kind: "resource",
+      label: labelFor(key, r?.label),
+      count: inventory[key] || 0,
+      buyPrice: p.buy ?? 0,
+      sellPrice: p.sell ?? 0,
+      orderStatus: status[key],
+      orderTotal: totals[key],
+    });
+  }
+  for (const key of sortedItemKeys) {
+    const item = itemDefsByKey.get(key);
+    entries.push({
+      key,
+      kind: "item",
+      label: labelFor(key, item?.label),
+      count: inventory[key] || 0,
+      buyPrice: 0,
+      sellPrice: sellPriceFor(key),
+      orderStatus: status[key],
+      orderTotal: totals[key],
+    });
+  }
+
+  const selected = entries.find((e) => e.key === selectedKey) ?? entries[0] ?? null;
 
   const noResults =
     sortedResourceKeys.length === 0 &&
     sortedItemKeys.length === 0 &&
     (query.length > 0 || filter !== "all");
 
-  return (
-    <div className="flex flex-col gap-3">
+  const toolbar = (
+    <div className="flex flex-col gap-2">
       {!compact && dispatch && (
         <Banner
           tone={marketBuilt ? "success" : "info"}
@@ -296,68 +330,31 @@ export function InventoryGrid({
           <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-iron-soft" /> excess</span>
         </div>
       )}
-      {noResults && (
-        <div className="hl-empty px-1">
-          No matches{query ? ` for "${query}"` : ""}.
-        </div>
-      )}
-      {showResources && sortedResourceKeys.length > 0 && (
-        <div>
-          <div className="hl-section-label mb-1.5">Resources</div>
-          <div className={`grid ${gridCols} gap-2`}>
-            {sortedResourceKeys.map((key) => {
-              const r = resourceCellsBy.get(key);
-              const p = prices[key];
-              return (
-                <InventoryCell
-                  key={key}
-                  r={r}
-                  count={inventory[key] || 0}
-                  compact={compact}
-                  orderStatus={status[key]}
-                  orderTotal={totals[key]}
-                  marketBuilt={marketBuilt}
-                  buyPrice={p?.buy ?? 0}
-                  sellPrice={p?.sell ?? 0}
-                  dispatch={dispatch}
-                  tradeKind="resource"
-                />
-              );
-            })}
-          </div>
-        </div>
-      )}
-      {showItems && (
-        <div>
-          <div className="hl-section-label mb-1.5">Items</div>
-          {items.length === 0 ? (
-            <div className="hl-text-faint italic px-1">No items yet — craft something!</div>
-          ) : sortedItemKeys.length === 0 ? (
-            <div className="hl-text-faint italic px-1">No items match the current filter.</div>
-          ) : (
-            <div className={`grid ${gridCols} gap-2`}>
-              {sortedItemKeys.map((key) => {
-                const item = itemDefsByKey.get(key);
-                return (
-                  <InventoryCell
-                    key={key}
-                    r={{ key, label: item.label, color: item.color }}
-                    count={inventory[key] || 0}
-                    compact={compact}
-                    orderStatus={status[key]}
-                    orderTotal={totals[key]}
-                    marketBuilt={marketBuilt}
-                    buyPrice={0}
-                    sellPrice={sellPriceFor(key)}
-                    dispatch={dispatch}
-                    tradeKind="item"
-                  />
-                );
-              })}
-            </div>
-          )}
-        </div>
-      )}
     </div>
+  );
+
+  const browser = noResults ? (
+    <div className="hl-empty px-1">No matches{query ? ` for "${query}"` : ""}.</div>
+  ) : entries.length === 0 ? (
+    <div className="hl-empty px-1">No resources yet.</div>
+  ) : (
+    <BrowserGrid min={compact ? 220 : 180}>
+      {entries.map((entry) => (
+        <InventoryBrowserItem
+          key={entry.key}
+          entry={entry}
+          selected={selected?.key === entry.key}
+          onSelect={() => setSelectedKey(entry.key)}
+        />
+      ))}
+    </BrowserGrid>
+  );
+
+  return (
+    <BrowserDetailLayout
+      toolbar={toolbar}
+      browser={browser}
+      detail={<InventoryDetail entry={selected} marketBuilt={marketBuilt} dispatch={dispatch} />}
+    />
   );
 }
