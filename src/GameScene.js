@@ -58,6 +58,13 @@ export class GameScene extends Phaser.Scene {
     this.layoutDims();
     this.drawBackground();
     this.fillBoard(true);
+    // Reload restoration: if we're continuing a saved session, overwrite the
+    // random tiles that fillBoard just generated with the persisted board state.
+    const boardRestoreGrid = this.registry.get("boardRestoreGrid");
+    if (boardRestoreGrid) {
+      this._applyGridFromState(boardRestoreGrid);
+      this._syncGridToState();
+    }
     this.input.on("pointerup", () => this.endPath());
     this.input.on("pointerupoutside", () => this.endPath());
     this.input.on("gameout", () => this.endPath());

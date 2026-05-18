@@ -104,6 +104,11 @@ function PhaserMount({ dispatch, biomeKey, turnsUsed, uiLocked, boardActive, sce
               game.registry.set("sessionSelectedTiles", gameState?.session?.selectedTiles ?? []);
               // Phase 3 — seed the active zone for the chain-upgrade redirect.
               game.registry.set("activeZone", gameState?.activeZone ?? gameState?.mapCurrent ?? "home");
+              // Reload restoration: pass the saved board grid so GameScene can
+              // apply it over the initial random fill when continuing a session.
+              if (gameState?.farmRun?.turnsRemaining > 0) {
+                game.registry.set("boardRestoreGrid", gameState.grid ?? null);
+              }
             },
             postBoot: (game) => {
               // Track host CSS-size changes and resize the game's backing
