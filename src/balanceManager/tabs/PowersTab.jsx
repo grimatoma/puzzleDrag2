@@ -16,6 +16,7 @@ import { BIOMES, ITEMS } from "../../constants.js";
 import {
   COLORS, NumberField, TextField, TextArea, Select, ColorField,
   SmallButton, Pill, Card, SearchBar, TileSwatch,
+  SegmentedFilter,
 } from "../shared.jsx";
 import AbilitiesEditor from "../AbilitiesEditor.jsx";
 
@@ -70,6 +71,10 @@ export default function PowersTab({ draft, updateDraft }) {
     }
     return true;
   });
+  const categoryOptions = useMemo(
+    () => [{ id: "all", label: "all" }, ...CATEGORIES.map((id) => ({ id, label: id }))],
+    [],
+  );
 
   const selected = TILE_TYPES_MAP[selectedTile];
   const draftPower = draft.tilePowers[selectedTile] || null;
@@ -185,14 +190,13 @@ export default function PowersTab({ draft, updateDraft }) {
       {/* Left: tile picker */}
       <div className="col-span-4 flex flex-col gap-2 min-h-0">
         <SearchBar value={search} onChange={setSearch} placeholder="Filter tiles…" />
-        <div className="flex flex-wrap gap-1">
-          <CategoryChip active={categoryFilter === "all"} onClick={() => setCategoryFilter("all")}>all</CategoryChip>
-          {CATEGORIES.map((c) => (
-            <CategoryChip key={c} active={categoryFilter === c} onClick={() => setCategoryFilter(c)}>
-              {c}
-            </CategoryChip>
-          ))}
-        </div>
+        <SegmentedFilter
+          options={categoryOptions}
+          value={categoryFilter}
+          onChange={setCategoryFilter}
+          ariaLabel="Tile category filter"
+          className="[&>button]:!px-2 [&>button]:!py-0.5 [&>button]:!text-[10px] [&>button]:!rounded-full"
+        />
         <div
           className="flex flex-col gap-1 overflow-y-auto rounded-lg border-2 p-2 flex-1 min-h-0"
           style={{ background: COLORS.parchmentDeep, borderColor: COLORS.border }}
@@ -443,22 +447,6 @@ export default function PowersTab({ draft, updateDraft }) {
         )}
       </div>
     </div>
-  );
-}
-
-function CategoryChip({ active, onClick, children }) {
-  return (
-    <button
-      onClick={onClick}
-      className="px-2 py-0.5 text-[10px] font-bold rounded-full border"
-      style={
-        active
-          ? { background: COLORS.ember, borderColor: COLORS.emberDeep, color: "#fff" }
-          : { background: COLORS.parchment, borderColor: COLORS.border, color: COLORS.inkLight }
-      }
-    >
-      {children}
-    </button>
   );
 }
 

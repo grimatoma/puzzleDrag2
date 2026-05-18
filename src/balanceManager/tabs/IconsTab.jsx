@@ -4,7 +4,7 @@
 import { useState, useMemo, useEffect, useRef, memo } from "react";
 import C2S from "canvas2svg";
 import { ICON_REGISTRY } from "../../textures/iconRegistry.js";
-import { COLORS, SearchBar } from "../shared.jsx";
+import { COLORS, FilterBar, SearchBar, SegmentedFilter } from "../shared.jsx";
 
 // Derive category buckets from key prefixes (everything before the first "_").
 // Keys with no underscore fall into "other".
@@ -22,6 +22,11 @@ const ALL_ENTRIES = Object.entries(ICON_REGISTRY).map(([key, entry]) => ({
 }));
 
 const ALL_CATEGORIES = ["all", ...Array.from(new Set(ALL_ENTRIES.map((e) => e.category))).sort()];
+const CATEGORY_OPTIONS = ALL_CATEGORIES.map((id) => ({ id, label: id }));
+const RENDER_MODE_OPTIONS = [
+  { id: "canvas", label: "Canvas" },
+  { id: "svg", label: "SVG" },
+];
 
 const ICON_SIZE = 56; // px — canvas render size
 
@@ -228,26 +233,17 @@ export default function IconsTab() {
   return (
     <div className="flex flex-col gap-3 h-full">
       {/* Controls row */}
-      <div className="flex items-center gap-3 flex-wrap flex-shrink-0">
+      <FilterBar className="gap-3 flex-shrink-0">
         <div className="flex-1 min-w-[160px] max-w-[320px]">
           <SearchBar value={search} onChange={setSearch} placeholder="Search key or label…" />
         </div>
-        <div className="flex items-center gap-1.5 flex-wrap">
-          {ALL_CATEGORIES.map((cat) => (
-            <button
-              key={cat}
-              onClick={() => setCategory(cat)}
-              className="px-2 py-1 text-[10px] font-bold rounded-md border-2 transition-colors capitalize"
-              style={
-                category === cat
-                  ? { background: COLORS.ember, borderColor: COLORS.emberDeep, color: "#fff" }
-                  : { background: COLORS.parchmentDeep, borderColor: COLORS.border, color: COLORS.inkLight }
-              }
-            >
-              {cat}
-            </button>
-          ))}
-        </div>
+        <SegmentedFilter
+          options={CATEGORY_OPTIONS}
+          value={category}
+          onChange={setCategory}
+          ariaLabel="Icon category filter"
+          className="[&>button]:!px-2 [&>button]:!py-1 [&>button]:!text-[10px] [&>button]:!rounded-md [&>button]:capitalize"
+        />
         <div
           className="flex items-center gap-1 ml-auto flex-shrink-0 px-2 py-1 rounded-lg border-2"
           role="group"
@@ -260,29 +256,18 @@ export default function IconsTab() {
           >
             Render
           </span>
-          {[
-            { id: "canvas", label: "Canvas" },
-            { id: "svg", label: "SVG" },
-          ].map((opt) => (
-            <button
-              key={opt.id}
-              onClick={() => setMode(opt.id)}
-              className="px-2 py-0.5 text-[10px] font-bold rounded-md border-2 transition-colors"
-              aria-pressed={mode === opt.id}
-              style={
-                mode === opt.id
-                  ? { background: COLORS.ember, borderColor: COLORS.emberDeep, color: "#fff" }
-                  : { background: COLORS.parchment, borderColor: COLORS.border, color: COLORS.inkLight }
-              }
-            >
-              {opt.label}
-            </button>
-          ))}
+          <SegmentedFilter
+            options={RENDER_MODE_OPTIONS}
+            value={mode}
+            onChange={setMode}
+            ariaLabel="Icon render mode"
+            className="[&>button]:!px-2 [&>button]:!py-0.5 [&>button]:!text-[10px] [&>button]:!rounded-md"
+          />
         </div>
         <div className="text-[11px] italic flex-shrink-0" style={{ color: COLORS.inkSubtle }}>
           {filtered.length} / {ALL_ENTRIES.length} icons
         </div>
-      </div>
+      </FilterBar>
 
       {/* Copy notice */}
       {copiedKey && (
