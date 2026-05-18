@@ -201,6 +201,15 @@ export function useRouter(state, dispatch) {
     if (typeof window === "undefined") return;
     const handler = () => {
       const incoming = parseHash(window.location.hash);
+      if ((state.view ?? "town") === "board" && (incoming.view ?? "town") !== "board") {
+        const currentBoardHash = buildHash(routeFromState(state));
+        if (window.location.hash !== currentBoardHash) {
+          window.history.replaceState(null, "", currentBoardHash);
+        }
+        lastHashRef.current = currentBoardHash;
+        dispatch({ type: "OPEN_MODAL", modal: "leaveBoard" });
+        return;
+      }
       const desired = buildHash(incoming);
       lastHashRef.current = desired;
       dispatch({ type: "ROUTE/APPLY", route: incoming });
@@ -211,7 +220,7 @@ export function useRouter(state, dispatch) {
       window.removeEventListener("popstate", handler);
       window.removeEventListener("hashchange", handler);
     };
-  }, [dispatch]);
+  }, [dispatch, state]);
 
   // State → URL: when navigation-relevant fields change, push a new entry.
   useEffect(() => {
