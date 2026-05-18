@@ -17,6 +17,7 @@ import { FLAG_READS } from "../../flagReads.js";
 import { NPCS } from "../../constants.js";
 import { COLORS, TextField, TextArea, NumberField, SmallButton } from "../shared.jsx";
 import { allBeatIds, effectiveBeat, FLAG_ID_RE } from "../../storyEditor/shared.jsx";
+import StatusChip from "../../ui/primitives/StatusChip.jsx";
 
 const NPC_KEYS = Object.keys(NPCS ?? {});
 
@@ -265,7 +266,15 @@ function CatDot({ name, draft }) {
   return <span className="inline-block rounded-[2px] flex-shrink-0" style={{ width: 8, height: 8, background: flagCategory(name, draft).color }} />;
 }
 function Tag({ children, color = COLORS.inkSubtle, bg = COLORS.parchmentDeep }) {
-  return <span className="inline-block px-1.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wide whitespace-nowrap" style={{ color, background: bg, border: `1px solid ${color}33` }}>{children}</span>;
+  return (
+    <StatusChip
+      size="xs"
+      uppercase
+      style={{ color, background: bg, borderColor: `${color}33` }}
+    >
+      {children}
+    </StatusChip>
+  );
 }
 function SourceLine({ s }) {
   if (s.type === "trigger") {
@@ -416,7 +425,7 @@ function Inspector({ flag, draft, updateDraft, onSelect }) {
         <div>
           <div className="text-[10px] font-bold uppercase tracking-wide mb-1.5 flex items-baseline gap-2" style={{ color: COLORS.inkSubtle }}>
             <span>Triggers</span><span style={{ fontFamily: "ui-monospace,monospace" }}>{triggers.length}</span>
-            {overridden && <span className="px-1.5 py-0.5 rounded-full text-[8px]" style={{ background: "rgba(214,97,42,0.14)", color: COLORS.emberDeep }}>OVERRIDDEN</span>}
+            {overridden && <Tag color={COLORS.emberDeep} bg="rgba(214,97,42,0.14)">OVERRIDDEN</Tag>}
             <SmallButton className="ml-auto" onClick={() => setTriggers(flag.name, [...triggers, { type: "session_start" }])}>+ Add</SmallButton>
             {overridden && <SmallButton onClick={() => setTriggers(flag.name, null)} title="Discard the override; revert to the registry's triggers">Reset</SmallButton>}
           </div>

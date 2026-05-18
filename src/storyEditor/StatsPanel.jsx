@@ -6,26 +6,7 @@
 import { useMemo } from "react";
 import { C, NPCS, Portrait } from "./shared.jsx";
 import { computeStoryStats, NARRATOR_SPEAKER } from "./storyStats.js";
-
-function MetricCard({ label, value, hint, tone = "default" }) {
-  const tones = {
-    default: { bg: C.parchmentDeep, fg: C.ink, accent: C.inkLight, border: C.border },
-    alarm:   { bg: "rgba(194,59,34,0.08)", fg: C.redDeep, accent: C.redDeep, border: C.redDeep },
-    good:    { bg: "rgba(90,158,75,0.10)", fg: C.greenDeep, accent: C.greenDeep, border: C.greenDeep },
-    info:    { bg: "rgba(43,34,24,0.05)", fg: C.ink, accent: C.emberDeep, border: C.border },
-  };
-  const t = tones[tone] || tones.default;
-  return (
-    <div style={{ background: t.bg, border: `1.5px solid ${t.border}55`, borderRadius: 10,
-      padding: "8px 10px", display: "flex", flexDirection: "column", gap: 2 }}>
-      <span style={{ font: "700 9px/1 system-ui", letterSpacing: "0.08em", textTransform: "uppercase", color: t.accent }}>
-        {label}
-      </span>
-      <span style={{ font: "700 18px/1 system-ui", color: t.fg }}>{value}</span>
-      {hint && <span style={{ font: "italic 400 10px/1.3 system-ui", color: C.inkSubtle }}>{hint}</span>}
-    </div>
-  );
-}
+import MetricCard from "../ui/primitives/MetricCard.jsx";
 
 function formatPercent(n) {
   if (!Number.isFinite(n)) return "—";
@@ -52,16 +33,16 @@ export default function StatsPanel({ draft }) {
         <div style={{ font: "700 10px/1 system-ui", letterSpacing: "0.12em", textTransform: "uppercase",
           color: C.inkSubtle, marginBottom: 6 }}>Story totals</div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: 8 }}>
-          <MetricCard label="Beats" value={stats.totalBeats} hint={stats.draftBeats ? `+${stats.draftBeats} drafts` : "all built-in"} />
-          <MetricCard label="Dialogue lines" value={stats.totalLines} />
-          <MetricCard label="Words" value={stats.totalWords.toLocaleString()} hint={`avg ${Math.round(stats.totalWords / Math.max(1, stats.totalLines))} per line`} />
-          <MetricCard label="Choices" value={stats.totalChoices} hint={`across ${stats.beatsWithChoices} forks`} />
+          <MetricCard align="left" label="Beats" value={stats.totalBeats} hint={stats.draftBeats ? `+${stats.draftBeats} drafts` : "all built-in"} />
+          <MetricCard align="left" label="Dialogue lines" value={stats.totalLines} />
+          <MetricCard align="left" label="Words" value={stats.totalWords.toLocaleString()} hint={`avg ${Math.round(stats.totalWords / Math.max(1, stats.totalLines))} per line`} />
+          <MetricCard align="left" label="Choices" value={stats.totalChoices} hint={`across ${stats.beatsWithChoices} forks`} />
           <MetricCard label="Fork density" value={formatPercent(stats.forkDensity)}
             hint={`avg ${formatAvg(stats.avgChoicesPerFork)} choices/fork`}
-            tone={stats.forkDensity > 0 ? "info" : "default"} />
+            tone={stats.forkDensity > 0 ? "ember" : "default"} align="left" />
           <MetricCard label="Unreachable" value={stats.unreachableCount}
-            tone={stats.unreachableCount > 0 ? "alarm" : "good"}
-            hint={stats.unreachableCount === 0 ? "every beat reachable" : `${stats.reachableCount} reachable`} />
+            tone={stats.unreachableCount > 0 ? "danger" : "success"}
+            hint={stats.unreachableCount === 0 ? "every beat reachable" : `${stats.reachableCount} reachable`} align="left" />
         </div>
       </section>
 
@@ -69,11 +50,11 @@ export default function StatsPanel({ draft }) {
         <div style={{ font: "700 10px/1 system-ui", letterSpacing: "0.12em", textTransform: "uppercase",
           color: C.inkSubtle, marginBottom: 6 }}>Outcomes</div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: 8 }}>
-          <MetricCard label="Flag sets" value={stats.flagOps.sets} hint={`${stats.flagOps.clears} clears`} />
-          <MetricCard label="Coins (Σ)" value={formatSigned(stats.currency.coins)} hint="sum across all choices" />
-          <MetricCard label="Embers (Σ)" value={formatSigned(stats.currency.embers)} />
-          <MetricCard label="Core ingots (Σ)" value={formatSigned(stats.currency.coreIngots)} />
-          <MetricCard label="Gems (Σ)" value={formatSigned(stats.currency.gems)} />
+          <MetricCard align="left" label="Flag sets" value={stats.flagOps.sets} hint={`${stats.flagOps.clears} clears`} />
+          <MetricCard align="left" label="Coins (Σ)" value={formatSigned(stats.currency.coins)} hint="sum across all choices" />
+          <MetricCard align="left" label="Embers (Σ)" value={formatSigned(stats.currency.embers)} />
+          <MetricCard align="left" label="Core ingots (Σ)" value={formatSigned(stats.currency.coreIngots)} />
+          <MetricCard align="left" label="Gems (Σ)" value={formatSigned(stats.currency.gems)} />
         </div>
       </section>
 

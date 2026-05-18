@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { MAP_NODES, KIND_LABELS } from "./data.js";
 import { isAdjacent } from "./slice.js";
 import { loreFor, HEARTH_TOKENS } from "./lore.js";
@@ -16,8 +16,10 @@ import {
 } from "../zones/data.js";
 import { keeperForType } from "../../keepers.js";
 import BiomePicker from "../zones/BiomePicker.jsx";
-import useFocusTrap from "../../ui/primitives/useFocusTrap.js";
+import Button from "../../ui/primitives/Button.jsx";
+import { ParchmentDialog } from "../../ui/primitives/Dialog.jsx";
 import FeaturePanel from "../../ui/primitives/FeaturePanel.jsx";
+import StatusChip from "../../ui/primitives/StatusChip.jsx";
 
 export const viewKey = "cartography";
 
@@ -63,8 +65,6 @@ function getNodeStatus(node, visitedSet, discoveredSet, current, playerLevel, ol
 function KeeperEncounterModal({ node, type, dispatch, onClose }) {
   const keeper = keeperForType(type);
   const [chosen, setChosen] = useState(null);
-  const panelRef = useRef(null);
-  useFocusTrap(panelRef, !!keeper, onClose);
   if (!keeper) { onClose(); return null; }
   const pick = (path) => {
     dispatch({ type: "KEEPER/CONFRONT", payload: { zoneId: node.id, path } });
@@ -72,16 +72,15 @@ function KeeperEncounterModal({ node, type, dispatch, onClose }) {
   };
   const info = chosen ? (chosen === "coexist" ? keeper.coexist : keeper.driveout) : null;
   return (
-    <div className="fixed inset-0 z-[60] bg-black/65 grid place-items-center p-3" onClick={chosen ? onClose : undefined}>
-      <div
-        ref={panelRef}
-        role="dialog"
-        aria-modal="true"
-        aria-label={`${keeper.name} encounter`}
-        tabIndex={-1}
-        className="bg-[#f4ecd8] border-[4px] border-[#b28b62] rounded-[18px] px-5 py-4 w-[min(460px,95vw)] max-h-[90vh] overflow-y-auto shadow-2xl outline-none"
-        onClick={(e) => e.stopPropagation()}
-      >
+    <ParchmentDialog
+      open
+      onClose={onClose}
+      closeOnBackdrop={!!chosen}
+      size="md"
+      ariaLabel={`${keeper.name} encounter`}
+      backdropClassName="z-[60] !bg-black/65"
+    >
+      <ParchmentDialog.Body className="!px-5 !py-4">
         <div className="flex items-center gap-2 mb-2">
           <span className="text-[26px] leading-none">{keeper.icon}</span>
           <div>
@@ -101,7 +100,7 @@ function KeeperEncounterModal({ node, type, dispatch, onClose }) {
               >
                 <div className="flex items-center justify-between">
                   <span className="font-bold text-[13px] text-[#1f3a10]">🤝 Coexist</span>
-                  <span className="text-[11px] font-bold text-[#6a4f10] bg-[#f2d98a] border border-[#b09a50] rounded-full px-2 py-0.5">+{keeper.coexist.embers ?? 0} 🔥 Embers</span>
+                  <StatusChip tone="gold">+{keeper.coexist.embers ?? 0} 🔥 Embers</StatusChip>
                 </div>
                 <div className="text-[12px] text-[#3a4a20] mt-0.5">"{keeper.coexist.label}"</div>
               </button>
@@ -111,7 +110,7 @@ function KeeperEncounterModal({ node, type, dispatch, onClose }) {
               >
                 <div className="flex items-center justify-between">
                   <span className="font-bold text-[13px] text-[#3a2715]">⚔ Trial</span>
-                  <span className="text-[11px] font-bold text-[#3a3e42] bg-[#cdd1d4] border border-[#8a8f95] rounded-full px-2 py-0.5">+{keeper.driveout.coreIngots ?? 0} ▣ Core Ingots</span>
+                  <StatusChip tone="slate">+{keeper.driveout.coreIngots ?? 0} ▣ Core Ingots</StatusChip>
                 </div>
                 <div className="text-[12px] text-[#4a3a2a] mt-0.5">"{keeper.driveout.label}"</div>
               </button>
@@ -136,16 +135,13 @@ function KeeperEncounterModal({ node, type, dispatch, onClose }) {
                   : `Win the trial to claim ${keeper.driveout.coreIngots ?? 0} Core Ingots.`}
               </p>
             </div>
-            <button
-              onClick={onClose}
-              className="w-full bg-[#91bf24] hover:bg-[#a3d028] text-white font-bold py-2 rounded-lg border-2 border-white text-[13px] transition-colors"
-            >
+            <Button tone="moss" size="md" block onClick={onClose}>
               Done
-            </button>
+            </Button>
           </>
         )}
-      </div>
-    </div>
+      </ParchmentDialog.Body>
+    </ParchmentDialog>
   );
 }
 
@@ -156,26 +152,28 @@ const cardStyle = {
   color: "#3a2715",
 };
 
-function StatusChip({ status, target, tokenCount = 0 }) {
-  let bg, fg, text;
+function NodeStatusChip({ status, target, tokenCount = 0 }) {
+  let tone, text;
   switch (status) {
-    case "current":               bg = "#c8a868"; fg = "#3a2715"; text = "◉ You are here"; break;
-    case "visited":               bg = "#dfeecd"; fg = "#1f3a10"; text = "✓ Visited · fast-travel"; break;
-    case "discovered-ready":      bg = "#f5e09a"; fg = "#3a2715"; text = "★ Ready to walk"; break;
-    case "discovered-locked":     bg = "#e9c0a8"; fg = "#5a2a1a"; text = `🔒 Level ${target.level} required`; break;
-    case "discovered-unreachable":bg = "#dccaa8"; fg = "#5a3a20"; text = "↯ No road from here"; break;
-    case "capital-locked":        bg = "#e0d2a0"; fg = "#3a2c0e"; text = `🏛 Hearth-Tokens ${tokenCount}/3`; break;
-    case "capital-ready":         bg = "#f4d65a"; fg = "#3a2c0e"; text = "🏛 The Ember awaits"; break;
+    case "current":               tone = "gold"; text = "◉ You are here"; break;
+    case "visited":               tone = "success"; text = "✓ Visited · fast-travel"; break;
+    case "discovered-ready":      tone = "gold"; text = "★ Ready to walk"; break;
+    case "discovered-locked":     tone = "danger"; text = `🔒 Level ${target.level} required`; break;
+    case "discovered-unreachable":tone = "muted"; text = "↯ No road from here"; break;
+    case "capital-locked":        tone = "warning"; text = `🏛 Hearth-Tokens ${tokenCount}/3`; break;
+    case "capital-ready":         tone = "gold"; text = "🏛 The Ember awaits"; break;
     case "hidden":
-    default:                      bg = "#cbb892"; fg = "#3a2715"; text = "Untraveled"; break;
+    default:                      tone = "muted"; text = "Untraveled"; break;
   }
   return (
-    <div
-      className="rounded-full px-3 py-1 text-center"
-      style={{ background: bg, border: "1.5px solid #7c4f2c", ...cardStyle, fontSize: 11, color: fg, fontWeight: 700 }}
+    <StatusChip
+      tone={tone}
+      size="md"
+      className="w-full"
+      style={{ fontFamily: cardStyle.fontFamily, fontSize: 11, borderWidth: 1.5 }}
     >
       {text}
-    </div>
+    </StatusChip>
   );
 }
 
@@ -435,7 +433,7 @@ function NodePanel({ node, current, visited, discovered, playerLevel, dispatch, 
         )}
       </div>
 
-      <StatusChip status={status} target={node} tokenCount={tokenCount} />
+      <NodeStatusChip status={status} target={node} tokenCount={tokenCount} />
 
       {showLore && lore?.epitaph && (
         <figure

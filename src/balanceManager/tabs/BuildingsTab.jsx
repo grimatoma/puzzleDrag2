@@ -11,6 +11,7 @@ import AbilitiesEditor from "../AbilitiesEditor.jsx";
 import { BuildingIllustration } from "../../ui/Town.jsx";
 import Icon from "../../ui/Icon.jsx";
 import { analyseBuildingCosts } from "../buildingCosts.js";
+import MetricCard from "../../ui/primitives/MetricCard.jsx";
 
 // Canonical cost-key list, derived from the live data (every biome resource +
 // the two currencies) — never hardcoded. Feeds the CostEditor's add picker.
@@ -260,16 +261,5 @@ function CostEditor({ cost, onChange }) {
 
 
 function CostStat({ label, value, accent }) {
-  const tone = accent === "warm"
-    ? { bg: "#fff5e6", fg: COLORS.ember, border: COLORS.ember }
-    : { bg: "#eef6ea", fg: COLORS.greenDeep, border: COLORS.greenDeep };
-  return (
-    <div
-      className="flex flex-col items-center justify-center px-2 py-2 rounded-lg border-2"
-      style={{ background: tone.bg, borderColor: `${tone.border}55` }}
-    >
-      <div className="text-[18px] font-bold" style={{ color: tone.fg }}>{value}</div>
-      <div className="text-[10px] uppercase tracking-wide font-bold text-center" style={{ color: COLORS.inkSubtle }}>{label}</div>
-    </div>
-  );
+  return <MetricCard label={label} value={value} tone={accent === "warm" ? "ember" : "success"} />;
 }

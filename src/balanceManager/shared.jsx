@@ -10,6 +10,8 @@ import {
   TextInput as BaseTextInput,
 } from "../ui/primitives/Field.jsx";
 import { UI_COLORS } from "../ui/primitives/palette.js";
+import SegmentedControl from "../ui/primitives/SegmentedControl.jsx";
+import StatusChip from "../ui/primitives/StatusChip.jsx";
 
 export const COLORS = UI_COLORS;
 
@@ -112,12 +114,13 @@ export function SmallButton({ children, onClick, variant = "default", disabled =
 
 export function Pill({ children, color = COLORS.inkSubtle, bg = COLORS.parchmentDeep }) {
   return (
-    <span
-      className="inline-block px-1.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide"
-      style={{ color, background: bg, border: `1px solid ${COLORS.border}` }}
+    <StatusChip
+      size="xs"
+      uppercase
+      style={{ color, background: bg, borderColor: COLORS.border, fontSize: 10 }}
     >
       {children}
-    </span>
+    </StatusChip>
   );
 }
 
@@ -163,6 +166,37 @@ export function SearchBar({ value, onChange, placeholder = "Search…" }) {
       onChange={(e) => onChange(e.target.value)}
       onClear={() => onChange("")}
       inputClassName="!h-auto py-1.5 text-[12px]"
+    />
+  );
+}
+
+export function FilterBar({ children, className = "" }) {
+  return (
+    <div className={`flex items-center gap-2 flex-wrap ${className}`}>
+      {children}
+    </div>
+  );
+}
+
+export function SegmentedFilter({ options, value, onChange, ariaLabel, className = "" }) {
+  return (
+    <SegmentedControl
+      options={options}
+      value={value}
+      onChange={onChange}
+      ariaLabel={ariaLabel}
+      role="group"
+      className={`flex gap-1 flex-shrink-0 flex-wrap ${className}`}
+      buttonClassName="px-3 py-1.5 text-[12px] font-bold rounded-lg border-2 transition-colors inline-flex items-center gap-1"
+      activeStyle={{ background: COLORS.ember, borderColor: COLORS.emberDeep, color: "#fff" }}
+      inactiveStyle={{ background: COLORS.parchmentDeep, borderColor: COLORS.border, color: COLORS.inkLight }}
+      renderOption={(option, { label }) => (
+        <>
+          {option.iconKey && <Icon iconKey={option.iconKey} size={16} />}
+          {option.icon && <span aria-hidden>{option.icon}</span>}
+          <span>{label}</span>
+        </>
+      )}
     />
   );
 }

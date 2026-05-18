@@ -17,7 +17,7 @@ const KIND_TONE = {
   tile:        { bg: "#fff5e6", fg: COLORS.ember,    label: "TILE" },
   item:        { bg: "#fff5e6", fg: COLORS.ember,    label: "ITEM" },
   recipe:      { bg: "#fbf6ea", fg: COLORS.inkLight, label: "RECIPE" },
-  building:    { bg: "#f4ecd8", fg: COLORS.inkLight, label: "BUILDING" },
+  building:    { bg: COLORS.parchment, fg: COLORS.inkLight, label: "BUILDING" },
   biome:       { bg: "#eef6ea", fg: COLORS.greenDeep, label: "BIOME" },
   zone:        { bg: "#eef6ea", fg: COLORS.greenDeep, label: "ZONE" },
   npc:         { bg: "#f7edff", fg: "#5a3d83",       label: "NPC" },

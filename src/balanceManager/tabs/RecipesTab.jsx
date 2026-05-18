@@ -3,6 +3,7 @@ import { RECIPES, ITEMS } from "../../constants.js";
 import {
   COLORS, NumberField, Select,
   SmallButton, Pill, Card, SearchBar, SearchAndAddPicker,
+  FilterBar, SegmentedFilter,
 } from "../shared.jsx";
 import Icon from "../../ui/Icon.jsx";
 import { traceRecipe, collectUpstreamRecipes, countRawInputs } from "../recipeGraph.js";
@@ -83,29 +84,14 @@ export default function RecipesTab({ draft, updateDraft }) {
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex items-center gap-2 flex-wrap">
-        <div className="flex gap-1 flex-shrink-0">
-          {STATION_FILTERS.map((s) => (
-            <button
-              key={s.id}
-              onClick={() => setStationFilter(s.id)}
-              className="px-3 py-1.5 text-[12px] font-bold rounded-lg border-2"
-              style={
-                stationFilter === s.id
-                  ? { background: COLORS.ember, borderColor: COLORS.emberDeep, color: "#fff" }
-                  : { background: COLORS.parchmentDeep, borderColor: COLORS.border, color: COLORS.inkLight }
-              }
-            >
-              {s.icon} {s.label}
-            </button>
-          ))}
-        </div>
+      <FilterBar>
+        <SegmentedFilter options={STATION_FILTERS} value={stationFilter} onChange={setStationFilter} ariaLabel="Recipe station filter" />
         <div className="flex-1 min-w-[180px]">
           <SearchBar value={search} onChange={setSearch} placeholder="Filter recipes by ID or Item…" />
         </div>
         <Pill>{filtered.length} recipes</Pill>
         <SmallButton onClick={createNewRecipe}>+ New Recipe</SmallButton>
-      </div>
+      </FilterBar>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
         {filtered.map(([recId, eff]) => {

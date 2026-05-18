@@ -11,13 +11,14 @@ import { ITEMS, RECIPES } from "../../constants.js";
 import {
   COLORS, NumberField, TextField, TextArea, ColorField,
   SmallButton, Pill, Card, SearchBar, TileSwatch,
+  FilterBar, SegmentedFilter,
 } from "../shared.jsx";
 import Icon from "../../ui/Icon.jsx";
 
 const FILTERS = [
-  { id: "all",   label: "All items", icon: "ui_build" },
-  { id: "tool",  label: "Tools",     icon: "rake"     },
-  { id: "plain", label: "Plain",     icon: "ui_star"  },
+  { id: "all",   label: "All items", iconKey: "ui_build" },
+  { id: "tool",  label: "Tools",     iconKey: "rake"     },
+  { id: "plain", label: "Plain",     iconKey: "ui_star"  },
 ];
 
 // Tiles and resources are excluded — those are separate concepts/tabs.
@@ -79,28 +80,13 @@ export default function ItemsTab({ draft, updateDraft }) {
   return (
     <div className="flex flex-col gap-3">
       {/* Filter (All / Tools / Plain) + search */}
-      <div className="flex items-center gap-2 flex-wrap">
-        <div className="flex gap-1 flex-shrink-0">
-          {FILTERS.map((b) => (
-            <button
-              key={b.id}
-              onClick={() => setFilter(b.id)}
-              className="px-3 py-1.5 text-[12px] font-bold rounded-lg border-2 transition-colors flex items-center gap-1"
-              style={
-                filter === b.id
-                  ? { background: COLORS.ember, borderColor: COLORS.emberDeep, color: "#fff" }
-                  : { background: COLORS.parchmentDeep, borderColor: COLORS.border, color: COLORS.inkLight }
-              }
-            >
-              <Icon iconKey={b.icon} size={16} /> {b.label}
-            </button>
-          ))}
-        </div>
+      <FilterBar>
+        <SegmentedFilter options={FILTERS} value={filter} onChange={setFilter} ariaLabel="Item filter" />
         <div className="flex-1 min-w-[200px]">
           <SearchBar value={search} onChange={setSearch} placeholder="Filter items by key or label…" />
         </div>
         <Pill>{filtered.length} of {itemEntries.length}</Pill>
-      </div>
+      </FilterBar>
 
       <div className="text-[11px] italic" style={{ color: COLORS.inkSubtle }}>
         Discrete objects you carry in your inventory. A tool is just an item with a power — the Effect / Target / Anim fields below. (Tiles and resources are not items; see their own tabs.)

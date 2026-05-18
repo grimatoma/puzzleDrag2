@@ -14,6 +14,7 @@ import { FARM_HAZARD_META } from "../farm/hazards.js";
 import { HAZARDS } from "../mine/hazards.js";
 import IconCanvas, { hasIcon } from "../../ui/IconCanvas.jsx";
 import FeaturePanel from "../../ui/primitives/FeaturePanel.jsx";
+import SegmentedControl from "../../ui/primitives/SegmentedControl.jsx";
 
 export const viewKey = "tileCollection";
 
@@ -307,57 +308,58 @@ export default function TileCollectionPanel({ state, dispatch }) {
       />
 
       {/* Sub-category bar */}
-      <div className="flex border-b border-[var(--panel-divider)] flex-shrink-0 bg-[var(--panel-toolbar)]">
-        {SUB_CATEGORIES.map((sub) => {
-          const selected = subCategory === sub;
+      <SegmentedControl
+        options={SUB_CATEGORIES}
+        value={subCategory}
+        onChange={setSubCategory}
+        ariaLabel="Tile wiki section"
+        className="flex border-b border-[var(--panel-divider)] flex-shrink-0 bg-[var(--panel-toolbar)]"
+        getButtonClassName={(sub, selected) => {
           const isHaz = sub === "hazards";
-          return (
-            <button
-              key={sub}
-              onClick={() => setSubCategory(sub)}
-              className={`flex-1 py-2 px-2 text-xs font-bold transition-colors flex flex-col items-center min-w-[60px] ${
-                selected
-                  ? isHaz
-                    ? "bg-[#9c3a2a] text-white border-b-2 border-[#9c3a2a]"
-                    : "bg-[var(--ember)] text-white border-b-2 border-[var(--ember-hot)]"
-                  : isHaz
-                    ? "text-[#9c3a2a] hover:text-[#8a2a14]"
-                    : "text-on-panel-dim hover:text-on-panel"
-              }`}
-            >
-              <span className="block text-base leading-none">{SUB_CATEGORY_ICONS[sub]}</span>
-              <span className="block text-center leading-tight mt-0.5">{SUB_CATEGORY_LABELS[sub]}</span>
-            </button>
-          );
-        })}
-      </div>
+          return `flex-1 py-2 px-2 text-xs font-bold transition-colors flex flex-col items-center min-w-[60px] ${
+            selected
+              ? isHaz
+                ? "bg-[#9c3a2a] text-white border-b-2 border-[#9c3a2a]"
+                : "bg-[var(--ember)] text-white border-b-2 border-[var(--ember-hot)]"
+              : isHaz
+                ? "text-[#9c3a2a] hover:text-[#8a2a14]"
+                : "text-on-panel-dim hover:text-on-panel"
+          }`;
+        }}
+        renderOption={(sub) => (
+          <>
+            <span className="block text-base leading-none">{SUB_CATEGORY_ICONS[sub]}</span>
+            <span className="block text-center leading-tight mt-0.5">{SUB_CATEGORY_LABELS[sub]}</span>
+          </>
+        )}
+      />
 
       {/* Category tabs — scrollable row (hidden under Hazards) */}
       {subCategory !== "hazards" && visibleCategories.length > 0 && (
-        <div
+        <SegmentedControl
           ref={tabBarRef}
+          options={visibleCategories}
+          value={activeTab}
+          onChange={setActiveTab}
+          ariaLabel="Tile category"
           className="flex border-b border-[var(--panel-divider)] flex-shrink-0 overflow-x-auto"
           style={{ scrollbarWidth: "none" }}
-        >
-          {visibleCategories.map((cat) => (
-            <button
-              key={cat}
-              onClick={() => setActiveTab(cat)}
-              className={`flex-shrink-0 py-2 px-2 text-xs font-bold transition-colors min-w-[52px] ${
-                activeTab === cat
-                  ? "bg-[var(--ember)] text-white border-b-2 border-[var(--ember-hot)]"
-                  : "text-on-panel-dim hover:text-on-panel"
-              }`}
-            >
+          getButtonClassName={(cat, selected) => `flex-shrink-0 py-2 px-2 text-xs font-bold transition-colors min-w-[52px] ${
+            selected
+              ? "bg-[var(--ember)] text-white border-b-2 border-[var(--ember-hot)]"
+              : "text-on-panel-dim hover:text-on-panel"
+          }`}
+          renderOption={(cat) => (
+            <>
               <span className="grid place-items-center mx-auto" style={{ width: 22, height: 22 }}>
                 {hasIcon(`cat_${cat}`)
                   ? <IconCanvas iconKey={`cat_${cat}`} size={22} />
                   : <span className="text-base">{CATEGORY_ICONS[cat]}</span>}
               </span>
               <span className="block text-center leading-tight">{CATEGORY_LABELS[cat]}</span>
-            </button>
-          ))}
-        </div>
+            </>
+          )}
+        />
       )}
 
       {/* Content */}
