@@ -195,20 +195,24 @@ export function initialState(overrides) {
       savedWithoutLegacy.hazards = { ...savedWithoutLegacy.hazards, fire: null };
     }
 
-    return { 
-      ...fresh, 
-      ...savedWithoutLegacy, 
-      story: mergedStory, 
-      tileCollection: mergedTileCollection, 
-      view: "town", 
-      viewParams: {}, 
-      turnsUsed: 0, 
-      farmRun: null, 
-      activeTrial: null, 
-      modal: null, 
-      bubble: null, 
+    // Restore active run if it still has turns remaining so a reload mid-session
+    // drops the player back onto their board instead of losing progress.
+    const restoredFarmRun = saved.farmRun?.turnsRemaining > 0 ? saved.farmRun : null;
+
+    return {
+      ...fresh,
+      ...savedWithoutLegacy,
+      story: mergedStory,
+      tileCollection: mergedTileCollection,
+      view: "town",   // router will restore "board" from the URL hash if appropriate
+      viewParams: {},
+      turnsUsed: restoredFarmRun ? (saved.turnsUsed ?? 0) : 0,
+      farmRun: restoredFarmRun,
+      activeTrial: null,
+      modal: null,
+      bubble: null,
       pendingView: null,
-      seasonStats: { harvests: 0, upgrades: 0, ordersFilled: 0, coins: 0 } 
+      seasonStats: { harvests: 0, upgrades: 0, ordersFilled: 0, coins: 0 }
     };
   }
   return fresh;
