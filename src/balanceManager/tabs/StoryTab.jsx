@@ -14,6 +14,7 @@ import { groupedStoryWarnings, NPCS } from "../../storyEditor/shared.jsx";
 import StatsPanel from "../../storyEditor/StatsPanel.jsx";
 import BondTimelinePanel from "../../storyEditor/BondTimelinePanel.jsx";
 import HeatmapPanel from "../../storyEditor/HeatmapPanel.jsx";
+import MetricCard, { MetricGrid } from "../../ui/primitives/MetricCard.jsx";
 
 const STORY_EDITOR_URL = import.meta.env.BASE_URL.replace(/\/$/, "") + "/story/";
 
@@ -73,24 +74,21 @@ export default function StoryTab({ draft }) {
         <div className="text-[12px] font-bold uppercase tracking-wide mb-2" style={{ color: COLORS.inkSubtle }}>
           Draft summary
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+        <MetricGrid>
           {[
             { label: "Beat patches", n: draftBeatOverrides },
             { label: "Author beats", n: draftBeats },
             { label: "Suppressed sides", n: suppressed },
             { label: "Validation issues", n: warningTotal, alarm: warningTotal > 0 },
           ].map((cell) => (
-            <div key={cell.label}
-              className="flex flex-col items-center justify-center px-2 py-2 rounded-lg border-2"
-              style={{
-                background: cell.alarm ? "#fff0eb" : (cell.n > 0 ? "#fff5e6" : COLORS.parchmentDeep),
-                borderColor: cell.alarm ? COLORS.red : (cell.n > 0 ? COLORS.ember : COLORS.border),
-              }}>
-              <div className="text-[20px] font-bold" style={{ color: cell.alarm ? COLORS.red : (cell.n > 0 ? COLORS.ember : COLORS.inkSubtle) }}>{cell.n}</div>
-              <div className="text-[10px] uppercase tracking-wide font-bold text-center" style={{ color: COLORS.inkSubtle }}>{cell.label}</div>
-            </div>
+            <MetricCard
+              key={cell.label}
+              label={cell.label}
+              value={cell.n}
+              tone={cell.alarm ? "danger" : cell.n > 0 ? "ember" : "muted"}
+            />
           ))}
-        </div>
+        </MetricGrid>
       </div>
 
       <div className="rounded-xl border-2 p-4" style={{ background: COLORS.parchment, borderColor: COLORS.border }}>

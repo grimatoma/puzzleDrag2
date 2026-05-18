@@ -8,6 +8,7 @@ import {
 } from "../snapshots.js";
 import { draftDiff, summariseTotals } from "../diff.js";
 import balanceFile from "../../config/balance.json";
+import MetricCard, { MetricGrid } from "../../ui/primitives/MetricCard.jsx";
 
 function pruneEmpty(obj) {
   if (!obj || typeof obj !== "object") return obj;
@@ -171,25 +172,19 @@ export default function ExportTab({ draft, updateDraft }) {
       </Card>
 
       <Card title="Override summary">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+        <MetricGrid>
           {sections.map((s) => {
             const count = Object.keys(draft[s.key] || {}).length;
             return (
-              <div
+              <MetricCard
                 key={s.key}
-                className="flex flex-col items-center justify-center px-2 py-2 rounded-lg border-2"
-                style={{ background: count ? "#fff5e6" : COLORS.parchmentDeep, borderColor: count ? COLORS.ember : COLORS.border }}
-              >
-                <div className="text-[20px] font-bold" style={{ color: count ? COLORS.ember : COLORS.inkSubtle }}>
-                  {count}
-                </div>
-                <div className="text-[10px] uppercase tracking-wide font-bold text-center" style={{ color: COLORS.inkSubtle }}>
-                  {s.label}
-                </div>
-              </div>
+                label={s.label}
+                value={count}
+                tone={count ? "ember" : "muted"}
+              />
             );
           })}
-        </div>
+        </MetricGrid>
       </Card>
 
       <Card title="Diff vs committed balance.json">

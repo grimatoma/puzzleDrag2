@@ -6,6 +6,7 @@ import Button from "../../ui/primitives/Button.jsx";
 import Pill from "../../ui/primitives/Pill.jsx";
 import ProgressTrack from "../../ui/primitives/ProgressTrack.jsx";
 import ResourceCell from "../../ui/primitives/ResourceCell.jsx";
+import MetricCard, { MetricGrid } from "../../ui/primitives/MetricCard.jsx";
 import Icon from "../../ui/Icon.jsx";
 
 export const modalKey = "runSummary";
@@ -64,16 +65,10 @@ function BestMomentCard({ best }) {
 function ChainsHeadline({ chainsPlayed, biggest }) {
   const longest = biggest?.count ?? 0;
   return (
-    <div className="flex items-baseline justify-between">
-      <div>
-        <div className="uppercase tracking-widest text-micro text-ink-light">Chains played</div>
-        <div className="text-h2 font-bold tabular-nums text-ink leading-none">{chainsPlayed}</div>
-      </div>
-      <div className="text-right">
-        <div className="uppercase tracking-widest text-micro text-ink-light">Longest</div>
-        <div className="text-h2 font-bold tabular-nums text-ember leading-none">{longest ? `x${longest}` : "—"}</div>
-      </div>
-    </div>
+    <MetricGrid className="!grid-cols-2 md:!grid-cols-2">
+      <MetricCard label="Chains played" value={chainsPlayed} />
+      <MetricCard label="Longest" value={longest ? `x${longest}` : "—"} tone={longest ? "ember" : "muted"} />
+    </MetricGrid>
   );
 }
 
