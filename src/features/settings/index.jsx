@@ -60,7 +60,7 @@ async function toggleFullscreen() {
   } catch { /* fullscreen not supported or denied */ }
 }
 
-function MainTab({ state, dispatch }) {
+function MainTab({ dispatch }) {
   const [fs, setFs] = useState(isFullscreen());
   useEffect(() => {
     const sync = () => setFs(isFullscreen());
@@ -217,7 +217,7 @@ export default function SettingsModal({ state, dispatch }) {
               </button>
             </div>
           </div>
-        ) : (tab === 'main' && <MainTab state={state} dispatch={dispatch} />)}
+        ) : (tab === 'main' && <MainTab dispatch={dispatch} />)}
         {tab === 'settings' && <SettingsTab settings={settings} dispatch={dispatch} />}
         {tab === 'about' && <AboutTab dispatch={dispatch} />}
       </ParchmentDialog.Body>
