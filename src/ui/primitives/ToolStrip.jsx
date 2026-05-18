@@ -5,14 +5,6 @@ const TAP_MAX_MS = 400;
 const LONG_PRESS_MS = 500;
 const HOVER_DWELL_MS = 1200;
 
-function CancelGlyph() {
-  return (
-    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" />
-    </svg>
-  );
-}
-
 function CountBadge({ count }) {
   return (
     <span
@@ -123,25 +115,6 @@ function ToolCard({ tool, armed, dimmed, onUse, onInspect }) {
   );
 }
 
-function CancelStrip({ armedTool, onCancel }) {
-  if (!armedTool) return null;
-  return (
-    <div className="flex items-center justify-between gap-2 px-2 py-1.5 mb-2 bg-bg-frame border border-gold-bright rounded-md">
-      <span className="text-caption text-cream font-semibold truncate">
-        Armed: {armedTool.label}
-      </span>
-      <button
-        type="button"
-        onClick={onCancel}
-        aria-label={`Cancel ${armedTool.label}`}
-        className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-bg-darker text-cream text-caption font-semibold hover:bg-bg-darkest border border-cream-soft/50"
-      >
-        Cancel <CancelGlyph />
-      </button>
-    </div>
-  );
-}
-
 export default function ToolStrip({
   layout = "grid",
   tools = [],
@@ -207,7 +180,6 @@ export default function ToolStrip({
 
   return (
     <div className={className}>
-      <CancelStrip armedTool={armedTool} onCancel={() => onUse?.(armedKey)} />
       {body}
     </div>
   );

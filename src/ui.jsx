@@ -39,9 +39,10 @@ class FeatureErrorBoundary extends React.Component {
 
 // ─── Side panel (orders / inventory / tools / biome switcher) ─────────────
 
-export function SidePanel({ state, dispatch, chainInfo }) {
+export function SidePanel({ state, dispatch, chainInfo, infoPanel = null, onInspectChange }) {
   return (
     <div className="hl-surface rounded-2xl p-3 flex flex-col gap-3 overflow-hidden h-full min-h-0">
+      {infoPanel}
       {chainInfo && (
         <div className="bg-[#2b2218]/90 border border-[#ffd248] rounded-xl px-3 py-2 text-[#ffd248] font-bold text-[13px] text-center flex-shrink-0">
           <div>
@@ -60,6 +61,7 @@ export function SidePanel({ state, dispatch, chainInfo }) {
             tools={state.tools}
             toolPending={state.toolPending}
             fertilizerActive={state.fertilizerActive}
+            onInspectChange={onInspectChange}
             onUse={(key) => {
               const isPending = state.toolPending === key;
               if (isPending) { dispatch({ type: "CANCEL_TOOL" }); return; }
