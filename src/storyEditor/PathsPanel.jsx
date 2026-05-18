@@ -14,48 +14,43 @@
 import { useMemo, useEffect } from "react";
 import { C, NPCS, effectiveBeat } from "./shared.jsx";
 import { enumerateStoryPaths, summarisePaths } from "./pathWalker.js";
+import StatusChip from "../ui/primitives/StatusChip.jsx";
 
 const REASON_TONE = {
-  "ends-here":      { label: "ENDS", fg: C.greenDeep, bg: "rgba(90,158,75,0.10)", bd: "rgba(90,158,75,0.45)" },
-  "no-target":      { label: "OPEN", fg: "#7a5810",   bg: "rgba(226,178,74,0.14)", bd: "rgba(226,178,74,0.5)" },
-  "loop":           { label: "LOOP", fg: "#7a3a82",   bg: "rgba(122,58,130,0.10)", bd: "rgba(122,58,130,0.45)" },
-  "depth-cap":      { label: "DEEP", fg: C.inkLight,   bg: "rgba(43,34,24,0.08)", bd: C.border },
-  "missing-target": { label: "BAD",  fg: C.redDeep,    bg: "rgba(194,59,34,0.10)", bd: "rgba(194,59,34,0.45)" },
+  "ends-here":      { label: "ENDS", tone: "success" },
+  "no-target":      { label: "OPEN", tone: "warning" },
+  "loop":           { label: "LOOP", tone: "info" },
+  "depth-cap":      { label: "DEEP", tone: "muted" },
+  "missing-target": { label: "BAD",  tone: "danger" },
 };
 
 function ReasonPill({ reason }) {
   const t = REASON_TONE[reason] || REASON_TONE["ends-here"];
-  return (
-    <span style={{ display: "inline-block", padding: "2px 6px", borderRadius: 999,
-      background: t.bg, color: t.fg, border: `1px solid ${t.bd}`,
-      font: "700 8px/1 system-ui", letterSpacing: "0.1em" }}>{t.label}</span>
-  );
+  return <StatusChip tone={t.tone} size="xs" uppercase>{t.label}</StatusChip>;
 }
 
 function EffectBadges({ effects }) {
   const bits = [];
-  if (effects.coins) bits.push({ k: "coins", text: `¢ ${effects.coins > 0 ? "+" : ""}${effects.coins}`, fg: "#7a5810" });
-  if (effects.embers) bits.push({ k: "embers", text: `✸ ${effects.embers > 0 ? "+" : ""}${effects.embers}`, fg: C.emberDeep });
-  if (effects.coreIngots) bits.push({ k: "core", text: `◈ ${effects.coreIngots > 0 ? "+" : ""}${effects.coreIngots}`, fg: C.inkLight });
-  if (effects.gems) bits.push({ k: "gems", text: `◆ ${effects.gems > 0 ? "+" : ""}${effects.gems}`, fg: "#5a3d83" });
+  if (effects.coins) bits.push({ k: "coins", text: `¢ ${effects.coins > 0 ? "+" : ""}${effects.coins}`, tone: "gold" });
+  if (effects.embers) bits.push({ k: "embers", text: `✸ ${effects.embers > 0 ? "+" : ""}${effects.embers}`, tone: "ember" });
+  if (effects.coreIngots) bits.push({ k: "core", text: `◈ ${effects.coreIngots > 0 ? "+" : ""}${effects.coreIngots}`, tone: "slate" });
+  if (effects.gems) bits.push({ k: "gems", text: `◆ ${effects.gems > 0 ? "+" : ""}${effects.gems}`, tone: "info" });
   for (const [npc, delta] of Object.entries(effects.bondDeltas)) {
     if (!delta) continue;
-    bits.push({ k: `bond-${npc}`, text: `♥ ${delta > 0 ? "+" : ""}${delta} ${NPCS[npc]?.name || npc}`, fg: delta > 0 ? C.greenDeep : C.redDeep });
+    bits.push({ k: `bond-${npc}`, text: `♥ ${delta > 0 ? "+" : ""}${delta} ${NPCS[npc]?.name || npc}`, tone: delta > 0 ? "success" : "danger" });
   }
-  for (const f of effects.flagsSet) bits.push({ k: `sf-${f}`, text: `⚐ ${f}`, fg: C.emberDeep });
-  for (const f of effects.flagsCleared) bits.push({ k: `cf-${f}`, text: `⚑ ${f} off`, fg: C.inkSubtle });
+  for (const f of effects.flagsSet) bits.push({ k: `sf-${f}`, text: `⚐ ${f}`, tone: "ember" });
+  for (const f of effects.flagsCleared) bits.push({ k: `cf-${f}`, text: `⚑ ${f} off`, tone: "muted" });
   if (bits.length === 0) {
     return <span style={{ font: "italic 400 10px/1 system-ui", color: C.inkSubtle }}>no aggregated effects</span>;
   }
   return (
     <span style={{ display: "inline-flex", flexWrap: "wrap", gap: 4 }}>
       {bits.slice(0, 12).map((b) => (
-        <span key={b.k} style={{ font: "600 9px/1.2 ui-monospace,monospace", color: b.fg,
-          padding: "2px 5px", borderRadius: 5, background: "rgba(43,34,24,0.04)",
-          border: "1px solid rgba(43,34,24,0.12)" }}>{b.text}</span>
+        <StatusChip key={b.k} tone={b.tone} size="xs" mono>{b.text}</StatusChip>
       ))}
       {bits.length > 12 && (
-        <span style={{ font: "600 9px/1.2 system-ui", color: C.inkSubtle }}>+{bits.length - 12} more</span>
+        <StatusChip tone="muted" size="xs">+{bits.length - 12} more</StatusChip>
       )}
     </span>
   );

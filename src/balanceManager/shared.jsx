@@ -11,6 +11,7 @@ import {
 } from "../ui/primitives/Field.jsx";
 import { UI_COLORS } from "../ui/primitives/palette.js";
 import SegmentedControl from "../ui/primitives/SegmentedControl.jsx";
+import StatusChip from "../ui/primitives/StatusChip.jsx";
 
 export const COLORS = UI_COLORS;
 
@@ -113,12 +114,13 @@ export function SmallButton({ children, onClick, variant = "default", disabled =
 
 export function Pill({ children, color = COLORS.inkSubtle, bg = COLORS.parchmentDeep }) {
   return (
-    <span
-      className="inline-block px-1.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide"
-      style={{ color, background: bg, border: `1px solid ${COLORS.border}` }}
+    <StatusChip
+      size="xs"
+      uppercase
+      style={{ color, background: bg, borderColor: COLORS.border, fontSize: 10 }}
     >
       {children}
-    </span>
+    </StatusChip>
   );
 }
 

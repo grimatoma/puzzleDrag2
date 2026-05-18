@@ -19,6 +19,7 @@ import BiomePicker from "../zones/BiomePicker.jsx";
 import Button from "../../ui/primitives/Button.jsx";
 import { ParchmentDialog } from "../../ui/primitives/Dialog.jsx";
 import FeaturePanel from "../../ui/primitives/FeaturePanel.jsx";
+import StatusChip from "../../ui/primitives/StatusChip.jsx";
 
 export const viewKey = "cartography";
 
@@ -99,7 +100,7 @@ function KeeperEncounterModal({ node, type, dispatch, onClose }) {
               >
                 <div className="flex items-center justify-between">
                   <span className="font-bold text-[13px] text-[#1f3a10]">🤝 Coexist</span>
-                  <span className="text-[11px] font-bold text-[#6a4f10] bg-[#f2d98a] border border-[#b09a50] rounded-full px-2 py-0.5">+{keeper.coexist.embers ?? 0} 🔥 Embers</span>
+                  <StatusChip tone="gold">+{keeper.coexist.embers ?? 0} 🔥 Embers</StatusChip>
                 </div>
                 <div className="text-[12px] text-[#3a4a20] mt-0.5">"{keeper.coexist.label}"</div>
               </button>
@@ -109,7 +110,7 @@ function KeeperEncounterModal({ node, type, dispatch, onClose }) {
               >
                 <div className="flex items-center justify-between">
                   <span className="font-bold text-[13px] text-[#3a2715]">⚔ Trial</span>
-                  <span className="text-[11px] font-bold text-[#3a3e42] bg-[#cdd1d4] border border-[#8a8f95] rounded-full px-2 py-0.5">+{keeper.driveout.coreIngots ?? 0} ▣ Core Ingots</span>
+                  <StatusChip tone="slate">+{keeper.driveout.coreIngots ?? 0} ▣ Core Ingots</StatusChip>
                 </div>
                 <div className="text-[12px] text-[#4a3a2a] mt-0.5">"{keeper.driveout.label}"</div>
               </button>
@@ -151,26 +152,28 @@ const cardStyle = {
   color: "#3a2715",
 };
 
-function StatusChip({ status, target, tokenCount = 0 }) {
-  let bg, fg, text;
+function NodeStatusChip({ status, target, tokenCount = 0 }) {
+  let tone, text;
   switch (status) {
-    case "current":               bg = "#c8a868"; fg = "#3a2715"; text = "◉ You are here"; break;
-    case "visited":               bg = "#dfeecd"; fg = "#1f3a10"; text = "✓ Visited · fast-travel"; break;
-    case "discovered-ready":      bg = "#f5e09a"; fg = "#3a2715"; text = "★ Ready to walk"; break;
-    case "discovered-locked":     bg = "#e9c0a8"; fg = "#5a2a1a"; text = `🔒 Level ${target.level} required`; break;
-    case "discovered-unreachable":bg = "#dccaa8"; fg = "#5a3a20"; text = "↯ No road from here"; break;
-    case "capital-locked":        bg = "#e0d2a0"; fg = "#3a2c0e"; text = `🏛 Hearth-Tokens ${tokenCount}/3`; break;
-    case "capital-ready":         bg = "#f4d65a"; fg = "#3a2c0e"; text = "🏛 The Ember awaits"; break;
+    case "current":               tone = "gold"; text = "◉ You are here"; break;
+    case "visited":               tone = "success"; text = "✓ Visited · fast-travel"; break;
+    case "discovered-ready":      tone = "gold"; text = "★ Ready to walk"; break;
+    case "discovered-locked":     tone = "danger"; text = `🔒 Level ${target.level} required`; break;
+    case "discovered-unreachable":tone = "muted"; text = "↯ No road from here"; break;
+    case "capital-locked":        tone = "warning"; text = `🏛 Hearth-Tokens ${tokenCount}/3`; break;
+    case "capital-ready":         tone = "gold"; text = "🏛 The Ember awaits"; break;
     case "hidden":
-    default:                      bg = "#cbb892"; fg = "#3a2715"; text = "Untraveled"; break;
+    default:                      tone = "muted"; text = "Untraveled"; break;
   }
   return (
-    <div
-      className="rounded-full px-3 py-1 text-center"
-      style={{ background: bg, border: "1.5px solid #7c4f2c", ...cardStyle, fontSize: 11, color: fg, fontWeight: 700 }}
+    <StatusChip
+      tone={tone}
+      size="md"
+      className="w-full"
+      style={{ fontFamily: cardStyle.fontFamily, fontSize: 11, borderWidth: 1.5 }}
     >
       {text}
-    </div>
+    </StatusChip>
   );
 }
 
@@ -430,7 +433,7 @@ function NodePanel({ node, current, visited, discovered, playerLevel, dispatch, 
         )}
       </div>
 
-      <StatusChip status={status} target={node} tokenCount={tokenCount} />
+      <NodeStatusChip status={status} target={node} tokenCount={tokenCount} />
 
       {showLore && lore?.epitaph && (
         <figure

@@ -9,6 +9,7 @@ import {
 import { draftDiff, summariseTotals } from "../diff.js";
 import balanceFile from "../../config/balance.json";
 import MetricCard, { MetricGrid } from "../../ui/primitives/MetricCard.jsx";
+import StatusChip from "../../ui/primitives/StatusChip.jsx";
 
 function pruneEmpty(obj) {
   if (!obj || typeof obj !== "object") return obj;
@@ -192,9 +193,9 @@ export default function ExportTab({ draft, updateDraft }) {
           <span className="text-[11px] font-bold uppercase tracking-wide" style={{ color: COLORS.inkSubtle }}>
             {summariseTotals(diff.totals)}
           </span>
-          {diff.totals.added > 0 && <span className="text-[11px] px-2 py-0.5 rounded-full font-bold" style={{ background: "rgba(90,158,75,0.16)", color: COLORS.greenDeep, border: `1px solid ${COLORS.greenDeep}55` }}>+{diff.totals.added}</span>}
-          {diff.totals.modified > 0 && <span className="text-[11px] px-2 py-0.5 rounded-full font-bold" style={{ background: "rgba(214,97,42,0.12)", color: COLORS.ember, border: `1px solid ${COLORS.ember}55` }}>~{diff.totals.modified}</span>}
-          {diff.totals.removed > 0 && <span className="text-[11px] px-2 py-0.5 rounded-full font-bold" style={{ background: "rgba(194,59,34,0.10)", color: COLORS.red, border: `1px solid ${COLORS.red}55` }}>−{diff.totals.removed}</span>}
+          {diff.totals.added > 0 && <StatusChip tone="success">+{diff.totals.added}</StatusChip>}
+          {diff.totals.modified > 0 && <StatusChip tone="ember">~{diff.totals.modified}</StatusChip>}
+          {diff.totals.removed > 0 && <StatusChip tone="danger">−{diff.totals.removed}</StatusChip>}
         </div>
         {diffSections.length === 0 && (
           <div className="text-[11px] italic" style={{ color: COLORS.inkSubtle }}>
