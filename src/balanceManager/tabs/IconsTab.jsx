@@ -167,7 +167,7 @@ const IconCell = memo(function IconCell({ entry, onClick, selected, mode }) {
     <button
       onClick={() => onClick(entry.key)}
       title={`${entry.key}\n${entry.label}`}
-      className="flex flex-col items-center gap-1 p-2 rounded-xl border-2 transition-colors hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-[#d6612a]/50"
+      className="flex flex-col items-center gap-1 p-2 rounded-xl border-2 transition-colors hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-ember/50"
       style={{
         background: selected ? entry.color + "22" : COLORS.parchment,
         borderColor: selected ? entry.color : COLORS.border,

@@ -9,7 +9,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { beatLines, interpolateBeatText } from "../story.js";
-import { NPCS, effectiveBeat, effectiveChoices, triggerSummary, allBeatIds } from "./shared.jsx";
+import { C, NPCS, effectiveBeat, effectiveChoices, triggerSummary, allBeatIds } from "./shared.jsx";
 import { applyPreviewEffects, blankPreviewState, firstTriggeredByPreviewState, previewStateSummary } from "./previewModel.js";
 import { StoryStagePanel, TapCue } from "../ui/Modals.jsx";
 
@@ -21,7 +21,7 @@ const P = {
   panelTop: "#221710", panelBot: "#1a110a", edge: "#3a2a1d",
   gold: "#e2b24a", goldSoft: "#f0c965",
   parch: "#f0e6cf", parchDim: "rgba(240,230,207,0.55)", parchFaint: "rgba(240,230,207,0.32)",
-  narration: "rgba(189,154,114,0.95)", iron: "#b28b62",
+  narration: "rgba(189,154,114,0.95)", iron: C.border,
   choiceBg: "rgba(58,42,29,0.55)", choiceEdge: "rgba(178,139,98,0.32)",
   ember: "#e88a5e",
 };

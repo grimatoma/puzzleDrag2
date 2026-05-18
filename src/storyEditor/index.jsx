@@ -121,7 +121,7 @@ function TreeEdge({ edge, nodeById, draft }) {
   }
 
   const isChoice = edge.kind === "choice";
-  const stroke = isChoice ? C.ember : (edge.kind === "trigger" ? "#8b6845" : "#a39880");
+  const stroke = isChoice ? C.ember : (edge.kind === "trigger" ? C.borderDeep : "#a39880");
   const sw = isChoice ? 2 : 1.4;
   const dash = (edge.kind === "trigger" && !edge.side) ? "5 5" : (edge.side ? "2 4" : null);
   const op = edge.side ? 0.6 : 1;
@@ -142,7 +142,7 @@ function TreeEdge({ edge, nodeById, draft }) {
 function TriggerChip({ beat, accent }) {
   const ts = triggerSummary(beat);
   if (!ts) return null;
-  const tone = ts.kind === "queued-code" ? { fg: C.emberDeep, bd: C.emberDeep } : { fg: C.ink, bd: accent || "#8b6845" };
+  const tone = ts.kind === "queued-code" ? { fg: C.emberDeep, bd: C.emberDeep } : { fg: C.ink, bd: accent || C.borderDeep };
   return (
     <div style={{ zIndex: 3, display: "inline-flex", alignItems: "center", gap: 5,
       padding: "3px 8px 3px 7px", borderRadius: 999, background: "#fff", border: `1.5px solid ${tone.bd}`, color: tone.fg,
@@ -184,7 +184,7 @@ function CompactNode({ node, beat, selected }) {
   return (
     <div style={{ width: "100%", height: "100%", borderRadius: 10,
       background: selected ? "linear-gradient(180deg,#fff 0%,#fbf6ea 100%)" : "#fff",
-      border: selected ? `2px solid ${ring}` : "1.5px solid #ddd0b4",
+      border: selected ? `2px solid ${ring}` : `1.5px solid ${C.canvasRule}`,
       boxShadow: selected ? `0 0 0 5px ${hexAlpha(ring, 0.32)}, 0 14px 26px -8px rgba(40,28,10,0.32)` : "0 2px 6px -2px rgba(40,28,10,0.12)",
       overflow: "hidden", position: "relative" }}>
       <div style={{ height: 4, background: ring }} />
@@ -207,7 +207,7 @@ function CompactNode({ node, beat, selected }) {
       </div>
       <div style={{ position: "absolute", left: 0, right: 0, bottom: 0, padding: "0 9px", height: 20,
         display: "flex", justifyContent: "space-between", alignItems: "center",
-        background: "rgba(240,232,212,0.7)", borderTop: "1px solid #ddd0b4" }}>
+        background: "rgba(240,232,212,0.7)", borderTop: `1px solid ${C.canvasRule}` }}>
         <span style={{ font: "500 9px/1 ui-monospace,monospace", color: C.inkSubtle }}>{beat?.id}</span>
         <span style={{ font: "600 8px/1 system-ui", letterSpacing: "0.06em", textTransform: "uppercase", color: C.inkSubtle }}>
           {choices.length > 0 ? `${choices.length} choices` : beat?.resolution ? "END" : "→ continue"}

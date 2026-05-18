@@ -306,7 +306,7 @@ export default function ExportTab({ draft, updateDraft }) {
           onChange={(e) => setImportText(e.target.value)}
           placeholder='Paste JSON here. Top-level keys: upgradeThresholds, resources, recipes, buildings, tilePowers, tileUnlocks, tileDescriptions.'
           rows={8}
-          className="w-full p-2 text-[11px] font-mono rounded-lg border-2 focus:outline-none focus:ring-2 focus:ring-[#d6612a]/40"
+          className="w-full p-2 text-[11px] font-mono rounded-lg border-2 focus:outline-none focus:ring-2 focus:ring-ember/40"
           style={{ background: "#fff", borderColor: COLORS.border, color: COLORS.ink, resize: "vertical" }}
         />
         {importError && (

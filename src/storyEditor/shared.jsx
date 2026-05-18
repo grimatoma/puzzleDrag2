@@ -34,7 +34,7 @@ export function actColor(beat) {
   if (beat?.act === 1) return "#7a8b5e";
   if (beat?.act === 2) return "#c9863a";
   if (beat?.act === 3) return "#a8431a";
-  return "#8b6845";
+  return C.borderDeep;
 }
 
 export function hexAlpha(hex, a) {

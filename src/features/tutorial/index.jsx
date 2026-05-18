@@ -1,9 +1,20 @@
 import { NPCS } from '../../constants.js';
 import Button from '../../ui/primitives/Button.jsx';
 import { ParchmentDialog } from '../../ui/primitives/Dialog.jsx';
+import { UI_COLORS } from '../../ui/primitives/palette.js';
 
 export const modalKey = 'tutorial';
 export const alwaysMounted = true;
+
+const TUTORIAL_COLORS = {
+  parchment: UI_COLORS.parchment,
+  parchmentDeep: UI_COLORS.parchmentDeep,
+  border: UI_COLORS.border,
+  ink: UI_COLORS.ink,
+  inkLight: UI_COLORS.inkLight,
+  dotIdle: UI_COLORS.canvasRule,
+  moss: 'var(--moss)',
+};
 
 const STEPS = [
   {
@@ -67,7 +78,7 @@ function NpcAvatar({ npcKey, size = 36 }) {
         fontWeight: 700,
         fontSize: size * 0.45,
         flexShrink: 0,
-        border: '2px solid #b28b62',
+        border: `2px solid ${TUTORIAL_COLORS.border}`,
       }}
     >
       {npc.name[0]}
@@ -85,7 +96,7 @@ function StepDots({ step, total }) {
             width: 8,
             height: 8,
             borderRadius: '50%',
-            background: i === step ? '#91bf24' : '#c8b99a',
+            background: i === step ? TUTORIAL_COLORS.moss : TUTORIAL_COLORS.dotIdle,
           }}
         />
       ))}
@@ -156,10 +167,10 @@ function CornerToastButton({ children, onClick, ariaLabel, primary = false }) {
       onClick={onClick}
       aria-label={ariaLabel}
       style={{
-        background: primary ? '#91bf24' : '#e8dcc4',
-        border: primary ? 'none' : '2px solid #b28b62',
+        background: primary ? TUTORIAL_COLORS.moss : TUTORIAL_COLORS.parchmentDeep,
+        border: primary ? 'none' : `2px solid ${TUTORIAL_COLORS.border}`,
         borderRadius: 8,
-        color: primary ? '#fff' : '#5a3a20',
+        color: primary ? '#fff' : TUTORIAL_COLORS.inkLight,
         fontFamily: 'Arial, sans-serif',
         fontSize: 18,
         fontWeight: 700,
@@ -190,8 +201,8 @@ function CornerToast({ step, stepData, dispatch }) {
     >
       <div
         style={{
-          background: '#f4ecd8',
-          border: '3px solid #b28b62',
+          background: TUTORIAL_COLORS.parchment,
+          border: `3px solid ${TUTORIAL_COLORS.border}`,
           borderRadius: 16,
           padding: '12px 14px',
           boxShadow: '0 4px 18px rgba(0,0,0,0.28)',
@@ -205,7 +216,7 @@ function CornerToast({ step, stepData, dispatch }) {
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <NpcAvatar npcKey={stepData.npc} size={30} />
-            <div style={{ fontWeight: 700, fontSize: 13, color: '#3e2a1a' }}>{stepData.title}</div>
+            <div style={{ fontWeight: 700, fontSize: 13, color: TUTORIAL_COLORS.ink }}>{stepData.title}</div>
           </div>
           <CornerToastButton
             onClick={() => dispatch({ type: 'TUTORIAL/SKIP' })}
@@ -215,13 +226,13 @@ function CornerToast({ step, stepData, dispatch }) {
           </CornerToastButton>
         </div>
 
-        <div style={{ fontSize: 13, color: '#5a3e28', lineHeight: 1.5 }}>{stepData.body}</div>
+        <div style={{ fontSize: 13, color: TUTORIAL_COLORS.inkLight, lineHeight: 1.5 }}>{stepData.body}</div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <div
             style={{
               fontSize: 12,
-              color: '#91bf24',
+              color: TUTORIAL_COLORS.moss,
               fontWeight: 700,
               animation: 'tutorialPulse 1.4s ease-in-out infinite',
             }}
