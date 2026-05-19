@@ -25,25 +25,14 @@ export default function Chronicle({ state, dispatch }) {
         </div>
       </div>
 
-      <FeaturePanel.Header className="relative z-10">
-        <div className="flex items-center gap-3 min-w-0">
-          <Icon iconKey="ui_clipboard" size={24} className="text-[#d6612a]" />
-          <h1 className="hl-panel-title font-serif tracking-tight">Chronicle of the Vale</h1>
-        </div>
-        <div className="flex items-center gap-2 flex-shrink-0">
-          <button
-            onClick={() => dispatch({ type: "SET_VIEW", view: "charter" })}
-            className="hl-tab"
-            title="View Charter"
-          >
-            View Charter
-          </button>
-          <FeaturePanel.CloseButton
-            onClick={() => dispatch({ type: "SET_VIEW", view: "town" })}
-            title="Return to Town"
-            label="Return to Town"
-          />
-        </div>
+      <FeaturePanel.Header className="relative z-10 justify-end">
+        <button
+          onClick={() => dispatch({ type: "SET_VIEW", view: "charter" })}
+          className="hl-tab"
+          title="View Charter"
+        >
+          View Charter
+        </button>
       </FeaturePanel.Header>
 
       <FeaturePanel.Body className="relative z-10">

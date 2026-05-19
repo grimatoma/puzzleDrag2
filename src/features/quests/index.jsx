@@ -223,12 +223,6 @@ export default function QuestsScreen({ state, dispatch, initialTab }) {
 
   return (
     <FeaturePanel>
-      <FeaturePanel.Header
-        title="📜 Quests & Almanac"
-        onClose={() => dispatch({ type: "SET_VIEW", view: "town" })}
-        closeLabel="Close quests"
-      />
-
       <FeaturePanel.Tabs>
         {["daily", "almanac"].map((t) => (
           <FeaturePanel.Tab

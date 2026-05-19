@@ -48,12 +48,6 @@ function DecorationCard({ decor, state, dispatch }) {
 export default function DecorationsScreen({ state, dispatch }) {
   return (
     <FeaturePanel>
-      <FeaturePanel.Header
-        title="🌸 Decorations"
-        onClose={() => dispatch({ type: "SET_VIEW", view: "town" })}
-        closeLabel="Close decorations"
-      />
-
       {/* Decoration list */}
       <FeaturePanel.Body className="!px-2">
         <div className="grid grid-cols-2 portrait:grid-cols-1 gap-2">

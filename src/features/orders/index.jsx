@@ -17,11 +17,6 @@ export default function OrdersScreen({ state, dispatch }) {
 
   return (
     <FeaturePanel>
-      <FeaturePanel.Header
-        title="📋 Orders"
-        onClose={() => dispatch({ type: "SET_VIEW", view: "town" })}
-        closeLabel="Close orders"
-      />
       <FeaturePanel.Body className="flex flex-col gap-2">
         {orders.map((o) => {
           const have = inventory[o.key] || 0;

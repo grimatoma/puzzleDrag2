@@ -178,12 +178,6 @@ export default function AchievementsScreen({ state, dispatch }) {
 
   return (
     <FeaturePanel>
-      <FeaturePanel.Header
-        title="🏆 Trophies"
-        onClose={() => dispatch({ type: "SET_VIEW", view: "town" })}
-        closeLabel="Close trophies"
-      />
-
       {/* Tab toggle */}
       <FeaturePanel.Tabs>
         {["trophies", "collection"].map((t) => (

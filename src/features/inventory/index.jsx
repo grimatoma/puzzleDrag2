@@ -105,12 +105,6 @@ export default function InventoryScreen({ state, dispatch }) {
 
   return (
     <FeaturePanel className="z-10">
-      <FeaturePanel.Header
-        title="Inventory"
-        onClose={() => dispatch({ type: "SET_VIEW", view: "town" })}
-        closeLabel="Close inventory"
-      />
-
       <FeaturePanel.Toolbar className="flex-col !items-stretch gap-2 pt-3 pb-2">
         <SearchInput
           value={queryInput}

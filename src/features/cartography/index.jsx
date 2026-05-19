@@ -531,7 +531,7 @@ function HearthTokensStrip({ state }) {
 
 // ─── Header bar ────────────────────────────────────────────────────────────
 
-function HeaderBar({ currentNode, visitedCount, totalCount, state, onClose }) {
+function HeaderBar({ currentNode, visitedCount, totalCount, state }) {
   return (
     <div className="flex items-center justify-between px-3 py-2 flex-shrink-0 border-b border-[#b28b62]/40 gap-2">
       <div className="flex flex-col min-w-0">
@@ -549,13 +549,6 @@ function HeaderBar({ currentNode, visitedCount, totalCount, state, onClose }) {
         <span className="text-[10px] text-[#5b3b20]/80 hidden sm:inline">
           {visitedCount} / {totalCount} known
         </span>
-        <button
-          onClick={onClose}
-          aria-label="Close map"
-          className="w-7 h-7 rounded-lg bg-[#f6efe0] border-2 border-[#b28b62] grid place-items-center text-[#6a4b31] font-bold text-[14px]"
-        >
-          ✕
-        </button>
       </div>
     </div>
   );
@@ -660,7 +653,6 @@ export default function CartographyScreen({ state, dispatch }) {
         visitedCount={visited.length}
         totalCount={MAP_NODES.length}
         state={state}
-        onClose={() => dispatch({ type: "SET_VIEW", view: "town" })}
       />
 
       <div

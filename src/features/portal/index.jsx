@@ -14,12 +14,6 @@ export default function PortalScreen({ state, dispatch }) {
 
   return (
     <FeaturePanel tone="arcane">
-      <FeaturePanel.Header
-        title="🔮 Magic Portal"
-        onClose={() => dispatch({ type: "SET_VIEW", view: "town" })}
-        closeLabel="Close portal"
-      />
-
       {/* Influence display */}
       {portalBuilt && (
         <div className="px-3 py-1.5 flex-shrink-0 border-b border-[#8a6aa8]/40">

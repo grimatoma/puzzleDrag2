@@ -318,14 +318,6 @@ export default function TileCollectionPanel({ state, dispatch }) {
 
   return (
     <FeaturePanel>
-      {/* Header */}
-      <FeaturePanel.Header
-        title="Tiles Wiki"
-        titleAs="h2"
-        onClose={() => dispatch({ type: "SET_VIEW", view: "town" })}
-        closeLabel="Close tiles wiki"
-      />
-
       {/* Sub-category bar */}
       <SegmentedControl
         options={SUB_CATEGORIES}

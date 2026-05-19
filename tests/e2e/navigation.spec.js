@@ -14,7 +14,7 @@ test('navigate to Town shows Hearthwood Vale', async ({ page }) => {
 test('open Crafting screen', async ({ page }) => {
   await gotoFresh(page);
   await page.getByRole('button', { name: '🔨 Craft' }).click();
-  await expect(page.getByText(/🔨 Crafting/)).toBeVisible();
+  await expect(page.getByTestId('hud').getByText('Crafting', { exact: true })).toBeVisible();
 });
 
 test('open Inventory screen', async ({ page }) => {
