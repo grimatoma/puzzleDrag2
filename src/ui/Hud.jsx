@@ -1,7 +1,6 @@
 import { SEASONS } from "../constants.js";
 import { xpForLevel } from "../state.js";
 import { seasonIndexInSession, hearthTokenCount } from "../features/zones/data.js";
-import { locBuilt } from "../locBuilt.js";
 import LegacyIcon from "./Icon.jsx";
 import Icon from "./primitives/Icon.jsx";
 import Pill from "./primitives/Pill.jsx";
@@ -140,8 +139,6 @@ export function Hud({ state, dispatch }) {
   const season = SEASONS[seasonIdx];
   const xpNeed = xpForLevel(level);
   const xpPct = Math.min(100, (xp / xpNeed) * 100);
-  const builtAtLoc = locBuilt(state);
-  const buildingCount = Object.keys(builtAtLoc).filter((k) => k !== "_plots").length;
   const isWon = !!state.story?.flags?.isWon;
   const sandbox = !!state.story?.sandbox || isWon;
   const settlementName = state.settlement?.name ?? "Hearthwood Vale";
@@ -152,21 +149,18 @@ export function Hud({ state, dispatch }) {
       className="flex items-center gap-2 px-3 py-2 bg-ink-soft border-b-2 border-bg-darker text-cream"
       data-testid="hud"
     >
-      <div className="flex items-center gap-2 flex-shrink-0 min-w-0">
+      <div className="flex items-center gap-2 flex-shrink-0">
         <button
           onClick={() => dispatch({ type: "OPEN_MODAL", modal: onBoard ? "leaveBoard" : "menu" })}
           className="w-8 h-8 rounded-lg bg-paper-soft border-2 border-iron grid place-items-center text-ink-mid font-bold text-large flex-shrink-0"
           data-testid="menu-btn"
           aria-label={onBoard ? "Leave board" : "Menu"}
-          title={onBoard ? "Leave board" : "Menu"}
+          title={onBoard ? `Leave board · ${settlementName}` : settlementName}
         >{onBoard ? "←" : "≡"}</button>
-        <div className="flex flex-col items-start min-w-0 leading-tight">
-          <span className="text-body font-semibold text-cream truncate max-w-[180px]">
-            {settlementName}
-            {sandbox && <span className="italic text-cream-soft font-normal"> · sandbox</span>}
-          </span>
-          <span className="text-micro text-cream-soft">{VIEW_LABELS[view] ?? "Menu"}</span>
-        </div>
+        <span className="text-caption font-semibold text-cream-soft whitespace-nowrap">
+          {VIEW_LABELS[view] ?? "Menu"}
+          {sandbox && <span className="italic font-normal"> · sandbox</span>}
+        </span>
       </div>
 
       <div className="flex items-center gap-2 flex-1 justify-center min-w-0 flex-wrap">
@@ -198,15 +192,6 @@ export function Hud({ state, dispatch }) {
               }
             />
             <Pill
-              tone="iron"
-              variant="solid"
-              size="sm"
-              leading={<Icon iconKey="design.building.market" size={14} />}
-              title="Buildings built at this location"
-            >
-              <span className="tabular-nums" data-testid="buildings">{buildingCount}</span>
-            </Pill>
-            <Pill
               tone="ember"
               variant="solid"
               size="sm"
@@ -214,14 +199,11 @@ export function Hud({ state, dispatch }) {
               className="!px-2 !gap-1.5"
             >
               <span className="text-caption font-semibold tabular-nums">Lv {level}</span>
-              <span className="flex flex-col items-stretch min-w-[80px]">
-                <span className="text-micro tabular-nums text-cream leading-none mb-0.5 text-center">{xp}/{xpNeed}</span>
-                <span className="block h-1 rounded-pill bg-bg-dark/60 overflow-hidden">
-                  <span
-                    className="block h-full bg-gold-bright transition-[width] duration-300"
-                    style={{ width: `${xpPct}%` }}
-                  />
-                </span>
+              <span className="block w-12 h-1.5 rounded-pill bg-bg-dark/60 overflow-hidden">
+                <span
+                  className="block h-full bg-gold-bright transition-[width] duration-300"
+                  style={{ width: `${xpPct}%` }}
+                />
               </span>
             </Pill>
           </>
