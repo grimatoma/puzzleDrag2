@@ -3,6 +3,7 @@ import { ParchmentDialog } from "../../ui/primitives/Dialog.jsx";
 import FeaturePanel from "../../ui/primitives/FeaturePanel.jsx";
 
 export const modalKey = "menu";
+export const alwaysMounted = true;
 
 // --- Toggle switch ---
 function Toggle({ on, onToggle }) {
