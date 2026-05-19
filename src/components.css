@@ -173,17 +173,27 @@
   .hl-browser-pane {
     @apply pl-1;
   }
-  @media (max-width: 980px), (max-height: 520px) {
+  /* Stacked layout for narrow viewports (portrait phones). Wider viewports —
+     including a phone rotated to landscape — fall through to the two-column
+     grid defined above. ~720px is comfortably above the grid's ~620px minimum
+     width and above every phone's portrait width. */
+  @media (max-width: 720px) {
     .hl-browser-detail__body {
       @apply flex flex-col overflow-hidden;
     }
-    .hl-browser-list {
-      @apply overflow-y-auto pr-0 pl-0 flex-shrink-0;
-      max-height: clamp(180px, 42dvh, 360px);
-    }
+    /* Detail pinned on top, sized to its content. It only scrolls when the
+       content physically can't fit (a dense panel on a small phone); on a
+       normal portrait phone the cap never engages, so it reads as a fully
+       static panel and the action buttons stay reachable. */
     .hl-browser-pane {
-      @apply overflow-y-auto pr-0 pl-0 flex-1;
-      min-height: 220px;
+      @apply pr-0 pl-0 flex-shrink-0 overflow-y-auto;
+      order: 0;
+      max-height: 78dvh;
+    }
+    /* List fills the space beneath the detail and is the primary scroller. */
+    .hl-browser-list {
+      @apply pr-0 pl-0 flex-1 min-h-0 overflow-y-auto;
+      order: 1;
     }
   }
 
