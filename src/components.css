@@ -208,12 +208,41 @@
     background: var(--card-bg-hover);
     border-color: var(--card-border-strong);
   }
+  /* ── selected: strong green ring + tinted bg ── */
   .hl-browser-item.is-selected {
     border-color: var(--moss);
-    box-shadow: 0 0 0 2px rgba(145, 191, 36, 0.24);
+    background: rgba(145, 191, 36, 0.14);
+    box-shadow: 0 0 0 3px rgba(145, 191, 36, 0.32);
   }
+  .hl-browser-item.is-selected .hl-browser-item__icon {
+    background: rgba(145, 191, 36, 0.20);
+    border-color: rgba(145, 191, 36, 0.50);
+  }
+  .hl-browser-item.is-selected .hl-browser-item__subtitle {
+    color: var(--moss);
+    font-weight: 600;
+  }
+
+  /* ── active (in-game active tile, not selected): gold accent ── */
+  .hl-browser-item.is-active:not(.is-selected) {
+    border-color: var(--gold);
+    background: rgba(226, 178, 74, 0.10);
+  }
+  .hl-browser-item.is-active:not(.is-selected) .hl-browser-item__icon {
+    background: rgba(226, 178, 74, 0.18);
+    border-color: rgba(226, 178, 74, 0.45);
+  }
+  .hl-browser-item.is-active .hl-browser-item__subtitle {
+    color: var(--gold);
+    font-weight: 600;
+  }
+
+  /* ── locked: muted; lift opacity slightly when also selected ── */
   .hl-browser-item.is-muted {
     opacity: 0.62;
+  }
+  .hl-browser-item.is-muted.is-selected {
+    opacity: 0.85;
   }
   .hl-browser-item__icon {
     @apply flex-shrink-0 grid place-items-center rounded-md overflow-hidden;
