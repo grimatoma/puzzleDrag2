@@ -281,12 +281,6 @@ export default function CraftingScreen({ state, dispatch }) {
 
   return (
     <FeaturePanel>
-      <FeaturePanel.Header
-        title="🔨 Crafting"
-        onClose={() => dispatch({ type: "SET_VIEW", view: "town" })}
-        closeLabel="Close crafting"
-      />
-
       {/* Phase 5 — real-time craft queue */}
       <CraftQueueStrip queue={state.craftQueue} gems={state.gems} dispatch={dispatch} />
 

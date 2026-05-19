@@ -10,6 +10,23 @@ import ProgressTrack from "./primitives/ProgressTrack.jsx";
 
 export const SEASON_EFFECTS = ["", "", "", ""];
 
+const VIEW_LABELS = {
+  town: "Menu",
+  board: "Menu",
+  crafting: "Crafting",
+  inventory: "Inventory",
+  orders: "Orders",
+  quests: "Quests",
+  townsfolk: "Townsfolk",
+  chronicle: "Chronicle",
+  tileCollection: "Tiles",
+  portal: "Portal",
+  achievements: "Trophies",
+  cartography: "Map",
+  charter: "Charter",
+  boons: "Boons",
+};
+
 function TideContent({ fish }) {
   const tide = fish?.tide ?? "high";
   const tideTurn = fish?.tideTurn ?? 0;
@@ -148,7 +165,7 @@ export function Hud({ state, dispatch }) {
             {settlementName}
             {sandbox && <span className="italic text-cream-soft font-normal"> · sandbox</span>}
           </span>
-          <span className="hidden md:inline text-micro text-cream-soft">Menu</span>
+          <span className="text-micro text-cream-soft">{VIEW_LABELS[view] ?? "Menu"}</span>
         </div>
       </div>
 

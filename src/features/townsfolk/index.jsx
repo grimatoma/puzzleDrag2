@@ -18,11 +18,6 @@ export default function TownsfolkScreen({ state, dispatch }) {
   const setTab = (next) => dispatch({ type: "SET_VIEW_PARAMS", params: { tab: next } });
   return (
     <FeaturePanel>
-      <FeaturePanel.Header
-        title="👥 Townsfolk"
-        onClose={() => dispatch({ type: "SET_VIEW", view: "town" })}
-        closeLabel="Close townsfolk"
-      />
       <FeaturePanel.Tabs>
         {[
           { key: "workers", label: "Workers", icon: "ui_build" },
