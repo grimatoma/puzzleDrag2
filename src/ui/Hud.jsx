@@ -137,12 +137,12 @@ export function Hud({ state, dispatch }) {
     >
       <div className="flex items-center gap-2 flex-shrink-0 min-w-0">
         <button
-          onClick={() => dispatch({ type: "OPEN_MODAL", modal: "menu" })}
+          onClick={() => dispatch({ type: "OPEN_MODAL", modal: onBoard ? "leaveBoard" : "menu" })}
           className="w-8 h-8 rounded-lg bg-paper-soft border-2 border-iron grid place-items-center text-ink-mid font-bold text-large flex-shrink-0"
           data-testid="menu-btn"
-          aria-label="Menu"
-          title="Menu"
-        >&#x2261;</button>
+          aria-label={onBoard ? "Leave board" : "Menu"}
+          title={onBoard ? "Leave board" : "Menu"}
+        >{onBoard ? "←" : "≡"}</button>
         <div className="flex flex-col items-start min-w-0 leading-tight">
           <span className="text-body font-semibold text-cream truncate max-w-[180px]">
             {settlementName}
