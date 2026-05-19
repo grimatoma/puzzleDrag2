@@ -266,6 +266,7 @@ export default function App() {
   const [chainInfo, setChainInfo] = useState(null);
   const [inspectedTool, setInspectedTool] = useState(null);
   const sceneRef = useRef(null);
+  const stateRef = useRef(state);
   const storyModalOpen = !!state.story?.queuedBeat;
   const armedTool = state.toolPending ? state.tools ? { key: state.toolPending, count: state.tools[state.toolPending] ?? 0 } : null : null;
   const infoPanelEl = (
@@ -282,6 +283,27 @@ export default function App() {
   useRouter(state, dispatch);
   useA11yBridge();
 
+  useEffect(() => {
+    stateRef.current = state;
+  }, [state]);
+
+  useEffect(() => {
+    if (!import.meta.env.DEV && import.meta.env.MODE !== "test") return undefined;
+    let cleanup;
+    let active = true;
+    import("./src/visualTesting/bridge.js").then(({ installVisualTestingBridge }) => {
+      if (!active) return;
+      cleanup = installVisualTestingBridge({
+        getState: () => stateRef.current,
+        dispatch,
+      });
+    });
+    return () => {
+      active = false;
+      cleanup?.();
+    };
+  }, [dispatch]);
+
   // Fire session_start story beat on first mount
   useEffect(() => {
     dispatch({ type: "SESSION_START" });
@@ -292,7 +314,7 @@ export default function App() {
   }, [state.pendingReload]);
 
   return (
-    <div className="h-full w-full bg-[#2a1d0f] text-[#2b2218] grid place-items-center" style={{ position: "relative", overflow: "hidden" }}>
+    <div data-visual-root="app" className="h-full w-full bg-[#2a1d0f] text-[#2b2218] grid place-items-center" style={{ position: "relative", overflow: "hidden" }}>
       {/* Ambient dust motes — behind all chrome */}
       {DUST_MOTES.map((m) => (
         <div
@@ -313,7 +335,7 @@ export default function App() {
         />
       ))}
 
-      <div className="relative w-full max-w-[1280px] aspect-[5/4] max-h-[100dvh] max-[1024px]:aspect-auto max-[1024px]:max-h-none max-[1024px]:w-full max-[1024px]:h-full max-[1024px]:max-w-none bg-[#3a2715] rounded-2xl max-[1024px]:rounded-none overflow-hidden shadow-2xl border border-white/10 flex flex-col" style={{ zIndex: 1 }}>
+      <div data-testid="app-shell" className="relative w-full max-w-[1280px] aspect-[5/4] max-h-[100dvh] max-[1024px]:aspect-auto max-[1024px]:max-h-none max-[1024px]:w-full max-[1024px]:h-full max-[1024px]:max-w-none bg-[#3a2715] rounded-2xl max-[1024px]:rounded-none overflow-hidden shadow-2xl border border-white/10 flex flex-col" style={{ zIndex: 1 }}>
         {/* HUD bar */}
         <Hud state={state} dispatch={dispatch} />
 

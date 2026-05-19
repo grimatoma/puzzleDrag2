@@ -1,0 +1,487 @@
+import { ITEMS } from "../constants.js";
+import { parseHash } from "../router.js";
+import { createFreshState } from "../state/init.js";
+import { defaultTileCollectionSlice } from "../state/helpers.js";
+import { TILE_TYPES, CATEGORIES } from "../features/tileCollection/data.js";
+import { findBeat, INITIAL_STORY_STATE } from "../story.js";
+import { initialFlagState } from "../flags.js";
+
+export const VISUAL_FIXED_NOW = 1_700_000_000_000;
+
+const HOME_PLOTS = {
+  0: "hearth",
+  1: "mill",
+  2: "bakery",
+  3: "inn",
+  4: "granary",
+  5: "larder",
+  6: "forge",
+  7: "caravan_post",
+  8: "kitchen",
+  9: "workshop",
+  10: "powder_store",
+  11: "portal",
+};
+
+const MINE_PLOTS = {
+  0: "hearth",
+  1: "kitchen",
+  2: "workshop",
+  3: "forge",
+  4: "barn",
+  5: "powder_store",
+  6: "inn",
+  7: "housing",
+};
+
+const HARBOR_PLOTS = {
+  0: "hearth",
+  1: "harbor_dock",
+  2: "fishmonger",
+  3: "smokehouse",
+  4: "inn",
+  5: "caravan_post",
+  6: "housing",
+  7: "housing2",
+};
+
+function builtFromPlots(plots, extras = {}) {
+  const out = { decorations: {}, _plots: { ...plots }, ...extras };
+  for (const id of Object.values(plots)) out[id] = true;
+  return out;
+}
+
+function quietStory(extraFlags = {}) {
+  return {
+    ...INITIAL_STORY_STATE,
+    flags: {
+      ...initialFlagState(),
+      intro_seen: true,
+      _fired_act1_arrival: true,
+      ...extraFlags,
+    },
+    queuedBeat: null,
+    beatQueue: [],
+    choiceLog: [],
+    sandbox: false,
+  };
+}
+
+function fullTileCollection(overrides = {}) {
+  const tc = defaultTileCollectionSlice();
+  const discovered = { ...tc.discovered };
+  const researchProgress = { ...tc.researchProgress };
+  const activeByCategory = { ...tc.activeByCategory };
+  for (const tile of TILE_TYPES) {
+    discovered[tile.id] = true;
+    if (activeByCategory[tile.category] == null) activeByCategory[tile.category] = tile.id;
+    if (tile.discovery?.method === "research") researchProgress[tile.id] = tile.discovery.researchAmount ?? 1;
+  }
+  return {
+    discovered,
+    researchProgress,
+    activeByCategory,
+    freeMoves: 0,
+    ...overrides,
+  };
+}
+
+function order(id, npc, key, need, have, reward = 80) {
+  return {
+    id,
+    npc,
+    key,
+    need,
+    reward,
+    baseReward: reward,
+    line: `Could you bring ${need} ${ITEMS[key]?.label ?? key}?`,
+    _visualHave: have,
+  };
+}
+
+function visualOrders() {
+  return [
+    order("order-ready", "mira", "grass_hay", 12, 40, 90),
+    order("order-partial", "tomas", "wood_plank", 18, 8, 130),
+    order("order-crafted", "bram", "bread", 2, 3, 180),
+  ];
+}
+
+function visualQuests() {
+  return [
+    { id: "quest-incomplete", label: "Harvest 30 hay", progress: 12, target: 30, reward: { coins: 50, almanacXp: 10 }, claimed: false },
+    { id: "quest-claimable", label: "Deliver 1 order", progress: 1, target: 1, reward: { coins: 75, almanacXp: 20 }, claimed: false },
+    { id: "quest-claimed", label: "Chain 5 resources", progress: 5, target: 5, reward: { coins: 40, almanacXp: 10 }, claimed: true },
+  ];
+}
+
+function richInventory() {
+  return {
+    supplies: 12,
+    grass_hay: 40,
+    grain_wheat: 22,
+    grain: 18,
+    grain_flour: 12,
+    wood_log: 28,
+    wood_plank: 80,
+    wood_beam: 8,
+    berry: 19,
+    berry_jam: 5,
+    mine_stone: 95,
+    mine_ore: 36,
+    mine_ingot: 24,
+    mine_coal: 30,
+    mine_gem: 8,
+    bird_egg: 12,
+    fruit_apple: 14,
+    bread: 3,
+    soup: 7,
+    meat: 4,
+    fish_sardine: 12,
+    fish_fillet: 9,
+  };
+}
+
+function applyRoute(state, scenario) {
+  const hash = scenario.hash ?? null;
+  let next = { ...state };
+  if (hash) {
+    const route = parseHash(hash);
+    next = {
+      ...next,
+      view: route.view,
+      modal: route.modal,
+      viewParams: route.viewParams ?? {},
+      settingsTab: route.modal === "menu" ? route.modalParams?.tab ?? "main" : next.settingsTab ?? "main",
+      craftingTab: route.view === "crafting" ? route.viewParams?.tab ?? next.craftingTab ?? null : next.craftingTab ?? null,
+    };
+  }
+  if (scenario.view) {
+    next.view = scenario.view;
+    next.viewParams = scenario.viewParams ?? {};
+    next.modal = scenario.modal ?? null;
+  }
+  return next;
+}
+
+function baseState() {
+  const state = createFreshState({ saveSeed: "visual-seed-0001" });
+  const orders = visualOrders();
+  const inventory = { ...state.inventory };
+  for (const o of orders) inventory[o.key] = o._visualHave;
+  return {
+    ...state,
+    saveSeed: "visual-seed-0001",
+    coins: 150,
+    level: 1,
+    xp: 0,
+    view: "town",
+    viewParams: {},
+    modal: null,
+    bubble: null,
+    orders,
+    quests: visualQuests(),
+    inventory,
+    story: quietStory(),
+    market: { seed: 42, season: 0, prices: {}, prevPrices: null },
+    built: { home: builtFromPlots({ 0: "hearth" }) },
+    mapCurrent: "home",
+    activeZone: "home",
+    mapVisited: ["home", "meadow", "orchard"],
+    mapDiscovered: ["home", "meadow", "orchard", "crossroads", "quarry", "harbor", "oldcapital"],
+    settlements: { home: { founded: true, biome: "prairie" } },
+    tileCollection: defaultTileCollectionSlice(),
+    runSummary: { open: false },
+  };
+}
+
+function richState() {
+  const state = baseState();
+  const unlocked = { ...(state.achievements?.unlocked ?? {}) };
+  Object.keys(unlocked).slice(0, 4).forEach((key) => { unlocked[key] = true; });
+  return {
+    ...state,
+    coins: 12_500,
+    level: 8,
+    xp: 120,
+    runes: 9,
+    gems: 4,
+    embers: 12,
+    coreIngots: 9,
+    influence: 180,
+    inventory: richInventory(),
+    tools: {
+      ...state.tools,
+      clear: 5,
+      basic: 4,
+      rare: 3,
+      shuffle: 2,
+      bomb: 3,
+      fertilizer: 2,
+      magic_wand: 1,
+      hourglass: 1,
+      magic_seed: 1,
+      magic_fertilizer: 0,
+    },
+    built: {
+      home: builtFromPlots(HOME_PLOTS, { housing: true, housing2: true, housing3: true, silo: true }),
+      meadow: builtFromPlots({ 0: "hearth", 1: "mill", 2: "granary", 3: "bakery" }),
+      quarry: builtFromPlots(MINE_PLOTS),
+      harbor: builtFromPlots(HARBOR_PLOTS),
+    },
+    settlements: {
+      home: { founded: true, biome: "prairie", keeperPath: "coexist" },
+      meadow: { founded: true, biome: "forest", keeperPath: "coexist" },
+      quarry: { founded: true, biome: "mountain", keeperPath: "driveout" },
+      harbor: { founded: true, biome: "coastal" },
+    },
+    story: quietStory({
+      first_harvest: true,
+      hearth_lit: true,
+      first_order: true,
+      granary_built: true,
+      bram_arrived: true,
+      keeper_home_coexist: true,
+      keeper_meadow_coexist: true,
+      keeper_quarry_driveout: true,
+      frostmaw_defeated: true,
+      ember_drake_active: true,
+    }),
+    npcs: {
+      roster: ["wren", "mira", "tomas", "bram", "liss"],
+      bonds: { wren: 7.2, mira: 9.1, tomas: 5.8, bram: 6.4, liss: 4.2 },
+      giftCooldown: { wren: 0, mira: 0, tomas: 0, bram: 0, liss: 0 },
+    },
+    workers: { hired: { farmer: 2, lumberjack: 1, miner: 1, baker: 3 } },
+    tileCollection: fullTileCollection(),
+    almanac: { xp: 260, level: 3, claimed: { 1: true, 2: false, 3: false, 4: false, 5: false } },
+    almanacClaimed: [1],
+    achievements: {
+      ...state.achievements,
+      counters: {
+        ...state.achievements.counters,
+        chains_committed: 12,
+        orders_fulfilled: 3,
+        bosses_defeated: 1,
+        distinct_resources_chained: 7,
+        distinct_buildings_built: 8,
+        supplies_converted: 4,
+      },
+      unlocked,
+    },
+    collected: {
+      grass_hay: 120,
+      grain_wheat: 44,
+      wood_log: 31,
+      wood_plank: 18,
+      mine_stone: 75,
+      mine_ore: 22,
+      fish_sardine: 9,
+    },
+  };
+}
+
+function grid(rows) {
+  return rows.map((row) => row.map((cell) => (typeof cell === "string" ? { key: cell } : cell)));
+}
+
+const farmGrid = grid([
+  ["grass_hay", "grass_hay", "grass_hay", "grass_hay", "grass_hay", "grass_hay"],
+  ["grass_hay", "grass_hay", "grass_hay", "grass_hay", "grass_hay", "grass_hay"],
+  ["grain_wheat", "veg_carrot", "fruit_apple", "tree_oak", "herd_pig", "cattle_cow"],
+  ["grain_wheat", "veg_carrot", "fruit_apple", "tree_oak", "herd_pig", "cattle_cow"],
+  ["flower_pansy", "bird_pheasant", "mount_horse", "grain_wheat", "veg_carrot", "fruit_apple"],
+  ["flower_pansy", "bird_pheasant", "mount_horse", "grain_wheat", "veg_carrot", "fruit_apple"],
+]);
+
+const mineGrid = grid([
+  ["mine_stone", "mine_stone", "mine_ore", "mine_coal", "mine_gem", "mine_dirt"],
+  ["mine_stone", "mine_ore", "mine_ore", "mine_coal", "mine_gem", "mine_dirt"],
+  ["mine_stone", "mine_stone", "mine_ore", "mine_coal", "mine_gem", "mine_dirt"],
+  ["mine_stone", "mine_ore", "mine_coal", "mine_coal", "mine_gem", "mine_dirt"],
+  ["mine_stone", "mine_stone", "mine_ore", "mine_coal", "mine_gem", "mine_dirt"],
+  ["mine_stone", "mine_ore", "mine_ore", "mine_coal", "mine_gem", "mine_dirt"],
+]);
+
+const fishGrid = grid([
+  ["fish_sardine", "fish_sardine", "fish_mackerel", "fish_clam", "fish_kelp", "fish_oyster"],
+  ["fish_sardine", "fish_mackerel", "fish_mackerel", "fish_clam", "fish_kelp", "fish_oyster"],
+  ["fish_sardine", "fish_sardine", "fish_mackerel", "fish_clam", "fish_kelp", "fish_oyster"],
+  ["fish_sardine", "fish_mackerel", "fish_clam", "fish_clam", "fish_kelp", "fish_oyster"],
+  ["fish_sardine", "fish_sardine", "fish_mackerel", "fish_clam", "fish_kelp", "fish_oyster"],
+  ["fish_sardine", "fish_mackerel", "fish_mackerel", "fish_clam", "fish_kelp", "fish_oyster"],
+]);
+
+function boardState(kind = "farm") {
+  const rich = richState();
+  const biomeKey = kind === "mine" ? "mine" : kind === "fish" ? "fish" : "farm";
+  const zoneId = kind === "mine" ? "quarry" : kind === "fish" ? "harbor" : "home";
+  const boardGrid = kind === "mine" ? mineGrid : kind === "fish" ? fishGrid : farmGrid;
+  return {
+    ...rich,
+    view: "board",
+    modal: null,
+    biomeKey,
+    biome: biomeKey,
+    mapCurrent: zoneId,
+    activeZone: zoneId,
+    grid: boardGrid,
+    turnsUsed: 2,
+    farmRun: {
+      zoneId,
+      turnBudget: 10,
+      turnsRemaining: 8,
+      startedAt: VISUAL_FIXED_NOW,
+      mode: kind === "farm" ? "normal" : "expedition",
+    },
+    session: kind === "farm"
+      ? { selectedTiles: ["grass", "grain", "trees", "birds", "vegetables", "fruits"], fertilizerUsed: false }
+      : { expedition: { zoneId, supply: { supplies: 4 }, turns: 10 } },
+  };
+}
+
+function withBeat(state, beatId) {
+  const beat = findBeat(beatId);
+  return {
+    ...state,
+    story: {
+      ...state.story,
+      queuedBeat: beat ? { ...beat } : null,
+      beatQueue: [],
+    },
+    modal: null,
+  };
+}
+
+function withRunSummary(state) {
+  return {
+    ...state,
+    modal: "runSummary",
+    runSummary: {
+      open: true,
+      biome: "farm",
+      zoneId: "home",
+      mode: "normal",
+      turnsAtStart: 10,
+      chainsPlayed: 5,
+      biggestChain: { count: 12, key: "grass_hay", coinGain: 28, upgrades: 2, gained: 12 },
+      totalUpgrades: 4,
+      totalCoinGain: 140,
+      resourcesGained: { grass_hay: 34, grain_wheat: 8, fruit_apple: 5 },
+      bondsAtStart: { wren: 5, mira: 5 },
+      bondDeltas: { wren: 0.5, mira: 0.3 },
+      beatsTriggered: [{ id: "act1_first_harvest", title: "The First Harvest" }],
+      suppliesConsumed: {},
+      fertilizerUsed: true,
+    },
+  };
+}
+
+function profileState(profile) {
+  switch (profile) {
+    case "fresh": return baseState();
+    case "rich": return richState();
+    case "bubble": return { ...richState(), bubble: { id: 101, npc: "wren", text: "A visual check toast is on the wind.", ms: 10_000 } };
+    case "buildReady": return { ...richState(), built: { ...richState().built, home: builtFromPlots({ 0: "hearth" }) } };
+    case "lowResource": return { ...baseState(), coins: 25, level: 1, inventory: { supplies: 0 } };
+    case "unfoundedBlocked": return { ...richState(), mapCurrent: "orchard", activeZone: "orchard", settlements: { home: { founded: true, biome: "prairie" } }, coins: 50 };
+    case "unfoundedReady": return { ...richState(), mapCurrent: "meadow", activeZone: "meadow", settlements: { home: { founded: true, biome: "prairie", keeperPath: "coexist" } } };
+    case "mineTown": return { ...richState(), mapCurrent: "quarry", activeZone: "quarry", biomeKey: "mine", biome: "mine" };
+    case "harborTown": return { ...richState(), mapCurrent: "harbor", activeZone: "harbor", biomeKey: "fish", biome: "fish" };
+    case "fertilizerEntry": return { ...richState(), tools: { ...richState().tools, fertilizer: 3 } };
+    case "farmDangersEntry": return { ...richState(), mapCurrent: "meadow", activeZone: "meadow", settlements: { ...richState().settlements, meadow: { founded: true, biome: "prairie" } } };
+    case "mineLocked": return { ...baseState(), level: 1, mapCurrent: "quarry", activeZone: "quarry", settlements: { home: { founded: true, biome: "prairie" }, quarry: { founded: true, biome: "mountain" } } };
+    case "mineTownNoFood": return { ...richState(), level: 2, mapCurrent: "quarry", activeZone: "quarry", inventory: { ...richInventory(), supplies: 0, bread: 0, fruit_apple: 0 } };
+    case "mineTownFood": return { ...richState(), level: 2, mapCurrent: "quarry", activeZone: "quarry" };
+    case "harborTownFood": return { ...richState(), level: 3, mapCurrent: "harbor", activeZone: "harbor", biomeKey: "fish" };
+    case "boardFarm": return boardState("farm");
+    case "boardFarmLong": return { ...boardState("farm"), grid: farmGrid };
+    case "boardFarmBoss": return { ...boardState("farm"), boss: { key: "frostmaw", name: "The Frostmaw", emoji: "❄️", resource: "wood_log", targetCount: 30, progress: 8, turnsLeft: 6, minChain: 5, goal: "Bring 30 logs in 10 turns." } };
+    case "boardFarmHazards": return { ...boardState("farm"), hazards: { ...boardState("farm").hazards, fire: { cells: [{ row: 0, col: 4 }, { row: 1, col: 4 }] }, rats: [{ row: 4, col: 0, age: 1 }, { row: 4, col: 1, age: 1 }, { row: 5, col: 0, age: 1 }] } };
+    case "boardFarmBomb": return { ...boardState("farm"), toolPending: "bomb", tools: { ...boardState("farm").tools, bomb: 3 } };
+    case "boardFarmFertilizer": return { ...boardState("farm"), fertilizerActive: true, magicFertilizerCharges: 3, session: { selectedTiles: ["grass", "grain"], fertilizerUsed: true } };
+    case "boardMine": return boardState("mine");
+    case "boardMineHazards": {
+      const st = boardState("mine");
+      const g = st.grid.map((row) => row.map((cell) => ({ ...cell })));
+      g[1][1] = { key: "mine_stone", rubble: true };
+      g[2][2] = { key: "mysterious_ore" };
+      g[3][3] = { key: "lava" };
+      return { ...st, grid: g, hazards: { ...st.hazards, caveIn: { row: 1, col: 1 }, gasVent: { row: 0, col: 3, turnsLeft: 3 }, lava: { cells: [{ row: 3, col: 3 }], turnsToSpread: 1 } }, mysteriousOre: { row: 2, col: 2 } };
+    }
+    case "boardFish": return boardState("fish");
+    case "boardFishPearl": {
+      const st = boardState("fish");
+      const g = st.grid.map((row) => row.map((cell) => ({ ...cell })));
+      g[2][2] = { key: "fish_pearl" };
+      return { ...st, grid: g, fish: { tide: "low", tideTurn: 2 }, fishPearl: { row: 2, col: 2 } };
+    }
+    case "boardBossMinimized": return { ...boardState("farm"), bossMinimized: true, boss: { key: "quagmire", name: "The Quagmire", emoji: "🌿", resource: "grass_hay", targetCount: 50, progress: 22, turnsLeft: 4, goal: "Drain the bog: harvest 50 hay." } };
+    case "craftQueue": return { ...richState(), craftQueue: [{ key: "bread", queuedAt: VISUAL_FIXED_NOW - 10_000, readyAt: VISUAL_FIXED_NOW - 1_000 }, { key: "berry_jam", queuedAt: VISUAL_FIXED_NOW, readyAt: VISUAL_FIXED_NOW + 14_400_000 }] };
+    case "portalInsufficient": return { ...richState(), influence: 10, tools: { ...richState().tools, magic_wand: 0, hourglass: 0, magic_seed: 0, magic_fertilizer: 0 } };
+    case "tileActivate": return { ...richState(), tileCollection: fullTileCollection({ activeByCategory: { ...fullTileCollection().activeByCategory, grass: "grass_hay" } }) };
+    case "tileBuy": {
+      const tc = fullTileCollection();
+      delete tc.discovered.bird_clover;
+      tc.activeByCategory.flowers = "flower_pansy";
+      return { ...richState(), coins: 1_000, tileCollection: tc };
+    }
+    case "tileResearch": {
+      const tc = fullTileCollection();
+      delete tc.discovered.grass_spiky;
+      tc.researchProgress.grass_spiky = 32;
+      return { ...richState(), tileCollection: tc };
+    }
+    case "tileFreeMoves": return { ...richState(), tileCollection: fullTileCollection({ freeMoves: 3 }) };
+    case "mapReady": return { ...richState(), mapCurrent: "home", activeZone: "home", level: 2, mapVisited: ["home"], mapDiscovered: ["home", "meadow", "orchard"] };
+    case "mapLevelLocked": return { ...richState(), level: 1, mapCurrent: "home", activeZone: "home", mapVisited: ["home"], mapDiscovered: ["home", "meadow", "orchard"] };
+    case "mapUnreachable": return { ...richState(), level: 8, mapCurrent: "home", activeZone: "home", mapVisited: ["home"], mapDiscovered: ["home", "meadow", "orchard", "quarry"] };
+    case "mapComplete": return richState();
+    case "mapFounder": return { ...richState(), mapVisited: ["home", "meadow"], settlements: { home: { founded: true, biome: "prairie", keeperPath: "coexist" } } };
+    case "mapKeeper": return { ...richState(), settlements: { ...richState().settlements, meadow: { founded: true, biome: "forest" } }, built: { ...richState().built, meadow: builtFromPlots({ 0: "hearth", 1: "mill", 2: "granary", 3: "bakery" }) } };
+    case "mapCapitalLocked": return { ...richState(), heirlooms: { heirloomSeed: 1, pactIron: 0, tidesingerPearl: 0 } };
+    case "mapCapitalReady": return { ...richState(), heirlooms: { heirloomSeed: 1, pactIron: 1, tidesingerPearl: 1, seed: 1, iron: 1, pearl: 1 } };
+    case "storyProgressed": return { ...richState(), story: quietStory({ first_harvest: true, hearth_lit: true, first_order: true, granary_built: true, bram_arrived: true }) };
+    case "charter": return { ...richState(), turnsUsed: 27, story: { ...richState().story, flags: { ...richState().story.flags, keeper_path_driveout: true, keeper_path_coexist: true }, choiceLog: [{ beatId: "act1_arrival", choiceId: "continue", ts: VISUAL_FIXED_NOW - 300_000, value: "Hearthwood Vale" }, { beatId: "frostmaw_keeper", choiceId: "drive_out", ts: VISUAL_FIXED_NOW - 200_000 }, { beatId: "mira_letter_1", choiceId: "send", ts: VISUAL_FIXED_NOW - 100_000 }] } };
+    case "bossGallery": return { ...richState(), story: quietStory({ frostmaw_defeated: true, ember_drake_active: true }) };
+    case "bossModal": return { ...richState(), modal: "boss", boss: { key: "frostmaw", name: "The Frostmaw", emoji: "❄️", resource: "wood_log", targetCount: 30, progress: 11, turnsLeft: 7, minChain: 5, goal: "Bring 30 logs in 10 turns to keep the hearth lit.", flavor: "A frozen titan stirs in the deep winter wood." } };
+    case "runSummary": return withRunSummary(richState());
+    case "boons": return { ...richState(), story: quietStory({ keeper_anyzone_coexist: true, keeper_anyzone_driveout: true }), boons: { deer_blessing: true } };
+    case "storyBar": return withBeat(richState(), "act1_light_hearth");
+    case "storyChoices": return withBeat(richState(), "frostmaw_keeper");
+    case "storyPrompt": return withBeat(richState(), "act1_arrival");
+    case "storyWin": return withBeat({ ...richState(), story: quietStory({ isWon: true }) }, "act3_win");
+    case "tutorialCenter": return { ...richState(), tutorial: { active: true, step: 0, seen: false }, modal: null, story: quietStory() };
+    case "tutorialCorner": return { ...boardState("farm"), tutorial: { active: true, step: 1, seen: false }, modal: null, story: quietStory() };
+    default: return richState();
+  }
+}
+
+export function buildVisualState(scenario) {
+  const profile = scenario.state ?? "fresh";
+  const state = profileState(profile);
+  return applyRoute(state, scenario);
+}
+
+export function validateVisualState(state) {
+  if (!state || typeof state !== "object") return ["state is not an object"];
+  const errors = [];
+  if (!state.view) errors.push("state.view is missing");
+  if (!state.story?.flags?.intro_seen && !state.story?.queuedBeat) errors.push("quiet scenario is missing intro_seen");
+  if (state.view === "board") {
+    if (!state.farmRun?.turnsRemaining) errors.push("board scenario needs an active farmRun");
+    if (!Array.isArray(state.grid) || state.grid.length !== 6) errors.push("board scenario needs a 6-row grid");
+  }
+  const active = state.tileCollection?.activeByCategory ?? {};
+  for (const [category, tileId] of Object.entries(active)) {
+    if (!CATEGORIES.includes(category)) errors.push(`unknown tile category ${category}`);
+    if (tileId) {
+      const tile = TILE_TYPES.find((t) => t.id === tileId);
+      if (!tile) errors.push(`unknown active tile ${tileId}`);
+      else if (tile.category !== category) errors.push(`${tileId} is not in category ${category}`);
+    }
+  }
+  return errors;
+}
+
+export { farmGrid, mineGrid, fishGrid };

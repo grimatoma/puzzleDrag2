@@ -57,6 +57,14 @@ const slices = [crafting, quests, achievements, tutorial, settings, boss, cartog
 // All readers were removed when the calendar was deleted, so the table is
 // gone too.
 
+function visualTestingEnabled() {
+  return !!(
+    import.meta.env?.DEV
+    || import.meta.env?.MODE === "test"
+    || globalThis.__HEARTH_VISUAL_TESTING__
+  );
+}
+
 // Canonical almanac XP function (§17 linear, 150 XP/level).
 // Wraps features/almanac/data.js awardXp() so all reducers route through it.
 function applyAlmanacXp(state, amount) {
@@ -147,7 +155,13 @@ function applyTileCollectionChainEffects(state, key, length) {
 
 function coreReducer(state, action) {
   switch (action.type) {
+    case "VISUAL/LOAD_STATE": {
+      if (!visualTestingEnabled()) return state;
+      const next = action.payload?.state ?? action.state;
+      return next && typeof next === "object" ? next : state;
+    }
     case "GRID/SYNC": {
+      if (visualTestingEnabled() && state?._visualScenarioId) return state;
       const { grid } = action.payload;
       if (!grid) return state;
       return { ...state, grid };

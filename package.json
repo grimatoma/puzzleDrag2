@@ -13,7 +13,14 @@
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test",
     "test:e2e:headed": "playwright test --headed",
-    "test:e2e:install": "playwright install chromium"
+    "test:e2e:install": "playwright install chromium",
+    "test:visual": "playwright test -c playwright.visual.config.js --project=desktop",
+    "test:visual:update": "playwright test -c playwright.visual.config.js --project=desktop --update-snapshots",
+    "test:visual:headed": "playwright test -c playwright.visual.config.js --project=desktop --headed",
+    "test:visual:all": "playwright test -c playwright.visual.config.js",
+    "test:visual:all:update": "playwright test -c playwright.visual.config.js --update-snapshots",
+    "test:visual:mobile-smoke": "VISUAL_MOBILE_SMOKE=1 playwright test -c playwright.visual.config.js tests/visual/mobile-smoke.spec.js --project=iphone-landscape --project=iphone-portrait",
+    "test:visual:mobile-smoke:update": "VISUAL_MOBILE_SMOKE=1 playwright test -c playwright.visual.config.js tests/visual/mobile-smoke.spec.js --project=iphone-landscape --project=iphone-portrait --update-snapshots"
   },
   "dependencies": {
     "canvas2svg": "^1.0.16",
