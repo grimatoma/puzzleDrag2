@@ -100,6 +100,11 @@ function PhaserMount({ dispatch, biomeKey, turnsUsed, uiLocked, boardActive, sce
   const notifier = useNotifier();
   const notifierRef = useRef(notifier);
   useEffect(() => { notifierRef.current = notifier; }, [notifier]);
+  // Keep a ref so postBoot (a stale closure) can read the *current* boardActive
+  // rather than the value captured at mount — which is always false because view
+  // starts as "town" and the router hasn't fired yet when Phaser initialises.
+  const boardActiveRef = useRef(boardActive);
+  useEffect(() => { boardActiveRef.current = boardActive; }, [boardActive]);
 
   useEffect(() => {
     if (!hostRef.current || gameRef.current) return;
@@ -180,7 +185,7 @@ function PhaserMount({ dispatch, biomeKey, turnsUsed, uiLocked, boardActive, sce
               scene.events.on(SCENE_EVENTS.CHAIN_FLOAT_TEXT, ({ text }) => {
                 notifierRef.current?.toast?.({ text, tone: "moss", duration: 1600 });
               });
-              setBoardRuntimeActive(game, boardActive);
+              setBoardRuntimeActive(game, boardActiveRef.current);
               setLoading(false);
             },
           },
