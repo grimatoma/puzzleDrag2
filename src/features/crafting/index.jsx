@@ -7,7 +7,6 @@ import { locBuilt } from "../../locBuilt.js";
 import Icon from "../../ui/Icon.jsx";
 import DesignIcon from "../../ui/primitives/Icon.jsx";
 import FeaturePanel from "../../ui/primitives/FeaturePanel.jsx";
-import { CostChip } from "../../ui/primitives/Chip.jsx";
 import {
   BrowserDetailLayout,
   BrowserGrid,
@@ -201,44 +200,80 @@ function canAffordDecor(decor, state) {
   return true;
 }
 
-function DecorationCard({ decor, state, dispatch }) {
+function DecorIcon({ decor, size = 42 }) {
+  const decorIconKey = `decor_${decor.id}`;
+  if (hasIcon(decorIconKey)) {
+    return <IconCanvas iconKey={decorIconKey} size={size} />;
+  }
+  return (
+    <span className="text-lg font-bold" aria-hidden="true">
+      {decor.name.slice(0, 1)}
+    </span>
+  );
+}
+
+function decorCostEntries(decor, state) {
+  const inv = state.inventory ?? {};
+  return Object.entries(decor.cost ?? {}).map(([key, amount]) => ({
+    key,
+    label: key === "coins" ? "Coins" : ITEMS[key]?.label || key,
+    amount,
+    have: key === "coins" ? (state.coins ?? 0) : (inv[key] ?? 0),
+    showHave: true,
+    check: true,
+    ok: key === "coins" ? (state.coins ?? 0) >= amount : (inv[key] ?? 0) >= amount,
+  }));
+}
+
+function DecorationBrowserItem({ decor, state, selected, onSelect }) {
   const affordable = canAffordDecor(decor, state);
   const count = locBuilt(state).decorations?.[decor.id] ?? 0;
-  const decorIconKey = `decor_${decor.id}`;
   return (
-    <div className="hl-card !flex-row !border-2 items-center gap-2 relative" style={{ minHeight: 72 }}>
-      {count > 0 && (
-        <div className="absolute top-1 right-1 text-[10px] text-on-panel-faint font-bold">×{count}</div>
-      )}
-      {hasIcon(decorIconKey) && (
-        <div
-          className="flex-shrink-0 grid place-items-center rounded-lg overflow-hidden"
-          style={{ width: 48, height: 48, background: "rgba(122,58,168,0.12)", border: "1px solid rgba(122,58,168,0.35)" }}
-        >
-          <IconCanvas iconKey={decorIconKey} size={48} />
-        </div>
-      )}
-      <div className="flex flex-col gap-0.5 flex-1 min-w-0">
-        <span className="hl-card-title text-[11px] leading-tight">{decor.name}</span>
-        <div className="flex flex-wrap gap-1 mt-0.5">
-          {Object.entries(decor.cost).map(([k, v]) => (
-            <CostChip key={k}>
-              {v} {k === "coins" ? "◉" : k}
-            </CostChip>
-          ))}
-        </div>
-      </div>
-      <div className="flex flex-col items-end gap-1 flex-shrink-0">
-        <span className="text-[10px] font-bold text-[#7a3a8a]">+{decor.influence} influence</span>
-        <button
+    <BrowserItemButton
+      selected={selected}
+      muted={!affordable}
+      icon={<DecorIcon decor={decor} size={38} />}
+      title={decor.name}
+      subtitle={affordable ? `+${decor.influence} influence` : "Missing cost"}
+      count={count > 0 ? `x${count}` : null}
+      onClick={onSelect}
+      aria-label={`View decor ${decor.name}`}
+    />
+  );
+}
+
+function DecorationDetail({ decor, state, dispatch }) {
+  if (!decor) return <DetailPane empty="Select decor to inspect it." />;
+  const affordable = canAffordDecor(decor, state);
+  const count = locBuilt(state).decorations?.[decor.id] ?? 0;
+
+  return (
+    <DetailPane
+      eyebrow="Decor"
+      title={decor.name}
+      status={affordable ? "Ready to build" : "Missing cost"}
+      description="Build this decoration at the current settlement to raise influence."
+      icon={<DecorIcon decor={decor} size={64} />}
+      actions={
+        <DetailActionButton
+          tone="moss"
           disabled={!affordable}
           onClick={() => dispatch({ type: "BUILD_DECORATION", payload: { id: decor.id } })}
-          className="hl-btn hl-btn--sm hl-btn--go"
         >
           Build
-        </button>
+        </DetailActionButton>
+      }
+    >
+      <div className="hl-well">
+        <div className="hl-section-label">Owned here</div>
+        <div className="hl-heading tabular-nums">{count}</div>
       </div>
-    </div>
+      <div className="hl-well">
+        <div className="hl-section-label">Influence</div>
+        <div className="hl-heading">+{decor.influence}</div>
+      </div>
+      <CostGrid entries={decorCostEntries(decor, state)} title="Cost" />
+    </DetailPane>
   );
 }
 
@@ -277,7 +312,10 @@ export default function CraftingScreen({ state, dispatch }) {
   });
   const meta = STATION_META[activeTab];
   const [selectedRecipeKey, setSelectedRecipeKey] = useState(null);
+  const [selectedDecorId, setSelectedDecorId] = useState(null);
   const selectedRecipeEntry = stationRecipes.find(([key]) => key === selectedRecipeKey) ?? stationRecipes[0] ?? null;
+  const decorations = Object.values(DECORATIONS);
+  const selectedDecor = decorations.find((decor) => decor.id === selectedDecorId) ?? decorations[0] ?? null;
 
   return (
     <FeaturePanel>
@@ -310,12 +348,23 @@ export default function CraftingScreen({ state, dispatch }) {
 
       {/* Content for active tab */}
       {activeTab === "decor" ? (
-        <FeaturePanel.Body className="!px-2">
-          <div className="grid grid-cols-2 portrait:grid-cols-1 gap-2">
-            {Object.values(DECORATIONS).map((decor) => (
-              <DecorationCard key={decor.id} decor={decor} state={state} dispatch={dispatch} />
-            ))}
-          </div>
+        <FeaturePanel.Body>
+          <BrowserDetailLayout
+            browser={
+              <BrowserGrid min={170}>
+                {decorations.map((decor) => (
+                  <DecorationBrowserItem
+                    key={decor.id}
+                    decor={decor}
+                    state={state}
+                    selected={selectedDecor?.id === decor.id}
+                    onSelect={() => setSelectedDecorId(decor.id)}
+                  />
+                ))}
+              </BrowserGrid>
+            }
+            detail={<DecorationDetail decor={selectedDecor} state={state} dispatch={dispatch} />}
+          />
         </FeaturePanel.Body>
       ) : !stationBuilt(built, activeTab) ? (
         <div className="flex-1 grid place-items-center px-4">
