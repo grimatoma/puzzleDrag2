@@ -166,6 +166,7 @@ function TileListItem({ row, selected, onSelect }) {
     <BrowserItemButton
       selected={selected}
       muted={row.locked}
+      active={row.active}
       icon={<TileIcon tileId={row.id} size={38} locked={row.locked} />}
       title={row.name}
       subtitle={row.active ? "Active" : row.locked ? "Locked" : "Unlocked"}

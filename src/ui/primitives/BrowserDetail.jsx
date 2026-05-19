@@ -32,6 +32,7 @@ export function BrowserGrid({ children, min = 128, className = "" }) {
 export function BrowserItemButton({
   selected = false,
   muted = false,
+  active = false,
   icon,
   title,
   subtitle,
@@ -51,6 +52,7 @@ export function BrowserItemButton({
         "hl-browser-item",
         selected && "is-selected",
         muted && "is-muted",
+        active && "is-active",
         className,
       )}
       {...rest}
