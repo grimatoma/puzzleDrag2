@@ -122,6 +122,10 @@ export class GameScene extends Phaser.Scene {
     const onVisibility = () => { if (document.hidden) this.endPath(); };
     document.addEventListener("visibilitychange", onVisibility);
     window.addEventListener("blur", onDocPointerUp);
+    // Cancel drag when the pointer physically leaves the canvas. gameout fires
+    // for clean departures but can be skipped when overlapping DOM elements
+    // intercept the pointer — pointerleave fires regardless.
+    canvas.addEventListener("pointerleave", onDocPointerUp);
 
     // Registry and scale listeners — track each so they can be torn down on
     // shutdown. Otherwise scene recreation (HMR, tests, biome reload) leaks
@@ -137,6 +141,7 @@ export class GameScene extends Phaser.Scene {
     this.events.once("shutdown", () => {
       canvas.removeEventListener("selectstart", preventSelect);
       canvas.removeEventListener("contextmenu", preventSelect);
+      canvas.removeEventListener("pointerleave", onDocPointerUp);
       document.removeEventListener("pointerup", onDocPointerUp);
       document.removeEventListener("mouseup", onDocPointerUp);
       document.removeEventListener("pointercancel", onDocPointerUp);

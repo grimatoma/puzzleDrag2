@@ -228,7 +228,7 @@ export default function BossFeature({ state, dispatch }) {
   if (!boss) return null;
 
   if (bossMinimized) {
-    return <MiniCard boss={boss} dispatch={dispatch} />;
+    return null;
   }
 
   // Only show the blocking full modal when modal === 'boss' (board is locked)
