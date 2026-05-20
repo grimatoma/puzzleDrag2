@@ -23,11 +23,18 @@ if [ ! -d node_modules ] || [ ! -x node_modules/.bin/vitest ]; then
   npm install --no-audit --no-fund
 fi
 
-# 2. Install Playwright Chromium (no-op if cache already exists).
-#    Honors PLAYWRIGHT_BROWSERS_PATH (sandbox images set this to /opt/pw-browsers).
-#    Browser walkthrough subagents need this; cold install is ~30s.
-PW_CACHE_DIR="${PLAYWRIGHT_BROWSERS_PATH:-$HOME/.cache/ms-playwright}"
-if [ -z "$(ls -A "$PW_CACHE_DIR" 2>/dev/null)" ]; then
+# 2. Install Playwright Chromium if the revision our @playwright/test pins
+#    isn't already cached. Honors PLAYWRIGHT_BROWSERS_PATH (sandbox images
+#    set this to /opt/pw-browsers, preinstalled with whatever revision was
+#    current at image build time — often older than our pin).
+#
+#    The previous gate ("is the cache dir empty?") wrongly short-circuited
+#    when the preinstalled revision didn't match our Playwright version,
+#    leaving `chromium.executablePath()` pointing at a missing binary and
+#    producing the "No browsers available" error. Resolve the expected path
+#    via Playwright itself and only install when it's actually missing.
+PW_EXPECTED_CHROMIUM="$(node -e "try { process.stdout.write(require('playwright').chromium.executablePath()); } catch (_) {}" 2>/dev/null || true)"
+if [ -z "$PW_EXPECTED_CHROMIUM" ] || [ ! -x "$PW_EXPECTED_CHROMIUM" ]; then
   npx playwright install chromium
 fi
 
