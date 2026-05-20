@@ -99,30 +99,6 @@ export function ToolsGrid({ tools, toolPending, fertilizerActive, onUse, onInspe
   );
 }
 
-export function PortraitToolsBar({ state, dispatch, onInspectChange }) {
-  const [inspectKey, setInspectKey] = useState(null);
-  const list = buildToolList(state.tools, {
-    toolPending: state.toolPending,
-    fertilizerActive: state.fertilizerActive,
-  });
-  const inspectTool = inspectKey ? TOOL_BY_KEY[inspectKey] : null;
-  useEffect(() => {
-    onInspectChange?.(inspectTool);
-  }, [inspectTool, onInspectChange]);
-  return (
-    <div className="bg-bg-frame border-t border-iron px-2 py-2 flex-shrink-0">
-      <ToolStrip
-        layout="rail"
-        tools={list}
-        armedKey={state.toolPending}
-        onUse={(key) => dispatchUseTool(dispatch, key, state)}
-        onInspect={(key) => setInspectKey(key)}
-      />
-      <ToolInspectSheet tool={inspectTool} onClose={() => setInspectKey(null)} />
-    </div>
-  );
-}
-
 export function MobileDock({ state, dispatch, onInspectChange }) {
   const [sheet, setSheet] = useState(null);
   const [inspectKey, setInspectKey] = useState(null);

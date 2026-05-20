@@ -5,7 +5,7 @@ import LegacyIcon from "./Icon.jsx";
 import Icon from "./primitives/Icon.jsx";
 import Pill from "./primitives/Pill.jsx";
 import Popover from "./primitives/Popover.jsx";
-import ProgressTrack from "./primitives/ProgressTrack.jsx";
+import { SeasonWheel } from "./puzzleBoard.jsx";
 
 export const SEASON_EFFECTS = ["", "", "", ""];
 
@@ -67,26 +67,6 @@ function TideChip({ fish }) {
         </Pill>
       }
     />
-  );
-}
-
-function SeasonRing({ season, turnsUsed, turnsLeft, turnBudget }) {
-  const pipCount = Math.max(1, turnBudget | 0);
-  const used = Math.max(0, Math.min(pipCount, turnsUsed ?? 0));
-  const tone = season?.fill === 0xffe2a3 ? "gold" : "ember";
-  return (
-    <div className="inline-flex items-center gap-2 bg-paper border border-iron rounded-pill pl-3 pr-2 py-0.5 max-w-[420px]">
-      <span className="text-caption font-semibold text-ink-mid whitespace-nowrap">{season.name}</span>
-      <div className="flex-1 min-w-0 flex justify-center">
-        <ProgressTrack value={used} max={pipCount} style="pips" tone={tone} size="sm" currentMarker={used < pipCount ? used : undefined} />
-      </div>
-      <span
-        className="text-caption font-semibold text-ink-mid whitespace-nowrap pl-2 border-l border-iron tabular-nums"
-        data-testid="turns-left"
-      >
-        {turnsLeft} turn{turnsLeft === 1 ? "" : "s"} left
-      </span>
-    </div>
   );
 }
 
@@ -165,7 +145,13 @@ export function Hud({ state, dispatch }) {
 
       <div className="flex items-center gap-2 flex-1 justify-center min-w-0 flex-wrap">
         {onBoard && (
-          <SeasonRing season={season} turnsUsed={turnsUsed} turnsLeft={turnsRemaining} turnBudget={turnBudget || 1} />
+          <SeasonWheel
+            turnsUsed={turnsUsed ?? 0}
+            turnBudget={turnBudget || 1}
+            turnsRemaining={turnsRemaining}
+            seasonIdx={seasonIdx}
+            seasonName={season.name}
+          />
         )}
         {showTide && <TideChip fish={state.fish} />}
       </div>
