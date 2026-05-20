@@ -566,15 +566,16 @@ const ToolTile = forwardRef(function ToolTile(
         height: dims.h,
         borderRadius: 11,
         padding: "4px 0 5px",
-        background: armed ? "#fdf3e3" : inspected ? "rgba(240,193,75,0.18)" : "rgba(255,255,255,0.04)",
+        background: armed ? "#fdf3e3" : inspected ? "rgba(240,193,75,0.22)" : "rgba(255,210,140,0.10)",
         border: armed
           ? "2px solid #f0c14b"
           : inspected
-          ? "2px solid rgba(240,193,75,0.55)"
-          : "1.5px solid rgba(255,255,255,0.08)",
-        color: armed ? "#3a2412" : "#caa97a",
+          ? "2px solid rgba(240,193,75,0.60)"
+          : "1.5px solid rgba(200,160,90,0.22)",
+        color: armed ? "#3a2412" : "#e8d4a8",
         boxShadow: "0 2px 0 rgba(0,0,0,0.2)",
-        opacity: dragging ? 0.35 : (tool.count === 0 && !armed ? 0.55 : 1),
+        opacity: dragging ? 0.35 : (tool.count === 0 && !armed ? 0.38 : 1),
+        filter: tool.count === 0 && !armed ? "grayscale(0.75)" : "none",
         touchAction: "none",
       }}
       title={tool.name}
@@ -650,8 +651,8 @@ export function PuzzleToolGrid({ state, onInspectChange, inspectedKey }) {
     <div
       className="h-full overflow-y-auto rounded-[11px]"
       style={{
-        background: "linear-gradient(#1a0d05,#241710)",
-        border: "1px solid #0a0506",
+        background: "linear-gradient(#2e1c0c,#3d2712)",
+        border: "1px solid #180c04",
       }}
       data-testid="puzzle-tool-grid"
     >
@@ -905,8 +906,8 @@ export function PuzzleHotbar({
     <div
       className="flex items-stretch gap-2 pl-2 pr-1"
       style={{
-        background: "linear-gradient(#1a0d05,#241710)",
-        borderBottom: "1px solid #0a0506",
+        background: "linear-gradient(#2e1c0c,#3d2712)",
+        borderBottom: "1px solid #180c04",
         paddingTop: 6,
         paddingBottom: 6,
       }}
@@ -1037,7 +1038,7 @@ export function PuzzleToolModal({
       <div
         className="w-full max-w-[520px] flex flex-col pointer-events-auto mx-2"
         style={{
-          background: "linear-gradient(180deg,#241710 0%,#1a0d05 100%)",
+          background: "linear-gradient(180deg,#4a2e14 0%,#362210 100%)",
           borderBottomLeftRadius: 16,
           borderBottomRightRadius: 16,
           border: "1.5px solid #8a6428",

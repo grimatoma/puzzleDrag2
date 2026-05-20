@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
-import { drawIcon, iconColor, iconLabel } from "../../textures/iconRegistry.js";
+import { iconColor, iconLabel } from "../../textures/iconRegistry.js";
+import { paintIcon } from "../../textures/paintIcon.js";
 
 const SVG_REGISTRY = {};
 const WARNED = new Set();
@@ -63,18 +64,7 @@ function CanvasIcon({ iconKey, size, tone, title }) {
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.scale(dpr, dpr);
     ctx.clearRect(0, 0, size, size);
-    ctx.translate(size / 2, size / 2);
-    const scale = size / 32;
-    ctx.scale(scale, scale);
-    ctx.lineCap = "round";
-    ctx.lineJoin = "round";
-    try {
-      drawIcon(ctx, iconKey);
-    } catch (e) {
-      if (typeof import.meta !== "undefined" && import.meta.env && import.meta.env.DEV) {
-        console.error("Icon draw failed: " + iconKey, e);
-      }
-    }
+    paintIcon(ctx, iconKey, size);
   }, [iconKey, size]);
 
   const filter = TONE_FILTER[tone];

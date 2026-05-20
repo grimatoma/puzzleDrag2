@@ -9,7 +9,7 @@ function CountBadge({ count }) {
   return (
     <span
       aria-hidden="true"
-      className="absolute -top-1 -right-1 inline-flex items-center justify-center min-w-[16px] h-[16px] px-1 rounded-pill bg-bg-darker text-cream text-[11px] leading-none font-semibold tabular-nums border border-cream-soft pointer-events-none"
+      className="absolute -top-1 -right-1 inline-flex items-center justify-center min-w-[16px] h-[16px] px-1 rounded-pill bg-ink text-cream text-[11px] leading-none font-semibold tabular-nums border border-iron pointer-events-none"
     >
       {count}
     </span>
@@ -77,12 +77,13 @@ function ToolCard({ tool, armed, dimmed, onUse, onInspect }) {
   };
 
   const stateCls = armed
-    ? "ring-2 ring-gold-bright bg-bg-frame border-cream-soft"
+    ? "ring-2 ring-gold-bright bg-bg-frame border-cream-soft text-cream"
     : isDisabled
-    ? "opacity-40 border-iron/60 bg-bg-frame hover:opacity-60"
-    : "border-cream-soft/60 bg-bg-frame hover:bg-bg-warm";
+    ? "border-iron/30 bg-parchment-dim/40 text-ink-light hover:opacity-70"
+    : "border-iron/60 bg-parchment-soft hover:bg-parchment text-ink";
 
   const dimCls = dimmed && !armed ? "opacity-60" : "";
+  const exhaustedCls = isExhausted ? "opacity-50 grayscale" : "";
 
   return (
     <button
@@ -101,7 +102,7 @@ function ToolCard({ tool, armed, dimmed, onUse, onInspect }) {
       onTouchCancel={cancelPress}
       onTouchMove={cancelPress}
       onContextMenu={onContextMenu}
-      className={`relative w-full min-h-tap rounded-md border-2 px-1 py-1.5 flex flex-col items-center justify-center gap-0.5 transition-colors text-cream ${stateCls} ${dimCls}`}
+      className={`relative w-full min-h-tap rounded-md border-2 px-1 py-1.5 flex flex-col items-center justify-center gap-0.5 transition-colors ${stateCls} ${dimCls} ${exhaustedCls}`}
     >
       <Icon iconKey={tool.iconKey} size={28} />
       <span className="text-micro font-semibold leading-none text-center truncate w-full">
@@ -111,7 +112,7 @@ function ToolCard({ tool, armed, dimmed, onUse, onInspect }) {
       {tipOpen && !onInspect && tool.def?.desc && (
         <span
           role="tooltip"
-          className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 z-50 w-40 bg-bg-darkest text-cream text-caption rounded-md px-2 py-1.5 shadow-lg pointer-events-none border border-cream-soft/40"
+          className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 z-50 w-40 bg-ink text-cream text-caption rounded-md px-2 py-1.5 shadow-lg pointer-events-none border border-iron/60"
         >
           <span className="block font-semibold mb-0.5">{tool.label}</span>
           <span className="block text-cream/80 leading-snug">{tool.def.desc}</span>
@@ -169,7 +170,7 @@ export default function ToolStrip({
       <div className="flex flex-col gap-2.5">
         {Array.from(byCat.entries()).map(([cat, list]) => (
           <div key={cat}>
-            <div className="text-[10px] font-bold uppercase tracking-wider text-cream/70 mb-1 px-0.5">
+            <div className="text-[10px] font-bold uppercase tracking-wider text-ink-mid mb-1 px-0.5">
               {cat}
             </div>
             <div className={layout === "sheet" ? "grid grid-cols-3 gap-2" : "grid grid-cols-2 gap-1.5"}>
