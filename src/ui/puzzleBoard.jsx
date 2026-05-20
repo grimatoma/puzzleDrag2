@@ -644,7 +644,14 @@ export function PuzzleToolGrid({ state, onInspectChange, inspectedKey }) {
 // ─── Pinned-tools persistence ────────────────────────────────────────────
 
 const PIN_STORAGE_KEY = "hearthwood:hotbar-pins";
-const DEFAULT_PINS = TOOL_CATALOG.filter((t) => t.category === "field").map((t) => t.key);
+// Cap matches what fits comfortably on a phone-portrait hotbar (≈ 5 starter
+// tools + chevron, with one slot in reserve). Once full, the PIN button
+// disables and the player has to unpin one before pinning a new tool.
+export const MAX_PINS = 6;
+const DEFAULT_PINS = TOOL_CATALOG
+  .filter((t) => t.category === "field")
+  .slice(0, MAX_PINS)
+  .map((t) => t.key);
 
 function readStoredPins() {
   try {
@@ -652,7 +659,7 @@ function readStoredPins() {
     if (!raw) return DEFAULT_PINS.slice();
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) return DEFAULT_PINS.slice();
-    return parsed.filter((k) => typeof k === "string" && TOOL_BY_KEY[k]);
+    return parsed.filter((k) => typeof k === "string" && TOOL_BY_KEY[k]).slice(0, MAX_PINS);
   } catch {
     return DEFAULT_PINS.slice();
   }
@@ -667,7 +674,13 @@ export function usePinnedTools() {
   }, [pins]);
   const toggle = useCallback((key) => {
     if (!TOOL_BY_KEY[key]) return;
-    setPins((prev) => (prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]));
+    setPins((prev) => {
+      if (prev.includes(key)) return prev.filter((k) => k !== key);
+      // Silently ignore over-cap pins — the caller is expected to disable
+      // its PIN affordance when `pins.length >= MAX_PINS`.
+      if (prev.length >= MAX_PINS) return prev;
+      return [...prev, key];
+    });
   }, []);
   return [pins, toggle];
 }
@@ -687,16 +700,18 @@ export function PuzzleHotbar({ state, onInspectChange, inspectedKey, pins, onOpe
   );
   return (
     <div
-      className="flex items-center gap-2 pl-2 pr-1 py-2"
+      className="flex items-center gap-2 pl-2 pr-1"
       style={{
         background: "linear-gradient(#1a0d05,#241710)",
         borderBottom: "1px solid #0a0506",
+        paddingTop: 12, // room for the count badges that sit at `top:-8`
+        paddingBottom: 8,
       }}
       data-testid="puzzle-hotbar"
     >
       <div
-        className="flex-1 min-w-0 flex items-center gap-1.5 overflow-hidden"
-        style={{ paddingTop: 4 }}
+        className="flex-1 min-w-0 flex items-center overflow-x-auto"
+        style={{ gap: 12, paddingRight: 10 }}
       >
         {visiblePins.length === 0 ? (
           <div className="text-[#8a6a47] text-[10px] font-bold uppercase tracking-wider px-2">
@@ -719,7 +734,7 @@ export function PuzzleHotbar({ state, onInspectChange, inspectedKey, pins, onOpe
           background: "rgba(240,193,75,0.10)",
           border: "1.5px dashed rgba(240,193,75,0.55)",
           color: "#f0c14b",
-          marginTop: 4,
+          flexShrink: 0,
         }}
         title="Open tools"
         aria-label="Open tools"
@@ -769,21 +784,29 @@ export function PuzzleToolModal({ open, onClose, state, dispatch, pins, togglePi
     <div
       role="dialog"
       aria-modal="true"
-      className="fixed inset-0 z-[60] flex items-end justify-center"
+      className="fixed inset-0 z-[60] flex items-start justify-center"
       style={{ background: "rgba(10,5,3,0.55)" }}
       data-testid="puzzle-tool-modal"
       onClick={(e) => { if (e.target === e.currentTarget) onClose?.(); }}
     >
+      <style>{`
+        @keyframes hwv-tool-modal-drop {
+          from { transform: translateY(-100%); opacity: 0; }
+          to   { transform: translateY(0); opacity: 1; }
+        }
+      `}</style>
       <div
         className="w-full max-w-[520px] flex flex-col"
         style={{
           background: "linear-gradient(180deg,#241710 0%,#1a0d05 100%)",
-          borderTopLeftRadius: 16,
-          borderTopRightRadius: 16,
+          borderBottomLeftRadius: 16,
+          borderBottomRightRadius: 16,
           border: "1.5px solid #8a6428",
-          borderBottom: "none",
+          borderTop: "none",
           maxHeight: "78dvh",
-          boxShadow: "0 -10px 30px rgba(0,0,0,0.5)",
+          boxShadow: "0 10px 30px rgba(0,0,0,0.5)",
+          animation: "hwv-tool-modal-drop 220ms cubic-bezier(0.16, 1, 0.3, 1)",
+          transformOrigin: "top center",
         }}
       >
         {/* Detail */}
@@ -791,8 +814,6 @@ export function PuzzleToolModal({ open, onClose, state, dispatch, pins, togglePi
           className="flex items-center gap-3 p-3 relative"
           style={{
             background: "linear-gradient(180deg, rgba(253,243,227,0.97) 0%, rgba(246,227,191,0.97) 100%)",
-            borderTopLeftRadius: 14,
-            borderTopRightRadius: 14,
             borderBottom: "1px solid #8a6428",
           }}
         >
@@ -831,7 +852,8 @@ export function PuzzleToolModal({ open, onClose, state, dispatch, pins, togglePi
                 <button
                   type="button"
                   onClick={() => togglePin(selectedTool.key)}
-                  className="font-extrabold whitespace-nowrap"
+                  disabled={!pinned && pins.length >= MAX_PINS}
+                  className="font-extrabold whitespace-nowrap disabled:cursor-not-allowed"
                   style={{
                     fontSize: 10,
                     padding: "5px 9px",
@@ -840,10 +862,17 @@ export function PuzzleToolModal({ open, onClose, state, dispatch, pins, togglePi
                     color: pinned ? "#f0c14b" : "#5b3a1e",
                     border: pinned ? "1.5px solid #f0c14b" : "1.5px solid rgba(58,36,18,0.4)",
                     letterSpacing: 0.5,
+                    opacity: !pinned && pins.length >= MAX_PINS ? 0.55 : 1,
                   }}
-                  title={pinned ? "Unpin from hotbar" : "Pin to hotbar"}
+                  title={
+                    pinned
+                      ? "Unpin from hotbar"
+                      : pins.length >= MAX_PINS
+                      ? "Hotbar full — unpin one first"
+                      : "Pin to hotbar"
+                  }
                 >
-                  📌 {pinned ? "PINNED" : "PIN"}
+                  📌 {pinned ? "PINNED" : pins.length >= MAX_PINS ? "FULL" : "PIN"}
                 </button>
                 <button
                   type="button"
@@ -892,18 +921,24 @@ export function PuzzleToolModal({ open, onClose, state, dispatch, pins, togglePi
             ))}
           </div>
         </div>
-        {/* Pinned-hotbar preview at the bottom */}
+        {/* Pinned-hotbar preview at the bottom.
+            pt-5 + extra padding-right on the scroller leave room for the
+            count badges, which sit at `top:-8 right:-6` on each ToolTile
+            and were getting clipped at the previous compact spacing. */}
         <div
-          className="px-3 py-2 flex items-center gap-2"
+          className="px-3 pt-5 pb-3 flex items-center gap-3"
           style={{
             background: "rgba(26,13,5,0.8)",
             borderTop: "1px solid #0a0506",
           }}
         >
           <div className="text-[#caa97a] text-[9px] font-extrabold uppercase tracking-widest whitespace-nowrap">
-            Pinned
+            Pinned <span className="text-[#8a6a47]">{visiblePins.length}/{MAX_PINS}</span>
           </div>
-          <div className="flex-1 min-w-0 flex items-center gap-1.5 overflow-x-auto">
+          <div
+            className="flex-1 min-w-0 flex items-center overflow-x-auto"
+            style={{ gap: 12, paddingRight: 10 }}
+          >
             {visiblePins.length === 0 ? (
               <div className="text-[#8a6a47] text-[10px] italic">Pin tools above to add them</div>
             ) : (
@@ -974,23 +1009,19 @@ export function BoardLayout({ hotbar, statusPanel, toolsGrid, board }) {
 // ─── Board frame ─────────────────────────────────────────────────────────
 
 export function BoardFrame({ children, seasonIdx }) {
+  // Single rounded card — the dark brown chrome frames the tiles directly,
+  // no field-tint padding wrapper around it. The cell containing the frame
+  // gets a thin drop shadow for depth.
   return (
     <div
-      className="w-full h-full p-2.5 box-border"
-      style={{ background: fieldGradientFor(seasonIdx) }}
+      className="w-full h-full relative overflow-hidden"
+      style={{
+        background: fieldGradientFor(seasonIdx),
+        borderRadius: 14,
+        boxShadow: "0 4px 0 rgba(0,0,0,0.25)",
+      }}
     >
-      <div
-        className="w-full h-full relative"
-        style={{
-          background: "linear-gradient(#3e2818,#2c1a0d)",
-          borderRadius: 14,
-          padding: 8,
-          boxShadow:
-            "inset 0 0 0 2px #1a0d05, 0 4px 0 rgba(0,0,0,0.25)",
-        }}
-      >
-        <div className="w-full h-full relative overflow-hidden rounded-md">{children}</div>
-      </div>
+      {children}
     </div>
   );
 }
