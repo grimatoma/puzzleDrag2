@@ -310,7 +310,19 @@ export function TownView({ state, dispatch }) {
       <TownGround plan={townPlan} theme={theme} biomeVariant={biomeVariant} builtLots={builtLotIndices} />
 
       {/* Header */}
-      <div className="absolute top-3 left-4 landscape:max-[1024px]:top-2 landscape:max-[1024px]:left-3 font-bold text-[20px] landscape:max-[1024px]:text-[15px]" style={{ color: theme.textColor }}>{locationName}</div>
+      <div className="absolute top-3 left-4 landscape:max-[1024px]:top-2 landscape:max-[1024px]:left-3 flex items-center gap-2 z-10">
+        <button
+          type="button"
+          onClick={() => dispatch({ type: "SETTINGS/OPEN_DEBUG" })}
+          className="px-2 py-1 rounded-lg border-2 text-[11px] font-bold leading-tight"
+          style={{ background: "#5a5e66", borderColor: "#2a2e36", color: "#fff" }}
+          title="Open debug menu"
+          aria-label="Open debug menu"
+        >
+          🛠 Debug
+        </button>
+        <span className="font-bold text-[20px] landscape:max-[1024px]:text-[15px]" style={{ color: theme.textColor }}>{locationName}</span>
+      </div>
       <div className="absolute top-3 right-4 landscape:max-[1024px]:top-2 landscape:max-[1024px]:right-3 flex items-center gap-2 z-10">
         {/* Boons shortcut — only visible once the player has faced any keeper. */}
         {Object.keys(state.story?.flags ?? {}).some((k) => k.startsWith("keeper_") && (k.endsWith("_coexist") || k.endsWith("_driveout")) && state.story.flags[k]) && (
