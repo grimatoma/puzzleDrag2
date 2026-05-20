@@ -323,7 +323,6 @@ export function TownView({ state, dispatch }) {
             ✨ Boons
           </button>
         )}
-        <div className="bg-white/85 px-3 py-1.5 landscape:max-[1024px]:px-2 landscape:max-[1024px]:py-1 rounded-full font-bold text-[#3a2715] landscape:max-[1024px]:text-[13px]">◉ {state.coins.toLocaleString()}</div>
       </div>
 
       {/* "Found this settlement" CTA — only renders for visited-but-unfounded settleable zones. */}
