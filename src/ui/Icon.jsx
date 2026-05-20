@@ -52,13 +52,11 @@ export default function Icon({ iconKey, size = 24, className = "", style = {}, t
       ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.scale(dpr, dpr);
       
-      // The icons in iconRegistry are designed to be drawn at origin (0,0),
-      // typically built for a ~32x32 bounding box. 
-      // We translate to the center of our target size canvas.
+      // The icons in iconRegistry are drawn at origin (0,0) assuming a ~64x64
+      // bounding box (see IconCanvas.jsx and MapScene.js). Translate to the
+      // center of our target canvas and scale the 64px design path into `size`.
       ctx.translate(size / 2, size / 2);
-      
-      // We scale the context so the nominal 32px path fits perfectly into `size`.
-      const scaleFactor = size / 32;
+      const scaleFactor = size / 64;
       ctx.scale(scaleFactor, scaleFactor);
       
       ctx.lineCap = "round";
