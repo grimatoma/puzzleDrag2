@@ -1,14 +1,11 @@
 import { WorkersPanel } from "../workers/index.jsx";
-import { CompactOrders } from "../../ui/Inventory.jsx";
-import BossGallery from "../bosses/Gallery.jsx";
 import { QuestsPanel } from "../quests/index.jsx";
-import CastlePanel from "../castle/index.jsx";
 import Icon from "../../ui/Icon.jsx";
 import FeaturePanel from "../../ui/primitives/FeaturePanel.jsx";
 
 export const viewKey = "townsfolk";
 
-const TABS = ["workers", "quests", "castle", "bosses", "orders"];
+const TABS = ["workers", "quests"];
 
 export default function TownsfolkScreen({ state, dispatch }) {
   // Tab lives in viewParams so the URL (src/router.js) is the single source
@@ -22,9 +19,6 @@ export default function TownsfolkScreen({ state, dispatch }) {
         {[
           { key: "workers", label: "Workers", icon: "ui_build" },
           { key: "quests", label: "Quests", icon: "ui_clipboard" },
-          { key: "castle", label: "Castle", icon: "ui_home" },
-          { key: "bosses", label: "Foes", icon: "ui_warning" },
-          { key: "orders", label: "Orders", icon: "ui_shop" },
         ].map((item) => (
           <FeaturePanel.Tab
             key={item.key}
@@ -41,16 +35,10 @@ export default function TownsfolkScreen({ state, dispatch }) {
       </FeaturePanel.Tabs>
       <FeaturePanel.Body>
         <div className="w-full h-full min-h-0 mx-auto">
-          {tab === "workers" ? (
-            <WorkersPanel state={state} dispatch={dispatch} />
-          ) : tab === "quests" ? (
+          {tab === "quests" ? (
             <QuestsPanel state={state} dispatch={dispatch} />
-          ) : tab === "castle" ? (
-            <CastlePanel state={state} dispatch={dispatch} />
-          ) : tab === "bosses" ? (
-            <BossGallery state={state} />
           ) : (
-            <CompactOrders orders={state.orders || []} inventory={state.inventory || {}} dispatch={dispatch} />
+            <WorkersPanel state={state} dispatch={dispatch} />
           )}
         </div>
       </FeaturePanel.Body>

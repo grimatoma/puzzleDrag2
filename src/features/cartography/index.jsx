@@ -531,18 +531,30 @@ function HearthTokensStrip({ state }) {
 
 // ─── Header bar ────────────────────────────────────────────────────────────
 
-function HeaderBar({ currentNode, visitedCount, totalCount, state }) {
+function HeaderBar({ currentNode, visitedCount, totalCount, state, dispatch }) {
   return (
     <div className="flex items-center justify-between px-3 py-2 flex-shrink-0 border-b border-[#b28b62]/40 gap-2">
-      <div className="flex flex-col min-w-0">
-        <span className="font-bold text-[14px] text-[#3a2715] truncate">
-          🗺 The Hearthwood
-        </span>
-        {currentNode && (
-          <span className="text-[10px] italic text-[#5b3b20]/85 truncate">
-            your smoke rises from {currentNode.name}
+      <div className="flex items-center gap-2 min-w-0">
+        <div className="flex flex-col min-w-0">
+          <span className="font-bold text-[14px] text-[#3a2715] truncate">
+            🗺 The Hearthwood
           </span>
-        )}
+          {currentNode && (
+            <span className="text-[10px] italic text-[#5b3b20]/85 truncate">
+              your smoke rises from {currentNode.name}
+            </span>
+          )}
+        </div>
+        <button
+          type="button"
+          onClick={() => dispatch({ type: "SETTINGS/OPEN_DEBUG" })}
+          className="flex-shrink-0 px-2 py-1 rounded-lg border-2 text-[11px] font-bold leading-tight"
+          style={{ background: "#5a5e66", borderColor: "#2a2e36", color: "#fff" }}
+          title="Open debug menu"
+          aria-label="Open debug menu"
+        >
+          🛠 Debug
+        </button>
       </div>
       <div className="flex items-center gap-2 flex-shrink-0">
         <HearthTokensStrip state={state} />
@@ -653,6 +665,7 @@ export default function CartographyScreen({ state, dispatch }) {
         visitedCount={visited.length}
         totalCount={MAP_NODES.length}
         state={state}
+        dispatch={dispatch}
       />
 
       <div

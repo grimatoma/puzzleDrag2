@@ -3,6 +3,8 @@ import { locBuilt } from "../../locBuilt.js";
 import FeaturePanel from "../../ui/primitives/FeaturePanel.jsx";
 import { CostChip } from "../../ui/primitives/Chip.jsx";
 
+export const viewKey = "decorations";
+
 function canAfford(decor, state) {
   const { cost } = decor;
   if ((state.coins ?? 0) < (cost.coins ?? 0)) return false;

@@ -27,11 +27,28 @@ function DebugBtn({ children, onClick, color = 'slate' }) {
   );
 }
 
+const MENU_LINKS = [
+  { view: "portal",         label: "🌀 Portal",       color: "purple" },
+  { view: "chronicle",      label: "📜 Chronicle",    color: "slate" },
+  { view: "bosses",         label: "🐉 Foes",         color: "red" },
+  { view: "orders",         label: "📋 Orders",       color: "mine_gold" },
+  { view: "castle",         label: "🏰 Castle",       color: "rose" },
+  { view: "tileCollection", label: "🧩 Tiles",        color: "blue" },
+  { view: "decorations",    label: "🌿 Decorations",  color: "green" },
+  { view: "charter",        label: "📜 Charter",      color: "slate" },
+  { view: "boons",          label: "✨ Boons",        color: "teal" },
+  { view: "achievements",   label: "🏆 Trophies",     color: "mine_gold" },
+];
+
 export default function DebugModal({ state, dispatch }) {
   const [itemBiome, setItemBiome] = useState('farm');
   const [itemKey, setItemKey] = useState('grass_hay');
   const open = state.modal === 'debug';
   const close = () => dispatch({ type: 'CLOSE_MODAL' });
+  const gotoView = (view) => {
+    dispatch({ type: 'CLOSE_MODAL' });
+    dispatch({ type: 'SET_VIEW', view });
+  };
 
   if (!open) return null;
 
@@ -62,6 +79,18 @@ export default function DebugModal({ state, dispatch }) {
             <div>🔮 {state?.runes ?? 0} runes</div>
             <div>💠 {state?.influence ?? 0} infl</div>
             <div>📚 Alm {state?.almanac?.level ?? 1}</div>
+          </div>
+
+          {/* Menu shortcuts — quick access to in-development panels */}
+          <div>
+            <div className="hl-section-label !text-[10px] mb-1.5">Menus</div>
+            <div className="grid grid-cols-2 gap-1.5">
+              {MENU_LINKS.map((m) => (
+                <DebugBtn key={m.view} color={m.color} onClick={() => gotoView(m.view)}>
+                  {m.label}
+                </DebugBtn>
+              ))}
+            </div>
           </div>
 
           {/* Currency */}

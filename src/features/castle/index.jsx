@@ -1,10 +1,8 @@
 import { CASTLE_NEEDS } from "./data.js";
 import Icon from "../../ui/Icon.jsx";
+import FeaturePanel from "../../ui/primitives/FeaturePanel.jsx";
 
-// Note: this panel is embedded inside features/inventory/index.jsx (direct
-// default-import) rather than mounted as its own top-level view. Don't add
-// a `viewKey` export — it would cause this panel to render twice whenever
-// state.view ever became "castle".
+export const viewKey = "castle";
 
 function ProgressBar({ value, max }) {
   const pct = max > 0 ? Math.min(100, Math.max(0, (value / max) * 100)) : 0;
@@ -18,7 +16,7 @@ function ProgressBar({ value, max }) {
   );
 }
 
-export default function CastlePanel({ state, dispatch }) {
+function CastleNeedsList({ state, dispatch }) {
   const contributed = state?.castle?.contributed ?? {};
   const inventory = state?.inventory ?? {};
 
@@ -74,5 +72,15 @@ export default function CastlePanel({ state, dispatch }) {
         );
       })}
     </div>
+  );
+}
+
+export default function CastleScreen({ state, dispatch }) {
+  return (
+    <FeaturePanel>
+      <FeaturePanel.Body>
+        <CastleNeedsList state={state} dispatch={dispatch} />
+      </FeaturePanel.Body>
+    </FeaturePanel>
   );
 }
