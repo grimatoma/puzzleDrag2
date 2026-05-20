@@ -535,16 +535,6 @@ function HeaderBar({ currentNode, visitedCount, totalCount, state, dispatch }) {
   return (
     <div className="flex items-center justify-between px-3 py-2 flex-shrink-0 border-b border-[#b28b62]/40 gap-2">
       <div className="flex items-center gap-2 min-w-0">
-        <div className="flex flex-col min-w-0">
-          <span className="font-bold text-[14px] text-[#3a2715] truncate">
-            🗺 The Hearthwood
-          </span>
-          {currentNode && (
-            <span className="text-[10px] italic text-[#5b3b20]/85 truncate">
-              your smoke rises from {currentNode.name}
-            </span>
-          )}
-        </div>
         <button
           type="button"
           onClick={() => dispatch({ type: "SETTINGS/OPEN_DEBUG" })}
@@ -555,6 +545,16 @@ function HeaderBar({ currentNode, visitedCount, totalCount, state, dispatch }) {
         >
           🛠 Debug
         </button>
+        <div className="flex flex-col min-w-0">
+          <span className="font-bold text-[14px] text-[#3a2715] truncate">
+            🗺 The Hearthwood
+          </span>
+          {currentNode && (
+            <span className="text-[10px] italic text-[#5b3b20]/85 truncate">
+              your smoke rises from {currentNode.name}
+            </span>
+          )}
+        </div>
       </div>
       <div className="flex items-center gap-2 flex-shrink-0">
         <HearthTokensStrip state={state} />
