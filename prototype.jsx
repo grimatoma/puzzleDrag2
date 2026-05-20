@@ -3,7 +3,6 @@ import { COLS, ROWS, TILE, SCENE_EVENTS } from "./src/constants.js";
 import { runSelfTests, currentCap } from "./src/utils.js";
 import { gameReducer, initialState } from "./src/state.js";
 import { Hud } from "./src/ui/Hud.jsx";
-import { MobileDock } from "./src/ui/Tools.jsx";
 import { TownView } from "./src/ui/Town.jsx";
 import { NpcBubble, StoryModal } from "./src/ui/Modals.jsx";
 import { SidePanel, BottomNav, FeatureModals, FeatureScreens } from "./src/ui.jsx";
@@ -320,15 +319,24 @@ export default function App() {
                 </div>
               </div>
             )}
-            {/* Horizontal tools strip — directly under the HUD, matches the
-                Hearthwood Vale mock. Players reach every owned tool with one swipe. */}
-            <PuzzleToolStrip state={state} dispatch={dispatch} onInspectChange={setInspectedTool} />
+            {/* Horizontal tools strip — directly under the HUD on narrow
+                phones (and desktop, where it complements the side panel).
+                Anything wider than ~500px and below desktop gets the vertical
+                rail on the left instead, so the strip is hidden there. */}
+            <div className="min-[500px]:max-[1024px]:hidden">
+              <PuzzleToolStrip
+                state={state}
+                onInspectChange={setInspectedTool}
+                inspectedKey={inspectedTool?.key ?? state.toolPending ?? null}
+              />
+            </div>
 
-            <div className="flex-1 min-h-0 grid grid-cols-[1fr_300px] gap-3 p-3 max-[1024px]:grid-cols-1 max-[1024px]:gap-0 max-[1024px]:p-0">
-              {/* Board column: action panel stacked above the Phaser frame,
-                  field-tint gradient applied as the area background. */}
-              <div className="relative min-h-0 min-w-0 flex flex-col gap-2 max-[1024px]:p-2 max-[1024px]:gap-2">
-                {infoPanelEl}
+            <div className="flex-1 min-h-0 grid grid-cols-[1fr_300px] gap-3 p-3 max-[1024px]:grid-cols-1 max-[1024px]:gap-0 max-[1024px]:p-0 min-[500px]:max-[1024px]:grid-cols-[240px_1fr] min-[500px]:max-[1024px]:gap-2 min-[500px]:max-[1024px]:p-2">
+              {/* Board column. On the wide-mobile layout the panel moves to
+                  the left column so the board column claims the full
+                  remaining width (grid `order` swaps DOM order vs visual order). */}
+              <div className="relative min-h-0 min-w-0 flex flex-col gap-2 max-[1024px]:p-2 max-[1024px]:gap-2 min-[500px]:max-[1024px]:p-0 min-[500px]:max-[1024px]:gap-2 min-[500px]:max-[1024px]:order-2">
+                <div className="min-[500px]:max-[1024px]:hidden">{infoPanelEl}</div>
                 <div className="flex-1 min-h-0 min-w-0">
                   <BoardFrame seasonIdx={seasonIdx}>
                     <PhaserMount
@@ -348,15 +356,22 @@ export default function App() {
                   </BoardFrame>
                 </div>
               </div>
+              {/* Wide-mobile left column: status panel + vertical tool rail. */}
+              <div className="hidden min-[500px]:max-[1024px]:flex min-[500px]:max-[1024px]:flex-col min-[500px]:max-[1024px]:gap-2 min-[500px]:max-[1024px]:order-1 min-[500px]:max-[1024px]:min-h-0">
+                {infoPanelEl}
+                <div className="flex-1 min-h-0 overflow-hidden rounded-[11px]" style={{ background: "linear-gradient(#1a0d05,#241710)", border: "1px solid #0a0506" }}>
+                  <PuzzleToolStrip
+                    state={state}
+                    onInspectChange={setInspectedTool}
+                    inspectedKey={inspectedTool?.key ?? state.toolPending ?? null}
+                    orientation="vertical"
+                  />
+                </div>
+              </div>
               {/* Side panel — desktop only. Houses orders/tools/inventory shortcuts. */}
               <div className="min-h-0 max-[1024px]:hidden">
                 <SidePanel state={state} dispatch={dispatch} chainInfo={chainInfo} infoPanel={null} onInspectChange={setInspectedTool} />
               </div>
-            </div>
-            {/* Mobile dock — only visible on mobile landscape (portrait gets the
-                full PuzzleToolStrip up top, so the dock is redundant there). */}
-            <div className="hidden landscape:max-[1024px]:block flex-shrink-0">
-              <MobileDock state={state} dispatch={dispatch} onInspectChange={setInspectedTool} />
             </div>
           </div>
 
