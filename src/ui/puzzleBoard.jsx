@@ -603,14 +603,14 @@ function dispatchUseTool(dispatch, key, state) {
 const DOUBLE_TAP_MS = 420;
 
 const ToolTile = forwardRef(function ToolTile(
-  { tool, inspected, onClick, onActivate, onPointerDown, size = "md", showName = true, dragging = false },
+  { tool, inspected, onClick, onActivate, onPointerDown, size = "md", dragging = false },
   ref,
 ) {
   const armed = !!tool.armed;
   const empty = tool.count === 0 && !armed;
   const dims = size === "sm"
-    ? { w: 48, h: 52, icon: 24, name: 9, badge: 9, badgeMin: 14 }
-    : { w: 58, h: 62, icon: 28, name: 9.5, badge: 10, badgeMin: 15 };
+    ? { w: 48, h: 52, icon: 32, badge: 9, badgeMin: 14 }
+    : { w: 58, h: 62, icon: 38, badge: 10, badgeMin: 15 };
   const lastTapAt = useRef(0);
   const handleClick = () => {
     const now = Date.now();
@@ -646,12 +646,11 @@ const ToolTile = forwardRef(function ToolTile(
       ref={ref}
       onClick={handleClick}
       onPointerDown={onPointerDown}
-      className="flex-shrink-0 flex flex-col items-center justify-end relative select-none"
+      className="flex-shrink-0 flex items-center justify-center relative select-none"
       style={{
         width: dims.w,
         height: dims.h,
         borderRadius: 11,
-        padding: "4px 0 5px",
         background,
         border: borderColor,
         color: ink,
@@ -683,11 +682,6 @@ const ToolTile = forwardRef(function ToolTile(
         {tool.count}
       </div>
       <LegacyIcon iconKey={tool.iconKey} size={dims.icon} />
-      {showName && (
-        <div className="font-extrabold mt-0.5 leading-none" style={{ fontSize: dims.name, letterSpacing: 0.2 }}>
-          {tool.name}
-        </div>
-      )}
     </button>
   );
 });
@@ -812,8 +806,11 @@ export function usePinnedTools() {
 
 // Measure how many tool tiles fit in a container — used so the hotbar's
 // effective pin cap shrinks on narrow viewports instead of overflowing.
-const HOTBAR_TILE_FULL = 48 + 12; // sm tile width + gap
-const HOTBAR_RESERVED = 8 + 4 + 44 + 10; // outer padding + chevron + chevron gap
+// Slots are distributed with space-between, so we only need a minimum
+// gap to keep tiles from kissing on narrow viewports.
+const HOTBAR_TILE_W = 48; // sm tile width
+const HOTBAR_MIN_GAP = 8;
+const HOTBAR_RESERVED = 8 + 8 + 48 + 4; // pl-2 + gap-2 + chevron width + pr-1
 export function useMaxFitPins(ref) {
   const [maxFit, setMaxFit] = useState(MAX_PINS);
   useLayoutEffect(() => {
@@ -822,7 +819,9 @@ export function useMaxFitPins(ref) {
     const recompute = () => {
       const width = el.getBoundingClientRect().width;
       const usable = Math.max(0, width - HOTBAR_RESERVED);
-      const fit = Math.max(1, Math.floor(usable / HOTBAR_TILE_FULL));
+      // N tiles need: N*TILE_W + (N-1)*MIN_GAP <= usable
+      // → N <= (usable + MIN_GAP) / (TILE_W + MIN_GAP)
+      const fit = Math.max(1, Math.floor((usable + HOTBAR_MIN_GAP) / (HOTBAR_TILE_W + HOTBAR_MIN_GAP)));
       setMaxFit(Math.min(MAX_PINS, fit));
     };
     recompute();
@@ -995,6 +994,9 @@ export function PuzzleHotbar({
   // player has lost or never owned — pin order is preserved). Capped to
   // whatever the measured width allows so the rail never scrolls sideways.
   const visiblePins = pins.map((k) => byKey[k]).filter(Boolean).slice(0, maxFitPins);
+  // Always render exactly `maxFitPins` slots — populated tiles followed by
+  // dashed placeholders — so the rail's footprint matches the container.
+  const totalSlots = Math.max(visiblePins.length, maxFitPins);
   const select = useCallback(
     (t) => onInspectChange?.({ ...TOOL_BY_KEY[t.key], count: t.count }),
     [onInspectChange],
@@ -1022,73 +1024,66 @@ export function PuzzleHotbar({
       }}
       data-testid="puzzle-hotbar"
     >
-      <div
-        className="flex-1 min-w-0 flex items-center"
-        style={{ gap: 12, paddingRight: 4 }}
-      >
-        {visiblePins.length === 0 ? (
-          <div
-            data-hotbar-slot="0"
-            className="text-[#fdf3e3] text-[10px] font-bold uppercase tracking-wider px-2 py-2 flex-1 rounded-md"
-            style={
-              showHotbarDropHints
-                ? { background: "rgba(240,193,75,0.22)", outline: "2px dashed #f0c14b", outlineOffset: -2 }
-                : undefined
-            }
-          >
-            Drag tools here to pin
-          </div>
-        ) : (
-          visiblePins.map((t, i) => (
+      <div className="flex-1 min-w-0 flex items-center justify-between">
+        {Array.from({ length: totalSlots }, (_, i) => {
+          const tool = visiblePins[i];
+          if (tool) {
+            return (
+              <div
+                key={tool.key}
+                data-hotbar-slot={i}
+                className="flex-shrink-0 relative"
+                style={
+                  showHotbarDropHints
+                    ? { boxShadow: "0 0 0 2px rgba(240,193,75,0.55), 0 0 12px rgba(240,193,75,0.45)", borderRadius: 12 }
+                    : undefined
+                }
+              >
+                <ToolTile
+                  tool={tool}
+                  inspected={inspectedKey === tool.key}
+                  onClick={select}
+                  onActivate={activate}
+                  onPointerDown={(ev) => onBeginDrag?.(tool.key, true, ev)}
+                  size="sm"
+                  dragging={dragKey === tool.key}
+                />
+              </div>
+            );
+          }
+          // Empty placeholder slot — dashed outline, accepts drops from the modal.
+          return (
             <div
-              key={t.key}
+              key={`empty-${i}`}
               data-hotbar-slot={i}
-              className="flex-shrink-0 relative"
-              style={
-                showHotbarDropHints
-                  ? { boxShadow: "0 0 0 2px rgba(240,193,75,0.55), 0 0 12px rgba(240,193,75,0.45)", borderRadius: 12 }
-                  : undefined
-              }
-            >
-              <ToolTile
-                tool={t}
-                inspected={inspectedKey === t.key}
-                onClick={select}
-                onActivate={activate}
-                onPointerDown={(ev) => onBeginDrag?.(t.key, true, ev)}
-                size="sm"
-                dragging={dragKey === t.key}
-              />
-            </div>
-          ))
-        )}
-        {/* Trailing drop zone so the player can append by dragging past the
-            last pinned tile, even when the rail is empty. */}
-        {visiblePins.length > 0 && (
-          <div
-            data-hotbar-slot={visiblePins.length}
-            className="flex-1 self-stretch min-w-[8px] rounded-md"
-            aria-hidden="true"
-            style={
-              showHotbarDropHints
-                ? { background: "rgba(240,193,75,0.18)", outline: "2px dashed rgba(240,193,75,0.65)", outlineOffset: -2 }
-                : undefined
-            }
-          />
-        )}
+              aria-hidden="true"
+              className="flex-shrink-0 rounded-[11px]"
+              style={{
+                width: 48,
+                height: 52,
+                border: "1.5px dashed rgba(240,193,75,0.55)",
+                background: showHotbarDropHints
+                  ? "rgba(240,193,75,0.18)"
+                  : "transparent",
+              }}
+            />
+          );
+        })}
       </div>
       <button
         type="button"
         onClick={onOpenModal}
-        className="flex-shrink-0 flex flex-col items-center justify-center"
+        className="flex-shrink-0 flex items-center justify-center"
         style={{
-          width: 44,
+          width: 48,
           height: 52,
           borderRadius: 10,
-          background: modalOpen ? "#f0c14b" : "rgba(240,193,75,0.18)",
-          border: "1.5px dashed rgba(240,193,75,0.65)",
+          background: modalOpen
+            ? "linear-gradient(180deg,#f4c66b,#d99a2a)"
+            : "linear-gradient(180deg,#8a6428,#5f4419)",
+          border: "1.5px solid #2a1a08",
           color: modalOpen ? "#3a2412" : "#fdf3e3",
-          flexShrink: 0,
+          boxShadow: "0 2px 0 rgba(0,0,0,0.30), inset 0 1px 0 rgba(255,255,255,0.20)",
           transition: "background 120ms ease, color 120ms ease",
         }}
         title={modalOpen ? "Close tools" : "Open tools"}
@@ -1096,7 +1091,15 @@ export function PuzzleHotbar({
         aria-expanded={!!modalOpen}
         data-testid="puzzle-hotbar-open"
       >
-        <div style={{ fontSize: 22, lineHeight: 1, transform: modalOpen ? "rotate(180deg)" : "none", transition: "transform 160ms ease" }}>▾</div>
+        <div
+          style={{
+            fontSize: 22,
+            lineHeight: 1,
+            transform: modalOpen ? "rotate(180deg)" : "none",
+            transition: "transform 160ms ease",
+            textShadow: "0 1px 0 rgba(0,0,0,0.35)",
+          }}
+        >▾</div>
       </button>
     </div>
   );
