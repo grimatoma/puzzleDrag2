@@ -104,7 +104,14 @@ function PhaserMount({ dispatch, biomeKey, turnsUsed, uiLocked, boardActive, sce
           // pixelArt would otherwise default to true whenever scale.zoom != 1,
           // which forces nearest-neighbor sampling and breaks our crisp tiles.
           render: { antialias: true, antialiasGL: true, roundPixels: false, pixelArt: false, powerPreference: "high-performance" },
-          input: { activePointers: 3 },
+          // windowEvents: false stops Phaser from processing mousedown / touchstart
+          // it sees on the *window* — without it, a tap on a React overlay above the
+          // canvas (the tool dropdown's click-blocker, modals, etc.) still gets
+          // routed into the scene's input pipeline and starts a chain on whichever
+          // tile sits under the touch. GameScene already adds document-level
+          // pointerup/touchend listeners to end the path, so we don't need Phaser's
+          // POINTER_UP_OUTSIDE fallback.
+          input: { activePointers: 3, windowEvents: false },
           callbacks: {
             preBoot: (game) => {
               game.registry.set("biomeKey", biomeKey);
