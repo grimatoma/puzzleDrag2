@@ -3,7 +3,7 @@ import { COLS, ROWS, TILE, SCENE_EVENTS } from "./src/constants.js";
 import { runSelfTests, currentCap } from "./src/utils.js";
 import { gameReducer, initialState } from "./src/state.js";
 import { Hud } from "./src/ui/Hud.jsx";
-import { MobileDock, PortraitToolsBar } from "./src/ui/Tools.jsx";
+import { MobileDock } from "./src/ui/Tools.jsx";
 import { TownView } from "./src/ui/Town.jsx";
 import { NpcBubble, StoryModal } from "./src/ui/Modals.jsx";
 import { SidePanel, BottomNav, FeatureModals, FeatureScreens } from "./src/ui.jsx";
@@ -12,54 +12,13 @@ import { useRouter } from "./src/router.js";
 import { setPhaserScene } from "./src/phaserBridge.js";
 import { FIRE_HAZARD_ENABLED } from "./src/featureFlags.js";
 import { useNotifier } from "./src/ui/primitives/Toast.jsx";
-import Icon from "./src/ui/primitives/Icon.jsx";
 import { useA11yBridge } from "./src/a11y.js";
-import { BIOMES } from "./src/constants.js";
-
-function BoardInfoPanel({ chainInfo, inspectedTool, armedTool, inventory, biomeKey }) {
-  const biomeResources = BIOMES[biomeKey]?.resources ?? [];
-  const hasSelection = !!(chainInfo && chainInfo.count > 0 && chainInfo.resourceKey);
-  return (
-    <div className="bg-[#efe6d8] border border-[#b78655] rounded-xl p-3 min-h-[92px]">
-      {hasSelection ? (
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <Icon iconKey={chainInfo.resourceKey} size={34} title={chainInfo.resourceLabel || chainInfo.resourceKey} />
-            <div className="bg-[#9cc33d] border border-[#7a8e3a] rounded-lg px-3 py-1.5 text-white font-bold text-[24px] leading-none tabular-nums min-w-[120px] text-center">
-              {chainInfo.nextTileProgress?.current ?? chainInfo.count}/{chainInfo.nextTileProgress?.threshold ?? 0}
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <Icon iconKey={chainInfo.resourceKey} size={34} />
-            <span className="bg-black/80 rounded-md px-2 py-0.5 text-white text-[20px] leading-none tabular-nums">
-              {inventory?.[chainInfo.resourceKey] ?? 0}
-            </span>
-          </div>
-        </div>
-      ) : inspectedTool ? (
-        <div>
-          <div className="font-bold text-[34px] leading-none text-[#5a3a21]">{inspectedTool.name}</div>
-          <div className="text-[15px] text-[#5a3a21] leading-tight mt-1">{inspectedTool.desc}</div>
-          <div className={`text-[16px] font-bold mt-2 ${armedTool?.key === inspectedTool.key ? "text-[#2e7d32]" : "text-[#8f8172]"}`}>
-            {armedTool?.key === inspectedTool.key ? "ARMED" : "Touch to use"}
-          </div>
-        </div>
-      ) : (
-        <div>
-          <div className="font-bold text-[16px] text-[#5a3a21] mb-2">Collectable resources</div>
-          <div className="flex flex-wrap gap-2">
-            {biomeResources.slice(0, 8).map((res) => (
-              <div key={res.key} className="flex items-center gap-1.5 bg-white/70 border border-[#d0b28e] rounded-md px-2 py-1">
-                <Icon iconKey={res.key} size={18} />
-                <span className="text-[12px] text-[#5a3a21]">{inventory?.[res.key] ?? 0}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
+import { seasonIndexInSession } from "./src/features/zones/data.js";
+import {
+  BoardFrame,
+  PuzzleActionPanel,
+  PuzzleToolStrip,
+} from "./src/ui/puzzleBoard.jsx";
 
 function BoardSkeleton() {
   return (
@@ -269,13 +228,18 @@ export default function App() {
   const stateRef = useRef(state);
   const storyModalOpen = !!state.story?.queuedBeat;
   const armedTool = state.toolPending ? state.tools ? { key: state.toolPending, count: state.tools[state.toolPending] ?? 0 } : null : null;
+  const turnBudget = state.farmRun?.turnBudget ?? 0;
+  const seasonIdx = seasonIndexInSession(state.turnsUsed ?? 0, turnBudget || 1);
   const infoPanelEl = (
-    <BoardInfoPanel
+    <PuzzleActionPanel
       chainInfo={chainInfo}
       inspectedTool={inspectedTool}
       armedTool={armedTool}
       inventory={state.inventory}
       biomeKey={state.biomeKey}
+      cap={currentCap(state)}
+      dispatch={dispatch}
+      onCloseInspect={() => setInspectedTool(null)}
     />
   );
   const uiLocked = !!state.modal || state.view !== "board" || storyModalOpen;
@@ -356,38 +320,42 @@ export default function App() {
                 </div>
               </div>
             )}
+            {/* Horizontal tools strip — directly under the HUD, matches the
+                Hearthwood Vale mock. Players reach every owned tool with one swipe. */}
+            <PuzzleToolStrip state={state} dispatch={dispatch} onInspectChange={setInspectedTool} />
+
             <div className="flex-1 min-h-0 grid grid-cols-[1fr_300px] gap-3 p-3 max-[1024px]:grid-cols-1 max-[1024px]:gap-0 max-[1024px]:p-0">
-              {/* Phaser host — takes the rest. Phaser draws its own background and frame. */}
-              <div className="relative min-h-0 min-w-0 overflow-hidden">
-                <PhaserMount
-                  dispatch={dispatch}
-                  biomeKey={state.biomeKey}
-                  turnsUsed={state.turnsUsed}
-                  uiLocked={uiLocked}
-                  boardActive={state.view === "board"}
-                  sceneRef={sceneRef}
-                  toolPending={state.toolPending}
-                  setChainInfo={setChainInfo}
-                  workers={state.workers}
-                  tileCollection={state.tileCollection}
-                  gameState={state}
-                  grid={state.grid}
-                />
+              {/* Board column: action panel stacked above the Phaser frame,
+                  field-tint gradient applied as the area background. */}
+              <div className="relative min-h-0 min-w-0 flex flex-col gap-2 max-[1024px]:p-2 max-[1024px]:gap-2">
+                {infoPanelEl}
+                <div className="flex-1 min-h-0 min-w-0">
+                  <BoardFrame seasonIdx={seasonIdx}>
+                    <PhaserMount
+                      dispatch={dispatch}
+                      biomeKey={state.biomeKey}
+                      turnsUsed={state.turnsUsed}
+                      uiLocked={uiLocked}
+                      boardActive={state.view === "board"}
+                      sceneRef={sceneRef}
+                      toolPending={state.toolPending}
+                      setChainInfo={setChainInfo}
+                      workers={state.workers}
+                      tileCollection={state.tileCollection}
+                      gameState={state}
+                      grid={state.grid}
+                    />
+                  </BoardFrame>
+                </div>
               </div>
-              {/* Side panel — hidden on mobile, replaced by MobileDock */}
+              {/* Side panel — desktop only. Houses orders/tools/inventory shortcuts. */}
               <div className="min-h-0 max-[1024px]:hidden">
-                <SidePanel state={state} dispatch={dispatch} chainInfo={chainInfo} infoPanel={infoPanelEl} onInspectChange={setInspectedTool} />
+                <SidePanel state={state} dispatch={dispatch} chainInfo={chainInfo} infoPanel={null} onInspectChange={setInspectedTool} />
               </div>
             </div>
-            <div className="hidden max-[1024px]:block px-2 pb-2">
-              {infoPanelEl}
-            </div>
-            {/* Portrait phone tools bar — board is width-limited so canvas height can shrink */}
-            <div className="hidden portrait:max-[1024px]:block flex-shrink-0">
-              <PortraitToolsBar state={state} dispatch={dispatch} onInspectChange={setInspectedTool} />
-            </div>
-            {/* Mobile dock — only visible on mobile, in board view */}
-            <div className="hidden max-[1024px]:block flex-shrink-0">
+            {/* Mobile dock — only visible on mobile landscape (portrait gets the
+                full PuzzleToolStrip up top, so the dock is redundant there). */}
+            <div className="hidden landscape:max-[1024px]:block flex-shrink-0">
               <MobileDock state={state} dispatch={dispatch} onInspectChange={setInspectedTool} />
             </div>
           </div>
