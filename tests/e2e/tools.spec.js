@@ -11,17 +11,29 @@ import { gotoFresh, getReactState, waitForState, dispatchAction } from './helper
  *   - applies the tool's effect (instant) OR sets state.toolPending (tap-target)
  */
 
-test('USE_TOOL "rake" instant: removes all hay tiles + decrements count', async ({ page }) => {
+test('USE_TOOL "rake" arms toolPending without spending the charge', async ({ page }) => {
   await gotoFresh(page, {
     tools: { rake: 2 },
     coins: 100,
     inventory: { wood_plank: 0 },
   });
   await dispatchAction(page, { type: 'SET_VIEW', view: 'board' });
-  // Direct dispatch — exercises the reducer path without depending on the
-  // bottom-sheet click flow (which is fiddly under iOS device emulation).
+  // Tap-target tools defer the charge spend to TOOL_FIRED so the player can
+  // cancel without losing a charge and the armed count stays accurate.
   await dispatchAction(page, { type: 'USE_TOOL', payload: { id: 'rake' } });
-  await waitForState(page, (s) => (s.tools?.rake ?? 0) === 1);
+  await waitForState(page, (s) => s.toolPending === 'rake' && (s.tools?.rake ?? 0) === 2);
+});
+
+test('TOOL_FIRED "rake" spends the charge and clears toolPending', async ({ page }) => {
+  await gotoFresh(page, {
+    tools: { rake: 2 },
+    coins: 100,
+    inventory: { wood_plank: 0 },
+  });
+  await dispatchAction(page, { type: 'SET_VIEW', view: 'board' });
+  await dispatchAction(page, { type: 'USE_TOOL', payload: { id: 'rake' } });
+  await dispatchAction(page, { type: 'TOOL_FIRED', key: 'rake' });
+  await waitForState(page, (s) => s.toolPending === null && (s.tools?.rake ?? 0) === 1);
 });
 
 test('USE_TOOL with no tool inventory is a no-op', async ({ page }) => {
@@ -36,14 +48,16 @@ test('USE_TOOL with no tool inventory is a no-op', async ({ page }) => {
   expect(after.turnsUsed).toBe(before.turnsUsed);
 });
 
-test('USE_TOOL tap-target arms toolPending, CANCEL_TOOL refunds it', async ({ page }) => {
+test('USE_TOOL tap-target arms toolPending; CANCEL_TOOL clears it without touching count', async ({ page }) => {
   await gotoFresh(page, { tools: { magic_wand: 1 } });
   await dispatchAction(page, { type: 'SET_VIEW', view: 'board' });
-  // Magic wand is routed through the portal slice; arming sets toolPending.
+  // Magic wand is routed through the portal slice; arming only sets
+  // toolPending — the charge is debited in TOOL_FIRED.
   await dispatchAction(page, { type: 'USE_TOOL', payload: { id: 'magic_wand' } });
-  await waitForState(page, (s) => s.toolPending === 'magic_wand');
-  // The tool is held in pending; the on-tile action will resolve and consume.
-  // Cancelling refunds: tools[magic_wand] returns to 1, toolPending clears.
+  await waitForState(page, (s) => s.toolPending === 'magic_wand' && (s.tools?.magic_wand ?? 0) === 1);
+  // Cancel before the tap fires: toolPending clears and the charge is
+  // preserved (CANCEL_TOOL doesn't refund tap-target tools because USE_TOOL
+  // never spent the charge).
   await dispatchAction(page, { type: 'CANCEL_TOOL' });
   await waitForState(page, (s) => s.toolPending === null && (s.tools?.magic_wand ?? 0) === 1);
 });

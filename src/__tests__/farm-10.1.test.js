@@ -122,11 +122,27 @@ describe("10.1 — CRAFT_TOOL action", () => {
 // ── USE_TOOL action — Phase 1 contract (no turn cost) ─────────────────────────
 
 describe("10.1 — USE_TOOL (no turn cost)", () => {
-  it("rake armed: tools.rake decremented, toolPending = 'rake'", () => {
+  it("rake armed: tools.rake NOT decremented yet, toolPending = 'rake'", () => {
+    // Tap-target tools defer the charge spend to TOOL_FIRED so the displayed
+    // count stays accurate while the player picks a target tile.
     const s0 = { ...createInitialState(), tools: { ...createInitialState().tools, rake: 1 }, turnsUsed: 4 };
     const s1 = rootReducer(s0, { type: "USE_TOOL", key: "rake" });
-    expect(s1.tools.rake).toBe(0);
+    expect(s1.tools.rake).toBe(1);
     expect(s1.toolPending).toBe("rake");
+  });
+
+  it("rake TOOL_FIRED: spends the charge and clears toolPending", () => {
+    const s0 = { ...createInitialState(), tools: { ...createInitialState().tools, rake: 1 }, toolPending: "rake" };
+    const s1 = rootReducer(s0, { type: "TOOL_FIRED", key: "rake" });
+    expect(s1.tools.rake).toBe(0);
+    expect(s1.toolPending).toBeNull();
+  });
+
+  it("rake CANCEL_TOOL: clears toolPending without touching count", () => {
+    const s0 = { ...createInitialState(), tools: { ...createInitialState().tools, rake: 1 }, toolPending: "rake" };
+    const s1 = rootReducer(s0, { type: "CANCEL_TOOL" });
+    expect(s1.tools.rake).toBe(1);
+    expect(s1.toolPending).toBeNull();
   });
 
   it("rake does NOT consume a turn", () => {
@@ -135,10 +151,11 @@ describe("10.1 — USE_TOOL (no turn cost)", () => {
     expect(s1.turnsUsed).toBe(4);
   });
 
-  it("axe armed: toolPending = 'axe'", () => {
+  it("axe armed: toolPending = 'axe' without decrementing count", () => {
     const s0 = { ...createInitialState(), tools: { ...createInitialState().tools, axe: 1 }, turnsUsed: 2 };
     const s1 = rootReducer(s0, { type: "USE_TOOL", key: "axe" });
     expect(s1.toolPending).toBe("axe");
+    expect(s1.tools.axe).toBe(1);
     expect(s1.turnsUsed).toBe(2);
   });
 

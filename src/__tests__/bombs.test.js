@@ -31,13 +31,31 @@ describe("3.4 — Bombs + Powder Store", () => {
     expect(after2.tools.bomb).toBe(4);
   });
 
-  it("USE_TOOL bomb: decrements count and arms toolPending without consuming turn", () => {
+  it("USE_TOOL bomb: arms toolPending without spending the charge or turn", () => {
+    // Bomb is a tap-target tool — the charge is debited in TOOL_FIRED once
+    // the player taps a tile, so the count stays at 3 while armed.
     const s0 = initialState();
     const armed = { ...s0, tools: { ...s0.tools, bomb: 3 }, turnsUsed: 4 };
     const r = gameReducer(armed, { type: "USE_TOOL", payload: { key: "bomb" } });
-    expect(r.tools.bomb).toBe(2);
+    expect(r.tools.bomb).toBe(3);
     expect(r.toolPending).toBe("bomb");
     expect(r.turnsUsed).toBe(4);
+  });
+
+  it("TOOL_FIRED bomb: spends the charge and clears toolPending", () => {
+    const s0 = initialState();
+    const armed = { ...s0, tools: { ...s0.tools, bomb: 3 }, toolPending: "bomb" };
+    const r = gameReducer(armed, { type: "TOOL_FIRED", key: "bomb" });
+    expect(r.tools.bomb).toBe(2);
+    expect(r.toolPending).toBeNull();
+  });
+
+  it("CANCEL_TOOL bomb: clears toolPending without refunding (charge was never spent)", () => {
+    const s0 = initialState();
+    const armed = { ...s0, tools: { ...s0.tools, bomb: 2 }, toolPending: "bomb" };
+    const r = gameReducer(armed, { type: "CANCEL_TOOL" });
+    expect(r.tools.bomb).toBe(2);
+    expect(r.toolPending).toBeNull();
   });
 
   it("USE_TOOL bomb: no-op when count=0", () => {

@@ -151,6 +151,7 @@ function PhaserMount({ dispatch, biomeKey, turnsUsed, uiLocked, boardActive, sce
               scene.events.on(SCENE_EVENTS.CHAIN_FLOAT_TEXT, ({ text }) => {
                 notifierRef.current?.toast?.({ text, tone: "moss", duration: 1600 });
               });
+              scene.events.on(SCENE_EVENTS.TOOL_FIRED, ({ key }) => dispatch({ type: "TOOL_FIRED", key }));
               setBoardRuntimeActive(game, boardActiveRef.current);
               setLoading(false);
             },
@@ -331,9 +332,13 @@ export default function App() {
           <div className={`absolute inset-0 ${state.view === "board" ? "" : "invisible"}`}>
             <BoardLayout
               hotbar={
-                <div ref={hotbarRef} className="relative">
+                // zIndex elevates the hotbar (and its absolute-positioned
+                // dropdown / backdrop children) above the board area so the
+                // dropdown's click-blocker actually intercepts touches.
+                <div ref={hotbarRef} className="relative" style={{ zIndex: 50 }}>
                   <PuzzleHotbar
                     state={state}
+                    dispatch={dispatch}
                     onInspectChange={setInspectedTool}
                     inspectedKey={inspectedKey}
                     pins={pins}
@@ -341,6 +346,7 @@ export default function App() {
                     modalOpen={toolModalOpen}
                     maxFitPins={maxFitPins}
                     dragKey={drag?.key ?? null}
+                    dragFromHotbar={drag?.fromHotbar ?? null}
                     onBeginDrag={beginDrag}
                   />
                   {/* Tools dropdown — anchored to the hotbar so it floats
@@ -355,6 +361,7 @@ export default function App() {
                       inspectedTool={inspectedTool}
                       onInspectChange={setInspectedTool}
                       dragKey={drag?.key ?? null}
+                      dragFromHotbar={drag?.fromHotbar ?? null}
                       onBeginDrag={beginDrag}
                     />
                   )}
@@ -364,6 +371,7 @@ export default function App() {
               toolsGrid={
                 <PuzzleToolGrid
                   state={state}
+                  dispatch={dispatch}
                   onInspectChange={setInspectedTool}
                   inspectedKey={inspectedKey}
                 />

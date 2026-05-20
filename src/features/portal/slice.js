@@ -81,18 +81,14 @@ export function reduce(state, action) {
         };
       }
 
-      // Magic Wand — collect every tile of a player-chosen type from the board.
-      // Sets toolPending so GameScene can prompt the player to tap a tile type.
-      // The tool is consumed immediately; inventory credit happens in GameScene
-      // when it resolves the pending wand action.
+      // Magic Wand — arm-then-tap target tool. USE_TOOL only sets toolPending
+      // so the displayed charge count stays accurate while the player is
+      // picking a target. The charge is spent in coreReducer's TOOL_FIRED
+      // case (see TAP_TARGET_TOOL_KEYS in state.js).
       if (id === "magic_wand") {
         const count = state.tools?.[id] ?? 0;
         if (count <= 0) return state;
-        return {
-          ...state,
-          tools: { ...state.tools, [id]: count - 1 },
-          toolPending: "magic_wand",
-        };
+        return { ...state, toolPending: "magic_wand" };
       }
 
       return state;
