@@ -383,8 +383,6 @@ export default function App() {
                     modalOpen={toolModalOpen}
                     maxFitPins={maxFitPins}
                     dragKey={drag?.key ?? null}
-                    dragFromHotbar={drag?.fromHotbar ?? null}
-                    onBeginDrag={beginDrag}
                   />
                   {/* Tools dropdown — anchored to the hotbar so it floats
                       over the board area without covering the hotbar or HUD. */}
@@ -398,7 +396,6 @@ export default function App() {
                       inspectedTool={inspectedTool}
                       onInspectChange={setInspectedTool}
                       dragKey={drag?.key ?? null}
-                      dragFromHotbar={drag?.fromHotbar ?? null}
                       onBeginDrag={beginDrag}
                     />
                   )}
