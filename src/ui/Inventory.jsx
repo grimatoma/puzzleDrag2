@@ -142,8 +142,8 @@ function InventoryDetail({ entry, marketBuilt, dispatch }) {
       title={label}
       status={`${count.toLocaleString()} in storage`}
       icon={<Icon iconKey={key} size={64} title={label} />}
-      actions={
-        <div className="flex flex-row justify-end gap-2 w-full">
+      headerActions={
+        <div className="flex flex-col gap-1.5">
           <Button
             tone="moss"
             size="sm"

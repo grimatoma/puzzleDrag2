@@ -233,6 +233,7 @@ export default function App() {
   const [chainInfo, setChainInfo] = useState(null);
   const [inspectedTool, setInspectedTool] = useState(null);
   const [toolModalOpen, setToolModalOpen] = useState(false);
+  const [inventorySearchOpen, setInventorySearchOpen] = useState(false);
   const [pins, pinActions] = usePinnedTools();
   const hotbarRef = useRef(null);
   const maxFitPins = useMaxFitPins(hotbarRef);
@@ -301,6 +302,10 @@ export default function App() {
   }, [dispatch]);
 
   useEffect(() => {
+    if (state.view !== "inventory") setInventorySearchOpen(false);
+  }, [state.view]);
+
+  useEffect(() => {
     if (state.pendingReload) window.location.reload();
   }, [state.pendingReload]);
 
@@ -328,7 +333,12 @@ export default function App() {
 
       <div data-testid="app-shell" className="relative w-full max-w-[1280px] aspect-[5/4] max-h-[100dvh] max-[1024px]:aspect-auto max-[1024px]:max-h-none max-[1024px]:w-full max-[1024px]:h-full max-[1024px]:max-w-none bg-[#3a2715] rounded-2xl max-[1024px]:rounded-none overflow-hidden shadow-2xl border border-white/10 flex flex-col" style={{ zIndex: 1 }}>
         {/* HUD bar */}
-        <Hud state={state} dispatch={dispatch} />
+        <Hud
+          state={state}
+          dispatch={dispatch}
+          inventorySearchOpen={inventorySearchOpen}
+          onInventorySearchToggle={() => setInventorySearchOpen((o) => !o)}
+        />
 
         {/* Main area: board + side panel, or town view */}
         <div className="flex-1 min-h-0 relative">
@@ -413,7 +423,12 @@ export default function App() {
           )}
 
           {/* Feature full-screen views */}
-          <FeatureScreens state={state} dispatch={dispatch} />
+          <FeatureScreens
+            state={state}
+            dispatch={dispatch}
+            inventorySearchOpen={inventorySearchOpen}
+            onInventorySearchToggle={() => setInventorySearchOpen((o) => !o)}
+          />
         </div>
 
         {/* Bottom nav — hidden on the main game board */}
