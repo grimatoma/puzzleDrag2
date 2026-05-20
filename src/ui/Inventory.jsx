@@ -5,12 +5,11 @@ import { locBuilt } from "../locBuilt.js";
 import { iconLabel } from "../textures/iconRegistry.js";
 import Icon from "./Icon.jsx";
 import Pill from "./primitives/Pill.jsx";
-import Banner from "./primitives/Banner.jsx";
+import Button from "./primitives/Button.jsx";
 import {
   BrowserDetailLayout,
   BrowserGrid,
   BrowserItemButton,
-  DetailActionButton,
   DetailPane,
 } from "./primitives/BrowserDetail.jsx";
 
@@ -144,35 +143,34 @@ function InventoryDetail({ entry, marketBuilt, dispatch }) {
       status={`${count.toLocaleString()} in storage`}
       icon={<Icon iconKey={key} size={64} title={label} />}
       actions={
-        <>
-          <DetailActionButton
+        <div className="flex flex-row justify-end gap-2 w-full">
+          <Button
             tone="moss"
+            size="sm"
             disabled={!canSell}
             onClick={sell}
           >
             Sell {sellPrice > 0 ? `+${sellPrice}◉` : ""}
-          </DetailActionButton>
+          </Button>
           {kind === "resource" && (
-            <DetailActionButton
+            <Button
               tone="gold"
+              size="sm"
               disabled={!canBuy}
               onClick={buy}
             >
               Buy {buyPrice > 0 ? `${buyPrice}◉` : ""}
-            </DetailActionButton>
+            </Button>
           )}
-        </>
+        </div>
       }
     >
-      <div className="hl-well">
-        <div className="hl-section-label mb-1.5">Market</div>
-        <div className="flex flex-wrap gap-2">
-          {status}
-          <Pill tone={marketBuilt ? "moss" : "iron"} variant="soft" size="sm">
-            {marketBuilt ? "Caravan Post open" : "Build Caravan Post"}
-          </Pill>
+      {status && (
+        <div className="hl-well">
+          <div className="hl-section-label mb-1.5">Status</div>
+          <div className="flex flex-wrap gap-2">{status}</div>
         </div>
-      </div>
+      )}
       {orderStatus && (
         <div className="hl-well">
           <div className="hl-section-label mb-1.5">Orders</div>
@@ -311,28 +309,6 @@ export function InventoryGrid({
     sortedItemKeys.length === 0 &&
     (query.length > 0 || filter !== "all");
 
-  const toolbar = (
-    <div className="flex flex-col gap-2">
-      {!compact && dispatch && (
-        <Banner
-          tone={marketBuilt ? "success" : "info"}
-          icon={<Icon iconKey="ui_shop" size={16} />}
-        >
-          {marketBuilt
-            ? "Caravan Post open — buy and sell directly from your inventory."
-            : "Build the Caravan Post in town to enable trading from your inventory."}
-        </Banner>
-      )}
-      {orders.length > 0 && (
-        <div className="flex items-center gap-3 text-caption text-on-panel-dim px-1 -mb-1">
-          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-moss" /> ready</span>
-          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-gold" /> needed</span>
-          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-iron-soft" /> excess</span>
-        </div>
-      )}
-    </div>
-  );
-
   const browser = noResults ? (
     <div className="hl-empty px-1">No matches{query ? ` for "${query}"` : ""}.</div>
   ) : entries.length === 0 ? (
@@ -352,7 +328,6 @@ export function InventoryGrid({
 
   return (
     <BrowserDetailLayout
-      toolbar={toolbar}
       browser={browser}
       detail={<InventoryDetail entry={selected} marketBuilt={marketBuilt} dispatch={dispatch} />}
     />

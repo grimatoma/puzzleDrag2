@@ -1,24 +1,9 @@
 import { useEffect, useState } from "react";
 import { InventoryGrid } from "../../ui/Inventory.jsx";
-import Pill from "../../ui/primitives/Pill.jsx";
-import Button from "../../ui/primitives/Button.jsx";
 import FeaturePanel from "../../ui/primitives/FeaturePanel.jsx";
 import { SearchInput } from "../../ui/primitives/Field.jsx";
 
 export const viewKey = "inventory";
-
-const FILTERS = [
-  { key: "all", label: "All" },
-  { key: "chain", label: "Chain only" },
-  { key: "items", label: "Items only" },
-  { key: "sellable", label: "Sellable only" },
-];
-
-const SORTS = [
-  { key: "count", label: "Count" },
-  { key: "alpha", label: "A→Z" },
-  { key: "recent", label: "Recent" },
-];
 
 const PHONE_BREAKPOINT = 768;
 
@@ -89,85 +74,59 @@ function useRecentOrder(inventory) {
   return state.order;
 }
 
+function SearchIcon({ size = 16 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <circle cx="11" cy="11" r="6" stroke="currentColor" strokeWidth="2" />
+      <path d="M20 20l-3.5-3.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 export default function InventoryScreen({ state, dispatch }) {
   const biomeKey = state.biomeKey ?? "farm";
   const isPhone = usePhoneViewport();
 
-  const [filter, setFilter] = useState("all");
-  const [sort, setSort] = useState("count");
   const [queryInput, setQueryInput] = useState("");
-  const [compactOverride, setCompactOverride] = useState(null);
+  const [searchOpen, setSearchOpen] = useState(false);
 
   const query = useDebounced(queryInput, 100);
   const recentOrder = useRecentOrder(state.inventory);
 
-  const compact = compactOverride != null ? compactOverride : isPhone;
+  const closeSearch = () => {
+    setSearchOpen(false);
+    setQueryInput("");
+  };
 
   return (
     <FeaturePanel className="z-10">
-      <FeaturePanel.Toolbar className="flex-col !items-stretch gap-2 pt-3 pb-2">
-        <SearchInput
-          value={queryInput}
-          onChange={(e) => setQueryInput(e.target.value)}
-          onClear={() => setQueryInput("")}
-          placeholder="Search resources..."
-          ariaLabel="Search resources"
-        />
-
-        <div className="flex items-center justify-between gap-2 flex-wrap">
-          <div className="flex flex-wrap items-center gap-1.5">
-            {FILTERS.map((f) => {
-              const active = filter === f.key;
-              return (
-                <Pill
-                  key={f.key}
-                  tone={active ? "ember" : "iron"}
-                  variant={active ? "solid" : "soft"}
-                  size="sm"
-                  interactive
-                  onClick={() => setFilter(f.key)}
-                  aria-pressed={active}
-                >
-                  {f.label}
-                </Pill>
-              );
-            })}
-          </div>
-
-          <div className="flex items-center gap-1 ml-auto">
-            <span className="text-caption text-on-panel-dim mr-1 hidden sm:inline">Sort</span>
-            {SORTS.map((s) => {
-              const active = sort === s.key;
-              return (
-                <Button
-                  key={s.key}
-                  tone={active ? "ember" : "ghost"}
-                  variant={active ? "solid" : "ghost"}
-                  size="sm"
-                  onClick={() => setSort(s.key)}
-                  aria-pressed={active}
-                  className={active ? "" : "text-on-panel hover:bg-[#3a2715]/10"}
-                >
-                  {s.label}
-                </Button>
-              );
-            })}
-            {!isPhone && (
-              <Button
-                tone="ghost"
-                variant="ghost"
-                size="sm"
-                onClick={() => setCompactOverride(!compact)}
-                aria-label={compact ? "Switch to grid view" : "Switch to list view"}
-                aria-pressed={compact}
-                className="text-on-panel hover:bg-[#3a2715]/10 ml-1"
-              >
-                {compact ? "Grid" : "List"}
-              </Button>
-            )}
-          </div>
-        </div>
-      </FeaturePanel.Toolbar>
+      <FeaturePanel.Header
+        title="Inventory"
+        actions={
+          <button
+            type="button"
+            onClick={() => (searchOpen ? closeSearch() : setSearchOpen(true))}
+            aria-label={searchOpen ? "Close search" : "Search resources"}
+            aria-pressed={searchOpen}
+            className="hl-panel-close"
+          >
+            <SearchIcon size={16} />
+          </button>
+        }
+      />
+      {searchOpen && (
+        <FeaturePanel.Toolbar className="pt-2 pb-2">
+          <SearchInput
+            autoFocus
+            value={queryInput}
+            onChange={(e) => setQueryInput(e.target.value)}
+            onClear={() => setQueryInput("")}
+            placeholder="Search resources..."
+            ariaLabel="Search resources"
+            className="flex-1"
+          />
+        </FeaturePanel.Toolbar>
+      )}
 
       <FeaturePanel.Body>
         <div className="w-full h-full min-h-0 flex flex-col gap-3">
@@ -177,11 +136,11 @@ export default function InventoryScreen({ state, dispatch }) {
             orders={state.orders}
             state={state}
             dispatch={dispatch}
-            filter={filter}
-            sort={sort}
+            filter="all"
+            sort="count"
             query={query}
             recentOrder={recentOrder}
-            compact={compact}
+            compact={isPhone}
           />
         </div>
       </FeaturePanel.Body>
