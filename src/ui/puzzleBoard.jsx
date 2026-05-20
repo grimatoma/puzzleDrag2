@@ -1,20 +1,25 @@
 /**
- * Hearthwood Vale puzzle-board chrome: the four pieces of the board view's
+ * Hearthwood Vale puzzle-board chrome: the pieces of the board view's
  * visual frame, ported from the design mock at
  * 04cd42d7-Hearthwood_Vale_Puzzle_Board.html.
  *
  *   - SeasonWheel        — circular 4-quadrant year wheel for the HUD.
  *   - PuzzleActionPanel  — cream paper card with idle/chain/tool states.
- *   - PuzzleToolStrip    — horizontal scrolling tool tray with count pills.
+ *   - PuzzleToolStrip    — grid / vertical / horizontal tool tray with count pills.
+ *   - PuzzleHotbar       — compact pinned-tools rail with a chevron that
+ *                          opens the tool modal.
+ *   - PuzzleToolModal    — overlay with tool detail, scrollable grid, and
+ *                          tap-to-pin hotbar slots.
  *   - BoardFrame         — dark-brown rounded card around the Phaser host.
  *
  * All four read from existing game state; no new slices or actions.
+ * Hotbar pin assignments persist to localStorage (no save-schema bump).
  */
 
-import { useEffect, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import LegacyIcon from "./Icon.jsx";
 import { BIOMES } from "../constants.js";
-import { TOOL_BY_KEY, isTapTargetTool, visibleTools } from "./toolRegistry.js";
+import { TOOL_BY_KEY, isTapTargetTool, visibleTools, TOOL_CATALOG } from "./toolRegistry.js";
 import { getPhaserScene } from "../phaserBridge.js";
 
 const QUAD_COLORS = ["#b8d670", "#f0c14b", "#e07a3a", "#b4cfdf"];
@@ -517,24 +522,80 @@ function dispatchUseTool(dispatch, key, state) {
   if (key === "shuffle") getPhaserScene()?.shuffleBoard();
 }
 
-export function PuzzleToolStrip({ state, onInspectChange, inspectedKey, orientation = "horizontal" }) {
-  const list = useMemo(() => {
-    const tools = state.tools || {};
-    return visibleTools(tools).map((def) => ({
-      key: def.key,
-      iconKey: def.iconKey,
-      name: def.name,
-      desc: def.desc,
-      count: tools[def.key] || 0,
-      armed:
-        state.toolPending === def.key ||
-        (def.key === "fertilizer" && !!state.fertilizerActive),
-    }));
-  }, [state.tools, state.toolPending, state.fertilizerActive]);
+// ─── Tool tile (shared by hotbar / grid / modal) ─────────────────────────
 
-  // Whichever tool is currently armed (toolPending) auto-shows its detail.
-  // Tapping a different tool just sets the inspect; the player presses
-  // USE NOW (or Tap a tile) in the detail panel to actually trigger it.
+function ToolTile({ tool, inspected, onClick, size = "md" }) {
+  const armed = !!tool.armed;
+  const dims = size === "sm"
+    ? { w: 48, h: 52, icon: 22, name: 9, badge: 12, badgePad: "1px 6px", badgeMin: 18 }
+    : { w: 58, h: 62, icon: 26, name: 9.5, badge: 14, badgePad: "2px 8px", badgeMin: 20 };
+  return (
+    <button
+      type="button"
+      onClick={() => onClick?.(tool)}
+      className="flex-shrink-0 flex flex-col items-center justify-end relative"
+      style={{
+        width: dims.w,
+        height: dims.h,
+        borderRadius: 11,
+        padding: "4px 0 5px",
+        background: armed ? "#fdf3e3" : inspected ? "rgba(240,193,75,0.18)" : "rgba(255,255,255,0.04)",
+        border: armed
+          ? "2px solid #f0c14b"
+          : inspected
+          ? "2px solid rgba(240,193,75,0.55)"
+          : "1.5px solid rgba(255,255,255,0.08)",
+        color: armed ? "#3a2412" : "#caa97a",
+        boxShadow: "0 2px 0 rgba(0,0,0,0.2)",
+        opacity: tool.count === 0 && !armed ? 0.55 : 1,
+      }}
+      title={tool.name}
+      aria-label={`${tool.name} (${tool.count})`}
+      data-tool-key={tool.key}
+      data-armed={armed ? "true" : "false"}
+    >
+      <div
+        className="absolute font-mono font-extrabold text-center"
+        style={{
+          top: -8,
+          right: -6,
+          background: armed ? "#3a2412" : "#1a0d05",
+          border: `2px solid ${armed ? "#f0c14b" : "#caa97a"}`,
+          borderRadius: 10,
+          fontSize: dims.badge,
+          padding: dims.badgePad,
+          color: armed ? "#f0c14b" : "#fff8e7",
+          boxShadow: "0 2px 0 rgba(0,0,0,0.35), inset 0 -1px 0 rgba(0,0,0,0.3)",
+          minWidth: dims.badgeMin,
+        }}
+      >
+        {tool.count}
+      </div>
+      <LegacyIcon iconKey={tool.iconKey} size={dims.icon} />
+      <div className="font-extrabold mt-0.5" style={{ fontSize: dims.name, letterSpacing: 0.2 }}>
+        {tool.name}
+      </div>
+    </button>
+  );
+}
+
+function buildVisibleToolList(state) {
+  const tools = state.tools || {};
+  return visibleTools(tools).map((def) => ({
+    key: def.key,
+    iconKey: def.iconKey,
+    name: def.name,
+    desc: def.desc,
+    count: tools[def.key] || 0,
+    armed:
+      state.toolPending === def.key ||
+      (def.key === "fertilizer" && !!state.fertilizerActive),
+  }));
+}
+
+// When the player arms a tool from anywhere (modal, hotbar, grid), the
+// status panel auto-shows that tool's detail. This is the shared effect.
+function useAutoInspectArmed(state, onInspectChange) {
   useEffect(() => {
     if (!onInspectChange) return;
     if (state.toolPending && TOOL_BY_KEY[state.toolPending]) {
@@ -544,112 +605,423 @@ export function PuzzleToolStrip({ state, onInspectChange, inspectedKey, orientat
       });
     }
   }, [state.toolPending, state.tools, onInspectChange]);
+}
 
-  const isVertical = orientation === "vertical";
+// ─── Tool grid (side-by-side left column) ────────────────────────────────
+
+export function PuzzleToolGrid({ state, onInspectChange, inspectedKey }) {
+  const list = useMemo(() => buildVisibleToolList(state), [state.tools, state.toolPending, state.fertilizerActive]);
+  useAutoInspectArmed(state, onInspectChange);
+  const select = useCallback(
+    (t) => onInspectChange?.({ ...TOOL_BY_KEY[t.key], count: t.count }),
+    [onInspectChange],
+  );
   return (
     <div
-      className={isVertical ? "h-full flex flex-col" : "flex-shrink-0"}
+      className="h-full overflow-y-auto rounded-[11px]"
       style={{
         background: "linear-gradient(#1a0d05,#241710)",
-        borderBottom: isVertical ? "none" : "1px solid #0a0506",
+        border: "1px solid #0a0506",
       }}
+      data-testid="puzzle-tool-grid"
     >
       <div
-        className={
-          isVertical
-            ? "flex flex-col gap-2 px-2 pt-3 pb-1 overflow-y-auto h-full"
-            : "flex gap-1.5 px-2.5 pt-3.5 pb-1 overflow-x-auto"
-        }
-        data-testid="puzzle-tool-strip"
-        data-orientation={orientation}
+        className="px-2 pt-3 pb-2"
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fill, minmax(58px, 1fr))",
+          gap: 8,
+        }}
       >
-        {list.map((t) => {
-          const active = t.armed;
-          const inspected = inspectedKey === t.key;
-          return (
-            <button
-              key={t.key}
-              type="button"
-              onClick={() => onInspectChange?.({ ...TOOL_BY_KEY[t.key], count: t.count })}
-              className="flex-shrink-0 flex flex-col items-center justify-end relative"
-              style={{
-                width: 58,
-                height: 62,
-                borderRadius: 11,
-                padding: "4px 0 5px",
-                background: active ? "#fdf3e3" : inspected ? "rgba(240,193,75,0.18)" : "rgba(255,255,255,0.04)",
-                border: active
-                  ? "2px solid #f0c14b"
-                  : inspected
-                  ? "2px solid rgba(240,193,75,0.55)"
-                  : "1.5px solid rgba(255,255,255,0.08)",
-                color: active ? "#3a2412" : "#caa97a",
-                boxShadow: "0 2px 0 rgba(0,0,0,0.2)",
-                opacity: t.count === 0 && !active ? 0.55 : 1,
-              }}
-              title={t.name}
-              aria-label={`${t.name} (${t.count})`}
-              data-tool-key={t.key}
-              data-armed={active ? "true" : "false"}
-            >
+        {list.map((t) => (
+          <ToolTile key={t.key} tool={t} inspected={inspectedKey === t.key} onClick={select} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── Pinned-tools persistence ────────────────────────────────────────────
+
+const PIN_STORAGE_KEY = "hearthwood:hotbar-pins";
+// Cap matches what fits comfortably on a phone-portrait hotbar (≈ 5 starter
+// tools + chevron, with one slot in reserve). Once full, the PIN button
+// disables and the player has to unpin one before pinning a new tool.
+export const MAX_PINS = 6;
+const DEFAULT_PINS = TOOL_CATALOG
+  .filter((t) => t.category === "field")
+  .slice(0, MAX_PINS)
+  .map((t) => t.key);
+
+function readStoredPins() {
+  try {
+    const raw = typeof window !== "undefined" && window.localStorage?.getItem(PIN_STORAGE_KEY);
+    if (!raw) return DEFAULT_PINS.slice();
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return DEFAULT_PINS.slice();
+    return parsed.filter((k) => typeof k === "string" && TOOL_BY_KEY[k]).slice(0, MAX_PINS);
+  } catch {
+    return DEFAULT_PINS.slice();
+  }
+}
+
+export function usePinnedTools() {
+  const [pins, setPins] = useState(readStoredPins);
+  useEffect(() => {
+    try {
+      window.localStorage?.setItem(PIN_STORAGE_KEY, JSON.stringify(pins));
+    } catch { /* localStorage may be unavailable in private mode; ignore */ }
+  }, [pins]);
+  const toggle = useCallback((key) => {
+    if (!TOOL_BY_KEY[key]) return;
+    setPins((prev) => {
+      if (prev.includes(key)) return prev.filter((k) => k !== key);
+      // Silently ignore over-cap pins — the caller is expected to disable
+      // its PIN affordance when `pins.length >= MAX_PINS`.
+      if (prev.length >= MAX_PINS) return prev;
+      return [...prev, key];
+    });
+  }, []);
+  return [pins, toggle];
+}
+
+// ─── Hotbar (portrait top rail) ──────────────────────────────────────────
+
+export function PuzzleHotbar({ state, onInspectChange, inspectedKey, pins, onOpenModal }) {
+  const list = useMemo(() => buildVisibleToolList(state), [state.tools, state.toolPending, state.fertilizerActive]);
+  useAutoInspectArmed(state, onInspectChange);
+  const byKey = useMemo(() => Object.fromEntries(list.map((t) => [t.key, t])), [list]);
+  // Show only currently-visible pinned tools (skip pins for tools the
+  // player has lost or never owned — pin order is preserved).
+  const visiblePins = pins.map((k) => byKey[k]).filter(Boolean);
+  const select = useCallback(
+    (t) => onInspectChange?.({ ...TOOL_BY_KEY[t.key], count: t.count }),
+    [onInspectChange],
+  );
+  return (
+    <div
+      className="flex items-center gap-2 pl-2 pr-1"
+      style={{
+        background: "linear-gradient(#1a0d05,#241710)",
+        borderBottom: "1px solid #0a0506",
+        paddingTop: 12, // room for the count badges that sit at `top:-8`
+        paddingBottom: 8,
+      }}
+      data-testid="puzzle-hotbar"
+    >
+      <div
+        className="flex-1 min-w-0 flex items-center overflow-x-auto"
+        style={{ gap: 12, paddingRight: 10 }}
+      >
+        {visiblePins.length === 0 ? (
+          <div className="text-[#8a6a47] text-[10px] font-bold uppercase tracking-wider px-2">
+            Tap ▾ to pin tools
+          </div>
+        ) : (
+          visiblePins.map((t) => (
+            <ToolTile key={t.key} tool={t} inspected={inspectedKey === t.key} onClick={select} size="sm" />
+          ))
+        )}
+      </div>
+      <button
+        type="button"
+        onClick={onOpenModal}
+        className="flex-shrink-0 flex flex-col items-center justify-center"
+        style={{
+          width: 44,
+          height: 52,
+          borderRadius: 10,
+          background: "rgba(240,193,75,0.10)",
+          border: "1.5px dashed rgba(240,193,75,0.55)",
+          color: "#f0c14b",
+          flexShrink: 0,
+        }}
+        title="Open tools"
+        aria-label="Open tools"
+        data-testid="puzzle-hotbar-open"
+      >
+        <div style={{ fontSize: 18, lineHeight: 1 }}>▾</div>
+        <div style={{ fontSize: 8.5, fontWeight: 900, letterSpacing: 0.5, marginTop: 2 }}>TOOLS</div>
+      </button>
+    </div>
+  );
+}
+
+// ─── Tool modal ──────────────────────────────────────────────────────────
+
+export function PuzzleToolModal({ open, onClose, state, dispatch, pins, togglePin, inspectedTool, onInspectChange }) {
+  const list = useMemo(() => buildVisibleToolList(state), [state.tools, state.toolPending, state.fertilizerActive]);
+  const byKey = useMemo(() => Object.fromEntries(list.map((t) => [t.key, t])), [list]);
+  // The modal's selected tool defaults to whatever's already inspected;
+  // otherwise the first visible tool so the detail area is never empty.
+  // Derived: the modal mirrors whichever tool the player is inspecting in
+  // the rest of the UI, but the modal can also drive that inspect (via the
+  // grid below) — we only need a local override when the player picks
+  // something inside the modal that differs from the outer inspect.
+  const [localSelectedKey, setLocalSelectedKey] = useState(null);
+  // Reset the local override when the modal opens so the first paint shows
+  // whatever the rest of the UI already had inspected.
+  const openKey = open ? "1" : "0";
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: reset transient local selection when modal opens
+  useEffect(() => { if (open) setLocalSelectedKey(null); }, [openKey, open]);
+
+  if (!open) return null;
+  const effectiveKey = localSelectedKey ?? inspectedTool?.key ?? list[0]?.key ?? null;
+  const selectedTool = effectiveKey ? byKey[effectiveKey] : null;
+  const select = (t) => {
+    setLocalSelectedKey(t.key);
+    onInspectChange?.({ ...TOOL_BY_KEY[t.key], count: t.count });
+  };
+  const handleUse = () => {
+    if (!selectedTool) return;
+    dispatchUseTool(dispatch, selectedTool.key, { toolPending: state.toolPending });
+    onClose?.();
+  };
+  const visiblePins = pins.map((k) => byKey[k]).filter(Boolean);
+  const pinned = selectedTool ? pins.includes(selectedTool.key) : false;
+
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      className="fixed inset-0 z-[60] flex items-start justify-center"
+      style={{ background: "rgba(10,5,3,0.55)" }}
+      data-testid="puzzle-tool-modal"
+      onClick={(e) => { if (e.target === e.currentTarget) onClose?.(); }}
+    >
+      <style>{`
+        @keyframes hwv-tool-modal-drop {
+          from { transform: translateY(-100%); opacity: 0; }
+          to   { transform: translateY(0); opacity: 1; }
+        }
+      `}</style>
+      <div
+        className="w-full max-w-[520px] flex flex-col"
+        style={{
+          background: "linear-gradient(180deg,#241710 0%,#1a0d05 100%)",
+          borderBottomLeftRadius: 16,
+          borderBottomRightRadius: 16,
+          border: "1.5px solid #8a6428",
+          borderTop: "none",
+          maxHeight: "78dvh",
+          boxShadow: "0 10px 30px rgba(0,0,0,0.5)",
+          animation: "hwv-tool-modal-drop 220ms cubic-bezier(0.16, 1, 0.3, 1)",
+          transformOrigin: "top center",
+        }}
+      >
+        {/* Detail */}
+        <div
+          className="flex items-center gap-3 p-3 relative"
+          style={{
+            background: "linear-gradient(180deg, rgba(253,243,227,0.97) 0%, rgba(246,227,191,0.97) 100%)",
+            borderBottom: "1px solid #8a6428",
+          }}
+        >
+          {selectedTool ? (
+            <>
               <div
-                className="absolute font-mono font-extrabold text-center"
+                className="flex items-center justify-center flex-shrink-0"
                 style={{
-                  top: -8,
-                  right: -6,
-                  background: active ? "#3a2412" : "#1a0d05",
-                  border: `2px solid ${active ? "#f0c14b" : "#caa97a"}`,
-                  borderRadius: 10,
-                  fontSize: 14,
-                  padding: "2px 8px",
-                  color: active ? "#f0c14b" : "#fff8e7",
-                  boxShadow:
-                    "0 2px 0 rgba(0,0,0,0.35), inset 0 -1px 0 rgba(0,0,0,0.3)",
-                  minWidth: 20,
+                  width: 64,
+                  height: 64,
+                  borderRadius: 13,
+                  background: "#3a2412",
+                  border: "2px solid #f0c14b",
+                  boxShadow: "inset 0 -3px 0 rgba(0,0,0,0.35), 0 0 0 4px rgba(240,193,75,0.25)",
                 }}
               >
-                {t.count}
+                <LegacyIcon iconKey={selectedTool.iconKey} size={40} />
               </div>
-              <LegacyIcon iconKey={t.iconKey} size={26} />
-              <div className="font-extrabold mt-0.5" style={{ fontSize: 9.5, letterSpacing: 0.2 }}>
-                {t.name}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-baseline gap-2">
+                  <div
+                    className="text-[#3a2412] font-extrabold italic leading-none"
+                    style={{ fontFamily: "Georgia, serif", fontSize: 19 }}
+                  >
+                    {selectedTool.name}
+                  </div>
+                  <span className="text-[10px] font-extrabold text-[#7a5520] uppercase tracking-wider">
+                    × {selectedTool.count} left
+                  </span>
+                </div>
+                <div className="text-[11.5px] text-[#5b3a1e] leading-snug mt-1.5 line-clamp-3">
+                  {selectedTool.desc}
+                </div>
               </div>
-            </button>
-          );
-        })}
-      </div>
-      {!isVertical && (
-        <div
-          className="text-center font-extrabold"
-          style={{ color: "#5b3a1e", fontSize: 9, letterSpacing: 1, marginTop: 2, paddingBottom: 4 }}
-        >
-          <span style={{ color: "#8a6a47" }}>‹ swipe ›</span>
+              <div className="flex flex-col gap-1.5 flex-shrink-0">
+                <button
+                  type="button"
+                  onClick={() => togglePin(selectedTool.key)}
+                  disabled={!pinned && pins.length >= MAX_PINS}
+                  className="font-extrabold whitespace-nowrap disabled:cursor-not-allowed"
+                  style={{
+                    fontSize: 10,
+                    padding: "5px 9px",
+                    borderRadius: 7,
+                    background: pinned ? "#3a2412" : "rgba(58,36,18,0.10)",
+                    color: pinned ? "#f0c14b" : "#5b3a1e",
+                    border: pinned ? "1.5px solid #f0c14b" : "1.5px solid rgba(58,36,18,0.4)",
+                    letterSpacing: 0.5,
+                    opacity: !pinned && pins.length >= MAX_PINS ? 0.55 : 1,
+                  }}
+                  title={
+                    pinned
+                      ? "Unpin from hotbar"
+                      : pins.length >= MAX_PINS
+                      ? "Hotbar full — unpin one first"
+                      : "Pin to hotbar"
+                  }
+                >
+                  📌 {pinned ? "PINNED" : pins.length >= MAX_PINS ? "FULL" : "PIN"}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleUse}
+                  disabled={selectedTool.count === 0 && state.toolPending !== selectedTool.key}
+                  className="font-extrabold whitespace-nowrap disabled:opacity-50"
+                  style={{
+                    background: isTapTargetTool(selectedTool.key)
+                      ? "linear-gradient(180deg,#f4a050,#d97a2a)"
+                      : "linear-gradient(180deg,#85c14a,#4e8425)",
+                    color: "#0c2e10",
+                    fontSize: 11,
+                    padding: "6px 12px",
+                    borderRadius: 8,
+                    border: "1.5px solid #3a5a12",
+                    boxShadow: "0 2px 0 rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.35)",
+                    letterSpacing: 0.5,
+                  }}
+                >
+                  {isTapTargetTool(selectedTool.key) ? "ARM" : "✓ USE"}
+                </button>
+              </div>
+            </>
+          ) : (
+            <div className="text-[12px] text-[#5b3a1e] py-3">No tools available — head to the workshop or portal to craft some.</div>
+          )}
+          <button
+            type="button"
+            onClick={onClose}
+            className="absolute top-1.5 right-1.5 w-6 h-6 rounded-md flex items-center justify-center text-[#5b3a1e] font-extrabold"
+            style={{ background: "rgba(138,100,40,0.18)", border: "1px solid rgba(138,100,40,0.4)", fontSize: 14 }}
+            aria-label="Close tools"
+          >×</button>
         </div>
-      )}
+        {/* Scrollable grid */}
+        <div className="flex-1 min-h-0 overflow-y-auto p-3">
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fill, minmax(64px, 1fr))",
+              gap: 10,
+            }}
+          >
+            {list.map((t) => (
+              <ToolTile key={t.key} tool={t} inspected={effectiveKey === t.key} onClick={select} />
+            ))}
+          </div>
+        </div>
+        {/* Pinned-hotbar preview at the bottom.
+            pt-5 + extra padding-right on the scroller leave room for the
+            count badges, which sit at `top:-8 right:-6` on each ToolTile
+            and were getting clipped at the previous compact spacing. */}
+        <div
+          className="px-3 pt-5 pb-3 flex items-center gap-3"
+          style={{
+            background: "rgba(26,13,5,0.8)",
+            borderTop: "1px solid #0a0506",
+          }}
+        >
+          <div className="text-[#caa97a] text-[9px] font-extrabold uppercase tracking-widest whitespace-nowrap">
+            Pinned <span className="text-[#8a6a47]">{visiblePins.length}/{MAX_PINS}</span>
+          </div>
+          <div
+            className="flex-1 min-w-0 flex items-center overflow-x-auto"
+            style={{ gap: 12, paddingRight: 10 }}
+          >
+            {visiblePins.length === 0 ? (
+              <div className="text-[#8a6a47] text-[10px] italic">Pin tools above to add them</div>
+            ) : (
+              visiblePins.map((t) => (
+                <ToolTile key={t.key} tool={t} inspected={effectiveKey === t.key} onClick={select} size="sm" />
+              ))
+            )}
+          </div>
+        </div>
+      </div>
     </div>
+  );
+}
+
+// ─── Board layout (template-areas grid; reshapes Phaser-free) ─────────────
+
+const BOARD_LAYOUT_CSS = `
+.hwv-board-layout {
+  display: grid;
+  width: 100%;
+  height: 100%;
+  gap: 8px;
+  padding: 8px;
+  box-sizing: border-box;
+  grid-template-areas:
+    "hotbar"
+    "panel"
+    "board";
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto auto minmax(0, 1fr);
+}
+.hwv-board-layout > [data-area="hotbar"] { grid-area: hotbar; min-width: 0; }
+.hwv-board-layout > [data-area="panel"]  { grid-area: panel; min-width: 0; }
+.hwv-board-layout > [data-area="tools"]  { display: none; }
+.hwv-board-layout > [data-area="board"]  { grid-area: board; min-height: 0; min-width: 0; }
+@media (orientation: landscape) and (min-width: 500px) {
+  .hwv-board-layout {
+    grid-template-areas:
+      "panel board"
+      "tools board";
+    grid-template-columns: 240px minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+  .hwv-board-layout > [data-area="hotbar"] { display: none; }
+  .hwv-board-layout > [data-area="tools"]  {
+    display: block;
+    grid-area: tools;
+    min-height: 0;
+    overflow: hidden;
+  }
+}
+`;
+
+export function BoardLayout({ hotbar, statusPanel, toolsGrid, board }) {
+  return (
+    <>
+      <style>{BOARD_LAYOUT_CSS}</style>
+      <div className="hwv-board-layout">
+        <div data-area="hotbar">{hotbar}</div>
+        <div data-area="panel">{statusPanel}</div>
+        <div data-area="tools">{toolsGrid}</div>
+        <div data-area="board">{board}</div>
+      </div>
+    </>
   );
 }
 
 // ─── Board frame ─────────────────────────────────────────────────────────
 
 export function BoardFrame({ children, seasonIdx }) {
+  // Single rounded card — the dark brown chrome frames the tiles directly,
+  // no field-tint padding wrapper around it. The cell containing the frame
+  // gets a thin drop shadow for depth.
   return (
     <div
-      className="w-full h-full p-2.5 box-border"
-      style={{ background: fieldGradientFor(seasonIdx) }}
+      className="w-full h-full relative overflow-hidden"
+      style={{
+        background: fieldGradientFor(seasonIdx),
+        borderRadius: 14,
+        boxShadow: "0 4px 0 rgba(0,0,0,0.25)",
+      }}
     >
-      <div
-        className="w-full h-full relative"
-        style={{
-          background: "linear-gradient(#3e2818,#2c1a0d)",
-          borderRadius: 14,
-          padding: 8,
-          boxShadow:
-            "inset 0 0 0 2px #1a0d05, 0 4px 0 rgba(0,0,0,0.25)",
-        }}
-      >
-        <div className="w-full h-full relative overflow-hidden rounded-md">{children}</div>
-      </div>
+      {children}
     </div>
   );
 }
