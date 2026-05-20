@@ -103,11 +103,14 @@ describe("portal slice — coverage gaps", () => {
     expect(s1).toBe(s0);
   });
 
-  it("USE_TOOL magic_wand: arms toolPending and decrements count", () => {
+  it("USE_TOOL magic_wand: arms toolPending without spending the charge", () => {
+    // Tap-target tools defer the spend to TOOL_FIRED (see TAP_TARGET_TOOL_KEYS
+    // in state.js) so the displayed charge count remains accurate while the
+    // player is choosing a tile target.
     const s0 = baseState({ tools: { magic_wand: 1 } });
     const s1 = portalReduce(s0, { type: "USE_TOOL", payload: { id: "magic_wand" } });
     expect(s1.toolPending).toBe("magic_wand");
-    expect(s1.tools.magic_wand).toBe(0);
+    expect(s1.tools.magic_wand).toBe(1);
   });
 
   it("USE_TOOL magic_wand: 0-count → no-op", () => {

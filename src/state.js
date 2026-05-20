@@ -53,6 +53,11 @@ export { createFreshState, generateSaveSeed, initialState };
 
 const slices = [crafting, quests, achievements, tutorial, settings, boss, cartography, storySlice, decorations, portal, market, castle, fish, zones, workers, boons, runSummary];
 
+// Tools that arm-then-fire from a board tap. USE_TOOL only sets toolPending;
+// the charge is spent in TOOL_FIRED once the tap actually resolves. Keep in
+// sync with `armed: "tap"` entries in src/ui/toolRegistry.js.
+const TAP_TARGET_TOOL_KEYS = new Set(["bomb", "rake", "axe", "magic_wand"]);
+
 // Phase 7 — SEASON_NAMES used to be the calendar-season index → name lookup.
 // All readers were removed when the calendar was deleted, so the table is
 // gone too.
@@ -463,15 +468,41 @@ function coreReducer(state, action) {
     }
 
     case "CANCEL_TOOL": {
-      // Refund and disarm an armed tap-target tool. Portal magic_wand also
-      // routes through here so re-clicking it from the panel un-arms it.
+      // Disarm an armed tool. Tap-target tools (bomb / rake / axe / magic_wand)
+      // never consumed a charge on arm, so there is nothing to refund. Tools
+      // that briefly arm during their fire effect (clear / basic / rare /
+      // shuffle) and the rune-wildcard arming flow did spend, so refund those.
       const pending = state.toolPending;
       if (!pending) return state;
+      if (TAP_TARGET_TOOL_KEYS.has(pending)) {
+        return { ...state, toolPending: null };
+      }
+      if (pending === "rune_wildcard") {
+        return { ...state, toolPending: null, runeStash: (state.runeStash ?? 0) + 1 };
+      }
       return {
         ...state,
         toolPending: null,
         tools: { ...state.tools, [pending]: (state.tools[pending] ?? 0) + 1 },
       };
+    }
+    case "TOOL_FIRED": {
+      // Dispatched by GameScene after a tool effect actually executes. For
+      // tap-target tools the charge is spent here (USE_TOOL only armed). For
+      // instant tools that briefly set toolPending so the scene could pick it
+      // up, we just clear toolPending — the charge was already spent in
+      // USE_TOOL. Either way, this is the canonical end-of-fire signal that
+      // keeps React state and the Phaser registry in sync.
+      const key = action.key ?? action.payload?.key ?? state.toolPending;
+      if (!key) return state;
+      let next = state;
+      if (TAP_TARGET_TOOL_KEYS.has(key) && (state.tools?.[key] ?? 0) > 0) {
+        next = { ...next, tools: { ...next.tools, [key]: next.tools[key] - 1 } };
+      }
+      if (next.toolPending === key) {
+        next = { ...next, toolPending: null };
+      }
+      return next;
     }
     case "USE_TOOL": {
       // Support action.payload.id (Phase 9), action.payload.key, or action.key (legacy)
@@ -494,6 +525,19 @@ function coreReducer(state, action) {
         };
       }
       if ((state.tools[key] || 0) <= 0) return state;
+      // Tap-target tools (bomb / rake / axe) only arm here — the charge is
+      // spent in TOOL_FIRED so a cancel never leaves the player out a tool
+      // and the armed display can show the real remaining count.
+      if (TAP_TARGET_TOOL_KEYS.has(key)) {
+        const bubbleText =
+          key === "bomb" ? "Bomb armed — tap a tile to detonate!" :
+          key === "rake" ? "Rake armed — tap a hay tile!" :
+          key === "axe"  ? "Axe armed — tap a row to fell!" : null;
+        const next = { ...state, toolPending: key };
+        return bubbleText
+          ? { ...next, bubble: { id: Date.now(), npc: "bram", text: bubbleText, ms: 1500 } }
+          : next;
+      }
       const tools = { ...state.tools, [key]: state.tools[key] - 1 };
       if (key === "shuffle") {
         return {
@@ -525,14 +569,6 @@ function coreReducer(state, action) {
           tools,
           toolPending: "rare",
           bubble: { id: Date.now(), npc: "bram", text: "Lockbox — placing rare tiles!", ms: 1500 },
-        };
-      }
-      if (key === "bomb") {
-        return {
-          ...state,
-          tools,
-          toolPending: "bomb",
-          bubble: { id: Date.now(), npc: "bram", text: "Bomb armed — tap a tile to detonate!", ms: 1500 },
         };
       }
       // Phase 9 — Water Pump: clear all lava cells (converts to rubble), no turn cost
@@ -1341,13 +1377,9 @@ function coreReducer(state, action) {
     }
 
     case "USE_TOOL_BOMB": {
-      // Alias to USE_TOOL for bomb — handled in USE_TOOL branch too
+      // Alias to USE_TOOL for bomb — arms only; charge spent on TOOL_FIRED.
       if ((state.tools.bomb ?? 0) <= 0) return state;
-      return {
-        ...state,
-        tools: { ...state.tools, bomb: state.tools.bomb - 1 },
-        toolPending: "bomb",
-      };
+      return { ...state, toolPending: "bomb" };
     }
 
     case "LOGIN_TICK": {

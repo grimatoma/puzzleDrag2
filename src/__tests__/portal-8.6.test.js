@@ -91,7 +91,10 @@ describe("8.6 — Magic Portal summons", () => {
     expect(r4.tools.magic_fertilizer).toBe(0);
   });
 
-  it("USE_TOOL magic_wand: decrements tool count and sets toolPending", () => {
+  it("USE_TOOL magic_wand: arms toolPending without spending the charge", () => {
+    // Magic Wand is a tap-target tool; the charge is debited in TOOL_FIRED
+    // once the player taps a tile, so the count display stays accurate while
+    // they pick a target.
     const s5 = {
       ...createInitialState(),
       tools: { ...createInitialState().tools, magic_wand: 1 },
@@ -100,8 +103,19 @@ describe("8.6 — Magic Portal summons", () => {
       type: "USE_TOOL",
       payload: { id: "magic_wand" },
     });
-    expect(r5.tools.magic_wand).toBe(0);
+    expect(r5.tools.magic_wand).toBe(1);
     expect(r5.toolPending).toBe("magic_wand");
+  });
+
+  it("TOOL_FIRED magic_wand: spends the charge and clears toolPending", () => {
+    const s = {
+      ...createInitialState(),
+      tools: { ...createInitialState().tools, magic_wand: 2 },
+      toolPending: "magic_wand",
+    };
+    const r = rootReducer(s, { type: "TOOL_FIRED", key: "magic_wand" });
+    expect(r.tools.magic_wand).toBe(1);
+    expect(r.toolPending).toBeNull();
   });
 
   it("USE_TOOL magic_wand: no-op when count is 0", () => {

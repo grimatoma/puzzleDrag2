@@ -337,8 +337,13 @@ function ToolView({ tool, armedKey, dispatch, onClose }) {
   const handleUse = () => {
     dispatchUseTool(dispatch, tool.key, { toolPending: armedKey });
   };
+  const handleDisarm = () => {
+    dispatch({ type: "CANCEL_TOOL" });
+  };
   const handleClose = () => {
-    if (armed) dispatch({ type: "CANCEL_TOOL" });
+    // Plain close: leave any armed state alone — the explicit DISARM button
+    // is the cancel affordance now, so closing the inspect panel shouldn't
+    // throw away an arming the player just made.
     onClose?.();
   };
   return (
@@ -380,8 +385,8 @@ function ToolView({ tool, armedKey, dispatch, onClose }) {
             border: armed ? "1px solid rgba(224,40,40,0.55)" : "1px solid rgba(138,100,40,0.4)",
             fontSize: 15,
           }}
-          title={armed ? "Cancel armed tool" : "Close"}
-          aria-label={armed ? "Cancel armed tool" : "Close tool inspect"}
+          title="Close"
+          aria-label="Close tool inspect"
         >
           ×
         </button>
@@ -419,31 +424,75 @@ function ToolView({ tool, armedKey, dispatch, onClose }) {
       </div>
       {targeted ? (
         <div
-          className="flex items-center justify-center gap-2 py-2 border-t border-dashed border-[rgba(138,100,40,0.55)] uppercase font-extrabold"
+          className="flex items-center gap-2 px-2 py-1.5 border-t border-dashed border-[rgba(138,100,40,0.55)]"
           style={{
             background: armed
               ? "linear-gradient(180deg, rgba(224,40,40,0.18), rgba(224,40,40,0.30))"
               : "linear-gradient(180deg, rgba(224,122,58,0.14), rgba(224,122,58,0.22))",
-            color: armed ? "#9a1a1a" : "#7a3c12",
-            fontSize: 11,
-            letterSpacing: 1.5,
           }}
         >
-          <span
-            className="inline-flex items-center justify-center"
-            style={{
-              width: 18,
-              height: 18,
-              borderRadius: 50,
-              background: armed ? "#e02828" : "#e07a3a",
-              color: "#fff8e7",
-              fontSize: 11,
-              animation: armed ? "hwv-armed-marquee 900ms steps(8) infinite" : "none",
-            }}
+          <div
+            className="text-[10.5px] font-extrabold flex-1 uppercase tracking-wider flex items-center gap-1.5"
+            style={{ color: armed ? "#9a1a1a" : "#7a3c12" }}
           >
-            ◎
-          </span>
-          {armed ? "Tap a tile on the board" : "Press USE to arm, then tap a tile"}
+            <span
+              className="inline-flex items-center justify-center flex-shrink-0"
+              style={{
+                width: 16,
+                height: 16,
+                borderRadius: 50,
+                background: armed ? "#e02828" : "#e07a3a",
+                color: "#fff8e7",
+                fontSize: 10,
+                animation: armed ? "hwv-armed-marquee 900ms steps(8) infinite" : "none",
+              }}
+            >
+              ◎
+            </span>
+            {armed ? "Tap a tile on the board" : "Tap arms — then pick a tile"}
+          </div>
+          {armed ? (
+            <button
+              type="button"
+              onClick={handleDisarm}
+              className="font-extrabold"
+              style={{
+                background: "linear-gradient(180deg,#e07a3a,#a02a14)",
+                color: "#fff8e7",
+                fontSize: 12,
+                padding: "7px 16px",
+                borderRadius: 9,
+                border: "1.5px solid #5a1a08",
+                boxShadow: "0 2px 0 rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.30)",
+                letterSpacing: 0.5,
+              }}
+              title="Cancel armed tool"
+              aria-label="Disarm tool"
+            >
+              ✕ DISARM
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={handleUse}
+              disabled={count === 0}
+              className="font-extrabold disabled:opacity-50"
+              style={{
+                background: "linear-gradient(180deg,#f4a050,#d97a2a)",
+                color: "#2c1408",
+                fontSize: 12,
+                padding: "7px 18px",
+                borderRadius: 9,
+                border: "1.5px solid #7a3c12",
+                boxShadow: "0 2px 0 rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.35)",
+                letterSpacing: 0.5,
+              }}
+              title="Arm tool — then tap a tile on the board"
+              aria-label="Arm tool"
+            >
+              ◎ ARM
+            </button>
+          )}
         </div>
       ) : (
         <div className="flex items-center gap-2 px-2 py-1.5 border-t border-dashed border-[rgba(138,100,40,0.55)]">
@@ -453,7 +502,7 @@ function ToolView({ tool, armedKey, dispatch, onClose }) {
           <button
             type="button"
             onClick={handleUse}
-            disabled={count === 0 && !armed}
+            disabled={count === 0}
             className="font-extrabold disabled:opacity-50"
             style={{
               background: "linear-gradient(180deg,#85c14a,#4e8425)",
@@ -546,19 +595,55 @@ function dispatchUseTool(dispatch, key, state) {
 
 // ─── Tool tile (shared by hotbar / grid / modal) ─────────────────────────
 
+// Two-tap to arm: first tap on a tile inspects it; a second tap within this
+// window activates (arms / uses) the tool. This keeps long-press for drag
+// while preventing a stray tap from arming a tool the player only wanted to
+// look at.
+const DOUBLE_TAP_MS = 420;
+
 const ToolTile = forwardRef(function ToolTile(
-  { tool, inspected, onClick, onPointerDown, size = "md", showName = true, dragging = false },
+  { tool, inspected, onClick, onActivate, onPointerDown, size = "md", showName = true, dragging = false },
   ref,
 ) {
   const armed = !!tool.armed;
+  const empty = tool.count === 0 && !armed;
   const dims = size === "sm"
     ? { w: 48, h: 52, icon: 24, name: 9, badge: 9, badgeMin: 14 }
     : { w: 58, h: 62, icon: 28, name: 9.5, badge: 10, badgeMin: 15 };
+  const lastTapAt = useRef(0);
+  const handleClick = () => {
+    const now = Date.now();
+    const isDouble = now - lastTapAt.current < DOUBLE_TAP_MS;
+    lastTapAt.current = isDouble ? 0 : now;
+    if (isDouble && onActivate) {
+      onActivate(tool);
+      return;
+    }
+    onClick?.(tool);
+  };
+  // Empty tiles get a clearly-recessed look — no warm tint, faded ink — so
+  // the player can't mistake them for an active selection. Owned tiles keep
+  // the lighter parchment fill that reads as "available".
+  const background = armed
+    ? "#fdf3e3"
+    : inspected
+    ? "rgba(246,227,191,0.55)"
+    : empty
+    ? "rgba(20,12,5,0.32)"
+    : "rgba(246,227,191,0.18)";
+  const borderColor = armed
+    ? "2px solid #f0c14b"
+    : inspected
+    ? "2px solid rgba(240,193,75,0.60)"
+    : empty
+    ? "1.5px solid rgba(200,160,90,0.12)"
+    : "1.5px solid rgba(200,160,90,0.40)";
+  const ink = armed ? "#3a2412" : empty ? "rgba(232,212,168,0.45)" : "#f6e3bf";
   return (
     <button
       type="button"
       ref={ref}
-      onClick={() => onClick?.(tool)}
+      onClick={handleClick}
       onPointerDown={onPointerDown}
       className="flex-shrink-0 flex flex-col items-center justify-end relative select-none"
       style={{
@@ -566,16 +651,12 @@ const ToolTile = forwardRef(function ToolTile(
         height: dims.h,
         borderRadius: 11,
         padding: "4px 0 5px",
-        background: armed ? "#fdf3e3" : inspected ? "rgba(240,193,75,0.22)" : "rgba(255,210,140,0.10)",
-        border: armed
-          ? "2px solid #f0c14b"
-          : inspected
-          ? "2px solid rgba(240,193,75,0.60)"
-          : "1.5px solid rgba(200,160,90,0.22)",
-        color: armed ? "#3a2412" : "#e8d4a8",
-        boxShadow: "0 2px 0 rgba(0,0,0,0.2)",
-        opacity: dragging ? 0.35 : (tool.count === 0 && !armed ? 0.38 : 1),
-        filter: tool.count === 0 && !armed ? "grayscale(0.75)" : "none",
+        background,
+        border: borderColor,
+        color: ink,
+        boxShadow: empty ? "inset 0 2px 4px rgba(0,0,0,0.35)" : "0 2px 0 rgba(0,0,0,0.2)",
+        opacity: dragging ? 0.35 : (empty ? 0.55 : 1),
+        filter: empty ? "grayscale(0.85)" : "none",
         touchAction: "none",
       }}
       title={tool.name}
@@ -588,12 +669,12 @@ const ToolTile = forwardRef(function ToolTile(
         style={{
           top: 2,
           right: 2,
-          background: armed ? "rgba(58,36,18,0.92)" : "rgba(10,5,3,0.85)",
+          background: armed ? "rgba(58,36,18,0.92)" : empty ? "rgba(10,5,3,0.55)" : "rgba(10,5,3,0.85)",
           borderRadius: 6,
           fontSize: dims.badge,
           padding: "0px 4px",
           lineHeight: 1.3,
-          color: armed ? "#f0c14b" : "#fff8e7",
+          color: armed ? "#f0c14b" : empty ? "rgba(255,248,231,0.45)" : "#fff8e7",
           minWidth: dims.badgeMin,
           letterSpacing: 0.2,
         }}
@@ -640,19 +721,26 @@ function useAutoInspectArmed(state, onInspectChange) {
 
 // ─── Tool grid (side-by-side left column) ────────────────────────────────
 
-export function PuzzleToolGrid({ state, onInspectChange, inspectedKey }) {
+export function PuzzleToolGrid({ state, onInspectChange, inspectedKey, dispatch }) {
   const list = useMemo(() => buildVisibleToolList(state), [state.tools, state.toolPending, state.fertilizerActive]);
   useAutoInspectArmed(state, onInspectChange);
   const select = useCallback(
     (t) => onInspectChange?.({ ...TOOL_BY_KEY[t.key], count: t.count }),
     [onInspectChange],
   );
+  const activate = useCallback(
+    (t) => {
+      onInspectChange?.({ ...TOOL_BY_KEY[t.key], count: t.count });
+      if (dispatch) dispatchUseTool(dispatch, t.key, { toolPending: state.toolPending });
+    },
+    [dispatch, onInspectChange, state.toolPending],
+  );
   return (
     <div
       className="h-full overflow-y-auto rounded-[11px]"
       style={{
-        background: "linear-gradient(#2e1c0c,#3d2712)",
-        border: "1px solid #180c04",
+        background: "linear-gradient(#6b4a26,#54391d)",
+        border: "1px solid #2a1a08",
       }}
       data-testid="puzzle-tool-grid"
     >
@@ -665,7 +753,7 @@ export function PuzzleToolGrid({ state, onInspectChange, inspectedKey }) {
         }}
       >
         {list.map((t) => (
-          <ToolTile key={t.key} tool={t} inspected={inspectedKey === t.key} onClick={select} />
+          <ToolTile key={t.key} tool={t} inspected={inspectedKey === t.key} onClick={select} onActivate={activate} />
         ))}
       </div>
     </div>
@@ -833,15 +921,21 @@ export function useToolDrag({ pins, pinActions, maxFitPins }) {
       const el = document.elementFromPoint(x, y);
       const slot = el?.closest?.("[data-hotbar-slot]");
       const inHotbar = !!el?.closest?.("[data-testid='puzzle-hotbar']");
-      if (slot) {
+      const inToolList = !!el?.closest?.("[data-testid='puzzle-tool-modal']");
+      if (d.fromHotbar) {
+        // Hotbar-originated drags: the only valid drop target is the tool
+        // list (dropping there unpins). Anywhere else — including other
+        // hotbar slots and the board area — is a no-op so an accidental
+        // drag off the hotbar can never silently lose pins.
+        if (inToolList) {
+          pinActions.remove(d.key);
+        }
+      } else if (slot) {
         const idx = Number.parseInt(slot.getAttribute("data-hotbar-slot"), 10);
         if (Number.isFinite(idx)) pinActions.insertAt(d.key, idx, maxFitPins);
       } else if (inHotbar) {
         // Dropped on the hotbar container (e.g., empty area) — append to end.
         pinActions.insertAt(d.key, pins.length, maxFitPins);
-      } else if (d.fromHotbar) {
-        // Dragged out of the hotbar onto open space → unpin.
-        pinActions.remove(d.key);
       }
       setDrag(null);
     };
@@ -882,6 +976,7 @@ export function DragGhost({ drag, tool }) {
 
 export function PuzzleHotbar({
   state,
+  dispatch,
   onInspectChange,
   inspectedKey,
   pins,
@@ -889,6 +984,7 @@ export function PuzzleHotbar({
   modalOpen,
   maxFitPins,
   dragKey,
+  dragFromHotbar,
   onBeginDrag,
 }) {
   const list = useMemo(() => buildVisibleToolList(state), [state.tools, state.toolPending, state.fertilizerActive]);
@@ -902,12 +998,24 @@ export function PuzzleHotbar({
     (t) => onInspectChange?.({ ...TOOL_BY_KEY[t.key], count: t.count }),
     [onInspectChange],
   );
+  const activate = useCallback(
+    (t) => {
+      onInspectChange?.({ ...TOOL_BY_KEY[t.key], count: t.count });
+      if (dispatch) dispatchUseTool(dispatch, t.key, { toolPending: state.toolPending });
+    },
+    [dispatch, onInspectChange, state.toolPending],
+  );
+  // Drop indicators light up only for drags originating in the dropdown
+  // list — hotbar→hotbar reordering already shows its own ghost and the
+  // user asked that hotbar-originated drags only resolve when dropped on
+  // the list, so we don't draw a hotbar drop hint for them.
+  const showHotbarDropHints = !!dragKey && dragFromHotbar === false;
   return (
     <div
       className="flex items-stretch gap-2 pl-2 pr-1"
       style={{
-        background: "linear-gradient(#2e1c0c,#3d2712)",
-        borderBottom: "1px solid #180c04",
+        background: "linear-gradient(#6b4a26,#54391d)",
+        borderBottom: "1px solid #2a1a08",
         paddingTop: 6,
         paddingBottom: 6,
       }}
@@ -920,7 +1028,12 @@ export function PuzzleHotbar({
         {visiblePins.length === 0 ? (
           <div
             data-hotbar-slot="0"
-            className="text-[#8a6a47] text-[10px] font-bold uppercase tracking-wider px-2 py-2 flex-1"
+            className="text-[#fdf3e3] text-[10px] font-bold uppercase tracking-wider px-2 py-2 flex-1 rounded-md"
+            style={
+              showHotbarDropHints
+                ? { background: "rgba(240,193,75,0.22)", outline: "2px dashed #f0c14b", outlineOffset: -2 }
+                : undefined
+            }
           >
             Drag tools here to pin
           </div>
@@ -929,12 +1042,18 @@ export function PuzzleHotbar({
             <div
               key={t.key}
               data-hotbar-slot={i}
-              className="flex-shrink-0"
+              className="flex-shrink-0 relative"
+              style={
+                showHotbarDropHints
+                  ? { boxShadow: "0 0 0 2px rgba(240,193,75,0.55), 0 0 12px rgba(240,193,75,0.45)", borderRadius: 12 }
+                  : undefined
+              }
             >
               <ToolTile
                 tool={t}
                 inspected={inspectedKey === t.key}
                 onClick={select}
+                onActivate={activate}
                 onPointerDown={(ev) => onBeginDrag?.(t.key, true, ev)}
                 size="sm"
                 dragging={dragKey === t.key}
@@ -947,8 +1066,13 @@ export function PuzzleHotbar({
         {visiblePins.length > 0 && (
           <div
             data-hotbar-slot={visiblePins.length}
-            className="flex-1 self-stretch min-w-[8px]"
+            className="flex-1 self-stretch min-w-[8px] rounded-md"
             aria-hidden="true"
+            style={
+              showHotbarDropHints
+                ? { background: "rgba(240,193,75,0.18)", outline: "2px dashed rgba(240,193,75,0.65)", outlineOffset: -2 }
+                : undefined
+            }
           />
         )}
       </div>
@@ -960,9 +1084,9 @@ export function PuzzleHotbar({
           width: 44,
           height: 52,
           borderRadius: 10,
-          background: modalOpen ? "#f0c14b" : "rgba(240,193,75,0.10)",
-          border: "1.5px dashed rgba(240,193,75,0.55)",
-          color: modalOpen ? "#3a2412" : "#f0c14b",
+          background: modalOpen ? "#f0c14b" : "rgba(240,193,75,0.18)",
+          border: "1.5px dashed rgba(240,193,75,0.65)",
+          color: modalOpen ? "#3a2412" : "#fdf3e3",
           flexShrink: 0,
           transition: "background 120ms ease, color 120ms ease",
         }}
@@ -988,6 +1112,7 @@ export function PuzzleToolModal({
   inspectedTool,
   onInspectChange,
   dragKey,
+  dragFromHotbar,
   onBeginDrag,
 }) {
   const list = useMemo(() => buildVisibleToolList(state), [state.tools, state.toolPending, state.fertilizerActive]);
@@ -1010,17 +1135,45 @@ export function PuzzleToolModal({
     setLocalSelectedKey(t.key);
     onInspectChange?.({ ...TOOL_BY_KEY[t.key], count: t.count });
   };
+  const activate = (t) => {
+    setLocalSelectedKey(t.key);
+    onInspectChange?.({ ...TOOL_BY_KEY[t.key], count: t.count });
+    dispatchUseTool(dispatch, t.key, { toolPending: state.toolPending });
+    if (!isTapTargetTool(t.key)) onClose?.();
+  };
   const handleUse = () => {
     if (!selectedTool) return;
     dispatchUseTool(dispatch, selectedTool.key, { toolPending: state.toolPending });
-    onClose?.();
+    if (!isTapTargetTool(selectedTool.key)) onClose?.();
   };
   const pinned = selectedTool ? pins.includes(selectedTool.key) : false;
+  // Highlight the dropdown grid as a drop target whenever the player is
+  // dragging a tool out of the hotbar — that's the only valid drop target
+  // for hotbar-originated drags.
+  const showListDropHint = !!dragKey && dragFromHotbar === true;
 
   // The dropdown floats *over* the board area rather than covering the
   // whole screen — no dark backdrop, capped height — so the player keeps
   // sight of the tiles they're about to act on.
   return (
+    <>
+      {/* Click-blocker behind the panel so taps under the dropdown can't
+          fall through to the board canvas. Sized to extend well past the
+          viewport so it covers the board no matter the layout. */}
+      <div
+        onClick={onClose}
+        onPointerDown={(e) => e.stopPropagation()}
+        aria-hidden="true"
+        className="absolute"
+        style={{
+          top: "100%",
+          left: "-50vw",
+          right: "-50vw",
+          bottom: "-200vh",
+          zIndex: 54,
+        }}
+        data-testid="puzzle-tool-modal-backdrop"
+      />
     <div
       role="dialog"
       aria-modal="false"
@@ -1133,11 +1286,20 @@ export function PuzzleToolModal({
           </div>
         </div>
         {/* Scrollable grid */}
-        <div className="flex-1 min-h-0 overflow-y-auto p-3">
+        <div
+          className="flex-1 min-h-0 overflow-y-auto p-3 rounded-b-md"
+          style={
+            showListDropHint
+              ? { background: "rgba(240,193,75,0.10)", outline: "2px dashed rgba(240,193,75,0.55)", outlineOffset: -6 }
+              : undefined
+          }
+        >
           <div
             className="text-[9px] font-extrabold uppercase tracking-widest text-[#caa97a] mb-2 px-0.5"
           >
-            Long-press a tool and drag it up to pin it
+            {showListDropHint
+              ? "Drop here to unpin from the hotbar"
+              : "Long-press a tool and drag it up to pin · double-tap to arm"}
           </div>
           <div
             style={{
@@ -1152,6 +1314,7 @@ export function PuzzleToolModal({
                 tool={t}
                 inspected={effectiveKey === t.key}
                 onClick={select}
+                onActivate={activate}
                 onPointerDown={(ev) => onBeginDrag?.(t.key, false, ev)}
                 dragging={dragKey === t.key}
               />
@@ -1160,6 +1323,7 @@ export function PuzzleToolModal({
         </div>
       </div>
     </div>
+    </>
   );
 }
 

@@ -174,15 +174,10 @@ export class GameScene extends Phaser.Scene {
         this._deferredTool = value;
         return;
       }
-      if (value === "clear")      this._applyToolClear();
-      if (value === "basic")      this._applyToolBasic();
-      if (value === "rare")       this._applyToolRare();
-      if (value === "shuffle")    this.shuffleBoard();
       if (value === "magic_wand") {
         // Arm the wand — next tile tap sweeps all tiles of that type
         this._magicWandPending = true;
         this.applyToolDim("magic_wand");
-        // Do NOT clear toolPending yet; it clears after the tap in _applyMagicWand
         return;
       }
       if (value === "rake") {
@@ -205,8 +200,14 @@ export class GameScene extends Phaser.Scene {
         this.applyToolDim("rune_wildcard");
         return;
       }
-      // Clear the pending flag once handled
-      this.time.delayedCall(50, () => this.registry.set("toolPending", null));
+      // Instant tools: fire the effect synchronously, then signal the React
+      // store that the tool has resolved so toolPending clears and the player
+      // can fire it again without first hitting a cancel.
+      if (value === "clear")    this._applyToolClear();
+      if (value === "basic")    this._applyToolBasic();
+      if (value === "rare")     this._applyToolRare();
+      if (value === "shuffle")  this.shuffleBoard();
+      this.time.delayedCall(50, () => this.events.emit(SCENE_EVENTS.TOOL_FIRED, { key: value }));
     });
     // Sync worker effects on init and whenever state.workers changes
     this._syncWorkerEffects();
@@ -1146,31 +1147,31 @@ export class GameScene extends Phaser.Scene {
     if (this._magicWandPending) {
       this._magicWandPending = false;
       this._applyMagicWand(tile.res);
-      this.time.delayedCall(50, () => this.registry.set("toolPending", null));
+      this.time.delayedCall(50, () => this.events.emit(SCENE_EVENTS.TOOL_FIRED, { key: "magic_wand" }));
       return;
     }
     if (this._rakePending) {
       this._rakePending = false;
       this._applyToolRake(tile);
-      this.time.delayedCall(50, () => this.registry.set("toolPending", null));
+      this.time.delayedCall(50, () => this.events.emit(SCENE_EVENTS.TOOL_FIRED, { key: "rake" }));
       return;
     }
     if (this._axePending) {
       this._axePending = false;
       this._applyToolAxe(tile);
-      this.time.delayedCall(50, () => this.registry.set("toolPending", null));
+      this.time.delayedCall(50, () => this.events.emit(SCENE_EVENTS.TOOL_FIRED, { key: "axe" }));
       return;
     }
     if (this._bombPending) {
       this._bombPending = false;
       this._applyToolBomb(tile);
-      this.time.delayedCall(50, () => this.registry.set("toolPending", null));
+      this.time.delayedCall(50, () => this.events.emit(SCENE_EVENTS.TOOL_FIRED, { key: "bomb" }));
       return;
     }
     if (this._runeWildcardPending) {
       this._runeWildcardPending = false;
       this._applyRuneWildcard(tile);
-      this.time.delayedCall(50, () => this.registry.set("toolPending", null));
+      this.time.delayedCall(50, () => this.events.emit(SCENE_EVENTS.TOOL_FIRED, { key: "rune_wildcard" }));
       return;
     }
     this.dragging = true;
@@ -1371,6 +1372,9 @@ export class GameScene extends Phaser.Scene {
     if (this._deferredTool) {
       const tool = this._deferredTool;
       this._deferredTool = null;
+      // The registry already holds `tool`; the changedata handler fired but
+      // we shortcircuited because of the drag. Re-poke the registry so the
+      // handler runs cleanly now that dragging is over.
       this.registry.set("toolPending", null);
       this.time.delayedCall(60, () => this.registry.set("toolPending", tool));
     }
