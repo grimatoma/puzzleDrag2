@@ -5,7 +5,7 @@ import { gameReducer, initialState } from "./src/state.js";
 import { Hud } from "./src/ui/Hud.jsx";
 import { TownView } from "./src/ui/Town.jsx";
 import { NpcBubble, StoryModal } from "./src/ui/Modals.jsx";
-import { SidePanel, BottomNav, FeatureModals, FeatureScreens } from "./src/ui.jsx";
+import { BottomNav, FeatureModals, FeatureScreens } from "./src/ui.jsx";
 import { useAudio } from "./src/audio/useAudio.js";
 import { useRouter } from "./src/router.js";
 import { setPhaserScene } from "./src/phaserBridge.js";
@@ -15,8 +15,12 @@ import { useA11yBridge } from "./src/a11y.js";
 import { seasonIndexInSession } from "./src/features/zones/data.js";
 import {
   BoardFrame,
+  BoardLayout,
   PuzzleActionPanel,
-  PuzzleToolStrip,
+  PuzzleHotbar,
+  PuzzleToolGrid,
+  PuzzleToolModal,
+  usePinnedTools,
 } from "./src/ui/puzzleBoard.jsx";
 
 function BoardSkeleton() {
@@ -223,12 +227,15 @@ export default function App() {
   const [state, dispatch] = useReducer(gameReducer, undefined, initialState);
   const [chainInfo, setChainInfo] = useState(null);
   const [inspectedTool, setInspectedTool] = useState(null);
+  const [toolModalOpen, setToolModalOpen] = useState(false);
+  const [pins, togglePin] = usePinnedTools();
   const sceneRef = useRef(null);
   const stateRef = useRef(state);
   const storyModalOpen = !!state.story?.queuedBeat;
   const armedTool = state.toolPending ? state.tools ? { key: state.toolPending, count: state.tools[state.toolPending] ?? 0 } : null : null;
   const turnBudget = state.farmRun?.turnBudget ?? 0;
   const seasonIdx = seasonIndexInSession(state.turnsUsed ?? 0, turnBudget || 1);
+  const inspectedKey = inspectedTool?.key ?? state.toolPending ?? null;
   const infoPanelEl = (
     <PuzzleActionPanel
       chainInfo={chainInfo}
@@ -304,75 +311,49 @@ export default function App() {
 
         {/* Main area: board + side panel, or town view */}
         <div className="flex-1 min-h-0 relative">
-          {/* Board + side panel grid — always mounted to keep Phaser alive, hidden when in town view */}
-          <div className={`absolute inset-0 flex flex-col ${state.view === "board" ? "" : "invisible"}`}>
-            {/* Chain badge overlay for phone landscape — React handles it since Phaser badge gets clipped */}
-            {chainInfo && (
-              <div className="hidden max-[1024px]:landscape:block absolute top-2 left-1/2 -translate-x-1/2 z-30 pointer-events-none">
-                <div className="bg-[#2b2218]/90 border border-[#ffd248] rounded-full px-3 py-1 text-[#ffd248] font-bold text-[12px] whitespace-nowrap">
-                  chain × {chainInfo.count}{chainInfo.upgrades > 0 ? `  +${chainInfo.upgrades}★` : ""}
-                  {chainInfo.nextTileProgress && chainInfo.nextTileProgress.threshold > 0 && (
-                    <span className="ml-2 text-[10px] text-[#f8e7c6] font-normal">
-                      ({chainInfo.nextTileProgress.current}/{chainInfo.nextTileProgress.threshold} {chainInfo.nextTileProgress.targetLabel})
-                    </span>
-                  )}
-                </div>
-              </div>
-            )}
-            {/* Horizontal tools strip — directly under the HUD on narrow
-                phones (and desktop, where it complements the side panel).
-                Anything wider than ~500px and below desktop gets the vertical
-                rail on the left instead, so the strip is hidden there. */}
-            <div className="min-[500px]:max-[1024px]:hidden">
-              <PuzzleToolStrip
-                state={state}
-                onInspectChange={setInspectedTool}
-                inspectedKey={inspectedTool?.key ?? state.toolPending ?? null}
-              />
-            </div>
-
-            <div className="flex-1 min-h-0 grid grid-cols-[1fr_300px] gap-3 p-3 max-[1024px]:grid-cols-1 max-[1024px]:gap-0 max-[1024px]:p-0 min-[500px]:max-[1024px]:grid-cols-[240px_1fr] min-[500px]:max-[1024px]:gap-2 min-[500px]:max-[1024px]:p-2">
-              {/* Board column. On the wide-mobile layout the panel moves to
-                  the left column so the board column claims the full
-                  remaining width (grid `order` swaps DOM order vs visual order). */}
-              <div className="relative min-h-0 min-w-0 flex flex-col gap-2 max-[1024px]:p-2 max-[1024px]:gap-2 min-[500px]:max-[1024px]:p-0 min-[500px]:max-[1024px]:gap-2 min-[500px]:max-[1024px]:order-2">
-                <div className="min-[500px]:max-[1024px]:hidden">{infoPanelEl}</div>
-                <div className="flex-1 min-h-0 min-w-0">
-                  <BoardFrame seasonIdx={seasonIdx}>
-                    <PhaserMount
-                      dispatch={dispatch}
-                      biomeKey={state.biomeKey}
-                      turnsUsed={state.turnsUsed}
-                      uiLocked={uiLocked}
-                      boardActive={state.view === "board"}
-                      sceneRef={sceneRef}
-                      toolPending={state.toolPending}
-                      setChainInfo={setChainInfo}
-                      workers={state.workers}
-                      tileCollection={state.tileCollection}
-                      gameState={state}
-                      grid={state.grid}
-                    />
-                  </BoardFrame>
-                </div>
-              </div>
-              {/* Wide-mobile left column: status panel + vertical tool rail. */}
-              <div className="hidden min-[500px]:max-[1024px]:flex min-[500px]:max-[1024px]:flex-col min-[500px]:max-[1024px]:gap-2 min-[500px]:max-[1024px]:order-1 min-[500px]:max-[1024px]:min-h-0">
-                {infoPanelEl}
-                <div className="flex-1 min-h-0 overflow-hidden rounded-[11px]" style={{ background: "linear-gradient(#1a0d05,#241710)", border: "1px solid #0a0506" }}>
-                  <PuzzleToolStrip
-                    state={state}
-                    onInspectChange={setInspectedTool}
-                    inspectedKey={inspectedTool?.key ?? state.toolPending ?? null}
-                    orientation="vertical"
+          {/* Board layout — single Phaser mount, CSS-grid template-areas
+              reshape the surrounding chrome between portrait (vertical
+              stack) and landscape ≥500px (status + tools-grid on left,
+              board on right). Always mounted to keep Phaser alive; hidden
+              when in town view. */}
+          <div className={`absolute inset-0 ${state.view === "board" ? "" : "invisible"}`}>
+            <BoardLayout
+              hotbar={
+                <PuzzleHotbar
+                  state={state}
+                  onInspectChange={setInspectedTool}
+                  inspectedKey={inspectedKey}
+                  pins={pins}
+                  onOpenModal={() => setToolModalOpen(true)}
+                />
+              }
+              statusPanel={infoPanelEl}
+              toolsGrid={
+                <PuzzleToolGrid
+                  state={state}
+                  onInspectChange={setInspectedTool}
+                  inspectedKey={inspectedKey}
+                />
+              }
+              board={
+                <BoardFrame seasonIdx={seasonIdx}>
+                  <PhaserMount
+                    dispatch={dispatch}
+                    biomeKey={state.biomeKey}
+                    turnsUsed={state.turnsUsed}
+                    uiLocked={uiLocked}
+                    boardActive={state.view === "board"}
+                    sceneRef={sceneRef}
+                    toolPending={state.toolPending}
+                    setChainInfo={setChainInfo}
+                    workers={state.workers}
+                    tileCollection={state.tileCollection}
+                    gameState={state}
+                    grid={state.grid}
                   />
-                </div>
-              </div>
-              {/* Side panel — desktop only. Houses orders/tools/inventory shortcuts. */}
-              <div className="min-h-0 max-[1024px]:hidden">
-                <SidePanel state={state} dispatch={dispatch} chainInfo={chainInfo} infoPanel={null} onInspectChange={setInspectedTool} />
-              </div>
-            </div>
+                </BoardFrame>
+              }
+            />
           </div>
 
           {/* Town overlay — covers exactly the same area as the board */}
@@ -401,6 +382,22 @@ export default function App() {
 
         {/* Feature modals */}
         <FeatureModals state={state} dispatch={dispatch} />
+
+        {/* Tools modal — portrait hotbar's chevron opens it; tap-to-pin
+            management lives inside. Mounted at app-shell level so it
+            overlays both the board and any feature view. */}
+        {state.view === "board" && (
+          <PuzzleToolModal
+            open={toolModalOpen}
+            onClose={() => setToolModalOpen(false)}
+            state={state}
+            dispatch={dispatch}
+            pins={pins}
+            togglePin={togglePin}
+            inspectedTool={inspectedTool}
+            onInspectChange={setInspectedTool}
+          />
+        )}
       </div>
     </div>
   );
