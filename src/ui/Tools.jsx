@@ -27,8 +27,9 @@ function buildToolList(toolsState, { toolPending, fertilizerActive }) {
   });
 }
 
-function ToolInspectSheet({ tool, onClose }) {
+function ToolInspectSheet({ tool, count, onClose, onUse }) {
   if (!tool) return null;
+  const canUse = typeof count === "number" && count > 0;
   return (
     <BottomSheet
       open={!!tool}
@@ -52,8 +53,16 @@ function ToolInspectSheet({ tool, onClose }) {
         )}
         <button
           type="button"
+          disabled={!canUse}
+          onClick={() => { onUse?.(tool.key); onClose(); }}
+          className={`mt-2 w-full font-bold py-2 rounded-md border text-body ${canUse ? "bg-bg-warm hover:bg-bg-frame text-cream border-cream-soft" : "bg-bg-frame text-cream/40 border-iron/60 opacity-50 cursor-not-allowed"}`}
+        >
+          {canUse ? `Use (${count} left)` : "None left"}
+        </button>
+        <button
+          type="button"
           onClick={onClose}
-          className="mt-2 w-full bg-bg-warm hover:bg-bg-frame text-cream font-bold py-2 rounded-md border border-cream-soft text-body"
+          className="w-full bg-transparent hover:bg-bg-warm text-cream/70 font-semibold py-1.5 rounded-md border border-cream-soft/30 text-caption"
         >
           Close
         </button>
@@ -81,6 +90,7 @@ export function ToolsGrid({ tools, toolPending, fertilizerActive, onUse, onInspe
   const [inspectKey, setInspectKey] = useState(null);
   const list = buildToolList(tools, { toolPending, fertilizerActive });
   const inspectTool = inspectKey ? TOOL_BY_KEY[inspectKey] : null;
+  const inspectCount = inspectKey != null ? (tools?.[inspectKey] ?? 0) : 0;
   useEffect(() => {
     onInspectChange?.(inspectTool);
   }, [inspectTool, onInspectChange]);
@@ -94,7 +104,12 @@ export function ToolsGrid({ tools, toolPending, fertilizerActive, onUse, onInspe
         onInspect={(key) => setInspectKey(key)}
         grouped
       />
-      <ToolInspectSheet tool={inspectTool} onClose={() => setInspectKey(null)} />
+      <ToolInspectSheet
+        tool={inspectTool}
+        count={inspectCount}
+        onClose={() => setInspectKey(null)}
+        onUse={onUse}
+      />
     </>
   );
 }
@@ -119,6 +134,7 @@ export function MobileDock({ state, dispatch, onInspectChange }) {
     fertilizerActive: state.fertilizerActive,
   });
   const inspectTool = inspectKey ? TOOL_BY_KEY[inspectKey] : null;
+  const inspectCount = inspectKey != null ? (state.tools?.[inspectKey] ?? 0) : 0;
   useEffect(() => {
     onInspectChange?.(inspectTool);
   }, [inspectTool, onInspectChange]);
@@ -164,7 +180,12 @@ export function MobileDock({ state, dispatch, onInspectChange }) {
         />
       </BottomSheet>
 
-      <ToolInspectSheet tool={inspectTool} onClose={() => setInspectKey(null)} />
+      <ToolInspectSheet
+        tool={inspectTool}
+        count={inspectCount}
+        onClose={() => setInspectKey(null)}
+        onUse={(key) => { dispatchUseTool(dispatch, key, state); if (!isTapTargetTool(key)) closeSheet(); }}
+      />
     </>
   );
 }

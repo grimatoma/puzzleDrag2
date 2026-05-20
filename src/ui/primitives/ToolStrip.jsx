@@ -24,6 +24,7 @@ function ToolCard({ tool, armed, dimmed, onUse, onInspect }) {
   const [tipOpen, setTipOpen] = useState(false);
 
   const isDisabled = (!armed && tool.disabled) || (!armed && tool.count === 0);
+  const isExhausted = !armed && tool.count === 0;
 
   useEffect(
     () => () => {
@@ -46,7 +47,13 @@ function ToolCard({ tool, armed, dimmed, onUse, onInspect }) {
     clearTimeout(longPressTimer.current);
     const elapsed = Date.now() - tapStart.current;
     if (longPressFired.current) return;
-    if (elapsed < TAP_MAX_MS) onUse?.(tool.key);
+    if (elapsed < TAP_MAX_MS) {
+      if (isExhausted) {
+        onInspect ? onInspect(tool.key) : setTipOpen(true);
+      } else {
+        onUse?.(tool.key);
+      }
+    }
   };
   const cancelPress = () => {
     clearTimeout(longPressTimer.current);
@@ -72,7 +79,7 @@ function ToolCard({ tool, armed, dimmed, onUse, onInspect }) {
   const stateCls = armed
     ? "ring-2 ring-gold-bright bg-bg-frame border-cream-soft"
     : isDisabled
-    ? "opacity-40 cursor-not-allowed border-iron/60 bg-bg-frame"
+    ? "opacity-40 border-iron/60 bg-bg-frame hover:opacity-60"
     : "border-cream-soft/60 bg-bg-frame hover:bg-bg-warm";
 
   const dimCls = dimmed && !armed ? "opacity-60" : "";
@@ -80,8 +87,7 @@ function ToolCard({ tool, armed, dimmed, onUse, onInspect }) {
   return (
     <button
       type="button"
-      disabled={isDisabled}
-      aria-label={armed ? `Cancel ${tool.label}` : `Use ${tool.label}`}
+      aria-label={armed ? `Cancel ${tool.label}` : isExhausted ? `Inspect ${tool.label}` : `Use ${tool.label}`}
       aria-pressed={armed}
       onMouseDown={beginPress}
       onMouseUp={endPress}
