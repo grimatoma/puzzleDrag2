@@ -21,7 +21,11 @@ import {
   PuzzleToolGrid,
   PuzzleToolModal,
   usePinnedTools,
+  useMaxFitPins,
+  useToolDrag,
+  DragGhost,
 } from "./src/ui/puzzleBoard.jsx";
+import { TOOL_BY_KEY, isTapTargetTool } from "./src/ui/toolRegistry.js";
 
 function BoardSkeleton() {
   return (
@@ -228,14 +232,22 @@ export default function App() {
   const [chainInfo, setChainInfo] = useState(null);
   const [inspectedTool, setInspectedTool] = useState(null);
   const [toolModalOpen, setToolModalOpen] = useState(false);
-  const [pins, togglePin] = usePinnedTools();
+  const [pins, pinActions] = usePinnedTools();
+  const hotbarRef = useRef(null);
+  const maxFitPins = useMaxFitPins(hotbarRef);
+  const { drag, beginDrag } = useToolDrag({ pins, pinActions, maxFitPins });
   const sceneRef = useRef(null);
   const stateRef = useRef(state);
   const storyModalOpen = !!state.story?.queuedBeat;
   const armedTool = state.toolPending ? state.tools ? { key: state.toolPending, count: state.tools[state.toolPending] ?? 0 } : null : null;
+  const armedTapTarget = !!state.toolPending && isTapTargetTool(state.toolPending);
   const turnBudget = state.farmRun?.turnBudget ?? 0;
   const seasonIdx = seasonIndexInSession(state.turnsUsed ?? 0, turnBudget || 1);
   const inspectedKey = inspectedTool?.key ?? state.toolPending ?? null;
+  const dragTool = drag ? TOOL_BY_KEY[drag.key] : null;
+  const dragToolWithCount = dragTool
+    ? { ...dragTool, count: state.tools?.[drag.key] ?? 0, armed: state.toolPending === drag.key }
+    : null;
   const infoPanelEl = (
     <PuzzleActionPanel
       chainInfo={chainInfo}
@@ -319,13 +331,34 @@ export default function App() {
           <div className={`absolute inset-0 ${state.view === "board" ? "" : "invisible"}`}>
             <BoardLayout
               hotbar={
-                <PuzzleHotbar
-                  state={state}
-                  onInspectChange={setInspectedTool}
-                  inspectedKey={inspectedKey}
-                  pins={pins}
-                  onOpenModal={() => setToolModalOpen(true)}
-                />
+                <div ref={hotbarRef} className="relative">
+                  <PuzzleHotbar
+                    state={state}
+                    onInspectChange={setInspectedTool}
+                    inspectedKey={inspectedKey}
+                    pins={pins}
+                    onOpenModal={() => setToolModalOpen((o) => !o)}
+                    modalOpen={toolModalOpen}
+                    maxFitPins={maxFitPins}
+                    dragKey={drag?.key ?? null}
+                    onBeginDrag={beginDrag}
+                  />
+                  {/* Tools dropdown — anchored to the hotbar so it floats
+                      over the board area without covering the hotbar or HUD. */}
+                  {state.view === "board" && (
+                    <PuzzleToolModal
+                      open={toolModalOpen}
+                      onClose={() => setToolModalOpen(false)}
+                      state={state}
+                      dispatch={dispatch}
+                      pins={pins}
+                      inspectedTool={inspectedTool}
+                      onInspectChange={setInspectedTool}
+                      dragKey={drag?.key ?? null}
+                      onBeginDrag={beginDrag}
+                    />
+                  )}
+                </div>
               }
               statusPanel={infoPanelEl}
               toolsGrid={
@@ -336,7 +369,7 @@ export default function App() {
                 />
               }
               board={
-                <BoardFrame seasonIdx={seasonIdx}>
+                <BoardFrame seasonIdx={seasonIdx} armed={armedTapTarget}>
                   <PhaserMount
                     dispatch={dispatch}
                     biomeKey={state.biomeKey}
@@ -383,21 +416,9 @@ export default function App() {
         {/* Feature modals */}
         <FeatureModals state={state} dispatch={dispatch} />
 
-        {/* Tools modal — portrait hotbar's chevron opens it; tap-to-pin
-            management lives inside. Mounted at app-shell level so it
-            overlays both the board and any feature view. */}
-        {state.view === "board" && (
-          <PuzzleToolModal
-            open={toolModalOpen}
-            onClose={() => setToolModalOpen(false)}
-            state={state}
-            dispatch={dispatch}
-            pins={pins}
-            togglePin={togglePin}
-            inspectedTool={inspectedTool}
-            onInspectChange={setInspectedTool}
-          />
-        )}
+        {/* Drag ghost — floats above everything while a hotbar drag is
+            in-flight so the player can see the tool moving with their finger. */}
+        <DragGhost drag={drag} tool={dragToolWithCount} />
       </div>
     </div>
   );

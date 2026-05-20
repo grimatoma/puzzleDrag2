@@ -162,7 +162,9 @@ export class GameScene extends Phaser.Scene {
       this.locked = !!value;
     });
     onRegistry("changedata-toolPending", (_p, value) => {
-      if (!value) return;
+      // Tap-target tools dim non-useful tiles while armed, so the player
+      // sees which tiles will actually matter; instant tools never dim.
+      if (!value) { this.clearToolDim(); return; }
       if (this.dragging) {
         this._deferredTool = value;
         return;
@@ -174,23 +176,28 @@ export class GameScene extends Phaser.Scene {
       if (value === "magic_wand") {
         // Arm the wand — next tile tap sweeps all tiles of that type
         this._magicWandPending = true;
+        this.applyToolDim("magic_wand");
         // Do NOT clear toolPending yet; it clears after the tap in _applyMagicWand
         return;
       }
       if (value === "rake") {
         this._rakePending = true;
+        this.applyToolDim("rake");
         return;
       }
       if (value === "axe") {
         this._axePending = true;
+        // Axe affects an entire row — every tile is a valid target, no dim.
         return;
       }
       if (value === "bomb") {
         this._bombPending = true;
+        // Bomb covers any 3×3 region — every tile is a valid target.
         return;
       }
       if (value === "rune_wildcard") {
         this._runeWildcardPending = true;
+        this.applyToolDim("rune_wildcard");
         return;
       }
       // Clear the pending flag once handled
@@ -740,6 +747,10 @@ export class GameScene extends Phaser.Scene {
           this.shuffleBoard();
         }
         this._syncGridToState();
+        // The board just changed under an armed tool — re-evaluate which
+        // tiles should be dimmed so feedback stays accurate.
+        const pending = this.registry.get("toolPending");
+        if (pending && !this.dragging) this.applyToolDim(pending);
       });
     } else {
       this._syncGridToState();
@@ -1452,6 +1463,57 @@ export class GameScene extends Phaser.Scene {
         tile.sprite.setAlpha(1);
       }
     }
+  }
+
+  // Dim tiles that are not useful targets for the armed tool. Mirrors the
+  // chain-drag dimming so the player gets the same visual signal: bright
+  // tiles are the ones that will actually do something.
+  applyToolDim(toolKey) {
+    if (toolKey === "magic_wand" || toolKey === "rune_wildcard") {
+      // Sweep-by-type tools — dim resources that appear only once (sweeping
+      // them only clears the tile the player tapped, which is wasted).
+      const counts = {};
+      for (let r = 0; r < ROWS; r++) {
+        for (let c = 0; c < COLS; c++) {
+          const t = this.grid[r]?.[c];
+          if (!t) continue;
+          counts[t.res.key] = (counts[t.res.key] ?? 0) + 1;
+        }
+      }
+      for (let r = 0; r < ROWS; r++) {
+        for (let c = 0; c < COLS; c++) {
+          const t = this.grid[r]?.[c];
+          if (!t) continue;
+          t.sprite.setAlpha((counts[t.res.key] ?? 0) > 1 ? 1 : 0.35);
+        }
+      }
+      return;
+    }
+    if (toolKey === "rake") {
+      // Flood-fill tool — dim tiles with no same-key 4-neighbour, since
+      // tapping them just sweeps that one tile.
+      for (let r = 0; r < ROWS; r++) {
+        for (let c = 0; c < COLS; c++) {
+          const t = this.grid[r]?.[c];
+          if (!t) continue;
+          const k = t.res.key;
+          const u = this.grid[r - 1]?.[c]?.res.key === k;
+          const d = this.grid[r + 1]?.[c]?.res.key === k;
+          const l = this.grid[r]?.[c - 1]?.res.key === k;
+          const ri = this.grid[r]?.[c + 1]?.res.key === k;
+          t.sprite.setAlpha(u || d || l || ri ? 1 : 0.35);
+        }
+      }
+      return;
+    }
+    // Other tools (axe, bomb) treat every tile as a valid target.
+    this.clearDimming();
+  }
+
+  clearToolDim() {
+    // Don't unstick the chain-drag dim by accident.
+    if (this.dragging) return;
+    this.clearDimming();
   }
 
   clearPath(deselect = true) {
