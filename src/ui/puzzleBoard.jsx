@@ -772,7 +772,12 @@ function readStoredPins() {
     if (!raw) return DEFAULT_PINS.slice();
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) return DEFAULT_PINS.slice();
-    return parsed.filter((k) => typeof k === "string" && TOOL_BY_KEY[k]).slice(0, MAX_PINS);
+    // Pins are a sparse fixed-slot array — keep slot positions, normalize
+    // non-strings / unknown keys to `null` so each index still represents
+    // a specific hotbar slot.
+    return parsed
+      .map((k) => (typeof k === "string" && TOOL_BY_KEY[k] ? k : null))
+      .slice(0, MAX_PINS);
   } catch {
     return DEFAULT_PINS.slice();
   }
@@ -785,23 +790,29 @@ export function usePinnedTools() {
       window.localStorage?.setItem(PIN_STORAGE_KEY, JSON.stringify(pins));
     } catch { /* localStorage may be unavailable in private mode; ignore */ }
   }, [pins]);
-  // Insert a tool at `index` (0..pins.length). Removes it from its old slot
-  // first so dragging to reorder doesn't duplicate. Honors the supplied cap
-  // so the hotbar never overflows the visible width.
-  const insertAt = useCallback((key, index, cap = MAX_PINS) => {
+  // Place `key` at slot `index`, overwriting whatever was there. If the
+  // tool was already pinned to a different slot, that slot becomes empty
+  // (move semantics — never duplicates). Honors the supplied cap so the
+  // hotbar never overflows the visible width.
+  const placeAt = useCallback((key, index, cap = MAX_PINS) => {
     if (!TOOL_BY_KEY[key]) return;
     setPins((prev) => {
-      const without = prev.filter((k) => k !== key);
-      const i = Math.max(0, Math.min(index, without.length));
-      const next = [...without.slice(0, i), key, ...without.slice(i)];
-      return next.slice(0, Math.max(1, Math.min(MAX_PINS, cap)));
+      const slotCap = Math.max(1, Math.min(MAX_PINS, cap));
+      const target = Math.max(0, Math.min(index, slotCap - 1));
+      const len = Math.max(prev.length, target + 1);
+      const next = Array.from({ length: len }, (_, i) => prev[i] ?? null);
+      for (let i = 0; i < next.length; i++) {
+        if (next[i] === key && i !== target) next[i] = null;
+      }
+      next[target] = key;
+      return next.slice(0, slotCap);
     });
   }, []);
   const remove = useCallback((key) => {
     if (!TOOL_BY_KEY[key]) return;
-    setPins((prev) => prev.filter((k) => k !== key));
+    setPins((prev) => prev.map((k) => (k === key ? null : k)));
   }, []);
-  return [pins, { insertAt, remove }];
+  return [pins, { placeAt, remove }];
 }
 
 // Measure how many tool tiles fit in a container — used so the hotbar's
@@ -932,10 +943,14 @@ export function useToolDrag({ pins, pinActions, maxFitPins }) {
         }
       } else if (slot) {
         const idx = Number.parseInt(slot.getAttribute("data-hotbar-slot"), 10);
-        if (Number.isFinite(idx)) pinActions.insertAt(d.key, idx, maxFitPins);
+        if (Number.isFinite(idx)) pinActions.placeAt(d.key, idx, maxFitPins);
       } else if (inHotbar) {
-        // Dropped on the hotbar container (e.g., empty area) — append to end.
-        pinActions.insertAt(d.key, pins.length, maxFitPins);
+        // Dropped on the hotbar container (e.g., in the gap between two
+        // slots) — place in the first empty slot, otherwise the last.
+        const firstEmpty = Array.from({ length: maxFitPins }, (_, i) => pins[i] ?? null)
+          .findIndex((k) => !k);
+        const target = firstEmpty >= 0 ? firstEmpty : maxFitPins - 1;
+        pinActions.placeAt(d.key, target, maxFitPins);
       }
       setDrag(null);
     };
@@ -947,7 +962,7 @@ export function useToolDrag({ pins, pinActions, maxFitPins }) {
       window.removeEventListener("pointerup", finish);
       window.removeEventListener("pointercancel", finish);
     };
-  }, [pinActions, pins.length, maxFitPins]);
+  }, [pinActions, pins, maxFitPins]);
 
   return { drag, beginDrag: beginPress };
 }
@@ -990,13 +1005,17 @@ export function PuzzleHotbar({
   const list = useMemo(() => buildVisibleToolList(state), [state.tools, state.toolPending, state.fertilizerActive]);
   useAutoInspectArmed(state, onInspectChange);
   const byKey = useMemo(() => Object.fromEntries(list.map((t) => [t.key, t])), [list]);
-  // Show only currently-visible pinned tools (skip pins for tools the
-  // player has lost or never owned — pin order is preserved). Capped to
-  // whatever the measured width allows so the rail never scrolls sideways.
-  const visiblePins = pins.map((k) => byKey[k]).filter(Boolean).slice(0, maxFitPins);
-  // Always render exactly `maxFitPins` slots — populated tiles followed by
-  // dashed placeholders — so the rail's footprint matches the container.
-  const totalSlots = Math.max(visiblePins.length, maxFitPins);
+  // Each pin slot is positional: slot `i` shows whatever tool sits at
+  // `pins[i]`, or an empty placeholder when that entry is null / the
+  // referenced tool isn't currently owned. The rail always renders
+  // exactly `maxFitPins` slots so its footprint matches the container.
+  const slots = useMemo(
+    () => Array.from({ length: maxFitPins }, (_, i) => {
+      const key = pins[i];
+      return key && byKey[key] ? byKey[key] : null;
+    }),
+    [pins, byKey, maxFitPins],
+  );
   const select = useCallback(
     (t) => onInspectChange?.({ ...TOOL_BY_KEY[t.key], count: t.count }),
     [onInspectChange],
@@ -1025,8 +1044,7 @@ export function PuzzleHotbar({
       data-testid="puzzle-hotbar"
     >
       <div className="flex-1 min-w-0 flex items-center justify-between">
-        {Array.from({ length: totalSlots }, (_, i) => {
-          const tool = visiblePins[i];
+        {slots.map((tool, i) => {
           if (tool) {
             return (
               <div
