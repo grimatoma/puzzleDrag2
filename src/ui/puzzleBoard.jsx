@@ -602,7 +602,7 @@ function dispatchUseTool(dispatch, key, state) {
 const DOUBLE_TAP_MS = 420;
 
 const ToolTile = forwardRef(function ToolTile(
-  { tool, inspected, onClick, onActivate, onPointerDown, size = "md", showName = true, dragging = false },
+  { tool, inspected, onClick, onActivate, onPointerDown, size = "md", showName = true, dragging = false, fluid = false },
   ref,
 ) {
   const armed = !!tool.armed;
@@ -610,6 +610,10 @@ const ToolTile = forwardRef(function ToolTile(
   const dims = size === "sm"
     ? { w: 48, h: 52, icon: 24, name: 9, badge: 9, badgeMin: 14 }
     : { w: 58, h: 62, icon: 28, name: 9.5, badge: 10, badgeMin: 15 };
+  // `fluid` mode (hotbar) lets the tile fill its grid slot horizontally so
+  // a row of slots shares the extra width evenly. Height stays fixed so the
+  // hotbar doesn't reflow when the slot count or layout changes.
+  const tileWidth = fluid ? "100%" : dims.w;
   const lastTapAt = useRef(0);
   const handleClick = () => {
     const now = Date.now();
@@ -645,9 +649,9 @@ const ToolTile = forwardRef(function ToolTile(
       ref={ref}
       onClick={handleClick}
       onPointerDown={onPointerDown}
-      className="flex-shrink-0 flex flex-col items-center justify-end relative select-none"
+      className={`${fluid ? "" : "flex-shrink-0 "}flex flex-col items-center justify-end relative select-none`}
       style={{
-        width: dims.w,
+        width: tileWidth,
         height: dims.h,
         borderRadius: 11,
         padding: "4px 0 5px",
@@ -1010,6 +1014,10 @@ export function PuzzleHotbar({
   // user asked that hotbar-originated drags only resolve when dropped on
   // the list, so we don't draw a hotbar drop hint for them.
   const showHotbarDropHints = !!dragKey && dragFromHotbar === false;
+  // Always render exactly `maxFitPins` slots so the rail keeps a stable
+  // shape: pinned tools take their slot, the rest show as empty drop
+  // placeholders. Equal-width slots (1fr each) share any extra width.
+  const slotCount = Math.max(1, maxFitPins);
   return (
     <div
       className="flex items-stretch gap-2 pl-2 pr-1"
@@ -1022,59 +1030,64 @@ export function PuzzleHotbar({
       data-testid="puzzle-hotbar"
     >
       <div
-        className="flex-1 min-w-0 flex items-center"
-        style={{ gap: 12, paddingRight: 4 }}
+        className="flex-1 min-w-0 grid items-center"
+        style={{
+          gridTemplateColumns: `repeat(${slotCount}, minmax(0, 1fr))`,
+          gap: 8,
+          paddingRight: 4,
+        }}
       >
-        {visiblePins.length === 0 ? (
-          <div
-            data-hotbar-slot="0"
-            className="text-[#fdf3e3] text-[10px] font-bold uppercase tracking-wider px-2 py-2 flex-1 rounded-md"
-            style={
-              showHotbarDropHints
-                ? { background: "rgba(240,193,75,0.22)", outline: "2px dashed #f0c14b", outlineOffset: -2 }
-                : undefined
-            }
-          >
-            Drag tools here to pin
-          </div>
-        ) : (
-          visiblePins.map((t, i) => (
+        {Array.from({ length: slotCount }, (_, i) => {
+          const t = visiblePins[i];
+          if (t) {
+            return (
+              <div
+                key={t.key}
+                data-hotbar-slot={i}
+                className="relative"
+                style={
+                  showHotbarDropHints
+                    ? { boxShadow: "0 0 0 2px rgba(240,193,75,0.55), 0 0 12px rgba(240,193,75,0.45)", borderRadius: 12 }
+                    : undefined
+                }
+              >
+                <ToolTile
+                  tool={t}
+                  inspected={inspectedKey === t.key}
+                  onClick={select}
+                  onActivate={activate}
+                  onPointerDown={(ev) => onBeginDrag?.(t.key, true, ev)}
+                  size="sm"
+                  fluid
+                  dragging={dragKey === t.key}
+                />
+              </div>
+            );
+          }
+          // Empty slot — flat dashed border placeholder. Lights up brighter
+          // when a list-originated drag is in flight so the player can see
+          // exactly where their drop will land.
+          return (
             <div
-              key={t.key}
+              key={`empty-${i}`}
               data-hotbar-slot={i}
-              className="flex-shrink-0 relative"
-              style={
-                showHotbarDropHints
-                  ? { boxShadow: "0 0 0 2px rgba(240,193,75,0.55), 0 0 12px rgba(240,193,75,0.45)", borderRadius: 12 }
-                  : undefined
-              }
+              className="rounded-[11px] flex items-center justify-center text-[#fdf3e3]/45 select-none"
+              style={{
+                height: 52,
+                background: showHotbarDropHints ? "rgba(240,193,75,0.18)" : "rgba(20,12,5,0.20)",
+                border: showHotbarDropHints
+                  ? "1.5px dashed rgba(240,193,75,0.75)"
+                  : "1.5px dashed rgba(253,243,227,0.18)",
+                fontSize: 18,
+                lineHeight: 1,
+                fontWeight: 700,
+              }}
+              aria-label="Empty hotbar slot"
             >
-              <ToolTile
-                tool={t}
-                inspected={inspectedKey === t.key}
-                onClick={select}
-                onActivate={activate}
-                onPointerDown={(ev) => onBeginDrag?.(t.key, true, ev)}
-                size="sm"
-                dragging={dragKey === t.key}
-              />
+              +
             </div>
-          ))
-        )}
-        {/* Trailing drop zone so the player can append by dragging past the
-            last pinned tile, even when the rail is empty. */}
-        {visiblePins.length > 0 && (
-          <div
-            data-hotbar-slot={visiblePins.length}
-            className="flex-1 self-stretch min-w-[8px] rounded-md"
-            aria-hidden="true"
-            style={
-              showHotbarDropHints
-                ? { background: "rgba(240,193,75,0.18)", outline: "2px dashed rgba(240,193,75,0.65)", outlineOffset: -2 }
-                : undefined
-            }
-          />
-        )}
+          );
+        })}
       </div>
       <button
         type="button"

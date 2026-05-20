@@ -261,7 +261,12 @@ export default function App() {
       onCloseInspect={() => setInspectedTool(null)}
     />
   );
-  const uiLocked = !!state.modal || state.view !== "board" || storyModalOpen;
+  // toolModalOpen is included so Phaser's input handlers refuse board taps
+  // while the dropdown is open — the backdrop DOM element blocks pointer
+  // events too, but Phaser's canvas can create its own stacking context (the
+  // transform-based scale at zoom!=1) so the canvas can still intercept
+  // touches in some layouts. Locking the scene is the belt-and-suspenders.
+  const uiLocked = !!state.modal || state.view !== "board" || storyModalOpen || toolModalOpen;
   useAudio(state);
   useRouter(state, dispatch);
   useA11yBridge();

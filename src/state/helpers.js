@@ -84,6 +84,10 @@ export function mergeLoadedState(saved) {
   }
   const out = { ...saved };
   delete out.species; // remove legacy key if present
+  // toolPending is transient arming state owned by the active session — never
+  // restore it from a save, or the player resumes with a board border glowing
+  // and a stale tool waiting to fire.
+  out.toolPending = null;
   return { ...out, tileCollection };
 }
 
