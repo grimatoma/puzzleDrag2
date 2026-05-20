@@ -160,6 +160,23 @@ export async function closeStoryModalIfOpen(page) {
   await dispatchAction(page, { type: 'CLOSE_MODAL' });
 }
 
+/**
+ * Suppress all dialogs and modals for the duration of a test page load.
+ * Call this via `page.addInitScript` before `page.goto` so the flag is set
+ * before the app renders. Story beats, season summaries, NPC bubbles, and
+ * feature modals are all silenced.
+ *
+ * Example:
+ *   await disableDialogs(page);
+ *   await page.goto('/');
+ *   await waitForBoot(page);
+ */
+export async function disableDialogs(page) {
+  await page.addInitScript(() => {
+    globalThis.__HEARTH_DISABLE_DIALOGS__ = true;
+  });
+}
+
 // ─── Chains / board interaction ────────────────────────────────────────────
 
 /**
