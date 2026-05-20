@@ -1,6 +1,6 @@
 import Phaser from "phaser";
 import { MAP_NODES, MAP_EDGES, REGIONS } from "./data.js";
-import { drawIcon } from "../../textures/iconRegistry.js";
+import { ICON_DESIGN_BOX, paintIcon } from "../../textures/paintIcon.js";
 import { isAdjacent } from "./slice.js";
 
 /* Phaser scene that renders the redesigned world map.
@@ -124,18 +124,18 @@ export class MapScene extends Phaser.Scene {
       const tex = this.textures.createCanvas(key, size, size);
       const ctx = tex.getContext();
       ctx.imageSmoothingEnabled = true;
-      ctx.save();
-      ctx.translate(size / 2, size / 2);
-      // iconRegistry draws assume a ~64px box around origin (0,0).
-      const scale = size / 64;
-      ctx.scale(scale, scale);
-      ctx.lineCap = "round";
-      ctx.lineJoin = "round";
-      const ok = drawIcon(ctx, `map_${node.id}`);
+      const ok = paintIcon(ctx, `map_${node.id}`, size);
       // If a node has no registered icon (e.g. fish harbor, old capital),
-      // fall back to a hand-drawn medallion glyph.
-      if (!ok) drawFallbackIcon(ctx, node);
-      ctx.restore();
+      // fall back to a hand-drawn medallion glyph drawn in the same
+      // 64px-design-box coordinate space as registry icons.
+      if (!ok) {
+        ctx.save();
+        ctx.translate(size / 2, size / 2);
+        const scale = size / ICON_DESIGN_BOX;
+        ctx.scale(scale, scale);
+        drawFallbackIcon(ctx, node);
+        ctx.restore();
+      }
       tex.refresh();
     }
 

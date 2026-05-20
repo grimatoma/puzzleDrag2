@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
-import { drawIcon, iconColor } from "../textures/iconRegistry.js";
+import { iconColor } from "../textures/iconRegistry.js";
+import { paintIcon } from "../textures/paintIcon.js";
 
 /**
  * Renders an iconRegistry icon to a small <canvas>. Icons are drawn at the
@@ -46,13 +47,7 @@ export default function IconCanvas({
         ctx.fillRect(0, 0, size, size);
       }
     }
-    ctx.translate(size / 2, size / 2);
-    // Icons are drawn assuming a ~64px tile; scale down/up to match `size`.
-    const scale = size / 64;
-    ctx.scale(scale, scale);
-    ctx.lineCap = "round";
-    ctx.lineJoin = "round";
-    drawIcon(ctx, iconKey);
+    paintIcon(ctx, iconKey, size);
     ctx.restore();
   }, [iconKey, size, background, rounded]);
 

@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { ICON_REGISTRY, drawIcon } from "../textures/iconRegistry.js";
+import { ICON_REGISTRY } from "../textures/iconRegistry.js";
+import { paintIcon } from "../textures/paintIcon.js";
 
 // Global cache mapping size -> { key -> dataUri }
 // We use a combined string key for easy lookups: `${iconKey}_${size}_${dpr}`
@@ -51,22 +52,7 @@ export default function Icon({ iconKey, size = 24, className = "", style = {}, t
       
       ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.scale(dpr, dpr);
-      
-      // The icons in iconRegistry are drawn at origin (0,0) assuming a ~64x64
-      // bounding box (see IconCanvas.jsx and MapScene.js). Translate to the
-      // center of our target canvas and scale the 64px design path into `size`.
-      ctx.translate(size / 2, size / 2);
-      const scaleFactor = size / 64;
-      ctx.scale(scaleFactor, scaleFactor);
-      
-      ctx.lineCap = "round";
-      ctx.lineJoin = "round";
-
-      try {
-        drawIcon(ctx, iconKey);
-      } catch (e) {
-        console.error(`Failed to draw icon: ${iconKey}`, e);
-      }
+      paintIcon(ctx, iconKey, size);
 
       const uri = canvas.toDataURL("image/png");
       ICON_CACHE.set(cacheKey, uri);
