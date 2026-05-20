@@ -16,7 +16,7 @@
  * Hotbar pin assignments persist to localStorage (no save-schema bump).
  */
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { forwardRef, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import LegacyIcon from "./Icon.jsx";
 import { BIOMES } from "../constants.js";
 import { TOOL_BY_KEY, isTapTargetTool, visibleTools, TOOL_CATALOG } from "./toolRegistry.js";
@@ -343,28 +343,45 @@ function ToolView({ tool, armedKey, dispatch, onClose }) {
   };
   return (
     <>
-      <div className="flex items-center justify-between px-2.5 py-1.5 border-b border-dashed border-[rgba(138,100,40,0.55)]">
-        <div className="flex items-center gap-1.5 text-[9.5px] font-extrabold text-[#7a5520] uppercase tracking-[0.15em]">
+      <style>{`
+        @keyframes hwv-armed-marquee {
+          0%, 100% { background-position: 0 0; }
+          100% { background-position: 32px 0; }
+        }
+      `}</style>
+      <div
+        className="flex items-center justify-between px-2.5 py-1.5 border-b border-dashed border-[rgba(138,100,40,0.55)]"
+        style={armed ? {
+          background: "linear-gradient(180deg, rgba(224,40,40,0.18), rgba(224,40,40,0.08))",
+        } : undefined}
+      >
+        <div
+          className="flex items-center gap-1.5 text-[9.5px] font-extrabold uppercase tracking-[0.15em] min-w-0"
+          style={{ color: armed ? "#9a1a1a" : "#7a5520" }}
+        >
           <span
-            className="w-1.5 h-1.5 rounded-full inline-block"
-            style={{ background: armed ? "#e07a3a" : "#8a6a47" }}
+            className="w-2 h-2 rounded-full inline-block flex-shrink-0"
+            style={{
+              background: armed ? "#e02828" : "#8a6a47",
+              boxShadow: armed ? "0 0 6px rgba(224,40,40,0.85)" : "none",
+            }}
           />
-          {targeted ? "Tool armed" : armed ? "Tool ready" : "Tool inspect"}
-          <span className="font-bold text-[#8a6a47] normal-case tracking-normal">
+          <span className="truncate">{armed ? "Tool armed" : targeted ? "Tool ready" : "Tool inspect"}</span>
+          <span className="font-bold normal-case tracking-normal" style={{ color: armed ? "#9a1a1a" : "#8a6a47" }}>
             · × {count} left
           </span>
         </div>
         <button
           type="button"
           onClick={handleClose}
-          className="w-6 h-6 rounded-md flex items-center justify-center text-[#5b3a1e] font-extrabold leading-none"
+          className="w-7 h-7 rounded-md flex items-center justify-center text-[#5b3a1e] font-extrabold leading-none flex-shrink-0 ml-2"
           style={{
-            background: "rgba(138,100,40,0.18)",
-            border: "1px solid rgba(138,100,40,0.4)",
-            fontSize: 14,
+            background: armed ? "rgba(224,40,40,0.18)" : "rgba(138,100,40,0.18)",
+            border: armed ? "1px solid rgba(224,40,40,0.55)" : "1px solid rgba(138,100,40,0.4)",
+            fontSize: 15,
           }}
-          title="Cancel"
-          aria-label="Cancel tool"
+          title={armed ? "Cancel armed tool" : "Close"}
+          aria-label={armed ? "Cancel armed tool" : "Close tool inspect"}
         >
           ×
         </button>
@@ -373,27 +390,28 @@ function ToolView({ tool, armedKey, dispatch, onClose }) {
         <div
           className="flex items-center justify-center flex-shrink-0"
           style={{
-            width: 64,
-            height: 64,
+            width: 60,
+            height: 60,
             borderRadius: 13,
             background: "#3a2412",
-            border: "2px solid #f0c14b",
-            boxShadow:
-              "0 2px 0 rgba(0,0,0,0.3), inset 0 -3px 0 rgba(0,0,0,0.35), 0 0 0 4px rgba(240,193,75,0.25)",
+            border: armed ? "2px solid #e02828" : "2px solid #f0c14b",
+            boxShadow: armed
+              ? "0 2px 0 rgba(0,0,0,0.3), inset 0 -3px 0 rgba(0,0,0,0.35), 0 0 0 4px rgba(224,40,40,0.30)"
+              : "0 2px 0 rgba(0,0,0,0.3), inset 0 -3px 0 rgba(0,0,0,0.35), 0 0 0 4px rgba(240,193,75,0.25)",
           }}
         >
-          <LegacyIcon iconKey={tool.iconKey} size={40} />
+          <LegacyIcon iconKey={tool.iconKey} size={38} />
         </div>
         <div className="flex-1 min-w-0">
           <div
             className="text-[#3a2412] font-extrabold italic leading-none"
-            style={{ fontFamily: "Georgia, serif", fontSize: 19 }}
+            style={{ fontFamily: "Georgia, serif", fontSize: 18 }}
           >
             {tool.name}
           </div>
           <div
             className="text-[11.5px] text-[#5b3a1e] leading-snug mt-1.5 overflow-hidden"
-            style={{ display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical" }}
+            style={{ display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}
           >
             {tool.desc}
           </div>
@@ -401,9 +419,12 @@ function ToolView({ tool, armedKey, dispatch, onClose }) {
       </div>
       {targeted ? (
         <div
-          className="flex items-center justify-center gap-2 py-1.5 border-t border-dashed border-[rgba(138,100,40,0.55)] text-[#7a3c12] uppercase font-extrabold"
+          className="flex items-center justify-center gap-2 py-2 border-t border-dashed border-[rgba(138,100,40,0.55)] uppercase font-extrabold"
           style={{
-            background: "linear-gradient(180deg, rgba(224,122,58,0.18), rgba(224,122,58,0.30))",
+            background: armed
+              ? "linear-gradient(180deg, rgba(224,40,40,0.18), rgba(224,40,40,0.30))"
+              : "linear-gradient(180deg, rgba(224,122,58,0.14), rgba(224,122,58,0.22))",
+            color: armed ? "#9a1a1a" : "#7a3c12",
             fontSize: 11,
             letterSpacing: 1.5,
           }}
@@ -411,17 +432,18 @@ function ToolView({ tool, armedKey, dispatch, onClose }) {
           <span
             className="inline-flex items-center justify-center"
             style={{
-              width: 16,
-              height: 16,
+              width: 18,
+              height: 18,
               borderRadius: 50,
-              background: "#e07a3a",
+              background: armed ? "#e02828" : "#e07a3a",
               color: "#fff8e7",
-              fontSize: 10,
+              fontSize: 11,
+              animation: armed ? "hwv-armed-marquee 900ms steps(8) infinite" : "none",
             }}
           >
             ◎
           </span>
-          {armed ? "Tap a tile to use" : "Press to arm — then tap a tile"}
+          {armed ? "Tap a tile on the board" : "Press USE to arm, then tap a tile"}
         </div>
       ) : (
         <div className="flex items-center gap-2 px-2 py-1.5 border-t border-dashed border-[rgba(138,100,40,0.55)]">
@@ -524,16 +546,21 @@ function dispatchUseTool(dispatch, key, state) {
 
 // ─── Tool tile (shared by hotbar / grid / modal) ─────────────────────────
 
-function ToolTile({ tool, inspected, onClick, size = "md" }) {
+const ToolTile = forwardRef(function ToolTile(
+  { tool, inspected, onClick, onPointerDown, size = "md", showName = true, dragging = false },
+  ref,
+) {
   const armed = !!tool.armed;
   const dims = size === "sm"
-    ? { w: 48, h: 52, icon: 22, name: 9, badge: 12, badgePad: "1px 6px", badgeMin: 18 }
-    : { w: 58, h: 62, icon: 26, name: 9.5, badge: 14, badgePad: "2px 8px", badgeMin: 20 };
+    ? { w: 48, h: 52, icon: 24, name: 9, badge: 9, badgeMin: 14 }
+    : { w: 58, h: 62, icon: 28, name: 9.5, badge: 10, badgeMin: 15 };
   return (
     <button
       type="button"
+      ref={ref}
       onClick={() => onClick?.(tool)}
-      className="flex-shrink-0 flex flex-col items-center justify-end relative"
+      onPointerDown={onPointerDown}
+      className="flex-shrink-0 flex flex-col items-center justify-end relative select-none"
       style={{
         width: dims.w,
         height: dims.h,
@@ -547,7 +574,8 @@ function ToolTile({ tool, inspected, onClick, size = "md" }) {
           : "1.5px solid rgba(255,255,255,0.08)",
         color: armed ? "#3a2412" : "#caa97a",
         boxShadow: "0 2px 0 rgba(0,0,0,0.2)",
-        opacity: tool.count === 0 && !armed ? 0.55 : 1,
+        opacity: dragging ? 0.35 : (tool.count === 0 && !armed ? 0.55 : 1),
+        touchAction: "none",
       }}
       title={tool.name}
       aria-label={`${tool.name} (${tool.count})`}
@@ -555,29 +583,31 @@ function ToolTile({ tool, inspected, onClick, size = "md" }) {
       data-armed={armed ? "true" : "false"}
     >
       <div
-        className="absolute font-mono font-extrabold text-center"
+        className="absolute font-mono font-bold text-center pointer-events-none"
         style={{
-          top: -8,
-          right: -6,
-          background: armed ? "#3a2412" : "#1a0d05",
-          border: `2px solid ${armed ? "#f0c14b" : "#caa97a"}`,
-          borderRadius: 10,
+          top: 2,
+          right: 2,
+          background: armed ? "rgba(58,36,18,0.92)" : "rgba(10,5,3,0.85)",
+          borderRadius: 6,
           fontSize: dims.badge,
-          padding: dims.badgePad,
+          padding: "0px 4px",
+          lineHeight: 1.3,
           color: armed ? "#f0c14b" : "#fff8e7",
-          boxShadow: "0 2px 0 rgba(0,0,0,0.35), inset 0 -1px 0 rgba(0,0,0,0.3)",
           minWidth: dims.badgeMin,
+          letterSpacing: 0.2,
         }}
       >
         {tool.count}
       </div>
       <LegacyIcon iconKey={tool.iconKey} size={dims.icon} />
-      <div className="font-extrabold mt-0.5" style={{ fontSize: dims.name, letterSpacing: 0.2 }}>
-        {tool.name}
-      </div>
+      {showName && (
+        <div className="font-extrabold mt-0.5 leading-none" style={{ fontSize: dims.name, letterSpacing: 0.2 }}>
+          {tool.name}
+        </div>
+      )}
     </button>
   );
-}
+});
 
 function buildVisibleToolList(state) {
   const tools = state.tools || {};
@@ -644,13 +674,12 @@ export function PuzzleToolGrid({ state, onInspectChange, inspectedKey }) {
 // ─── Pinned-tools persistence ────────────────────────────────────────────
 
 const PIN_STORAGE_KEY = "hearthwood:hotbar-pins";
-// Cap matches what fits comfortably on a phone-portrait hotbar (≈ 5 starter
-// tools + chevron, with one slot in reserve). Once full, the PIN button
-// disables and the player has to unpin one before pinning a new tool.
-export const MAX_PINS = 6;
+// Absolute ceiling. The actual cap is computed dynamically from the hotbar
+// container width so adding more tools never forces horizontal scrolling.
+export const MAX_PINS = 8;
 const DEFAULT_PINS = TOOL_CATALOG
   .filter((t) => t.category === "field")
-  .slice(0, MAX_PINS)
+  .slice(0, 5)
   .map((t) => t.key);
 
 function readStoredPins() {
@@ -672,55 +701,254 @@ export function usePinnedTools() {
       window.localStorage?.setItem(PIN_STORAGE_KEY, JSON.stringify(pins));
     } catch { /* localStorage may be unavailable in private mode; ignore */ }
   }, [pins]);
-  const toggle = useCallback((key) => {
+  // Insert a tool at `index` (0..pins.length). Removes it from its old slot
+  // first so dragging to reorder doesn't duplicate. Honors the supplied cap
+  // so the hotbar never overflows the visible width.
+  const insertAt = useCallback((key, index, cap = MAX_PINS) => {
     if (!TOOL_BY_KEY[key]) return;
     setPins((prev) => {
-      if (prev.includes(key)) return prev.filter((k) => k !== key);
-      // Silently ignore over-cap pins — the caller is expected to disable
-      // its PIN affordance when `pins.length >= MAX_PINS`.
-      if (prev.length >= MAX_PINS) return prev;
-      return [...prev, key];
+      const without = prev.filter((k) => k !== key);
+      const i = Math.max(0, Math.min(index, without.length));
+      const next = [...without.slice(0, i), key, ...without.slice(i)];
+      return next.slice(0, Math.max(1, Math.min(MAX_PINS, cap)));
     });
   }, []);
-  return [pins, toggle];
+  const remove = useCallback((key) => {
+    if (!TOOL_BY_KEY[key]) return;
+    setPins((prev) => prev.filter((k) => k !== key));
+  }, []);
+  return [pins, { insertAt, remove }];
+}
+
+// Measure how many tool tiles fit in a container — used so the hotbar's
+// effective pin cap shrinks on narrow viewports instead of overflowing.
+const HOTBAR_TILE_FULL = 48 + 12; // sm tile width + gap
+const HOTBAR_RESERVED = 8 + 4 + 44 + 10; // outer padding + chevron + chevron gap
+export function useMaxFitPins(ref) {
+  const [maxFit, setMaxFit] = useState(MAX_PINS);
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    const recompute = () => {
+      const width = el.getBoundingClientRect().width;
+      const usable = Math.max(0, width - HOTBAR_RESERVED);
+      const fit = Math.max(1, Math.floor(usable / HOTBAR_TILE_FULL));
+      setMaxFit(Math.min(MAX_PINS, fit));
+    };
+    recompute();
+    const ro = new ResizeObserver(recompute);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [ref]);
+  return maxFit;
+}
+
+// ─── Drag-and-drop hook ──────────────────────────────────────────────────
+// Long-press a tool tile in the dropdown or hotbar to start a drag. Drag a
+// ghost over the hotbar to insert/reorder; drop outside to unpin. Tap is
+// preserved by suppressing onClick only after the drag actually starts.
+
+const DRAG_LONGPRESS_MS = 220;
+const DRAG_THRESHOLD_PX = 6;
+
+export function useToolDrag({ pins, pinActions, maxFitPins }) {
+  // Active drag state: { key, fromHotbar, x, y, suppressClick }
+  const [drag, setDrag] = useState(null);
+  const dragRef = useRef(null);
+  // Mirror the drag state into a ref via effect so window listeners (which
+  // close over stale snapshots) can read the latest value without re-binding
+  // every render. Updating refs during render is unsafe (lints as an error).
+  useEffect(() => { dragRef.current = drag; }, [drag]);
+
+  // Track pending press without committing to drag yet — lets short taps
+  // fall through to the normal click handler.
+  const pressRef = useRef(null);
+
+  const beginPress = useCallback(
+    (key, fromHotbar, ev) => {
+      if (ev.button != null && ev.button !== 0) return;
+      ev.currentTarget?.setPointerCapture?.(ev.pointerId);
+      pressRef.current = {
+        key,
+        fromHotbar,
+        startX: ev.clientX,
+        startY: ev.clientY,
+        pointerId: ev.pointerId,
+        target: ev.currentTarget,
+        longPressTimer: setTimeout(() => {
+          // Long-press hit — promote to drag mode.
+          if (pressRef.current?.key !== key) return;
+          setDrag({
+            key,
+            fromHotbar,
+            x: pressRef.current.startX,
+            y: pressRef.current.startY,
+            suppressClick: true,
+          });
+        }, DRAG_LONGPRESS_MS),
+      };
+    },
+    [],
+  );
+
+  useEffect(() => {
+    const onMove = (e) => {
+      const press = pressRef.current;
+      if (!press) return;
+      const dx = e.clientX - press.startX;
+      const dy = e.clientY - press.startY;
+      // Movement larger than the threshold pre-empts the long-press timer
+      // so quick swipes promote to drag without waiting.
+      if (!dragRef.current && Math.hypot(dx, dy) > DRAG_THRESHOLD_PX) {
+        clearTimeout(press.longPressTimer);
+        setDrag({
+          key: press.key,
+          fromHotbar: press.fromHotbar,
+          x: e.clientX,
+          y: e.clientY,
+          suppressClick: true,
+        });
+        return;
+      }
+      if (dragRef.current) {
+        setDrag((d) => (d ? { ...d, x: e.clientX, y: e.clientY } : d));
+      }
+    };
+    const finish = (e) => {
+      const press = pressRef.current;
+      if (press) {
+        clearTimeout(press.longPressTimer);
+        try { press.target?.releasePointerCapture?.(press.pointerId); } catch { /* already released */ }
+      }
+      const d = dragRef.current;
+      pressRef.current = null;
+      if (!d) {
+        setDrag(null);
+        return;
+      }
+      // Resolve the drop target from the element under the pointer.
+      const x = e.clientX ?? d.x;
+      const y = e.clientY ?? d.y;
+      const el = document.elementFromPoint(x, y);
+      const slot = el?.closest?.("[data-hotbar-slot]");
+      const inHotbar = !!el?.closest?.("[data-testid='puzzle-hotbar']");
+      if (slot) {
+        const idx = Number.parseInt(slot.getAttribute("data-hotbar-slot"), 10);
+        if (Number.isFinite(idx)) pinActions.insertAt(d.key, idx, maxFitPins);
+      } else if (inHotbar) {
+        // Dropped on the hotbar container (e.g., empty area) — append to end.
+        pinActions.insertAt(d.key, pins.length, maxFitPins);
+      } else if (d.fromHotbar) {
+        // Dragged out of the hotbar onto open space → unpin.
+        pinActions.remove(d.key);
+      }
+      setDrag(null);
+    };
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", finish);
+    window.addEventListener("pointercancel", finish);
+    return () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", finish);
+      window.removeEventListener("pointercancel", finish);
+    };
+  }, [pinActions, pins.length, maxFitPins]);
+
+  return { drag, beginDrag: beginPress };
+}
+
+// Floating tile that follows the cursor while a hotbar drag is active.
+export function DragGhost({ drag, tool }) {
+  if (!drag || !tool) return null;
+  return (
+    <div
+      style={{
+        position: "fixed",
+        left: drag.x,
+        top: drag.y,
+        transform: "translate(-50%, -50%) scale(1.1)",
+        pointerEvents: "none",
+        zIndex: 1000,
+        opacity: 0.9,
+      }}
+    >
+      <ToolTile tool={tool} size="sm" />
+    </div>
+  );
 }
 
 // ─── Hotbar (portrait top rail) ──────────────────────────────────────────
 
-export function PuzzleHotbar({ state, onInspectChange, inspectedKey, pins, onOpenModal }) {
+export function PuzzleHotbar({
+  state,
+  onInspectChange,
+  inspectedKey,
+  pins,
+  onOpenModal,
+  modalOpen,
+  maxFitPins,
+  dragKey,
+  onBeginDrag,
+}) {
   const list = useMemo(() => buildVisibleToolList(state), [state.tools, state.toolPending, state.fertilizerActive]);
   useAutoInspectArmed(state, onInspectChange);
   const byKey = useMemo(() => Object.fromEntries(list.map((t) => [t.key, t])), [list]);
   // Show only currently-visible pinned tools (skip pins for tools the
-  // player has lost or never owned — pin order is preserved).
-  const visiblePins = pins.map((k) => byKey[k]).filter(Boolean);
+  // player has lost or never owned — pin order is preserved). Capped to
+  // whatever the measured width allows so the rail never scrolls sideways.
+  const visiblePins = pins.map((k) => byKey[k]).filter(Boolean).slice(0, maxFitPins);
   const select = useCallback(
     (t) => onInspectChange?.({ ...TOOL_BY_KEY[t.key], count: t.count }),
     [onInspectChange],
   );
   return (
     <div
-      className="flex items-center gap-2 pl-2 pr-1"
+      className="flex items-stretch gap-2 pl-2 pr-1"
       style={{
         background: "linear-gradient(#1a0d05,#241710)",
         borderBottom: "1px solid #0a0506",
-        paddingTop: 12, // room for the count badges that sit at `top:-8`
-        paddingBottom: 8,
+        paddingTop: 6,
+        paddingBottom: 6,
       }}
       data-testid="puzzle-hotbar"
     >
       <div
-        className="flex-1 min-w-0 flex items-center overflow-x-auto"
-        style={{ gap: 12, paddingRight: 10 }}
+        className="flex-1 min-w-0 flex items-center"
+        style={{ gap: 12, paddingRight: 4 }}
       >
         {visiblePins.length === 0 ? (
-          <div className="text-[#8a6a47] text-[10px] font-bold uppercase tracking-wider px-2">
-            Tap ▾ to pin tools
+          <div
+            data-hotbar-slot="0"
+            className="text-[#8a6a47] text-[10px] font-bold uppercase tracking-wider px-2 py-2 flex-1"
+          >
+            Drag tools here to pin
           </div>
         ) : (
-          visiblePins.map((t) => (
-            <ToolTile key={t.key} tool={t} inspected={inspectedKey === t.key} onClick={select} size="sm" />
+          visiblePins.map((t, i) => (
+            <div
+              key={t.key}
+              data-hotbar-slot={i}
+              className="flex-shrink-0"
+            >
+              <ToolTile
+                tool={t}
+                inspected={inspectedKey === t.key}
+                onClick={select}
+                onPointerDown={(ev) => onBeginDrag?.(t.key, true, ev)}
+                size="sm"
+                dragging={dragKey === t.key}
+              />
+            </div>
           ))
+        )}
+        {/* Trailing drop zone so the player can append by dragging past the
+            last pinned tile, even when the rail is empty. */}
+        {visiblePins.length > 0 && (
+          <div
+            data-hotbar-slot={visiblePins.length}
+            className="flex-1 self-stretch min-w-[8px]"
+            aria-hidden="true"
+          />
         )}
       </div>
       <button
@@ -731,17 +959,18 @@ export function PuzzleHotbar({ state, onInspectChange, inspectedKey, pins, onOpe
           width: 44,
           height: 52,
           borderRadius: 10,
-          background: "rgba(240,193,75,0.10)",
+          background: modalOpen ? "#f0c14b" : "rgba(240,193,75,0.10)",
           border: "1.5px dashed rgba(240,193,75,0.55)",
-          color: "#f0c14b",
+          color: modalOpen ? "#3a2412" : "#f0c14b",
           flexShrink: 0,
+          transition: "background 120ms ease, color 120ms ease",
         }}
-        title="Open tools"
-        aria-label="Open tools"
+        title={modalOpen ? "Close tools" : "Open tools"}
+        aria-label={modalOpen ? "Close tools" : "Open tools"}
+        aria-expanded={!!modalOpen}
         data-testid="puzzle-hotbar-open"
       >
-        <div style={{ fontSize: 18, lineHeight: 1 }}>▾</div>
-        <div style={{ fontSize: 8.5, fontWeight: 900, letterSpacing: 0.5, marginTop: 2 }}>TOOLS</div>
+        <div style={{ fontSize: 22, lineHeight: 1, transform: modalOpen ? "rotate(180deg)" : "none", transition: "transform 160ms ease" }}>▾</div>
       </button>
     </div>
   );
@@ -749,7 +978,17 @@ export function PuzzleHotbar({ state, onInspectChange, inspectedKey, pins, onOpe
 
 // ─── Tool modal ──────────────────────────────────────────────────────────
 
-export function PuzzleToolModal({ open, onClose, state, dispatch, pins, togglePin, inspectedTool, onInspectChange }) {
+export function PuzzleToolModal({
+  open,
+  onClose,
+  state,
+  dispatch,
+  pins,
+  inspectedTool,
+  onInspectChange,
+  dragKey,
+  onBeginDrag,
+}) {
   const list = useMemo(() => buildVisibleToolList(state), [state.tools, state.toolPending, state.fertilizerActive]);
   const byKey = useMemo(() => Object.fromEntries(list.map((t) => [t.key, t])), [list]);
   // The modal's selected tool defaults to whatever's already inspected;
@@ -759,8 +998,6 @@ export function PuzzleToolModal({ open, onClose, state, dispatch, pins, togglePi
   // grid below) — we only need a local override when the player picks
   // something inside the modal that differs from the outer inspect.
   const [localSelectedKey, setLocalSelectedKey] = useState(null);
-  // Reset the local override when the modal opens so the first paint shows
-  // whatever the rest of the UI already had inspected.
   const openKey = open ? "1" : "0";
   // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: reset transient local selection when modal opens
   useEffect(() => { if (open) setLocalSelectedKey(null); }, [openKey, open]);
@@ -777,115 +1014,109 @@ export function PuzzleToolModal({ open, onClose, state, dispatch, pins, togglePi
     dispatchUseTool(dispatch, selectedTool.key, { toolPending: state.toolPending });
     onClose?.();
   };
-  const visiblePins = pins.map((k) => byKey[k]).filter(Boolean);
   const pinned = selectedTool ? pins.includes(selectedTool.key) : false;
 
+  // The dropdown floats *over* the board area rather than covering the
+  // whole screen — no dark backdrop, capped height — so the player keeps
+  // sight of the tiles they're about to act on.
   return (
     <div
       role="dialog"
-      aria-modal="true"
-      className="fixed inset-0 z-[60] flex items-start justify-center"
-      style={{ background: "rgba(10,5,3,0.55)" }}
+      aria-modal="false"
+      aria-label="Tools"
+      className="absolute left-0 right-0 z-[55] flex justify-center pointer-events-none"
+      style={{ top: "100%" }}
       data-testid="puzzle-tool-modal"
-      onClick={(e) => { if (e.target === e.currentTarget) onClose?.(); }}
     >
       <style>{`
         @keyframes hwv-tool-modal-drop {
-          from { transform: translateY(-100%); opacity: 0; }
+          from { transform: translateY(-12%); opacity: 0; }
           to   { transform: translateY(0); opacity: 1; }
         }
       `}</style>
       <div
-        className="w-full max-w-[520px] flex flex-col"
+        className="w-full max-w-[520px] flex flex-col pointer-events-auto mx-2"
         style={{
           background: "linear-gradient(180deg,#241710 0%,#1a0d05 100%)",
           borderBottomLeftRadius: 16,
           borderBottomRightRadius: 16,
           border: "1.5px solid #8a6428",
           borderTop: "none",
-          maxHeight: "78dvh",
-          boxShadow: "0 10px 30px rgba(0,0,0,0.5)",
-          animation: "hwv-tool-modal-drop 220ms cubic-bezier(0.16, 1, 0.3, 1)",
+          maxHeight: "60dvh",
+          boxShadow: "0 12px 28px rgba(0,0,0,0.55)",
+          animation: "hwv-tool-modal-drop 200ms cubic-bezier(0.16, 1, 0.3, 1)",
           transformOrigin: "top center",
         }}
       >
-        {/* Detail */}
+        {/* Detail header. The close button now sits beside the title row
+            instead of floating over the action buttons. */}
         <div
-          className="flex items-center gap-3 p-3 relative"
+          className="relative"
           style={{
             background: "linear-gradient(180deg, rgba(253,243,227,0.97) 0%, rgba(246,227,191,0.97) 100%)",
             borderBottom: "1px solid #8a6428",
           }}
         >
-          {selectedTool ? (
-            <>
-              <div
-                className="flex items-center justify-center flex-shrink-0"
-                style={{
-                  width: 64,
-                  height: 64,
-                  borderRadius: 13,
-                  background: "#3a2412",
-                  border: "2px solid #f0c14b",
-                  boxShadow: "inset 0 -3px 0 rgba(0,0,0,0.35), 0 0 0 4px rgba(240,193,75,0.25)",
-                }}
-              >
-                <LegacyIcon iconKey={selectedTool.iconKey} size={40} />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-baseline gap-2">
-                  <div
-                    className="text-[#3a2412] font-extrabold italic leading-none"
-                    style={{ fontFamily: "Georgia, serif", fontSize: 19 }}
-                  >
-                    {selectedTool.name}
-                  </div>
-                  <span className="text-[10px] font-extrabold text-[#7a5520] uppercase tracking-wider">
-                    × {selectedTool.count} left
-                  </span>
-                </div>
-                <div className="text-[11.5px] text-[#5b3a1e] leading-snug mt-1.5 line-clamp-3">
-                  {selectedTool.desc}
-                </div>
-              </div>
-              <div className="flex flex-col gap-1.5 flex-shrink-0">
-                <button
-                  type="button"
-                  onClick={() => togglePin(selectedTool.key)}
-                  disabled={!pinned && pins.length >= MAX_PINS}
-                  className="font-extrabold whitespace-nowrap disabled:cursor-not-allowed"
+          <div className="flex items-center justify-between gap-2 px-3 pt-2">
+            <div className="flex items-center gap-1.5 text-[9.5px] font-extrabold text-[#7a5520] uppercase tracking-[0.15em] min-w-0">
+              <span className="w-1.5 h-1.5 rounded-full inline-block flex-shrink-0" style={{ background: "#8a6a47" }} />
+              <span className="truncate">Tool detail</span>
+              {pinned && (
+                <span className="text-[#8a6a47] normal-case tracking-normal font-bold">· pinned</span>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={onClose}
+              className="w-7 h-7 rounded-md flex items-center justify-center text-[#5b3a1e] font-extrabold leading-none flex-shrink-0"
+              style={{ background: "rgba(138,100,40,0.18)", border: "1px solid rgba(138,100,40,0.4)", fontSize: 16 }}
+              aria-label="Close tools"
+            >×</button>
+          </div>
+          <div className="flex items-center gap-3 px-3 pt-1 pb-3">
+            {selectedTool ? (
+              <>
+                <div
+                  className="flex items-center justify-center flex-shrink-0"
                   style={{
-                    fontSize: 10,
-                    padding: "5px 9px",
-                    borderRadius: 7,
-                    background: pinned ? "#3a2412" : "rgba(58,36,18,0.10)",
-                    color: pinned ? "#f0c14b" : "#5b3a1e",
-                    border: pinned ? "1.5px solid #f0c14b" : "1.5px solid rgba(58,36,18,0.4)",
-                    letterSpacing: 0.5,
-                    opacity: !pinned && pins.length >= MAX_PINS ? 0.55 : 1,
+                    width: 60,
+                    height: 60,
+                    borderRadius: 13,
+                    background: "#3a2412",
+                    border: "2px solid #f0c14b",
+                    boxShadow: "inset 0 -3px 0 rgba(0,0,0,0.35), 0 0 0 4px rgba(240,193,75,0.25)",
                   }}
-                  title={
-                    pinned
-                      ? "Unpin from hotbar"
-                      : pins.length >= MAX_PINS
-                      ? "Hotbar full — unpin one first"
-                      : "Pin to hotbar"
-                  }
                 >
-                  📌 {pinned ? "PINNED" : pins.length >= MAX_PINS ? "FULL" : "PIN"}
-                </button>
+                  <LegacyIcon iconKey={selectedTool.iconKey} size={38} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-baseline gap-2 flex-wrap">
+                    <div
+                      className="text-[#3a2412] font-extrabold italic leading-none"
+                      style={{ fontFamily: "Georgia, serif", fontSize: 18 }}
+                    >
+                      {selectedTool.name}
+                    </div>
+                    <span className="text-[10px] font-extrabold text-[#7a5520] uppercase tracking-wider">
+                      × {selectedTool.count} left
+                    </span>
+                  </div>
+                  <div className="text-[11.5px] text-[#5b3a1e] leading-snug mt-1.5 line-clamp-2">
+                    {selectedTool.desc}
+                  </div>
+                </div>
                 <button
                   type="button"
                   onClick={handleUse}
                   disabled={selectedTool.count === 0 && state.toolPending !== selectedTool.key}
-                  className="font-extrabold whitespace-nowrap disabled:opacity-50"
+                  className="font-extrabold whitespace-nowrap disabled:opacity-50 flex-shrink-0 self-center"
                   style={{
                     background: isTapTargetTool(selectedTool.key)
                       ? "linear-gradient(180deg,#f4a050,#d97a2a)"
                       : "linear-gradient(180deg,#85c14a,#4e8425)",
                     color: "#0c2e10",
                     fontSize: 11,
-                    padding: "6px 12px",
+                    padding: "7px 13px",
                     borderRadius: 8,
                     border: "1.5px solid #3a5a12",
                     boxShadow: "0 2px 0 rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.35)",
@@ -894,21 +1125,19 @@ export function PuzzleToolModal({ open, onClose, state, dispatch, pins, togglePi
                 >
                   {isTapTargetTool(selectedTool.key) ? "ARM" : "✓ USE"}
                 </button>
-              </div>
-            </>
-          ) : (
-            <div className="text-[12px] text-[#5b3a1e] py-3">No tools available — head to the workshop or portal to craft some.</div>
-          )}
-          <button
-            type="button"
-            onClick={onClose}
-            className="absolute top-1.5 right-1.5 w-6 h-6 rounded-md flex items-center justify-center text-[#5b3a1e] font-extrabold"
-            style={{ background: "rgba(138,100,40,0.18)", border: "1px solid rgba(138,100,40,0.4)", fontSize: 14 }}
-            aria-label="Close tools"
-          >×</button>
+              </>
+            ) : (
+              <div className="text-[12px] text-[#5b3a1e] py-3">No tools available — head to the workshop or portal to craft some.</div>
+            )}
+          </div>
         </div>
         {/* Scrollable grid */}
         <div className="flex-1 min-h-0 overflow-y-auto p-3">
+          <div
+            className="text-[9px] font-extrabold uppercase tracking-widest text-[#caa97a] mb-2 px-0.5"
+          >
+            Long-press a tool and drag it up to pin it
+          </div>
           <div
             style={{
               display: "grid",
@@ -917,35 +1146,15 @@ export function PuzzleToolModal({ open, onClose, state, dispatch, pins, togglePi
             }}
           >
             {list.map((t) => (
-              <ToolTile key={t.key} tool={t} inspected={effectiveKey === t.key} onClick={select} />
+              <ToolTile
+                key={t.key}
+                tool={t}
+                inspected={effectiveKey === t.key}
+                onClick={select}
+                onPointerDown={(ev) => onBeginDrag?.(t.key, false, ev)}
+                dragging={dragKey === t.key}
+              />
             ))}
-          </div>
-        </div>
-        {/* Pinned-hotbar preview at the bottom.
-            pt-5 + extra padding-right on the scroller leave room for the
-            count badges, which sit at `top:-8 right:-6` on each ToolTile
-            and were getting clipped at the previous compact spacing. */}
-        <div
-          className="px-3 pt-5 pb-3 flex items-center gap-3"
-          style={{
-            background: "rgba(26,13,5,0.8)",
-            borderTop: "1px solid #0a0506",
-          }}
-        >
-          <div className="text-[#caa97a] text-[9px] font-extrabold uppercase tracking-widest whitespace-nowrap">
-            Pinned <span className="text-[#8a6a47]">{visiblePins.length}/{MAX_PINS}</span>
-          </div>
-          <div
-            className="flex-1 min-w-0 flex items-center overflow-x-auto"
-            style={{ gap: 12, paddingRight: 10 }}
-          >
-            {visiblePins.length === 0 ? (
-              <div className="text-[#8a6a47] text-[10px] italic">Pin tools above to add them</div>
-            ) : (
-              visiblePins.map((t) => (
-                <ToolTile key={t.key} tool={t} inspected={effectiveKey === t.key} onClick={select} size="sm" />
-              ))
-            )}
           </div>
         </div>
       </div>
@@ -1008,7 +1217,7 @@ export function BoardLayout({ hotbar, statusPanel, toolsGrid, board }) {
 
 // ─── Board frame ─────────────────────────────────────────────────────────
 
-export function BoardFrame({ children, seasonIdx }) {
+export function BoardFrame({ children, seasonIdx, armed = false }) {
   // Single rounded card — the dark brown chrome frames the tiles directly,
   // no field-tint padding wrapper around it. The cell containing the frame
   // gets a thin drop shadow for depth.
@@ -1022,6 +1231,38 @@ export function BoardFrame({ children, seasonIdx }) {
       }}
     >
       {children}
+      {armed && (
+        <>
+          <style>{`
+            @keyframes hwv-armed-pulse {
+              0%, 100% {
+                box-shadow:
+                  inset 0 0 0 4px rgba(255,40,40,0.95),
+                  inset 0 0 0 8px rgba(255,40,40,0.45),
+                  inset 0 0 32px rgba(255,40,40,0.55);
+                opacity: 1;
+              }
+              50% {
+                box-shadow:
+                  inset 0 0 0 6px rgba(255,60,60,1),
+                  inset 0 0 0 11px rgba(255,60,60,0.65),
+                  inset 0 0 48px rgba(255,60,60,0.85);
+                opacity: 0.85;
+              }
+            }
+          `}</style>
+          <div
+            aria-hidden="true"
+            data-testid="board-armed-border"
+            className="pointer-events-none absolute inset-0"
+            style={{
+              borderRadius: 14,
+              animation: "hwv-armed-pulse 1100ms ease-in-out infinite",
+              zIndex: 30,
+            }}
+          />
+        </>
+      )}
     </div>
   );
 }
