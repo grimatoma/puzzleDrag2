@@ -539,10 +539,11 @@ export function PuzzleActionPanel({
   return (
     <div
       // Fixed height so swapping idle/chain/tool content never shifts surrounding
-      // layout — matches PANEL_HEIGHT = 178 in the design mock.
+      // layout. Sized to the densest view (idle stockpile grid measures ~147px;
+      // chain/tool variants are shorter) so the board gets the spare pixels back.
       className="rounded-[13px] relative overflow-hidden flex flex-col flex-shrink-0"
       style={{
-        height: 178,
+        height: 148,
         background:
           "linear-gradient(180deg, rgba(253,243,227,0.97) 0%, rgba(246,227,191,0.97) 100%)",
         border: "1.5px solid #8a6428",
