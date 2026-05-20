@@ -539,15 +539,16 @@ function ToolTile({ tool, inspected, onClick, size = "md" }) {
         height: dims.h,
         borderRadius: 11,
         padding: "4px 0 5px",
-        background: armed ? "#fdf3e3" : inspected ? "rgba(240,193,75,0.18)" : "rgba(255,255,255,0.04)",
+        background: armed ? "#fdf3e3" : inspected ? "rgba(240,193,75,0.22)" : "rgba(255,210,140,0.10)",
         border: armed
           ? "2px solid #f0c14b"
           : inspected
-          ? "2px solid rgba(240,193,75,0.55)"
-          : "1.5px solid rgba(255,255,255,0.08)",
-        color: armed ? "#3a2412" : "#caa97a",
+          ? "2px solid rgba(240,193,75,0.60)"
+          : "1.5px solid rgba(200,160,90,0.22)",
+        color: armed ? "#3a2412" : "#e8d4a8",
         boxShadow: "0 2px 0 rgba(0,0,0,0.2)",
-        opacity: tool.count === 0 && !armed ? 0.55 : 1,
+        opacity: tool.count === 0 && !armed ? 0.38 : 1,
+        filter: tool.count === 0 && !armed ? "grayscale(0.75)" : "none",
       }}
       title={tool.name}
       aria-label={`${tool.name} (${tool.count})`}
@@ -559,12 +560,12 @@ function ToolTile({ tool, inspected, onClick, size = "md" }) {
         style={{
           top: -8,
           right: -6,
-          background: armed ? "#3a2412" : "#1a0d05",
-          border: `2px solid ${armed ? "#f0c14b" : "#caa97a"}`,
+          background: armed ? "#3a2412" : tool.count === 0 ? "#4a4236" : "#2a1d0f",
+          border: `2px solid ${armed ? "#f0c14b" : tool.count === 0 ? "#786050" : "#b89060"}`,
           borderRadius: 10,
           fontSize: dims.badge,
           padding: dims.badgePad,
-          color: armed ? "#f0c14b" : "#fff8e7",
+          color: armed ? "#f0c14b" : tool.count === 0 ? "#908070" : "#f0ddb0",
           boxShadow: "0 2px 0 rgba(0,0,0,0.35), inset 0 -1px 0 rgba(0,0,0,0.3)",
           minWidth: dims.badgeMin,
         }}
@@ -620,8 +621,8 @@ export function PuzzleToolGrid({ state, onInspectChange, inspectedKey }) {
     <div
       className="h-full overflow-y-auto rounded-[11px]"
       style={{
-        background: "linear-gradient(#1a0d05,#241710)",
-        border: "1px solid #0a0506",
+        background: "linear-gradient(#2e1c0c,#3d2712)",
+        border: "1px solid #180c04",
       }}
       data-testid="puzzle-tool-grid"
     >
@@ -702,8 +703,8 @@ export function PuzzleHotbar({ state, onInspectChange, inspectedKey, pins, onOpe
     <div
       className="flex items-center gap-2 pl-2 pr-1"
       style={{
-        background: "linear-gradient(#1a0d05,#241710)",
-        borderBottom: "1px solid #0a0506",
+        background: "linear-gradient(#2e1c0c,#3d2712)",
+        borderBottom: "1px solid #180c04",
         paddingTop: 12, // room for the count badges that sit at `top:-8`
         paddingBottom: 8,
       }}
@@ -798,7 +799,7 @@ export function PuzzleToolModal({ open, onClose, state, dispatch, pins, togglePi
       <div
         className="w-full max-w-[520px] flex flex-col"
         style={{
-          background: "linear-gradient(180deg,#241710 0%,#1a0d05 100%)",
+          background: "linear-gradient(180deg,#4a2e14 0%,#362210 100%)",
           borderBottomLeftRadius: 16,
           borderBottomRightRadius: 16,
           border: "1.5px solid #8a6428",
@@ -928,8 +929,8 @@ export function PuzzleToolModal({ open, onClose, state, dispatch, pins, togglePi
         <div
           className="px-3 pt-5 pb-3 flex items-center gap-3"
           style={{
-            background: "rgba(26,13,5,0.8)",
-            borderTop: "1px solid #0a0506",
+            background: "rgba(24,14,5,0.65)",
+            borderTop: "1px solid #180c04",
           }}
         >
           <div className="text-[#caa97a] text-[9px] font-extrabold uppercase tracking-widest whitespace-nowrap">
