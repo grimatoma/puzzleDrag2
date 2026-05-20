@@ -1162,7 +1162,6 @@ export class GameScene extends Phaser.Scene {
     this.addToPath(tile);
     this.dimUnselectableTiles(tile.res.key);
     this.showChainBadge();
-    this.showChainStatus();
     this.showGrassHover();
     this.updateChainBadge();
     // Subtle haptic tick on drag-start, gated by user setting.
@@ -1569,171 +1568,14 @@ export class GameScene extends Phaser.Scene {
     if (this.chainBadge) {
       this.chainBadgeText.setText(k > 0 ? `chain × ${n}   +${k}★` : `chain × ${n}`);
     }
-    this.updateChainStatus();
     this.updateGrassHover();
     this._emitChainUpdate();
   }
 
   hideChainBadge() {
     if (this.chainBadge) { this.chainBadge.destroy(); this.chainBadge = null; this.chainBadgeText = null; }
-    this.hideChainStatus();
     this.hideGrassHover();
     this.events.emit(SCENE_EVENTS.CHAIN_UPDATE, null);
-  }
-
-  // ─── Chain progress panel (banked + chain toward 1 inventory resource) ──
-  //
-  // Sits above the board while dragging. The meter is intentionally distinct
-  // from the chain-tier upgrade preview (the floating stars on the chain that
-  // indicate when the next-tier tile spawns):
-  //
-  //   • The meter tracks the player's *resource accumulation* — banked tiles
-  //     in inventory plus the tiles being chained — toward the cumulative
-  //     count needed to produce one terminal item (e.g. raw hay → bread).
-  //   • The chain stars handle the per-tier tile that lands on the board
-  //     every Nth selection, which is a separate concept.
-  //
-  // The terminal item is found by walking `.next` to the end of the chain;
-  // the threshold is the product of per-tier thresholds along that path.
-
-  /** Walks `res.next` to the terminal product, multiplying per-tier thresholds. */
-  _terminalProductInfo(res) {
-    const effThresh = this.registry.get("effectiveThresholds") ?? UPGRADE_THRESHOLDS;
-    let cur = res;
-    let cumulative = 1;
-    const visited = new Set();
-    while (cur?.next && !visited.has(cur.key)) {
-      visited.add(cur.key);
-      const T = effThresh[cur.key] ?? UPGRADE_THRESHOLDS[cur.key] ?? 0;
-      if (T <= 0) return null;
-      cumulative *= T;
-      const nextRes = this.resourceByKey(cur.next);
-      if (!nextRes) return null;
-      cur = nextRes;
-    }
-    if (cur === res) return null;
-    return { terminal: cur, threshold: cumulative };
-  }
-
-  showChainStatus() {
-    if (this.chainStatus) return;
-    const dpr = this.dpr;
-    const w = 220 * dpr;
-    const h = 60 * dpr;
-    const cx = this.boardX + (COLS * this.tileSize) / 2;
-    const minY = h / 2 + 8 * dpr;
-    const cy = Math.max(minY, this.boardY - this.boardFrame - 36 * dpr);
-    this.chainStatus = this.add.container(cx, cy).setDepth(45);
-
-    const bg = rounded(this, -w / 2, -h / 2, w, h, 14 * dpr, 0xfff4e0, 0.97, 0xb88a3a, 2 * dpr);
-
-    const iconCx = w / 2 - 26 * dpr;
-    const iconHaloR = 22 * dpr;
-    const halo = this.add.graphics();
-    halo.fillStyle(0xf2dca0, 1);
-    halo.fillCircle(iconCx, 0, iconHaloR);
-    halo.lineStyle(1.5 * dpr, 0xb88a3a, 1);
-    halo.strokeCircle(iconCx, 0, iconHaloR);
-
-    this.chainStatusIcon = this.add.image(iconCx, 0, "spark").setScale(0.6);
-
-    // "x N earned" badge — bottom-right of the icon halo, only when the
-    // accumulated count would produce 2+ terminal items (i.e. multiples
-    // beyond the first one in progress).
-    const badgeR = 10 * dpr;
-    const badgeX = iconCx + iconHaloR - 4 * dpr;
-    const badgeY = iconHaloR - 6 * dpr;
-    const badgeBg = this.add.circle(badgeX, badgeY, badgeR, 0x2b2218, 1).setStrokeStyle(1.5 * dpr, 0xffd248);
-    const badgeText = this.add.text(badgeX, badgeY, "0", {
-      fontFamily: "Arial", fontSize: `${11 * dpr}px`, color: "#ffd248", fontStyle: "bold",
-    }).setOrigin(0.5);
-    badgeBg.setVisible(false);
-    badgeText.setVisible(false);
-    this.chainStatusBadgeBg = badgeBg;
-    this.chainStatusBadge = badgeText;
-
-    // Progress bar
-    const barW = 130 * dpr;
-    const barH = 18 * dpr;
-    const barX = -w / 2 + 14 * dpr;
-    const barY = 0;
-    const barRadius = barH / 2;
-    const barBg = this.add.graphics();
-    barBg.fillStyle(0xd4b890, 1);
-    barBg.fillRoundedRect(barX, barY - barH / 2, barW, barH, barRadius);
-    barBg.lineStyle(1.5 * dpr, 0x6a4a2a, 1);
-    barBg.strokeRoundedRect(barX, barY - barH / 2, barW, barH, barRadius);
-
-    const barFill = this.add.graphics();
-    this.chainStatusBarFill = barFill;
-    this.chainStatusBarGeom = { x: barX, y: barY, w: barW, h: barH, r: barRadius };
-
-    this.chainStatusText = this.add.text(barX + barW / 2, barY, "0/0", {
-      fontFamily: "Arial", fontSize: `${13 * dpr}px`, color: "#2b2218", fontStyle: "bold",
-      stroke: "#fff4e0", strokeThickness: 3 * dpr,
-    }).setOrigin(0.5);
-
-    this.chainStatus.add([bg, halo, barBg, barFill, this.chainStatusText, this.chainStatusIcon, badgeBg, badgeText]);
-
-    this.chainStatus.setScale(0.85).setAlpha(0);
-    this.tweens.add({ targets: this.chainStatus, scale: 1, alpha: 1, duration: this._dur(180), ease: "Back.Out" });
-  }
-
-  updateChainStatus() {
-    if (!this.chainStatus) return;
-    const n = this.path.length;
-    if (n === 0) { this.chainStatus.setVisible(false); return; }
-    const res = this.path[0].res;
-    const info = this._terminalProductInfo(res);
-    if (!info) { this.chainStatus.setVisible(false); return; }
-    const { terminal, threshold: T } = info;
-    if (T <= 0) { this.chainStatus.setVisible(false); return; }
-    this.chainStatus.setVisible(true);
-
-    const inventory = this.registry.get("inventory") ?? {};
-    const banked = inventory[res.key] ?? 0;
-    const total = banked + n;
-
-    const within = total >= T ? T : total % T;
-    const earnedExtra = Math.max(0, Math.floor(total / T) - (total % T === 0 && total > 0 ? 1 : 0));
-
-    this.chainStatusText.setText(`${total}/${T}`);
-
-    const ready = total >= T;
-    const fillColor = ready ? 0xe39a2f : 0xa8c769;
-    const ratio = Math.min(1, within / T);
-    const { x, y, w, h, r } = this.chainStatusBarGeom;
-    const fillW = Math.max(0, w * ratio);
-    const g = this.chainStatusBarFill;
-    g.clear();
-    if (fillW > 0) {
-      g.fillStyle(fillColor, 1);
-      const rr = Math.min(r, fillW / 2);
-      g.fillRoundedRect(x, y - h / 2, fillW, h, rr);
-    }
-
-    if (this.chainStatusIcon.texture.key !== `tile_${terminal.key}`) {
-      this.chainStatusIcon.setTexture(`tile_${terminal.key}`);
-    }
-    this.chainStatusIcon.setScale(0.42 * this.tileSpriteScale);
-
-    const showBadge = earnedExtra > 0;
-    this.chainStatusBadgeBg.setVisible(showBadge);
-    this.chainStatusBadge.setVisible(showBadge);
-    if (showBadge) this.chainStatusBadge.setText(`${earnedExtra}`);
-  }
-
-  hideChainStatus() {
-    if (!this.chainStatus) return;
-    this.tweens.killTweensOf(this.chainStatus);
-    this.chainStatus.destroy();
-    this.chainStatus = null;
-    this.chainStatusIcon = null;
-    this.chainStatusText = null;
-    this.chainStatusBarFill = null;
-    this.chainStatusBarGeom = null;
-    this.chainStatusBadge = null;
-    this.chainStatusBadgeBg = null;
   }
 
   // ─── Grass hover (cursor-following spawn preview) ─────────────────────────
@@ -1746,13 +1588,13 @@ export class GameScene extends Phaser.Scene {
   showGrassHover() {
     if (this.grassHover) return;
     const dpr = this.dpr;
-    const w = 62 * dpr;
-    const h = 34 * dpr;
+    const w = 80 * dpr;
+    const h = 44 * dpr;
     this.grassHover = this.add.container(0, 0).setDepth(60);
-    const bg = rounded(this, -w / 2, -h / 2, w, h, 12 * dpr, 0x2b2218, 0.92, 0xa8c769, 2 * dpr);
-    this.grassHoverIcon = this.add.image(-w / 2 + 17 * dpr, 0, "spark").setScale(0.5);
-    this.grassHoverText = this.add.text(2 * dpr, 0, "", {
-      fontFamily: "Arial", fontSize: `${15 * dpr}px`, color: "#cfe88f", fontStyle: "bold",
+    const bg = rounded(this, -w / 2, -h / 2, w, h, 14 * dpr, 0x2b2218, 0.92, 0xa8c769, 2 * dpr);
+    this.grassHoverIcon = this.add.image(-w / 2 + 22 * dpr, 0, "spark").setScale(0.55);
+    this.grassHoverText = this.add.text(4 * dpr, 0, "", {
+      fontFamily: "Arial", fontSize: `${18 * dpr}px`, color: "#cfe88f", fontStyle: "bold",
     }).setOrigin(0, 0.5);
     this.grassHover.add([bg, this.grassHoverIcon, this.grassHoverText]);
     this.grassHover.setVisible(false);
@@ -1775,15 +1617,19 @@ export class GameScene extends Phaser.Scene {
     if (this.textures.exists(tex) && this.grassHoverIcon.texture.key !== tex) {
       this.grassHoverIcon.setTexture(tex);
     }
-    this.grassHoverIcon.setScale(0.4 * (this.tileSpriteScale ?? 1));
+    this.grassHoverIcon.setScale(0.5 * (this.tileSpriteScale ?? 1));
     this.grassHoverText.setText(`×${k}`);
   }
 
   _positionGrassHover(x, y) {
     if (!this.grassHover) return;
     const dpr = this.dpr;
-    const minY = 20 * dpr;
-    this.grassHover.setPosition(x, Math.max(minY, y - 46 * dpr));
+    const ts = this.tileSize ?? 60;
+    const minY = 26 * dpr;
+    // Offset up by a full tile height + padding so the badge sits clearly
+    // above the tile rather than overlapping it, and nudge right so it reads
+    // as adjacent to the tile rather than centered on the cursor.
+    this.grassHover.setPosition(x + ts * 0.55, Math.max(minY, y - ts * 0.9));
   }
 
   hideGrassHover() {
