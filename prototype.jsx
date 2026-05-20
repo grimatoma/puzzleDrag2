@@ -279,6 +279,18 @@ export default function App() {
     }
   }, [chainInfo]); // eslint-disable-line react-hooks/exhaustive-deps -- intentional: only react to chain end, not every toolPending change
 
+  // When an armed tool fires (or is cancelled) — toolPending goes from set →
+  // null — drop the inspected tool too so the info card swaps from
+  // "Tool ready" back to the resources stockpile.
+  const prevToolPendingRef = useRef(state.toolPending);
+  useEffect(() => {
+    const wasArmed = prevToolPendingRef.current != null;
+    prevToolPendingRef.current = state.toolPending;
+    if (wasArmed && !state.toolPending && !chainInfo) {
+      setInspectedTool(null);
+    }
+  }, [state.toolPending, chainInfo]);
+
   useEffect(() => {
     if (!import.meta.env.DEV && import.meta.env.MODE !== "test") return undefined;
     let cleanup;
