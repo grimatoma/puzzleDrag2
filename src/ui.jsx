@@ -5,7 +5,6 @@ import { Section, CompactOrders } from "./ui/Inventory.jsx";
 import { ToolsGrid } from "./ui/Tools.jsx";
 import { TOOL_BY_KEY } from "./ui/toolRegistry.js";
 import TabBar, { Tab } from "./ui/primitives/TabBar.jsx";
-import { isDialogsDisabled } from "./featureFlags.js";
 
 // Per-feature error boundary. A crash in any one feature renders an inline
 // fallback inside that feature's slot and dispatches CLOSE_MODAL so the
@@ -133,7 +132,6 @@ const FEATURES = Object.values(featureModules).map((m) => ({
 }));
 
 export function FeatureModals({ state, dispatch }) {
-  if (isDialogsDisabled()) return null;
   // Always-mounted features manage their own visibility internally
   const alwaysFeatures = FEATURES.filter(f => f.alwaysMounted);
 

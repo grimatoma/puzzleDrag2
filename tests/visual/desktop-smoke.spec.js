@@ -1,13 +1,13 @@
 import { expect, test } from "@playwright/test";
 import {
-  VISUAL_MOBILE_SMOKE_SCENARIO_IDS,
+  VISUAL_DESKTOP_SMOKE_SCENARIO_IDS,
   VISUAL_SCENARIOS,
 } from "../../src/visualTesting/matrix.js";
 
 const VISUAL_FIXED_NOW = 1_700_000_000_000;
-const SMOKE_SCENARIOS = VISUAL_MOBILE_SMOKE_SCENARIO_IDS.map((id) => {
+const SMOKE_SCENARIOS = VISUAL_DESKTOP_SMOKE_SCENARIO_IDS.map((id) => {
   const scenario = VISUAL_SCENARIOS.find((candidate) => candidate.id === id);
-  if (!scenario) throw new Error(`Unknown mobile smoke visual scenario: ${id}`);
+  if (!scenario) throw new Error(`Unknown desktop smoke visual scenario: ${id}`);
   return scenario;
 });
 
@@ -18,6 +18,7 @@ function escapeRegExp(value) {
 async function installDeterminism(page) {
   await page.addInitScript(({ fixedNow }) => {
     window.__HEARTH_VISUAL_TESTING__ = true;
+    window.__HEARTH_DISABLE_DIALOGS__ = true; // Suppress auto-triggered dialogs/story beats
     let seed = 123456789;
     Math.random = () => {
       seed = (1664525 * seed + 1013904223) >>> 0;
@@ -78,9 +79,8 @@ async function runAction(page, action) {
 }
 
 for (const scenario of SMOKE_SCENARIOS) {
-  test(`mobile smoke ${scenario.id}`, async ({ page }, testInfo) => {
-    test.skip(!process.env.VISUAL_MOBILE_SMOKE, "Use npm run test:visual:mobile-smoke for mobile smoke goldens.");
-    test.skip(testInfo.project.name === "desktop", "Mobile smoke runs only on phone projects.");
+  test(`desktop smoke ${scenario.id}`, async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== "desktop", "Desktop smoke runs only on desktop.");
     test.skip(
       scenario.skipProjects?.includes(testInfo.project.name),
       `${scenario.id} is intentionally skipped for ${testInfo.project.name}`,

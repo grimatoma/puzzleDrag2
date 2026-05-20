@@ -3,8 +3,7 @@ import { defineConfig, devices } from "@playwright/test";
 export default defineConfig({
   testDir: "./tests/visual",
   timeout: 420_000,
-  fullyParallel: false,
-  workers: 1,
+  fullyParallel: true,
   retries: 0,
   reporter: [["list"], ["html", { outputFolder: "playwright-report/visual", open: "never" }]],
   snapshotPathTemplate: "{testDir}/__goldens__/{projectName}/{arg}{ext}",

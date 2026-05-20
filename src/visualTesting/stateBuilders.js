@@ -417,8 +417,10 @@ function profileState(profile) {
       return { ...st, grid: g, fish: { tide: "low", tideTurn: 2 }, fishPearl: { row: 2, col: 2 } };
     }
     case "boardBossMinimized": return { ...boardState("farm"), bossMinimized: true, boss: { key: "quagmire", name: "The Quagmire", emoji: "🌿", resource: "grass_hay", targetCount: 50, progress: 22, turnsLeft: 4, goal: "Drain the bog: harvest 50 hay." } };
+    case "boardBossWeather": return { ...boardState("fish"), boss: { key: "storm", name: "The Storm", emoji: "🌩", resource: "fish_fillet", targetCount: 6, progress: 2, turnsLeft: 5, minChain: 4, goal: "Land 6 fish fillets in 10 turns. Short chains slip the line.", modifierDescription: "Chains of fewer than 4 fish tiles slip the line: they consume a turn but yield nothing." }, fish: { tide: "high", tideTurn: 3 } };
     case "craftQueue": return { ...richState(), craftQueue: [{ key: "bread", queuedAt: VISUAL_FIXED_NOW - 10_000, readyAt: VISUAL_FIXED_NOW - 1_000 }, { key: "berry_jam", queuedAt: VISUAL_FIXED_NOW, readyAt: VISUAL_FIXED_NOW + 14_400_000 }] };
     case "portalInsufficient": return { ...richState(), influence: 10, tools: { ...richState().tools, magic_wand: 0, hourglass: 0, magic_seed: 0, magic_fertilizer: 0 } };
+    case "marketNews": return { ...richState(), bubble: { id: 202, npc: "tomas", text: "Market News: Wood Shortage! Timber supplies are low. Logs and Planks are worth double!", ms: 10_000 }, market: { ...richState().market, season: 2, event: { id: "wood_shortage", label: "Wood Shortage", desc: "Timber supplies are low. Logs and Planks are worth double!", mults: { wood_log: 2, wood_plank: 2 } } } };
     case "tileActivate": return { ...richState(), tileCollection: fullTileCollection({ activeByCategory: { ...fullTileCollection().activeByCategory, grass: "grass_hay" } }) };
     case "tileBuy": {
       const tc = fullTileCollection();

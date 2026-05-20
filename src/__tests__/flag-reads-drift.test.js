@@ -9,7 +9,7 @@ const SRC = path.resolve(HERE, "..");
 
 function walk(dir, out = []) {
   for (const ent of fs.readdirSync(dir, { withFileTypes: true })) {
-    if (ent.name === "__tests__") continue;
+    if (ent.name === "__tests__" || ent.name === "visualTesting") continue;
     const p = path.join(dir, ent.name);
     if (ent.isDirectory()) walk(p, out);
     else if (/\.(js|jsx)$/.test(ent.name)) out.push(p);

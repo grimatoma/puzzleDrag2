@@ -10,6 +10,7 @@ function escapeRegExp(value) {
 async function installDeterminism(page) {
   await page.addInitScript(({ fixedNow }) => {
     window.__HEARTH_VISUAL_TESTING__ = true;
+    window.__HEARTH_DISABLE_DIALOGS__ = true; // Suppress auto-triggered dialogs/story beats
     let seed = 123456789;
     Math.random = () => {
       seed = (1664525 * seed + 1013904223) >>> 0;
@@ -71,9 +72,10 @@ async function runAction(page, action) {
 
 for (const scenario of VISUAL_SCENARIOS) {
   test(`${scenario.id}`, async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name === "desktop", "Full visual tests run only on mobile projects.");
     test.skip(
       scenario.skipProjects?.includes(testInfo.project.name),
-      `${scenario.id} is intentionally desktop-only`,
+      `${scenario.id} is intentionally skipped for ${testInfo.project.name}`,
     );
 
     const pageErrors = [];
