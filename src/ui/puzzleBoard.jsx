@@ -11,7 +11,7 @@
  * All four read from existing game state; no new slices or actions.
  */
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo } from "react";
 import LegacyIcon from "./Icon.jsx";
 import { BIOMES } from "../constants.js";
 import { TOOL_BY_KEY, isTapTargetTool, visibleTools } from "./toolRegistry.js";
@@ -128,7 +128,7 @@ function IdleView({ inventory, biomeKey, cap }) {
   return (
     <>
       <PanelHeader left="Stockpile" right={`${ownedCount}/${list.length} kinds`} />
-      <div className="grid grid-cols-4 gap-1.5 p-2">
+      <div className="grid grid-cols-4 gap-1.5 p-2 flex-1 min-h-0 overflow-y-auto content-start">
         {list.map((r) => {
           const count = inventory?.[r.key] ?? 0;
           const empty = count === 0;
@@ -182,7 +182,7 @@ function ChainView({ chainInfo }) {
         right={`${resourceLabel} chain`}
         accent={stage.accent}
       />
-      <div className="flex items-center gap-3 px-3 py-2 min-h-0">
+      <div className="flex items-center gap-3 px-3 py-2 min-h-0 flex-1">
         <div className="flex-1 relative">
           <div
             className="relative rounded-[13px] overflow-hidden"
@@ -330,18 +330,11 @@ function ToolView({ tool, armedKey, dispatch, onClose }) {
   const armed = armedKey === tool.key;
   const count = tool.count ?? 0;
   const handleUse = () => {
-    const isPending = armed;
-    if (isPending) {
-      dispatch({ type: "CANCEL_TOOL" });
-      return;
-    }
-    const def = TOOL_BY_KEY[tool.key];
-    if (def?.category === "magic") {
-      dispatch({ type: "USE_TOOL", payload: { id: tool.key } });
-    } else {
-      dispatch({ type: "USE_TOOL", key: tool.key });
-    }
-    if (tool.key === "shuffle") getPhaserScene()?.shuffleBoard();
+    dispatchUseTool(dispatch, tool.key, { toolPending: armedKey });
+  };
+  const handleClose = () => {
+    if (armed) dispatch({ type: "CANCEL_TOOL" });
+    onClose?.();
   };
   return (
     <>
@@ -358,7 +351,7 @@ function ToolView({ tool, armedKey, dispatch, onClose }) {
         </div>
         <button
           type="button"
-          onClick={onClose}
+          onClick={handleClose}
           className="w-6 h-6 rounded-md flex items-center justify-center text-[#5b3a1e] font-extrabold leading-none"
           style={{
             background: "rgba(138,100,40,0.18)",
@@ -371,7 +364,7 @@ function ToolView({ tool, armedKey, dispatch, onClose }) {
           ×
         </button>
       </div>
-      <div className="flex items-center gap-3 px-3 py-2">
+      <div className="flex items-center gap-3 px-3 py-2 flex-1 min-h-0">
         <div
           className="flex items-center justify-center flex-shrink-0"
           style={{
@@ -469,8 +462,11 @@ export function PuzzleActionPanel({
   const state = hasChain ? "chain" : inspectedTool ? "tool" : "idle";
   return (
     <div
-      className="rounded-[13px] relative overflow-hidden"
+      // Fixed height so swapping idle/chain/tool content never shifts surrounding
+      // layout — matches PANEL_HEIGHT = 178 in the design mock.
+      className="rounded-[13px] relative overflow-hidden flex flex-col flex-shrink-0"
       style={{
+        height: 178,
         background:
           "linear-gradient(180deg, rgba(253,243,227,0.97) 0%, rgba(246,227,191,0.97) 100%)",
         border: "1.5px solid #8a6428",
@@ -488,7 +484,7 @@ export function PuzzleActionPanel({
           backgroundSize: "8px 8px",
         }}
       />
-      <div className="relative">
+      <div className="relative flex flex-col flex-1 min-h-0 overflow-hidden">
         {state === "idle" && <IdleView inventory={inventory} biomeKey={biomeKey} cap={cap} />}
         {state === "chain" && <ChainView chainInfo={chainInfo} />}
         {state === "tool" && (
@@ -521,8 +517,7 @@ function dispatchUseTool(dispatch, key, state) {
   if (key === "shuffle") getPhaserScene()?.shuffleBoard();
 }
 
-export function PuzzleToolStrip({ state, dispatch, onInspectChange }) {
-  const [hoverKey, setHoverKey] = useState(null);
+export function PuzzleToolStrip({ state, onInspectChange, inspectedKey, orientation = "horizontal" }) {
   const list = useMemo(() => {
     const tools = state.tools || {};
     return visibleTools(tools).map((def) => ({
@@ -537,43 +532,57 @@ export function PuzzleToolStrip({ state, dispatch, onInspectChange }) {
     }));
   }, [state.tools, state.toolPending, state.fertilizerActive]);
 
-  // The hover state drives the inspect-panel preview: the player can press &
-  // hold a tile to see what it does without arming it.
+  // Whichever tool is currently armed (toolPending) auto-shows its detail.
+  // Tapping a different tool just sets the inspect; the player presses
+  // USE NOW (or Tap a tile) in the detail panel to actually trigger it.
   useEffect(() => {
     if (!onInspectChange) return;
-    const def = hoverKey ? TOOL_BY_KEY[hoverKey] : state.toolPending ? TOOL_BY_KEY[state.toolPending] : null;
-    onInspectChange(def);
-  }, [hoverKey, state.toolPending, onInspectChange]);
+    if (state.toolPending && TOOL_BY_KEY[state.toolPending]) {
+      onInspectChange({
+        ...TOOL_BY_KEY[state.toolPending],
+        count: state.tools?.[state.toolPending] ?? 0,
+      });
+    }
+  }, [state.toolPending, state.tools, onInspectChange]);
 
+  const isVertical = orientation === "vertical";
   return (
     <div
-      className="flex-shrink-0"
+      className={isVertical ? "h-full flex flex-col" : "flex-shrink-0"}
       style={{
         background: "linear-gradient(#1a0d05,#241710)",
-        borderBottom: "1px solid #0a0506",
+        borderBottom: isVertical ? "none" : "1px solid #0a0506",
       }}
     >
-      <div className="flex gap-1.5 px-2.5 pt-3.5 pb-1 overflow-x-auto" data-testid="puzzle-tool-strip">
+      <div
+        className={
+          isVertical
+            ? "flex flex-col gap-2 px-2 pt-3 pb-1 overflow-y-auto h-full"
+            : "flex gap-1.5 px-2.5 pt-3.5 pb-1 overflow-x-auto"
+        }
+        data-testid="puzzle-tool-strip"
+        data-orientation={orientation}
+      >
         {list.map((t) => {
           const active = t.armed;
+          const inspected = inspectedKey === t.key;
           return (
             <button
               key={t.key}
               type="button"
-              onClick={() => dispatchUseTool(dispatch, t.key, state)}
-              onMouseDown={() => setHoverKey(t.key)}
-              onMouseUp={() => setHoverKey(null)}
-              onMouseLeave={() => setHoverKey(null)}
-              onTouchStart={() => setHoverKey(t.key)}
-              onTouchEnd={() => setHoverKey(null)}
+              onClick={() => onInspectChange?.({ ...TOOL_BY_KEY[t.key], count: t.count })}
               className="flex-shrink-0 flex flex-col items-center justify-end relative"
               style={{
                 width: 58,
                 height: 62,
                 borderRadius: 11,
                 padding: "4px 0 5px",
-                background: active ? "#fdf3e3" : "rgba(255,255,255,0.04)",
-                border: active ? "2px solid #f0c14b" : "1.5px solid rgba(255,255,255,0.08)",
+                background: active ? "#fdf3e3" : inspected ? "rgba(240,193,75,0.18)" : "rgba(255,255,255,0.04)",
+                border: active
+                  ? "2px solid #f0c14b"
+                  : inspected
+                  ? "2px solid rgba(240,193,75,0.55)"
+                  : "1.5px solid rgba(255,255,255,0.08)",
                 color: active ? "#3a2412" : "#caa97a",
                 boxShadow: "0 2px 0 rgba(0,0,0,0.2)",
                 opacity: t.count === 0 && !active ? 0.55 : 1,
@@ -609,12 +618,14 @@ export function PuzzleToolStrip({ state, dispatch, onInspectChange }) {
           );
         })}
       </div>
-      <div
-        className="text-center font-extrabold"
-        style={{ color: "#5b3a1e", fontSize: 9, letterSpacing: 1, marginTop: 2, paddingBottom: 4 }}
-      >
-        <span style={{ color: "#8a6a47" }}>‹ swipe ›</span>
-      </div>
+      {!isVertical && (
+        <div
+          className="text-center font-extrabold"
+          style={{ color: "#5b3a1e", fontSize: 9, letterSpacing: 1, marginTop: 2, paddingBottom: 4 }}
+        >
+          <span style={{ color: "#8a6a47" }}>‹ swipe ›</span>
+        </div>
+      )}
     </div>
   );
 }
