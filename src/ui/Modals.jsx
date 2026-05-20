@@ -8,6 +8,7 @@ import RichText from "./RichText.jsx";
 import { ParchmentDialog } from "./primitives/Dialog.jsx";
 import Button from "./primitives/Button.jsx";
 import { useNotifier } from "./primitives/Toast.jsx";
+import { isDialogsDisabled } from "../featureFlags.js";
 
 function Stat({ v, l }) {
   return (
@@ -19,6 +20,7 @@ function Stat({ v, l }) {
 }
 
 export function SeasonModal({ state, dispatch }) {
+  if (isDialogsDisabled()) return null;
   if (state.modal !== "season") return null;
   const stats = state.seasonStats;
   const close = () => dispatch({ type: "CLOSE_SEASON" });
@@ -452,6 +454,7 @@ function WinBeat({ beat, lines, sceneBg, onContinue }) {
  * presentation form. Continue-only beats (no prompt) also dismiss via ESC.
  */
 export function StoryModal({ state, dispatch }) {
+  if (isDialogsDisabled()) return null;
   const beat = state.story?.queuedBeat;
   const [lineStep, setLineStep] = useState(0);
   const [lastBeatId, setLastBeatId] = useState(beat?.id || "");
@@ -572,6 +575,7 @@ export function NpcBubble({ bubble, dispatch }) {
   const notifier = useNotifier();
   const lastIdRef = useRef(null);
   useEffect(() => {
+    if (isDialogsDisabled()) return;
     if (!bubble || bubble.id === lastIdRef.current) return;
     lastIdRef.current = bubble.id;
     const npc = NPCS[bubble.npc];
