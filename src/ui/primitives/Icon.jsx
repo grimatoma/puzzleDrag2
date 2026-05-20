@@ -64,7 +64,7 @@ function CanvasIcon({ iconKey, size, tone, title }) {
     ctx.scale(dpr, dpr);
     ctx.clearRect(0, 0, size, size);
     ctx.translate(size / 2, size / 2);
-    const scale = size / 32;
+    const scale = size / 64;
     ctx.scale(scale, scale);
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
