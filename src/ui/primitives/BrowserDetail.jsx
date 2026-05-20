@@ -81,6 +81,7 @@ export function DetailPane({
   description,
   children,
   actions,
+  headerActions,
   empty,
   className = "",
 }) {
@@ -101,6 +102,7 @@ export function DetailPane({
           <h3 className="hl-detail-pane__title">{title}</h3>
           {status && <div className="hl-detail-pane__status">{status}</div>}
         </div>
+        {headerActions && <div className="flex-shrink-0 flex flex-col gap-1.5 justify-center">{headerActions}</div>}
       </div>
       {description && <p className="hl-detail-pane__description">{description}</p>}
       {children && <div className="hl-detail-pane__content">{children}</div>}

@@ -74,46 +74,22 @@ function useRecentOrder(inventory) {
   return state.order;
 }
 
-function SearchIcon({ size = 16 }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <circle cx="11" cy="11" r="6" stroke="currentColor" strokeWidth="2" />
-      <path d="M20 20l-3.5-3.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-export default function InventoryScreen({ state, dispatch }) {
+export default function InventoryScreen({ state, dispatch, searchOpen: searchOpenProp, onToggleSearch }) {
   const biomeKey = state.biomeKey ?? "farm";
   const isPhone = usePhoneViewport();
 
   const [queryInput, setQueryInput] = useState("");
-  const [searchOpen, setSearchOpen] = useState(false);
 
+  const searchOpen = searchOpenProp ?? false;
   const query = useDebounced(queryInput, 100);
   const recentOrder = useRecentOrder(state.inventory);
 
-  const closeSearch = () => {
-    setSearchOpen(false);
-    setQueryInput("");
-  };
+  useEffect(() => {
+    if (!searchOpen) setQueryInput("");
+  }, [searchOpen]);
 
   return (
     <FeaturePanel className="z-10">
-      <FeaturePanel.Header
-        title="Inventory"
-        actions={
-          <button
-            type="button"
-            onClick={() => (searchOpen ? closeSearch() : setSearchOpen(true))}
-            aria-label={searchOpen ? "Close search" : "Search resources"}
-            aria-pressed={searchOpen}
-            className="hl-panel-close"
-          >
-            <SearchIcon size={16} />
-          </button>
-        }
-      />
       {searchOpen && (
         <FeaturePanel.Toolbar className="pt-2 pb-2">
           <SearchInput

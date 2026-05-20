@@ -113,7 +113,16 @@ function DevButton({ title, iconKey, onClick }) {
   );
 }
 
-export function Hud({ state, dispatch }) {
+function SearchIcon({ size = 16 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <circle cx="11" cy="11" r="6" stroke="currentColor" strokeWidth="2" />
+      <path d="M20 20l-3.5-3.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+export function Hud({ state, dispatch, inventorySearchOpen, onInventorySearchToggle }) {
   const { coins, level, xp, turnsUsed, view } = state;
   const onBoard = view === "board";
   const turnBudget = state.farmRun?.turnBudget ?? 0;
@@ -144,6 +153,21 @@ export function Hud({ state, dispatch }) {
           {VIEW_LABELS[view] ?? "Menu"}
           {sandbox && <span className="italic font-normal"> · sandbox</span>}
         </span>
+        {view === "inventory" && onInventorySearchToggle && (
+          <button
+            type="button"
+            onClick={onInventorySearchToggle}
+            aria-pressed={!!inventorySearchOpen}
+            aria-label={inventorySearchOpen ? "Close search" : "Search inventory"}
+            className="w-7 h-7 rounded-lg grid place-items-center flex-shrink-0 transition-colors"
+            style={inventorySearchOpen
+              ? { background: "var(--moss)", border: "2px solid var(--moss)", color: "white" }
+              : { background: "var(--paper-soft)", border: "2px solid var(--iron)", color: "var(--ink-mid)" }
+            }
+          >
+            <SearchIcon size={14} />
+          </button>
+        )}
       </div>
 
       <div className="flex items-center gap-2 flex-1 justify-center min-w-0 flex-wrap">

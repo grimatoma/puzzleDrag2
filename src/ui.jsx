@@ -150,14 +150,17 @@ export function FeatureModals({ state, dispatch }) {
   );
 }
 
-export function FeatureScreens({ state, dispatch }) {
+export function FeatureScreens({ state, dispatch, inventorySearchOpen, onInventorySearchToggle }) {
   if (state.view === "board" || state.view === "town") return null;
   for (const f of FEATURES) {
     if (f.viewKey && state.view === f.viewKey) {
       const C = f.Component;
+      const extra = f.viewKey === "inventory"
+        ? { searchOpen: inventorySearchOpen, onToggleSearch: onInventorySearchToggle }
+        : {};
       return (
         <FeatureErrorBoundary featureKey={f.viewKey}>
-          <C state={state} dispatch={dispatch} />
+          <C state={state} dispatch={dispatch} {...extra} />
         </FeatureErrorBoundary>
       );
     }
