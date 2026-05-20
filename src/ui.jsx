@@ -1,6 +1,5 @@
 import React from "react";
 import { getPhaserScene } from "./phaserBridge.js";
-import { locBuilt } from "./locBuilt.js";
 import { Section, CompactOrders } from "./ui/Inventory.jsx";
 import { ToolsGrid } from "./ui/Tools.jsx";
 import { TOOL_BY_KEY } from "./ui/toolRegistry.js";
@@ -86,13 +85,10 @@ export function SidePanel({ state, dispatch, chainInfo, infoPanel = null, onInsp
 // ─── Bottom nav ───────────────────────────────────────────────────────────
 
 export function BottomNav({ view, dispatch, state }) {
-  const builtAtLoc = locBuilt(state ?? {});
   const orders = state?.orders ?? [];
   const inventory = state?.inventory ?? {};
   const ordersReady = orders.filter((o) => (inventory[o.key] ?? 0) >= o.need).length;
   const ordersBadge = ordersReady > 0 ? { count: ordersReady, tone: "moss" } : undefined;
-  // Chronicle badge skipped: no `lastChronicleViewedAt` (or equivalent) field
-  // exists in state, and the brief forbids adding new state for this slot.
   return (
     <TabBar
       current={view}
@@ -103,15 +99,6 @@ export function BottomNav({ view, dispatch, state }) {
       <Tab itemKey="crafting" iconKey="ui_build" label="Craft" />
       <Tab itemKey="cartography" iconKey="ui_map" label="Map" />
       <Tab itemKey="townsfolk" iconKey="ui_people" label="Townsfolk" />
-      <Tab itemKey="chronicle" iconKey="ui_clipboard" label="Chronicle" />
-      <Tab itemKey="tileCollection" iconKey="ui_puzzle" label="Tiles" />
-      <Tab
-        itemKey="portal"
-        iconKey="ui_portal"
-        label="Portal"
-        locked={!builtAtLoc.portal}
-        unlockHint="Build the Portal"
-      />
     </TabBar>
   );
 }

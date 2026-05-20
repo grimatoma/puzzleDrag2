@@ -35,6 +35,11 @@ export const KNOWN_VIEWS = new Set([
   "achievements",
   "portal",
   "orders",
+  "castle",
+  "bosses",
+  "decorations",
+  "charter",
+  "boons",
 ]);
 
 // Modals that are reachable via the URL. The transient `season` modal is

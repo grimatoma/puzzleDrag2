@@ -24,6 +24,9 @@ const VIEW_LABELS = {
   cartography: "Map",
   charter: "Charter",
   boons: "Boons",
+  castle: "Castle",
+  bosses: "Foes",
+  decorations: "Decorations",
 };
 
 function TideContent({ fish }) {
