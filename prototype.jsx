@@ -319,10 +319,11 @@ export default function App() {
                 </div>
               </div>
             )}
-            {/* Horizontal tools strip — directly under the HUD on portrait
-                phones and desktop. Landscape gets a vertical tool rail in
-                its left column instead (see below) so the strip is hidden. */}
-            <div className="landscape:max-[1024px]:hidden">
+            {/* Horizontal tools strip — directly under the HUD on narrow
+                phones (and desktop, where it complements the side panel).
+                Anything wider than ~500px and below desktop gets the vertical
+                rail on the left instead, so the strip is hidden there. */}
+            <div className="min-[500px]:max-[1024px]:hidden">
               <PuzzleToolStrip
                 state={state}
                 onInspectChange={setInspectedTool}
@@ -330,13 +331,12 @@ export default function App() {
               />
             </div>
 
-            <div className="flex-1 min-h-0 grid grid-cols-[1fr_300px] gap-3 p-3 max-[1024px]:grid-cols-1 max-[1024px]:gap-0 max-[1024px]:p-0 landscape:max-[1024px]:grid-cols-[260px_1fr] landscape:max-[1024px]:gap-2 landscape:max-[1024px]:p-2">
-              {/* Board column: action panel stacked above the Phaser frame,
-                  field-tint gradient applied as the area background.
-                  Landscape moves the panel into a slim left column so the
-                  board itself gets the full remaining horizontal space. */}
-              <div className="relative min-h-0 min-w-0 flex flex-col gap-2 max-[1024px]:p-2 max-[1024px]:gap-2 landscape:max-[1024px]:p-0 landscape:max-[1024px]:gap-2 landscape:max-[1024px]:order-2">
-                <div className="landscape:max-[1024px]:hidden">{infoPanelEl}</div>
+            <div className="flex-1 min-h-0 grid grid-cols-[1fr_300px] gap-3 p-3 max-[1024px]:grid-cols-1 max-[1024px]:gap-0 max-[1024px]:p-0 min-[500px]:max-[1024px]:grid-cols-[240px_1fr] min-[500px]:max-[1024px]:gap-2 min-[500px]:max-[1024px]:p-2">
+              {/* Board column. On the wide-mobile layout the panel moves to
+                  the left column so the board column claims the full
+                  remaining width (grid `order` swaps DOM order vs visual order). */}
+              <div className="relative min-h-0 min-w-0 flex flex-col gap-2 max-[1024px]:p-2 max-[1024px]:gap-2 min-[500px]:max-[1024px]:p-0 min-[500px]:max-[1024px]:gap-2 min-[500px]:max-[1024px]:order-2">
+                <div className="min-[500px]:max-[1024px]:hidden">{infoPanelEl}</div>
                 <div className="flex-1 min-h-0 min-w-0">
                   <BoardFrame seasonIdx={seasonIdx}>
                     <PhaserMount
@@ -356,8 +356,8 @@ export default function App() {
                   </BoardFrame>
                 </div>
               </div>
-              {/* Landscape left column: action panel + vertical tool rail. */}
-              <div className="hidden landscape:max-[1024px]:flex landscape:max-[1024px]:flex-col landscape:max-[1024px]:gap-2 landscape:max-[1024px]:order-1 landscape:max-[1024px]:min-h-0">
+              {/* Wide-mobile left column: status panel + vertical tool rail. */}
+              <div className="hidden min-[500px]:max-[1024px]:flex min-[500px]:max-[1024px]:flex-col min-[500px]:max-[1024px]:gap-2 min-[500px]:max-[1024px]:order-1 min-[500px]:max-[1024px]:min-h-0">
                 {infoPanelEl}
                 <div className="flex-1 min-h-0 overflow-hidden rounded-[11px]" style={{ background: "linear-gradient(#1a0d05,#241710)", border: "1px solid #0a0506" }}>
                   <PuzzleToolStrip
