@@ -270,6 +270,14 @@ export default function App() {
     stateRef.current = state;
   }, [state]);
 
+  // When a chain drag ends (chainInfo goes null) and no tool is armed, reset the
+  // inspected tool so the panel returns to the idle resources view by default.
+  useEffect(() => {
+    if (!chainInfo && !state.toolPending) {
+      setInspectedTool(null);
+    }
+  }, [chainInfo]); // eslint-disable-line react-hooks/exhaustive-deps -- intentional: only react to chain end, not every toolPending change
+
   useEffect(() => {
     if (!import.meta.env.DEV && import.meta.env.MODE !== "test") return undefined;
     let cleanup;
