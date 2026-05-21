@@ -2,7 +2,7 @@
 // Migrated from runSelfTests() assertions 0.1 and 0.2.
 import { describe, it, expect } from "vitest";
 import { ROWS, COLS } from "../src/constants.js";
-import { clamp, seasonIndexForTurns, rollResource } from "../src/utils.js";
+import { clamp, seasonIndexForTurns, rollResource, makeBubble } from "../src/utils.js";
 
 describe("Phase 0 — grid dimensions", () => {
   it("ROWS === 6", () => expect(ROWS).toBe(6));
@@ -33,5 +33,23 @@ describe("Phase 0 — rollResource helper", () => {
   });
   it("returns the last item when random is close to 1", () => {
     expect(rollResource(pool, () => 0.99)).toBe("iron");
+  });
+});
+
+describe("Phase 0 — makeBubble helper", () => {
+  it("creates a bubble object with default ms", () => {
+    const bubble = makeBubble("npc_1", "Hello");
+    expect(bubble.npc).toBe("npc_1");
+    expect(bubble.text).toBe("Hello");
+    expect(bubble.ms).toBe(1800);
+    expect(typeof bubble.id).toBe("number");
+  });
+
+  it("creates a bubble object with custom ms", () => {
+    const bubble = makeBubble("npc_2", "World", 3000);
+    expect(bubble.npc).toBe("npc_2");
+    expect(bubble.text).toBe("World");
+    expect(bubble.ms).toBe(3000);
+    expect(typeof bubble.id).toBe("number");
   });
 });
