@@ -1,8 +1,4 @@
 import React from "react";
-import { getPhaserScene } from "./phaserBridge.js";
-import { Section, CompactOrders } from "./ui/Inventory.jsx";
-import { ToolsGrid } from "./ui/Tools.jsx";
-import { TOOL_BY_KEY } from "./ui/toolRegistry.js";
 import TabBar, { Tab } from "./ui/primitives/TabBar.jsx";
 
 // Per-feature error boundary. A crash in any one feature renders an inline
@@ -34,59 +30,6 @@ class FeatureErrorBoundary extends React.Component {
     }
     return this.props.children;
   }
-}
-
-// ─── Side panel (orders / inventory / tools / biome switcher) ─────────────
-
-export function SidePanel({ state, dispatch, chainInfo, infoPanel = null, onInspectChange }) {
-  return (
-    <div className="hl-surface rounded-2xl p-3 flex flex-col gap-3 overflow-hidden h-full min-h-0">
-      {infoPanel}
-      {chainInfo && (
-        <div className="bg-[#2b2218]/90 border border-[#ffd248] rounded-xl px-3 py-2 text-[#ffd248] font-bold text-[13px] text-center flex-shrink-0">
-          <div>
-            chain × {chainInfo.count}{chainInfo.upgrades > 0 ? `  +${chainInfo.upgrades}★` : ""}
-          </div>
-          {chainInfo.nextTileProgress && chainInfo.nextTileProgress.threshold > 0 && (
-            <div className="text-[11px] text-[#f8e7c6] font-normal mt-0.5">
-              {chainInfo.nextTileProgress.current}/{chainInfo.nextTileProgress.threshold} {chainInfo.nextTileProgress.targetLabel}
-            </div>
-          )}
-        </div>
-      )}
-      <Section title="Tools" titleColor="#3a2715">
-        <div className="max-h-[40vh] landscape:max-[1024px]:max-h-[34vh] overflow-y-auto pr-1">
-          <ToolsGrid
-            tools={state.tools}
-            toolPending={state.toolPending}
-            fertilizerActive={state.fertilizerActive}
-            onInspectChange={onInspectChange}
-            onUse={(key) => {
-              const isPending = state.toolPending === key;
-              if (isPending) { dispatch({ type: "CANCEL_TOOL" }); return; }
-              // Disarm any other armed tool first so only one is ever armed.
-              if (state.toolPending && state.toolPending !== key) {
-                dispatch({ type: "CANCEL_TOOL" });
-              }
-              if (state.fertilizerActive && key !== "fertilizer") {
-                dispatch({ type: "USE_TOOL", key: "fertilizer" });
-              }
-              const def = TOOL_BY_KEY[key];
-              if (def?.category === "magic") {
-                dispatch({ type: "USE_TOOL", payload: { id: key } });
-              } else {
-                dispatch({ type: "USE_TOOL", key });
-              }
-              if (key === "shuffle") getPhaserScene()?.shuffleBoard();
-            }}
-          />
-        </div>
-      </Section>
-      <Section title="Orders" titleColor="#3a2715">
-        <CompactOrders orders={state.orders} inventory={state.inventory} dispatch={dispatch} />
-      </Section>
-    </div>
-  );
 }
 
 // ─── Bottom nav ───────────────────────────────────────────────────────────
