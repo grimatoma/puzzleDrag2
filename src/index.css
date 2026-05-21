@@ -143,6 +143,26 @@
   display: inline-block;
 }
 
+/* Floating reward chip (e.g. "+15" above the HUD coin pill when a chain
+   pays out). Rises and fades; pointer-events disabled so it never
+   interferes with clicks. */
+@keyframes rewardChipFloat {
+  0%   { opacity: 0; transform: translate(-50%, 6px) scale(0.85); }
+  20%  { opacity: 1; transform: translate(-50%, -2px) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -28px) scale(0.95); }
+}
+.reward-chip {
+  position: absolute;
+  left: 50%;
+  top: -4px;
+  pointer-events: none;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.35);
+  animation: rewardChipFloat 1100ms cubic-bezier(.2,.7,.2,1) both;
+}
+
 /* ── Crafting queue panel ───────────────────────────────────────────────── */
 @keyframes craftProgressShine {
   0%   { transform: translateX(-110%); }

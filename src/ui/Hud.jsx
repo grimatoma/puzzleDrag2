@@ -6,6 +6,7 @@ import Icon from "./primitives/Icon.jsx";
 import Pill from "./primitives/Pill.jsx";
 import Popover from "./primitives/Popover.jsx";
 import { useCountUp } from "./primitives/useCountUp.js";
+import { useReceiptChips } from "./primitives/useReceiptChips.js";
 import { SeasonIndicator } from "./puzzleBoard.jsx";
 
 export const SEASON_EFFECTS = ["", "", "", ""];
@@ -134,6 +135,7 @@ export function Hud({ state, dispatch, inventorySearchOpen, onInventorySearchTog
   const xpPct = Math.min(100, (xp / xpNeed) * 100);
   const { display: coinsDisplay, pulse: coinsPulse, pulseKey: coinsPulseKey } = useCountUp(coins ?? 0);
   const { pulse: levelPulse, pulseKey: levelPulseKey } = useCountUp(level ?? 1);
+  const coinChips = useReceiptChips(coins ?? 0);
   const isWon = !!state.story?.flags?.isWon;
   const sandbox = !!state.story?.sandbox || isWon;
   const settlementName = state.settlement?.name ?? "Hearthwood Vale";
@@ -192,27 +194,34 @@ export function Hud({ state, dispatch, inventorySearchOpen, onInventorySearchTog
         <DevButton title="Balance Manager" iconKey="ui_scale" onClick={() => { window.open(`${import.meta.env.BASE_URL}b/`, "_blank", "noopener,noreferrer"); }} />
         {!onBoard && (
           <>
-            <Popover
-              density="rich"
-              content={<CurrencyContent state={state} />}
-              anchor={
-                <Pill
-                  interactive
-                  tone="gold"
-                  variant="solid"
-                  size="sm"
-                  leading={<Icon iconKey="design.currency.coin" size={14} />}
-                  title="Currencies"
-                >
-                  <span
-                    key={coinsPulseKey}
-                    className="tabular-nums"
-                    data-testid="coins"
-                    data-count-pulse={coinsPulse || undefined}
-                  >{coinsDisplay.toLocaleString()}</span>
-                </Pill>
-              }
-            />
+            <div className="relative">
+              <Popover
+                density="rich"
+                content={<CurrencyContent state={state} />}
+                anchor={
+                  <Pill
+                    interactive
+                    tone="gold"
+                    variant="solid"
+                    size="sm"
+                    leading={<Icon iconKey="design.currency.coin" size={14} />}
+                    title="Currencies"
+                  >
+                    <span
+                      key={coinsPulseKey}
+                      className="tabular-nums"
+                      data-testid="coins"
+                      data-count-pulse={coinsPulse || undefined}
+                    >{coinsDisplay.toLocaleString()}</span>
+                  </Pill>
+                }
+              />
+              {coinChips.map((c) => (
+                <span key={c.id} className="reward-chip text-gold-bright text-caption">
+                  +{c.delta.toLocaleString()}
+                </span>
+              ))}
+            </div>
             <Pill
               tone="ember"
               variant="solid"
