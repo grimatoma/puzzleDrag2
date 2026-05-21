@@ -1,4 +1,5 @@
 import { createContext, useContext } from "react";
+import AutoFitText from "./AutoFitText.jsx";
 
 const ScreenCtx = createContext({ tone: "dark" });
 
@@ -35,7 +36,15 @@ export default function Screen({ title, onBack, tone = "dark", className = "", c
             </button>
           )}
           {title && (
-            <h1 className="text-h3 font-bold m-0 truncate">{title}</h1>
+            <AutoFitText
+              as="h1"
+              className="font-bold m-0 flex-1 min-w-0"
+              maxFontSize={18}
+              minFontSize={12}
+              title={typeof title === "string" ? title : undefined}
+            >
+              {title}
+            </AutoFitText>
           )}
         </header>
         {children}

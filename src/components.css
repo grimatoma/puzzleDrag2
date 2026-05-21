@@ -255,7 +255,7 @@
     @apply flex-1 min-w-0 flex flex-col gap-0.5;
   }
   .hl-browser-item__title {
-    @apply text-body font-bold truncate;
+    @apply font-bold;
     color: var(--on-panel);
   }
   .hl-browser-item__subtitle {

@@ -105,16 +105,16 @@ function StatusPill({ status, total }) {
 
 function InventoryBrowserItem({ entry, selected, onSelect }) {
   const { key, label, count, orderStatus } = entry;
-  let derivedStatus = orderStatus;
-  if (!derivedStatus && count > 0) derivedStatus = "excess";
+  // List view: surface only meaningful order statuses (ready/needed). The
+  // "Excess" badge and the redundant kind subtitle stay on the detail card.
+  const listStatus = orderStatus === "ready" || orderStatus === "needed" ? orderStatus : undefined;
   return (
     <BrowserItemButton
       selected={selected}
       icon={<Icon iconKey={key} size={40} title={label} />}
       title={label}
-      subtitle={entry.kind === "item" ? "Item" : "Resource"}
       count={count}
-      status={derivedStatus}
+      status={listStatus}
       onClick={onSelect}
       aria-label={`View ${label}`}
     />
