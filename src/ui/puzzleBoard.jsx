@@ -198,11 +198,13 @@ function ChainView({ chainInfo, inventory }) {
   const newPct = threshold > 0 ? (newFitsInCycle / threshold) * 100 : 0;
   const overflowPct = threshold > 0 ? (remainder / threshold) * 100 : 0;
 
-  // Text format flips once combined hits the threshold (carried is absorbed
-  // into the cycle counter). "+N" only appears when the next set has actually
-  // begun (i.e. there's a remainder), so exact-boundary chains read as
-  // "{threshold}/{threshold}" without a trailing "+0".
-  const useCycleText = threshold > 0 && combined >= threshold;
+  // Text format flips only after combined exceeds the threshold — while still
+  // inside the first cycle (combined <= threshold), the "{carried}+{length}"
+  // split is preserved so the player can see their carry-over contribution.
+  // Once spillover begins, carried is absorbed into the "{remainder}/{threshold}
+  // + {N}" cycle counter. Multi-cycle boundaries with no spillover (e.g. exact
+  // 2×threshold) read as "{threshold}/{threshold} + {N-1}".
+  const useCycleText = threshold > 0 && combined > threshold;
   const onCycleBoundary = useCycleText && remainder === 0;
   const textCurrent = onCycleBoundary ? threshold : remainder;
   const textPriorCycles = onCycleBoundary ? cyclesCompleted - 1 : cyclesCompleted;
