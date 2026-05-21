@@ -1,3 +1,4 @@
+import AutoFitText from "./AutoFitText.jsx";
 import Button from "./Button.jsx";
 import { CostChip, RequirementChip } from "./Chip.jsx";
 import ProgressTrack from "./ProgressTrack.jsx";
@@ -59,7 +60,9 @@ export function BrowserItemButton({
     >
       <span className="hl-browser-item__icon">{icon}</span>
       <span className="hl-browser-item__main">
-        <span className="hl-browser-item__title">{title}</span>
+        <AutoFitText className="hl-browser-item__title" maxFontSize={14} minFontSize={10} title={typeof title === "string" ? title : undefined}>
+          {title}
+        </AutoFitText>
         {subtitle && <span className="hl-browser-item__subtitle">{subtitle}</span>}
         {children}
       </span>
@@ -99,7 +102,9 @@ export function DetailPane({
         {icon && <div className="hl-detail-pane__icon">{icon}</div>}
         <div className="min-w-0 flex-1">
           {eyebrow && <div className="hl-detail-pane__eyebrow">{eyebrow}</div>}
-          <h3 className="hl-detail-pane__title">{title}</h3>
+          <AutoFitText as="h3" className="hl-detail-pane__title" maxFontSize={18} minFontSize={12} title={typeof title === "string" ? title : undefined}>
+            {title}
+          </AutoFitText>
           {status && <div className="hl-detail-pane__status">{status}</div>}
         </div>
         {headerActions && <div className="flex-shrink-0 flex flex-col gap-1.5 justify-center self-center">{headerActions}</div>}

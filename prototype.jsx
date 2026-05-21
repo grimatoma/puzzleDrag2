@@ -316,6 +316,20 @@ export default function App() {
     };
   }, [dispatch]);
 
+  useEffect(() => {
+    if (!import.meta.env.DEV && import.meta.env.MODE !== "test") return undefined;
+    let cleanup;
+    let active = true;
+    import("./src/ui/primitives/truncationDetector.js").then(({ startTruncationDetector }) => {
+      if (!active) return;
+      cleanup = startTruncationDetector();
+    });
+    return () => {
+      active = false;
+      cleanup?.();
+    };
+  }, []);
+
   // Fire session_start story beat on first mount
   useEffect(() => {
     dispatch({ type: "SESSION_START" });
