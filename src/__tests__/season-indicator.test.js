@@ -1,32 +1,54 @@
 import { describe, expect, it } from "vitest";
 import { createElement as h } from "react";
 import { renderToString } from "react-dom/server";
-import { SeasonIndicator, SeasonIcon } from "../ui/puzzleBoard.jsx";
-import { SeasonScene } from "../ui/seasonScenes.jsx";
+import { SeasonIndicator } from "../ui/puzzleBoard.jsx";
+import { SeasonStrip, seasonTurnRanges } from "../ui/seasonStrip.jsx";
 import { reduce as settingsReduce } from "../features/settings/slice.js";
 
 const baseProps = {
   turnsUsed: 3,
   turnBudget: 10,
   turnsRemaining: 7,
-  seasonIdx: 0,
-  seasonName: "Spring",
+  seasonIdx: 1,
+  seasonName: "Summer",
 };
 
+describe("seasonTurnRanges", () => {
+  it("divides a 10-turn budget into 2/3/2/3", () => {
+    const ranges = seasonTurnRanges(10);
+    expect(ranges.map((r) => r.count)).toEqual([2, 3, 2, 3]);
+    expect(ranges[0].end).toBe(2);
+    expect(ranges[3].end).toBe(10);
+  });
+
+  it("sums each segment back to the budget", () => {
+    for (const budget of [4, 8, 12, 16, 20]) {
+      const ranges = seasonTurnRanges(budget);
+      const sum = ranges.reduce((acc, r) => acc + r.count, 0);
+      expect(sum, `budget=${budget}`).toBe(budget);
+    }
+  });
+
+  it("clamps a zero budget to 1", () => {
+    const ranges = seasonTurnRanges(0);
+    expect(ranges[3].end).toBe(1);
+  });
+});
+
 describe("settings — bespokeSeasonWidget toggle", () => {
-  it("flips an undefined/false flag to true", () => {
+  it("flips false → true", () => {
     const state = { settings: {} };
     const next = settingsReduce(state, { type: "SETTINGS/TOGGLE", key: "bespokeSeasonWidget" });
     expect(next.settings.bespokeSeasonWidget).toBe(true);
   });
 
-  it("flips true back to false", () => {
+  it("flips true → false", () => {
     const state = { settings: { bespokeSeasonWidget: true } };
     const next = settingsReduce(state, { type: "SETTINGS/TOGGLE", key: "bespokeSeasonWidget" });
     expect(next.settings.bespokeSeasonWidget).toBe(false);
   });
 
-  it("does not affect unrelated settings keys", () => {
+  it("does not affect unrelated keys", () => {
     const state = { settings: { sfxOn: true, bespokeSeasonWidget: false } };
     const next = settingsReduce(state, { type: "SETTINGS/TOGGLE", key: "bespokeSeasonWidget" });
     expect(next.settings.sfxOn).toBe(true);
@@ -34,20 +56,25 @@ describe("settings — bespokeSeasonWidget toggle", () => {
   });
 });
 
-describe("SeasonIndicator — picks the right presentation", () => {
-  it("renders the themed wheel when bespoke=false", () => {
+describe("SeasonIndicator — renders the strip in both modes", () => {
+  it("renders a SeasonStrip when bespoke=false (compact)", () => {
     const html = renderToString(h(SeasonIndicator, { ...baseProps, bespoke: false }));
     expect(html).toContain('data-testid="turns-left"');
-    expect(html).toContain("Spring");
-    // Wheel mode does not put role="img" on the SVG.
-    expect(html).not.toContain('role="img"');
+    expect(html).toContain('role="status"');
+    // Source-cased labels (CSS text-transform handles display casing).
+    for (const name of ["Spring", "Summer", "Autumn", "Winter"]) {
+      expect(html).toContain(name);
+    }
+    expect(html).toContain("turns left");
   });
 
-  it("renders a bespoke scene when bespoke=true", () => {
+  it("renders a SeasonStrip when bespoke=true (busy)", () => {
     const html = renderToString(h(SeasonIndicator, { ...baseProps, bespoke: true }));
     expect(html).toContain('data-testid="turns-left"');
     expect(html).toContain('role="status"');
-    expect(html).toContain('role="img"');
+    for (const name of ["Spring", "Summer", "Autumn", "Winter"]) {
+      expect(html).toContain(name);
+    }
   });
 
   it("shows the remaining count in both modes", () => {
@@ -64,75 +91,85 @@ describe("SeasonIndicator — picks the right presentation", () => {
       h(SeasonIndicator, { ...baseProps, turnsRemaining: undefined, bespoke: false })
     );
     const match = html.match(/data-testid="turns-left"[^>]*>\s*(\d+)\s*</);
-    expect(match[1]).toBe("7"); // turnBudget 10 - turnsUsed 3
+    expect(match[1]).toBe("7"); // 10 - 3
   });
 });
 
-describe("SeasonScene — dispatches to the right scene per season", () => {
-  const seasons = [
-    { idx: 0, name: "Spring", gradId: "hwv-spring-sky" },
-    { idx: 1, name: "Summer", gradId: "hwv-summer-sky" },
-    { idx: 2, name: "Autumn", gradId: "hwv-autumn-sky" },
-    { idx: 3, name: "Winter", gradId: "hwv-winter-sky" },
-  ];
-
-  for (const { idx, name, gradId } of seasons) {
-    it(`renders the ${name} scene for seasonIdx=${idx}`, () => {
-      const html = renderToString(h(SeasonScene, { seasonIdx: idx, remaining: 5, name }));
-      expect(html).toContain(gradId);
-      expect(html.toUpperCase()).toContain(name.toUpperCase());
-      expect(html).toContain('data-testid="turns-left"');
-    });
-  }
-
-  it("falls back to the Spring scene for an unknown seasonIdx", () => {
-    const html = renderToString(h(SeasonScene, { seasonIdx: 99, remaining: 5, name: "Spring" }));
-    expect(html).toContain("hwv-spring-sky");
-  });
-});
-
-describe("SeasonScene — aria-label", () => {
+describe("SeasonStrip — aria-label pluralization", () => {
   it("uses singular when remaining=1", () => {
-    const html = renderToString(h(SeasonScene, { seasonIdx: 0, remaining: 1, name: "Spring" }));
-    expect(html).toMatch(/aria-label="Spring [^"]*1 turn left"/);
+    const html = renderToString(
+      h(SeasonStrip, {
+        turnsUsed: 9,
+        turnBudget: 10,
+        turnsRemaining: 1,
+        seasonIdx: 3,
+        seasonName: "Winter",
+        busy: false,
+      })
+    );
+    expect(html).toMatch(/aria-label="Winter [^"]*1 turn left"/);
   });
 
   it("uses plural for any other count", () => {
-    const html5 = renderToString(h(SeasonScene, { seasonIdx: 1, remaining: 5, name: "Summer" }));
-    expect(html5).toMatch(/aria-label="Summer [^"]*5 turns left"/);
+    const html5 = renderToString(
+      h(SeasonStrip, {
+        turnsUsed: 5,
+        turnBudget: 10,
+        turnsRemaining: 5,
+        seasonIdx: 2,
+        seasonName: "Autumn",
+        busy: false,
+      })
+    );
+    expect(html5).toMatch(/aria-label="Autumn [^"]*5 turns left"/);
 
-    const html0 = renderToString(h(SeasonScene, { seasonIdx: 1, remaining: 0, name: "Summer" }));
-    expect(html0).toMatch(/aria-label="Summer [^"]*0 turns left"/);
+    const html0 = renderToString(
+      h(SeasonStrip, {
+        turnsUsed: 10,
+        turnBudget: 10,
+        turnsRemaining: 0,
+        seasonIdx: 3,
+        seasonName: "Winter",
+        busy: false,
+      })
+    );
+    expect(html0).toMatch(/aria-label="Winter [^"]*0 turns left"/);
   });
 });
 
-describe("SeasonScene — numeral matches remaining across ranges", () => {
+describe("SeasonStrip — numeral matches remaining across ranges", () => {
   for (const n of [0, 1, 3, 7, 12]) {
     it(`shows ${n} when remaining=${n}`, () => {
-      const html = renderToString(h(SeasonScene, { seasonIdx: 2, remaining: n, name: "Autumn" }));
+      const html = renderToString(
+        h(SeasonStrip, {
+          turnsUsed: 0,
+          turnBudget: Math.max(n, 1),
+          turnsRemaining: n,
+          seasonIdx: 0,
+          seasonName: "Spring",
+          busy: false,
+        })
+      );
       const match = html.match(/data-testid="turns-left"[^>]*>\s*(\d+)\s*</);
       expect(match?.[1]).toBe(String(n));
     });
   }
 });
 
-describe("SeasonIcon", () => {
-  it("renders an SVG for each season index 0–3", () => {
-    for (const kind of [0, 1, 2, 3]) {
-      const html = renderToString(h(SeasonIcon, { kind }));
-      expect(html).toContain("<svg");
-    }
-  });
-
-  it("renders nothing for an unknown kind", () => {
-    const html = renderToString(h(SeasonIcon, { kind: 99 }));
-    expect(html).toBe("");
-  });
-
-  it("uses no emoji in the output", () => {
-    for (const kind of [0, 1, 2, 3]) {
-      const html = renderToString(h(SeasonIcon, { kind }));
-      expect(html).not.toMatch(/🌸|☀️|🍂|❄️|☀|🌻|🌹/);
+describe("SeasonStrip — emoji-free output", () => {
+  it("never includes legacy season emoji", () => {
+    for (const busy of [false, true]) {
+      const html = renderToString(
+        h(SeasonStrip, {
+          turnsUsed: 3,
+          turnBudget: 10,
+          turnsRemaining: 7,
+          seasonIdx: 1,
+          seasonName: "Summer",
+          busy,
+        })
+      );
+      expect(html).not.toMatch(/🌸|☀️|🍂|❄️|🌻|🌹|🌷|🍁/);
     }
   });
 });
