@@ -1290,7 +1290,7 @@ export function PuzzleToolModal({
           <div
             className="text-[9px] font-extrabold uppercase tracking-widest text-[#caa97a] mb-2 px-0.5"
           >
-            Long-press a tool and drag it up to pin · double-tap to arm
+            Long-press a tool and drag it up to pin · double-tap to use
           </div>
           <div
             style={{
