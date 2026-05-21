@@ -188,13 +188,24 @@ function ChainView({ chainInfo, inventory }) {
   const combined = carriedInCycle + length;
   const cyclesCompleted = threshold > 0 ? Math.floor(combined / threshold) : 0;
   const remainder = threshold > 0 ? combined % threshold : 0;
-  const looped = cyclesCompleted >= 1;
+  // Visual loop kicks in only when there's spillover past the threshold
+  // (combined > threshold), so the bar always shows an in-progress fill.
+  const looped = threshold > 0 && combined > threshold;
   const carriedPct = threshold > 0 ? (carriedInCycle / threshold) * 100 : 0;
   const newFitsInCycle = threshold > 0
     ? Math.max(0, Math.min(length, threshold - carriedInCycle))
     : length;
   const newPct = threshold > 0 ? (newFitsInCycle / threshold) * 100 : 0;
   const overflowPct = threshold > 0 ? (remainder / threshold) * 100 : 0;
+
+  // Text format flips once combined hits the threshold (carried is absorbed
+  // into the cycle counter). "+N" only appears when the next set has actually
+  // begun (i.e. there's a remainder), so exact-boundary chains read as
+  // "{threshold}/{threshold}" without a trailing "+0".
+  const useCycleText = threshold > 0 && combined >= threshold;
+  const onCycleBoundary = useCycleText && remainder === 0;
+  const textCurrent = onCycleBoundary ? threshold : remainder;
+  const textPriorCycles = onCycleBoundary ? cyclesCompleted - 1 : cyclesCompleted;
 
   return (
     <>
@@ -274,13 +285,17 @@ function ChainView({ chainInfo, inventory }) {
               }}
             >
               {threshold > 0 ? (
-                looped ? (
+                useCycleText ? (
                   <>
-                    {remainder}
+                    {textCurrent}
                     <span style={{ opacity: 0.7 }}>/</span>
                     {threshold}
-                    <span style={{ opacity: 0.6 }}> + </span>
-                    {cyclesCompleted}
+                    {textPriorCycles > 0 && (
+                      <>
+                        <span style={{ opacity: 0.6 }}> + </span>
+                        {textPriorCycles}
+                      </>
+                    )}
                   </>
                 ) : (
                   <>
