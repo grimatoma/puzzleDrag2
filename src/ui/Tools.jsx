@@ -152,8 +152,8 @@ export function MobileDock({ state, dispatch, onInspectChange }) {
               {totalTools}
             </div>
           )}
-          <div style={{ width: 24, height: 24 }}>
-            <IconCanvas iconKey="player_clear" size={24} />
+          <div style={{ width: 32, height: 32 }}>
+            <IconCanvas iconKey="player_clear" size={32} />
           </div>
           <span className="text-[9px] font-bold">Tools</span>
         </button>

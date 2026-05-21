@@ -92,11 +92,11 @@ function TileSlot({ category, selected, locked, activeTileId, onToggle, onChoose
         aria-pressed={selected}
         aria-label={`${label}${selected ? " selected" : ""}${locked ? " locked" : ""}`}
       >
-        <span className="grid place-items-center" style={{ width: 36, height: 36 }}>
+        <span className="grid place-items-center" style={{ width: 56, height: 56 }}>
           {activeTile ? (
-            <TileIcon tileId={activeTile.id} size={36} />
+            <TileIcon tileId={activeTile.id} size={56} />
           ) : (
-            <span className="text-[24px] leading-none">{fallbackGlyph}</span>
+            <span className="text-[36px] leading-none">{fallbackGlyph}</span>
           )}
         </span>
         <span className="mt-1 leading-tight text-center">

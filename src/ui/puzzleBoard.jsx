@@ -153,7 +153,7 @@ function IdleView({ inventory, biomeKey, cap }) {
                 className="absolute inset-y-0 left-0 pointer-events-none"
                 style={{ width: `${pct * 100}%`, background: "rgba(124,179,66,0.12)" }}
               />
-              <LegacyIcon iconKey={r.key} size={20} />
+              <LegacyIcon iconKey={r.key} size={32} />
               <span
                 className="font-mono font-bold text-[13px] text-[#3a2412] relative tabular-nums"
               >
@@ -609,8 +609,8 @@ const ToolTile = forwardRef(function ToolTile(
   const armed = !!tool.armed;
   const empty = tool.count === 0 && !armed;
   const dims = size === "sm"
-    ? { w: 48, h: 52, icon: 32, badge: 9, badgeMin: 14 }
-    : { w: 58, h: 62, icon: 38, badge: 10, badgeMin: 15 };
+    ? { w: 48, h: 52, icon: 42, badge: 9, badgeMin: 14 }
+    : { w: 58, h: 62, icon: 48, badge: 10, badgeMin: 15 };
   const lastTapAt = useRef(0);
   const handleClick = () => {
     const now = Date.now();

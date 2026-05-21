@@ -27,7 +27,7 @@ export default function TownsfolkScreen({ state, dispatch }) {
             className="flex-1 min-w-[80px]"
           >
             <div className="flex items-center justify-center gap-1">
-              <Icon iconKey={item.icon} size={12} className={tab === item.key ? "" : "opacity-70"} />
+              <Icon iconKey={item.icon} size={18} className={tab === item.key ? "" : "opacity-70"} />
               {item.label}
             </div>
           </FeaturePanel.Tab>
