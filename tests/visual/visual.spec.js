@@ -71,7 +71,9 @@ async function runAction(page, action) {
 }
 
 for (const scenario of VISUAL_SCENARIOS) {
-  test(`${scenario.id}`, async ({ page }, testInfo) => {
+  test(`${scenario.id} — ${scenario.expectation}`, async ({ page }, testInfo) => {
+    testInfo.annotations.push({ type: "expectation", description: scenario.expectation });
+    console.log(`[visual] ${scenario.id}: ${scenario.expectation}`);
     test.skip(testInfo.project.name === "desktop", "Full visual tests run only on mobile projects.");
     test.skip(
       scenario.skipProjects?.includes(testInfo.project.name),

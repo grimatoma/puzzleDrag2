@@ -79,7 +79,9 @@ async function runAction(page, action) {
 }
 
 for (const scenario of SMOKE_SCENARIOS) {
-  test(`desktop smoke ${scenario.id}`, async ({ page }, testInfo) => {
+  test(`desktop smoke ${scenario.id} — ${scenario.expectation}`, async ({ page }, testInfo) => {
+    testInfo.annotations.push({ type: "expectation", description: scenario.expectation });
+    console.log(`[visual-desktop-smoke] ${scenario.id}: ${scenario.expectation}`);
     test.skip(testInfo.project.name !== "desktop", "Desktop smoke runs only on desktop.");
     test.skip(
       scenario.skipProjects?.includes(testInfo.project.name),
