@@ -16,6 +16,6 @@ export const SELL_RATE = 0.10;
  */
 export function sellPriceFor(itemId) {
   const item = ITEMS[itemId];
-  if (!item || !item.value) return 0;
+  if (!item || !item.value || item.sellable === false) return 0;
   return Math.round(item.value * SELL_RATE);
 }
