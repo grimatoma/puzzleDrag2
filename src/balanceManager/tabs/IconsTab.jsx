@@ -1,25 +1,62 @@
-// Icons viewer tab — renders every entry in ICON_REGISTRY on a canvas cell
-// (or as inline SVG) so designers can browse, search, and copy icon keys.
+// Icons viewer tab — renders every entry in ICON_REGISTRY (canvas-based)
+// and DESIGN_ICONS_MAP (SVG-React) on a card so designers can browse, search,
+// filter by usage, and copy icon keys.
 
 import { useState, useMemo, useEffect, useRef, memo } from "react";
 import C2S from "canvas2svg";
 import { ICON_REGISTRY } from "../../textures/iconRegistry.js";
+import { DESIGN_ICONS_MAP } from "../../ui/icons/index.jsx";
+import { getUsedIconKeys } from "../iconUsage.js";
 import { COLORS, FilterBar, SearchBar, SegmentedFilter } from "../shared.jsx";
 
-// Derive category buckets from key prefixes (everything before the first "_").
-// Keys with no underscore fall into "other".
-function categoryOf(key) {
-  const idx = key.indexOf("_");
-  return idx === -1 ? "other" : key.slice(0, idx);
+// Derive category buckets from key prefixes. Canvas keys use `_` (e.g.
+// "ui_lock" → "ui"); SVG keys use `.` (e.g. "design.tile.grass" → "design.tile").
+// When an archived/legacy canvas entry has `replacedBy`, use that key's
+// category instead so the legacy entry sorts next to its active sibling.
+function categoryOf(key, replacedBy) {
+  const effective = replacedBy || key;
+  if (effective.includes(".")) {
+    const parts = effective.split(".");
+    return parts.length >= 2 ? `${parts[0]}.${parts[1]}` : parts[0];
+  }
+  const idx = effective.indexOf("_");
+  return idx === -1 ? "other" : effective.slice(0, idx);
 }
 
-const ALL_ENTRIES = Object.entries(ICON_REGISTRY).map(([key, entry]) => ({
+// Light-weight stub label for SVG entries that just publishes the key tail
+// as a human label ("design.tile.grass" → "tile.grass").
+function deriveSvgLabel(key) {
+  const tail = key.startsWith("design.") ? key.slice("design.".length) : key;
+  return tail.replace(/[._]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+const USED_KEYS = getUsedIconKeys();
+
+const CANVAS_ENTRIES = Object.entries(ICON_REGISTRY).map(([key, entry]) => ({
   key,
   label: entry.label ?? key,
   color: entry.color ?? "#888",
   draw: entry.draw,
-  category: categoryOf(key),
+  source: "canvas",
+  archive: entry.archive === true,
+  replacedBy: entry.replacedBy ?? null,
+  category: categoryOf(key, entry.replacedBy),
+  inUse: USED_KEYS.has(key),
 }));
+
+const SVG_ENTRIES = Object.entries(DESIGN_ICONS_MAP).map(([key, Component]) => ({
+  key,
+  label: deriveSvgLabel(key),
+  color: "#5a6a76",
+  Component,
+  source: "svg",
+  archive: false,
+  replacedBy: null,
+  category: categoryOf(key, null),
+  inUse: USED_KEYS.has(key),
+}));
+
+const ALL_ENTRIES = [...CANVAS_ENTRIES, ...SVG_ENTRIES];
 
 const ALL_CATEGORIES = ["all", ...Array.from(new Set(ALL_ENTRIES.map((e) => e.category))).sort()];
 const CATEGORY_OPTIONS = ALL_CATEGORIES.map((id) => ({ id, label: id }));
@@ -27,12 +64,18 @@ const RENDER_MODE_OPTIONS = [
   { id: "canvas", label: "Canvas" },
   { id: "svg", label: "SVG" },
 ];
+const STATUS_OPTIONS = [
+  { id: "all", label: "All" },
+  { id: "in-use", label: "In Use" },
+  { id: "unused", label: "Unused" },
+  { id: "legacy", label: "Legacy" },
+];
 
 const ICON_SIZE = 56; // px — canvas render size
 
 // Run an icon's draw function against any Canvas-2D-shaped context with the
 // same background tint and centering as the live game.
-function paintIcon(ctx, entry, size) {
+function paintIconForCell(ctx, entry, size) {
   ctx.save();
   ctx.beginPath();
   ctx.arc(size / 2, size / 2, size / 2 - 2, 0, Math.PI * 2);
@@ -124,7 +167,7 @@ function patchC2S() {
 function renderIconSvg(entry, size) {
   patchC2S();
   const ctx = new C2S(size, size);
-  paintIcon(ctx, entry, size);
+  paintIconForCell(ctx, entry, size);
   // canvas2svg bakes width/height into the root <svg>. Replace with a
   // viewBox so the SVG scales with its container — confirming it's truly
   // vector and not a fixed-size raster.
@@ -136,16 +179,17 @@ function renderIconSvg(entry, size) {
     );
 }
 
-// Memoised cell: renders one icon to its own <canvas> or inline <svg> and
-// shows key + label.
+// Memoised cell: renders one icon to its own <canvas>, inline <svg>, or
+// React-SVG component and shows key + label + status badge.
 const IconCell = memo(function IconCell({ entry, onClick, selected, mode }) {
   const canvasRef = useRef(null);
   const svgMarkup = useMemo(
-    () => (mode === "svg" ? renderIconSvg(entry, ICON_SIZE) : null),
+    () => (mode === "svg" && entry.source === "canvas" ? renderIconSvg(entry, ICON_SIZE) : null),
     [entry, mode],
   );
 
   useEffect(() => {
+    if (entry.source !== "canvas") return;
     if (mode !== "canvas") return;
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -160,22 +204,59 @@ const IconCell = memo(function IconCell({ entry, onClick, selected, mode }) {
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.scale(dpr, dpr);
     ctx.clearRect(0, 0, ICON_SIZE, ICON_SIZE);
-    paintIcon(ctx, entry, ICON_SIZE);
+    paintIconForCell(ctx, entry, ICON_SIZE);
   }, [entry, mode]);
+
+  // Status badge: "Legacy" wins over "Unused" because it's more specific
+  // (legacy entries are always unused but the legacy badge tells the
+  // designer *why*).
+  let badge = null;
+  if (entry.archive) badge = { label: "Legacy", color: "#7a4a18" };
+  else if (!entry.inUse) badge = { label: "Unused", color: "#6a6a72" };
+
+  const isSvgSource = entry.source === "svg";
+  const SvgComp = isSvgSource ? entry.Component : null;
 
   return (
     <button
       onClick={() => onClick(entry.key)}
       title={`${entry.key}\n${entry.label}`}
-      className="flex flex-col items-center gap-1 p-2 rounded-xl border-2 transition-colors hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-ember/50"
+      className="flex flex-col items-center gap-1 p-2 rounded-xl border-2 transition-colors hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-ember/50 relative"
       style={{
         background: selected ? entry.color + "22" : COLORS.parchment,
         borderColor: selected ? entry.color : COLORS.border,
         width: ICON_SIZE + 32,
         cursor: "pointer",
+        opacity: entry.archive ? 0.85 : 1.0,
       }}
     >
-      {mode === "svg" ? (
+      {badge && (
+        <span
+          className="absolute top-1 right-1 text-[8px] font-bold px-1.5 py-[1px] rounded uppercase tracking-wide pointer-events-none"
+          style={{
+            background: badge.color,
+            color: "#fefae0",
+            letterSpacing: "0.04em",
+          }}
+        >
+          {badge.label}
+        </span>
+      )}
+      {isSvgSource ? (
+        <div
+          style={{
+            width: ICON_SIZE,
+            height: ICON_SIZE,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            background: entry.color + "20",
+            borderRadius: "50%",
+          }}
+        >
+          <SvgComp size={ICON_SIZE - 8} />
+        </div>
+      ) : mode === "svg" ? (
         <div
           style={{ width: ICON_SIZE, height: ICON_SIZE, display: "block" }}
           dangerouslySetInnerHTML={{ __html: svgMarkup }}
@@ -212,6 +293,7 @@ const IconCell = memo(function IconCell({ entry, onClick, selected, mode }) {
 export default function IconsTab() {
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("all");
+  const [status, setStatus] = useState("all");
   const [copiedKey, setCopiedKey] = useState(null);
   const [mode, setMode] = useState("canvas"); // "canvas" | "svg"
 
@@ -219,10 +301,23 @@ export default function IconsTab() {
     const q = search.toLowerCase();
     return ALL_ENTRIES.filter((e) => {
       if (category !== "all" && e.category !== category) return false;
+      if (status === "in-use" && (!e.inUse || e.archive)) return false;
+      if (status === "unused" && (e.inUse || e.archive)) return false;
+      if (status === "legacy" && !e.archive) return false;
       if (!q) return true;
       return e.key.toLowerCase().includes(q) || e.label.toLowerCase().includes(q);
+    }).sort((a, b) => {
+      // Within each category: in-use first, unused next, legacy last.
+      const rankA = a.archive ? 2 : a.inUse ? 0 : 1;
+      const rankB = b.archive ? 2 : b.inUse ? 0 : 1;
+      if (rankA !== rankB) return rankA - rankB;
+      // Within a rank, group by `replacedBy` so a legacy entry sits next
+      // to the active key it replaces.
+      const groupA = a.replacedBy || a.key;
+      const groupB = b.replacedBy || b.key;
+      return groupA.localeCompare(groupB);
     });
-  }, [search, category]);
+  }, [search, category, status]);
 
   function handleClick(key) {
     navigator.clipboard?.writeText(key).catch(() => {});
@@ -244,6 +339,26 @@ export default function IconsTab() {
           ariaLabel="Icon category filter"
           className="[&>button]:!px-2 [&>button]:!py-1 [&>button]:!text-[10px] [&>button]:!rounded-md [&>button]:capitalize"
         />
+        <div
+          className="flex items-center gap-1 flex-shrink-0 px-2 py-1 rounded-lg border-2"
+          role="group"
+          aria-label="Usage status"
+          style={{ background: COLORS.parchmentDeep, borderColor: COLORS.border }}
+        >
+          <span
+            className="text-[10px] font-bold uppercase tracking-wide pr-1"
+            style={{ color: COLORS.inkSubtle }}
+          >
+            Status
+          </span>
+          <SegmentedFilter
+            options={STATUS_OPTIONS}
+            value={status}
+            onChange={setStatus}
+            ariaLabel="Icon usage status"
+            className="[&>button]:!px-2 [&>button]:!py-0.5 [&>button]:!text-[10px] [&>button]:!rounded-md"
+          />
+        </div>
         <div
           className="flex items-center gap-1 ml-auto flex-shrink-0 px-2 py-1 rounded-lg border-2"
           role="group"
@@ -304,7 +419,7 @@ export default function IconsTab() {
       </div>
 
       <div className="text-[10px] italic flex-shrink-0" style={{ color: COLORS.inkSubtle }}>
-        Click any icon to copy its key to the clipboard.
+        Click any icon to copy its key to the clipboard. <span className="font-bold">Legacy</span> entries are archived originals; <span className="font-bold">Unused</span> entries are registered but not referenced anywhere in code.
       </div>
     </div>
   );

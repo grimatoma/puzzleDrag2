@@ -150,16 +150,47 @@ function FoundSettlementBanner({ state, dispatch }) {
   );
 }
 
+// Soft cloud silhouette as a single SVG path — multiple lobes on top, a
+// gently rounded base, and an inner highlight gradient. The aspect ratio
+// is locked to the viewBox so a cloud sized 96×26 looks identical to one
+// at 128×34, just scaled.
 function Cloud({ top, w, h, color, anim, breatheDur }) {
-  const s = { borderRadius: '50%', background: color, position: 'absolute' };
   const animation = breatheDur ? `${anim}, cloudBreathe ${breatheDur}s ease-in-out infinite` : anim;
-  const bott = h * 0.2;
+  // Stable per-instance id for the gradient defs (so multiple Cloud
+  // instances don't collide). Derived from the rendered width — sufficient
+  // for the half-dozen clouds the town backdrop has.
+  const gradId = `cloud-grad-${Math.round(w)}-${Math.round(h)}`;
   return (
     <div style={{ position: 'absolute', top, width: w, height: h, animation }}>
-      <div style={{ ...s, width: '100%', height: '100%' }} />
-      <div style={{ ...s, width: w * 0.42, height: h * 1.6, bottom: bott, left: w * 0.05 }} />
-      <div style={{ ...s, width: w * 0.50, height: h * 1.9, bottom: bott, left: w * 0.28 }} />
-      <div style={{ ...s, width: w * 0.38, height: h * 1.5, bottom: bott, right: w * 0.05 }} />
+      <svg
+        width="100%"
+        height="100%"
+        viewBox="0 0 100 60"
+        preserveAspectRatio="none"
+        style={{ display: 'block', overflow: 'visible' }}
+      >
+        <defs>
+          <radialGradient id={gradId} cx="0.35" cy="0.25" r="0.85">
+            <stop offset="0%" stopColor="#ffffff" stopOpacity="0.95" />
+            <stop offset="55%" stopColor={color} stopOpacity="1" />
+            <stop offset="100%" stopColor={color} stopOpacity="0.85" />
+          </radialGradient>
+        </defs>
+        <path
+          d="M 8 42
+             C 2 42, 0 32, 8 28
+             C 6 18, 16 14, 24 18
+             C 26 6, 42 4, 48 14
+             C 54 6, 70 6, 74 18
+             C 84 14, 94 22, 90 32
+             C 98 34, 98 44, 88 46
+             C 88 52, 78 54, 72 50
+             C 66 54, 52 54, 46 50
+             C 40 54, 26 54, 20 50
+             C 14 54, 6 50, 8 42 Z"
+          fill={`url(#${gradId})`}
+        />
+      </svg>
     </div>
   );
 }
