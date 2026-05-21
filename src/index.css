@@ -81,6 +81,28 @@
   from { transform: translateY(100%); }
 }
 
+/* ── Numeric gain / loss pulse (HUD coins, XP, resource counters) ────── */
+@keyframes gainPop {
+  0%   { transform: scale(1);    filter: brightness(1); }
+  35%  { transform: scale(1.18); filter: brightness(1.4) saturate(1.2); }
+  100% { transform: scale(1);    filter: brightness(1); }
+}
+@keyframes lossPop {
+  0%   { transform: scale(1);    filter: brightness(1); }
+  35%  { transform: scale(0.92); filter: brightness(0.85); }
+  100% { transform: scale(1);    filter: brightness(1); }
+}
+[data-count-pulse="gain"] {
+  animation: gainPop 420ms cubic-bezier(.34,1.56,.64,1);
+  transform-origin: center;
+  display: inline-block;
+}
+[data-count-pulse="loss"] {
+  animation: lossPop 360ms ease-out;
+  transform-origin: center;
+  display: inline-block;
+}
+
 /* ── Crafting queue panel ───────────────────────────────────────────────── */
 @keyframes craftProgressShine {
   0%   { transform: translateX(-110%); }
