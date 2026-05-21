@@ -421,11 +421,9 @@ function profileState(profile) {
     case "craftQueue": {
       // Sequential queue snapshot showing the full UI in motion: head is
       // mid-progress (~75% through a 2-minute bread craft), middle waits
-      // briefly, tail waits a long time. Built relative to live `Date.now()`
-      // (not VISUAL_FIXED_NOW) because the queue UI compares against real
-      // wall-clock time; using a fixed past anchor would render every entry
-      // as "Ready". Durations match the per-recipe craftMs in constants.js.
-      const NOW = Date.now();
+      // briefly, tail waits a long time. Anchor timings to VISUAL_FIXED_NOW
+      // so buildVisualState remains deterministic across repeated calls.
+      const NOW = VISUAL_FIXED_NOW;
       const MIN = 60_000;
       const SEC = 1_000;
       const bread     = { key: "bread",      queuedAt: NOW - 90 * SEC, startAt: NOW - 90 * SEC, readyAt: NOW + 30 * SEC,                durationMs: 2 * MIN };
