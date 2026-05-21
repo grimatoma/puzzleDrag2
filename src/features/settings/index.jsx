@@ -195,8 +195,8 @@ export default function SettingsModal({ state, dispatch }) {
         {/* Tab content */}
         {leavingBoard ? (
           <div
-            className="w-full flex flex-col gap-3 py-3 px-3 rounded-xl border-2"
-            style={{ background: '#f4e8d0', borderColor: '#c23b22' }}
+            className="w-full flex flex-col gap-3 py-3 px-3 rounded-xl"
+            style={{ background: '#f4e8d0' }}
           >
             <span className="text-[13px] font-bold text-center" style={{ color: '#5a3a20' }}>
               Leave the board? Your current run will not be saved.
