@@ -111,6 +111,14 @@
   --motion-med:       240ms;
   --motion-slow:      600ms;
 
+  /* ── Display font stack — gives headings and panel titles a softer,
+       hand-set look than the body sans. The leading entries (Cinzel,
+       IM Fell English, Fraunces) are only used if the user agent or
+       host page has loaded them; the fallback to ui-serif/Georgia
+       still feels distinct from the body system-ui sans, so the
+       upgrade lands even without a webfont. */
+  --font-display:     "Cinzel", "IM Fell English", "Fraunces", ui-serif, Georgia, "Times New Roman", serif;
+
   /* ════════════════════════════════════════════════════════════════════
    * SEMANTIC UI CHROME — single source of truth for the panel/card system.
    *

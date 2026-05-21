@@ -184,18 +184,22 @@ function Title({ children, className = "" }) {
   const color = tone === "dark" ? "text-gold-soft" : "text-ink-soft";
   return (
     <div className={`px-5 pt-4 pb-3 flex-shrink-0 ${className}`}>
-      <h2 id={titleId} className={`font-bold text-h2 ${color} m-0`}>
+      <h2
+        id={titleId}
+        className={`font-bold text-h2 ${color} m-0`}
+        style={{ fontFamily: "var(--font-display)", letterSpacing: "0.015em" }}
+      >
         {children}
       </h2>
-      {tone === "dark" && (
-        <div
-          className="mt-3"
-          style={{
-            height: 1,
-            background: "linear-gradient(90deg, transparent, rgba(226,178,74,0.5), transparent)",
-          }}
-        />
-      )}
+      <div
+        className="mt-3"
+        style={{
+          height: 1,
+          background: tone === "dark"
+            ? "linear-gradient(90deg, transparent, rgba(226,178,74,0.5), transparent)"
+            : "linear-gradient(90deg, transparent, rgba(178,139,98,0.45), transparent)",
+        }}
+      />
     </div>
   );
 }
