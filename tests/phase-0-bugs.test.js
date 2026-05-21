@@ -2,7 +2,7 @@
 // Migrated from runSelfTests() assertions 0.1 and 0.2.
 import { describe, it, expect } from "vitest";
 import { ROWS, COLS } from "../src/constants.js";
-import { clamp, seasonIndexForTurns, rollResource, makeBubble } from "../src/utils.js";
+import { clamp, seasonIndexForTurns, rollResource, makeBubble, hex } from "../src/utils.js";
 
 describe("Phase 0 — grid dimensions", () => {
   it("ROWS === 6", () => expect(ROWS).toBe(6));
@@ -52,4 +52,11 @@ describe("Phase 0 — makeBubble helper", () => {
     expect(bubble.ms).toBe(3000);
     expect(typeof bubble.id).toBe("number");
   });
+});
+
+describe("Phase 0 — hex formatting", () => {
+  it("pads zero to 6 digits", () => expect(hex(0)).toBe("#000000"));
+  it("pads small numbers", () => expect(hex(255)).toBe("#0000ff"));
+  it("handles exactly 6 hex digits", () => expect(hex(0xffffff)).toBe("#ffffff"));
+  it("handles typical color hex", () => expect(hex(0x123456)).toBe("#123456"));
 });
