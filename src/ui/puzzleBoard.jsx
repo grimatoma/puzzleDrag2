@@ -384,12 +384,12 @@ function ChainView({ chainInfo, inventory }) {
   );
 }
 
-function ToolView({ tool, armedKey, dispatch, onClose }) {
+function ToolView({ tool, armedKey, fertilizerActive, dispatch, onClose }) {
   const targeted = isTapTargetTool(tool.key);
   const armed = armedKey === tool.key;
   const count = tool.count ?? 0;
   const handleUse = () => {
-    dispatchUseTool(dispatch, tool.key, { toolPending: armedKey });
+    dispatchUseTool(dispatch, tool.key, { toolPending: armedKey, fertilizerActive });
   };
   const handleDisarm = () => {
     dispatch({ type: "CANCEL_TOOL" });
@@ -582,6 +582,7 @@ export function PuzzleActionPanel({
   chainInfo,
   inspectedTool,
   armedTool,
+  fertilizerActive,
   inventory,
   biomeKey,
   cap = 200,
@@ -622,6 +623,7 @@ export function PuzzleActionPanel({
           <ToolView
             tool={inspectedTool}
             armedKey={armedTool?.key}
+            fertilizerActive={fertilizerActive}
             dispatch={dispatch}
             onClose={onCloseInspect}
           />
@@ -633,12 +635,28 @@ export function PuzzleActionPanel({
 
 // ─── Tools strip ─────────────────────────────────────────────────────────
 
+// Only one tool may be "selected" (inspected, armed, or used) at a time.
+// Touching a new tool implicitly cancels any other tool that's still armed —
+// the previously-armed tool is "no longer selected", so its highlight, its
+// arming, and (for non-tap-target tools) its consumed charge are all undone.
+// Fertilizer uses its own flag rather than toolPending; re-dispatching
+// USE_TOOL fertilizer is the canonical disarm + refund path for it.
+function disarmOtherTools(dispatch, key, state) {
+  if (state?.toolPending && state.toolPending !== key) {
+    dispatch({ type: "CANCEL_TOOL" });
+  }
+  if (state?.fertilizerActive && key !== "fertilizer") {
+    dispatch({ type: "USE_TOOL", key: "fertilizer" });
+  }
+}
+
 function dispatchUseTool(dispatch, key, state) {
   const isPending = state.toolPending === key;
   if (isPending) {
     dispatch({ type: "CANCEL_TOOL" });
     return;
   }
+  disarmOtherTools(dispatch, key, state);
   const def = TOOL_BY_KEY[key];
   if (def?.category === "magic") {
     dispatch({ type: "USE_TOOL", payload: { id: key } });
@@ -759,33 +777,43 @@ function buildVisibleToolList(state) {
 
 // When the player arms a tool from anywhere (modal, hotbar, grid), the
 // status panel auto-shows that tool's detail. This is the shared effect.
-function useAutoInspectArmed(state, onInspectChange) {
+// We refuse to override an explicit selection: if the player has inspected
+// a different tool than what's armed, leave the panel alone. Otherwise a
+// state.tools change (e.g. using an instant tool) would yank the panel back
+// to the armed tool that the player wasn't even looking at.
+function useAutoInspectArmed(state, onInspectChange, inspectedKey) {
   useEffect(() => {
     if (!onInspectChange) return;
-    if (state.toolPending && TOOL_BY_KEY[state.toolPending]) {
-      onInspectChange({
-        ...TOOL_BY_KEY[state.toolPending],
-        count: state.tools?.[state.toolPending] ?? 0,
-      });
-    }
-  }, [state.toolPending, state.tools, onInspectChange]);
+    const pending = state.toolPending;
+    if (!pending || !TOOL_BY_KEY[pending]) return;
+    if (inspectedKey != null && inspectedKey !== pending) return;
+    onInspectChange({
+      ...TOOL_BY_KEY[pending],
+      count: state.tools?.[pending] ?? 0,
+    });
+  }, [state.toolPending, state.tools, onInspectChange, inspectedKey]);
 }
 
 // ─── Tool grid (side-by-side left column) ────────────────────────────────
 
 export function PuzzleToolGrid({ state, onInspectChange, inspectedKey, dispatch }) {
   const list = useMemo(() => buildVisibleToolList(state), [state.tools, state.toolPending, state.fertilizerActive]);
-  useAutoInspectArmed(state, onInspectChange);
+  useAutoInspectArmed(state, onInspectChange, inspectedKey);
+  const toolPending = state.toolPending;
+  const fertilizerActive = state.fertilizerActive;
   const select = useCallback(
-    (t) => onInspectChange?.({ ...TOOL_BY_KEY[t.key], count: t.count }),
-    [onInspectChange],
+    (t) => {
+      if (dispatch) disarmOtherTools(dispatch, t.key, { toolPending, fertilizerActive });
+      onInspectChange?.({ ...TOOL_BY_KEY[t.key], count: t.count });
+    },
+    [dispatch, onInspectChange, toolPending, fertilizerActive],
   );
   const activate = useCallback(
     (t) => {
       onInspectChange?.({ ...TOOL_BY_KEY[t.key], count: t.count });
-      if (dispatch) dispatchUseTool(dispatch, t.key, { toolPending: state.toolPending });
+      if (dispatch) dispatchUseTool(dispatch, t.key, { toolPending, fertilizerActive });
     },
-    [dispatch, onInspectChange, state.toolPending],
+    [dispatch, onInspectChange, toolPending, fertilizerActive],
   );
   return (
     <div
@@ -1063,7 +1091,7 @@ export function PuzzleHotbar({
   onBeginDrag,
 }) {
   const list = useMemo(() => buildVisibleToolList(state), [state.tools, state.toolPending, state.fertilizerActive]);
-  useAutoInspectArmed(state, onInspectChange);
+  useAutoInspectArmed(state, onInspectChange, inspectedKey);
   const byKey = useMemo(() => Object.fromEntries(list.map((t) => [t.key, t])), [list]);
   // Each pin slot is positional: slot `i` shows whatever tool sits at
   // `pins[i]`, or an empty placeholder when that entry is null / the
@@ -1076,16 +1104,21 @@ export function PuzzleHotbar({
     }),
     [pins, byKey, maxFitPins],
   );
+  const toolPending = state.toolPending;
+  const fertilizerActive = state.fertilizerActive;
   const select = useCallback(
-    (t) => onInspectChange?.({ ...TOOL_BY_KEY[t.key], count: t.count }),
-    [onInspectChange],
+    (t) => {
+      if (dispatch) disarmOtherTools(dispatch, t.key, { toolPending, fertilizerActive });
+      onInspectChange?.({ ...TOOL_BY_KEY[t.key], count: t.count });
+    },
+    [dispatch, onInspectChange, toolPending, fertilizerActive],
   );
   const activate = useCallback(
     (t) => {
       onInspectChange?.({ ...TOOL_BY_KEY[t.key], count: t.count });
-      if (dispatch) dispatchUseTool(dispatch, t.key, { toolPending: state.toolPending });
+      if (dispatch) dispatchUseTool(dispatch, t.key, { toolPending, fertilizerActive });
     },
-    [dispatch, onInspectChange, state.toolPending],
+    [dispatch, onInspectChange, toolPending, fertilizerActive],
   );
   // Drop indicators light up only for drags originating in the dropdown
   // list — hotbar→list reordering already shows its own ghost and
@@ -1221,6 +1254,7 @@ export function PuzzleToolModal({
   const selectedTool = effectiveKey ? byKey[effectiveKey] : null;
   const select = (t) => {
     setLocalSelectedKey(t.key);
+    disarmOtherTools(dispatch, t.key, state);
     onInspectChange?.({ ...TOOL_BY_KEY[t.key], count: t.count });
   };
   const activate = (t) => {
@@ -1230,7 +1264,7 @@ export function PuzzleToolModal({
     if (isArmable) {
       onInspectChange?.({ ...TOOL_BY_KEY[t.key], count: t.count });
     }
-    dispatchUseTool(dispatch, t.key, { toolPending: state.toolPending });
+    dispatchUseTool(dispatch, t.key, state);
     if (!willCancel) {
       onClose?.();
       // Instant tools fire-and-clear: send the action panel back to the
@@ -1242,7 +1276,7 @@ export function PuzzleToolModal({
     if (!selectedTool) return;
     const willCancel = state.toolPending === selectedTool.key;
     const isArmable = isTapTargetTool(selectedTool.key);
-    dispatchUseTool(dispatch, selectedTool.key, { toolPending: state.toolPending });
+    dispatchUseTool(dispatch, selectedTool.key, state);
     if (!willCancel) {
       onClose?.();
       if (!isArmable) onInspectChange?.(null);

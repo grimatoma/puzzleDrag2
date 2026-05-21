@@ -71,12 +71,27 @@ function ToolInspectSheet({ tool, count, onClose, onUse }) {
   );
 }
 
+// Mirrors the disarm rule in puzzleBoard.jsx: only one tool can be "selected"
+// (armed or used) at a time. Picking up a different tool implicitly cancels
+// whatever was previously armed. See disarmOtherTools there for the full
+// rationale; fertilizerActive is its own flag so re-dispatching USE_TOOL
+// fertilizer is the disarm + refund path for it.
+function disarmOtherTools(dispatch, key, state) {
+  if (state?.toolPending && state.toolPending !== key) {
+    dispatch({ type: "CANCEL_TOOL" });
+  }
+  if (state?.fertilizerActive && key !== "fertilizer") {
+    dispatch({ type: "USE_TOOL", key: "fertilizer" });
+  }
+}
+
 function dispatchUseTool(dispatch, key, state) {
   const isPending = state.toolPending === key;
   if (isPending) {
     dispatch({ type: "CANCEL_TOOL" });
     return;
   }
+  disarmOtherTools(dispatch, key, state);
   const def = TOOL_BY_KEY[key];
   if (def?.category === "magic") {
     dispatch({ type: "USE_TOOL", payload: { id: key } });
