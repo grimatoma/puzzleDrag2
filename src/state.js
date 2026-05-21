@@ -58,6 +58,38 @@ const slices = [crafting, quests, achievements, tutorial, settings, boss, cartog
 // sync with `armed: "tap"` entries in src/ui/toolRegistry.js.
 const TAP_TARGET_TOOL_KEYS = new Set(["bomb", "rake", "axe", "magic_wand"]);
 
+// Disarm every armed tool in one shot, mirroring the existing CANCEL_TOOL +
+// USE_TOOL(fertilizer self-disarm) sequences so the player is left whole:
+// tap-target arms spent no charge to refund, instant arms get their charge
+// back, rune wildcard returns to the rune stash, and fertilizer refunds its
+// charge. Used whenever the player navigates away from the board (or loads
+// a save) — anything other than directly using the tool deselects it.
+export function disarmAllTools(state) {
+  let next = state;
+  const pending = next.toolPending;
+  if (pending) {
+    if (TAP_TARGET_TOOL_KEYS.has(pending)) {
+      next = { ...next, toolPending: null };
+    } else if (pending === "rune_wildcard") {
+      next = { ...next, toolPending: null, runeStash: (next.runeStash ?? 0) + 1 };
+    } else {
+      next = {
+        ...next,
+        toolPending: null,
+        tools: { ...next.tools, [pending]: (next.tools?.[pending] ?? 0) + 1 },
+      };
+    }
+  }
+  if (next.fertilizerActive) {
+    next = {
+      ...next,
+      fertilizerActive: false,
+      tools: { ...next.tools, fertilizer: (next.tools?.fertilizer ?? 0) + 1 },
+    };
+  }
+  return next;
+}
+
 // Phase 7 — SEASON_NAMES used to be the calendar-season index → name lookup.
 // All readers were removed when the calendar was deleted, so the table is
 // gone too.
@@ -746,7 +778,11 @@ function coreReducer(state, action) {
       // stale sub-tabs (e.g. tile-wiki sub-category from a previous trip).
       const sameView = next === state.view;
       const viewParams = action.viewParams ?? (sameView ? state.viewParams : {});
-      return { ...state, view: next, viewParams, craftingTab: action.craftingTab ?? (next === "crafting" ? state.craftingTab : null) };
+      // Leaving the board is an "action not directly using the tool", so any
+      // armed tool deselects (with charge refunded). Tap-target arms had no
+      // charge to refund; instant/rune/fertilizer arms get their charge back.
+      const base = next === "board" ? state : disarmAllTools(state);
+      return { ...base, view: next, viewParams, craftingTab: action.craftingTab ?? (next === "crafting" ? base.craftingTab : null) };
     }
     case "SET_VIEW_PARAMS":
       return { ...state, viewParams: { ...(state.viewParams ?? {}), ...(action.params ?? {}) } };
@@ -815,9 +851,13 @@ function coreReducer(state, action) {
       // Safety: don't navigate to board via URL if there's no active run —
       // avoids a broken green-screen on reload after a session has ended.
       const view = rawView === "board" && !(state.farmRun?.turnsRemaining > 0) ? "town" : rawView;
+      // Mirror SET_VIEW: hash-driven navigation away from the board deselects
+      // any armed tool (with charge refunded). Keeps "leave the board"
+      // behavior consistent whether the user taps the nav or hits back.
+      const base = view === "board" ? state : disarmAllTools(state);
       const modal = r.modal ?? null;
       const incomingViewParams = r.viewParams ?? {};
-      const next = { ...state, view, viewParams: incomingViewParams };
+      const next = { ...base, view, viewParams: incomingViewParams };
       if (view === "crafting") {
         next.craftingTab = incomingViewParams.tab ?? state.craftingTab ?? null;
       } else {

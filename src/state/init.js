@@ -197,6 +197,25 @@ export function initialState(overrides) {
     // drops the player back onto their board instead of losing progress.
     const restoredFarmRun = saved.farmRun?.turnsRemaining > 0 ? saved.farmRun : null;
 
+    // Load drops the player on town view, so any tool armed at save time must
+    // deselect — the player isn't on the board to "directly use" it. Refund
+    // fertilizer (its charge was spent on arm) and any instant-tool pending
+    // arms (same). Tap-target arms (bomb/rake/axe/magic_wand) spent no charge,
+    // so just clearing toolPending is enough.
+    const savedTools = savedWithoutLegacy.tools ?? {};
+    let restoredTools = savedTools;
+    if (savedWithoutLegacy.fertilizerActive) {
+      restoredTools = { ...restoredTools, fertilizer: (restoredTools.fertilizer ?? 0) + 1 };
+    }
+    const TAP_TARGET = new Set(["bomb", "rake", "axe", "magic_wand"]);
+    const savedPending = savedWithoutLegacy.toolPending;
+    if (savedPending && !TAP_TARGET.has(savedPending) && savedPending !== "rune_wildcard") {
+      restoredTools = { ...restoredTools, [savedPending]: (restoredTools[savedPending] ?? 0) + 1 };
+    }
+    const restoredRuneStash = savedPending === "rune_wildcard"
+      ? (savedWithoutLegacy.runeStash ?? 0) + 1
+      : savedWithoutLegacy.runeStash;
+
     return {
       ...fresh,
       ...savedWithoutLegacy,
@@ -210,6 +229,10 @@ export function initialState(overrides) {
       modal: null,
       bubble: null,
       pendingView: null,
+      toolPending: null,
+      fertilizerActive: false,
+      tools: restoredTools,
+      runeStash: restoredRuneStash,
       seasonStats: { harvests: 0, upgrades: 0, ordersFilled: 0, coins: 0 }
     };
   }
