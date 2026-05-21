@@ -141,10 +141,14 @@ export function Hud({ state, dispatch, inventorySearchOpen, onInventorySearchTog
   const settlementName = state.settlement?.name ?? "Hearthwood Vale";
   const showTide = state.biomeKey === "fish" && (onBoard || view === "town");
 
+  const seasonAccent = onBoard
+    ? `#${(season.fill ?? 0xe2b24a).toString(16).padStart(6, "0")}`
+    : "var(--ember)";
   return (
     <div
-      className="flex items-center gap-2 px-3 py-2 bg-ink-soft border-b-2 border-bg-darker text-cream"
+      className="flex items-center gap-2 px-3 py-2 bg-ink-soft border-b-2 border-bg-darker text-cream relative"
       data-testid="hud"
+      style={{ boxShadow: `inset 0 -3px 0 ${seasonAccent}55` }}
     >
       <div className="flex items-center gap-2 flex-shrink-0">
         <button
