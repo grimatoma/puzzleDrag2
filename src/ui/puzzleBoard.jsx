@@ -1140,13 +1140,15 @@ export function PuzzleToolModal({
   const activate = (t) => {
     setLocalSelectedKey(t.key);
     onInspectChange?.({ ...TOOL_BY_KEY[t.key], count: t.count });
+    const willCancel = state.toolPending === t.key;
     dispatchUseTool(dispatch, t.key, { toolPending: state.toolPending });
-    if (!isTapTargetTool(t.key)) onClose?.();
+    if (!willCancel) onClose?.();
   };
   const handleUse = () => {
     if (!selectedTool) return;
+    const willCancel = state.toolPending === selectedTool.key;
     dispatchUseTool(dispatch, selectedTool.key, { toolPending: state.toolPending });
-    if (!isTapTargetTool(selectedTool.key)) onClose?.();
+    if (!willCancel) onClose?.();
   };
   const pinned = selectedTool ? pins.includes(selectedTool.key) : false;
 

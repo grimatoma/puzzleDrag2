@@ -172,8 +172,9 @@ export function MobileDock({ state, dispatch, onInspectChange }) {
           tools={list}
           armedKey={state.toolPending}
           onUse={(key) => {
+            const willCancel = state.toolPending === key;
             dispatchUseTool(dispatch, key, state);
-            if (!isTapTargetTool(key)) closeSheet();
+            if (!willCancel) closeSheet();
           }}
           onInspect={(key) => setInspectKey(key)}
           grouped
@@ -184,7 +185,11 @@ export function MobileDock({ state, dispatch, onInspectChange }) {
         tool={inspectTool}
         count={inspectCount}
         onClose={() => setInspectKey(null)}
-        onUse={(key) => { dispatchUseTool(dispatch, key, state); if (!isTapTargetTool(key)) closeSheet(); }}
+        onUse={(key) => {
+          const willCancel = state.toolPending === key;
+          dispatchUseTool(dispatch, key, state);
+          if (!willCancel) closeSheet();
+        }}
       />
     </>
   );
