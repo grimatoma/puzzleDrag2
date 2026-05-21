@@ -100,11 +100,17 @@ describe("visual golden scenario matrix", () => {
   });
 
   it("builds deterministic valid state for every scenario", () => {
-    for (const scenario of VISUAL_SCENARIOS) {
-      const first = buildVisualState(scenario);
-      const second = buildVisualState(scenario);
-      expect(validateVisualState(first), scenario.id).toEqual([]);
-      expect(first, scenario.id).toEqual(second);
+    const originalNow = Date.now;
+    Date.now = () => 1700000000000;
+    try {
+      for (const scenario of VISUAL_SCENARIOS) {
+        const first = buildVisualState(scenario);
+        const second = buildVisualState(scenario);
+        expect(validateVisualState(first), scenario.id).toEqual([]);
+        expect(first, scenario.id).toEqual(second);
+      }
+    } finally {
+      Date.now = originalNow;
     }
   });
 

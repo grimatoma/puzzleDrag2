@@ -283,9 +283,10 @@ export default function App() {
   // inspected tool so the panel returns to the idle resources view by default.
   useEffect(() => {
     if (!chainInfo && !state.toolPending) {
-      setInspectedTool(null);
+      setTimeout(() => setInspectedTool(null), 0);
     }
-  }, [chainInfo]); // eslint-disable-line react-hooks/exhaustive-deps -- intentional: only react to chain end, not every toolPending change
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: only react to chain end, not every toolPending change
+  }, [chainInfo]);
 
   // When an armed tool fires (or is cancelled) — toolPending goes from set →
   // null — drop the inspected tool too so the info card swaps from
@@ -336,7 +337,9 @@ export default function App() {
   }, [dispatch]);
 
   useEffect(() => {
-    if (state.view !== "inventory") setInventorySearchOpen(false);
+    if (state.view !== "inventory") {
+      setTimeout(() => setInventorySearchOpen(false), 0);
+    }
   }, [state.view]);
 
   useEffect(() => {
