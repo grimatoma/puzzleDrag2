@@ -603,10 +603,13 @@ function dispatchUseTool(dispatch, key, state) {
 const DOUBLE_TAP_MS = 420;
 
 const ToolTile = forwardRef(function ToolTile(
-  { tool, inspected, onClick, onActivate, onPointerDown, size = "md", dragging = false },
+  { tool, inspected, onClick, onActivate, onPointerDown, size = "md", dragging = false, hideArmed = false },
   ref,
 ) {
-  const armed = !!tool.armed;
+  // The dropdown grid passes `hideArmed` so an already-armed tool doesn't get
+  // a special bright tile — the player armed it elsewhere, the dropdown
+  // shouldn't redraw attention to it.
+  const armed = !!tool.armed && !hideArmed;
   const empty = tool.count === 0 && !armed;
   const dims = size === "sm"
     ? { w: 48, h: 52, icon: 32, badge: 9, badgeMin: 14 }
@@ -1139,16 +1142,28 @@ export function PuzzleToolModal({
   };
   const activate = (t) => {
     setLocalSelectedKey(t.key);
-    onInspectChange?.({ ...TOOL_BY_KEY[t.key], count: t.count });
     const willCancel = state.toolPending === t.key;
+    const isArmable = isTapTargetTool(t.key);
+    if (isArmable) {
+      onInspectChange?.({ ...TOOL_BY_KEY[t.key], count: t.count });
+    }
     dispatchUseTool(dispatch, t.key, { toolPending: state.toolPending });
-    if (!willCancel) onClose?.();
+    if (!willCancel) {
+      onClose?.();
+      // Instant tools fire-and-clear: send the action panel back to the
+      // resource (idle) view rather than leaving the tool detail showing.
+      if (!isArmable) onInspectChange?.(null);
+    }
   };
   const handleUse = () => {
     if (!selectedTool) return;
     const willCancel = state.toolPending === selectedTool.key;
+    const isArmable = isTapTargetTool(selectedTool.key);
     dispatchUseTool(dispatch, selectedTool.key, { toolPending: state.toolPending });
-    if (!willCancel) onClose?.();
+    if (!willCancel) {
+      onClose?.();
+      if (!isArmable) onInspectChange?.(null);
+    }
   };
   const pinned = selectedTool ? pins.includes(selectedTool.key) : false;
 
@@ -1308,6 +1323,7 @@ export function PuzzleToolModal({
                 onActivate={activate}
                 onPointerDown={(ev) => onBeginDrag?.(t.key, ev)}
                 dragging={dragKey === t.key}
+                hideArmed
               />
             ))}
           </div>
