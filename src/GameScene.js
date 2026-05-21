@@ -565,7 +565,11 @@ export class GameScene extends Phaser.Scene {
   }
 
   resourceByKey(key) {
-    return this.biome().resources.find((r) => r.key === key);
+    const b = this.biome();
+    if (!b._resourceMap) {
+      b._resourceMap = new Map(b.resources.map(r => [r.key, r]));
+    }
+    return b._resourceMap.get(key);
   }
 
   randomResource() {
