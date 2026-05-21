@@ -1,5 +1,6 @@
 import { Children, cloneElement, isValidElement } from "react";
 import Icon from "./Icon.jsx";
+import { useCountUp } from "./useCountUp.js";
 
 const BADGE_TONE = {
   moss:  "bg-moss text-ink",
@@ -18,8 +19,11 @@ function LockGlyph() {
 
 function Badge({ count, tone = "moss" }) {
   const cls = BADGE_TONE[tone] || BADGE_TONE.moss;
+  const { pulse, pulseKey } = useCountUp(count);
   return (
     <span
+      key={pulseKey}
+      data-count-pulse={pulse || undefined}
       className={`absolute top-0.5 right-1.5 inline-flex items-center justify-center min-w-[16px] h-[16px] px-1 rounded-pill text-[11px] leading-none font-semibold tabular-nums pointer-events-none ${cls}`}
     >
       {count}
