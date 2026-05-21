@@ -41,6 +41,8 @@ describe("utils — clamp / contrast / adjacency", () => {
     expect(canExtendChain([], { key: "x" })).toBe(true);
     expect(canExtendChain([{ key: "x" }], { key: "x" })).toBe(true);
     expect(canExtendChain([{ key: "x" }], { key: "y" })).toBe(false);
+    expect(canExtendChain([{ key: "x" }, { key: "x" }], { key: "x" })).toBe(true);
+    expect(canExtendChain([{ key: "x" }, { key: "x" }], { key: "y" })).toBe(false);
   });
 });
 
