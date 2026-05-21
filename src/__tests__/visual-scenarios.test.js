@@ -8,6 +8,7 @@ import { BALANCE_VISUAL_SCENARIOS, BALANCE_VISUAL_SMOKE_SCENARIO_IDS } from "../
 import { STORY_EDITOR_VISUAL_SCENARIOS, STORY_EDITOR_VISUAL_SMOKE_SCENARIO_IDS } from "../visualTesting/storyEditorMatrix.js";
 import { KNOWN_VIEWS, parseHash } from "../router.js";
 import { CATEGORIES, SUB_CATEGORIES, TILE_TYPES } from "../features/tileCollection/data.js";
+import { buildManifestFromGoldens, readManifest, validateManifest } from "../../tests/visual/manifestTools.mjs";
 
 const INTERNAL_VISUAL_VIEWS = new Set(["boons", "charter"]);
 
@@ -191,5 +192,18 @@ describe("visual golden snapshots integrity", () => {
         expect(extra, `Extraneous (dead) snapshots for suite ${suite.key} project ${project}`).toEqual([]);
       }
     }
+  });
+});
+
+
+describe("visual manifest integrity", () => {
+  it("matches generated output and has no stale/missing scenario links", () => {
+    const manifest = readManifest();
+    const expected = buildManifestFromGoldens();
+
+    expect(manifest).toEqual(expected);
+
+    const errors = validateManifest(manifest);
+    expect(errors).toEqual([]);
   });
 });
