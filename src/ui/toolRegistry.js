@@ -88,9 +88,8 @@ export function isTapTargetTool(key) {
  * so players see what they can earn even when their stock is empty.
  */
 export function visibleTools(toolsState = {}) {
-  return TOOL_CATALOG.filter((t) => {
-    const count = toolsState[t.key] || 0;
-    if (count > 0) return true;
-    return t.category === "field";
-  });
+  return TOOL_CATALOG.map((t) => ({
+    ...t,
+    count: toolsState[t.key] || 0,
+  }));
 }
