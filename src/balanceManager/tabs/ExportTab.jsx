@@ -10,6 +10,19 @@ import { draftDiff, summariseTotals } from "../diff.js";
 import balanceFile from "../../config/balance.json";
 import MetricCard, { MetricGrid } from "../../ui/primitives/MetricCard.jsx";
 import StatusChip from "../../ui/primitives/StatusChip.jsx";
+import { z } from "zod";
+
+const sectionSchema = z.record(z.string(), z.unknown());
+const importSchema = z.object({
+  version: z.number().finite().optional(),
+  upgradeThresholds: sectionSchema.optional(),
+  resources: sectionSchema.optional(),
+  recipes: sectionSchema.optional(),
+  buildings: sectionSchema.optional(),
+  tilePowers: sectionSchema.optional(),
+  tileUnlocks: sectionSchema.optional(),
+  tileDescriptions: sectionSchema.optional(),
+}).strip();
 
 function pruneEmpty(obj) {
   if (!obj || typeof obj !== "object") return obj;
@@ -129,8 +142,8 @@ export default function ExportTab({ draft, updateDraft }) {
   function applyImport() {
     setImportError("");
     try {
-      const parsed = JSON.parse(importText);
-      if (!parsed || typeof parsed !== "object") throw new Error("Top level must be a JSON object.");
+      const parsedRaw = JSON.parse(importText);
+      const parsed = importSchema.parse(parsedRaw);
       updateDraft((d) => {
         // Replace each known section if present in the import, else leave it.
         const sections = [
@@ -138,15 +151,19 @@ export default function ExportTab({ draft, updateDraft }) {
           "tilePowers", "tileUnlocks", "tileDescriptions",
         ];
         for (const s of sections) {
-          if (parsed[s] && typeof parsed[s] === "object") {
+          if (parsed[s] !== undefined) {
             d[s] = JSON.parse(JSON.stringify(parsed[s]));
           }
         }
-        if (Number.isFinite(parsed.version)) d.version = parsed.version;
+        if (parsed.version !== undefined) d.version = parsed.version;
       });
       setImportText("");
     } catch (e) {
-      setImportError(String(e?.message || e));
+      if (e instanceof z.ZodError) {
+        setImportError("Validation Error: " + e.issues.map(i => `${i.path.join('.')}: ${i.message}`).join(", "));
+      } else {
+        setImportError(String(e?.message || e));
+      }
     }
   }
 
