@@ -64,4 +64,34 @@ describe("iconUsage", () => {
     expect(a).toBe(b);
     expect(a).toBe(true);
   });
+
+  it("treats char_* prefix as in-use (storyEditor references)", () => {
+    expect(isIconUsed("char_mira")).toBe(true);
+    expect(isIconUsed("char_bram")).toBe(true);
+    expect(isIconUsed("char_wren")).toBe(true);
+  });
+
+  it("treats cat_* prefix as in-use (tileCollection template literals)", () => {
+    expect(isIconUsed("cat_grass")).toBe(true);
+    expect(isIconUsed("cat_grain")).toBe(true);
+    expect(isIconUsed("cat_fruits")).toBe(true);
+  });
+
+  it("treats hazard_* prefix as in-use", () => {
+    expect(isIconUsed("hazard_rats")).toBe(true);
+    expect(isIconUsed("hazard_fire")).toBe(true);
+    expect(isIconUsed("hazard_smoke")).toBe(true);
+  });
+
+  it("flags design.* SVG icons whose key is NOT in SVG_USAGE_LITERALS", () => {
+    // tea-house is one we know is registered but doesn't show up as a JSX
+    // string literal anywhere — should be flagged as unused.
+    expect(isIconUsed("design.building.tea-house")).toBe(false);
+  });
+
+  it("does NOT mark legacy_ prefixed keys as in-use", () => {
+    // legacy_char_mira doesn't exist but the rule should be the prefix check.
+    expect(isIconUsed("legacy_char_mira")).toBe(false);
+    expect(isIconUsed("legacy_cat_grass")).toBe(false);
+  });
 });

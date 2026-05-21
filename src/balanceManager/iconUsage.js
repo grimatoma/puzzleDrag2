@@ -15,6 +15,7 @@ import { TYPE_WORKERS } from "../features/workers/data.js";
 import { TOOL_CATALOG } from "../ui/toolRegistry.js";
 import { BOSSES } from "../features/bosses/data.js";
 import { DECORATIONS } from "../features/decorations/data.js";
+import { ICON_REGISTRY } from "../textures/iconRegistry.js";
 
 // Hard-coded list of icon keys referenced by JSX literals (e.g. ui_lock in
 // Town.jsx:362), rich-text placeholders (e.g. [icon:ui_star] in NPC bubbles),
@@ -30,6 +31,43 @@ const HARDCODED_USAGE = [
   // RichText [icon:X] embeds in state.js / story.js / feature slices.
   "ui_build", "ui_star", "ui_warning",
   "berry", "fish_pearl", "grass_hay",
+];
+
+// Prefixes for icon keys that are referenced dynamically (template literals,
+// registry lookups by interpolated id, storyEditor character maps, etc.).
+// When a key in the canvas registry starts with one of these prefixes, treat
+// it as in-use. This is a deliberate over-approximation: better to under-flag
+// than to label a clearly-referenced icon "Unused".
+const DYNAMIC_PREFIXES_CANVAS = [
+  "char_",       // storyEditor/shared.jsx + dialogue speaker lookups
+  "cat_",        // tileCollection/index.jsx `cat_${cat}` template literals
+  "hazard_",     // mine/zone hazards looked up by id
+  "boss_",       // BOSSES.id → boss_<id> (also explicitly added below)
+  "decor_",      // DECORATIONS.id → decor_<id> (also explicitly added below)
+  "worker_",     // TYPE_WORKERS.iconKey (also explicitly added below)
+  "player_",     // player tools — TOOL_CATALOG.iconKey (also covered below)
+  "tile_",       // baked Phaser texture keys (tile_<resource>)
+];
+
+// design.* SVG keys that appear as JSX literals across the codebase. List
+// derived from a grep over src/ — re-run that grep if the SVG registry is
+// extended with new keys that show up as JSX attribute string literals.
+const SVG_USAGE_LITERALS = [
+  "design.building.bakery", "design.building.dock", "design.building.inn",
+  "design.building.kitchen", "design.building.market", "design.building.scriptorium",
+  "design.building.silo", "design.building.smithy", "design.building.stable",
+  "design.currency.coin", "design.currency.ember", "design.currency.gem",
+  "design.currency.ingot",
+  "design.hazard.blight", "design.hazard.fire", "design.hazard.frost",
+  "design.hazard.keeper", "design.hazard.rats", "design.hazard.storm",
+  "design.npc.bram", "design.npc.liss", "design.npc.mira",
+  "design.npc.tomas", "design.npc.wren",
+  "design.tile.dirt", "design.tile.fire", "design.tile.fish",
+  "design.tile.grass", "design.tile.hay", "design.tile.horse",
+  "design.tile.ice", "design.tile.ore", "design.tile.pearl",
+  "design.tile.rune", "design.tile.stone", "design.tile.wheat",
+  "design.tool.axe", "design.tool.firebreak", "design.tool.hoe",
+  "design.tool.net",
 ];
 
 /**
@@ -93,6 +131,22 @@ export function getUsedIconKeys() {
 
   // Hardcoded fallback list for icons referenced in JSX/rich-text only.
   for (const key of HARDCODED_USAGE) add(key);
+
+  // Dynamic-prefix passes: any canvas key matching one of the known dynamic
+  // prefixes is treated as in-use, on the basis that those families are
+  // referenced via template-literal lookups (cat_${cat}, etc.) or by id
+  // through indirection layers (storyEditor character map, hazard catalogs).
+  // Explicitly excludes `legacy_` so archived entries still flag as unused.
+  for (const key of Object.keys(ICON_REGISTRY || {})) {
+    if (key.startsWith("legacy_")) continue;
+    if (DYNAMIC_PREFIXES_CANVAS.some((p) => key.startsWith(p))) add(key);
+  }
+
+  // SVG registry — mark only keys that appear as literal references in the
+  // codebase (verified via grep). Any design.* key in DESIGN_ICONS_MAP not in
+  // this list will surface as "Unused" — that's the signal the Icons tab is
+  // meant to provide.
+  for (const key of SVG_USAGE_LITERALS) add(key);
 
   return used;
 }
