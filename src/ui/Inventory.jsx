@@ -110,7 +110,7 @@ function InventoryBrowserItem({ entry, selected, onSelect }) {
   return (
     <BrowserItemButton
       selected={selected}
-      icon={<Icon iconKey={key} size={34} title={label} />}
+      icon={<Icon iconKey={key} size={40} title={label} />}
       title={label}
       subtitle={entry.kind === "item" ? "Item" : "Resource"}
       count={count}
@@ -141,7 +141,7 @@ function InventoryDetail({ entry, marketBuilt, dispatch }) {
       eyebrow={kind === "item" ? "Item" : "Resource"}
       title={label}
       status={`${count.toLocaleString()} in storage`}
-      icon={<Icon iconKey={key} size={64} title={label} />}
+      icon={<Icon iconKey={key} size={72} title={label} />}
       headerActions={
         <div className="flex flex-col gap-1.5">
           <Button

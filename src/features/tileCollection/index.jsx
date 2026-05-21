@@ -167,7 +167,7 @@ function TileListItem({ row, selected, onSelect }) {
       selected={selected}
       muted={row.locked}
       active={row.active}
-      icon={<TileIcon tileId={row.id} size={38} locked={row.locked} />}
+      icon={<TileIcon tileId={row.id} size={40} locked={row.locked} />}
       title={row.name}
       subtitle={row.active ? "Active" : row.locked ? "Locked" : "Unlocked"}
       onClick={onSelect}
@@ -211,7 +211,7 @@ function TileDetail({ detail, category, state, dispatch }) {
       title={detail.name}
       status={detail.status}
       description={detail.description}
-      icon={<TileIcon tileId={detail.id} size={68} locked={detail.locked} />}
+      icon={<TileIcon tileId={detail.id} size={76} locked={detail.locked} />}
       actions={action}
     >
       {d.method === "research" && !detail.discovered && (
