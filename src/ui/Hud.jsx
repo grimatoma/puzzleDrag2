@@ -5,6 +5,7 @@ import LegacyIcon from "./Icon.jsx";
 import Icon from "./primitives/Icon.jsx";
 import Pill from "./primitives/Pill.jsx";
 import Popover from "./primitives/Popover.jsx";
+import { useCountUp } from "./primitives/useCountUp.js";
 import { SeasonWheel } from "./puzzleBoard.jsx";
 
 export const SEASON_EFFECTS = ["", "", "", ""];
@@ -131,6 +132,8 @@ export function Hud({ state, dispatch, inventorySearchOpen, onInventorySearchTog
   const season = SEASONS[seasonIdx];
   const xpNeed = xpForLevel(level);
   const xpPct = Math.min(100, (xp / xpNeed) * 100);
+  const { display: coinsDisplay, pulse: coinsPulse, pulseKey: coinsPulseKey } = useCountUp(coins ?? 0);
+  const { pulse: levelPulse, pulseKey: levelPulseKey } = useCountUp(level ?? 1);
   const isWon = !!state.story?.flags?.isWon;
   const sandbox = !!state.story?.sandbox || isWon;
   const settlementName = state.settlement?.name ?? "Hearthwood Vale";
@@ -200,7 +203,12 @@ export function Hud({ state, dispatch, inventorySearchOpen, onInventorySearchTog
                   leading={<Icon iconKey="design.currency.coin" size={14} />}
                   title="Currencies"
                 >
-                  <span className="tabular-nums" data-testid="coins">{coins.toLocaleString()}</span>
+                  <span
+                    key={coinsPulseKey}
+                    className="tabular-nums"
+                    data-testid="coins"
+                    data-count-pulse={coinsPulse || undefined}
+                  >{coinsDisplay.toLocaleString()}</span>
                 </Pill>
               }
             />
@@ -211,7 +219,11 @@ export function Hud({ state, dispatch, inventorySearchOpen, onInventorySearchTog
               title={`Level ${level} · ${xp} / ${xpNeed} XP`}
               className="!px-2 !gap-1.5"
             >
-              <span className="text-caption font-semibold tabular-nums">Lv {level}</span>
+              <span
+                key={levelPulseKey}
+                className="text-caption font-semibold tabular-nums"
+                data-count-pulse={levelPulse || undefined}
+              >Lv {level}</span>
               <span className="block w-12 h-1.5 rounded-pill bg-bg-dark/60 overflow-hidden">
                 <span
                   className="block h-full bg-gold-bright transition-[width] duration-300"

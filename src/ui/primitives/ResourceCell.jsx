@@ -1,5 +1,6 @@
 import Icon from "./Icon.jsx";
 import { iconLabel } from "../../textures/iconRegistry.js";
+import { useCountUp } from "./useCountUp.js";
 
 const DENSITY = {
   micro: {
@@ -84,6 +85,7 @@ export default function ResourceCell({
   const d = DENSITY[density] || DENSITY.comfortable;
   const s = status ? STATUS[status] : null;
   const label = iconLabel(resourceKey) || humanize(resourceKey);
+  const { display: countDisplay, pulse: countPulse, pulseKey: countPulseKey } = useCountUp(count);
 
   const baseCls = [
     "w-full flex flex-col rounded-md border bg-paper text-ink",
@@ -112,7 +114,11 @@ export default function ResourceCell({
           <div className="flex-1 min-w-0 flex flex-col">
             <div className="flex items-center gap-1.5 min-w-0">
               <span className={d.labelCls + " flex-1"}>{label}</span>
-              <span className={d.countCls}>{count}</span>
+              <span
+                key={countPulseKey}
+                className={d.countCls}
+                data-count-pulse={countPulse || undefined}
+              >{countDisplay}</span>
               {s && <StatusGlyph status={status} />}
             </div>
           </div>
@@ -121,8 +127,12 @@ export default function ResourceCell({
             {density !== "micro" && (
               <span className={d.labelCls + " flex-1 min-w-0"}>{label}</span>
             )}
-            <span className={d.countCls + (density === "micro" ? " ml-auto" : "")}>
-              {count}
+            <span
+              key={countPulseKey}
+              className={d.countCls + (density === "micro" ? " ml-auto" : "")}
+              data-count-pulse={countPulse || undefined}
+            >
+              {countDisplay}
             </span>
             {s && <StatusGlyph status={status} />}
           </>
