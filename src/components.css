@@ -344,10 +344,32 @@
 
   .hl-btn {
     @apply inline-flex items-center justify-center gap-1 px-3 py-1.5;
-    @apply text-caption font-bold rounded-lg border-2 transition-colors cursor-pointer;
+    @apply text-caption font-bold rounded-lg border-2 cursor-pointer;
     white-space: nowrap;
+    transition:
+      background-color 140ms ease,
+      border-color 140ms ease,
+      color 140ms ease,
+      transform 120ms cubic-bezier(.34,1.56,.64,1),
+      box-shadow 140ms ease,
+      opacity 140ms ease;
   }
   .hl-btn--sm { @apply px-2.5 py-1 text-micro rounded-md; }
+
+  /* Lift on hover (pointer-only — touch devices skip this and go straight
+     to :active). The shadow grounds the lifted button without affecting
+     layout. */
+  @media (hover: hover) {
+    .hl-btn:hover:not(:disabled) {
+      transform: translateY(-1px);
+      box-shadow: 0 2px 0 rgba(58, 39, 21, 0.18);
+    }
+  }
+  .hl-btn:active:not(:disabled) {
+    transform: translateY(1px) scale(0.97);
+    box-shadow: inset 0 1px 0 rgba(0, 0, 0, 0.10);
+    transition-duration: 60ms;
+  }
 
   /* Solid green — craft / build / confirm affordance. */
   .hl-btn--go { background: #5e8c1e; border-color: #3f6010; color: #fff; }
@@ -373,12 +395,15 @@
   .hl-btn--danger { background: #9a3a2a; border-color: #6f251b; color: #fff; }
   .hl-btn--danger:hover:not(:disabled) { background: #b24a36; }
 
-  /* Disabled — muted but still clearly visible against parchment. */
+  /* Disabled — clearly locked. Drop opacity so unavailability reads
+     before the user reaches for the cursor; muted brown still maintains
+     legibility on parchment. */
   .hl-btn:disabled {
     background: #c4b08a;
     border-color: #a48f64;
     color: #6d5a3a;
     cursor: not-allowed;
+    opacity: 0.6;
   }
 
   /* ══ Cost / requirement chips ═══════════════════════════════════════ */
