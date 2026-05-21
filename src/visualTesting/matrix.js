@@ -51,6 +51,18 @@ const BASE_VISUAL_SCENARIOS = [
   { id: "board-boss-active", state: "boardFarmBoss", hash: "#/board", diff: canvasDiff },
   { id: "board-boss-weather", state: "boardBossWeather", hash: "#/board", diff: canvasDiff },
 
+  // Season-indicator scenarios — desktop-only for the initial PR (HUD widget,
+  // not laid out for mobile yet). Mobile goldens can be captured later via
+  // `npm run test:visual:mobile:update` after removing `skipProjects`.
+  { id: "board-season-spring-wheel",   state: "boardSeasonSpringWheel",   hash: "#/board", diff: canvasDiff, skipProjects: ["iphone-landscape", "iphone-portrait"] },
+  { id: "board-season-spring-bespoke", state: "boardSeasonSpringBespoke", hash: "#/board", diff: canvasDiff, skipProjects: ["iphone-landscape", "iphone-portrait"] },
+  { id: "board-season-summer-wheel",   state: "boardSeasonSummerWheel",   hash: "#/board", diff: canvasDiff, skipProjects: ["iphone-landscape", "iphone-portrait"] },
+  { id: "board-season-summer-bespoke", state: "boardSeasonSummerBespoke", hash: "#/board", diff: canvasDiff, skipProjects: ["iphone-landscape", "iphone-portrait"] },
+  { id: "board-season-autumn-wheel",   state: "boardSeasonAutumnWheel",   hash: "#/board", diff: canvasDiff, skipProjects: ["iphone-landscape", "iphone-portrait"] },
+  { id: "board-season-autumn-bespoke", state: "boardSeasonAutumnBespoke", hash: "#/board", diff: canvasDiff, skipProjects: ["iphone-landscape", "iphone-portrait"] },
+  { id: "board-season-winter-wheel",   state: "boardSeasonWinterWheel",   hash: "#/board", diff: canvasDiff, skipProjects: ["iphone-landscape", "iphone-portrait"] },
+  { id: "board-season-winter-bespoke", state: "boardSeasonWinterBespoke", hash: "#/board", diff: canvasDiff, skipProjects: ["iphone-landscape", "iphone-portrait"] },
+
   { id: "inventory-grid-all", state: "rich", hash: "#/inventory", diff: domDiff },
   { id: "inventory-list-mode", state: "rich", hash: "#/inventory", diff: domDiff },
   { id: "inventory-search-empty", state: "rich", hash: "#/inventory", actions: [{ type: "fillPlaceholder", placeholder: "Search resources...", value: "zzzz" }], diff: domDiff },
