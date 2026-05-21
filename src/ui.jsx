@@ -64,6 +64,13 @@ export function SidePanel({ state, dispatch, chainInfo, infoPanel = null, onInsp
             onUse={(key) => {
               const isPending = state.toolPending === key;
               if (isPending) { dispatch({ type: "CANCEL_TOOL" }); return; }
+              // Disarm any other armed tool first so only one is ever armed.
+              if (state.toolPending && state.toolPending !== key) {
+                dispatch({ type: "CANCEL_TOOL" });
+              }
+              if (state.fertilizerActive && key !== "fertilizer") {
+                dispatch({ type: "USE_TOOL", key: "fertilizer" });
+              }
               const def = TOOL_BY_KEY[key];
               if (def?.category === "magic") {
                 dispatch({ type: "USE_TOOL", payload: { id: key } });

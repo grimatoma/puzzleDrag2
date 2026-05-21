@@ -262,6 +262,7 @@ export default function App() {
       chainInfo={chainInfo}
       inspectedTool={inspectedTool}
       armedTool={armedTool}
+      fertilizerActive={!!state.fertilizerActive}
       inventory={state.inventory}
       biomeKey={state.biomeKey}
       cap={currentCap(state)}
