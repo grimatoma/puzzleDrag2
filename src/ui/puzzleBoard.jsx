@@ -1077,12 +1077,15 @@ export function PuzzleHotbar({
           width: 48,
           height: 52,
           borderRadius: 10,
+          // Bright gold against the brown hotbar so the button reads as a
+          // control rather than another tool slot. Pressed state inverts
+          // to a deep brown so the open/close affordance is unambiguous.
           background: modalOpen
-            ? "linear-gradient(180deg,#f4c66b,#d99a2a)"
-            : "linear-gradient(180deg,#8a6428,#5f4419)",
+            ? "linear-gradient(180deg,#3a2412,#2a1a08)"
+            : "linear-gradient(180deg,#f4c66b,#d99a2a)",
           border: "1.5px solid #2a1a08",
-          color: modalOpen ? "#3a2412" : "#fdf3e3",
-          boxShadow: "0 2px 0 rgba(0,0,0,0.30), inset 0 1px 0 rgba(255,255,255,0.20)",
+          color: modalOpen ? "#f0c14b" : "#3a2412",
+          boxShadow: "0 2px 0 rgba(0,0,0,0.30), inset 0 1px 0 rgba(255,255,255,0.30)",
           transition: "background 120ms ease, color 120ms ease",
         }}
         title={modalOpen ? "Close tools" : "Open tools"}
@@ -1092,11 +1095,11 @@ export function PuzzleHotbar({
       >
         <div
           style={{
-            fontSize: 22,
+            fontSize: 24,
             lineHeight: 1,
+            fontWeight: 900,
             transform: modalOpen ? "rotate(180deg)" : "none",
             transition: "transform 160ms ease",
-            textShadow: "0 1px 0 rgba(0,0,0,0.35)",
           }}
         >▾</div>
       </button>
