@@ -407,7 +407,7 @@ export function TownView({ state, dispatch }) {
         <svg viewBox="0 0 1100 600" preserveAspectRatio="none" className="w-full h-full" style={{ position: "absolute", inset: 0, pointerEvents: "none" }} />
         <div className="absolute pointer-events-none" style={{ left: 0, right: 0, top: 0, bottom: 0 }}>
           {/* Townsfolk walking the streets (depth-sorted with buildings via z-index) */}
-          <TownVillagers key={state.mapCurrent} plan={townPlan} buildings={plotById} />
+          <TownVillagers key={state.mapCurrent} plan={townPlan} buildings={plotById} workers={state.workers} />
           {slotRows.map((slot) => {
             const b = slot.buildingId ? BUILDINGS.find((x) => x.id === slot.buildingId) : null;
             const isBuilt = !!b;
