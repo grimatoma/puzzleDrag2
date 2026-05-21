@@ -275,6 +275,12 @@ function ChainView({ chainInfo, inventory }) {
             >
               {threshold > 0 ? (
                 <>
+                  {carriedInCycle > 0 && (
+                    <>
+                      <span style={{ opacity: 0.75 }}>{carriedInCycle}</span>
+                      <span style={{ opacity: 0.6 }}>+</span>
+                    </>
+                  )}
                   {length}
                   <span style={{ opacity: 0.7 }}>/</span>
                   {threshold}
