@@ -12,8 +12,9 @@ import { useMemo, useState } from "react";
 import { ZONES, ZONE_CATEGORIES, ZONE_UPGRADE_TARGET_GOLD } from "../../features/zones/data.js";
 import { BUILDINGS } from "../../constants.js";
 import {
-  COLORS, NumberField, Select, SmallButton, Pill, Card, SearchBar,
+  COLORS, NumberField, Select, SmallButton, Pill, Card, SearchBar, SearchAndAddPicker,
 } from "../shared.jsx";
+import { BuildingIllustration } from "../../ui/Town.jsx";
 
 const SEASON_NAMES = ["Spring", "Summer", "Autumn", "Winter"];
 
@@ -51,6 +52,10 @@ function Toggle({ value, onChange, label }) {
 export default function ZonesTab({ draft, updateDraft }) {
   const [search, setSearch] = useState("");
   const zoneList = useMemo(() => Object.values(ZONES), []);
+  const buildingById = useMemo(
+    () => Object.fromEntries(BUILDINGS.map((b) => [b.id, b])),
+    [],
+  );
   const filtered = useMemo(
     () => zoneList.filter((z) => {
       if (!search) return true;
@@ -166,31 +171,12 @@ export default function ZonesTab({ draft, updateDraft }) {
 
               {/* Buildings */}
               <div className="mb-3">
-                <Label>Buildings available in this town</Label>
-                <div className="grid grid-cols-2 gap-1">
-                  {BUILDINGS.map((b) => {
-                    const active = eff.buildings.includes(b.id);
-                    return (
-                      <button
-                        key={b.id}
-                        onClick={() => {
-                          const next = active
-                            ? eff.buildings.filter((id) => id !== b.id)
-                            : [...eff.buildings, b.id];
-                          patch(z.id, { buildings: next });
-                        }}
-                        className="text-[10px] font-bold px-2 py-1 rounded-lg border text-left transition-colors"
-                        style={{
-                          background:  active ? "rgba(145,191,36,0.15)" : COLORS.parchmentDeep,
-                          borderColor: active ? "#6a9010"               : COLORS.border,
-                          color:       active ? "#3a5010"               : COLORS.inkSubtle,
-                        }}
-                      >
-                        {b.name}
-                      </button>
-                    );
-                  })}
-                </div>
+                <Label>Buildings available in this town ({eff.buildings.length})</Label>
+                <BuildingsPicker
+                  selectedIds={eff.buildings}
+                  buildingById={buildingById}
+                  onChange={(next) => patch(z.id, { buildings: next })}
+                />
               </div>
 
               {/* Turn budget + entry cost */}
@@ -338,6 +324,109 @@ export default function ZonesTab({ draft, updateDraft }) {
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+function BuildingIcon({ id, size = 28 }) {
+  return (
+    <div
+      className="relative shrink-0 rounded border overflow-hidden"
+      style={{ width: size, height: size, borderColor: COLORS.border, background: COLORS.parchment }}
+      aria-hidden
+    >
+      <BuildingIllustration id={id} isBuilt />
+    </div>
+  );
+}
+
+function BuildingsPicker({ selectedIds, buildingById, onChange }) {
+  const selected = useMemo(
+    () => (Array.isArray(selectedIds) ? selectedIds : []),
+    [selectedIds],
+  );
+
+  const pickerOptions = useMemo(() => {
+    const taken = new Set(selected);
+    return BUILDINGS
+      .filter((b) => !taken.has(b.id))
+      .map((b) => ({
+        id: b.id,
+        searchText: `${b.id} ${b.name} ${b.desc || ""} ${b.biome || ""}`,
+        renderNode: (
+          <div className="flex items-center gap-2 min-w-0 w-full">
+            <BuildingIcon id={b.id} size={32} />
+            <div className="flex flex-col items-start min-w-0 flex-1">
+              <div className="text-[12px] font-bold truncate w-full" style={{ color: COLORS.ink }}>
+                {b.name}
+              </div>
+              <div className="text-[10px] font-mono truncate w-full" style={{ color: COLORS.inkSubtle }}>
+                {b.id}
+              </div>
+            </div>
+          </div>
+        ),
+      }));
+  }, [selected]);
+
+  function addBuilding(id) {
+    if (selected.includes(id)) return;
+    onChange([...selected, id]);
+  }
+
+  function removeBuilding(id) {
+    onChange(selected.filter((bid) => bid !== id));
+  }
+
+  return (
+    <div className="flex flex-col gap-2">
+      {selected.length === 0 ? (
+        <div
+          className="text-center py-3 text-[11px] italic rounded-lg border-2 border-dashed"
+          style={{ borderColor: COLORS.border, color: COLORS.inkSubtle }}
+        >
+          No buildings added. Pick one below.
+        </div>
+      ) : (
+        <div className="flex flex-wrap gap-1.5">
+          {selected.map((id) => {
+            const b = buildingById[id];
+            return (
+              <div
+                key={id}
+                className="flex items-center gap-1.5 pl-1 pr-1.5 py-1 rounded-lg border"
+                style={{
+                  background: "rgba(145,191,36,0.15)",
+                  borderColor: "#6a9010",
+                  color: "#3a5010",
+                }}
+              >
+                <BuildingIcon id={id} size={24} />
+                <span className="text-[11px] font-bold">
+                  {b ? b.name : id}
+                </span>
+                <button
+                  onClick={() => removeBuilding(id)}
+                  className="ml-0.5 text-[11px] font-bold rounded px-1 leading-none hover:opacity-80"
+                  style={{ color: COLORS.red }}
+                  title={`Remove ${b ? b.name : id}`}
+                  aria-label={`Remove ${b ? b.name : id}`}
+                >
+                  ✕
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      <SearchAndAddPicker
+        label="Add building"
+        placeholder="Search buildings by name, id, or biome…"
+        options={pickerOptions}
+        onSelect={addBuilding}
+        gridClass="grid-cols-1 md:grid-cols-2"
+      />
     </div>
   );
 }
