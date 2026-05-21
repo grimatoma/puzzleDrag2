@@ -40,6 +40,7 @@ const AchievementsTab = lazy(() => import("./tabs/AchievementsTab.jsx"));
 const DailyRewardsTab = lazy(() => import("./tabs/DailyRewardsTab.jsx"));
 const ExportTab    = lazy(() => import("./tabs/ExportTab.jsx"));
 const IconsTab     = lazy(() => import("./tabs/IconsTab.jsx"));
+const AbilitiesReferenceTab = lazy(() => import("./tabs/AbilitiesReferenceTab.jsx"));
 
 // Hash routing for the Balance Manager lives in `./router.js` — kept separate
 // from `src/router.js` because the Balance Manager is its own page (`/b/`).
@@ -107,6 +108,9 @@ const TABS = [
   { id: "icons",     label: "Icons",          iconKey: "ui_star", Component: IconsTab,
     section: "other",
     blurb: "Browse every procedurally-drawn icon in ICON_REGISTRY. Filter by category, search by key or label, and click to copy the key." },
+  { id: "abilities", label: "Abilities",      iconKey: "ui_star", Component: AbilitiesReferenceTab,
+    section: "other",
+    blurb: "Reference list of every ability definition: name, description, configurable params, trigger/channel runtime behavior, and sample payload." },
   { id: "export",    label: "Export · Import",iconKey: "ui_star", Component: ExportTab,
     section: "other",
     blurb: "Save your draft, download as JSON to commit, or paste a config to import." },
