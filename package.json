@@ -20,7 +20,8 @@
     "test:visual:all": "playwright test -c playwright.visual.config.js",
     "test:visual:all:update": "playwright test -c playwright.visual.config.js --update-snapshots",
     "test:visual:mobile": "playwright test -c playwright.visual.config.js tests/visual/visual.spec.js --project=iphone-landscape --project=iphone-portrait",
-    "test:visual:mobile:update": "playwright test -c playwright.visual.config.js tests/visual/visual.spec.js --project=iphone-landscape --project=iphone-portrait --update-snapshots"
+    "test:visual:mobile:update": "playwright test -c playwright.visual.config.js tests/visual/visual.spec.js --project=iphone-landscape --project=iphone-portrait --update-snapshots",
+    "test:visual:manifest": "node tests/visual/generateManifest.mjs && vitest run src/__tests__/visual-scenarios.test.js"
   },
   "dependencies": {
     "canvas2svg": "^1.0.16",

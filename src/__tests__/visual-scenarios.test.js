@@ -6,6 +6,7 @@ import { VISUAL_DESKTOP_SMOKE_SCENARIO_IDS, VISUAL_SCENARIOS } from "../visualTe
 import { buildVisualState, validateVisualState } from "../visualTesting/stateBuilders.js";
 import { KNOWN_VIEWS, parseHash } from "../router.js";
 import { CATEGORIES, SUB_CATEGORIES, TILE_TYPES } from "../features/tileCollection/data.js";
+import { buildManifestFromGoldens, readManifest, validateManifest } from "../../tests/visual/manifestTools.mjs";
 
 const INTERNAL_VISUAL_VIEWS = new Set(["boons", "charter"]);
 
@@ -150,5 +151,18 @@ describe("visual golden snapshots integrity", () => {
       expect(missing, `Missing snapshots for project ${project}`).toEqual([]);
       expect(extra, `Extraneous (dead) snapshots for project ${project}`).toEqual([]);
     }
+  });
+});
+
+
+describe("visual manifest integrity", () => {
+  it("matches generated output and has no stale/missing scenario links", () => {
+    const manifest = readManifest();
+    const expected = buildManifestFromGoldens();
+
+    expect(manifest).toEqual(expected);
+
+    const errors = validateManifest(manifest);
+    expect(errors).toEqual([]);
   });
 });
