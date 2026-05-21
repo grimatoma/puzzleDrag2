@@ -20,7 +20,6 @@ import CommandPalette from "./CommandPalette.jsx";
 // Lazy-load tabs so the Balance Manager (a dev-time tool) stays out of the
 // main entry chunk. Each tab becomes its own JS chunk fetched only when
 // the user opens the modal and selects that tab.
-const ResourcesTab = lazy(() => import("./tabs/ResourcesTab.jsx"));
 const ItemsTab = lazy(() => import("./tabs/ItemsTab.jsx"));
 const RecipesTab   = lazy(() => import("./tabs/RecipesTab.jsx"));
 const BuildingsTab = lazy(() => import("./tabs/BuildingsTab.jsx"));
@@ -44,11 +43,8 @@ const IconsTab     = lazy(() => import("./tabs/IconsTab.jsx"));
 // Hash routing for the Balance Manager lives in `./router.js` — kept separate
 // from `src/router.js` because the Balance Manager is its own page (`/b/`).
 //
-// The game's object model has three separate concepts, and each gets its own
-// tab (and sidebar section): Tiles (board pieces), Resources & Currency (the
-// counts of stuff you accumulate), and Items (discrete inventory objects;
-// a tool is just an item with a power). Recipes / Buildings / Rations sit
-// alongside Items as the other inventory-economy editors.
+// The game's object model separates Tiles from inventory entries. Inventory
+// entries (resources + items + tools) are unified under Items.
 const TABS = [
   { id: "tiles",     label: "Tiles",          iconKey: "ui_star", Component: PowersTab,
     section: "tiles",
@@ -59,12 +55,9 @@ const TABS = [
   { id: "biomes",    label: "Settlement Biomes", iconKey: "ui_star", Component: BiomesTab,
     section: "tiles",
     blurb: "The biomes a settlement can be founded as (4 per type): name, icon, the two hazards that appear in every round there, and the resource bonus." },
-  { id: "resources", label: "Resources & Currency", iconKey: "ui_star", Component: ResourcesTab,
-    section: "resources",
-    blurb: "Resources & currency — the counts of stuff you accumulate: inventory amounts (grain, wood, eggs, crafted goods…) with their colours, chains and sale values, plus a reference list of the kingdom currency counters (gold / runes / embers / …)." },
   { id: "items", label: "Items",      iconKey: "ui_star", Component: ItemsTab,
     section: "items",
-    blurb: "Items — discrete objects that sit in your inventory. A tool is just an item with a power (its effect / target / anim). Filter by All / Tools / Plain. Tiles and resources are separate concepts with their own tabs." },
+    blurb: "Unified inventory editor — resources, tools, and plain items in one place. Filter by All / Resources / Tools / Items. Existing kind/biome tags still appear on each card." },
   { id: "recipes",   label: "Recipes",        iconKey: "ui_star", Component: RecipesTab,
     section: "items",
     blurb: "Crafted items (and tools): ingredients, station, coin reward, and description." },

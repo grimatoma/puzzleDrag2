@@ -2,12 +2,12 @@
 // a rake, a comb, a table…). A "tool" is just an item with a power: the
 // Effect / Target / Anim fields are what make it a tool.
 //
-// Tiles (board pieces) and resources (currency-like counts) are NOT items —
-// they each have their own tab. This tab only ever lists kinds that aren't
-// "tile" or "resource".
+// Tiles (board pieces) are separate. This tab is the unified inventory model:
+// resources + plain items + tools.
 
 import { useState, useMemo } from "react";
 import { ITEMS, RECIPES } from "../../constants.js";
+import { tagsForItemKey, sourceTagsForItem } from "../../features/inventory/tags.js";
 import {
   COLORS, NumberField, TextField, TextArea, ColorField,
   SmallButton, Pill, Card, SearchBar, TileSwatch,
@@ -16,14 +16,14 @@ import {
 import Icon from "../../ui/Icon.jsx";
 
 const FILTERS = [
-  { id: "all",   label: "All items", iconKey: "ui_build" },
-  { id: "tool",  label: "Tools",     iconKey: "rake"     },
-  { id: "plain", label: "Plain",     iconKey: "ui_star"  },
+  { id: "all",      label: "All",       iconKey: "ui_build" },
+  { id: "resource", label: "Resources", iconKey: "grain"    },
+  { id: "tool",     label: "Tools",     iconKey: "rake"     },
+  { id: "item",     label: "Items",     iconKey: "ui_star"  },
 ];
 
-// Tiles and resources are excluded — those are separate concepts/tabs.
 function isItem(r) {
-  return r.kind !== "tile" && r.kind !== "resource";
+  return r.kind !== "tile";
 }
 
 // What makes an item a "tool" is that it has a power — a wired effect.
@@ -43,8 +43,9 @@ export default function ItemsTab({ draft, updateDraft }) {
   );
 
   const filtered = itemEntries.filter(([key, r]) => {
+    if (filter === "resource" && r.kind !== "resource") return false;
     if (filter === "tool" && !isTool(r)) return false;
-    if (filter === "plain" && isTool(r)) return false;
+    if (filter === "item" && (r.kind === "resource" || isTool(r))) return false;
     if (search) {
       const q = search.toLowerCase();
       if (!key.toLowerCase().includes(q) && !(r.label || "").toLowerCase().includes(q)) return false;
@@ -79,7 +80,7 @@ export default function ItemsTab({ draft, updateDraft }) {
 
   return (
     <div className="flex flex-col gap-3">
-      {/* Filter (All / Tools / Plain) + search */}
+      {/* Filter (All / Resources / Tools / Items) + search */}
       <FilterBar>
         <SegmentedFilter options={FILTERS} value={filter} onChange={setFilter} ariaLabel="Item filter" />
         <div className="flex-1 min-w-[200px]">
@@ -89,7 +90,7 @@ export default function ItemsTab({ draft, updateDraft }) {
       </FilterBar>
 
       <div className="text-[11px] italic" style={{ color: COLORS.inkSubtle }}>
-        Discrete objects you carry in your inventory. A tool is just an item with a power — the Effect / Target / Anim fields below. (Tiles and resources are not items; see their own tabs.)
+        Unified inventory editor. Filter across resources, tools, and plain items. Existing tags (like kind/resource and biome/farm) are shown on each card.
       </div>
 
       {/* Items list */}
@@ -109,7 +110,10 @@ export default function ItemsTab({ draft, updateDraft }) {
           };
           const dirty = Object.keys(patch).length > 0;
           const tool = isTool(r);
+          const resource = r.kind === "resource";
           const craftedBy = allCraftingMethods[key] || [];
+          const semanticTags = tagsForItemKey(key);
+          const sourceTags = sourceTagsForItem(key, { recipesByOutput: allCraftingMethods });
 
           return (
             <Card key={key} accent={dirty ? COLORS.ember : COLORS.border}>
@@ -124,8 +128,8 @@ export default function ItemsTab({ draft, updateDraft }) {
                     >
                       {key}
                     </code>
-                    <Pill>{tool ? "tool" : (r.kind || "item")}</Pill>
-                    {r.biome && <Pill>{r.biome}</Pill>}
+                    {semanticTags.map((tag) => <Pill key={`semantic-${tag}`}>{tag}</Pill>)}
+                    {sourceTags.map((tag) => <Pill key={`source-${tag}`}>{tag}</Pill>)}
                     {dirty && <Pill color="#fff" bg={COLORS.ember}>edited</Pill>}
                     {dirty && (
                       <SmallButton variant="ghost" onClick={() => updateDraft((d) => { delete d.items[key]; })}>
@@ -143,7 +147,7 @@ export default function ItemsTab({ draft, updateDraft }) {
                     <NumberField value={eff.value} min={0} max={9999} onChange={(v) => patchItem(key, { value: v })} width={80} />
                   </div>
 
-                  {/* Plain items carry a colour swatch; tools draw their own glyph. */}
+                  {/* Resources and plain items carry a colour swatch; tools draw their own glyph. */}
                   {!tool && (
                     <div>
                       <Label>Color</Label>
@@ -227,3 +231,9 @@ function Label({ children }) {
     </div>
   );
 }
+                  {resource && (
+                    <div className="col-span-2">
+                      <Label>Next chain product</Label>
+                      <TextField value={r.next || "—"} readOnly />
+                    </div>
+                  )}

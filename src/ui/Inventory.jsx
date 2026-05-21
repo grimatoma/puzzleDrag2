@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { BIOMES, ITEMS } from "../constants.js";
+import { INVENTORY_TAGS, itemHasTag, tagsForItemKey } from "../features/inventory/tags.js";
 import { sellPriceFor } from "../features/market/pricing.js";
 import { locBuilt } from "../locBuilt.js";
 import { iconLabel } from "../textures/iconRegistry.js";
@@ -123,7 +124,7 @@ function InventoryBrowserItem({ entry, selected, onSelect }) {
 
 function InventoryDetail({ entry, marketBuilt, dispatch }) {
   if (!entry) return <DetailPane empty="Select a resource to inspect it." />;
-  const { key, label, count, sellPrice, buyPrice, kind, orderStatus, orderTotal } = entry;
+  const { key, label, count, sellPrice, buyPrice, kind, orderStatus, orderTotal, tags = [] } = entry;
   const canBuy = kind === "resource" && marketBuilt && buyPrice > 0;
   const canSell = marketBuilt && sellPrice > 0 && count > 0;
   const sell = () => {
@@ -138,7 +139,7 @@ function InventoryDetail({ entry, marketBuilt, dispatch }) {
 
   return (
     <DetailPane
-      eyebrow={kind === "item" ? "Item" : "Resource"}
+      eyebrow={kind === "tool" ? "Tool" : kind === "item" ? "Item" : "Resource"}
       title={label}
       status={`${count.toLocaleString()} in storage`}
       icon={<Icon iconKey={key} size={72} title={label} />}
@@ -169,6 +170,12 @@ function InventoryDetail({ entry, marketBuilt, dispatch }) {
         <div className="hl-well">
           <div className="hl-section-label mb-1.5">Status</div>
           <div className="flex flex-wrap gap-2">{status}</div>
+        </div>
+      )}
+      {tags.length > 0 && (
+        <div className="hl-well">
+          <div className="hl-section-label mb-1.5">Tags</div>
+          <div className="hl-text-dim capitalize">{tags.join(", ")}</div>
         </div>
       )}
       {orderStatus && (
@@ -237,42 +244,65 @@ export function InventoryGrid({
     item.kind !== "tile" &&
     item.kind !== "tool"
   );
+  const tools = Object.entries(state?.tools ?? {}).filter(([key, count]) =>
+    (count || 0) > 0 && ITEMS[key]?.kind === "tool"
+  );
   const { status, totals } = orderStatusByKey(orders, inventory);
   const marketBuilt = !!locBuilt(state).caravan_post;
   const prices = state?.market?.prices ?? {};
   const [selectedKey, setSelectedKey] = useState(null);
 
-  const showResources = filter === "all" || filter === "chain" || filter === "sellable";
-  const showItems = filter === "all" || filter === "items" || filter === "sellable";
+  const activeTags = filter === "all"
+    ? null
+    : Array.isArray(filter)
+      ? filter
+      : filter === "chain"
+        ? [INVENTORY_TAGS.RESOURCE]
+        : filter === "items"
+          ? [INVENTORY_TAGS.ITEM]
+          : [filter];
+
+  const matchesTags = (key) => {
+    if (!activeTags || activeTags.length === 0) return true;
+    return activeTags.every((tag) => itemHasTag(key, tag));
+  };
 
   const resourceCellsBy = new Map(resources.map((r) => [r.key, r]));
   const itemDefsByKey = new Map(items.map(([key, item]) => [key, item]));
+  const toolDefsByKey = new Map(tools.map(([key]) => [key, ITEMS[key]]));
 
-  const visibleResourceKeys = showResources
-    ? resources
-        .map((r) => r.key)
-        .filter((key) => {
-          if (!matchesQuery(key, labelFor(key, resourceCellsBy.get(key)?.label), query)) return false;
-          if (filter === "sellable") {
-            const p = prices[key];
-            return (p?.sell ?? 0) > 0;
-          }
-          return true;
-        })
-    : [];
+  const visibleResourceKeys = resources
+    .map((r) => r.key)
+    .filter((key) => {
+      if (!matchesTags(key)) return false;
+      if (!matchesQuery(key, labelFor(key, resourceCellsBy.get(key)?.label), query)) return false;
+      if (filter === "sellable") {
+        const p = prices[key];
+        return (p?.sell ?? 0) > 0;
+      }
+      return true;
+    });
 
-  const visibleItemKeys = showItems
-    ? items
-        .map(([key]) => key)
-        .filter((key) => {
-          if (!matchesQuery(key, labelFor(key, itemDefsByKey.get(key)?.label), query)) return false;
-          if (filter === "sellable") return sellPriceFor(key) > 0;
-          return true;
-        })
-    : [];
+  const visibleItemKeys = items
+    .map(([key]) => key)
+    .filter((key) => {
+      if (!matchesTags(key)) return false;
+      if (!matchesQuery(key, labelFor(key, itemDefsByKey.get(key)?.label), query)) return false;
+      if (filter === "sellable") return sellPriceFor(key) > 0;
+      return true;
+    });
+  const visibleToolKeys = tools
+    .map(([key]) => key)
+    .filter((key) => {
+      if (!matchesTags(key)) return false;
+      if (!matchesQuery(key, labelFor(key, toolDefsByKey.get(key)?.label), query)) return false;
+      return true;
+    });
 
   const sortedResourceKeys = sortKeys(visibleResourceKeys, sort, inventory, recentOrder);
   const sortedItemKeys = sortKeys(visibleItemKeys, sort, inventory, recentOrder);
+  const toolCountByKey = Object.fromEntries(tools);
+  const sortedToolKeys = sortKeys(visibleToolKeys, sort, toolCountByKey, recentOrder);
   const entries = [];
   for (const key of sortedResourceKeys) {
     const r = resourceCellsBy.get(key);
@@ -280,6 +310,7 @@ export function InventoryGrid({
     entries.push({
       key,
       kind: "resource",
+      tags: tagsForItemKey(key),
       label: labelFor(key, r?.label),
       count: inventory[key] || 0,
       buyPrice: p.buy ?? 0,
@@ -293,6 +324,7 @@ export function InventoryGrid({
     entries.push({
       key,
       kind: "item",
+      tags: tagsForItemKey(key),
       label: labelFor(key, item?.label),
       count: inventory[key] || 0,
       buyPrice: 0,
@@ -301,12 +333,27 @@ export function InventoryGrid({
       orderTotal: totals[key],
     });
   }
+  for (const key of sortedToolKeys) {
+    const item = toolDefsByKey.get(key);
+    entries.push({
+      key,
+      kind: "tool",
+      tags: tagsForItemKey(key),
+      label: labelFor(key, item?.label),
+      count: toolCountByKey[key] || 0,
+      buyPrice: 0,
+      sellPrice: 0,
+      orderStatus: undefined,
+      orderTotal: undefined,
+    });
+  }
 
   const selected = entries.find((e) => e.key === selectedKey) ?? entries[0] ?? null;
 
   const noResults =
     sortedResourceKeys.length === 0 &&
     sortedItemKeys.length === 0 &&
+    sortedToolKeys.length === 0 &&
     (query.length > 0 || filter !== "all");
 
   const browser = noResults ? (
