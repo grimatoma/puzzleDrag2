@@ -808,7 +808,11 @@ export function usePinnedTools() {
       return next.slice(0, slotCap);
     });
   }, []);
-  return [pins, { placeAt }];
+  const remove = useCallback((key) => {
+    if (!TOOL_BY_KEY[key]) return;
+    setPins((prev) => prev.map((k) => (k === key ? null : k)));
+  }, []);
+  return [pins, { placeAt, remove }];
 }
 
 // Measure how many tool tiles fit in a container — used so the hotbar's
@@ -840,9 +844,10 @@ export function useMaxFitPins(ref) {
 }
 
 // ─── Drag-and-drop hook ──────────────────────────────────────────────────
-// Long-press a tool tile in the dropdown to start a drag. Drag the ghost
-// over a hotbar slot to place (replacing whatever's already there). Tools
-// already pinned in the hotbar are tap-only — they cannot be dragged.
+// Long-press a tool tile in the dropdown or hotbar to start a drag. Drag a
+// ghost over the hotbar to place/reorder; from the hotbar, drop onto the
+// modal grid to unpin. Hotbar-originated drags are only wired up while
+// the modal is open — the hotbar is tap-only when the dropdown is closed.
 // Tap is preserved by suppressing onClick only after the drag actually
 // starts.
 
@@ -850,7 +855,7 @@ const DRAG_LONGPRESS_MS = 220;
 const DRAG_THRESHOLD_PX = 6;
 
 export function useToolDrag({ pins, pinActions, maxFitPins }) {
-  // Active drag state: { key, x, y, suppressClick }
+  // Active drag state: { key, fromHotbar, x, y, suppressClick }
   const [drag, setDrag] = useState(null);
   const dragRef = useRef(null);
   // Mirror the drag state into a ref via effect so window listeners (which
@@ -863,11 +868,12 @@ export function useToolDrag({ pins, pinActions, maxFitPins }) {
   const pressRef = useRef(null);
 
   const beginPress = useCallback(
-    (key, ev) => {
+    (key, fromHotbar, ev) => {
       if (ev.button != null && ev.button !== 0) return;
       ev.currentTarget?.setPointerCapture?.(ev.pointerId);
       pressRef.current = {
         key,
+        fromHotbar,
         startX: ev.clientX,
         startY: ev.clientY,
         pointerId: ev.pointerId,
@@ -877,6 +883,7 @@ export function useToolDrag({ pins, pinActions, maxFitPins }) {
           if (pressRef.current?.key !== key) return;
           setDrag({
             key,
+            fromHotbar,
             x: pressRef.current.startX,
             y: pressRef.current.startY,
             suppressClick: true,
@@ -899,6 +906,7 @@ export function useToolDrag({ pins, pinActions, maxFitPins }) {
         clearTimeout(press.longPressTimer);
         setDrag({
           key: press.key,
+          fromHotbar: press.fromHotbar,
           x: e.clientX,
           y: e.clientY,
           suppressClick: true,
@@ -927,7 +935,16 @@ export function useToolDrag({ pins, pinActions, maxFitPins }) {
       const el = document.elementFromPoint(x, y);
       const slot = el?.closest?.("[data-hotbar-slot]");
       const inHotbar = !!el?.closest?.("[data-testid='puzzle-hotbar']");
-      if (slot) {
+      const inToolList = !!el?.closest?.("[data-testid='puzzle-tool-modal']");
+      if (d.fromHotbar) {
+        // Hotbar-originated drags: the only valid drop target is the tool
+        // list (dropping there unpins). Anywhere else — including other
+        // hotbar slots and the board area — is a no-op so an accidental
+        // drag off the hotbar can never silently lose pins.
+        if (inToolList) {
+          pinActions.remove(d.key);
+        }
+      } else if (slot) {
         const idx = Number.parseInt(slot.getAttribute("data-hotbar-slot"), 10);
         if (Number.isFinite(idx)) pinActions.placeAt(d.key, idx, maxFitPins);
       } else if (inHotbar) {
@@ -985,6 +1002,8 @@ export function PuzzleHotbar({
   modalOpen,
   maxFitPins,
   dragKey,
+  dragFromHotbar,
+  onBeginDrag,
 }) {
   const list = useMemo(() => buildVisibleToolList(state), [state.tools, state.toolPending, state.fertilizerActive]);
   useAutoInspectArmed(state, onInspectChange);
@@ -1011,9 +1030,11 @@ export function PuzzleHotbar({
     },
     [dispatch, onInspectChange, state.toolPending],
   );
-  // Highlight the hotbar as a drop target whenever a tool is being
-  // dragged from the modal — every active drag now originates there.
-  const showHotbarDropHints = !!dragKey;
+  // Drop indicators light up only for drags originating in the dropdown
+  // list — hotbar→list reordering already shows its own ghost and
+  // hotbar-originated drags only resolve when dropped on the list, so
+  // we don't draw a hotbar drop hint for them.
+  const showHotbarDropHints = !!dragKey && dragFromHotbar === false;
   return (
     <div
       className="flex items-stretch gap-2 pl-2 pr-1"
@@ -1044,6 +1065,10 @@ export function PuzzleHotbar({
                   inspected={inspectedKey === tool.key}
                   onClick={select}
                   onActivate={activate}
+                  // Hotbar tiles only initiate a drag while the dropdown
+                  // is open — when it's closed, the rail is tap-only so
+                  // a stray long-press can't accidentally unpin a tool.
+                  onPointerDown={modalOpen ? (ev) => onBeginDrag?.(tool.key, true, ev) : undefined}
                   size="sm"
                   dragging={dragKey === tool.key}
                 />
@@ -1118,6 +1143,7 @@ export function PuzzleToolModal({
   inspectedTool,
   onInspectChange,
   dragKey,
+  dragFromHotbar,
   onBeginDrag,
 }) {
   const list = useMemo(() => buildVisibleToolList(state), [state.tools, state.toolPending, state.fertilizerActive]);
@@ -1154,6 +1180,10 @@ export function PuzzleToolModal({
     if (!willCancel) onClose?.();
   };
   const pinned = selectedTool ? pins.includes(selectedTool.key) : false;
+  // Highlight the dropdown grid as a drop target whenever the player is
+  // dragging a tool out of the hotbar — that's the only valid drop target
+  // for hotbar-originated drags.
+  const showListDropHint = !!dragKey && dragFromHotbar === true;
 
   // The dropdown floats *over* the board area rather than covering the
   // whole screen — no dark backdrop, capped height — so the player keeps
@@ -1289,11 +1319,20 @@ export function PuzzleToolModal({
           </div>
         </div>
         {/* Scrollable grid */}
-        <div className="flex-1 min-h-0 overflow-y-auto p-3 rounded-b-md">
+        <div
+          className="flex-1 min-h-0 overflow-y-auto p-3 rounded-b-md"
+          style={
+            showListDropHint
+              ? { background: "rgba(240,193,75,0.10)", outline: "2px dashed rgba(240,193,75,0.55)", outlineOffset: -6 }
+              : undefined
+          }
+        >
           <div
             className="text-[9px] font-extrabold uppercase tracking-widest text-[#caa97a] mb-2 px-0.5"
           >
-            Long-press a tool and drag it up to pin · double-tap to use
+            {showListDropHint
+              ? "Drop here to unpin from the hotbar"
+              : "Long-press a tool and drag it up to pin · double-tap to use"}
           </div>
           <div
             style={{
@@ -1309,7 +1348,7 @@ export function PuzzleToolModal({
                 inspected={effectiveKey === t.key}
                 onClick={select}
                 onActivate={activate}
-                onPointerDown={(ev) => onBeginDrag?.(t.key, ev)}
+                onPointerDown={(ev) => onBeginDrag?.(t.key, false, ev)}
                 dragging={dragKey === t.key}
               />
             ))}
