@@ -787,6 +787,505 @@ function drawMossback(ctx) {
   ctx.strokeStyle = "#5a1a3a"; ctx.lineWidth = 0.6; ctx.stroke();
 }
 
+// ── Boss: The Storm ──────────────────────────────────────────────────────
+
+function drawStorm(ctx) {
+  // The Storm — black squall over chopping seas, with a lightning strike.
+  drawAvatarFrame(ctx, { bg: "#9aa8c4", border: "#1a2e4a" });
+
+  // Churning sea (bottom third). Dark teal-grey with light caps.
+  const seaGrad = ctx.createLinearGradient(0, 14, 0, 32);
+  seaGrad.addColorStop(0, "#2a4870");
+  seaGrad.addColorStop(0.6, "#16263e");
+  seaGrad.addColorStop(1, "#0a1424");
+  ctx.fillStyle = seaGrad;
+  ctx.beginPath();
+  ctx.moveTo(-30, 16);
+  ctx.bezierCurveTo(-22, 12, -14, 18, -6, 14);
+  ctx.bezierCurveTo(2, 10, 10, 18, 18, 14);
+  ctx.bezierCurveTo(24, 12, 28, 16, 30, 14);
+  ctx.lineTo(30, 32);
+  ctx.lineTo(-30, 32);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = "#0a1424";
+  ctx.lineWidth = 1.4;
+  ctx.stroke();
+
+  // Whitecaps on the chop.
+  ctx.fillStyle = "rgba(220,232,248,0.85)";
+  [[-22, 14, 4, 1.4], [-8, 13, 5, 1.4], [10, 16, 4, 1.3], [22, 14, 3, 1.2]].forEach(([x, y, w, h]) => {
+    ctx.beginPath();
+    ctx.ellipse(x, y, w, h, 0, 0, Math.PI * 2);
+    ctx.fill();
+  });
+
+  // Distant rain veil — soft alpha streaks behind the cloud.
+  ctx.strokeStyle = "rgba(120,140,170,0.5)";
+  ctx.lineWidth = 0.8;
+  for (let i = -22; i <= 22; i += 4) {
+    ctx.beginPath();
+    ctx.moveTo(i, -4);
+    ctx.lineTo(i - 2, 12);
+    ctx.stroke();
+  }
+
+  // Lightning bolt — bright zig-zag punching from cloud to sea, drawn first
+  // so the cloud overlap covers its top.
+  const boltGrad = ctx.createLinearGradient(0, -6, 0, 16);
+  boltGrad.addColorStop(0, "#fffae0");
+  boltGrad.addColorStop(0.5, "#fff080");
+  boltGrad.addColorStop(1, "#f8b020");
+  ctx.fillStyle = boltGrad;
+  ctx.beginPath();
+  ctx.moveTo(-2, -8);
+  ctx.lineTo(4, 2);
+  ctx.lineTo(0, 2);
+  ctx.lineTo(6, 14);
+  ctx.lineTo(-2, 6);
+  ctx.lineTo(2, 6);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = "#c08020";
+  ctx.lineWidth = 0.8;
+  ctx.stroke();
+  // Bolt glow
+  ctx.fillStyle = "rgba(255,240,160,0.25)";
+  ctx.beginPath();
+  ctx.ellipse(2, 4, 10, 14, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Storm cloud — heavy charcoal with rolling underside.
+  const cloudGrad = ctx.createRadialGradient(-4, -16, 6, 0, -10, 32);
+  cloudGrad.addColorStop(0, "#5a6680");
+  cloudGrad.addColorStop(0.6, "#2a3450");
+  cloudGrad.addColorStop(1, "#10182a");
+  ctx.fillStyle = cloudGrad;
+  ctx.beginPath();
+  // Top puff line
+  ctx.moveTo(-26, -8);
+  ctx.bezierCurveTo(-28, -22, -12, -28, -4, -22);
+  ctx.bezierCurveTo(4, -32, 18, -28, 20, -18);
+  ctx.bezierCurveTo(30, -20, 32, -8, 24, -4);
+  // Bumpy underside
+  ctx.bezierCurveTo(22, 2, 14, 4, 10, -2);
+  ctx.bezierCurveTo(6, 4, -2, 4, -6, -2);
+  ctx.bezierCurveTo(-12, 4, -20, 2, -22, -4);
+  ctx.bezierCurveTo(-30, -4, -30, -10, -26, -8);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = "#0a0e1a";
+  ctx.lineWidth = 1.6;
+  ctx.stroke();
+
+  // Cloud highlight — dim moonlit edge along the top-left.
+  ctx.strokeStyle = "rgba(180,200,230,0.45)";
+  ctx.lineWidth = 1.2;
+  ctx.beginPath();
+  ctx.moveTo(-22, -16);
+  ctx.bezierCurveTo(-18, -24, -8, -26, 0, -22);
+  ctx.stroke();
+
+  // A pair of menacing eyes glowing in the cloud.
+  ctx.fillStyle = "rgba(255,240,200,0.85)";
+  ctx.beginPath(); ctx.arc(-8, -14, 2.2, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(6, -14, 2.2, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = "#f8c040";
+  ctx.beginPath(); ctx.arc(-8, -14, 1.1, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(6, -14, 1.1, 0, Math.PI * 2); ctx.fill();
+  // Glow halo around eyes
+  ctx.fillStyle = "rgba(255,200,80,0.15)";
+  ctx.beginPath(); ctx.arc(-8, -14, 5, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(6, -14, 5, 0, Math.PI * 2); ctx.fill();
+
+  // A few rain droplets falling out of the bottom.
+  ctx.fillStyle = "#7aa8d0";
+  [[-14, 6], [-4, 8], [12, 8], [18, 5]].forEach(([x, y]) => {
+    ctx.beginPath();
+    ctx.ellipse(x, y, 1, 1.8, 0, 0, Math.PI * 2);
+    ctx.fill();
+  });
+}
+
+// ── Workers (generic profession portraits) ───────────────────────────────
+
+function drawWorkerFarmer(ctx) {
+  // Anonymous farm-hand: broad straw hat + simple tunic + scythe over shoulder.
+  drawAvatarFrame(ctx, { bg: "#e8f0d4", border: "#4f8c3a" });
+  // Scythe (behind shoulder)
+  ctx.strokeStyle = "#6a4818";
+  ctx.lineWidth = 2.4;
+  ctx.lineCap = "round";
+  ctx.beginPath();
+  ctx.moveTo(14, 22);
+  ctx.lineTo(-4, -22);
+  ctx.stroke();
+  // Scythe blade
+  ctx.fillStyle = "#c8cdd4";
+  ctx.beginPath();
+  ctx.moveTo(-4, -22);
+  ctx.quadraticCurveTo(-18, -22, -22, -10);
+  ctx.quadraticCurveTo(-12, -16, -6, -18);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = "#3a3a40";
+  ctx.lineWidth = 1.2;
+  ctx.stroke();
+  // Body — earthy tunic + leather suspender hint
+  drawShoulders(ctx, "#4f8c3a", "#1a3008");
+  ctx.strokeStyle = "#6a4818";
+  ctx.lineWidth = 1.6;
+  ctx.beginPath();
+  ctx.moveTo(-6, 8); ctx.lineTo(-4, 26);
+  ctx.moveTo(6, 8); ctx.lineTo(4, 26);
+  ctx.stroke();
+  // Head — sun-tanned, no beard
+  drawHead(ctx, { skin: "#e8b078", outline: "#5a3a18", brow: "#4a3014" });
+  // Sun freckles
+  ctx.fillStyle = "rgba(150,90,40,0.5)";
+  [[-3, -3], [3, -3], [0, -4], [-5, -1], [4, -1]].forEach(([x, y]) => {
+    ctx.beginPath();
+    ctx.arc(x, y, 0.4, 0, Math.PI * 2);
+    ctx.fill();
+  });
+  // Straw hat — wide brim, slightly tilted
+  ctx.fillStyle = "#e8c068";
+  ctx.beginPath();
+  ctx.ellipse(0, -16, 22, 4.5, -0.05, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = "#7a5408";
+  ctx.lineWidth = 1.4;
+  ctx.stroke();
+  // Hat crown
+  ctx.fillStyle = "#d4a850";
+  ctx.beginPath();
+  ctx.ellipse(0, -20, 9, 6, 0, Math.PI, 0);
+  ctx.fill();
+  ctx.strokeStyle = "#7a5408";
+  ctx.lineWidth = 1.2;
+  ctx.stroke();
+  // Hat band
+  ctx.fillStyle = "#4a3014";
+  ctx.fillRect(-9, -17, 18, 1.8);
+  // Straw weave stripes
+  ctx.strokeStyle = "rgba(120,84,8,0.5)";
+  ctx.lineWidth = 0.5;
+  for (let i = -18; i <= 18; i += 4) {
+    ctx.beginPath();
+    ctx.moveTo(i, -16);
+    ctx.lineTo(i + 1, -13);
+    ctx.stroke();
+  }
+}
+
+function drawWorkerLumberjack(ctx) {
+  // Anonymous logger: knit cap + flannel + axe across chest.
+  drawAvatarFrame(ctx, { bg: "#f0dcc0", border: "#7a4f1f" });
+  // Axe — handle crossed behind, head on left shoulder
+  ctx.strokeStyle = "#5a3a18";
+  ctx.lineWidth = 3;
+  ctx.lineCap = "round";
+  ctx.beginPath();
+  ctx.moveTo(18, 24);
+  ctx.lineTo(-20, -18);
+  ctx.stroke();
+  // Wood grain on handle
+  ctx.strokeStyle = "rgba(40,16,4,0.5)";
+  ctx.lineWidth = 0.6;
+  ctx.beginPath();
+  ctx.moveTo(10, 14); ctx.lineTo(0, 0);
+  ctx.stroke();
+  // Axe head — wedge of steel
+  ctx.fillStyle = "#9099a4";
+  ctx.beginPath();
+  ctx.moveTo(-20, -18);
+  ctx.lineTo(-26, -10);
+  ctx.lineTo(-22, -4);
+  ctx.lineTo(-12, -14);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = "#2a3038";
+  ctx.lineWidth = 1.4;
+  ctx.stroke();
+  // Axe edge highlight
+  ctx.strokeStyle = "rgba(220,228,240,0.8)";
+  ctx.lineWidth = 0.8;
+  ctx.beginPath();
+  ctx.moveTo(-25, -10); ctx.lineTo(-21, -5);
+  ctx.stroke();
+  // Body — red plaid flannel
+  drawShoulders(ctx, "#a8341a", "#3a0a04");
+  // Plaid pattern — black grid lines
+  ctx.strokeStyle = "rgba(0,0,0,0.5)";
+  ctx.lineWidth = 1;
+  [-20, -12, -4, 4, 12, 20].forEach((x) => {
+    ctx.beginPath(); ctx.moveTo(x, 8); ctx.lineTo(x, 32); ctx.stroke();
+  });
+  [12, 18, 24, 30].forEach((y) => {
+    ctx.beginPath(); ctx.moveTo(-26, y); ctx.lineTo(26, y); ctx.stroke();
+  });
+  // Plaid lighter cross
+  ctx.strokeStyle = "rgba(255,200,180,0.3)";
+  ctx.lineWidth = 0.7;
+  [-16, -8, 0, 8, 16].forEach((x) => {
+    ctx.beginPath(); ctx.moveTo(x, 8); ctx.lineTo(x, 32); ctx.stroke();
+  });
+  // Head — weathered, dark beard
+  drawHead(ctx, { skin: "#d49060", outline: "#3a1e08", brow: "#1a0e04" });
+  // Full beard
+  ctx.fillStyle = "#3a2010";
+  ctx.beginPath();
+  ctx.moveTo(-10, -2);
+  ctx.bezierCurveTo(-12, 6, -6, 10, 0, 9);
+  ctx.bezierCurveTo(6, 10, 12, 6, 10, -2);
+  ctx.bezierCurveTo(8, 2, -8, 2, -10, -2);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = "#0a0604";
+  ctx.lineWidth = 1;
+  ctx.stroke();
+  // Mustache strip over mouth
+  ctx.fillStyle = "#3a2010";
+  ctx.beginPath();
+  ctx.ellipse(0, -1, 6, 1.6, 0, 0, Math.PI * 2);
+  ctx.fill();
+  // Knit cap — rounded with cuff
+  ctx.fillStyle = "#5a4030";
+  ctx.beginPath();
+  ctx.ellipse(0, -16, 15, 10, 0, Math.PI, 0);
+  ctx.fill();
+  ctx.strokeStyle = "#1a0e04";
+  ctx.lineWidth = 1.4;
+  ctx.stroke();
+  // Cap cuff stripe
+  ctx.fillStyle = "#7a5a44";
+  ctx.fillRect(-15, -12, 30, 3);
+  ctx.strokeStyle = "#1a0e04";
+  ctx.lineWidth = 0.8;
+  ctx.strokeRect(-15, -12, 30, 3);
+  // Cap pom-pom
+  ctx.fillStyle = "#7a5a44";
+  ctx.beginPath();
+  ctx.arc(0, -26, 3, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = "#1a0e04";
+  ctx.lineWidth = 1;
+  ctx.stroke();
+}
+
+function drawWorkerMiner(ctx) {
+  // Anonymous miner: helmet w/ lantern + leather vest + pickaxe over shoulder.
+  drawAvatarFrame(ctx, { bg: "#d4d8e0", border: "#5a6470" });
+  // Pickaxe — handle behind right shoulder
+  ctx.strokeStyle = "#5a3a14";
+  ctx.lineWidth = 2.6;
+  ctx.lineCap = "round";
+  ctx.beginPath();
+  ctx.moveTo(-12, 26);
+  ctx.lineTo(14, -16);
+  ctx.stroke();
+  // Pickaxe head — double-pointed iron
+  ctx.fillStyle = "#5a6470";
+  ctx.beginPath();
+  ctx.moveTo(14, -16);
+  ctx.lineTo(24, -22);
+  ctx.lineTo(22, -18);
+  ctx.lineTo(16, -12);
+  ctx.lineTo(8, -10);
+  ctx.lineTo(6, -14);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = "#1a1e24";
+  ctx.lineWidth = 1.4;
+  ctx.stroke();
+  ctx.fillStyle = "rgba(200,210,224,0.6)";
+  ctx.beginPath();
+  ctx.moveTo(14, -16); ctx.lineTo(20, -20); ctx.lineTo(18, -18);
+  ctx.closePath();
+  ctx.fill();
+  // Body — dark leather vest over dirt-coloured undershirt
+  drawShoulders(ctx, "#5a4530", "#1a1006");
+  // Vest lighter strip down centre
+  ctx.fillStyle = "#7a6048";
+  ctx.beginPath();
+  ctx.moveTo(-4, 8);
+  ctx.lineTo(4, 8);
+  ctx.lineTo(5, 32);
+  ctx.lineTo(-5, 32);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = "#1a1006";
+  ctx.lineWidth = 1.2;
+  ctx.stroke();
+  // Vest buttons
+  ctx.fillStyle = "#3a2812";
+  [14, 22, 28].forEach((y) => {
+    ctx.beginPath(); ctx.arc(0, y, 1.2, 0, Math.PI * 2); ctx.fill();
+  });
+  // Head — sooty cheeks
+  drawHead(ctx, { skin: "#c89878", outline: "#3a1e08", brow: "#1a0e04" });
+  // Soot smudges
+  ctx.fillStyle = "rgba(40,32,28,0.55)";
+  ctx.beginPath(); ctx.ellipse(-6, 0, 2.4, 1.2, 0.2, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(5, -1, 1.8, 0.9, -0.2, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(2, 2, 1.2, 0.6, 0, 0, Math.PI * 2); ctx.fill();
+  // Helmet — domed, brown leather + brass strap
+  ctx.fillStyle = "#7a4a18";
+  ctx.beginPath();
+  ctx.ellipse(0, -16, 14, 10, 0, Math.PI, 0);
+  ctx.fill();
+  ctx.strokeStyle = "#3a1808";
+  ctx.lineWidth = 1.4;
+  ctx.stroke();
+  // Helmet brim
+  ctx.fillStyle = "#5a3408";
+  ctx.beginPath();
+  ctx.ellipse(0, -10, 16, 3, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = "#3a1808";
+  ctx.lineWidth = 1.2;
+  ctx.stroke();
+  // Brass band
+  ctx.fillStyle = "#c89030";
+  ctx.fillRect(-14, -12, 28, 1.4);
+  // Lantern affixed to front of helmet
+  ctx.fillStyle = "#3a3038";
+  ctx.beginPath();
+  rrect(ctx, -3, -18, 6, 6, 1);
+  ctx.fill();
+  ctx.strokeStyle = "#1a1c20";
+  ctx.lineWidth = 1.2;
+  ctx.stroke();
+  // Lantern glass + glow
+  ctx.fillStyle = "#fff080";
+  ctx.fillRect(-2, -17, 4, 4);
+  ctx.fillStyle = "rgba(255,200,80,0.45)";
+  ctx.beginPath();
+  ctx.arc(0, -15, 8, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = "#fff";
+  ctx.fillRect(-0.6, -16.4, 1, 1);
+}
+
+function rrect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+
+function drawWorkerBaker(ctx) {
+  // Anonymous baker: tall chef's toque + flour-dusted apron + rolling pin.
+  // Deliberately a different silhouette from Mira (NPC baker) — male/generic,
+  // toque instead of bun, clean-shaven.
+  drawAvatarFrame(ctx, { bg: "#fff4d8", border: "#c89b6a" });
+  // Rolling pin held horizontally across chest
+  ctx.fillStyle = "#d4a373";
+  rrect(ctx, -22, 16, 44, 6, 3);
+  ctx.fill();
+  ctx.strokeStyle = "#5a3a14";
+  ctx.lineWidth = 1.4;
+  ctx.stroke();
+  // Rolling pin handles (darker caps)
+  ctx.fillStyle = "#7a5028";
+  rrect(ctx, -26, 17.5, 6, 3, 1);
+  ctx.fill();
+  ctx.strokeStyle = "#3a1808";
+  ctx.lineWidth = 1;
+  ctx.stroke();
+  rrect(ctx, 20, 17.5, 6, 3, 1);
+  ctx.fill();
+  ctx.stroke();
+  // Wood grain on pin
+  ctx.strokeStyle = "rgba(90,58,20,0.4)";
+  ctx.lineWidth = 0.5;
+  [18, 19.5, 21].forEach((y) => {
+    ctx.beginPath();
+    ctx.moveTo(-18, y); ctx.lineTo(18, y);
+    ctx.stroke();
+  });
+  // Body — plain off-white shirt
+  drawShoulders(ctx, "#f4e0c0", "#a88040");
+  // Apron (creamier band over shirt, w/ flour smudges)
+  ctx.fillStyle = "#e8d4a8";
+  ctx.beginPath();
+  ctx.moveTo(-10, 8);
+  ctx.lineTo(10, 8);
+  ctx.lineTo(14, 32);
+  ctx.lineTo(-14, 32);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = "#a88040";
+  ctx.lineWidth = 1.2;
+  ctx.stroke();
+  // Flour dust on apron
+  ctx.fillStyle = "rgba(255,255,255,0.85)";
+  [[-6, 14, 2.4], [4, 18, 2], [-2, 22, 1.8], [8, 26, 1.4], [-8, 24, 1.6]].forEach(([x, y, r]) => {
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fill();
+  });
+  // Apron strap
+  ctx.strokeStyle = "#a88040";
+  ctx.lineWidth = 1.2;
+  ctx.beginPath();
+  ctx.moveTo(-8, 8); ctx.lineTo(-2, 0);
+  ctx.moveTo(8, 8); ctx.lineTo(2, 0);
+  ctx.stroke();
+  // Head — clean-shaven, friendly
+  drawHead(ctx, { skin: "#f4c896", outline: "#4a2a10", brow: "#3a1808" });
+  // Add a slight smirk over the default mouth
+  ctx.strokeStyle = "#5a2a08";
+  ctx.lineWidth = 1.4;
+  ctx.lineCap = "round";
+  ctx.beginPath();
+  ctx.moveTo(-3, 0);
+  ctx.quadraticCurveTo(0, 3, 3, 0);
+  ctx.stroke();
+  // Chef's toque — tall puffy mushroom, distinct from any other hat
+  ctx.fillStyle = "#fff8e8";
+  ctx.beginPath();
+  ctx.ellipse(0, -16, 11, 4, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = "#a88040";
+  ctx.lineWidth = 1.4;
+  ctx.stroke();
+  // Toque body — three puff lobes
+  ctx.fillStyle = "#fff8e8";
+  ctx.beginPath();
+  ctx.arc(-7, -22, 6, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(7, -22, 6, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(0, -26, 7, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = "#a88040";
+  ctx.lineWidth = 1.4;
+  ctx.beginPath();
+  ctx.arc(-7, -22, 6, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(7, -22, 6, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(0, -26, 7, 0, Math.PI * 2);
+  ctx.stroke();
+  // Toque highlights
+  ctx.fillStyle = "rgba(255,255,255,0.85)";
+  ctx.beginPath(); ctx.arc(-2, -28, 1.6, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(-8, -24, 1.2, 0, Math.PI * 2); ctx.fill();
+  // Flour dusting on hat
+  ctx.fillStyle = "rgba(220,180,120,0.4)";
+  ctx.beginPath();
+  ctx.ellipse(0, -17, 10, 1.4, 0, 0, Math.PI * 2);
+  ctx.fill();
+}
+
 // ── Registry ───────────────────────────────────────────────────────────────
 
 export const ICONS = {
@@ -802,4 +1301,10 @@ export const ICONS = {
   boss_ember_drake:   { label:"Ember Drake",   color:"#c84818", draw:drawEmberDrake },
   boss_old_stoneface: { label:"Old Stoneface", color:"#5a4a3a", draw:drawOldStoneface },
   boss_mossback:      { label:"Mossback",      color:"#3a6018", draw:drawMossback },
+  boss_storm:         { label:"The Storm",     color:"#1a2e4a", draw:drawStorm },
+  // Workers (generic, profession-themed silhouettes — distinct from named NPCs)
+  worker_farmer:     { label:"Farmer (worker)",     color:"#4f8c3a", draw:drawWorkerFarmer },
+  worker_lumberjack: { label:"Lumberjack (worker)", color:"#7a4f1f", draw:drawWorkerLumberjack },
+  worker_miner:      { label:"Miner (worker)",      color:"#7a8490", draw:drawWorkerMiner },
+  worker_baker:      { label:"Baker (worker)",      color:"#c89b6a", draw:drawWorkerBaker },
 };

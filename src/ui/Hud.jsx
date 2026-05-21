@@ -6,7 +6,7 @@ import Icon from "./primitives/Icon.jsx";
 import Pill from "./primitives/Pill.jsx";
 import Popover from "./primitives/Popover.jsx";
 import { useCountUp } from "./primitives/useCountUp.js";
-import { SeasonWheel } from "./puzzleBoard.jsx";
+import { SeasonIndicator } from "./puzzleBoard.jsx";
 
 export const SEASON_EFFECTS = ["", "", "", ""];
 
@@ -175,12 +175,13 @@ export function Hud({ state, dispatch, inventorySearchOpen, onInventorySearchTog
 
       <div className="flex items-center gap-2 flex-1 justify-center min-w-0 flex-wrap">
         {onBoard && (
-          <SeasonWheel
+          <SeasonIndicator
             turnsUsed={turnsUsed ?? 0}
             turnBudget={turnBudget || 1}
             turnsRemaining={turnsRemaining}
             seasonIdx={seasonIdx}
             seasonName={season.name}
+            bespoke={!!state.settings?.bespokeSeasonWidget}
           />
         )}
         {showTide && <TideChip fish={state.fish} />}

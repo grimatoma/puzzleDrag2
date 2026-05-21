@@ -673,13 +673,29 @@ export class MapScene extends Phaser.Scene {
   }
 
   spawnInitialAmbient() {
-    // A few drifting clouds.
+    // A few drifting clouds. Each cloud is a single filled path with
+    // multiple lobes on top and a smooth base — far softer than the
+    // stacked-ellipse silhouettes that used to render here.
     for (let i = 0; i < 4; i++) {
       const g = this.add.graphics();
-      g.fillStyle(0xfff8e0, 0.55);
-      for (let j = 0; j < 4; j++) {
-        g.fillEllipse(j * 14 - 18, Math.sin(j) * 4, 28 + j * 4, 16);
-      }
+      const scale = 0.85 + Math.random() * 0.4;
+      // Soft fill body
+      g.fillStyle(0xfff8e0, 0.7);
+      g.beginPath();
+      g.moveTo(-30 * scale, 6 * scale);
+      g.lineTo(-30 * scale, 0);
+      g.bezierCurveTo(-36 * scale, -4 * scale, -32 * scale, -16 * scale, -22 * scale, -14 * scale);
+      g.bezierCurveTo(-22 * scale, -26 * scale, -6 * scale, -28 * scale, -2 * scale, -18 * scale);
+      g.bezierCurveTo(2 * scale, -30 * scale, 18 * scale, -24 * scale, 18 * scale, -14 * scale);
+      g.bezierCurveTo(28 * scale, -18 * scale, 36 * scale, -8 * scale, 30 * scale, 0);
+      g.lineTo(30 * scale, 6 * scale);
+      g.bezierCurveTo(30 * scale, 14 * scale, -30 * scale, 14 * scale, -30 * scale, 6 * scale);
+      g.closePath();
+      g.fillPath();
+      // Brighter inner highlight on the top-left lobes
+      g.fillStyle(0xffffff, 0.35);
+      g.fillEllipse(-10 * scale, -16 * scale, 14 * scale, 6 * scale);
+      g.fillEllipse(6 * scale, -18 * scale, 10 * scale, 4 * scale);
       g.setAlpha(0.55);
       g.x = (i / 4) * WORLD_W;
       g.y = 80 + Math.random() * 70;

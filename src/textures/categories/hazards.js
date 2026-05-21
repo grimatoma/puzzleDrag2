@@ -309,8 +309,74 @@ function drawWolfHazard(ctx) {
   ctx.fill();
 }
 
+function drawSmokeHazard(ctx) {
+  drawShadow(ctx, 14, 3);
+  // Smoldering ember base
+  ctx.fillStyle = "#3a1a08";
+  ctx.beginPath();
+  ctx.ellipse(0, 18, 10, 3, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = "#1a0a04";
+  ctx.lineWidth = 1;
+  ctx.stroke();
+  // Glowing ember spots
+  ctx.fillStyle = "#c84818";
+  ctx.beginPath();
+  ctx.arc(-3, 17, 1.6, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(4, 18, 1.4, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = "#f8a020";
+  ctx.beginPath();
+  ctx.arc(-3, 17, 0.7, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Stack of three smoke puffs rising. Each puff is a soft-edged radial
+  // blob with several inner ellipses to give the cloud-like volume.
+  function puff(cx, cy, r, alpha) {
+    const grd = ctx.createRadialGradient(cx, cy, r * 0.2, cx, cy, r);
+    grd.addColorStop(0, `rgba(220,220,228,${alpha})`);
+    grd.addColorStop(0.55, `rgba(150,150,162,${alpha * 0.85})`);
+    grd.addColorStop(1, `rgba(80,80,92,${alpha * 0.0})`);
+    ctx.fillStyle = grd;
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.fill();
+    // Inner lobe darker
+    ctx.fillStyle = `rgba(110,110,120,${alpha * 0.4})`;
+    ctx.beginPath();
+    ctx.ellipse(cx - r * 0.25, cy + r * 0.15, r * 0.5, r * 0.32, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // Highlight nubbin top-left
+    ctx.fillStyle = `rgba(255,255,255,${alpha * 0.45})`;
+    ctx.beginPath();
+    ctx.ellipse(cx - r * 0.35, cy - r * 0.4, r * 0.4, r * 0.28, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  puff(2, 8, 9, 0.85);
+  puff(-3, -3, 11, 0.8);
+  puff(5, -15, 12, 0.7);
+  puff(-6, -20, 6, 0.5);
+
+  // Soft outline tying the cloud together (so it reads as one form, not
+  // three separate blobs)
+  ctx.strokeStyle = "rgba(80,80,90,0.5)";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(-6, 14);
+  ctx.bezierCurveTo(-14, 8, -10, -2, -6, -4);
+  ctx.bezierCurveTo(-14, -16, -2, -26, 6, -20);
+  ctx.bezierCurveTo(16, -22, 18, -12, 12, -6);
+  ctx.bezierCurveTo(18, 0, 14, 12, 8, 14);
+  ctx.bezierCurveTo(6, 16, -4, 16, -6, 14);
+  ctx.closePath();
+  ctx.stroke();
+}
+
 export const ICONS = {
-  hazard_rats: { label:"Rat Swarm", color:"#3a2818", draw:drawRatsHazard },
-  hazard_fire: { label:"Fire",      color:"#f87018", draw:drawFireHazard },
-  hazard_wolf: { label:"Wolves",    color:"#3a3a40", draw:drawWolfHazard },
+  hazard_rats:  { label:"Rat Swarm", color:"#3a2818", draw:drawRatsHazard },
+  hazard_fire:  { label:"Fire",      color:"#f87018", draw:drawFireHazard },
+  hazard_wolf:  { label:"Wolves",    color:"#3a3a40", draw:drawWolfHazard },
+  hazard_smoke: { label:"Smoke",     color:"#7a7a82", draw:drawSmokeHazard },
 };

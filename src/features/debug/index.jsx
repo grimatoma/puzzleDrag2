@@ -155,6 +155,22 @@ export default function DebugModal({ state, dispatch }) {
             </div>
           </div>
 
+          {/* Display toggles */}
+          <div>
+            <div className="hl-section-label !text-[10px] mb-1.5">Display</div>
+            <div className="grid grid-cols-1 gap-1.5">
+              <DebugBtn
+                color={state.settings?.bespokeSeasonWidget ? 'teal' : 'slate'}
+                onClick={() => dispatch({ type: 'SETTINGS/TOGGLE', key: 'bespokeSeasonWidget' })}
+              >
+                {state.settings?.bespokeSeasonWidget ? '● ON' : '○ OFF'} — Bespoke season widget
+              </DebugBtn>
+              <div className="text-[10px] italic text-on-panel-faint text-center">
+                Replaces the season wheel with a per-season mini-scene.
+              </div>
+            </div>
+          </div>
+
           {/* Triggers & Reset */}
           <div>
             <div className="hl-section-label !text-[10px] mb-1.5">Triggers</div>
