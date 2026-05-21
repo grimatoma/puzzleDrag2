@@ -62,9 +62,9 @@ export function buildTownPlan({ zoneId = "home", plotCount = 12, boardKinds = []
   // lower-left water's edge. When a wing is occupied, the building rows below
   // give it room.
   const BOARD_SPOTS = {
-    farm: { cx: 118, cy: 286, w: 152, h: 142 },
-    mine: { cx: W - 116, cy: 232, w: 162, h: 150 },
-    fish: { cx: 132, cy: 446, w: 140, h: 130 },
+    farm: { cx: 118, cy: ROWS[2].streetY - 71, w: 152, h: 142 },
+    mine: { cx: W - 116, cy: ROWS[2].streetY - 75, w: 162, h: 150 },
+    fish: { cx: 132, cy: ROWS[2].streetY - 65, w: 140, h: 130 },
   };
   const boards = kinds.filter((k) => BOARD_SPOTS[k]).map((k) => ({ kind: k, ...BOARD_SPOTS[k] }));
   const hasLeftBoard = kinds.includes("farm") || kinds.includes("fish");
@@ -118,6 +118,13 @@ export function buildTownPlan({ zoneId = "home", plotCount = 12, boardKinds = []
     { x1: 150, y1: ROWS[0].streetY, x2: W - 150, y2: ROWS[0].streetY, width: 24 }, // back lane
     { x1: PLAZA.cx, y1: ROWS[0].streetY, x2: PLAZA.cx, y2: H - 16, width: 30 },     // vertical connector through the plaza
   ];
+
+  if (hasLeftBoard) {
+    streets.push({ x1: 118, y1: ROWS[2].streetY, x2: 118, y2: ROWS[2].streetY - 20, width: 24 });
+  }
+  if (hasRightBoard) {
+    streets.push({ x1: W - 116, y1: ROWS[2].streetY, x2: W - 116, y2: ROWS[2].streetY - 20, width: 24 });
+  }
 
   // Street furniture so the place reads as lived-in.
   const props = [
