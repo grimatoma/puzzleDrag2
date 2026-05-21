@@ -77,4 +77,17 @@ describe("disarm-other-tools — single-armed invariant", () => {
     expect(s1.toolPending).toBeNull();
     expect(s1.tools.rake).toBe(1);
   });
+
+  it("switching from one tap-target tool to another leaves the new tool armed", () => {
+    // Regression: the in-board hotbar/grid single-tap used to call
+    // disarmOtherTools without arming the new tool, leaving the player with
+    // nothing selected after a switch. The CANCEL_TOOL + USE_TOOL sequence
+    // the UI now dispatches must end with the new tool armed.
+    const s0 = { ...withTools({ tools: { bomb: 1, rake: 1 } }), toolPending: "bomb" };
+    const s1 = rootReducer(s0, { type: "CANCEL_TOOL" });
+    const s2 = rootReducer(s1, { type: "USE_TOOL", key: "rake" });
+    expect(s2.toolPending).toBe("rake");
+    expect(s2.tools.bomb).toBe(1);
+    expect(s2.tools.rake).toBe(1);
+  });
 });
