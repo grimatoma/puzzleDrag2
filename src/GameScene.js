@@ -290,6 +290,46 @@ export class GameScene extends Phaser.Scene {
     this.cameras.main.shake(duration, intensity);
   }
 
+  // Brief squash-stretch when a falling tile lands. Reads the sprite's
+  // current scaleX/scaleY as the rest state so the bounce composes with
+  // whatever tileSpriteScale is in effect at the current resolution.
+  _landingBounce(sprite) {
+    if (!sprite?.active) return;
+    const baseSx = sprite.scaleX;
+    const baseSy = sprite.scaleY;
+    this.tweens.add({
+      targets: sprite,
+      scaleX: baseSx * 1.08,
+      scaleY: baseSy * 0.88,
+      duration: this._dur(70),
+      ease: "Quad.Out",
+      yoyo: true,
+      onComplete: () => {
+        if (sprite.active) sprite.setScale(baseSx, baseSy);
+      },
+    });
+  }
+
+  // Golden ring + soft sparkle that radiates out from a tile spawning
+  // as a chain upgrade. Pairs with the scale-pop on the tile itself.
+  _upgradeSpawnBurst(x, y) {
+    const ring = this.add.graphics().setDepth(11);
+    const ro = { r: 5 * this.tileScale, a: 1 };
+    this.tweens.add({
+      targets: ro,
+      r: 36 * this.tileScale,
+      a: 0,
+      duration: this._dur(380),
+      ease: "Quad.Out",
+      onUpdate: () => {
+        ring.clear();
+        ring.lineStyle(3 * this.tileScale, 0xffd248, ro.a);
+        ring.strokeCircle(x, y, ro.r);
+      },
+      onComplete: () => ring.destroy(),
+    });
+  }
+
   _updateHazardAtmosphere() {
     if (!this.hazardVignette) return;
     const fire = this.registry.get("hazardFire");
@@ -712,10 +752,12 @@ export class GameScene extends Phaser.Scene {
           const x = this.boardX + c * ts + ts / 2;
           const y = this.boardY + r * ts + ts / 2;
           let res;
+          let isUpgrade = false;
           if (!initial && this.pendingUpgrades.length) {
             const idx = this.pendingUpgrades.findIndex(u => u.col === c);
             if (idx !== -1) {
               res = this.pendingUpgrades.splice(idx, 1)[0].res;
+              isUpgrade = true;
             }
           }
           // Phase 3b — try the per-(zone, in-session season) drop table
@@ -724,10 +766,34 @@ export class GameScene extends Phaser.Scene {
           // existing weighted pool sampler.
           if (!res) res = this._pickFromZoneSeasonDrops();
           if (!res) res = this._randomFromPool(workerPool);
-          const tile = new TileObj(this, x, initial ? y - 500 - Phaser.Math.Between(0, 100) : y - 140, c, r, res);
-          tile.sprite.setScale(this.tileSpriteScale);
-          this.grid[r][c] = tile;
-          this.tweens.add({ targets: tile.sprite, y, duration: this._dur(initial ? 450 + r * 28 : 210), ease: "Back.Out" });
+          if (isUpgrade) {
+            // Spawn upgrades in place at scale 0 and pop them in — sells the
+            // moment the chain "promoted" the tile rather than burying it
+            // in the regular fill cascade.
+            const tile = new TileObj(this, x, y, c, r, res);
+            tile.sprite.setScale(0);
+            this.grid[r][c] = tile;
+            const finalScale = this.tileSpriteScale;
+            this.tweens.add({
+              targets: tile.sprite,
+              scale: finalScale,
+              duration: this._dur(380),
+              ease: "Back.Out",
+            });
+            this.emitCollectParticles(x, y, res.color || "#ffd248", 4);
+            this._upgradeSpawnBurst(x, y);
+          } else {
+            const tile = new TileObj(this, x, initial ? y - 500 - Phaser.Math.Between(0, 100) : y - 140, c, r, res);
+            tile.sprite.setScale(this.tileSpriteScale);
+            this.grid[r][c] = tile;
+            this.tweens.add({
+              targets: tile.sprite,
+              y,
+              duration: this._dur(initial ? 450 + r * 28 : 210),
+              ease: "Back.Out",
+              onComplete: () => this._landingBounce(tile.sprite),
+            });
+          }
         }
       }
     }
@@ -778,7 +844,12 @@ export class GameScene extends Phaser.Scene {
           this.grid[write][c] = tile;
           this.grid[r][c] = null;
           tile.row = write;
-          this.tweens.add({ targets: tile.sprite, y: this.boardY + write * ts + ts / 2, duration: this._dur(190) });
+          this.tweens.add({
+            targets: tile.sprite,
+            y: this.boardY + write * ts + ts / 2,
+            duration: this._dur(190),
+            onComplete: () => this._landingBounce(tile.sprite),
+          });
         }
         write--;
       }
