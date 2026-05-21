@@ -1178,9 +1178,9 @@ export class GameScene extends Phaser.Scene {
     this.clearPath(false);
     this.addToPath(tile);
     this.dimUnselectableTiles(tile.res.key);
-    this.showChainBadge();
     this.showGrassHover();
-    this.updateChainBadge();
+    this.updateGrassHover();
+    this._emitChainUpdate();
     // Subtle haptic tick on drag-start, gated by user setting.
     if (this.registry.get("hapticsOn") && navigator.vibrate) {
       try { navigator.vibrate(10); } catch { /* unsupported */ }
@@ -1196,7 +1196,8 @@ export class GameScene extends Phaser.Scene {
       last.setSelected(false);
       this.path.pop();
       this.redrawPath();
-      this.updateChainBadge();
+      this.updateGrassHover();
+      this._emitChainUpdate();
       return;
     }
     if (tile.selected) return;
@@ -1210,7 +1211,8 @@ export class GameScene extends Phaser.Scene {
     tile.pulse();
     this.path.push(tile);
     this.redrawPath();
-    this.updateChainBadge();
+    this.updateGrassHover();
+    this._emitChainUpdate();
   }
 
   redrawPath() {
@@ -1364,7 +1366,8 @@ export class GameScene extends Phaser.Scene {
   endPath() {
     if (!this.dragging) return;
     this.dragging = false;
-    this.hideChainBadge();
+    this.hideGrassHover();
+    this.events.emit(SCENE_EVENTS.CHAIN_UPDATE, null);
     this.clearDimming();
     const minChain = this._effectiveMinChain();
     if (this.path.length >= minChain) this.collectPath();
@@ -1534,7 +1537,8 @@ export class GameScene extends Phaser.Scene {
     this.pathStars.forEach((s) => s.destroy());
     this.pathStars = [];
     if (this.pathNodeG) { this.pathNodeG.clear(); }
-    this.hideChainBadge();
+    this.hideGrassHover();
+    this.events.emit(SCENE_EVENTS.CHAIN_UPDATE, null);
   }
 
   collectPath() {
@@ -1608,45 +1612,6 @@ export class GameScene extends Phaser.Scene {
     this._prevStarGroups = 0;
     this.time.delayedCall(300, () => this.collapseBoard());
     this.time.delayedCall(310, () => this._syncGridToState());
-  }
-
-  // ─── Chain badge (above board) ────────────────────────────────────────────
-
-  showChainBadge() {
-    if (this.chainBadge) return;
-    // In landscape the badge sits above the board but boardY ≈ boardFrame so cy
-    // goes negative and gets clipped. React renders it in the side panel instead.
-    if (this.scale.width > this.scale.height) {
-      this._emitChainUpdate();
-      return;
-    }
-    const dpr = this.dpr;
-    const cx = this.boardX + (COLS * this.tileSize) / 2;
-    const cy = this.boardY - this.boardFrame - 22 * dpr;
-    this.chainBadge = this.add.container(cx, cy).setDepth(40);
-    const bg = rounded(this, -70 * dpr, -16 * dpr, 140 * dpr, 32 * dpr, 16 * dpr, 0x2b2218, 0.9, 0xffd248, 2 * dpr);
-    this.chainBadgeText = this.add.text(0, 0, "", { fontFamily: "Arial", fontSize: `${14 * dpr}px`, color: "#ffd248", fontStyle: "bold" }).setOrigin(0.5);
-    this.chainBadge.add([bg, this.chainBadgeText]);
-    this._emitChainUpdate();
-  }
-
-  updateChainBadge() {
-    const n = this.path.length;
-    const res = n ? this.path[0].res : null;
-    const next = res ? this.nextResource(res) : null;
-    const effThresh = this.registry.get("effectiveThresholds") ?? UPGRADE_THRESHOLDS;
-    const k = next ? upgradeCountForChain(n, res.key, effThresh) : 0;
-    if (this.chainBadge) {
-      this.chainBadgeText.setText(k > 0 ? `chain × ${n}   +${k}★` : `chain × ${n}`);
-    }
-    this.updateGrassHover();
-    this._emitChainUpdate();
-  }
-
-  hideChainBadge() {
-    if (this.chainBadge) { this.chainBadge.destroy(); this.chainBadge = null; this.chainBadgeText = null; }
-    this.hideGrassHover();
-    this.events.emit(SCENE_EVENTS.CHAIN_UPDATE, null);
   }
 
   // ─── Grass hover (cursor-following spawn preview) ─────────────────────────
