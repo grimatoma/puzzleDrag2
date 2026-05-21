@@ -30,6 +30,34 @@ describe("utils — clamp / contrast / adjacency", () => {
     expect(contrastRatio(0x808080, 0x808080)).toBeCloseTo(1, 3);
   });
 
+  it("contrastRatio calculates correct WCAG ratios for known colors", () => {
+    // White on black should be exactly 21:1
+    expect(contrastRatio(0xffffff, 0x000000)).toBeCloseTo(21, 1);
+
+    // White on white should be exactly 1:1
+    expect(contrastRatio(0xffffff, 0xffffff)).toBeCloseTo(1, 1);
+
+    // Black on black should be exactly 1:1
+    expect(contrastRatio(0x000000, 0x000000)).toBeCloseTo(1, 1);
+
+    // Red on white (approx 3.99:1)
+    expect(contrastRatio(0xff0000, 0xffffff)).toBeCloseTo(3.99, 1);
+
+    // Blue on white (approx 8.59:1)
+    expect(contrastRatio(0x0000ff, 0xffffff)).toBeCloseTo(8.59, 1);
+  });
+
+  it("contrastRatio ignores alpha bytes", () => {
+    // 0xff000000 should be treated as black (0x000000)
+    // Contrast with white should be 21
+    expect(contrastRatio(0xff000000, 0xffffff)).toBeCloseTo(21, 1);
+
+    // 0x12ffffff should be treated as white (0xffffff)
+    // Contrast with black should be 21
+    expect(contrastRatio(0x12ffffff, 0x000000)).toBeCloseTo(21, 1);
+  });
+
+
   it("isAdjacent: orthogonal only", () => {
     expect(isAdjacent({ row: 0, col: 0 }, { row: 0, col: 1 })).toBe(true);
     expect(isAdjacent({ row: 0, col: 0 }, { row: 1, col: 0 })).toBe(true);
