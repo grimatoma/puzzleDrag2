@@ -1,6 +1,27 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Guidance for agents working in this repo. `AGENTS.md` (Codex/ChatGPT, Cursor, Aider convention) and `GEMINI.md` (Gemini CLI) are symlinks to this file — there is one source of truth. Edit only `CLAUDE.md`.
+
+## Mental model (read first)
+
+Phaser 3 + React game. **React owns state** — `useReducer` in `prototype.jsx`, store logic in `src/state.js`, 29 auto-discovered feature slices under `src/features/*`. **Phaser owns the canvas** (`src/GameScene.js`) and receives state via a registry bridge (`src/phaserBridge.js`); the scene dispatches actions back to the reducer. Vite ships three independent entries from one repo: `/` (game, pulls Phaser), `/b/` (Balance Manager, Phaser-free), `/story/` (Story Tree Editor). They share state only via `localStorage`. All textures are drawn procedurally — no external image assets.
+
+## Where to look
+
+| Task | First stop | See also |
+|---|---|---|
+| Add a new resource/tile | `src/constants.js` + `src/textures/categories/` | `resource-add` skill |
+| Bug in drag/animation/board layout | `src/GameScene.js`, `src/phaserBridge.js` | `phaser-scene-debug` skill |
+| New feature panel (HUD, modal, screen) | `src/features/<name>/index.jsx` + `slice.js` | auto-discovered via `import.meta.glob` in `src/ui.jsx` |
+| New view or modal route | `src/router.js` (`KNOWN_VIEWS` / `KNOWN_MODALS`) | navigate via hash `#/view[/sub]` |
+| Tune balance values | `src/constants.js` (`UPGRADE_THRESHOLDS`, `MINE_ENTRY_TIERS`, `DAILY_REWARDS`) | Balance Manager at `/b/` |
+| Story beat content | `src/story.js`, `src/features/story/slice.js`, `src/state/storyEffects.js` | Story Editor at `/story/` |
+| Dispatched action silently does nothing | `SLICE_PRIMARY_ACTIONS` / `ALWAYS_RUN_SLICES` in `src/state.js` | `check-slice-action` skill |
+| Persisted save shape changed | bump `SAVE_SCHEMA_VERSION` in `src/constants.js` | reducer discards mismatched saves |
+| Land on a specific screen for QA | "Testing a specific UI" section below | `?visual=<id>`, `window.__hearthVisual` |
+| Reset state during testing | `localStorage.removeItem("hearth.save.v1")` | also `hearth.settings`, `hearth.tutorial.seen`, `hearth.disableDialogs` |
+
+The body below covers commands, architecture, the core game mechanic, testing harness, engineering rules, and PR workflow. Trust code over older docs (anything under `docs/` is allowed to drift; this file is kept current).
 
 ## Commands
 
@@ -31,8 +52,8 @@ This is a Phaser 3 + React game. React owns the page shell *and* the canonical g
 - `/story/` — the Story Tree Editor (`story/index.html` → `src/storyEditorEntry.jsx` → `src/storyEditor/`). Authoring tool for story beats.
 
 **Key files:**
-- `src/state.js` — external store. Redux-style `coreReducer` + `rawReducer` + `initialState`, with 26 feature slices auto-composed. Defines `SLICE_PRIMARY_ACTIONS` and `ALWAYS_RUN_SLICES` (see below).
-- `src/features/` — 26 feature directories, each with `index.jsx` + `slice.js`, auto-discovered by `src/ui.jsx` via `import.meta.glob`. This is the primary extension point for new game systems.
+- `src/state.js` — external store. Redux-style `coreReducer` + `rawReducer` + `initialState`, with 29 feature slices auto-composed. Defines `SLICE_PRIMARY_ACTIONS` and `ALWAYS_RUN_SLICES` (see below).
+- `src/features/` — 29 feature directories, each with `index.jsx` + `slice.js`, auto-discovered by `src/ui.jsx` via `import.meta.glob`. This is the primary extension point for new game systems.
 - `SAVE_SCHEMA_VERSION` (in `src/constants.js`) — bump whenever the persisted save shape changes. Forward migrations are intentionally **not** maintained: `src/state.js` discards saves whose `version` doesn't match, and the player starts fresh.
 - `src/featureFlags.js` — feature toggles plus `isDialogsDisabled()` (see "Testing a specific UI").
 - `src/router.js` — hash-based router; `KNOWN_VIEWS` / `KNOWN_MODALS` enumerate every deep-linkable surface. `parseHash`/`buildHash`/`useRouter` keep `state.view` and `state.modal` in sync with `location.hash`.
