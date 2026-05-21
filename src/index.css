@@ -143,6 +143,26 @@
   display: inline-block;
 }
 
+/* ── Season transition cinematic ───────────────────────────────────── */
+@keyframes seasonCinematicBg {
+  0%   { opacity: 0; }
+  25%  { opacity: 1; }
+  75%  { opacity: 1; }
+  100% { opacity: 0; }
+}
+@keyframes seasonCinematicCard {
+  0%   { opacity: 0; transform: translateY(18px) scale(0.92); letter-spacing: 0.4em; }
+  25%  { opacity: 1; transform: translateY(0)    scale(1);    letter-spacing: 0.05em; }
+  75%  { opacity: 1; transform: translateY(0)    scale(1);    letter-spacing: 0.05em; }
+  100% { opacity: 0; transform: translateY(-8px) scale(1.02); letter-spacing: 0.18em; }
+}
+.season-cinematic-bg {
+  animation: seasonCinematicBg 1100ms ease-in-out both;
+}
+.season-cinematic-card {
+  animation: seasonCinematicCard 1100ms cubic-bezier(.2,.7,.2,1) both;
+}
+
 /* Floating reward chip (e.g. "+15" above the HUD coin pill when a chain
    pays out). Rises and fades; pointer-events disabled so it never
    interferes with clicks. */
