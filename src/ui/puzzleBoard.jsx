@@ -847,7 +847,7 @@ function useAutoInspectArmed(state, onInspectChange, inspectedKey) {
 // ─── Tool grid (side-by-side left column) ────────────────────────────────
 
 export function PuzzleToolGrid({ state, onInspectChange, inspectedKey, dispatch }) {
-  const list = useMemo(() => buildVisibleToolList(state), [state.tools, state.toolPending, state.fertilizerActive]);
+  const list = useMemo(() => buildVisibleToolList(state), [state]);
   useAutoInspectArmed(state, onInspectChange, inspectedKey);
   const toolPending = state.toolPending;
   const fertilizerActive = state.fertilizerActive;
@@ -1142,7 +1142,7 @@ export function PuzzleHotbar({
   dragFromHotbar,
   onBeginDrag,
 }) {
-  const list = useMemo(() => buildVisibleToolList(state), [state.tools, state.toolPending, state.fertilizerActive]);
+  const list = useMemo(() => buildVisibleToolList(state), [state]);
   useAutoInspectArmed(state, onInspectChange, inspectedKey);
   const byKey = useMemo(() => Object.fromEntries(list.map((t) => [t.key, t])), [list]);
   // Each pin slot is positional: slot `i` shows whatever tool sits at
@@ -1290,7 +1290,7 @@ export function PuzzleToolModal({
   dragFromHotbar,
   onBeginDrag,
 }) {
-  const list = useMemo(() => buildVisibleToolList(state), [state.tools, state.toolPending, state.fertilizerActive]);
+  const list = useMemo(() => buildVisibleToolList(state), [state]);
   const byKey = useMemo(() => Object.fromEntries(list.map((t) => [t.key, t])), [list]);
   // The modal's selected tool defaults to whatever's already inspected;
   // otherwise the first visible tool so the detail area is never empty.

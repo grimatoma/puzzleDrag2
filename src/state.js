@@ -1073,24 +1073,28 @@ function coreReducer(state, action) {
       return evaluateAndApplyStoryBeat(state, { type: "craft_made", item: craftKey, count: 1 });
     }
     case "CRAFTING/CLAIM_CRAFT": {
-      // Mirror CRAFT_RECIPE for queued completions: claiming a ready queue
+      // Mirror CRAFT_RECIPE for queued completions: claiming the ready head
       // entry should fire `craft_made` so story beats, boss progress
       // (ember_drake counts mine_ingot crafts) and achievements
-      // (totalCrafted, distinct_crafts) all advance. The slice still owns the
-      // actual inventory mutation + queue removal; we only emit the event when
-      // the action would succeed.
-      const idx = action.payload?.idx ?? action.idx;
+      // (totalCrafted, distinct_crafts) all advance. Sequential queue: only
+      // idx 0 is claimable. The slice still owns the actual inventory
+      // mutation + queue removal; we only emit the event when the action
+      // would succeed.
+      const idx = action.payload?.idx ?? action.idx ?? 0;
+      if (idx !== 0) return state;
       const queue = state.craftQueue ?? [];
-      const entry = queue[idx];
+      const entry = queue[0];
       if (!entry || (entry.readyAt ?? Infinity) > Date.now()) return state;
       return evaluateAndApplyStoryBeat(state, { type: "craft_made", item: entry.key, count: 1 });
     }
     case "CRAFTING/SKIP_CRAFT": {
-      // Same idea as CLAIM_CRAFT but for gem-skip completions. Validate gem
-      // cost so we don't fire the event on a rejected skip.
-      const idx = action.payload?.idx ?? action.idx;
+      // Same idea as CLAIM_CRAFT but for gem-skip completions. Sequential
+      // queue: only idx 0 is skippable. Validate gem cost so we don't fire
+      // the event on a rejected skip.
+      const idx = action.payload?.idx ?? action.idx ?? 0;
+      if (idx !== 0) return state;
       const queue = state.craftQueue ?? [];
-      const entry = queue[idx];
+      const entry = queue[0];
       if (!entry) return state;
       if ((state.gems ?? 0) < CRAFT_GEM_SKIP_COST) return state;
       return evaluateAndApplyStoryBeat(state, { type: "craft_made", item: entry.key, count: 1 });

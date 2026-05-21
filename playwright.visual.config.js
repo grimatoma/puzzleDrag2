@@ -6,7 +6,7 @@ export default defineConfig({
   fullyParallel: true,
   retries: 0,
   reporter: [["list"], ["html", { outputFolder: "playwright-report/visual", open: "never" }]],
-  snapshotPathTemplate: "{testDir}/__goldens__/{projectName}/{arg}{ext}",
+  snapshotPathTemplate: "{testDir}/__goldens__/{testFilePath}/{projectName}/{arg}{ext}",
   outputDir: "test-results/visual",
   use: {
     baseURL: "http://localhost:5173/puzzleDrag2/",

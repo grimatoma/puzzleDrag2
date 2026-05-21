@@ -454,7 +454,6 @@ function WinBeat({ beat, lines, sceneBg, onContinue }) {
  * presentation form. Continue-only beats (no prompt) also dismiss via ESC.
  */
 export function StoryModal({ state, dispatch }) {
-  if (isDialogsDisabled()) return null;
   const beat = state.story?.queuedBeat;
   const [lineStep, setLineStep] = useState(0);
   const [lastBeatId, setLastBeatId] = useState(beat?.id || "");
@@ -476,6 +475,7 @@ export function StoryModal({ state, dispatch }) {
   }, [beat, hasPrompt, continueOnly, dispatch]);
 
   if (!beat) return null;
+  if (isDialogsDisabled()) return null;
 
   const settlement = displayZoneName(state, "home");
   const lines = beatLines(beat).map((l) => ({ ...l, text: interpolateBeatText(l.text, { settlement }) }));

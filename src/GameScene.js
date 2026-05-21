@@ -896,8 +896,7 @@ export class GameScene extends Phaser.Scene {
     });
     // Emit resource gains to React (like a mini chain collect, no turn cost)
     for (const [key, gained] of Object.entries(gainMap)) {
-      const biome = this.biome();
-      const res = biome.resources.find((r) => r.key === key);
+      const res = this.resourceByKey(key);
       if (res) {
         this.events.emit(SCENE_EVENTS.CHAIN_COLLECTED, { key, gained, upgrades: 0, chainLength: gained, value: res.value, noTurn: true });
       }
@@ -1044,7 +1043,7 @@ export class GameScene extends Phaser.Scene {
         onComplete: () => t.destroy(),
       });
     });
-    const res = this.biome().resources.find((r) => r.key === targetKey);
+    const res = this.resourceByKey(targetKey);
     this.events.emit(SCENE_EVENTS.CHAIN_COLLECTED, {
       key: targetKey, gained: swept.length, upgrades: 0,
       chainLength: swept.length, value: res?.value ?? 1, noTurn: true,
@@ -1072,9 +1071,8 @@ export class GameScene extends Phaser.Scene {
         onComplete: () => t.destroy(),
       });
     });
-    const resMap = new Map(this.biome().resources.map(r => [r.key, r]));
     for (const [key, gained] of Object.entries(gainMap)) {
-      const res = resMap.get(key);
+      const res = this.resourceByKey(key);
       this.events.emit(SCENE_EVENTS.CHAIN_COLLECTED, {
         key, gained, upgrades: 0, chainLength: gained, value: res?.value ?? 1, noTurn: true,
       });
@@ -1105,9 +1103,8 @@ export class GameScene extends Phaser.Scene {
         onComplete: () => t.destroy(),
       });
     });
-    const resMap = new Map(this.biome().resources.map(r => [r.key, r]));
     for (const [key, gained] of Object.entries(gainMap)) {
-      const res = resMap.get(key);
+      const res = this.resourceByKey(key);
       this.events.emit(SCENE_EVENTS.CHAIN_COLLECTED, {
         key, gained, upgrades: 0, chainLength: gained, value: res?.value ?? 1, noTurn: true,
       });

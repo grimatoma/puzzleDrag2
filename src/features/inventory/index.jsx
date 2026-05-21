@@ -74,7 +74,7 @@ function useRecentOrder(inventory) {
   return state.order;
 }
 
-export default function InventoryScreen({ state, dispatch, searchOpen: searchOpenProp, onToggleSearch }) {
+export default function InventoryScreen({ state, dispatch, searchOpen: searchOpenProp }) {
   const biomeKey = state.biomeKey ?? "farm";
   const isPhone = usePhoneViewport();
 
@@ -85,7 +85,9 @@ export default function InventoryScreen({ state, dispatch, searchOpen: searchOpe
   const recentOrder = useRecentOrder(state.inventory);
 
   useEffect(() => {
-    if (!searchOpen) setQueryInput("");
+    if (!searchOpen) {
+      setTimeout(() => setQueryInput(""), 0);
+    }
   }, [searchOpen]);
 
   return (

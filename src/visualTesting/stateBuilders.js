@@ -418,7 +418,19 @@ function profileState(profile) {
     }
     case "boardBossMinimized": return { ...boardState("farm"), bossMinimized: true, boss: { key: "quagmire", name: "The Quagmire", emoji: "🌿", resource: "grass_hay", targetCount: 50, progress: 22, turnsLeft: 4, goal: "Drain the bog: harvest 50 hay." } };
     case "boardBossWeather": return { ...boardState("fish"), boss: { key: "storm", name: "The Storm", emoji: "🌩", resource: "fish_fillet", targetCount: 6, progress: 2, turnsLeft: 5, minChain: 4, goal: "Land 6 fish fillets in 10 turns. Short chains slip the line.", modifierDescription: "Chains of fewer than 4 fish tiles slip the line: they consume a turn but yield nothing." }, fish: { tide: "high", tideTurn: 3 } };
-    case "craftQueue": return { ...richState(), craftQueue: [{ key: "bread", queuedAt: VISUAL_FIXED_NOW - 10_000, readyAt: VISUAL_FIXED_NOW - 1_000 }, { key: "berry_jam", queuedAt: VISUAL_FIXED_NOW, readyAt: VISUAL_FIXED_NOW + 14_400_000 }] };
+    case "craftQueue": {
+      // Sequential queue snapshot showing the full UI in motion: head is
+      // mid-progress (~75% through a 2-minute bread craft), middle waits
+      // briefly, tail waits a long time. Anchor timings to VISUAL_FIXED_NOW
+      // so buildVisualState remains deterministic across repeated calls.
+      const NOW = VISUAL_FIXED_NOW;
+      const MIN = 60_000;
+      const SEC = 1_000;
+      const bread     = { key: "bread",      queuedAt: NOW - 90 * SEC, startAt: NOW - 90 * SEC, readyAt: NOW + 30 * SEC,                durationMs: 2 * MIN };
+      const preserve  = { key: "preserve",   queuedAt: NOW - 90 * SEC, startAt: bread.readyAt,  readyAt: bread.readyAt + 4 * MIN,       durationMs: 4 * MIN };
+      const ironHinge = { key: "iron_hinge", queuedAt: NOW - 90 * SEC, startAt: preserve.readyAt, readyAt: preserve.readyAt + 45 * MIN, durationMs: 45 * MIN };
+      return { ...richState(), gems: 3, craftQueue: [bread, preserve, ironHinge] };
+    }
     case "portalInsufficient": return { ...richState(), influence: 10, tools: { ...richState().tools, magic_wand: 0, hourglass: 0, magic_seed: 0, magic_fertilizer: 0 } };
     case "marketNews": return { ...richState(), bubble: { id: 202, npc: "tomas", text: "Market News: Wood Shortage! Timber supplies are low. Logs and Planks are worth double!", ms: 10_000 }, market: { ...richState().market, season: 2, event: { id: "wood_shortage", label: "Wood Shortage", desc: "Timber supplies are low. Logs and Planks are worth double!", mults: { wood_log: 2, wood_plank: 2 } } } };
     case "tileActivate": return { ...richState(), tileCollection: fullTileCollection({ activeByCategory: { ...fullTileCollection().activeByCategory, grass: "grass_hay" } }) };

@@ -41,8 +41,20 @@ describe("CRAFTING/QUEUE_RECIPE", () => {
     expect(s1.craftQueue).toHaveLength(1);
     expect(s1.craftQueue[0].key).toBe(RECIPE_KEY);
     expect(s1.craftQueue[0].readyAt).toBeGreaterThan(Date.now());
+    expect(s1.craftQueue[0].startAt).toBeLessThanOrEqual(Date.now() + 5);
+    expect(s1.craftQueue[0].durationMs).toBeGreaterThan(0);
     expect(s1.inventory[RECIPE_KEY] ?? 0).toBe(0); // not granted yet
     expect(s1.coins).toBe(s0.coins);                // coins not granted yet
+  });
+
+  it("stacks sequentially: second entry's startAt equals the first's readyAt", () => {
+    let s = bakeryReady();
+    s = rootReducer(s, { type: "CRAFTING/QUEUE_RECIPE", payload: { key: RECIPE_KEY } });
+    s = rootReducer(s, { type: "CRAFTING/QUEUE_RECIPE", payload: { key: RECIPE_KEY } });
+    expect(s.craftQueue).toHaveLength(2);
+    const [a, b] = s.craftQueue;
+    expect(b.startAt).toBe(a.readyAt);
+    expect(b.readyAt).toBe(a.readyAt + b.durationMs);
   });
 
   it("is a no-op without the station built (slice level)", () => {
@@ -73,6 +85,17 @@ describe("CRAFTING/CLAIM_CRAFT", () => {
     expect(s.coins).toBe(coinsBefore + (RECIPE.coins || 0));
     expect(s.craftedTotals[RECIPE_KEY]).toBe(1);
   });
+
+  it("is a no-op for non-head entries even when their readyAt is in the past", () => {
+    // Sequential queue: only idx 0 is claimable. Putting a past readyAt on
+    // idx 1 should not let it through.
+    let s = rootReducer(bakeryReady(), { type: "CRAFTING/QUEUE_RECIPE", payload: { key: RECIPE_KEY } });
+    s = rootReducer(s, { type: "CRAFTING/QUEUE_RECIPE", payload: { key: RECIPE_KEY } });
+    s = { ...s, craftQueue: [s.craftQueue[0], { ...s.craftQueue[1], readyAt: Date.now() - 1000 }] };
+    const before = s;
+    const after = craftingReduce(s, { type: "CRAFTING/CLAIM_CRAFT", payload: { idx: 1 } });
+    expect(after).toBe(before);
+  });
 });
 
 describe("CRAFTING/SKIP_CRAFT", () => {
@@ -89,6 +112,30 @@ describe("CRAFTING/SKIP_CRAFT", () => {
     expect(s.craftQueue).toHaveLength(0);
     expect(s.inventory[RECIPE_KEY]).toBe(1);
     expect(s.craftedTotals[RECIPE_KEY]).toBe(1);
+  });
+
+  it("shifts the remaining queue forward by the skipped item's leftover time", () => {
+    // Two queued: skipping head should pull the second item's startAt to now
+    // (instead of waiting for the first to finish naturally).
+    let s = rootReducer({ ...bakeryReady(), gems: 2 }, { type: "CRAFTING/QUEUE_RECIPE", payload: { key: RECIPE_KEY } });
+    s = rootReducer(s, { type: "CRAFTING/QUEUE_RECIPE", payload: { key: RECIPE_KEY } });
+    expect(s.craftQueue).toHaveLength(2);
+    const secondBefore = s.craftQueue[1];
+    s = rootReducer(s, { type: "CRAFTING/SKIP_CRAFT", payload: { idx: 0 } });
+    expect(s.craftQueue).toHaveLength(1);
+    const newSecond = s.craftQueue[0];
+    // The new head's startAt is no later than now (it became the active item).
+    expect(newSecond.startAt).toBeLessThanOrEqual(Date.now() + 5);
+    // And it's earlier than its original startAt by roughly the skipped duration.
+    expect(newSecond.startAt).toBeLessThan(secondBefore.startAt);
+  });
+
+  it("is a no-op when targeting a non-head index", () => {
+    let s = rootReducer({ ...bakeryReady(), gems: 2 }, { type: "CRAFTING/QUEUE_RECIPE", payload: { key: RECIPE_KEY } });
+    s = rootReducer(s, { type: "CRAFTING/QUEUE_RECIPE", payload: { key: RECIPE_KEY } });
+    const before = s;
+    const after = craftingReduce(s, { type: "CRAFTING/SKIP_CRAFT", payload: { idx: 1 } });
+    expect(after).toBe(before);
   });
 });
 

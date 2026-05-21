@@ -14,7 +14,7 @@ const tileRoutes = [
   ["tiles-water-fish", "#/tiles/water/fish"],
 ].map(([id, hash]) => ({ id, state: "rich", hash, diff: domDiff }));
 
-export const VISUAL_SCENARIOS = [
+const BASE_VISUAL_SCENARIOS = [
   { id: "shell-town-fresh", state: "fresh", hash: "#/town", diff: domDiff },
   { id: "shell-menu-main", state: "fresh", hash: "#/town", actions: [click("Menu")], diff: domDiff },
   { id: "shell-menu-settings", state: "fresh", hash: "#/town", actions: [click("Menu"), clickText("Settings")], diff: domDiff },
@@ -98,6 +98,40 @@ export const VISUAL_SCENARIOS = [
   { id: "tutorial-corner", state: "tutorialCorner", hash: "#/board", diff: domDiff },
   { id: "town-market-news", state: "marketNews", hash: "#/town", diff: domDiff },
 ];
+
+const expectationOverrideById = {
+  "board-farm-chain-7": "A 7-tile hay chain is visibly held on the farm board before capture.",
+  "shell-menu-settings": "Settings panel is open from the menu modal.",
+  "town-build-picker-locked": "Build picker is open and a locked building option is shown.",
+};
+
+function buildExpectationForScenario(scenario) {
+  return expectationOverrideById[scenario.id] ?? `Scenario ${scenario.id} renders expected ${scenario.hash ?? scenario.view} UI state.`;
+}
+
+function buildChecklistForScenario(scenario) {
+  const checklist = [];
+  if (scenario.hash) checklist.push(`Hash route resolves to ${scenario.hash}.`);
+  if (scenario.view) checklist.push(`Internal visual view is ${scenario.view}.`);
+  if (scenario.actions?.some((action) => action.type === "api" && action.method === "holdChain")) {
+    checklist.push("Selected holdChain pattern is visible on the board.");
+  }
+  if (scenario.actions?.some((action) => action.type === "clickRole" || action.type === "clickRoleLast")) {
+    checklist.push("Triggered button-driven modal/panel state is visible.");
+  }
+  if (scenario.actions?.some((action) => action.type === "clickText")) {
+    checklist.push("Clicked text target appears in the resulting focused panel.");
+  }
+  if (scenario.hash?.startsWith?.("#/board")) checklist.push("Board canvas is rendered with populated tiles.");
+  if (!checklist.length) checklist.push("Primary panel content is visible and not blank.");
+  return checklist;
+}
+
+export const VISUAL_SCENARIOS = BASE_VISUAL_SCENARIOS.map((scenario) => ({
+  ...scenario,
+  expectation: buildExpectationForScenario(scenario),
+  reviewChecklist: buildChecklistForScenario(scenario),
+}));
 
 export function visualScenarioById(id) {
   return VISUAL_SCENARIOS.find((scenario) => scenario.id === id) ?? null;
