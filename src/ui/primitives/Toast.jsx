@@ -13,7 +13,9 @@ import Icon from "./Icon.jsx";
 const NotifierCtx = createContext(null);
 
 const TOAST_MS = 3000;
+const TOAST_EXIT_MS = 200;
 const BUBBLE_MS = 1800;
+const BUBBLE_EXIT_MS = 200;
 const TOAST_MAX = 3;
 
 const TONE_TOAST = {
@@ -31,16 +33,25 @@ let nextId = 1;
 const uid = () => `n${nextId++}`;
 
 function ToastItem({ entry, onDone }) {
+  const [exiting, setExiting] = useState(false);
   useEffect(() => {
-    const t = setTimeout(() => onDone(entry.id), entry.duration ?? TOAST_MS);
-    return () => clearTimeout(t);
+    const dur = entry.duration ?? TOAST_MS;
+    const exitTimer = setTimeout(() => setExiting(true), dur);
+    const doneTimer = setTimeout(() => onDone(entry.id), dur + TOAST_EXIT_MS);
+    return () => {
+      clearTimeout(exitTimer);
+      clearTimeout(doneTimer);
+    };
   }, [entry, onDone]);
 
   const toneCls = TONE_TOAST[entry.tone] || TONE_TOAST.info;
+  const anim = exiting
+    ? `toastOut ${TOAST_EXIT_MS}ms ease-in both`
+    : "toastIn 180ms ease-out both";
   return (
     <div
-      className={`pointer-events-auto inline-flex items-center gap-2 px-3 py-2 rounded-md border shadow-md text-body font-medium tabular-nums animate-[fadein_180ms_ease-out] ${toneCls}`}
-      style={{ animation: "toastIn 180ms ease-out" }}
+      className={`pointer-events-auto inline-flex items-center gap-2 px-3 py-2 rounded-md border shadow-md text-body font-medium tabular-nums ${toneCls}`}
+      style={{ animation: anim }}
     >
       {entry.icon && <Icon iconKey={entry.icon} size={18} />}
       <span className="leading-tight">{entry.text}</span>
@@ -49,17 +60,33 @@ function ToastItem({ entry, onDone }) {
 }
 
 function BubbleItem({ entry, onDone, onDismiss }) {
+  const [exiting, setExiting] = useState(false);
   useEffect(() => {
-    const t = setTimeout(() => onDone(entry.id), entry.duration ?? BUBBLE_MS);
-    return () => clearTimeout(t);
+    const dur = entry.duration ?? BUBBLE_MS;
+    const exitTimer = setTimeout(() => setExiting(true), dur);
+    const doneTimer = setTimeout(() => onDone(entry.id), dur + BUBBLE_EXIT_MS);
+    return () => {
+      clearTimeout(exitTimer);
+      clearTimeout(doneTimer);
+    };
   }, [entry, onDone]);
+
+  const handleClick = () => {
+    setExiting(true);
+    setTimeout(() => onDismiss(entry.id), BUBBLE_EXIT_MS);
+  };
+
+  const anim = exiting
+    ? `toastOut ${BUBBLE_EXIT_MS}ms ease-in both`
+    : "toastIn 200ms ease-out both";
 
   return (
     <button
       type="button"
-      onClick={() => onDismiss(entry.id)}
+      onClick={handleClick}
       className="pointer-events-auto max-w-xs px-3 py-2 bg-parchment text-ink rounded-lg border border-iron shadow-md text-body text-left"
       aria-label="Dismiss bubble"
+      style={{ animation: anim }}
     >
       {entry.npcKey && (
         <span className="block text-micro font-semibold uppercase tracking-wider text-iron-deep mb-0.5">

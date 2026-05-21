@@ -1,5 +1,8 @@
 import { useEffect, useRef, useId, createContext, useContext } from "react";
 import { createPortal } from "react-dom";
+import { useExitTransition } from "./useExitTransition.js";
+
+const DIALOG_EXIT_MS = 140;
 
 const FOCUSABLE = 'a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
 
@@ -58,15 +61,17 @@ function useDialogBehavior(open, onClose, panelRef) {
   }, [open, onClose, panelRef]);
 }
 
-function BackdropShell({ open, onClose, closeOnBackdrop = true, className = "", children }) {
-  if (!open) return null;
+function BackdropShell({ exiting, onClose, closeOnBackdrop = true, className = "", children }) {
   const onBackdrop = (e) => {
     if (closeOnBackdrop && e.target === e.currentTarget && onClose) onClose();
   };
+  const anim = exiting
+    ? `backdropOut ${DIALOG_EXIT_MS}ms ease-out both`
+    : "fadein 200ms ease-out both";
   return createPortal(
     <div
       className={`hl-backdrop ${className}`}
-      style={{ animation: "fadein 200ms ease-out both" }}
+      style={{ animation: anim }}
       onMouseDown={onBackdrop}
     >
       {children}
@@ -75,16 +80,13 @@ function BackdropShell({ open, onClose, closeOnBackdrop = true, className = "", 
   );
 }
 
-function PanelIn({ children, style }) {
+function PanelIn({ exiting, children, style }) {
+  const anim = exiting
+    ? `dialogPanelOut ${DIALOG_EXIT_MS}ms cubic-bezier(.4,.0,.6,1) both`
+    : "dialogPanelIn 200ms cubic-bezier(.2,.7,.2,1) both";
   return (
-    <div
-      style={{
-        animation: "dialogPanelIn 200ms cubic-bezier(.2,.7,.2,1) both",
-        ...style,
-      }}
-    >
+    <div style={{ animation: anim, ...style }}>
       {children}
-      <style>{`@keyframes dialogPanelIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }`}</style>
     </div>
   );
 }
@@ -105,11 +107,12 @@ export function ParchmentDialog({
   const stickyRef = useRef(false);
   const sizeCls = SIZES[size] || SIZES.md;
   const bgCls = tone === "paper" ? "bg-paper-soft" : "bg-parchment-soft";
+  const { shouldRender, exiting } = useExitTransition(open, DIALOG_EXIT_MS);
   useDialogBehavior(open, onClose, panelRef);
-  if (!open) return null;
+  if (!shouldRender) return null;
   return (
-    <BackdropShell open={open} onClose={onClose} closeOnBackdrop={closeOnBackdrop} className={backdropClassName}>
-      <PanelIn>
+    <BackdropShell exiting={exiting} onClose={onClose} closeOnBackdrop={closeOnBackdrop} className={backdropClassName}>
+      <PanelIn exiting={exiting}>
         <div
           ref={panelRef}
           role="dialog"
@@ -148,11 +151,12 @@ export function StoryDialog({
   const panelRef = useRef(null);
   const titleId = useId();
   const sizeCls = SIZES[size] || SIZES.md;
+  const { shouldRender, exiting } = useExitTransition(open, DIALOG_EXIT_MS);
   useDialogBehavior(open, onClose, panelRef);
-  if (!open) return null;
+  if (!shouldRender) return null;
   return (
-    <BackdropShell open={open} onClose={onClose} closeOnBackdrop={closeOnBackdrop} className={backdropClassName}>
-      <PanelIn>
+    <BackdropShell exiting={exiting} onClose={onClose} closeOnBackdrop={closeOnBackdrop} className={backdropClassName}>
+      <PanelIn exiting={exiting}>
         <div
           ref={panelRef}
           role="dialog"
