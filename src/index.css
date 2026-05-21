@@ -143,6 +143,59 @@
   display: inline-block;
 }
 
+/* ── Level-up cinematic ────────────────────────────────────────────── */
+@keyframes levelupBg {
+  0%   { opacity: 0; }
+  20%  { opacity: 1; }
+  80%  { opacity: 1; }
+  100% { opacity: 0; }
+}
+@keyframes levelupCard {
+  0%   { opacity: 0; transform: scale(0.6); }
+  20%  { opacity: 1; transform: scale(1.08); }
+  35%  { transform: scale(1); }
+  80%  { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(1.12); }
+}
+@keyframes levelupRays {
+  0%   { opacity: 0; transform: rotate(0deg) scale(0.4); }
+  20%  { opacity: 0.65; transform: rotate(20deg) scale(1); }
+  100% { opacity: 0; transform: rotate(80deg) scale(1.4); }
+}
+.levelup-bg {
+  background: radial-gradient(circle at center, rgba(255, 210, 72, 0.28) 0%, rgba(0, 0, 0, 0.45) 70%);
+  animation: levelupBg 1600ms ease-in-out both;
+}
+.levelup-card {
+  animation: levelupCard 1600ms cubic-bezier(.34,1.56,.64,1) both;
+}
+.levelup-rays {
+  width: 600px;
+  height: 600px;
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg,
+    rgba(255, 210, 72, 0.18) 8deg,
+    transparent 16deg,
+    transparent 30deg,
+    rgba(255, 210, 72, 0.14) 38deg,
+    transparent 46deg,
+    transparent 60deg,
+    rgba(255, 210, 72, 0.18) 68deg,
+    transparent 76deg,
+    transparent 90deg,
+    rgba(255, 210, 72, 0.14) 98deg,
+    transparent 106deg,
+    transparent 120deg,
+    rgba(255, 210, 72, 0.18) 128deg,
+    transparent 136deg,
+    transparent 360deg
+  );
+  border-radius: 50%;
+  filter: blur(0.5px);
+  animation: levelupRays 1600ms ease-out both;
+}
+
 /* ── Season transition cinematic ───────────────────────────────────── */
 @keyframes seasonCinematicBg {
   0%   { opacity: 0; }
