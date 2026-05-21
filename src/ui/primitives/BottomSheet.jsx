@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState, useId } from "react";
 import { createPortal } from "react-dom";
+import { useExitTransition } from "./useExitTransition.js";
 
 const CLOSE_THRESHOLD_PX = 80;
+const SHEET_EXIT_MS = 200;
 
 export default function BottomSheet({
   open,
@@ -70,15 +72,23 @@ export default function BottomSheet({
     if (e.target === e.currentTarget && dismissible) onClose?.();
   };
 
-  if (!open) return null;
+  const { shouldRender, exiting } = useExitTransition(open, SHEET_EXIT_MS);
+  if (!shouldRender) return null;
 
   const heightPct = snap * 100;
   const translateY = `calc(${100 - heightPct}% + ${dragOffset}px)`;
 
+  const backdropAnim = exiting
+    ? `backdropOut ${SHEET_EXIT_MS}ms ease-out both`
+    : "fadein 200ms ease-out both";
+  const sheetAnim = exiting
+    ? `bottomSheetOut ${SHEET_EXIT_MS}ms cubic-bezier(.4,0,.6,1) both`
+    : "bottomSheetIn 240ms cubic-bezier(.2,.7,.2,1) both";
+
   return createPortal(
     <div
       className="fixed inset-0 z-50 bg-black/55"
-      style={{ animation: "fadein 200ms ease-out both" }}
+      style={{ animation: backdropAnim }}
       onMouseDown={onBackdrop}
     >
       <div
@@ -91,7 +101,7 @@ export default function BottomSheet({
           height: "100dvh",
           transform: `translateY(${translateY})`,
           transition: dragging ? "none" : "transform 240ms cubic-bezier(.2,.7,.2,1)",
-          animation: "bottomSheetIn 240ms cubic-bezier(.2,.7,.2,1) both",
+          animation: sheetAnim,
           borderTopLeftRadius: 22,
           borderTopRightRadius: 22,
           borderTop: "1px solid var(--iron)",
