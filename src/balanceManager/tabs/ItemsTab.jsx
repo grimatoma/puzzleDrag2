@@ -101,6 +101,7 @@ export default function ItemsTab({ draft, updateDraft }) {
             label:       patch.label       ?? r.label,
             color:       patch.color       ?? r.color,
             value:       patch.value       ?? r.value,
+            sellable:    patch.sellable    ?? r.sellable ?? false,
             desc:        patch.desc        ?? r.desc ?? "",
             description: patch.description ?? r.description ?? "",
             effect:      patch.effect      ?? r.effect ?? "",
@@ -110,7 +111,6 @@ export default function ItemsTab({ draft, updateDraft }) {
           };
           const dirty = Object.keys(patch).length > 0;
           const tool = isTool(r);
-          const resource = r.kind === "resource";
           const craftedBy = allCraftingMethods[key] || [];
           const semanticTags = tagsForItemKey(key);
           const sourceTags = sourceTagsForItem(key, { recipesByOutput: allCraftingMethods });
@@ -142,9 +142,21 @@ export default function ItemsTab({ draft, updateDraft }) {
                     <Label>Label</Label>
                     <TextField value={eff.label} onChange={(v) => patchItem(key, { label: v })} />
                   </div>
-                  <div>
-                    <Label>Sale value</Label>
-                    <NumberField value={eff.value} min={0} max={9999} onChange={(v) => patchItem(key, { value: v })} width={80} />
+                  <div className="col-span-2 flex items-end gap-3 flex-wrap">
+                    <label className="text-[11px] flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={!!eff.sellable}
+                        onChange={(e) => patchItem(key, { sellable: e.target.checked })}
+                      />
+                      Sellable in market
+                    </label>
+                    {eff.sellable && (
+                      <div>
+                        <Label>Sale value</Label>
+                        <NumberField value={eff.value} min={0} max={9999} onChange={(v) => patchItem(key, { value: v })} width={80} />
+                      </div>
+                    )}
                   </div>
 
                   {/* Resources and plain items carry a colour swatch; tools draw their own glyph. */}
@@ -231,9 +243,3 @@ function Label({ children }) {
     </div>
   );
 }
-                  {resource && (
-                    <div className="col-span-2">
-                      <Label>Next chain product</Label>
-                      <TextField value={r.next || "—"} readOnly />
-                    </div>
-                  )}
