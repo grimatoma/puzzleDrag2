@@ -186,15 +186,15 @@ function ChainView({ chainInfo, inventory }) {
   const carriedTotal = (resourceKey && inventory?.[resourceKey]) || 0;
   const carriedInCycle = threshold > 0 ? carriedTotal % threshold : 0;
   const combined = carriedInCycle + length;
-  const looped = threshold > 0 && combined > threshold;
+  const cyclesCompleted = threshold > 0 ? Math.floor(combined / threshold) : 0;
+  const remainder = threshold > 0 ? combined % threshold : 0;
+  const looped = cyclesCompleted >= 1;
   const carriedPct = threshold > 0 ? (carriedInCycle / threshold) * 100 : 0;
   const newFitsInCycle = threshold > 0
     ? Math.max(0, Math.min(length, threshold - carriedInCycle))
     : length;
   const newPct = threshold > 0 ? (newFitsInCycle / threshold) * 100 : 0;
-  const overflowPct = threshold > 0
-    ? Math.min(100, (Math.max(0, combined - threshold) / threshold) * 100)
-    : 0;
+  const overflowPct = threshold > 0 ? (remainder / threshold) * 100 : 0;
 
   return (
     <>
@@ -274,17 +274,27 @@ function ChainView({ chainInfo, inventory }) {
               }}
             >
               {threshold > 0 ? (
-                <>
-                  {carriedInCycle > 0 && (
-                    <>
-                      <span style={{ opacity: 0.75 }}>{carriedInCycle}</span>
-                      <span style={{ opacity: 0.6 }}>+</span>
-                    </>
-                  )}
-                  {length}
-                  <span style={{ opacity: 0.7 }}>/</span>
-                  {threshold}
-                </>
+                looped ? (
+                  <>
+                    {remainder}
+                    <span style={{ opacity: 0.7 }}>/</span>
+                    {threshold}
+                    <span style={{ opacity: 0.6 }}> + </span>
+                    {cyclesCompleted}
+                  </>
+                ) : (
+                  <>
+                    {carriedInCycle > 0 && (
+                      <>
+                        <span style={{ opacity: 0.75 }}>{carriedInCycle}</span>
+                        <span style={{ opacity: 0.6 }}>+</span>
+                      </>
+                    )}
+                    {length}
+                    <span style={{ opacity: 0.7 }}>/</span>
+                    {threshold}
+                  </>
+                )
               ) : (
                 <>×{length}</>
               )}
