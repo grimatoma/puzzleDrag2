@@ -697,6 +697,23 @@ function dispatchUseTool(dispatch, key, state) {
   if (key === "shuffle") getPhaserScene()?.shuffleBoard();
 }
 
+// When a tap-target tool (bomb / rake / axe / magic_wand) or fertilizer is
+// already armed, single-tapping another tool means "switch to this one" —
+// the player has already committed to using a tool, so the new tap should
+// transfer the arming rather than leave nothing selected. When no tool is
+// armed, the two-tap inspect→activate pattern still applies. Returns true
+// when arming was transferred so the caller can skip the plain inspect path.
+function maybeTransferArming(dispatch, key, state) {
+  const armedKey = state?.toolPending;
+  const fertilizerArmed = !!state?.fertilizerActive;
+  const hasOtherArmed =
+    (armedKey && armedKey !== key) ||
+    (fertilizerArmed && key !== "fertilizer");
+  if (!hasOtherArmed) return false;
+  dispatchUseTool(dispatch, key, state);
+  return true;
+}
+
 // ─── Tool tile (shared by hotbar / grid / modal) ─────────────────────────
 
 // Two-tap to arm: first tap on a tile inspects it; a second tap within this
@@ -834,7 +851,9 @@ export function PuzzleToolGrid({ state, onInspectChange, inspectedKey, dispatch 
   const fertilizerActive = state.fertilizerActive;
   const select = useCallback(
     (t) => {
-      if (dispatch) disarmOtherTools(dispatch, t.key, { toolPending, fertilizerActive });
+      if (dispatch && !maybeTransferArming(dispatch, t.key, { toolPending, fertilizerActive })) {
+        disarmOtherTools(dispatch, t.key, { toolPending, fertilizerActive });
+      }
       onInspectChange?.({ ...TOOL_BY_KEY[t.key], count: t.count });
     },
     [dispatch, onInspectChange, toolPending, fertilizerActive],
@@ -1139,7 +1158,9 @@ export function PuzzleHotbar({
   const fertilizerActive = state.fertilizerActive;
   const select = useCallback(
     (t) => {
-      if (dispatch) disarmOtherTools(dispatch, t.key, { toolPending, fertilizerActive });
+      if (dispatch && !maybeTransferArming(dispatch, t.key, { toolPending, fertilizerActive })) {
+        disarmOtherTools(dispatch, t.key, { toolPending, fertilizerActive });
+      }
       onInspectChange?.({ ...TOOL_BY_KEY[t.key], count: t.count });
     },
     [dispatch, onInspectChange, toolPending, fertilizerActive],
@@ -1285,7 +1306,9 @@ export function PuzzleToolModal({
   const selectedTool = effectiveKey ? byKey[effectiveKey] : null;
   const select = (t) => {
     setLocalSelectedKey(t.key);
-    disarmOtherTools(dispatch, t.key, state);
+    if (!maybeTransferArming(dispatch, t.key, state)) {
+      disarmOtherTools(dispatch, t.key, state);
+    }
     onInspectChange?.({ ...TOOL_BY_KEY[t.key], count: t.count });
   };
   const activate = (t) => {
