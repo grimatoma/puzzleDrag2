@@ -454,7 +454,7 @@ export default function App() {
 
           {/* Town overlay — covers exactly the same area as the board */}
           {state.view === "town" && (
-            <div className="absolute inset-0 z-20">
+            <div className="absolute inset-0 z-20 view-enter">
               <TownView state={state} dispatch={dispatch} />
             </div>
           )}

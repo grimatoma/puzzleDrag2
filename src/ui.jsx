@@ -108,10 +108,14 @@ export function FeatureScreens({ state, dispatch, inventorySearchOpen, onInvento
       const extra = f.viewKey === "inventory"
         ? { searchOpen: inventorySearchOpen, onToggleSearch: onInventorySearchToggle }
         : {};
+      // Wrapper keyed on viewKey forces re-mount when navigating between
+      // features, which retriggers the .view-enter animation.
       return (
-        <FeatureErrorBoundary featureKey={f.viewKey}>
-          <C state={state} dispatch={dispatch} {...extra} />
-        </FeatureErrorBoundary>
+        <div key={f.viewKey} className="view-enter absolute inset-0">
+          <FeatureErrorBoundary featureKey={f.viewKey}>
+            <C state={state} dispatch={dispatch} {...extra} />
+          </FeatureErrorBoundary>
+        </div>
       );
     }
   }
