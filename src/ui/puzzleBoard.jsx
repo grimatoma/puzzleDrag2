@@ -167,7 +167,7 @@ function IdleView({ inventory, biomeKey, cap }) {
   );
 }
 
-function ChainView({ chainInfo }) {
+function ChainView({ chainInfo, inventory }) {
   const length = chainInfo.count ?? 0;
   const threshold = chainInfo.nextTileProgress?.threshold ?? 0;
   const into = chainInfo.nextTileProgress?.current ?? length;
@@ -179,6 +179,22 @@ function ChainView({ chainInfo }) {
 
   const stage = CHAIN_STAGES[Math.min(earned, CHAIN_STAGES.length - 1)];
   const pct = threshold > 0 ? Math.min(100, (into / threshold) * 100) : 0;
+
+  // Carried tile count from previous chains/rounds (persisted in inventory).
+  // Shown as an "old" base fill behind the live chain so the bar reflects
+  // total tile progress, looping with a brighter cycle color past threshold.
+  const carriedTotal = (resourceKey && inventory?.[resourceKey]) || 0;
+  const carriedInCycle = threshold > 0 ? carriedTotal % threshold : 0;
+  const combined = carriedInCycle + length;
+  const looped = threshold > 0 && combined > threshold;
+  const carriedPct = threshold > 0 ? (carriedInCycle / threshold) * 100 : 0;
+  const newFitsInCycle = threshold > 0
+    ? Math.max(0, Math.min(length, threshold - carriedInCycle))
+    : length;
+  const newPct = threshold > 0 ? (newFitsInCycle / threshold) * 100 : 0;
+  const overflowPct = threshold > 0
+    ? Math.min(100, (Math.max(0, combined - threshold) / threshold) * 100)
+    : 0;
 
   return (
     <>
@@ -201,16 +217,54 @@ function ChainView({ chainInfo }) {
                   : "inset 0 2px 4px rgba(0,0,0,0.22)",
             }}
           >
-            <div
-              className="absolute left-0 top-0 bottom-0"
-              style={{
-                width: `${pct}%`,
-                background: `linear-gradient(180deg, ${stage.top} 0%, ${stage.bot} 100%)`,
-                boxShadow:
-                  "inset 0 -3px 0 rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.35)",
-                transition: "width 120ms ease-out",
-              }}
-            />
+            {looped ? (
+              <>
+                <div
+                  className="absolute left-0 top-0 bottom-0"
+                  style={{
+                    width: "100%",
+                    background: "linear-gradient(180deg, #b89762 0%, #8a6428 100%)",
+                    boxShadow:
+                      "inset 0 -3px 0 rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.25)",
+                  }}
+                />
+                <div
+                  className="absolute left-0 top-0 bottom-0"
+                  style={{
+                    width: `${overflowPct}%`,
+                    background: `linear-gradient(180deg, ${stage.top} 0%, ${stage.bot} 100%)`,
+                    boxShadow:
+                      "inset 0 -3px 0 rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.4)",
+                    transition: "width 120ms ease-out",
+                  }}
+                />
+              </>
+            ) : (
+              <>
+                {carriedPct > 0 && (
+                  <div
+                    className="absolute left-0 top-0 bottom-0"
+                    style={{
+                      width: `${carriedPct}%`,
+                      background: "linear-gradient(180deg, #b89762 0%, #8a6428 100%)",
+                      boxShadow:
+                        "inset 0 -3px 0 rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.25)",
+                    }}
+                  />
+                )}
+                <div
+                  className="absolute top-0 bottom-0"
+                  style={{
+                    left: `${carriedPct}%`,
+                    width: `${newPct}%`,
+                    background: `linear-gradient(180deg, ${stage.top} 0%, ${stage.bot} 100%)`,
+                    boxShadow:
+                      "inset 0 -3px 0 rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.35)",
+                    transition: "left 120ms ease-out, width 120ms ease-out",
+                  }}
+                />
+              </>
+            )}
             <div
               className="absolute inset-0 flex items-center justify-center font-mono font-bold text-[#fff8e7]"
               style={{
@@ -563,7 +617,7 @@ export function PuzzleActionPanel({
       />
       <div className="relative flex flex-col flex-1 min-h-0 overflow-hidden">
         {state === "idle" && <IdleView inventory={inventory} biomeKey={biomeKey} cap={cap} />}
-        {state === "chain" && <ChainView chainInfo={chainInfo} />}
+        {state === "chain" && <ChainView chainInfo={chainInfo} inventory={inventory} />}
         {state === "tool" && (
           <ToolView
             tool={inspectedTool}
