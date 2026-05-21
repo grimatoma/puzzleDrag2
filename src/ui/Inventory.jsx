@@ -1,6 +1,11 @@
 import { useState } from "react";
-import { BIOMES, ITEMS } from "../constants.js";
-import { INVENTORY_TAGS, itemHasTag, tagsForItemKey } from "../features/inventory/tags.js";
+import { BIOMES, ITEMS, RECIPES } from "../constants.js";
+import {
+  INVENTORY_TAGS,
+  itemHasTag,
+  sourceTagsForItem,
+  tagsForItemKey,
+} from "../features/inventory/tags.js";
 import { sellPriceFor } from "../features/market/pricing.js";
 import { locBuilt } from "../locBuilt.js";
 import { iconLabel } from "../textures/iconRegistry.js";
@@ -250,6 +255,12 @@ export function InventoryGrid({
   const { status, totals } = orderStatusByKey(orders, inventory);
   const marketBuilt = !!locBuilt(state).caravan_post;
   const prices = state?.market?.prices ?? {};
+  const recipesByOutput = Object.values(RECIPES).reduce((acc, recipe) => {
+    if (!recipe?.item) return acc;
+    if (!acc[recipe.item]) acc[recipe.item] = [];
+    acc[recipe.item].push(recipe);
+    return acc;
+  }, {});
   const [selectedKey, setSelectedKey] = useState(null);
 
   const activeTags = filter === "all"
@@ -264,7 +275,7 @@ export function InventoryGrid({
 
   const matchesTags = (key) => {
     if (!activeTags || activeTags.length === 0) return true;
-    return activeTags.every((tag) => itemHasTag(key, tag));
+    return activeTags.every((tag) => itemHasTag(key, tag) || sourceTagsForItem(key, { recipesByOutput }).includes(tag));
   };
 
   const resourceCellsBy = new Map(resources.map((r) => [r.key, r]));
@@ -310,7 +321,7 @@ export function InventoryGrid({
     entries.push({
       key,
       kind: "resource",
-      tags: tagsForItemKey(key),
+      tags: [...tagsForItemKey(key), ...sourceTagsForItem(key, { recipesByOutput })],
       label: labelFor(key, r?.label),
       count: inventory[key] || 0,
       buyPrice: p.buy ?? 0,
@@ -324,7 +335,7 @@ export function InventoryGrid({
     entries.push({
       key,
       kind: "item",
-      tags: tagsForItemKey(key),
+      tags: [...tagsForItemKey(key), ...sourceTagsForItem(key, { recipesByOutput })],
       label: labelFor(key, item?.label),
       count: inventory[key] || 0,
       buyPrice: 0,
@@ -338,7 +349,7 @@ export function InventoryGrid({
     entries.push({
       key,
       kind: "tool",
-      tags: tagsForItemKey(key),
+      tags: [...tagsForItemKey(key), ...sourceTagsForItem(key, { recipesByOutput })],
       label: labelFor(key, item?.label),
       count: toolCountByKey[key] || 0,
       buyPrice: 0,

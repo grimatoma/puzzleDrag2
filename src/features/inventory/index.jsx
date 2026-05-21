@@ -1,9 +1,28 @@
 import { useEffect, useState } from "react";
 import { InventoryGrid } from "../../ui/Inventory.jsx";
+import { INVENTORY_SOURCE_TAGS, INVENTORY_TAGS } from "./tags.js";
 import FeaturePanel from "../../ui/primitives/FeaturePanel.jsx";
 import { SearchInput } from "../../ui/primitives/Field.jsx";
+import Pill from "../../ui/primitives/Pill.jsx";
 
 export const viewKey = "inventory";
+
+const PRIMARY_FILTERS = [
+  { id: "all", label: "All" },
+  { id: INVENTORY_TAGS.RESOURCE, label: "Resources" },
+  { id: INVENTORY_TAGS.TOOL, label: "Tools" },
+  { id: INVENTORY_TAGS.ITEM, label: "Items" },
+];
+
+const TAG_FILTERS = [
+  { id: INVENTORY_TAGS.FOOD, label: "Food" },
+  { id: INVENTORY_TAGS.CARGO, label: "Cargo" },
+  { id: INVENTORY_SOURCE_TAGS.FARM, label: "Farm" },
+  { id: INVENTORY_SOURCE_TAGS.MINE, label: "Mine" },
+  { id: INVENTORY_SOURCE_TAGS.HARBOR, label: "Harbor" },
+  { id: INVENTORY_SOURCE_TAGS.CRAFTED, label: "Crafted" },
+  { id: INVENTORY_SOURCE_TAGS.NATURAL, label: "Natural" },
+];
 
 const PHONE_BREAKPOINT = 768;
 
@@ -79,6 +98,8 @@ export default function InventoryScreen({ state, dispatch, searchOpen: searchOpe
   const isPhone = usePhoneViewport();
 
   const [queryInput, setQueryInput] = useState("");
+  const [primaryFilter, setPrimaryFilter] = useState("all");
+  const [activeTags, setActiveTags] = useState([]);
 
   const searchOpen = searchOpenProp ?? false;
   const query = useDebounced(queryInput, 100);
@@ -89,6 +110,16 @@ export default function InventoryScreen({ state, dispatch, searchOpen: searchOpe
       setTimeout(() => setQueryInput(""), 0);
     }
   }, [searchOpen]);
+
+  const toggleTag = (tagId) => {
+    setActiveTags((prev) => (prev.includes(tagId)
+      ? prev.filter((id) => id !== tagId)
+      : [...prev, tagId]));
+  };
+
+  const combinedFilter = primaryFilter === "all"
+    ? activeTags
+    : [primaryFilter, ...activeTags];
 
   return (
     <FeaturePanel className="z-10">
@@ -108,13 +139,36 @@ export default function InventoryScreen({ state, dispatch, searchOpen: searchOpe
 
       <FeaturePanel.Body>
         <div className="w-full h-full min-h-0 flex flex-col gap-3">
+          <div className="hl-well flex flex-wrap items-center gap-2">
+            {PRIMARY_FILTERS.map((option) => {
+              const active = primaryFilter === option.id;
+              return (
+                <button
+                  key={option.id}
+                  type="button"
+                  className={`rounded-lg px-2 py-1 text-[11px] font-semibold border transition-colors ${active ? "bg-amber-300/20 border-amber-300/70 text-cream" : "bg-iron-deep/55 border-iron text-parchment"}`}
+                  onClick={() => setPrimaryFilter(option.id)}
+                >
+                  {option.label}
+                </button>
+              );
+            })}
+            {TAG_FILTERS.map((option) => {
+              const active = activeTags.includes(option.id);
+              return (
+                <button key={option.id} type="button" onClick={() => toggleTag(option.id)}>
+                  <Pill tone={active ? "gold" : "iron"} variant="soft" size="sm">{option.label}</Pill>
+                </button>
+              );
+            })}
+          </div>
           <InventoryGrid
             inventory={state.inventory}
             biomeKey={biomeKey}
             orders={state.orders}
             state={state}
             dispatch={dispatch}
-            filter="all"
+            filter={combinedFilter}
             sort="count"
             query={query}
             recentOrder={recentOrder}
