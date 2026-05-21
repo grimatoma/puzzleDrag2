@@ -1402,7 +1402,7 @@ const BOARD_LAYOUT_CSS = `
     grid-template-areas:
       "panel board"
       "tools board";
-    grid-template-columns: minmax(320px, 28%) minmax(0, 1fr);
+    grid-template-columns: minmax(360px, 44%) minmax(0, 1fr);
     grid-template-rows: auto minmax(0, 1fr);
   }
   .hwv-board-layout > [data-area="hotbar"] { display: none; }
