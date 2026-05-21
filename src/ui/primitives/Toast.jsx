@@ -45,9 +45,10 @@ function ToastItem({ entry, onDone }) {
   }, [entry, onDone]);
 
   const toneCls = TONE_TOAST[entry.tone] || TONE_TOAST.info;
+  const stagger = entry.stagger ?? 0;
   const anim = exiting
     ? `toastOut ${TOAST_EXIT_MS}ms ease-in both`
-    : "toastIn 180ms ease-out both";
+    : `toastIn 180ms ease-out ${stagger}ms both`;
   return (
     <div
       className={`pointer-events-auto inline-flex items-center gap-2 px-3 py-2 rounded-md border shadow-md text-body font-medium tabular-nums ${toneCls}`}
@@ -98,10 +99,15 @@ function BubbleItem({ entry, onDone, onDismiss }) {
   );
 }
 
+const TOAST_STAGGER_MS = 80;
+const TOAST_STAGGER_RESET_MS = 350;
+const TOAST_STAGGER_MAX = 240;
+
 export function NotifierProvider({ children, onBeat }) {
   const [toasts, setToasts] = useState([]);
   const [bubbles, setBubbles] = useState([]);
   const onBeatRef = useRef(onBeat);
+  const staggerRef = useRef({ next: 0, lastAt: 0 });
   useEffect(() => {
     onBeatRef.current = onBeat;
   }, [onBeat]);
@@ -116,7 +122,15 @@ export function NotifierProvider({ children, onBeat }) {
   const api = useMemo(
     () => ({
       toast(payload) {
-        const entry = { id: uid(), ...payload };
+        const now = typeof performance !== "undefined" ? performance.now() : Date.now();
+        const s = staggerRef.current;
+        if (now - s.lastAt > TOAST_STAGGER_RESET_MS) {
+          s.next = 0;
+        }
+        s.lastAt = now;
+        const stagger = s.next;
+        s.next = Math.min(s.next + TOAST_STAGGER_MS, TOAST_STAGGER_MAX);
+        const entry = { id: uid(), stagger, ...payload };
         setToasts((q) => {
           const next = [...q, entry];
           return next.length > TOAST_MAX ? next.slice(next.length - TOAST_MAX) : next;
