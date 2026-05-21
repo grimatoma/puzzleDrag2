@@ -80,3 +80,66 @@
 @keyframes bottomSheetIn {
   from { transform: translateY(100%); }
 }
+
+/* ── Crafting queue panel ───────────────────────────────────────────────── */
+@keyframes craftProgressShine {
+  0%   { transform: translateX(-110%); }
+  100% { transform: translateX(160%); }
+}
+@keyframes craftActivePulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(199, 94, 46, 0.00); }
+  50%      { box-shadow: 0 0 14px 2px rgba(199, 94, 46, 0.38); }
+}
+@keyframes craftReadyGlow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(143, 199, 64, 0.30); }
+  50%      { box-shadow: 0 0 20px 4px rgba(143, 199, 64, 0.70); }
+}
+@keyframes craftReadyBadge {
+  0%, 100% { transform: scale(1); opacity: 0.95; }
+  50%      { transform: scale(1.06); opacity: 1; }
+}
+.craft-active-card { animation: craftActivePulse 2.6s ease-in-out infinite; }
+.craft-ready-card  { animation: craftReadyGlow   1.6s ease-in-out infinite; }
+.craft-ready-badge { animation: craftReadyBadge  1.2s ease-in-out infinite; }
+.craft-progress {
+  position: relative;
+  height: 10px;
+  background: rgba(0, 0, 0, 0.32);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.craft-progress-fill {
+  position: absolute;
+  inset: 0;
+  width: 0;
+  background: linear-gradient(90deg, #b8531f 0%, #e08a5a 100%);
+  border-radius: 999px;
+  transition: width 1s linear;
+}
+.craft-progress-fill--ready {
+  background: linear-gradient(90deg, #4c7820 0%, #8fc740 100%);
+}
+.craft-progress-shine {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(90deg, transparent 35%, rgba(255, 255, 255, 0.28) 50%, transparent 65%);
+  animation: craftProgressShine 2.4s linear infinite;
+  transform: translateX(-110%);
+}
+.craft-queue-row {
+  position: relative;
+  transition: opacity 200ms ease, transform 200ms ease;
+}
+.craft-queue-row::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: 3px;
+  height: 50%;
+  transform: translateY(-50%);
+  background: linear-gradient(180deg, transparent 0%, rgba(255,255,255,0.18) 50%, transparent 100%);
+  border-radius: 2px;
+}

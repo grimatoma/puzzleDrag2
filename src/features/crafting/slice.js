@@ -1,10 +1,8 @@
-import { RECIPES, ITEMS, CRAFT_QUEUE_HOURS, CRAFT_GEM_SKIP_COST } from "../../constants.js";
+import { RECIPES, ITEMS, CRAFT_GEM_SKIP_COST, recipeCraftMs } from "../../constants.js";
 import { computeWorkerEffects } from "../workers/aggregate.js";
 import { locBuilt } from "../../locBuilt.js";
 
 export const initial = { craftedTotals: {}, craftQueue: [] };
-
-const CRAFT_QUEUE_MS = CRAFT_QUEUE_HOURS * 60 * 60 * 1000;
 
 /**
  * Phase 4 — apply per-hire recipe-input reductions from `computeWorkerEffects`
@@ -84,51 +82,75 @@ export function reduce(state, action) {
       return { ...next, bubble: { npc: "mira", text: `Crafted ${ITEMS[paid.recipe.item]?.label}!`, ms: 1500, id: Date.now() } };
     }
 
-    // ── Phase 5 — real-time crafting queue ──────────────────────────────────
+    // ── Phase 5 — real-time SEQUENTIAL crafting queue ──────────────────────
+    // Queue entry: { key, queuedAt, startAt, readyAt, durationMs }
+    // Only the head of the queue actively crafts. Subsequent entries have
+    // `startAt == previousEntry.readyAt` and don't begin counting down until
+    // the entry ahead is claimed/skipped.
     case "CRAFTING/QUEUE_RECIPE": {
       const recipeKey = action.recipeKey ?? action.payload?.key;
       const paid = canPayForRecipe(state, recipeKey);
       if (!paid) return state;
       const inv = payInputs(state.inventory || {}, paid.inputs);
       const now = Date.now();
+      const queue = state.craftQueue ?? [];
+      const last = queue[queue.length - 1];
+      const startAt = Math.max(now, last?.readyAt ?? 0);
+      const durationMs = recipeCraftMs(recipeKey);
+      const readyAt = startAt + durationMs;
       return {
         ...state,
         inventory: inv,
-        craftQueue: [...(state.craftQueue ?? []), { key: recipeKey, queuedAt: now, readyAt: now + CRAFT_QUEUE_MS }],
-        bubble: { npc: "mira", text: `Queued ${ITEMS[paid.recipe.item]?.label} — ready in ${CRAFT_QUEUE_HOURS}h.`, ms: 1800, id: Date.now() },
+        craftQueue: [...queue, { key: recipeKey, queuedAt: now, startAt, readyAt, durationMs }],
+        bubble: { npc: "mira", text: `Queued ${ITEMS[paid.recipe.item]?.label}.`, ms: 1500, id: Date.now() },
       };
     }
     case "CRAFTING/CLAIM_CRAFT": {
-      // Queue-completion path. coreReducer (src/state.js) fires the
-      // `craft_made` event for story beats + ember_drake boss progress;
-      // we also bump achievements `totalCrafted` here so the queued path
-      // contributes to the same counter as the instant CRAFT_RECIPE.
-      const idx = action.payload?.idx ?? action.idx;
+      // Sequential queue: only the head (idx 0) can be claimed, and only
+      // when ready. coreReducer (src/state.js) fires the `craft_made` event
+      // for story beats + ember_drake boss progress; we also bump
+      // achievements `totalCrafted` so the queued path contributes to the
+      // same counter as the instant CRAFT_RECIPE.
+      const idx = action.payload?.idx ?? action.idx ?? 0;
+      if (idx !== 0) return state; // only the head can be claimed
       const queue = state.craftQueue ?? [];
-      const entry = queue[idx];
+      const entry = queue[0];
       if (!entry || (entry.readyAt ?? Infinity) > Date.now()) return state; // not ready
       const recipe = RECIPES[entry.key];
       if (!recipe) return state;
       const next = grantCraftOutput(state, entry.key, recipe, state.inventory || {});
       return {
         ...next,
-        craftQueue: queue.filter((_, i) => i !== idx),
+        craftQueue: queue.slice(1),
         totalCrafted: (next.totalCrafted || 0) + 1,
         bubble: { npc: "mira", text: `Crafted ${ITEMS[recipe.item]?.label}!`, ms: 1500, id: Date.now() },
       };
     }
     case "CRAFTING/SKIP_CRAFT": {
-      const idx = action.payload?.idx ?? action.idx;
+      // Sequential queue: only the head can be skipped. Spending a gem
+      // finishes the head instantly; any remaining queue entries shift
+      // earlier by however much time the skipped item would have taken,
+      // so the next item begins crafting NOW instead of when the skipped
+      // item would have finished.
+      const idx = action.payload?.idx ?? action.idx ?? 0;
+      if (idx !== 0) return state;
       const queue = state.craftQueue ?? [];
-      const entry = queue[idx];
+      const entry = queue[0];
       if (!entry) return state;
       const recipe = RECIPES[entry.key];
       if (!recipe) return state;
       if ((state.gems ?? 0) < CRAFT_GEM_SKIP_COST) return state;
+      const now = Date.now();
+      const shift = Math.max(0, (entry.readyAt ?? now) - now);
+      const restShifted = queue.slice(1).map((e) => ({
+        ...e,
+        startAt: (e.startAt ?? 0) - shift,
+        readyAt: (e.readyAt ?? 0) - shift,
+      }));
       const next = grantCraftOutput({ ...state, gems: state.gems - CRAFT_GEM_SKIP_COST }, entry.key, recipe, state.inventory || {});
       return {
         ...next,
-        craftQueue: queue.filter((_, i) => i !== idx),
+        craftQueue: restShifted,
         totalCrafted: (next.totalCrafted || 0) + 1,
         bubble: { npc: "mira", text: `Skipped ahead — crafted ${ITEMS[recipe.item]?.label}!`, ms: 1600, id: Date.now() },
       };
