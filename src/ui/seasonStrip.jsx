@@ -137,77 +137,114 @@ function evenSpaced(count, width, leftPad = 8, rightPad = 8) {
 
 function SpringDeco({ width }) {
   if (width <= 0) return null;
-  // Anchor: a single butterfly that always appears (idle flutter).
-  // Filler: flowers along the bottom, ~1 per 18px of width.
-  const flowerCount = Math.max(2, Math.round(width / 18));
-  const flowerXs = evenSpaced(flowerCount, width, 8, 10);
-  const palette = ["#f06292", "#ffb74d", "#ba68c8", "#f06292", "#ffb74d"];
-  const showSecondButterfly = width >= 170;
-  const showGrassTufts = width >= 110;
+  // 4-petal pansies (the elaborate version from the original bespoke scene)
+  // stand along a clear grass strip. A butterfly always flutters above the
+  // first flower; wider segments get extra butterflies and grass tufts.
+  const flowerCount = Math.max(3, Math.min(9, Math.round(width / 22)));
+  const flowerXs = evenSpaced(flowerCount, width, 10, 10);
+  const flowerColors = ["#f06292", "#ffb74d", "#ba68c8", "#f06292", "#ffb74d", "#ba68c8", "#f06292", "#ffb74d", "#ba68c8"];
+  const showSecondButterfly = width >= 150;
+  const showThirdButterfly = width >= 230;
+  const showGrassTufts = width >= 90;
 
   return (
     <g aria-hidden="true">
+      {/* grass strip */}
+      <rect x="0" y="42" width={width} height="8" fill="#7cba4c" />
+      <rect x="0" y="42" width={width} height="1.5" fill="#5da636" />
+
+      {/* grass tufts between flowers */}
       {showGrassTufts && (
-        <g stroke="#3a7a2a" strokeWidth="0.7" strokeLinecap="round" fill="none" opacity="0.7">
-          {evenSpaced(Math.max(2, Math.round(width / 60)), width, 4, 4).map((x, i) => (
-            <g key={i} transform={`translate(${x},44)`}>
-              <line x1="-2" y1="0" x2="-1" y2="-3" />
-              <line x1="0" y1="0" x2="0" y2="-4" />
-              <line x1="2" y1="0" x2="1" y2="-3" />
+        <g stroke="#3a7a2a" strokeWidth="0.6" strokeLinecap="round" fill="none" opacity="0.75">
+          {evenSpaced(Math.max(2, Math.round(width / 45)), width, 5, 5).map((x, i) => (
+            <g key={i} transform={`translate(${x},42)`}>
+              <line x1="-2" y1="0" x2="-1.4" y2="-3.5" />
+              <line x1="0"  y1="0" x2="0"    y2="-4.2" />
+              <line x1="2"  y1="0" x2="1.4"  y2="-3.5" />
             </g>
           ))}
         </g>
       )}
+
+      {/* 4-petal pansies */}
       {flowerXs.map((x, i) => {
-        const color = palette[i % palette.length];
+        const color = flowerColors[i % flowerColors.length];
         return (
-          <g key={`f${i}`} transform={`translate(${x},44)`}>
-            <line x1="0" y1="0" x2="0" y2="-6" stroke="#3a7a2a" strokeWidth="1.1" strokeLinecap="round" />
-            <circle cx="0" cy="-7.5" r="2" fill={color} stroke="#9a3358" strokeWidth="0.3" />
-            <circle cx="0" cy="-7.5" r="0.7" fill="#fff4a8" />
+          <g key={`f${i}`} transform={`translate(${x},0)`}>
+            {/* stem */}
+            <line x1="0" y1="42" x2="0" y2="26" stroke="#3a7a2a" strokeWidth="1.3" strokeLinecap="round" />
+            {/* a small leaf on the stem */}
+            <path d={`M 0 33 Q 3 31 4 33 Q 2 34 0 33 Z`} fill="#5da636" stroke="#3a7a2a" strokeWidth="0.3" />
+            {/* 4 petals around a yellow center */}
+            <ellipse cx="0"    cy="22" rx="2.8" ry="1.9" fill={color} stroke="#9a3358" strokeWidth="0.3" />
+            <ellipse cx="0"    cy="28" rx="2.8" ry="1.9" fill={color} stroke="#9a3358" strokeWidth="0.3" />
+            <ellipse cx="-2.8" cy="25" rx="1.9" ry="2.8" fill={color} stroke="#9a3358" strokeWidth="0.3" />
+            <ellipse cx="2.8"  cy="25" rx="1.9" ry="2.8" fill={color} stroke="#9a3358" strokeWidth="0.3" />
+            <circle cx="0" cy="25" r="1.3" fill="#fff4a8" stroke="#c79a48" strokeWidth="0.2" />
           </g>
         );
       })}
-      <g
-        transform={`translate(${Math.min(28, width / 3)},14)`}
-        className="hwv-anim"
-        style={{
-          transformOrigin: `${Math.min(28, width / 3)}px 14px`,
-          animation: "hwv-spring-sway 1500ms ease-in-out infinite",
-        }}
-      >
-        <path d="M0 0 C -2 -1.5, -3.5 -0.5, -2.5 1 C -3.5 1.5, -2 2.5, 0 1.5 Z" fill="#9c66c8" stroke="#5a2e7a" strokeWidth="0.3" />
-        <path d="M0 0 C  2 -1.5,  3.5 -0.5,  2.5 1 C  3.5 1.5,  2 2.5, 0 1.5 Z" fill="#9c66c8" stroke="#5a2e7a" strokeWidth="0.3" />
-      </g>
-      {showSecondButterfly && (
+
+      {/* butterflies */}
+      {[
+        { x: Math.min(width * 0.28, 30), y: 12, color: "#9c66c8", stroke: "#5a2e7a", delay: 0,   period: 1500 },
+        ...(showSecondButterfly
+          ? [{ x: Math.min(width * 0.62, width - 26), y: 18, color: "#f06292", stroke: "#9a3358", delay: 350, period: 1750 }]
+          : []),
+        ...(showThirdButterfly
+          ? [{ x: width - 22, y: 10, color: "#ffb74d", stroke: "#9a3358", delay: 200, period: 1300 }]
+          : []),
+      ].map((b, i) => (
         <g
-          transform={`translate(${width - 22},20)`}
+          key={`bfly${i}`}
+          transform={`translate(${b.x},${b.y})`}
           className="hwv-anim"
           style={{
-            transformOrigin: `${width - 22}px 20px`,
-            animation: "hwv-spring-sway 1900ms ease-in-out infinite",
-            animationDelay: "300ms",
+            transformOrigin: `${b.x}px ${b.y}px`,
+            animation: `hwv-spring-sway ${b.period}ms ease-in-out infinite`,
+            animationDelay: `${b.delay}ms`,
           }}
         >
-          <path d="M0 0 C -1.6 -1.2, -2.8 -0.4, -2 0.8 C -2.8 1.2, -1.6 2, 0 1.2 Z" fill="#f06292" stroke="#9a3358" strokeWidth="0.3" />
-          <path d="M0 0 C  1.6 -1.2,  2.8 -0.4,  2 0.8 C  2.8 1.2,  1.6 2, 0 1.2 Z" fill="#f06292" stroke="#9a3358" strokeWidth="0.3" />
+          <path d="M0 0 C -3 -2.2, -4.6 -0.6, -3.6 1.4 C -4.6 2, -3 3.6, 0 1.8 Z" fill={b.color} stroke={b.stroke} strokeWidth="0.4" />
+          <path d="M0 0 C  3 -2.2,  4.6 -0.6,  3.6 1.4 C  4.6 2,  3 3.6, 0 1.8 Z" fill={b.color} stroke={b.stroke} strokeWidth="0.4" />
+          <line x1="0" y1="-0.6" x2="0" y2="3" stroke="#3a2412" strokeWidth="0.5" />
         </g>
-      )}
+      ))}
     </g>
   );
 }
 
 function SummerDeco({ width }) {
   if (width <= 0) return null;
-  // Anchor: sun in upper-left. Filler: clouds across, scaling with width.
-  const cloudCount = Math.max(1, Math.round((width - 32) / 80));
-  const cloudXs = evenSpaced(cloudCount, width - 30, 36, 8);
-  const showBee = width >= 140;
-  const showWheatTufts = width >= 100;
+  // A big sun shedding 8 rays in the upper-left (the prominent sun from the
+  // original bespoke scene). Sandy strip across the bottom with a shell.
+  // Filler: clouds, a bee, and wheat tufts on wider segments.
+  const cloudCount = Math.max(1, Math.min(3, Math.round((width - 50) / 80)));
+  const cloudXs = evenSpaced(cloudCount, width - 36, 50, 8);
+  const showBee = width >= 130;
+  const showWheatTufts = width >= 110;
+  const showSecondShell = width >= 160;
 
   return (
     <g aria-hidden="true">
-      {/* sun rays */}
+      {/* sandy strip at bottom */}
+      <rect x="0" y="42" width={width} height="8" fill="#e9c87a" />
+      <rect x="0" y="42" width={width} height="1.5" fill="#c79a48" />
+      {/* shell on the sand */}
+      <g transform={`translate(${width * 0.55}, 47)`}>
+        <path d="M -3 0 Q 0 -4 3 0 L 1.5 1.5 L -1.5 1.5 Z" fill="#fff2d6" stroke="#a87832" strokeWidth="0.5" />
+        <line x1="0" y1="-3.5" x2="0" y2="0" stroke="#a87832" strokeWidth="0.4" />
+        <line x1="-1.5" y1="-2" x2="-0.5" y2="0" stroke="#a87832" strokeWidth="0.3" />
+        <line x1="1.5"  y1="-2" x2="0.5"  y2="0" stroke="#a87832" strokeWidth="0.3" />
+      </g>
+      {showSecondShell && (
+        <g transform={`translate(${width - 18}, 47)`}>
+          <path d="M -2.4 0 Q 0 -3 2.4 0 L 1.2 1.2 L -1.2 1.2 Z" fill="#ffe4c4" stroke="#a87832" strokeWidth="0.4" />
+          <line x1="0" y1="-2.5" x2="0" y2="0" stroke="#a87832" strokeWidth="0.3" />
+        </g>
+      )}
+
+      {/* big sun with 8 rays */}
       <g
         className="hwv-anim"
         style={{ animation: "hwv-summer-pulse 2200ms ease-in-out infinite" }}
@@ -217,55 +254,62 @@ function SummerDeco({ width }) {
           return (
             <line
               key={deg}
-              x1={16 + 7 * Math.cos(a)}
-              y1={14 + 7 * Math.sin(a)}
-              x2={16 + 11 * Math.cos(a)}
-              y2={14 + 11 * Math.sin(a)}
+              x1={18 + 8.5 * Math.cos(a)}
+              y1={16 + 8.5 * Math.sin(a)}
+              x2={18 + 13 * Math.cos(a)}
+              y2={16 + 13 * Math.sin(a)}
               stroke="#f0c14b"
-              strokeWidth="1.3"
+              strokeWidth="1.6"
               strokeLinecap="round"
             />
           );
         })}
       </g>
-      <circle cx="16" cy="14" r="5.5" fill="#f6c342" stroke="#a87832" strokeWidth="0.6" />
-      <circle cx="14" cy="12" r="1.2" fill="#fff2c6" opacity="0.85" />
-      {/* clouds */}
+      <circle cx="18" cy="16" r="7" fill="#f6c342" stroke="#a87832" strokeWidth="0.8" />
+      {/* sun face / highlight */}
+      <circle cx="15.5" cy="13.5" r="1.4" fill="#fff2c6" opacity="0.85" />
+      <circle cx="15.5" cy="15.5" r="0.6" fill="#3a2412" />
+      <circle cx="20.5" cy="15.5" r="0.6" fill="#3a2412" />
+      <path d="M 16 18.5 Q 18 20 20 18.5" stroke="#3a2412" strokeWidth="0.6" fill="none" strokeLinecap="round" />
+
+      {/* clouds drifting across the sky */}
       {cloudXs.map((x, i) => (
-        <g key={i} transform={`translate(${x},${10 + (i % 2) * 4})`} opacity="0.85">
-          <ellipse cx="0" cy="0" rx="7" ry="2.8" fill="#fff9e8" stroke="#c79a48" strokeWidth="0.4" />
-          <ellipse cx="-3" cy="-1.2" rx="3" ry="2.4" fill="#fff9e8" stroke="#c79a48" strokeWidth="0.4" />
-          <ellipse cx="2.5" cy="-1.6" rx="3.5" ry="2.8" fill="#fff9e8" stroke="#c79a48" strokeWidth="0.4" />
+        <g key={i} transform={`translate(${x},${8 + (i % 2) * 5})`} opacity="0.92">
+          <ellipse cx="0"  cy="0"    rx="8" ry="3"  fill="#fff9e8" stroke="#c79a48" strokeWidth="0.5" />
+          <ellipse cx="-4" cy="-1.4" rx="3.5" ry="2.6" fill="#fff9e8" stroke="#c79a48" strokeWidth="0.5" />
+          <ellipse cx="3"  cy="-1.8" rx="4" ry="3" fill="#fff9e8" stroke="#c79a48" strokeWidth="0.5" />
         </g>
       ))}
-      {/* wheat tufts along the bottom */}
+
+      {/* wheat tufts along the bottom strip */}
       {showWheatTufts && (
         <g>
-          {evenSpaced(Math.max(2, Math.round(width / 40)), width, 32, 10).map((x, i) => (
+          {evenSpaced(Math.max(2, Math.round(width / 50)), width, 38, 14).map((x, i) => (
             <g key={i} transform={`translate(${x},44)`}>
-              <line x1="0" y1="0" x2="0" y2="-5" stroke="#a87832" strokeWidth="0.6" />
-              <ellipse cx="-1" cy="-5" rx="0.8" ry="1.4" fill="#f0c14b" stroke="#a87832" strokeWidth="0.3" />
-              <ellipse cx="1"  cy="-5" rx="0.8" ry="1.4" fill="#f0c14b" stroke="#a87832" strokeWidth="0.3" />
-              <ellipse cx="0"  cy="-6.5" rx="0.8" ry="1.4" fill="#f0c14b" stroke="#a87832" strokeWidth="0.3" />
+              <line x1="0" y1="0" x2="0" y2="-6" stroke="#a87832" strokeWidth="0.7" />
+              <ellipse cx="-1" cy="-5"   rx="0.9" ry="1.5" fill="#f0c14b" stroke="#a87832" strokeWidth="0.3" />
+              <ellipse cx="1"  cy="-5"   rx="0.9" ry="1.5" fill="#f0c14b" stroke="#a87832" strokeWidth="0.3" />
+              <ellipse cx="0"  cy="-6.8" rx="0.9" ry="1.5" fill="#f0c14b" stroke="#a87832" strokeWidth="0.3" />
             </g>
           ))}
         </g>
       )}
-      {/* bee silhouette */}
+
+      {/* bee bobbing near the sun */}
       {showBee && (
         <g
-          transform={`translate(${width - 26},20)`}
+          transform={`translate(${Math.min(width - 22, 36)}, 28)`}
           className="hwv-anim"
           style={{
-            transformOrigin: `${width - 26}px 20px`,
+            transformOrigin: `${Math.min(width - 22, 36)}px 28px`,
             animation: "hwv-spring-sway 900ms ease-in-out infinite",
           }}
         >
-          <ellipse cx="0" cy="0" rx="2" ry="1.3" fill="#f0c14b" stroke="#3a2412" strokeWidth="0.3" />
-          <rect x="-1.4" y="-1.3" width="0.8" height="2.6" fill="#3a2412" />
-          <rect x="0.4"  y="-1.3" width="0.8" height="2.6" fill="#3a2412" />
-          <ellipse cx="-1.2" cy="-1.4" rx="1.4" ry="0.7" fill="#fff9e8" opacity="0.6" />
-          <ellipse cx="1.2"  cy="-1.4" rx="1.4" ry="0.7" fill="#fff9e8" opacity="0.6" />
+          <ellipse cx="0" cy="0" rx="2.4" ry="1.5" fill="#f0c14b" stroke="#3a2412" strokeWidth="0.3" />
+          <rect x="-1.6" y="-1.5" width="0.9" height="3" fill="#3a2412" />
+          <rect x="0.7"  y="-1.5" width="0.9" height="3" fill="#3a2412" />
+          <ellipse cx="-1.5" cy="-1.6" rx="1.6" ry="0.8" fill="#fff9e8" opacity="0.7" />
+          <ellipse cx="1.5"  cy="-1.6" rx="1.6" ry="0.8" fill="#fff9e8" opacity="0.7" />
         </g>
       )}
     </g>
@@ -274,38 +318,55 @@ function SummerDeco({ width }) {
 
 function AutumnDeco({ width }) {
   if (width <= 0) return null;
-  // Anchor: tree on the left + leaf pile at its trunk base.
-  // Filler: falling leaves at staggered x's, plus a pumpkin if there's room.
-  const fallingLeafCount = Math.max(1, Math.round((width - 50) / 35));
-  const fallingXs = evenSpaced(fallingLeafCount, width - 36, 44, 10);
-  const showPumpkin = width >= 170;
-  const showAcorns = width >= 130;
+  // A full tree with a leafy canopy (multiple maple leaves clustered on
+  // branches), a generous leaf pile at the trunk base, and falling leaves
+  // drifting across the segment. Pumpkin + acorns on wider segments.
+  const fallingLeafCount = Math.max(1, Math.min(4, Math.round((width - 50) / 40)));
+  const fallingXs = evenSpaced(fallingLeafCount, width - 50, 56, 10);
+  const showPumpkin = width >= 150;
+  const showAcorns = width >= 120;
 
   return (
     <g aria-hidden="true">
+      {/* ground strip */}
+      <rect x="0" y="42" width={width} height="8" fill="#a86b30" />
+      <rect x="0" y="42" width={width} height="1.5" fill="#7a4a1c" />
+
       {/* trunk */}
-      <rect x="14" y="22" width="4" height="16" fill="#6b3a1a" rx="0.8" />
+      <rect x="16" y="22" width="5" height="20" fill="#6b3a1a" rx="0.8" />
+      <line x1="17.5" y1="24" x2="17.5" y2="40" stroke="#3a2412" strokeWidth="0.4" />
       {/* canopy backdrop */}
-      <ellipse cx="16" cy="18" rx="13" ry="11" fill="#8a4a1e" opacity="0.55" />
-      {/* canopy leaves */}
+      <ellipse cx="18.5" cy="16" rx="15" ry="12" fill="#8a4a1e" opacity="0.55" />
+      {/* canopy leaves — clustered around the canopy backdrop */}
       {[
-        { x: 9, y: 12, color: "#e07a3a", rot: -25 },
-        { x: 22, y: 14, color: "#d04a28", rot: 20 },
-        { x: 16, y: 9, color: "#f0a838", rot: 0 },
-        { x: 11, y: 22, color: "#f0a838", rot: -10 },
-        { x: 21, y: 22, color: "#d04a28", rot: 15 },
+        { x: 12, y: 10, color: "#e07a3a", rot: -25, scale: 1.1 },
+        { x: 25, y: 11, color: "#d04a28", rot: 20,  scale: 1.0 },
+        { x: 18, y: 6,  color: "#f0a838", rot: 0,   scale: 1.2 },
+        { x: 11, y: 18, color: "#f0a838", rot: -15, scale: 0.95 },
+        { x: 26, y: 19, color: "#d04a28", rot: 15,  scale: 1.05 },
+        { x: 19, y: 22, color: "#e07a3a", rot: 5,   scale: 1.0 },
+        { x: 7,  y: 14, color: "#f0a838", rot: -35, scale: 0.85 },
+        { x: 30, y: 15, color: "#e07a3a", rot: 30,  scale: 0.9 },
       ].map((l, i) => (
-        <g key={i} transform={`translate(${l.x},${l.y}) rotate(${l.rot})`}>
-          <path d="M 0 -2.6 Q 2.2 0 0 2.6 Q -2.2 0 0 -2.6 Z" fill={l.color} stroke="#7a3a14" strokeWidth="0.3" />
-          <line x1="0" y1="-2.2" x2="0" y2="2.2" stroke="#7a3a14" strokeWidth="0.25" />
+        <g key={i} transform={`translate(${l.x},${l.y}) rotate(${l.rot}) scale(${l.scale})`}>
+          <path d="M 0 -3 Q 2.5 0 0 3 Q -2.5 0 0 -3 Z" fill={l.color} stroke="#7a3a14" strokeWidth="0.3" />
+          <line x1="0" y1="-2.5" x2="0" y2="2.5" stroke="#7a3a14" strokeWidth="0.3" />
+          <line x1="0" y1="-1" x2="1.4" y2="0.4" stroke="#7a3a14" strokeWidth="0.25" />
+          <line x1="0" y1="-1" x2="-1.4" y2="0.4" stroke="#7a3a14" strokeWidth="0.25" />
         </g>
       ))}
-      {/* leaf pile at trunk base */}
-      <ellipse cx="22" cy="40" rx="9" ry="1.6" fill="#a85822" opacity="0.55" />
-      <circle cx="18" cy="39" r="1.2" fill="#d04a28" opacity="0.85" />
-      <circle cx="22" cy="40" r="1.2" fill="#f0a838" opacity="0.85" />
-      <circle cx="26" cy="39" r="1.1" fill="#e07a3a" opacity="0.85" />
-      {/* falling leaves filler */}
+
+      {/* fallen-leaf pile — a generous mound around the trunk base */}
+      <ellipse cx="22" cy="41.5" rx="14" ry="2" fill="#a85822" opacity="0.7" />
+      <circle cx="14" cy="40.5" r="1.4" fill="#d04a28" opacity="0.9" />
+      <circle cx="18" cy="40"   r="1.5" fill="#f0a838" opacity="0.9" />
+      <circle cx="22" cy="40.5" r="1.4" fill="#e07a3a" opacity="0.9" />
+      <circle cx="26" cy="40"   r="1.4" fill="#d04a28" opacity="0.9" />
+      <circle cx="30" cy="40.8" r="1.3" fill="#f0a838" opacity="0.9" />
+      <circle cx="20" cy="38.5" r="1.2" fill="#e07a3a" opacity="0.85" />
+      <circle cx="24" cy="38.5" r="1.2" fill="#d04a28" opacity="0.85" />
+
+      {/* falling leaves above the tree */}
       {fallingXs.map((x, i) => (
         <g
           key={i}
@@ -317,26 +378,34 @@ function AutumnDeco({ width }) {
             animationDelay: `${(i * 700) % 3800}ms`,
           }}
         >
-          <path d="M 0 -2.4 Q 2 0 0 2.4 Q -2 0 0 -2.4 Z" fill={["#e07a3a", "#d04a28", "#f0a838"][i % 3]} stroke="#7a3a14" strokeWidth="0.3" />
+          <path d="M 0 -2.6 Q 2.2 0 0 2.6 Q -2.2 0 0 -2.6 Z" fill={["#e07a3a", "#d04a28", "#f0a838"][i % 3]} stroke="#7a3a14" strokeWidth="0.3" />
+          <line x1="0" y1="-2.3" x2="0" y2="2.3" stroke="#7a3a14" strokeWidth="0.25" />
         </g>
       ))}
-      {/* ground pumpkin */}
+
+      {/* ground pumpkin — bigger and with proper segments */}
       {showPumpkin && (
-        <g transform={`translate(${width - 22},38)`}>
-          <ellipse cx="0" cy="0" rx="4" ry="3" fill="#e07a3a" stroke="#7a3a14" strokeWidth="0.4" />
-          <line x1="-2" y1="-2.4" x2="-2" y2="2.4" stroke="#a8521c" strokeWidth="0.5" />
-          <line x1="0"  y1="-3"   x2="0"  y2="3"   stroke="#a8521c" strokeWidth="0.5" />
-          <line x1="2"  y1="-2.4" x2="2"  y2="2.4" stroke="#a8521c" strokeWidth="0.5" />
-          <line x1="0"  y1="-3"   x2="0"  y2="-4.2" stroke="#3a7a2a" strokeWidth="0.7" strokeLinecap="round" />
+        <g transform={`translate(${width - 24}, 38)`}>
+          <ellipse cx="0" cy="0" rx="5" ry="3.6" fill="#e07a3a" stroke="#7a3a14" strokeWidth="0.5" />
+          <ellipse cx="-2.4" cy="0" rx="1.4" ry="3.4" fill="#d04a28" stroke="#7a3a14" strokeWidth="0.4" />
+          <ellipse cx="2.4"  cy="0" rx="1.4" ry="3.4" fill="#d04a28" stroke="#7a3a14" strokeWidth="0.4" />
+          <line x1="-3.4" y1="-2.4" x2="-3.4" y2="2.4" stroke="#a8521c" strokeWidth="0.4" />
+          <line x1="0"   y1="-3.6" x2="0"    y2="3.6" stroke="#a8521c" strokeWidth="0.4" />
+          <line x1="3.4" y1="-2.4" x2="3.4"  y2="2.4" stroke="#a8521c" strokeWidth="0.4" />
+          {/* stem + leaf */}
+          <rect x="-0.5" y="-4.6" width="1" height="1.4" fill="#3a7a2a" />
+          <path d="M 0.5 -4 Q 3 -5 4 -3 Q 2.5 -3 0.5 -3 Z" fill="#5da636" stroke="#3a7a2a" strokeWidth="0.3" />
         </g>
       )}
-      {/* acorns on the ground */}
+
+      {/* acorns near the leaf pile */}
       {showAcorns && (
-        <g transform={`translate(${width / 2 + 8},40)`}>
-          <ellipse cx="0" cy="0" rx="1.4" ry="1.7" fill="#a85822" stroke="#3a2412" strokeWidth="0.3" />
-          <ellipse cx="0" cy="-1.4" rx="1.5" ry="0.7" fill="#6b3a1a" stroke="#3a2412" strokeWidth="0.3" />
-          <ellipse cx="3" cy="0" rx="1.3" ry="1.5" fill="#a85822" stroke="#3a2412" strokeWidth="0.3" />
-          <ellipse cx="3" cy="-1.2" rx="1.4" ry="0.6" fill="#6b3a1a" stroke="#3a2412" strokeWidth="0.3" />
+        <g transform={`translate(${Math.min(width / 2 + 14, width - 50)},40)`}>
+          <ellipse cx="0" cy="0" rx="1.6" ry="2" fill="#a85822" stroke="#3a2412" strokeWidth="0.3" />
+          <ellipse cx="0" cy="-1.6" rx="1.7" ry="0.8" fill="#6b3a1a" stroke="#3a2412" strokeWidth="0.3" />
+          <line x1="0" y1="-2.4" x2="0" y2="-3" stroke="#3a2412" strokeWidth="0.4" />
+          <ellipse cx="3.4" cy="0" rx="1.4" ry="1.7" fill="#a85822" stroke="#3a2412" strokeWidth="0.3" />
+          <ellipse cx="3.4" cy="-1.4" rx="1.5" ry="0.7" fill="#6b3a1a" stroke="#3a2412" strokeWidth="0.3" />
         </g>
       )}
     </g>
@@ -345,26 +414,32 @@ function AutumnDeco({ width }) {
 
 function WinterDeco({ width }) {
   if (width <= 0) return null;
-  // Anchor: snow-dusted evergreen on the left.
-  // Filler: drifting snowflakes across the sky, plus a snow drift or a
-  // second evergreen for wider segments.
-  const flakeCount = Math.max(2, Math.round(width / 24));
-  const flakeXs = evenSpaced(flakeCount, width - 30, 34, 8);
-  const showSecondTree = width >= 180;
-  const showSnowdrift = width >= 110;
+  // A full 3-tier snowman with hat, twig arms, scarf, carrot nose, and coal
+  // buttons — placed in the middle of the segment as the centerpiece. A
+  // snow-dusted evergreen anchors the left side. Drifting snowflakes fill
+  // the sky; wider segments get a second evergreen on the right and an
+  // extra snow drift in the foreground.
+  const flakeCount = Math.max(3, Math.min(10, Math.round(width / 22)));
+  const flakeXs = evenSpaced(flakeCount, width, 8, 8);
+  const showSecondTree = width >= 200;
+  const snowmanCx = Math.max(54, Math.min(width / 2 + 10, width - 24));
 
   return (
     <g aria-hidden="true">
-      {/* evergreen — anchor */}
-      <rect x="14" y="34" width="3" height="6" fill="#6b3a1a" rx="0.4" />
-      <path d="M 15.5 6 L 23 22 L 8 22 Z" fill="#2a6a4a" />
-      <path d="M 15.5 14 L 25 32 L 6 32 Z" fill="#2a6a4a" />
-      {/* snow on the branches */}
-      <ellipse cx="15.5" cy="22" rx="7" ry="0.9" fill="#f8fbff" />
-      <ellipse cx="15.5" cy="32" rx="9" ry="0.9" fill="#f8fbff" />
-      {/* drifting snowflakes */}
+      {/* snowy ground strip */}
+      <rect x="0" y="42" width={width} height="8" fill="#f8fbff" />
+      <rect x="0" y="42" width={width} height="1.2" fill="#bcd0e0" />
+
+      {/* evergreen anchor on the left */}
+      <rect x="13" y="34" width="3" height="6" fill="#6b3a1a" rx="0.4" />
+      <path d="M 14.5 6 L 22 22 L 7 22 Z"  fill="#2a6a4a" />
+      <path d="M 14.5 14 L 24 32 L 5 32 Z" fill="#2a6a4a" />
+      <ellipse cx="14.5" cy="22" rx="7"   ry="1" fill="#f8fbff" />
+      <ellipse cx="14.5" cy="32" rx="9.5" ry="1" fill="#f8fbff" />
+
+      {/* drifting snowflakes scattered across the sky */}
       {flakeXs.map((x, i) => {
-        const y = 8 + (i % 4) * 7;
+        const y = 6 + (i % 5) * 6;
         const size = 0.9 + (i % 3) * 0.4;
         return (
           <g
@@ -374,29 +449,100 @@ function WinterDeco({ width }) {
             style={{
               transformOrigin: `${x}px ${y}px`,
               animation: "hwv-winter-drift 2600ms ease-in-out infinite",
-              animationDelay: `${(i * 350) % 2600}ms`,
+              animationDelay: `${(i * 320) % 2600}ms`,
             }}
           >
-            <circle cx="0" cy="0" r={size} fill="#ffffff" stroke="#7aa9c6" strokeWidth="0.3" />
+            {/* 6-spoke snowflake — like the previous bespoke scene */}
+            {[0, 60, 120].map((deg) => {
+              const a = (deg * Math.PI) / 180;
+              const dx = Math.cos(a) * size;
+              const dy = Math.sin(a) * size;
+              return (
+                <line
+                  key={deg}
+                  x1={-dx}
+                  y1={-dy}
+                  x2={dx}
+                  y2={dy}
+                  stroke="#ffffff"
+                  strokeWidth="0.7"
+                  strokeLinecap="round"
+                />
+              );
+            })}
+            {[0, 60, 120].map((deg) => {
+              const a = (deg * Math.PI) / 180;
+              const dx = Math.cos(a) * size;
+              const dy = Math.sin(a) * size;
+              return (
+                <line
+                  key={`m${deg}`}
+                  x1={-dx}
+                  y1={-dy}
+                  x2={dx}
+                  y2={dy}
+                  stroke="#7aa9c6"
+                  strokeWidth="0.25"
+                  strokeLinecap="round"
+                />
+              );
+            })}
           </g>
         );
       })}
-      {/* snowdrift in the middle-foreground */}
-      {showSnowdrift && (
-        <path
-          d={`M ${width / 2 - 14} 44 Q ${width / 2} 38 ${width / 2 + 14} 44 Z`}
-          fill="#ffffff"
-          stroke="#bcd0e0"
-          strokeWidth="0.5"
-        />
-      )}
-      {/* small evergreen on the right */}
+
+      {/* snow drift in the foreground */}
+      <path
+        d={`M ${snowmanCx - 22} 44 Q ${snowmanCx - 12} 39 ${snowmanCx} 41 Q ${snowmanCx + 12} 39 ${snowmanCx + 22} 44 Z`}
+        fill="#ffffff"
+        stroke="#bcd0e0"
+        strokeWidth="0.5"
+        opacity="0.85"
+      />
+
+      {/* 3-tier snowman — the centerpiece */}
+      <g transform={`translate(${snowmanCx}, 0)`}>
+        {/* bottom snowball */}
+        <circle cx="0" cy="38" r="8.5" fill="#ffffff" stroke="#4a6a86" strokeWidth="0.8" />
+        {/* middle snowball */}
+        <circle cx="0" cy="26" r="6.5" fill="#ffffff" stroke="#4a6a86" strokeWidth="0.8" />
+        {/* head */}
+        <circle cx="0" cy="16" r="5"   fill="#ffffff" stroke="#4a6a86" strokeWidth="0.8" />
+        {/* twig arms */}
+        <line x1="-5" y1="26" x2="-12" y2="22" stroke="#5a3a1c" strokeWidth="1.1" strokeLinecap="round" />
+        <line x1="5"  y1="26" x2="12"  y2="22" stroke="#5a3a1c" strokeWidth="1.1" strokeLinecap="round" />
+        <line x1="-10" y1="23.5" x2="-9.5" y2="20.5" stroke="#5a3a1c" strokeWidth="1" strokeLinecap="round" />
+        <line x1="-11" y1="22.5" x2="-12" y2="20" stroke="#5a3a1c" strokeWidth="1" strokeLinecap="round" />
+        <line x1="10"  y1="23.5" x2="10.5" y2="20.5" stroke="#5a3a1c" strokeWidth="1" strokeLinecap="round" />
+        <line x1="11"  y1="22.5" x2="12" y2="20" stroke="#5a3a1c" strokeWidth="1" strokeLinecap="round" />
+        {/* coal buttons on the middle snowball */}
+        <circle cx="0" cy="23" r="0.7" fill="#2a3950" />
+        <circle cx="0" cy="26" r="0.7" fill="#2a3950" />
+        <circle cx="0" cy="29" r="0.7" fill="#2a3950" />
+        {/* scarf */}
+        <rect x="-5.5" y="20" width="11" height="2" fill="#d04a28" />
+        <rect x="-2.5" y="20" width="1"  height="3.5" fill="#d04a28" />
+        <rect x="1.5"  y="20" width="1"  height="3.5" fill="#d04a28" />
+        {/* face — eyes, carrot nose, mouth */}
+        <circle cx="-1.6" cy="15" r="0.7" fill="#2a3950" />
+        <circle cx="1.6"  cy="15" r="0.7" fill="#2a3950" />
+        <path d="M -0.4 16.5 L 3 17.3 L -0.4 18 Z" fill="#e07a3a" stroke="#a8521c" strokeWidth="0.3" />
+        <circle cx="-1.6" cy="18.5" r="0.4" fill="#2a3950" />
+        <circle cx="0"    cy="18.7" r="0.4" fill="#2a3950" />
+        <circle cx="1.6"  cy="18.5" r="0.4" fill="#2a3950" />
+        {/* top hat */}
+        <rect x="-4.5" y="11.5" width="9" height="1.6" fill="#2a3950" />
+        <rect x="-3"   y="7.5"  width="6" height="4.5" fill="#2a3950" />
+        <rect x="-3"   y="9"    width="6" height="0.8" fill="#d04a28" />
+      </g>
+
+      {/* small evergreen on the right for wider segments */}
       {showSecondTree && (
-        <g transform={`translate(${width - 24},0)`}>
+        <g transform={`translate(${width - 18},0)`}>
           <rect x="-1" y="36" width="2" height="4" fill="#6b3a1a" rx="0.3" />
-          <path d="M 0 14 L 6 26 L -6 26 Z" fill="#2a6a4a" />
-          <path d="M 0 20 L 7 36 L -7 36 Z" fill="#2a6a4a" />
-          <ellipse cx="0" cy="26" rx="5" ry="0.7" fill="#f8fbff" />
+          <path d="M 0 14 L 5.5 26 L -5.5 26 Z" fill="#2a6a4a" />
+          <path d="M 0 20 L 7   36 L -7   36 Z" fill="#2a6a4a" />
+          <ellipse cx="0" cy="26" rx="4.5" ry="0.7" fill="#f8fbff" />
           <ellipse cx="0" cy="36" rx="6.5" ry="0.7" fill="#f8fbff" />
         </g>
       )}
