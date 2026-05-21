@@ -57,6 +57,32 @@ describe("visual golden scenario matrix", () => {
     expect(new Set(ids).size).toBe(ids.length);
   });
 
+  it("requires expectation metadata with concrete visual checklist criteria", () => {
+    const concreteCriterionPatterns = [
+      /label|text|button/i,
+      /modal|panel|dialog/i,
+      /selected|focused|active/i,
+      /visible|rendered|shown/i,
+      /tile|board|hash route|view/i,
+    ];
+
+    for (const scenario of VISUAL_SCENARIOS) {
+      expect(typeof scenario.expectation, scenario.id).toBe("string");
+      expect(scenario.expectation.trim().length, scenario.id).toBeGreaterThan(0);
+
+      const checklist = scenario.reviewChecklist ?? [];
+      expect(Array.isArray(checklist), scenario.id).toBe(true);
+      expect(checklist.length, scenario.id).toBeGreaterThan(0);
+
+      const hasConcreteCriterion = checklist.some((criterion) =>
+        typeof criterion === "string"
+        && criterion.trim().length > 0
+        && concreteCriterionPatterns.some((pattern) => pattern.test(criterion))
+      );
+      expect(hasConcreteCriterion, scenario.id).toBe(true);
+    }
+  });
+
   it("uses valid hash routes or explicit internal views", () => {
     for (const scenario of VISUAL_SCENARIOS) {
       if (scenario.hash) {
