@@ -22,6 +22,12 @@ if (typeof window !== "undefined") {
   });
 }
 
+// In dev, invalidate the cache when any icon registry / texture module is
+// hot-reloaded so saved edits show up immediately without a full reload.
+if (import.meta.hot) {
+  import.meta.hot.accept(["../textures/iconRegistry.js"], () => clearIconCache());
+}
+
 /**
  * Universal Icon Component
  * Mounts an off-screen canvas exactly once per unique (key, size, dpr) combination,
