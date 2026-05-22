@@ -106,10 +106,12 @@ export default function TabBar({
   className = "",
   children,
 }) {
+  // No pb-safe-bottom here: body already reserves env(safe-area-inset-bottom)
+  // via index.html, and stacking it again leaves an empty band under the nav.
   const containerCls =
     density === "dock"
-      ? "flex items-stretch justify-around w-full bg-paper border-t-2 border-iron pb-safe-bottom shadow-[0_-4px_12px_rgba(0,0,0,.12)]"
-      : "flex items-stretch w-full bg-paper border-t-2 border-iron pb-safe-bottom shadow-[0_-4px_12px_rgba(0,0,0,.12)]";
+      ? "flex items-stretch justify-around w-full bg-paper border-t-2 border-iron shadow-[0_-4px_12px_rgba(0,0,0,.12)]"
+      : "flex items-stretch w-full bg-paper border-t-2 border-iron shadow-[0_-4px_12px_rgba(0,0,0,.12)]";
 
   const tabs = Children.map(children, (child) => {
     if (!isValidElement(child)) return child;
