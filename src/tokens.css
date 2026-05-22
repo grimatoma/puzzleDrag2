@@ -53,6 +53,39 @@
   --biome-mine:       #6a7d92;
   --biome-fish:       #4a8aa8;
 
+  /* ── Board surfaces (parchment-tinted; was saturated season fills) ─ */
+  --board-tools-top:    #fbf7eb;
+  --board-tools-bot:    #f0e3c4;
+  --board-tools-border: #c9b993;
+  --board-panel-border: #c9b993;     /* was #3a2412 */
+  --board-panel-track:  rgba(122, 94, 63, 0.18);
+  --board-chip-bg:      #fff7e6;     /* was #fff5dc */
+  --board-chip-border:  #c9b993;
+
+  /* ── Season-tinted field gradients (the board card backdrop). Lifted
+       so the board is a parchment card with seasonal warmth rather than
+       a saturated colour fill — pairs with the biome accent strip. ── */
+  --field-spring-top: #dbe6b5;
+  --field-spring-bot: #b8cf8a;
+  --field-summer-top: #ecdfb0;
+  --field-summer-bot: #c7b87a;
+  --field-fall-top:   #e8c890;
+  --field-fall-bot:   #c8a45a;
+  --field-winter-top: #dde4ea;
+  --field-winter-bot: #b6c2cc;
+
+  /* ── HUD depth — distinguish from page bg with one shade + shadow ── */
+  --hud-bg:           #faf3df;
+  --hud-shadow:       inset 0 1px 0 rgba(255, 255, 255, 0.6),
+                      0 1px 0 var(--iron),
+                      0 4px 12px rgba(60, 40, 20, 0.06);
+
+  /* ── Card shadow — subtle lift for rows / tiles on light chrome ──── */
+  --card-shadow:      0 1px 0 rgba(201, 185, 147, 0.55),
+                      0 2px 6px rgba(60, 40, 20, 0.05);
+  --card-shadow-strong: 0 2px 0 rgba(168, 146, 114, 0.45),
+                        0 4px 12px rgba(60, 40, 20, 0.08);
+
   /* ── Backgrounds (lifted parchment family; legacy "dark" names kept
        so existing consumers keep resolving — values are now light) ── */
   --bg-darkest:       #e9dfc6;

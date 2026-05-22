@@ -153,9 +153,9 @@ export function Hud({ state, dispatch, inventorySearchOpen, onInventorySearchTog
     : "var(--ember)";
   return (
     <div
-      className="flex items-center gap-2 px-3 py-2 bg-paper border-b border-iron text-ink relative"
+      className="flex items-center gap-2 px-3 py-2 bg-hud-bg border-b border-iron text-ink relative"
       data-testid="hud"
-      style={{ boxShadow: `inset 0 -3px 0 ${seasonAccent}55` }}
+      style={{ boxShadow: `var(--hud-shadow), inset 0 -3px 0 ${seasonAccent}55` }}
     >
       <div className="flex items-center gap-2 flex-shrink-0">
         <button
@@ -214,10 +214,11 @@ export function Hud({ state, dispatch, inventorySearchOpen, onInventorySearchTog
                   <Pill
                     interactive
                     tone="gold"
-                    variant="solid"
+                    variant="soft"
                     size="sm"
                     leading={<Icon iconKey="design.currency.coin" size={14} />}
                     title="Currencies"
+                    className="border border-iron"
                   >
                     <span
                       key={coinsPulseKey}

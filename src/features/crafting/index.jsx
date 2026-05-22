@@ -28,11 +28,11 @@ function LockGlyph({ size = 12 }) {
 }
 
 const STATION_META = {
-  bakery:   { label: "Bakery",   iconKey: "station_bakery",   bg: "#8a4a26" },
-  forge:    { label: "Forge",    iconKey: "station_forge",    bg: "#5a6973" },
-  larder:   { label: "Larder",   iconKey: "station_larder",   bg: "#4f6b3a" },
-  workshop: { label: "Workshop", iconKey: "station_workshop", bg: "#6a5a3a" },
-  decor:    { label: "Decor",    iconKey: "station_decor",    bg: "#7a3a8a" },
+  bakery:   { label: "Bakery",   iconKey: "station_bakery",   bg: "#c08458" },
+  forge:    { label: "Forge",    iconKey: "station_forge",    bg: "#8898a4" },
+  larder:   { label: "Larder",   iconKey: "station_larder",   bg: "#7a9658" },
+  workshop: { label: "Workshop", iconKey: "station_workshop", bg: "#a08c5e" },
+  decor:    { label: "Decor",    iconKey: "station_decor",    bg: "#b07ac0" },
 };
 
 // Ordered list of all stations (decor appended)

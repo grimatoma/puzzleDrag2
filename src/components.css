@@ -159,11 +159,13 @@
     background: var(--card-bg);
     border: 2px solid var(--card-border);
     color: var(--on-panel);
+    box-shadow: var(--card-shadow);
   }
-  .hl-card--interactive { @apply cursor-pointer transition-colors; }
+  .hl-card--interactive { @apply cursor-pointer transition-colors transition-shadow; }
   .hl-card--interactive:hover {
     background: var(--card-bg-hover);
     border-color: var(--card-border-strong);
+    box-shadow: var(--card-shadow-strong);
   }
   .hl-card-title { @apply text-body font-bold;  color: var(--on-panel); }
   .hl-card-text  { @apply text-body;            color: var(--on-panel); }
@@ -412,6 +414,15 @@
   /* Neutral brown — cancel / back affordance. */
   .hl-btn--neutral { background: #9a724d; border-color: #e6c49a; color: #fff; }
   .hl-btn--neutral:hover:not(:disabled) { background: #b8845a; }
+
+  /* Soft neutral — used for secondary actions (Fire, Cancel) on light
+     chrome. Parchment fill with ink text + warm border, no shouting. */
+  .hl-btn--neutral-soft {
+    background: var(--card-bg);
+    border-color: var(--card-border-strong);
+    color: var(--on-panel);
+  }
+  .hl-btn--neutral-soft:hover:not(:disabled) { background: var(--card-bg-hover); }
 
   /* Destructive action. */
   .hl-btn--danger { background: #9a3a2a; border-color: #6f251b; color: #fff; }

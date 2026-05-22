@@ -31,10 +31,10 @@ const SeasonStripPhaserLazy = lazy(() =>
 );
 
 const FIELD_GRADIENTS = [
-  "linear-gradient(180deg,#92b85a 0%,#6d9438 100%)",
-  "linear-gradient(180deg,#a8b948 0%,#7c9628 100%)",
-  "linear-gradient(180deg,#b78f3a 0%,#8a6428 100%)",
-  "linear-gradient(180deg,#a8bfc7 0%,#7c98a5 100%)",
+  "linear-gradient(180deg,var(--field-spring-top) 0%,var(--field-spring-bot) 100%)",
+  "linear-gradient(180deg,var(--field-summer-top) 0%,var(--field-summer-bot) 100%)",
+  "linear-gradient(180deg,var(--field-fall-top) 0%,var(--field-fall-bot) 100%)",
+  "linear-gradient(180deg,var(--field-winter-top) 0%,var(--field-winter-bot) 100%)",
 ];
 
 // Escalating chain-tier palette. Index = upgrades earned, clamped to 4.
@@ -101,13 +101,13 @@ export function SeasonIndicator({
 
 function PanelHeader({ left, right, accent }) {
   return (
-    <div className="flex items-center justify-between px-2.5 py-1.5 border-b border-dashed border-[rgba(138,100,40,0.55)] relative">
-      <div className="flex items-center gap-1.5 text-[9.5px] font-extrabold text-[#7a5520] uppercase tracking-[0.15em]">
+    <div className="flex items-center justify-between px-2.5 py-1.5 border-b border-dashed border-[color:var(--iron-edge)] relative">
+      <div className="flex items-center gap-1.5 text-[9.5px] font-extrabold text-on-panel-label uppercase tracking-[0.15em]">
         {accent && <span className="w-1.5 h-1.5 rounded-full inline-block" style={{ background: accent }} />}
         {left}
       </div>
       {right && (
-        <div className="text-[9.5px] text-[#8a6a47] font-bold uppercase tracking-wider">{right}</div>
+        <div className="text-[9.5px] text-on-panel-dim font-bold uppercase tracking-wider">{right}</div>
       )}
     </div>
   );
@@ -131,8 +131,8 @@ function IdleView({ inventory, biomeKey, cap }) {
               key={r.key}
               className="flex items-center gap-1.5 px-2 py-1 rounded-md relative overflow-hidden"
               style={{
-                background: empty ? "rgba(138,106,71,0.10)" : "#fff5dc",
-                border: `1px solid ${empty ? "transparent" : "#caa97a"}`,
+                background: empty ? "rgba(138,106,71,0.10)" : "var(--board-chip-bg)",
+                border: `1px solid ${empty ? "transparent" : "var(--board-chip-border)"}`,
                 opacity: empty ? 0.55 : 1,
               }}
               title={`${r.label ?? r.key}: ${count}`}
@@ -143,7 +143,7 @@ function IdleView({ inventory, biomeKey, cap }) {
               />
               <LegacyIcon iconKey={r.key} size={32} />
               <span
-                className="font-mono font-bold text-[13px] text-[#3a2412] relative tabular-nums"
+                className="font-mono font-bold text-[13px] text-on-panel relative tabular-nums"
               >
                 {count}
               </span>
@@ -210,12 +210,12 @@ function ChainView({ chainInfo, inventory }) {
             className="relative rounded-[13px] overflow-hidden"
             style={{
               height: 50,
-              background: "rgba(58,36,18,0.18)",
-              border: "2px solid #3a2412",
+              background: "var(--board-panel-track)",
+              border: "2px solid var(--board-panel-border)",
               boxShadow:
                 earned >= 2
-                  ? `inset 0 2px 4px rgba(0,0,0,0.22), 0 0 0 2px ${stage.accent}, 0 0 12px ${stage.accent}66`
-                  : "inset 0 2px 4px rgba(0,0,0,0.22)",
+                  ? `inset 0 2px 4px rgba(0,0,0,0.12), 0 0 0 2px ${stage.accent}, 0 0 12px ${stage.accent}66`
+                  : "inset 0 2px 4px rgba(0,0,0,0.10)",
             }}
           >
             {looped ? (
@@ -325,12 +325,12 @@ function ChainView({ chainInfo, inventory }) {
             style={{
               width: 64,
               height: 64,
-              background: "#3a2412",
-              border: earned > 0 ? `2px solid ${stage.accent}` : "2px solid #3a2412",
+              background: "var(--paper-soft)",
+              border: earned > 0 ? `2px solid ${stage.accent}` : "2px solid var(--board-panel-border)",
               boxShadow:
                 earned > 0
-                  ? `inset 0 -3px 0 rgba(0,0,0,0.35), 0 2px 0 rgba(0,0,0,0.3), 0 0 0 3px ${stage.accent}33`
-                  : "inset 0 -3px 0 rgba(0,0,0,0.35), 0 2px 0 rgba(0,0,0,0.3)",
+                  ? `inset 0 -3px 0 rgba(0,0,0,0.10), 0 2px 0 rgba(168,146,114,0.30), 0 0 0 3px ${stage.accent}33`
+                  : "inset 0 -3px 0 rgba(0,0,0,0.08), 0 2px 0 rgba(168,146,114,0.30)",
             }}
           >
             {resourceKey ? <LegacyIcon iconKey={resourceKey} size={40} /> : null}
@@ -342,11 +342,11 @@ function ChainView({ chainInfo, inventory }) {
                 bottom: -6,
                 right: -6,
                 background: `linear-gradient(180deg, ${stage.top}, ${stage.bot})`,
-                border: "2px solid #1a0d05",
+                border: "2px solid var(--ink)",
                 borderRadius: 10,
                 padding: "1px 7px",
                 fontSize: 14,
-                boxShadow: `0 2px 0 rgba(0,0,0,0.35), 0 0 8px ${stage.accent}99`,
+                boxShadow: `0 2px 0 rgba(0,0,0,0.25), 0 0 8px ${stage.accent}99`,
                 textShadow: "0 1px 0 rgba(0,0,0,0.4)",
                 minWidth: 24,
               }}
@@ -358,14 +358,14 @@ function ChainView({ chainInfo, inventory }) {
       </div>
       {threshold > 0 && (
         <div
-          className="flex items-center gap-2 px-2.5 py-1.5 border-t border-dashed border-[rgba(138,100,40,0.55)]"
+          className="flex items-center gap-2 px-2.5 py-1.5 border-t border-dashed border-[color:var(--iron-edge)]"
           style={{ background: "rgba(138,100,40,0.06)" }}
         >
-          <div className="text-[9px] font-extrabold text-[#7a5520] uppercase tracking-wider whitespace-nowrap">
+          <div className="text-[9px] font-extrabold text-on-panel-label uppercase tracking-wider whitespace-nowrap">
             Upgrade to
           </div>
           {upgradeKey ? <LegacyIcon iconKey={upgradeKey} size={18} /> : null}
-          <span className="text-[11px] font-extrabold text-[#3a2412] whitespace-nowrap">
+          <span className="text-[11px] font-extrabold text-on-panel whitespace-nowrap">
             {upgradeLabel}
           </span>
           <div
@@ -621,9 +621,9 @@ export function PuzzleActionPanel({
       style={{
         height: 148,
         background:
-          "linear-gradient(180deg, rgba(253,243,227,0.97) 0%, rgba(246,227,191,0.97) 100%)",
-        border: "1.5px solid #8a6428",
-        boxShadow: "0 3px 0 rgba(0,0,0,0.22), inset 0 0 0 1px rgba(255,255,255,0.55)",
+          "linear-gradient(180deg, var(--panel-top) 0%, var(--panel-bottom) 100%)",
+        border: "1.5px solid var(--card-border-strong)",
+        boxShadow: "var(--card-shadow-strong), inset 0 0 0 1px rgba(255,255,255,0.55)",
       }}
       data-testid="puzzle-action-panel"
       data-state={state}
@@ -859,8 +859,9 @@ export function PuzzleToolGrid({ state, onInspectChange, inspectedKey, dispatch 
     <div
       className="h-full overflow-y-auto rounded-[11px]"
       style={{
-        background: "linear-gradient(#6b4a26,#54391d)",
-        border: "1px solid #2a1a08",
+        background: "linear-gradient(180deg,var(--board-tools-top),var(--board-tools-bot))",
+        border: "1px solid var(--board-tools-border)",
+        boxShadow: "var(--card-shadow)",
       }}
       data-testid="puzzle-tool-grid"
     >

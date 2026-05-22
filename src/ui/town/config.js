@@ -1,15 +1,15 @@
 export const TOWN_THEMES = {
   home: {
-    bg: "linear-gradient(180deg, #a8c5d6 0%, #c5b48b 55%, #7e9b5a 100%)",
-    hill1: "#8da568", hill2: "#5a7a3e", road: "#c5b48b", roadLine: "#a89065",
-    sunColor: "#f7d572", sunGlow: "rgba(247,213,114,.7)",
+    bg: "linear-gradient(180deg, #dbe5e0 0%, #e8dfc6 55%, #b8c096 100%)",
+    hill1: "#a8b58a", hill2: "#86996a", road: "#d8c79c", roadLine: "#b8a578",
+    sunColor: "#f7d572", sunGlow: "rgba(247,213,114,.55)",
     textColor: "#2b2218",
   },
   farm: {
-    bg: "linear-gradient(180deg, #b5d98c 0%, #d4c97a 55%, #6b9c3e 100%)",
-    hill1: "#6b9c3e", hill2: "#4a7a28", road: "#d4c97a", roadLine: "#b0a050",
-    sunColor: "#ffe066", sunGlow: "rgba(255,224,102,.7)",
-    textColor: "#1e3a0a",
+    bg: "linear-gradient(180deg, #d4e3b8 0%, #e3d6a0 55%, #9ab86a 100%)",
+    hill1: "#9ab86a", hill2: "#789544", road: "#e3d6a0", roadLine: "#bfae74",
+    sunColor: "#ffe066", sunGlow: "rgba(255,224,102,.55)",
+    textColor: "#2b2218",
   },
   mine: {
     bg: "linear-gradient(180deg, #7a8a96 0%, #9a8878 55%, #4a4e52 100%)",
