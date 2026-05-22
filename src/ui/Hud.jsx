@@ -13,26 +13,6 @@ import { SeasonIndicator } from "./puzzleBoard.jsx";
 
 export const SEASON_EFFECTS = ["", "", "", ""];
 
-const VIEW_LABELS = {
-  town: "Menu",
-  board: "Menu",
-  crafting: "Crafting",
-  inventory: "Inventory",
-  orders: "Orders",
-  quests: "Quests",
-  townsfolk: "Townsfolk",
-  chronicle: "Chronicle",
-  tileCollection: "Tiles",
-  portal: "Portal",
-  achievements: "Trophies",
-  cartography: "Map",
-  charter: "Charter",
-  boons: "Boons",
-  castle: "Castle",
-  bosses: "Foes",
-  decorations: "Decorations",
-};
-
 function TideContent({ fish }) {
   const tide = fish?.tide ?? "high";
   const tideTurn = fish?.tideTurn ?? 0;
@@ -133,8 +113,6 @@ export function Hud({ state, dispatch, inventorySearchOpen, onInventorySearchTog
     setCoinAnchorEl(coinAnchorRef.current);
     return () => setCoinAnchorEl(null);
   });
-  const isWon = !!state.story?.flags?.isWon;
-  const sandbox = !!state.story?.sandbox || isWon;
   const settlementName = state.settlement?.name ?? "Hearthwood Vale";
   const showTide = state.biomeKey === "fish" && (onBoard || view === "town");
 
@@ -143,9 +121,9 @@ export function Hud({ state, dispatch, inventorySearchOpen, onInventorySearchTog
     : "var(--ember)";
   return (
     <div
-      className="flex items-center gap-2 px-3 py-2 bg-ink-soft border-b-2 border-bg-darker text-cream relative"
+      className="flex items-center gap-2 px-3 py-2 bg-hud-bg border-b border-iron text-ink relative"
       data-testid="hud"
-      style={{ boxShadow: `inset 0 -3px 0 ${seasonAccent}55` }}
+      style={{ boxShadow: `var(--hud-shadow), inset 0 -3px 0 ${seasonAccent}55` }}
     >
       <div className="flex items-center gap-2 flex-shrink-0">
         <button
@@ -198,10 +176,11 @@ export function Hud({ state, dispatch, inventorySearchOpen, onInventorySearchTog
                   <Pill
                     interactive
                     tone="gold"
-                    variant="solid"
+                    variant="soft"
                     size="sm"
                     leading={<Icon iconKey="design.currency.coin" size={14} />}
                     title="Currencies"
+                    className="border border-iron"
                   >
                     <span
                       key={coinsPulseKey}

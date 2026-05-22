@@ -517,20 +517,35 @@ export class GameScene extends Phaser.Scene {
     const ts = this.tileSize;
     const boardW = COLS * ts;
     const boardH = ROWS * ts;
-    const bg = this.biomeKey() === "mine" ? 0x31404a : s.bg;
-    this.cameras.main.setBackgroundColor(bg);
-    tag(this.add.rectangle(0, 0, vw, vh, bg).setOrigin(0).setDepth(-10));
+    // Lifted palette: page is parchment-cream; the board sits as a layered
+    // parchment card. Biome is signalled by a thin top-edge strip (not by
+    // tinting the whole board).
+    const pageBg = 0xe9dfc6;
+    const boardBg = 0xf6efe0;
+    this.cameras.main.setBackgroundColor(pageBg);
+    tag(this.add.rectangle(0, 0, vw, vh, pageBg).setOrigin(0).setDepth(-10));
     const frame = this.boardFrame;
-    // Decorative side leaves — only draw if there's room outside the board frame.
+    // Decorative side leaves — only draw if there's room outside the board
+    // frame. Biome accent gives them their tint, softer now.
     const leafGap = 36 * dpr;
     if (this.boardX - frame - leafGap > 0) {
       for (let y = 30 * dpr; y < vh - 30 * dpr; y += 36 * dpr) {
-        tag(this.add.ellipse(this.boardX - leafGap, y, 38 * dpr, 22 * dpr, s.accent, 0.55).setAngle(-25).setDepth(-9));
-        tag(this.add.ellipse(this.boardX + boardW + leafGap, y, 38 * dpr, 22 * dpr, s.accent, 0.55).setAngle(25).setDepth(-9));
+        tag(this.add.ellipse(this.boardX - leafGap, y, 38 * dpr, 22 * dpr, b.palette.accent, 0.35).setAngle(-25).setDepth(-9));
+        tag(this.add.ellipse(this.boardX + boardW + leafGap, y, 38 * dpr, 22 * dpr, b.palette.accent, 0.35).setAngle(25).setDepth(-9));
       }
     }
-    // Single decorative board frame (replaces the previously stacked outer/inner frames).
-    tag(rounded(this, this.boardX - frame, this.boardY - frame, boardW + frame * 2, boardH + frame * 2, 16 * dpr, b.mine_dirt, 1).setDepth(-1));
+    // Outer board frame — soft cream border instead of dark dirt.
+    tag(rounded(this, this.boardX - frame, this.boardY - frame, boardW + frame * 2, boardH + frame * 2, 16 * dpr, b.mine_dirt, 1).setDepth(-2));
+    // Parchment card the tiles sit on.
+    tag(rounded(this, this.boardX - frame * 0.6, this.boardY - frame * 0.6, boardW + frame * 1.2, boardH + frame * 1.2, 14 * dpr, boardBg, 1).setDepth(-1.5));
+    // Biome accent strip — 4dpr top edge of the parchment card. Identifies
+    // which biome the player is in without dominating the board.
+    const stripH = 4 * dpr;
+    tag(this.add.rectangle(this.boardX - frame * 0.6, this.boardY - frame * 0.6, boardW + frame * 1.2, stripH, b.palette.bg, 1).setOrigin(0, 0).setDepth(-1));
+    // Lightly tint the bottom of the parchment card with the current season's
+    // accent so seasons still register on the board. Drawn at low alpha so
+    // it never competes with tile readability.
+    tag(this.add.rectangle(this.boardX - frame * 0.6, this.boardY + boardH + frame * 0.6 - stripH, boardW + frame * 1.2, stripH, s.bg, 0.55).setOrigin(0, 0).setDepth(-1));
   }
 
   refreshSeasonTint() {
@@ -1582,7 +1597,7 @@ export class GameScene extends Phaser.Scene {
       fontSize: `${fontPx}px`,
       fontStyle: "bold",
       color: "#ffd248",
-      stroke: "#3a2715",
+      stroke: "#2b2218",
       strokeThickness: Math.max(2, Math.round(3 * this.tileScale)),
     }).setOrigin(0.5, 1).setDepth(13);
     this._cuePulses.push(text);

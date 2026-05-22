@@ -127,7 +127,7 @@ export default function InventoryScreen({ state, dispatch, searchOpen: searchOpe
                   <button
                     key={option.id}
                     type="button"
-                    className={`rounded-lg px-2 py-1 text-[11px] font-semibold border transition-colors ${active ? "bg-amber-300/20 border-amber-300/70 text-cream" : "bg-iron-deep/55 border-iron text-parchment"}`}
+                    className={`rounded-lg px-2 py-1 text-[11px] font-semibold border transition-colors ${active ? "bg-ember/20 border-ember/70 text-ink" : "bg-parchment-dim border-iron text-ink-soft"}`}
                     onClick={() => setPrimaryFilter(option.id)}
                   >
                     {option.label}

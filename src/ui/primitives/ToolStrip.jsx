@@ -77,7 +77,7 @@ function ToolCard({ tool, armed, dimmed, onUse, onInspect }) {
   };
 
   const stateCls = armed
-    ? "ring-2 ring-gold-bright bg-bg-frame border-cream-soft text-cream"
+    ? "ring-2 ring-gold-bright bg-ember border-ember-hot text-white"
     : isDisabled
     ? "border-iron/30 bg-parchment-dim/40 text-ink-light hover:opacity-70"
     : "border-iron/60 bg-parchment-soft hover:bg-parchment text-ink";

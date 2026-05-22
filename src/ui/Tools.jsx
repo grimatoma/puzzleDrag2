@@ -55,14 +55,14 @@ function ToolInspectSheet({ tool, count, onClose, onUse }) {
           type="button"
           disabled={!canUse}
           onClick={() => { onUse?.(tool.key); onClose(); }}
-          className={`mt-2 w-full font-bold py-2 rounded-md border text-body ${canUse ? "bg-bg-warm hover:bg-bg-frame text-cream border-cream-soft" : "bg-bg-frame text-cream/40 border-iron/60 opacity-50 cursor-not-allowed"}`}
+          className={`mt-2 w-full font-bold py-2 rounded-md border text-body ${canUse ? "bg-ember hover:bg-ember-hot text-white border-ember-hot" : "bg-parchment-dim text-ink/40 border-iron/60 opacity-50 cursor-not-allowed"}`}
         >
           {canUse ? `Use (${count} left)` : "None left"}
         </button>
         <button
           type="button"
           onClick={onClose}
-          className="w-full bg-transparent hover:bg-bg-warm text-cream/70 font-semibold py-1.5 rounded-md border border-cream-soft/30 text-caption"
+          className="w-full bg-transparent hover:bg-parchment-dim text-ink/70 font-semibold py-1.5 rounded-md border border-iron/40 text-caption"
         >
           Close
         </button>
@@ -156,10 +156,10 @@ export function MobileDock({ state, dispatch, onInspectChange }) {
 
   return (
     <>
-      <div className="flex border-t-2 border-iron bg-bg-frame">
+      <div className="flex border-t-2 border-iron bg-paper">
         <button
           type="button"
-          className="flex-1 flex flex-col items-center justify-center gap-0.5 py-2.5 relative text-cream"
+          className="flex-1 flex flex-col items-center justify-center gap-0.5 py-2.5 relative text-ink"
           onClick={() => setSheet(sheet === "tools" ? null : "tools")}
         >
           {totalTools > 0 && (

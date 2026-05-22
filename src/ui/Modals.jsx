@@ -65,17 +65,17 @@ const STORY_SERIF = '"Iowan Old Style", "Palatino Linotype", Palatino, "Book Ant
 
 // Parchment + iron palette, calibrated to the dialogue design.
 const SC = {
-  parchment:     "#f0e6cf",
-  parchmentDim:  "rgba(240,230,207,0.55)",
-  parchmentFaint:"rgba(240,230,207,0.35)",
-  narration:     "rgba(189,154,114,0.95)",
-  iron:          "#b28b62",
+  parchment:     "#f6efe0",
+  parchmentDim:  "rgba(246,239,224,0.55)",
+  parchmentFaint:"rgba(246,239,224,0.35)",
+  narration:     "rgba(122,94,63,0.95)",
+  iron:          "#c9b993",
   gold:          "#e2b24a",
   goldSoft:      "#f0c965",
-  ink:           "#3a2715",
-  panelEdge:     "#3a2a1d",
-  choiceBg:      "rgba(58,42,29,0.55)",
-  choiceEdge:    "rgba(178,139,98,0.32)",
+  ink:           "#2b2218",
+  panelEdge:     "#c9b993",
+  choiceBg:      "rgba(251,247,235,0.85)",
+  choiceEdge:    "rgba(201,185,147,0.45)",
 };
 
 function speakerName(key) { return key && NPCS[key] ? NPCS[key].name : null; }

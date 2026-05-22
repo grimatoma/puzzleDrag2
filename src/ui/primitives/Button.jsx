@@ -11,7 +11,7 @@ const TONE_SOFT = {
   ember: "hl-btn--primary",
   moss: "hl-btn--go",
   gold: "hl-btn--ghost",
-  iron: "hl-btn--neutral",
+  iron: "hl-btn--neutral-soft",
   ghost: "hl-btn--ghost",
   danger: "hl-btn--danger",
 };

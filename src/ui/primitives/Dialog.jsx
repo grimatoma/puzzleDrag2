@@ -181,7 +181,7 @@ export function StoryDialog({
 
 function Title({ children, className = "" }) {
   const { titleId, tone } = useContext(DialogCtx);
-  const color = tone === "dark" ? "text-gold-soft" : "text-ink-soft";
+  const color = tone === "dark" ? "text-ink" : "text-ink-soft";
   return (
     <div className={`px-5 pt-4 pb-3 flex-shrink-0 ${className}`}>
       <h2
@@ -213,8 +213,7 @@ function Portrait({ children, className = "" }) {
 }
 
 function Body({ children, className = "" }) {
-  const { tone } = useContext(DialogCtx);
-  const color = tone === "dark" ? "text-parchment" : "text-ink";
+  const color = "text-ink";
   return (
     <div
       className={`px-5 py-3 flex-1 min-h-0 overflow-y-auto ${color} text-body-lg ${className}`}

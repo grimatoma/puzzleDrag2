@@ -3,8 +3,8 @@ import Icon from "./Icon.jsx";
 import { useCountUp } from "./useCountUp.js";
 
 const BADGE_TONE = {
-  moss:  "bg-moss text-ink",
-  ember: "bg-ember text-cream",
+  moss:  "bg-moss text-white",
+  ember: "bg-ember text-white",
   gold:  "bg-gold text-ink",
 };
 
@@ -54,10 +54,10 @@ export function Tab({
   // token colours emit invalid CSS and silently fall back to inherited
   // text colour, which reads black against the dark nav.
   const stateCls = active
-    ? "bg-white/[0.07] text-cream"
+    ? "bg-ember/10 text-ink"
     : locked
-    ? "text-on-dark-faint"
-    : "text-on-dark-dim hover:bg-white/[0.04]";
+    ? "text-ink-light"
+    : "text-ink-soft hover:bg-ink/[0.05]";
 
   const onClick = () => {
     if (locked) return;
@@ -84,7 +84,7 @@ export function Tab({
       <span className="inline-flex items-center justify-center relative">
         <Icon iconKey={iconKey} size={iconSize} />
         {locked && (
-          <span className="absolute -bottom-1 -right-1 text-on-dark-faint">
+          <span className="absolute -bottom-1 -right-1 text-ink-light">
             <LockGlyph />
           </span>
         )}
@@ -108,8 +108,8 @@ export default function TabBar({
 }) {
   const containerCls =
     density === "dock"
-      ? "flex items-stretch justify-around w-full bg-bg-dark border-t-2 border-cream-soft pb-safe-bottom shadow-[0_-4px_12px_rgba(0,0,0,.25)]"
-      : "flex items-stretch w-full bg-bg-dark border-t-2 border-cream-soft pb-safe-bottom shadow-[0_-4px_12px_rgba(0,0,0,.25)]";
+      ? "flex items-stretch justify-around w-full bg-paper border-t-2 border-iron pb-safe-bottom shadow-[0_-4px_12px_rgba(0,0,0,.12)]"
+      : "flex items-stretch w-full bg-paper border-t-2 border-iron pb-safe-bottom shadow-[0_-4px_12px_rgba(0,0,0,.12)]";
 
   const tabs = Children.map(children, (child) => {
     if (!isValidElement(child)) return child;

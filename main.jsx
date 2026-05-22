@@ -25,7 +25,7 @@ class RootErrorBoundary extends React.Component {
       return (
         <div style={{
           minHeight: "100vh", display: "grid", placeItems: "center",
-          background: "#2a1d0f", color: "#f8e7c6", padding: "24px",
+          background: "#e9dfc6", color: "#2b2218", padding: "24px",
           fontFamily: "system-ui, sans-serif", textAlign: "center",
         }}>
           <div style={{ maxWidth: "480px" }}>

@@ -18,12 +18,12 @@ const SAMPLE_SETTLEMENT = "Hearthhollow";
 
 // parchment-and-iron palette (mirrors the in-game story modal)
 const P = {
-  panelTop: "#221710", panelBot: "#1a110a", edge: "#3a2a1d",
+  panelTop: "#fbf7eb", panelBot: "#f4ecd6", edge: "#c9b993",
   gold: "#e2b24a", goldSoft: "#f0c965",
-  parch: "#f0e6cf", parchDim: "rgba(240,230,207,0.55)", parchFaint: "rgba(240,230,207,0.32)",
-  narration: "rgba(189,154,114,0.95)", iron: C.border,
-  choiceBg: "rgba(58,42,29,0.55)", choiceEdge: "rgba(178,139,98,0.32)",
-  ember: "#e88a5e",
+  parch: "#f6efe0", parchDim: "rgba(122,94,63,0.55)", parchFaint: "rgba(122,94,63,0.32)",
+  narration: "rgba(122,94,63,0.95)", iron: C.border,
+  choiceBg: "rgba(251,247,235,0.85)", choiceEdge: "rgba(201,185,147,0.45)",
+  ember: "#c96442",
 };
 
 function outcomeBadges(outcome) {
