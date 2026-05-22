@@ -610,51 +610,77 @@ function drawSkullCandle(ctx) {
 // 14. Witch Broom
 function drawBroom(ctx) {
   shadow(ctx, 18);
-  ctx.save(); ctx.rotate(-0.5);
-  // Bristles
-  ctx.fillStyle = "#a87838";
-  ctx.beginPath();
-  ctx.moveTo(-16, -10); ctx.lineTo(-2, -2); ctx.lineTo(-6, 18); ctx.lineTo(-22, 14);
-  ctx.closePath(); ctx.fill();
-  ctx.strokeStyle = "#3a2008"; ctx.lineWidth = 1.4; ctx.stroke();
-  // Bristle strokes
-  ctx.strokeStyle = "#5a3814"; ctx.lineWidth = 0.7;
-  for (let i = 0; i < 8; i++) {
-    const t = i / 7;
-    const x1 = -16 + t * 14, y1 = -10 + t * 8;
-    const x2 = -22 + t * 16, y2 = 14 + t * 4;
-    ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2 - 2, y2 + 4); ctx.stroke();
-  }
-  // Twine wrap
-  ctx.strokeStyle = "#1a0e04"; ctx.lineWidth = 2.2;
-  ctx.beginPath(); ctx.moveTo(-4, -4); ctx.lineTo(-12, 0); ctx.stroke();
-  ctx.strokeStyle = "#a87010"; ctx.lineWidth = 1.0;
-  ctx.beginPath(); ctx.moveTo(-4, -4); ctx.lineTo(-12, 0); ctx.stroke();
-  // Handle
-  const hg = ctx.createLinearGradient(0, -16, 16, 4);
-  hg.addColorStop(0, "#5a3814"); hg.addColorStop(0.5, "#a87838"); hg.addColorStop(1, "#3a2008");
+  ctx.save();
+  ctx.rotate(-0.55);
+  // Long wooden handle — runs upper-right to lower-left so the bristles
+  // sit at the bottom-left like a swept broom resting on the ground.
+  const hg = ctx.createLinearGradient(-22, 8, 18, -22);
+  hg.addColorStop(0, "#5a3414");
+  hg.addColorStop(0.5, "#a87838");
+  hg.addColorStop(1, "#6a4218");
   ctx.fillStyle = hg;
   ctx.beginPath();
-  ctx.moveTo(-4, -4); ctx.lineTo(0, -8); ctx.lineTo(20, 12); ctx.lineTo(16, 16);
-  ctx.closePath(); ctx.fill();
-  ctx.strokeStyle = "#0a0604"; ctx.lineWidth = 1.4; ctx.stroke();
-  // Knob at end
+  ctx.moveTo(20, -20);
+  ctx.lineTo(22, -16);
+  ctx.lineTo(-12, 4);
+  ctx.lineTo(-14, 0);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = "#1a0e04"; ctx.lineWidth = 1.4;
+  ctx.stroke();
+  // Knob on the far end of the handle
   ctx.fillStyle = "#5a3408";
-  ctx.beginPath(); ctx.arc(20, 14, 2, 0, Math.PI*2); ctx.fill();
-  ctx.strokeStyle = "#0a0604"; ctx.lineWidth = 0.8; ctx.stroke();
-  // Sparkle trail
-  ctx.fillStyle = "#fffce0";
-  [[-20, 18, 1.0], [-24, 12, 0.8], [-20, 8, 0.6]].forEach(([x, y, r]) => {
+  ctx.beginPath(); ctx.arc(22, -19, 2.6, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = "#0a0604"; ctx.lineWidth = 0.9; ctx.stroke();
+  // Bristle bundle — wider cone splayed away from the handle tip
+  ctx.fillStyle = "#c89348";
+  ctx.beginPath();
+  ctx.moveTo(-10, 2);          // handle attach top
+  ctx.lineTo(-16, 6);          // handle attach bottom
+  ctx.lineTo(-28, 18);         // outer corner low
+  ctx.lineTo(-22, 6);          // splay tip
+  ctx.lineTo(-26, -2);         // outer corner high
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = "#3a2008"; ctx.lineWidth = 1.4;
+  ctx.stroke();
+  // Individual bristle strokes — fan out from the binding
+  ctx.strokeStyle = "#7a4a18";
+  ctx.lineWidth = 0.9;
+  const tipX = -13, tipY = 4;
+  const ends = [
+    [-28, -2], [-28, 2], [-28, 6], [-28, 10], [-28, 14], [-28, 18],
+    [-24, -3], [-24, 17], [-26, 0], [-26, 16],
+  ];
+  ends.forEach(([ex, ey]) => {
     ctx.beginPath();
-    for (let i = 0; i < 4; i++) {
-      const a = (i / 4) * Math.PI * 2;
-      const rr = i % 2 === 0 ? r*2 : r*0.4;
+    ctx.moveTo(tipX, tipY);
+    ctx.lineTo(ex, ey);
+    ctx.stroke();
+  });
+  // Twine wrap binding the bristles to the handle
+  ctx.strokeStyle = "#1a0e04"; ctx.lineWidth = 3.0;
+  ctx.beginPath();
+  ctx.moveTo(-10, 2); ctx.lineTo(-16, 6);
+  ctx.stroke();
+  ctx.strokeStyle = "#d8a060"; ctx.lineWidth = 1.4;
+  ctx.beginPath();
+  ctx.moveTo(-10, 2); ctx.lineTo(-16, 6);
+  ctx.moveTo(-11, 4); ctx.lineTo(-15, 8);
+  ctx.stroke();
+  ctx.restore();
+  // Sparkle trail (kept — sells the "witch" part)
+  ctx.fillStyle = "#fffce0";
+  [[-22, 20, 1.2], [-26, 14, 0.9], [-22, 10, 0.7], [16, -22, 0.8]].forEach(([x, y, r]) => {
+    ctx.beginPath();
+    for (let i = 0; i < 8; i++) {
+      const a = (i / 8) * Math.PI * 2;
+      const rr = i % 2 === 0 ? r * 2 : r * 0.5;
       const px = x + Math.cos(a) * rr, py = y + Math.sin(a) * rr;
       if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
     }
     ctx.closePath(); ctx.fill();
   });
-  ctx.restore();
 }
 
 // 15. Pentagram

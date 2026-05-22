@@ -168,6 +168,15 @@ export default function DebugModal({ state, dispatch }) {
               <div className="text-[10px] italic text-on-panel-faint text-center">
                 Replaces the season wheel with a per-season mini-scene.
               </div>
+              <DebugBtn
+                color={state.settings?.seasonStripPhaser ? 'purple' : 'slate'}
+                onClick={() => dispatch({ type: 'SETTINGS/TOGGLE', key: 'seasonStripPhaser' })}
+              >
+                {state.settings?.seasonStripPhaser ? '● ON' : '○ OFF'} — Phaser season strip (HQ)
+              </DebugBtn>
+              <div className="text-[10px] italic text-on-panel-faint text-center">
+                High-fidelity Phaser version with parallax hills + dense particle effects.
+              </div>
             </div>
           </div>
 

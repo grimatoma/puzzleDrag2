@@ -67,11 +67,39 @@ function drawBlock(ctx) {
   right.addColorStop(0,"#7c8388"); right.addColorStop(1,"#3a3e44");
   ctx.fillStyle = right;
   ctx.beginPath(); ctx.moveTo(18,-2); ctx.lineTo(0,6); ctx.lineTo(0,22); ctx.lineTo(18,14); ctx.closePath(); ctx.fill(); ctx.stroke();
+  // Top face highlight (lighter rim)
   ctx.strokeStyle = "rgba(255,255,255,0.6)"; ctx.lineWidth = 1.6;
   ctx.beginPath(); ctx.moveTo(-17,-2); ctx.lineTo(0,-17); ctx.lineTo(17,-2); ctx.stroke();
-  ctx.strokeStyle = "rgba(40,42,46,0.65)"; ctx.lineWidth = 1.4;
-  ctx.beginPath(); ctx.moveTo(-7,-5); ctx.lineTo(0,-10); ctx.lineTo(7,-5);
-  ctx.moveTo(-5,-2); ctx.lineTo(0,-7); ctx.lineTo(5,-2); ctx.stroke();
+  // Replace the previous double-chevron embossing (read as upload arrows)
+  // with a stone-block grid: one horizontal seam plus two staggered
+  // verticals so the cube looks like cut masonry.
+  ctx.strokeStyle = "rgba(40,42,46,0.7)"; ctx.lineWidth = 1.4;
+  // Horizontal mortar seam across the front-left face
+  ctx.beginPath();
+  ctx.moveTo(-15, 6); ctx.lineTo(0, 14);
+  ctx.stroke();
+  // Horizontal mortar seam across the front-right face
+  ctx.beginPath();
+  ctx.moveTo(0, 14); ctx.lineTo(15, 6);
+  ctx.stroke();
+  // Two short vertical seams (staggered top/bottom) on the left face
+  ctx.beginPath();
+  ctx.moveTo(-10, 2); ctx.lineTo(-10, 6);
+  ctx.moveTo(-5, 14); ctx.lineTo(-5, 18);
+  ctx.stroke();
+  // Same on the right face
+  ctx.beginPath();
+  ctx.moveTo(10, 2); ctx.lineTo(10, 6);
+  ctx.moveTo(5, 14); ctx.lineTo(5, 18);
+  ctx.stroke();
+  // Small chip notch on the top edge — adds a "carved stone" feel and
+  // breaks any residual icon symmetry that might still read as an arrow.
+  ctx.fillStyle = "#5a5e62";
+  ctx.beginPath();
+  ctx.moveTo(-4, -13); ctx.lineTo(-1, -16); ctx.lineTo(1, -12); ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = "#1a1d20"; ctx.lineWidth = 0.8;
+  ctx.stroke();
 }
 
 function drawOre(ctx) {

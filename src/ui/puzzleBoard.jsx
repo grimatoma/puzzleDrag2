@@ -22,6 +22,13 @@ import { BIOMES } from "../constants.js";
 import { TOOL_BY_KEY, isTapTargetTool, visibleTools, TOOL_CATALOG } from "./toolRegistry.js";
 import { getPhaserScene } from "../phaserBridge.js";
 import { SeasonStrip } from "./seasonStrip.jsx";
+import { lazy, Suspense } from "react";
+
+// Phaser-rendered strip is lazy-loaded so the heavy graphics library is only
+// pulled into the bundle when the player opts in via the debug toggle.
+const SeasonStripPhaserLazy = lazy(() =>
+  import("./seasonStripPhaser.jsx").then((m) => ({ default: m.SeasonStripPhaser }))
+);
 
 const FIELD_GRADIENTS = [
   "linear-gradient(180deg,#92b85a 0%,#6d9438 100%)",
@@ -52,7 +59,32 @@ export function SeasonIndicator({
   seasonIdx,
   seasonName,
   bespoke,
+  phaser,
 }) {
+  if (phaser) {
+    return (
+      <Suspense
+        fallback={
+          <SeasonStrip
+            turnsUsed={turnsUsed}
+            turnBudget={turnBudget}
+            turnsRemaining={turnsRemaining}
+            seasonIdx={seasonIdx}
+            seasonName={seasonName}
+            busy={!!bespoke}
+          />
+        }
+      >
+        <SeasonStripPhaserLazy
+          turnsUsed={turnsUsed}
+          turnBudget={turnBudget}
+          turnsRemaining={turnsRemaining}
+          seasonIdx={seasonIdx}
+          seasonName={seasonName}
+        />
+      </Suspense>
+    );
+  }
   return (
     <SeasonStrip
       turnsUsed={turnsUsed}

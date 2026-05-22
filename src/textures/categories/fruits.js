@@ -93,22 +93,65 @@ function drawGoldenApple(ctx) {
 
 function drawBlackberry(ctx) {
   ctx.fillStyle = "rgba(0,0,0,0.25)";
-  ctx.beginPath(); ctx.ellipse(0, 20, 18, 4, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(0, 20, 14, 4, 0, 0, Math.PI * 2); ctx.fill();
+  // Stem + leaf
   ctx.strokeStyle = "#3a1810"; ctx.lineWidth = 2.4;
   ctx.beginPath(); ctx.moveTo(-3, -22); ctx.quadraticCurveTo(0, -16, 2, -10); ctx.stroke();
   ctx.fillStyle = "#3a6818";
-  ctx.beginPath(); ctx.moveTo(-3, -22); ctx.bezierCurveTo(8, -25, 14, -19, 11, -12); ctx.bezierCurveTo(5, -14, -1, -18, -3, -22); ctx.closePath(); ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(-3, -22);
+  ctx.bezierCurveTo(8, -25, 14, -19, 11, -12);
+  ctx.bezierCurveTo(5, -14, -1, -18, -3, -22);
+  ctx.closePath();
+  ctx.fill();
   ctx.strokeStyle = "#1f3a08"; ctx.lineWidth = 1.3; ctx.stroke();
-  const layout = [[-8,-2,5],[0,-4,5.5],[8,-2,5],[-10,6,5],[-2,8,5.5],[6,6,5],[-6,14,4.8],[2,14,4.8]];
-  layout.forEach(([dx,dy,dr])=>{
-    const grad = ctx.createRadialGradient(dx-dr*0.4, dy-dr*0.4, 0.5, dx, dy, dr);
-    grad.addColorStop(0,"#7a4a8a"); grad.addColorStop(0.6,"#2a0a3a"); grad.addColorStop(1,"#0a0014");
-    ctx.fillStyle = grad;
-    ctx.beginPath(); ctx.arc(dx,dy,dr,0,Math.PI*2); ctx.fill();
-    ctx.strokeStyle = "#0a0014"; ctx.lineWidth = 1.2; ctx.stroke();
-    ctx.fillStyle = "rgba(220,180,255,0.7)";
-    ctx.beginPath(); ctx.arc(dx-dr*0.4, dy-dr*0.5, dr*0.25, 0, Math.PI*2); ctx.fill();
-  });
+  // Green calyx where fruit meets stem
+  ctx.fillStyle = "#5a8a26";
+  ctx.beginPath();
+  ctx.moveTo(0, -10);
+  ctx.lineTo(3, -8); ctx.lineTo(0, -7); ctx.lineTo(-3, -8);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = "#33550f"; ctx.lineWidth = 0.6; ctx.stroke();
+  // Backing oval defines the overall blackberry silhouette so gaps between
+  // drupelets read as texture, not holes.
+  ctx.fillStyle = "#1a0420";
+  ctx.beginPath();
+  ctx.ellipse(0, 6, 11, 13, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = "#08000c"; ctx.lineWidth = 1.6; ctx.stroke();
+  // Many small drupelets, hex-packed, clipped to the body oval. This is
+  // the key fix: blackberries are clusters of ~30 tiny drupelets, not
+  // 6 large round balls (which read as grapes).
+  ctx.save();
+  ctx.beginPath();
+  ctx.ellipse(0, 6, 10.5, 12.5, 0, 0, Math.PI * 2);
+  ctx.clip();
+  const dr = 2.4;
+  for (let row = -5; row <= 5; row++) {
+    const oy = -6 + row * 2.6;
+    const offset = (row % 2 === 0) ? 0 : dr * 0.95;
+    for (let col = -5; col <= 5; col++) {
+      const ox = col * 2.4 + offset;
+      if ((ox / 10.5) ** 2 + ((oy - 6) / 12.5) ** 2 > 1.0) continue;
+      const grad = ctx.createRadialGradient(
+        ox - dr * 0.4, oy - dr * 0.4, 0.3, ox, oy, dr
+      );
+      grad.addColorStop(0, "#7a4a8a");
+      grad.addColorStop(0.55, "#2a0a3a");
+      grad.addColorStop(1, "#0a0014");
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(ox, oy, dr, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = "#08000c"; ctx.lineWidth = 0.6; ctx.stroke();
+      ctx.fillStyle = "rgba(220,180,255,0.7)";
+      ctx.beginPath();
+      ctx.arc(ox - dr * 0.4, oy - dr * 0.5, dr * 0.22, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+  ctx.restore();
 }
 
 function drawRambutan(ctx) {
@@ -143,31 +186,70 @@ function drawRambutan(ctx) {
 function drawStarfruit(ctx) {
   ctx.fillStyle = "rgba(0,0,0,0.25)";
   ctx.beginPath(); ctx.ellipse(0, 22, 18, 4, 0, 0, Math.PI * 2); ctx.fill();
-  const grad = ctx.createRadialGradient(0, 0, 4, 0, 0, 22);
-  grad.addColorStop(0,"#fff8b8"); grad.addColorStop(0.5,"#f0d048"); grad.addColorStop(1,"#a87810");
+  // Whole carambola is an oblong yellow fruit with deep longitudinal ridges.
+  // Draw it as a side-view oblong body so it reads as fruit; show the star
+  // cross-section only as a small inset at the top-right.
+  ctx.save();
+  ctx.rotate(-0.18);
+  const grad = ctx.createLinearGradient(-12, 0, 12, 0);
+  grad.addColorStop(0, "#a87810");
+  grad.addColorStop(0.5, "#f0d048");
+  grad.addColorStop(1, "#a87810");
   ctx.fillStyle = grad;
   ctx.beginPath();
-  for (let i = 0; i < 10; i++) {
-    const a = -Math.PI/2 + (i*Math.PI)/5;
-    const r = i % 2 === 0 ? 22 : 9;
-    const x = Math.cos(a)*r; const y = Math.sin(a)*r + 2;
-    if (i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
-  }
-  ctx.closePath(); ctx.fill();
-  ctx.strokeStyle = "#5e4210"; ctx.lineWidth = 2.2; ctx.stroke();
-  ctx.strokeStyle = "rgba(94,66,16,0.6)"; ctx.lineWidth = 1.2;
+  ctx.moveTo(-14, -12);
+  ctx.bezierCurveTo(-10, -18, 10, -18, 14, -12);
+  ctx.bezierCurveTo(  8,  -8, 16,  -4, 10,   0);
+  ctx.bezierCurveTo( 16,   4,  8,   8, 14,  12);
+  ctx.bezierCurveTo( 10,  18,-10,  18,-14,  12);
+  ctx.bezierCurveTo( -8,   8,-16,   4,-10,   0);
+  ctx.bezierCurveTo(-16,  -4, -8,  -8,-14, -12);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = "#5e4210"; ctx.lineWidth = 2.0;
+  ctx.stroke();
+  // Vertical ridge lines (project the star points along the body)
+  ctx.strokeStyle = "#7a5210"; ctx.lineWidth = 1.4;
+  [-8, -3, 3, 8].forEach((x) => {
+    ctx.beginPath();
+    ctx.moveTo(x, -14);
+    ctx.bezierCurveTo(x - 1, -4, x + 1, 4, x, 14);
+    ctx.stroke();
+  });
+  // Brown calyx + tiny stem at the top
+  ctx.fillStyle = "#5a3a14";
+  ctx.beginPath(); ctx.arc(0, -16, 1.8, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = "#5a3a14"; ctx.lineWidth = 1.6; ctx.lineCap = "round";
+  ctx.beginPath(); ctx.moveTo(0, -16); ctx.lineTo(2, -22); ctx.stroke();
+  // Single small leaf
+  ctx.fillStyle = "#5a8a26";
+  ctx.beginPath();
+  ctx.moveTo(2, -22);
+  ctx.bezierCurveTo(10, -24, 12, -18, 6, -16);
+  ctx.bezierCurveTo(3, -18, 1, -20, 2, -22);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = "#33550f"; ctx.lineWidth = 1.0; ctx.stroke();
+  // Sheen highlight
+  ctx.fillStyle = "rgba(255,255,255,0.45)";
+  ctx.beginPath(); ctx.ellipse(-6, -2, 2, 8, -0.15, 0, Math.PI * 2); ctx.fill();
+  ctx.restore();
+  // Tiny inset 5-point star at the top-right corner — telegraphs
+  // "starfruit" by association without replacing the whole icon with a star.
+  ctx.save();
+  ctx.translate(16, -16);
+  ctx.fillStyle = "#fff4a0";
   ctx.beginPath();
   for (let i = 0; i < 10; i++) {
-    const a = -Math.PI/2 + (i*Math.PI)/5;
-    const r = i % 2 === 0 ? 13 : 5;
-    const x = Math.cos(a)*r; const y = Math.sin(a)*r + 2;
-    if (i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+    const a = -Math.PI / 2 + (i * Math.PI) / 5;
+    const r = i % 2 === 0 ? 5 : 2;
+    const x = Math.cos(a) * r;
+    const y = Math.sin(a) * r;
+    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
   }
-  ctx.closePath(); ctx.stroke();
-  ctx.fillStyle = "#5e4210";
-  [[0,0],[-3,4],[3,4],[-2,-2],[2,-2]].forEach(([sx,sy])=>{ ctx.beginPath(); ctx.arc(sx,sy+2,1.0,0,Math.PI*2); ctx.fill(); });
-  ctx.fillStyle = "rgba(255,255,255,0.6)";
-  ctx.beginPath(); ctx.ellipse(-10,-10,3,5,-0.7,0,Math.PI*2); ctx.fill();
+  ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = "#a87810"; ctx.lineWidth = 0.9; ctx.stroke();
+  ctx.restore();
 }
 
 function drawCoconut(ctx) {

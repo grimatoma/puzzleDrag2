@@ -38,6 +38,7 @@ const DEFAULT_SETTINGS = {
   musicOn: true,
   hapticsOn: true,
   bespokeSeasonWidget: false,
+  seasonStripPhaser: false,
 };
 
 export const initial = {
