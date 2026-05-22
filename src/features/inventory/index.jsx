@@ -185,16 +185,14 @@ export default function InventoryScreen({ state, dispatch, searchOpen: searchOpe
                   </button>
                 );
               })}
-              <div className="ml-auto">
-                <button
-                  type="button"
-                  onClick={toggleViewMode}
-                  aria-label={viewMode === "grid" ? "Switch to list view" : "Switch to grid view"}
-                  className="rounded-lg px-2 py-1 border border-iron bg-iron-deep/55 text-parchment hover:border-iron-light transition-colors flex items-center gap-1"
-                >
-                  {viewMode === "grid" ? <ListIcon /> : <GridIcon />}
-                </button>
-              </div>
+              <button
+                type="button"
+                onClick={toggleViewMode}
+                aria-label={viewMode === "grid" ? "Switch to list view" : "Switch to grid view"}
+                className="ml-auto rounded-lg px-2 py-1 border border-iron bg-iron-deep/55 text-parchment hover:border-iron-soft transition-colors flex items-center gap-1"
+              >
+                {viewMode === "grid" ? <ListIcon /> : <GridIcon />}
+              </button>
             </div>
           </div>
           <InventoryGrid
