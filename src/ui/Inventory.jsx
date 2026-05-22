@@ -72,6 +72,13 @@ export function accordionReducer(state, action) {
       }
       return { ...state, pendingKey: key };
     }
+    case "SELECT_IN_PLACE": {
+      const { key } = action;
+      if (key === state.displayedKey) {
+        return { ...state, isOpen: false, pendingKey: null };
+      }
+      return { displayedKey: key, isOpen: true, pendingKey: null };
+    }
     case "OPEN":
       return { ...state, isOpen: true };
     case "CLOSE":
@@ -97,10 +104,11 @@ function useAccordion() {
   }, [state.displayedKey]);
 
   const select = useCallback((key) => dispatch({ type: "SELECT", key }), []);
+  const selectInPlace = useCallback((key) => dispatch({ type: "SELECT_IN_PLACE", key }), []);
   const close = useCallback(() => dispatch({ type: "CLOSE" }), []);
   const onClosed = useCallback(() => dispatch({ type: "TRANSITION_END" }), []);
 
-  return { displayedKey: state.displayedKey, isOpen: state.isOpen, select, close, onClosed };
+  return { displayedKey: state.displayedKey, isOpen: state.isOpen, select, selectInPlace, close, onClosed };
 }
 
 const InventoryIconCell = forwardRef(function InventoryIconCell(
@@ -127,7 +135,7 @@ const InventoryIconCell = forwardRef(function InventoryIconCell(
   );
 });
 
-function InventoryAccordion({ entry, isOpen, arrowLeft, marketBuilt, dispatch, onClose, onClosed, style }) {
+function InventoryAccordion({ entry, isOpen, arrowLeft, marketBuilt, dispatch, onClosed, style }) {
   const handleTransitionEnd = (e) => {
     if (e.propertyName === "max-height" && !isOpen) {
       onClosed?.();
@@ -135,7 +143,7 @@ function InventoryAccordion({ entry, isOpen, arrowLeft, marketBuilt, dispatch, o
   };
 
   return (
-    <div className="inv-accordion" style={style}>
+    <div className={`inv-accordion${isOpen ? " is-open" : ""}`} style={style}>
       <div
         className="inv-accordion__arrow"
         style={arrowLeft != null ? { left: arrowLeft } : { left: "50%" }}
@@ -144,17 +152,7 @@ function InventoryAccordion({ entry, isOpen, arrowLeft, marketBuilt, dispatch, o
         className={`inv-accordion__body${isOpen ? " is-open" : ""}`}
         onTransitionEnd={handleTransitionEnd}
       >
-        <button
-          type="button"
-          className="inv-accordion__close"
-          onClick={onClose}
-          aria-label="Close detail"
-        >
-          ×
-        </button>
-        <div className="inv-accordion__detail">
-          <InventoryDetail entry={entry} marketBuilt={marketBuilt} dispatch={dispatch} />
-        </div>
+        <InventoryDetail entry={entry} marketBuilt={marketBuilt} dispatch={dispatch} />
       </div>
     </div>
   );
@@ -545,6 +543,16 @@ export function InventoryGrid({
         }
       }
       const selectedEntry = selectedIndex >= 0 ? entries[selectedIndex] : null;
+      const cols = Math.max(columnsPerRow, 1);
+      const handleCellSelect = (key, idx) => {
+        if (viewMode === "grid" && accordion.isOpen && selectedIndex >= 0) {
+          if (Math.floor(selectedIndex / cols) === Math.floor(idx / cols)) {
+            accordion.selectInPlace(key);
+            return;
+          }
+        }
+        accordion.select(key);
+      };
       for (let i = 0; i < entries.length; i++) {
         const entry = entries[i];
         const isSelected = entry.key === accordion.displayedKey;
@@ -554,7 +562,7 @@ export function InventoryGrid({
               key={entry.key}
               entry={entry}
               selected={isSelected}
-              onSelect={() => accordion.select(entry.key)}
+              onSelect={() => handleCellSelect(entry.key, i)}
               ref={makeRef(entry.key)}
             />
           );
@@ -577,7 +585,6 @@ export function InventoryGrid({
               arrowLeft={viewMode === "grid" ? arrowLeft : null}
               marketBuilt={marketBuilt}
               dispatch={dispatch}
-              onClose={accordion.close}
               onClosed={accordion.onClosed}
               style={viewMode === "grid" ? { gridColumn: "1 / -1" } : undefined}
             />
