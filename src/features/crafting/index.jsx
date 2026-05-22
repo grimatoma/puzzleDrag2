@@ -139,10 +139,13 @@ function RecipeDetail({ recipeKey, recipe, inventory, built, level, state, dispa
   );
 }
 
-// Phase 5 — sequential crafting queue panel shown atop the crafting screen.
-// Visual model: the queue's HEAD is the actively-crafting item (big card with
-// animated progress, claim/skip buttons). Subsequent entries are "up next" —
-// muted, with a relative "starts in" countdown.
+// Phase 5 — per-station crafting queue UI.
+// • Each station tab gets a small badge (count + ready-dot) and a 2px progress
+//   hair below it tracking the head's progress.
+// • The active station's queue, if any, shows as a compact single-row strip
+//   above the recipe browser: ring-progress icon, name + countdown, claim/skip,
+//   and small icon chips for up-next.
+// • Empty station ⇒ no strip, zero wasted real estate.
 function fmtDuration(ms) {
   if (ms <= 0) return "0s";
   const h = Math.floor(ms / 3_600_000);
@@ -153,156 +156,142 @@ function fmtDuration(ms) {
   return `${s}s`;
 }
 
-function ActiveCraftCard({ entry, recipe, now, gems, dispatch }) {
-  const itemDef = ITEMS[recipe?.item] || {};
-  const itemName = itemDef.label ?? recipe?.item ?? entry.key;
-  const start = entry.startAt ?? entry.queuedAt ?? now;
-  const ready = entry.readyAt ?? start;
-  const duration = entry.durationMs ?? Math.max(1, ready - start);
+function entryProgress(entry, now) {
+  const start = entry?.startAt ?? entry?.queuedAt ?? now;
+  const ready = entry?.readyAt ?? start;
+  const duration = entry?.durationMs ?? Math.max(1, ready - start);
   const elapsed = Math.max(0, Math.min(duration, now - start));
   const remaining = Math.max(0, ready - now);
   const pct = duration > 0 ? Math.max(0, Math.min(1, elapsed / duration)) : 0;
-  const isReady = remaining <= 0;
+  return { duration, remaining, pct, isReady: remaining <= 0 };
+}
 
+// Small ring-progress with the recipe icon centered. The ring fills as the
+// head crafts; turns green and pulses when ready.
+function ProgressRingIcon({ iconKey, pct, ready, size = 52 }) {
+  const stroke = 3;
+  const r = (size - stroke) / 2;
+  const c = 2 * Math.PI * r;
+  const dash = c * pct;
   return (
-    <div
-      className={`relative rounded-xl border bg-[var(--card-bg)] px-3 py-2.5 ${isReady ? "craft-ready-card" : "craft-active-card"}`}
-      style={{ borderColor: isReady ? "rgba(143,199,64,0.7)" : "var(--card-border)" }}
-      aria-label={`Now crafting ${itemName}, ${isReady ? "ready to claim" : `${fmtDuration(remaining)} remaining`}`}
-    >
-      <div className="flex items-center gap-3">
-        <div className="relative flex-shrink-0 grid place-items-center" style={{ width: 52, height: 52 }}>
-          <Icon iconKey={recipe?.item ?? entry.key} size={48} />
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-baseline justify-between gap-2">
-            <div className="flex items-center gap-1.5 min-w-0">
-              <span className="text-[9px] uppercase tracking-wide font-bold text-on-panel-faint">Now crafting</span>
-              <span className="text-[13px] font-bold text-on-panel truncate">{itemName}</span>
-            </div>
-            {isReady ? (
-              <span className="craft-ready-badge text-[10px] font-bold px-1.5 py-0.5 rounded-md" style={{ background: "#5e8c1e", color: "#fff" }}>
-                READY
-              </span>
-            ) : (
-              <span className="text-[10px] tabular-nums font-bold text-on-panel-faint">
-                <span className="text-on-panel">{fmtDuration(remaining)}</span>
-                <span className="opacity-60"> / {fmtDuration(duration)}</span>
-              </span>
-            )}
-          </div>
-          <div className="craft-progress mt-1.5">
-            <div
-              className={`craft-progress-fill ${isReady ? "craft-progress-fill--ready" : ""}`}
-              style={{ width: `${Math.round(pct * 100)}%` }}
-            />
-            {!isReady && <div className="craft-progress-shine" aria-hidden />}
-          </div>
-          <div className="flex items-center gap-1.5 mt-2">
-            <button
-              disabled={!isReady}
-              onClick={() => dispatch({ type: "CRAFTING/CLAIM_CRAFT", payload: { idx: 0 } })}
-              className="hl-btn hl-btn--sm hl-btn--go flex-1"
-              aria-label={`Claim ${itemName}`}
-            >Claim</button>
-            {!isReady && (
-              <button
-                disabled={(gems ?? 0) < 1}
-                onClick={() => dispatch({ type: "CRAFTING/SKIP_CRAFT", payload: { idx: 0 } })}
-                title={(gems ?? 0) < 1 ? "Need a gem to skip" : "Spend a gem to finish now"}
-                className="hl-btn hl-btn--sm hl-btn--ghost"
-                aria-label={`Skip ${itemName} with a gem`}
-              >
-                <span className="inline-flex items-center gap-1">Skip <DesignIcon iconKey="design.currency.gem" size={10} /></span>
-              </button>
-            )}
-          </div>
-        </div>
+    <div className={`craft-ring ${ready ? "craft-ring--ready" : ""}`} style={{ width: size, height: size }}>
+      <svg width={size} height={size} className="craft-ring-svg" aria-hidden="true">
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="rgba(0,0,0,0.32)" strokeWidth={stroke} />
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={r}
+          fill="none"
+          stroke={ready ? "#8fc740" : "url(#craft-ring-grad)"}
+          strokeWidth={stroke}
+          strokeLinecap="round"
+          strokeDasharray={`${dash} ${c - dash}`}
+        />
+        <defs>
+          <linearGradient id="craft-ring-grad" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stopColor="#b8531f" />
+            <stop offset="100%" stopColor="#e08a5a" />
+          </linearGradient>
+        </defs>
+      </svg>
+      <div className="craft-ring-icon">
+        <Icon iconKey={iconKey} size={size - 18} />
       </div>
     </div>
   );
 }
 
-function QueuedCraftRow({ entry, now, position }) {
-  const recipe = RECIPES[entry.key];
-  const itemDef = ITEMS[recipe?.item] || {};
-  const itemName = itemDef.label ?? recipe?.item ?? entry.key;
-  const start = entry.startAt ?? now;
-  const duration = entry.durationMs ?? Math.max(1, (entry.readyAt ?? start) - start);
-  const startsIn = Math.max(0, start - now);
-  return (
-    <div
-      className="craft-queue-row flex items-center gap-2 rounded-lg border border-[var(--card-border)] bg-[var(--card-bg)] px-2 py-1.5"
-      style={{ opacity: 0.78 }}
-      aria-label={`Queued ${itemName}, starts in ${fmtDuration(startsIn)}, takes ${fmtDuration(duration)}`}
-    >
-      <span className="text-[10px] font-bold text-on-panel-faint w-4 text-center tabular-nums">{position}</span>
-      <Icon iconKey={recipe?.item ?? entry.key} size={24} />
-      <span className="text-[12px] font-bold text-on-panel flex-1 min-w-0 truncate">{itemName}</span>
-      <div className="flex flex-col items-end leading-tight">
-        <span className="text-[9px] uppercase tracking-wide text-on-panel-faint">Starts in</span>
-        <span className="text-[10px] font-bold tabular-nums text-on-panel">{fmtDuration(startsIn)}</span>
-      </div>
-      <span className="text-[9px] text-on-panel-faint tabular-nums w-12 text-right">{fmtDuration(duration)}</span>
-    </div>
-  );
-}
-
-function CraftQueuePanel({ queue, gems, dispatch }) {
-  // 1s tick drives the countdown text + lets the CSS `transition: width 1s linear`
-  // on the progress bar fill smoothly between updates. We pause when the queue
-  // is empty to avoid a phantom timer.
-  const [now, setNow] = useState(() => Date.now());
-  const hasQueue = !!(queue && queue.length > 0);
-  useEffect(() => {
-    if (!hasQueue) return undefined;
-    const t = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(t);
-  }, [hasQueue]);
-
-  if (!hasQueue) return null;
+// Compact single-row strip rendered above the active station's recipe browser
+// when that station has a non-empty queue. `now` is owned by the parent so
+// all per-station indicators share one ticker.
+function StationQueueStrip({ station, queue, gems, dispatch, now }) {
+  if (!queue || queue.length === 0) return null;
 
   const head = queue[0];
   const tail = queue.slice(1);
-  const headRecipe = RECIPES[head.key];
-  const totalRemaining = Math.max(0, (queue[queue.length - 1].readyAt ?? now) - now);
+  const recipe = RECIPES[head.key];
+  const itemDef = ITEMS[recipe?.item] || {};
+  const itemName = itemDef.label ?? recipe?.item ?? head.key;
+  const { duration, remaining, pct, isReady } = entryProgress(head, now);
+  const visibleTail = tail.slice(0, 4);
+  const tailOverflow = tail.length - visibleTail.length;
 
   return (
-    <div className="bg-[var(--panel-toolbar)] border-b border-[var(--panel-divider)] px-3 py-2.5">
-      <div className="flex items-baseline justify-between mb-1.5">
-        <div className="hl-section-label flex items-center gap-1.5">
-          <IconCanvas iconKey="station_workshop" size={14} />
-          <span>Workshop · {queue.length} {queue.length === 1 ? "item" : "items"}</span>
-        </div>
-        <div className="text-[10px] text-on-panel-faint tabular-nums">
-          Total: <span className="font-bold text-on-panel">{fmtDuration(totalRemaining)}</span>
+    <div
+      className={`craft-strip ${isReady ? "craft-strip--ready" : "craft-strip--active"}`}
+      aria-label={`${itemName} ${isReady ? "is ready to claim" : `crafting, ${fmtDuration(remaining)} remaining`}`}
+    >
+      <ProgressRingIcon iconKey={recipe?.item ?? head.key} pct={pct} ready={isReady} />
+      <div className="craft-strip-meta">
+        <div className="craft-strip-name">{itemName}</div>
+        <div className="craft-strip-time">
+          {isReady ? (
+            <span className="craft-strip-ready">Ready to claim</span>
+          ) : (
+            <>
+              <span className="craft-strip-time-remaining">{fmtDuration(remaining)}</span>
+              <span className="craft-strip-time-total"> / {fmtDuration(duration)}</span>
+            </>
+          )}
         </div>
       </div>
-
-      <ActiveCraftCard
-        entry={head}
-        recipe={headRecipe}
-        now={now}
-        gems={gems}
-        dispatch={dispatch}
-      />
-
+      <div className="craft-strip-actions">
+        <button
+          disabled={!isReady}
+          onClick={() => dispatch({ type: "CRAFTING/CLAIM_CRAFT", payload: { station } })}
+          className="hl-btn hl-btn--sm hl-btn--go"
+          aria-label={`Claim ${itemName}`}
+        >Claim</button>
+        {!isReady && (
+          <button
+            disabled={(gems ?? 0) < 1}
+            onClick={() => dispatch({ type: "CRAFTING/SKIP_CRAFT", payload: { station } })}
+            title={(gems ?? 0) < 1 ? "Need a gem to skip" : "Spend a gem to finish now"}
+            className="hl-btn hl-btn--sm hl-btn--ghost"
+            aria-label={`Skip ${itemName} with a gem`}
+          >
+            <span className="inline-flex items-center gap-1">Skip <DesignIcon iconKey="design.currency.gem" size={10} /></span>
+          </button>
+        )}
+      </div>
       {tail.length > 0 && (
-        <>
-          <div className="hl-section-label mt-2 mb-1">Up next</div>
-          <div className="flex flex-col gap-1">
-            {tail.map((entry, i) => (
-              <QueuedCraftRow
-                key={`${entry.key}-${entry.queuedAt}-${i}`}
-                entry={entry}
-                now={now}
-                position={i + 2}
-              />
-            ))}
-          </div>
-        </>
+        <div className="craft-strip-upnext" aria-label={`${tail.length} more in queue`}>
+          <span className="craft-strip-upnext-label">Next</span>
+          {visibleTail.map((entry, i) => (
+            <span
+              key={`${entry.key}-${entry.queuedAt}-${i}`}
+              className="craft-strip-upnext-chip"
+              title={ITEMS[RECIPES[entry.key]?.item]?.label ?? entry.key}
+            >
+              <Icon iconKey={RECIPES[entry.key]?.item ?? entry.key} size={20} />
+            </span>
+          ))}
+          {tailOverflow > 0 && (
+            <span className="craft-strip-upnext-more">+{tailOverflow}</span>
+          )}
+        </div>
       )}
     </div>
+  );
+}
+
+// Per-tab queue indicator: a small badge (count + ready-dot) plus a 2px
+// progress hair anchored to the bottom of the tab.
+function StationTabIndicator({ queue, now }) {
+  if (!queue || queue.length === 0) return null;
+  const head = queue[0];
+  const { pct, isReady } = entryProgress(head, now);
+  return (
+    <>
+      <span
+        className={`craft-tab-badge ${isReady ? "craft-tab-badge--ready" : ""}`}
+        aria-label={`${queue.length} queued${isReady ? ", one ready" : ""}`}
+      >
+        <span className="craft-tab-badge-dot" />
+        <span className="craft-tab-badge-count tabular-nums">{queue.length}</span>
+      </span>
+      <span className="craft-tab-hair" style={{ width: `${Math.round(pct * 100)}%` }} aria-hidden="true" />
+    </>
   );
 }
 
@@ -434,23 +423,34 @@ export default function CraftingScreen({ state, dispatch }) {
   const decorations = Object.values(DECORATIONS);
   const selectedDecor = decorations.find((decor) => decor.id === selectedDecorId) ?? decorations[0] ?? null;
 
+  const craftQueues = state.craftQueues ?? {};
+  const activeStationQueue = craftQueues[activeTab] ?? [];
+  const hasAnyQueue = Object.values(craftQueues).some((q) => q && q.length > 0);
+
+  // Single 1s ticker shared by the strip + every tab indicator. Paused
+  // entirely when nothing is queued.
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (!hasAnyQueue) return undefined;
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, [hasAnyQueue]);
+
   return (
     <FeaturePanel>
-      {/* Phase 5 — sequential real-time craft queue panel */}
-      <CraftQueuePanel queue={state.craftQueue} gems={state.gems} dispatch={dispatch} />
-
-      {/* Station tabs */}
+      {/* Station tabs with per-station queue indicator */}
       <FeaturePanel.Tabs className="!flex-nowrap overflow-x-auto">
         {STATION_ORDER.map((s) => {
           const m = STATION_META[s];
           const isActive = activeTab === s;
           const isBuilt = s === "decor" ? true : stationBuilt(built, s);
+          const stationQueue = craftQueues[s] ?? [];
           return (
             <FeaturePanel.Tab
               key={s}
               onClick={() => setActiveTab(s)}
               active={isActive}
-              className="flex-shrink-0"
+              className="flex-shrink-0 relative"
               style={isActive ? { backgroundColor: m.bg, borderColor: "rgba(255,255,255,0.2)" } : {}}
             >
               <span style={{ width: 22, height: 22, display: "inline-grid", placeItems: "center" }}>
@@ -458,10 +458,22 @@ export default function CraftingScreen({ state, dispatch }) {
               </span>
               <span>{m.label}</span>
               {!isBuilt && <span className="opacity-60"><LockGlyph size={10} /></span>}
+              <StationTabIndicator queue={stationQueue} now={now} />
             </FeaturePanel.Tab>
           );
         })}
       </FeaturePanel.Tabs>
+
+      {/* Active station's queue strip (only when it has items) */}
+      {activeTab !== "decor" && (
+        <StationQueueStrip
+          station={activeTab}
+          queue={activeStationQueue}
+          gems={state.gems}
+          dispatch={dispatch}
+          now={now}
+        />
+      )}
 
       {/* Content for active tab */}
       {activeTab === "decor" ? (
