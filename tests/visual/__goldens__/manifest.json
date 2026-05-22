@@ -424,6 +424,17 @@
       "Compare UI and canvas output to the golden image."
     ]
   },
+  "iphone-landscape/crafting-queue-ready.png": {
+    "scenarioId": "crafting-queue-ready",
+    "routeHash": "#/crafting/larder",
+    "view": null,
+    "actions": [],
+    "expectation": "Scenario crafting-queue-ready renders correctly at #/crafting/larder.",
+    "checklist": [
+      "Open #/crafting/larder.",
+      "Compare UI and canvas output to the golden image."
+    ]
+  },
   "iphone-landscape/crafting-queue.png": {
     "scenarioId": "crafting-queue",
     "routeHash": "#/crafting/bakery",
@@ -1427,6 +1438,17 @@
     "expectation": "Scenario crafting-locked-station renders correctly at #/crafting/bakery.",
     "checklist": [
       "Open #/crafting/bakery.",
+      "Compare UI and canvas output to the golden image."
+    ]
+  },
+  "iphone-portrait/crafting-queue-ready.png": {
+    "scenarioId": "crafting-queue-ready",
+    "routeHash": "#/crafting/larder",
+    "view": null,
+    "actions": [],
+    "expectation": "Scenario crafting-queue-ready renders correctly at #/crafting/larder.",
+    "checklist": [
+      "Open #/crafting/larder.",
       "Compare UI and canvas output to the golden image."
     ]
   },

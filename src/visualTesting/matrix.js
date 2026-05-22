@@ -75,6 +75,7 @@ const BASE_VISUAL_SCENARIOS = [
   { id: "crafting-locked-station", state: "fresh", hash: "#/crafting/bakery", diff: domDiff },
   { id: "crafting-bakery", state: "rich", hash: "#/crafting/bakery", diff: domDiff },
   { id: "crafting-queue", state: "craftQueue", hash: "#/crafting/bakery", diff: domDiff },
+  { id: "crafting-queue-ready", state: "craftQueue", hash: "#/crafting/larder", diff: domDiff },
 
   ...tileRoutes,
   { id: "tiles-hazards", state: "rich", hash: "#/tiles/hazards", diff: domDiff },
