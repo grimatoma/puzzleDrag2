@@ -100,7 +100,7 @@ export function FeatureModals({ state, dispatch }) {
   );
 }
 
-export function FeatureScreens({ state, dispatch, inventorySearchOpen, onInventorySearchToggle }) {
+export function FeatureScreens({ state, dispatch, inventorySearchOpen, onInventorySearchToggle, viewDirection = "up" }) {
   if (state.view === "board" || state.view === "town") return null;
   for (const f of FEATURES) {
     if (f.viewKey && state.view === f.viewKey) {
@@ -108,10 +108,11 @@ export function FeatureScreens({ state, dispatch, inventorySearchOpen, onInvento
       const extra = f.viewKey === "inventory"
         ? { searchOpen: inventorySearchOpen, onToggleSearch: onInventorySearchToggle }
         : {};
+      const enterCls = viewDirection === "down" ? "view-enter-down" : "view-enter-up";
       // Wrapper keyed on viewKey forces re-mount when navigating between
-      // features, which retriggers the .view-enter animation.
+      // features, which retriggers the .view-enter-* animation.
       return (
-        <div key={f.viewKey} className="view-enter absolute inset-0">
+        <div key={f.viewKey} className={`${enterCls} absolute inset-0`}>
           <FeatureErrorBoundary featureKey={f.viewKey}>
             <C state={state} dispatch={dispatch} {...extra} />
           </FeatureErrorBoundary>

@@ -9,6 +9,7 @@ import SeasonCinematic from "./src/ui/SeasonCinematic.jsx";
 import LevelUpCinematic from "./src/ui/LevelUpCinematic.jsx";
 import BossCinematic from "./src/ui/BossCinematic.jsx";
 import RewardChipsLayer from "./src/ui/RewardChipsLayer.jsx";
+import { useViewDirection } from "./src/ui/primitives/useViewDirection.js";
 import { BottomNav, FeatureModals, FeatureScreens } from "./src/ui.jsx";
 import { useAudio } from "./src/audio/useAudio.js";
 import { useRouter } from "./src/router.js";
@@ -252,6 +253,7 @@ const DUST_MOTES = Array.from({ length: 14 }, (_, i) => ({
 
 export default function App() {
   const [state, dispatch] = useReducer(gameReducer, undefined, initialState);
+  const viewDirection = useViewDirection(state.view);
   const [chainInfo, setChainInfo] = useState(null);
   const [inspectedTool, setInspectedTool] = useState(null);
   const [toolModalOpen, setToolModalOpen] = useState(false);
@@ -469,7 +471,7 @@ export default function App() {
 
           {/* Town overlay — covers exactly the same area as the board */}
           {state.view === "town" && (
-            <div className="absolute inset-0 z-20 view-enter">
+            <div className="absolute inset-0 z-20 view-enter-down">
               <TownView state={state} dispatch={dispatch} />
             </div>
           )}
@@ -480,6 +482,7 @@ export default function App() {
             dispatch={dispatch}
             inventorySearchOpen={inventorySearchOpen}
             onInventorySearchToggle={() => setInventorySearchOpen((o) => !o)}
+            viewDirection={viewDirection}
           />
         </div>
 

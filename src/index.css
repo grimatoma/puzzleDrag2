@@ -90,6 +90,19 @@
   animation: viewEnter 200ms cubic-bezier(.2,.7,.2,1) both;
 }
 
+/* Direction-aware variants — going "deeper" (toward a feature) slides
+   from below, coming "back" (toward town) slides from above. */
+@keyframes viewEnterUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes viewEnterDown {
+  from { opacity: 0; transform: translateY(-10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.view-enter-up   { animation: viewEnterUp   220ms cubic-bezier(.2,.7,.2,1) both; }
+.view-enter-down { animation: viewEnterDown 220ms cubic-bezier(.2,.7,.2,1) both; }
+
 @keyframes bottomSheetIn {
   from { transform: translateY(100%); }
 }
