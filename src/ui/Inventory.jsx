@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useReducer, useCallback, useEffect, useLayoutEffect, useRef, forwardRef } from "react";
 import { BIOMES, ITEMS, RECIPES } from "../constants.js";
 import {
   INVENTORY_TAGS,
@@ -53,6 +53,54 @@ function matchesQuery(key, label, query) {
   if (!query) return true;
   const q = query.toLowerCase();
   return key.toLowerCase().includes(q) || label.toLowerCase().includes(q);
+}
+
+export const accordionInitialState = { displayedKey: null, isOpen: false, pendingKey: null };
+
+export function accordionReducer(state, action) {
+  switch (action.type) {
+    case "SELECT": {
+      const { key } = action;
+      if (key === state.displayedKey && state.isOpen) {
+        return { ...state, isOpen: false, pendingKey: null };
+      }
+      if (state.displayedKey && state.isOpen) {
+        return { ...state, isOpen: false, pendingKey: key };
+      }
+      if (!state.displayedKey) {
+        return { displayedKey: key, isOpen: false, pendingKey: null };
+      }
+      return { ...state, pendingKey: key };
+    }
+    case "OPEN":
+      return { ...state, isOpen: true };
+    case "CLOSE":
+      return { ...state, isOpen: false, pendingKey: null };
+    case "TRANSITION_END":
+      if (state.isOpen) return state;
+      return state.pendingKey
+        ? { displayedKey: state.pendingKey, isOpen: false, pendingKey: null }
+        : { displayedKey: null, isOpen: false, pendingKey: null };
+    default:
+      return state;
+  }
+}
+
+function useAccordion() {
+  const [state, dispatch] = useReducer(accordionReducer, accordionInitialState);
+
+  // Trigger the enter animation after displayedKey is set (next frame)
+  useEffect(() => {
+    if (!state.displayedKey) return;
+    const id = requestAnimationFrame(() => dispatch({ type: "OPEN" }));
+    return () => cancelAnimationFrame(id);
+  }, [state.displayedKey]);
+
+  const select = useCallback((key) => dispatch({ type: "SELECT", key }), []);
+  const close = useCallback(() => dispatch({ type: "CLOSE" }), []);
+  const onClosed = useCallback(() => dispatch({ type: "TRANSITION_END" }), []);
+
+  return { displayedKey: state.displayedKey, isOpen: state.isOpen, select, close, onClosed };
 }
 
 export function Section({ title, titleColor = "#f8e7c6", children }) {
