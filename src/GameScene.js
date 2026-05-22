@@ -1286,7 +1286,7 @@ export class GameScene extends Phaser.Scene {
     // suppresses pointerleave for the duration of the drag, preventing the
     // canvas.pointerleave handler from firing endPath() mid-chain.
     this._capturedPointerId = null;
-    const _activePtr = this.input.activePointers.find(p => p.isDown);
+    const _activePtr = this.input.manager.pointers.find(p => p.isDown);
     if (_activePtr?.pointerId != null) {
       try {
         this.sys.game.canvas.setPointerCapture(_activePtr.pointerId);
