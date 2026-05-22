@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { InventoryGrid } from "../../ui/Inventory.jsx";
 import { INVENTORY_TAGS } from "./tags.js";
 import FeaturePanel from "../../ui/primitives/FeaturePanel.jsx";
@@ -82,6 +82,56 @@ function useRecentOrder(inventory) {
   return state.order;
 }
 
+const INV_VIEW_KEY = "hearth.settings.inventoryView";
+
+export function readViewMode() {
+  try {
+    const val = localStorage.getItem(INV_VIEW_KEY);
+    return val === "grid" ? "grid" : "list";
+  } catch {
+    return "list";
+  }
+}
+
+export function saveViewMode(mode) {
+  try {
+    localStorage.setItem(INV_VIEW_KEY, mode);
+  } catch { /* storage unavailable */ }
+}
+
+function useViewMode() {
+  const [viewMode, setViewMode] = useState(readViewMode);
+  const toggle = useCallback(() => {
+    setViewMode((prev) => {
+      const next = prev === "grid" ? "list" : "grid";
+      saveViewMode(next);
+      return next;
+    });
+  }, []);
+  return [viewMode, toggle];
+}
+
+function GridIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+      <rect x="0" y="0" width="6" height="6" rx="1" fill="currentColor" />
+      <rect x="8" y="0" width="6" height="6" rx="1" fill="currentColor" />
+      <rect x="0" y="8" width="6" height="6" rx="1" fill="currentColor" />
+      <rect x="8" y="8" width="6" height="6" rx="1" fill="currentColor" />
+    </svg>
+  );
+}
+
+function ListIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+      <rect x="0" y="1" width="14" height="3" rx="1" fill="currentColor" />
+      <rect x="0" y="6" width="14" height="3" rx="1" fill="currentColor" />
+      <rect x="0" y="11" width="14" height="3" rx="1" fill="currentColor" />
+    </svg>
+  );
+}
+
 export default function InventoryScreen({ state, dispatch, searchOpen: searchOpenProp }) {
   const biomeKey = state.biomeKey ?? "farm";
   const isPhone = usePhoneViewport();
@@ -90,6 +140,7 @@ export default function InventoryScreen({ state, dispatch, searchOpen: searchOpe
   const [primaryFilter, setPrimaryFilter] = useState("all");
 
   const searchOpen = searchOpenProp ?? false;
+  const [viewMode, toggleViewMode] = useViewMode();
   const query = useDebounced(queryInput, 100);
   const recentOrder = useRecentOrder(state.inventory);
 
@@ -134,6 +185,14 @@ export default function InventoryScreen({ state, dispatch, searchOpen: searchOpe
                   </button>
                 );
               })}
+              <button
+                type="button"
+                onClick={toggleViewMode}
+                aria-label={viewMode === "grid" ? "Switch to list view" : "Switch to grid view"}
+                className="ml-auto rounded-lg px-2 py-1 border border-iron bg-iron-deep/55 text-parchment hover:border-iron-soft transition-colors flex items-center gap-1"
+              >
+                {viewMode === "grid" ? <ListIcon /> : <GridIcon />}
+              </button>
             </div>
           </div>
           <InventoryGrid
@@ -147,6 +206,7 @@ export default function InventoryScreen({ state, dispatch, searchOpen: searchOpe
             query={query}
             recentOrder={recentOrder}
             compact={isPhone}
+            viewMode={viewMode}
           />
         </div>
       </FeaturePanel.Body>

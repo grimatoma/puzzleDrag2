@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useReducer, useCallback, useEffect, useLayoutEffect, useRef, forwardRef } from "react";
 import { BIOMES, ITEMS, RECIPES } from "../constants.js";
 import {
   INVENTORY_TAGS,
@@ -53,6 +53,111 @@ function matchesQuery(key, label, query) {
   if (!query) return true;
   const q = query.toLowerCase();
   return key.toLowerCase().includes(q) || label.toLowerCase().includes(q);
+}
+
+export const accordionInitialState = { displayedKey: null, isOpen: false, pendingKey: null };
+
+export function accordionReducer(state, action) {
+  switch (action.type) {
+    case "SELECT": {
+      const { key } = action;
+      if (key === state.displayedKey && state.isOpen) {
+        return { ...state, isOpen: false, pendingKey: null };
+      }
+      if (state.displayedKey && state.isOpen) {
+        return { ...state, isOpen: false, pendingKey: key };
+      }
+      if (!state.displayedKey) {
+        return { displayedKey: key, isOpen: false, pendingKey: null };
+      }
+      return { ...state, pendingKey: key };
+    }
+    case "OPEN":
+      return { ...state, isOpen: true };
+    case "CLOSE":
+      return { ...state, isOpen: false, pendingKey: null };
+    case "TRANSITION_END":
+      if (state.isOpen) return state;
+      return state.pendingKey
+        ? { displayedKey: state.pendingKey, isOpen: false, pendingKey: null }
+        : { displayedKey: null, isOpen: false, pendingKey: null };
+    default:
+      return state;
+  }
+}
+
+function useAccordion() {
+  const [state, dispatch] = useReducer(accordionReducer, accordionInitialState);
+
+  // Trigger the enter animation after displayedKey is set (next frame)
+  useEffect(() => {
+    if (!state.displayedKey) return;
+    const id = requestAnimationFrame(() => dispatch({ type: "OPEN" }));
+    return () => cancelAnimationFrame(id);
+  }, [state.displayedKey]);
+
+  const select = useCallback((key) => dispatch({ type: "SELECT", key }), []);
+  const close = useCallback(() => dispatch({ type: "CLOSE" }), []);
+  const onClosed = useCallback(() => dispatch({ type: "TRANSITION_END" }), []);
+
+  return { displayedKey: state.displayedKey, isOpen: state.isOpen, select, close, onClosed };
+}
+
+const InventoryIconCell = forwardRef(function InventoryIconCell(
+  { entry, selected, onSelect },
+  ref
+) {
+  const { key, label, count } = entry;
+  return (
+    <button
+      ref={ref}
+      type="button"
+      className={`inv-grid__cell${selected ? " is-selected" : ""}${count === 0 ? " is-muted" : ""}`}
+      aria-pressed={selected}
+      aria-label={`${label}${count > 0 ? `, ${count}` : ""}`}
+      onClick={onSelect}
+    >
+      <Icon iconKey={key} size={52} title={label} />
+      {count > 0 && (
+        <span className="inv-grid__badge" aria-hidden="true">
+          {count > 999 ? "999+" : count}
+        </span>
+      )}
+    </button>
+  );
+});
+
+function InventoryAccordion({ entry, isOpen, arrowLeft, marketBuilt, dispatch, onClose, onClosed, style }) {
+  const handleTransitionEnd = (e) => {
+    if (e.propertyName === "max-height" && !isOpen) {
+      onClosed?.();
+    }
+  };
+
+  return (
+    <div className="inv-accordion" style={style}>
+      <div
+        className="inv-accordion__arrow"
+        style={arrowLeft != null ? { left: arrowLeft } : { left: "50%" }}
+      />
+      <div
+        className={`inv-accordion__body${isOpen ? " is-open" : ""}`}
+        onTransitionEnd={handleTransitionEnd}
+      >
+        <div className="relative">
+          <button
+            type="button"
+            className="inv-accordion__close"
+            onClick={onClose}
+            aria-label="Close detail"
+          >
+            ×
+          </button>
+          <InventoryDetail entry={entry} marketBuilt={marketBuilt} dispatch={dispatch} />
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export function Section({ title, titleColor = "#f8e7c6", children }) {
@@ -240,6 +345,7 @@ export function InventoryGrid({
   sort = "count",
   query = "",
   recentOrder,
+  viewMode = "list",
 }) {
   const allBiomeEntries = BIOMES[biomeKey].resources;
   const resources = allBiomeEntries.filter((r) => r.kind !== "tile");
@@ -262,6 +368,28 @@ export function InventoryGrid({
     return acc;
   }, {});
   const [selectedKey, setSelectedKey] = useState(null);
+  const accordion = useAccordion();
+  const cellRefs = useRef({});
+  const containerRef = useRef(null);
+  const [arrowLeft, setArrowLeft] = useState(null);
+  const assignCellRef = useCallback((key, el) => {
+    if (el) cellRefs.current[key] = el;
+    else delete cellRefs.current[key];
+  }, []);
+
+  useLayoutEffect(() => {
+    let next = null;
+    if (compact && accordion.displayedKey) {
+      const cell = cellRefs.current[accordion.displayedKey];
+      const container = containerRef.current;
+      if (cell && container) {
+        const cellRect = cell.getBoundingClientRect();
+        const containerRect = container.getBoundingClientRect();
+        next = cellRect.left + cellRect.width / 2 - containerRect.left;
+      }
+    }
+    setArrowLeft(next);
+  }, [accordion.displayedKey, compact, viewMode]);
 
   const activeTags = filter === "all"
     ? null
@@ -359,20 +487,94 @@ export function InventoryGrid({
     });
   }
 
-  const selected = entries.find((e) => e.key === selectedKey) ?? entries[0] ?? null;
-
   const noResults =
     sortedResourceKeys.length === 0 &&
     sortedItemKeys.length === 0 &&
     sortedToolKeys.length === 0 &&
     (query.length > 0 || filter !== "all");
 
+  const makeRef = useCallback((key) => (el) => assignCellRef(key, el), [assignCellRef]);
+
+  // ── Narrow mode: inline accordion, no side panel ─────────────────────────
+  if (compact) {
+    const cells = [];
+    if (entries.length === 0) {
+      cells.push(
+        <div key="empty" className="hl-empty px-1">
+          {noResults ? `No matches${query ? ` for "${query}"` : ""}.` : "No resources yet."}
+        </div>
+      );
+    } else {
+      for (const entry of entries) {
+        const isSelected = entry.key === accordion.displayedKey;
+        if (viewMode === "grid") {
+          cells.push(
+            <InventoryIconCell
+              key={entry.key}
+              entry={entry}
+              selected={isSelected}
+              onSelect={() => accordion.select(entry.key)}
+              ref={makeRef(entry.key)}
+            />
+          );
+        } else {
+          cells.push(
+            <InventoryBrowserItem
+              key={entry.key}
+              entry={entry}
+              selected={isSelected}
+              onSelect={() => accordion.select(entry.key)}
+            />
+          );
+        }
+        if (isSelected) {
+          cells.push(
+            <InventoryAccordion
+              key="__accordion__"
+              entry={entry}
+              isOpen={accordion.isOpen}
+              arrowLeft={viewMode === "grid" ? arrowLeft : null}
+              marketBuilt={marketBuilt}
+              dispatch={dispatch}
+              onClose={accordion.close}
+              onClosed={accordion.onClosed}
+              style={viewMode === "grid" ? { gridColumn: "1 / -1" } : undefined}
+            />
+          );
+        }
+      }
+    }
+
+    const containerClass = viewMode === "grid" ? "inv-grid" : "flex flex-col gap-2";
+    return (
+      <div className="w-full h-full min-h-0 overflow-y-auto pr-1" style={{ overscrollBehavior: "contain" }}>
+        <div className={containerClass} ref={containerRef}>
+          {cells}
+        </div>
+      </div>
+    );
+  }
+
+  // ── Wide mode: right-side detail panel always visible ────────────────────
+  const selected = entries.find((e) => e.key === selectedKey) ?? entries[0] ?? null;
+
   const browser = noResults ? (
     <div className="hl-empty px-1">No matches{query ? ` for "${query}"` : ""}.</div>
   ) : entries.length === 0 ? (
     <div className="hl-empty px-1">No resources yet.</div>
+  ) : viewMode === "grid" ? (
+    <div className="inv-grid">
+      {entries.map((entry) => (
+        <InventoryIconCell
+          key={entry.key}
+          entry={entry}
+          selected={selected?.key === entry.key}
+          onSelect={() => setSelectedKey(entry.key)}
+        />
+      ))}
+    </div>
   ) : (
-    <BrowserGrid min={compact ? 220 : 180}>
+    <BrowserGrid min={180}>
       {entries.map((entry) => (
         <InventoryBrowserItem
           key={entry.key}

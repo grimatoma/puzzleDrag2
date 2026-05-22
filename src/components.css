@@ -289,6 +289,129 @@
     color: var(--on-panel-dim);
   }
 
+  /* ── Inventory icon grid (WoW-style) ── */
+  .inv-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
+    gap: 8px;
+  }
+
+  .inv-grid__cell {
+    position: relative;
+    aspect-ratio: 1;
+    display: grid;
+    place-items: center;
+    border-radius: 0.5rem;
+    border: 2px solid var(--card-border);
+    background: var(--card-bg);
+    cursor: pointer;
+    transition: border-color 150ms, background 150ms, box-shadow 150ms;
+  }
+
+  .inv-grid__cell:hover {
+    background: var(--card-bg-hover);
+    border-color: var(--card-border-strong);
+  }
+
+  .inv-grid__cell.is-selected {
+    border-color: var(--moss);
+    background: rgba(145, 191, 36, 0.14);
+    box-shadow: 0 0 0 3px rgba(145, 191, 36, 0.32);
+  }
+
+  .inv-grid__cell.is-muted {
+    opacity: 0.62;
+  }
+
+  .inv-grid__cell.is-muted.is-selected {
+    opacity: 0.85;
+  }
+
+  .inv-grid__badge {
+    position: absolute;
+    top: 3px;
+    right: 3px;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 4px;
+    border-radius: 9px;
+    background: rgba(0, 0, 0, 0.65);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 18px;
+    text-align: center;
+    pointer-events: none;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ── Inventory inline accordion (portrait/narrow detail) ── */
+  .inv-accordion {
+    position: relative;
+    width: 100%;
+  }
+
+  .inv-accordion__arrow {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 0;
+    border-left: 8px solid transparent;
+    border-right: 8px solid transparent;
+    border-bottom: 8px solid var(--card-border-strong);
+    z-index: 1;
+  }
+
+  .inv-accordion__arrow::after {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: -7px;
+    width: 0;
+    height: 0;
+    border-left: 7px solid transparent;
+    border-right: 7px solid transparent;
+    border-bottom: 7px solid var(--card-bg);
+  }
+
+  .inv-accordion__body {
+    overflow: hidden;
+    max-height: 0;
+    border-radius: 0.5rem;
+    transition: max-height 150ms ease-in;
+  }
+
+  .inv-accordion__body.is-open {
+    max-height: 700px;
+    transition: max-height 200ms ease-out;
+  }
+
+  .inv-accordion__close {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 28px;
+    height: 28px;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    background: var(--well-bg);
+    border: 1px solid var(--well-border);
+    color: var(--on-panel-dim);
+    font-size: 18px;
+    line-height: 1;
+    cursor: pointer;
+    z-index: 2;
+    transition: background 150ms, color 150ms;
+  }
+
+  .inv-accordion__close:hover {
+    background: var(--card-bg-hover);
+    color: var(--on-panel);
+  }
+
   .hl-detail-pane {
     @apply rounded-lg border-2 p-3 flex flex-col gap-3;
     background: var(--card-bg);
