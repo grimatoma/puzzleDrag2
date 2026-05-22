@@ -698,10 +698,10 @@ function Wagon({ progress, cargoSeason }) {
       className="hwv-wagon"
       style={{
         position: "absolute",
-        left: `calc(${leftPct}% - 18px)`,
+        left: `calc(${leftPct}% - 22px)`,
         bottom: 2,
-        width: 36,
-        height: 32,
+        width: 44,
+        height: 34,
         transition: "left 400ms cubic-bezier(0.4, 0, 0.2, 1)",
         pointerEvents: "none",
         zIndex: 2,
@@ -715,42 +715,88 @@ function Wagon({ progress, cargoSeason }) {
           animation: "hwv-wagon-bob 1700ms ease-in-out infinite",
         }}
       >
-        <svg width="36" height="32" viewBox="-18 -24 36 32" aria-hidden="true">
+        <svg width="44" height="34" viewBox="-22 -26 44 34" aria-hidden="true">
+          <defs>
+            <radialGradient id="hwv-wheel-grad" cx="40%" cy="35%" r="65%">
+              <stop offset="0%" stopColor="#a8742e" />
+              <stop offset="55%" stopColor="#6b3a1a" />
+              <stop offset="100%" stopColor="#2a1810" />
+            </radialGradient>
+            <linearGradient id="hwv-bed-grad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#c08840" />
+              <stop offset="100%" stopColor="#7a4a1c" />
+            </linearGradient>
+          </defs>
+
+          {/* cargo on the wagon bed */}
           <Cargo />
-          {/* wagon bed (rounded trapezoid) */}
+
+          {/* back wall / cargo retainer plate */}
+          <rect x="-14" y="-13" width="2" height="6" fill="#5a3010" rx="0.3" />
+          <rect x="12"  y="-13" width="2" height="6" fill="#5a3010" rx="0.3" />
+
+          {/* wagon bed (rounded trapezoid with gradient) */}
           <path
-            d="M -11 -8 L 11 -8 L 13 -2 L -13 -2 Z"
-            fill="#a8742e"
+            d="M -13 -8 L 13 -8 L 15 -2 L -15 -2 Z"
+            fill="url(#hwv-bed-grad)"
             stroke="#3a2412"
-            strokeWidth="0.8"
+            strokeWidth="0.9"
             strokeLinejoin="round"
           />
           {/* bed planks */}
-          <line x1="-9" y1="-7" x2="-9" y2="-3" stroke="#6b3a1a" strokeWidth="0.4" />
-          <line x1="-3" y1="-7" x2="-3" y2="-3" stroke="#6b3a1a" strokeWidth="0.4" />
-          <line x1="3"  y1="-7" x2="3"  y2="-3" stroke="#6b3a1a" strokeWidth="0.4" />
-          <line x1="9"  y1="-7" x2="9"  y2="-3" stroke="#6b3a1a" strokeWidth="0.4" />
+          <line x1="-10.5" y1="-7" x2="-10.5" y2="-3" stroke="#5a3010" strokeWidth="0.45" />
+          <line x1="-5.5"  y1="-7" x2="-5.5"  y2="-3" stroke="#5a3010" strokeWidth="0.45" />
+          <line x1="0"     y1="-7" x2="0"     y2="-3" stroke="#5a3010" strokeWidth="0.45" />
+          <line x1="5.5"   y1="-7" x2="5.5"   y2="-3" stroke="#5a3010" strokeWidth="0.45" />
+          <line x1="10.5"  y1="-7" x2="10.5"  y2="-3" stroke="#5a3010" strokeWidth="0.45" />
+          {/* iron-banding on the bed top edge */}
+          <line x1="-13" y1="-8" x2="13" y2="-8" stroke="#3a2412" strokeWidth="0.5" />
+
+          {/* driver / farmer seated on the front bench */}
+          <g transform="translate(-9, -10)">
+            {/* body */}
+            <path d="M -2 0 L 2 0 L 2.6 5 L -2.6 5 Z" fill="#7a4a1c" stroke="#3a2412" strokeWidth="0.3" />
+            <rect x="-1.4" y="-2.5" width="2.8" height="2.6" fill="#d6b078" stroke="#3a2412" strokeWidth="0.3" rx="0.4" />
+            {/* hat — wide brim */}
+            <ellipse cx="0" cy="-3.4" rx="3" ry="0.7" fill="#5a3010" />
+            <rect x="-1.4" y="-5.2" width="2.8" height="2" fill="#5a3010" rx="0.4" />
+          </g>
+
           {/* axle */}
-          <line x1="-9" y1="-1" x2="9" y2="-1" stroke="#3a2412" strokeWidth="0.6" />
-          {/* wheels — cartoon wagon wheel with a clear rim, 4 spokes, and a
-              centered hub. Stationary so the spokes always read as spokes
-              instead of blurring into a wedge mid-rotation. */}
-          <g transform="translate(-9 2)">
-            <circle cx="0" cy="0" r="4.2" fill="#2a1810" />
-            <circle cx="0" cy="0" r="3.2" fill="#7a4a1c" />
-            <line x1="-3.2" y1="0" x2="3.2" y2="0" stroke="#2a1810" strokeWidth="0.7" />
-            <line x1="0" y1="-3.2" x2="0" y2="3.2" stroke="#2a1810" strokeWidth="0.7" />
-            <circle cx="0" cy="0" r="1" fill="#2a1810" />
-            <circle cx="0" cy="0" r="0.4" fill="#a8742e" />
-          </g>
-          <g transform="translate(9 2)">
-            <circle cx="0" cy="0" r="4.2" fill="#2a1810" />
-            <circle cx="0" cy="0" r="3.2" fill="#7a4a1c" />
-            <line x1="-3.2" y1="0" x2="3.2" y2="0" stroke="#2a1810" strokeWidth="0.7" />
-            <line x1="0" y1="-3.2" x2="0" y2="3.2" stroke="#2a1810" strokeWidth="0.7" />
-            <circle cx="0" cy="0" r="1" fill="#2a1810" />
-            <circle cx="0" cy="0" r="0.4" fill="#a8742e" />
-          </g>
+          <line x1="-11" y1="-1" x2="11" y2="-1" stroke="#3a2412" strokeWidth="0.7" />
+
+          {/* wheels — radial-gradient hub with highlight, 6 spokes */}
+          {[-11, 11].map((cx) => (
+            <g key={cx} transform={`translate(${cx} 2)`}>
+              {/* outer tire */}
+              <circle cx="0" cy="0" r="4.8" fill="#1a0e08" />
+              {/* tire highlight (top-left) */}
+              <path d="M -3.4 -3 A 4.8 4.8 0 0 1 0 -4.8" fill="none" stroke="#5a3010" strokeWidth="0.5" />
+              {/* hub fill */}
+              <circle cx="0" cy="0" r="3.7" fill="url(#hwv-wheel-grad)" />
+              {/* 6 spokes evenly spaced */}
+              {[0, 30, 60, 90, 120, 150].map((deg) => {
+                const a = (deg * Math.PI) / 180;
+                const r = 3.4;
+                return (
+                  <line
+                    key={deg}
+                    x1={-Math.cos(a) * r}
+                    y1={-Math.sin(a) * r}
+                    x2={Math.cos(a) * r}
+                    y2={Math.sin(a) * r}
+                    stroke="#1a0e08"
+                    strokeWidth="0.6"
+                  />
+                );
+              })}
+              {/* hub cap */}
+              <circle cx="0" cy="0" r="1.2" fill="#1a0e08" />
+              <circle cx="0" cy="0" r="0.5" fill="#c08840" />
+              {/* tiny shadow on the ground */}
+              <ellipse cx="0" cy="5.2" rx="4.6" ry="0.5" fill="#000000" opacity="0.25" />
+            </g>
+          ))}
         </svg>
       </div>
     </div>
