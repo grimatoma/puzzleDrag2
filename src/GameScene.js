@@ -734,7 +734,11 @@ export class GameScene extends Phaser.Scene {
       });
       // Guard against an over-restrictive selection that would leave no
       // tiles to spawn — fall back to the unfiltered pool in that case.
-      if (filtered.length > 0) workerPool = filtered;
+      // Deduplicate after filtering: the base pool intentionally has 3× grass_hay
+      // for variety weighting, but after zone filtering removes 4 other tile types
+      // that 3× concentration dominates a much smaller pool (3/8 = 37.5%). Equal
+      // weight per surviving type gives a more varied board.
+      if (filtered.length > 0) workerPool = [...new Set(filtered)];
     }
     // Boss spawnBias: Quagmire pushes extra log/hay tiles into pool.
     // For each resource key, the bias factor adds (bias-1)*baseCount extra copies.
