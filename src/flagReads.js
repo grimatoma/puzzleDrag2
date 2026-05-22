@@ -9,4 +9,5 @@ export const FLAG_READS = Object.freeze({
   isWon:                [{ where: "src/ui/Hud.jsx", note: "win banner + sandbox affordances" }],
   mine_unlocked:        [{ where: "src/state.js", note: "gates mine-only actions" }],
   frostmaw_active:      [{ where: "src/features/bosses/Gallery.jsx", note: "legacy boss gallery state" }],
+  intro_seen:           [{ where: "src/state/init.js", note: "preserve across save schema discards so returning players skip the intro beat" }],
 });
