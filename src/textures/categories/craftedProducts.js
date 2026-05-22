@@ -568,99 +568,160 @@ function drawBread(ctx) {
 
 function drawMineDirt(ctx) {
   drawShadow(ctx, 22, 4);
-  // Pile of dark soil
-  const body = ctx.createRadialGradient(0, 4, 4, 0, 8, 24);
-  body.addColorStop(0, "#9a7048");
-  body.addColorStop(0.6, "#6d4a2f");
-  body.addColorStop(1, "#3a2410");
-  ctx.fillStyle = body;
+  // Wide, low mound of loose soil — flatter and chunkier than before so it
+  // doesn't read as a Christmas pudding. No dome, no glaze drip, no worm.
+  ctx.fillStyle = "#6d4a2f";
   ctx.beginPath();
-  ctx.moveTo(-22, 14);
-  ctx.bezierCurveTo(-22, -8, -10, -16, 0, -14);
-  ctx.bezierCurveTo(12, -14, 22, -6, 22, 14);
-  ctx.bezierCurveTo(20, 18, -20, 18, -22, 14);
+  ctx.moveTo(-22, 18);
+  ctx.bezierCurveTo(-22, 2, -16, -4, -10, -2);
+  ctx.bezierCurveTo(-6, -8, 4, -8, 8, -2);
+  ctx.bezierCurveTo(16, -4, 22, 2, 22, 18);
+  ctx.bezierCurveTo(18, 22, -18, 22, -22, 18);
   ctx.closePath();
   ctx.fill();
   ctx.strokeStyle = "#1a1004";
-  ctx.lineWidth = 2;
+  ctx.lineWidth = 1.8;
   ctx.stroke();
-  // Clods
-  ctx.fillStyle = "rgba(60,30,12,0.7)";
-  [[-10, 0, 4], [4, -4, 5], [12, 4, 4], [-4, 8, 3]].forEach(([x, y, r]) => {
-    ctx.beginPath();
-    ctx.arc(x, y, r, 0, Math.PI * 2);
-    ctx.fill();
-  });
-  // Highlights / dry crumbs
-  ctx.fillStyle = "rgba(220,180,140,0.7)";
-  [[-8, -6, 1.4], [6, -10, 1.2], [12, 0, 1.0], [-12, 4, 1.2], [0, 6, 0.9], [16, 10, 1.0]].forEach(([x, y, r]) => {
-    ctx.beginPath();
-    ctx.arc(x, y, r, 0, Math.PI * 2);
-    ctx.fill();
-  });
-  // Worm peeking
-  ctx.strokeStyle = "#c87898";
-  ctx.lineWidth = 2.4;
-  ctx.lineCap = "round";
+  // Lit top facets so the soil looks dimensional rather than uniform brown
+  ctx.fillStyle = "rgba(180,140,90,0.55)";
   ctx.beginPath();
-  ctx.moveTo(-2, -4);
-  ctx.bezierCurveTo(2, -10, -2, -14, 4, -16);
-  ctx.stroke();
-  ctx.fillStyle = "#a85868";
-  ctx.beginPath();
-  ctx.arc(4, -16, 1.4, 0, Math.PI * 2);
-  ctx.fill();
-}
-
-// Cured meat — a salt-rubbed ham, twine-wrapped for hanging. Distinct from
-// `meat` (a hot roasted drumstick): drier, darker, dusted with cure salt.
-function drawCuredMeat(ctx) {
-  drawShadow(ctx, 20, 4);
-  ctx.save();
-  ctx.rotate(0.18);
-  // Ham body — teardrop
-  const ham = ctx.createRadialGradient(-2, 2, 3, 0, 6, 24);
-  ham.addColorStop(0, "#c46a3a");
-  ham.addColorStop(0.5, "#9a4a22");
-  ham.addColorStop(1, "#4a2110");
-  ctx.fillStyle = ham;
-  ctx.beginPath();
-  ctx.moveTo(0, -14);
-  ctx.bezierCurveTo(16, -12, 20, 12, 2, 20);
-  ctx.bezierCurveTo(-18, 16, -16, -8, 0, -14);
+  ctx.moveTo(-18, 6);
+  ctx.bezierCurveTo(-14, 0, -8, 0, -4, 4);
+  ctx.bezierCurveTo(-10, 6, -16, 8, -18, 6);
   ctx.closePath();
   ctx.fill();
-  ctx.strokeStyle = "#2e1408";
-  ctx.lineWidth = 2;
-  ctx.stroke();
-  // Bone nub at the narrow top
-  ctx.fillStyle = "#f1e7cf";
   ctx.beginPath();
-  ctx.ellipse(0, -15, 3.4, 4, 0, 0, Math.PI * 2);
+  ctx.moveTo(2, 2);
+  ctx.bezierCurveTo(8, -2, 14, 0, 18, 6);
+  ctx.bezierCurveTo(14, 8, 6, 8, 2, 2);
+  ctx.closePath();
   ctx.fill();
-  ctx.strokeStyle = "#8a6a3a";
-  ctx.lineWidth = 1.4;
-  ctx.stroke();
-  // Twine wraps
-  ctx.strokeStyle = "#d8c08a";
-  ctx.lineWidth = 1.8;
-  ctx.lineCap = "round";
-  [-2, 6].forEach((dy) => {
+  // Pebbles / clods scattered across the surface — irregular, varied sizes
+  ctx.strokeStyle = "rgba(20,12,4,0.55)";
+  ctx.lineWidth = 0.7;
+  const clods = [
+    [-12,  4, 3.0, "#4a2e18"],
+    [ -2,  8, 2.4, "#3a2412"],
+    [  8,  6, 2.8, "#4a2e18"],
+    [ 14, 10, 1.8, "#5a3a20"],
+    [-15, 12, 1.6, "#3a2412"],
+    [  0, 14, 2.0, "#5a3a20"],
+  ];
+  clods.forEach(([x, y, r, c]) => {
+    ctx.fillStyle = c;
     ctx.beginPath();
-    ctx.ellipse(1, dy, 13, 4.5, 0.15, 0, Math.PI * 2);
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fill();
     ctx.stroke();
   });
-  // Cure-salt flecks
-  ctx.fillStyle = "rgba(255,252,240,0.9)";
-  [[-6, 0], [4, -4], [8, 8], [-3, 10], [2, 4], [10, 2]].forEach(([x, y]) => {
+  // Dry crumbs / specks of lighter mineral grit
+  ctx.fillStyle = "rgba(220,180,140,0.85)";
+  [[-9, 2, 0.8], [5, 0, 0.7], [12, 4, 0.8], [-6, 12, 0.7], [10, 14, 0.7], [-14, 8, 0.6]].forEach(([x, y, r]) => {
     ctx.beginPath();
-    ctx.arc(x, y, 1, 0, Math.PI * 2);
+    ctx.arc(x, y, r, 0, Math.PI * 2);
     ctx.fill();
   });
-  // Sheen
-  ctx.fillStyle = "rgba(255,210,170,0.45)";
+  // Tiny sprout poking out — flags the tile as "earth/soil" rather than
+  // an inert clump, while staying neutral (not the old worm).
+  ctx.strokeStyle = "#3a6018";
+  ctx.lineWidth = 1.2;
+  ctx.lineCap = "round";
   ctx.beginPath();
-  ctx.ellipse(-4, -2, 5, 2.4, -0.4, 0, Math.PI * 2);
+  ctx.moveTo(-2, -2);
+  ctx.lineTo(-2, -10);
+  ctx.stroke();
+  ctx.fillStyle = "#5a8a26";
+  ctx.beginPath();
+  ctx.ellipse(-5, -10, 3, 1.6, -0.5, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.ellipse(1, -10, 3, 1.6, 0.5, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = "#1f2a08";
+  ctx.lineWidth = 0.7;
+  ctx.stroke();
+}
+
+// Cured meat — a country leg of ham. Drawn at an angle with a clearly
+// exposed white shank bone at the narrow end and a fat round meat bulb at
+// the wide end. No twine, no rings, no diamond crosshatch — those all
+// made it read as a bauble/pumpkin.
+function drawCuredMeat(ctx) {
+  drawShadow(ctx, 22, 4);
+  ctx.save();
+  ctx.translate(2, 2);
+  ctx.rotate(-0.6);
+  // Main leg silhouette: a tapered "bowling pin" / drumstick shape.
+  // Narrow at the top (where the bone sticks out), bulging wide at the
+  // bottom. Drawn first as the meat fill.
+  const meat = ctx.createRadialGradient(-6, 6, 4, 0, 4, 24);
+  meat.addColorStop(0, "#d77a44");
+  meat.addColorStop(0.4, "#a64c20");
+  meat.addColorStop(1, "#4a1808");
+  ctx.fillStyle = meat;
+  ctx.beginPath();
+  // Start at the top-left of the bone neck
+  ctx.moveTo(-3, -22);
+  ctx.lineTo( 3, -22);
+  // Down to where the meat starts swelling
+  ctx.bezierCurveTo(5, -16, 6, -10, 8, -6);
+  // Wide bulb on the right side
+  ctx.bezierCurveTo(20, -2, 22, 14, 8, 18);
+  // Across the bottom
+  ctx.bezierCurveTo(2, 20, -6, 20, -10, 16);
+  // Wide bulb on the left side
+  ctx.bezierCurveTo(-22, 8, -16, -2, -8, -6);
+  // Back up to the bone neck
+  ctx.bezierCurveTo(-6, -10, -5, -16, -3, -22);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = "#2e1408"; ctx.lineWidth = 2;
+  ctx.stroke();
+  // Creamy fat cap covering the upper portion of the ham (where the rind
+  // is left on for curing). Classic country-ham silhouette.
+  ctx.fillStyle = "#f4dca8";
+  ctx.beginPath();
+  ctx.moveTo(-3, -22);
+  ctx.lineTo( 3, -22);
+  ctx.bezierCurveTo(5, -16, 6, -10, 8, -6);
+  ctx.bezierCurveTo(2, -4, -2, -4, -8, -6);
+  ctx.bezierCurveTo(-6, -10, -5, -16, -3, -22);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = "#8a6a3a"; ctx.lineWidth = 1.4;
+  ctx.stroke();
+  // Wavy edge where the fat cap meets the meat (looks like the natural
+  // line where rind is trimmed away)
+  ctx.strokeStyle = "#5a3818"; ctx.lineWidth = 1.4;
+  ctx.beginPath();
+  ctx.moveTo(-8, -6);
+  ctx.bezierCurveTo(-4, -8, 4, -4, 8, -6);
+  ctx.stroke();
+  // Exposed shank bone — a chunky white cylinder protruding straight up
+  // out of the top of the leg. This is the iconic ham-on-a-bone read.
+  ctx.fillStyle = "#fbf4dd";
+  ctx.fillRect(-3.5, -28, 7, 8);
+  ctx.strokeStyle = "#8a6a3a"; ctx.lineWidth = 1.4;
+  ctx.strokeRect(-3.5, -28, 7, 8);
+  // Bone end-cap (the flat circular top of the cut bone)
+  ctx.fillStyle = "#fffaea";
+  ctx.beginPath();
+  ctx.ellipse(0, -28, 3.5, 1.4, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = "#8a6a3a"; ctx.lineWidth = 1.2;
+  ctx.stroke();
+  // Marrow dot (centre of the bone)
+  ctx.fillStyle = "#c8a888";
+  ctx.beginPath();
+  ctx.arc(0, -28, 1.2, 0, Math.PI * 2);
+  ctx.fill();
+  // Sheen on the bone (so it doesn't read as a stick)
+  ctx.fillStyle = "rgba(255,255,255,0.6)";
+  ctx.fillRect(-2.5, -27, 1.5, 6);
+  // Sheen on the meat (catches light, sells the "wet/cured" surface)
+  ctx.fillStyle = "rgba(255,210,170,0.35)";
+  ctx.beginPath();
+  ctx.ellipse(-5, 6, 4, 9, -0.3, 0, Math.PI * 2);
   ctx.fill();
   ctx.restore();
 }

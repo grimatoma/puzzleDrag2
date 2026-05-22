@@ -72,21 +72,52 @@ function drawLonghorn(ctx) {
   ctx.fillStyle = "#fffce8";
   ctx.beginPath(); ctx.moveTo(-18, -4); ctx.lineTo(-15, -8); ctx.lineTo(-12, 4); ctx.lineTo(-16, 4); ctx.closePath(); ctx.fill();
   ctx.strokeStyle = "#1a0e04"; ctx.lineWidth = 1.0; ctx.stroke();
-  // MASSIVE horns
-  ctx.strokeStyle = "#3a2008"; ctx.lineWidth = 4;
+  // MASSIVE swept horns — wider sweep, drawn as filled tapered shapes so
+  // they read as the dominant silhouette feature.
+  // Left horn — sweeps far out and slightly forward then up at the tip
+  ctx.fillStyle = "#d8b878";
   ctx.beginPath();
-  ctx.moveTo(-13, -7); ctx.bezierCurveTo(-22, -12, -28, -6, -26, 0);
-  ctx.stroke();
+  ctx.moveTo(-13, -7);
+  ctx.bezierCurveTo(-22, -10, -32, -10, -34, -2);
+  ctx.bezierCurveTo(-34, -6, -32, -7, -30, -5);
+  ctx.bezierCurveTo(-22, -7, -16, -6, -12, -5);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = "#3a2008"; ctx.lineWidth = 1.4; ctx.stroke();
+  // Right horn (mirrored)
+  ctx.fillStyle = "#d8b878";
   ctx.beginPath();
-  ctx.moveTo(-9, -7); ctx.bezierCurveTo(-2, -12, 4, -6, 2, 0);
-  ctx.stroke();
-  // Tips
+  ctx.moveTo(-9, -7);
+  ctx.bezierCurveTo(0, -10, 10, -10, 12, -2);
+  ctx.bezierCurveTo(12, -6, 10, -7, 8, -5);
+  ctx.bezierCurveTo(0, -7, -6, -6, -10, -5);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = "#3a2008"; ctx.lineWidth = 1.4; ctx.stroke();
+  // Tip caps (lighter, polished)
   ctx.fillStyle = "#fff8d0";
-  ctx.beginPath(); ctx.arc(-26, 0, 2, 0, Math.PI*2); ctx.fill();
-  ctx.beginPath(); ctx.arc(2, 0, 2, 0, Math.PI*2); ctx.fill();
-  ctx.strokeStyle = "#3a2008"; ctx.lineWidth = 0.8; ctx.stroke();
-  ctx.beginPath(); ctx.arc(-26, 0, 2, 0, Math.PI*2); ctx.stroke();
-  ctx.beginPath(); ctx.arc(2, 0, 2, 0, Math.PI*2); ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(-34, -2); ctx.lineTo(-32, -6); ctx.lineTo(-30, -3); ctx.closePath();
+  ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(12, -2); ctx.lineTo(10, -6); ctx.lineTo(8, -3); ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = "#3a2008"; ctx.lineWidth = 0.8;
+  ctx.stroke();
+  // Length ridges on the horn shafts (catches the eye, sells the length)
+  ctx.strokeStyle = "rgba(80,50,12,0.55)"; ctx.lineWidth = 0.7;
+  for (let i = 0; i < 4; i++) {
+    ctx.beginPath();
+    ctx.moveTo(-30 + i * 4, -7);
+    ctx.lineTo(-29 + i * 4, -4);
+    ctx.stroke();
+  }
+  for (let i = 0; i < 4; i++) {
+    ctx.beginPath();
+    ctx.moveTo(8 - i * 4, -7);
+    ctx.lineTo(7 - i * 4, -4);
+    ctx.stroke();
+  }
 }
 
 function drawTriceratops(ctx) {

@@ -96,23 +96,45 @@ function drawBoar(ctx) {
 function drawWarthog(ctx) {
   shadow(ctx, 22);
   pigBase(ctx, "#5a4828", "#2a1a08", "#0a0604");
-  // Mane
+  // Mane — a continuous shaggy ridge running along the back, NOT a row of
+  // porcupine quills. Drawn as overlapping tufts so the silhouette reads as
+  // bristly hair, not spikes.
   ctx.fillStyle = "#1a0e04";
-  for (let i = 0; i < 9; i++) {
-    const x = -8 + i * 3;
-    ctx.beginPath(); ctx.moveTo(x, -3); ctx.lineTo(x - 2, -12); ctx.lineTo(x + 1, -3); ctx.closePath(); ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(-8, -2);
+  ctx.bezierCurveTo(-10, -10, -6, -10, -4, -3);
+  ctx.bezierCurveTo(-4, -10, 0, -10, 0, -3);
+  ctx.bezierCurveTo(0, -10, 4, -10, 4, -3);
+  ctx.bezierCurveTo(4, -10, 8, -10, 8, -3);
+  ctx.bezierCurveTo(8, -10, 12, -8, 12, -2);
+  ctx.bezierCurveTo(10, 0, -8, 0, -8, -2);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = "#0a0604";
+  ctx.lineWidth = 1.0;
+  ctx.stroke();
+  // A few short bristle hairs poking out of the mane ridge (NOT spikes —
+  // they stay close to the body and are clearly hair texture)
+  ctx.strokeStyle = "rgba(50,40,30,0.85)";
+  ctx.lineWidth = 0.8;
+  for (let i = 0; i < 6; i++) {
+    const x = -6 + i * 3;
+    ctx.beginPath();
+    ctx.moveTo(x, -6);
+    ctx.quadraticCurveTo(x - 0.5, -9, x - 1, -7);
+    ctx.stroke();
   }
-  // Tusks (curved up)
+  // Tusks (curved up out of the lower jaw)
   ctx.fillStyle = "#fff8d0";
   ctx.beginPath();
   ctx.moveTo(-19, 3); ctx.bezierCurveTo(-22, -2, -20, -6, -19, -2); ctx.lineTo(-18, 3); ctx.closePath(); ctx.fill();
   ctx.beginPath();
   ctx.moveTo(-17, 3); ctx.bezierCurveTo(-14, -2, -16, -6, -17, -2); ctx.lineTo(-18, 3); ctx.closePath(); ctx.fill();
   ctx.strokeStyle = "#5a3814"; ctx.lineWidth = 0.8; ctx.stroke();
-  // Warts
+  // Facial warts (signature warthog feature)
   ctx.fillStyle = "#1a0e04";
-  ctx.beginPath(); ctx.arc(-15, 0, 1.4, 0, Math.PI*2); ctx.fill();
-  ctx.beginPath(); ctx.arc(-11, 4, 1.2, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(-15, 0, 1.4, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(-11, 4, 1.2, 0, Math.PI * 2); ctx.fill();
 }
 
 function drawSheep(ctx) {

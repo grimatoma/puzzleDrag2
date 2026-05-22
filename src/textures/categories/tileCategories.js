@@ -178,60 +178,104 @@ function drawCatBerry(ctx) {
 
 function drawCatBird(ctx) {
   drawShadow(ctx, 16, 3);
-  // Egg in nest
-  // Nest
-  ctx.fillStyle = "#7a4a18";
+  // Stylised perched songbird so the category badge actually shows a *bird*
+  // (was previously an egg in a nest, which collided with cat_eggs etc).
+  // Perch
+  ctx.strokeStyle = "#5a3a14";
+  ctx.lineWidth = 3;
+  ctx.lineCap = "round";
   ctx.beginPath();
-  ctx.ellipse(0, 14, 18, 6, 0, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.strokeStyle = "#3a1c08";
-  ctx.lineWidth = 1.4;
+  ctx.moveTo(-16, 18);
+  ctx.lineTo(16, 18);
   ctx.stroke();
-  // Twigs
-  ctx.strokeStyle = "rgba(58,28,8,0.7)";
-  ctx.lineWidth = 1;
-  for (let i = -16; i <= 16; i += 4) {
-    ctx.beginPath();
-    ctx.moveTo(i, 16);
-    ctx.lineTo(i + 2, 12);
-    ctx.stroke();
-  }
-  // Egg
-  const grad = ctx.createRadialGradient(-3, -3, 1, 0, 0, 12);
-  grad.addColorStop(0, "#fffefa");
-  grad.addColorStop(0.7, "#f0e2c0");
-  grad.addColorStop(1, "#a89878");
+  // Body — round, leaning slightly forward
+  const grad = ctx.createRadialGradient(-3, -2, 2, 0, 2, 14);
+  grad.addColorStop(0, "#f8d878");
+  grad.addColorStop(0.6, "#c8682a");
+  grad.addColorStop(1, "#5a2008");
   ctx.fillStyle = grad;
   ctx.beginPath();
-  ctx.ellipse(0, 4, 9, 12, 0, 0, Math.PI * 2);
+  ctx.ellipse(0, 4, 11, 10, -0.1, 0, Math.PI * 2);
   ctx.fill();
-  ctx.strokeStyle = "#7a6248";
+  ctx.strokeStyle = "#1a0e04";
+  ctx.lineWidth = 1.6;
+  ctx.stroke();
+  // Wing
+  ctx.fillStyle = "#7a3010";
+  ctx.beginPath();
+  ctx.ellipse(2, 5, 7, 5, -0.1, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = "#1a0e04";
+  ctx.lineWidth = 1;
+  ctx.stroke();
+  // Wing feathers
+  ctx.strokeStyle = "rgba(26,14,4,0.7)";
+  ctx.lineWidth = 0.7;
+  for (let i = 0; i < 4; i++) {
+    ctx.beginPath();
+    ctx.moveTo(-3 + i * 2, 3);
+    ctx.lineTo(-3 + i * 2, 8);
+    ctx.stroke();
+  }
+  // Head
+  ctx.fillStyle = "#c8682a";
+  ctx.beginPath();
+  ctx.arc(-7, -6, 5.5, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = "#1a0e04";
   ctx.lineWidth = 1.4;
   ctx.stroke();
-  // Speckles
-  ctx.fillStyle = "rgba(120,90,40,0.65)";
-  [[-3, 0], [2, 4], [-1, 8], [4, -1]].forEach(([x, y]) => {
+  // Beak
+  ctx.fillStyle = "#f0a020";
+  ctx.beginPath();
+  ctx.moveTo(-12, -6);
+  ctx.lineTo(-17, -5);
+  ctx.lineTo(-12, -3);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = "#5a3814";
+  ctx.lineWidth = 0.8;
+  ctx.stroke();
+  // Eye with catch-light
+  ctx.fillStyle = "#fff8e0";
+  ctx.beginPath();
+  ctx.arc(-8, -7, 1.4, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = "#0a0e04";
+  ctx.beginPath();
+  ctx.arc(-8, -7, 0.8, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = "#fff";
+  ctx.beginPath();
+  ctx.arc(-7.7, -7.3, 0.3, 0, Math.PI * 2);
+  ctx.fill();
+  // Tail — small fan
+  ctx.fillStyle = "#5a2008";
+  ctx.beginPath();
+  ctx.moveTo(10, 2);
+  ctx.lineTo(16, -1);
+  ctx.lineTo(15, 3);
+  ctx.lineTo(16, 7);
+  ctx.lineTo(10, 6);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = "#1a0e04";
+  ctx.lineWidth = 1;
+  ctx.stroke();
+  // Feet gripping the perch
+  ctx.strokeStyle = "#1a0e04";
+  ctx.lineWidth = 1.6;
+  ctx.lineCap = "round";
+  [-2, 4].forEach((fx) => {
     ctx.beginPath();
-    ctx.arc(x, y, 0.7, 0, Math.PI * 2);
-    ctx.fill();
+    ctx.moveTo(fx, 14);
+    ctx.lineTo(fx, 18);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(fx - 2, 18);
+    ctx.lineTo(fx + 2, 18);
+    ctx.stroke();
   });
-  // Highlight
-  ctx.fillStyle = "rgba(255,255,255,0.7)";
-  ctx.beginPath();
-  ctx.ellipse(-3, -2, 2, 4, -0.3, 0, Math.PI * 2);
-  ctx.fill();
-  // Bird (tiny silhouette flying above)
-  ctx.fillStyle = "#3a3a40";
-  ctx.beginPath();
-  ctx.moveTo(-10, -16);
-  ctx.bezierCurveTo(-6, -20, -2, -20, 2, -16);
-  ctx.bezierCurveTo(-2, -18, -6, -18, -10, -16);
-  ctx.fill();
-  ctx.beginPath();
-  ctx.moveTo(2, -18);
-  ctx.bezierCurveTo(6, -22, 10, -22, 14, -18);
-  ctx.bezierCurveTo(10, -20, 6, -20, 2, -18);
-  ctx.fill();
 }
 
 function drawCatVegetables(ctx) {

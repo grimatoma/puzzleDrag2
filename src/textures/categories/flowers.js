@@ -1,36 +1,68 @@
 // Flowers.
 
 function drawPansy(ctx) {
+  // Soil shadow
   ctx.fillStyle = "rgba(0,0,0,0.22)";
-  ctx.beginPath(); ctx.ellipse(0,22,20,4,0,0,Math.PI*2); ctx.fill();
-  ctx.strokeStyle = "#234012"; ctx.lineWidth = 3.5;
-  ctx.beginPath(); ctx.moveTo(0,24); ctx.quadraticCurveTo(-2,8,0,-4); ctx.stroke();
+  ctx.beginPath(); ctx.ellipse(0, 22, 18, 4, 0, 0, Math.PI*2); ctx.fill();
+  // Stem
+  ctx.strokeStyle = "#2a4810"; ctx.lineWidth = 3.5; ctx.lineCap = "round";
+  ctx.beginPath(); ctx.moveTo(0, 22); ctx.quadraticCurveTo(-2, 8, 0, -2); ctx.stroke();
+  // Leaves on stem
   ctx.fillStyle = "#3a6818";
-  ctx.beginPath(); ctx.ellipse(-6,16,5,3,-0.4,0,Math.PI*2); ctx.fill();
-  ctx.beginPath(); ctx.ellipse(5,8,5,3,0.4,0,Math.PI*2); ctx.fill();
-  ctx.strokeStyle = "#1f2a08"; ctx.lineWidth = 1.2; ctx.stroke();
-  const drawPetal = (cx, cy, rx, ry, angle, c1, c2) => {
-    const grad = ctx.createRadialGradient(cx, cy, 1, cx, cy, Math.max(rx,ry));
-    grad.addColorStop(0, c1); grad.addColorStop(0.6, c2); grad.addColorStop(1, "#2a0a4a");
+  ctx.beginPath(); ctx.ellipse(-6, 14, 5, 2.6, -0.5, 0, Math.PI*2); ctx.fill();
+  ctx.strokeStyle = "#1f2a08"; ctx.lineWidth = 1.0; ctx.stroke();
+  ctx.fillStyle = "#3a6818";
+  ctx.beginPath(); ctx.ellipse(5, 6, 5, 2.6, 0.5, 0, Math.PI*2); ctx.fill();
+  ctx.strokeStyle = "#1f2a08"; ctx.lineWidth = 1.0; ctx.stroke();
+  // Pansy face — 5 broad overlapping petals arranged in the classic
+  // two-up / two-side / one-down configuration. Drawn back-to-front so the
+  // bottom petal layers on top.
+  const drawPetal = (cx, cy, rx, ry, angle, c1, c2, outline = "#2a0a4a") => {
+    const grad = ctx.createRadialGradient(cx, cy, 1, cx, cy, Math.max(rx, ry));
+    grad.addColorStop(0, c1);
+    grad.addColorStop(0.7, c2);
+    grad.addColorStop(1, outline);
     ctx.fillStyle = grad;
-    ctx.save(); ctx.translate(cx, cy); ctx.rotate(angle);
-    ctx.beginPath(); ctx.ellipse(0, -ry*0.3, rx, ry, 0, 0, Math.PI*2); ctx.fill();
-    ctx.strokeStyle = "#2a0a4a"; ctx.lineWidth = 1.4; ctx.stroke();
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(angle);
+    ctx.beginPath();
+    ctx.ellipse(0, 0, rx, ry, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = outline;
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
     ctx.restore();
   };
-  drawPetal(-10, -8, 7, 9, -0.6, "#c8a8e8", "#7a3aa8");
-  drawPetal(10, -8, 7, 9, 0.6, "#c8a8e8", "#7a3aa8");
-  drawPetal(-7, 4, 7, 8, -1.4, "#fff8a0", "#e8a020");
-  drawPetal(7, 4, 7, 8, 1.4, "#fff8a0", "#e8a020");
-  drawPetal(0, 8, 9, 9, Math.PI, "#5a2a8a", "#2a0a4a");
-  ctx.strokeStyle = "rgba(40,8,60,0.7)"; ctx.lineWidth = 1.0;
-  for (let i = 0; i < 5; i++) {
-    const a = -Math.PI/2 + (i * 2 * Math.PI / 5);
-    ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(Math.cos(a)*4, Math.sin(a)*4); ctx.stroke();
+  // Two upper "ear" petals — purple
+  drawPetal(-6, -10, 6, 7, -0.35, "#c8a8e8", "#7a3aa8");
+  drawPetal( 6, -10, 6, 7,  0.35, "#c8a8e8", "#7a3aa8");
+  // Two side petals — yellow with purple edge
+  drawPetal(-9,  -2, 6, 6.5, -0.15, "#fff4a0", "#e8a020", "#5a2a8a");
+  drawPetal( 9,  -2, 6, 6.5,  0.15, "#fff4a0", "#e8a020", "#5a2a8a");
+  // Bottom petal — broad, drawn last so it sits in front
+  drawPetal( 0,   3, 8, 6.5, 0, "#fff4a0", "#e8a020", "#5a2a8a");
+  // Dark "blotch" radiating from the centre (signature pansy face markings)
+  ctx.fillStyle = "rgba(40,8,60,0.55)";
+  ctx.beginPath();
+  ctx.ellipse(-5, -7, 2.8, 2.4, -0.4, 0, Math.PI * 2);
+  ctx.ellipse( 5, -7, 2.8, 2.4,  0.4, 0, Math.PI * 2);
+  ctx.ellipse( 0,  0, 4.5, 3.2, 0, 0, Math.PI * 2);
+  ctx.fill();
+  // Tiny veins fanning out from the centre
+  ctx.strokeStyle = "rgba(40,8,60,0.85)";
+  ctx.lineWidth = 0.7;
+  for (let i = 0; i < 7; i++) {
+    const a = -Math.PI / 2 + (i / 6) * Math.PI;
+    ctx.beginPath();
+    ctx.moveTo(0, -3);
+    ctx.lineTo(Math.cos(a) * 5.5, -3 + Math.sin(a) * 5.5);
+    ctx.stroke();
   }
+  // Yellow centre
   ctx.fillStyle = "#fff8d0";
-  ctx.beginPath(); ctx.arc(0, 0, 2.8, 0, Math.PI*2); ctx.fill();
-  ctx.strokeStyle = "#7a4a0a"; ctx.lineWidth = 1.2; ctx.stroke();
+  ctx.beginPath(); ctx.arc(0, -3, 1.8, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = "#a8740a"; ctx.lineWidth = 1; ctx.stroke();
 }
 
 function drawWaterLily(ctx) {

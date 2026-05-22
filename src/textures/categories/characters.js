@@ -1015,6 +1015,17 @@ function drawWorkerLumberjack(ctx) {
   ctx.stroke();
   // Body — red plaid flannel
   drawShoulders(ctx, "#a8341a", "#3a0a04");
+  // Clip the plaid to the shirt silhouette so the grid lines never spill out
+  // past the shoulders (must mirror drawShoulders' body path exactly).
+  ctx.save();
+  ctx.beginPath();
+  ctx.moveTo(-26, 28);
+  ctx.bezierCurveTo(-22, 12, -10, 8, 0, 8);
+  ctx.bezierCurveTo(10, 8, 22, 12, 26, 28);
+  ctx.lineTo(26, 32);
+  ctx.lineTo(-26, 32);
+  ctx.closePath();
+  ctx.clip();
   // Plaid pattern — black grid lines
   ctx.strokeStyle = "rgba(0,0,0,0.5)";
   ctx.lineWidth = 1;
@@ -1030,6 +1041,7 @@ function drawWorkerLumberjack(ctx) {
   [-16, -8, 0, 8, 16].forEach((x) => {
     ctx.beginPath(); ctx.moveTo(x, 8); ctx.lineTo(x, 32); ctx.stroke();
   });
+  ctx.restore();
   // Head — weathered, dark beard
   drawHead(ctx, { skin: "#d49060", outline: "#3a1e08", brow: "#1a0e04" });
   // Full beard
