@@ -195,6 +195,7 @@ export function Hud({ state, dispatch, inventorySearchOpen, onInventorySearchTog
             seasonIdx={seasonIdx}
             seasonName={season.name}
             bespoke={!!state.settings?.bespokeSeasonWidget}
+            phaser={!!state.settings?.seasonStripPhaser}
           />
         )}
         {showTide && <TideChip fish={state.fish} />}
