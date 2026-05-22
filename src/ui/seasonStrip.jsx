@@ -135,17 +135,18 @@ function evenSpaced(count, width, leftPad = 8, rightPad = 8) {
   return Array.from({ length: count }, (_, i) => leftPad + (usable * i) / (count - 1));
 }
 
-function SpringDeco({ width }) {
+function SpringDeco({ width, busy }) {
   if (width <= 0) return null;
-  // 4-petal pansies (the elaborate version from the original bespoke scene)
-  // stand along a clear grass strip. A butterfly always flutters above the
-  // first flower; wider segments get extra butterflies and grass tufts.
-  const flowerCount = Math.max(3, Math.min(9, Math.round(width / 22)));
+  // 4-petal pansies stand along a clear grass strip. Hero art (flowers +
+  // grass strip + lead butterfly) always renders; `busy` adds extra
+  // butterflies, extra flowers, and grass tufts.
+  const spacing = busy ? 18 : 28;
+  const flowerCount = Math.max(3, Math.min(11, Math.round(width / spacing)));
   const flowerXs = evenSpaced(flowerCount, width, 10, 10);
-  const flowerColors = ["#f06292", "#ffb74d", "#ba68c8", "#f06292", "#ffb74d", "#ba68c8", "#f06292", "#ffb74d", "#ba68c8"];
+  const flowerColors = ["#f06292", "#ffb74d", "#ba68c8", "#f06292", "#ffb74d", "#ba68c8", "#f06292", "#ffb74d", "#ba68c8", "#f06292", "#ffb74d"];
   const showSecondButterfly = width >= 150;
-  const showThirdButterfly = width >= 230;
-  const showGrassTufts = width >= 90;
+  const showThirdButterfly = busy && width >= 230;
+  const showGrassTufts = busy && width >= 90;
 
   return (
     <g aria-hidden="true">
@@ -214,15 +215,16 @@ function SpringDeco({ width }) {
   );
 }
 
-function SummerDeco({ width }) {
+function SummerDeco({ width, busy }) {
   if (width <= 0) return null;
-  // A big sun shedding 8 rays in the upper-left (the prominent sun from the
-  // original bespoke scene). Sandy strip across the bottom with a shell.
-  // Filler: clouds, a bee, and wheat tufts on wider segments.
-  const cloudCount = Math.max(1, Math.min(3, Math.round((width - 50) / 80)));
+  // Hero: big sun with face + 8 rays, sandy bottom with a shell. Always on.
+  // `busy` adds extra clouds, a bee, wheat tufts, and a second shell.
+  const cloudCount = busy
+    ? Math.max(1, Math.min(4, Math.round((width - 50) / 65)))
+    : Math.max(1, Math.min(2, Math.round((width - 50) / 110)));
   const cloudXs = evenSpaced(cloudCount, width - 36, 50, 8);
-  const showBee = width >= 130;
-  const showWheatTufts = width >= 110;
+  const showBee = busy && width >= 130;
+  const showWheatTufts = busy && width >= 110;
   const showSecondShell = width >= 160;
 
   return (
@@ -316,15 +318,16 @@ function SummerDeco({ width }) {
   );
 }
 
-function AutumnDeco({ width }) {
+function AutumnDeco({ width, busy }) {
   if (width <= 0) return null;
-  // A full tree with a leafy canopy (multiple maple leaves clustered on
-  // branches), a generous leaf pile at the trunk base, and falling leaves
-  // drifting across the segment. Pumpkin + acorns on wider segments.
-  const fallingLeafCount = Math.max(1, Math.min(4, Math.round((width - 50) / 40)));
+  // Hero: full tree with a leafy canopy + leaf pile + pumpkin always render.
+  // `busy` adds more falling leaves drifting across, plus acorns.
+  const fallingLeafCount = busy
+    ? Math.max(1, Math.min(5, Math.round((width - 50) / 32)))
+    : Math.max(1, Math.min(2, Math.round((width - 50) / 70)));
   const fallingXs = evenSpaced(fallingLeafCount, width - 50, 56, 10);
   const showPumpkin = width >= 150;
-  const showAcorns = width >= 120;
+  const showAcorns = busy && width >= 120;
 
   return (
     <g aria-hidden="true">
@@ -412,14 +415,14 @@ function AutumnDeco({ width }) {
   );
 }
 
-function WinterDeco({ width }) {
+function WinterDeco({ width, busy }) {
   if (width <= 0) return null;
-  // A full 3-tier snowman with hat, twig arms, scarf, carrot nose, and coal
-  // buttons — placed in the middle of the segment as the centerpiece. A
-  // snow-dusted evergreen anchors the left side. Drifting snowflakes fill
-  // the sky; wider segments get a second evergreen on the right and an
-  // extra snow drift in the foreground.
-  const flakeCount = Math.max(3, Math.min(10, Math.round(width / 22)));
+  // Hero: full 3-tier snowman in the middle + snow-dusted evergreen on the
+  // left + snow drift always render. `busy` adds more drifting snowflakes
+  // across the sky.
+  const flakeCount = busy
+    ? Math.max(4, Math.min(12, Math.round(width / 18)))
+    : Math.max(2, Math.min(5, Math.round(width / 45)));
   const flakeXs = evenSpaced(flakeCount, width, 8, 8);
   const showSecondTree = width >= 200;
   const snowmanCx = Math.max(54, Math.min(width / 2 + 10, width - 24));
@@ -556,7 +559,10 @@ const DECO_BY_SEASON = [SpringDeco, SummerDeco, AutumnDeco, WinterDeco];
 
 function Segment({ idx, palette, turnsInSeason, flex, isActive, busy }) {
   const [ref, width] = useMeasuredWidth();
-  const Deco = busy ? DECO_BY_SEASON[idx] : null;
+  // Per-season hero art always renders so the strip never looks empty.
+  // `busy` controls extra filler density (more butterflies, more snowflakes,
+  // etc.) inside each Deco.
+  const Deco = DECO_BY_SEASON[idx];
 
   // Tick marks at the top of the segment, one per turn boundary inside the
   // segment (turnsInSeason - 1 ticks for turnsInSeason turns).
@@ -585,7 +591,8 @@ function Segment({ idx, palette, turnsInSeason, flex, isActive, busy }) {
         </div>
       )}
 
-      {/* per-season decorative SVG layer (busy mode only) */}
+      {/* per-season decorative SVG layer — always renders, density scales
+          with `busy` and segment width inside each Deco. */}
       {Deco && width > 0 && (
         <svg
           width={width}
@@ -594,7 +601,7 @@ function Segment({ idx, palette, turnsInSeason, flex, isActive, busy }) {
           preserveAspectRatio="none"
           style={{ position: "absolute", inset: 0, pointerEvents: "none" }}
         >
-          <Deco width={width} />
+          <Deco width={width} busy={busy} />
         </svg>
       )}
 
@@ -725,32 +732,24 @@ function Wagon({ progress, cargoSeason }) {
           <line x1="9"  y1="-7" x2="9"  y2="-3" stroke="#6b3a1a" strokeWidth="0.4" />
           {/* axle */}
           <line x1="-9" y1="-1" x2="9" y2="-1" stroke="#3a2412" strokeWidth="0.6" />
-          {/* wheels — spin */}
-          <g
-            transform="translate(-8 2)"
-            className="hwv-anim"
-            style={{ transformOrigin: "-8px 2px", animation: "hwv-wagon-wheel 4000ms linear infinite" }}
-          >
-            <circle cx="0" cy="0" r="3.2" fill="#3a2412" />
-            <circle cx="0" cy="0" r="2.2" fill="#6b3a1a" />
-            <line x1="-2.2" y1="0" x2="2.2" y2="0" stroke="#3a2412" strokeWidth="0.4" />
-            <line x1="0" y1="-2.2" x2="0" y2="2.2" stroke="#3a2412" strokeWidth="0.4" />
-            <line x1="-1.6" y1="-1.6" x2="1.6" y2="1.6" stroke="#3a2412" strokeWidth="0.4" />
-            <line x1="-1.6" y1="1.6"  x2="1.6" y2="-1.6" stroke="#3a2412" strokeWidth="0.4" />
-            <circle cx="0" cy="0" r="0.6" fill="#3a2412" />
+          {/* wheels — cartoon wagon wheel with a clear rim, 4 spokes, and a
+              centered hub. Stationary so the spokes always read as spokes
+              instead of blurring into a wedge mid-rotation. */}
+          <g transform="translate(-9 2)">
+            <circle cx="0" cy="0" r="4.2" fill="#2a1810" />
+            <circle cx="0" cy="0" r="3.2" fill="#7a4a1c" />
+            <line x1="-3.2" y1="0" x2="3.2" y2="0" stroke="#2a1810" strokeWidth="0.7" />
+            <line x1="0" y1="-3.2" x2="0" y2="3.2" stroke="#2a1810" strokeWidth="0.7" />
+            <circle cx="0" cy="0" r="1" fill="#2a1810" />
+            <circle cx="0" cy="0" r="0.4" fill="#a8742e" />
           </g>
-          <g
-            transform="translate(8 2)"
-            className="hwv-anim"
-            style={{ transformOrigin: "8px 2px", animation: "hwv-wagon-wheel 4000ms linear infinite" }}
-          >
-            <circle cx="0" cy="0" r="3.2" fill="#3a2412" />
-            <circle cx="0" cy="0" r="2.2" fill="#6b3a1a" />
-            <line x1="-2.2" y1="0" x2="2.2" y2="0" stroke="#3a2412" strokeWidth="0.4" />
-            <line x1="0" y1="-2.2" x2="0" y2="2.2" stroke="#3a2412" strokeWidth="0.4" />
-            <line x1="-1.6" y1="-1.6" x2="1.6" y2="1.6" stroke="#3a2412" strokeWidth="0.4" />
-            <line x1="-1.6" y1="1.6"  x2="1.6" y2="-1.6" stroke="#3a2412" strokeWidth="0.4" />
-            <circle cx="0" cy="0" r="0.6" fill="#3a2412" />
+          <g transform="translate(9 2)">
+            <circle cx="0" cy="0" r="4.2" fill="#2a1810" />
+            <circle cx="0" cy="0" r="3.2" fill="#7a4a1c" />
+            <line x1="-3.2" y1="0" x2="3.2" y2="0" stroke="#2a1810" strokeWidth="0.7" />
+            <line x1="0" y1="-3.2" x2="0" y2="3.2" stroke="#2a1810" strokeWidth="0.7" />
+            <circle cx="0" cy="0" r="1" fill="#2a1810" />
+            <circle cx="0" cy="0" r="0.4" fill="#a8742e" />
           </g>
         </svg>
       </div>
@@ -849,10 +848,6 @@ export function SeasonStrip({
         @keyframes hwv-wagon-bob {
           0%, 100% { transform: translateY(0); }
           50%      { transform: translateY(-1.5px); }
-        }
-        @keyframes hwv-wagon-wheel {
-          from { transform: rotate(0deg); }
-          to   { transform: rotate(360deg); }
         }
         @keyframes hwv-spring-sway {
           0%, 100% { transform: rotate(-4deg); }
