@@ -5,8 +5,10 @@ import LegacyIcon from "./Icon.jsx";
 import Icon from "./primitives/Icon.jsx";
 import Pill from "./primitives/Pill.jsx";
 import Popover from "./primitives/Popover.jsx";
+import { useEffect, useRef } from "react";
 import { useCountUp } from "./primitives/useCountUp.js";
 import { useReceiptChips } from "./primitives/useReceiptChips.js";
+import { setCoinAnchorEl } from "./rewardEvents.js";
 import { SeasonIndicator } from "./puzzleBoard.jsx";
 
 export const SEASON_EFFECTS = ["", "", "", ""];
@@ -136,6 +138,11 @@ export function Hud({ state, dispatch, inventorySearchOpen, onInventorySearchTog
   const { display: coinsDisplay, pulse: coinsPulse, pulseKey: coinsPulseKey } = useCountUp(coins ?? 0);
   const { pulse: levelPulse, pulseKey: levelPulseKey } = useCountUp(level ?? 1);
   const coinChips = useReceiptChips(coins ?? 0);
+  const coinAnchorRef = useRef(null);
+  useEffect(() => {
+    setCoinAnchorEl(coinAnchorRef.current);
+    return () => setCoinAnchorEl(null);
+  });
   const isWon = !!state.story?.flags?.isWon;
   const sandbox = !!state.story?.sandbox || isWon;
   const settlementName = state.settlement?.name ?? "Hearthwood Vale";
@@ -198,7 +205,7 @@ export function Hud({ state, dispatch, inventorySearchOpen, onInventorySearchTog
         <DevButton title="Balance Manager" iconKey="ui_scale" onClick={() => { window.open(`${import.meta.env.BASE_URL}b/`, "_blank", "noopener,noreferrer"); }} />
         {!onBoard && (
           <>
-            <div className="relative">
+            <div className="relative" ref={coinAnchorRef}>
               <Popover
                 density="rich"
                 content={<CurrencyContent state={state} />}

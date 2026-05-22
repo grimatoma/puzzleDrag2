@@ -1745,6 +1745,20 @@ export class GameScene extends Phaser.Scene {
     const chainTiles = this.path.map(t => ({ key: t.res.key, row: t.row, col: t.col }));
     this.events.emit(SCENE_EVENTS.CHAIN_COLLECTED, { key: res.key, gained: totalGained, upgrades, chainLength: this.path.length, value: res.value, chain: chainTiles });
 
+    // Reward burst — emit chain center in canvas-local coords so the React
+    // layer can spawn a "+N" chip from the board → HUD coin pill.
+    if (this.path.length > 0) {
+      let sx = 0, sy = 0;
+      for (const t of this.path) { sx += t.x; sy += t.y; }
+      this.events.emit(SCENE_EVENTS.REWARD_BURST, {
+        canvasX: sx / this.path.length,
+        canvasY: sy / this.path.length,
+        canvasW: this.scale?.gameSize?.width ?? 0,
+        canvasH: this.scale?.gameSize?.height ?? 0,
+        coins: totalGained * (res.value ?? 0),
+      });
+    }
+
     this.pathLines.forEach((l) => l.destroy());
     this.pathStars.forEach((s) => s.destroy());
     if (this.pathNodeG) { this.pathNodeG.destroy(); this.pathNodeG = null; }
