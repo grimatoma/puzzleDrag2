@@ -363,6 +363,12 @@
     border-bottom: 10px solid var(--card-border-strong);
     z-index: 2;
     pointer-events: none;
+    opacity: 0;
+    transition: left 200ms ease-out, opacity 120ms;
+  }
+
+  .inv-accordion.is-open .inv-accordion__arrow {
+    opacity: 1;
   }
 
   .inv-accordion__arrow::after {
@@ -378,7 +384,6 @@
   }
 
   .inv-accordion__body {
-    position: relative;
     overflow: hidden;
     max-height: 0;
     border-radius: 0.5rem;
@@ -388,35 +393,6 @@
   .inv-accordion__body.is-open {
     max-height: 700px;
     transition: max-height 200ms ease-out;
-  }
-
-  .inv-accordion__detail {
-    margin-top: 32px;
-  }
-
-  .inv-accordion__close {
-    position: absolute;
-    top: 0;
-    right: 0;
-    width: 28px;
-    height: 28px;
-    display: grid;
-    place-items: center;
-    border-radius: 50%;
-    background: var(--card-bg);
-    border: 1px solid var(--card-border-strong);
-    color: var(--on-panel);
-    font-size: 18px;
-    line-height: 1;
-    cursor: pointer;
-    z-index: 3;
-    transition: background 150ms, color 150ms, border-color 150ms;
-  }
-
-  .inv-accordion__close:hover {
-    background: var(--card-bg-hover);
-    border-color: var(--card-border-strong);
-    color: var(--on-panel);
   }
 
   .hl-detail-pane {

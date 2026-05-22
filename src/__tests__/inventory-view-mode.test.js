@@ -65,6 +65,24 @@ describe("accordionReducer", () => {
     );
     expect(s).toEqual({ displayedKey: "grain", isOpen: false, pendingKey: null });
   });
+
+  it("SELECT_IN_PLACE switches to a new key instantly, stays open", () => {
+    const open = { displayedKey: "grain", isOpen: true, pendingKey: null };
+    const s = accordionReducer(open, { type: "SELECT_IN_PLACE", key: "hay" });
+    expect(s).toEqual({ displayedKey: "hay", isOpen: true, pendingKey: null });
+  });
+
+  it("SELECT_IN_PLACE on same key closes the accordion", () => {
+    const open = { displayedKey: "grain", isOpen: true, pendingKey: null };
+    const s = accordionReducer(open, { type: "SELECT_IN_PLACE", key: "grain" });
+    expect(s).toEqual({ displayedKey: "grain", isOpen: false, pendingKey: null });
+  });
+
+  it("SELECT_IN_PLACE from closed state opens instantly", () => {
+    const closed = { displayedKey: null, isOpen: false, pendingKey: null };
+    const s = accordionReducer(closed, { type: "SELECT_IN_PLACE", key: "hay" });
+    expect(s).toEqual({ displayedKey: "hay", isOpen: true, pendingKey: null });
+  });
 });
 
 // ── View mode storage ─────────────────────────────────────────────────────
