@@ -120,10 +120,10 @@ function AlmanacTierCard({ idx, tierDef, almanacXp, almanacClaimed, dispatch }) 
           </ActionCard.Title>
           <div className="text-[10px] font-bold text-[#a8722a]">{rewardStr}</div>
         </div>
-        <div className="text-[9px] text-[#7a5e3f]/70 flex-shrink-0">{cost}✦</div>
+        <div className="text-[9px] text-[#5b3b20]/70 flex-shrink-0">{cost}✦</div>
       </div>
       {tierDef.description && (
-        <div className="text-[9px] text-[#7a5e3f]/80 italic leading-snug">
+        <div className="text-[9px] text-[#5b3b20]/80 italic leading-snug">
           {tierDef.description}
         </div>
       )}
@@ -187,7 +187,7 @@ export function QuestsPanel({ state, dispatch }) {
         <div className="flex flex-col gap-2">
           <div className="flex items-center gap-2">
             <ProgressBar value={xpIntoTier} max={100} className="flex-1 h-3" />
-            <span className="text-[11px] font-bold text-[#2b2218] whitespace-nowrap">
+            <span className="text-[11px] font-bold text-[#3a2715] whitespace-nowrap">
               {almanacXp}✦ / {nextCost > 1000 ? "MAX" : nextCost}
             </span>
           </div>
@@ -256,7 +256,7 @@ export default function QuestsScreen({ state, dispatch, initialTab }) {
         <div className="flex-1 flex flex-col overflow-hidden px-3 pb-3 gap-2">
           <div className="flex-shrink-0 flex items-center gap-2">
             <ProgressBar value={xpIntoTier} max={100} className="flex-1 h-3" />
-            <span className="text-[11px] font-bold text-[#2b2218] whitespace-nowrap">
+            <span className="text-[11px] font-bold text-[#3a2715] whitespace-nowrap">
               {almanacXp}✦ / {nextCost > 1000 ? "MAX" : nextCost}
             </span>
           </div>

@@ -153,7 +153,7 @@ export function Hud({ state, dispatch, inventorySearchOpen, onInventorySearchTog
     : "var(--ember)";
   return (
     <div
-      className="flex items-center gap-2 px-3 py-2 bg-paper border-b border-iron text-ink relative"
+      className="flex items-center gap-2 px-3 py-2 bg-ink-soft border-b-2 border-bg-darker text-cream relative"
       data-testid="hud"
       style={{ boxShadow: `inset 0 -3px 0 ${seasonAccent}55` }}
     >
@@ -165,7 +165,7 @@ export function Hud({ state, dispatch, inventorySearchOpen, onInventorySearchTog
           aria-label={onBoard ? "Leave board" : "Menu"}
           title={onBoard ? `Leave board · ${settlementName}` : settlementName}
         >{onBoard ? "←" : "≡"}</button>
-        <span className="text-caption font-semibold text-ink whitespace-nowrap">
+        <span className="text-caption font-semibold text-cream-soft whitespace-nowrap">
           {VIEW_LABELS[view] ?? "Menu"}
           {sandbox && <span className="italic font-normal"> · sandbox</span>}
         </span>

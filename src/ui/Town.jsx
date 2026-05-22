@@ -348,7 +348,7 @@ export function TownView({ state, dispatch }) {
           <button
             type="button"
             onClick={() => dispatch({ type: "SET_VIEW", view: "boons" })}
-            className="bg-white/85 px-3 py-1.5 landscape:max-[1024px]:px-2 landscape:max-[1024px]:py-1 rounded-full font-bold text-[#2b2218] landscape:max-[1024px]:text-[13px] hover:bg-white transition-colors"
+            className="bg-white/85 px-3 py-1.5 landscape:max-[1024px]:px-2 landscape:max-[1024px]:py-1 rounded-full font-bold text-[#3a2715] landscape:max-[1024px]:text-[13px] hover:bg-white transition-colors"
             title="Spend Embers / Core Ingots on per-path boons"
           >
             ✨ Boons
