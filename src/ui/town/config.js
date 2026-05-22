@@ -3,7 +3,7 @@ export const TOWN_THEMES = {
     bg: "linear-gradient(180deg, #a8c5d6 0%, #c5b48b 55%, #7e9b5a 100%)",
     hill1: "#8da568", hill2: "#5a7a3e", road: "#c5b48b", roadLine: "#a89065",
     sunColor: "#f7d572", sunGlow: "rgba(247,213,114,.7)",
-    textColor: "#3a2715",
+    textColor: "#2b2218",
   },
   farm: {
     bg: "linear-gradient(180deg, #b5d98c 0%, #d4c97a 55%, #6b9c3e 100%)",

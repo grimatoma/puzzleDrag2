@@ -1173,18 +1173,18 @@ export default function StoryEditorApp() {
   return (
     <div style={{ position: "fixed", inset: 0, display: "flex", flexDirection: "column", background: C.parchmentDeep, fontFamily: "system-ui, sans-serif" }}>
       <header style={{ flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "space-between",
-        padding: "10px 18px", background: "linear-gradient(180deg,#2a1d0f,#3a2812)", borderBottom: `3px solid ${C.border}` }}>
+        padding: "10px 18px", background: "linear-gradient(180deg,#e9dfc6,#f4ecd6)", borderBottom: `3px solid ${C.border}` }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <span style={{ fontSize: 20 }}>📖</span>
           <div>
-            <div style={{ font: "700 16px/1 system-ui", color: "#f4d9a0" }}>Story Tree Editor</div>
-            <div style={{ font: "400 10px/1 system-ui", color: "rgba(244,217,160,0.6)", marginTop: 2 }}>Hearthlands · beats · choices · branches</div>
+            <div style={{ font: "700 16px/1 system-ui", color: "#2b2218" }}>Story Tree Editor</div>
+            <div style={{ font: "400 10px/1 system-ui", color: "rgba(43,34,24,0.6)", marginTop: 2 }}>Hearthlands · beats · choices · branches</div>
           </div>
         </div>
         <div style={{ position: "relative", display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
           {savedNotice && <span style={{ font: "700 10px/1 system-ui", padding: "4px 9px", borderRadius: 6, background: C.green, color: "#fff" }}>{savedNotice}</span>}
           {isDirty && !savedNotice && <span style={{ font: "700 10px/1 system-ui", padding: "4px 9px", borderRadius: 6, background: C.ember, color: "#fff" }}>Unsaved changes</span>}
-          <span style={{ font: "400 10px/1 system-ui", color: "rgba(244,217,160,0.5)" }}>Drag handle · arrows navigate · Enter previews · ⌘Z undo · ⌘S saves</span>
+          <span style={{ font: "400 10px/1 system-ui", color: "rgba(43,34,24,0.5)" }}>Drag handle · arrows navigate · Enter previews · ⌘Z undo · ⌘S saves</span>
           <span role="group" aria-label="Undo and redo" style={{ display: "inline-flex", padding: 2, borderRadius: 8, border: `1.5px solid ${C.border}`, background: C.parchmentDeep }}>
             <button onClick={() => undo()} disabled={!canUndo} title="Undo (Cmd/Ctrl-Z)" aria-label="Undo last change"
               style={{ padding: "5px 9px", borderRadius: 6, border: "none", background: "transparent",

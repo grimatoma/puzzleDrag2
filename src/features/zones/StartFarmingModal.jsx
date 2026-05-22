@@ -72,7 +72,7 @@ function TileSlot({ category, selected, locked, activeTileId, onToggle, onChoose
   const activeTile = activeTileId ? TILE_TYPES_MAP[activeTileId] : null;
   const baseStyle = {
     background: selected ? "#fffaf1" : "#dbcfb6",
-    color: "#3a2715",
+    color: "#2b2218",
     border: selected ? "3px solid #91bf24" : "3px solid #8c7656",
     boxShadow: selected ? "0 2px 8px rgba(145,191,36,.25)" : "none",
     opacity: locked ? 0.85 : 1,
@@ -190,7 +190,7 @@ function TileChooserPopup({ zoneCategory, state, dispatch, onClose }) {
                   className="flex flex-col items-center rounded-xl px-2 py-2 text-[12px] font-bold transition-colors"
                   style={{
                     background: isActive ? "#fffaf1" : "#dbcfb6",
-                    color: "#3a2715",
+                    color: "#2b2218",
                     border: isActive ? "3px solid #91bf24" : "3px solid #8c7656",
                   }}
                 >

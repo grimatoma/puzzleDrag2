@@ -19,7 +19,7 @@ export function ProgressBar({
 }) {
   const pct = max > 0 ? Math.max(0, Math.min(100, (value / max) * 100)) : 0;
   return (
-    <div className={cx("h-2.5 rounded-full overflow-hidden bg-[#3a2715]/25", trackClassName, className)}>
+    <div className={cx("h-2.5 rounded-full overflow-hidden bg-[#2b2218]/25", trackClassName, className)}>
       <div
         className="h-full rounded-full transition-[width] duration-300"
         style={{ width: `${pct}%`, background: color || PROGRESS_TONES[tone] || PROGRESS_TONES.ember }}

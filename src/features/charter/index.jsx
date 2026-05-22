@@ -138,12 +138,12 @@ function TermCard({ term, choiceLog, flags, onOpen }) {
     <button
       type="button"
       onClick={onOpen}
-      className="w-full text-left bg-bg-darker/70 border border-panel-edge rounded-lg p-3 flex items-start gap-3 hover:bg-bg-darker transition-colors"
+      className="w-full text-left bg-parchment-soft border border-iron rounded-lg p-3 flex items-start gap-3 hover:bg-parchment transition-colors"
     >
-      <span className="text-h3 font-bold text-gold-soft tabular-nums w-8 text-right flex-shrink-0">{term.roman}.</span>
+      <span className="text-h3 font-bold text-ember tabular-nums w-8 text-right flex-shrink-0">{term.roman}.</span>
       <span className="flex-1 min-w-0">
-        <span className="block text-body-lg font-semibold text-cream truncate">{term.title}</span>
-        <span className="block text-caption text-cream-soft mt-1">{caption}</span>
+        <span className="block text-body-lg font-semibold text-ink truncate">{term.title}</span>
+        <span className="block text-caption text-ink-soft mt-1">{caption}</span>
       </span>
       <Pill tone={tone} size="sm">{label}</Pill>
     </button>
@@ -210,15 +210,15 @@ function FilterChip({ active, onClick, children }) {
 
 function SettlementRibbon({ name, dayCount }) {
   return (
-    <div className="flex items-center gap-3 bg-bg-darker/70 border border-panel-edge rounded-lg px-4 py-3 mb-4">
+    <div className="flex items-center gap-3 bg-parchment-soft border border-iron rounded-lg px-4 py-3 mb-4">
       <div className="w-10 h-10 rounded-full bg-gold-soft/20 border border-gold-soft/40 grid place-items-center flex-shrink-0">
         <Icon iconKey="ui_star" size={20} />
       </div>
       <div className="flex-1 min-w-0">
-        <div className="text-body-lg font-semibold text-cream truncate">{name}</div>
-        <div className="text-caption text-cream-soft tabular-nums">{dayCount} turn{dayCount === 1 ? "" : "s"} elapsed</div>
+        <div className="text-body-lg font-semibold text-ink truncate">{name}</div>
+        <div className="text-caption text-ink-soft tabular-nums">{dayCount} turn{dayCount === 1 ? "" : "s"} elapsed</div>
       </div>
-      <div className="text-micro uppercase tracking-wide text-cream-soft">Hollow Pact</div>
+      <div className="text-micro uppercase tracking-wide text-ink-soft">Hollow Pact</div>
     </div>
   );
 }
@@ -229,17 +229,17 @@ function TimelineRow({ entry }) {
     <li className="relative pl-6 py-2 border-l-2 border-panel-edge">
       <span className="absolute -left-[5px] top-3 w-2 h-2 rounded-full bg-gold-soft" />
       <div className="flex items-baseline gap-2">
-        <span className="text-body font-semibold text-cream">{f.title}</span>
+        <span className="text-body font-semibold text-ink">{f.title}</span>
         {f.act != null && (
-          <span className="text-micro uppercase tracking-wide text-cream-soft">Act {f.act}</span>
+          <span className="text-micro uppercase tracking-wide text-ink-soft">Act {f.act}</span>
         )}
       </div>
-      <div className="text-caption text-cream-soft mt-1">{f.choiceLabel}</div>
+      <div className="text-caption text-ink-soft mt-1">{f.choiceLabel}</div>
       {f.value && (
-        <div className="text-caption text-cream-soft italic mt-1">"{String(f.value)}"</div>
+        <div className="text-caption text-ink-soft italic mt-1">"{String(f.value)}"</div>
       )}
       {f.ts && (
-        <div className="text-micro text-cream-soft/70 tabular-nums mt-1">{formatTimestamp(f.ts)}</div>
+        <div className="text-micro text-ink-soft/70 tabular-nums mt-1">{formatTimestamp(f.ts)}</div>
       )}
     </li>
   );
@@ -283,13 +283,13 @@ export default function Charter({ state, dispatch }) {
                 />
               ))}
             </div>
-            <p className="text-caption text-cream-soft italic leading-relaxed mt-6">
+            <p className="text-caption text-ink-soft italic leading-relaxed mt-6">
               Six terms, sworn at the home hearth. Read by the Ember at the close of the age.
               Each choice you make is weighed against them.
             </p>
           </>
         ) : sortedLog.length === 0 ? (
-          <div className="text-center py-12 text-cream-soft italic">
+          <div className="text-center py-12 text-ink-soft italic">
             Your choices will be recorded here as the pact unfolds.
           </div>
         ) : (

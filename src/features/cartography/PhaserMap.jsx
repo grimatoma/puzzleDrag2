@@ -49,7 +49,7 @@ export default function PhaserMap({
           parent: host,
           width: cssW * dpr,
           height: cssH * dpr,
-          backgroundColor: "#2a1d0f",
+          backgroundColor: "#e9dfc6",
           scene: MapScene,
           scale: {
             mode: Phaser.Scale.NONE,
