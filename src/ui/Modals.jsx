@@ -369,7 +369,7 @@ function StoryBar({ line, npc, onContinue }) {
       role="dialog" aria-modal="true"
       aria-label={npc ? `${npc.name} speaking` : "Narration"}
       aria-describedby="story-bar-text"
-      className="absolute inset-0 z-[60]"
+      className="fixed inset-0 z-[60]"
     >
       {/* light scrim — the board stays visible */}
       <div className="absolute inset-0" style={{ background: "rgba(0,0,0,0.28)" }} />
@@ -418,7 +418,7 @@ function WinBeat({ beat, lines, sceneBg, onContinue }) {
   return (
     <div
       role="dialog" aria-modal="true" aria-labelledby="story-win-title"
-      className="absolute inset-0 grid place-items-center z-[60]"
+      className="fixed inset-0 grid place-items-center z-[60]"
       style={{ animation: "fadein 0.8s ease both", background: sceneBg ?? "rgba(0,0,0,0.65)" }}
     >
       <div
@@ -554,7 +554,7 @@ export function StoryModal({ state, dispatch }) {
       aria-modal="true"
       aria-labelledby="story-modal-title"
       aria-describedby="story-modal-body"
-      className="absolute inset-0 grid place-items-center z-[60] animate-fadein"
+      className="fixed inset-0 grid place-items-center z-[60] animate-fadein"
       style={{ background: scene?.bg ?? "rgba(0,0,0,0.6)" }}
     >
       <StoryStagePanel
