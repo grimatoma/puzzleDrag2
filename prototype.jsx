@@ -118,6 +118,11 @@ function PhaserMount({ dispatch, biomeKey, turnsUsed, uiLocked, boardActive, sce
           // pointerup/touchend listeners to end the path, so we don't need Phaser's
           // POINTER_UP_OUTSIDE fallback.
           input: { activePointers: 3, windowEvents: false },
+          // Disable Phaser's WebAudioSoundManager — we use our own Web Audio
+          // implementation in src/audio/. Without this, Phaser creates an
+          // AudioContext at boot (before user gesture), triggering the browser's
+          // "AudioContext was not allowed to start" warning.
+          audio: { noAudio: true },
           callbacks: {
             preBoot: (game) => {
               game.registry.set("biomeKey", biomeKey);
