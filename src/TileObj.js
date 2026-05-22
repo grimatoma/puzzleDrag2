@@ -37,7 +37,31 @@ export class TileObj {
     this.selected = v;
     this.sprite.setTexture(`tile_${this.res.key}${v ? "_sel" : ""}`);
     const s = this.scene.tileSpriteScale ?? this.scene.tileScale ?? 1;
-    this.sprite.setScale(s * (v ? 1.06 : 1));
+    this.sprite.setScale(s * (v ? 1.08 : 1));
+    // Lift selected tiles ~6px to read as "picked up" — pairs with the
+    // shadow ellipse below. baseY is the board-anchored rest position.
+    const ts = this.scene.tileSize ?? 60;
+    const baseY = (this.scene.boardY ?? 0) + this.row * ts + ts / 2;
+    const liftPx = v ? 6 : 0;
+    this.sprite.y = baseY - liftPx;
+    if (v) {
+      if (!this.shadow) {
+        this.shadow = this.scene.add.ellipse(
+          this.sprite.x,
+          baseY + ts * 0.32,
+          ts * 0.55,
+          ts * 0.16,
+          0x000000,
+          0.28,
+        );
+        this.shadow.setDepth(this.sprite.depth - 1);
+      } else {
+        this.shadow.setPosition(this.sprite.x, baseY + ts * 0.32);
+      }
+    } else if (this.shadow) {
+      this.shadow.destroy();
+      this.shadow = null;
+    }
     if (!v) this.sprite.angle = 0;
   }
 
@@ -75,6 +99,7 @@ export class TileObj {
 
   destroy() {
     this._destroying = true;
+    if (this.shadow) { this.shadow.destroy(); this.shadow = null; }
     this.sprite.destroy();
   }
 }
