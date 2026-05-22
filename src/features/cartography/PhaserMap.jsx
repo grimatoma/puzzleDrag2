@@ -29,6 +29,13 @@ export default function PhaserMap({
     const cssH = Math.max(240, host.clientHeight);
 
     let cancelled = false;
+    // Safety net: if Phaser fails to boot (e.g. WebGL context creation hangs
+    // or the dynamic import stalls on a flaky mobile connection), the
+    // "unfurling the map…" overlay would otherwise sit there forever. Drop it
+    // after a reasonable wait so the user at least sees the side panel.
+    const safetyTimer = setTimeout(() => {
+      if (!cancelled) setLoading(false);
+    }, 6000);
 
     (async () => {
       try {
@@ -59,8 +66,6 @@ export default function PhaserMap({
           input: { activePointers: 2 },
           callbacks: {
             postBoot: (g) => {
-              const scene = g.scene.scenes[0];
-              if (!scene) return;
               const ro = new ResizeObserver(() => {
                 const w = host.clientWidth;
                 const h = host.clientHeight;
@@ -69,20 +74,28 @@ export default function PhaserMap({
               });
               ro.observe(host);
               g.__resizeObserver = ro;
-              scene.events.on("create", () => {
+              const scene = g.scene.scenes[0];
+              if (scene) {
+                scene.events.on("create", () => {
+                  sceneReadyRef.current = true;
+                  pushPayload(g, payload);
+                  pushTapped(g, tapped);
+                });
+                scene.events.on("carto.nodetap", (id) => {
+                  onNodeTapRef.current?.(id);
+                });
                 sceneReadyRef.current = true;
-                pushPayload(g, payload);
-                pushTapped(g, tapped);
-              });
-              scene.events.on("carto.nodetap", (id) => {
-                onNodeTapRef.current?.(id);
-              });
-              sceneReadyRef.current = true;
-              setLoading(false);
+              }
             },
           },
         });
         gameRef.current = game;
+        // The canvas is in the DOM the moment Phaser.Game is constructed, so
+        // drop the loading overlay now rather than waiting for postBoot — on
+        // some mobile browsers the postBoot/create callbacks fire late or
+        // never (WebGL context exhaustion) and the overlay would otherwise be
+        // permanent.
+        if (!cancelled) setLoading(false);
         // The "create" event might have already fired by the time we attach a
         // listener — push the initial payload defensively.
         pushPayload(game, payload);
@@ -95,6 +108,7 @@ export default function PhaserMap({
 
     return () => {
       cancelled = true;
+      clearTimeout(safetyTimer);
       gameRef.current?.__resizeObserver?.disconnect();
       gameRef.current?.destroy(true);
       gameRef.current = null;
