@@ -331,37 +331,31 @@ ITEMS.iron_frame = ITEMS.ironframe;
 ITEMS.gem_crown  = ITEMS.gemcrown;
 ITEMS.gold_ring  = ITEMS.goldring;
 
-// Lifted palette: `palette.bg` is now the biome ACCENT strip color (drawn as
-// a thin top edge of the board, not the board fill). `mine_dirt` is the
-// board's outer frame tone — a soft cream border that lifts into the
-// parchment family. `dark` is the ink color used for text contrast.
-// `dirtColor` is the tile sprite's dirt/floor color (kept readable against
-// parchment without being a saturated brown).
 export const BIOMES = {
   farm: {
     name: "Farm",
-    mine_dirt: 0xc9b993,
-    dark: 0x2b2218,
-    dirtColor: 0xb8a378,
-    palette: { bg: 0x7fa848, accent: 0x6f8a3a, dim: 0xc9b993 },
+    mine_dirt: 0x6d4a2f,
+    dark: 0x3e2a1a,
+    dirtColor: 0x6d4a2f,
+    palette: { bg: 0x7dbd48, accent: 0x5daa35, dim: 0x3e2a1a },
     tilePool: FARM_TILE_POOL,
     pool: FARM_TILE_POOL,
   },
   mine: {
     name: "Mine",
-    mine_dirt: 0xc9b993,
-    dark: 0x2b2218,
-    dirtColor: 0xb8b0a2,
-    palette: { bg: 0x6a7d92, accent: 0x7a8ca0, dim: 0xc9b993 },
+    mine_dirt: 0x242526,
+    dark: 0x151515,
+    dirtColor: 0x3e3a36,
+    palette: { bg: 0x2a2c30, accent: 0x6a7280, dim: 0x121316 },
     tilePool: MINE_TILE_POOL,
     pool: MINE_TILE_POOL,
   },
   fish: {
     name: "Harbor",
-    mine_dirt: 0xc9b993,
-    dark: 0x2b2218,
-    dirtColor: 0xb8b0a2,
-    palette: { bg: 0x4a8aa8, accent: 0x6aa0c0, dim: 0xc9b993 },
+    mine_dirt: 0x2a4a6a,
+    dark: 0x18283a,
+    dirtColor: 0x2a4a6a,
+    palette: { bg: 0x2a4a6a, accent: 0x4a8aaa, dim: 0x18283a },
     tilePool: FISH_TILE_POOL,
     pool: FISH_TILE_POOL,
   },

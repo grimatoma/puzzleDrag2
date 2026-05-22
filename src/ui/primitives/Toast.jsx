@@ -19,14 +19,14 @@ const BUBBLE_EXIT_MS = 200;
 const TOAST_MAX = 3;
 
 const TONE_TOAST = {
-  info:    "bg-iron text-ink border-iron-deep",
-  success: "bg-moss text-white border-moss",
+  info:    "bg-iron text-cream border-iron-soft",
+  success: "bg-moss text-ink border-moss-soft",
   warning: "bg-gold text-ink border-gold-soft",
-  danger:  "bg-rose text-white border-rose",
-  moss:    "bg-moss text-white border-moss",
-  ember:   "bg-ember text-white border-ember-soft",
+  danger:  "bg-rose text-cream border-rose",
+  moss:    "bg-moss text-ink border-moss-soft",
+  ember:   "bg-ember text-cream border-ember-soft",
   gold:    "bg-gold text-ink border-gold-soft",
-  iron:    "bg-iron text-ink border-iron-deep",
+  iron:    "bg-iron text-cream border-iron-soft",
 };
 
 let nextId = 1;

@@ -22,7 +22,7 @@ const TYPE_LABELS = { farm: "Farm", mine: "Mine", harbor: "Harbor" };
 const PATH_LABELS = { coexist: "Coexist", driveout: "Drive Out" };
 const PATH_COLOR = {
   coexist: { bg: "#dfeecd", border: "#6a9a3a", text: "#1f3a10" },
-  driveout: { bg: "#e4ddd0", border: "#9a8a6a", text: "#2b2218" },
+  driveout: { bg: "#e4ddd0", border: "#9a8a6a", text: "#3a2715" },
 };
 
 function CheckGlyph({ size = 10 }) {
@@ -143,7 +143,7 @@ export default function BoonScreen({ state, dispatch }) {
               className="flex-1 rounded-lg px-2 py-1.5 font-bold text-[13px] transition-colors"
               style={{
                 background: type === k ? "#c8923a" : "#efe4cc",
-                color: type === k ? "white" : "#2b2218",
+                color: type === k ? "white" : "#3a2715",
                 border: type === k ? "2px solid #7a4f10" : "2px solid #c5a87a",
               }}
             >

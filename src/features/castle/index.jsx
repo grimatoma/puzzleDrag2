@@ -7,7 +7,7 @@ export const viewKey = "castle";
 function ProgressBar({ value, max }) {
   const pct = max > 0 ? Math.min(100, Math.max(0, (value / max) * 100)) : 0;
   return (
-    <div className="h-2 rounded-full bg-[#2b2218]/25 overflow-hidden border border-[#b28b62]/50">
+    <div className="h-2 rounded-full bg-[#3a2715]/25 overflow-hidden border border-[#b28b62]/50">
       <div
         className="h-full bg-gradient-to-r from-[#c8923a] to-[#f0c068]"
         style={{ width: `${pct}%` }}

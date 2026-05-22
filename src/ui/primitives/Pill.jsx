@@ -1,11 +1,11 @@
 const TONE_SOLID = {
-  iron:   "bg-iron text-ink",
+  iron:   "bg-iron text-cream",
   gold:   "bg-gold text-ink",
-  ember:  "bg-ember text-white",
-  moss:   "bg-moss text-white",
-  indigo: "bg-indigo text-white",
-  rose:   "bg-rose text-white",
-  slate:  "bg-slate text-white",
+  ember:  "bg-ember text-cream",
+  moss:   "bg-moss text-ink",
+  indigo: "bg-indigo text-cream",
+  rose:   "bg-rose text-cream",
+  slate:  "bg-slate text-cream",
 };
 
 const TONE_OUTLINE = {

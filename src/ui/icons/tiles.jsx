@@ -35,11 +35,11 @@ export function TileDirt({ size = 24, fill = "#7a5836" }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true">
       <rect x="2" y="6" width="20" height="14" rx="2" fill={fill}/>
-      <circle cx="7" cy="10" r="1" fill="#2b2218"/>
-      <circle cx="13" cy="14" r="0.8" fill="#2b2218"/>
-      <circle cx="18" cy="11" r="0.6" fill="#2b2218"/>
-      <circle cx="9" cy="16" r="0.5" fill="#2b2218"/>
-      <circle cx="16" cy="17" r="0.7" fill="#2b2218"/>
+      <circle cx="7" cy="10" r="1" fill="#3a2715"/>
+      <circle cx="13" cy="14" r="0.8" fill="#3a2715"/>
+      <circle cx="18" cy="11" r="0.6" fill="#3a2715"/>
+      <circle cx="9" cy="16" r="0.5" fill="#3a2715"/>
+      <circle cx="16" cy="17" r="0.7" fill="#3a2715"/>
     </svg>
   );
 }

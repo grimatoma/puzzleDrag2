@@ -70,7 +70,7 @@ export class MapScene extends Phaser.Scene {
   }
 
   create() {
-    this.cameras.main.setBackgroundColor("#f4ecd6");
+    this.cameras.main.setBackgroundColor("#3a2715");
     this.bakeNodeTextures();
 
     this.layers = {
@@ -223,7 +223,7 @@ export class MapScene extends Phaser.Scene {
       .text(WORLD_W / 2, 36, "The Hearthwood", {
         fontFamily: "'Newsreader', 'Times New Roman', serif",
         fontSize: "28px",
-        color: "#2b2218",
+        color: "#3a2715",
         fontStyle: "italic",
       })
       .setOrigin(0.5)

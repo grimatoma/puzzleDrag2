@@ -31,7 +31,7 @@ export function ToolFirebreak({ size = 24, fill = "#c96442" }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true">
       <path d="M12 22 Q4 17 6 11 Q8 8 9 11 Q9 6 12 2 Q14 5 14 8 Q18 6 18 13 Q19 18 12 22 Z" fill={fill} opacity="0.4"/>
-      <line x1="4" y1="6" x2="20" y2="22" stroke="#2b2218" strokeWidth="2.5"/>
+      <line x1="4" y1="6" x2="20" y2="22" stroke="#3a2715" strokeWidth="2.5"/>
       <line x1="4" y1="6" x2="20" y2="22" stroke="#ffd248" strokeWidth="1"/>
     </svg>
   );

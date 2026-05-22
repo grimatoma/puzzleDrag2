@@ -9,27 +9,26 @@
 
 :root {
   /* ── Surfaces ─────────────────────────────────────────────────────── */
-  --parchment:        #f6efe0;
-  --parchment-dim:    #e9dfc6;
+  --parchment:        #f0e6cf;
+  --parchment-dim:    #dac6a2;
   --parchment-faint:  rgba(240, 230, 207, 0.35);
   --parchment-muted:  rgba(240, 230, 207, 0.55);
-  --parchment-soft:   #fbf7eb;
-  --paper:            #f9f2dd;
+  --parchment-soft:   #f4ecd8;
+  --paper:            #faf0dd;
   --paper-soft:       #f6efe0;
 
-  /* ── Iron / structure (border family — was a dark brown frame; now
-       a soft cream border that lifts into the parchment family) ─────── */
-  --iron:             #c9b993;
-  --iron-soft:        #d8c9a4;
-  --iron-deep:        #a89272;
-  --iron-edge:        rgba(201, 185, 147, 0.45);
+  /* ── Iron / structure ────────────────────────────────────────────── */
+  --iron:             #b28b62;
+  --iron-soft:        #c8a482;
+  --iron-deep:        #8a6a3a;
+  --iron-edge:        rgba(178, 139, 98, 0.32);
 
   /* ── Ink / text ───────────────────────────────────────────────────── */
-  --ink:              #2b2218;
-  --ink-soft:         #7a5e3f;
-  --ink-mid:          #7a5e3f;
-  --ink-light:        #c9b993;
-  --panel-edge:       #c9b993;
+  --ink:              #3a2715;
+  --ink-soft:         #5b3b20;
+  --ink-mid:          #6a4b31;
+  --ink-light:        #7a5638;
+  --panel-edge:       #3a2a1d;
   --cream:            #f8e7c6;
   --cream-soft:       #f7e2b6;
 
@@ -41,25 +40,18 @@
   --gold-soft:        #f0c965;
   --gold-bright:      #ffd248;
   --gold-warm:        #ffd34c;
-  --moss:             #6f8a3a;
+  --moss:             #91bf24;
   --moss-soft:        #a8c44a;
   --indigo:           #38406b;
   --rose:             #9c3a4a;
   --slate:            #5a5e62;
-  --danger:           #b13a2a;
 
-  /* ── Biome accents (badge / strip, not full backgrounds) ─────────── */
-  --biome-farm:       #7fa848;
-  --biome-mine:       #6a7d92;
-  --biome-fish:       #4a8aa8;
-
-  /* ── Backgrounds (lifted parchment family; legacy "dark" names kept
-       so existing consumers keep resolving — values are now light) ── */
-  --bg-darkest:       #e9dfc6;
-  --bg-darker:        #e9dfc6;
-  --bg-dark:          #f4ecd6;
-  --bg-frame:         #f4ecd6;
-  --bg-warm:          #f9f2dd;
+  /* ── Backgrounds (dark surfaces) ─────────────────────────────────── */
+  --bg-darkest:       #1a1208;
+  --bg-darker:        #2a1d0f;
+  --bg-dark:          #2b2218;
+  --bg-frame:         #3a2715;
+  --bg-warm:          #3d2310;
 
   /* ── Spacing scale (pairs with Tailwind 4px base) ────────────────── */
   --space-1:          4px;
@@ -140,11 +132,11 @@
    * ════════════════════════════════════════════════════════════════════ */
 
   /* ── Light feature panel (full-screen views) ─────────────────────── */
-  --panel-top:           #fbf7eb;   /* parchment lifted, gradient start */
-  --panel-bottom:        #f4ecd6;   /* gradient end                    */
-  --panel-border:        #c9b993;   /* soft border (was iron frame)    */
-  --panel-toolbar:       rgba(201, 185, 147, 0.18);  /* search/filter strip */
-  --panel-divider:       rgba(201, 185, 147, 0.45);
+  --panel-top:           #ead7b3;   /* parchment, gradient start */
+  --panel-bottom:        #d4b585;   /* gradient end              */
+  --panel-border:        #b28b62;   /* iron frame                */
+  --panel-toolbar:       rgba(178, 139, 98, 0.14);  /* search/filter strip */
+  --panel-divider:       rgba(178, 139, 98, 0.40);
 
   /* Arcane variant (Portal) — light panel, violet frame + accents. */
   --panel-arcane-top:    #ddd0ea;
@@ -152,19 +144,19 @@
   --panel-arcane-border: #8a6aa8;
 
   /* ── Inset wells (sub-sections sunk into a panel) ────────────────── */
-  --well-bg:             rgba(122, 94, 63, 0.10);
-  --well-border:         rgba(122, 94, 63, 0.22);
+  --well-bg:             rgba(120, 85, 50, 0.16);
+  --well-border:         rgba(120, 85, 50, 0.30);
 
   /* ── Light cards (rows / tiles inside panels & dialogs) ──────────── */
-  --card-bg:             #fbf7eb;
+  --card-bg:             #faf0dd;
   --card-bg-hover:       #fff7e6;
-  --card-border:         #c9b993;
-  --card-border-strong:  #a89272;
+  --card-border:         #c8a482;
+  --card-border-strong:  #b28b62;
 
   /* ── Text on LIGHT chrome (panels, cards, dialogs) ───────────────── */
-  --on-panel:            #2b2218;   /* primary  (alias of --ink)      */
-  --on-panel-dim:        #7a5e3f;   /* secondary                      */
-  --on-panel-faint:      #c9b993;   /* tertiary / border tone         */
+  --on-panel:            #3a2715;   /* primary  (alias of --ink)      */
+  --on-panel-dim:        #5b3b20;   /* secondary                      */
+  --on-panel-faint:      #7a5638;   /* tertiary                       */
   --on-panel-label:      #8a4a26;   /* section labels — warm accent   */
 
   /* ── Text on DARK chrome (HUD, dark dialogs, board) ──────────────── */

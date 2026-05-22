@@ -90,7 +90,7 @@ function KeeperEncounterModal({ node, type, dispatch, onClose }) {
         </div>
         {!chosen ? (
           <>
-            <div className="flex flex-col gap-1.5 text-[12px] text-[#2b2218] leading-snug mb-3">
+            <div className="flex flex-col gap-1.5 text-[12px] text-[#3a2715] leading-snug mb-3">
               {keeper.intro.map((line, i) => <p key={i}>{line}</p>)}
             </div>
             <div className="flex flex-col gap-2">
@@ -109,7 +109,7 @@ function KeeperEncounterModal({ node, type, dispatch, onClose }) {
                 className="text-left bg-[#e4ddd0] hover:bg-[#ece6da] border-2 border-[#9a8a6a] rounded-xl px-3 py-2 transition-colors"
               >
                 <div className="flex items-center justify-between">
-                  <span className="font-bold text-[13px] text-[#2b2218]">⚔ Trial</span>
+                  <span className="font-bold text-[13px] text-[#3a2715]">⚔ Trial</span>
                   <StatusChip tone="slate">+{keeper.driveout.coreIngots ?? 0} ▣ Core Ingots</StatusChip>
                 </div>
                 <div className="text-[12px] text-[#4a3a2a] mt-0.5">"{keeper.driveout.label}"</div>
@@ -127,7 +127,7 @@ function KeeperEncounterModal({ node, type, dispatch, onClose }) {
             <div className={`text-[11px] font-bold uppercase tracking-wide mb-1 ${chosen === "coexist" ? "text-[#3a7a1a]" : "text-[#6a5a3a]"}`}>
               {chosen === "coexist" ? "🤝 You chose to coexist" : "⚔ Keeper trial started"}
             </div>
-            <div className="flex flex-col gap-1.5 text-[12px] text-[#2b2218] leading-snug mb-3">
+            <div className="flex flex-col gap-1.5 text-[12px] text-[#3a2715] leading-snug mb-3">
               {(info?.pitch ?? []).map((line, i) => <p key={i}>{line}</p>)}
               <p className="font-bold text-[#5a7a1a]">
                 {chosen === "coexist"
@@ -149,7 +149,7 @@ function KeeperEncounterModal({ node, type, dispatch, onClose }) {
 
 const cardStyle = {
   fontFamily: "'Newsreader', 'Times New Roman', serif",
-  color: "#2b2218",
+  color: "#3a2715",
 };
 
 function NodeStatusChip({ status, target, tokenCount = 0 }) {
@@ -210,7 +210,7 @@ function FoundSettlementBlock({ node, visitedSet, state, dispatch }) {
               ...cardStyle,
               background: path === "coexist" ? "#dfeecd" : "#e4ddd0",
               border: "1.5px solid #9a8a6a",
-              color: "#2b2218",
+              color: "#3a2715",
             }}
           >
             {path === "coexist" ? "🤝" : "⚔"} {keeper.name} · {path === "coexist" ? "Coexisting" : "Driven out"}
@@ -281,7 +281,7 @@ function ActionButton({ status, node, isCurrent, canFastTravel, canUnlock, onTra
   };
   if (isCurrent) {
     return (
-      <div style={{ ...base, background: "#c8a868", border: "2px solid #a07840", color: "#2b2218" }}>
+      <div style={{ ...base, background: "#c8a868", border: "2px solid #a07840", color: "#3a2715" }}>
         Your hearth
       </div>
     );
@@ -359,7 +359,7 @@ function EmptyPanel() {
   return (
     <div
       className="flex flex-col items-start gap-1.5 px-3 py-3"
-      style={{ ...cardStyle, color: "#2b2218" }}
+      style={{ ...cardStyle, color: "#3a2715" }}
     >
       <div className="font-bold text-[14px]">The Hearthwood</div>
       <div className="text-[12px] italic" style={{ color: "#5a3a20" }}>
@@ -417,7 +417,7 @@ function NodePanel({ node, current, visited, discovered, playerLevel, dispatch, 
   return (
     <div
       className="flex flex-col gap-2 px-3 py-3 h-full overflow-y-auto"
-      style={{ ...cardStyle, color: "#2b2218" }}
+      style={{ ...cardStyle, color: "#3a2715" }}
     >
       <div className="flex flex-col gap-0.5">
         <div className="text-[10px] uppercase tracking-[0.15em]" style={{ color: "#7c4f2c", fontWeight: 700 }}>
@@ -461,7 +461,7 @@ function NodePanel({ node, current, visited, discovered, playerLevel, dispatch, 
             What waits here
           </div>
           {node.activities.map((a, i) => (
-            <div key={i} className="text-[11px]" style={{ color: "#2b2218" }}>
+            <div key={i} className="text-[11px]" style={{ color: "#3a2715" }}>
               • {a}
             </div>
           ))}
@@ -504,7 +504,7 @@ function HearthTokensStrip({ state }) {
             style={{
               background: lit ? "rgba(232,201,138,0.95)" : "rgba(58,39,21,0.45)",
               border: lit ? "1.5px solid #b28b62" : "1.5px solid #6a4b31",
-              color: lit ? "#2b2218" : "#cbb892",
+              color: lit ? "#3a2715" : "#cbb892",
             }}
           >
             <span
@@ -536,11 +536,11 @@ function HeaderBar({ currentNode, visitedCount, totalCount, state, dispatch }) {
     <div className="flex items-center justify-between px-3 py-2 flex-shrink-0 border-b border-[#b28b62]/40 gap-2">
       <div className="flex items-center gap-2 min-w-0">
         <div className="flex flex-col min-w-0">
-          <span className="font-bold text-[14px] text-[#2b2218] truncate">
+          <span className="font-bold text-[14px] text-[#3a2715] truncate">
             🗺 The Hearthwood
           </span>
           {currentNode && (
-            <span className="text-[10px] italic text-[#7a5e3f]/85 truncate">
+            <span className="text-[10px] italic text-[#5b3b20]/85 truncate">
               your smoke rises from {currentNode.name}
             </span>
           )}
@@ -558,7 +558,7 @@ function HeaderBar({ currentNode, visitedCount, totalCount, state, dispatch }) {
       </div>
       <div className="flex items-center gap-2 flex-shrink-0">
         <HearthTokensStrip state={state} />
-        <span className="text-[10px] text-[#7a5e3f]/80 hidden sm:inline">
+        <span className="text-[10px] text-[#5b3b20]/80 hidden sm:inline">
           {visitedCount} / {totalCount} known
         </span>
       </div>
