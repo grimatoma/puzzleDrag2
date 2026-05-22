@@ -156,6 +156,28 @@
   display: inline-block;
 }
 
+/* ── App shell decorative texture ──────────────────────────────────────
+   Subtle parchment-grain on the dark brown chrome so dead space around
+   the board (panel sidebar, top/bottom inset bands) reads as worked
+   leather instead of flat flood-fill. The pattern is positioned on the
+   chrome itself, so feature panels and the board overlay sit on top
+   unaffected. */
+.hl-app-shell::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.10;
+  background-image:
+    radial-gradient(rgba(255, 226, 173, 0.45) 0.6px, transparent 0.6px),
+    radial-gradient(rgba(0, 0, 0, 0.30) 0.5px, transparent 0.5px);
+  background-size: 9px 9px, 14px 14px;
+  background-position: 0 0, 4px 6px;
+  mix-blend-mode: overlay;
+}
+.hl-app-shell > * { position: relative; z-index: 1; }
+
 /* ── Boss encounter pre-roll ───────────────────────────────────────── */
 @keyframes bossCinematicVignette {
   0%   { opacity: 0; }
