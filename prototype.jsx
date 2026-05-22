@@ -7,6 +7,7 @@ import { TownView } from "./src/ui/Town.jsx";
 import { NpcBubble, StoryModal } from "./src/ui/Modals.jsx";
 import SeasonCinematic from "./src/ui/SeasonCinematic.jsx";
 import LevelUpCinematic from "./src/ui/LevelUpCinematic.jsx";
+import BossCinematic from "./src/ui/BossCinematic.jsx";
 import RewardChipsLayer from "./src/ui/RewardChipsLayer.jsx";
 import { BottomNav, FeatureModals, FeatureScreens } from "./src/ui.jsx";
 import { useAudio } from "./src/audio/useAudio.js";
@@ -496,6 +497,10 @@ export default function App() {
 
         {/* Level-up cinematic — fires when state.level increases. */}
         <LevelUpCinematic state={state} />
+
+        {/* Boss encounter pre-roll — vignette + ember flash + camera
+            shake just as the boss modal slides up. */}
+        <BossCinematic state={state} />
 
         {/* Reward chips — fly from chain center on the canvas to the HUD
             coin pill when a chain collects. Hooked via scene event +
