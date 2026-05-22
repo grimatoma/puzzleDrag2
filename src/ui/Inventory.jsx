@@ -389,7 +389,7 @@ export function InventoryGrid({
       }
     }
     setArrowLeft(next);
-  }, [accordion.displayedKey, compact]);
+  }, [accordion.displayedKey, compact, viewMode]);
 
   const activeTags = filter === "all"
     ? null
