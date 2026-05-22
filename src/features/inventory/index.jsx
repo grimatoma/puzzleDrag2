@@ -1,9 +1,8 @@
 import { useEffect, useState } from "react";
 import { InventoryGrid } from "../../ui/Inventory.jsx";
-import { INVENTORY_SOURCE_TAGS, INVENTORY_TAGS } from "./tags.js";
+import { INVENTORY_TAGS } from "./tags.js";
 import FeaturePanel from "../../ui/primitives/FeaturePanel.jsx";
 import { SearchInput } from "../../ui/primitives/Field.jsx";
-import Pill from "../../ui/primitives/Pill.jsx";
 
 export const viewKey = "inventory";
 
@@ -12,16 +11,6 @@ const PRIMARY_FILTERS = [
   { id: INVENTORY_TAGS.RESOURCE, label: "Resources" },
   { id: INVENTORY_TAGS.TOOL, label: "Tools" },
   { id: INVENTORY_TAGS.ITEM, label: "Items" },
-];
-
-const TAG_FILTERS = [
-  { id: INVENTORY_TAGS.FOOD, label: "Food" },
-  { id: INVENTORY_TAGS.CARGO, label: "Cargo" },
-  { id: INVENTORY_SOURCE_TAGS.FARM, label: "Farm" },
-  { id: INVENTORY_SOURCE_TAGS.MINE, label: "Mine" },
-  { id: INVENTORY_SOURCE_TAGS.HARBOR, label: "Harbor" },
-  { id: INVENTORY_SOURCE_TAGS.CRAFTED, label: "Crafted" },
-  { id: INVENTORY_SOURCE_TAGS.NATURAL, label: "Natural" },
 ];
 
 const PHONE_BREAKPOINT = 768;
@@ -99,7 +88,6 @@ export default function InventoryScreen({ state, dispatch, searchOpen: searchOpe
 
   const [queryInput, setQueryInput] = useState("");
   const [primaryFilter, setPrimaryFilter] = useState("all");
-  const [activeTags, setActiveTags] = useState([]);
 
   const searchOpen = searchOpenProp ?? false;
   const query = useDebounced(queryInput, 100);
@@ -111,15 +99,7 @@ export default function InventoryScreen({ state, dispatch, searchOpen: searchOpe
     }
   }, [searchOpen]);
 
-  const toggleTag = (tagId) => {
-    setActiveTags((prev) => (prev.includes(tagId)
-      ? prev.filter((id) => id !== tagId)
-      : [...prev, tagId]));
-  };
-
-  const combinedFilter = primaryFilter === "all"
-    ? activeTags
-    : [primaryFilter, ...activeTags];
+  const combinedFilter = primaryFilter === "all" ? [] : [primaryFilter];
 
   return (
     <FeaturePanel className="z-10">
@@ -151,14 +131,6 @@ export default function InventoryScreen({ state, dispatch, searchOpen: searchOpe
                     onClick={() => setPrimaryFilter(option.id)}
                   >
                     {option.label}
-                  </button>
-                );
-              })}
-              {TAG_FILTERS.map((option) => {
-                const active = activeTags.includes(option.id);
-                return (
-                  <button key={option.id} type="button" onClick={() => toggleTag(option.id)}>
-                    <Pill tone={active ? "gold" : "iron"} variant="soft" size="sm">{option.label}</Pill>
                   </button>
                 );
               })}
