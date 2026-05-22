@@ -127,6 +127,39 @@ const InventoryIconCell = forwardRef(function InventoryIconCell(
   );
 });
 
+function InventoryAccordion({ entry, isOpen, arrowLeft, marketBuilt, dispatch, onClose, onClosed, style }) {
+  const handleTransitionEnd = (e) => {
+    if (e.propertyName === "max-height" && !isOpen) {
+      onClosed?.();
+    }
+  };
+
+  return (
+    <div className="inv-accordion" style={style}>
+      <div
+        className="inv-accordion__arrow"
+        style={arrowLeft != null ? { left: arrowLeft } : { left: "50%" }}
+      />
+      <div
+        className={`inv-accordion__body${isOpen ? " is-open" : ""}`}
+        onTransitionEnd={handleTransitionEnd}
+      >
+        <div className="relative">
+          <button
+            type="button"
+            className="inv-accordion__close"
+            onClick={onClose}
+            aria-label="Close detail"
+          >
+            ×
+          </button>
+          <InventoryDetail entry={entry} marketBuilt={marketBuilt} dispatch={dispatch} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function Section({ title, titleColor = "#f8e7c6", children }) {
   return (
     <div className="flex flex-col gap-2 min-h-0">
