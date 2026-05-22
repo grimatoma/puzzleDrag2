@@ -34,9 +34,11 @@
   --cream-soft:       #f7e2b6;
 
   /* ── Accents (single saturation, hue varies) ─────────────────────── */
-  --ember:            #d6612a;
-  --ember-soft:       #ff8b25;
-  --ember-hot:        #c96442;
+  /* Ember pulled toward terracotta — less neon orange, more earthen
+     pottery so accent pills feel in-world rather than web-app. */
+  --ember:            #c25b35;
+  --ember-soft:       #e07a45;
+  --ember-hot:        #a64429;
   --gold:             #e2b24a;
   --gold-soft:        #f0c965;
   --gold-bright:      #ffd248;

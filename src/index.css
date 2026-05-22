@@ -5,6 +5,20 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ── Paper-grain on the page background ───────────────────────────────────
+   The lifted parchment palette is honest but visually monotonous; a faint
+   dotted texture on the body gives it tactile "made" feeling without
+   darkening anything. Two staggered radial stipples mimic woven fibre.
+   Pointer-events disabled — purely cosmetic. */
+body {
+  background-image:
+    radial-gradient(rgba(122, 94, 63, 0.055) 0.5px, transparent 0.6px),
+    radial-gradient(rgba(201, 185, 147, 0.22)  0.6px, transparent 0.7px);
+  background-size: 11px 11px, 17px 17px;
+  background-position: 0 0, 5px 7px;
+  background-attachment: fixed;
+}
+
 @keyframes townCloudA {
   0%   { transform: translateX(-18vw) translateY(0px); }
   20%  { transform: translateX(12vw)  translateY(-6px); }

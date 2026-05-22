@@ -54,7 +54,7 @@ export function Tab({
   // token colours emit invalid CSS and silently fall back to inherited
   // text colour, which reads black against the dark nav.
   const stateCls = active
-    ? "bg-ember/10 text-ink"
+    ? "text-ink"
     : locked
     ? "text-ink-light"
     : "text-ink-soft hover:bg-ink/[0.05]";
@@ -76,13 +76,50 @@ export function Tab({
       className={`${containerBase} ${stateCls} transition-colors select-none`}
     >
       {active && (
-        <span
-          aria-hidden="true"
-          className="absolute top-0 left-0 right-0 h-[3px] bg-ember"
-        />
+        <>
+          {/* Wooden tab ribbon: peeks up out of the nav rail like a
+              bookmark, with rounded bottom corners and a soft drop. */}
+          <span
+            aria-hidden="true"
+            className="absolute top-0 rounded-b-md pointer-events-none"
+            style={{
+              left: "16%",
+              right: "16%",
+              height: "5px",
+              background: "linear-gradient(180deg, var(--ember-soft) 0%, var(--ember) 60%, var(--ember-hot) 100%)",
+              boxShadow: "0 1px 0 rgba(120, 50, 20, 0.25), inset 0 1px 0 rgba(255, 220, 200, 0.45)",
+            }}
+          />
+          {/* Stitched divider line just below the ribbon. */}
+          <span
+            aria-hidden="true"
+            className="absolute pointer-events-none"
+            style={{
+              top: "7px",
+              left: "10%",
+              right: "10%",
+              borderTop: "1px dotted var(--iron-deep)",
+              opacity: 0.35,
+            }}
+          />
+        </>
       )}
       <span className="inline-flex items-center justify-center relative">
-        <Icon iconKey={iconKey} size={iconSize} />
+        {active && (
+          <span
+            aria-hidden="true"
+            className="absolute rounded-full pointer-events-none"
+            style={{
+              inset: "-5px",
+              background: "var(--paper-soft)",
+              border: "1px solid var(--iron)",
+              boxShadow: "inset 0 1px 0 rgba(255, 255, 255, 0.55), 0 1px 1px rgba(60, 40, 20, 0.08)",
+            }}
+          />
+        )}
+        <span className="relative inline-flex">
+          <Icon iconKey={iconKey} size={iconSize} />
+        </span>
         {locked && (
           <span className="absolute -bottom-1 -right-1 text-ink-light">
             <LockGlyph />
