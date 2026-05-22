@@ -32,9 +32,26 @@ import { ICONS as G_MINE_HAZARDS } from "./categories/mineHazards.js";
 import { ICONS as G_FISH } from "./categories/fish.js";
 import { ICONS as G_RECIPES } from "./categories/recipes.js";
 import { ICONS as G_UI_ELEMENTS } from "./categories/uiElements.js";
+import { ICONS as G_MISSING_ITEMS } from "./categories/missingItems.js";
 import { ICONS as G_ARCHIVED } from "./categories/archivedIcons.js";
 
-export const ICON_REGISTRY = Object.freeze({
+// Some items in constants.js carry both an underscore form and a
+// concatenated form (ITEMS.iron_frame === ITEMS.ironframe etc., see
+// src/constants.js:329-331). The active icons live under the
+// concatenated form; alias the underscore form so the game's lookup
+// `drawIcon("iron_frame")` resolves instead of falling back to "?".
+function aliasIconKeys(reg) {
+  const aliases = {
+    iron_frame: reg.ironframe,
+    gem_crown:  reg.gemcrown,
+    gold_ring:  reg.goldring,
+  };
+  for (const [key, value] of Object.entries(aliases)) {
+    if (value && !reg[key]) reg[key] = value;
+  }
+}
+
+const REGISTRY_DRAFT = {
   ...G_GRASS,
   ...G_GRAIN,
   ...G_VEGETABLES,
@@ -63,11 +80,14 @@ export const ICON_REGISTRY = Object.freeze({
   ...G_FISH,
   ...G_RECIPES,
   ...G_UI_ELEMENTS,
+  ...G_MISSING_ITEMS,
   // Archived legacy draws live under `legacy_<key>` keys. They render in the
   // Balance Manager's Icons tab but are never used in-game. Spread last so
   // they can never accidentally override an active key.
   ...G_ARCHIVED,
-});
+};
+aliasIconKeys(REGISTRY_DRAFT);
+export const ICON_REGISTRY = Object.freeze(REGISTRY_DRAFT);
 
 export const ICON_KEYS = new Set(Object.keys(ICON_REGISTRY));
 
