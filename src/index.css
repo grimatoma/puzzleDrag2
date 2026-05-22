@@ -216,6 +216,28 @@
   animation: seasonCinematicCard 1100ms cubic-bezier(.2,.7,.2,1) both;
 }
 
+/* Reward trajectory chip — flies from chain center on the canvas to the
+   HUD coin pill via CSS custom property translate deltas. Set --tx and
+   --ty inline when spawning. */
+@keyframes rewardTrajectory {
+  0%   { opacity: 0; transform: translate(-50%, -50%) scale(0.6); }
+  12%  { opacity: 1; transform: translate(calc(-50% + var(--tx) * 0.04), calc(-50% + var(--ty) * 0.04 - 6px)) scale(1.1); }
+  20%  { opacity: 1; transform: translate(calc(-50% + var(--tx) * 0.10), calc(-50% + var(--ty) * 0.10 - 4px)) scale(1); }
+  100% { opacity: 0; transform: translate(calc(-50% + var(--tx)),         calc(-50% + var(--ty)))           scale(0.55); }
+}
+.reward-trajectory-chip {
+  position: absolute;
+  pointer-events: none;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  font-size: 18px;
+  color: var(--gold-bright);
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.55), 0 0 8px rgba(255, 210, 72, 0.55);
+  white-space: nowrap;
+  animation: rewardTrajectory 900ms cubic-bezier(.45,.05,.55,.95) both;
+  will-change: transform, opacity;
+}
+
 /* Floating reward chip (e.g. "+15" above the HUD coin pill when a chain
    pays out). Rises and fades; pointer-events disabled so it never
    interferes with clicks. */

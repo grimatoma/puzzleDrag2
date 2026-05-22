@@ -22,6 +22,7 @@ export const SCENE_EVENTS = Object.freeze({
   FERTILIZER_CONSUMED: "fertilizer-consumed",
   CHAIN_FLOAT_TEXT: "chain-float-text",
   TOOL_FIRED: "tool-fired",
+  REWARD_BURST: "reward-burst",
 });
 
 export const TILE = 74;

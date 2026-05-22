@@ -7,10 +7,12 @@ import { TownView } from "./src/ui/Town.jsx";
 import { NpcBubble, StoryModal } from "./src/ui/Modals.jsx";
 import SeasonCinematic from "./src/ui/SeasonCinematic.jsx";
 import LevelUpCinematic from "./src/ui/LevelUpCinematic.jsx";
+import RewardChipsLayer from "./src/ui/RewardChipsLayer.jsx";
 import { BottomNav, FeatureModals, FeatureScreens } from "./src/ui.jsx";
 import { useAudio } from "./src/audio/useAudio.js";
 import { useRouter } from "./src/router.js";
 import { setPhaserScene } from "./src/phaserBridge.js";
+import { emitBurst } from "./src/ui/rewardEvents.js";
 import { FIRE_HAZARD_ENABLED } from "./src/featureFlags.js";
 import { useNotifier } from "./src/ui/primitives/Toast.jsx";
 import { useA11yBridge } from "./src/a11y.js";
@@ -161,6 +163,16 @@ function PhaserMount({ dispatch, biomeKey, turnsUsed, uiLocked, boardActive, sce
                 notifierRef.current?.toast?.({ text, tone: "moss", duration: 1600 });
               });
               scene.events.on(SCENE_EVENTS.TOOL_FIRED, ({ key }) => dispatch({ type: "TOOL_FIRED", key }));
+              scene.events.on(SCENE_EVENTS.REWARD_BURST, (data) => {
+                const canvas = scene?.game?.canvas;
+                if (!canvas || !data.coins) return;
+                const rect = canvas.getBoundingClientRect();
+                const w = data.canvasW || rect.width || 1;
+                const h = data.canvasH || rect.height || 1;
+                const pageX = rect.left + (data.canvasX / w) * rect.width;
+                const pageY = rect.top + (data.canvasY / h) * rect.height;
+                emitBurst({ pageX, pageY, coins: data.coins });
+              });
               setBoardRuntimeActive(game, boardActiveRef.current);
               setLoading(false);
             },
@@ -484,6 +496,11 @@ export default function App() {
 
         {/* Level-up cinematic — fires when state.level increases. */}
         <LevelUpCinematic state={state} />
+
+        {/* Reward chips — fly from chain center on the canvas to the HUD
+            coin pill when a chain collects. Hooked via scene event +
+            module event bus in src/ui/rewardEvents.js. */}
+        <RewardChipsLayer />
 
         {/* Run summary now owns the season-end recap (see features/runSummary). */}
 
