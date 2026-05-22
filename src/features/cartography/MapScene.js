@@ -679,19 +679,13 @@ export class MapScene extends Phaser.Scene {
     for (let i = 0; i < 4; i++) {
       const g = this.add.graphics();
       const scale = 0.85 + Math.random() * 0.4;
-      // Soft fill body
+      // Soft cloud body — overlapping ellipses (Phaser Graphics has no bezierCurveTo).
       g.fillStyle(0xfff8e0, 0.7);
-      g.beginPath();
-      g.moveTo(-30 * scale, 6 * scale);
-      g.lineTo(-30 * scale, 0);
-      g.bezierCurveTo(-36 * scale, -4 * scale, -32 * scale, -16 * scale, -22 * scale, -14 * scale);
-      g.bezierCurveTo(-22 * scale, -26 * scale, -6 * scale, -28 * scale, -2 * scale, -18 * scale);
-      g.bezierCurveTo(2 * scale, -30 * scale, 18 * scale, -24 * scale, 18 * scale, -14 * scale);
-      g.bezierCurveTo(28 * scale, -18 * scale, 36 * scale, -8 * scale, 30 * scale, 0);
-      g.lineTo(30 * scale, 6 * scale);
-      g.bezierCurveTo(30 * scale, 14 * scale, -30 * scale, 14 * scale, -30 * scale, 6 * scale);
-      g.closePath();
-      g.fillPath();
+      g.fillEllipse(0,             4 * scale, 64 * scale, 14 * scale);
+      g.fillEllipse(-20 * scale, -10 * scale, 24 * scale, 24 * scale);
+      g.fillEllipse( -2 * scale, -16 * scale, 28 * scale, 28 * scale);
+      g.fillEllipse( 18 * scale,  -8 * scale, 22 * scale, 20 * scale);
+      g.fillEllipse( -4 * scale,  -2 * scale, 52 * scale, 18 * scale);
       // Brighter inner highlight on the top-left lobes
       g.fillStyle(0xffffff, 0.35);
       g.fillEllipse(-10 * scale, -16 * scale, 14 * scale, 6 * scale);
