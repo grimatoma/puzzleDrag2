@@ -23,57 +23,6 @@ function WarningGlyph({ size = 14 }) {
   );
 }
 
-// eslint-disable-next-line no-unused-vars
-function MiniCard({ boss, dispatch }) {
-  return (
-    <div
-      className="absolute top-2 right-2 z-50 select-none"
-      style={{ maxWidth: 200 }}
-    >
-      <div
-        className="relative rounded-xl p-2 text-white shadow-xl cursor-pointer"
-        style={{
-          background: "rgba(58,39,21,0.95)",
-          border: "2px solid #a8431a",
-        }}
-        onClick={() => dispatch({ type: "BOSS/EXPAND" })}
-      >
-        {!boss.isKeeperTrial && (
-          <button
-            type="button"
-            aria-label="Reject challenge"
-            onClick={(e) => {
-              e.stopPropagation();
-              dispatch({ type: "BOSS/REJECT" });
-            }}
-            className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full text-white text-[11px] font-bold flex items-center justify-center leading-none shadow"
-            style={{
-              background: "#a8431a",
-              border: "1.5px solid #ff9a50",
-            }}
-          >
-            ×
-          </button>
-        )}
-        <div className="flex items-center gap-1.5 mb-1 pr-3">
-          {bossPortraitKey(boss) ? (
-            <div style={{ width: 28, height: 28, borderRadius: "50%", overflow: "hidden", border: "1.5px solid #ff7a00", flexShrink: 0 }}>
-              <IconCanvas iconKey={bossPortraitKey(boss)} size={28} />
-            </div>
-          ) : (
-            <span className="text-[14px]">{boss.emoji}</span>
-          )}
-          <span className="text-[10px] font-bold text-[#ff7a00] leading-tight">{boss.name}</span>
-        </div>
-        <div className="text-[9px] text-white/70 mb-1">
-          {boss.progress}/{boss.targetCount} &middot; {boss.turnsLeft}t left
-        </div>
-        <ProgressBar value={boss.progress} max={boss.targetCount} color="#ff7a00" />
-      </div>
-    </div>
-  );
-}
-
 function BossModal({ boss, year = 1, dispatch }) {
   const meta = BOSS_META[boss.key] || {};
   const pct = boss.targetCount > 0
