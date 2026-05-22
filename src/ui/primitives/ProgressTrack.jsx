@@ -37,7 +37,7 @@ function Bar({ value, max, tone, size, showValue }) {
           style={{ width: `${pct}%` }}
         />
         {showValue === "inside" && (
-          <div className={`absolute inset-0 flex items-center justify-center font-semibold tabular-nums text-cream ${textCls}`}>
+          <div className={`absolute inset-0 flex items-center justify-center font-semibold tabular-nums text-ink ${textCls}`}>
             {value}/{max}
           </div>
         )}

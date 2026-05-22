@@ -76,7 +76,7 @@ function TrophyCard({ achievement, current, trophyState }) {
         <div className="hl-card-meta text-[10px] leading-snug line-clamp-1">{desc}</div>
         {/* Progress bar */}
         <div className="flex items-center gap-1.5 mt-0.5">
-          <div className="flex-1 h-1.5 bg-[#3a2715]/25 rounded-full overflow-hidden">
+          <div className="flex-1 h-1.5 bg-[#2b2218]/25 rounded-full overflow-hidden">
             <div
               className="h-full rounded-full transition-[width] duration-500"
               style={{
@@ -120,7 +120,7 @@ function TrophyCard({ achievement, current, trophyState }) {
 function ResourceChip({ resource, count }) {
   const discovered = count > 0;
   const bg = discovered ? hexColor(resource.color) : "#d8c4a0";
-  const textColor = discovered ? "#fff" : "#5b3b20";
+  const textColor = discovered ? "#fff" : "#7a5e3f";
 
   return (
     <div

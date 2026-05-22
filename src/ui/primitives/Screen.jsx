@@ -13,11 +13,14 @@ function BackArrow() {
 
 export default function Screen({ title, onBack, tone = "dark", className = "", children }) {
   const isLight = tone === "light";
-  const surface = isLight ? "bg-parchment-soft text-ink" : "bg-bg-darkest text-cream";
+  // Lifted palette: both tones live in the parchment family now. "dark" keeps
+  // the API but renders a slightly warmer parchment + ink stack to differentiate
+  // from "light"'s lifted cream.
+  const surface = isLight ? "bg-parchment-soft text-ink" : "bg-parchment text-ink";
   const headerSurface = isLight
     ? "bg-parchment-soft/95 border-iron-edge text-ink-soft"
-    : "bg-bg-darker/95 border-panel-edge text-cream";
-  const backHover = isLight ? "hover:bg-iron-soft/15" : "hover:bg-cream/[0.06]";
+    : "bg-parchment/95 border-iron-edge text-ink-soft";
+  const backHover = "hover:bg-iron-soft/15";
 
   return (
     <ScreenCtx.Provider value={{ tone }}>
@@ -57,7 +60,7 @@ function Filters({ className = "", children }) {
   const { tone } = useContext(ScreenCtx);
   const surface = tone === "light"
     ? "bg-parchment/80 border-iron-edge"
-    : "bg-bg-darker/70 border-panel-edge";
+    : "bg-parchment-dim/80 border-iron-edge";
   return (
     <div className={`sticky top-14 z-[5] flex flex-wrap items-center gap-2 px-4 py-2 border-b backdrop-blur-sm ${surface} ${className}`}>
       {children}
@@ -80,7 +83,7 @@ function FooterBar({ className = "", children }) {
   const { tone } = useContext(ScreenCtx);
   const surface = tone === "light"
     ? "bg-parchment-soft/95 border-iron-edge"
-    : "bg-bg-darker/95 border-panel-edge";
+    : "bg-parchment/95 border-iron-edge";
   return (
     <div
       className={`sticky bottom-0 z-10 flex items-center justify-end gap-2 px-4 py-3 border-t pb-safe-bottom backdrop-blur-sm ${surface} ${className}`}
