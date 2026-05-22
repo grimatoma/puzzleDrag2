@@ -13,26 +13,6 @@ import { SeasonIndicator } from "./puzzleBoard.jsx";
 
 export const SEASON_EFFECTS = ["", "", "", ""];
 
-const VIEW_LABELS = {
-  town: "Menu",
-  board: "Menu",
-  crafting: "Crafting",
-  inventory: "Inventory",
-  orders: "Orders",
-  quests: "Quests",
-  townsfolk: "Townsfolk",
-  chronicle: "Chronicle",
-  tileCollection: "Tiles",
-  portal: "Portal",
-  achievements: "Trophies",
-  cartography: "Map",
-  charter: "Charter",
-  boons: "Boons",
-  castle: "Castle",
-  bosses: "Foes",
-  decorations: "Decorations",
-};
-
 function TideContent({ fish }) {
   const tide = fish?.tide ?? "high";
   const tideTurn = fish?.tideTurn ?? 0;
@@ -106,16 +86,6 @@ function CurrencyContent({ state }) {
   );
 }
 
-function DevButton({ title, iconKey, onClick }) {
-  return (
-    <button
-      onClick={onClick}
-      className="w-7 h-7 rounded-lg bg-bg-dark border-2 border-iron-deep grid place-items-center flex-shrink-0"
-      title={title}
-      aria-label={title}
-    ><LegacyIcon iconKey={iconKey} size={14} /></button>
-  );
-}
 
 function SearchIcon({ size = 16 }) {
   return (
@@ -143,8 +113,6 @@ export function Hud({ state, dispatch, inventorySearchOpen, onInventorySearchTog
     setCoinAnchorEl(coinAnchorRef.current);
     return () => setCoinAnchorEl(null);
   });
-  const isWon = !!state.story?.flags?.isWon;
-  const sandbox = !!state.story?.sandbox || isWon;
   const settlementName = state.settlement?.name ?? "Hearthwood Vale";
   const showTide = state.biomeKey === "fish" && (onBoard || view === "town");
 
@@ -160,15 +128,11 @@ export function Hud({ state, dispatch, inventorySearchOpen, onInventorySearchTog
       <div className="flex items-center gap-2 flex-shrink-0">
         <button
           onClick={() => dispatch({ type: "OPEN_MODAL", modal: onBoard ? "leaveBoard" : "menu" })}
-          className="w-8 h-8 rounded-lg bg-paper-soft border-2 border-iron grid place-items-center text-ink-mid font-bold text-large flex-shrink-0"
+          className="w-8 h-8 rounded-lg bg-paper-soft border-2 border-iron flex items-center justify-center text-ink-mid font-bold text-large flex-shrink-0 leading-none"
           data-testid="menu-btn"
           aria-label={onBoard ? "Leave board" : "Menu"}
           title={onBoard ? `Leave board · ${settlementName}` : settlementName}
         >{onBoard ? "←" : "≡"}</button>
-        <span className="text-caption font-semibold text-ink whitespace-nowrap">
-          {VIEW_LABELS[view] ?? "Menu"}
-          {sandbox && <span className="italic font-normal"> · sandbox</span>}
-        </span>
         {view === "inventory" && onInventorySearchToggle && (
           <button
             type="button"
@@ -202,8 +166,6 @@ export function Hud({ state, dispatch, inventorySearchOpen, onInventorySearchTog
       </div>
 
       <div className="flex items-center gap-1.5 flex-shrink-0">
-        <DevButton title="Debug tools" iconKey="ui_devtools" onClick={() => dispatch({ type: "SETTINGS/OPEN_DEBUG" })} />
-        <DevButton title="Balance Manager" iconKey="ui_scale" onClick={() => { window.open(`${import.meta.env.BASE_URL}b/`, "_blank", "noopener,noreferrer"); }} />
         {!onBoard && (
           <>
             <div className="relative" ref={coinAnchorRef}>
