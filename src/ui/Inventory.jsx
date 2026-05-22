@@ -103,6 +103,30 @@ function useAccordion() {
   return { displayedKey: state.displayedKey, isOpen: state.isOpen, select, close, onClosed };
 }
 
+const InventoryIconCell = forwardRef(function InventoryIconCell(
+  { entry, selected, onSelect },
+  ref
+) {
+  const { key, label, count } = entry;
+  return (
+    <button
+      ref={ref}
+      type="button"
+      className={`inv-grid__cell${selected ? " is-selected" : ""}${count === 0 ? " is-muted" : ""}`}
+      aria-pressed={selected}
+      aria-label={`${label}${count > 0 ? `, ${count}` : ""}`}
+      onClick={onSelect}
+    >
+      <Icon iconKey={key} size={52} title={label} />
+      {count > 0 && (
+        <span className="inv-grid__badge" aria-hidden="true">
+          {count > 999 ? "999+" : count}
+        </span>
+      )}
+    </button>
+  );
+});
+
 export function Section({ title, titleColor = "#f8e7c6", children }) {
   return (
     <div className="flex flex-col gap-2 min-h-0">
