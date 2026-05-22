@@ -353,30 +353,32 @@
 
   .inv-accordion__arrow {
     position: absolute;
-    top: 0;
+    top: -10px;
     left: 50%;
     transform: translateX(-50%);
     width: 0;
     height: 0;
-    border-left: 8px solid transparent;
-    border-right: 8px solid transparent;
-    border-bottom: 8px solid var(--card-border-strong);
-    z-index: 1;
+    border-left: 10px solid transparent;
+    border-right: 10px solid transparent;
+    border-bottom: 10px solid var(--card-border-strong);
+    z-index: 2;
+    pointer-events: none;
   }
 
   .inv-accordion__arrow::after {
     content: '';
     position: absolute;
-    top: 2px;
-    left: -7px;
+    top: 3px;
+    left: -9px;
     width: 0;
     height: 0;
-    border-left: 7px solid transparent;
-    border-right: 7px solid transparent;
-    border-bottom: 7px solid var(--card-bg);
+    border-left: 9px solid transparent;
+    border-right: 9px solid transparent;
+    border-bottom: 9px solid var(--card-bg);
   }
 
   .inv-accordion__body {
+    position: relative;
     overflow: hidden;
     max-height: 0;
     border-radius: 0.5rem;
@@ -388,27 +390,32 @@
     transition: max-height 200ms ease-out;
   }
 
+  .inv-accordion__detail {
+    margin-top: 32px;
+  }
+
   .inv-accordion__close {
     position: absolute;
-    top: 8px;
-    right: 8px;
+    top: 0;
+    right: 0;
     width: 28px;
     height: 28px;
     display: grid;
     place-items: center;
     border-radius: 50%;
-    background: var(--well-bg);
-    border: 1px solid var(--well-border);
-    color: var(--on-panel-dim);
+    background: var(--card-bg);
+    border: 1px solid var(--card-border-strong);
+    color: var(--on-panel);
     font-size: 18px;
     line-height: 1;
     cursor: pointer;
-    z-index: 2;
-    transition: background 150ms, color 150ms;
+    z-index: 3;
+    transition: background 150ms, color 150ms, border-color 150ms;
   }
 
   .inv-accordion__close:hover {
     background: var(--card-bg-hover);
+    border-color: var(--card-border-strong);
     color: var(--on-panel);
   }
 

@@ -144,15 +144,15 @@ function InventoryAccordion({ entry, isOpen, arrowLeft, marketBuilt, dispatch, o
         className={`inv-accordion__body${isOpen ? " is-open" : ""}`}
         onTransitionEnd={handleTransitionEnd}
       >
-        <div className="relative">
-          <button
-            type="button"
-            className="inv-accordion__close"
-            onClick={onClose}
-            aria-label="Close detail"
-          >
-            ×
-          </button>
+        <button
+          type="button"
+          className="inv-accordion__close"
+          onClick={onClose}
+          aria-label="Close detail"
+        >
+          ×
+        </button>
+        <div className="inv-accordion__detail">
           <InventoryDetail entry={entry} marketBuilt={marketBuilt} dispatch={dispatch} />
         </div>
       </div>
@@ -372,6 +372,7 @@ export function InventoryGrid({
   const cellRefs = useRef({});
   const containerRef = useRef(null);
   const [arrowLeft, setArrowLeft] = useState(null);
+  const [columnsPerRow, setColumnsPerRow] = useState(1);
   const assignCellRef = useCallback((key, el) => {
     if (el) cellRefs.current[key] = el;
     else delete cellRefs.current[key];
@@ -390,6 +391,28 @@ export function InventoryGrid({
     }
     setArrowLeft(next);
   }, [accordion.displayedKey, compact, viewMode]);
+
+  useLayoutEffect(() => {
+    if (!compact || viewMode !== "grid") {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- reset when leaving grid mode
+      setColumnsPerRow(1);
+      return undefined;
+    }
+    const container = containerRef.current;
+    if (!container || typeof window === "undefined") return undefined;
+    const measure = () => {
+      const cs = window.getComputedStyle(container);
+      const tracks = cs.gridTemplateColumns
+        .split(" ")
+        .filter((t) => t && t !== "none");
+      setColumnsPerRow(Math.max(tracks.length, 1));
+    };
+    measure();
+    if (typeof ResizeObserver === "undefined") return undefined;
+    const ro = new ResizeObserver(measure);
+    ro.observe(container);
+    return () => ro.disconnect();
+  }, [compact, viewMode]);
 
   const activeTags = filter === "all"
     ? null
@@ -505,7 +528,25 @@ export function InventoryGrid({
         </div>
       );
     } else {
-      for (const entry of entries) {
+      const selectedIndex = accordion.displayedKey
+        ? entries.findIndex((e) => e.key === accordion.displayedKey)
+        : -1;
+      let accordionInsertAfter = -1;
+      if (selectedIndex >= 0) {
+        if (viewMode === "grid") {
+          const cols = Math.max(columnsPerRow, 1);
+          const rowEnd = Math.min(
+            (Math.floor(selectedIndex / cols) + 1) * cols - 1,
+            entries.length - 1
+          );
+          accordionInsertAfter = rowEnd;
+        } else {
+          accordionInsertAfter = selectedIndex;
+        }
+      }
+      const selectedEntry = selectedIndex >= 0 ? entries[selectedIndex] : null;
+      for (let i = 0; i < entries.length; i++) {
+        const entry = entries[i];
         const isSelected = entry.key === accordion.displayedKey;
         if (viewMode === "grid") {
           cells.push(
@@ -527,11 +568,11 @@ export function InventoryGrid({
             />
           );
         }
-        if (isSelected) {
+        if (i === accordionInsertAfter && selectedEntry) {
           cells.push(
             <InventoryAccordion
               key="__accordion__"
-              entry={entry}
+              entry={selectedEntry}
               isOpen={accordion.isOpen}
               arrowLeft={viewMode === "grid" ? arrowLeft : null}
               marketBuilt={marketBuilt}
