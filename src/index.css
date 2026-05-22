@@ -331,7 +331,8 @@
 .craft-strip {
   display: flex;
   align-items: center;
-  gap: 12px;
+  flex-wrap: wrap;
+  gap: 8px 12px;
   padding: 8px 12px;
   background: linear-gradient(180deg, rgba(0, 0, 0, 0.32), rgba(0, 0, 0, 0.18));
   border-bottom: 1px solid var(--panel-divider, rgba(0, 0, 0, 0.42));
@@ -402,6 +403,20 @@
   font-weight: 700;
   color: var(--on-panel-faint, rgba(255, 255, 255, 0.55));
   margin-left: 2px;
+}
+
+/* Mobile portrait: the up-next row wraps below the head row so the recipe
+   name stops getting squeezed to a single letter on ~360-400px viewports. */
+@media (max-width: 480px) {
+  .craft-strip-upnext {
+    flex-basis: 100%;
+    margin-left: 0;
+    padding-left: 0;
+    border-left: none;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    padding-top: 6px;
+    margin-top: 2px;
+  }
 }
 
 /* Progress ring around the head icon */
