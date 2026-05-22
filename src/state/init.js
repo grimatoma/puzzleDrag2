@@ -236,10 +236,5 @@ export function initialState(overrides) {
       seasonStats: { harvests: 0, upgrades: 0, ordersFilled: 0, coins: 0 }
     };
   }
-  // Preserve flags that should survive schema bumps so returning players
-  // aren't forced through one-time intros they've already seen.
-  if (raw?.story?.flags?.intro_seen) {
-    fresh.story.flags.intro_seen = true;
-  }
   return fresh;
 }
