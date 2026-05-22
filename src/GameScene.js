@@ -27,6 +27,20 @@ function boardFrameFor(cssVw) {
 }
 
 
+// Chain path colors (warm orange when the chain meets minimum length, brown
+// when it doesn't). Cross-faded via _pathValidProgress when validity flips.
+const PATH_COLORS_VALID   = { line: 0xff6d00, halo: 0xffd248, nodeOuter: 0xffd248, nodeInner: 0xff6d00 };
+const PATH_COLORS_INVALID = { line: 0x9a4630, halo: 0xc06b3e, nodeOuter: 0xc06b3e, nodeInner: 0x9a4630 };
+
+function lerpHex(a, b, t) {
+  const ar = (a >> 16) & 0xff, ag = (a >> 8) & 0xff, ab = a & 0xff;
+  const br = (b >> 16) & 0xff, bg = (b >> 8) & 0xff, bb = b & 0xff;
+  const r = Math.round(ar + (br - ar) * t);
+  const g = Math.round(ag + (bg - ag) * t);
+  const bl = Math.round(ab + (bb - ab) * t);
+  return (r << 16) | (g << 8) | bl;
+}
+
 export class GameScene extends Phaser.Scene {
   constructor() {
     super("GameScene");
@@ -41,6 +55,9 @@ export class GameScene extends Phaser.Scene {
     this.dragging = false;
     this.locked = false;
     this.board = null; // Phaser Container used as tween target for shuffle spin
+    this._pathValidProgress = 1;
+    this._lastPathValid = true;
+    this._validTween = null;
   }
 
   create() {
@@ -1300,10 +1317,26 @@ export class GameScene extends Phaser.Scene {
     // V.1 — Choose path colors based on whether chain meets the effective minimum length
     const effectiveMinChain = this._effectiveMinChain();
     const pathValid = this.path.length === 0 || this.path.length >= effectiveMinChain;
-    const lineColor = pathValid ? 0xff6d00 : 0x9a4630;
-    const haloColor = pathValid ? 0xffd248 : 0xc06b3e;
-    const nodeOuterColor = pathValid ? 0xffd248 : 0xc06b3e;
-    const nodeInnerColor = pathValid ? 0xff6d00 : 0x9a4630;
+
+    // Tween the validity color when it flips, rather than snapping. Brown ↔ orange
+    // over 160ms. Repaint hooked via onUpdate so segments + nodes both follow.
+    if (pathValid !== this._lastPathValid) {
+      this._lastPathValid = pathValid;
+      if (this._validTween) this._validTween.stop();
+      this._validTween = this.tweens.add({
+        targets: this,
+        _pathValidProgress: pathValid ? 1 : 0,
+        duration: 160,
+        ease: "Quad.Out",
+        onUpdate: () => this._repaintPathColors(),
+      });
+    }
+
+    const t = this._pathValidProgress;
+    const lineColor      = lerpHex(PATH_COLORS_INVALID.line,      PATH_COLORS_VALID.line,      t);
+    const haloColor      = lerpHex(PATH_COLORS_INVALID.halo,      PATH_COLORS_VALID.halo,      t);
+    const nodeOuterColor = lerpHex(PATH_COLORS_INVALID.nodeOuter, PATH_COLORS_VALID.nodeOuter, t);
+    const nodeInnerColor = lerpHex(PATH_COLORS_INVALID.nodeInner, PATH_COLORS_VALID.nodeInner, t);
 
     for (let i = 1; i < this.path.length; i++) {
       const a = this.path[i - 1];
@@ -1426,6 +1459,42 @@ export class GameScene extends Phaser.Scene {
     }
     this._prevStarGroups = groupCount;
     this.path.forEach((t) => t.sprite.setDepth(7));
+  }
+
+  // Cheap version of redrawPath that just re-colors existing line graphics
+  // and the node ring with the current _pathValidProgress. Called on every
+  // tween frame during a validity flip so colors blend instead of snap.
+  _repaintPathColors() {
+    if (this.path.length === 0) return;
+    const t = this._pathValidProgress;
+    const lineColor      = lerpHex(PATH_COLORS_INVALID.line,      PATH_COLORS_VALID.line,      t);
+    const haloColor      = lerpHex(PATH_COLORS_INVALID.halo,      PATH_COLORS_VALID.halo,      t);
+    const nodeOuterColor = lerpHex(PATH_COLORS_INVALID.nodeOuter, PATH_COLORS_VALID.nodeOuter, t);
+    const nodeInnerColor = lerpHex(PATH_COLORS_INVALID.nodeInner, PATH_COLORS_VALID.nodeInner, t);
+    for (let i = 1; i < this.path.length; i++) {
+      const a = this.path[i - 1];
+      const b = this.path[i];
+      const g = this.pathLines[i - 1];
+      if (!g) continue;
+      // Skip the very last segment if a "grow" tween is still running on it —
+      // letting onUpdate take over its color while the tween's own onUpdate
+      // keeps redrawing its grow progress in the old color would flicker.
+      if (i === this.path.length - 1 && this.tweens.isTweening(g)) continue;
+      g.clear();
+      this._drawSegment(g, a.x, a.y, b.x, b.y, lineColor, haloColor);
+    }
+    if (this.pathNodeG) {
+      this.pathNodeG.clear();
+      const nr = 7 * this.tileScale;
+      this.path.forEach((tp) => {
+        this.pathNodeG.fillStyle(nodeOuterColor, 0.55);
+        this.pathNodeG.fillCircle(tp.x, tp.y, nr * 1.6);
+        this.pathNodeG.fillStyle(nodeInnerColor, 1);
+        this.pathNodeG.fillCircle(tp.x, tp.y, nr);
+        this.pathNodeG.fillStyle(0xfff4c2, 0.9);
+        this.pathNodeG.fillCircle(tp.x, tp.y, nr * 0.4);
+      });
+    }
   }
 
   _drawSegment(g, ax, ay, bx, by, lineColor = 0xff6d00, haloColor = 0xffd248) {
