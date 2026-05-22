@@ -111,6 +111,10 @@ Three layered ways to land on the exact screen you want to verify, without click
 
 When you fix a bug found in a specific scenario, add or extend an entry in `src/visualTesting/matrix.js` so the visual suite covers it on the next `npm run test:visual` run.
 
+## Agent execution
+
+- **Always use subagent-driven development for plan execution.** When executing an implementation plan, always invoke the `superpowers:subagent-driven-development` skill — never execute tasks inline in the main session. This keeps the main chat's context small and focused.
+
 ## Engineering rules
 
 - **No fakes or mocks in production code.** Wire real implementations end-to-end. `vi.mock` and stub state shapes are fine *inside test files only* (under `tests/` or `src/__tests__/`). If you find yourself adding a fake hook, a fake worker, or a stub data row in `src/` to make something compile or "demonstrate" a mechanic, stop and wire the real thing instead — or surface it to the user before shipping.
