@@ -29,13 +29,13 @@ export const TILE = 74;
 export const COLS = 6;
 export const ROWS = 6;
 
-// Phase 5 — real-time crafting queue (alongside the instant CRAFT_RECIPE). A
-// queued craft is ready this many wall-clock hours after it's queued; spending
-// CRAFT_GEM_SKIP_COST gems finishes it instantly. Both tunable. The queue is
-// SEQUENTIAL: only the head of `craftQueue` actively crafts; subsequent items
-// `startAt` == the previous item's `readyAt`. Each recipe may override the
-// default duration via a `craftMs` field (see RECIPES); when unset, the recipe
-// uses CRAFT_QUEUE_HOURS hours.
+// Phase 5 — real-time crafting queues (alongside the instant CRAFT_RECIPE).
+// Per-station: each station (bakery, forge, …) has its own sequential queue
+// under `state.craftQueues[station]`. Within a station only the head ticks
+// down; across stations queues run in parallel. Spending CRAFT_GEM_SKIP_COST
+// gems finishes the head instantly. Each recipe may override the default
+// duration via a `craftMs` field (see RECIPES); when unset the recipe falls
+// back to CRAFT_QUEUE_HOURS hours.
 export let CRAFT_QUEUE_HOURS = 4;       // Balance Manager: tuning.craftQueueHours
 export let CRAFT_GEM_SKIP_COST = 1;     // Balance Manager: tuning.craftGemSkipCost
 
@@ -100,7 +100,7 @@ export let DEFAULT_HOME_BIOME = "prairie"; // Balance Manager: tuning.homeBiome
 
 // Save schema version. Forward migrations are not maintained — bump this
 // whenever persisted state changes shape and existing saves will be discarded.
-export const SAVE_SCHEMA_VERSION = 38;
+export const SAVE_SCHEMA_VERSION = 39;
 
 export const UPGRADE_THRESHOLDS = {
   grass_hay: 6, grass_meadow: 6, grass_spiky: 6,

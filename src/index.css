@@ -305,65 +305,163 @@
   animation: rewardChipFloat 1100ms cubic-bezier(.2,.7,.2,1) both;
 }
 
-/* ── Crafting queue panel ───────────────────────────────────────────────── */
-@keyframes craftProgressShine {
-  0%   { transform: translateX(-110%); }
-  100% { transform: translateX(160%); }
+/* ── Per-station crafting queue strip + tab indicator ───────────────────── */
+@keyframes craftStripActivePulse {
+  0%, 100% { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04), 0 0 0 0 rgba(199, 94, 46, 0); }
+  50%      { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06), 0 0 14px 1px rgba(199, 94, 46, 0.32); }
 }
-@keyframes craftActivePulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(199, 94, 46, 0.00); }
-  50%      { box-shadow: 0 0 14px 2px rgba(199, 94, 46, 0.38); }
+@keyframes craftStripReadyGlow {
+  0%, 100% { box-shadow: inset 0 0 0 1px rgba(143, 199, 64, 0.55), 0 0 0 0 rgba(143, 199, 64, 0.25); }
+  50%      { box-shadow: inset 0 0 0 1px rgba(143, 199, 64, 0.75), 0 0 22px 3px rgba(143, 199, 64, 0.55); }
 }
-@keyframes craftReadyGlow {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(143, 199, 64, 0.30); }
-  50%      { box-shadow: 0 0 20px 4px rgba(143, 199, 64, 0.70); }
+@keyframes craftRingDashSpin {
+  from { stroke-dashoffset: 0; }
+  to   { stroke-dashoffset: -32; }
 }
-@keyframes craftReadyBadge {
-  0%, 100% { transform: scale(1); opacity: 0.95; }
-  50%      { transform: scale(1.06); opacity: 1; }
+@keyframes craftRingReadyPulse {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.05); }
 }
-.craft-active-card { animation: craftActivePulse 2.6s ease-in-out infinite; }
-.craft-ready-card  { animation: craftReadyGlow   1.6s ease-in-out infinite; }
-.craft-ready-badge { animation: craftReadyBadge  1.2s ease-in-out infinite; }
-.craft-progress {
+@keyframes craftBadgeReadyPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(230, 196, 100, 0.0); }
+  50%      { box-shadow: 0 0 0 4px rgba(230, 196, 100, 0.45); }
+}
+
+/* The strip itself */
+.craft-strip {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.32), rgba(0, 0, 0, 0.18));
+  border-bottom: 1px solid var(--panel-divider, rgba(0, 0, 0, 0.42));
   position: relative;
-  height: 10px;
-  background: rgba(0, 0, 0, 0.32);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 999px;
+  min-height: 64px;
+}
+.craft-strip--active { animation: craftStripActivePulse 2.8s ease-in-out infinite; }
+.craft-strip--ready  { animation: craftStripReadyGlow   1.6s ease-in-out infinite; }
+.craft-strip-meta {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.craft-strip-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--on-panel, #fff);
+  white-space: nowrap;
   overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.15;
 }
-.craft-progress-fill {
-  position: absolute;
-  inset: 0;
-  width: 0;
-  background: linear-gradient(90deg, #b8531f 0%, #e08a5a 100%);
-  border-radius: 999px;
-  transition: width 1s linear;
+.craft-strip-time {
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: var(--on-panel-faint, rgba(255, 255, 255, 0.6));
+  line-height: 1.15;
 }
-.craft-progress-fill--ready {
-  background: linear-gradient(90deg, #4c7820 0%, #8fc740 100%);
+.craft-strip-time-remaining { color: var(--on-panel, #fff); font-weight: 700; }
+.craft-strip-time-total { opacity: 0.6; }
+.craft-strip-ready { color: #b3df68; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; font-size: 10px; }
+.craft-strip-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
 }
-.craft-progress-shine {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background: linear-gradient(90deg, transparent 35%, rgba(255, 255, 255, 0.28) 50%, transparent 65%);
-  animation: craftProgressShine 2.4s linear infinite;
-  transform: translateX(-110%);
+.craft-strip-upnext {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding-left: 8px;
+  margin-left: 4px;
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
+  flex-shrink: 0;
 }
-.craft-queue-row {
+.craft-strip-upnext-label {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--on-panel-faint, rgba(255, 255, 255, 0.55));
+  margin-right: 2px;
+}
+.craft-strip-upnext-chip {
+  display: inline-grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.28);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+}
+.craft-strip-upnext-more {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--on-panel-faint, rgba(255, 255, 255, 0.55));
+  margin-left: 2px;
+}
+
+/* Progress ring around the head icon */
+.craft-ring {
   position: relative;
-  transition: opacity 200ms ease, transform 200ms ease;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
 }
-.craft-queue-row::before {
-  content: "";
+.craft-ring--ready { animation: craftRingReadyPulse 1.4s ease-in-out infinite; }
+.craft-ring-svg {
   position: absolute;
-  left: 0;
-  top: 50%;
-  width: 3px;
-  height: 50%;
-  transform: translateY(-50%);
-  background: linear-gradient(180deg, transparent 0%, rgba(255,255,255,0.18) 50%, transparent 100%);
-  border-radius: 2px;
+  inset: 0;
+  transform: rotate(-90deg);
+}
+.craft-ring-svg circle:nth-child(2) {
+  transition: stroke-dasharray 1s linear;
+}
+.craft-ring-icon {
+  position: relative;
+  display: grid;
+  place-items: center;
+}
+
+/* Compact tab indicator + bottom progress hair */
+.craft-tab-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 1px 6px 1px 5px;
+  margin-left: 4px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+}
+.craft-tab-badge-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 999px;
+  background: #e08a5a;
+  flex-shrink: 0;
+}
+.craft-tab-badge--ready {
+  background: #5e8c1e;
+  border-color: #8fc740;
+  color: #fff;
+  animation: craftBadgeReadyPulse 1.4s ease-in-out infinite;
+}
+.craft-tab-badge--ready .craft-tab-badge-dot { background: #fff; }
+.craft-tab-hair {
+  position: absolute;
+  left: 4px;
+  right: auto;
+  bottom: 0;
+  height: 2px;
+  background: linear-gradient(90deg, #b8531f, #e08a5a);
+  border-radius: 1px;
+  pointer-events: none;
+  transition: width 1s linear;
 }
