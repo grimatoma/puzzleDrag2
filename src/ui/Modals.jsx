@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { NPCS } from "../constants.js";
 import { beatLines, beatChoices, beatIsContinueOnly, beatScene, interpolateBeatText } from "../story.js";
 import { displayZoneName } from "../features/zones/data.js";
@@ -499,12 +500,12 @@ export function StoryModal({ state, dispatch }) {
 
   // 1) The finale — keep its gilded full-bleed treatment.
   if (beat.id === "act3_win") {
-    return <WinBeat beat={beat} lines={lines} sceneBg={scene?.bg} onContinue={() => pick("continue")} />;
+    return createPortal(<WinBeat beat={beat} lines={lines} sceneBg={scene?.bg} onContinue={() => pick("continue")} />, document.body);
   }
 
   // 2) Lightweight one-line milestone → bottom-anchored bar.
   if (continueOnly && !hasPrompt && lines.length <= 1) {
-    return <StoryBar line={lines[0] ?? { speaker: null, text: beat.title }} npc={npc} onContinue={() => pick("continue")} />;
+    return createPortal(<StoryBar line={lines[0] ?? { speaker: null, text: beat.title }} npc={npc} onContinue={() => pick("continue")} />, document.body);
   }
 
   // 3) Center-stage modal — multi-line beats, prompts, and branching choices.
@@ -548,7 +549,7 @@ export function StoryModal({ state, dispatch }) {
     footKind = "choices";
   }
 
-  return (
+  return createPortal(
     <div
       role="dialog"
       aria-modal="true"
@@ -565,7 +566,8 @@ export function StoryModal({ state, dispatch }) {
         sceneLabel={scene?.label}
         onClose={continueOnly && !hasPrompt ? () => dispatch({ type: "STORY/DISMISS_MODAL" }) : undefined}
       />
-    </div>
+    </div>,
+    document.body
   );
 }
 
