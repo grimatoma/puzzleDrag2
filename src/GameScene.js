@@ -83,8 +83,11 @@ export class GameScene extends Phaser.Scene {
       this._syncGridToState();
     }
     this.input.on("pointerup", () => this.endPath());
-    this.input.on("pointerupoutside", () => this.endPath());
-    this.input.on("gameout", () => this.endPath());
+    // pointerupoutside and gameout are intentionally omitted: Phaser fires
+    // gameout via a synthetic 'mouseout' that mobile browsers dispatch during
+    // touch moves (touch-to-mouse synthesis), killing the drag immediately.
+    // The document-level pointerup / touchend / pointercancel listeners below
+    // cover all end-drag cases without the false-positive on touch.
 
     // Touch-friendly drag fallback: pointerover misses tiles when a finger
     // moves quickly across the board (touch tracking has lower temporal
