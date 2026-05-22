@@ -139,28 +139,30 @@ export default function InventoryScreen({ state, dispatch, searchOpen: searchOpe
 
       <FeaturePanel.Body>
         <div className="w-full h-full min-h-0 flex flex-col gap-3">
-          <div className="hl-well flex flex-wrap items-center gap-2">
-            {PRIMARY_FILTERS.map((option) => {
-              const active = primaryFilter === option.id;
-              return (
-                <button
-                  key={option.id}
-                  type="button"
-                  className={`rounded-lg px-2 py-1 text-[11px] font-semibold border transition-colors ${active ? "bg-amber-300/20 border-amber-300/70 text-cream" : "bg-iron-deep/55 border-iron text-parchment"}`}
-                  onClick={() => setPrimaryFilter(option.id)}
-                >
-                  {option.label}
-                </button>
-              );
-            })}
-            {TAG_FILTERS.map((option) => {
-              const active = activeTags.includes(option.id);
-              return (
-                <button key={option.id} type="button" onClick={() => toggleTag(option.id)}>
-                  <Pill tone={active ? "gold" : "iron"} variant="soft" size="sm">{option.label}</Pill>
-                </button>
-              );
-            })}
+          <div className="hl-well">
+            <div className="flex flex-row flex-wrap items-center gap-2">
+              {PRIMARY_FILTERS.map((option) => {
+                const active = primaryFilter === option.id;
+                return (
+                  <button
+                    key={option.id}
+                    type="button"
+                    className={`rounded-lg px-2 py-1 text-[11px] font-semibold border transition-colors ${active ? "bg-amber-300/20 border-amber-300/70 text-cream" : "bg-iron-deep/55 border-iron text-parchment"}`}
+                    onClick={() => setPrimaryFilter(option.id)}
+                  >
+                    {option.label}
+                  </button>
+                );
+              })}
+              {TAG_FILTERS.map((option) => {
+                const active = activeTags.includes(option.id);
+                return (
+                  <button key={option.id} type="button" onClick={() => toggleTag(option.id)}>
+                    <Pill tone={active ? "gold" : "iron"} variant="soft" size="sm">{option.label}</Pill>
+                  </button>
+                );
+              })}
+            </div>
           </div>
           <InventoryGrid
             inventory={state.inventory}
