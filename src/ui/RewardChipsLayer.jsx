@@ -33,7 +33,11 @@ export default function RewardChipsLayer() {
     return off;
   }, []);
 
-  if (typeof document === "undefined") return null;
+  // Render nothing (no DOM node at all) when no chips are active.
+  // A persistent fixed-inset-0 overlay, even with pointer-events:none, can
+  // block touch events on iOS Safari — so we only mount the portal when
+  // there is actually something to show.
+  if (chips.length === 0 || typeof document === "undefined") return null;
 
   return createPortal(
     <div className="fixed inset-0 pointer-events-none z-[150]" aria-hidden="true">
