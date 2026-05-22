@@ -139,10 +139,11 @@ export class GameScene extends Phaser.Scene {
     const onVisibility = () => { if (document.hidden) this.endPath(); };
     document.addEventListener("visibilitychange", onVisibility);
     window.addEventListener("blur", onDocPointerUp);
-    // Cancel drag when the pointer physically leaves the canvas. gameout fires
-    // for clean departures but can be skipped when overlapping DOM elements
-    // intercept the pointer — pointerleave fires regardless.
-    canvas.addEventListener("pointerleave", onDocPointerUp);
+    // Cancel drag when the mouse physically leaves the canvas. Skip touch:
+    // on mobile, pointerleave fires spuriously when a finger passes over an
+    // overlapping DOM element; document-level touchend handles actual release.
+    const onPointerLeave = (e) => { if (e.pointerType !== "touch") onDocPointerUp(); };
+    canvas.addEventListener("pointerleave", onPointerLeave);
 
     // Registry and scale listeners — track each so they can be torn down on
     // shutdown. Otherwise scene recreation (HMR, tests, biome reload) leaks
@@ -158,7 +159,7 @@ export class GameScene extends Phaser.Scene {
     this.events.once("shutdown", () => {
       canvas.removeEventListener("selectstart", preventSelect);
       canvas.removeEventListener("contextmenu", preventSelect);
-      canvas.removeEventListener("pointerleave", onDocPointerUp);
+      canvas.removeEventListener("pointerleave", onPointerLeave);
       document.removeEventListener("pointerup", onDocPointerUp);
       document.removeEventListener("mouseup", onDocPointerUp);
       document.removeEventListener("pointercancel", onDocPointerUp);
@@ -1281,18 +1282,6 @@ export class GameScene extends Phaser.Scene {
       return;
     }
     this.dragging = true;
-    // Capture the pointer so the canvas keeps receiving pointermove/pointerup
-    // even if the finger slides over an overlapping React element. This also
-    // suppresses pointerleave for the duration of the drag, preventing the
-    // canvas.pointerleave handler from firing endPath() mid-chain.
-    this._capturedPointerId = null;
-    const _activePtr = this.input.manager.pointers.find(p => p.isDown);
-    if (_activePtr?.pointerId != null) {
-      try {
-        this.sys.game.canvas.setPointerCapture(_activePtr.pointerId);
-        this._capturedPointerId = _activePtr.pointerId;
-      } catch { /* browser doesn't support capture — pointerleave fallback still runs */ }
-    }
     this.clearPath(false);
     this.addToPath(tile);
     this.dimUnselectableTiles(tile.res.key);
@@ -1536,10 +1525,6 @@ export class GameScene extends Phaser.Scene {
   endPath() {
     if (!this.dragging) return;
     this.dragging = false;
-    if (this._capturedPointerId != null) {
-      try { this.sys.game.canvas.releasePointerCapture(this._capturedPointerId); } catch { /* ignore */ }
-      this._capturedPointerId = null;
-    }
     this.hideGrassHover();
     this.events.emit(SCENE_EVENTS.CHAIN_UPDATE, null);
     this.clearDimming();
