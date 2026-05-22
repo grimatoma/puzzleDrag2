@@ -224,71 +224,103 @@ function drawMole(ctx) {
     ctx.arc(x, y, r, 0, Math.PI * 2);
     ctx.fill();
   });
-  // Mole emerging
-  // Body (round, fuzzy)
-  ctx.fillStyle = "#3a2818";
+  // ── Mole body ──
+  // Rounded teardrop body — wider at the back, tapering toward the long snout.
+  ctx.fillStyle = "#4a3220";
   ctx.beginPath();
-  ctx.ellipse(0, 4, 12, 10, 0, 0, Math.PI * 2);
+  ctx.moveTo(-12, 4);
+  ctx.bezierCurveTo(-14, -8, -2, -12, 6, -10);
+  ctx.bezierCurveTo(14, -8, 14, 4, 12, 8);
+  ctx.bezierCurveTo(10, 12, -10, 12, -12, 4);
+  ctx.closePath();
   ctx.fill();
   ctx.strokeStyle = "#1a0e08";
-  ctx.lineWidth = 1.4;
+  ctx.lineWidth = 1.6;
   ctx.stroke();
-  // Snout
-  ctx.fillStyle = "#5a3818";
+  // Soft underbelly hint
+  ctx.fillStyle = "rgba(140,100,70,0.45)";
   ctx.beginPath();
-  ctx.ellipse(0, 0, 5, 3.5, 0, 0, Math.PI * 2);
+  ctx.ellipse(0, 6, 8, 3, 0, 0, Math.PI * 2);
   ctx.fill();
-  ctx.strokeStyle = "#1a0e08";
+  // Velvety fur tufts along the back (visible silhouette texture)
+  ctx.strokeStyle = "rgba(20,10,4,0.65)";
+  ctx.lineWidth = 0.7;
+  for (let i = 0; i < 8; i++) {
+    const x = -8 + i * 2;
+    ctx.beginPath();
+    ctx.moveTo(x, -9);
+    ctx.lineTo(x + 0.5, -12);
+    ctx.stroke();
+  }
+  // Long pink snout sticking out to the LEFT (so the body has direction)
+  ctx.fillStyle = "#e8a098";
+  ctx.beginPath();
+  ctx.moveTo(-12, 0);
+  ctx.bezierCurveTo(-20, -2, -22, 2, -18, 4);
+  ctx.bezierCurveTo(-16, 6, -14, 6, -12, 4);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = "#5a2820";
   ctx.lineWidth = 1.2;
   ctx.stroke();
-  // Pink nose
-  ctx.fillStyle = "#e88898";
+  // Pink nose tip (darker, at the very end of the snout)
+  ctx.fillStyle = "#c8606a";
   ctx.beginPath();
-  ctx.ellipse(0, -2, 2, 1.4, 0, 0, Math.PI * 2);
+  ctx.arc(-20, 1.5, 1.6, 0, Math.PI * 2);
   ctx.fill();
-  // Tiny eyes (closed/squinting)
+  ctx.strokeStyle = "#5a2820";
+  ctx.lineWidth = 0.7;
+  ctx.stroke();
+  // Tiny squinting eye (moles have minuscule eyes)
   ctx.strokeStyle = "#1a0a04";
   ctx.lineWidth = 1.2;
   ctx.lineCap = "round";
   ctx.beginPath();
-  ctx.moveTo(-7, -2); ctx.lineTo(-5, -1);
-  ctx.moveTo(7, -2); ctx.lineTo(5, -1);
+  ctx.moveTo(-9, -3);
+  ctx.lineTo(-6, -2);
   ctx.stroke();
-  // Whiskers
+  // Whiskers radiating from the snout
   ctx.strokeStyle = "rgba(180,160,140,0.85)";
   ctx.lineWidth = 0.5;
-  [[-5, 1, -10, -1], [-5, 2, -10, 2], [5, 1, 10, -1], [5, 2, 10, 2]].forEach(([x1, y1, x2, y2]) => {
+  [[-18, 0, -24, -2], [-18, 2, -24, 3], [-18, 4, -24, 6]].forEach(([x1, y1, x2, y2]) => {
     ctx.beginPath();
     ctx.moveTo(x1, y1);
     ctx.lineTo(x2, y2);
     ctx.stroke();
   });
-  // Teeth (buck)
+  // Buck teeth poking out under the snout (moles are diggers)
   ctx.fillStyle = "#fffae0";
-  ctx.fillRect(-1.4, 1.6, 1.2, 2.4);
-  ctx.fillRect(0.2, 1.6, 1.2, 2.4);
-  // Claws (digging)
-  ctx.fillStyle = "#fffae0";
-  [[-10, 12], [-6, 14], [10, 12], [6, 14]].forEach(([x, y]) => {
+  ctx.fillRect(-19.5, 3.2, 1, 2);
+  ctx.fillRect(-18, 3.2, 1, 2);
+  // Huge digging paw at the front-right — the iconic mole feature
+  ctx.fillStyle = "#4a3220";
+  ctx.beginPath();
+  ctx.ellipse(4, 8, 5, 4, -0.1, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = "#1a0e08";
+  ctx.lineWidth = 1.2;
+  ctx.stroke();
+  // Three long, pale curving claws fanning out of the paw
+  ctx.fillStyle = "#f4e2c0";
+  ctx.strokeStyle = "#3a1c08";
+  ctx.lineWidth = 0.7;
+  [[ 0, 10], [ 3, 12], [ 7, 11]].forEach(([cx, cy]) => {
     ctx.beginPath();
-    ctx.moveTo(x - 0.8, y);
-    ctx.lineTo(x + 0.8, y);
-    ctx.lineTo(x, y + 3);
+    ctx.moveTo(cx, cy);
+    ctx.bezierCurveTo(cx + 1, cy + 3, cx + 3, cy + 4, cx + 4, cy + 1);
+    ctx.lineTo(cx + 1, cy - 0.5);
     ctx.closePath();
     ctx.fill();
-    ctx.strokeStyle = "#3a1c08";
-    ctx.lineWidth = 0.6;
     ctx.stroke();
   });
-  // Fuzz tufts
-  ctx.strokeStyle = "rgba(120,90,60,0.5)";
-  ctx.lineWidth = 0.6;
-  [-6, 0, 6].forEach((x) => {
-    ctx.beginPath();
-    ctx.moveTo(x, -8);
-    ctx.lineTo(x, -10);
-    ctx.stroke();
-  });
+  // Stub of a tail at the back-right (just a hint)
+  ctx.strokeStyle = "#4a3220";
+  ctx.lineWidth = 2;
+  ctx.lineCap = "round";
+  ctx.beginPath();
+  ctx.moveTo(13, 4);
+  ctx.lineTo(16, 2);
+  ctx.stroke();
 }
 
 function drawBiomeFarm(ctx) {
@@ -479,7 +511,7 @@ function drawBiomeFish(ctx) {
   ctx.fillRect(-26, 6, 52, 30);
   // Wave caps
   ctx.strokeStyle = "rgba(220,240,255,0.6)"; ctx.lineWidth = 1.0;
-  for (let y = 8; y < 22; y += 5) {
+  for (let y = 10; y < 22; y += 4) {
     ctx.beginPath();
     for (let x = -26; x <= 26; x += 5) {
       const dy = Math.sin((x + y) * 0.4) * 1.0;
@@ -496,45 +528,52 @@ function drawBiomeFish(ctx) {
   ctx.lineTo(-18, 0); ctx.lineTo(-12, 4); ctx.lineTo(-8, 6);
   ctx.closePath();
   ctx.fill();
-  // Pier post (foreground)
-  ctx.fillStyle = "#7a4a18";
-  ctx.fillRect(-14, 4, 3, 18);
-  ctx.fillRect(-2, 4, 3, 18);
-  ctx.fillRect(10, 4, 3, 18);
-  ctx.strokeStyle = "#3a1c08"; ctx.lineWidth = 1.0;
-  ctx.strokeRect(-14, 4, 3, 18); ctx.strokeRect(-2, 4, 3, 18); ctx.strokeRect(10, 4, 3, 18);
-  // Pier deck
-  ctx.fillStyle = "#a8783a";
-  ctx.fillRect(-16, 0, 30, 4);
-  ctx.strokeStyle = "#3a1c08"; ctx.lineWidth = 1.2;
-  ctx.strokeRect(-16, 0, 30, 4);
-  // Plank lines
-  ctx.strokeStyle = "rgba(58,28,8,0.6)"; ctx.lineWidth = 0.6;
-  for (let i = -10; i <= 8; i += 6) {
-    ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, 4); ctx.stroke();
-  }
-  // Anchor on the deck
-  ctx.strokeStyle = "#1a1010"; ctx.lineWidth = 1.6;
-  ctx.fillStyle = "#3a3a40";
-  ctx.beginPath(); ctx.arc(0, -4, 2.5, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-  ctx.beginPath();
-  ctx.moveTo(0, -1); ctx.lineTo(0, -8);
-  ctx.moveTo(-3, -8); ctx.lineTo(3, -8);
-  ctx.moveTo(-4, -4); ctx.bezierCurveTo(-6, -4, -6, -10, 0, -10);
-  ctx.bezierCurveTo(6, -10, 6, -4, 4, -4);
-  ctx.stroke();
-  // Sun on horizon
+  // Sun on horizon (moved up-right so it doesn't sit beside the gull arcs)
   ctx.fillStyle = "#f8d878";
-  ctx.beginPath(); ctx.arc(14, -2, 4, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(16, -10, 4, 0, Math.PI * 2); ctx.fill();
   ctx.strokeStyle = "rgba(255,255,255,0.5)";
-  ctx.beginPath(); ctx.arc(14, -2, 4, 0, Math.PI * 2); ctx.stroke();
-  // Seagulls
+  ctx.beginPath(); ctx.arc(16, -10, 4, 0, Math.PI * 2); ctx.stroke();
+  // Sailboat silhouette instead of the previous floating anchor (the
+  // anchor + two gull arcs above accidentally formed a smiley face).
+  ctx.fillStyle = "#5a3014";
+  ctx.beginPath();
+  ctx.moveTo(-8, 2);
+  ctx.lineTo(8, 2);
+  ctx.lineTo(4, 6);
+  ctx.lineTo(-4, 6);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = "#1a0a04"; ctx.lineWidth = 1.0;
+  ctx.stroke();
+  // Mast
+  ctx.strokeStyle = "#1a0a04";
+  ctx.lineWidth = 1.0;
+  ctx.beginPath();
+  ctx.moveTo(0, 2); ctx.lineTo(0, -10);
+  ctx.stroke();
+  // Triangular sail
+  ctx.fillStyle = "#fff8e0";
+  ctx.beginPath();
+  ctx.moveTo(0, -10);
+  ctx.lineTo(7, 2);
+  ctx.lineTo(0, 2);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = "#5a605a"; ctx.lineWidth = 0.8;
+  ctx.stroke();
+  // Pier post (right side, anchoring composition) — single post only,
+  // no longer a three-post torii-gate that looked like a face base.
+  ctx.fillStyle = "#7a4a18";
+  ctx.fillRect(14, 4, 3, 18);
+  ctx.strokeStyle = "#3a1c08"; ctx.lineWidth = 1.0;
+  ctx.strokeRect(14, 4, 3, 18);
+  // Single seagull, pushed up into the sky (so it doesn't pair with anything
+  // below to form features).
   ctx.strokeStyle = "#fff"; ctx.lineWidth = 1.4;
-  [[-12, -14], [4, -16], [-2, -10]].forEach(([gx, gy]) => {
-    ctx.beginPath();
-    ctx.moveTo(gx - 3, gy); ctx.quadraticCurveTo(gx, gy - 2, gx + 3, gy);
-    ctx.stroke();
-  });
+  ctx.beginPath();
+  ctx.moveTo(-12, -18); ctx.quadraticCurveTo(-9, -20, -6, -18);
+  ctx.quadraticCurveTo(-3, -20, 0, -18);
+  ctx.stroke();
 }
 
 export const ICONS = {

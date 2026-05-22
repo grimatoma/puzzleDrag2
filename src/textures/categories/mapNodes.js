@@ -676,73 +676,68 @@ function drawPit(ctx) {
   ctx.beginPath();
   ctx.ellipse(0, 10, 16, 6, 0, 0, Math.PI * 2);
   ctx.fill();
-  // Crossed swords
+  // Crossed swords — drawn with rectangular pommels (round ones read as
+  // scissor handle loops) and chunkier blades/guards.
   ctx.save();
-  // Sword 1
-  ctx.save();
-  ctx.translate(-2, -8);
-  ctx.rotate(-0.4);
-  // Blade
-  ctx.fillStyle = "#c8c8d0";
-  ctx.beginPath();
-  ctx.moveTo(-2, 4);
-  ctx.lineTo(2, 4);
-  ctx.lineTo(2, -16);
-  ctx.lineTo(0, -22);
-  ctx.lineTo(-2, -16);
-  ctx.closePath();
-  ctx.fill();
-  ctx.strokeStyle = "#3a3a40";
-  ctx.lineWidth = 1;
-  ctx.stroke();
-  // Center line
-  ctx.strokeStyle = "rgba(58,58,64,0.6)";
-  ctx.lineWidth = 0.8;
-  ctx.beginPath();
-  ctx.moveTo(0, 4); ctx.lineTo(0, -20);
-  ctx.stroke();
-  // Cross-guard
-  ctx.fillStyle = "#a87838";
-  ctx.fillRect(-7, 4, 14, 2.6);
-  ctx.strokeStyle = "#3a1c08";
-  ctx.lineWidth = 0.8;
-  ctx.strokeRect(-7, 4, 14, 2.6);
-  // Hilt
-  ctx.fillStyle = "#5a3014";
-  ctx.fillRect(-1.4, 6.6, 2.8, 8);
-  ctx.fillStyle = "#a87838";
-  ctx.beginPath();
-  ctx.arc(0, 16, 2.4, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.restore();
-  // Sword 2 (mirrored)
-  ctx.save();
-  ctx.translate(2, -8);
-  ctx.rotate(0.4);
-  ctx.fillStyle = "#c8c8d0";
-  ctx.beginPath();
-  ctx.moveTo(-2, 4);
-  ctx.lineTo(2, 4);
-  ctx.lineTo(2, -16);
-  ctx.lineTo(0, -22);
-  ctx.lineTo(-2, -16);
-  ctx.closePath();
-  ctx.fill();
-  ctx.strokeStyle = "#3a3a40";
-  ctx.lineWidth = 1;
-  ctx.stroke();
-  ctx.fillStyle = "#a87838";
-  ctx.fillRect(-7, 4, 14, 2.6);
-  ctx.strokeStyle = "#3a1c08";
-  ctx.lineWidth = 0.8;
-  ctx.strokeRect(-7, 4, 14, 2.6);
-  ctx.fillStyle = "#5a3014";
-  ctx.fillRect(-1.4, 6.6, 2.8, 8);
-  ctx.fillStyle = "#a87838";
-  ctx.beginPath();
-  ctx.arc(0, 16, 2.4, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.restore();
+  const drawSword = (tx, ty, rot) => {
+    ctx.save();
+    ctx.translate(tx, ty);
+    ctx.rotate(rot);
+    // Blade — broader and longer than before
+    ctx.fillStyle = "#e0e0e8";
+    ctx.beginPath();
+    ctx.moveTo(-3, 4);
+    ctx.lineTo(3, 4);
+    ctx.lineTo(3, -18);
+    ctx.lineTo(0, -26);
+    ctx.lineTo(-3, -18);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = "#2a2a32";
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
+    // Fuller (centre groove)
+    ctx.strokeStyle = "rgba(70,70,78,0.9)";
+    ctx.lineWidth = 1.0;
+    ctx.beginPath();
+    ctx.moveTo(0, 3);
+    ctx.lineTo(0, -22);
+    ctx.stroke();
+    // Sheen
+    ctx.strokeStyle = "rgba(255,255,255,0.8)";
+    ctx.lineWidth = 0.7;
+    ctx.beginPath();
+    ctx.moveTo(-1.6, 0);
+    ctx.lineTo(-1.6, -20);
+    ctx.stroke();
+    // Cross-guard — chunky bar
+    ctx.fillStyle = "#a87838";
+    ctx.fillRect(-9, 4, 18, 3.2);
+    ctx.strokeStyle = "#3a1c08";
+    ctx.lineWidth = 0.9;
+    ctx.strokeRect(-9, 4, 18, 3.2);
+    // Grip — wrapped leather
+    ctx.fillStyle = "#3a1c08";
+    ctx.fillRect(-1.8, 7.2, 3.6, 7);
+    ctx.strokeStyle = "#1a0e04";
+    ctx.lineWidth = 0.7;
+    for (let i = 8; i < 14; i += 1.5) {
+      ctx.beginPath();
+      ctx.moveTo(-1.8, i);
+      ctx.lineTo(1.8, i);
+      ctx.stroke();
+    }
+    // Pommel — RECTANGULAR (was a circle, which made the icon read as
+    // scissor loops). Now reads unmistakably as a sword butt.
+    ctx.fillStyle = "#c89548";
+    ctx.fillRect(-2.6, 14.2, 5.2, 3);
+    ctx.strokeStyle = "#3a1c08";
+    ctx.lineWidth = 0.8;
+    ctx.strokeRect(-2.6, 14.2, 5.2, 3);
+    ctx.restore();
+  };
+  drawSword(-2, -6, -0.45);
+  drawSword( 2, -6,  0.45);
   ctx.restore();
 }
 

@@ -252,7 +252,10 @@ function drawWildGoose(ctx) {
 }
 
 function drawGoose(ctx) {
-  gooseBase(ctx, "#fffce8", "#c8b890", "#fffce8", "#f0a020");
+  // Domestic goose — keep it pale but tint just enough that the body
+  // silhouette reads against a light tile/UI background (previously it
+  // was almost #fffce8 and rendered as outline-only on cream tiles).
+  gooseBase(ctx, "#fff8d8", "#a89868", "#fff8d8", "#f0a020");
 }
 
 function drawParrot(ctx) {
