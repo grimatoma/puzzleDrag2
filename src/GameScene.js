@@ -1266,6 +1266,18 @@ export class GameScene extends Phaser.Scene {
       return;
     }
     this.dragging = true;
+    // Capture the pointer so the canvas keeps receiving pointermove/pointerup
+    // even if the finger slides over an overlapping React element. This also
+    // suppresses pointerleave for the duration of the drag, preventing the
+    // canvas.pointerleave handler from firing endPath() mid-chain.
+    this._capturedPointerId = null;
+    const _activePtr = this.input.activePointers.find(p => p.isDown);
+    if (_activePtr?.pointerId != null) {
+      try {
+        this.sys.game.canvas.setPointerCapture(_activePtr.pointerId);
+        this._capturedPointerId = _activePtr.pointerId;
+      } catch { /* browser doesn't support capture — pointerleave fallback still runs */ }
+    }
     this.clearPath(false);
     this.addToPath(tile);
     this.dimUnselectableTiles(tile.res.key);
@@ -1509,6 +1521,10 @@ export class GameScene extends Phaser.Scene {
   endPath() {
     if (!this.dragging) return;
     this.dragging = false;
+    if (this._capturedPointerId != null) {
+      try { this.sys.game.canvas.releasePointerCapture(this._capturedPointerId); } catch { /* ignore */ }
+      this._capturedPointerId = null;
+    }
     this.hideGrassHover();
     this.events.emit(SCENE_EVENTS.CHAIN_UPDATE, null);
     this.clearDimming();
