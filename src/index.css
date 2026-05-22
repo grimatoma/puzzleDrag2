@@ -143,6 +143,40 @@
   display: inline-block;
 }
 
+/* ── Boss encounter pre-roll ───────────────────────────────────────── */
+@keyframes bossCinematicVignette {
+  0%   { opacity: 0; }
+  30%  { opacity: 1; }
+  100% { opacity: 0; }
+}
+@keyframes bossCinematicFlash {
+  0%   { opacity: 0; transform: scale(0.4); }
+  20%  { opacity: 0.85; transform: scale(1.1); }
+  100% { opacity: 0; transform: scale(2.2); }
+}
+.boss-cinematic-vignette {
+  background: radial-gradient(
+    ellipse at center,
+    transparent 0%,
+    rgba(0, 0, 0, 0.55) 60%,
+    rgba(58, 18, 8, 0.85) 100%
+  );
+  animation: bossCinematicVignette 700ms ease-out both;
+}
+.boss-cinematic-flash {
+  width: 220px;
+  height: 220px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(214, 97, 42, 0.6) 0%,
+    rgba(156, 58, 74, 0.25) 50%,
+    transparent 75%
+  );
+  filter: blur(8px);
+  animation: bossCinematicFlash 700ms cubic-bezier(.4,0,.6,1) both;
+}
+
 /* ── Level-up cinematic ────────────────────────────────────────────── */
 @keyframes levelupBg {
   0%   { opacity: 0; }
