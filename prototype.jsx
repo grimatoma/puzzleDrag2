@@ -102,7 +102,7 @@ function PhaserMount({ dispatch, biomeKey, turnsUsed, uiLocked, boardActive, sce
           width: cssW * dpr,
           height: cssH * dpr,
           parent: host,
-          backgroundColor: "#75b94a",
+          backgroundColor: "#e9dfc6",
           scene: GameScene,
           // zoom = 1/dpr makes canvas.style display at CSS size while the
           // backing store stays at gameSize (cssSize × dpr).
@@ -364,7 +364,7 @@ export default function App() {
   }, [state.pendingReload]);
 
   return (
-    <div data-visual-root="app" className="h-full w-full bg-[#2a1d0f] text-[#2b2218] grid place-items-center" style={{ position: "relative", overflow: "hidden" }}>
+    <div data-visual-root="app" className="h-full w-full bg-[#e9dfc6] text-[#2b2218] grid place-items-center" style={{ position: "relative", overflow: "hidden" }}>
       {/* Ambient dust motes — behind all chrome */}
       {DUST_MOTES.map((m) => (
         <div
@@ -387,7 +387,7 @@ export default function App() {
 
       <div
         data-testid="app-shell"
-        className="hl-app-shell relative w-full max-w-[1280px] aspect-[5/4] max-h-[100dvh] max-[1024px]:aspect-auto max-[1024px]:max-h-none max-[1024px]:w-full max-[1024px]:h-full max-[1024px]:max-w-none bg-[#3a2715] rounded-2xl max-[1024px]:rounded-none overflow-hidden shadow-2xl border border-white/10 flex flex-col"
+        className="hl-app-shell relative w-full max-w-[1280px] aspect-[5/4] max-h-[100dvh] max-[1024px]:aspect-auto max-[1024px]:max-h-none max-[1024px]:w-full max-[1024px]:h-full max-[1024px]:max-w-none bg-[#f4ecd6] rounded-2xl max-[1024px]:rounded-none overflow-hidden shadow-2xl border border-[#c9b993] flex flex-col"
         style={{ zIndex: 1 }}
       >
         {/* HUD bar */}

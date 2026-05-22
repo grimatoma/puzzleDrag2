@@ -208,13 +208,13 @@ export function CompactOrders({ orders, inventory, dispatch }) {
             key={o.id}
             type="button"
             onClick={() => dispatch({ type: "TURN_IN_ORDER", id: o.id, npc: o.npc, key: o.key, need: o.need, reward: o.reward })}
-            className={`flex items-center gap-1.5 rounded-lg px-2 py-2 text-left border min-h-tap transition-colors ${done ? "bg-moss/40 border-moss text-white" : "bg-iron-deep border-iron text-cream"}`}
+            className={`flex items-center gap-1.5 rounded-lg px-2 py-2 text-left border min-h-tap transition-colors ${done ? "bg-moss/40 border-moss text-white" : "bg-parchment-soft border-iron text-ink"}`}
           >
             <span className="flex-shrink-0 grid place-items-center w-5 h-5">
               <Icon iconKey={o.key} size={20} />
             </span>
             <span className="flex-1 min-w-0 text-[10px] font-bold truncate">{label}</span>
-            <span className={`text-[10px] font-bold whitespace-nowrap tabular-nums ${done ? "text-white" : have > 0 ? "text-cream" : "text-parchment"}`}>
+            <span className={`text-[10px] font-bold whitespace-nowrap tabular-nums ${done ? "text-white" : have > 0 ? "text-ink" : "text-ink-soft"}`}>
               {Math.min(have, o.need)}/{o.need}
             </span>
             {done && (
