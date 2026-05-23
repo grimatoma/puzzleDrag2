@@ -1,4 +1,4 @@
-import { STORAGE_KEYS } from "../constants.js";
+import { STORAGE_KEYS, SAVE_SCHEMA_VERSION } from "../constants.js";
 
 const SAVE_KEY = STORAGE_KEYS.save;
 const VOLATILE = new Set(["modal", "bubble", "view", "viewParams", "pendingView", "craftingTab"]);
@@ -8,7 +8,15 @@ export function loadSavedState() {
     const raw = localStorage.getItem(SAVE_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw);
-    return parsed && typeof parsed === "object" ? parsed : null;
+    if (!parsed || typeof parsed !== "object") return null;
+    if (parsed.version !== SAVE_SCHEMA_VERSION) {
+      console.warn(
+        `[hearth] discarding save: schema version ${parsed.version} does not match current ${SAVE_SCHEMA_VERSION}; starting fresh`
+      );
+      try { localStorage.removeItem(SAVE_KEY); } catch { /* storage unavailable */ }
+      return null;
+    }
+    return parsed;
   } catch (e) { console.warn("[hearth] save data corrupt, starting fresh:", e); return null; }
 }
 

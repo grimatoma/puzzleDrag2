@@ -100,7 +100,7 @@ export let DEFAULT_HOME_BIOME = "prairie"; // Balance Manager: tuning.homeBiome
 
 // Save schema version. Forward migrations are not maintained — bump this
 // whenever persisted state changes shape and existing saves will be discarded.
-export const SAVE_SCHEMA_VERSION = 39;
+export const SAVE_SCHEMA_VERSION = 40;
 
 export const UPGRADE_THRESHOLDS = {
   grass_hay: 6, grass_meadow: 6, grass_spiky: 6,
@@ -183,6 +183,33 @@ export const FISH_TILE_POOL = [
   "fish_oyster",
 ];
 
+// Maps tile family name -> default produced resource key.
+// Read by GameScene.nextResource and the Balance Manager UI to determine
+// what a tile produces by default. Per-tile overrides live in tilePowers[id].producesResource.
+// Families with custom handlers (special, hazards) are intentionally absent.
+export const TILE_FAMILY_RESOURCE = {
+  grass: "hay_bundle",
+  grain: "flour",
+  tree: "plank",
+  bird: "eggs",
+  herd: "meat",
+  cattle: "milk",
+  mount: "horseshoe",
+  flower: "honey",
+  fruit: "pie",
+  veg: "soup",
+  mine_stone: "block",
+  mine_iron_ore: "iron_bar",
+  mine_copper_ore: "copper_bar",
+  mine_coal: "coke",
+  mine_gem: "cut_gem",
+  mine_gold: "gold_bar",
+  fish: "fish_fillet",
+  fish_clam: "sea_shells",
+  fish_oyster: "pearls",
+  fish_kelp: "fish_oil",
+};
+
 export const ITEMS = {
   // Farm tiles/resources
   grass_hay:          { kind: "tile", biome: "farm", label: "Hay",          color: 0xa8c769, dark: 0x4f6b3a, value: 1, next: null, sway: { amp: 4.0, freq: 0.00060, gust: 0.20 } },
@@ -216,6 +243,7 @@ export const ITEMS = {
   milk:               { kind: "resource", biome: "farm", label: "Milk",      color: 0xfaf6ec, dark: 0x807e74, value: 100, next: null },
   horseshoe:          { kind: "resource", biome: "farm", label: "Horseshoe", color: 0x8a8a90, dark: 0x46464a, value: 400, next: null },
   eggs:               { kind: "resource", biome: "farm", label: "Eggs",      color: 0xf8efd0, dark: 0x807660, value: 5, next: null },
+  hay_bundle:         { kind: "resource", biome: "farm", label: "Hay Bundle", color: 0xc9b160, dark: 0x6a5828, value: 6, next: null },
   bread:              { kind: "resource", biome: "farm", label: "Bread Loaf", color: 0xd49060, dark: 0x7a4a28, value: 125, next: null, desc: "A wholesome loaf baked from flour and eggs, sold for 125 coins at the Bakery." },
 
   grass_heather:      { kind: "tile", biome: "farm", label: "Heather",      color: 0x7a4f8a, dark: 0x3a2548, value: 1, next: null, sway: { amp: 2.5, freq: 0.00060, gust: 0.10 } },
@@ -278,6 +306,9 @@ export const ITEMS = {
   mine_cutgem: { kind: "resource", biome: "mine", label: "CutGem", color: 0xa3f0ff, dark: 0x1686a3, value: 14, next: null, sway: { amp: 1.2, freq: 0.00028, gust: 0.04 } },
   mine_gold:   { kind: "tile", biome: "mine", label: "Gold",   color: 0xffd34c, dark: 0x946b11, value: 5,  next: null, sway: { amp: 1.0, freq: 0.00024, gust: 0.04 } },
   mine_dirt:   { kind: "tile", biome: "mine", label: "Dirt",   color: 0x7a6850, dark: 0x3e3a36, value: 1,  next: null },
+  iron_bar:    { kind: "resource", biome: "mine", label: "Iron Bar",   color: 0x8a8e94, dark: 0x3a3e44, value: 8,  next: null },
+  copper_bar:  { kind: "resource", biome: "mine", label: "Copper Bar", color: 0xc97f3c, dark: 0x6a3e18, value: 8,  next: null },
+  gold_bar:    { kind: "resource", biome: "mine", label: "Gold Bar",   color: 0xf4c430, dark: 0x7a6010, value: 16, next: null },
 
   // Harbor tiles/resources
   fish_sardine:  { kind: "tile", biome: "fish", label: "Sardine",  color: 0x9ab8c4, dark: 0x4a5e68, value: 1, next: "fish_raw", sway: { amp: 1.4, freq: 0.00050, gust: 0.08 } },
@@ -288,6 +319,8 @@ export const ITEMS = {
   fish_raw:      { kind: "resource", biome: "fish", label: "Fish",     color: 0xb0c8d4, dark: 0x546a78, value: 4, next: "fish_fillet" },
   fish_fillet:   { kind: "resource", biome: "fish", label: "Fillet",   color: 0xe8c8b0, dark: 0x7a604c, value: 8, next: null },
   fish_oil:      { kind: "resource", biome: "fish", label: "Fish Oil", color: 0xe8d050, dark: 0x7a6818, value: 6, next: null },
+  sea_shells:    { kind: "resource", biome: "fish", label: "Sea Shells", color: 0xf4ead0, dark: 0x80755a, value: 5, next: null },
+  pearls:        { kind: "resource", biome: "fish", label: "Pearls",     color: 0xe8e0e8, dark: 0x807888, value: 12, next: null },
   fish_pearl:    { kind: "tile", biome: "fish", label: "Pearl",    color: 0xefe8d8, dark: 0x6a6258, value: 0, next: null },
 
   // Tools
