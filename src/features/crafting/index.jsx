@@ -462,6 +462,13 @@ export default function CraftingScreen({ state, dispatch }) {
             </FeaturePanel.Tab>
           );
         })}
+        <button
+          type="button"
+          onClick={() => { window.location.hash = "#/wiki"; }}
+          className="ml-auto flex-shrink-0 self-center mr-1 rounded-lg px-2 py-1 border border-iron bg-parchment-dim text-ink-soft text-[11px] hover:bg-parchment-soft transition-colors"
+        >
+          Recipe Graph →
+        </button>
       </FeaturePanel.Tabs>
 
       {/* Active station's queue strip (only when it has items) */}
