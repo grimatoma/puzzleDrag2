@@ -157,7 +157,7 @@ export default function Popover({
         left: pos ? pos.left : -9999,
         zIndex: 60,
         visibility: pos ? "visible" : "hidden",
-        animation: "fadein 150ms ease-out both",
+        animation: "fadein 150ms cubic-bezier(0.4, 0, 0.2, 1) both",
       }}
     >
       {content}

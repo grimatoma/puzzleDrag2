@@ -186,7 +186,7 @@ export function TapCue({ label = "Tap to continue" }) {
                color: SC.goldSoft, fontWeight: 600, fontSize: 11, lineHeight: 1, letterSpacing: "0.07em", textTransform: "uppercase" }}
     >
       {label}
-      <span style={{ display: "inline-block", width: 6, height: 6, borderRadius: 999, background: SC.gold, animation: "storyPulseRing 1.6s ease-out infinite" }} />
+      <span style={{ display: "inline-block", width: 6, height: 6, borderRadius: 999, background: SC.gold, animation: "storyPulseRing 1.6s cubic-bezier(0.4, 0, 0.2, 1) infinite" }} />
     </span>
   );
 }

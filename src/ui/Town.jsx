@@ -69,7 +69,7 @@ function ThemeBackdrop({ bg }) {
             background: l.bg,
             opacity: 1,
             animation: i > 0
-              ? `townThemeFade ${THEME_CROSSFADE_MS}ms ease-in-out forwards`
+              ? `townThemeFade ${THEME_CROSSFADE_MS}ms cubic-bezier(0.4, 0, 0.2, 1) forwards`
               : undefined,
           }}
         />
@@ -155,7 +155,7 @@ function FoundSettlementBanner({ state, dispatch }) {
 // is locked to the viewBox so a cloud sized 96×26 looks identical to one
 // at 128×34, just scaled.
 function Cloud({ top, w, h, color, anim, breatheDur }) {
-  const animation = breatheDur ? `${anim}, cloudBreathe ${breatheDur}s ease-in-out infinite` : anim;
+  const animation = breatheDur ? `${anim}, cloudBreathe ${breatheDur}s cubic-bezier(0.4, 0, 0.2, 1) infinite` : anim;
   // Stable per-instance id for the gradient defs (so multiple Cloud
   // instances don't collide). Derived from the rendered width — sufficient
   // for the half-dozen clouds the town backdrop has.
@@ -736,7 +736,7 @@ function BuildingSmoke() {
             width: 8 + i * 2,
             height: 8 + i * 2,
             background: "rgba(240,235,220,.6)",
-            animation: "townSmoke 3.4s ease-out infinite",
+            animation: "townSmoke 3.4s cubic-bezier(0.4, 0, 0.2, 1) infinite",
             animationDelay: `${i * 1.1}s`,
           }}
         />
@@ -753,7 +753,7 @@ function HearthGlow() {
           width: "120%",
           height: "120%",
           background: "radial-gradient(circle, rgba(255,160,0,0.22) 0%, rgba(255,100,0,0.08) 50%, transparent 100%)",
-          animation: "hearthPulse 4s ease-in-out infinite",
+          animation: "hearthPulse 4s cubic-bezier(0.4, 0, 0.2, 1) infinite",
         }}
       />
     </div>

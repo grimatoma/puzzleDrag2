@@ -202,7 +202,7 @@ function SpringDeco({ width, busy }) {
           className="hwv-anim"
           style={{
             transformOrigin: `${b.x}px ${b.y}px`,
-            animation: `hwv-spring-sway ${b.period}ms ease-in-out infinite`,
+            animation: `hwv-spring-sway ${b.period}ms cubic-bezier(0.4, 0, 0.2, 1) infinite`,
             animationDelay: `${b.delay}ms`,
           }}
         >
@@ -249,7 +249,7 @@ function SummerDeco({ width, busy }) {
       {/* big sun with 8 rays */}
       <g
         className="hwv-anim"
-        style={{ animation: "hwv-summer-pulse 2200ms ease-in-out infinite" }}
+        style={{ animation: "hwv-summer-pulse 2200ms cubic-bezier(0.4, 0, 0.2, 1) infinite" }}
       >
         {[0, 45, 90, 135, 180, 225, 270, 315].map((deg) => {
           const a = (deg * Math.PI) / 180;
@@ -304,7 +304,7 @@ function SummerDeco({ width, busy }) {
           className="hwv-anim"
           style={{
             transformOrigin: `${Math.min(width - 22, 36)}px 28px`,
-            animation: "hwv-spring-sway 900ms ease-in-out infinite",
+            animation: "hwv-spring-sway 900ms cubic-bezier(0.4, 0, 0.2, 1) infinite",
           }}
         >
           <ellipse cx="0" cy="0" rx="2.4" ry="1.5" fill="#f0c14b" stroke="#3a2412" strokeWidth="0.3" />
@@ -377,7 +377,7 @@ function AutumnDeco({ width, busy }) {
           className="hwv-anim"
           style={{
             transformOrigin: `${x}px 6px`,
-            animation: "hwv-autumn-fall 3800ms ease-in infinite",
+            animation: "hwv-autumn-fall 3800ms cubic-bezier(0.4, 0, 0.2, 1) infinite",
             animationDelay: `${(i * 700) % 3800}ms`,
           }}
         >
@@ -451,7 +451,7 @@ function WinterDeco({ width, busy }) {
             className="hwv-anim"
             style={{
               transformOrigin: `${x}px ${y}px`,
-              animation: "hwv-winter-drift 2600ms ease-in-out infinite",
+              animation: "hwv-winter-drift 2600ms cubic-bezier(0.4, 0, 0.2, 1) infinite",
               animationDelay: `${(i * 320) % 2600}ms`,
             }}
           >
@@ -712,7 +712,7 @@ function Wagon({ progress, cargoSeason }) {
         style={{
           width: "100%",
           height: "100%",
-          animation: "hwv-wagon-bob 1700ms ease-in-out infinite",
+          animation: "hwv-wagon-bob 1700ms cubic-bezier(0.4, 0, 0.2, 1) infinite",
         }}
       >
         <svg width="44" height="34" viewBox="-22 -26 44 34" aria-hidden="true">

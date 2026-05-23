@@ -236,7 +236,7 @@ function ChainView({ chainInfo, inventory }) {
                     background: `linear-gradient(180deg, ${stage.top} 0%, ${stage.bot} 100%)`,
                     boxShadow:
                       "inset 0 -3px 0 rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.4)",
-                    transition: "width 120ms ease-out",
+                    transition: "width 120ms cubic-bezier(0.4, 0, 0.2, 1)",
                   }}
                 />
               </>
@@ -261,7 +261,7 @@ function ChainView({ chainInfo, inventory }) {
                     background: `linear-gradient(180deg, ${stage.top} 0%, ${stage.bot} 100%)`,
                     boxShadow:
                       "inset 0 -3px 0 rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.35)",
-                    transition: "left 120ms ease-out, width 120ms ease-out",
+                    transition: "left 120ms cubic-bezier(0.4, 0, 0.2, 1), width 120ms cubic-bezier(0.4, 0, 0.2, 1)",
                   }}
                 />
               </>
@@ -378,7 +378,7 @@ function ChainView({ chainInfo, inventory }) {
                 width: `${pct}%`,
                 background: `linear-gradient(90deg, ${stage.accent}, ${stage.top})`,
                 boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.4)",
-                transition: "width 120ms ease-out",
+                transition: "width 120ms cubic-bezier(0.4, 0, 0.2, 1)",
               }}
             />
           </div>
@@ -1604,7 +1604,7 @@ export function BoardFrame({ children, seasonIdx, armed = false }) {
             className="pointer-events-none absolute inset-0"
             style={{
               borderRadius: 14,
-              animation: "hwv-armed-pulse 1100ms ease-in-out infinite",
+              animation: "hwv-armed-pulse 1100ms cubic-bezier(0.4, 0, 0.2, 1) infinite",
               zIndex: 30,
             }}
           />
