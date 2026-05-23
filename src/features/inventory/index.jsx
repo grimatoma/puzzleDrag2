@@ -202,7 +202,7 @@ export default function InventoryScreen({ state, dispatch, searchOpen: searchOpe
             state={state}
             dispatch={dispatch}
             filter={combinedFilter}
-            sort="count"
+            sort="alpha"
             query={query}
             recentOrder={recentOrder}
             compact={isPhone}
