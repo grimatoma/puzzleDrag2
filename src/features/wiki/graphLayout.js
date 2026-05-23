@@ -1,7 +1,7 @@
 export const NODE_W = 120;
 export const NODE_H = 72;
-const COL_STRIDE = 180;
-const ROW_STRIDE = 84;
+export const COL_STRIDE = 180;
+export const ROW_STRIDE = 84;
 
 export function buildGraph(recipes, labelFn) {
   const recipeList = Object.values(recipes).filter(
