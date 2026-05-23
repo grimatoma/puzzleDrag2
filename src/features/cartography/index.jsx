@@ -545,16 +545,6 @@ function HeaderBar({ currentNode, visitedCount, totalCount, state, dispatch }) {
             </span>
           )}
         </div>
-        <button
-          type="button"
-          onClick={() => dispatch({ type: "SETTINGS/OPEN_DEBUG" })}
-          className="flex-shrink-0 px-2 py-1 rounded-lg border-2 text-[11px] font-bold leading-tight"
-          style={{ background: "#5a5e66", borderColor: "#2a2e36", color: "#fff" }}
-          title="Open debug menu"
-          aria-label="Open debug menu"
-        >
-          🛠 Debug
-        </button>
       </div>
       <div className="flex items-center gap-2 flex-shrink-0">
         <HearthTokensStrip state={state} />

@@ -100,6 +100,18 @@ function MainTab({ dispatch }) {
         <ActionBtn onClick={() => { dispatch({ type: 'CLOSE_MODAL' }); dispatch({ type: 'SET_VIEW', view: 'achievements' }); }}>
           🏆 Trophies
         </ActionBtn>
+
+        <ActionBtn onClick={() => dispatch({ type: 'SETTINGS/OPEN_DEBUG' })}>
+          🛠 Debug
+        </ActionBtn>
+
+        <a
+          href={`${import.meta.env.BASE_URL}b/`}
+          className="w-full py-2 px-4 text-[13px] font-bold rounded-xl border-2 flex items-center justify-center no-underline"
+          style={{ background: '#e8dcc4', borderColor: '#b28b62', color: '#5a3a20' }}
+        >
+          ⚖️ Balance Manager
+        </a>
       </div>
     </div>
   );
