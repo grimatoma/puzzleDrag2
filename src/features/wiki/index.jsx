@@ -247,18 +247,19 @@ export default function WikiScreen() {
     dragRef.current = { startX: e.clientX - view.x, startY: e.clientY - view.y };
   }
   function doPan(e) {
-    if (!dragRef.current) return;
+    const drag = dragRef.current;
+    if (!drag) return;
     setView((v) => ({
       ...v,
-      x: e.clientX - dragRef.current.startX,
-      y: e.clientY - dragRef.current.startY,
+      x: e.clientX - drag.startX,
+      y: e.clientY - drag.startY,
     }));
   }
   function endPan() {
     dragRef.current = null;
   }
 
-  // Zoom
+  // Zoom — must be non-passive to call preventDefault and block page scroll
   const doZoom = useCallback((e) => {
     e.preventDefault();
     const delta = -e.deltaY * 0.001;
@@ -275,6 +276,13 @@ export default function WikiScreen() {
       };
     });
   }, []);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    el.addEventListener("wheel", doZoom, { passive: false });
+    return () => el.removeEventListener("wheel", doZoom);
+  }, [doZoom]);
 
   // Fit button
   function handleFit() {
@@ -334,7 +342,6 @@ export default function WikiScreen() {
           onPointerMove={doPan}
           onPointerUp={endPan}
           onPointerCancel={endPan}
-          onWheel={doZoom}
         >
           {/* SVG edge layer */}
           <svg

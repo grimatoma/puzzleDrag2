@@ -21,6 +21,7 @@ export default defineConfig({
   ],
   base: process.env.BASE_PATH || "/puzzleDrag2/",
   build: {
+    minify: false,
     sourcemap: true,
     rollupOptions: {
       // Keep the main entry keyed `index` so its chunk lands as `index-*.js`
