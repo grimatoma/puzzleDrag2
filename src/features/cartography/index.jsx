@@ -531,7 +531,7 @@ function HearthTokensStrip({ state }) {
 
 // ─── Header bar ────────────────────────────────────────────────────────────
 
-function HeaderBar({ currentNode, visitedCount, totalCount, state, dispatch }) {
+function HeaderBar({ currentNode, visitedCount, totalCount, state }) {
   return (
     <div className="flex items-center justify-between px-3 py-2 flex-shrink-0 border-b border-[#b28b62]/40 gap-2">
       <div className="flex items-center gap-2 min-w-0">

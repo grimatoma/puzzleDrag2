@@ -40,6 +40,7 @@ export const KNOWN_VIEWS = new Set([
   "decorations",
   "charter",
   "boons",
+  "recipeWiki",
 ]);
 
 // Modals that are reachable via the URL. The transient `season` modal is
@@ -55,9 +56,11 @@ export const KNOWN_MODALS = new Set([
 // Short alias used in URLs in place of the longer camelCase view key.
 const VIEW_ALIASES = {
   tiles: "tileCollection",
+  wiki: "recipeWiki",
 };
 const VIEW_ALIASES_REVERSE = {
   tileCollection: "tiles",
+  recipeWiki: "wiki",
 };
 
 // Views that accept a single `tab` segment after the view name. Each view's
