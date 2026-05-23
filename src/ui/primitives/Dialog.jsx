@@ -66,8 +66,8 @@ function BackdropShell({ exiting, onClose, closeOnBackdrop = true, className = "
     if (closeOnBackdrop && e.target === e.currentTarget && onClose) onClose();
   };
   const anim = exiting
-    ? `backdropOut ${DIALOG_EXIT_MS}ms ease-out both`
-    : "fadein 200ms ease-out both";
+    ? `backdropOut ${DIALOG_EXIT_MS}ms cubic-bezier(0.4, 0, 0.2, 1) both`
+    : "fadein 200ms cubic-bezier(0.4, 0, 0.2, 1) both";
   return createPortal(
     <div
       className={`hl-backdrop ${className}`}

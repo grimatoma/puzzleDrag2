@@ -79,8 +79,8 @@ export default function BottomSheet({
   const translateY = `calc(${100 - heightPct}% + ${dragOffset}px)`;
 
   const backdropAnim = exiting
-    ? `backdropOut ${SHEET_EXIT_MS}ms ease-out both`
-    : "fadein 200ms ease-out both";
+    ? `backdropOut ${SHEET_EXIT_MS}ms cubic-bezier(0.4, 0, 0.2, 1) both`
+    : "fadein 200ms cubic-bezier(0.4, 0, 0.2, 1) both";
   const sheetAnim = exiting
     ? `bottomSheetOut ${SHEET_EXIT_MS}ms cubic-bezier(.4,0,.6,1) both`
     : "bottomSheetIn 240ms cubic-bezier(.2,.7,.2,1) both";

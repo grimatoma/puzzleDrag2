@@ -47,8 +47,8 @@ function ToastItem({ entry, onDone }) {
   const toneCls = TONE_TOAST[entry.tone] || TONE_TOAST.info;
   const stagger = entry.stagger ?? 0;
   const anim = exiting
-    ? `toastOut ${TOAST_EXIT_MS}ms ease-in both`
-    : `toastIn 180ms ease-out ${stagger}ms both`;
+    ? `toastOut ${TOAST_EXIT_MS}ms cubic-bezier(0.4, 0, 0.2, 1) both`
+    : `toastIn 180ms cubic-bezier(0.4, 0, 0.2, 1) ${stagger}ms both`;
   return (
     <div
       className={`pointer-events-auto inline-flex items-center gap-2 px-3 py-2 rounded-md border shadow-md text-body font-medium tabular-nums ${toneCls}`}
@@ -78,8 +78,8 @@ function BubbleItem({ entry, onDone, onDismiss }) {
   };
 
   const anim = exiting
-    ? `toastOut ${BUBBLE_EXIT_MS}ms ease-in both`
-    : "toastIn 200ms ease-out both";
+    ? `toastOut ${BUBBLE_EXIT_MS}ms cubic-bezier(0.4, 0, 0.2, 1) both`
+    : "toastIn 200ms cubic-bezier(0.4, 0, 0.2, 1) both";
 
   return (
     <button
