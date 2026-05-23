@@ -123,18 +123,6 @@ function RecipeDetail({ recipeKey, recipe, inventory, built, level, state, dispa
       }
     >
       <CostGrid entries={entries} title={rawChanged ? "Inputs after worker bonuses" : "Inputs"} />
-      {itemDef.value != null && itemDef.kind !== "tool" && (
-        <div className="hl-well">
-          <div className="hl-section-label">Sell value</div>
-          <div className="hl-heading">+{itemDef.value} coins</div>
-        </div>
-      )}
-      {itemDef.kind === "tool" && (
-        <div className="hl-well">
-          <div className="hl-section-label">Output</div>
-          <div className="hl-text-dim">Adds one {itemName} to your tools.</div>
-        </div>
-      )}
     </DetailPane>
   );
 }
