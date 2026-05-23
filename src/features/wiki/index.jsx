@@ -208,9 +208,12 @@ function WikiInfoCard({ itemKey, onClose }) {
 export default function WikiScreen() {
   const [view, setView] = useState({ x: 40, y: 40, scale: 1 });
   const [selectedKey, setSelectedKey] = useState(null);
+  const [filteredNodeKey, setFilteredNodeKey] = useState("");
   const [query, setQuery] = useState("");
   const containerRef = useRef(null);
   const dragRef = useRef(null);
+  const pointersRef = useRef(new Map());
+  const pinchRef = useRef(null);
 
   const { nodes, edges, totalW, totalH } = useMemo(
     () =>
@@ -227,26 +230,63 @@ export default function WikiScreen() {
     return nodes.find((n) => n.label.toLowerCase().includes(query.toLowerCase()))?.key ?? null;
   }, [query, nodes]);
 
-  // Dimming: click selection → immediate neighbors; search → full transitive chain
-  const connectedKeys = useMemo(() => {
-    if (selectedKey) {
-      const s = new Set([selectedKey]);
-      for (const e of edges) {
-        if (e.fromKey === selectedKey) s.add(e.toKey);
-        if (e.toKey === selectedKey) s.add(e.fromKey);
-      }
-      return s;
-    }
-    if (autoSelectedKey) return computeTransitiveChain(autoSelectedKey, edges);
-    return null;
-  }, [selectedKey, autoSelectedKey, edges]);
+  const chainFocusKey = selectedKey ?? filteredNodeKey || autoSelectedKey;
+  const connectedKeys = useMemo(
+    () => (chainFocusKey ? computeTransitiveChain(chainFocusKey, edges) : null),
+    [chainFocusKey, edges]
+  );
+
+  const visibleNodes = useMemo(
+    () => (connectedKeys ? nodes.filter((n) => connectedKeys.has(n.key)) : nodes),
+    [connectedKeys, nodes]
+  );
+  const visibleEdges = useMemo(
+    () =>
+      connectedKeys
+        ? edges.filter((e) => connectedKeys.has(e.fromKey) && connectedKeys.has(e.toKey))
+        : edges,
+    [connectedKeys, edges]
+  );
 
   // Pan
   function startPan(e) {
     e.currentTarget.setPointerCapture(e.pointerId);
-    dragRef.current = { startX: e.clientX - view.x, startY: e.clientY - view.y };
+    pointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pointersRef.current.size === 1) {
+      dragRef.current = { startX: e.clientX - view.x, startY: e.clientY - view.y };
+      pinchRef.current = null;
+      return;
+    }
+    if (pointersRef.current.size === 2) {
+      const pts = [...pointersRef.current.values()];
+      const [a, b] = pts;
+      const distance = Math.hypot(b.x - a.x, b.y - a.y);
+      const rect = containerRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      const cx = (a.x + b.x) / 2 - rect.left;
+      const cy = (a.y + b.y) / 2 - rect.top;
+      pinchRef.current = { distance, cx, cy, baseView: { ...view } };
+      dragRef.current = null;
+    }
   }
   function doPan(e) {
+    if (pointersRef.current.has(e.pointerId)) {
+      pointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    }
+    if (pointersRef.current.size === 2) {
+      const pts = [...pointersRef.current.values()];
+      const [a, b] = pts;
+      const distance = Math.hypot(b.x - a.x, b.y - a.y);
+      const pinch = pinchRef.current;
+      if (!pinch || pinch.distance <= 0) return;
+      const nextScale = Math.min(2.5, Math.max(0.25, pinch.baseView.scale * (distance / pinch.distance)));
+      setView(() => ({
+        scale: nextScale,
+        x: pinch.cx - (pinch.cx - pinch.baseView.x) * (nextScale / pinch.baseView.scale),
+        y: pinch.cy - (pinch.cy - pinch.baseView.y) * (nextScale / pinch.baseView.scale),
+      }));
+      return;
+    }
     const drag = dragRef.current;
     if (!drag) return;
     setView((v) => ({
@@ -256,7 +296,9 @@ export default function WikiScreen() {
     }));
   }
   function endPan() {
+    pointersRef.current.clear();
     dragRef.current = null;
+    pinchRef.current = null;
   }
 
   // Zoom — must be non-passive to call preventDefault and block page scroll
@@ -332,6 +374,17 @@ export default function WikiScreen() {
         >
           Fit
         </button>
+        <select
+          value={filteredNodeKey}
+          onChange={(e) => setFilteredNodeKey(e.target.value)}
+          aria-label="Filter by node"
+          className="ml-2 rounded-lg px-2 py-1 border border-iron bg-parchment text-ink-soft text-[11px]"
+        >
+          <option value="">All nodes</option>
+          {nodes.map((n) => (
+            <option key={n.key} value={n.key}>{n.label}</option>
+          ))}
+        </select>
       </FeaturePanel.Toolbar>
 
       <FeaturePanel.Body>
@@ -354,7 +407,7 @@ export default function WikiScreen() {
             }}
           >
             <g transform={`translate(${view.x} ${view.y}) scale(${view.scale})`}>
-              {edges.map((e, i) => (
+              {visibleEdges.map((e, i) => (
                 <WikiEdge
                   key={i}
                   edge={e}
@@ -377,7 +430,7 @@ export default function WikiScreen() {
               height: totalH,
             }}
           >
-            {nodes.map((n) => (
+            {visibleNodes.map((n) => (
               <WikiNode
                 key={n.key}
                 node={n}
