@@ -6,13 +6,19 @@ export const RATS_HAZARD_ENABLED = true;
 
 // Returns true when dialogs/modals should be suppressed — useful for testing
 // pages so that auto-triggered story beats and season modals don't interrupt
-// the test flow. Set globalThis.__HEARTH_DISABLE_DIALOGS__ = true (e.g. via
-// page.addInitScript in Playwright) to activate at runtime without a rebuild.
+// the test flow. globalThis.__HEARTH_DISABLE_DIALOGS__ can force on/off at
+// runtime (e.g. via page.addInitScript in Playwright).
 export function isDialogsDisabled() {
-  if (globalThis.__HEARTH_DISABLE_DIALOGS__) return true;
+  const globalOverride = globalThis.__HEARTH_DISABLE_DIALOGS__;
+  if (typeof globalOverride === 'boolean') return globalOverride;
+
   try {
-    return localStorage.getItem('hearth.disableDialogs') === '1';
+    const persisted = localStorage.getItem('hearth.disableDialogs');
+    if (persisted === '1') return true;
+    if (persisted === '0') return false;
   } catch {
-    return false;
+    // Ignore storage access failures and fall through to the default.
   }
+
+  return true;
 }
