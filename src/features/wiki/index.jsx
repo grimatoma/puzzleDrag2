@@ -17,6 +17,26 @@ const STATION_COLORS = {
   smokehouse: "#9b6b4a",
 };
 
+// ── Transitive chain computation ──────────────────────────────────────────────
+function computeTransitiveChain(key, edges) {
+  // BFS upstream: all items needed (transitively) to craft this item
+  const chain = new Set([key]);
+  for (const curr of chain) {
+    for (const e of edges) {
+      if (e.toKey === curr) chain.add(e.fromKey);
+    }
+  }
+  // BFS downstream: all items that use this item (transitively)
+  const downstream = new Set([key]);
+  for (const curr of downstream) {
+    for (const e of edges) {
+      if (e.fromKey === curr) downstream.add(e.toKey);
+    }
+  }
+  for (const k of downstream) chain.add(k);
+  return chain;
+}
+
 // ── WikiNode ──────────────────────────────────────────────────────────────────
 function WikiNode({ node, selectedKey, connectedKeys, onSelect }) {
   const isSelected = selectedKey === node.key;
@@ -35,6 +55,7 @@ function WikiNode({ node, selectedKey, connectedKeys, onSelect }) {
       tabIndex={0}
       aria-pressed={isSelected}
       aria-label={node.label}
+      onPointerDown={(e) => e.stopPropagation()}
       onClick={(e) => { e.stopPropagation(); onSelect(node.key); }}
       onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.stopPropagation(); onSelect(node.key); } }}
       style={{
@@ -200,16 +221,25 @@ export default function WikiScreen() {
     []
   );
 
-  // Dimming — which keys are connected to the selected node
+  // Key matched by current search query (for chain filter)
+  const autoSelectedKey = useMemo(() => {
+    if (!query) return null;
+    return nodes.find((n) => n.label.toLowerCase().includes(query.toLowerCase()))?.key ?? null;
+  }, [query, nodes]);
+
+  // Dimming: click selection → immediate neighbors; search → full transitive chain
   const connectedKeys = useMemo(() => {
-    if (!selectedKey) return null;
-    const s = new Set([selectedKey]);
-    for (const e of edges) {
-      if (e.fromKey === selectedKey) s.add(e.toKey);
-      if (e.toKey === selectedKey) s.add(e.fromKey);
+    if (selectedKey) {
+      const s = new Set([selectedKey]);
+      for (const e of edges) {
+        if (e.fromKey === selectedKey) s.add(e.toKey);
+        if (e.toKey === selectedKey) s.add(e.fromKey);
+      }
+      return s;
     }
-    return s;
-  }, [selectedKey, edges]);
+    if (autoSelectedKey) return computeTransitiveChain(autoSelectedKey, edges);
+    return null;
+  }, [selectedKey, autoSelectedKey, edges]);
 
   // Pan
   function startPan(e) {
