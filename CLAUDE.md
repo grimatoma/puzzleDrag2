@@ -82,6 +82,37 @@ This is a Phaser 3 + React game. React owns the page shell *and* the canonical g
 
 When adding a new slice action, decide which set (if any) it belongs in. The `check-slice-action` skill validates registration.
 
+## Tiles vs Resources (and the upgrade pipeline)
+
+The game has three disjoint item kinds in `ITEMS` (`src/constants.js`), discriminated by the `kind` field:
+
+| Kind | Lives on | Key prefix | Examples |
+|---|---|---|---|
+| `tile` | the board | `tile_*` | `tile_grass_hay`, `tile_mount_horse`, `tile_mine_stone` |
+| `resource` | inventory | no prefix | `flour`, `bread`, `block`, `horseshoe`, `supplies` |
+| `tool` | inventory (consumed on use) | no prefix | `axe`, `bomb`, `rake`, `shovel` |
+
+**Invariant:** tiles never enter inventory; resources never appear on the board; the three key namespaces are disjoint. Anything that crosses these lines is a bug.
+
+**Typing.** `src/types/items.js` declares the canonical `@typedef` discriminated union (`Item = TileItem | ResourceItem | ToolItem`) plus branded `TileKey` / `ResourceKey` / `ToolKey` string types. `src/types/guards.js` exports runtime predicates (`isTile`, `isResource`, `isTool`) and assertions (`assertTile`, `assertResource`, `assertTool` — throw in dev, warn-once in prod). `jsconfig.json` runs `checkJs:false` globally so files opt in to JSDoc checking with `// @ts-check` at the top; add the pragma to any file where you want VS Code + `tsc --noEmit` to verify your annotations.
+
+**Canonical inventory.** The Balance Manager Wiki tab (`/b/` → Wiki) iterates each concept (Tiles, Resources, Tools, Recipes, Hazards, Workers, Buildings, NPCs, Zones, Abilities, Tool Powers, …) from the live source maps. If you add a new tile/resource/tool, it appears there automatically — no manual registration. If something looks miscategorised in the wiki, fix the underlying `kind` field, not the wiki.
+
+**Known conflation (in-flight migration).** The codebase still has a few places where tile and resource keys are mixed:
+- `BIOMES[*].resources` (`src/constants.js`) contains both kinds — the dynamic builder filters by `biome`, not `kind`. Three `resourceByKey` helpers depend on this.
+- `CAPPED_RESOURCES` (`src/constants.js`) mixes tile and resource keys under one inventory cap.
+- Several recipes (`src/constants.js` RECIPES) consume `tile_*` keys as inputs; several building costs do the same.
+- `LONG_CHAIN_BONUSES` (`src/features/tileCollection/longChainBonus.js`) awards tile keys directly into inventory.
+- Order generation in `src/state/helpers.js` (`makeOrder`) draws from `biome.pool` (tile keys) rather than a resource-only pool.
+
+These are tracked for PR 4 cleanup. **Do not introduce new conflations** — if you're adding a recipe, building cost, or bonus, the input/cost/payout should be a resource key, not a tile key. Use `assertResource(key)` at any new write site that's supposed to receive a resource so regressions throw in dev.
+
+**Upgrade pipeline (intended model, partially wired).** A completed chain does two things conceptually distinct:
+1. **Board-side:** spawns a higher-tier *tile* at the chain endpoint, driven by `zone.upgradeMap` in `src/features/zones/data.js` (category → category). The data exists; runtime wiring is PR 3 work.
+2. **Inventory-side:** accumulates progress toward one *resource* per tile family (`tileFamilyResource()` in `src/constants.js`). Today this rolls over in whole-tile increments; PR 3 introduces fractional `resourceProgress` state.
+
+Until PR 3 lands, `tile.next` still names a resource that gets both placed on the board AND added to inventory (one entity, double duty). Don't lean on that behavior in new code — treat `next` as "the resource this tile produces" and let PR 3 split off the upgrade-tile side.
+
 ## Testing a specific UI
 
 Three layered ways to land on the exact screen you want to verify, without clicking through the game from a fresh save.

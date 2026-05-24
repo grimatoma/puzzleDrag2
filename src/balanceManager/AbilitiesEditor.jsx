@@ -13,7 +13,7 @@ import {
 import { useMemo } from "react";
 import { BIOMES } from "../constants.js";
 import { CATEGORIES } from "../features/tileCollection/data.js";
-import { COLORS, NumberField, Select, SmallButton, Card, SearchAndAddPicker, resourceKeyOptions, hazardOptions } from "./shared.jsx";
+import { COLORS, NumberField, Select, SmallButton, Card, SearchAndAddPicker, resourceKeyOptions, tileKeyOptions, hazardOptions } from "./shared.jsx";
 
 function categoryOptions() {
   return [
@@ -68,6 +68,10 @@ function ParamField({ param, value, onChange }) {
     case "resourceKey":
       return (
         <Select value={value ?? ""} options={resourceKeyOptions()} onChange={onChange} />
+      );
+    case "tileKey":
+      return (
+        <Select value={value ?? ""} options={tileKeyOptions()} onChange={onChange} />
       );
     case "category":
       return (

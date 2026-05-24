@@ -266,6 +266,7 @@ export const ITEMS = {
   eggs:               { kind: "resource", biome: "farm", label: "Eggs",      color: 0xf8efd0, dark: 0x807660, value: 5, next: null },
   hay_bundle:         { kind: "resource", biome: "farm", label: "Hay Bundle", color: 0xc9b160, dark: 0x6a5828, value: 6, next: null },
   bread:              { kind: "resource", biome: "farm", label: "Bread Loaf", color: 0xd49060, dark: 0x7a4a28, value: 125, next: null, desc: "A wholesome loaf baked from flour and eggs, sold for 125 coins at the Bakery." },
+  supplies:           { kind: "resource", biome: "farm", label: "Supplies",   color: 0x8a6a3a, dark: 0x453519, value: 30,  next: null, desc: "Travel rations packed at the Kitchen. Three supplies grant standard Mine entry." },
 
   tile_grass_heather:      { kind: "tile", biome: "farm", label: "Heather",      color: 0x7a4f8a, dark: 0x3a2548, value: 1, next: "hay_bundle", sway: { amp: 2.5, freq: 0.00060, gust: 0.10 } },
   tile_grain_corn:         { kind: "tile", biome: "farm", label: "Corn",         color: 0xf4c84a, dark: 0x7a6020, value: 1, next: "flour", sway: { amp: 4.0, freq: 0.00060, gust: 0.18 } },
@@ -707,7 +708,7 @@ export const RESOURCE_CAP_BASE = 200;
 export const RESOURCE_CAP_GRANARY = 500;
 /** Raw farm + mine resources subject to the inventory cap. */
 export const CAPPED_RESOURCES = ["tile_grass_hay","tile_grain_wheat","flour","plank",
-  "jam","eggs","tile_mine_stone","tile_mine_iron_ore","tile_mine_copper_ore","tile_mine_coal","hay_bundle",
+  "jam","tile_mine_stone","tile_mine_iron_ore","tile_mine_copper_ore","tile_mine_coal","hay_bundle",
   "tile_veg_carrot","tile_veg_eggplant","tile_veg_turnip","tile_veg_beet","tile_veg_cucumber","tile_veg_squash","tile_veg_mushroom","tile_veg_pepper","tile_veg_broccoli","soup",
   // Catalog-import placeholders.
   "tile_grass_heather",

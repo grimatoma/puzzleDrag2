@@ -2,7 +2,7 @@
 // ember-orange accents.
 import { useState } from "react";
 import Icon from "../ui/Icon.jsx";
-import { BIOMES } from "../constants.js";
+import { BIOMES, ITEMS } from "../constants.js";
 import {
   NumberInput as BaseNumberInput,
   SearchInput as BaseSearchInput,
@@ -285,13 +285,27 @@ export function SearchAndAddPicker({
   );
 }
 
-/** Options for resource-key selects. Drawn from all biome resource lists. */
+/** Options for resource-key selects. Drawn from all biome resource lists; excludes tile-kind entries. */
 export function resourceKeyOptions() {
   const set = new Set();
-  for (const b of Object.values(BIOMES)) for (const r of b.resources) set.add(r.key);
+  for (const b of Object.values(BIOMES))
+    for (const r of b.resources)
+      if (ITEMS[r.key]?.kind === "resource") set.add(r.key);
   return [
     { value: "", label: "— pick resource —" },
     ...[...set].sort().map((k) => ({ value: k, label: k })),
+  ];
+}
+
+/** Options for tile-key selects. Returns only entries from ITEMS where kind === "tile". */
+export function tileKeyOptions() {
+  const keys = Object.entries(ITEMS)
+    .filter(([, v]) => v.kind === "tile")
+    .map(([k]) => k)
+    .sort();
+  return [
+    { value: "", label: "— pick tile —" },
+    ...keys.map((k) => ({ value: k, label: k })),
   ];
 }
 
