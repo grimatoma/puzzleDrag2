@@ -12,8 +12,9 @@
 // deliberately spends the tool item to trigger the effect.
 
 export const TOOL_POWER_PARAM_TYPES = Object.freeze({
-  RESOURCE_KEY: "resourceKey",
   HAZARD: "hazard",
+  RESOURCE_KEY: "resourceKey",
+  TILE_KEY: "tileKey",
 });
 
 export const TOOL_POWERS = Object.freeze([
@@ -21,13 +22,13 @@ export const TOOL_POWERS = Object.freeze([
     id: "clear_all",
     name: "Clear All Tiles",
     desc: "Sweeps every tile matching the target resource from the board.",
-    params: [{ key: "target", label: "Target Resource", type: "resourceKey" }],
+    params: [{ key: "target", label: "Target Tile", type: "tileKey" }],
   },
   {
     id: "fill_bias",
     name: "Fill Bias",
     desc: "Biases the next board fill toward the target resource.",
-    params: [{ key: "target", label: "Target Resource", type: "resourceKey" }],
+    params: [{ key: "target", label: "Target Tile", type: "tileKey" }],
   },
   {
     id: "clear_hazard",

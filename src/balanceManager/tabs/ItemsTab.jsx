@@ -11,7 +11,7 @@ import { tagsForItemKey, sourceTagsForItem } from "../../features/inventory/tags
 import {
   COLORS, NumberField, TextField, TextArea, ColorField,
   SmallButton, Pill, Card, SearchBar, TileSwatch,
-  FilterBar, SegmentedFilter, Select, resourceKeyOptions, hazardOptions,
+  FilterBar, SegmentedFilter, Select, resourceKeyOptions, tileKeyOptions, hazardOptions,
 } from "../shared.jsx";
 import { TOOL_POWERS, getToolPower, defaultsForToolPower } from "../../config/toolPowers.js";
 import Icon from "../../ui/Icon.jsx";
@@ -207,6 +207,12 @@ export default function ItemsTab({ draft, updateDraft }) {
                                 <Select
                                   value={eff[p.key] ?? ""}
                                   options={resourceKeyOptions()}
+                                  onChange={(v) => patchItem(key, { [p.key]: v })}
+                                />
+                              ) : p.type === "tileKey" ? (
+                                <Select
+                                  value={eff[p.key] ?? ""}
+                                  options={tileKeyOptions()}
                                   onChange={(v) => patchItem(key, { [p.key]: v })}
                                 />
                               ) : p.type === "hazard" ? (
