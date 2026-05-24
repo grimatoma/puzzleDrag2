@@ -168,76 +168,86 @@ export default function ItemsTab({ draft, updateDraft }) {
                     </div>
                   )}
 
-                  {/* The power — having one of these is what makes an item a tool. */}
+                  {/* The power — having one of these is what makes an item a tool.
+                      Grouped into its own sub-Card so the connected attributes
+                      (effect + its params + anim) read as a single unit, the
+                      same way Abilities/Attributes render on Buildings. */}
                   {tool && (
-                    <>
-                      {/* Effect (power) — schema-driven dropdown */}
-                      <div className="col-span-2">
-                        <Label>Effect (power)</Label>
-                        <Select
-                          value={eff.effect}
-                          options={[
-                            { value: "", label: "— pick power —" },
-                            ...TOOL_POWERS.map((p) => ({ value: p.id, label: `${p.name} — ${p.id}` })),
-                          ]}
-                          onChange={(v) => {
-                            const defaults = defaultsForToolPower(v);
-                            patchItem(key, { effect: v, target: defaults.target ?? "", ...defaults });
-                          }}
-                        />
-                        {getToolPower(eff.effect) && (
-                          <div className="text-[10px] italic mt-0.5" style={{ color: COLORS.inkSubtle }}>
-                            {getToolPower(eff.effect).desc}
-                          </div>
-                        )}
-                      </div>
-                      {/* Per-param fields driven by the power schema */}
-                      {(getToolPower(eff.effect)?.params ?? []).map((p) => (
-                        <div key={p.key}>
-                          <Label>{p.label}</Label>
-                          {p.type === "resourceKey" ? (
-                            <Select
-                              value={eff[p.key] ?? ""}
-                              options={resourceKeyOptions()}
-                              onChange={(v) => patchItem(key, { [p.key]: v })}
-                            />
-                          ) : p.type === "hazard" ? (
-                            <Select
-                              value={eff[p.key] ?? ""}
-                              options={hazardOptions()}
-                              onChange={(v) => patchItem(key, { [p.key]: v })}
-                            />
-                          ) : null}
+                    <div className="col-span-2">
+                      <Card>
+                        <div className="text-[11px] font-bold uppercase tracking-wide mb-2" style={{ color: COLORS.inkSubtle }}>
+                          Effect
                         </div>
-                      ))}
-                      {/* Anim — dropdown from known values across all tool items */}
-                      <div>
-                        <Label>Anim</Label>
-                        <Select
-                          value={eff.anim}
-                          options={(() => {
-                            const known = [...new Set(
-                              Object.values(ITEMS)
-                                .filter((it) => it.kind === "tool" && it.anim)
-                                .map((it) => it.anim)
-                            )].sort();
-                            const opts = [
-                              { value: "", label: "— pick anim —" },
-                              ...known.map((a) => ({ value: a, label: a })),
-                            ];
-                            if (eff.anim && !known.includes(eff.anim)) {
-                              opts.unshift({ value: eff.anim, label: `${eff.anim} (custom)` });
-                            }
-                            return opts;
-                          })()}
-                          onChange={(v) => patchItem(key, { anim: v })}
-                        />
-                      </div>
-                      <div>
-                        <Label>Anim MS</Label>
-                        <NumberField value={eff.ms} min={0} max={5000} onChange={(v) => patchItem(key, { ms: v })} width={80} />
-                      </div>
-                    </>
+                        <div className="grid grid-cols-2 gap-x-3 gap-y-1.5">
+                          {/* Effect (power) — schema-driven dropdown */}
+                          <div className="col-span-2">
+                            <Label>Effect (power)</Label>
+                            <Select
+                              value={eff.effect}
+                              options={[
+                                { value: "", label: "— pick power —" },
+                                ...TOOL_POWERS.map((p) => ({ value: p.id, label: `${p.name} — ${p.id}` })),
+                              ]}
+                              onChange={(v) => {
+                                const defaults = defaultsForToolPower(v);
+                                patchItem(key, { effect: v, target: defaults.target ?? "", ...defaults });
+                              }}
+                            />
+                            {getToolPower(eff.effect) && (
+                              <div className="text-[10px] italic mt-0.5" style={{ color: COLORS.inkSubtle }}>
+                                {getToolPower(eff.effect).desc}
+                              </div>
+                            )}
+                          </div>
+                          {/* Per-param fields driven by the power schema */}
+                          {(getToolPower(eff.effect)?.params ?? []).map((p) => (
+                            <div key={p.key}>
+                              <Label>{p.label}</Label>
+                              {p.type === "resourceKey" ? (
+                                <Select
+                                  value={eff[p.key] ?? ""}
+                                  options={resourceKeyOptions()}
+                                  onChange={(v) => patchItem(key, { [p.key]: v })}
+                                />
+                              ) : p.type === "hazard" ? (
+                                <Select
+                                  value={eff[p.key] ?? ""}
+                                  options={hazardOptions()}
+                                  onChange={(v) => patchItem(key, { [p.key]: v })}
+                                />
+                              ) : null}
+                            </div>
+                          ))}
+                          {/* Anim — dropdown from known values across all tool items */}
+                          <div>
+                            <Label>Anim</Label>
+                            <Select
+                              value={eff.anim}
+                              options={(() => {
+                                const known = [...new Set(
+                                  Object.values(ITEMS)
+                                    .filter((it) => it.kind === "tool" && it.anim)
+                                    .map((it) => it.anim)
+                                )].sort();
+                                const opts = [
+                                  { value: "", label: "— pick anim —" },
+                                  ...known.map((a) => ({ value: a, label: a })),
+                                ];
+                                if (eff.anim && !known.includes(eff.anim)) {
+                                  opts.unshift({ value: eff.anim, label: `${eff.anim} (custom)` });
+                                }
+                                return opts;
+                              })()}
+                              onChange={(v) => patchItem(key, { anim: v })}
+                            />
+                          </div>
+                          <div>
+                            <Label>Anim MS</Label>
+                            <NumberField value={eff.ms} min={0} max={5000} onChange={(v) => patchItem(key, { ms: v })} width={80} />
+                          </div>
+                        </div>
+                      </Card>
+                    </div>
                   )}
 
                   {/* Crafting recipes read-only summary */}
