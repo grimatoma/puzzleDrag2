@@ -235,6 +235,20 @@ export function tileFamilyResource(tileKey) {
   return fam ? (TILE_FAMILY_RESOURCE[fam] ?? null) : null;
 }
 
+// Derived map: resource key → upgrade threshold of the tile that produces it.
+// Built once at module load from UPGRADE_THRESHOLDS + tileFamilyResource.
+// When multiple tile variants in the same family share a threshold (grass,
+// bird, fruit, etc.) all map to the same resource — we take the first
+// threshold encountered (families are uniform in practice).
+export const RESOURCE_TO_THRESHOLD = (() => {
+  const out = {};
+  for (const [tileKey, threshold] of Object.entries(UPGRADE_THRESHOLDS)) {
+    const resource = tileFamilyResource(tileKey);
+    if (resource && out[resource] == null) out[resource] = threshold;
+  }
+  return out;
+})();
+
 export const ITEMS = {
   // Farm tiles/resources
   tile_grass_hay:          { kind: "tile", biome: "farm", label: "Hay",          color: 0xa8c769, dark: 0x4f6b3a, value: 1, next: "hay_bundle", sway: { amp: 4.0, freq: 0.00060, gust: 0.20 } },

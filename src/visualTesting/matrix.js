@@ -67,6 +67,8 @@ const BASE_VISUAL_SCENARIOS = [
   { id: "inventory-grid-all", state: "rich", hash: "#/inventory", diff: domDiff },
   { id: "inventory-list-mode", state: "rich", hash: "#/inventory", diff: domDiff },
   { id: "inventory-search-empty", state: "rich", hash: "#/inventory", actions: [{ type: "fillPlaceholder", placeholder: "Search resources...", value: "zzzz" }], diff: domDiff },
+  { id: "inventory-mid-progress", state: "inventoryMidProgress", hash: "#/inventory", diff: domDiff },
+  { id: "inventory-full-with-progress", state: "inventoryFullWithProgress", hash: "#/inventory", diff: domDiff },
   { id: "orders-mixed", state: "rich", hash: "#/orders", diff: domDiff },
   { id: "quests-daily-mixed", state: "rich", hash: "#/quests/daily", diff: domDiff },
   { id: "quests-almanac-mixed", state: "rich", hash: "#/quests/almanac", diff: domDiff },
