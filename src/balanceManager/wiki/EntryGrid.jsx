@@ -31,7 +31,7 @@ export default function EntryGrid({ entries, emptyLabel = "No entries." }) {
         return (
           <div
             key={entry.key}
-            className="rounded-lg border overflow-hidden flex flex-col items-center transition-shadow hover:shadow-md"
+            className="rounded-lg border flex flex-col items-center transition-shadow hover:shadow-md"
             style={{
               background: COLORS.parchment,
               borderColor: COLORS.border,
@@ -45,13 +45,13 @@ export default function EntryGrid({ entries, emptyLabel = "No entries." }) {
             <div className="flex flex-col items-center justify-center gap-1 px-2 pt-2 pb-2 w-full">
               <Icon iconKey={entry.iconKey} size={36} />
               <div
-                className="text-[12px] font-bold text-center leading-tight truncate w-full"
+                className="text-[12px] font-bold text-center leading-tight break-all w-full"
                 style={{ color: COLORS.ink }}
               >
                 {entry.name}
               </div>
               <div
-                className="font-mono text-[10px] text-center leading-tight truncate w-full"
+                className="font-mono text-[10px] text-center leading-tight break-all w-full"
                 style={{ color: COLORS.inkSubtle }}
               >
                 {entry.key}
