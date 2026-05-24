@@ -261,7 +261,7 @@ export default function WikiScreen() {
     return nodes.find((n) => n.label.toLowerCase().includes(query.toLowerCase()))?.key ?? null;
   }, [query, nodes]);
 
-  const chainFocusKey = selectedKey ?? filteredNodeKey || autoSelectedKey;
+  const chainFocusKey = (selectedKey ?? filteredNodeKey) || autoSelectedKey;
   const connectedKeys = useMemo(
     () => (chainFocusKey ? computeTransitiveChain(chainFocusKey, edges) : null),
     [chainFocusKey, edges]
