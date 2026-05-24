@@ -14,7 +14,7 @@ import {
   SmallButton, Pill, Card, SearchBar, TileSwatch,
   FilterBar, SegmentedFilter, Select, resourceKeyOptions, tileKeyOptions, hazardOptions,
 } from "../shared.jsx";
-import { TOOL_POWERS, getToolPower, defaultsForToolPower } from "../../config/toolPowers.js";
+import { TOOL_POWERS, getToolPower, defaultsForToolPower, defaultBoardAnimForPower } from "../../config/toolPowers.js";
 import { CardAttachmentFooter, RelationalFooter, CraftingRecipeLinks } from "../relational.jsx";
 
 const FILTERS = [
@@ -230,6 +230,20 @@ export default function ItemsTab({ draft, updateDraft }) {
                       <Label>Anim MS</Label>
                       <NumberField value={eff.ms} min={0} max={5000} onChange={(v) => patchItem(key, { ms: v })} width={80} />
                     </div>
+                    {(() => {
+                      const powerId = eff.effect || eff.power?.id;
+                      const def = powerId ? defaultBoardAnimForPower(powerId) : null;
+                      if (!def) return null;
+                      const overrides = eff.anim !== def.anim || eff.ms !== def.ms;
+                      return (
+                        <div className="col-span-2 text-[10px]" style={{ color: COLORS.inkSubtle }}>
+                          Power default: <code className="font-mono">{def.anim}</code> · {def.ms}ms
+                          {overrides && (
+                            <span style={{ color: COLORS.ember }}> — tool override</span>
+                          )}
+                        </div>
+                      );
+                    })()}
                   </div>
                 </CardAttachmentFooter>
               )}

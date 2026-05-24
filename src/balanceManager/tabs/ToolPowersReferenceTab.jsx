@@ -1,15 +1,51 @@
+import { BOARD_ANIMATIONS } from "../../config/boardAnimations.js";
 import { TOOL_POWERS } from "../../config/toolPowers.js";
-import { COLORS, Card } from "../shared.jsx";
+import { COLORS, Card, Pill } from "../shared.jsx";
+
+function BoardPresetTiming({ animName }) {
+  const entry = animName ? BOARD_ANIMATIONS[animName] : null;
+  if (!entry) return null;
+  return (
+    <div className="flex items-center gap-1 flex-wrap mt-1">
+      <span className="text-[10px]" style={{ color: COLORS.inkSubtle }}>
+        Preset <span className="font-mono">{animName}</span> ({entry.kind})
+      </span>
+      {Number.isFinite(entry.duration) && <Pill>duration: {entry.duration}ms</Pill>}
+      {Number.isFinite(entry.staggerMs) && <Pill>stagger: {entry.staggerMs}ms</Pill>}
+      {entry.ease && <Pill>ease: {entry.ease}</Pill>}
+    </div>
+  );
+}
+
+function DefaultBoardAnimBlock({ anim }) {
+  if (!anim) {
+    return (
+      <div className="text-[11px] italic" style={{ color: COLORS.inkSubtle }}>
+        No default board animation (state-only or deferred VFX).
+      </div>
+    );
+  }
+  return (
+    <div className="text-[11px]" style={{ color: COLORS.inkSubtle }}>
+      <span className="font-mono" style={{ color: COLORS.ink }}>{anim.anim}</span>
+      {" "}· {anim.ms}ms
+      <BoardPresetTiming animName={anim.anim} />
+      <div className="text-[10px] italic mt-1">
+        Starting point for new tools — override per item on the Inventory tab.
+      </div>
+    </div>
+  );
+}
 
 export default function ToolPowersReferenceTab() {
   return (
     <div className="flex flex-col gap-3">
       <Card>
         <div className="text-[12px]" style={{ color: COLORS.inkSubtle }}>
-          Catalog of all tool powers from <code>src/config/toolPowers.js</code>. Tool powers are the shared
-          active effects players trigger by spending a tool item. Board <code>anim</code> / <code>ms</code> are
-          per tool on the Inventory tab (<code>constants.js</code>), not on this tab — multiple tools can share
-          one power with different animations.
+          Catalog from <code>src/config/toolPowers.js</code>. Each power defines a{" "}
+          <strong>default</strong> board <code>anim</code> / <code>ms</code>; individual tools can override
+          on the Inventory tab when they share the same power (e.g. bird cage <code>cage</code> vs scythe{" "}
+          <code>sweep</code>, both clearing tiles).
         </div>
       </Card>
 
@@ -36,23 +72,32 @@ export default function ToolPowersReferenceTab() {
             </div>
           )}
 
-          <div>
-            <div className="text-[11px] font-bold uppercase mb-1" style={{ color: COLORS.ink }}>Config options</div>
-            {(power.params?.length ?? 0) === 0 ? (
-              <div className="text-[11px]" style={{ color: COLORS.inkSubtle }}>No params.</div>
-            ) : (
-              <ul className="text-[11px] list-disc pl-4" style={{ color: COLORS.inkSubtle }}>
-                {power.params.map((p) => (
-                  <li key={p.key}>
-                    <span className="font-mono" style={{ color: COLORS.ink }}>{p.key}</span>
-                    {" "}({p.type}) — {p.label}
-                    {p.default !== undefined && (
-                      <>; default: <span className="font-mono">{String(p.default)}</span></>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            )}
+          <div className="grid md:grid-cols-2 gap-3">
+            <div>
+              <div className="text-[11px] font-bold uppercase mb-1" style={{ color: COLORS.ink }}>Config options</div>
+              {(power.params?.length ?? 0) === 0 ? (
+                <div className="text-[11px]" style={{ color: COLORS.inkSubtle }}>No params.</div>
+              ) : (
+                <ul className="text-[11px] list-disc pl-4" style={{ color: COLORS.inkSubtle }}>
+                  {power.params.map((p) => (
+                    <li key={p.key}>
+                      <span className="font-mono" style={{ color: COLORS.ink }}>{p.key}</span>
+                      {" "}({p.type}) — {p.label}
+                      {p.default !== undefined && (
+                        <>; default: <span className="font-mono">{String(p.default)}</span></>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+
+            <div>
+              <div className="text-[11px] font-bold uppercase mb-1" style={{ color: COLORS.ink }}>
+                Default board animation
+              </div>
+              <DefaultBoardAnimBlock anim={power.defaultBoardAnim} />
+            </div>
           </div>
         </Card>
       ))}

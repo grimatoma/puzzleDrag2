@@ -5,10 +5,11 @@
 //   - id     — stable string used by items data (matches the `effect` field on tool items)
 //   - name   — human-readable name shown in the Dev Panel
 //   - desc   — short description of the effect
-//   - params — schema for the editor + runtime arguments (may be empty)
-//   - note   — optional caveat surfaced in the Wiki (e.g. extras vs PC2)
+//   - params           — schema for the editor + runtime arguments (may be empty)
+//   - note             — optional caveat surfaced in the Wiki (e.g. extras vs PC2)
+//   - defaultBoardAnim — suggested anim + ms when a tool uses this power (tools may override in ITEMS)
 //
-// Board anim/ms live on each tool row in constants.js (Inventory tab), not here.
+// Per-tool anim/ms on constants.js (Inventory tab) override these defaults.
 //
 // Contrast with Attributes (src/config/abilities.js) which are *passive* modifiers
 // always active while their source is present. Tool Powers are *active* — the player
@@ -28,12 +29,14 @@ export const TOOL_POWERS = Object.freeze([
     name: "Clear Tiles of Type",
     desc: "Sweeps every board tile of the chosen type into inventory. Set target to * to clear all tile types.",
     params: [{ key: "target", label: "Tile type", type: "tileKey" }],
+    defaultBoardAnim: Object.freeze({ anim: "sweep", ms: 300 }),
   },
   {
     id: "clear_category",
     name: "Clear Category",
     desc: "Sweep all tiles whose family matches the target category. Accepts a single category or an array.",
     params: [{ key: "target", label: "Target category", type: "tileCategory" }],
+    defaultBoardAnim: Object.freeze({ anim: "sweep", ms: 300 }),
   },
   {
     id: "fill_bias",
@@ -41,6 +44,7 @@ export const TOOL_POWERS = Object.freeze([
     desc: "Biases the next board fill toward the target resource.",
     params: [{ key: "target", label: "Target Tile", type: "tileKey" }],
     note: "Extra (vs PC2). Biases the NEXT board fill toward target. PC2 equivalents (Sapling, Bird Feed) mutate existing tiles — see transform_tiles.",
+    defaultBoardAnim: Object.freeze({ anim: "shimmer", ms: 600 }),
   },
   {
     id: "transform_tiles",
@@ -50,6 +54,7 @@ export const TOOL_POWERS = Object.freeze([
       { key: "from", label: "From", type: "tileCategory" },
       { key: "to", label: "To tile", type: "tileKey" },
     ],
+    defaultBoardAnim: Object.freeze({ anim: "shimmer", ms: 400 }),
   },
   {
     id: "transform_adjacent",
@@ -60,12 +65,14 @@ export const TOOL_POWERS = Object.freeze([
       { key: "to", label: "To tile", type: "tileKey" },
       { key: "radius", label: "Radius", type: "number", default: 1 },
     ],
+    defaultBoardAnim: Object.freeze({ anim: "shimmer", ms: 320 }),
   },
   {
     id: "area_blast",
     name: "Area Blast",
     desc: "Tap-target: clear every tile within `radius` of the tapped cell.",
     params: [{ key: "radius", label: "Radius", type: "number", default: 1 }],
+    defaultBoardAnim: Object.freeze({ anim: "sweep", ms: 300 }),
   },
   {
     id: "tap_clear_type",
@@ -73,6 +80,7 @@ export const TOOL_POWERS = Object.freeze([
     desc: "Tap-target: sweep every tile whose key matches the tapped cell.",
     params: [],
     note: "Backs Magic Wand.",
+    defaultBoardAnim: Object.freeze({ anim: "sweep", ms: 300 }),
   },
   {
     id: "undo_move",
@@ -100,6 +108,7 @@ export const TOOL_POWERS = Object.freeze([
     name: "Clear Hazard",
     desc: "Clears all active instances of a hazard from the board.",
     params: [{ key: "target", label: "Hazard", type: "hazard" }],
+    defaultBoardAnim: Object.freeze({ anim: "scatter", ms: 200 }),
   },
   {
     id: "scatter_hazard",
@@ -107,6 +116,7 @@ export const TOOL_POWERS = Object.freeze([
     desc: "Scares a hazard away for 5 turns.",
     params: [{ key: "target", label: "Hazard", type: "hazard" }],
     note: "Extra (vs PC2). Timed scare (5 turns). PC2 'Hound' is a straight clearer; we keep both scatter (hound) and clear (rifle/terrier).",
+    defaultBoardAnim: Object.freeze({ anim: "bark", ms: 400 }),
   },
   {
     id: "water_pump",
@@ -120,6 +130,7 @@ export const TOOL_POWERS = Object.freeze([
     name: "Explosives",
     desc: "Clears mole + cave-in hazards from the mine.",
     params: [],
+    defaultBoardAnim: Object.freeze({ anim: "sweep", ms: 300 }),
   },
 ]);
 
@@ -131,11 +142,21 @@ export function getToolPower(id) {
   return TOOL_POWER_BY_ID[id] ?? null;
 }
 
-/** Default param object for a tool power id. */
+/** Default board anim/ms for a power id, or null when the power has no board tween. */
+export function defaultBoardAnimForPower(powerId) {
+  return TOOL_POWER_BY_ID[powerId]?.defaultBoardAnim ?? null;
+}
+
+/** Default param object for a tool power id (includes anim/ms when the catalog defines them). */
 export function defaultsForToolPower(powerId) {
   const p = TOOL_POWER_BY_ID[powerId];
   if (!p) return {};
   const out = {};
+  const boardAnim = p.defaultBoardAnim;
+  if (boardAnim) {
+    if (boardAnim.anim) out.anim = boardAnim.anim;
+    if (boardAnim.ms != null) out.ms = boardAnim.ms;
+  }
   for (const param of p.params) {
     if (param.default !== undefined) {
       out[param.key] = param.default;
