@@ -45,7 +45,7 @@ export const ACHIEVEMENTS = [
   { id: "ability_artisan", name: "Ability Artisan",     desc: "Trigger 5 distinct abilities",                   counter: "distinct_abilities_triggered", threshold: 5,  target: 5,  reward: { coins: 150 } },
 ];
 
-// Phase 6 — Balance Manager "Achievements" tab: name / desc / threshold / target
+// Phase 6 — Dev Panel "Achievements" tab: name / desc / threshold / target
 // / coin-reward patches from `balance.json`'s `achievements` section.
 import { BALANCE_OVERRIDES as _BO_ACH } from "../../constants.js";
 import { applyAchievementOverrides } from "../../config/applyOverrides.js";

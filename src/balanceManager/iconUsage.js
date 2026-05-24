@@ -3,7 +3,7 @@
 // Mirrors `itemReferences.js` in spirit: walks the static data catalogs that
 // reference icon keys (resource items, recipes, abilities, workers, seasons,
 // tool catalog, etc.) and produces a `Set<iconKey>` of every key the game
-// actually uses. The Balance Manager's Icons tab cross-references this set
+// actually uses. The Dev Panel's Icons tab cross-references this set
 // against the icon registries to badge "unused" entries.
 //
 // Covers both the canvas registry (`src/textures/iconRegistry.js`) and the

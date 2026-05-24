@@ -1,4 +1,4 @@
-// Bosses tab — Balance Manager.
+// Bosses tab — Dev Panel.
 //
 // Edits seasonal bosses: name, season, the target resource amount, and the
 // flavour / modifier descriptions. Modifier type + params drive board logic and

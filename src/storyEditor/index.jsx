@@ -739,7 +739,7 @@ export default function StoryEditorApp() {
       const next = cloneDraft(readBalanceDraft() || BALANCE_OVERRIDES);
       resetDraft(next);
       setSavedDraft(cloneDraft(next));
-      setSavedNotice("Synced from Balance Manager");
+      setSavedNotice("Synced from Dev Panel");
       setTimeout(() => setSavedNotice(""), 1800);
     };
     window.addEventListener("storage", onStorage);
@@ -1284,7 +1284,7 @@ export default function StoryEditorApp() {
             )}
           </span>
           <button onClick={saveDraft} style={{ padding: "6px 14px", borderRadius: 7, border: `2px solid ${C.greenDeep}`, background: C.green, color: "#fff", font: "700 11px/1 system-ui", cursor: "pointer" }}>💾 Save Draft</button>
-          <a href={import.meta.env.BASE_URL + "b/#/story"} style={{ padding: "6px 14px", borderRadius: 7, border: `2px solid ${C.border}`, background: C.parchmentDeep, color: C.inkLight, font: "700 11px/1 system-ui", textDecoration: "none" }}>← Balance Manager</a>
+          <a href={import.meta.env.BASE_URL + "b/#/story"} style={{ padding: "6px 14px", borderRadius: 7, border: `2px solid ${C.border}`, background: C.parchmentDeep, color: C.inkLight, font: "700 11px/1 system-ui", textDecoration: "none" }}>← Dev Panel</a>
           <a href={import.meta.env.BASE_URL} style={{ padding: "6px 14px", borderRadius: 7, border: `2px solid ${C.border}`, background: C.parchmentDeep, color: C.inkLight, font: "700 11px/1 system-ui", textDecoration: "none" }}>← Back to Game</a>
         </div>
       </header>

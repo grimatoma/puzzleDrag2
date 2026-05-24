@@ -6,8 +6,8 @@ import { visualizer } from "rollup-plugin-visualizer";
 
 // Multi-page build:
 //   /         → the game (index.html → main.jsx, pulls in Phaser)
-//   /b/       → the Balance Manager (b/index.html → src/balanceEntry.jsx)
-// Each page builds its own HTML + JS bundle. The Balance Manager bundle is
+//   /b/       → the Dev Panel (b/index.html → src/balanceEntry.jsx)
+// Each page builds its own HTML + JS bundle. The Dev Panel bundle is
 // independent of Phaser/the game runtime and could be deployed standalone
 // (the two apps share state only via localStorage).
 export default defineConfig({
@@ -33,7 +33,7 @@ export default defineConfig({
       },
       output: {
         // Function form so Rollup doesn't pre-create a chunk for phaser
-        // when an entry never imports it (the Balance Manager's bundle).
+        // when an entry never imports it (the Dev Panel's bundle).
         // The object form pulled phaser into the shared chunk's interop
         // helpers and made `/b/` fetch all 1.4MB of phaser at load.
         manualChunks(id) {

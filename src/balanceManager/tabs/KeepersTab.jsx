@@ -1,4 +1,4 @@
-// Keepers tab — Balance Manager.
+// Keepers tab — Dev Panel.
 //
 // Edits the biome-keeper encounters (src/keepers.js): names, the appearance
 // threshold, and the Coexist / Drive Out dialogue + rewards. Patches are

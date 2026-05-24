@@ -1,7 +1,7 @@
 // Archived ("legacy") icon draws — the original versions of icons that have
 // been replaced by improved drawings in their original category files. These
 // are kept here so designers can compare the new draw to the old draw in the
-// Balance Manager's Icons tab. They are NOT referenced anywhere in the live
+// Dev Panel's Icons tab. They are NOT referenced anywhere in the live
 // game — only the IconsTab pulls them in via the registry.
 //
 // Each entry has `archive: true` and `replacedBy: "<active_key>"` metadata

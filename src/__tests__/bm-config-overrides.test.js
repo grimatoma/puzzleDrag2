@@ -1,4 +1,4 @@
-// Phase 6 — Balance Manager override functions for the new config sections.
+// Phase 6 — Dev Panel override functions for the new config sections.
 import { describe, it, expect } from "vitest";
 import { applyExpeditionOverrides, applyBiomeOverrides, sanitizeTuning, applyNpcOverrides, applyStoryOverrides, applyBossOverrides, applyAchievementOverrides, applyDailyRewardOverrides, sanitizeChoiceOutcome, sanitizeChoiceArray, sanitizeBeatTrigger, sanitizeBeatOnComplete, sanitizeBeatRepeatCooldown, applyFlagOverrides, sanitizeFlagTrigger, sanitizeFlagTriggerArray } from "../config/applyOverrides.js";
 

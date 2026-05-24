@@ -55,7 +55,7 @@ export const BOSSES = [
   },
 ];
 
-// Phase 6 — Balance Manager "Bosses" tab: presentation + target-amount patches.
+// Phase 6 — Dev Panel "Bosses" tab: presentation + target-amount patches.
 import { BALANCE_OVERRIDES as _BO_BOSSES } from "../../constants.js";
 import { applyBossOverrides } from "../../config/applyOverrides.js";
 applyBossOverrides(BOSSES, _BO_BOSSES.bosses);

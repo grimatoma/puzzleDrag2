@@ -3,7 +3,7 @@
 //
 // Each entry declares:
 //   - id     — stable string used by items data (matches the `effect` field on tool items)
-//   - name   — human-readable name shown in the Balance Manager
+//   - name   — human-readable name shown in the Dev Panel
 //   - desc   — short description of the effect
 //   - params — schema for the editor + runtime arguments (may be empty)
 //

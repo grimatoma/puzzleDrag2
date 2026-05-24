@@ -1,5 +1,5 @@
 // Named draft snapshots — small store on top of localStorage that lets a
-// designer save the current Balance Manager draft under a friendly name
+// designer save the current Dev Panel draft under a friendly name
 // (e.g. "easy", "tight economy", "speedrun") and reload it later. Useful
 // for keeping multiple tuning presets in flight without trampling the
 // committed balance.json or losing in-progress experiments.

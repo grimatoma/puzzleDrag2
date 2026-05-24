@@ -36,8 +36,8 @@ export const ROWS = 6;
 // gems finishes the head instantly. Each recipe may override the default
 // duration via a `craftMs` field (see RECIPES); when unset the recipe falls
 // back to CRAFT_QUEUE_HOURS hours.
-export let CRAFT_QUEUE_HOURS = 4;       // Balance Manager: tuning.craftQueueHours
-export let CRAFT_GEM_SKIP_COST = 1;     // Balance Manager: tuning.craftGemSkipCost
+export let CRAFT_QUEUE_HOURS = 4;       // Dev Panel: tuning.craftQueueHours
+export let CRAFT_GEM_SKIP_COST = 1;     // Dev Panel: tuning.craftGemSkipCost
 
 /** Wall-clock ms a queued craft of `recipeKey` takes (recipe override or default). */
 export function recipeCraftMs(recipeKey) {
@@ -53,7 +53,7 @@ export function recipeCraftMs(recipeKey) {
 // `wedding_pie` / `iron_ration` are forward-declared here — those recipes don't
 // exist in the resource pipeline yet; they'll be added with the round flow
 // (Phase 5d). `tile_fruit_apple` and `bread` are the live keys today.
-// Not frozen — `applyExpeditionOverrides` (Balance Manager) mutates this in place.
+// Not frozen — `applyExpeditionOverrides` (Dev Panel) mutates this in place.
 export const EXPEDITION_FOOD_TURNS = {
   supplies:      1,
   tile_fruit_apple:   1,
@@ -68,7 +68,7 @@ export const EXPEDITION_FOOD_TURNS = {
 export const EXPEDITION_MEAT_FOODS = ["cured_meat"];
 // An expedition needs at least this many turns of food packed before you can
 // set out (Phase 5d). Tunable.
-export let MIN_EXPEDITION_TURNS = 3;    // Balance Manager: tuning.minExpeditionTurns
+export let MIN_EXPEDITION_TURNS = 3;    // Dev Panel: tuning.minExpeditionTurns
 
 // Phase 5e — settlement biomes (master doc §IV). A biome is chosen at founding
 // and fixes the two hazards that appear in every round at that settlement, plus
@@ -96,7 +96,7 @@ export const SETTLEMENT_BIOMES = Object.freeze({
   ],
 });
 // The biome `home` is treated as (it's pre-founded, never goes through the picker).
-export let DEFAULT_HOME_BIOME = "prairie"; // Balance Manager: tuning.homeBiome
+export let DEFAULT_HOME_BIOME = "prairie"; // Dev Panel: tuning.homeBiome
 
 // Save schema version. Forward migrations are not maintained — bump this
 // whenever persisted state changes shape and existing saves will be discarded.
@@ -175,7 +175,7 @@ export const FISH_TILE_POOL = [
 ];
 
 // Maps tile family name -> default produced resource key.
-// Read by GameScene.nextResource and the Balance Manager UI to determine
+// Read by GameScene.nextResource and the Dev Panel UI to determine
 // what a tile produces by default. Per-tile overrides live in tilePowers[id].producesResource.
 // Families with custom handlers (special, hazards) are intentionally absent.
 export const TILE_FAMILY_RESOURCE = {
@@ -579,7 +579,7 @@ export const BUILDINGS = [
 // `craftMs` is the wall-clock duration of a queued craft. When omitted, the
 // recipe falls back to `CRAFT_QUEUE_HOURS` hours via `recipeCraftMs(key)`.
 // Values below are demo-tuned (seconds-to-hours) so the queue UI is visible
-// without waiting half a day; tune via Balance Manager for shipped balance.
+// without waiting half a day; tune via Dev Panel for shipped balance.
 const MIN = 60_000;
 const HOUR = 60 * MIN;
 export const RECIPES = {
@@ -832,10 +832,10 @@ export function dayKeyForDate(d) {
   return `${y}-${m}-${day}`;
 }
 
-// ─── Balance-Manager overrides ─────────────────────────────────────────────
+// ─── Dev Panel overrides ─────────────────────────────────────────────
 // The committed `src/config/balance.json` file is merged onto the constants
 // above at module-load time. A localStorage draft (written by the in-game
-// Balance Manager) is layered on top so designers can preview changes
+// Dev Panel) is layered on top so designers can preview changes
 // without committing. Both layers are optional — the defaults above remain
 // the source of truth in production builds when balance.json is empty.
 import balanceFile from "./config/balance.json";
@@ -862,7 +862,7 @@ applyBuildingOverrides(BUILDINGS, BALANCE_OVERRIDES.buildings);
 applyExpeditionOverrides(EXPEDITION_FOOD_TURNS, EXPEDITION_MEAT_FOODS, BALANCE_OVERRIDES.expedition);
 applyBiomeOverrides(SETTLEMENT_BIOMES, BALANCE_OVERRIDES.biomes);
 
-// Phase 6 — the Balance Manager "Tuning" section: loose top-level constants.
+// Phase 6 — the Dev Panel "Tuning" section: loose top-level constants.
 // `TUNING_OVERRIDES` is the validated subset; the `export let`s above (and the
 // SETTLEMENT_FOUNDING_* ones in features/zones/data.js) are reassigned from it.
 export const TUNING_OVERRIDES = sanitizeTuning(BALANCE_OVERRIDES.tuning);

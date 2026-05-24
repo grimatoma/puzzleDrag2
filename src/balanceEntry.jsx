@@ -1,4 +1,4 @@
-// Entry point for the Balance Manager standalone app served at `/b/`.
+// Entry point for the Dev Panel standalone app served at `/b/`.
 // Lives behind its own Vite input (see vite.config.js) so it builds to a
 // separate HTML + JS bundle that can be served independently of the game.
 // Both apps share an origin and therefore share localStorage — drafts saved
@@ -29,7 +29,7 @@ class RootErrorBoundary extends React.Component {
           fontFamily: "system-ui, sans-serif", textAlign: "center",
         }}>
           <div style={{ maxWidth: "480px" }}>
-            <h1 style={{ fontSize: "20px", marginBottom: "12px" }}>Balance Manager crashed.</h1>
+            <h1 style={{ fontSize: "20px", marginBottom: "12px" }}>Dev Panel crashed.</h1>
             <p style={{ fontSize: "14px", opacity: 0.85, marginBottom: "16px" }}>
               An unexpected error was thrown during render. Your saved draft is intact.
             </p>

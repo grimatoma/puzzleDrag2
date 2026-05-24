@@ -1,4 +1,4 @@
-// Shared undo/redo state hook used by the Balance Manager and Story Editor.
+// Shared undo/redo state hook used by the Dev Panel and Story Editor.
 //
 // Wraps `useState` with a past/future stack so a designer can step backwards
 // through their edits with Cmd/Ctrl-Z and forward with Cmd/Ctrl-Shift-Z (or

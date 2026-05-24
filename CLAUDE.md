@@ -6,7 +6,7 @@ Guidance for agents working in this repo. `AGENTS.md` (Codex/ChatGPT, Cursor, Ai
 
 ## Mental model (read first)
 
-Phaser 3 + React game. **React owns state** — `useReducer` in `prototype.jsx`, store logic in `src/state.js`, 29 auto-discovered feature slices under `src/features/*`. **Phaser owns the canvas** (`src/GameScene.js`) and receives state via a registry bridge (`src/phaserBridge.js`); the scene dispatches actions back to the reducer. Vite ships three independent entries from one repo: `/` (game, pulls Phaser), `/b/` (Balance Manager, Phaser-free), `/story/` (Story Tree Editor). They share state only via `localStorage`. All textures are drawn procedurally — no external image assets.
+Phaser 3 + React game. **React owns state** — `useReducer` in `prototype.jsx`, store logic in `src/state.js`, 29 auto-discovered feature slices under `src/features/*`. **Phaser owns the canvas** (`src/GameScene.js`) and receives state via a registry bridge (`src/phaserBridge.js`); the scene dispatches actions back to the reducer. Vite ships three independent entries from one repo: `/` (game, pulls Phaser), `/b/` (Dev Panel, Phaser-free), `/story/` (Story Tree Editor). They share state only via `localStorage`. All textures are drawn procedurally — no external image assets.
 
 ## Where to look
 
@@ -16,20 +16,20 @@ Phaser 3 + React game. **React owns state** — `useReducer` in `prototype.jsx`,
 | Bug in drag/animation/board layout | `src/GameScene.js`, `src/phaserBridge.js` | `phaser-scene-debug` skill |
 | New feature panel (HUD, modal, screen) | `src/features/<name>/index.jsx` + `slice.js` | auto-discovered via `import.meta.glob` in `src/ui.jsx` |
 | New view or modal route | `src/router.js` (`KNOWN_VIEWS` / `KNOWN_MODALS`) | navigate via hash `#/view[/sub]` |
-| Tune balance values | `src/constants.js` (`UPGRADE_THRESHOLDS`, `MINE_ENTRY_TIERS`, `DAILY_REWARDS`) | Balance Manager at `/b/` |
+| Tune balance values | `src/constants.js` (`UPGRADE_THRESHOLDS`, `MINE_ENTRY_TIERS`, `DAILY_REWARDS`) | Dev Panel at `/b/` |
 | Story beat content | `src/story.js`, `src/features/story/slice.js`, `src/state/storyEffects.js` | Story Editor at `/story/` |
 | Dispatched action silently does nothing | `SLICE_PRIMARY_ACTIONS` / `ALWAYS_RUN_SLICES` in `src/state.js` | `check-slice-action` skill |
 | Persisted save shape changed | bump `SAVE_SCHEMA_VERSION` in `src/constants.js` | reducer discards mismatched saves |
 | Land on a specific screen for QA | "Testing a specific UI" section below | `?visual=<id>`, `window.__hearthVisual` |
 | Reset state during testing | `localStorage.removeItem("hearth.save.v1")` | also `hearth.settings`, `hearth.tutorial.seen`, `hearth.disableDialogs` |
-| Canonical concept inventory | Balance Manager `/b/` → Wiki → Concepts | sub-tabs iterate live from `src/constants.js`, `src/features/*/data.js`, `src/config/abilities.js`, `src/config/toolPowers.js`, `src/router.js`. Do not duplicate concept lists in other docs — point at the Wiki. |
+| Canonical concept inventory | Dev Panel `/b/` → Wiki → Concepts | sub-tabs iterate live from `src/constants.js`, `src/features/*/data.js`, `src/config/abilities.js`, `src/config/toolPowers.js`, `src/router.js`. Do not duplicate concept lists in other docs — point at the Wiki. |
 
 The body below covers commands, architecture, the core game mechanic, testing harness, engineering rules, and PR workflow. Trust code over older docs (anything under `docs/` is allowed to drift; this file is kept current).
 
 ## Commands
 
 ```bash
-npm run dev                  # Start Vite dev server (game at /, Balance Manager at /b/, Story Editor at /story/)
+npm run dev                  # Start Vite dev server (game at /, Dev Panel at /b/, Story Editor at /story/)
 npm run build                # Production build (outputs to dist/, including dist/stats.html bundle analyzer)
 npm run lint                 # ESLint over src/ + prototype.jsx
 npm test                     # Vitest unit tests (single run)
@@ -51,7 +51,7 @@ This is a Phaser 3 + React game. React owns the page shell *and* the canonical g
 
 **Multi-page build:** `vite.config.js` ships three independent Vite entries that share state only via `localStorage`:
 - `/` — the game (`index.html` → `main.jsx` → `prototype.jsx`). Pulls in Phaser.
-- `/b/` — the Balance Manager (`b/index.html` → `src/balanceEntry.jsx` → `src/balanceManager/`). Phaser-free bundle; can be deployed standalone.
+- `/b/` — the Dev Panel (`b/index.html` → `src/balanceEntry.jsx` → `src/balanceManager/`). Phaser-free bundle; can be deployed standalone.
 - `/story/` — the Story Tree Editor (`story/index.html` → `src/storyEditorEntry.jsx` → `src/storyEditor/`). Authoring tool for story beats.
 
 **Key files:**
@@ -98,7 +98,7 @@ The game has three disjoint item kinds in `ITEMS` (`src/constants.js`), discrimi
 
 **Typing.** `src/types/items.js` declares the canonical `@typedef` discriminated union (`Item = TileItem | ResourceItem | ToolItem`) plus branded `TileKey` / `ResourceKey` / `ToolKey` string types. `src/types/guards.js` exports runtime predicates (`isTile`, `isResource`, `isTool`) and assertions (`assertTile`, `assertResource`, `assertTool` — throw in dev, warn-once in prod). `jsconfig.json` runs `checkJs:false` globally so files opt in to JSDoc checking with `// @ts-check` at the top; add the pragma to any file where you want VS Code + `tsc --noEmit` to verify your annotations.
 
-**Canonical inventory.** The Balance Manager Wiki tab (`/b/` → Wiki) iterates each concept (Tiles, Resources, Tools, Recipes, Hazards, Workers, Buildings, NPCs, Zones, Abilities, Tool Powers, …) from the live source maps. If you add a new tile/resource/tool, it appears there automatically — no manual registration. If something looks miscategorised in the wiki, fix the underlying `kind` field, not the wiki.
+**Canonical inventory.** The Dev Panel Wiki tab (`/b/` → Wiki) iterates each concept (Tiles, Resources, Tools, Recipes, Hazards, Workers, Buildings, NPCs, Zones, Abilities, Tool Powers, …) from the live source maps. If you add a new tile/resource/tool, it appears there automatically — no manual registration. If something looks miscategorised in the wiki, fix the underlying `kind` field, not the wiki.
 
 **Known conflation (in-flight migration).** The codebase still has a few places where tile and resource keys are mixed:
 - `BIOMES[*].resources` (`src/constants.js`) contains both kinds — the dynamic builder filters by `biome`, not `kind`. Three `resourceByKey` helpers depend on this.

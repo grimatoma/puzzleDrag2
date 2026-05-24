@@ -292,7 +292,7 @@ export const SIDE_BEATS = [
   },
 ];
 
-// Phase 6 — Balance Manager "Story" tab: presentation-only patches (titles,
+// Phase 6 — Dev Panel "Story" tab: presentation-only patches (titles,
 // scenes, body/lines, choice labels) from `balance.json`'s `story` section.
 applyStoryOverrides(STORY_BEATS, SIDE_BEATS, BALANCE_OVERRIDES.story);
 
