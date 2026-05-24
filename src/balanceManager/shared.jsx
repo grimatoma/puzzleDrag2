@@ -308,6 +308,7 @@ export function tileKeyOptions() {
     .sort();
   return [
     { value: "", label: "— pick tile —" },
+    { value: "*", label: "All tile types" },
     ...keys.map((k) => ({ value: k, label: k })),
   ];
 }

@@ -42,7 +42,7 @@ export const TOOL_CATALOG = [
   { key: "cat",         category: "workshop", iconKey: "cat",           name: "Cat",          armed: "instant",
     desc: "Dispatches a mouser to clear every rat hazard from the farm." },
   { key: "bird_cage",   category: "workshop", iconKey: "bird_cage",     name: "Bird Cage",    armed: "instant",
-    desc: "Sweeps every egg tile from the board into your inventory." },
+    desc: "Sweeps every chicken tile from the board into your inventory." },
   { key: "scythe_full", category: "workshop", iconKey: "scythe",        name: "Scythe (full)", armed: "instant",
     desc: "Harvests every grain tile on the board in one swing." },
   { key: "rifle",       category: "workshop", iconKey: "rifle",         name: "Rifle",        armed: "instant",

@@ -9,10 +9,12 @@ describe("tileKeyOptions", () => {
     expect(values.length).toBeGreaterThan(0);
     // Every returned key must be kind:"tile" in ITEMS
     for (const k of values) {
+      if (k === "*") continue;
       expect(ITEMS[k]?.kind).toBe("tile");
     }
     // Known tile key is present
     expect(values).toContain("tile_grass_hay");
+    expect(values).toContain("*");
     // Known resource key is absent
     expect(values).not.toContain("bread");
     expect(values).not.toContain("flour");
