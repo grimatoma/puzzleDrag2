@@ -114,7 +114,7 @@ const TABS = [
   { id: "toolPowers", label: "Tool Powers",  iconKey: "rake",    Component: ToolPowersReferenceTab,
     section: "other",
     blurb: "Reference list of every tool power: name, description, and configurable params. Tool powers are the active effects players trigger by spending a tool (e.g. clear_all, water_pump)." },
-  { id: "tileDiscovery", label: "Tile Discovery",  iconKey: "ui_star", Component: TileDiscoveryReferenceTab,
+  { id: "tileDiscoveryMethods", label: "Tile Discovery Methods", iconKey: "ui_star", Component: TileDiscoveryReferenceTab,
     section: "other",
     blurb: "Reference list of every tile-discovery method: default, chain, research, buy, daily reward. Shows each method's params and which tiles currently use it." },
   { id: "animationsDemo", label: "Animations Demo", iconKey: "ui_star", Component: AnimationsDemoTab,

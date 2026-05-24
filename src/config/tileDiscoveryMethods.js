@@ -10,10 +10,14 @@
 // Mirrors src/config/toolPowers.js / src/config/abilities.js. To add a new
 // discovery method:
 //   1. Add an entry below.
-//   2. Add a branch to the switch in src/features/tileCollection/effects.js
-//      (and any reducer that reads `discovery.method`).
-//   3. The Wiki, Tile Discovery reference tab, and Tiles editor pick it up
-//      automatically.
+//   2. Wire the runtime — grep for `discovery.method` and handle the new id
+//      everywhere it's read. Today that's three files:
+//        - src/features/tileCollection/effects.js (chain trigger, status
+//          + detail labels)
+//        - src/state.js (research accumulator, BUY_TILE reducer)
+//        - src/state/helpers.js (initial tile-collection slice)
+//   3. The Wiki, Tile Discovery Methods reference tab, and Tiles editor
+//      pick it up automatically.
 
 export const TILE_DISCOVERY_PARAM_TYPES = Object.freeze({
   INT: "int",

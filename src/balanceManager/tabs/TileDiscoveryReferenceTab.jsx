@@ -29,7 +29,8 @@ export default function TileDiscoveryReferenceTab() {
           Catalog of all tile discovery methods from <code>src/config/tileDiscoveryMethods.js</code>.
           A tile's <code>discovery.method</code> field picks one of these; the params on the same
           object configure it. Used by the Tiles editor's Discovery section and consumed at
-          runtime in <code>src/features/tileCollection/effects.js</code>.
+          runtime in <code>src/state.js</code>, <code>src/state/helpers.js</code>, and{" "}
+          <code>src/features/tileCollection/effects.js</code>.
         </div>
       </Card>
 
