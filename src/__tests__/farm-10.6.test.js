@@ -26,11 +26,11 @@ function makeGridWith(items) {
 
 describe("10.6 — WORKSHOP_RECIPES", () => {
   it("bird_cage costs 1 hay", () => {
-    expect(WORKSHOP_RECIPES.bird_cage.inputs.tile_grass_hay).toBe(1);
+    expect(WORKSHOP_RECIPES.bird_cage.inputs.hay_bundle).toBe(1);
   });
 
   it("scythe_full costs 1 stone", () => {
-    expect(WORKSHOP_RECIPES.scythe_full.inputs.tile_mine_stone).toBe(1);
+    expect(WORKSHOP_RECIPES.scythe_full.inputs.block).toBe(1);
   });
 });
 

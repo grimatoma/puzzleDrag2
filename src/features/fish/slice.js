@@ -12,7 +12,8 @@
 // crosses TIDE_PERIOD. We do NOT touch turnsUsed — that's coreReducer's
 // responsibility — only the tide bookkeeping and grid bottom row.
 
-import { FISH_TILE_POOL, BIOMES } from "../../constants.js";
+import { FISH_TILE_POOL } from "../../constants.js";
+import { resourceByKey } from "../../state/helpers.js";
 
 export const TIDE_PERIOD = 3;
 
@@ -24,14 +25,6 @@ export const LOW_TIDE_POOL = ["tile_fish_clam", "tile_fish_clam", "tile_fish_kel
 export const initial = {
   fish: { tide: "high", tideTurn: 0 },
 };
-
-function resourceByKey(key) {
-  for (const biome of Object.values(BIOMES)) {
-    const r = biome.resources.find((x) => x.key === key);
-    if (r) return r;
-  }
-  return null;
-}
 
 /**
  * Replace the bottom row of `grid` with tiles drawn from `pool`. Returns

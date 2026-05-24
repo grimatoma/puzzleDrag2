@@ -14,12 +14,12 @@ describe("Phase 10 — Workshop tool recipes", () => {
   });
 
   it("axe costs 1 stone", () => {
-    expect(WORKSHOP_RECIPES.axe.inputs.tile_mine_stone).toBe(1);
+    expect(WORKSHOP_RECIPES.axe.inputs.block).toBe(1);
   });
 
   it("fertilizer costs 1 hay + 1 dirt", () => {
-    expect(WORKSHOP_RECIPES.fertilizer.inputs.tile_grass_hay).toBe(1);
-    expect(WORKSHOP_RECIPES.fertilizer.inputs.tile_special_dirt).toBe(1);
+    expect(WORKSHOP_RECIPES.fertilizer.inputs.hay_bundle).toBe(1);
+    expect(WORKSHOP_RECIPES.fertilizer.inputs.dirt).toBe(1);
   });
 });
 

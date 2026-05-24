@@ -75,7 +75,7 @@ export function drawTileIcon(ctx, key) {
   // Glyph fallback — only fires if neither registry nor legacy handled it.
   let res = null;
   for (const biome of Object.values(BIOMES)) {
-    res = biome.resources.find((r) => r.key === key);
+    res = [...biome.tiles, ...biome.resources].find((r) => r.key === key);
     if (res) break;
   }
   if (res) {
@@ -106,7 +106,7 @@ function bakeScaleFor(scene) {
 export function regenerateTextures(scene) {
   const dpr = bakeScaleFor(scene);
   Object.values(BIOMES).forEach((biome) => {
-    biome.resources.forEach((r) => {
+    [...biome.tiles, ...biome.resources].forEach((r) => {
       [false, true].forEach((selected) => {
         const key = `tile_${r.key}${selected ? "_sel" : ""}`;
         // Remove existing cached texture so canvasTexture will recreate it
@@ -232,7 +232,7 @@ function bakeFireTile(scene, dpr) {
 export function makeTextures(scene) {
   const dpr = bakeScaleFor(scene);
   Object.values(BIOMES).forEach((biome) => {
-    biome.resources.forEach((r) => {
+    [...biome.tiles, ...biome.resources].forEach((r) => {
       [false, true].forEach((selected) => {
         const tileColor = r.color;
         canvasTexture(scene, `tile_${r.key}${selected ? "_sel" : ""}`, TILE, TILE, (ctx, w, h) => {

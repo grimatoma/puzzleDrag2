@@ -13,7 +13,8 @@ import {
 import { CATEGORY_OF, TILE_TYPES } from "../src/features/tileCollection/data.js";
 import { BIOMES } from "../src/constants.js";
 
-const farmResources = BIOMES.farm.resources;
+// nextResourceForZone resolves tile entries by CATEGORY_OF, so it needs both tiles and resources.
+const farmResources = [...BIOMES.farm.tiles, ...BIOMES.farm.resources];
 
 function findResource(key) {
   return farmResources.find((r) => r.key === key);

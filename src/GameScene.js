@@ -1,6 +1,7 @@
 import Phaser from "phaser";
-import { TILE, COLS, ROWS, UPGRADE_THRESHOLDS, SEASONS, BIOMES, CAPPED_RESOURCES, SCENE_EVENTS, tileFamilyResource, TILES_WITH_CUSTOM_OUTPUT } from "./constants.js";
+import { TILE, COLS, ROWS, UPGRADE_THRESHOLDS, SEASONS, BIOMES, CAPPED_TILES, SCENE_EVENTS, tileFamilyResource, TILES_WITH_CUSTOM_OUTPUT } from "./constants.js";
 import { upgradeCountForChain, rollResource } from "./utils.js";
+import { resourceByKey } from "./state/helpers.js";
 import { computeWorkerEffects } from "./features/workers/aggregate.js";
 import { CATEGORY_OF, TILE_TYPES_MAP } from "./features/tileCollection/data.js";
 import {
@@ -278,7 +279,7 @@ export class GameScene extends Phaser.Scene {
         const newKey = next[tileCat];
         if (!newKey) continue;
         if (tile.res.key === newKey) continue; // already the right type
-        const newRes = this.resourceByKey(newKey);
+        const newRes = resourceByKey(newKey);
         if (!newRes) continue;
         tile.setResource(newRes);
         this.tweens.add({ targets: tile.sprite, angle: 360, duration: this._dur(280), onComplete: () => (tile.sprite.angle = 0) });
@@ -566,7 +567,7 @@ export class GameScene extends Phaser.Scene {
         if (!t) return;
         const cell = savedGrid?.[t.row]?.[t.col];
         if (cell?.key) {
-          const newRes = this.resourceByKey(cell.key);
+          const newRes = resourceByKey(cell.key);
           if (newRes) t.setResource(newRes);
         }
       });
@@ -586,20 +587,21 @@ export class GameScene extends Phaser.Scene {
 
   nextResource(res) {
     if (!res || !res.key) return null;
-    const resources = this.biome().resources;
+    const b = this.biome();
+    const allEntries = [...b.tiles, ...b.resources];
 
     // 1. Per-tile "Produces Resource" override (Balance Manager → Tiles tab)
     // is authoritative — it names the chain's upgrade target outright.
     const override = TILE_TYPES_MAP[res.key]?.effects?.producesResource;
     if (override) {
-      return resources.find((r) => r.key === override) ?? null;
+      return allEntries.find((r) => r.key === override) ?? null;
     }
 
     // 2. Family default from TILE_FAMILY_RESOURCE — the single source of
     // truth for "what does this tile family produce on the board".
     const defaultKey = tileFamilyResource(res.key);
     if (defaultKey) {
-      return resources.find((r) => r.key === defaultKey) ?? null;
+      return allEntries.find((r) => r.key === defaultKey) ?? null;
     }
 
     // 3. Tiles with custom handlers (special, hazards) produce nothing by
@@ -609,8 +611,8 @@ export class GameScene extends Phaser.Scene {
 
     // 4. Legacy fallback for resources/tiles that aren't covered by the
     // family map — chase the resource's own `.next` pointer in the biome.
-    const nextKey = resources.find((r) => r.key === res.key)?.next;
-    return nextKey ? (resources.find((r) => r.key === nextKey) ?? null) : null;
+    const nextKey = allEntries.find((r) => r.key === res.key)?.next;
+    return nextKey ? (allEntries.find((r) => r.key === nextKey) ?? null) : null;
   }
 
   /**
@@ -635,25 +637,17 @@ export class GameScene extends Phaser.Scene {
     return out.length > 0 ? out : [...base];
   }
 
-  resourceByKey(key) {
-    const b = this.biome();
-    if (!b._resourceMap) {
-      b._resourceMap = new Map(b.resources.map(r => [r.key, r]));
-    }
-    return b._resourceMap.get(key);
-  }
-
   randomResource() {
     const pool = this.activePool();
-    if (pool.length === 0) return this.biome().resources[0];
+    if (pool.length === 0) return this.biome().tiles[0];
     const key = rollResource(pool);
-    return this.resourceByKey(key) ?? this.biome().resources[0];
+    return resourceByKey(key) ?? this.biome().tiles[0];
   }
 
   _randomFromPool(pool) {
     const safePool = pool.length ? pool : this.biome().pool;
     const key = rollResource(safePool);
-    return this.resourceByKey(key) ?? this.biome().resources[0];
+    return resourceByKey(key) ?? this.biome().tiles[0];
   }
 
   // Phase 3b — sample a tile from the active zone's per-(zone, season) drop
@@ -673,7 +667,7 @@ export class GameScene extends Phaser.Scene {
     return pickByZoneSeasonDrops({
       zoneId,
       seasonName,
-      biomeResources: this.biome().resources,
+      biomeResources: [...this.biome().tiles, ...this.biome().resources],
       tileCollectionActive: this.registry.get("tileCollectionActive") ?? null,
       categoryOf: CATEGORY_OF,
     });
@@ -711,7 +705,7 @@ export class GameScene extends Phaser.Scene {
         const cell = stateGrid[r]?.[c];
         if (!tile || !cell) continue;
         if (tile.res.key !== cell.key) {
-          const newRes = this.resourceByKey(cell.key);
+          const newRes = resourceByKey(cell.key);
           if (newRes) tile.setResource(newRes);
         }
         tile.frozen = !!cell.frozen;
@@ -943,7 +937,7 @@ export class GameScene extends Phaser.Scene {
   _forceGuaranteedChain() {
     const pool = this.activePool();
     const key = pool[0] ?? this.biome().pool[0];
-    const res = this.resourceByKey(key) ?? this.biome().resources[0];
+    const res = resourceByKey(key) ?? this.biome().tiles[0];
     // Assign the same resource to the first 3 tiles in row-major order
     let count = 0;
     for (let r = 0; r < ROWS && count < 3; r++) {
@@ -1058,7 +1052,7 @@ export class GameScene extends Phaser.Scene {
     this.playBoardAnimation("sweep", picks);
     // Emit resource gains to React (like a mini chain collect, no turn cost)
     for (const [key, gained] of Object.entries(gainMap)) {
-      const res = this.resourceByKey(key);
+      const res = resourceByKey(key);
       if (res) {
         this.events.emit(SCENE_EVENTS.CHAIN_COLLECTED, { key, gained, upgrades: 0, chainLength: gained, value: res.value, noTurn: true });
       }
@@ -1068,7 +1062,7 @@ export class GameScene extends Phaser.Scene {
 
   /** 1.4 Seedpack: replace 5 random non-selected tiles with the biome's base resource. */
   _applyToolBasic() {
-    const baseRes = this.biome().resources[0]; // hay / stone
+    const baseRes = this.biome().tiles[0]; // hay / stone
     const allTiles = [];
     for (let r = 0; r < ROWS; r++) {
       for (let c = 0; c < COLS; c++) {
@@ -1087,7 +1081,7 @@ export class GameScene extends Phaser.Scene {
   _applyToolRare() {
     const biome = this.biome();
     const rareKey = biome.name === "Mine" ? "tile_mine_gem" : "tile_fruit_blackberry";
-    const rareRes = biome.resources.find((r) => r.key === rareKey) || biome.resources[biome.resources.length - 1];
+    const rareRes = biome.tiles.find((r) => r.key === rareKey) || biome.tiles[biome.tiles.length - 1];
     const allTiles = [];
     for (let r = 0; r < ROWS; r++) {
       for (let c = 0; c < COLS; c++) {
@@ -1160,7 +1154,7 @@ export class GameScene extends Phaser.Scene {
     }
     if (!swept.length) return;
     this.playBoardAnimation("sweep", swept, { tint: 0x88ff88 });
-    const res = this.resourceByKey(targetKey);
+    const res = resourceByKey(targetKey);
     this.events.emit(SCENE_EVENTS.CHAIN_COLLECTED, {
       key: targetKey, gained: swept.length, upgrades: 0,
       chainLength: swept.length, value: res?.value ?? 1, noTurn: true,
@@ -1183,7 +1177,7 @@ export class GameScene extends Phaser.Scene {
     });
     this.playBoardAnimation("sweep", swept, { tint: 0xff9900 });
     for (const [key, gained] of Object.entries(gainMap)) {
-      const res = this.resourceByKey(key);
+      const res = resourceByKey(key);
       this.events.emit(SCENE_EVENTS.CHAIN_COLLECTED, {
         key, gained, upgrades: 0, chainLength: gained, value: res?.value ?? 1, noTurn: true,
       });
@@ -1209,7 +1203,7 @@ export class GameScene extends Phaser.Scene {
     });
     this.playBoardAnimation("sweep", swept, { tint: 0xff4444 });
     for (const [key, gained] of Object.entries(gainMap)) {
-      const res = this.resourceByKey(key);
+      const res = resourceByKey(key);
       this.events.emit(SCENE_EVENTS.CHAIN_COLLECTED, {
         key, gained, upgrades: 0, chainLength: gained, value: res?.value ?? 1, noTurn: true,
       });
@@ -1635,7 +1629,7 @@ export class GameScene extends Phaser.Scene {
     // V.3 — Clamp the displayed gain to the inventory cap so float text matches what the player actually receives
     const cap = this.registry.get("inventoryCap") ?? 200;
     const inv = this.registry.get("inventory") ?? {};
-    const isCapped = CAPPED_RESOURCES.includes(res.key);
+    const isCapped = CAPPED_TILES.includes(res.key);
     const currentAmt = inv[res.key] ?? 0;
     const wouldGain = gained + (bonusGains[res.key] ?? 0);
     const actualGain = isCapped ? Math.max(0, Math.min(cap - currentAmt, wouldGain)) : wouldGain;

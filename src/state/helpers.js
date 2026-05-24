@@ -1,19 +1,25 @@
-import { BIOMES, ITEMS, NPCS, CAPPED_RESOURCES } from "../constants.js";
+import { BIOMES, ITEMS, NPCS, CAPPED_INVENTORY_RESOURCES, CAPPED_TILES } from "../constants.js";
 import { TILE_TYPES, CATEGORIES } from "../features/tileCollection/data.js";
 
 // ─── Inventory helpers ─────────────────────────────────────────────────────
 
+// Until PR 3 moves tile-counts out of state.inventory, chain-collect still
+// writes tile keys into inventory and they need the same cap treatment as
+// resource keys. Once PR 3 lands, drop CAPPED_TILES from this union.
+const INVENTORY_CAPPED_KEYS = new Set([...CAPPED_INVENTORY_RESOURCES, ...CAPPED_TILES]);
+
 /**
  * Mutates `inv` (and `capFloaters` / `floaters` when provided) to credit
- * `amount` of `key` to inventory, applying the resource cap when the key is
- * in CAPPED_RESOURCES. When the cap is freshly hit, sets capFloaters[key]
- * and appends a "stash full" floater if a floaters draft is supplied.
+ * `amount` of `key` to inventory, applying the cap when the key is in
+ * CAPPED_INVENTORY_RESOURCES (or, transitionally, CAPPED_TILES). When the cap
+ * is freshly hit, sets capFloaters[key] and appends a "stash full" floater if
+ * a floaters draft is supplied.
  *
  * Caller is responsible for cloning `inv`/`capFloaters`/`floaters` first
  * (they're treated as locally-owned drafts).
  */
 export function addCappedResourceMut(inv, capFloaters, floaters, key, amount, cap) {
-  if (!CAPPED_RESOURCES.includes(key)) {
+  if (!INVENTORY_CAPPED_KEYS.has(key)) {
     inv[key] = (inv[key] ?? 0) + amount;
     return;
   }
@@ -87,20 +93,21 @@ export function mergeLoadedState(saved) {
   return { ...out, tileCollection };
 }
 
-const _resourceCache = new Map();
-
 export const SEASON_END_BONUS_COINS = 25;
 
 /** Legacy non-linear curve — kept for backward compat with any external callers. */
 export const xpForLevel = (l) => 50 + l * 80;
 
+/**
+ * Look up any ITEMS entry by key (tiles, resources, tools).
+ * Returns `{ key, ...item }` or null. O(1) via ITEMS direct lookup.
+ * Canonical implementation — used by all callsites (GameScene, fish/slice, state).
+ */
 export function resourceByKey(key) {
-  if (_resourceCache.has(key)) return _resourceCache.get(key);
-  for (const b of Object.values(BIOMES)) {
-    const r = b.resources.find((x) => x.key === key);
-    if (r) { _resourceCache.set(key, r); return r; }
-  }
-  return null;
+  if (!key) return null;
+  const item = ITEMS[key];
+  if (!item) return null;
+  return { key, ...item };
 }
 
 export function pickNpcKey(excludeKeys = [], roster = Object.keys(NPCS)) {
@@ -144,9 +151,9 @@ export function makeOrder(biomeKey, level, excludeNpcs = [], excludeOrderKeys = 
     reward = Math.round(need * (itemDef?.value || 100) * 1.5);
     resourceLabel = (itemDef?.label || key).toLowerCase();
   } else {
-    const candidates = biome.pool.filter((k, i, a) => a.indexOf(k) === i);
-    const resourceCandidates = candidates.filter((k) => !excludeOrderKeys.includes(k));
-    const resourcePickPool = resourceCandidates.length ? resourceCandidates : candidates;
+    const pool = biome.resourceOrderPool;
+    const resourceCandidates = pool.filter((k) => !excludeOrderKeys.includes(k));
+    const resourcePickPool = resourceCandidates.length ? resourceCandidates : pool;
     key = resourcePickPool[Math.floor(Math.random() * resourcePickPool.length)];
     const res = resourceByKey(key);
     const baseNeed = res.value < 3 ? 8 : 4;

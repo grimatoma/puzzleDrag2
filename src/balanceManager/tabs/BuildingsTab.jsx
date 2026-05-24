@@ -17,7 +17,7 @@ import MetricCard from "../../ui/primitives/MetricCard.jsx";
 // the two currencies) — never hardcoded. Feeds the CostEditor's add picker.
 const COST_KEYS = (() => {
   const out = new Set(["coins", "runes"]);
-  for (const b of Object.values(BIOMES)) for (const r of b.resources) out.add(r.key);
+  for (const b of Object.values(BIOMES)) for (const r of [...b.tiles, ...b.resources]) out.add(r.key);
   return [...out].sort();
 })();
 

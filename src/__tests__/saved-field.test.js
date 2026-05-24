@@ -10,7 +10,7 @@ describe("Phase 12.5 — saved-field preservation", () => {
     const barn = findBuilding("barn");
     expect(silo).toMatchObject({ cost: { coins: 250, plank: 15 },
       lv: 4, biome: "farm" });
-    expect(barn).toMatchObject({ cost: { coins: 400, plank: 25, tile_mine_stone: 5 },
+    expect(barn).toMatchObject({ cost: { coins: 400, plank: 25, block: 5 },
       lv: 5, biome: "mine" });
     expect(silo.desc).toMatch(/preserves the tile layout between sessions/i);
     expect(barn.desc).toMatch(/preserves the tile layout between sessions/i);

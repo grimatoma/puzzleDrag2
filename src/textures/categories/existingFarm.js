@@ -130,6 +130,20 @@ function drawPlank(ctx) {
   ctx.restore();
 }
 
+function drawDirt(ctx) {
+  ctx.fillStyle = "rgba(0,0,0,0.22)"; ctx.beginPath(); ctx.ellipse(0,23,20,4,0,0,Math.PI*2); ctx.fill();
+  const body = ctx.createLinearGradient(0,-14,0,20);
+  body.addColorStop(0,"#9a7248"); body.addColorStop(0.5,"#6b4a2a"); body.addColorStop(1,"#3a2412");
+  ctx.fillStyle = body; rr(ctx,-18,-16,36,38,4); ctx.fill();
+  ctx.strokeStyle = "#2a1608"; ctx.lineWidth = 2; ctx.stroke();
+  ctx.fillStyle = "rgba(0,0,0,0.18)";
+  [[-8,2,3.5],[6,-4,2.5],[0,10,2],[10,6,2],[-4,-6,1.8]].forEach(([cx,cy,r])=>{ ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2); ctx.fill(); });
+  ctx.fillStyle = "rgba(180,140,90,0.45)";
+  [[-12,-8,1.4],[8,0,1.2],[-4,14,1],[12,-6,1],[2,6,1.3]].forEach(([cx,cy,r])=>{ ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2); ctx.fill(); });
+  ctx.strokeStyle = "rgba(255,200,130,0.25)"; ctx.lineWidth = 1.2;
+  ctx.beginPath(); ctx.moveTo(-15,-12); ctx.lineTo(14,-12); ctx.stroke();
+}
+
 function drawJam(ctx) {
   ctx.fillStyle = "rgba(0,0,0,0.22)"; ctx.beginPath(); ctx.ellipse(0,24,20,4,0,0,Math.PI*2); ctx.fill();
   const glass = ctx.createLinearGradient(-18,0,18,0);
@@ -255,6 +269,7 @@ export const ICONS = {
   tile_grain_wheat:         { label:"Wheat",        color:"#e8c34c", draw:drawWheat },
   flour:               { label:"Flour",        color:"#f0e2b8", draw:drawFlour },
   plank:               { label:"Plank",        color:"#caa168", draw:drawPlank },
+  dirt:                { label:"Dirt",         color:"#6b4a2a", draw:drawDirt },
   jam:                 { label:"Jam",          color:"#a72c5e", draw:drawJam },
   tile_bird_turkey:         { label:"Turkey",       color:"#a86028", draw:drawTurkey },
   tile_bird_clover:         { label:"Clover",       color:"#88c050", draw:drawClover },

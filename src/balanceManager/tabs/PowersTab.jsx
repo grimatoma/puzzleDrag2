@@ -29,7 +29,7 @@ const DISCOVERY_METHODS = [
 
 function resourceKeyOptions(includeNone = false) {
   const set = new Set();
-  for (const b of Object.values(BIOMES)) for (const r of b.resources) set.add(r.key);
+  for (const b of Object.values(BIOMES)) for (const r of [...b.tiles, ...b.resources]) set.add(r.key);
   const opts = [...set].sort().map((k) => ({ value: k, label: k }));
   if (includeNone) {
     return [{ value: "", label: "— use base chain —" }, ...opts];
@@ -42,7 +42,7 @@ function resourceKeyOptions(includeNone = false) {
 // the user can see what "leave unset" actually produces.
 function producesOptionsFor(tileId) {
   const set = new Set();
-  for (const b of Object.values(BIOMES)) for (const r of b.resources) set.add(r.key);
+  for (const b of Object.values(BIOMES)) for (const r of [...b.tiles, ...b.resources]) set.add(r.key);
   const opts = [...set].sort().map((k) => ({ value: k, label: k }));
   const familyDefault = tileFamilyResource(tileId);
   const placeholder = familyDefault
@@ -55,7 +55,7 @@ function tileSwatchProps(tileId) {
   const tile = TILE_TYPES_MAP[tileId];
   if (!tile) return { color: 0x888888 };
   for (const b of Object.values(BIOMES)) {
-    for (const r of b.resources) {
+    for (const r of [...b.tiles, ...b.resources]) {
       if (r.key === tile.baseResource) return { color: r.color, iconKey: r.key };
     }
   }

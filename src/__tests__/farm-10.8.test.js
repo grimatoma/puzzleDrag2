@@ -21,8 +21,8 @@ function farmState(overrides = {}) {
 describe("10.8 — WORKSHOP_RECIPES tool recipes", () => {
   it("rifle requires 1 ingot", () => expect(WORKSHOP_RECIPES.rifle.inputs.iron_bar).toBe(1));
   it("rifle requires 1 plank", () => expect(WORKSHOP_RECIPES.rifle.inputs.plank).toBe(1));
-  it("rifle requires 1 stone", () => expect(WORKSHOP_RECIPES.rifle.inputs.tile_mine_stone).toBe(1));
-  it("hound requires 3 stone", () => expect(WORKSHOP_RECIPES.hound.inputs.tile_mine_stone).toBe(3));
+  it("rifle requires 1 block", () => expect(WORKSHOP_RECIPES.rifle.inputs.block).toBe(1));
+  it("hound requires 3 block", () => expect(WORKSHOP_RECIPES.hound.inputs.block).toBe(3));
   it("hound requires 1 bread", () => expect(WORKSHOP_RECIPES.hound.inputs.bread).toBe(1));
 });
 

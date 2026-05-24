@@ -1,4 +1,4 @@
-import { BIOMES, BUILDINGS, RECIPES, DAILY_REWARDS, MIN_EXPEDITION_TURNS, CAPPED_RESOURCES, UPGRADE_THRESHOLDS, CRAFT_GEM_SKIP_COST } from "./constants.js";
+import { BIOMES, BUILDINGS, RECIPES, DAILY_REWARDS, MIN_EXPEDITION_TURNS, CAPPED_TILES, CAPPED_INVENTORY_RESOURCES, UPGRADE_THRESHOLDS, CRAFT_GEM_SKIP_COST } from "./constants.js";
 import { locBuilt as _locBuilt } from "./locBuilt.js";
 import { sellPriceFor as _sellPriceFor } from "./features/market/pricing.js";
 import { tryClearRatChain } from "./features/farm/rats.js";
@@ -12,7 +12,6 @@ import { currentCap } from "./utils.js";
 import { computeWorkerEffects } from "./features/workers/aggregate.js";
 import { TILE_TYPES, CATEGORIES, TILE_TYPES_MAP, CATEGORY_OF } from "./features/tileCollection/data.js";
 import { discoverTileTypesFromChain } from "./features/tileCollection/effects.js";
-import { longChainBonusFor } from "./features/tileCollection/longChainBonus.js";
 import { rollQuests } from "./features/quests/data.js";
 import { awardXp } from "./features/almanac/data.js";
 import * as crafting from "./features/crafting/slice.js";
@@ -313,13 +312,6 @@ function coreReducer(state, action) {
       const hookFlat = chainTileEffects.coinBonusFlat || 0;
       const hookPerTile = chainTileEffects.coinBonusPerTile || 0;
       const coinHookBonus = hookFlat + hookPerTile * effectiveChain;
-
-      // Catalog §7 "long chain gives X" bonuses — Buckwheat → herd, Eggplant
-      // → veg, Goose → veg, Willow → veg, Broccoli → flower, Warthog → mount.
-      const longBonus = longChainBonusFor(key, effectiveChain);
-      if (longBonus) {
-        addCappedResourceMut(inventory, chainCf, chainFloaters, longBonus.bonusKey, longBonus.amount, chainCap);
-      }
 
       const baseCoinsGain = Math.max(1, Math.floor((gained * value) / 2)) + coinHookBonus;
       // Phase 6b — coin_gain_mult boons scale chain coin reward.
@@ -1102,7 +1094,9 @@ function coreReducer(state, action) {
 
     case "BUY_RESOURCE": {
       const { key: buyKey, qty: buyQty } = action.payload;
-      if (CAPPED_RESOURCES.includes(buyKey)) {
+      // Transitional: market still trades tile keys until PR 3 moves tiles out
+      // of inventory. Cap-check against both lists.
+      if (CAPPED_INVENTORY_RESOURCES.includes(buyKey) || CAPPED_TILES.includes(buyKey)) {
         const buyingCap = currentCap(state);
         const currentAmt = state.inventory?.[buyKey] ?? 0;
         if (currentAmt + buyQty > buyingCap) return state; // cap reached — no debit
@@ -1393,7 +1387,7 @@ function coreReducer(state, action) {
         upgradeKey = active ?? null;
       } else {
         threshold = Math.max(1, (UPGRADE_THRESHOLDS[effectiveKey] ?? Infinity) - reduce);
-        const res = Object.values(BIOMES).flatMap((b) => b.resources ?? []).find((r) => r.key === effectiveKey);
+        const res = resourceByKey(effectiveKey);
         upgradeKey = res?.next ?? null;
       }
 
@@ -1469,7 +1463,7 @@ function coreReducer(state, action) {
       const migCap = currentCap(state);
       const migInv = { ...state.inventory };
       let changed = false;
-      for (const k of CAPPED_RESOURCES) {
+      for (const k of [...CAPPED_TILES, ...CAPPED_INVENTORY_RESOURCES]) {
         if ((migInv[k] ?? 0) > migCap) {
           migInv[k] = migCap;
           changed = true;
@@ -1615,7 +1609,7 @@ function coreReducer(state, action) {
       if (action.type === "DEV/FILL_STORAGE") {
         const inventory = { ...state.inventory };
         for (const biome of Object.values(BIOMES)) {
-          for (const res of biome.resources) {
+          for (const res of [...biome.tiles, ...biome.resources]) {
             inventory[res.key] = (inventory[res.key] || 0) + (action.amount ?? 100);
           }
         }

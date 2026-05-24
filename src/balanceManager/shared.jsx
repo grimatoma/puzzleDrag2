@@ -285,12 +285,12 @@ export function SearchAndAddPicker({
   );
 }
 
-/** Options for resource-key selects. Drawn from all biome resource lists; excludes tile-kind entries. */
+/** Options for resource-key selects. Drawn from all biome resource lists (pre-filtered to kind:"resource"). */
 export function resourceKeyOptions() {
   const set = new Set();
   for (const b of Object.values(BIOMES))
     for (const r of b.resources)
-      if (ITEMS[r.key]?.kind === "resource") set.add(r.key);
+      set.add(r.key);
   return [
     { value: "", label: "— pick resource —" },
     ...[...set].sort().map((k) => ({ value: k, label: k })),

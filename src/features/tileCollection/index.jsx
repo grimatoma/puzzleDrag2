@@ -74,7 +74,7 @@ const CATEGORY_ICONS = {
 // Look up resources across every biome — mine and fish tiles also need
 // their colour/icon in the wiki, not just farm.
 const ALL_RESOURCES = Object.fromEntries(
-  Object.values(BIOMES).flatMap((b) => b.resources.map((r) => [r.key, r])),
+  Object.values(BIOMES).flatMap((b) => [...b.tiles, ...b.resources].map((r) => [r.key, r])),
 );
 
 const FARM_HAZARD_LIST = [

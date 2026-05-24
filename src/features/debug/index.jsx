@@ -52,7 +52,7 @@ export default function DebugModal({ state, dispatch }) {
 
   if (!open) return null;
 
-  const biomeResources = BIOMES[itemBiome]?.resources ?? [];
+  const biomeResources = [...(BIOMES[itemBiome]?.tiles ?? []), ...(BIOMES[itemBiome]?.resources ?? [])];
 
   return (
     <ParchmentDialog open={open} onClose={close} size="lg" ariaLabel="Debug Tools" backdropClassName="z-[70]">
@@ -125,7 +125,7 @@ export default function DebugModal({ state, dispatch }) {
                     key={b}
                     onClick={() => {
                       setItemBiome(b);
-                      setItemKey(BIOMES[b].resources[0]?.key ?? '');
+                      setItemKey((BIOMES[b].tiles[0] ?? BIOMES[b].resources[0])?.key ?? '');
                     }}
                     className="flex-1 py-1 text-[11px] font-bold rounded border-2"
                     style={
