@@ -7,6 +7,7 @@ import { useState } from "react";
 import { ITEMS } from "../../constants.js";
 import { TYPE_WORKERS, nextHireCost, nextHireResourceCost } from "./data.js";
 import Icon from "../../ui/Icon.jsx";
+import DesignIcon from "../../ui/primitives/Icon.jsx";
 import {
   AbilitySummary,
   BrowserDetailLayout,
@@ -72,11 +73,20 @@ function WorkerDetail({ worker, count, state, dispatch }) {
   const canHire = (state?.coins ?? 0) >= coinCost && canPayResources && count < worker.maxCount;
   const canFire = count > 0;
   const costEntries = [
-    { key: "coins", label: "Coins", amount: coinCost, have: state?.coins ?? 0, showHave: true, check: true },
+    {
+      key: "coins",
+      label: "Coins",
+      amount: coinCost,
+      icon: <DesignIcon iconKey="design.currency.coin" size={18} />,
+      have: state?.coins ?? 0,
+      showHave: true,
+      check: true,
+    },
     ...Object.entries(resourceCost).map(([key, amount]) => ({
       key,
       label: ITEMS[key]?.label || key,
       amount,
+      icon: <Icon iconKey={key} size={18} />,
       have: inv[key] ?? 0,
       showHave: true,
       check: true,
