@@ -35,8 +35,6 @@ export default function EntryGrid({ entries, emptyLabel = "No entries." }) {
             style={{
               background: COLORS.parchment,
               borderColor: COLORS.border,
-              width: "100%",
-              maxWidth: 96,
               minHeight: 96,
             }}
             title={entry.key}
@@ -45,7 +43,7 @@ export default function EntryGrid({ entries, emptyLabel = "No entries." }) {
             <div className="flex flex-col items-center justify-center gap-1 px-2 pt-2 pb-2 w-full">
               <Icon iconKey={entry.iconKey} size={36} />
               <div
-                className="text-[12px] font-bold text-center leading-tight break-all w-full"
+                className="text-[12px] font-bold text-center leading-tight break-words w-full"
                 style={{ color: COLORS.ink }}
               >
                 {entry.name}
