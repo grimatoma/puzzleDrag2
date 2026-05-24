@@ -106,6 +106,9 @@ export default function ItemsTab({ draft, updateDraft }) {
           };
           const dirty = Object.keys(patch).length > 0;
           const tool = isTool(r);
+          const powerId = tool ? (eff.effect || r.power?.id) : null;
+          const def = powerId ? defaultBoardAnimForPower(powerId) : null;
+          const animMatchesDefault = !!(def && eff.anim === def.anim && eff.ms === def.ms);
           const craftedBy = allCraftingMethods[key] || [];
           const semanticTags = tagsForItemKey(key);
           const sourceTags = sourceTagsForItem(key, { recipesByOutput: allCraftingMethods });
@@ -214,36 +217,38 @@ export default function ItemsTab({ draft, updateDraft }) {
                     <div>
                       <Label>Anim</Label>
                       <Select
-                        value={eff.anim}
+                        value={animMatchesDefault ? "" : eff.anim}
                         options={(() => {
                           const known = [...new Set(
                             Object.values(ITEMS).filter((it) => it.kind === "tool" && it.anim).map((it) => it.anim),
                           )].sort();
-                          const opts = [{ value: "", label: "— pick anim —" }, ...known.map((a) => ({ value: a, label: a }))];
-                          if (eff.anim && !known.includes(eff.anim)) opts.unshift({ value: eff.anim, label: `${eff.anim} (custom)` });
+                          const emptyLabel = def ? "(use power default)" : "— none —";
+                          const opts = [{ value: "", label: emptyLabel }, ...known.map((a) => ({ value: a, label: a }))];
+                          if (eff.anim && !known.includes(eff.anim) && !animMatchesDefault) opts.unshift({ value: eff.anim, label: `${eff.anim} (custom)` });
                           return opts;
                         })()}
-                        onChange={(v) => patchItem(key, { anim: v })}
+                        onChange={(v) => {
+                          if (v === "") {
+                            patchItem(key, { anim: "", ms: 0 });
+                          } else {
+                            patchItem(key, { anim: v });
+                          }
+                        }}
                       />
                     </div>
                     <div>
                       <Label>Anim MS</Label>
                       <NumberField value={eff.ms} min={0} max={5000} onChange={(v) => patchItem(key, { ms: v })} width={80} />
                     </div>
-                    {(() => {
-                      const powerId = eff.effect || eff.power?.id;
-                      const def = powerId ? defaultBoardAnimForPower(powerId) : null;
-                      if (!def) return null;
-                      const overrides = eff.anim !== def.anim || eff.ms !== def.ms;
-                      return (
-                        <div className="col-span-2 text-[10px]" style={{ color: COLORS.inkSubtle }}>
-                          Power default: <code className="font-mono">{def.anim}</code> · {def.ms}ms
-                          {overrides && (
-                            <span style={{ color: COLORS.ember }}> — tool override</span>
-                          )}
-                        </div>
-                      );
-                    })()}
+                    {def && (
+                      <div className="col-span-2 text-[10px]" style={{ color: COLORS.inkSubtle }}>
+                        {animMatchesDefault ? (
+                          <>Using power default: <code className="font-mono">{def.anim}</code> · {def.ms}ms</>
+                        ) : (
+                          <>Power default: <code className="font-mono">{def.anim}</code> · {def.ms}ms<span style={{ color: COLORS.ember }}> — tool override</span></>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </CardAttachmentFooter>
               )}
