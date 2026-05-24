@@ -1,4 +1,4 @@
-import { BIOMES, BUILDINGS, RECIPES, DAILY_REWARDS, MIN_EXPEDITION_TURNS, CAPPED_RESOURCES, UPGRADE_THRESHOLDS, CRAFT_GEM_SKIP_COST } from "./constants.js";
+import { BIOMES, BUILDINGS, RECIPES, DAILY_REWARDS, MIN_EXPEDITION_TURNS, CAPPED_TILES, CAPPED_INVENTORY_RESOURCES, UPGRADE_THRESHOLDS, CRAFT_GEM_SKIP_COST } from "./constants.js";
 import { locBuilt as _locBuilt } from "./locBuilt.js";
 import { sellPriceFor as _sellPriceFor } from "./features/market/pricing.js";
 import { tryClearRatChain } from "./features/farm/rats.js";
@@ -1094,7 +1094,7 @@ function coreReducer(state, action) {
 
     case "BUY_RESOURCE": {
       const { key: buyKey, qty: buyQty } = action.payload;
-      if (CAPPED_RESOURCES.includes(buyKey)) {
+      if (CAPPED_INVENTORY_RESOURCES.includes(buyKey)) {
         const buyingCap = currentCap(state);
         const currentAmt = state.inventory?.[buyKey] ?? 0;
         if (currentAmt + buyQty > buyingCap) return state; // cap reached — no debit
@@ -1461,7 +1461,7 @@ function coreReducer(state, action) {
       const migCap = currentCap(state);
       const migInv = { ...state.inventory };
       let changed = false;
-      for (const k of CAPPED_RESOURCES) {
+      for (const k of [...CAPPED_TILES, ...CAPPED_INVENTORY_RESOURCES]) {
         if ((migInv[k] ?? 0) > migCap) {
           migInv[k] = migCap;
           changed = true;

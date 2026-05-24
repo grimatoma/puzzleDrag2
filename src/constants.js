@@ -706,10 +706,14 @@ export const QUEST_TEMPLATES = [
 // ─── Phase 4 — Inventory soft caps ───────────────────────────────────────────
 export const RESOURCE_CAP_BASE = 200;
 export const RESOURCE_CAP_GRANARY = 500;
-/** Raw farm + mine resources subject to the inventory cap. */
-export const CAPPED_RESOURCES = ["tile_grass_hay","tile_grain_wheat","flour","plank",
-  "jam","tile_mine_stone","tile_mine_iron_ore","tile_mine_copper_ore","tile_mine_coal","hay_bundle",
-  "tile_veg_carrot","tile_veg_eggplant","tile_veg_turnip","tile_veg_beet","tile_veg_cucumber","tile_veg_squash","tile_veg_mushroom","tile_veg_pepper","tile_veg_broccoli","soup",
+/**
+ * Board tile keys (kind:"tile") subject to the inventory cap.
+ * Used when checking whether a chain collection would exceed the cap.
+ * 62 entries — all tile_* keys from the original CAPPED_RESOURCES.
+ */
+export const CAPPED_TILES = [
+  "tile_grass_hay","tile_grain_wheat","tile_mine_stone","tile_mine_iron_ore","tile_mine_copper_ore","tile_mine_coal",
+  "tile_veg_carrot","tile_veg_eggplant","tile_veg_turnip","tile_veg_beet","tile_veg_cucumber","tile_veg_squash","tile_veg_mushroom","tile_veg_pepper","tile_veg_broccoli",
   // Catalog-import placeholders.
   "tile_grass_heather",
   "tile_grain_corn","tile_grain_buckwheat","tile_grain_manna","tile_grain_rice",
@@ -723,8 +727,17 @@ export const CAPPED_RESOURCES = ["tile_grass_hay","tile_grain_wheat","flour","pl
   "tile_herd_sheep","tile_herd_alpaca","tile_herd_goat","tile_herd_ram",
   "tile_cattle_cow","tile_cattle_longhorn","tile_cattle_triceratops",
   "tile_mount_horse","tile_mount_donkey","tile_mount_moose","tile_mount_mammoth",
+];
+/**
+ * Inventory resource keys (kind:"resource") subject to the inventory cap.
+ * Used when checking whether buying or crediting a bare resource would exceed the cap.
+ * 12 entries — all non-tile keys from the original CAPPED_RESOURCES.
+ */
+export const CAPPED_INVENTORY_RESOURCES = [
+  "flour","plank","jam","hay_bundle","soup",
   // Phase: wire-all-chains — terminal products.
-  "pie","honey","meat","milk","horseshoe","eggs","bread"];
+  "pie","honey","meat","milk","horseshoe","eggs","bread",
+];
 
 // ─── Phase 3 Economy ──────────────────────────────────────────────────────────
 

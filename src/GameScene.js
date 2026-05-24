@@ -1,5 +1,5 @@
 import Phaser from "phaser";
-import { TILE, COLS, ROWS, UPGRADE_THRESHOLDS, SEASONS, BIOMES, CAPPED_RESOURCES, SCENE_EVENTS, tileFamilyResource, TILES_WITH_CUSTOM_OUTPUT } from "./constants.js";
+import { TILE, COLS, ROWS, UPGRADE_THRESHOLDS, SEASONS, BIOMES, CAPPED_TILES, SCENE_EVENTS, tileFamilyResource, TILES_WITH_CUSTOM_OUTPUT } from "./constants.js";
 import { upgradeCountForChain, rollResource } from "./utils.js";
 import { computeWorkerEffects } from "./features/workers/aggregate.js";
 import { CATEGORY_OF, TILE_TYPES_MAP } from "./features/tileCollection/data.js";
@@ -1635,7 +1635,7 @@ export class GameScene extends Phaser.Scene {
     // V.3 — Clamp the displayed gain to the inventory cap so float text matches what the player actually receives
     const cap = this.registry.get("inventoryCap") ?? 200;
     const inv = this.registry.get("inventory") ?? {};
-    const isCapped = CAPPED_RESOURCES.includes(res.key);
+    const isCapped = CAPPED_TILES.includes(res.key);
     const currentAmt = inv[res.key] ?? 0;
     const wouldGain = gained + (bonusGains[res.key] ?? 0);
     const actualGain = isCapped ? Math.max(0, Math.min(cap - currentAmt, wouldGain)) : wouldGain;

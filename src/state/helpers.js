@@ -1,4 +1,4 @@
-import { BIOMES, ITEMS, NPCS, CAPPED_RESOURCES } from "../constants.js";
+import { BIOMES, ITEMS, NPCS, CAPPED_INVENTORY_RESOURCES } from "../constants.js";
 import { TILE_TYPES, CATEGORIES } from "../features/tileCollection/data.js";
 
 // ─── Inventory helpers ─────────────────────────────────────────────────────
@@ -6,14 +6,14 @@ import { TILE_TYPES, CATEGORIES } from "../features/tileCollection/data.js";
 /**
  * Mutates `inv` (and `capFloaters` / `floaters` when provided) to credit
  * `amount` of `key` to inventory, applying the resource cap when the key is
- * in CAPPED_RESOURCES. When the cap is freshly hit, sets capFloaters[key]
+ * in CAPPED_INVENTORY_RESOURCES. When the cap is freshly hit, sets capFloaters[key]
  * and appends a "stash full" floater if a floaters draft is supplied.
  *
  * Caller is responsible for cloning `inv`/`capFloaters`/`floaters` first
  * (they're treated as locally-owned drafts).
  */
 export function addCappedResourceMut(inv, capFloaters, floaters, key, amount, cap) {
-  if (!CAPPED_RESOURCES.includes(key)) {
+  if (!CAPPED_INVENTORY_RESOURCES.includes(key)) {
     inv[key] = (inv[key] ?? 0) + amount;
     return;
   }
