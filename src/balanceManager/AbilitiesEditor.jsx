@@ -13,16 +13,7 @@ import {
 import { useMemo } from "react";
 import { BIOMES } from "../constants.js";
 import { CATEGORIES } from "../features/tileCollection/data.js";
-import { COLORS, NumberField, Select, SmallButton, Card, SearchAndAddPicker } from "./shared.jsx";
-
-function resourceKeyOptions() {
-  const set = new Set();
-  for (const b of Object.values(BIOMES)) for (const r of b.resources) set.add(r.key);
-  return [
-    { value: "", label: "— pick resource —" },
-    ...[...set].sort().map((k) => ({ value: k, label: k })),
-  ];
-}
+import { COLORS, NumberField, Select, SmallButton, Card, SearchAndAddPicker, resourceKeyOptions, hazardOptions } from "./shared.jsx";
 
 function categoryOptions() {
   return [
@@ -48,19 +39,6 @@ function toolOptions() {
     { value: "water_pump", label: "water_pump" },
     { value: "magic_wand", label: "magic_wand" },
     { value: "magic_seed", label: "magic_seed" },
-  ];
-}
-
-function hazardOptions() {
-  // Hazards aren't centrally enumerated — provide free text + common ids.
-  return [
-    { value: "", label: "— pick hazard —" },
-    { value: "rats", label: "rats" },
-    { value: "wolves", label: "wolves" },
-    { value: "fire", label: "fire" },
-    { value: "deadly_pests", label: "deadly_pests" },
-    { value: "gas_vent", label: "gas_vent" },
-    { value: "cave_in", label: "cave_in" },
   ];
 }
 
@@ -165,7 +143,7 @@ export default function AbilitiesEditor({ scope, abilities, onChange }) {
   return (
     <div className="flex flex-col gap-2">
       <div className="text-[11px] font-bold uppercase tracking-wide" style={{ color: COLORS.inkSubtle }}>
-        Abilities ({list.length})
+        Attributes ({list.length})
       </div>
 
       {list.length === 0 && (
@@ -173,7 +151,7 @@ export default function AbilitiesEditor({ scope, abilities, onChange }) {
           className="text-center py-3 text-[12px] italic rounded-lg border-2 border-dashed"
           style={{ borderColor: COLORS.border, color: COLORS.inkSubtle }}
         >
-          No abilities attached. Pick one below.
+          No attributes attached. Pick one below.
         </div>
       )}
 
@@ -184,7 +162,7 @@ export default function AbilitiesEditor({ scope, abilities, onChange }) {
             <Card key={idx}>
               <div className="flex items-center justify-between">
                 <span className="text-[12px]" style={{ color: COLORS.red }}>
-                  ⚠ Unknown ability id: <code>{inst?.id}</code>
+                  ⚠ Unknown attribute id: <code>{inst?.id}</code>
                 </span>
                 <SmallButton variant="danger" onClick={() => removeAt(idx)}>remove</SmallButton>
               </div>
@@ -223,8 +201,8 @@ export default function AbilitiesEditor({ scope, abilities, onChange }) {
       })}
 
       <SearchAndAddPicker
-        label="Add ability"
-        placeholder="Search abilities by name, id, or description…"
+        label="Add attribute"
+        placeholder="Search attributes by name, id, or description…"
         options={pickerOptions}
         onSelect={add}
         gridClass="grid-cols-1 md:grid-cols-2"

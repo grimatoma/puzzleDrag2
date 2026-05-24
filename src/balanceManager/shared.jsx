@@ -2,6 +2,7 @@
 // ember-orange accents.
 import { useState } from "react";
 import Icon from "../ui/Icon.jsx";
+import { BIOMES } from "../constants.js";
 import {
   NumberInput as BaseNumberInput,
   SearchInput as BaseSearchInput,
@@ -282,4 +283,27 @@ export function SearchAndAddPicker({
       )}
     </div>
   );
+}
+
+/** Options for resource-key selects. Drawn from all biome resource lists. */
+export function resourceKeyOptions() {
+  const set = new Set();
+  for (const b of Object.values(BIOMES)) for (const r of b.resources) set.add(r.key);
+  return [
+    { value: "", label: "— pick resource —" },
+    ...[...set].sort().map((k) => ({ value: k, label: k })),
+  ];
+}
+
+/** Options for hazard selects. Common ids; designers may enter others freely. */
+export function hazardOptions() {
+  return [
+    { value: "", label: "— pick hazard —" },
+    { value: "rats", label: "rats" },
+    { value: "wolves", label: "wolves" },
+    { value: "fire", label: "fire" },
+    { value: "deadly_pests", label: "deadly_pests" },
+    { value: "gas_vent", label: "gas_vent" },
+    { value: "cave_in", label: "cave_in" },
+  ];
 }

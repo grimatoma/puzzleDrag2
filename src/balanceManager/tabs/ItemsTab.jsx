@@ -11,8 +11,9 @@ import { tagsForItemKey, sourceTagsForItem } from "../../features/inventory/tags
 import {
   COLORS, NumberField, TextField, TextArea, ColorField,
   SmallButton, Pill, Card, SearchBar, TileSwatch,
-  FilterBar, SegmentedFilter,
+  FilterBar, SegmentedFilter, Select, resourceKeyOptions, hazardOptions,
 } from "../shared.jsx";
+import { TOOL_POWERS, getToolPower, defaultsForToolPower } from "../../config/toolPowers.js";
 import Icon from "../../ui/Icon.jsx";
 
 const FILTERS = [
@@ -170,17 +171,67 @@ export default function ItemsTab({ draft, updateDraft }) {
                   {/* The power — having one of these is what makes an item a tool. */}
                   {tool && (
                     <>
-                      <div>
+                      {/* Effect (power) — schema-driven dropdown */}
+                      <div className="col-span-2">
                         <Label>Effect (power)</Label>
-                        <TextField value={eff.effect} onChange={(v) => patchItem(key, { effect: v })} />
+                        <Select
+                          value={eff.effect}
+                          options={[
+                            { value: "", label: "— pick power —" },
+                            ...TOOL_POWERS.map((p) => ({ value: p.id, label: `${p.name} — ${p.id}` })),
+                          ]}
+                          onChange={(v) => {
+                            const defaults = defaultsForToolPower(v);
+                            patchItem(key, { effect: v, target: defaults.target ?? "", ...defaults });
+                          }}
+                        />
+                        {getToolPower(eff.effect) && (
+                          <div className="text-[10px] italic mt-0.5" style={{ color: COLORS.inkSubtle }}>
+                            {getToolPower(eff.effect).desc}
+                          </div>
+                        )}
                       </div>
-                      <div>
-                        <Label>Target</Label>
-                        <TextField value={eff.target} onChange={(v) => patchItem(key, { target: v })} />
-                      </div>
+                      {/* Per-param fields driven by the power schema */}
+                      {(getToolPower(eff.effect)?.params ?? []).map((p) => (
+                        <div key={p.key}>
+                          <Label>{p.label}</Label>
+                          {p.type === "resourceKey" ? (
+                            <Select
+                              value={eff[p.key] ?? ""}
+                              options={resourceKeyOptions()}
+                              onChange={(v) => patchItem(key, { [p.key]: v })}
+                            />
+                          ) : p.type === "hazard" ? (
+                            <Select
+                              value={eff[p.key] ?? ""}
+                              options={hazardOptions()}
+                              onChange={(v) => patchItem(key, { [p.key]: v })}
+                            />
+                          ) : null}
+                        </div>
+                      ))}
+                      {/* Anim — dropdown from known values across all tool items */}
                       <div>
                         <Label>Anim</Label>
-                        <TextField value={eff.anim} onChange={(v) => patchItem(key, { anim: v })} />
+                        <Select
+                          value={eff.anim}
+                          options={(() => {
+                            const known = [...new Set(
+                              Object.values(ITEMS)
+                                .filter((it) => it.kind === "tool" && it.anim)
+                                .map((it) => it.anim)
+                            )].sort();
+                            const opts = [
+                              { value: "", label: "— pick anim —" },
+                              ...known.map((a) => ({ value: a, label: a })),
+                            ];
+                            if (eff.anim && !known.includes(eff.anim)) {
+                              opts.unshift({ value: eff.anim, label: `${eff.anim} (custom)` });
+                            }
+                            return opts;
+                          })()}
+                          onChange={(v) => patchItem(key, { anim: v })}
+                        />
                       </div>
                       <div>
                         <Label>Anim MS</Label>

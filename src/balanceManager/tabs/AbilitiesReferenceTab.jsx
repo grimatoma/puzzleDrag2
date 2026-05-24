@@ -14,17 +14,12 @@ function techExplanation(ability) {
   return `Aggregated into channel \`${ability.channel}\` at trigger \`${ability.trigger}\` via \`applyAbilityToChannels\` using ability id \`${ability.id}\`.`;
 }
 
-function exampleSnippet(ability) {
-  const params = Object.fromEntries((ability.params || []).map((p) => [p.key, p.default ?? "..."]));
-  return JSON.stringify({ id: ability.id, params }, null, 2);
-}
-
 export default function AbilitiesReferenceTab() {
   return (
     <div className="flex flex-col gap-3">
       <Card>
         <div className="text-[12px]" style={{ color: COLORS.inkSubtle }}>
-          Catalog of all abilities from <code>src/config/abilities.js</code>. Use this as a reference for names, config fields,
+          Catalog of all attributes from <code>src/config/abilities.js</code>. Use this as a reference for names, config fields,
           runtime trigger/channel behavior, and example instance payloads.
         </div>
       </Card>
@@ -75,12 +70,6 @@ export default function AbilitiesReferenceTab() {
             </div>
           </div>
 
-          <div className="mt-2">
-            <div className="text-[11px] font-bold uppercase mb-1" style={{ color: COLORS.ink }}>Example</div>
-            <pre className="text-[10px] p-2 rounded border overflow-x-auto" style={{ background: "#fffaf1", borderColor: COLORS.border, color: COLORS.ink }}>
-{exampleSnippet(ability)}
-            </pre>
-          </div>
         </Card>
       ))}
     </div>
