@@ -2,20 +2,57 @@
  * Phase 10.1 — Farm tools pure logic.
  * Animation lives in GameScene; this file is pure state transforms.
  *
- * Locked rule: tools NEVER tick state.turnsUsed.
- *
- * §5 lists "1 Wood" for Rake; implementation uses `plank` because the
- * §6 wood chain names the base tile "tile_tree_oak" and the first upgrade "plank" —
- * plank is what the player can actually hold at workshop-build time.
- *
- * §6 Cat tool counter deferred per Phase 10.4 design note;
- * chain-3-rats is the locked Phase 10 removal path.
+ * Tap-target tools (rake, axe, bomb, magic_wand) use bespoke GameScene handlers;
+ * instant `clear_all` tools read tile keys from ITEMS / power params.
  */
 
+import { ITEMS } from "../../constants.js";
+
+/** Board tools that arm on USE_TOOL and resolve on tap (not instant clear_all). */
+export const TAP_TARGET_TOOL_IDS = new Set(["bomb", "rake", "axe", "magic_wand"]);
+
+function cellMatchesClearTarget(t, targetKey) {
+  if (!t.key || t.rubble || t.gas || t.frozen || t.key === "rat") return false;
+  if (targetKey === "*") return true;
+  return t.key === targetKey;
+}
+
 /**
- * Apply a pending board tool (rake / axe) — pure.
- * Clears the matching tile key from every non-locked cell and credits inventory.
- * Returns the updated state.
+ * Clear every board cell matching targetKey (or all tile types when targetKey is "*").
+ *
+ * @param {object} state
+ * @param {string} targetKey
+ * @returns {{ state: object, collected: number }}
+ */
+export function clearTilesOfKey(state, targetKey) {
+  if (!targetKey || !state.grid) {
+    return { state, collected: 0 };
+  }
+
+  /** @type {Record<string, number>} */
+  const byKey = {};
+  const grid = state.grid.map((row) =>
+    row.map((t) => {
+      if (!cellMatchesClearTarget(t, targetKey)) return t;
+      byKey[t.key] = (byKey[t.key] ?? 0) + 1;
+      return { ...t, key: null, _emptied: true };
+    }),
+  );
+
+  const collected = Object.values(byKey).reduce((sum, n) => sum + n, 0);
+  let inventory = state.inventory ?? {};
+  for (const [k, n] of Object.entries(byKey)) {
+    inventory = { ...inventory, [k]: (inventory[k] ?? 0) + n };
+  }
+
+  return {
+    state: { ...state, grid, inventory },
+    collected,
+  };
+}
+
+/**
+ * Apply a pending board tool — pure reducer helper (tests / legacy paths).
  *
  * @param {object} state
  * @returns {object}
@@ -23,29 +60,12 @@
 export function applyToolPending(state) {
   const id = state.toolPending;
   if (!id) return state;
-  if (id === "rake") return _clearKey(state, "tile_grass_hay");
-  if (id === "axe") return _clearKey(state, "tile_tree_oak");
-  // fertilizer is handled at fillBoard time, not here
-  return { ...state, toolPending: null };
-}
 
-/**
- * Clear all non-hazard-locked tiles of the given key and add them to inventory.
- */
-function _clearKey(state, key) {
-  let collected = 0;
-  const grid = state.grid.map((row) =>
-    row.map((t) => {
-      if (t.key === key && !t.rubble && !t.gas && !t.frozen && t.key !== "rat") {
-        collected += 1;
-        return { ...t, key: null, _emptied: true };
-      }
-      return t;
-    }),
-  );
-  const inventory = {
-    ...state.inventory,
-    [key]: (state.inventory[key] ?? 0) + collected,
-  };
-  return { ...state, grid, inventory, toolPending: null };
+  const def = ITEMS[id];
+  if (def?.effect === "clear_all" && def.target) {
+    const { state: next } = clearTilesOfKey(state, def.target);
+    return { ...next, toolPending: null };
+  }
+
+  return { ...state, toolPending: null };
 }

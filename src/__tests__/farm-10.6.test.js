@@ -44,21 +44,21 @@ describe("10.6 — initial tool counts", () => {
 // ── USE_TOOL bird_cage ────────────────────────────────────────────────────────
 
 describe("10.6 — USE_TOOL bird_cage", () => {
-  it("collects all 3 egg tiles into inventory", () => {
-    const grid = makeGridWith([{ key: "eggs", count: 3 }, { key: "tile_grass_hay", count: 4 }]);
+  it("collects all 3 chicken tiles into inventory", () => {
+    const grid = makeGridWith([{ key: "tile_bird_chicken", count: 3 }, { key: "tile_grass_hay", count: 4 }]);
     const s0 = {
       ...createInitialState(),
       grid,
       tools: { ...createInitialState().tools, bird_cage: 1 },
-      inventory: { ...createInitialState().inventory, eggs: 0 },
+      inventory: { ...createInitialState().inventory, tile_bird_chicken: 0 },
     };
     const s1 = rootReducer(s0, { type: "USE_TOOL", payload: { id: "bird_cage" } });
-    expect(s1.inventory.eggs).toBe(3);
+    expect(s1.inventory.tile_bird_chicken).toBe(3);
     expect(s1.tools.bird_cage).toBe(0);
   });
 
   it("does NOT consume a turn", () => {
-    const grid = makeGridWith([{ key: "eggs", count: 2 }]);
+    const grid = makeGridWith([{ key: "tile_bird_chicken", count: 2 }]);
     const s0 = {
       ...createInitialState(),
       grid,
@@ -69,7 +69,7 @@ describe("10.6 — USE_TOOL bird_cage", () => {
     expect(s1.turnsUsed).toBe(4);
   });
 
-  it("refunds when no egg tiles (tool count unchanged)", () => {
+  it("refunds when no chicken tiles (tool count unchanged)", () => {
     const grid = makeGridWith([{ key: "tile_grass_hay", count: 6 }]);
     const s0 = {
       ...createInitialState(),

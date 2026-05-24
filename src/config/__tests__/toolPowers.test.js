@@ -26,12 +26,13 @@ describe("toolPowers animation catalog", () => {
   });
 
   it("itemsWithToolPower groups tools by power.id", () => {
-    const clearCategory = itemsWithToolPower("clear_category").map((i) => i.key);
-    expect(clearCategory).toContain("bird_cage");
-    expect(clearCategory).toContain("fruit_picker");
-    expect(clearCategory).toContain("hoe");
-
     const clearAll = itemsWithToolPower("clear_all").map((i) => i.key);
-    expect(clearAll.length).toBe(0);
+    expect(clearAll).toContain("hoe");
+    expect(clearAll).toContain("bird_cage");
+
+    const clearCategory = itemsWithToolPower("clear_category").map((i) => i.key);
+    expect(clearCategory).toContain("fruit_picker");
+    expect(clearCategory).not.toContain("hoe");
+    expect(clearCategory).not.toContain("bird_cage");
   });
 });

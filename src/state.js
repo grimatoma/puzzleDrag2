@@ -1,6 +1,7 @@
 import { BIOMES, BUILDINGS, RECIPES, DAILY_REWARDS, MIN_EXPEDITION_TURNS, CAPPED_TILES, CAPPED_INVENTORY_RESOURCES, UPGRADE_THRESHOLDS, CRAFT_GEM_SKIP_COST, ITEMS } from "./constants.js";
 import { locBuilt as _locBuilt } from "./locBuilt.js";
 import { sellPriceFor as _sellPriceFor } from "./features/market/pricing.js";
+import { clearTilesOfKey, TAP_TARGET_TOOL_IDS } from "./features/farm/tools.js";
 import { tryClearRatChain } from "./features/farm/rats.js";
 import { tryExtinguishFire, rollFarmHazard, tickFire, tickWolves } from "./features/farm/hazards.js";
 import { tryDeadlyPestsKill } from "./features/farm/deadlyPests.js";
@@ -62,7 +63,7 @@ const slices = [crafting, quests, achievements, tutorial, settings, boss, cartog
 // Tools that arm-then-fire from a board tap. USE_TOOL only sets toolPending;
 // the charge is spent in TOOL_FIRED once the tap actually resolves. Keep in
 // sync with `armed: "tap"` entries in src/ui/toolRegistry.js.
-const TAP_TARGET_TOOL_KEYS = new Set(["bomb", "rake", "axe", "magic_wand"]);
+const TAP_TARGET_TOOL_KEYS = TAP_TARGET_TOOL_IDS;
 
 // Phase 2 (tool-powers overhaul) — typed-power equivalent of the legacy
 // TAP_TARGET_TOOL_KEYS set. Any power id in this set arms-on-USE_TOOL and
@@ -90,10 +91,7 @@ const TAP_TARGET_POWER_IDS = new Set([
 //   - MAGIC tools routed exclusively through src/features/portal/slice.js
 //     (hourglass, magic_seed, magic_fertilizer, magic_wand).
 //   - Legacy tools with a declarative `power` field but no runtime handler
-//     in either the legacy switch OR applyToolPower (hoe, stone_hammer,
-//     iron_pick, bird_feed, sapling). These were already dead-with-decrement
-//     pre-fix; keeping them legacy preserves that behavior. A future PR can
-//     migrate them by removing the key from this set.
+//     in either the legacy switch OR applyToolPower (bird_feed, sapling).
 // NOTE: `fertilizer` is INTENTIONALLY omitted — Phase 3 fix 2 migrated it
 // to `transform_tiles` (grass → wheat). The legacy `fertilizerActive` flag
 // branch is still reachable as a defensive fallback (e.g. for saves loaded
@@ -101,11 +99,11 @@ const TAP_TARGET_POWER_IDS = new Set([
 // fertilizer through the typed power. The fertilizer-self-disarm path runs
 // BEFORE the auto-lookup so toggling an armed fertilizer still refunds.
 const LEGACY_TOOL_KEYS = new Set([
-  "rake", "axe", "cat", "bird_cage", "scythe_full",
+  "rake", "axe", "cat",
   "rifle", "hound", "water_pump", "explosives",
   "shuffle", "clear", "basic", "rare", "bomb",
   "magic_wand", "hourglass", "magic_seed", "magic_fertilizer",
-  "hoe", "stone_hammer", "iron_pick", "bird_feed", "sapling",
+  "bird_feed", "sapling",
 ]);
 
 // Disarm every armed tool in one shot, mirroring the existing CANCEL_TOOL +
@@ -188,6 +186,30 @@ function applyToolPower(state, key, power) {
   }
 
   switch (id) {
+    case "clear_all": {
+      const spent = _spendToolCharge(state, key);
+      if (spent === null) return state;
+      const targetKey = params.target ?? ITEMS[key]?.target;
+      if (!targetKey) return spent;
+      const { state: cleared, collected } = clearTilesOfKey(spent, targetKey);
+      if (collected === 0) {
+        const label =
+          targetKey === "*"
+            ? "matching tiles"
+            : (ITEMS[targetKey]?.label?.toLowerCase() ?? targetKey);
+        return {
+          ...cleared,
+          tools: { ...cleared.tools, [key]: (cleared.tools[key] ?? 0) + 1 },
+          bubble: {
+            id: Date.now(),
+            npc: "bram",
+            text: `No ${label} on the board.`,
+            ms: 1200,
+          },
+        };
+      }
+      return { ...cleared, tools: spent.tools };
+    }
     case "clear_category": {
       const spent = _spendToolCharge(state, key);
       if (spent === null) return state;
@@ -957,54 +979,6 @@ function coreReducer(state, action) {
           tools,
           grid,
           hazards: { ...state.hazards, rats: [] },
-        };
-      }
-      // Phase 10.6 — Bird Cage: collect all egg tiles (no turn cost)
-      if (key === "bird_cage") {
-        let grid = state.grid;
-        let collected = 0;
-        if (grid) {
-          const eggCount = grid.flat().filter((t) => t.key === "eggs").length;
-          if (eggCount === 0) {
-            return { ...state, tools: { ...state.tools }, // refund
-              bubble: { id: Date.now(), npc: "bram", text: "No eggs to cage.", ms: 1200 } };
-          }
-          grid = grid.map((row) =>
-            row.map((t) => {
-              if (t.key === "eggs") { collected += 1; return { ...t, key: null, _emptied: true }; }
-              return t;
-            }),
-          );
-        }
-        return {
-          ...state,
-          tools,
-          grid,
-          inventory: { ...state.inventory, eggs: (state.inventory?.eggs ?? 0) + collected },
-        };
-      }
-      // Phase 10.6 — Scythe (full): collect all wheat tiles (no turn cost)
-      if (key === "scythe_full") {
-        let grid = state.grid;
-        let collectedGrain = 0;
-        if (grid) {
-          const grainCount = grid.flat().filter((t) => t.key === "tile_grain_wheat").length;
-          if (grainCount === 0) {
-            return { ...state, tools: { ...state.tools }, // refund
-              bubble: { id: Date.now(), npc: "bram", text: "No wheat to cut.", ms: 1200 } };
-          }
-          grid = grid.map((row) =>
-            row.map((t) => {
-              if (t.key === "tile_grain_wheat") { collectedGrain += 1; return { ...t, key: null, _emptied: true }; }
-              return t;
-            }),
-          );
-        }
-        return {
-          ...state,
-          tools,
-          grid,
-          inventory: { ...state.inventory, tile_grain_wheat: (state.inventory?.tile_grain_wheat ?? 0) + collectedGrain },
         };
       }
       // Phase 10.8 — Rifle: clear all wolves (no turn cost)
