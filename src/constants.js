@@ -244,7 +244,8 @@ export const ITEMS = {
   // Terminal farm resources (flat one-step pipeline).
   flour:              { kind: "resource", biome: "farm", label: "Flour", color: 0xf4e3c0, dark: 0x8a6a3a, value: 8, next: null },
   plank:              { kind: "resource", biome: "farm", label: "Plank", color: 0xc98c50, dark: 0x5e3a1d, value: 6, next: null },
-  jam:                { kind: "resource", biome: "farm", label: "Jam",   color: 0xa72c5e, dark: 0x5a1638, value: 5, next: null },
+  dirt:               { kind: "resource", biome: "farm", label: "Dirt",  color: 0x6b4a2a, dark: 0x352515, value: 2, next: null, desc: "Fertile soil hauled up from the special dirt tiles. Used in fertilizer, explosives, and animal pens." },
+  jam:                { kind: "resource", biome: "farm", label: "Jam",   color: 0x8a1840, dark: 0x450c20, value: 5, next: null, desc: "Sweet preserves cooked down from blackberries. Used in tinctures and festival loaves." },
   tile_bird_turkey:        { kind: "tile", biome: "farm", label: "Turkey", color: 0xb8743a, dark: 0x5e3818, value: 4, next: "eggs", sway: { amp: 1.2, freq: 0.00050, gust: 0.10 } },
   tile_bird_clover:        { kind: "tile", biome: "farm", label: "Clover", color: 0x6fa450, dark: 0x365e22, value: 5, next: "eggs", sway: { amp: 2.5, freq: 0.00080, gust: 0.18 } },
   tile_bird_melon:         { kind: "tile", biome: "farm", label: "Melon",  color: 0xb3d770, dark: 0x4a6e2a, value: 6, next: "eggs", sway: { amp: 0.8, freq: 0.00030, gust: 0.05 } },
@@ -276,7 +277,7 @@ export const ITEMS = {
   tile_fruit_apple:        { kind: "tile", biome: "farm", label: "Apple",        color: 0xd4543a, dark: 0x6a2a18, value: 1, next: "pie", sway: { amp: 1.2, freq: 0.00040, gust: 0.06 } },
   tile_fruit_pear:         { kind: "tile", biome: "farm", label: "Pear",         color: 0xbcc436, dark: 0x5e6018, value: 1, next: "pie", sway: { amp: 1.2, freq: 0.00040, gust: 0.06 } },
   tile_fruit_golden_apple: { kind: "tile", biome: "farm", label: "Golden Apple", color: 0xf4c430, dark: 0x7a6010, value: 1, next: "pie", sway: { amp: 1.2, freq: 0.00040, gust: 0.06 } },
-  tile_fruit_blackberry:   { kind: "tile", biome: "farm", label: "Blackberry",   color: 0x3a1a4a, dark: 0x180a20, value: 1, next: "pie", sway: { amp: 1.0, freq: 0.00038, gust: 0.05 } },
+  tile_fruit_blackberry:   { kind: "tile", biome: "farm", label: "Blackberry",   color: 0x3a1a4a, dark: 0x180a20, value: 1, next: "jam", sway: { amp: 1.0, freq: 0.00038, gust: 0.05 } },
   tile_fruit_rambutan:     { kind: "tile", biome: "farm", label: "Rambutan",     color: 0xd8344a, dark: 0x6a1820, value: 1, next: "pie", sway: { amp: 1.4, freq: 0.00042, gust: 0.07 } },
   tile_fruit_starfruit:    { kind: "tile", biome: "farm", label: "Starfruit",    color: 0xe8c83c, dark: 0x726018, value: 1, next: "pie", sway: { amp: 1.0, freq: 0.00040, gust: 0.05 } },
   tile_fruit_coconut:      { kind: "tile", biome: "farm", label: "Coconut",      color: 0x5e3a14, dark: 0x2e1c08, value: 1, next: "pie", sway: { amp: 0.8, freq: 0.00030, gust: 0.04 } },
@@ -324,7 +325,7 @@ export const ITEMS = {
   tile_mine_gem:          { kind: "tile", biome: "mine", label: "Gem",        color: 0x65e5ff, dark: 0x1686a3, value: 7, next: "cut_gem", sway: { amp: 1.2, freq: 0.00028, gust: 0.04 } },
   tile_mine_gold:         { kind: "tile", biome: "mine", label: "Gold",       color: 0xffd34c, dark: 0x946b11, value: 5, next: "gold_bar", sway: { amp: 1.0, freq: 0.00024, gust: 0.04 } },
   // Special family (custom mechanics — dirt feeds rune countdown with mysterious ore).
-  tile_special_dirt:      { kind: "tile", biome: "mine", label: "Dirt", color: 0x7a6850, dark: 0x3e3a36, value: 1, next: null },
+  tile_special_dirt:      { kind: "tile", biome: "mine", label: "Dirt", color: 0x7a6850, dark: 0x3e3a36, value: 1, next: "dirt" },
   // Terminal mine resources.
   block:       { kind: "resource", biome: "mine", label: "Block",   color: 0x7c8388, dark: 0x2a2e32, value: 6,  next: null },
   cut_gem:     { kind: "resource", biome: "mine", label: "Cut Gem", color: 0xa3f0ff, dark: 0x1686a3, value: 14, next: null },
