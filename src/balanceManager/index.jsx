@@ -40,6 +40,7 @@ const DailyRewardsTab = lazy(() => import("./tabs/DailyRewardsTab.jsx"));
 const ExportTab    = lazy(() => import("./tabs/ExportTab.jsx"));
 const IconsTab     = lazy(() => import("./tabs/IconsTab.jsx"));
 const AbilitiesReferenceTab = lazy(() => import("./tabs/AbilitiesReferenceTab.jsx"));
+const ToolPowersReferenceTab = lazy(() => import("./tabs/ToolPowersReferenceTab.jsx"));
 
 // Hash routing for the Balance Manager lives in `./router.js` — kept separate
 // from `src/router.js` because the Balance Manager is its own page (`/b/`).
@@ -101,9 +102,12 @@ const TABS = [
   { id: "icons",     label: "Icons",          iconKey: "ui_star", Component: IconsTab,
     section: "other",
     blurb: "Browse every procedurally-drawn icon in ICON_REGISTRY. Filter by category, search by key or label, and click to copy the key." },
-  { id: "abilities", label: "Abilities",      iconKey: "ui_star", Component: AbilitiesReferenceTab,
+  { id: "abilities", label: "Attributes",     iconKey: "ui_star", Component: AbilitiesReferenceTab,
     section: "other",
-    blurb: "Reference list of every ability definition: name, description, configurable params, trigger/channel runtime behavior, and sample payload." },
+    blurb: "Reference list of every attribute definition: name, description, configurable params, trigger/channel runtime behavior. Attributes are passive modifiers (always on while their source is present) — contrast with Tool Powers, which are active." },
+  { id: "toolPowers", label: "Tool Powers",  iconKey: "rake",    Component: ToolPowersReferenceTab,
+    section: "other",
+    blurb: "Reference list of every tool power: name, description, and configurable params. Tool powers are the active effects players trigger by spending a tool (e.g. clear_all, water_pump)." },
   { id: "export",    label: "Export · Import",iconKey: "ui_star", Component: ExportTab,
     section: "other",
     blurb: "Save your draft, download as JSON to commit, or paste a config to import." },
