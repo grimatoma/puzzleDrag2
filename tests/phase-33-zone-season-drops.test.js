@@ -9,7 +9,8 @@ import {
 import { CATEGORY_OF } from "../src/features/tileCollection/data.js";
 import { BIOMES } from "../src/constants.js";
 
-const farmResources = BIOMES.farm.resources;
+// pickByZoneSeasonDrops resolves tile entries by CATEGORY_OF, so it needs both tiles and resources.
+const farmResources = [...BIOMES.farm.tiles, ...BIOMES.farm.resources];
 
 describe("Phase 33 — seasonIndexInSession (turn split)", () => {
   it("16-turn session splits 4/4/4/4 across the four seasons", () => {

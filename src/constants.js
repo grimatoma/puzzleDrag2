@@ -424,12 +424,24 @@ export const BIOMES = {
   },
 };
 
-// Reattach resources to BIOMES dynamically so we don't break downstream code
-// that relies on BIOMES.farm.resources being an array of item objects.
+// Populate biome-specific arrays from ITEMS. Each biome gets:
+//   .tiles — kind:"tile" entries matching the biome (board tiles)
+//   .resources — kind:"resource" entries matching the biome (chain outputs)
+//   .resourceOrderPool — resource keys drawn from chain outputs of biome tiles
+//     (used by makeOrder; avoids the old bug where orders were keyed on tile keys)
 for (const b of Object.values(BIOMES)) {
-  b.resources = Object.entries(ITEMS)
-    .filter(([, item]) => item.biome === b.name.toLowerCase() || (b.name === "Harbor" && item.biome === "fish"))
+  const biomeFilter = b.name === "Harbor" ? "fish" : b.name.toLowerCase();
+  const allEntries = Object.entries(ITEMS)
+    .filter(([, item]) => item.biome === biomeFilter)
     .map(([key, item]) => ({ key, ...item }));
+  b.tiles     = allEntries.filter((e) => e.kind === "tile");
+  b.resources = allEntries.filter((e) => e.kind === "resource");
+  // Resource order pool: unique resource keys produced by chaining this biome's tiles.
+  const seen = new Set();
+  b.resourceOrderPool = b.tiles
+    .map((t) => t.next)
+    .filter((k) => k != null && !seen.has(k) && seen.add(k))
+    .filter((k) => ITEMS[k]?.kind === "resource");
 }
 
 

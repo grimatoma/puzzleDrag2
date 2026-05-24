@@ -345,8 +345,7 @@ export function InventoryGrid({
   recentOrder,
   viewMode = "list",
 }) {
-  const allBiomeEntries = BIOMES[biomeKey].resources;
-  const resources = allBiomeEntries.filter((r) => r.kind !== "tile");
+  const resources = BIOMES[biomeKey].resources; // already resource-only after data split
   const items = Object.entries(ITEMS).filter(([key, item]) =>
     (inventory[key] || 0) > 0 &&
     !resources.find(r => r.key === key) &&

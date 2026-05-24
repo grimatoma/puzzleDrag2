@@ -45,7 +45,7 @@ export default function NpcsTab({ draft, updateDraft }) {
 
   const allResourceKeys = useMemo(() => {
     const set = new Set();
-    for (const b of Object.values(BIOMES)) for (const r of b.resources) set.add(r.key);
+    for (const b of Object.values(BIOMES)) for (const r of [...b.tiles, ...b.resources]) set.add(r.key);
     for (const k of Object.keys(RECIPES)) set.add(k);
     return [...set].filter((k) => typeof k === "string").sort();
   }, []);

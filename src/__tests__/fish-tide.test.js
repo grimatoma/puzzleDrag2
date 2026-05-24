@@ -10,7 +10,8 @@ import { BIOMES } from "../constants.js";
 function makeFishGrid(rows = 3, cols = 4) {
   // Build a small grid of resource-bearing cells. We use tile_fish_oyster
   // because it's not in either tide pool, so we can detect mutation.
-  const oyster = BIOMES.fish.resources.find((r) => r.key === "tile_fish_oyster");
+  // tile_fish_oyster is a tile (kind:"tile"), so it lives in biome.tiles.
+  const oyster = BIOMES.fish.tiles.find((r) => r.key === "tile_fish_oyster");
   return Array.from({ length: rows }, () =>
     Array.from({ length: cols }, () => ({ key: oyster.key, res: oyster })),
   );

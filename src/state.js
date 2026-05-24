@@ -1094,7 +1094,9 @@ function coreReducer(state, action) {
 
     case "BUY_RESOURCE": {
       const { key: buyKey, qty: buyQty } = action.payload;
-      if (CAPPED_INVENTORY_RESOURCES.includes(buyKey)) {
+      // Transitional: market still trades tile keys until PR 3 moves tiles out
+      // of inventory. Cap-check against both lists.
+      if (CAPPED_INVENTORY_RESOURCES.includes(buyKey) || CAPPED_TILES.includes(buyKey)) {
         const buyingCap = currentCap(state);
         const currentAmt = state.inventory?.[buyKey] ?? 0;
         if (currentAmt + buyQty > buyingCap) return state; // cap reached — no debit
@@ -1385,7 +1387,7 @@ function coreReducer(state, action) {
         upgradeKey = active ?? null;
       } else {
         threshold = Math.max(1, (UPGRADE_THRESHOLDS[effectiveKey] ?? Infinity) - reduce);
-        const res = Object.values(BIOMES).flatMap((b) => b.resources ?? []).find((r) => r.key === effectiveKey);
+        const res = resourceByKey(effectiveKey);
         upgradeKey = res?.next ?? null;
       }
 
@@ -1607,7 +1609,7 @@ function coreReducer(state, action) {
       if (action.type === "DEV/FILL_STORAGE") {
         const inventory = { ...state.inventory };
         for (const biome of Object.values(BIOMES)) {
-          for (const res of biome.resources) {
+          for (const res of [...biome.tiles, ...biome.resources]) {
             inventory[res.key] = (inventory[res.key] || 0) + (action.amount ?? 100);
           }
         }
