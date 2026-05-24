@@ -3,15 +3,8 @@ name: Deploy to GitHub Pages
 on:
   push:
     branches: [main]
-  pull_request:
-    types: [closed]
-    branches: [main]
-  # Auto-Merge Setup merges PRs with GITHUB_TOKEN, and pushes attributed to
-  # GITHUB_TOKEN don't trigger workflows — so the `push`/`pull_request` events
-  # above are skipped for bot-merged PRs and the site never re-deploys. Run
-  # hourly as a safety net (and `workflow_dispatch` for an immediate publish).
-  schedule:
-    - cron: "0 * * * *"
+  repository_dispatch:
+    types: [pages-deploy]
   workflow_dispatch:
 
 permissions:
@@ -25,12 +18,11 @@ concurrency:
 
 jobs:
   build:
-    if: github.event_name != 'pull_request' || github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.merge_commit_sha || github.sha }}
+          ref: ${{ github.event.client_payload.sha || github.sha }}
 
       - uses: actions/setup-node@v4
         with:
@@ -45,7 +37,6 @@ jobs:
           path: dist/
 
   deploy:
-    if: github.event_name != 'pull_request' || github.event.pull_request.merged == true
     needs: build
     runs-on: ubuntu-latest
     environment:
