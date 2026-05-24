@@ -1,4 +1,4 @@
-// Balance Manager — standalone console for editing tile chains, resources,
+// Dev Panel — standalone console for editing tile chains, resources,
 // recipes, building costs and tile power hooks. Served from its own page at
 // `/b/` (separate Vite entry, see `b/index.html`). Edits are kept in a draft
 // object stored in localStorage (`hearth.balance.draft`) and applied to the
@@ -17,7 +17,7 @@ import { parseHash, useBalanceRouter } from "./router.js";
 import { useDraftHistory } from "./useDraftHistory.js";
 import CommandPalette from "./CommandPalette.jsx";
 
-// Lazy-load tabs so the Balance Manager (a dev-time tool) stays out of the
+// Lazy-load tabs so the Dev Panel (a dev-time tool) stays out of the
 // main entry chunk. Each tab becomes its own JS chunk fetched only when
 // the user opens the modal and selects that tab.
 const ItemsTab = lazy(() => import("./tabs/ItemsTab.jsx"));
@@ -45,93 +45,110 @@ const TileDiscoveryReferenceTab = lazy(() => import("./tabs/TileDiscoveryReferen
 const WikiTab = lazy(() => import("./tabs/WikiTab.jsx"));
 const AnimationsDemoTab = lazy(() => import("./tabs/AnimationsDemoTab.jsx"));
 
-// Hash routing for the Balance Manager lives in `./router.js` — kept separate
-// from `src/router.js` because the Balance Manager is its own page (`/b/`).
+// Hash routing for the Dev Panel lives in `./router.js` — kept separate
+// from `src/router.js` because the Dev Panel is its own page (`/b/`).
 //
 // The game's object model separates Tiles from inventory entries. Inventory
 // entries (resources + items + tools) are unified under Items.
 const TABS = [
+  // Reference — scan the full catalog before editing
   { id: "wiki", label: "Concepts", iconKey: "ui_star", Component: WikiTab,
-    section: "wiki",
-    blurb: "Reference catalog of every concept in the game — tiles, resources, tools, workers, hazards, recipes, zones, abilities, and more. One sub-tab per concept, scanning grid for visual review." },
-  { id: "tiles",     label: "Tiles",          iconKey: "ui_star", Component: PowersTab,
-    section: "tiles",
-    blurb: "Board pieces. Per-tile attributes: basics (label, colour, sale value, base chain target, tiles-wiki blurb), discovery method, what resource the chain produces, and any attached power hooks." },
-  { id: "zones",     label: "Zones",          iconKey: "ui_star", Component: ZonesTab,
-    section: "tiles",
-    blurb: "Per-zone settings: base turns, entry cost, the chain-upgrade redirect map, and the per-(zone, season) tile drop percentages." },
-  { id: "biomes",    label: "Settlement Biomes", iconKey: "ui_star", Component: BiomesTab,
-    section: "tiles",
-    blurb: "The biomes a settlement can be founded as (4 per type): name, icon, the two hazards that appear in every round there, and the resource bonus." },
-  { id: "items", label: "Items",      iconKey: "ui_star", Component: ItemsTab,
-    section: "items",
-    blurb: "Unified inventory editor — resources, tools, and plain items in one place. Filter by All / Resources / Tools / Items. Existing kind/biome tags still appear on each card." },
-  { id: "recipes",   label: "Recipes",        iconKey: "ui_star", Component: RecipesTab,
-    section: "items",
-    blurb: "Crafted items (and tools): ingredients, station, coin reward, and description." },
-  { id: "buildings", label: "Buildings",      iconKey: "ui_star", Component: BuildingsTab,
-    section: "items",
+    section: "reference",
+    blurb: "Read-only catalog of every game concept — tiles, resources, tools, zones, hazards, recipes, attributes, and more. One filter per concept; entries pull live from source files." },
+
+  // Board — pieces, places, founding context
+  { id: "tiles", label: "Tiles", iconKey: "ui_star", Component: PowersTab,
+    section: "board",
+    blurb: "Board pieces: label, colour, sale value, chain target, discovery method, produced resource, and attached power hooks." },
+  { id: "zones", label: "Zones", iconKey: "ui_star", Component: ZonesTab,
+    section: "board",
+    blurb: "Per-zone settings: base turns, entry cost, chain-upgrade map, and per-(zone, season) tile drop weights." },
+  { id: "biomes", label: "Settlement biomes", iconKey: "ui_star", Component: BiomesTab,
+    section: "board",
+    blurb: "Founding biomes (four per settlement type): name, icon, round hazards, and resource bonus." },
+
+  // Economy — inventory through town and expeditions
+  { id: "items", label: "Inventory", iconKey: "ui_star", Component: ItemsTab,
+    section: "economy",
+    blurb: "Resources, tools, and plain items in one editor. Filter by kind; kind and biome tags stay on each card." },
+  { id: "recipes", label: "Recipes", iconKey: "ui_star", Component: RecipesTab,
+    section: "economy",
+    blurb: "Crafted goods and tools: ingredients, station, coin reward, and description." },
+  { id: "buildings", label: "Buildings", iconKey: "ui_star", Component: BuildingsTab,
+    section: "economy",
     blurb: "Town building costs and unlock levels." },
-  { id: "rations",   label: "Expedition Rations", iconKey: "ui_star", Component: RationsTab,
-    section: "items",
-    blurb: "Food values for supply-structured mine/harbor expeditions: how many turns each ration is worth, and which foods count as 'meat' for the Smokehouse +1 modifier." },
-  { id: "workers",   label: "Workers",        iconKey: "ui_devtools", Component: WorkersTab,
-    section: "other",
-    blurb: "Type-tier worker hire costs (flat / linear / geometric ramp), max count, and effect parameters." },
-  { id: "tuning",    label: "Tuning",         iconKey: "ui_devtools", Component: TuningTab,
-    section: "other",
-    blurb: "Loose top-level constants: round length, audit-boss cooldown, craft-queue timer + gem-skip cost, expedition floor, settlement founding cost ramp, and the home biome." },
-  { id: "bosses",    label: "Bosses",         iconKey: "ui_star", Component: BossesTab,
-    section: "other",
-    blurb: "Seasonal bosses: name, season, the target resource amount to clear, and the flavour / modifier descriptions. (Modifier types and params drive board logic and aren't editable here.)" },
+  { id: "rations", label: "Expedition rations", iconKey: "ui_star", Component: RationsTab,
+    section: "economy",
+    blurb: "Mine/harbor expedition food: turn value per ration and which foods count as meat for the Smokehouse +1." },
+
+  // Run — per-run and meta progression knobs
+  { id: "tuning", label: "Global tuning", iconKey: "ui_devtools", Component: TuningTab,
+    section: "run",
+    blurb: "Top-level constants: round length, audit-boss cooldown, craft-queue timer and gem skip, expedition floor, settlement founding ramp, home biome." },
+  { id: "workers", label: "Workers", iconKey: "ui_devtools", Component: WorkersTab,
+    section: "run",
+    blurb: "Worker hire costs (flat / linear / geometric), max count per type, and effect parameters." },
+  { id: "bosses", label: "Bosses", iconKey: "ui_star", Component: BossesTab,
+    section: "run",
+    blurb: "Seasonal bosses: name, season, clear target, flavour text. Modifier types and params are board logic (not editable here)." },
   { id: "achievements", label: "Achievements", iconKey: "ui_star", Component: AchievementsTab,
-    section: "other",
-    blurb: "Achievement names, descriptions, the count threshold to unlock, and the coin reward. (Which counter each one watches isn't editable here.)" },
-  { id: "dailyRewards", label: "Daily Rewards", iconKey: "ui_star", Component: DailyRewardsTab,
-    section: "other",
-    blurb: "The 30-day login reward track: tune the coin / rune amounts per day. (Tool and tile-unlock drops aren't editable here.)" },
-  { id: "story",     label: "Story · Dialogue", iconKey: "ui_star", Component: StoryTab,
-    section: "story",
-    blurb: "Beat editing moved to the full-page visual decision-tree editor at /story/ — pan/zoom canvas, node cards, branch edges, side inspector. (Writes to the same draft, so overrides flow through identically.)" },
-  { id: "flags",     label: "Flags",          iconKey: "ui_devtools", Component: FlagsTab,
-    section: "story",
-    blurb: "Audit and edit story flags: create custom flags, override metadata/triggers, see which beats and systems set or read each flag, and catch orphan warnings." },
-  { id: "npcs",      label: "NPCs",           iconKey: "ui_star", Component: NpcsTab,
-    section: "story",
-    blurb: "Townsfolk gift preferences (loves / likes — the items that raise their bond fastest) and the four bond bands (name + the order-reward modifier at that band)." },
-  { id: "keepers",   label: "Keepers",        iconKey: "ui_star", Component: KeepersTab,
-    section: "story",
-    blurb: "The biome keepers (Deer-Spirit / Stone-Knocker / Tidesinger): names, the building threshold at which they appear, and the Coexist / Drive Out dialogue + rewards." },
-  { id: "boons",     label: "Boons",          iconKey: "ui_star", Component: BoonsTab,
-    section: "story",
-    blurb: "Per-path zone boons unlocked by facing keepers — spend Embers (Coexist) or Core Ingots (Drive Out) for run-wide perks. Read-only catalog for now; editing wires up later." },
-  { id: "icons",     label: "Icons",          iconKey: "ui_star", Component: IconsTab,
-    section: "other",
-    blurb: "Browse every procedurally-drawn icon in ICON_REGISTRY. Filter by category, search by key or label, and click to copy the key." },
-  { id: "abilities", label: "Attributes",     iconKey: "ui_star", Component: AbilitiesReferenceTab,
-    section: "other",
-    blurb: "Reference list of every attribute definition: name, description, configurable params, trigger/channel runtime behavior. Attributes are passive modifiers (always on while their source is present) — contrast with Tool Powers, which are active." },
-  { id: "toolPowers", label: "Tool Powers",  iconKey: "rake",    Component: ToolPowersReferenceTab,
-    section: "other",
-    blurb: "Reference list of every tool power: name, description, and configurable params. Tool powers are the active effects players trigger by spending a tool (e.g. clear_all, water_pump)." },
-  { id: "tileDiscoveryMethods", label: "Tile Discovery Methods", iconKey: "ui_star", Component: TileDiscoveryReferenceTab,
-    section: "other",
-    blurb: "Reference list of every tile-discovery method: default, chain, research, buy, daily reward. Shows each method's params and which tiles currently use it." },
-  { id: "animationsDemo", label: "Animations Demo", iconKey: "ui_star", Component: AnimationsDemoTab,
-    section: "other",
-    blurb: "Preview every named board animation on a live game board. Each animation has fixed duration / stagger / ease — tools just pick which one to play. Source: src/config/boardAnimations.js." },
-  { id: "export",    label: "Export · Import",iconKey: "ui_star", Component: ExportTab,
-    section: "other",
-    blurb: "Save your draft, download as JSON to commit, or paste a config to import." },
+    section: "run",
+    blurb: "Achievement names, descriptions, unlock threshold, and coin reward. Counter wiring is not editable here." },
+  { id: "dailyRewards", label: "Daily rewards", iconKey: "ui_star", Component: DailyRewardsTab,
+    section: "run",
+    blurb: "30-day login track: coin and rune amounts per day. Tool and tile-unlock drops are not editable here." },
+
+  // World — narrative and characters
+  { id: "flags", label: "Story flags", iconKey: "ui_devtools", Component: FlagsTab,
+    section: "world",
+    blurb: "Story flags: create custom flags, override metadata and triggers, see readers/writers, catch orphans." },
+  { id: "story", label: "Story beats", iconKey: "ui_star", Component: StoryTab,
+    section: "world",
+    blurb: "Beat editing lives in the Story Tree Editor at /story/ (pan/zoom canvas, branches, inspector). Same draft — overrides apply on reload." },
+  { id: "npcs", label: "NPCs", iconKey: "ui_star", Component: NpcsTab,
+    section: "world",
+    blurb: "Townsfolk gift preferences (loves / likes) and bond bands (name + order-reward modifier)." },
+  { id: "keepers", label: "Keepers", iconKey: "ui_star", Component: KeepersTab,
+    section: "world",
+    blurb: "Biome keepers: names, building threshold, Coexist / Drive Out dialogue and rewards." },
+  { id: "boons", label: "Boons", iconKey: "ui_star", Component: BoonsTab,
+    section: "world",
+    blurb: "Keeper-path zone boons (Embers or Core Ingots). Read-only catalog for now." },
+
+  // Systems — passive/active catalogs (editable reference)
+  { id: "abilities", label: "Attributes", iconKey: "ui_star", Component: AbilitiesReferenceTab,
+    section: "systems",
+    blurb: "Passive attribute definitions: name, description, params, trigger/channel behavior. Contrast with tool powers (active, on spend)." },
+  { id: "toolPowers", label: "Tool powers", iconKey: "rake", Component: ToolPowersReferenceTab,
+    section: "systems",
+    blurb: "Active tool effects when the player spends a tool (e.g. clear_all, water_pump): name, description, params." },
+  { id: "tileDiscoveryMethods", label: "Tile discovery", iconKey: "ui_star", Component: TileDiscoveryReferenceTab,
+    section: "systems",
+    blurb: "How tiles unlock: default, chain, research, buy, daily reward — each method's params and which tiles use it." },
+
+  // Dev — previews and asset lookup
+  { id: "icons", label: "Icons", iconKey: "ui_star", Component: IconsTab,
+    section: "dev",
+    blurb: "Every procedurally drawn icon in ICON_REGISTRY. Filter, search, click to copy the key." },
+  { id: "animationsDemo", label: "Board animations", iconKey: "ui_star", Component: AnimationsDemoTab,
+    section: "dev",
+    blurb: "Preview named board animations on a live board. Source: src/config/boardAnimations.js." },
+
+  // Workflow — draft I/O
+  { id: "export", label: "Export & import", iconKey: "ui_star", Component: ExportTab,
+    section: "workflow",
+    blurb: "Save draft, download JSON to commit, or paste a config to import." },
 ];
 
 const SECTIONS = [
-  { id: "wiki",      label: "Wiki" },
-  { id: "tiles",     label: "Tiles" },
-  { id: "resources", label: "Resources" },
-  { id: "items",     label: "Items" },
-  { id: "story",     label: "Story" },
-  { id: "other",     label: "Other" },
+  { id: "reference", label: "Reference" },
+  { id: "board", label: "Board" },
+  { id: "economy", label: "Economy" },
+  { id: "run", label: "Run" },
+  { id: "world", label: "World" },
+  { id: "systems", label: "Systems" },
+  { id: "dev", label: "Dev" },
+  { id: "workflow", label: "Workflow" },
 ];
 
 function emptyDraft() {
@@ -211,7 +228,7 @@ function useIsSmallScreen() {
 
 export default function BalanceManagerApp() {
   const tabIds = useMemo(() => TABS.map((t) => t.id), []);
-  const [tab, setTab] = useState(() => parseHash(typeof window !== "undefined" ? window.location.hash : "", tabIds).tab ?? "tiles");
+  const [tab, setTab] = useState(() => parseHash(typeof window !== "undefined" ? window.location.hash : "", tabIds).tab ?? "wiki");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(readSidebarCollapsed);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const isSmallScreen = useIsSmallScreen();
@@ -220,7 +237,7 @@ export default function BalanceManagerApp() {
   const overlayOpen = isSmallScreen && mobileNavOpen;
 
   // Bind the active tab to the URL hash. On mount this normalises the hash
-  // (e.g. empty → `#/tiles`); subsequent `setTab` calls push history entries,
+  // (e.g. empty → `#/wiki`); subsequent `setTab` calls push history entries,
   // and back/forward / `hashchange` events rebind the tab.
   useBalanceRouter(tab, setTab, tabIds);
 
@@ -333,10 +350,10 @@ export default function BalanceManagerApp() {
                 ☰
               </button>
             )}
-            <span className="text-[24px]">⚖️</span>
+            <span className="text-[24px]">🛠</span>
             <div>
               <div className="text-[18px] font-bold leading-tight" style={{ color: COLORS.ember }}>
-                Balance Manager
+                Dev Panel
               </div>
               <div className="text-[11px] italic" style={{ color: COLORS.inkSubtle }}>
                 Tune game constants · attach power hooks · export config

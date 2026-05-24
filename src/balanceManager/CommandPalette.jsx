@@ -1,4 +1,4 @@
-// Cmd-K command palette modal for the Balance Manager.
+// Cmd-K command palette modal for the Dev Panel.
 //
 // Opens with Cmd/Ctrl-K. Type to filter every known balance entity
 // (tiles, items, recipes, buildings, biomes, zones, NPCs, keepers,
@@ -107,7 +107,7 @@ function PaletteImpl({ onClose, onSelect }) {
         <div ref={listRef} style={{ flex: 1, overflowY: "auto", padding: "4px 0" }}>
           {results.length === 0 && (
             <div style={{ padding: "16px 14px", font: "italic 400 12px/1.4 system-ui", color: COLORS.inkSubtle }}>
-              {query.trim() ? `No matches for “${query}”.` : "Start typing to search across every Balance Manager tab."}
+              {query.trim() ? `No matches for “${query}”.` : "Start typing to search every tab."}
             </div>
           )}
           {results.map((entry, idx) => {
