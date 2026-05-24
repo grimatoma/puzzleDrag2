@@ -294,4 +294,16 @@ export const DEFERRED_TOOL_POWERS = Object.freeze([
     blocker: "Repo's existing `magic_seed` already occupies the id with `restore_turns / 5`. Splitting requires a new id and a UX decision.",
     dependsOn: "naming + UX call from designer",
   },
+  // Mine — Iron Ration as a TOOL (restore turns on expedition) collides with
+  // the existing `iron_ration` RESOURCE key. PC2's iron ration is a one-shot
+  // "+5 turns" item; this repo already ships `magic_seed` (restore_turns /
+  // 5) so the mechanic is covered, but a dedicated mid-tier non-magic Iron
+  // Ration tool is still missing.
+  {
+    id: "iron_ration",
+    pc2Name: "Iron Ration",
+    intendedPower: "restore_turns / 5",
+    blocker: "Key conflict — `iron_ration` already exists in ITEMS as kind:'resource' (calorie-dense expedition food). Adding kind:'tool' under the same key would violate the tile/resource/tool namespace invariant.",
+    dependsOn: "key namespace migration (e.g. ship as `iron_ration_tool`) + procedural icon + workshop recipe",
+  },
 ]);

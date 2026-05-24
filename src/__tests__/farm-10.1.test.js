@@ -159,27 +159,43 @@ describe("10.1 — USE_TOOL (no turn cost)", () => {
     expect(s1.turnsUsed).toBe(2);
   });
 
-  it("fertilizer: fertilizerActive set to true, no turn cost", () => {
-    const s0 = { ...createInitialState(), tools: { ...createInitialState().tools, fertilizer: 1 }, turnsUsed: 4 };
+  it("fertilizer: mutates every grass tile to wheat on cast (PC2-faithful transform_tiles), no turn cost", () => {
+    // PR-fix 2 migrated fertilizer from fill_bias to transform_tiles. The
+    // legacy fill_bias semantic — set fertilizerActive=true on cast — is
+    // replaced by an immediate board mutation (grass → wheat).
+    const base = createInitialState();
+    const grid = [
+      [{ key: "tile_grass_hay" }, { key: "tile_grass_meadow" }, { key: "tile_tree_oak" }],
+      [{ key: "tile_grass_hay" }, { key: "tile_fruit_blackberry" }, { key: "tile_grass_meadow" }],
+    ];
+    const s0 = { ...base, grid, tools: { ...base.tools, fertilizer: 1 }, turnsUsed: 4 };
     const s1 = rootReducer(s0, { type: "USE_TOOL", key: "fertilizer" });
-    expect(s1.fertilizerActive).toBe(true);
     expect(s1.tools.fertilizer).toBe(0);
     expect(s1.turnsUsed).toBe(4);
+    // Every grass tile became wheat; non-grass tiles survive.
+    expect(s1.grid[0][0].key).toBe("tile_grain_wheat");
+    expect(s1.grid[0][1].key).toBe("tile_grain_wheat");
+    expect(s1.grid[0][2].key).toBe("tile_tree_oak");
+    expect(s1.grid[1][0].key).toBe("tile_grain_wheat");
+    expect(s1.grid[1][1].key).toBe("tile_fruit_blackberry");
+    expect(s1.grid[1][2].key).toBe("tile_grain_wheat");
   });
 
-  it("fertilizer: re-using while active disarms and refunds the fertilizer", () => {
+  it("fertilizer: legacy fertilizerActive arm still disarms when armed (defensive fallback)", () => {
+    // The fertilizer-self-disarm path stays wired for any legacy state shape
+    // that still arms `fertilizerActive` (CANCEL_TOOL / disarmOtherTools, etc.)
+    // even after the transform_tiles migration. Re-using while active refunds.
+    const base = createInitialState();
     const s0 = {
-      ...createInitialState(),
-      tools: { ...createInitialState().tools, fertilizer: 1 },
+      ...base,
+      tools: { ...base.tools, fertilizer: 0 },
+      fertilizerActive: true,
       turnsUsed: 4,
     };
     const s1 = rootReducer(s0, { type: "USE_TOOL", key: "fertilizer" });
-    expect(s1.fertilizerActive).toBe(true);
-    expect(s1.tools.fertilizer).toBe(0);
-    const s2 = rootReducer(s1, { type: "USE_TOOL", key: "fertilizer" });
-    expect(s2.fertilizerActive).toBe(false);
-    expect(s2.tools.fertilizer).toBe(1);
-    expect(s2.turnsUsed).toBe(4);
+    expect(s1.fertilizerActive).toBe(false);
+    expect(s1.tools.fertilizer).toBe(1);
+    expect(s1.turnsUsed).toBe(4);
   });
 });
 

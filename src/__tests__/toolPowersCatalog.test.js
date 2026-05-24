@@ -35,15 +35,17 @@ function countKey(grid, key) {
   return n;
 }
 
-/** Dispatch USE_TOOL using the canonical Phase 3 contract: pass the typed
- *  `power` from ITEMS so the Phase 2 runtime takes over. The Phase 3
- *  declarative `power` field on ITEMS is the source of truth for `params`. */
+/** Dispatch USE_TOOL using the canonical Phase 3 contract: pass JUST the
+ *  tool id so the reducer's auto-lookup (Phase 3 fix 1) finds ITEMS[id].power
+ *  and routes through applyToolPower. This is what production call sites do
+ *  (the UI dispatches `{ type: "USE_TOOL", payload: { id } }` and never
+ *  attaches a power config). */
 function useTool(state, toolKey) {
   const item = ITEMS[toolKey];
   if (!item || !item.power) throw new Error(`${toolKey} has no power field`);
   return rootReducer(state, {
     type: "USE_TOOL",
-    payload: { id: toolKey, power: item.power },
+    payload: { id: toolKey },
   });
 }
 
@@ -233,23 +235,35 @@ describe("Phase 3 — clear_category tools collect family tiles", () => {
   });
 
   it("terrier clears every rat hazard (clear_hazard / rats)", () => {
+    // PR-fix 3: applyToolPower now handles clear_hazard. terrier dispatches
+    // through the typed-power runtime and clears rats end-to-end (both the
+    // hazards.rats[] list AND any rat tiles still on the board).
     const grid = blankGrid();
+    grid[1][1].key = "rat";
+    grid[3][4].key = "rat";
     const s0 = {
       ...createInitialState(),
       grid,
       tools: { ...createInitialState().tools, terrier: 1 },
       hazards: { ...createInitialState().hazards, rats: [{ row: 1, col: 1 }, { row: 3, col: 4 }] },
     };
-    // clear_hazard isn't in the Phase 2 runtime applyToolPower switch (it's a
-    // pass-through for now), so the legacy `effect: "clear_hazard"` is what
-    // would actually fire. We don't have a NEW tool key with clear_hazard
-    // backed by the runtime dispatch yet — just pin that the declarative
-    // `power` is present and the tool charge accounting works.
     const s1 = useTool(s0, "terrier");
-    // Phase 2 applyToolPower doesn't handle clear_hazard, so the default
-    // (unknown id branch) returns state unchanged — including the charge.
-    expect(s1.tools.terrier).toBe(1);
-    // No crash; this pin documents the gap so a future PR can wire it.
+    expect(s1.tools.terrier).toBe(0); // charge consumed
+    expect(s1.hazards.rats).toEqual([]); // hazard list cleared
+    expect(s1.grid[1][1].key).toBe(null); // rat cell emptied
+    expect(s1.grid[3][4].key).toBe(null);
+  });
+
+  it("terrier refunds when no rats are present (no charge spent)", () => {
+    const grid = blankGrid();
+    const s0 = {
+      ...createInitialState(),
+      grid,
+      tools: { ...createInitialState().tools, terrier: 1 },
+      hazards: { ...createInitialState().hazards, rats: [] },
+    };
+    const s1 = useTool(s0, "terrier");
+    expect(s1.tools.terrier).toBe(1); // refunded
   });
 });
 

@@ -1,4 +1,4 @@
-import { BIOMES, BUILDINGS, RECIPES, DAILY_REWARDS, MIN_EXPEDITION_TURNS, CAPPED_TILES, CAPPED_INVENTORY_RESOURCES, UPGRADE_THRESHOLDS, CRAFT_GEM_SKIP_COST } from "./constants.js";
+import { BIOMES, BUILDINGS, RECIPES, DAILY_REWARDS, MIN_EXPEDITION_TURNS, CAPPED_TILES, CAPPED_INVENTORY_RESOURCES, UPGRADE_THRESHOLDS, CRAFT_GEM_SKIP_COST, ITEMS } from "./constants.js";
 import { locBuilt as _locBuilt } from "./locBuilt.js";
 import { sellPriceFor as _sellPriceFor } from "./features/market/pricing.js";
 import { tryClearRatChain } from "./features/farm/rats.js";
@@ -72,6 +72,40 @@ const TAP_TARGET_POWER_IDS = new Set([
   "area_blast",
   "transform_adjacent",
   "tap_clear_type",
+]);
+
+// Phase 3 fix — every tool key whose USE_TOOL handling is hard-coded after
+// the typed-power dispatch below. The auto-lookup fallback (which reads
+// ITEMS[key].power and dispatches to applyToolPower) MUST skip these keys
+// so the legacy switch keeps running for them. The Phase 3 net-new tools
+// (trimmer, drill, magnet, golden_*, miners_hat, …) are deliberately
+// absent so the fallback fires for them.
+//
+// Includes:
+//   - Tools with a dedicated `if (key === ...)` block in the USE_TOOL switch
+//     (rake, axe, fertilizer, cat, bird_cage, scythe_full, rifle, hound,
+//     water_pump, explosives, shuffle, clear, basic, rare).
+//   - TAP_TARGET tools (bomb, magic_wand) whose arm-then-fire flow lives in
+//     the TAP_TARGET_TOOL_KEYS branch above the legacy switch.
+//   - MAGIC tools routed exclusively through src/features/portal/slice.js
+//     (hourglass, magic_seed, magic_fertilizer, magic_wand).
+//   - Legacy tools with a declarative `power` field but no runtime handler
+//     in either the legacy switch OR applyToolPower (hoe, stone_hammer,
+//     iron_pick, bird_feed, sapling). These were already dead-with-decrement
+//     pre-fix; keeping them legacy preserves that behavior. A future PR can
+//     migrate them by removing the key from this set.
+// NOTE: `fertilizer` is INTENTIONALLY omitted — Phase 3 fix 2 migrated it
+// to `transform_tiles` (grass → wheat). The legacy `fertilizerActive` flag
+// branch is still reachable as a defensive fallback (e.g. for saves loaded
+// pre-migration), but the auto-lookup fallback now fires first and routes
+// fertilizer through the typed power. The fertilizer-self-disarm path runs
+// BEFORE the auto-lookup so toggling an armed fertilizer still refunds.
+const LEGACY_TOOL_KEYS = new Set([
+  "rake", "axe", "cat", "bird_cage", "scythe_full",
+  "rifle", "hound", "water_pump", "explosives",
+  "shuffle", "clear", "basic", "rare", "bomb",
+  "magic_wand", "hourglass", "magic_seed", "magic_fertilizer",
+  "hoe", "stone_hammer", "iron_pick", "bird_feed", "sapling",
 ]);
 
 // Disarm every armed tool in one shot, mirroring the existing CANCEL_TOOL +
@@ -219,6 +253,50 @@ function applyToolPower(state, key, power) {
       // when no cell has hidden:true (the documented sentinel for now).
       const { grid } = applyRevealTiles(spent.grid, tileKeys);
       return { ...spent, grid };
+    }
+    case "clear_hazard": {
+      // Mirror the cat/rifle/explosives legacy clears: hazard-specific patch
+      // of state.hazards plus (for cell-based hazards) a grid sweep that
+      // empties tiles where the hazard sat. No inventory credit — hazards
+      // aren't tiles. Refund (no charge spent) when there's nothing to clear.
+      const target = params.target ?? params.hazard;
+      if (!target) return state;
+      const hazards = state.hazards ?? {};
+      let nextHazards = hazards;
+      let grid = state.grid;
+      let didClear = false;
+      if (target === "rats") {
+        const rats = hazards.rats ?? [];
+        if (rats.length > 0) {
+          const ratSet = new Set(rats.map((r) => `${r.row},${r.col}`));
+          if (grid) {
+            grid = grid.map((row, ri) =>
+              row.map((t, ci) =>
+                ratSet.has(`${ri},${ci}`) ? { ...t, key: null, _emptied: true } : t,
+              ),
+            );
+          }
+          nextHazards = { ...hazards, rats: [] };
+          didClear = true;
+        }
+      } else if (target === "wolves") {
+        if (hazards.wolves) { nextHazards = { ...hazards, wolves: null }; didClear = true; }
+      } else if (target === "mole") {
+        if (hazards.mole) { nextHazards = { ...hazards, mole: null }; didClear = true; }
+      } else if (target === "caveIn") {
+        if (hazards.caveIn) { nextHazards = { ...hazards, caveIn: null }; didClear = true; }
+      } else if (target === "lava") {
+        if (hazards.lava) { nextHazards = { ...hazards, lava: null }; didClear = true; }
+      } else if (target === "fire") {
+        if (hazards.fire) { nextHazards = { ...hazards, fire: null }; didClear = true; }
+      } else if (target === "gasVent" || target === "gas") {
+        if (hazards.gasVent) { nextHazards = { ...hazards, gasVent: null }; didClear = true; }
+      }
+      // Nothing to clear → refund (consistent with cat / rifle / bird_cage).
+      if (!didClear) return state;
+      const spent = _spendToolCharge(state, key);
+      if (spent === null) return state;
+      return { ...spent, grid, hazards: nextHazards };
     }
     default:
       // Unknown power id — drop quietly so the rest of the reducer keeps
@@ -743,22 +821,34 @@ function coreReducer(state, action) {
       // the typed power-id dispatch. This is purely additive: existing tools
       // that ship ad-hoc handlers (rake/axe/wand/etc.) are untouched until
       // Phase 3 backfills `power` into their ITEMS entry.
-      const power = action.payload?.power;
-      if (power && power.id) {
-        return applyToolPower(state, key, power);
+      const explicitPower = action.payload?.power;
+      if (explicitPower && explicitPower.id) {
+        return applyToolPower(state, key, explicitPower);
       }
       // Magic tools (hourglass, magic_seed, magic_fertilizer) are handled exclusively
       // by the portal slice — skip them here to avoid double-consume.
       const MAGIC_TOOL_IDS = new Set(["hourglass", "magic_seed", "magic_fertilizer", "magic_wand"]);
       if (MAGIC_TOOL_IDS.has(key)) return state;
       // Fertilizer disarm: when already armed, refund 1 and clear the flag,
-      // even if the player has spent their last fertilizer arming it.
+      // even if the player has spent their last fertilizer arming it. Must
+      // run BEFORE the typed-power auto-lookup below so the player can still
+      // toggle fertilizer off even with the new transform_tiles power.
       if (key === "fertilizer" && state.fertilizerActive) {
         return {
           ...state,
           tools: { ...state.tools, fertilizer: (state.tools.fertilizer ?? 0) + 1 },
           fertilizerActive: false,
         };
+      }
+      // Phase 3 fix — auto-lookup ITEMS[key].power for tools that declared a
+      // typed power but never got an explicit `payload.power` from the call
+      // site. This is the bridge that activates the Phase 3 net-new tools
+      // (trimmer/plough/drill/golden_*/etc.) in production. Legacy tools
+      // listed in LEGACY_TOOL_KEYS keep their hardcoded inline handling so
+      // rake/axe/cat/etc. behavior is unchanged.
+      const itemPower = ITEMS[key]?.power ?? null;
+      if (itemPower && itemPower.id && !LEGACY_TOOL_KEYS.has(key)) {
+        return applyToolPower(state, key, itemPower);
       }
       if ((state.tools[key] || 0) <= 0) return state;
       // Tap-target tools (bomb / rake / axe) only arm here — the charge is

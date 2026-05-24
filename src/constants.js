@@ -381,7 +381,7 @@ export const ITEMS = {
   // existing tiles (grass → grain); ours biases the next fill. Migrating
   // would silently flip behaviour for every existing caller (workshop UI,
   // tutorial, story beats). Tracking as DONE_WITH_CONCERNS for the overhaul.
-  fertilizer:  { kind: "tool", label: "Fertilizer", effect: "fill_bias", target: "tile_grain_wheat", anim: "shimmer", ms: 600, power: { id: "fill_bias", params: { target: "tile_grain_wheat" } }, desc: "Enriches the soil so the next board fill is biased toward grain tiles." },
+  fertilizer:  { kind: "tool", label: "Fertilizer", effect: "fill_bias", target: "tile_grain_wheat", anim: "shimmer", ms: 600, power: { id: "transform_tiles", params: { from: "grass", to: "tile_grain_wheat" } }, desc: "Mutates every grass tile on the board into wheat for an instant grain harvest." },
   cat:         { kind: "tool", label: "Cat", effect: "clear_hazard", target: "rats", anim: "scatter", ms: 200, power: { id: "clear_hazard", params: { target: "rats" } }, desc: "Dispatches a mouser to clear all active rat hazards from the farm in one go." },
   bird_cage:   { kind: "tool", label: "Bird Cage", effect: "clear_all", target: "tile_bird_chicken", anim: "cage", ms: 300, power: { id: "clear_category", params: { target: "birds" } }, desc: "Sweeps all chicken tiles from the board — useful when bird tiles are flooding the farm." },
   scythe_full: { kind: "tool", label: "Scythe (full)", effect: "clear_all", target: "tile_grain_wheat", anim: "sweep", ms: 300, power: { id: "clear_category", params: { target: "grain" } }, desc: "Harvests all wheat tiles at once, clearing the board for a fresh fill." },
