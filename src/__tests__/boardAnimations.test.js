@@ -1,5 +1,9 @@
 import { describe, it, expect } from "vitest";
-import { BOARD_ANIMATIONS, BOARD_ANIMATION_NAMES } from "../config/boardAnimations.js";
+import {
+  BOARD_ANIMATIONS,
+  BOARD_ANIMATION_NAMES,
+  demoBoardAnimResetMs,
+} from "../config/boardAnimations.js";
 
 describe("BOARD_ANIMATIONS registry", () => {
   it("exports sweep, popIn, and goldenFlash entries", () => {
@@ -41,5 +45,20 @@ describe("BOARD_ANIMATIONS registry", () => {
 
   it("BOARD_ANIMATION_NAMES matches Object.keys(BOARD_ANIMATIONS)", () => {
     expect([...BOARD_ANIMATION_NAMES]).toEqual(Object.keys(BOARD_ANIMATIONS));
+  });
+});
+
+describe("demoBoardAnimResetMs", () => {
+  it("includes collapse pipeline for sweep", () => {
+    expect(demoBoardAnimResetMs("sweep", 6)).toBe(240 + 190 + 210 + 210 + 100);
+  });
+
+  it("uses duration + settle for goldenFlash", () => {
+    const g = BOARD_ANIMATIONS.goldenFlash;
+    expect(demoBoardAnimResetMs("goldenFlash", 3)).toBe(g.duration + g.settleMs + 100);
+  });
+
+  it("uses duration for popIn", () => {
+    expect(demoBoardAnimResetMs("popIn", 5)).toBe(BOARD_ANIMATIONS.popIn.duration + 100);
   });
 });

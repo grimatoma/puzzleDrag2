@@ -28,3 +28,23 @@ export const BOARD_ANIMATIONS = Object.freeze({
 });
 
 export const BOARD_ANIMATION_NAMES = Object.freeze(Object.keys(BOARD_ANIMATIONS));
+
+/** Collapse + fill delays after a sweep in GameScene (ms, pre-_dur). */
+const SWEEP_COLLAPSE_PIPELINE_MS = 240 + 190 + 210 + 210;
+
+/**
+ * How long the animations demo should wait before reloading the scenario.
+ * Sweep includes the collapse/fill pipeline; popIn/goldenFlash are tween-only.
+ */
+export function demoBoardAnimResetMs(name, tileCount = 1) {
+  const animation = BOARD_ANIMATIONS[name];
+  if (!animation) return 600;
+  if (animation.kind === "fadeOut") {
+    return SWEEP_COLLAPSE_PIPELINE_MS + 100;
+  }
+  if (animation.kind === "twoStage") {
+    return animation.duration + animation.settleMs + 100;
+  }
+  const stagger = (animation.staggerMs ?? 0) * Math.max(0, tileCount - 1);
+  return animation.duration + stagger + 100;
+}
