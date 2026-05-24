@@ -107,6 +107,56 @@ async function holdChain({ key, length }) {
   };
 }
 
+/**
+ * Demo-only: triggers a board animation on tiles selected by `pattern`.
+ * Does NOT null grid cells, so `sweep` will leave dangling grid references
+ * (tile.destroy() in onComplete). Pair with HEARTH_RELOAD_SCENARIO to reset.
+ */
+function playBoardAnimation({ name, tint, pattern }) {
+  const scene = window.__phaserScene;
+  if (!scene?.grid?.length) throw new Error("Phaser scene is not ready for playBoardAnimation");
+  const tiles = pickTilesForPattern(scene, pattern);
+  if (!tiles.length) return { played: false, tileCount: 0 };
+  scene.playBoardAnimation(name, tiles, { tint });
+  return { played: true, tileCount: tiles.length, pattern: pattern ?? "all" };
+}
+
+function pickTilesForPattern(scene, pattern) {
+  const rows = scene.grid.length;
+  const cols = scene.grid[0]?.length ?? 0;
+  const all = [];
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const tile = scene.grid[r]?.[c];
+      if (tile) all.push(tile);
+    }
+  }
+  switch (pattern) {
+    case "row": {
+      const mid = Math.floor(rows / 2);
+      return all.filter((t) => t.row === mid);
+    }
+    case "bomb3x3": {
+      const cr = Math.floor(rows / 2);
+      const cc = Math.floor(cols / 2);
+      return all.filter((t) => Math.abs(t.row - cr) <= 1 && Math.abs(t.col - cc) <= 1);
+    }
+    case "random6": {
+      const shuffled = [...all].sort(() => Math.random() - 0.5);
+      return shuffled.slice(0, 6);
+    }
+    case "centerSingle": {
+      const cr = Math.floor(rows / 2);
+      const cc = Math.floor(cols / 2);
+      const t = scene.grid[cr]?.[cc];
+      return t ? [t] : [];
+    }
+    case "all":
+    default:
+      return all;
+  }
+}
+
 function applyBoardStateToScene(state) {
   const scene = window.__phaserScene;
   if (!scene || state?.view !== "board") return false;
@@ -228,12 +278,30 @@ export function installVisualTestingBridge({ getState, dispatch }) {
     click: (selector) => clickSelector(selector),
     hover: (selector) => hoverSelector(selector),
     holdChain,
+    playBoardAnimation,
     syncScene: () => applyBoardStateToScene(window.__hearthVisualScenarioState ?? getState()),
     freeze: freezeUi,
     selectorForTestId: (testId) => `[data-testid="${cssEscape(testId)}"]`,
   };
 
   window.__hearthVisual = api;
+
+  function onMessage(event) {
+    const data = event.data;
+    if (!data || typeof data !== "object") return;
+    if (data.type === "HEARTH_PLAY_ANIMATION") {
+      try {
+        playBoardAnimation({ name: data.name, tint: data.tint, pattern: data.pattern });
+      } catch (err) {
+        console.warn("[hearthVisual] playBoardAnimation failed:", err.message);
+      }
+    } else if (data.type === "HEARTH_RELOAD_SCENARIO") {
+      const id = data.scenarioId ?? document.documentElement.dataset.visualScenario;
+      if (id) api.loadScenario(id).catch((err) => console.warn("[hearthVisual] reload failed:", err.message));
+    }
+  }
+  window.addEventListener("message", onMessage);
+
   const params = new URLSearchParams(window.location.search);
   const scenarioId = params.get("visual");
   const shouldShowPanel = params.get("visualPanel") === "1";
@@ -248,6 +316,7 @@ export function installVisualTestingBridge({ getState, dispatch }) {
   });
 
   return () => {
+    window.removeEventListener("message", onMessage);
     delete window.__hearthVisual;
     delete window.__hearthVisualScenarioState;
     const panel = document.getElementById("hearth-visual-panel");

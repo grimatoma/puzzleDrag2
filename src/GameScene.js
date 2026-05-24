@@ -15,6 +15,7 @@ import { rounded, makeTextures, regenerateTextures } from "./textures.js";
 import { TileObj } from "./TileObj.js";
 import { computeBakeScale, hasValidChain } from "./game/chain.js";
 export { computeBakeScale, hasValidChain } from "./game/chain.js";
+import { BOARD_ANIMATIONS } from "./config/boardAnimations.js";
 
 const FLOAT_TEXT_COLOR = 0xffd248;
 
@@ -968,6 +969,75 @@ export class GameScene extends Phaser.Scene {
 
   // ─── Board tool handlers (1.3 Scythe / 1.4 Seedpack / 1.5 Lockbox) ──────
 
+  /**
+   * Play a named board animation on a set of tiles. Tools should call this
+   * instead of inlining tween blocks — see src/config/boardAnimations.js for
+   * the registry of timings. Optional `tint` is applied via setTint() before
+   * the tween starts. The caller is responsible for nulling grid cells before
+   * a destructive (fadeOut) animation so the onComplete-destroy doesn't race
+   * later board reads.
+   */
+  playBoardAnimation(name, tiles, { tint } = {}) {
+    const animation = BOARD_ANIMATIONS[name];
+    if (!animation) return;
+    if (!tiles || !tiles.length) return;
+
+    if (animation.kind === "fadeOut") {
+      tiles.forEach((tile, i) => {
+        if (tint !== undefined) tile.sprite.setTint(tint);
+        this.tweens.add({
+          targets: tile.sprite,
+          scaleX: 0,
+          scaleY: 0,
+          alpha: 0,
+          angle: Phaser.Math.Between(-animation.rotationHalfDeg, animation.rotationHalfDeg),
+          duration: this._dur(animation.duration),
+          delay: i * animation.staggerMs,
+          ease: animation.ease,
+          onComplete: () => tile.destroy(),
+        });
+      });
+      return;
+    }
+
+    if (animation.kind === "popIn") {
+      tiles.forEach((tile, i) => {
+        if (tint !== undefined) tile.sprite.setTint(tint);
+        tile.sprite.setScale(0);
+        this.tweens.add({
+          targets: tile.sprite,
+          scale: this.tileSpriteScale,
+          duration: this._dur(animation.duration),
+          delay: i * animation.staggerMs,
+          ease: animation.ease,
+          onComplete: () => tile.sprite.clearTint(),
+        });
+      });
+      return;
+    }
+
+    if (animation.kind === "twoStage") {
+      tiles.forEach((tile) => {
+        if (tint !== undefined) tile.sprite.setTint(tint);
+        tile.sprite.setScale(0);
+        this.tweens.add({
+          targets: tile.sprite,
+          scale: this.tileSpriteScale * 1.1,
+          duration: this._dur(animation.duration),
+          ease: animation.ease,
+          onComplete: () => {
+            this.tweens.add({
+              targets: tile.sprite,
+              scale: this.tileSpriteScale,
+              duration: this._dur(animation.settleMs),
+              onComplete: () => tile.sprite.clearTint(),
+            });
+          },
+        });
+      });
+    }
+  }
+
   /** 1.3 Scythe: remove 6 random tiles with animation, credit resources, collapse + refill. */
   _applyToolClear() {
     const allTiles = [];
@@ -980,21 +1050,12 @@ export class GameScene extends Phaser.Scene {
     Phaser.Utils.Array.Shuffle(allTiles);
     const picks = allTiles.slice(0, 6);
     const gainMap = {};
-    picks.forEach((tile, i) => {
+    picks.forEach((tile) => {
       const key = tile.res.key;
       gainMap[key] = (gainMap[key] || 0) + 1;
       this.grid[tile.row][tile.col] = null;
-      this.tweens.add({
-        targets: tile.sprite,
-        scaleX: 0, scaleY: 0,
-        alpha: 0,
-        rotation: (Math.random() - 0.5) * 0.6,
-        duration: 200,
-        delay: i * 20,
-        ease: "Quad.In",
-        onComplete: () => tile.destroy(),
-      });
     });
+    this.playBoardAnimation("sweep", picks);
     // Emit resource gains to React (like a mini chain collect, no turn cost)
     for (const [key, gained] of Object.entries(gainMap)) {
       const res = this.resourceByKey(key);
@@ -1018,17 +1079,8 @@ export class GameScene extends Phaser.Scene {
     const picks = allTiles.slice(0, 5);
     picks.forEach((tile) => {
       tile.setResource(baseRes);
-      // Green sparkle burst: scale 0→1 with Back.Out ease
-      tile.sprite.setScale(0);
-      tile.sprite.setTint(0x88ff88);
-      this.tweens.add({
-        targets: tile.sprite,
-        scale: this.tileSpriteScale,
-        duration: 180,
-        ease: "Back.Out",
-        onComplete: () => tile.sprite.clearTint(),
-      });
     });
+    this.playBoardAnimation("popIn", picks, { tint: 0x88ff88 });
   }
 
   /** 1.5 Lockbox: replace 3 random non-selected tiles with biome's rare resource. */
@@ -1046,24 +1098,8 @@ export class GameScene extends Phaser.Scene {
     const picks = allTiles.slice(0, 3);
     picks.forEach((tile) => {
       tile.setResource(rareRes);
-      // Golden flash: scale 0 → 1.1 → 1.0
-      tile.sprite.setScale(0);
-      tile.sprite.setTint(0xffd248);
-      this.tweens.add({
-        targets: tile.sprite,
-        scale: this.tileSpriteScale * 1.1,
-        duration: 130,
-        ease: "Back.Out",
-        onComplete: () => {
-          this.tweens.add({
-            targets: tile.sprite,
-            scale: this.tileSpriteScale,
-            duration: 80,
-            onComplete: () => tile.sprite.clearTint(),
-          });
-        },
-      });
     });
+    this.playBoardAnimation("goldenFlash", picks, { tint: 0xffd248 });
     this.time.delayedCall(this._dur(220), () => {
       if (!hasValidChain(this.grid)) {
         this.floatText("No moves — reshuffled!", this.boardX + (COLS * this.tileSize) / 2, this.boardY - 24 * this.dpr);
@@ -1086,19 +1122,7 @@ export class GameScene extends Phaser.Scene {
     }
     if (!swept.length) return;
     // Animate out with a staggered sparkle burst
-    swept.forEach((tile, i) => {
-      tile.sprite.setTint(0xa070ff);
-      this.tweens.add({
-        targets: tile.sprite,
-        scale: 0,
-        alpha: 0,
-        angle: Phaser.Math.Between(-30, 30),
-        duration: this._dur(200),
-        delay: i * 15,
-        ease: "Quad.In",
-        onComplete: () => tile.destroy(),
-      });
-    });
+    this.playBoardAnimation("sweep", swept, { tint: 0xa070ff });
     // Emit collection event (noTurn: true so no turn is consumed)
     this.events.emit(SCENE_EVENTS.CHAIN_COLLECTED, {
       key: targetRes.key,
@@ -1135,15 +1159,7 @@ export class GameScene extends Phaser.Scene {
       }
     }
     if (!swept.length) return;
-    swept.forEach((t, i) => {
-      t.sprite.setTint(0x88ff88);
-      this.tweens.add({
-        targets: t.sprite, scale: 0, alpha: 0,
-        angle: Phaser.Math.Between(-20, 20),
-        duration: this._dur(190), delay: i * 12, ease: "Quad.In",
-        onComplete: () => t.destroy(),
-      });
-    });
+    this.playBoardAnimation("sweep", swept, { tint: 0x88ff88 });
     const res = this.resourceByKey(targetKey);
     this.events.emit(SCENE_EVENTS.CHAIN_COLLECTED, {
       key: targetKey, gained: swept.length, upgrades: 0,
@@ -1162,16 +1178,10 @@ export class GameScene extends Phaser.Scene {
     }
     if (!swept.length) return;
     const gainMap = {};
-    swept.forEach((t, i) => {
+    swept.forEach((t) => {
       gainMap[t.res.key] = (gainMap[t.res.key] ?? 0) + 1;
-      t.sprite.setTint(0xff9900);
-      this.tweens.add({
-        targets: t.sprite, scale: 0, alpha: 0,
-        angle: Phaser.Math.Between(-25, 25),
-        duration: this._dur(190), delay: i * 10, ease: "Quad.In",
-        onComplete: () => t.destroy(),
-      });
     });
+    this.playBoardAnimation("sweep", swept, { tint: 0xff9900 });
     for (const [key, gained] of Object.entries(gainMap)) {
       const res = this.resourceByKey(key);
       this.events.emit(SCENE_EVENTS.CHAIN_COLLECTED, {
@@ -1194,16 +1204,10 @@ export class GameScene extends Phaser.Scene {
     }
     if (!swept.length) return;
     const gainMap = {};
-    swept.forEach((t, i) => {
+    swept.forEach((t) => {
       gainMap[t.res.key] = (gainMap[t.res.key] ?? 0) + 1;
-      t.sprite.setTint(0xff4444);
-      this.tweens.add({
-        targets: t.sprite, scale: 0, alpha: 0,
-        angle: Phaser.Math.Between(-40, 40),
-        duration: this._dur(180), delay: i * 8, ease: "Quad.In",
-        onComplete: () => t.destroy(),
-      });
     });
+    this.playBoardAnimation("sweep", swept, { tint: 0xff4444 });
     for (const [key, gained] of Object.entries(gainMap)) {
       const res = this.resourceByKey(key);
       this.events.emit(SCENE_EVENTS.CHAIN_COLLECTED, {
@@ -1227,15 +1231,7 @@ export class GameScene extends Phaser.Scene {
       }
     }
     if (!swept.length) return;
-    swept.forEach((t, i) => {
-      t.sprite.setTint(0xffd248);
-      this.tweens.add({
-        targets: t.sprite, scale: 0, alpha: 0,
-        angle: Phaser.Math.Between(-30, 30),
-        duration: this._dur(200), delay: i * 15, ease: "Quad.In",
-        onComplete: () => t.destroy(),
-      });
-    });
+    this.playBoardAnimation("sweep", swept, { tint: 0xffd248 });
     this.events.emit(SCENE_EVENTS.CHAIN_COLLECTED, {
       key: targetRes.key, gained: swept.length, upgrades: 0,
       chainLength: swept.length, value: targetRes.value, noTurn: true,
