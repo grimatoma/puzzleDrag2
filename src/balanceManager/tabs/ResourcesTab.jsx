@@ -12,7 +12,8 @@
 // concepts with their own tabs.
 
 import { useState, useMemo } from "react";
-import { ITEMS, RECIPES } from "../../constants.js";
+import { ITEMS } from "../../constants.js";
+import { buildRecipesByOutput } from "../recipeCatalog.js";
 import {
   COLORS, NumberField, TextField, TextArea, Select, ColorField,
   SmallButton, Pill, Card, SearchBar, TileSwatch,
@@ -74,17 +75,10 @@ export default function ResourcesTab({ draft, updateDraft }) {
     });
   }
 
-  // Map every recipe onto the item it outputs, so each card can show how it's made.
-  const allCraftingMethods = useMemo(() => {
-    const methods = {};
-    for (const [recId, rec] of Object.entries(RECIPES)) {
-      const draftRec = draft.recipes[recId];
-      const effItem = draftRec?.item ?? rec.item;
-      if (!methods[effItem]) methods[effItem] = [];
-      methods[effItem].push({ recId, ...rec, ...draftRec });
-    }
-    return methods;
-  }, [draft.recipes]);
+  const allCraftingMethods = useMemo(
+    () => buildRecipesByOutput({ draftRecipes: draft.recipes }),
+    [draft.recipes],
+  );
 
   // Cross-reference index — used by the "Where used" line on each resource card.
   const referenceIndex = useMemo(() => buildItemReferenceIndex(), []);

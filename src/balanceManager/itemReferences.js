@@ -11,6 +11,7 @@
 
 import { ITEMS, RECIPES, BUILDINGS } from "../constants.js";
 import { STORY_BEATS, SIDE_BEATS } from "../story.js";
+import { canonicalRecipeEntries } from "./recipeCatalog.js";
 
 function asArrayValues(v) {
   return Array.isArray(v) ? v : Object.values(v || {});
@@ -35,7 +36,7 @@ export function buildItemReferenceIndex({
     return out.get(id);
   };
 
-  for (const [recipeId, recipe] of Object.entries(recipes || {})) {
+  for (const [recipeId, recipe] of canonicalRecipeEntries(recipes)) {
     for (const [inputId, qty] of Object.entries(recipe?.inputs || {})) {
       ensure(inputId).push({ kind: "recipe_input", recipeId, qty, station: recipe.station });
     }
