@@ -190,11 +190,34 @@ function writeSidebarCollapsed(v) {
   } catch { /* storage unavailable */ }
 }
 
+// Below this width, the sidebar becomes an overlay toggled by a hamburger
+// button in the header instead of a permanent column.
+const SMALL_SCREEN_QUERY = "(max-width: 768px)";
+
+function useIsSmallScreen() {
+  const [small, setSmall] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return window.matchMedia(SMALL_SCREEN_QUERY).matches;
+  });
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const mq = window.matchMedia(SMALL_SCREEN_QUERY);
+    const update = () => setSmall(mq.matches);
+    mq.addEventListener?.("change", update);
+    return () => mq.removeEventListener?.("change", update);
+  }, []);
+  return small;
+}
+
 export default function BalanceManagerApp() {
   const tabIds = useMemo(() => TABS.map((t) => t.id), []);
   const [tab, setTab] = useState(() => parseHash(typeof window !== "undefined" ? window.location.hash : "", tabIds).tab ?? "tiles");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(readSidebarCollapsed);
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const isSmallScreen = useIsSmallScreen();
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  // The overlay is only meaningful on small screens; ignore the toggle on desktop.
+  const overlayOpen = isSmallScreen && mobileNavOpen;
 
   // Bind the active tab to the URL hash. On mount this normalises the hash
   // (e.g. empty → `#/tiles`); subsequent `setTab` calls push history entries,
@@ -203,6 +226,7 @@ export default function BalanceManagerApp() {
 
   const navigateTo = useCallback((nextTab) => {
     setTab(nextTab);
+    setMobileNavOpen(false);
   }, []);
   // Initialise the draft from whatever the constants module merged in:
   // committed file + previous localStorage draft. That way, opening the
@@ -266,6 +290,9 @@ export default function BalanceManagerApp() {
 
   const activeTab = TABS.find((t) => t.id === tab) ?? TABS[0];
   const ActiveComponent = activeTab.Component;
+  // On small screens the sidebar renders as an overlay and is always
+  // shown in its "expanded" form (labels + section headers).
+  const effectiveCollapsed = !isSmallScreen && sidebarCollapsed;
 
   const handlePaletteSelect = useCallback((entry) => {
     if (entry?.tab) navigateTo(entry.tab);
@@ -293,6 +320,19 @@ export default function BalanceManagerApp() {
           }}
         >
           <div className="flex items-center gap-3">
+            {isSmallScreen && (
+              <button
+                onClick={() => setMobileNavOpen((v) => !v)}
+                className="grid place-items-center w-9 h-9 rounded-md border-2 text-[18px] font-bold"
+                style={{ background: COLORS.parchment, borderColor: COLORS.border, color: COLORS.inkLight }}
+                title={overlayOpen ? "Close navigation" : "Open navigation"}
+                aria-label={overlayOpen ? "Close navigation" : "Open navigation"}
+                aria-expanded={overlayOpen}
+                aria-controls="balance-mobile-nav"
+              >
+                ☰
+              </button>
+            )}
             <span className="text-[24px]">⚖️</span>
             <div>
               <div className="text-[18px] font-bold leading-tight" style={{ color: COLORS.ember }}>
@@ -374,32 +414,60 @@ export default function BalanceManagerApp() {
           </div>
         </header>
 
-        <div className="flex flex-1 min-h-0">
-          {/* Sidebar tabs (collapsible) */}
+        <div className="flex flex-1 min-h-0 relative">
+          {/* Backdrop for mobile overlay nav. */}
+          {overlayOpen && (
+            <div
+              onClick={() => setMobileNavOpen(false)}
+              aria-hidden
+              className="absolute inset-0 z-10"
+              style={{ background: "rgba(0,0,0,0.4)" }}
+            />
+          )}
+          {/* Sidebar tabs — inline column on desktop, fixed overlay on small screens. */}
           <nav
-            className="flex flex-col gap-1 p-3 flex-shrink-0 overflow-y-auto transition-[width] duration-200 relative"
-            style={{
-              width: sidebarCollapsed ? 56 : 200,
-              background: COLORS.parchmentDeep,
-              borderRight: `2px solid ${COLORS.border}`,
-            }}
+            id="balance-mobile-nav"
+            className="flex flex-col gap-1 p-3 flex-shrink-0 overflow-y-auto transition-transform duration-200"
+            style={
+              isSmallScreen
+                ? {
+                    position: "absolute",
+                    top: 0,
+                    bottom: 0,
+                    left: 0,
+                    width: 240,
+                    background: COLORS.parchmentDeep,
+                    borderRight: `2px solid ${COLORS.border}`,
+                    transform: overlayOpen ? "translateX(0)" : "translateX(-100%)",
+                    zIndex: 20,
+                    boxShadow: overlayOpen ? "2px 0 12px rgba(0,0,0,0.25)" : "none",
+                  }
+                : {
+                    width: effectiveCollapsed ? 56 : 200,
+                    background: COLORS.parchmentDeep,
+                    borderRight: `2px solid ${COLORS.border}`,
+                    position: "relative",
+                    transition: "width 200ms",
+                  }
+            }
+            aria-hidden={isSmallScreen && !overlayOpen}
           >
             <button
-              onClick={toggleSidebar}
+              onClick={isSmallScreen ? () => setMobileNavOpen(false) : toggleSidebar}
               className="self-end mb-1 w-7 h-7 grid place-items-center text-[14px] font-bold rounded-md border-2"
               style={{ background: COLORS.parchment, borderColor: COLORS.border, color: COLORS.inkLight }}
-              title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-              aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-              aria-expanded={!sidebarCollapsed}
+              title={isSmallScreen ? "Close navigation" : (sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar")}
+              aria-label={isSmallScreen ? "Close navigation" : (sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar")}
+              aria-expanded={isSmallScreen ? overlayOpen : !sidebarCollapsed}
             >
-              {sidebarCollapsed ? "»" : "«"}
+              {isSmallScreen ? "✕" : (sidebarCollapsed ? "»" : "«")}
             </button>
             {SECTIONS.map((sec) => {
               const sectionTabs = TABS.filter((t) => t.section === sec.id);
               if (sectionTabs.length === 0) return null;
               return (
                 <div key={sec.id} className="flex flex-col gap-1">
-                  {!sidebarCollapsed && (
+                  {!effectiveCollapsed && (
                     <div
                       className="px-2 pt-2 pb-1 text-[10px] font-bold uppercase tracking-wider"
                       style={{ color: COLORS.inkSubtle }}
@@ -407,7 +475,7 @@ export default function BalanceManagerApp() {
                       {sec.label}
                     </div>
                   )}
-                  {sidebarCollapsed && (
+                  {effectiveCollapsed && (
                     <div
                       className="mx-2 my-1 h-px"
                       style={{ background: COLORS.border, opacity: 0.4 }}
@@ -425,11 +493,11 @@ export default function BalanceManagerApp() {
                             ? { background: COLORS.ember, color: "#fff" }
                             : { background: "transparent", color: COLORS.inkLight }
                         }
-                        title={sidebarCollapsed ? t.label : undefined}
+                        title={effectiveCollapsed ? t.label : undefined}
                         aria-label={t.label}
                       >
                         <span className="text-[15px]">{t.icon}</span>
-                        {!sidebarCollapsed && <span className="flex-1">{t.label}</span>}
+                        {!effectiveCollapsed && <span className="flex-1">{t.label}</span>}
                       </button>
                     );
                   })}
@@ -445,7 +513,7 @@ export default function BalanceManagerApp() {
                 title="Discard local edits and reload from balance.json"
                 aria-label="Reset to committed balance.json"
               >
-                {sidebarCollapsed ? "↺" : "↺ Reset to Committed"}
+                {effectiveCollapsed ? "↺" : "↺ Reset to Committed"}
               </button>
               <button
                 onClick={clearAllOverrides}
@@ -454,7 +522,7 @@ export default function BalanceManagerApp() {
                 title="Wipe every override — restores raw defaults"
                 aria-label="Clear all overrides"
               >
-                {sidebarCollapsed ? "✕" : "✕ Clear All Overrides"}
+                {effectiveCollapsed ? "✕" : "✕ Clear All Overrides"}
               </button>
             </div>
           </nav>
