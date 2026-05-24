@@ -20,6 +20,7 @@ Phaser 3 + React game. **React owns state** — `useReducer` in `prototype.jsx`,
 | Persisted save shape changed | bump `SAVE_SCHEMA_VERSION` in `src/constants.js` | reducer discards mismatched saves |
 | Land on a specific screen for QA | "Testing a specific UI" section below | `?visual=<id>`, `window.__hearthVisual` |
 | Reset state during testing | `localStorage.removeItem("hearth.save.v1")` | also `hearth.settings`, `hearth.tutorial.seen`, `hearth.disableDialogs` |
+| Canonical concept inventory | Balance Manager `/b/` → Wiki → Concepts | sub-tabs iterate live from `src/constants.js`, `src/features/*/data.js`, `src/config/abilities.js`, `src/config/toolPowers.js`, `src/router.js`. Do not duplicate concept lists in other docs — point at the Wiki. |
 
 The body below covers commands, architecture, the core game mechanic, testing harness, engineering rules, and PR workflow. Trust code over older docs (anything under `docs/` is allowed to drift; this file is kept current).
 
