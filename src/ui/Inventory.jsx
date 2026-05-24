@@ -530,17 +530,13 @@ export function InventoryGrid({
         ? entries.findIndex((e) => e.key === accordion.displayedKey)
         : -1;
       let accordionInsertAfter = -1;
-      if (selectedIndex >= 0) {
-        if (viewMode === "grid") {
-          const cols = Math.max(columnsPerRow, 1);
-          const rowEnd = Math.min(
-            (Math.floor(selectedIndex / cols) + 1) * cols - 1,
-            entries.length - 1
-          );
-          accordionInsertAfter = rowEnd;
-        } else {
-          accordionInsertAfter = selectedIndex;
-        }
+      if (selectedIndex >= 0 && viewMode === "grid") {
+        const cols = Math.max(columnsPerRow, 1);
+        const rowEnd = Math.min(
+          (Math.floor(selectedIndex / cols) + 1) * cols - 1,
+          entries.length - 1
+        );
+        accordionInsertAfter = rowEnd;
       }
       const selectedEntry = selectedIndex >= 0 ? entries[selectedIndex] : null;
       const cols = Math.max(columnsPerRow, 1);
@@ -566,12 +562,30 @@ export function InventoryGrid({
               ref={makeRef(entry.key)}
             />
           );
+        } else if (isSelected) {
+          cells.push(
+            <div key={entry.key} className="flex flex-col">
+              <InventoryBrowserItem
+                entry={entry}
+                selected
+                onSelect={() => accordion.select(entry.key)}
+              />
+              <div
+                className={`inv-accordion__body${accordion.isOpen ? " is-open" : ""}`}
+                onTransitionEnd={(e) => {
+                  if (e.propertyName === "max-height" && !accordion.isOpen) accordion.onClosed();
+                }}
+              >
+                <InventoryDetail entry={entry} marketBuilt={marketBuilt} dispatch={dispatch} />
+              </div>
+            </div>
+          );
         } else {
           cells.push(
             <InventoryBrowserItem
               key={entry.key}
               entry={entry}
-              selected={isSelected}
+              selected={false}
               onSelect={() => accordion.select(entry.key)}
             />
           );
