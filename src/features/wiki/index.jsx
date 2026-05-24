@@ -115,7 +115,7 @@ function WikiEdge({ edge, selectedKey, connectedKeys }) {
 }
 
 // ── WikiInfoCard ──────────────────────────────────────────────────────────────
-function WikiInfoCard({ itemKey, onClose }) {
+function WikiInfoCard({ itemKey, isVisible, onClose }) {
   const label = labelFor(itemKey);
   const itemDef = ITEMS[itemKey] ?? {};
 
@@ -137,7 +137,14 @@ function WikiInfoCard({ itemKey, onClose }) {
   return (
     <div
       className="absolute bottom-0 left-0 right-0 bg-parchment border-t border-iron p-3"
-      style={{ minHeight: 160, maxHeight: 200, overflowY: "auto" }}
+      style={{
+        minHeight: 160,
+        maxHeight: 200,
+        overflowY: "auto",
+        transform: isVisible ? "translateY(0)" : "translateY(100%)",
+        transition: "transform 220ms ease-out",
+        willChange: "transform",
+      }}
     >
       {/* Close button */}
       <button
@@ -209,6 +216,30 @@ export default function WikiScreen() {
   const [view, setView] = useState({ x: 40, y: 40, scale: 1 });
   const [selectedKey, setSelectedKey] = useState(null);
   const [query, setQuery] = useState("");
+  // Card animation: cardKey keeps the card mounted during exit transition
+  const [cardKey, setCardKey] = useState(null);
+  const [cardVisible, setCardVisible] = useState(false);
+
+  useEffect(() => {
+    let raf1, raf2, timer;
+    if (selectedKey) {
+      const key = selectedKey;
+      // Frame 1: mount hidden; Frame 2: transition in
+      raf1 = requestAnimationFrame(() => {
+        setCardKey(key);
+        raf2 = requestAnimationFrame(() => setCardVisible(true));
+      });
+    } else {
+      // Start exit transition, then unmount after it completes
+      raf1 = requestAnimationFrame(() => setCardVisible(false));
+      timer = setTimeout(() => setCardKey(null), 230);
+    }
+    return () => {
+      cancelAnimationFrame(raf1);
+      cancelAnimationFrame(raf2);
+      clearTimeout(timer);
+    };
+  }, [selectedKey]);
   const containerRef = useRef(null);
   const dragRef = useRef(null);
 
@@ -389,10 +420,11 @@ export default function WikiScreen() {
           </div>
         </div>
 
-        {selectedKey && (
+        {cardKey && (
           <WikiInfoCard
-            key={selectedKey}
-            itemKey={selectedKey}
+            key={cardKey}
+            itemKey={cardKey}
+            isVisible={cardVisible}
             edges={edges}
             onClose={() => setSelectedKey(null)}
           />
