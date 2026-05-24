@@ -1,0 +1,34 @@
+# Cursor ignore — keeps Agent/Tab/search off bulky non-source files.
+# Syntax matches .gitignore. See https://cursor.com/docs/reference/ignore-file
+
+# Dependencies and build output
+node_modules/
+dist/
+
+# Visual regression goldens (~66MB of PNG screenshots; not useful for code context)
+tests/visual/__goldens__/
+
+# Generated test artifacts
+test-results/
+playwright-report/
+playwright/.cache/
+coverage/
+
+# Binary media (textures are procedural JS under src/textures/, not image files)
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.webp
+*.svg
+*.ico
+*.mp4
+*.wav
+*.mp3
+*.zip
+*.tar
+*.gz
+
+# Secrets
+.env
+.env.*
