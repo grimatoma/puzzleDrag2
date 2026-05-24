@@ -8,7 +8,14 @@ import { rollHazard, tickHazards } from "./features/mine/hazards.js";
 import { isMysteriousChainValid, spawnMysteriousOre, tickMysteriousOre } from "./features/mine/mysterious_ore.js";
 import { isPearlChainValid, spawnPearl, tickPearl, PEARL_KEY } from "./features/fish/pearl.js";
 import { driftPrices, applyTrade, pickMarketEvent } from "./market.js";
-import { currentCap } from "./utils.js";
+import { currentCap, tilesInCategory } from "./utils.js";
+import {
+  sweepTileKeys,
+  applyAreaBlast,
+  applyTransformAll,
+  applyTransformAdjacent,
+  applyRevealTiles,
+} from "./state/boardMutations.js";
 import { computeWorkerEffects } from "./features/workers/aggregate.js";
 import { TILE_TYPES, CATEGORIES, TILE_TYPES_MAP, CATEGORY_OF } from "./features/tileCollection/data.js";
 import { discoverTileTypesFromChain } from "./features/tileCollection/effects.js";
@@ -86,7 +93,169 @@ export function disarmAllTools(state) {
       tools: { ...next.tools, fertilizer: (next.tools?.fertilizer ?? 0) + 1 },
     };
   }
+  // Phase 2 (tool-powers overhaul) — drop any armed typed-power config too.
+  // The charge was refunded above via the `toolPending` branch if applicable;
+  // here we just clear the tap-target armed power reference.
+  if (next.toolPendingPower) {
+    next = { ...next, toolPendingPower: null };
+  }
   return next;
+}
+
+// ─── Tool power runtime (Phase 2 of the tool-powers overhaul) ─────────────
+// Dispatch a typed tool power (rake/axe/wand/etc. NOT included — those keep
+// their existing ad-hoc handlers until Phase 3 migrates them). Inputs are
+// validated; returns `state` unchanged when the action is rejected (no
+// charge / unknown power id). Tap-target powers only arm here; the board
+// mutation happens in applyTapTargetPower from the TOOL_FIRED case.
+//
+// `power` shape: { id: string, params?: object }
+//
+// Non-tap powers consume one charge from `state.tools[key]` (when `key` is
+// non-null). Tap-target powers stash the armed power config in
+// `state.toolPendingPower` and only spend the charge on TOOL_FIRED.
+const TAP_TARGET_POWER_IDS = new Set([
+  "transform_adjacent",
+  "area_blast",
+  "tap_clear_type",
+]);
+
+function _spendToolCharge(state, key) {
+  if (!key) return state;
+  if ((state.tools?.[key] ?? 0) <= 0) return null;
+  return { ...state, tools: { ...state.tools, [key]: state.tools[key] - 1 } };
+}
+
+function applyToolPower(state, key, power) {
+  const id = power.id;
+  const params = power.params ?? {};
+
+  // Tap-target arming: don't spend the charge yet, just remember the power
+  // config so TOOL_FIRED can re-hydrate it at the click site.
+  if (TAP_TARGET_POWER_IDS.has(id)) {
+    if (key && (state.tools?.[key] ?? 0) <= 0) return state;
+    return { ...state, toolPending: key ?? null, toolPendingPower: { ...power } };
+  }
+
+  switch (id) {
+    case "clear_category": {
+      const spent = _spendToolCharge(state, key);
+      if (spent === null) return state;
+      const tileKeys = tilesInCategory(params.target);
+      if (tileKeys.length === 0) return spent;
+      const { grid, collected } = sweepTileKeys(spent.grid, tileKeys);
+      const inventory = { ...spent.inventory };
+      for (const [tileKey, count] of Object.entries(collected)) {
+        inventory[tileKey] = (inventory[tileKey] ?? 0) + count;
+      }
+      return { ...spent, grid, inventory };
+    }
+    case "transform_tiles": {
+      const spent = _spendToolCharge(state, key);
+      if (spent === null) return state;
+      // `from` accepts either a tileCategory string/array OR a literal tileKey.
+      // tilesInCategory returns [] for unknown categories, so we fall back to
+      // treating `from` as a literal key when nothing came back.
+      const fromCategory = tilesInCategory(params.from);
+      const fromKeys = fromCategory.length > 0
+        ? fromCategory
+        : (typeof params.from === "string" ? [params.from] : []);
+      if (fromKeys.length === 0 || !params.to) return spent;
+      const { grid } = applyTransformAll(spent.grid, fromKeys, params.to);
+      return { ...spent, grid };
+    }
+    case "undo_move": {
+      const snap = state.lastChainSnapshot;
+      // No snapshot — refund (do not consume).
+      if (!snap) return state;
+      const spent = _spendToolCharge(state, key);
+      if (spent === null) return state;
+      return {
+        ...spent,
+        grid: snap.grid ?? spent.grid,
+        inventory: snap.inventory ?? spent.inventory,
+        turnsUsed: snap.turnsUsed ?? spent.turnsUsed,
+        farmRun: snap.farmRun ?? spent.farmRun,
+        lastChainSnapshot: null,
+      };
+    }
+    case "restore_turns": {
+      // No active board run — refund.
+      if (!state.farmRun) return state;
+      const spent = _spendToolCharge(state, key);
+      if (spent === null) return state;
+      const amount = params.amount ?? 5;
+      return {
+        ...spent,
+        farmRun: {
+          ...spent.farmRun,
+          turnBudget: (spent.farmRun.turnBudget ?? 0) + amount,
+          turnsRemaining: (spent.farmRun.turnsRemaining ?? 0) + amount,
+        },
+      };
+    }
+    case "reveal_tiles": {
+      const spent = _spendToolCharge(state, key);
+      if (spent === null) return state;
+      const tileKeys = tilesInCategory(params.target);
+      if (tileKeys.length === 0) return spent;
+      // sweep board for hidden cells; applyRevealTiles silently no-ops
+      // when no cell has hidden:true (the documented sentinel for now).
+      const { grid } = applyRevealTiles(spent.grid, tileKeys);
+      return { ...spent, grid };
+    }
+    default:
+      // Unknown power id — drop quietly so the rest of the reducer keeps
+      // running; this is safer than throwing during a player action.
+      return state;
+  }
+}
+
+function applyTapTargetPower(state, key, power, row, col) {
+  const id = power.id;
+  const params = power.params ?? {};
+  // Charge spend: tap-target tools spend on fire.
+  const spent = _spendToolCharge(state, key);
+  // For powers that pass through reduce(state, ...) without a real key (e.g.
+  // tests dispatch a tap-target power and TOOL_FIRED with no inventory entry),
+  // we tolerate a missing tool charge — the armed state was set, the click
+  // resolved, we just don't deduct from a slot the caller never populated.
+  const base = spent ?? state;
+  const next = { ...base, toolPending: null, toolPendingPower: null };
+  if (typeof row !== "number" || typeof col !== "number") return next;
+  switch (id) {
+    case "area_blast": {
+      const radius = params.radius ?? 1;
+      const { grid, collected } = applyAreaBlast(next.grid, row, col, radius);
+      const inventory = { ...next.inventory };
+      for (const [tileKey, count] of Object.entries(collected)) {
+        inventory[tileKey] = (inventory[tileKey] ?? 0) + count;
+      }
+      return { ...next, grid, inventory };
+    }
+    case "transform_adjacent": {
+      const radius = params.radius ?? 1;
+      const fromCategory = tilesInCategory(params.from);
+      const fromKeys = fromCategory.length > 0
+        ? fromCategory
+        : (typeof params.from === "string" ? [params.from] : []);
+      if (fromKeys.length === 0 || !params.to) return next;
+      const { grid } = applyTransformAdjacent(next.grid, row, col, radius, fromKeys, params.to);
+      return { ...next, grid };
+    }
+    case "tap_clear_type": {
+      const tappedKey = next.grid?.[row]?.[col]?.key;
+      if (!tappedKey) return next;
+      const { grid, collected } = sweepTileKeys(next.grid, [tappedKey]);
+      const inventory = { ...next.inventory };
+      for (const [tileKey, count] of Object.entries(collected)) {
+        inventory[tileKey] = (inventory[tileKey] ?? 0) + count;
+      }
+      return { ...next, grid, inventory };
+    }
+    default:
+      return next;
+  }
 }
 
 // Phase 7 — SEASON_NAMES used to be the calendar-season index → name lookup.
@@ -528,6 +697,15 @@ function coreReducer(state, action) {
       // keeps React state and the Phaser registry in sync.
       const key = action.key ?? action.payload?.key ?? state.toolPending;
       if (!key) return state;
+      // Phase 2 (tool-powers overhaul) — typed tap-target powers stash the
+      // armed power config in state.toolPendingPower. If present, apply it
+      // here at the tap site instead of the key-based legacy branches below.
+      const armedPower = state.toolPendingPower;
+      if (armedPower && armedPower.id) {
+        const row = action.row ?? action.payload?.row;
+        const col = action.col ?? action.payload?.col;
+        return applyTapTargetPower(state, key, armedPower, row, col);
+      }
       let next = state;
       if (TAP_TARGET_TOOL_KEYS.has(key) && (state.tools?.[key] ?? 0) > 0) {
         next = { ...next, tools: { ...next.tools, [key]: next.tools[key] - 1 } };
@@ -544,6 +722,15 @@ function coreReducer(state, action) {
       // call sites (and any quest/reward shapes still in flight) keep working.
       const ALIAS = { scythe: "clear", seedpack: "basic", lockbox: "rare", reshuffle: "shuffle" };
       const key = ALIAS[rawKey] ?? rawKey;
+      // Phase 2 (tool-powers overhaul) — if the caller supplied an explicit
+      // power config (`action.payload.power = { id, params }`), route through
+      // the typed power-id dispatch. This is purely additive: existing tools
+      // that ship ad-hoc handlers (rake/axe/wand/etc.) are untouched until
+      // Phase 3 backfills `power` into their ITEMS entry.
+      const power = action.payload?.power;
+      if (power && power.id) {
+        return applyToolPower(state, key, power);
+      }
       // Magic tools (hourglass, magic_seed, magic_fertilizer) are handled exclusively
       // by the portal slice — skip them here to avoid double-consume.
       const MAGIC_TOOL_IDS = new Set(["hourglass", "magic_seed", "magic_fertilizer", "magic_wand"]);
