@@ -446,6 +446,149 @@ function drawSiftingScreen(ctx) {
   ctx.beginPath(); ctx.ellipse(-7, -4, 4, 2, -0.4, 0, Math.PI*2); ctx.fill();
 }
 
+// Phase 3 net-new mine tools (tool-powers overhaul).
+function drawCoalHammer(ctx) {
+  shadow(ctx, 16);
+  woodHandle(ctx, 10, 20, -8, -14, 4);
+  // Head — chunky black hammer
+  ctx.save(); ctx.translate(-10, -16);
+  const g = ctx.createLinearGradient(0, 0, 0, 12);
+  g.addColorStop(0, "#5a5060"); g.addColorStop(0.5, "#2a2030"); g.addColorStop(1, "#0a0508");
+  ctx.fillStyle = g;
+  ctx.fillRect(-8, 0, 18, 12);
+  ctx.strokeStyle = "#0a0008"; ctx.lineWidth = 1.6;
+  ctx.strokeRect(-8, 0, 18, 12);
+  // Coal-flake glints on the head
+  ctx.fillStyle = "rgba(140,80,180,0.45)";
+  ctx.beginPath(); ctx.arc(-3, 4, 1.4, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(4, 8, 1.0, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(6, 3, 0.9, 0, Math.PI*2); ctx.fill();
+  ctx.restore();
+}
+
+function drawGoldPick(ctx) {
+  shadow(ctx, 18);
+  woodHandle(ctx, -10, 18, 12, -16, 4);
+  ctx.save(); ctx.translate(12, -16);
+  // Golden pick head — curved both ways
+  const g = ctx.createLinearGradient(-14, 0, 18, 0);
+  g.addColorStop(0, "#a85410"); g.addColorStop(0.5, "#ffd34c"); g.addColorStop(1, "#7a4810");
+  ctx.fillStyle = g;
+  ctx.beginPath();
+  ctx.moveTo(-14, -2); ctx.lineTo(14, -2); ctx.lineTo(18, 2); ctx.lineTo(14, 6); ctx.lineTo(-14, 6); ctx.lineTo(-18, 2);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = "#5a3008"; ctx.lineWidth = 1.6; ctx.stroke();
+  // Gold sheen
+  ctx.fillStyle = "rgba(255,255,255,0.6)";
+  ctx.fillRect(-12, -1, 24, 1.5);
+  // Sparkles
+  ctx.fillStyle = "#fffce0";
+  [[-10, 0], [10, 4]].forEach(([x, y]) => {
+    ctx.beginPath();
+    for (let i = 0; i < 4; i++) {
+      const a = (i / 4) * Math.PI * 2;
+      const r = i % 2 === 0 ? 1.2 : 0.3;
+      const px = x + Math.cos(a) * r, py = y + Math.sin(a) * r;
+      if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+    }
+    ctx.closePath(); ctx.fill();
+  });
+  ctx.restore();
+}
+
+function drawMagnet(ctx) {
+  shadow(ctx, 18);
+  // Classic horseshoe magnet
+  ctx.save();
+  // Outer red body
+  ctx.strokeStyle = "#a82018"; ctx.lineWidth = 9; ctx.lineCap = "butt";
+  ctx.beginPath();
+  ctx.arc(0, 0, 11, Math.PI*0.25, Math.PI*0.75, false);
+  ctx.stroke();
+  // Outline
+  ctx.strokeStyle = "#3a0808"; ctx.lineWidth = 1.4;
+  ctx.beginPath();
+  ctx.arc(0, 0, 15, Math.PI*0.25, Math.PI*0.75, false);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(0, 0, 7, Math.PI*0.25, Math.PI*0.75, false);
+  ctx.stroke();
+  // Silver tips (poles)
+  const tipL = [Math.cos(Math.PI*0.75) * 11, Math.sin(Math.PI*0.75) * 11];
+  const tipR = [Math.cos(Math.PI*0.25) * 11, Math.sin(Math.PI*0.25) * 11];
+  ctx.fillStyle = "#a8a8b0";
+  ctx.beginPath();
+  ctx.rect(tipL[0] - 4, tipL[1] - 1, 8, 6);
+  ctx.fill();
+  ctx.strokeStyle = "#1a1a1e"; ctx.lineWidth = 1.2; ctx.stroke();
+  ctx.fillStyle = "#a8a8b0";
+  ctx.beginPath();
+  ctx.rect(tipR[0] - 4, tipR[1] - 1, 8, 6);
+  ctx.fill();
+  ctx.strokeStyle = "#1a1a1e"; ctx.lineWidth = 1.2; ctx.stroke();
+  ctx.restore();
+  // Pole labels
+  ctx.fillStyle = "#fffce0"; ctx.font = "bold 6px sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  ctx.fillText("N", tipL[0], tipL[1] + 2);
+  ctx.fillText("S", tipR[0], tipR[1] + 2);
+  // Attraction lines (orbiting iron flecks)
+  ctx.strokeStyle = "rgba(80,80,90,0.7)"; ctx.lineWidth = 1.0;
+  for (let i = 0; i < 4; i++) {
+    const y = 14 + i * 2;
+    ctx.beginPath();
+    ctx.moveTo(-10 + i * 0.5, y);
+    ctx.lineTo(10 - i * 0.5, y);
+    ctx.stroke();
+  }
+  // Iron filings being pulled up
+  ctx.fillStyle = "#5a5a62";
+  [[-6, 18, 1.6], [3, 20, 1.2], [9, 18, 1.0]].forEach(([x, y, r]) => {
+    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI*2); ctx.fill();
+  });
+}
+
+function drawCoalTransmuter(ctx) {
+  shadow(ctx, 20);
+  // Crucible-ish base
+  ctx.fillStyle = "#3a2810";
+  ctx.beginPath();
+  ctx.moveTo(-16, 6); ctx.lineTo(16, 6); ctx.lineTo(12, 20); ctx.lineTo(-12, 20);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = "#1a0e04"; ctx.lineWidth = 1.8; ctx.stroke();
+  // Rim
+  ctx.fillStyle = "#7a5018";
+  ctx.beginPath(); ctx.ellipse(0, 6, 16, 4, 0, 0, Math.PI*2); ctx.fill();
+  ctx.strokeStyle = "#1a0e04"; ctx.lineWidth = 1.4; ctx.stroke();
+  // Glowing coal inside
+  const g = ctx.createRadialGradient(0, 6, 1, 0, 6, 14);
+  g.addColorStop(0, "#fff4a0"); g.addColorStop(0.4, "#f86040"); g.addColorStop(1, "#1a0a14");
+  ctx.fillStyle = g;
+  ctx.beginPath(); ctx.ellipse(0, 6, 14, 3, 0, 0, Math.PI*2); ctx.fill();
+  // Coal lumps
+  ctx.fillStyle = "#1a0a14";
+  [[-6, 4, 2.4], [4, 5, 2.0], [-1, 3, 1.8], [9, 6, 1.4]].forEach(([x, y, r]) => {
+    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI*2); ctx.fill();
+    ctx.strokeStyle = "#0a0008"; ctx.lineWidth = 0.6; ctx.stroke();
+  });
+  // Embers / sparks above
+  ctx.fillStyle = "#f8a020";
+  [[-4, -2], [3, -6], [6, -2], [-8, -6]].forEach(([x, y]) => {
+    ctx.beginPath(); ctx.arc(x, y, 1.2, 0, Math.PI*2); ctx.fill();
+  });
+  // Arrow / transmutation glyph above
+  ctx.strokeStyle = "rgba(255,255,255,0.7)"; ctx.lineWidth = 1.4;
+  ctx.beginPath();
+  ctx.moveTo(-2, -12); ctx.lineTo(2, -16); ctx.lineTo(-2, -20);
+  ctx.stroke();
+  // Smoke wisp
+  ctx.strokeStyle = "rgba(120,120,140,0.6)"; ctx.lineWidth = 1.6;
+  ctx.beginPath();
+  ctx.moveTo(8, -2); ctx.bezierCurveTo(12, -8, 6, -12, 10, -18);
+  ctx.stroke();
+}
+
 export const ICONS = {
   pickaxe:        { label:"Pickaxe",        color:"#a8a8b0", draw:drawPickaxe },
   sledgehammer:   { label:"Sledgehammer",   color:"#5a5a62", draw:drawSledgehammer },
@@ -460,4 +603,8 @@ export const ICONS = {
   rope_coil:      { label:"Rope Coil",      color:"#a87838", draw:drawRopeCoil },
   crucible:       { label:"Crucible",       color:"#f8a020", draw:drawCrucible },
   sifting_screen: { label:"Sifting Screen", color:"#a8a8b0", draw:drawSiftingScreen },
+  coal_hammer:    { label:"Coal Hammer",    color:"#2a2030", draw:drawCoalHammer },
+  gold_pick:      { label:"Gold Pick",      color:"#ffd34c", draw:drawGoldPick },
+  magnet:         { label:"Magnet",         color:"#a82018", draw:drawMagnet },
+  coal_transmuter:{ label:"Coal Transmuter", color:"#f86040", draw:drawCoalTransmuter },
 };

@@ -3,9 +3,12 @@ import { MAGIC_TOOLS } from "../features/portal/data.js";
 import { createInitialState, rootReducer } from "../state.js";
 
 describe("8.6 — Magic Portal summons", () => {
-  it("all 4 magic tools registered", () => {
+  it("the original 4 magic tools remain registered (PR3 added 6 net-new ones)", () => {
+    // PR3 of the tool-powers overhaul adds golden_apple / golden_carrot /
+    // golden_idol / golden_sheep / philosophers_stone / miners_hat alongside
+    // the original four. We only pin the originals here so future additions
+    // don't keep churning this single test.
     const ids = MAGIC_TOOLS.map((t) => t.id);
-    expect(ids.length).toBe(4);
     expect(ids.includes("magic_wand")).toBe(true);
     expect(ids.includes("hourglass")).toBe(true);
     expect(ids.includes("magic_seed")).toBe(true);

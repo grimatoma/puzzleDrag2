@@ -68,13 +68,21 @@ describe("Phase 10 — CRAFT_TOOL action", () => {
 });
 
 describe("Phase 10 — USE_TOOL fertilizer", () => {
-  it("fertilizer sets fertilizerActive flag", () => {
-    const s = {
-      ...createInitialState(),
-      tools: { ...createInitialState().tools, fertilizer: 1 },
-    };
+  it("fertilizer transforms every grass tile into wheat on cast (PC2-faithful transform_tiles)", () => {
+    // Tool-powers Phase 3: fertilizer's `power` migrated from fill_bias to
+    // transform_tiles. The legacy fertilizerActive flag is now a defensive
+    // fallback only; casting mutates the board instead.
+    const base = createInitialState();
+    const grid = [
+      [{ key: "tile_grass_hay" }, { key: "tile_tree_oak" }],
+      [{ key: "tile_grass_meadow" }, { key: "tile_grass_hay" }],
+    ];
+    const s = { ...base, grid, tools: { ...base.tools, fertilizer: 1 } };
     const next = rootReducer(s, { type: "USE_TOOL", payload: { id: "fertilizer" } });
-    expect(next.fertilizerActive).toBe(true);
     expect(next.tools.fertilizer).toBe(0);
+    expect(next.grid[0][0].key).toBe("tile_grain_wheat");
+    expect(next.grid[0][1].key).toBe("tile_tree_oak");
+    expect(next.grid[1][0].key).toBe("tile_grain_wheat");
+    expect(next.grid[1][1].key).toBe("tile_grain_wheat");
   });
 });
