@@ -57,17 +57,17 @@ describe("buildItemReferenceIndex", () => {
 
   it("records story_outcome usages from beat choice outcomes", () => {
     const idx = buildItemReferenceIndex({
-      items: { wood_log: {} },
+      items: { tree_oak: {} },
       recipes: {}, buildings: [],
       storyBeats: [{
         id: "b1", choices: [
-          { id: "a", outcome: { resources: { wood_log: 5 } } },
+          { id: "a", outcome: { resources: { tree_oak: 5 } } },
           { id: "b", outcome: { resources: {} } },
         ],
       }],
       sideBeats: [],
     });
-    const usages = idx.get("wood_log");
+    const usages = idx.get("tree_oak");
     expect(usages).toHaveLength(1);
     expect(usages[0]).toMatchObject({ kind: "story_outcome", beatId: "b1", choiceId: "a", qty: 5 });
   });
@@ -75,7 +75,8 @@ describe("buildItemReferenceIndex", () => {
   it("returns an index for the real catalogs without crashing", () => {
     const idx = buildItemReferenceIndex();
     expect(idx.size).toBeGreaterThan(0);
-    expect(idx.get("wood_log")?.length).toBeGreaterThan(0);
+    // flour is heavily referenced (recipe inputs/outputs + chain_next).
+    expect(idx.get("flour")?.length).toBeGreaterThan(0);
   });
 });
 

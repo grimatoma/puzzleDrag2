@@ -119,7 +119,7 @@ describe("1.2 — hasValidChain", () => {
       return;
     }
     const ROWS = 6, COLS = 6;
-    const types = ["grass_hay", "wood_log", "berry", "bird_egg"];
+    const types = ["grass_hay", "tree_oak", "berry", "eggs"];
     const grid = [];
     for (let r = 0; r < ROWS; r++) {
       grid[r] = [];
@@ -143,7 +143,7 @@ describe("1.2 — hasValidChain", () => {
     for (let r = 0; r < ROWS; r++) {
       grid[r] = [];
       for (let c = 0; c < COLS; c++) {
-        grid[r][c] = { res: { key: "wood_log" } };
+        grid[r][c] = { res: { key: "tree_oak" } };
       }
     }
     // Make a mostly-unique board but with 3 hay in a row at top-left

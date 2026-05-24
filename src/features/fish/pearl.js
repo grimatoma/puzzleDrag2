@@ -7,14 +7,14 @@
  * tiles before the timer expires → +1 Rune. If the timer runs out, the
  * tile degrades back into kelp.
  *
- * The pearl tile shares the existing `fish_pearl` resource entry used
- * by the oyster icon (no separate sprite — fish_pearl is a special
+ * The pearl tile shares the existing `special_giant_pearl` resource entry used
+ * by the oyster icon (no separate sprite — special_giant_pearl is a special
  * non-spawnable resource used only when conditionally seeded here).
  */
 
 export const PEARL_TURNS = 5;
 export const REQUIRED_FISH_IN_CHAIN = 2;
-export const PEARL_KEY = "fish_pearl";
+export const PEARL_KEY = "special_giant_pearl";
 
 /** Resource keys that count as "fish" for the rune-capture chain rule. */
 const FISH_CATEGORY_KEYS = new Set([
@@ -23,7 +23,7 @@ const FISH_CATEGORY_KEYS = new Set([
   "fish_clam",
   "fish_oyster",
   "fish_kelp",
-  "fish_raw",
+  "fish_fillet",
 ]);
 
 /**

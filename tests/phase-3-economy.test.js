@@ -8,7 +8,7 @@ describe("Phase 3 — market prices defined", () => {
   it("hay has buy price", () => expect(MARKET_PRICES.grass_hay.buy).toBeGreaterThan(0));
   it("wheat has sell price", () => expect(MARKET_PRICES.grain_wheat.sell).toBeGreaterThan(0));
   it("all base resources covered", () => {
-    const keys = ["grass_hay", "grain_wheat", "grain", "wood_log", "wood_plank", "berry", "mine_stone", "mine_ore", "mine_coal"];
+    const keys = ["grass_hay", "grain_wheat", "flour", "plank", "jam", "mine_stone", "mine_coal"];
     for (const k of keys) {
       expect(MARKET_PRICES[k], `${k} missing`).toBeDefined();
     }
@@ -49,15 +49,15 @@ describe("Phase 3 — daily streak in fresh state", () => {
 });
 
 describe("Phase 3 — supply chain (CONVERT_TO_SUPPLY)", () => {
-  it("converts 3 grain to 1 supply", () => {
-    const s = { ...createInitialState(), inventory: { grain: 9 } };
+  it("converts 3 flour to 1 supply", () => {
+    const s = { ...createInitialState(), inventory: { flour: 9 } };
     const next = rootReducer(s, { type: "CONVERT_TO_SUPPLY", payload: { qty: 1 } });
-    expect(next.inventory.grain).toBe(6);
+    expect(next.inventory.flour).toBe(6);
     expect(next.inventory.supplies).toBe(1);
   });
 
-  it("rejects conversion when grain < 3", () => {
-    const s = { ...createInitialState(), inventory: { grain: 2 } };
+  it("rejects conversion when flour < 3", () => {
+    const s = { ...createInitialState(), inventory: { flour: 2 } };
     const next = rootReducer(s, { type: "CONVERT_TO_SUPPLY", payload: { qty: 1 } });
     expect(next).toBe(s);
   });

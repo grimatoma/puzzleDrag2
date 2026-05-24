@@ -65,8 +65,8 @@ describe("evaluateFlagTriggers", () => {
   });
   it("supports resource_total / resource_total_multi / craft_made / act_entered / bond_at_least", () => {
     const cases = [
-      [{ triggers: [{ type: "resource_total", key: "wood_log", amount: 30 }] }, baseState({}, { inventory: { wood_log: 30 } }), { type: "resource_total", key: "wood_log", amount: 30 }, true],
-      [{ triggers: [{ type: "resource_total", key: "wood_log", amount: 30 }] }, baseState({}, { inventory: { wood_log: 12 } }), { type: "resource_total", key: "wood_log", amount: 12 }, false],
+      [{ triggers: [{ type: "resource_total", key: "tree_oak", amount: 30 }] }, baseState({}, { inventory: { tree_oak: 30 } }), { type: "resource_total", key: "tree_oak", amount: 30 }, true],
+      [{ triggers: [{ type: "resource_total", key: "tree_oak", amount: 30 }] }, baseState({}, { inventory: { tree_oak: 12 } }), { type: "resource_total", key: "tree_oak", amount: 12 }, false],
       [{ triggers: [{ type: "resource_total_multi", req: { mine_stone: 20, mine_coal: 10 } }] }, baseState({}, { inventory: { mine_stone: 25, mine_coal: 10 } }), { type: "resource_total_multi" }, true],
       [{ triggers: [{ type: "craft_made", item: "bread", count: 1 }] }, baseState(), { type: "craft_made", item: "bread", count: 1 }, true],
       [{ triggers: [{ type: "act_entered", act: 3 }] }, baseState(), { type: "act_entered", act: 3 }, true],

@@ -1,15 +1,5 @@
 // Existing mine icons — ported verbatim from src/textures/mineIcons.js
 
-function rr(ctx, x, y, w, h, r) {
-  ctx.beginPath();
-  ctx.moveTo(x + r, y);
-  ctx.arcTo(x + w, y, x + w, y + h, r);
-  ctx.arcTo(x + w, y + h, x, y + h, r);
-  ctx.arcTo(x, y + h, x, y, r);
-  ctx.arcTo(x, y, x + w, y, r);
-  ctx.closePath();
-}
-
 function drawStone(ctx) {
   ctx.fillStyle = "rgba(0,0,0,0.25)"; ctx.beginPath(); ctx.ellipse(2,22,22,4,0,0,Math.PI*2); ctx.fill();
   const grad = ctx.createLinearGradient(0,-22,0,22);
@@ -28,28 +18,6 @@ function drawStone(ctx) {
   ctx.beginPath(); ctx.moveTo(-18,-16); ctx.lineTo(-2,-22); ctx.lineTo(-6,-2); ctx.closePath(); ctx.fill();
   ctx.fillStyle = "rgba(58,62,68,0.55)";
   [[2,-10],[10,0],[-10,8],[14,10],[-14,-2]].forEach(([dx,dy])=>{ ctx.beginPath(); ctx.arc(dx,dy,0.9,0,Math.PI*2); ctx.fill(); });
-}
-
-function drawCobble(ctx) {
-  ctx.fillStyle = "rgba(0,0,0,0.22)"; rr(ctx,-22,19,44,6,3); ctx.fill();
-  ctx.fillStyle = "#5e6469"; rr(ctx,-22,-22,44,44,4); ctx.fill();
-  const stones = [[-11,-11,18,18],[11,-10,18,16],[-11,9,18,16],[10,10,16,17]];
-  stones.forEach(([cx,cy,cw,ch],i)=>{
-    ctx.save(); ctx.translate(cx,cy);
-    const grad = ctx.createLinearGradient(0,-ch/2,0,ch/2);
-    grad.addColorStop(0,"#e0e5ea"); grad.addColorStop(0.5,"#bbc1c6"); grad.addColorStop(1,"#7e858a");
-    ctx.fillStyle = grad;
-    const angle = (i%2===0?-0.05:0.06); ctx.rotate(angle);
-    rr(ctx,-cw/2,-ch/2,cw,ch,3); ctx.fill();
-    ctx.strokeStyle = "#3a3e44"; ctx.lineWidth = 1.6; ctx.stroke();
-    ctx.strokeStyle = "rgba(255,255,255,0.55)"; ctx.lineWidth = 1.2;
-    ctx.beginPath(); ctx.moveTo(-cw/2+2,-ch/2+1); ctx.lineTo(cw/2-3,-ch/2+1); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(-cw/2+1,-ch/2+2); ctx.lineTo(-cw/2+1,ch/2-3); ctx.stroke();
-    ctx.fillStyle = "rgba(58,62,68,0.5)";
-    [[-3,-2],[2,3],[3,-3],[-3,4]].forEach(([dx,dy])=>{ ctx.beginPath(); ctx.arc(dx,dy,0.7,0,Math.PI*2); ctx.fill(); });
-    ctx.restore();
-  });
-  ctx.strokeStyle = "#1f2326"; ctx.lineWidth = 2; rr(ctx,-22,-22,44,44,4); ctx.stroke();
 }
 
 function drawBlock(ctx) {
@@ -102,45 +70,67 @@ function drawBlock(ctx) {
   ctx.stroke();
 }
 
-function drawOre(ctx) {
+// Iron ore — cold-grey rock body with bright metallic iron flecks.
+function drawMineIronOre(ctx) {
   ctx.fillStyle = "rgba(0,0,0,0.25)"; ctx.beginPath(); ctx.ellipse(2,22,22,4,0,0,Math.PI*2); ctx.fill();
   const grad = ctx.createLinearGradient(0,-22,0,22);
-  grad.addColorStop(0,"#bca5a5"); grad.addColorStop(0.5,"#7a6464"); grad.addColorStop(1,"#3e2e2e");
+  grad.addColorStop(0,"#c8ccd0"); grad.addColorStop(0.5,"#7a7e84"); grad.addColorStop(1,"#3a3e44");
   ctx.fillStyle = grad;
   ctx.beginPath(); ctx.moveTo(-21,4); ctx.lineTo(-16,-17); ctx.lineTo(2,-22); ctx.lineTo(18,-14); ctx.lineTo(23,2); ctx.lineTo(15,19); ctx.lineTo(-6,22); ctx.lineTo(-19,14); ctx.closePath(); ctx.fill();
-  ctx.strokeStyle = "#2a1a1a"; ctx.lineWidth = 2.2; ctx.stroke();
-  ctx.fillStyle = "rgba(255,255,255,0.18)"; ctx.beginPath(); ctx.moveTo(-16,-17); ctx.lineTo(2,-22); ctx.lineTo(-2,-6); ctx.closePath(); ctx.fill();
-  const vein = ctx.createLinearGradient(-20,0,20,0);
-  vein.addColorStop(0,"#d97a2b"); vein.addColorStop(0.5,"#ffd34c"); vein.addColorStop(1,"#a85614");
-  ctx.fillStyle = vein;
-  ctx.beginPath(); ctx.moveTo(-18,-4); ctx.bezierCurveTo(-6,-10,6,4,20,-2); ctx.lineTo(20,2); ctx.bezierCurveTo(6,8,-6,-6,-18,0); ctx.closePath(); ctx.fill();
-  ctx.strokeStyle = "#7a4010"; ctx.lineWidth = 0.8; ctx.stroke();
-  ctx.strokeStyle = "rgba(255,250,200,0.7)"; ctx.lineWidth = 1;
-  ctx.beginPath(); ctx.moveTo(-16,-3); ctx.bezierCurveTo(-4,-8,4,4,18,-1); ctx.stroke();
-  ctx.fillStyle = "#ffe890";
-  [[8,8],[-10,12],[4,-14],[-14,-8],[14,-6]].forEach(([sx,sy])=>{ ctx.beginPath(); ctx.arc(sx,sy,1.1,0,Math.PI*2); ctx.fill(); });
+  ctx.strokeStyle = "#1a1d20"; ctx.lineWidth = 2.2; ctx.stroke();
+  // Highlight facet (catches the light)
+  ctx.fillStyle = "rgba(255,255,255,0.28)";
+  ctx.beginPath(); ctx.moveTo(-16,-17); ctx.lineTo(2,-22); ctx.lineTo(-2,-6); ctx.closePath(); ctx.fill();
+  // Metallic iron seam — silver-blue band running across the rock.
+  const seam = ctx.createLinearGradient(-20,0,20,0);
+  seam.addColorStop(0,"#7a8a96"); seam.addColorStop(0.5,"#dfe4eb"); seam.addColorStop(1,"#5a6470");
+  ctx.fillStyle = seam;
+  ctx.beginPath(); ctx.moveTo(-18,-2); ctx.bezierCurveTo(-6,-8,6,4,20,0); ctx.lineTo(20,3); ctx.bezierCurveTo(6,9,-6,-3,-18,2); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = "#2a3a48"; ctx.lineWidth = 0.8; ctx.stroke();
+  // Specular streak on the seam
+  ctx.strokeStyle = "rgba(255,255,255,0.75)"; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(-15,0); ctx.bezierCurveTo(-4,-5,4,5,16,1); ctx.stroke();
+  // Pyrite-style metallic flecks scattered across the body.
+  ctx.fillStyle = "#e0e6ec";
+  [[8,8],[-10,12],[4,-14],[-14,-8],[14,-6],[-4,4]].forEach(([sx,sy])=>{
+    ctx.beginPath(); ctx.arc(sx,sy,1.2,0,Math.PI*2); ctx.fill();
+  });
+  // Darker pits to make the flecks read as embedded
+  ctx.fillStyle = "rgba(20,24,30,0.6)";
+  [[9,9],[-9,13],[5,-13]].forEach(([sx,sy])=>{
+    ctx.beginPath(); ctx.arc(sx,sy,0.5,0,Math.PI*2); ctx.fill();
+  });
 }
 
-function drawIngot(ctx) {
-  ctx.fillStyle = "rgba(0,0,0,0.3)"; rr(ctx,-22,14,44,6,3); ctx.fill();
-  ctx.fillStyle = "#7a8088";
-  ctx.beginPath(); ctx.moveTo(-22,14); ctx.lineTo(-18,10); ctx.lineTo(20,10); ctx.lineTo(22,14); ctx.closePath(); ctx.fill();
-  ctx.fillStyle = "#9aa0a8";
-  ctx.beginPath(); ctx.moveTo(20,10); ctx.lineTo(22,14); ctx.lineTo(22,14); ctx.lineTo(22,6); ctx.lineTo(18,4); ctx.closePath(); ctx.fill();
-  const top = ctx.createLinearGradient(0,-10,0,10);
-  top.addColorStop(0,"#fafcff"); top.addColorStop(0.4,"#dadfe4"); top.addColorStop(1,"#8a909a");
-  ctx.fillStyle = top;
-  ctx.beginPath(); ctx.moveTo(-22,14); ctx.lineTo(-18,10); ctx.lineTo(-14,-8); ctx.lineTo(14,-8); ctx.lineTo(18,10); ctx.lineTo(22,14); ctx.lineTo(20,14); ctx.lineTo(-20,14); ctx.closePath(); ctx.fill();
-  ctx.strokeStyle = "#2a3036"; ctx.lineWidth = 2; ctx.stroke();
-  const topFace = ctx.createLinearGradient(0,-14,0,0);
-  topFace.addColorStop(0,"#fcffff"); topFace.addColorStop(0.5,"#e0e5ea"); topFace.addColorStop(1,"#a4aab2");
-  ctx.fillStyle = topFace;
-  ctx.beginPath(); ctx.moveTo(-14,-8); ctx.lineTo(-18,-14); ctx.lineTo(18,-14); ctx.lineTo(14,-8); ctx.closePath(); ctx.fill(); ctx.stroke();
-  ctx.strokeStyle = "rgba(255,255,255,0.95)"; ctx.lineWidth = 1.4;
-  ctx.beginPath(); ctx.moveTo(-16,-12); ctx.lineTo(16,-12); ctx.stroke();
-  ctx.strokeStyle = "rgba(40,46,52,0.85)"; ctx.lineWidth = 2;
-  ctx.beginPath(); ctx.arc(0,4,6,0,Math.PI*2); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(-3.5,0.5); ctx.lineTo(3.5,7.5); ctx.moveTo(3.5,0.5); ctx.lineTo(-3.5,7.5); ctx.stroke();
+// Copper ore — warm orange-brown rock body with bright copper veins.
+function drawMineCopperOre(ctx) {
+  ctx.fillStyle = "rgba(0,0,0,0.25)"; ctx.beginPath(); ctx.ellipse(2,22,22,4,0,0,Math.PI*2); ctx.fill();
+  const grad = ctx.createLinearGradient(0,-22,0,22);
+  grad.addColorStop(0,"#d8a070"); grad.addColorStop(0.5,"#8a5430"); grad.addColorStop(1,"#3e2510");
+  ctx.fillStyle = grad;
+  ctx.beginPath(); ctx.moveTo(-21,4); ctx.lineTo(-16,-17); ctx.lineTo(2,-22); ctx.lineTo(18,-14); ctx.lineTo(23,2); ctx.lineTo(15,19); ctx.lineTo(-6,22); ctx.lineTo(-19,14); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = "#2a1808"; ctx.lineWidth = 2.2; ctx.stroke();
+  ctx.fillStyle = "rgba(255,235,200,0.28)";
+  ctx.beginPath(); ctx.moveTo(-16,-17); ctx.lineTo(2,-22); ctx.lineTo(-2,-6); ctx.closePath(); ctx.fill();
+  // Copper vein — bright orange running diagonally
+  const vein = ctx.createLinearGradient(-20,0,20,0);
+  vein.addColorStop(0,"#ff944a"); vein.addColorStop(0.5,"#ffc878"); vein.addColorStop(1,"#a04818");
+  ctx.fillStyle = vein;
+  ctx.beginPath(); ctx.moveTo(-18,-4); ctx.bezierCurveTo(-6,-10,6,4,20,-2); ctx.lineTo(20,2); ctx.bezierCurveTo(6,8,-6,-6,-18,0); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = "#5a2a08"; ctx.lineWidth = 0.8; ctx.stroke();
+  // Specular streak
+  ctx.strokeStyle = "rgba(255,240,210,0.8)"; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(-16,-3); ctx.bezierCurveTo(-4,-8,4,4,18,-1); ctx.stroke();
+  // Verdigris (green oxidation) flecks — copper's signature tarnish
+  ctx.fillStyle = "#5ab078";
+  [[8,8],[-10,12],[14,-6]].forEach(([sx,sy])=>{
+    ctx.beginPath(); ctx.arc(sx,sy,1.1,0,Math.PI*2); ctx.fill();
+  });
+  // Brighter copper sparkles
+  ctx.fillStyle = "#ffd9a0";
+  [[4,-14],[-14,-8],[-4,4]].forEach(([sx,sy])=>{
+    ctx.beginPath(); ctx.arc(sx,sy,0.9,0,Math.PI*2); ctx.fill();
+  });
 }
 
 function drawCoal(ctx) {
@@ -274,14 +264,13 @@ function drawGold(ctx) {
 }
 
 export const ICONS = {
-  mine_stone:   { label:"Stone",       color:"#8a8f94", draw:drawStone },
-  mine_cobble:  { label:"Cobblestone", color:"#a8aeb4", draw:drawCobble },
-  mine_block:   { label:"Block",       color:"#7e858a", draw:drawBlock },
-  mine_ore:     { label:"Ore",         color:"#9c5e2c", draw:drawOre },
-  mine_ingot:   { label:"Ingot",       color:"#c0c8d0", draw:drawIngot },
-  mine_coal:    { label:"Coal",        color:"#3a3a40", draw:drawCoal },
-  mine_coke:    { label:"Coke",        color:"#5a5a64", draw:drawCoke },
-  mine_gem:     { label:"Gem (rough)", color:"#6dd5e8", draw:drawGem },
-  mine_cutgem:  { label:"Cut Gem",     color:"#7ce0ff", draw:drawCutgem },
-  mine_gold:    { label:"Gold Nugget", color:"#e8b830", draw:drawGold },
+  mine_stone:       { label:"Stone",       color:"#8a8f94", draw:drawStone },
+  block:            { label:"Block",       color:"#7e858a", draw:drawBlock },
+  mine_iron_ore:    { label:"Iron Ore",    color:"#a89890", draw:drawMineIronOre },
+  mine_copper_ore:  { label:"Copper Ore",  color:"#c97f4f", draw:drawMineCopperOre },
+  mine_coal:        { label:"Coal",        color:"#3a3a40", draw:drawCoal },
+  coke:             { label:"Coke",        color:"#5a5a64", draw:drawCoke },
+  mine_gem:         { label:"Gem (rough)", color:"#6dd5e8", draw:drawGem },
+  cut_gem:          { label:"Cut Gem",     color:"#7ce0ff", draw:drawCutgem },
+  mine_gold:        { label:"Gold Nugget", color:"#e8b830", draw:drawGold },
 };

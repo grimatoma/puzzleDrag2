@@ -16,10 +16,10 @@ function workerState(coins) {
     coins,
     inventory: {
       grass_hay: 10000,
-      wood_log: 10000,
+      tree_oak: 10000,
       mine_stone: 10000,
-      grain_flour: 10000,
-      bird_egg: 10000,
+      flour: 10000,
+      eggs: 10000,
     },
   };
 }
@@ -57,7 +57,7 @@ describe("Phase 36 — nextHireCost helper", () => {
     expect(nextHireResourceCost(FARMER, 0)).toEqual({ grass_hay: 2 });
     expect(nextHireResourceCost(FARMER, 2)).toEqual({ grass_hay: 2 });
     expect(nextHireResourceCost(FARMER, 3)).toEqual({ grass_hay: 4 });
-    expect(nextHireResourceCost(BAKER, 6)).toEqual({ grain_flour: 3, bird_egg: 3 });
+    expect(nextHireResourceCost(BAKER, 6)).toEqual({ flour: 3, eggs: 3 });
   });
 
   it("Lumberjack and Miner ramp linearly per their step", () => {

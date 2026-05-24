@@ -45,7 +45,7 @@ describe("legacy Frostmaw boss no longer drives keeper rewards", () => {
     const s = createInitialState();
     return {
       ...s,
-      boss: { key: "frostmaw", resource: "wood_log", targetCount: 30, progress: 30, turnsLeft: 5 },
+      boss: { key: "frostmaw", resource: "tree_oak", targetCount: 30, progress: 30, turnsLeft: 5 },
       modal: "boss",
       ...over,
     };

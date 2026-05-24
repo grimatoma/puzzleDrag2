@@ -48,13 +48,14 @@ describe("mine-themed achievements", () => {
 
   it("CHAIN_COLLECTED on every mine_* species credits the same counter", () => {
     let s = baseState();
-    for (const key of ["mine_stone", "mine_ore", "mine_coal", "mine_gem", "mine_dirt"]) {
+    const mineKeys = ["mine_stone", "mine_iron_ore", "mine_copper_ore", "mine_coal", "mine_gem", "mine_gold"];
+    for (const key of mineKeys) {
       s = achReduce(s, {
         type: "CHAIN_COLLECTED",
         payload: { key, gained: 3, chainLength: 3, upgrades: 0 },
       });
     }
-    expect(s.achievements.counters.mine_chained).toBe(3 * 5);
+    expect(s.achievements.counters.mine_chained).toBe(3 * mineKeys.length);
   });
 
   it("zero-gain chain does NOT bump mine_chained", () => {

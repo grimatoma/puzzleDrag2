@@ -126,7 +126,7 @@ export const STORY_BEATS = [
     act: 2,
     title: "The Healer",
     body: "Sister Liss: 'A child has fever. I need berries.'",
-    trigger: { type: "resource_total_multi", req: { mine_stone: 20, berry: 10 } },
+    trigger: { type: "resource_total_multi", req: { mine_stone: 20, fruit_blackberry: 10 } },
     onComplete: { spawnNPC: "liss", setFlag: "liss_arrived", advanceAct: 3 },
   },
   // ── Act 3 ──────────────────────────────────────────────────────────────────
@@ -173,7 +173,7 @@ export const STORY_BEATS = [
     body: "The festival larder is full. {settlement} lives again — and there is more of the old kingdom still to find. (Sandbox mode continues.)",
     trigger: {
       type: "resource_total_multi",
-      req: { grass_hay: 50, grain_wheat: 50, grain: 50, berry: 50, wood_log: 50 },
+      req: { grass_hay: 50, grain_wheat: 50, flour: 50, fruit_blackberry: 50, tree_oak: 50 },
     },
     onComplete: { setFlag: "isWon" },
   },

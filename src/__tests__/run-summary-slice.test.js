@@ -30,14 +30,14 @@ describe("runSummary slice — chain accumulation", () => {
   it("accumulates chains, picks biggest, totals coins/upgrades", () => {
     let s = reduce(baseState(), { type: "FARM/ENTER" });
     s = reduce(s, { type: "CHAIN_COLLECTED", payload: { key: "grass_hay", gained: 4, upgrades: 0, chainLength: 4, value: 2 } });
-    s = reduce(s, { type: "CHAIN_COLLECTED", payload: { key: "wood_log", gained: 9, upgrades: 1, chainLength: 9, value: 3 } });
+    s = reduce(s, { type: "CHAIN_COLLECTED", payload: { key: "tree_oak", gained: 9, upgrades: 1, chainLength: 9, value: 3 } });
     expect(s.runSummary.chainsPlayed).toBe(2);
     expect(s.runSummary.biggestChain.count).toBe(9);
-    expect(s.runSummary.biggestChain.key).toBe("wood_log");
+    expect(s.runSummary.biggestChain.key).toBe("tree_oak");
     expect(s.runSummary.totalUpgrades).toBe(1);
     expect(s.runSummary.totalCoinGain).toBeGreaterThan(0);
     expect(s.runSummary.resourcesGained.grass_hay).toBe(4);
-    expect(s.runSummary.resourcesGained.wood_log).toBe(9);
+    expect(s.runSummary.resourcesGained.tree_oak).toBe(9);
   });
 
   it("auto-opens when modal transitions to season and diffs bonds", () => {

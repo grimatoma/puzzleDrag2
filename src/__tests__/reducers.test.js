@@ -166,7 +166,7 @@ describe("USE_TOOL", () => {
 
 describe("boss Ember Drake — CRAFTING/CRAFT_RECIPE", () => {
   const drakeState = (overrides = {}) => minState({
-    boss: { key: "ember_drake", resource: "mine_ingot", progress: 0, targetCount: 5, turnsLeft: 5, name: "Ember Drake", emoji: "🔥", goal: "", flavor: "", minChain: null },
+    boss: { key: "ember_drake", resource: "iron_bar", progress: 0, targetCount: 5, turnsLeft: 5, name: "Ember Drake", emoji: "🔥", goal: "", flavor: "", minChain: null },
     ...overrides,
   });
 
@@ -178,7 +178,7 @@ describe("boss Ember Drake — CRAFTING/CRAFT_RECIPE", () => {
   it("iron_hinge (forge output) increments Drake progress", () => {
     const ready = drakeState({
       built: { forge: true },
-      inventory: { mine_ingot: 2, mine_coke: 1 },
+      inventory: { iron_bar: 2, coke: 1 },
     });
     expect(canPayForRecipe(ready, "rec_iron_hinge")).toBeTruthy();
     const s = gameReducer(ready, { type: "CRAFTING/CRAFT_RECIPE", payload: { key: "rec_iron_hinge" } });
@@ -237,7 +237,7 @@ describe("SWITCH_BIOME", () => {
     // Need a state that already has 3 orders so SWITCH_BIOME has something to map over
     const baseOrders = [
       { id: "o1", npc: "mira", key: "grass_hay", need: 5, reward: 30, line: "t" },
-      { id: "o2", npc: "tomas", key: "wood_log", need: 5, reward: 30, line: "t" },
+      { id: "o2", npc: "tomas", key: "tree_oak", need: 5, reward: 30, line: "t" },
       { id: "o3", npc: "bram", key: "berry", need: 5, reward: 30, line: "t" },
     ];
     for (let i = 0; i < 100; i++) {

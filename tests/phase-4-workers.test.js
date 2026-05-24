@@ -12,10 +12,10 @@ function withCoins(coins) {
     coins,
     inventory: {
       grass_hay: 100,
-      wood_log: 100,
+      tree_oak: 100,
       mine_stone: 100,
-      grain_flour: 100,
-      bird_egg: 100,
+      flour: 100,
+      eggs: 100,
     },
   };
 }
@@ -133,15 +133,15 @@ describe("Phase 4 — Aggregator folds type-workers into the effects channels", 
 
   it("a Baker hired to maxCount contributes amount*count to recipeInputReduce", () => {
     const out = computeWorkerEffects({ workers: { hired: { baker: 10 } } });
-    // Baker: recipe_input_reduce bread/grain_flour, amount=1 per hire.
+    // Baker: recipe_input_reduce bread/flour, amount=1 per hire.
     // 10 hired Bakers → 10 raw reduction (crafting/slice.js floors recipe at 1).
-    expect(out.recipeInputReduce.bread.grain_flour).toBe(10);
+    expect(out.recipeInputReduce.bread.flour).toBe(10);
   });
 
   it("multiple type-workers compose independently on their own channels", () => {
     const out = computeWorkerEffects({ workers: { hired: { farmer: 10, baker: 10 } } });
     const grainHas = Object.keys(out.thresholdReduce).some((k) => k.startsWith("grain"));
     expect(grainHas).toBe(true);
-    expect(out.recipeInputReduce.bread.grain_flour).toBe(10);
+    expect(out.recipeInputReduce.bread.flour).toBe(10);
   });
 });

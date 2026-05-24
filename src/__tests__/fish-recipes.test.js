@@ -15,12 +15,12 @@ describe("fish biome recipes", () => {
     const r = RECIPES.fish_oil_bottled;
     expect(r).toBeDefined();
     expect(r.station).toBe("workshop");
-    expect(r.inputs).toEqual({ fish_oil: 1, wood_plank: 1 });
+    expect(r.inputs).toEqual({ fish_oil: 1, plank: 1 });
     expect(r.coins).toBeGreaterThan(0);
   });
 
   it("market prices exist for fish chain products", () => {
-    for (const k of ["fish_raw", "fish_fillet", "fish_oil", "fish_oil_bottled", "chowder"]) {
+    for (const k of ["fish_fillet", "fish_fillet", "fish_oil", "fish_oil_bottled", "chowder"]) {
       expect(MARKET_PRICES[k], `${k} price`).toBeDefined();
       // Chain products are sell-only — buy: 0 is the convention.
       expect(MARKET_PRICES[k].sell).toBeGreaterThan(0);
@@ -70,11 +70,11 @@ describe("fish biome recipes", () => {
       ...createInitialState(),
       coins: 5,
       built: { workshop: true },
-      inventory: { fish_oil: 2, wood_plank: 1 },
+      inventory: { fish_oil: 2, plank: 1 },
     };
     const s1 = rootReducer(s0, { type: "CRAFTING/CRAFT_RECIPE", recipeKey: "fish_oil_bottled" });
     expect(s1.inventory.fish_oil).toBe(1);
-    expect(s1.inventory.wood_plank).toBe(0);
+    expect(s1.inventory.plank).toBe(0);
     expect(s1.inventory.fish_oil_bottled).toBe(1);
     expect(s1.coins).toBe(5 + RECIPES.fish_oil_bottled.coins);
   });

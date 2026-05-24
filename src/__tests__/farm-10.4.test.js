@@ -94,7 +94,7 @@ describe("10.4 — tickRats", () => {
       biome: "farm",
       grid: [
         [{ key: "grass_hay" }, { key: "rat" }, { key: "grain_wheat" }],
-        [{ key: "berry" }, { key: "wood_log" }, { key: "mine_stone" }],
+        [{ key: "berry" }, { key: "tree_oak" }, { key: "mine_stone" }],
       ],
       hazards: { ...createInitialState().hazards, rats: [{ row: 0, col: 1, age: 0 }] },
     };

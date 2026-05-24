@@ -56,7 +56,7 @@ describe("Phase 5.4 — Chain-length discovery", () => {
       chainLength: UPGRADE_THRESHOLDS.mine_stone,
     });
     expect(f1.discoveredIds).not.toContain("grass_meadow");
-    expect(f1.discoveredIds).toContain("mine_cobble");
+    expect(f1.discoveredIds).toContain("block");
   });
 
   it("G: chain of pansy at UPGRADE_THRESHOLDS.flower_pansy discovers water_lily", () => {

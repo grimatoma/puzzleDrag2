@@ -17,7 +17,7 @@ import {
 describe("decorations slice — coverage gaps", () => {
   const baseState = (over = {}) => ({
     coins: 1000,
-    inventory: { grass_hay: 50, mine_stone: 50, wood_plank: 50, berry: 50 },
+    inventory: { grass_hay: 50, mine_stone: 50, plank: 50, berry: 50 },
     influence: 0,
     built: { decorations: {} },
     ...over,
@@ -69,7 +69,7 @@ describe("decorations slice — coverage gaps", () => {
   it("apple_sapling: multi-resource cost path is honoured", () => {
     const s0 = baseState();
     const s1 = decoReduce(s0, { type: "BUILD_DECORATION", payload: { id: "apple_sapling" } });
-    expect(s1.inventory.wood_plank).toBe(50 - DECORATIONS.apple_sapling.cost.wood_plank);
+    expect(s1.inventory.plank).toBe(50 - DECORATIONS.apple_sapling.cost.plank);
     expect(s1.inventory.berry).toBe(50 - DECORATIONS.apple_sapling.cost.berry);
   });
 

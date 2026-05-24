@@ -13,10 +13,8 @@ function rr(ctx, x, y, w, h, r) {
 }
 
 const FARM_HANDLED_KEYS = new Set([
-  "grass_hay", "grain_wheat", "grain", "grain_flour",
-  "wood_log", "wood_plank", "wood_beam",
-  "berry", "berry_jam",
-  "bird_egg", "grass_meadow", "grass_spiky",
+  "grass_hay", "grain_wheat",
+  "grass_meadow", "grass_spiky",
   "bird_turkey", "bird_clover", "bird_melon",
   "veg_carrot", "veg_eggplant", "veg_turnip", "veg_beet",
   "veg_cucumber", "veg_squash", "veg_mushroom", "veg_pepper", "veg_broccoli",
@@ -215,7 +213,7 @@ export function drawFarmTileIcon(ctx, key) {
     ctx.fill();
   }
 
-  else if (key === "grain_flour") {
+  else if (key === "flour") {
     // Cream-colored cloth sack with stenciled wheat & flour dust
     // Shadow
     ctx.fillStyle = "rgba(0,0,0,0.18)";
@@ -293,7 +291,7 @@ export function drawFarmTileIcon(ctx, key) {
     ctx.fill();
   }
 
-  else if (key === "wood_log") {
+  else if (key === "tree_oak") {
     // 3D wooden log lying on its side
     // Body shadow
     ctx.fillStyle = "rgba(0,0,0,0.2)";
@@ -361,7 +359,7 @@ export function drawFarmTileIcon(ctx, key) {
     ctx.fill();
   }
 
-  else if (key === "wood_plank") {
+  else if (key === "plank") {
     // Wooden plank with grain & nails (slight isometric)
     ctx.save();
     ctx.rotate(-0.18);
@@ -415,72 +413,6 @@ export function drawFarmTileIcon(ctx, key) {
       ctx.lineWidth = 0.8;
       ctx.stroke();
     });
-    ctx.restore();
-  }
-
-  else if (key === "wood_beam") {
-    // Thick dark wooden beam with iron brackets
-    ctx.save();
-    ctx.rotate(-0.15);
-    // Shadow
-    ctx.fillStyle = "rgba(0,0,0,0.28)";
-    rr(ctx, -26, 14, 52, 8, 4);
-    ctx.fill();
-    // Body
-    const grad = ctx.createLinearGradient(0, -16, 0, 16);
-    grad.addColorStop(0, "#8e5b2b");
-    grad.addColorStop(0.5, "#5e3a18");
-    grad.addColorStop(1, "#33200c");
-    ctx.fillStyle = grad;
-    rr(ctx, -26, -14, 52, 28, 3);
-    ctx.fill();
-    ctx.strokeStyle = "#1a0e04";
-    ctx.lineWidth = 2.2;
-    ctx.stroke();
-    // Wood grain
-    ctx.strokeStyle = "rgba(20,12,4,0.55)";
-    ctx.lineWidth = 1.1;
-    [-8, -3, 3, 8].forEach((y0) => {
-      ctx.beginPath();
-      ctx.moveTo(-24, y0);
-      ctx.bezierCurveTo(-10, y0 - 1.6, 8, y0 + 2, 24, y0 - 0.6);
-      ctx.stroke();
-    });
-    // End grain on right edge
-    ctx.fillStyle = "rgba(40,20,8,0.7)";
-    rr(ctx, 22, -13, 4, 26, 1);
-    ctx.fill();
-    // Iron brackets at both ends
-    [-1, 1].forEach((side) => {
-      const x = side * 18;
-      const bg = ctx.createLinearGradient(x, -14, x, 14);
-      bg.addColorStop(0, "#7a8590");
-      bg.addColorStop(0.5, "#3e464c");
-      bg.addColorStop(1, "#1a1f24");
-      ctx.fillStyle = bg;
-      rr(ctx, x - 4, -15, 8, 30, 1);
-      ctx.fill();
-      ctx.strokeStyle = "#0a0d10";
-      ctx.lineWidth = 1.4;
-      ctx.stroke();
-      // Rivets
-      [-9, 0, 9].forEach((ry) => {
-        const rg = ctx.createRadialGradient(x - 0.6, ry - 0.6, 0.3, x, ry, 2);
-        rg.addColorStop(0, "#dadfe4");
-        rg.addColorStop(1, "#222730");
-        ctx.fillStyle = rg;
-        ctx.beginPath();
-        ctx.arc(x, ry, 1.6, 0, Math.PI * 2);
-        ctx.fill();
-      });
-    });
-    // Top edge highlight
-    ctx.strokeStyle = "rgba(255,210,160,0.45)";
-    ctx.lineWidth = 1.2;
-    ctx.beginPath();
-    ctx.moveTo(-22, -12);
-    ctx.lineTo(22, -12);
-    ctx.stroke();
     ctx.restore();
   }
 
@@ -542,7 +474,7 @@ export function drawFarmTileIcon(ctx, key) {
     });
   }
 
-  else if (key === "berry_jam") {
+  else if (key === "jam") {
     // Glass jar of berry jam with lid and label
     // Shadow
     ctx.fillStyle = "rgba(0,0,0,0.22)";
@@ -633,7 +565,7 @@ export function drawFarmTileIcon(ctx, key) {
     ctx.fill();
   }
 
-  else if (key === "bird_egg") {
+  else if (key === "eggs") {
     // Glossy speckled egg with strong outline (its tile color is also cream,
     // so we lean on a darker outline + warmer shading to keep contrast).
     // Drop shadow on the tile beneath the egg

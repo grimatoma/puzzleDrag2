@@ -11,7 +11,7 @@ const BOSS_META = {
     emoji: "❄️",
     flavor: "A frozen titan stirs in the deep winter wood. Your hearth must not go dark.",
     goal: "Bring 30 logs in 10 turns to keep the hearth lit.",
-    resource: "wood_log",
+    resource: "tree_oak",
     targetCount: 30,
     turns: BOSS_WINDOW_TURNS, // §18 locked: 10
     minChain: 5,
@@ -21,7 +21,7 @@ const BOSS_META = {
     emoji: "🔥",
     flavor: "Scales of cinder, breath of smelting flame — the Drake demands tribute in iron.",
     goal: "Forge 3 ingots before the hour passes.",
-    resource: "mine_ingot",
+    resource: "iron_bar",
     targetCount: 3,
     turns: BOSS_WINDOW_TURNS,
     minChain: null,
@@ -38,7 +38,7 @@ const BOSS_META = {
     turns: BOSS_WINDOW_TURNS,
     minChain: null,
     // Spec §9: extra log/hay respawn tiles — bias spawn pool +30% log+hay
-    spawnBias: { wood_log: 1.3, grass_hay: 1.3 },
+    spawnBias: { tree_oak: 1.3, grass_hay: 1.3 },
   },
   old_stoneface: {
     name: "Old Stoneface",
@@ -57,7 +57,7 @@ const BOSS_META = {
     emoji: "🌱",
     flavor: "A mossy titan lurks in the spring glades. Four mystery tiles hide its weakness — reveal them all.",
     goal: "Hide ~4 mystery tiles that flip on chain.",
-    resource: "berry",
+    resource: "fruit_blackberry",
     targetCount: 30,
     turns: BOSS_WINDOW_TURNS,
     minChain: null,
@@ -237,11 +237,11 @@ export function reduce(state, action) {
 
     case "CRAFTING/CRAFT_RECIPE": {
       if (state.boss?.isKeeperTrial) return state;
-      if (!state.boss || state.boss.resource !== "mine_ingot") return state;
+      if (!state.boss || state.boss.resource !== "iron_bar") return state;
       const recipeKey = action.recipeKey ?? action.payload?.key;
       const recipe = RECIPES[recipeKey] ?? Object.values(RECIPES).find((r) => r?.item === recipeKey);
-      // Count any forge recipe that consumes mine_ingot as an input ingredient.
-      if (!recipe || !recipe.inputs?.mine_ingot) return state;
+      // Count any forge recipe that consumes iron_bar as an input ingredient.
+      if (!recipe || !recipe.inputs?.iron_bar) return state;
       const newProgress = Math.min(state.boss.targetCount, (state.boss.progress || 0) + 1);
       const updatedBoss = { ...state.boss, progress: newProgress };
       if (newProgress >= state.boss.targetCount) {

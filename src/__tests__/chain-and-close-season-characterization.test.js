@@ -96,11 +96,11 @@ describe("CHAIN_COLLECTED — gains-map path", () => {
     const s0 = baseState({ inventory: { grass_hay: 5, berry: 2 } });
     const s1 = rootReducer(s0, {
       type: "CHAIN_COLLECTED",
-      payload: { gains: { grass_hay: 3, berry: 4, wood_log: 1 } },
+      payload: { gains: { grass_hay: 3, berry: 4, tree_oak: 1 } },
     });
     expect(s1.inventory.grass_hay).toBe(8);
     expect(s1.inventory.berry).toBe(6);
-    expect(s1.inventory.wood_log).toBe(1);
+    expect(s1.inventory.tree_oak).toBe(1);
   });
 
   it("does not advance turnsUsed on gains-map", () => {

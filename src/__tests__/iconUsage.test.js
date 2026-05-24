@@ -20,7 +20,7 @@ describe("iconUsage", () => {
     const set = getUsedIconKeys();
     // grass_hay is the canonical fully-tested resource.
     expect(set.has("grass_hay")).toBe(true);
-    expect(set.has("wood_log")).toBe(true);
+    expect(set.has("tree_oak")).toBe(true);
     expect(set.has("bread")).toBe(true);
   });
 

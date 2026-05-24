@@ -41,11 +41,11 @@ const CATEGORY_LABELS = {
   cattle: "Cattle",
   mounts: "Mounts",
   mine_stone: "Stone",
-  mine_ore: "Ore",
+  mine_iron_ore: "Ore",
   mine_coal: "Coal",
   mine_gem: "Gem",
   mine_gold: "Gold",
-  mine_dirt: "Dirt",
+  special_dirt: "Dirt",
   fish: "Fish",
 };
 
@@ -63,11 +63,11 @@ const CATEGORY_ICONS = {
   cattle: "🐄",
   mounts: "🐎",
   mine_stone: "🪨",
-  mine_ore: "⛏",
+  mine_iron_ore: "⛏",
   mine_coal: "🔥",
   mine_gem: "💎",
   mine_gold: "🪙",
-  mine_dirt: "🟫",
+  special_dirt: "🟫",
   fish: "🐟",
 };
 

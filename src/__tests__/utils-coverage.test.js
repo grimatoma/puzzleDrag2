@@ -85,9 +85,9 @@ describe("utils — chain math", () => {
   });
 
   it("rollResource samples the pool by index using the supplied RNG", () => {
-    const pool = ["grass_hay", "wood_log", "berry"];
+    const pool = ["grass_hay", "tree_oak", "berry"];
     expect(rollResource(pool, () => 0)).toBe("grass_hay");
-    expect(rollResource(pool, () => 0.5)).toBe("wood_log");
+    expect(rollResource(pool, () => 0.5)).toBe("tree_oak");
     expect(rollResource(pool, () => 0.99)).toBe("berry");
   });
 });

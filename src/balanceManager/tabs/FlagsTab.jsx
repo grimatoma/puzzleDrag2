@@ -202,8 +202,8 @@ const FLAG_TRIGGER_TYPES = [
 function defaultFlagTrigger(type) {
   switch (type) {
     case "flag_set":             return { type: "flag_set", flag: STORY_FLAGS[0]?.id || "hearth_lit" };
-    case "resource_total":       return { type: "resource_total", key: "wood_log", amount: 10 };
-    case "resource_total_multi": return { type: "resource_total_multi", req: { wood_log: 10 } };
+    case "resource_total":       return { type: "resource_total", key: "tree_oak", amount: 10 };
+    case "resource_total_multi": return { type: "resource_total_multi", req: { tree_oak: 10 } };
     case "craft_made":           return { type: "craft_made", item: "bread" };
     case "building_built":       return { type: "building_built", id: "mill" };
     case "boss_defeated":        return { type: "boss_defeated", id: "frostmaw" };
@@ -232,7 +232,7 @@ function TriggerRow({ trigger, onChange, onRemove }) {
       </>}
       {t.type === "resource_total_multi" && (
         <textarea rows={2} className="text-[10px] rounded border outline-none px-1.5 py-1 font-mono" style={{ borderColor: COLORS.border, color: COLORS.ink, flex: "1 1 160px" }}
-          value={Object.entries(t.req || {}).map(([k, v]) => `${k} ${v}`).join("\n")} placeholder={"wood_log 20\niron_ingot 5"}
+          value={Object.entries(t.req || {}).map(([k, v]) => `${k} ${v}`).join("\n")} placeholder={"tree_oak 20\niron_ingot 5"}
           onChange={(e) => { const req = {}; for (const line of e.target.value.split("\n")) { const m = line.trim().match(/^(\S+)\s+(\d+)$/); if (m) req[m[1]] = Number(m[2]); } onChange({ type: "resource_total_multi", req }); }} />
       )}
       {t.type === "craft_made" && <>

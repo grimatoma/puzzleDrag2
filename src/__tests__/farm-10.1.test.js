@@ -15,7 +15,7 @@ describe("10.1 — RECIPES.tools table", () => {
   });
 
   it("rake costs 1 plank", () => {
-    expect(RECIPES.tools.rake.inputs.wood_plank).toBe(1);
+    expect(RECIPES.tools.rake.inputs.plank).toBe(1);
   });
 
   it("axe costs 1 stone", () => {
@@ -24,7 +24,7 @@ describe("10.1 — RECIPES.tools table", () => {
 
   it("fertilizer costs 1 hay + 1 dirt", () => {
     expect(RECIPES.tools.fertilizer.inputs.grass_hay).toBe(1);
-    expect(RECIPES.tools.fertilizer.inputs.mine_dirt).toBe(1);
+    expect(RECIPES.tools.fertilizer.inputs.special_dirt).toBe(1);
   });
 
   it("rake is crafted at workshop", () => {
@@ -78,23 +78,23 @@ describe("10.1 — CRAFT_TOOL action", () => {
   }
 
   it("crafts rake with 1 plank → tools.rake = 1", () => {
-    const s0 = workshopState({ inventory: { wood_plank: 2 } });
+    const s0 = workshopState({ inventory: { plank: 2 } });
     const s1 = rootReducer(s0, { type: "CRAFT_TOOL", id: "rake" });
     expect(s1.tools.rake).toBe(1);
   });
 
   it("crafts rake debits 1 plank", () => {
-    const s0 = workshopState({ inventory: { wood_plank: 2 } });
+    const s0 = workshopState({ inventory: { plank: 2 } });
     const s1 = rootReducer(s0, { type: "CRAFT_TOOL", id: "rake" });
-    expect(s1.inventory.wood_plank).toBe(1);
+    expect(s1.inventory.plank).toBe(1);
   });
 
   it("no workshop = no craft (state unchanged)", () => {
     const s0 = createInitialState();
-    const s1 = { ...s0, inventory: { ...s0.inventory, wood_plank: 5 } };
+    const s1 = { ...s0, inventory: { ...s0.inventory, plank: 5 } };
     const s2 = rootReducer(s1, { type: "CRAFT_TOOL", id: "rake" });
     expect(s2.tools.rake).toBe(0);
-    expect(s2.inventory.wood_plank).toBe(5);
+    expect(s2.inventory.plank).toBe(5);
   });
 
   it("no plank = no rake (tools.rake stays 0)", () => {
@@ -111,11 +111,11 @@ describe("10.1 — CRAFT_TOOL action", () => {
   });
 
   it("crafts fertilizer with 1 hay + 1 dirt", () => {
-    const s0 = workshopState({ inventory: { grass_hay: 2, mine_dirt: 2 } });
+    const s0 = workshopState({ inventory: { grass_hay: 2, special_dirt: 2 } });
     const s1 = rootReducer(s0, { type: "CRAFT_TOOL", id: "fertilizer" });
     expect(s1.tools.fertilizer).toBe(1);
     expect(s1.inventory.grass_hay).toBe(1);
-    expect(s1.inventory.mine_dirt).toBe(1);
+    expect(s1.inventory.special_dirt).toBe(1);
   });
 });
 
@@ -191,8 +191,8 @@ describe("10.1 — applyToolPending", () => {
     const s1 = {
       ...s0,
       grid: [
-        [{ key: "grass_hay" }, { key: "wood_log" }, { key: "grass_hay" }],
-        [{ key: "grass_hay" }, { key: "berry" }, { key: "grain_wheat" }],
+        [{ key: "grass_hay" }, { key: "tree_oak" }, { key: "grass_hay" }],
+        [{ key: "grass_hay" }, { key: "fruit_blackberry" }, { key: "grain_wheat" }],
       ],
       inventory: { ...s0.inventory, grass_hay: 0 },
       toolPending: "rake",
@@ -206,8 +206,8 @@ describe("10.1 — applyToolPending", () => {
     const s1 = {
       ...s0,
       grid: [
-        [{ key: "grass_hay" }, { key: "wood_log" }, { key: "grass_hay" }],
-        [{ key: "grass_hay" }, { key: "berry" }, { key: "grain_wheat" }],
+        [{ key: "grass_hay" }, { key: "tree_oak" }, { key: "grass_hay" }],
+        [{ key: "grass_hay" }, { key: "fruit_blackberry" }, { key: "grain_wheat" }],
       ],
       inventory: { ...s0.inventory, grass_hay: 0 },
       toolPending: "rake",
@@ -233,14 +233,14 @@ describe("10.1 — applyToolPending", () => {
     const s1 = {
       ...s0,
       grid: [
-        [{ key: "wood_log" }, { key: "grass_hay" }],
-        [{ key: "wood_log" }, { key: "wood_log" }],
+        [{ key: "tree_oak" }, { key: "grass_hay" }],
+        [{ key: "tree_oak" }, { key: "tree_oak" }],
       ],
-      inventory: { ...s0.inventory, wood_log: 0 },
+      inventory: { ...s0.inventory, tree_oak: 0 },
       toolPending: "axe",
     };
     const s2 = applyToolPending(s1);
-    expect(s2.inventory.wood_log).toBe(3);
+    expect(s2.inventory.tree_oak).toBe(3);
   });
 
   it("rake skips rubble-locked tiles", () => {

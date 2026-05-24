@@ -15,7 +15,7 @@ describe("Phase 5.6 — Board pool wiring", () => {
       discovered: {
         grass_hay: true, grain_wheat: true, bird_pheasant: true,
         grain: true, bird_turkey: true,
-        grass_meadow: true, grass_spiky: true, grain_flour: true,
+        grass_meadow: true, grass_spiky: true, flour: true,
         veg_carrot: true, veg_eggplant: true, veg_turnip: true, veg_cucumber: true,
         fruit_apple: true, flower_pansy: true, tree_oak: true,
         herd_pig: true, cattle_cow: true, mount_horse: true,
@@ -54,7 +54,7 @@ describe("Phase 5.6 — Board pool wiring", () => {
   });
 
   it("F: turkey weight ignored when egg is active bird, applied when turkey is active bird", () => {
-    const r5a = getActivePool(mkState({ bird: "bird_egg" }, { bird_turkey: 3 }), "farm");
+    const r5a = getActivePool(mkState({ bird: "eggs" }, { bird_turkey: 3 }), "farm");
     expect(r5a.filter((k) => k === "bird_turkey").length).toBe(0);
 
     const r5b = getActivePool(mkState({ bird: "bird_turkey" }, { bird_turkey: 3 }), "farm");

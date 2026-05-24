@@ -135,7 +135,7 @@ describe("7.1 tickQuest", () => {
   });
 
   it("does not tick craft quest on wrong item", () => {
-    const r = tickQuest(craftQuest, { type: "craft", item: "berry_jam", count: 1 });
+    const r = tickQuest(craftQuest, { type: "craft", item: "jam", count: 1 });
     expect(r.progress).toBe(0);
   });
 

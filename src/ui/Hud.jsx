@@ -35,7 +35,7 @@ function TideChip({ fish }) {
   const turnsUntilFlip = Math.max(0, 3 - tideTurn);
   const isHigh = tide === "high";
   const label = isHigh ? "High Tide" : "Low Tide";
-  const iconKey = isHigh ? "ui_water" : "fish_pearl";
+  const iconKey = isHigh ? "ui_water" : "special_giant_pearl";
   return (
     <Popover
       density="compact"

@@ -36,9 +36,9 @@ function freshWorkers() {
     {
       id: "baker",
       name: "Baker",
-      hireCost: { coins: 75, coinsMult: 1.4, resources: { grain_flour: 1, bird_egg: 1 }, resourcesStepEvery: 3 },
+      hireCost: { coins: 75, coinsMult: 1.4, resources: { flour: 1, eggs: 1 }, resourcesStepEvery: 3 },
       maxCount: 10,
-      effect: { type: "recipe_input_reduce", recipe: "bread", input: "grain_flour", from: 3, to: 1 },
+      effect: { type: "recipe_input_reduce", recipe: "bread", input: "flour", from: 3, to: 1 },
     },
   ];
 }
@@ -127,8 +127,8 @@ describe("Phase 37 — applyWorkerOverrides", () => {
 
   it("patches resource costs and resource step", () => {
     const w = freshWorkers();
-    applyWorkerOverrides(w, { farmer: { hireCost: { resources: { wood_log: 2.9, nope: 0 }, resourcesStepEvery: 4.8 } } });
-    expect(w[0].hireCost.resources).toEqual({ wood_log: 2 });
+    applyWorkerOverrides(w, { farmer: { hireCost: { resources: { tree_oak: 2.9, nope: 0 }, resourcesStepEvery: 4.8 } } });
+    expect(w[0].hireCost.resources).toEqual({ tree_oak: 2 });
     expect(w[0].hireCost.resourcesStepEvery).toBe(4);
   });
 

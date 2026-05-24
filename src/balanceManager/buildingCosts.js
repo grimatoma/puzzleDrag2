@@ -1,7 +1,7 @@
 // Building cost analysis — sums every BUILDINGS[*].cost across the
 // catalog and emits both per-building totals and a per-resource roll-up
 // of everything a "full town" requires. Helpful when tuning the build
-// economy: if the total ramp suddenly demands 400 wood_plank, is that
+// economy: if the total ramp suddenly demands 400 plank, is that
 // proportional to the per-session yield?
 //
 // Pure module — takes its catalogs as arguments with defaults sourced

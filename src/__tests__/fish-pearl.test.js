@@ -93,7 +93,7 @@ describe("fish/pearl helpers", () => {
   });
 
   it("isPearlChainValid: pearl + non-fish bystanders → false", () => {
-    const chain = [{ key: PEARL_KEY }, { key: "grass_hay" }, { key: "wood_log" }];
+    const chain = [{ key: PEARL_KEY }, { key: "grass_hay" }, { key: "tree_oak" }];
     expect(isPearlChainValid(chain)).toBe(false);
   });
 

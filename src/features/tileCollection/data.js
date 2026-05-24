@@ -9,7 +9,7 @@ export const CATEGORIES = [
   "fruits", "flowers", "trees", "herd_animals", "cattle", "mounts",
   // Mine tile species — stone/cobble/block, ore/ingot, coal/coke, gem/cutgem,
   // gold (singleton), dirt (singleton).
-  "mine_stone", "mine_ore", "mine_coal", "mine_gem", "mine_gold", "mine_dirt",
+  "mine_stone", "mine_iron_ore", "mine_coal", "mine_gem", "mine_gold", "special_dirt",
   // Fish biome category — sardine / mackerel / clam / oyster / kelp.
   "fish",
 ];
@@ -49,11 +49,11 @@ export const CATEGORY_TO_SUBCATEGORY = {
   cattle: "farm",
   mounts: "farm",
   mine_stone: "mining",
-  mine_ore: "mining",
+  mine_iron_ore: "mining",
   mine_coal: "mining",
   mine_gem: "mining",
   mine_gold: "mining",
-  mine_dirt: "mining",
+  special_dirt: "mining",
   fish: "water",
 };
 
@@ -104,7 +104,7 @@ export const TILE_TYPES = [
     description: "Golden stalks of grain unlocked when hay chains grow long enough to harvest properly.",
   },
 
-  // (grain and grain_flour are late resources/recipe ingredients, not tile
+  // (grain and flour are late resources/recipe ingredients, not tile
   // species — see BIOMES.farm.resources.)
 
   // (wood and berry are resources/items, not tile species — see BIOMES.farm.resources.)
@@ -112,7 +112,7 @@ export const TILE_TYPES = [
   // Bird (egg is a resource/product, not a board tile — see BIOMES.farm.resources)
   {
     id: "bird_turkey", category: "bird", displayName: "Turkey", baseResource: "bird_turkey", tier: 1,
-    discovery: { method: "research", researchOf: "bird_egg", researchAmount: 20 },
+    discovery: { method: "research", researchOf: "eggs", researchAmount: 20 },
     abilities: [
       { id: "free_moves", params: { count: 2 } },
     ],
@@ -604,30 +604,23 @@ export const TILE_TYPES = [
     description: "Common rock chipped from the cavern walls — the staple of every mining run.",
   },
   {
-    id: "mine_cobble", category: "mine_stone", displayName: "Cobble",
-    baseResource: "mine_cobble", tier: 1,
+    id: "block", category: "mine_stone", displayName: "Block",
+    baseResource: "block", tier: 1,
     discovery: { method: "chain", chainLengthOf: "mine_stone", chainLength: UPGRADE_THRESHOLDS.mine_stone },
-    effects: {},
-    description: "Trimmed stone, ready for paving and foundations.",
-  },
-  {
-    id: "mine_block", category: "mine_stone", displayName: "Block",
-    baseResource: "mine_block", tier: 2,
-    discovery: { method: "chain", chainLengthOf: "mine_cobble", chainLength: UPGRADE_THRESHOLDS.mine_cobble },
     effects: {},
     description: "Squared masonry blocks — the structural backbone of stout buildings.",
   },
   {
-    id: "mine_ore", category: "mine_ore", displayName: "Ore",
-    baseResource: "mine_ore", tier: 0,
+    id: "mine_iron_ore", category: "mine_iron_ore", displayName: "Ore",
+    baseResource: "mine_iron_ore", tier: 0,
     discovery: { method: "default" },
     effects: {},
     description: "Raw metallic ore prised from a vein — smelt in the forge for ingots.",
   },
   {
-    id: "mine_ingot", category: "mine_ore", displayName: "Ingot",
-    baseResource: "mine_ingot", tier: 1,
-    discovery: { method: "chain", chainLengthOf: "mine_ore", chainLength: UPGRADE_THRESHOLDS.mine_ore },
+    id: "iron_bar", category: "mine_iron_ore", displayName: "Ingot",
+    baseResource: "iron_bar", tier: 1,
+    discovery: { method: "chain", chainLengthOf: "mine_iron_ore", chainLength: UPGRADE_THRESHOLDS.mine_iron_ore },
     effects: {},
     description: "A bar of refined metal, the foundation of forged tools and horseshoes.",
   },
@@ -639,8 +632,8 @@ export const TILE_TYPES = [
     description: "Sooty fuel for the forge — long coal chains promote it to coke.",
   },
   {
-    id: "mine_coke", category: "mine_coal", displayName: "Coke",
-    baseResource: "mine_coke", tier: 1,
+    id: "coke", category: "mine_coal", displayName: "Coke",
+    baseResource: "coke", tier: 1,
     discovery: { method: "chain", chainLengthOf: "mine_coal", chainLength: UPGRADE_THRESHOLDS.mine_coal },
     effects: {},
     description: "Hot-burning coke, the forge master's preferred fuel.",
@@ -653,8 +646,8 @@ export const TILE_TYPES = [
     description: "A rough gemstone glittering in the rock — chain enough to cut a polished stone.",
   },
   {
-    id: "mine_cutgem", category: "mine_gem", displayName: "Cut Gem",
-    baseResource: "mine_cutgem", tier: 1,
+    id: "cut_gem", category: "mine_gem", displayName: "Cut Gem",
+    baseResource: "cut_gem", tier: 1,
     discovery: { method: "chain", chainLengthOf: "mine_gem", chainLength: UPGRADE_THRESHOLDS.mine_gem },
     effects: {},
     description: "A faceted gemstone, sold for a small fortune at the market.",
@@ -667,8 +660,8 @@ export const TILE_TYPES = [
     description: "A nugget of pure gold pulled from the deeper seams.",
   },
   {
-    id: "mine_dirt", category: "mine_dirt", displayName: "Dirt",
-    baseResource: "mine_dirt", tier: 0,
+    id: "special_dirt", category: "special_dirt", displayName: "Dirt",
+    baseResource: "special_dirt", tier: 0,
     discovery: { method: "default" },
     effects: {},
     description: "Crumbly dirt that backfills tunnels — needed to clear mysterious ore.",

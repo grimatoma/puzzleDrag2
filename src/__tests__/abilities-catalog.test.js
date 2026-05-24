@@ -116,7 +116,7 @@ describe("abilities catalog", () => {
       }
       if (a.id === "recipe_input_reduce") {
         params.recipe = "bread";
-        params.input = "grain_flour";
+        params.input = "flour";
       }
       if (a.id === "hazard_spawn_reduce") params.hazard = "rats";
       if (a.id === "hazard_coin_multiplier") params.hazard = "rats";

@@ -273,8 +273,8 @@ const FLAG_OPTIONS = STORY_FLAGS.map((f) => f.id);
 function defaultTriggerFor(type) {
   switch (type) {
     case "flag_set":             return { type: "flag_set", flag: FLAG_OPTIONS[0] || "hearth_lit" };
-    case "resource_total":       return { type: "resource_total", key: "wood_log", amount: 10 };
-    case "resource_total_multi": return { type: "resource_total_multi", req: { wood_log: 10 } };
+    case "resource_total":       return { type: "resource_total", key: "tree_oak", amount: 10 };
+    case "resource_total_multi": return { type: "resource_total_multi", req: { tree_oak: 10 } };
     case "craft_made":           return { type: "craft_made", item: "bread" };
     case "building_built":       return { type: "building_built", id: "mill" };
     case "boss_defeated":        return { type: "boss_defeated", id: "frostmaw" };
@@ -310,7 +310,7 @@ function TriggerFields({ trigger, onChange, knownFlags }) {
     case "resource_total":
       return (
         <Row label="Resource">
-          <input style={{ ...selStyle, flex: 1, fontFamily: "ui-monospace,monospace" }} value={t.key || ""} placeholder="e.g. wood_log"
+          <input style={{ ...selStyle, flex: 1, fontFamily: "ui-monospace,monospace" }} value={t.key || ""} placeholder="e.g. tree_oak"
             onChange={(e) => onChange({ ...t, key: e.target.value })} />
           <span style={{ font: "600 11px/1 system-ui", color: C.inkSubtle }}>≥</span>
           <NumberField step="1" width={56} value={Number.isFinite(t.amount) ? t.amount : undefined}
@@ -321,7 +321,7 @@ function TriggerFields({ trigger, onChange, knownFlags }) {
       const text = Object.entries(t.req || {}).map(([k, v]) => `${k} ${v}`).join("\n");
       return (
         <Row label="Resources">
-          <textarea rows={3} value={text} placeholder={"wood_log 20\niron_ingot 5"} style={{ ...taStyle, flex: 1 }}
+          <textarea rows={3} value={text} placeholder={"tree_oak 20\niron_ingot 5"} style={{ ...taStyle, flex: 1 }}
             onChange={(e) => {
               const req = {};
               for (const line of e.target.value.split("\n")) {

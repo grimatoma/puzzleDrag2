@@ -23,7 +23,7 @@ export function keeperTrialDefinition(state, zoneId, path = "driveout") {
   const goalByType = {
     farm: { resource: "grass_hay", amount: 25 },
     mine: { resource: "mine_stone", amount: 20 },
-    harbor: { resource: "fish_raw", amount: 20 },
+    harbor: { resource: "fish_fillet", amount: 20 },
   };
   const baseBudgetByType = { farm: 12, mine: 10, harbor: 10 };
   const goal = goalByType[type] ?? goalByType.farm;

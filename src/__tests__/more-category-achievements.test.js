@@ -61,7 +61,7 @@ describe("cattle / mount / tree / bird achievements", () => {
     const s0 = baseState();
     const s1 = achReduce(s0, {
       type: "CHAIN_COLLECTED",
-      payload: { key: "bird_egg", gained: 6, chainLength: 6, upgrades: 0 },
+      payload: { key: "bird_chicken", gained: 6, chainLength: 6, upgrades: 0 },
     });
     expect(s1.achievements.counters.bird_chained).toBe(6);
   });

@@ -51,7 +51,7 @@ describe("discoverTileTypesFromChain", () => {
 
 describe("getActivePool", () => {
   const stateWith = (active = {}, registry = {}) => ({
-    tileCollection: { activeByCategory: { grass: "grass_hay", wood: "wood_log", grain: "grain_wheat", berry: "berry", bird: "bird_pheasant", vegetables: "veg_carrot", fruits: "fruit_apple", flowers: "flower_pansy", trees: "tree_oak", herd_animals: "herd_pig", cattle: "cattle_cow", mounts: "mount_horse", ...active } },
+    tileCollection: { activeByCategory: { grass: "grass_hay", wood: "tree_oak", grain: "grain_wheat", berry: "berry", bird: "bird_pheasant", vegetables: "veg_carrot", fruits: "fruit_apple", flowers: "flower_pansy", trees: "tree_oak", herd_animals: "herd_pig", cattle: "cattle_cow", mounts: "mount_horse", ...active } },
     registry,
   });
 
@@ -62,11 +62,11 @@ describe("getActivePool", () => {
   });
 
   it("drops slots whose category is disabled (active=null)", () => {
-    const s = stateWith({ grass: null, wood: null });
+    const s = stateWith({ grass: null, trees: null });
     const pool = getActivePool(s, "farm");
     expect(pool).not.toContain("grass_hay");
     expect(pool).not.toContain("grass_meadow");
-    expect(pool).not.toContain("wood_log");
+    expect(pool).not.toContain("tree_oak");
   });
 
   it("worker pool_weight only applies when matching key is active in its category", () => {

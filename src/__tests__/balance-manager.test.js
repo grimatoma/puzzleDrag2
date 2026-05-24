@@ -19,24 +19,24 @@ describe("Balance Manager — override merge layer", () => {
   });
 
   it("applyUpgradeThresholdOverrides mutates in place and rejects bad values", () => {
-    const target = { grass_hay: 6, wood_log: 5 };
-    applyUpgradeThresholdOverrides(target, { grass_hay: 8, wood_log: 0, bogus: -1, also_bogus: "abc" });
+    const target = { grass_hay: 6, tree_oak: 5 };
+    applyUpgradeThresholdOverrides(target, { grass_hay: 8, tree_oak: 0, bogus: -1, also_bogus: "abc" });
     expect(target.grass_hay).toBe(8);
-    expect(target.wood_log).toBe(5); // < 1 rejected
+    expect(target.tree_oak).toBe(5); // < 1 rejected
   });
 
   it("applyItemOverrides patches ITEMS entries by key", () => {
     const items = {
       grass_hay: { label: "Hay", color: 0xa8c769, value: 1, next: "grain_wheat" },
-      wood_log:  { label: "Log", color: 0x9b6b3e, value: 2, next: "wood_plank" },
+      tree_oak:  { label: "Log", color: 0x9b6b3e, value: 2, next: "plank" },
     };
     applyItemOverrides(items, {
-      grass_hay: { label: "Straw", value: 3, next: "wood_log" },
+      grass_hay: { label: "Straw", value: 3, next: "tree_oak" },
     });
     expect(items.grass_hay.label).toBe("Straw");
     expect(items.grass_hay.value).toBe(3);
-    expect(items.grass_hay.next).toBe("wood_log");
-    expect(items.wood_log.label).toBe("Log"); // unchanged
+    expect(items.grass_hay.next).toBe("tree_oak");
+    expect(items.tree_oak.label).toBe("Log"); // unchanged
   });
 
   it("applyItemOverrides treats `next: null/empty` as terminal", () => {
@@ -47,13 +47,13 @@ describe("Balance Manager — override merge layer", () => {
 
   it("applyRecipeOverrides replaces inputs wholesale and rejects bad qty", () => {
     const recipes = {
-      bread: { name: "Bread", inputs: { grain_flour: 3, bird_egg: 1 }, coins: 125, station: "bakery" },
+      bread: { name: "Bread", inputs: { flour: 3, eggs: 1 }, coins: 125, station: "bakery" },
     };
     applyRecipeOverrides(recipes, {
-      bread: { coins: 200, inputs: { grain_flour: 4, bogus: -1 } },
+      bread: { coins: 200, inputs: { flour: 4, bogus: -1 } },
     });
     expect(recipes.bread.coins).toBe(200);
-    expect(recipes.bread.inputs).toEqual({ grain_flour: 4 });
+    expect(recipes.bread.inputs).toEqual({ flour: 4 });
   });
 
   it("applyBuildingOverrides patches matched ids", () => {
@@ -62,11 +62,11 @@ describe("Balance Manager — override merge layer", () => {
       { id: "forge", name: "Forge", desc: "Smith", cost: { coins: 1200 }, lv: 8 },
     ];
     applyBuildingOverrides(buildings, {
-      mill: { name: "Windmill", lv: 2, cost: { coins: 100, wood_plank: 10 } },
+      mill: { name: "Windmill", lv: 2, cost: { coins: 100, plank: 10 } },
     });
     expect(buildings[0].name).toBe("Windmill");
     expect(buildings[0].lv).toBe(2);
-    expect(buildings[0].cost).toEqual({ coins: 100, wood_plank: 10 });
+    expect(buildings[0].cost).toEqual({ coins: 100, plank: 10 });
     expect(buildings[1].name).toBe("Forge"); // unchanged
   });
 });

@@ -23,7 +23,7 @@ describe("boss slice — lifecycle actions", () => {
     const s0 = baseState();
     const s1 = bossReduce(s0, { type: "BOSS/TRIGGER", bossKey: "ember_drake" });
     expect(s1.boss?.key).toBe("ember_drake");
-    expect(s1.boss?.resource).toBe("mine_ingot");
+    expect(s1.boss?.resource).toBe("iron_bar");
     expect(s1.boss?.targetCount).toBe(3);
     expect(s1.modal).toBe("boss");
     expect(s1.bossMinimized).toBe(false);
@@ -83,7 +83,7 @@ describe("boss slice — RESOLVE (win / loss)", () => {
     baseState({
       boss: {
         key: "frostmaw",
-        resource: "wood_log",
+        resource: "tree_oak",
         targetCount: 30,
         progress: 30,
         turnsLeft: 5,
@@ -130,18 +130,18 @@ describe("boss slice — RESOLVE (win / loss)", () => {
 describe("boss slice — CHAIN_COLLECTED progress + auto-resolve", () => {
   it("CHAIN_COLLECTED matching the boss resource bumps progress", () => {
     const s0 = baseState({
-      boss: { key: "frostmaw", resource: "wood_log", targetCount: 30, progress: 5, turnsLeft: 5 },
+      boss: { key: "frostmaw", resource: "tree_oak", targetCount: 30, progress: 5, turnsLeft: 5 },
     });
     const s1 = bossReduce(s0, {
       type: "CHAIN_COLLECTED",
-      payload: { resource: "wood_log", gained: 4, key: "wood_log" },
+      payload: { resource: "tree_oak", gained: 4, key: "tree_oak" },
     });
     expect(s1.boss.progress).toBe(9);
   });
 
   it("CHAIN_COLLECTED with mismatching resource does not bump progress", () => {
     const s0 = baseState({
-      boss: { key: "frostmaw", resource: "wood_log", targetCount: 30, progress: 5, turnsLeft: 5 },
+      boss: { key: "frostmaw", resource: "tree_oak", targetCount: 30, progress: 5, turnsLeft: 5 },
     });
     const s1 = bossReduce(s0, {
       type: "CHAIN_COLLECTED",
@@ -152,12 +152,12 @@ describe("boss slice — CHAIN_COLLECTED progress + auto-resolve", () => {
 
   it("CHAIN_COLLECTED that hits target auto-resolves with a win", () => {
     const s0 = baseState({
-      boss: { key: "frostmaw", resource: "wood_log", targetCount: 10, progress: 7, turnsLeft: 5 },
+      boss: { key: "frostmaw", resource: "tree_oak", targetCount: 10, progress: 7, turnsLeft: 5 },
       coins: 0,
     });
     const s1 = bossReduce(s0, {
       type: "CHAIN_COLLECTED",
-      payload: { resource: "wood_log", gained: 4, key: "wood_log" },
+      payload: { resource: "tree_oak", gained: 4, key: "tree_oak" },
     });
     expect(s1.boss).toBeNull();
     expect(s1.bossesDefeated).toBe(1);
@@ -175,29 +175,29 @@ describe("boss slice — CHAIN_COLLECTED progress + auto-resolve", () => {
 describe("boss slice — CRAFTING/CRAFT_RECIPE (ember_drake ingot path)", () => {
   it("crafting an ingot recipe bumps ember_drake progress by 1", () => {
     const s0 = baseState({
-      boss: { key: "ember_drake", resource: "mine_ingot", targetCount: 3, progress: 0, turnsLeft: 5 },
+      boss: { key: "ember_drake", resource: "iron_bar", targetCount: 3, progress: 0, turnsLeft: 5 },
     });
     const s1 = bossReduce(s0, {
       type: "CRAFTING/CRAFT_RECIPE",
-      payload: { key: "iron_hinge" }, // any forge recipe whose output is mine_ingot
+      payload: { key: "iron_hinge" }, // any forge recipe whose output is iron_bar
     });
     expect(s1.boss.progress).toBe(1);
   });
 
   it("crafting a non-ingot recipe is ignored", () => {
     const s0 = baseState({
-      boss: { key: "ember_drake", resource: "mine_ingot", targetCount: 3, progress: 0, turnsLeft: 5 },
+      boss: { key: "ember_drake", resource: "iron_bar", targetCount: 3, progress: 0, turnsLeft: 5 },
     });
     const s1 = bossReduce(s0, {
       type: "CRAFTING/CRAFT_RECIPE",
-      payload: { key: "bread" }, // bakery — output is the recipe key, not mine_ingot
+      payload: { key: "bread" }, // bakery — output is the recipe key, not iron_bar
     });
     expect(s1.boss.progress).toBe(0);
   });
 
   it("crafting that hits ember_drake target auto-resolves with a win", () => {
     const s0 = baseState({
-      boss: { key: "ember_drake", resource: "mine_ingot", targetCount: 3, progress: 2, turnsLeft: 5 },
+      boss: { key: "ember_drake", resource: "iron_bar", targetCount: 3, progress: 2, turnsLeft: 5 },
       coins: 0,
     });
     const s1 = bossReduce(s0, {
@@ -210,7 +210,7 @@ describe("boss slice — CRAFTING/CRAFT_RECIPE (ember_drake ingot path)", () => 
 
   it("crafting on a non-ember_drake boss is ignored", () => {
     const s0 = baseState({
-      boss: { key: "frostmaw", resource: "wood_log", targetCount: 30, progress: 0, turnsLeft: 5 },
+      boss: { key: "frostmaw", resource: "tree_oak", targetCount: 30, progress: 0, turnsLeft: 5 },
     });
     const s1 = bossReduce(s0, {
       type: "CRAFTING/CRAFT_RECIPE",
@@ -223,7 +223,7 @@ describe("boss slice — CRAFTING/CRAFT_RECIPE (ember_drake ingot path)", () => 
 describe("boss slice — CLOSE_SEASON scheduling", () => {
   it("CLOSE_SEASON decrements an active boss's turnsLeft", () => {
     const s0 = baseState({
-      boss: { key: "frostmaw", resource: "wood_log", targetCount: 30, progress: 5, turnsLeft: 5 },
+      boss: { key: "frostmaw", resource: "tree_oak", targetCount: 30, progress: 5, turnsLeft: 5 },
     });
     const s1 = bossReduce(s0, { type: "CLOSE_SEASON" });
     expect(s1.boss.turnsLeft).toBe(4);
@@ -231,7 +231,7 @@ describe("boss slice — CLOSE_SEASON scheduling", () => {
 
   it("CLOSE_SEASON resolves a boss that runs out of turns short of target", () => {
     const s0 = baseState({
-      boss: { key: "frostmaw", resource: "wood_log", targetCount: 30, progress: 5, turnsLeft: 1 },
+      boss: { key: "frostmaw", resource: "tree_oak", targetCount: 30, progress: 5, turnsLeft: 1 },
     });
     const s1 = bossReduce(s0, { type: "CLOSE_SEASON" });
     expect(s1.boss).toBeNull();

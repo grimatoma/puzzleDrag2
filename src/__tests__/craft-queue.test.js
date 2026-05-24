@@ -61,7 +61,7 @@ describe("CRAFTING/QUEUE_RECIPE", () => {
   it("keeps each station's queue independent — workshop queue stays empty when queuing bread", () => {
     const s0 = bakeryReady({
       built: { ...bakeryReady().built, home: { ...bakeryReady().built.home, [STATION]: true, workshop: true } },
-      inventory: { ...bakeryReady().inventory, wood_plank: 2 },
+      inventory: { ...bakeryReady().inventory, plank: 2 },
     });
     const s1 = rootReducer(s0, { type: "CRAFTING/QUEUE_RECIPE", payload: { key: RECIPE_KEY } });
     expect(s1.craftQueues[STATION]).toHaveLength(1);

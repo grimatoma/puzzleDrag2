@@ -102,7 +102,7 @@ function order(id, npc, key, need, have, reward = 80) {
 function visualOrders() {
   return [
     order("order-ready", "mira", "grass_hay", 12, 40, 90),
-    order("order-partial", "tomas", "wood_plank", 18, 8, 130),
+    order("order-partial", "tomas", "plank", 18, 8, 130),
     order("order-crafted", "bram", "bread", 2, 3, 180),
   ];
 }
@@ -120,19 +120,17 @@ function richInventory() {
     supplies: 12,
     grass_hay: 40,
     grain_wheat: 22,
-    grain: 18,
-    grain_flour: 12,
-    wood_log: 28,
-    wood_plank: 80,
-    wood_beam: 8,
-    berry: 19,
-    berry_jam: 5,
+    flour: 12,
+    tree_oak: 28,
+    plank: 80,
+    fruit_blackberry: 19,
+    jam: 5,
     mine_stone: 95,
-    mine_ore: 36,
-    mine_ingot: 24,
+    mine_iron_ore: 36,
+    iron_bar: 24,
     mine_coal: 30,
     mine_gem: 8,
-    bird_egg: 12,
+    eggs: 12,
     fruit_apple: 14,
     bread: 3,
     soup: 7,
@@ -272,10 +270,10 @@ function richState() {
     collected: {
       grass_hay: 120,
       grain_wheat: 44,
-      wood_log: 31,
-      wood_plank: 18,
+      tree_oak: 31,
+      plank: 18,
       mine_stone: 75,
-      mine_ore: 22,
+      mine_iron_ore: 22,
       fish_sardine: 9,
     },
   };
@@ -295,12 +293,12 @@ const farmGrid = grid([
 ]);
 
 const mineGrid = grid([
-  ["mine_stone", "mine_stone", "mine_ore", "mine_coal", "mine_gem", "mine_dirt"],
-  ["mine_stone", "mine_ore", "mine_ore", "mine_coal", "mine_gem", "mine_dirt"],
-  ["mine_stone", "mine_stone", "mine_ore", "mine_coal", "mine_gem", "mine_dirt"],
-  ["mine_stone", "mine_ore", "mine_coal", "mine_coal", "mine_gem", "mine_dirt"],
-  ["mine_stone", "mine_stone", "mine_ore", "mine_coal", "mine_gem", "mine_dirt"],
-  ["mine_stone", "mine_ore", "mine_ore", "mine_coal", "mine_gem", "mine_dirt"],
+  ["mine_stone", "mine_stone", "mine_iron_ore", "mine_coal", "mine_gem", "special_dirt"],
+  ["mine_stone", "mine_iron_ore", "mine_iron_ore", "mine_coal", "mine_gem", "special_dirt"],
+  ["mine_stone", "mine_stone", "mine_iron_ore", "mine_coal", "mine_gem", "special_dirt"],
+  ["mine_stone", "mine_iron_ore", "mine_coal", "mine_coal", "mine_gem", "special_dirt"],
+  ["mine_stone", "mine_stone", "mine_iron_ore", "mine_coal", "mine_gem", "special_dirt"],
+  ["mine_stone", "mine_iron_ore", "mine_iron_ore", "mine_coal", "mine_gem", "special_dirt"],
 ]);
 
 const fishGrid = grid([
@@ -409,7 +407,7 @@ function profileState(profile) {
     case "harborTownFood": return { ...richState(), level: 3, mapCurrent: "harbor", activeZone: "harbor", biomeKey: "fish" };
     case "boardFarm": return boardState("farm");
     case "boardFarmLong": return { ...boardState("farm"), grid: farmGrid };
-    case "boardFarmBoss": return { ...boardState("farm"), boss: { key: "frostmaw", name: "The Frostmaw", emoji: "❄️", resource: "wood_log", targetCount: 30, progress: 8, turnsLeft: 6, minChain: 5, goal: "Bring 30 logs in 10 turns." } };
+    case "boardFarmBoss": return { ...boardState("farm"), boss: { key: "frostmaw", name: "The Frostmaw", emoji: "❄️", resource: "tree_oak", targetCount: 30, progress: 8, turnsLeft: 6, minChain: 5, goal: "Bring 30 logs in 10 turns." } };
     case "boardFarmHazards": return { ...boardState("farm"), hazards: { ...boardState("farm").hazards, fire: { cells: [{ row: 0, col: 4 }, { row: 1, col: 4 }] }, rats: [{ row: 4, col: 0, age: 1 }, { row: 4, col: 1, age: 1 }, { row: 5, col: 0, age: 1 }] } };
     case "boardFarmBomb": return { ...boardState("farm"), toolPending: "bomb", tools: { ...boardState("farm").tools, bomb: 3 } };
     case "boardFarmFertilizer": return { ...boardState("farm"), fertilizerActive: true, magicFertilizerCharges: 3, session: { selectedTiles: ["grass", "grain"], fertilizerUsed: true } };
@@ -434,7 +432,7 @@ function profileState(profile) {
     case "boardFishPearl": {
       const st = boardState("fish");
       const g = st.grid.map((row) => row.map((cell) => ({ ...cell })));
-      g[2][2] = { key: "fish_pearl" };
+      g[2][2] = { key: "special_giant_pearl" };
       return { ...st, grid: g, fish: { tide: "low", tideTurn: 2 }, fishPearl: { row: 2, col: 2 } };
     }
     case "boardBossMinimized": return { ...boardState("farm"), bossMinimized: true, boss: { key: "quagmire", name: "The Quagmire", emoji: "🌿", resource: "grass_hay", targetCount: 50, progress: 22, turnsLeft: 4, goal: "Drain the bog: harvest 50 hay." } };
@@ -468,7 +466,7 @@ function profileState(profile) {
       };
     }
     case "portalInsufficient": return { ...richState(), influence: 10, tools: { ...richState().tools, magic_wand: 0, hourglass: 0, magic_seed: 0, magic_fertilizer: 0 } };
-    case "marketNews": return { ...richState(), bubble: { id: 202, npc: "tomas", text: "Market News: Wood Shortage! Timber supplies are low. Logs and Planks are worth double!", ms: 10_000 }, market: { ...richState().market, season: 2, event: { id: "wood_shortage", label: "Wood Shortage", desc: "Timber supplies are low. Logs and Planks are worth double!", mults: { wood_log: 2, wood_plank: 2 } } } };
+    case "marketNews": return { ...richState(), bubble: { id: 202, npc: "tomas", text: "Market News: Wood Shortage! Timber supplies are low. Logs and Planks are worth double!", ms: 10_000 }, market: { ...richState().market, season: 2, event: { id: "wood_shortage", label: "Wood Shortage", desc: "Timber supplies are low. Logs and Planks are worth double!", mults: { tree_oak: 2, plank: 2 } } } };
     case "tileActivate": return { ...richState(), tileCollection: fullTileCollection({ activeByCategory: { ...fullTileCollection().activeByCategory, grass: "grass_hay" } }) };
     case "tileBuy": {
       const tc = fullTileCollection();
@@ -494,7 +492,7 @@ function profileState(profile) {
     case "storyProgressed": return { ...richState(), story: quietStory({ first_harvest: true, hearth_lit: true, first_order: true, granary_built: true, bram_arrived: true }) };
     case "charter": return { ...richState(), turnsUsed: 27, story: { ...richState().story, flags: { ...richState().story.flags, keeper_path_driveout: true, keeper_path_coexist: true }, choiceLog: [{ beatId: "act1_arrival", choiceId: "continue", ts: VISUAL_FIXED_NOW - 300_000, value: "Hearthwood Vale" }, { beatId: "frostmaw_keeper", choiceId: "drive_out", ts: VISUAL_FIXED_NOW - 200_000 }, { beatId: "mira_letter_1", choiceId: "send", ts: VISUAL_FIXED_NOW - 100_000 }] } };
     case "bossGallery": return { ...richState(), story: quietStory({ frostmaw_defeated: true, ember_drake_active: true }) };
-    case "bossModal": return { ...richState(), modal: "boss", boss: { key: "frostmaw", name: "The Frostmaw", emoji: "❄️", resource: "wood_log", targetCount: 30, progress: 11, turnsLeft: 7, minChain: 5, goal: "Bring 30 logs in 10 turns to keep the hearth lit.", flavor: "A frozen titan stirs in the deep winter wood." } };
+    case "bossModal": return { ...richState(), modal: "boss", boss: { key: "frostmaw", name: "The Frostmaw", emoji: "❄️", resource: "tree_oak", targetCount: 30, progress: 11, turnsLeft: 7, minChain: 5, goal: "Bring 30 logs in 10 turns to keep the hearth lit.", flavor: "A frozen titan stirs in the deep winter wood." } };
     case "runSummary": return withRunSummary(richState());
     case "boons": return { ...richState(), story: quietStory({ keeper_anyzone_coexist: true, keeper_anyzone_driveout: true }), boons: { deer_blessing: true } };
     case "storyBar": return withBeat(richState(), "act1_light_hearth");

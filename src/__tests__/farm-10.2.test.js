@@ -18,9 +18,9 @@ function farmAt(season) {
 // ── SEASON_POOL_MODS constants locked ─────────────────────────────────────────
 
 describe("10.2 — SEASON_POOL_MODS constants", () => {
-  it("spring berry +1", () => expect(SEASON_POOL_MODS.Spring.berry).toBe(1));
+  it("spring fruit_blackberry +1", () => expect(SEASON_POOL_MODS.Spring.fruit_blackberry).toBe(1));
   it("summer wheat +1", () => expect(SEASON_POOL_MODS.Summer.grain_wheat).toBe(1));
-  it("autumn log +2",  () => expect(SEASON_POOL_MODS.Autumn.wood_log).toBe(2));
+  it("autumn log +2",  () => expect(SEASON_POOL_MODS.Autumn.tree_oak).toBe(2));
   it("winter stone +1", () => expect(SEASON_POOL_MODS.Winter.mine_stone).toBe(1));
   it("winter hay -1", () => expect(SEASON_POOL_MODS.Winter.grass_hay).toBe(-1));
 });
@@ -28,8 +28,8 @@ describe("10.2 — SEASON_POOL_MODS constants", () => {
 // ── Pool counts by season ─────────────────────────────────────────────────────
 
 describe("10.2 — getEffectivePool seasonal counts", () => {
-  it("spring pool has +1 berry over base", () => {
-    expect(cnt(farmAt("Spring"), "berry")).toBe(cnt(BASE, "berry") + 1);
+  it("spring pool has +1 fruit_blackberry over base", () => {
+    expect(cnt(farmAt("Spring"), "fruit_blackberry")).toBe(cnt(BASE, "fruit_blackberry") + 1);
   });
 
   it("spring hay is unchanged", () => {
@@ -41,7 +41,7 @@ describe("10.2 — getEffectivePool seasonal counts", () => {
   });
 
   it("autumn pool has +2 log over base", () => {
-    expect(cnt(farmAt("Autumn"), "wood_log")).toBe(cnt(BASE, "wood_log") + 2);
+    expect(cnt(farmAt("Autumn"), "tree_oak")).toBe(cnt(BASE, "tree_oak") + 2);
   });
 
   it("winter pool has +1 stone over base", () => {
@@ -65,19 +65,19 @@ describe("10.2 — worker pool_weight additive stacking", () => {
       ...createInitialState(),
       biome: "farm",
       season: "Autumn",
-      _workerEffects: { effectivePoolWeights: { wood_log: 1 } },
+      _workerEffects: { effectivePoolWeights: { tree_oak: 1 } },
     };
-    expect(cnt(getEffectivePool(s), "wood_log")).toBe(cnt(BASE, "wood_log") + 2 + 1);
+    expect(cnt(getEffectivePool(s), "tree_oak")).toBe(cnt(BASE, "tree_oak") + 2 + 1);
   });
 });
 
 // ── Mine biome ignores farm season mods ──────────────────────────────────────
 
 describe("10.2 — Mine biome ignores farm season mods", () => {
-  it("mine spring pool — berry count unchanged", () => {
+  it("mine spring pool — fruit_blackberry count unchanged", () => {
     const s = { ...createInitialState(), biome: "mine", season: "Spring" };
     const mineBase = BIOMES.mine.pool;
-    expect(cnt(getEffectivePool(s), "berry")).toBe(cnt(mineBase, "berry"));
+    expect(cnt(getEffectivePool(s), "fruit_blackberry")).toBe(cnt(mineBase, "fruit_blackberry"));
   });
 });
 

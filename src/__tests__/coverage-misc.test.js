@@ -83,7 +83,7 @@ describe("bosses/data — tickBossTurn", () => {
       year: 1,
       turnsRemaining: 5,
       progress: 0,
-      target: { resource: "wood_log", amount: 30 },
+      target: { resource: "tree_oak", amount: 30 },
       modifierState: {},
     },
     coins: 0,
@@ -162,7 +162,7 @@ describe("farm/pool — getEffectivePool seasonal modifier", () => {
     biome: "farm",
     season: "Spring",
     tileCollection: {
-      activeByCategory: { grass: "grass_hay", grain: "grain_wheat", wood: "wood_log", berry: "berry", bird: "bird_egg" },
+      activeByCategory: { grass: "grass_hay", grain: "grain_wheat", wood: "tree_oak", berry: "berry", bird: "eggs" },
     },
     _workerEffects: { effectivePoolWeights: {} },
     ...over,
@@ -174,10 +174,10 @@ describe("farm/pool — getEffectivePool seasonal modifier", () => {
     expect(r.length).toBeGreaterThanOrEqual(9);
   });
 
-  it("Spring season adds extra berry slots", () => {
+  it("Spring season adds extra blackberry slots", () => {
     const r = getEffectivePool(baseState({ season: "Spring" }));
-    const baseBerry = BIOMES.farm.pool.filter((k) => k === "berry").length;
-    const newBerry = r.filter((k) => k === "berry").length;
+    const baseBerry = BIOMES.farm.pool.filter((k) => k === "fruit_blackberry").length;
+    const newBerry = r.filter((k) => k === "fruit_blackberry").length;
     expect(newBerry).toBe(baseBerry + 1);
   });
 
@@ -196,17 +196,17 @@ describe("farm/pool — getEffectivePool seasonal modifier", () => {
 
   it("mine biome skips season modifier", () => {
     const r = getEffectivePool(baseState({ biome: "mine", season: "Spring" }));
-    // Spring's berry mod should NOT apply on mine.
-    const berryCount = r.filter((k) => k === "berry").length;
+    // Spring's blackberry mod should NOT apply on mine.
+    const berryCount = r.filter((k) => k === "fruit_blackberry").length;
     expect(berryCount).toBe(0);
   });
 
   it("worker effectivePoolWeights add tile slots", () => {
-    const s = baseState({ _workerEffects: { effectivePoolWeights: { berry: 2 } } });
+    const s = baseState({ _workerEffects: { effectivePoolWeights: { fruit_blackberry: 2 } } });
     const r = getEffectivePool(s);
-    const baseBerry = BIOMES.farm.pool.filter((k) => k === "berry").length;
-    // Spring also adds +1 berry by default; expect base + 2 worker + 1 season.
-    expect(r.filter((k) => k === "berry").length).toBe(baseBerry + 2 + 1);
+    const baseBerry = BIOMES.farm.pool.filter((k) => k === "fruit_blackberry").length;
+    // Spring also adds +1 blackberry by default; expect base + 2 worker + 1 season.
+    expect(r.filter((k) => k === "fruit_blackberry").length).toBe(baseBerry + 2 + 1);
   });
 
   it("safety floor: pool never shorter than 9 entries", () => {

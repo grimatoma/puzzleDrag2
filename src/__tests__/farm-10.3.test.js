@@ -16,8 +16,8 @@ function recipe(id) {
 
 describe("10.3 — §11 forge recipe registration", () => {
   it("iron_frame: 2 beam + 1 ingot", () => {
-    expect(recipe("iron_frame").inputs.wood_beam).toBe(2);
-    expect(recipe("iron_frame").inputs.mine_ingot).toBe(1);
+    expect(recipe("iron_frame").inputs.plank).toBe(2);
+    expect(recipe("iron_frame").inputs.iron_bar).toBe(1);
   });
 
   it("iron_frame value 275◉", () => {
@@ -25,23 +25,23 @@ describe("10.3 — §11 forge recipe registration", () => {
   });
 
   it("stonework: 2 block + 1 coke", () => {
-    expect(recipe("stonework").inputs.mine_block).toBe(2);
-    expect(recipe("stonework").inputs.mine_coke).toBe(1);
+    expect(recipe("stonework").inputs.block).toBe(2);
+    expect(recipe("stonework").inputs.coke).toBe(1);
   });
 
   it("gem_crown: 1 cutgem + 2 gold", () => {
-    expect(recipe("gem_crown").inputs.mine_cutgem).toBe(1);
+    expect(recipe("gem_crown").inputs.cut_gem).toBe(1);
     expect(recipe("gem_crown").inputs.mine_gold).toBe(2);
   });
 
   it("gold_ring: 1 gold + 2 ingot", () => {
     expect(recipe("gold_ring").inputs.mine_gold).toBe(1);
-    expect(recipe("gold_ring").inputs.mine_ingot).toBe(2);
+    expect(recipe("gold_ring").inputs.iron_bar).toBe(2);
   });
 
   it("camelCase aliases still work: ironframe", () => {
     expect(recipe("ironframe")).toBeDefined();
-    expect(recipe("ironframe").inputs.wood_beam).toBe(2);
+    expect(recipe("ironframe").inputs.plank).toBe(2);
   });
 
   it("camelCase aliases still work: gemcrown", () => {
@@ -66,47 +66,47 @@ describe("10.3 — CRAFT iron_frame via CRAFT action", () => {
   }
 
   it("crafts iron_frame: debits 2 beam + 1 ingot, adds 1 iron_frame", () => {
-    const s0 = forgeState({ wood_beam: 3, mine_ingot: 3 });
+    const s0 = forgeState({ plank: 3, iron_bar: 3 });
     const s1 = rootReducer(s0, { type: "CRAFT", payload: { id: "iron_frame" } });
-    expect(s1.inventory.wood_beam).toBe(1);
-    expect(s1.inventory.mine_ingot).toBe(2);
+    expect(s1.inventory.plank).toBe(1);
+    expect(s1.inventory.iron_bar).toBe(2);
     expect(s1.inventory.iron_frame ?? 0).toBe(1);
   });
 
   it("insufficient inputs = no-op (inventory and iron_frame unchanged)", () => {
-    const s0 = forgeState({ wood_beam: 1, mine_ingot: 1 });
+    const s0 = forgeState({ plank: 1, iron_bar: 1 });
     const s1 = rootReducer(s0, { type: "CRAFT", payload: { id: "iron_frame" } });
     // Core state should be unchanged: inventory not debited, no iron_frame added
-    expect(s1.inventory.wood_beam).toBe(1);
-    expect(s1.inventory.mine_ingot).toBe(1);
+    expect(s1.inventory.plank).toBe(1);
+    expect(s1.inventory.iron_bar).toBe(1);
     expect(s1.inventory.iron_frame ?? 0).toBe(0);
   });
 
   it("no forge = no craft", () => {
     const s0 = createInitialState();
     const s1 = rootReducer(
-      { ...s0, inventory: { ...s0.inventory, wood_beam: 5, mine_ingot: 5 } },
+      { ...s0, inventory: { ...s0.inventory, plank: 5, iron_bar: 5 } },
       { type: "CRAFT", payload: { id: "iron_frame" } },
     );
     expect(s1.inventory.iron_frame ?? 0).toBe(0);
   });
 
   it("crafts stonework", () => {
-    const s0 = forgeState({ mine_block: 3, mine_coke: 2 });
+    const s0 = forgeState({ block: 3, coke: 2 });
     const s1 = rootReducer(s0, { type: "CRAFT", payload: { id: "stonework" } });
     expect(s1.inventory.stonework ?? 0).toBe(1);
-    expect(s1.inventory.mine_block).toBe(1);
-    expect(s1.inventory.mine_coke).toBe(1);
+    expect(s1.inventory.block).toBe(1);
+    expect(s1.inventory.coke).toBe(1);
   });
 
   it("crafts gem_crown", () => {
-    const s0 = forgeState({ mine_cutgem: 2, mine_gold: 3 });
+    const s0 = forgeState({ cut_gem: 2, mine_gold: 3 });
     const s1 = rootReducer(s0, { type: "CRAFT", payload: { id: "gem_crown" } });
     expect(s1.inventory.gem_crown ?? 0).toBe(1);
   });
 
   it("crafts gold_ring", () => {
-    const s0 = forgeState({ mine_gold: 2, mine_ingot: 3 });
+    const s0 = forgeState({ mine_gold: 2, iron_bar: 3 });
     const s1 = rootReducer(s0, { type: "CRAFT", payload: { id: "gold_ring" } });
     expect(s1.inventory.gold_ring ?? 0).toBe(1);
   });

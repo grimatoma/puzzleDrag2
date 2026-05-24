@@ -16,7 +16,7 @@ import { hasTag } from "../tileCollection/tags.js";
 import { computeWorkerEffects } from "../workers/aggregate.js";
 import { effectiveRatSpawnRate } from "./attractsRats.js";
 
-const PLANT_KEYS = new Set(["grass_hay", "grain_wheat", "grain", "berry"]);
+const PLANT_KEYS = new Set(["grass_hay", "grain_wheat", "fruit_blackberry"]);
 
 // ─────────────────────────────────────────────────────────────────────────────
 

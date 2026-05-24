@@ -539,7 +539,7 @@ export class GameScene extends Phaser.Scene {
       }
     }
     // Outer board frame — soft cream border instead of dark dirt.
-    tag(rounded(this, this.boardX - frame, this.boardY - frame, boardW + frame * 2, boardH + frame * 2, 16 * dpr, b.mine_dirt, 1).setDepth(-2));
+    tag(rounded(this, this.boardX - frame, this.boardY - frame, boardW + frame * 2, boardH + frame * 2, 16 * dpr, b.special_dirt, 1).setDepth(-2));
     // Parchment card the tiles sit on.
     tag(rounded(this, this.boardX - frame * 0.6, this.boardY - frame * 0.6, boardW + frame * 1.2, boardH + frame * 1.2, 14 * dpr, boardBg, 1).setDepth(-1.5));
     // Biome accent strip — 4dpr top edge of the parchment card. Identifies
@@ -772,7 +772,7 @@ export class GameScene extends Phaser.Scene {
     const fertilizerActive = (this.registry.get("fertilizerActive") ?? false) ||
                              ((this.registry.get("magicFertilizerCharges") ?? 0) > 0);
     if (fertilizerActive) {
-      const seedlings = ["seedling", "grass_hay", "grain_wheat", "grain"];
+      const seedlings = ["seedling", "grass_hay", "grain_wheat"];
       const fBase = {};
       for (const k of workerPool) fBase[k] = (fBase[k] ?? 0) + 1;
       for (const k of seedlings) {
@@ -1040,7 +1040,7 @@ export class GameScene extends Phaser.Scene {
   /** 1.5 Lockbox: replace 3 random non-selected tiles with biome's rare resource. */
   _applyToolRare() {
     const biome = this.biome();
-    const rareKey = biome.name === "Mine" ? "mine_gem" : "berry";
+    const rareKey = biome.name === "Mine" ? "mine_gem" : "fruit_blackberry";
     const rareRes = biome.resources.find((r) => r.key === rareKey) || biome.resources[biome.resources.length - 1];
     const allTiles = [];
     for (let r = 0; r < ROWS; r++) {

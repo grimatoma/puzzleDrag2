@@ -3,11 +3,12 @@ import { MARKET_PRICES } from "../constants.js";
 import { driftPrices, applyTrade, bombFootprint } from "../market.js";
 
 describe("3.1 — Market prices", () => {
-  it("MARKET_PRICES covers all 20 sellable resources", () => {
+  it("MARKET_PRICES covers all base sellable resources", () => {
     const keys = [
-      "grass_hay", "grain_wheat", "grain", "grain_flour", "wood_log", "wood_plank", "wood_beam",
-      "berry", "berry_jam", "bird_egg", "mine_stone", "mine_cobble", "mine_block", "mine_ore",
-      "mine_ingot", "mine_coal", "mine_coke", "mine_gem", "mine_cutgem", "mine_gold",
+      "grass_hay", "grain_wheat", "flour", "plank",
+      "jam", "eggs", "mine_stone", "block",
+      "iron_bar", "copper_bar", "mine_coal", "coke", "mine_gem", "cut_gem", "mine_gold", "gold_bar",
+      "hay_bundle", "sea_shells", "pearls",
     ];
     for (const k of keys) {
       expect(MARKET_PRICES[k], `MARKET_PRICES has ${k}`).toBeTruthy();

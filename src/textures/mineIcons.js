@@ -13,10 +13,9 @@ function rr(ctx, x, y, w, h, r) {
 }
 
 const MINE_HANDLED_KEYS = new Set([
-  "mine_stone", "mine_cobble", "mine_block",
-  "mine_ore", "mine_ingot",
-  "mine_coal", "mine_coke",
-  "mine_gem", "mine_cutgem",
+  "mine_stone",
+  "mine_coal",
+  "mine_gem",
   "mine_gold",
 ]);
 
@@ -80,7 +79,7 @@ export function drawMineTileIcon(ctx, key) {
     });
   }
 
-  else if (key === "mine_cobble") {
+  else if (key === "block") {
     // Four cobblestones in 2x2 pattern with mortar
     // Shadow
     ctx.fillStyle = "rgba(0,0,0,0.22)";
@@ -140,76 +139,7 @@ export function drawMineTileIcon(ctx, key) {
     ctx.stroke();
   }
 
-  else if (key === "mine_block") {
-    // Polished isometric stone block with engraving
-    // Shadow
-    ctx.fillStyle = "rgba(0,0,0,0.28)";
-    ctx.beginPath();
-    ctx.ellipse(0, 22, 22, 4, 0, 0, Math.PI * 2);
-    ctx.fill();
-    // Top face (parallelogram)
-    const top = ctx.createLinearGradient(0, -22, 0, -2);
-    top.addColorStop(0, "#cfd5da");
-    top.addColorStop(1, "#7c8388");
-    ctx.fillStyle = top;
-    ctx.beginPath();
-    ctx.moveTo(-18, -2);
-    ctx.lineTo(0, -18);
-    ctx.lineTo(18, -2);
-    ctx.lineTo(0, 6);
-    ctx.closePath();
-    ctx.fill();
-    ctx.strokeStyle = "#1a1d20";
-    ctx.lineWidth = 2;
-    ctx.stroke();
-    // Left face
-    const left = ctx.createLinearGradient(-18, 0, 0, 0);
-    left.addColorStop(0, "#9da3a8");
-    left.addColorStop(1, "#4e5358");
-    ctx.fillStyle = left;
-    ctx.beginPath();
-    ctx.moveTo(-18, -2);
-    ctx.lineTo(0, 6);
-    ctx.lineTo(0, 22);
-    ctx.lineTo(-18, 14);
-    ctx.closePath();
-    ctx.fill();
-    ctx.stroke();
-    // Right face
-    const right = ctx.createLinearGradient(0, 0, 18, 0);
-    right.addColorStop(0, "#7c8388");
-    right.addColorStop(1, "#3a3e44");
-    ctx.fillStyle = right;
-    ctx.beginPath();
-    ctx.moveTo(18, -2);
-    ctx.lineTo(0, 6);
-    ctx.lineTo(0, 22);
-    ctx.lineTo(18, 14);
-    ctx.closePath();
-    ctx.fill();
-    ctx.stroke();
-    // Top-edge highlight
-    ctx.strokeStyle = "rgba(255,255,255,0.6)";
-    ctx.lineWidth = 1.6;
-    ctx.beginPath();
-    ctx.moveTo(-17, -2);
-    ctx.lineTo(0, -17);
-    ctx.lineTo(17, -2);
-    ctx.stroke();
-    // Engraved chevron on top
-    ctx.strokeStyle = "rgba(40,42,46,0.65)";
-    ctx.lineWidth = 1.4;
-    ctx.beginPath();
-    ctx.moveTo(-7, -5);
-    ctx.lineTo(0, -10);
-    ctx.lineTo(7, -5);
-    ctx.moveTo(-5, -2);
-    ctx.lineTo(0, -7);
-    ctx.lineTo(5, -2);
-    ctx.stroke();
-  }
-
-  else if (key === "mine_ore") {
+  else if (key === "mine_iron_ore") {
     // Rocky chunk with bright copper/gold metal veins
     // Shadow
     ctx.fillStyle = "rgba(0,0,0,0.25)";
@@ -276,7 +206,7 @@ export function drawMineTileIcon(ctx, key) {
     });
   }
 
-  else if (key === "mine_ingot") {
+  else if (key === "iron_bar") {
     // 3D metallic silver ingot bar with stamp
     // Shadow
     ctx.fillStyle = "rgba(0,0,0,0.3)";
@@ -417,7 +347,7 @@ export function drawMineTileIcon(ctx, key) {
     });
   }
 
-  else if (key === "mine_coke") {
+  else if (key === "coke") {
     // Refined hexagonal coke briquette with red glow
     // Shadow
     ctx.fillStyle = "rgba(0,0,0,0.3)";
@@ -559,7 +489,7 @@ export function drawMineTileIcon(ctx, key) {
     ctx.fill();
   }
 
-  else if (key === "mine_cutgem") {
+  else if (key === "cut_gem") {
     // Brilliant round-cut gem viewed from above with star burst
     // Shadow
     ctx.fillStyle = "rgba(0,0,0,0.28)";

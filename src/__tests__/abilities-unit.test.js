@@ -37,12 +37,12 @@ describe("ability: threshold_reduce_category", () => {
 
 describe("ability: pool_weight (floored per source)", () => {
   it("floors fractional contributions", () => {
-    const out = single("pool_weight", { target: "mine_ore", amount: 1 }, 0.5);
-    expect(out.effectivePoolWeights.mine_ore ?? 0).toBe(0); // 0.5 floored
+    const out = single("pool_weight", { target: "mine_iron_ore", amount: 1 }, 0.5);
+    expect(out.effectivePoolWeights.mine_iron_ore ?? 0).toBe(0); // 0.5 floored
   });
   it("contributes integer at full weight", () => {
-    const out = single("pool_weight", { target: "mine_ore", amount: 3 }, 1);
-    expect(out.effectivePoolWeights.mine_ore).toBe(3);
+    const out = single("pool_weight", { target: "mine_iron_ore", amount: 3 }, 1);
+    expect(out.effectivePoolWeights.mine_iron_ore).toBe(3);
   });
 });
 
@@ -69,8 +69,8 @@ describe("ability: season_bonus", () => {
 
 describe("ability: recipe_input_reduce", () => {
   it("nests under recipe → input", () => {
-    const out = single("recipe_input_reduce", { recipe: "bread", input: "grain_flour", amount: 2 }, 1);
-    expect(out.recipeInputReduce.bread.grain_flour).toBe(2);
+    const out = single("recipe_input_reduce", { recipe: "bread", input: "flour", amount: 2 }, 1);
+    expect(out.recipeInputReduce.bread.flour).toBe(2);
   });
 });
 

@@ -28,19 +28,19 @@ describe("3.2 — Supply chain (grain → supplies → expedition rations)", () 
     expect(s0.inventory.supplies).toBe(0);
   });
 
-  it("CONVERT_TO_SUPPLY: 3 grain → 1 supply (qty=2 → 6 grain, 2 supplies)", () => {
+  it("CONVERT_TO_SUPPLY: 3 flour → 1 supply (qty=2 → 6 flour, 2 supplies)", () => {
     const s0 = initialState();
-    const s1 = { ...s0, inventory: { ...s0.inventory, grain: 9 } };
+    const s1 = { ...s0, inventory: { ...s0.inventory, flour: 9 } };
     const s2 = gameReducer(s1, { type: "CONVERT_TO_SUPPLY", payload: { qty: 2 } });
-    expect(s2.inventory.grain).toBe(3);
+    expect(s2.inventory.flour).toBe(3);
     expect(s2.inventory.supplies).toBe(2);
   });
 
-  it("CONVERT_TO_SUPPLY: insufficient grain → no-op", () => {
+  it("CONVERT_TO_SUPPLY: insufficient flour → no-op", () => {
     const s0 = initialState();
-    const poor = { ...s0, inventory: { ...s0.inventory, grain: 2, supplies: 0 } };
+    const poor = { ...s0, inventory: { ...s0.inventory, flour: 2, supplies: 0 } };
     const same = gameReducer(poor, { type: "CONVERT_TO_SUPPLY", payload: { qty: 1 } });
-    expect(same.inventory.grain).toBe(2);
+    expect(same.inventory.flour).toBe(2);
     expect(same.inventory.supplies).toBe(0);
   });
 

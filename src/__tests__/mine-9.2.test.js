@@ -94,13 +94,13 @@ describe("Phase 9.2 — Mysterious Ore", () => {
     const expired = tickMysteriousOre(t);
     expect(expired.mysteriousOre).toBeNull();
     expect(expired.runes ?? 0).toBe(t.runes ?? 0);
-    expect(expired.grid[t.mysteriousOre.row][t.mysteriousOre.col].key).toBe("mine_dirt");
+    expect(expired.grid[t.mysteriousOre.row][t.mysteriousOre.col].key).toBe("special_dirt");
   });
 
   // ── Chain validation ───────────────────────────────────────────────────────
   const ore = { key: "mysterious_ore", row: 2, col: 3 };
-  const d1 = { key: "mine_dirt", row: 2, col: 4 };
-  const d2 = { key: "mine_dirt", row: 2, col: 5 };
+  const d1 = { key: "special_dirt", row: 2, col: 4 };
+  const d2 = { key: "special_dirt", row: 2, col: 5 };
   const stone = { key: "mine_stone", row: 2, col: 6 };
 
   it("ore alone fails", () => {

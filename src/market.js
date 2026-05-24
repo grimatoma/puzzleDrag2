@@ -1,7 +1,7 @@
 import { MARKET_PRICES } from "./constants.js";
 
 export const MARKET_EVENTS = [
-  { id: "wood_shortage", label: "Wood Shortage", desc: "Timber supplies are low. Logs and Planks are worth double!", mults: { wood_log: 2, wood_plank: 2 } },
+  { id: "wood_shortage", label: "Wood Shortage", desc: "Timber supplies are low. Logs and Planks are worth double!", mults: { tree_oak: 2, plank: 2 } },
   { id: "bumper_crop",   label: "Bumper Crop",   desc: "The fields are overflowing. Hay and Wheat prices have crashed.", mults: { grass_hay: 0.5, grain_wheat: 0.5 } },
   { id: "iron_rush",     label: "Iron Rush",     desc: "The King's army is buying iron. Ingot prices are soaring!", mults: { mine_iron: 2.5 } },
   { id: "gem_fever",     label: "Gem Fever",     desc: "A rich merchant is in town. Gems are trading at a premium.", mults: { mine_gem: 1.8 } },

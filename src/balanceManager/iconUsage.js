@@ -30,7 +30,7 @@ const HARDCODED_USAGE = [
   "ui_scale", "ui_devtools", "ui_heart", "ui_farmer",
   // RichText [icon:X] embeds in state.js / story.js / feature slices.
   "ui_build", "ui_star", "ui_warning",
-  "berry", "fish_pearl", "grass_hay",
+  "berry", "special_giant_pearl", "grass_hay",
 ];
 
 // Prefixes for icon keys that are referenced dynamically (template literals,

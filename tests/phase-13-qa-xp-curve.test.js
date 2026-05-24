@@ -101,7 +101,7 @@ describe("XP per source — BUILD (10 XP)", () => {
     const b = BUILDINGS.find((x) => x.id === "hearth_upgrade") ?? BUILDINGS[0];
     if (!b) return; // guard if no buildings available cheaply
     // Give enough resources to build cheaply
-    const rich = { ...s, coins: 99999, inventory: { grass_hay: 999, wood_log: 999, mine_stone: 999, mine_ore: 999, grain: 999 } };
+    const rich = { ...s, coins: 99999, inventory: { grass_hay: 999, tree_oak: 999, mine_stone: 999, mine_iron_ore: 999, grain: 999 } };
     const next = rootReducer(rich, { type: "BUILD", building: b });
     if (next === rich) return; // build was rejected (no-op guard)
     expect(next.almanac.xp).toBe(10);
@@ -112,7 +112,7 @@ describe("XP per source — BOSS/RESOLVE won (25 XP)", () => {
   it("winning a boss awards 25 almanac XP", () => {
     const s = {
       ...fresh(),
-      boss: { key: "frostmaw", resource: "wood_log", targetCount: 30, progress: 30, turnsLeft: 3, minChain: null },
+      boss: { key: "frostmaw", resource: "tree_oak", targetCount: 30, progress: 30, turnsLeft: 3, minChain: null },
     };
     const next = rootReducer(s, { type: "BOSS/RESOLVE", won: true });
     expect(next.almanac.xp).toBe(25);
@@ -121,7 +121,7 @@ describe("XP per source — BOSS/RESOLVE won (25 XP)", () => {
   it("losing a boss awards 0 almanac XP", () => {
     const s = {
       ...fresh(),
-      boss: { key: "frostmaw", resource: "wood_log", targetCount: 30, progress: 5, turnsLeft: 0, minChain: null },
+      boss: { key: "frostmaw", resource: "tree_oak", targetCount: 30, progress: 5, turnsLeft: 0, minChain: null },
     };
     const next = rootReducer(s, { type: "BOSS/RESOLVE", won: false });
     expect(next.almanac.xp).toBe(0);

@@ -3,7 +3,7 @@
 // like:
 //
 //   rec_bread
-//     └── grain_flour  (← rec_flour)
+//     └── flour  (← rec_flour)
 //            └── grain  (← raw)
 //     └── water        (← raw)
 //

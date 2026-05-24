@@ -26,14 +26,14 @@ describe("workshop tools — round 2 (catalog §8 fillins)", () => {
     expect(WORKSHOP_RECIPES.hoe.effect).toBe("clear_all");
     expect(WORKSHOP_RECIPES.hoe.target).toBe("veg_carrot");
     expect(WORKSHOP_RECIPES.stone_hammer.effect).toBe("clear_all");
-    expect(WORKSHOP_RECIPES.stone_hammer.target).toBe("mine_cobble");
+    expect(WORKSHOP_RECIPES.stone_hammer.target).toBe("mine_stone");
     expect(WORKSHOP_RECIPES.iron_pick.effect).toBe("clear_all");
-    expect(WORKSHOP_RECIPES.iron_pick.target).toBe("mine_ore");
+    expect(WORKSHOP_RECIPES.iron_pick.target).toBe("mine_iron_ore");
   });
 
   it("fill-bias tools target species categories the player wants to seed", () => {
     expect(WORKSHOP_RECIPES.bird_feed.effect).toBe("fill_bias");
-    expect(WORKSHOP_RECIPES.bird_feed.target).toBe("bird_egg");
+    expect(WORKSHOP_RECIPES.bird_feed.target).toBe("bird_chicken");
     expect(WORKSHOP_RECIPES.sapling.effect).toBe("fill_bias");
     expect(WORKSHOP_RECIPES.sapling.target).toBe("tree_oak");
   });

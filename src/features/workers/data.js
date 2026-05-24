@@ -40,7 +40,7 @@ export const TYPE_WORKERS = [
     role: "Lumberjack",
     iconKey: "worker_lumberjack",
     color: "#7a4f1f",
-    hireCost: { coins: 60, coinsStep: 30, resources: { wood_log: 2 }, resourcesStepEvery: 3 },
+    hireCost: { coins: 60, coinsStep: 30, resources: { tree_oak: 2 }, resourcesStepEvery: 3 },
     maxCount: 10,
     abilities: [
       { id: "threshold_reduce_category", params: { category: "trees", amount: 1 } },
@@ -66,10 +66,10 @@ export const TYPE_WORKERS = [
     role: "Baker",
     iconKey: "worker_baker",
     color: "#c89b6a",
-    hireCost: { coins: 75, coinsMult: 1.4, resources: { grain_flour: 1, bird_egg: 1 }, resourcesStepEvery: 3 },
+    hireCost: { coins: 75, coinsMult: 1.4, resources: { flour: 1, eggs: 1 }, resourcesStepEvery: 3 },
     maxCount: 10,
     abilities: [
-      { id: "recipe_input_reduce", params: { recipe: "bread", input: "grain_flour", amount: 1 } },
+      { id: "recipe_input_reduce", params: { recipe: "bread", input: "flour", amount: 1 } },
     ],
     description: "Each hired Baker trims one flour off the bread recipe.",
   },
