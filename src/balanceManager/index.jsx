@@ -108,7 +108,7 @@ const TABS = [
     blurb: "Passive attribute definitions: name, description, params, trigger/channel behavior. Contrast with tool powers (active, on spend)." },
   { id: "toolPowers", label: "Tool powers", iconKey: "rake", Component: ToolPowersReferenceTab,
     section: "systems",
-    blurb: "Active tool effects when the player spends a tool: name, description, params. Per-tool board anim/ms are on Inventory items." },
+    blurb: "Active tool effects: params plus default board anim/ms (tools override per item on Inventory)." },
   { id: "tileDiscoveryMethods", label: "Tile discovery", iconKey: "ui_star", Component: TileDiscoveryReferenceTab,
     section: "systems",
     blurb: "How tiles unlock: default, chain, research, buy, daily reward — each method's params and which tiles use it." },

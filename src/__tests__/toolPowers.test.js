@@ -4,6 +4,7 @@ import {
   TOOL_POWER_PARAM_TYPES,
   DEFERRED_TOOL_POWERS,
   defaultsForToolPower,
+  defaultBoardAnimForPower,
   getToolPower,
 } from "../config/toolPowers.js";
 import { tilesInCategory } from "../utils.js";
@@ -79,19 +80,28 @@ describe("TOOL_POWERS catalog shape", () => {
     expect(getToolPower("clear_category").id).toBe("clear_category");
     expect(getToolPower("definitely_not_a_power")).toBeNull();
   });
+
+  it("powers with board VFX declare defaultBoardAnim", () => {
+    expect(getToolPower("clear_all").defaultBoardAnim).toEqual({ anim: "sweep", ms: 300 });
+    expect(getToolPower("clear_hazard").defaultBoardAnim).toEqual({ anim: "scatter", ms: 200 });
+    expect(getToolPower("undo_move").defaultBoardAnim).toBeUndefined();
+    expect(getToolPower("water_pump").defaultBoardAnim).toBeUndefined();
+  });
 });
 
 describe("defaultsForToolPower", () => {
   it("returns { target: \"\" } for clear_all — tileKey defaults to \"\" so ItemsTab's cleanup pass strips empty targets", () => {
-    expect(defaultsForToolPower("clear_all")).toEqual({ target: "" });
+    expect(defaultsForToolPower("clear_all")).toEqual({ anim: "sweep", ms: 300, target: "" });
   });
 
   it("returns { target: null } for clear_category — tileCategory uses null as the 'unset' sentinel", () => {
-    expect(defaultsForToolPower("clear_category")).toEqual({ target: null });
+    expect(defaultsForToolPower("clear_category")).toEqual({ anim: "sweep", ms: 300, target: null });
   });
 
   it("returns { from: null, to: \"\", radius: 1 } for transform_adjacent", () => {
     expect(defaultsForToolPower("transform_adjacent")).toEqual({
+      anim: "shimmer",
+      ms: 320,
       from: null,
       to: "",
       radius: 1,
@@ -104,13 +114,15 @@ describe("defaultsForToolPower", () => {
 
   it("returns { from: null, to: \"\" } for transform_tiles", () => {
     expect(defaultsForToolPower("transform_tiles")).toEqual({
+      anim: "shimmer",
+      ms: 400,
       from: null,
       to: "",
     });
   });
 
   it("returns { radius: 1 } for area_blast", () => {
-    expect(defaultsForToolPower("area_blast")).toEqual({ radius: 1 });
+    expect(defaultsForToolPower("area_blast")).toEqual({ anim: "sweep", ms: 300, radius: 1 });
   });
 
   it("returns {} for an unknown power id", () => {
@@ -118,8 +130,13 @@ describe("defaultsForToolPower", () => {
   });
 
   it("returns {} for powers with no params (tap_clear_type, undo_move)", () => {
-    expect(defaultsForToolPower("tap_clear_type")).toEqual({});
+    expect(defaultsForToolPower("tap_clear_type")).toEqual({ anim: "sweep", ms: 300 });
     expect(defaultsForToolPower("undo_move")).toEqual({});
+  });
+
+  it("defaultBoardAnimForPower matches catalog entry", () => {
+    expect(defaultBoardAnimForPower("scatter_hazard")).toEqual({ anim: "bark", ms: 400 });
+    expect(defaultBoardAnimForPower("undo_move")).toBeNull();
   });
 });
 
