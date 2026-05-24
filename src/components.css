@@ -289,6 +289,27 @@
     color: var(--on-panel-dim);
   }
 
+  /* ── List row that expands inline when selected ── */
+  .hl-browser-item--expanded {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.625rem;
+    cursor: default;
+  }
+  .hl-browser-item__row {
+    @apply flex items-center gap-2 w-full text-left;
+    background: transparent;
+    border: 0;
+    padding: 0;
+    color: inherit;
+    cursor: pointer;
+  }
+  .hl-browser-item__details {
+    @apply flex flex-col gap-2.5;
+    border-top: 1px solid var(--card-border);
+    padding-top: 0.625rem;
+  }
+
   /* ── Inventory icon grid (WoW-style) ── */
   .inv-grid {
     display: grid;

@@ -249,6 +249,83 @@ function InventoryBrowserItem({ entry, selected, onSelect, progress }) {
   );
 }
 
+function InventoryListItemExpanded({ entry, marketBuilt, dispatch, onCollapse, progress }) {
+  const { key, label, count, sellPrice, buyPrice, kind, orderStatus, orderTotal, tags = [] } = entry;
+  const canBuy = kind === "resource" && marketBuilt && buyPrice > 0;
+  const canSell = marketBuilt && sellPrice > 0 && count > 0;
+  const sell = () => {
+    if (kind === "resource") {
+      dispatch({ type: "SELL_RESOURCE", payload: { key, qty: 1 } });
+    } else {
+      dispatch({ type: "SELL_ITEM", id: key, qty: 1 });
+    }
+  };
+  const buy = () => dispatch({ type: "BUY_RESOURCE", payload: { key, qty: 1 } });
+  const listStatus = orderStatus === "ready" || orderStatus === "needed" ? orderStatus : undefined;
+  const showActions = canSell || kind === "resource";
+
+  return (
+    <div className="hl-browser-item is-selected hl-browser-item--expanded">
+      <button
+        type="button"
+        className="hl-browser-item__row"
+        onClick={onCollapse}
+        aria-expanded="true"
+        aria-label={`Collapse ${label}`}
+      >
+        <span className="hl-browser-item__icon">
+          <Icon iconKey={key} size={40} title={label} />
+        </span>
+        <span className="hl-browser-item__main">
+          <span className="hl-browser-item__title">{label}</span>
+          {progress && (
+            <ProgressBar
+              value={progress.value}
+              max={progress.max}
+              tone="gold"
+              className="h-1.5 mt-1"
+            />
+          )}
+        </span>
+        <span className="hl-browser-item__meta">
+          {count != null && <span className="tabular-nums">{count}</span>}
+          {listStatus && <span>{listStatus}</span>}
+        </span>
+      </button>
+      <div className="hl-browser-item__details">
+        {showActions && (
+          <div className="flex flex-wrap gap-2">
+            <Button tone="moss" size="sm" disabled={!canSell} onClick={sell}>
+              Sell {sellPrice > 0 ? `+${sellPrice}◉` : ""}
+            </Button>
+            {kind === "resource" && (
+              <Button tone="gold" size="sm" disabled={!canBuy} onClick={buy}>
+                Buy {buyPrice > 0 ? `${buyPrice}◉` : ""}
+              </Button>
+            )}
+          </div>
+        )}
+        {orderStatus === "excess" && (
+          <div className="flex flex-wrap gap-2">
+            <StatusPill status="excess" total={orderTotal} />
+          </div>
+        )}
+        {tags.length > 0 && (
+          <div>
+            <div className="hl-section-label mb-1">Tags</div>
+            <div className="hl-text-dim capitalize">{tags.join(", ")}</div>
+          </div>
+        )}
+        {orderStatus && (
+          <div className="hl-text-dim text-caption">
+            Current orders ask for {orderTotal} {label}.
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function InventoryDetail({ entry, marketBuilt, dispatch }) {
   if (!entry) return <DetailPane empty="Select a resource to inspect it." />;
   const { key, label, count, sellPrice, buyPrice, kind, orderStatus, orderTotal, tags = [] } = entry;
@@ -592,22 +669,14 @@ export function InventoryGrid({
           );
         } else if (isSelected) {
           cells.push(
-            <div key={entry.key} className="flex flex-col">
-              <InventoryBrowserItem
-                entry={entry}
-                selected
-                onSelect={() => accordion.select(entry.key)}
-                progress={progressFor(entry.key)}
-              />
-              <div
-                className={`inv-accordion__body${accordion.isOpen ? " is-open" : ""}`}
-                onTransitionEnd={(e) => {
-                  if (e.propertyName === "max-height" && !accordion.isOpen) accordion.onClosed();
-                }}
-              >
-                <InventoryDetail entry={entry} marketBuilt={marketBuilt} dispatch={dispatch} />
-              </div>
-            </div>
+            <InventoryListItemExpanded
+              key={entry.key}
+              entry={entry}
+              marketBuilt={marketBuilt}
+              dispatch={dispatch}
+              onCollapse={() => accordion.selectInPlace(entry.key)}
+              progress={progressFor(entry.key)}
+            />
           );
         } else {
           cells.push(
@@ -615,7 +684,7 @@ export function InventoryGrid({
               key={entry.key}
               entry={entry}
               selected={false}
-              onSelect={() => accordion.select(entry.key)}
+              onSelect={() => accordion.selectInPlace(entry.key)}
               progress={progressFor(entry.key)}
             />
           );
