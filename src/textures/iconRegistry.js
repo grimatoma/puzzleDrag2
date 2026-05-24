@@ -45,6 +45,13 @@ function aliasIconKeys(reg) {
     iron_frame: reg.ironframe,
     gem_crown:  reg.gemcrown,
     gold_ring:  reg.goldring,
+    // Phase 3 tool-powers overhaul — the magic-tier portal tools are now
+    // registered as ITEMS so the icon-audit test expects an icon under each
+    // item key. Their canvas draws live under the portal-icon labels (wand,
+    // hourglass, potion, scroll) so we alias the ITEM keys onto those draws.
+    magic_wand:        reg.wand,
+    magic_seed:        reg.potion,
+    magic_fertilizer:  reg.scroll,
   };
   for (const [key, value] of Object.entries(aliases)) {
     if (value && !reg[key]) reg[key] = value;

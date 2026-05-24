@@ -54,6 +54,36 @@ export const TOOL_CATALOG = [
   { key: "explosives",  category: "workshop", iconKey: "dynamite",      name: "Explosives",   armed: "instant",
     desc: "Clears every cave-in and mole hazard from the mine." },
 
+  // ── Phase 3 net-new workshop tools (tool-powers overhaul) ──────────────
+  // Farm tools.
+  { key: "trimmer",       category: "workshop", iconKey: "trimmer",       name: "Trimmer",        armed: "instant",
+    desc: "Transforms every tree tile into hay so the chain can re-roll." },
+  { key: "plough",        category: "workshop", iconKey: "plough",        name: "Plough",         armed: "instant",
+    desc: "Harvests every grass AND grain tile in one pass." },
+  { key: "fruit_picker",  category: "workshop", iconKey: "fruit_picker",  name: "Fruit Picker",   armed: "instant",
+    desc: "Gathers every fruit tile from the board into your inventory." },
+  { key: "herders_crook", category: "workshop", iconKey: "herders_crook", name: "Herder's Crook", armed: "instant",
+    desc: "Rounds up every herd-animal tile in a single sweep." },
+  { key: "milk_churn",    category: "workshop", iconKey: "milk_churn",    name: "Milk Churn",     armed: "instant",
+    desc: "Calls every cattle tile into the churn — sweeps them off the board." },
+  { key: "saddle",        category: "workshop", iconKey: "saddle",        name: "Saddle",         armed: "instant",
+    desc: "Tames every mount tile, collecting them all from the board." },
+  { key: "bee",           category: "workshop", iconKey: "bee",           name: "Bee",            armed: "instant",
+    desc: "Pollinates every flower tile, ripening them into apple-fruit tiles." },
+  { key: "terrier",       category: "workshop", iconKey: "terrier",       name: "Terrier",        armed: "instant",
+    desc: "Bolts through the board clearing every rat hazard from the farm." },
+  // Mine tools.
+  { key: "drill",         category: "workshop", iconKey: "drill",         name: "Drill",          armed: "instant",
+    desc: "Converts every special-dirt tile into rough stone tiles for further chaining." },
+  { key: "coal_hammer",   category: "workshop", iconKey: "coal_hammer",   name: "Coal Hammer",    armed: "instant",
+    desc: "Breaks every coal tile loose from the board in one sweep." },
+  { key: "gold_pick",     category: "workshop", iconKey: "gold_pick",     name: "Gold Pick",      armed: "instant",
+    desc: "Strikes every gold tile from the board into your stockpile." },
+  { key: "magnet",        category: "workshop", iconKey: "magnet",        name: "Magnet",         armed: "tap",
+    desc: "Tap a tile — collapses every ore tile (coal/iron/gold/gem) in a 3×3 area into stone for re-chaining." },
+  { key: "coal_transmuter", category: "workshop", iconKey: "coal_transmuter", name: "Coal Transmuter", armed: "tap",
+    desc: "Tap a tile — transmutes stone and lesser ore in a 3×3 area into coal." },
+
   // ── Magic Portal ────────────────────────────────────────────────────────
   { key: "magic_wand",       category: "magic", iconKey: "wand",      name: "Magic Wand",       armed: "tap",
     desc: "Tap a tile type — sweeps every tile of that type from the board." },
@@ -63,6 +93,20 @@ export const TOOL_CATALOG = [
     desc: "Adds five turns to the current session." },
   { key: "magic_fertilizer", category: "magic", iconKey: "scroll",    name: "Magic Fertilizer", armed: "passive",
     desc: "The next three board fills spawn grain in every cell." },
+  // Phase 3 net-new magic tools (tool-powers overhaul). All resolve via the
+  // typed `power` field on ITEMS at USE_TOOL dispatch time.
+  { key: "golden_apple",       category: "magic", iconKey: "golden_apple",       name: "Golden Apple",       armed: "instant",
+    desc: "Transforms every tree tile on the board into apple-fruit tiles." },
+  { key: "golden_carrot",      category: "magic", iconKey: "golden_carrot",      name: "Golden Carrot",      armed: "instant",
+    desc: "Transforms every grass tile on the board into carrot vegetable tiles." },
+  { key: "golden_idol",        category: "magic", iconKey: "golden_idol",        name: "Golden Idol",        armed: "instant",
+    desc: "Transforms every grass tile on the board into cattle (cow) tiles." },
+  { key: "golden_sheep",       category: "magic", iconKey: "golden_sheep",       name: "Golden Sheep",       armed: "instant",
+    desc: "Transforms every grass tile on the board into sheep herd tiles." },
+  { key: "philosophers_stone", category: "magic", iconKey: "philosophers_stone", name: "Philosopher's Stone", armed: "instant",
+    desc: "Transmutes every stone tile in the mine into gold tiles." },
+  { key: "miners_hat",         category: "magic", iconKey: "miners_hat",         name: "Miner's Hat",         armed: "instant",
+    desc: "Reveals every hidden ore tile. No effect until hidden-tile spawning ships." },
 ];
 
 export const TOOL_BY_KEY = Object.fromEntries(TOOL_CATALOG.map((t) => [t.key, t]));

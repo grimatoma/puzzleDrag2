@@ -819,6 +819,244 @@ function drawMagicKey(ctx) {
   ctx.restore();
 }
 
+// Phase 3 net-new magic-tier tools (tool-powers overhaul).
+function drawGoldenApple(ctx) {
+  shadow(ctx, 14);
+  // Halo
+  magicHalo(ctx, "rgba(248,192,64,0.55)", 16);
+  // Apple body
+  const g = ctx.createRadialGradient(-4, -4, 2, 0, 0, 14);
+  g.addColorStop(0, "#fffce0"); g.addColorStop(0.4, "#f8c040"); g.addColorStop(1, "#7a4810");
+  ctx.fillStyle = g;
+  ctx.beginPath();
+  ctx.moveTo(-10, -2);
+  ctx.bezierCurveTo(-14, -10, -2, -14, 0, -10);
+  ctx.bezierCurveTo(2, -14, 14, -10, 10, -2);
+  ctx.bezierCurveTo(14, 8, 6, 14, 0, 14);
+  ctx.bezierCurveTo(-6, 14, -14, 8, -10, -2);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = "#3a2008"; ctx.lineWidth = 1.6; ctx.stroke();
+  // Stem
+  ctx.strokeStyle = "#3a2008"; ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(0, -10); ctx.bezierCurveTo(2, -14, 0, -16, -2, -18);
+  ctx.stroke();
+  // Leaf
+  ctx.fillStyle = "#a8d040";
+  ctx.beginPath();
+  ctx.ellipse(4, -14, 5, 2, -0.5, 0, Math.PI*2);
+  ctx.fill();
+  ctx.strokeStyle = "#3a4a08"; ctx.lineWidth = 0.8; ctx.stroke();
+  // Highlight
+  ctx.fillStyle = "rgba(255,255,255,0.7)";
+  ctx.beginPath(); ctx.ellipse(-4, -2, 3, 5, -0.3, 0, Math.PI*2); ctx.fill();
+  // Sparkles
+  ctx.fillStyle = "#fffce0";
+  [[8, 2], [-10, 4]].forEach(([x, y]) => {
+    ctx.beginPath();
+    for (let i = 0; i < 4; i++) {
+      const a = (i / 4) * Math.PI * 2;
+      const r = i % 2 === 0 ? 1.4 : 0.4;
+      const px = x + Math.cos(a) * r, py = y + Math.sin(a) * r;
+      if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+    }
+    ctx.closePath(); ctx.fill();
+  });
+}
+
+function drawGoldenCarrot(ctx) {
+  shadow(ctx, 12);
+  magicHalo(ctx, "rgba(248,192,64,0.5)", 16);
+  // Body — long taper, gold
+  const g = ctx.createLinearGradient(0, -8, 0, 18);
+  g.addColorStop(0, "#fffce0"); g.addColorStop(0.4, "#f8c040"); g.addColorStop(1, "#7a4810");
+  ctx.fillStyle = g;
+  ctx.beginPath();
+  ctx.moveTo(-6, -8); ctx.lineTo(6, -8); ctx.lineTo(2, 20); ctx.lineTo(-2, 20);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = "#3a2008"; ctx.lineWidth = 1.6; ctx.stroke();
+  // Ridges
+  ctx.strokeStyle = "rgba(58,32,8,0.6)"; ctx.lineWidth = 0.7;
+  for (let i = -6; i < 18; i += 4) {
+    ctx.beginPath(); ctx.moveTo(-5, i); ctx.lineTo(5, i); ctx.stroke();
+  }
+  // Greens at top
+  ctx.fillStyle = "#5a8a18";
+  for (let i = -2; i <= 2; i++) {
+    ctx.save(); ctx.translate(i * 2, -8); ctx.rotate(i * 0.2);
+    ctx.beginPath();
+    ctx.ellipse(0, -6, 2, 6, 0, 0, Math.PI*2);
+    ctx.fill();
+    ctx.strokeStyle = "#1e3a08"; ctx.lineWidth = 0.6; ctx.stroke();
+    ctx.restore();
+  }
+  // Highlight
+  ctx.fillStyle = "rgba(255,255,255,0.55)";
+  ctx.beginPath(); ctx.ellipse(-2, 4, 1.2, 10, -0.1, 0, Math.PI*2); ctx.fill();
+}
+
+function drawGoldenIdol(ctx) {
+  shadow(ctx, 18);
+  magicHalo(ctx, "rgba(248,192,64,0.55)", 20);
+  // Base / pedestal
+  ctx.fillStyle = "#a87010";
+  ctx.beginPath();
+  ctx.moveTo(-14, 18); ctx.lineTo(14, 18); ctx.lineTo(10, 12); ctx.lineTo(-10, 12);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = "#3a2008"; ctx.lineWidth = 1.6; ctx.stroke();
+  // Idol body — pyramidal
+  const g = ctx.createLinearGradient(0, -16, 0, 12);
+  g.addColorStop(0, "#fffce0"); g.addColorStop(0.4, "#f8c040"); g.addColorStop(1, "#7a4810");
+  ctx.fillStyle = g;
+  ctx.beginPath();
+  ctx.moveTo(0, -18);
+  ctx.lineTo(8, 0);
+  ctx.lineTo(10, 12);
+  ctx.lineTo(-10, 12);
+  ctx.lineTo(-8, 0);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = "#3a2008"; ctx.lineWidth = 1.6; ctx.stroke();
+  // Face glyphs
+  ctx.fillStyle = "#3a2008";
+  ctx.beginPath(); ctx.arc(-3, -4, 1.2, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(3, -4, 1.2, 0, Math.PI*2); ctx.fill();
+  ctx.strokeStyle = "#3a2008"; ctx.lineWidth = 1.0;
+  ctx.beginPath(); ctx.moveTo(-3, 2); ctx.lineTo(3, 2); ctx.stroke();
+  // Highlight
+  ctx.fillStyle = "rgba(255,255,255,0.5)";
+  ctx.beginPath();
+  ctx.moveTo(0, -18); ctx.lineTo(-3, -2); ctx.lineTo(-1, -2); ctx.lineTo(2, -18);
+  ctx.closePath();
+  ctx.fill();
+}
+
+function drawGoldenSheep(ctx) {
+  shadow(ctx, 18);
+  magicHalo(ctx, "rgba(248,192,64,0.5)", 18);
+  // Cloud-like body — gold-tinged wool
+  const g = ctx.createRadialGradient(-3, -2, 3, 0, 0, 14);
+  g.addColorStop(0, "#fffce0"); g.addColorStop(0.6, "#f8c040"); g.addColorStop(1, "#7a4810");
+  ctx.fillStyle = g;
+  for (const [x, y, r] of [[-8, -2, 6], [0, -6, 7], [8, -2, 6], [-4, 4, 6], [5, 5, 6]]) {
+    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI*2); ctx.fill();
+    ctx.strokeStyle = "#3a2008"; ctx.lineWidth = 1.2; ctx.stroke();
+  }
+  // Head poking out (right side)
+  ctx.fillStyle = "#3a2008";
+  ctx.beginPath(); ctx.ellipse(13, 0, 4, 3, 0.2, 0, Math.PI*2); ctx.fill();
+  ctx.strokeStyle = "#1a0e04"; ctx.lineWidth = 1.0; ctx.stroke();
+  // Ear
+  ctx.fillStyle = "#3a2008";
+  ctx.beginPath(); ctx.moveTo(11, -2); ctx.lineTo(14, -5); ctx.lineTo(13, -1); ctx.closePath(); ctx.fill();
+  // Eye highlight
+  ctx.fillStyle = "#fffce0";
+  ctx.beginPath(); ctx.arc(14, -1, 0.7, 0, Math.PI*2); ctx.fill();
+  // Legs
+  ctx.fillStyle = "#3a2008";
+  ctx.fillRect(-7, 10, 2.4, 8);
+  ctx.fillRect(0, 10, 2.4, 8);
+  ctx.fillRect(6, 10, 2.4, 8);
+  // Sparkles
+  ctx.fillStyle = "#fffce0";
+  [[-10, -10], [12, -8], [10, 10]].forEach(([x, y]) => {
+    ctx.beginPath();
+    for (let i = 0; i < 4; i++) {
+      const a = (i / 4) * Math.PI * 2;
+      const r = i % 2 === 0 ? 1.4 : 0.4;
+      const px = x + Math.cos(a) * r, py = y + Math.sin(a) * r;
+      if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+    }
+    ctx.closePath(); ctx.fill();
+  });
+}
+
+function drawPhilosophersStone(ctx) {
+  shadow(ctx, 14);
+  magicHalo(ctx, "rgba(232,40,40,0.55)", 18);
+  // Stone faceted gem
+  const g = ctx.createRadialGradient(-3, -3, 1, 0, 0, 14);
+  g.addColorStop(0, "#ffffff"); g.addColorStop(0.3, "#f86040"); g.addColorStop(0.7, "#a82018"); g.addColorStop(1, "#3a0808");
+  ctx.fillStyle = g;
+  ctx.beginPath();
+  ctx.moveTo(0, -14);
+  ctx.lineTo(12, -4);
+  ctx.lineTo(8, 12);
+  ctx.lineTo(-8, 12);
+  ctx.lineTo(-12, -4);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = "#3a0808"; ctx.lineWidth = 1.8; ctx.stroke();
+  // Facet lines
+  ctx.strokeStyle = "rgba(255,255,255,0.7)"; ctx.lineWidth = 0.9;
+  ctx.beginPath();
+  ctx.moveTo(0, -14); ctx.lineTo(0, 12);
+  ctx.moveTo(-12, -4); ctx.lineTo(12, -4);
+  ctx.moveTo(0, -14); ctx.lineTo(-8, 12);
+  ctx.moveTo(0, -14); ctx.lineTo(8, 12);
+  ctx.stroke();
+  // Center sparkle
+  ctx.fillStyle = "#ffffff";
+  ctx.beginPath();
+  for (let i = 0; i < 4; i++) {
+    const a = (i / 4) * Math.PI * 2;
+    const r = i % 2 === 0 ? 2.4 : 0.6;
+    const px = Math.cos(a) * r, py = -2 + Math.sin(a) * r;
+    if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+  }
+  ctx.closePath(); ctx.fill();
+  // Outer alchemical glyph
+  ctx.strokeStyle = "rgba(248,192,64,0.7)"; ctx.lineWidth = 0.8;
+  ctx.beginPath(); ctx.arc(0, -2, 16, 0, Math.PI*2); ctx.stroke();
+}
+
+function drawMinersHat(ctx) {
+  shadow(ctx, 18);
+  // Helmet body
+  const g = ctx.createRadialGradient(-4, -6, 3, 0, 4, 18);
+  g.addColorStop(0, "#f8c040"); g.addColorStop(0.6, "#a87010"); g.addColorStop(1, "#3a2008");
+  ctx.fillStyle = g;
+  ctx.beginPath();
+  ctx.moveTo(-16, 6);
+  ctx.bezierCurveTo(-16, -16, 16, -16, 16, 6);
+  ctx.lineTo(14, 10); ctx.lineTo(-14, 10);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = "#1a0e04"; ctx.lineWidth = 1.8; ctx.stroke();
+  // Brim
+  ctx.fillStyle = "#5a3408";
+  ctx.beginPath();
+  ctx.ellipse(0, 10, 18, 3, 0, 0, Math.PI*2);
+  ctx.fill();
+  ctx.strokeStyle = "#1a0e04"; ctx.lineWidth = 1.4; ctx.stroke();
+  // Lamp on front
+  ctx.fillStyle = "#a8a8b0";
+  ctx.beginPath();
+  ctx.moveTo(-6, -10); ctx.lineTo(6, -10); ctx.lineTo(8, -4); ctx.lineTo(-8, -4);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = "#1a1a1e"; ctx.lineWidth = 1.4; ctx.stroke();
+  // Lamp lens — glowing
+  const lampG = ctx.createRadialGradient(0, -7, 0.5, 0, -7, 5);
+  lampG.addColorStop(0, "#ffffff"); lampG.addColorStop(0.5, "#fff4a0"); lampG.addColorStop(1, "#a87010");
+  ctx.fillStyle = lampG;
+  ctx.beginPath(); ctx.arc(0, -7, 4, 0, Math.PI*2); ctx.fill();
+  ctx.strokeStyle = "#3a2008"; ctx.lineWidth = 1.0; ctx.stroke();
+  // Light beam
+  ctx.fillStyle = "rgba(255,244,160,0.45)";
+  ctx.beginPath();
+  ctx.moveTo(-3, -7); ctx.lineTo(-14, -22); ctx.lineTo(14, -22); ctx.lineTo(3, -7);
+  ctx.closePath(); ctx.fill();
+  // Magical glimmer
+  magicHalo(ctx, "rgba(184,120,232,0.4)", 16);
+  // Highlight
+  ctx.fillStyle = "rgba(255,255,255,0.4)";
+  ctx.beginPath(); ctx.ellipse(-8, -2, 4, 7, -0.4, 0, Math.PI*2); ctx.fill();
+}
+
 export const ICONS = {
   wand:          { label:"Wand",          color:"#80c8f8", draw:drawWand },
   spellbook:     { label:"Spellbook",     color:"#5a1010", draw:drawSpellbook },
@@ -837,4 +1075,10 @@ export const ICONS = {
   pentagram:     { label:"Pentagram",     color:"#f060c0", draw:drawPentagram },
   magic_mirror:  { label:"Magic Mirror",  color:"#80c8f8", draw:drawMagicMirror },
   magic_key:     { label:"Magic Key",     color:"#d8a020", draw:drawMagicKey },
+  golden_apple:      { label:"Golden Apple",       color:"#f8c040", draw:drawGoldenApple },
+  golden_carrot:     { label:"Golden Carrot",      color:"#f8c040", draw:drawGoldenCarrot },
+  golden_idol:       { label:"Golden Idol",        color:"#f8c040", draw:drawGoldenIdol },
+  golden_sheep:      { label:"Golden Sheep",       color:"#f8c040", draw:drawGoldenSheep },
+  philosophers_stone:{ label:"Philosopher's Stone", color:"#f86040", draw:drawPhilosophersStone },
+  miners_hat:        { label:"Miner's Hat",         color:"#f8c040", draw:drawMinersHat },
 };

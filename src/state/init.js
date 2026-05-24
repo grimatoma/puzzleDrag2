@@ -73,7 +73,7 @@ export function createFreshState(overrides) {
     resourceProgress: {},
     orders: [o1, o2, o3],
     quests: rollQuests(saveSeed, 1, "spring"),
-    tools: { 
+    tools: {
       clear: 2 + extraScytheBonus, basic: 1, rare: 1, shuffle: 0, bomb: 0,
       startingExtraScythe: !!overrides?.tools?.startingExtraScythe,
       extraBlueprintSlot: !!overrides?.tools?.extraBlueprintSlot,
@@ -84,7 +84,15 @@ export function createFreshState(overrides) {
       rake: 0, axe: 0, fertilizer: 0,
       cat: 0,
       bird_cage: 0, scythe_full: 0,
-      rifle: 0, hound: 0 
+      rifle: 0, hound: 0,
+      // Phase 3 net-new tools (tool-powers overhaul). Workshop tier defaults
+      // to 0; players craft them. Magic tools come via the portal so they
+      // also start at 0.
+      trimmer: 0, plough: 0, fruit_picker: 0, herders_crook: 0, milk_churn: 0,
+      saddle: 0, bee: 0, terrier: 0,
+      drill: 0, coal_hammer: 0, gold_pick: 0, magnet: 0, coal_transmuter: 0,
+      golden_apple: 0, golden_carrot: 0, golden_idol: 0, golden_sheep: 0,
+      philosophers_stone: 0, miners_hat: 0,
     },
     toolPending: null,
     toolPendingPower: null,

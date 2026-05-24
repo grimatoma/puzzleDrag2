@@ -643,6 +643,82 @@ function drawHound(ctx) {
   ctx.beginPath(); ctx.arc(-7, 6, 1.4, 0, Math.PI*2); ctx.fill();
 }
 
+// Phase 3 net-new farm tools (tool-powers overhaul).
+function drawHerdersCrook(ctx) {
+  shadow(ctx, 16);
+  woodHandle(ctx, -6, 22, 8, -16, 4);
+  // Curved hook at the top
+  ctx.save(); ctx.translate(8, -16);
+  ctx.strokeStyle = "#7a4818"; ctx.lineWidth = 5;
+  ctx.beginPath();
+  ctx.arc(-6, 0, 7, -Math.PI*0.1, Math.PI*1.2, false);
+  ctx.stroke();
+  ctx.strokeStyle = "#1a0e04"; ctx.lineWidth = 1.2;
+  ctx.beginPath();
+  ctx.arc(-6, 0, 7, -Math.PI*0.1, Math.PI*1.2, false);
+  ctx.stroke();
+  // Highlight on hook
+  ctx.strokeStyle = "rgba(255,255,255,0.45)"; ctx.lineWidth = 1.6;
+  ctx.beginPath();
+  ctx.arc(-6, 0, 7, -Math.PI*0.05, Math.PI*0.6, false);
+  ctx.stroke();
+  ctx.restore();
+  // Leather wrap at the grip
+  ctx.fillStyle = "#3a2008";
+  ctx.fillRect(-2, 8, 6, 4);
+  ctx.strokeStyle = "#1a0e04"; ctx.lineWidth = 0.8;
+  ctx.strokeRect(-2, 8, 6, 4);
+}
+
+function drawSaddle(ctx) {
+  shadow(ctx, 22);
+  // Seat body
+  const g = ctx.createLinearGradient(0, -4, 0, 12);
+  g.addColorStop(0, "#a85420");
+  g.addColorStop(0.5, "#6a3010");
+  g.addColorStop(1, "#3a1808");
+  ctx.fillStyle = g;
+  ctx.beginPath();
+  ctx.moveTo(-20, 4);
+  ctx.bezierCurveTo(-22, -2, -16, -10, -8, -8);
+  ctx.bezierCurveTo(-2, -12, 8, -12, 14, -8);
+  ctx.bezierCurveTo(20, -6, 22, 0, 20, 6);
+  ctx.bezierCurveTo(18, 14, 10, 16, 0, 14);
+  ctx.bezierCurveTo(-10, 16, -18, 12, -20, 4);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = "#1a0e04"; ctx.lineWidth = 1.8; ctx.stroke();
+  // Pommel knob
+  ctx.fillStyle = "#3a1808";
+  ctx.beginPath(); ctx.arc(-14, -4, 4, 0, Math.PI*2); ctx.fill();
+  ctx.strokeStyle = "#1a0e04"; ctx.lineWidth = 1.2; ctx.stroke();
+  // Highlight stripe across the seat
+  ctx.fillStyle = "rgba(255,255,255,0.25)";
+  ctx.beginPath();
+  ctx.ellipse(-2, -2, 12, 3, -0.1, 0, Math.PI*2);
+  ctx.fill();
+  // Stitching line
+  ctx.strokeStyle = "rgba(245,235,210,0.6)"; ctx.lineWidth = 0.7;
+  ctx.beginPath();
+  ctx.moveTo(-16, 8); ctx.lineTo(16, 4);
+  ctx.stroke();
+  ctx.setLineDash([1.5, 1.5]);
+  ctx.beginPath();
+  ctx.moveTo(-16, 8); ctx.lineTo(16, 4);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  // Stirrup loop hanging down
+  ctx.strokeStyle = "#5a3814"; ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(10, 12); ctx.lineTo(8, 22);
+  ctx.stroke();
+  ctx.fillStyle = "#5a5a62";
+  ctx.beginPath();
+  ctx.ellipse(8, 22, 4, 2, 0, 0, Math.PI*2);
+  ctx.fill();
+  ctx.strokeStyle = "#1a1a1e"; ctx.lineWidth = 1.0; ctx.stroke();
+}
+
 export const ICONS = {
   rake:          { label:"Rake",          color:"#7a4818", draw:drawRake },
   axe:           { label:"Axe",           color:"#a8a8b0", draw:drawAxe },
@@ -662,4 +738,6 @@ export const ICONS = {
   rifle:         { label:"Rifle",         color:"#7a4818", draw:drawRifle },
   terrier:       { label:"Terrier",       color:"#a89060", draw:drawTerrier },
   hound:         { label:"Hound",         color:"#7a4818", draw:drawHound },
+  herders_crook: { label:"Herder's Crook", color:"#7a4818", draw:drawHerdersCrook },
+  saddle:        { label:"Saddle",        color:"#a85420", draw:drawSaddle },
 };
