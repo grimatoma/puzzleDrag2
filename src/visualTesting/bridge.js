@@ -1,3 +1,4 @@
+import { BOARD_ANIMATIONS, demoBoardAnimResetMs } from "../config/boardAnimations.js";
 import { buildVisualScenario, listVisualScenarios } from "./scenarios.js";
 
 function nextFrame() {
@@ -107,17 +108,38 @@ async function holdChain({ key, length }) {
   };
 }
 
+let demoAnimResetTimer = null;
+
 /**
  * Demo-only: triggers a board animation on tiles selected by `pattern`.
- * Does NOT null grid cells, so `sweep` will leave dangling grid references
- * (tile.destroy() in onComplete). Pair with HEARTH_RELOAD_SCENARIO to reset.
+ * Sweep nulls cells and runs collapse like real tools; all kinds reload the
+ * scenario when the animation (and collapse, if any) finishes.
  */
-function playBoardAnimation({ name, tint, pattern }) {
+function playBoardAnimation({ name, tint, pattern }, api) {
   const scene = window.__phaserScene;
   if (!scene?.grid?.length) throw new Error("Phaser scene is not ready for playBoardAnimation");
   const tiles = pickTilesForPattern(scene, pattern);
   if (!tiles.length) return { played: false, tileCount: 0 };
-  scene.playBoardAnimation(name, tiles, { tint });
+
+  const isSweep = BOARD_ANIMATIONS[name]?.kind === "fadeOut";
+  if (isSweep) {
+    tiles.forEach((tile) => {
+      if (scene.grid[tile.row]?.[tile.col] === tile) scene.grid[tile.row][tile.col] = null;
+    });
+    scene.playBoardAnimation(name, tiles, { tint });
+    scene.time?.delayedCall?.(240, () => scene.collapseBoard?.());
+  } else {
+    scene.playBoardAnimation(name, tiles, { tint });
+  }
+
+  if (demoAnimResetTimer != null) clearTimeout(demoAnimResetTimer);
+  const resetMs = demoBoardAnimResetMs(name, tiles.length);
+  demoAnimResetTimer = setTimeout(() => {
+    demoAnimResetTimer = null;
+    const id = document.documentElement.dataset.visualScenario;
+    if (id) api.loadScenario(id).catch((err) => console.warn("[hearthVisual] demo reload failed:", err.message));
+  }, resetMs);
+
   return { played: true, tileCount: tiles.length, pattern: pattern ?? "all" };
 }
 
@@ -157,7 +179,7 @@ function pickTilesForPattern(scene, pattern) {
   }
 }
 
-function applyBoardStateToScene(state) {
+function applyBoardStateToScene(state, { rebuildGrid = false } = {}) {
   const scene = window.__phaserScene;
   if (!scene || state?.view !== "board") return false;
   scene.registry.set("biomeKey", state.biomeKey ?? state.biome ?? "farm");
@@ -171,7 +193,11 @@ function applyBoardStateToScene(state) {
   scene.registry.set("hazardRats", state.hazards?.rats ?? null);
   if (Array.isArray(state.grid)) {
     scene.registry.set("grid", state.grid);
-    scene._applyGridFromState?.(state.grid);
+    if (rebuildGrid && typeof scene.rebuildGridFromState === "function") {
+      scene.rebuildGridFromState(state.grid);
+    } else {
+      scene._applyGridFromState?.(state.grid);
+    }
   }
   scene.refreshSeasonTint?.();
   return true;
@@ -256,6 +282,10 @@ export function installVisualTestingBridge({ getState, dispatch }) {
       return getState();
     },
     async loadScenario(id) {
+      if (demoAnimResetTimer != null) {
+        clearTimeout(demoAnimResetTimer);
+        demoAnimResetTimer = null;
+      }
       const scenario = buildVisualScenario(id);
       const stateTree = { ...cloneState(scenario.stateTree), _visualScenarioId: id };
       if (scenario.hash) {
@@ -267,7 +297,7 @@ export function installVisualTestingBridge({ getState, dispatch }) {
       dispatch({ type: "VISUAL/LOAD_STATE", payload: { id, state: stateTree } });
       document.documentElement.dataset.visualScenario = id;
       await settleFrames(4);
-      applyBoardStateToScene(stateTree);
+      applyBoardStateToScene(stateTree, { rebuildGrid: true });
       await settleFrames(2);
       return {
         id,
@@ -278,7 +308,7 @@ export function installVisualTestingBridge({ getState, dispatch }) {
     click: (selector) => clickSelector(selector),
     hover: (selector) => hoverSelector(selector),
     holdChain,
-    playBoardAnimation,
+    playBoardAnimation: (opts) => playBoardAnimation(opts, api),
     syncScene: () => applyBoardStateToScene(window.__hearthVisualScenarioState ?? getState()),
     freeze: freezeUi,
     selectorForTestId: (testId) => `[data-testid="${cssEscape(testId)}"]`,
@@ -291,7 +321,7 @@ export function installVisualTestingBridge({ getState, dispatch }) {
     if (!data || typeof data !== "object") return;
     if (data.type === "HEARTH_PLAY_ANIMATION") {
       try {
-        playBoardAnimation({ name: data.name, tint: data.tint, pattern: data.pattern });
+        playBoardAnimation({ name: data.name, tint: data.tint, pattern: data.pattern }, api);
       } catch (err) {
         console.warn("[hearthVisual] playBoardAnimation failed:", err.message);
       }
@@ -316,6 +346,7 @@ export function installVisualTestingBridge({ getState, dispatch }) {
   });
 
   return () => {
+    if (demoAnimResetTimer != null) clearTimeout(demoAnimResetTimer);
     window.removeEventListener("message", onMessage);
     delete window.__hearthVisual;
     delete window.__hearthVisualScenarioState;

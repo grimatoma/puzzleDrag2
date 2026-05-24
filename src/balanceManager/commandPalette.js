@@ -17,6 +17,7 @@ import { ACHIEVEMENTS } from "../features/achievements/data.js";
 import { ZONES, ZONE_IDS } from "../features/zones/data.js";
 import { STORY_BEATS, SIDE_BEATS } from "../story.js";
 import { STORY_FLAGS } from "../flags.js";
+import { getToolPower } from "../config/toolPowers.js";
 
 function asArrayValues(obj) {
   return Array.isArray(obj) ? obj : Object.values(obj || {});
@@ -38,9 +39,13 @@ export function buildCommandIndex({ items = ITEMS, npcs = NPCS, buildings = BUIL
       keywords: [id, item?.label, "tile"].filter(Boolean) });
   }
   for (const [id, item] of Object.entries(items || {})) {
+    const power = item?.effect ? getToolPower(item.effect) : null;
+    const powerBit = power
+      ? ` · ${power.name}`
+      : (item?.effect ? ` · ${item.effect}` : "");
     push({ id, kind: "item", tab: "items",
-      label: item?.label || id, sublabel: `item · ${id}${item?.effect ? ` · ${item.effect}` : ""}`,
-      keywords: [id, item?.label, item?.effect, item?.target, "item"].filter(Boolean) });
+      label: item?.label || id, sublabel: `item · ${id}${powerBit}`,
+      keywords: [id, item?.label, item?.effect, power?.name, item?.target, "item", "tool", "power"].filter(Boolean) });
   }
   for (const [id, recipe] of Object.entries(recipes || {})) {
     push({ id, kind: "recipe", tab: "recipes",

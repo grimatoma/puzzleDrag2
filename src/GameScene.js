@@ -776,6 +776,40 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
+  /** Replace every live tile from a serialized grid (visual demo reload). */
+  rebuildGridFromState(stateGrid) {
+    if (!stateGrid) return;
+    this.endPath();
+    this.clearPath(false);
+    this.pendingUpgrades = [];
+    for (let r = 0; r < ROWS; r++) {
+      for (let c = 0; c < COLS; c++) {
+        const tile = this.grid[r]?.[c];
+        if (tile) {
+          this.tweens.killTweensOf(tile.sprite);
+          tile.destroy();
+        }
+        this.grid[r][c] = null;
+      }
+    }
+    const ts = this.tileSize;
+    for (let r = 0; r < ROWS; r++) {
+      for (let c = 0; c < COLS; c++) {
+        const cell = stateGrid[r]?.[c];
+        if (!cell?.key) continue;
+        const res = resourceByKey(cell.key);
+        if (!res) continue;
+        const x = this.boardX + c * ts + ts / 2;
+        const y = this.boardY + r * ts + ts / 2;
+        const tile = new TileObj(this, x, y, c, r, res);
+        tile.sprite.setScale(this.tileSpriteScale);
+        tile.frozen = !!cell.frozen;
+        tile.rubble = !!cell.rubble;
+        this.grid[r][c] = tile;
+      }
+    }
+  }
+
   // ─── Board fill / collapse ────────────────────────────────────────────────
 
   fillBoard(initial = false) {
