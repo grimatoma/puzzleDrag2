@@ -323,7 +323,10 @@ export default function App() {
   }, [state.toolPending, chainInfo]);
 
   useEffect(() => {
-    if (!import.meta.env.DEV && import.meta.env.MODE !== "test") return undefined;
+    // While the project is in active development we deploy as effectively dev
+    // (the visual bridge powers the Balance Manager's Animations Demo iframe,
+    // and other dev tools rely on it). Re-add the env gate when prod deploys
+    // should exclude the bridge.
     let cleanup;
     let active = true;
     import("./src/visualTesting/bridge.js").then(({ installVisualTestingBridge }) => {
