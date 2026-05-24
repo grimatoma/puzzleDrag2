@@ -1,4 +1,4 @@
-// Expedition Rations tab — Balance Manager.
+// Expedition Rations tab — Dev Panel.
 //
 // Tunes the supply-structured mine/harbor round (master doc §VI): how many
 // turns each ration is worth, and which foods count as "meat" for the

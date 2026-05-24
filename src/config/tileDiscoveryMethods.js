@@ -3,7 +3,7 @@
 //
 // Each entry declares:
 //   - id     — stable string used by tile data (`discovery.method`)
-//   - name   — human-readable name shown in the Balance Manager
+//   - name   — human-readable name shown in the Dev Panel
 //   - desc   — short description of the discovery condition
 //   - params — schema for the editor + per-tile arguments (may be empty)
 //

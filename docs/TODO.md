@@ -22,7 +22,7 @@ Status legend: **[ ]** not started · **[~]** partial · **[deferred]** there's 
 - **Economy** — real-time crafting queue + gem-skip; the Items registry (`ITEMS`); expedition-supply model for mine/harbor (`EXPEDITION/DEPART` + a "Pack provisions" packer) + the `EXPEDITION_FOOD_TURNS` table.
 - **Audit cadence** — day-cooldown audit-boss trigger (replaced the seasonal climax).
 - **Town redesign** — a procedural town plan (plaza + streets + a planned lot grid + street furniture); walking villagers on the street graph; the farm/mine/harbor entrances moved onto town lots.
-- **Balance Manager** — config tabs for every shipped data table: Tiles, Zones, Settlement Biomes, Resources, Items, Recipes, Buildings, Expedition Rations, Story·Dialogue (→ `/story/`), NPCs, Keepers, Boons (read-only), Workers, Tuning, Bosses, Achievements, Daily Rewards (+ Icons / Export).
+- **Dev Panel** — config tabs for every shipped data table: Tiles, Zones, Settlement Biomes, Resources, Items, Recipes, Buildings, Expedition Rations, Story·Dialogue (→ `/story/`), NPCs, Keepers, Boons (read-only), Workers, Tuning, Bosses, Achievements, Daily Rewards (+ Icons / Export).
 - **Tech-debt sweep (Wave H)** — queued-craft `CLAIM_CRAFT` / `SKIP_CRAFT` now fire `craft_made` from coreReducer and bump `totalCrafted` from the crafting slice (achievements, story beats, `ember_drake` boss progress all advance for queued completions); pruned the 18 unused `char_*` apprentice portrait portraits + their `draw*` functions (≈900 lines); collapsed the legacy `applyResourceOverrides` into `applyItemOverrides` (tests migrated, function deleted).
 - **Zone 1 Stabilization** — wired `settlementHazards` to the game board; added "Dangers" UI to expedition/farming modals; implemented "First Harvest" onboarding beat; extended Almanac to 10 tiers with structural rewards; added missing expedition food recipes (`cured_meat`, `iron_ration`, etc.) + `supplies` kitchen recipe.
 
@@ -59,7 +59,7 @@ Status legend: **[ ]** not started · **[~]** partial · **[deferred]** there's 
 
 - [~] **Daily quest pools per NPC** (Part 5 §I — Mira's/Bram's/Liss's/Tomas's/Wren's templates) — there's an `orders` system (`makeOrder`) but not the structured per-NPC pools from the doc.
 - [ ] **Personal-arc + kingdom story quests** (Part 5 §II–III).
-- [ ] **A Quests tab in the Balance Manager.**
+- [ ] **A Quests tab in the Dev Panel.**
 
 ## 5. Bosses
 
@@ -76,7 +76,7 @@ Status legend: **[ ]** not started · **[~]** partial · **[deferred]** there's 
 - [ ] **Remove the now-hidden legacy foreground `roadPath`** in `Town.jsx`.
 - [ ] Tighten the perspective so tall buildings (silo/portal) sit right on their square lots.
 
-## 7. Balance Manager polish
+## 7. Dev Panel polish
 
 - [ ] **Bosses** → modifier params · **Achievements** → the `counter` · **Daily Rewards** → tool/tile-unlock drops · **NPCs** → order-line templates + `GIFT_DELTAS` · **Boons** → editable name/desc/cost/effect params (the tab ships read-only; needs an `applyBoonOverrides` paralleling `applyKeeperOverrides`).
 - [x] **Story editor graph readability pass** — per-conversation-chain focus mode plus global/stitched view controls are live in `/story/`.

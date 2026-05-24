@@ -1,4 +1,4 @@
-// Compact stats panel for the Story Tree Editor / Balance Manager Story tab.
+// Compact stats panel for the Story Tree Editor / Dev Panel Story tab.
 // Renders the output of computeStoryStats() as a grid of metric cards plus
 // a per-NPC ranking table. Display-only; click-through to beats is handled
 // elsewhere (the validation panel covers warning-driven navigation).

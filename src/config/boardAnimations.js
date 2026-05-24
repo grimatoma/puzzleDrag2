@@ -2,7 +2,7 @@
  * Single source of truth for board-tool animation timing. Tools pick a named
  * animation and supply tiles + an optional tint; duration / stagger / ease /
  * rotation jitter live here so designers can tune everything in one place and
- * the Balance Manager's Animations Demo tab can read from this same module.
+ * the Dev Panel's Animations Demo tab can read from this same module.
  */
 
 export const BOARD_ANIMATIONS = Object.freeze({

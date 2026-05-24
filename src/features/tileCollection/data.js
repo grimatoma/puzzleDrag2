@@ -670,7 +670,7 @@ export const TILE_TYPES = [
 
 // Compile each tile's `abilities` array (data-defined) into the legacy
 // `effects` shape that GameScene + state.js read from. Done before the
-// balance-manager override step so overrides can wholesale-replace the
+// dev-panel override step so overrides can wholesale-replace the
 // abilities and recompile.
 for (const t of TILE_TYPES) {
   if (Array.isArray(t.abilities) && t.abilities.length > 0) {
@@ -678,7 +678,7 @@ for (const t of TILE_TYPES) {
   }
 }
 
-// Balance-Manager: apply tile-power, unlock and description overrides in
+// Dev Panel: apply tile-power, unlock and description overrides in
 // place before the lookup maps below are built, so consumers see the
 // merged data.
 applyTileOverrides(TILE_TYPES, BALANCE_OVERRIDES);

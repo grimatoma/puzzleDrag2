@@ -82,7 +82,7 @@ const REGISTRY_DRAFT = {
   ...G_UI_ELEMENTS,
   ...G_MISSING_ITEMS,
   // Archived legacy draws live under `legacy_<key>` keys. They render in the
-  // Balance Manager's Icons tab but are never used in-game. Spread last so
+  // Dev Panel's Icons tab but are never used in-game. Spread last so
   // they can never accidentally override an active key.
   ...G_ARCHIVED,
 };

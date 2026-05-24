@@ -125,7 +125,7 @@ export function nextHireResourceCost(worker, count) {
   return out;
 }
 
-// Phase 6 — Balance Manager hook. Apply any committed/draft overrides from
+// Phase 6 — Dev Panel hook. Apply any committed/draft overrides from
 // `src/config/balance.json` + the localStorage draft to the live TYPE_WORKERS
 // array at module load time.
 import { BALANCE_OVERRIDES } from "../../constants.js";

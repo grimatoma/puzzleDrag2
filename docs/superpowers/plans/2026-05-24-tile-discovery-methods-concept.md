@@ -128,7 +128,7 @@ Create `src/config/tileDiscoveryMethods.js`:
 //
 // Each entry declares:
 //   - id     — stable string used by tile data (`discovery.method`)
-//   - name   — human-readable name shown in the Balance Manager
+//   - name   — human-readable name shown in the Dev Panel
 //   - desc   — short description of the discovery condition
 //   - params — schema for the editor + per-tile arguments (may be empty)
 //
@@ -416,7 +416,7 @@ list of tiles currently using that method."
 
 ---
 
-## Task 4: Register the Tile Discovery tab in the Balance Manager
+## Task 4: Register the Tile Discovery tab in the Dev Panel
 
 **Files:**
 - Modify: `src/balanceManager/index.jsx`
@@ -670,7 +670,7 @@ Expected: clean.
 - [ ] **Step 3: Build**
 
 Run: `npm run build`
-Expected: build succeeds. The Balance Manager bundle (`/b/`) should include the new tab as its own chunk (lazy-loaded).
+Expected: build succeeds. The Dev Panel bundle (`/b/`) should include the new tab as its own chunk (lazy-loaded).
 
 - [ ] **Step 4: Confirm no stray edits**
 

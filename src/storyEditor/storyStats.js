@@ -7,7 +7,7 @@
 // - "How many beats have actual choices vs. straight-through dialogue?"
 // - "Which side beats look likely to be unreachable?"
 //
-// Used by the Story Tree Editor / Balance Manager StoryTab.
+// Used by the Story Tree Editor / Dev Panel StoryTab.
 
 import { effectiveBeat, allBeatIds, draftBeats, isDraftBeat } from "./shared.jsx";
 

@@ -1,4 +1,4 @@
-// Zones tab — Balance Manager.
+// Zones tab — Dev Panel.
 //
 // Edits per-zone settings: name, board flags (hasFarm/hasMine/hasWater),
 // buildings list, baseTurns, entry cost, upgrade map, and per-session-season

@@ -315,7 +315,7 @@ function coreReducer(state, action) {
         }
       }
 
-      // Power-hook coin bonuses (set via Balance Manager → Tile Powers).
+      // Power-hook coin bonuses (set via Dev Panel → Tile Powers).
       const chainTileEffects = TILE_TYPES_MAP[key]?.effects ?? {};
       const hookFlat = chainTileEffects.coinBonusFlat || 0;
       const hookPerTile = chainTileEffects.coinBonusPerTile || 0;

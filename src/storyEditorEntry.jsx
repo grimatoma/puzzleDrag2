@@ -1,6 +1,6 @@
 // Entry point for the Story Tree Editor served at `/story/`.
 // Separate Vite input (see vite.config.js) — builds to its own HTML + JS bundle.
-// Shares localStorage with the game and Balance Manager; story-beat overrides
+// Shares localStorage with the game and Dev Panel; story-beat overrides
 // written here flow through the same hearth.balance.draft key.
 
 import "./index.css";

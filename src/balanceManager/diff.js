@@ -1,6 +1,6 @@
 // Balance-draft diff helpers.
 //
-// The Balance Manager loads its starting draft from a merge of
+// The Dev Panel loads its starting draft from a merge of
 // `balance.json` (committed) + a localStorage draft. When the designer
 // makes edits and asks "what would actually change if I downloaded this
 // draft and replaced balance.json?", these helpers answer that question:
