@@ -180,7 +180,7 @@ export function AbilitySummary({ abilities, effects, empty = "No special bonus."
   if (effects?.freeMovesIfChain?.minChain) rows.push(`Free move on ${effects.freeMovesIfChain.minChain}+ chain`);
 
   const unique = [...new Set(rows)].filter(Boolean);
-  if (unique.length === 0) return <div className="hl-text-faint italic">{empty}</div>;
+  if (unique.length === 0) return empty == null ? null : <div className="hl-text-faint italic">{empty}</div>;
   return (
     <ul className="hl-ability-list">
       {unique.map((row) => <li key={row}>{row}</li>)}
