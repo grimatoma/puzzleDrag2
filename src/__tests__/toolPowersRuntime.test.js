@@ -10,7 +10,7 @@
  * Until then, the action payload is the contract.
  */
 import { describe, it, expect } from "vitest";
-import { rootReducer, createInitialState } from "../state.js";
+import { rootReducer, createInitialState, disarmAllTools } from "../state.js";
 import { ROWS, COLS } from "../constants.js";
 
 // ─── helpers ──────────────────────────────────────────────────────────────
@@ -332,6 +332,101 @@ describe("USE_TOOL { power: restore_turns } — adds turns to the active run", (
       payload: { id: "ration", power: { id: "restore_turns", params: {} } },
     });
     expect(s1.farmRun.turnsRemaining).toBe(6);
+  });
+});
+
+// ─── disarmAllTools — Phase 2 typed-power refund leak regression ───────────
+
+describe("disarmAllTools — Phase 2 typed tap-target powers", () => {
+  it("clears toolPendingPower without refunding the deferred charge", () => {
+    // Arm an area_blast power on a tool key not in TAP_TARGET_TOOL_KEYS.
+    // The charge is deferred to TOOL_FIRED, so disarming must NOT refund.
+    const s0 = withGrid(gridFrom([]), { tools: { bomb_v2: 1 } });
+    const armed = rootReducer(s0, {
+      type: "USE_TOOL",
+      payload: { id: "bomb_v2", power: { id: "area_blast", params: { radius: 1 } } },
+    });
+    expect(armed.toolPending).toBe("bomb_v2");
+    expect(armed.toolPendingPower?.id).toBe("area_blast");
+    // Charge stays at 1 — deferred to TOOL_FIRED.
+    expect(armed.tools.bomb_v2).toBe(1);
+
+    // Now navigate away — SET_VIEW to anything other than "board" funnels
+    // through disarmAllTools (state.js:988). Use the helper directly too.
+    const disarmedDirect = disarmAllTools(armed);
+    expect(disarmedDirect.toolPending).toBeNull();
+    expect(disarmedDirect.toolPendingPower).toBeNull();
+    // Critical: tool count UNCHANGED — refunding here would dupe the charge.
+    expect(disarmedDirect.tools.bomb_v2).toBe(1);
+
+    // Same path via the reducer (SET_VIEW → coreReducer → disarmAllTools).
+    const viaReducer = rootReducer(armed, { type: "SET_VIEW", view: "town" });
+    expect(viaReducer.toolPending).toBeNull();
+    expect(viaReducer.toolPendingPower).toBeNull();
+    expect(viaReducer.tools.bomb_v2).toBe(1);
+  });
+
+  it("clears toolPendingPower for transform_adjacent without refund", () => {
+    const s0 = withGrid(gridFrom([]), { tools: { coal_transmuter: 1 } });
+    const armed = rootReducer(s0, {
+      type: "USE_TOOL",
+      payload: {
+        id: "coal_transmuter",
+        power: { id: "transform_adjacent", params: { from: "dirt", to: "tile_mine_stone", radius: 1 } },
+      },
+    });
+    expect(armed.toolPendingPower?.id).toBe("transform_adjacent");
+    expect(armed.tools.coal_transmuter).toBe(1);
+
+    const disarmed = disarmAllTools(armed);
+    expect(disarmed.toolPending).toBeNull();
+    expect(disarmed.toolPendingPower).toBeNull();
+    expect(disarmed.tools.coal_transmuter).toBe(1);
+  });
+
+  it("clears toolPendingPower for tap_clear_type without refund", () => {
+    const s0 = withGrid(gridFrom([]), { tools: { wand_v2: 1 } });
+    const armed = rootReducer(s0, {
+      type: "USE_TOOL",
+      payload: { id: "wand_v2", power: { id: "tap_clear_type", params: {} } },
+    });
+    expect(armed.toolPendingPower?.id).toBe("tap_clear_type");
+    expect(armed.tools.wand_v2).toBe(1);
+
+    const disarmed = disarmAllTools(armed);
+    expect(disarmed.toolPending).toBeNull();
+    expect(disarmed.toolPendingPower).toBeNull();
+    expect(disarmed.tools.wand_v2).toBe(1);
+  });
+
+  it("preserves legacy refund behavior when only toolPending is set (no toolPendingPower)", () => {
+    // Legacy arm path: toolPending is a non-tap-target tool key with no
+    // typed power. disarm should refund the charge into tools[key], unchanged
+    // from pre-Phase-2 behavior.
+    const s0 = withGrid(gridFrom([]), {
+      tools: { hourglass: 0 },
+      toolPending: "hourglass",
+      toolPendingPower: null,
+    });
+    const disarmed = disarmAllTools(s0);
+    expect(disarmed.toolPending).toBeNull();
+    expect(disarmed.toolPendingPower).toBeNull();
+    // Refund: hourglass goes 0 → 1.
+    expect(disarmed.tools.hourglass).toBe(1);
+  });
+
+  it("preserves legacy tap-target behavior (bomb/rake/axe/magic_wand)", () => {
+    // Legacy tap-target arm: toolPending = "bomb", no typed power. The
+    // charge was deferred, so disarm clears toolPending without refund.
+    const s0 = withGrid(gridFrom([]), {
+      tools: { bomb: 2 },
+      toolPending: "bomb",
+      toolPendingPower: null,
+    });
+    const disarmed = disarmAllTools(s0);
+    expect(disarmed.toolPending).toBeNull();
+    expect(disarmed.toolPendingPower).toBeNull();
+    expect(disarmed.tools.bomb).toBe(2);
   });
 });
 

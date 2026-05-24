@@ -87,6 +87,7 @@ export function createFreshState(overrides) {
       rifle: 0, hound: 0 
     },
     toolPending: null,
+    toolPendingPower: null,
     fertilizerActive: false,
     mysteriousOre: null,
     fishPearl: null,
@@ -232,6 +233,10 @@ export function initialState(overrides) {
       bubble: null,
       pendingView: null,
       toolPending: null,
+      // Phase 2 (tool-powers overhaul) — any armed typed power from save time
+      // must also clear on load. The save schema is forward-safe: old saves
+      // simply lack this field, and the merge sets it to null either way.
+      toolPendingPower: null,
       fertilizerActive: false,
       tools: restoredTools,
       runeStash: restoredRuneStash,

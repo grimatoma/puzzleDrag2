@@ -64,6 +64,16 @@ const slices = [crafting, quests, achievements, tutorial, settings, boss, cartog
 // sync with `armed: "tap"` entries in src/ui/toolRegistry.js.
 const TAP_TARGET_TOOL_KEYS = new Set(["bomb", "rake", "axe", "magic_wand"]);
 
+// Phase 2 (tool-powers overhaul) — typed-power equivalent of the legacy
+// TAP_TARGET_TOOL_KEYS set. Any power id in this set arms-on-USE_TOOL and
+// fires-on-TOOL_FIRED, deferring the charge spend to fire time. Keep in
+// sync with the tap-target branch in applyToolPower below.
+const TAP_TARGET_POWER_IDS = new Set([
+  "area_blast",
+  "transform_adjacent",
+  "tap_clear_type",
+]);
+
 // Disarm every armed tool in one shot, mirroring the existing CANCEL_TOOL +
 // USE_TOOL(fertilizer self-disarm) sequences so the player is left whole:
 // tap-target arms spent no charge to refund, instant arms get their charge
@@ -73,7 +83,15 @@ const TAP_TARGET_TOOL_KEYS = new Set(["bomb", "rake", "axe", "magic_wand"]);
 export function disarmAllTools(state) {
   let next = state;
   const pending = next.toolPending;
-  if (pending) {
+  const pendingPower = next.toolPendingPower;
+  // Phase 2 typed-power arm: if a tap-target power is armed, the charge was
+  // deferred to TOOL_FIRED (never spent), so just clear the arm — do NOT
+  // refund. Refunding here would dupe the charge the next time the player
+  // returns to the board. Legacy behavior (no toolPendingPower set) is
+  // preserved exactly by the else-branch below.
+  if (pendingPower && TAP_TARGET_POWER_IDS.has(pendingPower.id)) {
+    next = { ...next, toolPending: null, toolPendingPower: null };
+  } else if (pending) {
     if (TAP_TARGET_TOOL_KEYS.has(pending)) {
       next = { ...next, toolPending: null };
     } else if (pending === "rune_wildcard") {
@@ -93,9 +111,10 @@ export function disarmAllTools(state) {
       tools: { ...next.tools, fertilizer: (next.tools?.fertilizer ?? 0) + 1 },
     };
   }
-  // Phase 2 (tool-powers overhaul) — drop any armed typed-power config too.
-  // The charge was refunded above via the `toolPending` branch if applicable;
-  // here we just clear the tap-target armed power reference.
+  // Defensive: if a non-tap-target toolPendingPower is somehow still set
+  // (e.g. a non-tap typed power left armed by a future bug), drop it. The
+  // legacy refund branch above already handled toolPending; this just makes
+  // sure the field doesn't carry across.
   if (next.toolPendingPower) {
     next = { ...next, toolPendingPower: null };
   }
@@ -113,12 +132,9 @@ export function disarmAllTools(state) {
 //
 // Non-tap powers consume one charge from `state.tools[key]` (when `key` is
 // non-null). Tap-target powers stash the armed power config in
-// `state.toolPendingPower` and only spend the charge on TOOL_FIRED.
-const TAP_TARGET_POWER_IDS = new Set([
-  "transform_adjacent",
-  "area_blast",
-  "tap_clear_type",
-]);
+// `state.toolPendingPower` and only spend the charge on TOOL_FIRED. The
+// TAP_TARGET_POWER_IDS set lives near TAP_TARGET_TOOL_KEYS above so
+// disarmAllTools can reference it too.
 
 function _spendToolCharge(state, key) {
   if (!key) return state;
