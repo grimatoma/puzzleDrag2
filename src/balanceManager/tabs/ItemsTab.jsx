@@ -1,6 +1,6 @@
 // Items — discrete objects that sit in your inventory (one or many of each:
-// a rake, a comb, a table…). A "tool" is just an item with a power: the
-// Effect / Target / Anim fields are what make it a tool.
+// a rake, a comb, a table…). A "tool" is just an item with a tool power: the
+// power / target / anim fields are what make it a tool.
 //
 // Tiles (board pieces) are separate. This tab is the unified inventory model:
 // resources + plain items + tools.
@@ -27,7 +27,7 @@ function isItem(r) {
   return r.kind !== "tile";
 }
 
-// What makes an item a "tool" is that it has a power — a wired effect.
+// What makes an item a "tool" is that it has a tool power wired (stored as `effect` in data).
 function isTool(r) {
   return r.kind === "tool" || !!r.effect;
 }
@@ -168,20 +168,19 @@ export default function ItemsTab({ draft, updateDraft }) {
                     </div>
                   )}
 
-                  {/* The power — having one of these is what makes an item a tool.
-                      Grouped into its own sub-Card so the connected attributes
-                      (effect + its params + anim) read as a single unit, the
-                      same way Abilities/Attributes render on Buildings. */}
+                  {/* Tool power — having one wired is what makes an item a tool.
+                      Grouped into its own sub-Card so power + params + anim read
+                      as a single unit, the same way Attributes render on Buildings. */}
                   {tool && (
                     <div className="col-span-2">
                       <Card>
                         <div className="text-[11px] font-bold uppercase tracking-wide mb-2" style={{ color: COLORS.inkSubtle }}>
-                          Effect
+                          Tool power
                         </div>
                         <div className="grid grid-cols-2 gap-x-3 gap-y-1.5">
-                          {/* Effect (power) — schema-driven dropdown */}
+                          {/* Tool power — schema-driven dropdown (persisted as `effect` on the item) */}
                           <div className="col-span-2">
-                            <Label>Effect (power)</Label>
+                            <Label>Tool power</Label>
                             <Select
                               value={eff.effect}
                               options={[

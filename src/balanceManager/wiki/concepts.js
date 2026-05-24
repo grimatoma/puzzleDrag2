@@ -214,7 +214,7 @@ export const CONCEPTS = [
   {
     id: "tools",
     label: "Tools",
-    blurb: "Single-use items the player spends to trigger active effects (kind: \"tool\").",
+    blurb: "Single-use items the player spends to trigger a tool power (kind: \"tool\").",
     getEntries: () => itemsOfKind("tool"),
   },
   {
@@ -280,7 +280,7 @@ export const CONCEPTS = [
   {
     id: "toolPowers",
     label: "Tool Powers",
-    blurb: "Active effects the player triggers by spending a tool item.",
+    blurb: "Catalog of tool powers — active mechanics triggered when the player spends a tool item.",
     getEntries: toolPowerEntries,
   },
   {
