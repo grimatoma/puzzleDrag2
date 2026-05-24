@@ -1,9 +1,3 @@
-// Wiki — reusable entry grid renderer.
-//
-// Renders a uniform grid of small cards. Each card shows a procedural icon,
-// the entry's display name, and its raw id (monospace). Used by every
-// concept sub-tab in WikiTab.
-
 import Icon from "../../ui/Icon.jsx";
 import { COLORS, hexToCss } from "../shared.jsx";
 

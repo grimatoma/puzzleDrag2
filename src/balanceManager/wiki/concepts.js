@@ -46,7 +46,7 @@ function hazardEntries() {
   return HAZARDS.map((h) => ({
     key: h.id,
     name: h.name,
-    iconKey: undefined,
+    iconKey: `hazard_${h.id}`,
   })).sort(byName);
 }
 

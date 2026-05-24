@@ -14,33 +14,22 @@ import { CONCEPTS } from "../wiki/concepts.js";
 import EntryGrid from "../wiki/EntryGrid.jsx";
 import { COLORS, SegmentedFilter } from "../shared.jsx";
 
-const DEFAULT_CONCEPT_ID = "tiles";
+const CONCEPT_OPTIONS = CONCEPTS.map((c) => ({ value: c.id, label: c.label }));
 
 export default function WikiTab() {
-  const [conceptId, setConceptId] = useState(DEFAULT_CONCEPT_ID);
+  const [conceptId, setConceptId] = useState(CONCEPTS[0].id);
 
   const concept = useMemo(
-    () => CONCEPTS.find((c) => c.id === conceptId) ?? CONCEPTS[0],
+    () => CONCEPTS.find((c) => c.id === conceptId),
     [conceptId],
   );
 
-  const entries = useMemo(() => {
-    try {
-      return concept.getEntries();
-    } catch {
-      return [];
-    }
-  }, [concept]);
-
-  const options = useMemo(
-    () => CONCEPTS.map((c) => ({ value: c.id, label: c.label })),
-    [],
-  );
+  const entries = useMemo(() => concept.getEntries(), [concept]);
 
   return (
     <div className="flex flex-col gap-3">
       <SegmentedFilter
-        options={options}
+        options={CONCEPT_OPTIONS}
         value={concept.id}
         onChange={setConceptId}
         ariaLabel="Wiki concept"
