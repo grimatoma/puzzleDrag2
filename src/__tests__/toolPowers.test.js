@@ -82,14 +82,18 @@ describe("TOOL_POWERS catalog shape", () => {
 });
 
 describe("defaultsForToolPower", () => {
-  it("returns { target: null } for clear_category", () => {
+  it("returns { target: \"\" } for clear_all — tileKey defaults to \"\" so ItemsTab's cleanup pass strips empty targets", () => {
+    expect(defaultsForToolPower("clear_all")).toEqual({ target: "" });
+  });
+
+  it("returns { target: null } for clear_category — tileCategory uses null as the 'unset' sentinel", () => {
     expect(defaultsForToolPower("clear_category")).toEqual({ target: null });
   });
 
-  it("returns { from: null, to: null, radius: 1 } for transform_adjacent", () => {
+  it("returns { from: null, to: \"\", radius: 1 } for transform_adjacent", () => {
     expect(defaultsForToolPower("transform_adjacent")).toEqual({
       from: null,
-      to: null,
+      to: "",
       radius: 1,
     });
   });
@@ -98,10 +102,10 @@ describe("defaultsForToolPower", () => {
     expect(defaultsForToolPower("restore_turns")).toEqual({ amount: 5 });
   });
 
-  it("returns { from: null, to: null } for transform_tiles", () => {
+  it("returns { from: null, to: \"\" } for transform_tiles", () => {
     expect(defaultsForToolPower("transform_tiles")).toEqual({
       from: null,
-      to: null,
+      to: "",
     });
   });
 

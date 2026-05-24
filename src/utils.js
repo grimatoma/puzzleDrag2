@@ -69,41 +69,28 @@ export function upgradeCountForChain(chainLength, resourceKey, thresholdMap = UP
 }
 
 // Public category names (used by tool-power configs) → tile families that live
-// in TILE_FAMILY_RESOURCE. Plural/synonym keys are accepted so callers can use
-// either the tileCollection style (`bird`, `special_dirt`) or the more natural
-// tool-power name (`birds`, `dirt`).
+// in TILE_FAMILY_RESOURCE. Uses the tool-power plural form (`birds`, `dirt`,
+// `stone`); `bird` and `special_dirt` are also accepted because the
+// tileCollection `category` field uses those exact strings.
 const CATEGORY_TO_FAMILIES = {
   grass: ["grass"],
   grain: ["grain"],
   trees: ["tree"],
-  tree: ["tree"],
   vegetables: ["veg"],
-  veg: ["veg"],
   fruits: ["fruit"],
-  fruit: ["fruit"],
   flowers: ["flower"],
-  flower: ["flower"],
   birds: ["bird"],
   bird: ["bird"],
   herd_animals: ["herd"],
-  herd: ["herd"],
   cattle: ["cattle"],
   mounts: ["mount"],
-  mount: ["mount"],
   dirt: ["special_dirt"],
   special_dirt: ["special_dirt"],
   stone: ["mine_stone"],
-  mine_stone: ["mine_stone"],
   iron: ["mine_iron_ore"],
-  mine_iron_ore: ["mine_iron_ore"],
-  copper: ["mine_copper_ore"],
-  mine_copper_ore: ["mine_copper_ore"],
   coal: ["mine_coal"],
-  mine_coal: ["mine_coal"],
   gold: ["mine_gold"],
-  mine_gold: ["mine_gold"],
   gem: ["mine_gem"],
-  mine_gem: ["mine_gem"],
   fish: ["fish", "fish_clam", "fish_oyster", "fish_kelp"],
 };
 

@@ -137,11 +137,15 @@ export function defaultsForToolPower(powerId) {
   for (const param of p.params) {
     if (param.default !== undefined) {
       out[param.key] = param.default;
-    } else if (param.type === "tileCategory" || param.type === "tileKey") {
+    } else if (param.type === "tileCategory") {
+      // "no category picked" is semantically distinct from "" — ItemsTab
+      // treats null as the unset sentinel for category dropdowns.
       out[param.key] = null;
     } else if (param.type === "number") {
       out[param.key] = 0;
     } else {
+      // tileKey, resourceKey, hazard — preserve the pre-overhaul "" default so
+      // ItemsTab's cleanup pass (which strips falsy/empty targets) still works.
       out[param.key] = "";
     }
   }
