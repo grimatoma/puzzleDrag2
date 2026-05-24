@@ -7,6 +7,8 @@ import {
 } from "../shared.jsx";
 import Icon from "../../ui/Icon.jsx";
 import { traceRecipe, collectUpstreamRecipes, countRawInputs } from "../recipeGraph.js";
+import { focusHighlightProps, useScrollToFocus } from "../relational.jsx";
+import { useBalanceNav } from "../balanceNav.jsx";
 
 const STATIONS = [
   { value: "bakery",   label: "Bakery" },
@@ -23,7 +25,11 @@ const STATION_FILTERS = [
   { id: "workshop", label: "Workshop", iconKey: "ui_devtools" },
 ];
 
-export default function RecipesTab({ draft, updateDraft }) {
+export default function RecipesTab({ draft, updateDraft, focus }) {
+  const { focus: navFocus } = useBalanceNav();
+  const activeFocus = focus ?? navFocus;
+  useScrollToFocus(activeFocus);
+
   const [stationFilter, setStationFilter] = useState("all");
   const [search, setSearch] = useState("");
   const [openTrees, setOpenTrees] = useState(new Set());
@@ -53,6 +59,7 @@ export default function RecipesTab({ draft, updateDraft }) {
   }, [draft.recipes]);
 
   const filtered = recipeEntries.filter(([recId, r]) => {
+    if (activeFocus && recId === activeFocus) return true;
     if (stationFilter !== "all" && r.station !== stationFilter) return false;
     if (search) {
       const q = search.toLowerCase();
@@ -97,9 +104,10 @@ export default function RecipesTab({ draft, updateDraft }) {
         {filtered.map(([recId, eff]) => {
           const dirty = eff._isDraft;
           const isNew = !RECIPES[recId];
+          const hi = focusHighlightProps(recId, activeFocus);
 
           return (
-            <Card key={recId} accent={dirty ? COLORS.ember : COLORS.border}>
+            <Card key={recId} id={hi.id} style={hi.ringStyle} accent={dirty || hi.isFocused ? COLORS.ember : COLORS.border}>
               <div className="flex items-start justify-between mb-2 gap-2">
                 <div className="flex items-center gap-2 min-w-0">
                   <div className="flex-shrink-0 w-8 h-8 rounded grid place-items-center bg-[#e0d4be] text-[20px] overflow-hidden">

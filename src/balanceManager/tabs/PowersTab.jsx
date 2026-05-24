@@ -19,6 +19,7 @@ import {
   SegmentedFilter,
 } from "../shared.jsx";
 import AbilitiesEditor from "../AbilitiesEditor.jsx";
+import { CardAttachmentFooter } from "../relational.jsx";
 import {
   TILE_DISCOVERY_METHODS,
   getTileDiscoveryMethod,
@@ -442,14 +443,13 @@ export default function PowersTab({ draft, updateDraft }) {
               </Card>
             </div>
 
-            {/* Abilities — shared editor (catalog + active list + picker). */}
-            <div>
+            <CardAttachmentFooter title="Attributes" standalone>
               <AbilitiesEditor
                 scope="tile"
                 abilities={abilities}
                 onChange={(next) => setAbilitiesForTile(selected.id, next)}
               />
-            </div>
+            </CardAttachmentFooter>
           </>
         )}
       </div>

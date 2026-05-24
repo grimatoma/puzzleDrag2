@@ -8,6 +8,8 @@ import {
   SmallButton, Pill, Card, SearchBar, SearchAndAddPicker,
 } from "../shared.jsx";
 import AbilitiesEditor from "../AbilitiesEditor.jsx";
+import { CardAttachmentFooter, focusHighlightProps, useScrollToFocus } from "../relational.jsx";
+import { useBalanceNav } from "../balanceNav.jsx";
 import { BuildingIllustration } from "../../ui/Town.jsx";
 import Icon from "../../ui/Icon.jsx";
 import { analyseBuildingCosts } from "../buildingCosts.js";
@@ -21,7 +23,11 @@ const COST_KEYS = (() => {
   return [...out].sort();
 })();
 
-export default function BuildingsTab({ draft, updateDraft }) {
+export default function BuildingsTab({ draft, updateDraft, focus }) {
+  const { focus: navFocus } = useBalanceNav();
+  const activeFocus = focus ?? navFocus;
+  useScrollToFocus(activeFocus);
+
   const [search, setSearch] = useState("");
   const [analysisOpen, setAnalysisOpen] = useState(false);
   const analysis = useMemo(() => analyseBuildingCosts(), []);
@@ -94,9 +100,10 @@ export default function BuildingsTab({ draft, updateDraft }) {
             abilities: p.abilities ?? b.abilities ?? [],
           };
           const dirty = Object.keys(p).length > 0;
+          const hi = focusHighlightProps(b.id, activeFocus);
 
           return (
-            <Card key={b.id} accent={dirty ? COLORS.ember : COLORS.border}>
+            <Card key={b.id} id={hi.id} style={hi.ringStyle} accent={dirty || hi.isFocused ? COLORS.ember : COLORS.border}>
               <div className="flex items-start justify-between mb-2 gap-2">
                 <div className="flex items-center gap-2">
                   <div
@@ -156,13 +163,13 @@ export default function BuildingsTab({ draft, updateDraft }) {
                 />
               </div>
 
-              <div className="mt-3 pt-3" style={{ borderTop: `1px dashed ${COLORS.border}` }}>
+              <CardAttachmentFooter title="Attributes">
                 <AbilitiesEditor
                   scope="building"
                   abilities={eff.abilities}
                   onChange={(next) => patch(b.id, { abilities: next })}
                 />
-              </div>
+              </CardAttachmentFooter>
             </Card>
           );
         })}

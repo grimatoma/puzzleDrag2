@@ -18,8 +18,8 @@ import {
   COLORS, NumberField, TextField, TextArea, Select, ColorField,
   SmallButton, Pill, Card, SearchBar, TileSwatch,
 } from "../shared.jsx";
-import Icon from "../../ui/Icon.jsx";
 import { buildItemReferenceIndex } from "../itemReferences.js";
+import { RelationalFooter, CraftingRecipeLinks, WhereUsedLinks } from "../relational.jsx";
 
 const BIOME_FILTERS = [
   { value: "all",  label: "All biomes" },
@@ -165,27 +165,6 @@ export default function ResourcesTab({ draft, updateDraft }) {
                     <ColorField value={eff.color} onChange={(v) => patchItem(key, { color: v })} />
                   </div>
                   <div className="col-span-2">
-                    <Label>Crafting Recipes</Label>
-                    {craftedBy.length === 0 ? (
-                      <div className="text-[10px] italic text-gray-500">Not craftable.</div>
-                    ) : (
-                      <div className="flex flex-col gap-1">
-                        {craftedBy.map((rec) => (
-                          <div key={rec.recId} className="text-[10px] flex items-center gap-1 border rounded px-1.5 py-1" style={{ borderColor: COLORS.border }}>
-                            <Pill>{rec.station}</Pill>
-                            <span className="text-gray-600">Requires:</span>
-                            {Object.entries(rec.inputs || {}).map(([inp, qty]) => (
-                              <span key={inp} className="flex items-center gap-0.5">
-                                <Icon iconKey={inp} size={12} /> {qty}x
-                              </span>
-                            ))}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="col-span-2">
                     <Label>Description</Label>
                     <TextArea
                       rows={2}
@@ -194,12 +173,23 @@ export default function ResourcesTab({ draft, updateDraft }) {
                       onChange={(v) => patchItem(key, { desc: v, description: v })}
                     />
                   </div>
-                  <div className="col-span-2">
-                    <Label>Where used</Label>
-                    <WhereUsed itemKey={key} index={referenceIndex} />
-                  </div>
                 </div>
               </div>
+
+              <RelationalFooter title="References" hint="Derived · click to open">
+                <div className="mb-2.5">
+                  <div className="text-[9px] font-bold uppercase tracking-wide mb-1" style={{ color: COLORS.slate }}>
+                    Crafting recipes
+                  </div>
+                  <CraftingRecipeLinks recipes={craftedBy} />
+                </div>
+                <div>
+                  <div className="text-[9px] font-bold uppercase tracking-wide mb-1" style={{ color: COLORS.slate }}>
+                    Where used
+                  </div>
+                  <WhereUsedLinks usages={referenceIndex?.get(key) || []} />
+                </div>
+              </RelationalFooter>
             </Card>
           );
         })}
@@ -221,45 +211,3 @@ function Label({ children }) {
   );
 }
 
-const USAGE_LABELS = {
-  recipe_input:  { label: "Recipe input",   tone: "info" },
-  recipe_output: { label: "Recipe output",  tone: "good" },
-  building_cost: { label: "Building cost",  tone: "warn" },
-  chain_next:    { label: "Chain feeder",   tone: "default" },
-  story_outcome: { label: "Story reward",   tone: "ember" },
-};
-const TONE_BG = {
-  info: "rgba(43,34,24,0.06)", good: "rgba(90,158,75,0.10)", warn: "rgba(226,178,74,0.14)",
-  ember: "rgba(214,97,42,0.10)", default: COLORS.parchmentDeep,
-};
-const TONE_FG = {
-  info: COLORS.inkLight, good: COLORS.greenDeep, warn: "#7a5810",
-  ember: COLORS.emberDeep, default: COLORS.inkSubtle,
-};
-
-function WhereUsed({ itemKey, index }) {
-  const usages = index?.get(itemKey) || [];
-  if (usages.length === 0) {
-    return <div className="text-[10px] italic" style={{ color: COLORS.inkSubtle }}>Not referenced anywhere.</div>;
-  }
-  return (
-    <div className="flex flex-wrap gap-1">
-      {usages.map((u, i) => {
-        const meta = USAGE_LABELS[u.kind] || { label: u.kind, tone: "default" };
-        const label = u.kind === "recipe_input" ? `${u.recipeId} · ${u.qty}×`
-          : u.kind === "recipe_output" ? `${u.recipeId} (output)`
-          : u.kind === "building_cost" ? `${u.buildingId} · ${u.qty}×`
-          : u.kind === "chain_next" ? `← ${u.fromId}`
-          : u.kind === "story_outcome" ? `${u.beatId}/${u.choiceId} · ${u.qty > 0 ? "+" : ""}${u.qty}`
-          : u.kind;
-        return (
-          <span key={i} className="px-1.5 py-0.5 rounded text-[9px] font-mono"
-            title={meta.label}
-            style={{ background: TONE_BG[meta.tone], color: TONE_FG[meta.tone], border: `1px solid ${COLORS.border}55` }}>
-            {label}
-          </span>
-        );
-      })}
-    </div>
-  );
-}
