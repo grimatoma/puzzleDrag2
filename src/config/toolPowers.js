@@ -5,16 +5,14 @@
 //   - id     — stable string used by items data (matches the `effect` field on tool items)
 //   - name   — human-readable name shown in the Dev Panel
 //   - desc   — short description of the effect
-//   - params     — schema for the editor + runtime arguments (may be empty)
-//   - note       — optional caveat surfaced in the Wiki (e.g. extras vs PC2)
-//   - animation  — board animation behavior (merged from toolPowerBoardAnimation.js)
+//   - params — schema for the editor + runtime arguments (may be empty)
+//   - note   — optional caveat surfaced in the Wiki (e.g. extras vs PC2)
+//
+// Board anim/ms live on each tool row in constants.js (Inventory tab), not here.
 //
 // Contrast with Attributes (src/config/abilities.js) which are *passive* modifiers
 // always active while their source is present. Tool Powers are *active* — the player
 // deliberately spends the tool item to trigger the effect.
-
-import { ITEMS } from "../constants.js";
-import { TOOL_POWER_BOARD_ANIMATION } from "./toolPowerBoardAnimation.js";
 
 export const TOOL_POWER_PARAM_TYPES = Object.freeze({
   HAZARD: "hazard",
@@ -24,7 +22,7 @@ export const TOOL_POWER_PARAM_TYPES = Object.freeze({
   NUMBER: "number",
 });
 
-const TOOL_POWER_DEFS = [
+export const TOOL_POWERS = Object.freeze([
   {
     id: "clear_all",
     name: "Clear Tiles of Type",
@@ -123,14 +121,7 @@ const TOOL_POWER_DEFS = [
     desc: "Clears mole + cave-in hazards from the mine.",
     params: [],
   },
-];
-
-export const TOOL_POWERS = Object.freeze(
-  TOOL_POWER_DEFS.map((p) => ({
-    ...p,
-    animation: TOOL_POWER_BOARD_ANIMATION[p.id],
-  })),
-);
+]);
 
 const TOOL_POWER_BY_ID = Object.freeze(
   Object.fromEntries(TOOL_POWERS.map((p) => [p.id, p])),
@@ -161,24 +152,6 @@ export function defaultsForToolPower(powerId) {
     }
   }
   return out;
-}
-
-/**
- * Inventory tools whose typed `power.id` matches a catalog tool power.
- * @param {string} powerId
- * @returns {{ key: string, label: string, anim?: string, ms?: number, powerParams?: object }[]}
- */
-export function itemsWithToolPower(powerId) {
-  return Object.entries(ITEMS)
-    .filter(([, v]) => v.kind === "tool" && v.power?.id === powerId)
-    .map(([key, v]) => ({
-      key,
-      label: v.label ?? key,
-      anim: v.anim,
-      ms: v.ms,
-      powerParams: v.power?.params,
-    }))
-    .sort((a, b) => a.key.localeCompare(b.key));
 }
 
 // Puzzle Craft 2 tools we did NOT wire in this overhaul, plus the reason and
