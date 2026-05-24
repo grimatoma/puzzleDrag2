@@ -2,6 +2,8 @@
 
 Guidance for agents working in this repo. `AGENTS.md` (Codex/ChatGPT, Cursor, Aider convention) and `GEMINI.md` (Gemini CLI) are symlinks to this file — there is one source of truth. Edit only `CLAUDE.md`.
 
+**Platforms:** Use this repo with **Claude Code** or **Cursor** (desktop or Cloud). Skills live in `.claude/skills/` (shared). Cursor also has `.cursor/rules/cursor-superpowers.mdc` (always applied when present in the clone). Everything agents need is version-controlled here — Cloud agents do not load machine-local user rules.
+
 ## Mental model (read first)
 
 Phaser 3 + React game. **React owns state** — `useReducer` in `prototype.jsx`, store logic in `src/state.js`, 29 auto-discovered feature slices under `src/features/*`. **Phaser owns the canvas** (`src/GameScene.js`) and receives state via a registry bridge (`src/phaserBridge.js`); the scene dispatches actions back to the reducer. Vite ships three independent entries from one repo: `/` (game, pulls Phaser), `/b/` (Balance Manager, Phaser-free), `/story/` (Story Tree Editor). They share state only via `localStorage`. All textures are drawn procedurally — no external image assets.
@@ -145,7 +147,9 @@ When you fix a bug found in a specific scenario, add or extend an entry in `src/
 
 ## Agent execution
 
-- **Always use subagent-driven development for plan execution.** When executing an implementation plan, always invoke the `superpowers:subagent-driven-development` skill — never execute tasks inline in the main session. This keeps the main chat's context small and focused.
+- **Always use subagent-driven development for plan execution.** When executing an implementation plan, always invoke the `subagent-driven-development` skill (`.claude/skills/subagent-driven-development/SKILL.md`) — never execute tasks inline in the main session. This keeps the main chat's context small and focused.
+
+- **Cursor agents (desktop and Cloud).** Load `AGENTS.md`, this file, and `.cursor/rules/cursor-superpowers.mdc` from the repo clone. Skills: `.claude/skills/<name>/SKILL.md` (also `.cursor/skills/`); use **Read** in Cursor, **Skill** tool in Claude Code. Cloud has no access to `~/.cursor/rules` — commit project rules and skills; do not rely on personal Cursor rules for this repo. Claude Code hooks in `.claude/settings.json` run in Claude Code only (including remote); they do not run in Cursor.
 
 ## Engineering rules
 

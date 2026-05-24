@@ -1,0 +1,55 @@
+---
+description: Agent bridge for Cursor (desktop + Cloud) and Claude Code — skills, CLAUDE.md, tool mapping
+alwaysApply: true
+---
+
+# Agent bridge (Cursor + Claude Code)
+
+All agent context for this repo lives **in git**. Cursor Cloud clones the repo only — it does not see `~/.cursor/rules` or other machine-local user rules. This file plus `CLAUDE.md` and `.claude/skills/` are the full contract for every platform.
+
+## Canonical docs
+
+Edit only `CLAUDE.md`. `AGENTS.md` and `GEMINI.md` are symlinks to it.
+
+## Skills (required)
+
+- **Path:** `.claude/skills/<name>/SKILL.md` (also `.cursor/skills/<name>/SKILL.md` via symlink)
+- **When:** If any skill description might apply (~1% chance), load and follow that skill **before** coding, planning, debugging, or opening a PR.
+- **Session start** (not a subagent): Read `using-superpowers/SKILL.md`.
+
+| Situation | Skill |
+|-----------|--------|
+| New dispatch / slice action | `check-slice-action` |
+| New resource / tile / texture | `resource-add` |
+| Phaser ↔ React mismatch | `phaser-scene-debug` |
+| Bug or test failure | `systematic-debugging` |
+| Feature / behavior change | `brainstorming` then `test-driven-development` |
+| Multi-step implementation plan | `subagent-driven-development` |
+| Before opening a PR | `pre-pr-check` |
+| Claiming work is done | `verification-before-completion` |
+
+### How to load skills
+
+| Platform | Load skill |
+|----------|------------|
+| **Claude Code** | `Skill` tool (do not Read skill files) |
+| **Cursor** (desktop or Cloud) | **Read** the `SKILL.md` path (no `Skill` tool) |
+
+Tool mapping for Cursor: `.claude/skills/using-superpowers/references/cursor-tools.md`.
+
+## Plan execution
+
+Per `CLAUDE.md` Agent execution: for plans with independent tasks, Read `subagent-driven-development/SKILL.md` and dispatch with subagents — `Task` in Cursor, subagents in Claude Code. Do not inline large plans in the parent chat.
+
+## Platform notes
+
+| | Claude Code | Cursor (desktop / Cloud) |
+|---|-------------|-------------------------|
+| Project guide | `CLAUDE.md` | `AGENTS.md` + this rule + `CLAUDE.md` |
+| Skills | `.claude/skills/` via `Skill` | Same tree via **Read** |
+| Hooks | `.claude/settings.json`, `.claude/hooks/` | Not used — run `npm test` / `gh` directly |
+| PRs | MCP or `gh` | `gh` CLI; merge commits; non-draft PRs; frozen PR branches |
+
+## Subagents
+
+If dispatched for one specific task only, skip `using-superpowers` (`<SUBAGENT-STOP>` in that skill).
