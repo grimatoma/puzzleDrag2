@@ -39,13 +39,18 @@ function minState(overrides = {}) {
 // ─── coreReducer via gameReducer ─────────────────────────────────────────────
 
 describe("CHAIN_COLLECTED", () => {
-  it("adds harvested resources to inventory", () => {
-    const state = minState();
+  it("accumulates chain progress toward the produced resource (not tile key)", () => {
+    // Chain of 4 hay (threshold 6) → progress accumulates, no inventory entry yet.
+    // tile_grass_hay → hay_bundle via TILE_FAMILY_RESOURCE["grass"].
+    const state = minState({ resourceProgress: {} });
     const next = gameReducer(state, {
       type: "CHAIN_COLLECTED",
-      payload: { key: "tile_grass_hay", gained: 4, upgrades: 0, value: 1, chainLength: 4 },
+      payload: { key: "tile_grass_hay", gained: 4, upgrades: 0, value: 1, chainLength: 4, resourceKey: "hay_bundle" },
     });
-    expect(next.inventory.tile_grass_hay).toBe(4);
+    expect(next.resourceProgress.hay_bundle).toBe(4);
+    expect(next.inventory.hay_bundle).toBeFalsy();
+    // Tile key never enters inventory in the new model.
+    expect(next.inventory.tile_grass_hay).toBeUndefined();
   });
 
   // Phase 7 — calendar season effects (spring +20%, autumn 2× upgrades,
