@@ -41,6 +41,7 @@ const ExportTab    = lazy(() => import("./tabs/ExportTab.jsx"));
 const IconsTab     = lazy(() => import("./tabs/IconsTab.jsx"));
 const AbilitiesReferenceTab = lazy(() => import("./tabs/AbilitiesReferenceTab.jsx"));
 const ToolPowersReferenceTab = lazy(() => import("./tabs/ToolPowersReferenceTab.jsx"));
+const WikiTab = lazy(() => import("./tabs/WikiTab.jsx"));
 // The Animations Demo tab drives the game iframe via postMessage, which the
 // visual bridge only installs in dev/test (prototype.jsx). Gate the tab the
 // same way so production users don't see dead Play buttons.
@@ -55,6 +56,9 @@ const AnimationsDemoTab = ANIMATIONS_DEMO_AVAILABLE
 // The game's object model separates Tiles from inventory entries. Inventory
 // entries (resources + items + tools) are unified under Items.
 const TABS = [
+  { id: "wiki", label: "Concepts", iconKey: "ui_star", Component: WikiTab,
+    section: "wiki",
+    blurb: "Reference catalog of every concept in the game — tiles, resources, tools, workers, hazards, recipes, zones, abilities, and more. One sub-tab per concept, scanning grid for visual review." },
   { id: "tiles",     label: "Tiles",          iconKey: "ui_star", Component: PowersTab,
     section: "tiles",
     blurb: "Board pieces. Per-tile attributes: basics (label, colour, sale value, base chain target, tiles-wiki blurb), discovery method, what resource the chain produces, and any attached power hooks." },
@@ -126,6 +130,7 @@ const TABS = [
 ];
 
 const SECTIONS = [
+  { id: "wiki",      label: "Wiki" },
   { id: "tiles",     label: "Tiles" },
   { id: "resources", label: "Resources" },
   { id: "items",     label: "Items" },
