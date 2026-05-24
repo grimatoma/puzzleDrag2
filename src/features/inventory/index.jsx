@@ -207,6 +207,7 @@ export default function InventoryScreen({ state, dispatch, searchOpen: searchOpe
             recentOrder={recentOrder}
             compact={isPhone}
             viewMode={viewMode}
+            resourceProgress={state.resourceProgress ?? {}}
           />
         </div>
       </FeaturePanel.Body>

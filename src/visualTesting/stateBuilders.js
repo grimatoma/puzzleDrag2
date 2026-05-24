@@ -501,6 +501,17 @@ function profileState(profile) {
     case "storyWin": return withBeat({ ...richState(), story: quietStory({ isWon: true }) }, "act3_win");
     case "tutorialCenter": return { ...richState(), tutorial: { active: true, step: 0, seen: false }, modal: null, story: quietStory() };
     case "tutorialCorner": return { ...boardState("farm"), tutorial: { active: true, step: 1, seen: false }, modal: null, story: quietStory() };
+    // Inventory progress display scenarios (Task D)
+    case "inventoryMidProgress": return {
+      ...richState(),
+      inventory: { ...richInventory(), hay_bundle: 0 },
+      resourceProgress: { hay_bundle: 4 },
+    };
+    case "inventoryFullWithProgress": return {
+      ...richState(),
+      inventory: { ...richInventory(), eggs: 15 },
+      resourceProgress: { eggs: 2 },
+    };
     default: return richState();
   }
 }

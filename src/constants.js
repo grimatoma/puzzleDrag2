@@ -100,7 +100,7 @@ export let DEFAULT_HOME_BIOME = "prairie"; // Balance Manager: tuning.homeBiome
 
 // Save schema version. Forward migrations are not maintained — bump this
 // whenever persisted state changes shape and existing saves will be discarded.
-export const SAVE_SCHEMA_VERSION = 40;
+export const SAVE_SCHEMA_VERSION = 41;
 
 export const UPGRADE_THRESHOLDS = {
   tile_grass_hay: 6, tile_grass_meadow: 6, tile_grass_spiky: 6,
@@ -234,6 +234,20 @@ export function tileFamilyResource(tileKey) {
   const fam = tileFamily(tileKey);
   return fam ? (TILE_FAMILY_RESOURCE[fam] ?? null) : null;
 }
+
+// Derived map: resource key → upgrade threshold of the tile that produces it.
+// Built once at module load from UPGRADE_THRESHOLDS + tileFamilyResource.
+// When multiple tile variants in the same family share a threshold (grass,
+// bird, fruit, etc.) all map to the same resource — we take the first
+// threshold encountered (families are uniform in practice).
+export const RESOURCE_TO_THRESHOLD = (() => {
+  const out = {};
+  for (const [tileKey, threshold] of Object.entries(UPGRADE_THRESHOLDS)) {
+    const resource = tileFamilyResource(tileKey);
+    if (resource && out[resource] == null) out[resource] = threshold;
+  }
+  return out;
+})();
 
 export const ITEMS = {
   // Farm tiles/resources

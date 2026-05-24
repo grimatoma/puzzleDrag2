@@ -217,7 +217,7 @@ function coreReducer(state, action) {
           seasonStats: { ...state.seasonStats, capFloaters: cf } };
       }
 
-      const { key, gained, upgrades, value, chainLength, noTurn } = action.payload;
+      const { key, gained, upgrades, value, chainLength, noTurn, resourceKey } = action.payload;
       const hintsShown = state._hintsShown || {};
       const effectiveChain = chainLength || gained;
 
@@ -295,16 +295,24 @@ function coreReducer(state, action) {
         return applyKeeperTrialChainProgress(next, null, 0, turn);
       }
 
-      const res = resourceByKey(key);
       const inventory = { ...state.inventory };
       const chainCap = currentCap(state);
       const chainCf = { ...(state.seasonStats?.capFloaters ?? {}) };
       const chainFloaters = [...(state.floaters ?? [])];
 
-      addCappedResourceMut(inventory, chainCf, chainFloaters, key, gained, chainCap);
-
-      if (res?.next && upgrades > 0) {
-        addCappedResourceMut(inventory, chainCf, chainFloaters, res.next, upgrades, chainCap);
+      // Fractional resource accumulation: chain length contributes to
+      // state.resourceProgress[resourceKey], rolling into inventory once it
+      // crosses UPGRADE_THRESHOLDS[key] (the chained tile's threshold).
+      // Tile keys no longer enter state.inventory directly.
+      const progress = { ...(state.resourceProgress ?? {}) };
+      if (resourceKey) {
+        const threshold = UPGRADE_THRESHOLDS[key] ?? Infinity;
+        const newProgress = (progress[resourceKey] ?? 0) + chainLength;
+        const wholeUnits = threshold === Infinity ? 0 : Math.floor(newProgress / threshold);
+        progress[resourceKey] = threshold === Infinity ? newProgress : newProgress % threshold;
+        if (wholeUnits > 0) {
+          addCappedResourceMut(inventory, chainCf, chainFloaters, resourceKey, wholeUnits, chainCap);
+        }
       }
 
       // Power-hook coin bonuses (set via Balance Manager → Tile Powers).
@@ -369,6 +377,7 @@ function coreReducer(state, action) {
         ...state,
         ...(mergedHazards ? { hazards: mergedHazards } : {}),
         inventory,
+        resourceProgress: progress,
         coins: state.coins + coinsGain + fireCoinBonus + deadlyCoinBonus,
         xp: afterAlmanacXp.almanac.xp,
         level: afterAlmanacXp.almanac.level,

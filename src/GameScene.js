@@ -10,7 +10,11 @@ import {
   seasonIndexInSession,
   seasonNameInSession,
   ZONES,
+  ZONE_UPGRADE_TARGET_GOLD,
+  TILE_CATEGORY_TO_ZONE_CATEGORY,
+  ZONE_TO_TILE_CATEGORIES,
 } from "./features/zones/data.js";
+import { assertTile } from "./types/guards.js";
 const cssColor = (num) => Phaser.Display.Color.IntegerToColor(num).rgba;
 import { rounded, makeTextures, regenerateTextures } from "./textures.js";
 import { TileObj } from "./TileObj.js";
@@ -19,6 +23,32 @@ export { computeBakeScale, hasValidChain } from "./game/chain.js";
 import { BOARD_ANIMATIONS } from "./config/boardAnimations.js";
 
 const FLOAT_TEXT_COLOR = 0xffd248;
+
+// Per-biome gold tile key — the board-only "GOLD" sentinel upgrade target.
+// When a zone's upgradeMap points to ZONE_UPGRADE_TARGET_GOLD ("gold"), we
+// spawn this tile on the board. It never enters inventory.
+const BIOME_GOLD_TILE = Object.freeze({
+  farm: "tile_fruit_golden_apple",
+  mine: "tile_mine_gold",
+  fish: null, // No gold tile for fish biome yet
+});
+
+/**
+ * Returns the resource KEY (string) that chaining `tile` contributes progress
+ * toward. Per-tile override > family default. Returns null for tiles in
+ * TILES_WITH_CUSTOM_OUTPUT (their custom path handles output).
+ *
+ * Module-level pure function — no scene context needed, easier to unit-test.
+ * @param {{ key: string }} tile
+ * @returns {string | null}
+ */
+export function producedResource(tile) {
+  if (!tile?.key) return null;
+  if (TILES_WITH_CUSTOM_OUTPUT.has(tile.key)) return null;
+  const override = TILE_TYPES_MAP[tile.key]?.effects?.producesResource;
+  if (override) return override;
+  return tileFamilyResource(tile.key) ?? null;
+}
 
 // Single decorative frame around the tiles, in CSS pixels. Thinner on narrow
 // viewports so the board can stretch as wide as possible.
@@ -585,34 +615,66 @@ export class GameScene extends Phaser.Scene {
 
   // ─── Resources ────────────────────────────────────────────────────────────
 
-  nextResource(res) {
-    if (!res || !res.key) return null;
+  /**
+   * Returns the TILE def (from the current biome's tiles) to spawn at the
+   * chain endpoint, derived from the active zone's upgradeMap. Returns null
+   * when there is no mapping (chain spawns nothing on the board).
+   *
+   * Handles the ZONE_UPGRADE_TARGET_GOLD sentinel: when the upgradeMap target
+   * is "gold", returns the biome-specific gold tile def.
+   *
+   * @param {{ key: string }} tile
+   * @returns {object | null}  Full tile def with { key, label, color, ... }
+   */
+  nextUpgradeTile(tile) {
+    if (!tile?.key) return null;
+    if (TILES_WITH_CUSTOM_OUTPUT.has(tile.key)) return null;
+
     const b = this.biome();
-    const allEntries = [...b.tiles, ...b.resources];
+    const biomeKey = this.biomeKey();
+    const allTiles = b.tiles;
 
-    // 1. Per-tile "Produces Resource" override (Balance Manager → Tiles tab)
-    // is authoritative — it names the chain's upgrade target outright.
-    const override = TILE_TYPES_MAP[res.key]?.effects?.producesResource;
-    if (override) {
-      return allEntries.find((r) => r.key === override) ?? null;
+    // Determine source zone-category from tile's tileCollection category.
+    const tileCat = CATEGORY_OF[tile.key];
+    if (!tileCat) return null;
+    const sourceZoneCat = TILE_CATEGORY_TO_ZONE_CATEGORY[tileCat];
+    if (!sourceZoneCat) return null;
+
+    // Look up the zone's upgradeMap for this source category.
+    const zoneId = this.registry.get("activeZone") ?? null;
+    if (!zoneId) return null;
+    const zone = ZONES[zoneId];
+    if (!zone?.upgradeMap) return null;
+    const targetZoneCat = zone.upgradeMap[sourceZoneCat];
+    if (!targetZoneCat) return null;
+
+    // Handle the GOLD sentinel: spawn the biome's dedicated gold tile.
+    if (targetZoneCat === ZONE_UPGRADE_TARGET_GOLD) {
+      const goldKey = BIOME_GOLD_TILE[biomeKey] ?? null;
+      if (!goldKey) return null;
+      return allTiles.find((t) => t.key === goldKey) ?? null;
     }
 
-    // 2. Family default from TILE_FAMILY_RESOURCE — the single source of
-    // truth for "what does this tile family produce on the board".
-    const defaultKey = tileFamilyResource(res.key);
-    if (defaultKey) {
-      return allEntries.find((r) => r.key === defaultKey) ?? null;
+    // Normal case: find the player's active tile in the target zone-category.
+    const targetTileCats = ZONE_TO_TILE_CATEGORIES[targetZoneCat] ?? [];
+    const tileCollectionActive = this.registry.get("tileCollectionActive") ?? null;
+
+    if (tileCollectionActive) {
+      for (const tc of targetTileCats) {
+        const activeKey = tileCollectionActive[tc];
+        if (!activeKey) continue;
+        const r = allTiles.find((t) => t.key === activeKey);
+        if (r) return r;
+      }
     }
 
-    // 3. Tiles with custom handlers (special, hazards) produce nothing by
-    // chain default — their outputs (runes, countdowns, ...) are wired in
-    // feature code.
-    if (TILES_WITH_CUSTOM_OUTPUT.has(res.key)) return null;
+    // Fallback: first biome tile whose category matches the target tile-categories.
+    for (const t of allTiles) {
+      const cat = CATEGORY_OF[t.key];
+      if (cat && targetTileCats.includes(cat)) return t;
+    }
 
-    // 4. Legacy fallback for resources/tiles that aren't covered by the
-    // family map — chase the resource's own `.next` pointer in the biome.
-    const nextKey = allEntries.find((r) => r.key === res.key)?.next;
-    return nextKey ? (allEntries.find((r) => r.key === nextKey) ?? null) : null;
+    return null;
   }
 
   /**
@@ -1408,7 +1470,9 @@ export class GameScene extends Phaser.Scene {
     });
 
     const res0 = this.path.length ? this.path[0].res : null;
-    const next = res0 ? this.nextResource(res0) : null;
+    // Display the TILE that will spawn on the board (nextUpgradeTile), so the
+    // star preview matches what actually appears at the endpoint.
+    const next = res0 ? this.nextUpgradeTile(res0) : null;
     const effThresh = this.registry.get("effectiveThresholds") ?? UPGRADE_THRESHOLDS;
     const threshold = res0 ? (effThresh[res0.key] || 0) : 0;
     const prevGroups = this._prevStarGroups;
@@ -1616,7 +1680,12 @@ export class GameScene extends Phaser.Scene {
   collectPath() {
     if (!this.path.length) return;
     const res = this.path[0].res;
-    const next = this.nextResource(res);
+    // Board upgrade: resolve as a TILE (via zone upgradeMap). This is what
+    // spawns on the board at the chain endpoint.
+    const next = this.nextUpgradeTile(res);
+    // Resource progress: the resource key this chain's length contributes
+    // toward (fractional accumulation in state.resourceProgress).
+    const resourceKey = producedResource(res);
     const effThresholds = this.registry.get("effectiveThresholds") ?? UPGRADE_THRESHOLDS;
     const upgrades = next ? upgradeCountForChain(this.path.length, res.key, effThresholds) : 0;
     const gained = this.path.length;
@@ -1645,7 +1714,9 @@ export class GameScene extends Phaser.Scene {
     this.radialFlash(this.path[this.path.length - 1].x, this.path[this.path.length - 1].y, this.path.length);
 
     // Queue upgrade tiles to spawn at the endpoint after board collapse.
+    // next is a tile def (from nextUpgradeTile), so assertTile guards regressions.
     if (next && upgrades > 0) {
+      assertTile(next.key);
       const endpointTile = this.path[this.path.length - 1];
       for (let u = 0; u < upgrades; u++) {
         this.pendingUpgrades.push({ res: next, col: endpointTile.col, row: endpointTile.row });
@@ -1669,10 +1740,11 @@ export class GameScene extends Phaser.Scene {
     });
 
     // Emit to React — gained is the full amount (state.js caps it).
+    // resourceKey tells the reducer which resource to accumulate progress for.
     const totalGained = gained + (bonusGains[res.key] ?? 0);
     // Include tile positions so the reducer can extinguish fire/hazard cells
     const chainTiles = this.path.map(t => ({ key: t.res.key, row: t.row, col: t.col }));
-    this.events.emit(SCENE_EVENTS.CHAIN_COLLECTED, { key: res.key, gained: totalGained, upgrades, chainLength: this.path.length, value: res.value, chain: chainTiles });
+    this.events.emit(SCENE_EVENTS.CHAIN_COLLECTED, { key: res.key, gained: totalGained, upgrades, chainLength: this.path.length, value: res.value, chain: chainTiles, resourceKey });
 
     // Reward burst — emit chain center in canvas-local coords so the React
     // layer can spawn a "+N" chip from the board → HUD coin pill.
@@ -1727,7 +1799,8 @@ export class GameScene extends Phaser.Scene {
     if (!this.grassHover) return;
     const n = this.path.length;
     const res = n ? this.path[0].res : null;
-    const next = res ? this.nextResource(res) : null;
+    // Show the TILE that will spawn on the board (nextUpgradeTile).
+    const next = res ? this.nextUpgradeTile(res) : null;
     // No `next` means this resource can't upgrade — nothing will ever spawn.
     if (!next) { this.grassHover.setVisible(false); return; }
     const effThresh = this.registry.get("effectiveThresholds") ?? UPGRADE_THRESHOLDS;
@@ -1765,7 +1838,8 @@ export class GameScene extends Phaser.Scene {
   _emitChainUpdate() {
     const n = this.path.length;
     const res = n ? this.path[0].res : null;
-    const next = res ? this.nextResource(res) : null;
+    // Show the TILE that will spawn on the board (nextUpgradeTile) for the HUD.
+    const next = res ? this.nextUpgradeTile(res) : null;
     const effThresh = this.registry.get("effectiveThresholds") ?? UPGRADE_THRESHOLDS;
     // V.1 — include valid flag for React side panel
     const k = next ? upgradeCountForChain(n, res.key, effThresh) : 0;

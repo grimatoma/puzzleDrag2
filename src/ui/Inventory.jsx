@@ -1,5 +1,6 @@
 import { useState, useReducer, useCallback, useEffect, useLayoutEffect, useRef, forwardRef } from "react";
-import { BIOMES, ITEMS, RECIPES } from "../constants.js";
+import { BIOMES, ITEMS, RECIPES, RESOURCE_TO_THRESHOLD } from "../constants.js";
+import { ProgressBar } from "./primitives/ActionCard.jsx";
 import {
   INVENTORY_TAGS,
   itemHasTag,
@@ -112,17 +113,18 @@ function useAccordion() {
 }
 
 const InventoryIconCell = forwardRef(function InventoryIconCell(
-  { entry, selected, onSelect },
+  { entry, selected, onSelect, progress },
   ref
 ) {
   const { key, label, count } = entry;
+  const pct = progress ? Math.max(0, Math.min(100, (progress.value / progress.max) * 100)) : 0;
   return (
     <button
       ref={ref}
       type="button"
-      className={`inv-grid__cell${selected ? " is-selected" : ""}${count === 0 ? " is-muted" : ""}`}
+      className={`inv-grid__cell${selected ? " is-selected" : ""}${count === 0 && !progress ? " is-muted" : ""}`}
       aria-pressed={selected}
-      aria-label={`${label}${count > 0 ? `, ${count}` : ""}`}
+      aria-label={`${label}${count > 0 ? `, ${count}` : ""}${progress ? `, ${progress.value}/${progress.max} toward next` : ""}`}
       onClick={onSelect}
     >
       <Icon iconKey={key} size={52} title={label} />
@@ -130,6 +132,17 @@ const InventoryIconCell = forwardRef(function InventoryIconCell(
         <span className="inv-grid__badge" aria-hidden="true">
           {count > 999 ? "999+" : count}
         </span>
+      )}
+      {progress && (
+        <div
+          className="absolute bottom-0 left-0 right-0 h-1 rounded-b overflow-hidden bg-black/20"
+          aria-hidden="true"
+        >
+          <div
+            className="h-full bg-amber-400 transition-[width] duration-300"
+            style={{ width: `${pct}%` }}
+          />
+        </div>
       )}
     </button>
   );
@@ -212,7 +225,7 @@ function StatusPill({ status, total }) {
   return null;
 }
 
-function InventoryBrowserItem({ entry, selected, onSelect }) {
+function InventoryBrowserItem({ entry, selected, onSelect, progress }) {
   const { key, label, count, orderStatus } = entry;
   // List view: surface only meaningful order statuses (ready/needed). The
   // "Excess" badge and the redundant kind subtitle stay on the detail card.
@@ -226,7 +239,13 @@ function InventoryBrowserItem({ entry, selected, onSelect }) {
       status={listStatus}
       onClick={onSelect}
       aria-label={`View ${label}`}
-    />
+    >
+      {progress && (
+        <div aria-label={`${progress.value}/${progress.max} toward next ${label}`}>
+          <ProgressBar value={progress.value} max={progress.max} tone="gold" className="h-1.5 mt-1" />
+        </div>
+      )}
+    </BrowserItemButton>
   );
 }
 
@@ -344,6 +363,7 @@ export function InventoryGrid({
   query = "",
   recentOrder,
   viewMode = "list",
+  resourceProgress = {},
 }) {
   const resources = BIOMES[biomeKey].resources; // already resource-only after data split
   const items = Object.entries(ITEMS).filter(([key, item]) =>
@@ -364,6 +384,14 @@ export function InventoryGrid({
     acc[recipe.item].push(recipe);
     return acc;
   }, {});
+  // Returns { value, max } when a resource has non-zero fractional progress,
+  // null otherwise (progress bar is hidden when nothing is accumulating).
+  const progressFor = (key) => {
+    const value = resourceProgress[key] ?? 0;
+    const max = RESOURCE_TO_THRESHOLD[key];
+    return value > 0 && max ? { value, max } : null;
+  };
+
   const [selectedKey, setSelectedKey] = useState(null);
   const accordion = useAccordion();
   const cellRefs = useRef({});
@@ -559,6 +587,7 @@ export function InventoryGrid({
               selected={isSelected}
               onSelect={() => handleCellSelect(entry.key, i)}
               ref={makeRef(entry.key)}
+              progress={progressFor(entry.key)}
             />
           );
         } else if (isSelected) {
@@ -568,6 +597,7 @@ export function InventoryGrid({
                 entry={entry}
                 selected
                 onSelect={() => accordion.select(entry.key)}
+                progress={progressFor(entry.key)}
               />
               <div
                 className={`inv-accordion__body${accordion.isOpen ? " is-open" : ""}`}
@@ -586,6 +616,7 @@ export function InventoryGrid({
               entry={entry}
               selected={false}
               onSelect={() => accordion.select(entry.key)}
+              progress={progressFor(entry.key)}
             />
           );
         }
@@ -631,6 +662,7 @@ export function InventoryGrid({
           entry={entry}
           selected={selected?.key === entry.key}
           onSelect={() => setSelectedKey(entry.key)}
+          progress={progressFor(entry.key)}
         />
       ))}
     </div>
@@ -642,6 +674,7 @@ export function InventoryGrid({
           entry={entry}
           selected={selected?.key === entry.key}
           onSelect={() => setSelectedKey(entry.key)}
+          progress={progressFor(entry.key)}
         />
       ))}
     </BrowserGrid>
