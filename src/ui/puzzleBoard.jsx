@@ -176,9 +176,9 @@ function ChainView({ chainInfo, inventory }) {
   const combined = carriedInCycle + length;
   const cyclesCompleted = threshold > 0 ? Math.floor(combined / threshold) : 0;
   const remainder = threshold > 0 ? combined % threshold : 0;
-  // Visual loop kicks in only when there's spillover past the threshold
-  // (combined > threshold), so the bar always shows an in-progress fill.
-  const looped = threshold > 0 && combined > threshold;
+  // Visual loop kicks in when combined reaches the threshold so the bar
+  // resets and shows only the overflow fill (0% when exactly at boundary).
+  const looped = threshold > 0 && combined >= threshold;
   const carriedPct = threshold > 0 ? (carriedInCycle / threshold) * 100 : 0;
   const newFitsInCycle = threshold > 0
     ? Math.max(0, Math.min(length, threshold - carriedInCycle))
@@ -186,16 +186,12 @@ function ChainView({ chainInfo, inventory }) {
   const newPct = threshold > 0 ? (newFitsInCycle / threshold) * 100 : 0;
   const overflowPct = threshold > 0 ? (remainder / threshold) * 100 : 0;
 
-  // Text format flips only after combined exceeds the threshold — while still
-  // inside the first cycle (combined <= threshold), the "{carried}+{length}"
-  // split is preserved so the player can see their carry-over contribution.
-  // Once spillover begins, carried is absorbed into the "{remainder}/{threshold}
-  // + {N}" cycle counter. Multi-cycle boundaries with no spillover (e.g. exact
-  // 2×threshold) read as "{threshold}/{threshold} + {N-1}".
-  const useCycleText = threshold > 0 && combined > threshold;
-  const onCycleBoundary = useCycleText && remainder === 0;
-  const textCurrent = onCycleBoundary ? threshold : remainder;
-  const textPriorCycles = onCycleBoundary ? cyclesCompleted - 1 : cyclesCompleted;
+  // Text format flips as soon as combined reaches the threshold. At exactly
+  // the threshold (remainder === 0) we show "0/{threshold} + {N}" so the
+  // player sees the counter reset cleanly rather than "{threshold}/{threshold}".
+  const useCycleText = threshold > 0 && combined >= threshold;
+  const textCurrent = remainder;
+  const textPriorCycles = cyclesCompleted;
 
   return (
     <>
@@ -220,15 +216,17 @@ function ChainView({ chainInfo, inventory }) {
           >
             {looped ? (
               <>
-                <div
-                  className="absolute left-0 top-0 bottom-0"
-                  style={{
-                    width: "100%",
-                    background: "linear-gradient(180deg, #b89762 0%, #8a6428 100%)",
-                    boxShadow:
-                      "inset 0 -3px 0 rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.25)",
-                  }}
-                />
+                {remainder > 0 && (
+                  <div
+                    className="absolute left-0 top-0 bottom-0"
+                    style={{
+                      width: "100%",
+                      background: "linear-gradient(180deg, #b89762 0%, #8a6428 100%)",
+                      boxShadow:
+                        "inset 0 -3px 0 rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.25)",
+                    }}
+                  />
+                )}
                 <div
                   className="absolute left-0 top-0 bottom-0"
                   style={{
