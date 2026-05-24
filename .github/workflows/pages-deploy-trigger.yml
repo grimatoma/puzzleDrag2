@@ -1,0 +1,29 @@
+# Bot/auto-merged PRs land on main via github-actions[bot]. Pushes from
+# GITHUB_TOKEN do not start other workflows, so deploy.yml's `push` trigger
+# never runs. `pull_request` closed events still fire; dispatch Pages deploy
+# on main via repository_dispatch (exempt from the token push restriction).
+name: Trigger Pages deploy after bot merge
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  dispatch:
+    if: >-
+      github.event.pull_request.merged == true &&
+      github.event.pull_request.merged_by.type == 'Bot'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dispatch Pages deploy on main
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh api "repos/${GITHUB_REPOSITORY}/dispatches" \
+            --method POST \
+            -f event_type=pages-deploy \
+            -f "client_payload[sha]=${{ github.event.pull_request.merge_commit_sha }}"
