@@ -1708,7 +1708,6 @@ const SLICE_PRIMARY_ACTIONS = new Set([
   // Quest claim and almanac actions are owned by quests/slice
   "QUESTS/CLAIM_QUEST",
   "QUESTS/CLAIM_ALMANAC",
-  "QUESTS/ROLL_DAILIES",
   "QUESTS/PROGRESS_QUEST",
   // Boss actions are owned by boss/slice
   "BOSS/TRIGGER",

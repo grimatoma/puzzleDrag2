@@ -16,13 +16,6 @@ const baseState = (over = {}) => ({
 });
 
 describe("quests slice — coverage gaps", () => {
-  it("QUESTS/ROLL_DAILIES rolls fresh dailies and increments dailyDay", () => {
-    const s0 = baseState({ dailyDay: 5 });
-    const s1 = questReduce(s0, { type: "QUESTS/ROLL_DAILIES" });
-    expect(s1.dailyDay).toBe(6);
-    expect(Array.isArray(s1.dailies)).toBe(true);
-  });
-
   it("QUESTS/PROGRESS_QUEST bumps progress on matching key", () => {
     const s0 = baseState({
       dailies: [

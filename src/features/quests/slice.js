@@ -49,9 +49,6 @@ function progressQuests(dailies, key, amount) {
 
 export function reduce(state, action) {
   switch (action.type) {
-    case "QUESTS/ROLL_DAILIES": {
-      return { ...state, dailies: rollFresh(), dailyDay: (state.dailyDay || 0) + 1 };
-    }
     case "QUESTS/PROGRESS_QUEST": {
       const { key, amount } = action;
       return { ...state, dailies: progressQuests(state.dailies || [], key, amount) };

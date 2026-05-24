@@ -175,13 +175,6 @@ export function QuestsPanel({ state, dispatch }) {
           }).map((q) => (
             <QuestCard key={q.id} q={q} dispatch={dispatch} />
           ))}
-          <p className="text-[10px] text-on-panel-dim text-center mt-1">Next refresh: when season ends</p>
-          <button
-            onClick={() => dispatch({ type: "QUESTS/ROLL_DAILIES" })}
-            className="hl-tab self-center"
-          >
-            🔄 Reroll (dev)
-          </button>
         </div>
       ) : (
         <div className="flex flex-col gap-2">
@@ -244,13 +237,6 @@ export default function QuestsScreen({ state, dispatch, initialTab }) {
           }).map((q) => (
             <QuestCard key={q.id} q={q} dispatch={dispatch} />
           ))}
-          <p className="text-[10px] text-on-panel-dim text-center mt-1">Next refresh: when season ends</p>
-          <button
-            onClick={() => dispatch({ type: "QUESTS/ROLL_DAILIES" })}
-            className="hl-tab self-center"
-          >
-            🔄 Reroll (dev)
-          </button>
         </div>
       ) : (
         <div className="flex-1 flex flex-col overflow-hidden px-3 pb-3 gap-2">
