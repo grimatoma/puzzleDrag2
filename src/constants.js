@@ -201,6 +201,40 @@ export const TILE_FAMILY_RESOURCE = {
   fish_kelp: "fish_oil",
 };
 
+// Tiles whose output is not a simple family-default resource — they have
+// custom handlers (rune triggers, countdowns) wired in feature code, so the
+// chain pipeline intentionally returns null for them.
+export const TILES_WITH_CUSTOM_OUTPUT = new Set([
+  "tile_special_dirt",
+  "tile_special_giant_pearl",
+]);
+
+// Extract the family portion of a tile key, e.g. "tile_grass_hay" -> "grass",
+// "tile_mine_iron_ore" -> "mine_iron_ore", "tile_fish_clam" -> "fish_clam",
+// "tile_fish_sardine" -> "fish". Uses longest-match against TILE_FAMILY_RESOURCE
+// keys so compound families (mine_iron_ore, fish_clam, ...) win over their
+// shorter prefixes (mine, fish). Returns null if the tile key has no
+// registered family.
+const _FAMILY_KEYS_LONGEST_FIRST = Object.keys(TILE_FAMILY_RESOURCE).sort(
+  (a, b) => b.length - a.length,
+);
+export function tileFamily(tileKey) {
+  if (typeof tileKey !== "string" || !tileKey.startsWith("tile_")) return null;
+  const rest = tileKey.slice(5); // strip "tile_"
+  for (const fam of _FAMILY_KEYS_LONGEST_FIRST) {
+    if (rest === fam || rest.startsWith(fam + "_")) return fam;
+  }
+  return null;
+}
+
+// The default produced resource for a tile, based on its family.
+// Returns null when the tile has no family default (special/hazards tiles,
+// or unknown keys).
+export function tileFamilyResource(tileKey) {
+  const fam = tileFamily(tileKey);
+  return fam ? (TILE_FAMILY_RESOURCE[fam] ?? null) : null;
+}
+
 export const ITEMS = {
   // Farm tiles/resources
   tile_grass_hay:          { kind: "tile", biome: "farm", label: "Hay",          color: 0xa8c769, dark: 0x4f6b3a, value: 1, next: "hay_bundle", sway: { amp: 4.0, freq: 0.00060, gust: 0.20 } },

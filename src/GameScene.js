@@ -1,15 +1,13 @@
 import Phaser from "phaser";
-import { TILE, COLS, ROWS, UPGRADE_THRESHOLDS, SEASONS, BIOMES, CAPPED_RESOURCES, SCENE_EVENTS } from "./constants.js";
+import { TILE, COLS, ROWS, UPGRADE_THRESHOLDS, SEASONS, BIOMES, CAPPED_RESOURCES, SCENE_EVENTS, tileFamilyResource, TILES_WITH_CUSTOM_OUTPUT } from "./constants.js";
 import { upgradeCountForChain, rollResource } from "./utils.js";
 import { computeWorkerEffects } from "./features/workers/aggregate.js";
 import { CATEGORY_OF, TILE_TYPES_MAP } from "./features/tileCollection/data.js";
 import {
   expandZoneCategories,
-  nextResourceForZone,
   pickByZoneSeasonDrops,
   seasonIndexInSession,
   seasonNameInSession,
-  TILE_CATEGORY_TO_ZONE_CATEGORY,
   ZONES,
 } from "./features/zones/data.js";
 const cssColor = (num) => Phaser.Display.Color.IntegerToColor(num).rgba;
@@ -586,36 +584,32 @@ export class GameScene extends Phaser.Scene {
   // ─── Resources ────────────────────────────────────────────────────────────
 
   nextResource(res) {
+    if (!res || !res.key) return null;
     const resources = this.biome().resources;
 
-    // Per-tile "Produces Resource" override (Balance Manager → Tiles tab) is
-    // authoritative — it names the chain's upgrade target outright, ahead of
-    // the zone redirect and the resource's native `.next`.
-    const producesKey = TILE_TYPES_MAP[res.key]?.effects?.producesResource;
-    if (producesKey) {
-      return resources.find((r) => r.key === producesKey) ?? null;
+    // 1. Per-tile "Produces Resource" override (Balance Manager → Tiles tab)
+    // is authoritative — it names the chain's upgrade target outright.
+    const override = TILE_TYPES_MAP[res.key]?.effects?.producesResource;
+    if (override) {
+      return resources.find((r) => r.key === override) ?? null;
     }
 
-    // Farm chains are owned by the active zone's upgradeMap. Whatever the
-    // zone says (concrete category, gold sentinel, or "no entry") is the
-    // final answer — we do NOT fall back to the resource's native `.next`.
-    // Mine/water resources aren't represented in TILE_CATEGORY_TO_ZONE_CATEGORY
-    // and so fall through to their native chain below.
-    const zoneId = this.registry.get("activeZone") ?? null;
-    const sourceTileCat = CATEGORY_OF[res.key];
-    const sourceZoneCat = sourceTileCat ? TILE_CATEGORY_TO_ZONE_CATEGORY[sourceTileCat] : null;
-    if (zoneId && sourceZoneCat) {
-      const tileCollectionActive = this.registry.get("tileCollectionActive") ?? null;
-      return nextResourceForZone({
-        currentRes: res,
-        zoneId,
-        biomeResources: resources,
-        tileCollectionActive,
-        categoryOf: CATEGORY_OF,
-      });
+    // 2. Family default from TILE_FAMILY_RESOURCE — the single source of
+    // truth for "what does this tile family produce on the board".
+    const defaultKey = tileFamilyResource(res.key);
+    if (defaultKey) {
+      return resources.find((r) => r.key === defaultKey) ?? null;
     }
+
+    // 3. Tiles with custom handlers (special, hazards) produce nothing by
+    // chain default — their outputs (runes, countdowns, ...) are wired in
+    // feature code.
+    if (TILES_WITH_CUSTOM_OUTPUT.has(res.key)) return null;
+
+    // 4. Legacy fallback for resources/tiles that aren't covered by the
+    // family map — chase the resource's own `.next` pointer in the biome.
     const nextKey = resources.find((r) => r.key === res.key)?.next;
-    return nextKey ? resources.find((r) => r.key === nextKey) : null;
+    return nextKey ? (resources.find((r) => r.key === nextKey) ?? null) : null;
   }
 
   /**
