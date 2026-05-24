@@ -1,4 +1,10 @@
-import { UPGRADE_THRESHOLDS, RESOURCE_CAP_BASE, RESOURCE_CAP_GRANARY } from "./constants.js";
+import {
+  UPGRADE_THRESHOLDS,
+  RESOURCE_CAP_BASE,
+  RESOURCE_CAP_GRANARY,
+  ITEMS,
+  tileFamily,
+} from "./constants.js";
 import { locBuilt } from "./locBuilt.js";
 
 export function clamp(n, a, b) {
@@ -60,6 +66,82 @@ export function upgradeCountForChain(chainLength, resourceKey, thresholdMap = UP
   const t = thresholdMap[resourceKey];
   if (!t) return 0; // terminal or unknown resource
   return Math.floor(chainLength / t);
+}
+
+// Public category names (used by tool-power configs) → tile families that live
+// in TILE_FAMILY_RESOURCE. Plural/synonym keys are accepted so callers can use
+// either the tileCollection style (`bird`, `special_dirt`) or the more natural
+// tool-power name (`birds`, `dirt`).
+const CATEGORY_TO_FAMILIES = {
+  grass: ["grass"],
+  grain: ["grain"],
+  trees: ["tree"],
+  tree: ["tree"],
+  vegetables: ["veg"],
+  veg: ["veg"],
+  fruits: ["fruit"],
+  fruit: ["fruit"],
+  flowers: ["flower"],
+  flower: ["flower"],
+  birds: ["bird"],
+  bird: ["bird"],
+  herd_animals: ["herd"],
+  herd: ["herd"],
+  cattle: ["cattle"],
+  mounts: ["mount"],
+  mount: ["mount"],
+  dirt: ["special_dirt"],
+  special_dirt: ["special_dirt"],
+  stone: ["mine_stone"],
+  mine_stone: ["mine_stone"],
+  iron: ["mine_iron_ore"],
+  mine_iron_ore: ["mine_iron_ore"],
+  copper: ["mine_copper_ore"],
+  mine_copper_ore: ["mine_copper_ore"],
+  coal: ["mine_coal"],
+  mine_coal: ["mine_coal"],
+  gold: ["mine_gold"],
+  mine_gold: ["mine_gold"],
+  gem: ["mine_gem"],
+  mine_gem: ["mine_gem"],
+  fish: ["fish", "fish_clam", "fish_oyster", "fish_kelp"],
+};
+
+// Resolve a tile key's family — falls back to a synthetic "special_dirt" tag
+// for `tile_special_dirt`, which is intentionally absent from TILE_FAMILY_RESOURCE
+// because its produced resource is handled by a custom rune-trigger pipeline.
+function _tileFamilyForCategory(tileKey) {
+  const fam = tileFamily(tileKey);
+  if (fam) return fam;
+  if (tileKey === "tile_special_dirt") return "special_dirt";
+  return null;
+}
+
+/**
+ * Returns every `tile_*` key whose family matches the given category (or
+ * categories). Accepts a single category string OR an array of categories;
+ * the returned array is the union with no duplicates. Unknown categories
+ * contribute nothing — the function never throws.
+ * @param {string | string[]} category
+ * @returns {string[]}
+ */
+export function tilesInCategory(category) {
+  const requested = Array.isArray(category) ? category : [category];
+  const families = new Set();
+  for (const c of requested) {
+    const fams = CATEGORY_TO_FAMILIES[c];
+    if (!fams) continue;
+    for (const f of fams) families.add(f);
+  }
+  if (families.size === 0) return [];
+  const out = [];
+  for (const key of Object.keys(ITEMS)) {
+    const item = ITEMS[key];
+    if (!item || item.kind !== "tile") continue;
+    const fam = _tileFamilyForCategory(key);
+    if (fam && families.has(fam)) out.push(key);
+  }
+  return out;
 }
 
 /**
