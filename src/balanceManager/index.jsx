@@ -41,6 +41,7 @@ const ExportTab    = lazy(() => import("./tabs/ExportTab.jsx"));
 const IconsTab     = lazy(() => import("./tabs/IconsTab.jsx"));
 const AbilitiesReferenceTab = lazy(() => import("./tabs/AbilitiesReferenceTab.jsx"));
 const ToolPowersReferenceTab = lazy(() => import("./tabs/ToolPowersReferenceTab.jsx"));
+const AnimationsDemoTab = lazy(() => import("./tabs/AnimationsDemoTab.jsx"));
 
 // Hash routing for the Balance Manager lives in `./router.js` — kept separate
 // from `src/router.js` because the Balance Manager is its own page (`/b/`).
@@ -108,6 +109,9 @@ const TABS = [
   { id: "toolPowers", label: "Tool Powers",  iconKey: "rake",    Component: ToolPowersReferenceTab,
     section: "other",
     blurb: "Reference list of every tool power: name, description, and configurable params. Tool powers are the active effects players trigger by spending a tool (e.g. clear_all, water_pump)." },
+  { id: "animationsDemo", label: "Animations Demo", iconKey: "ui_star", Component: AnimationsDemoTab,
+    section: "other",
+    blurb: "Preview every named board animation on a live game board. Each animation has fixed duration / stagger / ease — tools just pick which one to play. Source: src/config/boardAnimations.js." },
   { id: "export",    label: "Export · Import",iconKey: "ui_star", Component: ExportTab,
     section: "other",
     blurb: "Save your draft, download as JSON to commit, or paste a config to import." },
