@@ -41,6 +41,7 @@ const ExportTab    = lazy(() => import("./tabs/ExportTab.jsx"));
 const IconsTab     = lazy(() => import("./tabs/IconsTab.jsx"));
 const AbilitiesReferenceTab = lazy(() => import("./tabs/AbilitiesReferenceTab.jsx"));
 const ToolPowersReferenceTab = lazy(() => import("./tabs/ToolPowersReferenceTab.jsx"));
+const TileDiscoveryReferenceTab = lazy(() => import("./tabs/TileDiscoveryReferenceTab.jsx"));
 const WikiTab = lazy(() => import("./tabs/WikiTab.jsx"));
 const AnimationsDemoTab = lazy(() => import("./tabs/AnimationsDemoTab.jsx"));
 
@@ -113,6 +114,9 @@ const TABS = [
   { id: "toolPowers", label: "Tool Powers",  iconKey: "rake",    Component: ToolPowersReferenceTab,
     section: "other",
     blurb: "Reference list of every tool power: name, description, and configurable params. Tool powers are the active effects players trigger by spending a tool (e.g. clear_all, water_pump)." },
+  { id: "tileDiscoveryMethods", label: "Tile Discovery Methods", iconKey: "ui_star", Component: TileDiscoveryReferenceTab,
+    section: "other",
+    blurb: "Reference list of every tile-discovery method: default, chain, research, buy, daily reward. Shows each method's params and which tiles currently use it." },
   { id: "animationsDemo", label: "Animations Demo", iconKey: "ui_star", Component: AnimationsDemoTab,
     section: "other",
     blurb: "Preview every named board animation on a live game board. Each animation has fixed duration / stagger / ease — tools just pick which one to play. Source: src/config/boardAnimations.js." },

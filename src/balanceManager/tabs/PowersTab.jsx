@@ -19,13 +19,16 @@ import {
   SegmentedFilter,
 } from "../shared.jsx";
 import AbilitiesEditor from "../AbilitiesEditor.jsx";
+import {
+  TILE_DISCOVERY_METHODS,
+  getTileDiscoveryMethod,
+  defaultsForTileDiscoveryMethod,
+} from "../../config/tileDiscoveryMethods.js";
 
-const DISCOVERY_METHODS = [
-  { value: "default",  label: "Default — always available" },
-  { value: "chain",    label: "Chain — long enough chain of source resource" },
-  { value: "research", label: "Research — cumulative chain progress" },
-  { value: "buy",      label: "Buy — purchase with coins" },
-];
+const DISCOVERY_METHOD_OPTIONS = TILE_DISCOVERY_METHODS.map((m) => ({
+  value: m.id,
+  label: `${m.name} — ${m.desc}`,
+}));
 
 function resourceKeyOptions(includeNone = false) {
   const set = new Set();
@@ -171,7 +174,7 @@ export default function PowersTab({ draft, updateDraft }) {
 
   function setUnlockMethod(tileId, method) {
     updateDraft((d) => {
-      d.tileUnlocks[tileId] = { method };
+      d.tileUnlocks[tileId] = { method, ...defaultsForTileDiscoveryMethod(method) };
     });
   }
 
@@ -352,7 +355,7 @@ export default function PowersTab({ draft, updateDraft }) {
               </div>
             )}
 
-            {/* Discovery / Unlock */}
+            {/* Discovery / Unlock — schema-driven from src/config/tileDiscoveryMethods.js */}
             <div>
               <div className="text-[11px] font-bold uppercase tracking-wide mb-1.5" style={{ color: COLORS.inkSubtle }}>
                 Discovery {unlockDirty && <span style={{ color: COLORS.ember }}>· edited</span>}
@@ -363,66 +366,39 @@ export default function PowersTab({ draft, updateDraft }) {
                     <Label>Discovery method</Label>
                     <Select
                       value={effDiscovery.method}
-                      options={DISCOVERY_METHODS}
+                      options={DISCOVERY_METHOD_OPTIONS}
                       onChange={(v) => setUnlockMethod(selected.id, v)}
                     />
                   </div>
-                  {effDiscovery.method === "chain" && (
-                    <>
-                      <div>
-                        <Label>Source resource</Label>
-                        <Select
-                          value={effDiscovery.chainLengthOf ?? ""}
-                          options={sourceOptions}
-                          onChange={(v) => patchUnlock(selected.id, { chainLengthOf: v })}
-                        />
-                      </div>
-                      <div>
-                        <Label>Required chain length</Label>
-                        <NumberField
-                          value={effDiscovery.chainLength ?? 6}
-                          min={1}
-                          max={50}
-                          width={70}
-                          onChange={(v) => patchUnlock(selected.id, { chainLength: v })}
-                        />
-                      </div>
-                    </>
-                  )}
-                  {effDiscovery.method === "research" && (
-                    <>
-                      <div>
-                        <Label>Source resource</Label>
-                        <Select
-                          value={effDiscovery.researchOf ?? ""}
-                          options={sourceOptions}
-                          onChange={(v) => patchUnlock(selected.id, { researchOf: v })}
-                        />
-                      </div>
-                      <div>
-                        <Label>Cumulative chain target</Label>
-                        <NumberField
-                          value={effDiscovery.researchAmount ?? 30}
-                          min={1}
-                          max={500}
-                          width={80}
-                          onChange={(v) => patchUnlock(selected.id, { researchAmount: v })}
-                        />
-                      </div>
-                    </>
-                  )}
-                  {effDiscovery.method === "buy" && (
-                    <div>
-                      <Label>Coin cost</Label>
-                      <NumberField
-                        value={effDiscovery.coinCost ?? 100}
-                        min={0}
-                        max={99999}
-                        width={90}
-                        onChange={(v) => patchUnlock(selected.id, { coinCost: v })}
-                      />
-                    </div>
-                  )}
+                  {(getTileDiscoveryMethod(effDiscovery.method)?.params ?? []).map((p) => {
+                    if (p.type === "resourceKey") {
+                      return (
+                        <div key={p.key}>
+                          <Label>{p.label}</Label>
+                          <Select
+                            value={effDiscovery[p.key] ?? ""}
+                            options={sourceOptions}
+                            onChange={(v) => patchUnlock(selected.id, { [p.key]: v })}
+                          />
+                        </div>
+                      );
+                    }
+                    if (p.type === "int") {
+                      return (
+                        <div key={p.key}>
+                          <Label>{p.label}</Label>
+                          <NumberField
+                            value={effDiscovery[p.key] ?? p.default ?? 0}
+                            min={p.min ?? 0}
+                            max={p.max ?? 9999}
+                            width={90}
+                            onChange={(v) => patchUnlock(selected.id, { [p.key]: v })}
+                          />
+                        </div>
+                      );
+                    }
+                    return null;
+                  })}
                   {unlockDirty && (
                     <div className="col-span-2">
                       <SmallButton variant="ghost" onClick={() => revertUnlock(selected.id)}>
