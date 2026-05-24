@@ -13,15 +13,15 @@ function rr(ctx, x, y, w, h, r) {
 }
 
 const MINE_HANDLED_KEYS = new Set([
-  "mine_stone",
-  "mine_coal",
-  "mine_gem",
-  "mine_gold",
+  "tile_mine_stone",
+  "tile_mine_coal",
+  "tile_mine_gem",
+  "tile_mine_gold",
 ]);
 
 export function drawMineTileIcon(ctx, key) {
   if (!MINE_HANDLED_KEYS.has(key)) return false;
-  if (key === "mine_stone") {
+  if (key === "tile_mine_stone") {
     // Faceted gray rock with crevices
     // Shadow
     ctx.fillStyle = "rgba(0,0,0,0.25)";
@@ -139,7 +139,7 @@ export function drawMineTileIcon(ctx, key) {
     ctx.stroke();
   }
 
-  else if (key === "mine_iron_ore") {
+  else if (key === "tile_mine_iron_ore") {
     // Rocky chunk with bright copper/gold metal veins
     // Shadow
     ctx.fillStyle = "rgba(0,0,0,0.25)";
@@ -286,7 +286,7 @@ export function drawMineTileIcon(ctx, key) {
     ctx.stroke();
   }
 
-  else if (key === "mine_coal") {
+  else if (key === "tile_mine_coal") {
     // Lumpy black coal with cracks and highlights
     // Shadow
     ctx.fillStyle = "rgba(0,0,0,0.3)";
@@ -418,7 +418,7 @@ export function drawMineTileIcon(ctx, key) {
     ctx.stroke();
   }
 
-  else if (key === "mine_gem") {
+  else if (key === "tile_mine_gem") {
     // Cut crystal gem with multiple facets
     // Shadow
     ctx.fillStyle = "rgba(0,0,0,0.28)";
@@ -560,7 +560,7 @@ export function drawMineTileIcon(ctx, key) {
     });
   }
 
-  else if (key === "mine_gold") {
+  else if (key === "tile_mine_gold") {
     // Irregular gold nugget (NOT a circle)
     // Shadow
     ctx.fillStyle = "rgba(0,0,0,0.3)";

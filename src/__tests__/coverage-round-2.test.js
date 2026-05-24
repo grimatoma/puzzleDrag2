@@ -11,11 +11,11 @@ import { CASTLE_NEEDS } from "../features/castle/data.js";
 // ─── castle/slice.js ────────────────────────────────────────────────────────
 describe("castle slice — coverage gaps", () => {
   const baseCastle = () => ({
-    contributed: { soup: 0, meat: 0, mine_coal: 0 },
+    contributed: { soup: 0, meat: 0, tile_mine_coal: 0 },
   });
   const baseState = (over = {}) => ({
     castle: baseCastle(),
-    inventory: { soup: 5, meat: 5, mine_coal: 5 },
+    inventory: { soup: 5, meat: 5, tile_mine_coal: 5 },
     ...over,
   });
 
@@ -59,10 +59,10 @@ describe("castle slice — coverage gaps", () => {
     expect(s1.castle.contributed.soup).toBe(3);
   });
 
-  it("CASTLE/CONTRIBUTE deducts inventory and increments contributed (coal via mine_coal)", () => {
+  it("CASTLE/CONTRIBUTE deducts inventory and increments contributed (coal via tile_mine_coal)", () => {
     const s0 = baseState();
     const s1 = castleReduce(s0, { type: "CASTLE/CONTRIBUTE", payload: { key: "coal", amount: 2 } });
-    expect(s1.inventory.mine_coal).toBe(3);
+    expect(s1.inventory.tile_mine_coal).toBe(3);
     expect(s1.castle.contributed.coal).toBe(2);
   });
 

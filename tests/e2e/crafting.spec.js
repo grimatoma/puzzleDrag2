@@ -49,7 +49,7 @@ test('Workshop: crafting water_pump credits state.tools, NOT inventory (PR #274 
   await gotoFresh(page, {
     coins: 500,
     built: { workshop: true },
-    inventory: { wood_plank: 2, mine_stone: 2 },
+    inventory: { wood_plank: 2, tile_mine_stone: 2 },
     level: 3, // tier-2 recipes require level ≥ 3
   });
   await openCraftingTab(page, 'workshop');
@@ -62,14 +62,14 @@ test('Workshop: crafting water_pump credits state.tools, NOT inventory (PR #274 
   // Routing assertion: NOT in inventory under the recipe key.
   expect(s.inventory?.water_pump ?? 0).toBe(0);
   expect(s.inventory.wood_plank).toBe(1);
-  expect(s.inventory.mine_stone).toBe(1);
+  expect(s.inventory.tile_mine_stone).toBe(1);
 });
 
 test('Workshop: crafting explosives also routes to state.tools', async ({ page }) => {
   await gotoFresh(page, {
     coins: 500,
     built: { workshop: true },
-    inventory: { grass_hay: 2, mine_dirt: 2 },
+    inventory: { tile_grass_hay: 2, tile_special_dirt: 2 },
     level: 3,
   });
   await openCraftingTab(page, 'workshop');

@@ -14,12 +14,12 @@
  *   Warthog   → mount
  */
 export const LONG_CHAIN_BONUSES = Object.freeze({
-  grain_buckwheat: { threshold: 12, bonusKey: "herd_pig",  amount: 1 },
-  veg_eggplant:    { threshold: 12, bonusKey: "veg_carrot", amount: 1 },
-  bird_goose:      { threshold: 12, bonusKey: "veg_carrot", amount: 1 },
-  tree_willow:     { threshold: 12, bonusKey: "veg_carrot", amount: 1 },
-  veg_broccoli:    { threshold: 12, bonusKey: "flower_pansy", amount: 1 },
-  herd_warthog:    { threshold: 12, bonusKey: "mount_horse",  amount: 1 },
+  tile_grain_buckwheat: { threshold: 12, bonusKey: "tile_herd_pig",  amount: 1 },
+  tile_veg_eggplant:    { threshold: 12, bonusKey: "tile_veg_carrot", amount: 1 },
+  tile_bird_goose:      { threshold: 12, bonusKey: "tile_veg_carrot", amount: 1 },
+  tile_tree_willow:     { threshold: 12, bonusKey: "tile_veg_carrot", amount: 1 },
+  tile_veg_broccoli:    { threshold: 12, bonusKey: "tile_flower_pansy", amount: 1 },
+  tile_herd_warthog:    { threshold: 12, bonusKey: "tile_mount_horse",  amount: 1 },
 });
 
 /**

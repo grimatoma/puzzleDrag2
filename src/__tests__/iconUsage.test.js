@@ -18,9 +18,9 @@ describe("iconUsage", () => {
 
   it("includes resource item keys (ITEMS keys = icon keys)", () => {
     const set = getUsedIconKeys();
-    // grass_hay is the canonical fully-tested resource.
-    expect(set.has("grass_hay")).toBe(true);
-    expect(set.has("tree_oak")).toBe(true);
+    // tile_grass_hay is the canonical fully-tested resource.
+    expect(set.has("tile_grass_hay")).toBe(true);
+    expect(set.has("tile_tree_oak")).toBe(true);
     expect(set.has("bread")).toBe(true);
   });
 
@@ -59,8 +59,8 @@ describe("iconUsage", () => {
   });
 
   it("isIconUsed is cached and consistent across calls", () => {
-    const a = isIconUsed("grass_hay");
-    const b = isIconUsed("grass_hay");
+    const a = isIconUsed("tile_grass_hay");
+    const b = isIconUsed("tile_grass_hay");
     expect(a).toBe(b);
     expect(a).toBe(true);
   });

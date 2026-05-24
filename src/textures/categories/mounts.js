@@ -236,8 +236,8 @@ function drawMammoth(ctx) {
 }
 
 export const ICONS = {
-  mount_horse:   { label:"Horse",   color:"#a86838", draw:drawHorse },
-  mount_donkey:  { label:"Donkey",  color:"#8a8478", draw:drawDonkey },
-  mount_moose:   { label:"Moose",   color:"#5a3814", draw:drawMoose },
-  mount_mammoth: { label:"Mammoth", color:"#a87838", draw:drawMammoth },
+  tile_mount_horse:   { label:"Horse",   color:"#a86838", draw:drawHorse },
+  tile_mount_donkey:  { label:"Donkey",  color:"#8a8478", draw:drawDonkey },
+  tile_mount_moose:   { label:"Moose",   color:"#5a3814", draw:drawMoose },
+  tile_mount_mammoth: { label:"Mammoth", color:"#a87838", draw:drawMammoth },
 };

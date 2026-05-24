@@ -8,7 +8,7 @@ import IconCanvas from "../../ui/IconCanvas.jsx";
 import Icon from "../../ui/Icon.jsx";
 
 const FOOD_LABELS = {
-  supplies: "Supplies", fruit_apple: "Apple", bread: "Bread", cured_meat: "Cured Meat",
+  supplies: "Supplies", tile_fruit_apple: "Apple", bread: "Bread", cured_meat: "Cured Meat",
   festival_loaf: "Festival Loaf", wedding_pie: "Wedding Pie", iron_ration: "Iron Ration",
 };
 

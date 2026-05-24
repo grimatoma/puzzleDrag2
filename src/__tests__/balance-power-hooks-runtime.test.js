@@ -28,26 +28,26 @@ function warmupAndGetState() {
   const s0 = createInitialState();
   return rootReducer(s0, {
     type: "CHAIN_COLLECTED",
-    payload: { key: "grass_hay", gained: 4, upgrades: 0, value: 1, chainLength: 4 },
+    payload: { key: "tile_grass_hay", gained: 4, upgrades: 0, value: 1, chainLength: 4 },
   });
 }
 
 describe("Power hooks at runtime", () => {
   let snap;
-  beforeEach(() => { snap = snapshotEffects("grass_hay"); });
-  afterEach(() => { restoreEffects("grass_hay", snap); });
+  beforeEach(() => { snap = snapshotEffects("tile_grass_hay"); });
+  afterEach(() => { restoreEffects("tile_grass_hay", snap); });
 
   it("coin_bonus_flat adds a flat amount on CHAIN_COLLECTED", () => {
     const sWarm = warmupAndGetState();
     const before = sWarm.coins;
 
     applyTileOverrides(TILE_TYPES, {
-      tilePowers: { grass_hay: { hooks: [{ id: "coin_bonus_flat", params: { amount: 50 } }] } },
+      tilePowers: { tile_grass_hay: { hooks: [{ id: "coin_bonus_flat", params: { amount: 50 } }] } },
     });
 
     const sAfter = rootReducer(sWarm, {
       type: "CHAIN_COLLECTED",
-      payload: { key: "grass_hay", gained: 4, upgrades: 0, value: 1, chainLength: 4 },
+      payload: { key: "tile_grass_hay", gained: 4, upgrades: 0, value: 1, chainLength: 4 },
     });
     // Base coinsGain = max(1, floor(5*1/2)) = 2 (Spring +1 harvest bonus on 4),
     // plus hook flat = 50. Total delta = 52.
@@ -59,12 +59,12 @@ describe("Power hooks at runtime", () => {
     const before = sWarm.coins;
 
     applyTileOverrides(TILE_TYPES, {
-      tilePowers: { grass_hay: { hooks: [{ id: "coin_bonus_per_tile", params: { amount: 3 } }] } },
+      tilePowers: { tile_grass_hay: { hooks: [{ id: "coin_bonus_per_tile", params: { amount: 3 } }] } },
     });
 
     const sAfter = rootReducer(sWarm, {
       type: "CHAIN_COLLECTED",
-      payload: { key: "grass_hay", gained: 5, upgrades: 0, value: 1, chainLength: 5 },
+      payload: { key: "tile_grass_hay", gained: 5, upgrades: 0, value: 1, chainLength: 5 },
     });
     // Phase 7 — calendar Spring +20% removed. gained 5 → coinsGain
     // max(1, floor(5/2)) = 2. Per-tile hook: 3 × chainLength(5) = 15.
@@ -74,18 +74,18 @@ describe("Power hooks at runtime", () => {
 
   it("free_turn_after_n grants 1 free move only when chain meets threshold", () => {
     applyTileOverrides(TILE_TYPES, {
-      tilePowers: { grass_hay: { hooks: [{ id: "free_turn_after_n", params: { minChain: 6 } }] } },
+      tilePowers: { tile_grass_hay: { hooks: [{ id: "free_turn_after_n", params: { minChain: 6 } }] } },
     });
     const s0 = createInitialState();
     const sShort = rootReducer(s0, {
       type: "CHAIN_COMMIT",
-      payload: { key: "grass_hay", length: 4 },
+      payload: { key: "tile_grass_hay", length: 4 },
     });
     expect(sShort.tileCollection?.freeMoves ?? 0).toBe(0);
 
     const sLong = rootReducer(s0, {
       type: "CHAIN_COMMIT",
-      payload: { key: "grass_hay", length: 6 },
+      payload: { key: "tile_grass_hay", length: 6 },
     });
     expect(sLong.tileCollection?.freeMoves ?? 0).toBe(1);
   });

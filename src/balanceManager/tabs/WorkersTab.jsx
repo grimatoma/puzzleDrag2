@@ -169,7 +169,7 @@ export default function WorkersTab({ draft, updateDraft }) {
                     style={{ background: COLORS.parchmentDeep, border: `1px solid ${COLORS.border}`, color: COLORS.ink }}
                     value={formatResources(eff.resources)}
                     onChange={(e) => patchHireCost("resources", parseResources(e.target.value))}
-                    placeholder="grass_hay:2, tree_oak:1"
+                    placeholder="tile_grass_hay:2, tile_tree_oak:1"
                   />
                 </div>
               </div>

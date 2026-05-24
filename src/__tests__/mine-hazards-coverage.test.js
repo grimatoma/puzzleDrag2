@@ -151,9 +151,9 @@ describe("clearCaveIn", () => {
   it("chain not adjacent to caveIn row → unchanged", () => {
     const s = { hazards: { caveIn: { row: 0 } } };
     const chain = [
-      { key: "mine_stone", row: 4, col: 0 },
-      { key: "mine_stone", row: 4, col: 1 },
-      { key: "mine_stone", row: 4, col: 2 },
+      { key: "tile_mine_stone", row: 4, col: 0 },
+      { key: "tile_mine_stone", row: 4, col: 1 },
+      { key: "tile_mine_stone", row: 4, col: 2 },
     ];
     const r = clearCaveIn(s, chain);
     expect(r).toBe(s);
@@ -162,8 +162,8 @@ describe("clearCaveIn", () => {
   it("chain too short (< 3 stone) → unchanged", () => {
     const s = { hazards: { caveIn: { row: 0 } } };
     const chain = [
-      { key: "mine_stone", row: 1, col: 0 },
-      { key: "mine_stone", row: 1, col: 1 },
+      { key: "tile_mine_stone", row: 1, col: 0 },
+      { key: "tile_mine_stone", row: 1, col: 1 },
     ];
     const r = clearCaveIn(s, chain);
     expect(r).toBe(s);
@@ -172,9 +172,9 @@ describe("clearCaveIn", () => {
   it("chain ≥ 3 stone, adjacent row → clears caveIn", () => {
     const s = { hazards: { caveIn: { row: 0 } } };
     const chain = [
-      { key: "mine_stone", row: 1, col: 0 },
-      { key: "mine_stone", row: 1, col: 1 },
-      { key: "mine_stone", row: 1, col: 2 },
+      { key: "tile_mine_stone", row: 1, col: 0 },
+      { key: "tile_mine_stone", row: 1, col: 1 },
+      { key: "tile_mine_stone", row: 1, col: 2 },
     ];
     const r = clearCaveIn(s, chain);
     expect(r.hazards.caveIn).toBeNull();

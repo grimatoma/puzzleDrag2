@@ -21,8 +21,8 @@ export function keeperTrialDefinition(state, zoneId, path = "driveout") {
   if (!keeper || !info) return null;
   const biomeKey = biomeForSettlementType(type);
   const goalByType = {
-    farm: { resource: "grass_hay", amount: 25 },
-    mine: { resource: "mine_stone", amount: 20 },
+    farm: { resource: "tile_grass_hay", amount: 25 },
+    mine: { resource: "tile_mine_stone", amount: 20 },
     harbor: { resource: "fish_fillet", amount: 20 },
   };
   const baseBudgetByType = { farm: 12, mine: 10, harbor: 10 };

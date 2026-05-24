@@ -10,32 +10,32 @@
  */
 export const SPECIES_TAGS = Object.freeze({
   // ── Avoided by rats — rats won't eat these tiles ─────────────────────
-  grain_wheat:   ["avoids_rats"],
-  fruit_coconut: ["avoids_rats"],
-  fruit_pear:    ["avoids_rats"],
-  veg_cucumber:  ["avoids_rats"],
-  tree_cypress:  ["avoids_rats", "deadly_pests"],
+  tile_grain_wheat:   ["avoids_rats"],
+  tile_fruit_coconut: ["avoids_rats"],
+  tile_fruit_pear:    ["avoids_rats"],
+  tile_veg_cucumber:  ["avoids_rats"],
+  tile_tree_cypress:  ["avoids_rats", "deadly_pests"],
 
   // ── Placeholder tags (data only; rules not wired yet) ────────────────
   // Resistant to swamp
-  grain_rice:        ["resistant_swamp"],
-  mount_moose:       ["resistant_swamp"],
-  flower_water_lily: ["resistant_swamp"],
-  veg_mushroom:      ["resistant_swamp"],
-  fruit_rambutan:    ["resistant_swamp"],
+  tile_grain_rice:        ["resistant_swamp"],
+  tile_mount_moose:       ["resistant_swamp"],
+  tile_flower_water_lily: ["resistant_swamp"],
+  tile_veg_mushroom:      ["resistant_swamp"],
+  tile_fruit_rambutan:    ["resistant_swamp"],
   // Avoided by wolves
-  bird_rooster:        ["avoids_wolves"],
-  herd_sheep:          ["avoids_wolves"],
-  herd_alpaca:         ["avoids_wolves"],
-  herd_warthog:        ["avoids_wolves"],
-  cattle_triceratops:  ["avoids_wolves"],
+  tile_bird_rooster:        ["avoids_wolves"],
+  tile_herd_sheep:          ["avoids_wolves"],
+  tile_herd_alpaca:         ["avoids_wolves"],
+  tile_herd_warthog:        ["avoids_wolves"],
+  tile_cattle_triceratops:  ["avoids_wolves"],
   // Attracts rats / wolves
-  grain_manna:     ["attracts_rats"],
-  fruit_jackfruit: ["attracts_rats"],
-  bird_wild_goose: ["attracts_wolves"],
-  bird_phoenix:    ["attracts_wolves", "deadly_pests"],
+  tile_grain_manna:     ["attracts_rats"],
+  tile_fruit_jackfruit: ["attracts_rats"],
+  tile_bird_wild_goose: ["attracts_wolves"],
+  tile_bird_phoenix:    ["attracts_wolves", "deadly_pests"],
   // Deadly to pests
-  veg_beet:       ["deadly_pests"],
+  tile_veg_beet:       ["deadly_pests"],
 });
 
 /**

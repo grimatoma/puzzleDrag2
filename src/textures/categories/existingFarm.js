@@ -249,14 +249,14 @@ function drawMelon(ctx) {
 }
 
 export const ICONS = {
-  grass_hay:           { label:"Hay",          color:"#e8b85c", draw:drawHay },
-  grass_meadow:        { label:"Meadow Grass", color:"#7eb84a", draw:drawMeadowGrass },
-  grass_spiky:         { label:"Spiky Grass",  color:"#9ec25a", draw:drawSpikyGrass },
-  grain_wheat:         { label:"Wheat",        color:"#e8c34c", draw:drawWheat },
+  tile_grass_hay:           { label:"Hay",          color:"#e8b85c", draw:drawHay },
+  tile_grass_meadow:        { label:"Meadow Grass", color:"#7eb84a", draw:drawMeadowGrass },
+  tile_grass_spiky:         { label:"Spiky Grass",  color:"#9ec25a", draw:drawSpikyGrass },
+  tile_grain_wheat:         { label:"Wheat",        color:"#e8c34c", draw:drawWheat },
   flour:               { label:"Flour",        color:"#f0e2b8", draw:drawFlour },
   plank:               { label:"Plank",        color:"#caa168", draw:drawPlank },
   jam:                 { label:"Jam",          color:"#a72c5e", draw:drawJam },
-  bird_turkey:         { label:"Turkey",       color:"#a86028", draw:drawTurkey },
-  bird_clover:         { label:"Clover",       color:"#88c050", draw:drawClover },
-  bird_melon:          { label:"Melon",        color:"#86b54a", draw:drawMelon },
+  tile_bird_turkey:         { label:"Turkey",       color:"#a86028", draw:drawTurkey },
+  tile_bird_clover:         { label:"Clover",       color:"#88c050", draw:drawClover },
+  tile_bird_melon:          { label:"Melon",        color:"#86b54a", draw:drawMelon },
 };

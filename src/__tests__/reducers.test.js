@@ -43,9 +43,9 @@ describe("CHAIN_COLLECTED", () => {
     const state = minState();
     const next = gameReducer(state, {
       type: "CHAIN_COLLECTED",
-      payload: { key: "grass_hay", gained: 4, upgrades: 0, value: 1, chainLength: 4 },
+      payload: { key: "tile_grass_hay", gained: 4, upgrades: 0, value: 1, chainLength: 4 },
     });
-    expect(next.inventory.grass_hay).toBe(4);
+    expect(next.inventory.tile_grass_hay).toBe(4);
   });
 
   // Phase 7 — calendar season effects (spring +20%, autumn 2× upgrades,
@@ -55,7 +55,7 @@ describe("CHAIN_COLLECTED", () => {
     const state = minState({ turnsUsed: 9, farmRun: { zoneId: "home", turnBudget: 10, turnsRemaining: 1, startedAt: 1 } });
     const next = gameReducer(state, {
       type: "CHAIN_COLLECTED",
-      payload: { key: "grass_hay", gained: 3, upgrades: 0, value: 1, chainLength: 4 },
+      payload: { key: "tile_grass_hay", gained: 3, upgrades: 0, value: 1, chainLength: 4 },
     });
     expect(next.turnsUsed).toBe(10);
     expect(next.farmRun.turnsRemaining).toBe(0);
@@ -66,7 +66,7 @@ describe("CHAIN_COLLECTED", () => {
     const state = minState();
     const next = gameReducer(state, {
       type: "CHAIN_COLLECTED",
-      payload: { key: "grass_hay", gained: 6, upgrades: 0, value: 1, chainLength: 6 },
+      payload: { key: "tile_grass_hay", gained: 6, upgrades: 0, value: 1, chainLength: 6 },
     });
     expect(next.coins).toBeGreaterThan(state.coins);
     expect(next.xp).toBeGreaterThan(0);
@@ -75,10 +75,10 @@ describe("CHAIN_COLLECTED", () => {
 
 describe("TURN_IN_ORDER", () => {
   it("deducts inventory and adds reward coins", () => {
-    const order = { id: "o1", npc: "wren", key: "grass_hay", need: 5, reward: 30, line: "test" };
+    const order = { id: "o1", npc: "wren", key: "tile_grass_hay", need: 5, reward: 30, line: "test" };
     const state = minState({
       seasonsCycled: 2, // Autumn — no order reward modifier
-      inventory: { grass_hay: 10 },
+      inventory: { tile_grass_hay: 10 },
       orders: [order],
     });
     const next = gameReducer(state, {
@@ -89,17 +89,17 @@ describe("TURN_IN_ORDER", () => {
       need: order.need,
       reward: order.reward,
     });
-    expect(next.inventory.grass_hay).toBe(5);
+    expect(next.inventory.tile_grass_hay).toBe(5);
     expect(next.coins).toBe(state.coins + 30);
   });
 
   // Phase 7 — summer 2× order multiplier removed with the calendar season.
 
   it("does nothing when inventory is insufficient", () => {
-    const order = { id: "o1", npc: "wren", key: "grass_hay", need: 10, reward: 30, line: "test" };
+    const order = { id: "o1", npc: "wren", key: "tile_grass_hay", need: 10, reward: 30, line: "test" };
     const state = minState({
       seasonsCycled: 2, // Autumn — no order reward modifier
-      inventory: { grass_hay: 2 },
+      inventory: { tile_grass_hay: 2 },
       orders: [order],
     });
     const next = gameReducer(state, {
@@ -110,7 +110,7 @@ describe("TURN_IN_ORDER", () => {
       need: order.need,
       reward: order.reward,
     });
-    expect(next.inventory.grass_hay).toBe(2); // unchanged
+    expect(next.inventory.tile_grass_hay).toBe(2); // unchanged
     expect(next.coins).toBe(state.coins); // unchanged
   });
 });
@@ -236,8 +236,8 @@ describe("SWITCH_BIOME", () => {
   it("always generates 3 orders with distinct NPCs (100 iterations)", () => {
     // Need a state that already has 3 orders so SWITCH_BIOME has something to map over
     const baseOrders = [
-      { id: "o1", npc: "mira", key: "grass_hay", need: 5, reward: 30, line: "t" },
-      { id: "o2", npc: "tomas", key: "tree_oak", need: 5, reward: 30, line: "t" },
+      { id: "o1", npc: "mira", key: "tile_grass_hay", need: 5, reward: 30, line: "t" },
+      { id: "o2", npc: "tomas", key: "tile_tree_oak", need: 5, reward: 30, line: "t" },
       { id: "o3", npc: "bram", key: "berry", need: 5, reward: 30, line: "t" },
     ];
     for (let i = 0; i < 100; i++) {

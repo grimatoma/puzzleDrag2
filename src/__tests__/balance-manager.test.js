@@ -10,39 +10,39 @@ import {
 
 describe("Balance Manager — override merge layer", () => {
   it("mergeOverrides shallow-merges nested objects", () => {
-    const a = { upgradeThresholds: { grass_hay: 6 }, resources: {} };
-    const b = { upgradeThresholds: { grain_wheat: 4 }, recipes: { bread: { coins: 200 } } };
+    const a = { upgradeThresholds: { tile_grass_hay: 6 }, resources: {} };
+    const b = { upgradeThresholds: { tile_grain_wheat: 4 }, recipes: { bread: { coins: 200 } } };
     const out = mergeOverrides(a, b);
-    expect(out.upgradeThresholds).toEqual({ grass_hay: 6, grain_wheat: 4 });
+    expect(out.upgradeThresholds).toEqual({ tile_grass_hay: 6, tile_grain_wheat: 4 });
     expect(out.recipes).toEqual({ bread: { coins: 200 } });
     expect(out.resources).toEqual({});
   });
 
   it("applyUpgradeThresholdOverrides mutates in place and rejects bad values", () => {
-    const target = { grass_hay: 6, tree_oak: 5 };
-    applyUpgradeThresholdOverrides(target, { grass_hay: 8, tree_oak: 0, bogus: -1, also_bogus: "abc" });
-    expect(target.grass_hay).toBe(8);
-    expect(target.tree_oak).toBe(5); // < 1 rejected
+    const target = { tile_grass_hay: 6, tile_tree_oak: 5 };
+    applyUpgradeThresholdOverrides(target, { tile_grass_hay: 8, tile_tree_oak: 0, bogus: -1, also_bogus: "abc" });
+    expect(target.tile_grass_hay).toBe(8);
+    expect(target.tile_tree_oak).toBe(5); // < 1 rejected
   });
 
   it("applyItemOverrides patches ITEMS entries by key", () => {
     const items = {
-      grass_hay: { label: "Hay", color: 0xa8c769, value: 1, next: "grain_wheat" },
-      tree_oak:  { label: "Log", color: 0x9b6b3e, value: 2, next: "plank" },
+      tile_grass_hay: { label: "Hay", color: 0xa8c769, value: 1, next: "tile_grain_wheat" },
+      tile_tree_oak:  { label: "Log", color: 0x9b6b3e, value: 2, next: "plank" },
     };
     applyItemOverrides(items, {
-      grass_hay: { label: "Straw", value: 3, next: "tree_oak" },
+      tile_grass_hay: { label: "Straw", value: 3, next: "tile_tree_oak" },
     });
-    expect(items.grass_hay.label).toBe("Straw");
-    expect(items.grass_hay.value).toBe(3);
-    expect(items.grass_hay.next).toBe("tree_oak");
-    expect(items.tree_oak.label).toBe("Log"); // unchanged
+    expect(items.tile_grass_hay.label).toBe("Straw");
+    expect(items.tile_grass_hay.value).toBe(3);
+    expect(items.tile_grass_hay.next).toBe("tile_tree_oak");
+    expect(items.tile_tree_oak.label).toBe("Log"); // unchanged
   });
 
   it("applyItemOverrides treats `next: null/empty` as terminal", () => {
-    const items = { grass_hay: { label: "Hay", next: "grain_wheat" } };
-    applyItemOverrides(items, { grass_hay: { next: null } });
-    expect(items.grass_hay.next).toBeNull();
+    const items = { tile_grass_hay: { label: "Hay", next: "tile_grain_wheat" } };
+    applyItemOverrides(items, { tile_grass_hay: { next: null } });
+    expect(items.tile_grass_hay.next).toBeNull();
   });
 
   it("applyRecipeOverrides replaces inputs wholesale and rejects bad qty", () => {
@@ -74,12 +74,12 @@ describe("Balance Manager — override merge layer", () => {
 describe("Balance Manager — applyTileOverrides", () => {
   it("merges power hooks into tile.effects via expansion", () => {
     const tiles = [
-      { id: "grass_hay", category: "grass", baseResource: "grass_hay", tier: 0,
+      { id: "tile_grass_hay", category: "grass", baseResource: "tile_grass_hay", tier: 0,
         discovery: { method: "default" }, effects: {} },
     ];
     applyTileOverrides(tiles, {
       tilePowers: {
-        grass_hay: {
+        tile_grass_hay: {
           // Legacy `hooks` form is translated 1:1 into the new abilities shape.
           hooks: [{ id: "coin_bonus_flat", params: { amount: 10 } }],
         },

@@ -31,7 +31,7 @@ describe("new harbor + smokehouse buildings", () => {
     const s0 = {
       ...createInitialState(),
       coins: def.cost.coins + 100,
-      inventory: { plank: def.cost.plank + 10, mine_stone: def.cost.mine_stone + 10 },
+      inventory: { plank: def.cost.plank + 10, tile_mine_stone: def.cost.tile_mine_stone + 10 },
       level: def.lv + 1,
       built: {},
     };

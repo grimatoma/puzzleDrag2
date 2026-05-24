@@ -101,7 +101,7 @@ function order(id, npc, key, need, have, reward = 80) {
 
 function visualOrders() {
   return [
-    order("order-ready", "mira", "grass_hay", 12, 40, 90),
+    order("order-ready", "mira", "tile_grass_hay", 12, 40, 90),
     order("order-partial", "tomas", "plank", 18, 8, 130),
     order("order-crafted", "bram", "bread", 2, 3, 180),
   ];
@@ -118,24 +118,24 @@ function visualQuests() {
 function richInventory() {
   return {
     supplies: 12,
-    grass_hay: 40,
-    grain_wheat: 22,
+    tile_grass_hay: 40,
+    tile_grain_wheat: 22,
     flour: 12,
-    tree_oak: 28,
+    tile_tree_oak: 28,
     plank: 80,
-    fruit_blackberry: 19,
+    tile_fruit_blackberry: 19,
     jam: 5,
-    mine_stone: 95,
-    mine_iron_ore: 36,
+    tile_mine_stone: 95,
+    tile_mine_iron_ore: 36,
     iron_bar: 24,
-    mine_coal: 30,
-    mine_gem: 8,
+    tile_mine_coal: 30,
+    tile_mine_gem: 8,
     eggs: 12,
-    fruit_apple: 14,
+    tile_fruit_apple: 14,
     bread: 3,
     soup: 7,
     meat: 4,
-    fish_sardine: 12,
+    tile_fish_sardine: 12,
     fish_fillet: 9,
   };
 }
@@ -268,13 +268,13 @@ function richState() {
       unlocked,
     },
     collected: {
-      grass_hay: 120,
-      grain_wheat: 44,
-      tree_oak: 31,
+      tile_grass_hay: 120,
+      tile_grain_wheat: 44,
+      tile_tree_oak: 31,
       plank: 18,
-      mine_stone: 75,
-      mine_iron_ore: 22,
-      fish_sardine: 9,
+      tile_mine_stone: 75,
+      tile_mine_iron_ore: 22,
+      tile_fish_sardine: 9,
     },
   };
 }
@@ -284,30 +284,30 @@ function grid(rows) {
 }
 
 const farmGrid = grid([
-  ["grass_hay", "grass_hay", "grass_hay", "grass_hay", "grass_hay", "grass_hay"],
-  ["grass_hay", "grass_hay", "grass_hay", "grass_hay", "grass_hay", "grass_hay"],
-  ["grain_wheat", "veg_carrot", "fruit_apple", "tree_oak", "herd_pig", "cattle_cow"],
-  ["grain_wheat", "veg_carrot", "fruit_apple", "tree_oak", "herd_pig", "cattle_cow"],
-  ["flower_pansy", "bird_pheasant", "mount_horse", "grain_wheat", "veg_carrot", "fruit_apple"],
-  ["flower_pansy", "bird_pheasant", "mount_horse", "grain_wheat", "veg_carrot", "fruit_apple"],
+  ["tile_grass_hay", "tile_grass_hay", "tile_grass_hay", "tile_grass_hay", "tile_grass_hay", "tile_grass_hay"],
+  ["tile_grass_hay", "tile_grass_hay", "tile_grass_hay", "tile_grass_hay", "tile_grass_hay", "tile_grass_hay"],
+  ["tile_grain_wheat", "tile_veg_carrot", "tile_fruit_apple", "tile_tree_oak", "tile_herd_pig", "tile_cattle_cow"],
+  ["tile_grain_wheat", "tile_veg_carrot", "tile_fruit_apple", "tile_tree_oak", "tile_herd_pig", "tile_cattle_cow"],
+  ["tile_flower_pansy", "tile_bird_pheasant", "tile_mount_horse", "tile_grain_wheat", "tile_veg_carrot", "tile_fruit_apple"],
+  ["tile_flower_pansy", "tile_bird_pheasant", "tile_mount_horse", "tile_grain_wheat", "tile_veg_carrot", "tile_fruit_apple"],
 ]);
 
 const mineGrid = grid([
-  ["mine_stone", "mine_stone", "mine_iron_ore", "mine_coal", "mine_gem", "special_dirt"],
-  ["mine_stone", "mine_iron_ore", "mine_iron_ore", "mine_coal", "mine_gem", "special_dirt"],
-  ["mine_stone", "mine_stone", "mine_iron_ore", "mine_coal", "mine_gem", "special_dirt"],
-  ["mine_stone", "mine_iron_ore", "mine_coal", "mine_coal", "mine_gem", "special_dirt"],
-  ["mine_stone", "mine_stone", "mine_iron_ore", "mine_coal", "mine_gem", "special_dirt"],
-  ["mine_stone", "mine_iron_ore", "mine_iron_ore", "mine_coal", "mine_gem", "special_dirt"],
+  ["tile_mine_stone", "tile_mine_stone", "tile_mine_iron_ore", "tile_mine_coal", "tile_mine_gem", "tile_special_dirt"],
+  ["tile_mine_stone", "tile_mine_iron_ore", "tile_mine_iron_ore", "tile_mine_coal", "tile_mine_gem", "tile_special_dirt"],
+  ["tile_mine_stone", "tile_mine_stone", "tile_mine_iron_ore", "tile_mine_coal", "tile_mine_gem", "tile_special_dirt"],
+  ["tile_mine_stone", "tile_mine_iron_ore", "tile_mine_coal", "tile_mine_coal", "tile_mine_gem", "tile_special_dirt"],
+  ["tile_mine_stone", "tile_mine_stone", "tile_mine_iron_ore", "tile_mine_coal", "tile_mine_gem", "tile_special_dirt"],
+  ["tile_mine_stone", "tile_mine_iron_ore", "tile_mine_iron_ore", "tile_mine_coal", "tile_mine_gem", "tile_special_dirt"],
 ]);
 
 const fishGrid = grid([
-  ["fish_sardine", "fish_sardine", "fish_mackerel", "fish_clam", "fish_kelp", "fish_oyster"],
-  ["fish_sardine", "fish_mackerel", "fish_mackerel", "fish_clam", "fish_kelp", "fish_oyster"],
-  ["fish_sardine", "fish_sardine", "fish_mackerel", "fish_clam", "fish_kelp", "fish_oyster"],
-  ["fish_sardine", "fish_mackerel", "fish_clam", "fish_clam", "fish_kelp", "fish_oyster"],
-  ["fish_sardine", "fish_sardine", "fish_mackerel", "fish_clam", "fish_kelp", "fish_oyster"],
-  ["fish_sardine", "fish_mackerel", "fish_mackerel", "fish_clam", "fish_kelp", "fish_oyster"],
+  ["tile_fish_sardine", "tile_fish_sardine", "tile_fish_mackerel", "tile_fish_clam", "tile_fish_kelp", "tile_fish_oyster"],
+  ["tile_fish_sardine", "tile_fish_mackerel", "tile_fish_mackerel", "tile_fish_clam", "tile_fish_kelp", "tile_fish_oyster"],
+  ["tile_fish_sardine", "tile_fish_sardine", "tile_fish_mackerel", "tile_fish_clam", "tile_fish_kelp", "tile_fish_oyster"],
+  ["tile_fish_sardine", "tile_fish_mackerel", "tile_fish_clam", "tile_fish_clam", "tile_fish_kelp", "tile_fish_oyster"],
+  ["tile_fish_sardine", "tile_fish_sardine", "tile_fish_mackerel", "tile_fish_clam", "tile_fish_kelp", "tile_fish_oyster"],
+  ["tile_fish_sardine", "tile_fish_mackerel", "tile_fish_mackerel", "tile_fish_clam", "tile_fish_kelp", "tile_fish_oyster"],
 ]);
 
 function boardState(kind = "farm") {
@@ -375,10 +375,10 @@ function withRunSummary(state) {
       mode: "normal",
       turnsAtStart: 10,
       chainsPlayed: 5,
-      biggestChain: { count: 12, key: "grass_hay", coinGain: 28, upgrades: 2, gained: 12 },
+      biggestChain: { count: 12, key: "tile_grass_hay", coinGain: 28, upgrades: 2, gained: 12 },
       totalUpgrades: 4,
       totalCoinGain: 140,
-      resourcesGained: { grass_hay: 34, grain_wheat: 8, fruit_apple: 5 },
+      resourcesGained: { tile_grass_hay: 34, tile_grain_wheat: 8, tile_fruit_apple: 5 },
       bondsAtStart: { wren: 5, mira: 5 },
       bondDeltas: { wren: 0.5, mira: 0.3 },
       beatsTriggered: [{ id: "act1_first_harvest", title: "The First Harvest" }],
@@ -402,12 +402,12 @@ function profileState(profile) {
     case "fertilizerEntry": return { ...richState(), tools: { ...richState().tools, fertilizer: 3 } };
     case "farmDangersEntry": return { ...richState(), mapCurrent: "meadow", activeZone: "meadow", settlements: { ...richState().settlements, meadow: { founded: true, biome: "prairie" } } };
     case "mineLocked": return { ...baseState(), level: 1, mapCurrent: "quarry", activeZone: "quarry", settlements: { home: { founded: true, biome: "prairie" }, quarry: { founded: true, biome: "mountain" } } };
-    case "mineTownNoFood": return { ...richState(), level: 2, mapCurrent: "quarry", activeZone: "quarry", inventory: { ...richInventory(), supplies: 0, bread: 0, fruit_apple: 0 } };
+    case "mineTownNoFood": return { ...richState(), level: 2, mapCurrent: "quarry", activeZone: "quarry", inventory: { ...richInventory(), supplies: 0, bread: 0, tile_fruit_apple: 0 } };
     case "mineTownFood": return { ...richState(), level: 2, mapCurrent: "quarry", activeZone: "quarry" };
     case "harborTownFood": return { ...richState(), level: 3, mapCurrent: "harbor", activeZone: "harbor", biomeKey: "fish" };
     case "boardFarm": return boardState("farm");
     case "boardFarmLong": return { ...boardState("farm"), grid: farmGrid };
-    case "boardFarmBoss": return { ...boardState("farm"), boss: { key: "frostmaw", name: "The Frostmaw", emoji: "❄️", resource: "tree_oak", targetCount: 30, progress: 8, turnsLeft: 6, minChain: 5, goal: "Bring 30 logs in 10 turns." } };
+    case "boardFarmBoss": return { ...boardState("farm"), boss: { key: "frostmaw", name: "The Frostmaw", emoji: "❄️", resource: "tile_tree_oak", targetCount: 30, progress: 8, turnsLeft: 6, minChain: 5, goal: "Bring 30 logs in 10 turns." } };
     case "boardFarmHazards": return { ...boardState("farm"), hazards: { ...boardState("farm").hazards, fire: { cells: [{ row: 0, col: 4 }, { row: 1, col: 4 }] }, rats: [{ row: 4, col: 0, age: 1 }, { row: 4, col: 1, age: 1 }, { row: 5, col: 0, age: 1 }] } };
     case "boardFarmBomb": return { ...boardState("farm"), toolPending: "bomb", tools: { ...boardState("farm").tools, bomb: 3 } };
     case "boardFarmFertilizer": return { ...boardState("farm"), fertilizerActive: true, magicFertilizerCharges: 3, session: { selectedTiles: ["grass", "grain"], fertilizerUsed: true } };
@@ -415,7 +415,7 @@ function profileState(profile) {
     case "boardMineHazards": {
       const st = boardState("mine");
       const g = st.grid.map((row) => row.map((cell) => ({ ...cell })));
-      g[1][1] = { key: "mine_stone", rubble: true };
+      g[1][1] = { key: "tile_mine_stone", rubble: true };
       g[2][2] = { key: "mysterious_ore" };
       g[3][3] = { key: "lava" };
       return { ...st, grid: g, hazards: { ...st.hazards, caveIn: { row: 1, col: 1 }, gasVent: { row: 0, col: 3, turnsLeft: 3 }, lava: { cells: [{ row: 3, col: 3 }], turnsToSpread: 1 } }, mysteriousOre: { row: 2, col: 2 } };
@@ -432,10 +432,10 @@ function profileState(profile) {
     case "boardFishPearl": {
       const st = boardState("fish");
       const g = st.grid.map((row) => row.map((cell) => ({ ...cell })));
-      g[2][2] = { key: "special_giant_pearl" };
+      g[2][2] = { key: "tile_special_giant_pearl" };
       return { ...st, grid: g, fish: { tide: "low", tideTurn: 2 }, fishPearl: { row: 2, col: 2 } };
     }
-    case "boardBossMinimized": return { ...boardState("farm"), bossMinimized: true, boss: { key: "quagmire", name: "The Quagmire", emoji: "🌿", resource: "grass_hay", targetCount: 50, progress: 22, turnsLeft: 4, goal: "Drain the bog: harvest 50 hay." } };
+    case "boardBossMinimized": return { ...boardState("farm"), bossMinimized: true, boss: { key: "quagmire", name: "The Quagmire", emoji: "🌿", resource: "tile_grass_hay", targetCount: 50, progress: 22, turnsLeft: 4, goal: "Drain the bog: harvest 50 hay." } };
     case "boardBossWeather": return { ...boardState("fish"), boss: { key: "storm", name: "The Storm", emoji: "🌩", resource: "fish_fillet", targetCount: 6, progress: 2, turnsLeft: 5, minChain: 4, goal: "Land 6 fish fillets in 10 turns. Short chains slip the line.", modifierDescription: "Chains of fewer than 4 fish tiles slip the line: they consume a turn but yield nothing." }, fish: { tide: "high", tideTurn: 3 } };
     case "craftQueue": {
       // Multi-station queue snapshot: bakery has two stacked, forge has
@@ -466,18 +466,18 @@ function profileState(profile) {
       };
     }
     case "portalInsufficient": return { ...richState(), influence: 10, tools: { ...richState().tools, magic_wand: 0, hourglass: 0, magic_seed: 0, magic_fertilizer: 0 } };
-    case "marketNews": return { ...richState(), bubble: { id: 202, npc: "tomas", text: "Market News: Wood Shortage! Timber supplies are low. Logs and Planks are worth double!", ms: 10_000 }, market: { ...richState().market, season: 2, event: { id: "wood_shortage", label: "Wood Shortage", desc: "Timber supplies are low. Logs and Planks are worth double!", mults: { tree_oak: 2, plank: 2 } } } };
-    case "tileActivate": return { ...richState(), tileCollection: fullTileCollection({ activeByCategory: { ...fullTileCollection().activeByCategory, grass: "grass_hay" } }) };
+    case "marketNews": return { ...richState(), bubble: { id: 202, npc: "tomas", text: "Market News: Wood Shortage! Timber supplies are low. Logs and Planks are worth double!", ms: 10_000 }, market: { ...richState().market, season: 2, event: { id: "wood_shortage", label: "Wood Shortage", desc: "Timber supplies are low. Logs and Planks are worth double!", mults: { tile_tree_oak: 2, plank: 2 } } } };
+    case "tileActivate": return { ...richState(), tileCollection: fullTileCollection({ activeByCategory: { ...fullTileCollection().activeByCategory, grass: "tile_grass_hay" } }) };
     case "tileBuy": {
       const tc = fullTileCollection();
-      delete tc.discovered.bird_clover;
-      tc.activeByCategory.flowers = "flower_pansy";
+      delete tc.discovered.tile_bird_clover;
+      tc.activeByCategory.flowers = "tile_flower_pansy";
       return { ...richState(), coins: 1_000, tileCollection: tc };
     }
     case "tileResearch": {
       const tc = fullTileCollection();
-      delete tc.discovered.grass_spiky;
-      tc.researchProgress.grass_spiky = 32;
+      delete tc.discovered.tile_grass_spiky;
+      tc.researchProgress.tile_grass_spiky = 32;
       return { ...richState(), tileCollection: tc };
     }
     case "tileFreeMoves": return { ...richState(), tileCollection: fullTileCollection({ freeMoves: 3 }) };
@@ -492,7 +492,7 @@ function profileState(profile) {
     case "storyProgressed": return { ...richState(), story: quietStory({ first_harvest: true, hearth_lit: true, first_order: true, granary_built: true, bram_arrived: true }) };
     case "charter": return { ...richState(), turnsUsed: 27, story: { ...richState().story, flags: { ...richState().story.flags, keeper_path_driveout: true, keeper_path_coexist: true }, choiceLog: [{ beatId: "act1_arrival", choiceId: "continue", ts: VISUAL_FIXED_NOW - 300_000, value: "Hearthwood Vale" }, { beatId: "frostmaw_keeper", choiceId: "drive_out", ts: VISUAL_FIXED_NOW - 200_000 }, { beatId: "mira_letter_1", choiceId: "send", ts: VISUAL_FIXED_NOW - 100_000 }] } };
     case "bossGallery": return { ...richState(), story: quietStory({ frostmaw_defeated: true, ember_drake_active: true }) };
-    case "bossModal": return { ...richState(), modal: "boss", boss: { key: "frostmaw", name: "The Frostmaw", emoji: "❄️", resource: "tree_oak", targetCount: 30, progress: 11, turnsLeft: 7, minChain: 5, goal: "Bring 30 logs in 10 turns to keep the hearth lit.", flavor: "A frozen titan stirs in the deep winter wood." } };
+    case "bossModal": return { ...richState(), modal: "boss", boss: { key: "frostmaw", name: "The Frostmaw", emoji: "❄️", resource: "tile_tree_oak", targetCount: 30, progress: 11, turnsLeft: 7, minChain: 5, goal: "Bring 30 logs in 10 turns to keep the hearth lit.", flavor: "A frozen titan stirs in the deep winter wood." } };
     case "runSummary": return withRunSummary(richState());
     case "boons": return { ...richState(), story: quietStory({ keeper_anyzone_coexist: true, keeper_anyzone_driveout: true }), boons: { deer_blessing: true } };
     case "storyBar": return withBeat(richState(), "act1_light_hearth");

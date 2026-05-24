@@ -75,7 +75,7 @@ test('Mixed chain (rat + non-rat) is rejected', async ({ page }) => {
     chain: [
       { key: 'rat', row: 0, col: 0 },
       { key: 'rat', row: 0, col: 1 },
-      { key: 'grass_hay', row: 0, col: 2 },
+      { key: 'tile_grass_hay', row: 0, col: 2 },
     ],
   });
   await page.waitForTimeout(200);

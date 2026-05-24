@@ -27,10 +27,10 @@ describe("fish-biome quest templates", () => {
     }
   });
 
-  it("collect_sardine references a real fish_sardine resource key", () => {
+  it("collect_sardine references a real tile_fish_sardine resource key", () => {
     const t = QUEST_TEMPLATES.find((x) => x.id === "collect_sardine");
     expect(t.category).toBe("collect");
-    expect(t.key).toBe("fish_sardine");
+    expect(t.key).toBe("tile_fish_sardine");
   });
 
   it("craft_chowder targets the chowder recipe item", () => {

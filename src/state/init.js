@@ -94,7 +94,7 @@ export function createFreshState(overrides) {
       fire: null,
       wolves: null 
     },
-    grid: Array.from({ length: 6 }, () => Array.from({ length: 6 }, () => ({ key: "grass_hay" }))),
+    grid: Array.from({ length: 6 }, () => Array.from({ length: 6 }, () => ({ key: "tile_grass_hay" }))),
     _biomeRestored: false,
     lastChainSnapshot: null,
     magicFertilizerCharges: 0,

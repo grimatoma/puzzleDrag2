@@ -285,12 +285,12 @@ function drawPearl(ctx) {
 }
 
 export const ICONS = {
-  fish_sardine:        { label: "Sardine",     color: "#9ab8c4", draw: drawSardine },
-  fish_mackerel:       { label: "Mackerel",    color: "#4a7a9a", draw: drawMackerel },
-  fish_clam:           { label: "Clam",        color: "#c8a888", draw: drawClam },
-  fish_oyster:         { label: "Oyster",      color: "#d0c0a8", draw: drawOyster },
-  fish_kelp:           { label: "Kelp",        color: "#3a6a3a", draw: drawKelp },
+  tile_fish_sardine:        { label: "Sardine",     color: "#9ab8c4", draw: drawSardine },
+  tile_fish_mackerel:       { label: "Mackerel",    color: "#4a7a9a", draw: drawMackerel },
+  tile_fish_clam:           { label: "Clam",        color: "#c8a888", draw: drawClam },
+  tile_fish_oyster:         { label: "Oyster",      color: "#d0c0a8", draw: drawOyster },
+  tile_fish_kelp:           { label: "Kelp",        color: "#3a6a3a", draw: drawKelp },
   fish_fillet:         { label: "Fillet",      color: "#e8c8b0", draw: drawFishFillet },
   fish_oil:            { label: "Fish Oil",    color: "#e8d050", draw: drawFishOil },
-  special_giant_pearl: { label: "Giant Pearl", color: "#efe8d8", draw: drawPearl },
+  tile_special_giant_pearl: { label: "Giant Pearl", color: "#efe8d8", draw: drawPearl },
 };

@@ -39,10 +39,10 @@ describe("Combination — building + worker + tile abilities stack on shared cha
 
   it("worker (fractional weight) + tile (full weight) on threshold_reduce stack on the same key", () => {
     const out = aggregateAbilities([
-      { kind: "worker", abilities: [{ id: "threshold_reduce", params: { target: "grass_hay", amount: 4 } }], weight: 0.5 },
-      { kind: "tile", abilities: [{ id: "threshold_reduce", params: { target: "grass_hay", amount: 1 } }], weight: 1 },
+      { kind: "worker", abilities: [{ id: "threshold_reduce", params: { target: "tile_grass_hay", amount: 4 } }], weight: 0.5 },
+      { kind: "tile", abilities: [{ id: "threshold_reduce", params: { target: "tile_grass_hay", amount: 1 } }], weight: 1 },
     ], ctx());
-    expect(out.thresholdReduce.grass_hay).toBe(3); // (4*0.5) + (1*1)
+    expect(out.thresholdReduce.tile_grass_hay).toBe(3); // (4*0.5) + (1*1)
   });
 });
 
@@ -65,7 +65,7 @@ describe("Combination — full season-end with built buildings", () => {
   it("silo on farm preserves the board between sessions via preserve_board ability", () => {
     let s = createInitialState();
     s = withBuilt(s, ["hearth", "silo"]);
-    const grid = [["grass_hay"]];
+    const grid = [["tile_grass_hay"]];
     s = {
       ...s,
       biomeKey: "farm",

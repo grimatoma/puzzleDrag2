@@ -6,13 +6,13 @@
  * coin reward, mirroring tryClearRatChain's per-rat payout).
  *
  * Catalog entries:
- *   tree_cypress
- *   veg_beet
- *   bird_phoenix
+ *   tile_tree_cypress
+ *   tile_veg_beet
+ *   tile_bird_phoenix
  */
 import { RAT_CLEAR_REWARD_PER } from "../../constants.js";
 
-const DEADLY_KEYS = new Set(["tree_cypress", "veg_beet", "bird_phoenix"]);
+const DEADLY_KEYS = new Set(["tile_tree_cypress", "tile_veg_beet", "tile_bird_phoenix"]);
 
 /** Returns true if the given resource key is "deadly to pests". */
 export function isDeadlyToPests(key) {

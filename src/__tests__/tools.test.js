@@ -47,10 +47,10 @@ describe("1.3 — Scythe USE_TOOL { key: 'clear' }", () => {
   });
 
   it("does NOT silently add inventory", () => {
-    const s0 = minState({ tools: { clear: 2, basic: 0, rare: 0, shuffle: 0 }, inventory: { grass_hay: 3 } });
+    const s0 = minState({ tools: { clear: 2, basic: 0, rare: 0, shuffle: 0 }, inventory: { tile_grass_hay: 3 } });
     const s1 = gameReducer(s0, { type: "USE_TOOL", payload: { key: "clear" } });
     // inventory should be unchanged — Phaser handles the resource gain via board animation
-    expect(s1.inventory.grass_hay).toBe(3);
+    expect(s1.inventory.tile_grass_hay).toBe(3);
   });
 });
 
@@ -70,9 +70,9 @@ describe("1.4 — Seedpack USE_TOOL { key: 'basic' }", () => {
   });
 
   it("does NOT add inventory (Phaser handles board placement)", () => {
-    const s0 = minState({ tools: { basic: 1, clear: 0, rare: 0, shuffle: 0 }, inventory: { grass_hay: 0 } });
+    const s0 = minState({ tools: { basic: 1, clear: 0, rare: 0, shuffle: 0 }, inventory: { tile_grass_hay: 0 } });
     const s1 = gameReducer(s0, { type: "USE_TOOL", payload: { key: "basic" } });
-    expect(s1.inventory.grass_hay || 0).toBe(0);
+    expect(s1.inventory.tile_grass_hay || 0).toBe(0);
   });
 });
 
@@ -119,7 +119,7 @@ describe("1.2 — hasValidChain", () => {
       return;
     }
     const ROWS = 6, COLS = 6;
-    const types = ["grass_hay", "tree_oak", "berry", "eggs"];
+    const types = ["tile_grass_hay", "tile_tree_oak", "berry", "eggs"];
     const grid = [];
     for (let r = 0; r < ROWS; r++) {
       grid[r] = [];
@@ -143,13 +143,13 @@ describe("1.2 — hasValidChain", () => {
     for (let r = 0; r < ROWS; r++) {
       grid[r] = [];
       for (let c = 0; c < COLS; c++) {
-        grid[r][c] = { res: { key: "tree_oak" } };
+        grid[r][c] = { res: { key: "tile_tree_oak" } };
       }
     }
     // Make a mostly-unique board but with 3 hay in a row at top-left
-    grid[0][0] = { res: { key: "grass_hay" } };
-    grid[0][1] = { res: { key: "grass_hay" } };
-    grid[0][2] = { res: { key: "grass_hay" } };
+    grid[0][0] = { res: { key: "tile_grass_hay" } };
+    grid[0][1] = { res: { key: "tile_grass_hay" } };
+    grid[0][2] = { res: { key: "tile_grass_hay" } };
     expect(hasValidChain(grid)).toBe(true);
   });
 });

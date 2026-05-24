@@ -39,7 +39,7 @@ describe("Phase 32 — TILE_CATEGORY_TO_ZONE_CATEGORY reverse mapping", () => {
 describe("Phase 32 — nextResourceForZone returns null when the zone has no override", () => {
   it("returns null when zoneId is missing", () => {
     const r = nextResourceForZone({
-      currentRes: findResource("grass_hay"),
+      currentRes: findResource("tile_grass_hay"),
       zoneId: null,
       biomeResources: farmResources,
       tileCollectionActive: null,
@@ -50,7 +50,7 @@ describe("Phase 32 — nextResourceForZone returns null when the zone has no ove
 
   it("returns null for a resource whose category is not in the zone upgradeMap", () => {
     // Home (basic farm) has no `flowers` source in upgradeMap.
-    const flowerRes = findResource("flower_pansy");
+    const flowerRes = findResource("tile_flower_pansy");
     const r = nextResourceForZone({
       currentRes: flowerRes,
       zoneId: "home",
@@ -63,7 +63,7 @@ describe("Phase 32 — nextResourceForZone returns null when the zone has no ove
 
   it("returns null when the upgrade target is the gold sentinel", () => {
     // Home: fruits -> gold
-    const fruitRes = findResource("fruit_apple");
+    const fruitRes = findResource("tile_fruit_apple");
     const r = nextResourceForZone({
       currentRes: fruitRes,
       zoneId: "home",
@@ -79,7 +79,7 @@ describe("Phase 32 — nextResourceForZone returns null when the zone has no ove
 
 describe("Phase 32 — nextResourceForZone redirects per the zone upgradeMap", () => {
   it("Home chain of grass spawns a bird tile (per base farm spec)", () => {
-    const grassRes = findResource("grass_hay");
+    const grassRes = findResource("tile_grass_hay");
     const r = nextResourceForZone({
       currentRes: grassRes,
       zoneId: "home",
@@ -92,7 +92,7 @@ describe("Phase 32 — nextResourceForZone redirects per the zone upgradeMap", (
   });
 
   it("Home chain of vegetables redirects to fruits (instead of veg .next chain)", () => {
-    const vegRes = findResource("veg_carrot");
+    const vegRes = findResource("tile_veg_carrot");
     const r = nextResourceForZone({
       currentRes: vegRes,
       zoneId: "home",
@@ -107,7 +107,7 @@ describe("Phase 32 — nextResourceForZone redirects per the zone upgradeMap", (
   it("returns null for flowers on a zone whose upgradeMap has no flowers entry", () => {
     // Flowers are in ZONE_CATEGORIES but no current zone configures them.
     // nextResourceForZone returns null and the caller falls back to native .next chain.
-    const flowerRes = findResource("flower_pansy");
+    const flowerRes = findResource("tile_flower_pansy");
     const r = nextResourceForZone({
       currentRes: flowerRes,
       zoneId: "orchard",
@@ -128,7 +128,7 @@ describe("Phase 32 — nextResourceForZone honours the player's active species",
     const desired = allBirds[allBirds.length - 1];
     const tileCollectionActive = { bird: desired.id };
     const r = nextResourceForZone({
-      currentRes: findResource("grass_hay"),
+      currentRes: findResource("tile_grass_hay"),
       zoneId: "home",
       biomeResources: farmResources,
       tileCollectionActive,

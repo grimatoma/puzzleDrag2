@@ -32,7 +32,7 @@ describe("mine-themed achievements", () => {
     const s0 = baseState();
     const s1 = achReduce(s0, {
       type: "CHAIN_COLLECTED",
-      payload: { key: "mine_stone", gained: 4, chainLength: 4, upgrades: 0 },
+      payload: { key: "tile_mine_stone", gained: 4, chainLength: 4, upgrades: 0 },
     });
     expect(s1.achievements.counters.mine_chained).toBe(4);
   });
@@ -41,14 +41,14 @@ describe("mine-themed achievements", () => {
     const s0 = baseState();
     const s1 = achReduce(s0, {
       type: "CHAIN_COLLECTED",
-      payload: { key: "grass_hay", gained: 10, chainLength: 10, upgrades: 0 },
+      payload: { key: "tile_grass_hay", gained: 10, chainLength: 10, upgrades: 0 },
     });
     expect(s1.achievements.counters.mine_chained).toBe(0);
   });
 
   it("CHAIN_COLLECTED on every mine_* species credits the same counter", () => {
     let s = baseState();
-    const mineKeys = ["mine_stone", "mine_iron_ore", "mine_copper_ore", "mine_coal", "mine_gem", "mine_gold"];
+    const mineKeys = ["tile_mine_stone", "tile_mine_iron_ore", "tile_mine_copper_ore", "tile_mine_coal", "tile_mine_gem", "tile_mine_gold"];
     for (const key of mineKeys) {
       s = achReduce(s, {
         type: "CHAIN_COLLECTED",
@@ -62,7 +62,7 @@ describe("mine-themed achievements", () => {
     const s0 = baseState();
     const s1 = achReduce(s0, {
       type: "CHAIN_COLLECTED",
-      payload: { key: "mine_stone", gained: 0, chainLength: 4, upgrades: 0 },
+      payload: { key: "tile_mine_stone", gained: 0, chainLength: 4, upgrades: 0 },
     });
     expect(s1.achievements.counters.mine_chained).toBe(0);
   });
@@ -83,7 +83,7 @@ describe("mine-themed achievements", () => {
     const s0 = baseState({ coins: 0 });
     const s1 = achReduce(s0, {
       type: "CHAIN_COLLECTED",
-      payload: { key: "mine_stone", gained: 1, chainLength: 1, upgrades: 0 },
+      payload: { key: "tile_mine_stone", gained: 1, chainLength: 1, upgrades: 0 },
     });
     expect(s1.achievements.unlocked.first_strike).toBe(true);
     // First chain also unlocks first_steps + naturalist could fire — total

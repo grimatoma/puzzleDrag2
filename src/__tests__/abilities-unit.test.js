@@ -14,19 +14,19 @@ function single(abilityId, params, weight = 1) {
 
 describe("ability: threshold_reduce", () => {
   it("contributes amount × weight to thresholdReduce[target]", () => {
-    const out = single("threshold_reduce", { target: "grass_hay", amount: 4 }, 0.5);
-    expect(out.thresholdReduce.grass_hay).toBe(2);
+    const out = single("threshold_reduce", { target: "tile_grass_hay", amount: 4 }, 0.5);
+    expect(out.thresholdReduce.tile_grass_hay).toBe(2);
   });
   it("zero weight contributes nothing", () => {
-    const out = single("threshold_reduce", { target: "grass_hay", amount: 4 }, 0);
-    expect(out.thresholdReduce.grass_hay ?? 0).toBe(0);
+    const out = single("threshold_reduce", { target: "tile_grass_hay", amount: 4 }, 0);
+    expect(out.thresholdReduce.tile_grass_hay ?? 0).toBe(0);
   });
 });
 
 describe("ability: threshold_reduce_category", () => {
   it("fans out to every species in the category", () => {
     const out = single("threshold_reduce_category", { category: "vegetables", amount: 2 }, 1);
-    // veg_carrot is the canonical default; multiple species exist.
+    // tile_veg_carrot is the canonical default; multiple species exist.
     const reduceKeys = Object.keys(out.thresholdReduce);
     expect(reduceKeys.length).toBeGreaterThan(0);
     for (const k of reduceKeys) {
@@ -37,12 +37,12 @@ describe("ability: threshold_reduce_category", () => {
 
 describe("ability: pool_weight (floored per source)", () => {
   it("floors fractional contributions", () => {
-    const out = single("pool_weight", { target: "mine_iron_ore", amount: 1 }, 0.5);
-    expect(out.effectivePoolWeights.mine_iron_ore ?? 0).toBe(0); // 0.5 floored
+    const out = single("pool_weight", { target: "tile_mine_iron_ore", amount: 1 }, 0.5);
+    expect(out.effectivePoolWeights.tile_mine_iron_ore ?? 0).toBe(0); // 0.5 floored
   });
   it("contributes integer at full weight", () => {
-    const out = single("pool_weight", { target: "mine_iron_ore", amount: 3 }, 1);
-    expect(out.effectivePoolWeights.mine_iron_ore).toBe(3);
+    const out = single("pool_weight", { target: "tile_mine_iron_ore", amount: 3 }, 1);
+    expect(out.effectivePoolWeights.tile_mine_iron_ore).toBe(3);
   });
 });
 
@@ -55,8 +55,8 @@ describe("ability: pool_weight_legacy (continuous scaling)", () => {
 
 describe("ability: bonus_yield", () => {
   it("contributes amount × weight to bonusYield[target]", () => {
-    const out = single("bonus_yield", { target: "fish_clam", amount: 3 }, 0.5);
-    expect(out.bonusYield.fish_clam).toBeCloseTo(1.5);
+    const out = single("bonus_yield", { target: "tile_fish_clam", amount: 3 }, 0.5);
+    expect(out.bonusYield.tile_fish_clam).toBeCloseTo(1.5);
   });
 });
 

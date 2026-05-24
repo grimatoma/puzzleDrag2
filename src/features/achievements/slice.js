@@ -56,24 +56,24 @@ export function reduce(state, action) {
       // Tick canonical achievement counters
       next = tick(next, "chains_committed", 1);
       next = tick(next, "distinct_resources_chained", 1, actualKey);
-      // Fish-biome milestones — credit every fish_* chain by its tile count.
-      if (typeof actualKey === "string" && actualKey.startsWith("fish_") && actualGained > 0) {
+      // Fish-biome milestones — credit every tile_fish_* chain by its tile count.
+      if (typeof actualKey === "string" && actualKey.startsWith("tile_fish_") && actualGained > 0) {
         next = tick(next, "fish_chained", actualGained);
       }
-      // Mine-biome milestones — credit every mine_* chain by its tile count.
-      if (typeof actualKey === "string" && actualKey.startsWith("mine_") && actualGained > 0) {
+      // Mine-biome milestones — credit every tile_mine_* chain by its tile count.
+      if (typeof actualKey === "string" && actualKey.startsWith("tile_mine_") && actualGained > 0) {
         next = tick(next, "mine_chained", actualGained);
       }
-      // Per-category milestones — prefix-match the chain key.
+      // Per-category milestones — prefix-match the chain key (tile_<family>_).
       if (typeof actualKey === "string" && actualGained > 0) {
-        if (actualKey.startsWith("veg_")) next = tick(next, "veg_chained", actualGained);
-        else if (actualKey.startsWith("fruit_")) next = tick(next, "fruit_chained", actualGained);
-        else if (actualKey.startsWith("flower_")) next = tick(next, "flower_chained", actualGained);
-        else if (actualKey.startsWith("herd_")) next = tick(next, "herd_chained", actualGained);
-        else if (actualKey.startsWith("cattle_")) next = tick(next, "cattle_chained", actualGained);
-        else if (actualKey.startsWith("mount_")) next = tick(next, "mount_chained", actualGained);
-        else if (actualKey.startsWith("tree_")) next = tick(next, "tree_chained", actualGained);
-        else if (actualKey.startsWith("bird_")) next = tick(next, "bird_chained", actualGained);
+        if (actualKey.startsWith("tile_veg_")) next = tick(next, "veg_chained", actualGained);
+        else if (actualKey.startsWith("tile_fruit_")) next = tick(next, "fruit_chained", actualGained);
+        else if (actualKey.startsWith("tile_flower_")) next = tick(next, "flower_chained", actualGained);
+        else if (actualKey.startsWith("tile_herd_")) next = tick(next, "herd_chained", actualGained);
+        else if (actualKey.startsWith("tile_cattle_")) next = tick(next, "cattle_chained", actualGained);
+        else if (actualKey.startsWith("tile_mount_")) next = tick(next, "mount_chained", actualGained);
+        else if (actualKey.startsWith("tile_tree_")) next = tick(next, "tree_chained", actualGained);
+        else if (actualKey.startsWith("tile_bird_")) next = tick(next, "bird_chained", actualGained);
       }
 
       return next;

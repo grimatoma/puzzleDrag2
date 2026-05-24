@@ -89,19 +89,22 @@ export function getActivePool(state, biomeKey = "farm") {
  */
 // Catalog category prefixes — stripped from chainLengthOf/researchOf in
 // status strings so users see "chain 20 hay to discover" instead of
-// "chain 20 grass_hay to discover".
+// "chain 20 tile_grass_hay to discover".
 const CATEGORY_PREFIXES = [
   "grass_", "grain_", "wood_", "berry_", "bird_", "veg_",
   "fruit_", "flower_", "tree_", "herd_", "cattle_", "mount_",
-  "mine_",
+  "mine_", "fish_", "special_",
 ];
 
 export function displayKey(k) {
   if (typeof k !== "string") return k;
+  // Strip the universal tile_ prefix first, then strip the family prefix.
+  let s = k;
+  if (s.startsWith("tile_")) s = s.slice(5);
   for (const p of CATEGORY_PREFIXES) {
-    if (k.startsWith(p)) return k.slice(p.length);
+    if (s.startsWith(p)) return s.slice(p.length);
   }
-  return k;
+  return s;
 }
 
 function statusFor(state, t) {

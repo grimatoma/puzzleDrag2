@@ -34,7 +34,7 @@ describe("cattle / mount / tree / bird achievements", () => {
     const s0 = baseState();
     const s1 = achReduce(s0, {
       type: "CHAIN_COLLECTED",
-      payload: { key: "cattle_cow", gained: 6, chainLength: 6, upgrades: 0 },
+      payload: { key: "tile_cattle_cow", gained: 6, chainLength: 6, upgrades: 0 },
     });
     expect(s1.achievements.counters.cattle_chained).toBe(6);
   });
@@ -43,7 +43,7 @@ describe("cattle / mount / tree / bird achievements", () => {
     const s0 = baseState();
     const s1 = achReduce(s0, {
       type: "CHAIN_COLLECTED",
-      payload: { key: "mount_horse", gained: 4, chainLength: 4, upgrades: 0 },
+      payload: { key: "tile_mount_horse", gained: 4, chainLength: 4, upgrades: 0 },
     });
     expect(s1.achievements.counters.mount_chained).toBe(4);
   });
@@ -52,7 +52,7 @@ describe("cattle / mount / tree / bird achievements", () => {
     const s0 = baseState();
     const s1 = achReduce(s0, {
       type: "CHAIN_COLLECTED",
-      payload: { key: "tree_oak", gained: 5, chainLength: 5, upgrades: 0 },
+      payload: { key: "tile_tree_oak", gained: 5, chainLength: 5, upgrades: 0 },
     });
     expect(s1.achievements.counters.tree_chained).toBe(5);
   });
@@ -61,16 +61,16 @@ describe("cattle / mount / tree / bird achievements", () => {
     const s0 = baseState();
     const s1 = achReduce(s0, {
       type: "CHAIN_COLLECTED",
-      payload: { key: "bird_chicken", gained: 6, chainLength: 6, upgrades: 0 },
+      payload: { key: "tile_bird_chicken", gained: 6, chainLength: 6, upgrades: 0 },
     });
     expect(s1.achievements.counters.bird_chained).toBe(6);
   });
 
-  it("CHAIN_COLLECTED on grass_hay touches none of the four new counters", () => {
+  it("CHAIN_COLLECTED on tile_grass_hay touches none of the four new counters", () => {
     const s0 = baseState();
     const s1 = achReduce(s0, {
       type: "CHAIN_COLLECTED",
-      payload: { key: "grass_hay", gained: 6, chainLength: 6, upgrades: 0 },
+      payload: { key: "tile_grass_hay", gained: 6, chainLength: 6, upgrades: 0 },
     });
     expect(s1.achievements.counters.cattle_chained).toBe(0);
     expect(s1.achievements.counters.mount_chained).toBe(0);

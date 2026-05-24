@@ -16,15 +16,15 @@ describe("Phase 9 — Mine biome resources", () => {
   });
 
   it("stone upgrade threshold is 8", () => {
-    expect(UPGRADE_THRESHOLDS.mine_stone).toBe(8);
+    expect(UPGRADE_THRESHOLDS.tile_mine_stone).toBe(8);
   });
 
   it("iron ore upgrade threshold is 6", () => {
-    expect(UPGRADE_THRESHOLDS.mine_iron_ore).toBe(6);
+    expect(UPGRADE_THRESHOLDS.tile_mine_iron_ore).toBe(6);
   });
 
   it("copper ore upgrade threshold is 6", () => {
-    expect(UPGRADE_THRESHOLDS.mine_copper_ore).toBe(6);
+    expect(UPGRADE_THRESHOLDS.tile_mine_copper_ore).toBe(6);
   });
 });
 

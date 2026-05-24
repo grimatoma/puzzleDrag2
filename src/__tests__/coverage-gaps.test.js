@@ -78,7 +78,7 @@ describe("settings slice — coverage gaps", () => {
 describe("market slice — coverage gaps", () => {
   const baseState = (over = {}) => ({
     built: { caravan_post: true },
-    inventory: { grass_hay: 5, mine_stone: 10 },
+    inventory: { tile_grass_hay: 5, tile_mine_stone: 10 },
     coins: 0,
     ...over,
   });
@@ -91,13 +91,13 @@ describe("market slice — coverage gaps", () => {
 
   it("MARKET/SELL without caravan_post is rejected", () => {
     const s0 = baseState({ built: {} });
-    const s1 = marketReduce(s0, { type: "MARKET/SELL", payload: { resource: "grass_hay" } });
+    const s1 = marketReduce(s0, { type: "MARKET/SELL", payload: { resource: "tile_grass_hay" } });
     expect(s1).toBe(s0);
   });
 
   it("MARKET/SELL with insufficient inventory is rejected", () => {
     const s0 = baseState();
-    const s1 = marketReduce(s0, { type: "MARKET/SELL", payload: { resource: "grass_hay", qty: 100 } });
+    const s1 = marketReduce(s0, { type: "MARKET/SELL", payload: { resource: "tile_grass_hay", qty: 100 } });
     expect(s1).toBe(s0);
   });
 
@@ -131,8 +131,8 @@ describe("rootReducer composition smokes (settings + market)", () => {
   });
 
   it("rootReducer rejects MARKET/SELL when caravan_post not built", () => {
-    const s0 = { ...createInitialState(), built: {}, inventory: { grass_hay: 5 } };
-    const s1 = rootReducer(s0, { type: "MARKET/SELL", payload: { resource: "grass_hay", qty: 1 } });
+    const s0 = { ...createInitialState(), built: {}, inventory: { tile_grass_hay: 5 } };
+    const s1 = rootReducer(s0, { type: "MARKET/SELL", payload: { resource: "tile_grass_hay", qty: 1 } });
     expect(s1.coins).toBe(s0.coins);
   });
 });

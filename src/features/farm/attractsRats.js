@@ -7,7 +7,7 @@
  * RAT_SPAWN_THRESHOLDS.perFillRate is the base 10% spawn rate; this
  * helper adds a per-tile bonus on top of that.
  */
-const ATTRACT_KEYS = new Set(["grain_manna", "fruit_jackfruit"]);
+const ATTRACT_KEYS = new Set(["tile_grain_manna", "tile_fruit_jackfruit"]);
 
 /** Per-tile rat-spawn bonus. Two tiles on the board double the bonus. */
 export const ATTRACT_RATE_BONUS = 0.05;

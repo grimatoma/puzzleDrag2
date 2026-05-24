@@ -29,7 +29,7 @@ function freshWorkers() {
     {
       id: "farmer",
       name: "Farmer",
-      hireCost: { coins: 50, coinsStep: 25, resources: { grass_hay: 2 }, resourcesStepEvery: 3 },
+      hireCost: { coins: 50, coinsStep: 25, resources: { tile_grass_hay: 2 }, resourcesStepEvery: 3 },
       maxCount: 10,
       effect: { type: "threshold_reduce_category", category: "grain", from: 6, to: 5 },
     },
@@ -122,13 +122,13 @@ describe("Phase 37 — applyWorkerOverrides", () => {
     expect(w[0].hireCost.coins).toBe(60);
     // Sibling step preserved.
     expect(w[0].hireCost.coinsStep).toBe(25);
-    expect(w[0].hireCost.resources).toEqual({ grass_hay: 2 });
+    expect(w[0].hireCost.resources).toEqual({ tile_grass_hay: 2 });
   });
 
   it("patches resource costs and resource step", () => {
     const w = freshWorkers();
-    applyWorkerOverrides(w, { farmer: { hireCost: { resources: { tree_oak: 2.9, nope: 0 }, resourcesStepEvery: 4.8 } } });
-    expect(w[0].hireCost.resources).toEqual({ tree_oak: 2 });
+    applyWorkerOverrides(w, { farmer: { hireCost: { resources: { tile_tree_oak: 2.9, nope: 0 }, resourcesStepEvery: 4.8 } } });
+    expect(w[0].hireCost.resources).toEqual({ tile_tree_oak: 2 });
     expect(w[0].hireCost.resourcesStepEvery).toBe(4);
   });
 
@@ -165,12 +165,12 @@ describe("Phase 37 — applyWorkerOverrides", () => {
     applyWorkerOverrides(w, {
       farmer: {
         abilities: [
-          { id: "pool_weight_legacy", params: { target: "grain_wheat", amount: 3 } },
+          { id: "pool_weight_legacy", params: { target: "tile_grain_wheat", amount: 3 } },
         ],
       },
     });
     expect(w[0].abilities).toEqual([
-      { id: "pool_weight_legacy", params: { target: "grain_wheat", amount: 3 } },
+      { id: "pool_weight_legacy", params: { target: "tile_grain_wheat", amount: 3 } },
     ]);
   });
 

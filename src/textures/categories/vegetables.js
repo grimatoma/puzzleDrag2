@@ -602,13 +602,13 @@ function drawBroccoli(ctx) {
 }
 
 export const ICONS = {
-  veg_carrot:   { label:"Carrot",   color:"#e07820", draw:drawCarrot },
-  veg_eggplant: { label:"Eggplant", color:"#582888", draw:drawEggplant },
-  veg_turnip:   { label:"Turnip",   color:"#c8a8b4", draw:drawTurnip },
-  veg_beet:     { label:"Beet",     color:"#a82058", draw:drawBeet },
-  veg_cucumber: { label:"Cucumber", color:"#7eb44a", draw:drawCucumber },
-  veg_squash:   { label:"Squash",   color:"#e09038", draw:drawSquash },
-  veg_mushroom: { label:"Mushroom", color:"#c8281a", draw:drawMushroom },
-  veg_pepper:   { label:"Pepper",   color:"#c8181a", draw:drawPepper },
-  veg_broccoli: { label:"Broccoli", color:"#5a8a26", draw:drawBroccoli },
+  tile_veg_carrot:   { label:"Carrot",   color:"#e07820", draw:drawCarrot },
+  tile_veg_eggplant: { label:"Eggplant", color:"#582888", draw:drawEggplant },
+  tile_veg_turnip:   { label:"Turnip",   color:"#c8a8b4", draw:drawTurnip },
+  tile_veg_beet:     { label:"Beet",     color:"#a82058", draw:drawBeet },
+  tile_veg_cucumber: { label:"Cucumber", color:"#7eb44a", draw:drawCucumber },
+  tile_veg_squash:   { label:"Squash",   color:"#e09038", draw:drawSquash },
+  tile_veg_mushroom: { label:"Mushroom", color:"#c8281a", draw:drawMushroom },
+  tile_veg_pepper:   { label:"Pepper",   color:"#c8181a", draw:drawPepper },
+  tile_veg_broccoli: { label:"Broccoli", color:"#5a8a26", draw:drawBroccoli },
 };

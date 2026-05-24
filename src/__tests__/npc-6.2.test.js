@@ -31,7 +31,7 @@ describe("6.2 — multi-tier gift preferences", () => {
   it("giftTier classifies loves / likes / neutral", () => {
     expect(giftTier("mira", "flour")).toBe("loves");
     expect(giftTier("mira", "honey")).toBe("likes");
-    expect(giftTier("mira", "grass_hay")).toBe("neutral");
+    expect(giftTier("mira", "tile_grass_hay")).toBe("neutral");
     expect(giftTier("nobody", "anything")).toBe("neutral");
   });
 });
@@ -69,9 +69,9 @@ describe("6.2 — applyGift liked gift (+0.3)", () => {
 describe("6.2 — applyGift neutral gift (+0.15)", () => {
   it("accepts a neutral gift and bumps bond by +0.15", () => {
     const s = createInitialState();
-    s.inventory.grass_hay = 4;
+    s.inventory.tile_grass_hay = 4;
     s.season = 1;
-    const r = applyGift(s, "mira", "grass_hay");
+    const r = applyGift(s, "mira", "tile_grass_hay");
     expect(r.ok).toBe(true);
     expect(r.tier).toBe("neutral");
     expect(r.isFavorite).toBe(false);
@@ -83,15 +83,15 @@ describe("6.2 — applyGift neutral gift (+0.15)", () => {
 describe("6.2 — cooldown blocks re-gift in same season", () => {
   it("second gift returns ok:false and leaves state unchanged", () => {
     const s = createInitialState();
-    s.inventory.grass_hay = 4;
+    s.inventory.tile_grass_hay = 4;
     s.season = 1;
-    const r = applyGift(s, "mira", "grass_hay");
+    const r = applyGift(s, "mira", "tile_grass_hay");
     const cooled = r.newState;
 
-    const r2 = applyGift(cooled, "mira", "grass_hay");
+    const r2 = applyGift(cooled, "mira", "tile_grass_hay");
     expect(r2.ok).toBe(false);
     // No mutation: cooled state unchanged
-    expect(cooled.inventory.grass_hay).toBe(3);
+    expect(cooled.inventory.tile_grass_hay).toBe(3);
     expect(Math.abs(cooled.npcs.bonds.mira - 5.15)).toBeLessThan(1e-9);
   });
 });

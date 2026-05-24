@@ -28,10 +28,10 @@ describe("mine-biome quest templates", () => {
     }
   });
 
-  it("collect_stone references a real mine_stone resource key", () => {
+  it("collect_stone references a real tile_mine_stone resource key", () => {
     const t = QUEST_TEMPLATES.find((x) => x.id === "collect_stone");
     expect(t.category).toBe("collect");
-    expect(t.key).toBe("mine_stone");
+    expect(t.key).toBe("tile_mine_stone");
   });
 
   it("craft_goldring references the gold ring forge recipe", () => {

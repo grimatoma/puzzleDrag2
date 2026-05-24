@@ -378,12 +378,12 @@ function drawRam(ctx) {
 }
 
 export const ICONS = {
-  herd_pig:     { label:"Pig",     color:"#e88a98", draw:drawPig },
-  herd_hog:     { label:"Hog",     color:"#a87838", draw:drawHog },
-  herd_boar:    { label:"Boar",    color:"#241408", draw:drawBoar },
-  herd_warthog: { label:"Warthog", color:"#5a4828", draw:drawWarthog },
-  herd_sheep:   { label:"Sheep",   color:"#fffce8", draw:drawSheep },
-  herd_alpaca:  { label:"Alpaca",  color:"#f8e8c8", draw:drawAlpaca },
-  herd_goat:    { label:"Goat",    color:"#d8c098", draw:drawGoat },
-  herd_ram:     { label:"Ram",     color:"#a87838", draw:drawRam },
+  tile_herd_pig:     { label:"Pig",     color:"#e88a98", draw:drawPig },
+  tile_herd_hog:     { label:"Hog",     color:"#a87838", draw:drawHog },
+  tile_herd_boar:    { label:"Boar",    color:"#241408", draw:drawBoar },
+  tile_herd_warthog: { label:"Warthog", color:"#5a4828", draw:drawWarthog },
+  tile_herd_sheep:   { label:"Sheep",   color:"#fffce8", draw:drawSheep },
+  tile_herd_alpaca:  { label:"Alpaca",  color:"#f8e8c8", draw:drawAlpaca },
+  tile_herd_goat:    { label:"Goat",    color:"#d8c098", draw:drawGoat },
+  tile_herd_ram:     { label:"Ram",     color:"#a87838", draw:drawRam },
 };

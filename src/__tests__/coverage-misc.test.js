@@ -83,7 +83,7 @@ describe("bosses/data — tickBossTurn", () => {
       year: 1,
       turnsRemaining: 5,
       progress: 0,
-      target: { resource: "tree_oak", amount: 30 },
+      target: { resource: "tile_tree_oak", amount: 30 },
       modifierState: {},
     },
     coins: 0,
@@ -162,7 +162,7 @@ describe("farm/pool — getEffectivePool seasonal modifier", () => {
     biome: "farm",
     season: "Spring",
     tileCollection: {
-      activeByCategory: { grass: "grass_hay", grain: "grain_wheat", wood: "tree_oak", berry: "berry", bird: "eggs" },
+      activeByCategory: { grass: "tile_grass_hay", grain: "tile_grain_wheat", wood: "tile_tree_oak", berry: "berry", bird: "eggs" },
     },
     _workerEffects: { effectivePoolWeights: {} },
     ...over,
@@ -176,37 +176,37 @@ describe("farm/pool — getEffectivePool seasonal modifier", () => {
 
   it("Spring season adds extra blackberry slots", () => {
     const r = getEffectivePool(baseState({ season: "Spring" }));
-    const baseBerry = BIOMES.farm.pool.filter((k) => k === "fruit_blackberry").length;
-    const newBerry = r.filter((k) => k === "fruit_blackberry").length;
+    const baseBerry = BIOMES.farm.pool.filter((k) => k === "tile_fruit_blackberry").length;
+    const newBerry = r.filter((k) => k === "tile_fruit_blackberry").length;
     expect(newBerry).toBe(baseBerry + 1);
   });
 
   it("Summer adds extra wheat slot", () => {
     const r = getEffectivePool(baseState({ season: "Summer" }));
-    const baseWheat = BIOMES.farm.pool.filter((k) => k === "grain_wheat").length;
-    expect(r.filter((k) => k === "grain_wheat").length).toBe(baseWheat + 1);
+    const baseWheat = BIOMES.farm.pool.filter((k) => k === "tile_grain_wheat").length;
+    expect(r.filter((k) => k === "tile_grain_wheat").length).toBe(baseWheat + 1);
   });
 
   it("Winter removes one hay (clamped — never the last)", () => {
     const r = getEffectivePool(baseState({ season: "Winter" }));
-    const baseHay = BIOMES.farm.pool.filter((k) => k === "grass_hay").length;
-    const newHay = r.filter((k) => k === "grass_hay").length;
+    const baseHay = BIOMES.farm.pool.filter((k) => k === "tile_grass_hay").length;
+    const newHay = r.filter((k) => k === "tile_grass_hay").length;
     expect(newHay).toBe(Math.max(1, baseHay - 1));
   });
 
   it("mine biome skips season modifier", () => {
     const r = getEffectivePool(baseState({ biome: "mine", season: "Spring" }));
     // Spring's blackberry mod should NOT apply on mine.
-    const berryCount = r.filter((k) => k === "fruit_blackberry").length;
+    const berryCount = r.filter((k) => k === "tile_fruit_blackberry").length;
     expect(berryCount).toBe(0);
   });
 
   it("worker effectivePoolWeights add tile slots", () => {
-    const s = baseState({ _workerEffects: { effectivePoolWeights: { fruit_blackberry: 2 } } });
+    const s = baseState({ _workerEffects: { effectivePoolWeights: { tile_fruit_blackberry: 2 } } });
     const r = getEffectivePool(s);
-    const baseBerry = BIOMES.farm.pool.filter((k) => k === "fruit_blackberry").length;
+    const baseBerry = BIOMES.farm.pool.filter((k) => k === "tile_fruit_blackberry").length;
     // Spring also adds +1 blackberry by default; expect base + 2 worker + 1 season.
-    expect(r.filter((k) => k === "fruit_blackberry").length).toBe(baseBerry + 2 + 1);
+    expect(r.filter((k) => k === "tile_fruit_blackberry").length).toBe(baseBerry + 2 + 1);
   });
 
   it("safety floor: pool never shorter than 9 entries", () => {

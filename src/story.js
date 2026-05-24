@@ -58,7 +58,7 @@ export const STORY_BEATS = [
       { speaker: "wren", text: "There. The first of many. This land was dead, but it still remembers how to grow." },
       { speaker: "wren", text: "Mira will be here soon. She'll need that hay for the workers' fires." },
     ],
-    trigger: { type: "resource_total", key: "grass_hay", amount: 1 },
+    trigger: { type: "resource_total", key: "tile_grass_hay", amount: 1 },
     onComplete: { setFlag: "first_harvest" },
   },
   {
@@ -67,7 +67,7 @@ export const STORY_BEATS = [
     title: "First Light",
     scene: "hearth",
     body: "Wren: 'The Hearth is alive again. Mira will be here soon.'",
-    trigger: { type: "resource_total", key: "grass_hay", amount: 20 },
+    trigger: { type: "resource_total", key: "tile_grass_hay", amount: 20 },
     onComplete: { setFlag: "hearth_lit", spawnNPC: "mira" },
   },
   {
@@ -118,7 +118,7 @@ export const STORY_BEATS = [
     body: "Bram: 'That stone is not just stone. It is road, wall, kiln, and promise.'",
     // Save-compat id: this was the Frostmaw audit-boss beat. Keeper Trials now
     // own boss progression, so Act 2 uses the quarry as the next-zone tutorial.
-    trigger: { type: "resource_total", key: "mine_stone", amount: 20 },
+    trigger: { type: "resource_total", key: "tile_mine_stone", amount: 20 },
     onComplete: { setFlag: "quarry_foothold" },
   },
   {
@@ -126,7 +126,7 @@ export const STORY_BEATS = [
     act: 2,
     title: "The Healer",
     body: "Sister Liss: 'A child has fever. I need berries.'",
-    trigger: { type: "resource_total_multi", req: { mine_stone: 20, fruit_blackberry: 10 } },
+    trigger: { type: "resource_total_multi", req: { tile_mine_stone: 20, tile_fruit_blackberry: 10 } },
     onComplete: { spawnNPC: "liss", setFlag: "liss_arrived", advanceAct: 3 },
   },
   // ── Act 3 ──────────────────────────────────────────────────────────────────
@@ -143,7 +143,7 @@ export const STORY_BEATS = [
     act: 3,
     title: "Into the Dark",
     body: "Wren: 'The seal is broken. The mine is yours.'",
-    trigger: { type: "resource_total_multi", req: { mine_stone: 20, mine_coal: 10 } },
+    trigger: { type: "resource_total_multi", req: { tile_mine_stone: 20, tile_mine_coal: 10 } },
     onComplete: { setFlag: "mine_unlocked", unlockBiome: "mine" },
   },
   {
@@ -173,7 +173,7 @@ export const STORY_BEATS = [
     body: "The festival larder is full. {settlement} lives again — and there is more of the old kingdom still to find. (Sandbox mode continues.)",
     trigger: {
       type: "resource_total_multi",
-      req: { grass_hay: 50, grain_wheat: 50, flour: 50, fruit_blackberry: 50, tree_oak: 50 },
+      req: { tile_grass_hay: 50, tile_grain_wheat: 50, flour: 50, tile_fruit_blackberry: 50, tile_tree_oak: 50 },
     },
     onComplete: { setFlag: "isWon" },
   },
@@ -196,7 +196,7 @@ export const SIDE_BEATS = [
       { speaker: "wren", text: "Every move you make on that board spends time. See the counter? When it hits zero, the season turns." },
       { speaker: "wren", text: "Harvest what you can, but remember: we're not just collecting hay. We're building a home. Every scrap counts toward the next construction." },
     ],
-    trigger: { type: "resource_total", key: "grass_hay", amount: 5 },
+    trigger: { type: "resource_total", key: "tile_grass_hay", amount: 5 },
     onComplete: { setFlag: "tutorial_beat_4" },
   },
 

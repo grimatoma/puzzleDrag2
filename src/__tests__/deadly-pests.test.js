@@ -5,14 +5,14 @@ import { RAT_CLEAR_REWARD_PER } from "../constants.js";
 
 describe("isDeadlyToPests", () => {
   it("returns true for cypress / beet / phoenix", () => {
-    expect(isDeadlyToPests("tree_cypress")).toBe(true);
-    expect(isDeadlyToPests("veg_beet")).toBe(true);
-    expect(isDeadlyToPests("bird_phoenix")).toBe(true);
+    expect(isDeadlyToPests("tile_tree_cypress")).toBe(true);
+    expect(isDeadlyToPests("tile_veg_beet")).toBe(true);
+    expect(isDeadlyToPests("tile_bird_phoenix")).toBe(true);
   });
 
   it("returns false for non-deadly keys", () => {
-    expect(isDeadlyToPests("grass_hay")).toBe(false);
-    expect(isDeadlyToPests("fish_sardine")).toBe(false);
+    expect(isDeadlyToPests("tile_grass_hay")).toBe(false);
+    expect(isDeadlyToPests("tile_fish_sardine")).toBe(false);
     expect(isDeadlyToPests("anything")).toBe(false);
   });
 });
@@ -20,19 +20,19 @@ describe("isDeadlyToPests", () => {
 describe("tryDeadlyPestsKill", () => {
   it("returns null when chain has no deadly tile", () => {
     const state = { hazards: { rats: [{ row: 0, col: 0 }] } };
-    const chain = [{ key: "grass_hay", row: 1, col: 1 }];
+    const chain = [{ key: "tile_grass_hay", row: 1, col: 1 }];
     expect(tryDeadlyPestsKill(state, chain)).toBeNull();
   });
 
   it("returns null when no rats are active", () => {
     const state = { hazards: { rats: [] } };
-    const chain = [{ key: "tree_cypress", row: 1, col: 1 }];
+    const chain = [{ key: "tile_tree_cypress", row: 1, col: 1 }];
     expect(tryDeadlyPestsKill(state, chain)).toBeNull();
   });
 
   it("returns null when deadly chain has no adjacent rats", () => {
     const state = { hazards: { rats: [{ row: 5, col: 5 }] } };
-    const chain = [{ key: "tree_cypress", row: 0, col: 0 }];
+    const chain = [{ key: "tile_tree_cypress", row: 0, col: 0 }];
     expect(tryDeadlyPestsKill(state, chain)).toBeNull();
   });
 
@@ -41,7 +41,7 @@ describe("tryDeadlyPestsKill", () => {
       coins: 0,
       hazards: { rats: [{ row: 0, col: 1 }, { row: 5, col: 5 }] }, // first adj to (0,0), second far
     };
-    const chain = [{ key: "tree_cypress", row: 0, col: 0 }];
+    const chain = [{ key: "tile_tree_cypress", row: 0, col: 0 }];
     const r = tryDeadlyPestsKill(state, chain);
     expect(r).not.toBeNull();
     expect(r.hazards.rats).toHaveLength(1);
@@ -55,7 +55,7 @@ describe("tryDeadlyPestsKill", () => {
       coins: 0,
       hazards: { rats: [{ row: 0, col: 0 }] },
     };
-    const chain = [{ key: "veg_beet", row: 0, col: 0 }];
+    const chain = [{ key: "tile_veg_beet", row: 0, col: 0 }];
     const r = tryDeadlyPestsKill(state, chain);
     expect(r).not.toBeNull();
     expect(r.hazards.rats).toHaveLength(0);
@@ -66,7 +66,7 @@ describe("tryDeadlyPestsKill", () => {
       coins: 0,
       hazards: { rats: [{ row: 0, col: 0 }, { row: 0, col: 1 }, { row: 0, col: 2 }] },
     };
-    const chain = [{ key: "bird_phoenix", row: 0, col: 1 }];
+    const chain = [{ key: "tile_bird_phoenix", row: 0, col: 1 }];
     const r = tryDeadlyPestsKill(state, chain);
     expect(r._deadlyKills).toBe(3);
     expect(r.coins).toBe(3 * RAT_CLEAR_REWARD_PER);
@@ -88,10 +88,10 @@ describe("CHAIN_COLLECTED with deadly_pests in chain (smoke)", () => {
       biomeKey: "farm",
       hazards: { ...createInitialState().hazards, rats: [{ row: 0, col: 1 }] },
     };
-    const chain = [{ key: "tree_cypress", row: 0, col: 0 }];
+    const chain = [{ key: "tile_tree_cypress", row: 0, col: 0 }];
     const s1 = rootReducer(s0, {
       type: "CHAIN_COLLECTED",
-      payload: { chain, key: "tree_cypress", gained: 1, chainLength: 1, value: 1, upgrades: 0 },
+      payload: { chain, key: "tile_tree_cypress", gained: 1, chainLength: 1, value: 1, upgrades: 0 },
     });
     // Rat at (0,1) is adjacent to chain cell (0,0) → killed.
     expect(s1.hazards.rats).toHaveLength(0);

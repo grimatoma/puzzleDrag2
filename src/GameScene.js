@@ -772,7 +772,7 @@ export class GameScene extends Phaser.Scene {
     const fertilizerActive = (this.registry.get("fertilizerActive") ?? false) ||
                              ((this.registry.get("magicFertilizerCharges") ?? 0) > 0);
     if (fertilizerActive) {
-      const seedlings = ["seedling", "grass_hay", "grain_wheat"];
+      const seedlings = ["seedling", "tile_grass_hay", "tile_grain_wheat"];
       const fBase = {};
       for (const k of workerPool) fBase[k] = (fBase[k] ?? 0) + 1;
       for (const k of seedlings) {
@@ -1040,7 +1040,7 @@ export class GameScene extends Phaser.Scene {
   /** 1.5 Lockbox: replace 3 random non-selected tiles with biome's rare resource. */
   _applyToolRare() {
     const biome = this.biome();
-    const rareKey = biome.name === "Mine" ? "mine_gem" : "fruit_blackberry";
+    const rareKey = biome.name === "Mine" ? "tile_mine_gem" : "tile_fruit_blackberry";
     const rareRes = biome.resources.find((r) => r.key === rareKey) || biome.resources[biome.resources.length - 1];
     const allTiles = [];
     for (let r = 0; r < ROWS; r++) {

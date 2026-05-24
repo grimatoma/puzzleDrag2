@@ -57,17 +57,17 @@ describe("buildItemReferenceIndex", () => {
 
   it("records story_outcome usages from beat choice outcomes", () => {
     const idx = buildItemReferenceIndex({
-      items: { tree_oak: {} },
+      items: { tile_tree_oak: {} },
       recipes: {}, buildings: [],
       storyBeats: [{
         id: "b1", choices: [
-          { id: "a", outcome: { resources: { tree_oak: 5 } } },
+          { id: "a", outcome: { resources: { tile_tree_oak: 5 } } },
           { id: "b", outcome: { resources: {} } },
         ],
       }],
       sideBeats: [],
     });
-    const usages = idx.get("tree_oak");
+    const usages = idx.get("tile_tree_oak");
     expect(usages).toHaveLength(1);
     expect(usages[0]).toMatchObject({ kind: "story_outcome", beatId: "b1", choiceId: "a", qty: 5 });
   });

@@ -7,7 +7,7 @@ describe("fish biome recipes", () => {
     const r = RECIPES.chowder;
     expect(r).toBeDefined();
     expect(r.station).toBe("larder");
-    expect(r.inputs).toEqual({ fish_fillet: 2, milk: 1, veg_carrot: 1 });
+    expect(r.inputs).toEqual({ fish_fillet: 2, milk: 1, tile_veg_carrot: 1 });
     expect(r.coins).toBeGreaterThan(0);
   });
 
@@ -32,12 +32,12 @@ describe("fish biome recipes", () => {
       ...createInitialState(),
       coins: 0,
       built: { larder: true },
-      inventory: { fish_fillet: 5, milk: 2, veg_carrot: 3 },
+      inventory: { fish_fillet: 5, milk: 2, tile_veg_carrot: 3 },
     };
     const s1 = rootReducer(s0, { type: "CRAFTING/CRAFT_RECIPE", recipeKey: "chowder" });
     expect(s1.inventory.fish_fillet).toBe(3);
     expect(s1.inventory.milk).toBe(1);
-    expect(s1.inventory.veg_carrot).toBe(2);
+    expect(s1.inventory.tile_veg_carrot).toBe(2);
     expect(s1.inventory.chowder).toBe(1);
     expect(s1.coins).toBe(RECIPES.chowder.coins);
   });
@@ -47,7 +47,7 @@ describe("fish biome recipes", () => {
       ...createInitialState(),
       coins: 0,
       built: {},
-      inventory: { fish_fillet: 5, milk: 2, veg_carrot: 3 },
+      inventory: { fish_fillet: 5, milk: 2, tile_veg_carrot: 3 },
     };
     const s1 = rootReducer(s0, { type: "CRAFTING/CRAFT_RECIPE", recipeKey: "chowder" });
     expect(s1.inventory.chowder).toBeUndefined();
@@ -58,7 +58,7 @@ describe("fish biome recipes", () => {
     const s0 = {
       ...createInitialState(),
       built: { larder: true },
-      inventory: { fish_fillet: 1, milk: 1, veg_carrot: 1 }, // need 2 fillet
+      inventory: { fish_fillet: 1, milk: 1, tile_veg_carrot: 1 }, // need 2 fillet
     };
     const s1 = rootReducer(s0, { type: "CRAFTING/CRAFT_RECIPE", recipeKey: "chowder" });
     expect(s1.inventory.chowder).toBeUndefined();

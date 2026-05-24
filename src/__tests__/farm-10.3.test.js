@@ -31,11 +31,11 @@ describe("10.3 — §11 forge recipe registration", () => {
 
   it("gem_crown: 1 cutgem + 2 gold", () => {
     expect(recipe("gem_crown").inputs.cut_gem).toBe(1);
-    expect(recipe("gem_crown").inputs.mine_gold).toBe(2);
+    expect(recipe("gem_crown").inputs.tile_mine_gold).toBe(2);
   });
 
   it("gold_ring: 1 gold + 2 ingot", () => {
-    expect(recipe("gold_ring").inputs.mine_gold).toBe(1);
+    expect(recipe("gold_ring").inputs.tile_mine_gold).toBe(1);
     expect(recipe("gold_ring").inputs.iron_bar).toBe(2);
   });
 
@@ -100,13 +100,13 @@ describe("10.3 — CRAFT iron_frame via CRAFT action", () => {
   });
 
   it("crafts gem_crown", () => {
-    const s0 = forgeState({ cut_gem: 2, mine_gold: 3 });
+    const s0 = forgeState({ cut_gem: 2, tile_mine_gold: 3 });
     const s1 = rootReducer(s0, { type: "CRAFT", payload: { id: "gem_crown" } });
     expect(s1.inventory.gem_crown ?? 0).toBe(1);
   });
 
   it("crafts gold_ring", () => {
-    const s0 = forgeState({ mine_gold: 2, iron_bar: 3 });
+    const s0 = forgeState({ tile_mine_gold: 2, iron_bar: 3 });
     const s1 = rootReducer(s0, { type: "CRAFT", payload: { id: "gold_ring" } });
     expect(s1.inventory.gold_ring ?? 0).toBe(1);
   });

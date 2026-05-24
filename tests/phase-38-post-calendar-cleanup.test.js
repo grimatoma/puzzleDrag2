@@ -20,11 +20,11 @@ describe("Phase 38 — story beats no longer use the calendar", () => {
     const frostmaw = STORY_BEATS.find((b) => b.id === "act2_frostmaw");
     expect(frostmaw).toBeTruthy();
     expect(frostmaw.trigger.type).toBe("resource_total");
-    expect(frostmaw.trigger.key).toBe("mine_stone");
+    expect(frostmaw.trigger.key).toBe("tile_mine_stone");
     expect(frostmaw.onComplete.spawnBoss).toBeUndefined();
   });
 
-  it("act2_frostmaw fires once total mine_stone gathered hits the threshold", () => {
+  it("act2_frostmaw fires once total tile_mine_stone gathered hits the threshold", () => {
     const frostmaw = STORY_BEATS.find((b) => b.id === "act2_frostmaw");
     const need = frostmaw.trigger.amount;
     // evaluateStoryTriggers walks the queue sequentially; fast-forward by
@@ -37,8 +37,8 @@ describe("Phase 38 — story beats no longer use the calendar", () => {
     }
     const result = evaluateStoryTriggers(
       { flags, act: 2 },
-      { type: "resource_total", key: "mine_stone", amount: need },
-      { mine_stone: need },
+      { type: "resource_total", key: "tile_mine_stone", amount: need },
+      { tile_mine_stone: need },
     );
     expect(result?.firedBeat?.id).toBe("act2_frostmaw");
   });

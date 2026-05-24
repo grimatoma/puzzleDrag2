@@ -345,13 +345,13 @@ function drawJackfruit(ctx) {
 }
 
 export const ICONS = {
-  fruit_apple:        { label:"Apple",        color:"#d4543a", draw:drawApple },
-  fruit_pear:         { label:"Pear",         color:"#bcc436", draw:drawPear },
-  fruit_golden_apple: { label:"Golden Apple", color:"#f4c430", draw:drawGoldenApple },
-  fruit_blackberry:   { label:"Blackberry",   color:"#3a1a4a", draw:drawBlackberry },
-  fruit_rambutan:     { label:"Rambutan",     color:"#d8344a", draw:drawRambutan },
-  fruit_starfruit:    { label:"Starfruit",    color:"#e8c83c", draw:drawStarfruit },
-  fruit_coconut:      { label:"Coconut",      color:"#5e3a14", draw:drawCoconut },
-  fruit_lemon:        { label:"Lemon",        color:"#f4d030", draw:drawLemon },
-  fruit_jackfruit:    { label:"Jackfruit",    color:"#a8a040", draw:drawJackfruit },
+  tile_fruit_apple:        { label:"Apple",        color:"#d4543a", draw:drawApple },
+  tile_fruit_pear:         { label:"Pear",         color:"#bcc436", draw:drawPear },
+  tile_fruit_golden_apple: { label:"Golden Apple", color:"#f4c430", draw:drawGoldenApple },
+  tile_fruit_blackberry:   { label:"Blackberry",   color:"#3a1a4a", draw:drawBlackberry },
+  tile_fruit_rambutan:     { label:"Rambutan",     color:"#d8344a", draw:drawRambutan },
+  tile_fruit_starfruit:    { label:"Starfruit",    color:"#e8c83c", draw:drawStarfruit },
+  tile_fruit_coconut:      { label:"Coconut",      color:"#5e3a14", draw:drawCoconut },
+  tile_fruit_lemon:        { label:"Lemon",        color:"#f4d030", draw:drawLemon },
+  tile_fruit_jackfruit:    { label:"Jackfruit",    color:"#a8a040", draw:drawJackfruit },
 };

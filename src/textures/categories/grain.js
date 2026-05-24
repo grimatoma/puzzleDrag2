@@ -245,8 +245,8 @@ function drawRice(ctx) {
 }
 
 export const ICONS = {
-  grain_corn:      { label:"Corn",      color:"#f4c84a", draw:drawCorn },
-  grain_buckwheat: { label:"Buckwheat", color:"#9ab548", draw:drawBuckwheat },
-  grain_manna:     { label:"Manna",     color:"#f8e8c0", draw:drawManna },
-  grain_rice:      { label:"Rice",      color:"#c8d878", draw:drawRice },
+  tile_grain_corn:      { label:"Corn",      color:"#f4c84a", draw:drawCorn },
+  tile_grain_buckwheat: { label:"Buckwheat", color:"#9ab548", draw:drawBuckwheat },
+  tile_grain_manna:     { label:"Manna",     color:"#f8e8c0", draw:drawManna },
+  tile_grain_rice:      { label:"Rice",      color:"#c8d878", draw:drawRice },
 };

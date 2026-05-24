@@ -42,7 +42,7 @@ const MENU_LINKS = [
 
 export default function DebugModal({ state, dispatch }) {
   const [itemBiome, setItemBiome] = useState('farm');
-  const [itemKey, setItemKey] = useState('grass_hay');
+  const [itemKey, setItemKey] = useState('tile_grass_hay');
   const open = state.modal === 'debug';
   const close = () => dispatch({ type: 'CLOSE_MODAL' });
   const gotoView = (view) => {

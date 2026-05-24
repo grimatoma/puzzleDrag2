@@ -34,7 +34,7 @@ describe("per-category achievements", () => {
     const s0 = baseState();
     const s1 = achReduce(s0, {
       type: "CHAIN_COLLECTED",
-      payload: { key: "veg_carrot", gained: 5, chainLength: 5, upgrades: 0 },
+      payload: { key: "tile_veg_carrot", gained: 5, chainLength: 5, upgrades: 0 },
     });
     expect(s1.achievements.counters.veg_chained).toBe(5);
     expect(s1.achievements.counters.fruit_chained).toBe(0);
@@ -46,7 +46,7 @@ describe("per-category achievements", () => {
     const s0 = baseState();
     const s1 = achReduce(s0, {
       type: "CHAIN_COLLECTED",
-      payload: { key: "fruit_apple", gained: 7, chainLength: 7, upgrades: 0 },
+      payload: { key: "tile_fruit_apple", gained: 7, chainLength: 7, upgrades: 0 },
     });
     expect(s1.achievements.counters.fruit_chained).toBe(7);
     expect(s1.achievements.counters.veg_chained).toBe(0);
@@ -56,7 +56,7 @@ describe("per-category achievements", () => {
     const s0 = baseState();
     const s1 = achReduce(s0, {
       type: "CHAIN_COLLECTED",
-      payload: { key: "flower_pansy", gained: 10, chainLength: 10, upgrades: 0 },
+      payload: { key: "tile_flower_pansy", gained: 10, chainLength: 10, upgrades: 0 },
     });
     expect(s1.achievements.counters.flower_chained).toBe(10);
     expect(s1.achievements.counters.veg_chained).toBe(0);
@@ -66,17 +66,17 @@ describe("per-category achievements", () => {
     const s0 = baseState();
     const s1 = achReduce(s0, {
       type: "CHAIN_COLLECTED",
-      payload: { key: "herd_pig", gained: 4, chainLength: 4, upgrades: 0 },
+      payload: { key: "tile_herd_pig", gained: 4, chainLength: 4, upgrades: 0 },
     });
     expect(s1.achievements.counters.herd_chained).toBe(4);
     expect(s1.achievements.counters.veg_chained).toBe(0);
   });
 
-  it("CHAIN_COLLECTED on grass_hay touches none of the new counters", () => {
+  it("CHAIN_COLLECTED on tile_grass_hay touches none of the new counters", () => {
     const s0 = baseState();
     const s1 = achReduce(s0, {
       type: "CHAIN_COLLECTED",
-      payload: { key: "grass_hay", gained: 6, chainLength: 6, upgrades: 0 },
+      payload: { key: "tile_grass_hay", gained: 6, chainLength: 6, upgrades: 0 },
     });
     expect(s1.achievements.counters.veg_chained).toBe(0);
     expect(s1.achievements.counters.fruit_chained).toBe(0);
@@ -95,7 +95,7 @@ describe("per-category achievements", () => {
     const s0 = baseState();
     const s1 = achReduce(s0, {
       type: "CHAIN_COLLECTED",
-      payload: { key: "flower_pansy", gained: 30, chainLength: 30, upgrades: 0 },
+      payload: { key: "tile_flower_pansy", gained: 30, chainLength: 30, upgrades: 0 },
     });
     expect(s1.achievements.unlocked.pollinator).toBe(true);
   });

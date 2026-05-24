@@ -11,10 +11,10 @@ export const BOND_BANDS = Object.freeze([
 // features/npcs/bond.js for the per-tier bond gain.
 const NPC_RAW = {
   mira:  { id: "mira",  displayName: "Mira",        loves: ["flour", "bread"],     likes: ["honey", "jam"] },
-  tomas: { id: "tomas", displayName: "Old Tomas",   loves: ["jam", "honey"],       likes: ["fruit_blackberry", "bread"] },
-  bram:  { id: "bram",  displayName: "Bram",        loves: ["iron_bar", "mine_coal"],  likes: ["mine_stone", "mine_iron_ore"] },
-  liss:  { id: "liss",  displayName: "Sister Liss", loves: ["jam", "fruit_blackberry"], likes: ["honey", "soup"]      },
-  wren:  { id: "wren",  displayName: "Wren",        loves: ["plank", "iron_bar"], likes: ["tree_oak", "bread"]  },
+  tomas: { id: "tomas", displayName: "Old Tomas",   loves: ["jam", "honey"],       likes: ["tile_fruit_blackberry", "bread"] },
+  bram:  { id: "bram",  displayName: "Bram",        loves: ["iron_bar", "tile_mine_coal"],  likes: ["tile_mine_stone", "tile_mine_iron_ore"] },
+  liss:  { id: "liss",  displayName: "Sister Liss", loves: ["jam", "tile_fruit_blackberry"], likes: ["honey", "soup"]      },
+  wren:  { id: "wren",  displayName: "Wren",        loves: ["plank", "iron_bar"], likes: ["tile_tree_oak", "bread"]  },
 };
 
 // Not frozen — `applyNpcOverrides` (Balance Manager) mutates this in place.

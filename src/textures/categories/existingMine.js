@@ -264,13 +264,13 @@ function drawGold(ctx) {
 }
 
 export const ICONS = {
-  mine_stone:       { label:"Stone",       color:"#8a8f94", draw:drawStone },
+  tile_mine_stone:       { label:"Stone",       color:"#8a8f94", draw:drawStone },
   block:            { label:"Block",       color:"#7e858a", draw:drawBlock },
-  mine_iron_ore:    { label:"Iron Ore",    color:"#a89890", draw:drawMineIronOre },
-  mine_copper_ore:  { label:"Copper Ore",  color:"#c97f4f", draw:drawMineCopperOre },
-  mine_coal:        { label:"Coal",        color:"#3a3a40", draw:drawCoal },
+  tile_mine_iron_ore:    { label:"Iron Ore",    color:"#a89890", draw:drawMineIronOre },
+  tile_mine_copper_ore:  { label:"Copper Ore",  color:"#c97f4f", draw:drawMineCopperOre },
+  tile_mine_coal:        { label:"Coal",        color:"#3a3a40", draw:drawCoal },
   coke:             { label:"Coke",        color:"#5a5a64", draw:drawCoke },
-  mine_gem:         { label:"Gem (rough)", color:"#6dd5e8", draw:drawGem },
+  tile_mine_gem:         { label:"Gem (rough)", color:"#6dd5e8", draw:drawGem },
   cut_gem:          { label:"Cut Gem",     color:"#7ce0ff", draw:drawCutgem },
-  mine_gold:        { label:"Gold Nugget", color:"#e8b830", draw:drawGold },
+  tile_mine_gold:        { label:"Gold Nugget", color:"#e8b830", draw:drawGold },
 };

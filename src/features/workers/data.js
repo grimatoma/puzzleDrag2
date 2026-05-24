@@ -27,7 +27,7 @@ export const TYPE_WORKERS = [
     role: "Farmer",
     iconKey: "worker_farmer",
     color: "#4f8c3a",
-    hireCost: { coins: 50, coinsStep: 25, resources: { grass_hay: 2 }, resourcesStepEvery: 3 },
+    hireCost: { coins: 50, coinsStep: 25, resources: { tile_grass_hay: 2 }, resourcesStepEvery: 3 },
     maxCount: 10,
     abilities: [
       { id: "threshold_reduce_category", params: { category: "grain", amount: 1 } },
@@ -40,7 +40,7 @@ export const TYPE_WORKERS = [
     role: "Lumberjack",
     iconKey: "worker_lumberjack",
     color: "#7a4f1f",
-    hireCost: { coins: 60, coinsStep: 30, resources: { tree_oak: 2 }, resourcesStepEvery: 3 },
+    hireCost: { coins: 60, coinsStep: 30, resources: { tile_tree_oak: 2 }, resourcesStepEvery: 3 },
     maxCount: 10,
     abilities: [
       { id: "threshold_reduce_category", params: { category: "trees", amount: 1 } },
@@ -53,7 +53,7 @@ export const TYPE_WORKERS = [
     role: "Miner",
     iconKey: "worker_miner",
     color: "#7a8490",
-    hireCost: { coins: 75, coinsStep: 35, resources: { mine_stone: 2 }, resourcesStepEvery: 3 },
+    hireCost: { coins: 75, coinsStep: 35, resources: { tile_mine_stone: 2 }, resourcesStepEvery: 3 },
     maxCount: 10,
     abilities: [
       { id: "threshold_reduce_category", params: { category: "wood", amount: 1 } },

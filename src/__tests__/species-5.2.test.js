@@ -26,18 +26,18 @@ describe("Phase 5.2 — state.tileCollection slice", () => {
 
   it("activeByCategory: grass=hay, bird=pheasant, fruits=apple, trees=oak (wood/berry/egg are resources, not tiles)", () => {
     const s0 = initialState();
-    expect(s0.tileCollection.activeByCategory.grass).toBe("grass_hay");
-    expect(s0.tileCollection.activeByCategory.bird).toBe("bird_pheasant");
-    expect(s0.tileCollection.activeByCategory.fruits).toBe("fruit_apple");
-    expect(s0.tileCollection.activeByCategory.tree_oak ?? s0.tileCollection.activeByCategory.trees).toBeDefined();
+    expect(s0.tileCollection.activeByCategory.grass).toBe("tile_grass_hay");
+    expect(s0.tileCollection.activeByCategory.bird).toBe("tile_bird_pheasant");
+    expect(s0.tileCollection.activeByCategory.fruits).toBe("tile_fruit_apple");
+    expect(s0.tileCollection.activeByCategory.tile_tree_oak ?? s0.tileCollection.activeByCategory.trees).toBeDefined();
     // wood/berry are no longer tile categories.
     expect(s0.tileCollection.activeByCategory.wood).toBeUndefined();
     expect(s0.tileCollection.activeByCategory.berry).toBeUndefined();
     // Grain previously started null because wheat was the only entry and
     // wheat is `chain`-discovered. After REFERENCE_CATALOG canonicalized
     // Corn/Buckwheat/Rice as `default`, grain auto-activates the first one
-    // (currently grain_corn).
-    expect(s0.tileCollection.activeByCategory.grain).toBe("grain_corn");
+    // (currently tile_grain_corn).
+    expect(s0.tileCollection.activeByCategory.grain).toBe("tile_grain_corn");
   });
 
   it("researchProgress seeded at 0 for every research-method tile type", () => {
@@ -61,8 +61,8 @@ describe("Phase 5.2 — state.tileCollection slice", () => {
     delete oldSave.tileCollection;
     const migrated = mergeLoadedState(oldSave);
     expect(migrated.tileCollection).toBeTruthy();
-    expect(migrated.tileCollection.discovered.grass_hay).toBe(true);
-    expect(migrated.tileCollection.activeByCategory.grass).toBe("grass_hay");
+    expect(migrated.tileCollection.discovered.tile_grass_hay).toBe(true);
+    expect(migrated.tileCollection.activeByCategory.grass).toBe("tile_grass_hay");
     expect(migrated.tileCollection.freeMoves).toBe(0);
   });
 
@@ -81,13 +81,13 @@ describe("Phase 5.2 — state.tileCollection slice", () => {
       ...s0,
       tileCollection: {
         ...s0.tileCollection,
-        discovered: { ...s0.tileCollection.discovered, grain_wheat: true, grass_meadow: true },
+        discovered: { ...s0.tileCollection.discovered, tile_grain_wheat: true, tile_grass_meadow: true },
         freeMoves: 7,
       },
     };
     const reset = rootReducer(dirty, { type: "DEV/RESET_GAME" });
-    expect(reset.tileCollection.discovered.grain_wheat).toBeFalsy();
-    expect(reset.tileCollection.discovered.grass_meadow).toBeFalsy();
+    expect(reset.tileCollection.discovered.tile_grain_wheat).toBeFalsy();
+    expect(reset.tileCollection.discovered.tile_grass_meadow).toBeFalsy();
     expect(reset.tileCollection.freeMoves).toBe(0);
   });
 });

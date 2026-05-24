@@ -11,5 +11,5 @@ export const CASTLE_NEEDS = {
   soup:  { target: 53, label: "Soup",  resource: "soup"  },
   meat:  { target: 47, label: "Meat",  resource: "meat"  },
   // Need-key `coal`; `resource` points to the prefixed mine inventory key.
-  coal:  { target: 43, label: "Coal",  resource: "mine_coal" },
+  coal:  { target: 43, label: "Coal",  resource: "tile_mine_coal" },
 };
