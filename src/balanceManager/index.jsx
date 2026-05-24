@@ -466,7 +466,7 @@ export default function BalanceManagerApp() {
           <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} onSelect={handlePaletteSelect} />
 
           {/* Active tab content */}
-          <main className="flex-1 flex flex-col min-w-0">
+          <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
             <div
               className="px-5 py-2 text-[11px] italic flex-shrink-0"
               style={{ color: COLORS.inkSubtle, background: COLORS.parchment, borderBottom: `1px solid ${COLORS.border}` }}
