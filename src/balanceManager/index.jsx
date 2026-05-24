@@ -16,6 +16,7 @@ import { COLORS } from "./shared.jsx";
 import { parseHash, useBalanceRouter } from "./router.js";
 import { useDraftHistory } from "./useDraftHistory.js";
 import CommandPalette from "./CommandPalette.jsx";
+import { BalanceNavProvider } from "./balanceNav.jsx";
 
 // Lazy-load tabs so the Dev Panel (a dev-time tool) stays out of the
 // main entry chunk. Each tab becomes its own JS chunk fetched only when
@@ -255,7 +256,9 @@ function useIsSmallScreen() {
 
 export default function BalanceManagerApp() {
   const tabIds = useMemo(() => TABS.map((t) => t.id), []);
-  const [tab, setTab] = useState(() => parseHash(typeof window !== "undefined" ? window.location.hash : "", tabIds).tab ?? "wiki");
+  const initialRoute = parseHash(typeof window !== "undefined" ? window.location.hash : "", tabIds);
+  const [tab, setTab] = useState(() => initialRoute.tab ?? "wiki");
+  const [focus, setFocus] = useState(() => initialRoute.focus ?? null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(readSidebarCollapsed);
   const [showDormantTabs, setShowDormantTabs] = useState(readShowDormantTabs);
   const [paletteOpen, setPaletteOpen] = useState(false);
@@ -267,12 +270,17 @@ export default function BalanceManagerApp() {
   // Bind the active tab to the URL hash. On mount this normalises the hash
   // (e.g. empty → `#/wiki`); subsequent `setTab` calls push history entries,
   // and back/forward / `hashchange` events rebind the tab.
-  useBalanceRouter(tab, setTab, tabIds);
+  useBalanceRouter(tab, setTab, focus, setFocus, tabIds);
 
-  const navigateTo = useCallback((nextTab) => {
+  const navigateTo = useCallback((nextTab, nextFocus = null) => {
     setTab(nextTab);
+    setFocus(nextFocus);
     setMobileNavOpen(false);
   }, []);
+
+  const navigate = useCallback(({ tab: nextTab, focus: nextFocus = null }) => {
+    navigateTo(nextTab, nextFocus);
+  }, [navigateTo]);
   // Initialise the draft from whatever the constants module merged in:
   // committed file + previous localStorage draft. That way, opening the
   // manager always shows the user's full set of overrides as starting point.
@@ -348,7 +356,7 @@ export default function BalanceManagerApp() {
   const effectiveCollapsed = !isSmallScreen && sidebarCollapsed;
 
   const handlePaletteSelect = useCallback((entry) => {
-    if (entry?.tab) navigateTo(entry.tab);
+    if (entry?.tab) navigateTo(entry.tab, entry.id ?? null);
   }, [navigateTo]);
 
   return (
@@ -608,7 +616,9 @@ export default function BalanceManagerApp() {
                   Loading {activeTab.label}…
                 </div>
               }>
-                <ActiveComponent draft={draft} updateDraft={updateDraft} />
+                <BalanceNavProvider focus={focus} navigate={navigate}>
+                  <ActiveComponent draft={draft} updateDraft={updateDraft} focus={focus} />
+                </BalanceNavProvider>
               </Suspense>
             </div>
           </main>

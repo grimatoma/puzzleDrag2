@@ -1,59 +1,37 @@
-// Hash-based router for the Dev Panel. Separate from the main game's
-// router (`src/router.js`) — the Dev Panel is its own Vite entry served
-// at `/b/`, so it needs its own URL-state binding.
-//
-// URL shape (within /b/):
-//   #/<tab>
-//
-// Examples:
-//   #/wiki
-//   #/tiles
-//   #/recipes
-//
-// `parseHash` and `buildHash` are pure helpers that round-trip cleanly and
-// gracefully fall back to the default tab when the hash is empty or refers to
-// an unknown tab. `useBalanceRouter` is the React hook that wires
-// browser URL ↔ component state via `popstate` and `hashchange`.
+// Hash-based router for the Dev Panel (`/b/`).
+// URL shape: #/<tab> or #/<tab>/<focusId>
 
 import { useEffect, useRef } from "react";
 
-/**
- * Parse a hash string into a route descriptor.
- * Unknown tabs and empty hashes resolve to `null`, leaving the caller free to
- * decide on a default.
- */
+function decodeSeg(seg) {
+  if (!seg) return null;
+  try {
+    return decodeURIComponent(seg);
+  } catch {
+    return null;
+  }
+}
+
 export function parseHash(hash, validTabs) {
   const raw = String(hash || "").replace(/^#\/?/, "");
-  if (!raw) return { tab: null };
-  const seg = raw.split("/")[0];
-  if (!seg) return { tab: null };
-  let decoded;
-  try { decoded = decodeURIComponent(seg); }
-  catch { return { tab: null }; }
-  if (!Array.isArray(validTabs) || !validTabs.includes(decoded)) return { tab: null };
-  return { tab: decoded };
+  if (!raw) return { tab: null, focus: null };
+  const parts = raw.split("/").filter(Boolean);
+  const tabSeg = parts[0];
+  if (!tabSeg) return { tab: null, focus: null };
+  const tab = decodeSeg(tabSeg);
+  if (!Array.isArray(validTabs) || !validTabs.includes(tab)) return { tab: null, focus: null };
+  const focus = parts[1] ? decodeSeg(parts[1]) : null;
+  return { tab, focus };
 }
 
-/**
- * Build a hash string from a route descriptor. Always starts with `#/` so it
- * can be assigned directly to `location.hash`.
- */
-export function buildHash({ tab } = {}) {
+export function buildHash({ tab, focus } = {}) {
   if (!tab) return "#/";
-  return `#/${encodeURIComponent(tab)}`;
+  const base = `#/${encodeURIComponent(tab)}`;
+  if (focus) return `${base}/${encodeURIComponent(focus)}`;
+  return base;
 }
 
-/**
- * React hook that binds the Dev Panel's tab state to the URL hash.
- *
- *   - On mount: parses the current hash; if it points at a valid tab, calls
- *     `setTab(parsed)`. Then writes the resolved tab back with `replaceState`
- *     so the URL is normalized (e.g. `""` → `#/wiki`).
- *   - On state change: pushes a new history entry whenever `tab` changes.
- *   - On `popstate` / `hashchange`: re-reads the hash and calls `setTab` so
- *     back/forward and manual edits stay in sync.
- */
-export function useBalanceRouter(tab, setTab, validTabs) {
+export function useBalanceRouter(tab, setTab, focus, setFocus, validTabs) {
   const lastWrittenRef = useRef(null);
   const initialisedRef = useRef(false);
 
@@ -61,22 +39,27 @@ export function useBalanceRouter(tab, setTab, validTabs) {
     if (typeof window === "undefined") return;
     const incoming = parseHash(window.location.hash, validTabs);
     const resolvedTab = incoming.tab ?? tab;
-    const desired = buildHash({ tab: resolvedTab });
+    const resolvedFocus = incoming.tab ? (incoming.focus ?? null) : null;
+    const desired = buildHash({ tab: resolvedTab, focus: resolvedFocus });
     if (window.location.hash !== desired) {
       window.history.replaceState(null, "", desired);
     }
     lastWrittenRef.current = desired;
     initialisedRef.current = true;
     if (incoming.tab && incoming.tab !== tab) setTab(incoming.tab);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: initial sync only runs once on mount
+    if (resolvedFocus !== focus) setFocus(resolvedFocus);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
     const handler = () => {
       const incoming = parseHash(window.location.hash, validTabs);
-      lastWrittenRef.current = buildHash({ tab: incoming.tab ?? tab });
+      const resolvedTab = incoming.tab ?? tab;
+      const resolvedFocus = incoming.tab ? (incoming.focus ?? null) : null;
+      lastWrittenRef.current = buildHash({ tab: resolvedTab, focus: resolvedFocus });
       if (incoming.tab && incoming.tab !== tab) setTab(incoming.tab);
+      if (resolvedFocus !== focus) setFocus(resolvedFocus);
     };
     window.addEventListener("popstate", handler);
     window.addEventListener("hashchange", handler);
@@ -84,14 +67,14 @@ export function useBalanceRouter(tab, setTab, validTabs) {
       window.removeEventListener("popstate", handler);
       window.removeEventListener("hashchange", handler);
     };
-  }, [tab, setTab, validTabs]);
+  }, [tab, setTab, focus, setFocus, validTabs]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (!initialisedRef.current) return;
-    const desired = buildHash({ tab });
+    const desired = buildHash({ tab, focus: focus || null });
     if (desired === lastWrittenRef.current) return;
     lastWrittenRef.current = desired;
     window.history.pushState(null, "", desired);
-  }, [tab]);
+  }, [tab, focus]);
 }

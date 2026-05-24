@@ -11,6 +11,8 @@ import {
   COLORS, NumberField, SmallButton, Pill, Card, SearchBar,
 } from "../shared.jsx";
 import AbilitiesEditor from "../AbilitiesEditor.jsx";
+import { CardAttachmentFooter, focusHighlightProps, useScrollToFocus } from "../relational.jsx";
+import { useBalanceNav } from "../balanceNav.jsx";
 import Icon from "../../ui/Icon.jsx";
 import { ITEMS } from "../../constants.js";
 
@@ -38,7 +40,11 @@ function parseResources(text) {
   return out;
 }
 
-export default function WorkersTab({ draft, updateDraft }) {
+export default function WorkersTab({ draft, updateDraft, focus }) {
+  const { focus: navFocus } = useBalanceNav();
+  const activeFocus = focus ?? navFocus;
+  useScrollToFocus(activeFocus);
+
   const [search, setSearch] = useState("");
   const filtered = useMemo(
     () => TYPE_WORKERS.filter((w) => {
@@ -97,8 +103,10 @@ export default function WorkersTab({ draft, updateDraft }) {
             patch(w.id, { hireCost: nextCost });
           }
 
+          const hi = focusHighlightProps(w.id, activeFocus);
+
           return (
-            <Card key={w.id} accent={dirty ? COLORS.ember : COLORS.border}>
+            <Card key={w.id} id={hi.id} style={hi.ringStyle} accent={dirty || hi.isFocused ? COLORS.ember : COLORS.border}>
               <div className="flex items-start justify-between mb-2 gap-2">
                 <div className="flex items-center gap-2">
                   <div
@@ -174,13 +182,13 @@ export default function WorkersTab({ draft, updateDraft }) {
                 </div>
               </div>
 
-              <div className="mt-2 pt-3" style={{ borderTop: `1px dashed ${COLORS.border}` }}>
+              <CardAttachmentFooter title="Attributes">
                 <AbilitiesEditor
                   scope="worker"
                   abilities={eff.abilities}
                   onChange={(next) => patch(w.id, { abilities: next })}
                 />
-              </div>
+              </CardAttachmentFooter>
             </Card>
           );
         })}

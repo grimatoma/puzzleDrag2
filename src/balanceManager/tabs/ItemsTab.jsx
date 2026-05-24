@@ -15,7 +15,7 @@ import {
   FilterBar, SegmentedFilter, Select, resourceKeyOptions, tileKeyOptions, hazardOptions,
 } from "../shared.jsx";
 import { TOOL_POWERS, getToolPower, defaultsForToolPower } from "../../config/toolPowers.js";
-import Icon from "../../ui/Icon.jsx";
+import { CardAttachmentFooter, RelationalFooter, CraftingRecipeLinks } from "../relational.jsx";
 
 const FILTERS = [
   { id: "all",      label: "All",       iconKey: "ui_build" },
@@ -162,116 +162,6 @@ export default function ItemsTab({ draft, updateDraft }) {
                     </div>
                   )}
 
-                  {/* Tool power — having one wired is what makes an item a tool.
-                      Grouped into its own sub-Card so power + params + anim read
-                      as a single unit, the same way Attributes render on Buildings. */}
-                  {tool && (
-                    <div className="col-span-2">
-                      <Card>
-                        <div className="text-[11px] font-bold uppercase tracking-wide mb-2" style={{ color: COLORS.inkSubtle }}>
-                          Tool power
-                        </div>
-                        <div className="grid grid-cols-2 gap-x-3 gap-y-1.5">
-                          {/* Tool power — schema-driven dropdown (persisted as `effect` on the item) */}
-                          <div className="col-span-2">
-                            <Label>Tool power</Label>
-                            <Select
-                              value={eff.effect}
-                              options={[
-                                { value: "", label: "— pick power —" },
-                                ...TOOL_POWERS.map((p) => ({ value: p.id, label: `${p.name} — ${p.id}` })),
-                              ]}
-                              onChange={(v) => {
-                                const defaults = defaultsForToolPower(v);
-                                patchItem(key, { effect: v, target: defaults.target ?? "", ...defaults });
-                              }}
-                            />
-                            {getToolPower(eff.effect) && (
-                              <div className="text-[10px] italic mt-0.5" style={{ color: COLORS.inkSubtle }}>
-                                {getToolPower(eff.effect).desc}
-                              </div>
-                            )}
-                          </div>
-                          {/* Per-param fields driven by the power schema */}
-                          {(getToolPower(eff.effect)?.params ?? []).map((p) => (
-                            <div key={p.key}>
-                              <Label>{p.label}</Label>
-                              {p.type === "resourceKey" ? (
-                                <Select
-                                  value={eff[p.key] ?? ""}
-                                  options={resourceKeyOptions()}
-                                  onChange={(v) => patchItem(key, { [p.key]: v })}
-                                />
-                              ) : p.type === "tileKey" ? (
-                                <Select
-                                  value={eff[p.key] ?? ""}
-                                  options={tileKeyOptions()}
-                                  onChange={(v) => patchItem(key, { [p.key]: v })}
-                                />
-                              ) : p.type === "hazard" ? (
-                                <Select
-                                  value={eff[p.key] ?? ""}
-                                  options={hazardOptions()}
-                                  onChange={(v) => patchItem(key, { [p.key]: v })}
-                                />
-                              ) : null}
-                            </div>
-                          ))}
-                          {/* Anim — dropdown from known values across all tool items */}
-                          <div>
-                            <Label>Anim</Label>
-                            <Select
-                              value={eff.anim}
-                              options={(() => {
-                                const known = [...new Set(
-                                  Object.values(ITEMS)
-                                    .filter((it) => it.kind === "tool" && it.anim)
-                                    .map((it) => it.anim)
-                                )].sort();
-                                const opts = [
-                                  { value: "", label: "— pick anim —" },
-                                  ...known.map((a) => ({ value: a, label: a })),
-                                ];
-                                if (eff.anim && !known.includes(eff.anim)) {
-                                  opts.unshift({ value: eff.anim, label: `${eff.anim} (custom)` });
-                                }
-                                return opts;
-                              })()}
-                              onChange={(v) => patchItem(key, { anim: v })}
-                            />
-                          </div>
-                          <div>
-                            <Label>Anim MS</Label>
-                            <NumberField value={eff.ms} min={0} max={5000} onChange={(v) => patchItem(key, { ms: v })} width={80} />
-                          </div>
-                        </div>
-                      </Card>
-                    </div>
-                  )}
-
-                  {/* Crafting recipes read-only summary */}
-                  <div className="col-span-2">
-                    <Label>Crafting Recipes</Label>
-                    {craftedBy.length === 0 ? (
-                      <div className="text-[10px] italic text-gray-500">Not craftable.</div>
-                    ) : (
-                      <div className="flex flex-col gap-1">
-                        {craftedBy.map((rec) => (
-                          <div key={rec.recId} className="text-[10px] flex items-center gap-1 border rounded px-1.5 py-1" style={{ borderColor: COLORS.border }}>
-                            <Pill>{rec.station}</Pill>
-                            <span className="text-gray-600">Requires:</span>
-                            {Object.entries(rec.inputs || {}).map(([inp, qty]) => (
-                              <span key={inp} className="flex items-center gap-0.5">
-                                <Icon iconKey={inp} size={12} /> {qty}x
-                              </span>
-                            ))}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Description */}
                   <div className="col-span-2">
                     <Label>Description</Label>
                     <TextArea
@@ -283,6 +173,70 @@ export default function ItemsTab({ draft, updateDraft }) {
                   </div>
                 </div>
               </div>
+
+              {tool && (
+                <CardAttachmentFooter title="Tool power">
+                  <div className="grid grid-cols-2 gap-x-3 gap-y-1.5">
+                    <div className="col-span-2">
+                      <Label>Tool power</Label>
+                      <Select
+                        value={eff.effect}
+                        options={[
+                          { value: "", label: "— pick power —" },
+                          ...TOOL_POWERS.map((p) => ({ value: p.id, label: `${p.name} — ${p.id}` })),
+                        ]}
+                        onChange={(v) => {
+                          const defaults = defaultsForToolPower(v);
+                          patchItem(key, { effect: v, target: defaults.target ?? "", ...defaults });
+                        }}
+                      />
+                      {getToolPower(eff.effect) && (
+                        <div className="text-[10px] italic mt-0.5" style={{ color: COLORS.inkSubtle }}>
+                          {getToolPower(eff.effect).desc}
+                        </div>
+                      )}
+                    </div>
+                    {(getToolPower(eff.effect)?.params ?? []).map((p) => (
+                      <div key={p.key}>
+                        <Label>{p.label}</Label>
+                        {p.type === "resourceKey" ? (
+                          <Select value={eff[p.key] ?? ""} options={resourceKeyOptions()}
+                            onChange={(v) => patchItem(key, { [p.key]: v })} />
+                        ) : p.type === "tileKey" ? (
+                          <Select value={eff[p.key] ?? ""} options={tileKeyOptions()}
+                            onChange={(v) => patchItem(key, { [p.key]: v })} />
+                        ) : p.type === "hazard" ? (
+                          <Select value={eff[p.key] ?? ""} options={hazardOptions()}
+                            onChange={(v) => patchItem(key, { [p.key]: v })} />
+                        ) : null}
+                      </div>
+                    ))}
+                    <div>
+                      <Label>Anim</Label>
+                      <Select
+                        value={eff.anim}
+                        options={(() => {
+                          const known = [...new Set(
+                            Object.values(ITEMS).filter((it) => it.kind === "tool" && it.anim).map((it) => it.anim),
+                          )].sort();
+                          const opts = [{ value: "", label: "— pick anim —" }, ...known.map((a) => ({ value: a, label: a }))];
+                          if (eff.anim && !known.includes(eff.anim)) opts.unshift({ value: eff.anim, label: `${eff.anim} (custom)` });
+                          return opts;
+                        })()}
+                        onChange={(v) => patchItem(key, { anim: v })}
+                      />
+                    </div>
+                    <div>
+                      <Label>Anim MS</Label>
+                      <NumberField value={eff.ms} min={0} max={5000} onChange={(v) => patchItem(key, { ms: v })} width={80} />
+                    </div>
+                  </div>
+                </CardAttachmentFooter>
+              )}
+
+              <RelationalFooter title="Crafting recipes" hint="Derived · click to open">
+                <CraftingRecipeLinks recipes={craftedBy} />
+              </RelationalFooter>
             </Card>
           );
         })}

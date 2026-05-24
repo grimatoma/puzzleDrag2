@@ -139,14 +139,17 @@ export function FieldRow({ label, hint, children }) {
   );
 }
 
-export function Card({ children, className = "", title, accent }) {
+export function Card({ children, className = "", title, accent, id, cardRef, style: styleProp }) {
   return (
     <div
+      ref={cardRef}
+      id={id}
       className={`rounded-xl border-2 p-3 ${className}`}
       style={{
         background: COLORS.parchment,
         borderColor: accent || COLORS.border,
         boxShadow: "0 1px 0 rgba(0,0,0,0.08)",
+        ...styleProp,
       }}
     >
       {title && (
