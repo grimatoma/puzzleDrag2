@@ -5,6 +5,8 @@ import { TileIcon } from "../tileCollection/index.jsx";
 import useFocusTrap from "../../ui/primitives/useFocusTrap.js";
 import { ParchmentDialog } from "../../ui/primitives/Dialog.jsx";
 import Button from "../../ui/primitives/Button.jsx";
+import { UPGRADE_THRESHOLDS } from "../../constants.js";
+import { AbilitySummary } from "../../ui/primitives/BrowserDetail.jsx";
 
 const CATEGORY_LABEL = {
   grass: "Grass",
@@ -179,30 +181,53 @@ function TileChooserPopup({ zoneCategory, state, dispatch, onClose }) {
             buy new variants.
           </p>
         ) : (
-          <div className="grid grid-cols-3 gap-2">
+          <div className="flex flex-col gap-1.5">
             {rows.map(({ tile, tileCat }) => {
               const isActive = active[tileCat] === tile.id;
+              const chain = UPGRADE_THRESHOLDS[tile.baseResource];
               return (
                 <button
                   key={tile.id}
                   type="button"
                   onClick={() => pick({ tile, tileCat })}
-                  className="flex flex-col items-center rounded-xl px-2 py-2 text-[12px] font-bold transition-colors"
+                  aria-pressed={isActive}
+                  aria-label={`${tile.displayName}${isActive ? " (active)" : ""}`}
+                  className="flex items-start gap-2 rounded-xl px-2 py-2 text-left transition-colors"
                   style={{
                     background: isActive ? "#fffaf1" : "#dbcfb6",
                     color: "#2b2218",
                     border: isActive ? "3px solid #91bf24" : "3px solid #8c7656",
                   }}
                 >
-                  <span className="grid place-items-center" style={{ width: 40, height: 40 }}>
+                  <span className="grid place-items-center shrink-0" style={{ width: 40, height: 40 }}>
                     <TileIcon tileId={tile.id} size={40} />
                   </span>
-                  <span className="mt-1 leading-tight text-center">
-                    {tile.displayName}
+                  <span className="flex-1 min-w-0 flex flex-col gap-0.5">
+                    <span className="flex items-center gap-1.5 flex-wrap">
+                      <span className="font-bold text-[13px] leading-tight">{tile.displayName}</span>
+                      {tile.tier > 0 && (
+                        <span className="rounded-full px-1.5 py-0.5 text-[10px] font-bold bg-[#8c7656]/20 text-on-panel-dim">
+                          Tier {tile.tier}
+                        </span>
+                      )}
+                      {chain != null && (
+                        <span className="rounded-full px-1.5 py-0.5 text-[10px] font-bold bg-[#8c7656]/20 text-on-panel-dim">
+                          Chain: {chain}
+                        </span>
+                      )}
+                      {isActive && (
+                        <span className="ml-auto rounded-full px-1.5 py-0.5 text-[10px] font-bold text-[#2a5010]">
+                          ● Active
+                        </span>
+                      )}
+                    </span>
+                    {tile.description && (
+                      <span className="text-[11px] text-on-panel-faint leading-snug">
+                        {tile.description}
+                      </span>
+                    )}
+                    <AbilitySummary abilities={tile.abilities} effects={tile.effects} empty={null} />
                   </span>
-                  {isActive && (
-                    <span className="text-[10px] text-[#2a5010] mt-0.5">● Active</span>
-                  )}
                 </button>
               );
             })}
