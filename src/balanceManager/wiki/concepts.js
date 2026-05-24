@@ -18,6 +18,7 @@ import { CATEGORIES as TILE_CATEGORIES } from "../../features/tileCollection/dat
 import { ABILITIES } from "../../config/abilities.js";
 import { TOOL_POWERS } from "../../config/toolPowers.js";
 import { KNOWN_VIEWS, KNOWN_MODALS } from "../../router.js";
+import { BOSSES } from "../../features/bosses/data.js";
 
 function byName(a, b) {
   const an = String(a.name ?? "").toLowerCase();
@@ -40,6 +41,14 @@ function itemsOfKind(kind) {
   }
   out.sort(byName);
   return out;
+}
+
+function bossEntries() {
+  return BOSSES.map((b) => ({
+    key: b.id,
+    name: b.name,
+    iconKey: `boss_${b.id}`,
+  })).sort(byName);
 }
 
 function hazardEntries() {
@@ -199,6 +208,12 @@ export const CONCEPTS = [
     label: "Tools",
     blurb: "Single-use items the player spends to trigger active effects (kind: \"tool\").",
     getEntries: () => itemsOfKind("tool"),
+  },
+  {
+    id: "bosses",
+    label: "Boss Types",
+    blurb: "Seasonal antagonists — each locks a 10-turn challenge with a unique board modifier.",
+    getEntries: bossEntries,
   },
   {
     id: "hazards",
