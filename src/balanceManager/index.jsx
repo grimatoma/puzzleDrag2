@@ -64,7 +64,7 @@ const TABS = [
     section: "board",
     blurb: "Per-zone settings: base turns, entry cost, chain-upgrade map, and per-(zone, season) tile drop weights." },
   { id: "biomes", label: "Settlement biomes", iconKey: "ui_star", Component: BiomesTab,
-    section: "board",
+    section: "board", dormant: true,
     blurb: "Founding biomes (four per settlement type): name, icon, round hazards, and resource bonus." },
 
   // Economy — inventory through town and expeditions
@@ -78,29 +78,12 @@ const TABS = [
     section: "economy",
     blurb: "Town building costs and unlock levels." },
   { id: "rations", label: "Expedition rations", iconKey: "ui_star", Component: RationsTab,
-    section: "economy",
+    section: "economy", dormant: true,
     blurb: "Mine/harbor expedition food: turn value per ration and which foods count as meat for the Smokehouse +1." },
-
-  // Run — per-run and meta progression knobs
-  { id: "tuning", label: "Global tuning", iconKey: "ui_devtools", Component: TuningTab,
-    section: "run",
-    blurb: "Top-level constants: round length, audit-boss cooldown, craft-queue timer and gem skip, expedition floor, settlement founding ramp, home biome." },
-  { id: "workers", label: "Workers", iconKey: "ui_devtools", Component: WorkersTab,
-    section: "run",
-    blurb: "Worker hire costs (flat / linear / geometric), max count per type, and effect parameters." },
-  { id: "bosses", label: "Bosses", iconKey: "ui_star", Component: BossesTab,
-    section: "run",
-    blurb: "Seasonal bosses: name, season, clear target, flavour text. Modifier types and params are board logic (not editable here)." },
-  { id: "achievements", label: "Achievements", iconKey: "ui_star", Component: AchievementsTab,
-    section: "run",
-    blurb: "Achievement names, descriptions, unlock threshold, and coin reward. Counter wiring is not editable here." },
-  { id: "dailyRewards", label: "Daily rewards", iconKey: "ui_star", Component: DailyRewardsTab,
-    section: "run",
-    blurb: "30-day login track: coin and rune amounts per day. Tool and tile-unlock drops are not editable here." },
 
   // World — narrative and characters
   { id: "flags", label: "Story flags", iconKey: "ui_devtools", Component: FlagsTab,
-    section: "world",
+    section: "world", dormant: true,
     blurb: "Story flags: create custom flags, override metadata and triggers, see readers/writers, catch orphans." },
   { id: "story", label: "Story beats", iconKey: "ui_star", Component: StoryTab,
     section: "world",
@@ -108,11 +91,14 @@ const TABS = [
   { id: "npcs", label: "NPCs", iconKey: "ui_star", Component: NpcsTab,
     section: "world",
     blurb: "Townsfolk gift preferences (loves / likes) and bond bands (name + order-reward modifier)." },
-  { id: "keepers", label: "Keepers", iconKey: "ui_star", Component: KeepersTab,
+  { id: "workers", label: "Workers", iconKey: "ui_devtools", Component: WorkersTab,
     section: "world",
+    blurb: "Worker hire costs (flat / linear / geometric), max count per type, and effect parameters." },
+  { id: "keepers", label: "Keepers", iconKey: "ui_star", Component: KeepersTab,
+    section: "world", dormant: true,
     blurb: "Biome keepers: names, building threshold, Coexist / Drive Out dialogue and rewards." },
   { id: "boons", label: "Boons", iconKey: "ui_star", Component: BoonsTab,
-    section: "world",
+    section: "world", dormant: true,
     blurb: "Keeper-path zone boons (Embers or Core Ingots). Read-only catalog for now." },
 
   // Systems — passive/active catalogs (editable reference)
@@ -134,6 +120,20 @@ const TABS = [
     section: "dev",
     blurb: "Preview named board animations on a live board. Source: src/config/boardAnimations.js." },
 
+  // Run — per-run and meta progression (mostly stub tabs; hidden by default)
+  { id: "tuning", label: "Global tuning", iconKey: "ui_devtools", Component: TuningTab,
+    section: "run", dormant: true,
+    blurb: "Top-level constants: round length, audit-boss cooldown, craft-queue timer and gem skip, expedition floor, settlement founding ramp, home biome." },
+  { id: "bosses", label: "Bosses", iconKey: "ui_star", Component: BossesTab,
+    section: "run", dormant: true,
+    blurb: "Seasonal bosses: name, season, clear target, flavour text. Modifier types and params are board logic (not editable here)." },
+  { id: "achievements", label: "Achievements", iconKey: "ui_star", Component: AchievementsTab,
+    section: "run", dormant: true,
+    blurb: "Achievement names, descriptions, unlock threshold, and coin reward. Counter wiring is not editable here." },
+  { id: "dailyRewards", label: "Daily rewards", iconKey: "ui_star", Component: DailyRewardsTab,
+    section: "run", dormant: true,
+    blurb: "30-day login track: coin and rune amounts per day. Tool and tile-unlock drops are not editable here." },
+
   // Workflow — draft I/O
   { id: "export", label: "Export & import", iconKey: "ui_star", Component: ExportTab,
     section: "workflow",
@@ -144,12 +144,24 @@ const SECTIONS = [
   { id: "reference", label: "Reference" },
   { id: "board", label: "Board" },
   { id: "economy", label: "Economy" },
-  { id: "run", label: "Run" },
   { id: "world", label: "World" },
   { id: "systems", label: "Systems" },
   { id: "dev", label: "Dev" },
   { id: "workflow", label: "Workflow" },
+  { id: "run", label: "Run" },
 ];
+
+function tabNavStyle(active, dormant) {
+  if (active) {
+    return dormant
+      ? { background: "#c45c4a", color: "#fff", border: `1px solid ${COLORS.redDeep}` }
+      : { background: COLORS.ember, color: "#fff" };
+  }
+  if (dormant) {
+    return { background: "rgba(194, 59, 34, 0.14)", color: COLORS.redDeep };
+  }
+  return { background: "transparent", color: COLORS.inkLight };
+}
 
 function emptyDraft() {
   return {
@@ -192,6 +204,7 @@ function cloneDraft(d) {
 }
 
 const SIDEBAR_COLLAPSED_KEY = "hearth.balance.sidebarCollapsed";
+const SIDEBAR_DORMANT_KEY = "hearth.balance.sidebarDormantTabs";
 
 function readSidebarCollapsed() {
   try {
@@ -204,6 +217,20 @@ function writeSidebarCollapsed(v) {
   try {
     if (typeof localStorage === "undefined") return;
     localStorage.setItem(SIDEBAR_COLLAPSED_KEY, v ? "1" : "0");
+  } catch { /* storage unavailable */ }
+}
+
+function readShowDormantTabs() {
+  try {
+    if (typeof localStorage === "undefined") return false;
+    return localStorage.getItem(SIDEBAR_DORMANT_KEY) === "1";
+  } catch { return false; }
+}
+
+function writeShowDormantTabs(v) {
+  try {
+    if (typeof localStorage === "undefined") return;
+    localStorage.setItem(SIDEBAR_DORMANT_KEY, v ? "1" : "0");
   } catch { /* storage unavailable */ }
 }
 
@@ -230,6 +257,7 @@ export default function BalanceManagerApp() {
   const tabIds = useMemo(() => TABS.map((t) => t.id), []);
   const [tab, setTab] = useState(() => parseHash(typeof window !== "undefined" ? window.location.hash : "", tabIds).tab ?? "wiki");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(readSidebarCollapsed);
+  const [showDormantTabs, setShowDormantTabs] = useState(readShowDormantTabs);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const isSmallScreen = useIsSmallScreen();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
@@ -258,6 +286,14 @@ export default function BalanceManagerApp() {
     setSidebarCollapsed((v) => {
       const next = !v;
       writeSidebarCollapsed(next);
+      return next;
+    });
+  }, []);
+
+  const toggleDormantTabs = useCallback(() => {
+    setShowDormantTabs((v) => {
+      const next = !v;
+      writeShowDormantTabs(next);
       return next;
     });
   }, []);
@@ -469,18 +505,34 @@ export default function BalanceManagerApp() {
             }
             aria-hidden={isSmallScreen && !overlayOpen}
           >
-            <button
-              onClick={isSmallScreen ? () => setMobileNavOpen(false) : toggleSidebar}
-              className="self-end mb-1 w-7 h-7 grid place-items-center text-[14px] font-bold rounded-md border-2"
-              style={{ background: COLORS.parchment, borderColor: COLORS.border, color: COLORS.inkLight }}
-              title={isSmallScreen ? "Close navigation" : (sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar")}
-              aria-label={isSmallScreen ? "Close navigation" : (sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar")}
-              aria-expanded={isSmallScreen ? overlayOpen : !sidebarCollapsed}
-            >
-              {isSmallScreen ? "✕" : (sidebarCollapsed ? "»" : "«")}
-            </button>
+            <div className="self-end mb-1 flex gap-1">
+              <button
+                onClick={toggleDormantTabs}
+                className="w-7 h-7 grid place-items-center text-[11px] font-bold rounded-md border-2"
+                style={{
+                  background: showDormantTabs ? "rgba(194, 59, 34, 0.2)" : COLORS.parchment,
+                  borderColor: showDormantTabs ? COLORS.red : COLORS.border,
+                  color: showDormantTabs ? COLORS.redDeep : COLORS.inkLight,
+                }}
+                title={showDormantTabs ? "Hide unused tabs" : "Show unused tabs"}
+                aria-label={showDormantTabs ? "Hide unused tabs" : "Show unused tabs"}
+                aria-pressed={showDormantTabs}
+              >
+                {effectiveCollapsed ? "⊡" : "···"}
+              </button>
+              <button
+                onClick={isSmallScreen ? () => setMobileNavOpen(false) : toggleSidebar}
+                className="w-7 h-7 grid place-items-center text-[14px] font-bold rounded-md border-2"
+                style={{ background: COLORS.parchment, borderColor: COLORS.border, color: COLORS.inkLight }}
+                title={isSmallScreen ? "Close navigation" : (sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar")}
+                aria-label={isSmallScreen ? "Close navigation" : (sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar")}
+                aria-expanded={isSmallScreen ? overlayOpen : !sidebarCollapsed}
+              >
+                {isSmallScreen ? "✕" : (sidebarCollapsed ? "»" : "«")}
+              </button>
+            </div>
             {SECTIONS.map((sec) => {
-              const sectionTabs = TABS.filter((t) => t.section === sec.id);
+              const sectionTabs = TABS.filter((t) => t.section === sec.id && (showDormantTabs || !t.dormant));
               if (sectionTabs.length === 0) return null;
               return (
                 <div key={sec.id} className="flex flex-col gap-1">
@@ -505,11 +557,7 @@ export default function BalanceManagerApp() {
                         key={t.id}
                         onClick={() => navigateTo(t.id)}
                         className="text-left px-3 py-2 rounded-lg text-[12px] font-bold transition-colors flex items-center gap-2"
-                        style={
-                          active
-                            ? { background: COLORS.ember, color: "#fff" }
-                            : { background: "transparent", color: COLORS.inkLight }
-                        }
+                        style={tabNavStyle(active, !!t.dormant)}
                         title={effectiveCollapsed ? t.label : undefined}
                         aria-label={t.label}
                       >
