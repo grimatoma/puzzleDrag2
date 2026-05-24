@@ -17,6 +17,7 @@ import { ZONES, ZONE_CATEGORIES } from "../../features/zones/data.js";
 import { CATEGORIES as TILE_CATEGORIES } from "../../features/tileCollection/data.js";
 import { ABILITIES } from "../../config/abilities.js";
 import { TOOL_POWERS } from "../../config/toolPowers.js";
+import { TILE_DISCOVERY_METHODS } from "../../config/tileDiscoveryMethods.js";
 import { KNOWN_VIEWS, KNOWN_MODALS } from "../../router.js";
 
 function byName(a, b) {
@@ -160,6 +161,13 @@ function toolPowerEntries() {
   })).sort(byName);
 }
 
+function tileDiscoveryMethodEntries() {
+  return TILE_DISCOVERY_METHODS.map((m) => ({
+    key: m.id,
+    name: m.name,
+  })).sort(byName);
+}
+
 function seasonEntries() {
   return SEASONS.map((s) => ({
     key: s.name,
@@ -259,6 +267,12 @@ export const CONCEPTS = [
     label: "Tool Powers",
     blurb: "Active effects the player triggers by spending a tool item.",
     getEntries: toolPowerEntries,
+  },
+  {
+    id: "tileDiscoveryMethods",
+    label: "Tile Discovery Methods",
+    blurb: "How a tile becomes available to the player — default, chain-unlock, research, buy, daily reward.",
+    getEntries: tileDiscoveryMethodEntries,
   },
   {
     id: "seasons",
