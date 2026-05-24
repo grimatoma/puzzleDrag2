@@ -39,6 +39,8 @@ npm run test:visual:update   # Refresh visual goldens after intentional UI chang
 npm run test:visual:all      # Run desktop + iPhone landscape/portrait visual matrix
 ```
 
+Every `test:visual*` script has a `pretest:visual*` hook that runs `tools/ensure-playwright-browser.mjs`. On restricted-network hosts (some sandboxes block `cdn.playwright.dev`), this bootstrap symlinks any pre-installed `/opt/pw-browsers/chromium_headless_shell-*` into the path the current Playwright revision expects, so visual tests work without a fresh download. No-op when the right browser is already present.
+
 Unit/integration tests live in `tests/` (22 phase-* files) and `src/__tests__/` (60+ files). `runSelfTests()` in `src/utils.js` is a thin smoke shim that delegates to `src/smokeTests.js` (`SMOKE_INVARIANTS`); it can still be invoked from the browser console after the game loads.
 
 ## Architecture
