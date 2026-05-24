@@ -59,10 +59,19 @@ function workerEntries() {
   })).sort(byName);
 }
 
+const BUILDING_ICON_KEYS = {
+  bakery: "station_bakery",
+  forge: "station_forge",
+  larder: "station_larder",
+  workshop: "station_workshop",
+  portal: "ui_portal",
+};
+
 function buildingEntries() {
   return BUILDINGS.map((b) => ({
     key: b.id,
     name: b.name,
+    iconKey: BUILDING_ICON_KEYS[b.id],
     color: b.color,
   })).sort(byName);
 }
@@ -73,6 +82,7 @@ function npcEntries() {
     out.push({
       key: id,
       name: npc.name ?? id,
+      iconKey: `char_${id}`,
       color: npc.color,
     });
   }
