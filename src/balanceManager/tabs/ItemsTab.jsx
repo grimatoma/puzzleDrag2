@@ -1,6 +1,6 @@
 // Items — discrete objects that sit in your inventory (one or many of each:
 // a rake, a comb, a table…). A "tool" is just an item with a tool power: the
-// power / target / anim fields are what make it a tool.
+// power / target fields are what make it a tool. Board anim + ms are fixed per item in constants.
 //
 // Tiles (board pieces) are separate. This tab is the unified inventory model:
 // resources + plain items + tools.
@@ -211,25 +211,12 @@ export default function ItemsTab({ draft, updateDraft }) {
                         ) : null}
                       </div>
                     ))}
-                    <div>
-                      <Label>Anim</Label>
-                      <Select
-                        value={eff.anim}
-                        options={(() => {
-                          const known = [...new Set(
-                            Object.values(ITEMS).filter((it) => it.kind === "tool" && it.anim).map((it) => it.anim),
-                          )].sort();
-                          const opts = [{ value: "", label: "— pick anim —" }, ...known.map((a) => ({ value: a, label: a }))];
-                          if (eff.anim && !known.includes(eff.anim)) opts.unshift({ value: eff.anim, label: `${eff.anim} (custom)` });
-                          return opts;
-                        })()}
-                        onChange={(v) => patchItem(key, { anim: v })}
-                      />
-                    </div>
-                    <div>
-                      <Label>Anim MS</Label>
-                      <NumberField value={eff.ms} min={0} max={5000} onChange={(v) => patchItem(key, { ms: v })} width={80} />
-                    </div>
+                    {eff.anim && (
+                      <div className="col-span-2 text-[10px]" style={{ color: COLORS.inkSubtle }}>
+                        Board animation: <code className="font-mono">{eff.anim}</code>
+                        {eff.ms > 0 && <> · {eff.ms}ms</>}
+                      </div>
+                    )}
                   </div>
                 </CardAttachmentFooter>
               )}
