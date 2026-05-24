@@ -108,6 +108,6 @@ function drawWaterLily(ctx) {
 }
 
 export const ICONS = {
-  flower_pansy:      { label:"Pansy",      color:"#7a3aa8", draw:drawPansy },
-  flower_water_lily: { label:"Water Lily", color:"#e890c0", draw:drawWaterLily },
+  tile_flower_pansy:      { label:"Pansy",      color:"#7a3aa8", draw:drawPansy },
+  tile_flower_water_lily: { label:"Water Lily", color:"#e890c0", draw:drawWaterLily },
 };

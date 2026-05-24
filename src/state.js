@@ -274,7 +274,7 @@ function coreReducer(state, action) {
               ...state,
               runes: (state.runes ?? 0) + 1,
               fishPearl: null,
-              bubble: { id: Date.now(), npc: "wren", text: "[icon:fish_pearl] Pearl captured! +1 Rune.", ms: 2200, priority: 2 },
+              bubble: { id: Date.now(), npc: "wren", text: "[icon:tile_special_giant_pearl] Pearl captured! +1 Rune.", ms: 2200, priority: 2 },
             };
           }
         }
@@ -611,7 +611,7 @@ function coreReducer(state, action) {
           const lavaSet = new Set(lavaCells.map((c) => `${c.row},${c.col}`));
           grid = grid.map((row, ri) =>
             row.map((t, ci) =>
-              lavaSet.has(`${ri},${ci}`) ? { ...t, key: "mine_stone", rubble: true, lava: false } : t,
+              lavaSet.has(`${ri},${ci}`) ? { ...t, key: "tile_mine_stone", rubble: true, lava: false } : t,
             ),
           );
         }
@@ -670,14 +670,14 @@ function coreReducer(state, action) {
         let grid = state.grid;
         let collected = 0;
         if (grid) {
-          const eggCount = grid.flat().filter((t) => t.key === "bird_egg").length;
+          const eggCount = grid.flat().filter((t) => t.key === "eggs").length;
           if (eggCount === 0) {
             return { ...state, tools: { ...state.tools }, // refund
               bubble: { id: Date.now(), npc: "bram", text: "No eggs to cage.", ms: 1200 } };
           }
           grid = grid.map((row) =>
             row.map((t) => {
-              if (t.key === "bird_egg") { collected += 1; return { ...t, key: null, _emptied: true }; }
+              if (t.key === "eggs") { collected += 1; return { ...t, key: null, _emptied: true }; }
               return t;
             }),
           );
@@ -686,22 +686,22 @@ function coreReducer(state, action) {
           ...state,
           tools,
           grid,
-          inventory: { ...state.inventory, bird_egg: (state.inventory?.bird_egg ?? 0) + collected },
+          inventory: { ...state.inventory, eggs: (state.inventory?.eggs ?? 0) + collected },
         };
       }
-      // Phase 10.6 — Scythe (full): collect all grain tiles (no turn cost)
+      // Phase 10.6 — Scythe (full): collect all wheat tiles (no turn cost)
       if (key === "scythe_full") {
         let grid = state.grid;
         let collectedGrain = 0;
         if (grid) {
-          const grainCount = grid.flat().filter((t) => t.key === "grain").length;
+          const grainCount = grid.flat().filter((t) => t.key === "tile_grain_wheat").length;
           if (grainCount === 0) {
             return { ...state, tools: { ...state.tools }, // refund
-              bubble: { id: Date.now(), npc: "bram", text: "No grain to cut.", ms: 1200 } };
+              bubble: { id: Date.now(), npc: "bram", text: "No wheat to cut.", ms: 1200 } };
           }
           grid = grid.map((row) =>
             row.map((t) => {
-              if (t.key === "grain") { collectedGrain += 1; return { ...t, key: null, _emptied: true }; }
+              if (t.key === "tile_grain_wheat") { collectedGrain += 1; return { ...t, key: null, _emptied: true }; }
               return t;
             }),
           );
@@ -710,7 +710,7 @@ function coreReducer(state, action) {
           ...state,
           tools,
           grid,
-          inventory: { ...state.inventory, grain: (state.inventory?.grain ?? 0) + collectedGrain },
+          inventory: { ...state.inventory, tile_grain_wheat: (state.inventory?.tile_grain_wheat ?? 0) + collectedGrain },
         };
       }
       // Phase 10.8 — Rifle: clear all wolves (no turn cost)
@@ -919,7 +919,7 @@ function coreReducer(state, action) {
         bubble = { id: Date.now(), npc: "mira", text: `${b.name} built! [icon:ui_build] Tap it in Town to open crafting recipes.`, ms: 2800 };
         newHintsShown = { ...hintsShown, craftHint: true };
       } else if (b.id === "inn" && !hintsShown.innHint) {
-        bubble = { id: Date.now(), npc: "wren", text: "Inn built! 🧑‍[icon:grass_hay] You can now hire Helpers from the nav below.", ms: 2800 };
+        bubble = { id: Date.now(), npc: "wren", text: "Inn built! 🧑‍[icon:tile_grass_hay] You can now hire Helpers from the nav below.", ms: 2800 };
         newHintsShown = { ...hintsShown, innHint: true };
       }
       // §17 locked: 10 XP per building into almanac
@@ -1075,7 +1075,7 @@ function coreReducer(state, action) {
     case "CRAFTING/CLAIM_CRAFT": {
       // Mirror CRAFT_RECIPE for queued completions: claiming the ready head
       // entry of a station's queue should fire `craft_made` so story beats,
-      // boss progress (ember_drake counts mine_ingot crafts) and achievements
+      // boss progress (ember_drake counts iron_bar crafts) and achievements
       // (totalCrafted, distinct_crafts) all advance. The slice owns the
       // actual inventory mutation + queue removal; we only emit the event
       // when the action would succeed.
@@ -1116,12 +1116,12 @@ function coreReducer(state, action) {
     case "CONVERT_TO_SUPPLY": {
       const qty = Math.max(1, action.payload.qty | 0);
       const cost = qty * 3;
-      if ((state.inventory.grain ?? 0) < cost) return state;
+      if ((state.inventory.flour ?? 0) < cost) return state;
       return {
         ...state,
         inventory: {
           ...state.inventory,
-          grain: state.inventory.grain - cost,
+          flour: state.inventory.flour - cost,
           supplies: (state.inventory.supplies ?? 0) + qty,
         },
       };

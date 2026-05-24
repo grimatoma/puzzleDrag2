@@ -10,11 +10,11 @@ export const BOND_BANDS = Object.freeze([
 // is derived from `loves[0]` so legacy callers still work. See GIFT_DELTAS in
 // features/npcs/bond.js for the per-tier bond gain.
 const NPC_RAW = {
-  mira:  { id: "mira",  displayName: "Mira",        loves: ["grain_flour", "bread"],     likes: ["honey", "berry_jam"] },
-  tomas: { id: "tomas", displayName: "Old Tomas",   loves: ["berry_jam", "honey"],       likes: ["berry", "bread"]     },
-  bram:  { id: "bram",  displayName: "Bram",        loves: ["mine_ingot", "mine_coal"],  likes: ["mine_stone", "mine_ore"] },
-  liss:  { id: "liss",  displayName: "Sister Liss", loves: ["berry_jam", "berry"],       likes: ["honey", "soup"]      },
-  wren:  { id: "wren",  displayName: "Wren",        loves: ["wood_plank", "mine_ingot"], likes: ["wood_log", "bread"]  },
+  mira:  { id: "mira",  displayName: "Mira",        loves: ["flour", "bread"],     likes: ["honey", "jam"] },
+  tomas: { id: "tomas", displayName: "Old Tomas",   loves: ["jam", "honey"],       likes: ["tile_fruit_blackberry", "bread"] },
+  bram:  { id: "bram",  displayName: "Bram",        loves: ["iron_bar", "tile_mine_coal"],  likes: ["tile_mine_stone", "tile_mine_iron_ore"] },
+  liss:  { id: "liss",  displayName: "Sister Liss", loves: ["jam", "tile_fruit_blackberry"], likes: ["honey", "soup"]      },
+  wren:  { id: "wren",  displayName: "Wren",        loves: ["plank", "iron_bar"], likes: ["tile_tree_oak", "bread"]  },
 };
 
 // Not frozen — `applyNpcOverrides` (Balance Manager) mutates this in place.

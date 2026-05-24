@@ -14,7 +14,7 @@ test('BUY_TILE debits coins and marks the tile discovered', async ({ page }) => 
   });
   // Pick any buyable tile id from constants. The reducer ignores ids whose
   // discovery.method !== "buy", so we use one we know is buyable.
-  await dispatchAction(page, { type: 'BUY_TILE', payload: { id: 'flower_pansy' } });
+  await dispatchAction(page, { type: 'BUY_TILE', payload: { id: 'tile_flower_pansy' } });
   // If the chosen id isn't actually buyable, the reducer is a no-op — accept
   // either outcome but don't crash. If it IS buyable, coins should drop.
   const errors = [];
@@ -27,12 +27,12 @@ test('Re-buying an already-discovered tile is a no-op', async ({ page }) => {
   await gotoFresh(page, {
     coins: 10000,
     tileCollection: {
-      discovered: { flower_pansy: true },
+      discovered: { tile_flower_pansy: true },
       researchProgress: {}, activeByCategory: {}, freeMoves: 0,
     },
   });
   const before = await getReactState(page);
-  await dispatchAction(page, { type: 'BUY_TILE', payload: { id: 'flower_pansy' } });
+  await dispatchAction(page, { type: 'BUY_TILE', payload: { id: 'tile_flower_pansy' } });
   await page.waitForTimeout(150);
   const after = await getReactState(page);
   expect(after.coins).toBe(before.coins);

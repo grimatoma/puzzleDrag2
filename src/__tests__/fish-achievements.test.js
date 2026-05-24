@@ -32,7 +32,7 @@ describe("fish-themed achievements", () => {
     const s0 = baseState();
     const s1 = achReduce(s0, {
       type: "CHAIN_COLLECTED",
-      payload: { key: "fish_sardine", gained: 4, chainLength: 4, upgrades: 0 },
+      payload: { key: "tile_fish_sardine", gained: 4, chainLength: 4, upgrades: 0 },
     });
     expect(s1.achievements.counters.fish_chained).toBe(4);
   });
@@ -41,14 +41,14 @@ describe("fish-themed achievements", () => {
     const s0 = baseState();
     const s1 = achReduce(s0, {
       type: "CHAIN_COLLECTED",
-      payload: { key: "grass_hay", gained: 10, chainLength: 10, upgrades: 0 },
+      payload: { key: "tile_grass_hay", gained: 10, chainLength: 10, upgrades: 0 },
     });
     expect(s1.achievements.counters.fish_chained).toBe(0);
   });
 
   it("CHAIN_COLLECTED on every fish_* species credits the same counter", () => {
     let s = baseState();
-    for (const key of ["fish_sardine", "fish_mackerel", "fish_clam", "fish_oyster", "fish_kelp"]) {
+    for (const key of ["tile_fish_sardine", "tile_fish_mackerel", "tile_fish_clam", "tile_fish_oyster", "tile_fish_kelp"]) {
       s = achReduce(s, {
         type: "CHAIN_COLLECTED",
         payload: { key, gained: 3, chainLength: 3, upgrades: 0 },
@@ -61,7 +61,7 @@ describe("fish-themed achievements", () => {
     const s0 = baseState();
     const s1 = achReduce(s0, {
       type: "CHAIN_COLLECTED",
-      payload: { key: "fish_sardine", gained: 0, chainLength: 4, upgrades: 0 },
+      payload: { key: "tile_fish_sardine", gained: 0, chainLength: 4, upgrades: 0 },
     });
     expect(s1.achievements.counters.fish_chained).toBe(0);
   });

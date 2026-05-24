@@ -485,14 +485,14 @@ function drawPigInDisguise(ctx) {
 }
 
 export const ICONS = {
-  bird_pheasant:        { label:"Pheasant",       color:"#8a4a18", draw:drawPheasant },
-  bird_chicken:         { label:"Chicken",        color:"#f0d8a0", draw:drawChicken },
-  bird_hen:             { label:"Hen",            color:"#a86838", draw:drawHen },
-  bird_rooster:         { label:"Rooster",        color:"#d81818", draw:drawRooster },
-  bird_wild_goose:      { label:"Wild Goose",     color:"#a89878", draw:drawWildGoose },
-  bird_goose:           { label:"Goose",          color:"#fffce8", draw:drawGoose },
-  bird_parrot:          { label:"Parrot",         color:"#d81818", draw:drawParrot },
-  bird_phoenix:         { label:"Phoenix",        color:"#f8a020", draw:drawPhoenix },
-  bird_dodo:            { label:"Dodo",           color:"#a89878", draw:drawDodo },
-  bird_pig_in_disguise: { label:"Pig in Disguise", color:"#e88a98", draw:drawPigInDisguise },
+  tile_bird_pheasant:        { label:"Pheasant",       color:"#8a4a18", draw:drawPheasant },
+  tile_bird_chicken:         { label:"Chicken",        color:"#f0d8a0", draw:drawChicken },
+  tile_bird_hen:             { label:"Hen",            color:"#a86838", draw:drawHen },
+  tile_bird_rooster:         { label:"Rooster",        color:"#d81818", draw:drawRooster },
+  tile_bird_wild_goose:      { label:"Wild Goose",     color:"#a89878", draw:drawWildGoose },
+  tile_bird_goose:           { label:"Goose",          color:"#fffce8", draw:drawGoose },
+  tile_bird_parrot:          { label:"Parrot",         color:"#d81818", draw:drawParrot },
+  tile_bird_phoenix:         { label:"Phoenix",        color:"#f8a020", draw:drawPhoenix },
+  tile_bird_dodo:            { label:"Dodo",           color:"#a89878", draw:drawDodo },
+  tile_bird_pig_in_disguise: { label:"Pig in Disguise", color:"#e88a98", draw:drawPigInDisguise },
 };

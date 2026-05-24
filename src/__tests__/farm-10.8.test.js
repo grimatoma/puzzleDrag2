@@ -19,10 +19,10 @@ function farmState(overrides = {}) {
 // ── Recipe locked ─────────────────────────────────────────────────────────────
 
 describe("10.8 — WORKSHOP_RECIPES tool recipes", () => {
-  it("rifle requires 1 ingot", () => expect(WORKSHOP_RECIPES.rifle.inputs.mine_ingot).toBe(1));
-  it("rifle requires 1 plank", () => expect(WORKSHOP_RECIPES.rifle.inputs.wood_plank).toBe(1));
-  it("rifle requires 1 stone", () => expect(WORKSHOP_RECIPES.rifle.inputs.mine_stone).toBe(1));
-  it("hound requires 3 stone", () => expect(WORKSHOP_RECIPES.hound.inputs.mine_stone).toBe(3));
+  it("rifle requires 1 ingot", () => expect(WORKSHOP_RECIPES.rifle.inputs.iron_bar).toBe(1));
+  it("rifle requires 1 plank", () => expect(WORKSHOP_RECIPES.rifle.inputs.plank).toBe(1));
+  it("rifle requires 1 stone", () => expect(WORKSHOP_RECIPES.rifle.inputs.tile_mine_stone).toBe(1));
+  it("hound requires 3 stone", () => expect(WORKSHOP_RECIPES.hound.inputs.tile_mine_stone).toBe(3));
   it("hound requires 1 bread", () => expect(WORKSHOP_RECIPES.hound.inputs.bread).toBe(1));
 });
 
@@ -30,7 +30,7 @@ describe("10.8 — WORKSHOP_RECIPES tool recipes", () => {
 
 describe("10.8 — rollFarmHazard wolf spawn condition", () => {
   it("no wolves below bird threshold (egg=5)", () => {
-    const s = farmState({ inventory: { bird_egg: 5 } });
+    const s = farmState({ inventory: { eggs: 5 } });
     let wolfCount = 0;
     for (let i = 0; i < 500; i++) {
       const r = rollFarmHazard(s, Math.random);
@@ -40,7 +40,7 @@ describe("10.8 — rollFarmHazard wolf spawn condition", () => {
   });
 
   it("wolves spawn ~6% when egg > 30 (over 2000 rolls)", () => {
-    const s = farmState({ inventory: { bird_egg: 50 } });
+    const s = farmState({ inventory: { eggs: 50 } });
     let wolfCount = 0;
     for (let i = 0; i < 2000; i++) {
       const r = rollFarmHazard(s, Math.random);
@@ -52,7 +52,7 @@ describe("10.8 — rollFarmHazard wolf spawn condition", () => {
   });
 
   it("mine biome: no wolves", () => {
-    const s = { ...farmState(), biome: "mine", inventory: { bird_egg: 99 } };
+    const s = { ...farmState(), biome: "mine", inventory: { eggs: 99 } };
     const r = rollFarmHazard(s, () => 0.001);
     expect(r).toBeNull();
   });

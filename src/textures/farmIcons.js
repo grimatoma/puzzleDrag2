@@ -13,19 +13,17 @@ function rr(ctx, x, y, w, h, r) {
 }
 
 const FARM_HANDLED_KEYS = new Set([
-  "grass_hay", "grain_wheat", "grain", "grain_flour",
-  "wood_log", "wood_plank", "wood_beam",
-  "berry", "berry_jam",
-  "bird_egg", "grass_meadow", "grass_spiky",
-  "bird_turkey", "bird_clover", "bird_melon",
-  "veg_carrot", "veg_eggplant", "veg_turnip", "veg_beet",
-  "veg_cucumber", "veg_squash", "veg_mushroom", "veg_pepper", "veg_broccoli",
+  "tile_grass_hay", "tile_grain_wheat",
+  "tile_grass_meadow", "tile_grass_spiky",
+  "tile_bird_turkey", "tile_bird_clover", "tile_bird_melon",
+  "tile_veg_carrot", "tile_veg_eggplant", "tile_veg_turnip", "tile_veg_beet",
+  "tile_veg_cucumber", "tile_veg_squash", "tile_veg_mushroom", "tile_veg_pepper", "tile_veg_broccoli",
   "soup",
 ]);
 
 export function drawFarmTileIcon(ctx, key) {
   if (!FARM_HANDLED_KEYS.has(key)) return false;
-  if (key === "grass_hay") {
+  if (key === "tile_grass_hay") {
     // Golden bundle of dried straw tied with twine
     // Outer dark straw (warm brown)
     ctx.strokeStyle = "#5e3a08";
@@ -77,7 +75,7 @@ export function drawFarmTileIcon(ctx, key) {
     ctx.stroke();
   }
 
-  else if (key === "grain_wheat") {
+  else if (key === "tile_grain_wheat") {
     // Tall wheat stalk with detailed grains
     // Stalk
     ctx.strokeStyle = "#6b4710";
@@ -215,7 +213,7 @@ export function drawFarmTileIcon(ctx, key) {
     ctx.fill();
   }
 
-  else if (key === "grain_flour") {
+  else if (key === "flour") {
     // Cream-colored cloth sack with stenciled wheat & flour dust
     // Shadow
     ctx.fillStyle = "rgba(0,0,0,0.18)";
@@ -293,7 +291,7 @@ export function drawFarmTileIcon(ctx, key) {
     ctx.fill();
   }
 
-  else if (key === "wood_log") {
+  else if (key === "tile_tree_oak") {
     // 3D wooden log lying on its side
     // Body shadow
     ctx.fillStyle = "rgba(0,0,0,0.2)";
@@ -361,7 +359,7 @@ export function drawFarmTileIcon(ctx, key) {
     ctx.fill();
   }
 
-  else if (key === "wood_plank") {
+  else if (key === "plank") {
     // Wooden plank with grain & nails (slight isometric)
     ctx.save();
     ctx.rotate(-0.18);
@@ -415,72 +413,6 @@ export function drawFarmTileIcon(ctx, key) {
       ctx.lineWidth = 0.8;
       ctx.stroke();
     });
-    ctx.restore();
-  }
-
-  else if (key === "wood_beam") {
-    // Thick dark wooden beam with iron brackets
-    ctx.save();
-    ctx.rotate(-0.15);
-    // Shadow
-    ctx.fillStyle = "rgba(0,0,0,0.28)";
-    rr(ctx, -26, 14, 52, 8, 4);
-    ctx.fill();
-    // Body
-    const grad = ctx.createLinearGradient(0, -16, 0, 16);
-    grad.addColorStop(0, "#8e5b2b");
-    grad.addColorStop(0.5, "#5e3a18");
-    grad.addColorStop(1, "#33200c");
-    ctx.fillStyle = grad;
-    rr(ctx, -26, -14, 52, 28, 3);
-    ctx.fill();
-    ctx.strokeStyle = "#1a0e04";
-    ctx.lineWidth = 2.2;
-    ctx.stroke();
-    // Wood grain
-    ctx.strokeStyle = "rgba(20,12,4,0.55)";
-    ctx.lineWidth = 1.1;
-    [-8, -3, 3, 8].forEach((y0) => {
-      ctx.beginPath();
-      ctx.moveTo(-24, y0);
-      ctx.bezierCurveTo(-10, y0 - 1.6, 8, y0 + 2, 24, y0 - 0.6);
-      ctx.stroke();
-    });
-    // End grain on right edge
-    ctx.fillStyle = "rgba(40,20,8,0.7)";
-    rr(ctx, 22, -13, 4, 26, 1);
-    ctx.fill();
-    // Iron brackets at both ends
-    [-1, 1].forEach((side) => {
-      const x = side * 18;
-      const bg = ctx.createLinearGradient(x, -14, x, 14);
-      bg.addColorStop(0, "#7a8590");
-      bg.addColorStop(0.5, "#3e464c");
-      bg.addColorStop(1, "#1a1f24");
-      ctx.fillStyle = bg;
-      rr(ctx, x - 4, -15, 8, 30, 1);
-      ctx.fill();
-      ctx.strokeStyle = "#0a0d10";
-      ctx.lineWidth = 1.4;
-      ctx.stroke();
-      // Rivets
-      [-9, 0, 9].forEach((ry) => {
-        const rg = ctx.createRadialGradient(x - 0.6, ry - 0.6, 0.3, x, ry, 2);
-        rg.addColorStop(0, "#dadfe4");
-        rg.addColorStop(1, "#222730");
-        ctx.fillStyle = rg;
-        ctx.beginPath();
-        ctx.arc(x, ry, 1.6, 0, Math.PI * 2);
-        ctx.fill();
-      });
-    });
-    // Top edge highlight
-    ctx.strokeStyle = "rgba(255,210,160,0.45)";
-    ctx.lineWidth = 1.2;
-    ctx.beginPath();
-    ctx.moveTo(-22, -12);
-    ctx.lineTo(22, -12);
-    ctx.stroke();
     ctx.restore();
   }
 
@@ -542,7 +474,7 @@ export function drawFarmTileIcon(ctx, key) {
     });
   }
 
-  else if (key === "berry_jam") {
+  else if (key === "jam") {
     // Glass jar of berry jam with lid and label
     // Shadow
     ctx.fillStyle = "rgba(0,0,0,0.22)";
@@ -633,7 +565,7 @@ export function drawFarmTileIcon(ctx, key) {
     ctx.fill();
   }
 
-  else if (key === "bird_egg") {
+  else if (key === "eggs") {
     // Glossy speckled egg with strong outline (its tile color is also cream,
     // so we lean on a darker outline + warmer shading to keep contrast).
     // Drop shadow on the tile beneath the egg
@@ -677,7 +609,7 @@ export function drawFarmTileIcon(ctx, key) {
     ctx.fill();
   }
 
-  else if (key === "grass_meadow") {
+  else if (key === "tile_grass_meadow") {
     // Lush thick meadow grass — long bowing blades, denser & greener than hay,
     // with a small wildflower nestled at the base.
     // Soil mound shadow
@@ -737,7 +669,7 @@ export function drawFarmTileIcon(ctx, key) {
     ctx.fill();
   }
 
-  else if (key === "grass_spiky") {
+  else if (key === "tile_grass_spiky") {
     // Hardy thorny spiky grass — short rigid blades with prominent thorns.
     // Soil shadow
     ctx.fillStyle = "rgba(0,0,0,0.22)";
@@ -811,7 +743,7 @@ export function drawFarmTileIcon(ctx, key) {
     ctx.fill();
   }
 
-  else if (key === "bird_turkey") {
+  else if (key === "tile_bird_turkey") {
     // Plump tom turkey with fanned tail feathers.
     // Drop shadow
     ctx.fillStyle = "rgba(0,0,0,0.25)";
@@ -919,7 +851,7 @@ export function drawFarmTileIcon(ctx, key) {
     });
   }
 
-  else if (key === "bird_clover") {
+  else if (key === "tile_bird_clover") {
     // Lucky four-leaf clover patch — three trefoil shapes with one bigger 4-leaf.
     // Soil shadow
     ctx.fillStyle = "rgba(0,0,0,0.20)";
@@ -980,7 +912,7 @@ export function drawFarmTileIcon(ctx, key) {
     ctx.stroke();
   }
 
-  else if (key === "veg_carrot") {
+  else if (key === "tile_veg_carrot") {
     // Orange tapered root with leafy green top
     // Drop shadow
     ctx.fillStyle = "rgba(0,0,0,0.22)";
@@ -1049,7 +981,7 @@ export function drawFarmTileIcon(ctx, key) {
     drawSprig(4, 8, 16, "#7ec238", "#2f5410");
   }
 
-  else if (key === "veg_eggplant") {
+  else if (key === "tile_veg_eggplant") {
     // Deep purple bulb with curved green calyx/stem
     // Drop shadow
     ctx.fillStyle = "rgba(0,0,0,0.25)";
@@ -1114,7 +1046,7 @@ export function drawFarmTileIcon(ctx, key) {
     ctx.stroke();
   }
 
-  else if (key === "veg_turnip") {
+  else if (key === "tile_veg_turnip") {
     // Pink/magenta upper, white lower, round root, green leaves on top
     // Drop shadow
     ctx.fillStyle = "rgba(0,0,0,0.22)";
@@ -1187,7 +1119,7 @@ export function drawFarmTileIcon(ctx, key) {
     drawLeaf(3, 7, 13, "#7ec238", "#2f5410");
   }
 
-  else if (key === "veg_beet") {
+  else if (key === "tile_veg_beet") {
     // Dark red-purple round root with red-veined leaves
     // Drop shadow
     ctx.fillStyle = "rgba(0,0,0,0.22)";
@@ -1268,7 +1200,7 @@ export function drawFarmTileIcon(ctx, key) {
     drawBeetLeaf(4, 0, 14, 0.4);
   }
 
-  else if (key === "veg_cucumber") {
+  else if (key === "tile_veg_cucumber") {
     // Long green ribbed cylinder with subtle bumps, tilted
     ctx.save();
     ctx.rotate(-0.4);
@@ -1340,7 +1272,7 @@ export function drawFarmTileIcon(ctx, key) {
     ctx.restore();
   }
 
-  else if (key === "veg_squash") {
+  else if (key === "tile_veg_squash") {
     // Yellow rounded gourd (acorn-squash) with brown stem and ridges
     // Drop shadow
     ctx.fillStyle = "rgba(0,0,0,0.25)";
@@ -1424,7 +1356,7 @@ export function drawFarmTileIcon(ctx, key) {
     ctx.stroke();
   }
 
-  else if (key === "veg_mushroom") {
+  else if (key === "tile_veg_mushroom") {
     // Toadstool — red cap with white spots, white stem
     // Drop shadow
     ctx.fillStyle = "rgba(0,0,0,0.22)";
@@ -1498,7 +1430,7 @@ export function drawFarmTileIcon(ctx, key) {
     ctx.fill();
   }
 
-  else if (key === "veg_pepper") {
+  else if (key === "tile_veg_pepper") {
     // Glossy red bell pepper with green stem
     // Drop shadow
     ctx.fillStyle = "rgba(0,0,0,0.25)";
@@ -1576,7 +1508,7 @@ export function drawFarmTileIcon(ctx, key) {
     ctx.stroke();
   }
 
-  else if (key === "veg_broccoli") {
+  else if (key === "tile_veg_broccoli") {
     // Green clustered florets atop a thicker pale-green stalk
     // Drop shadow
     ctx.fillStyle = "rgba(0,0,0,0.22)";
@@ -1770,7 +1702,7 @@ export function drawFarmTileIcon(ctx, key) {
     ctx.stroke();
   }
 
-  else if (key === "bird_melon") {
+  else if (key === "tile_bird_melon") {
     // Round striped summer melon with leaf and curling tendril.
     // Drop shadow
     ctx.fillStyle = "rgba(0,0,0,0.25)";

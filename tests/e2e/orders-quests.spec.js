@@ -25,13 +25,13 @@ async function withOrder(page, key, need, reward, extras = {}) {
 }
 
 test('TURN_IN_ORDER debits inventory and removes the order', async ({ page }) => {
-  await withOrder(page, 'grass_hay', 5, 50);
+  await withOrder(page, 'tile_grass_hay', 5, 50);
   // The reducer rolls a replacement order, so orders.length stays > 0. Look
   // for the specific order id being gone instead.
   await dispatchAction(page, { type: 'TURN_IN_ORDER', id: 'o1' });
   await waitForState(page, (s) => !(s.orders ?? []).some((o) => o.id === 'o1'));
   const s = await getReactState(page);
-  expect(s.inventory.grass_hay).toBe(0);
+  expect(s.inventory.tile_grass_hay).toBe(0);
   // Reward reaches the player as coins — we just assert it moved. The exact
   // number depends on bond + season multipliers and is covered in unit tests.
   expect(s.coins).toBeGreaterThan(0);
@@ -40,15 +40,15 @@ test('TURN_IN_ORDER debits inventory and removes the order', async ({ page }) =>
 test('TURN_IN_ORDER with insufficient inventory is rejected', async ({ page }) => {
   await gotoFresh(page, {
     coins: 0,
-    inventory: { grass_hay: 1 },
-    orders: [{ id: 'o1', npc: 'wren', key: 'grass_hay', need: 50, reward: 100, deadline: 99 }],
+    inventory: { tile_grass_hay: 1 },
+    orders: [{ id: 'o1', npc: 'wren', key: 'tile_grass_hay', need: 50, reward: 100, deadline: 99 }],
   });
   await dispatchAction(page, { type: 'TURN_IN_ORDER', id: 'o1' });
   await page.waitForTimeout(150);
   const s = await getReactState(page);
   // The order id is still present (not removed).
   expect((s.orders ?? []).some((o) => o.id === 'o1')).toBe(true);
-  expect(s.inventory.grass_hay).toBe(1);
+  expect(s.inventory.tile_grass_hay).toBe(1);
   expect(s.coins).toBe(0);
 });
 

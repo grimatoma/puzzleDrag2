@@ -180,20 +180,6 @@ function drawKelp(ctx) {
   ctx.beginPath(); ctx.arc(7, -20, 0.7, 0, Math.PI * 2); ctx.fill();
 }
 
-function drawFishRaw(ctx) {
-  shadow(ctx, 20);
-  // Plump cooked-looking fish on its side
-  fishBody(ctx, "#d8e2e8", "#88a0aa", "#3a4854", "#a8b8c2");
-  // Scale dots to set it apart from sardine
-  ctx.fillStyle = "rgba(40,60,80,0.55)";
-  for (let i = 0; i < 6; i++) {
-    const x = -6 + i * 3.5;
-    ctx.beginPath();
-    ctx.arc(x, -2 + (i % 2) * 4, 0.9, 0, Math.PI * 2);
-    ctx.fill();
-  }
-}
-
 function drawFishFillet(ctx) {
   shadow(ctx, 20);
   // Pinkish-orange fillet — long thin slab with darker bands
@@ -299,13 +285,12 @@ function drawPearl(ctx) {
 }
 
 export const ICONS = {
-  fish_sardine:  { label: "Sardine",  color: "#9ab8c4", draw: drawSardine },
-  fish_mackerel: { label: "Mackerel", color: "#4a7a9a", draw: drawMackerel },
-  fish_clam:     { label: "Clam",     color: "#c8a888", draw: drawClam },
-  fish_oyster:   { label: "Oyster",   color: "#d0c0a8", draw: drawOyster },
-  fish_kelp:     { label: "Kelp",     color: "#3a6a3a", draw: drawKelp },
-  fish_raw:      { label: "Fish",     color: "#b0c8d4", draw: drawFishRaw },
-  fish_fillet:   { label: "Fillet",   color: "#e8c8b0", draw: drawFishFillet },
-  fish_oil:      { label: "Fish Oil", color: "#e8d050", draw: drawFishOil },
-  fish_pearl:    { label: "Pearl",    color: "#efe8d8", draw: drawPearl },
+  tile_fish_sardine:        { label: "Sardine",     color: "#9ab8c4", draw: drawSardine },
+  tile_fish_mackerel:       { label: "Mackerel",    color: "#4a7a9a", draw: drawMackerel },
+  tile_fish_clam:           { label: "Clam",        color: "#c8a888", draw: drawClam },
+  tile_fish_oyster:         { label: "Oyster",      color: "#d0c0a8", draw: drawOyster },
+  tile_fish_kelp:           { label: "Kelp",        color: "#3a6a3a", draw: drawKelp },
+  fish_fillet:         { label: "Fillet",      color: "#e8c8b0", draw: drawFishFillet },
+  fish_oil:            { label: "Fish Oil",    color: "#e8d050", draw: drawFishOil },
+  tile_special_giant_pearl: { label: "Giant Pearl", color: "#efe8d8", draw: drawPearl },
 };

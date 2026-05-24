@@ -106,7 +106,7 @@ describe("abilities catalog", () => {
       // Plug in non-empty values for the editor placeholders so the runtime
       // actually writes to its channel.
       if (a.id === "threshold_reduce" || a.id === "pool_weight" || a.id === "pool_weight_legacy" || a.id === "bonus_yield") {
-        params.target = "grass_hay";
+        params.target = "tile_grass_hay";
       }
       if (a.id === "season_bonus") params.resource = "coins";
       if (a.id === "threshold_reduce_category") params.category = "grass";
@@ -116,7 +116,7 @@ describe("abilities catalog", () => {
       }
       if (a.id === "recipe_input_reduce") {
         params.recipe = "bread";
-        params.input = "grain_flour";
+        params.input = "flour";
       }
       if (a.id === "hazard_spawn_reduce") params.hazard = "rats";
       if (a.id === "hazard_coin_multiplier") params.hazard = "rats";

@@ -151,7 +151,7 @@ describe("Phase 33 — pickByZoneSeasonDrops", () => {
     });
     expect(r).toBeTruthy();
     // Spring grass bucket should resolve to the first grass resource on the
-    // farm biome (grass_hay is the canonical first grass entry).
+    // farm biome (tile_grass_hay is the canonical first grass entry).
     expect(CATEGORY_OF[r.key]).toBe("grass");
   });
 });

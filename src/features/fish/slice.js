@@ -17,9 +17,9 @@ import { FISH_TILE_POOL, BIOMES } from "../../constants.js";
 export const TIDE_PERIOD = 3;
 
 // Resources that surface during each tide. High tide = pelagic fish,
-// low tide = shellfish + kelp. fish_oyster is rare and cross-tide.
-export const HIGH_TIDE_POOL = ["fish_sardine", "fish_sardine", "fish_mackerel", "fish_mackerel", "fish_kelp"];
-export const LOW_TIDE_POOL = ["fish_clam", "fish_clam", "fish_kelp", "fish_kelp", "fish_oyster"];
+// low tide = shellfish + kelp. tile_fish_oyster is rare and cross-tide.
+export const HIGH_TIDE_POOL = ["tile_fish_sardine", "tile_fish_sardine", "tile_fish_mackerel", "tile_fish_mackerel", "tile_fish_kelp"];
+export const LOW_TIDE_POOL = ["tile_fish_clam", "tile_fish_clam", "tile_fish_kelp", "tile_fish_kelp", "tile_fish_oyster"];
 
 export const initial = {
   fish: { tide: "high", tideTurn: 0 },

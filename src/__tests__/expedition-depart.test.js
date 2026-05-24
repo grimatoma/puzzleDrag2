@@ -15,7 +15,7 @@ function ready(over = {}) {
     biomeKey: "farm",
     mapCurrent: "quarry",
     activeZone: "quarry",
-    inventory: { ...createInitialState().inventory, bread: 6, fruit_apple: 4 },
+    inventory: { ...createInitialState().inventory, bread: 6, tile_fruit_apple: 4 },
     settlements: {
       home: { founded: true },
       quarry: { founded: true, biome: "tundra" },
@@ -86,10 +86,10 @@ describe("EXPEDITION/DEPART — rejections", () => {
   });
 
   it("a non-ration key in the supply → no change", () => {
-    const s0 = ready({ inventory: { ...createInitialState().inventory, bread: 6, mine_stone: 50 } });
-    const s1 = rootReducer(s0, { type: "EXPEDITION/DEPART", payload: { biomeKey: "mine", supply: { mine_stone: 4 } } });
+    const s0 = ready({ inventory: { ...createInitialState().inventory, bread: 6, tile_mine_stone: 50 } });
+    const s1 = rootReducer(s0, { type: "EXPEDITION/DEPART", payload: { biomeKey: "mine", supply: { tile_mine_stone: 4 } } });
     expect(s1.view).not.toBe("board");
-    expect(s1.inventory.mine_stone).toBe(50);
+    expect(s1.inventory.tile_mine_stone).toBe(50);
   });
 
   it("level-locked (mine needs L2) → no change", () => {

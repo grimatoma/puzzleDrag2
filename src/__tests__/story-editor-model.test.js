@@ -252,7 +252,7 @@ describe("story editor preview model", () => {
         setFlag: ["a", "b"],
         clearFlag: "c",
         bondDelta: { npc: "wren", amount: 8 },
-        resources: { wood_log: 3 },
+        resources: { tile_tree_oak: 3 },
         coins: 12,
         embers: 2,
         coreIngots: 1,
@@ -262,7 +262,7 @@ describe("story editor preview model", () => {
     );
     expect(next.flags).toMatchObject({ beat_seen: true, a: true, b: true, c: false });
     expect(next.bonds.wren).toBe(10);
-    expect(next.resources.wood_log).toBe(3);
+    expect(next.resources.tile_tree_oak).toBe(3);
     expect(next.coins).toBe(12);
     expect(next.embers).toBe(2);
     expect(next.coreIngots).toBe(1);
@@ -275,13 +275,13 @@ describe("story editor preview model", () => {
       newBeats: [
         { id: "source", choices: [{ id: "go", label: "Go", outcome: { setFlag: "custom_oath" } }] },
         { id: "flag_followup", title: "Flag", trigger: { type: "flag_set", flag: "custom_oath" } },
-        { id: "resource_followup", title: "Resource", trigger: { type: "resource_total", key: "wood_log", amount: 3 } },
+        { id: "resource_followup", title: "Resource", trigger: { type: "resource_total", key: "tile_tree_oak", amount: 3 } },
       ],
     });
     const flagged = applyPreviewEffects(blankPreviewState(), null, { outcome: { setFlag: "custom_oath" } });
     expect(firstTriggeredByPreviewState(flagged, d, new Set(["source"]))).toBe("flag_followup");
-    const resourced = applyPreviewEffects(blankPreviewState(), null, { outcome: { resources: { wood_log: 3 } } });
+    const resourced = applyPreviewEffects(blankPreviewState(), null, { outcome: { resources: { tile_tree_oak: 3 } } });
     expect(firstTriggeredByPreviewState(resourced, d, new Set(["source", "flag_followup"]))).toBe("resource_followup");
-    expect(previewStateSummary(resourced).join(" ")).toContain("wood_log");
+    expect(previewStateSummary(resourced).join(" ")).toContain("tile_tree_oak");
   });
 });

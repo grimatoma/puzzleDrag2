@@ -291,7 +291,7 @@ function _tickMole(state, rng) {
 export function clearCaveIn(state, chain) {
   if (!state.hazards?.caveIn) return state;
   const targetRow = state.hazards.caveIn.row;
-  const stoneCount = chain.filter((t) => t.key === "mine_stone").length;
+  const stoneCount = chain.filter((t) => t.key === "tile_mine_stone").length;
   const nearRow = chain.some((t) => Math.abs(t.row - targetRow) === 1);
   if (stoneCount < 3 || !nearRow) return state;
   return { ...state, hazards: { ...state.hazards, caveIn: null } };

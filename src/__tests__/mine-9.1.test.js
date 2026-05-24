@@ -10,23 +10,23 @@ describe("Phase 9.1 — Stone/ore/coal/ingot resource chain + Mine biome setup",
     expect(MINE_TILE_POOL.length).toBe(9);
   });
 
-  it("MINE_TILE_POOL contains all 5 mine base resources", () => {
+  it("MINE_TILE_POOL contains all mine base resources (iron + copper ore split)", () => {
     const baseSet = new Set(MINE_TILE_POOL);
-    for (const k of ["mine_stone", "mine_ore", "mine_coal", "mine_dirt", "mine_gem"]) {
+    for (const k of ["tile_mine_stone", "tile_mine_iron_ore", "tile_mine_copper_ore", "tile_mine_coal", "tile_special_dirt", "tile_mine_gem"]) {
       expect(baseSet.has(k)).toBe(true);
     }
   });
 
   it("stone weighted ×3", () => {
-    expect(MINE_TILE_POOL.filter((k) => k === "mine_stone").length).toBe(3);
+    expect(MINE_TILE_POOL.filter((k) => k === "tile_mine_stone").length).toBe(3);
   });
 
   it("dirt weighted ×2", () => {
-    expect(MINE_TILE_POOL.filter((k) => k === "mine_dirt").length).toBe(2);
+    expect(MINE_TILE_POOL.filter((k) => k === "tile_special_dirt").length).toBe(2);
   });
 
   it("gem weighted ×1 (rare)", () => {
-    expect(MINE_TILE_POOL.filter((k) => k === "mine_gem").length).toBe(1);
+    expect(MINE_TILE_POOL.filter((k) => k === "tile_mine_gem").length).toBe(1);
   });
 
   // ── BIOMES wiring ─────────────────────────────────────────────────────────
@@ -41,27 +41,24 @@ describe("Phase 9.1 — Stone/ore/coal/ingot resource chain + Mine biome setup",
     expect(FARM_TILE_POOL).not.toBe(MINE_TILE_POOL);
   });
 
-  // ── Threshold table (locked from Phase 1 / GAME_SPEC §4) ─────────────────
-  it("stone → cobble at 8", () => {
-    expect(UPGRADE_THRESHOLDS.mine_stone).toBe(8);
+  // ── Threshold table (flat one-step chain) ─────────────────
+  it("stone → block at 8", () => {
+    expect(UPGRADE_THRESHOLDS.tile_mine_stone).toBe(8);
   });
-  it("cobble → block at 6", () => {
-    expect(UPGRADE_THRESHOLDS.mine_cobble).toBe(6);
+  it("iron ore → iron_bar at 6", () => {
+    expect(UPGRADE_THRESHOLDS.tile_mine_iron_ore).toBe(6);
   });
-  it("ore → ingot at 6", () => {
-    expect(UPGRADE_THRESHOLDS.mine_ore).toBe(6);
+  it("copper ore → copper_bar at 6", () => {
+    expect(UPGRADE_THRESHOLDS.tile_mine_copper_ore).toBe(6);
   });
   it("coal → coke at 7", () => {
-    expect(UPGRADE_THRESHOLDS.mine_coal).toBe(7);
+    expect(UPGRADE_THRESHOLDS.tile_mine_coal).toBe(7);
   });
-  it("gem → cutgem at 5", () => {
-    expect(UPGRADE_THRESHOLDS.mine_gem).toBe(5);
+  it("gem → cut_gem at 5", () => {
+    expect(UPGRADE_THRESHOLDS.tile_mine_gem).toBe(5);
   });
-  it("ingot is terminal — no threshold", () => {
-    expect(UPGRADE_THRESHOLDS.mine_ingot).toBeUndefined();
-  });
-  it("gold is terminal — no threshold", () => {
-    expect(UPGRADE_THRESHOLDS.mine_gold).toBeUndefined();
+  it("gold → gold_bar at 6 (tile_mine_gold is now a normal mine family)", () => {
+    expect(UPGRADE_THRESHOLDS.tile_mine_gold).toBe(6);
   });
 
   // ── Default biome + SET_BIOME swaps active pool ──────────────────────────
@@ -86,15 +83,15 @@ describe("Phase 9.1 — Stone/ore/coal/ingot resource chain + Mine biome setup",
   });
 
   // ── Shared inventory ──────────────────────────────────────────────────────
-  it("8-stone chain in mine biome → 7 stone + 1 cobble (threshold 8)", () => {
+  it("8-stone chain in mine biome → 7 stone + 1 block (threshold 8)", () => {
     let g = createInitialState();
-    g = { ...g, biome: "mine", inventory: { ...g.inventory, mine_stone: 0 } };
+    g = { ...g, biome: "mine", inventory: { ...g.inventory, tile_mine_stone: 0 } };
     g = reduce(g, {
       type: "COMMIT_CHAIN",
-      chain: Array(8).fill({ key: "mine_stone" }),
+      chain: Array(8).fill({ key: "tile_mine_stone" }),
     });
-    expect(g.inventory.mine_stone).toBe(7);
-    expect(g.inventory.mine_cobble).toBe(1);
+    expect(g.inventory.tile_mine_stone).toBe(7);
+    expect(g.inventory.block).toBe(1);
   });
 
   it("no separate mine inventory bag", () => {
@@ -102,25 +99,28 @@ describe("Phase 9.1 — Stone/ore/coal/ingot resource chain + Mine biome setup",
     g = { ...g, biome: "mine" };
     g = reduce(g, {
       type: "COMMIT_CHAIN",
-      chain: Array(8).fill({ key: "mine_stone" }),
+      chain: Array(8).fill({ key: "tile_mine_stone" }),
     });
     expect(g.inventory.mine).toBeUndefined();
   });
 
   // ── upgradeCountForChain honours mine thresholds without code changes ──────
-  it("8 stone = 1 cobble upgrade", () => {
-    expect(upgradeCountForChain(8, "mine_stone")).toBe(1);
+  it("8 stone = 1 block upgrade", () => {
+    expect(upgradeCountForChain(8, "tile_mine_stone")).toBe(1);
   });
-  it("16 stone = 2 cobble upgrades", () => {
-    expect(upgradeCountForChain(16, "mine_stone")).toBe(2);
+  it("16 stone = 2 block upgrades", () => {
+    expect(upgradeCountForChain(16, "tile_mine_stone")).toBe(2);
   });
-  it("6 ore = 1 ingot", () => {
-    expect(upgradeCountForChain(6, "mine_ore")).toBe(1);
+  it("6 iron_ore = 1 iron_bar", () => {
+    expect(upgradeCountForChain(6, "tile_mine_iron_ore")).toBe(1);
+  });
+  it("6 copper_ore = 1 copper_bar", () => {
+    expect(upgradeCountForChain(6, "tile_mine_copper_ore")).toBe(1);
   });
   it("7 coal = 1 coke", () => {
-    expect(upgradeCountForChain(7, "mine_coal")).toBe(1);
+    expect(upgradeCountForChain(7, "tile_mine_coal")).toBe(1);
   });
-  it("5 gem = 1 cutgem", () => {
-    expect(upgradeCountForChain(5, "mine_gem")).toBe(1);
+  it("5 gem = 1 cut_gem", () => {
+    expect(upgradeCountForChain(5, "tile_mine_gem")).toBe(1);
   });
 });

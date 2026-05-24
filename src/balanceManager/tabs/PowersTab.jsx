@@ -12,7 +12,7 @@
 
 import { useState, useMemo } from "react";
 import { TILE_TYPES, TILE_TYPES_MAP, CATEGORIES } from "../../features/tileCollection/data.js";
-import { BIOMES, ITEMS } from "../../constants.js";
+import { BIOMES, ITEMS, tileFamilyResource } from "../../constants.js";
 import {
   COLORS, NumberField, TextField, TextArea, Select, ColorField,
   SmallButton, Pill, Card, SearchBar, TileSwatch,
@@ -37,6 +37,20 @@ function resourceKeyOptions(includeNone = false) {
   return [{ value: "", label: "— pick resource —" }, ...opts];
 }
 
+// Build the produces-resource options for a specific tile. The empty-value
+// (no override) entry is labelled with that tile's family-default resource so
+// the user can see what "leave unset" actually produces.
+function producesOptionsFor(tileId) {
+  const set = new Set();
+  for (const b of Object.values(BIOMES)) for (const r of b.resources) set.add(r.key);
+  const opts = [...set].sort().map((k) => ({ value: k, label: k }));
+  const familyDefault = tileFamilyResource(tileId);
+  const placeholder = familyDefault
+    ? { value: "", label: `Family default (${familyDefault})` }
+    : { value: "", label: "— no default —" };
+  return [placeholder, ...opts];
+}
+
 function tileSwatchProps(tileId) {
   const tile = TILE_TYPES_MAP[tileId];
   if (!tile) return { color: 0x888888 };
@@ -53,7 +67,6 @@ export default function PowersTab({ draft, updateDraft }) {
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [selectedTile, setSelectedTile] = useState(TILE_TYPES[0]?.id);
 
-  const producesOptions = useMemo(() => resourceKeyOptions(true), []);
   const sourceOptions = useMemo(() => resourceKeyOptions(), []);
   // Base chain target — a tile chains into another tile or a resource.
   const chainTargetOptions = useMemo(() => {
@@ -80,12 +93,20 @@ export default function PowersTab({ draft, updateDraft }) {
   const draftPower = draft.tilePowers[selectedTile] || null;
   const abilities = draftPower?.abilities ?? selected?.abilities ?? [];
 
-  // Per-tile produces-resource override. Empty string = use base chain.
+  // Per-tile produces-resource override. Empty string = use family default
+  // (TILE_FAMILY_RESOURCE map → GameScene.nextResource). The Select below
+  // surfaces the family-default resource as the placeholder label so the user
+  // can see what "no override" produces.
   const liveProduces = selected?.effects?.producesResource || "";
   const draftProduces = draftPower && Object.prototype.hasOwnProperty.call(draftPower, "producesResource")
     ? (draftPower.producesResource || "")
     : null;
   const effProduces = draftProduces ?? liveProduces;
+  const selectedId = selected?.id ?? null;
+  const producesOptions = useMemo(
+    () => (selectedId ? producesOptionsFor(selectedId) : resourceKeyOptions(true)),
+    [selectedId],
+  );
 
   // Discovery / unlock hooks (formerly the Unlocks tab).
   const draftUnlock = draft.tileUnlocks[selectedTile] || null;
@@ -129,7 +150,16 @@ export default function PowersTab({ draft, updateDraft }) {
   }
 
   function setProduces(tileId, resourceKey) {
-    patchPower(tileId, { producesResource: resourceKey });
+    // If the user picked the family default, clear the override so this tile
+    // stays in sync with future family-default changes. patchPower already
+    // drops falsy producesResource values, so passing "" is equivalent to
+    // "no override".
+    const fam = tileFamilyResource(tileId);
+    if (resourceKey && fam && resourceKey === fam) {
+      patchPower(tileId, { producesResource: "" });
+    } else {
+      patchPower(tileId, { producesResource: resourceKey });
+    }
   }
 
   function patchUnlock(tileId, patch) {
@@ -412,8 +442,9 @@ export default function PowersTab({ draft, updateDraft }) {
               <Card>
                 <div className="text-[11px] mb-2" style={{ color: COLORS.inkSubtle }}>
                   Picks the resource the chain spawns when this tile is the active species
-                  for its category. Leave at “use base chain” to fall through to the
-                  resource's native upgrade or the active zone's redirect.
+                  for its category. Leave at the family default to inherit the family's
+                  base resource (so future family-default changes flow through automatically).
+                  Pick a different resource to override just this tile.
                 </div>
                 <div className="flex items-center gap-2">
                   <Select

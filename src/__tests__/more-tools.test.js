@@ -24,18 +24,18 @@ describe("workshop tools — round 2 (catalog §8 fillins)", () => {
 
   it("clear-tool effects target a board resource", () => {
     expect(WORKSHOP_RECIPES.hoe.effect).toBe("clear_all");
-    expect(WORKSHOP_RECIPES.hoe.target).toBe("veg_carrot");
+    expect(WORKSHOP_RECIPES.hoe.target).toBe("tile_veg_carrot");
     expect(WORKSHOP_RECIPES.stone_hammer.effect).toBe("clear_all");
-    expect(WORKSHOP_RECIPES.stone_hammer.target).toBe("mine_cobble");
+    expect(WORKSHOP_RECIPES.stone_hammer.target).toBe("tile_mine_stone");
     expect(WORKSHOP_RECIPES.iron_pick.effect).toBe("clear_all");
-    expect(WORKSHOP_RECIPES.iron_pick.target).toBe("mine_ore");
+    expect(WORKSHOP_RECIPES.iron_pick.target).toBe("tile_mine_iron_ore");
   });
 
   it("fill-bias tools target species categories the player wants to seed", () => {
     expect(WORKSHOP_RECIPES.bird_feed.effect).toBe("fill_bias");
-    expect(WORKSHOP_RECIPES.bird_feed.target).toBe("bird_egg");
+    expect(WORKSHOP_RECIPES.bird_feed.target).toBe("tile_bird_chicken");
     expect(WORKSHOP_RECIPES.sapling.effect).toBe("fill_bias");
-    expect(WORKSHOP_RECIPES.sapling.target).toBe("tree_oak");
+    expect(WORKSHOP_RECIPES.sapling.target).toBe("tile_tree_oak");
   });
 
   it("WORKSHOP_RECIPES is merged into RECIPES so the crafting screen sees them", () => {

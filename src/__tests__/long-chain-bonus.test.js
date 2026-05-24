@@ -7,42 +7,42 @@ describe("longChainBonusFor", () => {
   });
 
   it("returns null when chain length is below threshold", () => {
-    expect(longChainBonusFor("grain_buckwheat", 11)).toBeNull();
+    expect(longChainBonusFor("tile_grain_buckwheat", 11)).toBeNull();
   });
 
   it("returns the bonus shape at threshold", () => {
-    const r = longChainBonusFor("grain_buckwheat", 12);
-    expect(r).toEqual({ bonusKey: "herd_pig", amount: 1 });
+    const r = longChainBonusFor("tile_grain_buckwheat", 12);
+    expect(r).toEqual({ bonusKey: "tile_herd_pig", amount: 1 });
   });
 
   it("returns the bonus shape above threshold", () => {
-    const r = longChainBonusFor("grain_buckwheat", 50);
-    expect(r).toEqual({ bonusKey: "herd_pig", amount: 1 });
+    const r = longChainBonusFor("tile_grain_buckwheat", 50);
+    expect(r).toEqual({ bonusKey: "tile_herd_pig", amount: 1 });
   });
 
-  it("Eggplant → veg_carrot at chain 12", () => {
-    const r = longChainBonusFor("veg_eggplant", 12);
-    expect(r.bonusKey).toBe("veg_carrot");
+  it("Eggplant → tile_veg_carrot at chain 12", () => {
+    const r = longChainBonusFor("tile_veg_eggplant", 12);
+    expect(r.bonusKey).toBe("tile_veg_carrot");
   });
 
-  it("Goose → veg_carrot at chain 12", () => {
-    const r = longChainBonusFor("bird_goose", 12);
-    expect(r.bonusKey).toBe("veg_carrot");
+  it("Goose → tile_veg_carrot at chain 12", () => {
+    const r = longChainBonusFor("tile_bird_goose", 12);
+    expect(r.bonusKey).toBe("tile_veg_carrot");
   });
 
-  it("Willow → veg_carrot at chain 12", () => {
-    const r = longChainBonusFor("tree_willow", 12);
-    expect(r.bonusKey).toBe("veg_carrot");
+  it("Willow → tile_veg_carrot at chain 12", () => {
+    const r = longChainBonusFor("tile_tree_willow", 12);
+    expect(r.bonusKey).toBe("tile_veg_carrot");
   });
 
-  it("Broccoli → flower_pansy at chain 12", () => {
-    const r = longChainBonusFor("veg_broccoli", 12);
-    expect(r.bonusKey).toBe("flower_pansy");
+  it("Broccoli → tile_flower_pansy at chain 12", () => {
+    const r = longChainBonusFor("tile_veg_broccoli", 12);
+    expect(r.bonusKey).toBe("tile_flower_pansy");
   });
 
-  it("Warthog → mount_horse at chain 12", () => {
-    const r = longChainBonusFor("herd_warthog", 12);
-    expect(r.bonusKey).toBe("mount_horse");
+  it("Warthog → tile_mount_horse at chain 12", () => {
+    const r = longChainBonusFor("tile_herd_warthog", 12);
+    expect(r.bonusKey).toBe("tile_mount_horse");
   });
 
   it("LONG_CHAIN_BONUSES is frozen", () => {

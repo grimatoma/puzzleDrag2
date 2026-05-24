@@ -10,11 +10,11 @@ import { createInitialState, rootReducer } from "../state.js";
 
 describe("10.5 — WORKSHOP_RECIPES.cat", () => {
   it("cat recipe requires 2 stone", () => {
-    expect(WORKSHOP_RECIPES.cat.inputs.mine_stone).toBe(2);
+    expect(WORKSHOP_RECIPES.cat.inputs.tile_mine_stone).toBe(2);
   });
 
-  it("cat recipe requires 1 mine_dirt", () => {
-    expect(WORKSHOP_RECIPES.cat.inputs.mine_dirt).toBe(1);
+  it("cat recipe requires 1 tile_special_dirt", () => {
+    expect(WORKSHOP_RECIPES.cat.inputs.tile_special_dirt).toBe(1);
   });
 
   it("cat station is workshop", () => {
@@ -78,15 +78,15 @@ describe("10.5 — USE_TOOL cat", () => {
 // ── CRAFT_TOOL cat ────────────────────────────────────────────────────────────
 
 describe("10.5 — CRAFT_TOOL cat", () => {
-  it("crafts cat with 2 stone + 1 mine_dirt", () => {
+  it("crafts cat with 2 stone + 1 tile_special_dirt", () => {
     const s0 = {
       ...createInitialState(),
       built: { ...createInitialState().built, workshop: true },
-      inventory: { ...createInitialState().inventory, mine_stone: 3, mine_dirt: 2 },
+      inventory: { ...createInitialState().inventory, tile_mine_stone: 3, tile_special_dirt: 2 },
     };
     const s1 = rootReducer(s0, { type: "CRAFT_TOOL", id: "cat" });
     expect(s1.tools.cat).toBe(1);
-    expect(s1.inventory.mine_stone).toBe(1);
-    expect(s1.inventory.mine_dirt).toBe(1);
+    expect(s1.inventory.tile_mine_stone).toBe(1);
+    expect(s1.inventory.tile_special_dirt).toBe(1);
   });
 });

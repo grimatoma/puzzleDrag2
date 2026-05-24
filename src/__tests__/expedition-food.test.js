@@ -11,7 +11,7 @@ import {
 describe("EXPEDITION_FOOD_TURNS", () => {
   it("matches the master doc §VI table", () => {
     expect(EXPEDITION_FOOD_TURNS).toMatchObject({
-      fruit_apple: 1, bread: 1, cured_meat: 2, festival_loaf: 2, wedding_pie: 3, iron_ration: 4,
+      tile_fruit_apple: 1, bread: 1, cured_meat: 2, festival_loaf: 2, wedding_pie: 3, iron_ration: 4,
     });
   });
 });
@@ -19,9 +19,9 @@ describe("EXPEDITION_FOOD_TURNS", () => {
 describe("isExpeditionFood", () => {
   it("recognises rations, rejects raw resources", () => {
     expect(isExpeditionFood("bread")).toBe(true);
-    expect(isExpeditionFood("fruit_apple")).toBe(true);
+    expect(isExpeditionFood("tile_fruit_apple")).toBe(true);
     expect(isExpeditionFood("iron_ration")).toBe(true);
-    expect(isExpeditionFood("mine_stone")).toBe(false);
+    expect(isExpeditionFood("tile_mine_stone")).toBe(false);
     expect(isExpeditionFood("nope")).toBe(false);
   });
 });
@@ -31,14 +31,14 @@ describe("expeditionTurnsForFood", () => {
 
   it("returns the base turn value with no buildings", () => {
     expect(expeditionTurnsForFood(noBuildings, "bread", "home")).toBe(1);
-    expect(expeditionTurnsForFood(noBuildings, "fruit_apple", "home")).toBe(1);
+    expect(expeditionTurnsForFood(noBuildings, "tile_fruit_apple", "home")).toBe(1);
     expect(expeditionTurnsForFood(noBuildings, "cured_meat", "home")).toBe(2);
     expect(expeditionTurnsForFood(noBuildings, "wedding_pie", "home")).toBe(3);
     expect(expeditionTurnsForFood(noBuildings, "iron_ration", "home")).toBe(4);
   });
 
   it("returns 0 for a non-food key", () => {
-    expect(expeditionTurnsForFood(noBuildings, "mine_stone", "home")).toBe(0);
+    expect(expeditionTurnsForFood(noBuildings, "tile_mine_stone", "home")).toBe(0);
   });
 
   it("Larder adds +1 to every food at that zone", () => {
@@ -86,6 +86,6 @@ describe("expeditionTurnsFromSupply", () => {
   });
   it("ignores non-food entries in the supply", () => {
     const s = { built: {} };
-    expect(expeditionTurnsFromSupply(s, { bread: 2, mine_stone: 99 }, "home")).toBe(2);
+    expect(expeditionTurnsFromSupply(s, { bread: 2, tile_mine_stone: 99 }, "home")).toBe(2);
   });
 });

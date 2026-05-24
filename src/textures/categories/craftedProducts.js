@@ -788,7 +788,7 @@ export const ICONS = {
   horseshoe:     { label:"Horseshoe",     color:"#8a8a90", draw:drawHorseshoe },
   eggs:          { label:"Eggs",          color:"#f8efd0", draw:drawEggs },
   bread:         { label:"Bread",         color:"#c89048", draw:drawBread },
-  mine_dirt:     { label:"Dirt",          color:"#7a6850", draw:drawMineDirt },
+  tile_special_dirt:  { label:"Dirt",          color:"#7a6850", draw:drawMineDirt },
   cured_meat:    { label:"Cured Meat",    color:"#9a4a22", draw:drawCuredMeat },
   festival_loaf: { label:"Festival Loaf", color:"#d49060", draw:drawFestivalLoaf },
   wedding_pie:   { label:"Wedding Pie",   color:"#b05428", draw:drawWeddingPie },

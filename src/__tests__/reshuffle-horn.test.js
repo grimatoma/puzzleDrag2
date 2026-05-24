@@ -32,7 +32,7 @@ function minState(overrides = {}) {
 function mockShuffleBoard() {
   const ROWS = 6, COLS = 6;
   const grid = [];
-  const resources = ["grass_hay", "wood_log", "berry", "grain_wheat", "grain", "bird_egg"];
+  const resources = ["tile_grass_hay", "tile_tree_oak", "berry", "tile_grain_wheat", "grain", "eggs"];
   for (let r = 0; r < ROWS; r++) {
     grid[r] = [];
     for (let c = 0; c < COLS; c++) {

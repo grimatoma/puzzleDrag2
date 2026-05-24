@@ -178,7 +178,7 @@ function drawTriceratops(ctx) {
 }
 
 export const ICONS = {
-  cattle_cow:         { label:"Cow",         color:"#fffce8", draw:drawCow },
-  cattle_longhorn:    { label:"Longhorn",    color:"#d89048", draw:drawLonghorn },
-  cattle_triceratops: { label:"Triceratops", color:"#5a8a28", draw:drawTriceratops },
+  tile_cattle_cow:         { label:"Cow",         color:"#fffce8", draw:drawCow },
+  tile_cattle_longhorn:    { label:"Longhorn",    color:"#d89048", draw:drawLonghorn },
+  tile_cattle_triceratops: { label:"Triceratops", color:"#5a8a28", draw:drawTriceratops },
 };

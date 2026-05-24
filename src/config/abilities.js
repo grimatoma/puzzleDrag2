@@ -68,7 +68,7 @@ export const ABILITIES = Object.freeze([
   {
     id: "pool_weight_legacy",
     name: "Spawn Boost (continuous)",
-    iconKey: "grass_spiky",
+    iconKey: "tile_grass_spiky",
     desc: "Adds extra spawn-pool weight on a resource. Contribution scales continuously with source weight (used by Phase 4 workers).",
     scope: ["worker"],
     trigger: "on_board_fill",
@@ -81,7 +81,7 @@ export const ABILITIES = Object.freeze([
   {
     id: "pool_weight",
     name: "Spawn Boost",
-    iconKey: "grass_spiky",
+    iconKey: "tile_grass_spiky",
     desc: "Adds extra spawn-pool weight on a resource. Per-source contribution is floored to integer (used by Phase 9+ workers and tiles).",
     scope: ["worker", "tile", "building"],
     trigger: "on_board_fill",

@@ -29,10 +29,10 @@ describe("cattle / mount / herd / tree quest templates", () => {
   });
 
   it("collect templates reference real resource keys", () => {
-    expect(QUEST_TEMPLATES.find((x) => x.id === "collect_pig").key).toBe("herd_pig");
-    expect(QUEST_TEMPLATES.find((x) => x.id === "collect_cow").key).toBe("cattle_cow");
-    expect(QUEST_TEMPLATES.find((x) => x.id === "collect_horse").key).toBe("mount_horse");
-    expect(QUEST_TEMPLATES.find((x) => x.id === "collect_oak").key).toBe("tree_oak");
+    expect(QUEST_TEMPLATES.find((x) => x.id === "collect_pig").key).toBe("tile_herd_pig");
+    expect(QUEST_TEMPLATES.find((x) => x.id === "collect_cow").key).toBe("tile_cattle_cow");
+    expect(QUEST_TEMPLATES.find((x) => x.id === "collect_horse").key).toBe("tile_mount_horse");
+    expect(QUEST_TEMPLATES.find((x) => x.id === "collect_oak").key).toBe("tile_tree_oak");
   });
 
   it("higher-tier collect quests pay more per unit (horse > cow > sheep)", () => {

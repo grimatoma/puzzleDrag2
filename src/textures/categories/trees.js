@@ -215,10 +215,10 @@ function drawPalm(ctx) {
 }
 
 export const ICONS = {
-  tree_oak:     { label:"Oak",     color:"#3a6818", draw:drawOak },
-  tree_birch:   { label:"Birch",   color:"#a8c038", draw:drawBirch },
-  tree_willow:  { label:"Willow",  color:"#5a8a18", draw:drawWillow },
-  tree_fir:     { label:"Fir",     color:"#2a5008", draw:drawFir },
-  tree_cypress: { label:"Cypress", color:"#1a3a08", draw:drawCypress },
-  tree_palm:    { label:"Palm",    color:"#5a8a18", draw:drawPalm },
+  tile_tree_oak:     { label:"Oak",     color:"#3a6818", draw:drawOak },
+  tile_tree_birch:   { label:"Birch",   color:"#a8c038", draw:drawBirch },
+  tile_tree_willow:  { label:"Willow",  color:"#5a8a18", draw:drawWillow },
+  tile_tree_fir:     { label:"Fir",     color:"#2a5008", draw:drawFir },
+  tile_tree_cypress: { label:"Cypress", color:"#1a3a08", draw:drawCypress },
+  tile_tree_palm:    { label:"Palm",    color:"#5a8a18", draw:drawPalm },
 };

@@ -165,10 +165,10 @@ describe("applyStoryOverrides", () => {
     applyStoryOverrides(story, side, {
       newBeats: [{ id: "d1", title: "D1", trigger: { type: "building_built", id: "mill" }, repeat: true, repeatCooldown: 3 },
                  { id: "d2", title: "D2", trigger: { type: "flag_set", flag: " mine_unlocked " } }],
-      beats: { a1: { trigger: { type: "resource_total", key: "wood_log", amount: 30 }, repeat: true },
+      beats: { a1: { trigger: { type: "resource_total", key: "tile_tree_oak", amount: 30 }, repeat: true },
                d1: { repeat: false, repeatCooldown: 0 } },   // turn the repeat back off
     });
-    expect(story[0].trigger).toEqual({ type: "resource_total", key: "wood_log", amount: 30 });
+    expect(story[0].trigger).toEqual({ type: "resource_total", key: "tile_tree_oak", amount: 30 });
     expect(story[0].repeat).toBe(true);
     const d1 = side.find((b) => b.id === "d1"), d2 = side.find((b) => b.id === "d2");
     expect(d1).toMatchObject({ id: "d1", trigger: { type: "building_built", id: "mill" } });
@@ -177,7 +177,7 @@ describe("applyStoryOverrides", () => {
     expect(d2).toMatchObject({ id: "d2", trigger: { type: "flag_set", flag: "mine_unlocked" } });
     // a bad trigger in a patch is ignored (keeps the prior one)
     applyStoryOverrides(story, [], { beats: { a1: { trigger: { type: "no_such" } } } });
-    expect(story[0].trigger).toEqual({ type: "resource_total", key: "wood_log", amount: 30 });
+    expect(story[0].trigger).toEqual({ type: "resource_total", key: "tile_tree_oak", amount: 30 });
   });
   it("suppresses built-in side beats without deleting draft side beats", () => {
     const side = [
@@ -231,7 +231,7 @@ describe("flag-trigger sanitizers", () => {
     expect(sanitizeFlagTrigger({ type: "all_buildings_built", extra: 1 })).toEqual({ type: "all_buildings_built" });
     expect(sanitizeFlagTrigger({ type: "act_entered", act: "3" })).toEqual({ type: "act_entered", act: 3 });
     expect(sanitizeFlagTrigger({ type: "act_entered", act: 0 })).toBeUndefined();
-    expect(sanitizeFlagTrigger({ type: "resource_total", key: " wood_log ", amount: 30.9 })).toEqual({ type: "resource_total", key: "wood_log", amount: 30 });
+    expect(sanitizeFlagTrigger({ type: "resource_total", key: " tile_tree_oak ", amount: 30.9 })).toEqual({ type: "resource_total", key: "tile_tree_oak", amount: 30 });
     expect(sanitizeFlagTrigger({ type: "resource_total", key: "", amount: 5 })).toBeUndefined();
     expect(sanitizeFlagTrigger({ type: "resource_total_multi", req: { a: 2, b: 0, "": 3 } })).toEqual({ type: "resource_total_multi", req: { a: 2 } });
     expect(sanitizeFlagTrigger({ type: "resource_total_multi", req: { b: 0 } })).toBeUndefined();
@@ -288,10 +288,10 @@ describe("applyFlagOverrides", () => {
 
 describe("applyBossOverrides", () => {
   it("patches name/season/descriptions/target.amount; modifier untouched", () => {
-    const bosses = [{ id: "frostmaw", name: "Frostmaw", season: "winter", target: { resource: "wood_log", amount: 30 }, modifier: { type: "freeze_columns", params: { n: 2 } }, description: "old", modifierDescription: "old mod" }];
+    const bosses = [{ id: "frostmaw", name: "Frostmaw", season: "winter", target: { resource: "tile_tree_oak", amount: 30 }, modifier: { type: "freeze_columns", params: { n: 2 } }, description: "old", modifierDescription: "old mod" }];
     applyBossOverrides(bosses, { frostmaw: { name: "The Frostmaw", season: "spring", targetAmount: 45, description: "new", modifierDescription: "new mod" }, ghost: { name: "x" } });
     expect(bosses[0]).toMatchObject({ name: "The Frostmaw", season: "spring", description: "new", modifierDescription: "new mod" });
-    expect(bosses[0].target).toEqual({ resource: "wood_log", amount: 45 });
+    expect(bosses[0].target).toEqual({ resource: "tile_tree_oak", amount: 45 });
     expect(bosses[0].modifier).toEqual({ type: "freeze_columns", params: { n: 2 } });
   });
 });

@@ -1,7 +1,7 @@
 /**
  * Phase 10.4 — Rat hazard (pure logic).
  *
- * Spawn condition: Farm biome only, inventory.grass_hay > 50 AND inventory.grain_wheat > 50.
+ * Spawn condition: Farm biome only, inventory.tile_grass_hay > 50 AND inventory.tile_grain_wheat > 50.
  * Spawn rate: 10% per fillBoard call, cap 4 active.
  * Behaviour: each rat eats one orthogonally-adjacent plant tile per turn.
  * Counter: chain 3+ rat tiles → clear them, +5◉ per rat (no inventory yield).
@@ -16,7 +16,7 @@ import { hasTag } from "../tileCollection/tags.js";
 import { computeWorkerEffects } from "../workers/aggregate.js";
 import { effectiveRatSpawnRate } from "./attractsRats.js";
 
-const PLANT_KEYS = new Set(["grass_hay", "grain_wheat", "grain", "berry"]);
+const PLANT_KEYS = new Set(["tile_grass_hay", "tile_grain_wheat", "tile_fruit_blackberry"]);
 
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -32,8 +32,8 @@ export function rollRatSpawn(state, rng = Math.random) {
   if (!RATS_HAZARD_ENABLED) return null;
   if (state.biome !== "farm") return null;
   const inv = state.inventory ?? {};
-  if ((inv.grass_hay ?? 0) <= RAT_SPAWN_THRESHOLDS.grass_hay) return null;
-  if ((inv.grain_wheat ?? 0) <= RAT_SPAWN_THRESHOLDS.grain_wheat) return null;
+  if ((inv.tile_grass_hay ?? 0) <= RAT_SPAWN_THRESHOLDS.tile_grass_hay) return null;
+  if ((inv.tile_grain_wheat ?? 0) <= RAT_SPAWN_THRESHOLDS.tile_grain_wheat) return null;
   const rats = state.hazards?.rats ?? [];
   if (rats.length >= RAT_SPAWN_THRESHOLDS.maxActive) return null;
   // Catalog §7: tiles tagged "attracts_rats" (Manna, Jackfruit) bump the

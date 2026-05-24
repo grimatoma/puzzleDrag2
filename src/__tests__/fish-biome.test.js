@@ -9,8 +9,9 @@ describe("fish biome (MVP)", () => {
     expect(BIOMES.fish).toBeDefined();
     const keys = BIOMES.fish.resources.map((r) => r.key);
     expect(keys).toEqual([
-      "fish_sardine", "fish_mackerel", "fish_clam", "fish_oyster",
-      "fish_kelp", "fish_raw", "fish_fillet", "fish_oil", "fish_pearl",
+      "tile_fish_sardine", "tile_fish_mackerel", "tile_fish_clam", "tile_fish_oyster",
+      "tile_fish_kelp", "tile_special_giant_pearl",
+      "fish_fillet", "fish_oil", "sea_shells", "pearls",
     ]);
   });
 

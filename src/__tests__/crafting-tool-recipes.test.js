@@ -24,7 +24,7 @@ describe("CRAFTING/CRAFT_RECIPE — tool-output recipes", () => {
     const s0 = {
       ...createInitialState(),
       built: { workshop: true },
-      inventory: { wood_plank: 2, mine_stone: 2 },
+      inventory: { plank: 2, tile_mine_stone: 2 },
     };
     const before = (s0.tools?.water_pump ?? 0);
     const s1 = rootReducer(s0, { type: "CRAFTING/CRAFT_RECIPE", recipeKey: "water_pump" });
@@ -32,29 +32,29 @@ describe("CRAFTING/CRAFT_RECIPE — tool-output recipes", () => {
     // And it must NOT have been added to inventory under the recipe key.
     expect(s1.inventory.water_pump ?? 0).toBe(0);
     // Inputs were debited.
-    expect(s1.inventory.wood_plank).toBe(1);
-    expect(s1.inventory.mine_stone).toBe(1);
+    expect(s1.inventory.plank).toBe(1);
+    expect(s1.inventory.tile_mine_stone).toBe(1);
   });
 
   it("crafting explosives credits state.tools, not inventory", () => {
     const s0 = {
       ...createInitialState(),
       built: { workshop: true },
-      inventory: { grass_hay: 2, mine_dirt: 2 },
+      inventory: { tile_grass_hay: 2, tile_special_dirt: 2 },
     };
     const before = (s0.tools?.explosives ?? 0);
     const s1 = rootReducer(s0, { type: "CRAFTING/CRAFT_RECIPE", recipeKey: "explosives" });
     expect(s1.tools.explosives).toBe(before + 1);
     expect(s1.inventory.explosives ?? 0).toBe(0);
-    expect(s1.inventory.grass_hay).toBe(1);
-    expect(s1.inventory.mine_dirt).toBe(1);
+    expect(s1.inventory.tile_grass_hay).toBe(1);
+    expect(s1.inventory.tile_special_dirt).toBe(1);
   });
 
   it("non-tool recipes still go to inventory (control)", () => {
     const s0 = {
       ...createInitialState(),
       built: { bakery: true },
-      inventory: { grain_flour: 6, bird_egg: 2 },
+      inventory: { flour: 6, eggs: 2 },
     };
     const s1 = rootReducer(s0, { type: "CRAFTING/CRAFT_RECIPE", recipeKey: "bread" });
     expect(s1.inventory.bread).toBe(1);
@@ -66,7 +66,7 @@ describe("CRAFTING/CRAFT_RECIPE — tool-output recipes", () => {
     const s0 = {
       ...createInitialState(),
       built: { workshop: true },
-      inventory: { wood_plank: 0, mine_stone: 0 },
+      inventory: { plank: 0, tile_mine_stone: 0 },
       totalCrafted: 0,
     };
     const beforeTools = s0.tools?.water_pump ?? 0;

@@ -3,7 +3,7 @@ import { INVENTORY_SOURCE_TAGS, INVENTORY_TAGS, sourceTagsForItem, tagsForItemKe
 
 describe("inventory tags", () => {
   it("tags gathered resources as resources", () => {
-    expect(tagsForItemKey("grain")).toContain(INVENTORY_TAGS.RESOURCE);
+    expect(tagsForItemKey("flour")).toContain(INVENTORY_TAGS.RESOURCE);
   });
 
   it("tags tools as tools", () => {
@@ -21,7 +21,7 @@ describe("inventory tags", () => {
   });
 
   it("supports source tags for biome and crafted origins", () => {
-    expect(sourceTagsForItem("grain")).toContain(INVENTORY_SOURCE_TAGS.FARM);
+    expect(sourceTagsForItem("flour")).toContain(INVENTORY_SOURCE_TAGS.FARM);
     const sourceTags = sourceTagsForItem("bread", { recipesByOutput: { bread: [{}] } });
     expect(sourceTags).toContain(INVENTORY_SOURCE_TAGS.CRAFTED);
   });

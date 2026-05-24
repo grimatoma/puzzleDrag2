@@ -11,11 +11,11 @@ function withCoins(coins) {
     ...createInitialState(),
     coins,
     inventory: {
-      grass_hay: 100,
-      wood_log: 100,
-      mine_stone: 100,
-      grain_flour: 100,
-      bird_egg: 100,
+      tile_grass_hay: 100,
+      tile_tree_oak: 100,
+      tile_mine_stone: 100,
+      flour: 100,
+      eggs: 100,
     },
   };
 }
@@ -52,15 +52,15 @@ describe("Phase 4 — WORKERS/HIRE", () => {
     const s = withCoins(100);
     const next = rootReducer(s, { type: "WORKERS/HIRE", payload: { id: "farmer" } });
     expect(next.coins).toBe(50);
-    expect(next.inventory.grass_hay).toBe(98);
+    expect(next.inventory.tile_grass_hay).toBe(98);
     expect(next.workers.hired.farmer).toBe(1);
   });
 
   it("rejects hire when role resources are short without debiting coins", () => {
-    const s = { ...withCoins(100), inventory: { grass_hay: 1 } };
+    const s = { ...withCoins(100), inventory: { tile_grass_hay: 1 } };
     const next = rootReducer(s, { type: "WORKERS/HIRE", payload: { id: "farmer" } });
     expect(next.coins).toBe(100);
-    expect(next.inventory.grass_hay).toBe(1);
+    expect(next.inventory.tile_grass_hay).toBe(1);
     expect(next.workers.hired.farmer).toBe(0);
   });
 
@@ -115,7 +115,7 @@ describe("Phase 4 — Aggregator folds type-workers into the effects channels", 
     const out = computeWorkerEffects({ workers: { hired: { farmer: 5 } } });
     // Farmer is threshold_reduce_category on "grain" with amount=1 per hire.
     // 5 hired Farmers → 5 whole-tile reduction per grain species.
-    const grainKeys = Object.keys(out.thresholdReduce).filter((k) => k.startsWith("grain"));
+    const grainKeys = Object.keys(out.thresholdReduce).filter((k) => k.startsWith("tile_grain"));
     expect(grainKeys.length).toBeGreaterThan(0);
     for (const k of grainKeys) {
       expect(out.thresholdReduce[k]).toBe(5);
@@ -124,7 +124,7 @@ describe("Phase 4 — Aggregator folds type-workers into the effects channels", 
 
   it("a hired Lumberjack contributes to thresholdReduce on tree species", () => {
     const out = computeWorkerEffects({ workers: { hired: { lumberjack: 10 } } });
-    const treeKeys = Object.keys(out.thresholdReduce).filter((k) => k.startsWith("tree"));
+    const treeKeys = Object.keys(out.thresholdReduce).filter((k) => k.startsWith("tile_tree"));
     expect(treeKeys.length).toBeGreaterThan(0);
     for (const k of treeKeys) {
       expect(out.thresholdReduce[k]).toBe(10);
@@ -133,15 +133,15 @@ describe("Phase 4 — Aggregator folds type-workers into the effects channels", 
 
   it("a Baker hired to maxCount contributes amount*count to recipeInputReduce", () => {
     const out = computeWorkerEffects({ workers: { hired: { baker: 10 } } });
-    // Baker: recipe_input_reduce bread/grain_flour, amount=1 per hire.
+    // Baker: recipe_input_reduce bread/flour, amount=1 per hire.
     // 10 hired Bakers → 10 raw reduction (crafting/slice.js floors recipe at 1).
-    expect(out.recipeInputReduce.bread.grain_flour).toBe(10);
+    expect(out.recipeInputReduce.bread.flour).toBe(10);
   });
 
   it("multiple type-workers compose independently on their own channels", () => {
     const out = computeWorkerEffects({ workers: { hired: { farmer: 10, baker: 10 } } });
-    const grainHas = Object.keys(out.thresholdReduce).some((k) => k.startsWith("grain"));
+    const grainHas = Object.keys(out.thresholdReduce).some((k) => k.startsWith("tile_grain"));
     expect(grainHas).toBe(true);
-    expect(out.recipeInputReduce.bread.grain_flour).toBe(10);
+    expect(out.recipeInputReduce.bread.flour).toBe(10);
   });
 });

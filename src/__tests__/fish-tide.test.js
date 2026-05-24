@@ -8,9 +8,9 @@ import {
 import { BIOMES } from "../constants.js";
 
 function makeFishGrid(rows = 3, cols = 4) {
-  // Build a small grid of resource-bearing cells. We use fish_oyster
+  // Build a small grid of resource-bearing cells. We use tile_fish_oyster
   // because it's not in either tide pool, so we can detect mutation.
-  const oyster = BIOMES.fish.resources.find((r) => r.key === "fish_oyster");
+  const oyster = BIOMES.fish.resources.find((r) => r.key === "tile_fish_oyster");
   return Array.from({ length: rows }, () =>
     Array.from({ length: cols }, () => ({ key: oyster.key, res: oyster })),
   );
@@ -48,7 +48,7 @@ describe("fish biome tide cycle", () => {
   it(`tide flips after ${TIDE_PERIOD} END_TURNs and bottom row is mutated`, () => {
     let s = fishStateOnBoard();
     const oysterRow = s.grid[s.grid.length - 1].map((c) => c.key);
-    expect(oysterRow.every((k) => k === "fish_oyster")).toBe(true);
+    expect(oysterRow.every((k) => k === "tile_fish_oyster")).toBe(true);
     for (let i = 0; i < TIDE_PERIOD; i++) {
       s = rootReducer(s, { type: "END_TURN" });
     }

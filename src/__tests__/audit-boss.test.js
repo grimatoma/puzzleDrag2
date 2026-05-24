@@ -49,7 +49,7 @@ describe("boss slice — audit cooldown state", () => {
 
   it("does not fire if a boss is already active", () => {
     const old = 1;
-    const active = { key: "frostmaw", resource: "wood_log", targetCount: 30, progress: 1, turnsLeft: 5 };
+    const active = { key: "frostmaw", resource: "tile_tree_oak", targetCount: 30, progress: 1, turnsLeft: 5 };
     const s1 = bossReduce(base({ story: { flags: { frostmaw_active: true } }, lastAuditBossAt: old, boss: active }), { type: "CLOSE_SEASON" });
     // turnsLeft decremented (the boss-turn path), but no new boss spawn / clock reset.
     expect(s1.boss.key).toBe("frostmaw");

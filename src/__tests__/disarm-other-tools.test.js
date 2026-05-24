@@ -11,10 +11,10 @@ import { createInitialState, rootReducer } from "../state.js";
 function withTools(overrides = {}) {
   const s = createInitialState();
   const { tools: toolOverrides, ...rest } = overrides;
-  // Drop a single bird_egg into the grid so USE_TOOL bird_cage actually
+  // Drop a single eggs into the grid so USE_TOOL bird_cage actually
   // commits the decrement (the no-eggs branch is a refund).
   const grid = s.grid.map((row, ri) =>
-    row.map((cell, ci) => (ri === 0 && ci === 0 ? { ...cell, key: "bird_egg" } : cell)),
+    row.map((cell, ci) => (ri === 0 && ci === 0 ? { ...cell, key: "eggs" } : cell)),
   );
   return {
     ...s,

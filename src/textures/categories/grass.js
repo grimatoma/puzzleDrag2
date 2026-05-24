@@ -53,5 +53,5 @@ function drawHeather(ctx) {
 }
 
 export const ICONS = {
-  grass_heather: { label:"Heather", color:"#7a4f8a", draw:drawHeather },
+  tile_grass_heather: { label:"Heather", color:"#7a4f8a", draw:drawHeather },
 };

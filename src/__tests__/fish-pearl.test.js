@@ -9,7 +9,7 @@ import {
 } from "../features/fish/pearl.js";
 import { rootReducer, createInitialState } from "../state.js";
 
-const makeFishGrid = (rows = 3, cols = 4, fillKey = "fish_kelp") =>
+const makeFishGrid = (rows = 3, cols = 4, fillKey = "tile_fish_kelp") =>
   Array.from({ length: rows }, () =>
     Array.from({ length: cols }, () => ({ key: fillKey })),
   );
@@ -42,7 +42,7 @@ describe("fish/pearl helpers", () => {
     expect(s1.fishPearl).toEqual({ row: 0, col: 0, turnsRemaining: PEARL_TURNS });
     expect(s1.grid[0][0].key).toBe(PEARL_KEY);
     // Other tiles untouched
-    expect(s1.grid[0][1].key).toBe("fish_kelp");
+    expect(s1.grid[0][1].key).toBe("tile_fish_kelp");
   });
 
   it("spawnPearl avoids blocked tiles (frozen/rubble)", () => {
@@ -70,30 +70,30 @@ describe("fish/pearl helpers", () => {
     const s0 = { fishPearl: { row: 0, col: 1, turnsRemaining: 1 }, grid };
     const s1 = tickPearl(s0);
     expect(s1.fishPearl).toBeNull();
-    expect(s1.grid[0][1].key).toBe("fish_kelp");
+    expect(s1.grid[0][1].key).toBe("tile_fish_kelp");
   });
 
   it("isPearlChainValid: pearl + 2 fish tiles → true", () => {
     const chain = [
       { key: PEARL_KEY },
-      { key: "fish_sardine" },
-      { key: "fish_clam" },
+      { key: "tile_fish_sardine" },
+      { key: "tile_fish_clam" },
     ];
     expect(isPearlChainValid(chain)).toBe(true);
   });
 
   it("isPearlChainValid: pearl + 1 fish tile → false", () => {
-    const chain = [{ key: PEARL_KEY }, { key: "fish_sardine" }];
+    const chain = [{ key: PEARL_KEY }, { key: "tile_fish_sardine" }];
     expect(isPearlChainValid(chain)).toBe(false);
   });
 
   it("isPearlChainValid: no pearl → false", () => {
-    const chain = [{ key: "fish_sardine" }, { key: "fish_clam" }, { key: "fish_kelp" }];
+    const chain = [{ key: "tile_fish_sardine" }, { key: "tile_fish_clam" }, { key: "tile_fish_kelp" }];
     expect(isPearlChainValid(chain)).toBe(false);
   });
 
   it("isPearlChainValid: pearl + non-fish bystanders → false", () => {
-    const chain = [{ key: PEARL_KEY }, { key: "grass_hay" }, { key: "wood_log" }];
+    const chain = [{ key: PEARL_KEY }, { key: "tile_grass_hay" }, { key: "tile_tree_oak" }];
     expect(isPearlChainValid(chain)).toBe(false);
   });
 
@@ -134,8 +134,8 @@ describe("rootReducer: pearl integration on fish biome", () => {
     });
     const chain = [
       { key: PEARL_KEY },
-      { key: "fish_sardine" },
-      { key: "fish_clam" },
+      { key: "tile_fish_sardine" },
+      { key: "tile_fish_clam" },
     ];
     const s1 = rootReducer(s0, {
       type: "CHAIN_COLLECTED",
@@ -151,7 +151,7 @@ describe("rootReducer: pearl integration on fish biome", () => {
       runes: 0,
       fishPearl: { row: 0, col: 0, turnsRemaining: 3 },
     });
-    const chain = [{ key: PEARL_KEY }, { key: "fish_sardine" }];
+    const chain = [{ key: PEARL_KEY }, { key: "tile_fish_sardine" }];
     const s1 = rootReducer(s0, {
       type: "CHAIN_COLLECTED",
       payload: { chain, key: PEARL_KEY, gained: 0, upgrades: 0, chainLength: chain.length, value: 0 },

@@ -3,19 +3,19 @@ import { traceRecipe, collectUpstreamRecipes, countRawInputs } from "../balanceM
 
 describe("traceRecipe", () => {
   const recipes = {
-    rec_bread: { item: "bread", inputs: { grain_flour: 2, water: 1 }, station: "bakery" },
-    rec_flour: { item: "grain_flour", inputs: { grain: 3 }, station: "mill" },
+    rec_bread: { item: "bread", inputs: { flour: 2, water: 1 }, station: "bakery" },
+    rec_flour: { item: "flour", inputs: { grain: 3 }, station: "mill" },
   };
-  const items = { bread: { label: "Bread" }, grain_flour: { label: "Flour" }, grain: { label: "Grain" }, water: { label: "Water" } };
+  const items = { bread: { label: "Bread" }, flour: { label: "Flour" }, grain: { label: "Grain" }, water: { label: "Water" } };
 
   it("returns a tree rooted at the requested recipe with its raw + producible ingredients", () => {
     const tree = traceRecipe("rec_bread", { recipes, items });
     expect(tree.recipeId).toBe("rec_bread");
     expect(tree.output).toBe("bread");
-    expect(tree.ingredients.map((i) => i.id).sort()).toEqual(["grain_flour", "water"]);
+    expect(tree.ingredients.map((i) => i.id).sort()).toEqual(["flour", "water"]);
     const water = tree.ingredients.find((i) => i.id === "water");
     expect(water.raw).toBe(true);
-    const flour = tree.ingredients.find((i) => i.id === "grain_flour");
+    const flour = tree.ingredients.find((i) => i.id === "flour");
     expect(flour.raw).toBe(false);
     expect(flour.sources).toHaveLength(1);
     expect(flour.sources[0].recipeId).toBe("rec_flour");
@@ -38,7 +38,7 @@ describe("traceRecipe", () => {
 
   it("honors maxDepth (truncated ingredients keep their producer count but no expansion)", () => {
     const tree = traceRecipe("rec_bread", { recipes, items, maxDepth: 1 });
-    const flour = tree.ingredients.find((i) => i.id === "grain_flour");
+    const flour = tree.ingredients.find((i) => i.id === "flour");
     expect(flour.sources).toEqual([]);
     expect(flour.truncated).toBe(true);
   });
@@ -56,9 +56,9 @@ describe("traceRecipe", () => {
 describe("collectUpstreamRecipes", () => {
   it("returns a flat de-duplicated list of every upstream recipe id", () => {
     const recipes = {
-      rec_pie: { item: "pie", inputs: { grain_flour: 1, berry_jam: 1 } },
-      rec_flour: { item: "grain_flour", inputs: { grain: 1 } },
-      rec_jam: { item: "berry_jam", inputs: { berry: 1 } },
+      rec_pie: { item: "pie", inputs: { flour: 1, jam: 1 } },
+      rec_flour: { item: "flour", inputs: { grain: 1 } },
+      rec_jam: { item: "jam", inputs: { berry: 1 } },
     };
     const tree = traceRecipe("rec_pie", { recipes, items: {} });
     expect(collectUpstreamRecipes(tree)).toEqual(["rec_flour", "rec_jam"]);

@@ -30,7 +30,7 @@ const HARDCODED_USAGE = [
   "ui_scale", "ui_devtools", "ui_heart", "ui_farmer",
   // RichText [icon:X] embeds in state.js / story.js / feature slices.
   "ui_build", "ui_star", "ui_warning",
-  "berry", "fish_pearl", "grass_hay",
+  "berry", "tile_special_giant_pearl", "tile_grass_hay",
 ];
 
 // Prefixes for icon keys that are referenced dynamically (template literals,
@@ -75,7 +75,7 @@ const SVG_USAGE_LITERALS = [
  * that references one. Returns `Set<string>` keyed by icon key.
  *
  * The returned set treats the two registries (canvas + SVG) as one address
- * space: a `design.tile.grass` key and a canvas `grass_hay` key both appear
+ * space: a `design.tile.grass` key and a canvas `tile_grass_hay` key both appear
  * as plain strings if referenced.
  */
 export function getUsedIconKeys() {
@@ -85,7 +85,7 @@ export function getUsedIconKeys() {
   };
 
   // Resource items — every item key in ITEMS doubles as an icon key (e.g.
-  // ITEMS.grass_hay is rendered via the `grass_hay` icon).
+  // ITEMS.tile_grass_hay is rendered via the `tile_grass_hay` icon).
   for (const key of Object.keys(ITEMS || {})) add(key);
 
   // Recipes — outputs and inputs both reference item keys, which are icons.

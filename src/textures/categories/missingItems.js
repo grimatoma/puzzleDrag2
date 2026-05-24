@@ -5,6 +5,12 @@
 //   - stone_hammer  (tool, smashes cobble tiles)
 //   - iron_ration   (mine resource, calorie-dense food block)
 //   - supplies      (kitchen recipe output, basic supply bundle)
+//   - hay_bundle    (farm resource, tied bundle of hay)
+//   - iron_bar      (mine resource, smelted iron ingot)
+//   - copper_bar    (mine resource, smelted copper ingot)
+//   - gold_bar      (mine resource, smelted gold ingot)
+//   - sea_shells    (fish resource, small shell pair)
+//   - pearls        (fish resource, lustrous pearl trio)
 
 function rr(ctx, x, y, w, h, r) {
   ctx.beginPath();
@@ -457,10 +463,226 @@ function drawSupplies(ctx) {
   ctx.stroke();
 }
 
+// ── hay_bundle — round bale of hay tied with twine ────────────────────────
+function drawHayBundle(ctx) {
+  drawShadow(ctx, 22, 4);
+  // Hay bale body (circular cross-section)
+  const grad = ctx.createRadialGradient(-4, -4, 4, 0, 0, 22);
+  grad.addColorStop(0, "#f0d878");
+  grad.addColorStop(0.55, "#c9b160");
+  grad.addColorStop(1, "#6a5828");
+  ctx.fillStyle = grad;
+  ctx.beginPath();
+  ctx.ellipse(0, 2, 18, 16, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = "#3a2c10";
+  ctx.lineWidth = 1.6;
+  ctx.stroke();
+  // Straw striations
+  ctx.strokeStyle = "rgba(106,88,40,0.6)";
+  ctx.lineWidth = 0.7;
+  for (let y = -10; y <= 14; y += 4) {
+    ctx.beginPath();
+    ctx.moveTo(-16, y);
+    ctx.bezierCurveTo(-6, y - 2, 6, y + 2, 16, y);
+    ctx.stroke();
+  }
+  // Loose straw ends poking out
+  ctx.strokeStyle = "#8a7028";
+  ctx.lineWidth = 0.9;
+  [[-16, -6, -20, -10], [16, -4, 20, -8], [-14, 12, -18, 16], [14, 14, 18, 18]].forEach(([x1, y1, x2, y2]) => {
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x2, y2);
+    ctx.stroke();
+  });
+  // Twine wraps (two horizontal bands)
+  ctx.strokeStyle = "#5a3a18";
+  ctx.lineWidth = 1.4;
+  ctx.beginPath();
+  ctx.ellipse(0, -4, 18, 6, 0, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.ellipse(0, 8, 18, 5, 0, 0, Math.PI * 2);
+  ctx.stroke();
+  // Highlight
+  ctx.fillStyle = "rgba(255,250,210,0.45)";
+  ctx.beginPath();
+  ctx.ellipse(-6, -4, 4, 2, -0.3, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+// ── ingot helper — generic metal bar with custom palette ──────────────────
+function drawIngotWithColors(ctx, top, mid, dark, edgeLight) {
+  drawShadow(ctx, 22, 4);
+  // Trapezoid bar (wider at bottom)
+  const grad = ctx.createLinearGradient(0, -8, 0, 12);
+  grad.addColorStop(0, top);
+  grad.addColorStop(0.5, mid);
+  grad.addColorStop(1, dark);
+  ctx.fillStyle = grad;
+  ctx.beginPath();
+  ctx.moveTo(-16, 10);
+  ctx.lineTo(-12, -8);
+  ctx.lineTo(12, -8);
+  ctx.lineTo(16, 10);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = "#1a1a1a";
+  ctx.lineWidth = 1.6;
+  ctx.stroke();
+  // Top face highlight (the cast surface)
+  ctx.fillStyle = edgeLight;
+  ctx.beginPath();
+  ctx.moveTo(-12, -8);
+  ctx.lineTo(12, -8);
+  ctx.lineTo(10, -4);
+  ctx.lineTo(-10, -4);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = "rgba(0,0,0,0.4)";
+  ctx.lineWidth = 0.8;
+  ctx.stroke();
+  // Specular streak on body
+  ctx.strokeStyle = "rgba(255,255,255,0.55)";
+  ctx.lineWidth = 1.2;
+  ctx.beginPath();
+  ctx.moveTo(-10, 0);
+  ctx.lineTo(10, 0);
+  ctx.stroke();
+  // Lower shadow band
+  ctx.fillStyle = "rgba(0,0,0,0.25)";
+  ctx.beginPath();
+  ctx.moveTo(-16, 10);
+  ctx.lineTo(16, 10);
+  ctx.lineTo(14, 6);
+  ctx.lineTo(-14, 6);
+  ctx.closePath();
+  ctx.fill();
+}
+
+function drawIronBar(ctx) {
+  drawIngotWithColors(ctx, "#e0e4e8", "#8a8e94", "#3a3e44", "#cfd4d9");
+}
+
+function drawCopperBar(ctx) {
+  drawIngotWithColors(ctx, "#f0b878", "#c97f3c", "#6a3e18", "#e09858");
+}
+
+function drawGoldBar(ctx) {
+  drawIngotWithColors(ctx, "#fff0a8", "#f4c430", "#7a6010", "#fcde6a");
+}
+
+// ── sea_shells — pair of small clamshells ─────────────────────────────────
+function drawSeaShells(ctx) {
+  drawShadow(ctx, 20, 4);
+  // Back shell (cream)
+  ctx.save();
+  ctx.translate(4, -2);
+  ctx.rotate(0.25);
+  const back = ctx.createLinearGradient(0, -12, 0, 8);
+  back.addColorStop(0, "#fff8e0");
+  back.addColorStop(0.6, "#e8d8b0");
+  back.addColorStop(1, "#9a8460");
+  ctx.fillStyle = back;
+  ctx.beginPath();
+  ctx.moveTo(-10, 6);
+  ctx.bezierCurveTo(-14, -10, 14, -10, 10, 6);
+  ctx.bezierCurveTo(6, 8, -6, 8, -10, 6);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = "#5a4a28";
+  ctx.lineWidth = 1.4;
+  ctx.stroke();
+  // Radial ribs
+  ctx.strokeStyle = "rgba(122,96,56,0.55)";
+  ctx.lineWidth = 0.8;
+  for (let i = -3; i <= 3; i++) {
+    ctx.beginPath();
+    ctx.moveTo(0, 6);
+    ctx.lineTo(i * 3, -8);
+    ctx.stroke();
+  }
+  ctx.restore();
+  // Front shell (pearly pink-cream)
+  ctx.save();
+  ctx.translate(-4, 4);
+  ctx.rotate(-0.18);
+  const front = ctx.createLinearGradient(0, -10, 0, 8);
+  front.addColorStop(0, "#fffaf0");
+  front.addColorStop(0.6, "#f4ead0");
+  front.addColorStop(1, "#a89878");
+  ctx.fillStyle = front;
+  ctx.beginPath();
+  ctx.moveTo(-10, 6);
+  ctx.bezierCurveTo(-14, -8, 14, -8, 10, 6);
+  ctx.bezierCurveTo(6, 8, -6, 8, -10, 6);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = "#5a4a28";
+  ctx.lineWidth = 1.4;
+  ctx.stroke();
+  ctx.strokeStyle = "rgba(122,96,56,0.55)";
+  ctx.lineWidth = 0.8;
+  for (let i = -3; i <= 3; i++) {
+    ctx.beginPath();
+    ctx.moveTo(0, 6);
+    ctx.lineTo(i * 3, -6);
+    ctx.stroke();
+  }
+  // Highlight
+  ctx.fillStyle = "rgba(255,255,255,0.7)";
+  ctx.beginPath();
+  ctx.ellipse(-3, -2, 2, 1, -0.3, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+}
+
+// ── pearls — trio of lustrous pearls ──────────────────────────────────────
+function drawPearls(ctx) {
+  drawShadow(ctx, 20, 4);
+  const positions = [
+    [-9, 2, 7],
+    [9, 0, 7],
+    [0, -6, 8],
+  ];
+  for (const [cx, cy, r] of positions) {
+    const grad = ctx.createRadialGradient(cx - r * 0.35, cy - r * 0.35, 1, cx, cy, r);
+    grad.addColorStop(0, "#ffffff");
+    grad.addColorStop(0.4, "#f4eef4");
+    grad.addColorStop(0.85, "#c4bcc8");
+    grad.addColorStop(1, "#807888");
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = "#5a4e60";
+    ctx.lineWidth = 1.0;
+    ctx.stroke();
+    // Iridescent rim
+    ctx.strokeStyle = "rgba(180,160,200,0.55)";
+    ctx.lineWidth = 0.6;
+    ctx.beginPath();
+    ctx.arc(cx, cy, r - 1.2, 0.4, Math.PI - 0.4);
+    ctx.stroke();
+    // Specular highlight
+    ctx.fillStyle = "rgba(255,255,255,0.95)";
+    ctx.beginPath();
+    ctx.arc(cx - r * 0.4, cy - r * 0.4, r * 0.22, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
 export const ICONS = {
   scythe_full:  { label: "Scythe (full)", color: "#c0c8d4", draw: drawScytheFull },
   iron_pick:    { label: "Iron Pick",     color: "#8a929c", draw: drawIronPick },
   stone_hammer: { label: "Stone Hammer",  color: "#8a9098", draw: drawStoneHammer },
   iron_ration:  { label: "Iron Ration",   color: "#5a4030", draw: drawIronRation },
   supplies:     { label: "Supplies",      color: "#a87838", draw: drawSupplies },
+  hay_bundle:   { label: "Hay Bundle",    color: "#c9b160", draw: drawHayBundle },
+  iron_bar:     { label: "Iron Bar",      color: "#8a8e94", draw: drawIronBar },
+  copper_bar:   { label: "Copper Bar",    color: "#c97f3c", draw: drawCopperBar },
+  gold_bar:     { label: "Gold Bar",      color: "#f4c430", draw: drawGoldBar },
+  sea_shells:   { label: "Sea Shells",    color: "#f4ead0", draw: drawSeaShells },
+  pearls:       { label: "Pearls",        color: "#e8e0e8", draw: drawPearls },
 };

@@ -33,54 +33,54 @@ describe("Phase 34 — recipeInputReduce aggregation (real Baker)", () => {
     expect(out.recipeInputReduce).toEqual({});
   });
 
-  it("Baker effect lives on the bread / grain_flour cell", () => {
+  it("Baker effect lives on the bread / flour cell", () => {
     const out = computeWorkerEffects({ workers: { hired: { baker: BAKER.maxCount } } });
     // amount * count = 1 * 10 = 10 raw reduction at full hire
     // (crafting/slice.js floors the recipe input at 1)
-    expect(out.recipeInputReduce.bread.grain_flour).toBe(1 * BAKER.maxCount);
+    expect(out.recipeInputReduce.bread.flour).toBe(1 * BAKER.maxCount);
   });
 
   it("effectiveRecipeInputs resolves canonical rec_* aliases for UI display", () => {
-    const s = bakeryStateWith(1, { grain_flour: 5, bird_egg: 5 });
+    const s = bakeryStateWith(1, { flour: 5, eggs: 5 });
     expect(effectiveRecipeInputs(s, "rec_bread", RECIPES.rec_bread.inputs)).toEqual({
-      grain_flour: 2,
-      bird_egg: 1,
+      flour: 2,
+      eggs: 1,
     });
   });
 });
 
 describe("Phase 34 — CRAFTING/CRAFT_RECIPE applies the reduction (floored at 1)", () => {
   it("vanilla bread craft (no Bakers) deducts the full 3 flour + 1 egg", () => {
-    expect(RECIPES.bread.inputs.grain_flour).toBe(3);
-    const s = bakeryStateWith(0, { grain_flour: 5, bird_egg: 5 });
+    expect(RECIPES.bread.inputs.flour).toBe(3);
+    const s = bakeryStateWith(0, { flour: 5, eggs: 5 });
     const next = craftingReduce(s, { type: "CRAFTING/CRAFT_RECIPE", payload: { key: "bread" } });
-    expect(next.inventory.grain_flour).toBe(5 - 3);
-    expect(next.inventory.bird_egg).toBe(4);
+    expect(next.inventory.flour).toBe(5 - 3);
+    expect(next.inventory.eggs).toBe(4);
   });
 
   it("a single Baker (amount=1 per hire) trims one flour off the recipe", () => {
     // 1 Baker → 1 flour reduction → max(1, 3-1) = 2 flour required.
-    const s = bakeryStateWith(1, { grain_flour: 5, bird_egg: 5 });
+    const s = bakeryStateWith(1, { flour: 5, eggs: 5 });
     const next = craftingReduce(s, { type: "CRAFTING/CRAFT_RECIPE", payload: { key: "bread" } });
-    expect(next.inventory.grain_flour).toBe(5 - 2);
+    expect(next.inventory.flour).toBe(5 - 2);
   });
 
   it("two Bakers trim two flour off the recipe", () => {
     // 2 Bakers → 2 flour reduction → max(1, 3-2) = 1 flour required.
-    const s = bakeryStateWith(2, { grain_flour: 5, bird_egg: 5 });
+    const s = bakeryStateWith(2, { flour: 5, eggs: 5 });
     const next = craftingReduce(s, { type: "CRAFTING/CRAFT_RECIPE", payload: { key: "bread" } });
-    expect(next.inventory.grain_flour).toBe(5 - 1);
+    expect(next.inventory.flour).toBe(5 - 1);
   });
 
   it("max Bakers is still floored at 1 remaining flour", () => {
-    const s = bakeryStateWith(BAKER.maxCount, { grain_flour: 5, bird_egg: 5 });
+    const s = bakeryStateWith(BAKER.maxCount, { flour: 5, eggs: 5 });
     const next = craftingReduce(s, { type: "CRAFTING/CRAFT_RECIPE", payload: { key: "bread" } });
-    expect(next.inventory.grain_flour).toBe(5 - 1);
+    expect(next.inventory.flour).toBe(5 - 1);
   });
 
   it("rejects when reduced inputs exceed inventory", () => {
     // 0 Bakers => full 3 flour required. Have only 1 -> rejected.
-    const s = bakeryStateWith(0, { grain_flour: 1, bird_egg: 5 });
+    const s = bakeryStateWith(0, { flour: 1, eggs: 5 });
     const next = craftingReduce(s, { type: "CRAFTING/CRAFT_RECIPE", payload: { key: "bread" } });
     expect(next).toBe(s);
   });

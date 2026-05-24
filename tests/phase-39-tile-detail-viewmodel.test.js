@@ -7,7 +7,7 @@ describe("tile detail view models", () => {
     const state = createInitialState();
 
     const grassRows = getCategoryViewModel(state, "grass");
-    const hay = grassRows.find((r) => r.id === "grass_hay");
+    const hay = grassRows.find((r) => r.id === "tile_grass_hay");
     expect(hay).toMatchObject({
       locked: false,
       active: true,
@@ -15,7 +15,7 @@ describe("tile detail view models", () => {
       description: expect.any(String),
     });
 
-    const activeDetail = getTileDetailViewModel(state, "grass_hay");
+    const activeDetail = getTileDetailViewModel(state, "tile_grass_hay");
     expect(activeDetail).toMatchObject({
       action: "active",
       actionLabel: "Active",
@@ -23,7 +23,7 @@ describe("tile detail view models", () => {
       effects: expect.any(Object),
     });
 
-    const buyDetail = getTileDetailViewModel(state, "bird_dodo");
+    const buyDetail = getTileDetailViewModel(state, "tile_bird_dodo");
     expect(buyDetail).toMatchObject({
       locked: true,
       action: "buy",
@@ -31,7 +31,7 @@ describe("tile detail view models", () => {
       description: expect.any(String),
     });
 
-    const researchDetail = getTileDetailViewModel(state, "flower_water_lily");
+    const researchDetail = getTileDetailViewModel(state, "tile_flower_water_lily");
     expect(researchDetail).toMatchObject({
       locked: true,
       action: "research",

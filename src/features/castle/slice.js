@@ -1,13 +1,13 @@
 /**
  * Castle slice — handles CASTLE/CONTRIBUTE.
- * State shape: { contributed: { soup, meat, mine_coal } }
+ * State shape: { contributed: { soup, meat, tile_mine_coal } }
  * One-way sink: there is no reset action.
  */
 import { CASTLE_NEEDS } from "./data.js";
 
 export const initial = {
   castle: {
-    contributed: { soup: 0, meat: 0, mine_coal: 0 },
+    contributed: { soup: 0, meat: 0, tile_mine_coal: 0 },
   },
 };
 
@@ -19,11 +19,11 @@ function castleOf(state) {
       contributed: {
         soup: c.contributed.soup ?? 0,
         meat: c.contributed.meat ?? 0,
-        mine_coal: c.contributed.mine_coal ?? 0,
+        tile_mine_coal: c.contributed.tile_mine_coal ?? 0,
       },
     };
   }
-  return { contributed: { soup: 0, meat: 0, mine_coal: 0 } };
+  return { contributed: { soup: 0, meat: 0, tile_mine_coal: 0 } };
 }
 
 export function reduce(state, action) {
