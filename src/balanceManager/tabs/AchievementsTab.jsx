@@ -1,4 +1,4 @@
-// Achievements tab — Balance Manager.
+// Achievements tab — Dev Panel.
 //
 // Edits achievement name / description / count threshold / target / coin
 // reward. The `counter` each one watches drives logic and isn't editable here.

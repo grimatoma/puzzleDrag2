@@ -2,13 +2,29 @@ import { describe, it, expect } from "vitest";
 import { parseHash, buildHash } from "../balanceManager/router.js";
 
 const TAB_IDS = [
+  "wiki",
   "tiles",
   "zones",
-  "resources",
+  "biomes",
+  "items",
   "recipes",
   "buildings",
+  "rations",
+  "tuning",
   "workers",
+  "bosses",
+  "achievements",
+  "dailyRewards",
+  "flags",
+  "story",
+  "npcs",
+  "keepers",
+  "boons",
+  "abilities",
+  "toolPowers",
+  "tileDiscoveryMethods",
   "icons",
+  "animationsDemo",
   "export",
 ];
 

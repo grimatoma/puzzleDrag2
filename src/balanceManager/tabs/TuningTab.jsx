@@ -1,4 +1,4 @@
-// Tuning tab — Balance Manager.
+// Tuning tab — Dev Panel.
 //
 // Loose top-level constants that don't belong to any other table. Patches go to
 // `draft.tuning` (a flat object) and are validated by `sanitizeTuning` in

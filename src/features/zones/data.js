@@ -230,7 +230,7 @@ export function zoneCategories(zoneId) {
 // Engine code accesses ZONES[state.mapCurrent] or ZONES[state.activeZone]
 // (activeZone mirrors mapCurrent, set in cartography/slice.js on CARTO/TRAVEL).
 // Inner zone objects are intentionally NOT frozen — `applyZoneOverrides`
-// mutates them in place so Balance-Manager toggles (hasMine, hasWater, etc.)
+// mutates them in place so Dev Panel toggles (hasMine, hasWater, etc.)
 // take effect on the live module export. The outer dict is frozen so the
 // set of zone ids is fixed.
 export const ZONES = Object.freeze(
@@ -281,8 +281,8 @@ export function displayZoneName(state, zoneId) {
 // isSettlementFounded), and there is no Kingdoms-hub UI on the cartography map
 // that surfaces founded/completed status or a "Found this settlement" button.
 // Wire both of those in 4b.
-export let SETTLEMENT_FOUNDING_BASE_COINS = 300; // Balance Manager: tuning.foundingBaseCoins
-export let SETTLEMENT_FOUNDING_GROWTH = 1.7;   // Balance Manager: tuning.foundingGrowth
+export let SETTLEMENT_FOUNDING_BASE_COINS = 300; // Dev Panel: tuning.foundingBaseCoins
+export let SETTLEMENT_FOUNDING_GROWTH = 1.7;   // Dev Panel: tuning.foundingGrowth
 
 /** Number of zones the player has founded. */
 export function foundedSettlementCount(state) {
@@ -519,12 +519,12 @@ export function keeperReadyFor(state, zoneId) {
   return builtCountAt(state, zoneId) >= (keeper.appearsAfterBuildings ?? 4);
 }
 
-// Phase 6 — Balance Manager hook. Apply any committed/draft overrides from
+// Phase 6 — Dev Panel hook. Apply any committed/draft overrides from
 // `src/config/balance.json` + the localStorage draft to the live ZONES table.
 import { BALANCE_OVERRIDES, EXPEDITION_FOOD_TURNS, EXPEDITION_MEAT_FOODS, SETTLEMENT_BIOMES, DEFAULT_HOME_BIOME, TUNING_OVERRIDES } from "../../constants.js";
 import { keeperForType } from "../../keepers.js";
 import { applyZoneOverrides } from "../../config/applyOverrides.js";
 applyZoneOverrides(ZONES, BALANCE_OVERRIDES.zones);
-// Phase 6 — Balance Manager "Tuning" section: the founding-cost constants.
+// Phase 6 — Dev Panel "Tuning" section: the founding-cost constants.
 if ("foundingBaseCoins" in TUNING_OVERRIDES) SETTLEMENT_FOUNDING_BASE_COINS = TUNING_OVERRIDES.foundingBaseCoins;
 if ("foundingGrowth" in TUNING_OVERRIDES) SETTLEMENT_FOUNDING_GROWTH = TUNING_OVERRIDES.foundingGrowth;

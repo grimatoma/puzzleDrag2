@@ -8,7 +8,7 @@ import {
   applyTileOverrides,
 } from "../config/applyOverrides.js";
 
-describe("Balance Manager — override merge layer", () => {
+describe("Dev Panel — override merge layer", () => {
   it("mergeOverrides shallow-merges nested objects", () => {
     const a = { upgradeThresholds: { tile_grass_hay: 6 }, resources: {} };
     const b = { upgradeThresholds: { tile_grain_wheat: 4 }, recipes: { bread: { coins: 200 } } };
@@ -71,7 +71,7 @@ describe("Balance Manager — override merge layer", () => {
   });
 });
 
-describe("Balance Manager — applyTileOverrides", () => {
+describe("Dev Panel — applyTileOverrides", () => {
   it("merges power hooks into tile.effects via expansion", () => {
     const tiles = [
       { id: "tile_grass_hay", category: "grass", baseResource: "tile_grass_hay", tier: 0,

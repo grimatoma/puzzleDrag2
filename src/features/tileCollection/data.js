@@ -678,7 +678,7 @@ for (const t of TILE_TYPES) {
   }
 }
 
-// Balance-Manager: apply tile-power, unlock and description overrides in
+// Dev Panel: apply tile-power, unlock and description overrides in
 // place before the lookup maps below are built, so consumers see the
 // merged data.
 applyTileOverrides(TILE_TYPES, BALANCE_OVERRIDES);

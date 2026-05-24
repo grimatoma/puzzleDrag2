@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { CONCEPTS } from "../balanceManager/wiki/concepts.js";
 import { ITEMS } from "../constants.js";
 
-describe("Balance Manager Wiki — CONCEPTS", () => {
+describe("Dev Panel Wiki — CONCEPTS", () => {
   it("exports a non-empty array of concepts with required fields", () => {
     expect(Array.isArray(CONCEPTS)).toBe(true);
     expect(CONCEPTS.length).toBeGreaterThan(0);

@@ -75,7 +75,7 @@
 /**
  * A consumable tool item from ITEMS (kind === "tool"). Tools do not have a
  * biome; they are crafted and spent to trigger a tool power. The `effect`
- * field stores the tool-power id from TOOL_POWERS (Balance Manager UI calls
+ * field stores the tool-power id from TOOL_POWERS (Dev Panel UI calls
  * this "Tool power"); `target`, `anim`, and `ms` are optional
  * runtime hints consumed by GameScene.
  *

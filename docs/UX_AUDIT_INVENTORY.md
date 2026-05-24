@@ -104,7 +104,7 @@ A11–A13, A15, A22, A24–A26, A30, A32, A33, B1–B34 (informational), B52–B
 
 | # | Pri | Change | Reference |
 |---|-----|--------|-----------|
-| A1 | P1 | **Strip dev-only UI from HUD.** Move DevButton pair (debug tools, Balance Manager) behind `?debug=1` / 5-tap easter egg / Settings → Developer. Balance Manager opens new tab — non-devs will hit it. | v1 §01 #01 · `src/ui/Hud.jsx · 137–142` |
+| A1 | P1 | **Strip dev-only UI from HUD.** Move DevButton pair (debug tools, Dev Panel) behind `?debug=1` / 5-tap easter egg / Settings → Developer. Dev Panel opens new tab — non-devs will hit it. | v1 §01 #01 · `src/ui/Hud.jsx · 137–142` |
 | A2 | P1 | **Rebuild HUD as 3 zones, not 9 pills.** Left=identity+menu, Center=run state (season ring doubling as turn counter + larder badge), Right=progression (level/XP+currency popover). Collapse larder + meta currencies + Hearth-Tokens into one "Stash" pill. | v1 §01 #02 · `src/ui/Hud.jsx · 144–204` |
 | A3 | P1 | **Stop bottom nav width from changing.** Reserve all 8 slots from session start; render Portal in locked state with lock glyph until `locBuilt(state).portal`. | v1 §01 #03 · `src/ui.jsx · 81–95` |
 | A4 | P1 | **Pick one icon system.** Three coexist (IconCanvas, Icon, inline emoji). Treat missing canvas icon as `console.warn` + neutral placeholder; remove emoji from production except deliberate "✓". Add `/dev/icons` inventory. | v1 §01 #04 · `src/ui/Tools.jsx · 16–22`, `src/ui/Hud.jsx · 31–43` |

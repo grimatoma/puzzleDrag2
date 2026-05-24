@@ -6,7 +6,7 @@
 // The choice is final once resolved per settlement (found another of that type
 // to try the other path). This config is the source of truth for encounter
 // dialogue and rewards, and is overridable via `balance.json`'s `keepers`
-// section (the Balance Manager exposes it for editing).
+// section (the Dev Panel exposes it for editing).
 
 import { BALANCE_OVERRIDES } from "./constants.js";
 import { applyKeeperOverrides } from "./config/applyOverrides.js";

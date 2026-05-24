@@ -1,4 +1,4 @@
-// Canonical recipe iteration for Balance Manager UIs.
+// Canonical recipe iteration for Dev Panel UIs.
 //
 // RECIPES includes backward-compat aliases: RECIPES[rake] → same object as
 // rec_rake, plus underscore variants (rec_iron_frame → rec_ironframe). UIs
@@ -40,7 +40,7 @@ export function buildRecipesByOutput({ recipes = RECIPES, draftRecipes = {} } = 
     methods[effItem].push({ recId, ...rec, ...draftRec });
   }
 
-  // Draft-only recipes (created in Balance Manager, not yet in RECIPES).
+  // Draft-only recipes (created in Dev Panel, not yet in RECIPES).
   for (const [recId, draftRec] of Object.entries(draftRecipes || {})) {
     if (!draftRec?.item) continue;
     const base = recipes[recId];

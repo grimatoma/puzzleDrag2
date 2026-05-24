@@ -98,7 +98,7 @@ export const STORY_FLAGS = [
     description: "Break the Frostmaw's hold — the hearth is ours; grants Core Ingots.", triggers: [] },
 ];
 
-// Self-apply Balance-Manager / `/story/`-editor overrides (label / description /
+// Self-apply Dev Panel / `/story/`-editor overrides (label / description /
 // category / default / triggers patches, plus author-created flags). Mutates
 // STORY_FLAGS in place — same pattern as applyStoryOverrides in src/story.js.
 applyFlagOverrides(STORY_FLAGS, BALANCE_OVERRIDES.flags);

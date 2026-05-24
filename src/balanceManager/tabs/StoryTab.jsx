@@ -1,4 +1,4 @@
-// Story · Dialogue tab — Balance Manager.
+// Story · Dialogue tab — Dev Panel.
 //
 // The text-form beat editor that used to live here has been retired in favour
 // of the visual decision-tree editor at `/story/` (pan/zoom canvas, node cards,
@@ -55,7 +55,7 @@ export default function StoryTab({ draft }) {
           beat as a node card, with branch edges, a searchable beat list, and a side inspector. From there you can
           edit the title / scene / dialogue lines, <b>add · remove · re-label choices and edit their outcomes</b>
           {" "}(flags, bond, currency, branch target), <b>author whole new dialogue branches &amp; side beats</b>,
-          and collapse / expand forks to tidy the map. It writes to the same draft as this Balance Manager
+          and collapse / expand forks to tidy the map. It writes to the same draft as this Dev Panel
           (the <code style={{ fontFamily: "ui-monospace,monospace" }}>hearth.balance.draft</code> key) — beat patches go to
           {" "}<code style={{ fontFamily: "ui-monospace,monospace" }}>story.beats</code> and new beats to
           {" "}<code style={{ fontFamily: "ui-monospace,monospace" }}>story.newBeats</code>, both picked up by

@@ -1,4 +1,4 @@
-// NPCs tab — Balance Manager.
+// NPCs tab — Dev Panel.
 //
 // Edits townsfolk gift preferences (loves / likes — items that raise their bond
 // fastest; `favoriteGift` is re-derived from `loves[0]`) and the four bond

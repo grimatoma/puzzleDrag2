@@ -1,4 +1,4 @@
-// Boons tab — Balance Manager.
+// Boons tab — Dev Panel.
 //
 // Read-only browser over the boon catalogs (see src/features/boons/data.js).
 // Each catalog row shows the id, name, description, cost and effect. The

@@ -1,4 +1,4 @@
-// Settlement Biomes tab — Balance Manager.
+// Settlement Biomes tab — Dev Panel.
 //
 // Edits the biomes a settlement can be founded as (master doc §IV): 4 per type,
 // each with a name, an icon, two hazards (that appear in every round there),

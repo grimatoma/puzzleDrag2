@@ -110,7 +110,7 @@ function MainTab({ dispatch }) {
           className="w-full py-2 px-4 text-[13px] font-bold rounded-xl border-2 flex items-center justify-center no-underline"
           style={{ background: '#e8dcc4', borderColor: '#b28b62', color: '#5a3a20' }}
         >
-          ⚖️ Balance Manager
+          🛠 Dev Panel
         </a>
       </div>
     </div>

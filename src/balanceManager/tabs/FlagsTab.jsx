@@ -1,4 +1,4 @@
-// Balance Manager · Flags tab — audit of every story flag.
+// Dev Panel · Flags tab — audit of every story flag.
 //
 // Flags now have a real registry (src/flags.js → STORY_FLAGS): id, label,
 // description, category, default, where it's set (`source`), and optional

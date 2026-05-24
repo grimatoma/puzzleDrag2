@@ -1,7 +1,7 @@
 # Tile Discovery Methods — first-class concept
 
 **Status:** Approved · 2026-05-24
-**Scope:** Balance Manager (`/b/`). No game-runtime behavior changes.
+**Scope:** Dev Panel (`/b/`). No game-runtime behavior changes.
 
 ## Problem
 

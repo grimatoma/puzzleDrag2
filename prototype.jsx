@@ -324,7 +324,7 @@ export default function App() {
 
   useEffect(() => {
     // While the project is in active development we deploy as effectively dev
-    // (the visual bridge powers the Balance Manager's Animations Demo iframe,
+    // (the visual bridge powers the Dev Panel's Animations Demo iframe,
     // and other dev tools rely on it). Re-add the env gate when prod deploys
     // should exclude the bridge.
     let cleanup;

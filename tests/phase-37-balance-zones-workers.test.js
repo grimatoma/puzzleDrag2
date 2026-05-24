@@ -1,4 +1,4 @@
-// Phase 37 — Balance Manager extension: applyZoneOverrides + applyWorkerOverrides.
+// Phase 37 — Dev Panel extension: applyZoneOverrides + applyWorkerOverrides.
 //
 // Pure-function tests against a clone of the live tables so the live
 // modules don't drift across the suite.

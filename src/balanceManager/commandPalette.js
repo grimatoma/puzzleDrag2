@@ -1,11 +1,11 @@
-// Cmd-K command palette index for the Balance Manager.
+// Cmd-K command palette index for the Dev Panel.
 //
 // Walks the canonical game data (TILE/ITEM/recipe/building/biome/zone
 // catalogs + worker/keeper/boss/achievement lists + story beats + flags)
 // and emits a flat array of `{ id, label, sublabel, kind, tab }` entries.
 // The palette UI ranks entries against a free-form query (token-match scoring
 // with a small bonus for prefix hits) and routes the selected entry to the
-// appropriate balance-manager tab via the same hash routing the sidebar uses.
+// appropriate dev-panel tab via the same hash routing the sidebar uses.
 //
 // Pure module — no React, no DOM. The UI lives in CommandPalette.jsx.
 
@@ -26,7 +26,7 @@ function asArrayValues(obj) {
 /**
  * Build a search index from the live game data. Returns an array of entry
  * descriptors with `id`, `kind`, `label`, `sublabel`, and `tab` fields. Each
- * entry's `tab` is the Balance Manager tab id (e.g. `recipes`, `bosses`) the
+ * entry's `tab` is the Dev Panel tab id (e.g. `recipes`, `bosses`) the
  * palette should navigate to when the entry is picked.
  */
 export function buildCommandIndex({ items = ITEMS, npcs = NPCS, buildings = BUILDINGS, recipes = RECIPES, biomes = BIOMES, keepers = KEEPERS, workers = TYPE_WORKERS, bosses = BOSSES, achievements = ACHIEVEMENTS, zones = ZONES, storyBeats = STORY_BEATS, sideBeats = SIDE_BEATS, flags = STORY_FLAGS } = {}) {

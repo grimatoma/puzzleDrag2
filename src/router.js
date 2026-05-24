@@ -14,7 +14,7 @@
 //   #/town?modal=menu
 //   #/town?modal=menu&tab=settings
 //
-// The Balance Manager is a separate Vite entry served at `/b/` and has its
+// The Dev Panel is a separate Vite entry served at `/b/` and has its
 // own hash router (`src/balanceManager/router.js`) — it does not share this
 // view space.
 

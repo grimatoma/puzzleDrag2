@@ -1,4 +1,4 @@
-// Daily Rewards tab — Balance Manager.
+// Daily Rewards tab — Dev Panel.
 //
 // Tunes the coin / rune amounts on the 30-day login reward track. Tool drops
 // and tile unlocks aren't editable here. Patches go to `draft.dailyRewards[day]`

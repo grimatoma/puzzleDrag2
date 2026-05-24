@@ -1,8 +1,8 @@
-// Apply Balance-Manager overrides on top of the default game constants.
+// Apply Dev Panel overrides on top of the default game constants.
 //
 // The override JSON lives in `src/config/balance.json` (committed) and is
 // optionally augmented by a localStorage draft (`hearth.balance.draft`) that
-// the in-game Balance Manager writes for fast iteration. The committed file
+// the in-game Dev Panel writes for fast iteration. The committed file
 // is always the source of truth in production builds.
 //
 // All merge functions are pure and mutate-in-place on the passed-in
@@ -231,7 +231,7 @@ export function applyTileOverrides(tileTypes, overrides) {
 }
 
 /**
- * Apply patches to ZONES entries (Phase 6, Balance Manager Zones tab).
+ * Apply patches to ZONES entries (Phase 6, Dev Panel Zones tab).
  * Allowed fields per zone: baseTurns, entryCost.coins, upgradeMap,
  * seasonDrops. Each is whitelisted so unrelated keys can't bleed in.
  *
@@ -287,7 +287,7 @@ export function applyZoneOverrides(zones, overrides) {
 }
 
 /**
- * Apply patches to TYPE_WORKERS entries (Phase 6, Balance Manager Workers
+ * Apply patches to TYPE_WORKERS entries (Phase 6, Dev Panel Workers
  * tab), keyed by id. Whitelisted fields:
  *
  *   hireCost.coins, hireCost.coinsStep, hireCost.coinsMult,
@@ -357,7 +357,7 @@ export function applyWorkerOverrides(workers, overrides) {
 }
 
 /**
- * Apply patches to the KEEPERS table (Phase 6, Balance Manager Keepers tab),
+ * Apply patches to the KEEPERS table (Phase 6, Dev Panel Keepers tab),
  * keyed by settlement type ('farm' | 'mine' | 'harbor'). Whitelisted fields:
  *   name, title, icon, appearsAfterBuildings,
  *   intro (array of strings — replaced wholesale),
@@ -392,7 +392,7 @@ export function applyKeeperOverrides(keepers, overrides) {
 }
 
 /**
- * Apply patches to the expedition-ration tables (Phase 6, Balance Manager
+ * Apply patches to the expedition-ration tables (Phase 6, Dev Panel
  * Expedition Rations tab). `overrides`:
  *   { foodTurns: { <foodKey>: turns }, meatFoods: [<foodKey>...] }
  * `foodTurns` is merged (so existing keys can be tuned and new keys added);
@@ -414,7 +414,7 @@ export function applyExpeditionOverrides(foodTurns, meatFoods, overrides) {
 }
 
 /**
- * Apply patches to the SETTLEMENT_BIOMES table (Phase 6, Balance Manager
+ * Apply patches to the SETTLEMENT_BIOMES table (Phase 6, Dev Panel
  * Settlement Biomes tab), keyed by type then biome id:
  *   { farm: { prairie: { name, icon, hazards: [a, b], bonus } }, mine: {...}, harbor: {...} }
  * Each matched biome is patched in place (hazards replace wholesale).
@@ -439,7 +439,7 @@ export function applyBiomeOverrides(settlementBiomes, overrides) {
 }
 
 /**
- * Validate the Balance Manager "Tuning" section (loose top-level constants).
+ * Validate the Dev Panel "Tuning" section (loose top-level constants).
  * Returns a clean object containing only the keys that passed validation; the
  * caller (constants.js / zones/data.js) reassigns the matching `export let`s.
  *   craftQueueHours, craftGemSkipCost, minExpeditionTurns,
@@ -469,7 +469,7 @@ export function sanitizeTuning(o) {
 }
 
 /**
- * Apply patches to NPC data (Phase 6, Balance Manager NPCs tab). `overrides`:
+ * Apply patches to NPC data (Phase 6, Dev Panel NPCs tab). `overrides`:
  *   { byId: { <npcId>: { displayName, loves: [itemKey], likes: [itemKey] } },
  *     bands: [ { name, modifier }, ... ]   (positional — matches BOND_BANDS) }
  * `loves`/`likes` replace wholesale; `favoriteGift` is re-derived from
@@ -658,7 +658,7 @@ export function sanitizeBeatOnComplete(raw) {
 }
 
 /**
- * Apply patches to story beats (Balance Manager / `/story/` editor). `overrides`:
+ * Apply patches to story beats (Dev Panel / `/story/` editor). `overrides`:
  *   {
  *     suppressedBeats: [ <built-in side beat id> ],
  *     newBeats: [ { id, title, scene?, body?|lines?, choices?, trigger?, repeat?, repeatCooldown?, onComplete? } ],
@@ -797,7 +797,7 @@ export function applyFlagOverrides(flags, overrides) {
 }
 
 /**
- * Apply patches to BOSSES entries (Phase 6, Balance Manager Bosses tab), by id.
+ * Apply patches to BOSSES entries (Phase 6, Dev Panel Bosses tab), by id.
  * Editable: name, season, description, modifierDescription, targetAmount
  * (→ target.amount). The modifier type/params drive board logic — left alone.
  */
@@ -816,7 +816,7 @@ export function applyBossOverrides(bosses, overrides) {
 }
 
 /**
- * Apply patches to ACHIEVEMENTS entries (Phase 6, Balance Manager Achievements
+ * Apply patches to ACHIEVEMENTS entries (Phase 6, Dev Panel Achievements
  * tab), by id. Editable: name, desc, threshold, target, rewardCoins
  * (→ reward.coins). The `counter` it watches is left alone.
  */
@@ -835,7 +835,7 @@ export function applyAchievementOverrides(achievements, overrides) {
 }
 
 /**
- * Apply patches to DAILY_REWARDS entries (Phase 6, Balance Manager Daily
+ * Apply patches to DAILY_REWARDS entries (Phase 6, Dev Panel Daily
  * Rewards tab), keyed by day number. Editable: coins, runes (added if absent).
  * Tool / unlockTile drops are left alone.
  */

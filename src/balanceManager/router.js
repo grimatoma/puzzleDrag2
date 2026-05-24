@@ -1,14 +1,14 @@
-// Hash-based router for the Balance Manager. Separate from the main game's
-// router (`src/router.js`) — the Balance Manager is its own Vite entry served
+// Hash-based router for the Dev Panel. Separate from the main game's
+// router (`src/router.js`) — the Dev Panel is its own Vite entry served
 // at `/b/`, so it needs its own URL-state binding.
 //
 // URL shape (within /b/):
 //   #/<tab>
 //
 // Examples:
+//   #/wiki
 //   #/tiles
 //   #/recipes
-//   #/zones
 //
 // `parseHash` and `buildHash` are pure helpers that round-trip cleanly and
 // gracefully fall back to the default tab when the hash is empty or refers to
@@ -44,11 +44,11 @@ export function buildHash({ tab } = {}) {
 }
 
 /**
- * React hook that binds the Balance Manager's tab state to the URL hash.
+ * React hook that binds the Dev Panel's tab state to the URL hash.
  *
  *   - On mount: parses the current hash; if it points at a valid tab, calls
  *     `setTab(parsed)`. Then writes the resolved tab back with `replaceState`
- *     so the URL is normalized (e.g. `""` → `#/tiles`).
+ *     so the URL is normalized (e.g. `""` → `#/wiki`).
  *   - On state change: pushes a new history entry whenever `tab` changes.
  *   - On `popstate` / `hashchange`: re-reads the hash and calls `setTab` so
  *     back/forward and manual edits stay in sync.

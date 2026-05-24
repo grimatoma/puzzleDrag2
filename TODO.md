@@ -1,6 +1,6 @@
 ## Attributes vs. Powers rename — code level (deferred)
 
-The Balance Manager UI now uses "Attributes" (passive, was "Abilities") and
+The Dev Panel UI now uses "Attributes" (passive, was "Abilities") and
 "Powers" (active, tool effects). Code identifiers still use the old vocabulary.
 When ready to migrate:
 
