@@ -409,7 +409,9 @@ function profileState(profile) {
     case "boardFarmLong": return { ...boardState("farm"), grid: farmGrid };
     case "boardFarmBoss": return { ...boardState("farm"), boss: { key: "frostmaw", name: "The Frostmaw", emoji: "❄️", resource: "tile_tree_oak", targetCount: 30, progress: 8, turnsLeft: 6, minChain: 5, goal: "Bring 30 logs in 10 turns." } };
     case "boardFarmHazards": return { ...boardState("farm"), hazards: { ...boardState("farm").hazards, fire: { cells: [{ row: 0, col: 4 }, { row: 1, col: 4 }] }, rats: [{ row: 4, col: 0, age: 1 }, { row: 4, col: 1, age: 1 }, { row: 5, col: 0, age: 1 }] } };
-    case "boardFarmBomb": return { ...boardState("farm"), toolPending: "bomb", tools: { ...boardState("farm").tools, bomb: 3 } };
+    case "boardFarmBomb": return { ...boardState("farm"), toolPending: "bomb", toolPendingPower: { id: "area_blast", params: { radius: 1 }, tint: 0xff4444 }, tools: { ...boardState("farm").tools, bomb: 3 } };
+    case "boardFarmSickle": return { ...boardState("farm"), toolPending: "sickle", toolPendingPower: { id: "clear_row", params: {}, tint: 0xff9900 }, tools: { ...boardState("farm").tools, sickle: 2 } };
+    case "boardFarmRake": return { ...boardState("farm"), toolPending: "rake", toolPendingPower: { id: "clear_component", params: {}, tint: 0x88ff88 }, tools: { ...boardState("farm").tools, rake: 2 } };
     case "boardFarmFertilizer": return { ...boardState("farm"), fertilizerActive: true, magicFertilizerCharges: 3, session: { selectedTiles: ["grass", "grain"], fertilizerUsed: true } };
     case "boardMine": return boardState("mine");
     case "boardMineHazards": {

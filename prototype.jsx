@@ -65,7 +65,7 @@ function setBoardRuntimeActive(game, active) {
   game.__boardRuntimeActive = active;
 }
 
-function PhaserMount({ dispatch, biomeKey, turnsUsed, uiLocked, boardActive, sceneRef, toolPending, setChainInfo, workers, tileCollection, gameState, grid }) {
+function PhaserMount({ dispatch, biomeKey, turnsUsed, uiLocked, boardActive, sceneRef, toolPending, toolPendingPower, setChainInfo, workers, tileCollection, gameState, grid }) {
   const hostRef = useRef(null);
   const gameRef = useRef(null);
   const [loading, setLoading] = useState(true);
@@ -169,7 +169,9 @@ function PhaserMount({ dispatch, biomeKey, turnsUsed, uiLocked, boardActive, sce
               scene.events.on(SCENE_EVENTS.CHAIN_FLOAT_TEXT, ({ text }) => {
                 notifierRef.current?.toast?.({ text, tone: "moss", duration: 1600 });
               });
-              scene.events.on(SCENE_EVENTS.TOOL_FIRED, ({ key }) => dispatch({ type: "TOOL_FIRED", key }));
+              scene.events.on(SCENE_EVENTS.TOOL_FIRED, ({ key, row, col }) =>
+                dispatch({ type: "TOOL_FIRED", key, row, col }),
+              );
               scene.events.on(SCENE_EVENTS.REWARD_BURST, (data) => {
                 const canvas = scene?.game?.canvas;
                 if (!canvas || !data.coins) return;
@@ -219,6 +221,7 @@ function PhaserMount({ dispatch, biomeKey, turnsUsed, uiLocked, boardActive, sce
   useEffect(() => { gameRef.current?.registry.set("turnBudget", gameState?.farmRun?.turnBudget ?? null); }, [gameState?.farmRun?.turnBudget]);
   useEffect(() => { gameRef.current?.registry.set("uiLocked", uiLocked); }, [uiLocked]);
   useEffect(() => { gameRef.current?.registry.set("toolPending", toolPending ?? null); }, [toolPending]);
+  useEffect(() => { gameRef.current?.registry.set("toolPendingPower", toolPendingPower ?? null); }, [toolPendingPower]);
   useEffect(() => { gameRef.current?.registry.set("workers", workers ?? null); }, [workers]);
   useEffect(() => { gameRef.current?.registry.set("hapticsOn", gameState?.settings?.hapticsOn ?? true); }, [gameState?.settings?.hapticsOn]);
   useEffect(() => { gameRef.current?.registry.set("tileCollectionActive", tileCollection?.activeByCategory ?? null); }, [tileCollection?.activeByCategory]);
@@ -470,6 +473,7 @@ export default function App() {
                     boardActive={state.view === "board"}
                     sceneRef={sceneRef}
                     toolPending={state.toolPending}
+                    toolPendingPower={state.toolPendingPower}
                     setChainInfo={setChainInfo}
                     workers={state.workers}
                     tileCollection={state.tileCollection}

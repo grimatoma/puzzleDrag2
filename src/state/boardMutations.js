@@ -72,6 +72,49 @@ export function applyAreaBlast(board, row, col, radius) {
 }
 
 /**
+ * Clear only the listed coordinates. Returns `{ grid, collected }`.
+ *
+ * @param {Array<Array<object>>} board
+ * @param {Array<{ row: number, col: number, key?: string }>} cells
+ */
+export function sweepAtCoords(board, cells) {
+  if (!board || !cells?.length) return { grid: board, collected: {} };
+  const coordSet = new Set(cells.map((c) => `${c.row},${c.col}`));
+  const collected = {};
+  const grid = board.map((row, ri) =>
+    row.map((cell, ci) => {
+      if (!coordSet.has(`${ri},${ci}`)) return cell;
+      if (!cell || HAZARD_LOCKED(cell) || cell.key == null) return cell;
+      collected[cell.key] = (collected[cell.key] ?? 0) + 1;
+      return { ...cell, key: null, _emptied: true };
+    }),
+  );
+  return { grid, collected };
+}
+
+/**
+ * Replace cells at listed coordinates with `toKey`.
+ *
+ * @param {Array<Array<object>>} board
+ * @param {Array<{ row: number, col: number }>} cells
+ * @param {string} toKey
+ */
+export function transformAtCoords(board, cells, toKey) {
+  if (!board || !cells?.length || !toKey) return { grid: board, transformed: 0 };
+  const coordSet = new Set(cells.map((c) => `${c.row},${c.col}`));
+  let transformed = 0;
+  const grid = board.map((row, ri) =>
+    row.map((cell, ci) => {
+      if (!coordSet.has(`${ri},${ci}`)) return cell;
+      if (!cell || HAZARD_LOCKED(cell)) return cell;
+      transformed += 1;
+      return { ...cell, key: toKey };
+    }),
+  );
+  return { grid, transformed };
+}
+
+/**
  * Replace every cell whose key is in `fromKeys` with `toKey`. Returns
  * `{ grid, transformed }` where `transformed` is the number of cells changed.
  * Hazard-locked cells are skipped — a transform shouldn't quietly undo a

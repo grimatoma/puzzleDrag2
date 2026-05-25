@@ -13,6 +13,7 @@
  */
 import { describe, it, expect } from "vitest";
 import { ITEMS, WORKSHOP_RECIPES, ROWS, COLS } from "../constants.js";
+import { TOOL_POWERS } from "../config/toolPowers.js";
 import { TOOL_BY_KEY } from "../ui/toolRegistry.js";
 import { MAGIC_TOOLS } from "../features/portal/data.js";
 import { rootReducer, createInitialState } from "../state.js";
@@ -50,6 +51,24 @@ function useTool(state, toolKey) {
 }
 
 // ─── ITEMS catalog ─────────────────────────────────────────────────────────
+
+describe("tool catalog contract", () => {
+  it("every ITEMS tool power id resolves in TOOL_POWERS", () => {
+    const catalogIds = new Set(TOOL_POWERS.map((p) => p.id));
+    for (const [key, item] of Object.entries(ITEMS)) {
+      if (item.kind !== "tool" || !item.power?.id) continue;
+      expect(catalogIds.has(item.power.id), `${key}.power.id=${item.power.id}`).toBe(true);
+    }
+  });
+
+  it("migrated tools no longer declare legacy effect/target fields", () => {
+    for (const [key, item] of Object.entries(ITEMS)) {
+      if (item.kind !== "tool") continue;
+      expect(item.effect, `${key}.effect`).toBeUndefined();
+      expect(item.target, `${key}.target`).toBeUndefined();
+    }
+  });
+});
 
 describe("Phase 3 catalog — new tools registered in ITEMS with typed powers", () => {
   const NEW_FARM_TOOLS = [

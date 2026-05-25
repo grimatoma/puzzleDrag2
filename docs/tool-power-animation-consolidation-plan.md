@@ -1,6 +1,6 @@
 # Tool / Power / Animation Consolidation — Implementation Plan
 
-> **Status:** Approved plan. Multi-PR implementation. Respect the "PR freeze on create" rule in `CLAUDE.md` — each numbered PR below is its own branch, opened only after all its changes are committed locally.
+> **Status:** Implemented on branch `cursor/tool-power-consolidation-3f3e` (PRs 0–6 combined). Multi-PR plan executed in one integration branch. Respect the "PR freeze on create" rule in `CLAUDE.md` — each numbered PR below is its own branch, opened only after all its changes are committed locally.
 
 ## Context
 

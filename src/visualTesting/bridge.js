@@ -189,6 +189,7 @@ function applyBoardStateToScene(state, { rebuildGrid = false } = {}) {
   scene.registry.set("tileCollectionActive", state.tileCollection?.activeByCategory ?? null);
   scene.registry.set("boss", state.boss ?? null);
   scene.registry.set("toolPending", state.toolPending ?? null);
+  scene.registry.set("toolPendingPower", state.toolPendingPower ?? null);
   scene.registry.set("hazardFire", state.hazards?.fire ?? null);
   scene.registry.set("hazardRats", state.hazards?.rats ?? null);
   if (Array.isArray(state.grid)) {

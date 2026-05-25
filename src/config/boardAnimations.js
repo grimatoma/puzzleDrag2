@@ -30,7 +30,7 @@ export const BOARD_ANIMATIONS = Object.freeze({
 export const BOARD_ANIMATION_NAMES = Object.freeze(Object.keys(BOARD_ANIMATIONS));
 
 /** Collapse + fill delays after a sweep in GameScene (ms, pre-_dur). */
-const SWEEP_COLLAPSE_PIPELINE_MS = 240 + 190 + 210 + 210;
+export const SWEEP_COLLAPSE_PIPELINE_MS = 240 + 190 + 210 + 210;
 
 /**
  * How long the animations demo should wait before reloading the scenario.

@@ -6,8 +6,6 @@
  * instant `clear_all` tools read tile keys from ITEMS / power params.
  */
 
-import { ITEMS } from "../../constants.js";
-
 /** Board tools that arm on USE_TOOL and resolve on tap (not instant clear_all). */
 export const TAP_TARGET_TOOL_IDS = new Set(["bomb", "rake", "axe", "magic_wand"]);
 
@@ -60,12 +58,5 @@ export function clearTilesOfKey(state, targetKey) {
 export function applyToolPending(state) {
   const id = state.toolPending;
   if (!id) return state;
-
-  const def = ITEMS[id];
-  if (def?.effect === "clear_all" && def.target) {
-    const { state: next } = clearTilesOfKey(state, def.target);
-    return { ...next, toolPending: null };
-  }
-
   return { ...state, toolPending: null };
 }

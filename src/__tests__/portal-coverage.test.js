@@ -5,6 +5,7 @@
 
 import { describe, it, expect } from "vitest";
 import { reduce as portalReduce } from "../features/portal/slice.js";
+import { rootReducer } from "../state.js";
 import { MAGIC_TOOLS } from "../features/portal/data.js";
 
 describe("portal slice — coverage gaps", () => {
@@ -69,7 +70,7 @@ describe("portal slice — coverage gaps", () => {
       inventory: {},
       turnsUsed: 5,
     });
-    const s1 = portalReduce(s0, { type: "USE_TOOL", payload: { id: "hourglass" } });
+    const s1 = rootReducer(s0, { type: "USE_TOOL", payload: { id: "hourglass" } });
     expect(s1.tools.hourglass).toBe(1);
     expect(s1.inventory.foo).toBe(5);
     expect(s1.turnsUsed).toBe(3);
@@ -84,7 +85,7 @@ describe("portal slice — coverage gaps", () => {
 
   it("USE_TOOL magic_seed: extends the active farmRun by 5", () => {
     const s0 = baseState({ tools: { magic_seed: 1 }, farmRun: { zoneId: "home", turnBudget: 10, turnsRemaining: 4, startedAt: 1 } });
-    const s1 = portalReduce(s0, { type: "USE_TOOL", payload: { id: "magic_seed" } });
+    const s1 = rootReducer(s0, { type: "USE_TOOL", payload: { id: "magic_seed" } });
     expect(s1.farmRun.turnBudget).toBe(15);
     expect(s1.farmRun.turnsRemaining).toBe(9);
     expect(s1.tools.magic_seed).toBe(0);
@@ -92,7 +93,7 @@ describe("portal slice — coverage gaps", () => {
 
   it("USE_TOOL magic_fertilizer: sets 3 charges + decrements count", () => {
     const s0 = baseState({ tools: { magic_fertilizer: 1 } });
-    const s1 = portalReduce(s0, { type: "USE_TOOL", payload: { id: "magic_fertilizer" } });
+    const s1 = rootReducer(s0, { type: "USE_TOOL", payload: { id: "magic_fertilizer" } });
     expect(s1.magicFertilizerCharges).toBe(3);
     expect(s1.tools.magic_fertilizer).toBe(0);
   });
@@ -104,12 +105,10 @@ describe("portal slice — coverage gaps", () => {
   });
 
   it("USE_TOOL magic_wand: arms toolPending without spending the charge", () => {
-    // Tap-target tools defer the spend to TOOL_FIRED (see TAP_TARGET_TOOL_KEYS
-    // in state.js) so the displayed charge count remains accurate while the
-    // player is choosing a tile target.
     const s0 = baseState({ tools: { magic_wand: 1 } });
-    const s1 = portalReduce(s0, { type: "USE_TOOL", payload: { id: "magic_wand" } });
+    const s1 = rootReducer(s0, { type: "USE_TOOL", payload: { id: "magic_wand" } });
     expect(s1.toolPending).toBe("magic_wand");
+    expect(s1.toolPendingPower?.id).toBe("tap_clear_type");
     expect(s1.tools.magic_wand).toBe(1);
   });
 

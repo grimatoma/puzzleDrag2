@@ -44,8 +44,13 @@ describe("3.4 — Bombs + Powder Store", () => {
 
   it("TOOL_FIRED bomb: spends the charge and clears toolPending", () => {
     const s0 = initialState();
-    const armed = { ...s0, tools: { ...s0.tools, bomb: 3 }, toolPending: "bomb" };
-    const r = gameReducer(armed, { type: "TOOL_FIRED", key: "bomb" });
+    const armed = {
+      ...s0,
+      tools: { ...s0.tools, bomb: 3 },
+      toolPending: "bomb",
+      toolPendingPower: { id: "area_blast", params: { radius: 1 } },
+    };
+    const r = gameReducer(armed, { type: "TOOL_FIRED", key: "bomb", row: 2, col: 2 });
     expect(r.tools.bomb).toBe(2);
     expect(r.toolPending).toBeNull();
   });

@@ -361,39 +361,29 @@ export const ITEMS = {
   sea_shells:    { kind: "resource", biome: "fish", label: "Sea Shells", color: 0xf4ead0, dark: 0x80755a, value: 5, next: null },
   pearls:        { kind: "resource", biome: "fish", label: "Pearls",     color: 0xe8e0e8, dark: 0x807888, value: 12, next: null },
 
-  // Tools
-  // Phase 3 tool-powers overhaul — every tool entry gains a typed `power` field
-  // declaring its effect under the TOOL_POWERS catalog (src/config/toolPowers.js).
-  // This is the canonical metadata read by the Balance Manager Wiki and the
-  // Phase 2 USE_TOOL runtime (applyToolPower). Existing migrated tools
-  // (rake/axe/etc.) retain their legacy `effect/target` fields for backward
-  // compatibility with the in-reducer ad-hoc handlers and the existing test
-  // suite; production callers that explicitly route via `power` (e.g. balance
-  // manager preview, new tool runtime tests) get the new clear_category /
-  // transform_tiles / etc. semantics. The two paths coexist: legacy ad-hoc
-  // handlers remain wired to `effect/target` so tests and current UI
-  // dispatchers keep working until a follow-up flips each dispatcher to pass
-  // `power` explicitly.
-  rake:        { kind: "tool", label: "Rake", effect: "clear_all", target: "tile_grass_hay", anim: "sweep", ms: 300, power: { id: "clear_category", params: { target: "grass" } }, desc: "Clears all hay tiles from the board in one sweep — handy for tidying an overgrown field." },
-  axe:         { kind: "tool", label: "Axe", effect: "clear_all", target: "tile_tree_oak", anim: "chops", ms: 200, power: { id: "clear_category", params: { target: "trees" } }, desc: "Fells all oak tiles on the board instantly. Handy when the wood supply is blocking upgrades." },
-  // Fertilizer keeps the legacy `fill_bias` runtime — the PC2 transform semantic
-  // is intentionally NOT wired into `power` here. PC2's Fertilizer mutates
-  // existing tiles (grass → grain); ours biases the next fill. Migrating
-  // would silently flip behaviour for every existing caller (workshop UI,
-  // tutorial, story beats). Tracking as DONE_WITH_CONCERNS for the overhaul.
-  fertilizer:  { kind: "tool", label: "Fertilizer", effect: "fill_bias", target: "tile_grain_wheat", anim: "shimmer", ms: 600, power: { id: "transform_tiles", params: { from: "grass", to: "tile_grain_wheat" } }, desc: "Mutates every grass tile on the board into wheat for an instant grain harvest." },
-  cat:         { kind: "tool", label: "Cat", effect: "clear_hazard", target: "rats", anim: "scatter", ms: 200, power: { id: "clear_hazard", params: { target: "rats" } }, desc: "Dispatches a mouser to clear all active rat hazards from the farm in one go." },
-  bird_cage:   { kind: "tool", label: "Bird Cage", effect: "clear_all", target: "tile_bird_chicken", anim: "cage", ms: 300, power: { id: "clear_all", params: { target: "tile_bird_chicken" } }, desc: "Sweeps all chicken tiles from the board — useful when bird tiles are flooding the farm." },
-  scythe_full: { kind: "tool", label: "Scythe (full)", effect: "clear_all", target: "tile_grain_wheat", anim: "sweep", ms: 300, power: { id: "clear_all", params: { target: "tile_grain_wheat" } }, desc: "Harvests all wheat tiles at once, clearing the board for a fresh fill." },
-  rifle:       { kind: "tool", label: "Rifle", effect: "clear_hazard", target: "wolves", anim: "shot", ms: 300, power: { id: "clear_hazard", params: { target: "wolves" } }, desc: "Drives off all active wolves permanently, ending the wolf hazard immediately." },
-  hound:       { kind: "tool", label: "Hound", effect: "scatter_hazard", target: "wolves", anim: "bark", ms: 400, power: { id: "scatter_hazard", params: { target: "wolves" } }, desc: "Scares the wolves away for several turns, buying time to chain away their target tiles." },
-  hoe:         { kind: "tool", label: "Hoe", effect: "clear_all", target: "tile_veg_carrot", anim: "till", ms: 300, power: { id: "clear_all", params: { target: "tile_veg_carrot" } }, desc: "Tills the soil — clears every veg-carrot tile from the board so a fresh fill can roll." },
-  stone_hammer:{ kind: "tool", label: "Stone Hammer", effect: "clear_all", target: "tile_mine_stone", anim: "smash", ms: 350, power: { id: "clear_all", params: { target: "tile_mine_stone" } }, desc: "Smashes every stone tile on the board — a fast way to feed the chain into block tier." },
-  iron_pick:   { kind: "tool", label: "Iron Pick", effect: "clear_all", target: "tile_mine_iron_ore", anim: "pick", ms: 320, power: { id: "clear_all", params: { target: "tile_mine_iron_ore" } }, desc: "Bites into iron ore veins — clears every iron ore tile so the chain can be re-spawned cleanly." },
-  bird_feed:   { kind: "tool", label: "Bird Feed", effect: "fill_bias", target: "tile_bird_chicken", anim: "scatter", ms: 500, power: { id: "fill_bias", params: { target: "tile_bird_chicken" } }, desc: "Scatters feed across the field so the next board fill is biased toward bird tiles." },
-  sapling:     { kind: "tool", label: "Sapling", effect: "fill_bias", target: "tile_tree_oak", anim: "shimmer", ms: 600, power: { id: "fill_bias", params: { target: "tile_tree_oak" } }, desc: "Plants a sapling that biases the next fill toward oak (and other tree) tiles." },
-  water_pump:  { kind: "tool", label: "Water Pump", effect: "water_pump", power: { id: "water_pump", params: {} }, desc: "Lava Damper — floods all lava cells on the mine board, converting them to stone rubble. PC2's water-collector Water Pump is deferred (no water tile family)." },
-  explosives:  { kind: "tool", label: "Explosives", effect: "explosives", power: { id: "area_blast", params: { radius: 1 } }, desc: "Crafts a bundle of explosives that clears a 3×3 area of tiles from the mine board." },
+  // Tools — behavior, animation, and arm copy are data-driven via `power` (TOOL_POWERS catalog).
+  // Field starter tools
+  clear:    { kind: "tool", label: "Scythe", power: { id: "clear_random_n", params: { count: 6 }, anim: "sweep", ms: 240, bubble: "Scythe — clearing tiles!" }, desc: "Clears six random tiles and harvests their basic resources." },
+  basic:    { kind: "tool", label: "Seedpack", power: { id: "transform_random_n", params: { count: 5, to: "biome_base" }, anim: "popIn", ms: 220, tint: 0x88ff88, bubble: "Seedpack — placing seeds!" }, desc: "Plants five fresh basic-resource tiles in random spots on the board." },
+  rare:     { kind: "tool", label: "Lockbox", power: { id: "transform_random_n", params: { count: 3, to: "biome_rare" }, anim: "goldenFlash", ms: 220, tint: 0xffd248, bubble: "Lockbox — placing rare tiles!" }, desc: "Drops three rare-resource tiles onto the board." },
+  shuffle:  { kind: "tool", label: "Reshuffle Horn", power: { id: "reshuffle_board", params: {}, bubble: "Reshuffle Horn — board reshuffled!" }, desc: "Reshuffles every tile on the board for a fresh layout." },
+  bomb:     { kind: "tool", label: "Bomb", power: { id: "area_blast", params: { radius: 1 }, tint: 0xff4444, anim: "sweep", ms: 220, bubble: "Bomb armed — tap a tile to detonate!" }, desc: "Tap a tile — destroys a 3×3 area around it." },
+  rake:        { kind: "tool", label: "Rake", power: { id: "clear_component", params: {}, tint: 0x88ff88, anim: "sweep", ms: 220, bubble: "Rake armed — tap a connected patch!" }, desc: "Tap a tile — sweeps every 4-connected tile of the same type and collects them." },
+  axe:         { kind: "tool", label: "Axe", power: { id: "clear_category", params: { target: "trees" }, anim: "sweep", ms: 300, tint: 0x8b6914 }, desc: "Fells all tree tiles on the board instantly — every oak and related tree is swept into inventory." },
+  sickle:      { kind: "tool", label: "Sickle", power: { id: "clear_row", params: {}, tint: 0xff9900, anim: "sweep", ms: 220, bubble: "Sickle armed — tap a row to harvest!" }, desc: "Sweeps a single row in one stroke. Tap any tile to harvest that entire row." },
+  fertilizer:  { kind: "tool", label: "Fertilizer", power: { id: "arm_fill_bias", params: { target: "tile_grain_wheat", turns: 1 }, anim: "shimmer", ms: 600 }, desc: "Biases the next board fill toward grain tiles." },
+  cat:         { kind: "tool", label: "Cat", power: { id: "clear_hazard", params: { target: "rats" }, anim: "scatter", ms: 200 }, desc: "Dispatches a mouser to clear all active rat hazards from the farm in one go." },
+  bird_cage:   { kind: "tool", label: "Bird Cage", power: { id: "clear_all", params: { target: "tile_bird_chicken" }, anim: "cage", ms: 300 }, desc: "Sweeps all chicken tiles from the board — useful when bird tiles are flooding the farm." },
+  scythe_full: { kind: "tool", label: "Scythe (full)", power: { id: "clear_all", params: { target: "tile_grain_wheat" }, anim: "sweep", ms: 300 }, desc: "Harvests all wheat tiles at once, clearing the board for a fresh fill." },
+  rifle:       { kind: "tool", label: "Rifle", power: { id: "clear_hazard", params: { target: "wolves" }, anim: "shot", ms: 300 }, desc: "Drives off all active wolves permanently, ending the wolf hazard immediately." },
+  hound:       { kind: "tool", label: "Hound", power: { id: "scatter_hazard", params: { target: "wolves", turns: 5 }, anim: "bark", ms: 400 }, desc: "Scares the wolves away for several turns, buying time to chain away their target tiles." },
+  hoe:         { kind: "tool", label: "Hoe", power: { id: "clear_all", params: { target: "tile_veg_carrot" }, anim: "till", ms: 300 }, desc: "Tills the soil — clears every veg-carrot tile from the board so a fresh fill can roll." },
+  stone_hammer:{ kind: "tool", label: "Stone Hammer", power: { id: "clear_all", params: { target: "tile_mine_stone" }, anim: "smash", ms: 350 }, desc: "Smashes every stone tile on the board — a fast way to feed the chain into block tier." },
+  iron_pick:   { kind: "tool", label: "Iron Pick", power: { id: "clear_all", params: { target: "tile_mine_iron_ore" }, anim: "pick", ms: 320 }, desc: "Bites into iron ore veins — clears every iron ore tile so the chain can be re-spawned cleanly." },
+  bird_feed:   { kind: "tool", label: "Bird Feed", power: { id: "fill_bias", params: { target: "tile_bird_chicken" }, anim: "scatter", ms: 500 }, desc: "Scatters feed across the field so the next board fill is biased toward bird tiles." },
+  sapling:     { kind: "tool", label: "Sapling", power: { id: "fill_bias", params: { target: "tile_tree_oak" }, anim: "shimmer", ms: 600 }, desc: "Plants a sapling that biases the next fill toward oak (and other tree) tiles." },
+  water_pump:  { kind: "tool", label: "Water Pump", power: { id: "water_pump", params: {} }, desc: "Lava Damper — floods all lava cells on the mine board, converting them to stone rubble. PC2's water-collector Water Pump is deferred (no water tile family)." },
+  explosives:  { kind: "tool", label: "Explosives", power: { id: "explosives", params: {} }, desc: "Clears every cave-in and mole hazard from the mine." },
 
   // ── Phase 3 net-new tools (tool-powers overhaul) ────────────────────────
   // Farm tools — all use typed powers exclusively (no legacy effect/target).
@@ -421,10 +411,10 @@ export const ITEMS = {
   // ── Phase 3 magic-tier tools (Portal) ───────────────────────────────────
   // Existing magic tools — declarative power metadata only; runtime stays in
   // src/features/portal/slice.js to preserve current routing.
-  magic_wand:        { kind: "tool", label: "Magic Wand", power: { id: "tap_clear_type", params: {} }, desc: "Pick a tile type; collect every tile of that type on the board. No turn cost." },
+  magic_wand:        { kind: "tool", label: "Magic Wand", power: { id: "tap_clear_type", params: {}, tint: 0xa070ff, anim: "sweep", ms: 240, bubble: "Magic Wand armed — tap a tile type to sweep!" }, desc: "Pick a tile type; collect every tile of that type on the board. No turn cost." },
   hourglass:         { kind: "tool", label: "Hourglass", power: { id: "undo_move", params: {} }, desc: "Restores the board, inventory, and turns to the moment before your last chain." },
   magic_seed:        { kind: "tool", label: "Magic Seed", power: { id: "restore_turns", params: { amount: 5 } }, desc: "Adds five turns to the current session." },
-  magic_fertilizer:  { kind: "tool", label: "Magic Fertilizer", power: { id: "fill_bias", params: { target: "tile_grain_wheat" } }, desc: "The next three board fills spawn grain in every cell." },
+  magic_fertilizer:  { kind: "tool", label: "Magic Fertilizer", power: { id: "fill_bias", params: { target: "tile_grain_wheat", turns: 3 } }, desc: "The next three board fills spawn grain in every cell." },
   // Net-new magic tools.
   golden_apple:      { kind: "tool", label: "Golden Apple", power: { id: "transform_tiles", params: { from: "trees", to: "tile_fruit_apple" } }, desc: "A glowing apple — transforms every tree tile on the board into apple-fruit tiles." },
   golden_carrot:     { kind: "tool", label: "Golden Carrot", power: { id: "transform_tiles", params: { from: "grass", to: "tile_veg_carrot" } }, desc: "A shimmering carrot — transforms every grass tile on the board into carrot vegetable tiles." },
@@ -641,6 +631,7 @@ export const RECIPES = {
   // Workshop recipes (Tools)
   rec_rake:        { item: "rake",          station: "workshop", inputs: { plank: 1 },                            craftMs: 1 * MIN },
   rec_axe:         { item: "axe",           station: "workshop", inputs: { block: 1 },                            craftMs: 1 * MIN },
+  rec_sickle:      { item: "sickle",        station: "workshop", inputs: { plank: 1, iron_bar: 1 },               craftMs: 3 * MIN },
   rec_fertilizer:  { item: "fertilizer",    station: "workshop", inputs: { hay_bundle: 1, dirt: 1 },               craftMs: 3 * MIN },
   rec_cat:         { item: "cat",           station: "workshop", inputs: { block: 2, dirt: 1 },              craftMs: 5 * MIN },
   rec_bird_cage:   { item: "bird_cage",     station: "workshop", inputs: { hay_bundle: 1 },                             craftMs: 2 * MIN },
@@ -713,10 +704,9 @@ for (const rec of Object.values(RECIPES)) {
   if (rec.name === undefined)   rec.name   = itemDef.label;
   if (rec.coins === undefined)  rec.coins  = itemDef.value ?? 0;
   if (rec.color === undefined)  rec.color  = itemDef.color;
-  if (rec.effect === undefined) rec.effect = itemDef.effect;
-  if (rec.target === undefined) rec.target = itemDef.target;
-  if (rec.anim === undefined)   rec.anim   = itemDef.anim;
-  if (rec.ms === undefined)     rec.ms     = itemDef.ms;
+  if (rec.power === undefined && itemDef.power) rec.power = itemDef.power;
+  if (rec.anim === undefined)   rec.anim   = itemDef.power?.anim ?? itemDef.anim;
+  if (rec.ms === undefined)     rec.ms     = itemDef.power?.ms ?? itemDef.ms;
   if (rec.desc === undefined)   rec.desc   = itemDef.desc;
   // tool property: if the item is a tool, set recipe.tool = item key
   if (itemDef.kind === "tool" && rec.tool === undefined) rec.tool = rec.item;

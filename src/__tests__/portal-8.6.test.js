@@ -111,12 +111,16 @@ describe("8.6 — Magic Portal summons", () => {
   });
 
   it("TOOL_FIRED magic_wand: spends the charge and clears toolPending", () => {
+    const grid = createInitialState().grid;
+    grid[2][2] = { key: "tile_tree_oak" };
     const s = {
       ...createInitialState(),
+      grid,
       tools: { ...createInitialState().tools, magic_wand: 2 },
       toolPending: "magic_wand",
+      toolPendingPower: { id: "tap_clear_type", params: {} },
     };
-    const r = rootReducer(s, { type: "TOOL_FIRED", key: "magic_wand" });
+    const r = rootReducer(s, { type: "TOOL_FIRED", key: "magic_wand", row: 2, col: 2 });
     expect(r.tools.magic_wand).toBe(1);
     expect(r.toolPending).toBeNull();
   });
