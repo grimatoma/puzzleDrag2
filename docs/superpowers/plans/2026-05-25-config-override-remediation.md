@@ -10,6 +10,8 @@
 
 **Prerequisite doc:** `docs/hardcoded-special-cases-audit.md` (expand in Phase 0 with §12–§16 from this plan).
 
+**Historical:** UX audit scope (PRs #406–#422) is complete. Deferred UX items lived in `docs/UX_AUDIT_INVENTORY.md` (removed 2026-05-25). Tool-power consolidation shipped in [PR #634](https://github.com/grimatoma/puzzleDrag2/pull/634); the implementation plan doc was removed the same date.
+
 ---
 
 ## Coverage verdict
