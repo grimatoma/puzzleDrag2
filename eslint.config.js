@@ -1,6 +1,8 @@
 import js from "@eslint/js";
 import reactHooks from "eslint-plugin-react-hooks";
 import globals from "globals";
+import tsParser from "@typescript-eslint/parser";
+import tsPlugin from "@typescript-eslint/eslint-plugin";
 
 export default [
   js.configs.recommended,
@@ -15,7 +17,27 @@ export default [
     ignores: ["node_modules/**", "dist/**"],
   },
   {
-    files: ["src/__tests__/**/*.js"],
+    files: ["**/*.{ts,tsx}"],
+    plugins: {
+      "@typescript-eslint": tsPlugin,
+      "react-hooks": reactHooks,
+    },
+    languageOptions: {
+      parser: tsParser,
+      ecmaVersion: "latest",
+      sourceType: "module",
+      parserOptions: { ecmaFeatures: { jsx: true } },
+      globals: { ...globals.browser, ...globals.es2022 },
+    },
+    rules: {
+      ...reactHooks.configs.recommended.rules,
+      "no-unused-vars": "off",
+      "@typescript-eslint/no-unused-vars": ["error", { argsIgnorePattern: "^_", varsIgnorePattern: "^_" }],
+      "no-undef": "off",
+    },
+  },
+  {
+    files: ["src/__tests__/**/*.{js,ts}"],
     languageOptions: { globals: { ...globals.node } },
   },
 ];

@@ -1,4 +1,3 @@
-// @ts-check
 /**
  * The pure-function half of the chain HUD pipeline: given a tile, return the
  * resource key the chain produces (per-tile override > family default > null).

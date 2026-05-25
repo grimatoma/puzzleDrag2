@@ -1,4 +1,3 @@
-// @ts-check
 /**
  * Tile selectors — one pure function per tool power id.
  * `(grid, params, tap?) → { row, col, key }[]`

@@ -1,4 +1,3 @@
-// @ts-check
 /**
  * Tool power runtime — reducer-side handlers for ITEMS[key].power dispatch.
  */
