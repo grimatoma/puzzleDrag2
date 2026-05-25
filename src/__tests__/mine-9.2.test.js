@@ -128,7 +128,10 @@ describe("Phase 9.2 — Mysterious Ore", () => {
     let c = createInitialState();
     c = { ...c, biome: "mine", runes: 0, grid: makeGrid() };
     c = { ...c, mysteriousOre: { row: 2, col: 3, turnsRemaining: 3 } };
-    c = reduce(c, { type: "COMMIT_CHAIN", chain: [ore, d1, d2] });
+    c = reduce(c, {
+      type: "CHAIN_COLLECTED",
+      payload: { chain: [ore, d1, d2], key: "mysterious_ore", gained: 0, chainLength: 3, upgrades: 0, value: 0 },
+    });
     expect(c.runes).toBe(1);
     expect(c.mysteriousOre).toBeNull();
   });
@@ -137,7 +140,10 @@ describe("Phase 9.2 — Mysterious Ore", () => {
     let r = createInitialState();
     r = { ...r, biome: "mine", grid: makeGrid() };
     r = { ...r, mysteriousOre: { row: 2, col: 3, turnsRemaining: 4 } };
-    const after = reduce(r, { type: "COMMIT_CHAIN", chain: [ore, d1], rejected: true });
+    const after = reduce(r, {
+      type: "CHAIN_COLLECTED",
+      payload: { chain: [ore, d1], key: "mysterious_ore", gained: 0, chainLength: 2, upgrades: 0, value: 0 },
+    });
     // Countdown should NOT change on rejection
     expect(after.mysteriousOre?.turnsRemaining).toBe(4);
   });

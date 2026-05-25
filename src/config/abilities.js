@@ -263,6 +263,30 @@ export const ABILITIES = Object.freeze([
       { key: "biome", label: "Biome", type: "biome" },
     ],
   },
+  {
+    id: "turn_budget_bonus",
+    name: "Turn Budget Bonus",
+    iconKey: "ui_star",
+    desc: "Adds extra puzzle turns per session at this settlement.",
+    scope: ["building"],
+    trigger: "passive",
+    channel: "turnBudgetBonus",
+    params: [
+      { key: "amount", label: "Bonus Turns", type: "int", default: 1, min: 1, max: 5 },
+    ],
+  },
+  {
+    id: "inventory_cap_bonus",
+    name: "Inventory Cap Bonus",
+    iconKey: "ui_scale",
+    desc: "Raises the inventory soft cap for resources.",
+    scope: ["building"],
+    trigger: "passive",
+    channel: "inventoryCapBonus",
+    params: [
+      { key: "amount", label: "Cap Bonus", type: "int", default: 300, min: 50, max: 1000 },
+    ],
+  },
 ]);
 
 const ABILITY_BY_ID = Object.freeze(

@@ -211,6 +211,74 @@ Do not re-open as PR 1–6 work.
 
 ---
 
+## 12. Story / flags
+
+| Finding | Status (2026-05-25) |
+|---------|---------------------|
+| `mine_unlocked` story flag vs `level >= 2` | **Mitigated** — `canEnterBiome()` in `src/state/biomeAccess.js` |
+| `unlockedBiomes` vs Town UI | **Open** — verify Town cards use helper |
+| `flagReads.js` drift | **Open** — audit when adding beats |
+
+## 13. Quests / market
+
+| Finding | Status |
+|---------|--------|
+| Dual `QUEST_TEMPLATES` (constants vs `features/quests/templates.js`) | **Fixed** — slice uses `templates.js` |
+| `iron_rush` dead key `mine_iron` | **Fixed** — `tile_mine_iron_ore` in `market.js` |
+| Almanac XP on orders | **Open** — amounts in templates vs `awardXp` |
+
+## 14. Fish / cartography
+
+| Finding | Status |
+|---------|--------|
+| Tide / pearl live in `fish/slice.js` | Documented — update CLAUDE |
+| `modal: 'festivals'` noop | **Fixed** — `features/festivals` modal |
+
+## 15. BM / flags
+
+| Finding | Status |
+|---------|--------|
+| `balance.json` `resources` vs `items` | **Fixed** — `items` key + merge alias |
+| Dialogs default off | **Fixed** — `isDialogsDisabled()` default false |
+| Fire hazard BM toggle | **Fixed** — `tuning.fireHazardEnabled` |
+
+## 16. Tags / chain
+
+| Finding | Status |
+|---------|--------|
+| `DEADLY_KEYS` hardcoded | **Fixed** — `hasTag(..., 'deadly_pests')` |
+| `COMMIT_CHAIN` / `CHAIN_COMMIT` | **Removed** — `CHAIN_COLLECTED` only |
+| Unwired species tags | **Defer** — data present in `SPECIES_TAGS` |
+
+## 17. Building abilities vs hardcode
+
+| Finding | Status |
+|---------|--------|
+| Granary +1 turn / cap 500 hardcoded | **Fixed** — `BUILDINGS.granary.abilities` |
+| `mining_camp` / `pier` phantom ids | **Fixed** — `mining_camp` building stub; pier uses `harbor_dock` |
+
+## 18. Almanac / HUD
+
+| Finding | Status |
+|---------|--------|
+| HUD `xpForLevel` vs `XP_PER_LEVEL` | **Fixed** — Hud uses 150 XP per level |
+| `extraTurn` / `goldSeal` inert | **Fixed** — turn budget + order 1.1× coins |
+
+## 19. Deprecated doc symbols
+
+| Symbol | Replacement |
+|--------|-------------|
+| `MINE_ENTRY_TIERS` | `ZONES[].entryCost` + expedition depart |
+| `LONG_CHAIN_BONUSES` | removed — use `resourceProgress` |
+| Winter minChain 5 | boss `minChain` only |
+| Fish “no tide” | tides + pearl in fish feature |
+
+## §7 correction
+
+`_syncWorkerEffects` previously documented only `workers`; live path now passes full snapshot (`built`, `tileCollection`) through `computeAggregatedAbilities`.
+
+---
+
 ## Suggested follow-up PR themes
 
 | Theme | Absorbs rows |

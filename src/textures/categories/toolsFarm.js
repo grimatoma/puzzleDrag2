@@ -725,6 +725,7 @@ export const ICONS = {
   sapling:       { label:"Sapling",       color:"#7eb83a", draw:drawSapling },
   trimmer:       { label:"Trimmer",       color:"#a82018", draw:drawTrimmer },
   scythe:        { label:"Scythe",        color:"#a8a8b0", draw:drawScythe },
+  sickle:        { label:"Sickle",        color:"#c8a030", draw:drawScythe },
   fertilizer:    { label:"Fertilizer",    color:"#d8c890", draw:drawFertilizer },
   plough:        { label:"Plough",        color:"#7a4818", draw:drawPlough },
   bird_cage:     { label:"Bird Cage",     color:"#a82018", draw:drawBirdCage },

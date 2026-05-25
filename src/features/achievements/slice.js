@@ -24,6 +24,9 @@ export function reduce(state, action) {
   switch (action.type) {
     case "CHAIN_COLLECTED": {
       const payload = action.payload || action;
+      if (Array.isArray(payload.chain) && payload.chain.length > 0 && payload.chain.every((t) => t.key === "rat")) {
+        return state;
+      }
       const actualKey = payload.key;
       const actualGained = payload.gained || 0;
       const actualChain = payload.chainLength || 0;

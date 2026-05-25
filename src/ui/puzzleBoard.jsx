@@ -20,7 +20,6 @@ import { forwardRef, useCallback, useEffect, useLayoutEffect, useMemo, useRef, u
 import LegacyIcon from "./Icon.jsx";
 import { BIOMES } from "../constants.js";
 import { TOOL_BY_KEY, isTapTargetTool, visibleTools, TOOL_CATALOG } from "./toolRegistry.js";
-import { getPhaserScene } from "../phaserBridge.js";
 import { SeasonStrip } from "./seasonStrip.jsx";
 import { lazy, Suspense } from "react";
 
@@ -682,7 +681,10 @@ function dispatchUseTool(dispatch, key, state) {
   } else {
     dispatch({ type: "USE_TOOL", key });
   }
-  if (key === "shuffle") getPhaserScene()?.shuffleBoard();
+  if (key === "shuffle") {
+    dispatch({ type: "USE_TOOL", payload: { id: "shuffle" } });
+    return;
+  }
 }
 
 // When a tap-target tool (bomb / rake / axe / magic_wand) or fertilizer is

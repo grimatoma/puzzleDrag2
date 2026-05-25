@@ -558,7 +558,36 @@ export const BUILDINGS = [
   { id: "mill", name: "Mill", desc: "Grinds and sorts harvest goods for better town recipes.", cost: { coins: 200, plank: 30 }, lv: 1, x: 200, y: 380, w: 80, h: 90, color: "#c8923a" },
   { id: "bakery", name: "Bakery", desc: "Craft baked goods — bread, honey rolls, harvest pies — to sell for coins.", cost: { coins: 500, plank: 40, block: 10 }, lv: 1, x: 320, y: 360, w: 100, h: 110, color: "#8a4a26" },
   { id: "inn", name: "Inn", desc: "Lodgings for helpers and travelling traders.", cost: { coins: 250, plank: 15 }, lv: 2, x: 470, y: 350, w: 110, h: 130, color: "#4f6b3a" },
-  { id: "granary", name: "Granary", desc: "Keeps the harvest safe and adds +1 turn to farm sessions at this settlement.", cost: { coins: 150, plank: 10 }, lv: 1, x: 600, y: 380, w: 80, h: 100, color: "#c5a87a" },
+  {
+    id: "granary",
+    name: "Granary",
+    desc: "Keeps the harvest safe and adds +1 turn to farm sessions at this settlement.",
+    cost: { coins: 150, plank: 10 },
+    lv: 1,
+    x: 600,
+    y: 380,
+    w: 80,
+    h: 100,
+    color: "#c5a87a",
+    abilities: [
+      { id: "turn_budget_bonus", params: { amount: 1 } },
+      { id: "inventory_cap_bonus", params: { amount: 300 } },
+    ],
+  },
+  {
+    id: "mining_camp",
+    name: "Mining Camp",
+    desc: "Adds +1 expedition turn when departing for mine expeditions.",
+    cost: { coins: 200, plank: 15 },
+    lv: 1,
+    x: 0,
+    y: 0,
+    w: 0,
+    h: 0,
+    color: "#8a7a6a",
+    hidden: true,
+    abilities: [{ id: "turn_budget_bonus", params: { amount: 1 } }],
+  },
   { id: "larder", name: "Larder", desc: "Preserve and bottle your harvest. Craft preserve jars and berry tinctures for coins.", cost: { coins: 250, plank: 15 }, lv: 2, x: 700, y: 395, w: 70, h: 85, color: "#4f6b3a" },
   { id: "forge", name: "Forge", desc: "Smith metal goods — hinges, lanterns, rings, and more — for high coin rewards.", cost: { coins: 1200, block: 60, iron_bar: 20 }, lv: 8, x: 800, y: 380, w: 100, h: 100, color: "#5a6973" },
   { id: "caravan_post", name: "Caravan Post", desc: "Opens distant trade routes, letting you sell crafted goods to far-off markets.", cost: { coins: 800, plank: 40 }, lv: 8, x: 940, y: 390, w: 110, h: 90, color: "#7e4f24" },
@@ -914,7 +943,11 @@ import {
   sanitizeTuning,
 } from "./config/applyOverrides.js";
 
-export const BALANCE_OVERRIDES = mergeOverrides(balanceFile, readBalanceDraft());
+const _balanceMerged = mergeOverrides(balanceFile, readBalanceDraft());
+if (_balanceMerged.resources && !_balanceMerged.items) {
+  _balanceMerged.items = _balanceMerged.resources;
+}
+export const BALANCE_OVERRIDES = _balanceMerged;
 applyDailyRewardOverrides(DAILY_REWARDS, BALANCE_OVERRIDES.dailyRewards);
 
 applyUpgradeThresholdOverrides(UPGRADE_THRESHOLDS, BALANCE_OVERRIDES.upgradeThresholds);

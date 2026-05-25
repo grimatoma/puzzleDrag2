@@ -1,8 +1,9 @@
-import { BIOMES, BUILDINGS, RECIPES, DAILY_REWARDS, MIN_EXPEDITION_TURNS, CAPPED_TILES, CAPPED_INVENTORY_RESOURCES, UPGRADE_THRESHOLDS, CRAFT_GEM_SKIP_COST, ITEMS } from "./constants.js";
+import { BIOMES, BUILDINGS, RECIPES, DAILY_REWARDS, MIN_EXPEDITION_TURNS, CAPPED_INVENTORY_RESOURCES, UPGRADE_THRESHOLDS, CRAFT_GEM_SKIP_COST, ITEMS, tileFamilyResource } from "./constants.js";
 import { locBuilt as _locBuilt } from "./locBuilt.js";
 import { sellPriceFor as _sellPriceFor } from "./features/market/pricing.js";
-import { TAP_TARGET_TOOL_IDS } from "./features/farm/tools.js";
 import { isTapTargetPower } from "./config/toolPowers.js";
+import { rollRatSpawn, tickRats } from "./features/farm/rats.js";
+import { canEnterBiome } from "./state/biomeAccess.js";
 import { applyToolPower, applyTapTargetPower } from "./state/toolPowerRuntime.js";
 import { tryClearRatChain } from "./features/farm/rats.js";
 import { tryExtinguishFire, rollFarmHazard, tickFire, tickWolves } from "./features/farm/hazards.js";
@@ -13,10 +14,10 @@ import { isPearlChainValid, spawnPearl, tickPearl, PEARL_KEY } from "./features/
 import { driftPrices, applyTrade, pickMarketEvent } from "./market.js";
 import { currentCap } from "./utils.js";
 import { computeWorkerEffects } from "./features/workers/aggregate.js";
-import { TILE_TYPES, CATEGORIES, TILE_TYPES_MAP, CATEGORY_OF } from "./features/tileCollection/data.js";
+import { TILE_TYPES, CATEGORIES, TILE_TYPES_MAP } from "./features/tileCollection/data.js";
 import { discoverTileTypesFromChain } from "./features/tileCollection/effects.js";
 import { rollQuests } from "./features/quests/data.js";
-import { awardXp } from "./features/almanac/data.js";
+import { awardXp, XP_PER_LEVEL } from "./features/almanac/data.js";
 import * as crafting from "./features/crafting/slice.js";
 import * as quests from "./features/quests/slice.js";
 import * as achievements from "./features/achievements/slice.js";
@@ -58,8 +59,6 @@ const slices = [crafting, quests, achievements, tutorial, settings, boss, cartog
 // Tools that arm-then-fire from a board tap. USE_TOOL only sets toolPending;
 // the charge is spent in TOOL_FIRED once the tap actually resolves. Keep in
 // sync with `armed: "tap"` entries in src/ui/toolRegistry.js.
-const TAP_TARGET_TOOL_KEYS = TAP_TARGET_TOOL_IDS;
-
 // Disarm every armed tool in one shot, mirroring the existing CANCEL_TOOL +
 // USE_TOOL(fertilizer self-disarm) sequences so the player is left whole:
 // tap-target arms spent no charge to refund, instant arms get their charge
@@ -78,7 +77,8 @@ export function disarmAllTools(state) {
   if (pendingPower && isTapTargetPower(pendingPower.id)) {
     next = { ...next, toolPending: null, toolPendingPower: null };
   } else if (pending) {
-    if (TAP_TARGET_TOOL_KEYS.has(pending)) {
+    const legacyPower = ITEMS[pending]?.power;
+    if (legacyPower?.id && isTapTargetPower(legacyPower.id)) {
       next = { ...next, toolPending: null };
     } else if (pending === "rune_wildcard") {
       next = { ...next, toolPending: null, runeStash: (next.runeStash ?? 0) + 1 };
@@ -244,8 +244,8 @@ function coreReducer(state, action) {
       if (noTurn) {
         const capNoTurn = currentCap(state);
         const inventory = { ...state.inventory };
-        // No floater bookkeeping for tool-only gains (silent credit).
-        addCappedResourceMut(inventory, {}, null, key, gained, capNoTurn);
+        const creditKey = resourceKey ?? tileFamilyResource(key) ?? key;
+        addCappedResourceMut(inventory, {}, null, creditKey, gained, capNoTurn);
         return { ...state, inventory };
       }
 
@@ -276,7 +276,8 @@ function coreReducer(state, action) {
         } else if (currentBiome === "mine") {
           // Mysterious ore capture
           const hasOre = chainTiles.some((t) => t.key === "mysterious_ore");
-          if (hasOre && isMysteriousChainValid(chainTiles)) {
+          if (hasOre) {
+            if (!isMysteriousChainValid(chainTiles)) return state;
             return {
               ...state,
               runes: (state.runes ?? 0) + 1,
@@ -440,6 +441,14 @@ function coreReducer(state, action) {
           else if (hazardSpawn.kind === "wolf") hazards.wolves = { list: [{ row: hazardSpawn.row, col: hazardSpawn.col, scared: false }], scaredTurnsRemaining: 0 };
           afterChain = { ...afterChain, hazards };
         }
+        afterChain = tickRats(afterChain);
+        const ratSpawn = rollRatSpawn(afterChain, Math.random);
+        if (ratSpawn) {
+          afterChain = {
+            ...afterChain,
+            hazards: { ...(afterChain.hazards ?? {}), rats: [...(afterChain.hazards?.rats ?? []), ratSpawn] },
+          };
+        }
       } else if (chainBiome === "mine") {
         afterChain = tickHazards(afterChain);
         // Roll for a new mine hazard
@@ -472,7 +481,8 @@ function coreReducer(state, action) {
       // Use order.baseReward if present, else fall back to order.reward as the base
       const orderBase = o.baseReward ?? o.reward;
       const bondPaid = payOrder({ baseReward: orderBase }, npcBond);
-      const actualReward = bondPaid;
+      const goldMult = state.tools?.goldSeal ? 1.1 : 1;
+      const actualReward = Math.floor(bondPaid * goldMult);
       // Bump bond +0.3 on delivery (Phase 6.1) — scaled by any owned bond_gain_mult boons.
       const newBond = gainBond(npcBond, 0.3 * boonEffectMult(state, "bond_gain_mult"));
       const updatedNpcs = state.npcs
@@ -525,8 +535,9 @@ function coreReducer(state, action) {
       // shuffle) and the rune-wildcard arming flow did spend, so refund those.
       const pending = state.toolPending;
       if (!pending) return state;
-      if (TAP_TARGET_TOOL_KEYS.has(pending)) {
-        return { ...state, toolPending: null };
+      const cancelPower = state.toolPendingPower ?? ITEMS[pending]?.power;
+      if (cancelPower?.id && isTapTargetPower(cancelPower.id)) {
+        return { ...state, toolPending: null, toolPendingPower: null };
       }
       if (pending === "rune_wildcard") {
         return { ...state, toolPending: null, runeStash: (state.runeStash ?? 0) + 1 };
@@ -586,15 +597,9 @@ function coreReducer(state, action) {
       const key = action.key ?? action.payload?.biome;
       if (!key) return state;
       if (key === state.biomeKey) return state;
-      if (key === "mine" && state.level < 2) {
-        return { ...state, bubble: { id: Date.now(), npc: "wren", text: "Mine unlocks at Level 2.", ms: 1800 } };
-      }
-      const activeZone = state.activeZone ?? state.mapCurrent ?? DEFAULT_ZONE;
-      if (key === "mine" && !ZONES[activeZone]?.hasMine) {
-        return { ...state, bubble: { id: Date.now(), npc: "wren", text: "Travel to a mining settlement before opening the mine board.", ms: 2200 } };
-      }
-      if (key === "fish" && !ZONES[activeZone]?.hasWater) {
-        return { ...state, bubble: { id: Date.now(), npc: "wren", text: "Travel to a harbor before opening the fishing board.", ms: 2200 } };
+      const access = canEnterBiome(state, key);
+      if (!access.ok) {
+        return { ...state, bubble: { id: Date.now(), npc: "wren", text: access.reason, ms: 2200 } };
       }
       // Phase 12.5 — restore saved board if Silo/Barn built and snapshot exists
       const savedField = state[key]?.savedField ?? null;
@@ -944,7 +949,7 @@ function coreReducer(state, action) {
       const { key: buyKey, qty: buyQty } = action.payload;
       // Transitional: market still trades tile keys until PR 3 moves tiles out
       // of inventory. Cap-check against both lists.
-      if (CAPPED_INVENTORY_RESOURCES.includes(buyKey) || CAPPED_TILES.includes(buyKey)) {
+      if (CAPPED_INVENTORY_RESOURCES.includes(buyKey)) {
         const buyingCap = currentCap(state);
         const currentAmt = state.inventory?.[buyKey] ?? 0;
         if (currentAmt + buyQty > buyingCap) return state; // cap reached — no debit
@@ -1167,89 +1172,6 @@ function coreReducer(state, action) {
       return afterSetBiome;
     }
 
-    case "COMMIT_CHAIN": {
-      // Mine-biome chain commit with upgrade logic.
-      // Checks for mysterious ore special case; applies standard upgrade math.
-      const chain = action.chain ?? [];
-      if (chain.length === 0) return state;
-
-      const chainKey = chain[0]?.key;
-      if (!chainKey) return state;
-
-      // Phase 10.4 — Rat chain: chain of 3+ rat tiles clears rats, +5◉ per rat.
-      // Mixed chains (rat + other) and chains of < 3 rats are rejected.
-      const hasRat = chain.some((t) => t.key === "rat");
-      if (hasRat) {
-        const patch = tryClearRatChain(state, chain);
-        if (!patch) return state; // rejected — no-op
-        return { ...state, hazards: patch.hazards, coins: patch.coins };
-      }
-
-      // Phase 10.7 — Fire extinguishing: fire tiles in chain are removed and
-      // credit +2◉ each. Normal chain logic continues with non-fire tiles.
-      const firePatch = tryExtinguishFire(state, chain);
-      let stateAfterFire = state;
-      let fireCoinBonus = 0;
-      if (firePatch) {
-        stateAfterFire = { ...state, hazards: firePatch.hazards };
-        fireCoinBonus = firePatch.coinsBonus;
-      }
-
-      // Mysterious ore chain check
-      const hasOre = chain.some((t) => t.key === "mysterious_ore");
-      if (hasOre) {
-        if (!isMysteriousChainValid(chain)) {
-          // Rejected — no-op (countdown does NOT tick)
-          return state;
-        }
-        // Valid mysterious capture: +1 rune, clear ore
-        return {
-          ...state,
-          runes: (state.runes ?? 0) + 1,
-          mysteriousOre: null,
-        };
-      }
-
-      // Standard chain: all tiles must be the same key
-      // (fire tiles filtered out — they are handled by tryExtinguishFire above)
-      const nonFireChain = chain.filter((t) => t.key !== "fire");
-      const chainToProcess = nonFireChain.length >= chain.length ? chain : nonFireChain;
-      const effectiveKey = chainToProcess[0]?.key ?? chainKey;
-      const length = chainToProcess.length;
-      const workerEffects = computeWorkerEffects(state);
-      const reduce = workerEffects.thresholdReduce?.[effectiveKey] ?? 0;
-
-      // Cross-chain redirect (Grain Trader, Gardener, Orchardist, Farmer):
-      // when a worker has redirected this category, the chain produces a tile
-      // from the target category instead of the species' native `next`. The
-      // redirect threshold supersedes the native threshold.
-      const tileCat = CATEGORY_OF[effectiveKey] ?? null;
-      const redirect = tileCat ? workerEffects.chainRedirect?.[tileCat] : null;
-      let threshold;
-      let upgradeKey;
-      if (redirect) {
-        threshold = Math.max(1, redirect.threshold);
-        // Redirect target = active species in toCategory, fallback to first
-        // default species in that category.
-        const active = state.tileCollection?.activeByCategory?.[redirect.toCategory];
-        upgradeKey = active ?? null;
-      } else {
-        threshold = Math.max(1, (UPGRADE_THRESHOLDS[effectiveKey] ?? Infinity) - reduce);
-        const res = resourceByKey(effectiveKey);
-        upgradeKey = res?.next ?? null;
-      }
-
-      const upgrades = isFinite(threshold) ? Math.floor(length / threshold) : 0;
-      const gained = length - upgrades;
-      const inv = { ...(stateAfterFire.inventory ?? state.inventory) };
-      if (gained > 0) inv[effectiveKey] = (inv[effectiveKey] ?? 0) + gained;
-      if (upgradeKey && upgrades > 0) {
-        inv[upgradeKey] = (inv[upgradeKey] ?? 0) + upgrades;
-      }
-      return { ...stateAfterFire, inventory: inv,
-               coins: (stateAfterFire.coins ?? 0) + fireCoinBonus };
-    }
-
     case "ACTIVATE_RUNE_WILDCARD": {
       if ((state.runeStash ?? 0) < 1) return state;
       return {
@@ -1267,12 +1189,6 @@ function coreReducer(state, action) {
     case "FERTILIZER/CONSUMED": {
       if (!state.fertilizerActive) return state;
       return { ...state, fertilizerActive: false };
-    }
-
-    case "USE_TOOL_BOMB": {
-      if ((state.tools.bomb ?? 0) <= 0) return state;
-      const bombPower = ITEMS.bomb?.power ?? { id: "area_blast", params: { radius: 1 } };
-      return applyToolPower(state, "bomb", bombPower);
     }
 
     case "LOGIN_TICK": {
@@ -1320,7 +1236,7 @@ function coreReducer(state, action) {
       const migCap = currentCap(state);
       const migInv = { ...state.inventory };
       let changed = false;
-      for (const k of [...CAPPED_TILES, ...CAPPED_INVENTORY_RESOURCES]) {
+      for (const k of CAPPED_INVENTORY_RESOURCES) {
         if ((migInv[k] ?? 0) > migCap) {
           migInv[k] = migCap;
           changed = true;
@@ -1365,49 +1281,6 @@ function coreReducer(state, action) {
       }
       if (!changed) return state;
       return { ...state, tileCollection: { ...state.tileCollection, discovered: next } };
-    }
-
-    case "CHAIN_COMMIT": {
-      const { key, length } = action.payload ?? {};
-      if (!key || !length) return state;
-
-      let tcSlice = state.tileCollection ?? defaultTileCollectionSlice();
-      let progress = tcSlice.researchProgress ?? {};
-      let discovered = tcSlice.discovered ?? {};
-      let bubble = state.bubble;
-
-      // 5.5 — research progress
-      for (const t of TILE_TYPES) {
-        if (t.discovery?.method !== "research") continue;
-        if (t.discovery.researchOf !== key) continue;
-        if (discovered[t.id]) continue; // already discovered — no-op
-        const cur = progress[t.id] ?? 0;
-        const next = cur + length;
-        const capped = Math.min(next, t.discovery.researchAmount);
-        progress = { ...progress, [t.id]: capped };
-        if (next >= t.discovery.researchAmount) {
-          discovered = { ...discovered, [t.id]: true };
-          bubble = { id: Date.now() + t.id.length, npc: "wren",
-            text: `New tile type: ${t.displayName}`, ms: 2200 };
-        }
-      }
-
-      // 5.7 — free moves from chaining a free-move tile type
-      const chainedTile = TILE_TYPES_MAP[key];
-      const grant = chainedTile?.effects?.freeMoves ?? 0;
-      let freeMoves = tcSlice.freeMoves ?? 0;
-      if (grant > 0) {
-        freeMoves = freeMoves + grant;
-      }
-      // Conditional "free_turn_after_n" hook: grants extra free moves only
-      // when the chain meets a configured length threshold.
-      const condHook = chainedTile?.effects?.freeMovesIfChain;
-      if (condHook && length >= (condHook.minChain ?? 999)) {
-        freeMoves = freeMoves + (condHook.count ?? 1);
-      }
-
-      tcSlice = { ...tcSlice, researchProgress: progress, discovered, freeMoves };
-      return { ...state, tileCollection: tcSlice, bubble };
     }
 
     case "END_TURN": {
@@ -1484,8 +1357,13 @@ function coreReducer(state, action) {
         return { ...state, almanac: newState.almanac, xp: newState.almanac.xp, level: newState.almanac.level };
       }
       if (action.type === "DEV/ADD_LEVEL") {
-        const next = (state.level ?? 1) + (action.amount ?? 1);
-        return { ...state, level: next, xp: 0 };
+        const bump = action.amount ?? 1;
+        let s = state;
+        for (let i = 0; i < bump; i++) {
+          const { newState } = applyAlmanacXp(s, XP_PER_LEVEL);
+          s = newState;
+        }
+        return { ...s, xp: s.almanac.xp, level: s.almanac.level };
       }
       if (action.type === "DEV/ADD_ALMANAC_XP") {
         const { newState } = applyAlmanacXp(state, action.amount ?? 50);

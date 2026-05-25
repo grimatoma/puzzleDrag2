@@ -14,7 +14,7 @@ describe("Phase 5.7 — Free moves per season", () => {
         activeByCategory: { ...base.tileCollection.activeByCategory, bird: "tile_bird_turkey" },
       },
     };
-    const a1 = rootReducer(a0, { type: "CHAIN_COMMIT", payload: { key: "tile_bird_turkey", length: 3 } });
+    const a1 = rootReducer(a0, { type: "CHAIN_COLLECTED", payload: { key: "tile_bird_turkey", gained: 3, chainLength: 3, upgrades: 0, value: 1 } });
     expect(a1.tileCollection.freeMoves).toBe(2);
   });
 
@@ -27,9 +27,10 @@ describe("Phase 5.7 — Free moves per season", () => {
         activeByCategory: { ...base.tileCollection.activeByCategory, bird: "tile_bird_turkey" },
       },
     };
-    const a1 = rootReducer(a0, { type: "CHAIN_COMMIT", payload: { key: "tile_bird_turkey", length: 3 } });
-    const b1 = rootReducer(a1, { type: "CHAIN_COMMIT", payload: { key: "tile_bird_turkey", length: 5 } });
-    expect(b1.tileCollection.freeMoves).toBe(4);
+    const a1 = rootReducer(a0, { type: "CHAIN_COLLECTED", payload: { key: "tile_bird_turkey", gained: 3, chainLength: 3, upgrades: 0, value: 1 } });
+    const b1 = rootReducer(a1, { type: "CHAIN_COLLECTED", payload: { key: "tile_bird_turkey", gained: 5, chainLength: 5, upgrades: 0, value: 1 } });
+    // Second chain grants +2, then boardTurnPatch consumes one free move for the turn.
+    expect(b1.tileCollection.freeMoves).toBe(3);
   });
 
   it("C: chaining a non-free-move tile type does NOT increment", () => {
@@ -41,7 +42,7 @@ describe("Phase 5.7 — Free moves per season", () => {
         activeByCategory: { ...base.tileCollection.activeByCategory, bird: "tile_bird_turkey" },
       },
     };
-    const c1 = rootReducer(a0, { type: "CHAIN_COMMIT", payload: { key: "tile_grass_hay", length: 12 } });
+    const c1 = rootReducer(a0, { type: "CHAIN_COLLECTED", payload: { key: "tile_grass_hay", gained: 12, chainLength: 12, upgrades: 0, value: 1 } });
     expect(c1.tileCollection.freeMoves).toBe(0);
   });
 
@@ -56,7 +57,7 @@ describe("Phase 5.7 — Free moves per season", () => {
     };
     let d = d0;
     for (let i = 0; i < 5; i++) {
-      d = rootReducer(d, { type: "CHAIN_COMMIT", payload: { key: "tile_grass_hay", length: 6 } });
+      d = rootReducer(d, { type: "CHAIN_COLLECTED", payload: { key: "tile_grass_hay", gained: 6, chainLength: 6, upgrades: 0, value: 1 } });
     }
     expect(d.tileCollection.freeMoves).toBe(0);
   });

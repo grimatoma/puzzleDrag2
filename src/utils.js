@@ -6,6 +6,7 @@ import {
   tileFamily,
 } from "./constants.js";
 import { locBuilt } from "./locBuilt.js";
+import { computeAggregatedAbilities } from "./features/workers/aggregate.js";
 
 export function clamp(n, a, b) {
   return Math.max(a, Math.min(b, n));
@@ -159,6 +160,10 @@ export function seasonIndexForTurns(turns) {
 
 /** Returns the per-resource inventory cap: 500 with Granary, 200 otherwise. */
 export function currentCap(state) {
+  if (!state) return RESOURCE_CAP_BASE;
+  const agg = computeAggregatedAbilities(state);
+  const capBonus = agg.inventoryCapBonus ?? 0;
+  if (capBonus > 0) return RESOURCE_CAP_BASE + capBonus;
   const built = state ? locBuilt(state) : {};
   return (built?.granary || state?.built?.granary) ? RESOURCE_CAP_GRANARY : RESOURCE_CAP_BASE;
 }

@@ -10,7 +10,7 @@
  * §6 wolves spawn: 6% per fillBoard when egg > 30 OR turkey > 5, cap 2.
  */
 
-import { FIRE_HAZARD_ENABLED } from "../../featureFlags.js";
+import { isFireHazardEnabled } from "../../featureFlags.js";
 
 // ─── Hazard metadata (player-facing) ─────────────────────────────────────────
 
@@ -61,7 +61,7 @@ export function rollFarmHazard(state, rng = Math.random, allowedHazards = ["fire
   const wolves = state.hazards?.wolves;
 
   // Fire spawn gate
-  if (FIRE_HAZARD_ENABLED && allowedHazards.includes("fire") && !fire && (rats.length === 0) && !wolves) {
+  if (isFireHazardEnabled() && allowedHazards.includes("fire") && !fire && (rats.length === 0) && !wolves) {
     if ((fire?.cells?.length ?? 0) < FIRE_MAX_CELLS) {
       if (rng() < FIRE_SPAWN_RATE) {
         const grid = state.grid;

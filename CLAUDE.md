@@ -16,7 +16,7 @@ Phaser 3 + React game. **React owns state** — `useReducer` in `prototype.jsx`,
 | Bug in drag/animation/board layout | `src/GameScene.js`, `src/phaserBridge.js` | `phaser-scene-debug` skill |
 | New feature panel (HUD, modal, screen) | `src/features/<name>/index.jsx` + `slice.js` | auto-discovered via `import.meta.glob` in `src/ui.jsx` |
 | New view or modal route | `src/router.js` (`KNOWN_VIEWS` / `KNOWN_MODALS`) | navigate via hash `#/view[/sub]` |
-| Tune balance values | `src/constants.js` (`UPGRADE_THRESHOLDS`, `MINE_ENTRY_TIERS`, `DAILY_REWARDS`) | Dev Panel at `/b/` |
+| Tune balance values | `src/constants.js` (`UPGRADE_THRESHOLDS`, `ZONES[].entryCost`, `DAILY_REWARDS`) | Dev Panel at `/b/` |
 | Story beat content | `src/story.js`, `src/features/story/slice.js`, `src/state/storyEffects.js` | Story Editor at `/story/` |
 | Dispatched action silently does nothing | `SLICE_PRIMARY_ACTIONS` / `ALWAYS_RUN_SLICES` in `src/state.js` | `check-slice-action` skill |
 | Persisted save shape changed | bump `SAVE_SCHEMA_VERSION` in `src/constants.js` | reducer discards mismatched saves |
@@ -68,7 +68,7 @@ This is a Phaser 3 + React game. React owns the page shell *and* the canonical g
 - `src/GameScene.js` — Phaser scene: board rendering, drag input, animations, collapse pipeline. Reads from the bridge; dispatches actions back to the reducer. Board origin is computed dynamically each layout (`this.boardX = Math.round((vw - COLS * this.tileSize) / 2)`).
 - `src/TileObj.js` — thin wrapper around a single board tile; sprite swap and pulse animation on selection.
 - `src/textures.js` + `src/textures/categories/` — procedural texture generation (Canvas 2D). 16 category modules plus `iconRegistry.js` register textures into Phaser's cache at scene init. No external image assets.
-- `src/constants.js` — board dims (`COLS = 6, ROWS = 6`), per-resource `UPGRADE_THRESHOLDS` (5–10 range, e.g. `grass_hay: 6`, `mount_horse: 10`), turn/season rules, three biomes (Farm, Mine, Fish/Harbor — fish is a basic chain biome with no tide/pearl mechanics yet; see `docs/FISH_BOARD_SCOPE.md`), `MINE_ENTRY_TIERS`, `DAILY_REWARDS`, season color schemes.
+- `src/constants.js` — board dims (`COLS = 6, ROWS = 6`), per-resource `UPGRADE_THRESHOLDS` (5–10 range), turn/season rules, three biomes (Farm, Mine, Fish/Harbor — fish tides and pearl capture live in `src/features/fish/slice.js`), zone `entryCost`, `DAILY_REWARDS`, season color schemes.
 - `src/utils.js` — pure helpers: `upgradeCountForChain` (returns `floor(chainLength / threshold)`), color converters, `clamp`, and the `runSelfTests` smoke shim.
 - `src/audio/` — WebAudio engine + `useAudio` hook.
 - `src/a11y.js` — screen-reader announcements + keyboard navigation.
@@ -76,7 +76,7 @@ This is a Phaser 3 + React game. React owns the page shell *and* the canonical g
 - `src/smokeTests.js` — `SMOKE_INVARIANTS` smoke set used by `runSelfTests()`.
 - `tests/` + `src/__tests__/` — vitest suites (phase-* files at the top level, per-feature suites under `src/__tests__/`).
 
-**Core game mechanic:** Player drags adjacent matching tiles into a chain. Minimum chain length varies by season/boss (Winter min = 5; default 3). Each resource has its own threshold in `UPGRADE_THRESHOLDS`; `upgradeCountForChain` returns `floor(chainLength / threshold)` upgrades, which are spawned into the next-tier resource before the chain is collected. The board collapses downward after each move. 10 turns per season, 4 seasons. Mine biome unlocks at level 2; entry costs come from `MINE_ENTRY_TIERS` (free / `100◉ + 10 shovels` / `2 runes`). Mysterious Ore (mine) opens a 5-turn countdown that grants a Rune if chained with ≥2 dirt before it expires.
+**Core game mechanic:** Player drags adjacent matching tiles into a chain. Minimum chain length is 3 by default; active bosses may raise it via `boss.minChain`. Chains credit **resource keys** through `state.resourceProgress` (fractional progress per `UPGRADE_THRESHOLDS`) and spawn board upgrade tiles via zone `upgradeMap`. The board collapses downward after each move. 10 turns per season, 4 seasons. Mine unlocks at level 2 (`canEnterBiome` in `src/state/biomeAccess.js`); expedition entry costs come from `ZONES[].entryCost`. Mysterious Ore (mine) opens a 5-turn countdown that grants a Rune if chained with ≥2 dirt before it expires.
 
 **Texture pipeline:** All tile icons, season badges, and UI decorations are drawn once at scene init into Phaser's texture cache via `src/textures.js` and the modules in `src/textures/categories/`. When adding a new resource type, register its texture there and add its definition to `src/constants.js`. The `resource-add` skill walks through the full multi-file pipeline.
 
@@ -106,7 +106,7 @@ The game has three disjoint item kinds in `ITEMS` (`src/constants.js`), discrimi
 - `BIOMES[*].resources` (`src/constants.js`) contains both kinds — the dynamic builder filters by `biome`, not `kind`. Three `resourceByKey` helpers depend on this.
 - `CAPPED_RESOURCES` (`src/constants.js`) mixes tile and resource keys under one inventory cap.
 - Several recipes (`src/constants.js` RECIPES) consume `tile_*` keys as inputs; several building costs do the same.
-- `LONG_CHAIN_BONUSES` (`src/features/tileCollection/longChainBonus.js`) awards tile keys directly into inventory.
+- Legacy tile-key inventory bonuses are removed; use resource keys and `resourceProgress` only.
 - Order generation in `src/state/helpers.js` (`makeOrder`) draws from `biome.pool` (tile keys) rather than a resource-only pool.
 
 These are tracked for PR 4 cleanup. **Do not introduce new conflations** — if you're adding a recipe, building cost, or bonus, the input/cost/payout should be a resource key, not a tile key. Use `assertResource(key)` at any new write site that's supposed to receive a resource so regressions throw in dev.
@@ -140,7 +140,7 @@ Three layered ways to land on the exact screen you want to verify, without click
 - `window.__phaserScene` — direct handle to the live `GameScene` (`grid`, `registry`, `tweens`, etc.) for ad-hoc inspection.
 
 **Quieting auto-modals.** Tutorials, season prompts, and story beats can pop on top of the screen you're verifying. Suppress them via `isDialogsDisabled()` in `src/featureFlags.js`:
-- Console: `localStorage.setItem("hearth.disableDialogs", "1")` (persists across reloads).
+- Console: `localStorage.setItem("hearth.disableDialogs", "1")` to suppress (dialogs are on by default).
 - Test fixtures: `window.__HEARTH_DISABLE_DIALOGS__ = true` before first render (Playwright sets this via `page.addInitScript`).
 
 **Resetting state.** The save lives at `localStorage["hearth.save.v1"]` (`STORAGE_KEYS.save`). `localStorage.removeItem("hearth.save.v1")` forces a fresh start; the reducer also discards saves whose `version` mismatches `SAVE_SCHEMA_VERSION`. Other keys: `hearth.settings`, `hearth.tutorial.seen`, `hearth.disableDialogs`.

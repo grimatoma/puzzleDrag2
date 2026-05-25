@@ -465,6 +465,9 @@ export function sanitizeTuning(o) {
   }
   if (Number.isFinite(Number(o.foundingGrowth)) && Number(o.foundingGrowth) > 0) out.foundingGrowth = Number(o.foundingGrowth);
   if (typeof o.homeBiome === "string" && o.homeBiome.length > 0) out.homeBiome = o.homeBiome;
+  if (o.fireHazardEnabled === true || o.fireHazardEnabled === false) {
+    out.fireHazardEnabled = o.fireHazardEnabled;
+  }
   return out;
 }
 

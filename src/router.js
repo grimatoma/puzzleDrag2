@@ -43,14 +43,14 @@ export const KNOWN_VIEWS = new Set([
   "recipeWiki",
 ]);
 
-// Modals that are reachable via the URL. The transient `season` modal is
-// intentionally excluded — it's gated by gameplay state, not navigation, and
-// linking directly to it would put the player in an invalid run.
+// Modals that are reachable via the URL.
+// Excluded from deep links (gameplay-gated only): `season`, `leaveBoard`, `runSummary`.
 export const KNOWN_MODALS = new Set([
   "menu",
   "boss",
   "tutorial",
   "debug",
+  "festivals",
 ]);
 
 // Short alias used in URLs in place of the longer camelCase view key.

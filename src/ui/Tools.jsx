@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { getPhaserScene } from "../phaserBridge.js";
 import IconCanvas from "./IconCanvas.jsx";
 import ToolStrip from "./primitives/ToolStrip.jsx";
 import BottomSheet from "./primitives/BottomSheet.jsx";
@@ -98,7 +97,10 @@ function dispatchUseTool(dispatch, key, state) {
   } else {
     dispatch({ type: "USE_TOOL", key });
   }
-  if (key === "shuffle") getPhaserScene()?.shuffleBoard();
+  if (key === "shuffle") {
+    dispatch({ type: "USE_TOOL", payload: { id: "shuffle" } });
+    return;
+  }
 }
 
 export function ToolsGrid({ tools, toolPending, fertilizerActive, onUse, onInspectChange }) {
