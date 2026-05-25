@@ -1,6 +1,6 @@
 // Herd animals (pigs, sheep, goats, alpacas, rams).
 
-function shadow(ctx, w) {
+function shadow(ctx: CanvasRenderingContext2D, w: number) {
   ctx.fillStyle = "rgba(0,0,0,0.3)";
   ctx.beginPath(); ctx.ellipse(2, 22, w, 4.5, 0, 0, Math.PI*2); ctx.fill();
 }
@@ -62,9 +62,9 @@ function woolBody(ctx: CanvasRenderingContext2D, woolC1: string, woolC2: string,
   fluff(0, 10, 6); fluff(-12, 0, 6);
 }
 
-function drawPig(ctx) { shadow(ctx, 22); pigBase(ctx, "#ffd0d8", "#e88a98", "#3a1820"); }
+function drawPig(ctx: CanvasRenderingContext2D) { shadow(ctx, 22); pigBase(ctx, "#ffd0d8", "#e88a98", "#3a1820"); }
 
-function drawHog(ctx) {
+function drawHog(ctx: CanvasRenderingContext2D) {
   shadow(ctx, 22);
   pigBase(ctx, "#a87838", "#5a3a14", "#1a0e04");
   // Bristles on back
@@ -75,7 +75,7 @@ function drawHog(ctx) {
   }
 }
 
-function drawBoar(ctx) {
+function drawBoar(ctx: CanvasRenderingContext2D) {
   shadow(ctx, 22);
   pigBase(ctx, "#4a3818", "#241408", "#0a0604");
   // Tusks
@@ -93,7 +93,7 @@ function drawBoar(ctx) {
   ctx.fillStyle = "#d83a18"; ctx.beginPath(); ctx.arc(-13, -2, 1.0, 0, Math.PI*2); ctx.fill();
 }
 
-function drawWarthog(ctx) {
+function drawWarthog(ctx: CanvasRenderingContext2D) {
   shadow(ctx, 22);
   pigBase(ctx, "#5a4828", "#2a1a08", "#0a0604");
   // Mane — a continuous shaggy ridge running along the back, NOT a row of
@@ -137,7 +137,7 @@ function drawWarthog(ctx) {
   ctx.beginPath(); ctx.arc(-11, 4, 1.2, 0, Math.PI * 2); ctx.fill();
 }
 
-function drawSheep(ctx) {
+function drawSheep(ctx: CanvasRenderingContext2D) {
   shadow(ctx, 22);
   // Legs (dark slim) — drawn first so the wool sits on top
   ctx.fillStyle = "#2a1a18"; ctx.strokeStyle = "#0a0604"; ctx.lineWidth = 0.8;
@@ -187,7 +187,7 @@ function drawSheep(ctx) {
   ctx.beginPath(); ctx.arc(-13.6, -2.4, 0.3, 0, Math.PI*2); ctx.fill();
 }
 
-function drawAlpaca(ctx) {
+function drawAlpaca(ctx: CanvasRenderingContext2D) {
   shadow(ctx, 18);
   const wool = "#f5e6c8";
   const wool2 = "#c69a55";
@@ -265,7 +265,7 @@ function drawAlpaca(ctx) {
   ctx.beginPath(); ctx.arc(-10.7, -16.2, 0.3, 0, Math.PI*2); ctx.fill();
 }
 
-function drawGoat(ctx) {
+function drawGoat(ctx: CanvasRenderingContext2D) {
   shadow(ctx, 20);
   // Legs
   ctx.fillStyle = "#a89878";
@@ -302,7 +302,7 @@ function drawGoat(ctx) {
   ctx.fillStyle = "#0a0e04"; ctx.beginPath(); ctx.arc(-17, 0, 1.0, 0, Math.PI*2); ctx.fill();
 }
 
-function drawRam(ctx) {
+function drawRam(ctx: CanvasRenderingContext2D) {
   shadow(ctx, 22);
   const stroke = "#2a1808";
 
@@ -326,7 +326,7 @@ function drawRam(ctx) {
   // Curled horns — drawn as filled spirals using stacked arcs from outside in.
   // Each horn is anchored at the side of the head and spirals back into a
   // tighter centre, with a darker outline so the silhouette reads.
-  const drawHorn = (ax, ay, mirror) => {
+  const drawHorn = (ax: number, ay: number, mirror: boolean) => {
     ctx.save();
     ctx.translate(ax, ay);
     if (mirror) ctx.scale(-1, 1);

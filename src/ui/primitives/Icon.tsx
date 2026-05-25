@@ -2,23 +2,23 @@ import { useEffect, useRef } from "react";
 import { iconColor, iconLabel } from "../../textures/iconRegistry.js";
 import { paintIcon } from "../../textures/paintIcon.js";
 
-const SVG_REGISTRY = {};
-const WARNED = new Set();
+const SVG_REGISTRY: Record<string, any> = {};
+const WARNED = new Set<string>();
 
-export function registerSvgIcons(map) {
+export function registerSvgIcons(map: any) {
   if (!map || typeof map !== "object") return;
   for (const key of Object.keys(map)) {
     if (typeof map[key] === "function") SVG_REGISTRY[key] = map[key];
   }
 }
 
-export function hasIcon(key) {
+export function hasIcon(key: any) {
   if (!key) return false;
   if (SVG_REGISTRY[key]) return true;
   return iconColor(key) !== null;
 }
 
-const TONE_FILTER = {
+const TONE_FILTER: Record<string, string | undefined> = {
   inherit: undefined,
   muted:   "grayscale(0.6) opacity(0.7)",
   ember:   "sepia(1) saturate(4) hue-rotate(-25deg)",
@@ -26,7 +26,7 @@ const TONE_FILTER = {
   moss:    "sepia(1) saturate(3) hue-rotate(40deg) brightness(0.95)",
 };
 
-const TONE_FILL = {
+const TONE_FILL: Record<string, string> = {
   inherit: "currentColor",
   muted:   "var(--ink-light)",
   ember:   "var(--ember)",
@@ -34,14 +34,14 @@ const TONE_FILL = {
   moss:    "var(--moss)",
 };
 
-function placeholderLetter(key) {
+function placeholderLetter(key: any) {
   if (!key) return "?";
   const idx = key.indexOf("_");
   const seg = idx >= 0 ? key.slice(idx + 1) : key;
   return (seg.charAt(0) || "?").toUpperCase();
 }
 
-function labelForKey(key) {
+function labelForKey(key: any) {
   const fromRegistry = iconLabel(key);
   if (fromRegistry) return fromRegistry;
   if (!key) return "";
@@ -50,8 +50,8 @@ function labelForKey(key) {
   return seg.charAt(0).toUpperCase() + seg.slice(1);
 }
 
-function CanvasIcon({ iconKey, size, tone, title }) {
-  const ref = useRef(null);
+function CanvasIcon({ iconKey, size, tone, title }: { iconKey: any; size: any; tone: any; title?: any }) {
+  const ref = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
     const canvas = ref.current;
@@ -89,7 +89,7 @@ function CanvasIcon({ iconKey, size, tone, title }) {
   );
 }
 
-function Placeholder({ iconKey, size, title }) {
+function Placeholder({ iconKey, size, title }: { iconKey: any; size: any; title?: any }) {
   const letter = placeholderLetter(iconKey);
   return (
     <span
@@ -110,7 +110,7 @@ function Placeholder({ iconKey, size, title }) {
   );
 }
 
-export default function Icon({ iconKey, size = 20, tone = "inherit", title }) {
+export default function Icon({ iconKey, size = 20, tone = "inherit", title }: { iconKey: any; size?: number; tone?: string; title?: any }) {
   const label = title != null ? title : labelForKey(iconKey);
 
   const svgRender = SVG_REGISTRY[iconKey];

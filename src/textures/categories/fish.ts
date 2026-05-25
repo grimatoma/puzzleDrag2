@@ -3,7 +3,7 @@
 // simple silhouettes that read on a 48px tile; tide / pearl visuals
 // arrive when the tide-cycle MVP lands.
 
-function shadow(ctx, w) {
+function shadow(ctx: CanvasRenderingContext2D, w: number) {
   ctx.fillStyle = "rgba(0,0,0,0.28)";
   ctx.beginPath();
   ctx.ellipse(0, 22, w, 4, 0, 0, Math.PI * 2);

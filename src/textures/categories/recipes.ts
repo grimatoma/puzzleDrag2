@@ -1,6 +1,6 @@
 // Recipes icons (crafted items that don't fall into other categories)
 
-function rr(ctx, x, y, w, h, r) {
+function rr(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
   ctx.beginPath();
   ctx.moveTo(x + r, y);
   ctx.arcTo(x + w, y, x + w, y + h, r);
@@ -10,14 +10,14 @@ function rr(ctx, x, y, w, h, r) {
   ctx.closePath();
 }
 
-function drawShadow(ctx, w = 20, h = 4) {
+function drawShadow(ctx: CanvasRenderingContext2D, w = 20, h = 4) {
   ctx.fillStyle = "rgba(0,0,0,0.22)";
   ctx.beginPath();
   ctx.ellipse(0, 22, w, h, 0, 0, Math.PI * 2);
   ctx.fill();
 }
 
-function drawWaterPump(ctx) {
+function drawWaterPump(ctx: CanvasRenderingContext2D) {
   drawShadow(ctx, 18, 4);
   ctx.fillStyle = "#3a2a18";
   rr(ctx, -14, 14, 28, 6, 1.5);
@@ -103,7 +103,7 @@ function drawWaterPump(ctx) {
   ctx.fill();
 }
 
-function drawExplosives(ctx) {
+function drawExplosives(ctx: CanvasRenderingContext2D) {
   drawShadow(ctx, 18, 4);
   const sticks = [
     { x: -7, y: 4, rot: -0.18 },
@@ -195,7 +195,7 @@ function drawExplosives(ctx) {
   ctx.fill();
 }
 
-function drawHoneyroll(ctx) {
+function drawHoneyroll(ctx: CanvasRenderingContext2D) {
   drawShadow(ctx, 18, 4);
   const ringGrad = ctx.createRadialGradient(-4, -4, 2, 0, 0, 22);
   ringGrad.addColorStop(0, "#fff0a8");
@@ -265,7 +265,7 @@ function drawHoneyroll(ctx) {
   ctx.fill();
 }
 
-function drawHarvestpie(ctx) {
+function drawHarvestpie(ctx: CanvasRenderingContext2D) {
   drawShadow(ctx, 22, 4);
   ctx.fillStyle = "#9a8870";
   ctx.beginPath();
@@ -347,7 +347,7 @@ function drawHarvestpie(ctx) {
   });
 }
 
-function drawPreserve(ctx) {
+function drawPreserve(ctx: CanvasRenderingContext2D) {
   drawShadow(ctx, 16, 4);
   const jarGrad = ctx.createLinearGradient(-10, 0, 10, 0);
   jarGrad.addColorStop(0, "rgba(232,232,240,0.7)");
@@ -445,7 +445,7 @@ function drawPreserve(ctx) {
   ctx.stroke();
 }
 
-function drawTincture(ctx) {
+function drawTincture(ctx: CanvasRenderingContext2D) {
   drawShadow(ctx, 14, 4);
   const halo = ctx.createRadialGradient(0, 6, 2, 0, 6, 22);
   halo.addColorStop(0, "rgba(160,220,80,0.55)");
@@ -551,7 +551,7 @@ function drawTincture(ctx) {
   ctx.fill();
 }
 
-function drawIronHinge(ctx) {
+function drawIronHinge(ctx: CanvasRenderingContext2D) {
   drawShadow(ctx, 18, 4);
   const plateGrad = ctx.createLinearGradient(0, -10, 0, 10);
   plateGrad.addColorStop(0, "#b0bac4");
@@ -635,7 +635,7 @@ function drawIronHinge(ctx) {
   ctx.fill();
 }
 
-function drawIronframe(ctx) {
+function drawIronframe(ctx: CanvasRenderingContext2D) {
   drawShadow(ctx, 20, 4);
   const barGrad = ctx.createLinearGradient(0, -14, 0, 14);
   barGrad.addColorStop(0, "#a8b4c0");
@@ -720,7 +720,7 @@ function drawIronframe(ctx) {
   ctx.fill();
 }
 
-function drawCobblepath(ctx) {
+function drawCobblepath(ctx: CanvasRenderingContext2D) {
   drawShadow(ctx, 22, 4);
   ctx.fillStyle = "#2a2418";
   rr(ctx, -22, -14, 44, 32, 3);
@@ -773,7 +773,7 @@ function drawCobblepath(ctx) {
   });
 }
 
-function drawGoldring(ctx) {
+function drawGoldring(ctx: CanvasRenderingContext2D) {
   drawShadow(ctx, 16, 4);
   ctx.save();
   ctx.rotate(-0.5);
@@ -868,7 +868,7 @@ function drawGoldring(ctx) {
   ctx.fill();
 }
 
-function drawGemcrown(ctx) {
+function drawGemcrown(ctx: CanvasRenderingContext2D) {
   drawShadow(ctx, 20, 4);
   ctx.fillStyle = "#7a1c2a";
   rr(ctx, -16, 8, 32, 6, 1);
@@ -1030,7 +1030,7 @@ function drawGemcrown(ctx) {
   ctx.fill();
 }
 
-function drawStonework(ctx) {
+function drawStonework(ctx: CanvasRenderingContext2D) {
   drawShadow(ctx, 22, 4);
   const blocks = [
     { x: -16, y: 10, w: 16, h: 9, light: 0 },
@@ -1102,7 +1102,7 @@ function drawStonework(ctx) {
   ctx.fill();
 }
 
-function drawChowder(ctx) {
+function drawChowder(ctx: CanvasRenderingContext2D) {
   drawShadow(ctx, 22, 4);
   const bowlGrad = ctx.createLinearGradient(0, -4, 0, 18);
   bowlGrad.addColorStop(0, "#c8d4dc");
@@ -1211,7 +1211,7 @@ function drawChowder(ctx) {
   ctx.restore();
 }
 
-function drawFishOilBottled(ctx) {
+function drawFishOilBottled(ctx: CanvasRenderingContext2D) {
   drawShadow(ctx, 14, 4);
   const glassGrad = ctx.createLinearGradient(-8, 0, 8, 0);
   glassGrad.addColorStop(0, "rgba(240,236,220,0.75)");
@@ -1322,7 +1322,7 @@ function drawFishOilBottled(ctx) {
   ctx.fillText("FO", 9.5, 6);
 }
 
-function drawLantern(ctx) {
+function drawLantern(ctx: CanvasRenderingContext2D) {
   // Handle
   ctx.strokeStyle = "#3a3a40";
   ctx.lineWidth = 2;

@@ -5,21 +5,21 @@ import TabBar, { Tab } from "./ui/primitives/TabBar.jsx";
 // fallback inside that feature's slot and dispatches CLOSE_MODAL so the
 // player can navigate away — the rest of the app (HUD, board, other panels)
 // keeps working. Resets when the active feature changes.
-class FeatureErrorBoundary extends React.Component {
-  constructor(props) {
+class FeatureErrorBoundary extends React.Component<{ featureKey: any; children: any }, { error: any }> {
+  constructor(props: { featureKey: any; children: any }) {
     super(props);
     this.state = { error: null };
   }
-  static getDerivedStateFromError(error) { return { error }; }
-  componentDidCatch(error, info) {
+  static getDerivedStateFromError(error: any) { return { error }; }
+  override componentDidCatch(error: any, info: any) {
     console.error(`[hearth] feature "${this.props.featureKey}" crashed:`, error, info?.componentStack);
   }
-  componentDidUpdate(prev) {
+  override componentDidUpdate(prev: any) {
     if (prev.featureKey !== this.props.featureKey && this.state.error) {
       this.setState({ error: null });
     }
   }
-  render() {
+  override render() {
     if (this.state.error) {
       return (
         <div className="hl-card m-4">
@@ -34,15 +34,15 @@ class FeatureErrorBoundary extends React.Component {
 
 // ─── Bottom nav ───────────────────────────────────────────────────────────
 
-export function BottomNav({ view, dispatch, state }) {
+export function BottomNav({ view, dispatch, state }: { view: any; dispatch: any; state: any }) {
   const orders = state?.orders ?? [];
   const inventory = state?.inventory ?? {};
-  const ordersReady = orders.filter((o) => (inventory[o.key] ?? 0) >= o.need).length;
+  const ordersReady = orders.filter((o: any) => (inventory[o.key] ?? 0) >= o.need).length;
   const ordersBadge = ordersReady > 0 ? { count: ordersReady, tone: "moss" } : undefined;
   return (
     <TabBar
       current={view}
-      onSelect={(key) => dispatch({ type: "SET_VIEW", view: key })}
+      onSelect={(key: any) => dispatch({ type: "SET_VIEW", view: key })}
     >
       <Tab itemKey="town" iconKey="ui_star" label="Town" />
       <Tab itemKey="inventory" iconKey="ui_inventory" label="Inventory" badge={ordersBadge} />
@@ -60,15 +60,15 @@ export function BottomNav({ view, dispatch, state }) {
 //   - modalKey?: string — if set, mounts as a modal when state.modal === modalKey
 // Vite's import.meta.glob with eager: true resolves at build time.
 
-const featureModules = import.meta.glob("./features/*/index.jsx", { eager: true });
-const FEATURES = Object.values(featureModules).map((m) => ({
-  Component: m.default,
-  viewKey: m.viewKey,
-  modalKey: m.modalKey,
-  alwaysMounted: !!m.alwaysMounted,
+const featureModules = import.meta.glob("./features/*/index.{jsx,tsx}", { eager: true });
+const FEATURES = Object.values(featureModules).map((m: any) => ({
+  Component: (m as any).default,
+  viewKey: (m as any).viewKey,
+  modalKey: (m as any).modalKey,
+  alwaysMounted: !!(m as any).alwaysMounted,
 }));
 
-export function FeatureModals({ state, dispatch }) {
+export function FeatureModals({ state, dispatch }: { state: any; dispatch: any }) {
   // Always-mounted features manage their own visibility internally
   const alwaysFeatures = FEATURES.filter(f => f.alwaysMounted);
 
@@ -91,16 +91,20 @@ export function FeatureModals({ state, dispatch }) {
           </FeatureErrorBoundary>
         );
       })}
-      {modalFeature && (
-        <FeatureErrorBoundary featureKey={modalFeature.modalKey}>
-          <modalFeature.Component state={state} dispatch={dispatch} />
-        </FeatureErrorBoundary>
-      )}
+      {modalFeature && (() => {
+        const MF = (modalFeature as any);
+        const MFC = MF.Component;
+        return (
+          <FeatureErrorBoundary featureKey={MF.modalKey}>
+            <MFC state={state} dispatch={dispatch} />
+          </FeatureErrorBoundary>
+        );
+      })()}
     </>
   );
 }
 
-export function FeatureScreens({ state, dispatch, inventorySearchOpen, onInventorySearchToggle, viewDirection = "up" }) {
+export function FeatureScreens({ state, dispatch, inventorySearchOpen, onInventorySearchToggle, viewDirection = "up" }: { state: any; dispatch: any; inventorySearchOpen: any; onInventorySearchToggle: any; viewDirection?: string }) {
   if (state.view === "board" || state.view === "town") return null;
   for (const f of FEATURES) {
     if (f.viewKey && state.view === f.viewKey) {

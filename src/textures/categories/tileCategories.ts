@@ -2,14 +2,14 @@
 // small (~24-40px) badges shown in the tile collection screen tab strip,
 // so silhouettes are kept simple and readable at low resolutions.
 
-function drawShadow(ctx, w = 18, h = 3) {
+function drawShadow(ctx: CanvasRenderingContext2D, w = 18, h = 3) {
   ctx.fillStyle = "rgba(0,0,0,0.20)";
   ctx.beginPath();
   ctx.ellipse(0, 22, w, h, 0, 0, Math.PI * 2);
   ctx.fill();
 }
 
-function drawCatGrass(ctx) {
+function drawCatGrass(ctx: CanvasRenderingContext2D) {
   drawShadow(ctx, 18, 3);
   // Three blades + flower
   ctx.strokeStyle = "#2a4810";
@@ -43,7 +43,7 @@ function drawCatGrass(ctx) {
   ctx.fill();
 }
 
-function drawCatGrain(ctx) {
+function drawCatGrain(ctx: CanvasRenderingContext2D) {
   drawShadow(ctx, 16, 3);
   // Stalk
   ctx.strokeStyle = "#7a5018";
@@ -89,7 +89,7 @@ function drawCatGrain(ctx) {
   }
 }
 
-function drawCatWood(ctx) {
+function drawCatWood(ctx: CanvasRenderingContext2D) {
   drawShadow(ctx, 22, 4);
   // Log cross-section + standing log
   // Standing log
@@ -130,7 +130,7 @@ function drawCatWood(ctx) {
   });
 }
 
-function drawCatBerry(ctx) {
+function drawCatBerry(ctx: CanvasRenderingContext2D) {
   drawShadow(ctx, 18, 3);
   // Stem
   ctx.strokeStyle = "#3a6014";
@@ -176,7 +176,7 @@ function drawCatBerry(ctx) {
   });
 }
 
-function drawCatBird(ctx) {
+function drawCatBird(ctx: CanvasRenderingContext2D) {
   drawShadow(ctx, 16, 3);
   // Stylised perched songbird so the category badge actually shows a *bird*
   // (was previously an egg in a nest, which collided with cat_eggs etc).
@@ -278,7 +278,7 @@ function drawCatBird(ctx) {
   });
 }
 
-function drawCatVegetables(ctx) {
+function drawCatVegetables(ctx: CanvasRenderingContext2D) {
   drawShadow(ctx, 18, 3);
   // Carrot leaning right
   ctx.save();
@@ -330,7 +330,7 @@ function drawCatVegetables(ctx) {
   });
 }
 
-function drawCatFruits(ctx) {
+function drawCatFruits(ctx: CanvasRenderingContext2D) {
   drawShadow(ctx, 18, 3);
   // Apple (centered)
   const grad = ctx.createRadialGradient(-4, -6, 1, 0, 0, 16);
@@ -381,7 +381,7 @@ function drawCatFruits(ctx) {
   ctx.stroke();
 }
 
-function drawCatFlowers(ctx) {
+function drawCatFlowers(ctx: CanvasRenderingContext2D) {
   drawShadow(ctx, 16, 3);
   // Stem
   ctx.strokeStyle = "#3a6014";
@@ -431,7 +431,7 @@ function drawCatFlowers(ctx) {
   });
 }
 
-function drawCatTrees(ctx) {
+function drawCatTrees(ctx: CanvasRenderingContext2D) {
   drawShadow(ctx, 22, 4);
   // Trunk
   ctx.fillStyle = "#5a3a14";
@@ -494,7 +494,7 @@ function drawCatTrees(ctx) {
   ctx.stroke();
 }
 
-function drawCatHerd(ctx) {
+function drawCatHerd(ctx: CanvasRenderingContext2D) {
   drawShadow(ctx, 22, 4);
   // Sheep silhouette — wooly cloud body
   ctx.fillStyle = "#fffae0";
@@ -545,7 +545,7 @@ function drawCatHerd(ctx) {
   }
 }
 
-function drawCatCattle(ctx) {
+function drawCatCattle(ctx: CanvasRenderingContext2D) {
   drawShadow(ctx, 22, 4);
   // Cow body
   ctx.fillStyle = "#fffae0";
@@ -632,7 +632,7 @@ function drawCatCattle(ctx) {
   ctx.fill();
 }
 
-function drawCatMounts(ctx) {
+function drawCatMounts(ctx: CanvasRenderingContext2D) {
   drawShadow(ctx, 22, 4);
   // Horse silhouette
   ctx.fillStyle = "#a86838";

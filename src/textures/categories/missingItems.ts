@@ -12,7 +12,7 @@
 //   - sea_shells    (fish resource, small shell pair)
 //   - pearls        (fish resource, lustrous pearl trio)
 
-function rr(ctx, x, y, w, h, r) {
+function rr(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
   ctx.beginPath();
   ctx.moveTo(x + r, y);
   ctx.arcTo(x + w, y, x + w, y + h, r);
@@ -22,7 +22,7 @@ function rr(ctx, x, y, w, h, r) {
   ctx.closePath();
 }
 
-function drawShadow(ctx, w = 20, h = 4) {
+function drawShadow(ctx: CanvasRenderingContext2D, w = 20, h = 4) {
   ctx.fillStyle = "rgba(0,0,0,0.22)";
   ctx.beginPath();
   ctx.ellipse(0, 22, w, h, 0, 0, Math.PI * 2);
@@ -30,7 +30,7 @@ function drawShadow(ctx, w = 20, h = 4) {
 }
 
 // ── scythe_full — the upgraded scythe (full crescent blade) ────────────────
-function drawScytheFull(ctx) {
+function drawScytheFull(ctx: CanvasRenderingContext2D) {
   drawShadow(ctx, 20, 4);
   // Wooden snath (handle) — slightly diagonal, with grip wraps
   ctx.save();
@@ -103,7 +103,7 @@ function drawScytheFull(ctx) {
 }
 
 // ── iron_pick — upgraded pickaxe with iron head ───────────────────────────
-function drawIronPick(ctx) {
+function drawIronPick(ctx: CanvasRenderingContext2D) {
   drawShadow(ctx, 20, 4);
   // Wooden handle (diagonal)
   ctx.save();
@@ -187,7 +187,7 @@ function drawIronPick(ctx) {
 }
 
 // ── stone_hammer — chunky stone-headed maul ───────────────────────────────
-function drawStoneHammer(ctx) {
+function drawStoneHammer(ctx: CanvasRenderingContext2D) {
   drawShadow(ctx, 18, 4);
   // Handle (diagonal up-left to down-right)
   ctx.save();
@@ -275,7 +275,7 @@ function drawStoneHammer(ctx) {
 }
 
 // ── iron_ration — hard-tack ration block w/ stamped insignia ──────────────
-function drawIronRation(ctx) {
+function drawIronRation(ctx: CanvasRenderingContext2D) {
   drawShadow(ctx, 18, 4);
   // Wrapper underlay (parchment)
   ctx.fillStyle = "#d4c08a";
@@ -350,7 +350,7 @@ function drawIronRation(ctx) {
 }
 
 // ── supplies — simple supply bundle (sack + lashed crate corner + apple) ──
-function drawSupplies(ctx) {
+function drawSupplies(ctx: CanvasRenderingContext2D) {
   drawShadow(ctx, 22, 4);
 
   // Crate corner peeking out behind sack
@@ -464,7 +464,7 @@ function drawSupplies(ctx) {
 }
 
 // ── hay_bundle — round bale of hay tied with twine ────────────────────────
-function drawHayBundle(ctx) {
+function drawHayBundle(ctx: CanvasRenderingContext2D) {
   drawShadow(ctx, 22, 4);
   // Hay bale body (circular cross-section)
   const grad = ctx.createRadialGradient(-4, -4, 4, 0, 0, 22);
@@ -513,7 +513,7 @@ function drawHayBundle(ctx) {
 }
 
 // ── ingot helper — generic metal bar with custom palette ──────────────────
-function drawIngotWithColors(ctx, top, mid, dark, edgeLight) {
+function drawIngotWithColors(ctx: CanvasRenderingContext2D, top: string, mid: string, dark: string, edgeLight: string) {
   drawShadow(ctx, 22, 4);
   // Trapezoid bar (wider at bottom)
   const grad = ctx.createLinearGradient(0, -8, 0, 12);
@@ -561,20 +561,20 @@ function drawIngotWithColors(ctx, top, mid, dark, edgeLight) {
   ctx.fill();
 }
 
-function drawIronBar(ctx) {
+function drawIronBar(ctx: CanvasRenderingContext2D) {
   drawIngotWithColors(ctx, "#e0e4e8", "#8a8e94", "#3a3e44", "#cfd4d9");
 }
 
-function drawCopperBar(ctx) {
+function drawCopperBar(ctx: CanvasRenderingContext2D) {
   drawIngotWithColors(ctx, "#f0b878", "#c97f3c", "#6a3e18", "#e09858");
 }
 
-function drawGoldBar(ctx) {
+function drawGoldBar(ctx: CanvasRenderingContext2D) {
   drawIngotWithColors(ctx, "#fff0a8", "#f4c430", "#7a6010", "#fcde6a");
 }
 
 // ── sea_shells — pair of small clamshells ─────────────────────────────────
-function drawSeaShells(ctx) {
+function drawSeaShells(ctx: CanvasRenderingContext2D) {
   drawShadow(ctx, 20, 4);
   // Back shell (cream)
   ctx.save();
@@ -639,7 +639,7 @@ function drawSeaShells(ctx) {
 }
 
 // ── pearls — trio of lustrous pearls ──────────────────────────────────────
-function drawPearls(ctx) {
+function drawPearls(ctx: CanvasRenderingContext2D) {
   drawShadow(ctx, 20, 4);
   const positions = [
     [-9, 2, 7],

@@ -306,7 +306,7 @@ export class GameScene extends Phaser.Scene {
    * that belong to a changed category to the new active tile type. Tiles currently
    * selected in a drag chain are left alone to avoid disrupting input.
    */
-  handleActiveTileChange(next, prev) {
+  handleActiveTileChange(next: Record<string, string> | null, prev: Record<string, string> | null): void {
     if (!next) return;
     const prevMap = prev ?? {};
     const changed = [];
@@ -344,14 +344,14 @@ export class GameScene extends Phaser.Scene {
       },
     };
     const agg = computeAggregatedAbilities(snapshot);
-    const eff = {};
+    const eff: Record<string, number> = {};
     for (const [k, v] of Object.entries(UPGRADE_THRESHOLDS)) {
-      eff[k] = Math.max(1, v - (agg.thresholdReduce[k] ?? 0));
+      eff[k] = Math.max(1, (v as number) - ((agg as any).thresholdReduce?.[k] ?? 0));
     }
     // Merge legacy poolWeight (Phase 4) + Phase-9 effectivePoolWeights
-    const mergedPoolWeights = { ...agg.poolWeight };
-    for (const [k, v] of Object.entries(agg.effectivePoolWeights ?? {})) {
-      mergedPoolWeights[k] = (mergedPoolWeights[k] ?? 0) + v;
+    const mergedPoolWeights: Record<string, number> = { ...(agg as any).poolWeight };
+    for (const [k, v] of Object.entries((agg as any).effectivePoolWeights ?? {})) {
+      mergedPoolWeights[k] = (mergedPoolWeights[k] ?? 0) + (v as number);
     }
     this.registry.set("effectiveThresholds",  eff);
     this.registry.set("effectivePoolWeights", mergedPoolWeights);
@@ -366,7 +366,7 @@ export class GameScene extends Phaser.Scene {
   // Brief squash-stretch when a falling tile lands. Reads the sprite's
   // current scaleX/scaleY as the rest state so the bounce composes with
   // whatever tileSpriteScale is in effect at the current resolution.
-  _landingBounce(sprite) {
+  _landingBounce(sprite: Phaser.GameObjects.Sprite | null | undefined): void {
     if (!sprite?.active) return;
     const baseSx = sprite.scaleX;
     const baseSy = sprite.scaleY;
@@ -385,7 +385,7 @@ export class GameScene extends Phaser.Scene {
 
   // Golden ring + soft sparkle that radiates out from a tile spawning
   // as a chain upgrade. Pairs with the scale-pop on the tile itself.
-  _upgradeSpawnBurst(x, y) {
+  _upgradeSpawnBurst(x: number, y: number): void {
     const ring = this.add.graphics().setDepth(11);
     const ro = { r: 5 * this.tileScale, a: 1 };
     this.tweens.add({
@@ -441,7 +441,7 @@ export class GameScene extends Phaser.Scene {
   // ─── Building illustrations ──────────────────────────────────────────────
 
   /** Tween-duration passthrough (kept as a hook for future motion prefs). */
-  _dur(base) {
+  _dur(base: number): number {
     return base;
   }
 
@@ -649,51 +649,51 @@ export class GameScene extends Phaser.Scene {
    * @param {{ key: string }} tile
    * @returns {object | null}  Full tile def with { key, label, color, ... }
    */
-  nextUpgradeTile(tile) {
+  nextUpgradeTile(tile: { key: string }): TileRes | null {
     if (!tile?.key) return null;
     if (TILES_WITH_CUSTOM_OUTPUT.has(tile.key)) return null;
 
     const b = this.biome();
     const biomeKey = this.biomeKey();
-    const allTiles = b.tiles;
+    const allTiles: TileRes[] = b.tiles;
 
     // Determine source zone-category from tile's tileCollection category.
-    const tileCat = CATEGORY_OF[tile.key];
+    const tileCat = (CATEGORY_OF as Record<string, string | undefined>)[tile.key];
     if (!tileCat) return null;
-    const sourceZoneCat = TILE_CATEGORY_TO_ZONE_CATEGORY[tileCat];
+    const sourceZoneCat = (TILE_CATEGORY_TO_ZONE_CATEGORY as Record<string, string | undefined>)[tileCat];
     if (!sourceZoneCat) return null;
 
     // Look up the zone's upgradeMap for this source category.
     const zoneId = this.registry.get("activeZone") ?? null;
     if (!zoneId) return null;
-    const zone = ZONES[zoneId];
+    const zone = (ZONES as Record<string, any>)[zoneId];
     if (!zone?.upgradeMap) return null;
     const targetZoneCat = zone.upgradeMap[sourceZoneCat];
     if (!targetZoneCat) return null;
 
     // Handle the GOLD sentinel: spawn the biome's dedicated gold tile.
     if (targetZoneCat === ZONE_UPGRADE_TARGET_GOLD) {
-      const goldKey = BIOME_GOLD_TILE[biomeKey] ?? null;
+      const goldKey = (BIOME_GOLD_TILE as Record<string, string | null>)[biomeKey] ?? null;
       if (!goldKey) return null;
-      return allTiles.find((t) => t.key === goldKey) ?? null;
+      return allTiles.find((t: TileRes) => t.key === goldKey) ?? null;
     }
 
     // Normal case: find the player's active tile in the target zone-category.
-    const targetTileCats = ZONE_TO_TILE_CATEGORIES[targetZoneCat] ?? [];
+    const targetTileCats: string[] = (ZONE_TO_TILE_CATEGORIES as Record<string, string[]>)[targetZoneCat] ?? [];
     const tileCollectionActive = this.registry.get("tileCollectionActive") ?? null;
 
     if (tileCollectionActive) {
       for (const tc of targetTileCats) {
         const activeKey = tileCollectionActive[tc];
         if (!activeKey) continue;
-        const r = allTiles.find((t) => t.key === activeKey);
+        const r = allTiles.find((t: TileRes) => t.key === activeKey);
         if (r) return r;
       }
     }
 
     // Fallback: first biome tile whose category matches the target tile-categories.
     for (const t of allTiles) {
-      const cat = CATEGORY_OF[t.key];
+      const cat = (CATEGORY_OF as Record<string, string | undefined>)[t.key];
       if (cat && targetTileCats.includes(cat)) return t;
     }
 
@@ -729,7 +729,7 @@ export class GameScene extends Phaser.Scene {
     return resourceByKey(key) ?? this.biome().tiles[0];
   }
 
-  _randomFromPool(pool) {
+  _randomFromPool(pool: string[]): TileRes {
     const safePool = pool.length ? pool : this.biome().pool;
     const key = rollResource(safePool);
     return resourceByKey(key) ?? this.biome().tiles[0];
@@ -783,7 +783,7 @@ export class GameScene extends Phaser.Scene {
     this.time.delayedCall(0, () => { this._suppressNextGridApply = false; });
   }
 
-  _applyGridFromState(stateGrid) {
+  _applyGridFromState(stateGrid: Array<Array<{ key: string; frozen?: boolean; rubble?: boolean } | null>> | null | undefined): void {
     if (!stateGrid) return;
     for (let r = 0; r < ROWS; r++) {
       for (let c = 0; c < COLS; c++) {
@@ -801,7 +801,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   /** Replace every live tile from a serialized grid (visual demo reload). */
-  rebuildGridFromState(stateGrid) {
+  rebuildGridFromState(stateGrid: Array<Array<{ key: string; frozen?: boolean; rubble?: boolean } | null>> | null | undefined): void {
     if (!stateGrid) return;
     this.endPath();
     this.clearPath(false);
@@ -879,9 +879,9 @@ export class GameScene extends Phaser.Scene {
     if (fillBiasArmed) {
       const biasTarget = this.registry.get("fillBiasTarget");
       const biasKeys = biasTarget
-        ? [biasTarget, `tile_${biasTarget}`].filter((k) => resourceByKey(k) || this.biome().tiles.some((t) => t.key === k))
+        ? [biasTarget, `tile_${biasTarget}`].filter((k) => resourceByKey(k) || this.biome().tiles.some((t: TileRes) => t.key === k))
         : ["seedling", "tile_grass_hay", "tile_grain_wheat"];
-      const fBase = {};
+      const fBase: Record<string, number> = {};
       for (const k of workerPool) fBase[k] = (fBase[k] ?? 0) + 1;
       for (const k of biasKeys) {
         const extra = fBase[k] ?? 0;
@@ -1077,8 +1077,8 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
-  _performShuffleSwap() {
-    const tiles = this.grid.flat().filter(Boolean);
+  _performShuffleSwap(): void {
+    const tiles = this.grid.flat().filter((t): t is TileObj => t !== null && t !== undefined);
     const resources = tiles.map((t) => t.res);
     Phaser.Utils.Array.Shuffle(resources);
     tiles.forEach((t, i) => {
@@ -1099,7 +1099,7 @@ export class GameScene extends Phaser.Scene {
    * later board reads.
    */
   playBoardAnimation(name: string, tiles: TileObj[], { tint, ms }: { tint?: number; ms?: number } = {}): void {
-    const animation = BOARD_ANIMATIONS[resolveBoardAnimName(name)];
+    const animation = (BOARD_ANIMATIONS as Record<string, any>)[resolveBoardAnimName(name)];
     if (!animation) return;
     if (!tiles || !tiles.length) return;
 
@@ -1166,13 +1166,13 @@ export class GameScene extends Phaser.Scene {
     );
   }
 
-  _collapseAfterSweep(msOverride) {
+  _collapseAfterSweep(msOverride?: number): void {
     const delay = msOverride ?? SWEEP_COLLAPSE_PIPELINE_MS;
     this.time.delayedCall(this._dur(delay), () => this.collapseBoard());
   }
 
-  _emitClearGains(tileObjs) {
-    const gainMap = {};
+  _emitClearGains(tileObjs: TileObj[]): void {
+    const gainMap: Record<string, number> = {};
     for (const t of tileObjs) {
       const tileKey = t.res.key;
       const resourceKey = tileFamilyResource(tileKey) ?? tileKey;
@@ -1196,7 +1196,7 @@ export class GameScene extends Phaser.Scene {
    * Generic tool-power board effect. Tap-target powers pass `tapTile`; instant
    * powers pass null and run immediately when toolPending is set.
    */
-  applyToolPower(power, tapTile) {
+  applyToolPower(power: Record<string, any>, tapTile: TileObj | null): void { // TODO(ts-migration): tighten power type
     const id = power.id;
     const params = power.params ?? {};
     const boardAnim = defaultBoardAnimForPower(id);

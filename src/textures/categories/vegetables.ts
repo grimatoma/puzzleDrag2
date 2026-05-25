@@ -1,6 +1,6 @@
 // Vegetables.
 
-function drawCarrot(ctx) {
+function drawCarrot(ctx: CanvasRenderingContext2D) {
   ctx.save();
   ctx.rotate(-0.18);
   // Shadow
@@ -70,7 +70,7 @@ function drawCarrot(ctx) {
   ctx.restore();
 }
 
-function drawEggplant(ctx) {
+function drawEggplant(ctx: CanvasRenderingContext2D) {
   // Shadow
   ctx.fillStyle = "rgba(0,0,0,0.25)";
   ctx.beginPath();
@@ -128,7 +128,7 @@ function drawEggplant(ctx) {
   ctx.stroke();
 }
 
-function drawTurnip(ctx) {
+function drawTurnip(ctx: CanvasRenderingContext2D) {
   // Shadow
   ctx.fillStyle = "rgba(0,0,0,0.22)";
   ctx.beginPath();
@@ -200,7 +200,7 @@ function drawTurnip(ctx) {
   });
 }
 
-function drawBeet(ctx) {
+function drawBeet(ctx: CanvasRenderingContext2D) {
   // Shadow
   ctx.fillStyle = "rgba(0,0,0,0.22)";
   ctx.beginPath();
@@ -270,7 +270,7 @@ function drawBeet(ctx) {
   ctx.stroke();
 }
 
-function drawCucumber(ctx) {
+function drawCucumber(ctx: CanvasRenderingContext2D) {
   ctx.save();
   ctx.rotate(-0.45);
   // Shadow
@@ -327,7 +327,7 @@ function drawCucumber(ctx) {
   ctx.restore();
 }
 
-function drawSquash(ctx) {
+function drawSquash(ctx: CanvasRenderingContext2D) {
   // Shadow
   ctx.fillStyle = "rgba(0,0,0,0.25)";
   ctx.beginPath();
@@ -395,7 +395,7 @@ function drawSquash(ctx) {
   ctx.stroke();
 }
 
-function drawMushroom(ctx) {
+function drawMushroom(ctx: CanvasRenderingContext2D) {
   // Shadow
   ctx.fillStyle = "rgba(0,0,0,0.25)";
   ctx.beginPath();
@@ -459,7 +459,7 @@ function drawMushroom(ctx) {
   }
 }
 
-function drawPepper(ctx) {
+function drawPepper(ctx: CanvasRenderingContext2D) {
   // Shadow
   ctx.fillStyle = "rgba(0,0,0,0.25)";
   ctx.beginPath();
@@ -529,7 +529,7 @@ function drawPepper(ctx) {
   ctx.stroke();
 }
 
-function drawBroccoli(ctx) {
+function drawBroccoli(ctx: CanvasRenderingContext2D) {
   // Shadow
   ctx.fillStyle = "rgba(0,0,0,0.22)";
   ctx.beginPath();

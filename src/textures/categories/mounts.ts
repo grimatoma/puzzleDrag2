@@ -1,11 +1,11 @@
 // Mounts.
 
-function shadow(ctx, w) {
+function shadow(ctx: CanvasRenderingContext2D, w: number) {
   ctx.fillStyle = "rgba(0,0,0,0.3)";
   ctx.beginPath(); ctx.ellipse(2, 22, w, 4.5, 0, 0, Math.PI*2); ctx.fill();
 }
 
-function horseBase(ctx, bodyC1, bodyC2, maneC, outline, longLegs) {
+function horseBase(ctx: CanvasRenderingContext2D, bodyC1: string, bodyC2: string, maneC: string, outline: string, longLegs: boolean) {
   const legY = longLegs ? 12 : 13;
   const legH = longLegs ? 10 : 9;
   ctx.fillStyle = bodyC2;
@@ -56,12 +56,12 @@ function horseBase(ctx, bodyC1, bodyC2, maneC, outline, longLegs) {
   ctx.fillStyle = outline; ctx.beginPath(); ctx.arc(-19, -9, 0.7, 0, Math.PI*2); ctx.fill();
 }
 
-function drawHorse(ctx) {
+function drawHorse(ctx: CanvasRenderingContext2D) {
   shadow(ctx, 22);
   horseBase(ctx, "#a86838", "#5a3814", "#1a0e04", "#1a0e04", false);
 }
 
-function drawDonkey(ctx) {
+function drawDonkey(ctx: CanvasRenderingContext2D) {
   shadow(ctx, 20);
   horseBase(ctx, "#8a8478", "#3a3830", "#1a1a18", "#0a0a08", false);
   // Big donkey ears (overdraw)
@@ -73,7 +73,7 @@ function drawDonkey(ctx) {
   ctx.beginPath(); ctx.moveTo(-10, -18); ctx.lineTo(-7, -25); ctx.lineTo(-6, -16); ctx.closePath(); ctx.stroke();
 }
 
-function drawMoose(ctx) {
+function drawMoose(ctx: CanvasRenderingContext2D) {
   shadow(ctx, 22);
   horseBase(ctx, "#5a3814", "#2a1808", "#1a0e04", "#0a0604", true);
   // Pendulous snout
@@ -87,7 +87,7 @@ function drawMoose(ctx) {
   // upward from there and flare LEFT (out of the screen) and RIGHT (over
   // the body). Each one is a wide hand-like palm with 4 finger-tines
   // along the outer edge — moose antlers are unmistakable when drawn big.
-  const drawAntler = (anchorX, anchorY, mirror) => {
+  const drawAntler = (anchorX: number, anchorY: number, mirror: boolean) => {
     ctx.save();
     ctx.translate(anchorX, anchorY);
     if (mirror) ctx.scale(-1, 1);
@@ -153,7 +153,7 @@ function drawMoose(ctx) {
   drawAntler(-14, -15, false);
 }
 
-function drawMammoth(ctx) {
+function drawMammoth(ctx: CanvasRenderingContext2D) {
   shadow(ctx, 26);
   // Legs
   ctx.fillStyle = "#5a3814";

@@ -124,7 +124,7 @@ function drawDrill(ctx: CanvasRenderingContext2D) {
 function drawDynamite(ctx: CanvasRenderingContext2D) {
   shadow(ctx, 16);
   // Sticks
-  const drawStick = (x) => {
+  const drawStick = (x: number) => {
     const g = ctx.createLinearGradient(x - 4, 0, x + 4, 0);
     g.addColorStop(0, "#a82018"); g.addColorStop(0.5, "#e83a08"); g.addColorStop(1, "#5a0808");
     ctx.fillStyle = g;

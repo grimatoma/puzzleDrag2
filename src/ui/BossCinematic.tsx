@@ -4,9 +4,9 @@ import { getPhaserScene } from "../phaserBridge.js";
 
 const HOLD_MS = 700;
 
-export default function BossCinematic({ state }) {
+export default function BossCinematic({ state }: { state: any }) {
   const isBoss = state.modal === "boss";
-  const [shown, setShown] = useState(null);
+  const [shown, setShown] = useState<any>(null);
   const prevBossRef = useRef(isBoss);
   const mountedRef = useRef(false);
 
@@ -21,7 +21,7 @@ export default function BossCinematic({ state }) {
     const key = Math.random();
     setShown({ key });
     const scene = getPhaserScene();
-    scene?._shake?.(360, 0.012);
+    (scene as any)?._shake?.(360, 0.012);
     const timer = setTimeout(() => setShown(null), HOLD_MS);
     return () => clearTimeout(timer);
   }, [isBoss]);

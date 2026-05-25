@@ -1,4 +1,4 @@
-const TONE_SOLID = {
+const TONE_SOLID: Record<string, string> = {
   ember: "hl-btn--primary",
   moss: "hl-btn--go",
   gold: "hl-btn--primary",
@@ -7,7 +7,7 @@ const TONE_SOLID = {
   danger: "hl-btn--danger",
 };
 
-const TONE_SOFT = {
+const TONE_SOFT: Record<string, string> = {
   ember: "hl-btn--primary",
   moss: "hl-btn--go",
   gold: "hl-btn--ghost",
@@ -16,7 +16,7 @@ const TONE_SOFT = {
   danger: "hl-btn--danger",
 };
 
-const SIZES = {
+const SIZES: Record<string, string> = {
   sm: "hl-btn--sm",
   md: "",
   lg: "px-5 py-2 text-body-lg",
@@ -39,6 +39,20 @@ function Spinner({ size = "md" }) {
   );
 }
 
+interface ButtonProps {
+  tone?: string;
+  size?: string;
+  variant?: string;
+  leading?: any;
+  block?: boolean;
+  loading?: boolean;
+  disabled?: boolean;
+  className?: string;
+  children?: any;
+  onClick?: any;
+  type?: any;
+  [x: string]: any;
+}
 export default function Button({
   tone = "iron",
   size = "md",
@@ -52,7 +66,7 @@ export default function Button({
   onClick,
   type = "button",
   ...rest
-}) {
+}: ButtonProps) {
   const toneMap = variant === "solid" ? TONE_SOLID : TONE_SOFT;
   const toneCls = toneMap[tone] || toneMap.iron;
   const sizeCls = SIZES[size] || SIZES.md;

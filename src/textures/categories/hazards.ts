@@ -1,13 +1,13 @@
 // Hazard tile icons (rats, fire, wolf). Drawn at canvas origin (0,0).
 
-function drawShadow(ctx, w = 22, h = 4) {
+function drawShadow(ctx: CanvasRenderingContext2D, w = 22, h = 4) {
   ctx.fillStyle = "rgba(0,0,0,0.22)";
   ctx.beginPath();
   ctx.ellipse(0, 22, w, h, 0, 0, Math.PI * 2);
   ctx.fill();
 }
 
-function drawRatsHazard(ctx) {
+function drawRatsHazard(ctx: CanvasRenderingContext2D) {
   drawShadow(ctx, 22, 4);
   // Rat body (sitting)
   const body = ctx.createRadialGradient(-4, 0, 4, 0, 4, 18);
@@ -180,7 +180,7 @@ function drawRatsHazard(ctx) {
   ctx.restore();
 }
 
-function drawFireHazard(ctx) {
+function drawFireHazard(ctx: CanvasRenderingContext2D) {
   drawShadow(ctx, 22, 4);
   // Charred ground
   ctx.fillStyle = "#1a0a04";
@@ -243,7 +243,7 @@ function drawFireHazard(ctx) {
   });
 }
 
-function drawWolfHazard(ctx) {
+function drawWolfHazard(ctx: CanvasRenderingContext2D) {
   drawShadow(ctx, 22, 4);
   // Helper to draw a single side-view wolf at the given anchor with the
   // requested scale and tint. Drawn back-to-front so the foreground wolf
@@ -323,7 +323,7 @@ function drawWolfHazard(ctx) {
   drawOneWolf(-2, 4, 1.0, "#5a5a62", "rgba(160,160,170,0.55)", "#1a1c20");
 }
 
-function drawSmokeHazard(ctx) {
+function drawSmokeHazard(ctx: CanvasRenderingContext2D) {
   drawShadow(ctx, 14, 3);
   // Smoldering ember base
   ctx.fillStyle = "#3a1a08";

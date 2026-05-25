@@ -13,7 +13,7 @@ import { SeasonIndicator } from "./puzzleBoard.jsx";
 
 export const SEASON_EFFECTS = ["", "", "", ""];
 
-function TideContent({ fish }) {
+function TideContent({ fish }: { fish: any }) {
   const tide = fish?.tide ?? "high";
   const tideTurn = fish?.tideTurn ?? 0;
   const turnsUntilFlip = Math.max(0, 3 - tideTurn);
@@ -28,7 +28,7 @@ function TideContent({ fish }) {
   );
 }
 
-function TideChip({ fish }) {
+function TideChip({ fish }: { fish: any }) {
   if (!fish) return null;
   const tide = fish.tide ?? "high";
   const tideTurn = fish.tideTurn ?? 0;
@@ -57,7 +57,7 @@ function TideChip({ fish }) {
   );
 }
 
-function CurrencyContent({ state }) {
+function CurrencyContent({ state }: { state: any }) {
   const coins = state.coins ?? 0;
   const embers = state.embers ?? 0;
   const ingots = state.coreIngots ?? 0;
@@ -96,7 +96,7 @@ function SearchIcon({ size = 16 }) {
   );
 }
 
-export function Hud({ state, dispatch, inventorySearchOpen, onInventorySearchToggle }) {
+export function Hud({ state, dispatch, inventorySearchOpen, onInventorySearchToggle }: { state: any; dispatch: any; inventorySearchOpen: any; onInventorySearchToggle: any }) {
   const { coins, turnsUsed, view } = state;
   const level = state.almanac?.level ?? state.level ?? 1;
   const totalXp = state.almanac?.xp ?? state.xp ?? 0;
@@ -194,7 +194,7 @@ export function Hud({ state, dispatch, inventorySearchOpen, onInventorySearchTog
                   </Pill>
                 }
               />
-              {coinChips.map((c) => (
+              {coinChips.map((c: any) => (
                 <span key={c.id} className="reward-chip text-gold-bright text-caption">
                   +{c.delta.toLocaleString()}
                 </span>

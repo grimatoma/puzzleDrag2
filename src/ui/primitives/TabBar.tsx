@@ -2,7 +2,7 @@ import { Children, cloneElement, isValidElement } from "react";
 import Icon from "./Icon.jsx";
 import { useCountUp } from "./useCountUp.js";
 
-const BADGE_TONE = {
+const BADGE_TONE: Record<string, string> = {
   moss:  "bg-moss text-white",
   ember: "bg-ember text-white",
   gold:  "bg-gold text-ink",
@@ -17,7 +17,7 @@ function LockGlyph() {
   );
 }
 
-function Badge({ count, tone = "moss" }) {
+function Badge({ count, tone = "moss" }: { count: any; tone?: any }) {
   const cls = BADGE_TONE[tone] || BADGE_TONE.moss;
   const { pulse, pulseKey } = useCountUp(count);
   return (
@@ -41,6 +41,16 @@ export function Tab({
   active = false,
   density = "nav",
   onSelect,
+}: {
+  itemKey: any;
+  iconKey: any;
+  label: any;
+  badge?: any;
+  locked?: boolean;
+  unlockHint?: any;
+  active?: boolean;
+  density?: string;
+  onSelect?: any;
 }) {
   const iconSize = density === "dock" ? 22 : 18;
   const labelCls = density === "dock" ? "text-caption" : "text-micro";
@@ -50,9 +60,6 @@ export function Tab({
       ? "relative flex flex-col items-center justify-center gap-1 px-3 min-h-tap min-w-[88px] flex-1"
       : "relative flex-1 flex flex-col items-center justify-center gap-0.5 min-h-tap py-1";
 
-  // Solid colours only — Tailwind opacity modifiers (`/85`) on var()-based
-  // token colours emit invalid CSS and silently fall back to inherited
-  // text colour, which reads black against the dark nav.
   const stateCls = active
     ? "bg-ember/10 text-ink"
     : locked
@@ -105,9 +112,13 @@ export default function TabBar({
   onSelect,
   className = "",
   children,
+}: {
+  density?: string;
+  current?: any;
+  onSelect?: any;
+  className?: string;
+  children?: any;
 }) {
-  // No pb-safe-bottom here: body already reserves env(safe-area-inset-bottom)
-  // via index.html, and stacking it again leaves an empty band under the nav.
   const containerCls =
     density === "dock"
       ? "flex items-stretch justify-around w-full bg-paper border-t-2 border-iron shadow-[0_-4px_12px_rgba(0,0,0,.12)]"
@@ -115,10 +126,10 @@ export default function TabBar({
 
   const tabs = Children.map(children, (child) => {
     if (!isValidElement(child)) return child;
-    return cloneElement(child, {
+    return cloneElement(child as any, {
       density,
-      active: child.props.itemKey === current,
-      onSelect: child.props.onSelect || onSelect,
+      active: (child.props as any).itemKey === current,
+      onSelect: (child.props as any).onSelect || onSelect,
     });
   });
 

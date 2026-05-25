@@ -1,7 +1,7 @@
 // Crafting station icons (bakery, forge, larder, workshop, decor).
 // These appear as 32px tab badges in the crafting screen.
 
-function drawShadow(ctx, w = 22, h = 4) {
+function drawShadow(ctx: CanvasRenderingContext2D, w = 22, h = 4) {
   ctx.fillStyle = "rgba(0,0,0,0.22)";
   ctx.beginPath();
   ctx.ellipse(0, 22, w, h, 0, 0, Math.PI * 2);

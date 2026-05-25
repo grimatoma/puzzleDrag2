@@ -1,6 +1,6 @@
 // Grain family.
 
-function drawCorn(ctx) {
+function drawCorn(ctx: CanvasRenderingContext2D) {
   // Shadow
   ctx.fillStyle = "rgba(0,0,0,0.22)";
   ctx.beginPath();
@@ -82,7 +82,7 @@ function drawCorn(ctx) {
   ctx.fill();
 }
 
-function drawBuckwheat(ctx) {
+function drawBuckwheat(ctx: CanvasRenderingContext2D) {
   // Shadow
   ctx.fillStyle = "rgba(0,0,0,0.2)";
   ctx.beginPath();
@@ -135,7 +135,7 @@ function drawBuckwheat(ctx) {
   });
 }
 
-function drawManna(ctx) {
+function drawManna(ctx: CanvasRenderingContext2D) {
   // Soft white pillowy clusters with golden glow
   // Glow halo
   const glow = ctx.createRadialGradient(0, 0, 4, 0, 0, 26);
@@ -185,7 +185,7 @@ function drawManna(ctx) {
   });
 }
 
-function drawRice(ctx) {
+function drawRice(ctx: CanvasRenderingContext2D) {
   // Water at base
   ctx.fillStyle = "#5a8aae";
   ctx.beginPath();

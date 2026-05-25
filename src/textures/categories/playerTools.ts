@@ -1,13 +1,13 @@
 // Player-tools (HUD/Tools panel): Scythe, Seedpack, Lockbox, Reshuffle Horn.
 
-function drawShadow(ctx, w = 22, h = 4) {
+function drawShadow(ctx: CanvasRenderingContext2D, w = 22, h = 4) {
   ctx.fillStyle = "rgba(0,0,0,0.22)";
   ctx.beginPath();
   ctx.ellipse(0, 22, w, h, 0, 0, Math.PI * 2);
   ctx.fill();
 }
 
-function drawPlayerScythe(ctx) {
+function drawPlayerScythe(ctx: CanvasRenderingContext2D) {
   drawShadow(ctx, 22, 4);
   // Wooden snath (handle)
   ctx.save();
@@ -65,7 +65,7 @@ function drawPlayerScythe(ctx) {
   });
 }
 
-function drawSeedpack(ctx) {
+function drawSeedpack(ctx: CanvasRenderingContext2D) {
   drawShadow(ctx, 18, 4);
   // Cloth pouch body
   const body = ctx.createLinearGradient(0, -12, 0, 22);
@@ -145,7 +145,7 @@ function drawSeedpack(ctx) {
   ctx.fill();
 }
 
-function drawLockbox(ctx) {
+function drawLockbox(ctx: CanvasRenderingContext2D) {
   drawShadow(ctx, 22, 4);
   // Box body
   const body = ctx.createLinearGradient(0, -8, 0, 20);
@@ -225,7 +225,7 @@ function drawLockbox(ctx) {
   });
 }
 
-function drawReshuffleHorn(ctx) {
+function drawReshuffleHorn(ctx: CanvasRenderingContext2D) {
   drawShadow(ctx, 20, 4);
   // Horn body (curling)
   ctx.save();

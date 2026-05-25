@@ -3,11 +3,11 @@ import Button from "./Button.jsx";
 import { CostChip, RequirementChip } from "./Chip.jsx";
 import ProgressTrack from "./ProgressTrack.jsx";
 
-function cx(...parts) {
+function cx(...parts: any[]) {
   return parts.filter(Boolean).join(" ");
 }
 
-export function BrowserDetailLayout({ toolbar, browser, detail, className = "" }) {
+export function BrowserDetailLayout({ toolbar, browser, detail, className = "" }: { toolbar?: any; browser: any; detail: any; className?: string }) {
   return (
     <div className={cx("hl-browser-detail", className)}>
       {toolbar && <div className="hl-browser-toolbar">{toolbar}</div>}
@@ -19,7 +19,7 @@ export function BrowserDetailLayout({ toolbar, browser, detail, className = "" }
   );
 }
 
-export function BrowserGrid({ children, min = 128, className = "" }) {
+export function BrowserGrid({ children, min = 128, className = "" }: { children?: any; min?: number; className?: string }) {
   return (
     <div
       className={cx("grid gap-2", className)}
@@ -43,6 +43,19 @@ export function BrowserItemButton({
   className = "",
   children,
   ...rest
+}: {
+  selected?: boolean;
+  muted?: boolean;
+  active?: boolean;
+  icon: any;
+  title: any;
+  subtitle?: any;
+  count?: any;
+  status?: any;
+  onClick?: any;
+  className?: string;
+  children?: any;
+  [x: string]: any;
 }) {
   return (
     <button
@@ -87,6 +100,17 @@ export function DetailPane({
   headerActions,
   empty,
   className = "",
+}: {
+  title?: any;
+  eyebrow?: any;
+  icon?: any;
+  status?: any;
+  description?: any;
+  children?: any;
+  actions?: any;
+  headerActions?: any;
+  empty?: any;
+  className?: string;
 }) {
   if (empty) {
     return (
@@ -116,8 +140,8 @@ export function DetailPane({
   );
 }
 
-export function CostGrid({ entries = [], title = "Cost", empty = "No cost", className = "" }) {
-  const clean = entries.filter((e) => e && e.key && Number(e.amount) > 0);
+export function CostGrid({ entries = [], title = "Cost", empty = "No cost", className = "" }: { entries?: any[]; title?: string; empty?: string; className?: string }) {
+  const clean = entries.filter((e: any) => e && e.key && Number(e.amount) > 0);
   return (
     <div className={cx("flex flex-col gap-1.5", className)}>
       {title && <div className="hl-section-label">{title}</div>}
@@ -125,7 +149,7 @@ export function CostGrid({ entries = [], title = "Cost", empty = "No cost", clas
         <div className="hl-text-faint italic">{empty}</div>
       ) : (
         <div className="grid grid-cols-[repeat(auto-fill,minmax(96px,1fr))] gap-1.5">
-          {clean.map((e) => {
+          {clean.map((e: any) => {
             const have = Number(e.have ?? 0);
             const amount = Number(e.amount ?? 0);
             const ok = e.ok ?? have >= amount;
@@ -144,10 +168,10 @@ export function CostGrid({ entries = [], title = "Cost", empty = "No cost", clas
   );
 }
 
-export function AbilitySummary({ abilities, effects, empty = "No special bonus." }) {
+export function AbilitySummary({ abilities, effects, empty = "No special bonus." }: { abilities?: any; effects?: any; empty?: any }) {
   const rows = [];
   if (Array.isArray(abilities)) {
-    for (const ab of abilities) {
+    for (const ab of (abilities as any[])) {
       const p = ab?.params || {};
       switch (ab?.id) {
         case "free_moves":
@@ -188,7 +212,7 @@ export function AbilitySummary({ abilities, effects, empty = "No special bonus."
   );
 }
 
-export function DetailProgress({ value, max, label, tone = "moss" }) {
+export function DetailProgress({ value, max, label, tone = "moss" }: { value: any; max: any; label: any; tone?: string }) {
   return (
     <div className="flex flex-col gap-1">
       <div className="flex items-center justify-between gap-2 text-caption font-bold text-on-panel-dim">
@@ -200,6 +224,6 @@ export function DetailProgress({ value, max, label, tone = "moss" }) {
   );
 }
 
-export function DetailActionButton(props) {
+export function DetailActionButton(props: any) {
   return <Button block size="md" {...props} />;
 }

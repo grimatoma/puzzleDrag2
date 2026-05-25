@@ -64,18 +64,18 @@ function WorkerBrowserItem({ worker, count, selected, onSelect }: { worker: any;
   );
 }
 
-function WorkerDetail({ worker, count, state, dispatch }) {
+function WorkerDetail({ worker, count, state, dispatch }: { worker: any; count: any; state: any; dispatch: any }) {
   if (!worker) return <DetailPane empty="Select a worker type to inspect it." title={undefined} eyebrow={undefined} icon={undefined} status={undefined} description={undefined} actions={undefined} headerActions={undefined}>{undefined}</DetailPane>;
   // Phase 6 — show the cost of the *next* hire so the player can see the
   // ramp build up. When the worker is already at maxCount the ramp call
   // is moot but we still pass `count` for a stable display.
   const coinCost = nextHireCost(worker, count);
-  const resourceCost = nextHireResourceCost(worker, count);
+  const resourceCost = nextHireResourceCost(worker, count) as Record<string, number>;
   const inv = state?.inventory ?? {};
   const canPayResources = Object.entries(resourceCost).every(([key, amount]) => (inv[key] ?? 0) >= amount);
   const canHire = (state?.coins ?? 0) >= coinCost && canPayResources && count < worker.maxCount;
   const canFire = count > 0;
-  const costEntries = [
+  const costEntries: any[] = [
     {
       key: "coins",
       label: "Coins",
@@ -87,7 +87,7 @@ function WorkerDetail({ worker, count, state, dispatch }) {
     },
     ...Object.entries(resourceCost).map(([key, amount]) => ({
       key,
-      label: ITEMS[key]?.label || key,
+      label: (ITEMS as any)[key]?.label || key,
       amount,
       icon: <Icon iconKey={key} size={18} title="" />,
       have: inv[key] ?? 0,
@@ -127,7 +127,7 @@ function WorkerDetail({ worker, count, state, dispatch }) {
         </>
       }
     >
-      <CostGrid entries={costEntries} title="Next hire cost" />
+      <CostGrid entries={costEntries as never[]} title="Next hire cost" />
       <div>
         <div className="hl-section-label mb-1.5">Current effect</div>
         <div className="hl-text-dim">{effectSummary(worker.abilities, count, worker.maxCount) || "No current effect."}</div>
@@ -140,7 +140,7 @@ function WorkerDetail({ worker, count, state, dispatch }) {
   );
 }
 
-export function WorkersPanel({ state, dispatch }) {
+export function WorkersPanel({ state, dispatch }: { state: any; dispatch: any }) {
   const hired = state?.workers?.hired ?? {};
   const [selectedId, setSelectedId] = useState(TYPE_WORKERS[0]?.id ?? null);
   const selected = TYPE_WORKERS.find((w) => w.id === selectedId) ?? TYPE_WORKERS[0] ?? null;

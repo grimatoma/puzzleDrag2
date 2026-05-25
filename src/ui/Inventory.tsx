@@ -20,27 +20,27 @@ import {
   DetailPane,
 } from "./primitives/BrowserDetail.jsx";
 
-export function labelFor(key, fallback) {
+export function labelFor(key: any, fallback?: any) {
   return iconLabel(key) || ITEMS[key]?.label || fallback || key;
 }
 
-function sortKeys(keys, sort, inventory, recentOrder) {
+function sortKeys(keys: any, sort: any, inventory: any, recentOrder: any) {
   const arr = [...keys];
   if (sort === "alpha") {
     arr.sort((a, b) => labelFor(a).localeCompare(labelFor(b)));
   } else if (sort === "recent") {
-    const rank = (k) => {
+    const rank = (k: any) => {
       const idx = recentOrder ? recentOrder.indexOf(k) : -1;
       return idx === -1 ? Number.POSITIVE_INFINITY : idx;
     };
-    arr.sort((a, b) => {
+    arr.sort((a: any, b: any) => {
       const ra = rank(a);
       const rb = rank(b);
       if (ra !== rb) return ra - rb;
       return labelFor(a).localeCompare(labelFor(b));
     });
   } else {
-    arr.sort((a, b) => {
+    arr.sort((a: any, b: any) => {
       const ca = inventory[a] || 0;
       const cb = inventory[b] || 0;
       if (cb !== ca) return cb - ca;
@@ -50,7 +50,7 @@ function sortKeys(keys, sort, inventory, recentOrder) {
   return arr;
 }
 
-function matchesQuery(key, label, query) {
+function matchesQuery(key: any, label: any, query: any) {
   if (!query) return true;
   const q = query.toLowerCase();
   return key.toLowerCase().includes(q) || label.toLowerCase().includes(q);
@@ -58,7 +58,7 @@ function matchesQuery(key, label, query) {
 
 export const accordionInitialState = { displayedKey: null, isOpen: false, pendingKey: null };
 
-export function accordionReducer(state, action) {
+export function accordionReducer(state: any, action: any) {
   switch (action.type) {
     case "SELECT": {
       const { key } = action;
@@ -104,15 +104,15 @@ function useAccordion() {
     return () => cancelAnimationFrame(id);
   }, [state.displayedKey]);
 
-  const select = useCallback((key) => dispatch({ type: "SELECT", key }), []);
-  const selectInPlace = useCallback((key) => dispatch({ type: "SELECT_IN_PLACE", key }), []);
+  const select = useCallback((key: any) => dispatch({ type: "SELECT", key }), []);
+  const selectInPlace = useCallback((key: any) => dispatch({ type: "SELECT_IN_PLACE", key }), []);
   const close = useCallback(() => dispatch({ type: "CLOSE" }), []);
   const onClosed = useCallback(() => dispatch({ type: "TRANSITION_END" }), []);
 
   return { displayedKey: state.displayedKey, isOpen: state.isOpen, select, selectInPlace, close, onClosed };
 }
 
-const InventoryIconCell = forwardRef(function InventoryIconCell(
+const InventoryIconCell = forwardRef<HTMLButtonElement, { entry: any; selected: any; onSelect: any; progress: any }>(function InventoryIconCell(
   { entry, selected, onSelect, progress },
   ref
 ) {
@@ -148,8 +148,8 @@ const InventoryIconCell = forwardRef(function InventoryIconCell(
   );
 });
 
-function InventoryAccordion({ entry, isOpen, arrowLeft, marketBuilt, dispatch, onClosed, style }) {
-  const handleTransitionEnd = (e) => {
+function InventoryAccordion({ entry, isOpen, arrowLeft, marketBuilt, dispatch, onClosed, style }: { entry: any; isOpen: any; arrowLeft: any; marketBuilt: any; dispatch: any; onClosed: any; style?: any }) {
+  const handleTransitionEnd = (e: any) => {
     if (e.propertyName === "max-height" && !isOpen) {
       onClosed?.();
     }
@@ -171,7 +171,7 @@ function InventoryAccordion({ entry, isOpen, arrowLeft, marketBuilt, dispatch, o
   );
 }
 
-export function Section({ title, titleColor = "#f8e7c6", children }) {
+export function Section({ title, titleColor = "#f8e7c6", children }: { title: any; titleColor?: string; children?: any }) {
   return (
     <div className="flex flex-col gap-2 min-h-0">
       <div className="font-bold text-[14px] landscape:max-[1024px]:text-[11px] tracking-wide" style={{ color: titleColor }}>{title}</div>
@@ -188,9 +188,9 @@ function CheckGlyph({ size = 12 }) {
   );
 }
 
-function orderStatusByKey(orders, inventory) {
-  const status = {};
-  const totals = {};
+function orderStatusByKey(orders: any, inventory: any) {
+  const status: any = {};
+  const totals: any = {};
   for (const o of orders) {
     totals[o.key] = (totals[o.key] || 0) + o.need;
     const have = inventory[o.key] || 0;
@@ -200,7 +200,7 @@ function orderStatusByKey(orders, inventory) {
   return { status, totals };
 }
 
-function StatusPill({ status, total }) {
+function StatusPill({ status, total }: { status: any; total?: any }) {
   if (status === "ready") {
     return (
       <Pill tone="moss" variant="soft" size="sm" leading={<CheckGlyph size={10} />}>
@@ -225,7 +225,7 @@ function StatusPill({ status, total }) {
   return null;
 }
 
-function InventoryBrowserItem({ entry, selected, onSelect, progress }) {
+function InventoryBrowserItem({ entry, selected, onSelect, progress }: { entry: any; selected: any; onSelect: any; progress: any }) {
   const { key, label, count, orderStatus } = entry;
   // List view: surface only meaningful order statuses (ready/needed). The
   // "Excess" badge and the redundant kind subtitle stay on the detail card.
@@ -249,7 +249,7 @@ function InventoryBrowserItem({ entry, selected, onSelect, progress }) {
   );
 }
 
-function InventoryListItemExpanded({ entry, marketBuilt, dispatch, onCollapse, progress }) {
+function InventoryListItemExpanded({ entry, marketBuilt, dispatch, onCollapse, progress }: { entry: any; marketBuilt: any; dispatch: any; onCollapse: any; progress: any }) {
   const { key, label, count, sellPrice, buyPrice, kind, orderStatus, orderTotal, tags = [] } = entry;
   const canBuy = kind === "resource" && marketBuilt && buyPrice > 0;
   const canSell = marketBuilt && sellPrice > 0 && count > 0;
@@ -326,7 +326,7 @@ function InventoryListItemExpanded({ entry, marketBuilt, dispatch, onCollapse, p
   );
 }
 
-function InventoryDetail({ entry, marketBuilt, dispatch }) {
+function InventoryDetail({ entry, marketBuilt, dispatch }: { entry: any; marketBuilt: any; dispatch: any }) {
   if (!entry) return <DetailPane empty="Select a resource to inspect it." />;
   const { key, label, count, sellPrice, buyPrice, kind, orderStatus, orderTotal, tags = [] } = entry;
   const canBuy = kind === "resource" && marketBuilt && buyPrice > 0;
@@ -394,7 +394,7 @@ function InventoryDetail({ entry, marketBuilt, dispatch }) {
   );
 }
 
-export function CompactOrders({ orders, inventory, dispatch }) {
+export function CompactOrders({ orders, inventory, dispatch }: { orders: any; inventory: any; dispatch: any }) {
   return (
     <div className="flex flex-col gap-1.5">
       {orders.map((o) => {
@@ -441,29 +441,42 @@ export function InventoryGrid({
   recentOrder,
   viewMode = "list",
   resourceProgress = {},
+}: {
+  inventory: any;
+  biomeKey: any;
+  compact?: any;
+  orders?: any[];
+  state: any;
+  dispatch: any;
+  filter?: any;
+  sort?: string;
+  query?: string;
+  recentOrder?: any;
+  viewMode?: string;
+  resourceProgress?: any;
 }) {
   const resources = BIOMES[biomeKey].resources; // already resource-only after data split
-  const items = Object.entries(ITEMS).filter(([key, item]) =>
+  const items = (Object.entries(ITEMS) as [string, any][]).filter(([key, item]) =>
     (inventory[key] || 0) > 0 &&
     !resources.find(r => r.key === key) &&
     item.kind !== "tile" &&
     item.kind !== "tool"
   );
-  const tools = Object.entries(state?.tools ?? {}).filter(([key, count]) =>
+  const tools = (Object.entries(state?.tools ?? {}) as [string, any][]).filter(([key, count]) =>
     (count || 0) > 0 && ITEMS[key]?.kind === "tool"
   );
   const { status, totals } = orderStatusByKey(orders, inventory);
   const marketBuilt = !!locBuilt(state).caravan_post;
   const prices = state?.market?.prices ?? {};
-  const recipesByOutput = Object.values(RECIPES).reduce((acc, recipe) => {
+  const recipesByOutput = (Object.values(RECIPES) as any[]).reduce((acc: any, recipe: any) => {
     if (!recipe?.item) return acc;
     if (!acc[recipe.item]) acc[recipe.item] = [];
     acc[recipe.item].push(recipe);
     return acc;
-  }, {});
+  }, {} as any);
   // Returns { value, max } when a resource has non-zero fractional progress,
   // null otherwise (progress bar is hidden when nothing is accumulating).
-  const progressFor = (key) => {
+  const progressFor = (key: any) => {
     const value = resourceProgress[key] ?? 0;
     const max = RESOURCE_TO_THRESHOLD[key];
     return value > 0 && max ? { value, max } : null;
@@ -475,7 +488,7 @@ export function InventoryGrid({
   const containerRef = useRef(null);
   const [arrowLeft, setArrowLeft] = useState(null);
   const [columnsPerRow, setColumnsPerRow] = useState(1);
-  const assignCellRef = useCallback((key, el) => {
+  const assignCellRef = useCallback((key: any, el: any) => {
     if (el) cellRefs.current[key] = el;
     else delete cellRefs.current[key];
   }, []);
@@ -526,7 +539,7 @@ export function InventoryGrid({
           ? [INVENTORY_TAGS.ITEM]
           : [filter];
 
-  const matchesTags = (key) => {
+  const matchesTags = (key: any) => {
     if (!activeTags || activeTags.length === 0) return true;
     return activeTags.every((tag) => itemHasTag(key, tag) || sourceTagsForItem(key, { recipesByOutput }).includes(tag));
   };
@@ -618,7 +631,7 @@ export function InventoryGrid({
     sortedToolKeys.length === 0 &&
     (query.length > 0 || filter !== "all");
 
-  const makeRef = useCallback((key) => (el) => assignCellRef(key, el), [assignCellRef]);
+  const makeRef = useCallback((key: any) => (el: any) => assignCellRef(key, el), [assignCellRef]);
 
   // ── Narrow mode: inline accordion, no side panel ─────────────────────────
   if (compact) {

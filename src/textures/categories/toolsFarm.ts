@@ -91,7 +91,7 @@ function drawSapling(ctx: CanvasRenderingContext2D) {
   ctx.strokeStyle = "#3a2008"; ctx.lineWidth = 2.4;
   ctx.beginPath(); ctx.moveTo(0, 6); ctx.bezierCurveTo(-2, -2, 2, -8, 0, -16); ctx.stroke();
   // Leaves
-  const leaf = (cx, cy, rx, ry, ang, c1) => {
+  const leaf = (cx: number, cy: number, rx: number, ry: number, ang: number, c1: string) => {
     ctx.fillStyle = c1;
     ctx.save(); ctx.translate(cx, cy); ctx.rotate(ang);
     ctx.beginPath(); ctx.ellipse(0, 0, rx, ry, 0, 0, Math.PI*2); ctx.fill();

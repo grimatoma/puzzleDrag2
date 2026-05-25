@@ -1,12 +1,12 @@
 // Wave 6 — Birds.
 
 // Generic bird body helper (returns nothing — just draws shadow)
-function shadow(ctx, w) {
+function shadow(ctx: CanvasRenderingContext2D, w: number) {
   ctx.fillStyle = "rgba(0,0,0,0.28)";
   ctx.beginPath(); ctx.ellipse(2, 22, w, 4, 0, 0, Math.PI*2); ctx.fill();
 }
 
-function drawPheasant(ctx) {
+function drawPheasant(ctx: CanvasRenderingContext2D) {
   shadow(ctx, 22);
   // Long tail feathers
   ctx.strokeStyle = "#8a4a18"; ctx.lineWidth = 3;
@@ -59,7 +59,7 @@ function drawPheasant(ctx) {
   ctx.beginPath(); ctx.ellipse(-6, 0, 3, 5, -0.4, 0, Math.PI*2); ctx.fill();
 }
 
-function drawChicken(ctx) {
+function drawChicken(ctx: CanvasRenderingContext2D) {
   shadow(ctx, 16);
   // Body
   const g = ctx.createRadialGradient(-4, -2, 3, 0, 4, 16);
@@ -102,7 +102,7 @@ function drawChicken(ctx) {
   ctx.beginPath(); ctx.moveTo(3, 16); ctx.lineTo(4, 22); ctx.stroke();
 }
 
-function drawHen(ctx) {
+function drawHen(ctx: CanvasRenderingContext2D) {
   shadow(ctx, 17);
   // Hen sitting on a nest
   ctx.fillStyle = "#a87838";
@@ -145,7 +145,7 @@ function drawHen(ctx) {
   ctx.strokeStyle = "#a8804a"; ctx.lineWidth = 1.0; ctx.stroke();
 }
 
-function drawRooster(ctx) {
+function drawRooster(ctx: CanvasRenderingContext2D) {
   shadow(ctx, 20);
   // Tail — proud arching feathers
   const tailColors = ["#1a3a18", "#3a6818", "#7a4a18", "#5a2008", "#3a1808"];
@@ -244,21 +244,21 @@ function gooseBase(ctx: CanvasRenderingContext2D, bodyColor1: string, bodyColor2
   });
 }
 
-function drawWildGoose(ctx) {
+function drawWildGoose(ctx: CanvasRenderingContext2D) {
   gooseBase(ctx, "#a89878", "#5a4818", "#1a1408", "#3a2008");
   // White cheek patch
   ctx.fillStyle = "#fff8e0";
   ctx.beginPath(); ctx.ellipse(-9, -13, 3, 2, 0, 0, Math.PI*2); ctx.fill();
 }
 
-function drawGoose(ctx) {
+function drawGoose(ctx: CanvasRenderingContext2D) {
   // Domestic goose — keep it pale but tint just enough that the body
   // silhouette reads against a light tile/UI background (previously it
   // was almost #fffce8 and rendered as outline-only on cream tiles).
   gooseBase(ctx, "#fff8d8", "#a89868", "#fff8d8", "#f0a020");
 }
 
-function drawParrot(ctx) {
+function drawParrot(ctx: CanvasRenderingContext2D) {
   shadow(ctx, 18);
   // Branch
   ctx.fillStyle = "#5a3814";
@@ -311,7 +311,7 @@ function drawParrot(ctx) {
   ctx.beginPath(); ctx.moveTo(2, 14); ctx.lineTo(3, 18); ctx.stroke();
 }
 
-function drawPhoenix(ctx) {
+function drawPhoenix(ctx: CanvasRenderingContext2D) {
   // Aura
   const aura = ctx.createRadialGradient(0, 0, 4, 0, 0, 28);
   aura.addColorStop(0, "rgba(255,200,80,0.5)"); aura.addColorStop(0.6, "rgba(255,80,20,0.25)"); aura.addColorStop(1, "rgba(255,40,10,0)");
@@ -380,7 +380,7 @@ function drawPhoenix(ctx) {
   });
 }
 
-function drawDodo(ctx) {
+function drawDodo(ctx: CanvasRenderingContext2D) {
   shadow(ctx, 20);
   // Tail — silly tuft
   ctx.fillStyle = "#fff8e0";
@@ -425,7 +425,7 @@ function drawDodo(ctx) {
   });
 }
 
-function drawPigInDisguise(ctx) {
+function drawPigInDisguise(ctx: CanvasRenderingContext2D) {
   shadow(ctx, 20);
   // Pink pig body
   const bg = ctx.createRadialGradient(-4, -2, 3, 0, 4, 16);

@@ -23,8 +23,16 @@ export default function IconCanvas({
   title,
   className = "",
   ...rest
+}: {
+  iconKey: any;
+  size?: number;
+  background?: any;
+  rounded?: boolean;
+  title?: any;
+  className?: string;
+  [x: string]: any;
 }) {
-  const ref = useRef(null);
+  const ref = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
     const canvas = ref.current;
@@ -65,6 +73,6 @@ export default function IconCanvas({
 }
 
 /** Returns whether a given key is registered. */
-export function hasIcon(key) {
+export function hasIcon(key: any) {
   return iconColor(key) !== null;
 }

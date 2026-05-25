@@ -1,6 +1,6 @@
 // Fruits.
 
-function drawApple(ctx) {
+function drawApple(ctx: CanvasRenderingContext2D) {
   ctx.fillStyle = "rgba(0,0,0,0.25)";
   ctx.beginPath(); ctx.ellipse(2, 22, 18, 4, 0, 0, Math.PI * 2); ctx.fill();
   const grad = ctx.createRadialGradient(-7, -8, 3, 0, 4, 22);
@@ -25,7 +25,7 @@ function drawApple(ctx) {
   ctx.beginPath(); ctx.ellipse(-8, -6, 4, 7, -0.5, 0, Math.PI * 2); ctx.fill();
 }
 
-function drawPear(ctx) {
+function drawPear(ctx: CanvasRenderingContext2D) {
   ctx.fillStyle = "rgba(0,0,0,0.25)";
   ctx.beginPath(); ctx.ellipse(0, 22, 16, 4, 0, 0, Math.PI * 2); ctx.fill();
   const grad = ctx.createRadialGradient(-6, 4, 3, 0, 8, 24);
@@ -50,7 +50,7 @@ function drawPear(ctx) {
   ctx.beginPath(); ctx.ellipse(-7,4,3,6,-0.4,0,Math.PI*2); ctx.fill();
 }
 
-function drawGoldenApple(ctx) {
+function drawGoldenApple(ctx: CanvasRenderingContext2D) {
   ctx.fillStyle = "rgba(255,220,80,0.18)";
   ctx.beginPath(); ctx.arc(0, 2, 26, 0, Math.PI * 2); ctx.fill();
   ctx.fillStyle = "rgba(0,0,0,0.25)";
@@ -91,7 +91,7 @@ function drawGoldenApple(ctx) {
   });
 }
 
-function drawBlackberry(ctx) {
+function drawBlackberry(ctx: CanvasRenderingContext2D) {
   ctx.fillStyle = "rgba(0,0,0,0.25)";
   ctx.beginPath(); ctx.ellipse(0, 20, 14, 4, 0, 0, Math.PI * 2); ctx.fill();
   // Stem + leaf
@@ -154,7 +154,7 @@ function drawBlackberry(ctx) {
   ctx.restore();
 }
 
-function drawRambutan(ctx) {
+function drawRambutan(ctx: CanvasRenderingContext2D) {
   ctx.fillStyle = "rgba(0,0,0,0.25)";
   ctx.beginPath(); ctx.ellipse(2, 22, 20, 4, 0, 0, Math.PI * 2); ctx.fill();
   ctx.strokeStyle = "#5a8a26"; ctx.lineWidth = 1.4;
@@ -183,7 +183,7 @@ function drawRambutan(ctx) {
   ctx.beginPath(); ctx.ellipse(-6,-1,3,5,-0.4,0,Math.PI*2); ctx.fill();
 }
 
-function drawStarfruit(ctx) {
+function drawStarfruit(ctx: CanvasRenderingContext2D) {
   ctx.fillStyle = "rgba(0,0,0,0.25)";
   ctx.beginPath(); ctx.ellipse(0, 22, 18, 4, 0, 0, Math.PI * 2); ctx.fill();
   // Whole carambola is an oblong yellow fruit with deep longitudinal ridges.
@@ -252,7 +252,7 @@ function drawStarfruit(ctx) {
   ctx.restore();
 }
 
-function drawCoconut(ctx) {
+function drawCoconut(ctx: CanvasRenderingContext2D) {
   ctx.fillStyle = "rgba(0,0,0,0.28)";
   ctx.beginPath(); ctx.ellipse(2,22,22,4.5,0,0,Math.PI*2); ctx.fill();
   const grad = ctx.createRadialGradient(-6,-8,3,0,4,24);
@@ -289,7 +289,7 @@ function drawCoconut(ctx) {
   ctx.beginPath(); ctx.ellipse(-7,-10,4,7,-0.4,0,Math.PI*2); ctx.fill();
 }
 
-function drawLemon(ctx) {
+function drawLemon(ctx: CanvasRenderingContext2D) {
   ctx.fillStyle = "rgba(0,0,0,0.25)";
   ctx.beginPath(); ctx.ellipse(2,22,20,4,0,0,Math.PI*2); ctx.fill();
   const grad = ctx.createRadialGradient(-6,-6,3,0,4,22);
@@ -316,7 +316,7 @@ function drawLemon(ctx) {
   ctx.beginPath(); ctx.ellipse(-5,-5,5,9,-0.5,0,Math.PI*2); ctx.fill();
 }
 
-function drawJackfruit(ctx) {
+function drawJackfruit(ctx: CanvasRenderingContext2D) {
   ctx.fillStyle = "rgba(0,0,0,0.28)";
   ctx.beginPath(); ctx.ellipse(2,22,22,5,0,0,Math.PI*2); ctx.fill();
   const grad = ctx.createRadialGradient(-6,-4,3,0,6,26);

@@ -65,20 +65,20 @@ const PACT_TERMS = [
   },
 ];
 
-function termRelatedEntries(term, choiceLog) {
+function termRelatedEntries(term: any, choiceLog: any) {
   const set = new Set(term.relatedBeats);
-  return choiceLog.filter((e) => set.has(e.beatId));
+  return choiceLog.filter((e: any) => set.has(e.beatId));
 }
 
-function deriveTermState(term, choiceLog, flags) {
-  if (term.violationFlags.some((f) => flags[f])) return "violated";
+function deriveTermState(term: any, choiceLog: any, flags: any) {
+  if (term.violationFlags.some((f: any) => flags[f])) return "violated";
   const entries = termRelatedEntries(term, choiceLog);
-  if (term.honoredFlags.some((f) => flags[f])) return "honored";
+  if (term.honoredFlags.some((f: any) => flags[f])) return "honored";
   if (entries.length > 0) return "honored";
   return "pending";
 }
 
-function termCaption(term, choiceLog, flags) {
+function termCaption(term: any, choiceLog: any, flags: any) {
   const entries = termRelatedEntries(term, choiceLog);
   const state = deriveTermState(term, choiceLog, flags);
   if (state === "violated") return `Violated — ${entries.length || 1} recorded mark${entries.length === 1 ? "" : "s"}`;
@@ -86,19 +86,19 @@ function termCaption(term, choiceLog, flags) {
   return "Awaiting your hand";
 }
 
-function statePillTone(state) {
+function statePillTone(state: any) {
   if (state === "honored") return "moss";
   if (state === "violated") return "rose";
   return "iron";
 }
 
-function statePillLabel(state) {
+function statePillLabel(state: any) {
   if (state === "honored") return "honored";
   if (state === "violated") return "violated";
   return "pending";
 }
 
-function formatChoiceEntry(entry) {
+function formatChoiceEntry(entry: any) {
   const beat = findBeat(entry.beatId);
   if (!beat) {
     return {
@@ -109,7 +109,7 @@ function formatChoiceEntry(entry) {
       value: entry.value,
     };
   }
-  const choice = beatChoices(beat).find((c) => c.id === entry.choiceId);
+  const choice = beatChoices(beat).find((c: any) => c.id === entry.choiceId);
   return {
     title: beat.title || entry.beatId,
     choiceLabel: choice?.label || entry.choiceId,
@@ -119,7 +119,7 @@ function formatChoiceEntry(entry) {
   };
 }
 
-function formatTimestamp(ts) {
+function formatTimestamp(ts: any) {
   if (!ts) return "";
   try {
     const d = new Date(ts);
@@ -129,7 +129,7 @@ function formatTimestamp(ts) {
   }
 }
 
-function TermCard({ term, choiceLog, flags, onOpen }) {
+function TermCard({ term, choiceLog, flags, onOpen }: { term: any; choiceLog: any; flags: any; onOpen: any }) {
   const state = deriveTermState(term, choiceLog, flags);
   const tone = statePillTone(state);
   const label = statePillLabel(state);
@@ -150,7 +150,7 @@ function TermCard({ term, choiceLog, flags, onOpen }) {
   );
 }
 
-function TermDialog({ term, choiceLog, flags, onClose }) {
+function TermDialog({ term, choiceLog, flags, onClose }: { term: any; choiceLog: any; flags: any; onClose: any }) {
   if (!term) return null;
   const entries = termRelatedEntries(term, choiceLog);
   const state = deriveTermState(term, choiceLog, flags);
@@ -172,7 +172,7 @@ function TermDialog({ term, choiceLog, flags, onClose }) {
           </p>
         ) : (
           <ul className="flex flex-col gap-2">
-            {entries.map((e, i) => {
+            {entries.map((e: any, i: any) => {
               const f = formatChoiceEntry(e);
               return (
                 <li key={`${e.beatId}-${e.choiceId}-${e.ts ?? i}`} className="border-l-2 border-iron-edge pl-3 py-1">
@@ -194,7 +194,7 @@ function TermDialog({ term, choiceLog, flags, onClose }) {
   );
 }
 
-function FilterChip({ active, onClick, children }) {
+function FilterChip({ active, onClick, children }: { active: any; onClick: any; children: any }) {
   return (
     <Pill
       tone={active ? "gold" : "iron"}
@@ -211,7 +211,7 @@ function FilterChip({ active, onClick, children }) {
   );
 }
 
-function SettlementRibbon({ name, dayCount }) {
+function SettlementRibbon({ name, dayCount }: { name: any; dayCount: any }) {
   return (
     <div className="flex items-center gap-3 bg-parchment-soft border border-iron rounded-lg px-4 py-3 mb-4">
       <div className="w-10 h-10 rounded-full bg-gold-soft/20 border border-gold-soft/40 grid place-items-center flex-shrink-0">
@@ -226,7 +226,7 @@ function SettlementRibbon({ name, dayCount }) {
   );
 }
 
-function TimelineRow({ entry }) {
+function TimelineRow({ entry }: { entry: any }) {
   const f = formatChoiceEntry(entry);
   return (
     <li className="relative pl-6 py-2 border-l-2 border-panel-edge">
@@ -248,9 +248,9 @@ function TimelineRow({ entry }) {
   );
 }
 
-export default function Charter({ state, dispatch }) {
+export default function Charter({ state, dispatch }: { state: any; dispatch: any }) {
   const [tab, setTab] = useState("terms");
-  const [openTermId, setOpenTermId] = useState(null);
+  const [openTermId, setOpenTermId] = useState<string | null>(null);
 
   const flags = state?.story?.flags ?? {};
   const settlementName = state?.settlement?.name ?? "Hearthwood Vale";

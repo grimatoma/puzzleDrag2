@@ -3,14 +3,14 @@
 // of the iconRegistry: soft drop shadow + layered fill/stroke + cool
 // outlines.
 
-function drawShadow(ctx, w = 22, h = 4) {
+function drawShadow(ctx: CanvasRenderingContext2D, w = 22, h = 4) {
   ctx.fillStyle = "rgba(0,0,0,0.22)";
   ctx.beginPath();
   ctx.ellipse(0, 22, w, h, 0, 0, Math.PI * 2);
   ctx.fill();
 }
 
-function drawHome(ctx) {
+function drawHome(ctx: CanvasRenderingContext2D) {
   // Hearthwood Vale — a warm-roofed cottage
   drawShadow(ctx, 20, 4);
   // Walls
@@ -95,7 +95,7 @@ function drawHome(ctx) {
   ctx.fill();
 }
 
-function drawMeadow(ctx) {
+function drawMeadow(ctx: CanvasRenderingContext2D) {
   // Greenmeadow — rolling field with wheat
   drawShadow(ctx, 26, 4);
   // Background hills
@@ -159,7 +159,7 @@ function drawMeadow(ctx) {
   ctx.stroke();
 }
 
-function drawOrchard(ctx) {
+function drawOrchard(ctx: CanvasRenderingContext2D) {
   // Wild Orchard — apple tree
   drawShadow(ctx, 22, 4);
   // Trunk
@@ -227,7 +227,7 @@ function drawOrchard(ctx) {
   ctx.fill();
 }
 
-function drawCrossroads(ctx) {
+function drawCrossroads(ctx: CanvasRenderingContext2D) {
   // The Crossroads — signpost at intersection
   drawShadow(ctx, 24, 4);
   // Ground (dirt path)
@@ -299,7 +299,7 @@ function drawCrossroads(ctx) {
   ctx.stroke();
 }
 
-function drawQuarry(ctx) {
+function drawQuarry(ctx: CanvasRenderingContext2D) {
   // Cracked Quarry — pickaxe over stone block
   drawShadow(ctx, 22, 4);
   // Stone block
@@ -382,7 +382,7 @@ function drawQuarry(ctx) {
   });
 }
 
-function drawCaves(ctx) {
+function drawCaves(ctx: CanvasRenderingContext2D) {
   // Lanternlit Caves — cave entrance with hanging lantern
   drawShadow(ctx, 22, 4);
   // Cave background (dark)
@@ -466,7 +466,7 @@ function drawCaves(ctx) {
   });
 }
 
-function drawFairground(ctx) {
+function drawFairground(ctx: CanvasRenderingContext2D) {
   // Drifter's Fairground — striped tent
   drawShadow(ctx, 24, 4);
   // Center pole
@@ -560,7 +560,7 @@ function drawFairground(ctx) {
   });
 }
 
-function drawForgeMap(ctx) {
+function drawForgeMap(ctx: CanvasRenderingContext2D) {
   // Black Forge — anvil with sparks
   drawShadow(ctx, 22, 4);
   // Anvil base
@@ -652,7 +652,7 @@ function drawForgeMap(ctx) {
   ctx.restore();
 }
 
-function drawPit(ctx) {
+function drawPit(ctx: CanvasRenderingContext2D) {
   // The Pit — boss arena: crossed swords over a dark hole
   drawShadow(ctx, 22, 4);
   // Outer ring (rim)
@@ -679,7 +679,7 @@ function drawPit(ctx) {
   // Crossed swords — drawn with rectangular pommels (round ones read as
   // scissor handle loops) and chunkier blades/guards.
   ctx.save();
-  const drawSword = (tx, ty, rot) => {
+  const drawSword = (tx: number, ty: number, rot: number) => {
     ctx.save();
     ctx.translate(tx, ty);
     ctx.rotate(rot);

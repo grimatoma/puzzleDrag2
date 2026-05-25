@@ -1,6 +1,6 @@
 // Grass family.
 
-function drawHeather(ctx) {
+function drawHeather(ctx: CanvasRenderingContext2D) {
   // Soil shadow
   ctx.fillStyle = "rgba(0,0,0,0.22)";
   ctx.beginPath();

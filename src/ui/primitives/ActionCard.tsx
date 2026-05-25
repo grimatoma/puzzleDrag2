@@ -1,8 +1,8 @@
-function cx(...parts) {
+function cx(...parts: any[]) {
   return parts.filter(Boolean).join(" ");
 }
 
-const PROGRESS_TONES = {
+const PROGRESS_TONES: Record<string, string> = {
   ember: "var(--ember)",
   moss: "var(--moss)",
   gold: "var(--gold)",
@@ -16,7 +16,7 @@ export function ProgressBar({
   color,
   className = "",
   trackClassName = "",
-}) {
+}: { value?: number; max?: number; tone?: string; color?: any; className?: string; trackClassName?: string }) {
   const pct = max > 0 ? Math.max(0, Math.min(100, (value / max) * 100)) : 0;
   return (
     <div className={cx("h-2.5 rounded-full overflow-hidden bg-[#2b2218]/25", trackClassName, className)}>
@@ -29,12 +29,12 @@ export function ProgressBar({
 }
 
 export default function ActionCard({
-  as: Component = "div",
+  as: Component = "div" as any,
   interactive = false,
   className = "",
   children,
   ...rest
-}) {
+}: { as?: any; interactive?: boolean; className?: string; children?: any; [x: string]: any }) {
   return (
     <Component
       className={cx(
@@ -50,11 +50,11 @@ export default function ActionCard({
   );
 }
 
-function Row({ className = "", children }) {
+function Row({ className = "", children }: { className?: string; children?: any }) {
   return <div className={cx("flex items-center gap-2", className)}>{children}</div>;
 }
 
-function Content({ className = "", children }) {
+function Content({ className = "", children }: { className?: string; children?: any }) {
   return <div className={cx("flex-1 min-w-0", className)}>{children}</div>;
 }
 
