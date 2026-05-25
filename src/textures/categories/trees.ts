@@ -13,7 +13,7 @@ function trunk(ctx: CanvasRenderingContext2D, w: number, topY: number, botY: num
   ctx.strokeStyle = outline; ctx.lineWidth = 2.0; ctx.stroke();
 }
 
-function drawOak(ctx) {
+function drawOak(ctx: CanvasRenderingContext2D) {
   ctx.fillStyle = "rgba(0,0,0,0.3)";
   ctx.beginPath(); ctx.ellipse(2, 24, 22, 4, 0, 0, Math.PI*2); ctx.fill();
   trunk(ctx, 5, -4, 24, "#7a4a18", "#3a200a", "#1a0e04");
@@ -31,7 +31,7 @@ function drawOak(ctx) {
   [[-10,-8,3],[10,-8,3],[-4,-14,2.5],[4,-12,2.5]].forEach(([sx,sy,sr])=>{ ctx.beginPath(); ctx.arc(sx,sy,sr,0,Math.PI*2); ctx.fill(); });
 }
 
-function drawBirch(ctx) {
+function drawBirch(ctx: CanvasRenderingContext2D) {
   ctx.fillStyle = "rgba(0,0,0,0.28)";
   ctx.beginPath(); ctx.ellipse(2, 24, 16, 4, 0, 0, Math.PI*2); ctx.fill();
   const g = ctx.createLinearGradient(-4, 0, 4, 0);
@@ -63,7 +63,7 @@ function drawBirch(ctx) {
   [[-11,-13,2],[11,-13,2],[0,-21,2.2]].forEach(([sx,sy,sr])=>{ ctx.beginPath(); ctx.arc(sx,sy,sr,0,Math.PI*2); ctx.fill(); });
 }
 
-function drawWillow(ctx) {
+function drawWillow(ctx: CanvasRenderingContext2D) {
   ctx.fillStyle = "rgba(0,0,0,0.3)";
   ctx.beginPath(); ctx.ellipse(2, 24, 22, 4, 0, 0, Math.PI*2); ctx.fill();
   trunk(ctx, 4, -8, 24, "#6b4818", "#3a2008", "#1a0e04");
@@ -94,7 +94,7 @@ function drawWillow(ctx) {
   [[-6,-16,3],[6,-16,3]].forEach(([sx,sy,sr])=>{ ctx.beginPath(); ctx.arc(sx,sy,sr,0,Math.PI*2); ctx.fill(); });
 }
 
-function drawFir(ctx) {
+function drawFir(ctx: CanvasRenderingContext2D) {
   ctx.fillStyle = "rgba(0,0,0,0.32)";
   ctx.beginPath(); ctx.ellipse(2, 24, 18, 4, 0, 0, Math.PI*2); ctx.fill();
   trunk(ctx, 3.5, 18, 24, "#5a3814", "#2a1808", "#1a0e04");
@@ -140,7 +140,7 @@ function drawFir(ctx) {
   ctx.fillStyle = "#f8d040"; ctx.beginPath(); ctx.arc(0,-22,1.4,0,Math.PI*2); ctx.fill();
 }
 
-function drawCypress(ctx) {
+function drawCypress(ctx: CanvasRenderingContext2D) {
   ctx.fillStyle = "rgba(0,0,0,0.32)";
   ctx.beginPath(); ctx.ellipse(2, 24, 12, 4, 0, 0, Math.PI*2); ctx.fill();
   trunk(ctx, 3, 18, 24, "#5a3814", "#2a1808", "#1a0e04");
@@ -167,7 +167,7 @@ function drawCypress(ctx) {
   [[-4,4,1.6],[4,-2,1.6],[-2,-12,1.4],[3,10,1.5]].forEach(([sx,sy,sr])=>{ ctx.beginPath(); ctx.arc(sx,sy,sr,0,Math.PI*2); ctx.fill(); });
 }
 
-function drawPalm(ctx) {
+function drawPalm(ctx: CanvasRenderingContext2D) {
   ctx.fillStyle = "rgba(0,0,0,0.3)";
   ctx.beginPath(); ctx.ellipse(2, 24, 18, 4, 0, 0, Math.PI*2); ctx.fill();
   const tg = ctx.createLinearGradient(-5, 0, 5, 0);

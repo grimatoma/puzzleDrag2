@@ -156,7 +156,7 @@ export class GameScene extends Phaser.Scene {
     // snags on whichever off-diagonal tile's corner the finger clips. The
     // circle leaves the corners as a neutral gutter, so diagonal moves go
     // straight from tile to diagonal tile without grabbing an intermediate.
-    this.input.on("pointermove", (pointer) => {
+    this.input.on("pointermove", (pointer: Phaser.Input.Pointer) => {
       if (!this.dragging || !this.path.length) return;
       this._positionGrassHover(pointer.worldX, pointer.worldY);
       const ts = this.tileSize;
@@ -180,7 +180,7 @@ export class GameScene extends Phaser.Scene {
     // Prevent the browser from hijacking pointer events with its native text/element
     // selection during tile drags (causes the "foggy film" overlay and stuck tile selection).
     const canvas = this.sys.game.canvas;
-    const preventSelect = (e) => e.preventDefault();
+    const preventSelect = (e: Event) => e.preventDefault();
     canvas.addEventListener("selectstart", preventSelect);
     canvas.addEventListener("contextmenu", preventSelect);
 
@@ -201,14 +201,14 @@ export class GameScene extends Phaser.Scene {
     // Cancel drag when the mouse physically leaves the canvas. Skip touch:
     // on mobile, pointerleave fires spuriously when a finger passes over an
     // overlapping DOM element; document-level touchend handles actual release.
-    const onPointerLeave = (e) => { if (e.pointerType !== "touch") onDocPointerUp(); };
+    const onPointerLeave = (e: PointerEvent) => { if (e.pointerType !== "touch") onDocPointerUp(); };
     canvas.addEventListener("pointerleave", onPointerLeave);
 
     // Registry and scale listeners — track each so they can be torn down on
     // shutdown. Otherwise scene recreation (HMR, tests, biome reload) leaks
     // handlers that fire against a destroyed scene.
-    const registryListeners = [];
-    const onRegistry = (event, fn) => {
+    const registryListeners: Array<[string, (...args: any[]) => void]> = []; // TODO(ts-migration): tighten registry callback types
+    const onRegistry = (event: string, fn: (...args: any[]) => void) => { // TODO(ts-migration): tighten
       this.registry.events.on(event, fn);
       registryListeners.push([event, fn]);
     };

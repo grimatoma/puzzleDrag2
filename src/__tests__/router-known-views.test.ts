@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { KNOWN_VIEWS } from "../router.js";
 
-const featureModules = import.meta.glob("../features/*/index.{jsx,tsx}", { eager: true });
+const featureModules = import.meta.glob("../features/*/index.{jsx,tsx,js}", { eager: true });
 
 describe("router KNOWN_VIEWS", () => {
   it("includes every feature viewKey export", () => {

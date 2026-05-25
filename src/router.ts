@@ -20,9 +20,10 @@
 
 import { useEffect, useRef } from "react";
 
-const featureModules = import.meta.glob("./features/*/index.jsx", { eager: true });
+const featureModules = import.meta.glob("./features/*/index.{jsx,tsx}", { eager: true });
+if (typeof console !== "undefined") console.log("[router] glob keys:", Object.keys(featureModules).filter(k => k.includes("crafting") || k.includes("inventory")).join(", ") || "none");
 const FEATURE_VIEW_KEYS = Object.values(featureModules)
-  .map((mod) => mod.viewKey)
+  .map((mod: any) => (mod as any).viewKey)
   .filter(Boolean);
 
 // Views reachable via the URL (shell views + feature viewKey exports).

@@ -4,7 +4,7 @@ import { paintIcon } from "../textures/paintIcon.js";
 
 // Global cache mapping size -> { key -> dataUri }
 // We use a combined string key for easy lookups: `${iconKey}_${size}_${dpr}`
-const ICON_CACHE = new Map();
+const ICON_CACHE = new Map<string, string>();
 
 export function clearIconCache() {
   ICON_CACHE.clear();
@@ -15,7 +15,7 @@ export function clearIconCache() {
 
 // Debounce resize to trigger global cache clearing so we can bake new resolutions
 if (typeof window !== "undefined") {
-  let resizeTimer;
+  let resizeTimer: ReturnType<typeof setTimeout> | undefined;
   window.addEventListener("resize", () => {
     clearTimeout(resizeTimer);
     resizeTimer = setTimeout(clearIconCache, 200);
@@ -33,21 +33,21 @@ if (import.meta.hot) {
  * Mounts an off-screen canvas exactly once per unique (key, size, dpr) combination,
  * caches the resulting data URI, and renders as an <img> for maximum React performance.
  */
-export default function Icon({ iconKey, size = 24, className = "", style = {}, title }) {
-  const [dataUri, setDataUri] = useState(null);
+export default function Icon({ iconKey, size = 24, className = "", style = {} as any, title }: { iconKey: any; size?: number; className?: string; style?: any; title?: any }) {
+  const [dataUri, setDataUri] = useState<string | null>(null);
 
   useEffect(() => {
     function getOrBake() {
       if (!iconKey) return null;
       
-      const entry = ICON_REGISTRY[iconKey];
+      const entry = (ICON_REGISTRY as any)[iconKey];
       if (!entry) return null;
 
       const dpr = (typeof window !== "undefined" ? window.devicePixelRatio : 1) || 1;
       const cacheKey = `${iconKey}_${size}_${dpr}`;
       
       if (ICON_CACHE.has(cacheKey)) {
-        return ICON_CACHE.get(cacheKey);
+        return ICON_CACHE.get(cacheKey) ?? null;
       }
 
       // Bake new icon
@@ -55,6 +55,7 @@ export default function Icon({ iconKey, size = 24, className = "", style = {}, t
       canvas.width = size * dpr;
       canvas.height = size * dpr;
       const ctx = canvas.getContext("2d");
+      if (!ctx) return null;
       
       ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.scale(dpr, dpr);
@@ -93,7 +94,7 @@ export default function Icon({ iconKey, size = 24, className = "", style = {}, t
     <img
       src={dataUri}
       alt={iconKey}
-      title={title || ICON_REGISTRY[iconKey]?.label || iconKey}
+      title={title || (ICON_REGISTRY as any)[iconKey]?.label || iconKey}
       className={`inline-block align-middle ${className}`}
       style={{
         width: size,
