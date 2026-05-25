@@ -13,7 +13,7 @@ function collectTestIds(source) {
 
 describe('board layout + tools modal invariants', () => {
   const HERE = path.dirname(fileURLToPath(import.meta.url));
-  const boardPath = path.resolve(HERE, '..', 'ui', 'puzzleBoard.jsx');
+  const boardPath = path.resolve(HERE, '..', 'ui', 'puzzleBoard.tsx');
   const source = fs.readFileSync(boardPath, 'utf8');
   const testIds = collectTestIds(source);
 
