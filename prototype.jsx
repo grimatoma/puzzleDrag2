@@ -228,14 +228,16 @@ function PhaserMount({ dispatch, biomeKey, turnsUsed, uiLocked, boardActive, sce
   useEffect(() => { gameRef.current?.registry.set("tileCollectionDiscovered", tileCollection?.discovered ?? null); }, [tileCollection?.discovered]);
   useEffect(() => { gameRef.current?.registry.set("built", gameState?.built ?? null); }, [gameState?.built]);
   useEffect(() => { gameRef.current?.registry.set("fillBiasTarget", gameState?.fillBiasTarget ?? null); }, [gameState?.fillBiasTarget]);
+  useEffect(() => {
+    const scene = gameRef.current?.scene?.getScene?.("Game");
+    scene?._syncWorkerEffects?.();
+  }, [workers, gameState?.built, gameState?.activeZone, gameState?.mapCurrent, tileCollection?.activeByCategory, tileCollection?.discovered]);
   // Sync grid state → Phaser registry so hazard engines see real tile keys
   useEffect(() => { gameRef.current?.registry.set("grid", grid ?? null); }, [grid]);
   // Sync biomeRestored flag so GameScene.handleBiomeChange can skip randomize when savedField restored
   useEffect(() => { gameRef.current?.registry.set("biomeRestored", gameState?._biomeRestored ?? false); }, [gameState?._biomeRestored]);
   // Sync boss modifier flags so GameScene.fillBoard can apply spawnBias
   useEffect(() => { gameRef.current?.registry.set("boss", gameState?.boss ?? null); }, [gameState?.boss]);
-  // Sync fertilizerActive so GameScene.fillBoard can bias seedling-tier resources
-  useEffect(() => { gameRef.current?.registry.set("fertilizerActive", gameState?.fertilizerActive ?? false); }, [gameState?.fertilizerActive]);
   // V.3 — Sync inventory and cap so GameScene.collectPath can compute actual gain for float text
   useEffect(() => { gameRef.current?.registry.set("inventory", gameState?.inventory ?? {}); }, [gameState?.inventory]);
   useEffect(() => { gameRef.current?.registry.set("inventoryCap", currentCap(gameState) ?? 200); }, [gameState]);
@@ -290,7 +292,7 @@ export default function App() {
       chainInfo={chainInfo}
       inspectedTool={inspectedTool}
       armedTool={armedTool}
-      fertilizerActive={!!state.fertilizerActive}
+      fillBiasArmed={!!(state.fillBiasTarget || (state.magicFertilizerCharges ?? 0) > 0)}
       inventory={state.inventory}
       biomeKey={state.biomeKey}
       cap={currentCap(state)}

@@ -59,8 +59,8 @@ describe("10.1 — createInitialState tool counters", () => {
     expect(createInitialState().toolPending).toBeNull();
   });
 
-  it("fertilizerActive starts false", () => {
-    expect(createInitialState().fertilizerActive).toBe(false);
+  it("fillBiasTarget starts unset", () => {
+    expect(createInitialState().fillBiasTarget).toBeFalsy();
   });
 });
 
@@ -183,23 +183,20 @@ describe("10.1 — USE_TOOL (no turn cost)", () => {
     const s0 = { ...base, tools: { ...base.tools, fertilizer: 1 }, turnsUsed: 4 };
     const s1 = rootReducer(s0, { type: "USE_TOOL", key: "fertilizer" });
     expect(s1.tools.fertilizer).toBe(0);
-    expect(s1.fertilizerActive).toBe(true);
+    expect(s1.fillBiasTarget).toBeTruthy();
     expect(s1.turnsUsed).toBe(4);
   });
 
-  it("fertilizer: legacy fertilizerActive arm still disarms when armed (defensive fallback)", () => {
-    // The fertilizer-self-disarm path stays wired for any legacy state shape
-    // that still arms `fertilizerActive` (CANCEL_TOOL / disarmOtherTools, etc.)
-    // even after the transform_tiles migration. Re-using while active refunds.
+  it("fertilizer: fill bias arm disarms when re-used (refund charge)", () => {
     const base = createInitialState();
     const s0 = {
       ...base,
       tools: { ...base.tools, fertilizer: 0 },
-      fertilizerActive: true,
+      fillBiasTarget: "tile_grain_wheat",
       turnsUsed: 4,
     };
     const s1 = rootReducer(s0, { type: "USE_TOOL", key: "fertilizer" });
-    expect(s1.fertilizerActive).toBe(false);
+    expect(s1.fillBiasTarget).toBeFalsy();
     expect(s1.tools.fertilizer).toBe(1);
     expect(s1.turnsUsed).toBe(4);
   });

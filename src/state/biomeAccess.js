@@ -38,3 +38,8 @@ export function canEnterBiome(state, biomeKey) {
 
   return { ok: true };
 }
+
+/** Whether a biome board card or entry modal should show as locked. */
+export function isBiomeLocked(state, biomeKey) {
+  return !canEnterBiome(state, biomeKey).ok;
+}

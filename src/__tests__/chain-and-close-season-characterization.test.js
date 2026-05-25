@@ -212,10 +212,10 @@ describe("CLOSE_SEASON — bookkeeping resets", () => {
     expect(s1.seasonStats).toEqual({ harvests: 0, upgrades: 0, ordersFilled: 0, coins: 0, capFloaters: {} });
   });
 
-  it("clears fertilizerActive at season end", () => {
-    const s0 = baseState({ fertilizerActive: true });
+  it("clears fillBiasTarget at season end", () => {
+    const s0 = baseState({ fillBiasTarget: "tile_grain_wheat" });
     const s1 = rootReducer(s0, { type: "CLOSE_SEASON" });
-    expect(s1.fertilizerActive).toBe(false);
+    expect(s1.fillBiasTarget).toBeFalsy();
   });
 
   it("resets tileCollection.freeMoves to 0", () => {

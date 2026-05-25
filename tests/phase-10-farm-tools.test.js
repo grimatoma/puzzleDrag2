@@ -34,9 +34,9 @@ describe("Phase 10 — fresh state tools", () => {
     expect(s.tools.axe).toBe(0);
   });
 
-  it("fresh state has fertilizerActive === false", () => {
+  it("fresh state has no fill bias armed", () => {
     const s = createInitialState();
-    expect(s.fertilizerActive).toBe(false);
+    expect(s.fillBiasTarget).toBeFalsy();
   });
 
   it("fresh state has tools.cat === 0", () => {
@@ -73,6 +73,6 @@ describe("Phase 10 — USE_TOOL fertilizer", () => {
     const s = { ...base, tools: { ...base.tools, fertilizer: 1 } };
     const next = rootReducer(s, { type: "USE_TOOL", payload: { id: "fertilizer" } });
     expect(next.tools.fertilizer).toBe(0);
-    expect(next.fertilizerActive).toBe(true);
+    expect(next.fillBiasTarget).toBeTruthy();
   });
 });

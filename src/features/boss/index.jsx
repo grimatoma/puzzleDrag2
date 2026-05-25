@@ -1,5 +1,5 @@
 
-import { BOSS_META } from "./slice.js";
+import { BOSS_UI } from "./uiMeta.js";
 import IconCanvas, { hasIcon } from "../../ui/IconCanvas.jsx";
 import { StoryDialog } from "../../ui/primitives/Dialog.jsx";
 import { ProgressBar } from "../../ui/primitives/ActionCard.jsx";
@@ -24,7 +24,7 @@ function WarningGlyph({ size = 14 }) {
 }
 
 function BossModal({ boss, year = 1, dispatch }) {
-  const meta = BOSS_META[boss.key] || {};
+  const meta = BOSS_UI[boss.key] || {};
   const pct = boss.targetCount > 0
     ? Math.min(100, Math.round((boss.progress / boss.targetCount) * 100))
     : 0;
@@ -64,7 +64,7 @@ function BossModal({ boss, year = 1, dispatch }) {
             className="text-[12px] text-white/70 text-center italic mt-1 px-2"
             style={{ fontFamily: "Arial, sans-serif" }}
           >
-            {meta.flavor || boss.flavor}
+            {boss.flavor || meta.flavor}
           </div>
           {boss.description && (
             <div

@@ -36,10 +36,10 @@ describe("auto-deselect — SET_VIEW away from board disarms armed tools", () =>
     expect(s1.tools.rake).toBe(1);
   });
 
-  it("fertilizerActive flag clears and refunds the charge on leave-board", () => {
-    const s0 = { ...baseState(), fertilizerActive: true, tools: { ...baseState().tools, fertilizer: 0 } };
+  it("fillBiasTarget flag clears and refunds the charge on leave-board", () => {
+    const s0 = { ...baseState(), fillBiasTarget: "tile_grain_wheat", tools: { ...baseState().tools, fertilizer: 0 } };
     const s1 = rootReducer(s0, { type: "SET_VIEW", view: "town" });
-    expect(s1.fertilizerActive).toBe(false);
+    expect(s1.fillBiasTarget).toBeFalsy();
     expect(s1.tools.fertilizer).toBe(1);
   });
 
@@ -60,12 +60,12 @@ describe("auto-deselect — SET_VIEW away from board disarms armed tools", () =>
     const s0 = {
       ...baseState(),
       toolPending: "bomb",
-      fertilizerActive: true,
+      fillBiasTarget: "tile_grain_wheat",
       tools: { ...baseState().tools, fertilizer: 0 },
     };
     const s1 = rootReducer(s0, { type: "SET_VIEW", view: "town" });
     expect(s1.toolPending).toBeNull();
-    expect(s1.fertilizerActive).toBe(false);
+    expect(s1.fillBiasTarget).toBeFalsy();
     expect(s1.tools.bomb).toBe(1);       // tap-target arms refund nothing
     expect(s1.tools.fertilizer).toBe(1); // fertilizer refunds
   });
@@ -74,7 +74,7 @@ describe("auto-deselect — SET_VIEW away from board disarms armed tools", () =>
     const s0 = baseState();
     const s1 = rootReducer(s0, { type: "SET_VIEW", view: "town" });
     expect(s1.toolPending).toBeNull();
-    expect(s1.fertilizerActive).toBeFalsy();
+    expect(s1.fillBiasTarget).toBeFalsy();
     expect(s1.tools).toEqual(s0.tools);
   });
 });
@@ -128,16 +128,16 @@ describe("auto-deselect — save load drops any armed tool", () => {
     expect(loaded.tools.bomb).toBe(2);
   });
 
-  it("save with fertilizerActive hydrates disarmed with charge refunded", async () => {
+  it("save with fillBiasTarget hydrates disarmed with charge refunded", async () => {
     const { SAVE_SCHEMA_VERSION } = await import("../constants.js");
     persistSave({
       version: SAVE_SCHEMA_VERSION,
       view: "board",
       tools: { fertilizer: 0 },
-      fertilizerActive: true,
+      fillBiasTarget: "tile_grain_wheat",
     });
     const loaded = initialState();
-    expect(loaded.fertilizerActive).toBe(false);
+    expect(loaded.fillBiasTarget).toBeFalsy();
     expect(loaded.tools.fertilizer).toBe(1);
   });
 

@@ -1,6 +1,10 @@
 // Curated non-story reads of story flags. The Flags tab derives story/beat
 // references directly; this map covers guards in reducers and UI that are not
 // visible from the registry or beat data.
+//
+// Checklist when adding a beat flag: register the read site here, use
+// canEnterBiome() for biome gates (not raw level checks), and add a test if
+// the flag gates gameplay.
 export const FLAG_READS = Object.freeze({
   hearth_lit:           [{ where: "src/features/npcs/dialog.js", note: "Wren reactive town dialog" }, { where: "src/ui/Town.jsx", note: "ambient Hearth building state" }],
   first_order:          [{ where: "src/features/npcs/dialog.js", note: "Tomas reactive town dialog" }],

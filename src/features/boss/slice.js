@@ -1,85 +1,10 @@
 import { RECIPES } from "../../constants.js";
 import { BOSSES, BOSS_WINDOW_TURNS, bossReward as bossRewardFn, spawnBoss } from "../bosses/data.js";
+import { tickModifier } from "../bosses/modifiers.js";
 import { awardXp } from "../almanac/data.js";
+import { BOSS_UI } from "./uiMeta.js";
 
-// Build BOSS_META from the canonical BOSSES list (features/bosses/data.js)
-// Preserving UI-only fields (emoji, flavor, goal) inline while sourcing turns
-// from BOSS_WINDOW_TURNS and resource/target from each boss def.
-const BOSS_META = {
-  frostmaw: {
-    name: "The Frostmaw",
-    emoji: "❄️",
-    flavor: "A frozen titan stirs in the deep winter wood. Your hearth must not go dark.",
-    goal: "Bring 30 logs in 10 turns to keep the hearth lit.",
-    resource: "tile_tree_oak",
-    targetCount: 30,
-    turns: BOSS_WINDOW_TURNS, // §18 locked: 10
-    minChain: 5,
-  },
-  ember_drake: {
-    name: "Ember Drake",
-    emoji: "🔥",
-    flavor: "Scales of cinder, breath of smelting flame — the Drake demands tribute in iron.",
-    goal: "Forge 3 ingots before the hour passes.",
-    resource: "iron_bar",
-    targetCount: 3,
-    turns: BOSS_WINDOW_TURNS,
-    minChain: null,
-    // Spec §9: heat tiles appear — spawn 1-2 fire tiles per season
-    spawnFireTiles: 2,
-  },
-  quagmire: {
-    name: "The Quagmire",
-    emoji: "🌿",
-    flavor: "The bog has swallowed the lower fields. Only a bountiful harvest can drain its hold.",
-    goal: "Drain the bog: harvest 50 hay across 10 turns.",
-    resource: "tile_grass_hay",
-    targetCount: 50,
-    turns: BOSS_WINDOW_TURNS,
-    minChain: null,
-    // Spec §9: extra log/hay respawn tiles — bias spawn pool +30% log+hay
-    spawnBias: { tile_tree_oak: 1.3, tile_grass_hay: 1.3 },
-  },
-  old_stoneface: {
-    name: "Old Stoneface",
-    emoji: "🪨",
-    flavor: "An ancient golem has sealed the mountain pass. Prove your worth at the rock face.",
-    goal: "Quarry 20 stone from the rock biome.",
-    resource: "tile_mine_stone",
-    targetCount: 20,
-    turns: BOSS_WINDOW_TURNS,
-    minChain: null,
-    // Spec §9: rubble tiles block until cleared — spawn 1-2 cave_in tiles per season
-    spawnRubbleTiles: 2,
-  },
-  mossback: {
-    name: "Mossback",
-    emoji: "🌱",
-    flavor: "A mossy titan lurks in the spring glades. Four mystery tiles hide its weakness — reveal them all.",
-    goal: "Hide ~4 mystery tiles that flip on chain.",
-    resource: "tile_fruit_blackberry",
-    targetCount: 30,
-    turns: BOSS_WINDOW_TURNS,
-    minChain: null,
-    hiddenTilesTarget: 4,
-  },
-  storm: {
-    name: "The Storm",
-    emoji: "🌩",
-    flavor: "A black squall rolls over Saltspray Harbor. Every short cast tears free — only steady, deliberate pulls bring fillets through the chop.",
-    goal: "Land 6 fish fillets in 10 turns. Short chains slip the line.",
-    resource: "fish_fillet",
-    targetCount: 6,
-    turns: BOSS_WINDOW_TURNS,
-    minChain: 4,
-  },
-};
-
-// Legacy manual boss rotation. Automatic seasonal/audit spawning is deferred;
-// Keeper Trials are the primary boss structure.
 const YEAR_BOSS_ROTATION = ["frostmaw", "quagmire", "ember_drake", "old_stoneface", "mossback", "storm"];
-
-// Heirloom IDs eligible to drop from boss victories (rare/legendary picks)
 
 export const initial = {
   boss: null,
@@ -88,8 +13,6 @@ export const initial = {
   bossesDefeated: 0,
   _bossSeasonCount: 0,
   _bossResolvedThisSeason: false,
-  // Legacy audit fields retained for save compatibility and tests. CLOSE_SEASON
-  // no longer schedules bosses from these values.
   lastAuditBossAt: 0,
   auditBossSeq: 0,
 };
@@ -111,32 +34,30 @@ function minChainFromModifier(modifier) {
 }
 
 function triggerBoss(state, bossKey) {
-  const meta = BOSS_META[bossKey];
-  if (!meta) return state;
-  const canonicalDef = BOSSES.find((b) => b.id === bossKey) ?? {};
+  const def = BOSSES.find((b) => b.id === bossKey);
+  if (!def) return state;
+  const ui = BOSS_UI[bossKey] ?? {};
   const year = state.year ?? Math.max(1, Math.ceil(((state._bossSeasonCount ?? 0) / 4)));
   const spawned = spawnBoss(state, bossKey, year);
   if (!spawned.boss) return state;
-  const modifier = canonicalDef.modifier ?? {};
+  const modifier = def.modifier ?? {};
   return {
     ...spawned,
     boss: {
       ...spawned.boss,
       key: bossKey,
-      name: meta.name,
-      emoji: meta.emoji,
-      flavor: meta.flavor,
-      goal: meta.goal,
-      description: canonicalDef.description ?? null,
-      modifierDescription: canonicalDef.modifierDescription ?? null,
-      resource: meta.resource ?? canonicalDef.target?.resource,
-      targetCount: canonicalDef.target?.amount ?? meta.targetCount,
+      name: ui.displayName ?? def.name,
+      emoji: ui.emoji,
+      flavor: ui.flavor,
+      goal: ui.goal,
+      description: def.description ?? null,
+      modifierDescription: def.modifierDescription ?? null,
+      resource: def.target?.resource,
+      targetCount: def.target.amount,
       progress: spawned.boss.progress ?? 0,
-      turnsLeft: spawned.boss.turnsRemaining ?? meta.turns,
-      minChain: meta.minChain ?? minChainFromModifier(modifier),
-      spawnBias: meta.spawnBias ?? spawnBiasFromModifier(modifier),
-      spawnFireTiles: meta.spawnFireTiles ?? null,
-      spawnRubbleTiles: meta.spawnRubbleTiles ?? null,
+      turnsLeft: spawned.boss.turnsRemaining ?? BOSS_WINDOW_TURNS,
+      minChain: minChainFromModifier(modifier),
+      spawnBias: spawnBiasFromModifier(modifier),
       modifier,
     },
     bossPending: false,
@@ -190,23 +111,18 @@ export function reduce(state, action) {
         _bossResolvedThisSeason: true,
       };
       if (won) {
-        // Use year-scaling reward from features/bosses/data.js
         const bossDef = BOSSES.find((b) => b.id === state.boss?.key) ??
-          // fallback: construct a minimal def from BOSS_META if id not found
           { target: { amount: state.boss?.targetCount ?? 1 } };
         const year = state.year ?? Math.max(1, Math.ceil(((state._bossSeasonCount ?? 0) / 4)));
         const progress = state.boss?.progress ?? 0;
         const { coins: rewardCoins, runes: rewardRunes } = bossRewardFn(bossDef, progress, year);
-        const earnedCoins = rewardCoins > 0 ? rewardCoins : 200 * year; // guaranteed-win floor
-        // §17 locked: 25 XP per boss win into almanac
+        const earnedCoins = rewardCoins > 0 ? rewardCoins : 200 * year;
         const { newState: afterBossXp } = awardXp(base, 25);
-        let result = {
+        return {
           ...afterBossXp,
           bossesDefeated: (state.bossesDefeated || 0) + 1,
           coins: (state.coins || 0) + earnedCoins,
           runes: (state.runes ?? 0) + (rewardRunes ?? 0),
-          // Phase 5 — a gem per boss win (the current gem source until more
-          // land later; tunable). Gems pay to skip a real-time craft.
           gems: (state.gems ?? 0) + 1,
           bubble: {
             npc: "mira",
@@ -215,7 +131,6 @@ export function reduce(state, action) {
             id: Date.now(),
           },
         };
-        return result;
       }
       return {
         ...base,
@@ -233,7 +148,6 @@ export function reduce(state, action) {
       let next = { ...state };
       const payload = action.payload || {};
 
-      // Update boss progress
       if (next.boss) {
         const gained = payload.gained || 0;
         const resourceKey = payload.resource || payload.key || "";
@@ -260,7 +174,6 @@ export function reduce(state, action) {
       if (!state.boss || state.boss.resource !== "iron_bar") return state;
       const recipeKey = action.recipeKey ?? action.payload?.key;
       const recipe = RECIPES[recipeKey] ?? Object.values(RECIPES).find((r) => r?.item === recipeKey);
-      // Count any forge recipe that consumes iron_bar as an input ingredient.
       if (!recipe || !recipe.inputs?.iron_bar) return state;
       const newProgress = Math.min(state.boss.targetCount, (state.boss.progress || 0) + 1);
       const updatedBoss = { ...state.boss, progress: newProgress };
@@ -272,13 +185,14 @@ export function reduce(state, action) {
 
     case "CLOSE_SEASON": {
       let next = { ...state };
-
-      // Track seasons for boss scheduling (every 4 seasons = 1 year)
       const seasonCount = (next._bossSeasonCount || 0) + 1;
       next = { ...next, _bossSeasonCount: seasonCount };
 
-      // Decrement boss turns if a boss is active
       if (next.boss) {
+        if (next.boss.modifier?.type) {
+          const ticked = tickModifier(next, next.boss.modifier);
+          next = ticked.newState;
+        }
         const turnsLeft = (next.boss.turnsLeft || 1) - 1;
         if (turnsLeft <= 0 && next.boss.progress < next.boss.targetCount) {
           return reduce({ ...next, boss: { ...next.boss, turnsLeft: 0 } }, { type: "BOSS/RESOLVE", won: false });
@@ -286,10 +200,6 @@ export function reduce(state, action) {
         next = { ...next, boss: { ...next.boss, turnsLeft } };
       }
 
-      // Random seasonal bosses are deferred; keeper trials are now the primary
-      // boss structure. Manual BOSS/TRIGGER remains for debug/testing.
-
-      // Reset the per-season resolved flag at end of every season
       next = { ...next, _bossResolvedThisSeason: false };
       return next;
     }
@@ -299,4 +209,19 @@ export function reduce(state, action) {
   }
 }
 
-export { BOSS_META };
+/** @deprecated Use BOSS_UI + BOSSES; kept for UI fallbacks. */
+export const BOSS_META = Object.fromEntries(
+  BOSSES.map((b) => {
+    const ui = BOSS_UI[b.id] ?? {};
+    return [b.id, {
+      name: ui.displayName ?? b.name,
+      emoji: ui.emoji,
+      flavor: ui.flavor,
+      goal: ui.goal,
+      resource: b.target?.resource,
+      targetCount: b.target?.amount,
+      turns: BOSS_WINDOW_TURNS,
+      minChain: minChainFromModifier(b.modifier),
+    }];
+  }),
+);

@@ -20,27 +20,16 @@
 
 import { useEffect, useRef } from "react";
 
-// Views that are reachable via the URL. Anything not listed here is treated
-// as "town" when parsing — guards against stale hashes or typos.
+const featureModules = import.meta.glob("./features/*/index.jsx", { eager: true });
+const FEATURE_VIEW_KEYS = Object.values(featureModules)
+  .map((mod) => mod.viewKey)
+  .filter(Boolean);
+
+// Views reachable via the URL (shell views + feature viewKey exports).
 export const KNOWN_VIEWS = new Set([
   "town",
   "board",
-  "inventory",
-  "quests",
-  "crafting",
-  "cartography",
-  "chronicle",
-  "townsfolk",
-  "tileCollection",
-  "achievements",
-  "portal",
-  "orders",
-  "castle",
-  "bosses",
-  "decorations",
-  "charter",
-  "boons",
-  "recipeWiki",
+  ...FEATURE_VIEW_KEYS,
 ]);
 
 // Modals that are reachable via the URL.

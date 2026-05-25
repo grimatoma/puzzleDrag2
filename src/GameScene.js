@@ -3,7 +3,7 @@ import { TILE, COLS, ROWS, UPGRADE_THRESHOLDS, SEASONS, BIOMES, CAPPED_TILES, SC
 import { upgradeCountForChain, rollResource } from "./utils.js";
 import { resourceByKey } from "./state/helpers.js";
 import { computeAggregatedAbilities } from "./features/workers/aggregate.js";
-import { SEASON_POOL_MODS } from "./constants.js";
+import { applyPoolWeightAdds, applySeasonPoolMods } from "./features/farm/poolMath.js";
 import { CATEGORY_OF, TILE_TYPES_MAP } from "./features/tileCollection/data.js";
 import {
   expandZoneCategories,
@@ -21,7 +21,7 @@ import { rounded, makeTextures, regenerateTextures } from "./textures.js";
 import { TileObj } from "./TileObj.js";
 import { computeBakeScale, hasValidChain } from "./game/chain.js";
 export { computeBakeScale, hasValidChain } from "./game/chain.js";
-import { BOARD_ANIMATIONS, SWEEP_COLLAPSE_PIPELINE_MS } from "./config/boardAnimations.js";
+import { BOARD_ANIMATIONS, SWEEP_COLLAPSE_PIPELINE_MS, resolveBoardAnimName } from "./config/boardAnimations.js";
 import { defaultBoardAnimForPower, dimStrategyForPower, isTapTargetPower } from "./config/toolPowers.js";
 import { selectTilesForPower, resolveTransformKey } from "./config/tileSelectors.js";
 
@@ -819,11 +819,7 @@ export class GameScene extends Phaser.Scene {
     const tileCollectionActive = this.registry.get("tileCollectionActive") ?? null;
     let workerPool = this.activePool();
     const poolWeights = this.registry.get("effectivePoolWeights") ?? {};
-    for (const [k, n] of Object.entries(poolWeights)) {
-      const cat = CATEGORY_OF[k];
-      if (cat && tileCollectionActive && tileCollectionActive[cat] !== k) continue;
-      for (let i = 0; i < Math.round(n); i++) workerPool.push(k);
-    }
+    workerPool = applyPoolWeightAdds(workerPool, poolWeights, tileCollectionActive);
     // Phase 2 — restrict the spawn pool to the categories the player picked
     // in the Start Farming modal. Empty/missing list = no filter (legacy
     // entry path through SWITCH_BIOME / cartography). Mine and fish biomes
@@ -853,9 +849,9 @@ export class GameScene extends Phaser.Scene {
     }
     // Fertilizer bias: double seedling-tier resource copies in pool
     // Also activated by magic_fertilizer charges (one charge consumed per fill)
-    const fertilizerActive = (this.registry.get("fertilizerActive") ?? false) ||
-                             ((this.registry.get("magicFertilizerCharges") ?? 0) > 0);
-    if (fertilizerActive) {
+    const fillBiasArmed = !!(this.registry.get("fillBiasTarget") ||
+                             (this.registry.get("magicFertilizerCharges") ?? 0) > 0);
+    if (fillBiasArmed) {
       const biasTarget = this.registry.get("fillBiasTarget");
       const biasKeys = biasTarget
         ? [biasTarget, `tile_${biasTarget}`].filter((k) => resourceByKey(k) || this.biome().tiles.some((t) => t.key === k))
@@ -872,18 +868,7 @@ export class GameScene extends Phaser.Scene {
       const turnsUsed = this.registry.get("turnsUsed") ?? 0;
       const turnBudget = this.registry.get("turnBudget") ?? 10;
       const seasonName = seasonNameInSession(turnsUsed, turnBudget);
-      const mod = SEASON_POOL_MODS[seasonName] ?? {};
-      for (const [k, d] of Object.entries(mod)) {
-        if (d > 0) {
-          for (let i = 0; i < d; i++) workerPool.push(k);
-        } else if (d < 0) {
-          let toRemove = -d;
-          while (toRemove > 0 && workerPool.filter((x) => x === k).length > 1) {
-            workerPool.splice(workerPool.lastIndexOf(k), 1);
-            toRemove -= 1;
-          }
-        }
-      }
+      workerPool = applySeasonPoolMods(workerPool, seasonName);
     }
     for (let r = 0; r < ROWS; r++) {
       this.grid[r] = this.grid[r] || [];
@@ -966,7 +951,9 @@ export class GameScene extends Phaser.Scene {
         // The board just changed under an armed tool — re-evaluate which
         // tiles should be dimmed so feedback stays accurate.
         const pending = this.registry.get("toolPending");
-        if (pending && !this.dragging) this.applyToolDim(pending);
+        const pendingPower = this.registry.get("toolPendingPower")
+          ?? (pending ? ITEMS[pending]?.power : null);
+        if (pendingPower && pending && !this.dragging) this.applyToolDimForPower(pendingPower, pending);
       });
     } else {
       this._syncGridToState();
@@ -1086,8 +1073,8 @@ export class GameScene extends Phaser.Scene {
    * a destructive (fadeOut) animation so the onComplete-destroy doesn't race
    * later board reads.
    */
-  playBoardAnimation(name, tiles, { tint } = {}) {
-    const animation = BOARD_ANIMATIONS[name];
+  playBoardAnimation(name, tiles, { tint, ms } = {}) {
+    const animation = BOARD_ANIMATIONS[resolveBoardAnimName(name)];
     if (!animation) return;
     if (!tiles || !tiles.length) return;
 
@@ -1100,7 +1087,7 @@ export class GameScene extends Phaser.Scene {
           scaleY: 0,
           alpha: 0,
           angle: Phaser.Math.Between(-animation.rotationHalfDeg, animation.rotationHalfDeg),
-          duration: this._dur(animation.duration),
+          duration: this._dur(ms ?? animation.duration),
           delay: i * animation.staggerMs,
           ease: animation.ease,
           onComplete: () => tile.destroy(),
@@ -1116,7 +1103,7 @@ export class GameScene extends Phaser.Scene {
         this.tweens.add({
           targets: tile.sprite,
           scale: this.tileSpriteScale,
-          duration: this._dur(animation.duration),
+          duration: this._dur(ms ?? animation.duration),
           delay: i * animation.staggerMs,
           ease: animation.ease,
           onComplete: () => tile.sprite.clearTint(),
@@ -1132,7 +1119,7 @@ export class GameScene extends Phaser.Scene {
         this.tweens.add({
           targets: tile.sprite,
           scale: this.tileSpriteScale * 1.1,
-          duration: this._dur(animation.duration),
+          duration: this._dur(ms ?? animation.duration),
           ease: animation.ease,
           onComplete: () => {
             this.tweens.add({
@@ -1208,7 +1195,7 @@ export class GameScene extends Phaser.Scene {
       if (!res) return;
       const picks = cells.map(({ row, col }) => this.grid[row]?.[col]).filter(Boolean);
       picks.forEach((tile) => tile.setResource(res));
-      this.playBoardAnimation(anim, picks, { tint });
+      this.playBoardAnimation(anim, picks, { tint, ms: power.ms });
       if (params.to === "biome_rare") {
         this.time.delayedCall(this._dur(collapseMs), () => {
           if (!hasValidChain(this.grid)) {
@@ -1223,7 +1210,7 @@ export class GameScene extends Phaser.Scene {
     const tileObjs = cells.map(({ row, col }) => this.grid[row]?.[col]).filter(Boolean);
     if (!tileObjs.length && isTapTargetPower(id)) return;
 
-    this.playBoardAnimation(anim, tileObjs, { tint });
+    this.playBoardAnimation(anim, tileObjs, { tint, ms: power.ms });
 
     // Tap-target: reducer mutates grid + inventory on TOOL_FIRED (no double credit).
     if (isTapTargetPower(id) && tap) {
@@ -1580,13 +1567,6 @@ export class GameScene extends Phaser.Scene {
       return;
     }
     this.clearDimming();
-  }
-
-  /** @deprecated Use applyToolDimForPower — kept for any external callers. */
-  applyToolDim(toolKey) {
-    const power = ITEMS[toolKey]?.power;
-    if (power) this.applyToolDimForPower(power, toolKey);
-    else this.clearDimming();
   }
 
   clearToolDim() {

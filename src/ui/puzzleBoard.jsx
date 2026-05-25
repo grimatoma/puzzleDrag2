@@ -20,6 +20,7 @@ import { forwardRef, useCallback, useEffect, useLayoutEffect, useMemo, useRef, u
 import LegacyIcon from "./Icon.jsx";
 import { BIOMES } from "../constants.js";
 import { TOOL_BY_KEY, isTapTargetTool, visibleTools, TOOL_CATALOG } from "./toolRegistry.js";
+import { isFillBiasArmed } from "../state/fillBias.js";
 import { SeasonStrip } from "./seasonStrip.jsx";
 import { lazy, Suspense } from "react";
 
@@ -402,12 +403,12 @@ function ChainView({ chainInfo, inventory }) {
   );
 }
 
-function ToolView({ tool, armedKey, fertilizerActive, dispatch, onClose }) {
+function ToolView({ tool, armedKey, fillBiasArmed, dispatch, onClose }) {
   const targeted = isTapTargetTool(tool.key);
   const armed = armedKey === tool.key;
   const count = tool.count ?? 0;
   const handleUse = () => {
-    dispatchUseTool(dispatch, tool.key, { toolPending: armedKey, fertilizerActive });
+    dispatchUseTool(dispatch, tool.key, { toolPending: armedKey, fillBiasArmed });
   };
   const handleDisarm = () => {
     dispatch({ type: "CANCEL_TOOL" });
@@ -600,7 +601,7 @@ export function PuzzleActionPanel({
   chainInfo,
   inspectedTool,
   armedTool,
-  fertilizerActive,
+  fillBiasArmed,
   inventory,
   biomeKey,
   cap = 200,
@@ -641,7 +642,7 @@ export function PuzzleActionPanel({
           <ToolView
             tool={inspectedTool}
             armedKey={armedTool?.key}
-            fertilizerActive={fertilizerActive}
+            fillBiasArmed={fillBiasArmed}
             dispatch={dispatch}
             onClose={onCloseInspect}
           />
@@ -663,7 +664,7 @@ function disarmOtherTools(dispatch, key, state) {
   if (state?.toolPending && state.toolPending !== key) {
     dispatch({ type: "CANCEL_TOOL" });
   }
-  if (state?.fertilizerActive && key !== "fertilizer") {
+  if (state?.fillBiasArmed && key !== "fertilizer") {
     dispatch({ type: "USE_TOOL", key: "fertilizer" });
   }
 }
@@ -695,7 +696,7 @@ function dispatchUseTool(dispatch, key, state) {
 // when arming was transferred so the caller can skip the plain inspect path.
 function maybeTransferArming(dispatch, key, state) {
   const armedKey = state?.toolPending;
-  const fertilizerArmed = !!state?.fertilizerActive;
+  const fertilizerArmed = isFillBiasArmed(state);
   const hasOtherArmed =
     (armedKey && armedKey !== key) ||
     (fertilizerArmed && key !== "fertilizer");
@@ -809,7 +810,7 @@ function buildVisibleToolList(state) {
     count: tools[def.key] || 0,
     armed:
       state.toolPending === def.key ||
-      (def.key === "fertilizer" && !!state.fertilizerActive),
+      (def.key === "fertilizer" && isFillBiasArmed(state)),
   }));
 }
 
@@ -838,22 +839,22 @@ export function PuzzleToolGrid({ state, onInspectChange, inspectedKey, dispatch 
   const list = useMemo(() => buildVisibleToolList(state), [state]);
   useAutoInspectArmed(state, onInspectChange, inspectedKey);
   const toolPending = state.toolPending;
-  const fertilizerActive = state.fertilizerActive;
+  const fillBiasArmed = isFillBiasArmed(state);
   const select = useCallback(
     (t) => {
-      if (dispatch && !maybeTransferArming(dispatch, t.key, { toolPending, fertilizerActive })) {
-        disarmOtherTools(dispatch, t.key, { toolPending, fertilizerActive });
+      if (dispatch && !maybeTransferArming(dispatch, t.key, { toolPending, fillBiasArmed })) {
+        disarmOtherTools(dispatch, t.key, { toolPending, fillBiasArmed });
       }
       onInspectChange?.({ ...TOOL_BY_KEY[t.key], count: t.count });
     },
-    [dispatch, onInspectChange, toolPending, fertilizerActive],
+    [dispatch, onInspectChange, toolPending, fillBiasArmed],
   );
   const activate = useCallback(
     (t) => {
       onInspectChange?.({ ...TOOL_BY_KEY[t.key], count: t.count });
-      if (dispatch) dispatchUseTool(dispatch, t.key, { toolPending, fertilizerActive });
+      if (dispatch) dispatchUseTool(dispatch, t.key, { toolPending, fillBiasArmed });
     },
-    [dispatch, onInspectChange, toolPending, fertilizerActive],
+    [dispatch, onInspectChange, toolPending, fillBiasArmed],
   );
   return (
     <div
@@ -1146,22 +1147,22 @@ export function PuzzleHotbar({
     [pins, byKey, maxFitPins],
   );
   const toolPending = state.toolPending;
-  const fertilizerActive = state.fertilizerActive;
+  const fillBiasArmed = isFillBiasArmed(state);
   const select = useCallback(
     (t) => {
-      if (dispatch && !maybeTransferArming(dispatch, t.key, { toolPending, fertilizerActive })) {
-        disarmOtherTools(dispatch, t.key, { toolPending, fertilizerActive });
+      if (dispatch && !maybeTransferArming(dispatch, t.key, { toolPending, fillBiasArmed })) {
+        disarmOtherTools(dispatch, t.key, { toolPending, fillBiasArmed });
       }
       onInspectChange?.({ ...TOOL_BY_KEY[t.key], count: t.count });
     },
-    [dispatch, onInspectChange, toolPending, fertilizerActive],
+    [dispatch, onInspectChange, toolPending, fillBiasArmed],
   );
   const activate = useCallback(
     (t) => {
       onInspectChange?.({ ...TOOL_BY_KEY[t.key], count: t.count });
-      if (dispatch) dispatchUseTool(dispatch, t.key, { toolPending, fertilizerActive });
+      if (dispatch) dispatchUseTool(dispatch, t.key, { toolPending, fillBiasArmed });
     },
-    [dispatch, onInspectChange, toolPending, fertilizerActive],
+    [dispatch, onInspectChange, toolPending, fillBiasArmed],
   );
   // Drop indicators light up only for drags originating in the dropdown
   // list — hotbar→list reordering already shows its own ghost and

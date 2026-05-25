@@ -19,7 +19,7 @@ describe("portal slice — coverage gaps", () => {
     farmRun: null,
     lastChainSnapshot: null,
     magicFertilizerCharges: 0,
-    fertilizerActive: false,
+    fillBiasTarget: false,
     ...over,
   });
 
@@ -137,17 +137,17 @@ describe("portal slice — coverage gaps", () => {
   });
 
   it("CHAIN_COLLECTED: charges > 0 decrements by 1", () => {
-    const s0 = baseState({ magicFertilizerCharges: 3, fertilizerActive: true });
+    const s0 = baseState({ magicFertilizerCharges: 3, fillBiasTarget: "tile_grain_wheat" });
     const s1 = portalReduce(s0, { type: "CHAIN_COLLECTED", payload: {} });
     expect(s1.magicFertilizerCharges).toBe(2);
-    expect(s1.fertilizerActive).toBe(true);
+    expect(s1.fillBiasTarget).toBe("tile_grain_wheat");
   });
 
-  it("CHAIN_COLLECTED: charges hitting 0 clears fertilizerActive", () => {
-    const s0 = baseState({ magicFertilizerCharges: 1, fertilizerActive: true });
+  it("CHAIN_COLLECTED: charges hitting 0 clears fillBiasTarget", () => {
+    const s0 = baseState({ magicFertilizerCharges: 1, fillBiasTarget: "tile_grain_wheat" });
     const s1 = portalReduce(s0, { type: "CHAIN_COLLECTED", payload: {} });
     expect(s1.magicFertilizerCharges).toBe(0);
-    expect(s1.fertilizerActive).toBe(false);
+    expect(s1.fillBiasTarget).toBeFalsy();
   });
 
   it("unknown action returns state unchanged", () => {

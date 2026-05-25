@@ -129,9 +129,9 @@ function _applyFillBias(state, key, params) {
   if (spent === null) return state;
   const turns = params.turns ?? 1;
   if (key === "magic_fertilizer") {
-    return { ...spent, magicFertilizerCharges: turns, fertilizerActive: true };
+    return { ...spent, magicFertilizerCharges: turns, fillBiasTarget: params.target ?? null };
   }
-  return { ...spent, fertilizerActive: true, fillBiasTarget: params.target ?? null };
+  return { ...spent, fillBiasTarget: params.target ?? null };
 }
 
 function _applyArmFillBias(state, key, params) {
@@ -139,9 +139,9 @@ function _applyArmFillBias(state, key, params) {
   if (spent === null) return state;
   const turns = params.turns ?? 1;
   if (key === "magic_fertilizer") {
-    return { ...spent, magicFertilizerCharges: turns, fertilizerActive: true };
+    return { ...spent, magicFertilizerCharges: turns, fillBiasTarget: params.target ?? null };
   }
-  return { ...spent, fertilizerActive: true, fillBiasTarget: params.target ?? null };
+  return { ...spent, fillBiasTarget: params.target ?? null };
 }
 
 function _sweepSelected(state, cells) {

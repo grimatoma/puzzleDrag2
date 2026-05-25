@@ -29,6 +29,21 @@ export const BOARD_ANIMATIONS = Object.freeze({
 
 export const BOARD_ANIMATION_NAMES = Object.freeze(Object.keys(BOARD_ANIMATIONS));
 
+/** Catalog anim ids on tool powers → registry keys. */
+export const BOARD_ANIM_ALIASES = Object.freeze({
+  chops: "sweep",
+  shimmer: "sweep",
+  scatter: "sweep",
+  cage: "sweep",
+  shot: "sweep",
+  bark: "sweep",
+});
+
+export function resolveBoardAnimName(name) {
+  if (!name) return name;
+  return BOARD_ANIM_ALIASES[name] ?? name;
+}
+
 /** Collapse + fill delays after a sweep in GameScene (ms, pre-_dur). */
 export const SWEEP_COLLAPSE_PIPELINE_MS = 240 + 190 + 210 + 210;
 
