@@ -31,7 +31,7 @@
 | Textures | 1 | 0 | 0 | Sickle reuses axe icon in panel |
 | Tile vs resource | 0 | 0 | 5+ | Tracked in `CLAUDE.md`; do not add new conflations |
 
-**Tool consolidation status:** PRs 0–6 from `docs/tool-power-animation-consolidation-plan.md` are **complete**. Remaining tool rows below are post-consolidation drift, not plan backlog.
+**Tool consolidation status:** [PR #634](https://github.com/grimatoma/puzzleDrag2/pull/634) (tool-power consolidation, PRs 0–6) is **complete**. Remaining tool rows below are post-consolidation drift, not plan backlog.
 
 ---
 
@@ -224,4 +224,4 @@ Do not re-open as PR 1–6 work.
 
 ---
 
-*Post-migration audit. For pre-consolidation history, see git before PR #634.*
+*Post-migration audit. For pre-consolidation history, see git before PR #634. UX audit scope (PRs #406–#422) is complete; deferred UX backlog was in `docs/UX_AUDIT_INVENTORY.md` (removed 2026-05-25).*
