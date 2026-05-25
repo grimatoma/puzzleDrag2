@@ -7,8 +7,6 @@
  */
 
 /** Board tools that arm on USE_TOOL and resolve on tap (not instant clear_all). */
-export const TAP_TARGET_TOOL_IDS = new Set(["bomb", "rake", "axe", "magic_wand"]);
-
 function cellMatchesClearTarget(t, targetKey) {
   if (!t.key || t.rubble || t.gas || t.frozen || t.key === "rat") return false;
   if (targetKey === "*") return true;

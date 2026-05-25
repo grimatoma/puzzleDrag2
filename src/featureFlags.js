@@ -1,8 +1,15 @@
 // Feature flags — set to true to enable the feature.
 // Fire and rats hazards are gated here so they can be turned on independently.
 
+import { TUNING_OVERRIDES } from "./constants.js";
+
 export const FIRE_HAZARD_ENABLED = false;
 export const RATS_HAZARD_ENABLED = true;
+
+/** Dev Panel tuning (`balance.json` → `tuning.fireHazardEnabled`). */
+export function isFireHazardEnabled() {
+  return TUNING_OVERRIDES?.fireHazardEnabled === true;
+}
 
 // Returns true when dialogs/modals should be suppressed — useful for testing
 // pages so that auto-triggered story beats and season modals don't interrupt
@@ -20,5 +27,5 @@ export function isDialogsDisabled() {
     // Ignore storage access failures and fall through to the default.
   }
 
-  return true;
+  return false;
 }

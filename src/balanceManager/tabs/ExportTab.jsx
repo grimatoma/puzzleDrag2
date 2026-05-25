@@ -147,7 +147,7 @@ export default function ExportTab({ draft, updateDraft }) {
       updateDraft((d) => {
         // Replace each known section if present in the import, else leave it.
         const sections = [
-          "upgradeThresholds", "resources", "recipes", "buildings",
+          "upgradeThresholds", "items", "recipes", "buildings",
           "tilePowers", "tileUnlocks", "tileDescriptions",
         ];
         for (const s of sections) {
@@ -169,7 +169,7 @@ export default function ExportTab({ draft, updateDraft }) {
 
   const sections = [
     { key: "upgradeThresholds", label: "Upgrade Thresholds" },
-    { key: "resources",         label: "Resources" },
+    { key: "items",               label: "Items" },
     { key: "recipes",           label: "Recipes" },
     { key: "buildings",         label: "Buildings" },
     { key: "tilePowers",        label: "Tile Powers" },

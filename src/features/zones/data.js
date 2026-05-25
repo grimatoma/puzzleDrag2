@@ -19,6 +19,7 @@
 // Special upgrade target: "gold" (board-only coin tile, not in inventory).
 
 import { MAP_NODES } from "../cartography/data.js";
+import { computeAggregatedAbilities } from "../workers/aggregate.js";
 
 export const ZONE_CATEGORIES = Object.freeze([
   "grass",
@@ -102,10 +103,10 @@ export function zoneBaseTurns(zoneOrId) {
   return Math.max(0, Math.floor(Number(raw) || 0));
 }
 
-export function turnBudgetAdditiveBonusForZone(state, zoneId) {
-  const built = state?.built?.[zoneId] ?? {};
-  let bonus = 0;
-  if (built.granary) bonus += 1;
+export function turnBudgetAdditiveBonusForZone(state) {
+  const agg = computeAggregatedAbilities(state);
+  let bonus = agg.turnBudgetBonus ?? 0;
+  if (state?.tools?.extraTurn) bonus += 1;
   return bonus;
 }
 

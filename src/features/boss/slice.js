@@ -1,5 +1,5 @@
 import { RECIPES } from "../../constants.js";
-import { BOSSES, BOSS_WINDOW_TURNS, bossReward as bossRewardFn } from "../bosses/data.js";
+import { BOSSES, BOSS_WINDOW_TURNS, bossReward as bossRewardFn, spawnBoss } from "../bosses/data.js";
 import { awardXp } from "../almanac/data.js";
 
 // Build BOSS_META from the canonical BOSSES list (features/bosses/data.js)
@@ -94,14 +94,34 @@ export const initial = {
   auditBossSeq: 0,
 };
 
+function spawnBiasFromModifier(modifier) {
+  if (modifier?.type === "respawn_boost") {
+    const boost = modifier.params?.boost ?? [];
+    const factor = modifier.params?.factor ?? 1.5;
+    const out = {};
+    for (const k of boost) out[k] = factor;
+    return out;
+  }
+  return null;
+}
+
+function minChainFromModifier(modifier) {
+  if (modifier?.type === "min_chain") return modifier.params?.length ?? null;
+  return null;
+}
+
 function triggerBoss(state, bossKey) {
   const meta = BOSS_META[bossKey];
   if (!meta) return state;
-  // Pull description + modifierDescription from the canonical bosses/data.js list
   const canonicalDef = BOSSES.find((b) => b.id === bossKey) ?? {};
+  const year = state.year ?? Math.max(1, Math.ceil(((state._bossSeasonCount ?? 0) / 4)));
+  const spawned = spawnBoss(state, bossKey, year);
+  if (!spawned.boss) return state;
+  const modifier = canonicalDef.modifier ?? {};
   return {
-    ...state,
+    ...spawned,
     boss: {
+      ...spawned.boss,
       key: bossKey,
       name: meta.name,
       emoji: meta.emoji,
@@ -109,15 +129,15 @@ function triggerBoss(state, bossKey) {
       goal: meta.goal,
       description: canonicalDef.description ?? null,
       modifierDescription: canonicalDef.modifierDescription ?? null,
-      resource: meta.resource,
-      targetCount: meta.targetCount,
-      progress: 0,
-      turnsLeft: meta.turns,
-      minChain: meta.minChain || null,
-      // Board modifier flags (Spec §9: boss-specific board effects)
-      spawnBias: meta.spawnBias ?? null,
+      resource: meta.resource ?? canonicalDef.target?.resource,
+      targetCount: canonicalDef.target?.amount ?? meta.targetCount,
+      progress: spawned.boss.progress ?? 0,
+      turnsLeft: spawned.boss.turnsRemaining ?? meta.turns,
+      minChain: meta.minChain ?? minChainFromModifier(modifier),
+      spawnBias: meta.spawnBias ?? spawnBiasFromModifier(modifier),
       spawnFireTiles: meta.spawnFireTiles ?? null,
       spawnRubbleTiles: meta.spawnRubbleTiles ?? null,
+      modifier,
     },
     bossPending: false,
     bossMinimized: false,

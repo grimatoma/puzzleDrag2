@@ -13,6 +13,7 @@ import {
   applyTransformAdjacent,
   applyRevealTiles,
 } from "./boardMutations.js";
+import { normalizeHazardId } from "../config/hazardIds.js";
 
 function _spendToolCharge(state, key) {
   if (!key) return state;
@@ -28,39 +29,55 @@ function _creditCollected(inventory, collected) {
   return inv;
 }
 
-function _clearHazardTarget(state, target) {
-  const hazards = state.hazards ?? {};
-  let nextHazards = hazards;
-  let grid = state.grid;
-  let didClear = false;
-  if (target === "rats") {
+const HAZARD_CLEAR_HANDLERS = {
+  rats(state) {
+    const hazards = state.hazards ?? {};
     const rats = hazards.rats ?? [];
-    if (rats.length > 0) {
+    if (rats.length === 0) return null;
+    let grid = state.grid;
+    if (grid) {
       const ratSet = new Set(rats.map((r) => `${r.row},${r.col}`));
-      if (grid) {
-        grid = grid.map((row, ri) =>
-          row.map((t, ci) =>
-            ratSet.has(`${ri},${ci}`) ? { ...t, key: null, _emptied: true } : t,
-          ),
-        );
-      }
-      nextHazards = { ...hazards, rats: [] };
-      didClear = true;
+      grid = grid.map((row, ri) =>
+        row.map((t, ci) =>
+          ratSet.has(`${ri},${ci}`) ? { ...t, key: null, _emptied: true } : t,
+        ),
+      );
     }
-  } else if (target === "wolves") {
-    if (hazards.wolves) { nextHazards = { ...hazards, wolves: null }; didClear = true; }
-  } else if (target === "mole") {
-    if (hazards.mole) { nextHazards = { ...hazards, mole: null }; didClear = true; }
-  } else if (target === "caveIn") {
-    if (hazards.caveIn) { nextHazards = { ...hazards, caveIn: null }; didClear = true; }
-  } else if (target === "lava") {
-    if (hazards.lava) { nextHazards = { ...hazards, lava: null }; didClear = true; }
-  } else if (target === "fire") {
-    if (hazards.fire) { nextHazards = { ...hazards, fire: null }; didClear = true; }
-  } else if (target === "gasVent" || target === "gas") {
-    if (hazards.gasVent) { nextHazards = { ...hazards, gasVent: null }; didClear = true; }
-  }
-  return { grid, hazards: nextHazards, didClear };
+    return { grid, hazards: { ...hazards, rats: [] } };
+  },
+  wolves(state) {
+    if (!state.hazards?.wolves) return null;
+    return { hazards: { ...state.hazards, wolves: null } };
+  },
+  mole(state) {
+    if (!state.hazards?.mole) return null;
+    return { hazards: { ...state.hazards, mole: null } };
+  },
+  caveIn(state) {
+    if (!state.hazards?.caveIn) return null;
+    return { hazards: { ...state.hazards, caveIn: null } };
+  },
+  lava(state) {
+    if (!state.hazards?.lava) return null;
+    return { hazards: { ...state.hazards, lava: null } };
+  },
+  fire(state) {
+    if (!state.hazards?.fire) return null;
+    return { hazards: { ...state.hazards, fire: null } };
+  },
+  gasVent(state) {
+    if (!state.hazards?.gasVent) return null;
+    return { hazards: { ...state.hazards, gasVent: null } };
+  },
+};
+
+function _clearHazardTarget(state, target) {
+  const runtimeKey = normalizeHazardId(target);
+  const handler = runtimeKey ? HAZARD_CLEAR_HANDLERS[runtimeKey] : null;
+  if (!handler) return { grid: state.grid, hazards: state.hazards ?? {}, didClear: false };
+  const patch = handler(state);
+  if (!patch) return { grid: state.grid, hazards: state.hazards ?? {}, didClear: false };
+  return { grid: patch.grid ?? state.grid, hazards: patch.hazards, didClear: true };
 }
 
 function _applyWaterPump(state) {

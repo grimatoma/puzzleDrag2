@@ -52,7 +52,7 @@ function aliasIconKeys(reg) {
     magic_wand:        reg.wand,
     magic_seed:        reg.potion,
     magic_fertilizer:  reg.scroll,
-    sickle:            reg.axe,
+    sickle:            reg.sickle ?? reg.scythe ?? reg.axe,
     clear:             reg.player_clear,
     basic:             reg.player_basic,
     rare:              reg.player_rare,

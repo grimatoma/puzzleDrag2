@@ -12,8 +12,8 @@ describe("isDialogsDisabled", () => {
     localStorage.removeItem("hearth.disableDialogs");
   });
 
-  it("returns true by default", () => {
-    expect(isDialogsDisabled()).toBe(true);
+  it("returns false by default (dialogs on)", () => {
+    expect(isDialogsDisabled()).toBe(false);
   });
 
   it("returns true when __HEARTH_DISABLE_DIALOGS__ is set", () => {

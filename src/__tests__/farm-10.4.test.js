@@ -147,7 +147,10 @@ describe("10.4 — COMMIT_CHAIN rat chains", () => {
       { key: "rat", row: 1, col: 2 },
       { key: "rat", row: 1, col: 3 },
     ];
-    const s1 = rootReducer(s0, { type: "COMMIT_CHAIN", chain });
+    const s1 = rootReducer(s0, {
+      type: "CHAIN_COLLECTED",
+      payload: { chain, key: "rat", gained: 0, chainLength: 3, upgrades: 0, value: 0 },
+    });
     expect(s1.hazards.rats.length).toBe(0);
     expect(s1.coins).toBe(15);
     expect(s1.inventory?.rat ?? 0).toBe(0);
@@ -164,9 +167,13 @@ describe("10.4 — COMMIT_CHAIN rat chains", () => {
       },
     };
     const before = JSON.stringify(s0.hazards.rats);
-    const s1 = rootReducer(s0, { type: "COMMIT_CHAIN", chain: [
+    const chain2 = [
       { key: "rat", row: 1, col: 1 }, { key: "rat", row: 1, col: 2 },
-    ]});
+    ];
+    const s1 = rootReducer(s0, {
+      type: "CHAIN_COLLECTED",
+      payload: { chain: chain2, key: "rat", gained: 0, chainLength: 2, upgrades: 0, value: 0 },
+    });
     expect(JSON.stringify(s1.hazards.rats)).toBe(before);
     expect(s1.coins).toBe(0);
   });
@@ -182,9 +189,13 @@ describe("10.4 — COMMIT_CHAIN rat chains", () => {
       },
     };
     const before = JSON.stringify(s0.hazards.rats);
-    const s1 = rootReducer(s0, { type: "COMMIT_CHAIN", chain: [
+    const mixed = [
       { key: "rat", row: 0, col: 0 }, { key: "rat", row: 0, col: 1 }, { key: "tile_grass_hay", row: 0, col: 2 },
-    ]});
+    ];
+    const s1 = rootReducer(s0, {
+      type: "CHAIN_COLLECTED",
+      payload: { chain: mixed, key: "rat", gained: 0, chainLength: 3, upgrades: 0, value: 0 },
+    });
     expect(JSON.stringify(s1.hazards.rats)).toBe(before);
   });
 });

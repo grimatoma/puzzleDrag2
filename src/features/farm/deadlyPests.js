@@ -11,12 +11,11 @@
  *   tile_bird_phoenix
  */
 import { RAT_CLEAR_REWARD_PER } from "../../constants.js";
+import { hasTag } from "../tileCollection/tags.js";
 
-const DEADLY_KEYS = new Set(["tile_tree_cypress", "tile_veg_beet", "tile_bird_phoenix"]);
-
-/** Returns true if the given resource key is "deadly to pests". */
+/** Returns true if the given tile key is "deadly to pests". */
 export function isDeadlyToPests(key) {
-  return DEADLY_KEYS.has(key);
+  return hasTag(key, "deadly_pests");
 }
 
 /**
@@ -32,7 +31,7 @@ export function isDeadlyToPests(key) {
  */
 export function tryDeadlyPestsKill(state, chain) {
   if (!Array.isArray(chain) || chain.length === 0) return null;
-  const hasDeadly = chain.some((t) => DEADLY_KEYS.has(t?.key));
+  const hasDeadly = chain.some((t) => isDeadlyToPests(t?.key));
   if (!hasDeadly) return null;
 
   const rats = state.hazards?.rats ?? [];

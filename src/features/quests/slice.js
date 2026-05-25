@@ -1,4 +1,4 @@
-import { QUEST_TEMPLATES } from "../../constants.js";
+import { QUEST_TEMPLATES } from "./templates.js";
 import { claimQuest, tickQuest } from "./data.js";
 import { awardXp, claimAlmanacTier } from "../almanac/data.js";
 
@@ -104,6 +104,10 @@ export function reduce(state, action) {
       return { ...newState, almanacClaimed };
     }
     case "CHAIN_COLLECTED": {
+      const chainOnly = action.payload?.chain;
+      if (Array.isArray(chainOnly) && chainOnly.length > 0 && chainOnly.every((t) => t.key === "rat")) {
+        return state;
+      }
       const { gained = 0, chainLength = 0, key: chainKey = "" } = action.payload || {};
       // Legacy dailies
       let dailies = state.dailies || [];

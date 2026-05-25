@@ -2,7 +2,8 @@ import Phaser from "phaser";
 import { TILE, COLS, ROWS, UPGRADE_THRESHOLDS, SEASONS, BIOMES, CAPPED_TILES, SCENE_EVENTS, ITEMS, tileFamilyResource, TILES_WITH_CUSTOM_OUTPUT } from "./constants.js";
 import { upgradeCountForChain, rollResource } from "./utils.js";
 import { resourceByKey } from "./state/helpers.js";
-import { computeWorkerEffects } from "./features/workers/aggregate.js";
+import { computeAggregatedAbilities } from "./features/workers/aggregate.js";
+import { SEASON_POOL_MODS } from "./constants.js";
 import { CATEGORY_OF, TILE_TYPES_MAP } from "./features/tileCollection/data.js";
 import {
   expandZoneCategories,
@@ -250,6 +251,9 @@ export class GameScene extends Phaser.Scene {
     // Sync worker effects on init and whenever state.workers changes
     this._syncWorkerEffects();
     onRegistry("changedata-workers", () => this._syncWorkerEffects());
+    onRegistry("changedata-built", () => this._syncWorkerEffects());
+    onRegistry("changedata-tileCollectionActive", () => this._syncWorkerEffects());
+    onRegistry("changedata-tileCollectionDiscovered", () => this._syncWorkerEffects());
 
     // Swap on-board tiles to match the newly active tile type in their category
     onRegistry("changedata-tileCollectionActive", (_p, value, prev) => {
@@ -307,8 +311,16 @@ export class GameScene extends Phaser.Scene {
   // ─── Worker effects sync ─────────────────────────────────────────────────
 
   _syncWorkerEffects() {
-    const workers = this.registry.get("workers") ?? { hired: {} };
-    const agg = computeWorkerEffects({ workers });
+    const snapshot = {
+      workers: this.registry.get("workers") ?? { hired: {} },
+      built: this.registry.get("built") ?? {},
+      mapCurrent: this.registry.get("activeZone") ?? "home",
+      tileCollection: {
+        discovered: this.registry.get("tileCollectionDiscovered") ?? {},
+        activeByCategory: this.registry.get("tileCollectionActive") ?? {},
+      },
+    };
+    const agg = computeAggregatedAbilities(snapshot);
     const eff = {};
     for (const [k, v] of Object.entries(UPGRADE_THRESHOLDS)) {
       eff[k] = Math.max(1, v - (agg.thresholdReduce[k] ?? 0));
@@ -844,14 +856,34 @@ export class GameScene extends Phaser.Scene {
     const fertilizerActive = (this.registry.get("fertilizerActive") ?? false) ||
                              ((this.registry.get("magicFertilizerCharges") ?? 0) > 0);
     if (fertilizerActive) {
-      const seedlings = ["seedling", "tile_grass_hay", "tile_grain_wheat"];
+      const biasTarget = this.registry.get("fillBiasTarget");
+      const biasKeys = biasTarget
+        ? [biasTarget, `tile_${biasTarget}`].filter((k) => resourceByKey(k) || this.biome().tiles.some((t) => t.key === k))
+        : ["seedling", "tile_grass_hay", "tile_grain_wheat"];
       const fBase = {};
       for (const k of workerPool) fBase[k] = (fBase[k] ?? 0) + 1;
-      for (const k of seedlings) {
+      for (const k of biasKeys) {
         const extra = fBase[k] ?? 0;
         for (let i = 0; i < extra; i++) workerPool.push(k);
       }
       this.events.emit(SCENE_EVENTS.FERTILIZER_CONSUMED);
+    }
+    if (this.biomeKey() === "farm") {
+      const turnsUsed = this.registry.get("turnsUsed") ?? 0;
+      const turnBudget = this.registry.get("turnBudget") ?? 10;
+      const seasonName = seasonNameInSession(turnsUsed, turnBudget);
+      const mod = SEASON_POOL_MODS[seasonName] ?? {};
+      for (const [k, d] of Object.entries(mod)) {
+        if (d > 0) {
+          for (let i = 0; i < d; i++) workerPool.push(k);
+        } else if (d < 0) {
+          let toRemove = -d;
+          while (toRemove > 0 && workerPool.filter((x) => x === k).length > 1) {
+            workerPool.splice(workerPool.lastIndexOf(k), 1);
+            toRemove -= 1;
+          }
+        }
+      }
     }
     for (let r = 0; r < ROWS; r++) {
       this.grid[r] = this.grid[r] || [];
@@ -1130,12 +1162,15 @@ export class GameScene extends Phaser.Scene {
   _emitClearGains(tileObjs) {
     const gainMap = {};
     for (const t of tileObjs) {
-      gainMap[t.res.key] = (gainMap[t.res.key] ?? 0) + 1;
+      const tileKey = t.res.key;
+      const resourceKey = tileFamilyResource(tileKey) ?? tileKey;
+      gainMap[resourceKey] = (gainMap[resourceKey] ?? 0) + 1;
     }
-    for (const [key, gained] of Object.entries(gainMap)) {
-      const res = resourceByKey(key);
+    for (const [resourceKey, gained] of Object.entries(gainMap)) {
+      const res = resourceByKey(resourceKey);
       this.events.emit(SCENE_EVENTS.CHAIN_COLLECTED, {
-        key,
+        key: resourceKey,
+        resourceKey,
         gained,
         upgrades: 0,
         chainLength: gained,

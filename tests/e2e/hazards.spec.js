@@ -23,12 +23,19 @@ test('Rat chain of 3 clears the rats and rewards coins', async ({ page }) => {
   });
   // COMMIT_CHAIN with three rat tiles — the rat path captures and clears.
   await dispatchAction(page, {
-    type: 'COMMIT_CHAIN',
-    chain: [
-      { key: 'rat', row: 0, col: 0 },
-      { key: 'rat', row: 0, col: 1 },
-      { key: 'rat', row: 0, col: 2 },
-    ],
+    type: 'CHAIN_COLLECTED',
+    payload: {
+      chain: [
+        { key: 'rat', row: 0, col: 0 },
+        { key: 'rat', row: 0, col: 1 },
+        { key: 'rat', row: 0, col: 2 },
+      ],
+      key: 'rat',
+      gained: 0,
+      chainLength: 3,
+      upgrades: 0,
+      value: 0,
+    },
   });
   await waitForState(page, (s) => (s.hazards?.rats ?? []).length === 0);
   const s = await getReactState(page);
@@ -47,11 +54,18 @@ test('Rat chain shorter than 3 is rejected (no reward, rats remain)', async ({ p
     ] },
   });
   await dispatchAction(page, {
-    type: 'COMMIT_CHAIN',
-    chain: [
-      { key: 'rat', row: 0, col: 0 },
-      { key: 'rat', row: 0, col: 1 },
-    ],
+    type: 'CHAIN_COLLECTED',
+    payload: {
+      chain: [
+        { key: 'rat', row: 0, col: 0 },
+        { key: 'rat', row: 0, col: 1 },
+      ],
+      key: 'rat',
+      gained: 0,
+      chainLength: 2,
+      upgrades: 0,
+      value: 0,
+    },
   });
   await page.waitForTimeout(200);
   const s = await getReactState(page);
@@ -71,12 +85,19 @@ test('Mixed chain (rat + non-rat) is rejected', async ({ page }) => {
     ] },
   });
   await dispatchAction(page, {
-    type: 'COMMIT_CHAIN',
-    chain: [
-      { key: 'rat', row: 0, col: 0 },
-      { key: 'rat', row: 0, col: 1 },
-      { key: 'tile_grass_hay', row: 0, col: 2 },
-    ],
+    type: 'CHAIN_COLLECTED',
+    payload: {
+      chain: [
+        { key: 'rat', row: 0, col: 0 },
+        { key: 'rat', row: 0, col: 1 },
+        { key: 'tile_grass_hay', row: 0, col: 2 },
+      ],
+      key: 'rat',
+      gained: 0,
+      chainLength: 3,
+      upgrades: 0,
+      value: 0,
+    },
   });
   await page.waitForTimeout(200);
   const s = await getReactState(page);

@@ -23,12 +23,12 @@ const baseState = (overrides = {}) => {
 
 describe("CHAIN_COLLECTED — noTurn path (tool-driven gains)", () => {
   it("credits resource without advancing turnsUsed", () => {
-    const s0 = baseState({ inventory: { tile_grass_hay: 5 }, turnsUsed: 3 });
+    const s0 = baseState({ inventory: { hay_bundle: 5 }, turnsUsed: 3 });
     const s1 = rootReducer(s0, {
       type: "CHAIN_COLLECTED",
-      payload: { key: "tile_grass_hay", gained: 4, upgrades: 0, value: 1, chainLength: 4, noTurn: true },
+      payload: { key: "tile_grass_hay", resourceKey: "hay_bundle", gained: 4, upgrades: 0, value: 1, chainLength: 4, noTurn: true },
     });
-    expect(s1.inventory.tile_grass_hay).toBe(9);
+    expect(s1.inventory.hay_bundle).toBe(9);
     expect(s1.turnsUsed).toBe(3);
   });
 
@@ -44,19 +44,19 @@ describe("CHAIN_COLLECTED — noTurn path (tool-driven gains)", () => {
   });
 
   it("still respects the inventory cap", () => {
-    const s0 = baseState({ inventory: { tile_grass_hay: 198 } });
+    const s0 = baseState({ inventory: { hay_bundle: 198 } });
     const s1 = rootReducer(s0, {
       type: "CHAIN_COLLECTED",
-      payload: { key: "tile_grass_hay", gained: 10, upgrades: 0, value: 1, chainLength: 5, noTurn: true },
+      payload: { key: "tile_grass_hay", resourceKey: "hay_bundle", gained: 10, upgrades: 0, value: 1, chainLength: 5, noTurn: true },
     });
-    expect(s1.inventory.tile_grass_hay).toBe(200);
+    expect(s1.inventory.hay_bundle).toBe(200);
   });
 
   it("does not push a stash-full floater on noTurn", () => {
-    const s0 = baseState({ inventory: { tile_grass_hay: 198 } });
+    const s0 = baseState({ inventory: { hay_bundle: 198 } });
     const s1 = rootReducer(s0, {
       type: "CHAIN_COLLECTED",
-      payload: { key: "tile_grass_hay", gained: 10, upgrades: 0, value: 1, chainLength: 5, noTurn: true },
+      payload: { key: "tile_grass_hay", resourceKey: "hay_bundle", gained: 10, upgrades: 0, value: 1, chainLength: 5, noTurn: true },
     });
     expect(s1.floaters?.some((f) => /stash full/.test(f.text)) ?? false).toBe(false);
   });

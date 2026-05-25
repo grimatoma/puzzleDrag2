@@ -78,14 +78,14 @@ describe("Power hooks at runtime", () => {
     });
     const s0 = createInitialState();
     const sShort = rootReducer(s0, {
-      type: "CHAIN_COMMIT",
-      payload: { key: "tile_grass_hay", length: 4 },
+      type: "CHAIN_COLLECTED",
+      payload: { key: "tile_grass_hay", gained: 4, chainLength: 4, upgrades: 0, value: 1 },
     });
     expect(sShort.tileCollection?.freeMoves ?? 0).toBe(0);
 
     const sLong = rootReducer(s0, {
-      type: "CHAIN_COMMIT",
-      payload: { key: "tile_grass_hay", length: 6 },
+      type: "CHAIN_COLLECTED",
+      payload: { key: "tile_grass_hay", gained: 6, chainLength: 6, upgrades: 0, value: 1 },
     });
     expect(sLong.tileCollection?.freeMoves ?? 0).toBe(1);
   });

@@ -1,5 +1,5 @@
 import { SEASONS } from "../constants.js";
-import { xpForLevel } from "../state.js";
+import { XP_PER_LEVEL } from "../features/almanac/data.js";
 import { seasonIndexInSession, hearthTokenCount } from "../features/zones/data.js";
 import LegacyIcon from "./Icon.jsx";
 import Icon from "./primitives/Icon.jsx";
@@ -97,14 +97,17 @@ function SearchIcon({ size = 16 }) {
 }
 
 export function Hud({ state, dispatch, inventorySearchOpen, onInventorySearchToggle }) {
-  const { coins, level, xp, turnsUsed, view } = state;
+  const { coins, turnsUsed, view } = state;
+  const level = state.almanac?.level ?? state.level ?? 1;
+  const totalXp = state.almanac?.xp ?? state.xp ?? 0;
   const onBoard = view === "board";
   const turnBudget = state.farmRun?.turnBudget ?? 0;
   const turnsRemaining = state.farmRun?.turnsRemaining ?? Math.max(0, turnBudget - (turnsUsed ?? 0));
   const seasonIdx = onBoard ? seasonIndexInSession(turnsUsed ?? 0, turnBudget || 1) : 0;
   const season = SEASONS[seasonIdx];
-  const xpNeed = xpForLevel(level);
-  const xpPct = Math.min(100, (xp / xpNeed) * 100);
+  const xpNeed = XP_PER_LEVEL;
+  const xpInLevel = totalXp % XP_PER_LEVEL;
+  const xpPct = Math.min(100, (xpInLevel / xpNeed) * 100);
   const { display: coinsDisplay, pulse: coinsPulse, pulseKey: coinsPulseKey } = useCountUp(coins ?? 0);
   const { pulse: levelPulse, pulseKey: levelPulseKey } = useCountUp(level ?? 1);
   const coinChips = useReceiptChips(coins ?? 0);
@@ -201,7 +204,7 @@ export function Hud({ state, dispatch, inventorySearchOpen, onInventorySearchTog
               tone="ember"
               variant="solid"
               size="sm"
-              title={`Level ${level} · ${xp} / ${xpNeed} XP`}
+              title={`Level ${level} · ${xpInLevel} / ${xpNeed} XP`}
               className="!px-2 !gap-1.5"
             >
               <span

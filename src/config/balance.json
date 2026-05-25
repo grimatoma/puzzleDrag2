@@ -2,7 +2,7 @@
   "$schema": "./balance.schema.md",
   "version": 1,
   "upgradeThresholds": {},
-  "resources": {},
+  "items": {},
   "recipes": {},
   "buildings": {},
   "tilePowers": {},

@@ -39,6 +39,8 @@ export function emptyChannels() {
     seasonEndTools: {},
     seasonEndPoolStep: 0,
     boardPreserveBiomes: new Set(),
+    turnBudgetBonus: 0,
+    inventoryCapBonus: 0,
   };
 }
 
@@ -185,6 +187,18 @@ export function applyAbilityToChannels(out, ability, params, weight, ctx = {}) {
       const amount = Number(p.amount) || 0;
       if (amount <= 0) break;
       out.coinBonusPerTile = (out.coinBonusPerTile || 0) + Math.floor(amount * weight);
+      break;
+    }
+    case "turn_budget_bonus": {
+      const amount = Number(p.amount) || 0;
+      if (amount <= 0) break;
+      out.turnBudgetBonus = (out.turnBudgetBonus ?? 0) + Math.floor(amount * weight);
+      break;
+    }
+    case "inventory_cap_bonus": {
+      const amount = Number(p.amount) || 0;
+      if (amount <= 0) break;
+      out.inventoryCapBonus = (out.inventoryCapBonus ?? 0) + Math.floor(amount * weight);
       break;
     }
     case "grant_tool": {
