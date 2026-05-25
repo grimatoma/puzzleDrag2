@@ -85,12 +85,36 @@ The orange row-sweep animation that previously lived inside `_applyToolAxe` is e
 
 Each step is its own PR. Don't push a follow-up commit to a branch with an open PR (CLAUDE.md "PR freeze" rule).
 
+0. **PR 0 — codebase-wide hardcoding audit (research, no code changes).** Before any migration, produce `docs/hardcoded-special-cases-audit.md`. The point: the tool/animation consolidation revealed a recurring pattern — behavior keyed on a specific identifier (tool name, hazard key, biome name, etc.) when an existing catalog could carry it as data. Find every other instance of that pattern so PR 1–6 can absorb adjacent cleanups instead of leaving them for a second pass.
+
+   **Scope to scan:**
+   - `src/state.js` — `if (key === "...")`, `switch (action.type)` arms keyed on a single string the catalog already knows about, `ALWAYS_RUN_SLICES` / `SLICE_PRIMARY_ACTIONS` entries that exist only because a slice is hardcoded.
+   - `src/GameScene.js` — per-key conditionals on tiles, hazards, biomes, seasons, animations.
+   - `src/features/*/slice.js` — per-key reducer branches that should be parameterized by the slice's own data file.
+   - `src/ui/*` — per-tool/per-biome/per-season label, icon, color tables hardcoded inline instead of read from `src/constants.js`, `src/config/*`, or the slice's `data.js`.
+   - `src/textures/categories/*` — tile/icon registration keyed on names the catalog already enumerates.
+   - `src/state/helpers.js` `makeOrder` (CLAUDE.md flags it as a tile/resource conflation site) and the other in-flight migrations listed under "Known conflation" in CLAUDE.md.
+   - Animation registry (`src/config/boardAnimations.js`) — patterns hardcoded in GameScene per tool/effect.
+   - **The inverse case** ("code overriding a config"): tool/item/biome metadata in `ITEMS`, `BIOMES`, `UPGRADE_THRESHOLDS`, `MINE_ENTRY_TIERS`, `DAILY_REWARDS`, abilities, tool powers — find every place where a runtime branch ignores the config value and uses a hardcoded fallback or constant instead.
+
+   **Report format** (one row per finding):
+
+   | File:line | Pattern | What's hardcoded | Existing config that could carry it | Suggested fix | Risk |
+   |---|---|---|---|---|---|
+
+   **Triage in the report:**
+   - **Absorb into PR 1–6** — adjacent to tool-powers work, ride along.
+   - **Spin off as its own PR** — large enough to warrant a focused branch; list as a follow-up.
+   - **Defer** — needs design discussion or depends on a tile-family / data shape not yet built. Note the blocker.
+
+   Use the `Explore` subagent type (per the CLAUDE.md plan workflow) to parallelize the scan across the directories above. Output is a markdown file only — no source edits. Subsequent PRs reference its findings.
+
 1. **PR 1 — selector registry + dispatcher (no behavior change).** Add `src/config/tileSelectors.js`, add `GameScene.applyToolPower`. Existing per-tool methods stay. Tests assert selectors return identical sets to legacy methods on representative grids.
 2. **PR 2 — new powers + sickle tool.** Add `clear_row/column/cross/component/random_n`, `transform_random_n`, `reshuffle_board`, `arm_fill_bias` to the catalog. Add `sickle` to ITEMS + workshop recipe. Visual scenario for sickle. Refresh visual goldens (new scenarios only).
 3. **PR 3 — migrate axe, rake, bomb, magic_wand, rune_wildcard.** Route through new dispatcher; delete `_applyToolRake/Axe/Bomb/Magic_Wand/RuneWildcard` and pending flags. Visual goldens expected unchanged (visual parity is the contract); any diff is a regression.
 4. **PR 4 — migrate water_pump, explosives, cat, rifle, hound, fertilizer.** Delete the inline `if (key === ...)` chains in `USE_TOOL`; route through power handlers. Move bubble text to power config.
 5. **PR 5 — migrate shuffle / clear / basic / rare.** Delete `_applyToolClear/Basic/Rare`; these ride `clear_random_n` / `transform_random_n` / `reshuffle_board`.
-6. **PR 6 — final cleanup.** Delete `effect`/`target`/`anim`/`ms` fields from `ITEMS`, delete `LEGACY_TOOL_KEYS`, delete `def.effect === "clear_all"` branch in `farm/tools.js`, delete `applyToolDim` strategies (replace with one rule reading the selector). Update wiki copy. Final visual golden run — this PR is where the 17 silent Phase-3 tools start showing animations; expect intentional diffs.
+6. **PR 6 — final cleanup.** Delete `effect`/`target`/`anim`/`ms` fields from `ITEMS`, delete `LEGACY_TOOL_KEYS`, delete `def.effect === "clear_all"` branch in `farm/tools.js`, delete `applyToolDim` strategies (replace with one rule reading the selector). Update wiki copy. Final visual golden run — this PR is where the 17 silent Phase-3 tools start showing animations; expect intentional diffs. **Fold in any audit findings tagged "absorb into PR 1–6" that weren't already taken by PRs 1–5.**
 
 ## Verification (each PR)
 
