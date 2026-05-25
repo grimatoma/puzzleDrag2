@@ -97,6 +97,7 @@ export function spawnBoss(state, id, year, rng = Math.random) {
   const modifierState = applyModifierToFreshGrid(grid, def.modifier, rng);
   return {
     ...state,
+    grid,
     boss: {
       id,
       season: def.season,

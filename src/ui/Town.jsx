@@ -5,6 +5,7 @@ import { ZONES, displayZoneName, isSettlementFounded, settlementFoundingCost, se
 import BiomePicker from "../features/zones/BiomePicker.jsx";
 import StartFarmingModal from "../features/zones/StartFarmingModal.jsx";
 import BiomeEntryModal from "../features/zones/BiomeEntryModal.jsx";
+import { canEnterBiome } from "../state/biomeAccess.js";
 import { buildTownPlan } from "../townLayout.js";
 import TownGround from "./TownGround.jsx";
 import TownVillagers from "./TownVillagers.jsx";
@@ -367,7 +368,9 @@ export function TownView({ state, dispatch }) {
         {(townPlan.boards || []).map((b) => {
           const meta = BOARD_META[b.kind];
           if (!meta) return null;
-          const locked = b.kind === "mine" && state.level < 2;
+          const locked = b.kind === "mine" || b.kind === "fish"
+            ? !canEnterBiome(state, b.kind).ok
+            : false;
           return (
             <button
               key={b.kind}

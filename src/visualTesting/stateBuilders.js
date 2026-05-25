@@ -412,7 +412,7 @@ function profileState(profile) {
     case "boardFarmBomb": return { ...boardState("farm"), toolPending: "bomb", toolPendingPower: { id: "area_blast", params: { radius: 1 }, tint: 0xff4444 }, tools: { ...boardState("farm").tools, bomb: 3 } };
     case "boardFarmSickle": return { ...boardState("farm"), toolPending: "sickle", toolPendingPower: { id: "clear_row", params: {}, tint: 0xff9900 }, tools: { ...boardState("farm").tools, sickle: 2 } };
     case "boardFarmRake": return { ...boardState("farm"), toolPending: "rake", toolPendingPower: { id: "clear_component", params: {}, tint: 0x88ff88 }, tools: { ...boardState("farm").tools, rake: 2 } };
-    case "boardFarmFertilizer": return { ...boardState("farm"), fertilizerActive: true, magicFertilizerCharges: 3, session: { selectedTiles: ["grass", "grain"], fertilizerUsed: true } };
+    case "boardFarmFertilizer": return { ...boardState("farm"), fillBiasTarget: "tile_grain_wheat", magicFertilizerCharges: 3, session: { selectedTiles: ["grass", "grain"], fertilizerUsed: true } };
     case "boardMine": return boardState("mine");
     case "boardMineHazards": {
       const st = boardState("mine");

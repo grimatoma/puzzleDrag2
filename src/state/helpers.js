@@ -1,4 +1,4 @@
-import { BIOMES, ITEMS, NPCS, CAPPED_INVENTORY_RESOURCES, CAPPED_TILES } from "../constants.js";
+import { BIOMES, ITEMS, NPCS, RECIPES, CAPPED_INVENTORY_RESOURCES, CAPPED_TILES } from "../constants.js";
 import { TILE_TYPES, CATEGORIES } from "../features/tileCollection/data.js";
 
 // ─── Inventory helpers ─────────────────────────────────────────────────────
@@ -119,9 +119,22 @@ export function pickNpcKey(excludeKeys = [], roster = Object.keys(NPCS)) {
 
 const CRAFTED_ORDER_CHANCE = 0.30;
 
-// Crafted item pools for advanced orders (level 3+)
-const CRAFTED_FARM_POOL = ["bread", "honeyroll", "harvestpie", "preserve", "tincture"];
-const CRAFTED_MINE_POOL = ["iron_hinge", "cobblepath", "lantern", "goldring", "gemcrown", "ironframe", "stonework"];
+const CRAFTED_STATIONS_BY_BIOME = {
+  farm: new Set(["bakery", "larder"]),
+  mine: new Set(["forge"]),
+  fish: new Set(["bakery", "larder", "workshop"]),
+};
+
+/** Crafted resource keys eligible for level 3+ orders, from RECIPES by biome station. */
+export function craftedOrderPoolForBiome(biomeKey) {
+  const stations = CRAFTED_STATIONS_BY_BIOME[biomeKey] ?? CRAFTED_STATIONS_BY_BIOME.farm;
+  const keys = new Set();
+  for (const rec of Object.values(RECIPES)) {
+    if (!rec?.item || !stations.has(rec.station)) continue;
+    if (ITEMS[rec.item]?.kind === "resource") keys.add(rec.item);
+  }
+  return [...keys];
+}
 
 let orderIdSeq = 1;
 
@@ -142,7 +155,7 @@ export function makeOrder(biomeKey, level, excludeNpcs = [], excludeOrderKeys = 
 
   let key, need, reward, resourceLabel;
   if (useCrafted) {
-    const craftedPool = biomeKey === "mine" ? CRAFTED_MINE_POOL : CRAFTED_FARM_POOL;
+    const craftedPool = craftedOrderPoolForBiome(biomeKey);
     const craftedCandidates = craftedPool.filter((k) => !excludeOrderKeys.includes(k));
     const craftedPickPool = craftedCandidates.length ? craftedCandidates : craftedPool;
     key = craftedPickPool[Math.floor(Math.random() * craftedPickPool.length)];

@@ -4,6 +4,8 @@ import { sellPriceFor as _sellPriceFor } from "./features/market/pricing.js";
 import { isTapTargetPower } from "./config/toolPowers.js";
 import { rollRatSpawn, tickRats } from "./features/farm/rats.js";
 import { canEnterBiome } from "./state/biomeAccess.js";
+import { resolveToolDispatchKey } from "./state/toolAliases.js";
+import { disarmFillBias, isFillBiasArmed } from "./state/fillBias.js";
 import { applyToolPower, applyTapTargetPower } from "./state/toolPowerRuntime.js";
 import { tryClearRatChain } from "./features/farm/rats.js";
 import { tryExtinguishFire, rollFarmHazard, tickFire, tickWolves } from "./features/farm/hazards.js";
@@ -90,12 +92,8 @@ export function disarmAllTools(state) {
       };
     }
   }
-  if (next.fertilizerActive) {
-    next = {
-      ...next,
-      fertilizerActive: false,
-      tools: { ...next.tools, fertilizer: (next.tools?.fertilizer ?? 0) + 1 },
-    };
+  if (isFillBiasArmed(next)) {
+    next = disarmFillBias(next);
   }
   // Defensive: if a non-tap-target toolPendingPower is somehow still set
   // (e.g. a non-tap typed power left armed by a future bug), drop it. The
@@ -570,19 +568,13 @@ function coreReducer(state, action) {
     }
     case "USE_TOOL": {
       const rawKey = action.payload?.id ?? action.payload?.key ?? action.key;
-      const ALIAS = { scythe: "clear", seedpack: "basic", lockbox: "rare", reshuffle: "shuffle" };
-      const key = ALIAS[rawKey] ?? rawKey;
+      const key = resolveToolDispatchKey(rawKey);
       const explicitPower = action.payload?.power;
       if (explicitPower?.id) {
         return applyToolPower(state, key, explicitPower);
       }
-      if (key === "fertilizer" && state.fertilizerActive) {
-        return {
-          ...state,
-          tools: { ...state.tools, fertilizer: (state.tools.fertilizer ?? 0) + 1 },
-          fertilizerActive: false,
-          fillBiasTarget: null,
-        };
+      if (key === "fertilizer" && isFillBiasArmed(state)) {
+        return disarmFillBias(state);
       }
       const item = ITEMS[key];
       const itemPower = item?.power ?? null;
@@ -852,7 +844,8 @@ function coreReducer(state, action) {
         pendingView: null,
         seasonStats: { harvests: 0, upgrades: 0, ordersFilled: 0, coins: 0, capFloaters: {} },
         // Clear fertilizer flag at season end — it was consumed this season
-        fertilizerActive: false,
+        fillBiasTarget: null,
+        magicFertilizerCharges: 0,
         // 5.7: reset per-season free moves on season close
         tileCollection: state.tileCollection ? { ...state.tileCollection, freeMoves: 0 } : state.tileCollection,
         npcs: decayedNpcs,
@@ -1187,8 +1180,8 @@ function coreReducer(state, action) {
     }
 
     case "FERTILIZER/CONSUMED": {
-      if (!state.fertilizerActive) return state;
-      return { ...state, fertilizerActive: false };
+      if (!isFillBiasArmed(state)) return state;
+      return { ...state, fillBiasTarget: null, magicFertilizerCharges: 0 };
     }
 
     case "LOGIN_TICK": {

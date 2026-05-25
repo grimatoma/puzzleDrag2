@@ -3,16 +3,17 @@ import IconCanvas from "./IconCanvas.jsx";
 import ToolStrip from "./primitives/ToolStrip.jsx";
 import BottomSheet from "./primitives/BottomSheet.jsx";
 import { TOOL_CATALOG, TOOL_BY_KEY, visibleTools, isTapTargetTool } from "./toolRegistry.js";
+import { isFillBiasArmed } from "../state/fillBias.js";
 
 export const TOOL_DEFS = TOOL_CATALOG;
 
-function buildToolList(toolsState, { toolPending, fertilizerActive }) {
+function buildToolList(toolsState, { toolPending, fillBiasArmed }) {
   const tools = toolsState || {};
   return visibleTools(tools).map((def) => {
     const count = tools[def.key] || 0;
     const armed =
       toolPending === def.key ||
-      (def.key === "fertilizer" && !!fertilizerActive);
+      (def.key === "fertilizer" && !!fillBiasArmed);
     return {
       key: def.key,
       iconKey: def.iconKey,
@@ -73,13 +74,13 @@ function ToolInspectSheet({ tool, count, onClose, onUse }) {
 // Mirrors the disarm rule in puzzleBoard.jsx: only one tool can be "selected"
 // (armed or used) at a time. Picking up a different tool implicitly cancels
 // whatever was previously armed. See disarmOtherTools there for the full
-// rationale; fertilizerActive is its own flag so re-dispatching USE_TOOL
+// rationale; fillBiasArmed is its own flag so re-dispatching USE_TOOL
 // fertilizer is the disarm + refund path for it.
 function disarmOtherTools(dispatch, key, state) {
   if (state?.toolPending && state.toolPending !== key) {
     dispatch({ type: "CANCEL_TOOL" });
   }
-  if (state?.fertilizerActive && key !== "fertilizer") {
+  if (state?.fillBiasArmed && key !== "fertilizer") {
     dispatch({ type: "USE_TOOL", key: "fertilizer" });
   }
 }
@@ -103,9 +104,9 @@ function dispatchUseTool(dispatch, key, state) {
   }
 }
 
-export function ToolsGrid({ tools, toolPending, fertilizerActive, onUse, onInspectChange }) {
+export function ToolsGrid({ tools, toolPending, fillBiasArmed, onUse, onInspectChange }) {
   const [inspectKey, setInspectKey] = useState(null);
-  const list = buildToolList(tools, { toolPending, fertilizerActive });
+  const list = buildToolList(tools, { toolPending, fillBiasArmed });
   const inspectTool = inspectKey ? TOOL_BY_KEY[inspectKey] : null;
   const inspectCount = inspectKey != null ? (tools?.[inspectKey] ?? 0) : 0;
   useEffect(() => {
@@ -148,7 +149,7 @@ export function MobileDock({ state, dispatch, onInspectChange }) {
   const closeSheet = () => setSheet(null);
   const list = buildToolList(state.tools, {
     toolPending: state.toolPending,
-    fertilizerActive: state.fertilizerActive,
+    fillBiasArmed: isFillBiasArmed(state),
   });
   const inspectTool = inspectKey ? TOOL_BY_KEY[inspectKey] : null;
   const inspectCount = inspectKey != null ? (state.tools?.[inspectKey] ?? 0) : 0;

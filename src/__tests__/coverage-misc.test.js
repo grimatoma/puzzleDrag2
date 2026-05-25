@@ -162,7 +162,7 @@ describe("farm/pool — getEffectivePool seasonal modifier", () => {
     biome: "farm",
     season: "Spring",
     tileCollection: {
-      activeByCategory: { grass: "tile_grass_hay", grain: "tile_grain_wheat", wood: "tile_tree_oak", berry: "berry", bird: "eggs" },
+      activeByCategory: { grass: "tile_grass_hay", grain: "tile_grain_wheat", wood: "tile_tree_oak", fruits: "tile_fruit_blackberry", bird: "eggs" },
     },
     _workerEffects: { effectivePoolWeights: {} },
     ...over,

@@ -1,3 +1,4 @@
+import { ITEMS } from "../../constants.js";
 import { MAGIC_TOOLS } from "./data.js";
 import { locBuilt } from "../../locBuilt.js";
 
@@ -41,7 +42,7 @@ export function reduce(state, action) {
       return {
         ...state,
         magicFertilizerCharges: newCharges,
-        fertilizerActive: newCharges > 0 ? state.fertilizerActive : false,
+        fillBiasTarget: newCharges > 0 ? (state.fillBiasTarget ?? ITEMS.fertilizer?.power?.params?.target ?? null) : null,
       };
     }
 

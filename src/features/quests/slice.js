@@ -71,17 +71,15 @@ export function reduce(state, action) {
       const dailies = (state.dailies || []).map((x) =>
         x.id === id ? { ...x, claimed: true } : x
       );
-      const afterLegacy = {
+      const legacyXp = q.reward.almanacXp || 0;
+      let afterLegacy = {
         ...state,
         dailies,
         coins: (state.coins || 0) + (q.reward.coins || 0),
-        almanacXp: (state.almanacXp || 0) + (q.reward.almanacXp || 0),
       };
-      // Also award almanac XP to canonical almanac slice
-      const legacyXp = q.reward.almanacXp || 0;
       if (legacyXp > 0) {
         const { newState: afterXp } = awardXp(afterLegacy, legacyXp);
-        return afterXp;
+        afterLegacy = afterXp;
       }
       return afterLegacy;
     }

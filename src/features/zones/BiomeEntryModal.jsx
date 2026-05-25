@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { BIOMES, EXPEDITION_FOOD_TURNS, MIN_EXPEDITION_TURNS } from "../../constants.js";
 import { expeditionTurnsForFood, expeditionTurnsFromSupply, settlementHazards } from "./data.js";
+import { canEnterBiome } from "../../state/biomeAccess.js";
 import { ParchmentDialog } from "../../ui/primitives/Dialog.jsx";
 import Button from "../../ui/primitives/Button.jsx";
 import Stepper from "../../ui/primitives/Stepper.jsx";
@@ -14,9 +15,8 @@ const FOOD_LABELS = {
 
 export default function BiomeEntryModal({ biomeKey, state, dispatch, onClose }) {
   const biome = BIOMES[biomeKey];
-  const level = state.level ?? 1;
-  const unlockLevel = biomeKey === "mine" ? 2 : biomeKey === "fish" ? 3 : 0;
-  const locked = level < unlockLevel;
+  const access = canEnterBiome(state, biomeKey);
+  const locked = !access.ok;
   const zoneId = state.activeZone ?? state.mapCurrent ?? "home";
   const descriptions = {
     mine: "Descend into the depths. Stone, ore, and gems wait below — but you only stay as long as your provisions last.",
@@ -63,7 +63,7 @@ export default function BiomeEntryModal({ biomeKey, state, dispatch, onClose }) 
       <ParchmentDialog.Body>
         {locked ? (
           <div className="bg-[#f7d572]/30 border border-[#f7d572] rounded-xl px-4 py-3 text-[#7a5020] font-bold text-body text-center">
-            <div className="flex items-center gap-1.5 justify-center"><Icon iconKey="ui_lock" size={14} /> Unlocks at Level {unlockLevel}</div>
+            <div className="flex items-center gap-1.5 justify-center"><Icon iconKey="ui_lock" size={14} /> {access.reason}</div>
           </div>
         ) : (
           <>

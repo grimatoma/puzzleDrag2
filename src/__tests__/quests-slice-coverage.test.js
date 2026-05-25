@@ -87,8 +87,6 @@ describe("quests slice — coverage gaps", () => {
     });
     const s1 = questReduce(s0, { type: "QUESTS/CLAIM_QUEST", id: "q1" });
     expect(s1.coins).toBe(50);
-    expect(s1.almanacXp).toBe(30);
-    // canonical almanac.xp should reflect the awarded XP (path branch)
     expect((s1.almanac?.xp ?? 0)).toBeGreaterThanOrEqual(30);
   });
 

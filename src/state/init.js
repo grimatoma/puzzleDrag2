@@ -3,6 +3,8 @@ import { rollQuests } from "../features/quests/data.js";
 import { INITIAL_STORY_STATE } from "../story.js";
 import { initialFlagState } from "../flags.js";
 import { FIRE_HAZARD_ENABLED } from "../featureFlags.js";
+import { isTapTargetPower } from "../config/toolPowers.js";
+import { ITEMS } from "../constants.js";
 import { ACHIEVEMENTS as ACHIEVEMENT_LIST } from "../features/achievements/data.js";
 import * as crafting from "../features/crafting/slice.js";
 import * as quests from "../features/quests/slice.js";
@@ -96,7 +98,7 @@ export function createFreshState(overrides) {
     },
     toolPending: null,
     toolPendingPower: null,
-    fertilizerActive: false,
+    fillBiasTarget: null,
     mysteriousOre: null,
     fishPearl: null,
     hazards: { 
@@ -215,12 +217,13 @@ export function initialState(overrides) {
     // so just clearing toolPending is enough.
     const savedTools = savedWithoutLegacy.tools ?? {};
     let restoredTools = savedTools;
-    if (savedWithoutLegacy.fertilizerActive) {
+    if (savedWithoutLegacy.fertilizerActive || savedWithoutLegacy.fillBiasTarget) {
       restoredTools = { ...restoredTools, fertilizer: (restoredTools.fertilizer ?? 0) + 1 };
     }
-    const TAP_TARGET = new Set(["bomb", "rake", "axe", "magic_wand"]);
     const savedPending = savedWithoutLegacy.toolPending;
-    if (savedPending && !TAP_TARGET.has(savedPending) && savedPending !== "rune_wildcard") {
+    const pendingPower = savedWithoutLegacy.toolPendingPower ?? ITEMS[savedPending]?.power;
+    const pendingIsTap = pendingPower?.id && isTapTargetPower(pendingPower.id);
+    if (savedPending && !pendingIsTap && savedPending !== "rune_wildcard") {
       restoredTools = { ...restoredTools, [savedPending]: (restoredTools[savedPending] ?? 0) + 1 };
     }
     const restoredRuneStash = savedPending === "rune_wildcard"
@@ -245,7 +248,7 @@ export function initialState(overrides) {
       // must also clear on load. The save schema is forward-safe: old saves
       // simply lack this field, and the merge sets it to null either way.
       toolPendingPower: null,
-      fertilizerActive: false,
+      fillBiasTarget: null,
       tools: restoredTools,
       runeStash: restoredRuneStash,
       seasonStats: { harvests: 0, upgrades: 0, ordersFilled: 0, coins: 0 }

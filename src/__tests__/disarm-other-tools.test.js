@@ -36,10 +36,10 @@ describe("disarm-other-tools — single-armed invariant", () => {
     expect(s2.tools.bird_cage).toBe(0); // bird_cage consumed
   });
 
-  it("USE_TOOL fertilizer disarms fertilizerActive and refunds the charge", () => {
-    const s0 = { ...withTools({ tools: { fertilizer: 0 } }), fertilizerActive: true };
+  it("USE_TOOL fertilizer disarms fillBiasTarget and refunds the charge", () => {
+    const s0 = { ...withTools({ tools: { fertilizer: 0 } }), fillBiasTarget: "tile_grain_wheat" };
     const s1 = rootReducer(s0, { type: "USE_TOOL", key: "fertilizer" });
-    expect(s1.fertilizerActive).toBe(false);
+    expect(s1.fillBiasTarget).toBeFalsy();
     expect(s1.tools.fertilizer).toBe(1); // refunded
   });
 
@@ -50,21 +50,21 @@ describe("disarm-other-tools — single-armed invariant", () => {
     const s0 = {
       ...withTools({ tools: { fertilizer: 0 } }),
       toolPending: "bomb",
-      fertilizerActive: true,
+      fillBiasTarget: "tile_grain_wheat",
     };
 
     const s1 = rootReducer(s0, { type: "CANCEL_TOOL" });
     expect(s1.toolPending).toBeNull();
-    expect(s1.fertilizerActive).toBe(true); // CANCEL_TOOL only handles toolPending
+    expect(s1.fillBiasTarget).toBe("tile_grain_wheat"); // CANCEL_TOOL only handles toolPending
 
     const s2 = rootReducer(s1, { type: "USE_TOOL", key: "fertilizer" });
-    expect(s2.fertilizerActive).toBe(false);
+    expect(s2.fillBiasTarget).toBeFalsy();
     expect(s2.tools.fertilizer).toBe(1); // refunded
 
     // After the disarm sequence, the new tool fires against a clean slate.
     const s3 = rootReducer(s2, { type: "USE_TOOL", key: "bird_cage" });
     expect(s3.toolPending).toBeNull();
-    expect(s3.fertilizerActive).toBe(false);
+    expect(s3.fillBiasTarget).toBeFalsy();
     expect(s3.tools.bird_cage).toBe(0);
   });
 
