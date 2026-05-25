@@ -9,7 +9,7 @@ import { BIOMES, COLS, ROWS } from "../constants.js";
 import { tilesInCategory } from "../utils.js";
 import { applyAreaBlast } from "../state/boardMutations.js";
 
-const HAZARD_LOCKED = (cell) =>
+const HAZARD_LOCKED = (cell: any) =>
   !!(cell && (cell.rubble || cell.gas || cell.frozen || cell.key === "rat"));
 
 const DIRS4 = [[0, 1], [0, -1], [1, 0], [-1, 0]];
@@ -20,7 +20,7 @@ const DIRS4 = [[0, 1], [0, -1], [1, 0], [-1, 0]];
  * @param {number} col
  * @returns {{ row: number, col: number, key: string } | null}
  */
-function cellAt(grid, row, col) {
+function cellAt(grid: any, row: any, col: any) {
   if (!grid) return null;
   const cell = grid[row]?.[col];
   if (!cell?.key || HAZARD_LOCKED(cell)) return null;
@@ -31,8 +31,8 @@ function cellAt(grid, row, col) {
  * @param {Array<Array<{ key?: string | null }>> | null | undefined} grid
  * @param {boolean} [excludeSelected]
  */
-function allCells(grid, excludeSelected = false) {
-  const out = [];
+function allCells(grid: any, excludeSelected = false) {
+  const out: any[] = [];
   if (!grid) return out;
   for (let r = 0; r < ROWS; r++) {
     for (let c = 0; c < COLS; c++) {
@@ -46,7 +46,7 @@ function allCells(grid, excludeSelected = false) {
 }
 
 /** Fisher–Yates shuffle (in-place copy). */
-function shuffled(cells) {
+function shuffled(cells: any) {
   const arr = cells.slice();
   for (let i = arr.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
@@ -61,8 +61,8 @@ function shuffled(cells) {
  * @param {number} tapCol
  * @param {number} rowSpan
  */
-function selectRow(grid, tapRow, tapCol, rowSpan = 1) {
-  const out = [];
+function selectRow(grid: any, tapRow: any, tapCol: any, rowSpan = 1) {
+  const out: any[] = [];
   const r0 = Math.max(0, tapRow);
   const r1 = Math.min(ROWS - 1, tapRow + rowSpan - 1);
   for (let r = r0; r <= r1; r++) {
@@ -80,8 +80,8 @@ function selectRow(grid, tapRow, tapCol, rowSpan = 1) {
  * @param {number} tapCol
  * @param {number} colSpan
  */
-function selectColumn(grid, tapRow, tapCol, colSpan = 1) {
-  const out = [];
+function selectColumn(grid: any, tapRow: any, tapCol: any, colSpan = 1) {
+  const out: any[] = [];
   const c0 = Math.max(0, tapCol);
   const c1 = Math.min(COLS - 1, tapCol + colSpan - 1);
   for (let c = c0; c <= c1; c++) {
@@ -98,9 +98,9 @@ function selectColumn(grid, tapRow, tapCol, colSpan = 1) {
  * @param {number} tapRow
  * @param {number} tapCol
  */
-function selectCross(grid, tapRow, tapCol) {
+function selectCross(grid: any, tapRow: any, tapCol: any) {
   const seen = new Set();
-  const out = [];
+  const out: any[] = [];
   for (const cell of [...selectRow(grid, tapRow, tapCol), ...selectColumn(grid, tapRow, tapCol)]) {
     const id = `${cell.row},${cell.col}`;
     if (!seen.has(id)) {
@@ -114,16 +114,16 @@ function selectCross(grid, tapRow, tapCol) {
 /**
  * 4-connected flood from tap matching tapped key (or any key when matchKey false).
  */
-function selectComponent(grid, tapRow, tapCol, matchKey = true) {
+function selectComponent(grid: any, tapRow: any, tapCol: any, matchKey = true) {
   const seed = cellAt(grid, tapRow, tapCol);
   if (!seed) return [];
   const targetKey = seed.key;
-  const out = [];
+  const out: any[] = [];
   const visited = Array.from({ length: ROWS }, () => new Array(COLS).fill(false));
-  const queue = [{ row: tapRow, col: tapCol }];
+  const queue: Array<{ row: any; col: any }> = [{ row: tapRow, col: tapCol }];
   visited[tapRow][tapCol] = true;
   while (queue.length) {
-    const { row: r, col: c } = queue.shift();
+    const { row: r, col: c } = queue.shift()!;
     const cell = cellAt(grid, r, c);
     if (!cell) continue;
     if (matchKey && cell.key !== targetKey) continue;
@@ -143,10 +143,10 @@ function selectComponent(grid, tapRow, tapCol, matchKey = true) {
  * @param {object} params
  * @param {string} [biomeKey]
  */
-export function resolveTransformKey(params, biomeKey = "farm") {
+export function resolveTransformKey(params: any, biomeKey = "farm") {
   const to = params.to;
   if (to === "biome_base") {
-    return BIOMES[biomeKey]?.tiles?.[0]?.key ?? null;
+    return (BIOMES as any)[biomeKey]?.tiles?.[0]?.key ?? null;
   }
   if (to === "biome_rare") {
     const biome = BIOMES[biomeKey];
@@ -159,31 +159,31 @@ export function resolveTransformKey(params, biomeKey = "farm") {
 
 /** @type {Record<string, (grid: any, params: any, tap?: { row: number, col: number }, ctx?: { biomeKey?: string, biomes?: any }) => Array<{ row: number, col: number, key: string }>>} */
 export const TILE_SELECTORS = Object.freeze({
-  clear_row(grid, params, tap) {
+  clear_row(grid: any, params: any, tap?: any) {
     if (!tap || typeof tap.row !== "number") return [];
     return selectRow(grid, tap.row, tap.col, params.rowSpan ?? 1);
   },
-  clear_column(grid, params, tap) {
+  clear_column(grid: any, params: any, tap?: any) {
     if (!tap || typeof tap.row !== "number") return [];
     return selectColumn(grid, tap.row, tap.col, params.colSpan ?? 1);
   },
-  clear_cross(grid, _params, tap) {
+  clear_cross(grid: any, _params: any, tap?: any) {
     if (!tap || typeof tap.row !== "number") return [];
     return selectCross(grid, tap.row, tap.col);
   },
-  clear_component(grid, params, tap) {
+  clear_component(grid: any, params: any, tap?: any) {
     if (!tap || typeof tap.row !== "number") return [];
     return selectComponent(grid, tap.row, tap.col, params.matchKey !== false);
   },
-  clear_random_n(grid, params) {
+  clear_random_n(grid: any, params: any) {
     const n = params.count ?? 6;
     return shuffled(allCells(grid, true)).slice(0, n);
   },
-  transform_random_n(grid, params) {
+  transform_random_n(grid: any, params: any) {
     const n = params.count ?? 5;
     return shuffled(allCells(grid, true)).slice(0, n);
   },
-  area_blast(grid, params, tap) {
+  area_blast(grid: any, params: any, tap?: any) {
     if (!tap || typeof tap.row !== "number") return [];
     const radius = params.radius ?? 1;
     const { grid: blasted } = applyAreaBlast(grid, tap.row, tap.col, radius);
@@ -199,7 +199,7 @@ export const TILE_SELECTORS = Object.freeze({
     }
     return out;
   },
-  tap_clear_type(grid, _params, tap) {
+  tap_clear_type(grid: any, _params: any, tap?: any) {
     if (!tap || typeof tap.row !== "number") return [];
     const key = grid[tap.row]?.[tap.col]?.key;
     if (!key) return [];
@@ -214,12 +214,12 @@ export const TILE_SELECTORS = Object.freeze({
     }
     return out;
   },
-  clear_category(grid, params) {
+  clear_category(grid: any, params: any) {
     const keys = tilesInCategory(params.target);
     const keySet = new Set(keys);
     return allCells(grid).filter((c) => keySet.has(c.key));
   },
-  clear_all(grid, params) {
+  clear_all(grid: any, params: any) {
     const target = params.target;
     if (target === "*") return allCells(grid);
     return allCells(grid).filter((c) => c.key === target);
@@ -230,7 +230,7 @@ export const TILE_SELECTORS = Object.freeze({
   arm_fill_bias() {
     return [];
   },
-  transform_tiles(grid, params) {
+  transform_tiles(grid: any, params: any) {
     const fromCategory = tilesInCategory(params.from);
     const fromKeys = fromCategory.length > 0
       ? fromCategory
@@ -238,7 +238,7 @@ export const TILE_SELECTORS = Object.freeze({
     const keySet = new Set(fromKeys);
     return allCells(grid).filter((c) => keySet.has(c.key));
   },
-  transform_adjacent(grid, params, tap) {
+  transform_adjacent(grid: any, params: any, tap?: any) {
     if (!tap || typeof tap.row !== "number") return [];
     const radius = params.radius ?? 1;
     const fromCategory = tilesInCategory(params.from);
@@ -268,8 +268,8 @@ export const TILE_SELECTORS = Object.freeze({
  * @param {{ row: number, col: number } | null | undefined} [tap]
  * @param {{ biomeKey?: string, biomes?: object }} [ctx]
  */
-export function selectTilesForPower(powerId, grid, params = {}, tap, ctx = {}) {
-  const fn = TILE_SELECTORS[powerId];
+export function selectTilesForPower(powerId: any, grid: any, params: any = {}, tap?: any, ctx: any = {}) {
+  const fn = (TILE_SELECTORS as any)[powerId];
   if (!fn) return [];
   return fn(grid ?? [], params ?? {}, tap ?? undefined, ctx); // ctx reserved for biome-relative selectors
 }

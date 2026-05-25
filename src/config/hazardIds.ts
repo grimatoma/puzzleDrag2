@@ -16,8 +16,8 @@ const TO_RUNTIME = Object.freeze({
   lava: "lava",
 });
 
-export function normalizeHazardId(id) {
+export function normalizeHazardId(id: any) {
   if (id == null || id === "") return null;
   const key = String(id).trim();
-  return TO_RUNTIME[key] ?? key;
+  return (TO_RUNTIME as any)[key] ?? key;
 }

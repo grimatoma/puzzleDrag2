@@ -1211,15 +1211,15 @@ export class GameScene extends Phaser.Scene {
 
     const tap = tapTile ? { row: tapTile.row, col: tapTile.col } : null;
     const biomeKey = this.registry.get("biomeKey") ?? "farm";
-    const cells = selectTilesForPower(id, this._selectorGrid(), params, tap, { biomeKey });
+    const cells: Array<{ row: number; col: number }> = selectTilesForPower(id, this._selectorGrid(), params, tap, { biomeKey });
 
     if (id === "transform_random_n") {
       const toKey = resolveTransformKey(params, biomeKey);
       if (!toKey) return;
-      const res = resourceByKey(toKey) ?? this.biome().tiles.find((t) => t.key === toKey);
+      const res: TileRes | undefined = resourceByKey(toKey) ?? (this.biome().tiles as TileRes[]).find((t: TileRes) => t.key === toKey);
       if (!res) return;
-      const picks = cells.map(({ row, col }) => this.grid[row]?.[col]).filter(Boolean);
-      picks.forEach((tile) => tile.setResource(res));
+      const picks = cells.map(({ row, col }) => this.grid[row]?.[col]).filter((t): t is TileObj => t != null);
+      picks.forEach((tile: TileObj) => tile.setResource(res!));
       this.playBoardAnimation(anim, picks, { tint, ms: power.ms });
       if (params.to === "biome_rare") {
         this.time.delayedCall(this._dur(collapseMs), () => {
@@ -1232,7 +1232,7 @@ export class GameScene extends Phaser.Scene {
       return;
     }
 
-    const tileObjs = cells.map(({ row, col }) => this.grid[row]?.[col]).filter(Boolean);
+    const tileObjs = cells.map(({ row, col }) => this.grid[row]?.[col]).filter((t): t is TileObj => t != null);
     if (!tileObjs.length && isTapTargetPower(id)) return;
 
     this.playBoardAnimation(anim, tileObjs, { tint, ms: power.ms });
@@ -1252,7 +1252,7 @@ export class GameScene extends Phaser.Scene {
 
   // ─── Drag chain ───────────────────────────────────────────────────────────
 
-  startPath(tile) {
+  startPath(tile: TileObj): void {
     if (this.locked) return;
     const pendingKey = this.registry.get("toolPending");
     const armedPower = this.registry.get("toolPendingPower")
@@ -1279,7 +1279,7 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
-  tryAddToPath(tile) {
+  tryAddToPath(tile: TileObj): void {
     if (!this.dragging || !this.path.length) return;
     if (tile.frozen || tile.rubble) return;
     const last = this.path[this.path.length - 1];
@@ -1298,7 +1298,7 @@ export class GameScene extends Phaser.Scene {
     if (same && adj) this.addToPath(tile);
   }
 
-  addToPath(tile) {
+  addToPath(tile: TileObj): void {
     tile.setSelected(true);
     tile.pulse();
     this.path.push(tile);
@@ -1394,15 +1394,16 @@ export class GameScene extends Phaser.Scene {
 
     // Static node dots
     if (!this.pathNodeG) this.pathNodeG = this.add.graphics().setDepth(9);
-    this.pathNodeG.clear();
+    const pathNodeG = this.pathNodeG; // narrowed non-null ref
+    pathNodeG.clear();
     const nr = 7 * this.tileScale;
     this.path.forEach((t) => {
-      this.pathNodeG.fillStyle(nodeOuterColor, 0.55);
-      this.pathNodeG.fillCircle(t.x, t.y, nr * 1.6);
-      this.pathNodeG.fillStyle(nodeInnerColor, 1);
-      this.pathNodeG.fillCircle(t.x, t.y, nr);
-      this.pathNodeG.fillStyle(0xfff4c2, 0.9);
-      this.pathNodeG.fillCircle(t.x, t.y, nr * 0.4);
+      pathNodeG.fillStyle(nodeOuterColor, 0.55);
+      pathNodeG.fillCircle(t.x, t.y, nr * 1.6);
+      pathNodeG.fillStyle(nodeInnerColor, 1);
+      pathNodeG.fillCircle(t.x, t.y, nr);
+      pathNodeG.fillStyle(0xfff4c2, 0.9);
+      pathNodeG.fillCircle(t.x, t.y, nr * 0.4);
     });
 
     const res0 = this.path.length ? this.path[0].res : null;
@@ -1487,20 +1488,21 @@ export class GameScene extends Phaser.Scene {
       this._drawSegment(g, a.x, a.y, b.x, b.y, lineColor, haloColor);
     }
     if (this.pathNodeG) {
-      this.pathNodeG.clear();
+      const pathNodeG2 = this.pathNodeG; // narrowed non-null ref
+      pathNodeG2.clear();
       const nr = 7 * this.tileScale;
       this.path.forEach((tp) => {
-        this.pathNodeG.fillStyle(nodeOuterColor, 0.55);
-        this.pathNodeG.fillCircle(tp.x, tp.y, nr * 1.6);
-        this.pathNodeG.fillStyle(nodeInnerColor, 1);
-        this.pathNodeG.fillCircle(tp.x, tp.y, nr);
-        this.pathNodeG.fillStyle(0xfff4c2, 0.9);
-        this.pathNodeG.fillCircle(tp.x, tp.y, nr * 0.4);
+        pathNodeG2.fillStyle(nodeOuterColor, 0.55);
+        pathNodeG2.fillCircle(tp.x, tp.y, nr * 1.6);
+        pathNodeG2.fillStyle(nodeInnerColor, 1);
+        pathNodeG2.fillCircle(tp.x, tp.y, nr);
+        pathNodeG2.fillStyle(0xfff4c2, 0.9);
+        pathNodeG2.fillCircle(tp.x, tp.y, nr * 0.4);
       });
     }
   }
 
-  _drawSegment(g, ax, ay, bx, by, lineColor = 0xff6d00, haloColor = 0xffd248) {
+  _drawSegment(g: Phaser.GameObjects.Graphics, ax: number, ay: number, bx: number, by: number, lineColor = 0xff6d00, haloColor = 0xffd248): void {
     g.lineStyle(22 * this.tileScale, haloColor, 0.22);
     g.beginPath(); g.moveTo(ax, ay); g.lineTo(bx, by); g.strokePath();
     g.lineStyle(9 * this.tileScale, lineColor, 1);
@@ -1529,7 +1531,7 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
-  dimUnselectableTiles(key) {
+  dimUnselectableTiles(key: string): void {
     for (let r = 0; r < ROWS; r++) {
       for (let c = 0; c < COLS; c++) {
         const tile = this.grid[r]?.[c];
@@ -1552,12 +1554,12 @@ export class GameScene extends Phaser.Scene {
   // Dim tiles that are not useful targets for the armed tool. Mirrors the
   // chain-drag dimming so the player gets the same visual signal: bright
   // tiles are the ones that will actually do something.
-  applyToolDimForPower(power, toolKey) {
+  applyToolDimForPower(power: Record<string, any>, toolKey: string): void { // TODO(ts-migration): tighten power type
     const strategy = dimStrategyForPower(power.id) ?? "none";
     if (strategy === "type_multi" || toolKey === "rune_wildcard") {
       // Sweep-by-type tools — dim resources that appear only once (sweeping
       // them only clears the tile the player tapped, which is wasted).
-      const counts = {};
+      const counts: Record<string, number> = {};
       for (let r = 0; r < ROWS; r++) {
         for (let c = 0; c < COLS; c++) {
           const t = this.grid[r]?.[c];
@@ -1627,13 +1629,13 @@ export class GameScene extends Phaser.Scene {
     const gained = this.path.length;
     // Bonus yields: add per-resource bonus if this chain contained that resource
     const bonusYields = this.registry.get("bonusYields") ?? {};
-    const bonusGains = {};
-    if (bonusYields[res.key]) {
-      bonusGains[res.key] = Math.round(bonusYields[res.key]);
+    const bonusGains: Record<string, number> = {};
+    if ((bonusYields as Record<string, number>)[res.key]) {
+      bonusGains[res.key] = Math.round((bonusYields as Record<string, number>)[res.key]);
     }
     // V.3 — Clamp the displayed gain to the inventory cap so float text matches what the player actually receives
     const cap = this.registry.get("inventoryCap") ?? 200;
-    const inv = this.registry.get("inventory") ?? {};
+    const inv: Record<string, number> = this.registry.get("inventory") ?? {};
     const isCapped = CAPPED_TILES.includes(res.key);
     const currentAmt = inv[res.key] ?? 0;
     const wouldGain = gained + (bonusGains[res.key] ?? 0);
@@ -1677,7 +1679,7 @@ export class GameScene extends Phaser.Scene {
 
     // Emit to React — gained is the full amount (state.js caps it).
     // resourceKey tells the reducer which resource to accumulate progress for.
-    const totalGained = gained + (bonusGains[res.key] ?? 0);
+    const totalGained = gained + ((bonusGains as Record<string, number>)[res.key] ?? 0);
     // Include tile positions so the reducer can extinguish fire/hazard cells
     const chainTiles = this.path.map(t => ({ key: t.res.key, row: t.row, col: t.col }));
     this.events.emit(SCENE_EVENTS.CHAIN_COLLECTED, { key: res.key, gained: totalGained, upgrades, chainLength: this.path.length, value: res.value, chain: chainTiles, resourceKey });
@@ -1740,19 +1742,19 @@ export class GameScene extends Phaser.Scene {
     // No `next` means this resource can't upgrade — nothing will ever spawn.
     if (!next) { this.grassHover.setVisible(false); return; }
     const effThresh = this.registry.get("effectiveThresholds") ?? UPGRADE_THRESHOLDS;
-    const k = upgradeCountForChain(n, res.key, effThresh);
+    const k = upgradeCountForChain(n, res!.key, effThresh);
     // Stays visible (and trails the cursor) for the whole drag so the spawn
     // count can be watched ticking up from 0.
     this.grassHover.setVisible(true);
     const tex = `tile_${next.key}`;
-    if (this.textures.exists(tex) && this.grassHoverIcon.texture.key !== tex) {
+    if (this.textures.exists(tex) && this.grassHoverIcon && this.grassHoverIcon.texture.key !== tex) {
       this.grassHoverIcon.setTexture(tex);
     }
-    this.grassHoverIcon.setScale(0.5 * (this.tileSpriteScale ?? 1));
-    this.grassHoverText.setText(`×${k}`);
+    if (this.grassHoverIcon) this.grassHoverIcon.setScale(0.5 * (this.tileSpriteScale ?? 1));
+    if (this.grassHoverText) this.grassHoverText.setText(`×${k}`);
   }
 
-  _positionGrassHover(x, y) {
+  _positionGrassHover(x: number, y: number): void {
     if (!this.grassHover) return;
     const dpr = this.dpr;
     const ts = this.tileSize ?? 60;
@@ -1783,7 +1785,7 @@ export class GameScene extends Phaser.Scene {
 
   // ─── Juice (chain-length feedback) ────────────────────────────────────────
 
-  shakeForChain(len) {
+  shakeForChain(len: number): void {
     if (len < 3) return;
     // 3 → barely; 6 → noticeable; 10+ → bone-rattling.
     const intensity = Math.min(0.018, 0.0025 + (len - 3) * 0.0028);

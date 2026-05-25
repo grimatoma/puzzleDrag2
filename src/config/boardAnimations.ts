@@ -39,9 +39,9 @@ export const BOARD_ANIM_ALIASES = Object.freeze({
   bark: "sweep",
 });
 
-export function resolveBoardAnimName(name) {
+export function resolveBoardAnimName(name: any) {
   if (!name) return name;
-  return BOARD_ANIM_ALIASES[name] ?? name;
+  return (BOARD_ANIM_ALIASES as any)[name] ?? name;
 }
 
 /** Collapse + fill delays after a sweep in GameScene (ms, pre-_dur). */
@@ -51,8 +51,8 @@ export const SWEEP_COLLAPSE_PIPELINE_MS = 240 + 190 + 210 + 210;
  * How long the animations demo should wait before reloading the scenario.
  * Sweep includes the collapse/fill pipeline; popIn/goldenFlash are tween-only.
  */
-export function demoBoardAnimResetMs(name, tileCount = 1) {
-  const animation = BOARD_ANIMATIONS[name];
+export function demoBoardAnimResetMs(name: any, tileCount = 1) {
+  const animation = (BOARD_ANIMATIONS as any)[name];
   if (!animation) return 600;
   if (animation.kind === "fadeOut") {
     return SWEEP_COLLAPSE_PIPELINE_MS + 100;

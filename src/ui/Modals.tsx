@@ -11,7 +11,7 @@ import Button from "./primitives/Button.jsx";
 import { useNotifier } from "./primitives/Toast.jsx";
 import { isDialogsDisabled } from "../featureFlags.js";
 
-function Stat({ v, l }) {
+function Stat({ v, l }: { v: any; l: any }) {
   return (
     <div>
       <div className="font-bold text-h2 max-[640px]:text-large text-ember tabular-nums">{v}</div>
@@ -20,13 +20,13 @@ function Stat({ v, l }) {
   );
 }
 
-export function SeasonModal({ state, dispatch }) {
+export function SeasonModal({ state, dispatch }: { state: any; dispatch: any }) {
   if (isDialogsDisabled()) return null;
   if (state.modal !== "season") return null;
   const stats = state.seasonStats;
   const close = () => dispatch({ type: "CLOSE_SEASON" });
   return (
-    <ParchmentDialog open onClose={close} size="md">
+    <ParchmentDialog open onClose={close} size="md" ariaLabel="Harvest Complete">
       <ParchmentDialog.Title>
         <span className="flex flex-col items-center text-center gap-1">
           <Icon iconKey="ui_home" size={48} className="leading-none" />
@@ -44,7 +44,7 @@ export function SeasonModal({ state, dispatch }) {
         <p className="text-ink-soft text-body-lg font-semibold tabular-nums mt-3 inline-block px-3 py-1 rounded-md bg-gold-soft/40 border border-iron-edge">+25◉ return bonus</p>
       </ParchmentDialog.Body>
       <ParchmentDialog.Actions sticky>
-        <Button tone="ember" size="md" onClick={close}>Return to Town</Button>
+        <Button tone="ember" size="md" onClick={close} leading={undefined}>Return to Town</Button>
       </ParchmentDialog.Actions>
     </ParchmentDialog>
   );
@@ -79,21 +79,21 @@ const SC = {
   choiceEdge:    "rgba(201,185,147,0.45)",
 };
 
-function speakerName(key) { return key && NPCS[key] ? NPCS[key].name : null; }
-function speakerRole(key) { return key && NPCS[key] ? NPCS[key].role : null; }
-function speakerColor(key) { return key && NPCS[key] ? NPCS[key].color : SC.iron; }
-function speakerIconKey(key) { return key ? `char_${key}` : null; }
+function speakerName(key: any) { return key && (NPCS as any)[key] ? (NPCS as any)[key].name : null; }
+function speakerRole(key: any) { return key && (NPCS as any)[key] ? (NPCS as any)[key].role : null; }
+function speakerColor(key: any) { return key && (NPCS as any)[key] ? (NPCS as any)[key].color : SC.iron; }
+function speakerIconKey(key: any) { return key ? `char_${key}` : null; }
 
 /** A small uppercase pill — outcome badges and beat meta tags. */
-function StoryPill({ children, tone = "iron" }) {
-  const tones = {
+function StoryPill({ children, tone = "iron" }: { children?: any; tone?: string }) {
+  const tones: Record<string, any> = {
     iron:  { bg: "rgba(178,139,98,0.16)",  bd: "rgba(178,139,98,0.5)",  fg: "#dac6a2" },
     gold:  { bg: "rgba(226,178,74,0.18)",  bd: "rgba(226,178,74,0.5)",  fg: "#f0c965" },
     ember: { bg: "rgba(214,97,42,0.16)",   bd: "rgba(214,97,42,0.45)",  fg: "#e88a5e" },
     green: { bg: "rgba(120,170,90,0.18)",  bd: "rgba(120,170,90,0.45)", fg: "#aacf83" },
     slate: { bg: "rgba(150,165,190,0.14)", bd: "rgba(150,165,190,0.4)", fg: "#bcc6d8" },
   };
-  const t = tones[tone] || tones.iron;
+  const t: any = tones[tone] || tones.iron;
   return (
     <span
       className="inline-flex items-center gap-1 rounded-full whitespace-nowrap align-middle"
@@ -106,8 +106,8 @@ function StoryPill({ children, tone = "iron" }) {
 }
 
 /** Painterly placeholder portrait — a light highlight + dark shade over the NPC's base colour. */
-export function StoryPortrait({ npcKey, size = 56 }) {
-  const npc = npcKey ? NPCS[npcKey] : null;
+export function StoryPortrait({ npcKey, size = 56 }: { npcKey: any; size?: number }) {
+  const npc = npcKey ? (NPCS as any)[npcKey] : null;
   const iconKey = speakerIconKey(npcKey);
   if (iconKey && hasIcon(iconKey)) {
     return (
@@ -135,10 +135,10 @@ export function StoryPortrait({ npcKey, size = 56 }) {
 }
 
 /** Stacked dialogue lines — each authored turn owns its speaker portrait. */
-export function DialogueLines({ lines, compact = false }) {
+export function DialogueLines({ lines, compact = false }: { lines: any; compact?: boolean }) {
   return (
     <div className="flex flex-col" style={{ gap: compact ? 8 : 12 }}>
-      {lines.map((line, i) => {
+      {lines.map((line: any, i: any) => {
         const prev = i > 0 ? lines[i - 1].speaker : undefined;
         const showLabel = line.speaker && line.speaker !== prev;
         return (
@@ -178,7 +178,7 @@ export function DialogueLines({ lines, compact = false }) {
 }
 
 /** "Tap to continue" cue with a slow pulsing dot. */
-export function TapCue({ label = "Tap to continue" }) {
+export function TapCue({ label = "Tap to continue" }: { label?: string }) {
   return (
     <span
       className="inline-flex items-center gap-2 rounded-full"
@@ -192,7 +192,7 @@ export function TapCue({ label = "Tap to continue" }) {
 }
 
 /** Short uppercase meta for a beat — "Act II", "Bond 8", or null. */
-function beatMetaLabel(beat) {
+function beatMetaLabel(beat: any) {
   if (beat.trigger?.type === "bond_at_least" && Number.isFinite(beat.trigger.amount)) return `Bond ${beat.trigger.amount}`;
   if (beat.act) {
     const roman = ["", "I", "II", "III", "IV", "V"][beat.act] || beat.act;
@@ -203,7 +203,7 @@ function beatMetaLabel(beat) {
 
 /** Decodes a choice's `outcome` into player-facing reward badges. Internal keys
  *  (setFlag / clearFlag / queueBeat) are intentionally not surfaced. */
-function outcomeBadges(outcome) {
+function outcomeBadges(outcome: any) {
   const o = outcome && typeof outcome === "object" ? outcome : {};
   const out = [];
   if (o.bondDelta && typeof o.bondDelta === "object" && Number.isFinite(o.bondDelta.amount) && o.bondDelta.amount !== 0) {
@@ -215,13 +215,13 @@ function outcomeBadges(outcome) {
   if (Number.isFinite(o.gems) && o.gems) out.push({ key: "gems", tone: "gold", label: `${o.gems > 0 ? "+" : ""}${o.gems} Gems` });
   if (Number.isFinite(o.coins) && o.coins) out.push({ key: "coins", tone: "gold", label: `${o.coins > 0 ? "+" : ""}${o.coins} Coins` });
   if (o.resources && typeof o.resources === "object") {
-    for (const [k, v] of Object.entries(o.resources)) {
+    for (const [k, v] of Object.entries(o.resources) as [string, any][]) {
       if (!Number.isFinite(v) || !v) continue;
       out.push({ key: `r-${k}`, tone: "iron", label: `${v > 0 ? "+" : ""}${v} ${k.split("_").pop()}` });
     }
   }
   if (o.heirlooms && typeof o.heirlooms === "object") {
-    for (const [k, v] of Object.entries(o.heirlooms)) {
+    for (const [k, v] of Object.entries(o.heirlooms) as [string, any][]) {
       if (!Number.isFinite(v) || !v) continue;
       out.push({ key: `h-${k}`, tone: "gold", label: `${v > 0 ? "+" : ""}${v} ${k.split("_").pop()}` });
     }
@@ -230,7 +230,7 @@ function outcomeBadges(outcome) {
 }
 
 /** A single branching-choice button: A/B/C chip + serif label + outcome badges. */
-function ChoiceButton({ choice, index, onPick }) {
+function ChoiceButton({ choice, index, onPick }: { choice: any; index: any; onPick: any }) {
   const letter = ["A", "B", "C", "D", "E", "F"][index] ?? "•";
   const badges = outcomeBadges(choice.outcome);
   return (
@@ -263,7 +263,7 @@ function ChoiceButton({ choice, index, onPick }) {
 }
 
 /** Free-text prompt footer (e.g. naming a settlement). Remounted per beat via key. */
-export function PromptInput({ prompt, onSubmit }) {
+export function PromptInput({ prompt, onSubmit }: { prompt: any; onSubmit: any }) {
   const [draft, setDraft] = useState("");
   const max = Number.isFinite(prompt.maxLength) ? prompt.maxLength : 24;
   return (
@@ -305,7 +305,7 @@ export function PromptInput({ prompt, onSubmit }) {
 }
 
 /** The dark parchment-and-iron stage used by the center-stage modal forms. */
-export function StoryStagePanel({ beat, lines, footer, footKind, sceneLabel, onClose }) {
+export function StoryStagePanel({ beat, lines, footer, footKind, sceneLabel, onClose }: { beat: any; lines: any; footer: any; footKind: any; sceneLabel: any; onClose: any }) {
   return (
     <div
       className="w-[92vw] max-w-[460px] shadow-2xl flex flex-col relative"
@@ -363,8 +363,8 @@ export function StoryStagePanel({ beat, lines, footer, footKind, sceneLabel, onC
 
 /** Bottom-anchored dialogue bar — lightweight one-line milestones. Tap (anywhere
  *  on the bar), Enter/Space, or ESC advances. */
-function StoryBar({ line, npc, onContinue }) {
-  const advance = (e) => { if (e?.type === "keydown" && e.key !== "Enter" && e.key !== " ") return; e?.preventDefault?.(); onContinue(); };
+function StoryBar({ line, npc, onContinue }: { line: any; npc: any; onContinue: any }) {
+  const advance = (e: any) => { if (e?.type === "keydown" && e.key !== "Enter" && e.key !== " ") return; e?.preventDefault?.(); onContinue(); };
   return (
     <div
       role="dialog" aria-modal="true"
@@ -415,7 +415,7 @@ function StoryBar({ line, npc, onContinue }) {
 }
 
 /** The gilded finale card (act3_win). */
-function WinBeat({ beat, lines, sceneBg, onContinue }) {
+function WinBeat({ beat, lines, sceneBg, onContinue }: { beat: any; lines: any; sceneBg: any; onContinue: any }) {
   return (
     <div
       role="dialog" aria-modal="true" aria-labelledby="story-win-title"
@@ -430,7 +430,7 @@ function WinBeat({ beat, lines, sceneBg, onContinue }) {
         <Icon iconKey="ui_trophy" size={56} className="mb-2" />
         <h2 id="story-win-title" style={{ fontFamily: STORY_SERIF, fontWeight: 700, fontSize: 28, color: SC.goldSoft, marginBottom: 8 }}>{beat.title}</h2>
         <div className="mx-auto" style={{ maxWidth: 420, marginBottom: 24 }}>
-          {lines.map((l, i) => (
+          {lines.map((l: any, i: any) => (
             <p key={i} style={{ fontFamily: STORY_SERIF, fontSize: 16, lineHeight: 1.5, color: SC.parchment, marginTop: i ? 10 : 0 }}>
               <RichText text={l.text} />
             </p>
@@ -454,7 +454,7 @@ function WinBeat({ beat, lines, sceneBg, onContinue }) {
  * Renders when state.story.queuedBeat is set. Routes the beat to the right
  * presentation form. Continue-only beats (no prompt) also dismiss via ESC.
  */
-export function StoryModal({ state, dispatch }) {
+export function StoryModal({ state, dispatch }: { state: any; dispatch: any }) {
   const beat = state.story?.queuedBeat;
   const [lineStep, setLineStep] = useState(0);
   const [lastBeatId, setLastBeatId] = useState(beat?.id || "");
@@ -470,7 +470,7 @@ export function StoryModal({ state, dispatch }) {
   // prompt needs an explicit click/submit).
   useEffect(() => {
     if (!beat || hasPrompt || !continueOnly) return;
-    const handler = (e) => { if (e.key === "Escape") dispatch({ type: "STORY/DISMISS_MODAL" }); };
+    const handler = (e: any) => { if (e.key === "Escape") dispatch({ type: "STORY/DISMISS_MODAL" }); };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
   }, [beat, hasPrompt, continueOnly, dispatch]);
@@ -487,7 +487,7 @@ export function StoryModal({ state, dispatch }) {
   const choices = beatChoices(beat);
   const scene = beatScene(beat);
   const headSpeakerKey = visibleLines.find((l) => l.speaker)?.speaker ?? lines.find((l) => l.speaker)?.speaker ?? null;
-  const baseNpc = headSpeakerKey ? NPCS[headSpeakerKey] : null;
+  const baseNpc = headSpeakerKey ? (NPCS as any)[headSpeakerKey] : null;
   const npc = baseNpc ? { key: headSpeakerKey, ...baseNpc } : null;
 
   const pick = (choiceId) => dispatch({ type: "STORY/PICK_CHOICE", payload: { choiceId } });

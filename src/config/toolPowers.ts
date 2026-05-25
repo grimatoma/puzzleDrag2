@@ -230,20 +230,20 @@ const TOOL_POWER_BY_ID = Object.freeze(
   Object.fromEntries(TOOL_POWERS.map((p) => [p.id, p])),
 );
 
-export function getToolPower(id) {
-  return TOOL_POWER_BY_ID[id] ?? null;
+export function getToolPower(id: any) {
+  return (TOOL_POWER_BY_ID as any)[id] ?? null;
 }
 
-export function isTapTargetPower(powerId) {
+export function isTapTargetPower(powerId: any) {
   return !!TOOL_POWER_BY_ID[powerId]?.isTapTarget;
 }
 
-export function dimStrategyForPower(powerId) {
+export function dimStrategyForPower(powerId: any) {
   return TOOL_POWER_BY_ID[powerId]?.dimStrategy ?? "none";
 }
 
 /** Default board anim/ms for a power id, or null when the power has no board tween. */
-export function defaultBoardAnimForPower(powerId) {
+export function defaultBoardAnimForPower(powerId: any) {
   return TOOL_POWER_BY_ID[powerId]?.defaultBoardAnim ?? null;
 }
 

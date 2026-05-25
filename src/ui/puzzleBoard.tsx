@@ -141,12 +141,12 @@ function IdleView({ inventory, biomeKey, cap }: any) {
   // The mock shows a 4-column grid of resource chips. Trim to the first 12
   // resources of the biome so the grid stays tight and predictable.
   const list = useMemo(() => (BIOMES[biomeKey]?.resources ?? []).slice(0, 12), [biomeKey]);
-  const ownedCount = list.filter((r) => (inventory?.[r.key] ?? 0) > 0).length;
+  const ownedCount = list.filter((r: any) => (inventory?.[r.key] ?? 0) > 0).length;
   return (
     <>
       <PanelHeader left="Stockpile" right={`${ownedCount}/${list.length} kinds`} />
       <div className="grid grid-cols-4 gap-1.5 p-2 flex-1 min-h-0 overflow-y-auto content-start">
-        {list.map((r) => {
+        {list.map((r: any) => {
           const count = inventory?.[r.key] ?? 0;
           const empty = count === 0;
           const pct = Math.min(1, count / Math.max(1, cap));
@@ -922,9 +922,9 @@ const PIN_STORAGE_KEY = "hearthwood:hotbar-pins";
 // container width so adding more tools never forces horizontal scrolling.
 export const MAX_PINS = 8;
 const DEFAULT_PINS = TOOL_CATALOG
-  .filter((t) => t.category === "field")
+  .filter((t: any) => t.category === "field")
   .slice(0, 5)
-  .map((t) => t.key);
+  .map((t: any) => t.key);
 
 function readStoredPins() {
   try {
@@ -1074,7 +1074,7 @@ export function useToolDrag({ pins, pinActions, maxFitPins }: any) {
         return;
       }
       if (dragRef.current) {
-        setDrag((d) => (d ? { ...d, x: e.clientX, y: e.clientY } : d));
+        setDrag((d: any) => (d ? { ...d, x: e.clientX, y: e.clientY } : d));
       }
     };
     const finish = (e: any) => {

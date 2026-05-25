@@ -5,7 +5,13 @@ export default defineConfig({
   plugins: [react()],
   test: {
     environment: "node",
-    include: ["tests/**/*.test.{js,ts,tsx}", "src/**/*.test.{js,ts,tsx}"],
+    include: [
+      "tests/**/*.test.js",
+      "tests/**/*.test.ts",
+      "src/**/*.test.js",
+      "src/**/*.test.ts",
+      "src/**/*.test.tsx",
+    ],
     exclude: ["tests/fixtures/**", "node_modules/**", "tests/e2e/**"],
     setupFiles: ["src/__tests__/setup.js"],
     coverage: {

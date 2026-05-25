@@ -3,9 +3,9 @@ import { createPortal } from "react-dom";
 
 const HOLD_MS = 1600;
 
-export default function LevelUpCinematic({ state }) {
+export default function LevelUpCinematic({ state }: { state: any }) {
   const level = state.level ?? 1;
-  const [shown, setShown] = useState(null);
+  const [shown, setShown] = useState<any>(null);
   const prevLevelRef = useRef(level);
   const mountedRef = useRef(false);
 

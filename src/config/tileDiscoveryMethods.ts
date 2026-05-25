@@ -74,14 +74,14 @@ export const TILE_DISCOVERY_METHOD_BY_ID = Object.freeze(
   Object.fromEntries(TILE_DISCOVERY_METHODS.map((m) => [m.id, m])),
 );
 
-export function getTileDiscoveryMethod(id) {
-  return TILE_DISCOVERY_METHOD_BY_ID[id] ?? null;
+export function getTileDiscoveryMethod(id: any) {
+  return (TILE_DISCOVERY_METHOD_BY_ID as any)[id] ?? null;
 }
 
-export function defaultsForTileDiscoveryMethod(id) {
-  const m = TILE_DISCOVERY_METHOD_BY_ID[id];
+export function defaultsForTileDiscoveryMethod(id: any) {
+  const m = (TILE_DISCOVERY_METHOD_BY_ID as any)[id];
   if (!m) return {};
-  const out = {};
-  for (const p of m.params) out[p.key] = p.default ?? "";
+  const out: any = {};
+  for (const p of (m as any).params) (out as any)[p.key] = (p as any).default ?? "";
   return out;
 }
