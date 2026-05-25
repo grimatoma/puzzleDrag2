@@ -52,6 +52,12 @@ function aliasIconKeys(reg) {
     magic_wand:        reg.wand,
     magic_seed:        reg.potion,
     magic_fertilizer:  reg.scroll,
+    sickle:            reg.axe,
+    clear:             reg.player_clear,
+    basic:             reg.player_basic,
+    rare:              reg.player_rare,
+    shuffle:           reg.player_shuffle,
+    bomb:              reg.dynamite,
   };
   for (const [key, value] of Object.entries(aliases)) {
     if (value && !reg[key]) reg[key] = value;

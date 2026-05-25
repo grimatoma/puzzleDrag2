@@ -34,11 +34,13 @@ export const TOOL_CATALOG = [
 
   // ── Workshop (crafted) ──────────────────────────────────────────────────
   { key: "rake",        category: "workshop", iconKey: "rake",          name: "Rake",         armed: "tap",
-    desc: "Tap a hay tile — sweeps every connected hay tile and collects them." },
-  { key: "axe",         category: "workshop", iconKey: "axe",           name: "Axe",          armed: "tap",
-    desc: "Tap a tile — fells the entire row, harvesting every tile in it." },
+    desc: "Tap a tile — sweeps every 4-connected tile of the same type and collects them." },
+  { key: "axe",         category: "workshop", iconKey: "axe",           name: "Axe",          armed: "instant",
+    desc: "Fells every tree tile on the board in one swing." },
+  { key: "sickle",      category: "workshop", iconKey: "axe",           name: "Sickle",       armed: "tap",
+    desc: "Tap a tile — sweeps the entire row and harvests every tile in it." },
   { key: "fertilizer",  category: "workshop", iconKey: "fertilizer",    name: "Fertilizer",   armed: "passive",
-    desc: "Biases the next board fill toward grain tiles." },
+    desc: "Arms fill bias — the next board fill favors grain tiles." },
   { key: "cat",         category: "workshop", iconKey: "cat",           name: "Cat",          armed: "instant",
     desc: "Dispatches a mouser to clear every rat hazard from the farm." },
   { key: "bird_cage",   category: "workshop", iconKey: "bird_cage",     name: "Bird Cage",    armed: "instant",

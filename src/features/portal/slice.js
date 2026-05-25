@@ -29,68 +29,7 @@ export function reduce(state, action) {
     }
 
     case "USE_TOOL": {
-      // Magic tool use handler — extends the existing USE_TOOL case.
-      // Only handle magic tool ids here; other ids are handled by coreReducer.
-      const id = action.payload?.id ?? action.payload?.key ?? action.key;
-      if (!id) return state;
-
-      // Hourglass — undo last chain
-      if (id === "hourglass") {
-        const count = state.tools?.[id] ?? 0;
-        if (count <= 0) return state;
-        const snap = state.lastChainSnapshot;
-        if (!snap) {
-          // No snapshot: refund — do not consume
-          return state;
-        }
-        // Restore snapshot
-        return {
-          ...state,
-          tools: { ...state.tools, [id]: count - 1 },
-          grid: snap.grid ?? state.grid,
-          inventory: snap.inventory ?? state.inventory,
-          turnsUsed: snap.turnsUsed ?? state.turnsUsed,
-          farmRun: snap.farmRun ?? state.farmRun,
-          lastChainSnapshot: null,
-        };
-      }
-
-      // Magic Seed — +5 turns to the active board run.
-      if (id === "magic_seed") {
-        const count = state.tools?.[id] ?? 0;
-        if (count <= 0 || !state.farmRun) return state;
-        return {
-          ...state,
-          tools: { ...state.tools, [id]: count - 1 },
-          farmRun: {
-            ...state.farmRun,
-            turnBudget: (state.farmRun.turnBudget ?? 0) + 5,
-            turnsRemaining: (state.farmRun.turnsRemaining ?? 0) + 5,
-          },
-        };
-      }
-
-      // Magic Fertilizer — set 3 fill charges
-      if (id === "magic_fertilizer") {
-        const count = state.tools?.[id] ?? 0;
-        if (count <= 0) return state;
-        return {
-          ...state,
-          tools: { ...state.tools, [id]: count - 1 },
-          magicFertilizerCharges: 3,
-        };
-      }
-
-      // Magic Wand — arm-then-tap target tool. USE_TOOL only sets toolPending
-      // so the displayed charge count stays accurate while the player is
-      // picking a target. The charge is spent in coreReducer's TOOL_FIRED
-      // case (see TAP_TARGET_TOOL_KEYS in state.js).
-      if (id === "magic_wand") {
-        const count = state.tools?.[id] ?? 0;
-        if (count <= 0) return state;
-        return { ...state, toolPending: "magic_wand" };
-      }
-
+      // Magic tools route through coreReducer applyToolPower (ITEMS[key].power).
       return state;
     }
 

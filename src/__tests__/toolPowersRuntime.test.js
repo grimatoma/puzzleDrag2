@@ -415,15 +415,11 @@ describe("disarmAllTools — Phase 2 typed tap-target powers", () => {
     expect(disarmed.tools.hourglass).toBe(1);
   });
 
-  it("preserves legacy tap-target behavior (bomb/rake/axe/magic_wand)", () => {
-    // Legacy tap-target arm: toolPending = "bomb", no typed power. The
-    // charge was deferred, so disarm clears toolPending without refund.
-    const s0 = withGrid(gridFrom([]), {
-      tools: { bomb: 2 },
-      toolPending: "bomb",
-      toolPendingPower: null,
-    });
-    const disarmed = disarmAllTools(s0);
+  it("tap-target bomb arm via ITEMS.power disarms without refund", () => {
+    const s0 = withGrid(gridFrom([]), { tools: { bomb: 2 } });
+    const armed = rootReducer(s0, { type: "USE_TOOL", payload: { id: "bomb" } });
+    expect(armed.toolPendingPower?.id).toBe("area_blast");
+    const disarmed = disarmAllTools(armed);
     expect(disarmed.toolPending).toBeNull();
     expect(disarmed.toolPendingPower).toBeNull();
     expect(disarmed.tools.bomb).toBe(2);

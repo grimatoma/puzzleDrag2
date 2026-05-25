@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { WORKSHOP_RECIPES, RECIPES } from "../constants.js";
+import { WORKSHOP_RECIPES, RECIPES, ITEMS } from "../constants.js";
 
 describe("workshop tools — round 2 (catalog §8 fillins)", () => {
   it("registers hoe / stone_hammer / iron_pick / bird_feed / sapling", () => {
@@ -8,34 +8,28 @@ describe("workshop tools — round 2 (catalog §8 fillins)", () => {
     }
   });
 
-  it("each new tool has a station, inputs, effect, target, anim, ms, desc", () => {
+  it("each new tool has a station, inputs, typed power, desc", () => {
     for (const id of ["hoe", "stone_hammer", "iron_pick", "bird_feed", "sapling"]) {
       const r = WORKSHOP_RECIPES[id];
       expect(r.station).toBe("workshop");
       expect(typeof r.inputs).toBe("object");
       expect(Object.keys(r.inputs).length).toBeGreaterThan(0);
-      expect(typeof r.effect).toBe("string");
-      expect(typeof r.target).toBe("string");
-      expect(typeof r.anim).toBe("string");
-      expect(typeof r.ms).toBe("number");
+      expect(r.power?.id ?? ITEMS[id]?.power?.id).toBeTruthy();
       expect(typeof r.desc).toBe("string");
     }
   });
 
-  it("clear-tool effects target a board resource", () => {
-    expect(WORKSHOP_RECIPES.hoe.effect).toBe("clear_all");
-    expect(WORKSHOP_RECIPES.hoe.target).toBe("tile_veg_carrot");
-    expect(WORKSHOP_RECIPES.stone_hammer.effect).toBe("clear_all");
-    expect(WORKSHOP_RECIPES.stone_hammer.target).toBe("tile_mine_stone");
-    expect(WORKSHOP_RECIPES.iron_pick.effect).toBe("clear_all");
-    expect(WORKSHOP_RECIPES.iron_pick.target).toBe("tile_mine_iron_ore");
+  it("clear-tool powers target a board resource", () => {
+    expect(ITEMS.hoe.power.id).toBe("clear_all");
+    expect(ITEMS.hoe.power.params.target).toBe("tile_veg_carrot");
+    expect(ITEMS.stone_hammer.power.params.target).toBe("tile_mine_stone");
+    expect(ITEMS.iron_pick.power.params.target).toBe("tile_mine_iron_ore");
   });
 
-  it("fill-bias tools target species categories the player wants to seed", () => {
-    expect(WORKSHOP_RECIPES.bird_feed.effect).toBe("fill_bias");
-    expect(WORKSHOP_RECIPES.bird_feed.target).toBe("tile_bird_chicken");
-    expect(WORKSHOP_RECIPES.sapling.effect).toBe("fill_bias");
-    expect(WORKSHOP_RECIPES.sapling.target).toBe("tile_tree_oak");
+  it("fill-bias tools declare species tile targets", () => {
+    expect(ITEMS.bird_feed.power.id).toBe("fill_bias");
+    expect(ITEMS.bird_feed.power.params.target).toBe("tile_bird_chicken");
+    expect(ITEMS.sapling.power.params.target).toBe("tile_tree_oak");
   });
 
   it("WORKSHOP_RECIPES is merged into RECIPES so the crafting screen sees them", () => {

@@ -4,7 +4,7 @@
  */
 import { describe, it, expect } from "vitest";
 import { createInitialState, rootReducer } from "../state.js";
-import { RECIPES } from "../constants.js";
+import { RECIPES, ITEMS } from "../constants.js";
 import { applyToolPending } from "../features/farm/tools.js";
 
 // ── Recipe registration ────────────────────────────────────────────────────────
@@ -129,13 +129,25 @@ describe("10.1 — USE_TOOL (no turn cost)", () => {
     const s1 = rootReducer(s0, { type: "USE_TOOL", key: "rake" });
     expect(s1.tools.rake).toBe(1);
     expect(s1.toolPending).toBe("rake");
+    expect(s1.toolPendingPower?.id).toBe("clear_component");
   });
 
-  it("rake TOOL_FIRED: spends the charge and clears toolPending", () => {
-    const s0 = { ...createInitialState(), tools: { ...createInitialState().tools, rake: 1 }, toolPending: "rake" };
-    const s1 = rootReducer(s0, { type: "TOOL_FIRED", key: "rake" });
+  it("rake TOOL_FIRED: spends the charge and clears connected hay", () => {
+    const grid = [
+      [{ key: "tile_grass_hay" }, { key: "tile_grass_hay" }, { key: "tile_tree_oak" }],
+      [{ key: "tile_grass_hay" }, { key: "tile_fruit_blackberry" }, { key: "tile_grain_wheat" }],
+    ];
+    const s0 = {
+      ...createInitialState(),
+      grid,
+      tools: { ...createInitialState().tools, rake: 1 },
+      toolPending: "rake",
+      toolPendingPower: ITEMS.rake.power,
+    };
+    const s1 = rootReducer(s0, { type: "TOOL_FIRED", key: "rake", row: 0, col: 0 });
     expect(s1.tools.rake).toBe(0);
     expect(s1.toolPending).toBeNull();
+    expect(s1.inventory.tile_grass_hay ?? 0).toBe(3);
   });
 
   it("rake CANCEL_TOOL: clears toolPending without touching count", () => {
@@ -151,34 +163,28 @@ describe("10.1 — USE_TOOL (no turn cost)", () => {
     expect(s1.turnsUsed).toBe(4);
   });
 
-  it("axe armed: toolPending = 'axe' without decrementing count", () => {
-    const s0 = { ...createInitialState(), tools: { ...createInitialState().tools, axe: 1 }, turnsUsed: 2 };
-    const s1 = rootReducer(s0, { type: "USE_TOOL", key: "axe" });
-    expect(s1.toolPending).toBe("axe");
-    expect(s1.tools.axe).toBe(1);
-    expect(s1.turnsUsed).toBe(2);
-  });
-
-  it("fertilizer: mutates every grass tile to wheat on cast (PC2-faithful transform_tiles), no turn cost", () => {
-    // PR-fix 2 migrated fertilizer from fill_bias to transform_tiles. The
-    // legacy fill_bias semantic — set fertilizerActive=true on cast — is
-    // replaced by an immediate board mutation (grass → wheat).
+  it("axe: instant clear_category sweeps all trees and spends the charge", () => {
     const base = createInitialState();
     const grid = [
-      [{ key: "tile_grass_hay" }, { key: "tile_grass_meadow" }, { key: "tile_tree_oak" }],
-      [{ key: "tile_grass_hay" }, { key: "tile_fruit_blackberry" }, { key: "tile_grass_meadow" }],
+      [{ key: "tile_tree_oak" }, { key: "tile_grass_hay" }, { key: "tile_tree_oak" }],
+      [{ key: "tile_grass_hay" }, { key: "tile_grass_hay" }, { key: "tile_grass_hay" }],
     ];
-    const s0 = { ...base, grid, tools: { ...base.tools, fertilizer: 1 }, turnsUsed: 4 };
+    const s0 = { ...base, grid, tools: { ...base.tools, axe: 1 }, turnsUsed: 2 };
+    const s1 = rootReducer(s0, { type: "USE_TOOL", key: "axe" });
+    expect(s1.toolPending).toBeNull();
+    expect(s1.tools.axe).toBe(0);
+    expect(s1.turnsUsed).toBe(2);
+    expect(s1.inventory.tile_tree_oak ?? 0).toBe(2);
+    expect(s1.grid.flat().every((t) => t.key !== "tile_tree_oak")).toBe(true);
+  });
+
+  it("fertilizer: arms fill bias for the next board fill (arm_fill_bias)", () => {
+    const base = createInitialState();
+    const s0 = { ...base, tools: { ...base.tools, fertilizer: 1 }, turnsUsed: 4 };
     const s1 = rootReducer(s0, { type: "USE_TOOL", key: "fertilizer" });
     expect(s1.tools.fertilizer).toBe(0);
+    expect(s1.fertilizerActive).toBe(true);
     expect(s1.turnsUsed).toBe(4);
-    // Every grass tile became wheat; non-grass tiles survive.
-    expect(s1.grid[0][0].key).toBe("tile_grain_wheat");
-    expect(s1.grid[0][1].key).toBe("tile_grain_wheat");
-    expect(s1.grid[0][2].key).toBe("tile_tree_oak");
-    expect(s1.grid[1][0].key).toBe("tile_grain_wheat");
-    expect(s1.grid[1][1].key).toBe("tile_fruit_blackberry");
-    expect(s1.grid[1][2].key).toBe("tile_grain_wheat");
   });
 
   it("fertilizer: legacy fertilizerActive arm still disarms when armed (defensive fallback)", () => {
@@ -202,74 +208,10 @@ describe("10.1 — USE_TOOL (no turn cost)", () => {
 // ── applyToolPending (pure) ───────────────────────────────────────────────────
 
 describe("10.1 — applyToolPending", () => {
-  it("rake collects every hay tile", () => {
-    const s0 = createInitialState();
-    const s1 = {
-      ...s0,
-      grid: [
-        [{ key: "tile_grass_hay" }, { key: "tile_tree_oak" }, { key: "tile_grass_hay" }],
-        [{ key: "tile_grass_hay" }, { key: "tile_fruit_blackberry" }, { key: "tile_grain_wheat" }],
-      ],
-      inventory: { ...s0.inventory, tile_grass_hay: 0 },
-      toolPending: "rake",
-    };
-    const s2 = applyToolPending(s1);
-    expect(s2.inventory.tile_grass_hay).toBe(3);
-  });
-
-  it("rake leaves no hay in grid", () => {
-    const s0 = createInitialState();
-    const s1 = {
-      ...s0,
-      grid: [
-        [{ key: "tile_grass_hay" }, { key: "tile_tree_oak" }, { key: "tile_grass_hay" }],
-        [{ key: "tile_grass_hay" }, { key: "tile_fruit_blackberry" }, { key: "tile_grain_wheat" }],
-      ],
-      inventory: { ...s0.inventory, tile_grass_hay: 0 },
-      toolPending: "rake",
-    };
-    const s2 = applyToolPending(s1);
-    expect(s2.grid.flat().every((t) => t.key !== "tile_grass_hay")).toBe(true);
-  });
-
-  it("rake clears toolPending", () => {
-    const s0 = createInitialState();
-    const s1 = {
-      ...s0,
-      grid: [[{ key: "tile_grass_hay" }]],
-      inventory: { ...s0.inventory },
-      toolPending: "rake",
-    };
-    const s2 = applyToolPending(s1);
+  it("clears toolPending without mutating the grid", () => {
+    const s0 = { ...createInitialState(), toolPending: "rake" };
+    const s2 = applyToolPending(s0);
     expect(s2.toolPending).toBeNull();
-  });
-
-  it("axe collects 3 log tiles", () => {
-    const s0 = createInitialState();
-    const s1 = {
-      ...s0,
-      grid: [
-        [{ key: "tile_tree_oak" }, { key: "tile_grass_hay" }],
-        [{ key: "tile_tree_oak" }, { key: "tile_tree_oak" }],
-      ],
-      inventory: { ...s0.inventory, tile_tree_oak: 0 },
-      toolPending: "axe",
-    };
-    const s2 = applyToolPending(s1);
-    expect(s2.inventory.tile_tree_oak).toBe(3);
-  });
-
-  it("rake skips rubble-locked tiles", () => {
-    const s0 = createInitialState();
-    const s1 = {
-      ...s0,
-      grid: [
-        [{ key: "tile_grass_hay", rubble: true }, { key: "tile_grass_hay" }],
-      ],
-      inventory: { ...s0.inventory, tile_grass_hay: 0 },
-      toolPending: "rake",
-    };
-    const s2 = applyToolPending(s1);
-    expect(s2.inventory.tile_grass_hay).toBe(1);
+    expect(s2.grid).toEqual(s0.grid);
   });
 });

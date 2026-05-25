@@ -43,6 +43,8 @@ const BASE_VISUAL_SCENARIOS = [
   { id: "board-farm-chain-7", state: "boardFarm", hash: "#/board", actions: [api("holdChain", { key: "tile_grass_hay", length: 7 })], diff: canvasDiff },
   { id: "board-farm-fire-rats", state: "boardFarmHazards", hash: "#/board", diff: canvasDiff },
   { id: "board-farm-tool-bomb", state: "boardFarmBomb", hash: "#/board", diff: canvasDiff },
+  { id: "board-farm-tool-sickle", state: "boardFarmSickle", hash: "#/board", diff: canvasDiff },
+  { id: "board-farm-tool-rake", state: "boardFarmRake", hash: "#/board", diff: canvasDiff },
   { id: "board-farm-fertilizer-active", state: "boardFarmFertilizer", hash: "#/board", diff: canvasDiff },
   { id: "board-mine-idle", state: "boardMine", hash: "#/board", diff: canvasDiff },
   { id: "board-mine-hazards", state: "boardMineHazards", hash: "#/board", diff: canvasDiff },

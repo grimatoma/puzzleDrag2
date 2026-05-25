@@ -1,5 +1,5 @@
 import Phaser from "phaser";
-import { TILE, COLS, ROWS, UPGRADE_THRESHOLDS, SEASONS, BIOMES, CAPPED_TILES, SCENE_EVENTS, tileFamilyResource, TILES_WITH_CUSTOM_OUTPUT } from "./constants.js";
+import { TILE, COLS, ROWS, UPGRADE_THRESHOLDS, SEASONS, BIOMES, CAPPED_TILES, SCENE_EVENTS, ITEMS, tileFamilyResource, TILES_WITH_CUSTOM_OUTPUT } from "./constants.js";
 import { upgradeCountForChain, rollResource } from "./utils.js";
 import { resourceByKey } from "./state/helpers.js";
 import { computeWorkerEffects } from "./features/workers/aggregate.js";
@@ -20,7 +20,9 @@ import { rounded, makeTextures, regenerateTextures } from "./textures.js";
 import { TileObj } from "./TileObj.js";
 import { computeBakeScale, hasValidChain } from "./game/chain.js";
 export { computeBakeScale, hasValidChain } from "./game/chain.js";
-import { BOARD_ANIMATIONS } from "./config/boardAnimations.js";
+import { BOARD_ANIMATIONS, SWEEP_COLLAPSE_PIPELINE_MS } from "./config/boardAnimations.js";
+import { defaultBoardAnimForPower, dimStrategyForPower, isTapTargetPower } from "./config/toolPowers.js";
+import { selectTilesForPower, resolveTransformKey } from "./config/tileSelectors.js";
 
 const FLOAT_TEXT_COLOR = 0xffd248;
 
@@ -217,47 +219,32 @@ export class GameScene extends Phaser.Scene {
     onRegistry("changedata-uiLocked", (_p, value) => {
       this.locked = !!value;
     });
+    onRegistry("changedata-toolPendingPower", (_p, value, prev) => {
+      if (value === prev) return;
+      if (!value?.id || !this.registry.get("toolPending")) return;
+      const key = this.registry.get("toolPending");
+      if (isTapTargetPower(value.id)) {
+        this.applyToolDimForPower(value, key);
+      }
+    });
     onRegistry("changedata-toolPending", (_p, value) => {
-      // Tap-target tools dim non-useful tiles while armed, so the player
-      // sees which tiles will actually matter; instant tools never dim.
-      if (!value) { this.clearToolDim(); return; }
+      if (!value) {
+        this.clearToolDim();
+        return;
+      }
       if (this.dragging) {
         this._deferredTool = value;
         return;
       }
-      if (value === "magic_wand") {
-        // Arm the wand — next tile tap sweeps all tiles of that type
-        this._magicWandPending = true;
-        this.applyToolDim("magic_wand");
+      const power = this.registry.get("toolPendingPower")
+        ?? ITEMS[value]?.power
+        ?? null;
+      if (!power?.id) return;
+      if (isTapTargetPower(power.id)) {
+        this.applyToolDimForPower(power, value);
         return;
       }
-      if (value === "rake") {
-        this._rakePending = true;
-        this.applyToolDim("rake");
-        return;
-      }
-      if (value === "axe") {
-        this._axePending = true;
-        // Axe affects an entire row — every tile is a valid target, no dim.
-        return;
-      }
-      if (value === "bomb") {
-        this._bombPending = true;
-        // Bomb covers any 3×3 region — every tile is a valid target.
-        return;
-      }
-      if (value === "rune_wildcard") {
-        this._runeWildcardPending = true;
-        this.applyToolDim("rune_wildcard");
-        return;
-      }
-      // Instant tools: fire the effect synchronously, then signal the React
-      // store that the tool has resolved so toolPending clears and the player
-      // can fire it again without first hitting a cancel.
-      if (value === "clear")    this._applyToolClear();
-      if (value === "basic")    this._applyToolBasic();
-      if (value === "rare")     this._applyToolRare();
-      if (value === "shuffle")  this.shuffleBoard();
+      this.applyToolPower(power, null);
       this.time.delayedCall(50, () => this.events.emit(SCENE_EVENTS.TOOL_FIRED, { key: value }));
     });
     // Sync worker effects on init and whenever state.workers changes
@@ -1128,240 +1115,108 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
-  /** 1.3 Scythe: remove 6 random tiles with animation, credit resources, collapse + refill. */
-  _applyToolClear() {
-    const allTiles = [];
-    for (let r = 0; r < ROWS; r++) {
-      for (let c = 0; c < COLS; c++) {
-        if (this.grid[r][c] && !this.grid[r][c].selected) allTiles.push(this.grid[r][c]);
-      }
-    }
-    // Pick up to 6 random tiles
-    Phaser.Utils.Array.Shuffle(allTiles);
-    const picks = allTiles.slice(0, 6);
+  /** Reducer-shaped grid for tile selectors (keys + selected flag). */
+  _selectorGrid() {
+    return this.grid.map((row) =>
+      row.map((t) => (t ? { key: t.res.key, selected: !!t.selected } : { key: null })),
+    );
+  }
+
+  _collapseAfterSweep(msOverride) {
+    const delay = msOverride ?? SWEEP_COLLAPSE_PIPELINE_MS;
+    this.time.delayedCall(this._dur(delay), () => this.collapseBoard());
+  }
+
+  _emitClearGains(tileObjs) {
     const gainMap = {};
-    picks.forEach((tile) => {
-      const key = tile.res.key;
-      gainMap[key] = (gainMap[key] || 0) + 1;
-      this.grid[tile.row][tile.col] = null;
-    });
-    this.playBoardAnimation("sweep", picks);
-    // Emit resource gains to React (like a mini chain collect, no turn cost)
-    for (const [key, gained] of Object.entries(gainMap)) {
-      const res = resourceByKey(key);
-      if (res) {
-        this.events.emit(SCENE_EVENTS.CHAIN_COLLECTED, { key, gained, upgrades: 0, chainLength: gained, value: res.value, noTurn: true });
-      }
-    }
-    this.time.delayedCall(240, () => this.collapseBoard());
-  }
-
-  /** 1.4 Seedpack: replace 5 random non-selected tiles with the biome's base resource. */
-  _applyToolBasic() {
-    const baseRes = this.biome().tiles[0]; // hay / stone
-    const allTiles = [];
-    for (let r = 0; r < ROWS; r++) {
-      for (let c = 0; c < COLS; c++) {
-        if (this.grid[r][c] && !this.grid[r][c].selected) allTiles.push(this.grid[r][c]);
-      }
-    }
-    Phaser.Utils.Array.Shuffle(allTiles);
-    const picks = allTiles.slice(0, 5);
-    picks.forEach((tile) => {
-      tile.setResource(baseRes);
-    });
-    this.playBoardAnimation("popIn", picks, { tint: 0x88ff88 });
-  }
-
-  /** 1.5 Lockbox: replace 3 random non-selected tiles with biome's rare resource. */
-  _applyToolRare() {
-    const biome = this.biome();
-    const rareKey = biome.name === "Mine" ? "tile_mine_gem" : "tile_fruit_blackberry";
-    const rareRes = biome.tiles.find((r) => r.key === rareKey) || biome.tiles[biome.tiles.length - 1];
-    const allTiles = [];
-    for (let r = 0; r < ROWS; r++) {
-      for (let c = 0; c < COLS; c++) {
-        if (this.grid[r][c] && !this.grid[r][c].selected) allTiles.push(this.grid[r][c]);
-      }
-    }
-    Phaser.Utils.Array.Shuffle(allTiles);
-    const picks = allTiles.slice(0, 3);
-    picks.forEach((tile) => {
-      tile.setResource(rareRes);
-    });
-    this.playBoardAnimation("goldenFlash", picks, { tint: 0xffd248 });
-    this.time.delayedCall(this._dur(220), () => {
-      if (!hasValidChain(this.grid)) {
-        this.floatText("No moves — reshuffled!", this.boardX + (COLS * this.tileSize) / 2, this.boardY - 24 * this.dpr);
-        this.shuffleBoard();
-      }
-    });
-  }
-
-  /** Magic Wand: sweep all tiles of the chosen resource type and collect them (no turn cost). */
-  _applyMagicWand(targetRes) {
-    const swept = [];
-    for (let r = 0; r < ROWS; r++) {
-      for (let c = 0; c < COLS; c++) {
-        const tile = this.grid[r][c];
-        if (tile && tile.res.key === targetRes.key) {
-          swept.push(tile);
-          this.grid[r][c] = null;
-        }
-      }
-    }
-    if (!swept.length) return;
-    // Animate out with a staggered sparkle burst
-    this.playBoardAnimation("sweep", swept, { tint: 0xa070ff });
-    // Emit collection event (noTurn: true so no turn is consumed)
-    this.events.emit(SCENE_EVENTS.CHAIN_COLLECTED, {
-      key: targetRes.key,
-      gained: swept.length,
-      upgrades: 0,
-      chainLength: swept.length,
-      value: targetRes.value,
-      noTurn: true,
-    });
-    this.time.delayedCall(this._dur(240), () => this.collapseBoard());
-  }
-
-  /** Rake: sweep the 4-connected component (same key) containing the tapped tile. */
-  _applyToolRake(tile) {
-    const targetKey = tile.res.key;
-    // BFS to find all 4-connected tiles with the same key
-    const swept = [];
-    const visited = Array.from({ length: ROWS }, () => new Array(COLS).fill(false));
-    const queue = [{ r: tile.row, c: tile.col }];
-    visited[tile.row][tile.col] = true;
-    const DIRS4 = [[0, 1], [0, -1], [1, 0], [-1, 0]];
-    while (queue.length) {
-      const { r, c } = queue.shift();
-      const t = this.grid[r]?.[c];
-      if (!t || t.res.key !== targetKey) continue;
-      swept.push(t);
-      this.grid[r][c] = null;
-      for (const [dr, dc] of DIRS4) {
-        const nr = r + dr, nc = c + dc;
-        if (nr >= 0 && nr < ROWS && nc >= 0 && nc < COLS && !visited[nr][nc]) {
-          visited[nr][nc] = true;
-          queue.push({ r: nr, c: nc });
-        }
-      }
-    }
-    if (!swept.length) return;
-    this.playBoardAnimation("sweep", swept, { tint: 0x88ff88 });
-    const res = resourceByKey(targetKey);
-    this.events.emit(SCENE_EVENTS.CHAIN_COLLECTED, {
-      key: targetKey, gained: swept.length, upgrades: 0,
-      chainLength: swept.length, value: res?.value ?? 1, noTurn: true,
-    });
-    this.time.delayedCall(this._dur(220), () => this.collapseBoard());
-  }
-
-  /** Axe: clear an entire row containing the tapped tile. */
-  _applyToolAxe(tile) {
-    const targetRow = tile.row;
-    const swept = [];
-    for (let c = 0; c < COLS; c++) {
-      const t = this.grid[targetRow]?.[c];
-      if (t) { swept.push(t); this.grid[targetRow][c] = null; }
-    }
-    if (!swept.length) return;
-    const gainMap = {};
-    swept.forEach((t) => {
+    for (const t of tileObjs) {
       gainMap[t.res.key] = (gainMap[t.res.key] ?? 0) + 1;
-    });
-    this.playBoardAnimation("sweep", swept, { tint: 0xff9900 });
+    }
     for (const [key, gained] of Object.entries(gainMap)) {
       const res = resourceByKey(key);
       this.events.emit(SCENE_EVENTS.CHAIN_COLLECTED, {
-        key, gained, upgrades: 0, chainLength: gained, value: res?.value ?? 1, noTurn: true,
+        key,
+        gained,
+        upgrades: 0,
+        chainLength: gained,
+        value: res?.value ?? 1,
+        noTurn: true,
       });
     }
-    this.time.delayedCall(this._dur(220), () => this.collapseBoard());
   }
 
-  /** Bomb: clear a 3×3 area around the tapped tile. */
-  _applyToolBomb(tile) {
-    const swept = [];
-    for (let dr = -1; dr <= 1; dr++) {
-      for (let dc = -1; dc <= 1; dc++) {
-        const r = tile.row + dr, c = tile.col + dc;
-        if (r < 0 || r >= ROWS || c < 0 || c >= COLS) continue;
-        const t = this.grid[r]?.[c];
-        if (t) { swept.push(t); this.grid[r][c] = null; }
-      }
-    }
-    if (!swept.length) return;
-    const gainMap = {};
-    swept.forEach((t) => {
-      gainMap[t.res.key] = (gainMap[t.res.key] ?? 0) + 1;
-    });
-    this.playBoardAnimation("sweep", swept, { tint: 0xff4444 });
-    for (const [key, gained] of Object.entries(gainMap)) {
-      const res = resourceByKey(key);
-      this.events.emit(SCENE_EVENTS.CHAIN_COLLECTED, {
-        key, gained, upgrades: 0, chainLength: gained, value: res?.value ?? 1, noTurn: true,
-      });
-    }
-    this.time.delayedCall(this._dur(220), () => this.collapseBoard());
-  }
+  /**
+   * Generic tool-power board effect. Tap-target powers pass `tapTile`; instant
+   * powers pass null and run immediately when toolPending is set.
+   */
+  applyToolPower(power, tapTile) {
+    const id = power.id;
+    const params = power.params ?? {};
+    const boardAnim = defaultBoardAnimForPower(id);
+    const anim = power.anim ?? boardAnim?.anim ?? "sweep";
+    const tint = power.tint;
+    const collapseMs = power.ms ?? boardAnim?.ms ?? 220;
 
-  /** Rune Wildcard: sweep entire board of the tapped tile's key (golden tint). */
-  _applyRuneWildcard(tile) {
-    const targetRes = tile.res;
-    const swept = [];
-    for (let r = 0; r < ROWS; r++) {
-      for (let c = 0; c < COLS; c++) {
-        const t = this.grid[r][c];
-        if (t && t.res.key === targetRes.key) {
-          swept.push(t);
-          this.grid[r][c] = null;
-        }
-      }
+    if (id === "reshuffle_board") {
+      this.shuffleBoard();
+      return;
     }
-    if (!swept.length) return;
-    this.playBoardAnimation("sweep", swept, { tint: 0xffd248 });
-    this.events.emit(SCENE_EVENTS.CHAIN_COLLECTED, {
-      key: targetRes.key, gained: swept.length, upgrades: 0,
-      chainLength: swept.length, value: targetRes.value, noTurn: true,
-    });
-    this.time.delayedCall(this._dur(240), () => this.collapseBoard());
+
+    const tap = tapTile ? { row: tapTile.row, col: tapTile.col } : null;
+    const biomeKey = this.registry.get("biomeKey") ?? "farm";
+    const cells = selectTilesForPower(id, this._selectorGrid(), params, tap, { biomeKey });
+
+    if (id === "transform_random_n") {
+      const toKey = resolveTransformKey(params, biomeKey);
+      if (!toKey) return;
+      const res = resourceByKey(toKey) ?? this.biome().tiles.find((t) => t.key === toKey);
+      if (!res) return;
+      const picks = cells.map(({ row, col }) => this.grid[row]?.[col]).filter(Boolean);
+      picks.forEach((tile) => tile.setResource(res));
+      this.playBoardAnimation(anim, picks, { tint });
+      if (params.to === "biome_rare") {
+        this.time.delayedCall(this._dur(collapseMs), () => {
+          if (!hasValidChain(this.grid)) {
+            this.floatText("No moves — reshuffled!", this.boardX + (COLS * this.tileSize) / 2, this.boardY - 24 * this.dpr);
+            this.shuffleBoard();
+          }
+        });
+      }
+      return;
+    }
+
+    const tileObjs = cells.map(({ row, col }) => this.grid[row]?.[col]).filter(Boolean);
+    if (!tileObjs.length && isTapTargetPower(id)) return;
+
+    this.playBoardAnimation(anim, tileObjs, { tint });
+
+    // Tap-target: reducer mutates grid + inventory on TOOL_FIRED (no double credit).
+    if (isTapTargetPower(id) && tap) {
+      this._collapseAfterSweep(id === "tap_clear_type" ? 240 : collapseMs);
+      return;
+    }
+
+    for (const t of tileObjs) {
+      this.grid[t.row][t.col] = null;
+    }
+    this._emitClearGains(tileObjs);
+    this._collapseAfterSweep(collapseMs);
   }
 
   // ─── Drag chain ───────────────────────────────────────────────────────────
 
   startPath(tile) {
     if (this.locked) return;
-    // Magic Wand intercept: sweep all tiles of the tapped resource type
-    if (this._magicWandPending) {
-      this._magicWandPending = false;
-      this._applyMagicWand(tile.res);
-      this.time.delayedCall(50, () => this.events.emit(SCENE_EVENTS.TOOL_FIRED, { key: "magic_wand" }));
-      return;
-    }
-    if (this._rakePending) {
-      this._rakePending = false;
-      this._applyToolRake(tile);
-      this.time.delayedCall(50, () => this.events.emit(SCENE_EVENTS.TOOL_FIRED, { key: "rake" }));
-      return;
-    }
-    if (this._axePending) {
-      this._axePending = false;
-      this._applyToolAxe(tile);
-      this.time.delayedCall(50, () => this.events.emit(SCENE_EVENTS.TOOL_FIRED, { key: "axe" }));
-      return;
-    }
-    if (this._bombPending) {
-      this._bombPending = false;
-      this._applyToolBomb(tile);
-      this.time.delayedCall(50, () => this.events.emit(SCENE_EVENTS.TOOL_FIRED, { key: "bomb" }));
-      return;
-    }
-    if (this._runeWildcardPending) {
-      this._runeWildcardPending = false;
-      this._applyRuneWildcard(tile);
-      this.time.delayedCall(50, () => this.events.emit(SCENE_EVENTS.TOOL_FIRED, { key: "rune_wildcard" }));
+    const pendingKey = this.registry.get("toolPending");
+    const armedPower = this.registry.get("toolPendingPower")
+      ?? (pendingKey ? ITEMS[pendingKey]?.power : null);
+    if (pendingKey && armedPower?.id && isTapTargetPower(armedPower.id)) {
+      this.applyToolPower(armedPower, tile);
+      this.time.delayedCall(50, () => this.events.emit(SCENE_EVENTS.TOOL_FIRED, {
+        key: pendingKey,
+        row: tile.row,
+        col: tile.col,
+      }));
       return;
     }
     this.dragging = true;
@@ -1650,8 +1505,9 @@ export class GameScene extends Phaser.Scene {
   // Dim tiles that are not useful targets for the armed tool. Mirrors the
   // chain-drag dimming so the player gets the same visual signal: bright
   // tiles are the ones that will actually do something.
-  applyToolDim(toolKey) {
-    if (toolKey === "magic_wand" || toolKey === "rune_wildcard") {
+  applyToolDimForPower(power, toolKey) {
+    const strategy = dimStrategyForPower(power.id) ?? "none";
+    if (strategy === "type_multi" || toolKey === "rune_wildcard") {
       // Sweep-by-type tools — dim resources that appear only once (sweeping
       // them only clears the tile the player tapped, which is wasted).
       const counts = {};
@@ -1671,7 +1527,7 @@ export class GameScene extends Phaser.Scene {
       }
       return;
     }
-    if (toolKey === "rake") {
+    if (strategy === "flood_neighbor" || toolKey === "rake") {
       // Flood-fill tool — dim tiles with no same-key 4-neighbour, since
       // tapping them just sweeps that one tile.
       for (let r = 0; r < ROWS; r++) {
@@ -1688,8 +1544,14 @@ export class GameScene extends Phaser.Scene {
       }
       return;
     }
-    // Other tools (axe, bomb) treat every tile as a valid target.
     this.clearDimming();
+  }
+
+  /** @deprecated Use applyToolDimForPower — kept for any external callers. */
+  applyToolDim(toolKey) {
+    const power = ITEMS[toolKey]?.power;
+    if (power) this.applyToolDimForPower(power, toolKey);
+    else this.clearDimming();
   }
 
   clearToolDim() {
