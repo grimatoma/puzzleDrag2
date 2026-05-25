@@ -4,7 +4,7 @@ import { upgradeCountForChain, rollResource } from "./utils.js";
 import { resourceByKey } from "./state/helpers.js";
 import { computeAggregatedAbilities } from "./features/workers/aggregate.js";
 import { applyPoolWeightAdds, applySeasonPoolMods } from "./features/farm/poolMath.js";
-import { CATEGORY_OF, TILE_TYPES_MAP } from "./features/tileCollection/data.js";
+import { CATEGORY_OF } from "./features/tileCollection/data.js";
 import {
   expandZoneCategories,
   pickByZoneSeasonDrops,
@@ -21,6 +21,8 @@ import { rounded, makeTextures, regenerateTextures } from "./textures.js";
 import { TileObj } from "./TileObj.js";
 import { computeBakeScale, hasValidChain } from "./game/chain.js";
 export { computeBakeScale, hasValidChain } from "./game/chain.js";
+import { producedResource, buildChainUpdatePayload } from "./game/producedResource.js";
+export { producedResource, buildChainUpdatePayload } from "./game/producedResource.js";
 import { BOARD_ANIMATIONS, SWEEP_COLLAPSE_PIPELINE_MS, resolveBoardAnimName } from "./config/boardAnimations.js";
 import { defaultBoardAnimForPower, dimStrategyForPower, isTapTargetPower } from "./config/toolPowers.js";
 import { selectTilesForPower, resolveTransformKey } from "./config/tileSelectors.js";
@@ -35,23 +37,6 @@ const BIOME_GOLD_TILE = Object.freeze({
   mine: "tile_mine_gold",
   fish: null, // No gold tile for fish biome yet
 });
-
-/**
- * Returns the resource KEY (string) that chaining `tile` contributes progress
- * toward. Per-tile override > family default. Returns null for tiles in
- * TILES_WITH_CUSTOM_OUTPUT (their custom path handles output).
- *
- * Module-level pure function — no scene context needed, easier to unit-test.
- * @param {{ key: string }} tile
- * @returns {string | null}
- */
-export function producedResource(tile) {
-  if (!tile?.key) return null;
-  if (TILES_WITH_CUSTOM_OUTPUT.has(tile.key)) return null;
-  const override = TILE_TYPES_MAP[tile.key]?.effects?.producesResource;
-  if (override) return override;
-  return tileFamilyResource(tile.key) ?? null;
-}
 
 // Single decorative frame around the tiles, in CSS pixels. Thinner on narrow
 // viewports so the board can stretch as wide as possible.
@@ -1747,36 +1732,13 @@ export class GameScene extends Phaser.Scene {
   }
 
   _emitChainUpdate() {
-    const n = this.path.length;
-    const res = n ? this.path[0].res : null;
-    // Show the TILE that will spawn on the board (nextUpgradeTile) for the HUD.
-    const next = res ? this.nextUpgradeTile(res) : null;
-    const effThresh = this.registry.get("effectiveThresholds") ?? UPGRADE_THRESHOLDS;
-    // V.1 — include valid flag for React side panel
-    const k = next ? upgradeCountForChain(n, res.key, effThresh) : 0;
-    const valid = n === 0 || n >= this._effectiveMinChain();
-    // Phase 3 — second progress meter: tiles-to-next-spawn, e.g. "9/4 apples"
-    // while chaining carrots in a zone whose upgradeMap redirects to fruits.
-    let nextTileProgress = null;
-    if (next && res) {
-      const threshold = effThresh[res.key] ?? UPGRADE_THRESHOLDS[res.key] ?? 0;
-      if (threshold > 0) {
-        nextTileProgress = {
-          current: n,
-          threshold,
-          targetLabel: next.label ?? next.key ?? "",
-          targetKey: next.key ?? "",
-        };
-      }
-    }
-    this.events.emit(SCENE_EVENTS.CHAIN_UPDATE, {
-      count: n,
-      upgrades: k,
-      valid,
-      nextTileProgress,
-      resourceKey: res?.key ?? null,
-      resourceLabel: res?.label ?? null,
+    const payload = buildChainUpdatePayload({
+      path: this.path,
+      nextUpgradeTile: (res) => this.nextUpgradeTile(res),
+      effectiveThresholds: this.registry.get("effectiveThresholds"),
+      effectiveMinChain: this._effectiveMinChain(),
     });
+    this.events.emit(SCENE_EVENTS.CHAIN_UPDATE, payload);
   }
 
   // ─── Juice (chain-length feedback) ────────────────────────────────────────
