@@ -2,7 +2,7 @@
 
 Guidance for agents working in this repo. `AGENTS.md` (Codex/ChatGPT, Cursor, Aider convention) and `GEMINI.md` (Gemini CLI) are symlinks to this file — there is one source of truth. Edit only `CLAUDE.md`.
 
-**Platforms:** Use this repo with **Claude Code** or **Cursor** (desktop or Cloud). Skills live in `.claude/skills/` (shared). Cursor also has `.cursor/rules/cursor-superpowers.mdc` (always applied when present in the clone). Everything agents need is version-controlled here — Cloud agents do not load machine-local user rules.
+**Platforms:** Use this repo with **Claude Code**, **Codex**, or **Cursor** (desktop or Cloud). `AGENTS.md` is a symlink to this file so Codex loads the same canonical instructions. Skills live in `.claude/skills/` (shared and reusable across compatible agents). Cursor also has `.cursor/rules/cursor-superpowers.mdc` (always applied when present in the clone). Everything agents need is version-controlled here — Cloud agents do not load machine-local user rules.
 
 ## Mental model (read first)
 
