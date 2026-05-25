@@ -1,88 +1,128 @@
-# Hardcoded Special-Cases Audit (PR 0)
+# Hardcoded Special-Cases Audit
 
-**Scope:** Pre-migration inventory for `docs/tool-power-animation-consolidation-plan.md`.  
-**Method:** Static scan of `state.js`, `GameScene.js`, feature slices, `src/ui/*`, `src/textures/categories/*`, `src/state/helpers.js` (`makeOrder`), and `src/config/boardAnimations.js`, plus inverse cases where runtime code overrides catalog data.
+**Original scope:** Pre-migration inventory for `docs/tool-power-animation-consolidation-plan.md` (PR 0).  
+**Last reconciled:** After tool-power consolidation ([PR #634](https://github.com/grimatoma/puzzleDrag2/pull/634), branch `cursor/tool-power-consolidation-3f3e`).
+
+**Method:** Static scan of `state.js`, `GameScene.js`, feature slices, `src/ui/*`, `src/config/*`, `src/state/helpers.js`, plus inverse cases where runtime ignores catalog data.
 
 **Triage key:**
-- **PR 1–6** — Ride the tool/power/animation consolidation plan.
-- **Spin off** — Worth a focused follow-up PR; orthogonal or large.
-- **Defer** — Needs design, data model, or unrelated migration first.
+- **Open** — Still hardcoded; worth a follow-up PR.
+- **Spin off** — Larger or orthogonal cleanup.
+- **Defer** — Needs design or unrelated migration.
+- **Resolved** — Addressed by the consolidation (kept for traceability).
 
-## Summary
+---
 
-| Area | Findings | Primary triage |
-|------|----------|----------------|
-| `state.js` USE_TOOL / power runtime | 22 | PR 3–6 |
-| `GameScene.js` tool + animation | 14 | PR 1–6 |
-| `boardAnimations.js` | 3 | PR 1, PR 6 |
-| `src/ui/*` tool panel | 8 | PR 4–6, Spin off |
-| Feature slices (tool-adjacent) | 5 | PR 4, Spin off |
-| `helpers.js` `makeOrder` | 4 | Spin off, Defer |
-| Textures / icons | 4 | Defer, PR 6 |
-| Biome / hazard / chain (non-tool) | 8 | Spin off, Defer |
+## Summary (current)
 
-**Highest-risk mismatches (config says X, runtime does Y):**
-1. **Axe** — `ITEMS.axe.power` = `clear_category(trees)`; `GameScene._applyToolAxe` clears a **row** (plan: sickle gets row; axe keeps trees).
-2. **Explosives** — `ITEMS.explosives.power` = `area_blast`; legacy `USE_TOOL` clears **mole + cave-in hazards** only.
-3. **Fertilizer** — `power` = `transform_tiles`; runtime still uses **`fertilizerActive` fill bias** in `GameScene.fillBoard`.
-4. **Field tools** (`clear`/`basic`/`rare`/`shuffle`) — No `ITEMS` entries; behavior lives only in legacy `USE_TOOL` + `GameScene._applyTool*`.
-5. **`bird_feed` / `sapling`** — Listed in `LEGACY_TOOL_KEYS` (blocks auto-lookup) but **no** legacy handler and **no** `applyToolPower` case for `fill_bias`.
+| Area | Open findings | Notes |
+|------|---------------|--------|
+| Tool runtime (post-consolidation) | 6 | Mostly drift between parallel lists and fill-bias wiring |
+| `GameScene.js` | 3 | `playBoardAnimation` ms, fillBoard bias keys, deprecated dim wrapper |
+| `src/ui/*` | 4 | `TOOL_CATALOG`, fertilizer UI flag, shuffle shortcut |
+| Feature slices | 2 | Portal `CHAIN_COLLECTED`; hazard handler table |
+| `helpers.js` / chain / cartography | 8 | Unchanged by tool work — still deferred |
+| Textures | 1 | Sickle reuses `axe` iconKey in UI catalog |
 
-## Findings
+**Previously critical mismatches — all resolved in consolidation:**
 
-| File:line | Pattern | What's hardcoded | Existing config that could carry it | Suggested fix | Risk | Triage |
-|-----------|---------|------------------|-------------------------------------|---------------|------|--------|
-| `src/state.js:66–76` | Parallel `Set`s | `TAP_TARGET_TOOL_KEYS` and `TAP_TARGET_POWER_IDS` | `TOOL_POWERS[id].isTapTarget` | Single `isTapTarget` on catalog | Drift vs magnet/coal_transmuter | **PR 1** |
-| `src/state.js:101–107` | Denylist `Set` | `LEGACY_TOOL_KEYS` | N/A after migration | Delete in PR 6 | New tools stay silent on animation | **PR 6** |
-| `src/state.js:129–130` | `pending === "rune_wildcard"` | Rune refund on disarm | `tap_clear_type` + stash metadata | Typed power arm | Save-load edge cases | **PR 3** |
-| `src/state.js:139–144` | `fertilizerActive` in `disarmAllTools` | Separate disarm + refund | `arm_fill_bias` state | Fold into generic disarm | Double-refund | **PR 4** |
-| `src/state.js:183–186` | `TAP_TARGET_POWER_IDS.has(id)` | Tap-target arming | `isTapTarget` on catalog | Replace set | Missing ids → instant powers | **PR 1** |
-| `src/state.js:290–316` | `if/else` on hazard string | `clear_hazard` per-hazard branches | Handler table keyed by hazard id | One handler map | New hazards need reducer edits | **PR 4** |
-| `src/state.js:323–327` | `default: return state` | `scatter_hazard`, `water_pump`, `fill_bias` not in switch | `TOOL_POWERS` entries | Add cases | **bird_feed/sapling** no-op | **PR 4** |
-| `src/state.js:839–840` | Inline `ALIAS` map | scythe→clear, etc. | Canonical `ITEMS` keys | Centralize aliases | Quest payloads using PC2 names | **PR 5** |
-| `src/state.js:852–853` | `MAGIC_TOOL_IDS` skip | Portal tools bypass core | `applyToolPower` | Route magic through core | Double-consume | **Spin off** |
-| `src/state.js:858–863` | `key === "fertilizer" && fertilizerActive` | Toggle-off disarm | `arm_fill_bias` | Power-level arm/disarm | Old saves with flag | **PR 4** |
-| `src/state.js:872–873` | `!LEGACY_TOOL_KEYS.has(key)` | Blocks auto-lookup | N/A (temporary) | Remove guard per migration | Phase-3 tools lack animations | **PR 6** |
-| `src/state.js:879–887` | Per-tool bubble strings | bomb/rake/axe arm copy | `power.bubble` on `ITEMS` | Move to tool config | Copy drift vs wiki | **PR 4** |
-| `src/state.js:890–920` | shuffle/clear/basic/rare | Instant field tools inline | `reshuffle_board`, `clear_random_n`, `transform_random_n` | `ITEMS` + powers | Invisible to catalog tests | **PR 5** |
-| `src/state.js:923–939` | `water_pump` inline | Lava grid rewrite | `water_pump` power handler | Delete block | No GameScene animation | **PR 4** |
-| `src/state.js:942–947` | `explosives` inline | mole + caveIn only | Fix power id (not `area_blast`) | `clear_mine_obstructions` | Wrong behavior if auto-routed | **PR 4** |
-| `src/state.js:950–957` | rake/axe/fertilizer arms | Legacy arm paths | `isTapTarget` + bubbles | Unified arm | Inconsistent UX | **PR 3–4** |
-| `src/state.js:960–1007` | cat/rifle/hound inline | Hazard clears inline | `clear_hazard` / `scatter_hazard` | Delete blocks | Duplicate with `clear_hazard` | **PR 4** |
-| `src/GameScene.js:220–261` | `changedata-toolPending` chain | Per-tool branches | `applyToolPower` + `toolPendingPower` | One listener | 17 tools silent | **PR 3** |
-| `src/GameScene.js:1132–1330` | `_applyTool*` methods | Per-tool animation | `tileSelectors` + dispatcher | Delete methods | Parity contract on migrate | **PR 3–5** |
-| `src/GameScene.js:1653–1693` | `applyToolDim(toolKey)` | Dim per tool name | `dimStrategy` on power | Config-driven dim | New tap tools wrong dim | **PR 6** |
-| `src/GameScene.js:857–867` | `fillBoard` fertilizer | Hardcoded seed list | `arm_fill_bias` target | Read from power state | Magic fertilizer shares list | **PR 4** |
-| `src/config/boardAnimations.js` | Animation registry | Only sweep/popIn/goldenFlash | Per-power `anim` names | Register or alias anims | Catalog anim names no-op | **PR 6** |
-| `src/ui/toolRegistry.js` | `TOOL_CATALOG` | Parallel UI catalog | `ITEMS` + `TOOL_POWERS` | Generate from `ITEMS` | Triple source of truth | **Spin off** |
-| `src/constants.js:377–396` | Legacy `effect`/`target` | Duplicates `power` | `power` only | Strip in PR 6 | Dev Panel reads `effect` | **PR 6** |
-| `src/constants.js:396` | explosives `area_blast` | Semantic mismatch | Mine-hazard clear power | Fix catalog | Wiki wrong | **PR 4** |
-| N/A | Missing `ITEMS` for field tools | clear/basic/rare/shuffle/bomb | Add `ITEMS` rows | Catalog coverage | **PR 5** |
+| Issue | Resolution |
+|-------|------------|
+| Axe row-clear vs `clear_category(trees)` | Axe is instant `clear_category`; **sickle** owns `clear_row` + row sweep |
+| Explosives `area_blast` vs mine-hazard clear | `ITEMS.explosives.power.id` = `explosives` |
+| Fertilizer `transform_tiles` vs fill bias | `arm_fill_bias` on USE_TOOL; `fertilizerActive` flag retained for fill |
+| Field tools missing from `ITEMS` | `clear` / `basic` / `rare` / `shuffle` / `bomb` added with typed powers |
+| `bird_feed` / `sapling` blocked with no handler | Routed through `fill_bias` in `toolPowerRuntime.js` |
+| 17 Phase-3 tools silent on animation | Instant powers still reducer-only for some; tap/instant field tools use `applyToolPower` |
 
-## PR 1–6 absorption checklist
+---
 
-| PR | Absorb these audit IDs |
-|----|------------------------|
-| **PR 1** | Selector registry; `isTapTarget`; collapse timing from `boardAnimations.js` |
-| **PR 2** | `sickle` + `clear_row`; axe/wiki alignment |
-| **PR 3** | `GameScene._applyTool*`; pending flags; rune wildcard power arm |
-| **PR 4** | water_pump, explosives fix, cat/rifle/hound, fertilizer/`arm_fill_bias`, bubbles, `fill_bias`/`scatter_hazard` |
-| **PR 5** | Field tools → `ITEMS` + powers; delete `_applyToolClear/Basic/Rare`; UI shuffle shortcut |
-| **PR 6** | Delete `LEGACY_TOOL_KEYS`, legacy fields, `applyToolDim` strategies, anim registry gaps |
+## Resolved by consolidation (PR #634)
 
-## Spin-offs (post consolidation)
+Do not re-open these as PR 1–6 work — they are done unless regression is found.
 
-1. Portal magic tools — collapse `portal/slice.js` `USE_TOOL` branches.
-2. UI catalog generation from `ITEMS`.
-3. `makeOrder` data migration.
-4. Chain special registry (rat/ore/pearl).
-5. Achievement category ticks from `CATEGORY_OF`.
+| Former finding | What shipped |
+|----------------|--------------|
+| `LEGACY_TOOL_KEYS` / inline `USE_TOOL` chains | Removed; `ITEMS[key].power` → `applyToolPower` |
+| `TAP_TARGET_POWER_IDS` in state | Replaced by `isTapTargetPower()` from `toolPowers.js` for arming |
+| Per-tool `_applyToolRake/Axe/Bomb/…` | Replaced by `GameScene.applyToolPower` + `tileSelectors` |
+| `_rakePending` / `_axePending` / etc. | `toolPendingPower` on registry + React sync |
+| Legacy `effect` / `target` on `ITEMS` tools | Stripped; `power` is canonical |
+| `MAGIC_TOOL_IDS` skip + portal `USE_TOOL` handlers | Magic tools use core `applyToolPower`; portal `USE_TOOL` no-op |
+| Per-tool arm bubbles in state switch | `power.bubble` on tool configs (bomb, rake, sickle, magic_wand, field tools) |
+| `scatter_hazard` / `water_pump` / `fill_bias` no-op | Implemented in `toolPowerRuntime.js` |
+| `def.effect === "clear_all"` in `farm/tools.js` | Branch removed from `applyToolPending` |
+| Rune wildcard arm | `ACTIVATE_RUNE_WILDCARD` sets `toolPendingPower` (`tap_clear_type`, golden tint) |
+| `applyToolDim` per tool name (partial) | `applyToolDimForPower` reads `dimStrategy` from catalog |
 
-## Deferrals
+---
 
-- Tile vs resource conflation (`makeOrder`, `CAPPED_RESOURCES`, recipes).
-- Cartography node kinds, biome unlock bubbles.
+## Open findings
+
+| File:line | Pattern | What's hardcoded | Config that could carry it | Suggested fix | Risk | Triage |
+|-----------|---------|------------------|----------------------------|---------------|------|--------|
+| `src/features/farm/tools.js:10` | `TAP_TARGET_TOOL_IDS` | Still lists `bomb`, `rake`, **`axe`**, `magic_wand` | `isTapTargetPower(ITEMS[k].power.id)` | Delete set; derive from `ITEMS` / catalog | **Axe is instant** — disarm/refund logic wrong if axe ever arms | **Open** |
+| `src/state.js:61–81` | `TAP_TARGET_TOOL_KEYS` | Duplicate of farm set in `disarmAllTools` / `CANCEL_TOOL` | `isTapTargetPower(pendingPower?.id)` | Use `toolPendingPower` + catalog only | Drift vs magnet/sickle/bomb | **Open** |
+| `src/state.js:93–98` | `fertilizerActive` disarm | Separate refund path from `toolPendingPower` | Single armed-state on `arm_fill_bias` | Merge disarm into power arm model | Double-refund edge cases | **Open** |
+| `src/state.js:562–563` | `ALIAS` map | `scythe→clear`, `seedpack→basic`, etc. | Canonical keys in quests/rewards | Central alias module or migrate callers | Legacy quest payloads | **Open** |
+| `src/state/toolPowerRuntime.js:31–66` | `_clearHazardTarget` | Per-hazard `if/else` | Hazard id → patch fn table | Data-driven hazard handlers | New hazards need code edits | **Open** |
+| `src/GameScene.js:847–852` | `fillBoard` bias | Hardcoded `["seedling", "tile_grass_hay", "tile_grain_wheat"]` | `fillBiasTarget` / `arm_fill_bias` params on state | Read bias target from reducer state | Ignores `bird_feed`/`sapling` targets | **Open** |
+| `src/GameScene.js:1057–1071` | `playBoardAnimation` | Uses `BOARD_ANIMATIONS[name].duration` only | `power.ms` override (tools already declare `ms`) | Pass optional `ms` into `_dur()` | Catalog `anim: "chops"` etc. still no-op names | **Open** |
+| `src/GameScene.js:1550–1554` | `applyToolDim` wrapper | Deprecated shim keyed on tool name | Callers use `applyToolDimForPower` only | Remove shim after call-site sweep | Low | **Open** |
+| `src/ui/toolRegistry.js:22–110` | `TOOL_CATALOG` | Parallel labels, `armed`, icons vs `ITEMS` + `TOOL_POWERS` | Generate panel rows from `ITEMS` | Single UI source of truth | Triple maintenance (wiki uses ITEMS) | **Spin off** |
+| `src/ui/toolRegistry.js:127` | `isTapTargetTool` | Reads `armed === "tap"` from UI catalog | `isTapTargetPower(ITEMS[key].power.id)` | Align with runtime catalog | magnet/sickle correct in ITEMS but easy drift | **Spin off** |
+| `src/ui/Tools.jsx:101` | `shuffle` shortcut | Direct `getPhaserScene()?.shuffleBoard()` | `reshuffle_board` via reducer pending only | Remove UI-only path | Possible double-shuffle | **Open** |
+| `src/ui/puzzleBoard.jsx:685` | Same shuffle shortcut | Duplicate of `Tools.jsx` | Shared dispatch helper | Deduplicate | Fix twice forever | **Open** |
+| `src/ui/Tools.jsx` / `puzzleBoard.jsx` | `fertilizerActive` | Special armed UI alongside `toolPending` | `toolPendingPower` for `arm_fill_bias` | One armed-state signal | UI/state divergence | **Open** |
+| `src/config/boardAnimations.js` | Animation registry | Only `sweep`, `popIn`, `goldenFlash` | Alias map for catalog anim names (`chops`, `shimmer`, …) | Register kinds or map to existing kinds | Cosmetic only today | **Open** |
+| `src/ui/toolRegistry.js:40` | Sickle `iconKey: "axe"` | Reuses axe art in panel | Dedicated `sickle` texture + registry entry | Add draw fn / icon key | Wiki/panel conflation | **Open** |
+
+### Instant `clear_category` tools — animation gap (not a hardcoding audit row before)
+
+Tools such as `trimmer`, `plough`, `hoe`, etc. mutate the grid in the reducer on `USE_TOOL` with **no** `toolPending` and **no** `GameScene` tween. That is expected for reducer-first powers but differs from field/tap tools. Follow-up: optional scene hook on grid diff or brief pending pulse for catalog `anim`/`ms`.
+
+---
+
+## Spin-offs (unchanged by consolidation)
+
+1. **`TOOL_CATALOG` generation** — Derive panel metadata from `ITEMS` + `isTapTargetPower` + `TOOL_POWERS` defaults.
+2. **`makeOrder` data migration** — Crafted pools per biome; resource-only order pools (`CLAUDE.md` conflation).
+3. **Chain special registry** — Unify rat / ore / pearl logic in `CHAIN_COLLECTED` vs `COMMIT_CHAIN`.
+4. **Achievement category ticks** — Prefix checks vs `CATEGORY_OF`.
+5. **Cartography / biome unlock bubbles** — Node `kind` switch; mine/fish gating copy in `state.js`.
+
+## Deferrals (unchanged)
+
+- Tile vs resource conflation (`CAPPED_RESOURCES`, recipes, `LONG_CHAIN_BONUSES`).
 - Full texture pipeline dedup.
-- `DEFERRED_TOOL_POWERS` (22 entries).
+- `DEFERRED_TOOL_POWERS` (22 entries in `toolPowers.js`).
+- `fillBoard` reading `fillBiasTarget` for arbitrary `arm_fill_bias` targets (needs design + tests).
 
-*Generated for PR 0 (research only).*
+---
+
+## Implementation checklist (plan PRs 0–6)
+
+| PR | Status |
+|----|--------|
+| PR 0 — this audit | Done (reconciled post-#634) |
+| PR 1 — selectors + dispatcher | Done |
+| PR 2 — new powers + sickle | Done |
+| PR 3 — rake/bomb/wand/rune migration | Done |
+| PR 4 — pump/explosives/cat/rifle/hound/fertilizer | Done |
+| PR 5 — field tools | Done |
+| PR 6 — legacy cleanup | Mostly done; open rows above are the remainder |
+
+---
+
+## Suggested next PRs (from open rows)
+
+| PR theme | Absorb |
+|----------|--------|
+| **Tap-target drift fix** | Fix `TAP_TARGET_TOOL_IDS` (remove `axe`; add `sickle`, `magnet`, `coal_transmuter`); align `disarmAllTools` with `isTapTargetPower` only |
+| **Fill bias wiring** | `fillBoard` reads `fillBiasTarget`; drop hardcoded seed list |
+| **Animation polish** | `playBoardAnimation` respects `ms`; optional tweens for instant `clear_category` tools |
+| **UI dedup** | Remove shuffle Phaser shortcut; fertilizer armed via `toolPendingPower` |
+
+---
+
+*Reconciled after tool-power consolidation. For pre-migration line references, see git history before PR #634.*
