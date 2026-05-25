@@ -9,13 +9,13 @@ import { useState } from "react";
 import { ACHIEVEMENTS } from "../../features/achievements/data.js";
 import { COLORS, TextField, NumberField, FieldRow, Card, SearchBar } from "../shared.jsx";
 
-export default function AchievementsTab({ draft, updateDraft }) {
+export default function AchievementsTab({ draft: any, updateDraft: any }) {
   const [search, setSearch] = useState("");
   const q = search.trim().toLowerCase();
   const filtered = ACHIEVEMENTS.filter((a) => !q || a.id.toLowerCase().includes(q) || a.name.toLowerCase().includes(q) || (a.counter || "").toLowerCase().includes(q));
 
-  function patch(id, fields) {
-    updateDraft((d) => {
+  function patch(id: any, fields: any) {
+    updateDraft((d: any) => {
       d.achievements ??= {};
       const next = { ...(d.achievements[id] ?? {}), ...fields };
       for (const k of Object.keys(next)) if (next[k] === "" || next[k] == null) delete next[k];
@@ -41,11 +41,11 @@ export default function AchievementsTab({ draft, updateDraft }) {
         const hasToolReward = a.reward && a.reward.tools;
         return (
           <Card key={a.id} title={`${eff.name} (${a.id})`}>
-            <FieldRow label="Name"><TextField value={eff.name} onChange={(v) => patch(a.id, { name: v })} width={220} /></FieldRow>
-            <FieldRow label="Description" hint={`counter: ${a.counter}`}><TextField value={eff.desc} onChange={(v) => patch(a.id, { desc: v })} width={300} /></FieldRow>
-            <FieldRow label="Unlock threshold"><NumberField value={eff.threshold} onChange={(v) => patch(a.id, { threshold: v })} min={1} max={99999} /></FieldRow>
-            <FieldRow label="Target (progress bar max)"><NumberField value={eff.target} onChange={(v) => patch(a.id, { target: v })} min={1} max={99999} /></FieldRow>
-            <FieldRow label="Coin reward" hint={hasToolReward ? "also grants a tool — coins are layered on" : undefined}><NumberField value={eff.rewardCoins} onChange={(v) => patch(a.id, { rewardCoins: v })} min={0} max={99999} /></FieldRow>
+            <FieldRow label="Name"><TextField value={eff.name} onChange={(v: any) => patch(a.id, { name: v })} width={220} /></FieldRow>
+            <FieldRow label="Description" hint={`counter: ${a.counter}`}><TextField value={eff.desc} onChange={(v: any) => patch(a.id, { desc: v })} width={300} /></FieldRow>
+            <FieldRow label="Unlock threshold"><NumberField value={eff.threshold} onChange={(v: any) => patch(a.id, { threshold: v })} min={1} max={99999} /></FieldRow>
+            <FieldRow label="Target (progress bar max)"><NumberField value={eff.target} onChange={(v: any) => patch(a.id, { target: v })} min={1} max={99999} /></FieldRow>
+            <FieldRow label="Coin reward" hint={hasToolReward ? "also grants a tool — coins are layered on" : undefined}><NumberField value={eff.rewardCoins} onChange={(v: any) => patch(a.id, { rewardCoins: v })} min={0} max={99999} /></FieldRow>
           </Card>
         );
       })}

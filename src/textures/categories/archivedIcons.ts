@@ -7,7 +7,7 @@
 // Each entry has `archive: true` and `replacedBy: "<active_key>"` metadata
 // so IconsTab can group it visually next to its replacement.
 
-function rr(ctx, x, y, w, h, r) {
+function rr(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
   ctx.beginPath();
   ctx.moveTo(x + r, y);
   ctx.arcTo(x + w, y, x + w, y + h, r);
@@ -21,7 +21,7 @@ function rr(ctx, x, y, w, h, r) {
 // Crafted items (originally from recipes.js)
 // ---------------------------------------------------------------------------
 
-function drawWaterPumpLegacy(ctx) {
+function drawWaterPumpLegacy(ctx: CanvasRenderingContext2D) {
   ctx.fillStyle = "#4a4a52";
   ctx.fillRect(-10, 10, 20, 8);
   ctx.fillStyle = "#c84a3a";
@@ -51,7 +51,7 @@ function drawWaterPumpLegacy(ctx) {
   ctx.fill();
 }
 
-function drawExplosivesLegacy(ctx) {
+function drawExplosivesLegacy(ctx: CanvasRenderingContext2D) {
   ctx.fillStyle = "#d44a3a";
   ctx.strokeStyle = "#8a2a1a";
   ctx.lineWidth = 2;
@@ -83,7 +83,7 @@ function drawExplosivesLegacy(ctx) {
   ctx.fill();
 }
 
-function drawHoneyrollLegacy(ctx) {
+function drawHoneyrollLegacy(ctx: CanvasRenderingContext2D) {
   ctx.fillStyle = "#f0c050";
   ctx.strokeStyle = "#8a6010";
   ctx.lineWidth = 2;
@@ -110,7 +110,7 @@ function drawHoneyrollLegacy(ctx) {
   ctx.fill();
 }
 
-function drawHarvestpieLegacy(ctx) {
+function drawHarvestpieLegacy(ctx: CanvasRenderingContext2D) {
   ctx.fillStyle = "#8a8a92";
   ctx.beginPath();
   ctx.moveTo(-14, -2);
@@ -140,7 +140,7 @@ function drawHarvestpieLegacy(ctx) {
   ctx.stroke();
 }
 
-function drawPreserveLegacy(ctx) {
+function drawPreserveLegacy(ctx: CanvasRenderingContext2D) {
   ctx.fillStyle = "#e0e0e8";
   ctx.globalAlpha = 0.8;
   rr(ctx, -10, -4, 20, 22, 4);
@@ -161,7 +161,7 @@ function drawPreserveLegacy(ctx) {
   ctx.stroke();
 }
 
-function drawTinctureLegacy(ctx) {
+function drawTinctureLegacy(ctx: CanvasRenderingContext2D) {
   ctx.fillStyle = "#d0e8e0";
   ctx.globalAlpha = 0.6;
   ctx.beginPath();
@@ -189,7 +189,7 @@ function drawTinctureLegacy(ctx) {
   ctx.strokeRect(-5, -3, 10, 2);
 }
 
-function drawIronHingeLegacy(ctx) {
+function drawIronHingeLegacy(ctx: CanvasRenderingContext2D) {
   ctx.fillStyle = "#7a8a96";
   ctx.strokeStyle = "#2a3a46";
   ctx.lineWidth = 2;
@@ -207,7 +207,7 @@ function drawIronHingeLegacy(ctx) {
   ctx.beginPath(); ctx.arc(8, 4, 1.5, 0, Math.PI * 2); ctx.fill();
 }
 
-function drawCobblepathLegacy(ctx) {
+function drawCobblepathLegacy(ctx: CanvasRenderingContext2D) {
   ctx.fillStyle = "#9a9a8a";
   ctx.strokeStyle = "#404038";
   ctx.lineWidth = 2;
@@ -226,7 +226,7 @@ function drawCobblepathLegacy(ctx) {
   }
 }
 
-function drawGoldringLegacy(ctx) {
+function drawGoldringLegacy(ctx: CanvasRenderingContext2D) {
   ctx.strokeStyle = "#ffd34c";
   ctx.lineWidth = 4;
   ctx.beginPath();
@@ -243,7 +243,7 @@ function drawGoldringLegacy(ctx) {
   ctx.fill();
 }
 
-function drawGemcrownLegacy(ctx) {
+function drawGemcrownLegacy(ctx: CanvasRenderingContext2D) {
   ctx.fillStyle = "#ffd34c";
   ctx.strokeStyle = "#a08020";
   ctx.lineWidth = 2;
@@ -267,7 +267,7 @@ function drawGemcrownLegacy(ctx) {
   ctx.beginPath(); ctx.arc(18, -6, 3, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
 }
 
-function drawIronframeLegacy(ctx) {
+function drawIronframeLegacy(ctx: CanvasRenderingContext2D) {
   ctx.strokeStyle = "#6a7a86";
   ctx.lineWidth = 3;
   ctx.strokeRect(-12, -12, 24, 24);
@@ -284,7 +284,7 @@ function drawIronframeLegacy(ctx) {
   }
 }
 
-function drawStoneworkLegacy(ctx) {
+function drawStoneworkLegacy(ctx: CanvasRenderingContext2D) {
   ctx.fillStyle = "#8a8a7a";
   ctx.strokeStyle = "#383828";
   ctx.lineWidth = 2;
@@ -295,7 +295,7 @@ function drawStoneworkLegacy(ctx) {
   rr(ctx, -6, -12, 12, 8, 1); ctx.fill(); ctx.stroke();
 }
 
-function drawChowderLegacy(ctx) {
+function drawChowderLegacy(ctx: CanvasRenderingContext2D) {
   ctx.fillStyle = "#d49060";
   ctx.beginPath();
   ctx.ellipse(0, 0, 16, 6, 0, Math.PI, Math.PI * 2);
@@ -328,7 +328,7 @@ function drawChowderLegacy(ctx) {
   ctx.stroke();
 }
 
-function drawFishOilBottledLegacy(ctx) {
+function drawFishOilBottledLegacy(ctx: CanvasRenderingContext2D) {
   ctx.fillStyle = "#e8e0d0";
   ctx.globalAlpha = 0.5;
   ctx.beginPath();
@@ -368,7 +368,7 @@ function drawFishOilBottledLegacy(ctx) {
 // UI icons (originally from uiElements.js)
 // ---------------------------------------------------------------------------
 
-function drawLockLegacy(ctx) {
+function drawLockLegacy(ctx: CanvasRenderingContext2D) {
   ctx.fillStyle = "#e0a020";
   ctx.strokeStyle = "#8a6010";
   ctx.lineWidth = 2;
@@ -389,7 +389,7 @@ function drawLockLegacy(ctx) {
   ctx.fill();
 }
 
-function drawEnterArrowLegacy(ctx) {
+function drawEnterArrowLegacy(ctx: CanvasRenderingContext2D) {
   ctx.fillStyle = "#fff";
   ctx.beginPath();
   ctx.moveTo(-6, -10);
@@ -399,7 +399,7 @@ function drawEnterArrowLegacy(ctx) {
   ctx.fill();
 }
 
-function drawCancelLegacy(ctx) {
+function drawCancelLegacy(ctx: CanvasRenderingContext2D) {
   ctx.strokeStyle = "#ff4444";
   ctx.lineWidth = 4;
   ctx.beginPath();
@@ -410,7 +410,7 @@ function drawCancelLegacy(ctx) {
   ctx.stroke();
 }
 
-function drawBuildHammerLegacy(ctx) {
+function drawBuildHammerLegacy(ctx: CanvasRenderingContext2D) {
   ctx.strokeStyle = "#8b5a2b";
   ctx.lineWidth = 4;
   ctx.beginPath();
@@ -433,7 +433,7 @@ function drawBuildHammerLegacy(ctx) {
   ctx.stroke();
 }
 
-function drawPinLegacy(ctx) {
+function drawPinLegacy(ctx: CanvasRenderingContext2D) {
   ctx.fillStyle = "#ff4444";
   ctx.strokeStyle = "#aa1111";
   ctx.lineWidth = 2;
@@ -449,7 +449,7 @@ function drawPinLegacy(ctx) {
   ctx.fill();
 }
 
-function drawSettingsGearLegacy(ctx) {
+function drawSettingsGearLegacy(ctx: CanvasRenderingContext2D) {
   // NOTE: this draw is buggy in the original (loops lineTo without moveTo).
   // Kept exactly as it was for archival/diff purposes.
   ctx.fillStyle = "#8a9a9a";
@@ -472,7 +472,7 @@ function drawSettingsGearLegacy(ctx) {
   ctx.fill();
 }
 
-function drawClipboardLegacy(ctx) {
+function drawClipboardLegacy(ctx: CanvasRenderingContext2D) {
   ctx.fillStyle = "#d4a373";
   ctx.fillRect(-10, -8, 20, 24);
   ctx.fillStyle = "#fefae0";
@@ -489,7 +489,7 @@ function drawClipboardLegacy(ctx) {
   ctx.beginPath(); ctx.arc(0, -10, 2, 0, Math.PI * 2); ctx.fill();
 }
 
-function drawHomeLegacy(ctx) {
+function drawHomeLegacy(ctx: CanvasRenderingContext2D) {
   ctx.fillStyle = "#f4a261";
   ctx.fillRect(-10, 0, 20, 14);
   ctx.fillStyle = "#e76f51";
@@ -503,7 +503,7 @@ function drawHomeLegacy(ctx) {
   ctx.fillRect(-4, 6, 8, 8);
 }
 
-function drawTrophyLegacy(ctx) {
+function drawTrophyLegacy(ctx: CanvasRenderingContext2D) {
   ctx.fillStyle = "#e9c46a";
   ctx.strokeStyle = "#d4a373";
   ctx.lineWidth = 2;
@@ -524,7 +524,7 @@ function drawTrophyLegacy(ctx) {
   ctx.strokeRect(-6, 8, 12, 6);
 }
 
-function drawShopLegacy(ctx) {
+function drawShopLegacy(ctx: CanvasRenderingContext2D) {
   ctx.fillStyle = "#e63946";
   ctx.beginPath();
   ctx.moveTo(-12, -6);
@@ -544,7 +544,7 @@ function drawShopLegacy(ctx) {
   ctx.fillRect(-12, 6, 24, 4);
 }
 
-function drawBackpackLegacy(ctx) {
+function drawBackpackLegacy(ctx: CanvasRenderingContext2D) {
   ctx.fillStyle = "#606c38";
   ctx.strokeStyle = "#283618";
   ctx.lineWidth = 2;
@@ -565,7 +565,7 @@ function drawBackpackLegacy(ctx) {
   ctx.strokeRect(2, -12, 4, 4);
 }
 
-function drawMapLegacy(ctx) {
+function drawMapLegacy(ctx: CanvasRenderingContext2D) {
   ctx.fillStyle = "#fefae0";
   ctx.strokeStyle = "#d4a373";
   ctx.lineWidth = 2;
@@ -591,7 +591,7 @@ function drawMapLegacy(ctx) {
   ctx.fill();
 }
 
-function drawPeopleLegacy(ctx) {
+function drawPeopleLegacy(ctx: CanvasRenderingContext2D) {
   ctx.fillStyle = "#457b9d";
   ctx.beginPath(); ctx.arc(-4, -4, 4, 0, Math.PI * 2); ctx.fill();
   ctx.beginPath(); ctx.arc(-4, 10, 8, Math.PI, 0); ctx.fill();
@@ -600,7 +600,7 @@ function drawPeopleLegacy(ctx) {
   ctx.beginPath(); ctx.arc(6, 10, 7, Math.PI, 0); ctx.fill();
 }
 
-function drawPuzzleLegacy(ctx) {
+function drawPuzzleLegacy(ctx: CanvasRenderingContext2D) {
   ctx.fillStyle = "#a8dadc";
   ctx.strokeStyle = "#457b9d";
   ctx.lineWidth = 2;
@@ -618,7 +618,7 @@ function drawPuzzleLegacy(ctx) {
   ctx.stroke();
 }
 
-function drawPortalLegacy(ctx) {
+function drawPortalLegacy(ctx: CanvasRenderingContext2D) {
   ctx.fillStyle = "#9d4edd";
   ctx.beginPath();
   ctx.ellipse(0, 0, 10, 14, 0, 0, Math.PI * 2);
@@ -633,7 +633,7 @@ function drawPortalLegacy(ctx) {
   ctx.stroke();
 }
 
-function drawStarLegacy(ctx) {
+function drawStarLegacy(ctx: CanvasRenderingContext2D) {
   ctx.fillStyle = "#ffb703";
   ctx.beginPath();
   for (let i = 0; i < 10; i++) {
@@ -645,7 +645,7 @@ function drawStarLegacy(ctx) {
   ctx.fill();
 }
 
-function drawWarningLegacy(ctx) {
+function drawWarningLegacy(ctx: CanvasRenderingContext2D) {
   ctx.fillStyle = "#f4a261";
   ctx.strokeStyle = "#e76f51";
   ctx.lineWidth = 2;
@@ -661,7 +661,7 @@ function drawWarningLegacy(ctx) {
   ctx.fillRect(-1, 4, 2, 2);
 }
 
-function drawWaterLegacy(ctx) {
+function drawWaterLegacy(ctx: CanvasRenderingContext2D) {
   ctx.strokeStyle = "#00b4d8";
   ctx.lineWidth = 3;
   ctx.beginPath();
@@ -676,7 +676,7 @@ function drawWaterLegacy(ctx) {
   ctx.stroke();
 }
 
-function drawScaleLegacy(ctx) {
+function drawScaleLegacy(ctx: CanvasRenderingContext2D) {
   ctx.strokeStyle = "#8b5a2b";
   ctx.lineWidth = 2;
   ctx.beginPath(); ctx.moveTo(-6, 12); ctx.lineTo(6, 12); ctx.moveTo(0, 12); ctx.lineTo(0, -8); ctx.stroke();
@@ -685,7 +685,7 @@ function drawScaleLegacy(ctx) {
   ctx.beginPath(); ctx.moveTo(10, -8); ctx.lineTo(6, 2); ctx.lineTo(14, 2); ctx.closePath(); ctx.stroke();
 }
 
-function drawDevToolsLegacy(ctx) {
+function drawDevToolsLegacy(ctx: CanvasRenderingContext2D) {
   ctx.fillStyle = "#8a9a9a";
   ctx.beginPath();
   ctx.arc(-8, -8, 4, 0, Math.PI * 2);
@@ -697,7 +697,7 @@ function drawDevToolsLegacy(ctx) {
   ctx.stroke();
 }
 
-function drawHeartLegacy(ctx) {
+function drawHeartLegacy(ctx: CanvasRenderingContext2D) {
   ctx.fillStyle = "#ff4444";
   ctx.beginPath();
   ctx.arc(-4, -4, 4, Math.PI, 0);
@@ -707,7 +707,7 @@ function drawHeartLegacy(ctx) {
   ctx.fill();
 }
 
-function drawFarmerLegacy(ctx) {
+function drawFarmerLegacy(ctx: CanvasRenderingContext2D) {
   ctx.fillStyle = "#e9c46a";
   ctx.beginPath();
   ctx.ellipse(0, -6, 10, 3, 0, 0, Math.PI * 2);

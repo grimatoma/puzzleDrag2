@@ -40,7 +40,7 @@ function cowBase(ctx: CanvasRenderingContext2D, bodyC1: string, bodyC2: string, 
   ctx.fillStyle = bodyC2;
   ctx.beginPath(); ctx.ellipse(-10, -8, 3, 2.4, -0.4, 0, Math.PI*2); ctx.fill();
   ctx.strokeStyle = outline; ctx.lineWidth = 1.2; ctx.stroke();
-  if (hasHorns) {
+  if (hasHorns && hornC) {
     ctx.strokeStyle = hornC; ctx.lineWidth = 3;
     ctx.beginPath(); ctx.moveTo(-13, -8); ctx.bezierCurveTo(-18, -10, -22, -8, -22, -4); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(-9, -8); ctx.bezierCurveTo(-4, -10, 0, -8, 0, -4); ctx.stroke();

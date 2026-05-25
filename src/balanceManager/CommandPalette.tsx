@@ -30,7 +30,7 @@ const KIND_TONE = {
 };
 const DEFAULT_TONE = { bg: COLORS.parchmentDeep, fg: COLORS.inkLight, label: "ENTRY" };
 
-export default function CommandPalette({ open, onClose, onSelect }) {
+export default function CommandPalette({ open: any, onClose: any, onSelect: any }) {
   // Mount the stateful inner component only while open — that way query /
   // cursor reset to their initial values on every open without needing a
   // setState-in-effect (forbidden by react-hooks/set-state-in-effect).
@@ -38,7 +38,7 @@ export default function CommandPalette({ open, onClose, onSelect }) {
   return <PaletteImpl onClose={onClose} onSelect={onSelect} />;
 }
 
-function PaletteImpl({ onClose, onSelect }) {
+function PaletteImpl({ onClose: any, onSelect: any }) {
   const [query, setQueryRaw] = useState("");
   const [cursor, setCursor] = useState(0);
   const inputRef = useRef(null);
@@ -49,7 +49,7 @@ function PaletteImpl({ onClose, onSelect }) {
 
   // setQuery + cursor reset live together so it's an event handler rather
   // than an effect — eliminates the react-hooks/set-state-in-effect violation.
-  const setQuery = (next) => { setQueryRaw(next); setCursor(0); };
+  const setQuery = (next: any) => { setQueryRaw(next); setCursor(0); };
 
   useEffect(() => {
     const id = setTimeout(() => inputRef.current?.focus(), 0);
@@ -62,13 +62,13 @@ function PaletteImpl({ onClose, onSelect }) {
     if (el && typeof el.scrollIntoView === "function") el.scrollIntoView({ block: "nearest" });
   }, [cursor, results.length]);
 
-  const pick = (entry) => {
+  const pick = (entry: any) => {
     if (!entry) return;
     onSelect(entry);
     onClose();
   };
 
-  const onKey = (e) => {
+  const onKey = (e: any) => {
     if (e.key === "Escape") { e.preventDefault(); onClose(); return; }
     if (e.key === "ArrowDown") {
       e.preventDefault();

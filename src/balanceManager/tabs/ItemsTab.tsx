@@ -24,16 +24,16 @@ const FILTERS = [
   { id: "item",     label: "Items",     iconKey: "ui_star"  },
 ];
 
-function isItem(r) {
+function isItem(r: any) {
   return r.kind !== "tile";
 }
 
 // What makes an item a "tool" is that it has a tool power wired (stored as `effect` in data).
-function isTool(r) {
+function isTool(r: any) {
   return r.kind === "tool" || !!r.effect;
 }
 
-export default function ItemsTab({ draft, updateDraft }) {
+export default function ItemsTab({ draft: any, updateDraft: any }) {
   const [filter, setFilter] = useState("all");
   const [search, setSearch] = useState("");
 
@@ -55,8 +55,8 @@ export default function ItemsTab({ draft, updateDraft }) {
     return true;
   });
 
-  function patchItem(key, fields) {
-    updateDraft((d) => {
+  function patchItem(key: any, fields: any) {
+    updateDraft((d: any) => {
       const cur = d.items[key] || {};
       const next = { ...cur, ...fields };
       // Drop empty patches to keep the JSON tidy.
@@ -130,7 +130,7 @@ export default function ItemsTab({ draft, updateDraft }) {
                     {sourceTags.map((tag) => <Pill key={`source-${tag}`}>{tag}</Pill>)}
                     {dirty && <Pill color="#fff" bg={COLORS.ember}>edited</Pill>}
                     {dirty && (
-                      <SmallButton variant="ghost" onClick={() => updateDraft((d) => { delete d.items[key]; })}>
+                      <SmallButton variant="ghost" onClick={() => updateDraft((d: any) => { delete d.items[key]; })}>
                         revert
                       </SmallButton>
                     )}
@@ -138,7 +138,7 @@ export default function ItemsTab({ draft, updateDraft }) {
 
                   <div>
                     <Label>Label</Label>
-                    <TextField value={eff.label} onChange={(v) => patchItem(key, { label: v })} />
+                    <TextField value={eff.label} onChange={(v: any) => patchItem(key, { label: v })} />
                   </div>
                   <div className="col-span-2 flex items-end gap-3 flex-wrap">
                     <label className="text-[11px] flex items-center gap-2">
@@ -152,7 +152,7 @@ export default function ItemsTab({ draft, updateDraft }) {
                     {eff.sellable && (
                       <div>
                         <Label>Sale value</Label>
-                        <NumberField value={eff.value} min={0} max={9999} onChange={(v) => patchItem(key, { value: v })} width={80} />
+                        <NumberField value={eff.value} min={0} max={9999} onChange={(v: any) => patchItem(key, { value: v })} width={80} />
                       </div>
                     )}
                   </div>
@@ -161,7 +161,7 @@ export default function ItemsTab({ draft, updateDraft }) {
                   {!tool && (
                     <div>
                       <Label>Color</Label>
-                      <ColorField value={eff.color} onChange={(v) => patchItem(key, { color: v })} />
+                      <ColorField value={eff.color} onChange={(v: any) => patchItem(key, { color: v })} />
                     </div>
                   )}
 
@@ -171,7 +171,7 @@ export default function ItemsTab({ draft, updateDraft }) {
                       rows={2}
                       value={eff.desc || eff.description}
                       placeholder="Short flavor text shown in tooltips."
-                      onChange={(v) => patchItem(key, { desc: v, description: v })}
+                      onChange={(v: any) => patchItem(key, { desc: v, description: v })}
                     />
                   </div>
                 </div>
@@ -188,7 +188,7 @@ export default function ItemsTab({ draft, updateDraft }) {
                           { value: "", label: "— pick power —" },
                           ...TOOL_POWERS.map((p) => ({ value: p.id, label: `${p.name} — ${p.id}` })),
                         ]}
-                        onChange={(v) => {
+                        onChange={(v: any) => {
                           const defaults = defaultsForToolPower(v);
                           patchItem(key, { effect: v, target: defaults.target ?? "", ...defaults });
                         }}
@@ -204,13 +204,13 @@ export default function ItemsTab({ draft, updateDraft }) {
                         <Label>{p.label}</Label>
                         {p.type === "resourceKey" ? (
                           <Select value={eff[p.key] ?? ""} options={resourceKeyOptions()}
-                            onChange={(v) => patchItem(key, { [p.key]: v })} />
+                            onChange={(v: any) => patchItem(key, { [p.key]: v })} />
                         ) : p.type === "tileKey" ? (
                           <Select value={eff[p.key] ?? ""} options={tileKeyOptions()}
-                            onChange={(v) => patchItem(key, { [p.key]: v })} />
+                            onChange={(v: any) => patchItem(key, { [p.key]: v })} />
                         ) : p.type === "hazard" ? (
                           <Select value={eff[p.key] ?? ""} options={hazardOptions()}
-                            onChange={(v) => patchItem(key, { [p.key]: v })} />
+                            onChange={(v: any) => patchItem(key, { [p.key]: v })} />
                         ) : null}
                       </div>
                     ))}
@@ -227,7 +227,7 @@ export default function ItemsTab({ draft, updateDraft }) {
                           if (eff.anim && !known.includes(eff.anim) && !animMatchesDefault) opts.unshift({ value: eff.anim, label: `${eff.anim} (custom)` });
                           return opts;
                         })()}
-                        onChange={(v) => {
+                        onChange={(v: any) => {
                           if (v === "") {
                             patchItem(key, { anim: "", ms: 0 });
                           } else {
@@ -238,7 +238,7 @@ export default function ItemsTab({ draft, updateDraft }) {
                     </div>
                     <div>
                       <Label>Anim MS</Label>
-                      <NumberField value={eff.ms} min={0} max={5000} onChange={(v) => patchItem(key, { ms: v })} width={80} />
+                      <NumberField value={eff.ms} min={0} max={5000} onChange={(v: any) => patchItem(key, { ms: v })} width={80} />
                     </div>
                     {def && (
                       <div className="col-span-2 text-[10px]" style={{ color: COLORS.inkSubtle }}>
@@ -269,7 +269,7 @@ export default function ItemsTab({ draft, updateDraft }) {
   );
 }
 
-function Label({ children }) {
+function Label({ children: any }) {
   return (
     <div className="text-[10px] font-bold uppercase tracking-wide mb-0.5" style={{ color: COLORS.inkSubtle }}>
       {children}

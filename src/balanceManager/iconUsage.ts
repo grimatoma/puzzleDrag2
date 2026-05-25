@@ -80,7 +80,7 @@ const SVG_USAGE_LITERALS = [
  */
 export function getUsedIconKeys() {
   const used = new Set();
-  const add = (key) => {
+  const add = (key: any) => {
     if (typeof key === "string" && key.length > 0) used.add(key);
   };
 
@@ -158,7 +158,7 @@ export function getUsedIconKeys() {
  * module (the catalogs it pulls from are static at runtime).
  */
 let _cachedSet = null;
-export function isIconUsed(key) {
+export function isIconUsed(key: any) {
   if (_cachedSet === null) _cachedSet = getUsedIconKeys();
   return _cachedSet.has(key);
 }

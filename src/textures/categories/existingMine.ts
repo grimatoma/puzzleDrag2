@@ -1,6 +1,6 @@
 // Existing mine icons — ported verbatim from src/textures/mineIcons.js
 
-function drawStone(ctx) {
+function drawStone(ctx: CanvasRenderingContext2D) {
   ctx.fillStyle = "rgba(0,0,0,0.25)"; ctx.beginPath(); ctx.ellipse(2,22,22,4,0,0,Math.PI*2); ctx.fill();
   const grad = ctx.createLinearGradient(0,-22,0,22);
   grad.addColorStop(0,"#cfd5da"); grad.addColorStop(0.5,"#9da3a8"); grad.addColorStop(1,"#5e6469");
@@ -20,7 +20,7 @@ function drawStone(ctx) {
   [[2,-10],[10,0],[-10,8],[14,10],[-14,-2]].forEach(([dx,dy])=>{ ctx.beginPath(); ctx.arc(dx,dy,0.9,0,Math.PI*2); ctx.fill(); });
 }
 
-function drawBlock(ctx) {
+function drawBlock(ctx: CanvasRenderingContext2D) {
   ctx.fillStyle = "rgba(0,0,0,0.28)"; ctx.beginPath(); ctx.ellipse(0,22,22,4,0,0,Math.PI*2); ctx.fill();
   const top = ctx.createLinearGradient(0,-22,0,-2);
   top.addColorStop(0,"#cfd5da"); top.addColorStop(1,"#7c8388");
@@ -71,7 +71,7 @@ function drawBlock(ctx) {
 }
 
 // Iron ore — cold-grey rock body with bright metallic iron flecks.
-function drawMineIronOre(ctx) {
+function drawMineIronOre(ctx: CanvasRenderingContext2D) {
   ctx.fillStyle = "rgba(0,0,0,0.25)"; ctx.beginPath(); ctx.ellipse(2,22,22,4,0,0,Math.PI*2); ctx.fill();
   const grad = ctx.createLinearGradient(0,-22,0,22);
   grad.addColorStop(0,"#c8ccd0"); grad.addColorStop(0.5,"#7a7e84"); grad.addColorStop(1,"#3a3e44");
@@ -103,7 +103,7 @@ function drawMineIronOre(ctx) {
 }
 
 // Copper ore — warm orange-brown rock body with bright copper veins.
-function drawMineCopperOre(ctx) {
+function drawMineCopperOre(ctx: CanvasRenderingContext2D) {
   ctx.fillStyle = "rgba(0,0,0,0.25)"; ctx.beginPath(); ctx.ellipse(2,22,22,4,0,0,Math.PI*2); ctx.fill();
   const grad = ctx.createLinearGradient(0,-22,0,22);
   grad.addColorStop(0,"#d8a070"); grad.addColorStop(0.5,"#8a5430"); grad.addColorStop(1,"#3e2510");
@@ -133,7 +133,7 @@ function drawMineCopperOre(ctx) {
   });
 }
 
-function drawCoal(ctx) {
+function drawCoal(ctx: CanvasRenderingContext2D) {
   ctx.fillStyle = "rgba(0,0,0,0.3)"; ctx.beginPath(); ctx.ellipse(2,22,22,4,0,0,Math.PI*2); ctx.fill();
   const grad = ctx.createLinearGradient(0,-22,0,22);
   grad.addColorStop(0,"#4a4a52"); grad.addColorStop(0.5,"#1c1c20"); grad.addColorStop(1,"#000000");
@@ -154,9 +154,9 @@ function drawCoal(ctx) {
   [[-8,-10],[4,-12],[10,4],[-12,8]].forEach(([sx,sy])=>{ ctx.beginPath(); ctx.arc(sx,sy,1.2,0,Math.PI*2); ctx.fill(); });
 }
 
-function drawCoke(ctx) {
+function drawCoke(ctx: CanvasRenderingContext2D) {
   ctx.fillStyle = "rgba(0,0,0,0.3)"; ctx.beginPath(); ctx.ellipse(0,22,18,4,0,0,Math.PI*2); ctx.fill();
-  const hex6 = (rad) => {
+  const hex6 = (rad: number) => {
     ctx.beginPath();
     for (let i=0; i<6; i++) {
       const a = -Math.PI/2 + (i*Math.PI)/3;
@@ -182,7 +182,7 @@ function drawCoke(ctx) {
   ctx.beginPath(); ctx.moveTo(-10,-19); ctx.lineTo(10,-19); ctx.stroke();
 }
 
-function drawGem(ctx) {
+function drawGem(ctx: CanvasRenderingContext2D) {
   ctx.fillStyle = "rgba(0,0,0,0.28)"; ctx.beginPath(); ctx.ellipse(0,24,18,4,0,0,Math.PI*2); ctx.fill();
   ctx.beginPath(); ctx.moveTo(0,-26); ctx.lineTo(22,-10); ctx.lineTo(14,22); ctx.lineTo(-14,22); ctx.lineTo(-22,-10); ctx.closePath();
   const body = ctx.createLinearGradient(-20,-20,20,22);
@@ -207,9 +207,9 @@ function drawGem(ctx) {
   ctx.fillStyle = "rgba(255,255,255,0.7)"; ctx.beginPath(); ctx.arc(8,6,1.4,0,Math.PI*2); ctx.fill();
 }
 
-function drawCutgem(ctx) {
+function drawCutgem(ctx: CanvasRenderingContext2D) {
   ctx.fillStyle = "rgba(0,0,0,0.28)"; ctx.beginPath(); ctx.ellipse(0,22,22,5,0,0,Math.PI*2); ctx.fill();
-  const girdle = (rad) => {
+  const girdle = (rad: number) => {
     ctx.beginPath();
     for (let i=0; i<8; i++) {
       const a = (i*Math.PI)/4 + Math.PI/8;
@@ -237,7 +237,7 @@ function drawCutgem(ctx) {
   [[-12,-8,1.4],[10,12,1.6],[14,-10,1.2]].forEach(([sx,sy,sr])=>{ ctx.beginPath(); ctx.arc(sx,sy,sr,0,Math.PI*2); ctx.fill(); });
 }
 
-function drawGold(ctx) {
+function drawGold(ctx: CanvasRenderingContext2D) {
   ctx.fillStyle = "rgba(0,0,0,0.3)"; ctx.beginPath(); ctx.ellipse(2,22,22,5,0,0,Math.PI*2); ctx.fill();
   const grad = ctx.createRadialGradient(-6,-10,2,0,0,26);
   grad.addColorStop(0,"#fff8b8"); grad.addColorStop(0.4,"#ffd34c"); grad.addColorStop(0.8,"#c08a18"); grad.addColorStop(1,"#7a4f08");

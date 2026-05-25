@@ -5,12 +5,12 @@ function scopeLabel(scope = []) {
   return scope.map((s) => s[0].toUpperCase() + s.slice(1)).join(", ");
 }
 
-function defaultValueLabel(param) {
+function defaultValueLabel(param: any) {
   if (param.default === undefined) return "none";
   return String(param.default);
 }
 
-function techExplanation(ability) {
+function techExplanation(ability: any) {
   return `Aggregated into channel \`${ability.channel}\` at trigger \`${ability.trigger}\` via \`applyAbilityToChannels\` using ability id \`${ability.id}\`.`;
 }
 

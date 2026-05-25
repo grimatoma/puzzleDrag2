@@ -2,14 +2,14 @@
 // origin (0,0) inside a ~64x64 design box; painter sets lineCap/lineJoin to
 // "round" globally.
 
-function drawShadow(ctx, w = 14, h = 3) {
+function drawShadow(ctx: CanvasRenderingContext2D, w = 14, h = 3) {
   ctx.fillStyle = "rgba(0,0,0,0.18)";
   ctx.beginPath();
   ctx.ellipse(0, 16, w, h, 0, 0, Math.PI * 2);
   ctx.fill();
 }
 
-function rr(ctx, x, y, w, h, r) {
+function rr(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
   const rad = Math.min(r, w / 2, h / 2);
   ctx.beginPath();
   ctx.moveTo(x + rad, y);
@@ -24,7 +24,7 @@ function rr(ctx, x, y, w, h, r) {
   ctx.closePath();
 }
 
-function drawLock(ctx) {
+function drawLock(ctx: CanvasRenderingContext2D) {
   drawShadow(ctx, 14, 3);
   ctx.strokeStyle = "#3a3e44";
   ctx.lineWidth = 4.5;
@@ -76,7 +76,7 @@ function drawLock(ctx) {
   ctx.fill();
 }
 
-function drawEnterArrow(ctx) {
+function drawEnterArrow(ctx: CanvasRenderingContext2D) {
   drawShadow(ctx, 14, 3);
   const body = ctx.createLinearGradient(0, -10, 0, 10);
   body.addColorStop(0, "#8fcb5e");
@@ -110,7 +110,7 @@ function drawEnterArrow(ctx) {
   ctx.fill();
 }
 
-function drawCancel(ctx) {
+function drawCancel(ctx: CanvasRenderingContext2D) {
   drawShadow(ctx, 13, 3);
   ctx.strokeStyle = "#7a1818";
   ctx.lineWidth = 2;
@@ -144,7 +144,7 @@ function drawCancel(ctx) {
   ctx.stroke();
 }
 
-function drawBuildHammer(ctx) {
+function drawBuildHammer(ctx: CanvasRenderingContext2D) {
   drawShadow(ctx, 14, 3);
   const handle = ctx.createLinearGradient(-12, 14, 6, -4);
   handle.addColorStop(0, "#7a4a18");
@@ -207,7 +207,7 @@ function drawBuildHammer(ctx) {
   ctx.restore();
 }
 
-function drawPin(ctx) {
+function drawPin(ctx: CanvasRenderingContext2D) {
   ctx.fillStyle = "rgba(0,0,0,0.35)";
   ctx.beginPath();
   ctx.ellipse(0, 16, 5, 1.6, 0, 0, Math.PI * 2);
@@ -242,7 +242,7 @@ function drawPin(ctx) {
   ctx.fill();
 }
 
-function drawSettingsGear(ctx) {
+function drawSettingsGear(ctx: CanvasRenderingContext2D) {
   drawShadow(ctx, 14, 3);
   const teeth = 8;
   const innerR = 10;
@@ -295,7 +295,7 @@ function drawSettingsGear(ctx) {
   ctx.fill();
 }
 
-function drawClipboard(ctx) {
+function drawClipboard(ctx: CanvasRenderingContext2D) {
   drawShadow(ctx, 14, 3);
   const board = ctx.createLinearGradient(-12, 0, 12, 0);
   board.addColorStop(0, "#7a4a18");
@@ -360,7 +360,7 @@ function drawClipboard(ctx) {
   ctx.fill();
 }
 
-function drawHome(ctx) {
+function drawHome(ctx: CanvasRenderingContext2D) {
   drawShadow(ctx, 16, 3);
   const wall = ctx.createLinearGradient(0, -2, 0, 14);
   wall.addColorStop(0, "#fbc998");
@@ -456,7 +456,7 @@ function drawHome(ctx) {
   });
 }
 
-function drawTrophy(ctx) {
+function drawTrophy(ctx: CanvasRenderingContext2D) {
   drawShadow(ctx, 14, 3);
   const base = ctx.createLinearGradient(0, 10, 0, 18);
   base.addColorStop(0, "#f8d878");
@@ -539,7 +539,7 @@ function drawTrophy(ctx) {
   ctx.fill();
 }
 
-function drawShop(ctx) {
+function drawShop(ctx: CanvasRenderingContext2D) {
   drawShadow(ctx, 16, 3);
   const counter = ctx.createLinearGradient(0, 2, 0, 16);
   counter.addColorStop(0, "#c08a48");
@@ -572,7 +572,7 @@ function drawShop(ctx) {
   ctx.rect(-11, -6, 1.6, 10);
   ctx.rect(9.4, -6, 1.6, 10);
   ctx.stroke();
-  const stripes = [
+  const stripes: [number, number, number, string][] = [
     [-14, -10, -8, "#c83038"],
     [-8, -10, -2, "#fafafa"],
     [-2, -10, 4, "#c83038"],
@@ -639,7 +639,7 @@ function drawShop(ctx) {
   ctx.fill();
 }
 
-function drawBackpack(ctx) {
+function drawBackpack(ctx: CanvasRenderingContext2D) {
   drawShadow(ctx, 14, 3);
   ctx.strokeStyle = "#3a2810";
   ctx.lineWidth = 2.5;
@@ -719,7 +719,7 @@ function drawBackpack(ctx) {
   ctx.fill();
 }
 
-function drawMap(ctx) {
+function drawMap(ctx: CanvasRenderingContext2D) {
   drawShadow(ctx, 16, 3);
   const paper = ctx.createLinearGradient(0, -10, 0, 12);
   paper.addColorStop(0, "#fff5d0");
@@ -792,7 +792,7 @@ function drawMap(ctx) {
   ctx.fill();
 }
 
-function drawPeople(ctx) {
+function drawPeople(ctx: CanvasRenderingContext2D) {
   drawShadow(ctx, 14, 3);
   ctx.fillStyle = "rgba(74,42,28,0.85)";
   ctx.beginPath();
@@ -858,7 +858,7 @@ function drawPeople(ctx) {
   ctx.fill();
 }
 
-function drawPuzzle(ctx) {
+function drawPuzzle(ctx: CanvasRenderingContext2D) {
   drawShadow(ctx, 14, 3);
   const piece = ctx.createLinearGradient(-10, -10, 10, 10);
   piece.addColorStop(0, "#c4d4e4");
@@ -901,7 +901,7 @@ function drawPuzzle(ctx) {
   ctx.fill();
 }
 
-function drawPortal(ctx) {
+function drawPortal(ctx: CanvasRenderingContext2D) {
   ctx.save();
   const halo = ctx.createRadialGradient(0, 0, 4, 0, 0, 22);
   halo.addColorStop(0, "rgba(200,130,255,0.55)");
@@ -958,7 +958,7 @@ function drawPortal(ctx) {
   ctx.restore();
 }
 
-function drawStar(ctx) {
+function drawStar(ctx: CanvasRenderingContext2D) {
   drawShadow(ctx, 14, 3);
   const grad = ctx.createRadialGradient(-3, -4, 1, 0, 0, 16);
   grad.addColorStop(0, "#fff0a0");
@@ -994,7 +994,7 @@ function drawStar(ctx) {
   ctx.fill();
 }
 
-function drawWarning(ctx) {
+function drawWarning(ctx: CanvasRenderingContext2D) {
   drawShadow(ctx, 16, 3);
   const tri = ctx.createLinearGradient(0, -12, 0, 12);
   tri.addColorStop(0, "#ffd478");
@@ -1035,7 +1035,7 @@ function drawWarning(ctx) {
   ctx.fill();
 }
 
-function drawWater(ctx) {
+function drawWater(ctx: CanvasRenderingContext2D) {
   drawShadow(ctx, 10, 2.5);
   const body = ctx.createLinearGradient(0, -14, 0, 14);
   body.addColorStop(0, "#bce4f8");
@@ -1074,7 +1074,7 @@ function drawWater(ctx) {
   ctx.stroke();
 }
 
-function drawScale(ctx) {
+function drawScale(ctx: CanvasRenderingContext2D) {
   drawShadow(ctx, 16, 3);
   ctx.fillStyle = "#5a3008";
   ctx.beginPath();
@@ -1171,7 +1171,7 @@ function drawScale(ctx) {
   ctx.fill();
 }
 
-function drawDevTools(ctx) {
+function drawDevTools(ctx: CanvasRenderingContext2D) {
   drawShadow(ctx, 16, 3);
   ctx.save();
   ctx.rotate(-0.78);
@@ -1277,7 +1277,7 @@ function drawDevTools(ctx) {
   ctx.restore();
 }
 
-function drawHeart(ctx) {
+function drawHeart(ctx: CanvasRenderingContext2D) {
   drawShadow(ctx, 14, 3);
   const body = ctx.createRadialGradient(-3, -3, 2, 0, 0, 16);
   body.addColorStop(0, "#ff8090");
@@ -1311,7 +1311,7 @@ function drawHeart(ctx) {
   ctx.fill();
 }
 
-function drawFarmer(ctx) {
+function drawFarmer(ctx: CanvasRenderingContext2D) {
   drawShadow(ctx, 14, 3);
   const skin = ctx.createRadialGradient(-3, -3, 1, 0, 0, 10);
   skin.addColorStop(0, "#f8d8b0");

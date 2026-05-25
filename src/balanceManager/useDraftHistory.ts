@@ -16,7 +16,7 @@ import { useState, useCallback, useRef } from "react";
 const DEFAULT_MAX_HISTORY = 60;
 const DEFAULT_COALESCE_MS = 700;
 
-export function emptyHistory(present) {
+export function emptyHistory(present: any) {
   return { past: [], present, future: [] };
 }
 
@@ -26,7 +26,7 @@ export function emptyHistory(present) {
  * the past stack (used to merge rapid keystrokes into one entry).
  * Skips entirely if `next === h.present`.
  */
-export function pushHistoryEntry(h, next, { coalesce = false, maxHistory = DEFAULT_MAX_HISTORY } = {}) {
+export function pushHistoryEntry(h: any, next: any, { coalesce = false, maxHistory = DEFAULT_MAX_HISTORY } = {}) {
   if (Object.is(next, h.present)) return h;
   let past = h.past;
   if (!coalesce) {
@@ -36,7 +36,7 @@ export function pushHistoryEntry(h, next, { coalesce = false, maxHistory = DEFAU
   return { past, present: next, future: [] };
 }
 
-export function undoHistoryState(h) {
+export function undoHistoryState(h: any) {
   if (h.past.length === 0) return h;
   const previous = h.past[h.past.length - 1];
   return {
@@ -46,7 +46,7 @@ export function undoHistoryState(h) {
   };
 }
 
-export function redoHistoryState(h) {
+export function redoHistoryState(h: any) {
   if (h.future.length === 0) return h;
   return {
     past: [...h.past, h.present],
@@ -55,7 +55,7 @@ export function redoHistoryState(h) {
   };
 }
 
-function resolve(initial) {
+function resolve(initial: any) {
   return typeof initial === "function" ? initial() : initial;
 }
 
@@ -99,7 +99,7 @@ export function useDraftHistory<T>(initial: T | (() => T), options: { coalesceMs
     return did;
   }, []);
 
-  const reset = useCallback((value) => {
+  const reset = useCallback((value: any) => {
     lastChangeAt.current = 0;
     setHistory(emptyHistory(resolve(value)));
   }, []);

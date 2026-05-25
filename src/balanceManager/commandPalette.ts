@@ -19,7 +19,7 @@ import { STORY_BEATS, SIDE_BEATS } from "../story.js";
 import { STORY_FLAGS } from "../flags.js";
 import { getToolPower } from "../config/toolPowers.js";
 
-function asArrayValues(obj) {
+function asArrayValues(obj: any) {
   return Array.isArray(obj) ? obj : Object.values(obj || {});
 }
 
@@ -31,7 +31,7 @@ function asArrayValues(obj) {
  */
 export function buildCommandIndex({ items = ITEMS, npcs = NPCS, buildings = BUILDINGS, recipes = RECIPES, biomes = BIOMES, keepers = KEEPERS, workers = TYPE_WORKERS, bosses = BOSSES, achievements = ACHIEVEMENTS, zones = ZONES, storyBeats = STORY_BEATS, sideBeats = SIDE_BEATS, flags = STORY_FLAGS } = {}) {
   const entries = [];
-  const push = (entry) => entries.push(entry);
+  const push = (entry: any) => entries.push(entry);
 
   for (const [id, item] of Object.entries(items || {})) {
     push({ id, kind: "tile", tab: "tiles",
@@ -127,14 +127,14 @@ export function buildCommandIndex({ items = ITEMS, npcs = NPCS, buildings = BUIL
  *    label starts with the entire trimmed query (typical "I know what I'm
  *    looking for" case).
  */
-export function scoreEntry(entry, query) {
+export function scoreEntry(entry: any, query: any) {
   const q = String(query ?? "").trim().toLowerCase();
   if (!q) return 0;
   const tokens = q.split(/\s+/).filter(Boolean);
   const label = String(entry.label || "").toLowerCase();
   const sublabel = String(entry.sublabel || "").toLowerCase();
   const kind = String(entry.kind || "").toLowerCase();
-  const haystack = [label, sublabel, kind, ...(entry.keywords || []).map((k) => String(k).toLowerCase())];
+  const haystack = [label, sublabel, kind, ...(entry.keywords || []).map((k: any) => String(k).toLowerCase())];
 
   let score = 0;
   for (const tok of tokens) {
@@ -157,7 +157,7 @@ export function scoreEntry(entry, query) {
  * Search the index. Returns up to `limit` entries sorted by descending score,
  * with the original index order as a stable tiebreaker.
  */
-export function searchCommandIndex(index, query, limit = 12) {
+export function searchCommandIndex(index: any, query: any, limit = 12) {
   const q = String(query ?? "").trim();
   if (!q || !Array.isArray(index)) return [];
   const ranked = [];

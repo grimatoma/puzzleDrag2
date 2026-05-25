@@ -42,7 +42,7 @@ function toolOptions() {
   ];
 }
 
-function ParamField({ param, value, onChange }) {
+function ParamField({ param: any, value: any, onChange: any }) {
   switch (param.type) {
     case "int":
       return (
@@ -51,7 +51,7 @@ function ParamField({ param, value, onChange }) {
           min={param.min ?? 0}
           max={param.max ?? 9999}
           width={80}
-          onChange={(v) => onChange(Number(v))}
+          onChange={(v: any) => onChange(Number(v))}
         />
       );
     case "float":
@@ -62,7 +62,7 @@ function ParamField({ param, value, onChange }) {
           max={param.max ?? 1}
           step={0.05}
           width={80}
-          onChange={(v) => onChange(Number(v))}
+          onChange={(v: any) => onChange(Number(v))}
         />
       );
     case "resourceKey":
@@ -108,7 +108,7 @@ function ParamField({ param, value, onChange }) {
  *   abilities:  Array<{ id, params, trigger? }>
  *   onChange:   (newAbilities) => void
  */
-export default function AbilitiesEditor({ scope, abilities, onChange }) {
+export default function AbilitiesEditor({ scope: any, abilities: any, onChange: any }) {
   const list = Array.isArray(abilities) ? abilities : [];
   const catalog = abilitiesForScope(scope);
 
@@ -130,17 +130,17 @@ export default function AbilitiesEditor({ scope, abilities, onChange }) {
     )
   })), [catalog]);
 
-  function add(abilityId) {
+  function add(abilityId: any) {
     const def = getAbility(abilityId);
     if (!def) return;
     onChange([...list, { id: abilityId, params: defaultParamsFor(abilityId) }]);
   }
 
-  function removeAt(idx) {
+  function removeAt(idx: any) {
     onChange(list.filter((_, i) => i !== idx));
   }
 
-  function updateParam(idx, key, value) {
+  function updateParam(idx: any, key: any, value: any) {
     onChange(list.map((a, i) => i === idx ? { ...a, params: { ...(a.params || {}), [key]: value } } : a));
   }
 
@@ -187,7 +187,7 @@ export default function AbilitiesEditor({ scope, abilities, onChange }) {
               <SmallButton variant="danger" onClick={() => removeAt(idx)}>✕</SmallButton>
             </div>
             <div className="grid grid-cols-2 gap-x-3 gap-y-1.5">
-              {def.params.map((p) => (
+              {def.params.map((p: any) => (
                 <div key={p.key} className="flex items-center gap-2">
                   <span className="text-[11px] font-bold flex-shrink-0" style={{ color: COLORS.ink }}>
                     {p.label}
@@ -195,7 +195,7 @@ export default function AbilitiesEditor({ scope, abilities, onChange }) {
                   <ParamField
                     param={p}
                     value={inst.params?.[p.key]}
-                    onChange={(v) => updateParam(idx, p.key, v)}
+                    onChange={(v: any) => updateParam(idx, p.key, v)}
                   />
                 </div>
               ))}

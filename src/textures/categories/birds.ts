@@ -196,7 +196,7 @@ function drawRooster(ctx) {
   ctx.beginPath(); ctx.moveTo(3, 14); ctx.lineTo(5, 22); ctx.stroke();
 }
 
-function gooseBase(ctx, bodyColor1, bodyColor2, headColor, beakColor) {
+function gooseBase(ctx: CanvasRenderingContext2D, bodyColor1: string, bodyColor2: string, headColor: string, beakColor: string) {
   shadow(ctx, 20);
   // Body — long horizontal
   const g = ctx.createRadialGradient(-4, 0, 3, 0, 4, 18);

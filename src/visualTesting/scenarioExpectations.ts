@@ -6,6 +6,6 @@ export const SCENARIO_EXPECTATIONS = VISUAL_SCENARIOS.map((scenario) => ({
   reviewChecklist: [...(scenario.reviewChecklist ?? [])],
 }));
 
-export function scenarioExpectationById(id) {
+export function scenarioExpectationById(id: any) {
   return SCENARIO_EXPECTATIONS.find((scenario) => scenario.id === id) ?? null;
 }

@@ -40,7 +40,8 @@ import { ICONS as G_ARCHIVED } from "./categories/archivedIcons.js";
 // src/constants.js:329-331). The active icons live under the
 // concatenated form; alias the underscore form so the game's lookup
 // `drawIcon("iron_frame")` resolves instead of falling back to "?".
-function aliasIconKeys(reg) {
+/* eslint-disable-next-line @typescript-eslint/no-explicit-any */
+function aliasIconKeys(reg: Record<string, any>) {
   const aliases = {
     iron_frame: reg.ironframe,
     gem_crown:  reg.gemcrown,
@@ -106,19 +107,22 @@ export const ICON_KEYS = new Set(Object.keys(ICON_REGISTRY));
 
 /** Draw the registered icon for `key` at the canvas's current origin.
  *  Returns true if the key was found and drawn, false otherwise. */
-export function drawIcon(ctx, key) {
-  const entry = ICON_REGISTRY[key];
+export function drawIcon(ctx: CanvasRenderingContext2D, key: string) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const entry = (ICON_REGISTRY as Record<string, any>)[key];
   if (!entry) return false;
   entry.draw(ctx);
   return true;
 }
 
 /** Get the design's display label for a key, or null if unregistered. */
-export function iconLabel(key) {
-  return ICON_REGISTRY[key]?.label ?? null;
+export function iconLabel(key: string) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return (ICON_REGISTRY as Record<string, any>)[key]?.label ?? null;
 }
 
 /** Get the design's accent color hex string for a key, or null. */
-export function iconColor(key) {
-  return ICON_REGISTRY[key]?.color ?? null;
+export function iconColor(key: string) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return (ICON_REGISTRY as Record<string, any>)[key]?.color ?? null;
 }

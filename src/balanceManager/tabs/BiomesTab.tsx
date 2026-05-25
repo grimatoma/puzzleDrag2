@@ -10,9 +10,9 @@ import { COLORS, TextField, FieldRow, Card } from "../shared.jsx";
 
 const TYPE_LABELS = { farm: "Farm", mine: "Mine", harbor: "Harbor" };
 
-export default function BiomesTab({ draft, updateDraft }) {
-  function patch(type, biomeId, fields) {
-    updateDraft((d) => {
+export default function BiomesTab({ draft: any, updateDraft: any }) {
+  function patch(type: any, biomeId: any, fields: any) {
+    updateDraft((d: any) => {
       d.biomes ??= {};
       d.biomes[type] ??= {};
       const next = { ...(d.biomes[type][biomeId] ?? {}), ...fields };
@@ -35,7 +35,7 @@ export default function BiomesTab({ draft, updateDraft }) {
           <div className="text-[12px] font-bold uppercase tracking-wider" style={{ color: COLORS.inkSubtle }}>
             {TYPE_LABELS[type]} biomes
           </div>
-          {(SETTLEMENT_BIOMES[type] ?? []).map((b) => {
+          {(SETTLEMENT_BIOMES[type] ?? []).map((b: any) => {
             const p = (draft.biomes ?? {})[type]?.[b.id] ?? {};
             const eff = {
               name: p.name ?? b.name,
@@ -43,18 +43,18 @@ export default function BiomesTab({ draft, updateDraft }) {
               bonus: p.bonus ?? b.bonus,
               hazards: Array.isArray(p.hazards) ? p.hazards : b.hazards,
             };
-            const setHazard = (i, v) => {
+            const setHazard = (i: any, v: any) => {
               const next = [...(eff.hazards.length ? eff.hazards : ["", ""])];
               next[i] = v;
               patch(type, b.id, { hazards: next });
             };
             return (
               <Card key={b.id} title={`${eff.icon} ${eff.name}`}>
-                <FieldRow label="Name"><TextField value={eff.name} onChange={(v) => patch(type, b.id, { name: v })} width={200} /></FieldRow>
-                <FieldRow label="Icon (emoji)"><TextField value={eff.icon} onChange={(v) => patch(type, b.id, { icon: v })} width={60} /></FieldRow>
-                <FieldRow label="Hazard 1"><TextField value={eff.hazards[0] ?? ""} onChange={(v) => setHazard(0, v)} width={160} /></FieldRow>
-                <FieldRow label="Hazard 2"><TextField value={eff.hazards[1] ?? ""} onChange={(v) => setHazard(1, v)} width={160} /></FieldRow>
-                <FieldRow label="Resource bonus"><TextField value={eff.bonus} onChange={(v) => patch(type, b.id, { bonus: v })} width={220} /></FieldRow>
+                <FieldRow label="Name"><TextField value={eff.name} onChange={(v: any) => patch(type, b.id, { name: v })} width={200} /></FieldRow>
+                <FieldRow label="Icon (emoji)"><TextField value={eff.icon} onChange={(v: any) => patch(type, b.id, { icon: v })} width={60} /></FieldRow>
+                <FieldRow label="Hazard 1"><TextField value={eff.hazards[0] ?? ""} onChange={(v: any) => setHazard(0, v)} width={160} /></FieldRow>
+                <FieldRow label="Hazard 2"><TextField value={eff.hazards[1] ?? ""} onChange={(v: any) => setHazard(1, v)} width={160} /></FieldRow>
+                <FieldRow label="Resource bonus"><TextField value={eff.bonus} onChange={(v: any) => patch(type, b.id, { bonus: v })} width={220} /></FieldRow>
               </Card>
             );
           })}

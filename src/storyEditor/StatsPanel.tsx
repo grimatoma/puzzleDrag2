@@ -8,22 +8,22 @@ import { C, NPCS, Portrait } from "./shared.jsx";
 import { computeStoryStats, NARRATOR_SPEAKER } from "./storyStats.js";
 import MetricCard from "../ui/primitives/MetricCard.jsx";
 
-function formatPercent(n) {
+function formatPercent(n: any) {
   if (!Number.isFinite(n)) return "—";
   return `${Math.round(n * 100)}%`;
 }
 
-function formatAvg(n) {
+function formatAvg(n: any) {
   if (!Number.isFinite(n) || n === 0) return "—";
   return n.toFixed(1);
 }
 
-function formatSigned(n) {
+function formatSigned(n: any) {
   if (!Number.isFinite(n) || n === 0) return "0";
   return n > 0 ? `+${n}` : String(n);
 }
 
-export default function StatsPanel({ draft }) {
+export default function StatsPanel({ draft: any }) {
   const stats = useMemo(() => computeStoryStats(draft), [draft]);
   const topNpcLines = Math.max(1, ...stats.npcs.map((n) => n.lines));
 

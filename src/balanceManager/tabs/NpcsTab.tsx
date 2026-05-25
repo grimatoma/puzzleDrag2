@@ -13,9 +13,9 @@ import { BIOMES, RECIPES } from "../../constants.js";
 import { COLORS, TextField, NumberField, FieldRow, Card, SmallButton, SearchAndAddPicker } from "../shared.jsx";
 import Icon from "../../ui/Icon.jsx";
 
-export default function NpcsTab({ draft, updateDraft }) {
-  function patchNpc(id, fields) {
-    updateDraft((d) => {
+export default function NpcsTab({ draft: any, updateDraft: any }) {
+  function patchNpc(id: any, fields: any) {
+    updateDraft((d: any) => {
       d.npcs ??= {};
       d.npcs.byId ??= {};
       const next = { ...(d.npcs.byId[id] ?? {}), ...fields };
@@ -30,15 +30,15 @@ export default function NpcsTab({ draft, updateDraft }) {
       if (Object.keys(d.npcs).length === 0) delete d.npcs;
     });
   }
-  function patchBand(i, fields) {
-    updateDraft((d) => {
+  function patchBand(i: any, fields: any) {
+    updateDraft((d: any) => {
       d.npcs ??= {};
       d.npcs.bands ??= BOND_BANDS.map(() => ({}));
       d.npcs.bands[i] = { ...(d.npcs.bands[i] ?? {}), ...fields };
       for (const k of Object.keys(d.npcs.bands[i])) {
         if (d.npcs.bands[i][k] === "" || d.npcs.bands[i][k] == null) delete d.npcs.bands[i][k];
       }
-      if (d.npcs.bands.every((b) => Object.keys(b).length === 0)) delete d.npcs.bands;
+      if (d.npcs.bands.every((b: any) => Object.keys(b).length === 0)) delete d.npcs.bands;
       if (Object.keys(d.npcs).length === 0) delete d.npcs;
     });
   }
@@ -77,21 +77,21 @@ export default function NpcsTab({ draft, updateDraft }) {
                 </div>
               </div>
               <FieldRow label="Display name">
-                <TextField value={eff.displayName} onChange={(v) => patchNpc(id, { displayName: v })} width={200} />
+                <TextField value={eff.displayName} onChange={(v: any) => patchNpc(id, { displayName: v })} width={200} />
               </FieldRow>
               <div className="mt-2 pt-2 border-t" style={{ borderColor: COLORS.border }}>
                 <div className="flex items-center gap-2 mb-1">
                   <div className="text-[12px] font-bold" style={{ color: COLORS.ink }}>Loves</div>
                   <div className="text-[10px] italic" style={{ color: COLORS.inkSubtle }}>big bond gain · first item is the favourite</div>
                 </div>
-                <ListEditor items={eff.loves} availableKeys={allResourceKeys} onChange={(v) => patchNpc(id, { loves: v })} />
+                <ListEditor items={eff.loves} availableKeys={allResourceKeys} onChange={(v: any) => patchNpc(id, { loves: v })} />
               </div>
               <div className="mt-2 pt-2 border-t" style={{ borderColor: COLORS.border }}>
                 <div className="flex items-center gap-2 mb-1">
                   <div className="text-[12px] font-bold" style={{ color: COLORS.ink }}>Likes</div>
                   <div className="text-[10px] italic" style={{ color: COLORS.inkSubtle }}>medium bond gain</div>
                 </div>
-                <ListEditor items={eff.likes} availableKeys={allResourceKeys} onChange={(v) => patchNpc(id, { likes: v })} />
+                <ListEditor items={eff.likes} availableKeys={allResourceKeys} onChange={(v: any) => patchNpc(id, { likes: v })} />
               </div>
             </Card>
           );
@@ -109,8 +109,8 @@ export default function NpcsTab({ draft, updateDraft }) {
           return (
             <FieldRow key={i} label={`Bond ${band.lo}–${band.hi}`} hint={`reward × ${modifier}`}>
               <div className="flex items-center gap-2">
-                <TextField value={name} onChange={(v) => patchBand(i, { name: v })} width={110} />
-                <NumberField value={modifier} onChange={(v) => patchBand(i, { modifier: v })} min={0} max={5} step={0.05} width={70} />
+                <TextField value={name} onChange={(v: any) => patchBand(i, { name: v })} width={110} />
+                <NumberField value={modifier} onChange={(v: any) => patchBand(i, { modifier: v })} min={0} max={5} step={0.05} width={70} />
               </div>
             </FieldRow>
           );
@@ -120,9 +120,9 @@ export default function NpcsTab({ draft, updateDraft }) {
   );
 }
 
-function ListEditor({ items, availableKeys, onChange }) {
+function ListEditor({ items: any, availableKeys: any, onChange: any }) {
   const availableOptions = useMemo(() => {
-    return availableKeys.filter((k) => !items.includes(k)).map((k) => ({
+    return availableKeys.filter((k: any) => !items.includes(k)).map((k) => ({
       id: k,
       searchText: k,
       renderNode: (
@@ -138,10 +138,10 @@ function ListEditor({ items, availableKeys, onChange }) {
     }));
   }, [items, availableKeys]);
 
-  function addItem(k) {
+  function addItem(k: any) {
     onChange([...items, k]);
   }
-  function removeItem(idx) {
+  function removeItem(idx: any) {
     const next = [...items];
     next.splice(idx, 1);
     onChange(next);
@@ -155,7 +155,7 @@ function ListEditor({ items, availableKeys, onChange }) {
         </div>
       )}
       <div className="flex flex-wrap gap-2">
-        {items.map((k, i) => {
+        {items.map((k: any, i: any) => {
           const isValid = availableKeys.includes(k);
           return (
             <div

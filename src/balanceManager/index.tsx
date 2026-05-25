@@ -152,7 +152,7 @@ const SECTIONS = [
   { id: "run", label: "Run" },
 ];
 
-function tabNavStyle(active, dormant) {
+function tabNavStyle(active, dormant: any) {
   if (active) {
     return dormant
       ? { background: "#c45c4a", color: "#fff", border: `1px solid ${COLORS.redDeep}` }
@@ -194,7 +194,7 @@ function emptyDraft() {
   };
 }
 
-function cloneDraft(d) {
+function cloneDraft(d: any) {
   if (!d) return emptyDraft();
   const base = emptyDraft();
   for (const k of Object.keys(base)) {
@@ -214,7 +214,7 @@ function readSidebarCollapsed() {
   } catch { return false; }
 }
 
-function writeSidebarCollapsed(v) {
+function writeSidebarCollapsed(v: any) {
   try {
     if (typeof localStorage === "undefined") return;
     localStorage.setItem(SIDEBAR_COLLAPSED_KEY, v ? "1" : "0");
@@ -228,7 +228,7 @@ function readShowDormantTabs() {
   } catch { return false; }
 }
 
-function writeShowDormantTabs(v) {
+function writeShowDormantTabs(v: any) {
   try {
     if (typeof localStorage === "undefined") return;
     localStorage.setItem(SIDEBAR_DORMANT_KEY, v ? "1" : "0");
@@ -272,7 +272,7 @@ export default function BalanceManagerApp() {
   // and back/forward / `hashchange` events rebind the tab.
   useBalanceRouter(tab, setTab, focus, setFocus, tabIds);
 
-  const navigateTo = useCallback((nextTab, nextFocus = null) => {
+  const navigateTo = useCallback((nextTab: any, nextFocus = null) => {
     setTab(nextTab);
     setFocus(nextFocus);
     setMobileNavOpen(false);
@@ -306,7 +306,7 @@ export default function BalanceManagerApp() {
     });
   }, []);
 
-  const updateDraft = useCallback((updater) => {
+  const updateDraft = useCallback((updater: any) => {
     setDraft((prev) => {
       const next = cloneDraft(prev);
       updater(next);
@@ -336,7 +336,7 @@ export default function BalanceManagerApp() {
 
   // Save on Cmd/Ctrl-S, undo/redo on Cmd/Ctrl-Z, command palette on Cmd/Ctrl-K.
   useEffect(() => {
-    function onKey(e) {
+    function onKey(e: any) {
       const mod = e.metaKey || e.ctrlKey;
       if (!mod) return;
       const key = e.key.toLowerCase();
@@ -355,7 +355,7 @@ export default function BalanceManagerApp() {
   // shown in its "expanded" form (labels + section headers).
   const effectiveCollapsed = !isSmallScreen && sidebarCollapsed;
 
-  const handlePaletteSelect = useCallback((entry) => {
+  const handlePaletteSelect = useCallback((entry: any) => {
     if (entry?.tab) navigateTo(entry.tab, entry.id ?? null);
   }, [navigateTo]);
 

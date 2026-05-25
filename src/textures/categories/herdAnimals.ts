@@ -5,7 +5,7 @@ function shadow(ctx, w) {
   ctx.beginPath(); ctx.ellipse(2, 22, w, 4.5, 0, 0, Math.PI*2); ctx.fill();
 }
 
-function pigBase(ctx, fillC1, fillC2, outline) {
+function pigBase(ctx: CanvasRenderingContext2D, fillC1: string, fillC2: string, outline: string) {
   // Body
   const g = ctx.createRadialGradient(-4, -2, 3, 0, 4, 18);
   g.addColorStop(0, fillC1); g.addColorStop(1, fillC2);
@@ -49,8 +49,8 @@ function pigBase(ctx, fillC1, fillC2, outline) {
   ctx.beginPath(); ctx.ellipse(-2, 0, 4, 6, -0.3, 0, Math.PI*2); ctx.fill();
 }
 
-function woolBody(ctx, woolC1, woolC2, outline) {
-  const fluff = (cx, cy, r) => {
+function woolBody(ctx: CanvasRenderingContext2D, woolC1: string, woolC2: string, outline: string) {
+  const fluff = (cx: number, cy: number, r: number) => {
     const g = ctx.createRadialGradient(cx-r*0.4, cy-r*0.4, 1, cx, cy, r);
     g.addColorStop(0, woolC1); g.addColorStop(1, woolC2);
     ctx.fillStyle = g;
@@ -204,7 +204,7 @@ function drawAlpaca(ctx) {
   for (const lx of [-3, 3, 9, 13]) ctx.fillRect(lx, 21, 2.5, 1.5);
 
   // Wooly body — fewer, larger fluff blobs centred over the legs
-  const fluff = (cx, cy, r) => {
+  const fluff = (cx: number, cy: number, r: number) => {
     const g = ctx.createRadialGradient(cx-r*0.4, cy-r*0.4, 1, cx, cy, r);
     g.addColorStop(0, wool); g.addColorStop(1, wool2);
     ctx.fillStyle = g;

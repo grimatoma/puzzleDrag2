@@ -44,7 +44,7 @@ function resourceKeyOptions(includeNone = false) {
 // Build the produces-resource options for a specific tile. The empty-value
 // (no override) entry is labelled with that tile's family-default resource so
 // the user can see what "leave unset" actually produces.
-function producesOptionsFor(tileId) {
+function producesOptionsFor(tileId: any) {
   const set = new Set();
   for (const b of Object.values(BIOMES)) for (const r of [...b.tiles, ...b.resources]) set.add(r.key);
   const opts = [...set].sort().map((k) => ({ value: k, label: k }));
@@ -55,7 +55,7 @@ function producesOptionsFor(tileId) {
   return [placeholder, ...opts];
 }
 
-function tileSwatchProps(tileId) {
+function tileSwatchProps(tileId: any) {
   const tile = TILE_TYPES_MAP[tileId];
   if (!tile) return { color: 0x888888 };
   for (const b of Object.values(BIOMES)) {
@@ -66,7 +66,7 @@ function tileSwatchProps(tileId) {
   return { color: 0x888888 };
 }
 
-export default function PowersTab({ draft, updateDraft }) {
+export default function PowersTab({ draft: any, updateDraft: any }) {
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [selectedTile, setSelectedTile] = useState(TILE_TYPES[0]?.id);
@@ -132,8 +132,8 @@ export default function PowersTab({ draft, updateDraft }) {
     desc:  descPatch ?? itemRow?.description ?? "",
   };
 
-  function patchPower(tileId, patch) {
-    updateDraft((d) => {
+  function patchPower(tileId: any, patch: any) {
+    updateDraft((d: any) => {
       const cur = d.tilePowers[tileId] || {};
       const next = { ...cur, ...patch };
       // Drop empty patches so the JSON stays minimal.
@@ -145,7 +145,7 @@ export default function PowersTab({ draft, updateDraft }) {
     });
   }
 
-  function setAbilitiesForTile(tileId, list) {
+  function setAbilitiesForTile(tileId: any, list: any) {
     // An empty array is a meaningful instruction — "remove all abilities
     // from this tile" — so we keep an empty array entry rather than
     // dropping it. The merge layer will then recompute `effects` to the
@@ -153,7 +153,7 @@ export default function PowersTab({ draft, updateDraft }) {
     patchPower(tileId, { abilities: Array.isArray(list) ? list : [] });
   }
 
-  function setProduces(tileId, resourceKey) {
+  function setProduces(tileId: any, resourceKey: any) {
     // If the user picked the family default, clear the override so this tile
     // stays in sync with future family-default changes. patchPower already
     // drops falsy producesResource values, so passing "" is equivalent to
@@ -166,25 +166,25 @@ export default function PowersTab({ draft, updateDraft }) {
     }
   }
 
-  function patchUnlock(tileId, patch) {
-    updateDraft((d) => {
+  function patchUnlock(tileId: any, patch: any) {
+    updateDraft((d: any) => {
       const merged = { ...(d.tileUnlocks[tileId] || {}), ...patch };
       d.tileUnlocks[tileId] = merged;
     });
   }
 
-  function setUnlockMethod(tileId, method) {
-    updateDraft((d) => {
+  function setUnlockMethod(tileId: any, method: any) {
+    updateDraft((d: any) => {
       d.tileUnlocks[tileId] = { method, ...defaultsForTileDiscoveryMethod(method) };
     });
   }
 
-  function revertUnlock(tileId) {
-    updateDraft((d) => { delete d.tileUnlocks[tileId]; });
+  function revertUnlock(tileId: any) {
+    updateDraft((d: any) => { delete d.tileUnlocks[tileId]; });
   }
 
-  function patchItemMeta(tileId, fields) {
-    updateDraft((d) => {
+  function patchItemMeta(tileId: any, fields: any) {
+    updateDraft((d: any) => {
       const cur = d.items[tileId] || {};
       const next = { ...cur, ...fields };
       // Drop empty patches so the JSON stays minimal.
@@ -196,22 +196,22 @@ export default function PowersTab({ draft, updateDraft }) {
     });
   }
 
-  function patchTileDesc(tileId, value) {
-    updateDraft((d) => {
+  function patchTileDesc(tileId: any, value: any) {
+    updateDraft((d: any) => {
       if (!value) delete d.tileDescriptions[tileId];
       else d.tileDescriptions[tileId] = value;
     });
   }
 
-  function revertBasics(tileId) {
-    updateDraft((d) => {
+  function revertBasics(tileId: any) {
+    updateDraft((d: any) => {
       delete d.items[tileId];
       delete d.tileDescriptions[tileId];
     });
   }
 
-  function revertTile(tileId) {
-    updateDraft((d) => {
+  function revertTile(tileId: any) {
+    updateDraft((d: any) => {
       delete d.tilePowers[tileId];
       delete d.tileUnlocks[tileId];
       delete d.items[tileId];
@@ -321,21 +321,21 @@ export default function PowersTab({ draft, updateDraft }) {
                   <div className="grid grid-cols-2 gap-x-3 gap-y-2">
                     <div>
                       <Label>Label</Label>
-                      <TextField value={effMeta.label} onChange={(v) => patchItemMeta(selected.id, { label: v })} />
+                      <TextField value={effMeta.label} onChange={(v: any) => patchItemMeta(selected.id, { label: v })} />
                     </div>
                     <div>
                       <Label>Sale value</Label>
                       <NumberField value={effMeta.value} min={0} max={9999} width={90}
-                        onChange={(v) => patchItemMeta(selected.id, { value: v })} />
+                        onChange={(v: any) => patchItemMeta(selected.id, { value: v })} />
                     </div>
                     <div>
                       <Label>Color</Label>
-                      <ColorField value={effMeta.color} onChange={(v) => patchItemMeta(selected.id, { color: v })} />
+                      <ColorField value={effMeta.color} onChange={(v: any) => patchItemMeta(selected.id, { color: v })} />
                     </div>
                     <div>
                       <Label>Base chain target</Label>
                       <Select value={effMeta.next} options={chainTargetOptions}
-                        onChange={(v) => patchItemMeta(selected.id, { next: v })} />
+                        onChange={(v: any) => patchItemMeta(selected.id, { next: v })} />
                     </div>
                     <div className="col-span-2">
                       <Label>Tile-collection description</Label>
@@ -343,7 +343,7 @@ export default function PowersTab({ draft, updateDraft }) {
                         rows={2}
                         value={effMeta.desc}
                         placeholder="Long-form description for the Tile Collection screen."
-                        onChange={(v) => patchTileDesc(selected.id, v)}
+                        onChange={(v: any) => patchTileDesc(selected.id, v)}
                       />
                     </div>
                     {metaDirty && (
@@ -368,7 +368,7 @@ export default function PowersTab({ draft, updateDraft }) {
                     <Select
                       value={effDiscovery.method}
                       options={DISCOVERY_METHOD_OPTIONS}
-                      onChange={(v) => setUnlockMethod(selected.id, v)}
+                      onChange={(v: any) => setUnlockMethod(selected.id, v)}
                     />
                   </div>
                   {(getTileDiscoveryMethod(effDiscovery.method)?.params ?? []).map((p) => {
@@ -379,7 +379,7 @@ export default function PowersTab({ draft, updateDraft }) {
                           <Select
                             value={effDiscovery[p.key] ?? ""}
                             options={sourceOptions}
-                            onChange={(v) => patchUnlock(selected.id, { [p.key]: v })}
+                            onChange={(v: any) => patchUnlock(selected.id, { [p.key]: v })}
                           />
                         </div>
                       );
@@ -393,7 +393,7 @@ export default function PowersTab({ draft, updateDraft }) {
                             min={p.min ?? 0}
                             max={p.max ?? 9999}
                             width={90}
-                            onChange={(v) => patchUnlock(selected.id, { [p.key]: v })}
+                            onChange={(v: any) => patchUnlock(selected.id, { [p.key]: v })}
                           />
                         </div>
                       );
@@ -427,7 +427,7 @@ export default function PowersTab({ draft, updateDraft }) {
                   <Select
                     value={effProduces}
                     options={producesOptions}
-                    onChange={(v) => setProduces(selected.id, v)}
+                    onChange={(v: any) => setProduces(selected.id, v)}
                     width={220}
                   />
                   {draftProduces !== null && (
@@ -447,7 +447,7 @@ export default function PowersTab({ draft, updateDraft }) {
               <AbilitiesEditor
                 scope="tile"
                 abilities={abilities}
-                onChange={(next) => setAbilitiesForTile(selected.id, next)}
+                onChange={(next: any) => setAbilitiesForTile(selected.id, next)}
               />
             </CardAttachmentFooter>
           </>
@@ -457,7 +457,7 @@ export default function PowersTab({ draft, updateDraft }) {
   );
 }
 
-function Label({ children }) {
+function Label({ children: any }) {
   return (
     <div className="text-[10px] font-bold uppercase tracking-wide mb-0.5" style={{ color: COLORS.inkSubtle }}>
       {children}

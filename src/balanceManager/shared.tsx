@@ -16,53 +16,53 @@ import StatusChip from "../ui/primitives/StatusChip.jsx";
 
 export const COLORS = UI_COLORS;
 
-export function NumberField({ value, onChange, min = 0, max = 9999, step = 1, width = 70 }) {
+export function NumberField({ value: any, onChange: any, min = 0, max = 9999, step = 1, width = 70 }) {
   return (
     <BaseNumberInput
       value={value ?? 0}
       min={min}
       max={max}
       step={step}
-      onChange={(e) => onChange(Number(e.target.value))}
+      onChange={(e: any) => onChange(Number(e.target.value))}
       className="!h-auto px-1.5 py-1 text-[12px]"
       style={{ width }}
     />
   );
 }
 
-export function TextField({ value, onChange, placeholder = "", width = "100%" }) {
+export function TextField({ value: any, onChange: any, placeholder = "", width = "100%" }) {
   return (
     <BaseTextInput
       value={value ?? ""}
       placeholder={placeholder}
-      onChange={(e) => onChange(e.target.value)}
+      onChange={(e: any) => onChange(e.target.value)}
       className="!h-auto px-2 py-1 text-[12px]"
       style={{ width }}
     />
   );
 }
 
-export function TextArea({ value, onChange, rows = 3, placeholder = "" }) {
+export function TextArea({ value: any, onChange: any, rows = 3, placeholder = "" }) {
   return (
     <BaseTextArea
       value={value ?? ""}
       placeholder={placeholder}
       rows={rows}
-      onChange={(e) => onChange(e.target.value)}
+      onChange={(e: any) => onChange(e.target.value)}
       className="w-full px-2 py-1 text-[12px]"
     />
   );
 }
 
-export function Select({ value, onChange, options, width = "100%" }) {
+export function Select({ value: any, onChange: any, options: any, width = "100%" }) {
   return (
     <BaseSelectField
       value={value ?? ""}
-      onChange={(e) => onChange(e.target.value)}
+      onChange={(e: any) => onChange(e.target.value)}
       className="!h-auto px-2 py-1 text-[12px]"
       style={{ width }}
     >
-      {options.map((opt) => (
+      {options.map((opt: any) => (
         <option key={opt.value ?? "_none"} value={opt.value ?? ""}>
           {opt.label}
         </option>
@@ -71,11 +71,11 @@ export function Select({ value, onChange, options, width = "100%" }) {
   );
 }
 
-export function ColorField({ value, onChange }) {
+export function ColorField({ value: any, onChange: any }) {
   // value is a number (0xRRGGBB). Convert to/from hex string for <input type=color>.
-  const toHex = (n) =>
+  const toHex = (n: any) =>
     "#" + (Number.isFinite(n) ? n : 0).toString(16).padStart(6, "0").slice(-6);
-  const parse = (str) => parseInt(String(str).replace(/^#/, ""), 16);
+  const parse = (str: any) => parseInt(String(str).replace(/^#/, ""), 16);
   return (
     <div className="flex items-center gap-1">
       <input
@@ -113,7 +113,7 @@ export function SmallButton({ children, onClick, variant = "default", disabled =
   );
 }
 
-export function Pill({ children, color = COLORS.inkSubtle, bg = COLORS.parchmentDeep }) {
+export function Pill({ children: any, color = COLORS.inkSubtle, bg = COLORS.parchmentDeep }) {
   return (
     <StatusChip
       size="xs"
@@ -162,19 +162,19 @@ export function Card({ children, className = "", title, accent, id, cardRef, sty
   );
 }
 
-export function SearchBar({ value, onChange, placeholder = "Search…" }) {
+export function SearchBar({ value: any, onChange: any, placeholder = "Search…" }) {
   return (
     <BaseSearchInput
       value={value}
       placeholder={placeholder}
-      onChange={(e) => onChange(e.target.value)}
+      onChange={(e: any) => onChange(e.target.value)}
       onClear={() => onChange("")}
       inputClassName="!h-auto py-1.5 text-[12px]"
     />
   );
 }
 
-export function FilterBar({ children, className = "" }) {
+export function FilterBar({ children: any, className = "" }) {
   return (
     <div className={`flex items-center gap-2 flex-wrap ${className}`}>
       {children}
@@ -208,7 +208,7 @@ export function SegmentedFilter({ options, value, onChange, ariaLabel, className
 }
 
 /** Hex (number) → CSS hex string. */
-export function hexToCss(n) {
+export function hexToCss(n: any) {
   if (!Number.isFinite(n)) return "#000000";
   return "#" + n.toString(16).padStart(6, "0").slice(-6);
 }
@@ -236,7 +236,7 @@ export function SearchAndAddPicker({
   label = "Add Item",
   placeholder = "Search...",
   options = [],
-  onSelect,
+  onSelect: any,
   gridClass = "grid-cols-2 md:grid-cols-3"
 }) {
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -259,7 +259,7 @@ export function SearchAndAddPicker({
         <div className="flex flex-col gap-2">
           <BaseSearchInput
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(e: any) => setQuery(e.target.value)}
             onClear={() => setQuery("")}
             placeholder={placeholder}
             inputClassName="!h-auto py-1.5 text-[12px]"

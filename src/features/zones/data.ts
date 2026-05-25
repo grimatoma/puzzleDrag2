@@ -142,7 +142,7 @@ export function pickByZoneSeasonDrops({
   const r = (typeof rng === "function" ? rng() : Math.random()) * total;
   let acc = 0;
   let chosenZoneCat = null;
-  for (const [zoneCat, pct] of Object.entries(drops)) {
+  for (const [zoneCat, pct] of Object.entries(drops) as [string, number][]) {
     if (pct <= 0) continue;
     acc += pct;
     if (r <= acc) {
@@ -363,8 +363,9 @@ export function isExpeditionFood(foodKey) {
  * Turns one unit of `foodKey` is worth on an expedition from `zoneId`,
  * including that zone's building bonuses (master doc §VI). 0 if it isn't food.
  */
-export function expeditionTurnsForFood(state, foodKey, zoneId = state?.mapCurrent ?? DEFAULT_ZONE) {
-  const base = EXPEDITION_FOOD_TURNS[foodKey];
+export function expeditionTurnsForFood(state: any, foodKey: string, zoneId?: string): number {
+  if (zoneId === undefined) zoneId = (state?.mapCurrent ?? DEFAULT_ZONE) as string;
+  const base = (EXPEDITION_FOOD_TURNS as any)[foodKey];
   if (base == null) return 0;
   let turns = base;
   const built = state?.built?.[zoneId] ?? {};
@@ -380,7 +381,8 @@ export function expeditionTurnsForFood(state, foodKey, zoneId = state?.mapCurren
  * Total turn budget a `{ foodKey: count }` supply stockpile buys for an
  * expedition from `zoneId` — the sum of per-food turns × counts.
  */
-export function expeditionTurnsFromSupply(state, supply, zoneId = state?.mapCurrent ?? DEFAULT_ZONE) {
+export function expeditionTurnsFromSupply(state: any, supply: any, zoneId?: string): number {
+  if (zoneId === undefined) zoneId = (state?.mapCurrent ?? DEFAULT_ZONE) as string;
   let total = 0;
   for (const [foodKey, count] of Object.entries(supply ?? {})) {
     total += expeditionTurnsForFood(state, foodKey, zoneId) * Math.max(0, Math.floor(count));
@@ -440,7 +442,7 @@ export function grantEarnedHearthTokens(state) {
   for (const zoneId of Object.keys(map)) {
     if (!map[zoneId]?.founded || !settlementCompleted(state, zoneId)) continue;
     const type = settlementTypeForZone(zoneId);
-    const tok = type && HEARTH_TOKEN_FOR_TYPE[type];
+    const tok = type && (HEARTH_TOKEN_FOR_TYPE as any)[type];
     if (!tok || (next[tok] ?? 0) >= 1) continue;
     if (next === h) next = { ...h };
     next[tok] = 1;
@@ -475,11 +477,11 @@ export function settlementBiome(state, zoneId) {
   const id = settlementBiomeId(state, zoneId);
   if (!id) return null;
   const type = settlementTypeForZone(zoneId);
-  return (SETTLEMENT_BIOMES[type] ?? []).find((b) => b.id === id) ?? null;
+  return ((SETTLEMENT_BIOMES as any)[type ?? ""] ?? []).find((b: any) => b.id === id) ?? null;
 }
 
 /** Hazards that appear in every round at `zoneId` — the biome's, falling back to the static per-zone list. */
-export function settlementHazards(state, zoneId) {
+export function settlementHazards(state: any, zoneId: string): string[] {
   const b = settlementBiome(state, zoneId);
   if (b && Array.isArray(b.hazards)) return b.hazards;
   return ZONES[zoneId]?.dangers ?? [];

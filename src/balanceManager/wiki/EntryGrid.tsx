@@ -1,7 +1,7 @@
 import Icon from "../../ui/Icon.jsx";
 import { COLORS, hexToCss } from "../shared.jsx";
 
-function colorBarStyle(color) {
+function colorBarStyle(color: any) {
   if (color === undefined || color === null) return null;
   const css = typeof color === "number" ? hexToCss(color) : String(color);
   return {
@@ -12,7 +12,7 @@ function colorBarStyle(color) {
   };
 }
 
-export default function EntryGrid({ entries, emptyLabel = "No entries." }) {
+export default function EntryGrid({ entries: any, emptyLabel = "No entries." }) {
   if (!entries || entries.length === 0) {
     return (
       <div
@@ -26,7 +26,7 @@ export default function EntryGrid({ entries, emptyLabel = "No entries." }) {
 
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
-      {entries.map((entry) => {
+      {entries.map((entry: any) => {
         const bar = colorBarStyle(entry.color);
         return (
           <div

@@ -24,7 +24,7 @@ const importSchema = z.object({
   tileDescriptions: sectionSchema.optional(),
 }).strip();
 
-function pruneEmpty(obj) {
+function pruneEmpty(obj: any) {
   if (!obj || typeof obj !== "object") return obj;
   if (Array.isArray(obj)) return obj;
   const out = {};
@@ -42,7 +42,7 @@ function pruneEmpty(obj) {
   return out;
 }
 
-function relativeTime(iso) {
+function relativeTime(iso: any) {
   if (!iso) return "";
   const t = Date.parse(iso);
   if (!Number.isFinite(t)) return "";
@@ -56,7 +56,7 @@ function relativeTime(iso) {
   return `${day}d ago`;
 }
 
-export default function ExportTab({ draft, updateDraft }) {
+export default function ExportTab({ draft: any, updateDraft: any }) {
   const [importText, setImportText] = useState("");
   const [importError, setImportError] = useState("");
   const [snapshotName, setSnapshotName] = useState("");
@@ -67,7 +67,7 @@ export default function ExportTab({ draft, updateDraft }) {
   const diff = useMemo(() => draftDiff(balanceFile, draft), [draft]);
   const diffSections = useMemo(() => Object.entries(diff.sections).sort(([a], [b]) => a.localeCompare(b)), [diff]);
 
-  const toggleSection = (name) => {
+  const toggleSection = (name: any) => {
     setDiffOpen((prev) => {
       const next = new Set(prev);
       if (next.has(name)) next.delete(name); else next.add(name);
@@ -100,7 +100,7 @@ export default function ExportTab({ draft, updateDraft }) {
 
   function bumpSnapshots() { setSnapshots(listSnapshots()); }
 
-  function flashSnapshot(message) {
+  function flashSnapshot(message: any) {
     setSnapshotMessage(message);
     setSnapshotError("");
     setTimeout(() => setSnapshotMessage(""), 2400);
@@ -118,21 +118,21 @@ export default function ExportTab({ draft, updateDraft }) {
     bumpSnapshots();
   }
 
-  function handleLoadSnapshot(name) {
+  function handleLoadSnapshot(name: any) {
     const loaded = loadSnapshot(name);
     if (!loaded) {
       setSnapshotError(`Could not load snapshot “${name}”.`);
       return;
     }
     if (!confirm(`Replace the current draft with snapshot “${name}”? Your unsaved tab edits will be lost.`)) return;
-    updateDraft((d) => {
+    updateDraft((d: any) => {
       for (const k of Object.keys(d)) delete d[k];
       Object.assign(d, loaded);
     });
     flashSnapshot(`Loaded snapshot “${name}”`);
   }
 
-  function handleDeleteSnapshot(name) {
+  function handleDeleteSnapshot(name: any) {
     if (!confirm(`Delete snapshot “${name}”? This cannot be undone.`)) return;
     deleteSnapshot(name);
     flashSnapshot(`Deleted snapshot “${name}”`);
@@ -144,7 +144,7 @@ export default function ExportTab({ draft, updateDraft }) {
     try {
       const parsedRaw = JSON.parse(importText);
       const parsed = importSchema.parse(parsedRaw);
-      updateDraft((d) => {
+      updateDraft((d: any) => {
         // Replace each known section if present in the import, else leave it.
         const sections = [
           "upgradeThresholds", "items", "recipes", "buildings",

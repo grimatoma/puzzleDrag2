@@ -1,6 +1,6 @@
 // Flowers.
 
-function drawPansy(ctx) {
+function drawPansy(ctx: CanvasRenderingContext2D) {
   // Soil shadow
   ctx.fillStyle = "rgba(0,0,0,0.22)";
   ctx.beginPath(); ctx.ellipse(0, 22, 18, 4, 0, 0, Math.PI*2); ctx.fill();
@@ -17,7 +17,7 @@ function drawPansy(ctx) {
   // Pansy face — 5 broad overlapping petals arranged in the classic
   // two-up / two-side / one-down configuration. Drawn back-to-front so the
   // bottom petal layers on top.
-  const drawPetal = (cx, cy, rx, ry, angle, c1, c2, outline = "#2a0a4a") => {
+  const drawPetal = (cx: number, cy: number, rx: number, ry: number, angle: number, c1: string, c2: string, outline = "#2a0a4a") => {
     const grad = ctx.createRadialGradient(cx, cy, 1, cx, cy, Math.max(rx, ry));
     grad.addColorStop(0, c1);
     grad.addColorStop(0.7, c2);
@@ -65,7 +65,7 @@ function drawPansy(ctx) {
   ctx.strokeStyle = "#a8740a"; ctx.lineWidth = 1; ctx.stroke();
 }
 
-function drawWaterLily(ctx) {
+function drawWaterLily(ctx: CanvasRenderingContext2D) {
   const water = ctx.createRadialGradient(0, 4, 4, 0, 4, 26);
   water.addColorStop(0, "rgba(120,180,200,0.6)"); water.addColorStop(1, "rgba(20,60,90,0.1)");
   ctx.fillStyle = water;
@@ -87,7 +87,7 @@ function drawWaterLily(ctx) {
     const a = Math.PI*0.55 + (i * Math.PI*0.9 / 6);
     ctx.beginPath(); ctx.moveTo(3, 4); ctx.lineTo(Math.cos(a)*20, 12 + Math.sin(a)*12); ctx.stroke();
   }
-  const drawFlowerPetal = (angle, len, w, c1, c2) => {
+  const drawFlowerPetal = (angle: number, len: number, w: number, c1: string, c2: string) => {
     ctx.save(); ctx.translate(0, -2); ctx.rotate(angle);
     const grad = ctx.createLinearGradient(0, 0, 0, -len);
     grad.addColorStop(0, c1); grad.addColorStop(1, c2);

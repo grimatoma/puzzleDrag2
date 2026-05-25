@@ -18,7 +18,7 @@ const DEFAULT_OPTS = Object.freeze({
   maxPaths: 64,    // cap on the number of full paths returned
 });
 
-const asArr = (v) => Array.isArray(v) ? v : (typeof v === "string" && v ? [v] : []);
+const asArr = (v: any) => Array.isArray(v) ? v : (typeof v === "string" && v ? [v] : []);
 
 function emptyEffects() {
   return {
@@ -31,7 +31,7 @@ function emptyEffects() {
   };
 }
 
-function applyChoiceEffects(target, choice) {
+function applyChoiceEffects(target: any, choice: any) {
   const o = choice?.outcome || {};
   if (Number.isFinite(o.coins)) target.coins += o.coins;
   if (Number.isFinite(o.embers)) target.embers += o.embers;
@@ -52,11 +52,11 @@ function applyChoiceEffects(target, choice) {
   }
 }
 
-function applyOnComplete(target, beat) {
+function applyOnComplete(target: any, beat: any) {
   for (const f of asArr(beat?.onComplete?.setFlag)) target.flagsSet.add(f);
 }
 
-function cloneEffects(e) {
+function cloneEffects(e: any) {
   return {
     coins: e.coins, embers: e.embers, coreIngots: e.coreIngots, gems: e.gems,
     bondDeltas: { ...e.bondDeltas },
@@ -67,7 +67,7 @@ function cloneEffects(e) {
   };
 }
 
-function finalisePath(path, effects, terminalBeat, terminalReason) {
+function finalisePath(path: any, effects: any, terminalBeat: any, terminalReason: any) {
   return {
     beats: [...path.beats],
     choices: [...path.choices],
@@ -95,7 +95,7 @@ function finalisePath(path, effects, terminalBeat, terminalReason) {
  * - Each path carries the sequence of `beats[]` visited and the
  *   `choices[]` taken between them, plus a per-path `effects` aggregate.
  */
-export function enumerateStoryPaths(startBeatId, draft, options = DEFAULT_OPTS) {
+export function enumerateStoryPaths(startBeatId: any, draft: any, options = DEFAULT_OPTS) {
   const opts = { ...DEFAULT_OPTS, ...(options || {}) };
   const startBeat = effectiveBeat(startBeatId, draft);
   if (!startBeat) return { paths: [], truncated: false };
@@ -103,7 +103,7 @@ export function enumerateStoryPaths(startBeatId, draft, options = DEFAULT_OPTS) 
   const out = [];
   let truncated = false;
 
-  const walk = (beatId, path, effects, depth) => {
+  const walk = (beatId: any, path: any, effects: any, depth: any) => {
     if (out.length >= opts.maxPaths) { truncated = true; return; }
     const beat = effectiveBeat(beatId, draft);
     if (!beat) {
@@ -152,7 +152,7 @@ export function enumerateStoryPaths(startBeatId, draft, options = DEFAULT_OPTS) 
 }
 
 /** Summary line for a list of paths — useful for UI labels. */
-export function summarisePaths(walkResult) {
+export function summarisePaths(walkResult: any) {
   if (!walkResult || !Array.isArray(walkResult.paths)) return "no paths";
   const n = walkResult.paths.length;
   const truncated = walkResult.truncated;

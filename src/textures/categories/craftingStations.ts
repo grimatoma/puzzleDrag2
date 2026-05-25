@@ -8,7 +8,7 @@ function drawShadow(ctx, w = 22, h = 4) {
   ctx.fill();
 }
 
-function drawBakeryStation(ctx) {
+function drawBakeryStation(ctx: CanvasRenderingContext2D) {
   drawShadow(ctx, 22, 4);
   // Brick oven dome
   const dome = ctx.createRadialGradient(-4, -4, 4, 0, 0, 22);
@@ -78,7 +78,7 @@ function drawBakeryStation(ctx) {
   ctx.fill();
 }
 
-function drawForgeStation(ctx) {
+function drawForgeStation(ctx: CanvasRenderingContext2D) {
   drawShadow(ctx, 22, 4);
   // Forge stone base
   ctx.fillStyle = "#5a4a3a";
@@ -152,7 +152,7 @@ function drawForgeStation(ctx) {
   ctx.stroke();
 }
 
-function drawLarderStation(ctx) {
+function drawLarderStation(ctx: CanvasRenderingContext2D) {
   drawShadow(ctx, 22, 4);
   // Cabinet body
   const body = ctx.createLinearGradient(0, -18, 0, 22);
@@ -234,7 +234,7 @@ function drawLarderStation(ctx) {
   ctx.fill();
 }
 
-function drawWorkshopStation(ctx) {
+function drawWorkshopStation(ctx: CanvasRenderingContext2D) {
   drawShadow(ctx, 22, 4);
   // Workbench
   ctx.fillStyle = "#a87838";
@@ -339,7 +339,7 @@ function drawWorkshopStation(ctx) {
   });
 }
 
-function drawDecorStation(ctx) {
+function drawDecorStation(ctx: CanvasRenderingContext2D) {
   drawShadow(ctx, 22, 4);
   // Vase
   const body = ctx.createLinearGradient(0, 4, 0, 22);

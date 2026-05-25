@@ -13,7 +13,7 @@ import { ITEMS, RECIPES, BUILDINGS } from "../constants.js";
 import { STORY_BEATS, SIDE_BEATS } from "../story.js";
 import { canonicalRecipeEntries } from "./recipeCatalog.js";
 
-function asArrayValues(v) {
+function asArrayValues(v: any) {
   return Array.isArray(v) ? v : Object.values(v || {});
 }
 
@@ -31,7 +31,7 @@ export function buildItemReferenceIndex({
   storyBeats = STORY_BEATS, sideBeats = SIDE_BEATS,
 } = {}) {
   const out = new Map();
-  const ensure = (id) => {
+  const ensure = (id: any) => {
     if (!out.has(id)) out.set(id, []);
     return out.get(id);
   };
@@ -79,7 +79,7 @@ export function buildItemReferenceIndex({
 }
 
 /** Pretty-friendly grouping of an item's usages by `kind`. */
-export function groupUsagesByKind(usages) {
+export function groupUsagesByKind(usages: any) {
   const groups = new Map();
   for (const u of usages || []) {
     if (!groups.has(u.kind)) groups.set(u.kind, []);
@@ -89,12 +89,12 @@ export function groupUsagesByKind(usages) {
 }
 
 /** Convenience: usages of a single item id (returns []). */
-export function usagesFor(itemId, index) {
+export function usagesFor(itemId: any, index: any) {
   const idx = index || buildItemReferenceIndex();
   return idx.get(itemId) || [];
 }
 
 /** Total usage count across every kind — handy for badges. */
-export function totalUsageCount(usages) {
+export function totalUsageCount(usages: any) {
   return (usages || []).length;
 }

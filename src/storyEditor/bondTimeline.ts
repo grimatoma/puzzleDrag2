@@ -13,14 +13,14 @@
 
 import { effectiveBeat, allBeatIds, NPCS } from "./shared.jsx";
 
-const STORY_ACT_ORDER = (beatId, beat) => {
+const STORY_ACT_ORDER = (beatId: any, beat: any) => {
   if (!beat) return [99, beatId];
   if (Number.isFinite(beat.act)) return [beat.act, beatId];
   if (beat.side) return [4, beatId];
   return [3, beatId];
 };
 
-export function computeBondTimeline(draft) {
+export function computeBondTimeline(draft: any) {
   const ids = allBeatIds(draft);
   const beats = ids.map((id) => ({ id, beat: effectiveBeat(id, draft) }))
     .filter(({ beat }) => beat);
@@ -32,7 +32,7 @@ export function computeBondTimeline(draft) {
   });
 
   const byNpc = new Map();
-  const ensure = (npc) => {
+  const ensure = (npc: any) => {
     if (!byNpc.has(npc)) byNpc.set(npc, { npc, total: 0, max: 0, min: 0, stops: [] });
     return byNpc.get(npc);
   };
@@ -68,6 +68,6 @@ export function computeBondTimeline(draft) {
 }
 
 /** A single number summarising the net bond change across every choice. */
-export function totalAbsoluteBondDelta(timeline) {
-  return timeline.reduce((s, row) => s + row.stops.reduce((ss, stop) => ss + Math.abs(stop.amount), 0), 0);
+export function totalAbsoluteBondDelta(timeline: any) {
+  return timeline.reduce((s: any, row: any) => s + row.stops.reduce((ss: any, stop: any) => ss + Math.abs(stop.amount), 0), 0);
 }

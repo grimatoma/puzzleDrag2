@@ -19,7 +19,7 @@ const SAMPLE_PLAYS = {
   ],
 };
 
-function TintSwatch({ tint }) {
+function TintSwatch({ tint: any }) {
   const empty = tint == null;
   return (
     <span
@@ -42,7 +42,7 @@ function TintSwatch({ tint }) {
 export default function AnimationsDemoTab() {
   const iframeRef = useRef(null);
 
-  const postPlay = (name, tint, pattern) => {
+  const postPlay = (name: any, tint: any, pattern: any) => {
     iframeRef.current?.contentWindow?.postMessage(
       { type: "HEARTH_PLAY_ANIMATION", name, tint, pattern },
       "*"
@@ -109,7 +109,7 @@ export default function AnimationsDemoTab() {
                   No sample plays defined.
                 </div>
               )}
-              {plays.map((p, i) => (
+              {plays.map((p: any, i: any) => (
                 <div key={i} className="flex items-center gap-1">
                   <TintSwatch tint={p.tint} />
                   <SmallButton onClick={() => postPlay(name, p.tint, p.pattern)}>

@@ -14,14 +14,14 @@ import { COLORS, Card } from "../shared.jsx";
 const PATH_LABEL = { coexist: "🤝 Coexist", driveout: "⚔ Drive Out" };
 const TYPE_LABEL = { farm: "Farm", mine: "Mine", harbor: "Harbor" };
 
-function CostStr({ cost }) {
+function CostStr({ cost: any }) {
   const parts = [];
   if ((cost.embers ?? 0) > 0) parts.push(`🔥 ${cost.embers}`);
   if ((cost.coreIngots ?? 0) > 0) parts.push(`▣ ${cost.coreIngots}`);
   return <span style={{ color: COLORS.ink }}>{parts.join(" · ")}</span>;
 }
 
-function EffectStr({ effect }) {
+function EffectStr({ effect: any }) {
   if (!effect) return <span style={{ color: COLORS.inkSubtle }}>—</span>;
   return (
     <span style={{ color: COLORS.ink }}>

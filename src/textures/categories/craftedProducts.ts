@@ -599,7 +599,7 @@ function drawMineDirt(ctx: CanvasRenderingContext2D) {
   // Pebbles / clods scattered across the surface — irregular, varied sizes
   ctx.strokeStyle = "rgba(20,12,4,0.55)";
   ctx.lineWidth = 0.7;
-  const clods = [
+  const clods: [number, number, number, string][] = [
     [-12,  4, 3.0, "#4a2e18"],
     [ -2,  8, 2.4, "#3a2412"],
     [  8,  6, 2.8, "#4a2e18"],

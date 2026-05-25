@@ -2,7 +2,7 @@
 // No imports needed — pure Canvas 2D API drawing.
 
 // Canvas path helper for rounded rectangles
-function rr(ctx, x, y, w, h, r) {
+function rr(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
   ctx.beginPath();
   ctx.moveTo(x + r, y);
   ctx.arcTo(x + w, y, x + w, y + h, r);
@@ -21,7 +21,7 @@ const FARM_HANDLED_KEYS = new Set([
   "soup",
 ]);
 
-export function drawFarmTileIcon(ctx, key) {
+export function drawFarmTileIcon(ctx: CanvasRenderingContext2D, key: string) {
   if (!FARM_HANDLED_KEYS.has(key)) return false;
   if (key === "tile_grass_hay") {
     // Golden bundle of dried straw tied with twine
@@ -859,7 +859,7 @@ export function drawFarmTileIcon(ctx, key) {
     ctx.ellipse(0, 22, 22, 4, 0, 0, Math.PI * 2);
     ctx.fill();
     // Helper to draw a heart-shaped clover leaf
-    const drawLeaf = (cx, cy, r, angle, lightHex, darkHex) => {
+    const drawLeaf = (cx: number, cy: number, r: number, angle: number, lightHex: string, darkHex: string) => {
       ctx.save();
       ctx.translate(cx, cy);
       ctx.rotate(angle);
@@ -955,7 +955,7 @@ export function drawFarmTileIcon(ctx, key) {
     ctx.lineTo(-2, 18);
     ctx.stroke();
     // Leafy green top — three feathery sprigs
-    const drawSprig = (x0, sway, h, color, dark) => {
+    const drawSprig = (x0: number, sway: number, h: number, color: string, dark: string) => {
       ctx.strokeStyle = dark;
       ctx.lineWidth = 3.5;
       ctx.beginPath();
@@ -1102,7 +1102,7 @@ export function drawFarmTileIcon(ctx, key) {
     ctx.quadraticCurveTo(1, 25, -1, 27);
     ctx.stroke();
     // Green leaves up top — three lobed leaves
-    const drawLeaf = (x0, sway, h, light, dark) => {
+    const drawLeaf = (x0: number, sway: number, h: number, light: string, dark: string) => {
       ctx.fillStyle = light;
       ctx.strokeStyle = dark;
       ctx.lineWidth = 1.3;
@@ -1161,7 +1161,7 @@ export function drawFarmTileIcon(ctx, key) {
     ctx.quadraticCurveTo(2, 26, 0, 28);
     ctx.stroke();
     // Leaves with red-pink veins
-    const drawBeetLeaf = (x0, sway, h, ang) => {
+    const drawBeetLeaf = (x0: number, sway: number, h: number, ang: number) => {
       ctx.save();
       ctx.translate(x0, -8);
       ctx.rotate(ang);

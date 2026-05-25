@@ -23,7 +23,7 @@ const COST_KEYS = (() => {
   return [...out].sort();
 })();
 
-export default function BuildingsTab({ draft, updateDraft, focus }) {
+export default function BuildingsTab({ draft: any, updateDraft: any, focus: any }) {
   const { focus: navFocus } = useBalanceNav();
   const activeFocus = focus ?? navFocus;
   useScrollToFocus(activeFocus);
@@ -41,8 +41,8 @@ export default function BuildingsTab({ draft, updateDraft, focus }) {
     [search],
   );
 
-  function patch(id, fields) {
-    updateDraft((d) => {
+  function patch(id: any, fields: any) {
+    updateDraft((d: any) => {
       const cur = d.buildings[id] || {};
       const next = { ...cur, ...fields };
       for (const k of Object.keys(next)) if (next[k] === "" || next[k] === undefined) delete next[k];
@@ -125,7 +125,7 @@ export default function BuildingsTab({ draft, updateDraft, focus }) {
                 {dirty && (
                   <SmallButton
                     variant="ghost"
-                    onClick={() => updateDraft((d) => { delete d.buildings[b.id]; })}
+                    onClick={() => updateDraft((d: any) => { delete d.buildings[b.id]; })}
                   >
                     revert
                   </SmallButton>
@@ -135,12 +135,12 @@ export default function BuildingsTab({ draft, updateDraft, focus }) {
               <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 mb-2">
                 <div className="col-span-2">
                   <Label>Name</Label>
-                  <TextField value={eff.name} onChange={(v) => patch(b.id, { name: v })} />
+                  <TextField value={eff.name} onChange={(v: any) => patch(b.id, { name: v })} />
                 </div>
                 <div>
                   <Label>Required level</Label>
                   <NumberField value={eff.lv} min={1} max={20} width={60}
-                    onChange={(v) => patch(b.id, { lv: v })} />
+                    onChange={(v: any) => patch(b.id, { lv: v })} />
                 </div>
               </div>
 
@@ -150,7 +150,7 @@ export default function BuildingsTab({ draft, updateDraft, focus }) {
                 </div>
                 <CostEditor
                   cost={eff.cost}
-                  onChange={(nextCost) => patch(b.id, { cost: nextCost })}
+                  onChange={(nextCost: any) => patch(b.id, { cost: nextCost })}
                 />
               </div>
 
@@ -159,7 +159,7 @@ export default function BuildingsTab({ draft, updateDraft, focus }) {
                 <TextArea
                   rows={2}
                   value={eff.desc}
-                  onChange={(v) => patch(b.id, { desc: v })}
+                  onChange={(v: any) => patch(b.id, { desc: v })}
                 />
               </div>
 
@@ -167,7 +167,7 @@ export default function BuildingsTab({ draft, updateDraft, focus }) {
                 <AbilitiesEditor
                   scope="building"
                   abilities={eff.abilities}
-                  onChange={(next) => patch(b.id, { abilities: next })}
+                  onChange={(next: any) => patch(b.id, { abilities: next })}
                 />
               </CardAttachmentFooter>
             </Card>
@@ -183,7 +183,7 @@ export default function BuildingsTab({ draft, updateDraft, focus }) {
   );
 }
 
-function Label({ children }) {
+function Label({ children: any }) {
   return (
     <div className="text-[10px] font-bold uppercase tracking-wide mb-0.5" style={{ color: COLORS.inkSubtle }}>
       {children}
@@ -191,7 +191,7 @@ function Label({ children }) {
   );
 }
 
-function CostEditor({ cost, onChange }) {
+function CostEditor({ cost: any, onChange: any }) {
   const availableOptions = useMemo(() => {
     return COST_KEYS.filter((k) => !(k in cost)).map((k) => ({
       id: k,
@@ -209,7 +209,7 @@ function CostEditor({ cost, onChange }) {
     }));
   }, [cost]);
 
-  function updateCost(resKey, qty) {
+  function updateCost(resKey: any, qty: any) {
     const next = { ...cost };
     if (qty === null || qty === undefined || qty <= 0) {
       delete next[resKey];
@@ -245,7 +245,7 @@ function CostEditor({ cost, onChange }) {
                 min={1}
                 max={9999}
                 width={70}
-                onChange={(v) => updateCost(resKey, v)}
+                onChange={(v: any) => updateCost(resKey, v)}
               />
               <SmallButton variant="danger" onClick={() => updateCost(resKey, null)}>
                 ✕
@@ -259,7 +259,7 @@ function CostEditor({ cost, onChange }) {
         label="Add Cost"
         placeholder="Search resources…"
         options={availableOptions}
-        onSelect={(k) => updateCost(k, 1)}
+        onSelect={(k: any) => updateCost(k, 1)}
         gridClass="grid-cols-2 md:grid-cols-3"
       />
     </div>
@@ -267,6 +267,6 @@ function CostEditor({ cost, onChange }) {
 }
 
 
-function CostStat({ label, value, accent }) {
+function CostStat({ label: any, value: any, accent: any }) {
   return <MetricCard label={label} value={value} tone={accent === "warm" ? "ember" : "success"} />;
 }

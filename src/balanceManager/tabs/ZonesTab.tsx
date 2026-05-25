@@ -24,7 +24,7 @@ const TARGET_OPTIONS = [
   { value: ZONE_UPGRADE_TARGET_GOLD, label: "gold (board-only tile)" },
 ];
 
-function Label({ children }) {
+function Label({ children: any }) {
   return (
     <div className="text-[10px] font-bold uppercase tracking-wide mb-0.5" style={{ color: COLORS.inkSubtle }}>
       {children}
@@ -32,7 +32,7 @@ function Label({ children }) {
   );
 }
 
-function Toggle({ value, onChange, label }) {
+function Toggle({ value: any, onChange: any, label: any }) {
   return (
     <button
       onClick={() => onChange(!value)}
@@ -49,7 +49,7 @@ function Toggle({ value, onChange, label }) {
   );
 }
 
-export default function ZonesTab({ draft, updateDraft }) {
+export default function ZonesTab({ draft: any, updateDraft: any }) {
   const [search, setSearch] = useState("");
   const zoneList = useMemo(() => Object.values(ZONES), []);
   const buildingById = useMemo(
@@ -65,8 +65,8 @@ export default function ZonesTab({ draft, updateDraft }) {
     [search, zoneList],
   );
 
-  function patch(zoneId, fields) {
-    updateDraft((d) => {
+  function patch(zoneId: any, fields: any) {
+    updateDraft((d: any) => {
       d.zones ??= {};
       const cur = d.zones[zoneId] || {};
       const next = { ...cur, ...fields };
@@ -124,7 +124,7 @@ export default function ZonesTab({ draft, updateDraft }) {
                 {dirty && (
                   <SmallButton
                     variant="ghost"
-                    onClick={() => updateDraft((d) => { d.zones ??= {}; delete d.zones[z.id]; })}
+                    onClick={() => updateDraft((d: any) => { d.zones ??= {}; delete d.zones[z.id]; })}
                   >
                     revert
                   </SmallButton>
@@ -154,17 +154,17 @@ export default function ZonesTab({ draft, updateDraft }) {
                   <Toggle
                     value={eff.hasFarm}
                     label="🌾 Farm"
-                    onChange={(v) => patch(z.id, { hasFarm: v })}
+                    onChange={(v: any) => patch(z.id, { hasFarm: v })}
                   />
                   <Toggle
                     value={eff.hasMine}
                     label="⛏ Mine"
-                    onChange={(v) => patch(z.id, { hasMine: v })}
+                    onChange={(v: any) => patch(z.id, { hasMine: v })}
                   />
                   <Toggle
                     value={eff.hasWater}
                     label="⚓ Harbor"
-                    onChange={(v) => patch(z.id, { hasWater: v })}
+                    onChange={(v: any) => patch(z.id, { hasWater: v })}
                   />
                 </div>
               </div>
@@ -175,7 +175,7 @@ export default function ZonesTab({ draft, updateDraft }) {
                 <BuildingsPicker
                   selectedIds={eff.buildings}
                   buildingById={buildingById}
-                  onChange={(next) => patch(z.id, { buildings: next })}
+                  onChange={(next: any) => patch(z.id, { buildings: next })}
                 />
               </div>
 
@@ -188,7 +188,7 @@ export default function ZonesTab({ draft, updateDraft }) {
                     min={4}
                     max={64}
                     width={70}
-                    onChange={(v) => patch(z.id, { baseTurns: v })}
+                    onChange={(v: any) => patch(z.id, { baseTurns: v })}
                   />
                 </div>
                 <div>
@@ -198,7 +198,7 @@ export default function ZonesTab({ draft, updateDraft }) {
                     min={0}
                     max={9999}
                     width={80}
-                    onChange={(v) => patch(z.id, { entryCost: { coins: v } })}
+                    onChange={(v: any) => patch(z.id, { entryCost: { coins: v } })}
                   />
                 </div>
               </div>
@@ -220,7 +220,7 @@ export default function ZonesTab({ draft, updateDraft }) {
                         value={eff.upgradeMap[src] ?? ""}
                         options={TARGET_OPTIONS}
                         width={180}
-                        onChange={(v) => {
+                        onChange={(v: any) => {
                           const next = { ...eff.upgradeMap };
                           if (!v) delete next[src];
                           else next[src] = v;
@@ -281,7 +281,7 @@ export default function ZonesTab({ draft, updateDraft }) {
                                   max={1}
                                   step={0.05}
                                   width={70}
-                                  onChange={(v) => {
+                                  onChange={(v: any) => {
                                     const nextTable = { ...table };
                                     if (v <= 0) delete nextTable[cat];
                                     else nextTable[cat] = v;
@@ -328,7 +328,7 @@ export default function ZonesTab({ draft, updateDraft }) {
   );
 }
 
-function BuildingIcon({ id, size = 28 }) {
+function BuildingIcon({ id: any, size = 28 }) {
   return (
     <div
       className="relative shrink-0 rounded border overflow-hidden"
@@ -340,7 +340,7 @@ function BuildingIcon({ id, size = 28 }) {
   );
 }
 
-function BuildingsPicker({ selectedIds, buildingById, onChange }) {
+function BuildingsPicker({ selectedIds: any, buildingById: any, onChange: any }) {
   const selected = useMemo(
     () => (Array.isArray(selectedIds) ? selectedIds : []),
     [selectedIds],
@@ -369,12 +369,12 @@ function BuildingsPicker({ selectedIds, buildingById, onChange }) {
       }));
   }, [selected]);
 
-  function addBuilding(id) {
+  function addBuilding(id: any) {
     if (selected.includes(id)) return;
     onChange([...selected, id]);
   }
 
-  function removeBuilding(id) {
+  function removeBuilding(id: any) {
     onChange(selected.filter((bid) => bid !== id));
   }
 

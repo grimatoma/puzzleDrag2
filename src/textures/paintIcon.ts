@@ -11,7 +11,7 @@ export const ICON_DESIGN_BOX = 64;
  * transform in save/restore so the caller's transform/style state is
  * untouched. Returns the drawIcon() result (true if the key was found).
  */
-export function paintIcon(ctx, iconKey, size) {
+export function paintIcon(ctx: CanvasRenderingContext2D, iconKey: string, size: number) {
   ctx.save();
   ctx.translate(size / 2, size / 2);
   const scale = size / ICON_DESIGN_BOX;

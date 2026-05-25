@@ -42,7 +42,7 @@ function readInspectorCollapsed() {
   catch { return false; }
 }
 
-function writeInspectorCollapsed(v) {
+function writeInspectorCollapsed(v: any) {
   try { localStorage.setItem(INSPECTOR_COLLAPSED_KEY, v ? "1" : "0"); }
   catch {
     // localStorage can be disabled in private/browser-test contexts.
@@ -54,7 +54,7 @@ function readLeftRailCollapsed() {
   catch { return false; }
 }
 
-function writeLeftRailCollapsed(v) {
+function writeLeftRailCollapsed(v: any) {
   try { localStorage.setItem(LEFT_RAIL_COLLAPSED_KEY, v ? "1" : "0"); }
   catch {
     // localStorage can be disabled in private/browser-test contexts.
@@ -66,14 +66,14 @@ function readGraphViewMode() {
   catch { return "chain"; }
 }
 
-function writeGraphViewMode(v) {
+function writeGraphViewMode(v: any) {
   try { localStorage.setItem(GRAPH_VIEW_MODE_KEY, v === "full" ? "full" : "chain"); }
   catch {
     // localStorage can be disabled in private/browser-test contexts.
   }
 }
 
-function builtInSideSubtreeIds(startId) {
+function builtInSideSubtreeIds(startId: any) {
   const ids = new Set();
   const stack = [startId];
   const sideById = new Map(SIDE_BEATS.map((b) => [b.id, b]));
@@ -91,7 +91,7 @@ function builtInSideSubtreeIds(startId) {
 
 // ─── edges ───────────────────────────────────────────────────────────────────
 
-function TreeEdge({ edge, nodeById, draft }) {
+function TreeEdge({ edge: any, nodeById: any, draft: any }) {
   const from = nodeById.get(edge.from);
   const to = nodeById.get(edge.to);
   if (!from || !to) return null;
@@ -99,7 +99,7 @@ function TreeEdge({ edge, nodeById, draft }) {
   let x1 = from.x + from.w;
   let y1 = from.y + from.h / 2;
   if (edge.kind === "choice" && edge.choice && from.branching) {
-    const idx = effectiveChoices(edge.from, draft).findIndex((c) => c.id === edge.choice);
+    const idx = effectiveChoices(edge.from, draft).findIndex((c: any) => c.id === edge.choice);
     if (idx >= 0) y1 = from.y + branchingRowCenterY(idx);
   }
   // route to the target's left edge, but if the target sits left of the source,
@@ -139,7 +139,7 @@ function TreeEdge({ edge, nodeById, draft }) {
 
 // ─── chips on nodes ──────────────────────────────────────────────────────────
 
-function TriggerChip({ beat, accent }) {
+function TriggerChip({ beat: any, accent: any }) {
   const ts = triggerSummary(beat);
   if (!ts) return null;
   const tone = ts.kind === "queued-code" ? { fg: C.emberDeep, bd: C.emberDeep } : { fg: C.ink, bd: accent || C.borderDeep };
@@ -154,7 +154,7 @@ function TriggerChip({ beat, accent }) {
   );
 }
 
-function CollapseToggle({ collapsed, hiddenCount, onToggle }) {
+function CollapseToggle({ collapsed: any, hiddenCount: any, onToggle: any }) {
   return (
     <button
       onClick={(e) => { e.stopPropagation(); onToggle(); }}
@@ -175,11 +175,11 @@ function CollapseToggle({ collapsed, hiddenCount, onToggle }) {
 
 // ─── node cards ──────────────────────────────────────────────────────────────
 
-function CompactNode({ node, beat, selected }) {
+function CompactNode({ node: any, beat: any, selected: any }) {
   const ring = actColor(beat);
-  const speakers = [...new Set((beat?.lines || []).map((l) => l.speaker).filter(Boolean))];
+  const speakers = [...new Set((beat?.lines || []).map((l: any) => l.speaker).filter(Boolean))];
   const firstLine = beat?.lines?.[0]?.text || beat?.body || "—";
-  const hasSpeaker = beat?.lines?.find((l) => l.speaker)?.speaker;
+  const hasSpeaker = beat?.lines?.find((l: any) => l.speaker)?.speaker;
   const choices = beat?.choices || [];
   return (
     <div style={{ width: "100%", height: "100%", borderRadius: 10,
@@ -217,11 +217,11 @@ function CompactNode({ node, beat, selected }) {
   );
 }
 
-function BranchingNode({ beat, selected }) {
+function BranchingNode({ beat: any, selected: any }) {
   const ring = actColor(beat);
   const choices = beat?.choices || [];
   const firstLine = beat?.lines?.[0]?.text || beat?.body || "—";
-  const firstSpk = beat?.lines?.find((l) => l.speaker)?.speaker;
+  const firstSpk = beat?.lines?.find((l: any) => l.speaker)?.speaker;
   const HEADER = 78, ROW = 38, GAP = 4, FOOTER = 22;
   return (
     <div style={{ width: "100%", height: "100%", borderRadius: 12,
@@ -242,7 +242,7 @@ function BranchingNode({ beat, selected }) {
           font: "700 8px/1 system-ui", letterSpacing: "0.14em", textTransform: "uppercase" }}>⑂ FORK</div>
       </div>
       <div style={{ display: "flex", flexDirection: "column", gap: GAP, flex: 1 }}>
-        {choices.map((c, i) => {
+        {choices.map((c: any, i: any) => {
           const o = c.outcome || {};
           const badges = [];
           if (o.bondDelta) badges.push(`♥ ${o.bondDelta.amount > 0 ? "+" : ""}${o.bondDelta.amount}`);
@@ -278,7 +278,7 @@ function BranchingNode({ beat, selected }) {
   );
 }
 
-function ExpandedCard({ node, beat, selected, draft }) {
+function ExpandedCard({ node: any, beat: any, selected: any, draft: any }) {
   const incoming = findIncomingChoice(beat?.id, draft);
   const o = incoming?.choice?.outcome || {};
   const effects = [];
@@ -286,8 +286,8 @@ function ExpandedCard({ node, beat, selected, draft }) {
   if (o.embers) effects.push({ icon: "✸", label: `+${o.embers} Embers` });
   if (o.coreIngots) effects.push({ icon: "◈", label: `+${o.coreIngots} Core Ingots` });
   if (o.gems) effects.push({ icon: "◆", label: `+${o.gems} Gems` });
-  if (o.setFlag) (Array.isArray(o.setFlag) ? o.setFlag : [o.setFlag]).slice(0, 2).forEach((f) => effects.push({ icon: "⚐", label: f }));
-  const speaker = beat?.lines?.find((l) => l.speaker)?.speaker;
+  if (o.setFlag) (Array.isArray(o.setFlag) ? o.setFlag : [o.setFlag]).slice(0, 2).forEach((f: any) => effects.push({ icon: "⚐", label: f }));
+  const speaker = beat?.lines?.find((l: any) => l.speaker)?.speaker;
   const isDraftNode = !!node.draft;
   const accent = isDraftNode ? actColor(beat) : C.ember;
   return (
@@ -311,7 +311,7 @@ function ExpandedCard({ node, beat, selected, draft }) {
           </div>
         )}
         <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: 4 }}>
-          {(beat?.lines || []).map((l, i) => (
+          {(beat?.lines || []).map((l: any, i: any) => (
             <p key={i} style={{ margin: 0, font: l.speaker ? "400 10.5px/1.45 Georgia,serif" : "italic 400 10px/1.45 Georgia,serif",
               color: l.speaker ? "#f0e6cf" : "rgba(189,154,114,0.9)" }}>{l.text}</p>
           ))}
@@ -339,7 +339,7 @@ function ExpandedCard({ node, beat, selected, draft }) {
   );
 }
 
-function PreviewPlay({ onPlay }) {
+function PreviewPlay({ onPlay: any }) {
   return (
     <button onClick={(e) => { e.stopPropagation(); onPlay(); }} title="Preview this dialogue (walk the branch)"
       style={{ position: "absolute", bottom: -10, right: -10, zIndex: 4, width: 22, height: 22, borderRadius: "50%",
@@ -350,7 +350,7 @@ function PreviewPlay({ onPlay }) {
   );
 }
 
-function WarningBadge({ count }) {
+function WarningBadge({ count: any }) {
   if (!count) return null;
   return (
     <div title={`${count} validation warning${count === 1 ? "" : "s"}`} style={{ position: "absolute", top: -10, left: -10, zIndex: 5,
@@ -362,7 +362,7 @@ function WarningBadge({ count }) {
   );
 }
 
-function DragHandle({ dragging, onMouseDown, onTouchStart }) {
+function DragHandle({ dragging: any, onMouseDown: any, onTouchStart: any }) {
   return (
     <button data-drag-handle="1" title="Drag to move card"
       onMouseDown={onMouseDown}
@@ -376,7 +376,7 @@ function DragHandle({ dragging, onMouseDown, onTouchStart }) {
   );
 }
 
-function TreeNode({ node, beat, selectedId, collapsed, hiddenCount, showCollapse, dragging, warningCount, onNodeMouseDown, onNodeTouchStart, onToggleCollapse, onPreview, onSelect, draft }) {
+function TreeNode({ node: any, beat: any, selectedId: any, collapsed: any, hiddenCount: any, showCollapse: any, dragging: any, warningCount: any, onNodeMouseDown: any, onNodeTouchStart: any, onToggleCollapse: any, onPreview: any, onSelect: any, draft: any }) {
   const selected = node.id === selectedId;
   let Inner;
   if (node.draft || node.expanded) Inner = <ExpandedCard node={node} beat={beat} selected={selected} draft={draft} />;
@@ -386,7 +386,7 @@ function TreeNode({ node, beat, selectedId, collapsed, hiddenCount, showCollapse
     <div data-story-node="1" onClick={() => onSelect(node.id)} style={{ position: "absolute", left: node.x, top: node.y, width: node.w, height: node.h, cursor: "default", touchAction: "none" }}>
       <WarningBadge count={warningCount} />
       <div style={{ position: "absolute", top: -10, left: 10, right: 10, display: "flex", alignItems: "center", gap: 6 }}>
-        <DragHandle dragging={dragging} onMouseDown={(e) => onNodeMouseDown(e, node)} onTouchStart={(e) => onNodeTouchStart(e, node)} />
+        <DragHandle dragging={dragging} onMouseDown={(e: any) => onNodeMouseDown(e, node)} onTouchStart={(e) => onNodeTouchStart(e, node)} />
         <TriggerChip beat={beat} accent={actColor(beat)} />
       </div>
       {showCollapse && <CollapseToggle collapsed={collapsed} hiddenCount={hiddenCount} onToggle={() => onToggleCollapse(node.id)} />}
@@ -406,7 +406,7 @@ const ACT_LABELS = [
 
 // ─── left rail ───────────────────────────────────────────────────────────────
 
-function RailRow({ beatId, draft, selectedId, onlineIds, onSelect, matchKind }) {
+function RailRow({ beatId: any, draft: any, selectedId: any, onlineIds: any, onSelect: any, matchKind: any }) {
   const beat = effectiveBeat(beatId, draft);
   const isSel = beatId === selectedId;
   const choices = beat?.choices || [];
@@ -433,7 +433,7 @@ function RailRow({ beatId, draft, selectedId, onlineIds, onSelect, matchKind }) 
   );
 }
 
-function GroupHeader({ color, label, count }) {
+function GroupHeader({ color: any, label: any, count: any }) {
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 7, padding: "7px 12px", font: "600 9px/1 system-ui",
       letterSpacing: "0.12em", textTransform: "uppercase", color: C.inkSubtle }}>
@@ -443,18 +443,18 @@ function GroupHeader({ color, label, count }) {
   );
 }
 
-function searchKindForBeat(beat, id, q) {
+function searchKindForBeat(beat, id: any, q: any) {
   if (!q) return "any";
   if (id.toLowerCase().includes(q)) return "id";
   if ((beat?.title || "").toLowerCase().includes(q)) return "title";
-  const lineHits = (beat?.lines || []).reduce((n, l) => n + ((l?.text || "").toLowerCase().includes(q) ? 1 : 0), 0);
+  const lineHits = (beat?.lines || []).reduce((n: any, l: any) => n + ((l?.text || "").toLowerCase().includes(q) ? 1 : 0), 0);
   if (lineHits) return "lines";
-  const choiceHits = (beat?.choices || []).reduce((n, c) => n + ((c?.label || "").toLowerCase().includes(q) ? 1 : 0), 0);
+  const choiceHits = (beat?.choices || []).reduce((n: any, c: any) => n + ((c?.label || "").toLowerCase().includes(q) ? 1 : 0), 0);
   if (choiceHits) return "choices";
   return null;
 }
 
-function LeftRail({ draft, selectedId, onlineIds, collapsed, onToggleCollapsed, onSelect, onNewBeat }) {
+function LeftRail({ draft: any, selectedId: any, onlineIds: any, collapsed: any, onToggleCollapsed: any, onSelect: any, onNewBeat: any }) {
   const [search, setSearch] = useState("");
   const q = search.trim().toLowerCase();
   const dBeats = draftBeats(draft);
@@ -470,7 +470,7 @@ function LeftRail({ draft, selectedId, onlineIds, collapsed, onToggleCollapsed, 
     return out;
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [q, draft]);
-  const matches = (id) => !q || beatMatchKinds.has(id);
+  const matches = (id: any) => !q || beatMatchKinds.has(id);
 
   const groups = [
     { id: 1,      label: "Act I · Roots",     color: "#7a8b5e", ids: STORY_BEATS.filter((b) => b.act === 1).map((b) => b.id) },
@@ -556,7 +556,7 @@ function LeftRail({ draft, selectedId, onlineIds, collapsed, onToggleCollapsed, 
   );
 }
 
-function MiniMap({ nodes, bounds, selectedId, zoom, pan, canvasSize, onPanTo }) {
+function MiniMap({ nodes: any, bounds: any, selectedId: any, zoom: any, pan: any, canvasSize: any, onPanTo: any }) {
   const W = 180, H = 112, PAD = 8;
   const activePointerId = useRef(null);
   const scale = Math.min((W - PAD * 2) / Math.max(1, bounds.w), (H - PAD * 2) / Math.max(1, bounds.h));
@@ -566,37 +566,37 @@ function MiniMap({ nodes, bounds, selectedId, zoom, pan, canvasSize, onPanTo }) 
     w: canvasSize.width / Math.max(zoom, 0.01),
     h: canvasSize.height / Math.max(zoom, 0.01),
   } : null;
-  const toSvg = (x, y) => ({ x: PAD + x * scale, y: PAD + y * scale });
-  const centerAt = (e) => {
+  const toSvg = (x: any, y: any) => ({ x: PAD + x * scale, y: PAD + y * scale });
+  const centerAt = (e: any) => {
     const box = e.currentTarget.getBoundingClientRect();
     const worldX = Math.min(bounds.w, Math.max(0, (e.clientX - box.left - PAD) / scale));
     const worldY = Math.min(bounds.h, Math.max(0, (e.clientY - box.top - PAD) / scale));
     onPanTo(worldX, worldY);
   };
-  const onPointerDown = (e) => {
+  const onPointerDown = (e: any) => {
     e.stopPropagation();
     e.preventDefault();
     activePointerId.current = e.pointerId;
     e.currentTarget.setPointerCapture?.(e.pointerId);
     centerAt(e);
   };
-  const onPointerMove = (e) => {
+  const onPointerMove = (e: any) => {
     if (activePointerId.current !== e.pointerId) return;
     e.stopPropagation();
     e.preventDefault();
     centerAt(e);
   };
-  const endPointer = (e) => {
+  const endPointer = (e: any) => {
     if (activePointerId.current !== e.pointerId) return;
     e.stopPropagation();
     e.preventDefault();
     e.currentTarget.releasePointerCapture?.(e.pointerId);
     activePointerId.current = null;
   };
-  const clearPointer = (e) => {
+  const clearPointer = (e: any) => {
     if (activePointerId.current === e.pointerId) activePointerId.current = null;
   };
-  const suppressFallbackEvents = (e) => {
+  const suppressFallbackEvents = (e: any) => {
     e.stopPropagation();
     e.preventDefault();
   };
@@ -609,7 +609,7 @@ function MiniMap({ nodes, bounds, selectedId, zoom, pan, canvasSize, onPanTo }) 
       <svg width={W} height={H} onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={endPointer} onPointerCancel={endPointer}
         onLostPointerCapture={clearPointer} style={{ display: "block", cursor: "crosshair", touchAction: "none" }}>
         <rect x={PAD} y={PAD} width={bounds.w * scale} height={bounds.h * scale} rx="3" fill="rgba(240,232,212,0.8)" stroke={C.canvasRule} />
-        {nodes.map((n) => {
+        {nodes.map((n: any) => {
           const p = toSvg(n.x, n.y);
           return <rect key={n.id} x={p.x} y={p.y} width={Math.max(2, n.w * scale)} height={Math.max(2, n.h * scale)}
             rx="1" fill={n.id === selectedId ? C.ember : (n.draft ? "#6b8e9e" : C.inkSubtle)} opacity={n.id === selectedId ? 1 : 0.65} />;
@@ -630,7 +630,7 @@ function MiniMap({ nodes, bounds, selectedId, zoom, pan, canvasSize, onPanTo }) 
 
 // ─── draft mutation helpers ──────────────────────────────────────────────────
 
-function stripEmpty(obj) {
+function stripEmpty(obj: any) {
   const out = { ...obj };
   for (const k of Object.keys(out)) {
     const v = out[k];
@@ -682,23 +682,23 @@ export default function StoryEditorApp() {
     });
   }, []);
 
-  const setGraphMode = useCallback((mode) => {
+  const setGraphMode = useCallback((mode: any) => {
     const next = mode === "full" ? "full" : "chain";
     setGraphViewMode(next);
     writeGraphViewMode(next);
   }, []);
 
-  const moveNode = useCallback((id, x, y) => {
+  const moveNode = useCallback((id: any, x: any, y: any) => {
     setNodePositions((prev) => { const next = { ...prev, [id]: { x: Math.round(x), y: Math.round(y) } }; writeNodePositions(next); return next; });
   }, []);
   const resetLayout = useCallback(() => { setNodePositions({}); writeNodePositions({}); }, []);
-  const onNodeMouseDown = useCallback((e, node) => {
+  const onNodeMouseDown = useCallback((e: any, node: any) => {
     if (!e.target.closest("[data-drag-handle]")) return;
     e.stopPropagation();                                // don't let the canvas start a pan
     e.preventDefault();                                 // no text selection while dragging
     nodeDrag.current = { id: node.id, sx: e.clientX, sy: e.clientY, nx: node.x, ny: node.y, moved: false };
   }, []);
-  const onNodeTouchStart = useCallback((e, node) => {
+  const onNodeTouchStart = useCallback((e: any, node: any) => {
     if (e.touches.length !== 1 || !e.target.closest("[data-drag-handle]")) return;
     e.stopPropagation();
     e.preventDefault();
@@ -718,7 +718,7 @@ export default function StoryEditorApp() {
   }, [draft]);
 
   useEffect(() => {
-    const onKey = (e) => {
+    const onKey = (e: any) => {
       if (!(e.metaKey || e.ctrlKey)) return;
       const key = e.key.toLowerCase();
       if (key === "s") { e.preventDefault(); saveDraft(); return; }
@@ -734,7 +734,7 @@ export default function StoryEditorApp() {
   }, [saveDraft, undo, redo]);
 
   useEffect(() => {
-    const onStorage = (e) => {
+    const onStorage = (e: any) => {
       if (e.key !== "hearth.balance.draft" || dirtyRef.current) return;
       const next = cloneDraft(readBalanceDraft() || BALANCE_OVERRIDES);
       resetDraft(next);
@@ -747,7 +747,7 @@ export default function StoryEditorApp() {
   }, [resetDraft]);
 
   // canvas pan/zoom
-  const onMouseDown = useCallback((e) => {
+  const onMouseDown = useCallback((e: any) => {
     if (e.target.closest("[data-minimap]")) return;
     if (e.target !== canvasRef.current && !e.target.closest("[data-canvas-bg]")) return;
     isDragging.current = true; setDragging(true);
@@ -755,7 +755,7 @@ export default function StoryEditorApp() {
   }, [pan]);
   useEffect(() => {
     const z = zoom || 1;
-    const onMove = (e) => {
+    const onMove = (e: any) => {
       const nd = nodeDrag.current;
       if (nd) {
         if (!nd.moved && (Math.abs(e.clientX - nd.sx) > 3 || Math.abs(e.clientY - nd.sy) > 3)) { nd.moved = true; setDraggingNodeId(nd.id); }
@@ -774,11 +774,11 @@ export default function StoryEditorApp() {
   }, [moveNode, zoom]);
   useEffect(() => {
     const z = zoom || 1;
-    const touchById = (list, id) => {
+    const touchById = (list: any, id: any) => {
       for (let i = 0; i < list.length; i += 1) if (list[i].identifier === id) return list[i];
       return null;
     };
-    const onMove = (e) => {
+    const onMove = (e: any) => {
       const nd = nodeDrag.current;
       if (!nd?.touch) return;
       const t = touchById(e.touches, nd.touchId);
@@ -787,7 +787,7 @@ export default function StoryEditorApp() {
       if (!nd.moved && (Math.abs(t.clientX - nd.sx) > 3 || Math.abs(t.clientY - nd.sy) > 3)) { nd.moved = true; setDraggingNodeId(nd.id); }
       if (nd.moved) moveNode(nd.id, nd.nx + (t.clientX - nd.sx) / z, nd.ny + (t.clientY - nd.sy) / z);
     };
-    const onEnd = (e) => {
+    const onEnd = (e: any) => {
       const nd = nodeDrag.current;
       if (!nd?.touch) return;
       const stillActive = touchById(e.touches, nd.touchId);
@@ -806,7 +806,7 @@ export default function StoryEditorApp() {
       window.removeEventListener("touchcancel", onEnd);
     };
   }, [moveNode, zoom]);
-  const onWheel = useCallback((e) => {
+  const onWheel = useCallback((e: any) => {
     e.preventDefault();
     const rect = canvasRef.current?.getBoundingClientRect();
     if (!rect) return;
@@ -850,8 +850,8 @@ export default function StoryEditorApp() {
   useEffect(() => {
     const el = canvasRef.current;
     if (!el) return;
-    const clampZoom = z => Math.min(2, Math.max(0.3, z));
-    const onTouchStart = e => {
+    const clampZoom = (z: any) => Math.min(2, Math.max(0.3, z));
+    const onTouchStart = (e: any) => {
       if (e.touches.length === 1) {
         const t = e.touches[0];
         if (t.target.closest("[data-minimap]")) { touchState.current = null; return; }
@@ -877,7 +877,7 @@ export default function StoryEditorApp() {
         setDragging(false);
       }
     };
-    const onTouchMove = e => {
+    const onTouchMove = (e: any) => {
       const st = touchState.current;
       if (!st) return;
       if (st.mode === "pan" && e.touches.length === 1) {
@@ -898,7 +898,7 @@ export default function StoryEditorApp() {
         setPan({ x: midX - st.rect.left - cx * newZoom, y: midY - st.rect.top - cy * newZoom });
       }
     };
-    const onTouchEnd = e => {
+    const onTouchEnd = (e: any) => {
       if (e.touches.length === 0) {
         touchState.current = null;
         isDragging.current = false;
@@ -922,7 +922,7 @@ export default function StoryEditorApp() {
   }, []);
 
   // ── beat edits ──
-  const editBeat = useCallback((beatId, fields) => {
+  const editBeat = useCallback((beatId: any, fields: any) => {
     setDraft((prev) => {
       const d = cloneDraft(prev);
       d.story ??= {};
@@ -960,7 +960,7 @@ export default function StoryEditorApp() {
       : (opts.queuedBy ? `${opts.queuedBy.beatId}_${opts.queuedBy.choiceId}` : "side_beat");
     const cleanedBase = rawBase.toLowerCase().replace(/[^a-z0-9_]+/g, "_").replace(/^_+|_+$/g, "");
     const base = DRAFT_BEAT_ID_RE.test(cleanedBase) ? cleanedBase : `branch_${cleanedBase || "beat"}`;
-    const pickFree = (d) => {
+    const pickFree = (d: any) => {
       const taken = new Set(allBeatIds(d));
       if (!taken.has(base)) return base;
       let n = 2; while (taken.has(`${base}_${n}`)) n += 1; return `${base}_${n}`;
@@ -971,7 +971,7 @@ export default function StoryEditorApp() {
       const sourceGraph = deriveGraph(draft, nodePositions);
       const source = sourceGraph.nodes.find((n) => n.id === opts.queuedBy.beatId);
       if (source) {
-        const row = effectiveChoices(opts.queuedBy.beatId, draft).findIndex((c) => c.id === opts.queuedBy.choiceId);
+        const row = effectiveChoices(opts.queuedBy.beatId, draft).findIndex((c: any) => c.id === opts.queuedBy.choiceId);
         const rowY = row >= 0 && source.branching ? source.y + branchingRowCenterY(row) - 96 : source.y + source.h / 2 - 96;
         placedNearSource = { x: Math.round(source.x + source.w + 90), y: Math.round(rowY) };
       }
@@ -987,7 +987,7 @@ export default function StoryEditorApp() {
       if (opts.queuedBy) {
         d.story.beats ??= {};
         const { beatId, choiceId } = opts.queuedBy;
-        const nextChoices = effectiveChoices(beatId, d).map((c) => (c.id === choiceId
+        const nextChoices = effectiveChoices(beatId, d).map((c: any) => (c.id === choiceId
           ? { ...c, outcome: { ...(c.outcome || {}), queueBeat: id } } : c));
         const dj = draftBeatIndex(d, beatId);
         if (dj >= 0) { const arr = d.story.newBeats.slice(); arr[dj] = { ...arr[dj], choices: nextChoices }; d.story.newBeats = arr; }
@@ -1006,15 +1006,15 @@ export default function StoryEditorApp() {
     return newId;
   }, [draft, nodePositions, setDraft]);
 
-  const deleteDraftBeat = useCallback((beatId) => {
+  const deleteDraftBeat = useCallback((beatId: any) => {
     setDraft((prev) => {
       const d = cloneDraft(prev);
       if (!d.story?.newBeats) return d;
-      d.story.newBeats = d.story.newBeats.filter((b) => b && b.id !== beatId);
+      d.story.newBeats = d.story.newBeats.filter((b: any) => b && b.id !== beatId);
       if (d.story.newBeats.length === 0) delete d.story.newBeats;
       if (d.story.beats) delete d.story.beats[beatId];
       // unlink any choice pointing at the deleted beat
-      const scrub = (choices) => Array.isArray(choices)
+      const scrub = (choices: any) => Array.isArray(choices)
         ? choices.map((c) => {
             if (c?.outcome?.queueBeat !== beatId) return c;
             const o = { ...c.outcome }; delete o.queueBeat;
@@ -1025,7 +1025,7 @@ export default function StoryEditorApp() {
         if (Array.isArray(d.story.beats[id].choices)) d.story.beats[id] = stripEmpty({ ...d.story.beats[id], choices: scrub(d.story.beats[id].choices) });
         if (Object.keys(d.story.beats[id]).length === 0) delete d.story.beats[id];
       }
-      if (d.story.newBeats) d.story.newBeats = d.story.newBeats.map((b) => (Array.isArray(b.choices) ? { ...b, choices: scrub(b.choices) } : b));
+      if (d.story.newBeats) d.story.newBeats = d.story.newBeats.map((b: any) => (Array.isArray(b.choices) ? { ...b, choices: scrub(b.choices) } : b));
       if (d.story.beats && Object.keys(d.story.beats).length === 0) delete d.story.beats;
       if (d.story && Object.keys(d.story).length === 0) delete d.story;
       return d;
@@ -1034,7 +1034,7 @@ export default function StoryEditorApp() {
     setSelectedId((cur) => (cur === beatId ? null : cur));
   }, [setDraft]);
 
-  const suppressBuiltInBeat = useCallback((beatId) => {
+  const suppressBuiltInBeat = useCallback((beatId: any) => {
     setDraft((prev) => {
       const d = cloneDraft(prev);
       d.story ??= {};
@@ -1058,7 +1058,7 @@ export default function StoryEditorApp() {
     });
   }, [setDraft]);
 
-  const renameDraftBeat = useCallback((oldId, nextId) => {
+  const renameDraftBeat = useCallback((oldId: any, nextId: any) => {
     const result = renameDraftBeatInDraft(draft, oldId, nextId);
     if (!result.ok || !result.changed) return result;
     const newId = result.id;
@@ -1083,9 +1083,9 @@ export default function StoryEditorApp() {
     return result;
   }, [draft, setDraft]);
 
-  const onNewBranch = useCallback((parentBeatId, choiceId) => createDraftBeat({ queuedBy: { beatId: parentBeatId, choiceId } }), [createDraftBeat]);
+  const onNewBranch = useCallback((parentBeatId: any, choiceId: any) => createDraftBeat({ queuedBy: { beatId: parentBeatId, choiceId } }), [createDraftBeat]);
 
-  const toggleCollapse = useCallback((nodeId) => {
+  const toggleCollapse = useCallback((nodeId: any) => {
     setCollapsed((prev) => { const n = new Set(prev); if (n.has(nodeId)) n.delete(nodeId); else n.add(nodeId); writeCollapsed(n); return n; });
   }, []);
 
@@ -1097,7 +1097,7 @@ export default function StoryEditorApp() {
   ), [focusedGraph, fullGraph, graphViewMode]);
   const collapsible = useMemo(() => collapsibleIds(graph.edges), [graph]);
   const view = useMemo(() => visibleSubset(graph.nodes, graph.edges, collapsed), [graph, collapsed]);
-  const nodeById = useMemo(() => new Map(view.nodes.map((n) => [n.id, n])), [view]);
+  const nodeById = useMemo(() => new Map(view.nodes.map((n: any) => [n.id, n])), [view]);
   const onlineIds = useMemo(() => new Set(fullGraph.nodes.map((n) => n.id)), [fullGraph]);
   const warningsByBeat = useMemo(() => collectStoryWarnings(draft), [draft]);
   const totalWarnings = useMemo(() => Object.values(warningsByBeat).reduce((s, arr) => s + arr.length, 0), [warningsByBeat]);
@@ -1137,21 +1137,21 @@ export default function StoryEditorApp() {
       y: Math.round((rect.height - (maxY - minY) * nextZoom) / 2 - minY * nextZoom),
     });
   }, [view.nodes]);
-  const panToWorld = useCallback((worldX, worldY) => {
+  const panToWorld = useCallback((worldX: any, worldY: any) => {
     const el = canvasRef.current;
     if (!el) return;
     const rect = el.getBoundingClientRect();
     setPan({ x: Math.round(rect.width / 2 - worldX * zoom), y: Math.round(rect.height / 2 - worldY * zoom) });
   }, [zoom]);
-  const selectAndCenter = useCallback((id) => {
+  const selectAndCenter = useCallback((id: any) => {
     if (!id) return;
     setSelectedId(id);
-    const node = view.nodes.find((n) => n.id === id);
+    const node = view.nodes.find((n: any) => n.id === id);
     if (node) panToWorld(node.x + node.w / 2, node.y + node.h / 2);
   }, [panToWorld, view.nodes]);
 
   useEffect(() => {
-    const onKey = (e) => {
+    const onKey = (e: any) => {
       if (e.metaKey || e.ctrlKey || e.altKey) return;
       const tag = e.target?.tagName;
       if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || tag === "BUTTON" || tag === "A" || e.target?.isContentEditable) return;
@@ -1316,10 +1316,10 @@ export default function StoryEditorApp() {
             )}
 
             <svg style={{ position: "absolute", left: 0, top: 0, width: graph.bounds.w, height: graph.bounds.h, overflow: "visible", pointerEvents: "none" }}>
-              {view.edges.map((edge, i) => <TreeEdge key={i} edge={edge} nodeById={nodeById} draft={draft} />)}
+              {view.edges.map((edge: any, i: any) => <TreeEdge key={i} edge={edge} nodeById={nodeById} draft={draft} />)}
             </svg>
 
-            {view.nodes.map((node) => (
+            {view.nodes.map((node: any) => (
               <TreeNode key={node.id} node={node} beat={effectiveBeat(node.id, draft)} selectedId={selectedId}
                 collapsed={collapsed.has(node.id)} hiddenCount={view.hiddenCounts[node.id] || 0}
                 showCollapse={collapsible.has(node.id)} dragging={draggingNodeId === node.id}
@@ -1363,21 +1363,21 @@ export default function StoryEditorApp() {
       {previewBeatId && (
         <PreviewModal key={previewBeatId} startBeatId={previewBeatId} draft={draft}
           onClose={() => setPreviewBeatId(null)}
-          onOpenInEditor={(id) => setSelectedId(id)} />
+          onOpenInEditor={(id: any) => setSelectedId(id)} />
       )}
       <ValidationPanel open={validationOpen} draft={draft} anchorRect={validationAnchorRect}
         onClose={() => setValidationOpen(false)}
-        onJumpToBeat={(id) => selectAndCenter(id)} />
+        onJumpToBeat={(id: any) => selectAndCenter(id)} />
       <PathsPanel open={pathsOpen} draft={draft} anchorBeatId={selectedId}
         onClose={() => setPathsOpen(false)}
-        onJumpToBeat={(id) => selectAndCenter(id)} />
+        onJumpToBeat={(id: any) => selectAndCenter(id)} />
       <PlaythroughPanel open={playthroughOpen} draft={draft} anchorBeatId={selectedId}
         onClose={() => setPlaythroughOpen(false)}
-        onJumpToBeat={(id) => selectAndCenter(id)} />
+        onJumpToBeat={(id: any) => selectAndCenter(id)} />
       <FindReplacePanel open={findOpen} draft={draft}
         onClose={() => setFindOpen(false)}
-        onApply={(nextDraft) => setDraft(nextDraft, { commit: true })}
-        onJumpToBeat={(id) => selectAndCenter(id)} />
+        onApply={(nextDraft: any) => setDraft(nextDraft, { commit: true })}
+        onJumpToBeat={(id: any) => selectAndCenter(id)} />
     </div>
   );
 }

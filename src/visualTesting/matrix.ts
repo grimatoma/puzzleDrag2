@@ -1,12 +1,12 @@
 const canvasDiff = { maxDiffPixelRatio: 0.05, threshold: 0.28 };
 const domDiff = { maxDiffPixelRatio: 0.025, threshold: 0.22 };
 
-const click = (name) => ({ type: "clickRole", role: "button", name });
-const clickLast = (name) => ({ type: "clickRoleLast", role: "button", name });
-const clickText = (text) => ({ type: "clickText", text });
-const clickPattern = (pattern) => ({ type: "clickRole", role: "button", namePattern: pattern });
-const hoverText = (text) => ({ type: "hoverText", text });
-const api = (method, args) => ({ type: "api", method, args });
+const click = (name: any) => ({ type: "clickRole", role: "button", name });
+const clickLast = (name: any) => ({ type: "clickRoleLast", role: "button", name });
+const clickText = (text: any) => ({ type: "clickText", text });
+const clickPattern = (pattern: any) => ({ type: "clickRole", role: "button", namePattern: pattern });
+const hoverText = (text: any) => ({ type: "hoverText", text });
+const api = (method: any, args: any) => ({ type: "api", method, args });
 
 const tileRoutes = [
   ["tiles-farm-grass", "#/tiles/farm/grass"],
@@ -123,21 +123,21 @@ const expectationOverrideById = {
   "town-build-picker-locked": "Build picker is open and a locked building option is shown.",
 };
 
-function buildExpectationForScenario(scenario) {
+function buildExpectationForScenario(scenario: any) {
   return expectationOverrideById[scenario.id] ?? `Scenario ${scenario.id} renders expected ${scenario.hash ?? scenario.view} UI state.`;
 }
 
-function buildChecklistForScenario(scenario) {
+function buildChecklistForScenario(scenario: any) {
   const checklist = [];
   if (scenario.hash) checklist.push(`Hash route resolves to ${scenario.hash}.`);
   if (scenario.view) checklist.push(`Internal visual view is ${scenario.view}.`);
-  if (scenario.actions?.some((action) => action.type === "api" && action.method === "holdChain")) {
+  if (scenario.actions?.some((action: any) => action.type === "api" && action.method === "holdChain")) {
     checklist.push("Selected holdChain pattern is visible on the board.");
   }
-  if (scenario.actions?.some((action) => action.type === "clickRole" || action.type === "clickRoleLast")) {
+  if (scenario.actions?.some((action: any) => action.type === "clickRole" || action.type === "clickRoleLast")) {
     checklist.push("Triggered button-driven modal/panel state is visible.");
   }
-  if (scenario.actions?.some((action) => action.type === "clickText")) {
+  if (scenario.actions?.some((action: any) => action.type === "clickText")) {
     checklist.push("Clicked text target appears in the resulting focused panel.");
   }
   if (scenario.hash?.startsWith?.("#/board")) checklist.push("Board canvas is rendered with populated tiles.");
@@ -151,7 +151,7 @@ export const VISUAL_SCENARIOS = BASE_VISUAL_SCENARIOS.map((scenario) => ({
   reviewChecklist: buildChecklistForScenario(scenario),
 }));
 
-export function visualScenarioById(id) {
+export function visualScenarioById(id: any) {
   return VISUAL_SCENARIOS.find((scenario) => scenario.id === id) ?? null;
 }
 

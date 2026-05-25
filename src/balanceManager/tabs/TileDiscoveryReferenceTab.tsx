@@ -9,14 +9,14 @@ import { TILE_DISCOVERY_METHODS } from "../../config/tileDiscoveryMethods.js";
 import { TILE_TYPES } from "../../features/tileCollection/data.js";
 import { COLORS, Card } from "../shared.jsx";
 
-function tilesUsing(methodId) {
+function tilesUsing(methodId: any) {
   return TILE_TYPES
     .filter((t) => t.discovery?.method === methodId)
     .map((t) => t.id)
     .sort();
 }
 
-function defaultLabel(p) {
+function defaultLabel(p: any) {
   if (p.default === undefined) return "—";
   return String(p.default);
 }

@@ -7,7 +7,7 @@ function drawShadow(ctx, w = 22, h = 4) {
   ctx.fill();
 }
 
-function drawVioletBed(ctx) {
+function drawVioletBed(ctx: CanvasRenderingContext2D) {
   drawShadow(ctx, 22, 4);
   // Wooden bed border
   ctx.fillStyle = "#7a4a18";
@@ -76,7 +76,7 @@ function drawVioletBed(ctx) {
   });
 }
 
-function drawStoneLantern(ctx) {
+function drawStoneLantern(ctx: CanvasRenderingContext2D) {
   drawShadow(ctx, 18, 4);
   // Base
   ctx.fillStyle = "#7a8490";
@@ -181,7 +181,7 @@ function drawStoneLantern(ctx) {
   ctx.fill();
 }
 
-function drawAppleSapling(ctx) {
+function drawAppleSapling(ctx: CanvasRenderingContext2D) {
   drawShadow(ctx, 18, 4);
   // Pot
   ctx.fillStyle = "#a85838";
@@ -268,7 +268,7 @@ function drawAppleSapling(ctx) {
 
 // ── Harbor-themed decorations ────────────────────────────────────────────
 
-function drawDriftwoodArch(ctx) {
+function drawDriftwoodArch(ctx: CanvasRenderingContext2D) {
   drawShadow(ctx, 22, 4);
   // Stone base on both feet
   ctx.fillStyle = "#8a8478";
@@ -361,7 +361,7 @@ function drawDriftwoodArch(ctx) {
   ctx.stroke();
 }
 
-function drawPearlFountain(ctx) {
+function drawPearlFountain(ctx: CanvasRenderingContext2D) {
   drawShadow(ctx, 22, 4);
   // Lower basin — wide stone bowl
   ctx.fillStyle = "#a8a89c";
@@ -448,7 +448,7 @@ function drawPearlFountain(ctx) {
   });
 }
 
-function drawFishingDock(ctx) {
+function drawFishingDock(ctx: CanvasRenderingContext2D) {
   drawShadow(ctx, 22, 4);
   // Water beneath dock
   ctx.fillStyle = "#3a5878";
@@ -548,7 +548,7 @@ function drawFishingDock(ctx) {
 
 // ── Mine-themed decorations ──────────────────────────────────────────────
 
-function drawCobbleWell(ctx) {
+function drawCobbleWell(ctx: CanvasRenderingContext2D) {
   drawShadow(ctx, 22, 4);
   // Stone wellhead — drum of mortared cobbles
   ctx.fillStyle = "#8a8478";
@@ -668,7 +668,7 @@ function drawCobbleWell(ctx) {
   ctx.stroke();
 }
 
-function drawSmelterBrazier(ctx) {
+function drawSmelterBrazier(ctx: CanvasRenderingContext2D) {
   drawShadow(ctx, 20, 4);
   // Iron base — three-legged stand
   ctx.strokeStyle = "#1a1c20";
@@ -785,7 +785,7 @@ function drawSmelterBrazier(ctx) {
 }
 
 // Local rounded-rect helper (copied — codebase convention is per-file `rr`)
-function rrLocal(ctx, x, y, w, h, r) {
+function rrLocal(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
   ctx.beginPath();
   ctx.moveTo(x + r, y);
   ctx.arcTo(x + w, y, x + w, y + h, r);

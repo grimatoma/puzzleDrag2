@@ -16,7 +16,7 @@ import { useBalanceNav } from "../balanceNav.jsx";
 import Icon from "../../ui/Icon.jsx";
 import { ITEMS } from "../../constants.js";
 
-function Label({ children }) {
+function Label({ children: any }) {
   return (
     <div className="text-[10px] font-bold uppercase tracking-wide mb-0.5" style={{ color: COLORS.inkSubtle }}>
       {children}
@@ -24,11 +24,11 @@ function Label({ children }) {
   );
 }
 
-function formatResources(resources) {
+function formatResources(resources: any) {
   return Object.entries(resources || {}).map(([k, v]) => `${k}:${v}`).join(", ");
 }
 
-function parseResources(text) {
+function parseResources(text: any) {
   const out = {};
   for (const part of String(text || "").split(",")) {
     const [rawKey, rawValue] = part.split(":").map((s) => s?.trim());
@@ -40,7 +40,7 @@ function parseResources(text) {
   return out;
 }
 
-export default function WorkersTab({ draft, updateDraft, focus }) {
+export default function WorkersTab({ draft: any, updateDraft: any, focus: any }) {
   const { focus: navFocus } = useBalanceNav();
   const activeFocus = focus ?? navFocus;
   useScrollToFocus(activeFocus);
@@ -55,8 +55,8 @@ export default function WorkersTab({ draft, updateDraft, focus }) {
     [search],
   );
 
-  function patch(id, fields) {
-    updateDraft((d) => {
+  function patch(id: any, fields: any) {
+    updateDraft((d: any) => {
       d.workers ??= {};
       const cur = d.workers[id] || {};
       const next = { ...cur, ...fields };
@@ -91,7 +91,7 @@ export default function WorkersTab({ draft, updateDraft, focus }) {
           };
           const dirty = Object.keys(p).length > 0;
 
-          function patchHireCost(field, value) {
+          function patchHireCost(field: any, value: any) {
             const nextCost = { coins: eff.coins };
             if (eff.coinsStep > 0) nextCost.coinsStep = eff.coinsStep;
             if (eff.coinsMult !== 1) nextCost.coinsMult = eff.coinsMult;
@@ -126,7 +126,7 @@ export default function WorkersTab({ draft, updateDraft, focus }) {
                 {dirty && (
                   <SmallButton
                     variant="ghost"
-                    onClick={() => updateDraft((d) => { d.workers ??= {}; delete d.workers[w.id]; })}
+                    onClick={() => updateDraft((d: any) => { d.workers ??= {}; delete d.workers[w.id]; })}
                   >
                     revert
                   </SmallButton>
@@ -138,14 +138,14 @@ export default function WorkersTab({ draft, updateDraft, focus }) {
                   <Label>coins (base)</Label>
                   <NumberField
                     value={eff.coins} min={0} max={9999} width={80}
-                    onChange={(v) => patchHireCost("coins", v)}
+                    onChange={(v: any) => patchHireCost("coins", v)}
                   />
                 </div>
                 <div>
                   <Label>coinsStep (linear)</Label>
                   <NumberField
                     value={eff.coinsStep} min={0} max={999} width={80}
-                    onChange={(v) => patchHireCost("coinsStep", v)}
+                    onChange={(v: any) => patchHireCost("coinsStep", v)}
                   />
                 </div>
                 <div>
@@ -153,21 +153,21 @@ export default function WorkersTab({ draft, updateDraft, focus }) {
                   <NumberField
                     value={Number(eff.coinsMult.toFixed(3))}
                     min={1} max={3} step={0.05} width={80}
-                    onChange={(v) => patchHireCost("coinsMult", v)}
+                    onChange={(v: any) => patchHireCost("coinsMult", v)}
                   />
                 </div>
                 <div>
                   <Label>maxCount</Label>
                   <NumberField
                     value={eff.maxCount} min={1} max={50} width={70}
-                    onChange={(v) => patch(w.id, { maxCount: v })}
+                    onChange={(v: any) => patch(w.id, { maxCount: v })}
                   />
                 </div>
                 <div>
                   <Label>resource step</Label>
                   <NumberField
                     value={eff.resourcesStepEvery} min={1} max={20} width={70}
-                    onChange={(v) => patchHireCost("resourcesStepEvery", v)}
+                    onChange={(v: any) => patchHireCost("resourcesStepEvery", v)}
                   />
                 </div>
                 <div className="col-span-3">
@@ -186,7 +186,7 @@ export default function WorkersTab({ draft, updateDraft, focus }) {
                 <AbilitiesEditor
                   scope="worker"
                   abilities={eff.abilities}
-                  onChange={(next) => patch(w.id, { abilities: next })}
+                  onChange={(next: any) => patch(w.id, { abilities: next })}
                 />
               </CardAttachmentFooter>
             </Card>

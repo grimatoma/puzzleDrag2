@@ -16,7 +16,7 @@ export const RELATIONAL_FOOTER_STYLE = {
   borderTop: `1px dashed ${COLORS.slate}66`,
 };
 
-export function CardAttachmentFooter({ title, children, className = "", standalone = false }) {
+export function CardAttachmentFooter({ title: any, children: any, className = "", standalone = false }) {
   const edgeClass = standalone
     ? "mt-3 rounded-lg border px-3 pt-3 pb-3"
     : "mt-3 -mx-3 -mb-3 px-3 pt-3 pb-3 rounded-b-[10px]";
@@ -38,7 +38,7 @@ export function CardAttachmentFooter({ title, children, className = "", standalo
   );
 }
 
-export function RelationalFooter({ title = "Related", hint, children, className = "", standalone = false }) {
+export function RelationalFooter({ title = "Related", hint: any, children: any, className = "", standalone = false }) {
   const edgeClass = standalone
     ? "mt-3 rounded-lg border px-3 pt-3 pb-3"
     : "mt-3 -mx-3 -mb-3 px-3 pt-3 pb-3 rounded-b-[10px]";
@@ -63,7 +63,7 @@ export function RelationalFooter({ title = "Related", hint, children, className 
   );
 }
 
-export function RefButton({ children, onClick, title, className = "" }) {
+export function RefButton({ children: any, onClick: any, title: any, className = "" }) {
   return (
     <button
       type="button"
@@ -83,11 +83,11 @@ export function RefButton({ children, onClick, title, className = "" }) {
   );
 }
 
-export function balanceEntityDomId(entityId) {
+export function balanceEntityDomId(entityId: any) {
   return entityId ? `bm-${entityId}` : undefined;
 }
 
-export function useScrollToFocus(focus) {
+export function useScrollToFocus(focus: any) {
   useEffect(() => {
     if (!focus) return;
     document.getElementById(balanceEntityDomId(focus))
@@ -95,7 +95,7 @@ export function useScrollToFocus(focus) {
   }, [focus]);
 }
 
-export function focusHighlightProps(entityId, focus) {
+export function focusHighlightProps(entityId: any, focus: any) {
   const isFocused = Boolean(entityId && focus === entityId);
   return {
     id: balanceEntityDomId(entityId),
@@ -114,7 +114,7 @@ const USAGE_KIND_LABELS = {
   story_outcome: "Story reward",
 };
 
-export function navTargetForUsage(usage) {
+export function navTargetForUsage(usage: any) {
   if (!usage?.kind) return null;
   switch (usage.kind) {
     case "recipe_input":
@@ -131,7 +131,7 @@ export function navTargetForUsage(usage) {
   }
 }
 
-export function usageRefLabel(usage) {
+export function usageRefLabel(usage: any) {
   if (usage.kind === "recipe_input") return `${usage.recipeId} · ${usage.qty}× in`;
   if (usage.kind === "recipe_output") return `${usage.recipeId} (output)`;
   if (usage.kind === "building_cost") return `${usage.buildingId} · ${usage.qty}×`;
@@ -142,14 +142,14 @@ export function usageRefLabel(usage) {
   return usage.kind;
 }
 
-export function WhereUsedLinks({ usages }) {
+export function WhereUsedLinks({ usages: any }) {
   const { navigate } = useBalanceNav();
   if (!usages?.length) {
     return <div className="text-[10px] italic" style={{ color: COLORS.inkSubtle }}>Not referenced anywhere.</div>;
   }
   return (
     <div className="flex flex-wrap gap-1">
-      {usages.map((u, i) => {
+      {usages.map((u: any, i: any) => {
         const target = navTargetForUsage(u);
         const label = usageRefLabel(u);
         const title = USAGE_KIND_LABELS[u.kind] || u.kind;
@@ -172,14 +172,14 @@ export function WhereUsedLinks({ usages }) {
   );
 }
 
-export function CraftingRecipeLinks({ recipes }) {
+export function CraftingRecipeLinks({ recipes: any }) {
   const { navigate } = useBalanceNav();
   if (!recipes?.length) {
     return <div className="text-[10px] italic" style={{ color: COLORS.inkSubtle }}>Not craftable.</div>;
   }
   return (
     <div className="flex flex-col gap-1.5">
-      {recipes.map((rec) => (
+      {recipes.map((rec: any) => (
         <RefButton key={rec.recId} title={`Open recipe ${rec.recId}`}
           onClick={() => navigate({ tab: "recipes", focus: rec.recId })}
           className="w-full flex-wrap">
@@ -197,7 +197,7 @@ export function CraftingRecipeLinks({ recipes }) {
   );
 }
 
-function PillInline({ children }) {
+function PillInline({ children: any }) {
   return (
     <span className="px-1 py-0.5 rounded text-[9px] font-bold uppercase"
       style={{ background: COLORS.parchmentDeep, color: COLORS.inkLight }}>

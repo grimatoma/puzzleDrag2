@@ -1,6 +1,6 @@
 // Trees.
 
-function trunk(ctx, w, topY, botY, light, dark, outline) {
+function trunk(ctx: CanvasRenderingContext2D, w: number, topY: number, botY: number, light: string, dark: string, outline: string) {
   const g = ctx.createLinearGradient(-w, 0, w, 0);
   g.addColorStop(0, dark); g.addColorStop(0.5, light); g.addColorStop(1, dark);
   ctx.fillStyle = g;
@@ -45,7 +45,7 @@ function drawBirch(ctx) {
   [[-1,-10,3,1.5],[0,-2,3.5,1.4],[-1,8,3,1.6],[0,16,3.4,1.4],[-1,2,1.5,0.8],[1,12,1.5,0.8]].forEach(([sx,sy,sw,sh])=>{
     ctx.beginPath(); ctx.ellipse(sx,sy,sw,sh,0,0,Math.PI*2); ctx.fill();
   });
-  const drawLeafCluster = (cx, cy, r) => {
+  const drawLeafCluster = (cx: number, cy: number, r: number) => {
     const cg = ctx.createRadialGradient(cx-r*0.3, cy-r*0.3, 1, cx, cy, r);
     cg.addColorStop(0, "#d8e840"); cg.addColorStop(0.7, "#7ea818"); cg.addColorStop(1, "#3a5808");
     ctx.fillStyle = cg;
@@ -67,7 +67,7 @@ function drawWillow(ctx) {
   ctx.fillStyle = "rgba(0,0,0,0.3)";
   ctx.beginPath(); ctx.ellipse(2, 24, 22, 4, 0, 0, Math.PI*2); ctx.fill();
   trunk(ctx, 4, -8, 24, "#6b4818", "#3a2008", "#1a0e04");
-  const drawDrape = (cx, len, sway) => {
+  const drawDrape = (cx: number, len: number, sway: number) => {
     ctx.strokeStyle = "#5a8a18"; ctx.lineWidth = 2.2;
     ctx.beginPath(); ctx.moveTo(cx, -10); ctx.quadraticCurveTo(cx + sway, -10 + len/2, cx + sway*1.5, -10 + len); ctx.stroke();
     ctx.fillStyle = "#7eb83a";
@@ -98,7 +98,7 @@ function drawFir(ctx) {
   ctx.fillStyle = "rgba(0,0,0,0.32)";
   ctx.beginPath(); ctx.ellipse(2, 24, 18, 4, 0, 0, Math.PI*2); ctx.fill();
   trunk(ctx, 3.5, 18, 24, "#5a3814", "#2a1808", "#1a0e04");
-  const drawTier = (y, w, h) => {
+  const drawTier = (y: number, w: number, h: number) => {
     const g = ctx.createLinearGradient(0, y - h, 0, y);
     g.addColorStop(0, "#5a8a28"); g.addColorStop(0.6, "#2a5008"); g.addColorStop(1, "#1a3008");
     ctx.fillStyle = g;
@@ -186,7 +186,7 @@ function drawPalm(ctx) {
     ctx.moveTo(-5, 20 - i*7); ctx.bezierCurveTo(0, 22 - i*7, 0, 22 - i*7, 5, 20 - i*7);
     ctx.stroke();
   }
-  const drawFrond = (angle, len, droop) => {
+  const drawFrond = (angle: number, len: number, droop: number) => {
     ctx.save(); ctx.translate(0, -14); ctx.rotate(angle);
     ctx.strokeStyle = "#3a5808"; ctx.lineWidth = 2.0;
     ctx.beginPath(); ctx.moveTo(0, 0); ctx.quadraticCurveTo(len*0.5, droop*0.3, len, droop); ctx.stroke();

@@ -14,7 +14,7 @@ const BUCKET_COLOR = {
   act1: "#7a8b5e", act2: "#c9863a", act3: "#a8431a", side: "#7e7aa6", draft: "#6b8e9e",
 };
 
-function RowHeader({ label, hint }) {
+function RowHeader({ label: any, hint: any }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", justifyContent: "center",
       padding: "5px 8px", borderRight: `1px solid ${C.border}66` }}>
@@ -24,7 +24,7 @@ function RowHeader({ label, hint }) {
   );
 }
 
-function HeatCell({ value, scale, accent }) {
+function HeatCell({ value: any, scale: any, accent: any }) {
   const intensity = scale > 0 ? Math.min(1, Math.abs(value) / scale) : 0;
   const sign = value < 0 ? -1 : 1;
   const bg = value === 0
@@ -43,7 +43,7 @@ function HeatCell({ value, scale, accent }) {
   );
 }
 
-function hexToRgb(hex) {
+function hexToRgb(hex: any) {
   const h = (hex || "#000").replace("#", "");
   const r = parseInt(h.slice(0, 2), 16) || 0;
   const g = parseInt(h.slice(2, 4), 16) || 0;
@@ -51,23 +51,23 @@ function hexToRgb(hex) {
   return `${r},${g},${b}`;
 }
 
-function HeatRow({ row }) {
-  const max = Math.max(...row.cells.map((c) => Math.abs(c.value)));
+function HeatRow({ row: any }) {
+  const max = Math.max(...row.cells.map((c: any) => Math.abs(c.value)));
   return (
     <div style={{ display: "grid", gridTemplateColumns: "140px repeat(5, 1fr)",
       borderTop: `1px solid ${C.border}` }}>
       <RowHeader label={row.label} hint={row.hint} />
-      {row.cells.map((cell) => (
+      {row.cells.map((cell: any) => (
         <HeatCell key={cell.bucket} value={cell.value} scale={max} accent={BUCKET_COLOR[cell.bucket]} />
       ))}
     </div>
   );
 }
 
-export default function HeatmapPanel({ draft }) {
+export default function HeatmapPanel({ draft: any }) {
   const heat = useMemo(() => computeOutcomeHeatmap(draft), [draft]);
 
-  const cellsFor = (counts) => OUTCOME_BUCKETS.map((b) => ({ bucket: b, value: counts[b] || 0 }));
+  const cellsFor = (counts: any) => OUTCOME_BUCKETS.map((b) => ({ bucket: b, value: counts[b] || 0 }));
   const rows = [
     { label: "Choices", cells: cellsFor(heat.choiceCounts) },
     { label: "Embers ✸", hint: "summed across choices", cells: cellsFor(heat.counts.embers) },

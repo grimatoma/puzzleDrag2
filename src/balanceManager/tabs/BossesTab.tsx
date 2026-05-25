@@ -18,9 +18,9 @@ const TIER_TONE = {
   brutal:  { bg: "rgba(194,59,34,0.18)",  fg: COLORS.red },
 };
 
-export default function BossesTab({ draft, updateDraft }) {
-  function patch(id, fields) {
-    updateDraft((d) => {
+export default function BossesTab({ draft: any, updateDraft: any }) {
+  function patch(id: any, fields: any) {
+    updateDraft((d: any) => {
       d.bosses ??= {};
       const next = { ...(d.bosses[id] ?? {}), ...fields };
       for (const k of Object.keys(next)) if (next[k] === "" || next[k] == null) delete next[k];
@@ -74,13 +74,13 @@ export default function BossesTab({ draft, updateDraft }) {
                 </div>
               </div>
             </div>
-            <FieldRow label="Name"><TextField value={eff.name} onChange={(v) => patch(b.id, { name: v })} width={200} /></FieldRow>
-            <FieldRow label="Season"><TextField value={eff.season} onChange={(v) => patch(b.id, { season: v })} width={120} /></FieldRow>
-            <FieldRow label="Target amount" hint={`resource: ${b.target?.resource ?? "?"}`}><NumberField value={eff.targetAmount} onChange={(v) => patch(b.id, { targetAmount: v })} min={1} max={99999} /></FieldRow>
+            <FieldRow label="Name"><TextField value={eff.name} onChange={(v: any) => patch(b.id, { name: v })} width={200} /></FieldRow>
+            <FieldRow label="Season"><TextField value={eff.season} onChange={(v: any) => patch(b.id, { season: v })} width={120} /></FieldRow>
+            <FieldRow label="Target amount" hint={`resource: ${b.target?.resource ?? "?"}`}><NumberField value={eff.targetAmount} onChange={(v: any) => patch(b.id, { targetAmount: v })} min={1} max={99999} /></FieldRow>
             <div className="text-[10px] font-bold uppercase tracking-wide mb-0.5 mt-1" style={{ color: COLORS.inkSubtle }}>Description</div>
-            <TextArea rows={2} value={eff.description} onChange={(v) => patch(b.id, { description: v })} />
+            <TextArea rows={2} value={eff.description} onChange={(v: any) => patch(b.id, { description: v })} />
             <div className="text-[10px] font-bold uppercase tracking-wide mb-0.5 mt-1" style={{ color: COLORS.inkSubtle }}>Modifier description <span className="opacity-60">(modifier: {b.modifier?.type ?? "?"})</span></div>
-            <TextArea rows={2} value={eff.modifierDescription} onChange={(v) => patch(b.id, { modifierDescription: v })} />
+            <TextArea rows={2} value={eff.modifierDescription} onChange={(v: any) => patch(b.id, { modifierDescription: v })} />
           </Card>
         );
       })}

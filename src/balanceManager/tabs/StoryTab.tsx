@@ -18,7 +18,7 @@ import MetricCard, { MetricGrid } from "../../ui/primitives/MetricCard.jsx";
 
 const STORY_EDITOR_URL = import.meta.env.BASE_URL.replace(/\/$/, "") + "/story/";
 
-function downloadMarkdown(md, filename = "hearthlands-story.md") {
+function downloadMarkdown(md: any, filename = "hearthlands-story.md") {
   if (typeof document === "undefined") return;
   const blob = new Blob([md], { type: "text/markdown;charset=utf-8" });
   const url = URL.createObjectURL(blob);
@@ -31,7 +31,7 @@ function downloadMarkdown(md, filename = "hearthlands-story.md") {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-export default function StoryTab({ draft }) {
+export default function StoryTab({ draft: any }) {
   const counts = `${STORY_BEATS.length} story beat${STORY_BEATS.length === 1 ? "" : "s"} · ${SIDE_BEATS.length} side event${SIDE_BEATS.length === 1 ? "" : "s"}`;
   const { total: warningTotal } = useMemo(() => groupedStoryWarnings(draft), [draft]);
   const [previewOpen, setPreviewOpen] = useState(false);

@@ -3,7 +3,7 @@
 
 import { useEffect, useRef } from "react";
 
-function decodeSeg(seg) {
+function decodeSeg(seg: any) {
   if (!seg) return null;
   try {
     return decodeURIComponent(seg);
@@ -12,7 +12,7 @@ function decodeSeg(seg) {
   }
 }
 
-export function parseHash(hash, validTabs) {
+export function parseHash(hash: any, validTabs: any) {
   const raw = String(hash || "").replace(/^#\/?/, "");
   if (!raw) return { tab: null, focus: null };
   const parts = raw.split("/").filter(Boolean);
@@ -31,7 +31,7 @@ export function buildHash({ tab, focus }: { tab?: string | null; focus?: string 
   return base;
 }
 
-export function useBalanceRouter(tab, setTab, focus, setFocus, validTabs) {
+export function useBalanceRouter(tab: any, setTab: any, focus: any, setFocus: any, validTabs: any) {
   const lastWrittenRef = useRef(null);
   const initialisedRef = useRef(false);
 

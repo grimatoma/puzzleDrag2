@@ -9,7 +9,7 @@ import { effectiveBeat, allBeatIds } from "./shared.jsx";
 
 const BUCKETS = Object.freeze(["act1", "act2", "act3", "side", "draft"]);
 
-function bucketFor(beat, isDraft) {
+function bucketFor(beat: any, isDraft: any) {
   if (isDraft) return "draft";
   if (Number.isFinite(beat?.act)) return `act${beat.act}`;
   return "side";
@@ -21,7 +21,7 @@ function emptyBuckets() {
   return out;
 }
 
-const asArr = (v) => Array.isArray(v) ? v : (typeof v === "string" && v ? [v] : []);
+const asArr = (v: any) => Array.isArray(v) ? v : (typeof v === "string" && v ? [v] : []);
 
 /**
  * Walk the draft and return a heatmap of choice outcomes, broken down by
@@ -38,7 +38,7 @@ const asArr = (v) => Array.isArray(v) ? v : (typeof v === "string" && v ? [v] : 
  * `counts` covers coins / embers / coreIngots / gems / setFlags / clearFlags.
  * Per-NPC bond bookkeeping lives in `bondPerNpc` keyed by speaker.
  */
-export function computeOutcomeHeatmap(draft) {
+export function computeOutcomeHeatmap(draft: any) {
   const counts = {
     coins:      emptyBuckets(),
     embers:     emptyBuckets(),

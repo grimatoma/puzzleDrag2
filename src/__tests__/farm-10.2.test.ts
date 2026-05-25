@@ -1,0 +1,86 @@
+/**
+ * Phase 10.2 — Per-season tile pool modifier
+ * Tests written FIRST (red phase).
+ */
+import { describe, it, expect } from "vitest";
+import { SEASON_POOL_MODS, BIOMES } from "../constants.js";
+import { getEffectivePool } from "../features/farm/pool.js";
+import { createInitialState } from "../state.js";
+
+const BASE = BIOMES.farm.pool;
+const cnt = (arr, k) => arr.filter((x) => x === k).length;
+
+function farmAt(season) {
+  const s = createInitialState();
+  return getEffectivePool({ ...s, biome: "farm", season });
+}
+
+// ── SEASON_POOL_MODS constants locked ─────────────────────────────────────────
+
+describe("10.2 — SEASON_POOL_MODS constants", () => {
+  it("spring tile_fruit_blackberry +1", () => expect(SEASON_POOL_MODS.Spring.tile_fruit_blackberry).toBe(1));
+  it("summer wheat +1", () => expect(SEASON_POOL_MODS.Summer.tile_grain_wheat).toBe(1));
+  it("autumn log +2",  () => expect(SEASON_POOL_MODS.Autumn.tile_tree_oak).toBe(2));
+  it("winter stone +1", () => expect(SEASON_POOL_MODS.Winter.tile_mine_stone).toBe(1));
+  it("winter hay -1", () => expect(SEASON_POOL_MODS.Winter.tile_grass_hay).toBe(-1));
+});
+
+// ── Pool counts by season ─────────────────────────────────────────────────────
+
+describe("10.2 — getEffectivePool seasonal counts", () => {
+  it("spring pool has +1 tile_fruit_blackberry over base", () => {
+    expect(cnt(farmAt("Spring"), "tile_fruit_blackberry")).toBe(cnt(BASE, "tile_fruit_blackberry") + 1);
+  });
+
+  it("spring hay is unchanged", () => {
+    expect(cnt(farmAt("Spring"), "tile_grass_hay")).toBe(cnt(BASE, "tile_grass_hay"));
+  });
+
+  it("summer pool has +1 wheat over base", () => {
+    expect(cnt(farmAt("Summer"), "tile_grain_wheat")).toBe(cnt(BASE, "tile_grain_wheat") + 1);
+  });
+
+  it("autumn pool has +2 log over base", () => {
+    expect(cnt(farmAt("Autumn"), "tile_tree_oak")).toBe(cnt(BASE, "tile_tree_oak") + 2);
+  });
+
+  it("winter pool has +1 stone over base", () => {
+    expect(cnt(farmAt("Winter"), "tile_mine_stone")).toBe(cnt(BASE, "tile_mine_stone") + 1);
+  });
+
+  it("winter pool has -1 hay (clamped at min 1)", () => {
+    expect(cnt(farmAt("Winter"), "tile_grass_hay")).toBe(Math.max(1, cnt(BASE, "tile_grass_hay") - 1));
+  });
+
+  it("pool never collapses below 9 entries", () => {
+    expect(farmAt("Winter").length).toBeGreaterThanOrEqual(9);
+  });
+});
+
+// ── Worker pool_weight stacks additively ─────────────────────────────────────
+
+describe("10.2 — worker pool_weight additive stacking", () => {
+  it("autumn (+2) + worker (+1) = base+3 log", () => {
+    const s = {
+      ...createInitialState(),
+      biome: "farm",
+      season: "Autumn",
+      _workerEffects: { effectivePoolWeights: { tile_tree_oak: 1 } },
+    };
+    expect(cnt(getEffectivePool(s), "tile_tree_oak")).toBe(cnt(BASE, "tile_tree_oak") + 2 + 1);
+  });
+});
+
+// ── Mine biome ignores farm season mods ──────────────────────────────────────
+
+describe("10.2 — Mine biome ignores farm season mods", () => {
+  it("mine spring pool — tile_fruit_blackberry count unchanged", () => {
+    const s = { ...createInitialState(), biome: "mine", season: "Spring" };
+    const mineBase = BIOMES.mine.pool;
+    expect(cnt(getEffectivePool(s), "tile_fruit_blackberry")).toBe(cnt(mineBase, "tile_fruit_blackberry"));
+  });
+});
+
+// Phase 7 — the calendar-effect snapshot (winter min-chain, spring +20%,
+// summer 2× orders, autumn 2× upgrades) was deleted along with the
+// SEASON_EFFECTS export it asserted on.

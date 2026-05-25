@@ -13,17 +13,17 @@ import { COLORS, NumberField, TextField, TextArea, FieldRow, Card } from "../sha
 
 const TYPE_LABELS = { farm: "Farm", mine: "Mine", harbor: "Harbor" };
 
-function Label({ children }) {
+function Label({ children: any }) {
   return <div className="text-[10px] font-bold uppercase tracking-wide mb-0.5" style={{ color: COLORS.inkSubtle }}>{children}</div>;
 }
 
 // textarea string ⇄ array of non-empty trimmed lines
-const linesToText = (arr) => (Array.isArray(arr) ? arr.join("\n") : "");
-const textToLines = (str) => String(str ?? "").split("\n").map((s) => s.trim()).filter((s) => s.length > 0);
+const linesToText = (arr: any) => (Array.isArray(arr) ? arr.join("\n") : "");
+const textToLines = (str: any) => String(str ?? "").split("\n").map((s) => s.trim()).filter((s) => s.length > 0);
 
-export default function KeepersTab({ draft, updateDraft }) {
-  function patchKeeper(type, fields) {
-    updateDraft((d) => {
+export default function KeepersTab({ draft: any, updateDraft: any }) {
+  function patchKeeper(type: any, fields: any) {
+    updateDraft((d: any) => {
       d.keepers ??= {};
       const cur = d.keepers[type] ?? {};
       const next = { ...cur, ...fields };
@@ -41,7 +41,7 @@ export default function KeepersTab({ draft, updateDraft }) {
     });
   }
 
-  function PathBlock({ type, path, p, k }) {
+  function PathBlock({ type: any, path: any, p: any, k: any }) {
     const pp = p[path] ?? {};
     const kk = k[path];
     const rewardKey = path === "coexist" ? "embers" : "coreIngots";
@@ -51,12 +51,12 @@ export default function KeepersTab({ draft, updateDraft }) {
           {path === "coexist" ? "🤝 Coexist" : "⚔ Drive Out"}
         </div>
         <FieldRow label="Choice label">
-          <TextField value={pp.label ?? kk.label} onChange={(v) => patchKeeper(type, { [path]: { label: v } })} width={240} />
+          <TextField value={pp.label ?? kk.label} onChange={(v: any) => patchKeeper(type, { [path]: { label: v } })} width={240} />
         </FieldRow>
         <Label>Pitch (the keeper's response — one line per row)</Label>
-        <TextArea rows={3} value={linesToText(pp.pitch ?? kk.pitch)} onChange={(v) => patchKeeper(type, { [path]: { pitch: textToLines(v).length ? textToLines(v) : undefined } })} />
+        <TextArea rows={3} value={linesToText(pp.pitch ?? kk.pitch)} onChange={(v: any) => patchKeeper(type, { [path]: { pitch: textToLines(v).length ? textToLines(v) : undefined } })} />
         <FieldRow label={path === "coexist" ? "Embers reward" : "Core Ingots reward"}>
-          <NumberField value={pp[rewardKey] ?? kk[rewardKey]} onChange={(v) => patchKeeper(type, { [path]: { [rewardKey]: v } })} min={0} max={9999} />
+          <NumberField value={pp[rewardKey] ?? kk[rewardKey]} onChange={(v: any) => patchKeeper(type, { [path]: { [rewardKey]: v } })} min={0} max={9999} />
         </FieldRow>
       </div>
     );
@@ -78,12 +78,12 @@ export default function KeepersTab({ draft, updateDraft }) {
         };
         return (
           <Card key={type} title={`${eff.icon} ${eff.name} — ${TYPE_LABELS[type]}`}>
-            <FieldRow label="Name"><TextField value={eff.name} onChange={(v) => patchKeeper(type, { name: v })} width={220} /></FieldRow>
-            <FieldRow label="Title"><TextField value={eff.title} onChange={(v) => patchKeeper(type, { title: v })} width={220} /></FieldRow>
-            <FieldRow label="Icon (emoji)"><TextField value={eff.icon} onChange={(v) => patchKeeper(type, { icon: v })} width={60} /></FieldRow>
-            <FieldRow label="Appears after N buildings"><NumberField value={eff.appearsAfterBuildings} onChange={(v) => patchKeeper(type, { appearsAfterBuildings: v })} min={1} max={50} /></FieldRow>
+            <FieldRow label="Name"><TextField value={eff.name} onChange={(v: any) => patchKeeper(type, { name: v })} width={220} /></FieldRow>
+            <FieldRow label="Title"><TextField value={eff.title} onChange={(v: any) => patchKeeper(type, { title: v })} width={220} /></FieldRow>
+            <FieldRow label="Icon (emoji)"><TextField value={eff.icon} onChange={(v: any) => patchKeeper(type, { icon: v })} width={60} /></FieldRow>
+            <FieldRow label="Appears after N buildings"><NumberField value={eff.appearsAfterBuildings} onChange={(v: any) => patchKeeper(type, { appearsAfterBuildings: v })} min={1} max={50} /></FieldRow>
             <Label>Intro (narration + the keeper's opening — one line per row)</Label>
-            <TextArea rows={4} value={linesToText(eff.intro)} onChange={(v) => patchKeeper(type, { intro: textToLines(v).length ? textToLines(v) : undefined })} />
+            <TextArea rows={4} value={linesToText(eff.intro)} onChange={(v: any) => patchKeeper(type, { intro: textToLines(v).length ? textToLines(v) : undefined })} />
             <PathBlock type={type} path="coexist" p={p} k={k} />
             <PathBlock type={type} path="driveout" p={p} k={k} />
           </Card>

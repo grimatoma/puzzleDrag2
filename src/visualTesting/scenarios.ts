@@ -13,7 +13,7 @@ export function listVisualScenarios() {
   }));
 }
 
-export function buildVisualScenario(id) {
+export function buildVisualScenario(id: any) {
   const scenario = visualScenarioById(id);
   if (!scenario) throw new Error(`Unknown visual scenario: ${id}`);
   const state = buildVisualState(scenario);
@@ -24,7 +24,7 @@ export function buildVisualScenario(id) {
   return { ...scenario, stateTree: state };
 }
 
-export function getVisualScenario(id) {
+export function getVisualScenario(id: any) {
   return buildVisualScenario(id);
 }
 

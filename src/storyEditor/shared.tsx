@@ -28,7 +28,7 @@ export const NPC_KEYS = Object.keys(NPCS);
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-export function actColor(beat) {
+export function actColor(beat: any) {
   if (beat?.draft) return "#6b8e9e";
   if (beat?.side || beat?.resolution) return C.violet;
   if (beat?.act === 1) return "#7a8b5e";
@@ -37,13 +37,13 @@ export function actColor(beat) {
   return C.borderDeep;
 }
 
-export function hexAlpha(hex, a) {
+export function hexAlpha(hex: any, a: any) {
   const h = String(hex || "#000").replace("#", "");
   const r = parseInt(h.slice(0, 2), 16) || 0, g = parseInt(h.slice(2, 4), 16) || 0, b = parseInt(h.slice(4, 6), 16) || 0;
   return `rgba(${r},${g},${b},${a})`;
 }
 
-export function triggerSummary(beat) {
+export function triggerSummary(beat: any) {
   const t = beat?.trigger;
   if (t) {
     switch (t.type) {
@@ -68,7 +68,7 @@ export function triggerSummary(beat) {
 
 // ─── Portrait ────────────────────────────────────────────────────────────────
 
-export function Portrait({ npcKey, size = 24 }) {
+export function Portrait({ npcKey: any, size = 24 }) {
   const npc = NPCS[npcKey];
   if (npc?.iconKey && hasIcon(npc.iconKey)) {
     return (
@@ -94,12 +94,12 @@ export const SCENE_OPTS = [
   ...Object.keys(SCENE_THEMES).map((k) => ({ value: k, label: `${k} — ${SCENE_THEMES[k].label}` })),
 ];
 
-export const linesToText = (lines) =>
+export const linesToText = (lines: any) =>
   Array.isArray(lines)
     ? lines.map((l) => `${l?.speaker ? l.speaker : "narrator"}: ${l?.text || ""}`).join("\n")
     : "";
 
-export const textToLines = (str) =>
+export const textToLines = (str: any) =>
   String(str ?? "").split("\n").filter((r) => r.trim()).map((row) => {
     const i = row.indexOf(": ");
     if (i > 0) {
@@ -112,7 +112,7 @@ export const textToLines = (str) =>
 export const DRAFT_BEAT_ID_RE = /^[a-z][a-z0-9_]*$/;
 export const FLAG_ID_RE = /^[a-z_][a-z0-9_]*$/;
 
-const stable = (v) => {
+const stable = (v: any) => {
   if (Array.isArray(v)) return v.map(stable);
   if (v && typeof v === "object") {
     const out = {};
@@ -128,23 +128,23 @@ const stable = (v) => {
   return v;
 };
 
-export function normalizedStorySlice(draft) {
+export function normalizedStorySlice(draft: any) {
   return stable(draft?.story || {});
 }
 
-export function storySlicesEqual(a, b) {
+export function storySlicesEqual(a: any, b: any) {
   return JSON.stringify(normalizedStorySlice(a)) === JSON.stringify(normalizedStorySlice(b));
 }
 
-export function knownStoryFlagIds(draft) {
+export function knownStoryFlagIds(draft: any) {
   const ids = new Set(STORY_FLAGS.map((f) => f?.id).filter(Boolean));
-  const add = (id) => { if (typeof id === "string" && id.trim()) ids.add(id.trim()); };
+  const add = (id: any) => { if (typeof id === "string" && id.trim()) ids.add(id.trim()); };
   for (const f of draft?.flags?.new || []) add(f?.id);
   for (const id of Object.keys(draft?.flags?.byId || {})) add(id);
   return ids;
 }
 
-export function validateDraftBeatId(draft, currentId, nextId) {
+export function validateDraftBeatId(draft: any, currentId: any, nextId: any) {
   const id = String(nextId ?? "").trim();
   if (!id) return { ok: false, id, message: "Beat id is required." };
   if (!DRAFT_BEAT_ID_RE.test(id)) return { ok: false, id, message: "Use lowercase letters, numbers, and underscores; start with a letter." };
@@ -152,7 +152,7 @@ export function validateDraftBeatId(draft, currentId, nextId) {
   return { ok: true, id, message: "" };
 }
 
-function rewriteChoiceTargets(choices, oldId, newId) {
+function rewriteChoiceTargets(choices: any, oldId: any, newId: any) {
   if (!Array.isArray(choices)) return choices;
   return choices.map((c) => {
     if (!c?.outcome || c.outcome.queueBeat !== oldId) return c;
@@ -160,7 +160,7 @@ function rewriteChoiceTargets(choices, oldId, newId) {
   });
 }
 
-export function renameDraftBeatInDraft(draft, oldId, newId) {
+export function renameDraftBeatInDraft(draft: any, oldId: any, newId: any) {
   const check = validateDraftBeatId(draft, oldId, newId);
   if (!check.ok) return { draft, ok: false, message: check.message };
   if (oldId === check.id) return { draft, ok: true, id: oldId, changed: false };
@@ -172,7 +172,7 @@ export function renameDraftBeatInDraft(draft, oldId, newId) {
   if (idx < 0) return { draft, ok: false, message: "Draft beat not found." };
   const arr = d.story.newBeats.slice();
   arr[idx] = { ...arr[idx], id: check.id };
-  d.story.newBeats = arr.map((b) => Array.isArray(b?.choices) ? { ...b, choices: rewriteChoiceTargets(b.choices, oldId, check.id) } : b);
+  d.story.newBeats = arr.map((b: any) => Array.isArray(b?.choices) ? { ...b, choices: rewriteChoiceTargets(b.choices, oldId, check.id) } : b);
 
   if (d.story.beats) {
     const beats = {};
@@ -186,9 +186,9 @@ export function renameDraftBeatInDraft(draft, oldId, newId) {
   return { draft: d, ok: true, id: check.id, changed: true };
 }
 
-const flagList = (value) => Array.isArray(value) ? value : (typeof value === "string" && value ? [value] : []);
+const flagList = (value: any) => Array.isArray(value) ? value : (typeof value === "string" && value ? [value] : []);
 
-function addFlagWarnings(list, knownFlags, warnings, context) {
+function addFlagWarnings(list: any, knownFlags: any, warnings: any, context: any) {
   for (const raw of flagList(list)) {
     const id = String(raw || "").trim();
     if (!id || id.startsWith("_fired_") || knownFlags.has(id)) continue;
@@ -211,9 +211,9 @@ export const STORY_WARNING_TYPES = Object.freeze({
   triggerLoop:        { label: "Trigger / queue loops",    hint: "A queueBeat target eventually loops back to the same beat without ending — risks an infinite re-fire cascade." },
 });
 
-function detectChoiceLoop(beatId, draft, beatIndex) {
+function detectChoiceLoop(beatId: any, draft: any, beatIndex: any) {
   const seen = new Set();
-  const visit = (id) => {
+  const visit = (id: any) => {
     if (!id || seen.has(id)) return id && id === beatId;
     seen.add(id);
     const choices = beatIndex.get(id)?.choices;
@@ -228,7 +228,7 @@ function detectChoiceLoop(beatId, draft, beatIndex) {
   return visit(beatId);
 }
 
-export function storyWarningsForBeat(beatId, draft, ctx) {
+export function storyWarningsForBeat(beatId: any, draft: any, ctx: any) {
   const beat = effectiveBeat(beatId, draft);
   if (!beat) return [];
   const ids = ctx?.ids || new Set(allBeatIds(draft));
@@ -245,7 +245,7 @@ export function storyWarningsForBeat(beatId, draft, ctx) {
 
   const choices = effectiveChoices(beatId, draft);
   const linesArr = Array.isArray(beat.lines) ? beat.lines : [];
-  const hasContent = linesArr.some((l) => l && typeof l.text === "string" && l.text.trim().length > 0)
+  const hasContent = linesArr.some((l: any) => l && typeof l.text === "string" && l.text.trim().length > 0)
     || (typeof beat.body === "string" && beat.body.trim().length > 0)
     || choices.length > 0;
   if (!hasContent) {
@@ -280,7 +280,7 @@ export function storyWarningsForBeat(beatId, draft, ctx) {
   return warnings;
 }
 
-export function collectStoryWarnings(draft) {
+export function collectStoryWarnings(draft: any) {
   const ids = new Set(allBeatIds(draft));
   const knownFlags = knownStoryFlagIds(draft);
   const beatIndex = new Map();
@@ -308,7 +308,7 @@ export function collectStoryWarnings(draft) {
  * grouped by warning type — convenient for rendering in the validation panel.
  * Returns `{ groups: [{ type, label, hint, items: [...] }], total }`.
  */
-export function groupedStoryWarnings(draft, byBeat) {
+export function groupedStoryWarnings(draft: any, byBeat: any) {
   const map = byBeat || collectStoryWarnings(draft);
   const byType = new Map();
   let total = 0;
@@ -322,14 +322,14 @@ export function groupedStoryWarnings(draft, byBeat) {
   const groups = [];
   for (const [type, items] of byType) {
     const meta = STORY_WARNING_TYPES[type] || { label: type, hint: "" };
-    items.sort((a, b) => a.beatId.localeCompare(b.beatId));
+    items.sort((a: any, b: any) => a.beatId.localeCompare(b.beatId));
     groups.push({ type, label: meta.label, hint: meta.hint, items });
   }
   groups.sort((a, b) => a.label.localeCompare(b.label));
   return { groups, total };
 }
 
-export function editorLinesForBeat(beat) {
+export function editorLinesForBeat(beat: any) {
   if (!beat) return [];
   if (Array.isArray(beat.lines) && beat.lines.length > 0) return beat.lines;
   return beatLines(beat);
@@ -350,7 +350,7 @@ export function emptyDraft() {
   return d;
 }
 
-export function cloneDraft(d) {
+export function cloneDraft(d: any) {
   if (!d) return emptyDraft();
   const base = emptyDraft();
   base.version = d.version ?? 1;
@@ -361,31 +361,31 @@ export function cloneDraft(d) {
 }
 
 /** The author-created (draft) beats from a draft doc. */
-export function draftBeats(draft) {
+export function draftBeats(draft: any) {
   const arr = draft?.story?.newBeats;
   return Array.isArray(arr) ? arr : [];
 }
 
 /** Index of a draft beat in `draft.story.newBeats`, or -1. */
-export function draftBeatIndex(draft, beatId) {
+export function draftBeatIndex(draft: any, beatId: any) {
   return draftBeats(draft).findIndex((b) => b && b.id === beatId);
 }
 
 /** True if `beatId` is an author-created draft beat (not a built-in). */
-export function isDraftBeat(draft, beatId) {
+export function isDraftBeat(draft: any, beatId: any) {
   return draftBeatIndex(draft, beatId) >= 0;
 }
 
-export function suppressedBeatIds(draft) {
+export function suppressedBeatIds(draft: any) {
   const ids = draft?.story?.suppressedBeats;
   return new Set(Array.isArray(ids) ? ids.filter((id) => typeof id === "string" && id.trim()).map((id) => id.trim()) : []);
 }
 
-export function isBeatSuppressed(draft, beatId) {
+export function isBeatSuppressed(draft: any, beatId: any) {
   return suppressedBeatIds(draft).has(beatId);
 }
 
-const BUILTIN_BEAT = (id) =>
+const BUILTIN_BEAT = (id: any) =>
   STORY_BEATS.find((b) => b.id === id) || SIDE_BEATS.find((b) => b.id === id) || null;
 
 /**
@@ -393,7 +393,7 @@ const BUILTIN_BEAT = (id) =>
  * (or, for an author-created beat, the draft entry itself). Mirrors what
  * `applyStoryOverrides` would produce so the canvas reflects unsaved edits.
  */
-export function effectiveBeat(beatId, draft) {
+export function effectiveBeat(beatId: any, draft: any) {
   if (!beatId) return null;
   const fromDraft = draftBeats(draft).find((b) => b && b.id === beatId);
   if (!fromDraft && isBeatSuppressed(draft, beatId)) return null;
@@ -414,7 +414,7 @@ export function effectiveBeat(beatId, draft) {
       const arr = sanitizeChoiceArray(ov.choices);
       merged.choices = (arr && arr.length > 0) ? arr : undefined;
     } else if (ov.choices && typeof ov.choices === "object" && Array.isArray(base.choices)) {
-      merged.choices = base.choices.map((c) => ({ ...c, label: ov.choices[c.id]?.label ?? c.label }));
+      merged.choices = base.choices.map((c: any) => ({ ...c, label: ov.choices[c.id]?.label ?? c.label }));
     }
     if (ov.trigger) { const t = sanitizeBeatTrigger(ov.trigger); if (t) merged.trigger = t; }
     if (Object.prototype.hasOwnProperty.call(ov, "repeat")) merged.repeat = ov.repeat === true ? true : undefined;
@@ -431,13 +431,13 @@ export function effectiveBeat(beatId, draft) {
 }
 
 /** Effective choices for a beat (array form), defaulting to [] for non-forks. */
-export function effectiveChoices(beatId, draft) {
+export function effectiveChoices(beatId: any, draft: any) {
   const b = effectiveBeat(beatId, draft);
   return Array.isArray(b?.choices) ? b.choices : [];
 }
 
 /** Every beat id known to the editor (built-ins + drafts). */
-export function allBeatIds(draft) {
+export function allBeatIds(draft: any) {
   const suppressed = suppressedBeatIds(draft);
   return [
     ...STORY_BEATS.map((b) => b.id),
@@ -447,7 +447,7 @@ export function allBeatIds(draft) {
 }
 
 /** The first effective choice (across all beats) whose outcome queues `beatId`. */
-export function findIncomingChoice(beatId, draft) {
+export function findIncomingChoice(beatId: any, draft: any) {
   for (const id of allBeatIds(draft)) {
     const b = effectiveBeat(id, draft);
     for (const c of (b?.choices || [])) {
@@ -463,10 +463,10 @@ export const NW = 160, NH = 88, MY = 360;
 export const DRAFT_LANE_Y = 1200;     // y of the first auto-placed draft-beat row
 export const BR_HEADER_H = 78, BR_ROW_H = 38, BR_ROW_GAP = 4, BR_FOOTER_H = 22;
 
-export function branchingNodeHeight(n) {
+export function branchingNodeHeight(n: any) {
   return BR_HEADER_H + n * BR_ROW_H + Math.max(0, n - 1) * BR_ROW_GAP + BR_FOOTER_H;
 }
-export function branchingRowCenterY(idx) {
+export function branchingRowCenterY(idx: any) {
   return BR_HEADER_H + idx * (BR_ROW_H + BR_ROW_GAP) + BR_ROW_H / 2;
 }
 
@@ -529,7 +529,7 @@ const NODE_W_FORK = 240;
  *    with no trigger (a branch endpoint queued via a choice); shows the dialogue.
  *  - `compact` — everything else (trigger-fired mid-chain beats).
  */
-export function nodeKind(beatId, draft, isDraftNode) {
+export function nodeKind(beatId: any, draft: any, isDraftNode: any) {
   const beat = effectiveBeat(beatId, draft);
   if (Array.isArray(beat?.choices) && beat.choices.length > 0) return "branching";
   if (isDraftNode || !beat?.trigger) return "expanded";
@@ -549,11 +549,11 @@ export function nodeKind(beatId, draft, isDraftNode) {
  *   data has none); side-fork hints come from LAYOUT_SIDE_HINT_EDGES.
  *   `kind:"choice"` edges are derived from `choices[].outcome.queueBeat`.
  */
-export function deriveGraph(draft, positions = {}) {
+export function deriveGraph(draft: any, positions = {}) {
   const dBeats = draftBeats(draft);
   const suppressed = suppressedBeatIds(draft);
   const pos = (positions && typeof positions === "object") ? positions : {};
-  const at = (id, dx, dy) => ({ x: Number.isFinite(pos[id]?.x) ? pos[id].x : dx, y: Number.isFinite(pos[id]?.y) ? pos[id].y : dy });
+  const at = (id: any, dx: any, dy: any) => ({ x: Number.isFinite(pos[id]?.x) ? pos[id].x : dx, y: Number.isFinite(pos[id]?.y) ? pos[id].y : dy });
 
   const placed = [];
   const known = new Set();
@@ -575,7 +575,7 @@ export function deriveGraph(draft, positions = {}) {
 
   const edges = [];
   const seen = new Set();
-  const push = (e) => {
+  const push = (e: any) => {
     if (!nodeIds.has(e.from) || !nodeIds.has(e.to)) return;
     const k = `${e.from}|${e.to}|${e.kind}|${e.choice || ""}`;
     if (seen.has(k)) return;
@@ -614,10 +614,10 @@ export function deriveGraph(draft, positions = {}) {
 }
 
 /** An edge whose source being collapsed should hide it (a fork branch / side hint). */
-const isFoldable = (e) => e.kind === "choice" || !!e.side;
+const isFoldable = (e: any) => e.kind === "choice" || !!e.side;
 
 /** Node ids that have ≥1 foldable outgoing edge — these get a collapse toggle. */
-export function collapsibleIds(edges) {
+export function collapsibleIds(edges: any) {
   const s = new Set();
   for (const e of edges) if (isFoldable(e)) s.add(e.from);
   return s;
@@ -629,21 +629,21 @@ export function collapsibleIds(edges) {
  * choice branches / side hints (and everything only reachable through them) are
  * hidden. Returns { nodes, edges, hiddenCounts:{[collapsedId]:n} }.
  */
-export function visibleSubset(nodes, edges, collapsed) {
+export function visibleSubset(nodes: any, edges: any, collapsed: any) {
   if (!collapsed || collapsed.size === 0) return { nodes, edges, hiddenCounts: {} };
   const adj = new Map();
-  const indeg = new Map(nodes.map((n) => [n.id, 0]));
+  const indeg = new Map(nodes.map((n: any) => [n.id, 0]));
   for (const e of edges) {
     if (!adj.has(e.from)) adj.set(e.from, []);
     adj.get(e.from).push(e);
     indeg.set(e.to, (indeg.get(e.to) || 0) + 1);
   }
-  const traverseFrom = (id) => {
+  const traverseFrom = (id: any) => {
     const outs = adj.get(id) || [];
-    return collapsed.has(id) ? outs.filter((e) => e.kind === "trigger" && !e.side) : outs;
+    return collapsed.has(id) ? outs.filter((e: any) => e.kind === "trigger" && !e.side) : outs;
   };
   const visible = new Set();
-  const queue = nodes.filter((n) => (indeg.get(n.id) || 0) === 0).map((n) => n.id);
+  const queue = nodes.filter((n: any) => (indeg.get(n.id) || 0) === 0).map((n: any) => n.id);
   while (queue.length) {
     const id = queue.shift();
     if (visible.has(id)) continue;
@@ -657,7 +657,7 @@ export function visibleSubset(nodes, edges, collapsed) {
   const hiddenCounts = {};
   for (const cid of collapsed) {
     const seen = new Set();
-    const q = (adj.get(cid) || []).filter(isFoldable).map((e) => e.to);
+    const q = (adj.get(cid) || []).filter(isFoldable).map((e: any) => e.to);
     while (q.length) {
       const x = q.shift();
       if (seen.has(x)) continue;
@@ -668,12 +668,12 @@ export function visibleSubset(nodes, edges, collapsed) {
     for (const x of seen) if (!visible.has(x)) cnt += 1;
     if (cnt > 0) hiddenCounts[cid] = cnt;
   }
-  const edgeVisible = (e) => {
+  const edgeVisible = (e: any) => {
     if (!visible.has(e.from) || !visible.has(e.to)) return false;
     if (collapsed.has(e.from) && isFoldable(e)) return false;
     return true;
   };
-  return { nodes: nodes.filter((n) => visible.has(n.id)), edges: edges.filter(edgeVisible), hiddenCounts };
+  return { nodes: nodes.filter((n: any) => visible.has(n.id)), edges: edges.filter(edgeVisible), hiddenCounts };
 }
 
 /**
@@ -682,7 +682,7 @@ export function visibleSubset(nodes, edges, collapsed) {
  * spine is included. If the anchor is already inside a choice result, focus the
  * parent fork so sibling outcomes stay visible for comparison.
  */
-export function focusedChainSubset(nodes, edges, anchorId) {
+export function focusedChainSubset(nodes: any, edges: any, anchorId: any) {
   if (!Array.isArray(nodes) || nodes.length === 0) return { nodes: [], edges: [], hiddenCounts: {} };
   const nodeIds = new Set(nodes.map((n) => n.id));
   let anchor = nodeIds.has(anchorId) ? anchorId : nodes[0].id;
@@ -696,7 +696,7 @@ export function focusedChainSubset(nodes, edges, anchorId) {
   }
 
   const mainAdj = new Map();
-  const addMain = (a, b) => {
+  const addMain = (a: any, b: any) => {
     if (!mainAdj.has(a)) mainAdj.set(a, []);
     mainAdj.get(a).push(b);
   };
@@ -719,7 +719,7 @@ export function focusedChainSubset(nodes, edges, anchorId) {
 
   const visible = new Set(chain);
   const edgeKeys = new Set();
-  const includeEdge = (e) => edgeKeys.add(`${e.from}|${e.to}|${e.kind}|${e.choice || ""}`);
+  const includeEdge = (e: any) => edgeKeys.add(`${e.from}|${e.to}|${e.kind}|${e.choice || ""}`);
   for (const e of edges) {
     if (!nodeIds.has(e.from) || !nodeIds.has(e.to)) continue;
     if (chain.has(e.from) && chain.has(e.to) && e.kind === "trigger" && !e.side) {
@@ -732,12 +732,12 @@ export function focusedChainSubset(nodes, edges, anchorId) {
 
   return {
     nodes: nodes.filter((n) => visible.has(n.id)),
-    edges: edges.filter((e) => visible.has(e.from) && visible.has(e.to) && edgeKeys.has(`${e.from}|${e.to}|${e.kind}|${e.choice || ""}`)),
+    edges: edges.filter((e: any) => visible.has(e.from) && visible.has(e.to) && edgeKeys.has(`${e.from}|${e.to}|${e.kind}|${e.choice || ""}`)),
     hiddenCounts: {},
   };
 }
 
-export function directionalNodeId(nodes, selectedId, dir) {
+export function directionalNodeId(nodes: any, selectedId: any, dir: any) {
   const list = Array.isArray(nodes) ? nodes : [];
   if (list.length === 0) return null;
   const cur = list.find((n) => n.id === selectedId);
@@ -778,7 +778,7 @@ export function readCollapsed() {
     return new Set(Array.isArray(arr) ? arr.filter((s) => typeof s === "string") : []);
   } catch { return new Set(); }
 }
-export function writeCollapsed(set) {
+export function writeCollapsed(set: any) {
   try {
     if (typeof localStorage === "undefined") return;
     localStorage.setItem(COLLAPSE_KEY, JSON.stringify([...set]));
@@ -799,7 +799,7 @@ export function readNodePositions() {
     return out;
   } catch { return {}; }
 }
-export function writeNodePositions(map) {
+export function writeNodePositions(map: any) {
   try {
     if (typeof localStorage === "undefined") return;
     localStorage.setItem(LAYOUT_KEY, JSON.stringify(map || {}));
@@ -808,7 +808,7 @@ export function writeNodePositions(map) {
 
 // ─── Small UI atoms shared across the editor ─────────────────────────────────
 
-export function FieldLabel({ children, hint }) {
+export function FieldLabel({ children: any, hint: any }) {
   return (
     <span style={{ font: "700 9px/1 system-ui", letterSpacing: "0.1em", textTransform: "uppercase", color: C.inkSubtle }}>
       {children}
@@ -817,7 +817,7 @@ export function FieldLabel({ children, hint }) {
   );
 }
 
-export function TextInput(props) {
+export function TextInput(props: any) {
   return (
     <input
       {...props}
@@ -830,7 +830,7 @@ export function TextInput(props) {
   );
 }
 
-export function Btn({ tone = "ghost", children, style, ...rest }) {
+export function Btn({ tone = "ghost", children: any, style: any, ...rest }) {
   const tones = {
     primary: { bg: C.green, bd: C.greenDeep, fg: "#fff" },
     ember:   { bg: C.ember, bd: C.emberDeep, fg: "#fff" },

@@ -22,16 +22,16 @@ import { effectiveBeat, allBeatIds, draftBeats, NPCS, triggerSummary, isDraftBea
 
 const ACT_LABEL = { 1: "Act I · Roots", 2: "Act II · Iron", 3: "Act III · Kingdom" };
 
-function speakerName(key) {
+function speakerName(key: any) {
   if (!key) return "Narrator";
   return NPCS[key]?.name || key;
 }
 
-function escapeMd(text) {
+function escapeMd(text: any) {
   return String(text ?? "").replace(/([_*`<>])/g, "\\$1");
 }
 
-function outcomeBadgeBits(outcome) {
+function outcomeBadgeBits(outcome: any) {
   const o = outcome || {};
   const out = [];
   if (o.bondDelta?.npc && Number.isFinite(o.bondDelta.amount)) {
@@ -53,9 +53,9 @@ function outcomeBadgeBits(outcome) {
   return out;
 }
 
-const asList = (v) => Array.isArray(v) ? v : (typeof v === "string" && v ? [v] : []);
+const asList = (v: any) => Array.isArray(v) ? v : (typeof v === "string" && v ? [v] : []);
 
-function renderBeat(beat, beatId, draft, { isDraft = false } = {}) {
+function renderBeat(beat: any, beatId: any, draft: any, { isDraft = false } = {}) {
   if (!beat) return "";
   const lines = [];
   const titlePart = beat.title || beatId;
@@ -95,7 +95,7 @@ function renderBeat(beat, beatId, draft, { isDraft = false } = {}) {
   const choices = Array.isArray(beat.choices) ? beat.choices : [];
   if (choices.length > 0) {
     lines.push("**Choices**");
-    choices.forEach((c, idx) => {
+    choices.forEach((c: any, idx: any) => {
       const letter = "ABCDEFGH"[idx] || `${idx + 1}`;
       const label = escapeMd(c.label || c.id || "(no label)");
       const target = c.outcome?.queueBeat;
@@ -115,7 +115,7 @@ function renderBeat(beat, beatId, draft, { isDraft = false } = {}) {
 }
 
 /** Compare two beat ids for ordering: main story by act+position, then sides, then drafts. */
-function orderingScore(beatId, draft) {
+function orderingScore(beatId: any, draft: any) {
   const beat = effectiveBeat(beatId, draft);
   if (!beat) return [9, 9999, beatId];
   if (isDraftBeat(draft, beatId)) {
@@ -130,7 +130,7 @@ function orderingScore(beatId, draft) {
   return [1, idx >= 0 ? idx : 999, beatId];
 }
 
-export function compareBeatOrder(aId, bId, draft) {
+export function compareBeatOrder(aId: any, bId: any, draft: any) {
   const [aSec, aIdx, aKey] = orderingScore(aId, draft);
   const [bSec, bIdx, bKey] = orderingScore(bId, draft);
   if (aSec !== bSec) return aSec - bSec;
@@ -143,7 +143,7 @@ export function compareBeatOrder(aId, bId, draft) {
  * choices (DFS with cycle detection). Used to scope the markdown export
  * to one branch of the tree.
  */
-export function reachableBeatIds(startBeatId, draft) {
+export function reachableBeatIds(startBeatId: any, draft: any) {
   const seen = new Set();
   const stack = [startBeatId];
   while (stack.length > 0) {
@@ -162,7 +162,7 @@ export function reachableBeatIds(startBeatId, draft) {
  * Return true if a beat has any dialogue lines spoken by `speakerKey`. A
  * `speakerKey` of `null` matches narrator lines.
  */
-function beatMentionsSpeaker(beat, speakerKey) {
+function beatMentionsSpeaker(beat: any, speakerKey: any) {
   if (!beat || !Array.isArray(beat.lines)) return false;
   for (const line of beat.lines) {
     if (!line || typeof line.text !== "string" || line.text.trim().length === 0) continue;
@@ -183,7 +183,7 @@ function beatMentionsSpeaker(beat, speakerKey) {
  *   - `rootBeatId`: only include beats reachable through queueBeat from this
  *     beat — useful for exporting a single branch.
  */
-export function renderStoryMarkdown(draft, opts = {}) {
+export function renderStoryMarkdown(draft: any, opts = {}) {
   const reachable = opts.rootBeatId ? reachableBeatIds(opts.rootBeatId, draft) : null;
   let ids = [...allBeatIds(draft)].sort((a, b) => compareBeatOrder(a, b, draft));
   if (reachable) ids = ids.filter((id) => reachable.has(id));

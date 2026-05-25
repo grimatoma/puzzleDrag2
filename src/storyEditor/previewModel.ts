@@ -1,9 +1,9 @@
 import { conditionMatches } from "../story.js";
 import { allBeatIds, effectiveBeat, NPCS } from "./shared.jsx";
 
-const arr = (v) => (Array.isArray(v) ? v : (typeof v === "string" && v ? [v] : []));
+const arr = (v: any) => (Array.isArray(v) ? v : (typeof v === "string" && v ? [v] : []));
 
-function clampNonNegative(n) {
+function clampNonNegative(n: any) {
   return Math.max(0, Number.isFinite(n) ? n : 0);
 }
 
@@ -22,13 +22,13 @@ export function blankPreviewState(npcs = NPCS) {
   };
 }
 
-export function applyFlagList(flags, value, on) {
+export function applyFlagList(flags: any, value: any, on: any) {
   const next = { ...flags };
   for (const f of arr(value)) next[f] = on;
   return next;
 }
 
-function addMapValues(base, values) {
+function addMapValues(base: any, values: any) {
   const next = { ...(base || {}) };
   if (!values || typeof values !== "object") return next;
   for (const [key, amount] of Object.entries(values)) {
@@ -38,7 +38,7 @@ function addMapValues(base, values) {
   return next;
 }
 
-export function applyPreviewEffects(sim, beat, choice) {
+export function applyPreviewEffects(sim: any, beat: any, choice: any) {
   let next = {
     ...blankPreviewState(),
     ...sim,
@@ -66,7 +66,7 @@ export function applyPreviewEffects(sim, beat, choice) {
   return next;
 }
 
-export function firstTriggeredByPreviewState(sim, draft, visited = new Set()) {
+export function firstTriggeredByPreviewState(sim: any, draft: any, visited = new Set()) {
   const flags = sim?.flags ?? {};
   const resources = sim?.resources ?? {};
   const bonds = sim?.bonds ?? {};
@@ -84,14 +84,14 @@ export function firstTriggeredByPreviewState(sim, draft, visited = new Set()) {
   return null;
 }
 
-function topEntries(obj, max = 4) {
+function topEntries(obj: any, max = 4) {
   return Object.entries(obj || {})
     .filter(([, value]) => value)
     .slice(0, max)
     .map(([key, value]) => `${key}${value === true ? "" : ` ${value}`}`);
 }
 
-export function previewStateSummary(sim) {
+export function previewStateSummary(sim: any) {
   const bits = [];
   const flags = topEntries(Object.fromEntries(Object.entries(sim?.flags ?? {}).filter(([, v]) => v)));
   const resources = topEntries(sim?.resources);

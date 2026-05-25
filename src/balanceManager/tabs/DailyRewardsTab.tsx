@@ -10,9 +10,9 @@ import { COLORS, NumberField, FieldRow, Card } from "../shared.jsx";
 
 const DAYS = Object.keys(DAILY_REWARDS).map(Number).sort((a, b) => a - b);
 
-export default function DailyRewardsTab({ draft, updateDraft }) {
-  function patch(day, fields) {
-    updateDraft((d) => {
+export default function DailyRewardsTab({ draft: any, updateDraft: any }) {
+  function patch(day: any, fields: any) {
+    updateDraft((d: any) => {
       d.dailyRewards ??= {};
       const key = String(day);
       const next = { ...(d.dailyRewards[key] ?? {}), ...fields };
@@ -37,9 +37,9 @@ export default function DailyRewardsTab({ draft, updateDraft }) {
           <FieldRow key={day} label={`Day ${day}${extra}`} hint={base.tool ? `tool: ${base.tool}${base.unlockTile ? `, unlock: ${base.unlockTile}` : ""}` : base.unlockTile ? `unlock: ${base.unlockTile}` : undefined}>
             <div className="flex items-center gap-2">
               <span className="text-[10px]" style={{ color: COLORS.inkSubtle }}>coins</span>
-              <NumberField value={coins} onChange={(v) => patch(day, { coins: v })} min={0} max={99999} width={80} />
+              <NumberField value={coins} onChange={(v: any) => patch(day, { coins: v })} min={0} max={99999} width={80} />
               <span className="text-[10px]" style={{ color: COLORS.inkSubtle }}>runes</span>
-              <NumberField value={runes} onChange={(v) => patch(day, { runes: v })} min={0} max={999} width={60} />
+              <NumberField value={runes} onChange={(v: any) => patch(day, { runes: v })} min={0} max={999} width={60} />
             </div>
           </FieldRow>
         );

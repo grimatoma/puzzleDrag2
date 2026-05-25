@@ -45,6 +45,7 @@ function rr(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: n
 export function canvasTexture(scene: Phaser.Scene, key: string, w: number, h: number, draw: (ctx: CanvasRenderingContext2D, w: number, h: number) => void, dpr = 1) {
   if (scene.textures.exists(key)) return;
   const tex = scene.textures.createCanvas(key, Math.ceil(w * dpr), Math.ceil(h * dpr));
+  if (!tex) return;
   const ctx = tex.getContext();
   ctx.imageSmoothingEnabled = false;
   if (dpr !== 1) ctx.scale(dpr, dpr);

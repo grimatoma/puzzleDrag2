@@ -13,17 +13,17 @@ import { COLORS, NumberField, Select, FieldRow, Card } from "../shared.jsx";
 
 const HOME_BIOME_OPTIONS = (SETTLEMENT_BIOMES.farm ?? []).map((b) => ({ value: b.id, label: `${b.icon} ${b.name}` }));
 
-export default function TuningTab({ draft, updateDraft }) {
+export default function TuningTab({ draft: any, updateDraft: any }) {
   const t = draft.tuning ?? {};
-  function patch(key, v) {
-    updateDraft((d) => {
+  function patch(key: any, v: any) {
+    updateDraft((d: any) => {
       d.tuning = { ...(d.tuning ?? {}), [key]: v };
       if (v === "" || v === undefined || v === null) delete d.tuning[key];
       if (Object.keys(d.tuning).length === 0) delete d.tuning;
     });
   }
-  const num = (key, def, props = {}) => (
-    <NumberField value={t[key] ?? def} onChange={(v) => patch(key, v)} {...props} />
+  const num = (key: any, def: any, props = {}) => (
+    <NumberField value={t[key] ?? def} onChange={(v: any) => patch(key, v)} {...props} />
   );
 
   return (
@@ -38,7 +38,7 @@ export default function TuningTab({ draft, updateDraft }) {
         <FieldRow label="Founding cost — base coins" hint="SETTLEMENT_FOUNDING_BASE_COINS — cost of the 2nd settlement">{num("foundingBaseCoins", SETTLEMENT_FOUNDING_BASE_COINS, { min: 0, max: 999999 })}</FieldRow>
         <FieldRow label="Founding cost — growth ×" hint="SETTLEMENT_FOUNDING_GROWTH — multiplier per additional settlement">{num("foundingGrowth", SETTLEMENT_FOUNDING_GROWTH, { min: 1, max: 10, step: 0.1, width: 80 })}</FieldRow>
         <FieldRow label="Home biome" hint="DEFAULT_HOME_BIOME — the pre-founded Vale's biome">
-          <Select value={t.homeBiome ?? DEFAULT_HOME_BIOME} onChange={(v) => patch("homeBiome", v)} options={HOME_BIOME_OPTIONS} width={180} />
+          <Select value={t.homeBiome ?? DEFAULT_HOME_BIOME} onChange={(v: any) => patch("homeBiome", v)} options={HOME_BIOME_OPTIONS} width={180} />
         </FieldRow>
       </Card>
 

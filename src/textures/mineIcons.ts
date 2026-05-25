@@ -2,7 +2,7 @@
 // No imports needed — pure Canvas 2D API drawing.
 
 // Canvas path helper for rounded rectangles
-function rr(ctx, x, y, w, h, r) {
+function rr(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
   ctx.beginPath();
   ctx.moveTo(x + r, y);
   ctx.arcTo(x + w, y, x + w, y + h, r);
@@ -19,7 +19,7 @@ const MINE_HANDLED_KEYS = new Set([
   "tile_mine_gold",
 ]);
 
-export function drawMineTileIcon(ctx, key) {
+export function drawMineTileIcon(ctx: CanvasRenderingContext2D, key: string) {
   if (!MINE_HANDLED_KEYS.has(key)) return false;
   if (key === "tile_mine_stone") {
     // Faceted gray rock with crevices
@@ -355,7 +355,7 @@ export function drawMineTileIcon(ctx, key) {
     ctx.ellipse(0, 22, 18, 4, 0, 0, Math.PI * 2);
     ctx.fill();
     // Hexagon
-    const hex6 = (rad) => {
+    const hex6 = (rad: number) => {
       ctx.beginPath();
       for (let i = 0; i < 6; i++) {
         const a = -Math.PI / 2 + (i * Math.PI) / 3;
@@ -497,7 +497,7 @@ export function drawMineTileIcon(ctx, key) {
     ctx.ellipse(0, 22, 22, 5, 0, 0, Math.PI * 2);
     ctx.fill();
     // Outer octagonal girdle
-    const girdle = (rad) => {
+    const girdle = (rad: number) => {
       ctx.beginPath();
       for (let i = 0; i < 8; i++) {
         const a = (i * Math.PI) / 4 + Math.PI / 8;

@@ -13,7 +13,7 @@ import { COLORS, FilterBar, SearchBar, SegmentedFilter } from "../shared.jsx";
 // "ui_lock" → "ui"); SVG keys use `.` (e.g. "design.tile.grass" → "design.tile").
 // When an archived/legacy canvas entry has `replacedBy`, use that key's
 // category instead so the legacy entry sorts next to its active sibling.
-function categoryOf(key, replacedBy) {
+function categoryOf(key: any, replacedBy: any) {
   const effective = replacedBy || key;
   if (effective.includes(".")) {
     const parts = effective.split(".");
@@ -25,9 +25,9 @@ function categoryOf(key, replacedBy) {
 
 // Light-weight stub label for SVG entries that just publishes the key tail
 // as a human label ("design.tile.grass" → "tile.grass").
-function deriveSvgLabel(key) {
+function deriveSvgLabel(key: any) {
   const tail = key.startsWith("design.") ? key.slice("design.".length) : key;
-  return tail.replace(/[._]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+  return tail.replace(/[._]/g, " ").replace(/\b\w/g, (c: any) => c.toUpperCase());
 }
 
 const USED_KEYS = getUsedIconKeys();
@@ -75,7 +75,7 @@ const ICON_SIZE = 56; // px — canvas render size
 
 // Run an icon's draw function against any Canvas-2D-shaped context with the
 // same background tint and centering as the live game.
-function paintIconForCell(ctx, entry, size) {
+function paintIconForCell(ctx: any, entry: any, size: any) {
   ctx.save();
   ctx.beginPath();
   ctx.arc(size / 2, size / 2, size / 2 - 2, 0, Math.PI * 2);
@@ -103,7 +103,7 @@ function patchC2S() {
   c2sPatched = true;
   const proto = C2S.prototype;
   if (!proto.ellipse) {
-    proto.ellipse = function (cx, cy, rx, ry, rot, a0, a1, ccw) {
+    proto.ellipse = function (cx: any, cy: any, rx: any, ry: any, rot: any, a0: any, a1: any, ccw: any) {
       // Approximate the ellipse arc with cubic bezier segments (one per
       // ≤π/2 sweep). Output is in the same coord space as moveTo/lineTo,
       // so canvas2svg's path serialization handles it correctly.
@@ -115,7 +115,7 @@ function patchC2S() {
       const segDelta = delta / segments;
       const cosR = Math.cos(rot);
       const sinR = Math.sin(rot);
-      const xform = (px, py) => [cx + px * cosR - py * sinR, cy + px * sinR + py * cosR];
+      const xform = (px: any, py: any) => [cx + px * cosR - py * sinR, cy + px * sinR + py * cosR];
       let theta = a0;
       const [sx, sy] = xform(rx * Math.cos(theta), ry * Math.sin(theta));
       this.lineTo(sx, sy);
@@ -138,7 +138,7 @@ function patchC2S() {
     };
   }
   if (!proto.roundRect) {
-    proto.roundRect = function (x, y, w, h, r) {
+    proto.roundRect = function (x: any, y: any, w: any, h: any, r: any) {
       const list = Array.isArray(r) ? r : [r, r, r, r];
       let tl, tr, br, bl;
       if (list.length === 1) [tl, tr, br, bl] = [list[0], list[0], list[0], list[0]];
@@ -164,7 +164,7 @@ function patchC2S() {
   }
 }
 
-function renderIconSvg(entry, size) {
+function renderIconSvg(entry: any, size: any) {
   patchC2S();
   const ctx = new C2S(size, size);
   paintIconForCell(ctx, entry, size);
@@ -319,7 +319,7 @@ export default function IconsTab() {
     });
   }, [search, category, status]);
 
-  function handleClick(key) {
+  function handleClick(key: any) {
     navigator.clipboard?.writeText(key).catch(() => {});
     setCopiedKey(key);
     setTimeout(() => setCopiedKey((k) => (k === key ? null : k)), 1800);

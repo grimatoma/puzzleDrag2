@@ -24,28 +24,28 @@ const STRATEGIES = Object.freeze({
   },
   kindest: {
     label: "Kindest path",
-    score: (choice) => {
+    score: (choice: any) => {
       const d = choice?.outcome?.bondDelta?.amount;
       return Number.isFinite(d) ? d : 0;
     },
   },
   cruelest: {
     label: "Cruelest path",
-    score: (choice) => {
+    score: (choice: any) => {
       const d = choice?.outcome?.bondDelta?.amount;
       return Number.isFinite(d) ? -d : 0;
     },
   },
   richest: {
     label: "Richest path",
-    score: (choice) => {
+    score: (choice: any) => {
       const o = choice?.outcome || {};
       return (o.embers || 0) * 5 + (o.coreIngots || 0) * 3 + (o.gems || 0) * 4 + (o.coins || 0);
     },
   },
   bargain: {
     label: "Most flags",
-    score: (choice) => {
+    score: (choice: any) => {
       const o = choice?.outcome || {};
       const sf = Array.isArray(o.setFlag) ? o.setFlag.length : (o.setFlag ? 1 : 0);
       const cf = Array.isArray(o.clearFlag) ? o.clearFlag.length : (o.clearFlag ? 1 : 0);
@@ -56,12 +56,12 @@ const STRATEGIES = Object.freeze({
 
 export const PLAYTHROUGH_STRATEGIES = Object.keys(STRATEGIES);
 
-function pickChoice(choices, strategy) {
+function pickChoice(choices: any, strategy: any) {
   const fn = STRATEGIES[strategy]?.score;
   if (!fn || choices.length <= 1) return choices[0];
   let best = null;
   let bestScore = -Infinity;
-  choices.forEach((c, i) => {
+  choices.forEach((c: any, i: any) => {
     const score = fn(c);
     if (score > bestScore || (score === bestScore && best === null)) {
       bestScore = score;
@@ -72,9 +72,9 @@ function pickChoice(choices, strategy) {
   return best || choices[0];
 }
 
-const asArr = (v) => Array.isArray(v) ? v : (typeof v === "string" && v ? [v] : []);
+const asArr = (v: any) => Array.isArray(v) ? v : (typeof v === "string" && v ? [v] : []);
 
-function applyChoiceState(state, choice, beat) {
+function applyChoiceState(state: any, choice: any, beat: any) {
   const next = {
     coins: state.coins, embers: state.embers, coreIngots: state.coreIngots, gems: state.gems,
     bonds: { ...state.bonds },
@@ -95,7 +95,7 @@ function applyChoiceState(state, choice, beat) {
   return next;
 }
 
-function freezeState(state) {
+function freezeState(state: any) {
   return {
     coins: state.coins, embers: state.embers, coreIngots: state.coreIngots, gems: state.gems,
     bonds: { ...state.bonds },
@@ -119,7 +119,7 @@ const initialState = () => ({
  * no queueBeat ('no-target'), the next beat is missing ('missing-target'),
  * the path would revisit a beat ('loop'), or maxDepth is hit ('depth-cap').
  */
-export function simulatePlaythrough(startBeatId, draft, strategy = "first", { maxDepth = 32 } = {}) {
+export function simulatePlaythrough(startBeatId: any, draft: any, strategy = "first", { maxDepth = 32 } = {}) {
   if (!STRATEGIES[strategy]) throw new Error(`unknown strategy: ${strategy}`);
   let beatId = startBeatId;
   const steps = [];
@@ -149,13 +149,13 @@ export function simulatePlaythrough(startBeatId, draft, strategy = "first", { ma
 }
 
 /** Convenience: simulate every strategy from a starting beat. */
-export function simulateAllPlaythroughs(startBeatId, draft, opts = {}) {
+export function simulateAllPlaythroughs(startBeatId: any, draft: any, opts = {}) {
   return PLAYTHROUGH_STRATEGIES.map((s) => ({
     ...simulatePlaythrough(startBeatId, draft, s, opts),
     label: STRATEGIES[s].label,
   }));
 }
 
-export function strategyLabel(strategy) {
+export function strategyLabel(strategy: any) {
   return STRATEGIES[strategy]?.label || strategy;
 }

@@ -11,7 +11,7 @@ import {
 
 const FIELD_LABEL = { title: "Title", body: "Body", line: "Line", choice: "Choice" };
 
-function HighlightedSnippet({ snippet }) {
+function HighlightedSnippet({ snippet: any }) {
   // The snippet uses « / » sentinels around the matched substring.
   const parts = String(snippet).split(/(«[^»]*»)/g);
   return (
@@ -31,7 +31,7 @@ function HighlightedSnippet({ snippet }) {
   );
 }
 
-function MatchRow({ match, onJump }) {
+function MatchRow({ match: any, onJump: any }) {
   return (
     <button onClick={() => onJump && onJump(match.beatId)}
       style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", width: "100%",
@@ -62,7 +62,7 @@ function MatchRow({ match, onJump }) {
   );
 }
 
-export default function FindReplacePanel({ open, draft, onClose, onApply, onJumpToBeat }) {
+export default function FindReplacePanel({ open: any, draft: any, onClose: any, onApply: any, onJumpToBeat: any }) {
   const [query, setQuery] = useState("");
   const [replacement, setReplacement] = useState("");
   const [caseSensitive, setCaseSensitive] = useState(false);
@@ -70,7 +70,7 @@ export default function FindReplacePanel({ open, draft, onClose, onApply, onJump
 
   useEffect(() => {
     if (!open) return undefined;
-    const onKey = (e) => { if (e.key === "Escape") onClose(); };
+    const onKey = (e: any) => { if (e.key === "Escape") onClose(); };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [open, onClose]);

@@ -7,7 +7,7 @@ const BalanceNavContext = createContext({
   navigate: () => {},
 });
 
-export function BalanceNavProvider({ focus, navigate, children }) {
+export function BalanceNavProvider({ focus: any, navigate: any, children: any }) {
   const value = useMemo(() => ({ focus, navigate }), [focus, navigate]);
   return (
     <BalanceNavContext.Provider value={value}>

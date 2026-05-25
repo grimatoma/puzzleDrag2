@@ -1,6 +1,6 @@
 const domDiff = { maxDiffPixelRatio: 0.025, threshold: 0.22 };
 
-const click = (name) => ({ type: 'clickRole', role: 'button', name });
+const click = (name: any) => ({ type: 'clickRole', role: 'button', name });
 
 export const STORY_EDITOR_VISUAL_SCENARIOS = [
   { id: 'story-default', diff: domDiff },

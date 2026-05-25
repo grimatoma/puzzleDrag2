@@ -10,7 +10,7 @@ function shadow(ctx, w) {
   ctx.fill();
 }
 
-function fishBody(ctx, fillTop, fillBottom, outline, accent) {
+function fishBody(ctx: CanvasRenderingContext2D, fillTop: string, fillBottom: string, outline: string, accent: string) {
   // Body — teardrop pointing left
   const g = ctx.createLinearGradient(0, -8, 0, 10);
   g.addColorStop(0, fillTop);
@@ -51,7 +51,7 @@ function fishBody(ctx, fillTop, fillBottom, outline, accent) {
   ctx.beginPath(); ctx.arc(-13.3, -2.3, 0.3, 0, Math.PI * 2); ctx.fill();
 }
 
-function drawSardine(ctx) {
+function drawSardine(ctx: CanvasRenderingContext2D) {
   shadow(ctx, 18);
   fishBody(ctx, "#cad8de", "#7a8e98", "#3e4a52", "#9ab0bc");
   // Stripe
@@ -59,7 +59,7 @@ function drawSardine(ctx) {
   ctx.beginPath(); ctx.moveTo(-12, 0); ctx.lineTo(10, 0); ctx.stroke();
 }
 
-function drawMackerel(ctx) {
+function drawMackerel(ctx: CanvasRenderingContext2D) {
   shadow(ctx, 20);
   fishBody(ctx, "#5a8aa6", "#1f3a52", "#0e1a2a", "#3a6a86");
   // Tiger stripes across the back
@@ -73,7 +73,7 @@ function drawMackerel(ctx) {
   }
 }
 
-function drawClam(ctx) {
+function drawClam(ctx: CanvasRenderingContext2D) {
   shadow(ctx, 18);
   // Lower shell
   ctx.fillStyle = "#caa882"; ctx.strokeStyle = "#5a4028"; ctx.lineWidth = 1.6;
@@ -107,7 +107,7 @@ function drawClam(ctx) {
   ctx.fill();
 }
 
-function drawOyster(ctx) {
+function drawOyster(ctx: CanvasRenderingContext2D) {
   shadow(ctx, 20);
   // Rough craggy lower shell
   ctx.fillStyle = "#a89878"; ctx.strokeStyle = "#3a2e1a"; ctx.lineWidth = 1.6;
@@ -141,7 +141,7 @@ function drawOyster(ctx) {
   ctx.beginPath(); ctx.arc(-1.4, 2.4, 1.0, 0, Math.PI * 2); ctx.fill();
 }
 
-function drawKelp(ctx) {
+function drawKelp(ctx: CanvasRenderingContext2D) {
   shadow(ctx, 16);
   // Long flowing stalk with leafy paddles
   ctx.strokeStyle = "#1a3818"; ctx.lineWidth = 2;
@@ -151,7 +151,7 @@ function drawKelp(ctx) {
   ctx.bezierCurveTo(-10, -10, 6, -16, 0, -22);
   ctx.stroke();
   // Leaves
-  const leaves = [
+  const leaves: [number, number, number, string][] = [
     [-2, 16, -1.0, "#3a6a3a"],
     [3, 8, 0.6, "#4a8a4a"],
     [-4, 0, -0.8, "#3a6a3a"],
@@ -180,7 +180,7 @@ function drawKelp(ctx) {
   ctx.beginPath(); ctx.arc(7, -20, 0.7, 0, Math.PI * 2); ctx.fill();
 }
 
-function drawFishFillet(ctx) {
+function drawFishFillet(ctx: CanvasRenderingContext2D) {
   shadow(ctx, 20);
   // Pinkish-orange fillet — long thin slab with darker bands
   ctx.fillStyle = "#e8b894"; ctx.strokeStyle = "#7a4a30"; ctx.lineWidth = 1.6;
@@ -209,7 +209,7 @@ function drawFishFillet(ctx) {
   ctx.stroke();
 }
 
-function drawFishOil(ctx) {
+function drawFishOil(ctx: CanvasRenderingContext2D) {
   shadow(ctx, 14);
   // Round-bottomed amber bottle
   ctx.fillStyle = "#c89028"; ctx.strokeStyle = "#5a3e0a"; ctx.lineWidth = 1.6;
@@ -243,7 +243,7 @@ function drawFishOil(ctx) {
   ctx.fill();
 }
 
-function drawPearl(ctx) {
+function drawPearl(ctx: CanvasRenderingContext2D) {
   shadow(ctx, 14);
   // Open shell halves cradling the pearl
   ctx.fillStyle = "#a89878"; ctx.strokeStyle = "#3a2e1a"; ctx.lineWidth = 1.4;

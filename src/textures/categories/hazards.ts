@@ -248,7 +248,7 @@ function drawWolfHazard(ctx) {
   // Helper to draw a single side-view wolf at the given anchor with the
   // requested scale and tint. Drawn back-to-front so the foreground wolf
   // overlaps the background one and the silhouette reads as a *pack*.
-  const drawOneWolf = (ax, ay, scale, tintDark, tintLight, outline) => {
+  const drawOneWolf = (ax: number, ay: number, scale: number, tintDark: string, tintLight: string, outline: string) => {
     ctx.save();
     ctx.translate(ax, ay);
     ctx.scale(scale, scale);
@@ -348,7 +348,7 @@ function drawSmokeHazard(ctx) {
 
   // Stack of three smoke puffs rising. Each puff is a soft-edged radial
   // blob with several inner ellipses to give the cloud-like volume.
-  function puff(cx, cy, r, alpha) {
+  function puff(cx: number, cy: number, r: number, alpha: number) {
     const grd = ctx.createRadialGradient(cx, cy, r * 0.2, cx, cy, r);
     grd.addColorStop(0, `rgba(220,220,228,${alpha})`);
     grd.addColorStop(0.55, `rgba(150,150,162,${alpha * 0.85})`);

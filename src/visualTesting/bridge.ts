@@ -9,17 +9,17 @@ async function settleFrames(count = 2) {
   for (let i = 0; i < count; i += 1) await nextFrame();
 }
 
-function cssEscape(value) {
+function cssEscape(value: any) {
   if (window.CSS?.escape) return window.CSS.escape(value);
   return String(value).replace(/["\\]/g, "\\$&");
 }
 
-function cloneState(state) {
+function cloneState(state: any) {
   if (typeof structuredClone === "function") return structuredClone(state);
   return JSON.parse(JSON.stringify(state));
 }
 
-function clickSelector(selector) {
+function clickSelector(selector: any) {
   const el = document.querySelector(selector);
   if (!el) throw new Error(`Visual click target not found: ${selector}`);
   el.scrollIntoView({ block: "center", inline: "center" });
@@ -27,7 +27,7 @@ function clickSelector(selector) {
   return true;
 }
 
-function hoverSelector(selector) {
+function hoverSelector(selector: any) {
   const el = document.querySelector(selector);
   if (!el) throw new Error(`Visual hover target not found: ${selector}`);
   el.scrollIntoView({ block: "center", inline: "center" });
@@ -37,14 +37,14 @@ function hoverSelector(selector) {
   return true;
 }
 
-function findChainTiles(scene, key, length) {
+function findChainTiles(scene: any, key: any, length: any) {
   const grid = scene?.grid ?? [];
   const rows = grid.length;
   const cols = grid[0]?.length ?? 0;
   const seen = new Set();
   const path = [];
 
-  function visit(row, col) {
+  function visit(row: any, col: any) {
     if (path.length >= length) return true;
     const id = `${row}:${col}`;
     if (seen.has(id)) return false;
@@ -84,7 +84,7 @@ function findChainTiles(scene, key, length) {
   return [];
 }
 
-async function holdChain({ key, length }) {
+async function holdChain({ key: any, length: any }) {
   const scene = window.__phaserScene;
   if (!scene?.grid?.length) throw new Error("Phaser scene is not ready for visual holdChain");
   let tiles = findChainTiles(scene, key, length);
@@ -115,7 +115,7 @@ let demoAnimResetTimer = null;
  * Sweep nulls cells and runs collapse like real tools; all kinds reload the
  * scenario when the animation (and collapse, if any) finishes.
  */
-function playBoardAnimation({ name, tint, pattern }, api) {
+function playBoardAnimation({ name: any, tint: any, pattern: any }, api: any) {
   const scene = window.__phaserScene;
   if (!scene?.grid?.length) throw new Error("Phaser scene is not ready for playBoardAnimation");
   const tiles = pickTilesForPattern(scene, pattern);
@@ -137,13 +137,13 @@ function playBoardAnimation({ name, tint, pattern }, api) {
   demoAnimResetTimer = setTimeout(() => {
     demoAnimResetTimer = null;
     const id = document.documentElement.dataset.visualScenario;
-    if (id) api.loadScenario(id).catch((err) => console.warn("[hearthVisual] demo reload failed:", err.message));
+    if (id) api.loadScenario(id).catch((err: any) => console.warn("[hearthVisual] demo reload failed:", err.message));
   }, resetMs);
 
   return { played: true, tileCount: tiles.length, pattern: pattern ?? "all" };
 }
 
-function pickTilesForPattern(scene, pattern) {
+function pickTilesForPattern(scene: any, pattern: any) {
   const rows = scene.grid.length;
   const cols = scene.grid[0]?.length ?? 0;
   const all = [];
@@ -179,7 +179,7 @@ function pickTilesForPattern(scene, pattern) {
   }
 }
 
-function applyBoardStateToScene(state, { rebuildGrid = false } = {}) {
+function applyBoardStateToScene(state: any, { rebuildGrid = false } = {}) {
   const scene = window.__phaserScene;
   if (!scene || state?.view !== "board") return false;
   scene.registry.set("biomeKey", state.biomeKey ?? state.biome ?? "farm");
@@ -233,7 +233,7 @@ function freezeUi() {
   return true;
 }
 
-function installPanel(api) {
+function installPanel(api: any) {
   if (document.getElementById("hearth-visual-panel")) return;
   const panel = document.createElement("div");
   panel.id = "hearth-visual-panel";
@@ -268,7 +268,7 @@ function installPanel(api) {
   document.body.append(panel);
 }
 
-export function installVisualTestingBridge({ getState, dispatch }) {
+export function installVisualTestingBridge({ getState: any, dispatch: any }) {
   window.__HEARTH_VISUAL_TESTING__ = true;
   let readyResolve;
   const ready = new Promise((resolve) => { readyResolve = resolve; });
@@ -277,12 +277,12 @@ export function installVisualTestingBridge({ getState, dispatch }) {
     ready,
     list: listVisualScenarios,
     state: () => getState(),
-    async dispatch(action) {
+    async dispatch(action: any) {
       dispatch(action);
       await settleFrames();
       return getState();
     },
-    async loadScenario(id) {
+    async loadScenario(id: any) {
       if (demoAnimResetTimer != null) {
         clearTimeout(demoAnimResetTimer);
         demoAnimResetTimer = null;
@@ -306,18 +306,18 @@ export function installVisualTestingBridge({ getState, dispatch }) {
         modal: getState()?.modal ?? null,
       };
     },
-    click: (selector) => clickSelector(selector),
-    hover: (selector) => hoverSelector(selector),
+    click: (selector: any) => clickSelector(selector),
+    hover: (selector: any) => hoverSelector(selector),
     holdChain,
-    playBoardAnimation: (opts) => playBoardAnimation(opts, api),
+    playBoardAnimation: (opts: any) => playBoardAnimation(opts, api),
     syncScene: () => applyBoardStateToScene(window.__hearthVisualScenarioState ?? getState()),
     freeze: freezeUi,
-    selectorForTestId: (testId) => `[data-testid="${cssEscape(testId)}"]`,
+    selectorForTestId: (testId: any) => `[data-testid="${cssEscape(testId)}"]`,
   };
 
   window.__hearthVisual = api;
 
-  function onMessage(event) {
+  function onMessage(event: any) {
     const data = event.data;
     if (!data || typeof data !== "object") return;
     if (data.type === "HEARTH_PLAY_ANIMATION") {

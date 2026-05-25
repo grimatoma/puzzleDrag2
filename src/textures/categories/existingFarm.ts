@@ -2,7 +2,7 @@
 // so they render in the same review context as the new ones.
 // Source: github.com/grimatoma/puzzleDrag2 — src/textures/farmIcons.js
 
-function rr(ctx, x, y, w, h, r) {
+function rr(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
   ctx.beginPath();
   ctx.moveTo(x + r, y);
   ctx.arcTo(x + w, y, x + w, y + h, r);
@@ -12,7 +12,7 @@ function rr(ctx, x, y, w, h, r) {
   ctx.closePath();
 }
 
-function drawHay(ctx) {
+function drawHay(ctx: CanvasRenderingContext2D) {
   ctx.strokeStyle = "#5e3a08"; ctx.lineWidth = 5;
   [-18,-10,-2,6,14].forEach((x,i)=>{ ctx.beginPath(); ctx.moveTo(x,22); ctx.quadraticCurveTo(x-2+i,0,x-6+i*2,-24); ctx.stroke(); });
   ctx.strokeStyle = "#d4a020"; ctx.lineWidth = 3.5;
@@ -27,7 +27,7 @@ function drawHay(ctx) {
   ctx.strokeStyle = "#2a1804"; ctx.stroke();
 }
 
-function drawMeadowGrass(ctx) {
+function drawMeadowGrass(ctx: CanvasRenderingContext2D) {
   ctx.fillStyle = "rgba(0,0,0,0.22)"; ctx.beginPath(); ctx.ellipse(0,22,22,5,0,0,Math.PI*2); ctx.fill();
   ctx.strokeStyle = "#234012"; ctx.lineWidth = 4.5;
   [-18,-10,-2,6,14].forEach((x,i)=>{ ctx.beginPath(); ctx.moveTo(x,22); ctx.bezierCurveTo(x+4-i*2,6,x-6+i*3,-8,x-10+i*4,-22); ctx.stroke(); });
@@ -43,7 +43,7 @@ function drawMeadowGrass(ctx) {
   ctx.fillStyle = "#5a3a18"; ctx.beginPath(); ctx.ellipse(0,24,14,3,0,0,Math.PI*2); ctx.fill();
 }
 
-function drawSpikyGrass(ctx) {
+function drawSpikyGrass(ctx: CanvasRenderingContext2D) {
   ctx.fillStyle = "rgba(0,0,0,0.22)"; ctx.beginPath(); ctx.ellipse(0,22,22,4.5,0,0,Math.PI*2); ctx.fill();
   ctx.fillStyle = "#3d4a14"; ctx.strokeStyle = "#1f2a08"; ctx.lineWidth = 1.5;
   [[-22,20,-16,-22],[-14,22,-10,-20],[-6,22,-4,-24],[2,22,4,-24],[10,22,12,-20],[18,20,16,-22]].forEach(([x1,y1,xt,yt])=>{
@@ -62,7 +62,7 @@ function drawSpikyGrass(ctx) {
   ctx.fillStyle = "#5a3a18"; ctx.beginPath(); ctx.ellipse(0,24,16,3,0,0,Math.PI*2); ctx.fill();
 }
 
-function drawWheat(ctx) {
+function drawWheat(ctx: CanvasRenderingContext2D) {
   ctx.strokeStyle = "#6b4710"; ctx.lineWidth = 4;
   ctx.beginPath(); ctx.moveTo(0,26); ctx.lineTo(0,-12); ctx.stroke();
   ctx.strokeStyle = "#a47619"; ctx.lineWidth = 1.5;
@@ -88,7 +88,7 @@ function drawWheat(ctx) {
   [-4,-2,0,2,4].forEach((dx)=>{ ctx.beginPath(); ctx.moveTo(dx,-16); ctx.lineTo(dx*1.4,-26); ctx.stroke(); });
 }
 
-function drawFlour(ctx) {
+function drawFlour(ctx: CanvasRenderingContext2D) {
   ctx.fillStyle = "rgba(0,0,0,0.18)"; ctx.beginPath(); ctx.ellipse(0,23,22,4.5,0,0,Math.PI*2); ctx.fill();
   const body = ctx.createLinearGradient(0,-10,0,24);
   body.addColorStop(0,"#fff5dc"); body.addColorStop(1,"#c9a672");
@@ -109,7 +109,7 @@ function drawFlour(ctx) {
   ctx.beginPath(); ctx.moveTo(-13,-5); ctx.quadraticCurveTo(-17,8,-15,20); ctx.lineTo(-11,18); ctx.quadraticCurveTo(-12,8,-9,-5); ctx.closePath(); ctx.fill();
 }
 
-function drawPlank(ctx) {
+function drawPlank(ctx: CanvasRenderingContext2D) {
   ctx.save(); ctx.rotate(-0.18);
   ctx.fillStyle = "rgba(0,0,0,0.22)"; rr(ctx,-25,13,50,8,3); ctx.fill();
   const grad = ctx.createLinearGradient(0,-14,0,14);
@@ -130,7 +130,7 @@ function drawPlank(ctx) {
   ctx.restore();
 }
 
-function drawDirt(ctx) {
+function drawDirt(ctx: CanvasRenderingContext2D) {
   ctx.fillStyle = "rgba(0,0,0,0.22)"; ctx.beginPath(); ctx.ellipse(0,23,20,4,0,0,Math.PI*2); ctx.fill();
   const body = ctx.createLinearGradient(0,-14,0,20);
   body.addColorStop(0,"#9a7248"); body.addColorStop(0.5,"#6b4a2a"); body.addColorStop(1,"#3a2412");
@@ -144,7 +144,7 @@ function drawDirt(ctx) {
   ctx.beginPath(); ctx.moveTo(-15,-12); ctx.lineTo(14,-12); ctx.stroke();
 }
 
-function drawJam(ctx) {
+function drawJam(ctx: CanvasRenderingContext2D) {
   ctx.fillStyle = "rgba(0,0,0,0.22)"; ctx.beginPath(); ctx.ellipse(0,24,20,4,0,0,Math.PI*2); ctx.fill();
   const glass = ctx.createLinearGradient(-18,0,18,0);
   glass.addColorStop(0,"rgba(255,255,255,0.18)"); glass.addColorStop(0.5,"rgba(255,255,255,0.05)"); glass.addColorStop(1,"rgba(0,0,0,0.15)");
@@ -172,7 +172,7 @@ function drawJam(ctx) {
   ctx.fillStyle = "#5a8a26"; ctx.beginPath(); ctx.ellipse(0,9,2,1,0.5,0,Math.PI*2); ctx.fill();
 }
 
-function drawTurkey(ctx) {
+function drawTurkey(ctx: CanvasRenderingContext2D) {
   ctx.fillStyle = "rgba(0,0,0,0.25)"; ctx.beginPath(); ctx.ellipse(2,22,20,4,0,0,Math.PI*2); ctx.fill();
   const tailColors = ["#5a2f10","#8a4a18","#c08038","#e8b048"];
   for (let layer=0; layer<4; layer++) {
@@ -209,9 +209,9 @@ function drawTurkey(ctx) {
   [[-4,18],[4,18]].forEach(([fx,fy])=>{ ctx.beginPath(); ctx.moveTo(fx,fy); ctx.lineTo(fx,fy+4); ctx.moveTo(fx,fy+4); ctx.lineTo(fx-2,fy+6); ctx.moveTo(fx,fy+4); ctx.lineTo(fx+2,fy+6); ctx.stroke(); });
 }
 
-function drawClover(ctx) {
+function drawClover(ctx: CanvasRenderingContext2D) {
   ctx.fillStyle = "rgba(0,0,0,0.20)"; ctx.beginPath(); ctx.ellipse(0,22,22,4,0,0,Math.PI*2); ctx.fill();
-  const drawLeaf = (cx,cy,r,angle,lightHex,darkHex) => {
+  const drawLeaf = (cx: number, cy: number, r: number, angle: number, lightHex: string, darkHex: string) => {
     ctx.save(); ctx.translate(cx,cy); ctx.rotate(angle);
     const grad = ctx.createRadialGradient(-r*0.3,-r*0.3,1,0,0,r);
     grad.addColorStop(0,lightHex); grad.addColorStop(1,darkHex);
@@ -239,7 +239,7 @@ function drawClover(ctx) {
   ctx.strokeStyle = "#5a7818"; ctx.lineWidth = 0.8; ctx.stroke();
 }
 
-function drawMelon(ctx) {
+function drawMelon(ctx: CanvasRenderingContext2D) {
   ctx.fillStyle = "rgba(0,0,0,0.25)"; ctx.beginPath(); ctx.ellipse(2,22,22,4.5,0,0,Math.PI*2); ctx.fill();
   const grad = ctx.createRadialGradient(-6,-6,4,0,0,22);
   grad.addColorStop(0,"#d4ed90"); grad.addColorStop(0.55,"#7eb44a"); grad.addColorStop(1,"#3a6818");

@@ -24,12 +24,12 @@ const REASON_TONE = {
   "missing-target": { label: "BAD",  tone: "danger" },
 };
 
-function ReasonPill({ reason }) {
+function ReasonPill({ reason: any }) {
   const t = REASON_TONE[reason] || REASON_TONE["ends-here"];
   return <StatusChip tone={t.tone} size="xs" uppercase>{t.label}</StatusChip>;
 }
 
-function EffectBadges({ effects }) {
+function EffectBadges({ effects: any }) {
   const bits = [];
   if (effects.coins) bits.push({ k: "coins", text: `¢ ${effects.coins > 0 ? "+" : ""}${effects.coins}`, tone: "gold" });
   if (effects.embers) bits.push({ k: "embers", text: `✸ ${effects.embers > 0 ? "+" : ""}${effects.embers}`, tone: "ember" });
@@ -56,7 +56,7 @@ function EffectBadges({ effects }) {
   );
 }
 
-export default function PathsPanel({ open, draft, anchorBeatId, onClose, onJumpToBeat }) {
+export default function PathsPanel({ open: any, draft: any, anchorBeatId: any, onClose: any, onJumpToBeat: any }) {
   const result = useMemo(() => {
     if (!anchorBeatId) return { paths: [], truncated: false };
     return enumerateStoryPaths(anchorBeatId, draft);
@@ -64,7 +64,7 @@ export default function PathsPanel({ open, draft, anchorBeatId, onClose, onJumpT
 
   useEffect(() => {
     if (!open) return undefined;
-    const onKey = (e) => { if (e.key === "Escape") onClose(); };
+    const onKey = (e: any) => { if (e.key === "Escape") onClose(); };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [open, onClose]);
@@ -129,7 +129,7 @@ export default function PathsPanel({ open, draft, anchorBeatId, onClose, onJumpT
                 </div>
                 {p.choices.length > 0 && (
                   <div style={{ display: "flex", alignItems: "center", gap: 5, flexWrap: "wrap" }}>
-                    {p.choices.map((c, j) => (
+                    {p.choices.map((c: any, j: any) => (
                       <button key={`${c.beatId}-${c.choiceId}-${j}`}
                         onClick={() => { onJumpToBeat(c.beatId); onClose(); }}
                         title={`Jump to beat ${c.beatId}`}

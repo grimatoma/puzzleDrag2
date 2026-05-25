@@ -45,7 +45,7 @@ const HARBOR_PLOTS = {
   7: "housing2",
 };
 
-function builtFromPlots(plots, extras = {}) {
+function builtFromPlots(plots: any, extras = {}) {
   const out = { decorations: {}, _plots: { ...plots }, ...extras };
   for (const id of Object.values(plots)) out[id] = true;
   return out;
@@ -86,7 +86,7 @@ function fullTileCollection(overrides = {}) {
   };
 }
 
-function order(id, npc, key, need, have, reward = 80) {
+function order(id: any, npc: any, key: any, need: any, have: any, reward = 80) {
   return {
     id,
     npc,
@@ -140,7 +140,7 @@ function richInventory() {
   };
 }
 
-function applyRoute(state, scenario) {
+function applyRoute(state: any, scenario: any) {
   const hash = scenario.hash ?? null;
   let next = { ...state };
   if (hash) {
@@ -279,8 +279,8 @@ function richState() {
   };
 }
 
-function grid(rows) {
-  return rows.map((row) => row.map((cell) => (typeof cell === "string" ? { key: cell } : cell)));
+function grid(rows: any) {
+  return rows.map((row: any) => row.map((cell: any) => (typeof cell === "string" ? { key: cell } : cell)));
 }
 
 const farmGrid = grid([
@@ -341,7 +341,7 @@ function boardState(kind = "farm") {
 // Mid-season variant of boardState — `turnsUsed` lands the season indicator
 // inside a specific season (Spring 0-1, Summer 2-4, Autumn 5-6, Winter 7-9
 // with the default 10-turn budget) and `bespoke` flips the season widget.
-function boardWithSeason(turnsUsed, bespoke) {
+function boardWithSeason(turnsUsed: any, bespoke: any) {
   const base = boardState("farm");
   return {
     ...base,
@@ -351,7 +351,7 @@ function boardWithSeason(turnsUsed, bespoke) {
   };
 }
 
-function withBeat(state, beatId) {
+function withBeat(state: any, beatId: any) {
   const beat = findBeat(beatId);
   return {
     ...state,
@@ -364,7 +364,7 @@ function withBeat(state, beatId) {
   };
 }
 
-function withRunSummary(state) {
+function withRunSummary(state: any) {
   return {
     ...state,
     modal: "runSummary",
@@ -388,7 +388,7 @@ function withRunSummary(state) {
   };
 }
 
-function profileState(profile) {
+function profileState(profile: any) {
   switch (profile) {
     case "fresh": return baseState();
     case "rich": return richState();
@@ -416,7 +416,7 @@ function profileState(profile) {
     case "boardMine": return boardState("mine");
     case "boardMineHazards": {
       const st = boardState("mine");
-      const g = st.grid.map((row) => row.map((cell) => ({ ...cell })));
+      const g = st.grid.map((row: any) => row.map((cell: any) => ({ ...cell })));
       g[1][1] = { key: "tile_mine_stone", rubble: true };
       g[2][2] = { key: "mysterious_ore" };
       g[3][3] = { key: "lava" };
@@ -433,7 +433,7 @@ function profileState(profile) {
     case "boardSeasonWinterBespoke": return boardWithSeason(8, true);
     case "boardFishPearl": {
       const st = boardState("fish");
-      const g = st.grid.map((row) => row.map((cell) => ({ ...cell })));
+      const g = st.grid.map((row: any) => row.map((cell: any) => ({ ...cell })));
       g[2][2] = { key: "tile_special_giant_pearl" };
       return { ...st, grid: g, fish: { tide: "low", tideTurn: 2 }, fishPearl: { row: 2, col: 2 } };
     }
@@ -518,13 +518,13 @@ function profileState(profile) {
   }
 }
 
-export function buildVisualState(scenario) {
+export function buildVisualState(scenario: any) {
   const profile = scenario.state ?? "fresh";
   const state = profileState(profile);
   return applyRoute(state, scenario);
 }
 
-export function validateVisualState(state) {
+export function validateVisualState(state: any) {
   if (!state || typeof state !== "object") return ["state is not an object"];
   const errors = [];
   if (!state.view) errors.push("state.view is missing");

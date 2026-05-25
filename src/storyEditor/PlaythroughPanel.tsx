@@ -21,7 +21,7 @@ const REASON_LABEL = {
   "depth-cap": "DEEP", "missing-target": "BAD",
 };
 
-function StateRow({ label, value, accent }) {
+function StateRow({ label: any, value: any, accent: any }) {
   const v = value || 0;
   return (
     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between",
@@ -36,7 +36,7 @@ function StateRow({ label, value, accent }) {
   );
 }
 
-function StrategyColumn({ result }) {
+function StrategyColumn({ result: any }) {
   const tone = STRATEGY_TONE[result.strategy] || STRATEGY_TONE.first;
   const reason = REASON_LABEL[result.terminalReason] || result.terminalReason;
   return (
@@ -54,7 +54,7 @@ function StrategyColumn({ result }) {
         </div>
       </header>
       <div style={{ padding: "6px 0", borderBottom: `1px solid ${C.border}66`, maxHeight: 180, overflowY: "auto" }}>
-        {result.steps.map((s, i) => (
+        {result.steps.map((s: any, i: any) => (
           <div key={`${s.beatId}-${i}`} style={{ padding: "3px 10px",
             font: "500 10px/1.3 system-ui", color: C.inkLight,
             display: "flex", alignItems: "center", gap: 5 }}>
@@ -96,7 +96,7 @@ function StrategyColumn({ result }) {
   );
 }
 
-export default function PlaythroughPanel({ open, draft, anchorBeatId, onClose, onJumpToBeat }) {
+export default function PlaythroughPanel({ open: any, draft: any, anchorBeatId: any, onClose: any, onJumpToBeat: any }) {
   const results = useMemo(() => {
     if (!anchorBeatId) return [];
     return simulateAllPlaythroughs(anchorBeatId, draft);
@@ -104,7 +104,7 @@ export default function PlaythroughPanel({ open, draft, anchorBeatId, onClose, o
 
   useEffect(() => {
     if (!open) return undefined;
-    const onKey = (e) => { if (e.key === "Escape") onClose(); };
+    const onKey = (e: any) => { if (e.key === "Escape") onClose(); };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [open, onClose]);

@@ -13,14 +13,14 @@ import { effectiveBeat, allBeatIds, draftBeats, isDraftBeat } from "./shared.jsx
 
 const NARRATOR_KEY = "_narrator";
 
-function wordCount(text) {
+function wordCount(text: any) {
   if (typeof text !== "string") return 0;
   const trimmed = text.trim();
   if (!trimmed) return 0;
   return trimmed.split(/\s+/).length;
 }
 
-const asArr = (v) => Array.isArray(v) ? v : (typeof v === "string" && v ? [v] : []);
+const asArr = (v: any) => Array.isArray(v) ? v : (typeof v === "string" && v ? [v] : []);
 
 function emptyNpcRow() {
   return { lines: 0, words: 0, beats: new Set(), bondDelta: 0 };
@@ -29,7 +29,7 @@ function emptyNpcRow() {
 /**
  * Compute the stats blob for a draft. Pure: same draft → same numbers.
  */
-export function computeStoryStats(draft) {
+export function computeStoryStats(draft: any) {
   const ids = allBeatIds(draft);
   const beatLookup = new Map();
   for (const id of ids) {
@@ -52,7 +52,7 @@ export function computeStoryStats(draft) {
   const npcStats = new Map();
   const longestBeats = []; // sortable
 
-  const ensureNpc = (key) => {
+  const ensureNpc = (key: any) => {
     const k = key || NARRATOR_KEY;
     if (!npcStats.has(k)) npcStats.set(k, emptyNpcRow());
     return npcStats.get(k);
@@ -174,7 +174,7 @@ export function computeStoryStats(draft) {
 export const NARRATOR_SPEAKER = NARRATOR_KEY;
 
 /** True when a beat is part of the author-created drafts lane. */
-export function isAuthorBeat(draft, beatId) {
+export function isAuthorBeat(draft: any, beatId: any) {
   return isDraftBeat(draft, beatId);
 }
 

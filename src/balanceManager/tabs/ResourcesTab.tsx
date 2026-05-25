@@ -41,7 +41,7 @@ const CURRENCIES = [
   { icon: "🏺", label: "Heirloom tokens", note: "Per-biome story tokens: Heirloom Seed · Pact Iron · Tidesinger Pearl." },
 ];
 
-export default function ResourcesTab({ draft, updateDraft }) {
+export default function ResourcesTab({ draft: any, updateDraft: any }) {
   const [biome, setBiome] = useState("all");
   const [search, setSearch] = useState("");
 
@@ -62,8 +62,8 @@ export default function ResourcesTab({ draft, updateDraft }) {
     return true;
   });
 
-  function patchItem(key, fields) {
-    updateDraft((d) => {
+  function patchItem(key: any, fields: any) {
+    updateDraft((d: any) => {
       const cur = d.items[key] || {};
       const next = { ...cur, ...fields };
       // Drop empty patches to keep the JSON tidy.
@@ -146,7 +146,7 @@ export default function ResourcesTab({ draft, updateDraft }) {
                     {r.biome && <Pill>{r.biome}</Pill>}
                     {dirty && <Pill color="#fff" bg={COLORS.ember}>edited</Pill>}
                     {dirty && (
-                      <SmallButton variant="ghost" onClick={() => updateDraft((d) => { delete d.items[key]; })}>
+                      <SmallButton variant="ghost" onClick={() => updateDraft((d: any) => { delete d.items[key]; })}>
                         revert
                       </SmallButton>
                     )}
@@ -154,15 +154,15 @@ export default function ResourcesTab({ draft, updateDraft }) {
 
                   <div>
                     <Label>Label</Label>
-                    <TextField value={eff.label} onChange={(v) => patchItem(key, { label: v })} />
+                    <TextField value={eff.label} onChange={(v: any) => patchItem(key, { label: v })} />
                   </div>
                   <div>
                     <Label>Sale value</Label>
-                    <NumberField value={eff.value} min={0} max={9999} onChange={(v) => patchItem(key, { value: v })} width={80} />
+                    <NumberField value={eff.value} min={0} max={9999} onChange={(v: any) => patchItem(key, { value: v })} width={80} />
                   </div>
                   <div>
                     <Label>Color</Label>
-                    <ColorField value={eff.color} onChange={(v) => patchItem(key, { color: v })} />
+                    <ColorField value={eff.color} onChange={(v: any) => patchItem(key, { color: v })} />
                   </div>
                   <div className="col-span-2">
                     <Label>Description</Label>
@@ -170,7 +170,7 @@ export default function ResourcesTab({ draft, updateDraft }) {
                       rows={2}
                       value={eff.desc || eff.description}
                       placeholder="Short flavor text shown in tooltips."
-                      onChange={(v) => patchItem(key, { desc: v, description: v })}
+                      onChange={(v: any) => patchItem(key, { desc: v, description: v })}
                     />
                   </div>
                 </div>
@@ -203,7 +203,7 @@ export default function ResourcesTab({ draft, updateDraft }) {
   );
 }
 
-function Label({ children }) {
+function Label({ children: any }) {
   return (
     <div className="text-[10px] font-bold uppercase tracking-wide mb-0.5" style={{ color: COLORS.inkSubtle }}>
       {children}

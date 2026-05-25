@@ -2,7 +2,7 @@ import { BOARD_ANIMATIONS } from "../../config/boardAnimations.js";
 import { TOOL_POWERS } from "../../config/toolPowers.js";
 import { COLORS, Card, Pill } from "../shared.jsx";
 
-function BoardPresetTiming({ animName }) {
+function BoardPresetTiming({ animName: any }) {
   const entry = animName ? BOARD_ANIMATIONS[animName] : null;
   if (!entry) return null;
   return (
@@ -17,7 +17,7 @@ function BoardPresetTiming({ animName }) {
   );
 }
 
-function DefaultBoardAnimBlock({ anim }) {
+function DefaultBoardAnimBlock({ anim: any }) {
   if (!anim) {
     return (
       <div className="text-[11px] italic" style={{ color: COLORS.inkSubtle }}>

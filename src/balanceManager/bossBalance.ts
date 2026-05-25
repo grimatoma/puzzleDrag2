@@ -34,7 +34,7 @@ const MODIFIER_LABEL = {
   min_chain:       { label: "Min chain length", hint: "Chains shorter than N produce nothing." },
 };
 
-function bandFor(perTurn) {
+function bandFor(perTurn: any) {
   for (const tier of YIELD_TIERS) if (perTurn <= tier.max) return tier;
   return YIELD_TIERS[YIELD_TIERS.length - 1];
 }
@@ -44,7 +44,7 @@ function bandFor(perTurn) {
  *   - marginBands: a quick-glance triplet of "how much extra over target
  *     yields the +50% scaling bonus" — useful for tuning the reward curve.
  */
-export function assessBoss(boss, { windowTurns = BOSS_WINDOW_TURNS } = {}) {
+export function assessBoss(boss: any, { windowTurns = BOSS_WINDOW_TURNS } = {}) {
   const amount = Number(boss?.target?.amount) || 0;
   const perTurnTarget = windowTurns > 0 ? amount / windowTurns : amount;
   const tier = bandFor(perTurnTarget);

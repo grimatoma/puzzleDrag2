@@ -11,23 +11,23 @@ import { useState } from "react";
 import { EXPEDITION_FOOD_TURNS, EXPEDITION_MEAT_FOODS } from "../../constants.js";
 import { COLORS, NumberField, TextField, SmallButton, Card, FieldRow } from "../shared.jsx";
 
-export default function RationsTab({ draft, updateDraft }) {
+export default function RationsTab({ draft: any, updateDraft: any }) {
   const [newKey, setNewKey] = useState("");
   const exp = draft.expedition ?? {};
   const foodTurns = { ...EXPEDITION_FOOD_TURNS, ...(exp.foodTurns ?? {}) };
   const meatFoods = Array.isArray(exp.meatFoods) ? exp.meatFoods : EXPEDITION_MEAT_FOODS;
 
-  function patch(fields) {
-    updateDraft((d) => {
+  function patch(fields: any) {
+    updateDraft((d: any) => {
       d.expedition = { ...(d.expedition ?? {}), ...fields };
       if (d.expedition.foodTurns && Object.keys(d.expedition.foodTurns).length === 0) delete d.expedition.foodTurns;
       if (d.expedition.meatFoods && d.expedition.meatFoods.length === 0) delete d.expedition.meatFoods;
       if (Object.keys(d.expedition).length === 0) delete d.expedition;
     });
   }
-  const setTurns = (key, v) => patch({ foodTurns: { ...(exp.foodTurns ?? {}), [key]: v } });
-  const toggleMeat = (key) => {
-    const next = meatFoods.includes(key) ? meatFoods.filter((k) => k !== key) : [...meatFoods, key];
+  const setTurns = (key: any, v: any) => patch({ foodTurns: { ...(exp.foodTurns ?? {}), [key]: v } });
+  const toggleMeat = (key: any) => {
+    const next = meatFoods.includes(key) ? meatFoods.filter((k: any) => k !== key) : [...meatFoods, key];
     patch({ meatFoods: next });
   };
   const addFood = () => {
@@ -45,7 +45,7 @@ export default function RationsTab({ draft, updateDraft }) {
         </div>
         {Object.keys(foodTurns).map((key) => (
           <FieldRow key={key} label={key} hint={meatFoods.includes(key) ? "🥩 meat — Smokehouse +1" : undefined}>
-            <NumberField value={foodTurns[key]} onChange={(v) => setTurns(key, v)} min={0} max={99} />
+            <NumberField value={foodTurns[key]} onChange={(v: any) => setTurns(key, v)} min={0} max={99} />
           </FieldRow>
         ))}
         <div className="flex items-center gap-2 mt-2 pt-2" style={{ borderTop: `1px dashed ${COLORS.border}` }}>

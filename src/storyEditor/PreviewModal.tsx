@@ -26,7 +26,7 @@ const P = {
   ember: "#c96442",
 };
 
-function outcomeBadges(outcome) {
+function outcomeBadges(outcome: any) {
   const o = outcome || {};
   const out = [];
   if (o.bondDelta && o.bondDelta.npc) out.push({ k: "bond", t: "ember", label: `♥ ${o.bondDelta.amount > 0 ? "+" : ""}${o.bondDelta.amount} ${NPCS[o.bondDelta.npc]?.name || o.bondDelta.npc}` });
@@ -46,12 +46,12 @@ const BADGE_TONE = {
   ember: { bg: "rgba(214,97,42,0.16)",  bd: "rgba(214,97,42,0.45)",  fg: "#e88a5e" },
   slate: { bg: "rgba(150,165,190,0.14)",bd: "rgba(150,165,190,0.4)", fg: "#bcc6d8" },
 };
-function Badge({ tone, children }) {
+function Badge({ tone: any, children: any }) {
   const t = BADGE_TONE[tone] || BADGE_TONE.iron;
   return <span style={{ display: "inline-flex", alignItems: "center", padding: "2px 7px", borderRadius: 999, border: `1px solid ${t.bd}`, background: t.bg, color: t.fg, font: "600 9px/1 system-ui", letterSpacing: "0.05em", textTransform: "uppercase", whiteSpace: "nowrap" }}>{children}</span>;
 }
 
-function PreviewFooter({ beat, choices, ended, knownIds, draft, isPrompt, onPick }) {
+function PreviewFooter({ beat: any, choices: any, ended: any, knownIds: any, draft: any, isPrompt: any, onPick: any }) {
   if (isPrompt && !ended) {
     return (
       <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
@@ -82,7 +82,7 @@ function PreviewFooter({ beat, choices, ended, knownIds, draft, isPrompt, onPick
   }
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
-      {choices.map((c, i) => {
+      {choices.map((c: any, i: any) => {
         const badges = outcomeBadges(c.outcome);
         const target = c?.outcome?.queueBeat;
         const targetKnown = target ? knownIds.has(target) : false;
@@ -108,13 +108,13 @@ function PreviewFooter({ beat, choices, ended, knownIds, draft, isPrompt, onPick
 
 // `index.jsx` mounts this with `key={startBeatId}` so the walk state resets
 // when you pick a different beat to preview.
-export default function PreviewModal({ startBeatId, draft, onClose, onOpenInEditor }) {
+export default function PreviewModal({ startBeatId: any, draft: any, onClose: any, onOpenInEditor: any }) {
   const [path, setPath] = useState([startBeatId]);
   const [ended, setEnded] = useState(null); // { choice } once a terminal choice is taken
   const [simPath, setSimPath] = useState(() => [blankPreviewState()]);
   const [lineProgress, setLineProgress] = useState({ beatId: startBeatId, step: 0 });
   useEffect(() => {
-    const onKey = (e) => { if (e.key === "Escape") onClose(); };
+    const onKey = (e: any) => { if (e.key === "Escape") onClose(); };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
@@ -136,7 +136,7 @@ export default function PreviewModal({ startBeatId, draft, onClose, onOpenInEdit
     );
   }
 
-  const lines = beatLines(beat).map((l) => ({ speaker: l?.speaker ?? null, text: interpolateBeatText(l?.text ?? "", { settlement: SAMPLE_SETTLEMENT }) }));
+  const lines = beatLines(beat).map((l: any) => ({ speaker: l?.speaker ?? null, text: interpolateBeatText(l?.text ?? "", { settlement: SAMPLE_SETTLEMENT }) }));
   const canStepDialogue = lines.length > 1;
   const atLastLine = lineStep >= lines.length - 1;
   const visibleLines = canStepDialogue ? [lines[Math.max(0, Math.min(lineStep, lines.length - 1))]] : lines;
@@ -147,7 +147,7 @@ export default function PreviewModal({ startBeatId, draft, onClose, onOpenInEdit
   const ts = triggerSummary(beat);
   const stateBits = previewStateSummary(sim);
 
-  const pick = (c) => {
+  const pick = (c: any) => {
     const nextSim = applyPreviewEffects(sim, beat, c);
     const target = c?.outcome?.queueBeat;
     if (target && knownIds.has(target)) { setPath((p) => [...p, target]); setSimPath((p) => [...p, nextSim]); setEnded(null); return; }
@@ -223,7 +223,7 @@ const closeBtnStyle = {
   background: "transparent", color: P.parchDim, font: "600 11px/1 system-ui", cursor: "pointer",
 };
 
-function Backdrop({ children, onClose }) {
+function Backdrop({ children: any, onClose: any }) {
   return (
     <div onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 9999, display: "grid", placeItems: "center",
       background: "rgba(10,7,4,0.62)", backdropFilter: "blur(2px)", padding: 20 }}>
@@ -232,7 +232,7 @@ function Backdrop({ children, onClose }) {
   );
 }
 
-function SmallBtn({ children, onClick, tone }) {
+function SmallBtn({ children: any, onClick: any, tone: any }) {
   const close = tone === "close";
   return (
     <button onClick={onClick} style={{ padding: "4px 8px", borderRadius: 7,

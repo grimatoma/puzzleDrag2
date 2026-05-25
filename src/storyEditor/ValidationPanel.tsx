@@ -24,12 +24,12 @@ const TYPE_TONE = {
 };
 const DEFAULT_TONE = { fg: C.inkLight, bg: "rgba(43,34,24,0.06)", bd: C.border, icon: "•" };
 
-export default function ValidationPanel({ open, draft, onClose, onJumpToBeat, anchorRect }) {
+export default function ValidationPanel({ open: any, draft: any, onClose: any, onJumpToBeat: any, anchorRect: any }) {
   const { groups, total } = useMemo(() => groupedStoryWarnings(draft), [draft]);
 
   useEffect(() => {
     if (!open) return undefined;
-    const onKey = (e) => { if (e.key === "Escape") onClose(); };
+    const onKey = (e: any) => { if (e.key === "Escape") onClose(); };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [open, onClose]);
@@ -90,7 +90,7 @@ export default function ValidationPanel({ open, draft, onClose, onJumpToBeat, an
                   </div>
                 )}
                 <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
-                  {group.items.map(({ beatId, warning }, idx) => {
+                  {group.items.map(({ beatId: any, warning: any }, idx: any) => {
                     const beat = effectiveBeat(beatId, draft);
                     return (
                       <li key={`${beatId}-${idx}`}>

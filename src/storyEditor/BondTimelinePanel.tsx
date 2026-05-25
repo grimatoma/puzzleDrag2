@@ -8,12 +8,12 @@ import { useMemo } from "react";
 import { C, NPCS, Portrait } from "./shared.jsx";
 import { computeBondTimeline } from "./bondTimeline.js";
 
-function ActLabel({ act }) {
+function ActLabel({ act: any }) {
   if (act === null) return <span style={{ font: "600 8px/1 system-ui", color: C.violet, letterSpacing: "0.08em", textTransform: "uppercase" }}>SIDE</span>;
   return <span style={{ font: "600 8px/1 system-ui", color: C.inkSubtle, letterSpacing: "0.08em", textTransform: "uppercase" }}>{["", "I", "II", "III"][act] || `Act ${act}`}</span>;
 }
 
-function NpcRow({ row, onJumpToBeat }) {
+function NpcRow({ row: any, onJumpToBeat: any }) {
   const npc = NPCS[row.npc];
   const range = Math.max(1, Math.abs(row.max), Math.abs(row.min));
   return (
@@ -42,7 +42,7 @@ function NpcRow({ row, onJumpToBeat }) {
         <span style={{ textAlign: "right" }}>Δ</span>
         <span style={{ textAlign: "right" }}>Total</span>
       </div>
-      {row.stops.map((stop, i) => {
+      {row.stops.map((stop: any, i: any) => {
         const pos = stop.running >= 0;
         const pct = Math.round((Math.abs(stop.running) / range) * 100);
         return (
@@ -78,7 +78,7 @@ function NpcRow({ row, onJumpToBeat }) {
   );
 }
 
-export default function BondTimelinePanel({ draft, onJumpToBeat }) {
+export default function BondTimelinePanel({ draft: any, onJumpToBeat: any }) {
   const timeline = useMemo(() => computeBondTimeline(draft), [draft]);
   if (timeline.length === 0) {
     return (

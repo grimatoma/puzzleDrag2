@@ -25,7 +25,7 @@ const STRUCTURAL_KEYS = new Set([
   "achievements", "dailyRewards",
 ]);
 
-function deepEqual(a, b) {
+function deepEqual(a: any, b: any) {
   if (Object.is(a, b)) return true;
   if (!a || !b || typeof a !== "object" || typeof b !== "object") return false;
   if (Array.isArray(a) !== Array.isArray(b)) return false;
@@ -44,7 +44,7 @@ function deepEqual(a, b) {
   return true;
 }
 
-function isPlainObject(v) {
+function isPlainObject(v: any) {
   return v && typeof v === "object" && !Array.isArray(v);
 }
 
@@ -85,7 +85,7 @@ export function sectionDiff(baseline: Record<string, unknown> = {}, draft: Recor
     else if (d.status === "removed") removed.push({ key: k, value: d.baseline });
     else modified.push({ key: k, baseline: d.baseline, draft: d.draft, sub: d.sub });
   }
-  const order = (a, b) => a.key.localeCompare(b.key);
+  const order = (a: any, b: any) => a.key.localeCompare(b.key);
   added.sort(order); removed.sort(order); modified.sort(order);
   return { added, removed, modified };
 }
@@ -128,12 +128,12 @@ export function draftDiff(baseline: Record<string, unknown> = {}, draft: Record<
 }
 
 /** True if the two drafts are deep-equal (no changes to commit). */
-export function draftEqual(a, b) {
+export function draftEqual(a: any, b: any) {
   return deepEqual(a, b);
 }
 
 /** Format the diff totals into a one-line summary ("3 added · 1 modified"). */
-export function summariseTotals(totals) {
+export function summariseTotals(totals: any) {
   const bits = [];
   if (totals.added) bits.push(`${totals.added} added`);
   if (totals.modified) bits.push(`${totals.modified} modified`);
