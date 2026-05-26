@@ -18,9 +18,26 @@ import {
 
 describe("utils — clamp / contrast / adjacency", () => {
   it("clamp constrains to [a, b]", () => {
+    // Happy path: within bounds
     expect(clamp(5, 0, 10)).toBe(5);
+    // Lower bound violation
     expect(clamp(-3, 0, 10)).toBe(0);
+    // Upper bound violation
     expect(clamp(99, 0, 10)).toBe(10);
+
+    // Boundary matches
+    expect(clamp(0, 0, 10)).toBe(0);
+    expect(clamp(10, 0, 10)).toBe(10);
+
+    // Negative ranges
+    expect(clamp(-5, -10, -2)).toBe(-5);
+    expect(clamp(-15, -10, -2)).toBe(-10);
+    expect(clamp(0, -10, -2)).toBe(-2);
+
+    // Floating point numbers
+    expect(clamp(3.14, 0, 5.5)).toBe(3.14);
+    expect(clamp(-1.5, 0, 5.5)).toBe(0);
+    expect(clamp(6.28, 0, 5.5)).toBe(5.5);
   });
 
   it("contrastRatio is symmetric and >= 1", () => {
