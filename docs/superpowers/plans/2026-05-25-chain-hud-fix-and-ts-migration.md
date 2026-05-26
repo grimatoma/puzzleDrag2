@@ -598,7 +598,7 @@ Suggested: Phase 0 + Phase 1 inline (one session, ~1 hour). Each subsequent phas
 **Still open / optional:**
 
 - [ ] **Merge** `codex/type-constants-catalogs` → `main` when PR checks are green (user-driven).
-- [ ] **`tsc` over `src/__tests__`** — add to `tsconfig.tests.json` once unit tests use typed fixtures (large diff; thousands of strict errors today).
+- [x] **`tsc` over unit Vitest files** — incremental: `src/testUtils/testState.ts` (`mergeTestState` / `unsafeGameState` / `testAction`) + `docs/engineering/typed-tests.md`; `coverage-round-2.test.ts` migrated as the reference pattern. Widening `tsconfig.tests.json` to all `**/*.test.ts` still ~1.7k errors without migrating each file; do in batches.
 - [ ] **Deep `GameState` typing** — narrow `unknown` bags (`boss`, hazards, etc.) incrementally.
 - [ ] **E2E smoke** — re-run `npm run test:e2e` locally/CI; fix any flakes unrelated to TS rename if they block merge.
 
