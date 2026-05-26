@@ -32,7 +32,8 @@ The body below covers commands, architecture, the core game mechanic, testing ha
 npm run dev                  # Start Vite dev server (game at /, Dev Panel at /b/, Story Editor at /story/)
 npm run build                # Production build (outputs to dist/, including dist/stats.html bundle analyzer)
 npm run lint                 # ESLint over src/ + prototype.tsx
-npm run typecheck            # tsc --noEmit (strict; run before PRs — also enforced in CI)
+npm run typecheck            # tsc --noEmit over `src/` + entries (excludes `**/*.test.ts`; `src/testUtils/` is included)
+npm run typecheck:tests      # Playwright specs + Vitest setup; see `docs/engineering/typed-tests.md`
 npm run action-types:check   # sanity-check ACTION_TYPES array (no dupes); use with typecheck — `src/types/actionCatalogCoverage.ts` asserts every catalog string has a TypedAction branch
 npm test                     # Vitest unit tests (single run)
 npm run test:watch           # Vitest watch mode

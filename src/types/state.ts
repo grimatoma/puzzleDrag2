@@ -248,10 +248,8 @@ export interface GameState {
   floaters?: unknown[];
   /**
    * Boss-related extras (set when an encounter is active). The precise shape
-   * lives in src/features/boss/slice.ts as `BossState`; we keep it as
-   * `unknown` here so the canonical state type doesn't need to import a
-   * feature module, and so feature slices can attach extra fields freely.
-   * Callers should narrow with the BossState type when reading the field.
+   * lives in `BossState` in `src/features/boss/slice.ts`; runtime may attach
+   * partial or transitional objects — narrow at the call site when needed.
    */
   boss?: unknown | null;
   // Anything else that feature slices spread in via `...slice.initial`.
