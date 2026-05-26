@@ -218,7 +218,7 @@ function TileChooserPopup({ zoneCategory, state, dispatch, onClose }: TileChoose
           </button>
         </div>
         {rows.length === 0 ? (
-          <p className="text-on-panel-faint text-[13px] text-center py-6">
+          <p className="text-on-panel-dim text-[13px] text-center py-6">
             No {label} tiles unlocked yet. Visit the Tiles Wiki to research or
             buy new variants.
           </p>
@@ -248,12 +248,12 @@ function TileChooserPopup({ zoneCategory, state, dispatch, onClose }: TileChoose
                     <span className="flex items-center gap-1.5 flex-wrap">
                       <span className="font-bold text-[13px] leading-tight">{tile.displayName}</span>
                       {(tile.tier ?? 0) > 0 && (
-                        <span className="rounded-full px-1.5 py-0.5 text-[10px] font-bold bg-[#8c7656]/20 text-on-panel-dim">
+                        <span className="rounded-full px-1.5 py-0.5 text-[10px] font-bold bg-[#8c7656]/30 text-on-panel border border-[#8c7656]/45">
                           Tier {tile.tier}
                         </span>
                       )}
                       {chain != null && (
-                        <span className="rounded-full px-1.5 py-0.5 text-[10px] font-bold bg-[#8c7656]/20 text-on-panel-dim">
+                        <span className="rounded-full px-1.5 py-0.5 text-[10px] font-bold bg-[#8c7656]/30 text-on-panel border border-[#8c7656]/45">
                           Chain: {chain}
                         </span>
                       )}
@@ -264,7 +264,7 @@ function TileChooserPopup({ zoneCategory, state, dispatch, onClose }: TileChoose
                       )}
                     </span>
                     {tile.description && (
-                      <span className="text-[11px] text-on-panel-faint leading-snug">
+                      <span className="text-[11px] text-on-panel-dim leading-snug">
                         {tile.description}
                       </span>
                     )}
