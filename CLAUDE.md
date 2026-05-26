@@ -33,6 +33,7 @@ npm run dev                  # Start Vite dev server (game at /, Dev Panel at /b
 npm run build                # Production build (outputs to dist/, including dist/stats.html bundle analyzer)
 npm run lint                 # ESLint over src/ + prototype.tsx
 npm run typecheck            # tsc --noEmit (strict; run before PRs — also enforced in CI)
+npm run action-types:check   # sanity-check ACTION_TYPES array (no dupes); use with typecheck — `src/types/actionCatalogCoverage.ts` asserts every catalog string has a TypedAction branch
 npm test                     # Vitest unit tests (single run)
 npm run test:watch           # Vitest watch mode
 npm run test:coverage        # Vitest with coverage

@@ -826,9 +826,9 @@ function coreReducer(state: GameState, action: Action): GameState {
       return afterBuildStory;
     }
     case "POP_NPC":
-      return { ...state, bubble: { id: Date.now(), npc: action.npc as string, text: action.text as string, ms: (action.ms as number | undefined) ?? 1800 } };
+      return { ...state, bubble: { id: Date.now(), npc: action.npc, text: action.text, ms: action.ms ?? 1800 } };
     case "DISMISS_BUBBLE":
-      return state.bubble && state.bubble.id === (action.id as number | undefined) ? { ...state, bubble: null } : state;
+      return state.bubble && state.bubble.id === action.id ? { ...state, bubble: null } : state;
     case "CLOSE_SEASON": {
       const newSeasonNum = (state.market?.season ?? 0) + 1;
       const mSeed = state.market?.seed ?? 0;
@@ -1362,30 +1362,30 @@ function coreReducer(state: GameState, action: Action): GameState {
 
     default: {
       if (action.type === "DEV/ADD_GOLD") {
-        return { ...state, coins: state.coins + ((action.amount as number | undefined) ?? 1000) };
+        return { ...state, coins: state.coins + (action.amount ?? 1000) };
       }
       if (action.type === "DEV/FILL_STORAGE") {
         const inventory = { ...state.inventory };
         for (const biome of Object.values(BIOMES)) {
           for (const res of [...(biome.tiles ?? []), ...(biome.resources ?? [])]) {
-            inventory[res.key] = (inventory[res.key] || 0) + ((action.amount as number | undefined) ?? 100);
+            inventory[res.key] = (inventory[res.key] || 0) + (action.amount ?? 100);
           }
         }
         return { ...state, inventory };
       }
       if (action.type === "DEV/ADD_ITEM") {
-        const key = action.key as string | undefined;
+        const key = action.key;
         if (!key) return state;
         const inventory = { ...state.inventory };
-        inventory[key] = (inventory[key] || 0) + ((action.amount as number | undefined) ?? 50);
+        inventory[key] = (inventory[key] || 0) + (action.amount ?? 50);
         return { ...state, inventory };
       }
       if (action.type === "DEV/ADD_XP") {
-        const { newState } = applyAlmanacXp(state, (action.amount as number | undefined) ?? 100);
+        const { newState } = applyAlmanacXp(state, action.amount ?? 100);
         return { ...state, almanac: newState.almanac, xp: newState.almanac.xp, level: newState.almanac.level };
       }
       if (action.type === "DEV/ADD_LEVEL") {
-        const bump = (action.amount as number | undefined) ?? 1;
+        const bump = action.amount ?? 1;
         let s = state;
         for (let i = 0; i < bump; i++) {
           const { newState } = applyAlmanacXp(s, XP_PER_LEVEL);
@@ -1394,17 +1394,17 @@ function coreReducer(state: GameState, action: Action): GameState {
         return { ...s, xp: s.almanac.xp, level: s.almanac.level };
       }
       if (action.type === "DEV/ADD_ALMANAC_XP") {
-        const { newState } = applyAlmanacXp(state, (action.amount as number | undefined) ?? 50);
+        const { newState } = applyAlmanacXp(state, action.amount ?? 50);
         return newState;
       }
       if (action.type === "DEV/ADD_RUNES") {
-        return { ...state, runes: (state.runes ?? 0) + ((action.amount as number | undefined) ?? 10) };
+        return { ...state, runes: (state.runes ?? 0) + (action.amount ?? 10) };
       }
       if (action.type === "DEV/ADD_INFLUENCE") {
-        return { ...state, influence: (state.influence ?? 0) + ((action.amount as number | undefined) ?? 10) };
+        return { ...state, influence: (state.influence ?? 0) + (action.amount ?? 10) };
       }
       if (action.type === "DEV/FILL_TOOLS") {
-        const amt = (action.amount as number | undefined) ?? 5;
+        const amt = action.amount ?? 5;
         const tools = { ...state.tools } as Record<string, number | boolean | undefined>;
         for (const k of Object.keys(tools)) {
           const v = tools[k];
@@ -1414,7 +1414,7 @@ function coreReducer(state: GameState, action: Action): GameState {
       }
       if (action.type === "DEV/ADD_SUPPLIES") {
         const inventory = { ...state.inventory };
-        inventory.supplies = (inventory.supplies || 0) + ((action.amount as number | undefined) ?? 10);
+        inventory.supplies = (inventory.supplies || 0) + (action.amount ?? 10);
         return { ...state, inventory };
       }
       if (action.type === "DEV/BUILD_ALL") {

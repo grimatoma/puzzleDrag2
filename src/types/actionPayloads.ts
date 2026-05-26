@@ -1,6 +1,7 @@
 /**
  * Discriminated reducer actions — `type` narrows `payload` and legacy top-level fields.
- * Actions without a dedicated interface use {@link GenericAction}.
+ * The full {@link ActionType} catalog is covered by {@link TypedAction}; {@link GenericAction}
+ * is intentionally uninhabited (compile-time guard in `actionCatalogCoverage.ts`).
  */
 
 import type { ActionType } from "./actions.js";
@@ -430,6 +431,143 @@ export interface FishForceTideFlipAction {
   type: "FISH/FORCE_TIDE_FLIP";
 }
 
+// ── Modal / NPC / migration (core reducer) ───────────────────────────────────
+
+export interface CancelToolAction {
+  type: "CANCEL_TOOL";
+}
+
+export interface CloseModalAction {
+  type: "CLOSE_MODAL";
+}
+
+export interface PopNpcAction {
+  type: "POP_NPC";
+  npc: string;
+  text: string;
+  ms?: number;
+}
+
+export interface DismissBubbleAction {
+  type: "DISMISS_BUBBLE";
+  id: number;
+}
+
+export interface MigrateApplyCapsAction {
+  type: "MIGRATE/APPLY_CAPS";
+}
+
+// ── Run summary (catalog + slice) ───────────────────────────────────────────
+
+export interface RunSummaryOpenAction {
+  type: "RUN_SUMMARY/OPEN";
+}
+
+export interface RunSummaryCloseAction {
+  type: "RUN_SUMMARY/CLOSE";
+}
+
+// ── Settings (beyond TOGGLE / SET_TAB) ─────────────────────────────────────
+
+export interface SettingsOpenDebugAction {
+  type: "SETTINGS/OPEN_DEBUG";
+}
+
+export interface SettingsLeaveBoardAction {
+  type: "SETTINGS/LEAVE_BOARD";
+}
+
+export interface SettingsResetSaveAction {
+  type: "SETTINGS/RESET_SAVE";
+}
+
+export interface SettingsShowTutorialAction {
+  type: "SETTINGS/SHOW_TUTORIAL";
+}
+
+// ── Story / tutorial (slices) ───────────────────────────────────────────────
+
+export interface StoryDismissModalAction {
+  type: "STORY/DISMISS_MODAL";
+}
+
+export interface TutorialStartAction {
+  type: "TUTORIAL/START";
+}
+
+export interface TutorialNextAction {
+  type: "TUTORIAL/NEXT";
+}
+
+export interface TutorialPrevAction {
+  type: "TUTORIAL/PREV";
+}
+
+export interface TutorialSkipAction {
+  type: "TUTORIAL/SKIP";
+}
+
+// ── Dev panel (debug; core reducer default branch) ───────────────────────────
+
+export interface DevAddGoldAction {
+  type: "DEV/ADD_GOLD";
+  amount?: number;
+}
+
+export interface DevFillStorageAction {
+  type: "DEV/FILL_STORAGE";
+  amount?: number;
+}
+
+export interface DevAddItemAction {
+  type: "DEV/ADD_ITEM";
+  key: string;
+  amount?: number;
+}
+
+export interface DevAddXpAction {
+  type: "DEV/ADD_XP";
+  amount?: number;
+}
+
+export interface DevAddLevelAction {
+  type: "DEV/ADD_LEVEL";
+  amount?: number;
+}
+
+export interface DevAddAlmanacXpAction {
+  type: "DEV/ADD_ALMANAC_XP";
+  amount?: number;
+}
+
+export interface DevAddRunesAction {
+  type: "DEV/ADD_RUNES";
+  amount?: number;
+}
+
+export interface DevAddInfluenceAction {
+  type: "DEV/ADD_INFLUENCE";
+  amount?: number;
+}
+
+export interface DevFillToolsAction {
+  type: "DEV/FILL_TOOLS";
+  amount?: number;
+}
+
+export interface DevAddSuppliesAction {
+  type: "DEV/ADD_SUPPLIES";
+  amount?: number;
+}
+
+export interface DevBuildAllAction {
+  type: "DEV/BUILD_ALL";
+}
+
+export interface DevResetGameAction {
+  type: "DEV/RESET_GAME";
+}
+
 /** Action types with dedicated interfaces in this module. */
 export type TypedActionType =
   | VisualLoadStateAction["type"]
@@ -493,7 +631,35 @@ export type TypedActionType =
   | CloseSeasonAction["type"]
   | AdvanceSeasonAction["type"]
   | ActivateRuneWildcardAction["type"]
-  | FishForceTideFlipAction["type"];
+  | FishForceTideFlipAction["type"]
+  | CancelToolAction["type"]
+  | CloseModalAction["type"]
+  | PopNpcAction["type"]
+  | DismissBubbleAction["type"]
+  | MigrateApplyCapsAction["type"]
+  | RunSummaryOpenAction["type"]
+  | RunSummaryCloseAction["type"]
+  | SettingsOpenDebugAction["type"]
+  | SettingsLeaveBoardAction["type"]
+  | SettingsResetSaveAction["type"]
+  | SettingsShowTutorialAction["type"]
+  | StoryDismissModalAction["type"]
+  | TutorialStartAction["type"]
+  | TutorialNextAction["type"]
+  | TutorialPrevAction["type"]
+  | TutorialSkipAction["type"]
+  | DevAddGoldAction["type"]
+  | DevFillStorageAction["type"]
+  | DevAddItemAction["type"]
+  | DevAddXpAction["type"]
+  | DevAddLevelAction["type"]
+  | DevAddAlmanacXpAction["type"]
+  | DevAddRunesAction["type"]
+  | DevAddInfluenceAction["type"]
+  | DevFillToolsAction["type"]
+  | DevAddSuppliesAction["type"]
+  | DevBuildAllAction["type"]
+  | DevResetGameAction["type"];
 
 export type TypedAction =
   | VisualLoadStateAction
@@ -557,9 +723,37 @@ export type TypedAction =
   | CloseSeasonAction
   | AdvanceSeasonAction
   | ActivateRuneWildcardAction
-  | FishForceTideFlipAction;
+  | FishForceTideFlipAction
+  | CancelToolAction
+  | CloseModalAction
+  | PopNpcAction
+  | DismissBubbleAction
+  | MigrateApplyCapsAction
+  | RunSummaryOpenAction
+  | RunSummaryCloseAction
+  | SettingsOpenDebugAction
+  | SettingsLeaveBoardAction
+  | SettingsResetSaveAction
+  | SettingsShowTutorialAction
+  | StoryDismissModalAction
+  | TutorialStartAction
+  | TutorialNextAction
+  | TutorialPrevAction
+  | TutorialSkipAction
+  | DevAddGoldAction
+  | DevFillStorageAction
+  | DevAddItemAction
+  | DevAddXpAction
+  | DevAddLevelAction
+  | DevAddAlmanacXpAction
+  | DevAddRunesAction
+  | DevAddInfluenceAction
+  | DevFillToolsAction
+  | DevAddSuppliesAction
+  | DevBuildAllAction
+  | DevResetGameAction;
 
-/** Remaining catalog actions — loose fields until individually typed. */
+/** Remaining catalog actions — must stay empty; add a {@link TypedAction} branch instead. */
 export interface GenericAction {
   type: Exclude<ActionType, TypedActionType>;
   payload?: unknown;

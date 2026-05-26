@@ -1,6 +1,7 @@
 /**
- * Canonical reducer action type strings (auto-enumerated from src/).
- * Payload shapes remain on Action's index signature until per-action interfaces land.
+ * Canonical reducer action type strings (see `tools/list-action-types.mjs`).
+ * Discriminated payload shapes live in `actionPayloads.ts`; `actionCatalogCoverage.ts`
+ * asserts every entry here has a matching `TypedAction` branch.
  */
 export const ACTION_TYPES = [
   "ACTIVATE_RUNE_WILDCARD",
