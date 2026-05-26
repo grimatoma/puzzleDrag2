@@ -512,9 +512,10 @@ export function InventoryGrid({
   const biomes = BIOMES as Record<string, { resources: BiomeResourceEntry[] }>;
   const itemsAll = ITEMS as Record<string, ItemRow>;
   const resources = biomes[biomeKey].resources; // already resource-only after data split
+  const resourceKeys = new Set(resources.map((r) => r.key));
   const items = (Object.entries(itemsAll) as [string, ItemRow][]).filter(([key, item]) =>
     (inventory[key] || 0) > 0 &&
-    !resources.find((r) => r.key === key) &&
+    !resourceKeys.has(key) &&
     item.kind !== "tile" &&
     item.kind !== "tool"
   );
