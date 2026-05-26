@@ -24,8 +24,12 @@ export function persistSettings(settings: Record<string, unknown>): void {
 /** Side-effect: clear every hearth.* localStorage key (used by SETTINGS/RESET_SAVE). */
 export function clearAllHearthStorage() {
   try {
-    const keys = Object.keys(localStorage).filter((k) => k.startsWith("hearth."));
-    for (const k of keys) localStorage.removeItem(k);
+    for (let i = localStorage.length - 1; i >= 0; i--) {
+      const k = localStorage.key(i);
+      if (k && k.startsWith("hearth.")) {
+        localStorage.removeItem(k);
+      }
+    }
   } catch { /* storage unavailable */ }
 }
 
