@@ -1,5 +1,6 @@
 import { useState, useReducer, useCallback, useEffect, useLayoutEffect, useRef, forwardRef } from "react";
 import { BIOMES, ITEMS, RECIPES, RESOURCE_TO_THRESHOLD } from "../constants.js";
+import type { BiomeItemEntry, ItemEntry, ResourceItemEntry } from "../constants.js";
 import { ProgressBar } from "./primitives/ActionCard.jsx";
 import {
   INVENTORY_TAGS,
@@ -37,13 +38,9 @@ interface ProgressInfo { value: number; max: number }
 
 type SortMode = "alpha" | "recent" | "count" | string;
 
-interface BiomeResourceEntry {
-  key: string;
-  label?: string;
-  [extra: string]: unknown;
-}
-
 interface RecipeRef { item?: string; [extra: string]: unknown }
+type BiomeResourceEntry = BiomeItemEntry<ResourceItemEntry>;
+type ItemRow = ItemEntry;
 
 interface OrderLike {
   id: number;
@@ -57,8 +54,7 @@ interface OrderLike {
 }
 
 export function labelFor(key: string, fallback?: string) {
-  const items = ITEMS as Record<string, { label?: string }>;
-  return iconLabel(key) || items[key]?.label || fallback || key;
+  return iconLabel(key) || ITEMS[key]?.label || fallback || key;
 }
 
 function sortKeys(keys: string[], sort: SortMode, inventory: Record<string, number>, recentOrder: string[] | null | undefined) {
@@ -444,14 +440,13 @@ function InventoryDetail({ entry, marketBuilt, dispatch }: { entry: InventoryEnt
 }
 
 export function CompactOrders({ orders, inventory, dispatch }: { orders: OrderLike[]; inventory: Record<string, number>; dispatch: Dispatch }) {
-  const items = ITEMS as Record<string, { label?: string }>;
   return (
     <div className="flex flex-col gap-1.5">
       {orders.map((o) => {
         const need = o.need ?? 0;
         const have = inventory[o.key] || 0;
         const done = have >= need;
-        const res = items[o.key];
+        const res = ITEMS[o.key];
         const label = res ? res.label : o.key;
         return (
           <button
@@ -479,7 +474,6 @@ export function CompactOrders({ orders, inventory, dispatch }: { orders: OrderLi
   );
 }
 
-interface ItemRow { kind?: string; label?: string; [extra: string]: unknown }
 type FilterMode = string | string[];
 
 export function InventoryGrid({
@@ -509,17 +503,15 @@ export function InventoryGrid({
   viewMode?: string;
   resourceProgress?: Record<string, number>;
 }) {
-  const biomes = BIOMES as Record<string, { resources: BiomeResourceEntry[] }>;
-  const itemsAll = ITEMS as Record<string, ItemRow>;
-  const resources = biomes[biomeKey].resources; // already resource-only after data split
-  const items = (Object.entries(itemsAll) as [string, ItemRow][]).filter(([key, item]) =>
+  const resources = BIOMES[biomeKey].resources; // already resource-only after data split
+  const items = Object.entries(ITEMS).filter(([key, item]) =>
     (inventory[key] || 0) > 0 &&
     !resources.find((r) => r.key === key) &&
     item.kind !== "tile" &&
     item.kind !== "tool"
   );
   const tools = (Object.entries((state?.tools ?? {}) as Record<string, number>) as [string, number][]).filter(([key, count]) =>
-    (count || 0) > 0 && itemsAll[key]?.kind === "tool"
+    (count || 0) > 0 && ITEMS[key]?.kind === "tool"
   );
   const { status, totals } = orderStatusByKey(orders, inventory);
   const marketBuilt = !!locBuilt(state).caravan_post;
@@ -602,7 +594,7 @@ export function InventoryGrid({
 
   const resourceCellsBy = new Map<string, BiomeResourceEntry>(resources.map((r) => [r.key, r]));
   const itemDefsByKey = new Map<string, ItemRow>(items.map(([key, item]) => [key, item]));
-  const toolDefsByKey = new Map<string, ItemRow>(tools.map(([key]) => [key, itemsAll[key]]));
+  const toolDefsByKey = new Map<string, ItemRow>(tools.map(([key]) => [key, ITEMS[key]]));
 
   const visibleResourceKeys = resources
     .map((r) => r.key)

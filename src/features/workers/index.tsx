@@ -113,7 +113,7 @@ function WorkerDetail({ worker, count, state, dispatch }: WorkerDetailProps) {
     },
     ...Object.entries(resourceCost).map(([key, amount]) => ({
       key,
-      label: (ITEMS as Record<string, { label?: string } | undefined>)[key]?.label || key,
+      label: ITEMS[key]?.label || key,
       amount,
       icon: <Icon iconKey={key} size={18} title="" />,
       have: inv[key] ?? 0,

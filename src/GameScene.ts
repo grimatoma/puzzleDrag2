@@ -682,7 +682,7 @@ export class GameScene extends Phaser.Scene {
     // Look up the zone's upgradeMap for this source category.
     const zoneId = this.registry.get("activeZone") ?? null;
     if (!zoneId) return null;
-    const zone = (ZONES as Record<string, any>)[zoneId];
+    const zone = ZONES[zoneId];
     if (!zone?.upgradeMap) return null;
     const targetZoneCat = zone.upgradeMap[sourceZoneCat];
     if (!targetZoneCat) return null;

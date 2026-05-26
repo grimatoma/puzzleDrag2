@@ -122,7 +122,7 @@ function FoundSettlementBanner({ state, dispatch }: { state: AnyState; dispatch:
   const cost = settlementFoundingCost(state).coins;
   const canAfford = (state?.coins ?? 0) >= cost;
   const needPriorComplete = completedSettlementCount(state) < 1;
-  const node = (ZONES as Record<string, { id?: string } | undefined>)[zoneId];
+  const node = ZONES[zoneId];
   const name = displayZoneName(state, zoneId);
   const blocked = needPriorComplete || !canAfford;
   const blockedReason: string | undefined = needPriorComplete
@@ -255,7 +255,7 @@ export function TownView({ state, dispatch }: { state: AnyState; dispatch: Dispa
     ? `rgba(180,190,200,${(a * 0.55).toFixed(2)})`
     : `rgba(255,255,255,${a})`;
   // Zone config for this location controls which puzzle boards and buildings are available.
-  const zoneConfig = (ZONES as Record<string, any>)[state.mapCurrent];
+  const zoneConfig = ZONES[state.mapCurrent];
   const locationBuilt: Record<string, any> = state.built?.[state.mapCurrent] ?? EMPTY_OBJECT;
   // Town UX redesign — a procedural town *plan* (plaza + streets + a planned
   // grid of building lots) replaces the old hand-scattered plot positions. The
@@ -263,7 +263,7 @@ export function TownView({ state, dispatch }: { state: AnyState; dispatch: Dispa
   // we just project the plan's lots into that shape.
   const requestedPlots = Math.max(1, zoneConfig?.plotCount ?? 12);
   const townPlan = useMemo(() => {
-    const z = (ZONES as Record<string, any>)[state.mapCurrent];
+    const z = ZONES[state.mapCurrent];
     const boardKinds = [z?.hasFarm && "farm", z?.hasMine && "mine", z?.hasWater && "fish"].filter(Boolean) as string[];
     return buildTownPlan({ zoneId: state.mapCurrent, plotCount: requestedPlots, boardKinds: boardKinds as never[] });
   }, [state.mapCurrent, requestedPlots]);
@@ -678,7 +678,7 @@ interface CostEntry {
 function buildingCostEntries(building: Building | null | undefined, state: AnyState): CostEntry[] {
   return Object.entries(building?.cost ?? {}).map(([key, amount]) => ({
     key,
-    label: key === "coins" ? "Coins" : key === "runes" ? "Runes" : (ITEMS as Record<string, any>)[key]?.label || key,
+    label: key === "coins" ? "Coins" : key === "runes" ? "Runes" : ITEMS[key]?.label || key,
     amount: Number(amount),
     have: key === "coins" ? state.coins ?? 0 : key === "runes" ? state.runes ?? 0 : (state.inventory as Record<string, number> | undefined)?.[key] ?? 0,
     showHave: true,

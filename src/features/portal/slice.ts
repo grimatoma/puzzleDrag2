@@ -43,8 +43,7 @@ export function reduce(state: GameState, action: Action): GameState {
       const charges = state.magicFertilizerCharges ?? 0;
       if (charges <= 0) return state;
       const newCharges = charges - 1;
-      const itemsMap = ITEMS as Record<string, { power?: { params?: { target?: unknown } } } | undefined>;
-      const fallbackTarget = itemsMap.fertilizer?.power?.params?.target ?? null;
+      const fallbackTarget = ITEMS.fertilizer?.power?.params?.target ?? null;
       return {
         ...state,
         magicFertilizerCharges: newCharges,

@@ -186,8 +186,7 @@ function IdleView({ inventory, biomeKey, cap }: { inventory: Inventory; biomeKey
   // The mock shows a 4-column grid of resource chips. Trim to the first 12
   // resources of the biome so the grid stays tight and predictable.
   const list = useMemo<BiomeResource[]>(() => {
-    const biomes = BIOMES as Record<string, { resources?: BiomeResource[] }>;
-    return (biomes[biomeKey]?.resources ?? []).slice(0, 12);
+    return (BIOMES[biomeKey]?.resources ?? []).slice(0, 12);
   }, [biomeKey]);
   const ownedCount = list.filter((r) => (inventory?.[r.key] ?? 0) > 0).length;
   return (

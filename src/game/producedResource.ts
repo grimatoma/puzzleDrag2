@@ -76,7 +76,7 @@ export function buildChainUpdatePayload(args: ChainUpdateArgs): ChainUpdatePaylo
     }
   }
   const producedKey = res ? producedResource(res) : null;
-  const producedDef = producedKey ? (ITEMS as Record<string, { label?: string } | undefined>)[producedKey] : null;
+  const producedDef = producedKey ? ITEMS[producedKey] : null;
   return {
     count: n,
     upgrades: k,

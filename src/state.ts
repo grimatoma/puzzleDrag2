@@ -675,7 +675,7 @@ function coreReducer(state: GameState, action: Action): GameState {
     case "FOUND_SETTLEMENT": {
       const payload = action.payload as { zoneId?: string; biome?: string } | undefined;
       const zoneId = payload?.zoneId ?? (action.zoneId as string | undefined);
-      if (!zoneId || !(ZONES as Record<string, unknown>)[zoneId]) return state;            // unknown zone
+      if (!zoneId || !ZONES[zoneId]) return state;            // unknown zone
       if (isSettlementFounded(state, zoneId)) return state;   // already founded
       // Progression gate (Phase 6a): the player must have completed at least one
       // prior settlement before founding the next. `home` is auto-founded so the
@@ -1042,7 +1042,7 @@ function coreReducer(state: GameState, action: Action): GameState {
       const useFertilizer = !!farmPayload.useFertilizer;
 
       const zoneId = ((state.activeZone as string | undefined) ?? (state.mapCurrent as string | undefined) ?? "home");
-      const zone = (ZONES as Record<string, { hasFarm?: boolean; entryCost?: { coins?: number } } | undefined>)[zoneId];
+      const zone = ZONES[zoneId];
       if (!zone) return state;
       if (!zone.hasFarm) {
         return {
@@ -1155,7 +1155,7 @@ function coreReducer(state: GameState, action: Action): GameState {
       const craftPayload = action.payload as { id?: string; qty?: number } | undefined;
       const { id: craftId, qty: craftQty = 1 } = craftPayload ?? {};
       if (!craftId) return state;
-      const recipe = (RECIPES as Record<string, { station?: string; inputs: Record<string, number> } | undefined>)[craftId];
+      const recipe = RECIPES[craftId];
       if (!recipe) return state;
       // Check station is built (for workshop, check state.built.workshop)
       if (recipe.station && !(locBuilt(state) as Record<string, unknown>)[recipe.station]) return state;
@@ -1208,7 +1208,7 @@ function coreReducer(state: GameState, action: Action): GameState {
       if ((state.turnsUsed ?? 0) > 0) return state;
       const sbPayload = action.payload as { id?: string } | undefined;
       const biomeId = (action.id as string | undefined) ?? sbPayload?.id;
-      if (!biomeId || !(BIOMES as Record<string, unknown>)[biomeId]) return state;
+      if (!biomeId || !BIOMES[biomeId]) return state;
       if (biomeId === state.biome) return state;
       // Mysterious ore is a mine-only mechanic — clear it whenever leaving mine.
       // Pearl is a fish-only mechanic — clear it whenever leaving fish.
@@ -1408,8 +1408,7 @@ function coreReducer(state: GameState, action: Action): GameState {
       }
       if (action.type === "DEV/FILL_STORAGE") {
         const inventory = { ...state.inventory };
-        const biomesMap = BIOMES as Record<string, { tiles?: Array<{ key: string }>; resources?: Array<{ key: string }> }>;
-        for (const biome of Object.values(biomesMap)) {
+        for (const biome of Object.values(BIOMES)) {
           for (const res of [...(biome.tiles ?? []), ...(biome.resources ?? [])]) {
             inventory[res.key] = (inventory[res.key] || 0) + ((action.amount as number | undefined) ?? 100);
           }
