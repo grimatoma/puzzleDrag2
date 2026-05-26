@@ -1672,7 +1672,14 @@ export class GameScene extends Phaser.Scene {
     const overCap = wouldGain - actualGain > 0;
 
     const floatSuffix = upgrades > 0 ? `  ★×${upgrades}` : "";
-    const bonusText = Object.entries(bonusGains).filter(([k]) => k !== res.key).map(([k, n]) => `  +${n} ${k}★`).join("");
+    let bonusText = "";
+    const keys = Object.keys(bonusGains);
+    for (let i = 0; i < keys.length; i++) {
+      const k = keys[i];
+      if (k !== res.key) {
+        bonusText += `  +${bonusGains[k]} ${k}★`;
+      }
+    }
     this.floatText(`+${actualGain} ${res.label}${overCap ? " ⓘ" : ""}${floatSuffix}${bonusText}`, this.path[this.path.length - 1].x, this.path[this.path.length - 1].y);
 
     // Chain-length juice — escalating screen shake and a radial wipe. Big chains
