@@ -1,0 +1,245 @@
+// Shared abilities editor used by Buildings / Workers / Powers tabs.
+// Renders the list of abilities currently attached to an entity, lets the
+// designer add/remove/edit them, and offers a picker of catalog entries
+// whose `scope` includes the entity kind.
+//
+// The component is dumb — it stores nothing. The parent owns the abilities
+// array (typically pulled from the live entity merged with a local draft)
+// and supplies an `onChange(newAbilities)` callback.
+
+import {
+  abilitiesForScope, getAbility, defaultParamsFor,
+} from "../config/abilities.js";
+import { useMemo } from "react";
+import { BIOMES } from "../constants.js";
+import { CATEGORIES } from "../features/tileCollection/data.js";
+import Icon from "../ui/Icon.jsx";
+import { COLORS, NumberField, Select, SmallButton, Card, SearchAndAddPicker, resourceKeyOptions, tileKeyOptions, hazardOptions } from "./shared.jsx";
+
+function categoryOptions() {
+  return [
+    { value: "", label: "— pick category —" },
+    ...CATEGORIES.map((c) => ({ value: c, label: c })),
+  ];
+}
+
+function biomeOptions() {
+  return [
+    { value: "", label: "— pick biome —" },
+    ...Object.keys(BIOMES).map((k) => ({ value: k, label: k })),
+  ];
+}
+
+function toolOptions() {
+  // Tool keys live alongside state.tools — we don't have an authoritative
+  // catalog. Provide the common ones and let designers type others freely.
+  return [
+    { value: "", label: "— pick tool —" },
+    { value: "bomb", label: "bomb" },
+    { value: "rake", label: "rake" },
+    { value: "water_pump", label: "water_pump" },
+    { value: "magic_wand", label: "magic_wand" },
+    { value: "magic_seed", label: "magic_seed" },
+  ];
+}
+
+interface AbilityParamDef {
+  key: string;
+  label: string;
+  type: string;
+  default?: unknown;
+  min?: number;
+  max?: number;
+}
+
+export interface AbilityInstance {
+  id: string;
+  params?: Record<string, unknown>;
+  trigger?: string;
+  [extra: string]: unknown;
+}
+
+interface AbilityDef {
+  id: string;
+  name: string;
+  desc: string;
+  icon?: string;
+  iconKey?: string;
+  params: AbilityParamDef[];
+  scope?: string[];
+  [extra: string]: unknown;
+}
+
+function ParamField({ param, value, onChange }: { param: AbilityParamDef; value: unknown; onChange: (v: unknown) => void }) {
+  switch (param.type) {
+    case "int":
+      return (
+        <NumberField
+          value={Number(value ?? (param.default as number | undefined) ?? 0)}
+          min={param.min ?? 0}
+          max={param.max ?? 9999}
+          width={80}
+          onChange={(v: number) => onChange(Number(v))}
+        />
+      );
+    case "float":
+      return (
+        <NumberField
+          value={Number(value ?? (param.default as number | undefined) ?? 0)}
+          min={param.min ?? 0}
+          max={param.max ?? 1}
+          step={0.05}
+          width={80}
+          onChange={(v: number) => onChange(Number(v))}
+        />
+      );
+    case "resourceKey":
+      return (
+        <Select value={value ?? ""} options={resourceKeyOptions()} onChange={onChange} />
+      );
+    case "tileKey":
+      return (
+        <Select value={value ?? ""} options={tileKeyOptions()} onChange={onChange} />
+      );
+    case "category":
+      return (
+        <Select value={value ?? ""} options={categoryOptions()} onChange={onChange} />
+      );
+    case "biome":
+      return (
+        <Select value={value ?? ""} options={biomeOptions()} onChange={onChange} />
+      );
+    case "tool":
+      return (
+        <Select value={value ?? ""} options={toolOptions()} onChange={onChange} />
+      );
+    case "hazard":
+      return (
+        <Select value={value ?? ""} options={hazardOptions()} onChange={onChange} />
+      );
+    case "recipe":
+    default:
+      return (
+        <input
+          className="font-mono text-[11px] px-2 py-1 rounded border"
+          style={{ background: "#fffaf1", borderColor: COLORS.border, color: COLORS.ink, minWidth: 120 }}
+          value={(value as string | number | undefined) ?? ""}
+          onChange={(e) => onChange(e.target.value)}
+        />
+      );
+  }
+}
+
+/**
+ * Props:
+ *   scope:      "building" | "worker" | "tile"
+ *   abilities:  Array<{ id, params, trigger? }>
+ *   onChange:   (newAbilities) => void
+ */
+export default function AbilitiesEditor({ scope, abilities, onChange }: { scope: "building" | "worker" | "tile"; abilities: AbilityInstance[] | unknown; onChange: (next: AbilityInstance[]) => void }) {
+  const list: AbilityInstance[] = Array.isArray(abilities) ? (abilities as AbilityInstance[]) : [];
+  const catalog = abilitiesForScope(scope) as unknown as AbilityDef[];
+
+  const pickerOptions = useMemo(() => catalog.map((def: AbilityDef) => ({
+    id: def.id,
+    searchText: `${def.id} ${def.name} ${def.desc}`,
+    renderNode: (
+      <div className="flex flex-col items-start min-w-0">
+        <div className="text-[12px] font-bold truncate w-full flex items-center gap-1" style={{ color: COLORS.ember }}>
+          <Icon iconKey={def.iconKey} size={14} title="" />
+          {def.name}
+        </div>
+        <div className="text-[10px] font-mono mt-0.5 truncate w-full" style={{ color: COLORS.inkSubtle }}>
+          {def.id}
+        </div>
+        <div className="text-[10px] italic mt-0.5" style={{ color: COLORS.inkSubtle }}>
+          {def.desc}
+        </div>
+      </div>
+    )
+  })), [catalog]);
+
+  function add(abilityId: string) {
+    const def = getAbility(abilityId);
+    if (!def) return;
+    onChange([...list, { id: abilityId, params: defaultParamsFor(abilityId) as Record<string, unknown> }]);
+  }
+
+  function removeAt(idx: number) {
+    onChange(list.filter((_, i) => i !== idx));
+  }
+
+  function updateParam(idx: number, key: string, value: unknown) {
+    onChange(list.map((a, i) => i === idx ? { ...a, params: { ...(a.params || {}), [key]: value } } : a));
+  }
+
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="text-[11px] font-bold uppercase tracking-wide" style={{ color: COLORS.inkSubtle }}>
+        Attributes ({list.length})
+      </div>
+
+      {list.length === 0 && (
+        <div
+          className="text-center py-3 text-[12px] italic rounded-lg border-2 border-dashed"
+          style={{ borderColor: COLORS.border, color: COLORS.inkSubtle }}
+        >
+          No attributes attached. Pick one below.
+        </div>
+      )}
+
+      {list.map((inst: AbilityInstance, idx: number) => {
+        const def = getAbility(inst?.id) as unknown as AbilityDef | undefined;
+        if (!def) {
+          return (
+            <Card key={idx}>
+              <div className="flex items-center justify-between">
+                <span className="text-[12px]" style={{ color: COLORS.red }}>
+                  ⚠ Unknown attribute id: <code>{inst?.id}</code>
+                </span>
+                <SmallButton variant="danger" onClick={() => removeAt(idx)}>remove</SmallButton>
+              </div>
+            </Card>
+          );
+        }
+        return (
+          <Card key={idx}>
+            <div className="flex items-start justify-between mb-1.5 gap-2">
+              <div>
+                <div className="text-[13px] font-bold" style={{ color: COLORS.ember }}>
+                  {def.icon} {def.name}
+                </div>
+                <div className="text-[11px] italic" style={{ color: COLORS.inkSubtle }}>
+                  {def.desc}
+                </div>
+              </div>
+              <SmallButton variant="danger" onClick={() => removeAt(idx)}>✕</SmallButton>
+            </div>
+            <div className="grid grid-cols-2 gap-x-3 gap-y-1.5">
+              {def.params.map((p: AbilityParamDef) => (
+                <div key={p.key} className="flex items-center gap-2">
+                  <span className="text-[11px] font-bold flex-shrink-0" style={{ color: COLORS.ink }}>
+                    {p.label}
+                  </span>
+                  <ParamField
+                    param={p}
+                    value={inst.params?.[p.key]}
+                    onChange={(v: unknown) => updateParam(idx, p.key, v)}
+                  />
+                </div>
+              ))}
+            </div>
+          </Card>
+        );
+      })}
+
+      <SearchAndAddPicker
+        label="Add attribute"
+        placeholder="Search attributes by name, id, or description…"
+        options={pickerOptions}
+        onSelect={add}
+        gridClass="grid-cols-1 md:grid-cols-2"
+      />
+    </div>
+  );
+}
