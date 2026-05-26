@@ -904,9 +904,17 @@ function TownVillagers({ plan, buildings, workers }: TownVillagersProps) {
     const map: Record<string, number> = {};
     if (!plan || !buildings || !wps.length) return map;
     const nearest = (p: { x: number; y: number }) => { let b = 0, bd = Infinity; for (let i = 0; i < wps.length; i++) { const x = d2(wps[i], p); if (x < bd) { bd = x; b = i; } } return b; };
+
+    const lotsByIndex = new Map();
+    if (plan.lots) {
+      for (let i = 0; i < plan.lots.length; i++) {
+        lotsByIndex.set(plan.lots[i].index, plan.lots[i]);
+      }
+    }
+
     for (const v of NPC_VILLAGERS) {
       const lotIdx = buildings[v.building];
-      const lot = lotIdx != null ? plan.lots?.find((l) => l.index === lotIdx) : null;
+      const lot = lotIdx != null ? lotsByIndex.get(lotIdx) : null;
       if (lot) map[v.id] = nearest({ x: lot.cx, y: lot.cy + lot.h / 2 });
     }
     return map;
