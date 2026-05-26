@@ -23,16 +23,14 @@ function isPureCurrency(key: string): boolean {
  * - totals: { coins, runes, embers, coreIngots, gems, resourceCount }
  *   the kingdom-wide currency totals plus how many *resource* keys appear.
  */
-export function analyseBuildingCosts({ buildings = BUILDINGS, items = ITEMS }: { buildings?: unknown; items?: unknown } = {}) {
+export function analyseBuildingCosts({ buildings = BUILDINGS, items = ITEMS }: { buildings?: Record<string, any>[] | Record<string, any>; items?: unknown } = {}) {
   const perBuilding: Array<{ id: string; name: string; level: number | null; biome: string | null; costs: Record<string, number>; coins: number }> = [];
   const resourceTotals = new Map<string, number>();   // resourceKey → qty
   const usedBy = new Map<string, Set<string>>();       // resourceKey → Set<buildingId>
   const totals: Record<string, number> = { coins: 0, runes: 0, embers: 0, coreIngots: 0, gems: 0, resourceCount: 0 };
 
-  const buildingList: unknown[] = Array.isArray(buildings) ? buildings : Object.values((buildings as Record<string, unknown>) || {});
-  for (const rawB of buildingList) {
-    // TODO(ts-migration): BUILDINGS is untyped; use Record<string, any>
-    const b = rawB as Record<string, any>;
+  const buildingList = Array.isArray(buildings) ? buildings : Object.values(buildings || {});
+  for (const b of buildingList) {
     if (!b || !b["id"]) continue;
     const costs: Record<string, number> = b["cost"] || {};
     const flattened: Record<string, number> = {};
