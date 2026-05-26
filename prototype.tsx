@@ -272,7 +272,7 @@ function PhaserMount({ dispatch, biomeKey, turnsUsed, uiLocked, boardActive, sce
   useEffect(() => { gameRef.current?.registry.set("fillBiasTarget", gameState?.fillBiasTarget ?? null); }, [gameState?.fillBiasTarget]);
   useEffect(() => {
     sceneRef.current?._syncWorkerEffects();
-  }, [workers, gameState?.built, gameState?.activeZone, gameState?.mapCurrent, tileCollection?.activeByCategory, tileCollection?.discovered]);
+  }, [sceneRef, workers, gameState?.built, gameState?.activeZone, gameState?.mapCurrent, tileCollection?.activeByCategory, tileCollection?.discovered]);
   // Sync grid state → Phaser registry so hazard engines see real tile keys
   useEffect(() => { gameRef.current?.registry.set("grid", grid ?? null); }, [grid]);
   // Sync biomeRestored flag so GameScene.handleBiomeChange can skip randomize when savedField restored

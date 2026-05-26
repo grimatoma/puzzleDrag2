@@ -1,6 +1,7 @@
 import { expect, test, describe, vi, beforeEach, afterEach } from "vitest";
 import { loadSavedState, persistStateNow, clearSave } from "../state/persistence.js";
 import { STORAGE_KEYS, SAVE_SCHEMA_VERSION } from "../constants.js";
+import type { GameState } from "../types/state.js";
 
 describe("persistence", () => {
   const SAVE_KEY = STORAGE_KEYS.save;
@@ -69,12 +70,12 @@ describe("persistence", () => {
   });
 
   test("persistStateNow ignores VOLATILE fields", () => {
-    const mockState: any = {
+    const mockState = {
       version: SAVE_SCHEMA_VERSION,
       resources: { wood: 10 },
       modal: "should be ignored",
-      view: "should be ignored"
-    };
+      view: "should be ignored",
+    } as GameState;
     persistStateNow(mockState);
 
     const savedRaw = localStorage.getItem(SAVE_KEY);

@@ -1,6 +1,6 @@
 import { BOARD_ANIMATIONS, demoBoardAnimResetMs } from "../config/boardAnimations.js";
 import type { TileObj } from "../TileObj.js";
-import type { FarmRun } from "../types/state.js";
+import type { Dispatch, FarmRun } from "../types/state.js";
 import { buildVisualScenario, listVisualScenarios } from "./scenarios.js";
 
 function nextFrame(): Promise<void> {
@@ -298,11 +298,9 @@ function installPanel(api: { list: () => Array<{ id: string }>; loadScenario: (i
   document.body.append(panel);
 }
 
-interface ReducerAction { type: string; [k: string]: unknown }
-
 export function installVisualTestingBridge({ getState, dispatch }: {
   getState: () => VisualStateLike | undefined;
-  dispatch: (action: ReducerAction) => void;
+  dispatch: Dispatch;
 }): () => void {
   window.__HEARTH_VISUAL_TESTING__ = true;
   let readyResolve: ((value: boolean) => void) | undefined;
@@ -312,7 +310,7 @@ export function installVisualTestingBridge({ getState, dispatch }: {
     ready,
     list: listVisualScenarios,
     state: () => getState(),
-    async dispatch(action: ReducerAction) {
+    async dispatch(action: Parameters<Dispatch>[0]) {
       dispatch(action);
       await settleFrames();
       return getState();

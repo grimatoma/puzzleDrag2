@@ -10,7 +10,7 @@ interface VisualBridgeApi {
   ready: Promise<boolean>;
   list: () => Array<{ id: string; [k: string]: unknown }>;
   state: () => unknown;
-  dispatch: (action: { type: string; [k: string]: unknown }) => Promise<unknown>;
+  dispatch: (action: import("../types/state.js").Action) => Promise<unknown>;
   loadScenario: (id: string) => Promise<{ id: string; view?: string; modal?: unknown }>;
   click: (selector: string) => boolean;
   hover: (selector: string) => boolean;

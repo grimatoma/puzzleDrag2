@@ -9,6 +9,8 @@
  * `initial` block into the root state.
  */
 
+import type { ActionType } from "./actions.js";
+
 // ── Sub-types ─────────────────────────────────────────────────────────────
 
 export interface Tile {
@@ -261,13 +263,12 @@ export interface GameState {
 // ── Action ────────────────────────────────────────────────────────────────
 
 /**
- * Generic action shape. Each action has a `type` discriminator (86 distinct
- * types across the codebase, e.g. "CHAIN_COLLECTED", "BOSS/TRIGGER",
- * "CARTO/TRAVEL"). Per-action payload fields are accessed by narrowing on
- * `type` or via property access; `unknown` keeps call sites honest.
+ * Reducer action shape. `type` is a closed union of every dispatched string;
+ * per-action payload fields stay on the index signature until typed variants
+ * are added in src/types/actions.ts.
  */
 export interface Action {
-  type: string;
+  type: ActionType;
   readonly [key: string]: unknown;
 }
 
