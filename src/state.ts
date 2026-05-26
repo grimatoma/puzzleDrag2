@@ -933,8 +933,7 @@ function coreReducer(state: GameState, action: Action): GameState {
     }
     case "CRAFTING/CRAFT_RECIPE": {
       // Story: crafted items can trigger story beats (forwarded to next action handlers below)
-      const craftPayload = action.payload as { key?: string } | undefined;
-      const craftKey = (action.recipeKey as string | undefined) ?? craftPayload?.key;
+      const craftKey = action.recipeKey ?? action.payload?.key;
       if (!craftKey) return state;
       if (!crafting.canPayForRecipe(state, craftKey)) return state;
       return evaluateAndApplyStoryBeat(state, { type: "craft_made", item: craftKey, count: 1 });
@@ -946,8 +945,7 @@ function coreReducer(state: GameState, action: Action): GameState {
       // (totalCrafted, distinct_crafts) all advance. The slice owns the
       // actual inventory mutation + queue removal; we only emit the event
       // when the action would succeed.
-      const claimPayload = action.payload as { station?: string } | undefined;
-      const station = claimPayload?.station ?? (action.station as string | undefined);
+      const station = action.payload?.station ?? action.station;
       if (!station) return state;
       const queueMap = (state.craftQueues ?? {}) as Record<string, Array<{ key?: string; readyAt?: number }>>;
       const queue = queueMap[station] ?? [];
@@ -958,8 +956,7 @@ function coreReducer(state: GameState, action: Action): GameState {
     case "CRAFTING/SKIP_CRAFT": {
       // Same idea as CLAIM_CRAFT but for gem-skip completions. Validate gem
       // cost so we don't fire the event on a rejected skip.
-      const skipPayload = action.payload as { station?: string } | undefined;
-      const station = skipPayload?.station ?? (action.station as string | undefined);
+      const station = action.payload?.station ?? action.station;
       if (!station) return state;
       const queueMap = (state.craftQueues ?? {}) as Record<string, Array<{ key?: string }>>;
       const queue = queueMap[station] ?? [];
@@ -987,8 +984,7 @@ function coreReducer(state: GameState, action: Action): GameState {
     }
 
     case "CONVERT_TO_SUPPLY": {
-      const convPayload = action.payload as { qty?: number } | undefined;
-      const qty = Math.max(1, ((convPayload?.qty as number | undefined) ?? 0) | 0);
+      const qty = Math.max(1, (action.payload?.qty ?? 0) | 0);
       const cost = qty * 3;
       if ((state.inventory.flour ?? 0) < cost) return state;
       return {
@@ -1009,7 +1005,7 @@ function coreReducer(state: GameState, action: Action): GameState {
       //   and behaves as "no filter" (legacy entry path).
       // - useFertilizer: when true, consume one workshop-crafted fertilizer
       //   (state.tools.fertilizer) and double the session's turn budget.
-      const farmPayload = (action.payload as { selectedTiles?: unknown; useFertilizer?: unknown } | undefined) ?? {};
+      const farmPayload = action.payload ?? {};
       const selectedTiles = Array.isArray(farmPayload.selectedTiles)
         ? farmPayload.selectedTiles.slice(0, 8)
         : [];
@@ -1071,8 +1067,7 @@ function coreReducer(state: GameState, action: Action): GameState {
       // doc §VI). Payload: { biomeKey: "mine"|"fish", supply: { foodKey: count } }.
       // Pack food before the round; each ration is worth a number of turns
       // (expeditionTurnsForFood, building-boosted); play until they run out.
-      const expPayload = action.payload as { biomeKey?: string; supply?: Record<string, number> } | undefined;
-      const biomeKey = expPayload?.biomeKey;
+      const biomeKey = action.payload?.biomeKey;
       if (biomeKey !== "mine" && biomeKey !== "fish") return state;
       const needLevel = biomeKey === "mine" ? 2 : 3;
       if ((state.level ?? 1) < needLevel) return state;
@@ -1084,7 +1079,7 @@ function coreReducer(state: GameState, action: Action): GameState {
           bubble: { id: Date.now(), npc: "wren", text: `Found ${displayZoneName(state, zoneId)} before you depart from here.`, ms: 2400 },
         };
       }
-      const supply: Record<string, number> = expPayload?.supply ?? {};
+      const supply: Record<string, number> = action.payload?.supply ?? {};
       // Validate: every entry is a real ration the player has enough of.
       const inv = { ...(state.inventory ?? {}) };
       for (const [foodKey, rawCount] of Object.entries(supply)) {
@@ -1126,8 +1121,7 @@ function coreReducer(state: GameState, action: Action): GameState {
 
 
     case "CRAFT": {
-      const craftPayload = action.payload as { id?: string; qty?: number } | undefined;
-      const { id: craftId, qty: craftQty = 1 } = craftPayload ?? {};
+      const { id: craftId, qty: craftQty = 1 } = action.payload ?? {};
       if (!craftId) return state;
       const recipe = RECIPES[craftId];
       if (!recipe) return state;
@@ -1146,16 +1140,14 @@ function coreReducer(state: GameState, action: Action): GameState {
     }
 
     case "GRANT_RUNES": {
-      const grPayload = action.payload as { amount?: number } | undefined;
-      const amt = Math.max(0, ((grPayload?.amount as number | undefined) ?? 0) | 0);
+      const amt = Math.max(0, (action.payload?.amount ?? 0) | 0);
       return { ...state, runes: (state.runes ?? 0) + amt };
     }
 
     // Phase 10.3 — Sell a crafted item for its §10 sell price
     case "SELL_ITEM": {
-      const sellPayload = action.payload as { id?: string; qty?: number } | undefined;
-      const itemId = (action.id as string | undefined) ?? sellPayload?.id;
-      const sellQty = Math.max(1, ((action.qty as number | undefined) ?? sellPayload?.qty ?? 1) | 0);
+      const itemId = action.id ?? action.payload?.id;
+      const sellQty = Math.max(1, (action.qty ?? action.payload?.qty ?? 1) | 0);
       if (!itemId) return state;
       const owned = state.inventory?.[itemId] ?? 0;
       if (owned < sellQty) return state;
@@ -1180,8 +1172,7 @@ function coreReducer(state: GameState, action: Action): GameState {
     case "SET_BIOME": {
       // Reject mid-season switches; only allowed at a season boundary (turnsUsed === 0)
       if ((state.turnsUsed ?? 0) > 0) return state;
-      const sbPayload = action.payload as { id?: string } | undefined;
-      const biomeId = (action.id as string | undefined) ?? sbPayload?.id;
+      const biomeId = action.id ?? action.payload?.id;
       if (!biomeId || !BIOMES[biomeId]) return state;
       if (biomeId === state.biome) return state;
       // Mysterious ore is a mine-only mechanic — clear it whenever leaving mine.
@@ -1226,8 +1217,7 @@ function coreReducer(state: GameState, action: Action): GameState {
 
     case "LOGIN_TICK": {
       type DailyReward = { coins?: number; runes?: number; tool?: string; amount?: number; unlockTile?: string };
-      const ltPayload = action.payload as { today?: string } | undefined;
-      const today = ltPayload?.today ?? "";
+      const today = action.payload?.today ?? "";
       const last = state.dailyStreak?.lastClaimedDate ?? null;
       if (last === today) return state; // idempotent
       let nextDay: number;
@@ -1287,9 +1277,7 @@ function coreReducer(state: GameState, action: Action): GameState {
     // ─── Phase 5 Tile Collection ─────────────────────────────────────────────────
 
     case "SET_ACTIVE_TILE": {
-      const satPayload = action.payload as { category?: string; tileId?: string | null } | undefined;
-      const category = satPayload?.category ?? "";
-      const tileId = satPayload?.tileId ?? null;
+      const { category = "", tileId = null } = action.payload;
       if (!(CATEGORIES as readonly string[]).includes(category)) return state;
       const current = state.tileCollection?.activeByCategory?.[category];
       if (current === tileId) return state;                      // already active → no-op
@@ -1311,8 +1299,7 @@ function coreReducer(state: GameState, action: Action): GameState {
     }
 
     case "TILE_DISCOVERED": {
-      const tdPayload = action.payload as { ids?: string[] } | undefined;
-      const ids = tdPayload?.ids ?? [];
+      const ids = action.payload.ids ?? [];
       const known = state.tileCollection?.discovered ?? {};
       let changed = false;
       const next: Record<string, boolean> = { ...known };
@@ -1337,8 +1324,7 @@ function coreReducer(state: GameState, action: Action): GameState {
     }
 
     case "BUY_TILE": {
-      const btPayload = action.payload as { id?: string } | undefined;
-      const buyId = btPayload?.id;
+      const buyId = action.payload.id;
       if (!buyId) return state;
       const t = (TILE_TYPES_MAP as Record<string, { discovery?: { method?: string; coinCost?: number } } | undefined>)[buyId];
       if (!t) return state;
@@ -1358,9 +1344,7 @@ function coreReducer(state: GameState, action: Action): GameState {
 
     case "GIVE_GIFT": {
       // Phase 6.2: pure gift application via applyGift helper
-      const ggPayload = action.payload as { npcId?: string; itemKey?: string } | undefined;
-      const npcId = ggPayload?.npcId;
-      const itemKey = ggPayload?.itemKey;
+      const { npcId, itemKey } = action.payload;
       if (!npcId || !itemKey) return state;
       const giftResult = applyGift(state, npcId, itemKey) as { ok: boolean; newState?: GameState; delta?: number };
       if (!giftResult.ok || !giftResult.newState) return state; // cooldown or empty inventory — silent no-op

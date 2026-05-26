@@ -19,14 +19,11 @@ interface BoonHostState {
   bubble?: { id: number; npc: string; text: string; ms: number } | null;
 }
 
-interface BoonPurchasePayload { id?: string }
-
 export function reduce(state: GameState, action: Action): GameState {
   const s = state as unknown as BoonHostState;
   switch (action.type) {
     case "BOON/PURCHASE": {
-      const payload = action.payload as BoonPurchasePayload | undefined;
-      const id: string | undefined = payload?.id ?? (action as unknown as BoonPurchasePayload).id;
+      const id = action.payload?.id ?? action.id;
       const boon = id ? boonById(id) : null;
       if (!boon || !id) return state;
       if (s?.boons?.[id]) return state;            // already owned

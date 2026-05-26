@@ -40,7 +40,10 @@ export function evaluateAndApplyStoryBeat(state: GameState, event: StoryEvent): 
     const bossKey = nextRec.pendingBossKey;
     const withoutPendingBoss: Record<string, unknown> = { ...nextRec };
     delete withoutPendingBoss.pendingBossKey;
-    next = boss.reduce(withoutPendingBoss as unknown as GameState, { type: "BOSS/TRIGGER", bossKey });
+    next = boss.reduce(withoutPendingBoss as unknown as GameState, {
+      type: "BOSS/TRIGGER",
+      bossKey: typeof bossKey === "string" ? bossKey : String(bossKey),
+    });
   }
   const storyAfter = next.story as { act?: unknown; [k: string]: unknown } | undefined;
   if (result && storyAfter?.act !== actBefore) {

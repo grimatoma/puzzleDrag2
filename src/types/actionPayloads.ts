@@ -17,6 +17,8 @@ export interface ChainCollectedPayload {
   value?: number;
   chainLength?: number;
   noTurn?: boolean;
+  /** Boss slice progress key (alias of resourceKey). */
+  resource?: string;
   resourceKey?: string;
   chain?: Tile[];
 }
@@ -286,6 +288,148 @@ export interface ExpeditionDepartAction {
   payload?: { biomeKey?: string; supply?: Record<string, number> };
 }
 
+export interface BossTriggerAction {
+  type: "BOSS/TRIGGER";
+  bossKey?: string;
+}
+
+export interface BossResolveAction {
+  type: "BOSS/RESOLVE";
+  won?: boolean;
+}
+
+export type BossUiAction = {
+  type: "BOSS/CLOSE" | "BOSS/MINIMIZE" | "BOSS/EXPAND" | "BOSS/REJECT";
+};
+
+export interface QuestProgressAction {
+  type: "QUESTS/PROGRESS_QUEST";
+  key: string;
+  amount: number;
+}
+
+export interface QuestClaimAction {
+  type: "QUESTS/CLAIM_QUEST";
+  id: string;
+}
+
+export interface QuestClaimAlmanacAction {
+  type: "QUESTS/CLAIM_ALMANAC";
+  tier: number;
+}
+
+export interface ConvertToSupplyAction {
+  type: "CONVERT_TO_SUPPLY";
+  payload?: { qty?: number };
+}
+
+export interface CraftAction {
+  type: "CRAFT";
+  payload?: { id?: string; qty?: number };
+}
+
+export interface GrantRunesAction {
+  type: "GRANT_RUNES";
+  payload?: { amount?: number };
+}
+
+export interface SellItemAction {
+  type: "SELL_ITEM";
+  id?: string;
+  qty?: number;
+  payload?: { id?: string; qty?: number };
+}
+
+export interface SetBiomeAction {
+  type: "SET_BIOME";
+  id?: string;
+  payload?: { id?: string };
+}
+
+export interface SetActiveTileAction {
+  type: "SET_ACTIVE_TILE";
+  payload: { category: string; tileId: string | null };
+}
+
+export interface TileDiscoveredAction {
+  type: "TILE_DISCOVERED";
+  payload: { ids: string[] };
+}
+
+export interface BuyTileAction {
+  type: "BUY_TILE";
+  payload: { id: string };
+}
+
+export interface GiveGiftAction {
+  type: "GIVE_GIFT";
+  payload: { npcId: string; itemKey: string };
+}
+
+export interface LoginTickAction {
+  type: "LOGIN_TICK";
+  payload?: { today?: string };
+}
+
+export interface BoonPurchaseAction {
+  type: "BOON/PURCHASE";
+  payload?: { id?: string };
+  id?: string;
+}
+
+export interface WorkersHireAction {
+  type: "WORKERS/HIRE";
+  payload: { id: string };
+}
+
+export interface WorkersFireAction {
+  type: "WORKERS/FIRE";
+  payload: { id: string };
+}
+
+export interface StoryBeatFiredAction {
+  type: "STORY/BEAT_FIRED";
+  payload: {
+    firedBeat: unknown;
+    newFlags: Record<string, boolean>;
+    sideEffects: unknown;
+    repeatCooldown?: unknown;
+  };
+}
+
+export interface SummonMagicToolAction {
+  type: "SUMMON_MAGIC_TOOL";
+  payload?: { id?: string };
+}
+
+export interface SessionStartAction {
+  type: "SESSION_START";
+}
+
+export interface FertilizerConsumedAction {
+  type: "FERTILIZER/CONSUMED";
+}
+
+export interface EndTurnAction {
+  type: "END_TURN";
+}
+
+export interface CloseSeasonAction {
+  type: "CLOSE_SEASON";
+}
+
+export interface AdvanceSeasonAction {
+  type: "ADVANCE_SEASON";
+}
+
+export interface ActivateRuneWildcardAction {
+  type: "ACTIVATE_RUNE_WILDCARD";
+}
+
+export interface FishForceTideFlipAction {
+  type: "FISH/FORCE_TIDE_FLIP";
+}
+
 /** Action types with dedicated interfaces in this module. */
 export type TypedActionType =
   | VisualLoadStateAction["type"]
@@ -321,7 +465,35 @@ export type TypedActionType =
   | BuildDecorationAction["type"]
   | CastleContributeAction["type"]
   | FarmEnterAction["type"]
-  | ExpeditionDepartAction["type"];
+  | ExpeditionDepartAction["type"]
+  | BossTriggerAction["type"]
+  | BossResolveAction["type"]
+  | BossUiAction["type"]
+  | QuestProgressAction["type"]
+  | QuestClaimAction["type"]
+  | QuestClaimAlmanacAction["type"]
+  | ConvertToSupplyAction["type"]
+  | CraftAction["type"]
+  | GrantRunesAction["type"]
+  | SellItemAction["type"]
+  | SetBiomeAction["type"]
+  | SetActiveTileAction["type"]
+  | TileDiscoveredAction["type"]
+  | BuyTileAction["type"]
+  | GiveGiftAction["type"]
+  | LoginTickAction["type"]
+  | BoonPurchaseAction["type"]
+  | WorkersHireAction["type"]
+  | WorkersFireAction["type"]
+  | StoryBeatFiredAction["type"]
+  | SummonMagicToolAction["type"]
+  | SessionStartAction["type"]
+  | FertilizerConsumedAction["type"]
+  | EndTurnAction["type"]
+  | CloseSeasonAction["type"]
+  | AdvanceSeasonAction["type"]
+  | ActivateRuneWildcardAction["type"]
+  | FishForceTideFlipAction["type"];
 
 export type TypedAction =
   | VisualLoadStateAction
@@ -357,7 +529,35 @@ export type TypedAction =
   | BuildDecorationAction
   | CastleContributeAction
   | FarmEnterAction
-  | ExpeditionDepartAction;
+  | ExpeditionDepartAction
+  | BossTriggerAction
+  | BossResolveAction
+  | BossUiAction
+  | QuestProgressAction
+  | QuestClaimAction
+  | QuestClaimAlmanacAction
+  | ConvertToSupplyAction
+  | CraftAction
+  | GrantRunesAction
+  | SellItemAction
+  | SetBiomeAction
+  | SetActiveTileAction
+  | TileDiscoveredAction
+  | BuyTileAction
+  | GiveGiftAction
+  | LoginTickAction
+  | BoonPurchaseAction
+  | WorkersHireAction
+  | WorkersFireAction
+  | StoryBeatFiredAction
+  | SummonMagicToolAction
+  | SessionStartAction
+  | FertilizerConsumedAction
+  | EndTurnAction
+  | CloseSeasonAction
+  | AdvanceSeasonAction
+  | ActivateRuneWildcardAction
+  | FishForceTideFlipAction;
 
 /** Remaining catalog actions — loose fields until individually typed. */
 export interface GenericAction {

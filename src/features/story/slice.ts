@@ -72,23 +72,18 @@ function dismissCurrentModal(state: GameState): GameState {
 export function reduce(state: GameState, action: Action): GameState {
   switch (action.type) {
     case "STORY/BEAT_FIRED": {
-      const payload = (action.payload as {
-        firedBeat: Beat;
-        newFlags: Record<string, boolean>;
-        sideEffects: BeatSideEffects;
-        repeatCooldown?: unknown;
-      });
-      const { firedBeat, newFlags, sideEffects, repeatCooldown } = payload;
+      const { firedBeat, newFlags, sideEffects, repeatCooldown } = action.payload;
+      const beat = firedBeat as Beat;
 
       // Update story state: advance flags and mark beat complete
-      const flagKey = firedBeat.onComplete?.setFlag;
+      const flagKey = beat.onComplete?.setFlag;
       const completionFlags: Record<string, boolean> = { ...newFlags };
-      if (!flagKey && !firedBeat.repeat) {
-        completionFlags[firedFlagKey(firedBeat.id)] = true;
+      if (!flagKey && !beat.repeat) {
+        completionFlags[firedFlagKey(beat.id)] = true;
       }
 
       // Apply side effects to the rest of game state
-      const afterSideEffects = applyBeatResult(state, sideEffects) as GameState;
+      const afterSideEffects = applyBeatResult(state, sideEffects as BeatSideEffects) as GameState;
 
       // Queue the modal (or chain to existing queue)
       const story = (state.story ?? {}) as StorySubstate;
@@ -99,11 +94,11 @@ export function reduce(state: GameState, action: Action): GameState {
       const newStory: StorySubstate = {
         ...afterStory,
         flags: completionFlags,
-        queuedBeat: isModalOpen ? story.queuedBeat : firedBeat,
-        beatQueue: isModalOpen ? [...existingQueue, firedBeat] : existingQueue,
+        queuedBeat: isModalOpen ? story.queuedBeat : beat,
+        beatQueue: isModalOpen ? [...existingQueue, beat] : existingQueue,
       };
       if (repeatCooldown) {
-        newStory.repeatCooldowns = { ...(newStory.repeatCooldowns || {}), [firedBeat.id]: repeatCooldown };
+        newStory.repeatCooldowns = { ...(newStory.repeatCooldowns || {}), [beat.id]: repeatCooldown };
       }
 
       return { ...afterSideEffects, story: newStory };

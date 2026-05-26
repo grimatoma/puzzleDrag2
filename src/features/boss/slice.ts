@@ -119,16 +119,6 @@ function triggerBoss(state: GameState, bossKey: string): GameState {
   } as GameState;
 }
 
-interface ChainPayload {
-  gained?: number;
-  resource?: string;
-  key?: string;
-}
-
-interface CraftPayload {
-  key?: string;
-}
-
 interface BossAction {
   type: Action["type"];
   bossKey?: string;
@@ -223,11 +213,11 @@ export function reduce(state: GameState, action: Action): GameState {
       if (s.boss?.isKeeperTrial) return state;
       let next = { ...state } as GameState;
       const ns = next as unknown as BossHostState;
-      const payload: ChainPayload = (action.payload as ChainPayload | undefined) ?? {};
+      const payload = action.payload;
 
       if (ns.boss) {
         const gained = payload.gained || 0;
-        const resourceKey = payload.resource || payload.key || "";
+        const resourceKey = payload.resource || payload.resourceKey || payload.key || "";
         let added = 0;
         if (resourceKey === ns.boss.resource) {
           added = gained;
@@ -238,7 +228,7 @@ export function reduce(state: GameState, action: Action): GameState {
           const newProgress = Math.min(ns.boss.targetCount, (ns.boss.progress || 0) + added);
           next = { ...next, boss: { ...ns.boss, progress: newProgress } } as GameState;
           if (newProgress >= ns.boss.targetCount) {
-            return reduce(next, { type: "BOSS/RESOLVE", won: true } as Action);
+            return reduce(next, { type: "BOSS/RESOLVE", won: true });
           }
         }
       }
@@ -249,8 +239,7 @@ export function reduce(state: GameState, action: Action): GameState {
     case "CRAFTING/CRAFT_RECIPE": {
       if (s.boss?.isKeeperTrial) return state;
       if (!s.boss || s.boss.resource !== "iron_bar") return state;
-      const payload = action.payload as CraftPayload | undefined;
-      const recipeKey = a.recipeKey ?? payload?.key;
+      const recipeKey = action.recipeKey ?? action.payload?.key;
       if (!recipeKey) return state;
       const recipeMap = RECIPES as unknown as Record<string, { item: string; inputs?: Record<string, number> } | undefined>;
       const recipe = recipeMap[recipeKey] ?? Object.values(recipeMap).find((r) => r?.item === recipeKey);
@@ -258,7 +247,7 @@ export function reduce(state: GameState, action: Action): GameState {
       const newProgress = Math.min(s.boss.targetCount, (s.boss.progress || 0) + 1);
       const updatedBoss: BossState = { ...s.boss, progress: newProgress };
       if (newProgress >= s.boss.targetCount) {
-        return reduce({ ...state, boss: updatedBoss } as unknown as GameState, { type: "BOSS/RESOLVE", won: true } as Action);
+        return reduce({ ...state, boss: updatedBoss } as unknown as GameState, { type: "BOSS/RESOLVE", won: true });
       }
       return { ...state, boss: updatedBoss } as unknown as GameState;
     }
@@ -280,7 +269,7 @@ export function reduce(state: GameState, action: Action): GameState {
           if (turnsLeft <= 0 && currentBoss.progress < currentBoss.targetCount) {
             return reduce(
               { ...next, boss: { ...currentBoss, turnsLeft: 0 } } as GameState,
-              { type: "BOSS/RESOLVE", won: false } as Action,
+              { type: "BOSS/RESOLVE", won: false },
             );
           }
           next = { ...next, boss: { ...currentBoss, turnsLeft } } as GameState;

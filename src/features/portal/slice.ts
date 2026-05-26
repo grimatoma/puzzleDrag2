@@ -13,8 +13,7 @@ export const initial = {};
 export function reduce(state: GameState, action: Action): GameState {
   switch (action.type) {
     case "SUMMON_MAGIC_TOOL": {
-      const payload = (action.payload as { id?: string } | undefined) ?? {};
-      const id = payload.id;
+      const id = action.payload?.id;
       if (!id) return state;
       const def = MAGIC_TOOLS.find((t) => t.id === id);
       if (!def) return state;
