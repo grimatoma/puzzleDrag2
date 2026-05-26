@@ -135,6 +135,9 @@ interface BossAction extends Action {
   recipeKey?: string;
 }
 
+type RecipeDef = { item: string; inputs?: Record<string, number> };
+let __reverseMap: Record<string, RecipeDef> | null = null;
+
 export function reduce(state: GameState, action: Action): GameState {
   const s = state as unknown as BossHostState;
   const a = action as BossAction;
@@ -249,8 +252,17 @@ export function reduce(state: GameState, action: Action): GameState {
       const payload = action.payload as CraftPayload | undefined;
       const recipeKey = a.recipeKey ?? payload?.key;
       if (!recipeKey) return state;
-      const recipeMap = RECIPES as unknown as Record<string, { item: string; inputs?: Record<string, number> } | undefined>;
-      const recipe = recipeMap[recipeKey] ?? Object.values(recipeMap).find((r) => r?.item === recipeKey);
+      const recipeMap = RECIPES as unknown as Record<string, RecipeDef | undefined>;
+      let recipe = recipeMap[recipeKey];
+      if (!recipe) {
+        if (!__reverseMap) {
+          __reverseMap = {};
+          for (const r of Object.values(recipeMap)) {
+            if (r?.item) __reverseMap[r.item] = r;
+          }
+        }
+        recipe = __reverseMap[recipeKey];
+      }
       if (!recipe || !recipe.inputs?.iron_bar) return state;
       const newProgress = Math.min(s.boss.targetCount, (s.boss.progress || 0) + 1);
       const updatedBoss: BossState = { ...s.boss, progress: newProgress };
