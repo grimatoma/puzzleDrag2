@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { gotoFresh, waitForState, dispatchAction } from './helpers.js';
+import { gotoFresh, waitForState, dispatchAction } from './helpers';
 
 /**
  * Boss flow coverage. BOSS/TRIGGER is a SLICE_PRIMARY action handled in

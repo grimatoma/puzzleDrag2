@@ -84,7 +84,7 @@ for (const scenario of SMOKE_SCENARIOS) {
     console.log(`[visual-desktop-smoke] ${scenario.id}: ${scenario.expectation}`);
     test.skip(testInfo.project.name !== "desktop", "Desktop smoke runs only on desktop.");
     test.skip(
-      scenario.skipProjects?.includes(testInfo.project.name),
+      Boolean(scenario.skipProjects?.includes(testInfo.project.name)),
       `${scenario.id} is intentionally skipped for ${testInfo.project.name}`,
     );
 

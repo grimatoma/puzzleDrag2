@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { gotoFresh, getReactState, dispatchAction } from './helpers.js';
+import { gotoFresh, getReactState, dispatchAction } from './helpers';
 
 /**
  * Tile collection / catalog. The slice tracks discovered species, research

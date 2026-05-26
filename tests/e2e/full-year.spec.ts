@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 import {
   gotoFresh, waitForBoot, dispatchAction, getReactState,
   collectPageErrors, chainUntil,
-} from './helpers.js';
+} from './helpers';
 
 /**
  * Plays four farm sessions end-to-end via the scene API and the React reducer.

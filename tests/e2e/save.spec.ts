@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import {
   gotoFresh, waitForBoot, triggerChainViaScene, getReactState, dispatchAction,
-} from './helpers.js';
+} from './helpers';
 
 test('state persists across reload', async ({ page }) => {
   await gotoFresh(page);

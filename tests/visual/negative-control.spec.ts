@@ -25,6 +25,7 @@ test("visual negative control catches a deliberate diff", async ({ page }) => {
   await page.evaluate(() => window.__hearthVisual.ready);
   await page.evaluate(() => {
     const shell = document.querySelector("[data-testid='app-shell']");
+    if (!(shell instanceof HTMLElement)) return;
     shell.style.boxShadow = "inset 0 0 0 20px rgb(220, 20, 60)";
     window.__hearthVisual.freeze();
   });

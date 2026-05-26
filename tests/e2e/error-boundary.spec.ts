@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { gotoFresh, getReactState, dispatchAction } from './helpers.js';
+import { gotoFresh, getReactState, dispatchAction } from './helpers';
 
 /**
  * Error-boundary smoke. The RootErrorBoundary in main.jsx catches render

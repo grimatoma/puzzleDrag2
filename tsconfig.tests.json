@@ -1,0 +1,16 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "strict": false,
+    "noImplicitAny": false,
+    "strictNullChecks": false,
+    "types": ["node", "@playwright/test", "vite/client"]
+  },
+  "include": [
+    "tests/playwright-env.d.ts",
+    "tests/e2e/**/*.ts",
+    "tests/visual/**/*.ts",
+    "src/__tests__/setup.ts"
+  ]
+}

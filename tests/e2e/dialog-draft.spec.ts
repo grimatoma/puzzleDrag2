@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { dispatchAction, waitForBoot } from './helpers.js';
+import { dispatchAction, waitForBoot } from './helpers';
 
 test('balance draft dialog is consumed by the game runtime', async ({ page }) => {
   await page.addInitScript(() => {

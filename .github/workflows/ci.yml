@@ -1,9 +1,9 @@
 # CI — lint + typecheck + test + build on every PR vs main and push to main.
 # Branch protection (set in repo settings):
-#   - Require status checks: lint, typecheck, test, build
+#   - Require status checks: lint, typecheck, typecheck-tests, test, build
 #   - Require branches to be up to date before merging
 #   - Dismiss stale approvals on push
-# All three jobs must pass before a PR can merge.
+# All jobs must pass before a PR can merge.
 
 name: CI
 on:
@@ -36,6 +36,19 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run typecheck
+      - run: npm run action-types:check
+
+  typecheck-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck:tests
 
   test:
     runs-on: ubuntu-latest

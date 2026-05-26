@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { gotoFresh, getReactState, waitForState, dispatchAction } from './helpers.js';
+import { gotoFresh, getReactState, waitForState, dispatchAction } from './helpers';
 
 /**
  * Settings flags. The settings slice owns state.settings and persists to its
