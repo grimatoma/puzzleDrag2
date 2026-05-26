@@ -222,29 +222,17 @@ function coreReducer(state: GameState, action: Action): GameState {
   switch (action.type) {
     case "VISUAL/LOAD_STATE": {
       if (!visualTestingEnabled()) return state;
-      const payload = action.payload as { state?: GameState } | undefined;
-      const next = (payload?.state ?? (action as { state?: GameState }).state) as GameState | undefined;
+      const next = action.payload?.state ?? action.state;
       return next && typeof next === "object" ? next : state;
     }
     case "GRID/SYNC": {
       if (visualTestingEnabled() && state?._visualScenarioId) return state;
-      const payload = action.payload as { grid?: Grid } | undefined;
-      const { grid } = payload ?? {};
+      const { grid } = action.payload;
       if (!grid) return state;
       return { ...state, grid };
     }
     case "CHAIN_COLLECTED": {
-      const payload = action.payload as {
-        gains?: Record<string, number>;
-        key: string;
-        gained: number;
-        upgrades?: number;
-        value?: number;
-        chainLength?: number;
-        noTurn?: boolean;
-        resourceKey?: string;
-        chain?: Tile[];
-      } | undefined;
+      const payload = action.payload;
       // Phase 4.7: support { gains: {key: n, ...} } payload for cap-aware bulk collection
       if (payload?.gains) {
         const gainsMap = payload.gains;
@@ -492,8 +480,7 @@ function coreReducer(state: GameState, action: Action): GameState {
       return maybeFireResourceBeats(afterChain, state);
     }
     case "TURN_IN_ORDER": {
-      const actionId = action.id as number | undefined;
-      const o = state.orders.find((x) => x.id === actionId);
+      const o = state.orders.find((x) => x.id === action.id);
       if (!o) return state;
       const requiredQty = o.need ?? o.amount ?? 0;
       if ((state.inventory[o.key] || 0) < requiredQty) {
@@ -545,8 +532,7 @@ function coreReducer(state: GameState, action: Action): GameState {
     }
     case "CRAFT_TOOL": {
       // Phase 10.1 — craft a Workshop tool (rake / axe / fertilizer / cat / etc.)
-      const payload = action.payload as { id?: string } | undefined;
-      const toolId = (action.id as string | undefined) ?? payload?.id;
+      const toolId = action.id ?? action.payload?.id;
       if (!toolId) return state;
       const toolRecipe = Object.values(RECIPES).find((r: { item: string; station: string }) => r.item === toolId && r.station === "workshop") as { inputs: Record<string, number> } | undefined;
       if (!toolRecipe) return state;
@@ -588,28 +574,27 @@ function coreReducer(state: GameState, action: Action): GameState {
       // up, we just clear toolPending — the charge was already spent in
       // USE_TOOL. Either way, this is the canonical end-of-fire signal that
       // keeps React state and the Phaser registry in sync.
-      const payload = action.payload as { key?: string; row?: number; col?: number } | undefined;
-      const key = (action.key as string | undefined) ?? payload?.key ?? state.toolPending;
+      const key = action.key ?? action.payload?.key ?? state.toolPending;
       if (!key) return state;
       // Phase 2 (tool-powers overhaul) — typed tap-target powers stash the
       // armed power config in state.toolPendingPower. If present, apply it
       // here at the tap site instead of the key-based legacy branches below.
       const armedPower = state.toolPendingPower;
       if (armedPower?.id && isTapTargetPower(armedPower.id)) {
-        const row = (action.row as number | undefined) ?? payload?.row;
-        const col = (action.col as number | undefined) ?? payload?.col;
+        const row = action.row ?? action.payload?.row;
+        const col = action.col ?? action.payload?.col;
         return applyTapTargetPower(state, key, armedPower, row, col);
       }
       return { ...state, toolPending: null, toolPendingPower: null };
     }
     case "USE_TOOL": {
-      const payload = action.payload as { id?: string; key?: string; power?: { id?: string; [k: string]: unknown } } | undefined;
-      const rawKey = payload?.id ?? payload?.key ?? (action.key as string | undefined);
+      const payload = action.payload;
+      const rawKey = payload?.id ?? payload?.key ?? action.key;
       const key = resolveToolDispatchKey(rawKey);
       if (!key) return state;
       const explicitPower = payload?.power;
       if (explicitPower?.id) {
-        return applyToolPower(state, key, explicitPower as { id: string; [k: string]: unknown });
+        return applyToolPower(state, key, explicitPower);
       }
       if (key === "fertilizer" && isFillBiasArmed(state)) {
         return disarmFillBias(state);
@@ -624,8 +609,7 @@ function coreReducer(state: GameState, action: Action): GameState {
     }
     case "SWITCH_BIOME": {
       // Support both legacy action.key and Phase 12.5 action.payload.biome
-      const payload = action.payload as { biome?: string } | undefined;
-      const key = (action.key as string | undefined) ?? payload?.biome;
+      const key = action.key ?? action.payload?.biome;
       if (!key) return state;
       if (key === state.biomeKey) return state;
       const access = canEnterBiome(state, key) as { ok: boolean; reason?: string };
@@ -650,31 +634,28 @@ function coreReducer(state: GameState, action: Action): GameState {
       return { ...state, biome: key, biomeKey: key, orders: replacements, turnsUsed: 0, _biomeRestored: !!(savedField && savedField.tiles), ...boardPatch };
     }
     case "SET_VIEW": {
-      const next = action.view as string;
+      const next = action.view;
       // Reset viewParams when leaving a view so a fresh visit doesn't inherit
       // stale sub-tabs (e.g. tile-wiki sub-category from a previous trip).
       const sameView = next === state.view;
-      const viewParams = (action.viewParams as Record<string, unknown> | undefined)
-        ?? (sameView ? state.viewParams : {});
+      const viewParams = action.viewParams ?? (sameView ? state.viewParams : {});
       // Leaving the board is an "action not directly using the tool", so any
       // armed tool deselects (with charge refunded). Tap-target arms had no
       // charge to refund; instant/rune/fertilizer arms get their charge back.
       const base = next === "board" ? state : disarmAllTools(state);
-      return { ...base, view: next, viewParams, craftingTab: (action.craftingTab as string | null | undefined) ?? (next === "crafting" ? base.craftingTab : null) };
+      return { ...base, view: next, viewParams, craftingTab: action.craftingTab ?? (next === "crafting" ? base.craftingTab : null) };
     }
     case "SET_VIEW_PARAMS":
-      return { ...state, viewParams: { ...(state.viewParams ?? {}), ...((action.params as Record<string, unknown> | undefined) ?? {}) } };
+      return { ...state, viewParams: { ...(state.viewParams ?? {}), ...(action.params ?? {}) } };
     case "SET_SETTLEMENT_NAME": {
       // The only thing a player names is a settlement (a zone). Empty/blank
       // clears back to "unnamed" (UI then shows the static MAP_NODES name).
-      const payload = action.payload as { zoneId?: string; name?: string } | undefined;
-      const zoneId = payload?.zoneId ?? (action.zoneId as string | undefined) ?? (state.mapCurrent as string | undefined) ?? "home";
-      const name = String(payload?.name ?? (action.name as string | undefined) ?? "").trim().slice(0, 24);
+      const zoneId = action.payload?.zoneId ?? action.zoneId ?? (state.mapCurrent as string | undefined) ?? "home";
+      const name = String(action.payload?.name ?? action.name ?? "").trim().slice(0, 24);
       return { ...state, zoneNames: { ...(state.zoneNames ?? {}), [zoneId]: name } };
     }
     case "FOUND_SETTLEMENT": {
-      const payload = action.payload as { zoneId?: string; biome?: string } | undefined;
-      const zoneId = payload?.zoneId ?? (action.zoneId as string | undefined);
+      const zoneId = action.payload?.zoneId ?? action.zoneId;
       if (!zoneId || !ZONES[zoneId]) return state;            // unknown zone
       if (isSettlementFounded(state, zoneId)) return state;   // already founded
       // Progression gate (Phase 6a): the player must have completed at least one
@@ -692,7 +673,7 @@ function coreReducer(state: GameState, action: Action): GameState {
       if ((state.coins ?? 0) < (cost.coins ?? 0)) return state; // can't afford
       // Phase 5e — pick the biome at founding (the picker passes payload.biome;
       // a missing/unknown choice falls back to the first option for the type).
-      const biome = resolveBiomeChoice(settlementTypeForZone(zoneId), payload?.biome) as { id: string; name: string } | null;
+      const biome = resolveBiomeChoice(settlementTypeForZone(zoneId), action.payload?.biome) as { id: string; name: string } | null;
       if (!biome) return state;
       return {
         ...state,
@@ -702,27 +683,23 @@ function coreReducer(state: GameState, action: Action): GameState {
       };
     }
     case "KEEPER/CONFRONT": {
-      const payload = action.payload as { zoneId?: string; path?: string } | undefined;
-      const zoneId = payload?.zoneId ?? (action.zoneId as string | undefined);
-      const path = payload?.path ?? (action.path as string | undefined);
+      const zoneId = action.payload?.zoneId ?? action.zoneId;
+      const path = action.payload?.path ?? action.path;
       return startKeeperTrial(state, zoneId, path);
     }
     case "KEEPER/START_TRIAL": {
-      const payload = action.payload as { zoneId?: string; path?: string } | undefined;
-      const zoneId = payload?.zoneId ?? (action.zoneId as string | undefined);
-      return startKeeperTrial(state, zoneId, payload?.path ?? (action.path as string | undefined) ?? "driveout");
+      const zoneId = action.payload?.zoneId ?? action.zoneId;
+      return startKeeperTrial(state, zoneId, action.payload?.path ?? action.path ?? "driveout");
     }
     case "KEEPER/APPEASE": {
-      const payload = action.payload as { zoneId?: string } | undefined;
-      const zoneId = payload?.zoneId ?? (action.zoneId as string | undefined);
+      const zoneId = action.payload?.zoneId ?? action.zoneId;
       return finalizeKeeperPath(state, zoneId, "coexist");
     }
     case "KEEPER/TRIAL_RESOLVE": {
-      const payload = action.payload as { won?: boolean } | undefined;
-      return resolveKeeperTrial(state, payload?.won ?? (action.won as boolean | undefined));
+      return resolveKeeperTrial(state, action.payload?.won ?? action.won);
     }
     case "OPEN_MODAL":
-      return { ...state, modal: action.modal as string | null, settingsTab: (action.settingsTab as string | undefined) ?? 'main' };
+      return { ...state, modal: action.modal, settingsTab: action.settingsTab ?? "main" };
     case "CLOSE_MODAL":
       return { ...state, modal: null, settingsTab: 'main' };
     case "ROUTE/APPLY": {
@@ -730,7 +707,7 @@ function coreReducer(state: GameState, action: Action): GameState {
       // matches the equivalent SET_VIEW / OPEN_MODAL / SETTINGS/SET_TAB
       // semantics so popstate-driven changes look identical to user-driven
       // ones from the rest of the app's perspective.
-      const r = (action.route as { view?: string; modal?: string | null; viewParams?: Record<string, unknown>; modalParams?: { tab?: string } } | undefined) ?? {};
+      const r = action.route ?? {};
       const rawView = r.view ?? state.view ?? "town";
       // Safety: don't navigate to board via URL if there's no active run —
       // avoids a broken green-screen on reload after a session has ended.
@@ -759,9 +736,8 @@ function coreReducer(state: GameState, action: Action): GameState {
     case "BUILD": {
       // Support both legacy action.building (full object) and action.payload.id (lookup by id)
       type BuildingShape = { id: string; name: string; cost: Record<string, number> };
-      const payload = action.payload as { id?: string; plot?: number } | undefined;
       const buildings = BUILDINGS as unknown as readonly BuildingShape[];
-      const b = (action.building as BuildingShape | undefined) ?? buildings.find((x) => x.id === payload?.id);
+      const b = action.building ?? buildings.find((x) => x.id === action.payload?.id);
       if (!b) return state;
       const currentZone = (state.mapCurrent as string | undefined) ?? "home";
       // Founding gate (Phase 6a): can't build at a zone that hasn't been founded.
@@ -783,7 +759,7 @@ function coreReducer(state: GameState, action: Action): GameState {
       // Plot assignment: validate explicit plot index, otherwise auto-pick first free.
       const lbForPlot = locBuilt(state) as Record<string, unknown>;
       const plots: Record<string, unknown> = { ...((lbForPlot._plots as Record<string, unknown> | undefined) ?? {}) };
-      const requestedPlot = (action.plot as number | undefined) ?? payload?.plot;
+      const requestedPlot = action.plot ?? action.payload?.plot;
       const occupied = (idx: number) => Object.prototype.hasOwnProperty.call(plots, String(idx));
       let plotIdx: number;
       if (typeof requestedPlot === "number" && requestedPlot >= 0) {
@@ -996,9 +972,7 @@ function coreReducer(state: GameState, action: Action): GameState {
     // ─── Phase 3 Economy ────────────────────────────────────────────────────────
 
     case "BUY_RESOURCE": {
-      const buyPayload = action.payload as { key: string; qty: number } | undefined;
-      if (!buyPayload) return state;
-      const { key: buyKey, qty: buyQty } = buyPayload;
+      const { key: buyKey, qty: buyQty } = action.payload;
       // Transitional: market still trades tile keys until PR 3 moves tiles out
       // of inventory. Cap-check against both lists.
       if ((CAPPED_INVENTORY_RESOURCES as readonly string[]).includes(buyKey)) {
@@ -1566,8 +1540,7 @@ const ALWAYS_RUN_SLICES = new Set([
 
 function shouldAlwaysRunSlices(state: GameState, action: Action): boolean {
   if (action.type === "CRAFTING/CRAFT_RECIPE") {
-    const cp = action.payload as { key?: string } | undefined;
-    const craftKey = (action.recipeKey as string | undefined) ?? cp?.key;
+    const craftKey = action.recipeKey ?? action.payload?.key;
     if (!craftKey) return false;
     return !!crafting.canPayForRecipe(state, craftKey);
   }

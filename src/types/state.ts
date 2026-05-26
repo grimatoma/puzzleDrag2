@@ -9,8 +9,6 @@
  * `initial` block into the root state.
  */
 
-import type { ActionType } from "./actions.js";
-
 // ── Sub-types ─────────────────────────────────────────────────────────────
 
 export interface Tile {
@@ -260,19 +258,21 @@ export interface GameState {
   [extra: string]: unknown;
 }
 
-// ── Action ────────────────────────────────────────────────────────────────
+// ── Action (discriminated union in actionPayloads.ts) ─────────────────────
 
-/**
- * Reducer action shape. `type` is a closed union of every dispatched string;
- * per-action payload fields stay on the index signature until typed variants
- * are added in src/types/actions.ts.
- */
-export interface Action {
-  type: ActionType;
-  readonly [key: string]: unknown;
-}
+export type { Action, TypedAction, GenericAction, TypedActionType } from "./actionPayloads.js";
+export type {
+  ChainCollectedPayload,
+  ChainCollectedAction,
+  ToolFiredAction,
+  UseToolAction,
+  GridSyncAction,
+  SetViewAction,
+} from "./actionPayloads.js";
 
 // ── Reducer + dispatch ────────────────────────────────────────────────────
+
+import type { Action } from "./actionPayloads.js";
 
 export type Reducer<S = GameState> = (state: S, action: Action) => S;
 

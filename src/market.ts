@@ -60,8 +60,8 @@ export function driftPrices(
 }
 
 export function applyTrade(state: GameState, action: Action): GameState {
-  const payload = action.payload as { key: string; qty: number } | undefined;
-  if (!payload) return state;
+  if (action.type !== "BUY_RESOURCE" && action.type !== "SELL_RESOURCE") return state;
+  const payload = action.payload;
   const { key, qty } = payload;
   const p = state.market.prices[key];
   if (!p) return state;

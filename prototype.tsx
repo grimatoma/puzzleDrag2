@@ -4,7 +4,7 @@ import { runSelfTests, currentCap } from "./src/utils.js";
 import { gameReducer, initialState } from "./src/state.js";
 import type Phaser from "phaser";
 import type { GameScene } from "./src/GameScene.js";
-import type { GameState, Grid, Action as GameAction } from "./src/types/state.js";
+import type { GameState, Grid, Action as GameAction, ChainCollectedPayload } from "./src/types/state.js";
 import type { ChainInfo, RuntimeTool } from "./src/ui/puzzleBoard.jsx";
 import { Hud } from "./src/ui/Hud.jsx";
 import { TownView } from "./src/ui/Town.jsx";
@@ -200,7 +200,9 @@ function PhaserMount({ dispatch, biomeKey, turnsUsed, uiLocked, boardActive, sce
               sceneRef.current = scene;
               setPhaserScene(scene);
               if (typeof window !== "undefined") window.__phaserScene = scene;
-              scene.events.on(SCENE_EVENTS.CHAIN_COLLECTED, (payload: unknown) => dispatch({ type: "CHAIN_COLLECTED", payload }));
+              scene.events.on(SCENE_EVENTS.CHAIN_COLLECTED, (payload: ChainCollectedPayload) =>
+                dispatch({ type: "CHAIN_COLLECTED", payload }),
+              );
               scene.events.on(SCENE_EVENTS.FERTILIZER_CONSUMED, () => dispatch({ type: "FERTILIZER/CONSUMED" }));
               scene.events.on(SCENE_EVENTS.GRID_SYNC, ({ grid: g }: { grid: Grid }) => dispatch({ type: "GRID/SYNC", payload: { grid: g } }));
               scene.events.on(SCENE_EVENTS.CHAIN_UPDATE, (data: ChainInfo | null) => setChainInfo(data));

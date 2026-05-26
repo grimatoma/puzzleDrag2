@@ -60,8 +60,11 @@ function recomputeDiscovered(visited: string[]): string[] {
   return [...next];
 }
 
-interface TravelAction extends Action {
+interface TravelAction {
+  type: Action["type"];
   nodeId?: string;
+  payload?: { nodeId?: string };
+  readonly [key: string]: unknown;
 }
 
 export function reduce(state: GameState, action: Action): GameState {

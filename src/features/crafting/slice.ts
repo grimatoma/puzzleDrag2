@@ -123,26 +123,14 @@ function grantCraftOutput(state: GameState, recipeKey: string, recipe: RecipeDef
   } as unknown as GameState;
 }
 
-interface CraftPayload {
-  key?: string;
-  station?: string;
-}
-
-interface CraftingAction extends Action {
-  recipeKey?: string;
-  station?: string;
-}
-
 export function reduce(state: GameState, action: Action): GameState {
   const s = state as unknown as CraftingHostState;
-  const a = action as CraftingAction;
   const itemMap = ITEMS as unknown as Record<string, { kind?: string; label?: string } | undefined>;
   const recipeMap = RECIPES as unknown as Record<string, RecipeDef | undefined>;
   switch (action.type) {
     case "CRAFTING/CRAFT_RECIPE": {
       // Support both action.recipeKey (legacy UI) and action.payload.key.
-      const payload = action.payload as CraftPayload | undefined;
-      const recipeKey = a.recipeKey ?? payload?.key;
+      const recipeKey = action.recipeKey ?? action.payload?.key;
       if (!recipeKey) return state;
       const paid = canPayForRecipe(state, recipeKey);
       if (!paid) return state;
@@ -152,8 +140,7 @@ export function reduce(state: GameState, action: Action): GameState {
     }
 
     case "CRAFTING/QUEUE_RECIPE": {
-      const payload = action.payload as CraftPayload | undefined;
-      const recipeKey = a.recipeKey ?? payload?.key;
+      const recipeKey = action.recipeKey ?? action.payload?.key;
       if (!recipeKey) return state;
       const paid = canPayForRecipe(state, recipeKey);
       if (!paid) return state;
@@ -181,8 +168,7 @@ export function reduce(state: GameState, action: Action): GameState {
       // ready. coreReducer (src/state.js) fires the `craft_made` event for
       // story beats + ember_drake boss progress; we also bump achievements
       // `totalCrafted` so the queued path matches instant CRAFT_RECIPE.
-      const payload = action.payload as CraftPayload | undefined;
-      const station = payload?.station ?? a.station;
+      const station = action.payload?.station ?? action.station;
       if (!station) return state;
       const queues: Record<string, CraftQueueEntry[]> = s.craftQueues ?? {};
       const queue: CraftQueueEntry[] = queues[station] ?? [];
@@ -203,8 +189,7 @@ export function reduce(state: GameState, action: Action): GameState {
       // Spend a gem to finish `station`'s head instantly; the remaining
       // queue shifts earlier by however much time the skipped item still
       // had to run, so the next item begins crafting NOW instead of waiting.
-      const payload = action.payload as CraftPayload | undefined;
-      const station = payload?.station ?? a.station;
+      const station = action.payload?.station ?? action.station;
       if (!station) return state;
       const queues: Record<string, CraftQueueEntry[]> = s.craftQueues ?? {};
       const queue: CraftQueueEntry[] = queues[station] ?? [];

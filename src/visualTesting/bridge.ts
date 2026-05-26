@@ -328,7 +328,10 @@ export function installVisualTestingBridge({ getState, dispatch }: {
         window.history.replaceState(null, "", "#/town");
       }
       window.__hearthVisualScenarioState = stateTree;
-      dispatch({ type: "VISUAL/LOAD_STATE", payload: { id, state: stateTree } });
+      dispatch({
+        type: "VISUAL/LOAD_STATE",
+        payload: { state: stateTree as unknown as import("../types/state.js").GameState },
+      });
       document.documentElement.dataset.visualScenario = id;
       await settleFrames(4);
       applyBoardStateToScene(stateTree, { rebuildGrid: true });

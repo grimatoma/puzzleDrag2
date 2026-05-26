@@ -113,13 +113,12 @@ export function reduce(state: GameState, action: Action): GameState {
       const story = (state.story ?? {}) as StorySubstate;
       const beat = story.queuedBeat as Beat | null | undefined;
       if (!beat) return state;
-      const payload = action.payload as { choiceId?: string; value?: unknown } | undefined;
-      const choiceId = payload?.choiceId ?? (action.choiceId as string | undefined);
+      const choiceId = action.payload?.choiceId ?? action.choiceId;
       const choice = beatChoices(beat).find((c: { id: string }) => c.id === choiceId) as { id: string; outcome: ChoiceOutcome } | undefined;
       if (!choice) return state;
       // `value` is optional free-text supplied by prompt-style beats (e.g. the
       // settlement name) so the finale can read it back from the log.
-      const value = payload?.value ?? action.value;
+      const value = action.payload?.value ?? action.value;
 
       // Record the choice for the finale's "the Ember reads your record".
       const entry: ChoiceLogEntry = { beatId: beat.id, choiceId: choice.id, ts: Date.now() };

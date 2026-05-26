@@ -129,10 +129,13 @@ interface CraftPayload {
   key?: string;
 }
 
-interface BossAction extends Action {
+interface BossAction {
+  type: Action["type"];
   bossKey?: string;
   won?: boolean;
   recipeKey?: string;
+  payload?: unknown;
+  readonly [key: string]: unknown;
 }
 
 export function reduce(state: GameState, action: Action): GameState {

@@ -452,7 +452,7 @@ export function CompactOrders({ orders, inventory, dispatch }: { orders: OrderLi
           <button
             key={o.id}
             type="button"
-            onClick={() => dispatch({ type: "TURN_IN_ORDER", id: o.id, npc: o.npc, key: o.key, need, reward: o.reward })}
+            onClick={() => dispatch({ type: "TURN_IN_ORDER", id: o.id })}
             className={`flex items-center gap-1.5 rounded-lg px-2 py-2 text-left border min-h-tap transition-colors ${done ? "bg-moss/40 border-moss text-white" : "bg-parchment-soft border-iron text-ink"}`}
           >
             <span className="flex-shrink-0 grid place-items-center w-5 h-5">
