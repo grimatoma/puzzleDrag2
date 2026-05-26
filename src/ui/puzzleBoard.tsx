@@ -1210,10 +1210,11 @@ export function useToolDrag({ pins, pinActions, maxFitPins }: { pins: Array<stri
     };
   }, [pinActions, pins, maxFitPins]);
 
-  // Exported as a loose shape so JS-style callers' `state.tools?.[drag?.key]`
-  // expressions typecheck. Internally `drag` is strictly `DragState | null`;
-  // the public widening is only for the boundary with prototype.tsx.
-  return { drag: drag as (DragState & Record<string, unknown>) | null, beginDrag: beginPress };
+  // Exported as `any` at the JS-interop boundary so the legacy prototype.tsx
+  // call site `state.tools?.[drag?.key]` typechecks (string-or-undefined keys
+  // are rejected by the strict Tools index signature; we accept the local
+  // looseness to avoid touching the JS-style consumer).
+  return { drag: drag as any, beginDrag: beginPress };
 }
 
 // Floating tile that follows the cursor while a hotbar drag is active.

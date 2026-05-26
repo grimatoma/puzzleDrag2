@@ -609,7 +609,7 @@ function coreReducer(state: GameState, action: Action): GameState {
       if (!key) return state;
       const explicitPower = payload?.power;
       if (explicitPower?.id) {
-        return applyToolPower(state, key, explicitPower);
+        return applyToolPower(state, key, explicitPower as { id: string; [k: string]: unknown });
       }
       if (key === "fertilizer" && isFillBiasArmed(state)) {
         return disarmFillBias(state);
@@ -617,7 +617,7 @@ function coreReducer(state: GameState, action: Action): GameState {
       const item = ITEMS[key] as { power?: { id?: string; [k: string]: unknown } } | undefined;
       const itemPower = item?.power ?? null;
       if (itemPower?.id) {
-        return applyToolPower(state, key, itemPower);
+        return applyToolPower(state, key, itemPower as { id: string; [k: string]: unknown });
       }
       if (toolCount(state.tools, key) <= 0) return state;
       return { ...state, tools: { ...state.tools, [key]: toolCount(state.tools, key) - 1 } };
