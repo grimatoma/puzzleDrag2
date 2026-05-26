@@ -15,7 +15,7 @@ export const SELL_RATE = 0.10;
  * @returns {number}
  */
 export function sellPriceFor(itemId: string): number {
-  const item = (ITEMS as Record<string, { value?: number; sellable?: boolean } | undefined>)[itemId];
+  const item = ITEMS[itemId];
   if (!item || !item.value || item.sellable === false) return 0;
   return Math.round(item.value * SELL_RATE);
 }

@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { clearSave, dispatchAction } from './helpers.js';
+import { clearSave, dispatchAction } from './helpers';
 
 test.beforeEach(async ({ page }) => { await clearSave(page); });
 

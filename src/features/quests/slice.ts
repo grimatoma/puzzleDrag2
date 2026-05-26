@@ -83,12 +83,11 @@ function progressQuests(dailies: LegacyDaily[], key: string, amount: number): Le
 export function reduce(state: QuestsGameState, action: Action): GameState {
   switch (action.type) {
     case "QUESTS/PROGRESS_QUEST": {
-      const key = action.key as string;
-      const amount = action.amount as number;
+      const { key, amount } = action;
       return { ...state, dailies: progressQuests(state.dailies || [], key, amount) };
     }
     case "QUESTS/CLAIM_QUEST": {
-      const id = action.id as string;
+      const { id } = action;
 
       // New system: look in state.quests first (deterministic 6-slot system)
       const quests = (state.quests || []) as Quest[];
@@ -120,7 +119,7 @@ export function reduce(state: QuestsGameState, action: Action): GameState {
       return afterLegacy;
     }
     case "QUESTS/CLAIM_ALMANAC": {
-      const tier = action.tier as number;
+      const { tier } = action;
       // Ensure almanac state is initialised so claimAlmanacTier can read it
       const stateWithAlmanac: GameState = state.almanac
         ? state
@@ -138,13 +137,7 @@ export function reduce(state: QuestsGameState, action: Action): GameState {
       return { ...newState, almanacClaimed };
     }
     case "CHAIN_COLLECTED": {
-      const payload = (action.payload ?? {}) as {
-        chain?: { key: string }[];
-        gained?: number;
-        chainLength?: number;
-        key?: string;
-        value?: number;
-      };
+      const payload = action.payload;
       const chainOnly = payload.chain;
       if (Array.isArray(chainOnly) && chainOnly.length > 0 && chainOnly.every((t) => t.key === "rat")) {
         return state;
@@ -189,8 +182,7 @@ export function reduce(state: QuestsGameState, action: Action): GameState {
       return { ...state, dailies };
     }
     case "CRAFTING/CRAFT_RECIPE": {
-      const payload = (action.payload ?? {}) as { key?: string };
-      const craftKey = payload.key ?? "";
+      const craftKey = action.payload?.key ?? action.recipeKey ?? "";
       const dailies = progressQuests(state.dailies || [], "craft", 1);
       // New deterministic quests
       const craftEvent: QuestEvent = { type: "craft", item: craftKey, count: 1 };

@@ -13,7 +13,7 @@ export function canEnterBiome(state: GameState | null | undefined, biomeKey: str
   const unlockedBiomes = (stateRec.unlockedBiomes ?? {}) as Record<string, unknown>;
   const zoneIdRaw = stateRec.activeZone ?? stateRec.mapCurrent ?? "home";
   const zoneId = typeof zoneIdRaw === "string" ? zoneIdRaw : "home";
-  const zone = (ZONES as Record<string, { hasMine?: boolean; hasWater?: boolean } | undefined>)[zoneId] ?? null;
+  const zone = ZONES[zoneId] ?? null;
 
   if (biomeKey === "mine") {
     if (level < 2) {

@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import {
   gotoFresh, triggerChainViaScene, getReactState, waitForState, dispatchAction,
-} from './helpers.js';
+} from './helpers';
 
 test('drag-chain via scene API: turn advances and inventory grows', async ({ page }) => {
   test.setTimeout(60_000);
@@ -12,10 +12,11 @@ test('drag-chain via scene API: turn advances and inventory grows', async ({ pag
   // Allow up to two attempts — under parallel execution the very first chain
   // attempt sometimes lands during the scene's initial fill animation.
   let result = await triggerChainViaScene(page, 3);
-  if (!result.ok) result = await triggerChainViaScene(page, 3);
-  expect(result.ok).toBe(true);
+  if (!("ok" in result && result.ok)) result = await triggerChainViaScene(page, 3);
+  expect("ok" in result && result.ok).toBe(true);
+  const okResult = result as { ok: true; type: string; length: number };
   const after = await waitForState(page, (s) => s.turnsUsed >= 1);
-  expect(after.inventory[result.type] ?? 0).toBeGreaterThan(0);
+  expect(after.inventory[okResult.type] ?? 0).toBeGreaterThan(0);
 });
 
 test('chain via touch: simulate drag on canvas', async ({ page }) => {

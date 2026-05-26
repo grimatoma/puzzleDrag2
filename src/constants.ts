@@ -25,6 +25,180 @@ export const SCENE_EVENTS = Object.freeze({
   REWARD_BURST: "reward-burst",
 });
 
+type Brand<T, Name extends string> = T & { readonly __brand: Name };
+
+export type TileId = Brand<`tile_${string}`, "TileId">;
+export type ResourceId = Brand<string, "ResourceId">;
+export type ToolId = Brand<string, "ToolId">;
+export type ItemId = TileId | ResourceId | ToolId;
+export type BiomeId = "farm" | "mine" | "fish";
+export type RecipeId = Brand<`rec_${string}`, "RecipeId"> | Brand<string, "RecipeAliasId">;
+export type StationId = "bakery" | "forge" | "kitchen" | "larder" | "smokehouse" | "workshop" | string;
+
+export interface SwayParams {
+  amp: number;
+  freq: number;
+  gust: number;
+}
+
+export interface ToolPowerDefinition {
+  [legacyField: string]: unknown;
+  id: string;
+  params?: Record<string, unknown>;
+  anim?: string;
+  ms?: number;
+  tint?: number;
+  bubble?: string;
+}
+
+interface ItemEntryBase {
+  [legacyField: string]: unknown;
+  kind: "tile" | "resource" | "tool";
+  label: string;
+  color?: number;
+  dark?: number;
+  value?: number;
+  desc?: string;
+  description?: string;
+  glyph?: string;
+  iconKey?: string;
+  biome?: BiomeId | string;
+  next?: string | null;
+  sellable?: boolean;
+  power?: ToolPowerDefinition;
+  effect?: string;
+  target?: string;
+  anim?: string;
+  ms?: number;
+}
+
+export interface TileItemEntry extends ItemEntryBase {
+  kind: "tile";
+  biome: BiomeId | string;
+  color: number;
+  dark: number;
+  value: number;
+  next?: string | null;
+  sway?: SwayParams;
+}
+
+export interface ResourceItemEntry extends ItemEntryBase {
+  kind: "resource";
+  color: number;
+  dark: number;
+  value: number;
+  next?: null;
+}
+
+export interface ToolItemEntry extends ItemEntryBase {
+  kind: "tool";
+  power?: ToolPowerDefinition;
+  effect?: string;
+  target?: string;
+  anim?: string;
+  ms?: number;
+}
+
+export type ItemEntry = TileItemEntry | ResourceItemEntry | ToolItemEntry;
+export type ItemRecord = Record<string, ItemEntry>;
+export type TileRecord = Record<string, TileItemEntry>;
+export type ResourceRecord = Record<string, ResourceItemEntry>;
+export type ToolRecord = Record<string, ToolItemEntry>;
+
+export type BiomeItemEntry<T extends ItemEntry = ItemEntry> = T & { key: string };
+
+export interface BiomePalette {
+  bg: number;
+  accent: number;
+  dim: number;
+}
+
+export interface BiomeDefinition {
+  [legacyField: string]: unknown;
+  name: string;
+  special_dirt: number;
+  dark: number;
+  dirtColor: number;
+  palette: BiomePalette;
+  tilePool: string[];
+  pool: string[];
+  tiles: Array<BiomeItemEntry<TileItemEntry>>;
+  resources: Array<BiomeItemEntry<ResourceItemEntry>>;
+  resourceOrderPool: string[];
+}
+
+export type BiomeRecord = Record<BiomeId, BiomeDefinition> & Record<string, BiomeDefinition>;
+
+export type RecipeInputs = Record<string, number>;
+
+export interface RecipeDefinition {
+  [legacyField: string]: unknown;
+  item: string;
+  station: StationId;
+  inputs: RecipeInputs;
+  tier?: number;
+  craftMs?: number;
+  name?: string;
+  coins?: number;
+  tool?: string;
+  color?: number;
+  power?: ToolPowerDefinition;
+  anim?: string;
+  ms?: number;
+  desc?: string;
+}
+
+export type RecipeRecord = Record<string, RecipeDefinition>;
+export type WorkshopRecipeRecord = Record<string, RecipeDefinition>;
+
+function isObjectRecord(value: unknown): value is Record<string, unknown> {
+  return !!value && typeof value === "object" && !Array.isArray(value);
+}
+
+export function isItemEntry(value: unknown): value is ItemEntry {
+  return isObjectRecord(value)
+    && (value.kind === "tile" || value.kind === "resource" || value.kind === "tool")
+    && typeof value.label === "string";
+}
+
+export function isTileItemEntry(value: unknown): value is TileItemEntry {
+  return isItemEntry(value) && value.kind === "tile";
+}
+
+export function isResourceItemEntry(value: unknown): value is ResourceItemEntry {
+  return isItemEntry(value) && value.kind === "resource";
+}
+
+export function isToolItemEntry(value: unknown): value is ToolItemEntry {
+  return isItemEntry(value) && value.kind === "tool";
+}
+
+export function hasLegacyNext(value: unknown): value is ItemEntry & { next: string | null } {
+  return isItemEntry(value) && ("next" in value) && (typeof value.next === "string" || value.next === null);
+}
+
+export function hasToolPower(value: unknown): value is ItemEntry & { power: ToolPowerDefinition } {
+  return isItemEntry(value) && isObjectRecord(value.power) && typeof value.power.id === "string";
+}
+
+export function isRecipeDefinition(value: unknown): value is RecipeDefinition {
+  return isObjectRecord(value)
+    && typeof value.item === "string"
+    && typeof value.station === "string"
+    && isObjectRecord(value.inputs);
+}
+
+export function hasRecipeCraftMs(value: unknown): value is RecipeDefinition & { craftMs: number } {
+  return isRecipeDefinition(value) && typeof value.craftMs === "number" && value.craftMs > 0;
+}
+
+export function isBiomeDefinition(value: unknown): value is BiomeDefinition {
+  return isObjectRecord(value)
+    && typeof value.name === "string"
+    && Array.isArray(value.tilePool)
+    && Array.isArray(value.pool);
+}
+
 export const TILE = 74;
 export const COLS = 6;
 export const ROWS = 6;
@@ -41,8 +215,8 @@ export let CRAFT_GEM_SKIP_COST = 1;     // Dev Panel: tuning.craftGemSkipCost
 
 /** Wall-clock ms a queued craft of `recipeKey` takes (recipe override or default). */
 export function recipeCraftMs(recipeKey: string): number {
-  const r = (RECIPES as Record<string, { craftMs?: number }>)[recipeKey];
-  if (r && typeof r.craftMs === "number" && r.craftMs > 0) return r.craftMs;
+  const r = RECIPES[recipeKey];
+  if (hasRecipeCraftMs(r)) return r.craftMs;
   return CRAFT_QUEUE_HOURS * 60 * 60 * 1000;
 }
 
@@ -256,7 +430,7 @@ export const RESOURCE_TO_THRESHOLD: Record<string, number> = (() => {
  * dynamic mutation (underscore aliases, recipe back-compat) continue to work.
  */
 
-export const ITEMS: Record<string, any> = {
+export const ITEMS: ItemRecord = {
   // Farm tiles/resources
   tile_grass_hay:          { kind: "tile", biome: "farm", label: "Hay",          color: 0xa8c769, dark: 0x4f6b3a, value: 1, next: "hay_bundle", sway: { amp: 4.0, freq: 0.00060, gust: 0.20 } },
   tile_grass_meadow:       { kind: "tile", biome: "farm", label: "Meadow Grass", color: 0x7fb24a, dark: 0x3e5a18, value: 1, next: "hay_bundle", sway: { amp: 4.5, freq: 0.00058, gust: 0.22 } },
@@ -460,19 +634,19 @@ ITEMS.gold_ring  = ITEMS.goldring;
 // reach for TILES / RESOURCES / TOOLS by kind.
 export const TILES = Object.freeze(
   Object.fromEntries(
-    Object.entries(ITEMS).filter(([, v]) => v && v.kind === "tile"),
+    Object.entries(ITEMS).filter((entry): entry is [string, TileItemEntry] => isTileItemEntry(entry[1])),
   ),
-);
+) as TileRecord;
 export const RESOURCES = Object.freeze(
   Object.fromEntries(
-    Object.entries(ITEMS).filter(([, v]) => v && v.kind === "resource"),
+    Object.entries(ITEMS).filter((entry): entry is [string, ResourceItemEntry] => isResourceItemEntry(entry[1])),
   ),
-);
+) as ResourceRecord;
 export const TOOLS = Object.freeze(
   Object.fromEntries(
-    Object.entries(ITEMS).filter(([, v]) => v && v.kind === "tool"),
+    Object.entries(ITEMS).filter((entry): entry is [string, ToolItemEntry] => isToolItemEntry(entry[1])),
   ),
-);
+) as ToolRecord;
 
 // Lifted palette: `palette.bg` is now the biome ACCENT strip color (drawn as
 // a thin top edge of the board, not the board fill). `tile_special_dirt` is the
@@ -481,7 +655,7 @@ export const TOOLS = Object.freeze(
 // `dirtColor` is the tile sprite's dirt/floor color (kept readable against
 // parchment without being a saturated brown).
 
-export const BIOMES: Record<string, any> = {
+export const BIOMES: BiomeRecord = {
   farm: {
     name: "Farm",
     special_dirt: 0xc9b993,
@@ -490,6 +664,9 @@ export const BIOMES: Record<string, any> = {
     palette: { bg: 0x7fa848, accent: 0x6f8a3a, dim: 0xc9b993 },
     tilePool: FARM_TILE_POOL,
     pool: FARM_TILE_POOL,
+    tiles: [],
+    resources: [],
+    resourceOrderPool: [],
   },
   mine: {
     name: "Mine",
@@ -499,6 +676,9 @@ export const BIOMES: Record<string, any> = {
     palette: { bg: 0x6a7d92, accent: 0x7a8ca0, dim: 0xc9b993 },
     tilePool: MINE_TILE_POOL,
     pool: MINE_TILE_POOL,
+    tiles: [],
+    resources: [],
+    resourceOrderPool: [],
   },
   fish: {
     name: "Harbor",
@@ -508,6 +688,9 @@ export const BIOMES: Record<string, any> = {
     palette: { bg: 0x4a8aa8, accent: 0x6aa0c0, dim: 0xc9b993 },
     tilePool: FISH_TILE_POOL,
     pool: FISH_TILE_POOL,
+    tiles: [],
+    resources: [],
+    resourceOrderPool: [],
   },
 };
 
@@ -517,18 +700,19 @@ export const BIOMES: Record<string, any> = {
 //   .resourceOrderPool — resource keys drawn from chain outputs of biome tiles
 //     (used by makeOrder; avoids the old bug where orders were keyed on tile keys)
 for (const b of Object.values(BIOMES)) {
+  if (!isBiomeDefinition(b)) continue;
   const biomeFilter = b.name === "Harbor" ? "fish" : b.name.toLowerCase();
   const allEntries = Object.entries(ITEMS)
-    .filter(([, item]) => item.biome === biomeFilter)
+    .filter((entry): entry is [string, ItemEntry] => isItemEntry(entry[1]) && entry[1].biome === biomeFilter)
     .map(([key, item]) => ({ key, ...item }));
-  b.tiles     = allEntries.filter((e) => e.kind === "tile");
-  b.resources = allEntries.filter((e) => e.kind === "resource");
+  b.tiles     = allEntries.filter((e): e is BiomeItemEntry<TileItemEntry> => e.kind === "tile");
+  b.resources = allEntries.filter((e): e is BiomeItemEntry<ResourceItemEntry> => e.kind === "resource");
   // Resource order pool: unique resource keys produced by chaining this biome's tiles.
   const seen = new Set<string>();
   b.resourceOrderPool = b.tiles
-    .map((t: { next?: string | null }) => t.next)
+    .map((t) => t.next)
     .filter((k: string | null | undefined): k is string => k != null && !seen.has(k) && Boolean(seen.add(k)))
-    .filter((k: string) => ITEMS[k]?.kind === "resource");
+    .filter((k: string) => isResourceItemEntry(ITEMS[k]));
 }
 
 
@@ -685,7 +869,7 @@ export const BUILDINGS = [
 const MIN = 60_000;
 const HOUR = 60 * MIN;
 
-export const RECIPES: Record<string, any> = {
+export const RECIPES: RecipeRecord = {
   // Workshop recipes (Tools)
   rec_rake:        { item: "rake",          station: "workshop", inputs: { plank: 1 },                            craftMs: 1 * MIN },
   rec_axe:         { item: "axe",           station: "workshop", inputs: { block: 1 },                            craftMs: 1 * MIN },
@@ -749,25 +933,27 @@ export const RECIPES: Record<string, any> = {
 // Old code and tests reference RECIPES by item key (e.g. RECIPES["bread"]).
 // Generate aliases: for each recipe, RECIPES[recipe.item] → same object.
 for (const rec of Object.values(RECIPES)) {
+  if (!isRecipeDefinition(rec)) continue;
   if (rec.item && !RECIPES[rec.item]) RECIPES[rec.item] = rec;
 }
 // Add backward-compatible computed properties to each recipe. Old code reads
 // recipe.name, recipe.coins, recipe.tool, recipe.color, recipe.effect etc.
 // These are now sourced from ITEMS[recipe.item].
 for (const rec of Object.values(RECIPES)) {
+  if (!isRecipeDefinition(rec)) continue;
   if (!rec.item) continue;
   const itemDef = ITEMS[rec.item];
-  if (!itemDef) continue;
+  if (!isItemEntry(itemDef)) continue;
   // Legacy compat getters — only add if not already set by the recipe itself.
   if (rec.name === undefined)   rec.name   = itemDef.label;
   if (rec.coins === undefined)  rec.coins  = itemDef.value ?? 0;
   if (rec.color === undefined)  rec.color  = itemDef.color;
-  if (rec.power === undefined && itemDef.power) rec.power = itemDef.power;
-  if (rec.anim === undefined)   rec.anim   = itemDef.power?.anim ?? itemDef.anim;
-  if (rec.ms === undefined)     rec.ms     = itemDef.power?.ms ?? itemDef.ms;
+  if (rec.power === undefined && hasToolPower(itemDef)) rec.power = itemDef.power;
+  if (rec.anim === undefined)   rec.anim   = (hasToolPower(itemDef) ? itemDef.power.anim : undefined) ?? (isToolItemEntry(itemDef) ? itemDef.anim : undefined);
+  if (rec.ms === undefined)     rec.ms     = (hasToolPower(itemDef) ? itemDef.power.ms : undefined) ?? (isToolItemEntry(itemDef) ? itemDef.ms : undefined);
   if (rec.desc === undefined)   rec.desc   = itemDef.desc;
   // tool property: if the item is a tool, set recipe.tool = item key
-  if (itemDef.kind === "tool" && rec.tool === undefined) rec.tool = rec.item;
+  if (isToolItemEntry(itemDef) && rec.tool === undefined) rec.tool = rec.item;
 }
 // Explicit retro-compatibility aliases for underscore variants.
 RECIPES.rec_iron_frame = RECIPES.rec_ironframe;
@@ -779,14 +965,14 @@ RECIPES.gold_ring      = RECIPES.rec_goldring;
 
 // Legacy WORKSHOP_RECIPES export — a view keyed by item-name over workshop
 // recipes. Tests and a few call sites still import this.
-export const WORKSHOP_RECIPES = Object.fromEntries(
+export const WORKSHOP_RECIPES: WorkshopRecipeRecord = Object.fromEntries(
   Object.values(RECIPES)
-    .filter((r) => r.station === "workshop")
+    .filter((r): r is RecipeDefinition => isRecipeDefinition(r) && r.station === "workshop")
     .map((r) => [r.item, r])
 );
 
 // Legacy RECIPES.tools alias (tests reference RECIPES.tools.rake etc.)
-RECIPES.tools = WORKSHOP_RECIPES;
+Object.assign(RECIPES, { tools: WORKSHOP_RECIPES });
 
 
 export const MARKET_PRICES = {

@@ -147,11 +147,11 @@ function selectComponent(grid: MutableGrid | null | undefined, tapRow: number, t
 export function resolveTransformKey(params: TileSelectorParams, biomeKey: string = "farm"): string | null {
   const to = params.to;
   if (to === "biome_base") {
-    const biome = (BIOMES as Record<string, { tiles?: Array<{ key?: string }> } | undefined>)[biomeKey];
+    const biome = BIOMES[biomeKey];
     return biome?.tiles?.[0]?.key ?? null;
   }
   if (to === "biome_rare") {
-    const biome = (BIOMES as Record<string, { name?: string } | undefined>)[biomeKey];
+    const biome = BIOMES[biomeKey];
     if (!biome) return null;
     if (biome.name === "Mine") return "tile_mine_gem";
     return "tile_fruit_blackberry";

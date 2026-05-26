@@ -16,7 +16,7 @@
  * Hotbar pin assignments persist to localStorage (no save-schema bump).
  */
 
-import { forwardRef, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { forwardRef, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 // Cast so callers don't need to supply the `title` prop (it's optional
 // in practice even though Icon.jsx's inferred sig marks it required).
 import _LegacyIconRaw from "./Icon.jsx";
@@ -33,7 +33,7 @@ import type { Dispatch, GameState } from "../types/state.js";
 // state. `armed` here is a boolean (is THIS tool currently the active one)
 // rather than the catalog's `"instant" | "passive" | "tap"` category, so we
 // shadow it by omitting the catalog field.
-interface RuntimeTool extends Omit<ToolEntry, "armed"> {
+export interface RuntimeTool extends Omit<ToolEntry, "armed"> {
   count: number;
   armed?: boolean;
 }
@@ -186,8 +186,7 @@ function IdleView({ inventory, biomeKey, cap }: { inventory: Inventory; biomeKey
   // The mock shows a 4-column grid of resource chips. Trim to the first 12
   // resources of the biome so the grid stays tight and predictable.
   const list = useMemo<BiomeResource[]>(() => {
-    const biomes = BIOMES as Record<string, { resources?: BiomeResource[] }>;
-    return (biomes[biomeKey]?.resources ?? []).slice(0, 12);
+    return (BIOMES[biomeKey]?.resources ?? []).slice(0, 12);
   }, [biomeKey]);
   const ownedCount = list.filter((r) => (inventory?.[r.key] ?? 0) > 0).length;
   return (
@@ -1082,6 +1081,12 @@ const DRAG_LONGPRESS_MS = 220;
 const DRAG_THRESHOLD_PX = 6;
 
 interface DragState { key: string; fromHotbar: boolean; x: number; y: number; suppressClick: boolean }
+
+export interface ToolDragHandle {
+  drag: DragState | null;
+  beginDrag: (key: string, fromHotbar: boolean, ev: ReactPointerEvent<HTMLElement>) => void;
+}
+
 interface PressState {
   key: string;
   fromHotbar: boolean;
@@ -1097,7 +1102,7 @@ interface PinActions {
   remove: (key: string) => void;
 }
 
-export function useToolDrag({ pins, pinActions, maxFitPins }: { pins: Array<string | null>; pinActions: PinActions; maxFitPins: number }) {
+export function useToolDrag({ pins, pinActions, maxFitPins }: { pins: Array<string | null>; pinActions: PinActions; maxFitPins: number }): ToolDragHandle {
   // Active drag state.
   const [drag, setDrag] = useState<DragState | null>(null);
   const dragRef = useRef<DragState | null>(null);
@@ -1210,11 +1215,7 @@ export function useToolDrag({ pins, pinActions, maxFitPins }: { pins: Array<stri
     };
   }, [pinActions, pins, maxFitPins]);
 
-  // Exported as `any` at the JS-interop boundary so the legacy prototype.tsx
-  // call site `state.tools?.[drag?.key]` typechecks (string-or-undefined keys
-  // are rejected by the strict Tools index signature; we accept the local
-  // looseness to avoid touching the JS-style consumer).
-  return { drag: drag as any, beginDrag: beginPress };
+  return { drag, beginDrag: beginPress };
 }
 
 // Floating tile that follows the cursor while a hotbar drag is active.

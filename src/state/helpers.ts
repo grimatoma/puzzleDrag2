@@ -148,7 +148,7 @@ export const xpForLevel = (l: number): number => 50 + l * 80;
  */
 export function resourceByKey(key: string | null | undefined): (Record<string, unknown> & { key: string }) | null {
   if (!key) return null;
-  const item = (ITEMS as Record<string, Record<string, unknown> | undefined>)[key];
+  const item = ITEMS[key];
   if (!item) return null;
   return { key, ...item };
 }
@@ -182,7 +182,7 @@ export function craftedOrderPoolForBiome(biomeKey: string): string[] {
   const keys = new Set<string>();
   for (const rec of Object.values(RECIPES) as RecipeEntry[]) {
     if (!rec?.item || !rec.station || !stations.has(rec.station)) continue;
-    const item = (ITEMS as Record<string, { kind?: string } | undefined>)[rec.item];
+    const item = ITEMS[rec.item];
     if (item?.kind === "resource") keys.add(rec.item);
   }
   return [...keys];
@@ -222,7 +222,7 @@ export function makeOrder(
   excludeOrderKeys: string[] = [],
   npcRoster: string[] = Object.keys(NPCS),
 ): Order {
-  const biome = (BIOMES as Record<string, BiomeEntry>)[biomeKey];
+  const biome: BiomeEntry = BIOMES[biomeKey];
 
   // At level 3+, 30% chance for a crafted item order
   const useCrafted = level >= 3 && Math.random() < CRAFTED_ORDER_CHANCE;
@@ -236,7 +236,7 @@ export function makeOrder(
     const craftedCandidates = craftedPool.filter((k) => !excludeOrderKeys.includes(k));
     const craftedPickPool = craftedCandidates.length ? craftedCandidates : craftedPool;
     key = craftedPickPool[Math.floor(Math.random() * craftedPickPool.length)];
-    const itemDef = (ITEMS as Record<string, { label?: string; value?: number } | undefined>)[key];
+    const itemDef = ITEMS[key];
     need = 1 + Math.floor(Math.random() * 3); // 1–3 crafted items
     reward = Math.round(need * (itemDef?.value || 100) * 1.5);
     resourceLabel = (itemDef?.label || key).toLowerCase();

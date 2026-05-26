@@ -55,8 +55,8 @@ export const initial = {
 // happen in state.runActionEffects after this returns.
 export function reduce(state: GameState, action: Action): GameState {
   switch (action.type) {
-    case 'SETTINGS/TOGGLE': {
-      const key = action.key as string;
+    case "SETTINGS/TOGGLE": {
+      const key = action.key;
       const currentSettings = (state.settings ?? {}) as Record<string, unknown>;
       const settings = {
         ...currentSettings,
@@ -65,8 +65,8 @@ export function reduce(state: GameState, action: Action): GameState {
       return { ...state, settings };
     }
 
-    case 'SETTINGS/SET_TAB':
-      return { ...state, settingsTab: action.tab as string };
+    case "SETTINGS/SET_TAB":
+      return { ...state, settingsTab: action.tab };
 
     case 'SETTINGS/OPEN_DEBUG':
       return { ...state, modal: 'debug' };

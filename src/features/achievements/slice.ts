@@ -23,23 +23,9 @@ type AchievementsHostState = GameState & {
   chainsThisSeason?: number;
   totalOrders?: number;
   totalCrafted?: number;
-  orders?: Array<{ id: string; key: string; need: number }>;
+  orders?: Array<{ id: number; key: string; need?: number; amount?: number }>;
   inventory?: Record<string, number>;
 };
-
-interface ChainTile { key: string }
-interface ChainPayload {
-  chain?: ChainTile[];
-  key?: string;
-  gained?: number;
-  chainLength?: number;
-  upgrades?: number;
-}
-
-interface BuildPayload { key?: string }
-interface BossResolvePayload { won?: boolean }
-interface ConvertSupplyPayload { qty?: number }
-interface TurnInOrderAction { id?: string }
 
 // Tick one or more counters, accumulating into state.achievements canonical shape.
 function tick(state: GameState, counter: string, value: number = 1, key?: string): GameState {
@@ -53,8 +39,8 @@ export function reduce(state: GameState, action: Action): GameState {
   const s = state as unknown as AchievementsHostState;
   switch (action.type) {
     case "CHAIN_COLLECTED": {
-      const payload: ChainPayload = (action.payload as ChainPayload | undefined) ?? (action as unknown as ChainPayload);
-      if (Array.isArray(payload.chain) && payload.chain.length > 0 && payload.chain.every((t: ChainTile) => t.key === "rat")) {
+      const payload = action.payload;
+      if (Array.isArray(payload.chain) && payload.chain.length > 0 && payload.chain.every((t: { key?: string }) => t.key === "rat")) {
         return state;
       }
       const actualKey = payload.key;
@@ -117,22 +103,20 @@ export function reduce(state: GameState, action: Action): GameState {
     }
 
     case "TURN_IN_ORDER": {
-      const turnAction = action as unknown as TurnInOrderAction;
-      const order = (s.orders || []).find((o: { id: string; key: string; need: number }) => o.id === turnAction.id);
-      if (!order || ((s.inventory || {})[order.key] || 0) < order.need) return state;
+      const order = (s.orders || []).find((o) => o.id === action.id);
+      const needed = (order?.need ?? order?.amount) ?? 0;
+      if (!order || ((s.inventory || {})[order.key] || 0) < needed) return state;
       const next: GameState = { ...state, totalOrders: (s.totalOrders || 0) + 1 } as GameState;
       return tick(next, "orders_fulfilled", 1);
     }
 
     case "BUILD": {
-      const payload = action.payload as BuildPayload | undefined;
-      const buildKey: string | undefined = payload?.key ?? (action as unknown as BuildPayload).key;
+      const buildKey = action.building?.id ?? action.payload?.id;
       return tick(state, "distinct_buildings_built", 1, buildKey);
     }
 
     case "BOSS/RESOLVE": {
-      const payload = action.payload as BossResolvePayload | undefined;
-      const won = payload?.won ?? (action as unknown as BossResolvePayload).won;
+      const won = action.won;
       if (won === true) return tick(state, "bosses_defeated", 1);
       return state;
     }
@@ -175,8 +159,7 @@ export function reduce(state: GameState, action: Action): GameState {
     }
 
     case "CONVERT_TO_SUPPLY": {
-      const payload = action.payload as ConvertSupplyPayload | undefined;
-      const qty = Math.max(1, (payload?.qty ?? 0) | 0);
+      const qty = Math.max(1, (action.payload?.qty ?? 0) | 0);
       return tick(state, "supplies_converted", qty);
     }
 

@@ -76,7 +76,7 @@ for (const scenario of VISUAL_SCENARIOS) {
     console.log(`[visual] ${scenario.id}: ${scenario.expectation}`);
     test.skip(testInfo.project.name === "desktop", "Full visual tests run only on mobile projects.");
     test.skip(
-      scenario.skipProjects?.includes(testInfo.project.name),
+      Boolean(scenario.skipProjects?.includes(testInfo.project.name)),
       `${scenario.id} is intentionally skipped for ${testInfo.project.name}`,
     );
 

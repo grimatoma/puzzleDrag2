@@ -210,7 +210,7 @@ export function applyToolPower(state: GameState, key: string | null | undefined,
     const tools = state.tools;
     const cur = key ? tools?.[key] : undefined;
     if (key && typeof cur === "number" && cur <= 0) return state;
-    const itemPower = key ? ((ITEMS as Record<string, { power?: ToolPower } | undefined>)[key]?.power) : undefined;
+    const itemPower = key ? ITEMS[key]?.power : undefined;
     const bubbleText = (power.bubble ?? itemPower?.bubble) as string | null | undefined ?? null;
     let next: GameState = {
       ...state,
@@ -225,11 +225,11 @@ export function applyToolPower(state: GameState, key: string | null | undefined,
     case "clear_all": {
       const spent = _spendToolCharge(state, key);
       if (spent === null) return state;
-      const targetKey = (params.target as string | undefined) ?? (key ? ((ITEMS as Record<string, { target?: string } | undefined>)[key]?.target) : undefined);
+      const targetKey = (params.target as string | undefined) ?? (key ? ITEMS[key]?.target : undefined);
       if (!targetKey) return spent;
       const { state: cleared, collected } = clearTilesOfKey(spent, targetKey);
       if (collected === 0) {
-        const targetItem = (ITEMS as Record<string, { label?: string } | undefined>)[targetKey];
+        const targetItem = ITEMS[targetKey];
         const label =
           targetKey === "*"
             ? "matching tiles"

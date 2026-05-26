@@ -120,20 +120,6 @@ function startFreshRun(state: GameState, { biome, zoneId, mode, supply, fertiliz
   return { ...state, runSummary: fresh } as GameState;
 }
 
-interface ChainPayload {
-  noTurn?: boolean;
-  gains?: Record<string, number>;
-  chainLength?: number;
-  gained?: number;
-  key?: string;
-  upgrades?: number;
-  value?: number;
-}
-
-interface BeatPayload {
-  firedBeat?: { id?: string; title?: string };
-}
-
 export function reduce(state: GameState, action: Action): GameState {
   const s = state as unknown as RunHostState;
   switch (action.type) {
@@ -160,7 +146,7 @@ export function reduce(state: GameState, action: Action): GameState {
     case "CHAIN_COLLECTED": {
       const run = s.runSummary;
       if (!run) return maybeAutoOpen(state);
-      const payload = (action.payload as ChainPayload | undefined) ?? {};
+      const payload = action.payload;
       if (payload.noTurn) return maybeAutoOpen(state);
       if (payload.gains) {
         const gains: Record<string, number> = { ...(run.resourcesGained ?? {}) };
@@ -208,8 +194,7 @@ export function reduce(state: GameState, action: Action): GameState {
     case "STORY/BEAT_FIRED": {
       const run = s.runSummary;
       if (!run) return state;
-      const payload = action.payload as BeatPayload | undefined;
-      const fired = payload?.firedBeat;
+      const fired = action.payload.firedBeat as { id?: string; title?: string | null } | undefined;
       if (!fired?.id) return state;
       const entry: BeatTriggered = { id: fired.id, title: fired.title ?? null };
       if (run.beatsTriggered.some((b: BeatTriggered) => b.id === entry.id)) return state;

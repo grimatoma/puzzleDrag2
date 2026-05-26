@@ -20,8 +20,7 @@ interface DecorationDef {
 export function reduce(state: GameState, action: Action): GameState {
   if (action.type !== "BUILD_DECORATION") return state;
 
-  const payload = (action.payload as { id?: string } | undefined) ?? {};
-  const id = payload.id;
+  const id = action.payload.id;
   if (!id) return state;
   const decorationsMap = DECORATIONS as Record<string, DecorationDef | undefined>;
   const def = decorationsMap[id];

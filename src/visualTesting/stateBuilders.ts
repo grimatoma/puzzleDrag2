@@ -127,7 +127,7 @@ function order(id: string, npc: string, key: string, need: number, have: number,
     amount: need,
     reward,
     baseReward: reward,
-    line: `Could you bring ${need} ${(ITEMS as Record<string, { label?: string } | undefined>)[key]?.label ?? key}?`,
+    line: `Could you bring ${need} ${ITEMS[key]?.label ?? key}?`,
     _visualHave: have,
   };
 }

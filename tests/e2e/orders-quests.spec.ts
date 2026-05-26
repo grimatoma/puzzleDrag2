@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { gotoFresh, getReactState, waitForState, dispatchAction } from './helpers.js';
+import { gotoFresh, getReactState, waitForState, dispatchAction } from './helpers';
 
 /**
  * Orders + quests / dailies. Orders live at state.orders[]; turning one in
@@ -12,7 +12,7 @@ import { gotoFresh, getReactState, waitForState, dispatchAction } from './helper
  * progress as the player chains, crafts, etc.
  */
 
-async function withOrder(page, key, need, reward, extras = {}) {
+async function withOrder(page, key, need, reward, extras: { invExtra?: number } = {}) {
   // Force-write a single order via direct seed. The orders slice rolls its
   // own list at boot; for deterministic testing we plug one in. The reducer
   // expects npc + reward (or baseReward) on the order shape — without npc,

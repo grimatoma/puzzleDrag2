@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { gotoFresh, getReactState, waitForState, dispatchAction } from './helpers.js';
+import { gotoFresh, getReactState, waitForState, dispatchAction } from './helpers';
 
 /**
  * Biome switching coverage. The game runs three boards: Farm (default),

@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { gotoFresh, getReactState, waitForState, dispatchAction } from './helpers.js';
+import { gotoFresh, getReactState, waitForState, dispatchAction } from './helpers';
 
 /**
  * Hazards. Rats are the farm-biome pest; chaining 3+ rat tiles clears them

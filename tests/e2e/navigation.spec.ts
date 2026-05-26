@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import {
   gotoFresh, getReactState, dispatchAction, waitForState, chainUntil,
-} from './helpers.js';
+} from './helpers';
 
 test('navigate to Town shows Hearthwood Vale', async ({ page }) => {
   await gotoFresh(page);

@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { gotoFresh, getReactState, waitForState, dispatchAction } from './helpers.js';
+import { gotoFresh, getReactState, waitForState, dispatchAction } from './helpers';
 
 test.describe('CUJ: tools + hotbar journeys', () => {
   test('arming from dropdown closes modal and sets armed state', async ({ page }) => {

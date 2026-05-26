@@ -582,3 +582,30 @@ Plan complete. Two execution options:
 2. **Inline Execution** — execute tasks in this session using `executing-plans`. Better for Phase 0 (audit, all read-only) since context-sharing helps. Worse for Phase 3 (load-bearing, many files).
 
 Suggested: Phase 0 + Phase 1 inline (one session, ~1 hour). Each subsequent phase its own subagent-driven run.
+
+---
+
+## Remaining migration status (2026-05-26, branch `codex/type-constants-catalogs`)
+
+**Completed on this branch (no further action unless regressions):**
+
+- [x] **Runtime `src/` + `prototype.tsx`** — typed catalogs, action union, ESLint `@typescript-eslint/no-explicit-any` error, CI `typecheck`.
+- [x] **Playwright + Vitest harness** — all `tests/e2e/*.spec.js`, `tests/visual/*.spec.js`, and `tests/e2e/helpers.js` renamed to `.ts`; `src/__tests__/setup.js` → `setup.ts`; `tests/playwright-env.d.ts` for `window.__phaserScene` / `__hearthVisual`.
+- [x] **`tsconfig.tests.json` + `npm run typecheck:tests`** — typechecks Playwright specs and setup (relaxed `strict` for harness; does not yet include all `src/__tests__/*.test.ts` — those need GameState fixture typing first).
+- [x] **CI** — `action-types:check` on `typecheck` job; new `typecheck-tests` job; `tests/phase-12-ci.test.ts` updated.
+- [x] **Visual golden paths** — `__goldens__/*desktop-smoke.spec.js` dirs renamed to `.spec.ts` to match Playwright snapshot template.
+
+**Still open / optional:**
+
+- [ ] **Merge** `codex/type-constants-catalogs` → `main` when PR checks are green (user-driven).
+- [x] **`tsc` over unit Vitest files** — incremental: `src/testUtils/testState.ts` (`mergeTestState` / `unsafeGameState` / `testAction`) + `docs/engineering/typed-tests.md`; `coverage-round-2.test.ts` migrated as the reference pattern. Widening `tsconfig.tests.json` to all `**/*.test.ts` still ~1.7k errors without migrating each file; do in batches.
+- [ ] **Deep `GameState` typing** — narrow `unknown` bags (`boss`, hazards, etc.) incrementally.
+- [ ] **E2E smoke** — re-run `npm run test:e2e` locally/CI; fix any flakes unrelated to TS rename if they block merge.
+
+**Quick verify:**
+
+```bash
+npm run lint && npm run typecheck && npm run typecheck:tests && npm run action-types:check
+npm run build && npm test
+npm run test:e2e -- tests/e2e/smoke.spec.ts
+```

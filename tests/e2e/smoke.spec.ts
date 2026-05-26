@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { gotoFresh, getReactState, dispatchAction } from './helpers.js';
+import { gotoFresh, getReactState, dispatchAction } from './helpers';
 
 test('initial load: boots on Town view, HUD + bottom nav render without errors', async ({ page }) => {
   const errors = [];

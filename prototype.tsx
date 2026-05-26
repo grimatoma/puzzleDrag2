@@ -2,6 +2,10 @@ import React, { useEffect, useReducer, useRef, useState } from "react";
 import { COLS, ROWS, TILE, SCENE_EVENTS } from "./src/constants.js";
 import { runSelfTests, currentCap } from "./src/utils.js";
 import { gameReducer, initialState } from "./src/state.js";
+import type Phaser from "phaser";
+import type { GameScene } from "./src/GameScene.js";
+import type { GameState, Grid, Action as GameAction, ChainCollectedPayload } from "./src/types/state.js";
+import type { ChainInfo, RuntimeTool } from "./src/ui/puzzleBoard.jsx";
 import { Hud } from "./src/ui/Hud.jsx";
 import { TownView } from "./src/ui/Town.jsx";
 import { NpcBubble, StoryModal } from "./src/ui/Modals.jsx";
@@ -36,7 +40,20 @@ import { TOOL_BY_KEY, isTapTargetTool } from "./src/ui/toolRegistry.js";
 // The shared window augmentation lives in src/visualTesting/global.d.ts so
 // every module agrees on the shape of __phaserScene and friends.
 
-import type { Action as GameAction } from "./src/types/state";
+/** Phaser.Game instance with board sleep/wake bookkeeping from prototype. */
+interface HearthPhaserGame extends Phaser.Game {
+  __boardRuntimeActive?: boolean;
+  __resizeObserver?: ResizeObserver;
+}
+
+/** Canvas-local coords for REWARD_BURST → RewardChipsLayer. */
+interface RewardBurstPayload {
+  canvasX: number;
+  canvasY: number;
+  canvasW: number;
+  canvasH: number;
+  coins: number;
+}
 
 function BoardSkeleton() {
   return (
@@ -61,7 +78,7 @@ function BoardSkeleton() {
   );
 }
 
-function setBoardRuntimeActive(game: any, active: boolean): void {
+function setBoardRuntimeActive(game: HearthPhaserGame | null, active: boolean): void {
   if (!game || game.__boardRuntimeActive === active) return;
   const scene = game.scene?.getScene?.("GameScene") ?? game.scene?.scenes?.[0];
   if (!scene) return;
@@ -72,23 +89,23 @@ function setBoardRuntimeActive(game: any, active: boolean): void {
 
 interface PhaserMountProps {
   dispatch: React.Dispatch<GameAction>;
-  biomeKey: any;
-  turnsUsed: any;
+  biomeKey: GameState["biomeKey"];
+  turnsUsed: GameState["turnsUsed"];
   uiLocked: boolean;
   boardActive: boolean;
-  sceneRef: React.MutableRefObject<any>;
-  toolPending: any;
-  toolPendingPower: any;
-  setChainInfo: (info: any) => void;
-  workers: any;
-  tileCollection: any;
-  gameState: any;
-  grid: any;
+  sceneRef: React.MutableRefObject<GameScene | null>;
+  toolPending: GameState["toolPending"];
+  toolPendingPower: GameState["toolPendingPower"];
+  setChainInfo: (info: ChainInfo | null) => void;
+  workers: GameState["workers"];
+  tileCollection: GameState["tileCollection"];
+  gameState: GameState;
+  grid: Grid;
 }
 
 function PhaserMount({ dispatch, biomeKey, turnsUsed, uiLocked, boardActive, sceneRef, toolPending, toolPendingPower, setChainInfo, workers, tileCollection, gameState, grid }: PhaserMountProps) {
   const hostRef = useRef<HTMLDivElement>(null);
-  const gameRef = useRef<any>(null);
+  const gameRef = useRef<HearthPhaserGame | null>(null);
   const [loading, setLoading] = useState(true);
   const notifier = useNotifier();
   const notifierRef = useRef(notifier);
@@ -145,7 +162,7 @@ function PhaserMount({ dispatch, biomeKey, turnsUsed, uiLocked, boardActive, sce
           // "AudioContext was not allowed to start" warning.
           audio: { noAudio: true },
           callbacks: {
-            preBoot: (game: any) => {
+            preBoot: (game: HearthPhaserGame) => {
               game.registry.set("biomeKey", biomeKey);
               game.registry.set("turnsUsed", turnsUsed);
               game.registry.set("turnBudget", gameState?.farmRun?.turnBudget ?? null);
@@ -162,11 +179,11 @@ function PhaserMount({ dispatch, biomeKey, turnsUsed, uiLocked, boardActive, sce
               game.registry.set("activeZone", gameState?.activeZone ?? gameState?.mapCurrent ?? "home");
               // Reload restoration: pass the saved board grid so GameScene can
               // apply it over the initial random fill when continuing a session.
-              if (gameState?.farmRun?.turnsRemaining > 0) {
+              if ((gameState?.farmRun?.turnsRemaining ?? 0) > 0) {
                 game.registry.set("boardRestoreGrid", gameState.grid ?? null);
               }
             },
-            postBoot: (game: any) => {
+            postBoot: (game: HearthPhaserGame) => {
               // Track host CSS-size changes and resize the game's backing
               // store to match cssSize × dpr; ScaleManager.zoom keeps the
               // canvas displayed at cssSize.
@@ -179,14 +196,16 @@ function PhaserMount({ dispatch, biomeKey, turnsUsed, uiLocked, boardActive, sce
               ro.observe(host);
               game.__resizeObserver = ro;
 
-              const scene = game.scene.scenes[0];
+              const scene = game.scene.scenes[0] as GameScene;
               sceneRef.current = scene;
               setPhaserScene(scene);
               if (typeof window !== "undefined") window.__phaserScene = scene;
-              scene.events.on(SCENE_EVENTS.CHAIN_COLLECTED, (payload: unknown) => dispatch({ type: "CHAIN_COLLECTED", payload }));
+              scene.events.on(SCENE_EVENTS.CHAIN_COLLECTED, (payload: ChainCollectedPayload) =>
+                dispatch({ type: "CHAIN_COLLECTED", payload }),
+              );
               scene.events.on(SCENE_EVENTS.FERTILIZER_CONSUMED, () => dispatch({ type: "FERTILIZER/CONSUMED" }));
-              scene.events.on(SCENE_EVENTS.GRID_SYNC, ({ grid: g }: { grid: unknown }) => dispatch({ type: "GRID/SYNC", payload: { grid: g } }));
-              scene.events.on(SCENE_EVENTS.CHAIN_UPDATE, (data: unknown) => setChainInfo(data));
+              scene.events.on(SCENE_EVENTS.GRID_SYNC, ({ grid: g }: { grid: Grid }) => dispatch({ type: "GRID/SYNC", payload: { grid: g } }));
+              scene.events.on(SCENE_EVENTS.CHAIN_UPDATE, (data: ChainInfo | null) => setChainInfo(data));
               scene.events.on(SCENE_EVENTS.CHAIN_FLOAT_TEXT, ({ text }: { text: string }) => {
                 const t = notifierRef.current?.toast as ((opts: { text: string; tone?: string; duration?: number }) => void) | undefined;
                 t?.({ text, tone: "moss", duration: 1600 });
@@ -194,7 +213,7 @@ function PhaserMount({ dispatch, biomeKey, turnsUsed, uiLocked, boardActive, sce
               scene.events.on(SCENE_EVENTS.TOOL_FIRED, ({ key, row, col }: { key: string; row: number; col: number }) =>
                 dispatch({ type: "TOOL_FIRED", key, row, col }),
               );
-              scene.events.on(SCENE_EVENTS.REWARD_BURST, (data: any) => {
+              scene.events.on(SCENE_EVENTS.REWARD_BURST, (data: RewardBurstPayload) => {
                 const canvas = scene?.game?.canvas;
                 if (!canvas || !data.coins) return;
                 const rect = canvas.getBoundingClientRect();
@@ -245,15 +264,17 @@ function PhaserMount({ dispatch, biomeKey, turnsUsed, uiLocked, boardActive, sce
   useEffect(() => { gameRef.current?.registry.set("toolPending", toolPending ?? null); }, [toolPending]);
   useEffect(() => { gameRef.current?.registry.set("toolPendingPower", toolPendingPower ?? null); }, [toolPendingPower]);
   useEffect(() => { gameRef.current?.registry.set("workers", workers ?? null); }, [workers]);
-  useEffect(() => { gameRef.current?.registry.set("hapticsOn", gameState?.settings?.hapticsOn ?? true); }, [gameState?.settings?.hapticsOn]);
+  const settingsHapticsOn = (gameState as GameState & { settings?: { hapticsOn?: boolean } }).settings?.hapticsOn;
+  useEffect(() => {
+    gameRef.current?.registry.set("hapticsOn", settingsHapticsOn ?? true);
+  }, [settingsHapticsOn]);
   useEffect(() => { gameRef.current?.registry.set("tileCollectionActive", tileCollection?.activeByCategory ?? null); }, [tileCollection?.activeByCategory]);
   useEffect(() => { gameRef.current?.registry.set("tileCollectionDiscovered", tileCollection?.discovered ?? null); }, [tileCollection?.discovered]);
   useEffect(() => { gameRef.current?.registry.set("built", gameState?.built ?? null); }, [gameState?.built]);
   useEffect(() => { gameRef.current?.registry.set("fillBiasTarget", gameState?.fillBiasTarget ?? null); }, [gameState?.fillBiasTarget]);
   useEffect(() => {
-    const scene = gameRef.current?.scene?.getScene?.("Game");
-    scene?._syncWorkerEffects?.();
-  }, [workers, gameState?.built, gameState?.activeZone, gameState?.mapCurrent, tileCollection?.activeByCategory, tileCollection?.discovered]);
+    sceneRef.current?._syncWorkerEffects();
+  }, [sceneRef, workers, gameState?.built, gameState?.activeZone, gameState?.mapCurrent, tileCollection?.activeByCategory, tileCollection?.discovered]);
   // Sync grid state → Phaser registry so hazard engines see real tile keys
   useEffect(() => { gameRef.current?.registry.set("grid", grid ?? null); }, [grid]);
   // Sync biomeRestored flag so GameScene.handleBiomeChange can skip randomize when savedField restored
@@ -287,33 +308,36 @@ const DUST_MOTES = Array.from({ length: 14 }, (_, i) => ({
 }));
 
 export default function App() {
-  // gameReducer and initialState are JS-only (checkJs: false); cast to any so
-  // tsc resolves the correct useReducer overload and state/dispatch are `any`.
-  const [state, dispatch] = useReducer(
-    gameReducer as React.Reducer<any, GameAction>,
-    undefined as any,
-    initialState as (arg: any) => any,
-  );
+  const [state, dispatch] = useReducer(gameReducer, undefined, initialState);
   const viewDirection = useViewDirection(state.view);
-  const [chainInfo, setChainInfo] = useState<any>(null);
-  const [inspectedTool, setInspectedTool] = useState<any>(null);
+  const [chainInfo, setChainInfo] = useState<ChainInfo | null>(null);
+  const [inspectedTool, setInspectedTool] = useState<RuntimeTool | null>(null);
   const [toolModalOpen, setToolModalOpen] = useState(false);
   const [inventorySearchOpen, setInventorySearchOpen] = useState(false);
   const [pins, pinActions] = usePinnedTools();
   const hotbarRef = useRef<HTMLDivElement>(null);
   const maxFitPins = useMaxFitPins(hotbarRef);
   const { drag, beginDrag } = useToolDrag({ pins, pinActions, maxFitPins });
-  const sceneRef = useRef<any>(null);
+  const sceneRef = useRef<GameScene | null>(null);
   const stateRef = useRef(state);
   const storyModalOpen = !!state.story?.queuedBeat;
   const armedTool = state.toolPending ? state.tools ? { key: state.toolPending, count: state.tools[state.toolPending] ?? 0 } : null : null;
   const armedTapTarget = !!state.toolPending && isTapTargetTool(state.toolPending);
-  const turnBudget = state.farmRun?.turnBudget ?? 0;
+  const turnBudgetRaw = state.farmRun?.turnBudget;
+  const turnBudget = typeof turnBudgetRaw === "number" ? turnBudgetRaw : 0;
   const seasonIdx = seasonIndexInSession(state.turnsUsed ?? 0, turnBudget || 1);
   const inspectedKey = inspectedTool?.key ?? state.toolPending ?? null;
   const dragTool = drag ? TOOL_BY_KEY[drag.key] : null;
   const dragToolWithCount = dragTool
-    ? { ...dragTool, count: state.tools?.[drag?.key] ?? 0, armed: state.toolPending === drag?.key }
+    ? {
+        ...dragTool,
+        count: (() => {
+          if (!drag?.key) return 0;
+          const n = state.tools?.[drag.key];
+          return typeof n === "number" ? n : 0;
+        })(),
+        armed: state.toolPending === drag?.key,
+      }
     : null;
   const infoPanelEl = (
     <PuzzleActionPanel

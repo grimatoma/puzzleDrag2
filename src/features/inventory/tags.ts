@@ -28,7 +28,7 @@ function baseTagForKind(kind: string | undefined): string {
 }
 
 export function tagsForItemKey(key: string): string[] {
-  const item: ItemDef | undefined = (ITEMS as Record<string, ItemDef | undefined>)[key];
+  const item: ItemDef | undefined = ITEMS[key];
   const tags = new Set<string>([baseTagForKind(item?.kind)]);
 
   if (FOOD_KEYS.has(key)) tags.add(INVENTORY_TAGS.FOOD);
@@ -47,7 +47,7 @@ export interface SourceTagsOpts {
 }
 
 export function sourceTagsForItem(key: string, { recipesByOutput = {} }: SourceTagsOpts = {}): string[] {
-  const item: ItemDef | undefined = (ITEMS as Record<string, ItemDef | undefined>)[key];
+  const item: ItemDef | undefined = ITEMS[key];
   const tags = new Set<string>();
   const biome = item?.biome;
   if (biome === "farm") tags.add(INVENTORY_SOURCE_TAGS.FARM);

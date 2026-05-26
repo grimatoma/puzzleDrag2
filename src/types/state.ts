@@ -248,30 +248,29 @@ export interface GameState {
   floaters?: unknown[];
   /**
    * Boss-related extras (set when an encounter is active). The precise shape
-   * lives in src/features/boss/slice.ts as `BossState`; we keep it as
-   * `unknown` here so the canonical state type doesn't need to import a
-   * feature module, and so feature slices can attach extra fields freely.
-   * Callers should narrow with the BossState type when reading the field.
+   * lives in `BossState` in `src/features/boss/slice.ts`; runtime may attach
+   * partial or transitional objects — narrow at the call site when needed.
    */
   boss?: unknown | null;
   // Anything else that feature slices spread in via `...slice.initial`.
   [extra: string]: unknown;
 }
 
-// ── Action ────────────────────────────────────────────────────────────────
+// ── Action (discriminated union in actionPayloads.ts) ─────────────────────
 
-/**
- * Generic action shape. Each action has a `type` discriminator (86 distinct
- * types across the codebase, e.g. "CHAIN_COLLECTED", "BOSS/TRIGGER",
- * "CARTO/TRAVEL"). Per-action payload fields are accessed by narrowing on
- * `type` or via property access; `unknown` keeps call sites honest.
- */
-export interface Action {
-  type: string;
-  readonly [key: string]: unknown;
-}
+export type { Action, TypedAction, GenericAction, TypedActionType } from "./actionPayloads.js";
+export type {
+  ChainCollectedPayload,
+  ChainCollectedAction,
+  ToolFiredAction,
+  UseToolAction,
+  GridSyncAction,
+  SetViewAction,
+} from "./actionPayloads.js";
 
 // ── Reducer + dispatch ────────────────────────────────────────────────────
+
+import type { Action } from "./actionPayloads.js";
 
 export type Reducer<S = GameState> = (state: S, action: Action) => S;
 

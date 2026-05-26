@@ -30,7 +30,7 @@ export default function OrdersScreen({ state, dispatch }: OrdersScreenProps) {
           const done = have >= needed;
           const npc = (NPCS as Record<string, { name: string; color: string } | undefined>)[o.npc];
           if (!npc) return null;
-          const itemDef = (ITEMS as Record<string, { kind?: string; biome?: string; color?: number } | undefined>)[o.key] || {};
+          const itemDef = ITEMS[o.key] || {};
           const isCrafted = itemDef.kind === "resource" && !itemDef.biome;
           // Phase 6.1: bond chip
           const bond = (state.npcs?.bonds as Record<string, number> | undefined)?.[o.npc] ?? 5;
