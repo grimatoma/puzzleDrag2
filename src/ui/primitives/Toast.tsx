@@ -20,6 +20,7 @@ interface ToastEntry {
   icon?: string;
   duration?: number;
   stagger?: number;
+  ariaLive?: "assertive" | "polite";
 }
 
 interface BubbleEntry {

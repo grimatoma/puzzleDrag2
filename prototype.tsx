@@ -313,7 +313,7 @@ export default function App() {
   const inspectedKey = inspectedTool?.key ?? state.toolPending ?? null;
   const dragTool = drag ? TOOL_BY_KEY[drag.key] : null;
   const dragToolWithCount = dragTool
-    ? { ...dragTool, count: state.tools?.[drag?.key] ?? 0, armed: state.toolPending === drag?.key }
+    ? { ...dragTool, count: drag?.key ? (state.tools?.[drag.key] ?? 0) : 0, armed: state.toolPending === drag?.key }
     : null;
   const infoPanelEl = (
     <PuzzleActionPanel

@@ -3,7 +3,7 @@ import { play, setEnabled, unlock } from './index.js';
 import type { GameState } from "../types/state.js";
 
 /** Subset of GameState fields read by the audio hook. */
-type AudioGameState = Pick<GameState, "turnsUsed" | "level" | "bubble" | "modal" | "coins" | "runes" | "biomeKey"> & {
+type AudioGameState = Partial<Pick<GameState, "turnsUsed" | "level" | "bubble" | "modal" | "coins" | "runes" | "biomeKey">> & {
   lastChainLength?: number;
   built?: Record<string, unknown>;
   craftedTotals?: Record<string, number>;

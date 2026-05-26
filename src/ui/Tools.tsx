@@ -2,27 +2,17 @@ import { useEffect, useState } from "react";
 import IconCanvas from "./IconCanvas.jsx";
 import ToolStrip from "./primitives/ToolStrip.jsx";
 import BottomSheet from "./primitives/BottomSheet.jsx";
-import { TOOL_CATALOG, TOOL_BY_KEY, visibleTools, isTapTargetTool } from "./toolRegistry.js";
+import { TOOL_CATALOG, TOOL_BY_KEY, visibleTools, isTapTargetTool, type ToolEntry as CatalogToolEntry } from "./toolRegistry.js";
 import { isFillBiasArmed } from "../state/fillBias.js";
 import type { Dispatch, GameState } from "../types/state.js";
 
-type AnyState = GameState & Record<string, any>;
-
-interface ToolDef {
-  key: string;
-  iconKey: string;
-  name: string;
-  desc?: string;
-  category?: string;
-}
-
-interface ToolEntry {
+interface ToolStripEntry {
   key: string;
   iconKey: string;
   label: string;
   count: number;
   category: string | undefined;
-  def: ToolDef;
+  def: CatalogToolEntry;
   disabled: boolean;
   armed: boolean;
 }
@@ -32,9 +22,9 @@ export const TOOL_DEFS = TOOL_CATALOG;
 function buildToolList(
   toolsState: Record<string, number> | null | undefined,
   { toolPending, fillBiasArmed }: { toolPending?: string | null; fillBiasArmed?: boolean },
-): ToolEntry[] {
+): ToolStripEntry[] {
   const tools: Record<string, number> = toolsState || {};
-  return (visibleTools(tools) as ToolDef[]).map((def) => {
+  return visibleTools(tools).map((def) => {
     const count = tools[def.key] || 0;
     const armed =
       toolPending === def.key ||
@@ -53,7 +43,7 @@ function buildToolList(
 }
 
 interface ToolInspectSheetProps {
-  tool: ToolDef | null;
+  tool: CatalogToolEntry | null;
   count: number;
   onClose: () => void;
   onUse?: (key: string) => void;
@@ -103,36 +93,30 @@ function ToolInspectSheet({ tool, count, onClose, onUse }: ToolInspectSheetProps
   );
 }
 
-// Mirrors the disarm rule in puzzleBoard.jsx: only one tool can be "selected"
-// (armed or used) at a time. Picking up a different tool implicitly cancels
-// whatever was previously armed. See disarmOtherTools there for the full
-// rationale; fillBiasArmed is its own flag so re-dispatching USE_TOOL
-// fertilizer is the disarm + refund path for it.
-function disarmOtherTools(dispatch: Dispatch, key: string, state: AnyState) {
-  if (state?.toolPending && state.toolPending !== key) {
+function disarmOtherTools(dispatch: Dispatch, key: string, state: GameState) {
+  if (state.toolPending && state.toolPending !== key) {
     dispatch({ type: "CANCEL_TOOL" });
   }
-  if (state?.fillBiasArmed && key !== "fertilizer") {
+  if (isFillBiasArmed(state) && key !== "fertilizer") {
     dispatch({ type: "USE_TOOL", key: "fertilizer" });
   }
 }
 
-function dispatchUseTool(dispatch: Dispatch, key: string, state: AnyState) {
+function dispatchUseTool(dispatch: Dispatch, key: string, state: GameState) {
   const isPending = state.toolPending === key;
   if (isPending) {
     dispatch({ type: "CANCEL_TOOL" });
     return;
   }
   disarmOtherTools(dispatch, key, state);
-  const def = (TOOL_BY_KEY as Record<string, ToolDef | undefined>)[key];
-  if (def?.category === "magic") {
+  const def = TOOL_BY_KEY[key];
+  if ((def?.category as string) === "magic") {
     dispatch({ type: "USE_TOOL", payload: { id: key } });
   } else {
     dispatch({ type: "USE_TOOL", key });
   }
   if (key === "shuffle") {
     dispatch({ type: "USE_TOOL", payload: { id: "shuffle" } });
-    return;
   }
 }
 
@@ -141,13 +125,13 @@ interface ToolsGridProps {
   toolPending?: string | null;
   fillBiasArmed?: boolean;
   onUse?: (key: string) => void;
-  onInspectChange?: (tool: ToolDef | null) => void;
+  onInspectChange?: (tool: CatalogToolEntry | null) => void;
 }
 
 export function ToolsGrid({ tools, toolPending, fillBiasArmed, onUse, onInspectChange }: ToolsGridProps) {
   const [inspectKey, setInspectKey] = useState<string | null>(null);
   const list = buildToolList(tools, { toolPending, fillBiasArmed });
-  const inspectTool = inspectKey ? ((TOOL_BY_KEY as Record<string, ToolDef | undefined>)[inspectKey] ?? null) : null;
+  const inspectTool = inspectKey ? (TOOL_BY_KEY[inspectKey] ?? null) : null;
   const inspectCount = inspectKey != null ? (tools?.[inspectKey] ?? 0) : 0;
   useEffect(() => {
     onInspectChange?.(inspectTool);
@@ -173,9 +157,9 @@ export function ToolsGrid({ tools, toolPending, fillBiasArmed, onUse, onInspectC
 }
 
 interface MobileDockProps {
-  state: AnyState;
+  state: GameState;
   dispatch: Dispatch;
-  onInspectChange?: (tool: ToolDef | null) => void;
+  onInspectChange?: (tool: CatalogToolEntry | null) => void;
 }
 
 export function MobileDock({ state, dispatch, onInspectChange }: MobileDockProps) {
@@ -190,14 +174,14 @@ export function MobileDock({ state, dispatch, onInspectChange }: MobileDockProps
   }, [state.view]);
 
   const totalTools = Object.entries(state.tools || {})
-    .filter(([k, v]) => typeof v === "number" && v > 0 && (TOOL_BY_KEY as Record<string, ToolDef | undefined>)[k])
+    .filter(([k, v]) => typeof v === "number" && v > 0 && TOOL_BY_KEY[k])
     .reduce((s, [, v]) => s + (v as number), 0);
   const closeSheet = () => setSheet(null);
   const list = buildToolList(state.tools as Record<string, number>, {
     toolPending: state.toolPending,
     fillBiasArmed: isFillBiasArmed(state),
   });
-  const inspectTool = inspectKey ? ((TOOL_BY_KEY as Record<string, ToolDef | undefined>)[inspectKey] ?? null) : null;
+  const inspectTool = inspectKey ? (TOOL_BY_KEY[inspectKey] ?? null) : null;
   const inspectCount = inspectKey != null ? (Number(state.tools?.[inspectKey]) || 0) : 0;
   useEffect(() => {
     onInspectChange?.(inspectTool);

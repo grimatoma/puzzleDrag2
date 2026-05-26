@@ -6,13 +6,13 @@ import { createPortal } from "react-dom";
 // tip: null | { data, x, y }
 // handlers(data) returns the full set of mouse/touch event props with all
 // mobile fixes applied (synthetic-mouseleave guard, 2s touch dismiss, etc.)
-export interface TipState<D = any> {
+export interface TipState<D = unknown> {
   data: D;
   x: number;
   y: number;
 }
 
-export function useTooltip<D = any>() {
+export function useTooltip<D = unknown>() {
   const [tip, setTip] = useState<TipState<D> | null>(null);
   const lastTouchTime = useRef(0);
   const dismissTimer = useRef<ReturnType<typeof setTimeout> | null>(null);

@@ -12,7 +12,7 @@ import TownGround from "./TownGround.jsx";
 import TownVillagers from "./TownVillagers.jsx";
 import Icon from "./Icon.jsx";
 import BuildingIllustration from "./buildings/index.jsx";
-import { TOWN_THEMES, SMOKE_BUILDINGS, TOWN_BIOME_CONFIGS, LOCATION_TOWN_CONFIGS } from "./town/config.js";
+import { TOWN_THEMES, SMOKE_BUILDINGS, TOWN_BIOME_CONFIGS, LOCATION_TOWN_CONFIGS, type TownBiomeConfig } from "./town/config.js";
 import { FarmFieldArt, MineEntranceArt } from "./town/decor.jsx";
 import { FarmTerrainDecor, MineTerrainDecor } from "./town/terrain.jsx";
 import {
@@ -27,7 +27,11 @@ import FeaturePanel from "./primitives/FeaturePanel.jsx";
 import type { GameState, Dispatch } from "../types/state.js";
 import type { Building } from "../types/items.js";
 
-type AnyState = GameState & Record<string, any>;
+interface LocationBuiltState {
+  _plots?: Record<string, string | null>;
+  decorations?: unknown;
+  [buildingId: string]: unknown;
+}
 
 interface BoardMetaEntry {
   label: string;
@@ -112,9 +116,9 @@ function ThemeBackdrop({ bg }: { bg: string }) {
 // zone they haven't founded yet, show a top-center banner that opens the
 // shared BiomePicker. Also surfaces the "complete one settlement first"
 // progression gate (the reducer enforces it; this just explains why).
-function FoundSettlementBanner({ state, dispatch }: { state: AnyState; dispatch: Dispatch }) {
+function FoundSettlementBanner({ state, dispatch }: { state: GameState; dispatch: Dispatch }) {
   const [pickerOpen, setPickerOpen] = useState(false);
-  const zoneId = state.mapCurrent;
+  const zoneId = String(state.mapCurrent ?? "");
   if (!zoneId || zoneId === DEFAULT_ZONE) return null;
   if (isSettlementFounded(state, zoneId)) return null;
   const type = settlementTypeForZone(zoneId);
@@ -233,40 +237,41 @@ function Cloud({ top, w, h, color, anim, breatheDur }: CloudProps) {
   );
 }
 
-export function TownView({ state, dispatch }: { state: AnyState; dispatch: Dispatch }) {
+export function TownView({ state, dispatch }: { state: GameState; dispatch: Dispatch }) {
   const [entryBiome, setEntryBiome] = useState<string | null>(null);
   const [purchaseBuilding, setPurchaseBuilding] = useState<PendingBuilding | null>(null);
   // Build flow: when set, the player has chosen a building and is now picking
   // an empty plot to place it on. Cleared when they confirm or cancel.
   const [pendingBuilding, setPendingBuilding] = useState<PendingBuilding | null>(null);
   const [buildPickerOpen, setBuildPickerOpen] = useState(false);
-  const { tip: buildingTip, show: showBuildingTip, hide: hideBuildingTip, lastTouchTime } = useTooltip();
+  const { tip: buildingTip, show: showBuildingTip, hide: hideBuildingTip, lastTouchTime } = useTooltip<BuildingTipData>();
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const longPressActive = useRef(false);
-  const locConfig = (LOCATION_TOWN_CONFIGS as Record<string, any>)[state.mapCurrent];
+  const mapCurrent = String(state.mapCurrent ?? DEFAULT_ZONE);
+  const locConfig = LOCATION_TOWN_CONFIGS[mapCurrent];
   const biomeVariant = locConfig?.biomeVariant ?? (state.biomeKey === 'mine' ? 'mine' : 'farm');
   const themeKey = locConfig?.themeKey ?? biomeVariant;
-  const theme = (TOWN_THEMES as Record<string, any>)[themeKey] || TOWN_THEMES.farm;
-  const townConfig = (TOWN_BIOME_CONFIGS as Record<string, any>)[biomeVariant];
-  const locationName = displayZoneName(state, state.mapCurrent) || townConfig.name;
+  const theme = TOWN_THEMES[themeKey] || TOWN_THEMES.farm;
+  const townConfig: TownBiomeConfig = TOWN_BIOME_CONFIGS[biomeVariant] ?? TOWN_BIOME_CONFIGS.farm;
+  const locationName = displayZoneName(state, mapCurrent) || townConfig.name;
   const hill1Path = locConfig?.hill1Path ?? townConfig.hill1Path;
   const hill2Path = locConfig?.hill2Path ?? townConfig.hill2Path;
   const cc = (a: number) => biomeVariant === 'mine'
     ? `rgba(180,190,200,${(a * 0.55).toFixed(2)})`
     : `rgba(255,255,255,${a})`;
   // Zone config for this location controls which puzzle boards and buildings are available.
-  const zoneConfig = ZONES[state.mapCurrent];
-  const locationBuilt: Record<string, any> = state.built?.[state.mapCurrent] ?? EMPTY_OBJECT;
+  const zoneConfig = ZONES[mapCurrent];
+  const locationBuilt = (state.built?.[mapCurrent] ?? EMPTY_OBJECT) as LocationBuiltState;
   // Town UX redesign — a procedural town *plan* (plaza + streets + a planned
   // grid of building lots) replaces the old hand-scattered plot positions. The
   // building-render below still consumes a flat `layoutPlots` of {x,y,w,h}, so
   // we just project the plan's lots into that shape.
   const requestedPlots = Math.max(1, zoneConfig?.plotCount ?? 12);
   const townPlan = useMemo(() => {
-    const z = ZONES[state.mapCurrent];
+    const z = ZONES[mapCurrent];
     const boardKinds = [z?.hasFarm && "farm", z?.hasMine && "mine", z?.hasWater && "fish"].filter(Boolean) as string[];
-    return buildTownPlan({ zoneId: state.mapCurrent, plotCount: requestedPlots, boardKinds: boardKinds as never[] });
-  }, [state.mapCurrent, requestedPlots]);
+    return buildTownPlan({ zoneId: mapCurrent, plotCount: requestedPlots, boardKinds: boardKinds as never[] });
+  }, [mapCurrent, requestedPlots]);
   const layoutPlots = useMemo(
     () => townPlan.lots.map((l: { cx: number; cy: number; w: number; h: number }) => ({ x: l.cx - l.w / 2, y: l.cy - l.h / 2, w: l.w, h: l.h })),
     [townPlan],
@@ -456,7 +461,7 @@ export function TownView({ state, dispatch }: { state: AnyState; dispatch: Dispa
         <svg viewBox="0 0 1100 600" preserveAspectRatio="none" className="w-full h-full" style={{ position: "absolute", inset: 0, pointerEvents: "none" }} />
         <div className="absolute pointer-events-none" style={{ left: 0, right: 0, top: 0, bottom: 0 }}>
           {/* Townsfolk walking the streets (depth-sorted with buildings via z-index) */}
-          <TownVillagers key={state.mapCurrent} plan={townPlan} buildings={plotById} workers={state.workers} />
+          <TownVillagers key={mapCurrent} plan={townPlan} buildings={plotById} workers={state.workers} />
           {slotRows.map((slot) => {
             const b = slot.buildingId ? BUILDINGS_BY_ID.get(slot.buildingId) : null;
             const isBuilt = !!b;
@@ -675,7 +680,7 @@ interface CostEntry {
   check: boolean;
 }
 
-function buildingCostEntries(building: Building | null | undefined, state: AnyState): CostEntry[] {
+function buildingCostEntries(building: Building | null | undefined, state: GameState): CostEntry[] {
   return Object.entries(building?.cost ?? {}).map(([key, amount]) => ({
     key,
     label: key === "coins" ? "Coins" : key === "runes" ? "Runes" : ITEMS[key]?.label || key,
@@ -698,8 +703,8 @@ interface BuildingRow {
 
 function buildingRows(
   buildings: Building[],
-  state: AnyState,
-  locationBuilt: Record<string, any>,
+  state: GameState,
+  locationBuilt: LocationBuiltState,
   freePlots: number,
 ): BuildingRow[] {
   return buildings.map((b) => {
@@ -730,8 +735,8 @@ function buildingRows(
 
 interface BuildPickerProps {
   buildings: Building[];
-  state: AnyState;
-  locationBuilt: Record<string, any>;
+  state: GameState;
+  locationBuilt: LocationBuiltState;
   freePlots: number;
   plotCount: number;
   onPick: (b: Building) => void;
