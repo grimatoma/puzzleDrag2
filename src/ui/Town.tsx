@@ -309,10 +309,14 @@ export function TownView({ state, dispatch }: { state: AnyState; dispatch: Dispa
     }
     rows.sort((a, b) => (a.y + a.h) - (b.y + b.h));
 
-    const occupied = Object.entries(nextPlotMap).filter(([, id]) => id != null).length;
-    const lots = new Set<number>(
-      Object.entries(nextPlotMap).filter(([, id]) => id != null).map(([i]) => Number(i)),
-    );
+    let occupied = 0;
+    const lots = new Set<number>();
+    for (const key in nextPlotMap) {
+      if (nextPlotMap[key] != null) {
+        occupied++;
+        lots.add(Number(key));
+      }
+    }
 
     return {
       plotById: nextPlotById,
