@@ -1,14 +1,7 @@
 import { BOARD_ANIMATIONS, demoBoardAnimResetMs } from "../config/boardAnimations.js";
+import type { TileObj } from "../TileObj.js";
+import type { FarmRun } from "../types/state.js";
 import { buildVisualScenario, listVisualScenarios } from "./scenarios.js";
-
-interface SceneTile {
-  row: number;
-  col: number;
-  res?: { key: string };
-  frozen?: boolean;
-  rubble?: boolean;
-  [k: string]: unknown;
-}
 
 function nextFrame(): Promise<void> {
   return new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
@@ -46,12 +39,12 @@ function hoverSelector(selector: string): boolean {
   return true;
 }
 
-function findChainTiles(scene: NonNullable<Window["__phaserScene"]>, key: string, length: number): SceneTile[] {
-  const grid = (scene?.grid ?? []) as Array<Array<SceneTile | null>>;
+function findChainTiles(scene: NonNullable<Window["__phaserScene"]>, key: string, length: number): TileObj[] {
+  const grid = scene?.grid ?? [];
   const rows = grid.length;
   const cols = grid[0]?.length ?? 0;
   const seen = new Set<string>();
-  const path: SceneTile[] = [];
+  const path: TileObj[] = [];
 
   function visit(row: number, col: number): boolean {
     if (path.length >= length) return true;
@@ -126,7 +119,7 @@ interface VisualStateLike {
   biomeKey?: string;
   biome?: string;
   turnsUsed?: number;
-  farmRun?: { turnBudget?: number } | null;
+  farmRun?: FarmRun | null;
   activeZone?: string;
   mapCurrent?: string;
   tileCollection?: { activeByCategory?: unknown };
@@ -159,10 +152,12 @@ function playBoardAnimation(
     tiles.forEach((tile) => {
       if (scene.grid[tile.row]?.[tile.col] === tile) scene.grid[tile.row][tile.col] = null;
     });
-    scene.playBoardAnimation(name, tiles, { tint });
+    const tintNum = typeof tint === "number" ? tint : undefined;
+    scene.playBoardAnimation(name, tiles, { tint: tintNum });
     scene.time?.delayedCall?.(240, () => scene.collapseBoard?.());
   } else {
-    scene.playBoardAnimation(name, tiles, { tint });
+    const tintNum = typeof tint === "number" ? tint : undefined;
+    scene.playBoardAnimation(name, tiles, { tint: tintNum });
   }
 
   if (demoAnimResetTimer != null) clearTimeout(demoAnimResetTimer);
@@ -176,11 +171,11 @@ function playBoardAnimation(
   return { played: true, tileCount: tiles.length, pattern: pattern ?? "all" };
 }
 
-function pickTilesForPattern(scene: VisualScene, pattern: string | undefined): SceneTile[] {
-  const grid = scene.grid as Array<Array<SceneTile | null>>;
+function pickTilesForPattern(scene: VisualScene, pattern: string | undefined): TileObj[] {
+  const grid = scene.grid;
   const rows = grid.length;
   const cols = grid[0]?.length ?? 0;
-  const all: SceneTile[] = [];
+  const all: TileObj[] = [];
   for (let r = 0; r < rows; r++) {
     for (let c = 0; c < cols; c++) {
       const tile = grid[r]?.[c];

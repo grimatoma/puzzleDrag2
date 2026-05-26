@@ -27,6 +27,19 @@ export { producedResource, buildChainUpdatePayload } from "./game/producedResour
 import { BOARD_ANIMATIONS, SWEEP_COLLAPSE_PIPELINE_MS, resolveBoardAnimName } from "./config/boardAnimations.js";
 import { defaultBoardAnimForPower, dimStrategyForPower, isTapTargetPower } from "./config/toolPowers.js";
 import { selectTilesForPower, resolveTransformKey } from "./config/tileSelectors.js";
+import type { ToolPower } from "./state/toolPowerRuntime.js";
+
+type RegistryGrid = Array<Array<{ key: string; frozen?: boolean; rubble?: boolean } | null>> | null | undefined;
+
+function registryToolPower(value: unknown): ToolPower | null {
+  if (!value || typeof value !== "object") return null;
+  const id = (value as { id?: unknown }).id;
+  return typeof id === "string" ? (value as ToolPower) : null;
+}
+
+function registryToolKey(value: unknown): string | null {
+  return typeof value === "string" && value.length > 0 ? value : null;
+}
 
 const FLOAT_TEXT_COLOR = 0xffd248;
 
@@ -99,8 +112,7 @@ export class GameScene extends Phaser.Scene {
   bakeScale: number = 1;
 
   // Misc scene objects
-  // TODO(ts-migration): tighten emitter/vignette types
-  sparkEmitter: Phaser.GameObjects.Particles.ParticleEmitter | null = null; // TODO(ts-migration): tighten
+  sparkEmitter: Phaser.GameObjects.Particles.ParticleEmitter | null = null;
   hazardVignette: Phaser.GameObjects.Graphics | null = null;
   // Hover badge shown while dragging
   grassHover: Phaser.GameObjects.Container | null = null;
@@ -211,7 +223,11 @@ export class GameScene extends Phaser.Scene {
     // `(parent, value, previous)` where value/previous depend on the data key.
     // Typing this further would require a discriminated union of every
     // registry key; the handlers below narrow each value at their use site.
-    type RegistryHandler = (...args: any[]) => void;
+    type RegistryHandler = (
+      parent: Phaser.Data.DataManager,
+      value: unknown,
+      previousValue?: unknown,
+    ) => void;
     const registryListeners: Array<[string, RegistryHandler]> = [];
     const onRegistry = (event: string, fn: RegistryHandler) => {
       this.registry.events.on(event, fn);
@@ -238,7 +254,7 @@ export class GameScene extends Phaser.Scene {
     // Apply state.grid → Phaser when Redux pushes a change back (hazard engines may mutate)
     onRegistry("changedata-grid", (_p, value) => {
       if (this._suppressNextGridApply) return;
-      this._applyGridFromState(value);
+      this._applyGridFromState(value as RegistryGrid);
     });
 
     onRegistry("changedata-biomeKey", (_p, value, prev) => {
@@ -250,31 +266,33 @@ export class GameScene extends Phaser.Scene {
     });
     onRegistry("changedata-toolPendingPower", (_p, value, prev) => {
       if (value === prev) return;
-      if (!value?.id || !this.registry.get("toolPending")) return;
-      const key = this.registry.get("toolPending");
-      if (isTapTargetPower(value.id)) {
-        this.applyToolDimForPower(value, key);
+      const power = registryToolPower(value);
+      const key = registryToolKey(this.registry.get("toolPending"));
+      if (!power || !key) return;
+      if (isTapTargetPower(power.id)) {
+        this.applyToolDimForPower(power, key);
       }
     });
     onRegistry("changedata-toolPending", (_p, value) => {
-      if (!value) {
+      const toolKey = registryToolKey(value);
+      if (!toolKey) {
         this.clearToolDim();
         return;
       }
       if (this.dragging) {
-        this._deferredTool = value;
+        this._deferredTool = toolKey;
         return;
       }
-      const power = this.registry.get("toolPendingPower")
-        ?? ITEMS[value]?.power
+      const power = registryToolPower(this.registry.get("toolPendingPower"))
+        ?? registryToolPower(ITEMS[toolKey]?.power)
         ?? null;
-      if (!power?.id) return;
+      if (!power) return;
       if (isTapTargetPower(power.id)) {
-        this.applyToolDimForPower(power, value);
+        this.applyToolDimForPower(power, toolKey);
         return;
       }
       this.applyToolPower(power, null);
-      this.time.delayedCall(50, () => this.events.emit(SCENE_EVENTS.TOOL_FIRED, { key: value }));
+      this.time.delayedCall(50, () => this.events.emit(SCENE_EVENTS.TOOL_FIRED, { key: toolKey }));
     });
     // Sync worker effects on init and whenever state.workers changes
     this._syncWorkerEffects();
@@ -285,7 +303,10 @@ export class GameScene extends Phaser.Scene {
 
     // Swap on-board tiles to match the newly active tile type in their category
     onRegistry("changedata-tileCollectionActive", (_p, value, prev) => {
-      this.handleActiveTileChange(value, prev);
+      this.handleActiveTileChange(
+        (value ?? null) as Record<string, string> | null,
+        (prev ?? null) as Record<string, string> | null,
+      );
     });
 
     // AAA Juice: Particle emitters for collection and impact VFX
@@ -771,7 +792,7 @@ export class GameScene extends Phaser.Scene {
       biomeResources: [...this.biome().tiles, ...this.biome().resources],
       tileCollectionActive: this.registry.get("tileCollectionActive") ?? null,
       categoryOf: CATEGORY_OF,
-      rng: Math.random, // TODO(ts-migration): tighten — pickByZoneSeasonDrops added rng as required
+      rng: Math.random,
     });
   }
 
@@ -1225,13 +1246,14 @@ export class GameScene extends Phaser.Scene {
    * Generic tool-power board effect. Tap-target powers pass `tapTile`; instant
    * powers pass null and run immediately when toolPending is set.
    */
-  applyToolPower(power: Record<string, any>, tapTile: TileObj | null): void { // TODO(ts-migration): tighten power type
+  applyToolPower(power: ToolPower, tapTile: TileObj | null): void {
     const id = power.id;
     const params = power.params ?? {};
     const boardAnim = defaultBoardAnimForPower(id);
-    const anim = power.anim ?? boardAnim?.anim ?? "sweep";
-    const tint = power.tint;
-    const collapseMs = power.ms ?? boardAnim?.ms ?? 220;
+    const anim = typeof power.anim === "string" ? power.anim : (boardAnim?.anim ?? "sweep");
+    const tint = typeof power.tint === "number" ? power.tint : undefined;
+    const collapseMs = typeof power.ms === "number" ? power.ms : (boardAnim?.ms ?? 220);
+    const animMs = typeof power.ms === "number" ? power.ms : undefined;
 
     if (id === "reshuffle_board") {
       this.shuffleBoard();
@@ -1249,7 +1271,7 @@ export class GameScene extends Phaser.Scene {
       if (!res) return;
       const picks = cells.map(({ row, col }) => this.grid[row]?.[col]).filter((t): t is TileObj => t != null);
       picks.forEach((tile: TileObj) => tile.setResource(res!));
-      this.playBoardAnimation(anim, picks, { tint, ms: power.ms });
+      this.playBoardAnimation(anim, picks, { tint, ms: animMs });
       if (params.to === "biome_rare") {
         this.time.delayedCall(this._dur(collapseMs), () => {
           if (!hasValidChain(this.grid)) {
@@ -1264,7 +1286,7 @@ export class GameScene extends Phaser.Scene {
     const tileObjs = cells.map(({ row, col }) => this.grid[row]?.[col]).filter((t): t is TileObj => t != null);
     if (!tileObjs.length && isTapTargetPower(id)) return;
 
-    this.playBoardAnimation(anim, tileObjs, { tint, ms: power.ms });
+    this.playBoardAnimation(anim, tileObjs, { tint, ms: animMs });
 
     // Tap-target: reducer mutates grid + inventory on TOOL_FIRED (no double credit).
     if (isTapTargetPower(id) && tap) {
@@ -1583,7 +1605,7 @@ export class GameScene extends Phaser.Scene {
   // Dim tiles that are not useful targets for the armed tool. Mirrors the
   // chain-drag dimming so the player gets the same visual signal: bright
   // tiles are the ones that will actually do something.
-  applyToolDimForPower(power: Record<string, any>, toolKey: string): void { // TODO(ts-migration): tighten power type
+  applyToolDimForPower(power: ToolPower, toolKey: string): void {
     const strategy = dimStrategyForPower(power.id) ?? "none";
     if (strategy === "type_multi" || toolKey === "rune_wildcard") {
       // Sweep-by-type tools — dim resources that appear only once (sweeping

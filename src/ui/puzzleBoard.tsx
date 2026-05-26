@@ -33,7 +33,7 @@ import type { Dispatch, GameState } from "../types/state.js";
 // state. `armed` here is a boolean (is THIS tool currently the active one)
 // rather than the catalog's `"instant" | "passive" | "tap"` category, so we
 // shadow it by omitting the catalog field.
-interface RuntimeTool extends Omit<ToolEntry, "armed"> {
+export interface RuntimeTool extends Omit<ToolEntry, "armed"> {
   count: number;
   armed?: boolean;
 }
