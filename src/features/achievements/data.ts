@@ -4,7 +4,27 @@
  * At least 10 achievements in Phase 7; Phase 11 can layer cosmetics on top.
  */
 
-export const ACHIEVEMENTS = [
+import type { GameState } from "../../types/state.js";
+
+export interface AchievementReward {
+  coins?: number;
+  xp?: number;
+  tools?: Record<string, number>;
+}
+
+export interface AchievementDef {
+  id: string;
+  name: string;
+  desc: string;
+  counter: string;
+  threshold: number;
+  target: number;
+  reward?: AchievementReward;
+  icon?: string;
+  trigger?: string;
+}
+
+export const ACHIEVEMENTS: AchievementDef[] = [
   // chains_committed
   { id: "first_steps",    name: "First Steps",                desc: "Complete your first chain",                      counter: "chains_committed",           threshold: 1,   target: 1,   reward: { coins: 25 } },
   { id: "patient_hands",  name: "Patient Hands",              desc: "Complete 10 chains",                             counter: "chains_committed",           threshold: 10,  target: 10,  reward: { coins: 50 } },
@@ -51,6 +71,19 @@ import { BALANCE_OVERRIDES as _BO_ACH } from "../../constants.js";
 import { applyAchievementOverrides } from "../../config/applyOverrides.js";
 applyAchievementOverrides(ACHIEVEMENTS, _BO_ACH.achievements);
 
+export interface AchievementsSlice {
+  counters: Record<string, number>;
+  unlocked: Record<string, boolean>;
+  seenResources: Record<string, boolean>;
+  seenBuildings: Record<string, boolean>;
+  seenAbilities: Record<string, boolean>;
+}
+
+export interface TickAchievementResult {
+  newState: GameState;
+  unlocked: string[];
+}
+
 /**
  * Pure: tick a counter on state.achievements.
  * For distinct_resources_chained, distinct_buildings_built, and
@@ -59,14 +92,14 @@ applyAchievementOverrides(ACHIEVEMENTS, _BO_ACH.achievements);
  *
  * Returns { newState, unlocked: [ids of newly-unlocked achievements] }.
  */
-export function tickAchievement(state, counter, value = 1, key) {
-  const ach = state.achievements ?? {
+export function tickAchievement(state: GameState, counter: string, value: number = 1, key?: string): TickAchievementResult {
+  const ach: AchievementsSlice = (state as GameState & { achievements?: AchievementsSlice }).achievements ?? {
     counters: {}, unlocked: {}, seenResources: {}, seenBuildings: {}, seenAbilities: {},
   };
-  let counters = ach.counters;
-  let seenResources = ach.seenResources ?? {};
-  let seenBuildings = ach.seenBuildings ?? {};
-  let seenAbilities = ach.seenAbilities ?? {};
+  let counters: Record<string, number> = ach.counters;
+  let seenResources: Record<string, boolean> = ach.seenResources ?? {};
+  let seenBuildings: Record<string, boolean> = ach.seenBuildings ?? {};
+  let seenAbilities: Record<string, boolean> = ach.seenAbilities ?? {};
 
   // Distinct-key counters: only tick on first encounter of each key
   if (counter === "distinct_resources_chained" && key) {
@@ -85,13 +118,13 @@ export function tickAchievement(state, counter, value = 1, key) {
     counters = { ...counters, [counter]: (counters[counter] ?? 0) + value };
   }
 
-  const newCount = counters[counter] ?? 0;
-  const prevCount = ach.counters[counter] ?? 0;
+  const newCount: number = counters[counter] ?? 0;
+  const prevCount: number = ach.counters[counter] ?? 0;
 
   // Check which achievements just crossed their threshold
-  const newlyUnlocked = [];
-  const unlocked = { ...ach.unlocked };
-  let rewardState = { ...state, achievements: { ...ach, counters, unlocked, seenResources, seenBuildings, seenAbilities } };
+  const newlyUnlocked: string[] = [];
+  const unlocked: Record<string, boolean> = { ...ach.unlocked };
+  let rewardState: GameState = { ...state, achievements: { ...ach, counters, unlocked, seenResources, seenBuildings, seenAbilities } } as GameState;
   for (const a of ACHIEVEMENTS) {
     if (a.counter !== counter) continue;
     if (unlocked[a.id]) continue; // already unlocked — idempotent
@@ -101,14 +134,14 @@ export function tickAchievement(state, counter, value = 1, key) {
       // Grant reward immediately on unlock
       if (a.reward) {
         if (a.reward.coins) {
-          rewardState = { ...rewardState, coins: (rewardState.coins ?? 0) + a.reward.coins };
+          rewardState = { ...rewardState, coins: ((rewardState as GameState & { coins?: number }).coins ?? 0) + a.reward.coins } as GameState;
         }
         if (a.reward.tools) {
-          const tools = { ...rewardState.tools };
+          const tools: Record<string, number> = { ...((rewardState as GameState & { tools?: Record<string, number> }).tools ?? {}) };
           for (const [k, v] of Object.entries(a.reward.tools)) {
             tools[k] = (tools[k] ?? 0) + v;
           }
-          rewardState = { ...rewardState, tools };
+          rewardState = { ...rewardState, tools } as GameState;
         }
       }
     }
@@ -118,7 +151,7 @@ export function tickAchievement(state, counter, value = 1, key) {
     newState: {
       ...rewardState,
       achievements: { ...ach, counters, unlocked, seenResources, seenBuildings, seenAbilities },
-    },
+    } as GameState,
     unlocked: newlyUnlocked,
   };
 }

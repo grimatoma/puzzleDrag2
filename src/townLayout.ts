@@ -16,7 +16,7 @@
 const W = 1100, H = 600;
 
 // Deterministic 32-bit string hash → seeded mulberry32 PRNG.
-function seededRng(str) {
+function seededRng(str: string): () => number {
   let h = 1779033703 ^ String(str).length;
   for (let i = 0; i < String(str).length; i++) {
     h = Math.imul(h ^ String(str).charCodeAt(i), 3432918353);
@@ -40,19 +40,63 @@ const ROWS = [
   { streetY: 322, w: 96,  h: 104, cap: 5, name: "mid"   },  // second street
   { streetY: 398, w: 116, h: 120, cap: 5, name: "front" },  // main-street shopfronts (largest)
 ];
+interface RowSpec { streetY: number; w: number; h: number; cap: number; name: string }
 // Where a lot in row `r` sits so its drawn base lands ~6px behind the street.
-const rowLotCy = (row) => row.streetY - 6 - row.h / 2;
+const rowLotCy = (row: RowSpec) => row.streetY - 6 - row.h / 2;
 
 const PLAZA = { cx: 552, cy: 350, rx: 134, ry: 84 };
+
+interface BoardSpot { cx: number; cy: number; w: number; h: number }
+type BoardKind = keyof typeof BOARD_SPOTS_BASE;
+
+const BOARD_SPOTS_BASE = {
+  farm: { cx: 118, cy: ROWS[2].streetY - 71, w: 152, h: 142 },
+  mine: { cx: W - 116, cy: ROWS[2].streetY - 75, w: 162, h: 150 },
+  fish: { cx: 132, cy: ROWS[2].streetY - 65, w: 140, h: 130 },
+} satisfies Record<string, BoardSpot>;
+
+export interface TownPlanLot {
+  index: number;
+  cx: number;
+  cy: number;
+  w: number;
+  h: number;
+  row: string;
+}
+
+export interface TownPlanStreet { x1: number; y1: number; x2: number; y2: number; width: number }
+export interface TownPlanProp { kind: string; x: number; y: number }
+export interface TownPlanWaypoint { x: number; y: number }
+export interface TownPlanBoard extends BoardSpot { kind: BoardKind }
+
+export interface TownPlan {
+  width: number;
+  height: number;
+  ground: { top: number };
+  plaza: typeof PLAZA;
+  well: { cx: number; cy: number; r: number };
+  streets: TownPlanStreet[];
+  lots: TownPlanLot[];
+  boards: TownPlanBoard[];
+  props: TownPlanProp[];
+  waypoints: TownPlanWaypoint[];
+  edges: Array<[number, number]>;
+}
 
 /**
  * Build the town plan for a zone. `plotCount` is how many lots to expose
  * (≥ 1); the layout fills the front row first (it's the most prominent),
  * then mid, then back. Lot 0 is the hearth — placed on the plaza edge.
  */
-export function buildTownPlan({ zoneId = "home", plotCount = 12, boardKinds = [] } = {}) {
+export function buildTownPlan(
+  { zoneId = "home", plotCount = 12, boardKinds = [] }: {
+    zoneId?: string;
+    plotCount?: number;
+    boardKinds?: readonly string[];
+  } = {},
+): TownPlan {
   const rng = seededRng(zoneId);
-  const j = (amt) => (rng() - 0.5) * 2 * amt; // ±amt jitter
+  const j = (amt: number) => (rng() - 0.5) * 2 * amt; // ±amt jitter
   const n = Math.max(1, Math.floor(plotCount));
   const kinds = Array.isArray(boardKinds) ? boardKinds : [];
 
@@ -61,12 +105,10 @@ export function buildTownPlan({ zoneId = "home", plotCount = 12, boardKinds = []
   // the mine tunnelling into the hillside on the right, the harbor at the
   // lower-left water's edge. When a wing is occupied, the building rows below
   // give it room.
-  const BOARD_SPOTS = {
-    farm: { cx: 118, cy: ROWS[2].streetY - 71, w: 152, h: 142 },
-    mine: { cx: W - 116, cy: ROWS[2].streetY - 75, w: 162, h: 150 },
-    fish: { cx: 132, cy: ROWS[2].streetY - 65, w: 140, h: 130 },
-  };
-  const boards = kinds.filter((k) => BOARD_SPOTS[k]).map((k) => ({ kind: k, ...BOARD_SPOTS[k] }));
+  const BOARD_SPOTS: Record<string, BoardSpot> = BOARD_SPOTS_BASE;
+  const boards: TownPlanBoard[] = kinds
+    .filter((k): k is BoardKind => k in BOARD_SPOTS)
+    .map((k) => ({ kind: k, ...BOARD_SPOTS[k] }));
   const hasLeftBoard = kinds.includes("farm") || kinds.includes("fish");
   const hasRightBoard = kinds.includes("mine");
   const leftStart = hasLeftBoard ? 210 : 100;   // building rows' left clusters start here
@@ -87,7 +129,7 @@ export function buildTownPlan({ zoneId = "home", plotCount = 12, boardKinds = []
 
   // The hearth (lot 0) sits on the plaza, just in front of the well. Then we
   // lay out the remaining n-1 lots evenly across the rows we sized above.
-  const lots = [];
+  const lots: TownPlanLot[] = [];
   lots.push({ index: 0, cx: PLAZA.cx + j(8), cy: PLAZA.cy + 30 + j(4), w: 104, h: 112, row: "plaza" });
 
   let next = 1;
@@ -101,7 +143,7 @@ export function buildTownPlan({ zoneId = "home", plotCount = 12, boardKinds = []
     const half = Math.ceil(cnt / 2);
     const leftSpanEnd = PLAZA.cx - PLAZA.rx - 18;
     const rightSpanStart = PLAZA.cx + PLAZA.rx + 18;
-    const place = (k, total, x0, x1) => {
+    const place = (k: number, total: number, x0: number, x1: number) => {
       const t = total === 1 ? 0.5 : k / (total - 1);
       const cx = x0 + (x1 - x0) * t + j(12);
       lots.push({ index: next++, cx, cy: cy + j(8), w: row.w, h: row.h, row: row.name });
@@ -112,7 +154,7 @@ export function buildTownPlan({ zoneId = "home", plotCount = 12, boardKinds = []
 
   // Streets: a paved band along each row + a vertical lane connecting them
   // through the plaza. Widths shrink toward the back for a touch of perspective.
-  const streets = [
+  const streets: TownPlanStreet[] = [
     { x1: 40,  y1: ROWS[2].streetY, x2: W - 40,  y2: ROWS[2].streetY, width: 48 }, // main street (front)
     { x1: 80,  y1: ROWS[1].streetY, x2: W - 80,  y2: ROWS[1].streetY, width: 34 }, // second lane (mid)
     { x1: 150, y1: ROWS[0].streetY, x2: W - 150, y2: ROWS[0].streetY, width: 24 }, // back lane
@@ -127,7 +169,7 @@ export function buildTownPlan({ zoneId = "home", plotCount = 12, boardKinds = []
   }
 
   // Street furniture so the place reads as lived-in.
-  const props = [
+  const props: TownPlanProp[] = [
     { kind: "well",     x: PLAZA.cx,            y: PLAZA.cy - 8 },
     { kind: "lamppost", x: PLAZA.cx - PLAZA.rx + 6, y: PLAZA.cy + 10 },
     { kind: "lamppost", x: PLAZA.cx + PLAZA.rx - 6, y: PLAZA.cy + 10 },
@@ -143,13 +185,13 @@ export function buildTownPlan({ zoneId = "home", plotCount = 12, boardKinds = []
   // connector), and right end, plus the plaza — edges run along the lanes and
   // the connector. The villager sim (Town.jsx) walks this. The end columns pull
   // in when a wing holds a puzzle-board fixture, so folk don't tread on it.
-  const waypoints = [];
-  const wp = (x, y) => { waypoints.push({ x, y }); return waypoints.length - 1; };
+  const waypoints: TownPlanWaypoint[] = [];
+  const wp = (x: number, y: number): number => { waypoints.push({ x, y }); return waypoints.length - 1; };
   const rowYs = [ROWS[0].streetY, ROWS[1].streetY, ROWS[2].streetY];
   const cols = [hasLeftBoard ? 215 : 120, PLAZA.cx, hasRightBoard ? W - 215 : W - 120];
   const grid = rowYs.map((y) => cols.map((x) => wp(x, y)));
   const plazaWp = wp(PLAZA.cx, PLAZA.cy + 6);
-  const edges = [];
+  const edges: Array<[number, number]> = [];
   for (let r = 0; r < grid.length; r++) for (let c = 0; c < cols.length - 1; c++) edges.push([grid[r][c], grid[r][c + 1]]);
   for (let r = 0; r < grid.length - 1; r++) edges.push([grid[r][1], grid[r + 1][1]]);
   edges.push([grid[1][1], plazaWp]);

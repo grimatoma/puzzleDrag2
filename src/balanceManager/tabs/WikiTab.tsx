@@ -20,7 +20,7 @@ export default function WikiTab() {
   const [conceptId, setConceptId] = useState(CONCEPTS[0].id);
 
   const concept = useMemo(
-    () => CONCEPTS.find((c) => c.id === conceptId),
+    () => CONCEPTS.find((c) => c.id === conceptId) ?? CONCEPTS[0],
     [conceptId],
   );
 

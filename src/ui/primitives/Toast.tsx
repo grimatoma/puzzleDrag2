@@ -7,10 +7,37 @@ import {
   useRef,
   useState,
 } from "react";
+import type { ReactNode } from "react";
 import { createPortal } from "react-dom";
 import Icon from "./Icon.jsx";
 
-const NotifierCtx = createContext(null);
+type ToastTone = "info" | "success" | "warning" | "danger" | "moss" | "ember" | "gold" | "iron";
+
+interface ToastEntry {
+  id: string;
+  text: ReactNode;
+  tone?: ToastTone;
+  icon?: string;
+  duration?: number;
+  stagger?: number;
+}
+
+interface BubbleEntry {
+  id: string;
+  text: ReactNode;
+  npcKey?: string;
+  duration?: number;
+}
+
+interface NotifierApi {
+  toast(payload: Omit<ToastEntry, "id" | "stagger">): string;
+  bubble(payload: Omit<BubbleEntry, "id">): string;
+  beat(payload?: unknown): void;
+  dismissToast(id: string): void;
+  dismissBubble(id: string): void;
+}
+
+const NotifierCtx = createContext<NotifierApi | null>(null);
 
 const TOAST_MS = 3000;
 const TOAST_EXIT_MS = 200;
@@ -18,7 +45,7 @@ const BUBBLE_MS = 1800;
 const BUBBLE_EXIT_MS = 200;
 const TOAST_MAX = 3;
 
-const TONE_TOAST = {
+const TONE_TOAST: Record<ToastTone, string> = {
   info:    "bg-iron text-ink border-iron-deep",
   success: "bg-moss text-white border-moss",
   warning: "bg-gold text-ink border-gold-soft",
@@ -32,7 +59,7 @@ const TONE_TOAST = {
 let nextId = 1;
 const uid = () => `n${nextId++}`;
 
-function ToastItem({ entry, onDone }) {
+function ToastItem({ entry, onDone }: { entry: ToastEntry; onDone: (id: string) => void }) {
   const [exiting, setExiting] = useState(false);
   useEffect(() => {
     const dur = entry.duration ?? TOAST_MS;
@@ -44,7 +71,7 @@ function ToastItem({ entry, onDone }) {
     };
   }, [entry, onDone]);
 
-  const toneCls = TONE_TOAST[entry.tone] || TONE_TOAST.info;
+  const toneCls = (entry.tone && TONE_TOAST[entry.tone]) || TONE_TOAST.info;
   const stagger = entry.stagger ?? 0;
   const anim = exiting
     ? `toastOut ${TOAST_EXIT_MS}ms cubic-bezier(0.4, 0, 0.2, 1) both`
@@ -60,7 +87,7 @@ function ToastItem({ entry, onDone }) {
   );
 }
 
-function BubbleItem({ entry, onDone, onDismiss }) {
+function BubbleItem({ entry, onDone, onDismiss }: { entry: BubbleEntry; onDone: (id: string) => void; onDismiss: (id: string) => void }) {
   const [exiting, setExiting] = useState(false);
   useEffect(() => {
     const dur = entry.duration ?? BUBBLE_MS;
@@ -103,25 +130,30 @@ const TOAST_STAGGER_MS = 80;
 const TOAST_STAGGER_RESET_MS = 350;
 const TOAST_STAGGER_MAX = 240;
 
-export function NotifierProvider({ children, onBeat }) {
-  const [toasts, setToasts] = useState([]);
-  const [bubbles, setBubbles] = useState([]);
+interface NotifierProviderProps {
+  children?: ReactNode;
+  onBeat?: (payload: unknown) => void;
+}
+
+export function NotifierProvider({ children, onBeat }: NotifierProviderProps) {
+  const [toasts, setToasts] = useState<ToastEntry[]>([]);
+  const [bubbles, setBubbles] = useState<BubbleEntry[]>([]);
   const onBeatRef = useRef(onBeat);
   const staggerRef = useRef({ next: 0, lastAt: 0 });
   useEffect(() => {
     onBeatRef.current = onBeat;
   }, [onBeat]);
 
-  const dropToast = useCallback((id) => {
+  const dropToast = useCallback((id: string) => {
     setToasts((q) => q.filter((t) => t.id !== id));
   }, []);
-  const dropBubble = useCallback((id) => {
+  const dropBubble = useCallback((id: string) => {
     setBubbles((q) => q.filter((b) => b.id !== id));
   }, []);
 
-  const api = useMemo(
+  const api = useMemo<NotifierApi>(
     () => ({
-      toast(payload) {
+      toast(payload: Omit<ToastEntry, "id" | "stagger">) {
         const now = typeof performance !== "undefined" ? performance.now() : Date.now();
         const s = staggerRef.current;
         if (now - s.lastAt > TOAST_STAGGER_RESET_MS) {
@@ -130,19 +162,19 @@ export function NotifierProvider({ children, onBeat }) {
         s.lastAt = now;
         const stagger = s.next;
         s.next = Math.min(s.next + TOAST_STAGGER_MS, TOAST_STAGGER_MAX);
-        const entry = { id: uid(), stagger, ...payload };
+        const entry: ToastEntry = { id: uid(), stagger, ...payload };
         setToasts((q) => {
           const next = [...q, entry];
           return next.length > TOAST_MAX ? next.slice(next.length - TOAST_MAX) : next;
         });
         return entry.id;
       },
-      bubble(payload) {
-        const entry = { id: uid(), ...payload };
+      bubble(payload: Omit<BubbleEntry, "id">) {
+        const entry: BubbleEntry = { id: uid(), ...payload };
         setBubbles((q) => [...q, entry]);
         return entry.id;
       },
-      beat(payload) {
+      beat(payload: unknown) {
         onBeatRef.current?.(payload);
       },
       dismissToast: dropToast,

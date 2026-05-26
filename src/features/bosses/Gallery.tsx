@@ -1,23 +1,29 @@
-import { BOSSES } from "./data.js";
+import { BOSSES, type BossDef } from "./data.js";
 import IconCanvas, { hasIcon } from "../../ui/IconCanvas.jsx";
 import { CostChip, RewardChip } from "../../ui/primitives/Chip.jsx";
+import type { GameState } from "../../types/state.js";
 
-const SEASON_ACCENT = {
+const SEASON_ACCENT: Record<string, string> = {
   spring: "#5daa35",
   summer: "#e3a92f",
   autumn: "#d9792d",
   winter: "#3a82c4",
 };
 
-export default function BossGallery({ state }) {
-  const flags = state?.story?.flags ?? {};
+interface BossGalleryProps {
+  state: GameState;
+}
+
+export default function BossGallery({ state }: BossGalleryProps) {
+  const s = state as GameState & { story?: { flags?: Record<string, boolean> } };
+  const flags: Record<string, boolean> = s?.story?.flags ?? {};
   return (
     <div className="flex flex-col gap-3">
       <p className="hl-empty !py-1 !text-left">
         Five seasonal foes test the vale across the year. Each demands a tribute and warps the board while present.
       </p>
       <div className="grid grid-cols-1 gap-3">
-        {BOSSES.map((boss) => {
+        {BOSSES.map((boss: BossDef) => {
           const portraitKey = `boss_${boss.id}`;
           const defeated = flags[`${boss.id}_defeated`];
           const active = flags[`${boss.id}_active`];

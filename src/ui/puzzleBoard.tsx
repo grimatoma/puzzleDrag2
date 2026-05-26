@@ -16,7 +16,7 @@
  * Hotbar pin assignments persist to localStorage (no save-schema bump).
  */
 
-import { forwardRef, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, ReactNode } from "react";
+import { forwardRef, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 // Cast to any so callers don't need to supply the `title` prop (it's optional
 // in practice even though Icon.jsx's inferred sig marks it required).
 import _LegacyIconRaw from "./Icon.jsx";
@@ -701,7 +701,7 @@ function dispatchUseTool(dispatch: any, key: any, state: any) {
   }
   disarmOtherTools(dispatch, key, state);
   const def = TOOL_BY_KEY[key];
-  if (def?.category === "magic") {
+  if ((def?.category as string) === "magic") {
     dispatch({ type: "USE_TOOL", payload: { id: key } });
   } else {
     dispatch({ type: "USE_TOOL", key });

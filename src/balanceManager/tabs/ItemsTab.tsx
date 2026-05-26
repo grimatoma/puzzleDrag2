@@ -33,7 +33,7 @@ function isTool(r: any) {
   return r.kind === "tool" || !!r.effect;
 }
 
-export default function ItemsTab({ draft: any, updateDraft: any }) {
+export default function ItemsTab({ draft, updateDraft }: { draft: any; updateDraft: any }) {
   const [filter, setFilter] = useState("all");
   const [search, setSearch] = useState("");
 
@@ -193,27 +193,30 @@ export default function ItemsTab({ draft: any, updateDraft: any }) {
                           patchItem(key, { effect: v, target: defaults.target ?? "", ...defaults });
                         }}
                       />
-                      {getToolPower(eff.effect) && (
+                      {getToolPower(eff.effect)?.desc && (
                         <div className="text-[10px] italic mt-0.5" style={{ color: COLORS.inkSubtle }}>
-                          {getToolPower(eff.effect).desc}
+                          {getToolPower(eff.effect)?.desc}
                         </div>
                       )}
                     </div>
-                    {(getToolPower(eff.effect)?.params ?? []).map((p) => (
-                      <div key={p.key}>
-                        <Label>{p.label}</Label>
-                        {p.type === "resourceKey" ? (
-                          <Select value={eff[p.key] ?? ""} options={resourceKeyOptions()}
-                            onChange={(v: any) => patchItem(key, { [p.key]: v })} />
-                        ) : p.type === "tileKey" ? (
-                          <Select value={eff[p.key] ?? ""} options={tileKeyOptions()}
-                            onChange={(v: any) => patchItem(key, { [p.key]: v })} />
-                        ) : p.type === "hazard" ? (
-                          <Select value={eff[p.key] ?? ""} options={hazardOptions()}
-                            onChange={(v: any) => patchItem(key, { [p.key]: v })} />
-                        ) : null}
-                      </div>
-                    ))}
+                    {(getToolPower(eff.effect)?.params ?? []).map((p) => {
+                      const effRec = eff as unknown as Record<string, unknown>;
+                      return (
+                        <div key={p.key}>
+                          <Label>{p.label}</Label>
+                          {p.type === "resourceKey" ? (
+                            <Select value={effRec[p.key] ?? ""} options={resourceKeyOptions()}
+                              onChange={(v: any) => patchItem(key, { [p.key]: v })} />
+                          ) : p.type === "tileKey" ? (
+                            <Select value={effRec[p.key] ?? ""} options={tileKeyOptions()}
+                              onChange={(v: any) => patchItem(key, { [p.key]: v })} />
+                          ) : p.type === "hazard" ? (
+                            <Select value={effRec[p.key] ?? ""} options={hazardOptions()}
+                              onChange={(v: any) => patchItem(key, { [p.key]: v })} />
+                          ) : null}
+                        </div>
+                      );
+                    })}
                     <div>
                       <Label>Anim</Label>
                       <Select
@@ -269,7 +272,7 @@ export default function ItemsTab({ draft: any, updateDraft: any }) {
   );
 }
 
-function Label({ children: any }) {
+function Label({ children }: { children: any }) {
   return (
     <div className="text-[10px] font-bold uppercase tracking-wide mb-0.5" style={{ color: COLORS.inkSubtle }}>
       {children}

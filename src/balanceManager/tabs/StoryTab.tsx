@@ -31,7 +31,7 @@ function downloadMarkdown(md: any, filename = "hearthlands-story.md") {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-export default function StoryTab({ draft: any }) {
+export default function StoryTab({ draft }: { draft: any }) {
   const counts = `${STORY_BEATS.length} story beat${STORY_BEATS.length === 1 ? "" : "s"} · ${SIDE_BEATS.length} side event${SIDE_BEATS.length === 1 ? "" : "s"}`;
   const { total: warningTotal } = useMemo(() => groupedStoryWarnings(draft), [draft]);
   const [previewOpen, setPreviewOpen] = useState(false);
@@ -85,6 +85,7 @@ export default function StoryTab({ draft: any }) {
               key={cell.label}
               label={cell.label}
               value={cell.n}
+              hint={null}
               tone={cell.alarm ? "danger" : cell.n > 0 ? "ember" : "muted"}
             />
           ))}
@@ -142,7 +143,7 @@ export default function StoryTab({ draft: any }) {
             <Select value={filterSpeaker} onChange={setFilterSpeaker} options={[
               { value: "__all__", label: "Every speaker" },
               { value: "__narrator__", label: "Narrator only" },
-              ...Object.keys(NPCS).map((k) => ({ value: k, label: NPCS[k].name })),
+              ...Object.keys(NPCS).map((k) => ({ value: k, label: (NPCS as Record<string, { name?: string }>)[k]?.name ?? k })),
             ]} />
           </div>
         </div>

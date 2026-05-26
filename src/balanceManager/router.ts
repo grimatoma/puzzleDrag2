@@ -3,7 +3,7 @@
 
 import { useEffect, useRef } from "react";
 
-function decodeSeg(seg: any) {
+function decodeSeg(seg: string | undefined | null): string | null {
   if (!seg) return null;
   try {
     return decodeURIComponent(seg);
@@ -12,14 +12,21 @@ function decodeSeg(seg: any) {
   }
 }
 
-export function parseHash(hash: any, validTabs: any) {
+export interface ParsedHash {
+  tab: string | null;
+  focus: string | null;
+}
+
+export function parseHash(hash: string | null | undefined, validTabs: readonly string[]): ParsedHash {
   const raw = String(hash || "").replace(/^#\/?/, "");
   if (!raw) return { tab: null, focus: null };
   const parts = raw.split("/").filter(Boolean);
   const tabSeg = parts[0];
   if (!tabSeg) return { tab: null, focus: null };
   const tab = decodeSeg(tabSeg);
-  if (!Array.isArray(validTabs) || !validTabs.includes(tab)) return { tab: null, focus: null };
+  if (!Array.isArray(validTabs) || tab === null || !validTabs.includes(tab)) {
+    return { tab: null, focus: null };
+  }
   const focus = parts[1] ? decodeSeg(parts[1]) : null;
   return { tab, focus };
 }
@@ -31,8 +38,14 @@ export function buildHash({ tab, focus }: { tab?: string | null; focus?: string 
   return base;
 }
 
-export function useBalanceRouter(tab: any, setTab: any, focus: any, setFocus: any, validTabs: any) {
-  const lastWrittenRef = useRef(null);
+export function useBalanceRouter(
+  tab: string | null,
+  setTab: (value: string) => void,
+  focus: string | null,
+  setFocus: (value: string | null) => void,
+  validTabs: readonly string[],
+) {
+  const lastWrittenRef = useRef<string | null>(null);
   const initialisedRef = useRef(false);
 
   useEffect(() => {

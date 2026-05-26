@@ -101,14 +101,24 @@ export const KEEPERS = {
 
 applyKeeperOverrides(KEEPERS, BALANCE_OVERRIDES.keepers);
 
+export type KeeperType = keyof typeof KEEPERS;
+export type KeeperPath = "coexist" | "driveout";
+type KeeperEntry = (typeof KEEPERS)[KeeperType];
+type KeeperPathInfo = KeeperEntry["coexist"] | KeeperEntry["driveout"];
+
 /** The keeper for a settlement type ('farm' | 'mine' | 'harbor'), or null. */
-export function keeperForType(type) {
-  return KEEPERS[type] ?? null;
+export function keeperForType(type: string | null | undefined): KeeperEntry | null {
+  if (!type) return null;
+  return (KEEPERS as Record<string, KeeperEntry | undefined>)[type] ?? null;
 }
 
 /** Just the path-relevant slice (label, pitch, reward) for `path` ∈ {coexist, driveout}. */
-export function keeperPathInfo(type, path) {
-  const k = KEEPERS[type];
+export function keeperPathInfo(
+  type: string | null | undefined,
+  path: string | null | undefined,
+): KeeperPathInfo | null {
+  if (!type) return null;
+  const k = (KEEPERS as Record<string, KeeperEntry | undefined>)[type];
   if (!k) return null;
   return path === "coexist" ? k.coexist : path === "driveout" ? k.driveout : null;
 }

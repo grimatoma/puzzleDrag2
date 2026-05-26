@@ -12,8 +12,11 @@
 
 import { useMemo, useEffect } from "react";
 import { C, effectiveBeat, groupedStoryWarnings } from "./shared.jsx";
+import type { StoryDraft, StoryWarning, StoryWarningType } from "./types.js";
 
-const TYPE_TONE = {
+interface ToneEntry { fg: string; bg: string; bd: string; icon: string }
+
+const TYPE_TONE: Record<StoryWarningType, ToneEntry> = {
   missingBeat:      { fg: C.redDeep,    bg: "rgba(194,59,34,0.10)",  bd: "rgba(194,59,34,0.45)",  icon: "↯" },
   unknownFlag:      { fg: C.redDeep,    bg: "rgba(194,59,34,0.10)",  bd: "rgba(194,59,34,0.45)",  icon: "⚐" },
   orphanBeat:       { fg: "#7a5810",    bg: "rgba(226,178,74,0.14)", bd: "rgba(226,178,74,0.6)",  icon: "⌀" },
@@ -22,9 +25,21 @@ const TYPE_TONE = {
   emptyChoiceLabel: { fg: C.emberDeep,  bg: "rgba(214,97,42,0.10)",  bd: "rgba(214,97,42,0.4)",   icon: "𝙏" },
   triggerLoop:      { fg: "#7a3a82",    bg: "rgba(122,58,130,0.10)", bd: "rgba(122,58,130,0.45)", icon: "↻" },
 };
-const DEFAULT_TONE = { fg: C.inkLight, bg: "rgba(43,34,24,0.06)", bd: C.border, icon: "•" };
+const DEFAULT_TONE: ToneEntry = { fg: C.inkLight, bg: "rgba(43,34,24,0.06)", bd: C.border, icon: "•" };
 
-export default function ValidationPanel({ open: any, draft: any, onClose: any, onJumpToBeat: any, anchorRect: any }) {
+function toneFor(type: string): ToneEntry {
+  return (TYPE_TONE as Record<string, ToneEntry>)[type] || DEFAULT_TONE;
+}
+
+export interface ValidationPanelProps {
+  open: boolean;
+  draft: StoryDraft;
+  onClose: () => void;
+  onJumpToBeat: (id: string) => void;
+  anchorRect: DOMRect | null;
+}
+
+export default function ValidationPanel({ open, draft, onClose, onJumpToBeat, anchorRect }: ValidationPanelProps) {
   const { groups, total } = useMemo(() => groupedStoryWarnings(draft), [draft]);
 
   useEffect(() => {
@@ -74,7 +89,7 @@ export default function ValidationPanel({ open: any, draft: any, onClose: any, o
             </div>
           )}
           {groups.map((group) => {
-            const tone = TYPE_TONE[group.type] || DEFAULT_TONE;
+            const tone = toneFor(group.type);
             return (
               <section key={group.type} style={{ padding: "6px 0" }}>
                 <div style={{ display: "flex", alignItems: "baseline", gap: 7, padding: "5px 14px" }}>
@@ -90,7 +105,7 @@ export default function ValidationPanel({ open: any, draft: any, onClose: any, o
                   </div>
                 )}
                 <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
-                  {group.items.map(({ beatId: any, warning: any }, idx: any) => {
+                  {group.items.map(({ beatId, warning }: { beatId: string; warning: StoryWarning }, idx: number) => {
                     const beat = effectiveBeat(beatId, draft);
                     return (
                       <li key={`${beatId}-${idx}`}>

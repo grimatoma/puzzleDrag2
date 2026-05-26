@@ -63,7 +63,10 @@ export function buildItemReferenceIndex({
     }
   }
 
-  for (const beat of [...(storyBeats || []), ...(sideBeats || [])]) {
+  interface StoryChoice { id?: string; outcome?: { resources?: Record<string, number> } }
+  interface StoryBeatLike { id?: string; choices?: StoryChoice[] }
+  for (const raw of [...(storyBeats || []), ...(sideBeats || [])]) {
+    const beat = raw as StoryBeatLike;
     if (!beat || !Array.isArray(beat.choices)) continue;
     for (const c of beat.choices) {
       const res = c?.outcome?.resources;

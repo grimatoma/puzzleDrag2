@@ -9,7 +9,7 @@ import { useState } from "react";
 import { ACHIEVEMENTS } from "../../features/achievements/data.js";
 import { COLORS, TextField, NumberField, FieldRow, Card, SearchBar } from "../shared.jsx";
 
-export default function AchievementsTab({ draft: any, updateDraft: any }) {
+export default function AchievementsTab({ draft, updateDraft }: { draft: any; updateDraft: any }) {
   const [search, setSearch] = useState("");
   const q = search.trim().toLowerCase();
   const filtered = ACHIEVEMENTS.filter((a) => !q || a.id.toLowerCase().includes(q) || a.name.toLowerCase().includes(q) || (a.counter || "").toLowerCase().includes(q));

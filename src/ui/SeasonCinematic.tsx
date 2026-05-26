@@ -5,12 +5,14 @@ import { seasonIndexInSession } from "../features/zones/data.js";
 
 const HOLD_MS = 1100;
 
-export default function SeasonCinematic({ state }) {
+interface ShownState { seasonIdx: number; key: number }
+
+export default function SeasonCinematic({ state }: { state: any }) {
   const onBoard = state.view === "board";
   const turnBudget = state.farmRun?.turnBudget ?? 0;
   const turnsUsed = state.turnsUsed ?? 0;
   const seasonIdx = onBoard ? seasonIndexInSession(turnsUsed, turnBudget || 1) : 0;
-  const [shown, setShown] = useState(null);
+  const [shown, setShown] = useState<ShownState | null>(null);
   const prevSeasonRef = useRef(seasonIdx);
   const prevOnBoardRef = useRef(onBoard);
 

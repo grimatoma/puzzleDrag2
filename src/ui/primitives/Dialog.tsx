@@ -6,7 +6,14 @@ const DIALOG_EXIT_MS = 140;
 
 const FOCUSABLE = 'a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
 
-const DialogCtx = createContext({ titleId: "", hasStickyActions: false, setHasStickyActions: () => {} });
+interface DialogCtxValue {
+  titleId: string;
+  tone?: "light" | "dark";
+  hasStickyActions?: boolean;
+  setHasStickyActions?: (v: boolean) => void;
+}
+
+const DialogCtx = createContext<DialogCtxValue>({ titleId: "", hasStickyActions: false, setHasStickyActions: () => {} });
 
 const SIZES: Record<string, string> = {
   sm: "max-w-sm",
@@ -32,8 +39,8 @@ function useDialogBehavior(open: any, onClose: any, panelRef: any) {
         return;
       }
       if (e.key === "Tab" && panel) {
-        const focusables = Array.from(panel.querySelectorAll(FOCUSABLE)).filter(
-          (el) => !el.hasAttribute("disabled") && el.offsetParent !== null
+        const focusables = (Array.from(panel.querySelectorAll(FOCUSABLE)) as HTMLElement[]).filter(
+          (el: HTMLElement) => !el.hasAttribute("disabled") && el.offsetParent !== null
         );
         if (focusables.length === 0) {
           e.preventDefault();
@@ -54,8 +61,8 @@ function useDialogBehavior(open: any, onClose: any, panelRef: any) {
     document.addEventListener("keydown", onKey, true);
     return () => {
       document.removeEventListener("keydown", onKey, true);
-      if (previouslyFocused && typeof previouslyFocused.focus === "function") {
-        previouslyFocused.focus();
+      if (previouslyFocused && typeof (previouslyFocused as HTMLElement).focus === "function") {
+        (previouslyFocused as HTMLElement).focus();
       }
     };
   }, [open, onClose, panelRef]);

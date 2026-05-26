@@ -479,19 +479,19 @@ export function StoryModal({ state, dispatch }: { state: any; dispatch: any }) {
   if (isDialogsDisabled()) return null;
 
   const settlement = displayZoneName(state, "home");
-  const lines = beatLines(beat).map((l) => ({ ...l, text: interpolateBeatText(l.text, { settlement }) }));
+  const lines = beatLines(beat).map((l: any) => ({ ...l, text: interpolateBeatText(l.text, { settlement }) }));
   const canStepDialogue = lines.length > 1;
   const atLastLine = lineStep >= lines.length - 1;
   const visibleLines = canStepDialogue ? [lines[Math.max(0, Math.min(lineStep, lines.length - 1))]] : lines;
   const revealFooter = !canStepDialogue || atLastLine;
   const choices = beatChoices(beat);
   const scene = beatScene(beat);
-  const headSpeakerKey = visibleLines.find((l) => l.speaker)?.speaker ?? lines.find((l) => l.speaker)?.speaker ?? null;
+  const headSpeakerKey = visibleLines.find((l: any) => l.speaker)?.speaker ?? lines.find((l: any) => l.speaker)?.speaker ?? null;
   const baseNpc = headSpeakerKey ? (NPCS as any)[headSpeakerKey] : null;
   const npc = baseNpc ? { key: headSpeakerKey, ...baseNpc } : null;
 
-  const pick = (choiceId) => dispatch({ type: "STORY/PICK_CHOICE", payload: { choiceId } });
-  const submitPrompt = (value) => {
+  const pick = (choiceId: string) => dispatch({ type: "STORY/PICK_CHOICE", payload: { choiceId } });
+  const submitPrompt = (value: string) => {
     if (beat.prompt?.kind === "name_settlement") {
       dispatch({ type: "SET_SETTLEMENT_NAME", payload: { zoneId: beat.prompt.zoneId, name: value } });
     }
@@ -543,7 +543,7 @@ export function StoryModal({ state, dispatch }: { state: any; dispatch: any }) {
           <span style={{ fontWeight: 600, fontSize: 10, letterSpacing: "0.16em", textTransform: "uppercase", color: "rgba(226,178,74,0.7)" }}>Your reply</span>
           <span style={{ flex: 1, height: 1, background: "linear-gradient(90deg, transparent, rgba(226,178,74,0.4))" }} />
         </div>
-        {choices.map((c, i) => <ChoiceButton key={c.id} choice={c} index={i} onPick={() => pick(c.id)} />)}
+        {choices.map((c: any, i: number) => <ChoiceButton key={c.id} choice={c} index={i} onPick={() => pick(c.id)} />)}
       </div>
     );
     footKind = "choices";
@@ -573,14 +573,14 @@ export function StoryModal({ state, dispatch }: { state: any; dispatch: any }) {
 
 // ─── NpcBubble ────────────────────────────────────────────────────────────────
 
-export function NpcBubble({ bubble, dispatch }) {
+export function NpcBubble({ bubble, dispatch }: { bubble: any; dispatch: any }) {
   const notifier = useNotifier();
-  const lastIdRef = useRef(null);
+  const lastIdRef = useRef<string | null>(null);
   useEffect(() => {
     if (isDialogsDisabled()) return;
     if (!bubble || bubble.id === lastIdRef.current) return;
     lastIdRef.current = bubble.id;
-    const npc = NPCS[bubble.npc];
+    const npc = (NPCS as Record<string, any>)[bubble.npc];
     const npcLabel = npc ? `${npc.name} · ${npc.role}` : bubble.npc;
     notifier.bubble({
       npcKey: npcLabel,

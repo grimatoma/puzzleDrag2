@@ -1,15 +1,19 @@
+import type { ReactNode } from "react";
 import { BIOMES } from "../../constants.js";
+import type { GameState, Dispatch } from "../../types/state.js";
 
 const TABS = ["trophies", "collection"];
 // Use the canonical achievements list from features/achievements/data.js
 // (12 entries with counter/threshold shape). The constants.js ACHIEVEMENTS
 // list (20 entries) is retained for legacy compatibility but not rendered here.
-import { ACHIEVEMENTS } from "./data.js";
+import { ACHIEVEMENTS, type AchievementDef } from "./data.js";
 import { MAGIC_TOOLS } from "../portal/data.js";
 import Icon from "../../ui/Icon.jsx";
-import FeaturePanel from "../../ui/primitives/FeaturePanel.jsx";
+import { FeaturePanel } from "../_shared/uiTypes.js";
 
-function CheckGlyph({ size = 12 }) {
+interface GlyphProps { size?: number }
+
+function CheckGlyph({ size = 12 }: GlyphProps) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
       <path d="M5 12.5l4.5 4.5L19 7" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" />
@@ -17,7 +21,7 @@ function CheckGlyph({ size = 12 }) {
   );
 }
 
-function LockGlyph({ size = 18 }) {
+function LockGlyph({ size = 18 }: GlyphProps) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
       <rect x="5" y="11" width="14" height="9" rx="2" stroke="currentColor" strokeWidth="2" />
@@ -26,24 +30,38 @@ function LockGlyph({ size = 18 }) {
   );
 }
 
-function prettyToolName(key) {
-  const magic = MAGIC_TOOLS.find((t) => t.id === key);
+interface MagicTool { id: string; name: string }
+
+function prettyToolName(key: string): string {
+  const magic = (MAGIC_TOOLS as MagicTool[]).find((t) => t.id === key);
   if (magic) return magic.name;
   // Fallback: replace underscores with spaces and title-case
-  return key.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+  return key.replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase());
 }
 
 export const viewKey = "achievements";
 
-const ALL_RESOURCES = [...BIOMES.farm.resources, ...BIOMES.mine.resources];
+interface Resource {
+  key: string;
+  label: string;
+  color: number;
+}
 
-function hexColor(n) {
+const ALL_RESOURCES: Resource[] = [...BIOMES.farm.resources, ...BIOMES.mine.resources] as Resource[];
+
+function hexColor(n: number): string {
   return "#" + n.toString(16).padStart(6, "0");
 }
 
+interface AchievementsState {
+  counters?: Record<string, number>;
+  unlocked?: Record<string, boolean>;
+}
+
 // Get progress value for the canonical counter-based achievements
-function getCounterValue(state, counter) {
-  return (state.achievements?.counters?.[counter] ?? 0);
+function getCounterValue(state: GameState, counter: string): number {
+  const ach = (state as GameState & { achievements?: AchievementsState }).achievements;
+  return (ach?.counters?.[counter] ?? 0);
 }
 
 // Legacy metric lookup kept for reference (not currently rendered)
@@ -51,9 +69,16 @@ function getCounterValue(state, counter) {
 
 // ─── Trophy card ─────────────────────────────────────────────────────────────
 
-function TrophyCard({ achievement, current, trophyState }) {
+interface TrophyCardProps {
+  achievement: AchievementDef;
+  current: number;
+  trophyState: string | null;
+}
+
+function TrophyCard({ achievement, current, trophyState }: TrophyCardProps) {
   // canonical shape uses threshold; legacy shape uses target
-  const { name, desc, icon, threshold, target: targetLegacy } = achievement;
+  const { name, desc, threshold, target: targetLegacy } = achievement;
+  const icon: ReactNode = (achievement as AchievementDef & { icon?: ReactNode }).icon ?? null;
   const target = threshold ?? targetLegacy ?? 1;
   const unlocked = !!trophyState;
   const claimed  = trophyState === "claimed";
@@ -117,7 +142,12 @@ function TrophyCard({ achievement, current, trophyState }) {
 
 // ─── Collection chip ─────────────────────────────────────────────────────────
 
-function ResourceChip({ resource, count }) {
+interface ResourceChipProps {
+  resource: Resource;
+  count: number;
+}
+
+function ResourceChip({ resource, count }: ResourceChipProps) {
   const discovered = count > 0;
   const bg = discovered ? hexColor(resource.color) : "#d8c4a0";
   const textColor = discovered ? "#fff" : "#7a5e3f";
@@ -151,7 +181,7 @@ function ResourceChip({ resource, count }) {
 // ─── Main screen ─────────────────────────────────────────────────────────────
 
 // Derive counter-grouped categories from canonical ACHIEVEMENTS list
-const COUNTER_GROUPS = {
+const COUNTER_GROUPS: Record<string, string> = {
   chains_committed: "Chains",
   orders_fulfilled: "Orders",
   bosses_defeated: "Bosses",
@@ -160,17 +190,24 @@ const COUNTER_GROUPS = {
   supplies_converted: "Supplies",
 };
 
-export default function AchievementsScreen({ state, dispatch }) {
-  const requested = state?.viewParams?.tab;
-  const tab = TABS.includes(requested) ? requested : "trophies";
-  const setTab = (next) => dispatch({ type: "SET_VIEW_PARAMS", params: { tab: next } });
+interface AchievementsScreenProps {
+  state: GameState;
+  dispatch: Dispatch;
+}
+
+export default function AchievementsScreen({ state, dispatch }: AchievementsScreenProps) {
+  const viewParams = (state as GameState & { viewParams?: { tab?: string } }).viewParams;
+  const requested = viewParams?.tab;
+  const tab = requested && TABS.includes(requested) ? requested : "trophies";
+  const setTab = (next: string) => dispatch({ type: "SET_VIEW_PARAMS", params: { tab: next } });
 
   // Canonical: state.achievements.unlocked (from features/achievements/data.js)
-  const unlockedMap = state.achievements?.unlocked ?? {};
-  const collected = state.collected || {};
+  const achState = (state as GameState & { achievements?: AchievementsState; collected?: Record<string, number> });
+  const unlockedMap: Record<string, boolean> = achState.achievements?.unlocked ?? {};
+  const collected: Record<string, number> = achState.collected || {};
 
   const discoveredCount = ALL_RESOURCES.filter((r) => (collected[r.key] || 0) > 0).length;
-  const totalLifetime = Object.values(collected).reduce((s, v) => s + v, 0);
+  const totalLifetime = Object.values(collected).reduce((s: number, v: number) => s + v, 0);
 
   // Use canonical achievements list, group by counter
   const counterGroups = [...new Set(ACHIEVEMENTS.map((a) => COUNTER_GROUPS[a.counter] ?? a.counter))];
@@ -231,7 +268,7 @@ export default function AchievementsScreen({ state, dispatch }) {
               <div className="flex flex-col gap-1 justify-center">
                 <div className="hl-section-label !text-[9px] px-0.5">Farm</div>
                 <div className="flex flex-wrap gap-1.5">
-                  {BIOMES.farm.resources.map((r) => (
+                  {(BIOMES.farm.resources as Resource[]).map((r) => (
                     <ResourceChip key={r.key} resource={r} count={collected[r.key] || 0} />
                   ))}
                 </div>
@@ -242,7 +279,7 @@ export default function AchievementsScreen({ state, dispatch }) {
               <div className="flex flex-col gap-1 justify-center">
                 <div className="hl-section-label !text-[9px] px-0.5">Mine</div>
                 <div className="flex flex-wrap gap-1.5">
-                  {BIOMES.mine.resources.map((r) => (
+                  {(BIOMES.mine.resources as Resource[]).map((r) => (
                     <ResourceChip key={r.key} resource={r} count={collected[r.key] || 0} />
                   ))}
                 </div>

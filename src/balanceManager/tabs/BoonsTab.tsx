@@ -11,17 +11,27 @@
 import { BOONS } from "../../features/boons/data.js";
 import { COLORS, Card } from "../shared.jsx";
 
-const PATH_LABEL = { coexist: "🤝 Coexist", driveout: "⚔ Drive Out" };
-const TYPE_LABEL = { farm: "Farm", mine: "Mine", harbor: "Harbor" };
+const PATH_LABEL: Record<string, string> = { coexist: "🤝 Coexist", driveout: "⚔ Drive Out" };
+const TYPE_LABEL: Record<string, string> = { farm: "Farm", mine: "Mine", harbor: "Harbor" };
 
-function CostStr({ cost: any }) {
-  const parts = [];
+interface BoonCost { embers?: number; coreIngots?: number }
+interface BoonEffect { type: string; params?: Record<string, unknown> }
+interface BoonRow {
+  id: string;
+  name: string;
+  desc: string;
+  cost?: BoonCost;
+  effect?: BoonEffect | null;
+}
+
+function CostStr({ cost }: { cost: BoonCost }) {
+  const parts: string[] = [];
   if ((cost.embers ?? 0) > 0) parts.push(`🔥 ${cost.embers}`);
   if ((cost.coreIngots ?? 0) > 0) parts.push(`▣ ${cost.coreIngots}`);
   return <span style={{ color: COLORS.ink }}>{parts.join(" · ")}</span>;
 }
 
-function EffectStr({ effect: any }) {
+function EffectStr({ effect }: { effect: BoonEffect | null | undefined }) {
   if (!effect) return <span style={{ color: COLORS.inkSubtle }}>—</span>;
   return (
     <span style={{ color: COLORS.ink }}>
@@ -32,12 +42,13 @@ function EffectStr({ effect: any }) {
 }
 
 export default function BoonsTab() {
+  const boons = BOONS as unknown as Record<string, BoonRow[]>;
   return (
     <div className="flex flex-col gap-3">
       <div className="text-[11px] italic" style={{ color: COLORS.inkSubtle }}>
         Read-only browser. Boons are purchased in-game from the Boons screen after the player faces a settlement's keeper. Editing names / costs / effects wires up in a follow-up.
       </div>
-      {Object.entries(BOONS).map(([catalogKey, list]) => {
+      {Object.entries(boons).map(([catalogKey, list]) => {
         const [type, path] = catalogKey.split("_");
         return (
           <Card key={catalogKey} title={`${TYPE_LABEL[type] ?? type} · ${PATH_LABEL[path] ?? path}`}>

@@ -2,9 +2,19 @@ import { useEffect, useRef, useState } from "react";
 
 let nextChipId = 1;
 
-export function useReceiptChips(value, opts = {}) {
+interface ReceiptChip {
+  id: number;
+  delta: number;
+}
+
+interface UseReceiptChipsOpts {
+  lifetimeMs?: number;
+  sign?: "gain" | "loss" | "either";
+}
+
+export function useReceiptChips(value: number, opts: UseReceiptChipsOpts = {}): ReceiptChip[] {
   const { lifetimeMs = 1100, sign = "gain" } = opts;
-  const [chips, setChips] = useState([]);
+  const [chips, setChips] = useState<ReceiptChip[]>([]);
   const lastRef = useRef(value);
 
   useEffect(() => {

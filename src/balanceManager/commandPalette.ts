@@ -19,8 +19,35 @@ import { STORY_BEATS, SIDE_BEATS } from "../story.js";
 import { STORY_FLAGS } from "../flags.js";
 import { getToolPower } from "../config/toolPowers.js";
 
-function asArrayValues(obj: any) {
-  return Array.isArray(obj) ? obj : Object.values(obj || {});
+function asArrayValues<T = unknown>(obj: unknown): T[] {
+  if (Array.isArray(obj)) return obj as T[];
+  if (obj && typeof obj === "object") return Object.values(obj as Record<string, T>);
+  return [];
+}
+
+export interface CommandEntry {
+  id: string;
+  kind: string;
+  tab: string;
+  label: string;
+  sublabel: string;
+  keywords: string[];
+}
+
+interface BuildIndexOptions {
+  items?: Record<string, unknown>;
+  npcs?: Record<string, unknown>;
+  buildings?: unknown;
+  recipes?: Record<string, unknown>;
+  biomes?: Record<string, unknown>;
+  keepers?: Record<string, unknown>;
+  workers?: unknown;
+  bosses?: unknown;
+  achievements?: unknown;
+  zones?: Record<string, unknown>;
+  storyBeats?: unknown[];
+  sideBeats?: unknown[];
+  flags?: unknown;
 }
 
 /**
@@ -29,87 +56,131 @@ function asArrayValues(obj: any) {
  * entry's `tab` is the Dev Panel tab id (e.g. `recipes`, `bosses`) the
  * palette should navigate to when the entry is picked.
  */
-export function buildCommandIndex({ items = ITEMS, npcs = NPCS, buildings = BUILDINGS, recipes = RECIPES, biomes = BIOMES, keepers = KEEPERS, workers = TYPE_WORKERS, bosses = BOSSES, achievements = ACHIEVEMENTS, zones = ZONES, storyBeats = STORY_BEATS, sideBeats = SIDE_BEATS, flags = STORY_FLAGS } = {}) {
-  const entries = [];
-  const push = (entry: any) => entries.push(entry);
+export function buildCommandIndex({ items = ITEMS, npcs = NPCS, buildings = BUILDINGS, recipes = RECIPES, biomes = BIOMES, keepers = KEEPERS, workers = TYPE_WORKERS, bosses = BOSSES, achievements = ACHIEVEMENTS, zones = ZONES, storyBeats = STORY_BEATS, sideBeats = SIDE_BEATS, flags = STORY_FLAGS }: BuildIndexOptions = {}): CommandEntry[] {
+  const entries: CommandEntry[] = [];
+  const push = (entry: CommandEntry) => entries.push(entry);
+  // Narrow individual entries to a loose record so the dynamic field reads
+  // don't smear `unknown` across every line.
+  const asRec = (v: unknown): Record<string, unknown> => (v && typeof v === "object" ? v as Record<string, unknown> : {});
+  const stringList = (...xs: unknown[]): string[] =>
+    xs.filter((x): x is string => typeof x === "string" && x.length > 0);
 
-  for (const [id, item] of Object.entries(items || {})) {
+  for (const [id, raw] of Object.entries(items || {})) {
+    const item = asRec(raw);
+    const label = typeof item.label === "string" ? item.label : id;
     push({ id, kind: "tile", tab: "tiles",
-      label: item?.label || id, sublabel: `tile · ${id}`,
-      keywords: [id, item?.label, "tile"].filter(Boolean) });
+      label, sublabel: `tile · ${id}`,
+      keywords: stringList(id, item.label, "tile") });
   }
-  for (const [id, item] of Object.entries(items || {})) {
-    const power = item?.effect ? getToolPower(item.effect) : null;
+  for (const [id, raw] of Object.entries(items || {})) {
+    const item = asRec(raw);
+    const effect = typeof item.effect === "string" ? item.effect : null;
+    const power = effect ? getToolPower(effect) : null;
     const powerBit = power
       ? ` · ${power.name}`
-      : (item?.effect ? ` · ${item.effect}` : "");
+      : (effect ? ` · ${effect}` : "");
+    const label = typeof item.label === "string" ? item.label : id;
     push({ id, kind: "item", tab: "items",
-      label: item?.label || id, sublabel: `item · ${id}${powerBit}`,
-      keywords: [id, item?.label, item?.effect, power?.name, item?.target, "item", "tool", "power"].filter(Boolean) });
+      label, sublabel: `item · ${id}${powerBit}`,
+      keywords: stringList(id, item.label, effect, power?.name, item.target, "item", "tool", "power") });
   }
-  for (const [id, recipe] of Object.entries(recipes || {})) {
+  for (const [id, raw] of Object.entries(recipes || {})) {
+    const recipe = asRec(raw);
+    const name = typeof recipe.name === "string" ? recipe.name : id;
+    const station = typeof recipe.station === "string" ? recipe.station : "any";
+    const coins = typeof recipe.coins === "number" ? recipe.coins : null;
     push({ id, kind: "recipe", tab: "recipes",
-      label: recipe?.name || id, sublabel: `recipe · ${recipe?.station || "any"}${Number.isFinite(recipe?.coins) ? ` · ${recipe.coins}◉` : ""}`,
-      keywords: [id, recipe?.name, recipe?.station, "recipe"].filter(Boolean) });
+      label: name, sublabel: `recipe · ${station}${coins !== null ? ` · ${coins}◉` : ""}`,
+      keywords: stringList(id, recipe.name, recipe.station, "recipe") });
   }
-  for (const b of asArrayValues(buildings)) {
-    if (!b || !b.id) continue;
-    push({ id: b.id, kind: "building", tab: "buildings",
-      label: b.label || b.id, sublabel: `building · level ${b.level ?? "?"}${Number.isFinite(b.coins) ? ` · ${b.coins}◉` : ""}`,
-      keywords: [b.id, b.label, "building"].filter(Boolean) });
+  for (const raw of asArrayValues(buildings)) {
+    const b = asRec(raw);
+    const bid = typeof b.id === "string" ? b.id : null;
+    if (!bid) continue;
+    const label = typeof b.label === "string" ? b.label : bid;
+    const lvl = typeof b.level === "number" ? String(b.level) : "?";
+    const coins = typeof b.coins === "number" ? b.coins : null;
+    push({ id: bid, kind: "building", tab: "buildings",
+      label, sublabel: `building · level ${lvl}${coins !== null ? ` · ${coins}◉` : ""}`,
+      keywords: stringList(bid, b.label, "building") });
   }
-  for (const [id, biome] of Object.entries(biomes || {})) {
+  for (const [id, raw] of Object.entries(biomes || {})) {
+    const biome = asRec(raw);
+    const label = typeof biome.name === "string" ? biome.name : (typeof biome.label === "string" ? biome.label : id);
     push({ id, kind: "biome", tab: "biomes",
-      label: biome?.name || biome?.label || id, sublabel: `biome · ${id}`,
-      keywords: [id, biome?.name, biome?.label, "biome"].filter(Boolean) });
+      label, sublabel: `biome · ${id}`,
+      keywords: stringList(id, biome.name, biome.label, "biome") });
   }
   for (const id of ZONE_IDS || Object.keys(zones || {})) {
-    // TODO(ts-migration): zones is typed without label; cast to any for optional label access
-    const z = (zones as Record<string, any>)?.[id];
+    const z = asRec((zones as Record<string, unknown>)?.[id]);
+    const label = typeof z.name === "string" ? z.name : (typeof z.label === "string" ? z.label : id);
     push({ id, kind: "zone", tab: "zones",
-      label: z?.name || z?.label || id, sublabel: `zone · ${id}`,
-      keywords: [id, z?.name, z?.label, "zone"].filter(Boolean) });
+      label, sublabel: `zone · ${id}`,
+      keywords: stringList(id, z.name, z.label, "zone") });
   }
-  for (const [id, npc] of Object.entries(npcs || {})) {
+  for (const [id, raw] of Object.entries(npcs || {})) {
+    const npc = asRec(raw);
+    const label = typeof npc.name === "string" ? npc.name : id;
     push({ id, kind: "npc", tab: "npcs",
-      label: npc?.name || id, sublabel: `NPC · ${id}`,
-      keywords: [id, npc?.name, "npc"].filter(Boolean) });
+      label, sublabel: `NPC · ${id}`,
+      keywords: stringList(id, npc.name, "npc") });
   }
-  for (const [id, keeper] of Object.entries(keepers || {})) {
+  for (const [id, raw] of Object.entries(keepers || {})) {
+    const keeper = asRec(raw);
+    const label = typeof keeper.name === "string" ? keeper.name : id;
     push({ id, kind: "keeper", tab: "keepers",
-      label: keeper?.name || id, sublabel: `keeper · ${id}`,
-      keywords: [id, keeper?.name, "keeper"].filter(Boolean) });
+      label, sublabel: `keeper · ${id}`,
+      keywords: stringList(id, keeper.name, "keeper") });
   }
-  for (const w of asArrayValues(workers)) {
-    if (!w || !w.id) continue;
-    push({ id: w.id, kind: "worker", tab: "workers",
-      label: w.label || w.id, sublabel: `worker · ${w.id}`,
-      keywords: [w.id, w.label, "worker"].filter(Boolean) });
+  for (const raw of asArrayValues(workers)) {
+    const w = asRec(raw);
+    const wid = typeof w.id === "string" ? w.id : null;
+    if (!wid) continue;
+    const label = typeof w.label === "string" ? w.label : wid;
+    push({ id: wid, kind: "worker", tab: "workers",
+      label, sublabel: `worker · ${wid}`,
+      keywords: stringList(wid, w.label, "worker") });
   }
-  for (const b of asArrayValues(bosses)) {
-    if (!b || !b.id) continue;
-    push({ id: b.id, kind: "boss", tab: "bosses",
-      label: b.name || b.label || b.id, sublabel: `boss · ${b.season || "?"}`,
-      keywords: [b.id, b.name, b.label, b.season, "boss"].filter(Boolean) });
+  for (const raw of asArrayValues(bosses)) {
+    const b = asRec(raw);
+    const bid = typeof b.id === "string" ? b.id : null;
+    if (!bid) continue;
+    const label = typeof b.name === "string" ? b.name : (typeof b.label === "string" ? b.label : bid);
+    const season = typeof b.season === "string" ? b.season : "?";
+    push({ id: bid, kind: "boss", tab: "bosses",
+      label, sublabel: `boss · ${season}`,
+      keywords: stringList(bid, b.name, b.label, b.season, "boss") });
   }
-  for (const a of asArrayValues(achievements)) {
-    if (!a || !a.id) continue;
-    push({ id: a.id, kind: "achievement", tab: "achievements",
-      label: a.name || a.label || a.id, sublabel: "achievement",
-      keywords: [a.id, a.name, a.label, "achievement"].filter(Boolean) });
+  for (const raw of asArrayValues(achievements)) {
+    const a = asRec(raw);
+    const aid = typeof a.id === "string" ? a.id : null;
+    if (!aid) continue;
+    const label = typeof a.name === "string" ? a.name : (typeof a.label === "string" ? a.label : aid);
+    push({ id: aid, kind: "achievement", tab: "achievements",
+      label, sublabel: "achievement",
+      keywords: stringList(aid, a.name, a.label, "achievement") });
   }
-  for (const beat of [...(storyBeats || []), ...(sideBeats || [])]) {
-    if (!beat || !beat.id) continue;
-    push({ id: beat.id, kind: "beat", tab: "story",
-      label: beat.title || beat.id,
-      sublabel: `story beat · ${beat.act ? `Act ${beat.act}` : "side"}${beat.scene ? ` · ${beat.scene}` : ""}`,
-      keywords: [beat.id, beat.title, beat.scene, beat.act ? `act${beat.act}` : "side", "beat"].filter(Boolean) });
+  for (const raw of [...(storyBeats || []), ...(sideBeats || [])]) {
+    const beat = asRec(raw);
+    const beatId = typeof beat.id === "string" ? beat.id : null;
+    if (!beatId) continue;
+    const title = typeof beat.title === "string" ? beat.title : beatId;
+    const act = typeof beat.act === "number" ? beat.act : null;
+    const scene = typeof beat.scene === "string" ? beat.scene : null;
+    push({ id: beatId, kind: "beat", tab: "story",
+      label: title,
+      sublabel: `story beat · ${act ? `Act ${act}` : "side"}${scene ? ` · ${scene}` : ""}`,
+      keywords: stringList(beatId, beat.title, beat.scene, act ? `act${act}` : "side", "beat") });
   }
-  for (const flag of asArrayValues(flags)) {
-    if (!flag || !flag.id) continue;
-    push({ id: flag.id, kind: "flag", tab: "flags",
-      label: flag.label || flag.id, sublabel: `flag · ${flag.category || "story"}`,
-      keywords: [flag.id, flag.label, flag.category, "flag"].filter(Boolean) });
+  for (const raw of asArrayValues(flags)) {
+    const flag = asRec(raw);
+    const flagId = typeof flag.id === "string" ? flag.id : null;
+    if (!flagId) continue;
+    const label = typeof flag.label === "string" ? flag.label : flagId;
+    const category = typeof flag.category === "string" ? flag.category : "story";
+    push({ id: flagId, kind: "flag", tab: "flags",
+      label, sublabel: `flag · ${category}`,
+      keywords: stringList(flagId, flag.label, flag.category, "flag") });
   }
   return entries;
 }
@@ -127,14 +198,14 @@ export function buildCommandIndex({ items = ITEMS, npcs = NPCS, buildings = BUIL
  *    label starts with the entire trimmed query (typical "I know what I'm
  *    looking for" case).
  */
-export function scoreEntry(entry: any, query: any) {
+export function scoreEntry(entry: CommandEntry, query: string): number {
   const q = String(query ?? "").trim().toLowerCase();
   if (!q) return 0;
   const tokens = q.split(/\s+/).filter(Boolean);
   const label = String(entry.label || "").toLowerCase();
   const sublabel = String(entry.sublabel || "").toLowerCase();
   const kind = String(entry.kind || "").toLowerCase();
-  const haystack = [label, sublabel, kind, ...(entry.keywords || []).map((k: any) => String(k).toLowerCase())];
+  const haystack = [label, sublabel, kind, ...(entry.keywords || []).map((k) => String(k).toLowerCase())];
 
   let score = 0;
   for (const tok of tokens) {
@@ -157,10 +228,10 @@ export function scoreEntry(entry: any, query: any) {
  * Search the index. Returns up to `limit` entries sorted by descending score,
  * with the original index order as a stable tiebreaker.
  */
-export function searchCommandIndex(index: any, query: any, limit = 12) {
+export function searchCommandIndex(index: CommandEntry[], query: string, limit = 12): CommandEntry[] {
   const q = String(query ?? "").trim();
   if (!q || !Array.isArray(index)) return [];
-  const ranked = [];
+  const ranked: { score: number; order: number; entry: CommandEntry }[] = [];
   for (let i = 0; i < index.length; i += 1) {
     const score = scoreEntry(index[i], q);
     if (score > 0) ranked.push({ score, order: i, entry: index[i] });

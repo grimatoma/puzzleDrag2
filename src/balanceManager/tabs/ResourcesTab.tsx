@@ -41,7 +41,7 @@ const CURRENCIES = [
   { icon: "🏺", label: "Heirloom tokens", note: "Per-biome story tokens: Heirloom Seed · Pact Iron · Tidesinger Pearl." },
 ];
 
-export default function ResourcesTab({ draft: any, updateDraft: any }) {
+export default function ResourcesTab({ draft, updateDraft }: { draft: any; updateDraft: any }) {
   const [biome, setBiome] = useState("all");
   const [search, setSearch] = useState("");
 
@@ -203,7 +203,7 @@ export default function ResourcesTab({ draft: any, updateDraft: any }) {
   );
 }
 
-function Label({ children: any }) {
+function Label({ children }: { children: any }) {
   return (
     <div className="text-[10px] font-bold uppercase tracking-wide mb-0.5" style={{ color: COLORS.inkSubtle }}>
       {children}

@@ -1,5 +1,5 @@
-import { useState, useEffect, useMemo } from "react";
-import { MAP_NODES, KIND_LABELS } from "./data.js";
+import { useState, useEffect, useMemo, type CSSProperties } from "react";
+import { MAP_NODES, KIND_LABELS, type MapNode } from "./data.js";
 import { isAdjacent } from "./slice.js";
 import { loreFor, HEARTH_TOKENS } from "./lore.js";
 import PhaserMap from "./PhaserMap.jsx";
@@ -13,24 +13,43 @@ import {
   settlementBiome,
   settlementKeeperPath,
   keeperReadyFor,
+  type SettlementType,
 } from "../zones/data.js";
 import { keeperForType } from "../../keepers.js";
 import BiomePicker from "../zones/BiomePicker.jsx";
 import Button from "../../ui/primitives/Button.jsx";
 import { ParchmentDialog } from "../../ui/primitives/Dialog.jsx";
-import FeaturePanel from "../../ui/primitives/FeaturePanel.jsx";
+import { FeaturePanel } from "../_shared/uiTypes.js";
 import StatusChip from "../../ui/primitives/StatusChip.jsx";
+import type { GameState, Dispatch } from "../../types/state.js";
 
 export const viewKey = "cartography";
 
 // Zone kinds that can be founded (the rest — boss, event, festival, capital
 // — never get a "Found settlement" affordance).
-const SETTLEABLE_KINDS = new Set(["home", "farm", "mine", "fish"]);
+const SETTLEABLE_KINDS = new Set<string>(["home", "farm", "mine", "fish"]);
+
+interface KeeperDef {
+  name: string;
+  title: string;
+  icon: string;
+  intro: string[];
+  coexist: { label: string; embers?: number; pitch?: string[] };
+  driveout: { label: string; coreIngots?: number; pitch?: string[] };
+}
+
+interface LoreEntry {
+  subtitle?: string;
+  epitaph?: string;
+  speaker?: string;
+}
+
+type NodeStatus = "current" | "visited" | "discovered-ready" | "discovered-locked" | "discovered-unreachable" | "capital-locked" | "capital-ready" | "hidden";
 
 // ─── Helpers ───────────────────────────────────────────────────────────────
 
-function useIsPortrait() {
-  const [portrait, setPortrait] = useState(() => {
+function useIsPortrait(): boolean {
+  const [portrait, setPortrait] = useState<boolean>(() => {
     if (typeof window === "undefined") return false;
     return window.matchMedia("(orientation: portrait)").matches;
   });
@@ -48,7 +67,7 @@ function useIsPortrait() {
   return portrait;
 }
 
-function getNodeStatus(node, visitedSet, discoveredSet, current, playerLevel, oldCapitalUnlocked) {
+function getNodeStatus(node: MapNode, visitedSet: Set<string>, discoveredSet: Set<string>, current: string, playerLevel: number, oldCapitalUnlocked: boolean): NodeStatus {
   if (node.requiresHearthTokens) return oldCapitalUnlocked ? "capital-ready" : "capital-locked";
   if (node.id === current) return "current";
   if (visitedSet.has(node.id)) return "visited";
@@ -62,11 +81,18 @@ function getNodeStatus(node, visitedSet, discoveredSet, current, playerLevel, ol
 
 // ─── Keeper encounter modal (unchanged behaviour, light style polish) ──────
 
-function KeeperEncounterModal({ node, type, dispatch, onClose }) {
-  const keeper = keeperForType(type);
-  const [chosen, setChosen] = useState(null);
+interface KeeperEncounterModalProps {
+  node: MapNode;
+  type: SettlementType;
+  dispatch: Dispatch;
+  onClose: () => void;
+}
+
+function KeeperEncounterModal({ node, type, dispatch, onClose }: KeeperEncounterModalProps) {
+  const keeper = keeperForType(type) as KeeperDef | null;
+  const [chosen, setChosen] = useState<"coexist" | "driveout" | null>(null);
   if (!keeper) { onClose(); return null; }
-  const pick = (path) => {
+  const pick = (path: "coexist" | "driveout") => {
     dispatch({ type: "KEEPER/CONFRONT", payload: { zoneId: node.id, path } });
     setChosen(path);
   };
@@ -91,7 +117,7 @@ function KeeperEncounterModal({ node, type, dispatch, onClose }) {
         {!chosen ? (
           <>
             <div className="flex flex-col gap-1.5 text-[12px] text-[#2b2218] leading-snug mb-3">
-              {keeper.intro.map((line, i) => <p key={i}>{line}</p>)}
+              {keeper.intro.map((line: string, i: number) => <p key={i}>{line}</p>)}
             </div>
             <div className="flex flex-col gap-2">
               <button
@@ -100,7 +126,7 @@ function KeeperEncounterModal({ node, type, dispatch, onClose }) {
               >
                 <div className="flex items-center justify-between">
                   <span className="font-bold text-[13px] text-[#1f3a10]">🤝 Coexist</span>
-                  <StatusChip tone="gold">+{keeper.coexist.embers ?? 0} 🔥 Embers</StatusChip>
+                  <StatusChip tone="gold" style={{}}>+{keeper.coexist.embers ?? 0} 🔥 Embers</StatusChip>
                 </div>
                 <div className="text-[12px] text-[#3a4a20] mt-0.5">"{keeper.coexist.label}"</div>
               </button>
@@ -110,7 +136,7 @@ function KeeperEncounterModal({ node, type, dispatch, onClose }) {
               >
                 <div className="flex items-center justify-between">
                   <span className="font-bold text-[13px] text-[#2b2218]">⚔ Trial</span>
-                  <StatusChip tone="slate">+{keeper.driveout.coreIngots ?? 0} ▣ Core Ingots</StatusChip>
+                  <StatusChip tone="slate" style={{}}>+{keeper.driveout.coreIngots ?? 0} ▣ Core Ingots</StatusChip>
                 </div>
                 <div className="text-[12px] text-[#4a3a2a] mt-0.5">"{keeper.driveout.label}"</div>
               </button>
@@ -128,7 +154,7 @@ function KeeperEncounterModal({ node, type, dispatch, onClose }) {
               {chosen === "coexist" ? "🤝 You chose to coexist" : "⚔ Keeper trial started"}
             </div>
             <div className="flex flex-col gap-1.5 text-[12px] text-[#2b2218] leading-snug mb-3">
-              {(info?.pitch ?? []).map((line, i) => <p key={i}>{line}</p>)}
+              {(info?.pitch ?? []).map((line: string, i: number) => <p key={i}>{line}</p>)}
               <p className="font-bold text-[#5a7a1a]">
                 {chosen === "coexist"
                   ? `+${keeper.coexist.embers ?? 0} Embers added to your kingdom.`
@@ -147,13 +173,19 @@ function KeeperEncounterModal({ node, type, dispatch, onClose }) {
 
 // ─── Side card pieces ──────────────────────────────────────────────────────
 
-const cardStyle = {
+const cardStyle: CSSProperties = {
   fontFamily: "'Newsreader', 'Times New Roman', serif",
   color: "#2b2218",
 };
 
-function NodeStatusChip({ status, target, tokenCount = 0 }) {
-  let tone, text;
+interface NodeStatusChipProps {
+  status: NodeStatus;
+  target: MapNode;
+  tokenCount?: number;
+}
+
+function NodeStatusChip({ status, target, tokenCount = 0 }: NodeStatusChipProps) {
+  let tone: string, text: string;
   switch (status) {
     case "current":               tone = "gold"; text = "◉ You are here"; break;
     case "visited":               tone = "success"; text = "✓ Visited · fast-travel"; break;
@@ -177,9 +209,16 @@ function NodeStatusChip({ status, target, tokenCount = 0 }) {
   );
 }
 
-function FoundSettlementBlock({ node, visitedSet, state, dispatch }) {
-  const [pickerOpen, setPickerOpen] = useState(false);
-  const [keeperOpen, setKeeperOpen] = useState(false);
+interface FoundSettlementBlockProps {
+  node: MapNode;
+  visitedSet: Set<string>;
+  state: GameState;
+  dispatch: Dispatch;
+}
+
+function FoundSettlementBlock({ node, visitedSet, state, dispatch }: FoundSettlementBlockProps) {
+  const [pickerOpen, setPickerOpen] = useState<boolean>(false);
+  const [keeperOpen, setKeeperOpen] = useState<boolean>(false);
   if (!node || !SETTLEABLE_KINDS.has(node.kind)) return null;
   if (!visitedSet.has(node.id)) return null;
 
@@ -187,7 +226,7 @@ function FoundSettlementBlock({ node, visitedSet, state, dispatch }) {
     const done = settlementCompleted(state, node.id);
     const b = settlementBiome(state, node.id);
     const type = settlementTypeForZone(node.id);
-    const keeper = type && keeperForType(type);
+    const keeper = type ? (keeperForType(type) as KeeperDef | null) : null;
     const path = settlementKeeperPath(state, node.id);
     const ready = keeperReadyFor(state, node.id);
     return (
@@ -231,7 +270,7 @@ function FoundSettlementBlock({ node, visitedSet, state, dispatch }) {
             ⚔ Face {keeper.name}
           </button>
         )}
-        {keeperOpen && keeper && (
+        {keeperOpen && keeper && type && (
           <KeeperEncounterModal node={node} type={type} dispatch={dispatch} onClose={() => setKeeperOpen(false)} />
         )}
       </div>
@@ -241,7 +280,8 @@ function FoundSettlementBlock({ node, visitedSet, state, dispatch }) {
   const type = settlementTypeForZone(node.id);
   if (!type) return null;
   const cost = settlementFoundingCost(state).coins;
-  const canAfford = (state?.coins ?? 0) >= cost;
+  const s = state as GameState & { coins?: number };
+  const canAfford = (s?.coins ?? 0) >= cost;
   return (
     <>
       <button
@@ -267,8 +307,17 @@ function FoundSettlementBlock({ node, visitedSet, state, dispatch }) {
   );
 }
 
-function ActionButton({ status, node, isCurrent, canFastTravel, canUnlock, onTravel }) {
-  const base = {
+interface ActionButtonProps {
+  status: NodeStatus;
+  node: MapNode;
+  isCurrent: boolean;
+  canFastTravel: boolean;
+  canUnlock: boolean;
+  onTravel: () => void;
+}
+
+function ActionButton({ status, node, isCurrent, canFastTravel, canUnlock, onTravel }: ActionButtonProps) {
+  const base: CSSProperties = {
     ...cardStyle,
     width: "100%",
     fontSize: 12,
@@ -377,7 +426,15 @@ function EmptyPanel() {
   );
 }
 
-function Legenda({ dot, stroke, label, glow = false, muted = false }) {
+interface LegendaProps {
+  dot: string;
+  stroke: string;
+  label: string;
+  glow?: boolean;
+  muted?: boolean;
+}
+
+function Legenda({ dot, stroke, label, glow = false, muted = false }: LegendaProps) {
   return (
     <div className="flex items-center gap-1.5">
       <span
@@ -396,16 +453,26 @@ function Legenda({ dot, stroke, label, glow = false, muted = false }) {
 
 // ─── The story-flavored side panel ─────────────────────────────────────────
 
-function NodePanel({ node, current, visited, discovered, playerLevel, dispatch, state }) {
-  const visitedSet    = useMemo(() => new Set(visited),    [visited]);
-  const discoveredSet = useMemo(() => new Set(discovered), [discovered]);
+interface NodePanelProps {
+  node: MapNode;
+  current: string;
+  visited: string[];
+  discovered: string[];
+  playerLevel: number;
+  dispatch: Dispatch;
+  state: GameState;
+}
+
+function NodePanel({ node, current, visited, discovered, playerLevel, dispatch, state }: NodePanelProps) {
+  const visitedSet    = useMemo(() => new Set<string>(visited),    [visited]);
+  const discoveredSet = useMemo(() => new Set<string>(discovered), [discovered]);
   const capitalUnlocked = isOldCapitalUnlocked(state);
   const tokenCount = hearthTokenCount(state);
   const status = getNodeStatus(node, visitedSet, discoveredSet, current, playerLevel, capitalUnlocked);
   const isCurrent = status === "current";
   const canFastTravel = status === "visited";
   const canUnlock = status === "discovered-ready";
-  const lore = loreFor(node.id);
+  const lore = loreFor(node.id) as LoreEntry | null;
 
   function handleTravel() {
     dispatch({ type: "CARTO/TRAVEL", nodeId: node.id });
@@ -460,7 +527,7 @@ function NodePanel({ node, current, visited, discovered, playerLevel, dispatch, 
           <div className="text-[9px] font-bold uppercase tracking-[0.12em]" style={{ color: "#7c4f2c" }}>
             What waits here
           </div>
-          {node.activities.map((a, i) => (
+          {node.activities.map((a: string, i: number) => (
             <div key={i} className="text-[11px]" style={{ color: "#2b2218" }}>
               • {a}
             </div>
@@ -483,19 +550,29 @@ function NodePanel({ node, current, visited, discovered, playerLevel, dispatch, 
 
 // ─── Hearth-Tokens strip (top of map) ──────────────────────────────────────
 
-function HearthTokensStrip({ state }) {
+interface HearthTokenInfo {
+  id: string;
+  name: string;
+  source: string;
+  short: string;
+  glyph: string;
+  accent: string;
+}
+
+function HearthTokensStrip({ state }: { state: GameState }) {
+  const s = state as GameState & { heirlooms?: Record<string, number> };
   const earned = useMemo(() => {
-    const h = state?.heirlooms ?? {};
+    const h = s?.heirlooms ?? {};
     return {
       seed:  (h.seed ?? 0) > 0,
       iron:  (h.iron ?? 0) > 0,
       pearl: (h.pearl ?? 0) > 0,
-    };
-  }, [state?.heirlooms]);
+    } as Record<string, boolean>;
+  }, [s?.heirlooms]);
   return (
     <div className="flex items-center gap-2">
-      {HEARTH_TOKENS.map((t) => {
-        const lit = earned[t.id];
+      {(HEARTH_TOKENS as HearthTokenInfo[]).map((t) => {
+        const lit = !!earned[t.id];
         return (
           <div
             key={t.id}
@@ -531,7 +608,14 @@ function HearthTokensStrip({ state }) {
 
 // ─── Header bar ────────────────────────────────────────────────────────────
 
-function HeaderBar({ currentNode, visitedCount, totalCount, state }) {
+interface HeaderBarProps {
+  currentNode: MapNode | undefined;
+  visitedCount: number;
+  totalCount: number;
+  state: GameState;
+}
+
+function HeaderBar({ currentNode, visitedCount, totalCount, state }: HeaderBarProps) {
   return (
     <div className="flex items-center justify-between px-3 py-2 flex-shrink-0 border-b border-[#b28b62]/40 gap-2">
       <div className="flex items-center gap-2 min-w-0">
@@ -585,32 +669,46 @@ function LegendBar() {
 
 // ─── Top-level screen ──────────────────────────────────────────────────────
 
-export default function CartographyScreen({ state, dispatch }) {
-  const {
-    mapCurrent    = "home",
-    mapVisited,
-    mapDiscovered = ["home", "meadow", "orchard"],
-    level         = 1,
-  } = state;
+interface CartographyScreenProps {
+  state: GameState;
+  dispatch: Dispatch;
+}
+
+interface CartoHostStateUI {
+  mapCurrent?: string;
+  mapVisited?: string[];
+  mapDiscovered?: string[];
+  level?: number;
+  viewParams?: { zone?: string };
+  settlements?: Record<string, unknown>;
+  heirlooms?: Record<string, number>;
+}
+
+export default function CartographyScreen({ state, dispatch }: CartographyScreenProps) {
+  const s = state as unknown as CartoHostStateUI;
+  const mapCurrent = s.mapCurrent ?? "home";
+  const mapVisited = s.mapVisited;
+  const mapDiscovered = s.mapDiscovered ?? ["home", "meadow", "orchard"];
+  const level = s.level ?? 1;
 
   // Save migration: older saves don't have mapVisited.
-  const visited = mapVisited || mapDiscovered;
+  const visited: string[] = mapVisited || mapDiscovered;
 
   const isPortrait = useIsPortrait();
 
   // The "tapped" zone (panel target) lives in viewParams.zone so each zone
   // has its own URL path (`#/cartography/<zoneId>`). Bad ids are ignored.
-  const tappedFromUrl = state.viewParams?.zone ?? null;
-  const tapped = tappedFromUrl && MAP_NODES.some(n => n.id === tappedFromUrl) ? tappedFromUrl : null;
-  const tappedNode = tapped ? MAP_NODES.find(n => n.id === tapped) : null;
-  const currentNode = MAP_NODES.find(n => n.id === mapCurrent);
+  const tappedFromUrl: string | null = s.viewParams?.zone ?? null;
+  const tapped = tappedFromUrl && MAP_NODES.some((n: MapNode) => n.id === tappedFromUrl) ? tappedFromUrl : null;
+  const tappedNode = tapped ? MAP_NODES.find((n: MapNode) => n.id === tapped) : null;
+  const currentNode = MAP_NODES.find((n: MapNode) => n.id === mapCurrent);
 
   // Build the snapshot the Phaser scene reads from. Memoise so the registry
   // only repaints when something material changes.
   const payload = useMemo(() => {
-    const founded = {};
-    const keeperPaths = {};
-    for (const node of MAP_NODES) {
+    const founded: Record<string, boolean> = {};
+    const keeperPaths: Record<string, string> = {};
+    for (const node of MAP_NODES as MapNode[]) {
       if (isSettlementFounded(state, node.id)) founded[node.id] = true;
       const p = settlementKeeperPath(state, node.id);
       if (p) keeperPaths[node.id] = p;
@@ -626,9 +724,9 @@ export default function CartographyScreen({ state, dispatch }) {
       oldCapitalUnlocked: isOldCapitalUnlocked(state),
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- state.settlements / heirlooms drive founded/keeperPaths/tokenCount
-  }, [mapCurrent, visited, mapDiscovered, level, state.settlements, state.heirlooms]);
+  }, [mapCurrent, visited, mapDiscovered, level, s.settlements, s.heirlooms]);
 
-  function handleNodeTap(nodeId) {
+  function handleNodeTap(nodeId: string) {
     const next = nodeId === tapped ? null : nodeId;
     dispatch({ type: "SET_VIEW_PARAMS", params: { zone: next } });
   }
@@ -655,7 +753,6 @@ export default function CartographyScreen({ state, dispatch }) {
         visitedCount={visited.length}
         totalCount={MAP_NODES.length}
         state={state}
-        dispatch={dispatch}
       />
 
       <div

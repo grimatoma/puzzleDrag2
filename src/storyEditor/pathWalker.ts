@@ -12,15 +12,30 @@
 // respected, the same as the visual preview).
 
 import { effectiveBeat, effectiveChoices } from "./shared.jsx";
+import type { PathChoiceCrumb, PathEffectAggregate, StoryBeat, StoryChoice, StoryDraft, StoryPath, TerminalReason } from "./types.js";
 
-const DEFAULT_OPTS = Object.freeze({
+interface PathWalkerOpts { maxDepth: number; maxPaths: number }
+
+const DEFAULT_OPTS: PathWalkerOpts = Object.freeze({
   maxDepth: 12,    // upper bound on path length (root counted)
   maxPaths: 64,    // cap on the number of full paths returned
 });
 
-const asArr = (v: any) => Array.isArray(v) ? v : (typeof v === "string" && v ? [v] : []);
+const asArr = (v: unknown): string[] => Array.isArray(v) ? v.filter((s): s is string => typeof s === "string") : (typeof v === "string" && v ? [v] : []);
 
-function emptyEffects() {
+interface MutableEffects {
+  coins: number;
+  embers: number;
+  coreIngots: number;
+  gems: number;
+  bondDeltas: Record<string, number>;
+  flagsSet: Set<string>;
+  flagsCleared: Set<string>;
+  resourceDeltas: Record<string, number>;
+  heirloomDeltas: Record<string, number>;
+}
+
+function emptyEffects(): MutableEffects {
   return {
     coins: 0, embers: 0, coreIngots: 0, gems: 0,
     bondDeltas: {},         // npcKey → integer delta
@@ -31,12 +46,12 @@ function emptyEffects() {
   };
 }
 
-function applyChoiceEffects(target: any, choice: any) {
+function applyChoiceEffects(target: MutableEffects, choice: StoryChoice) {
   const o = choice?.outcome || {};
-  if (Number.isFinite(o.coins)) target.coins += o.coins;
-  if (Number.isFinite(o.embers)) target.embers += o.embers;
-  if (Number.isFinite(o.coreIngots)) target.coreIngots += o.coreIngots;
-  if (Number.isFinite(o.gems)) target.gems += o.gems;
+  if (Number.isFinite(o.coins)) target.coins += o.coins as number;
+  if (Number.isFinite(o.embers)) target.embers += o.embers as number;
+  if (Number.isFinite(o.coreIngots)) target.coreIngots += o.coreIngots as number;
+  if (Number.isFinite(o.gems)) target.gems += o.gems as number;
   if (o.bondDelta?.npc && Number.isFinite(o.bondDelta.amount)) {
     target.bondDeltas[o.bondDelta.npc] = (target.bondDeltas[o.bondDelta.npc] || 0) + o.bondDelta.amount;
   }
@@ -44,19 +59,19 @@ function applyChoiceEffects(target: any, choice: any) {
   for (const f of asArr(o.clearFlag)) target.flagsCleared.add(f);
   for (const [k, n] of Object.entries(o.resources || {})) {
     if (!Number.isFinite(n)) continue;
-    target.resourceDeltas[k] = (target.resourceDeltas[k] || 0) + n;
+    target.resourceDeltas[k] = (target.resourceDeltas[k] || 0) + (n as number);
   }
   for (const [k, n] of Object.entries(o.heirlooms || {})) {
     if (!Number.isFinite(n)) continue;
-    target.heirloomDeltas[k] = (target.heirloomDeltas[k] || 0) + n;
+    target.heirloomDeltas[k] = (target.heirloomDeltas[k] || 0) + (n as number);
   }
 }
 
-function applyOnComplete(target: any, beat: any) {
+function applyOnComplete(target: MutableEffects, beat: StoryBeat) {
   for (const f of asArr(beat?.onComplete?.setFlag)) target.flagsSet.add(f);
 }
 
-function cloneEffects(e: any) {
+function cloneEffects(e: MutableEffects): MutableEffects {
   return {
     coins: e.coins, embers: e.embers, coreIngots: e.coreIngots, gems: e.gems,
     bondDeltas: { ...e.bondDeltas },
@@ -67,7 +82,9 @@ function cloneEffects(e: any) {
   };
 }
 
-function finalisePath(path: any, effects: any, terminalBeat: any, terminalReason: any) {
+interface PathBuilder { beats: string[]; choices: PathChoiceCrumb[] }
+
+function finalisePath(path: PathBuilder, effects: MutableEffects, terminalBeat: string, terminalReason: TerminalReason): StoryPath {
   return {
     beats: [...path.beats],
     choices: [...path.choices],
@@ -95,15 +112,17 @@ function finalisePath(path: any, effects: any, terminalBeat: any, terminalReason
  * - Each path carries the sequence of `beats[]` visited and the
  *   `choices[]` taken between them, plus a per-path `effects` aggregate.
  */
-export function enumerateStoryPaths(startBeatId: any, draft: any, options = DEFAULT_OPTS) {
-  const opts = { ...DEFAULT_OPTS, ...(options || {}) };
+export interface WalkResult { paths: StoryPath[]; truncated: boolean }
+
+export function enumerateStoryPaths(startBeatId: string, draft: StoryDraft | null | undefined, options: Partial<PathWalkerOpts> = DEFAULT_OPTS): WalkResult {
+  const opts: PathWalkerOpts = { ...DEFAULT_OPTS, ...(options || {}) };
   const startBeat = effectiveBeat(startBeatId, draft);
   if (!startBeat) return { paths: [], truncated: false };
 
-  const out = [];
+  const out: StoryPath[] = [];
   let truncated = false;
 
-  const walk = (beatId: any, path: any, effects: any, depth: any) => {
+  const walk = (beatId: string, path: PathBuilder, effects: MutableEffects, depth: number) => {
     if (out.length >= opts.maxPaths) { truncated = true; return; }
     const beat = effectiveBeat(beatId, draft);
     if (!beat) {
@@ -152,7 +171,7 @@ export function enumerateStoryPaths(startBeatId: any, draft: any, options = DEFA
 }
 
 /** Summary line for a list of paths — useful for UI labels. */
-export function summarisePaths(walkResult: any) {
+export function summarisePaths(walkResult: WalkResult | null | undefined): string {
   if (!walkResult || !Array.isArray(walkResult.paths)) return "no paths";
   const n = walkResult.paths.length;
   const truncated = walkResult.truncated;

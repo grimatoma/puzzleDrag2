@@ -1,25 +1,30 @@
 import { useEffect } from "react";
+import type { RefObject } from "react";
 
 const FOCUSABLE = 'a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
 
-export default function useFocusTrap(ref, open, onClose) {
+export default function useFocusTrap(
+  ref: RefObject<HTMLElement | null>,
+  open: boolean,
+  onClose?: () => void,
+) {
   useEffect(() => {
     if (!open) return;
-    const previouslyFocused = document.activeElement;
+    const previouslyFocused = document.activeElement as HTMLElement | null;
     const panel = ref.current;
     if (panel) {
-      const focusables = panel.querySelectorAll(FOCUSABLE);
+      const focusables = panel.querySelectorAll<HTMLElement>(FOCUSABLE);
       const first = focusables[0] || panel;
-      first.focus?.();
+      (first as HTMLElement).focus?.();
     }
-    const onKey = (e) => {
+    const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape" && onClose) {
         e.stopPropagation();
         onClose();
         return;
       }
       if (e.key === "Tab" && panel) {
-        const focusables = Array.from(panel.querySelectorAll(FOCUSABLE)).filter(
+        const focusables = Array.from(panel.querySelectorAll<HTMLElement>(FOCUSABLE)).filter(
           (el) => !el.hasAttribute("disabled") && el.offsetParent !== null
         );
         if (focusables.length === 0) {

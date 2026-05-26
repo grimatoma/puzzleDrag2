@@ -12,11 +12,14 @@
 // chip in a path jumps to the beat that fork lives on.
 
 import { useMemo, useEffect } from "react";
-import { C, NPCS, effectiveBeat } from "./shared.jsx";
+import { C, npcByKey, effectiveBeat } from "./shared.jsx";
 import { enumerateStoryPaths, summarisePaths } from "./pathWalker.js";
 import StatusChip from "../ui/primitives/StatusChip.jsx";
+import type { PathEffectAggregate, StoryDraft, StoryPath, TerminalReason } from "./types.js";
 
-const REASON_TONE = {
+type ChipTone = "default" | "muted" | "success" | "warning" | "danger" | "ember" | "gold" | "slate" | "info";
+type ReasonToneEntry = { label: string; tone: ChipTone };
+const REASON_TONE: Record<TerminalReason, ReasonToneEntry> = {
   "ends-here":      { label: "ENDS", tone: "success" },
   "no-target":      { label: "OPEN", tone: "warning" },
   "loop":           { label: "LOOP", tone: "info" },
@@ -24,20 +27,24 @@ const REASON_TONE = {
   "missing-target": { label: "BAD",  tone: "danger" },
 };
 
-function ReasonPill({ reason: any }) {
+function ReasonPill({ reason }: { reason: TerminalReason }) {
   const t = REASON_TONE[reason] || REASON_TONE["ends-here"];
   return <StatusChip tone={t.tone} size="xs" uppercase>{t.label}</StatusChip>;
 }
 
-function EffectBadges({ effects: any }) {
-  const bits = [];
+interface EffectBit { k: string; text: string; tone: ChipTone }
+
+function EffectBadges({ effects }: { effects: PathEffectAggregate }) {
+  const bits: EffectBit[] = [];
   if (effects.coins) bits.push({ k: "coins", text: `¢ ${effects.coins > 0 ? "+" : ""}${effects.coins}`, tone: "gold" });
   if (effects.embers) bits.push({ k: "embers", text: `✸ ${effects.embers > 0 ? "+" : ""}${effects.embers}`, tone: "ember" });
   if (effects.coreIngots) bits.push({ k: "core", text: `◈ ${effects.coreIngots > 0 ? "+" : ""}${effects.coreIngots}`, tone: "slate" });
   if (effects.gems) bits.push({ k: "gems", text: `◆ ${effects.gems > 0 ? "+" : ""}${effects.gems}`, tone: "info" });
-  for (const [npc, delta] of Object.entries(effects.bondDeltas)) {
+  for (const [npc, deltaUnknown] of Object.entries(effects.bondDeltas)) {
+    const delta = deltaUnknown as number;
     if (!delta) continue;
-    bits.push({ k: `bond-${npc}`, text: `♥ ${delta > 0 ? "+" : ""}${delta} ${NPCS[npc]?.name || npc}`, tone: delta > 0 ? "success" : "danger" });
+    const name = npcByKey(npc)?.name || npc;
+    bits.push({ k: `bond-${npc}`, text: `♥ ${delta > 0 ? "+" : ""}${delta} ${name}`, tone: delta > 0 ? "success" : "danger" });
   }
   for (const f of effects.flagsSet) bits.push({ k: `sf-${f}`, text: `⚐ ${f}`, tone: "ember" });
   for (const f of effects.flagsCleared) bits.push({ k: `cf-${f}`, text: `⚑ ${f} off`, tone: "muted" });
@@ -56,7 +63,15 @@ function EffectBadges({ effects: any }) {
   );
 }
 
-export default function PathsPanel({ open: any, draft: any, anchorBeatId: any, onClose: any, onJumpToBeat: any }) {
+export interface PathsPanelProps {
+  open: boolean;
+  draft: StoryDraft;
+  anchorBeatId: string | null;
+  onClose: () => void;
+  onJumpToBeat: (id: string) => void;
+}
+
+export default function PathsPanel({ open, draft, anchorBeatId, onClose, onJumpToBeat }: PathsPanelProps) {
   const result = useMemo(() => {
     if (!anchorBeatId) return { paths: [], truncated: false };
     return enumerateStoryPaths(anchorBeatId, draft);
@@ -109,7 +124,7 @@ export default function PathsPanel({ open: any, draft: any, anchorBeatId: any, o
               No outgoing paths — this beat has no choices, or the start id doesn't exist.
             </div>
           )}
-          {result.paths.map((p, i) => {
+          {result.paths.map((p: StoryPath, i: number) => {
             const tb = effectiveBeat(p.terminalBeat, draft);
             return (
               <div key={i} style={{ borderRadius: 10, border: `1.5px solid ${C.border}`, background: "#fffaf3",
@@ -129,7 +144,7 @@ export default function PathsPanel({ open: any, draft: any, anchorBeatId: any, o
                 </div>
                 {p.choices.length > 0 && (
                   <div style={{ display: "flex", alignItems: "center", gap: 5, flexWrap: "wrap" }}>
-                    {p.choices.map((c: any, j: any) => (
+                    {p.choices.map((c, j) => (
                       <button key={`${c.beatId}-${c.choiceId}-${j}`}
                         onClick={() => { onJumpToBeat(c.beatId); onClose(); }}
                         title={`Jump to beat ${c.beatId}`}

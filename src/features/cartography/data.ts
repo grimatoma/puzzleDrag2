@@ -8,9 +8,54 @@
 // baseTurns, upgradeMap, seasonDrops, dangers, entryCost, buildings)
 // that was previously spread across the separate ZONES table in zones/data.js.
 
+export type MapNodeKind = "home" | "farm" | "mine" | "fish" | "festival" | "boss" | "event" | "capital";
+export type MapRegionId = "hearth" | "farm" | "mine" | "coast" | "wilds" | "boss" | "capital";
+
+export interface MapEntryCost {
+  coins?: number;
+}
+
+export interface SeasonDrops {
+  [season: string]: Record<string, number>;
+}
+
+export interface MapNode {
+  id: string;
+  name: string;
+  kind: MapNodeKind;
+  icon: string;
+  x: number;
+  y: number;
+  level: number;
+  region: MapRegionId;
+  description: string;
+  activities: string[];
+  hasFarm: boolean;
+  hasMine: boolean;
+  hasWater: boolean;
+  baseTurns: number;
+  entryCost: MapEntryCost;
+  upgradeMap?: Record<string, string>;
+  seasonDrops?: SeasonDrops;
+  dangers?: string[];
+  buildings: string[];
+  plotCount: number;
+  requiresHearthTokens?: boolean;
+}
+
+export interface MapRegion {
+  id: MapRegionId;
+  label: string;
+  cx: number;
+  cy: number;
+  rx: number;
+  ry: number;
+  fill: string;
+}
+
 const GOLD = "gold";
 
-const empty4Seasons = () => ({
+const empty4Seasons = (): SeasonDrops => ({
   Spring: {}, Summer: {}, Autumn: {}, Winter: {},
 });
 
@@ -32,7 +77,7 @@ const FARM_SEASON_DROPS_ORCHARD = {
   Winter: { grass: 0.05, grain: 0.05, trees: 0.60, birds: 0.15, vegetables: 0.05, fruits: 0.10 },
 };
 
-export const MAP_NODES = [
+export const MAP_NODES: MapNode[] = [
   {
     id: 'home', name: 'Hearthwood Vale', kind: 'home', icon: '🏡',
     x: 10, y: 50, level: 1, region: 'hearth',
@@ -233,7 +278,7 @@ export const MAP_NODES = [
   },
 ];
 
-export const MAP_EDGES = [
+export const MAP_EDGES: ReadonlyArray<readonly [string, string]> = [
   ['home', 'meadow'],
   ['home', 'orchard'],
   ['home', 'harbor'],
@@ -250,7 +295,7 @@ export const MAP_EDGES = [
   ['pit', 'oldcapital'],
 ];
 
-export const NODE_COLORS = {
+export const NODE_COLORS: Record<MapNodeKind, string> = {
   home:     '#bb3b2f',
   farm:     '#91bf24',
   mine:     '#7c8388',
@@ -263,7 +308,7 @@ export const NODE_COLORS = {
 
 // Background zone tints, drawn as soft circles behind the node graph.
 // Each zone is positioned roughly over the cluster of nodes it represents.
-export const REGIONS = [
+export const REGIONS: MapRegion[] = [
   { id: 'hearth', label: 'Hearthlands', cx: 12, cy: 50, rx: 16, ry: 22, fill: '#d8b878' },
   { id: 'farm',   label: 'Greenfields', cx: 26, cy: 50, rx: 14, ry: 32, fill: '#b8c878' },
   { id: 'wilds',  label: 'The Wilds',   cx: 56, cy: 50, rx: 22, ry: 30, fill: '#c4b888' },
@@ -273,7 +318,7 @@ export const REGIONS = [
   { id: 'capital', label: 'The Old Capital', cx: 93, cy: 50, rx: 7, ry: 18, fill: '#cdb56a' },
 ];
 
-export const KIND_LABELS = {
+export const KIND_LABELS: Record<MapNodeKind, string> = {
   home:     'Home Village',
   farm:     'Farm Region',
   mine:     'Mine Region',

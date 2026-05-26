@@ -1,10 +1,16 @@
+import type { CSSProperties, ReactNode, HTMLAttributes } from "react";
 import { UI_COLORS } from "./palette.js";
 
-function cx(...parts) {
+function cx(...parts: Array<string | false | null | undefined>): string {
   return parts.filter(Boolean).join(" ");
 }
 
-const TONES = {
+type Tone = "default" | "muted" | "success" | "warning" | "danger" | "ember" | "gold" | "slate" | "info";
+type Size = "xs" | "sm" | "md";
+
+interface ToneSpec { background: string; color: string; border: string }
+
+const TONES: Record<Tone, ToneSpec> = {
   default: {
     background: UI_COLORS.parchmentDeep,
     color: UI_COLORS.inkLight,
@@ -52,11 +58,21 @@ const TONES = {
   },
 };
 
-const SIZES = {
+const SIZES: Record<Size, string> = {
   xs: "px-1.5 py-0.5 text-[9px]",
   sm: "px-2 py-0.5 text-[11px]",
   md: "px-3 py-1 text-[12px]",
 };
+
+interface StatusChipProps extends Omit<HTMLAttributes<HTMLSpanElement>, "children" | "className" | "style"> {
+  tone?: Tone;
+  size?: Size;
+  uppercase?: boolean;
+  mono?: boolean;
+  className?: string;
+  style?: CSSProperties;
+  children?: ReactNode;
+}
 
 export default function StatusChip({
   tone = "default",
@@ -67,7 +83,7 @@ export default function StatusChip({
   style,
   children,
   ...rest
-}) {
+}: StatusChipProps) {
   const t = TONES[tone] || TONES.default;
   return (
     <span

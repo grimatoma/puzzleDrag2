@@ -1,16 +1,26 @@
 import { useEffect, useState } from "react";
+import type { CSSProperties } from "react";
 import { createPortal } from "react-dom";
 import { onBurst, getCoinAnchorRect } from "./rewardEvents.js";
 
 const LIFE_MS = 900;
 let nextId = 1;
 
+interface Chip {
+  id: number;
+  startX: number;
+  startY: number;
+  dx: number;
+  dy: number;
+  coins: number;
+}
+
 export default function RewardChipsLayer() {
-  const [chips, setChips] = useState([]);
+  const [chips, setChips] = useState<Chip[]>([]);
 
   useEffect(() => {
     const off = onBurst((e) => {
-      const { pageX, pageY, coins } = e.detail;
+      const { pageX, pageY, coins } = e.detail as { pageX: number; pageY: number; coins: number };
       const targetRect = getCoinAnchorRect();
       const targetX = targetRect
         ? targetRect.left + targetRect.width / 2
@@ -48,9 +58,9 @@ export default function RewardChipsLayer() {
           style={{
             left: c.startX,
             top: c.startY,
-            "--tx": `${c.dx}px`,
-            "--ty": `${c.dy}px`,
-          }}
+            ["--tx" as any]: `${c.dx}px`,
+            ["--ty" as any]: `${c.dy}px`,
+          } as CSSProperties}
         >
           +{c.coins.toLocaleString()}
         </span>

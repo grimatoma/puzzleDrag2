@@ -72,7 +72,9 @@ export function useDraftHistory<T>(initial: T | (() => T), options: { coalesceMs
     const coalesce = !force && (now - lastChangeAt.current < coalesceMs);
     lastChangeAt.current = now;
     setHistory((h) => {
-      const next = typeof updaterOrValue === "function" ? updaterOrValue(h.present) : updaterOrValue;
+      const next = typeof updaterOrValue === "function"
+        ? (updaterOrValue as (prev: T) => T)(h.present)
+        : updaterOrValue;
       return pushHistoryEntry(h, next, { coalesce, maxHistory });
     });
   }, [coalesceMs, maxHistory]);

@@ -10,7 +10,7 @@
 // metadata/triggers edits are persisted through the same draft override shape
 // used by `balance.json`: `flags.byId.<id>` / `flags.new`.
 
-import { useState, useMemo } from "react";
+import React, { useState, useMemo } from "react";
 import { firedFlagKey } from "../../story.js";
 import { STORY_FLAGS, isRegisteredFlag, flagCategory as registryFlagCategory, FLAG_CATEGORIES } from "../../flags.js";
 import { FLAG_READS } from "../../flagReads.js";
@@ -19,25 +19,82 @@ import { COLORS, TextField, TextArea, NumberField, SmallButton } from "../shared
 import { allBeatIds, effectiveBeat, FLAG_ID_RE } from "../../storyEditor/shared.jsx";
 import StatusChip from "../../ui/primitives/StatusChip.jsx";
 
-const NPC_KEYS = Object.keys(NPCS ?? {});
+interface FlagTrigger {
+  type: string;
+  flag?: string;
+  key?: string;
+  amount?: number;
+  req?: Record<string, number>;
+  item?: string;
+  count?: number;
+  id?: string;
+  npc?: string;
+  act?: number;
+}
 
-const FLAG_CATEGORY_KEYS = Object.keys(FLAG_CATEGORIES);
+interface FlagDef {
+  id: string;
+  label: string;
+  description?: string;
+  category?: string;
+  default?: boolean;
+  source?: string;
+  triggers?: FlagTrigger[];
+}
 
-function flagDefs(draft: any) {
-  const defs = STORY_FLAGS.map((f) => ({ ...f, triggers: Array.isArray(f.triggers) ? f.triggers.slice() : [] }));
-  const applyPatch = (def: any, patch: any) => {
+interface FlagSource {
+  type: "trigger" | "beat" | "choice" | "auto";
+  beatId?: string;
+  beatTitle?: string;
+  choiceId?: string;
+  choiceLabel?: string;
+  trigger?: FlagTrigger;
+  note?: string;
+}
+
+interface FlagRead { where: string; note: string }
+
+interface FlagInfo {
+  name: string;
+  def: FlagDef | null;
+  setBy: FlagSource[];
+  clearedBy: FlagSource[];
+  readBy: FlagRead[];
+  triggeredBeats: { beatId: string; beatTitle: string; trigger: FlagTrigger }[];
+}
+
+interface FlagCategoryInfo { id?: string; label: string; color: string }
+
+const flagCategories = FLAG_CATEGORIES as unknown as Record<string, FlagCategoryInfo>;
+const flagReads = FLAG_READS as unknown as Record<string, FlagRead[]>;
+const storyFlags = STORY_FLAGS as unknown as FlagDef[];
+const npcs = NPCS as unknown as Record<string, { name?: string }>;
+
+const NPC_KEYS = Object.keys(npcs ?? {});
+
+const FLAG_CATEGORY_KEYS = Object.keys(flagCategories);
+
+interface FlagsDraft {
+  byId?: Record<string, Partial<FlagDef>>;
+  new?: Array<Partial<FlagDef>>;
+}
+type DraftLike = { flags?: FlagsDraft; story?: { newBeats?: unknown[]; beats?: Record<string, unknown> } };
+
+function flagDefs(draft: DraftLike | null | undefined): FlagDef[] {
+  const defs: FlagDef[] = storyFlags.map((f) => ({ ...f, triggers: Array.isArray(f.triggers) ? f.triggers.slice() : [] }));
+  const applyPatch = (def: FlagDef, patch: Partial<FlagDef> | null | undefined): FlagDef => {
     if (!def || !patch || typeof patch !== "object") return def;
-    const next = { ...def };
+    const next: FlagDef = { ...def };
     if (typeof patch.label === "string" && patch.label.length > 0) next.label = patch.label;
     if (typeof patch.description === "string") next.description = patch.description;
-    if (typeof patch.category === "string" && FLAG_CATEGORIES[patch.category]) next.category = patch.category;
+    if (typeof patch.category === "string" && flagCategories[patch.category]) next.category = patch.category;
     if (typeof patch.default === "boolean") next.default = patch.default;
     if (Array.isArray(patch.triggers)) next.triggers = patch.triggers.slice();
     return next;
   };
   for (const [id, patch] of Object.entries(draft?.flags?.byId || {})) {
     const i = defs.findIndex((f) => f.id === id);
-    if (i >= 0) defs[i] = applyPatch(defs[i], patch);
+    if (i >= 0) defs[i] = applyPatch(defs[i], patch as Partial<FlagDef>);
   }
   const taken = new Set(defs.map((f) => f.id));
   for (const raw of draft?.flags?.new || []) {
@@ -49,7 +106,7 @@ function flagDefs(draft: any) {
   return defs;
 }
 
-function renameFlagValue(value: any, oldId: any, newId: any) {
+function renameFlagValue(value: unknown, oldId: string, newId: string): unknown {
   if (Array.isArray(value)) {
     if (!value.includes(oldId)) return value;
     const next = value.map((flag) => (flag === oldId ? newId : flag)).filter(Boolean);
@@ -58,7 +115,7 @@ function renameFlagValue(value: any, oldId: any, newId: any) {
   return value === oldId ? newId : value;
 }
 
-function renameTriggerFlag(trigger: any, oldId: any, newId: any) {
+function renameTriggerFlag(trigger: FlagTrigger | null | undefined, oldId: string, newId: string): FlagTrigger | null | undefined {
   if (!trigger || typeof trigger !== "object") return trigger;
   if ((trigger.type === "flag_set" || trigger.type === "flag_cleared") && trigger.flag === oldId) {
     return { ...trigger, flag: newId };
@@ -66,19 +123,22 @@ function renameTriggerFlag(trigger: any, oldId: any, newId: any) {
   return trigger;
 }
 
-function renameFlagReferencesInDraft(draft: any, oldId: any, newId: any) {
-  const patchBeat = (beat: any) => {
+function renameFlagReferencesInDraft(draft: DraftLike, oldId: string, newId: string) {
+  interface ChoiceLike { outcome?: { setFlag?: unknown; clearFlag?: unknown } }
+  interface BeatLike { trigger?: FlagTrigger; onComplete?: { setFlag?: unknown }; choices?: ChoiceLike[] }
+  const patchBeat = (beat: unknown): unknown => {
     if (!beat || typeof beat !== "object") return beat;
+    const b = beat as BeatLike;
     let changed = false;
-    const next = { ...beat };
+    const next: BeatLike = { ...b };
     const trigger = renameTriggerFlag(next.trigger, oldId, newId);
-    if (trigger !== next.trigger) { next.trigger = trigger; changed = true; }
+    if (trigger !== next.trigger) { next.trigger = trigger ?? undefined; changed = true; }
     if (next.onComplete?.setFlag) {
       const setFlag = renameFlagValue(next.onComplete.setFlag, oldId, newId);
       if (setFlag !== next.onComplete.setFlag) { next.onComplete = { ...next.onComplete, setFlag }; changed = true; }
     }
     if (Array.isArray(next.choices)) {
-      const choices = next.choices.map((choice: any) => {
+      const choices = next.choices.map((choice) => {
         const outcome = choice?.outcome;
         if (!outcome || typeof outcome !== "object") return choice;
         const setFlag = renameFlagValue(outcome.setFlag, oldId, newId);
@@ -94,48 +154,59 @@ function renameFlagReferencesInDraft(draft: any, oldId: any, newId: any) {
 
   if (draft.story?.newBeats) draft.story.newBeats = draft.story.newBeats.map(patchBeat);
   if (draft.story?.beats) {
-    for (const id of Object.keys(draft.story.beats)) draft.story.beats[id] = patchBeat(draft.story.beats[id]);
+    const beats = draft.story.beats as Record<string, unknown>;
+    for (const id of Object.keys(beats)) beats[id] = patchBeat(beats[id]);
   }
-  const patchTriggerList = (triggers: any) => Array.isArray(triggers) ? triggers.map((t) => renameTriggerFlag(t, oldId, newId)) : triggers;
-  if (draft.flags?.new) draft.flags.new = draft.flags.new.map((flag: any) => flag ? { ...flag, triggers: patchTriggerList(flag.triggers) } : flag);
+  const patchTriggerList = (triggers: unknown): unknown =>
+    Array.isArray(triggers) ? triggers.map((t) => renameTriggerFlag(t as FlagTrigger, oldId, newId)) : triggers;
+  if (draft.flags?.new) draft.flags.new = draft.flags.new.map((flag) => flag ? { ...flag, triggers: patchTriggerList(flag.triggers) as FlagTrigger[] } : flag);
   if (draft.flags?.byId) {
-    for (const id of Object.keys(draft.flags.byId)) {
-      if (draft.flags.byId[id]?.triggers) draft.flags.byId[id] = { ...draft.flags.byId[id], triggers: patchTriggerList(draft.flags.byId[id].triggers) };
+    const byId = draft.flags.byId;
+    for (const id of Object.keys(byId)) {
+      if (byId[id]?.triggers) byId[id] = { ...byId[id], triggers: patchTriggerList(byId[id].triggers) as FlagTrigger[] };
     }
   }
 }
 
 /** Effective triggers for a flag after local draft metadata/triggers are folded in. */
-function effectiveFlagTriggers(def: any) {
-  return Array.isArray(def?.triggers) ? def.triggers : [];
+function effectiveFlagTriggers(def: FlagDef | null | undefined): FlagTrigger[] {
+  return Array.isArray(def?.triggers) ? def!.triggers as FlagTrigger[] : [];
 }
 
-const AUTO_CAT = { id: "auto", label: "Auto · system", color: COLORS.slate };
+const AUTO_CAT: FlagCategoryInfo = { id: "auto", label: "Auto · system", color: COLORS.slate };
 
 /** Resolved category for a flag name: registry first, then `_fired_` auto, then a heuristic. */
-function flagCategory(name: any, draft: any) {
+function flagCategory(name: string, draft: DraftLike): FlagCategoryInfo {
   const def = flagDefs(draft).find((f) => f.id === name);
   if (def) {
-    const key = def.category && FLAG_CATEGORIES[def.category] ? def.category : "misc";
-    return { id: key, ...FLAG_CATEGORIES[key] };
+    const key = def.category && flagCategories[def.category] ? def.category : "misc";
+    return { id: key, ...flagCategories[key] };
   }
-  if (isRegisteredFlag(name)) return registryFlagCategory(name);
+  if (isRegisteredFlag(name)) return registryFlagCategory(name) as FlagCategoryInfo;
   if (name.startsWith("_fired_")) return AUTO_CAT;
-  if (name.startsWith("keeper_")) return { id: "frostmaw", ...FLAG_CATEGORIES.frostmaw };
-  if (name.startsWith("mira_"))   return { id: "mira",     ...FLAG_CATEGORIES.mira };
-  if (name.endsWith("_built") || name.endsWith("_lit") || name.endsWith("_active")) return { id: "story", ...FLAG_CATEGORIES.story };
-  return { id: "misc", ...FLAG_CATEGORIES.misc };
+  if (name.startsWith("keeper_")) return { id: "frostmaw", ...flagCategories.frostmaw };
+  if (name.startsWith("mira_"))   return { id: "mira",     ...flagCategories.mira };
+  if (name.endsWith("_built") || name.endsWith("_lit") || name.endsWith("_active")) return { id: "story", ...flagCategories.story };
+  return { id: "misc", ...flagCategories.misc };
 }
 
 /** Scan beats + registry → { name → { name, def, setBy:[], clearedBy:[], readBy:[], triggeredBeats:[] } }. */
-function collectFlags(draft: any) {
-  const flags = {};
-  const ensure = (name: any) => (flags[name] ||= { name, def: null, setBy: [], clearedBy: [], readBy: [], triggeredBeats: [] });
-  const asList = (v: any) => (Array.isArray(v) ? v : v ? [v] : []);
-  const scanBeat = (b: any) => {
+function collectFlags(draft: DraftLike): FlagInfo[] {
+  const flags: Record<string, FlagInfo> = {};
+  const ensure = (name: string): FlagInfo => (flags[name] ||= { name, def: null, setBy: [], clearedBy: [], readBy: [], triggeredBeats: [] });
+  const asList = (v: unknown): string[] => (Array.isArray(v) ? (v as string[]) : v ? [String(v)] : []);
+  interface BeatLike {
+    id?: string;
+    title?: string;
+    trigger?: FlagTrigger;
+    onComplete?: { setFlag?: string | string[] };
+    choices?: Array<{ id?: string; label?: string; outcome?: { setFlag?: string | string[]; clearFlag?: string | string[] } }>;
+  }
+  const scanBeat = (b: BeatLike | null | undefined) => {
     if (!b?.id) return;
     if (b.trigger?.type === "flag_set" || b.trigger?.type === "flag_cleared") {
-      ensure(b.trigger.flag).triggeredBeats.push({ beatId: b.id, beatTitle: b.title || b.id, trigger: b.trigger });
+      const flagId = b.trigger.flag ?? "";
+      ensure(flagId).triggeredBeats.push({ beatId: b.id, beatTitle: b.title || b.id, trigger: b.trigger });
     }
     for (const k of asList(b.onComplete?.setFlag)) ensure(k).setBy.push({ type: "beat", beatId: b.id, beatTitle: b.title || b.id });
     if (!b.onComplete?.setFlag) ensure(firedFlagKey(b.id)).setBy.push({ type: "auto", beatId: b.id, beatTitle: b.title || b.id, note: "implicit fired marker" });
@@ -144,7 +215,11 @@ function collectFlags(draft: any) {
       for (const k of asList(c.outcome?.clearFlag)) ensure(k).clearedBy.push({ type: "choice", beatId: b.id, beatTitle: b.title || b.id, choiceId: c.id, choiceLabel: c.label });
     }
   };
-  for (const id of allBeatIds(draft)) scanBeat(effectiveBeat(id, draft));
+  // Defer to the story editor's helpers (typed against StoryDraft, which is
+  // a superset of DraftLike here).
+  for (const id of allBeatIds(draft as unknown as Parameters<typeof allBeatIds>[0])) {
+    scanBeat(effectiveBeat(id, draft as unknown as Parameters<typeof effectiveBeat>[1]) as BeatLike);
+  }
   // Fold in the registry: attach `def`, ensure every registered flag exists,
   // and record a "trigger" set-by for any flag that declares triggers (the live
   // override draft takes precedence over the registry default).
@@ -154,27 +229,27 @@ function collectFlags(draft: any) {
     for (const t of effectiveFlagTriggers(def)) f.setBy.push({ type: "trigger", trigger: t });
   }
   for (const f of Object.values(flags)) {
-    if (FLAG_READS[f.name]) f.readBy = FLAG_READS[f.name].slice();
+    if (flagReads[f.name]) f.readBy = flagReads[f.name].slice();
     if (f.name.startsWith("_fired_")) f.readBy.push({ where: "src/story.js", note: "beat-progress tracking (isBeatComplete / nextPendingBeat)" });
     // A flag used as a beat's onComplete.setFlag doubles as that beat's
     // completion marker, so it's read by the beat evaluator.
-    if (f.setBy.some((s: any) => s.type === "beat")) f.readBy.push({ where: "src/story.js", note: "beat / side-beat completion marker (isBeatComplete · sideBeatFired)" });
+    if (f.setBy.some((s) => s.type === "beat")) f.readBy.push({ where: "src/story.js", note: "beat / side-beat completion marker (isBeatComplete · sideBeatFired)" });
   }
-  for (const k of Object.keys(FLAG_READS)) if (!flags[k]) flags[k] = { name: k, def: null, setBy: [], clearedBy: [], readBy: FLAG_READS[k].slice(), triggeredBeats: [] };
+  for (const k of Object.keys(flagReads)) if (!flags[k]) flags[k] = { name: k, def: null, setBy: [], clearedBy: [], readBy: flagReads[k].slice(), triggeredBeats: [] };
   return Object.values(flags).sort((a, b) => a.name.localeCompare(b.name));
 }
 
 /** One-line summary of a flag trigger condition. */
-function triggerLabel(t: any) {
+function triggerLabel(t: FlagTrigger | null | undefined): string {
   if (!t || typeof t !== "object") return String(t);
   switch (t.type) {
     case "session_start": return "session start";
     case "session_ended": return "session end";
     case "all_buildings_built": return "all buildings built";
-    case "act_entered": return `enter Act ${["", "I", "II", "III"][t.act] || t.act}`;
+    case "act_entered": return `enter Act ${["", "I", "II", "III"][t.act ?? 0] || t.act}`;
     case "resource_total": return `${t.key} ≥ ${t.amount}`;
     case "resource_total_multi": return Object.entries(t.req || {}).map(([k, v]) => `${k} ≥ ${v}`).join(" & ");
-    case "craft_made": return `craft ${t.item}${t.count > 1 ? ` ×${t.count}` : ""}`;
+    case "craft_made": return `craft ${t.item}${(t.count ?? 0) > 1 ? ` ×${t.count}` : ""}`;
     case "building_built": return `build ${t.id}`;
     case "boss_defeated": return `defeat ${t.id}`;
     case "bond_at_least": return `${t.npc} bond ≥ ${t.amount}`;
@@ -214,8 +289,8 @@ function defaultFlagTrigger(type: any) {
 }
 const miniSel = "text-[11px] rounded border outline-none px-1 py-0.5";
 
-function TriggerRow({ trigger: any, onChange: any, onRemove: any }) {
-  const t = trigger && typeof trigger === "object" && trigger.type ? trigger : { type: "session_start" };
+function TriggerRow({ trigger, onChange, onRemove }: { trigger: FlagTrigger | null | undefined; onChange: (next: FlagTrigger) => void; onRemove: () => void }) {
+  const t: FlagTrigger = trigger && typeof trigger === "object" && trigger.type ? trigger : { type: "session_start" };
   return (
     <div className="rounded-lg p-2 flex flex-wrap items-center gap-1.5" style={{ background: "rgba(62,114,54,0.06)", border: "1px solid rgba(62,114,54,0.25)" }}>
       <span style={{ color: "#3e7236", fontSize: 13 }}>⚡</span>
@@ -233,10 +308,10 @@ function TriggerRow({ trigger: any, onChange: any, onRemove: any }) {
       {t.type === "resource_total_multi" && (
         <textarea rows={2} className="text-[10px] rounded border outline-none px-1.5 py-1 font-mono" style={{ borderColor: COLORS.border, color: COLORS.ink, flex: "1 1 160px" }}
           value={Object.entries(t.req || {}).map(([k, v]) => `${k} ${v}`).join("\n")} placeholder={"tile_tree_oak 20\niron_ingot 5"}
-          onChange={(e) => { const req = {}; for (const line of e.target.value.split("\n")) { const m = line.trim().match(/^(\S+)\s+(\d+)$/); if (m) req[m[1]] = Number(m[2]); } onChange({ type: "resource_total_multi", req }); }} />
+          onChange={(e) => { const req: Record<string, number> = {}; for (const line of e.target.value.split("\n")) { const m = line.trim().match(/^(\S+)\s+(\d+)$/); if (m) req[m[1]] = Number(m[2]); } onChange({ type: "resource_total_multi", req }); }} />
       )}
       {t.type === "craft_made" && <>
-        <TextField value={t.item || ""} onChange={(v: any) => onChange(t.count > 1 ? { type: "craft_made", item: v, count: t.count } : { type: "craft_made", item: v })} placeholder="recipe id" width={110} />
+        <TextField value={t.item || ""} onChange={(v: any) => onChange((t.count ?? 0) > 1 ? { type: "craft_made", item: v, count: t.count } : { type: "craft_made", item: v })} placeholder="recipe id" width={110} />
         <span className="text-[11px]" style={{ color: COLORS.inkSubtle }}>×</span>
         <NumberField value={t.count ?? 1} onChange={(v: any) => onChange(v > 1 ? { type: "craft_made", item: t.item || "", count: v } : { type: "craft_made", item: t.item || "" })} min={1} max={999} width={50} />
       </>}
@@ -245,7 +320,7 @@ function TriggerRow({ trigger: any, onChange: any, onRemove: any }) {
       )}
       {t.type === "bond_at_least" && <>
         <select value={t.npc || NPC_KEYS[0] || "wren"} onChange={(e) => onChange({ type: "bond_at_least", npc: e.target.value, amount: t.amount || 8 })} className={miniSel} style={{ borderColor: COLORS.border, color: COLORS.ink }}>
-          {NPC_KEYS.map((k) => <option key={k} value={k}>{NPCS[k]?.name || k}</option>)}
+          {NPC_KEYS.map((k) => <option key={k} value={k}>{npcs[k]?.name || k}</option>)}
         </select>
         <span className="text-[11px]" style={{ color: COLORS.inkSubtle }}>≥</span>
         <NumberField value={t.amount ?? 8} onChange={(v: any) => onChange({ type: "bond_at_least", npc: t.npc || NPC_KEYS[0] || "wren", amount: v })} min={1} max={999} width={50} />
@@ -262,10 +337,10 @@ function TriggerRow({ trigger: any, onChange: any, onRemove: any }) {
 
 // ─── Small atoms ─────────────────────────────────────────────────────────────
 
-function CatDot({ name: any, draft: any }) {
+function CatDot({ name, draft }: { name: string; draft: DraftLike }) {
   return <span className="inline-block rounded-[2px] flex-shrink-0" style={{ width: 8, height: 8, background: flagCategory(name, draft).color }} />;
 }
-function Tag({ children: any, color = COLORS.inkSubtle, bg = COLORS.parchmentDeep }) {
+function Tag({ children, color = COLORS.inkSubtle, bg = COLORS.parchmentDeep }: { children: React.ReactNode; color?: string; bg?: string }) {
   return (
     <StatusChip
       size="xs"
@@ -276,7 +351,7 @@ function Tag({ children: any, color = COLORS.inkSubtle, bg = COLORS.parchmentDee
     </StatusChip>
   );
 }
-function SourceLine({ s: any }) {
+function SourceLine({ s }: { s: FlagSource }) {
   if (s.type === "trigger") {
     return (
       <div className="text-[11px] leading-snug" style={{ color: COLORS.ink }}>
@@ -297,7 +372,7 @@ function SourceLine({ s: any }) {
 
 // ─── Inspector ───────────────────────────────────────────────────────────────
 
-function Inspector({ flag: any, draft: any, updateDraft: any, onSelect: any }) {
+function Inspector({ flag, draft, updateDraft, onSelect }: { flag: FlagInfo | null; draft: DraftLike; updateDraft: (updater: (d: DraftLike) => void) => void; onSelect: (id: string | null) => void }) {
   const flagName = flag?.name || "";
   const [idDraft, setIdDraft] = useState(flagName);
   const [lastFlagName, setLastFlagName] = useState(flagName);
@@ -310,49 +385,49 @@ function Inspector({ flag: any, draft: any, updateDraft: any, onSelect: any }) {
   const def = flag.def;
   const setCount = flag.setBy.length, readCount = flag.readBy.length;
   const triggers = def ? effectiveFlagTriggers(def) : [];
-  const newIndex = (draft?.flags?.new || []).findIndex((f: any) => f?.id === flag.name);
+  const newIndex = (draft?.flags?.new || []).findIndex((f) => f?.id === flag.name);
   const isNewFlag = newIndex >= 0 || def?.source === "override";
   const overridden = !isNewFlag && !!draft?.flags?.byId?.[flag.name]?.triggers;
-  const allKnownIds = new Set([...STORY_FLAGS.map((f: any) => f.id), ...(draft?.flags?.new || []).map((f) => f?.id).filter(Boolean)]);
-  const validateNewId = (id: any) => {
+  const allKnownIds = new Set([...storyFlags.map((f) => f.id), ...(draft?.flags?.new || []).map((f) => f?.id).filter(Boolean) as string[]]);
+  const validateNewId = (id: string) => {
     const next = String(id || "").trim();
     if (!next) return "Flag id is required.";
     if (!FLAG_ID_RE.test(next)) return "Use lowercase letters, numbers, and underscores.";
     if (next !== flag.name && allKnownIds.has(next)) return "That flag id is already in use.";
     return "";
   };
-  const updateNewFlag = (patch: any) => updateDraft((d: any) => {
+  const updateNewFlag = (patch: Partial<FlagDef>) => updateDraft((d) => {
     d.flags ??= {}; d.flags.new ??= [];
-    const idx = d.flags.new.findIndex((f: any) => f?.id === flag.name);
+    const idx = d.flags.new.findIndex((f) => f?.id === flag.name);
     if (idx < 0) return;
     d.flags.new[idx] = { ...d.flags.new[idx], ...patch };
   });
-  const updateBuiltInFlag = (patch: any) => updateDraft((d: any) => {
+  const updateBuiltInFlag = (patch: Partial<FlagDef>) => updateDraft((d) => {
     d.flags ??= {}; d.flags.byId ??= {};
     d.flags.byId[flag.name] = { ...(d.flags.byId[flag.name] || {}), ...patch };
   });
-  const updateMeta = (patch: any) => {
+  const updateMeta = (patch: Partial<FlagDef>) => {
     if (isNewFlag) updateNewFlag(patch);
     else updateBuiltInFlag(patch);
   };
-  const renameNewFlag = (nextId: any) => {
+  const renameNewFlag = (nextId: string) => {
     const id = String(nextId || "").trim();
     const err = validateNewId(id);
     if (err) return;
-    updateDraft((d: any) => {
+    updateDraft((d) => {
       d.flags ??= {}; d.flags.new ??= [];
-      const idx = d.flags.new.findIndex((f: any) => f?.id === flag.name);
+      const idx = d.flags.new.findIndex((f) => f?.id === flag.name);
       if (idx < 0) return;
       d.flags.new[idx] = { ...d.flags.new[idx], id };
       renameFlagReferencesInDraft(d, flag.name, id);
     });
     onSelect?.(id);
   };
-  const setTriggers = (id: any, next: any) => updateDraft((d: any) => {
+  const setTriggers = (id: string, next: FlagTrigger[] | null) => updateDraft((d) => {
     d.flags ??= {};
     if (isNewFlag) {
       d.flags.new ??= [];
-      const idx = d.flags.new.findIndex((f: any) => f?.id === id);
+      const idx = d.flags.new.findIndex((f) => f?.id === id);
       if (idx >= 0) {
         if (next && next.length > 0) d.flags.new[idx] = { ...d.flags.new[idx], triggers: next };
         else {
@@ -364,7 +439,7 @@ function Inspector({ flag: any, draft: any, updateDraft: any, onSelect: any }) {
       return;
     }
     d.flags.byId ??= {};
-    const ov = { ...(d.flags.byId[id] || {}) };
+    const ov: Partial<FlagDef> = { ...(d.flags.byId[id] || {}) };
     if (next && next.length > 0) ov.triggers = next; else delete ov.triggers;
     if (Object.keys(ov).length === 0) delete d.flags.byId[id]; else d.flags.byId[id] = ov;
     if (Object.keys(d.flags.byId).length === 0) delete d.flags.byId;
@@ -410,7 +485,7 @@ function Inspector({ flag: any, draft: any, updateDraft: any, onSelect: any }) {
             <div className="flex-1 min-w-0">
               <div className="text-[10px] font-bold mb-1" style={{ color: COLORS.inkSubtle }}>Category</div>
               <select value={def.category || "misc"} onChange={(e) => updateMeta({ category: e.target.value })} className={miniSel} style={{ borderColor: COLORS.border, color: COLORS.ink, width: "100%" }}>
-                {FLAG_CATEGORY_KEYS.map((k) => <option key={k} value={k}>{FLAG_CATEGORIES[k].label}</option>)}
+                {FLAG_CATEGORY_KEYS.map((k) => <option key={k} value={k}>{flagCategories[k].label}</option>)}
               </select>
             </div>
             <label className="flex items-center gap-1.5 text-[11px] mt-4" style={{ color: COLORS.inkSubtle }}>
@@ -433,13 +508,13 @@ function Inspector({ flag: any, draft: any, updateDraft: any, onSelect: any }) {
             Game events that flip this flag on (it stays set once true). For a dialog that should fire after this, give a beat a <code style={{ fontFamily: "ui-monospace,monospace" }}>flag_set</code> trigger in the Story editor. Edits write <code style={{ fontFamily: "ui-monospace,monospace" }}>draft.flags.byId.{flag.name}.triggers</code>.
           </div>
           {triggers.length === 0 ? (
-            <div className="text-[11px] italic" style={{ color: COLORS.inkSubtle }}>No triggers — this flag is set by {flag.setBy.some((s: any) => s.type === "choice") ? "a choice outcome" : flag.setBy.some((s: any) => s.type === "beat") ? "a beat's onComplete" : "code"}. Add one above to make it event-driven too.</div>
+            <div className="text-[11px] italic" style={{ color: COLORS.inkSubtle }}>No triggers — this flag is set by {flag.setBy.some((s) => s.type === "choice") ? "a choice outcome" : flag.setBy.some((s) => s.type === "beat") ? "a beat's onComplete" : "code"}. Add one above to make it event-driven too.</div>
           ) : (
             <div className="flex flex-col gap-1.5">
-              {triggers.map((t: any, i: any) => (
+              {triggers.map((t, i) => (
                 <TriggerRow key={i} trigger={t}
-                  onChange={(next: any) => setTriggers(flag.name, triggers.map((x: any, j: any) => (j === i ? next : x)))}
-                  onRemove={() => setTriggers(flag.name, triggers.filter((_: any, j: any) => j !== i))} />
+                  onChange={(next) => setTriggers(flag.name, triggers.map((x, j) => (j === i ? next : x)))}
+                  onRemove={() => setTriggers(flag.name, triggers.filter((_, j) => j !== i))} />
               ))}
             </div>
           )}
@@ -458,7 +533,7 @@ function Inspector({ flag: any, draft: any, updateDraft: any, onSelect: any }) {
           </div>
         ) : (
           <div className="flex flex-col gap-1.5">
-            {flag.setBy.map((s: any, i: any) => (
+            {flag.setBy.map((s, i) => (
               s.type === "trigger" ? (
                 <div key={i} className="rounded-lg p-2 flex items-center gap-2" style={{ background: "rgba(62,114,54,0.07)", border: "1px solid rgba(62,114,54,0.3)" }}>
                   <Tag color="#3e7236">Flag trigger</Tag><span className="text-[11px]" style={{ color: COLORS.ink }}>{triggerLabel(s.trigger)}</span>
@@ -478,7 +553,7 @@ function Inspector({ flag: any, draft: any, updateDraft: any, onSelect: any }) {
       {flag.clearedBy.length > 0 && (
         <div>
           <div className="text-[10px] font-bold uppercase tracking-wide mb-1.5" style={{ color: COLORS.inkSubtle }}>Cleared by · {flag.clearedBy.length}</div>
-          <div className="flex flex-col gap-1">{flag.clearedBy.map((s: any, i: any) => <SourceLine key={i} s={s} />)}</div>
+          <div className="flex flex-col gap-1">{flag.clearedBy.map((s, i) => <SourceLine key={i} s={s} />)}</div>
         </div>
       )}
 
@@ -486,7 +561,7 @@ function Inspector({ flag: any, draft: any, updateDraft: any, onSelect: any }) {
         <div>
           <div className="text-[10px] font-bold uppercase tracking-wide mb-1.5" style={{ color: COLORS.inkSubtle }}>Beats this flag triggers · {flag.triggeredBeats.length}</div>
           <div className="flex flex-col gap-1.5">
-            {flag.triggeredBeats.map((b: any, i: any) => (
+            {flag.triggeredBeats.map((b, i) => (
               <div key={i} className="rounded-lg p-2" style={{ background: "rgba(214,97,42,0.06)", border: `1px solid ${COLORS.border}` }}>
                 <div className="text-[11px] font-bold" style={{ color: COLORS.ink }}>{b.beatTitle}</div>
                 <div className="text-[10px]" style={{ fontFamily: "ui-monospace,monospace", color: COLORS.inkSubtle }}>{b.beatId} · {triggerLabel(b.trigger)}</div>
@@ -504,7 +579,7 @@ function Inspector({ flag: any, draft: any, updateDraft: any, onSelect: any }) {
           </div>
         ) : (
           <div className="flex flex-col gap-1.5">
-            {flag.readBy.map((r: any, i: any) => (
+            {flag.readBy.map((r, i) => (
               <div key={i} className="rounded-lg p-2" style={{ background: COLORS.parchment, border: `1px solid ${COLORS.border}` }}>
                 <div className="text-[11px] font-bold" style={{ fontFamily: "ui-monospace,monospace", color: COLORS.ink }}>{r.where}</div>
                 <div className="text-[10px] italic mt-0.5" style={{ color: COLORS.inkSubtle }}>{r.note}</div>
@@ -527,25 +602,25 @@ const CATS = [
   { id: "auto",     label: "Auto" },
   { id: "misc",     label: "Misc" },
 ];
-const catChipColor = (id: any) => (id === "auto" ? AUTO_CAT.color : (FLAG_CATEGORIES[id]?.color || COLORS.inkSubtle));
+const catChipColor = (id: string) => (id === "auto" ? AUTO_CAT.color : (flagCategories[id]?.color || COLORS.inkSubtle));
 
-function nextFlagId(draft: any) {
+function nextFlagId(draft: DraftLike) {
   const taken = new Set(flagDefs(draft).map((f) => f.id));
   let n = 1;
   while (taken.has(`new_flag_${n}`)) n += 1;
   return `new_flag_${n}`;
 }
 
-export default function FlagsTab({ draft = {}, updateDraft = () => {} }) {
+export default function FlagsTab({ draft = {} as DraftLike, updateDraft = (() => {}) as (updater: (d: DraftLike) => void) => void }: { draft?: DraftLike; updateDraft?: (updater: (d: DraftLike) => void) => void }) {
   const allFlags = useMemo(() => collectFlags(draft), [draft]);
   const [cat, setCat] = useState("all");
   const [q, setQ] = useState("");
   const [onlyOrphans, setOnlyOrphans] = useState(false);
   const [includeFired, setIncludeFired] = useState(false);
-  const [sel, setSel] = useState(null);
+  const [sel, setSel] = useState<string | null>(null);
   const addFlag = () => {
     const id = nextFlagId(draft);
-    updateDraft((d: any) => {
+    updateDraft((d) => {
       d.flags ??= {};
       d.flags.new ??= [];
       d.flags.new.push({ id, label: "New flag", description: "", category: "misc", default: false, triggers: [] });
@@ -555,8 +630,8 @@ export default function FlagsTab({ draft = {}, updateDraft = () => {} }) {
     setIncludeFired(false);
   };
 
-  const orphanSet = (f: any) => f.setBy.length > 0 && f.readBy.length === 0;
-  const orphanRead = (f: any) => f.setBy.length === 0 && f.readBy.length > 0;
+  const orphanSet = (f: FlagInfo) => f.setBy.length > 0 && f.readBy.length === 0;
+  const orphanRead = (f: FlagInfo) => f.setBy.length === 0 && f.readBy.length > 0;
 
   const setNeverRead = allFlags.filter(orphanSet).filter((f) => !f.name.startsWith("_fired_"));
   const readNeverSet = allFlags.filter(orphanRead);
@@ -570,7 +645,7 @@ export default function FlagsTab({ draft = {}, updateDraft = () => {} }) {
     return true;
   });
   const selectedFlag = shown.find((f) => f.name === sel) || null;
-  const catCount = (id: any) => allFlags.filter((f) => (includeFired || !f.name.startsWith("_fired_")) && (id === "all" || flagCategory(f.name, draft).id === id)).length;
+  const catCount = (id: string) => allFlags.filter((f) => (includeFired || !f.name.startsWith("_fired_")) && (id === "all" || flagCategory(f.name, draft).id === id)).length;
 
   return (
     <div className="flex flex-col gap-2 h-full min-h-0">
@@ -633,12 +708,12 @@ export default function FlagsTab({ draft = {}, updateDraft = () => {} }) {
                   <span className="text-[10px] font-bold uppercase tracking-wide truncate" style={{ color: cInfo.color }}>{cInfo.label}</span>
                   <span className="min-w-0">
                     {f.setBy.length === 0 ? <span className="text-[10px] italic" style={{ color: COLORS.redDeep }}>nothing</span>
-                      : f.setBy.slice(0, 2).map((s: any, i: any) => <SourceLine key={i} s={s} />)}
+                      : f.setBy.slice(0, 2).map((s, i) => <SourceLine key={i} s={s} />)}
                     {f.setBy.length > 2 && <span className="text-[9px] italic" style={{ color: COLORS.inkSubtle }}>+{f.setBy.length - 2} more</span>}
                   </span>
                   <span className="min-w-0">
                     {f.readBy.length === 0 ? <span className="text-[10px] italic" style={{ color: "#b88a10" }}>nothing yet</span>
-                      : f.readBy.slice(0, 2).map((r: any, i: any) => <div key={i} className="text-[10px] truncate" style={{ color: COLORS.inkSubtle }}><span style={{ fontFamily: "ui-monospace,monospace" }}>{r.where}</span> · {r.note}</div>)}
+                      : f.readBy.slice(0, 2).map((r, i) => <div key={i} className="text-[10px] truncate" style={{ color: COLORS.inkSubtle }}><span style={{ fontFamily: "ui-monospace,monospace" }}>{r.where}</span> · {r.note}</div>)}
                     {f.readBy.length > 2 && <span className="text-[9px] italic" style={{ color: COLORS.inkSubtle }}>+{f.readBy.length - 2} more</span>}
                   </span>
                 </button>

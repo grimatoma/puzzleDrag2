@@ -1,4 +1,10 @@
-const TONES = {
+import type { ReactNode, HTMLAttributes } from "react";
+
+type Tone = "info" | "success" | "warning" | "danger";
+
+interface ToneSpec { surface: string; text: string; iconColor: string }
+
+const TONES: Record<Tone, ToneSpec> = {
   info:    { surface: "bg-iron-soft/25 border-iron",  text: "text-ink",   iconColor: "text-iron-deep" },
   success: { surface: "bg-moss-soft/30 border-moss",  text: "text-ink",   iconColor: "text-moss" },
   warning: { surface: "bg-gold-soft/35 border-gold",  text: "text-ink",   iconColor: "text-iron-deep" },
@@ -13,6 +19,16 @@ function CloseGlyph() {
   );
 }
 
+interface BannerProps extends Omit<HTMLAttributes<HTMLDivElement>, "className" | "children"> {
+  tone?: Tone;
+  icon?: ReactNode;
+  action?: ReactNode;
+  dismissible?: boolean;
+  onDismiss?: () => void;
+  className?: string;
+  children?: ReactNode;
+}
+
 export default function Banner({
   tone = "info",
   icon,
@@ -22,7 +38,7 @@ export default function Banner({
   className = "",
   children,
   ...rest
-}) {
+}: BannerProps) {
   const t = TONES[tone] || TONES.info;
   const classes = [
     "flex items-center gap-3 min-h-tap w-full px-3 py-2 border rounded-md text-body",

@@ -7,30 +7,31 @@
  * RAT_SPAWN_THRESHOLDS.perFillRate is the base 10% spawn rate; this
  * helper adds a per-tile bonus on top of that.
  */
-const ATTRACT_KEYS = new Set(["tile_grain_manna", "tile_fruit_jackfruit"]);
+const ATTRACT_KEYS = new Set<string>(["tile_grain_manna", "tile_fruit_jackfruit"]);
 
 /** Per-tile rat-spawn bonus. Two tiles on the board double the bonus. */
 export const ATTRACT_RATE_BONUS = 0.05;
 
+interface GridCell {
+  key?: string | null;
+}
+
 /** Returns true if the resource key attracts rats. */
-export function attractsRats(key) {
+export function attractsRats(key: string): boolean {
   return ATTRACT_KEYS.has(key);
 }
 
 /**
  * Counts how many "attracts_rats" tiles are currently on the grid.
  * Pure — no side effects.
- *
- * @param {Array<Array<{key:string}|null>>} grid
- * @returns {number}
  */
-export function countAttractsRatTiles(grid) {
+export function countAttractsRatTiles(grid: Array<Array<GridCell | null>> | null | undefined): number {
   if (!Array.isArray(grid)) return 0;
   let n = 0;
   for (const row of grid) {
     if (!Array.isArray(row)) continue;
     for (const tile of row) {
-      if (tile && ATTRACT_KEYS.has(tile.key)) n++;
+      if (tile?.key && ATTRACT_KEYS.has(tile.key)) n++;
     }
   }
   return n;
@@ -39,12 +40,8 @@ export function countAttractsRatTiles(grid) {
 /**
  * Returns the effective rat-spawn rate given a base rate and the current
  * grid contents. Capped at 1.0 so the bonus can never exceed certainty.
- *
- * @param {number} baseRate
- * @param {Array<Array<{key:string}|null>>} grid
- * @returns {number}
  */
-export function effectiveRatSpawnRate(baseRate, grid) {
+export function effectiveRatSpawnRate(baseRate: number, grid: Array<Array<GridCell | null>> | null | undefined): number {
   const n = countAttractsRatTiles(grid);
   return Math.min(1.0, baseRate + n * ATTRACT_RATE_BONUS);
 }

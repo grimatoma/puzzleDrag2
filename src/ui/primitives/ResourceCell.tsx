@@ -1,8 +1,22 @@
+import type { ReactNode } from "react";
 import Icon from "./Icon.jsx";
 import { iconLabel } from "../../textures/iconRegistry.js";
 import { useCountUp } from "./useCountUp.js";
 
-const DENSITY = {
+type Density = "micro" | "compact" | "comfortable";
+type Status = "ready" | "needed" | "excess";
+
+interface DensitySpec {
+  minH: number;
+  iconSize: number;
+  pad: string;
+  gap: string;
+  countCls: string;
+  labelCls: string;
+  layout: "row" | "stack";
+}
+
+const DENSITY: Record<Density, DensitySpec> = {
   micro: {
     minH: 40,
     iconSize: 20,
@@ -32,20 +46,20 @@ const DENSITY = {
   },
 };
 
-const STATUS = {
+const STATUS: Record<Status, { glyph: string; color: string; ring: string }> = {
   ready:  { glyph: "✓", color: "text-moss",          ring: "border-moss" },
   needed: { glyph: "↑", color: "text-gold",          ring: "border-gold" },
   excess: { glyph: "−", color: "text-parchment-dim", ring: "border-iron-soft" },
 };
 
-function humanize(key) {
+function humanize(key: string | null | undefined) {
   if (!key) return "";
   const idx = key.lastIndexOf("_");
   const seg = idx >= 0 ? key.slice(idx + 1) : key;
   return seg.charAt(0).toUpperCase() + seg.slice(1);
 }
 
-function ProgressBar({ current, target }) {
+function ProgressBar({ current, target }: { current: number; target: number }) {
   const t = Math.max(1, target || 1);
   const pct = Math.max(0, Math.min(100, Math.round((current / t) * 100)));
   return (
@@ -58,7 +72,7 @@ function ProgressBar({ current, target }) {
   );
 }
 
-function StatusGlyph({ status }) {
+function StatusGlyph({ status }: { status: Status }) {
   const s = STATUS[status];
   if (!s) return null;
   return (
@@ -71,6 +85,18 @@ function StatusGlyph({ status }) {
   );
 }
 
+interface ResourceCellProps {
+  resourceKey: string;
+  count?: number;
+  density?: Density;
+  progress?: { current: number; target: number } | null;
+  status?: Status;
+  actions?: ReactNode;
+  onTap?: () => void;
+  className?: string;
+  [key: string]: any;
+}
+
 export default function ResourceCell({
   resourceKey,
   count = 0,
@@ -81,7 +107,7 @@ export default function ResourceCell({
   onTap,
   className = "",
   ...rest
-}) {
+}: ResourceCellProps) {
   const d = DENSITY[density] || DENSITY.comfortable;
   const s = status ? STATUS[status] : null;
   const label = iconLabel(resourceKey) || humanize(resourceKey);
@@ -119,7 +145,7 @@ export default function ResourceCell({
                 className={d.countCls}
                 data-count-pulse={countPulse || undefined}
               >{countDisplay}</span>
-              {s && <StatusGlyph status={status} />}
+              {s && status && <StatusGlyph status={status} />}
             </div>
           </div>
         ) : (
@@ -134,7 +160,7 @@ export default function ResourceCell({
             >
               {countDisplay}
             </span>
-            {s && <StatusGlyph status={status} />}
+            {s && status && <StatusGlyph status={status} />}
           </>
         )}
       </div>

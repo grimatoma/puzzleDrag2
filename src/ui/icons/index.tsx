@@ -6,7 +6,14 @@ import * as Buildings from "./buildings.jsx";
 import * as Hazards from "./hazards.jsx";
 import * as Npcs from "./npcs.jsx";
 
-export const DESIGN_ICONS_MAP = {
+interface IconRenderProps {
+  size: number;
+  fill: string;
+}
+
+type IconRenderer = (props: IconRenderProps) => JSX.Element;
+
+export const DESIGN_ICONS_MAP: Record<string, IconRenderer> = {
   "design.tile.grass":      ({ size, fill }) => <Tiles.TileGrass size={size} fill={fill}/>,
   "design.tile.hay":        ({ size, fill }) => <Tiles.TileHay size={size} fill={fill}/>,
   "design.tile.wheat":      ({ size, fill }) => <Tiles.TileWheat size={size} fill={fill}/>,

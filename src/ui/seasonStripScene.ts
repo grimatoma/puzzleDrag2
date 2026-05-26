@@ -48,7 +48,7 @@ const SEASON_PALETTES = [
 
 const NUMERAL_PANEL_PX = 56;
 
-function seasonRanges(turnBudget) {
+function seasonRanges(turnBudget: number) {
   const S = Math.max(1, turnBudget | 0);
   const ends = [Math.floor(S / 4), Math.floor((2 * S) / 4), Math.floor((3 * S) / 4), S];
   return ends.map((end, i) => ({
@@ -58,12 +58,70 @@ function seasonRanges(turnBudget) {
   }));
 }
 
+interface SeasonPalette {
+  sky: number;
+  ground: number;
+  hill: number;
+  hillBack: number;
+  panel: number;
+  num: number;
+}
+
+interface SceneLayers {
+  backgrounds: Phaser.GameObjects.Container;
+  hillsBack: Phaser.GameObjects.Container;
+  hillsFront: Phaser.GameObjects.Container;
+  heroes: Phaser.GameObjects.Container;
+  particles: Phaser.GameObjects.Container;
+  wagon: Phaser.GameObjects.Container;
+  labels: Phaser.GameObjects.Container;
+  numeral: Phaser.GameObjects.Container;
+}
+
+interface SceneLayout {
+  dpr: number;
+  w: number;
+  h: number;
+  numW: number;
+  segW: number;
+  segLeft: number;
+  numLeft: number;
+}
+
+interface ZoneRect {
+  x: number;
+  width: number;
+  idx: number;
+  palette: SeasonPalette;
+}
+
+interface SceneInitData {
+  width?: number;
+  height?: number;
+  dpr?: number;
+}
+
 export class SeasonStripScene extends Phaser.Scene {
+  cssWidth!: number;
+  cssHeight!: number;
+  dpr!: number;
+  layers!: SceneLayers;
+  layout!: SceneLayout;
+  zoneRects!: ZoneRect[];
+  emitters!: Record<string, Phaser.GameObjects.Particles.ParticleEmitter | undefined>;
+  numeralText?: Phaser.GameObjects.Text;
+  numeralLabel?: Phaser.GameObjects.Text;
+  wagonContainer?: Phaser.GameObjects.Container;
+  wagonCargo?: Phaser.GameObjects.Graphics;
+  wagonWheels!: Phaser.GameObjects.Graphics[];
+  horseLegBack!: Phaser.GameObjects.Graphics;
+  horseLegFront!: Phaser.GameObjects.Graphics;
+
   constructor() {
     super({ key: "SeasonStripScene" });
   }
 
-  init(data) {
+  init(data: SceneInitData) {
     this.cssWidth = data.width ?? 720;
     this.cssHeight = data.height ?? 52;
     this.dpr = data.dpr ?? 1;
@@ -106,7 +164,7 @@ export class SeasonStripScene extends Phaser.Scene {
     this.registry.events.off("changedata", this.onRegistryChange, this);
     this.scale.off("resize", this.onResize, this);
     if (this.emitters) {
-      Object.values(this.emitters).forEach((e) => e?.destroy?.());
+      Object.values(this.emitters).forEach((e) => e?.destroy());
     }
   }
 
@@ -120,7 +178,7 @@ export class SeasonStripScene extends Phaser.Scene {
 
   rebuildLayout() {
     Object.values(this.layers).forEach((c) => c.removeAll(true));
-    if (this.emitters) Object.values(this.emitters).forEach((e) => e?.destroy?.());
+    if (this.emitters) Object.values(this.emitters).forEach((e) => e?.destroy());
     this.layout = this.computeLayout();
     this.buildZones();
     this.buildParallaxHills();
@@ -147,11 +205,11 @@ export class SeasonStripScene extends Phaser.Scene {
 
   generateTextures() {
     const dpr = this.dpr;
-    const px = (n) => Math.max(1, Math.round(n * dpr));
+    const px = (n: number) => Math.max(1, Math.round(n * dpr));
 
     // Tiny particle textures — circles with soft alpha so Phaser's particle
     // alpha tween makes them feel like ambient effects.
-    const makeDot = (key, fillHex, r) => {
+    const makeDot = (key: string, fillHex: number, r: number) => {
       if (this.textures.exists(key)) return;
       const g = this.add.graphics({ x: 0, y: 0 });
       g.fillStyle(fillHex, 1);
@@ -160,7 +218,7 @@ export class SeasonStripScene extends Phaser.Scene {
       g.destroy();
     };
 
-    const makePetal = (key, fillHex, strokeHex) => {
+    const makePetal = (key: string, fillHex: number, strokeHex: number) => {
       if (this.textures.exists(key)) return;
       const w = px(7);
       const h = px(6);
@@ -177,7 +235,7 @@ export class SeasonStripScene extends Phaser.Scene {
       g.destroy();
     };
 
-    const makeLeaf = (key, fillHex, strokeHex) => {
+    const makeLeaf = (key: string, fillHex: number, strokeHex: number) => {
       if (this.textures.exists(key)) return;
       const wpx = px(6);
       const hpx = px(9);
@@ -204,7 +262,7 @@ export class SeasonStripScene extends Phaser.Scene {
       g.destroy();
     };
 
-    const makeSnowflake = (key, size) => {
+    const makeSnowflake = (key: string, size: number) => {
       if (this.textures.exists(key)) return;
       const r = px(size);
       const dim = r * 2;
@@ -325,7 +383,7 @@ export class SeasonStripScene extends Phaser.Scene {
     });
   }
 
-  buildSpringHero(x, width, h, dpr) {
+  buildSpringHero(x: number, width: number, h: number, dpr: number) {
     // Cherry blossom tree on the left with a hanging branch
     const g = this.add.graphics();
     const cx = x + 16 * dpr;
@@ -375,7 +433,7 @@ export class SeasonStripScene extends Phaser.Scene {
     }
   }
 
-  buildSummerHero(x, width, h, dpr) {
+  buildSummerHero(x: number, width: number, h: number, dpr: number) {
     // Big sun with animated rays
     const sunX = x + 20 * dpr;
     const sunY = h * 0.35;
@@ -443,7 +501,7 @@ export class SeasonStripScene extends Phaser.Scene {
     this.layers.heroes.add(ground);
   }
 
-  buildAutumnHero(x, width, h, dpr) {
+  buildAutumnHero(x: number, width: number, h: number, dpr: number) {
     // Tall maple tree
     const cx = x + 18 * dpr;
     const trunkY = h * 0.45;
@@ -503,15 +561,15 @@ export class SeasonStripScene extends Phaser.Scene {
     this.layers.heroes.add(pile);
   }
 
-  buildWinterHero(x, width, h, dpr) {
+  buildWinterHero(x: number, width: number, h: number, dpr: number) {
     // Evergreens (left + maybe right)
-    const drawTree = (tx, ty, scale) => {
+    const drawTree = (tx: number, ty: number, scale: number) => {
       const g = this.add.graphics();
       g.fillStyle(0x6b3a1a, 1);
       g.fillRoundedRect(tx - 1.5 * dpr * scale, ty + 26 * dpr * scale, 3 * dpr * scale, 6 * dpr * scale, 0.4 * dpr);
       g.fillStyle(0x2a6a4a, 1);
       g.lineStyle(0.4 * dpr, 0x143a2a, 1);
-      const tri = (cy, w) => {
+      const tri = (cy: number, w: number) => {
         g.beginPath();
         g.moveTo(tx, ty + cy * dpr * scale);
         g.lineTo(tx + w * dpr * scale, ty + (cy + 12) * dpr * scale);
@@ -917,7 +975,7 @@ export class SeasonStripScene extends Phaser.Scene {
     this.wagonContainer.x = this.wagonTargetX(progress);
   }
 
-  drawCargo(seasonIdx) {
+  drawCargo(seasonIdx: number) {
     const { dpr } = this.layout;
     if (!this.wagonCargo) return;
     const g = this.wagonCargo;
@@ -983,7 +1041,7 @@ export class SeasonStripScene extends Phaser.Scene {
     return Math.max(0, Math.min(1, turnsUsed / Math.max(1, turnBudget)));
   }
 
-  wagonTargetX(progress) {
+  wagonTargetX(progress: number) {
     const { segW } = this.layout;
     return Math.round(progress * segW);
   }
@@ -1010,7 +1068,7 @@ export class SeasonStripScene extends Phaser.Scene {
     if (this.wagonCargo) this.drawCargo(seasonIdx);
   }
 
-  onRegistryChange(_parent, key) {
+  onRegistryChange(_parent: unknown, key: string) {
     if (!key.startsWith("hwv.")) return;
     if (key === "hwv.turnBudget") {
       this.rebuildLayout();

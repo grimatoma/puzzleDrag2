@@ -10,12 +10,12 @@
 // Collapse state (which forks are folded on the canvas) lives in a separate
 // `hearth.story.collapsed` key — it's a view preference, not game data.
 
-import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo, type ReactNode, type MouseEvent as ReactMouseEvent, type TouchEvent as ReactTouchEvent } from "react";
 import { STORY_BEATS, SIDE_BEATS } from "../story.js";
 import { readBalanceDraft, writeBalanceDraft } from "../config/applyOverrides.js";
 import { BALANCE_OVERRIDES } from "../constants.js";
 import {
-  C, NPCS, Portrait, actColor, hexAlpha, triggerSummary,
+  C, NPCS, npcByKey, Portrait, actColor, hexAlpha, triggerSummary,
   effectiveBeat, effectiveChoices, findIncomingChoice, allBeatIds,
   draftBeats, draftBeatIndex, isDraftBeat,
   cloneDraft, deriveGraph, visibleSubset, focusedChainSubset, collapsibleIds,
@@ -23,6 +23,9 @@ import {
   branchingRowCenterY, MY, NH, Btn, directionalNodeId,
   collectStoryWarnings, renameDraftBeatInDraft, storySlicesEqual, DRAFT_BEAT_ID_RE,
 } from "./shared.jsx";
+import type {
+  StoryBeat, StoryChoice, StoryDraft, StoryEdge, StoryGraph, StoryNode, StoryNodePosition,
+} from "./types.js";
 import Inspector from "./Inspector.jsx";
 import PreviewModal from "./PreviewModal.jsx";
 import ValidationPanel from "./ValidationPanel.jsx";
@@ -42,48 +45,50 @@ function readInspectorCollapsed() {
   catch { return false; }
 }
 
-function writeInspectorCollapsed(v: any) {
+function writeInspectorCollapsed(v: boolean): void {
   try { localStorage.setItem(INSPECTOR_COLLAPSED_KEY, v ? "1" : "0"); }
   catch {
     // localStorage can be disabled in private/browser-test contexts.
   }
 }
 
-function readLeftRailCollapsed() {
+function readLeftRailCollapsed(): boolean {
   try { return localStorage.getItem(LEFT_RAIL_COLLAPSED_KEY) === "1"; }
   catch { return false; }
 }
 
-function writeLeftRailCollapsed(v: any) {
+function writeLeftRailCollapsed(v: boolean): void {
   try { localStorage.setItem(LEFT_RAIL_COLLAPSED_KEY, v ? "1" : "0"); }
   catch {
     // localStorage can be disabled in private/browser-test contexts.
   }
 }
 
-function readGraphViewMode() {
+type GraphViewMode = "full" | "chain";
+
+function readGraphViewMode(): GraphViewMode {
   try { return localStorage.getItem(GRAPH_VIEW_MODE_KEY) === "full" ? "full" : "chain"; }
   catch { return "chain"; }
 }
 
-function writeGraphViewMode(v: any) {
+function writeGraphViewMode(v: GraphViewMode): void {
   try { localStorage.setItem(GRAPH_VIEW_MODE_KEY, v === "full" ? "full" : "chain"); }
   catch {
     // localStorage can be disabled in private/browser-test contexts.
   }
 }
 
-function builtInSideSubtreeIds(startId: any) {
-  const ids = new Set();
-  const stack = [startId];
-  const sideById = new Map(SIDE_BEATS.map((b) => [b.id, b]));
+function builtInSideSubtreeIds(startId: string): Set<string> {
+  const ids = new Set<string>();
+  const stack: string[] = [startId];
+  const sideById = new Map<string, StoryBeat>((SIDE_BEATS as StoryBeat[]).map((b) => [b.id, b]));
   while (stack.length > 0) {
     const id = stack.pop();
     if (!id || ids.has(id) || !sideById.has(id)) continue;
     ids.add(id);
-    for (const c of (sideById.get(id).choices || [])) {
+    for (const c of (sideById.get(id)!.choices || [])) {
       const target = c?.outcome?.queueBeat;
-      if (sideById.has(target)) stack.push(target);
+      if (target && sideById.has(target)) stack.push(target);
     }
   }
   return ids.size > 0 ? ids : new Set([startId]);
@@ -91,7 +96,9 @@ function builtInSideSubtreeIds(startId: any) {
 
 // ─── edges ───────────────────────────────────────────────────────────────────
 
-function TreeEdge({ edge: any, nodeById: any, draft: any }) {
+interface TreeEdgeProps { edge: StoryEdge; nodeById: Map<string, StoryNode>; draft: StoryDraft }
+
+function TreeEdge({ edge, nodeById, draft }: TreeEdgeProps) {
   const from = nodeById.get(edge.from);
   const to = nodeById.get(edge.to);
   if (!from || !to) return null;
@@ -99,12 +106,12 @@ function TreeEdge({ edge: any, nodeById: any, draft: any }) {
   let x1 = from.x + from.w;
   let y1 = from.y + from.h / 2;
   if (edge.kind === "choice" && edge.choice && from.branching) {
-    const idx = effectiveChoices(edge.from, draft).findIndex((c: any) => c.id === edge.choice);
+    const idx = effectiveChoices(edge.from, draft).findIndex((c) => c.id === edge.choice);
     if (idx >= 0) y1 = from.y + branchingRowCenterY(idx);
   }
   // route to the target's left edge, but if the target sits left of the source,
   // loop out the bottom of source → top of target (keeps drafts-lane links sane).
-  let x2 = to.x, y2 = to.y + to.h / 2, path;
+  let x2 = to.x, y2 = to.y + to.h / 2, path: string;
   if (to.x + to.w < from.x) {
     x1 = from.x + from.w / 2; y1 = from.y + from.h;
     x2 = to.x + to.w / 2; y2 = to.y;
@@ -123,7 +130,7 @@ function TreeEdge({ edge: any, nodeById: any, draft: any }) {
   const isChoice = edge.kind === "choice";
   const stroke = isChoice ? C.ember : (edge.kind === "trigger" ? C.borderDeep : "#a39880");
   const sw = isChoice ? 2 : 1.4;
-  const dash = (edge.kind === "trigger" && !edge.side) ? "5 5" : (edge.side ? "2 4" : null);
+  const dash = (edge.kind === "trigger" && !edge.side) ? "5 5" : (edge.side ? "2 4" : undefined);
   const op = edge.side ? 0.6 : 1;
   const verticalArrival = (to.y > from.y + 240) || (to.x + to.w < from.x);
   const head = verticalArrival
@@ -139,7 +146,7 @@ function TreeEdge({ edge: any, nodeById: any, draft: any }) {
 
 // ─── chips on nodes ──────────────────────────────────────────────────────────
 
-function TriggerChip({ beat: any, accent: any }) {
+function TriggerChip({ beat, accent }: { beat: StoryBeat | null | undefined; accent?: string }) {
   const ts = triggerSummary(beat);
   if (!ts) return null;
   const tone = ts.kind === "queued-code" ? { fg: C.emberDeep, bd: C.emberDeep } : { fg: C.ink, bd: accent || C.borderDeep };
@@ -154,7 +161,7 @@ function TriggerChip({ beat: any, accent: any }) {
   );
 }
 
-function CollapseToggle({ collapsed: any, hiddenCount: any, onToggle: any }) {
+function CollapseToggle({ collapsed, hiddenCount, onToggle }: { collapsed: boolean; hiddenCount: number; onToggle: () => void }) {
   return (
     <button
       onClick={(e) => { e.stopPropagation(); onToggle(); }}
@@ -175,11 +182,13 @@ function CollapseToggle({ collapsed: any, hiddenCount: any, onToggle: any }) {
 
 // ─── node cards ──────────────────────────────────────────────────────────────
 
-function CompactNode({ node: any, beat: any, selected: any }) {
+interface NodeCommonProps { node: StoryNode; beat: StoryBeat | null; selected: boolean }
+
+function CompactNode({ node, beat, selected }: NodeCommonProps) {
   const ring = actColor(beat);
-  const speakers = [...new Set((beat?.lines || []).map((l: any) => l.speaker).filter(Boolean))];
+  const speakers = [...new Set((beat?.lines || []).map((l) => l?.speaker).filter((s): s is string => Boolean(s)))];
   const firstLine = beat?.lines?.[0]?.text || beat?.body || "—";
-  const hasSpeaker = beat?.lines?.find((l: any) => l.speaker)?.speaker;
+  const hasSpeaker = beat?.lines?.find((l) => l?.speaker)?.speaker;
   const choices = beat?.choices || [];
   return (
     <div style={{ width: "100%", height: "100%", borderRadius: 10,
@@ -217,11 +226,11 @@ function CompactNode({ node: any, beat: any, selected: any }) {
   );
 }
 
-function BranchingNode({ beat: any, selected: any }) {
+function BranchingNode({ beat, selected }: { beat: StoryBeat | null; selected: boolean }) {
   const ring = actColor(beat);
   const choices = beat?.choices || [];
   const firstLine = beat?.lines?.[0]?.text || beat?.body || "—";
-  const firstSpk = beat?.lines?.find((l: any) => l.speaker)?.speaker;
+  const firstSpk = beat?.lines?.find((l) => l?.speaker)?.speaker;
   const HEADER = 78, ROW = 38, GAP = 4, FOOTER = 22;
   return (
     <div style={{ width: "100%", height: "100%", borderRadius: 12,
@@ -242,9 +251,9 @@ function BranchingNode({ beat: any, selected: any }) {
           font: "700 8px/1 system-ui", letterSpacing: "0.14em", textTransform: "uppercase" }}>⑂ FORK</div>
       </div>
       <div style={{ display: "flex", flexDirection: "column", gap: GAP, flex: 1 }}>
-        {choices.map((c: any, i: any) => {
+        {choices.map((c: StoryChoice, i: number) => {
           const o = c.outcome || {};
-          const badges = [];
+          const badges: string[] = [];
           if (o.bondDelta) badges.push(`♥ ${o.bondDelta.amount > 0 ? "+" : ""}${o.bondDelta.amount}`);
           if (o.embers) badges.push(`✸ ${o.embers}`);
           if (o.coreIngots) badges.push(`◈ ${o.coreIngots}`);
@@ -278,16 +287,18 @@ function BranchingNode({ beat: any, selected: any }) {
   );
 }
 
-function ExpandedCard({ node: any, beat: any, selected: any, draft: any }) {
-  const incoming = findIncomingChoice(beat?.id, draft);
+interface EffectBadge { icon: string; label: string }
+
+function ExpandedCard({ node, beat, selected, draft }: NodeCommonProps & { draft: StoryDraft }) {
+  const incoming = beat?.id ? findIncomingChoice(beat.id, draft) : null;
   const o = incoming?.choice?.outcome || {};
-  const effects = [];
-  if (o.bondDelta) effects.push({ icon: "♥", label: `Bond ${o.bondDelta.amount > 0 ? "+" : ""}${o.bondDelta.amount} ${NPCS[o.bondDelta.npc]?.name || o.bondDelta.npc}` });
+  const effects: EffectBadge[] = [];
+  if (o.bondDelta) effects.push({ icon: "♥", label: `Bond ${o.bondDelta.amount > 0 ? "+" : ""}${o.bondDelta.amount} ${npcByKey(o.bondDelta.npc)?.name || o.bondDelta.npc}` });
   if (o.embers) effects.push({ icon: "✸", label: `+${o.embers} Embers` });
   if (o.coreIngots) effects.push({ icon: "◈", label: `+${o.coreIngots} Core Ingots` });
   if (o.gems) effects.push({ icon: "◆", label: `+${o.gems} Gems` });
-  if (o.setFlag) (Array.isArray(o.setFlag) ? o.setFlag : [o.setFlag]).slice(0, 2).forEach((f: any) => effects.push({ icon: "⚐", label: f }));
-  const speaker = beat?.lines?.find((l: any) => l.speaker)?.speaker;
+  if (o.setFlag) (Array.isArray(o.setFlag) ? o.setFlag : [o.setFlag]).slice(0, 2).forEach((f) => effects.push({ icon: "⚐", label: f }));
+  const speaker = beat?.lines?.find((l) => l?.speaker)?.speaker;
   const isDraftNode = !!node.draft;
   const accent = isDraftNode ? actColor(beat) : C.ember;
   return (
@@ -304,16 +315,19 @@ function ExpandedCard({ node: any, beat: any, selected: any, draft: any }) {
       </div>
       <div style={{ margin: 8, marginBottom: 6, borderRadius: 8, padding: 8, background: "linear-gradient(180deg,#221710,#1a110a)",
         border: "1px solid rgba(120,80,40,0.6)", flex: 1, minHeight: 0, display: "flex", flexDirection: "column", gap: 5, overflow: "hidden" }}>
-        {speaker && (
-          <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 2 }}>
-            <Portrait npcKey={speaker} size={18} />
-            <span style={{ font: "600 9px/1 system-ui", color: NPCS[speaker]?.color || "#d4b896", letterSpacing: "0.06em", textTransform: "uppercase" }}>{NPCS[speaker]?.name}</span>
-          </div>
-        )}
+        {speaker && (() => {
+          const speakerInfo = npcByKey(speaker);
+          return (
+            <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 2 }}>
+              <Portrait npcKey={speaker} size={18} />
+              <span style={{ font: "600 9px/1 system-ui", color: speakerInfo?.color || "#d4b896", letterSpacing: "0.06em", textTransform: "uppercase" }}>{speakerInfo?.name}</span>
+            </div>
+          );
+        })()}
         <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: 4 }}>
-          {(beat?.lines || []).map((l: any, i: any) => (
-            <p key={i} style={{ margin: 0, font: l.speaker ? "400 10.5px/1.45 Georgia,serif" : "italic 400 10px/1.45 Georgia,serif",
-              color: l.speaker ? "#f0e6cf" : "rgba(189,154,114,0.9)" }}>{l.text}</p>
+          {(beat?.lines || []).map((l, i) => (
+            <p key={i} style={{ margin: 0, font: l?.speaker ? "400 10.5px/1.45 Georgia,serif" : "italic 400 10px/1.45 Georgia,serif",
+              color: l?.speaker ? "#f0e6cf" : "rgba(189,154,114,0.9)" }}>{l?.text}</p>
           ))}
           {(!beat?.lines || beat.lines.length === 0) && <p style={{ margin: 0, font: "italic 400 10px/1.45 Georgia,serif", color: "rgba(189,154,114,0.6)" }}>{beat?.body || "(no dialogue yet)"}</p>}
         </div>
@@ -339,7 +353,7 @@ function ExpandedCard({ node: any, beat: any, selected: any, draft: any }) {
   );
 }
 
-function PreviewPlay({ onPlay: any }) {
+function PreviewPlay({ onPlay }: { onPlay: () => void }) {
   return (
     <button onClick={(e) => { e.stopPropagation(); onPlay(); }} title="Preview this dialogue (walk the branch)"
       style={{ position: "absolute", bottom: -10, right: -10, zIndex: 4, width: 22, height: 22, borderRadius: "50%",
@@ -350,7 +364,7 @@ function PreviewPlay({ onPlay: any }) {
   );
 }
 
-function WarningBadge({ count: any }) {
+function WarningBadge({ count }: { count: number }) {
   if (!count) return null;
   return (
     <div title={`${count} validation warning${count === 1 ? "" : "s"}`} style={{ position: "absolute", top: -10, left: -10, zIndex: 5,
@@ -362,7 +376,7 @@ function WarningBadge({ count: any }) {
   );
 }
 
-function DragHandle({ dragging: any, onMouseDown: any, onTouchStart: any }) {
+function DragHandle({ dragging, onMouseDown, onTouchStart }: { dragging: boolean; onMouseDown: (e: ReactMouseEvent<HTMLButtonElement>) => void; onTouchStart: (e: ReactTouchEvent<HTMLButtonElement>) => void }) {
   return (
     <button data-drag-handle="1" title="Drag to move card"
       onMouseDown={onMouseDown}
@@ -376,9 +390,26 @@ function DragHandle({ dragging: any, onMouseDown: any, onTouchStart: any }) {
   );
 }
 
-function TreeNode({ node: any, beat: any, selectedId: any, collapsed: any, hiddenCount: any, showCollapse: any, dragging: any, warningCount: any, onNodeMouseDown: any, onNodeTouchStart: any, onToggleCollapse: any, onPreview: any, onSelect: any, draft: any }) {
+interface TreeNodeProps {
+  node: StoryNode;
+  beat: StoryBeat | null;
+  selectedId: string | null;
+  collapsed: boolean;
+  hiddenCount: number;
+  showCollapse: boolean;
+  dragging: boolean;
+  warningCount: number;
+  onNodeMouseDown: (e: ReactMouseEvent<HTMLButtonElement>, node: StoryNode) => void;
+  onNodeTouchStart: (e: ReactTouchEvent<HTMLButtonElement>, node: StoryNode) => void;
+  onToggleCollapse: (id: string) => void;
+  onPreview: (id: string) => void;
+  onSelect: (id: string) => void;
+  draft: StoryDraft;
+}
+
+function TreeNode({ node, beat, selectedId, collapsed, hiddenCount, showCollapse, dragging, warningCount, onNodeMouseDown, onNodeTouchStart, onToggleCollapse, onPreview, onSelect, draft }: TreeNodeProps) {
   const selected = node.id === selectedId;
-  let Inner;
+  let Inner: ReactNode;
   if (node.draft || node.expanded) Inner = <ExpandedCard node={node} beat={beat} selected={selected} draft={draft} />;
   else if (node.branching) Inner = <BranchingNode beat={beat} selected={selected} />;
   else Inner = <CompactNode node={node} beat={beat} selected={selected} />;
@@ -386,7 +417,7 @@ function TreeNode({ node: any, beat: any, selectedId: any, collapsed: any, hidde
     <div data-story-node="1" onClick={() => onSelect(node.id)} style={{ position: "absolute", left: node.x, top: node.y, width: node.w, height: node.h, cursor: "default", touchAction: "none" }}>
       <WarningBadge count={warningCount} />
       <div style={{ position: "absolute", top: -10, left: 10, right: 10, display: "flex", alignItems: "center", gap: 6 }}>
-        <DragHandle dragging={dragging} onMouseDown={(e: any) => onNodeMouseDown(e, node)} onTouchStart={(e) => onNodeTouchStart(e, node)} />
+        <DragHandle dragging={dragging} onMouseDown={(e) => onNodeMouseDown(e, node)} onTouchStart={(e) => onNodeTouchStart(e, node)} />
         <TriggerChip beat={beat} accent={actColor(beat)} />
       </div>
       {showCollapse && <CollapseToggle collapsed={collapsed} hiddenCount={hiddenCount} onToggle={() => onToggleCollapse(node.id)} />}
@@ -406,7 +437,7 @@ const ACT_LABELS = [
 
 // ─── left rail ───────────────────────────────────────────────────────────────
 
-function RailRow({ beatId: any, draft: any, selectedId: any, onlineIds: any, onSelect: any, matchKind: any }) {
+function RailRow({ beatId, draft, selectedId, onlineIds, onSelect, matchKind }: { beatId: any; draft: any; selectedId: any; onlineIds: any; onSelect: any; matchKind: any }) {
   const beat = effectiveBeat(beatId, draft);
   const isSel = beatId === selectedId;
   const choices = beat?.choices || [];
@@ -433,7 +464,7 @@ function RailRow({ beatId: any, draft: any, selectedId: any, onlineIds: any, onS
   );
 }
 
-function GroupHeader({ color: any, label: any, count: any }) {
+function GroupHeader({ color, label, count }: { color: any; label: any; count: any }) {
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 7, padding: "7px 12px", font: "600 9px/1 system-ui",
       letterSpacing: "0.12em", textTransform: "uppercase", color: C.inkSubtle }}>
@@ -443,24 +474,36 @@ function GroupHeader({ color: any, label: any, count: any }) {
   );
 }
 
-function searchKindForBeat(beat, id: any, q: any) {
+type SearchKind = "any" | "id" | "title" | "lines" | "choices";
+
+function searchKindForBeat(beat: StoryBeat | null | undefined, id: string, q: string): SearchKind | null {
   if (!q) return "any";
   if (id.toLowerCase().includes(q)) return "id";
   if ((beat?.title || "").toLowerCase().includes(q)) return "title";
-  const lineHits = (beat?.lines || []).reduce((n: any, l: any) => n + ((l?.text || "").toLowerCase().includes(q) ? 1 : 0), 0);
+  const lineHits = (beat?.lines || []).reduce((n: number, l) => n + ((l?.text || "").toLowerCase().includes(q) ? 1 : 0), 0);
   if (lineHits) return "lines";
-  const choiceHits = (beat?.choices || []).reduce((n: any, c: any) => n + ((c?.label || "").toLowerCase().includes(q) ? 1 : 0), 0);
+  const choiceHits = (beat?.choices || []).reduce((n: number, c) => n + ((c?.label || "").toLowerCase().includes(q) ? 1 : 0), 0);
   if (choiceHits) return "choices";
   return null;
 }
 
-function LeftRail({ draft: any, selectedId: any, onlineIds: any, collapsed: any, onToggleCollapsed: any, onSelect: any, onNewBeat: any }) {
+interface LeftRailProps {
+  draft: StoryDraft;
+  selectedId: string | null;
+  onlineIds: Set<string>;
+  collapsed: boolean;
+  onToggleCollapsed: () => void;
+  onSelect: (id: string) => void;
+  onNewBeat: () => void;
+}
+
+function LeftRail({ draft, selectedId, onlineIds, collapsed, onToggleCollapsed, onSelect, onNewBeat }: LeftRailProps) {
   const [search, setSearch] = useState("");
   const q = search.trim().toLowerCase();
   const dBeats = draftBeats(draft);
   const knownIds = new Set(allBeatIds(draft));
   const beatMatchKinds = useMemo(() => {
-    const out = new Map();
+    const out = new Map<string, SearchKind>();
     if (!q) return out;
     for (const id of knownIds) {
       const beat = effectiveBeat(id, draft);
@@ -470,13 +513,13 @@ function LeftRail({ draft: any, selectedId: any, onlineIds: any, collapsed: any,
     return out;
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [q, draft]);
-  const matches = (id: any) => !q || beatMatchKinds.has(id);
+  const matches = (id: string) => !q || beatMatchKinds.has(id);
 
-  const groups = [
-    { id: 1,      label: "Act I · Roots",     color: "#7a8b5e", ids: STORY_BEATS.filter((b) => b.act === 1).map((b) => b.id) },
-    { id: 2,      label: "Act II · Iron",      color: "#c9863a", ids: STORY_BEATS.filter((b) => b.act === 2).map((b) => b.id) },
-    { id: 3,      label: "Act III · Kingdom",  color: "#a8431a", ids: STORY_BEATS.filter((b) => b.act === 3).map((b) => b.id) },
-    { id: "side", label: "Side events",        color: C.violet,  ids: SIDE_BEATS.map((b) => b.id).filter((id) => knownIds.has(id)) },
+  const groups: { id: number | string; label: string; color: string; ids: string[] }[] = [
+    { id: 1,      label: "Act I · Roots",     color: "#7a8b5e", ids: (STORY_BEATS as StoryBeat[]).filter((b) => b.act === 1).map((b) => b.id) },
+    { id: 2,      label: "Act II · Iron",      color: "#c9863a", ids: (STORY_BEATS as StoryBeat[]).filter((b) => b.act === 2).map((b) => b.id) },
+    { id: 3,      label: "Act III · Kingdom",  color: "#a8431a", ids: (STORY_BEATS as StoryBeat[]).filter((b) => b.act === 3).map((b) => b.id) },
+    { id: "side", label: "Side events",        color: C.violet,  ids: (SIDE_BEATS as StoryBeat[]).map((b) => b.id).filter((id) => knownIds.has(id)) },
   ];
 
   if (collapsed) {
@@ -556,9 +599,22 @@ function LeftRail({ draft: any, selectedId: any, onlineIds: any, collapsed: any,
   );
 }
 
-function MiniMap({ nodes: any, bounds: any, selectedId: any, zoom: any, pan: any, canvasSize: any, onPanTo: any }) {
+interface CanvasSize { width: number; height: number }
+interface PanOffset { x: number; y: number }
+
+interface MiniMapProps {
+  nodes: StoryNode[];
+  bounds: { w: number; h: number };
+  selectedId: string | null;
+  zoom: number;
+  pan: PanOffset;
+  canvasSize: CanvasSize | null;
+  onPanTo: (x: number, y: number) => void;
+}
+
+function MiniMap({ nodes, bounds, selectedId, zoom, pan, canvasSize, onPanTo }: MiniMapProps) {
   const W = 180, H = 112, PAD = 8;
-  const activePointerId = useRef(null);
+  const activePointerId = useRef<number | null>(null);
   const scale = Math.min((W - PAD * 2) / Math.max(1, bounds.w), (H - PAD * 2) / Math.max(1, bounds.h));
   const view = canvasSize ? {
     x: -pan.x / Math.max(zoom, 0.01),
@@ -566,37 +622,37 @@ function MiniMap({ nodes: any, bounds: any, selectedId: any, zoom: any, pan: any
     w: canvasSize.width / Math.max(zoom, 0.01),
     h: canvasSize.height / Math.max(zoom, 0.01),
   } : null;
-  const toSvg = (x: any, y: any) => ({ x: PAD + x * scale, y: PAD + y * scale });
-  const centerAt = (e: any) => {
-    const box = e.currentTarget.getBoundingClientRect();
+  const toSvg = (x: number, y: number) => ({ x: PAD + x * scale, y: PAD + y * scale });
+  const centerAt = (e: React.PointerEvent<SVGSVGElement>) => {
+    const box = (e.currentTarget as SVGSVGElement).getBoundingClientRect();
     const worldX = Math.min(bounds.w, Math.max(0, (e.clientX - box.left - PAD) / scale));
     const worldY = Math.min(bounds.h, Math.max(0, (e.clientY - box.top - PAD) / scale));
     onPanTo(worldX, worldY);
   };
-  const onPointerDown = (e: any) => {
+  const onPointerDown = (e: React.PointerEvent<SVGSVGElement>) => {
     e.stopPropagation();
     e.preventDefault();
     activePointerId.current = e.pointerId;
     e.currentTarget.setPointerCapture?.(e.pointerId);
     centerAt(e);
   };
-  const onPointerMove = (e: any) => {
+  const onPointerMove = (e: React.PointerEvent<SVGSVGElement>) => {
     if (activePointerId.current !== e.pointerId) return;
     e.stopPropagation();
     e.preventDefault();
     centerAt(e);
   };
-  const endPointer = (e: any) => {
+  const endPointer = (e: React.PointerEvent<SVGSVGElement>) => {
     if (activePointerId.current !== e.pointerId) return;
     e.stopPropagation();
     e.preventDefault();
     e.currentTarget.releasePointerCapture?.(e.pointerId);
     activePointerId.current = null;
   };
-  const clearPointer = (e: any) => {
+  const clearPointer = (e: React.PointerEvent<SVGSVGElement>) => {
     if (activePointerId.current === e.pointerId) activePointerId.current = null;
   };
-  const suppressFallbackEvents = (e: any) => {
+  const suppressFallbackEvents = (e: ReactMouseEvent<HTMLDivElement> | ReactTouchEvent<HTMLDivElement>) => {
     e.stopPropagation();
     e.preventDefault();
   };
@@ -609,7 +665,7 @@ function MiniMap({ nodes: any, bounds: any, selectedId: any, zoom: any, pan: any
       <svg width={W} height={H} onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={endPointer} onPointerCancel={endPointer}
         onLostPointerCapture={clearPointer} style={{ display: "block", cursor: "crosshair", touchAction: "none" }}>
         <rect x={PAD} y={PAD} width={bounds.w * scale} height={bounds.h * scale} rx="3" fill="rgba(240,232,212,0.8)" stroke={C.canvasRule} />
-        {nodes.map((n: any) => {
+        {nodes.map((n) => {
           const p = toSvg(n.x, n.y);
           return <rect key={n.id} x={p.x} y={p.y} width={Math.max(2, n.w * scale)} height={Math.max(2, n.h * scale)}
             rx="1" fill={n.id === selectedId ? C.ember : (n.draft ? "#6b8e9e" : C.inkSubtle)} opacity={n.id === selectedId ? 1 : 0.65} />;
@@ -630,49 +686,60 @@ function MiniMap({ nodes: any, bounds: any, selectedId: any, zoom: any, pan: any
 
 // ─── draft mutation helpers ──────────────────────────────────────────────────
 
-function stripEmpty(obj: any) {
-  const out = { ...obj };
+function stripEmpty<T extends Record<string, unknown>>(obj: T): T {
+  const out: Record<string, unknown> = { ...obj };
   for (const k of Object.keys(out)) {
     const v = out[k];
     if (v === undefined || v === null || v === "") { delete out[k]; continue; }
     if (Array.isArray(v) && v.length === 0) { delete out[k]; continue; }
-    if (v && typeof v === "object" && !Array.isArray(v) && Object.keys(v).length === 0) delete out[k];
+    if (v && typeof v === "object" && !Array.isArray(v) && Object.keys(v as Record<string, unknown>).length === 0) delete out[k];
   }
-  return out;
+  return out as T;
 }
 
 // ─── app ─────────────────────────────────────────────────────────────────────
+
+interface NodeDragRef {
+  id: string;
+  sx: number;
+  sy: number;
+  nx: number;
+  ny: number;
+  moved: boolean;
+  touch?: boolean;
+  touchId?: number;
+}
 
 export default function StoryEditorApp() {
   const {
     state: draft, setState: setDraft, undo, redo, reset: resetDraft,
     canUndo, canRedo,
-  } = useDraftHistory(() => cloneDraft(BALANCE_OVERRIDES));
-  const [savedDraft, setSavedDraft] = useState(() => cloneDraft(BALANCE_OVERRIDES));
-  const [selectedId, setSelectedId] = useState(null);
+  } = useDraftHistory<StoryDraft>(() => cloneDraft(BALANCE_OVERRIDES as StoryDraft));
+  const [savedDraft, setSavedDraft] = useState<StoryDraft>(() => cloneDraft(BALANCE_OVERRIDES as StoryDraft));
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [savedNotice, setSavedNotice] = useState("");
   const [zoom, setZoom] = useState(1);
-  const [pan, setPan] = useState({ x: 20, y: 20 });
-  const [canvasSize, setCanvasSize] = useState(null);
+  const [pan, setPan] = useState<PanOffset>({ x: 20, y: 20 });
+  const [canvasSize, setCanvasSize] = useState<CanvasSize | null>(null);
   const [dragging, setDragging] = useState(false);
-  const [collapsed, setCollapsed] = useState(() => readCollapsed());
-  const [previewBeatId, setPreviewBeatId] = useState(null);
-  const [nodePositions, setNodePositions] = useState(() => readNodePositions());
-  const [draggingNodeId, setDraggingNodeId] = useState(null);
+  const [collapsed, setCollapsed] = useState<Set<string>>(() => readCollapsed());
+  const [previewBeatId, setPreviewBeatId] = useState<string | null>(null);
+  const [nodePositions, setNodePositions] = useState<Record<string, StoryNodePosition>>(() => readNodePositions());
+  const [draggingNodeId, setDraggingNodeId] = useState<string | null>(null);
   const [toolsOpen, setToolsOpen] = useState(false);
   const [validationOpen, setValidationOpen] = useState(false);
-  const [validationAnchorRect, setValidationAnchorRect] = useState(null);
-  const validationBtnRef = useRef(null);
+  const [validationAnchorRect, setValidationAnchorRect] = useState<DOMRect | null>(null);
+  const validationBtnRef = useRef<HTMLButtonElement | null>(null);
   const [pathsOpen, setPathsOpen] = useState(false);
   const [playthroughOpen, setPlaythroughOpen] = useState(false);
   const [findOpen, setFindOpen] = useState(false);
-  const [inspectorCollapsed, setInspectorCollapsed] = useState(() => readInspectorCollapsed());
-  const [leftRailCollapsed, setLeftRailCollapsed] = useState(() => readLeftRailCollapsed());
-  const [graphViewMode, setGraphViewMode] = useState(() => readGraphViewMode());
+  const [inspectorCollapsed, setInspectorCollapsed] = useState<boolean>(() => readInspectorCollapsed());
+  const [leftRailCollapsed, setLeftRailCollapsed] = useState<boolean>(() => readLeftRailCollapsed());
+  const [graphViewMode, setGraphViewMode] = useState<GraphViewMode>(() => readGraphViewMode());
   const isDragging = useRef(false);
-  const dragStart = useRef(null);
-  const nodeDrag = useRef(null);
-  const canvasRef = useRef(null);
+  const dragStart = useRef<{ x: number; y: number } | null>(null);
+  const nodeDrag = useRef<NodeDragRef | null>(null);
+  const canvasRef = useRef<HTMLDivElement | null>(null);
 
   const toggleLeftRail = useCallback(() => {
     setLeftRailCollapsed((prev) => {
@@ -682,24 +749,24 @@ export default function StoryEditorApp() {
     });
   }, []);
 
-  const setGraphMode = useCallback((mode: any) => {
-    const next = mode === "full" ? "full" : "chain";
+  const setGraphMode = useCallback((mode: GraphViewMode) => {
+    const next: GraphViewMode = mode === "full" ? "full" : "chain";
     setGraphViewMode(next);
     writeGraphViewMode(next);
   }, []);
 
-  const moveNode = useCallback((id: any, x: any, y: any) => {
+  const moveNode = useCallback((id: string, x: number, y: number) => {
     setNodePositions((prev) => { const next = { ...prev, [id]: { x: Math.round(x), y: Math.round(y) } }; writeNodePositions(next); return next; });
   }, []);
   const resetLayout = useCallback(() => { setNodePositions({}); writeNodePositions({}); }, []);
-  const onNodeMouseDown = useCallback((e: any, node: any) => {
-    if (!e.target.closest("[data-drag-handle]")) return;
+  const onNodeMouseDown = useCallback((e: ReactMouseEvent<HTMLButtonElement>, node: StoryNode) => {
+    if (!(e.target as Element).closest("[data-drag-handle]")) return;
     e.stopPropagation();                                // don't let the canvas start a pan
     e.preventDefault();                                 // no text selection while dragging
     nodeDrag.current = { id: node.id, sx: e.clientX, sy: e.clientY, nx: node.x, ny: node.y, moved: false };
   }, []);
-  const onNodeTouchStart = useCallback((e: any, node: any) => {
-    if (e.touches.length !== 1 || !e.target.closest("[data-drag-handle]")) return;
+  const onNodeTouchStart = useCallback((e: ReactTouchEvent<HTMLButtonElement>, node: StoryNode) => {
+    if (e.touches.length !== 1 || !(e.target as Element).closest("[data-drag-handle]")) return;
     e.stopPropagation();
     e.preventDefault();
     const t = e.touches[0];
@@ -718,13 +785,14 @@ export default function StoryEditorApp() {
   }, [draft]);
 
   useEffect(() => {
-    const onKey = (e: any) => {
+    const onKey = (e: KeyboardEvent) => {
       if (!(e.metaKey || e.ctrlKey)) return;
       const key = e.key.toLowerCase();
       if (key === "s") { e.preventDefault(); saveDraft(); return; }
       if (key === "f") { e.preventDefault(); setFindOpen((v) => !v); return; }
-      const tag = e.target?.tagName;
-      const isTextInput = tag === "INPUT" || tag === "TEXTAREA" || e.target?.isContentEditable;
+      const target = e.target as HTMLElement | null;
+      const tag = target?.tagName;
+      const isTextInput = tag === "INPUT" || tag === "TEXTAREA" || target?.isContentEditable;
       if (isTextInput) return;
       if (key === "z" && !e.shiftKey) { e.preventDefault(); undo(); return; }
       if ((key === "z" && e.shiftKey) || key === "y") { e.preventDefault(); redo(); return; }
@@ -734,9 +802,9 @@ export default function StoryEditorApp() {
   }, [saveDraft, undo, redo]);
 
   useEffect(() => {
-    const onStorage = (e: any) => {
+    const onStorage = (e: StorageEvent) => {
       if (e.key !== "hearth.balance.draft" || dirtyRef.current) return;
-      const next = cloneDraft(readBalanceDraft() || BALANCE_OVERRIDES);
+      const next = cloneDraft((readBalanceDraft() as StoryDraft) || (BALANCE_OVERRIDES as StoryDraft));
       resetDraft(next);
       setSavedDraft(cloneDraft(next));
       setSavedNotice("Synced from Dev Panel");
@@ -747,22 +815,23 @@ export default function StoryEditorApp() {
   }, [resetDraft]);
 
   // canvas pan/zoom
-  const onMouseDown = useCallback((e: any) => {
-    if (e.target.closest("[data-minimap]")) return;
-    if (e.target !== canvasRef.current && !e.target.closest("[data-canvas-bg]")) return;
+  const onMouseDown = useCallback((e: ReactMouseEvent<HTMLDivElement>) => {
+    const target = e.target as Element;
+    if (target.closest("[data-minimap]")) return;
+    if (target !== canvasRef.current && !target.closest("[data-canvas-bg]")) return;
     isDragging.current = true; setDragging(true);
     dragStart.current = { x: e.clientX - pan.x, y: e.clientY - pan.y };
   }, [pan]);
   useEffect(() => {
     const z = zoom || 1;
-    const onMove = (e: any) => {
+    const onMove = (e: MouseEvent) => {
       const nd = nodeDrag.current;
       if (nd) {
         if (!nd.moved && (Math.abs(e.clientX - nd.sx) > 3 || Math.abs(e.clientY - nd.sy) > 3)) { nd.moved = true; setDraggingNodeId(nd.id); }
         if (nd.moved) moveNode(nd.id, nd.nx + (e.clientX - nd.sx) / z, nd.ny + (e.clientY - nd.sy) / z);
         return;
       }
-      if (isDragging.current) setPan({ x: e.clientX - dragStart.current.x, y: e.clientY - dragStart.current.y });
+      if (isDragging.current && dragStart.current) setPan({ x: e.clientX - dragStart.current.x, y: e.clientY - dragStart.current.y });
     };
     const onUp = () => {
       const nd = nodeDrag.current;
@@ -774,22 +843,22 @@ export default function StoryEditorApp() {
   }, [moveNode, zoom]);
   useEffect(() => {
     const z = zoom || 1;
-    const touchById = (list: any, id: any) => {
+    const touchById = (list: TouchList, id: number): Touch | null => {
       for (let i = 0; i < list.length; i += 1) if (list[i].identifier === id) return list[i];
       return null;
     };
-    const onMove = (e: any) => {
+    const onMove = (e: TouchEvent) => {
       const nd = nodeDrag.current;
-      if (!nd?.touch) return;
+      if (!nd?.touch || typeof nd.touchId !== "number") return;
       const t = touchById(e.touches, nd.touchId);
       if (!t) return;
       e.preventDefault();
       if (!nd.moved && (Math.abs(t.clientX - nd.sx) > 3 || Math.abs(t.clientY - nd.sy) > 3)) { nd.moved = true; setDraggingNodeId(nd.id); }
       if (nd.moved) moveNode(nd.id, nd.nx + (t.clientX - nd.sx) / z, nd.ny + (t.clientY - nd.sy) / z);
     };
-    const onEnd = (e: any) => {
+    const onEnd = (e: TouchEvent) => {
       const nd = nodeDrag.current;
-      if (!nd?.touch) return;
+      if (!nd?.touch || typeof nd.touchId !== "number") return;
       const stillActive = touchById(e.touches, nd.touchId);
       if (stillActive) return;
       e.preventDefault();
@@ -806,7 +875,7 @@ export default function StoryEditorApp() {
       window.removeEventListener("touchcancel", onEnd);
     };
   }, [moveNode, zoom]);
-  const onWheel = useCallback((e: any) => {
+  const onWheel = useCallback((e: React.WheelEvent<HTMLDivElement>) => {
     e.preventDefault();
     const rect = canvasRef.current?.getBoundingClientRect();
     if (!rect) return;
@@ -827,10 +896,24 @@ export default function StoryEditorApp() {
   }, []);
 
   // Touch: one-finger pan, two-finger pinch-zoom (with focal point)
-  const panRef = useRef(pan);
-  const zoomRef = useRef(zoom);
+  const panRef = useRef<PanOffset>(pan);
+  const zoomRef = useRef<number>(zoom);
   useEffect(() => { panRef.current = pan; zoomRef.current = zoom; });
-  const touchState = useRef(null);
+  interface TouchPanState {
+    mode: "pan";
+    startX: number;
+    startY: number;
+  }
+  interface TouchPinchState {
+    mode: "pinch";
+    dist: number;
+    startZoom: number;
+    startPan: PanOffset;
+    rect: DOMRect;
+    midX: number;
+    midY: number;
+  }
+  const touchState = useRef<TouchPanState | TouchPinchState | null>(null);
   useEffect(() => {
     const el = canvasRef.current;
     if (!el) return;
@@ -851,18 +934,19 @@ export default function StoryEditorApp() {
     const el = canvasRef.current;
     if (!el) return;
     const clampZoom = (z: any) => Math.min(2, Math.max(0.3, z));
-    const onTouchStart = (e: any) => {
+    const onTouchStart = (e: TouchEvent) => {
       if (e.touches.length === 1) {
         const t = e.touches[0];
-        if (t.target.closest("[data-minimap]")) { touchState.current = null; return; }
-        if (t.target.closest("[data-story-node],button,a,input,textarea,select")) { touchState.current = null; return; }
-        if (t.target !== el && !t.target.closest("[data-canvas-bg]")) { touchState.current = null; return; }
+        const target = t.target as Element;
+        if (target.closest("[data-minimap]")) { touchState.current = null; return; }
+        if (target.closest("[data-story-node],button,a,input,textarea,select")) { touchState.current = null; return; }
+        if (target !== el && !target.closest("[data-canvas-bg]")) { touchState.current = null; return; }
         touchState.current = { mode: "pan", startX: t.clientX - panRef.current.x, startY: t.clientY - panRef.current.y };
         isDragging.current = true;
         setDragging(true);
       } else if (e.touches.length >= 2) {
         e.preventDefault();
-        const [a, b] = e.touches;
+        const [a, b] = [e.touches[0], e.touches[1]];
         const rect = el.getBoundingClientRect();
         touchState.current = {
           mode: "pinch",
@@ -877,7 +961,7 @@ export default function StoryEditorApp() {
         setDragging(false);
       }
     };
-    const onTouchMove = (e: any) => {
+    const onTouchMove = (e: TouchEvent) => {
       const st = touchState.current;
       if (!st) return;
       if (st.mode === "pan" && e.touches.length === 1) {
@@ -886,7 +970,7 @@ export default function StoryEditorApp() {
         setPan({ x: t.clientX - st.startX, y: t.clientY - st.startY });
       } else if (st.mode === "pinch" && e.touches.length >= 2) {
         e.preventDefault();
-        const [a, b] = e.touches;
+        const [a, b] = [e.touches[0], e.touches[1]];
         const dist = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY) || st.dist;
         const newZoom = clampZoom(st.startZoom * (dist / st.dist));
         const midX = (a.clientX + b.clientX) / 2;
@@ -898,7 +982,7 @@ export default function StoryEditorApp() {
         setPan({ x: midX - st.rect.left - cx * newZoom, y: midY - st.rect.top - cy * newZoom });
       }
     };
-    const onTouchEnd = (e: any) => {
+    const onTouchEnd = (e: TouchEvent) => {
       if (e.touches.length === 0) {
         touchState.current = null;
         isDragging.current = false;
@@ -922,29 +1006,30 @@ export default function StoryEditorApp() {
   }, []);
 
   // ── beat edits ──
-  const editBeat = useCallback((beatId: any, fields: any) => {
+  const editBeat = useCallback((beatId: string, fields: Partial<StoryBeat>) => {
     setDraft((prev) => {
       const d = cloneDraft(prev);
       d.story ??= {};
       const di = draftBeatIndex(d, beatId);
       if (di >= 0) {
         // author-created beat — patch the entry in newBeats directly
-        const arr = d.story.newBeats.slice();
-        const merged = { ...arr[di] };
+        const arr = (d.story.newBeats ?? []).slice();
+        const merged: Record<string, unknown> = { ...arr[di] };
         for (const [k, v] of Object.entries(fields)) {
           if (v === undefined || v === null) delete merged[k];
           else merged[k] = v;
         }
-        const cleaned = stripEmpty(merged);
+        const cleaned = stripEmpty(merged) as StoryBeat;
         cleaned.id = arr[di].id;
         if (!cleaned.title) cleaned.title = arr[di].title || cleaned.id;
         arr[di] = cleaned;
         d.story.newBeats = arr;
       } else {
         d.story.beats ??= {};
-        const next = stripEmpty({ ...(d.story.beats[beatId] || {}), ...fields });
+        const existing = (d.story.beats[beatId] as Record<string, unknown> | undefined) || {};
+        const next = stripEmpty({ ...existing, ...fields });
         if (Object.keys(next).length === 0) delete d.story.beats[beatId];
-        else d.story.beats[beatId] = next;
+        else d.story.beats[beatId] = next as never;
         if (Object.keys(d.story.beats).length === 0) delete d.story.beats;
       }
       if (d.story && Object.keys(d.story).length === 0) delete d.story;
@@ -952,26 +1037,33 @@ export default function StoryEditorApp() {
     });
   }, [setDraft]);
 
+  interface CreateDraftBeatOpts {
+    triggered?: boolean;
+    queuedBy?: { beatId: string; choiceId: string };
+    idHint?: string;
+  }
+
   // ── create a draft beat. opts: { triggered?:bool, queuedBy?:{beatId,choiceId}, idHint? } ──
-  const createDraftBeat = useCallback((opts = {}) => {
+  const createDraftBeat = useCallback((opts: CreateDraftBeatOpts = {}) => {
     // pick a free id from the current snapshot (single-user UI — no real race),
     // re-checked inside the updater for paranoia.
     const rawBase = (opts.idHint && /^[a-z0-9_]+$/i.test(opts.idHint)) ? opts.idHint
       : (opts.queuedBy ? `${opts.queuedBy.beatId}_${opts.queuedBy.choiceId}` : "side_beat");
     const cleanedBase = rawBase.toLowerCase().replace(/[^a-z0-9_]+/g, "_").replace(/^_+|_+$/g, "");
     const base = DRAFT_BEAT_ID_RE.test(cleanedBase) ? cleanedBase : `branch_${cleanedBase || "beat"}`;
-    const pickFree = (d: any) => {
+    const pickFree = (d: StoryDraft): string => {
       const taken = new Set(allBeatIds(d));
       if (!taken.has(base)) return base;
       let n = 2; while (taken.has(`${base}_${n}`)) n += 1; return `${base}_${n}`;
     };
     const newId = pickFree(draft);
-    let placedNearSource = null;
+    let placedNearSource: StoryNodePosition | null = null;
     if (opts.queuedBy) {
+      const queuedBy = opts.queuedBy;
       const sourceGraph = deriveGraph(draft, nodePositions);
-      const source = sourceGraph.nodes.find((n) => n.id === opts.queuedBy.beatId);
+      const source = sourceGraph.nodes.find((n) => n.id === queuedBy.beatId);
       if (source) {
-        const row = effectiveChoices(opts.queuedBy.beatId, draft).findIndex((c: any) => c.id === opts.queuedBy.choiceId);
+        const row = effectiveChoices(queuedBy.beatId, draft).findIndex((c) => c.id === queuedBy.choiceId);
         const rowY = row >= 0 && source.branching ? source.y + branchingRowCenterY(row) - 96 : source.y + source.h / 2 - 96;
         placedNearSource = { x: Math.round(source.x + source.w + 90), y: Math.round(rowY) };
       }
@@ -981,23 +1073,24 @@ export default function StoryEditorApp() {
       d.story ??= {};
       d.story.newBeats ??= [];
       const id = allBeatIds(d).includes(newId) ? pickFree(d) : newId;
-      const beat = { id, title: opts.triggered ? "New side beat" : "New branch", lines: [] };
+      const beat: StoryBeat = { id, title: opts.triggered ? "New side beat" : "New branch", lines: [] };
       if (opts.triggered) beat.trigger = { type: "bond_at_least", npc: "wren", amount: 8 };
       d.story.newBeats = [...d.story.newBeats, beat];
       if (opts.queuedBy) {
         d.story.beats ??= {};
         const { beatId, choiceId } = opts.queuedBy;
-        const nextChoices = effectiveChoices(beatId, d).map((c: any) => (c.id === choiceId
+        const nextChoices = effectiveChoices(beatId, d).map((c) => (c.id === choiceId
           ? { ...c, outcome: { ...(c.outcome || {}), queueBeat: id } } : c));
         const dj = draftBeatIndex(d, beatId);
         if (dj >= 0) { const arr = d.story.newBeats.slice(); arr[dj] = { ...arr[dj], choices: nextChoices }; d.story.newBeats = arr; }
-        else d.story.beats[beatId] = stripEmpty({ ...(d.story.beats[beatId] || {}), choices: nextChoices });
+        else d.story.beats[beatId] = stripEmpty({ ...((d.story.beats[beatId] as Record<string, unknown> | undefined) || {}), choices: nextChoices }) as never;
       }
       return d;
     });
     if (placedNearSource) {
+      const pos = placedNearSource;
       setNodePositions((prev) => {
-        const next = { ...prev, [newId]: placedNearSource };
+        const next = { ...prev, [newId]: pos };
         writeNodePositions(next);
         return next;
       });
@@ -1006,26 +1099,29 @@ export default function StoryEditorApp() {
     return newId;
   }, [draft, nodePositions, setDraft]);
 
-  const deleteDraftBeat = useCallback((beatId: any) => {
+  const deleteDraftBeat = useCallback((beatId: string) => {
     setDraft((prev) => {
       const d = cloneDraft(prev);
       if (!d.story?.newBeats) return d;
-      d.story.newBeats = d.story.newBeats.filter((b: any) => b && b.id !== beatId);
+      d.story.newBeats = d.story.newBeats.filter((b) => b && b.id !== beatId);
       if (d.story.newBeats.length === 0) delete d.story.newBeats;
       if (d.story.beats) delete d.story.beats[beatId];
       // unlink any choice pointing at the deleted beat
-      const scrub = (choices: any) => Array.isArray(choices)
+      const scrub = (choices: unknown): unknown => Array.isArray(choices)
         ? choices.map((c) => {
-            if (c?.outcome?.queueBeat !== beatId) return c;
-            const o = { ...c.outcome }; delete o.queueBeat;
-            return { ...c, outcome: Object.keys(o).length ? o : undefined };
+            const choice = c as StoryChoice | undefined;
+            if (choice?.outcome?.queueBeat !== beatId) return choice;
+            const o: Record<string, unknown> = { ...choice.outcome }; delete o.queueBeat;
+            return { ...choice, outcome: Object.keys(o).length ? o : undefined };
           })
         : choices;
       if (d.story.beats) for (const id of Object.keys(d.story.beats)) {
-        if (Array.isArray(d.story.beats[id].choices)) d.story.beats[id] = stripEmpty({ ...d.story.beats[id], choices: scrub(d.story.beats[id].choices) });
-        if (Object.keys(d.story.beats[id]).length === 0) delete d.story.beats[id];
+        const beatPatch = d.story.beats[id] as Record<string, unknown>;
+        if (Array.isArray(beatPatch.choices)) d.story.beats[id] = stripEmpty({ ...beatPatch, choices: scrub(beatPatch.choices) }) as never;
+        const finalPatch = d.story.beats[id] as Record<string, unknown> | undefined;
+        if (finalPatch && Object.keys(finalPatch).length === 0) delete d.story.beats[id];
       }
-      if (d.story.newBeats) d.story.newBeats = d.story.newBeats.map((b: any) => (Array.isArray(b.choices) ? { ...b, choices: scrub(b.choices) } : b));
+      if (d.story.newBeats) d.story.newBeats = d.story.newBeats.map((b) => (Array.isArray(b.choices) ? { ...b, choices: scrub(b.choices) as StoryChoice[] } : b));
       if (d.story.beats && Object.keys(d.story.beats).length === 0) delete d.story.beats;
       if (d.story && Object.keys(d.story).length === 0) delete d.story;
       return d;
@@ -1034,11 +1130,11 @@ export default function StoryEditorApp() {
     setSelectedId((cur) => (cur === beatId ? null : cur));
   }, [setDraft]);
 
-  const suppressBuiltInBeat = useCallback((beatId: any) => {
+  const suppressBuiltInBeat = useCallback((beatId: string) => {
     setDraft((prev) => {
       const d = cloneDraft(prev);
       d.story ??= {};
-      const ids = new Set(Array.isArray(d.story.suppressedBeats) ? d.story.suppressedBeats : []);
+      const ids = new Set<string>(Array.isArray(d.story.suppressedBeats) ? d.story.suppressedBeats : []);
       for (const id of builtInSideSubtreeIds(beatId)) ids.add(id);
       d.story.suppressedBeats = [...ids].sort();
       return d;
@@ -1058,9 +1154,9 @@ export default function StoryEditorApp() {
     });
   }, [setDraft]);
 
-  const renameDraftBeat = useCallback((oldId: any, nextId: any) => {
+  const renameDraftBeat = useCallback((oldId: string, nextId: string) => {
     const result = renameDraftBeatInDraft(draft, oldId, nextId);
-    if (!result.ok || !result.changed) return result;
+    if (!result.ok || !result.changed || !result.id) return result;
     const newId = result.id;
     setDraft(result.draft);
     setNodePositions((prev) => {
@@ -1083,9 +1179,9 @@ export default function StoryEditorApp() {
     return result;
   }, [draft, setDraft]);
 
-  const onNewBranch = useCallback((parentBeatId: any, choiceId: any) => createDraftBeat({ queuedBy: { beatId: parentBeatId, choiceId } }), [createDraftBeat]);
+  const onNewBranch = useCallback((parentBeatId: string, choiceId: string) => createDraftBeat({ queuedBy: { beatId: parentBeatId, choiceId } }), [createDraftBeat]);
 
-  const toggleCollapse = useCallback((nodeId: any) => {
+  const toggleCollapse = useCallback((nodeId: string) => {
     setCollapsed((prev) => { const n = new Set(prev); if (n.has(nodeId)) n.delete(nodeId); else n.add(nodeId); writeCollapsed(n); return n; });
   }, []);
 
@@ -1097,8 +1193,8 @@ export default function StoryEditorApp() {
   ), [focusedGraph, fullGraph, graphViewMode]);
   const collapsible = useMemo(() => collapsibleIds(graph.edges), [graph]);
   const view = useMemo(() => visibleSubset(graph.nodes, graph.edges, collapsed), [graph, collapsed]);
-  const nodeById = useMemo(() => new Map(view.nodes.map((n: any) => [n.id, n])), [view]);
-  const onlineIds = useMemo(() => new Set(fullGraph.nodes.map((n) => n.id)), [fullGraph]);
+  const nodeById = useMemo(() => new Map<string, StoryNode>(view.nodes.map((n) => [n.id, n])), [view]);
+  const onlineIds = useMemo(() => new Set<string>(fullGraph.nodes.map((n) => n.id)), [fullGraph]);
   const warningsByBeat = useMemo(() => collectStoryWarnings(draft), [draft]);
   const totalWarnings = useMemo(() => Object.values(warningsByBeat).reduce((s, arr) => s + arr.length, 0), [warningsByBeat]);
   const suppressedCount = Array.isArray(draft?.story?.suppressedBeats) ? draft.story.suppressedBeats.length : 0;
@@ -1137,28 +1233,30 @@ export default function StoryEditorApp() {
       y: Math.round((rect.height - (maxY - minY) * nextZoom) / 2 - minY * nextZoom),
     });
   }, [view.nodes]);
-  const panToWorld = useCallback((worldX: any, worldY: any) => {
+  const panToWorld = useCallback((worldX: number, worldY: number) => {
     const el = canvasRef.current;
     if (!el) return;
     const rect = el.getBoundingClientRect();
     setPan({ x: Math.round(rect.width / 2 - worldX * zoom), y: Math.round(rect.height / 2 - worldY * zoom) });
   }, [zoom]);
-  const selectAndCenter = useCallback((id: any) => {
+  const selectAndCenter = useCallback((id: string | null) => {
     if (!id) return;
     setSelectedId(id);
-    const node = view.nodes.find((n: any) => n.id === id);
+    const node = view.nodes.find((n) => n.id === id);
     if (node) panToWorld(node.x + node.w / 2, node.y + node.h / 2);
   }, [panToWorld, view.nodes]);
 
   useEffect(() => {
-    const onKey = (e: any) => {
+    const onKey = (e: KeyboardEvent) => {
       if (e.metaKey || e.ctrlKey || e.altKey) return;
-      const tag = e.target?.tagName;
-      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || tag === "BUTTON" || tag === "A" || e.target?.isContentEditable) return;
-      const map = { ArrowLeft: "left", ArrowRight: "right", ArrowUp: "up", ArrowDown: "down" };
-      if (map[e.key]) {
+      const target = e.target as HTMLElement | null;
+      const tag = target?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || tag === "BUTTON" || tag === "A" || target?.isContentEditable) return;
+      const map: Record<string, "left" | "right" | "up" | "down"> = { ArrowLeft: "left", ArrowRight: "right", ArrowUp: "up", ArrowDown: "down" };
+      const dir = map[e.key];
+      if (dir) {
         e.preventDefault();
-        selectAndCenter(directionalNodeId(view.nodes, selectedId, map[e.key]));
+        selectAndCenter(directionalNodeId(view.nodes, selectedId, dir));
       } else if (e.key === "Enter" && selectedId) {
         e.preventDefault();
         setPreviewBeatId(selectedId);
@@ -1219,10 +1317,10 @@ export default function StoryEditorApp() {
             )}
           </button>
           <span role="group" aria-label="Graph focus mode" style={{ display: "inline-flex", padding: 2, borderRadius: 8, border: `1.5px solid ${C.border}`, background: C.parchmentDeep }}>
-            {[
+            {([
               ["chain", "Current Chain"],
               ["full", "Full Graph"],
-            ].map(([mode, label]) => (
+            ] as const).map(([mode, label]) => (
               <button key={mode} onClick={() => setGraphMode(mode)}
                 aria-pressed={graphViewMode === mode}
                 title={mode === "chain" ? "Show the selected conversation chain and immediate choices" : "Show every story beat and cross-link"}
@@ -1316,10 +1414,10 @@ export default function StoryEditorApp() {
             )}
 
             <svg style={{ position: "absolute", left: 0, top: 0, width: graph.bounds.w, height: graph.bounds.h, overflow: "visible", pointerEvents: "none" }}>
-              {view.edges.map((edge: any, i: any) => <TreeEdge key={i} edge={edge} nodeById={nodeById} draft={draft} />)}
+              {view.edges.map((edge, i) => <TreeEdge key={i} edge={edge} nodeById={nodeById} draft={draft} />)}
             </svg>
 
-            {view.nodes.map((node: any) => (
+            {view.nodes.map((node) => (
               <TreeNode key={node.id} node={node} beat={effectiveBeat(node.id, draft)} selectedId={selectedId}
                 collapsed={collapsed.has(node.id)} hiddenCount={view.hiddenCounts[node.id] || 0}
                 showCollapse={collapsible.has(node.id)} dragging={draggingNodeId === node.id}
@@ -1363,21 +1461,21 @@ export default function StoryEditorApp() {
       {previewBeatId && (
         <PreviewModal key={previewBeatId} startBeatId={previewBeatId} draft={draft}
           onClose={() => setPreviewBeatId(null)}
-          onOpenInEditor={(id: any) => setSelectedId(id)} />
+          onOpenInEditor={(id) => setSelectedId(id)} />
       )}
       <ValidationPanel open={validationOpen} draft={draft} anchorRect={validationAnchorRect}
         onClose={() => setValidationOpen(false)}
-        onJumpToBeat={(id: any) => selectAndCenter(id)} />
+        onJumpToBeat={(id) => selectAndCenter(id)} />
       <PathsPanel open={pathsOpen} draft={draft} anchorBeatId={selectedId}
         onClose={() => setPathsOpen(false)}
-        onJumpToBeat={(id: any) => selectAndCenter(id)} />
+        onJumpToBeat={(id) => selectAndCenter(id)} />
       <PlaythroughPanel open={playthroughOpen} draft={draft} anchorBeatId={selectedId}
         onClose={() => setPlaythroughOpen(false)}
-        onJumpToBeat={(id: any) => selectAndCenter(id)} />
+        onJumpToBeat={(id) => selectAndCenter(id)} />
       <FindReplacePanel open={findOpen} draft={draft}
         onClose={() => setFindOpen(false)}
-        onApply={(nextDraft: any) => setDraft(nextDraft, { commit: true })}
-        onJumpToBeat={(id: any) => selectAndCenter(id)} />
+        onApply={(nextDraft) => setDraft(nextDraft, { commit: true })}
+        onJumpToBeat={(id) => selectAndCenter(id)} />
     </div>
   );
 }

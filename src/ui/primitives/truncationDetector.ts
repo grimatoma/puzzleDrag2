@@ -6,9 +6,26 @@
  *
  * Only runs in dev/test; the production bundle pays no cost.
  */
-const reported = new WeakSet();
+const reported = new WeakSet<Element>();
 
-function inspect(el) {
+interface TruncationHit {
+  element: Element;
+  text: string;
+  scrollWidth: number;
+  clientWidth: number;
+  kind?: string;
+}
+
+declare global {
+  interface Window {
+    __truncationDetector?: {
+      run: () => void;
+      scan: (root?: ParentNode) => TruncationHit[];
+    };
+  }
+}
+
+function inspect(el: Element): TruncationHit | null {
   if (reported.has(el)) return null;
   const rect = el.getBoundingClientRect?.();
   if (!rect || rect.width === 0 || rect.height === 0) return null;
@@ -22,8 +39,8 @@ function inspect(el) {
   };
 }
 
-function scan(root = document) {
-  const hits = [];
+function scan(root: ParentNode = document): TruncationHit[] {
+  const hits: TruncationHit[] = [];
   const truncates = root.querySelectorAll(".truncate, [data-truncate]");
   for (const el of truncates) {
     const hit = inspect(el);
@@ -37,7 +54,7 @@ function scan(root = document) {
   return hits;
 }
 
-export function startTruncationDetector({ intervalMs = 1500 } = {}) {
+export function startTruncationDetector({ intervalMs = 1500 }: { intervalMs?: number } = {}) {
   if (typeof window === "undefined" || typeof document === "undefined") return () => {};
   const run = () => {
     const hits = scan();

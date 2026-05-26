@@ -11,10 +11,21 @@
  */
 
 import { useEffect, useRef, useState } from "react";
+import type Phaser from "phaser";
 
 const STRIP_HEIGHT = 52;
 const STRIP_MAX_WIDTH = 760;
 const STRIP_MIN_WIDTH = 220;
+
+interface SeasonStripPhaserProps {
+  turnsUsed: number;
+  turnBudget: number;
+  turnsRemaining: number;
+  seasonIdx: number;
+  seasonName: string;
+}
+
+type GameWithObserver = Phaser.Game & { __resizeObserver?: ResizeObserver };
 
 export function SeasonStripPhaser({
   turnsUsed,
@@ -22,9 +33,9 @@ export function SeasonStripPhaser({
   turnsRemaining,
   seasonIdx,
   seasonName,
-}) {
-  const hostRef = useRef(null);
-  const gameRef = useRef(null);
+}: SeasonStripPhaserProps) {
+  const hostRef = useRef<HTMLDivElement | null>(null);
+  const gameRef = useRef<GameWithObserver | null>(null);
   const sceneReadyRef = useRef(false);
   const [loading, setLoading] = useState(true);
 
@@ -66,7 +77,7 @@ export function SeasonStripPhaser({
           },
           input: { activePointers: 0, mouse: false, touch: false, keyboard: false },
           callbacks: {
-            postBoot: (g) => {
+            postBoot: (g: Phaser.Game) => {
               const scene = g.scene.scenes[0];
               if (!scene) return;
               // Push current props into the registry BEFORE scene create()
@@ -85,11 +96,11 @@ export function SeasonStripPhaser({
                 g.scale.resize(newW * dpr, cssH * dpr);
               });
               ro.observe(host);
-              g.__resizeObserver = ro;
+              (g as GameWithObserver).__resizeObserver = ro;
             },
           },
         });
-        gameRef.current = game;
+        gameRef.current = game as GameWithObserver;
         setLoading(false);
       } catch (err) {
         console.warn("[hwv] Failed to load Phaser season strip:", err);

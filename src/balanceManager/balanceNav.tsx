@@ -1,14 +1,35 @@
 // Tab + entity focus navigation for the Dev Panel (`/b/`).
 
 import { createContext, useContext, useMemo } from "react";
+import type { ReactNode } from "react";
 
-const BalanceNavContext = createContext({
+export interface BalanceNavTarget {
+  tab: string;
+  focus?: string | null;
+}
+
+export type BalanceNavigate = (target: BalanceNavTarget) => void;
+
+export interface BalanceNavValue {
+  focus: string | null;
+  navigate: BalanceNavigate;
+}
+
+const BalanceNavContext = createContext<BalanceNavValue>({
   focus: null,
   navigate: () => {},
 });
 
-export function BalanceNavProvider({ focus: any, navigate: any, children: any }) {
-  const value = useMemo(() => ({ focus, navigate }), [focus, navigate]);
+export function BalanceNavProvider({
+  focus,
+  navigate,
+  children,
+}: {
+  focus: string | null;
+  navigate: BalanceNavigate;
+  children: ReactNode;
+}) {
+  const value = useMemo<BalanceNavValue>(() => ({ focus, navigate }), [focus, navigate]);
   return (
     <BalanceNavContext.Provider value={value}>
       {children}
@@ -16,6 +37,6 @@ export function BalanceNavProvider({ focus: any, navigate: any, children: any })
   );
 }
 
-export function useBalanceNav() {
+export function useBalanceNav(): BalanceNavValue {
   return useContext(BalanceNavContext);
 }

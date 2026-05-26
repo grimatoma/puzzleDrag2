@@ -19,11 +19,12 @@ import * as castle from "../features/castle/slice.js";
 import * as boons from "../features/boons/slice.js";
 import { driftPrices } from "../market.js";
 import { loadSavedState } from "./persistence.js";
-import { 
-  makeOrder, 
-  seedOrderIdSeq, 
-  defaultTileCollectionSlice 
+import {
+  makeOrder,
+  seedOrderIdSeq,
+  defaultTileCollectionSlice
 } from "./helpers.js";
+import type { GameState } from "../types/state";
 
 /**
  * Generates a stable save seed for deterministic RNG.
@@ -46,7 +47,7 @@ export function generateSaveSeed() {
  * of `initialState`. Callers that want the hydrated-from-save behaviour
  * should use `initialState` instead.
  */
-export function createFreshState(overrides?: any) {
+export function createFreshState(overrides?: { saveSeed?: string; tools?: Record<string, boolean> }): GameState {
   const biomeKey = "farm";
   const level = 1;
   const initialRoster = ["wren"];
@@ -174,7 +175,7 @@ export function createFreshState(overrides?: any) {
   };
 }
 
-export function initialState(overrides?: any) {
+export function initialState(overrides?: { saveSeed?: string; tools?: Record<string, boolean> }): GameState {
   const fresh = createFreshState(overrides);
   const raw = loadSavedState();
   if (raw && raw.version === SAVE_SCHEMA_VERSION) {

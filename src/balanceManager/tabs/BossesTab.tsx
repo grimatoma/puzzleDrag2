@@ -10,29 +10,45 @@ import { COLORS, TextField, TextArea, NumberField, FieldRow, Card, Pill } from "
 import Icon from "../../ui/Icon.jsx";
 import { ICON_REGISTRY } from "../../textures/iconRegistry.js";
 import { assessBoss } from "../bossBalance.js";
+import type { BalanceDraft } from "../index.jsx";
 
-const TIER_TONE = {
+interface TonePair { bg: string; fg: string }
+const TIER_TONE: Record<string, TonePair> = {
   gentle:  { bg: "rgba(90,158,75,0.16)",  fg: COLORS.greenDeep },
   steady:  { bg: "rgba(226,178,74,0.18)", fg: "#7a5810" },
   hard:    { bg: "rgba(214,97,42,0.18)",  fg: COLORS.emberDeep },
   brutal:  { bg: "rgba(194,59,34,0.18)",  fg: COLORS.red },
 };
 
-export default function BossesTab({ draft: any, updateDraft: any }) {
-  function patch(id: any, fields: any) {
-    updateDraft((d: any) => {
-      d.bosses ??= {};
-      const next = { ...(d.bosses[id] ?? {}), ...fields };
-      for (const k of Object.keys(next)) if (next[k] === "" || next[k] == null) delete next[k];
-      if (Object.keys(next).length === 0) delete d.bosses[id];
-      else d.bosses[id] = next;
-      if (Object.keys(d.bosses).length === 0) delete d.bosses;
+interface BossOverride {
+  name?: string;
+  season?: string;
+  targetAmount?: number;
+  description?: string;
+  modifierDescription?: string;
+}
+
+export default function BossesTab({ draft, updateDraft }: { draft: BalanceDraft; updateDraft: (updater: (draft: BalanceDraft) => void) => void }) {
+  function patch(id: string, fields: BossOverride) {
+    updateDraft((d) => {
+      const bosses = (d.bosses ?? {}) as Record<string, BossOverride>;
+      d.bosses = bosses;
+      const next: BossOverride = { ...(bosses[id] ?? {}), ...fields };
+      for (const k of Object.keys(next)) {
+        const v = (next as Record<string, unknown>)[k];
+        if (v === "" || v == null) delete (next as Record<string, unknown>)[k];
+      }
+      if (Object.keys(next).length === 0) delete bosses[id];
+      else bosses[id] = next;
+      if (Object.keys(bosses).length === 0) d.bosses = {};
     });
   }
+  const iconRegistry = ICON_REGISTRY as unknown as Record<string, unknown>;
   return (
     <div className="flex flex-col gap-3">
       {BOSSES.map((b) => {
-        const p = (draft.bosses ?? {})[b.id] ?? {};
+        const draftBosses = (draft.bosses ?? {}) as Record<string, BossOverride>;
+        const p = draftBosses[b.id] ?? {};
         const eff = {
           name: p.name ?? b.name,
           season: p.season ?? b.season ?? "",
@@ -41,7 +57,7 @@ export default function BossesTab({ draft: any, updateDraft: any }) {
           modifierDescription: p.modifierDescription ?? b.modifierDescription ?? "",
         };
         const portraitKey = `boss_${b.id}`;
-        const hasPortrait = !!ICON_REGISTRY[portraitKey];
+        const hasPortrait = !!iconRegistry[portraitKey];
         const assessment = assessBoss({ ...b, target: { ...(b.target || {}), amount: eff.targetAmount } });
         const tone = TIER_TONE[assessment.tier.id] || TIER_TONE.steady;
         return (

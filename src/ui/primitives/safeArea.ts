@@ -13,10 +13,12 @@
  */
 import { useEffect, useRef } from "react";
 
-const CSS_VAR = { top: "--chrome-top", bottom: "--chrome-bottom" };
+type ChromeEdge = "top" | "bottom";
 
-export function useChromeEdge(edge) {
-  const ref = useRef(null);
+const CSS_VAR: Record<ChromeEdge, string> = { top: "--chrome-top", bottom: "--chrome-bottom" };
+
+export function useChromeEdge(edge: ChromeEdge) {
+  const ref = useRef<HTMLElement | null>(null);
   useEffect(() => {
     const el = ref.current;
     if (!el) return;

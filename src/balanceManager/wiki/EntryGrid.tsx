@@ -12,7 +12,7 @@ function colorBarStyle(color: any) {
   };
 }
 
-export default function EntryGrid({ entries: any, emptyLabel = "No entries." }) {
+export default function EntryGrid({ entries, emptyLabel = "No entries." }: { entries: any; emptyLabel?: any }) {
   if (!entries || entries.length === 0) {
     return (
       <div

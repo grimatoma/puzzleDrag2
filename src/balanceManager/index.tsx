@@ -8,43 +8,83 @@
 // Because both the game and this app share an origin, localStorage drafts
 // written here are picked up by the game on its next load.
 
-import { useState, useMemo, useEffect, useCallback, Suspense, lazy } from "react";
+import React, { useState, useMemo, useEffect, useCallback, Suspense, lazy } from "react";
 import { BALANCE_OVERRIDES } from "../constants.js";
 import { writeBalanceDraft } from "../config/applyOverrides.js";
 import balanceFile from "../config/balance.json";
+import Icon from "../ui/Icon.jsx";
 import { COLORS } from "./shared.jsx";
 import { parseHash, useBalanceRouter } from "./router.js";
 import { useDraftHistory } from "./useDraftHistory.js";
 import CommandPalette from "./CommandPalette.jsx";
 import { BalanceNavProvider } from "./balanceNav.jsx";
+import type { CommandEntry } from "./commandPalette.js";
+
+// The shape of the editable balance draft. All section fields are dictionaries
+// of overrides keyed by id. Casting through Partial reflects that any section
+// can hold arbitrary override shapes (different tabs target different leaves).
+export interface BalanceDraft {
+  version: number;
+  upgradeThresholds: Record<string, unknown>;
+  items: Record<string, unknown>;
+  recipes: Record<string, unknown>;
+  buildings: Record<string, unknown>;
+  tilePowers: Record<string, unknown>;
+  tileUnlocks: Record<string, unknown>;
+  tileDescriptions: Record<string, unknown>;
+  zones: Record<string, unknown>;
+  workers: Record<string, unknown>;
+  keepers: Record<string, unknown>;
+  expedition: Record<string, unknown>;
+  biomes: Record<string, unknown>;
+  tuning: Record<string, unknown>;
+  npcs: Record<string, unknown>;
+  story: Record<string, unknown>;
+  flags: Record<string, unknown>;
+  bosses: Record<string, unknown>;
+  achievements: Record<string, unknown>;
+  dailyRewards: Record<string, unknown>;
+}
+
+// Props passed to every lazy tab. Individual tabs destructure only the fields
+// they need (e.g. RationsTab ignores focus); typing them uniformly lets us
+// render <ActiveComponent {...props}/> against a heterogeneous union without
+// fighting every overload.
+export interface TabProps {
+  draft: BalanceDraft;
+  updateDraft: (updater: (draft: BalanceDraft) => void) => void;
+  focus?: string | null;
+}
+
+type TabComponent = React.ComponentType<TabProps>;
 
 // Lazy-load tabs so the Dev Panel (a dev-time tool) stays out of the
 // main entry chunk. Each tab becomes its own JS chunk fetched only when
 // the user opens the modal and selects that tab.
-const ItemsTab = lazy(() => import("./tabs/ItemsTab.jsx"));
-const RecipesTab   = lazy(() => import("./tabs/RecipesTab.jsx"));
-const BuildingsTab = lazy(() => import("./tabs/BuildingsTab.jsx"));
-const PowersTab    = lazy(() => import("./tabs/PowersTab.jsx"));
-const ZonesTab     = lazy(() => import("./tabs/ZonesTab.jsx"));
-const BiomesTab    = lazy(() => import("./tabs/BiomesTab.jsx"));
-const WorkersTab   = lazy(() => import("./tabs/WorkersTab.jsx"));
-const KeepersTab   = lazy(() => import("./tabs/KeepersTab.jsx"));
-const BoonsTab     = lazy(() => import("./tabs/BoonsTab.jsx"));
-const NpcsTab      = lazy(() => import("./tabs/NpcsTab.jsx"));
-const StoryTab     = lazy(() => import("./tabs/StoryTab.jsx"));
-const FlagsTab     = lazy(() => import("./tabs/FlagsTab.jsx"));
-const RationsTab   = lazy(() => import("./tabs/RationsTab.jsx"));
-const TuningTab    = lazy(() => import("./tabs/TuningTab.jsx"));
-const BossesTab    = lazy(() => import("./tabs/BossesTab.jsx"));
-const AchievementsTab = lazy(() => import("./tabs/AchievementsTab.jsx"));
-const DailyRewardsTab = lazy(() => import("./tabs/DailyRewardsTab.jsx"));
-const ExportTab    = lazy(() => import("./tabs/ExportTab.jsx"));
-const IconsTab     = lazy(() => import("./tabs/IconsTab.jsx"));
-const AbilitiesReferenceTab = lazy(() => import("./tabs/AbilitiesReferenceTab.jsx"));
-const ToolPowersReferenceTab = lazy(() => import("./tabs/ToolPowersReferenceTab.jsx"));
-const TileDiscoveryReferenceTab = lazy(() => import("./tabs/TileDiscoveryReferenceTab.jsx"));
-const WikiTab = lazy(() => import("./tabs/WikiTab.jsx"));
-const AnimationsDemoTab = lazy(() => import("./tabs/AnimationsDemoTab.jsx"));
+const ItemsTab = lazy(() => import("./tabs/ItemsTab.jsx")) as unknown as TabComponent;
+const RecipesTab   = lazy(() => import("./tabs/RecipesTab.jsx")) as unknown as TabComponent;
+const BuildingsTab = lazy(() => import("./tabs/BuildingsTab.jsx")) as unknown as TabComponent;
+const PowersTab    = lazy(() => import("./tabs/PowersTab.jsx")) as unknown as TabComponent;
+const ZonesTab     = lazy(() => import("./tabs/ZonesTab.jsx")) as unknown as TabComponent;
+const BiomesTab    = lazy(() => import("./tabs/BiomesTab.jsx")) as unknown as TabComponent;
+const WorkersTab   = lazy(() => import("./tabs/WorkersTab.jsx")) as unknown as TabComponent;
+const KeepersTab   = lazy(() => import("./tabs/KeepersTab.jsx")) as unknown as TabComponent;
+const BoonsTab     = lazy(() => import("./tabs/BoonsTab.jsx")) as unknown as TabComponent;
+const NpcsTab      = lazy(() => import("./tabs/NpcsTab.jsx")) as unknown as TabComponent;
+const StoryTab     = lazy(() => import("./tabs/StoryTab.jsx")) as unknown as TabComponent;
+const FlagsTab     = lazy(() => import("./tabs/FlagsTab.jsx")) as unknown as TabComponent;
+const RationsTab   = lazy(() => import("./tabs/RationsTab.jsx")) as unknown as TabComponent;
+const TuningTab    = lazy(() => import("./tabs/TuningTab.jsx")) as unknown as TabComponent;
+const BossesTab    = lazy(() => import("./tabs/BossesTab.jsx")) as unknown as TabComponent;
+const AchievementsTab = lazy(() => import("./tabs/AchievementsTab.jsx")) as unknown as TabComponent;
+const DailyRewardsTab = lazy(() => import("./tabs/DailyRewardsTab.jsx")) as unknown as TabComponent;
+const ExportTab    = lazy(() => import("./tabs/ExportTab.jsx")) as unknown as TabComponent;
+const IconsTab     = lazy(() => import("./tabs/IconsTab.jsx")) as unknown as TabComponent;
+const AbilitiesReferenceTab = lazy(() => import("./tabs/AbilitiesReferenceTab.jsx")) as unknown as TabComponent;
+const ToolPowersReferenceTab = lazy(() => import("./tabs/ToolPowersReferenceTab.jsx")) as unknown as TabComponent;
+const TileDiscoveryReferenceTab = lazy(() => import("./tabs/TileDiscoveryReferenceTab.jsx")) as unknown as TabComponent;
+const WikiTab = lazy(() => import("./tabs/WikiTab.jsx")) as unknown as TabComponent;
+const AnimationsDemoTab = lazy(() => import("./tabs/AnimationsDemoTab.jsx")) as unknown as TabComponent;
 
 // Hash routing for the Dev Panel lives in `./router.js` — kept separate
 // from `src/router.js` because the Dev Panel is its own page (`/b/`).
@@ -152,7 +192,7 @@ const SECTIONS = [
   { id: "run", label: "Run" },
 ];
 
-function tabNavStyle(active, dormant: any) {
+function tabNavStyle(active: boolean, dormant: boolean): React.CSSProperties {
   if (active) {
     return dormant
       ? { background: "#c45c4a", color: "#fff", border: `1px solid ${COLORS.redDeep}` }
@@ -164,7 +204,7 @@ function tabNavStyle(active, dormant: any) {
   return { background: "transparent", color: COLORS.inkLight };
 }
 
-function emptyDraft() {
+function emptyDraft(): BalanceDraft {
   return {
     version: 1,
     upgradeThresholds: {},
@@ -194,14 +234,19 @@ function emptyDraft() {
   };
 }
 
-function cloneDraft(d: any) {
+function cloneDraft(d: Partial<BalanceDraft> | null | undefined): BalanceDraft {
   if (!d) return emptyDraft();
-  const base = emptyDraft();
+  const base = emptyDraft() as unknown as Record<string, unknown>;
+  const src = d as Record<string, unknown>;
   for (const k of Object.keys(base)) {
-    if (k === "version") base[k] = d[k] ?? 1;
-    else if (d[k] && typeof d[k] === "object") base[k] = JSON.parse(JSON.stringify(d[k]));
+    if (k === "version") {
+      const v = src[k];
+      base[k] = typeof v === "number" ? v : 1;
+    } else if (src[k] && typeof src[k] === "object") {
+      base[k] = JSON.parse(JSON.stringify(src[k]));
+    }
   }
-  return base;
+  return base as unknown as BalanceDraft;
 }
 
 const SIDEBAR_COLLAPSED_KEY = "hearth.balance.sidebarCollapsed";
@@ -214,7 +259,7 @@ function readSidebarCollapsed() {
   } catch { return false; }
 }
 
-function writeSidebarCollapsed(v: any) {
+function writeSidebarCollapsed(v: boolean) {
   try {
     if (typeof localStorage === "undefined") return;
     localStorage.setItem(SIDEBAR_COLLAPSED_KEY, v ? "1" : "0");
@@ -228,7 +273,7 @@ function readShowDormantTabs() {
   } catch { return false; }
 }
 
-function writeShowDormantTabs(v: any) {
+function writeShowDormantTabs(v: boolean) {
   try {
     if (typeof localStorage === "undefined") return;
     localStorage.setItem(SIDEBAR_DORMANT_KEY, v ? "1" : "0");
@@ -272,13 +317,13 @@ export default function BalanceManagerApp() {
   // and back/forward / `hashchange` events rebind the tab.
   useBalanceRouter(tab, setTab, focus, setFocus, tabIds);
 
-  const navigateTo = useCallback((nextTab: any, nextFocus = null) => {
+  const navigateTo = useCallback((nextTab: string, nextFocus: string | null = null) => {
     setTab(nextTab);
     setFocus(nextFocus);
     setMobileNavOpen(false);
   }, []);
 
-  const navigate = useCallback(({ tab: nextTab, focus: nextFocus = null }) => {
+  const navigate = useCallback(({ tab: nextTab, focus: nextFocus = null }: { tab: string; focus?: string | null }) => {
     navigateTo(nextTab, nextFocus);
   }, [navigateTo]);
   // Initialise the draft from whatever the constants module merged in:
@@ -306,7 +351,7 @@ export default function BalanceManagerApp() {
     });
   }, []);
 
-  const updateDraft = useCallback((updater: any) => {
+  const updateDraft = useCallback((updater: (draft: BalanceDraft) => void) => {
     setDraft((prev) => {
       const next = cloneDraft(prev);
       updater(next);
@@ -336,7 +381,7 @@ export default function BalanceManagerApp() {
 
   // Save on Cmd/Ctrl-S, undo/redo on Cmd/Ctrl-Z, command palette on Cmd/Ctrl-K.
   useEffect(() => {
-    function onKey(e: any) {
+    function onKey(e: KeyboardEvent) {
       const mod = e.metaKey || e.ctrlKey;
       if (!mod) return;
       const key = e.key.toLowerCase();
@@ -355,7 +400,7 @@ export default function BalanceManagerApp() {
   // shown in its "expanded" form (labels + section headers).
   const effectiveCollapsed = !isSmallScreen && sidebarCollapsed;
 
-  const handlePaletteSelect = useCallback((entry: any) => {
+  const handlePaletteSelect = useCallback((entry: CommandEntry | null | undefined) => {
     if (entry?.tab) navigateTo(entry.tab, entry.id ?? null);
   }, [navigateTo]);
 
@@ -569,7 +614,7 @@ export default function BalanceManagerApp() {
                         title={effectiveCollapsed ? t.label : undefined}
                         aria-label={t.label}
                       >
-                        <span className="text-[15px]">{t.icon}</span>
+                        <Icon iconKey={t.iconKey} size={16} title="" />
                         {!effectiveCollapsed && <span className="flex-1">{t.label}</span>}
                       </button>
                     );

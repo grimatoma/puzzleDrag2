@@ -11,17 +11,45 @@
 // `boonEffectMult` below). Heavier effects (Drive Out hazard dampening,
 // extra rations on expeditions) can be added once the boon trees prove out.
 
+import type { GameState } from "../../types/state.js";
+
 export const BOON_EFFECTS = Object.freeze([
   "coin_gain_mult",     // chain-collected coin reward × params.mult
   "bond_gain_mult",     // bond gains from gifts/orders × params.mult
-]);
+] as const);
+
+export type BoonEffectType = (typeof BOON_EFFECTS)[number];
+
+export interface BoonCost {
+  embers?: number;
+  coreIngots?: number;
+}
+
+export interface BoonEffect {
+  type: string;
+  params: { mult: number };
+}
+
+export interface BoonDef {
+  id: string;
+  name: string;
+  desc: string;
+  cost: BoonCost;
+  effect: BoonEffect;
+  catalogKey?: string;
+}
+
+export type BoonCatalogKey =
+  | "farm_coexist" | "farm_driveout"
+  | "mine_coexist" | "mine_driveout"
+  | "harbor_coexist" | "harbor_driveout";
 
 /**
  * One catalog of boons. Keyed by `${type}_${path}` (e.g. `farm_coexist`).
  * Each entry is `{ id, name, desc, cost: { embers?, coreIngots? }, effect: { type, params } }`.
  * Designed so each path has two options of escalating cost and impact.
  */
-export const BOONS = Object.freeze({
+export const BOONS: Readonly<Record<BoonCatalogKey, BoonDef[]>> = Object.freeze({
   farm_coexist: [
     { id: "deer_blessing",    name: "Deer-Blessing",        desc: "The herd remembers your name. Villager bonds rise 20% faster.", cost: { embers: 3 }, effect: { type: "bond_gain_mult", params: { mult: 1.2 } } },
     { id: "hearth_thrift",    name: "Hearth-Thrift",        desc: "Bountiful seasons. Coin gains +15%.",                          cost: { embers: 8 }, effect: { type: "coin_gain_mult", params: { mult: 1.15 } } },
@@ -48,9 +76,16 @@ export const BOONS = Object.freeze({
   ],
 });
 
+interface BoonHostState extends Record<string, unknown> {
+  embers?: number;
+  coreIngots?: number;
+  boons?: Record<string, boolean>;
+  story?: { flags?: Record<string, boolean> };
+}
+
 /** All boons as a flat list with their catalog key attached. */
-export function allBoons() {
-  const out = [];
+export function allBoons(): BoonDef[] {
+  const out: BoonDef[] = [];
   for (const [catalogKey, list] of Object.entries(BOONS)) {
     for (const b of list) out.push({ ...b, catalogKey });
   }
@@ -58,17 +93,19 @@ export function allBoons() {
 }
 
 /** Look up a boon by its id (across all catalogs). */
-export function boonById(id) {
+export function boonById(id: string): BoonDef | null {
   return allBoons().find((b) => b.id === id) ?? null;
 }
 
 /** True if the boon is purchaseable: not yet owned AND the keeper flag is set. */
-export function boonIsUnlocked(state, boon) {
+export function boonIsUnlocked(state: GameState, boon: BoonDef): boolean {
+  const s = state as unknown as BoonHostState;
   const [type, path] = boon.catalogKey?.split("_") ?? [];
   if (!type || !path) return false;
-  const flagSet = !!state?.story?.flags?.[`keeper_anyzone_${path}`]
-    || Object.keys(state?.story?.flags ?? {}).some(
-      (k) => k.startsWith("keeper_") && k.endsWith(`_${path}`) && state.story.flags[k],
+  const flags = s?.story?.flags ?? {};
+  const flagSet = !!flags[`keeper_anyzone_${path}`]
+    || Object.keys(flags).some(
+      (k) => k.startsWith("keeper_") && k.endsWith(`_${path}`) && !!flags[k],
     );
   // Path is satisfied by ANY settlement of any type that chose this path —
   // boons are kingdom-wide, not per-settlement. (Catalogs are split by type
@@ -77,24 +114,27 @@ export function boonIsUnlocked(state, boon) {
 }
 
 /** True if the boon's cost can be paid from the current state. */
-export function canAffordBoon(state, boon) {
+export function canAffordBoon(state: GameState, boon: BoonDef): boolean {
+  const s = state as unknown as BoonHostState;
   const c = boon.cost ?? {};
-  if ((c.embers ?? 0) > (state?.embers ?? 0)) return false;
-  if ((c.coreIngots ?? 0) > (state?.coreIngots ?? 0)) return false;
+  if ((c.embers ?? 0) > (s?.embers ?? 0)) return false;
+  if ((c.coreIngots ?? 0) > (s?.coreIngots ?? 0)) return false;
   return true;
 }
 
 /** True if the boon has been purchased. */
-export function boonOwned(state, boonId) {
-  return !!state?.boons?.[boonId];
+export function boonOwned(state: GameState, boonId: string): boolean {
+  const s = state as unknown as BoonHostState;
+  return !!s?.boons?.[boonId];
 }
 
 /**
  * Multiplier from owned boons whose `effect.type` matches. Defaults to 1.0
  * (no effect). When several owned boons share a type, multipliers compose.
  */
-export function boonEffectMult(state, effectType) {
-  const owned = state?.boons ?? {};
+export function boonEffectMult(state: GameState, effectType: string): number {
+  const s = state as unknown as BoonHostState;
+  const owned = s?.boons ?? {};
   let mult = 1;
   for (const [boonId, isOwned] of Object.entries(owned)) {
     if (!isOwned) continue;

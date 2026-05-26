@@ -55,18 +55,18 @@ function producesOptionsFor(tileId: any) {
   return [placeholder, ...opts];
 }
 
-function tileSwatchProps(tileId: any) {
+function tileSwatchProps(tileId: string): { color: number; iconKey: string } {
   const tile = TILE_TYPES_MAP[tileId];
-  if (!tile) return { color: 0x888888 };
+  if (!tile) return { color: 0x888888, iconKey: "" };
   for (const b of Object.values(BIOMES)) {
     for (const r of [...b.tiles, ...b.resources]) {
       if (r.key === tile.baseResource) return { color: r.color, iconKey: r.key };
     }
   }
-  return { color: 0x888888 };
+  return { color: 0x888888, iconKey: "" };
 }
 
-export default function PowersTab({ draft: any, updateDraft: any }) {
+export default function PowersTab({ draft, updateDraft }: { draft: any; updateDraft: any }) {
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [selectedTile, setSelectedTile] = useState(TILE_TYPES[0]?.id);
@@ -101,7 +101,7 @@ export default function PowersTab({ draft: any, updateDraft: any }) {
   // (TILE_FAMILY_RESOURCE map → GameScene.nextResource). The Select below
   // surfaces the family-default resource as the placeholder label so the user
   // can see what "no override" produces.
-  const liveProduces = selected?.effects?.producesResource || "";
+  const liveProduces = (selected?.effects as { producesResource?: string } | undefined)?.producesResource || "";
   const draftProduces = draftPower && Object.prototype.hasOwnProperty.call(draftPower, "producesResource")
     ? (draftPower.producesResource || "")
     : null;
@@ -371,7 +371,7 @@ export default function PowersTab({ draft: any, updateDraft: any }) {
                       onChange={(v: any) => setUnlockMethod(selected.id, v)}
                     />
                   </div>
-                  {(getTileDiscoveryMethod(effDiscovery.method)?.params ?? []).map((p) => {
+                  {(getTileDiscoveryMethod(effDiscovery.method)?.params ?? []).map((p: { key: string; label: string; type: string; default?: number; min?: number; max?: number }) => {
                     if (p.type === "resourceKey") {
                       return (
                         <div key={p.key}>
@@ -457,7 +457,7 @@ export default function PowersTab({ draft: any, updateDraft: any }) {
   );
 }
 
-function Label({ children: any }) {
+function Label({ children }: { children: any }) {
   return (
     <div className="text-[10px] font-bold uppercase tracking-wide mb-0.5" style={{ color: COLORS.inkSubtle }}>
       {children}

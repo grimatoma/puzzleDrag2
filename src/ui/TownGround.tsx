@@ -8,16 +8,41 @@
 
 import { memo } from "react";
 
+interface GroundPal {
+  floor: string;
+  floorEdge: string;
+  pave: string;
+  paveEdge: string;
+  grass: string;
+  shadow: string;
+}
+
+interface TownPlan {
+  ground: { top: number };
+  streets: Array<{ x1: number; y1: number; x2: number; y2: number; width: number }>;
+  plaza: { cx: number; cy: number; rx: number; ry: number };
+  lots: Array<{ index: number; cx: number; cy: number; w: number; h: number; row?: string }>;
+  boards?: Array<{ cx: number; cy: number; w: number; h: number }>;
+  props: Array<{ kind: string; x: number; y: number }>;
+}
+
+interface Theme {
+  road?: string;
+  roadLine?: string;
+}
+
 // Floor / pavement colours per biome family (the streets themselves use the
 // theme's `road` / `roadLine` so they tie into the existing palette).
-function groundPalette(biomeVariant) {
+function groundPalette(biomeVariant: string): GroundPal {
   if (biomeVariant === "mine") {
     return { floor: "#6f6a62", floorEdge: "#5a564f", pave: "#8a857c", paveEdge: "#6a655d", grass: "#5e6450", shadow: "rgba(20,18,14,0.30)" };
   }
   return { floor: "#9a8c5e", floorEdge: "#7e7148", pave: "#b6aa80", paveEdge: "#8e8258", grass: "#6f9a44", shadow: "rgba(30,24,12,0.28)" };
 }
 
-function Well({ x, y, pal }) {
+interface PropPositionalProps { x: number; y: number; pal: GroundPal }
+
+function Well({ x, y, pal }: PropPositionalProps) {
   return (
     <g>
       <ellipse cx={x} cy={y + 10} rx={22} ry={9} fill={pal.shadow} />
@@ -32,7 +57,7 @@ function Well({ x, y, pal }) {
   );
 }
 
-function Lamppost({ x, y, pal }) {
+function Lamppost({ x, y, pal }: PropPositionalProps) {
   return (
     <g>
       <ellipse cx={x} cy={y + 2} rx={7} ry={3} fill={pal.shadow} />
@@ -44,7 +69,7 @@ function Lamppost({ x, y, pal }) {
   );
 }
 
-function Signpost({ x, y, pal }) {
+function Signpost({ x, y, pal }: PropPositionalProps) {
   return (
     <g>
       <ellipse cx={x} cy={y + 2} rx={9} ry={3} fill={pal.shadow} />
@@ -55,7 +80,7 @@ function Signpost({ x, y, pal }) {
   );
 }
 
-function Cart({ x, y, pal }) {
+function Cart({ x, y, pal }: PropPositionalProps) {
   return (
     <g>
       <ellipse cx={x} cy={y + 8} rx={26} ry={6} fill={pal.shadow} />
@@ -68,7 +93,7 @@ function Cart({ x, y, pal }) {
   );
 }
 
-function Planter({ x, y, pal }) {
+function Planter({ x, y, pal }: PropPositionalProps) {
   return (
     <g>
       <ellipse cx={x} cy={y + 5} rx={11} ry={3} fill={pal.shadow} />
@@ -81,14 +106,21 @@ function Planter({ x, y, pal }) {
   );
 }
 
-const PROP_COMPONENTS = { well: Well, lamppost: Lamppost, signpost: Signpost, cart: Cart, planter: Planter };
+const PROP_COMPONENTS: Record<string, ((p: PropPositionalProps) => JSX.Element) | undefined> = { well: Well, lamppost: Lamppost, signpost: Signpost, cart: Cart, planter: Planter };
 
-function TownGround({ plan, theme, biomeVariant, builtLots }) {
+interface TownGroundProps {
+  plan: TownPlan | null | undefined;
+  theme?: Theme;
+  biomeVariant: string;
+  builtLots: Set<number> | unknown;
+}
+
+function TownGround({ plan, theme, biomeVariant, builtLots }: TownGroundProps) {
   if (!plan) return null;
   const pal = groundPalette(biomeVariant);
   const road = theme?.road || pal.pave;
   const roadLine = theme?.roadLine || pal.paveEdge;
-  const built = builtLots instanceof Set ? builtLots : new Set();
+  const built: Set<number> = builtLots instanceof Set ? (builtLots as Set<number>) : new Set();
 
   return (
     <svg

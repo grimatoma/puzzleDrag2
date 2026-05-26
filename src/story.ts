@@ -25,10 +25,70 @@ export const SCENE_THEMES = Object.freeze({
   frost:  { label: "The frozen wood", bg: "radial-gradient(120% 100% at 50% 10%, #2a4a5a 0%, #142a36 55%, #07121a 100%)" },
 });
 
+export type SceneThemeKey = keyof typeof SCENE_THEMES;
+export type SceneTheme = (typeof SCENE_THEMES)[SceneThemeKey];
+
+export interface BeatLine {
+  speaker: string | null;
+  text: string;
+}
+
+export interface BeatChoice {
+  id: string;
+  label: string;
+  outcome?: ChoiceOutcome | null;
+}
+
+export interface BeatTrigger {
+  type: string;
+  [k: string]: unknown;
+}
+
+export interface Beat {
+  id: string;
+  act?: number;
+  title?: string;
+  scene?: string;
+  body?: string;
+  lines?: BeatLine[];
+  prompt?: { kind: string; zoneId?: string; placeholder?: string; buttonLabel?: string };
+  trigger?: BeatTrigger;
+  onComplete?: BeatSideEffects;
+  choices?: BeatChoice[];
+  continueLabel?: string;
+  repeat?: boolean;
+  repeatCooldown?: number;
+  [k: string]: unknown;
+}
+
+export interface BeatSideEffects {
+  setFlag?: string | string[];
+  spawnNPC?: string;
+  unlockBiome?: string;
+  advanceAct?: number;
+  spawnBoss?: string;
+  [k: string]: unknown;
+}
+
+export interface ChoiceOutcome {
+  setFlag?: string | string[];
+  clearFlag?: string | string[];
+  bondDelta?: { npc: string; amount: number };
+  resources?: Record<string, number>;
+  coins?: number;
+  embers?: number;
+  coreIngots?: number;
+  gems?: number;
+  heirlooms?: Record<string, number>;
+  queueBeat?: string;
+  [k: string]: unknown;
+}
+
 /** Returns the scene theme object for a beat, or null. */
-export function beatScene(beat) {
+export function beatScene(beat: Beat | null | undefined): SceneTheme | null {
   const key = beat?.scene;
-  return (typeof key === "string" && SCENE_THEMES[key]) || null;
+  if (typeof key !== "string") return null;
+  return (SCENE_THEMES as Record<string, SceneTheme | undefined>)[key] ?? null;
 }
 
 export const STORY_BEATS = [
@@ -299,31 +359,43 @@ applyStoryOverrides(STORY_BEATS, SIDE_BEATS, BALANCE_OVERRIDES.story);
 // ─── Pure helpers ────────────────────────────────────────────────────────────
 
 /** Find a beat by id across both the main and side beat lists. */
-export function findBeat(id) {
-  return STORY_BEATS.find((b) => b.id === id) || SIDE_BEATS.find((b) => b.id === id) || null;
+export function findBeat(id: string): Beat | null {
+  return (STORY_BEATS as readonly Beat[]).find((b) => b.id === id)
+    || (SIDE_BEATS as readonly Beat[]).find((b) => b.id === id)
+    || null;
 }
 
 /**
  * Returns the auto-generated fired-flag key for a beat.
  * e.g. "act2_bram_arrives" → "_fired_act2_bram_arrives"
  */
-export function firedFlagKey(beatId) {
+export function firedFlagKey(beatId: string): string {
   return `_fired_${beatId}`;
 }
 
-function flagList(value) {
+function flagList(value: string | string[] | null | undefined): string[] {
   return Array.isArray(value) ? value.filter(Boolean) : (value ? [value] : []);
+}
+
+export interface StoryState {
+  act: number;
+  beat?: string | null;
+  flags: Record<string, boolean>;
+  choiceLog?: Array<{ beatId: string; choiceId: string; ts: number }>;
+  queuedBeat?: Beat | null;
+  beatQueue?: Beat[];
+  sandbox?: boolean;
+  repeatCooldowns?: Record<string, number>;
+  [k: string]: unknown;
 }
 
 /**
  * Returns true if the given beat has been completed.
  * Beats with an explicit onComplete.setFlag use that flag.
  * Beats without one use an auto-generated "_fired_<id>" flag set when the beat fires.
- * @param {object} state  — story state (act, beat, flags)
- * @param {string} beatId — beat id to test
  */
-export function isBeatComplete(state, beatId) {
-  const beat = STORY_BEATS.find((b) => b.id === beatId);
+export function isBeatComplete(state: StoryState, beatId: string): boolean {
+  const beat = (STORY_BEATS as readonly Beat[]).find((b) => b.id === beatId);
   if (!beat) return false;
   // Check explicit flag first; fall back to auto-generated fired marker.
   const explicitKey = beat.onComplete?.setFlag;
@@ -334,11 +406,10 @@ export function isBeatComplete(state, beatId) {
 
 /**
  * Returns the first beat whose act ≤ state.act and that has not yet been completed.
- * @param {object} state — story state
  */
-export function nextPendingBeat(state) {
-  return STORY_BEATS.find(
-    (b) => b.act <= state.act && !isBeatComplete(state, b.id)
+export function nextPendingBeat(state: StoryState): Beat | undefined {
+  return (STORY_BEATS as readonly Beat[]).find(
+    (b) => (b.act ?? 0) <= state.act && !isBeatComplete(state, b.id)
   );
 }
 
@@ -365,14 +436,31 @@ export function nextPendingBeat(state) {
  * @param {object} totals — inventory snapshot (resource key → amount)
  * @param {object} flags  — `state.story.flags` (for flag_set / flag_cleared)
  */
-export function conditionMatches(t, event, totals = {}, flags = {}) {
+export interface StoryEvent {
+  type: string;
+  [k: string]: unknown;
+}
+
+export function conditionMatches(
+  t: BeatTrigger | null | undefined,
+  event: StoryEvent | null | undefined,
+  totals: Record<string, number> = {},
+  flags: Record<string, boolean> = {},
+): boolean {
   if (!t) return false;
   // state conditions — checked regardless of which event fired
   switch (t.type) {
-    case "resource_total":       return (totals[t.key] ?? 0) >= t.amount;
-    case "resource_total_multi": return Object.entries(t.req || {}).every(([k, v]) => (totals[k] ?? 0) >= v);
-    case "flag_set":             return !!flags[t.flag];
-    case "flag_cleared":         return !!t.flag && !flags[t.flag];
+    case "resource_total": {
+      const key = t.key as string;
+      const amount = t.amount as number;
+      return (totals[key] ?? 0) >= amount;
+    }
+    case "resource_total_multi": {
+      const req = (t.req ?? {}) as Record<string, number>;
+      return Object.entries(req).every(([k, v]) => (totals[k] ?? 0) >= v);
+    }
+    case "flag_set":             return !!flags[t.flag as string];
+    case "flag_cleared":         return !!t.flag && !flags[t.flag as string];
     default: break;
   }
   // event conditions — must match the event's type
@@ -381,9 +469,9 @@ export function conditionMatches(t, event, totals = {}, flags = {}) {
     case "session_start":
     case "session_ended":      return true;
     case "act_entered":        return event.act === t.act;
-    case "craft_made":         return event.item === t.item && (event.count ?? 1) >= (t.count ?? 1);
+    case "craft_made":         return event.item === t.item && ((event.count as number | undefined) ?? 1) >= ((t.count as number | undefined) ?? 1);
     case "building_built":     return event.id === t.id;
-    case "order_fulfilled":    return (event.count ?? 1) >= (t.count ?? 1);
+    case "order_fulfilled":    return ((event.count as number | undefined) ?? 1) >= ((t.count as number | undefined) ?? 1);
     case "keeper_confronted":  return (!t.zoneId || event.zoneId === t.zoneId) && (!t.path || event.path === t.path);
     case "boss_defeated":      return event.id === t.id;
     case "all_buildings_built":return event.allBuilt === true;
@@ -432,31 +520,42 @@ const SIDE_SETTLE_EVENTS = new Set(["session_start", "session_ended"]);
 // the discrete event conditions (`craft_made`, `building_built`, …).
 const STATE_CONDITION_TYPES = new Set(["resource_total", "resource_total_multi", "bond_at_least", "flag_set", "flag_cleared"]);
 
+interface SideBeatGameState {
+  story?: StoryState | { flags?: Record<string, boolean>; repeatCooldowns?: Record<string, number> };
+  inventory?: Record<string, number>;
+  npcs?: { bonds?: Record<string, number> };
+  [k: string]: unknown;
+}
+
 /** True if a side beat has already fired (by its onComplete.setFlag or fired marker). */
-function sideBeatFired(flags, beat) {
+function sideBeatFired(flags: Record<string, boolean> | undefined, beat: Beat): boolean {
   const explicitFlags = flagList(beat.onComplete?.setFlag);
   if (explicitFlags.length > 0) return explicitFlags.some((flag) => !!flags?.[flag]);
   return !!flags?.[firedFlagKey(beat.id)];
 }
 
-function sideTriggerMatches(beat, event, gameState) {
+function sideTriggerMatches(beat: Beat, event: StoryEvent, gameState: SideBeatGameState | undefined): boolean {
   const t = beat.trigger;
   if (!t) return false; // resolution beats (queued via choices) have no trigger
-  if (beat.repeat && (gameState?.story?.repeatCooldowns?.[beat.id] ?? 0) > 0) return false;
+  const cooldowns = (gameState?.story as { repeatCooldowns?: Record<string, number> } | undefined)?.repeatCooldowns ?? {};
+  if (beat.repeat && (cooldowns[beat.id] ?? 0) > 0) return false;
   if (t.type === "bond_at_least") {
     // State-driven via the bonds snapshot (not in `conditionMatches`) — fires
     // the next settle moment once the bond threshold holds.
     if (!SIDE_SETTLE_EVENTS.has(event.type)) return false;
-    return (gameState?.npcs?.bonds?.[t.npc] ?? 0) >= t.amount;
+    const npc = t.npc as string;
+    const amount = t.amount as number;
+    return (gameState?.npcs?.bonds?.[npc] ?? 0) >= amount;
   }
   // A `repeat` beat on a perpetual predicate would re-fire on every event, so
   // pin those re-fires to settle moments. One-shot beats (and beats on discrete
   // event conditions) can match on any event — the fired-marker stops repeats.
   if (beat.repeat && STATE_CONDITION_TYPES.has(t.type) && !SIDE_SETTLE_EVENTS.has(event.type)) return false;
-  return conditionMatches(t, event, gameState?.inventory ?? {}, gameState?.story?.flags ?? {});
+  const flags = (gameState?.story as { flags?: Record<string, boolean> } | undefined)?.flags ?? {};
+  return conditionMatches(t, event, gameState?.inventory ?? {}, flags);
 }
 
-function fireSideBeat(beat, flags) {
+function fireSideBeat(beat: Beat, flags: Record<string, boolean>): { firedBeat: Beat; newFlags: Record<string, boolean>; sideEffects: BeatSideEffects; repeatCooldown?: number } {
   const newFlags = { ...flags };
   const setFlags = flagList(beat.onComplete?.setFlag);
   if (setFlags.length > 0) {
@@ -464,7 +563,8 @@ function fireSideBeat(beat, flags) {
   } else if (!beat.repeat) {
     newFlags[firedFlagKey(beat.id)] = true; // repeat beats keep no permanent marker
   }
-  const repeatCooldown = beat.repeat && Number.isFinite(beat.repeatCooldown) && beat.repeatCooldown > 0 ? Math.trunc(beat.repeatCooldown) : undefined;
+  const cd = beat.repeatCooldown;
+  const repeatCooldown = beat.repeat && Number.isFinite(cd) && (cd as number) > 0 ? Math.trunc(cd as number) : undefined;
   return { firedBeat: beat, newFlags, sideEffects: beat.onComplete ?? {}, repeatCooldown };
 }
 
@@ -505,18 +605,22 @@ export function evaluateSideBeats(gameState: any, event: any, opts: any = {}) {
  * @param {object} sideEffects — beat.onComplete (or a subset for testing)
  * @returns {object} new game state with side effects applied
  */
-export function applyBeatResult(gameState, sideEffects) {
-  let next = { ...gameState };
+interface AnyMap { [k: string]: unknown }
+
+export function applyBeatResult<S extends AnyMap>(gameState: S, sideEffects: BeatSideEffects): S {
+  let next: AnyMap = { ...gameState };
 
   // --- setFlag ---
   const setFlags = flagList(sideEffects.setFlag);
   if (setFlags.length > 0) {
+    const story = (next.story as AnyMap | undefined) ?? {};
+    const flags = (story.flags as Record<string, boolean> | undefined) ?? {};
     next = {
       ...next,
       story: {
-        ...(next.story ?? {}),
+        ...story,
         flags: {
-          ...(next.story?.flags ?? {}),
+          ...flags,
           ...Object.fromEntries(setFlags.map((flag) => [flag, true])),
         },
       },
@@ -526,13 +630,14 @@ export function applyBeatResult(gameState, sideEffects) {
   // --- spawnNPC ---
   if (sideEffects.spawnNPC) {
     const npc = sideEffects.spawnNPC;
-    const roster = next.npcs?.roster ?? [];
+    const npcs = (next.npcs as AnyMap | undefined) ?? {};
+    const roster = (npcs.roster as string[] | undefined) ?? [];
     if (!roster.includes(npc)) {
-      const bonds = next.npcs?.bonds ?? {};
+      const bonds = (npcs.bonds as Record<string, number> | undefined) ?? {};
       next = {
         ...next,
         npcs: {
-          ...(next.npcs ?? {}),
+          ...npcs,
           roster: [...roster, npc],
           bonds: { ...bonds, [npc]: bonds[npc] ?? 5 },
         },
@@ -542,10 +647,11 @@ export function applyBeatResult(gameState, sideEffects) {
 
   // --- unlockBiome ---
   if (sideEffects.unlockBiome) {
+    const unlocked = (next.unlockedBiomes as Record<string, boolean> | undefined) ?? {};
     next = {
       ...next,
       unlockedBiomes: {
-        ...(next.unlockedBiomes ?? {}),
+        ...unlocked,
         [sideEffects.unlockBiome]: true,
       },
     };
@@ -553,9 +659,10 @@ export function applyBeatResult(gameState, sideEffects) {
 
   // --- advanceAct ---
   if (sideEffects.advanceAct) {
+    const story = (next.story as AnyMap | undefined) ?? {};
     next = {
       ...next,
-      story: { ...(next.story ?? {}), act: sideEffects.advanceAct },
+      story: { ...story, act: sideEffects.advanceAct },
     };
   }
 
@@ -567,7 +674,7 @@ export function applyBeatResult(gameState, sideEffects) {
     };
   }
 
-  return next;
+  return next as S;
 }
 
 // ─── Speaker parser ───────────────────────────────────────────────────────────
@@ -587,9 +694,11 @@ const SPEAKER_MAP = {
  * e.g. "Wren: 'hello'" → "wren"
  * Returns null if no recognisable speaker prefix.
  */
-export function parseSpeaker(body) {
+export function parseSpeaker(body: string | null | undefined): string | null {
   const m = String(body ?? "").match(/^([A-Z][a-zA-Z ]+?):/);
-  return m ? (SPEAKER_MAP[m[1]] ?? null) : null;
+  if (!m) return null;
+  const map = SPEAKER_MAP as Record<string, string | undefined>;
+  return map[m[1]] ?? null;
 }
 
 /**
@@ -600,10 +709,11 @@ export function parseSpeaker(body) {
  *   "Wren: 'bring me hay'" → "bring me hay"
  *   "The larder is full."  → "The larder is full."
  */
-export function stripSpeakerPrefix(text) {
+export function stripSpeakerPrefix(text: string | null | undefined): string {
   let t = String(text ?? "");
   const m = t.match(/^([A-Z][a-zA-Z ]+?):\s*(.*)$/s);
-  if (m && SPEAKER_MAP[m[1]]) t = m[2];
+  const map = SPEAKER_MAP as Record<string, string | undefined>;
+  if (m && map[m[1]]) t = m[2];
   // Trim a single matched pair of wrapping single quotes (the legacy style).
   const q = t.match(/^'(.*)'$/s);
   if (q) t = q[1];
@@ -618,7 +728,7 @@ export function stripSpeakerPrefix(text) {
  * we project into one clean line.
  * @returns {Array<{ speaker: string|null, text: string }>}
  */
-export function beatLines(beat) {
+export function beatLines(beat: Beat | null | undefined): BeatLine[] {
   if (beat && Array.isArray(beat.lines) && beat.lines.length > 0) {
     return beat.lines.map((l) => ({
       speaker: l?.speaker ?? null,
@@ -638,7 +748,7 @@ export function beatLines(beat) {
  * where `outcome` (optional) is consumed by `applyChoiceOutcome`.
  * @returns {Array<{ id: string, label: string, outcome?: object }>}
  */
-export function beatChoices(beat) {
+export function beatChoices(beat: Beat | null | undefined): BeatChoice[] {
   if (beat && Array.isArray(beat.choices) && beat.choices.length > 0) {
     return beat.choices.map((c, i) => ({
       id: c?.id ?? `choice_${i}`,
@@ -653,7 +763,7 @@ export function beatChoices(beat) {
  * True when the beat presents exactly the single implicit "Continue" choice
  * (i.e. it can be dismissed without a decision — ESC / backdrop ok).
  */
-export function beatIsContinueOnly(beat) {
+export function beatIsContinueOnly(beat: Beat | null | undefined): boolean {
   const cs = beatChoices(beat);
   return cs.length === 1 && cs[0].id === "continue";
 }
@@ -663,9 +773,9 @@ export function beatIsContinueOnly(beat) {
  * verbatim. Currently the modal supplies `{ settlement }` (the player's home
  * settlement name); more vars can be added without touching this function.
  */
-export function interpolateBeatText(text, vars = {}) {
+export function interpolateBeatText(text: string | null | undefined, vars: Record<string, unknown> = {}): string {
   return String(text ?? "").replace(/\{(\w+)\}/g, (m, k) =>
-    Object.prototype.hasOwnProperty.call(vars, k) ? String(vars[k]) : m
+    Object.prototype.hasOwnProperty.call(vars, k) ? String((vars as Record<string, unknown>)[k]) : m
   );
 }
 
@@ -682,51 +792,54 @@ export function interpolateBeatText(text, vars = {}) {
  *   queueBeat:  string                       — append a beat id to the modal queue
  * A falsy `outcome` is a no-op.
  */
-export function applyChoiceOutcome(gameState, outcome) {
+export function applyChoiceOutcome<S extends AnyMap>(gameState: S, outcome: ChoiceOutcome | null | undefined): S {
   if (!outcome || typeof outcome !== "object") return gameState;
-  let next = { ...gameState };
+  let next: AnyMap = { ...gameState };
 
-  const setFlags = (val, on) => {
+  const setFlagsFn = (val: string | string[], on: boolean) => {
     const keys = Array.isArray(val) ? val : [val];
-    const flags = { ...(next.story?.flags ?? {}) };
+    const story = (next.story as AnyMap | undefined) ?? {};
+    const flags: Record<string, boolean> = { ...((story.flags as Record<string, boolean> | undefined) ?? {}) };
     for (const k of keys) if (typeof k === "string" && k) flags[k] = on;
-    next = { ...next, story: { ...next.story, flags } };
+    next = { ...next, story: { ...story, flags } };
   };
-  if (outcome.setFlag) setFlags(outcome.setFlag, true);
-  if (outcome.clearFlag) setFlags(outcome.clearFlag, false);
+  if (outcome.setFlag) setFlagsFn(outcome.setFlag, true);
+  if (outcome.clearFlag) setFlagsFn(outcome.clearFlag, false);
 
   if (outcome.bondDelta && typeof outcome.bondDelta === "object") {
     const { npc, amount } = outcome.bondDelta;
     if (typeof npc === "string" && Number.isFinite(amount)) {
-      const bonds = { ...(next.npcs?.bonds ?? {}) };
+      const npcs = (next.npcs as AnyMap | undefined) ?? {};
+      const bonds: Record<string, number> = { ...((npcs.bonds as Record<string, number> | undefined) ?? {}) };
       const cur = Number.isFinite(bonds[npc]) ? bonds[npc] : 5;
       bonds[npc] = Math.max(0, Math.min(10, cur + amount));
-      next = { ...next, npcs: { ...next.npcs, bonds } };
+      next = { ...next, npcs: { ...npcs, bonds } };
     }
   }
 
   if (outcome.resources && typeof outcome.resources === "object") {
-    const inventory = { ...(next.inventory ?? {}) };
+    const inventory: Record<string, number> = { ...((next.inventory as Record<string, number> | undefined) ?? {}) };
     for (const [k, v] of Object.entries(outcome.resources)) {
       if (!Number.isFinite(v)) continue;
-      inventory[k] = Math.max(0, (inventory[k] ?? 0) + v);
+      inventory[k] = Math.max(0, (inventory[k] ?? 0) + (v as number));
     }
     next = { ...next, inventory };
   }
 
   if (Number.isFinite(outcome.coins)) {
-    next = { ...next, coins: Math.max(0, (next.coins ?? 0) + outcome.coins) };
+    next = { ...next, coins: Math.max(0, ((next.coins as number | undefined) ?? 0) + (outcome.coins as number)) };
   }
-  for (const key of ["embers", "coreIngots", "gems"]) {
-    if (Number.isFinite(outcome[key])) {
-      next = { ...next, [key]: Math.max(0, (next[key] ?? 0) + outcome[key]) };
+  for (const key of ["embers", "coreIngots", "gems"] as const) {
+    const val = outcome[key];
+    if (Number.isFinite(val)) {
+      next = { ...next, [key]: Math.max(0, ((next[key] as number | undefined) ?? 0) + (val as number)) };
     }
   }
   if (outcome.heirlooms && typeof outcome.heirlooms === "object") {
-    const heirlooms = { ...(next.heirlooms ?? {}) };
+    const heirlooms: Record<string, number> = { ...((next.heirlooms as Record<string, number> | undefined) ?? {}) };
     for (const [k, v] of Object.entries(outcome.heirlooms)) {
       if (!Number.isFinite(v)) continue;
-      heirlooms[k] = Math.max(0, (heirlooms[k] ?? 0) + v);
+      heirlooms[k] = Math.max(0, (heirlooms[k] ?? 0) + (v as number));
     }
     next = { ...next, heirlooms };
   }
@@ -734,18 +847,19 @@ export function applyChoiceOutcome(gameState, outcome) {
   if (typeof outcome.queueBeat === "string") {
     const beat = findBeat(outcome.queueBeat);
     if (beat) {
-      const queue = next.story?.beatQueue ?? [];
-      const open = !!next.story?.queuedBeat;
+      const story = (next.story as AnyMap | undefined) ?? {};
+      const queue = (story.beatQueue as Beat[] | undefined) ?? [];
+      const open = !!story.queuedBeat;
       next = {
         ...next,
         story: {
-          ...next.story,
-          queuedBeat: open ? next.story.queuedBeat : beat,
+          ...story,
+          queuedBeat: open ? story.queuedBeat : beat,
           beatQueue: open ? [...queue, beat] : queue,
         },
       };
     }
   }
 
-  return next;
+  return next as S;
 }

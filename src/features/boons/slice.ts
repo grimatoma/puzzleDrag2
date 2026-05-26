@@ -8,26 +8,38 @@
 // boonIsUnlocked in data.js.
 
 import { boonById, boonIsUnlocked, canAffordBoon } from "./data.js";
+import type { Action, GameState } from "../../types/state.js";
 
-export const initial = { boons: {} };
+export const initial = { boons: {} as Record<string, boolean> };
 
-export function reduce(state, action) {
+interface BoonHostState {
+  embers?: number;
+  coreIngots?: number;
+  boons?: Record<string, boolean>;
+  bubble?: { id: number; npc: string; text: string; ms: number } | null;
+}
+
+interface BoonPurchasePayload { id?: string }
+
+export function reduce(state: GameState, action: Action): GameState {
+  const s = state as unknown as BoonHostState;
   switch (action.type) {
     case "BOON/PURCHASE": {
-      const id = action.payload?.id ?? action.id;
-      const boon = id && boonById(id);
-      if (!boon) return state;
-      if (state?.boons?.[id]) return state;            // already owned
+      const payload = action.payload as BoonPurchasePayload | undefined;
+      const id: string | undefined = payload?.id ?? (action as unknown as BoonPurchasePayload).id;
+      const boon = id ? boonById(id) : null;
+      if (!boon || !id) return state;
+      if (s?.boons?.[id]) return state;            // already owned
       if (!boonIsUnlocked(state, boon)) return state;  // wrong keeper path / no flag
       if (!canAffordBoon(state, boon)) return state;   // can't afford
       const cost = boon.cost ?? {};
       return {
         ...state,
-        embers: (state.embers ?? 0) - (cost.embers ?? 0),
-        coreIngots: (state.coreIngots ?? 0) - (cost.coreIngots ?? 0),
-        boons: { ...(state.boons ?? {}), [id]: true },
+        embers: (s.embers ?? 0) - (cost.embers ?? 0),
+        coreIngots: (s.coreIngots ?? 0) - (cost.coreIngots ?? 0),
+        boons: { ...(s.boons ?? {}), [id]: true },
         bubble: { id: Date.now(), npc: "wren", text: `Boon claimed: ${boon.name}.`, ms: 2200 },
-      };
+      } as GameState;
     }
     default:
       return state;

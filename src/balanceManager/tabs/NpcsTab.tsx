@@ -13,7 +13,7 @@ import { BIOMES, RECIPES } from "../../constants.js";
 import { COLORS, TextField, NumberField, FieldRow, Card, SmallButton, SearchAndAddPicker } from "../shared.jsx";
 import Icon from "../../ui/Icon.jsx";
 
-export default function NpcsTab({ draft: any, updateDraft: any }) {
+export default function NpcsTab({ draft, updateDraft }: { draft: any; updateDraft: any }) {
   function patchNpc(id: any, fields: any) {
     updateDraft((d: any) => {
       d.npcs ??= {};
@@ -120,9 +120,9 @@ export default function NpcsTab({ draft: any, updateDraft: any }) {
   );
 }
 
-function ListEditor({ items: any, availableKeys: any, onChange: any }) {
+function ListEditor({ items, availableKeys, onChange }: { items: string[]; availableKeys: string[]; onChange: (next: string[]) => void }) {
   const availableOptions = useMemo(() => {
-    return availableKeys.filter((k: any) => !items.includes(k)).map((k) => ({
+    return availableKeys.filter((k) => !items.includes(k)).map((k) => ({
       id: k,
       searchText: k,
       renderNode: (

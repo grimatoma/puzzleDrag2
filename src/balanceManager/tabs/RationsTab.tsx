@@ -11,7 +11,7 @@ import { useState } from "react";
 import { EXPEDITION_FOOD_TURNS, EXPEDITION_MEAT_FOODS } from "../../constants.js";
 import { COLORS, NumberField, TextField, SmallButton, Card, FieldRow } from "../shared.jsx";
 
-export default function RationsTab({ draft: any, updateDraft: any }) {
+export default function RationsTab({ draft, updateDraft }: { draft: any; updateDraft: any }) {
   const [newKey, setNewKey] = useState("");
   const exp = draft.expedition ?? {};
   const foodTurns = { ...EXPEDITION_FOOD_TURNS, ...(exp.foodTurns ?? {}) };

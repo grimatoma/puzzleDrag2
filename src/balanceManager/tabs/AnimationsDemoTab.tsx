@@ -2,7 +2,13 @@ import { useRef } from "react";
 import { BOARD_ANIMATIONS } from "../../config/boardAnimations.js";
 import { COLORS, Card, Pill, SmallButton, hexToCss } from "../shared.jsx";
 
-const SAMPLE_PLAYS = {
+interface SamplePlay {
+  label: string;
+  tint: number | null;
+  pattern: string;
+}
+
+const SAMPLE_PLAYS: Record<string, SamplePlay[]> = {
   sweep: [
     { label: "Clear (no tint)", tint: null, pattern: "random6" },
     { label: "Magic Wand", tint: 0xa070ff, pattern: "all" },
@@ -19,7 +25,7 @@ const SAMPLE_PLAYS = {
   ],
 };
 
-function TintSwatch({ tint: any }) {
+function TintSwatch({ tint }: { tint: number | null }) {
   const empty = tint == null;
   return (
     <span
@@ -40,9 +46,9 @@ function TintSwatch({ tint: any }) {
 }
 
 export default function AnimationsDemoTab() {
-  const iframeRef = useRef(null);
+  const iframeRef = useRef<HTMLIFrameElement | null>(null);
 
-  const postPlay = (name: any, tint: any, pattern: any) => {
+  const postPlay = (name: string, tint: number | null, pattern: string) => {
     iframeRef.current?.contentWindow?.postMessage(
       { type: "HEARTH_PLAY_ANIMATION", name, tint, pattern },
       "*"
@@ -88,19 +94,22 @@ export default function AnimationsDemoTab() {
 
       {Object.entries(BOARD_ANIMATIONS).map(([name, entry]) => {
         const plays = SAMPLE_PLAYS[name] ?? [];
+        // Each animation entry has a different shape per kind; widen to a
+        // loose record so we can read optional timing fields with `in`-checks.
+        const e = entry as unknown as Record<string, number | string | undefined>;
         return (
           <Card key={name}>
             <div className="flex items-baseline gap-3 mb-2 flex-wrap">
               <div className="text-[14px] font-bold" style={{ color: COLORS.ember }}>{name}</div>
-              <div className="font-mono text-[11px]" style={{ color: COLORS.inkSubtle }}>{entry.kind}</div>
+              <div className="font-mono text-[11px]" style={{ color: COLORS.inkSubtle }}>{String(e.kind)}</div>
             </div>
 
             <div className="flex items-center gap-1 mb-2 flex-wrap">
-              {Number.isFinite(entry.duration) && <Pill>duration: {entry.duration}ms</Pill>}
-              {Number.isFinite(entry.staggerMs) && <Pill>stagger: {entry.staggerMs}ms</Pill>}
-              {Number.isFinite(entry.settleMs) && <Pill>settle: {entry.settleMs}ms</Pill>}
-              {Number.isFinite(entry.rotationHalfDeg) && <Pill>rotation: ±{entry.rotationHalfDeg}°</Pill>}
-              {entry.ease && <Pill>ease: {entry.ease}</Pill>}
+              {Number.isFinite(e.duration) && <Pill>duration: {e.duration}ms</Pill>}
+              {Number.isFinite(e.staggerMs) && <Pill>stagger: {e.staggerMs}ms</Pill>}
+              {Number.isFinite(e.settleMs) && <Pill>settle: {e.settleMs}ms</Pill>}
+              {Number.isFinite(e.rotationHalfDeg) && <Pill>rotation: ±{e.rotationHalfDeg}°</Pill>}
+              {e.ease && <Pill>ease: {e.ease}</Pill>}
             </div>
 
             <div className="flex items-center gap-2 flex-wrap">
@@ -109,7 +118,7 @@ export default function AnimationsDemoTab() {
                   No sample plays defined.
                 </div>
               )}
-              {plays.map((p: any, i: any) => (
+              {plays.map((p, i) => (
                 <div key={i} className="flex items-center gap-1">
                   <TintSwatch tint={p.tint} />
                   <SmallButton onClick={() => postPlay(name, p.tint, p.pattern)}>

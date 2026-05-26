@@ -13,7 +13,7 @@ import { COLORS, NumberField, Select, FieldRow, Card } from "../shared.jsx";
 
 const HOME_BIOME_OPTIONS = (SETTLEMENT_BIOMES.farm ?? []).map((b) => ({ value: b.id, label: `${b.icon} ${b.name}` }));
 
-export default function TuningTab({ draft: any, updateDraft: any }) {
+export default function TuningTab({ draft, updateDraft }: { draft: any; updateDraft: any }) {
   const t = draft.tuning ?? {};
   function patch(key: any, v: any) {
     updateDraft((d: any) => {

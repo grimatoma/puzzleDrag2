@@ -105,48 +105,76 @@ applyFlagOverrides(STORY_FLAGS, BALANCE_OVERRIDES.flags);
 
 // ─── lookups ─────────────────────────────────────────────────────────────────
 
-export function flagDef(id) {
-  return STORY_FLAGS.find((f) => f && f.id === id) || null;
+export interface FlagTrigger {
+  type: string;
+  [k: string]: unknown;
 }
-export function isRegisteredFlag(id) {
-  return STORY_FLAGS.some((f) => f && f.id === id);
+
+export interface FlagDef {
+  id: string;
+  label: string;
+  description?: string;
+  category?: string;
+  default?: boolean;
+  source?: string;
+  triggers?: FlagTrigger[];
+}
+
+export function flagDef(id: string): FlagDef | null {
+  return (STORY_FLAGS as readonly FlagDef[]).find((f) => f && f.id === id) || null;
+}
+export function isRegisteredFlag(id: string): boolean {
+  return (STORY_FLAGS as readonly FlagDef[]).some((f) => f && f.id === id);
 }
 /** Resolved category descriptor for a flag id, falling back to "misc". */
-export function flagCategory(id) {
+export function flagCategory(id: string): { id: string; label: string; color: string } {
   const def = flagDef(id);
-  const key = (def && def.category && FLAG_CATEGORIES[def.category]) ? def.category : "misc";
-  return { id: key, ...FLAG_CATEGORIES[key] };
+  const cats = FLAG_CATEGORIES as Record<string, { label: string; color: string }>;
+  const key = (def && def.category && cats[def.category]) ? def.category : "misc";
+  return { id: key, ...cats[key] };
 }
 /** `{ [id]: true }` for every registered flag whose default is true (seeds new runs). */
-export function initialFlagState() {
-  const out = {};
-  for (const f of STORY_FLAGS) if (f && f.default === true) out[f.id] = true;
+export function initialFlagState(): Record<string, boolean> {
+  const out: Record<string, boolean> = {};
+  for (const f of STORY_FLAGS as readonly FlagDef[]) if (f && f.default === true) out[f.id] = true;
   return out;
 }
 
 // ─── trigger evaluator ───────────────────────────────────────────────────────
 
-function flagTriggerMatches(trigger, event, gameState) {
+interface FlagEvent {
+  type: string;
+  [k: string]: unknown;
+}
+
+interface FlagGameState {
+  npcs?: { bonds?: Record<string, number> };
+  inventory?: Record<string, number>;
+  story?: { flags?: Record<string, boolean> };
+  [k: string]: unknown;
+}
+
+function flagTriggerMatches(trigger: FlagTrigger | null | undefined, event: FlagEvent, gameState: FlagGameState | undefined): boolean {
   if (!trigger || typeof trigger !== "object") return false;
   if (trigger.type === "bond_at_least") {
     if (event.type !== "session_start" && event.type !== "session_ended") return false;
-    return (gameState?.npcs?.bonds?.[trigger.npc] ?? 0) >= trigger.amount;
+    const npc = trigger.npc as string;
+    const amount = trigger.amount as number;
+    return (gameState?.npcs?.bonds?.[npc] ?? 0) >= amount;
   }
   return conditionMatches(trigger, event, gameState?.inventory ?? {}, gameState?.story?.flags ?? {});
 }
 
 /**
  * Pure. Evaluates registered flag triggers against a game event.
- * @param {object} gameState — full game state (needs `.story.flags`, and
- *   `.inventory` / `.npcs.bonds` for the relevant trigger types)
- * @param {object} event     — game event `{ type, ...fields }`
- * @returns {{ changed: Record<string, true> } | null} the flags newly flipped
- *   to true, or null if none.
  */
-export function evaluateFlagTriggers(gameState, event) {
+export function evaluateFlagTriggers(
+  gameState: FlagGameState | undefined,
+  event: FlagEvent,
+): { changed: Record<string, true> } | null {
   const flags = gameState?.story?.flags ?? {};
-  const changed = {};
-  for (const def of STORY_FLAGS) {
+  const changed: Record<string, true> = {};
+  for (const def of STORY_FLAGS as readonly FlagDef[]) {
     if (!def || !Array.isArray(def.triggers) || def.triggers.length === 0) continue;
     if (flags[def.id]) continue;            // already set — leave it
     if (def.triggers.some((t) => flagTriggerMatches(t, event, gameState))) changed[def.id] = true;
@@ -159,21 +187,24 @@ export function evaluateFlagTriggers(gameState, event) {
  * applied to `story.flags`. Flag triggers can depend on other flags, so this
  * settles to a fixed point within the same dispatch. Does not mutate.
  */
-export function applyFlagTriggersWithResult(gameState, event) {
-  let next = gameState;
-  const changed = {};
+export function applyFlagTriggersWithResult<S extends FlagGameState>(
+  gameState: S,
+  event: FlagEvent,
+): { state: S; changed: Record<string, true> | null } {
+  let next: S = gameState;
+  const changed: Record<string, true> = {};
   for (let i = 0; i < STORY_FLAGS.length; i += 1) {
     const result = evaluateFlagTriggers(next, event);
     if (!result) break;
     Object.assign(changed, result.changed);
     next = {
       ...next,
-      story: { ...next.story, flags: { ...(next.story?.flags ?? {}), ...result.changed } },
+      story: { ...(next.story ?? {}), flags: { ...(next.story?.flags ?? {}), ...result.changed } },
     };
   }
   return Object.keys(changed).length > 0 ? { state: next, changed } : { state: gameState, changed: null };
 }
 
-export function applyFlagTriggers(gameState, event) {
+export function applyFlagTriggers<S extends FlagGameState>(gameState: S, event: FlagEvent): S {
   return applyFlagTriggersWithResult(gameState, event).state;
 }

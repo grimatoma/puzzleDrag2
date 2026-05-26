@@ -1,13 +1,14 @@
+import type { ReactNode } from "react";
 import Icon from "./Icon.jsx";
 
 /**
  * Parses a string containing `[icon:key]` tokens and renders them as `<Icon />` components.
  */
-export default function RichText({ text, iconSize = 16 }) {
+export default function RichText({ text, iconSize = 16 }: { text: ReactNode; iconSize?: number }) {
   if (typeof text !== "string") return <>{text}</>;
 
   const regex = /\[icon:([a-zA-Z0-9_]+)\]/g;
-  const parts = [];
+  const parts: ReactNode[] = [];
   let lastIndex = 0;
   let match;
 

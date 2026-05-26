@@ -117,7 +117,7 @@ const BASE_VISUAL_SCENARIOS = [
   { id: "town-market-news", state: "marketNews", hash: "#/town", diff: domDiff },
 ];
 
-const expectationOverrideById = {
+const expectationOverrideById: Record<string, string> = {
   "board-farm-chain-7": "A 7-tile hay chain is visibly held on the farm board before capture.",
   "shell-menu-settings": "Settings panel is open from the menu modal.",
   "town-build-picker-locked": "Build picker is open and a locked building option is shown.",

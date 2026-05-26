@@ -11,6 +11,7 @@ import balanceFile from "../../config/balance.json";
 import MetricCard, { MetricGrid } from "../../ui/primitives/MetricCard.jsx";
 import StatusChip from "../../ui/primitives/StatusChip.jsx";
 import { z } from "zod";
+import type { BalanceDraft } from "../index.jsx";
 
 const sectionSchema = z.record(z.string(), z.unknown());
 const importSchema = z.object({
@@ -24,13 +25,13 @@ const importSchema = z.object({
   tileDescriptions: sectionSchema.optional(),
 }).strip();
 
-function pruneEmpty(obj: any) {
+function pruneEmpty(obj: unknown): unknown {
   if (!obj || typeof obj !== "object") return obj;
   if (Array.isArray(obj)) return obj;
-  const out = {};
-  for (const [k, v] of Object.entries(obj)) {
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(obj as Record<string, unknown>)) {
     if (v == null) continue;
-    if (typeof v === "object" && !Array.isArray(v) && Object.keys(v).length === 0) continue;
+    if (typeof v === "object" && !Array.isArray(v) && Object.keys(v as Record<string, unknown>).length === 0) continue;
     if (Array.isArray(v) && v.length === 0) {
       // Keep empty arrays — they can be a meaningful instruction (e.g.
       // tilePowers entry with hooks: [] means "no hooks for this tile").
@@ -42,7 +43,7 @@ function pruneEmpty(obj: any) {
   return out;
 }
 
-function relativeTime(iso: any) {
+function relativeTime(iso: string | null | undefined): string {
   if (!iso) return "";
   const t = Date.parse(iso);
   if (!Number.isFinite(t)) return "";
@@ -56,18 +57,18 @@ function relativeTime(iso: any) {
   return `${day}d ago`;
 }
 
-export default function ExportTab({ draft: any, updateDraft: any }) {
+export default function ExportTab({ draft, updateDraft }: { draft: BalanceDraft; updateDraft: (updater: (draft: BalanceDraft) => void) => void }) {
   const [importText, setImportText] = useState("");
   const [importError, setImportError] = useState("");
   const [snapshotName, setSnapshotName] = useState("");
   const [snapshotMessage, setSnapshotMessage] = useState("");
   const [snapshotError, setSnapshotError] = useState("");
   const [snapshots, setSnapshots] = useState(() => listSnapshots());
-  const [diffOpen, setDiffOpen] = useState(new Set());
-  const diff = useMemo(() => draftDiff(balanceFile, draft), [draft]);
+  const [diffOpen, setDiffOpen] = useState<Set<string>>(new Set());
+  const diff = useMemo(() => draftDiff(balanceFile, draft as unknown as Record<string, unknown>), [draft]);
   const diffSections = useMemo(() => Object.entries(diff.sections).sort(([a], [b]) => a.localeCompare(b)), [diff]);
 
-  const toggleSection = (name: any) => {
+  const toggleSection = (name: string) => {
     setDiffOpen((prev) => {
       const next = new Set(prev);
       if (next.has(name)) next.delete(name); else next.add(name);
@@ -100,7 +101,7 @@ export default function ExportTab({ draft: any, updateDraft: any }) {
 
   function bumpSnapshots() { setSnapshots(listSnapshots()); }
 
-  function flashSnapshot(message: any) {
+  function flashSnapshot(message: string) {
     setSnapshotMessage(message);
     setSnapshotError("");
     setTimeout(() => setSnapshotMessage(""), 2400);
@@ -118,21 +119,22 @@ export default function ExportTab({ draft: any, updateDraft: any }) {
     bumpSnapshots();
   }
 
-  function handleLoadSnapshot(name: any) {
-    const loaded = loadSnapshot(name);
+  function handleLoadSnapshot(name: string) {
+    const loaded = loadSnapshot(name) as Record<string, unknown> | null;
     if (!loaded) {
       setSnapshotError(`Could not load snapshot “${name}”.`);
       return;
     }
     if (!confirm(`Replace the current draft with snapshot “${name}”? Your unsaved tab edits will be lost.`)) return;
-    updateDraft((d: any) => {
-      for (const k of Object.keys(d)) delete d[k];
-      Object.assign(d, loaded);
+    updateDraft((d) => {
+      const dr = d as unknown as Record<string, unknown>;
+      for (const k of Object.keys(dr)) delete dr[k];
+      Object.assign(dr, loaded);
     });
     flashSnapshot(`Loaded snapshot “${name}”`);
   }
 
-  function handleDeleteSnapshot(name: any) {
+  function handleDeleteSnapshot(name: string) {
     if (!confirm(`Delete snapshot “${name}”? This cannot be undone.`)) return;
     deleteSnapshot(name);
     flashSnapshot(`Deleted snapshot “${name}”`);
@@ -143,16 +145,17 @@ export default function ExportTab({ draft: any, updateDraft: any }) {
     setImportError("");
     try {
       const parsedRaw = JSON.parse(importText);
-      const parsed = importSchema.parse(parsedRaw);
-      updateDraft((d: any) => {
+      const parsed = importSchema.parse(parsedRaw) as Record<string, unknown> & { version?: number };
+      updateDraft((d) => {
         // Replace each known section if present in the import, else leave it.
         const sections = [
           "upgradeThresholds", "items", "recipes", "buildings",
           "tilePowers", "tileUnlocks", "tileDescriptions",
-        ];
+        ] as const;
+        const dr = d as unknown as Record<string, unknown>;
         for (const s of sections) {
           if (parsed[s] !== undefined) {
-            d[s] = JSON.parse(JSON.stringify(parsed[s]));
+            dr[s] = JSON.parse(JSON.stringify(parsed[s]));
           }
         }
         if (parsed.version !== undefined) d.version = parsed.version;
@@ -162,7 +165,8 @@ export default function ExportTab({ draft: any, updateDraft: any }) {
       if (e instanceof z.ZodError) {
         setImportError("Validation Error: " + e.issues.map(i => `${i.path.join('.')}: ${i.message}`).join(", "));
       } else {
-        setImportError(String(e?.message || e));
+        const msg = e instanceof Error ? e.message : String(e);
+        setImportError(msg);
       }
     }
   }
@@ -192,12 +196,14 @@ export default function ExportTab({ draft: any, updateDraft: any }) {
       <Card title="Override summary">
         <MetricGrid>
           {sections.map((s) => {
-            const count = Object.keys(draft[s.key] || {}).length;
+            const sectionData = (draft as unknown as Record<string, Record<string, unknown> | undefined>)[s.key];
+            const count = Object.keys(sectionData || {}).length;
             return (
               <MetricCard
                 key={s.key}
                 label={s.label}
                 value={count}
+                hint={null}
                 tone={count ? "ember" : "muted"}
               />
             );
@@ -210,9 +216,9 @@ export default function ExportTab({ draft: any, updateDraft: any }) {
           <span className="text-[11px] font-bold uppercase tracking-wide" style={{ color: COLORS.inkSubtle }}>
             {summariseTotals(diff.totals)}
           </span>
-          {diff.totals.added > 0 && <StatusChip tone="success">+{diff.totals.added}</StatusChip>}
-          {diff.totals.modified > 0 && <StatusChip tone="ember">~{diff.totals.modified}</StatusChip>}
-          {diff.totals.removed > 0 && <StatusChip tone="danger">−{diff.totals.removed}</StatusChip>}
+          {diff.totals.added > 0 && <StatusChip tone="success" style={undefined}>+{diff.totals.added}</StatusChip>}
+          {diff.totals.modified > 0 && <StatusChip tone="ember" style={undefined}>~{diff.totals.modified}</StatusChip>}
+          {diff.totals.removed > 0 && <StatusChip tone="danger" style={undefined}>−{diff.totals.removed}</StatusChip>}
         </div>
         {diffSections.length === 0 && (
           <div className="text-[11px] italic" style={{ color: COLORS.inkSubtle }}>

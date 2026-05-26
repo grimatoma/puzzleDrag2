@@ -25,7 +25,8 @@ const YIELD_TIERS = [
   { id: "brutal",   max: 9999, label: "Brutal",  hint: "13+/turn — only with major board manipulation." },
 ];
 
-const MODIFIER_LABEL = {
+interface ModifierInfo { label: string; hint: string; }
+const MODIFIER_LABEL: Record<string, ModifierInfo> = {
   freeze_columns:  { label: "Freezes columns",  hint: "Locks N columns until thawed (chain disruption)." },
   respawn_boost:   { label: "Boosted respawn",  hint: "Specific tiles respawn faster — favours the target res." },
   heat_tiles:      { label: "Heat tiles",       hint: "Some board cells burn the resource after N turns." },

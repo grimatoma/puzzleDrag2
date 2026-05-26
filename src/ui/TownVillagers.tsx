@@ -26,6 +26,70 @@
 
 import { memo, useEffect, useMemo, useRef } from "react";
 
+interface TownPlan {
+  waypoints?: Array<{ x: number; y: number }>;
+  edges?: Array<[number, number]>;
+  lots?: Array<{ index: number; cx: number; cy: number; w: number; h: number }>;
+}
+
+interface VariantRaw {
+  skinIdx: number;
+  hairColorIdx: number;
+  hairStyle: string;
+  hat: string | null;
+  beard: string | null;
+  bodyColor: string;
+  legColor: string;
+  prop: string | null;
+}
+
+interface NpcEntry {
+  id: string;
+  building: string;
+  variant: VariantRaw;
+}
+
+interface ResolvedVariant {
+  skin: string;
+  hairColor: string;
+  hairStyle: string;
+  hat: string | null;
+  beard: string | null;
+  bodyColor: string;
+  legColor: string;
+  prop: string | null;
+  bodyShape: string;
+  isAdult: boolean;
+  workerType?: string;
+}
+
+interface VillagerData {
+  id: string;
+  npcId: string | null;
+  seed: number;
+  from: number;
+  to: number;
+  t: number;
+  x: number;
+  y: number;
+  speed: number;
+  facing: number;
+  pauseUntil: number;
+  bob: number;
+  variant: ResolvedVariant;
+  isNamed: boolean;
+}
+
+interface VillagerRefs {
+  wrap: HTMLDivElement | null;
+  torso: HTMLDivElement | null;
+  head: HTMLDivElement | null;
+  legL: HTMLDivElement | null;
+  legR: HTMLDivElement | null;
+  armL: HTMLDivElement | null;
+  armR: HTMLDivElement | null;
+}
+
 const W = 1100, H = 600;
 const TOTAL_FIGURE_BUDGET = 14; // soft cap on simultaneous walking figures
 const WORKER_CAP_PER_TYPE = 3;
@@ -40,7 +104,14 @@ const GENERIC_BODY_COLORS = ["#7a8aa0", "#9a7a5a", "#6a9a6a", "#a06a8a", "#8a8a5
 // Hair styles affect the silhouette of the back-of-head div behind the face.
 // Each value is a {topRadius, bottomRadius, heightFactor, widthFactor} tuple
 // keyed by name so the render block can switch by lookup.
-const HAIR_STYLE_SHAPES = {
+interface HairShape {
+  topRadius: number;
+  bottomRadius: number;
+  hFactor: number;
+  wFactor: number;
+}
+
+const HAIR_STYLE_SHAPES: Record<string, HairShape> = {
   short:     { topRadius: 0.32, bottomRadius: 0.06, hFactor: 0.30, wFactor: 0.62 },
   long:      { topRadius: 0.30, bottomRadius: 0.18, hFactor: 0.48, wFactor: 0.66 },
   ponytail:  { topRadius: 0.32, bottomRadius: 0.10, hFactor: 0.34, wFactor: 0.60 },
@@ -50,7 +121,18 @@ const HAIR_STYLE_SHAPES = {
 
 // Hats are absolute-positioned layers above the head. `palette` is rendered
 // as `bg` / `bgAccent`; `style` selects a render branch in the JSX.
-const HAT_STYLES = {
+interface HatStyle {
+  palette: [string, string];
+  brim: number;
+  height: number;
+  puffy?: boolean;
+  cuff?: boolean;
+  hood?: boolean;
+  tied?: boolean;
+  lantern?: boolean;
+}
+
+const HAT_STYLES: Record<string, HatStyle> = {
   straw:        { palette: ["#e8c068", "#7a5408"], brim: 1.2,  height: 0.30 },
   toque:        { palette: ["#fff8e8", "#bfa68a"], brim: 0,    height: 0.55, puffy: true },
   knit:         { palette: ["#5a4030", "#1a0e04"], brim: 0,    height: 0.36, cuff: true },
@@ -60,14 +142,27 @@ const HAT_STYLES = {
   helmet:       { palette: ["#7a4a18", "#3a1808"], brim: 1.05, height: 0.34, lantern: true },
 };
 
-const BEARD_STYLES = {
+interface BeardStyle {
+  color: string | null;
+  h: number;
+  w: number;
+  density: number;
+}
+
+const BEARD_STYLES: Record<string, BeardStyle> = {
   scruff:     { color: null /* derived from hair */, h: 0.18, w: 0.50, density: 0.45 },
   full:       { color: null, h: 0.34, w: 0.66, density: 1.0 },
   "full-white": { color: "#e8e8e8", h: 0.34, w: 0.66, density: 1.0 },
   chinstrap:  { color: null, h: 0.20, w: 0.62, density: 0.7 },
 };
 
-const PROP_STYLES = {
+interface PropStyle {
+  kind: string | null;
+  color?: string;
+  blade?: string;
+}
+
+const PROP_STYLES: Record<string, PropStyle> = {
   scythe:  { kind: "diagonal-haft-blade", color: "#7a4818", blade: "#c8cdd4" },
   axe:     { kind: "diagonal-haft-wedge", color: "#5a3818", blade: "#8a929a" },
   pickaxe: { kind: "diagonal-haft-pick",  color: "#5a3818", blade: "#5a6470" },
@@ -83,7 +178,7 @@ const PROP_STYLES = {
 // Each NPC has a locked variant (matches their canvas portrait silhouette) and
 // a `building` they keep house near. The walking figure only spawns once that
 // building is built; if the building is missing the NPC simply isn't in town.
-const NPC_VILLAGERS = [
+const NPC_VILLAGERS: NpcEntry[] = [
   {
     id: "wren",
     building: "hearth",
@@ -118,7 +213,17 @@ const NPC_VILLAGERS = [
 
 // ── Worker presets (profession lockdowns for hired workers in town) ─────────
 
-const WORKER_VARIANTS = {
+interface WorkerVariant {
+  hat: string | null;
+  skinIdx: number;
+  hairColorIdx: number;
+  bodyColor: string;
+  legColor: string;
+  prop: string | null;
+  forceBeard: string | null;
+}
+
+const WORKER_VARIANTS: Record<string, WorkerVariant> = {
   farmer:     { hat: "straw",  skinIdx: 2, hairColorIdx: 1, bodyColor: "#4f8c3a", legColor: "#5a4830", prop: "scythe", forceBeard: null },
   lumberjack: { hat: "knit",   skinIdx: 1, hairColorIdx: 0, bodyColor: "#a8341a", legColor: "#3a2818", prop: "axe",    forceBeard: "full" },
   miner:      { hat: "helmet", skinIdx: 1, hairColorIdx: 0, bodyColor: "#5a6470", legColor: "#3a2818", prop: "pickaxe", forceBeard: null },
@@ -127,11 +232,11 @@ const WORKER_VARIANTS = {
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
-const d2 = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+const d2 = (a: { x: number; y: number }, b: { x: number; y: number }) => Math.hypot(a.x - b.x, a.y - b.y);
 
 // Deterministic 4-channel "random" from a single integer seed (mulberry32-ish
 // but cheaper — we only need ~4 picks per villager).
-function hashSeed(seed) {
+function hashSeed(seed: number) {
   let x = (seed * 2654435761) >>> 0;
   const next = () => {
     x = (x ^ (x << 13)) >>> 0;
@@ -142,7 +247,13 @@ function hashSeed(seed) {
   return { a: next(), b: next(), c: next(), d: next(), e: next() };
 }
 
-function pickVariant(seed, opts) {
+interface PickVariantOpts {
+  namedNpc?: NpcEntry;
+  workerType?: string;
+  genericColorIdx?: number;
+}
+
+function pickVariant(seed: number, opts?: PickVariantOpts): ResolvedVariant {
   const { namedNpc, workerType, genericColorIdx } = opts || {};
 
   // Named NPC — locked silhouette
@@ -214,9 +325,9 @@ function pickVariant(seed, opts) {
   };
 }
 
-function makeGraph(plan) {
-  const wps = plan?.waypoints || [];
-  const adj = wps.map(() => []);
+function makeGraph(plan: TownPlan | null | undefined) {
+  const wps: Array<{ x: number; y: number }> = plan?.waypoints || [];
+  const adj: number[][] = wps.map(() => []);
   for (const [i, j] of plan?.edges || []) { adj[i].push(j); adj[j].push(i); }
   return { wps, adj };
 }
@@ -227,13 +338,20 @@ function makeGraph(plan) {
 //   2. Up to WORKER_CAP_PER_TYPE workers per hired type.
 //   3. Generic background villagers, filling the remaining figure budget so
 //      total stays around TOTAL_FIGURE_BUDGET.
-function buildPopulation({ wps, adj, buildings, hiredWorkers }) {
+interface BuildPopulationArgs {
+  wps: Array<{ x: number; y: number }>;
+  adj: number[][];
+  buildings: Record<string, number | null | undefined> | null | undefined;
+  hiredWorkers: Record<string, number>;
+}
+
+function buildPopulation({ wps, adj, buildings, hiredWorkers }: BuildPopulationArgs): VillagerData[] {
   if (!wps.length) return [];
-  const out = [];
+  const out: VillagerData[] = [];
   const rng = Math.random;
 
   // Walk position seeder — picks two adjacent waypoints + a random t.
-  const seat = (seed) => {
+  const seat = (seed: number) => {
     const a = seed % wps.length;
     const adjList = adj[a] || [];
     const b = adjList.length ? adjList[Math.floor(rng() * adjList.length)] : a;
@@ -324,7 +442,13 @@ const LAYOUT = {
 // The sprite is a pure render — every sub-element exposes itself to the
 // parent via a `registerEl(id, key, element)` callback so the animation loop
 // can update transforms by villager id without any cross-component refs.
-const VillagerSprite = memo(function VillagerSprite({ villager, size, registerEl }) {
+interface VillagerSpriteProps {
+  villager: VillagerData;
+  size: number;
+  registerEl: (id: string, key: keyof VillagerRefs, el: HTMLDivElement | null) => void;
+}
+
+const VillagerSprite = memo(function VillagerSprite({ villager, size, registerEl }: VillagerSpriteProps) {
   const v = villager.variant;
   const widthMod = v.bodyShape === "slim" ? 0.85 : v.bodyShape === "stocky" ? 1.15 : 1.0;
   const torsoW = LAYOUT.torsoW * widthMod;
@@ -332,18 +456,18 @@ const VillagerSprite = memo(function VillagerSprite({ villager, size, registerEl
 
   // Each sub-element ref callback just forwards the DOM node to the parent
   // map. Mounted -> registered. Unmounted (el === null) -> cleared.
-  const wrapCb  = (el) => registerEl(villager.id, "wrap",  el);
-  const torsoCb = (el) => registerEl(villager.id, "torso", el);
-  const headCb  = (el) => registerEl(villager.id, "head",  el);
-  const legLCb  = (el) => registerEl(villager.id, "legL",  el);
-  const legRCb  = (el) => registerEl(villager.id, "legR",  el);
-  const armLCb  = (el) => registerEl(villager.id, "armL",  el);
-  const armRCb  = (el) => registerEl(villager.id, "armR",  el);
+  const wrapCb  = (el: HTMLDivElement | null) => registerEl(villager.id, "wrap",  el);
+  const torsoCb = (el: HTMLDivElement | null) => registerEl(villager.id, "torso", el);
+  const headCb  = (el: HTMLDivElement | null) => registerEl(villager.id, "head",  el);
+  const legLCb  = (el: HTMLDivElement | null) => registerEl(villager.id, "legL",  el);
+  const legRCb  = (el: HTMLDivElement | null) => registerEl(villager.id, "legR",  el);
+  const armLCb  = (el: HTMLDivElement | null) => registerEl(villager.id, "armL",  el);
+  const armRCb  = (el: HTMLDivElement | null) => registerEl(villager.id, "armR",  el);
 
   // Style helpers — every absolute position is bottom-anchored so the
   // figure's feet sit on the y coordinate the wrapper transform supplies.
-  const abs = (bottom, width, height, color, extra = {}) => ({
-    position: "absolute",
+  const abs = (bottom: number, width: number, height: number, color: string, extra: Record<string, any> = {}) => ({
+    position: "absolute" as const,
     left: "50%",
     bottom: figureH * bottom,
     transform: "translateX(-50%)",
@@ -727,9 +851,15 @@ const VillagerSprite = memo(function VillagerSprite({ villager, size, registerEl
 
 // ── Main component ──────────────────────────────────────────────────────────
 
-function TownVillagers({ plan, buildings, workers }) {
+interface TownVillagersProps {
+  plan: TownPlan | null | undefined;
+  buildings: Record<string, number | null | undefined> | null | undefined;
+  workers?: { hired?: Record<string, number> } | null;
+}
+
+function TownVillagers({ plan, buildings, workers }: TownVillagersProps) {
   const { wps, adj } = useMemo(() => makeGraph(plan), [plan]);
-  const hiredWorkers = workers?.hired || {};
+  const hiredWorkers: Record<string, number> = workers?.hired || {};
   // Re-seed the population whenever the build set changes (so a new building
   // can introduce its associated NPC mid-session) or worker counts change.
   const buildingsKey = useMemo(
@@ -746,14 +876,14 @@ function TownVillagers({ plan, buildings, workers }) {
     [wps, adj, buildingsKey, workersKey],
   );
 
-  const stageRef = useRef(null);
+  const stageRef = useRef<HTMLDivElement | null>(null);
   const stageSizeRef = useRef({ w: 0, h: 0 });
   // Map<villagerId, { wrap, torso, head, legL, legR, armL, armR }> —
   // populated by each sprite's ref callbacks as it mounts. The animation
   // loop reads from this map by villager id so the population list itself
   // stays immutable.
-  const refsMapRef = useRef(new Map());
-  const registerEl = (id, key, el) => {
+  const refsMapRef = useRef<Map<string, VillagerRefs>>(new Map());
+  const registerEl = (id: string, key: keyof VillagerRefs, el: HTMLDivElement | null) => {
     const map = refsMapRef.current;
     let entry = map.get(id);
     if (!entry) {
@@ -771,9 +901,9 @@ function TownVillagers({ plan, buildings, workers }) {
   // "Home" waypoint per named NPC, from their building's lot (if built). Read
   // live by the running sim via a ref so a new build doesn't restart it.
   const homeWp = useMemo(() => {
-    const map = {};
+    const map: Record<string, number> = {};
     if (!plan || !buildings || !wps.length) return map;
-    const nearest = (p) => { let b = 0, bd = Infinity; for (let i = 0; i < wps.length; i++) { const x = d2(wps[i], p); if (x < bd) { bd = x; b = i; } } return b; };
+    const nearest = (p: { x: number; y: number }) => { let b = 0, bd = Infinity; for (let i = 0; i < wps.length; i++) { const x = d2(wps[i], p); if (x < bd) { bd = x; b = i; } } return b; };
     for (const v of NPC_VILLAGERS) {
       const lotIdx = buildings[v.building];
       const lot = lotIdx != null ? plan.lots?.find((l) => l.index === lotIdx) : null;
@@ -800,7 +930,7 @@ function TownVillagers({ plan, buildings, workers }) {
   useEffect(() => {
     if (!wps.length || !villagers.length) return undefined;
     let raf = 0, last = performance.now();
-    const step = (now) => {
+    const step = (now: number) => {
       raf = requestAnimationFrame(step);
       const dt = Math.min(0.05, Math.max(0, (now - last) / 1000));
       last = now;

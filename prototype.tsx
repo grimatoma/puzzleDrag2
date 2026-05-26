@@ -33,17 +33,10 @@ import {
 } from "./src/ui/puzzleBoard.jsx";
 import { TOOL_BY_KEY, isTapTargetTool } from "./src/ui/toolRegistry.js";
 
-// Augment window to allow Phaser scene debug handle set by this module.
-declare global {
-  interface Window {
-    __phaserScene: unknown;
-  }
-}
+// The shared window augmentation lives in src/visualTesting/global.d.ts so
+// every module agrees on the shape of __phaserScene and friends.
 
-// Action type used throughout this component. Callers with typed slices can
-// narrow this further in Phase 4-6; for now `any` payload covers the Phaser
-// registry bridge and all existing action shapes.
-type GameAction = { type: string; [key: string]: unknown };
+import type { Action as GameAction } from "./src/types/state";
 
 function BoardSkeleton() {
   return (
@@ -195,7 +188,8 @@ function PhaserMount({ dispatch, biomeKey, turnsUsed, uiLocked, boardActive, sce
               scene.events.on(SCENE_EVENTS.GRID_SYNC, ({ grid: g }: { grid: unknown }) => dispatch({ type: "GRID/SYNC", payload: { grid: g } }));
               scene.events.on(SCENE_EVENTS.CHAIN_UPDATE, (data: unknown) => setChainInfo(data));
               scene.events.on(SCENE_EVENTS.CHAIN_FLOAT_TEXT, ({ text }: { text: string }) => {
-                notifierRef.current?.toast?.({ text, tone: "moss", duration: 1600 });
+                const t = notifierRef.current?.toast as ((opts: { text: string; tone?: string; duration?: number }) => void) | undefined;
+                t?.({ text, tone: "moss", duration: 1600 });
               });
               scene.events.on(SCENE_EVENTS.TOOL_FIRED, ({ key, row, col }: { key: string; row: number; col: number }) =>
                 dispatch({ type: "TOOL_FIRED", key, row, col }),

@@ -1,4 +1,5 @@
 import { useState, useRef, useMemo, useEffect } from "react";
+import type { ReactNode } from "react";
 import { BUILDINGS, ITEMS } from "../constants.js";
 import { useTooltip, Tooltip } from "./Tooltip.jsx";
 import { ZONES, displayZoneName, isSettlementFounded, settlementFoundingCost, settlementTypeForZone, completedSettlementCount, DEFAULT_ZONE } from "../features/zones/data.js";
@@ -23,6 +24,27 @@ import {
   DetailPane,
 } from "./primitives/BrowserDetail.jsx";
 import FeaturePanel from "./primitives/FeaturePanel.jsx";
+import type { GameState, Dispatch } from "../types/state.js";
+import type { Building } from "../types/items.js";
+
+type AnyState = GameState & Record<string, any>;
+
+interface BoardMetaEntry {
+  label: string;
+  icon: string;
+  border: string;
+  art: (locked?: boolean) => ReactNode;
+}
+
+interface BuildingTipData {
+  label: string;
+  desc?: string;
+  color: string;
+}
+
+interface PendingBuilding extends Building {
+  _plot?: number;
+}
 
 export { BuildingIllustration };
 
@@ -36,9 +58,9 @@ const THEME_CROSSFADE_MS = 600;
 // Puzzle-board fixtures placed on lots in the town (see townLayout.js
 // `boards`): label / nav icon / lot border / the art that fills the tile.
 // `kind` matches the `setEntryBiome` argument.
-const BOARD_META = {
+const BOARD_META: Record<string, BoardMetaEntry> = {
   farm: { label: "Farm Field", icon: "tile_grass_hay", border: "#2a5010", art: () => <FarmFieldArt /> },
-  mine: { label: "Mine",       icon: "ui_build",  border: "#1a1e22", art: (locked) => <MineEntranceArt locked={locked} /> },
+  mine: { label: "Mine",       icon: "ui_build",  border: "#1a1e22", art: (locked) => <MineEntranceArt locked={!!locked} /> },
   fish: { label: "Harbor",     icon: "ui_enter",  border: "#1a3a5a", art: () => <div className="w-full h-full" style={{ background: "linear-gradient(180deg, #4a8aaa 0%, #2a5a7a 55%, #1a3a5a 100%)" }} /> },
 };
 
@@ -46,8 +68,13 @@ const BOARD_META = {
 // interpolate linear-gradient stops, so each theme is its own stacked layer;
 // new layers mount with opacity 0 (animated to 1), prior layers unmount once
 // covered.
-function ThemeBackdrop({ bg }) {
-  const [layers, setLayers] = useState(() => [{ bg, id: 0 }]);
+interface BackdropLayer {
+  bg: string;
+  id: number;
+}
+
+function ThemeBackdrop({ bg }: { bg: string }) {
+  const [layers, setLayers] = useState<BackdropLayer[]>(() => [{ bg, id: 0 }]);
   const prevBg = useRef(bg);
   const nextId = useRef(1);
   useEffect(() => {
@@ -84,7 +111,7 @@ function ThemeBackdrop({ bg }) {
 // zone they haven't founded yet, show a top-center banner that opens the
 // shared BiomePicker. Also surfaces the "complete one settlement first"
 // progression gate (the reducer enforces it; this just explains why).
-function FoundSettlementBanner({ state, dispatch }) {
+function FoundSettlementBanner({ state, dispatch }: { state: AnyState; dispatch: Dispatch }) {
   const [pickerOpen, setPickerOpen] = useState(false);
   const zoneId = state.mapCurrent;
   if (!zoneId || zoneId === DEFAULT_ZONE) return null;
@@ -94,14 +121,14 @@ function FoundSettlementBanner({ state, dispatch }) {
   const cost = settlementFoundingCost(state).coins;
   const canAfford = (state?.coins ?? 0) >= cost;
   const needPriorComplete = completedSettlementCount(state) < 1;
-  const node = ZONES[zoneId];
+  const node = (ZONES as Record<string, { id?: string } | undefined>)[zoneId];
   const name = displayZoneName(state, zoneId);
   const blocked = needPriorComplete || !canAfford;
-  const blockedReason = needPriorComplete
+  const blockedReason: string | undefined = needPriorComplete
     ? "Complete your first settlement first"
     : !canAfford
       ? `Need ${cost}◉`
-      : null;
+      : undefined;
   return (
     <>
       <div
@@ -155,7 +182,16 @@ function FoundSettlementBanner({ state, dispatch }) {
 // gently rounded base, and an inner highlight gradient. The aspect ratio
 // is locked to the viewBox so a cloud sized 96×26 looks identical to one
 // at 128×34, just scaled.
-function Cloud({ top, w, h, color, anim, breatheDur }) {
+interface CloudProps {
+  top: number;
+  w: number;
+  h: number;
+  color: string;
+  anim: string;
+  breatheDur?: number;
+}
+
+function Cloud({ top, w, h, color, anim, breatheDur }: CloudProps) {
   const animation = breatheDur ? `${anim}, cloudBreathe ${breatheDur}s cubic-bezier(0.4, 0, 0.2, 1) infinite` : anim;
   // Stable per-instance id for the gradient defs (so multiple Cloud
   // instances don't collide). Derived from the rendered width — sufficient
@@ -196,46 +232,46 @@ function Cloud({ top, w, h, color, anim, breatheDur }) {
   );
 }
 
-export function TownView({ state, dispatch }) {
-  const [entryBiome, setEntryBiome] = useState(null);
-  const [purchaseBuilding, setPurchaseBuilding] = useState(null);
+export function TownView({ state, dispatch }: { state: AnyState; dispatch: Dispatch }) {
+  const [entryBiome, setEntryBiome] = useState<string | null>(null);
+  const [purchaseBuilding, setPurchaseBuilding] = useState<PendingBuilding | null>(null);
   // Build flow: when set, the player has chosen a building and is now picking
   // an empty plot to place it on. Cleared when they confirm or cancel.
-  const [pendingBuilding, setPendingBuilding] = useState(null);
+  const [pendingBuilding, setPendingBuilding] = useState<PendingBuilding | null>(null);
   const [buildPickerOpen, setBuildPickerOpen] = useState(false);
   const { tip: buildingTip, show: showBuildingTip, hide: hideBuildingTip, lastTouchTime } = useTooltip();
-  const longPressTimer = useRef(null);
+  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const longPressActive = useRef(false);
-  const locConfig = LOCATION_TOWN_CONFIGS[state.mapCurrent];
+  const locConfig = (LOCATION_TOWN_CONFIGS as Record<string, any>)[state.mapCurrent];
   const biomeVariant = locConfig?.biomeVariant ?? (state.biomeKey === 'mine' ? 'mine' : 'farm');
   const themeKey = locConfig?.themeKey ?? biomeVariant;
-  const theme = TOWN_THEMES[themeKey] || TOWN_THEMES.farm;
-  const townConfig = TOWN_BIOME_CONFIGS[biomeVariant];
+  const theme = (TOWN_THEMES as Record<string, any>)[themeKey] || TOWN_THEMES.farm;
+  const townConfig = (TOWN_BIOME_CONFIGS as Record<string, any>)[biomeVariant];
   const locationName = displayZoneName(state, state.mapCurrent) || townConfig.name;
   const hill1Path = locConfig?.hill1Path ?? townConfig.hill1Path;
   const hill2Path = locConfig?.hill2Path ?? townConfig.hill2Path;
-  const cc = (a) => biomeVariant === 'mine'
+  const cc = (a: number) => biomeVariant === 'mine'
     ? `rgba(180,190,200,${(a * 0.55).toFixed(2)})`
     : `rgba(255,255,255,${a})`;
   // Zone config for this location controls which puzzle boards and buildings are available.
-  const zoneConfig = ZONES[state.mapCurrent];
-  const locationBuilt = state.built?.[state.mapCurrent] ?? EMPTY_OBJECT;
+  const zoneConfig = (ZONES as Record<string, any>)[state.mapCurrent];
+  const locationBuilt: Record<string, any> = state.built?.[state.mapCurrent] ?? EMPTY_OBJECT;
   // Town UX redesign — a procedural town *plan* (plaza + streets + a planned
   // grid of building lots) replaces the old hand-scattered plot positions. The
   // building-render below still consumes a flat `layoutPlots` of {x,y,w,h}, so
   // we just project the plan's lots into that shape.
   const requestedPlots = Math.max(1, zoneConfig?.plotCount ?? 12);
   const townPlan = useMemo(() => {
-    const z = ZONES[state.mapCurrent];
-    const boardKinds = [z?.hasFarm && "farm", z?.hasMine && "mine", z?.hasWater && "fish"].filter(Boolean);
-    return buildTownPlan({ zoneId: state.mapCurrent, plotCount: requestedPlots, boardKinds });
+    const z = (ZONES as Record<string, any>)[state.mapCurrent];
+    const boardKinds = [z?.hasFarm && "farm", z?.hasMine && "mine", z?.hasWater && "fish"].filter(Boolean) as string[];
+    return buildTownPlan({ zoneId: state.mapCurrent, plotCount: requestedPlots, boardKinds: boardKinds as never[] });
   }, [state.mapCurrent, requestedPlots]);
   const layoutPlots = useMemo(
-    () => townPlan.lots.map((l) => ({ x: l.cx - l.w / 2, y: l.cy - l.h / 2, w: l.w, h: l.h })),
+    () => townPlan.lots.map((l: { cx: number; cy: number; w: number; h: number }) => ({ x: l.cx - l.w / 2, y: l.cy - l.h / 2, w: l.w, h: l.h })),
     [townPlan],
   );
   const plotCount = layoutPlots.length;
-  const storedPlots = locationBuilt._plots ?? EMPTY_OBJECT;
+  const storedPlots: Record<string, string | null> = locationBuilt._plots ?? EMPTY_OBJECT;
   // Build a normalised plot map { idx -> buildingId | null }, auto-assigning
   // any legacy buildings that lack an entry (e.g. saves predating the plot
   // system, or tests that set { hearth: true } without _plots).
@@ -243,9 +279,9 @@ export function TownView({ state, dispatch }) {
     const builtIds = Object.keys(locationBuilt).filter(
       (k) => !RESERVED_BUILDING_KEYS.has(k) && locationBuilt[k] && BUILDING_IDS.has(k),
     );
-    const nextPlotById = {};
-    Object.entries(storedPlots).forEach(([idx, id]) => { nextPlotById[id] = Number(idx); });
-    const nextPlotMap = {};
+    const nextPlotById: Record<string, number> = {};
+    Object.entries(storedPlots).forEach(([idx, id]) => { if (id != null) nextPlotById[String(id)] = Number(idx); });
+    const nextPlotMap: Record<number, string | null> = {};
     for (let i = 0; i < plotCount; i++) nextPlotMap[i] = storedPlots[i] ?? null;
     // Auto-assign any built building that doesn't yet have a plot to the first
     // free index. Render-only — never written back to state.
@@ -256,7 +292,15 @@ export function TownView({ state, dispatch }) {
       }
     }
 
-    const rows = [];
+    interface SlotRow {
+      idx: number;
+      x: number;
+      y: number;
+      w: number;
+      h: number;
+      buildingId: string | null;
+    }
+    const rows: SlotRow[] = [];
     for (let i = 0; i < plotCount; i++) {
       const pos = layoutPlots[i];
       if (!pos) continue;
@@ -265,7 +309,7 @@ export function TownView({ state, dispatch }) {
     rows.sort((a, b) => (a.y + a.h) - (b.y + b.h));
 
     const occupied = Object.entries(nextPlotMap).filter(([, id]) => id != null).length;
-    const lots = new Set(
+    const lots = new Set<number>(
       Object.entries(nextPlotMap).filter(([, id]) => id != null).map(([i]) => Number(i)),
     );
 
@@ -285,28 +329,29 @@ export function TownView({ state, dispatch }) {
   );
   const freePlots = plotCount - occupiedPlots;
 
-  const builtTipHandlers = (b) => {
-    const data = { label: b.name, desc: b.desc, color: b.color };
+  const builtTipHandlers = (b: Building) => {
+    const data: BuildingTipData = { label: b.name, desc: b.desc, color: b.color };
     return {
-      onMouseEnter: (e) => { if (Date.now() - lastTouchTime.current > 600) showBuildingTip(data, e.currentTarget); },
+      onMouseEnter: (e: React.MouseEvent<HTMLElement>) => { if (Date.now() - lastTouchTime.current > 600) showBuildingTip(data, e.currentTarget); },
       onMouseLeave: () => { if (Date.now() - lastTouchTime.current > 600) hideBuildingTip(); },
-      onTouchStart: (e) => {
+      onTouchStart: (e: React.TouchEvent<HTMLElement>) => {
         lastTouchTime.current = Date.now();
         longPressActive.current = false;
+        const target = e.currentTarget;
         longPressTimer.current = setTimeout(() => {
           longPressActive.current = true;
-          showBuildingTip(data, e.currentTarget);
+          showBuildingTip(data, target);
         }, 500);
       },
-      onTouchEnd: (e) => {
-        clearTimeout(longPressTimer.current);
+      onTouchEnd: (e: React.TouchEvent<HTMLElement>) => {
+        if (longPressTimer.current) clearTimeout(longPressTimer.current);
         if (longPressActive.current) {
           e.preventDefault();
           hideBuildingTip(2000);
         }
       },
       onTouchCancel: () => {
-        clearTimeout(longPressTimer.current);
+        if (longPressTimer.current) clearTimeout(longPressTimer.current);
         if (longPressActive.current) hideBuildingTip(2000);
         longPressActive.current = false;
       },
@@ -345,7 +390,7 @@ export function TownView({ state, dispatch }) {
       <div className="absolute top-3 left-4 landscape:max-[1024px]:top-2 landscape:max-[1024px]:left-3 font-bold text-[20px] landscape:max-[1024px]:text-[15px]" style={{ color: theme.textColor }}>{locationName}</div>
       <div className="absolute top-3 right-4 landscape:max-[1024px]:top-2 landscape:max-[1024px]:right-3 flex items-center gap-2 z-10">
         {/* Boons shortcut — only visible once the player has faced any keeper. */}
-        {Object.keys(state.story?.flags ?? {}).some((k) => k.startsWith("keeper_") && (k.endsWith("_coexist") || k.endsWith("_driveout")) && state.story.flags[k]) && (
+        {Object.keys(state.story?.flags ?? {}).some((k) => k.startsWith("keeper_") && (k.endsWith("_coexist") || k.endsWith("_driveout")) && (state.story.flags as Record<string, unknown>)[k]) && (
           <button
             type="button"
             onClick={() => dispatch({ type: "SET_VIEW", view: "boons" })}
@@ -443,13 +488,13 @@ export function TownView({ state, dispatch }) {
                   zIndex: Math.floor(slot.y + slot.h),
                 }}
                 onClick={onClick}
-                {...(isBuilt ? builtTipHandlers(b) : {})}
+                {...(isBuilt && b ? builtTipHandlers(b as unknown as Building) : {})}
               >
                 {isBuilt ? (
                   <>
                     <BuildingIllustration id={b.id} isBuilt={true} />
                     {SMOKE_BUILDINGS.has(b.id) && <BuildingSmoke />}
-                    {b.id === "hearth" && state.story?.flags?.hearth_lit && <HearthGlow />}
+                    {b.id === "hearth" && (state.story?.flags as Record<string, unknown> | undefined)?.hearth_lit && <HearthGlow />}
                     <div
                       className="absolute bottom-full left-0 right-0 text-center font-bold text-white truncate py-0.5 px-1"
                       style={{
@@ -523,7 +568,7 @@ export function TownView({ state, dispatch }) {
       {/* Building picker modal — choose a building, then a plot */}
       {buildPickerOpen && (
         <BuildPicker
-          buildings={eligibleBuildings}
+          buildings={eligibleBuildings as unknown as Building[]}
           state={state}
           locationBuilt={locationBuilt}
           freePlots={freePlots}
@@ -581,7 +626,7 @@ export function TownView({ state, dispatch }) {
             onClick={e => e.stopPropagation()}
           >
             <DetailPane
-              eyebrow={`Plot ${purchaseBuilding._plot + 1}`}
+              eyebrow={`Plot ${(purchaseBuilding._plot ?? 0) + 1}`}
               title={purchaseBuilding.name}
               description={purchaseBuilding.desc}
               icon={<BuildingPreview building={purchaseBuilding} />}
@@ -612,7 +657,7 @@ export function TownView({ state, dispatch }) {
   );
 }
 
-function BuildingPreview({ building }) {
+function BuildingPreview({ building }: { building: Building }) {
   return (
     <div className="relative w-full h-full overflow-hidden rounded-md bg-[var(--well-bg)]">
       <BuildingIllustration id={building.id} isBuilt={true} />
@@ -620,26 +665,51 @@ function BuildingPreview({ building }) {
   );
 }
 
-function buildingCostEntries(building, state) {
+interface CostEntry {
+  key: string;
+  label: string;
+  amount: number;
+  have: number;
+  showHave: boolean;
+  check: boolean;
+}
+
+function buildingCostEntries(building: Building | null | undefined, state: AnyState): CostEntry[] {
   return Object.entries(building?.cost ?? {}).map(([key, amount]) => ({
     key,
-    label: key === "coins" ? "Coins" : key === "runes" ? "Runes" : ITEMS[key]?.label || key,
-    amount,
-    have: key === "coins" ? state.coins ?? 0 : key === "runes" ? state.runes ?? 0 : state.inventory?.[key] ?? 0,
+    label: key === "coins" ? "Coins" : key === "runes" ? "Runes" : (ITEMS as Record<string, any>)[key]?.label || key,
+    amount: Number(amount),
+    have: key === "coins" ? state.coins ?? 0 : key === "runes" ? state.runes ?? 0 : (state.inventory as Record<string, number> | undefined)?.[key] ?? 0,
     showHave: true,
     check: true,
   }));
 }
 
-function buildingRows(buildings, state, locationBuilt, freePlots) {
+interface BuildingRow {
+  b: Building;
+  isBuilt: boolean;
+  levelMet: boolean;
+  prereqMet: boolean;
+  canAfford: boolean;
+  reason: string | null;
+  pickable: boolean;
+}
+
+function buildingRows(
+  buildings: Building[],
+  state: AnyState,
+  locationBuilt: Record<string, any>,
+  freePlots: number,
+): BuildingRow[] {
   return buildings.map((b) => {
     const isBuilt = !!locationBuilt[b.id];
     const prereqMet = !b.requires || !!locationBuilt[b.requires];
     const levelMet = state.level >= b.lv;
-    const canCoin = state.coins >= (b.cost.coins || 0);
-    const canRunes = (state.runes ?? 0) >= (b.cost.runes ?? 0);
-    const canRes = Object.entries(b.cost).every(
-      ([k, v]) => k === "coins" || k === "runes" || (state.inventory[k] || 0) >= v,
+    const cost = b.cost as Record<string, number>;
+    const canCoin = state.coins >= (cost.coins || 0);
+    const canRunes = (state.runes ?? 0) >= (cost.runes ?? 0);
+    const canRes = Object.entries(cost).every(
+      ([k, v]) => k === "coins" || k === "runes" || ((state.inventory as Record<string, number>)[k] || 0) >= Number(v),
     );
     const canAfford = canCoin && canRes && canRunes;
     const reason = isBuilt
@@ -657,7 +727,17 @@ function buildingRows(buildings, state, locationBuilt, freePlots) {
   });
 }
 
-function BuildPicker({ buildings, state, locationBuilt, freePlots, plotCount, onPick, onClose }) {
+interface BuildPickerProps {
+  buildings: Building[];
+  state: AnyState;
+  locationBuilt: Record<string, any>;
+  freePlots: number;
+  plotCount: number;
+  onPick: (b: Building) => void;
+  onClose: () => void;
+}
+
+function BuildPicker({ buildings, state, locationBuilt, freePlots, plotCount, onPick, onClose }: BuildPickerProps) {
   const rows = buildingRows(buildings, state, locationBuilt, freePlots);
   const [selectedId, setSelectedId] = useState(rows[0]?.b.id ?? null);
   const selected = rows.find((r) => r.b.id === selectedId) ?? rows[0] ?? null;

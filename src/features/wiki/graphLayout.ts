@@ -3,18 +3,54 @@ export const NODE_H = 72;
 export const COL_STRIDE = 180;
 export const ROW_STRIDE = 84;
 
-export function buildGraph(recipes, labelFn) {
-  const recipeList = Object.values(recipes).filter(
-    (r) => r && typeof r.item === "string" && r.inputs && typeof r.inputs === "object"
+interface RecipeIn {
+  item: string;
+  inputs: Record<string, number>;
+  station: string;
+}
+
+export interface WikiNodeDef {
+  key: string;
+  label: string;
+  rank: number;
+  x: number;
+  y: number;
+}
+
+export interface WikiEdgeDef {
+  fromKey: string;
+  toKey: string;
+  qty: number;
+  station: string;
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+  cpX: number;
+}
+
+export interface BuildGraphResult {
+  nodes: WikiNodeDef[];
+  edges: WikiEdgeDef[];
+  totalW: number;
+  totalH: number;
+}
+
+export function buildGraph(recipes: Record<string, unknown>, labelFn: (k: string) => string): BuildGraphResult {
+  const recipeList: RecipeIn[] = (Object.values(recipes) as unknown[]).filter(
+    (r): r is RecipeIn => {
+      const rec = r as Partial<RecipeIn> | null | undefined;
+      return !!rec && typeof rec.item === "string" && !!rec.inputs && typeof rec.inputs === "object";
+    },
   );
 
-  const craftedItems = new Set(recipeList.map((r) => r.item));
-  const allKeys = new Set(craftedItems);
+  const craftedItems = new Set<string>(recipeList.map((r) => r.item));
+  const allKeys = new Set<string>(craftedItems);
   for (const r of recipeList) {
     for (const k of Object.keys(r.inputs)) allKeys.add(k);
   }
 
-  const ranks = new Map();
+  const ranks = new Map<string, number>();
   for (const key of allKeys) {
     ranks.set(key, craftedItems.has(key) ? -1 : 0);
   }
@@ -34,25 +70,25 @@ export function buildGraph(recipes, labelFn) {
   }
 
   for (const key of allKeys) {
-    if (ranks.get(key) < 0) ranks.set(key, 0);
+    if ((ranks.get(key) ?? 0) < 0) ranks.set(key, 0);
   }
 
-  const byRank = new Map();
+  const byRank = new Map<number, string[]>();
   for (const [key, rank] of ranks) {
     if (!byRank.has(rank)) byRank.set(rank, []);
-    byRank.get(rank).push(key);
+    byRank.get(rank)!.push(key);
   }
   for (const arr of byRank.values()) {
-    arr.sort((a, b) => labelFn(a).localeCompare(labelFn(b)));
+    arr.sort((a: string, b: string) => labelFn(a).localeCompare(labelFn(b)));
   }
 
-  const nodeMap = new Map();
+  const nodeMap = new Map<string, WikiNodeDef>();
   let maxRank = 0;
   let maxNodesInAnyRank = 0;
   for (const [rank, keys] of byRank) {
     if (rank > maxRank) maxRank = rank;
     if (keys.length > maxNodesInAnyRank) maxNodesInAnyRank = keys.length;
-    keys.forEach((key, idx) => {
+    keys.forEach((key: string, idx: number) => {
       nodeMap.set(key, {
         key,
         label: labelFn(key),
@@ -63,9 +99,9 @@ export function buildGraph(recipes, labelFn) {
     });
   }
 
-  const nodes = [...nodeMap.values()];
+  const nodes: WikiNodeDef[] = [...nodeMap.values()];
 
-  const edges = [];
+  const edges: WikiEdgeDef[] = [];
   for (const r of recipeList) {
     const toNode = nodeMap.get(r.item);
     if (!toNode) continue;

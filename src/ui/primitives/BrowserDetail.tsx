@@ -219,7 +219,7 @@ export function DetailProgress({ value, max, label, tone = "moss" }: { value: an
         <span>{label}</span>
         <span className="tabular-nums">{value}/{max}</span>
       </div>
-      <ProgressTrack value={value} max={max} tone={tone} size="sm" />
+      <ProgressTrack value={value} max={max} tone={tone as any} size="sm" />
     </div>
   );
 }

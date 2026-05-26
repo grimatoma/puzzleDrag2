@@ -24,7 +24,7 @@ const TARGET_OPTIONS = [
   { value: ZONE_UPGRADE_TARGET_GOLD, label: "gold (board-only tile)" },
 ];
 
-function Label({ children: any }) {
+function Label({ children }: { children: any }) {
   return (
     <div className="text-[10px] font-bold uppercase tracking-wide mb-0.5" style={{ color: COLORS.inkSubtle }}>
       {children}
@@ -32,7 +32,7 @@ function Label({ children: any }) {
   );
 }
 
-function Toggle({ value: any, onChange: any, label: any }) {
+function Toggle({ value, onChange, label }: { value: any; onChange: any; label: any }) {
   return (
     <button
       onClick={() => onChange(!value)}
@@ -49,7 +49,7 @@ function Toggle({ value: any, onChange: any, label: any }) {
   );
 }
 
-export default function ZonesTab({ draft: any, updateDraft: any }) {
+export default function ZonesTab({ draft, updateDraft }: { draft: any; updateDraft: any }) {
   const [search, setSearch] = useState("");
   const zoneList = useMemo(() => Object.values(ZONES), []);
   const buildingById = useMemo(
@@ -297,8 +297,8 @@ export default function ZonesTab({ draft: any, updateDraft: any }) {
                       <tr style={{ background: COLORS.parchmentDeep }}>
                         <td className="px-2 py-1.5 font-bold" style={{ color: COLORS.ink }}>Total</td>
                         {SEASON_NAMES.map((season) => {
-                          const table = eff.seasonDrops[season] ?? {};
-                          const total = Object.values(table).reduce((a, b) => a + (Number(b) || 0), 0);
+                          const table = (eff.seasonDrops[season] ?? {}) as Record<string, number>;
+                          const total = Object.values(table).reduce<number>((a, b) => a + (Number(b) || 0), 0);
                           return (
                             <td key={`total-${season}`} className="px-2 py-1.5">
                               <Pill>{total.toFixed(2)}</Pill>
@@ -328,7 +328,7 @@ export default function ZonesTab({ draft: any, updateDraft: any }) {
   );
 }
 
-function BuildingIcon({ id: any, size = 28 }) {
+function BuildingIcon({ id, size = 28 }: { id: any; size?: any }) {
   return (
     <div
       className="relative shrink-0 rounded border overflow-hidden"
@@ -340,7 +340,7 @@ function BuildingIcon({ id: any, size = 28 }) {
   );
 }
 
-function BuildingsPicker({ selectedIds: any, buildingById: any, onChange: any }) {
+function BuildingsPicker({ selectedIds, buildingById, onChange }: { selectedIds: any; buildingById: any; onChange: any }) {
   const selected = useMemo(
     () => (Array.isArray(selectedIds) ? selectedIds : []),
     [selectedIds],

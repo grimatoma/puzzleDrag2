@@ -6,22 +6,29 @@
 // the existing per-NPC bar style; the heatmap reuses the same idiom.
 
 import { effectiveBeat, allBeatIds } from "./shared.jsx";
+import type {
+  HeatmapBucket,
+  HeatmapBucketCounts,
+  OutcomeHeatmap,
+  StoryBeat,
+  StoryDraft,
+} from "./types.js";
 
-const BUCKETS = Object.freeze(["act1", "act2", "act3", "side", "draft"]);
+const BUCKETS: readonly HeatmapBucket[] = Object.freeze(["act1", "act2", "act3", "side", "draft"] as HeatmapBucket[]);
 
-function bucketFor(beat: any, isDraft: any) {
+function bucketFor(beat: StoryBeat, isDraft: boolean): HeatmapBucket {
   if (isDraft) return "draft";
-  if (Number.isFinite(beat?.act)) return `act${beat.act}`;
+  if (Number.isFinite(beat?.act)) return `act${beat.act}` as HeatmapBucket;
   return "side";
 }
 
-function emptyBuckets() {
-  const out = {};
+function emptyBuckets(): HeatmapBucketCounts {
+  const out: Partial<HeatmapBucketCounts> = {};
   for (const b of BUCKETS) out[b] = 0;
-  return out;
+  return out as HeatmapBucketCounts;
 }
 
-const asArr = (v: any) => Array.isArray(v) ? v : (typeof v === "string" && v ? [v] : []);
+const asArr = (v: unknown): string[] => Array.isArray(v) ? v.filter((s): s is string => typeof s === "string") : (typeof v === "string" && v ? [v] : []);
 
 /**
  * Walk the draft and return a heatmap of choice outcomes, broken down by
@@ -38,7 +45,7 @@ const asArr = (v: any) => Array.isArray(v) ? v : (typeof v === "string" && v ? [
  * `counts` covers coins / embers / coreIngots / gems / setFlags / clearFlags.
  * Per-NPC bond bookkeeping lives in `bondPerNpc` keyed by speaker.
  */
-export function computeOutcomeHeatmap(draft: any) {
+export function computeOutcomeHeatmap(draft: StoryDraft | null | undefined): OutcomeHeatmap {
   const counts = {
     coins:      emptyBuckets(),
     embers:     emptyBuckets(),
@@ -49,7 +56,7 @@ export function computeOutcomeHeatmap(draft: any) {
   };
   const choiceCounts = emptyBuckets();
   const totals = { coins: 0, embers: 0, coreIngots: 0, gems: 0, setFlags: 0, clearFlags: 0 };
-  const bondPerNpc = {};
+  const bondPerNpc: Record<string, HeatmapBucketCounts> = {};
 
   const ids = allBeatIds(draft);
   for (const id of ids) {
@@ -62,10 +69,11 @@ export function computeOutcomeHeatmap(draft: any) {
     for (const c of choices) {
       choiceCounts[bucket] += 1;
       const o = c?.outcome || {};
-      for (const key of ["coins", "embers", "coreIngots", "gems"]) {
-        if (!Number.isFinite(o[key]) || o[key] === 0) continue;
-        counts[key][bucket] += o[key];
-        totals[key] += o[key];
+      for (const key of ["coins", "embers", "coreIngots", "gems"] as const) {
+        const value = o[key];
+        if (!Number.isFinite(value) || value === 0) continue;
+        counts[key][bucket] += value as number;
+        totals[key] += value as number;
       }
       const sFlags = asArr(o.setFlag).filter(Boolean);
       if (sFlags.length > 0) { counts.setFlags[bucket] += sFlags.length; totals.setFlags += sFlags.length; }

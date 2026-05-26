@@ -16,36 +16,42 @@
 // Pure module; no React.
 
 import { effectiveBeat, effectiveChoices } from "./shared.jsx";
+import type { PlaythroughFinalState, PlaythroughResult, PlaythroughStep, StoryBeat, StoryChoice, StoryDraft, TerminalReason } from "./types.js";
 
-const STRATEGIES = Object.freeze({
+interface StrategyEntry {
+  label: string;
+  score: (choice: StoryChoice) => number;
+}
+
+const STRATEGIES: Record<string, StrategyEntry> = Object.freeze({
   first: {
     label: "First choice",
     score: () => 0,                 // ties; tiebreaker (lower index) is automatic
   },
   kindest: {
     label: "Kindest path",
-    score: (choice: any) => {
+    score: (choice) => {
       const d = choice?.outcome?.bondDelta?.amount;
-      return Number.isFinite(d) ? d : 0;
+      return Number.isFinite(d) ? (d as number) : 0;
     },
   },
   cruelest: {
     label: "Cruelest path",
-    score: (choice: any) => {
+    score: (choice) => {
       const d = choice?.outcome?.bondDelta?.amount;
-      return Number.isFinite(d) ? -d : 0;
+      return Number.isFinite(d) ? -(d as number) : 0;
     },
   },
   richest: {
     label: "Richest path",
-    score: (choice: any) => {
+    score: (choice) => {
       const o = choice?.outcome || {};
-      return (o.embers || 0) * 5 + (o.coreIngots || 0) * 3 + (o.gems || 0) * 4 + (o.coins || 0);
+      return (Number(o.embers) || 0) * 5 + (Number(o.coreIngots) || 0) * 3 + (Number(o.gems) || 0) * 4 + (Number(o.coins) || 0);
     },
   },
   bargain: {
     label: "Most flags",
-    score: (choice: any) => {
+    score: (choice) => {
       const o = choice?.outcome || {};
       const sf = Array.isArray(o.setFlag) ? o.setFlag.length : (o.setFlag ? 1 : 0);
       const cf = Array.isArray(o.clearFlag) ? o.clearFlag.length : (o.clearFlag ? 1 : 0);
@@ -56,26 +62,35 @@ const STRATEGIES = Object.freeze({
 
 export const PLAYTHROUGH_STRATEGIES = Object.keys(STRATEGIES);
 
-function pickChoice(choices: any, strategy: any) {
+function pickChoice(choices: StoryChoice[], strategy: string): StoryChoice {
   const fn = STRATEGIES[strategy]?.score;
   if (!fn || choices.length <= 1) return choices[0];
-  let best = null;
+  let best: StoryChoice | null = null;
   let bestScore = -Infinity;
-  choices.forEach((c: any, i: any) => {
+  choices.forEach((c) => {
     const score = fn(c);
     if (score > bestScore || (score === bestScore && best === null)) {
       bestScore = score;
       best = c;
-      best._idx = i;
     }
   });
   return best || choices[0];
 }
 
-const asArr = (v: any) => Array.isArray(v) ? v : (typeof v === "string" && v ? [v] : []);
+const asArr = (v: unknown): string[] => Array.isArray(v) ? v.filter((s): s is string => typeof s === "string") : (typeof v === "string" && v ? [v] : []);
 
-function applyChoiceState(state: any, choice: any, beat: any) {
-  const next = {
+interface MutableState {
+  coins: number;
+  embers: number;
+  coreIngots: number;
+  gems: number;
+  bonds: Record<string, number>;
+  flagsSet: Set<string>;
+  flagsCleared: Set<string>;
+}
+
+function applyChoiceState(state: MutableState, choice: StoryChoice | null, beat: StoryBeat | null): MutableState {
+  const next: MutableState = {
     coins: state.coins, embers: state.embers, coreIngots: state.coreIngots, gems: state.gems,
     bonds: { ...state.bonds },
     flagsSet: new Set(state.flagsSet),
@@ -83,10 +98,10 @@ function applyChoiceState(state: any, choice: any, beat: any) {
   };
   for (const f of asArr(beat?.onComplete?.setFlag)) next.flagsSet.add(f);
   const o = choice?.outcome || {};
-  if (Number.isFinite(o.coins)) next.coins += o.coins;
-  if (Number.isFinite(o.embers)) next.embers += o.embers;
-  if (Number.isFinite(o.coreIngots)) next.coreIngots += o.coreIngots;
-  if (Number.isFinite(o.gems)) next.gems += o.gems;
+  if (Number.isFinite(o.coins)) next.coins += o.coins as number;
+  if (Number.isFinite(o.embers)) next.embers += o.embers as number;
+  if (Number.isFinite(o.coreIngots)) next.coreIngots += o.coreIngots as number;
+  if (Number.isFinite(o.gems)) next.gems += o.gems as number;
   if (o.bondDelta?.npc && Number.isFinite(o.bondDelta.amount)) {
     next.bonds[o.bondDelta.npc] = (next.bonds[o.bondDelta.npc] || 0) + o.bondDelta.amount;
   }
@@ -95,7 +110,7 @@ function applyChoiceState(state: any, choice: any, beat: any) {
   return next;
 }
 
-function freezeState(state: any) {
+function freezeState(state: MutableState): PlaythroughFinalState {
   return {
     coins: state.coins, embers: state.embers, coreIngots: state.coreIngots, gems: state.gems,
     bonds: { ...state.bonds },
@@ -104,7 +119,7 @@ function freezeState(state: any) {
   };
 }
 
-const initialState = () => ({
+const initialState = (): MutableState => ({
   coins: 0, embers: 0, coreIngots: 0, gems: 0,
   bonds: {},
   flagsSet: new Set(),
@@ -119,12 +134,12 @@ const initialState = () => ({
  * no queueBeat ('no-target'), the next beat is missing ('missing-target'),
  * the path would revisit a beat ('loop'), or maxDepth is hit ('depth-cap').
  */
-export function simulatePlaythrough(startBeatId: any, draft: any, strategy = "first", { maxDepth = 32 } = {}) {
+export function simulatePlaythrough(startBeatId: string, draft: StoryDraft | null | undefined, strategy: string = "first", { maxDepth = 32 }: { maxDepth?: number } = {}): PlaythroughResult {
   if (!STRATEGIES[strategy]) throw new Error(`unknown strategy: ${strategy}`);
-  let beatId = startBeatId;
-  const steps = [];
+  let beatId: string | undefined = startBeatId;
+  const steps: PlaythroughStep[] = [];
   let state = initialState();
-  let terminalReason = "ends-here";
+  let terminalReason: TerminalReason = "ends-here";
   while (beatId) {
     const beat = effectiveBeat(beatId, draft);
     if (!beat) { terminalReason = "missing-target"; break; }
@@ -149,13 +164,13 @@ export function simulatePlaythrough(startBeatId: any, draft: any, strategy = "fi
 }
 
 /** Convenience: simulate every strategy from a starting beat. */
-export function simulateAllPlaythroughs(startBeatId: any, draft: any, opts = {}) {
+export function simulateAllPlaythroughs(startBeatId: string, draft: StoryDraft | null | undefined, opts: { maxDepth?: number } = {}): PlaythroughResult[] {
   return PLAYTHROUGH_STRATEGIES.map((s) => ({
     ...simulatePlaythrough(startBeatId, draft, s, opts),
     label: STRATEGIES[s].label,
   }));
 }
 
-export function strategyLabel(strategy: any) {
+export function strategyLabel(strategy: string): string {
   return STRATEGIES[strategy]?.label || strategy;
 }

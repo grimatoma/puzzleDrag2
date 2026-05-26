@@ -9,11 +9,13 @@
 // The ranking + index live in commandPalette.js — this component is just
 // the input box, results list, and keyboard handling.
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { COLORS } from "./shared.jsx";
 import { buildCommandIndex, searchCommandIndex } from "./commandPalette.js";
+import type { CommandEntry } from "./commandPalette.js";
 
-const KIND_TONE = {
+interface KindTone { bg: string; fg: string; label: string; }
+const KIND_TONE: Record<string, KindTone> = {
   tile:        { bg: "#fff5e6", fg: COLORS.ember,    label: "TILE" },
   item:        { bg: "#fff5e6", fg: COLORS.ember,    label: "ITEM" },
   recipe:      { bg: "#fbf6ea", fg: COLORS.inkLight, label: "RECIPE" },
@@ -28,9 +30,15 @@ const KIND_TONE = {
   beat:        { bg: "#fbf6ea", fg: COLORS.inkLight, label: "BEAT" },
   flag:        { bg: "#fff0eb", fg: COLORS.red,      label: "FLAG" },
 };
-const DEFAULT_TONE = { bg: COLORS.parchmentDeep, fg: COLORS.inkLight, label: "ENTRY" };
+const DEFAULT_TONE: KindTone = { bg: COLORS.parchmentDeep, fg: COLORS.inkLight, label: "ENTRY" };
 
-export default function CommandPalette({ open: any, onClose: any, onSelect: any }) {
+interface CommandPaletteProps {
+  open: boolean;
+  onClose: () => void;
+  onSelect: (entry: CommandEntry) => void;
+}
+
+export default function CommandPalette({ open, onClose, onSelect }: CommandPaletteProps) {
   // Mount the stateful inner component only while open — that way query /
   // cursor reset to their initial values on every open without needing a
   // setState-in-effect (forbidden by react-hooks/set-state-in-effect).
@@ -38,18 +46,18 @@ export default function CommandPalette({ open: any, onClose: any, onSelect: any 
   return <PaletteImpl onClose={onClose} onSelect={onSelect} />;
 }
 
-function PaletteImpl({ onClose: any, onSelect: any }) {
+function PaletteImpl({ onClose, onSelect }: { onClose: () => void; onSelect: (entry: CommandEntry) => void }) {
   const [query, setQueryRaw] = useState("");
   const [cursor, setCursor] = useState(0);
-  const inputRef = useRef(null);
-  const listRef = useRef(null);
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  const listRef = useRef<HTMLDivElement | null>(null);
 
   const index = useMemo(() => buildCommandIndex(), []);
   const results = useMemo(() => searchCommandIndex(index, query, 12), [index, query]);
 
   // setQuery + cursor reset live together so it's an event handler rather
   // than an effect — eliminates the react-hooks/set-state-in-effect violation.
-  const setQuery = (next: any) => { setQueryRaw(next); setCursor(0); };
+  const setQuery = (next: string) => { setQueryRaw(next); setCursor(0); };
 
   useEffect(() => {
     const id = setTimeout(() => inputRef.current?.focus(), 0);
@@ -59,16 +67,18 @@ function PaletteImpl({ onClose: any, onSelect: any }) {
   useEffect(() => {
     if (!listRef.current) return;
     const el = listRef.current.querySelector(`[data-row-index="${cursor}"]`);
-    if (el && typeof el.scrollIntoView === "function") el.scrollIntoView({ block: "nearest" });
+    if (el && "scrollIntoView" in el && typeof (el as Element).scrollIntoView === "function") {
+      (el as Element).scrollIntoView({ block: "nearest" });
+    }
   }, [cursor, results.length]);
 
-  const pick = (entry: any) => {
+  const pick = (entry: CommandEntry | undefined) => {
     if (!entry) return;
     onSelect(entry);
     onClose();
   };
 
-  const onKey = (e: any) => {
+  const onKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Escape") { e.preventDefault(); onClose(); return; }
     if (e.key === "ArrowDown") {
       e.preventDefault();

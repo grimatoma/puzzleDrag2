@@ -1,7 +1,90 @@
 import Phaser from "phaser";
-import { MAP_NODES, MAP_EDGES, REGIONS } from "./data.js";
+import { MAP_NODES, MAP_EDGES, REGIONS, type MapNode } from "./data.js";
 import { ICON_DESIGN_BOX, paintIcon } from "../../textures/paintIcon.js";
 import { isAdjacent } from "./slice.js";
+
+interface NodeTerrain {
+  kind: string;
+  palette: [string, string];
+}
+
+interface SmokePuff extends Phaser.GameObjects.Image {
+  _active?: boolean;
+}
+
+interface SmokeColumn {
+  root: Phaser.GameObjects.Container;
+  puffs: SmokePuff[];
+  intensity: number;
+}
+
+interface NodeView {
+  node: MapNode;
+  container: Phaser.GameObjects.Container;
+  ringFront: Phaser.GameObjects.Graphics;
+  icon: Phaser.GameObjects.Image;
+  emberGlow: Phaser.GameObjects.Image;
+  lanternMark: Phaser.GameObjects.Image;
+  hereRing: Phaser.GameObjects.Graphics;
+  readyHalo: Phaser.GameObjects.Graphics;
+  capitalSeals: Phaser.GameObjects.Graphics;
+  underline: Phaser.GameObjects.Graphics;
+  label: Phaser.GameObjects.Text;
+  smoke: SmokeColumn;
+  hit: Phaser.GameObjects.Zone;
+}
+
+interface EdgeView {
+  a: string;
+  b: string;
+  na: MapNode;
+  nb: MapNode;
+  line: Phaser.GameObjects.Graphics;
+  marcher: Phaser.GameObjects.Image;
+  marchT: number;
+  unlockable?: boolean;
+}
+
+interface CloudView {
+  gfx: Phaser.GameObjects.Graphics;
+  speed: number;
+}
+
+interface BirdView {
+  gfx: Phaser.GameObjects.Graphics;
+  x: number;
+  y: number;
+  angle: number;
+  speed: number;
+  flap: number;
+}
+
+interface MapLayers {
+  paper: Phaser.GameObjects.Container;
+  regions: Phaser.GameObjects.Container;
+  terrain: Phaser.GameObjects.Container;
+  decor: Phaser.GameObjects.Container;
+  paths: Phaser.GameObjects.Container;
+  pathMarchers: Phaser.GameObjects.Container;
+  ambient: Phaser.GameObjects.Container;
+  nodes: Phaser.GameObjects.Container;
+  smoke: Phaser.GameObjects.Container;
+  embers: Phaser.GameObjects.Container;
+}
+
+interface CartoPayload {
+  visited?: string[];
+  discovered?: string[];
+  current?: string;
+  level?: number;
+  oldCapitalUnlocked?: boolean;
+  founded?: Record<string, boolean>;
+  keeperPaths?: Record<string, string>;
+  tokenCount?: number;
+}
+
+type StatusKey = "traveled" | "unlockable" | "discovered" | "hidden";
+type NodeStatusKey = "visited" | "discovered-ready" | "discovered-locked" | "discovered-unreachable" | "capital-ready" | "capital-locked" | "current" | "hidden";
 
 /* Phaser scene that renders the redesigned world map.
  *
@@ -34,7 +117,7 @@ const WORLD_H = 620;
 
 // Each node id maps to a hand-picked "feel" — drives the painted terrain
 // tile under the medallion and the atmospherics tied to that node.
-const NODE_TERRAIN = {
+const NODE_TERRAIN: Record<string, NodeTerrain> = {
   home:       { kind: "valley",   palette: ["#e8c98a", "#caa66a"] },
   meadow:     { kind: "field",    palette: ["#bcc97a", "#94a85a"] },
   orchard:    { kind: "orchard",  palette: ["#a8c068", "#7a9c4a"] },
@@ -49,6 +132,14 @@ const NODE_TERRAIN = {
 };
 
 export class MapScene extends Phaser.Scene {
+  nodeViews: Map<string, NodeView> = new Map();
+  edgeViews: EdgeView[] = [];
+  _lastTapped: string | null = null;
+  _cloudPool: CloudView[] = [];
+  _birdPool: BirdView[] = [];
+  _t: number = 0;
+  layers!: MapLayers;
+
   constructor() {
     super("CartoMapScene");
     this.nodeViews = new Map();   // id → { container, label, ember, ... }
@@ -96,8 +187,8 @@ export class MapScene extends Phaser.Scene {
     this.buildNodeViews();
 
     this.spawnInitialAmbient();
-    this.input.on("gameobjectdown", (_pointer, obj) => {
-      const id = obj.getData?.("nodeId");
+    this.input.on("gameobjectdown", (_pointer: Phaser.Input.Pointer, obj: Phaser.GameObjects.GameObject) => {
+      const id = (obj as Phaser.GameObjects.GameObject & { getData?: (k: string) => string | undefined }).getData?.("nodeId");
       if (id) {
         this.events.emit("carto.nodetap", id);
       }
@@ -122,6 +213,7 @@ export class MapScene extends Phaser.Scene {
       const key = `cartoIcon_${node.id}`;
       if (this.textures.exists(key)) continue;
       const tex = this.textures.createCanvas(key, size, size);
+      if (!tex) continue;
       const ctx = tex.getContext();
       ctx.imageSmoothingEnabled = true;
       const ok = paintIcon(ctx, `map_${node.id}`, size);
@@ -143,46 +235,52 @@ export class MapScene extends Phaser.Scene {
     if (!this.textures.exists("cartoEmberGlow")) {
       const g = 96;
       const tex = this.textures.createCanvas("cartoEmberGlow", g, g);
-      const ctx = tex.getContext();
-      const grd = ctx.createRadialGradient(g / 2, g / 2, 1, g / 2, g / 2, g / 2);
-      grd.addColorStop(0,    "rgba(255,212,128,0.85)");
-      grd.addColorStop(0.45, "rgba(232,150,60,0.45)");
-      grd.addColorStop(1,    "rgba(232,150,60,0.0)");
-      ctx.fillStyle = grd;
-      ctx.fillRect(0, 0, g, g);
-      tex.refresh();
+      if (tex) {
+        const ctx = tex.getContext();
+        const grd = ctx.createRadialGradient(g / 2, g / 2, 1, g / 2, g / 2, g / 2);
+        grd.addColorStop(0,    "rgba(255,212,128,0.85)");
+        grd.addColorStop(0.45, "rgba(232,150,60,0.45)");
+        grd.addColorStop(1,    "rgba(232,150,60,0.0)");
+        ctx.fillStyle = grd;
+        ctx.fillRect(0, 0, g, g);
+        tex.refresh();
+      }
     }
 
     // Hollow Folk lantern-mark texture (3 stacked tally bars).
     if (!this.textures.exists("cartoLanternMark")) {
       const w = 24, h = 28;
       const tex = this.textures.createCanvas("cartoLanternMark", w, h);
-      const ctx = tex.getContext();
-      ctx.strokeStyle = "#3a2410";
-      ctx.lineCap = "round";
-      ctx.lineWidth = 2;
-      ctx.globalAlpha = 0.85;
-      [6, 13, 20].forEach((y, i) => {
-        ctx.beginPath();
-        ctx.moveTo(4 - (i === 1 ? 1 : 0), y);
-        ctx.lineTo(w - 4 + (i === 2 ? 1 : 0), y);
-        ctx.stroke();
-      });
-      tex.refresh();
+      if (tex) {
+        const ctx = tex.getContext();
+        ctx.strokeStyle = "#3a2410";
+        ctx.lineCap = "round";
+        ctx.lineWidth = 2;
+        ctx.globalAlpha = 0.85;
+        [6, 13, 20].forEach((y: number, i: number) => {
+          ctx.beginPath();
+          ctx.moveTo(4 - (i === 1 ? 1 : 0), y);
+          ctx.lineTo(w - 4 + (i === 2 ? 1 : 0), y);
+          ctx.stroke();
+        });
+        tex.refresh();
+      }
     }
 
     // Smoke puff — single radial blob, reused with low alpha to form columns.
     if (!this.textures.exists("cartoSmokePuff")) {
       const s = 48;
       const tex = this.textures.createCanvas("cartoSmokePuff", s, s);
-      const ctx = tex.getContext();
-      const grd = ctx.createRadialGradient(s / 2, s / 2, 0, s / 2, s / 2, s / 2);
-      grd.addColorStop(0,   "rgba(252,246,232,0.7)");
-      grd.addColorStop(0.6, "rgba(220,212,196,0.35)");
-      grd.addColorStop(1,   "rgba(180,168,148,0)");
-      ctx.fillStyle = grd;
-      ctx.beginPath(); ctx.arc(s / 2, s / 2, s / 2, 0, Math.PI * 2); ctx.fill();
-      tex.refresh();
+      if (tex) {
+        const ctx = tex.getContext();
+        const grd = ctx.createRadialGradient(s / 2, s / 2, 0, s / 2, s / 2, s / 2);
+        grd.addColorStop(0,   "rgba(252,246,232,0.7)");
+        grd.addColorStop(0.6, "rgba(220,212,196,0.35)");
+        grd.addColorStop(1,   "rgba(180,168,148,0)");
+        ctx.fillStyle = grd;
+        ctx.beginPath(); ctx.arc(s / 2, s / 2, s / 2, 0, Math.PI * 2); ctx.fill();
+        tex.refresh();
+      }
     }
   }
 
@@ -424,17 +522,18 @@ export class MapScene extends Phaser.Scene {
     }
   }
 
-  drawEdge(view, status) {
+  drawEdge(view: EdgeView, status: StatusKey) {
     const { line, na, nb } = view;
     line.clear();
     const { ax, ay, bx, by } = endpoints(na, nb);
     const { mx, my } = midpoint(ax, ay, bx, by, view);
 
-    const styleByStatus = {
-      traveled: { color: 0x6a3a18, alpha: 0.95, width: 4, dash: null },
+    interface EdgeStyle { color: number; alpha: number; width: number; dash: number[] | null }
+    const styleByStatus: Record<StatusKey, EdgeStyle> = {
+      traveled:   { color: 0x6a3a18, alpha: 0.95, width: 4, dash: null },
       unlockable: { color: 0xc87a28, alpha: 0.92, width: 3, dash: [10, 6] },
       discovered: { color: 0x8a6a50, alpha: 0.55, width: 2, dash: [6, 6] },
-      hidden: { color: 0x8a6a50, alpha: 0.16, width: 2, dash: [2, 8] },
+      hidden:     { color: 0x8a6a50, alpha: 0.16, width: 2, dash: [2, 8] },
     };
     const { color, alpha, width, dash } = styleByStatus[status] || styleByStatus.hidden;
 
@@ -462,7 +561,7 @@ export class MapScene extends Phaser.Scene {
       const ringFront  = this.add.graphics();
 
       // Painted terrain disk behind the icon, tinted to match the node.
-      const terr = NODE_TERRAIN[node.id] ?? NODE_TERRAIN.home;
+      const terr: NodeTerrain = NODE_TERRAIN[node.id] ?? NODE_TERRAIN.home;
       ringShadow.fillStyle(0x3a2715, 0.30);
       ringShadow.fillEllipse(2, 6, 86, 86);
       ringBack.fillStyle(toInt(terr.palette[0]), 1);
@@ -499,7 +598,7 @@ export class MapScene extends Phaser.Scene {
       const hit = this.add.zone(0, 0, 96, 96);
       hit.setInteractive(new Phaser.Geom.Circle(48, 48, 48), Phaser.Geom.Circle.Contains);
       hit.setData("nodeId", node.id);
-      hit.input.cursor = "pointer";
+      if (hit.input) hit.input.cursor = "pointer";
 
       // Node label below the medallion.
       const label = this.add
@@ -586,11 +685,11 @@ export class MapScene extends Phaser.Scene {
     }
   }
 
-  makeSmokeColumn(x, y) {
+  makeSmokeColumn(x: number, y: number): SmokeColumn {
     const root = this.add.container(x, y);
-    const puffs = [];
+    const puffs: SmokePuff[] = [];
     for (let i = 0; i < 5; i++) {
-      const puff = this.add.image(0, 0, "cartoSmokePuff");
+      const puff = this.add.image(0, 0, "cartoSmokePuff") as SmokePuff;
       puff.setAlpha(0);
       puff.setScale(0.5);
       puff.setBlendMode(Phaser.BlendModes.SCREEN);
@@ -602,7 +701,7 @@ export class MapScene extends Phaser.Scene {
 
   // ─── Per-frame and state-driven updates ─────────────────────────────────
 
-  update(_time, delta) {
+  override update(_time: number, delta: number) {
     const dt = delta / 1000;
     this._t += dt;
 
@@ -701,7 +800,7 @@ export class MapScene extends Phaser.Scene {
     for (let i = 0; i < 3; i++) this._birdPool.push(this.spawnBird());
   }
 
-  spawnBird() {
+  spawnBird(): BirdView {
     const g = this.add.graphics();
     g.lineStyle(1.6, 0x3a2410, 0.9);
     g.beginPath();
@@ -712,14 +811,14 @@ export class MapScene extends Phaser.Scene {
     g.lineTo(6, 0);
     g.strokePath();
     this.layers.ambient.add(g);
-    const bird = {
+    const bird: BirdView = {
       gfx: g, x: 0, y: 0, angle: 0, speed: 30, flap: Math.random() * Math.PI,
     };
     this.respawnBird(bird);
     return bird;
   }
 
-  respawnBird(bird) {
+  respawnBird(bird: BirdView) {
     const side = Math.floor(Math.random() * 4);
     if (side === 0) { bird.x = -30; bird.y = Math.random() * WORLD_H * 0.7 + 40; }
     if (side === 1) { bird.x = WORLD_W + 30; bird.y = Math.random() * WORLD_H * 0.7 + 40; }
@@ -734,20 +833,20 @@ export class MapScene extends Phaser.Scene {
   // ─── React → Phaser state application ───────────────────────────────────
 
   applyState() {
-    const p = this.registry.get("carto.payload") || {};
-    const visited = new Set(p.visited ?? ["home"]);
-    const discovered = new Set(p.discovered ?? []);
-    const current = p.current ?? "home";
-    const playerLevel = p.level ?? 1;
+    const p: CartoPayload = (this.registry.get("carto.payload") as CartoPayload | undefined) || {};
+    const visited: Set<string> = new Set<string>(p.visited ?? ["home"]);
+    const discovered: Set<string> = new Set<string>(p.discovered ?? []);
+    const current: string = p.current ?? "home";
+    const playerLevel: number = p.level ?? 1;
     const oldCapitalUnlocked = !!p.oldCapitalUnlocked;
-    const founded = p.founded ?? {};
-    const keeperPaths = p.keeperPaths ?? {};
+    const founded: Record<string, boolean> = p.founded ?? {};
+    const keeperPaths: Record<string, string> = p.keeperPaths ?? {};
 
     // Edges first so the "unlockable" pulse aligns with node halos.
     for (const view of this.edgeViews) {
       const aV = visited.has(view.a), bV = visited.has(view.b);
       const aD = discovered.has(view.a), bD = discovered.has(view.b);
-      let status = "hidden";
+      let status: StatusKey = "hidden";
       if (aV && bV) status = "traveled";
       else if ((aV && bD && !bV) || (bV && aD && !aV)) status = "unlockable";
       else if (aD && bD) status = "discovered";
@@ -764,7 +863,7 @@ export class MapScene extends Phaser.Scene {
     this.applyTappedHighlight();
   }
 
-  paintNodeStatus(view, status, current, founded, keeperPaths) {
+  paintNodeStatus(view: NodeView, status: NodeStatusKey, current: string, founded: Record<string, boolean>, keeperPaths: Record<string, string>) {
     const node = view.node;
     const isHere = node.id === current;
     const isVisited = status === "visited" || isHere || status === "capital-ready";
@@ -919,11 +1018,11 @@ export class MapScene extends Phaser.Scene {
 
 // ─── Pure helpers ────────────────────────────────────────────────────────
 
-function endpoints(na, nb) {
+function endpoints(na: MapNode, nb: MapNode): { ax: number; ay: number; bx: number; by: number } {
   return { ax: (na.x / 100) * WORLD_W, ay: (na.y / 100) * WORLD_H, bx: (nb.x / 100) * WORLD_W, by: (nb.y / 100) * WORLD_H };
 }
 
-function midpoint(ax, ay, bx, by, view) {
+function midpoint(ax: number, ay: number, bx: number, by: number, view?: EdgeView): { mx: number; my: number } {
   // Mild perpendicular bend so overlapping edges separate.
   const dx = bx - ax, dy = by - ay;
   const len = Math.hypot(dx, dy) || 1;
@@ -932,16 +1031,16 @@ function midpoint(ax, ay, bx, by, view) {
   return { mx: (ax + bx) / 2 + nx * bend, my: (ay + by) / 2 + ny * bend };
 }
 
-function nodeXY(node) {
+function nodeXY(node: MapNode): { x: number; y: number } {
   return { x: (node.x / 100) * WORLD_W, y: (node.y / 100) * WORLD_H };
 }
 
-function quad(p0, p1, p2, t) {
+function quad(p0: number, p1: number, p2: number, t: number): number {
   const u = 1 - t;
   return u * u * p0 + 2 * u * t * p1 + t * t * p2;
 }
 
-function drawQuadCurve(g, ax, ay, mx, my, bx, by) {
+function drawQuadCurve(g: Phaser.GameObjects.Graphics, ax: number, ay: number, mx: number, my: number, bx: number, by: number): void {
   g.beginPath();
   g.moveTo(ax, ay);
   const SEG = 24;
@@ -952,7 +1051,7 @@ function drawQuadCurve(g, ax, ay, mx, my, bx, by) {
   g.strokePath();
 }
 
-function drawDashedQuadCurve(g, ax, ay, mx, my, bx, by, on, off) {
+function drawDashedQuadCurve(g: Phaser.GameObjects.Graphics, ax: number, ay: number, mx: number, my: number, bx: number, by: number, on: number, off: number): void {
   // Approximate the curve with short segments, lay dashes along them.
   const SEG = 80;
   let pen = on; // remaining length in current state
@@ -987,14 +1086,14 @@ function drawDashedQuadCurve(g, ax, ay, mx, my, bx, by, on, off) {
   }
 }
 
-function drawDashedRect(g, x, y, w, h, on, off) {
+function drawDashedRect(g: Phaser.GameObjects.Graphics, x: number, y: number, w: number, h: number, on: number, off: number): void {
   drawDashedLine(g, x, y, x + w, y, on, off);
   drawDashedLine(g, x + w, y, x + w, y + h, on, off);
   drawDashedLine(g, x + w, y + h, x, y + h, on, off);
   drawDashedLine(g, x, y + h, x, y, on, off);
 }
 
-function drawDashedLine(g, x1, y1, x2, y2, on, off) {
+function drawDashedLine(g: Phaser.GameObjects.Graphics, x1: number, y1: number, x2: number, y2: number, on: number, off: number): void {
   const dx = x2 - x1, dy = y2 - y1;
   const len = Math.hypot(dx, dy);
   if (len === 0) return;
@@ -1010,7 +1109,7 @@ function drawDashedLine(g, x1, y1, x2, y2, on, off) {
   }
 }
 
-function drawWatercolorMountains(g, cx, cy, w, h) {
+function drawWatercolorMountains(g: Phaser.GameObjects.Graphics, cx: number, cy: number, w: number, h: number): void {
   g.fillStyle(0x88766a, 0.55);
   for (let i = 0; i < 4; i++) {
     const dx = (i - 1.5) * w * 0.25;
@@ -1042,7 +1141,7 @@ function drawWatercolorMountains(g, cx, cy, w, h) {
   }
 }
 
-function drawTreeRow(g, x, y, n) {
+function drawTreeRow(g: Phaser.GameObjects.Graphics, x: number, y: number, n: number): void {
   for (let i = 0; i < n; i++) {
     const tx = x + i * 14;
     g.fillStyle(0x3a5a18, 1);
@@ -1052,7 +1151,7 @@ function drawTreeRow(g, x, y, n) {
   }
 }
 
-function drawDeer(g, cx, cy, s) {
+function drawDeer(g: Phaser.GameObjects.Graphics, cx: number, cy: number, s: number): void {
   g.fillRect(cx - s * 0.30, cy, s * 0.60, s * 0.20); // body
   g.fillRect(cx - s * 0.25, cy + s * 0.20, s * 0.06, s * 0.20);
   g.fillRect(cx + s * 0.19, cy + s * 0.20, s * 0.06, s * 0.20);
@@ -1063,7 +1162,7 @@ function drawDeer(g, cx, cy, s) {
   g.beginPath(); g.moveTo(cx + s * 0.22, cy - s * 0.22); g.lineTo(cx + s * 0.14, cy - s * 0.38); g.strokePath();
 }
 
-function drawFlameRing(g, r, t) {
+function drawFlameRing(g: Phaser.GameObjects.Graphics, r: number, t: number): void {
   g.beginPath();
   const N = 40;
   for (let i = 0; i <= N; i++) {
@@ -1078,7 +1177,7 @@ function drawFlameRing(g, r, t) {
   g.strokePath();
 }
 
-function drawFallbackIcon(ctx, node) {
+function drawFallbackIcon(ctx: CanvasRenderingContext2D, node: MapNode): void {
   ctx.fillStyle = node.kind === "fish" ? "#3a6a8c"
                 : node.kind === "capital" ? "#a88a2a"
                 : "#5a3a20";
@@ -1090,7 +1189,7 @@ function drawFallbackIcon(ctx, node) {
   ctx.fillText(node.icon || "?", 0, 2);
 }
 
-function computeStatus(node, visited, discovered, current, playerLevel, oldCapitalUnlocked) {
+function computeStatus(node: MapNode, visited: Set<string>, discovered: Set<string>, current: string, playerLevel: number, oldCapitalUnlocked: boolean): NodeStatusKey {
   if (node.requiresHearthTokens) return oldCapitalUnlocked ? "capital-ready" : "capital-locked";
   if (node.id === current) return "current";
   if (visited.has(node.id)) return "visited";
@@ -1102,13 +1201,13 @@ function computeStatus(node, visited, discovered, current, playerLevel, oldCapit
   return "hidden";
 }
 
-function toInt(hex) {
+function toInt(hex: string | number): number {
   if (typeof hex === "number") return hex;
   return parseInt(String(hex).replace("#", ""), 16);
 }
 
-function mulberry32(a) {
-  return function () {
+function mulberry32(a: number): () => number {
+  return function (): number {
     a |= 0; a = (a + 0x6D2B79F5) | 0;
     let t = a;
     t = Math.imul(t ^ (t >>> 15), t | 1);

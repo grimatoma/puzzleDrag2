@@ -11,9 +11,29 @@
 import { KEEPERS } from "../../keepers.js";
 import { COLORS, NumberField, TextField, TextArea, FieldRow, Card } from "../shared.jsx";
 
-const TYPE_LABELS = { farm: "Farm", mine: "Mine", harbor: "Harbor" };
+type KeeperType = "farm" | "mine" | "harbor";
+const TYPE_LABELS: Record<KeeperType, string> = { farm: "Farm", mine: "Mine", harbor: "Harbor" };
+const TYPES: KeeperType[] = ["farm", "mine", "harbor"];
 
-function Label({ children: any }) {
+interface KeeperPath {
+  label: string;
+  pitch: string[];
+  embers?: number;
+  coreIngots?: number;
+}
+interface KeeperRow {
+  id: string;
+  name: string;
+  title: string;
+  icon: string;
+  appearsAfterBuildings: number;
+  intro: string[];
+  coexist: KeeperPath;
+  driveout: KeeperPath;
+}
+const keepers = KEEPERS as unknown as Record<KeeperType, KeeperRow>;
+
+function Label({ children }: { children: any }) {
   return <div className="text-[10px] font-bold uppercase tracking-wide mb-0.5" style={{ color: COLORS.inkSubtle }}>{children}</div>;
 }
 
@@ -21,7 +41,7 @@ function Label({ children: any }) {
 const linesToText = (arr: any) => (Array.isArray(arr) ? arr.join("\n") : "");
 const textToLines = (str: any) => String(str ?? "").split("\n").map((s) => s.trim()).filter((s) => s.length > 0);
 
-export default function KeepersTab({ draft: any, updateDraft: any }) {
+export default function KeepersTab({ draft, updateDraft }: { draft: any; updateDraft: any }) {
   function patchKeeper(type: any, fields: any) {
     updateDraft((d: any) => {
       d.keepers ??= {};
@@ -41,7 +61,7 @@ export default function KeepersTab({ draft: any, updateDraft: any }) {
     });
   }
 
-  function PathBlock({ type: any, path: any, p: any, k: any }) {
+  function PathBlock({ type, path, p, k }: { type: any; path: any; p: any; k: any }) {
     const pp = p[path] ?? {};
     const kk = k[path];
     const rewardKey = path === "coexist" ? "embers" : "coreIngots";
@@ -67,8 +87,8 @@ export default function KeepersTab({ draft: any, updateDraft: any }) {
       <div className="text-[11px] italic" style={{ color: COLORS.inkSubtle }}>
         One keeper per settlement type. They appear once a settlement has at least the configured number of buildings.
       </div>
-      {["farm", "mine", "harbor"].map((type) => {
-        const k = KEEPERS[type];
+      {TYPES.map((type) => {
+        const k = keepers[type];
         if (!k) return null;
         const p = (draft.keepers ?? {})[type] ?? {};
         const eff = {

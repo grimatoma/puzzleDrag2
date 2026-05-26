@@ -26,7 +26,20 @@ const STRIP_MAX_WIDTH = 760;
 const STRIP_MIN_WIDTH = 220;
 const NUMERAL_WIDTH = 56;
 
-const SEASON_PALETTES = [
+interface SeasonPalette {
+  name: string;
+  bgTop: string;
+  bgBot: string;
+  groundFill: string;
+  groundStroke: string;
+  panelBg: string;
+  panelStroke: string;
+  numColor: string;
+  labelColor: string;
+  labelShadow: string;
+}
+
+const SEASON_PALETTES: SeasonPalette[] = [
   {
     name: "Spring",
     bgTop: "#fde7f0",
@@ -81,7 +94,7 @@ const SEASON_PALETTES = [
  * Divide a turn budget across 4 seasons using floor math so the segments
  * sum to exactly the budget — matches `seasonIndexInSession` in zones/data.
  */
-export function seasonTurnRanges(turnBudget) {
+export function seasonTurnRanges(turnBudget: number) {
   const S = Math.max(1, turnBudget | 0);
   const ends = [
     Math.floor(S / 4),
@@ -101,7 +114,7 @@ export function seasonTurnRanges(turnBudget) {
  * decoration density. Returns 0 until the first layout settles.
  */
 function useMeasuredWidth() {
-  const ref = useRef(null);
+  const ref = useRef<HTMLDivElement | null>(null);
   const [width, setWidth] = useState(0);
   useEffect(() => {
     const el = ref.current;
@@ -120,7 +133,7 @@ function useMeasuredWidth() {
     setWidth(el.offsetWidth || 0);
     return () => ro.disconnect();
   }, []);
-  return [ref, width];
+  return [ref, width] as const;
 }
 
 // ─── Per-season decorations ──────────────────────────────────────────────
@@ -128,14 +141,16 @@ function useMeasuredWidth() {
 // to fill the available space. Tiny segments only show their "anchor"
 // element; wider segments add filler so they never look empty.
 
-function evenSpaced(count, width, leftPad = 8, rightPad = 8) {
+function evenSpaced(count: number, width: number, leftPad = 8, rightPad = 8): number[] {
   if (count <= 0) return [];
   if (count === 1) return [width / 2];
   const usable = Math.max(0, width - leftPad - rightPad);
   return Array.from({ length: count }, (_, i) => leftPad + (usable * i) / (count - 1));
 }
 
-function SpringDeco({ width, busy }) {
+interface DecoProps { width: number; busy?: boolean }
+
+function SpringDeco({ width, busy }: DecoProps) {
   if (width <= 0) return null;
   // 4-petal pansies stand along a clear grass strip. Hero art (flowers +
   // grass strip + lead butterfly) always renders; `busy` adds extra
@@ -215,7 +230,7 @@ function SpringDeco({ width, busy }) {
   );
 }
 
-function SummerDeco({ width, busy }) {
+function SummerDeco({ width, busy }: DecoProps) {
   if (width <= 0) return null;
   // Hero: big sun with face + 8 rays, sandy bottom with a shell. Always on.
   // `busy` adds extra clouds, a bee, wheat tufts, and a second shell.
@@ -318,7 +333,7 @@ function SummerDeco({ width, busy }) {
   );
 }
 
-function AutumnDeco({ width, busy }) {
+function AutumnDeco({ width, busy }: DecoProps) {
   if (width <= 0) return null;
   // Hero: full tree with a leafy canopy + leaf pile + pumpkin always render.
   // `busy` adds more falling leaves drifting across, plus acorns.
@@ -415,7 +430,7 @@ function AutumnDeco({ width, busy }) {
   );
 }
 
-function WinterDeco({ width, busy }) {
+function WinterDeco({ width, busy }: DecoProps) {
   if (width <= 0) return null;
   // Hero: full 3-tier snowman in the middle + snow-dusted evergreen on the
   // left + snow drift always render. `busy` adds more drifting snowflakes
@@ -557,7 +572,16 @@ const DECO_BY_SEASON = [SpringDeco, SummerDeco, AutumnDeco, WinterDeco];
 
 // ─── A single season segment ─────────────────────────────────────────────
 
-function Segment({ idx, palette, turnsInSeason, flex, isActive, busy }) {
+interface SegmentProps {
+  idx: number;
+  palette: SeasonPalette;
+  turnsInSeason: number;
+  flex: number;
+  isActive: boolean;
+  busy?: boolean;
+}
+
+function Segment({ idx, palette, turnsInSeason, flex, isActive, busy }: SegmentProps) {
   const [ref, width] = useMeasuredWidth();
   // Per-season hero art always renders so the strip never looks empty.
   // `busy` controls extra filler density (more butterflies, more snowflakes,
@@ -566,7 +590,7 @@ function Segment({ idx, palette, turnsInSeason, flex, isActive, busy }) {
 
   // Tick marks at the top of the segment, one per turn boundary inside the
   // segment (turnsInSeason - 1 ticks for turnsInSeason turns).
-  const ticks = [];
+  const ticks: JSX.Element[] = [];
   for (let t = 1; t < turnsInSeason; t += 1) {
     const pct = (t / turnsInSeason) * 100;
     ticks.push(<span key={t} className="hwv-tick" style={{ left: `${pct}%` }} />);
@@ -690,7 +714,7 @@ function CargoFirewood() {
 
 const CARGO_BY_SEASON = [CargoFlowers, CargoWheat, CargoPumpkins, CargoFirewood];
 
-function Wagon({ progress, cargoSeason }) {
+function Wagon({ progress, cargoSeason }: { progress: number; cargoSeason: number }) {
   const Cargo = CARGO_BY_SEASON[cargoSeason] ?? CargoFlowers;
   const leftPct = Math.max(0, Math.min(1, progress)) * 100;
   return (
@@ -805,7 +829,7 @@ function Wagon({ progress, cargoSeason }) {
 
 // ─── Numeral panel ───────────────────────────────────────────────────────
 
-function NumeralPanel({ remaining, palette }) {
+function NumeralPanel({ remaining, palette }: { remaining: number; palette: SeasonPalette }) {
   return (
     <div
       style={{
@@ -849,6 +873,15 @@ function NumeralPanel({ remaining, palette }) {
 
 // ─── The strip ───────────────────────────────────────────────────────────
 
+interface SeasonStripProps {
+  turnsUsed: number;
+  turnBudget: number;
+  turnsRemaining?: number;
+  seasonIdx: number;
+  seasonName: string;
+  busy?: boolean;
+}
+
 export function SeasonStrip({
   turnsUsed,
   turnBudget,
@@ -856,10 +889,10 @@ export function SeasonStrip({
   seasonIdx,
   seasonName,
   busy,
-}) {
+}: SeasonStripProps) {
   const total = Math.max(1, turnBudget | 0);
   const used = Math.max(0, Math.min(total, turnsUsed | 0));
-  const remaining = Number.isFinite(turnsRemaining) ? Math.max(0, turnsRemaining) : total - used;
+  const remaining = (turnsRemaining != null && Number.isFinite(turnsRemaining)) ? Math.max(0, turnsRemaining) : total - used;
   const progress = used / total;
   const ranges = seasonTurnRanges(total);
   const currentPalette = SEASON_PALETTES[seasonIdx] ?? SEASON_PALETTES[0];

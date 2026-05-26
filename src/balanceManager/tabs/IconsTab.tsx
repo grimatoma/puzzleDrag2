@@ -3,6 +3,7 @@
 // filter by usage, and copy icon keys.
 
 import { useState, useMemo, useEffect, useRef, memo } from "react";
+// Local declaration lives in src/balanceManager/canvas2svg.d.ts.
 import C2S from "canvas2svg";
 import { ICON_REGISTRY } from "../../textures/iconRegistry.js";
 import { DESIGN_ICONS_MAP } from "../../ui/icons/index.jsx";
@@ -32,12 +33,20 @@ function deriveSvgLabel(key: any) {
 
 const USED_KEYS = getUsedIconKeys();
 
-const CANVAS_ENTRIES = Object.entries(ICON_REGISTRY).map(([key, entry]) => ({
+interface CanvasEntryRaw {
+  label?: string;
+  color?: string;
+  draw: (ctx: CanvasRenderingContext2D) => void;
+  archive?: boolean;
+  replacedBy?: string;
+}
+
+const CANVAS_ENTRIES = Object.entries(ICON_REGISTRY as unknown as Record<string, CanvasEntryRaw>).map(([key, entry]) => ({
   key,
   label: entry.label ?? key,
   color: entry.color ?? "#888",
   draw: entry.draw,
-  source: "canvas",
+  source: "canvas" as const,
   archive: entry.archive === true,
   replacedBy: entry.replacedBy ?? null,
   category: categoryOf(key, entry.replacedBy),
@@ -49,14 +58,15 @@ const SVG_ENTRIES = Object.entries(DESIGN_ICONS_MAP).map(([key, Component]) => (
   label: deriveSvgLabel(key),
   color: "#5a6a76",
   Component,
-  source: "svg",
+  source: "svg" as const,
   archive: false,
-  replacedBy: null,
+  replacedBy: null as string | null,
   category: categoryOf(key, null),
   inUse: USED_KEYS.has(key),
 }));
 
-const ALL_ENTRIES = [...CANVAS_ENTRIES, ...SVG_ENTRIES];
+type IconEntry = (typeof CANVAS_ENTRIES)[number] | (typeof SVG_ENTRIES)[number];
+const ALL_ENTRIES: IconEntry[] = [...CANVAS_ENTRIES, ...SVG_ENTRIES];
 
 const ALL_CATEGORIES = ["all", ...Array.from(new Set(ALL_ENTRIES.map((e) => e.category))).sort()];
 const CATEGORY_OPTIONS = ALL_CATEGORIES.map((id) => ({ id, label: id }));
@@ -164,7 +174,7 @@ function patchC2S() {
   }
 }
 
-function renderIconSvg(entry: any, size: any) {
+function renderIconSvg(entry: any, size: number) {
   patchC2S();
   const ctx = new C2S(size, size);
   paintIconForCell(ctx, entry, size);
@@ -181,8 +191,14 @@ function renderIconSvg(entry: any, size: any) {
 
 // Memoised cell: renders one icon to its own <canvas>, inline <svg>, or
 // React-SVG component and shows key + label + status badge.
-const IconCell = memo(function IconCell({ entry, onClick, selected, mode }) {
-  const canvasRef = useRef(null);
+interface IconCellProps {
+  entry: IconEntry;
+  onClick: (key: string) => void;
+  selected: boolean;
+  mode: "canvas" | "svg";
+}
+const IconCell = memo(function IconCell({ entry, onClick, selected, mode }: IconCellProps) {
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const svgMarkup = useMemo(
     () => (mode === "svg" && entry.source === "canvas" ? renderIconSvg(entry, ICON_SIZE) : null),
     [entry, mode],
@@ -242,7 +258,7 @@ const IconCell = memo(function IconCell({ entry, onClick, selected, mode }) {
           {badge.label}
         </span>
       )}
-      {isSvgSource ? (
+      {isSvgSource && SvgComp ? (
         <div
           style={{
             width: ICON_SIZE,
@@ -254,12 +270,12 @@ const IconCell = memo(function IconCell({ entry, onClick, selected, mode }) {
             borderRadius: "50%",
           }}
         >
-          <SvgComp size={ICON_SIZE - 8} />
+          <SvgComp size={ICON_SIZE - 8} fill={entry.color} />
         </div>
       ) : mode === "svg" ? (
         <div
           style={{ width: ICON_SIZE, height: ICON_SIZE, display: "block" }}
-          dangerouslySetInnerHTML={{ __html: svgMarkup }}
+          dangerouslySetInnerHTML={{ __html: svgMarkup ?? "" }}
         />
       ) : (
         <canvas
@@ -295,7 +311,7 @@ export default function IconsTab() {
   const [category, setCategory] = useState("all");
   const [status, setStatus] = useState("all");
   const [copiedKey, setCopiedKey] = useState(null);
-  const [mode, setMode] = useState("canvas"); // "canvas" | "svg"
+  const [mode, setMode] = useState<"canvas" | "svg">("canvas");
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();

@@ -1,18 +1,45 @@
 import { bondBand } from "./bond.js";
 import { NPC_DATA } from "./data.js";
+import type { GameState } from "../../types/state.js";
 
-export const DIALOG_POOLS = {
+interface DialogStateView {
+  story?: { flags?: Record<string, unknown> };
+  built?: Record<string, { _plots?: Record<string, string> } | undefined>;
+}
+
+type ReactiveState = GameState & DialogStateView;
+
+export interface ReactiveLine {
+  id: string;
+  text: string;
+  req: (s: ReactiveState) => unknown;
+}
+
+export interface SeasonalPool {
+  [band: string]: string[] | ReactiveLine[];
+}
+
+export interface NpcDialogPool {
+  reactive?: ReactiveLine[];
+  spring?: SeasonalPool;
+  summer?: SeasonalPool;
+  autumn?: SeasonalPool;
+  winter?: SeasonalPool;
+  [season: string]: SeasonalPool | ReactiveLine[] | undefined;
+}
+
+export const DIALOG_POOLS: Record<string, NpcDialogPool> = {
   mira: {
     reactive: [
       {
         id: "mira_hearth_unlit",
         text: "Mira: 'It's cold in here. We need that Hearth lit if we're going to survive the first frost.'",
-        req: (s) => !s.story?.flags?.hearth_lit
+        req: (s: ReactiveState) => !s.story?.flags?.hearth_lit
       },
       {
         id: "mira_bakery_built",
         text: "Mira: 'The ovens are finally hot. The smell of fresh bread... it feels like a real home now.'",
-        req: (s) => s.built?.home?._plots && Object.values(s.built.home._plots).includes("bakery")
+        req: (s: ReactiveState) => s.built?.home?._plots && Object.values(s.built.home._plots).includes("bakery")
       }
     ],
     spring: {
@@ -197,7 +224,7 @@ export const DIALOG_POOLS = {
       {
         id: "tomas_first_order",
         text: "Old Tomas: 'The Vale is talking. They see the smoke from your Hearth, and they're starting to hope.'",
-        req: (s) => s.story?.flags?.first_order
+        req: (s: ReactiveState) => s.story?.flags?.first_order
       }
     ],
     },
@@ -478,12 +505,12 @@ export const DIALOG_POOLS = {
       {
         id: "wren_no_granary",
         text: "Wren: 'The Hearth is lit, but we've got nowhere to store the surplus. A Granary should be next on your list.'",
-        req: (s) => s.story?.flags?.hearth_lit && !s.story?.flags?.granary_built
+        req: (s: ReactiveState) => s.story?.flags?.hearth_lit && !s.story?.flags?.granary_built
       },
       {
         id: "wren_village_growing",
         text: "Wren: 'Look at this place. A few weeks ago it was just ruins. Now... it's a settlement.'",
-        req: (s) => Object.keys(s.built?.home?._plots || {}).length >= 4
+        req: (s: ReactiveState) => Object.keys(s.built?.home?._plots || {}).length >= 4
       }
     ],
   },
@@ -494,7 +521,7 @@ export const DIALOG_POOLS = {
  * Now checks for 'reactive' lines first if a state object is provided.
  * Pure: given the same rng function (and thus same seed), returns the same phrase.
  */
-export function pickDialog(npcId, season, bond, rng, state = null) {
+export function pickDialog(npcId: string, season: string | null | undefined, bond: number, rng?: () => number, state: GameState | null = null): string {
   // 1. Try reactive lines first if we have state
   if (state) {
     const reactivePool = DIALOG_POOLS?.[npcId]?.reactive;
@@ -515,16 +542,32 @@ export function pickDialog(npcId, season, bond, rng, state = null) {
     }
   }
 
-  const bandName = bondBand(bond).name;
-  const npcPools = DIALOG_POOLS?.[npcId];
-  let pool = npcPools?.[season]?.[bandName];
+  const bandName: string = bondBand(bond).name ?? "Warm";
+  const npcPools: NpcDialogPool | undefined = DIALOG_POOLS?.[npcId];
+  let pool: string[] | undefined;
+  if (season && npcPools) {
+    const sp = npcPools[season] as SeasonalPool | ReactiveLine[] | undefined;
+    if (sp && !Array.isArray(sp)) {
+      const candidate = sp[bandName];
+      if (Array.isArray(candidate) && typeof candidate[0] === "string") {
+        pool = candidate as string[];
+      }
+    }
+  }
   if ((!Array.isArray(pool) || pool.length === 0) && !season && npcPools) {
     pool = Object.entries(npcPools)
       .filter(([key]) => key !== "reactive")
-      .flatMap(([, seasonalPools]) => seasonalPools?.[bandName] ?? []);
+      .flatMap(([, seasonalPools]) => {
+        const sp = seasonalPools as SeasonalPool | ReactiveLine[] | undefined;
+        if (Array.isArray(sp)) return [];
+        const v = sp?.[bandName];
+        if (Array.isArray(v) && typeof v[0] === "string") return v as string[];
+        return [];
+      });
   }
   if (!Array.isArray(pool) || pool.length === 0) {
-    const name = NPC_DATA[npcId]?.displayName ?? npcId;
+    const npcInfo = (NPC_DATA as Record<string, { displayName?: string } | undefined>)[npcId];
+    const name: string = npcInfo?.displayName ?? npcId;
     console.warn(`[dialog] missing ${npcId}.${season}.${bandName} — falling back`);
     return `${name}: '...'`;
   }

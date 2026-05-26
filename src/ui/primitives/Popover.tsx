@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import type { MouseEventHandler, ReactNode, TouchEventHandler } from "react";
 import { createPortal } from "react-dom";
 import BottomSheet from "./BottomSheet.jsx";
 
@@ -12,15 +13,23 @@ function isPhone() {
   return window.innerWidth < 768;
 }
 
-function computePosition(anchorRect, contentRect, placement) {
+interface Position {
+  top: number;
+  left: number;
+  placement: "top" | "bottom";
+}
+
+function computePosition(anchorRect: DOMRect, contentRect: DOMRect, placement: PopoverPlacement): Position {
   const vw = window.innerWidth;
   const vh = window.innerHeight;
   const gap = 8;
-  let resolved = placement;
+  let resolved: "top" | "bottom";
   if (placement === "auto") {
     const spaceTop = anchorRect.top;
     const spaceBottom = vh - anchorRect.bottom;
     resolved = spaceBottom >= contentRect.height + gap + VIEWPORT_MARGIN || spaceBottom >= spaceTop ? "bottom" : "top";
+  } else {
+    resolved = placement;
   }
   let top = resolved === "top"
     ? anchorRect.top - contentRect.height - gap
@@ -33,26 +42,49 @@ function computePosition(anchorRect, contentRect, placement) {
   return { top, left, placement: resolved };
 }
 
+type PopoverPlacement = "auto" | "top" | "bottom";
+type PopoverTrigger = "tap" | "hover" | "long-press" | "right-click";
+type PopoverDensity = "compact" | "rich";
+
+interface PopoverProps {
+  trigger?: PopoverTrigger;
+  placement?: PopoverPlacement;
+  density?: PopoverDensity;
+  anchor: ReactNode;
+  content: ReactNode;
+}
+
+interface TriggerProps {
+  onMouseEnter?: MouseEventHandler<HTMLSpanElement>;
+  onMouseLeave?: MouseEventHandler<HTMLSpanElement>;
+  onClick?: MouseEventHandler<HTMLSpanElement>;
+  onTouchStart?: TouchEventHandler<HTMLSpanElement>;
+  onTouchMove?: TouchEventHandler<HTMLSpanElement>;
+  onTouchEnd?: TouchEventHandler<HTMLSpanElement>;
+  onTouchCancel?: TouchEventHandler<HTMLSpanElement>;
+  onContextMenu?: MouseEventHandler<HTMLSpanElement>;
+}
+
 export default function Popover({
   trigger = "tap",
   placement = "auto",
   density = "compact",
   anchor,
   content,
-}) {
+}: PopoverProps) {
   const [open, setOpen] = useState(false);
-  const [pos, setPos] = useState(null);
-  const anchorRef = useRef(null);
-  const contentRef = useRef(null);
-  const longPressTimer = useRef(null);
-  const touchStart = useRef(null);
-  const hoverTimer = useRef(null);
+  const [pos, setPos] = useState<Position | null>(null);
+  const anchorRef = useRef<HTMLSpanElement | null>(null);
+  const contentRef = useRef<HTMLDivElement | null>(null);
+  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const touchStart = useRef<{ x: number; y: number } | null>(null);
+  const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const close = useCallback(() => setOpen(false), []);
   const openIt = useCallback(() => setOpen(true), []);
 
   useLayoutEffect(() => {
-    if (!open || isPhone() && density === "rich") return;
+    if (!open || (isPhone() && density === "rich")) return;
     const anchorEl = anchorRef.current;
     const contentEl = contentRef.current;
     if (!anchorEl || !contentEl) return;
@@ -72,12 +104,13 @@ export default function Popover({
 
   useEffect(() => {
     if (!open) return;
-    const onDocDown = (e) => {
-      if (anchorRef.current?.contains(e.target)) return;
-      if (contentRef.current?.contains(e.target)) return;
+    const onDocDown = (e: Event) => {
+      const target = e.target as Node;
+      if (anchorRef.current?.contains(target)) return;
+      if (contentRef.current?.contains(target)) return;
       close();
     };
-    const onKey = (e) => {
+    const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") close();
     };
     document.addEventListener("mousedown", onDocDown);
@@ -90,14 +123,14 @@ export default function Popover({
     };
   }, [open, close]);
 
-  const triggerProps = {};
+  const triggerProps: TriggerProps = {};
   if (trigger === "hover") {
     triggerProps.onMouseEnter = () => {
-      clearTimeout(hoverTimer.current);
+      if (hoverTimer.current) clearTimeout(hoverTimer.current);
       hoverTimer.current = setTimeout(openIt, HOVER_DELAY_MS);
     };
     triggerProps.onMouseLeave = () => {
-      clearTimeout(hoverTimer.current);
+      if (hoverTimer.current) clearTimeout(hoverTimer.current);
       hoverTimer.current = setTimeout(close, HOVER_DELAY_MS);
     };
   } else if (trigger === "tap") {
@@ -106,7 +139,7 @@ export default function Popover({
     triggerProps.onTouchStart = (e) => {
       const t = e.touches[0];
       touchStart.current = { x: t.clientX, y: t.clientY };
-      clearTimeout(longPressTimer.current);
+      if (longPressTimer.current) clearTimeout(longPressTimer.current);
       longPressTimer.current = setTimeout(openIt, LONG_PRESS_MS);
     };
     triggerProps.onTouchMove = (e) => {
@@ -115,16 +148,16 @@ export default function Popover({
       const dx = t.clientX - touchStart.current.x;
       const dy = t.clientY - touchStart.current.y;
       if (Math.hypot(dx, dy) > MOVE_TOLERANCE) {
-        clearTimeout(longPressTimer.current);
+        if (longPressTimer.current) clearTimeout(longPressTimer.current);
         touchStart.current = null;
       }
     };
     triggerProps.onTouchEnd = () => {
-      clearTimeout(longPressTimer.current);
+      if (longPressTimer.current) clearTimeout(longPressTimer.current);
       touchStart.current = null;
     };
     triggerProps.onTouchCancel = () => {
-      clearTimeout(longPressTimer.current);
+      if (longPressTimer.current) clearTimeout(longPressTimer.current);
       touchStart.current = null;
     };
   } else if (trigger === "right-click") {

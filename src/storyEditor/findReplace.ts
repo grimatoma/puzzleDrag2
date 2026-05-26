@@ -17,8 +17,11 @@
 // Pure module; no React.
 
 import { effectiveBeat, allBeatIds, isDraftBeat, draftBeats } from "./shared.jsx";
+import type { FindField, FindMatch, FindResult, StoryBeat, StoryChoice, StoryDraft } from "./types.js";
 
-function makeRegex(query: any, opts: any) {
+interface FindOpts { caseSensitive?: boolean; regex?: boolean }
+
+function makeRegex(query: string, opts?: FindOpts): RegExp | null {
   if (!query) return null;
   try {
     if (opts?.regex) return new RegExp(query, opts.caseSensitive ? "g" : "gi");
@@ -27,7 +30,9 @@ function makeRegex(query: any, opts: any) {
   } catch { return null; }
 }
 
-function* iterateText(beat: any, beatId: any) {
+interface TextEntry { beatId: string; field: FindField; index: number | null; text: string; speaker?: string | null; choiceId?: string | null }
+
+function* iterateText(beat: StoryBeat, beatId: string): Generator<TextEntry> {
   if (typeof beat?.title === "string" && beat.title) {
     yield { beatId, field: "title", index: null, text: beat.title };
   }
@@ -58,10 +63,10 @@ function* iterateText(beat: any, beatId: any) {
  * `snippet` is a short excerpt with the match highlighted via the
  * literal sentinel `«…»`, useful for preview rendering.
  */
-export function findInStory(draft: any, query: any, opts = {}) {
+export function findInStory(draft: StoryDraft | null | undefined, query: string, opts: FindOpts = {}): FindResult {
   const re = makeRegex(query, opts);
   if (!re) return { matches: [], total: 0 };
-  const matches = [];
+  const matches: FindMatch[] = [];
   let total = 0;
   for (const id of allBeatIds(draft)) {
     const beat = effectiveBeat(id, draft);
@@ -87,21 +92,21 @@ export function findInStory(draft: any, query: any, opts = {}) {
   return { matches, total };
 }
 
-function replaceField(beat: any, field: any, index: any, transform: any) {
+function replaceField(beat: StoryBeat, field: FindField, index: number | null, transform: (s: string) => string): StoryBeat {
   if (field === "title") {
     return { ...beat, title: transform(beat.title || "") };
   }
   if (field === "body") {
     return { ...beat, body: transform(beat.body || "") };
   }
-  if (field === "line") {
+  if (field === "line" && index !== null) {
     const lines = (beat.lines || []).slice();
     if (index >= 0 && index < lines.length) {
       lines[index] = { ...lines[index], text: transform(lines[index].text || "") };
     }
     return { ...beat, lines };
   }
-  if (field === "choice") {
+  if (field === "choice" && index !== null) {
     const choices = (beat.choices || []).slice();
     if (index >= 0 && index < choices.length) {
       choices[index] = { ...choices[index], label: transform(choices[index].label || "") };
@@ -119,12 +124,12 @@ function replaceField(beat: any, field: any, index: any, transform: any) {
  *
  * Pass the same `opts` used by `findInStory` so the regex matches.
  */
-export function applyReplacements(draft: any, query: any, replacement: any, opts = {}) {
+export function applyReplacements(draft: StoryDraft, query: string, replacement: string, opts: FindOpts = {}): StoryDraft {
   const re = makeRegex(query, opts);
   if (!re) return draft;
-  const result = JSON.parse(JSON.stringify(draft || {}));
+  const result: StoryDraft = JSON.parse(JSON.stringify(draft || {}));
   result.story = result.story || {};
-  const transform = (text: any) => text.replace(re, String(replacement ?? ""));
+  const transform = (text: string): string => text.replace(re, String(replacement ?? ""));
   for (const id of allBeatIds(result)) {
     const beat = effectiveBeat(id, result);
     if (!beat) continue;
@@ -139,17 +144,17 @@ export function applyReplacements(draft: any, query: any, replacement: any, opts
     // Store the replacement either in newBeats (for draft beats) or as a
     // patch under story.beats[id] (for built-ins / side beats).
     if (isDraftBeat(result, id)) {
-      const arr = (result.story.newBeats || []).slice();
-      const idx = arr.findIndex((b: any) => b && b.id === id);
+      const arr: StoryBeat[] = (result.story.newBeats || []).slice();
+      const idx = arr.findIndex((b: StoryBeat) => b && b.id === id);
       if (idx >= 0) arr[idx] = nextBeat;
       result.story.newBeats = arr;
     } else {
       result.story.beats = result.story.beats || {};
-      const existing = result.story.beats[id] || {};
-      const patch = { ...existing };
+      const existing = (result.story.beats[id] || {}) as Record<string, unknown>;
+      const patch: Record<string, unknown> = { ...existing };
       if (nextBeat.title !== beat.title || existing.title !== undefined) patch.title = nextBeat.title;
       if (Array.isArray(nextBeat.lines)) patch.lines = nextBeat.lines;
-      if (Array.isArray(nextBeat.choices)) patch.choices = nextBeat.choices;
+      if (Array.isArray(nextBeat.choices)) patch.choices = nextBeat.choices as StoryChoice[];
       if (typeof nextBeat.body === "string") patch.body = nextBeat.body;
       result.story.beats[id] = patch;
     }
@@ -158,13 +163,13 @@ export function applyReplacements(draft: any, query: any, replacement: any, opts
 }
 
 /** Convenience: count of unique beats touched by a given query. */
-export function affectedBeatCount(findResult: any) {
+export function affectedBeatCount(findResult: FindResult | null | undefined): number {
   if (!findResult) return 0;
-  return new Set(findResult.matches.map((m: any) => m.beatId)).size;
+  return new Set(findResult.matches.map((m) => m.beatId)).size;
 }
 
 /** Sanity helper used by the panel to gate the Apply button. */
-export function isReplacementSafe(query: any, replacement: any, opts: any) {
+export function isReplacementSafe(query: string, replacement: string, opts?: FindOpts): boolean {
   if (!query) return false;
   if (opts?.regex) {
     try { new RegExp(query, opts.caseSensitive ? "g" : "gi"); } catch { return false; }

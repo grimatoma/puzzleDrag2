@@ -1,11 +1,23 @@
 import { useRef, useState, useEffect } from "react";
+import type { MouseEvent as ReactMouseEvent } from "react";
 import Icon from "./Icon.jsx";
 
 const TAP_MAX_MS = 400;
 const LONG_PRESS_MS = 500;
 const HOVER_DWELL_MS = 1200;
 
-function CountBadge({ count }) {
+interface ToolEntry {
+  key: string;
+  iconKey: string;
+  label: string;
+  count: number;
+  category?: string;
+  def?: { desc?: string };
+  disabled?: boolean;
+  armed?: boolean;
+}
+
+function CountBadge({ count }: { count: number }) {
   return (
     <span
       aria-hidden="true"
@@ -16,11 +28,19 @@ function CountBadge({ count }) {
   );
 }
 
-function ToolCard({ tool, armed, dimmed, onUse, onInspect }) {
+interface ToolCardProps {
+  tool: ToolEntry;
+  armed?: boolean;
+  dimmed?: boolean;
+  onUse?: (key: string) => void;
+  onInspect?: (key: string) => void;
+}
+
+function ToolCard({ tool, armed, dimmed, onUse, onInspect }: ToolCardProps) {
   const tapStart = useRef(0);
-  const longPressTimer = useRef(null);
+  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const longPressFired = useRef(false);
-  const hoverTimer = useRef(null);
+  const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [tipOpen, setTipOpen] = useState(false);
 
   const isDisabled = (!armed && tool.disabled) || (!armed && tool.count === 0);
@@ -28,8 +48,8 @@ function ToolCard({ tool, armed, dimmed, onUse, onInspect }) {
 
   useEffect(
     () => () => {
-      clearTimeout(longPressTimer.current);
-      clearTimeout(hoverTimer.current);
+      if (longPressTimer.current) clearTimeout(longPressTimer.current);
+      if (hoverTimer.current) clearTimeout(hoverTimer.current);
     },
     []
   );
@@ -37,30 +57,30 @@ function ToolCard({ tool, armed, dimmed, onUse, onInspect }) {
   const beginPress = () => {
     tapStart.current = Date.now();
     longPressFired.current = false;
-    clearTimeout(longPressTimer.current);
+    if (longPressTimer.current) clearTimeout(longPressTimer.current);
     longPressTimer.current = setTimeout(() => {
       longPressFired.current = true;
-      onInspect ? onInspect(tool.key) : setTipOpen(true);
+      if (onInspect) onInspect(tool.key); else setTipOpen(true);
     }, LONG_PRESS_MS);
   };
   const endPress = () => {
-    clearTimeout(longPressTimer.current);
+    if (longPressTimer.current) clearTimeout(longPressTimer.current);
     const elapsed = Date.now() - tapStart.current;
     if (longPressFired.current) return;
     if (elapsed < TAP_MAX_MS) {
       if (isExhausted) {
-        onInspect ? onInspect(tool.key) : setTipOpen(true);
+        if (onInspect) onInspect(tool.key); else setTipOpen(true);
       } else {
         onUse?.(tool.key);
       }
     }
   };
   const cancelPress = () => {
-    clearTimeout(longPressTimer.current);
+    if (longPressTimer.current) clearTimeout(longPressTimer.current);
     longPressFired.current = false;
   };
 
-  const onContextMenu = (e) => {
+  const onContextMenu = (e: ReactMouseEvent) => {
     if (!onInspect) return;
     e.preventDefault();
     onInspect(tool.key);
@@ -68,11 +88,11 @@ function ToolCard({ tool, armed, dimmed, onUse, onInspect }) {
 
   const onMouseEnter = () => {
     if (onInspect) return;
-    clearTimeout(hoverTimer.current);
+    if (hoverTimer.current) clearTimeout(hoverTimer.current);
     hoverTimer.current = setTimeout(() => setTipOpen(true), HOVER_DWELL_MS);
   };
   const onMouseLeave = () => {
-    clearTimeout(hoverTimer.current);
+    if (hoverTimer.current) clearTimeout(hoverTimer.current);
     setTipOpen(false);
   };
 
@@ -92,9 +112,9 @@ function ToolCard({ tool, armed, dimmed, onUse, onInspect }) {
       aria-pressed={armed}
       onMouseDown={beginPress}
       onMouseUp={endPress}
-      onMouseLeave={(e) => {
+      onMouseLeave={() => {
         cancelPress();
-        onMouseLeave(e);
+        onMouseLeave();
       }}
       onMouseEnter={onMouseEnter}
       onTouchStart={beginPress}
@@ -122,6 +142,16 @@ function ToolCard({ tool, armed, dimmed, onUse, onInspect }) {
   );
 }
 
+interface ToolStripProps {
+  layout?: "grid" | "rail" | "sheet";
+  tools?: ToolEntry[];
+  armedKey?: string | null;
+  onUse?: (key: string) => void;
+  onInspect?: (key: string) => void;
+  grouped?: boolean;
+  className?: string;
+}
+
 export default function ToolStrip({
   layout = "grid",
   tools = [],
@@ -130,11 +160,11 @@ export default function ToolStrip({
   onInspect,
   grouped = false,
   className = "",
-}) {
+}: ToolStripProps) {
   const armedTool = armedKey ? tools.find((t) => t.key === armedKey) : null;
   const anyArmed = !!armedTool;
 
-  const renderCard = (tool) => (
+  const renderCard = (tool: ToolEntry) => (
     <ToolCard
       key={tool.key}
       tool={tool}
@@ -159,12 +189,12 @@ export default function ToolStrip({
         ))}
       </div>
     );
-  } else if (grouped && layout !== "rail") {
-    const byCat = new Map();
+  } else if (grouped) {
+    const byCat = new Map<string, ToolEntry[]>();
     for (const t of tools) {
       const cat = t.category || "general";
       if (!byCat.has(cat)) byCat.set(cat, []);
-      byCat.get(cat).push(t);
+      byCat.get(cat)!.push(t);
     }
     body = (
       <div className="flex flex-col gap-2.5">

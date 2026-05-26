@@ -16,7 +16,7 @@ import StatusChip from "../ui/primitives/StatusChip.jsx";
 
 export const COLORS = UI_COLORS;
 
-export function NumberField({ value: any, onChange: any, min = 0, max = 9999, step = 1, width = 70 }) {
+export function NumberField({ value, onChange, min = 0, max = 9999, step = 1, width = 70 }: { value: any; onChange: any; min?: any; max?: any; step?: any; width?: any }) {
   return (
     <BaseNumberInput
       value={value ?? 0}
@@ -30,7 +30,7 @@ export function NumberField({ value: any, onChange: any, min = 0, max = 9999, st
   );
 }
 
-export function TextField({ value: any, onChange: any, placeholder = "", width = "100%" }) {
+export function TextField({ value, onChange, placeholder = "", width = "100%" }: { value: any; onChange: any; placeholder?: any; width?: any }) {
   return (
     <BaseTextInput
       value={value ?? ""}
@@ -42,7 +42,7 @@ export function TextField({ value: any, onChange: any, placeholder = "", width =
   );
 }
 
-export function TextArea({ value: any, onChange: any, rows = 3, placeholder = "" }) {
+export function TextArea({ value, onChange, rows = 3, placeholder = "" }: { value: any; onChange: any; rows?: any; placeholder?: any }) {
   return (
     <BaseTextArea
       value={value ?? ""}
@@ -54,7 +54,7 @@ export function TextArea({ value: any, onChange: any, rows = 3, placeholder = ""
   );
 }
 
-export function Select({ value: any, onChange: any, options: any, width = "100%" }) {
+export function Select({ value, onChange, options, width = "100%" }: { value: any; onChange: any; options: any; width?: any }) {
   return (
     <BaseSelectField
       value={value ?? ""}
@@ -71,7 +71,7 @@ export function Select({ value: any, onChange: any, options: any, width = "100%"
   );
 }
 
-export function ColorField({ value: any, onChange: any }) {
+export function ColorField({ value, onChange }: { value: any; onChange: any }) {
   // value is a number (0xRRGGBB). Convert to/from hex string for <input type=color>.
   const toHex = (n: any) =>
     "#" + (Number.isFinite(n) ? n : 0).toString(16).padStart(6, "0").slice(-6);
@@ -92,8 +92,10 @@ export function ColorField({ value: any, onChange: any }) {
   );
 }
 
-export function SmallButton({ children, onClick, variant = "default", disabled = false, title, className = "" }: { children: React.ReactNode; onClick?: () => void; variant?: string; disabled?: boolean; title?: string; className?: string }) {
-  const styles = {
+export type SmallButtonVariant = "default" | "primary" | "success" | "danger" | "ghost";
+
+export function SmallButton({ children, onClick, variant = "default", disabled = false, title, className = "" }: { children: React.ReactNode; onClick?: () => void; variant?: SmallButtonVariant; disabled?: boolean; title?: string; className?: string }) {
+  const styles: Record<SmallButtonVariant, React.CSSProperties> = {
     default: { background: COLORS.parchmentDeep, borderColor: COLORS.border, color: COLORS.inkLight },
     primary: { background: COLORS.ember, borderColor: COLORS.emberDeep, color: "#fff" },
     success: { background: COLORS.green, borderColor: COLORS.greenDeep, color: "#fff" },
@@ -113,7 +115,7 @@ export function SmallButton({ children, onClick, variant = "default", disabled =
   );
 }
 
-export function Pill({ children: any, color = COLORS.inkSubtle, bg = COLORS.parchmentDeep }) {
+export function Pill({ children, color = COLORS.inkSubtle, bg = COLORS.parchmentDeep }: { children: any; color?: any; bg?: any }) {
   return (
     <StatusChip
       size="xs"
@@ -162,7 +164,7 @@ export function Card({ children, className = "", title, accent, id, cardRef, sty
   );
 }
 
-export function SearchBar({ value: any, onChange: any, placeholder = "Search…" }) {
+export function SearchBar({ value, onChange, placeholder = "Search…" }: { value: any; onChange: any; placeholder?: any }) {
   return (
     <BaseSearchInput
       value={value}
@@ -174,7 +176,7 @@ export function SearchBar({ value: any, onChange: any, placeholder = "Search…"
   );
 }
 
-export function FilterBar({ children: any, className = "" }) {
+export function FilterBar({ children, className = "" }: { children: any; className?: any }) {
   return (
     <div className={`flex items-center gap-2 flex-wrap ${className}`}>
       {children}
@@ -232,13 +234,13 @@ export function TileSwatch({ color, iconKey, size = 28 }: { color: number; iconK
   );
 }
 
-export function SearchAndAddPicker({
-  label = "Add Item",
-  placeholder = "Search...",
-  options = [],
-  onSelect: any,
-  gridClass = "grid-cols-2 md:grid-cols-3"
-}) {
+export interface SearchAndAddOption {
+  id: string;
+  searchText: string;
+  renderNode: React.ReactNode;
+}
+
+export function SearchAndAddPicker({ label = "Add Item", placeholder = "Search...", options = [], onSelect, gridClass = "grid-cols-2 md:grid-cols-3" }: { label?: React.ReactNode; placeholder?: string; options?: SearchAndAddOption[]; onSelect: (id: string) => void; gridClass?: string }) {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [query, setQuery] = useState("");
 
@@ -292,7 +294,7 @@ export function SearchAndAddPicker({
 
 /** Options for resource-key selects. Drawn from all biome resource lists (pre-filtered to kind:"resource"). */
 export function resourceKeyOptions() {
-  const set = new Set();
+  const set = new Set<string>();
   for (const b of Object.values(BIOMES))
     for (const r of b.resources)
       set.add(r.key);

@@ -1,6 +1,14 @@
 import { MARKET_PRICES } from "./constants.js";
+import type { GameState, Action } from "./types/state.js";
 
-export const MARKET_EVENTS = [
+export interface MarketEvent {
+  id: string;
+  label: string;
+  desc: string;
+  mults: Record<string, number>;
+}
+
+export const MARKET_EVENTS: MarketEvent[] = [
   { id: "wood_shortage", label: "Wood Shortage", desc: "Timber supplies are low. Logs and Planks are worth double!", mults: { tile_tree_oak: 2, plank: 2 } },
   { id: "bumper_crop",   label: "Bumper Crop",   desc: "The fields are overflowing. Hay and Wheat prices have crashed.", mults: { tile_grass_hay: 0.5, tile_grain_wheat: 0.5 } },
   { id: "iron_rush",     label: "Iron Rush",     desc: "The King's army is buying iron. Ingot prices are soaring!", mults: { tile_mine_iron_ore: 2.5 } },
@@ -8,14 +16,14 @@ export const MARKET_EVENTS = [
 ];
 
 // Deterministic 32-bit hash → [0, 1)
-function rand(seed, season, salt) {
+function rand(seed: number, season: number, salt: number): number {
   let x = (seed ^ (season * 73856093) ^ (salt * 19349663)) >>> 0;
   x = (x ^ (x >>> 16)) * 0x85ebca6b >>> 0;
   x = (x ^ (x >>> 13)) * 0xc2b2ae35 >>> 0;
   return ((x ^ (x >>> 16)) >>> 0) / 4294967296;
 }
 
-export function pickMarketEvent(seed, season) {
+export function pickMarketEvent(seed: number, season: number): MarketEvent | null {
   // 40% chance of an event each season
   const roll = rand(seed, season, 999);
   if (roll > 0.40) return null;
@@ -23,10 +31,17 @@ export function pickMarketEvent(seed, season) {
   return MARKET_EVENTS[idx];
 }
 
-export function driftPrices(seed, season, event = null) {
-  const out = {};
+export interface MarketPrice { buy: number; sell: number }
+
+export function driftPrices(
+  seed: number,
+  season: number,
+  event: MarketEvent | null = null,
+): Record<string, MarketPrice> {
+  const out: Record<string, MarketPrice> = {};
   let salt = 0;
-  for (const [k, base] of Object.entries(MARKET_PRICES)) {
+  const prices = MARKET_PRICES as Record<string, MarketPrice>;
+  for (const [k, base] of Object.entries(prices)) {
     let buyMul  = 0.85 + rand(seed, season, salt++) * 0.30; // [0.85, 1.15)
     let sellMul = 0.85 + rand(seed, season, salt++) * 0.30;
 
@@ -44,8 +59,10 @@ export function driftPrices(seed, season, event = null) {
   return out;
 }
 
-export function applyTrade(state, action) {
-  const { key, qty } = action.payload;
+export function applyTrade(state: GameState, action: Action): GameState {
+  const payload = action.payload as { key: string; qty: number } | undefined;
+  if (!payload) return state;
+  const { key, qty } = payload;
   const p = state.market.prices[key];
   if (!p) return state;
   if (action.type === "BUY_RESOURCE") {
@@ -71,8 +88,8 @@ export function applyTrade(state, action) {
 
 // Pure board helper: returns all [col, row] positions in a 3×3 area centred at (cx, cy),
 // clamped to the board dimensions (cols×rows). Used by Phaser Bomb tool.
-export function bombFootprint(cx, cy, cols, rows) {
-  const out = [];
+export function bombFootprint(cx: number, cy: number, cols: number, rows: number): Array<[number, number]> {
+  const out: Array<[number, number]> = [];
   for (let dy = -1; dy <= 1; dy++) {
     for (let dx = -1; dx <= 1; dx++) {
       const x = cx + dx, y = cy + dy;

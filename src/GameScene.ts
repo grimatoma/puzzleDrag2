@@ -930,7 +930,7 @@ export class GameScene extends Phaser.Scene {
               duration: this._dur(380),
               ease: "Back.Out",
             });
-            this.emitCollectParticles(x, y, res.color || "#ffd248", 4);
+            this.emitCollectParticles(x, y, (res as { color?: string }).color || "#ffd248", 4);
             this._upgradeSpawnBurst(x, y);
           } else {
             const tile = new TileObj(this, x, initial ? y - 500 - Phaser.Math.Between(0, 100) : y - 140, c, r, res);
@@ -1776,7 +1776,7 @@ export class GameScene extends Phaser.Scene {
   _emitChainUpdate() {
     const payload = buildChainUpdatePayload({
       path: this.path,
-      nextUpgradeTile: (res) => this.nextUpgradeTile(res),
+      nextUpgradeTile: (res: { key: string }) => this.nextUpgradeTile(res),
       effectiveThresholds: this.registry.get("effectiveThresholds"),
       effectiveMinChain: this._effectiveMinChain(),
     });
@@ -1793,7 +1793,7 @@ export class GameScene extends Phaser.Scene {
     this._shake(duration, intensity);
   }
 
-  radialFlash(x, y, len) {
+  radialFlash(x: number, y: number, len: number) {
     if (len < 3) return;
     const ring = this.add.graphics().setDepth(15);
     const startR = 10 * this.tileScale;
@@ -1814,7 +1814,7 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
-  upgradeBurst(x, y) {
+  upgradeBurst(x: number, y: number) {
     const flash = this.add.graphics().setDepth(14);
     const obj = { r: 4 * this.tileScale, a: 0.85 };
     this.tweens.add({
@@ -1832,7 +1832,7 @@ export class GameScene extends Phaser.Scene {
 
   // ─── Floater (resource-gain text per tile) ────────────────────────────────
 
-  floatText(msg, x, y) {
+  floatText(msg: string, x: number, y: number) {
     const dpr = this.dpr;
     const t = this.add.text(x, y, msg, { fontFamily: "Arial", fontSize: `${22 * dpr}px`, color: cssColor(FLOAT_TEXT_COLOR), fontStyle: "bold", stroke: "#000", strokeThickness: 5 * dpr }).setOrigin(0.5).setDepth(20).setScale(0.7);
     this.tweens.add({ targets: t, scale: 1, duration: 120, ease: "Back.Out" });
@@ -1841,7 +1841,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   // Called every frame by Phaser. Drives the per-tile ambient sway.
-  update(time) {
+  override update(time: number) {
     for (let r = 0; r < ROWS; r++) {
       const row = this.grid[r];
       if (!row) continue;

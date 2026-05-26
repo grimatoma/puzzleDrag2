@@ -5,10 +5,13 @@
 // cruelest ends at -2 — is that the right spread?"
 
 import { useMemo, useEffect } from "react";
-import { C, NPCS, Portrait, effectiveBeat } from "./shared.jsx";
+import { C, npcByKey, Portrait, effectiveBeat } from "./shared.jsx";
 import { simulateAllPlaythroughs } from "./playthroughs.js";
+import type { PlaythroughResult, StoryDraft, TerminalReason } from "./types.js";
 
-const STRATEGY_TONE = {
+interface StrategyToneEntry { fg: string; bg: string }
+
+const STRATEGY_TONE: Record<string, StrategyToneEntry> = {
   first:    { fg: C.inkLight,   bg: C.parchmentDeep },
   kindest:  { fg: C.greenDeep,  bg: "rgba(90,158,75,0.10)" },
   cruelest: { fg: C.redDeep,    bg: "rgba(194,59,34,0.10)" },
@@ -16,12 +19,12 @@ const STRATEGY_TONE = {
   bargain:  { fg: C.emberDeep,  bg: "rgba(214,97,42,0.10)" },
 };
 
-const REASON_LABEL = {
+const REASON_LABEL: Record<TerminalReason, string> = {
   "ends-here": "ENDS", "no-target": "OPEN", "loop": "LOOP",
   "depth-cap": "DEEP", "missing-target": "BAD",
 };
 
-function StateRow({ label: any, value: any, accent: any }) {
+function StateRow({ label, value, accent }: { label: string; value: number; accent: string }) {
   const v = value || 0;
   return (
     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between",
@@ -36,7 +39,7 @@ function StateRow({ label: any, value: any, accent: any }) {
   );
 }
 
-function StrategyColumn({ result: any }) {
+function StrategyColumn({ result }: { result: PlaythroughResult }) {
   const tone = STRATEGY_TONE[result.strategy] || STRATEGY_TONE.first;
   const reason = REASON_LABEL[result.terminalReason] || result.terminalReason;
   return (
@@ -54,7 +57,7 @@ function StrategyColumn({ result: any }) {
         </div>
       </header>
       <div style={{ padding: "6px 0", borderBottom: `1px solid ${C.border}66`, maxHeight: 180, overflowY: "auto" }}>
-        {result.steps.map((s: any, i: any) => (
+        {result.steps.map((s, i) => (
           <div key={`${s.beatId}-${i}`} style={{ padding: "3px 10px",
             font: "500 10px/1.3 system-ui", color: C.inkLight,
             display: "flex", alignItems: "center", gap: 5 }}>
@@ -76,17 +79,21 @@ function StrategyColumn({ result: any }) {
         <StateRow label="Core ◈"     value={result.finalState.coreIngots} accent={C.inkLight} />
         <StateRow label="Gems ◆"     value={result.finalState.gems}       accent="#5a3d83" />
         <StateRow label="Coins ¢"    value={result.finalState.coins}      accent="#7a5810" />
-        {Object.entries(result.finalState.bonds).map(([npc, amt]) => (
-          <div key={npc} style={{ display: "flex", alignItems: "center", gap: 6,
-            padding: "3px 8px", font: "500 11px/1.3 system-ui", color: C.ink }}>
-            <Portrait npcKey={npc} size={14} />
-            <span style={{ flex: 1, color: NPCS[npc]?.color || C.ink }}>{NPCS[npc]?.name || npc}</span>
-            <span style={{ font: "700 11px/1 ui-monospace,monospace",
-              color: amt > 0 ? C.greenDeep : (amt < 0 ? C.redDeep : C.inkSubtle) }}>
-              {amt > 0 ? `+${amt}` : amt}
-            </span>
-          </div>
-        ))}
+        {Object.entries(result.finalState.bonds).map(([npc, amt]) => {
+          const value = amt as number;
+          const npcInfo = npcByKey(npc);
+          return (
+            <div key={npc} style={{ display: "flex", alignItems: "center", gap: 6,
+              padding: "3px 8px", font: "500 11px/1.3 system-ui", color: C.ink }}>
+              <Portrait npcKey={npc} size={14} />
+              <span style={{ flex: 1, color: npcInfo?.color || C.ink }}>{npcInfo?.name || npc}</span>
+              <span style={{ font: "700 11px/1 ui-monospace,monospace",
+                color: value > 0 ? C.greenDeep : (value < 0 ? C.redDeep : C.inkSubtle) }}>
+                {value > 0 ? `+${value}` : value}
+              </span>
+            </div>
+          );
+        })}
       </div>
       <div style={{ padding: "5px 10px", background: C.parchmentDeep,
         font: "italic 400 9px/1.3 system-ui", color: C.inkSubtle }}>
@@ -96,7 +103,15 @@ function StrategyColumn({ result: any }) {
   );
 }
 
-export default function PlaythroughPanel({ open: any, draft: any, anchorBeatId: any, onClose: any, onJumpToBeat: any }) {
+export interface PlaythroughPanelProps {
+  open: boolean;
+  draft: StoryDraft;
+  anchorBeatId: string | null;
+  onClose: () => void;
+  onJumpToBeat?: (id: string) => void;
+}
+
+export default function PlaythroughPanel({ open, draft, anchorBeatId, onClose, onJumpToBeat }: PlaythroughPanelProps) {
   const results = useMemo(() => {
     if (!anchorBeatId) return [];
     return simulateAllPlaythroughs(anchorBeatId, draft);

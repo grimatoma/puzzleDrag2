@@ -3,17 +3,21 @@ import { BOSS_UI } from "./uiMeta.js";
 import IconCanvas, { hasIcon } from "../../ui/IconCanvas.jsx";
 import { StoryDialog } from "../../ui/primitives/Dialog.jsx";
 import { ProgressBar } from "../../ui/primitives/ActionCard.jsx";
+import type { GameState, Dispatch } from "../../types/state.js";
+import type { BossState } from "./slice.js";
 
 export const modalKey = "boss";
 export const alwaysMounted = true;
 
-function bossPortraitKey(boss) {
+function bossPortraitKey(boss: BossState | null | undefined): string | null {
   if (!boss) return null;
   const k = `boss_${boss.key || boss.id}`;
   return hasIcon(k) ? k : null;
 }
 
-function WarningGlyph({ size = 14 }) {
+interface GlyphProps { size?: number }
+
+function WarningGlyph({ size = 14 }: GlyphProps) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
       <path d="M12 3 L22 20 H2 Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
@@ -23,8 +27,14 @@ function WarningGlyph({ size = 14 }) {
   );
 }
 
-function BossModal({ boss, year = 1, dispatch }) {
-  const meta = BOSS_UI[boss.key] || {};
+interface BossModalProps {
+  boss: BossState;
+  year?: number;
+  dispatch: Dispatch;
+}
+
+function BossModal({ boss, year = 1, dispatch }: BossModalProps) {
+  const meta = (BOSS_UI as Record<string, { displayName?: string; emoji?: string; flavor?: string; goal?: string }>)[boss.key] || {};
   const pct = boss.targetCount > 0
     ? Math.min(100, Math.round((boss.progress / boss.targetCount) * 100))
     : 0;
@@ -171,9 +181,15 @@ function BossModal({ boss, year = 1, dispatch }) {
   );
 }
 
-export default function BossFeature({ state, dispatch }) {
-  const { boss, bossMinimized } = state;
-  const year = state.year ?? Math.max(1, Math.ceil(((state._bossSeasonCount ?? 0) / 4)));
+interface BossFeatureProps {
+  state: GameState;
+  dispatch: Dispatch;
+}
+
+export default function BossFeature({ state, dispatch }: BossFeatureProps) {
+  const s = state as GameState & { boss?: BossState | null; bossMinimized?: boolean; year?: number; _bossSeasonCount?: number; modal?: string | null };
+  const { boss, bossMinimized } = s;
+  const year = s.year ?? Math.max(1, Math.ceil(((s._bossSeasonCount ?? 0) / 4)));
 
   if (!boss) return null;
 
@@ -182,7 +198,7 @@ export default function BossFeature({ state, dispatch }) {
   }
 
   // Only show the blocking full modal when modal === 'boss' (board is locked)
-  if (state.modal !== "boss") return null;
+  if (s.modal !== "boss") return null;
 
   return <BossModal boss={boss} year={year} dispatch={dispatch} />;
 }

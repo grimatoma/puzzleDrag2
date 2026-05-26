@@ -1,9 +1,26 @@
 import { useEffect, useRef, useState, useId } from "react";
+import type { ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { useExitTransition } from "./useExitTransition.js";
 
 const CLOSE_THRESHOLD_PX = 80;
 const SHEET_EXIT_MS = 200;
+
+interface BottomSheetProps {
+  open: boolean;
+  onClose?: () => void;
+  snapPoints?: number[];
+  initialSnap?: number;
+  dismissible?: boolean;
+  title?: ReactNode;
+  children?: ReactNode;
+  className?: string;
+}
+
+interface DragState {
+  startY: number;
+  pointerId: number;
+}
 
 export default function BottomSheet({
   open,
@@ -14,9 +31,9 @@ export default function BottomSheet({
   title,
   children,
   className = "",
-}) {
-  const sheetRef = useRef(null);
-  const dragRef = useRef(null);
+}: BottomSheetProps) {
+  const sheetRef = useRef<HTMLDivElement | null>(null);
+  const dragRef = useRef<DragState | null>(null);
   const titleId = useId();
 
   const sorted = [...snapPoints].sort((a, b) => a - b);
@@ -28,7 +45,7 @@ export default function BottomSheet({
 
   useEffect(() => {
     if (!open || !dismissible) return;
-    const onKey = (e) => {
+    const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         e.stopPropagation();
         onClose?.();
@@ -38,7 +55,7 @@ export default function BottomSheet({
     return () => document.removeEventListener("keydown", onKey, true);
   }, [open, dismissible, onClose]);
 
-  const onPointerDown = (e) => {
+  const onPointerDown = (e: React.PointerEvent<HTMLElement>) => {
     if (!dismissible) return;
     if (e.button != null && e.button !== 0) return;
     dragRef.current = { startY: e.clientY, pointerId: e.pointerId };
@@ -46,13 +63,13 @@ export default function BottomSheet({
     e.currentTarget.setPointerCapture?.(e.pointerId);
   };
 
-  const onPointerMove = (e) => {
+  const onPointerMove = (e: React.PointerEvent<HTMLElement>) => {
     if (!dragRef.current) return;
     const dy = e.clientY - dragRef.current.startY;
     setDragOffset(Math.max(0, dy));
   };
 
-  const onPointerUp = (e) => {
+  const onPointerUp = (e: React.PointerEvent<HTMLElement>) => {
     if (!dragRef.current) return;
     const dy = e.clientY - dragRef.current.startY;
     e.currentTarget.releasePointerCapture?.(dragRef.current.pointerId);
@@ -68,7 +85,7 @@ export default function BottomSheet({
     setDragOffset(0);
   };
 
-  const onBackdrop = (e) => {
+  const onBackdrop = (e: React.MouseEvent<HTMLDivElement>) => {
     if (e.target === e.currentTarget && dismissible) onClose?.();
   };
 

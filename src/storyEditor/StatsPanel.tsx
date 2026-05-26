@@ -4,26 +4,27 @@
 // elsewhere (the validation panel covers warning-driven navigation).
 
 import { useMemo } from "react";
-import { C, NPCS, Portrait } from "./shared.jsx";
+import { C, npcByKey, Portrait } from "./shared.jsx";
 import { computeStoryStats, NARRATOR_SPEAKER } from "./storyStats.js";
 import MetricCard from "../ui/primitives/MetricCard.jsx";
+import type { StoryDraft } from "./types.js";
 
-function formatPercent(n: any) {
+function formatPercent(n: number): string {
   if (!Number.isFinite(n)) return "—";
   return `${Math.round(n * 100)}%`;
 }
 
-function formatAvg(n: any) {
+function formatAvg(n: number): string {
   if (!Number.isFinite(n) || n === 0) return "—";
   return n.toFixed(1);
 }
 
-function formatSigned(n: any) {
+function formatSigned(n: number): string {
   if (!Number.isFinite(n) || n === 0) return "0";
   return n > 0 ? `+${n}` : String(n);
 }
 
-export default function StatsPanel({ draft: any }) {
+export default function StatsPanel({ draft }: { draft: StoryDraft }) {
   const stats = useMemo(() => computeStoryStats(draft), [draft]);
   const topNpcLines = Math.max(1, ...stats.npcs.map((n) => n.lines));
 
@@ -34,7 +35,7 @@ export default function StatsPanel({ draft: any }) {
           color: C.inkSubtle, marginBottom: 6 }}>Story totals</div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: 8 }}>
           <MetricCard align="left" label="Beats" value={stats.totalBeats} hint={stats.draftBeats ? `+${stats.draftBeats} drafts` : "all built-in"} />
-          <MetricCard align="left" label="Dialogue lines" value={stats.totalLines} />
+          <MetricCard align="left" label="Dialogue lines" value={stats.totalLines} hint={undefined} />
           <MetricCard align="left" label="Words" value={stats.totalWords.toLocaleString()} hint={`avg ${Math.round(stats.totalWords / Math.max(1, stats.totalLines))} per line`} />
           <MetricCard align="left" label="Choices" value={stats.totalChoices} hint={`across ${stats.beatsWithChoices} forks`} />
           <MetricCard label="Fork density" value={formatPercent(stats.forkDensity)}
@@ -52,9 +53,9 @@ export default function StatsPanel({ draft: any }) {
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: 8 }}>
           <MetricCard align="left" label="Flag sets" value={stats.flagOps.sets} hint={`${stats.flagOps.clears} clears`} />
           <MetricCard align="left" label="Coins (Σ)" value={formatSigned(stats.currency.coins)} hint="sum across all choices" />
-          <MetricCard align="left" label="Embers (Σ)" value={formatSigned(stats.currency.embers)} />
-          <MetricCard align="left" label="Core ingots (Σ)" value={formatSigned(stats.currency.coreIngots)} />
-          <MetricCard align="left" label="Gems (Σ)" value={formatSigned(stats.currency.gems)} />
+          <MetricCard align="left" label="Embers (Σ)" value={formatSigned(stats.currency.embers)} hint={undefined} />
+          <MetricCard align="left" label="Core ingots (Σ)" value={formatSigned(stats.currency.coreIngots)} hint={undefined} />
+          <MetricCard align="left" label="Gems (Σ)" value={formatSigned(stats.currency.gems)} hint={undefined} />
         </div>
       </section>
 
@@ -70,7 +71,7 @@ export default function StatsPanel({ draft: any }) {
           </div>
           {stats.npcs.map((n) => {
             const isNar = n.key === NARRATOR_SPEAKER;
-            const npc = NPCS[n.key];
+            const npc = npcByKey(n.key);
             const name = isNar ? "Narrator" : (npc?.name || n.key);
             const pct = n.lines / topNpcLines;
             return (

@@ -1,7 +1,9 @@
 import { createContext, useContext } from "react";
+import type { ReactNode } from "react";
 import AutoFitText from "./AutoFitText.jsx";
 
-const ScreenCtx = createContext({ tone: "dark" });
+interface ScreenCtxValue { tone: "dark" | "light" }
+const ScreenCtx = createContext<ScreenCtxValue>({ tone: "dark" });
 
 function BackArrow() {
   return (
@@ -11,7 +13,22 @@ function BackArrow() {
   );
 }
 
-export default function Screen({ title, onBack, tone = "dark", className = "", children }) {
+interface ScreenProps {
+  title?: ReactNode;
+  onBack?: () => void;
+  tone?: "dark" | "light";
+  className?: string;
+  children?: ReactNode;
+}
+
+interface ScreenComponent {
+  (props: ScreenProps): JSX.Element;
+  Filters: typeof Filters;
+  Body: typeof Body;
+  FooterBar: typeof FooterBar;
+}
+
+const Screen: ScreenComponent = (({ title, onBack, tone = "dark", className = "", children }: ScreenProps) => {
   const isLight = tone === "light";
   // Lifted palette: both tones live in the parchment family now. "dark" keeps
   // the API but renders a slightly warmer parchment + ink stack to differentiate
@@ -54,9 +71,11 @@ export default function Screen({ title, onBack, tone = "dark", className = "", c
       </div>
     </ScreenCtx.Provider>
   );
-}
+}) as ScreenComponent;
 
-function Filters({ className = "", children }) {
+interface SubBlockProps { className?: string; children?: ReactNode }
+
+function Filters({ className = "", children }: SubBlockProps) {
   const { tone } = useContext(ScreenCtx);
   const surface = tone === "light"
     ? "bg-parchment/80 border-iron-edge"
@@ -68,7 +87,7 @@ function Filters({ className = "", children }) {
   );
 }
 
-function Body({ className = "", children }) {
+function Body({ className = "", children }: SubBlockProps) {
   return (
     <div
       className={`flex-1 min-h-0 overflow-y-auto px-4 py-3 ${className}`}
@@ -79,7 +98,7 @@ function Body({ className = "", children }) {
   );
 }
 
-function FooterBar({ className = "", children }) {
+function FooterBar({ className = "", children }: SubBlockProps) {
   const { tone } = useContext(ScreenCtx);
   const surface = tone === "light"
     ? "bg-parchment-soft/95 border-iron-edge"
@@ -96,3 +115,5 @@ function FooterBar({ className = "", children }) {
 Screen.Filters = Filters;
 Screen.Body = Body;
 Screen.FooterBar = FooterBar;
+
+export default Screen;

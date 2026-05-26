@@ -58,15 +58,15 @@ function Content({ className = "", children }: { className?: string; children?: 
   return <div className={cx("flex-1 min-w-0", className)}>{children}</div>;
 }
 
-function Title({ className = "", children }) {
+function Title({ className = "", children }: { className?: string; children?: any }) {
   return <div className={cx("hl-card-title leading-tight", className)}>{children}</div>;
 }
 
-function Meta({ className = "", children }) {
+function Meta({ className = "", children }: { className?: string; children?: any }) {
   return <div className={cx("hl-card-meta leading-snug", className)}>{children}</div>;
 }
 
-function Actions({ className = "", children }) {
+function Actions({ className = "", children }: { className?: string; children?: any }) {
   return <div className={cx("flex-shrink-0 flex items-center gap-1.5", className)}>{children}</div>;
 }
 

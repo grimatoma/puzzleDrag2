@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { RECIPES, ITEMS, recipeCraftMs } from "../../constants.js";
 import { DECORATIONS } from "../decorations/data.js";
-import { effectiveRecipeInputs } from "./slice.js";
+import { effectiveRecipeInputs, type CraftQueueEntry } from "./slice.js";
 import IconCanvas, { hasIcon } from "../../ui/IconCanvas.jsx";
 import { locBuilt } from "../../locBuilt.js";
 import Icon from "../../ui/Icon.jsx";
 import DesignIcon from "../../ui/primitives/Icon.jsx";
-import FeaturePanel from "../../ui/primitives/FeaturePanel.jsx";
+import { FeaturePanel } from "../_shared/uiTypes.js";
 import {
   BrowserDetailLayout,
   BrowserGrid,
@@ -15,10 +15,40 @@ import {
   DetailActionButton,
   DetailPane,
 } from "../../ui/primitives/BrowserDetail.jsx";
+import type { CSSProperties } from "react";
+import type { GameState, Dispatch } from "../../types/state.js";
 
 export const viewKey = "crafting";
 
-function LockGlyph({ size = 12 }) {
+interface RecipeDef {
+  item: string;
+  station: string;
+  inputs: Record<string, number>;
+  tier?: number;
+  desc?: string;
+  coins?: number;
+}
+
+interface ItemDef {
+  label?: string;
+  desc?: string;
+  kind?: string;
+}
+
+interface DecorDef {
+  id: string;
+  name: string;
+  influence: number;
+  cost: Record<string, number>;
+}
+
+interface StationMeta {
+  label: string;
+  iconKey: string;
+  bg: string;
+}
+
+function LockGlyph({ size = 12 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
       <rect x="5" y="11" width="14" height="9" rx="2" stroke="currentColor" strokeWidth="2" />
@@ -27,7 +57,7 @@ function LockGlyph({ size = 12 }) {
   );
 }
 
-const STATION_META = {
+const STATION_META: Record<string, StationMeta> = {
   bakery:   { label: "Bakery",   iconKey: "station_bakery",   bg: "#c08458" },
   forge:    { label: "Forge",    iconKey: "station_forge",    bg: "#8898a4" },
   larder:   { label: "Larder",   iconKey: "station_larder",   bg: "#7a9658" },
@@ -38,11 +68,11 @@ const STATION_META = {
 // Ordered list of all stations (decor appended)
 const STATION_ORDER = ["bakery", "larder", "forge", "workshop", "decor"];
 
-function stationBuilt(built, station) {
+function stationBuilt(built: Record<string, unknown> | null | undefined, station: string): boolean {
   return !!(built && built[station]);
 }
 
-function canCraft(recipe, inputs, inventory, built, level) {
+function canCraft(recipe: RecipeDef, inputs: Record<string, number>, inventory: Record<string, number>, built: Record<string, unknown>, level: number): boolean {
   if (recipe.tier === 2 && level < 3) return false;
   if (!stationBuilt(built, recipe.station)) return false;
   for (const [res, need] of Object.entries(inputs)) {
@@ -51,14 +81,27 @@ function canCraft(recipe, inputs, inventory, built, level) {
   return true;
 }
 
-function RecipeBrowserItem({ recipeKey, recipe, selected, inventory, built, level, craftedTotals, state, onSelect }) {
+interface RecipeBrowserItemProps {
+  recipeKey: string;
+  recipe: RecipeDef;
+  selected: boolean;
+  inventory: Record<string, number>;
+  built: Record<string, unknown>;
+  level: number;
+  craftedTotals: Record<string, number>;
+  state: GameState;
+  onSelect: () => void;
+}
+
+function RecipeBrowserItem({ recipeKey, recipe, selected, inventory, built, level, craftedTotals, state, onSelect }: RecipeBrowserItemProps) {
   const inputs = effectiveRecipeInputs(state, recipeKey, recipe.inputs);
   const craftable = canCraft(recipe, inputs, inventory, built, level);
   const stationOk = stationBuilt(built, recipe.station);
   const levelOk = !(recipe.tier === 2 && level < 3);
   const timesBuilt = (craftedTotals || {})[recipeKey] || 0;
 
-  const itemDef = ITEMS[recipe.item] || {};
+  const itemMap = ITEMS as unknown as Record<string, ItemDef | undefined>;
+  const itemDef = itemMap[recipe.item] || {};
   const itemName = itemDef.label || recipe.item;
 
   return (
@@ -75,17 +118,28 @@ function RecipeBrowserItem({ recipeKey, recipe, selected, inventory, built, leve
   );
 }
 
-function RecipeDetail({ recipeKey, recipe, inventory, built, level, state, dispatch }) {
-  if (!recipe) return <DetailPane empty="Select a recipe to inspect it." />;
+interface RecipeDetailProps {
+  recipeKey?: string;
+  recipe?: RecipeDef;
+  inventory: Record<string, number>;
+  built: Record<string, unknown>;
+  level: number;
+  state: GameState;
+  dispatch: Dispatch;
+}
+
+function RecipeDetail({ recipeKey, recipe, inventory, built, level, state, dispatch }: RecipeDetailProps) {
+  if (!recipe || !recipeKey) return <DetailPane empty="Select a recipe to inspect it." />;
   const inputs = effectiveRecipeInputs(state, recipeKey, recipe.inputs);
   const craftable = canCraft(recipe, inputs, inventory, built, level);
   const stationOk = stationBuilt(built, recipe.station);
   const levelOk = !(recipe.tier === 2 && level < 3);
-  const itemDef = ITEMS[recipe.item] || {};
+  const itemMap = ITEMS as unknown as Record<string, ItemDef | undefined>;
+  const itemDef = itemMap[recipe.item] || {};
   const itemName = itemDef.label || recipe.item;
-  const entries = Object.entries(inputs).map(([res, need]) => ({
+  const entries = Object.entries(inputs).map(([res, need]: [string, number]) => ({
     key: res,
-    label: ITEMS[res]?.label || res,
+    label: itemMap[res]?.label || res,
     amount: need,
     icon: <Icon iconKey={res} size={18} />,
     have: (inventory || {})[res] || 0,
@@ -135,7 +189,7 @@ function RecipeDetail({ recipeKey, recipe, inventory, built, level, state, dispa
 //   above the recipe browser: ring-progress icon, name + countdown, claim/skip,
 //   and small icon chips for up-next.
 // • Empty station ⇒ no strip, zero wasted real estate.
-function fmtDuration(ms) {
+function fmtDuration(ms: number): string {
   if (ms <= 0) return "0s";
   const h = Math.floor(ms / 3_600_000);
   const m = Math.floor((ms % 3_600_000) / 60_000);
@@ -145,7 +199,9 @@ function fmtDuration(ms) {
   return `${s}s`;
 }
 
-function entryProgress(entry, now) {
+interface EntryProgress { duration: number; remaining: number; pct: number; isReady: boolean }
+
+function entryProgress(entry: CraftQueueEntry | undefined, now: number): EntryProgress {
   const start = entry?.startAt ?? entry?.queuedAt ?? now;
   const ready = entry?.readyAt ?? start;
   const duration = entry?.durationMs ?? Math.max(1, ready - start);
@@ -155,9 +211,16 @@ function entryProgress(entry, now) {
   return { duration, remaining, pct, isReady: remaining <= 0 };
 }
 
+interface ProgressRingProps {
+  iconKey: string;
+  pct: number;
+  ready: boolean;
+  size?: number;
+}
+
 // Small ring-progress with the recipe icon centered. The ring fills as the
 // head crafts; turns green and pulses when ready.
-function ProgressRingIcon({ iconKey, pct, ready, size = 52 }) {
+function ProgressRingIcon({ iconKey, pct, ready, size = 52 }: ProgressRingProps) {
   const stroke = 3;
   const r = (size - stroke) / 2;
   const c = 2 * Math.PI * r;
@@ -190,16 +253,26 @@ function ProgressRingIcon({ iconKey, pct, ready, size = 52 }) {
   );
 }
 
+interface StationQueueStripProps {
+  station: string;
+  queue: CraftQueueEntry[] | undefined;
+  gems: number | undefined;
+  dispatch: Dispatch;
+  now: number;
+}
+
 // Compact single-row strip rendered above the active station's recipe browser
 // when that station has a non-empty queue. `now` is owned by the parent so
 // all per-station indicators share one ticker.
-function StationQueueStrip({ station, queue, gems, dispatch, now }) {
+function StationQueueStrip({ station, queue, gems, dispatch, now }: StationQueueStripProps) {
   if (!queue || queue.length === 0) return null;
 
   const head = queue[0];
-  const tail = queue.slice(1);
-  const recipe = RECIPES[head.key];
-  const itemDef = ITEMS[recipe?.item] || {};
+  const tail: CraftQueueEntry[] = queue.slice(1);
+  const recipeMap = RECIPES as unknown as Record<string, RecipeDef | undefined>;
+  const itemMap = ITEMS as unknown as Record<string, ItemDef | undefined>;
+  const recipe = recipeMap[head.key];
+  const itemDef = recipe ? (itemMap[recipe.item] || {}) : {};
   const itemName = itemDef.label ?? recipe?.item ?? head.key;
   const { duration, remaining, pct, isReady } = entryProgress(head, now);
   const visibleTail = tail.slice(0, 4);
@@ -246,13 +319,13 @@ function StationQueueStrip({ station, queue, gems, dispatch, now }) {
       {tail.length > 0 && (
         <div className="craft-strip-upnext" aria-label={`${tail.length} more in queue`}>
           <span className="craft-strip-upnext-label">Next</span>
-          {visibleTail.map((entry, i) => (
+          {visibleTail.map((entry: CraftQueueEntry, i: number) => (
             <span
               key={`${entry.key}-${entry.queuedAt}-${i}`}
               className="craft-strip-upnext-chip"
-              title={ITEMS[RECIPES[entry.key]?.item]?.label ?? entry.key}
+              title={recipeMap[entry.key]?.item ? itemMap[recipeMap[entry.key]!.item]?.label : entry.key}
             >
-              <Icon iconKey={RECIPES[entry.key]?.item ?? entry.key} size={20} />
+              <Icon iconKey={recipeMap[entry.key]?.item ?? entry.key} size={20} />
             </span>
           ))}
           {tailOverflow > 0 && (
@@ -264,9 +337,14 @@ function StationQueueStrip({ station, queue, gems, dispatch, now }) {
   );
 }
 
+interface StationTabIndicatorProps {
+  queue: CraftQueueEntry[] | undefined;
+  now: number;
+}
+
 // Per-tab queue indicator: a small badge (count + ready-dot) plus a 2px
 // progress hair anchored to the bottom of the tab.
-function StationTabIndicator({ queue, now }) {
+function StationTabIndicator({ queue, now }: StationTabIndicatorProps) {
   if (!queue || queue.length === 0) return null;
   const head = queue[0];
   const { pct, isReady } = entryProgress(head, now);
@@ -284,10 +362,16 @@ function StationTabIndicator({ queue, now }) {
   );
 }
 
-function canAffordDecor(decor, state) {
+interface DecorHostState {
+  coins?: number;
+  inventory?: Record<string, number>;
+}
+
+function canAffordDecor(decor: DecorDef, state: GameState): boolean {
+  const s = state as unknown as DecorHostState;
   const { cost } = decor;
-  if ((state.coins ?? 0) < (cost.coins ?? 0)) return false;
-  const inv = state.inventory ?? {};
+  if ((s.coins ?? 0) < (cost.coins ?? 0)) return false;
+  const inv: Record<string, number> = s.inventory ?? {};
   for (const [k, v] of Object.entries(cost)) {
     if (k === "coins") continue;
     if ((inv[k] ?? 0) < v) return false;
@@ -295,7 +379,7 @@ function canAffordDecor(decor, state) {
   return true;
 }
 
-function DecorIcon({ decor, size = 42 }) {
+function DecorIcon({ decor, size = 42 }: { decor: DecorDef; size?: number }) {
   const decorIconKey = `decor_${decor.id}`;
   if (hasIcon(decorIconKey)) {
     return <IconCanvas iconKey={decorIconKey} size={size} />;
@@ -307,23 +391,33 @@ function DecorIcon({ decor, size = 42 }) {
   );
 }
 
-function decorCostEntries(decor, state) {
-  const inv = state.inventory ?? {};
-  return Object.entries(decor.cost ?? {}).map(([key, amount]) => ({
+function decorCostEntries(decor: DecorDef, state: GameState) {
+  const s = state as unknown as DecorHostState;
+  const inv: Record<string, number> = s.inventory ?? {};
+  const itemMap = ITEMS as unknown as Record<string, ItemDef | undefined>;
+  return Object.entries(decor.cost ?? {}).map(([key, amount]: [string, number]) => ({
     key,
-    label: key === "coins" ? "Coins" : ITEMS[key]?.label || key,
+    label: key === "coins" ? "Coins" : itemMap[key]?.label || key,
     amount,
     icon: key === "coins" ? <DesignIcon iconKey="design.currency.coin" size={18} /> : <Icon iconKey={key} size={18} />,
-    have: key === "coins" ? (state.coins ?? 0) : (inv[key] ?? 0),
+    have: key === "coins" ? (s.coins ?? 0) : (inv[key] ?? 0),
     showHave: true,
     check: true,
-    ok: key === "coins" ? (state.coins ?? 0) >= amount : (inv[key] ?? 0) >= amount,
+    ok: key === "coins" ? (s.coins ?? 0) >= amount : (inv[key] ?? 0) >= amount,
   }));
 }
 
-function DecorationBrowserItem({ decor, state, selected, onSelect }) {
+interface DecorBrowserItemProps {
+  decor: DecorDef;
+  state: GameState;
+  selected: boolean;
+  onSelect: () => void;
+}
+
+function DecorationBrowserItem({ decor, state, selected, onSelect }: DecorBrowserItemProps) {
   const affordable = canAffordDecor(decor, state);
-  const count = locBuilt(state).decorations?.[decor.id] ?? 0;
+  const builtAt = (locBuilt(state) as { decorations?: Record<string, number> }).decorations ?? {};
+  const count: number = builtAt[decor.id] ?? 0;
   return (
     <BrowserItemButton
       selected={selected}
@@ -338,10 +432,17 @@ function DecorationBrowserItem({ decor, state, selected, onSelect }) {
   );
 }
 
-function DecorationDetail({ decor, state, dispatch }) {
+interface DecorDetailProps {
+  decor: DecorDef | null;
+  state: GameState;
+  dispatch: Dispatch;
+}
+
+function DecorationDetail({ decor, state, dispatch }: DecorDetailProps) {
   if (!decor) return <DetailPane empty="Select decor to inspect it." />;
   const affordable = canAffordDecor(decor, state);
-  const count = locBuilt(state).decorations?.[decor.id] ?? 0;
+  const builtAt = (locBuilt(state) as { decorations?: Record<string, number> }).decorations ?? {};
+  const count: number = builtAt[decor.id] ?? 0;
 
   return (
     <DetailPane
@@ -373,9 +474,27 @@ function DecorationDetail({ decor, state, dispatch }) {
   );
 }
 
-export default function CraftingScreen({ state, dispatch }) {
-  const { inventory = {}, level = 1, craftedTotals = {}, craftingTab } = state;
-  const built = locBuilt(state);
+interface CraftingScreenProps {
+  state: GameState;
+  dispatch: Dispatch;
+}
+
+interface CraftingHostStateUI {
+  inventory?: Record<string, number>;
+  level?: number;
+  craftedTotals?: Record<string, number>;
+  craftingTab?: string;
+  craftQueues?: Record<string, CraftQueueEntry[]>;
+  gems?: number;
+}
+
+export default function CraftingScreen({ state, dispatch }: CraftingScreenProps) {
+  const s = state as unknown as CraftingHostStateUI;
+  const inventory: Record<string, number> = s.inventory ?? {};
+  const level: number = s.level ?? 1;
+  const craftedTotals: Record<string, number> = s.craftedTotals ?? {};
+  const craftingTab = s.craftingTab;
+  const built = locBuilt(state) as Record<string, unknown>;
 
   // Stations that exist (built or not) — always show all three tabs, but indicate built status
   const builtStations = STATION_ORDER.filter((s) => stationBuilt(built, s));
@@ -387,7 +506,7 @@ export default function CraftingScreen({ state, dispatch }) {
     ? craftingTab
     : (builtStations[0] || STATION_ORDER[0]);
 
-  const dispatchedDefaultRef = useRef(false);
+  const dispatchedDefaultRef = useRef<boolean>(false);
   useEffect(() => {
     if (dispatchedDefaultRef.current) return;
     if (craftingTab && STATION_ORDER.includes(craftingTab)) return;
@@ -395,31 +514,34 @@ export default function CraftingScreen({ state, dispatch }) {
     dispatch({ type: "SET_VIEW", view: "crafting", craftingTab: activeTab });
   }, [craftingTab, activeTab, dispatch]);
 
-  const setActiveTab = (s) => dispatch({ type: "SET_VIEW", view: "crafting", craftingTab: s });
+  const setActiveTab = (s: string) => dispatch({ type: "SET_VIEW", view: "crafting", craftingTab: s });
   // RECIPES contains each recipe under multiple keys (canonical `rec_*` plus
   // legacy item-name aliases like `axe` for `rec_axe`). Insertion order puts
   // canonical keys first, so deduping by recipe identity keeps the `rec_*` key.
-  const seenRecipes = new Set();
-  const stationRecipes = Object.entries(RECIPES).filter(([, r]) => {
-    if (!r || typeof r !== "object" || r.station !== activeTab) return false;
-    if (seenRecipes.has(r)) return false;
-    seenRecipes.add(r);
+  const seenRecipes = new Set<RecipeDef>();
+  const recipeEntries = Object.entries(RECIPES) as Array<[string, RecipeDef | unknown]>;
+  const stationRecipes: Array<[string, RecipeDef]> = recipeEntries.filter((entry): entry is [string, RecipeDef] => {
+    const r = entry[1];
+    if (!r || typeof r !== "object" || (r as RecipeDef).station !== activeTab) return false;
+    const rDef = r as RecipeDef;
+    if (seenRecipes.has(rDef)) return false;
+    seenRecipes.add(rDef);
     return true;
   });
   const meta = STATION_META[activeTab];
-  const [selectedRecipeKey, setSelectedRecipeKey] = useState(null);
-  const [selectedDecorId, setSelectedDecorId] = useState(null);
+  const [selectedRecipeKey, setSelectedRecipeKey] = useState<string | null>(null);
+  const [selectedDecorId, setSelectedDecorId] = useState<string | null>(null);
   const selectedRecipeEntry = stationRecipes.find(([key]) => key === selectedRecipeKey) ?? stationRecipes[0] ?? null;
-  const decorations = Object.values(DECORATIONS);
-  const selectedDecor = decorations.find((decor) => decor.id === selectedDecorId) ?? decorations[0] ?? null;
+  const decorations = Object.values(DECORATIONS) as DecorDef[];
+  const selectedDecor = decorations.find((decor: DecorDef) => decor.id === selectedDecorId) ?? decorations[0] ?? null;
 
-  const craftQueues = state.craftQueues ?? {};
+  const craftQueues: Record<string, CraftQueueEntry[]> = s.craftQueues ?? {};
   const activeStationQueue = craftQueues[activeTab] ?? [];
-  const hasAnyQueue = Object.values(craftQueues).some((q) => q && q.length > 0);
+  const hasAnyQueue = Object.values(craftQueues).some((q) => !!q && q.length > 0);
 
   // Single 1s ticker shared by the strip + every tab indicator. Paused
   // entirely when nothing is queued.
-  const [now, setNow] = useState(() => Date.now());
+  const [now, setNow] = useState<number>(() => Date.now());
   useEffect(() => {
     if (!hasAnyQueue) return undefined;
     const t = setInterval(() => setNow(Date.now()), 1000);
@@ -435,13 +557,14 @@ export default function CraftingScreen({ state, dispatch }) {
           const isActive = activeTab === s;
           const isBuilt = s === "decor" ? true : stationBuilt(built, s);
           const stationQueue = craftQueues[s] ?? [];
+          const styleObj: CSSProperties = isActive ? { backgroundColor: m.bg, borderColor: "rgba(255,255,255,0.2)" } : {};
           return (
             <FeaturePanel.Tab
               key={s}
               onClick={() => setActiveTab(s)}
               active={isActive}
               className="flex-shrink-0 relative"
-              style={isActive ? { backgroundColor: m.bg, borderColor: "rgba(255,255,255,0.2)" } : {}}
+              style={styleObj}
             >
               <span style={{ width: 22, height: 22, display: "inline-grid", placeItems: "center" }}>
                 <IconCanvas iconKey={m.iconKey} size={22} />
@@ -466,7 +589,7 @@ export default function CraftingScreen({ state, dispatch }) {
         <StationQueueStrip
           station={activeTab}
           queue={activeStationQueue}
-          gems={state.gems}
+          gems={s.gems}
           dispatch={dispatch}
           now={now}
         />
@@ -478,7 +601,7 @@ export default function CraftingScreen({ state, dispatch }) {
           <BrowserDetailLayout
             browser={
               <BrowserGrid min={170}>
-                {decorations.map((decor) => (
+                {decorations.map((decor: DecorDef) => (
                   <DecorationBrowserItem
                     key={decor.id}
                     decor={decor}

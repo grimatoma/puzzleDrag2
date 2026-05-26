@@ -4,14 +4,15 @@
 // replacement across all of them in a single operation.
 
 import { useMemo, useState, useEffect } from "react";
-import { C, NPCS, Portrait } from "./shared.jsx";
+import { C, npcByKey, Portrait } from "./shared.jsx";
 import {
   findInStory, applyReplacements, affectedBeatCount, isReplacementSafe,
 } from "./findReplace.js";
+import type { FindField, FindMatch, StoryDraft } from "./types.js";
 
-const FIELD_LABEL = { title: "Title", body: "Body", line: "Line", choice: "Choice" };
+const FIELD_LABEL: Record<FindField, string> = { title: "Title", body: "Body", line: "Line", choice: "Choice" };
 
-function HighlightedSnippet({ snippet: any }) {
+function HighlightedSnippet({ snippet }: { snippet: string }) {
   // The snippet uses « / » sentinels around the matched substring.
   const parts = String(snippet).split(/(«[^»]*»)/g);
   return (
@@ -31,7 +32,7 @@ function HighlightedSnippet({ snippet: any }) {
   );
 }
 
-function MatchRow({ match: any, onJump: any }) {
+function MatchRow({ match, onJump }: { match: FindMatch; onJump?: (id: string) => void }) {
   return (
     <button onClick={() => onJump && onJump(match.beatId)}
       style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", width: "100%",
@@ -56,13 +57,21 @@ function MatchRow({ match: any, onJump: any }) {
         <HighlightedSnippet snippet={match.snippet} />
       </div>
       <div style={{ font: "500 9px/1 ui-monospace,monospace", color: C.inkSubtle, marginTop: 3 }}>
-        {match.beatId}{match.choiceId ? ` · choice ${match.choiceId}` : ""}{match.speaker ? ` · ${NPCS[match.speaker]?.name || match.speaker}` : ""}
+        {match.beatId}{match.choiceId ? ` · choice ${match.choiceId}` : ""}{match.speaker ? ` · ${npcByKey(match.speaker)?.name || match.speaker}` : ""}
       </div>
     </button>
   );
 }
 
-export default function FindReplacePanel({ open: any, draft: any, onClose: any, onApply: any, onJumpToBeat: any }) {
+export interface FindReplacePanelProps {
+  open: boolean;
+  draft: StoryDraft;
+  onClose: () => void;
+  onApply: (next: StoryDraft) => void;
+  onJumpToBeat?: (id: string) => void;
+}
+
+export default function FindReplacePanel({ open, draft, onClose, onApply, onJumpToBeat }: FindReplacePanelProps) {
   const [query, setQuery] = useState("");
   const [replacement, setReplacement] = useState("");
   const [caseSensitive, setCaseSensitive] = useState(false);

@@ -1,23 +1,30 @@
 import { useState, useLayoutEffect, useRef } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { createPortal } from "react-dom";
 
 // ─── Tooltip hook ──────────────────────────────────────────────────────────
 // tip: null | { data, x, y }
 // handlers(data) returns the full set of mouse/touch event props with all
 // mobile fixes applied (synthetic-mouseleave guard, 2s touch dismiss, etc.)
-export function useTooltip() {
-  const [tip, setTip] = useState(null);
-  const lastTouchTime = useRef(0);
-  const dismissTimer = useRef(null);
+export interface TipState<D = any> {
+  data: D;
+  x: number;
+  y: number;
+}
 
-  const show = (data, el) => {
-    clearTimeout(dismissTimer.current);
+export function useTooltip<D = any>() {
+  const [tip, setTip] = useState<TipState<D> | null>(null);
+  const lastTouchTime = useRef(0);
+  const dismissTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const show = (data: D, el: Element) => {
+    if (dismissTimer.current) clearTimeout(dismissTimer.current);
     const rect = el.getBoundingClientRect();
     setTip({ data, x: rect.left + rect.width / 2, y: rect.top });
   };
 
   const hide = (delay = 0) => {
-    clearTimeout(dismissTimer.current);
+    if (dismissTimer.current) clearTimeout(dismissTimer.current);
     if (delay > 0) {
       dismissTimer.current = setTimeout(() => setTip(null), delay);
     } else {
@@ -25,10 +32,10 @@ export function useTooltip() {
     }
   };
 
-  const handlers = (data) => ({
-    onMouseEnter: (e) => { if (Date.now() - lastTouchTime.current > 600) show(data, e.currentTarget); },
+  const handlers = (data: D) => ({
+    onMouseEnter: (e: React.MouseEvent<HTMLElement>) => { if (Date.now() - lastTouchTime.current > 600) show(data, e.currentTarget); },
     onMouseLeave: () => { if (Date.now() - lastTouchTime.current > 600) hide(); },
-    onTouchStart: (e) => { lastTouchTime.current = Date.now(); show(data, e.currentTarget); },
+    onTouchStart: (e: React.TouchEvent<HTMLElement>) => { lastTouchTime.current = Date.now(); show(data, e.currentTarget); },
     onTouchEnd: () => hide(2000),
     onTouchCancel: () => hide(2000),
   });
@@ -36,12 +43,28 @@ export function useTooltip() {
   return { tip, show, hide, handlers, lastTouchTime };
 }
 
+interface TooltipProps {
+  anchorX: number;
+  anchorY: number;
+  gap?: number;
+  edgeMargin?: number;
+  className?: string;
+  style?: CSSProperties;
+  arrowClassName?: string;
+  children?: ReactNode;
+}
+
+interface TooltipLayout {
+  leftEdge: number;
+  tailLeft: number;
+}
+
 // Tooltip portal that clamps horizontally to the viewport so it never
 // gets cut off near the screen edges, and shifts its tail to keep
 // pointing at the anchor.
-export function Tooltip({ anchorX, anchorY, gap = 8, edgeMargin = 8, className = "", style, arrowClassName, children }) {
-  const ref = useRef(null);
-  const [layout, setLayout] = useState(null);
+export function Tooltip({ anchorX, anchorY, gap = 8, edgeMargin = 8, className = "", style, arrowClassName, children }: TooltipProps) {
+  const ref = useRef<HTMLDivElement | null>(null);
+  const [layout, setLayout] = useState<TooltipLayout | null>(null);
 
   useLayoutEffect(() => {
     const el = ref.current;

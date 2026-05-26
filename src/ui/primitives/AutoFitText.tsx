@@ -1,6 +1,18 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import type { CSSProperties, ReactNode } from "react";
 
 const useIsoLayoutEffect = typeof window !== "undefined" ? useLayoutEffect : useEffect;
+
+interface AutoFitTextProps {
+  children?: ReactNode;
+  className?: string;
+  maxFontSize?: number;
+  minFontSize?: number;
+  as?: keyof JSX.IntrinsicElements;
+  title?: string;
+  style?: CSSProperties;
+  [key: string]: any;
+}
 
 /**
  * Renders text on a single line and scales the font-size down to fit the
@@ -18,8 +30,8 @@ export default function AutoFitText({
   title,
   style,
   ...rest
-}) {
-  const ref = useRef(null);
+}: AutoFitTextProps) {
+  const ref = useRef<HTMLElement | null>(null);
   const [fontSize, setFontSize] = useState(maxFontSize);
 
   useIsoLayoutEffect(() => {
@@ -51,9 +63,10 @@ export default function AutoFitText({
     return () => ro.disconnect();
   }, [children, maxFontSize, minFontSize]);
 
+  const TagAny = Tag as any;
   return (
-    <Tag
-      ref={ref}
+    <TagAny
+      ref={ref as any}
       className={`block whitespace-nowrap overflow-hidden ${className}`}
       style={{ ...style, fontSize: `${fontSize}px` }}
       data-autofit="1"
@@ -61,6 +74,6 @@ export default function AutoFitText({
       {...rest}
     >
       {children}
-    </Tag>
+    </TagAny>
   );
 }

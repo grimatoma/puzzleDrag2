@@ -1,16 +1,17 @@
 import { ABILITIES } from "../../config/abilities.js";
 import { COLORS, Card } from "../shared.jsx";
+import type { Ability, AbilityParam } from "../../types/items.js";
 
-function scopeLabel(scope = []) {
+function scopeLabel(scope: readonly string[] = []) {
   return scope.map((s) => s[0].toUpperCase() + s.slice(1)).join(", ");
 }
 
-function defaultValueLabel(param: any) {
+function defaultValueLabel(param: AbilityParam) {
   if (param.default === undefined) return "none";
   return String(param.default);
 }
 
-function techExplanation(ability: any) {
+function techExplanation(ability: Ability) {
   return `Aggregated into channel \`${ability.channel}\` at trigger \`${ability.trigger}\` via \`applyAbilityToChannels\` using ability id \`${ability.id}\`.`;
 }
 

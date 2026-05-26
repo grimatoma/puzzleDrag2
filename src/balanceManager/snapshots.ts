@@ -18,7 +18,7 @@ export const SNAPSHOT_VERSION = 1;
 export const SNAPSHOT_NAME_MAX = 60;
 
 /** Validate / canonicalise a user-supplied snapshot name. */
-export function normaliseSnapshotName(name: any) {
+export function normaliseSnapshotName(name: string | null | undefined): { ok: boolean; name: string; message: string } {
   const trimmed = String(name ?? "").trim();
   if (trimmed.length === 0) return { ok: false, name: "", message: "Snapshot name is required." };
   if (trimmed.length > SNAPSHOT_NAME_MAX) {
@@ -28,7 +28,7 @@ export function normaliseSnapshotName(name: any) {
 }
 
 /** Read every snapshot from a storage handle (defaulting to localStorage). */
-export function readSnapshots(storage: any) {
+export function readSnapshots(storage?: Storage | null): Record<string, { savedAt: string | null; version: number; draft: unknown }> {
   const store = storage ?? (typeof localStorage === "undefined" ? null : localStorage);
   if (!store) return {};
   try {
@@ -50,7 +50,7 @@ export function readSnapshots(storage: any) {
   } catch { return {}; }
 }
 
-function writeSnapshots(map: any, storage: any) {
+function writeSnapshots(map: Record<string, unknown> | null, storage?: Storage | null): boolean {
   const store = storage ?? (typeof localStorage === "undefined" ? null : localStorage);
   if (!store) return false;
   try {
@@ -64,7 +64,8 @@ function writeSnapshots(map: any, storage: any) {
 }
 
 /** List snapshots sorted by `savedAt` descending (newest first). */
-export function listSnapshots(storage: any) {
+export interface SnapshotSummary { name: string; savedAt: string | null; version: number }
+export function listSnapshots(storage?: Storage | null): SnapshotSummary[] {
   const map = readSnapshots(storage);
   return Object.entries(map)
     .map(([name, entry]) => ({ name, savedAt: entry.savedAt, version: entry.version }))
@@ -77,7 +78,8 @@ export function listSnapshots(storage: any) {
 }
 
 /** Persist a snapshot under the given name. Returns `{ ok, name, message }`. */
-export function saveSnapshot(name: any, draft: any, storage: any, now = () => new Date().toISOString()) {
+export interface SnapshotResult { ok: boolean; name: string; message: string }
+export function saveSnapshot(name: string, draft: unknown, storage?: Storage | null, now = () => new Date().toISOString()): SnapshotResult {
   const check = normaliseSnapshotName(name);
   if (!check.ok) return check;
   if (!draft || typeof draft !== "object") return { ok: false, name: check.name, message: "Cannot save an empty draft." };
@@ -92,7 +94,7 @@ export function saveSnapshot(name: any, draft: any, storage: any, now = () => ne
 }
 
 /** Load and return a snapshot's draft (or `null` if not found). */
-export function loadSnapshot(name: any, storage: any) {
+export function loadSnapshot(name: string, storage?: Storage | null): unknown {
   const map = readSnapshots(storage);
   const entry = map[name];
   if (!entry || typeof entry.draft !== "object") return null;
@@ -100,7 +102,7 @@ export function loadSnapshot(name: any, storage: any) {
 }
 
 /** Delete a snapshot. Returns true if one was actually removed. */
-export function deleteSnapshot(name: any, storage: any) {
+export function deleteSnapshot(name: string, storage?: Storage | null): boolean {
   const map = readSnapshots(storage);
   if (!Object.prototype.hasOwnProperty.call(map, name)) return false;
   delete map[name];
@@ -109,7 +111,7 @@ export function deleteSnapshot(name: any, storage: any) {
 }
 
 /** Move a snapshot from one name to another. */
-export function renameSnapshot(oldName: any, newName: any, storage: any) {
+export function renameSnapshot(oldName: string, newName: string, storage?: Storage | null): SnapshotResult {
   const check = normaliseSnapshotName(newName);
   if (!check.ok) return check;
   const map = readSnapshots(storage);

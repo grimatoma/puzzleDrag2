@@ -1,4 +1,24 @@
 import { useEffect, useRef, useState } from "react";
+import type Phaser from "phaser";
+
+interface MapPayload {
+  current?: string;
+  visited?: string[];
+  discovered?: string[];
+  level?: number;
+  founded?: Record<string, boolean>;
+  keeperPaths?: Record<string, string>;
+  tokenCount?: number;
+  oldCapitalUnlocked?: boolean;
+}
+
+interface PhaserMapProps {
+  payload: MapPayload;
+  tapped: string | null;
+  onNodeTap: (nodeId: string) => void;
+}
+
+type GameWithObserver = Phaser.Game & { __resizeObserver?: ResizeObserver };
 
 /* Mounts a Phaser instance that runs the redesigned Hearthwood map.
  *
@@ -10,14 +30,15 @@ import { useEffect, useRef, useState } from "react";
  *      back via the scene's "carto.nodetap" event.
  */
 export default function PhaserMap({
-  payload,        // { current, visited, discovered, level, founded, keeperPaths, tokenCount, oldCapitalUnlocked }
-  tapped,         // currently-tapped node id (string | null)
-  onNodeTap,      // (nodeId) => void
-}) {
-  const hostRef = useRef(null);
-  const gameRef = useRef(null);
-  const sceneReadyRef = useRef(false);
-  const [loading, setLoading] = useState(true);
+  payload,
+  tapped,
+  onNodeTap,
+}: PhaserMapProps) {
+  const hostRef = useRef<HTMLDivElement | null>(null);
+  const gameRef = useRef<GameWithObserver | null>(null);
+  const sceneReadyRef = useRef<boolean>(false);
+  const [loading, setLoading] = useState<boolean>(true);
+  const onNodeTapRef = useRef<(nodeId: string) => void>(onNodeTap);
 
   // Mount Phaser once. The cartography view is itself unmounted when the
   // player navigates away, which destroys this component and cleans up.
@@ -65,7 +86,8 @@ export default function PhaserMap({
           },
           input: { activePointers: 2 },
           callbacks: {
-            postBoot: (g) => {
+            postBoot: (g: Phaser.Game) => {
+              const gameWith = g as GameWithObserver;
               const ro = new ResizeObserver(() => {
                 const w = host.clientWidth;
                 const h = host.clientHeight;
@@ -73,7 +95,7 @@ export default function PhaserMap({
                 g.scale.resize(w * dpr, h * dpr);
               });
               ro.observe(host);
-              g.__resizeObserver = ro;
+              gameWith.__resizeObserver = ro;
               const scene = g.scene.scenes[0];
               if (scene) {
                 scene.events.on("create", () => {
@@ -81,7 +103,7 @@ export default function PhaserMap({
                   pushPayload(g, payload);
                   pushTapped(g, tapped);
                 });
-                scene.events.on("carto.nodetap", (id) => {
+                scene.events.on("carto.nodetap", (id: string) => {
                   onNodeTapRef.current?.(id);
                 });
                 sceneReadyRef.current = true;
@@ -89,7 +111,7 @@ export default function PhaserMap({
             },
           },
         });
-        gameRef.current = game;
+        gameRef.current = game as GameWithObserver;
         // The canvas is in the DOM the moment Phaser.Game is constructed, so
         // drop the loading overlay now rather than waiting for postBoot — on
         // some mobile browsers the postBoot/create callbacks fire late or
@@ -119,7 +141,6 @@ export default function PhaserMap({
 
   // Keep the onNodeTap handler current so the scene event listener always
   // dispatches to the latest closure.
-  const onNodeTapRef = useRef(onNodeTap);
   // eslint-disable-next-line react-hooks/immutability -- imperative Phaser bridge reads the latest React callback.
   useEffect(() => { onNodeTapRef.current = onNodeTap; }, [onNodeTap]);
 
@@ -142,13 +163,13 @@ export default function PhaserMap({
   );
 }
 
-function pushPayload(game, payload) {
+function pushPayload(game: Phaser.Game | null, payload: MapPayload): void {
   const reg = game?.registry;
   if (!reg) return;
   reg.set("carto.payload", payload);
 }
 
-function pushTapped(game, tapped) {
+function pushTapped(game: Phaser.Game | null, tapped: string | null): void {
   const reg = game?.registry;
   if (!reg) return;
   reg.set("carto.tapped", tapped);

@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 
-export function useExitTransition(open, durationMs = 180) {
-  const [phase, setPhase] = useState(open ? "open" : "closed");
-  const timerRef = useRef(0);
+type Phase = "open" | "exiting" | "closed";
+
+export function useExitTransition(open: boolean, durationMs = 180) {
+  const [phase, setPhase] = useState<Phase>(open ? "open" : "closed");
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    clearTimeout(timerRef.current);
+    if (timerRef.current) clearTimeout(timerRef.current);
     if (open) {
       if (phase !== "open") {
         // eslint-disable-next-line react-hooks/set-state-in-effect -- prop-driven transition: reopen cancels in-flight exit
@@ -17,7 +19,9 @@ export function useExitTransition(open, durationMs = 180) {
       setPhase("exiting");
       timerRef.current = setTimeout(() => setPhase("closed"), durationMs);
     }
-    return () => clearTimeout(timerRef.current);
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
   }, [open, phase, durationMs]);
 
   const shouldRender = phase !== "closed";

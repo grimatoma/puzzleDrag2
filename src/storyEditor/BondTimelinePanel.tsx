@@ -5,16 +5,17 @@
 // jumps to the source beat for editing.
 
 import { useMemo } from "react";
-import { C, NPCS, Portrait } from "./shared.jsx";
+import { C, npcByKey, Portrait } from "./shared.jsx";
 import { computeBondTimeline } from "./bondTimeline.js";
+import type { BondTimelineRow, StoryDraft } from "./types.js";
 
-function ActLabel({ act: any }) {
+function ActLabel({ act }: { act: number | null }) {
   if (act === null) return <span style={{ font: "600 8px/1 system-ui", color: C.violet, letterSpacing: "0.08em", textTransform: "uppercase" }}>SIDE</span>;
   return <span style={{ font: "600 8px/1 system-ui", color: C.inkSubtle, letterSpacing: "0.08em", textTransform: "uppercase" }}>{["", "I", "II", "III"][act] || `Act ${act}`}</span>;
 }
 
-function NpcRow({ row: any, onJumpToBeat: any }) {
-  const npc = NPCS[row.npc];
+function NpcRow({ row, onJumpToBeat }: { row: BondTimelineRow; onJumpToBeat?: (id: string) => void }) {
+  const npc = npcByKey(row.npc);
   const range = Math.max(1, Math.abs(row.max), Math.abs(row.min));
   return (
     <div style={{ background: "#fff", border: `1.5px solid ${C.border}`, borderRadius: 10, overflow: "hidden" }}>
@@ -42,7 +43,7 @@ function NpcRow({ row: any, onJumpToBeat: any }) {
         <span style={{ textAlign: "right" }}>Δ</span>
         <span style={{ textAlign: "right" }}>Total</span>
       </div>
-      {row.stops.map((stop: any, i: any) => {
+      {row.stops.map((stop, i) => {
         const pos = stop.running >= 0;
         const pct = Math.round((Math.abs(stop.running) / range) * 100);
         return (
@@ -78,7 +79,12 @@ function NpcRow({ row: any, onJumpToBeat: any }) {
   );
 }
 
-export default function BondTimelinePanel({ draft: any, onJumpToBeat: any }) {
+export interface BondTimelinePanelProps {
+  draft: StoryDraft;
+  onJumpToBeat?: (id: string) => void;
+}
+
+export default function BondTimelinePanel({ draft, onJumpToBeat }: BondTimelinePanelProps) {
   const timeline = useMemo(() => computeBondTimeline(draft), [draft]);
   if (timeline.length === 0) {
     return (

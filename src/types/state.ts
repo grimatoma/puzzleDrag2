@@ -28,8 +28,18 @@ export interface Order {
   id: number;
   npc: string;
   key: string;
+  /**
+   * Required quantity. The reducer reads `need` on the TURN_IN_ORDER path
+   * and `amount` on the create path — both are accepted for compatibility.
+   */
   amount: number;
+  need?: number;
   reward: number;
+  /**
+   * Optional pre-bond reward. When present, the bond multiplier scales this
+   * value; when absent, the multiplier applies to `reward` directly.
+   */
+  baseReward?: number;
   bond?: number;
   [extra: string]: unknown;
 }
@@ -49,6 +59,16 @@ export interface FarmRun {
   [extra: string]: unknown;
 }
 
+/**
+ * Per-tool counters. Numeric for tool-charge counts (clear, bomb, axe, …);
+ * a few boolean upgrade flags (startingExtraScythe etc.) live alongside.
+ *
+ * The index signature is intentionally `number | undefined` (not
+ * `number | boolean | undefined`) so arithmetic on `tools[someKey]` doesn't
+ * need a cast at every call site — the legitimate boolean fields are listed
+ * explicitly above. Boolean flag *reads* still happen safely against the
+ * declared fields (TS picks the precise type for known keys).
+ */
 export interface Tools {
   clear: number;
   basic: number;
@@ -59,18 +79,23 @@ export interface Tools {
   extraBlueprintSlot?: boolean;
   goldSeal?: boolean;
   extraTurn?: boolean;
-  // Many other tool counters; allow arbitrary numeric / boolean entries.
   [tool: string]: number | boolean | undefined;
 }
 
+/**
+ * Hazard slots on the active board. Each biome only uses a subset
+ * (mine = caveIn/gasVent/lava/mole, farm = rats/fire/wolves), so the
+ * fields are all optional and tolerate either a hazard payload or `null`.
+ * Feature-specific narrowing happens in src/features/{farm,mine}/hazards.ts.
+ */
 export interface Hazards {
-  caveIn: unknown;
-  gasVent: unknown;
-  lava: unknown;
-  mole: unknown;
-  rats: unknown[];
-  fire: unknown;
-  wolves: unknown;
+  caveIn?: unknown;
+  gasVent?: unknown;
+  lava?: unknown;
+  mole?: unknown;
+  rats?: unknown[];
+  fire?: unknown;
+  wolves?: unknown;
   [extra: string]: unknown;
 }
 
@@ -79,7 +104,11 @@ export interface SeasonStats {
   upgrades: number;
   ordersFilled: number;
   coins: number;
-  capFloaters?: unknown[];
+  /**
+   * Per-resource overflow accumulator. Resource keys map to objects tracking
+   * floats not yet rendered (the reducer keeps this as a dict, not a list).
+   */
+  capFloaters?: Record<string, unknown> | unknown[];
   [extra: string]: unknown;
 }
 
@@ -90,11 +119,20 @@ export interface NpcsState {
   [extra: string]: unknown;
 }
 
+/**
+ * A market price entry. `buy` and `sell` are integer coin amounts.
+ * (Stored per-resource in MarketState.prices.)
+ */
+export interface MarketPriceEntry {
+  buy: number;
+  sell: number;
+}
+
 export interface MarketState {
   seed: number;
   season: number;
-  prices: Record<string, number>;
-  prevPrices: Record<string, number> | null;
+  prices: Record<string, MarketPriceEntry>;
+  prevPrices: Record<string, MarketPriceEntry> | null;
   [extra: string]: unknown;
 }
 
@@ -208,8 +246,14 @@ export interface GameState {
   mine: { savedField: unknown; [k: string]: unknown };
   // Floaters layer rendered above the board after a chain commit.
   floaters?: unknown[];
-  // Boss-related extras (set when an encounter is active)
-  boss?: { minChain?: number; key?: string; [k: string]: unknown } | null;
+  /**
+   * Boss-related extras (set when an encounter is active). The precise shape
+   * lives in src/features/boss/slice.ts as `BossState`; we keep it as
+   * `unknown` here so the canonical state type doesn't need to import a
+   * feature module, and so feature slices can attach extra fields freely.
+   * Callers should narrow with the BossState type when reading the field.
+   */
+  boss?: unknown | null;
   // Anything else that feature slices spread in via `...slice.initial`.
   [extra: string]: unknown;
 }

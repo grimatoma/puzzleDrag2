@@ -18,48 +18,49 @@
 // to test, no React or DOM dependencies.
 
 import { STORY_BEATS, SIDE_BEATS } from "../story.js";
-import { effectiveBeat, allBeatIds, draftBeats, NPCS, triggerSummary, isDraftBeat, effectiveChoices } from "./shared.jsx";
+import { effectiveBeat, allBeatIds, draftBeats, npcByKey, triggerSummary, isDraftBeat, effectiveChoices } from "./shared.jsx";
+import type { StoryBeat, StoryChoice, StoryDraft, StoryOutcome } from "./types.js";
 
-const ACT_LABEL = { 1: "Act I · Roots", 2: "Act II · Iron", 3: "Act III · Kingdom" };
+const ACT_LABEL: Record<number, string> = { 1: "Act I · Roots", 2: "Act II · Iron", 3: "Act III · Kingdom" };
 
-function speakerName(key: any) {
+function speakerName(key: string | null | undefined): string {
   if (!key) return "Narrator";
-  return NPCS[key]?.name || key;
+  return npcByKey(key)?.name || key;
 }
 
-function escapeMd(text: any) {
+function escapeMd(text: unknown): string {
   return String(text ?? "").replace(/([_*`<>])/g, "\\$1");
 }
 
-function outcomeBadgeBits(outcome: any) {
+function outcomeBadgeBits(outcome: StoryOutcome | null | undefined): string[] {
   const o = outcome || {};
-  const out = [];
+  const out: string[] = [];
   if (o.bondDelta?.npc && Number.isFinite(o.bondDelta.amount)) {
     const sign = o.bondDelta.amount > 0 ? "+" : "";
     out.push(`♥ ${sign}${o.bondDelta.amount} ${speakerName(o.bondDelta.npc)}`);
   }
-  if (Number.isFinite(o.coins) && o.coins) out.push(`¢ ${o.coins > 0 ? "+" : ""}${o.coins} coins`);
-  if (Number.isFinite(o.embers) && o.embers) out.push(`✸ ${o.embers > 0 ? "+" : ""}${o.embers} embers`);
-  if (Number.isFinite(o.coreIngots) && o.coreIngots) out.push(`◈ ${o.coreIngots > 0 ? "+" : ""}${o.coreIngots} core ingots`);
-  if (Number.isFinite(o.gems) && o.gems) out.push(`◆ ${o.gems > 0 ? "+" : ""}${o.gems} gems`);
+  if (Number.isFinite(o.coins) && o.coins) out.push(`¢ ${(o.coins as number) > 0 ? "+" : ""}${o.coins} coins`);
+  if (Number.isFinite(o.embers) && o.embers) out.push(`✸ ${(o.embers as number) > 0 ? "+" : ""}${o.embers} embers`);
+  if (Number.isFinite(o.coreIngots) && o.coreIngots) out.push(`◈ ${(o.coreIngots as number) > 0 ? "+" : ""}${o.coreIngots} core ingots`);
+  if (Number.isFinite(o.gems) && o.gems) out.push(`◆ ${(o.gems as number) > 0 ? "+" : ""}${o.gems} gems`);
   for (const [key, amount] of Object.entries(o.resources || {})) {
-    if (Number.isFinite(amount) && amount) out.push(`${amount > 0 ? "+" : ""}${amount} ${key}`);
+    if (Number.isFinite(amount) && amount) out.push(`${(amount as number) > 0 ? "+" : ""}${amount} ${key}`);
   }
   for (const [key, amount] of Object.entries(o.heirlooms || {})) {
-    if (Number.isFinite(amount) && amount) out.push(`${amount > 0 ? "+" : ""}${amount} ${key}`);
+    if (Number.isFinite(amount) && amount) out.push(`${(amount as number) > 0 ? "+" : ""}${amount} ${key}`);
   }
   for (const flag of asList(o.setFlag)) out.push(`⚐ ${flag}`);
   for (const flag of asList(o.clearFlag)) out.push(`⚑ ${flag} off`);
   return out;
 }
 
-const asList = (v: any) => Array.isArray(v) ? v : (typeof v === "string" && v ? [v] : []);
+const asList = (v: unknown): string[] => Array.isArray(v) ? v.filter((s): s is string => typeof s === "string") : (typeof v === "string" && v ? [v] : []);
 
-function renderBeat(beat: any, beatId: any, draft: any, { isDraft = false } = {}) {
+function renderBeat(beat: StoryBeat | null, beatId: string, _draft: StoryDraft | null | undefined, { isDraft = false }: { isDraft?: boolean } = {}): string {
   if (!beat) return "";
-  const lines = [];
+  const lines: string[] = [];
   const titlePart = beat.title || beatId;
-  const actLabel = ACT_LABEL[beat.act];
+  const actLabel = beat.act ? ACT_LABEL[beat.act] : undefined;
   const headerPrefix = isDraft
     ? "Draft"
     : (beat.side ? "Side" : actLabel || "Beat");
@@ -95,12 +96,12 @@ function renderBeat(beat: any, beatId: any, draft: any, { isDraft = false } = {}
   const choices = Array.isArray(beat.choices) ? beat.choices : [];
   if (choices.length > 0) {
     lines.push("**Choices**");
-    choices.forEach((c: any, idx: any) => {
+    choices.forEach((c: StoryChoice, idx: number) => {
       const letter = "ABCDEFGH"[idx] || `${idx + 1}`;
       const label = escapeMd(c.label || c.id || "(no label)");
       const target = c.outcome?.queueBeat;
       const badges = outcomeBadgeBits(c.outcome);
-      const tail = [];
+      const tail: string[] = [];
       if (target) tail.push(`→ \`${target}\``);
       if (badges.length > 0) tail.push(`*(${badges.join(", ")})*`);
       lines.push(`- **${letter}.** ${label}${tail.length ? "  " + tail.join("  ") : ""}`);
@@ -114,8 +115,10 @@ function renderBeat(beat: any, beatId: any, draft: any, { isDraft = false } = {}
   return lines.join("\n");
 }
 
+type OrderingScore = [number, number, string];
+
 /** Compare two beat ids for ordering: main story by act+position, then sides, then drafts. */
-function orderingScore(beatId: any, draft: any) {
+function orderingScore(beatId: string, draft: StoryDraft | null | undefined): OrderingScore {
   const beat = effectiveBeat(beatId, draft);
   if (!beat) return [9, 9999, beatId];
   if (isDraftBeat(draft, beatId)) {
@@ -123,14 +126,14 @@ function orderingScore(beatId: any, draft: any) {
     return [3, idx, beatId];
   }
   if (beat.side || !beat.act) {
-    const idx = SIDE_BEATS.findIndex((b) => b.id === beatId);
+    const idx = (SIDE_BEATS as StoryBeat[]).findIndex((b) => b.id === beatId);
     return [2, idx >= 0 ? idx : 999, beatId];
   }
-  const idx = STORY_BEATS.findIndex((b) => b.id === beatId);
+  const idx = (STORY_BEATS as StoryBeat[]).findIndex((b) => b.id === beatId);
   return [1, idx >= 0 ? idx : 999, beatId];
 }
 
-export function compareBeatOrder(aId: any, bId: any, draft: any) {
+export function compareBeatOrder(aId: string, bId: string, draft: StoryDraft | null | undefined): number {
   const [aSec, aIdx, aKey] = orderingScore(aId, draft);
   const [bSec, bIdx, bKey] = orderingScore(bId, draft);
   if (aSec !== bSec) return aSec - bSec;
@@ -143,9 +146,9 @@ export function compareBeatOrder(aId: any, bId: any, draft: any) {
  * choices (DFS with cycle detection). Used to scope the markdown export
  * to one branch of the tree.
  */
-export function reachableBeatIds(startBeatId: any, draft: any) {
-  const seen = new Set();
-  const stack = [startBeatId];
+export function reachableBeatIds(startBeatId: string, draft: StoryDraft | null | undefined): Set<string> {
+  const seen = new Set<string>();
+  const stack: string[] = [startBeatId];
   while (stack.length > 0) {
     const id = stack.pop();
     if (!id || seen.has(id)) continue;
@@ -162,13 +165,18 @@ export function reachableBeatIds(startBeatId: any, draft: any) {
  * Return true if a beat has any dialogue lines spoken by `speakerKey`. A
  * `speakerKey` of `null` matches narrator lines.
  */
-function beatMentionsSpeaker(beat: any, speakerKey: any) {
+function beatMentionsSpeaker(beat: StoryBeat | null | undefined, speakerKey: string | null): boolean {
   if (!beat || !Array.isArray(beat.lines)) return false;
   for (const line of beat.lines) {
     if (!line || typeof line.text !== "string" || line.text.trim().length === 0) continue;
     if ((line.speaker || null) === speakerKey) return true;
   }
   return false;
+}
+
+export interface RenderStoryMarkdownOpts {
+  rootBeatId?: string;
+  speakerKey?: string | null;
 }
 
 /**
@@ -183,19 +191,20 @@ function beatMentionsSpeaker(beat: any, speakerKey: any) {
  *   - `rootBeatId`: only include beats reachable through queueBeat from this
  *     beat — useful for exporting a single branch.
  */
-export function renderStoryMarkdown(draft: any, opts = {}) {
+export function renderStoryMarkdown(draft: StoryDraft | null | undefined, opts: RenderStoryMarkdownOpts = {}): string {
   const reachable = opts.rootBeatId ? reachableBeatIds(opts.rootBeatId, draft) : null;
   let ids = [...allBeatIds(draft)].sort((a, b) => compareBeatOrder(a, b, draft));
   if (reachable) ids = ids.filter((id) => reachable.has(id));
   if (opts.speakerKey !== undefined) {
-    ids = ids.filter((id) => beatMentionsSpeaker(effectiveBeat(id, draft), opts.speakerKey));
+    const speakerKey = opts.speakerKey;
+    ids = ids.filter((id) => beatMentionsSpeaker(effectiveBeat(id, draft), speakerKey));
   }
   if (ids.length === 0) return "# Hearthlands · Story Script\n\n_(no beats matched the filter)_\n";
 
-  const parts = [];
+  const parts: string[] = [];
   parts.push("# Hearthlands · Story Script");
-  const filterBits = [];
-  if (opts.speakerKey !== undefined) filterBits.push(`speaker: ${opts.speakerKey === null ? "Narrator" : (NPCS[opts.speakerKey]?.name || opts.speakerKey)}`);
+  const filterBits: string[] = [];
+  if (opts.speakerKey !== undefined) filterBits.push(`speaker: ${opts.speakerKey === null ? "Narrator" : (npcByKey(opts.speakerKey)?.name || opts.speakerKey)}`);
   if (opts.rootBeatId) filterBits.push(`branch from \`${opts.rootBeatId}\``);
   parts.push("");
   const filterTag = filterBits.length > 0 ? ` · filtered (${filterBits.join("; ")})` : "";

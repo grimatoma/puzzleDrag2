@@ -15,44 +15,75 @@ import { RATS_HAZARD_ENABLED } from "../../featureFlags.js";
 import { hasTag } from "../tileCollection/tags.js";
 import { computeWorkerEffects } from "../workers/aggregate.js";
 import { effectiveRatSpawnRate } from "./attractsRats.js";
+import type { GameState } from "../../types/state.js";
 
-const PLANT_KEYS = new Set(["tile_grass_hay", "tile_grain_wheat", "tile_fruit_blackberry"]);
+const PLANT_KEYS = new Set<string>(["tile_grass_hay", "tile_grain_wheat", "tile_fruit_blackberry"]);
+
+export interface Rat {
+  row: number;
+  col: number;
+  age: number;
+}
+
+export interface GridCell {
+  key?: string | null;
+  rubble?: boolean;
+  gas?: boolean;
+  frozen?: boolean;
+  _eaten?: boolean;
+}
+
+interface FarmHazardsState {
+  rats?: Rat[];
+  [k: string]: unknown;
+}
+
+interface RatHostState {
+  biome?: string;
+  inventory?: Record<string, number>;
+  hazards?: FarmHazardsState;
+  grid?: GridCell[][];
+  coins?: number;
+}
+
+interface ChainCell { key?: string | null; row: number; col: number }
+
+interface WorkerEffectsView {
+  hazardCoinMultiplier?: Record<string, number>;
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
  * Roll for a rat spawn on a fillBoard call.
  * Returns `{ row, col, age: 0 }` on success, `null` otherwise.
- *
- * @param {object} state
- * @param {() => number} [rng]
- * @returns {{ row: number, col: number, age: number } | null}
  */
-export function rollRatSpawn(state, rng = Math.random) {
+export function rollRatSpawn(state: GameState, rng: () => number = Math.random): Rat | null {
   if (!RATS_HAZARD_ENABLED) return null;
-  if (state.biome !== "farm") return null;
-  const inv = state.inventory ?? {};
+  const s = state as unknown as RatHostState;
+  if (s.biome !== "farm") return null;
+  const inv: Record<string, number> = s.inventory ?? {};
   if ((inv.tile_grass_hay ?? 0) <= RAT_SPAWN_THRESHOLDS.tile_grass_hay) return null;
   if ((inv.tile_grain_wheat ?? 0) <= RAT_SPAWN_THRESHOLDS.tile_grain_wheat) return null;
-  const rats = state.hazards?.rats ?? [];
+  const rats: Rat[] = s.hazards?.rats ?? [];
   if (rats.length >= RAT_SPAWN_THRESHOLDS.maxActive) return null;
   // Catalog §7: tiles tagged "attracts_rats" (Manna, Jackfruit) bump the
   // spawn rate by ATTRACT_RATE_BONUS each, capped at 1.0.
-  const rate = effectiveRatSpawnRate(RAT_SPAWN_THRESHOLDS.perFillRate, state.grid);
+  const rate = effectiveRatSpawnRate(RAT_SPAWN_THRESHOLDS.perFillRate, s.grid);
   if (rng() >= rate) return null;
 
   // Pick a random non-special, non-rat cell
-  const grid = state.grid;
+  const grid = s.grid;
   if (!grid || !grid.length) return { row: 0, col: 0, age: 0 };
   const rows = grid.length;
   const cols = grid[0].length;
-  let row, col, tries = 0;
+  let row = 0, col = 0, tries = 0;
   do {
     row = Math.floor(rng() * rows);
     col = Math.floor(rng() * cols);
     const t = grid[row]?.[col];
     if (t && !t.rubble && !t.gas && !t.frozen
-        && !rats.some((r) => r.row === row && r.col === col)) {
+        && !rats.some((r: Rat) => r.row === row && r.col === col)) {
       break;
     }
   } while (++tries < 32);
@@ -61,25 +92,24 @@ export function rollRatSpawn(state, rng = Math.random) {
 
 /**
  * Advance all rats by one turn: each eats one adjacent plant tile and ages +1.
- *
- * @param {object} state
- * @returns {object}
  */
-export function tickRats(state) {
-  if (!state.hazards?.rats?.length) return state;
-  const grid = state.grid ? state.grid.map((r) => r.map((t) => ({ ...t }))) : state.grid;
-  const rats = state.hazards.rats.map((rat) => {
+export function tickRats(state: GameState): GameState {
+  const s = state as unknown as RatHostState;
+  if (!s.hazards?.rats?.length) return state;
+  const grid: GridCell[][] | undefined = s.grid ? s.grid.map((r: GridCell[]) => r.map((t: GridCell) => ({ ...t }))) : s.grid;
+  const rats: Rat[] = s.hazards.rats.map((rat: Rat) => {
     if (!grid) return { ...rat, age: rat.age + 1 };
     const rows = grid.length;
     const cols = grid[0].length;
-    const adj = [
+    const adj: Array<[number, number]> = ([
       [rat.row - 1, rat.col],
       [rat.row + 1, rat.col],
       [rat.row, rat.col - 1],
       [rat.row, rat.col + 1],
-    ].filter(([r, c]) => {
+    ] as Array<[number, number]>).filter(([r, c]) => {
       if (r < 0 || r >= rows || c < 0 || c >= cols) return false;
       const k = grid[r][c].key;
+      if (!k) return false;
       // Catalog §7: certain species are "avoided by rats" — rats won't eat them.
       if (hasTag(k, "avoids_rats")) return false;
       return PLANT_KEYS.has(k);
@@ -90,28 +120,31 @@ export function tickRats(state) {
     }
     return { ...rat, age: rat.age + 1 };
   });
-  return { ...state, grid, hazards: { ...state.hazards, rats } };
+  return { ...state, grid, hazards: { ...s.hazards, rats } } as GameState;
+}
+
+export interface RatChainPatch {
+  hazards: FarmHazardsState;
+  coins: number;
+  _ratFloater: string;
 }
 
 /**
  * Attempt to clear a rat chain from a COMMIT_CHAIN action.
  * Returns a state patch `{ hazards, coins, _ratFloater }` if valid, or null
  * if the chain is invalid (< 3 rats, or mixed tile types).
- *
- * @param {object} state
- * @param {Array<{key: string, row: number, col: number}>} chain
- * @returns {object|null}
  */
-export function tryClearRatChain(state, chain) {
+export function tryClearRatChain(state: GameState, chain: ChainCell[]): RatChainPatch | null {
+  const s = state as unknown as RatHostState;
   if (chain.length < 3) return null;
-  if (!chain.every((t) => t.key === "rat")) return null;
+  if (!chain.every((t: ChainCell) => t.key === "rat")) return null;
 
-  const existingRats = state.hazards?.rats ?? [];
-  const cleared = chain.filter((c) =>
-    existingRats.some((r) => r.row === c.row && r.col === c.col),
+  const existingRats: Rat[] = s.hazards?.rats ?? [];
+  const cleared = chain.filter((c: ChainCell) =>
+    existingRats.some((r: Rat) => r.row === c.row && r.col === c.col),
   );
-  const remaining = existingRats.filter(
-    (r) => !chain.some((c) => c.row === r.row && c.col === r.col),
+  const remaining: Rat[] = existingRats.filter(
+    (r: Rat) => !chain.some((c: ChainCell) => c.row === r.row && c.col === r.col),
   );
 
   const baseReward = (cleared.length || chain.length) * RAT_CLEAR_REWARD_PER;
@@ -119,12 +152,13 @@ export function tryClearRatChain(state, chain) {
   // scales the coin reward. Default multiplier is 1× when no buff.
   let mult = 1;
   try {
-    mult = computeWorkerEffects(state).hazardCoinMultiplier?.rats ?? 1;
+    const eff = computeWorkerEffects(state) as WorkerEffectsView;
+    mult = eff.hazardCoinMultiplier?.rats ?? 1;
   } catch { /* aggregator unavailable — fall back to 1× */ }
   const reward = Math.round(baseReward * mult);
   return {
-    hazards: { ...state.hazards, rats: remaining },
-    coins: (state.coins ?? 0) + reward,
+    hazards: { ...s.hazards, rats: remaining },
+    coins: (s.coins ?? 0) + reward,
     _ratFloater: `Pest cleared! +${reward}◉`,
   };
 }

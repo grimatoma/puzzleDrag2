@@ -2,7 +2,7 @@ import { VISUAL_SCENARIOS, visualScenarioById } from "./matrix.js";
 import { buildVisualState, validateVisualState } from "./stateBuilders.js";
 
 export function listVisualScenarios() {
-  return VISUAL_SCENARIOS.map((scenario) => ({
+  return VISUAL_SCENARIOS.map((scenario: any) => ({
     id: scenario.id,
     state: scenario.state,
     hash: scenario.hash ?? null,

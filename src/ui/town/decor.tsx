@@ -71,7 +71,7 @@ export function FarmFieldArt() {
   );
 }
 
-export function MineEntranceArt({ locked }) {
+export function MineEntranceArt({ locked }: { locked?: boolean }) {
   const lanternFill = locked ? "#5a4830" : "#c86820";
   const lanternGlow = locked ? "rgba(120,110,90,.0)" : "rgba(248,160,64,.22)";
   return (

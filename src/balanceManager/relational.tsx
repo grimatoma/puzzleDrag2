@@ -2,6 +2,7 @@
 // for Dev Panel entity cards.
 
 import { useEffect } from "react";
+import type { ReactNode } from "react";
 import Icon from "../ui/Icon.jsx";
 import { COLORS } from "./shared.jsx";
 import { useBalanceNav } from "./balanceNav.jsx";
@@ -16,7 +17,7 @@ export const RELATIONAL_FOOTER_STYLE = {
   borderTop: `1px dashed ${COLORS.slate}66`,
 };
 
-export function CardAttachmentFooter({ title: any, children: any, className = "", standalone = false }) {
+export function CardAttachmentFooter({ title, children, className = "", standalone = false }: { title?: ReactNode; children: ReactNode; className?: string; standalone?: boolean }) {
   const edgeClass = standalone
     ? "mt-3 rounded-lg border px-3 pt-3 pb-3"
     : "mt-3 -mx-3 -mb-3 px-3 pt-3 pb-3 rounded-b-[10px]";
@@ -38,7 +39,7 @@ export function CardAttachmentFooter({ title: any, children: any, className = ""
   );
 }
 
-export function RelationalFooter({ title = "Related", hint: any, children: any, className = "", standalone = false }) {
+export function RelationalFooter({ title = "Related", hint, children, className = "", standalone = false }: { title?: ReactNode; hint?: ReactNode; children: ReactNode; className?: string; standalone?: boolean }) {
   const edgeClass = standalone
     ? "mt-3 rounded-lg border px-3 pt-3 pb-3"
     : "mt-3 -mx-3 -mb-3 px-3 pt-3 pb-3 rounded-b-[10px]";
@@ -63,7 +64,7 @@ export function RelationalFooter({ title = "Related", hint: any, children: any, 
   );
 }
 
-export function RefButton({ children: any, onClick: any, title: any, className = "" }) {
+export function RefButton({ children, onClick, title, className = "" }: { children: ReactNode; onClick: () => void; title?: string; className?: string }) {
   return (
     <button
       type="button"
@@ -83,19 +84,21 @@ export function RefButton({ children: any, onClick: any, title: any, className =
   );
 }
 
-export function balanceEntityDomId(entityId: any) {
+export function balanceEntityDomId(entityId: string | null | undefined): string | undefined {
   return entityId ? `bm-${entityId}` : undefined;
 }
 
-export function useScrollToFocus(focus: any) {
+export function useScrollToFocus(focus: string | null | undefined): void {
   useEffect(() => {
     if (!focus) return;
-    document.getElementById(balanceEntityDomId(focus))
+    const domId = balanceEntityDomId(focus);
+    if (!domId) return;
+    document.getElementById(domId)
       ?.scrollIntoView({ block: "center", behavior: "smooth" });
   }, [focus]);
 }
 
-export function focusHighlightProps(entityId: any, focus: any) {
+export function focusHighlightProps(entityId: string | null | undefined, focus: string | null | undefined) {
   const isFocused = Boolean(entityId && focus === entityId);
   return {
     id: balanceEntityDomId(entityId),
@@ -106,7 +109,19 @@ export function focusHighlightProps(entityId: any, focus: any) {
   };
 }
 
-const USAGE_KIND_LABELS = {
+export type UsageKind = "recipe_input" | "recipe_output" | "building_cost" | "chain_next" | "story_outcome";
+
+export interface Usage {
+  kind: UsageKind | string;
+  recipeId?: string;
+  buildingId?: string;
+  fromId?: string;
+  beatId?: string;
+  choiceId?: string;
+  qty?: number;
+}
+
+const USAGE_KIND_LABELS: Record<string, string> = {
   recipe_input: "Recipe input",
   recipe_output: "Recipe output",
   building_cost: "Building cost",
@@ -114,7 +129,7 @@ const USAGE_KIND_LABELS = {
   story_outcome: "Story reward",
 };
 
-export function navTargetForUsage(usage: any) {
+export function navTargetForUsage(usage: Usage | null | undefined): { tab: string; focus: string | undefined } | null {
   if (!usage?.kind) return null;
   switch (usage.kind) {
     case "recipe_input":
@@ -131,25 +146,26 @@ export function navTargetForUsage(usage: any) {
   }
 }
 
-export function usageRefLabel(usage: any) {
+export function usageRefLabel(usage: Usage): string {
   if (usage.kind === "recipe_input") return `${usage.recipeId} · ${usage.qty}× in`;
   if (usage.kind === "recipe_output") return `${usage.recipeId} (output)`;
   if (usage.kind === "building_cost") return `${usage.buildingId} · ${usage.qty}×`;
   if (usage.kind === "chain_next") return `← ${usage.fromId}`;
   if (usage.kind === "story_outcome") {
-    return `${usage.beatId}/${usage.choiceId} · ${usage.qty > 0 ? "+" : ""}${usage.qty}`;
+    const qty = usage.qty ?? 0;
+    return `${usage.beatId}/${usage.choiceId} · ${qty > 0 ? "+" : ""}${qty}`;
   }
   return usage.kind;
 }
 
-export function WhereUsedLinks({ usages: any }) {
+export function WhereUsedLinks({ usages }: { usages: Usage[] | undefined | null }) {
   const { navigate } = useBalanceNav();
   if (!usages?.length) {
     return <div className="text-[10px] italic" style={{ color: COLORS.inkSubtle }}>Not referenced anywhere.</div>;
   }
   return (
     <div className="flex flex-wrap gap-1">
-      {usages.map((u: any, i: any) => {
+      {usages.map((u, i) => {
         const target = navTargetForUsage(u);
         const label = usageRefLabel(u);
         const title = USAGE_KIND_LABELS[u.kind] || u.kind;
@@ -172,14 +188,20 @@ export function WhereUsedLinks({ usages: any }) {
   );
 }
 
-export function CraftingRecipeLinks({ recipes: any }) {
+export interface CraftingRecipeRef {
+  recId: string;
+  station: string;
+  inputs?: Record<string, number>;
+}
+
+export function CraftingRecipeLinks({ recipes }: { recipes: CraftingRecipeRef[] | undefined | null }) {
   const { navigate } = useBalanceNav();
   if (!recipes?.length) {
     return <div className="text-[10px] italic" style={{ color: COLORS.inkSubtle }}>Not craftable.</div>;
   }
   return (
     <div className="flex flex-col gap-1.5">
-      {recipes.map((rec: any) => (
+      {recipes.map((rec) => (
         <RefButton key={rec.recId} title={`Open recipe ${rec.recId}`}
           onClick={() => navigate({ tab: "recipes", focus: rec.recId })}
           className="w-full flex-wrap">
@@ -197,7 +219,7 @@ export function CraftingRecipeLinks({ recipes: any }) {
   );
 }
 
-function PillInline({ children: any }) {
+function PillInline({ children }: { children: ReactNode }) {
   return (
     <span className="px-1 py-0.5 rounded text-[9px] font-bold uppercase"
       style={{ background: COLORS.parchmentDeep, color: COLORS.inkLight }}>

@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import React, { useState, useMemo } from "react";
 import { RECIPES, ITEMS } from "../../constants.js";
 import {
   COLORS, NumberField, Select,
@@ -25,7 +25,7 @@ const STATION_FILTERS = [
   { id: "workshop", label: "Workshop", iconKey: "ui_devtools" },
 ];
 
-export default function RecipesTab({ draft: any, updateDraft: any, focus: any }) {
+export default function RecipesTab({ draft, updateDraft, focus }: { draft: any; updateDraft: any; focus: any }) {
   const { focus: navFocus } = useBalanceNav();
   const activeFocus = focus ?? navFocus;
   useScrollToFocus(activeFocus);
@@ -68,7 +68,7 @@ export default function RecipesTab({ draft: any, updateDraft: any, focus: any })
     return true;
   });
 
-  function patch(recId, fields: any) {
+  function patch(recId: string, fields: Record<string, unknown>) {
     updateDraft((d: any) => {
       const cur = d.recipes[recId] || {};
       const next = { ...cur, ...fields };
@@ -78,7 +78,7 @@ export default function RecipesTab({ draft: any, updateDraft: any, focus: any })
     });
   }
 
-  function patchInputs(recId, inputs: any) {
+  function patchInputs(recId: string, inputs: Record<string, number>) {
     patch(recId, { inputs });
   }
 
@@ -185,7 +185,7 @@ export default function RecipesTab({ draft: any, updateDraft: any, focus: any })
   );
 }
 
-function Label({ children: any, hint: any }) {
+function Label({ children, hint }: { children: React.ReactNode; hint?: string }) {
   return (
     <div className="text-[10px] font-bold uppercase tracking-wide mb-0.5 flex items-center gap-1" style={{ color: COLORS.inkSubtle }}>
       <span>{children}</span>
@@ -202,9 +202,9 @@ function Label({ children: any, hint: any }) {
   );
 }
 
-function IngredientsEditor({ ingredients: any, availableKeys: any, onChange: any }) {
+function IngredientsEditor({ ingredients, availableKeys, onChange }: { ingredients: Record<string, number>; availableKeys: string[]; onChange: (next: Record<string, number>) => void }) {
   const availableOptions = useMemo(() => {
-    return availableKeys.filter((k: any) => !(k in ingredients)).map((k) => ({
+    return availableKeys.filter((k) => !(k in ingredients)).map((k) => ({
       id: k,
       searchText: k,
       renderNode: (
@@ -220,7 +220,7 @@ function IngredientsEditor({ ingredients: any, availableKeys: any, onChange: any
     }));
   }, [ingredients, availableKeys]);
 
-  function updateIngredient(resKey, qty: any) {
+  function updateIngredient(resKey: string, qty: number | null | undefined) {
     const next = { ...ingredients };
     if (qty === null || qty === undefined || qty <= 0) {
       delete next[resKey];
@@ -277,7 +277,7 @@ function IngredientsEditor({ ingredients: any, availableKeys: any, onChange: any
   );
 }
 
-function DependencyTrace({ recipeId: any, open: any, onToggle: any }) {
+function DependencyTrace({ recipeId, open, onToggle }: { recipeId: any; open: any; onToggle: any }) {
   const tree = useMemo(() => (open ? traceRecipe(recipeId) : null), [recipeId, open]);
   return (
     <div className="mt-2 pt-2" style={{ borderTop: `1px dashed ${COLORS.border}` }}>
@@ -298,7 +298,7 @@ function DependencyTrace({ recipeId: any, open: any, onToggle: any }) {
   );
 }
 
-function TreeNode({ node: any, depth: any }) {
+function TreeNode({ node, depth }: { node: any; depth: any }) {
   if (!node) return null;
   return (
     <div style={{ marginLeft: depth * 14 }}>

@@ -19,14 +19,17 @@
 // view space.
 
 import { useEffect, useRef } from "react";
+import type { GameState, Dispatch } from "./types/state.js";
 
-const featureModules = import.meta.glob("./features/*/index.{jsx,tsx}", { eager: true });
+interface FeatureModuleShape { viewKey?: string }
+
+const featureModules = import.meta.glob<FeatureModuleShape>("./features/*/index.{jsx,tsx}", { eager: true });
 const FEATURE_VIEW_KEYS = Object.values(featureModules)
-  .map((mod: any) => (mod as any).viewKey)
-  .filter(Boolean);
+  .map((mod) => mod.viewKey)
+  .filter((key): key is string => !!key);
 
 // Views reachable via the URL (shell views + feature viewKey exports).
-export const KNOWN_VIEWS = new Set([
+export const KNOWN_VIEWS = new Set<string>([
   "town",
   "board",
   ...FEATURE_VIEW_KEYS,
@@ -34,7 +37,7 @@ export const KNOWN_VIEWS = new Set([
 
 // Modals that are reachable via the URL.
 // Excluded from deep links (gameplay-gated only): `season`, `leaveBoard`, `runSummary`.
-export const KNOWN_MODALS = new Set([
+export const KNOWN_MODALS = new Set<string>([
   "menu",
   "boss",
   "tutorial",
@@ -43,11 +46,11 @@ export const KNOWN_MODALS = new Set([
 ]);
 
 // Short alias used in URLs in place of the longer camelCase view key.
-const VIEW_ALIASES = {
+const VIEW_ALIASES: Record<string, string> = {
   tiles: "tileCollection",
   wiki: "recipeWiki",
 };
-const VIEW_ALIASES_REVERSE = {
+const VIEW_ALIASES_REVERSE: Record<string, string> = {
   tileCollection: "tiles",
   recipeWiki: "wiki",
 };
@@ -55,35 +58,55 @@ const VIEW_ALIASES_REVERSE = {
 // Views that accept a single `tab` segment after the view name. Each view's
 // component stores its active tab in state.viewParams.tab (or, for crafting,
 // in the legacy state.craftingTab field that this router projects through).
-const VIEWS_WITH_TAB = new Set([
+const VIEWS_WITH_TAB = new Set<string>([
   "crafting",
   "quests",
   "achievements",
   "townsfolk",
 ]);
 
-function viewFromSegment(seg) {
+function viewFromSegment(seg: string | undefined): string {
   if (!seg) return "town";
   const decoded = decodeURIComponent(seg);
   const aliased = VIEW_ALIASES[decoded] ?? decoded;
   return KNOWN_VIEWS.has(aliased) ? aliased : "town";
 }
 
-function segmentForView(view) {
+function segmentForView(view: string): string {
   return VIEW_ALIASES_REVERSE[view] ?? view;
+}
+
+export interface RouteViewParams {
+  sub?: string;
+  cat?: string;
+  zone?: string;
+  tab?: string;
+  [k: string]: string | undefined;
+}
+
+export interface RouteModalParams {
+  tab?: string;
+  [k: string]: string | undefined;
+}
+
+export interface RouteDescriptor {
+  view: string;
+  modal: string | null;
+  viewParams: RouteViewParams;
+  modalParams: RouteModalParams;
 }
 
 /**
  * Parse a hash string (e.g. "#/tiles/farm/grass?modal=menu&tab=about") into
  * a route descriptor.
  */
-export function parseHash(hash = "") {
+export function parseHash(hash = ""): RouteDescriptor {
   const raw = String(hash || "").replace(/^#\/?/, "");
   if (!raw) return { view: "town", modal: null, viewParams: {}, modalParams: {} };
   const [pathPart, queryPart = ""] = raw.split("?");
   const segments = pathPart ? pathPart.split("/").filter(Boolean) : [];
   const view = viewFromSegment(segments[0]);
-  const viewParams = {};
+  const viewParams: RouteViewParams = {};
   if (view === "tileCollection") {
     if (segments[1]) viewParams.sub = decodeURIComponent(segments[1]);
     if (segments[2]) viewParams.cat = decodeURIComponent(segments[2]);
@@ -96,7 +119,7 @@ export function parseHash(hash = "") {
   const params = new URLSearchParams(queryPart);
   const modalRaw = params.get("modal");
   const modal = modalRaw && KNOWN_MODALS.has(modalRaw) ? modalRaw : null;
-  const modalParams = {};
+  const modalParams: RouteModalParams = {};
   if (modal === "menu") {
     const tab = params.get("tab");
     if (tab) modalParams.tab = tab;
@@ -108,7 +131,7 @@ export function parseHash(hash = "") {
  * Build a hash string from a route descriptor. The result always starts with
  * "#/" so it's safe to assign to `location.hash`.
  */
-export function buildHash({ view = "town", modal = null, viewParams = {}, modalParams = {} } = {}) {
+export function buildHash({ view = "town", modal = null, viewParams = {}, modalParams = {} }: Partial<RouteDescriptor> = {}): string {
   const safeView = KNOWN_VIEWS.has(view) ? view : "town";
   const segments = [segmentForView(safeView)];
   if (safeView === "tileCollection") {
@@ -122,7 +145,7 @@ export function buildHash({ view = "town", modal = null, viewParams = {}, modalP
     if (viewParams.tab) segments.push(encodeURIComponent(viewParams.tab));
   }
   const path = segments.join("/");
-  const queryParts = [];
+  const queryParts: string[] = [];
   if (modal && KNOWN_MODALS.has(modal)) {
     queryParts.push(`modal=${encodeURIComponent(modal)}`);
     if (modal === "menu" && modalParams.tab) {
@@ -133,30 +156,43 @@ export function buildHash({ view = "town", modal = null, viewParams = {}, modalP
   return `#/${path}${query}`;
 }
 
+interface RouterStateView {
+  view?: string;
+  modal?: string | null;
+  viewParams?: Record<string, unknown>;
+  craftingTab?: string;
+  settingsTab?: string;
+  [k: string]: unknown;
+}
+
 /**
  * Project current game state onto a route descriptor.
  */
-export function routeFromState(state) {
+export function routeFromState(state: RouterStateView): RouteDescriptor {
   const view = state.view ?? "town";
   const modal = state.modal ?? null;
-  const viewParams = {};
+  const viewParams: RouteViewParams = {};
   if (view === "tileCollection") {
     const tcParams = state.viewParams ?? {};
-    if (tcParams.sub) viewParams.sub = tcParams.sub;
-    if (tcParams.cat) viewParams.cat = tcParams.cat;
+    const sub = tcParams.sub;
+    const cat = tcParams.cat;
+    if (typeof sub === "string") viewParams.sub = sub;
+    if (typeof cat === "string") viewParams.cat = cat;
   } else if (view === "cartography") {
     const zone = state.viewParams?.zone;
-    if (zone) viewParams.zone = zone;
+    if (typeof zone === "string") viewParams.zone = zone;
   } else if (view === "crafting") {
     // craftingTab is the legacy redux home for the crafting station; if a
     // viewParams.tab override is also set (e.g. from ROUTE/APPLY) prefer it
     // since SET_VIEW carries craftingTab forward verbatim.
-    const tab = state.viewParams?.tab ?? state.craftingTab ?? null;
+    const tabFromParams = state.viewParams?.tab;
+    const tab = (typeof tabFromParams === "string" ? tabFromParams : null) ?? state.craftingTab ?? null;
     if (tab) viewParams.tab = tab;
   } else if (VIEWS_WITH_TAB.has(view)) {
-    if (state.viewParams?.tab) viewParams.tab = state.viewParams.tab;
+    const tab = state.viewParams?.tab;
+    if (typeof tab === "string") viewParams.tab = tab;
   }
-  const modalParams = {};
+  const modalParams: RouteModalParams = {};
   if (modal === "menu") {
     const tab = state.settingsTab && state.settingsTab !== "main" ? state.settingsTab : null;
     if (tab) modalParams.tab = tab;
@@ -170,10 +206,10 @@ export function routeFromState(state) {
  * state changes push a new history entry; back/forward (popstate) and manual
  * hash edits dispatch a ROUTE/APPLY back into state.
  */
-export function useRouter(state, dispatch) {
+export function useRouter(state: GameState, dispatch: Dispatch): void {
   // Last hash we wrote — used to detect "no real change" so we don't
   // pushState on every reducer dispatch.
-  const lastHashRef = useRef(null);
+  const lastHashRef = useRef<string | null>(null);
   // Tracks whether we've performed the initial sync.
   const initialisedRef = useRef(false);
 

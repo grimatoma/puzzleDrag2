@@ -118,6 +118,6 @@ export const HEARTH_TOKENS = [
   },
 ];
 
-export function loreFor(nodeId) {
-  return NODE_LORE[nodeId] ?? null;
+export function loreFor(nodeId: string) {
+  return (NODE_LORE as Record<string, unknown>)[nodeId] ?? null;
 }

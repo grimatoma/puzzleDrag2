@@ -1,8 +1,17 @@
-function cx(...parts) {
+import type { ButtonHTMLAttributes, HTMLAttributes, ReactNode } from "react";
+
+function cx(...parts: Array<string | false | null | undefined>): string {
   return parts.filter(Boolean).join(" ");
 }
 
-export function CloseButton({ onClick, label = "Close", className = "", children = "×", ...rest }) {
+interface CloseButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, "children" | "type"> {
+  onClick?: ButtonHTMLAttributes<HTMLButtonElement>["onClick"];
+  label?: string;
+  className?: string;
+  children?: ReactNode;
+}
+
+export function CloseButton({ onClick, label = "Close", className = "", children = "×", ...rest }: CloseButtonProps) {
   return (
     <button
       type="button"
@@ -16,6 +25,17 @@ export function CloseButton({ onClick, label = "Close", className = "", children
   );
 }
 
+interface HeaderProps {
+  title?: ReactNode;
+  titleAs?: keyof JSX.IntrinsicElements;
+  titleClassName?: string;
+  onClose?: () => void;
+  closeLabel?: string;
+  actions?: ReactNode;
+  className?: string;
+  children?: ReactNode;
+}
+
 function Header({
   title,
   titleAs: TitleTag = "span",
@@ -25,7 +45,7 @@ function Header({
   actions,
   className = "",
   children,
-}) {
+}: HeaderProps) {
   return (
     <div className={cx("hl-panel-header", className)}>
       {children ?? (
@@ -43,7 +63,12 @@ function Header({
   );
 }
 
-function Toolbar({ className = "", children, ...rest }) {
+interface PanelDivProps extends HTMLAttributes<HTMLDivElement> {
+  className?: string;
+  children?: ReactNode;
+}
+
+function Toolbar({ className = "", children, ...rest }: PanelDivProps) {
   return (
     <div className={cx("hl-panel-toolbar", className)} {...rest}>
       {children}
@@ -51,7 +76,7 @@ function Toolbar({ className = "", children, ...rest }) {
   );
 }
 
-function Body({ className = "", children, ...rest }) {
+function Body({ className = "", children, ...rest }: PanelDivProps) {
   return (
     <div className={cx("hl-panel-body", className)} {...rest}>
       {children}
@@ -59,7 +84,7 @@ function Body({ className = "", children, ...rest }) {
   );
 }
 
-function Tabs({ className = "", children, ...rest }) {
+function Tabs({ className = "", children, ...rest }: PanelDivProps) {
   return (
     <div className={cx("hl-tabs", className)} {...rest}>
       {children}
@@ -67,7 +92,13 @@ function Tabs({ className = "", children, ...rest }) {
   );
 }
 
-function Tab({ active = false, className = "", children, type = "button", ...rest }) {
+interface TabProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+  active?: boolean;
+  className?: string;
+  children?: ReactNode;
+}
+
+function Tab({ active = false, className = "", children, type = "button", ...rest }: TabProps) {
   return (
     <button
       type={type}
@@ -80,7 +111,23 @@ function Tab({ active = false, className = "", children, type = "button", ...res
   );
 }
 
-export default function FeaturePanel({ tone, className = "", children, ...rest }) {
+interface FeaturePanelProps extends HTMLAttributes<HTMLDivElement> {
+  tone?: string;
+  className?: string;
+  children?: ReactNode;
+}
+
+interface FeaturePanelComponent {
+  (props: FeaturePanelProps): JSX.Element;
+  Header: typeof Header;
+  Toolbar: typeof Toolbar;
+  Body: typeof Body;
+  Tabs: typeof Tabs;
+  Tab: typeof Tab;
+  CloseButton: typeof CloseButton;
+}
+
+const FeaturePanel: FeaturePanelComponent = (({ tone, className = "", children, ...rest }: FeaturePanelProps) => {
   return (
     <div
       className={cx("hl-panel", tone === "arcane" && "hl-panel--arcane", className)}
@@ -89,7 +136,7 @@ export default function FeaturePanel({ tone, className = "", children, ...rest }
       {children}
     </div>
   );
-}
+}) as FeaturePanelComponent;
 
 FeaturePanel.Header = Header;
 FeaturePanel.Toolbar = Toolbar;
@@ -97,3 +144,5 @@ FeaturePanel.Body = Body;
 FeaturePanel.Tabs = Tabs;
 FeaturePanel.Tab = Tab;
 FeaturePanel.CloseButton = CloseButton;
+
+export default FeaturePanel;

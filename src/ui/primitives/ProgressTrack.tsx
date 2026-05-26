@@ -1,29 +1,42 @@
-const TONE_BAR = {
+type Tone = "ember" | "moss" | "gold";
+type Size = "xs" | "sm" | "md";
+type ShowValue = false | "inside" | "after";
+
+const TONE_BAR: Record<Tone, string> = {
   ember: "bg-gradient-to-r from-ember-soft to-ember",
   moss:  "bg-gradient-to-r from-moss-soft to-moss",
   gold:  "bg-gradient-to-r from-gold-soft to-gold",
 };
 
-const TONE_FILL = {
+const TONE_FILL: Record<Tone, string> = {
   ember: "bg-ember",
   moss:  "bg-moss",
   gold:  "bg-gold",
 };
 
-const TONE_STROKE = {
+const TONE_STROKE: Record<Tone, string> = {
   ember: "var(--ember)",
   moss:  "var(--moss)",
   gold:  "var(--gold)",
 };
 
-const BAR_HEIGHT = { xs: "h-1.5", sm: "h-2.5", md: "h-3.5" };
-const PIP_SIZE   = { xs: "w-2 h-2", sm: "w-2.5 h-2.5", md: "w-3 h-3" };
-const RING_SIZE  = { xs: 28, sm: 40, md: 56 };
-const VALUE_TEXT = { xs: "text-micro", sm: "text-caption", md: "text-body" };
+const BAR_HEIGHT: Record<Size, string> = { xs: "h-1.5", sm: "h-2.5", md: "h-3.5" };
+const PIP_SIZE: Record<Size, string>   = { xs: "w-2 h-2", sm: "w-2.5 h-2.5", md: "w-3 h-3" };
+const RING_SIZE: Record<Size, number>  = { xs: 28, sm: 40, md: 56 };
+const VALUE_TEXT: Record<Size, string> = { xs: "text-micro", sm: "text-caption", md: "text-body" };
 
-function clamp01(v) { return v < 0 ? 0 : v > 1 ? 1 : v; }
+function clamp01(v: number) { return v < 0 ? 0 : v > 1 ? 1 : v; }
 
-function Bar({ value, max, tone, size, showValue }) {
+interface VariantProps {
+  value: number;
+  max: number;
+  tone: Tone;
+  size: Size;
+  showValue?: ShowValue;
+  currentMarker?: number;
+}
+
+function Bar({ value, max, tone, size, showValue }: VariantProps) {
   const pct = max > 0 ? clamp01(value / max) * 100 : 0;
   const heightCls = BAR_HEIGHT[size] || BAR_HEIGHT.md;
   const textCls = VALUE_TEXT[size] || VALUE_TEXT.md;
@@ -51,11 +64,11 @@ function Bar({ value, max, tone, size, showValue }) {
   );
 }
 
-function Pips({ value, max, tone, size, currentMarker, showValue }) {
+function Pips({ value, max, tone, size, currentMarker, showValue }: VariantProps) {
   const sizeCls = PIP_SIZE[size] || PIP_SIZE.md;
   const fillCls = TONE_FILL[tone] || TONE_FILL.ember;
   const textCls = VALUE_TEXT[size] || VALUE_TEXT.md;
-  const pips = [];
+  const pips: JSX.Element[] = [];
   for (let i = 0; i < max; i++) {
     const filled = i < value;
     const isCurrent = currentMarker != null && i === currentMarker;
@@ -74,7 +87,7 @@ function Pips({ value, max, tone, size, currentMarker, showValue }) {
   );
 }
 
-function Ring({ value, max, tone, size, showValue }) {
+function Ring({ value, max, tone, size, showValue }: VariantProps) {
   const dim = RING_SIZE[size] || RING_SIZE.md;
   const stroke = Math.max(3, Math.round(dim / 10));
   const r = (dim - stroke) / 2;
@@ -116,6 +129,17 @@ function Ring({ value, max, tone, size, showValue }) {
   );
 }
 
+interface ProgressTrackProps {
+  value?: number;
+  max?: number;
+  style?: "bar" | "pips" | "ring";
+  tone?: Tone;
+  size?: Size;
+  showValue?: ShowValue;
+  currentMarker?: number;
+  className?: string;
+}
+
 export default function ProgressTrack({
   value = 0,
   max = 1,
@@ -125,7 +149,7 @@ export default function ProgressTrack({
   showValue = false,
   currentMarker,
   className = "",
-}) {
+}: ProgressTrackProps) {
   let inner;
   if (style === "pips") {
     inner = <Pips value={value} max={max} tone={tone} size={size} currentMarker={currentMarker} showValue={showValue} />;

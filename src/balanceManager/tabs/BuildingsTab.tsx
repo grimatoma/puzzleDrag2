@@ -1,7 +1,7 @@
 // Buildings tab — edit name, description, level requirement, and full
 // resource cost map for every town building.
 
-import { useState, useMemo } from "react";
+import React, { useState, useMemo } from "react";
 import { BUILDINGS, BIOMES } from "../../constants.js";
 import {
   COLORS, NumberField, TextField, TextArea,
@@ -23,7 +23,7 @@ const COST_KEYS = (() => {
   return [...out].sort();
 })();
 
-export default function BuildingsTab({ draft: any, updateDraft: any, focus: any }) {
+export default function BuildingsTab({ draft, updateDraft, focus }: { draft: any; updateDraft: any; focus: any }) {
   const { focus: navFocus } = useBalanceNav();
   const activeFocus = focus ?? navFocus;
   useScrollToFocus(activeFocus);
@@ -183,7 +183,7 @@ export default function BuildingsTab({ draft: any, updateDraft: any, focus: any 
   );
 }
 
-function Label({ children: any }) {
+function Label({ children }: { children: any }) {
   return (
     <div className="text-[10px] font-bold uppercase tracking-wide mb-0.5" style={{ color: COLORS.inkSubtle }}>
       {children}
@@ -191,7 +191,7 @@ function Label({ children: any }) {
   );
 }
 
-function CostEditor({ cost: any, onChange: any }) {
+function CostEditor({ cost, onChange }: { cost: any; onChange: any }) {
   const availableOptions = useMemo(() => {
     return COST_KEYS.filter((k) => !(k in cost)).map((k) => ({
       id: k,
@@ -267,6 +267,6 @@ function CostEditor({ cost: any, onChange: any }) {
 }
 
 
-function CostStat({ label: any, value: any, accent: any }) {
-  return <MetricCard label={label} value={value} tone={accent === "warm" ? "ember" : "success"} />;
+function CostStat({ label, value, accent }: { label: React.ReactNode; value: React.ReactNode; accent?: string }) {
+  return <MetricCard label={label} value={value} hint={null} tone={accent === "warm" ? "ember" : "success"} />;
 }

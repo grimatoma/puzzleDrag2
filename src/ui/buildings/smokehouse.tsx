@@ -1,6 +1,6 @@
 import { svgState, Shadow } from "./helpers.jsx";
 
-export default function SmokehouseIllustration({ isBuilt }) {
+export default function SmokehouseIllustration({ isBuilt }: { isBuilt?: boolean }) {
   const { f, glow } = svgState(isBuilt);
   return (
     <svg viewBox="0 0 100 100" className="absolute inset-0 w-full h-full" preserveAspectRatio="xMidYMax meet" style={f}>

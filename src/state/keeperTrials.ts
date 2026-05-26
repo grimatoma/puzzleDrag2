@@ -18,7 +18,7 @@ export function keeperTrialDefinition(state: any, zoneId: any, path = "driveout"
   const type = settlementTypeForZone(zoneId);
   const keeper = keeperForType(type);
   const info = keeperPathInfo(type, path);
-  if (!keeper || !info) return null;
+  if (!keeper || !info || !type) return null;
   const biomeKey = biomeForSettlementType(type);
   const goalByType: Record<string, { resource: string; amount: number }> = {
     farm: { resource: "tile_grass_hay", amount: 25 },

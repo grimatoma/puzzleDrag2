@@ -5,23 +5,32 @@
 
 const target = typeof EventTarget !== "undefined" ? new EventTarget() : null;
 
-let coinAnchorEl = null;
+let coinAnchorEl: HTMLElement | null = null;
 
-export function setCoinAnchorEl(el) {
+export function setCoinAnchorEl(el: HTMLElement | null) {
   coinAnchorEl = el;
 }
 
-export function getCoinAnchorRect() {
+export function getCoinAnchorRect(): DOMRect | null {
   return coinAnchorEl?.getBoundingClientRect?.() ?? null;
 }
 
-export function onBurst(handler) {
-  if (!target) return () => {};
-  target.addEventListener("burst", handler);
-  return () => target.removeEventListener("burst", handler);
+export interface BurstDetail {
+  pageX: number;
+  pageY: number;
+  coins: number;
 }
 
-export function emitBurst(detail) {
+export type BurstHandler = (event: CustomEvent<BurstDetail>) => void;
+
+export function onBurst(handler: BurstHandler): () => void {
+  if (!target) return () => {};
+  const listener = handler as EventListener;
+  target.addEventListener("burst", listener);
+  return () => target.removeEventListener("burst", listener);
+}
+
+export function emitBurst(detail: BurstDetail) {
   if (!target) return;
   target.dispatchEvent(new CustomEvent("burst", { detail }));
 }

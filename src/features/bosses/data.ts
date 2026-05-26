@@ -1,4 +1,26 @@
-export const BOSSES = [
+import type { GameState } from "../../types/state.js";
+
+export interface BossTarget {
+  resource: string;
+  amount: number;
+}
+
+export interface BossModifierDef {
+  type: string;
+  params: Record<string, unknown>;
+}
+
+export interface BossDef {
+  id: string;
+  name: string;
+  season: string;
+  target: BossTarget;
+  modifier: BossModifierDef;
+  description: string;
+  modifierDescription: string;
+}
+
+export const BOSSES: BossDef[] = [
   {
     id: "frostmaw",
     name: "Frostmaw",
@@ -62,7 +84,13 @@ applyBossOverrides(BOSSES, _BO_BOSSES.bosses);
 
 // §9 locked: base = 200◉ × year_number; +1 rune (Phase 3 flat drop).
 // Margin scaling: 0% → 1.0×, +100% (cap) → 1.5×.
-export function bossReward(boss, progress, year) {
+export interface BossRewardResult {
+  coins: number;
+  runes: number;
+  defeated: boolean;
+}
+
+export function bossReward(boss: { target: BossTarget }, progress: number, year: number): BossRewardResult {
   const target = boss.target.amount;
   const defeated = progress >= target;
   if (!defeated) return { coins: 0, runes: 0, defeated: false };
@@ -81,20 +109,41 @@ import { applyModifierToFreshGrid } from "./modifiers.js";
 const DEFAULT_ROWS = 6;
 const DEFAULT_COLS = 6;
 
-function makeEmptyGrid(rows, cols) {
+interface BossesGridCell { row: number; col: number; [k: string]: unknown }
+
+function makeEmptyGrid(rows: number, cols: number): BossesGridCell[][] {
   return Array.from({ length: rows }, (_, r) =>
     Array.from({ length: cols }, (_, c) => ({ row: r, col: c }))
   );
 }
 
-export function spawnBoss(state, id, year, rng = Math.random) {
-  if (state.boss) return state;
+interface BossesHostState {
+  boss?: BossInstance | null;
+  grid?: BossesGridCell[][];
+  story?: { flags?: Record<string, boolean> };
+  coins?: number;
+  runes?: number;
+}
+
+export interface BossInstance {
+  id: string;
+  season: string;
+  year: number;
+  turnsRemaining: number;
+  progress: number;
+  target: BossTarget;
+  modifierState: unknown;
+}
+
+export function spawnBoss(state: GameState, id: string, year: number, rng: () => number = Math.random): GameState {
+  const s = state as unknown as BossesHostState;
+  if (s.boss) return state;
   const def = BOSSES.find((b) => b.id === id);
   if (!def) return state;
-  const grid = (state.grid && state.grid.length > 0)
-    ? state.grid
+  const grid = (s.grid && s.grid.length > 0)
+    ? s.grid
     : makeEmptyGrid(DEFAULT_ROWS, DEFAULT_COLS);
-  const modifierState = applyModifierToFreshGrid(grid, def.modifier, rng);
+  const modifierState = applyModifierToFreshGrid(grid as Array<Array<Record<string, unknown>>>, def.modifier as { type: string; params: { boost?: string[]; factor?: number; n?: number; count?: number; hidden?: number; burnAfter?: number } }, rng);
   return {
     ...state,
     grid,
@@ -108,30 +157,32 @@ export function spawnBoss(state, id, year, rng = Math.random) {
       modifierState,
     },
     story: {
-      ...state.story,
-      flags: { ...(state.story?.flags ?? {}), [`${id}_active`]: true },
+      ...s.story,
+      flags: { ...(s.story?.flags ?? {}), [`${id}_active`]: true },
     },
-  };
+  } as unknown as GameState;
 }
 
-export function tickBossTurn(state) {
-  if (!state.boss) return state;
-  const next = { ...state.boss, turnsRemaining: state.boss.turnsRemaining - 1 };
+export function tickBossTurn(state: GameState): GameState {
+  const s = state as unknown as BossesHostState;
+  if (!s.boss) return state;
+  const next: BossInstance = { ...s.boss, turnsRemaining: s.boss.turnsRemaining - 1 };
   const targetMet = next.progress >= next.target.amount;
   const expired = next.turnsRemaining <= 0;
-  if (!targetMet && !expired) return { ...state, boss: next };
-  const def = BOSSES.find((b) => b.id === state.boss.id);
-  const reward = bossReward(def, next.progress, next.year ?? state.boss.year ?? 1);
+  if (!targetMet && !expired) return { ...state, boss: next } as GameState;
+  const def = BOSSES.find((b) => b.id === s.boss?.id);
+  if (!def) return state;
+  const reward = bossReward(def, next.progress, next.year ?? s.boss.year ?? 1);
   const flags = {
-    ...(state.story?.flags ?? {}),
-    [`${state.boss.id}_active`]: false,
-    ...(reward.defeated ? { [`${state.boss.id}_defeated`]: true } : {}),
+    ...(s.story?.flags ?? {}),
+    [`${s.boss.id}_active`]: false,
+    ...(reward.defeated ? { [`${s.boss.id}_defeated`]: true } : {}),
   };
   return {
     ...state,
     boss: null,
-    coins: (state.coins ?? 0) + reward.coins,
-    runes: (state.runes ?? 0) + reward.runes,
-    story: { ...(state.story ?? {}), flags },
-  };
+    coins: (s.coins ?? 0) + reward.coins,
+    runes: (s.runes ?? 0) + reward.runes,
+    story: { ...(s.story ?? {}), flags },
+  } as GameState;
 }

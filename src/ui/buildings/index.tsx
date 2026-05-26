@@ -17,7 +17,8 @@ import HarborDockIllustration from "./harbor_dock.jsx";
 import FishmongerIllustration from "./fishmonger.jsx";
 import SmokehouseIllustration from "./smokehouse.jsx";
 
-const ILLUSTRATIONS = {
+type IllustrationComponent = (props: { isBuilt?: boolean }) => JSX.Element;
+const ILLUSTRATIONS: Record<string, IllustrationComponent> = {
   hearth: HearthIllustration,
   mill: MillIllustration,
   bakery: BakeryIllustration,
@@ -40,7 +41,7 @@ const ILLUSTRATIONS = {
   smokehouse: SmokehouseIllustration,
 };
 
-export default function BuildingIllustration({ id, isBuilt }) {
+export default function BuildingIllustration({ id, isBuilt }: { id: string; isBuilt?: boolean }) {
   const Component = ILLUSTRATIONS[id];
   return Component ? <Component isBuilt={isBuilt} /> : null;
 }

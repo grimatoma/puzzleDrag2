@@ -3,11 +3,48 @@
  * No Phaser references — state-side only.
  */
 
+import type { GameState } from "../../types/state.js";
+
+export interface BossModifierParams {
+  n?: number;
+  count?: number;
+  hidden?: number;
+  boost?: string[];
+  factor?: number;
+  burnAfter?: number;
+}
+
+export interface BossModifier {
+  type: string;
+  params: BossModifierParams;
+}
+
+interface ModifierGridCell {
+  frozen?: boolean;
+  rubble?: boolean;
+  hidden?: boolean;
+  heat?: boolean;
+  [k: string]: unknown;
+}
+
+export interface CellCoord { row: number; col: number }
+
+export interface HeatEntry { row: number; col: number; age: number }
+
+export interface ModifierState {
+  frozenColumns?: number[];
+  rubble?: CellCoord[];
+  hidden?: CellCoord[];
+  heat?: HeatEntry[];
+  boost?: string[];
+  factor?: number;
+}
+
 /**
  * Apply a modifier to a freshly-generated grid, returning the modifierState bag.
  * Mutates tile objects in grid to add overlay flags.
  */
-export function applyModifierToFreshGrid(grid, modifier, rng) {
+export function applyModifierToFreshGrid(grid: ModifierGridCell[][] | null | undefined, modifier: BossModifier, rng: () => number): ModifierState {
   const { type, params } = modifier;
   if (!grid || grid.length === 0) {
     // Empty grid — return shape-correct modifier state
@@ -23,18 +60,18 @@ export function applyModifierToFreshGrid(grid, modifier, rng) {
   const cols = grid[0].length;
 
   if (type === "freeze_columns") {
-    const picked = new Set();
-    while (picked.size < params.n) picked.add(Math.floor(rng() * cols));
+    const picked = new Set<number>();
+    while (picked.size < (params.n ?? 0)) picked.add(Math.floor(rng() * cols));
     const frozenColumns = [...picked];
     for (const row of grid) for (const c of frozenColumns) row[c].frozen = true;
     return { frozenColumns };
   }
 
   if (type === "rubble_blocks" || type === "hide_resources") {
-    const want = params.count ?? params.hidden;
-    const flag = type === "rubble_blocks" ? "rubble" : "hidden";
+    const want: number = (params.count ?? params.hidden ?? 0);
+    const flag: "rubble" | "hidden" = type === "rubble_blocks" ? "rubble" : "hidden";
     // Build a pool of all grid positions, shuffle with rng, take 'want'
-    const allCells = [];
+    const allCells: CellCoord[] = [];
     for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) allCells.push({ row: r, col: c });
     // Fisher-Yates shuffle using rng
     for (let i = allCells.length - 1; i > 0; i--) {
@@ -57,24 +94,32 @@ export function applyModifierToFreshGrid(grid, modifier, rng) {
  * tileIsChainable — returns false for frozen, rubble, or hidden tiles.
  * modifier parameter accepted for API compatibility but tile flags are checked directly.
  */
-export function tileIsChainable(tile) {
+export function tileIsChainable(tile: ModifierGridCell | null | undefined): boolean {
   return !!tile && !(tile.frozen || tile.rubble || tile.hidden);
 }
+
+interface ModifierHostState {
+  inventory?: Record<string, number>;
+  boss?: { modifierState?: { heat?: HeatEntry[] } } | null;
+}
+
+export interface TickModifierResult { newState: GameState }
 
 /**
  * tickModifier — advances modifier state one turn.
  * For heat_tiles: increments ages, burns at burnAfter threshold.
  * Returns { newState }.
  */
-export function tickModifier(state, modifier) {
+export function tickModifier(state: GameState, modifier: BossModifier): TickModifierResult {
   if (modifier.type !== "heat_tiles") return { newState: state };
+  const s = state as unknown as ModifierHostState;
 
-  const heat = (state.boss?.modifierState?.heat ?? []).map((h) => ({ ...h, age: h.age + 1 }));
-  const surviving = [];
-  let inv = { ...(state.inventory ?? {}) };
+  const heat: HeatEntry[] = (s.boss?.modifierState?.heat ?? []).map((h: HeatEntry) => ({ ...h, age: h.age + 1 }));
+  const surviving: HeatEntry[] = [];
+  const inv: Record<string, number> = { ...(s.inventory ?? {}) };
 
   for (const h of heat) {
-    if (h.age > modifier.params.burnAfter) {
+    if (h.age > (modifier.params.burnAfter ?? Infinity)) {
       const keys = Object.keys(inv).filter((k) => (inv[k] ?? 0) > 0);
       if (keys.length) {
         const k = keys[Math.floor(Math.random() * keys.length)];
@@ -90,13 +135,13 @@ export function tickModifier(state, modifier) {
       ...state,
       inventory: inv,
       boss: {
-        ...(state.boss ?? {}),
+        ...(s.boss ?? {}),
         modifierState: {
-          ...(state.boss?.modifierState ?? {}),
+          ...(s.boss?.modifierState ?? {}),
           heat: surviving,
         },
       },
-    },
+    } as GameState,
   };
 }
 
@@ -104,7 +149,7 @@ export function tickModifier(state, modifier) {
  * clearModifier — strips every overlay flag from all tiles in the grid.
  * Called once on boss resolution.
  */
-export function clearModifier(grid) {
+export function clearModifier(grid: ModifierGridCell[][] | null | undefined): ModifierGridCell[][] | null | undefined {
   if (!grid) return grid;
   for (const row of grid) {
     for (const t of row) {

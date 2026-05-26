@@ -2,22 +2,23 @@ import { BOARD_ANIMATIONS } from "../../config/boardAnimations.js";
 import { TOOL_POWERS } from "../../config/toolPowers.js";
 import { COLORS, Card, Pill } from "../shared.jsx";
 
-function BoardPresetTiming({ animName: any }) {
-  const entry = animName ? BOARD_ANIMATIONS[animName] : null;
+function BoardPresetTiming({ animName }: { animName: string | null | undefined }) {
+  const entry = animName ? (BOARD_ANIMATIONS as Record<string, unknown>)[animName] : null;
   if (!entry) return null;
+  const e = entry as Record<string, number | string | undefined>;
   return (
     <div className="flex items-center gap-1 flex-wrap mt-1">
       <span className="text-[10px]" style={{ color: COLORS.inkSubtle }}>
-        Preset <span className="font-mono">{animName}</span> ({entry.kind})
+        Preset <span className="font-mono">{animName}</span> ({String(e.kind)})
       </span>
-      {Number.isFinite(entry.duration) && <Pill>duration: {entry.duration}ms</Pill>}
-      {Number.isFinite(entry.staggerMs) && <Pill>stagger: {entry.staggerMs}ms</Pill>}
-      {entry.ease && <Pill>ease: {entry.ease}</Pill>}
+      {Number.isFinite(e.duration) && <Pill>duration: {e.duration}ms</Pill>}
+      {Number.isFinite(e.staggerMs) && <Pill>stagger: {e.staggerMs}ms</Pill>}
+      {e.ease && <Pill>ease: {e.ease}</Pill>}
     </div>
   );
 }
 
-function DefaultBoardAnimBlock({ anim: any }) {
+function DefaultBoardAnimBlock({ anim }: { anim: any }) {
   if (!anim) {
     return (
       <div className="text-[11px] italic" style={{ color: COLORS.inkSubtle }}>
@@ -79,15 +80,18 @@ export default function ToolPowersReferenceTab() {
                 <div className="text-[11px]" style={{ color: COLORS.inkSubtle }}>No params.</div>
               ) : (
                 <ul className="text-[11px] list-disc pl-4" style={{ color: COLORS.inkSubtle }}>
-                  {power.params.map((p) => (
-                    <li key={p.key}>
-                      <span className="font-mono" style={{ color: COLORS.ink }}>{p.key}</span>
-                      {" "}({p.type}) — {p.label}
-                      {p.default !== undefined && (
-                        <>; default: <span className="font-mono">{String(p.default)}</span></>
-                      )}
-                    </li>
-                  ))}
+                  {power.params.map((p) => {
+                    const pp = p as { key: string; label: string; type: string; default?: unknown };
+                    return (
+                      <li key={pp.key}>
+                        <span className="font-mono" style={{ color: COLORS.ink }}>{pp.key}</span>
+                        {" "}({pp.type}) — {pp.label}
+                        {pp.default !== undefined && (
+                          <>; default: <span className="font-mono">{String(pp.default)}</span></>
+                        )}
+                      </li>
+                    );
+                  })}
                 </ul>
               )}
             </div>

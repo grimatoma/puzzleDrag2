@@ -78,9 +78,9 @@ const SVG_USAGE_LITERALS = [
  * space: a `design.tile.grass` key and a canvas `tile_grass_hay` key both appear
  * as plain strings if referenced.
  */
-export function getUsedIconKeys() {
-  const used = new Set();
-  const add = (key: any) => {
+export function getUsedIconKeys(): Set<string> {
+  const used = new Set<string>();
+  const add = (key: unknown) => {
     if (typeof key === "string" && key.length > 0) used.add(key);
   };
 
@@ -157,13 +157,13 @@ export function getUsedIconKeys() {
  * Internally builds the set once and caches it for the lifetime of the
  * module (the catalogs it pulls from are static at runtime).
  */
-let _cachedSet = null;
-export function isIconUsed(key: any) {
+let _cachedSet: Set<string> | null = null;
+export function isIconUsed(key: string): boolean {
   if (_cachedSet === null) _cachedSet = getUsedIconKeys();
   return _cachedSet.has(key);
 }
 
 /** For tests only — clears the memoised set so the next call re-scans. */
-export function _resetIconUsageCacheForTests() {
+export function _resetIconUsageCacheForTests(): void {
   _cachedSet = null;
 }

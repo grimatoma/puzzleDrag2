@@ -7,22 +7,40 @@ import { isTapTargetPower } from "../config/toolPowers.js";
 
 const FIELD_TOOLS = new Set(["clear", "basic", "rare", "shuffle", "bomb"]);
 
-function toolCategory(key) {
+const _ITEMS = ITEMS as Record<string, any>;
+
+interface ToolPower {
+  id?: string;
+  bubble?: string;
+  [key: string]: unknown;
+}
+
+export interface ToolEntry {
+  key: string;
+  category: "field" | "workshop";
+  iconKey: string;
+  name: string;
+  armed: "instant" | "passive" | "tap";
+  desc: string;
+  count?: number;
+}
+
+function toolCategory(key: string): "field" | "workshop" {
   if (FIELD_TOOLS.has(key)) return "field";
-  if (ITEMS[key]?.kind === "tool") return "workshop";
+  if (_ITEMS[key]?.kind === "tool") return "workshop";
   return "workshop";
 }
 
-function toolArmed(power) {
+function toolArmed(power: ToolPower): "instant" | "passive" | "tap" {
   if (!power?.id) return "instant";
   if (power.id === "arm_fill_bias" || power.id === "fill_bias") return "passive";
   return isTapTargetPower(power.id) ? "tap" : "instant";
 }
 
-function entryFromItem(key) {
-  const item = ITEMS[key];
+function entryFromItem(key: string): ToolEntry | null {
+  const item = _ITEMS[key];
   if (!item || item.kind !== "tool") return null;
-  const power = item.power ?? {};
+  const power: ToolPower = item.power ?? {};
   return {
     key,
     category: toolCategory(key),
@@ -33,23 +51,23 @@ function entryFromItem(key) {
   };
 }
 
-export const TOOL_CATALOG = Object.keys(ITEMS)
+export const TOOL_CATALOG: ToolEntry[] = Object.keys(_ITEMS)
   .map(entryFromItem)
-  .filter(Boolean);
+  .filter((t): t is ToolEntry => t !== null);
 
-export const TOOL_BY_KEY = Object.fromEntries(TOOL_CATALOG.map((t) => [t.key, t]));
+export const TOOL_BY_KEY: Record<string, ToolEntry> = Object.fromEntries(TOOL_CATALOG.map((t) => [t.key, t]));
 
 export const TOOL_CATEGORIES = [
   { key: "field", label: "Field" },
   { key: "workshop", label: "Workshop" },
 ];
 
-export function isTapTargetTool(key) {
-  const power = ITEMS[key]?.power;
+export function isTapTargetTool(key: string): boolean {
+  const power = _ITEMS[key]?.power;
   return !!(power?.id && isTapTargetPower(power.id));
 }
 
-export function visibleTools(toolsState = {}) {
+export function visibleTools(toolsState: Record<string, number> = {}): ToolEntry[] {
   return TOOL_CATALOG.map((t) => ({
     ...t,
     count: toolsState[t.key] || 0,

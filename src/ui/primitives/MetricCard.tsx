@@ -1,10 +1,15 @@
+import type { ReactNode } from "react";
 import { UI_COLORS } from "./palette.js";
 
-function cx(...parts) {
+function cx(...parts: Array<string | false | null | undefined>): string {
   return parts.filter(Boolean).join(" ");
 }
 
-const TONES = {
+type Tone = "default" | "muted" | "ember" | "success" | "warning" | "danger";
+
+interface ToneSpec { bg: string; border: string; label: string; value: string }
+
+const TONES: Record<Tone, ToneSpec> = {
   default: {
     bg: UI_COLORS.parchmentDeep,
     border: UI_COLORS.border,
@@ -43,12 +48,22 @@ const TONES = {
   },
 };
 
-export function MetricGrid({ children, className = "" }) {
+export function MetricGrid({ children, className = "" }: { children?: ReactNode; className?: string }) {
   return (
     <div className={cx("grid grid-cols-2 md:grid-cols-4 gap-2", className)}>
       {children}
     </div>
   );
+}
+
+interface MetricCardProps {
+  label?: ReactNode;
+  value?: ReactNode;
+  hint?: ReactNode;
+  tone?: Tone;
+  align?: "left" | "right" | "center";
+  className?: string;
+  valueClassName?: string;
 }
 
 export default function MetricCard({
@@ -59,7 +74,7 @@ export default function MetricCard({
   align = "center",
   className = "",
   valueClassName = "",
-}) {
+}: MetricCardProps) {
   const t = TONES[tone] || TONES.default;
   const alignClass = align === "left" ? "items-start text-left" : align === "right" ? "items-end text-right" : "items-center text-center";
   return (

@@ -1,4 +1,12 @@
-function cx(...parts) {
+import type {
+  ChangeEvent,
+  InputHTMLAttributes,
+  ReactNode,
+  SelectHTMLAttributes,
+  TextareaHTMLAttributes,
+} from "react";
+
+function cx(...parts: Array<string | false | null | undefined>): string {
   return parts.filter(Boolean).join(" ");
 }
 
@@ -19,15 +27,23 @@ function ClearIcon() {
   );
 }
 
-export function TextInput({ className = "", type = "text", ...rest }) {
+interface TextInputProps extends InputHTMLAttributes<HTMLInputElement> {
+  className?: string;
+}
+
+export function TextInput({ className = "", type = "text", ...rest }: TextInputProps) {
   return <input type={type} className={cx("hl-input", className)} {...rest} />;
 }
 
-export function NumberInput({ className = "", ...rest }) {
+export function NumberInput({ className = "", ...rest }: TextInputProps) {
   return <TextInput type="number" className={cx("font-mono text-right tabular-nums", className)} {...rest} />;
 }
 
-export function TextArea({ className = "", ...rest }) {
+interface TextAreaProps extends TextareaHTMLAttributes<HTMLTextAreaElement> {
+  className?: string;
+}
+
+export function TextArea({ className = "", ...rest }: TextAreaProps) {
   return (
     <textarea
       className={cx(
@@ -39,12 +55,27 @@ export function TextArea({ className = "", ...rest }) {
   );
 }
 
-export function SelectField({ className = "", children, ...rest }) {
+interface SelectFieldProps extends SelectHTMLAttributes<HTMLSelectElement> {
+  className?: string;
+  children?: ReactNode;
+}
+
+export function SelectField({ className = "", children, ...rest }: SelectFieldProps) {
   return (
     <select className={cx("hl-input", className)} {...rest}>
       {children}
     </select>
   );
+}
+
+interface SearchInputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, "onChange" | "value"> {
+  value?: string;
+  onChange?: (e: ChangeEvent<HTMLInputElement> | { target: { value: string } }) => void;
+  onClear?: () => void;
+  placeholder?: string;
+  ariaLabel?: string;
+  className?: string;
+  inputClassName?: string;
 }
 
 export function SearchInput({
@@ -56,7 +87,7 @@ export function SearchInput({
   className = "",
   inputClassName = "",
   ...rest
-}) {
+}: SearchInputProps) {
   const handleClear = () => {
     if (onClear) onClear();
     else onChange?.({ target: { value: "" } });
@@ -69,7 +100,7 @@ export function SearchInput({
       <TextInput
         type="search"
         value={value}
-        onChange={onChange}
+        onChange={onChange as InputHTMLAttributes<HTMLInputElement>["onChange"]}
         placeholder={placeholder}
         aria-label={ariaLabel}
         className={cx("pl-8 pr-8", inputClassName)}

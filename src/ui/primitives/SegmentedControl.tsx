@@ -1,20 +1,43 @@
 import { forwardRef } from "react";
+import type { CSSProperties, ReactNode } from "react";
 
-function cx(...parts) {
+function cx(...parts: Array<string | false | null | undefined>): string {
   return parts.filter(Boolean).join(" ");
 }
 
-function defaultValue(option) {
+type OptionLike = string | number | { id?: string | number; value?: string | number; key?: string | number; label?: ReactNode; name?: ReactNode } | Record<string, any>;
+
+function defaultValue(option: OptionLike) {
   if (option && typeof option === "object") return option.id ?? option.value ?? option.key;
   return option;
 }
 
-function defaultLabel(option) {
+function defaultLabel(option: OptionLike): ReactNode {
   if (option && typeof option === "object") return option.label ?? option.name ?? option.id ?? option.value;
-  return option;
+  return option as ReactNode;
 }
 
-const SegmentedControl = forwardRef(function SegmentedControl({
+interface SegmentedControlProps {
+  options?: OptionLike[];
+  value?: unknown;
+  onChange?: (value: unknown, option: OptionLike) => void;
+  ariaLabel?: string;
+  role?: string;
+  className?: string;
+  style?: CSSProperties;
+  buttonClassName?: string;
+  activeClassName?: string;
+  inactiveClassName?: string;
+  activeStyle?: CSSProperties;
+  inactiveStyle?: CSSProperties;
+  getValue?: (option: OptionLike) => unknown;
+  getLabel?: (option: OptionLike) => ReactNode;
+  getButtonClassName?: (option: OptionLike, selected: boolean) => string;
+  getButtonStyle?: (option: OptionLike, selected: boolean) => CSSProperties | undefined;
+  renderOption?: (option: OptionLike, meta: { selected: boolean; value: unknown; label: ReactNode }) => ReactNode;
+}
+
+const SegmentedControl = forwardRef<HTMLDivElement, SegmentedControlProps>(function SegmentedControl({
   options = [],
   value,
   onChange,

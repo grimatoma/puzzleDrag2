@@ -4,12 +4,37 @@ import ToolStrip from "./primitives/ToolStrip.jsx";
 import BottomSheet from "./primitives/BottomSheet.jsx";
 import { TOOL_CATALOG, TOOL_BY_KEY, visibleTools, isTapTargetTool } from "./toolRegistry.js";
 import { isFillBiasArmed } from "../state/fillBias.js";
+import type { Dispatch, GameState } from "../types/state.js";
+
+type AnyState = GameState & Record<string, any>;
+
+interface ToolDef {
+  key: string;
+  iconKey: string;
+  name: string;
+  desc?: string;
+  category?: string;
+}
+
+interface ToolEntry {
+  key: string;
+  iconKey: string;
+  label: string;
+  count: number;
+  category: string | undefined;
+  def: ToolDef;
+  disabled: boolean;
+  armed: boolean;
+}
 
 export const TOOL_DEFS = TOOL_CATALOG;
 
-function buildToolList(toolsState, { toolPending, fillBiasArmed }) {
-  const tools = toolsState || {};
-  return visibleTools(tools).map((def) => {
+function buildToolList(
+  toolsState: Record<string, number> | null | undefined,
+  { toolPending, fillBiasArmed }: { toolPending?: string | null; fillBiasArmed?: boolean },
+): ToolEntry[] {
+  const tools: Record<string, number> = toolsState || {};
+  return (visibleTools(tools) as ToolDef[]).map((def) => {
     const count = tools[def.key] || 0;
     const armed =
       toolPending === def.key ||
@@ -27,7 +52,14 @@ function buildToolList(toolsState, { toolPending, fillBiasArmed }) {
   });
 }
 
-function ToolInspectSheet({ tool, count, onClose, onUse }) {
+interface ToolInspectSheetProps {
+  tool: ToolDef | null;
+  count: number;
+  onClose: () => void;
+  onUse?: (key: string) => void;
+}
+
+function ToolInspectSheet({ tool, count, onClose, onUse }: ToolInspectSheetProps) {
   if (!tool) return null;
   const canUse = typeof count === "number" && count > 0;
   return (
@@ -76,7 +108,7 @@ function ToolInspectSheet({ tool, count, onClose, onUse }) {
 // whatever was previously armed. See disarmOtherTools there for the full
 // rationale; fillBiasArmed is its own flag so re-dispatching USE_TOOL
 // fertilizer is the disarm + refund path for it.
-function disarmOtherTools(dispatch, key, state) {
+function disarmOtherTools(dispatch: Dispatch, key: string, state: AnyState) {
   if (state?.toolPending && state.toolPending !== key) {
     dispatch({ type: "CANCEL_TOOL" });
   }
@@ -85,14 +117,14 @@ function disarmOtherTools(dispatch, key, state) {
   }
 }
 
-function dispatchUseTool(dispatch, key, state) {
+function dispatchUseTool(dispatch: Dispatch, key: string, state: AnyState) {
   const isPending = state.toolPending === key;
   if (isPending) {
     dispatch({ type: "CANCEL_TOOL" });
     return;
   }
   disarmOtherTools(dispatch, key, state);
-  const def = TOOL_BY_KEY[key];
+  const def = (TOOL_BY_KEY as Record<string, ToolDef | undefined>)[key];
   if (def?.category === "magic") {
     dispatch({ type: "USE_TOOL", payload: { id: key } });
   } else {
@@ -104,10 +136,18 @@ function dispatchUseTool(dispatch, key, state) {
   }
 }
 
-export function ToolsGrid({ tools, toolPending, fillBiasArmed, onUse, onInspectChange }) {
-  const [inspectKey, setInspectKey] = useState(null);
+interface ToolsGridProps {
+  tools: Record<string, number> | null | undefined;
+  toolPending?: string | null;
+  fillBiasArmed?: boolean;
+  onUse?: (key: string) => void;
+  onInspectChange?: (tool: ToolDef | null) => void;
+}
+
+export function ToolsGrid({ tools, toolPending, fillBiasArmed, onUse, onInspectChange }: ToolsGridProps) {
+  const [inspectKey, setInspectKey] = useState<string | null>(null);
   const list = buildToolList(tools, { toolPending, fillBiasArmed });
-  const inspectTool = inspectKey ? TOOL_BY_KEY[inspectKey] : null;
+  const inspectTool = inspectKey ? ((TOOL_BY_KEY as Record<string, ToolDef | undefined>)[inspectKey] ?? null) : null;
   const inspectCount = inspectKey != null ? (tools?.[inspectKey] ?? 0) : 0;
   useEffect(() => {
     onInspectChange?.(inspectTool);
@@ -119,7 +159,7 @@ export function ToolsGrid({ tools, toolPending, fillBiasArmed, onUse, onInspectC
         tools={list}
         armedKey={toolPending}
         onUse={onUse}
-        onInspect={(key) => setInspectKey(key)}
+        onInspect={(key: string) => setInspectKey(key)}
         grouped
       />
       <ToolInspectSheet
@@ -132,9 +172,15 @@ export function ToolsGrid({ tools, toolPending, fillBiasArmed, onUse, onInspectC
   );
 }
 
-export function MobileDock({ state, dispatch, onInspectChange }) {
-  const [sheet, setSheet] = useState(null);
-  const [inspectKey, setInspectKey] = useState(null);
+interface MobileDockProps {
+  state: AnyState;
+  dispatch: Dispatch;
+  onInspectChange?: (tool: ToolDef | null) => void;
+}
+
+export function MobileDock({ state, dispatch, onInspectChange }: MobileDockProps) {
+  const [sheet, setSheet] = useState<string | null>(null);
+  const [inspectKey, setInspectKey] = useState<string | null>(null);
 
   useEffect(() => {
     if (state.view === "board") return;
@@ -144,15 +190,15 @@ export function MobileDock({ state, dispatch, onInspectChange }) {
   }, [state.view]);
 
   const totalTools = Object.entries(state.tools || {})
-    .filter(([k, v]) => typeof v === "number" && v > 0 && TOOL_BY_KEY[k])
-    .reduce((s, [, v]) => s + v, 0);
+    .filter(([k, v]) => typeof v === "number" && v > 0 && (TOOL_BY_KEY as Record<string, ToolDef | undefined>)[k])
+    .reduce((s, [, v]) => s + (v as number), 0);
   const closeSheet = () => setSheet(null);
-  const list = buildToolList(state.tools, {
+  const list = buildToolList(state.tools as Record<string, number>, {
     toolPending: state.toolPending,
     fillBiasArmed: isFillBiasArmed(state),
   });
-  const inspectTool = inspectKey ? TOOL_BY_KEY[inspectKey] : null;
-  const inspectCount = inspectKey != null ? (state.tools?.[inspectKey] ?? 0) : 0;
+  const inspectTool = inspectKey ? ((TOOL_BY_KEY as Record<string, ToolDef | undefined>)[inspectKey] ?? null) : null;
+  const inspectCount = inspectKey != null ? (Number(state.tools?.[inspectKey]) || 0) : 0;
   useEffect(() => {
     onInspectChange?.(inspectTool);
   }, [inspectTool, onInspectChange]);
@@ -189,12 +235,12 @@ export function MobileDock({ state, dispatch, onInspectChange }) {
           layout="sheet"
           tools={list}
           armedKey={state.toolPending}
-          onUse={(key) => {
+          onUse={(key: string) => {
             const willCancel = state.toolPending === key;
             dispatchUseTool(dispatch, key, state);
             if (!willCancel) closeSheet();
           }}
-          onInspect={(key) => setInspectKey(key)}
+          onInspect={(key: string) => setInspectKey(key)}
           grouped
         />
       </BottomSheet>
@@ -203,7 +249,7 @@ export function MobileDock({ state, dispatch, onInspectChange }) {
         tool={inspectTool}
         count={inspectCount}
         onClose={() => setInspectKey(null)}
-        onUse={(key) => {
+        onUse={(key: string) => {
           const willCancel = state.toolPending === key;
           dispatchUseTool(dispatch, key, state);
           if (!willCancel) closeSheet();

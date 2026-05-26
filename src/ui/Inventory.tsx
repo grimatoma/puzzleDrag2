@@ -397,7 +397,7 @@ function InventoryDetail({ entry, marketBuilt, dispatch }: { entry: any; marketB
 export function CompactOrders({ orders, inventory, dispatch }: { orders: any; inventory: any; dispatch: any }) {
   return (
     <div className="flex flex-col gap-1.5">
-      {orders.map((o) => {
+      {orders.map((o: any) => {
         const have = inventory[o.key] || 0;
         const done = have >= o.need;
         const res = ITEMS[o.key];
@@ -458,7 +458,7 @@ export function InventoryGrid({
   const resources = BIOMES[biomeKey].resources; // already resource-only after data split
   const items = (Object.entries(ITEMS) as [string, any][]).filter(([key, item]) =>
     (inventory[key] || 0) > 0 &&
-    !resources.find(r => r.key === key) &&
+    !resources.find((r: any) => r.key === key) &&
     item.kind !== "tile" &&
     item.kind !== "tool"
   );
@@ -482,11 +482,11 @@ export function InventoryGrid({
     return value > 0 && max ? { value, max } : null;
   };
 
-  const [selectedKey, setSelectedKey] = useState(null);
+  const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const accordion = useAccordion();
-  const cellRefs = useRef({});
-  const containerRef = useRef(null);
-  const [arrowLeft, setArrowLeft] = useState(null);
+  const cellRefs = useRef<Record<string, HTMLElement>>({});
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const [arrowLeft, setArrowLeft] = useState<number | null>(null);
   const [columnsPerRow, setColumnsPerRow] = useState(1);
   const assignCellRef = useCallback((key: any, el: any) => {
     if (el) cellRefs.current[key] = el;
@@ -494,7 +494,7 @@ export function InventoryGrid({
   }, []);
 
   useLayoutEffect(() => {
-    let next = null;
+    let next: number | null = null;
     if (compact && accordion.displayedKey) {
       const cell = cellRefs.current[accordion.displayedKey];
       const container = containerRef.current;
@@ -544,13 +544,13 @@ export function InventoryGrid({
     return activeTags.every((tag) => itemHasTag(key, tag) || sourceTagsForItem(key, { recipesByOutput }).includes(tag));
   };
 
-  const resourceCellsBy = new Map(resources.map((r) => [r.key, r]));
-  const itemDefsByKey = new Map(items.map(([key, item]) => [key, item]));
-  const toolDefsByKey = new Map(tools.map(([key]) => [key, ITEMS[key]]));
+  const resourceCellsBy = new Map<string, any>(resources.map((r: any) => [r.key, r]));
+  const itemDefsByKey = new Map<string, any>(items.map(([key, item]) => [key, item]));
+  const toolDefsByKey = new Map<string, any>(tools.map(([key]) => [key, ITEMS[key]]));
 
   const visibleResourceKeys = resources
-    .map((r) => r.key)
-    .filter((key) => {
+    .map((r: any) => r.key as string)
+    .filter((key: string) => {
       if (!matchesTags(key)) return false;
       if (!matchesQuery(key, labelFor(key, resourceCellsBy.get(key)?.label), query)) return false;
       if (filter === "sellable") {
@@ -657,7 +657,7 @@ export function InventoryGrid({
       }
       const selectedEntry = selectedIndex >= 0 ? entries[selectedIndex] : null;
       const cols = Math.max(columnsPerRow, 1);
-      const handleCellSelect = (key, idx) => {
+      const handleCellSelect = (key: string, idx: number) => {
         if (viewMode === "grid" && accordion.isOpen && selectedIndex >= 0) {
           if (Math.floor(selectedIndex / cols) === Math.floor(idx / cols)) {
             accordion.selectInPlace(key);

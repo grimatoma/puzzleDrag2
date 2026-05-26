@@ -69,7 +69,7 @@ function workerEntries() {
   })).sort(byName);
 }
 
-const BUILDING_ICON_KEYS = {
+const BUILDING_ICON_KEYS: Record<string, string> = {
   bakery: "station_bakery",
   forge: "station_forge",
   larder: "station_larder",
@@ -124,10 +124,15 @@ function recipeEntries() {
 
 function zoneEntries() {
   return Object.values(ZONES)
-    .map((z) => ({
-      key: z.id,
-      name: z.name ?? z.label ?? z.id,
-    }))
+    .map((z) => {
+      // The Zone type doesn't always expose a `label`; older configs used it
+      // as a fallback display name. Read both via a loose record cast.
+      const zz = z as unknown as { id: string; name?: string; label?: string };
+      return {
+        key: zz.id,
+        name: zz.name ?? zz.label ?? zz.id,
+      };
+    })
     .sort(byName);
 }
 

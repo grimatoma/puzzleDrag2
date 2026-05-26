@@ -10,28 +10,66 @@
 // Used by the Story Tree Editor / Dev Panel StoryTab.
 
 import { effectiveBeat, allBeatIds, draftBeats, isDraftBeat } from "./shared.jsx";
+import type { StoryBeat, StoryDraft } from "./types.js";
 
 const NARRATOR_KEY = "_narrator";
 
-function wordCount(text: any) {
+interface NpcRow {
+  lines: number;
+  words: number;
+  beats: Set<string>;
+  bondDelta: number;
+}
+
+interface BeatLength { id: string; title: string; words: number; lines: number }
+
+interface NpcStatRow {
+  key: string;
+  isNarrator: boolean;
+  lines: number;
+  words: number;
+  beats: number;
+  bondDelta: number;
+}
+
+export interface StoryStats {
+  totalBeats: number;
+  draftBeats: number;
+  totalLines: number;
+  totalWords: number;
+  totalChoices: number;
+  beatsWithDialogue: number;
+  beatsWithChoices: number;
+  beatsEmpty: number;
+  forkDensity: number;
+  avgChoicesPerFork: number;
+  reachableCount: number;
+  unreachableCount: number;
+  npcs: NpcStatRow[];
+  longestBeats: BeatLength[];
+  flagOps: { sets: number; clears: number };
+  currency: { coins: number; embers: number; coreIngots: number; gems: number };
+}
+
+function wordCount(text: unknown): number {
   if (typeof text !== "string") return 0;
   const trimmed = text.trim();
   if (!trimmed) return 0;
   return trimmed.split(/\s+/).length;
 }
 
-const asArr = (v: any) => Array.isArray(v) ? v : (typeof v === "string" && v ? [v] : []);
+const asArr = (v: unknown): string[] => Array.isArray(v) ? v.filter((s): s is string => typeof s === "string") : (typeof v === "string" && v ? [v] : []);
 
-function emptyNpcRow() {
+function emptyNpcRow(): NpcRow {
   return { lines: 0, words: 0, beats: new Set(), bondDelta: 0 };
 }
 
 /**
  * Compute the stats blob for a draft. Pure: same draft → same numbers.
  */
-export function computeStoryStats(draft: any) {
+export function computeStoryStats(draft: StoryDraft | null | undefined): StoryStats {
   const ids = allBeatIds(draft);
-  const beatLookup = new Map();
+  const beatLookup = new Map<string, StoryBeat>();
   for (const id of ids) {
     const beat = effectiveBeat(id, draft);
     if (beat) beatLookup.set(id, beat);
@@ -49,23 +87,23 @@ export function computeStoryStats(draft: any) {
   let totalEmbers = 0;
   let totalCoreIngots = 0;
   let totalGems = 0;
-  const npcStats = new Map();
-  const longestBeats = []; // sortable
+  const npcStats = new Map<string, NpcRow>();
+  const longestBeats: BeatLength[] = [];
 
-  const ensureNpc = (key: any) => {
+  const ensureNpc = (key: string | null | undefined): NpcRow => {
     const k = key || NARRATOR_KEY;
     if (!npcStats.has(k)) npcStats.set(k, emptyNpcRow());
-    return npcStats.get(k);
+    return npcStats.get(k)!;
   };
 
   // Track incoming-choice arrival for reachability bookkeeping.
-  const reachable = new Set();
+  const reachable = new Set<string>();
   for (const id of ids) {
     const beat = beatLookup.get(id);
     if (!beat) continue;
     // Beats with a real trigger or that sit on the main act spine reach
     // themselves; everything else needs to be queued by a choice.
-    if (beat.trigger || isFinite(beat.act)) reachable.add(id);
+    if (beat.trigger || (typeof beat.act === "number" && isFinite(beat.act))) reachable.add(id);
   }
   for (const id of ids) {
     const beat = beatLookup.get(id);
@@ -112,10 +150,10 @@ export function computeStoryStats(draft: any) {
       totalChoices += choices.length;
       for (const c of choices) {
         const o = c?.outcome || {};
-        if (Number.isFinite(o.coins)) totalCoins += o.coins;
-        if (Number.isFinite(o.embers)) totalEmbers += o.embers;
-        if (Number.isFinite(o.coreIngots)) totalCoreIngots += o.coreIngots;
-        if (Number.isFinite(o.gems)) totalGems += o.gems;
+        if (Number.isFinite(o.coins)) totalCoins += o.coins as number;
+        if (Number.isFinite(o.embers)) totalEmbers += o.embers as number;
+        if (Number.isFinite(o.coreIngots)) totalCoreIngots += o.coreIngots as number;
+        if (Number.isFinite(o.gems)) totalGems += o.gems as number;
         for (const f of asArr(o.setFlag)) { totalFlagSets += 1; void f; }
         for (const f of asArr(o.clearFlag)) { totalFlagClears += 1; void f; }
         if (o.bondDelta?.npc && Number.isFinite(o.bondDelta.amount)) {
@@ -131,7 +169,7 @@ export function computeStoryStats(draft: any) {
 
   longestBeats.sort((a, b) => b.words - a.words);
 
-  const npcs = [];
+  const npcs: NpcStatRow[] = [];
   for (const [key, row] of npcStats) {
     npcs.push({
       key,
@@ -174,7 +212,7 @@ export function computeStoryStats(draft: any) {
 export const NARRATOR_SPEAKER = NARRATOR_KEY;
 
 /** True when a beat is part of the author-created drafts lane. */
-export function isAuthorBeat(draft: any, beatId: any) {
+export function isAuthorBeat(draft: StoryDraft | null | undefined, beatId: string): boolean {
   return isDraftBeat(draft, beatId);
 }
 

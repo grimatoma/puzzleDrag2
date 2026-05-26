@@ -4,7 +4,19 @@ const isVisualTest = () =>
   typeof document !== "undefined" &&
   document.documentElement?.dataset?.visualTest === "true";
 
-export function useCountUp(value, opts = {}) {
+interface CountUpOpts {
+  minDuration?: number;
+  maxDuration?: number;
+  perUnitMs?: number;
+  initial?: number | null;
+}
+
+interface PulseState {
+  direction: "gain" | "loss" | null;
+  gen: number;
+}
+
+export function useCountUp(value: number, opts: CountUpOpts = {}) {
   const {
     minDuration = 200,
     maxDuration = 900,
@@ -12,12 +24,12 @@ export function useCountUp(value, opts = {}) {
     initial = null,
   } = opts;
 
-  const [animated, setAnimated] = useState(initial ?? value);
-  const [pulse, setPulse] = useState({ direction: null, gen: 0 });
-  const fromRef = useRef(initial ?? value);
-  const rafRef = useRef(0);
-  const pulseTimerRef = useRef(0);
-  const clearTimerRef = useRef(0);
+  const [animated, setAnimated] = useState<number>(initial ?? value);
+  const [pulse, setPulse] = useState<PulseState>({ direction: null, gen: 0 });
+  const fromRef = useRef<number>(initial ?? value);
+  const rafRef = useRef<number>(0);
+  const pulseTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const clearTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   const visualTest = isVisualTest();
   const display = visualTest ? value : animated;
@@ -35,10 +47,10 @@ export function useCountUp(value, opts = {}) {
     const delta = Math.abs(to - from);
     const dur = Math.min(maxDuration, Math.max(minDuration, delta * perUnitMs));
     const start = performance.now();
-    const going = to > from ? "gain" : "loss";
+    const going: "gain" | "loss" = to > from ? "gain" : "loss";
 
     cancelAnimationFrame(rafRef.current);
-    const tick = (now) => {
+    const tick = (now: number) => {
       const t = Math.min(1, (now - start) / dur);
       const eased = 1 - Math.pow(1 - t, 3);
       const v = from + (to - from) * eased;
@@ -52,8 +64,8 @@ export function useCountUp(value, opts = {}) {
     };
     rafRef.current = requestAnimationFrame(tick);
 
-    clearTimeout(pulseTimerRef.current);
-    clearTimeout(clearTimerRef.current);
+    if (pulseTimerRef.current) clearTimeout(pulseTimerRef.current);
+    if (clearTimerRef.current) clearTimeout(clearTimerRef.current);
     pulseTimerRef.current = setTimeout(
       () => setPulse((p) => ({ direction: going, gen: p.gen + 1 })),
       0,
@@ -70,8 +82,8 @@ export function useCountUp(value, opts = {}) {
 
   useEffect(() => () => {
     cancelAnimationFrame(rafRef.current);
-    clearTimeout(pulseTimerRef.current);
-    clearTimeout(clearTimerRef.current);
+    if (pulseTimerRef.current) clearTimeout(pulseTimerRef.current);
+    if (clearTimerRef.current) clearTimeout(clearTimerRef.current);
   }, []);
 
   return { display, pulse: pulse.direction, pulseKey: pulse.gen };

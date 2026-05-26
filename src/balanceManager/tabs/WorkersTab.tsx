@@ -5,7 +5,7 @@
 // `draft.workers[id]` and merge into the live `TYPE_WORKERS` array via
 // `applyWorkerOverrides` in src/config/applyOverrides.js.
 
-import { useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import { TYPE_WORKERS } from "../../features/workers/data.js";
 import {
   COLORS, NumberField, SmallButton, Pill, Card, SearchBar,
@@ -16,7 +16,7 @@ import { useBalanceNav } from "../balanceNav.jsx";
 import Icon from "../../ui/Icon.jsx";
 import { ITEMS } from "../../constants.js";
 
-function Label({ children: any }) {
+function Label({ children }: { children: React.ReactNode }) {
   return (
     <div className="text-[10px] font-bold uppercase tracking-wide mb-0.5" style={{ color: COLORS.inkSubtle }}>
       {children}
@@ -24,23 +24,32 @@ function Label({ children: any }) {
   );
 }
 
-function formatResources(resources: any) {
+function formatResources(resources: Record<string, number> | null | undefined): string {
   return Object.entries(resources || {}).map(([k, v]) => `${k}:${v}`).join(", ");
 }
 
-function parseResources(text: any) {
-  const out = {};
+function parseResources(text: string): Record<string, number> {
+  const out: Record<string, number> = {};
+  const items = ITEMS as unknown as Record<string, unknown>;
   for (const part of String(text || "").split(",")) {
     const [rawKey, rawValue] = part.split(":").map((s) => s?.trim());
     const value = Number(rawValue);
-    if (rawKey && ITEMS[rawKey] && Number.isFinite(value) && value > 0) {
+    if (rawKey && items[rawKey] && Number.isFinite(value) && value > 0) {
       out[rawKey] = Math.floor(value);
     }
   }
   return out;
 }
 
-export default function WorkersTab({ draft: any, updateDraft: any, focus: any }) {
+interface WorkerHireCost {
+  coins?: number;
+  coinsStep?: number;
+  coinsMult?: number;
+  resources?: Record<string, number>;
+  resourcesStepEvery?: number;
+}
+
+export default function WorkersTab({ draft, updateDraft, focus }: { draft: any; updateDraft: any; focus: any }) {
   const { focus: navFocus } = useBalanceNav();
   const activeFocus = focus ?? navFocus;
   useScrollToFocus(activeFocus);
@@ -91,13 +100,13 @@ export default function WorkersTab({ draft: any, updateDraft: any, focus: any })
           };
           const dirty = Object.keys(p).length > 0;
 
-          function patchHireCost(field: any, value: any) {
-            const nextCost = { coins: eff.coins };
+          function patchHireCost(field: keyof WorkerHireCost, value: number | Record<string, number>) {
+            const nextCost: WorkerHireCost = { coins: eff.coins };
             if (eff.coinsStep > 0) nextCost.coinsStep = eff.coinsStep;
             if (eff.coinsMult !== 1) nextCost.coinsMult = eff.coinsMult;
             if (Object.keys(eff.resources).length > 0) nextCost.resources = eff.resources;
             if (eff.resourcesStepEvery > 0) nextCost.resourcesStepEvery = eff.resourcesStepEvery;
-            nextCost[field] = value;
+            (nextCost as Record<string, unknown>)[field] = value;
             if ((nextCost.coinsStep ?? 0) <= 0) delete nextCost.coinsStep;
             if ((nextCost.coinsMult ?? 1) === 1) delete nextCost.coinsMult;
             patch(w.id, { hireCost: nextCost });

@@ -1,6 +1,6 @@
 import { svgState, Shadow } from "./helpers.jsx";
 
-export default function KitchenIllustration({ isBuilt }) {
+export default function KitchenIllustration({ isBuilt }: { isBuilt?: boolean }) {
   const { f, lit } = svgState(isBuilt);
   return (
     <svg viewBox="0 0 100 100" className="absolute inset-0 w-full h-full" preserveAspectRatio="xMidYMax meet" style={f}>

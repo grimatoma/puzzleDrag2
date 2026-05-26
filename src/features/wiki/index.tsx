@@ -1,14 +1,14 @@
-import { useState, useMemo, useRef, useEffect, useCallback } from "react";
+import { useState, useMemo, useRef, useEffect, useCallback, type PointerEvent as ReactPointerEvent } from "react";
 import { RECIPES, ITEMS } from "../../constants.js";
 import { labelFor } from "../../ui/Inventory.jsx";
 import Icon from "../../ui/Icon.jsx";
-import FeaturePanel from "../../ui/primitives/FeaturePanel.jsx";
+import { FeaturePanel } from "../_shared/uiTypes.js";
 import { SearchInput } from "../../ui/primitives/Field.jsx";
-import { buildGraph, NODE_W, NODE_H } from "./graphLayout.js";
+import { buildGraph, NODE_W, NODE_H, type WikiNodeDef, type WikiEdgeDef } from "./graphLayout.js";
 
 export const viewKey = "recipeWiki";
 
-const STATION_COLORS = {
+const STATION_COLORS: Record<string, string> = {
   workshop:   "#b06a3a",
   bakery:     "#c4893e",
   forge:      "#7a7a8a",
@@ -17,17 +17,27 @@ const STATION_COLORS = {
   smokehouse: "#9b6b4a",
 };
 
+interface RecipeDef {
+  item: string;
+  station: string;
+  inputs: Record<string, number>;
+}
+
+interface ItemDef {
+  desc?: string;
+}
+
 // ── Transitive chain computation ──────────────────────────────────────────────
-function computeTransitiveChain(key, edges) {
+function computeTransitiveChain(key: string, edges: WikiEdgeDef[]): Set<string> {
   // BFS upstream: all items needed (transitively) to craft this item
-  const chain = new Set([key]);
+  const chain = new Set<string>([key]);
   for (const curr of chain) {
     for (const e of edges) {
       if (e.toKey === curr) chain.add(e.fromKey);
     }
   }
   // BFS downstream: all items that use this item (transitively)
-  const downstream = new Set([key]);
+  const downstream = new Set<string>([key]);
   for (const curr of downstream) {
     for (const e of edges) {
       if (e.fromKey === curr) downstream.add(e.toKey);
@@ -37,8 +47,15 @@ function computeTransitiveChain(key, edges) {
   return chain;
 }
 
+interface WikiNodeProps {
+  node: WikiNodeDef;
+  selectedKey: string | null;
+  connectedKeys: Set<string> | null;
+  onSelect: (k: string) => void;
+}
+
 // ── WikiNode ──────────────────────────────────────────────────────────────────
-function WikiNode({ node, selectedKey, connectedKeys, onSelect }) {
+function WikiNode({ node, selectedKey, connectedKeys, onSelect }: WikiNodeProps) {
   const isSelected = selectedKey === node.key;
   const isDimmed = connectedKeys && !connectedKeys.has(node.key);
 
@@ -74,10 +91,16 @@ function WikiNode({ node, selectedKey, connectedKeys, onSelect }) {
   );
 }
 
+interface WikiEdgeProps {
+  edge: WikiEdgeDef;
+  selectedKey: string | null;
+  connectedKeys: Set<string> | null;
+}
+
 // ── WikiEdge ──────────────────────────────────────────────────────────────────
-function WikiEdge({ edge, selectedKey, connectedKeys }) {
+function WikiEdge({ edge, selectedKey, connectedKeys }: WikiEdgeProps) {
   const { x1, y1, x2, y2, cpX, station, qty, fromKey, toKey } = edge;
-  const isHighlighted = selectedKey && (fromKey === selectedKey || toKey === selectedKey);
+  const isHighlighted = !!selectedKey && (fromKey === selectedKey || toKey === selectedKey);
   const isDimmed = connectedKeys && !connectedKeys.has(fromKey) && !connectedKeys.has(toKey);
 
   const strokeColor = STATION_COLORS[station] ?? "#888888";
@@ -114,21 +137,29 @@ function WikiEdge({ edge, selectedKey, connectedKeys }) {
   );
 }
 
+interface WikiInfoCardProps {
+  itemKey: string;
+  isVisible: boolean;
+  onClose: () => void;
+  edges?: WikiEdgeDef[];
+}
+
 // ── WikiInfoCard ──────────────────────────────────────────────────────────────
-function WikiInfoCard({ itemKey, isVisible, onClose }) {
+function WikiInfoCard({ itemKey, isVisible, onClose }: WikiInfoCardProps) {
   const label = labelFor(itemKey);
-  const itemDef = ITEMS[itemKey] ?? {};
+  const itemMap = ITEMS as unknown as Record<string, ItemDef | undefined>;
+  const itemDef: ItemDef = itemMap[itemKey] ?? {};
 
   // Recipes that produce this item ("Crafted by:")
   const craftedBy = useMemo(
-    () => Object.entries(RECIPES).filter(([k, r]) => k.startsWith("rec_") && r.item === itemKey),
+    () => (Object.entries(RECIPES) as Array<[string, RecipeDef]>).filter(([k, r]) => k.startsWith("rec_") && r.item === itemKey),
     [itemKey]
   );
 
   // Recipes that use this item as an input ("Used in:")
   const usedIn = useMemo(
     () =>
-      Object.entries(RECIPES).filter(
+      (Object.entries(RECIPES) as Array<[string, RecipeDef]>).filter(
         ([k, r]) => k.startsWith("rec_") && r.inputs && Object.prototype.hasOwnProperty.call(r.inputs, itemKey)
       ),
     [itemKey]
@@ -178,7 +209,7 @@ function WikiInfoCard({ itemKey, isVisible, onClose }) {
                 />
                 <span className="text-ink capitalize">{r.station}</span>
                 <span className="text-ink-soft">—</span>
-                {Object.entries(r.inputs).map(([inp, qty]) => (
+                {Object.entries(r.inputs).map(([inp, qty]: [string, number]) => (
                   <span key={inp} className="flex items-center gap-0.5 text-ink-soft">
                     <Icon iconKey={inp} size={14} />
                     <span>×{qty}</span>
@@ -211,18 +242,24 @@ function WikiInfoCard({ itemKey, isVisible, onClose }) {
   );
 }
 
+interface ViewState { x: number; y: number; scale: number }
+interface DragState { startX: number; startY: number }
+interface PinchState { distance: number; cx: number; cy: number; baseView: ViewState }
+
 // ── Main WikiScreen ───────────────────────────────────────────────────────────
 export default function WikiScreen() {
-  const [view, setView] = useState({ x: 40, y: 40, scale: 1 });
-  const [selectedKey, setSelectedKey] = useState(null);
-  const [filteredNodeKey, setFilteredNodeKey] = useState("");
-  const [query, setQuery] = useState("");
+  const [view, setView] = useState<ViewState>({ x: 40, y: 40, scale: 1 });
+  const [selectedKey, setSelectedKey] = useState<string | null>(null);
+  const [filteredNodeKey, setFilteredNodeKey] = useState<string>("");
+  const [query, setQuery] = useState<string>("");
   // Card animation: cardKey keeps the card mounted during exit transition
-  const [cardKey, setCardKey] = useState(null);
-  const [cardVisible, setCardVisible] = useState(false);
+  const [cardKey, setCardKey] = useState<string | null>(null);
+  const [cardVisible, setCardVisible] = useState<boolean>(false);
 
   useEffect(() => {
-    let raf1, raf2, timer;
+    let raf1: number | undefined;
+    let raf2: number | undefined;
+    let timer: ReturnType<typeof setTimeout> | undefined;
     if (selectedKey) {
       const key = selectedKey;
       // Frame 1: mount hidden; Frame 2: transition in
@@ -236,51 +273,51 @@ export default function WikiScreen() {
       timer = setTimeout(() => setCardKey(null), 230);
     }
     return () => {
-      cancelAnimationFrame(raf1);
-      cancelAnimationFrame(raf2);
-      clearTimeout(timer);
+      if (raf1 != null) cancelAnimationFrame(raf1);
+      if (raf2 != null) cancelAnimationFrame(raf2);
+      if (timer != null) clearTimeout(timer);
     };
   }, [selectedKey]);
-  const containerRef = useRef(null);
-  const dragRef = useRef(null);
-  const pointersRef = useRef(new Map());
-  const pinchRef = useRef(null);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const dragRef = useRef<DragState | null>(null);
+  const pointersRef = useRef<Map<number, { x: number; y: number }>>(new Map());
+  const pinchRef = useRef<PinchState | null>(null);
 
   const { nodes, edges, totalW, totalH } = useMemo(
     () =>
       buildGraph(
-        Object.fromEntries(Object.entries(RECIPES).filter(([k]) => k.startsWith("rec_"))),
+        Object.fromEntries(Object.entries(RECIPES).filter(([k]) => k.startsWith("rec_"))) as Record<string, RecipeDef>,
         labelFor
       ),
     []
   );
 
   // Key matched by current search query (for chain filter)
-  const autoSelectedKey = useMemo(() => {
+  const autoSelectedKey: string | null = useMemo(() => {
     if (!query) return null;
-    return nodes.find((n) => n.label.toLowerCase().includes(query.toLowerCase()))?.key ?? null;
+    return nodes.find((n: WikiNodeDef) => n.label.toLowerCase().includes(query.toLowerCase()))?.key ?? null;
   }, [query, nodes]);
 
-  const chainFocusKey = (selectedKey ?? filteredNodeKey) || autoSelectedKey;
-  const connectedKeys = useMemo(
+  const chainFocusKey: string | null = (selectedKey ?? filteredNodeKey) || autoSelectedKey;
+  const connectedKeys: Set<string> | null = useMemo(
     () => (chainFocusKey ? computeTransitiveChain(chainFocusKey, edges) : null),
     [chainFocusKey, edges]
   );
 
   const visibleNodes = useMemo(
-    () => (connectedKeys ? nodes.filter((n) => connectedKeys.has(n.key)) : nodes),
+    () => (connectedKeys ? nodes.filter((n: WikiNodeDef) => connectedKeys.has(n.key)) : nodes),
     [connectedKeys, nodes]
   );
   const visibleEdges = useMemo(
     () =>
       connectedKeys
-        ? edges.filter((e) => connectedKeys.has(e.fromKey) && connectedKeys.has(e.toKey))
+        ? edges.filter((e: WikiEdgeDef) => connectedKeys.has(e.fromKey) && connectedKeys.has(e.toKey))
         : edges,
     [connectedKeys, edges]
   );
 
   // Pan
-  function startPan(e) {
+  function startPan(e: ReactPointerEvent<HTMLDivElement>) {
     e.currentTarget.setPointerCapture(e.pointerId);
     pointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
     if (pointersRef.current.size === 1) {
@@ -300,7 +337,7 @@ export default function WikiScreen() {
       dragRef.current = null;
     }
   }
-  function doPan(e) {
+  function doPan(e: ReactPointerEvent<HTMLDivElement>) {
     if (pointersRef.current.has(e.pointerId)) {
       pointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
     }
@@ -320,7 +357,7 @@ export default function WikiScreen() {
     }
     const drag = dragRef.current;
     if (!drag) return;
-    setView((v) => ({
+    setView((v: ViewState) => ({
       ...v,
       x: e.clientX - drag.startX,
       y: e.clientY - drag.startY,
@@ -333,10 +370,10 @@ export default function WikiScreen() {
   }
 
   // Zoom — must be non-passive to call preventDefault and block page scroll
-  const doZoom = useCallback((e) => {
+  const doZoom = useCallback((e: WheelEvent) => {
     e.preventDefault();
     const delta = -e.deltaY * 0.001;
-    setView((v) => {
+    setView((v: ViewState) => {
       const next = Math.min(2.5, Math.max(0.25, v.scale * (1 + delta)));
       const rect = containerRef.current?.getBoundingClientRect();
       if (!rect) return { ...v, scale: next };
@@ -369,18 +406,18 @@ export default function WikiScreen() {
   }
 
   // Select / deselect a node
-  function handleSelect(key) {
-    setSelectedKey((prev) => (prev === key ? null : key));
+  function handleSelect(key: string) {
+    setSelectedKey((prev: string | null) => (prev === key ? null : key));
   }
 
   // Search — pan to first match
   useEffect(() => {
     if (!query) return;
-    const match = nodes.find((n) => n.label.toLowerCase().includes(query.toLowerCase()));
+    const match = nodes.find((n: WikiNodeDef) => n.label.toLowerCase().includes(query.toLowerCase()));
     if (!match) return;
     const rect = containerRef.current?.getBoundingClientRect();
     if (!rect) return;
-    setView((v) => ({
+    setView((v: ViewState) => ({
       ...v,
       x: rect.width / 2 - (match.x + NODE_W / 2) * v.scale,
       y: rect.height / 2 - (match.y + NODE_H / 2) * v.scale,
@@ -392,7 +429,7 @@ export default function WikiScreen() {
       <FeaturePanel.Toolbar className="pt-2 pb-2">
         <SearchInput
           value={query}
-          onChange={(e) => setQuery(e.target.value)}
+          onChange={(e: { target: { value: string } }) => setQuery(e.target.value)}
           onClear={() => setQuery("")}
           placeholder="Search items..."
           ariaLabel="Search items"
@@ -407,12 +444,12 @@ export default function WikiScreen() {
         </button>
         <select
           value={filteredNodeKey}
-          onChange={(e) => setFilteredNodeKey(e.target.value)}
+          onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setFilteredNodeKey(e.target.value)}
           aria-label="Filter by node"
           className="ml-2 rounded-lg px-2 py-1 border border-iron bg-parchment text-ink-soft text-[11px]"
         >
           <option value="">All nodes</option>
-          {nodes.map((n) => (
+          {nodes.map((n: WikiNodeDef) => (
             <option key={n.key} value={n.key}>{n.label}</option>
           ))}
         </select>
@@ -438,7 +475,7 @@ export default function WikiScreen() {
             }}
           >
             <g transform={`translate(${view.x} ${view.y}) scale(${view.scale})`}>
-              {visibleEdges.map((e, i) => (
+              {visibleEdges.map((e: WikiEdgeDef, i: number) => (
                 <WikiEdge
                   key={i}
                   edge={e}
@@ -461,7 +498,7 @@ export default function WikiScreen() {
               height: totalH,
             }}
           >
-            {visibleNodes.map((n) => (
+            {visibleNodes.map((n: WikiNodeDef) => (
               <WikiNode
                 key={n.key}
                 node={n}

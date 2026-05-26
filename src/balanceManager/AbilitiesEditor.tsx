@@ -13,6 +13,7 @@ import {
 import { useMemo } from "react";
 import { BIOMES } from "../constants.js";
 import { CATEGORIES } from "../features/tileCollection/data.js";
+import Icon from "../ui/Icon.jsx";
 import { COLORS, NumberField, Select, SmallButton, Card, SearchAndAddPicker, resourceKeyOptions, tileKeyOptions, hazardOptions } from "./shared.jsx";
 
 function categoryOptions() {
@@ -42,7 +43,7 @@ function toolOptions() {
   ];
 }
 
-function ParamField({ param: any, value: any, onChange: any }) {
+function ParamField({ param, value, onChange }: { param: any; value: any; onChange: any }) {
   switch (param.type) {
     case "int":
       return (
@@ -108,7 +109,7 @@ function ParamField({ param: any, value: any, onChange: any }) {
  *   abilities:  Array<{ id, params, trigger? }>
  *   onChange:   (newAbilities) => void
  */
-export default function AbilitiesEditor({ scope: any, abilities: any, onChange: any }) {
+export default function AbilitiesEditor({ scope, abilities, onChange }: { scope: any; abilities: any; onChange: any }) {
   const list = Array.isArray(abilities) ? abilities : [];
   const catalog = abilitiesForScope(scope);
 
@@ -117,8 +118,9 @@ export default function AbilitiesEditor({ scope: any, abilities: any, onChange: 
     searchText: `${def.id} ${def.name} ${def.desc}`,
     renderNode: (
       <div className="flex flex-col items-start min-w-0">
-        <div className="text-[12px] font-bold truncate w-full" style={{ color: COLORS.ember }}>
-          {def.icon} {def.name}
+        <div className="text-[12px] font-bold truncate w-full flex items-center gap-1" style={{ color: COLORS.ember }}>
+          <Icon iconKey={def.iconKey} size={14} title="" />
+          {def.name}
         </div>
         <div className="text-[10px] font-mono mt-0.5 truncate w-full" style={{ color: COLORS.inkSubtle }}>
           {def.id}

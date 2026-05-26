@@ -7,7 +7,7 @@
 import "./index.css";
 import React from "react";
 import { createRoot } from "react-dom/client";
-import BalanceManagerApp from "./balanceManager/index.tsx";
+import BalanceManagerApp from "./balanceManager/index";
 
 interface ErrState { error: unknown }
 

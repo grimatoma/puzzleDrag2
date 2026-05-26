@@ -45,6 +45,7 @@ import * as boons from "./features/boons/slice.js";
 import * as runSummary from "./features/runSummary/slice.js";
 import { boonEffectMult } from "./features/boons/data.js";
 import { ZONES, settlementFoundingCost, isSettlementFounded, displayZoneName, grantEarnedHearthTokens, isOldCapitalUnlocked, isExpeditionFood, expeditionTurnsFromSupply, settlementTypeForZone, resolveBiomeChoice, completedSettlementCount, DEFAULT_ZONE, turnBudgetForZone, settlementHazards } from "./features/zones/data.js";
+import type { Action, GameState, Grid, Order, Tile } from "./types/state";
 import { addCappedResourceMut, hasAllInventory, deductInventory, defaultTileCollectionSlice, mergeLoadedState, resourceByKey, pickNpcKey, makeOrder, seedOrderIdSeq, SEASON_END_BONUS_COINS, xpForLevel } from "./state/helpers.js";
 export { addCappedResourceMut, hasAllInventory, deductInventory, defaultTileCollectionSlice, mergeLoadedState, resourceByKey, pickNpcKey, makeOrder, seedOrderIdSeq, SEASON_END_BONUS_COINS, xpForLevel };
 import { loadSavedState, persistStateNow, persistState, flushPersistState, clearSave } from "./state/persistence.js";
@@ -67,7 +68,7 @@ const slices = [crafting, quests, achievements, tutorial, settings, boss, cartog
 // back, rune wildcard returns to the rune stash, and fertilizer refunds its
 // charge. Used whenever the player navigates away from the board (or loads
 // a save) — anything other than directly using the tool deselects it.
-export function disarmAllTools(state) {
+export function disarmAllTools(state: GameState): GameState {
   let next = state;
   const pending = next.toolPending;
   const pendingPower = next.toolPendingPower;
@@ -88,7 +89,7 @@ export function disarmAllTools(state) {
       next = {
         ...next,
         toolPending: null,
-        tools: { ...next.tools, [pending]: (next.tools?.[pending] ?? 0) + 1 },
+        tools: { ...next.tools, [pending]: toolCount(next.tools, pending) + 1 },
       };
     }
   }
@@ -119,7 +120,7 @@ function visualTestingEnabled() {
 
 // Canonical almanac XP function (§17 linear, 150 XP/level).
 // Wraps features/almanac/data.js awardXp() so all reducers route through it.
-function applyAlmanacXp(state, amount) {
+function applyAlmanacXp(state: GameState, amount: number) {
   const { newState, leveledTo } = awardXp(state, amount);
   return { newState, leveledTo };
 }
@@ -128,7 +129,18 @@ function applyAlmanacXp(state, amount) {
 
 const locBuilt = _locBuilt;
 
-function boardTurnPatch(state, count = 1) {
+/**
+ * Read a tool count safely. The Tools index signature is
+ * `number | boolean | undefined` (a few boolean upgrade flags live alongside
+ * the per-tool counters); this helper coerces unknown keys to a numeric
+ * count so reducer arithmetic stays type-safe.
+ */
+function toolCount(tools: GameState["tools"] | undefined, key: string): number {
+  const raw = (tools as Record<string, number | boolean | undefined> | undefined)?.[key];
+  return typeof raw === "number" ? raw : 0;
+}
+
+function boardTurnPatch(state: GameState, count = 1) {
   const freeMoves = state.tileCollection?.freeMoves ?? 0;
   if (freeMoves > 0) {
     return {
@@ -149,7 +161,7 @@ function boardTurnPatch(state, count = 1) {
   return { turnsUsed, farmRun, ended: turnsRemaining <= 0 };
 }
 
-function applyTileCollectionChainEffects(state, key, length) {
+function applyTileCollectionChainEffects(state: GameState, key: string, length: number) {
   if (!key || !length) return state;
   let tcSlice = state.tileCollection ?? defaultTileCollectionSlice();
   let progress = tcSlice.researchProgress ?? {};
@@ -205,27 +217,40 @@ function applyTileCollectionChainEffects(state, key, length) {
   };
 }
 
-function coreReducer(state, action) {
+function coreReducer(state: GameState, action: Action): GameState {
   switch (action.type) {
     case "VISUAL/LOAD_STATE": {
       if (!visualTestingEnabled()) return state;
-      const next = action.payload?.state ?? action.state;
+      const payload = action.payload as { state?: GameState } | undefined;
+      const next = (payload?.state ?? (action as { state?: GameState }).state) as GameState | undefined;
       return next && typeof next === "object" ? next : state;
     }
     case "GRID/SYNC": {
       if (visualTestingEnabled() && state?._visualScenarioId) return state;
-      const { grid } = action.payload;
+      const payload = action.payload as { grid?: Grid } | undefined;
+      const { grid } = payload ?? {};
       if (!grid) return state;
       return { ...state, grid };
     }
     case "CHAIN_COLLECTED": {
+      const payload = action.payload as {
+        gains?: Record<string, number>;
+        key: string;
+        gained: number;
+        upgrades?: number;
+        value?: number;
+        chainLength?: number;
+        noTurn?: boolean;
+        resourceKey?: string;
+        chain?: Tile[];
+      } | undefined;
       // Phase 4.7: support { gains: {key: n, ...} } payload for cap-aware bulk collection
-      if (action.payload?.gains) {
-        const gainsMap = action.payload.gains;
+      if (payload?.gains) {
+        const gainsMap = payload.gains;
         const cap = currentCap(state);
-        const cf = { ...(state.seasonStats?.capFloaters ?? {}) };
+        const cf: Record<string, unknown> = { ...((state.seasonStats?.capFloaters as Record<string, unknown> | undefined) ?? {}) };
         const inv = { ...state.inventory };
-        const floaters = [...(state.floaters ?? [])];
+        const floaters = [...((state.floaters as unknown[] | undefined) ?? [])];
         for (const [k, n] of Object.entries(gainsMap)) {
           addCappedResourceMut(inv, cf, floaters, k, n, cap);
         }
@@ -233,7 +258,7 @@ function coreReducer(state, action) {
           seasonStats: { ...state.seasonStats, capFloaters: cf } };
       }
 
-      const { key, gained, upgrades, value, chainLength, noTurn, resourceKey } = action.payload;
+      const { key, gained, upgrades = 0, value, chainLength, noTurn, resourceKey } = payload ?? { key: "", gained: 0 };
       const hintsShown = state._hintsShown || {};
       const effectiveChain = chainLength || gained;
 
@@ -250,16 +275,18 @@ function coreReducer(state, action) {
       // Mine/Farm hazard processing when full chain is provided in payload
       // (e.g. when GameScene dispatches CHAIN_COLLECTED with chain: [...]
       //  rather than a separate COMMIT_CHAIN)
-      const chainTiles = action.payload.chain ?? null;
+      const chainTiles = (payload?.chain ?? null) as Tile[] | null;
       const currentBiome = state.biome ?? state.biomeKey;
-      let fireExtinguishPatch = null;
-      let deadlyPatch = null;
+      type FireExtinguishPatch = { hazards: Record<string, unknown>; coinsBonus: number };
+      type DeadlyPatch = { hazards: { rats: unknown[]; [k: string]: unknown }; coins: number; _deadlyKills?: number; _deadlyFloater?: string };
+      let fireExtinguishPatch: FireExtinguishPatch | null = null;
+      let deadlyPatch: DeadlyPatch | null = null;
       if (chainTiles && chainTiles.length > 0) {
         if (currentBiome === "farm") {
           // Rat clearing: chain of 3+ rat tiles
-          const hasRat = chainTiles.some((t) => t.key === "rat");
+          const hasRat = chainTiles.some((t: Tile) => t.key === "rat");
           if (hasRat) {
-            const patch = tryClearRatChain(state, chainTiles);
+            const patch = tryClearRatChain(state, chainTiles as unknown as Parameters<typeof tryClearRatChain>[1]);
             if (patch) {
               return { ...state, hazards: patch.hazards, coins: patch.coins };
             }
@@ -268,12 +295,12 @@ function coreReducer(state, action) {
           // Catalog §7 "deadly to pests" — Cypress / Beet / Phoenix in chain
           // exterminate orthogonally-adjacent rats. Captured here and applied
           // when building afterChain so the standard chain still resolves.
-          deadlyPatch = tryDeadlyPestsKill(state, chainTiles);
+          deadlyPatch = tryDeadlyPestsKill(state, chainTiles as unknown as Parameters<typeof tryDeadlyPestsKill>[1]) as DeadlyPatch | null;
           // Fire extinguishing — capture patch to apply when building afterChain
-          fireExtinguishPatch = tryExtinguishFire(state, chainTiles);
+          fireExtinguishPatch = tryExtinguishFire(state, chainTiles as unknown as Parameters<typeof tryExtinguishFire>[1]) as FireExtinguishPatch | null;
         } else if (currentBiome === "mine") {
           // Mysterious ore capture
-          const hasOre = chainTiles.some((t) => t.key === "mysterious_ore");
+          const hasOre = chainTiles.some((t: Tile) => t.key === "mysterious_ore");
           if (hasOre) {
             if (!isMysteriousChainValid(chainTiles)) return state;
             return {
@@ -284,7 +311,7 @@ function coreReducer(state, action) {
           }
         } else if (currentBiome === "fish") {
           // Pearl capture — chain pearl + ≥2 other fish-category tiles → +1 rune
-          const hasPearl = chainTiles.some((t) => t.key === PEARL_KEY);
+          const hasPearl = chainTiles.some((t: Tile) => t.key === PEARL_KEY);
           if (hasPearl && isPearlChainValid(chainTiles)) {
             return {
               ...state,
@@ -297,7 +324,8 @@ function coreReducer(state, action) {
       }
 
       // Boss board modifier: active boss may require longer chains
-      const bossMinChain = state.boss?.minChain || 0;
+      const bossSnapshot = state.boss as { minChain?: number; emoji?: string } | null | undefined;
+      const bossMinChain = bossSnapshot?.minChain || 0;
       if (bossMinChain > 0 && effectiveChain < bossMinChain) {
         const turn = boardTurnPatch(state);
         const next = {
@@ -306,7 +334,7 @@ function coreReducer(state, action) {
           farmRun: turn.farmRun,
           lastBoardActionConsumedFreeMove: !!turn.consumedFreeMove,
           ...(turn.tileCollection ? { tileCollection: turn.tileCollection } : {}),
-          bubble: { id: Date.now(), npc: "mira", text: `${state.boss.emoji} Challenge: chains need ${bossMinChain}+ tiles!`, ms: 2200, priority: 2 },
+          bubble: { id: Date.now(), npc: "mira", text: `${bossSnapshot?.emoji ?? ""} Challenge: chains need ${bossMinChain}+ tiles!`, ms: 2200, priority: 2 },
           modal: turn.ended ? "season" : state.modal,
         };
         return applyKeeperTrialChainProgress(next, null, 0, turn);
@@ -323,8 +351,10 @@ function coreReducer(state, action) {
       // Tile keys no longer enter state.inventory directly.
       const progress = { ...(state.resourceProgress ?? {}) };
       if (resourceKey) {
-        const threshold = UPGRADE_THRESHOLDS[key] ?? Infinity;
-        const newProgress = (progress[resourceKey] ?? 0) + chainLength;
+        const thresholds = UPGRADE_THRESHOLDS as Record<string, number>;
+        const threshold = thresholds[key] ?? Infinity;
+        const chainLenForProgress = chainLength ?? gained;
+        const newProgress = (progress[resourceKey] ?? 0) + chainLenForProgress;
         const wholeUnits = threshold === Infinity ? 0 : Math.floor(newProgress / threshold);
         progress[resourceKey] = threshold === Infinity ? newProgress : newProgress % threshold;
         if (wholeUnits > 0) {
@@ -333,12 +363,12 @@ function coreReducer(state, action) {
       }
 
       // Power-hook coin bonuses (set via Dev Panel → Tile Powers).
-      const chainTileEffects = (TILE_TYPES_MAP[key]?.effects ?? {}) as any;
+      const chainTileEffects = (TILE_TYPES_MAP[key]?.effects ?? {}) as { coinBonusFlat?: number; coinBonusPerTile?: number };
       const hookFlat = chainTileEffects.coinBonusFlat || 0;
       const hookPerTile = chainTileEffects.coinBonusPerTile || 0;
       const coinHookBonus = hookFlat + hookPerTile * effectiveChain;
 
-      const baseCoinsGain = Math.max(1, Math.floor((gained * value) / 2)) + coinHookBonus;
+      const baseCoinsGain = Math.max(1, Math.floor((gained * (value ?? 1)) / 2)) + coinHookBonus;
       // Phase 6b — coin_gain_mult boons scale chain coin reward.
       const coinMultBoon = boonEffectMult(state, "coin_gain_mult");
       const coinsGain = coinMultBoon > 1
@@ -390,7 +420,7 @@ function coreReducer(state, action) {
             ? { ...fireExtinguishPatch.hazards, rats: deadlyPatch.hazards.rats }
             : deadlyPatch.hazards)
         : (fireExtinguishPatch ? fireExtinguishPatch.hazards : null);
-      let afterChain = {
+      let afterChain: GameState = {
         ...state,
         ...(mergedHazards ? { hazards: mergedHazards } : {}),
         inventory,
@@ -430,11 +460,11 @@ function coreReducer(state, action) {
         afterChain = tickFire(afterChain);
         afterChain = tickWolves(afterChain);
         // Roll for a new hazard spawn only when none is currently active
-        const zoneId = afterChain.activeZone ?? afterChain.mapCurrent ?? "home";
+        const zoneId = (afterChain.activeZone as string | undefined) ?? (afterChain.mapCurrent as string | undefined) ?? "home";
         const allowed = settlementHazards(afterChain, zoneId);
-        const hazardSpawn = rollFarmHazard(afterChain, Math.random, allowed);
+        const hazardSpawn = rollFarmHazard(afterChain, Math.random, allowed) as { kind: string; cells?: unknown; row?: number; col?: number } | null;
         if (hazardSpawn) {
-          const hazards = { ...afterChain.hazards };
+          const hazards: Record<string, unknown> = { ...afterChain.hazards };
           if (hazardSpawn.kind === "fire") hazards.fire = { cells: hazardSpawn.cells };
           else if (hazardSpawn.kind === "wolf") hazards.wolves = { list: [{ row: hazardSpawn.row, col: hazardSpawn.col, scared: false }], scaredTurnsRemaining: 0 };
           afterChain = { ...afterChain, hazards };
@@ -444,13 +474,13 @@ function coreReducer(state, action) {
         if (ratSpawn) {
           afterChain = {
             ...afterChain,
-            hazards: { ...(afterChain.hazards ?? {}), rats: [...(afterChain.hazards?.rats ?? []), ratSpawn] },
+            hazards: { ...(afterChain.hazards ?? {}), rats: [...((afterChain.hazards?.rats as unknown[] | undefined) ?? []), ratSpawn] },
           };
         }
       } else if (chainBiome === "mine") {
         afterChain = tickHazards(afterChain);
         // Roll for a new mine hazard
-        const zoneId = afterChain.activeZone ?? afterChain.mapCurrent ?? "home";
+        const zoneId = (afterChain.activeZone as string | undefined) ?? (afterChain.mapCurrent as string | undefined) ?? "home";
         const allowed = settlementHazards(afterChain, zoneId);
         const mineSpawn = rollHazard(afterChain, Math.random, allowed);
         if (mineSpawn) {
@@ -461,13 +491,15 @@ function coreReducer(state, action) {
       return maybeFireResourceBeats(afterChain, state);
     }
     case "TURN_IN_ORDER": {
-      const o = state.orders.find((x) => x.id === action.id);
+      const actionId = action.id as number | undefined;
+      const o = state.orders.find((x) => x.id === actionId);
       if (!o) return state;
-      if ((state.inventory[o.key] || 0) < o.need) {
+      const requiredQty = o.need ?? o.amount ?? 0;
+      if ((state.inventory[o.key] || 0) < requiredQty) {
         return { ...state, bubble: { id: Date.now(), npc: o.npc, text: "Need more!", ms: 1100 } };
       }
       const inventory = { ...state.inventory };
-      inventory[o.key] -= o.need;
+      inventory[o.key] -= requiredQty;
       const remainingOrders = state.orders.filter((x) => x.id !== o.id);
       const usedNpcs = remainingOrders.map((x) => x.npc);
       const usedKeys = remainingOrders.map((x) => x.key);
@@ -512,9 +544,10 @@ function coreReducer(state, action) {
     }
     case "CRAFT_TOOL": {
       // Phase 10.1 — craft a Workshop tool (rake / axe / fertilizer / cat / etc.)
-      const toolId = action.id ?? action.payload?.id;
+      const payload = action.payload as { id?: string } | undefined;
+      const toolId = (action.id as string | undefined) ?? payload?.id;
       if (!toolId) return state;
-      const toolRecipe = Object.values(RECIPES).find((r) => r.item === toolId && r.station === "workshop");
+      const toolRecipe = Object.values(RECIPES).find((r: { item: string; station: string }) => r.item === toolId && r.station === "workshop") as { inputs: Record<string, number> } | undefined;
       if (!toolRecipe) return state;
       // Workshop must be built
       if (!locBuilt(state).workshop) return state;
@@ -522,7 +555,7 @@ function coreReducer(state, action) {
       return {
         ...state,
         inventory: deductInventory(state.inventory ?? {}, toolRecipe.inputs),
-        tools: { ...state.tools, [toolId]: (state.tools[toolId] ?? 0) + 1 },
+        tools: { ...state.tools, [toolId]: toolCount(state.tools, toolId) + 1 },
       };
     }
 
@@ -533,7 +566,8 @@ function coreReducer(state, action) {
       // shuffle) and the rune-wildcard arming flow did spend, so refund those.
       const pending = state.toolPending;
       if (!pending) return state;
-      const cancelPower = state.toolPendingPower ?? ITEMS[pending]?.power;
+      const itemEntry = ITEMS[pending] as { power?: { id?: string } } | undefined;
+      const cancelPower = state.toolPendingPower ?? itemEntry?.power;
       if (cancelPower?.id && isTapTargetPower(cancelPower.id)) {
         return { ...state, toolPending: null, toolPendingPower: null };
       }
@@ -543,7 +577,7 @@ function coreReducer(state, action) {
       return {
         ...state,
         toolPending: null,
-        tools: { ...state.tools, [pending]: (state.tools[pending] ?? 0) + 1 },
+        tools: { ...state.tools, [pending]: toolCount(state.tools, pending) + 1 },
       };
     }
     case "TOOL_FIRED": {
@@ -553,56 +587,60 @@ function coreReducer(state, action) {
       // up, we just clear toolPending — the charge was already spent in
       // USE_TOOL. Either way, this is the canonical end-of-fire signal that
       // keeps React state and the Phaser registry in sync.
-      const key = action.key ?? action.payload?.key ?? state.toolPending;
+      const payload = action.payload as { key?: string; row?: number; col?: number } | undefined;
+      const key = (action.key as string | undefined) ?? payload?.key ?? state.toolPending;
       if (!key) return state;
       // Phase 2 (tool-powers overhaul) — typed tap-target powers stash the
       // armed power config in state.toolPendingPower. If present, apply it
       // here at the tap site instead of the key-based legacy branches below.
       const armedPower = state.toolPendingPower;
       if (armedPower?.id && isTapTargetPower(armedPower.id)) {
-        const row = action.row ?? action.payload?.row;
-        const col = action.col ?? action.payload?.col;
+        const row = (action.row as number | undefined) ?? payload?.row;
+        const col = (action.col as number | undefined) ?? payload?.col;
         return applyTapTargetPower(state, key, armedPower, row, col);
       }
       return { ...state, toolPending: null, toolPendingPower: null };
     }
     case "USE_TOOL": {
-      const rawKey = action.payload?.id ?? action.payload?.key ?? action.key;
+      const payload = action.payload as { id?: string; key?: string; power?: { id?: string; [k: string]: unknown } } | undefined;
+      const rawKey = payload?.id ?? payload?.key ?? (action.key as string | undefined);
       const key = resolveToolDispatchKey(rawKey);
-      const explicitPower = action.payload?.power;
+      const explicitPower = payload?.power;
       if (explicitPower?.id) {
         return applyToolPower(state, key, explicitPower);
       }
       if (key === "fertilizer" && isFillBiasArmed(state)) {
         return disarmFillBias(state);
       }
-      const item = ITEMS[key];
+      const item = ITEMS[key] as { power?: { id?: string; [k: string]: unknown } } | undefined;
       const itemPower = item?.power ?? null;
       if (itemPower?.id) {
         return applyToolPower(state, key, itemPower);
       }
-      if ((state.tools?.[key] ?? 0) <= 0) return state;
-      return { ...state, tools: { ...state.tools, [key]: state.tools[key] - 1 } };
+      if (toolCount(state.tools, key) <= 0) return state;
+      return { ...state, tools: { ...state.tools, [key]: toolCount(state.tools, key) - 1 } };
     }
     case "SWITCH_BIOME": {
       // Support both legacy action.key and Phase 12.5 action.payload.biome
-      const key = action.key ?? action.payload?.biome;
+      const payload = action.payload as { biome?: string } | undefined;
+      const key = (action.key as string | undefined) ?? payload?.biome;
       if (!key) return state;
       if (key === state.biomeKey) return state;
-      const access = canEnterBiome(state, key);
+      const access = canEnterBiome(state, key) as { ok: boolean; reason?: string };
       if (!access.ok) {
-        return { ...state, bubble: { id: Date.now(), npc: "wren", text: access.reason, ms: 2200 } };
+        return { ...state, bubble: { id: Date.now(), npc: "wren", text: access.reason ?? "", ms: 2200 } };
       }
       // Phase 12.5 — restore saved board if Silo/Barn built and snapshot exists
-      const savedField = state[key]?.savedField ?? null;
-      let boardPatch = {};
+      const biomeSlot = (state as Record<string, unknown>)[key] as { savedField?: { tiles?: Grid } | null } | undefined;
+      const savedField = biomeSlot?.savedField ?? null;
+      let boardPatch: { grid?: Grid } = {};
       if (savedField && savedField.tiles) {
         boardPatch = { grid: savedField.tiles };
       }
-      const excludeNpcs = [];
-      const excludeKeys = [];
+      const excludeNpcs: string[] = [];
+      const excludeKeys: string[] = [];
       const replacements = (state.orders ?? []).map(() => {
-        const o = makeOrder(key, state.level, excludeNpcs, excludeKeys, state.npcs?.roster);
+        const o = makeOrder(key, state.level, excludeNpcs, excludeKeys, state.npcs?.roster) as Order;
         excludeNpcs.push(o.npc);
         excludeKeys.push(o.key);
         return o;
@@ -610,29 +648,32 @@ function coreReducer(state, action) {
       return { ...state, biome: key, biomeKey: key, orders: replacements, turnsUsed: 0, _biomeRestored: !!(savedField && savedField.tiles), ...boardPatch };
     }
     case "SET_VIEW": {
-      const next = action.view;
+      const next = action.view as string;
       // Reset viewParams when leaving a view so a fresh visit doesn't inherit
       // stale sub-tabs (e.g. tile-wiki sub-category from a previous trip).
       const sameView = next === state.view;
-      const viewParams = action.viewParams ?? (sameView ? state.viewParams : {});
+      const viewParams = (action.viewParams as Record<string, unknown> | undefined)
+        ?? (sameView ? state.viewParams : {});
       // Leaving the board is an "action not directly using the tool", so any
       // armed tool deselects (with charge refunded). Tap-target arms had no
       // charge to refund; instant/rune/fertilizer arms get their charge back.
       const base = next === "board" ? state : disarmAllTools(state);
-      return { ...base, view: next, viewParams, craftingTab: action.craftingTab ?? (next === "crafting" ? base.craftingTab : null) };
+      return { ...base, view: next, viewParams, craftingTab: (action.craftingTab as string | null | undefined) ?? (next === "crafting" ? base.craftingTab : null) };
     }
     case "SET_VIEW_PARAMS":
-      return { ...state, viewParams: { ...(state.viewParams ?? {}), ...(action.params ?? {}) } };
+      return { ...state, viewParams: { ...(state.viewParams ?? {}), ...((action.params as Record<string, unknown> | undefined) ?? {}) } };
     case "SET_SETTLEMENT_NAME": {
       // The only thing a player names is a settlement (a zone). Empty/blank
       // clears back to "unnamed" (UI then shows the static MAP_NODES name).
-      const zoneId = action.payload?.zoneId ?? action.zoneId ?? state.mapCurrent ?? "home";
-      const name = String(action.payload?.name ?? action.name ?? "").trim().slice(0, 24);
+      const payload = action.payload as { zoneId?: string; name?: string } | undefined;
+      const zoneId = payload?.zoneId ?? (action.zoneId as string | undefined) ?? (state.mapCurrent as string | undefined) ?? "home";
+      const name = String(payload?.name ?? (action.name as string | undefined) ?? "").trim().slice(0, 24);
       return { ...state, zoneNames: { ...(state.zoneNames ?? {}), [zoneId]: name } };
     }
     case "FOUND_SETTLEMENT": {
-      const zoneId = action.payload?.zoneId ?? action.zoneId;
-      if (!zoneId || !ZONES[zoneId]) return state;            // unknown zone
+      const payload = action.payload as { zoneId?: string; biome?: string } | undefined;
+      const zoneId = payload?.zoneId ?? (action.zoneId as string | undefined);
+      if (!zoneId || !(ZONES as Record<string, unknown>)[zoneId]) return state;            // unknown zone
       if (isSettlementFounded(state, zoneId)) return state;   // already founded
       // Progression gate (Phase 6a): the player must have completed at least one
       // prior settlement before founding the next. `home` is auto-founded so the
@@ -645,11 +686,11 @@ function coreReducer(state, action) {
           bubble: { id: Date.now(), npc: "wren", text: "Complete your first settlement before founding the next.", ms: 2400 },
         };
       }
-      const cost = settlementFoundingCost(state);
+      const cost = settlementFoundingCost(state) as { coins?: number };
       if ((state.coins ?? 0) < (cost.coins ?? 0)) return state; // can't afford
       // Phase 5e — pick the biome at founding (the picker passes payload.biome;
       // a missing/unknown choice falls back to the first option for the type).
-      const biome = resolveBiomeChoice(settlementTypeForZone(zoneId), action.payload?.biome);
+      const biome = resolveBiomeChoice(settlementTypeForZone(zoneId), payload?.biome) as { id: string; name: string } | null;
       if (!biome) return state;
       return {
         ...state,
@@ -659,23 +700,27 @@ function coreReducer(state, action) {
       };
     }
     case "KEEPER/CONFRONT": {
-      const zoneId = action.payload?.zoneId ?? action.zoneId;
-      const path = action.payload?.path ?? action.path;
+      const payload = action.payload as { zoneId?: string; path?: string } | undefined;
+      const zoneId = payload?.zoneId ?? (action.zoneId as string | undefined);
+      const path = payload?.path ?? (action.path as string | undefined);
       return startKeeperTrial(state, zoneId, path);
     }
     case "KEEPER/START_TRIAL": {
-      const zoneId = action.payload?.zoneId ?? action.zoneId;
-      return startKeeperTrial(state, zoneId, action.payload?.path ?? action.path ?? "driveout");
+      const payload = action.payload as { zoneId?: string; path?: string } | undefined;
+      const zoneId = payload?.zoneId ?? (action.zoneId as string | undefined);
+      return startKeeperTrial(state, zoneId, payload?.path ?? (action.path as string | undefined) ?? "driveout");
     }
     case "KEEPER/APPEASE": {
-      const zoneId = action.payload?.zoneId ?? action.zoneId;
+      const payload = action.payload as { zoneId?: string } | undefined;
+      const zoneId = payload?.zoneId ?? (action.zoneId as string | undefined);
       return finalizeKeeperPath(state, zoneId, "coexist");
     }
     case "KEEPER/TRIAL_RESOLVE": {
-      return resolveKeeperTrial(state, action.payload?.won ?? action.won);
+      const payload = action.payload as { won?: boolean } | undefined;
+      return resolveKeeperTrial(state, payload?.won ?? (action.won as boolean | undefined));
     }
     case "OPEN_MODAL":
-      return { ...state, modal: action.modal, settingsTab: action.settingsTab ?? 'main' };
+      return { ...state, modal: action.modal as string | null, settingsTab: (action.settingsTab as string | undefined) ?? 'main' };
     case "CLOSE_MODAL":
       return { ...state, modal: null, settingsTab: 'main' };
     case "ROUTE/APPLY": {
@@ -683,20 +728,21 @@ function coreReducer(state, action) {
       // matches the equivalent SET_VIEW / OPEN_MODAL / SETTINGS/SET_TAB
       // semantics so popstate-driven changes look identical to user-driven
       // ones from the rest of the app's perspective.
-      const r = action.route ?? {};
+      const r = (action.route as { view?: string; modal?: string | null; viewParams?: Record<string, unknown>; modalParams?: { tab?: string } } | undefined) ?? {};
       const rawView = r.view ?? state.view ?? "town";
       // Safety: don't navigate to board via URL if there's no active run —
       // avoids a broken green-screen on reload after a session has ended.
-      const view = rawView === "board" && !(state.farmRun?.turnsRemaining > 0) ? "town" : rawView;
+      const runTurnsRemaining = state.farmRun?.turnsRemaining ?? 0;
+      const view = rawView === "board" && !(runTurnsRemaining > 0) ? "town" : rawView;
       // Mirror SET_VIEW: hash-driven navigation away from the board deselects
       // any armed tool (with charge refunded). Keeps "leave the board"
       // behavior consistent whether the user taps the nav or hits back.
       const base = view === "board" ? state : disarmAllTools(state);
       const modal = r.modal ?? null;
-      const incomingViewParams = r.viewParams ?? {};
-      const next = { ...base, view, viewParams: incomingViewParams };
+      const incomingViewParams: Record<string, unknown> = r.viewParams ?? {};
+      const next: GameState = { ...base, view, viewParams: incomingViewParams };
       if (view === "crafting") {
-        next.craftingTab = incomingViewParams.tab ?? state.craftingTab ?? null;
+        next.craftingTab = (incomingViewParams.tab as string | undefined) ?? base.craftingTab ?? null;
       } else {
         next.craftingTab = null;
       }
@@ -710,14 +756,18 @@ function coreReducer(state, action) {
     }
     case "BUILD": {
       // Support both legacy action.building (full object) and action.payload.id (lookup by id)
-      const b = action.building ?? BUILDINGS.find((x) => x.id === action.payload?.id);
+      type BuildingShape = { id: string; name: string; cost: Record<string, number> };
+      const payload = action.payload as { id?: string; plot?: number } | undefined;
+      const buildings = BUILDINGS as unknown as readonly BuildingShape[];
+      const b = (action.building as BuildingShape | undefined) ?? buildings.find((x) => x.id === payload?.id);
       if (!b) return state;
+      const currentZone = (state.mapCurrent as string | undefined) ?? "home";
       // Founding gate (Phase 6a): can't build at a zone that hasn't been founded.
       // `home` is auto-founded so this only catches the player at meadow/quarry/etc.
-      if (!isSettlementFounded(state, state.mapCurrent)) {
+      if (!isSettlementFounded(state, currentZone)) {
         return {
           ...state,
-          bubble: { id: Date.now(), npc: "wren", text: `Found ${displayZoneName(state, state.mapCurrent)} before you build here.`, ms: 2400 },
+          bubble: { id: Date.now(), npc: "wren", text: `Found ${displayZoneName(state, currentZone)} before you build here.`, ms: 2400 },
         };
       }
       const canCoin = state.coins >= (b.cost.coins || 0);
@@ -729,11 +779,11 @@ function coreReducer(state, action) {
       const canRunes = (state.runes ?? 0) >= runesNeeded;
       if (!canCoin || !canRes || !canRunes) return state;
       // Plot assignment: validate explicit plot index, otherwise auto-pick first free.
-      const lbForPlot = locBuilt(state);
-      const plots = { ...(lbForPlot._plots ?? {}) };
-      const requestedPlot = action.plot ?? action.payload?.plot;
-      const occupied = (idx) => Object.prototype.hasOwnProperty.call(plots, String(idx));
-      let plotIdx;
+      const lbForPlot = locBuilt(state) as Record<string, unknown>;
+      const plots: Record<string, unknown> = { ...((lbForPlot._plots as Record<string, unknown> | undefined) ?? {}) };
+      const requestedPlot = (action.plot as number | undefined) ?? payload?.plot;
+      const occupied = (idx: number) => Object.prototype.hasOwnProperty.call(plots, String(idx));
+      let plotIdx: number;
       if (typeof requestedPlot === "number" && requestedPlot >= 0) {
         if (occupied(requestedPlot)) return state;
         plotIdx = requestedPlot;
@@ -761,12 +811,12 @@ function coreReducer(state, action) {
       }
       // §17 locked: 10 XP per building into almanac
       const { newState: afterBuildAlmanac } = applyAlmanacXp(state, 10);
-      const afterBuild = {
+      const afterBuild: GameState = {
         ...state,
         coins: state.coins - (b.cost.coins || 0),
         runes: (state.runes ?? 0) - runesNeeded,
         inventory,
-        built: { ...state.built, [state.mapCurrent]: { ...locBuilt(state), [b.id]: true, _plots: plots } },
+        built: { ...state.built, [currentZone]: { ...locBuilt(state), [b.id]: true, _plots: plots } },
         almanac: afterBuildAlmanac.almanac,
         bubble,
         _hintsShown: newHintsShown,
@@ -798,9 +848,9 @@ function coreReducer(state, action) {
       return afterBuildStory;
     }
     case "POP_NPC":
-      return { ...state, bubble: { id: Date.now(), npc: action.npc, text: action.text, ms: action.ms ?? 1800 } };
+      return { ...state, bubble: { id: Date.now(), npc: action.npc as string, text: action.text as string, ms: (action.ms as number | undefined) ?? 1800 } };
     case "DISMISS_BUBBLE":
-      return state.bubble && state.bubble.id === action.id ? { ...state, bubble: null } : state;
+      return state.bubble && state.bubble.id === (action.id as number | undefined) ? { ...state, bubble: null } : state;
     case "CLOSE_SEASON": {
       const newSeasonNum = (state.market?.season ?? 0) + 1;
       const mSeed = state.market?.seed ?? 0;
@@ -814,7 +864,7 @@ function coreReducer(state, action) {
       // on the same channels as worker contributions.
       const seasonAgg = computeWorkerEffects(state);
       for (const [tool, count] of Object.entries(seasonAgg.seasonEndTools ?? {})) {
-        if ((count as number) > 0) tools[tool] = (tools[tool] ?? 0) + (count as number);
+        if ((count as number) > 0) tools[tool] = toolCount(tools, tool) + (count as number);
       }
 
       // ── season_bonus — worker + building season_bonus abilities (which both
@@ -1491,7 +1541,7 @@ function shouldAlwaysRunSlices(state, action) {
   return ALWAYS_RUN_SLICES.has(action.type);
 }
 
-function rawReducer(state, action) {
+function rawReducer(state: GameState, action: Action): GameState {
   // 1. Core reducer mutates the canonical game state for known actions.
   // 2. Then every feature slice sees the action against the post-core state,
   //    so cross-cutting effects (quests, achievements, etc.) fire.
@@ -1534,8 +1584,8 @@ function runActionEffects(state, action) {
   }
 }
 
-export function gameReducer(state, action) {
-  let next;
+export function gameReducer(state: GameState, action: Action): GameState {
+  let next: GameState;
   try {
     next = rawReducer(state, action);
   } catch (e) {

@@ -230,34 +230,39 @@ const TOOL_POWER_BY_ID = Object.freeze(
   Object.fromEntries(TOOL_POWERS.map((p) => [p.id, p])),
 );
 
-export function getToolPower(id: any) {
-  return (TOOL_POWER_BY_ID as any)[id] ?? null;
+type ToolPowerEntry = (typeof TOOL_POWERS)[number];
+
+export function getToolPower(id: string): ToolPowerEntry | null {
+  return (TOOL_POWER_BY_ID as Record<string, ToolPowerEntry | undefined>)[id] ?? null;
 }
 
-export function isTapTargetPower(powerId: any) {
-  return !!TOOL_POWER_BY_ID[powerId]?.isTapTarget;
+export function isTapTargetPower(powerId: string): boolean {
+  return !!(TOOL_POWER_BY_ID as Record<string, ToolPowerEntry | undefined>)[powerId]?.isTapTarget;
 }
 
-export function dimStrategyForPower(powerId: any) {
-  return TOOL_POWER_BY_ID[powerId]?.dimStrategy ?? "none";
+export function dimStrategyForPower(powerId: string): string {
+  const entry = (TOOL_POWER_BY_ID as Record<string, ToolPowerEntry | undefined>)[powerId];
+  return (entry && "dimStrategy" in entry ? (entry.dimStrategy as string | undefined) : undefined) ?? "none";
 }
 
 /** Default board anim/ms for a power id, or null when the power has no board tween. */
-export function defaultBoardAnimForPower(powerId: any) {
-  return TOOL_POWER_BY_ID[powerId]?.defaultBoardAnim ?? null;
+export function defaultBoardAnimForPower(powerId: string): { anim: string; ms: number } | null {
+  const entry = (TOOL_POWER_BY_ID as Record<string, ToolPowerEntry | undefined>)[powerId];
+  return (entry?.defaultBoardAnim as { anim: string; ms: number } | undefined) ?? null;
 }
 
 /** Default param object for a tool power id (includes anim/ms when the catalog defines them). */
-export function defaultsForToolPower(powerId: any) {
+export function defaultsForToolPower(powerId: string): Record<string, unknown> {
   const p = TOOL_POWER_BY_ID[powerId];
   if (!p) return {};
-  const out: any = {};
+  const out: Record<string, unknown> = {};
   const boardAnim = p.defaultBoardAnim;
   if (boardAnim) {
     if (boardAnim.anim) out.anim = boardAnim.anim;
     if (boardAnim.ms != null) out.ms = boardAnim.ms;
   }
-  for (const param of p.params) {
+  const params = p.params as ReadonlyArray<{ key: string; type: string; default?: unknown }>;
+  for (const param of params) {
     if (param.default !== undefined) {
       out[param.key] = param.default;
     } else if (param.type === "tileCategory") {

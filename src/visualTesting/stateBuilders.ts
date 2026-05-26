@@ -45,9 +45,9 @@ const HARBOR_PLOTS = {
   7: "housing2",
 };
 
-function builtFromPlots(plots: any, extras = {}) {
-  const out = { decorations: {}, _plots: { ...plots }, ...extras };
-  for (const id of Object.values(plots)) out[id] = true;
+function builtFromPlots(plots: any, extras: Record<string, any> = {}) {
+  const out: Record<string, any> = { decorations: {}, _plots: { ...plots }, ...extras };
+  for (const id of Object.values(plots) as string[]) out[id] = true;
   return out;
 }
 
@@ -144,7 +144,7 @@ function applyRoute(state: any, scenario: any) {
   const hash = scenario.hash ?? null;
   let next = { ...state };
   if (hash) {
-    const route = parseHash(hash);
+    const route = parseHash(hash) as any;
     next = {
       ...next,
       view: route.view,
@@ -165,7 +165,7 @@ function applyRoute(state: any, scenario: any) {
 function baseState() {
   const state = createFreshState({ saveSeed: "visual-seed-0001" });
   const orders = visualOrders();
-  const inventory = { ...state.inventory };
+  const inventory: Record<string, any> = { ...state.inventory };
   for (const o of orders) inventory[o.key] = o._visualHave;
   return {
     ...state,
@@ -341,13 +341,14 @@ function boardState(kind = "farm") {
 // Mid-season variant of boardState — `turnsUsed` lands the season indicator
 // inside a specific season (Spring 0-1, Summer 2-4, Autumn 5-6, Winter 7-9
 // with the default 10-turn budget) and `bespoke` flips the season widget.
-function boardWithSeason(turnsUsed: any, bespoke: any) {
-  const base = boardState("farm");
+function boardWithSeason(turnsUsed: number, bespoke: boolean) {
+  const base = boardState("farm") as Record<string, unknown> & { farmRun?: { turnsRemaining?: number } };
+  const baseSettings = (base.settings as Record<string, unknown> | undefined) ?? {};
   return {
     ...base,
     turnsUsed,
-    farmRun: { ...base.farmRun, turnsRemaining: 10 - turnsUsed },
-    settings: { ...(base.settings ?? {}), bespokeSeasonWidget: !!bespoke },
+    farmRun: { ...(base.farmRun ?? {}), turnsRemaining: 10 - turnsUsed },
+    settings: { ...baseSettings, bespokeSeasonWidget: !!bespoke },
   };
 }
 

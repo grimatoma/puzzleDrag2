@@ -5,24 +5,25 @@
 // game-event vocabulary, incl. `flag_set`) + `repeat`, and — for author-created
 // draft beats — onComplete.setFlag, plus delete.
 
-import { useState } from "react";
+import { useState, type CSSProperties, type ReactNode } from "react";
 import {
-  C, NPCS, NPC_KEYS, Portrait, actColor, triggerSummary,
+  C, NPCS, NPC_KEYS, Portrait, actColor, triggerSummary, npcByKey,
   SCENE_OPTS,
   effectiveBeat, effectiveChoices, allBeatIds, findIncomingChoice,
   editorLinesForBeat, knownStoryFlagIds, storyWarningsForBeat, validateDraftBeatId,
   FieldLabel, TextInput, Btn,
 } from "./shared.jsx";
 import { STORY_FLAGS } from "../flags.js";
+import type { DraftBeatIdValidation, RenameDraftBeatResult, StoryBeat, StoryChoice, StoryDraft, StoryOutcome, StoryTrigger } from "./types.js";
 
 // ─── tiny styled atoms ───────────────────────────────────────────────────────
 
-const selStyle = {
+const selStyle: CSSProperties = {
   padding: "4px 6px", borderRadius: 5, border: `1px solid ${C.border}`,
   background: "#fff", font: "400 11px/1 system-ui", color: C.ink, outline: "none",
 };
 
-function Section({ title: any, hint: any, children: any, accent: any }) {
+function Section({ title, hint, children, accent }: { title: ReactNode; hint?: ReactNode; children: ReactNode; accent?: string }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 6,
       borderTop: `1px ${accent ? "solid" : "dashed"} ${accent || C.border}`, paddingTop: 10 }}>
@@ -32,7 +33,7 @@ function Section({ title: any, hint: any, children: any, accent: any }) {
   );
 }
 
-function Row({ label: any, children: any }) {
+function Row({ label, children }: { label: ReactNode; children: ReactNode }) {
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
       <span style={{ font: "600 9px/1.2 system-ui", color: C.inkSubtle, width: 64, flexShrink: 0,
@@ -46,16 +47,24 @@ function Row({ label: any, children: any }) {
  *  in-progress entry ("0.", "-") doesn't fight a controlled `value`. Re-syncs
  *  when the upstream value changes for an unrelated reason (e.g. switching beats)
  *  via the documented "adjust state during render" pattern. */
-function NumberField({ value: any, onCommit: any, step = "1", placeholder = "", width = 56 }) {
+interface NumberFieldProps {
+  value: number | undefined;
+  onCommit: (n: number | undefined) => void;
+  step?: string;
+  placeholder?: string;
+  width?: number;
+}
+
+function NumberField({ value, onCommit, step = "1", placeholder = "", width = 56 }: NumberFieldProps) {
   const [txt, setTxt] = useState(value == null ? "" : String(value));
   const [lastValue, setLastValue] = useState(value);
   if (value !== lastValue) {
     setLastValue(value);
     const cur = txt.trim() === "" ? undefined : Number(txt);
-    const norm = (v: any) => (v == null || Number.isNaN(v)) ? undefined : v;
+    const norm = (v: number | undefined) => (v == null || Number.isNaN(v)) ? undefined : v;
     if (norm(cur) !== norm(value)) setTxt(value == null ? "" : String(value));
   }
-  const commit = (s: any) => {
+  const commit = (s: string) => {
     const t = String(s).trim();
     if (t === "" || t === "-" || t === "." || t === "-.") { onCommit(undefined); return; }
     const n = Number(t);
@@ -72,14 +81,22 @@ function NumberField({ value: any, onCommit: any, step = "1", placeholder = "", 
 
 // ─── flag chip list ──────────────────────────────────────────────────────────
 
-const asFlagArr = (v: any) => (Array.isArray(v) ? v.slice() : (typeof v === "string" && v ? [v] : []));
-const packFlags = (arr: any) => {
-  const c = [];
+const asFlagArr = (v: unknown): string[] => (Array.isArray(v) ? v.filter((s): s is string => typeof s === "string").slice() : (typeof v === "string" && v ? [v] : []));
+const packFlags = (arr: string[]): string | string[] | undefined => {
+  const c: string[] = [];
   for (const s of arr) { const t = String(s ?? "").trim(); if (t && !c.includes(t)) c.push(t); }
   return c.length === 0 ? undefined : (c.length === 1 ? c[0] : c);
 };
 
-function FlagTags({ value: any, onChange: any, placeholder = "flag_name", tone = C.emberDeep, knownFlags: any }) {
+interface FlagTagsProps {
+  value: unknown;
+  onChange: (next: string | string[] | undefined) => void;
+  placeholder?: string;
+  tone?: string;
+  knownFlags?: Set<string>;
+}
+
+function FlagTags({ value, onChange, placeholder = "flag_name", tone = C.emberDeep, knownFlags }: FlagTagsProps) {
   const arr = asFlagArr(value);
   const [draftFlag, setDraftFlag] = useState("");
   const add = () => { const t = draftFlag.trim(); if (t && !arr.includes(t)) onChange(packFlags([...arr, t])); setDraftFlag(""); };
@@ -115,21 +132,32 @@ const CURRENCIES = [
   { key: "gems",       icon: "◆", label: "Gems" },
 ];
 
-function cleanOutcome(o: any) {
-  const next = { ...(o || {}) };
+function cleanOutcome(o: Record<string, unknown> | null | undefined): StoryOutcome | undefined {
+  const next: Record<string, unknown> = { ...(o || {}) };
   for (const k of Object.keys(next)) {
     const v = next[k];
     if (v === undefined || v === null || v === "") { delete next[k]; continue; }
     if (Array.isArray(v) && v.length === 0) { delete next[k]; continue; }
-    if (k === "bondDelta" && (!v || typeof v !== "object" || !v.npc)) delete next[k];
+    if (k === "bondDelta") {
+      const bd = v as { npc?: unknown } | null;
+      if (!bd || typeof bd !== "object" || !bd.npc) delete next[k];
+    }
   }
-  return Object.keys(next).length ? next : undefined;
+  return Object.keys(next).length ? (next as StoryOutcome) : undefined;
 }
 
-function OutcomeEditor({ outcome: any, draft: any, currentBeatId: any, onChange: any, onNewBranch: any }) {
+interface OutcomeEditorProps {
+  outcome: StoryOutcome | null | undefined;
+  draft: StoryDraft;
+  currentBeatId: string;
+  onChange: (next: StoryOutcome | undefined) => void;
+  onNewBranch?: () => void;
+}
+
+function OutcomeEditor({ outcome, draft, currentBeatId, onChange, onNewBranch }: OutcomeEditorProps) {
   const o = outcome || {};
-  const set = (patch: any) => onChange(cleanOutcome({ ...o, ...patch }));
-  const bond = o.bondDelta && typeof o.bondDelta === "object" ? o.bondDelta : {};
+  const set = (patch: Partial<StoryOutcome>) => onChange(cleanOutcome({ ...o, ...patch }));
+  const bond: { npc?: string; amount?: number } = (o.bondDelta && typeof o.bondDelta === "object") ? o.bondDelta : {};
   const beatOpts = allBeatIds(draft).filter((id) => id !== currentBeatId);
   const queueKnown = o.queueBeat ? beatOpts.includes(o.queueBeat) : false;
   const knownFlags = knownStoryFlagIds(draft);
@@ -137,25 +165,29 @@ function OutcomeEditor({ outcome: any, draft: any, currentBeatId: any, onChange:
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 7, padding: "8px 9px", borderRadius: 7,
       background: "rgba(43,34,24,0.03)", border: `1px solid ${C.border}55` }}>
-      <Row label="Set flags"><FlagTags value={o.setFlag} onChange={(v: any) => set({ setFlag: v })} placeholder="flag_set" knownFlags={knownFlags} /></Row>
-      <Row label="Clear flags"><FlagTags value={o.clearFlag} onChange={(v: any) => set({ clearFlag: v })} placeholder="flag_clear" tone={C.inkSubtle} knownFlags={knownFlags} /></Row>
+      <Row label="Set flags"><FlagTags value={o.setFlag} onChange={(v) => set({ setFlag: v })} placeholder="flag_set" knownFlags={knownFlags} /></Row>
+      <Row label="Clear flags"><FlagTags value={o.clearFlag} onChange={(v) => set({ clearFlag: v })} placeholder="flag_clear" tone={C.inkSubtle} knownFlags={knownFlags} /></Row>
       <Row label="Bond Δ">
         <select value={bond.npc || ""} style={selStyle}
-          onChange={(e) => set({ bondDelta: e.target.value ? { npc: e.target.value, amount: Number.isFinite(bond.amount) ? bond.amount : 1 } : undefined })}>
+          onChange={(e) => set({ bondDelta: e.target.value ? { npc: e.target.value, amount: Number.isFinite(bond.amount) ? (bond.amount as number) : 1 } : undefined })}>
           <option value="">— none —</option>
           {NPC_KEYS.map((k) => <option key={k} value={k}>{NPCS[k].name}</option>)}
         </select>
         <NumberField step="0.5" width={56} value={bond.npc ? bond.amount : undefined}
-          onCommit={(n: any) => bond.npc && set({ bondDelta: { npc: bond.npc, amount: Number.isFinite(n) ? n : 0 } })} />
+          onCommit={(n) => bond.npc && set({ bondDelta: { npc: bond.npc, amount: Number.isFinite(n) ? (n as number) : 0 } })} />
       </Row>
       <Row label="Currency">
-        {CURRENCIES.map((c) => (
-          <span key={c.key} style={{ display: "inline-flex", alignItems: "center", gap: 3 }}>
-            <span title={c.label} style={{ font: "600 10px/1 system-ui", color: C.inkSubtle }}>{c.icon}</span>
-            <NumberField step="1" width={44} value={Number.isFinite(o[c.key]) ? o[c.key] : undefined}
-              onCommit={(n: any) => set({ [c.key]: Number.isFinite(n) ? Math.trunc(n) : undefined })} />
-          </span>
-        ))}
+        {CURRENCIES.map((c) => {
+          const value = (o as Record<string, unknown>)[c.key];
+          const numericValue = Number.isFinite(value) ? (value as number) : undefined;
+          return (
+            <span key={c.key} style={{ display: "inline-flex", alignItems: "center", gap: 3 }}>
+              <span title={c.label} style={{ font: "600 10px/1 system-ui", color: C.inkSubtle }}>{c.icon}</span>
+              <NumberField step="1" width={44} value={numericValue}
+                onCommit={(n) => set({ [c.key]: Number.isFinite(n) ? Math.trunc(n as number) : undefined } as Partial<StoryOutcome>)} />
+            </span>
+          );
+        })}
       </Row>
       <Row label="Leads to">
         <select style={{ ...selStyle, flex: 1, minWidth: 0 }}
@@ -181,7 +213,21 @@ function OutcomeEditor({ outcome: any, draft: any, currentBeatId: any, onChange:
 
 // ─── one choice card ─────────────────────────────────────────────────────────
 
-function ChoiceCard({ index: any, choice: any, draft: any, currentBeatId: any, onChange: any, onDelete: any, onNewBranch: any, onMoveUp: any, onMoveDown: any, canMoveUp: any, canMoveDown: any }) {
+interface ChoiceCardProps {
+  index: number;
+  choice: StoryChoice;
+  draft: StoryDraft;
+  currentBeatId: string;
+  onChange: (next: StoryChoice) => void;
+  onDelete: () => void;
+  onNewBranch: (choiceId: string) => void;
+  onMoveUp: () => void;
+  onMoveDown: () => void;
+  canMoveUp: boolean;
+  canMoveDown: boolean;
+}
+
+function ChoiceCard({ index, choice, draft, currentBeatId, onChange, onDelete, onNewBranch, onMoveUp, onMoveDown, canMoveUp, canMoveDown }: ChoiceCardProps) {
   const o = choice.outcome || {};
   const target = o.queueBeat;
   return (
@@ -204,9 +250,9 @@ function ChoiceCard({ index: any, choice: any, draft: any, currentBeatId: any, o
       </div>
       <div style={{ padding: "7px 8px", display: "flex", flexDirection: "column", gap: 7 }}>
         <TextInput value={choice.label} placeholder="Choice label (player-facing)"
-          onChange={(e: any) => onChange({ ...choice, label: e.target.value })} style={{ font: "400 11.5px/1.3 Georgia,serif" }} />
+          onChange={(e) => onChange({ ...choice, label: e.target.value })} style={{ font: "400 11.5px/1.3 Georgia,serif" }} />
         <OutcomeEditor outcome={o} draft={draft} currentBeatId={currentBeatId}
-          onChange={(nextOutcome: any) => onChange({ ...choice, outcome: nextOutcome })}
+          onChange={(nextOutcome) => onChange({ ...choice, outcome: nextOutcome })}
           onNewBranch={() => onNewBranch(choice.id)} />
       </div>
     </div>
@@ -215,10 +261,17 @@ function ChoiceCard({ index: any, choice: any, draft: any, currentBeatId: any, o
 
 // ─── choices block ───────────────────────────────────────────────────────────
 
-function ChoicesBlock({ beatId: any, draft: any, onEditBeat: any, onNewBranch: any }) {
+interface ChoicesBlockProps {
+  beatId: string;
+  draft: StoryDraft;
+  onEditBeat: (beatId: string, fields: Partial<StoryBeat>) => void;
+  onNewBranch: (beatId: string, choiceId: string) => void;
+}
+
+function ChoicesBlock({ beatId, draft, onEditBeat, onNewBranch }: ChoicesBlockProps) {
   const choices = effectiveChoices(beatId, draft);
-  const writeChoices = (arr: any) => onEditBeat(beatId, { choices: arr.length ? arr : undefined });
-  const moveChoice = (from: any, to: any) => {
+  const writeChoices = (arr: StoryChoice[]) => onEditBeat(beatId, { choices: arr.length ? arr : undefined });
+  const moveChoice = (from: number, to: number) => {
     if (to < 0 || to >= choices.length) return;
     const next = choices.slice();
     const [item] = next.splice(from, 1);
@@ -226,7 +279,7 @@ function ChoicesBlock({ beatId: any, draft: any, onEditBeat: any, onNewBranch: a
     writeChoices(next);
   };
 
-  const usedIds = new Set(choices.map((c: any) => c.id));
+  const usedIds = new Set(choices.map((c) => c.id));
   const nextId = () => { let i = 1; while (usedIds.has(`choice_${i}`)) i += 1; return `choice_${i}`; };
 
   return (
@@ -237,11 +290,11 @@ function ChoicesBlock({ beatId: any, draft: any, onEditBeat: any, onNewBranch: a
         </div>
       )}
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        {choices.map((c: any, i: any) => (
+        {choices.map((c, i) => (
           <ChoiceCard key={c.id} index={i} choice={c} draft={draft} currentBeatId={beatId}
-            onChange={(nextChoice: any) => writeChoices(choices.map((x: any, j: any) => (j === i ? nextChoice : x)))}
-            onDelete={() => writeChoices(choices.filter((_: any, j: any) => j !== i))}
-            onNewBranch={(choiceId: any) => onNewBranch(beatId, choiceId)}
+            onChange={(nextChoice) => writeChoices(choices.map((x, j) => (j === i ? nextChoice : x)))}
+            onDelete={() => writeChoices(choices.filter((_, j) => j !== i))}
+            onNewBranch={(choiceId) => onNewBranch(beatId, choiceId)}
             onMoveUp={() => moveChoice(i, i - 1)} onMoveDown={() => moveChoice(i, i + 1)}
             canMoveUp={i > 0} canMoveDown={i < choices.length - 1} />
         ))}
@@ -270,7 +323,7 @@ const TRIGGER_TYPES = [
 ];
 const FLAG_OPTIONS = STORY_FLAGS.map((f) => f.id);
 
-function defaultTriggerFor(type: any) {
+function defaultTriggerFor(type: string): StoryTrigger | undefined {
   switch (type) {
     case "flag_set":             return { type: "flag_set", flag: FLAG_OPTIONS[0] || "hearth_lit" };
     case "resource_total":       return { type: "resource_total", key: "tile_tree_oak", amount: 10 };
@@ -287,80 +340,93 @@ function defaultTriggerFor(type: any) {
   }
 }
 
-const taStyle = { padding: "5px 7px", borderRadius: 6, border: `1.5px solid ${C.border}`, background: "#fff",
+const taStyle: CSSProperties = { padding: "5px 7px", borderRadius: 6, border: `1.5px solid ${C.border}`, background: "#fff",
   font: "400 11px/1.4 ui-monospace,monospace", color: C.ink, outline: "none", resize: "vertical", boxSizing: "border-box" };
 
-function TriggerFields({ trigger: any, onChange: any, knownFlags: any }) {
-  const t = trigger;
-  const flagOptions = knownFlags ? Array.from(knownFlags).filter((f) => !f.startsWith("_fired_")).sort() : FLAG_OPTIONS;
+interface TriggerFieldsProps {
+  trigger: StoryTrigger;
+  onChange: (next: StoryTrigger) => void;
+  knownFlags?: Set<string>;
+}
+
+function TriggerFields({ trigger, onChange, knownFlags }: TriggerFieldsProps) {
+  const t = trigger as Record<string, unknown> & { type?: string };
+  const num = (v: unknown): number | undefined => (typeof v === "number" ? v : undefined);
+  const str = (v: unknown): string => (typeof v === "string" ? v : "");
+  const flagOptions: string[] = knownFlags ? Array.from(knownFlags).filter((f) => !f.startsWith("_fired_")).sort() : FLAG_OPTIONS;
   switch (t.type) {
     case "flag_set":
-    case "flag_cleared":
+    case "flag_cleared": {
+      const flagStr = str(t.flag);
       return (
         <Row label="Flag">
           <input list="story-flag-options" style={{ ...selStyle, flex: 1, fontFamily: "ui-monospace,monospace",
-              borderColor: t.flag && knownFlags && !knownFlags.has(t.flag) ? C.red : C.border }} value={t.flag || ""}
-            placeholder="flag_name" onChange={(e) => onChange({ ...t, flag: e.target.value })} />
+              borderColor: flagStr && knownFlags && !knownFlags.has(flagStr) ? C.red : C.border }} value={flagStr}
+            placeholder="flag_name" onChange={(e) => onChange({ ...(t as StoryTrigger), flag: e.target.value })} />
           <datalist id="story-flag-options">{flagOptions.map((f) => <option key={f} value={f} />)}</datalist>
-          {t.flag && knownFlags && !knownFlags.has(t.flag) && (
+          {flagStr && knownFlags && !knownFlags.has(flagStr) && (
             <span style={{ font: "600 9px/1.2 system-ui", color: C.redDeep }}>⚠ unregistered</span>
           )}
         </Row>
       );
+    }
     case "resource_total":
       return (
         <Row label="Resource">
-          <input style={{ ...selStyle, flex: 1, fontFamily: "ui-monospace,monospace" }} value={t.key || ""} placeholder="e.g. tile_tree_oak"
-            onChange={(e) => onChange({ ...t, key: e.target.value })} />
+          <input style={{ ...selStyle, flex: 1, fontFamily: "ui-monospace,monospace" }} value={str(t.key)} placeholder="e.g. tile_tree_oak"
+            onChange={(e) => onChange({ ...(t as StoryTrigger), key: e.target.value })} />
           <span style={{ font: "600 11px/1 system-ui", color: C.inkSubtle }}>≥</span>
-          <NumberField step="1" width={56} value={Number.isFinite(t.amount) ? t.amount : undefined}
-            onCommit={(n: any) => onChange({ ...t, amount: Number.isFinite(n) && n > 0 ? Math.trunc(n) : 1 })} />
+          <NumberField step="1" width={56} value={num(t.amount)}
+            onCommit={(n) => onChange({ ...(t as StoryTrigger), amount: Number.isFinite(n) && (n as number) > 0 ? Math.trunc(n as number) : 1 })} />
         </Row>
       );
     case "resource_total_multi": {
-      const text = Object.entries(t.req || {}).map(([k, v]) => `${k} ${v}`).join("\n");
+      const req = (t.req as Record<string, number>) || {};
+      const text = Object.entries(req).map(([k, v]) => `${k} ${v}`).join("\n");
       return (
         <Row label="Resources">
           <textarea rows={3} value={text} placeholder={"tile_tree_oak 20\niron_ingot 5"} style={{ ...taStyle, flex: 1 }}
             onChange={(e) => {
-              const req = {};
+              const reqOut: Record<string, number> = {};
               for (const line of e.target.value.split("\n")) {
                 const m = line.trim().match(/^(\S+)\s+(\d+)$/);
-                if (m) req[m[1]] = Number(m[2]);
+                if (m) reqOut[m[1]] = Number(m[2]);
               }
-              onChange({ type: "resource_total_multi", req });
+              onChange({ type: "resource_total_multi", req: reqOut });
             }} />
         </Row>
       );
     }
-    case "craft_made":
+    case "craft_made": {
+      const count = num(t.count);
       return (
         <Row label="Item">
-          <input style={{ ...selStyle, flex: 1, fontFamily: "ui-monospace,monospace" }} value={t.item || ""} placeholder="recipe id, e.g. bread"
-            onChange={(e) => onChange(t.count > 1 ? { type: "craft_made", item: e.target.value, count: t.count } : { type: "craft_made", item: e.target.value })} />
+          <input style={{ ...selStyle, flex: 1, fontFamily: "ui-monospace,monospace" }} value={str(t.item)} placeholder="recipe id, e.g. bread"
+            onChange={(e) => onChange(count && count > 1 ? { type: "craft_made", item: e.target.value, count } : { type: "craft_made", item: e.target.value })} />
           <span style={{ font: "600 11px/1 system-ui", color: C.inkSubtle }}>×</span>
-          <NumberField step="1" width={44} value={Number.isFinite(t.count) && t.count > 1 ? t.count : undefined}
-            onCommit={(n: any) => onChange(Number.isFinite(n) && n > 1 ? { type: "craft_made", item: t.item || "", count: Math.trunc(n) } : { type: "craft_made", item: t.item || "" })} />
+          <NumberField step="1" width={44} value={Number.isFinite(count) && (count as number) > 1 ? count : undefined}
+            onCommit={(n) => onChange(Number.isFinite(n) && (n as number) > 1 ? { type: "craft_made", item: str(t.item), count: Math.trunc(n as number) } : { type: "craft_made", item: str(t.item) })} />
         </Row>
       );
+    }
     case "building_built":
-      return <Row label="Building"><input style={{ ...selStyle, flex: 1, fontFamily: "ui-monospace,monospace" }} value={t.id || ""} placeholder="building id, e.g. mill" onChange={(e) => onChange({ type: "building_built", id: e.target.value })} /></Row>;
+      return <Row label="Building"><input style={{ ...selStyle, flex: 1, fontFamily: "ui-monospace,monospace" }} value={str(t.id)} placeholder="building id, e.g. mill" onChange={(e) => onChange({ type: "building_built", id: e.target.value })} /></Row>;
     case "boss_defeated":
-      return <Row label="Boss"><input style={{ ...selStyle, flex: 1, fontFamily: "ui-monospace,monospace" }} value={t.id || ""} placeholder="boss id, e.g. frostmaw" onChange={(e) => onChange({ type: "boss_defeated", id: e.target.value })} /></Row>;
+      return <Row label="Boss"><input style={{ ...selStyle, flex: 1, fontFamily: "ui-monospace,monospace" }} value={str(t.id)} placeholder="boss id, e.g. frostmaw" onChange={(e) => onChange({ type: "boss_defeated", id: e.target.value })} /></Row>;
     case "bond_at_least":
       return (
         <Row label="Bond ≥">
-          <select style={selStyle} value={t.npc || "wren"} onChange={(e) => onChange({ type: "bond_at_least", npc: e.target.value, amount: t.amount || 8 })}>
+          <select style={selStyle} value={str(t.npc) || "wren"} onChange={(e) => onChange({ type: "bond_at_least", npc: e.target.value, amount: num(t.amount) || 8 })}>
             {NPC_KEYS.map((k) => <option key={k} value={k}>{NPCS[k].name}</option>)}
           </select>
-          <NumberField step="1" width={50} value={Number.isFinite(t.amount) ? t.amount : 8}
-            onCommit={(n: any) => onChange({ type: "bond_at_least", npc: t.npc || "wren", amount: Number.isFinite(n) && n > 0 ? Math.trunc(n) : 8 })} />
+          <NumberField step="1" width={50} value={Number.isFinite(num(t.amount)) ? num(t.amount) : 8}
+            onCommit={(n) => onChange({ type: "bond_at_least", npc: str(t.npc) || "wren", amount: Number.isFinite(n) && (n as number) > 0 ? Math.trunc(n as number) : 8 })} />
         </Row>
       );
     case "act_entered":
       return (
         <Row label="Act">
-          <select style={selStyle} value={t.act || 2} onChange={(e) => onChange({ type: "act_entered", act: Number(e.target.value) })}>
+          <select style={selStyle} value={num(t.act) || 2} onChange={(e) => onChange({ type: "act_entered", act: Number(e.target.value) })}>
             <option value={1}>I</option><option value={2}>II</option><option value={3}>III</option>
           </select>
         </Row>
@@ -370,10 +436,18 @@ function TriggerFields({ trigger: any, onChange: any, knownFlags: any }) {
   }
 }
 
-function TriggerEditor({ beatId: any, beat: any, draft: any, isMainChain: any, onEditBeat: any }) {
+interface TriggerEditorProps {
+  beatId: string;
+  beat: StoryBeat;
+  draft: StoryDraft;
+  isMainChain: boolean;
+  onEditBeat: (beatId: string, fields: Partial<StoryBeat>) => void;
+}
+
+function TriggerEditor({ beatId, beat, draft, isMainChain, onEditBeat }: TriggerEditorProps) {
   const t = beat?.trigger;
   const type = t?.type || "none";
-  const setTrigger = (next: any) => onEditBeat(beatId, { trigger: next ?? undefined });
+  const setTrigger = (next: StoryTrigger | undefined) => onEditBeat(beatId, { trigger: next ?? undefined });
   const knownFlags = knownStoryFlagIds(draft);
   return (
     <Section title="Trigger" accent={isMainChain ? undefined : C.ember}
@@ -384,7 +458,7 @@ function TriggerEditor({ beatId: any, beat: any, draft: any, isMainChain: any, o
           {TRIGGER_TYPES.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
         </select>
       </Row>
-      {t && <TriggerFields trigger={t} onChange={(next: any) => setTrigger(next)} knownFlags={knownFlags} />}
+      {t && <TriggerFields trigger={t} onChange={(next) => setTrigger(next)} knownFlags={knownFlags} />}
       {!isMainChain && (
         <Row label="Repeat">
           <label style={{ display: "flex", alignItems: "center", gap: 6, font: "400 11px/1.3 system-ui", color: type === "none" ? C.inkSubtle : C.inkLight }}>
@@ -397,7 +471,7 @@ function TriggerEditor({ beatId: any, beat: any, draft: any, isMainChain: any, o
       {!isMainChain && beat.repeat && type !== "none" && (
         <Row label="Cooldown">
           <NumberField step="1" width={48} value={Number.isFinite(beat.repeatCooldown) ? beat.repeatCooldown : undefined}
-            onCommit={(n: any) => onEditBeat(beatId, { repeatCooldown: Number.isFinite(n) && n > 0 ? Math.trunc(n) : undefined })} />
+            onCommit={(n) => onEditBeat(beatId, { repeatCooldown: Number.isFinite(n) && (n as number) > 0 ? Math.trunc(n as number) : undefined })} />
           <span style={{ font: "400 10px/1.3 system-ui", color: C.inkSubtle }}>story checks to wait before this can fire again</span>
         </Row>
       )}
@@ -407,15 +481,28 @@ function TriggerEditor({ beatId: any, beat: any, draft: any, isMainChain: any, o
 
 // ─── inspector shell ─────────────────────────────────────────────────────────
 
-export default function Inspector({ beatId: any, draft: any, isDraft: any, onEditBeat: any, onNewBranch: any, onDeleteBeat: any, onSuppressBeat: any, onRenameBeat: any, onSelect: any, onPreview: any }) {
-  const beat = effectiveBeat(beatId, draft);
+export interface InspectorProps {
+  beatId: string | null;
+  draft: StoryDraft;
+  isDraft: boolean;
+  onEditBeat: (beatId: string, fields: Partial<StoryBeat>) => void;
+  onNewBranch: (beatId: string, choiceId: string) => void;
+  onDeleteBeat: (beatId: string) => void;
+  onSuppressBeat?: (beatId: string) => void;
+  onRenameBeat?: (beatId: string, nextId: string) => RenameDraftBeatResult | DraftBeatIdValidation | void;
+  onSelect: (beatId: string) => void;
+  onPreview?: (beatId: string) => void;
+}
+
+export default function Inspector({ beatId, draft, isDraft, onEditBeat, onNewBranch, onDeleteBeat, onSuppressBeat, onRenameBeat, onSelect, onPreview }: InspectorProps) {
+  const beat = beatId ? effectiveBeat(beatId, draft) : null;
   const [draftId, setDraftId] = useState(beatId || "");
   const [lastBeatId, setLastBeatId] = useState(beatId || "");
   if ((beatId || "") !== lastBeatId) {
     setLastBeatId(beatId || "");
     setDraftId(beatId || "");
   }
-  if (!beat) {
+  if (!beat || !beatId) {
     return (
       <div style={{ width: 340, flexShrink: 0, background: C.parchment, borderLeft: `2px solid ${C.border}`,
         boxSizing: "border-box", display: "flex", alignItems: "center", justifyContent: "center", padding: 24, height: "100%", minHeight: 0 }}>
@@ -429,7 +516,8 @@ export default function Inspector({ beatId: any, draft: any, isDraft: any, onEdi
   const valTitle = beat.title ?? beatId;
   const valScene = beat.scene ?? "";
   const valLines = editorLinesForBeat(beat);
-  const updateLines = (next: any) => onEditBeat(beatId, { lines: next.length ? next : undefined, body: undefined });
+  const updateLines = (next: Array<{ speaker: string | null; text: string }>) =>
+    onEditBeat(beatId, { lines: next.length ? next : undefined, body: undefined });
 
   const ts = triggerSummary(beat);
   const ring = actColor(beat);
@@ -437,7 +525,9 @@ export default function Inspector({ beatId: any, draft: any, isDraft: any, onEdi
   const incoming = findIncomingChoice(beatId, draft);
   const unreached = isDraft && !beat.trigger && !incoming;
   const warnings = storyWarningsForBeat(beatId, draft);
-  const idCheck = isDraft ? validateDraftBeatId(draft, beatId, draftId) : { ok: true };
+  const idCheck: DraftBeatIdValidation = isDraft
+    ? validateDraftBeatId(draft, beatId, draftId)
+    : { ok: true, id: beatId, message: "" };
 
   return (
     <div style={{ width: 340, flexShrink: 0, background: C.parchment, borderLeft: `2px solid ${C.border}`,
@@ -447,9 +537,9 @@ export default function Inspector({ beatId: any, draft: any, isDraft: any, onEdi
         <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 7, flexWrap: "wrap" }}>
           <span style={{ display: "inline-flex", padding: "2px 7px", borderRadius: 999, background: ring, color: "#fff",
             font: "700 8px/1 system-ui", letterSpacing: "0.12em", textTransform: "uppercase" }}>
-            {isDraft ? "DRAFT BEAT" : isSide ? "SIDE BEAT" : `ACT ${["", "I", "II", "III"][beat.act] || beat.act}`}
+            {isDraft ? "DRAFT BEAT" : isSide ? "SIDE BEAT" : `ACT ${["", "I", "II", "III"][beat.act ?? 0] || beat.act}`}
           </span>
-          {beat.choices?.length > 0 && (
+          {beat.choices && beat.choices.length > 0 && (
             <span style={{ display: "inline-flex", padding: "2px 7px", borderRadius: 999, background: "rgba(214,97,42,0.14)",
               color: C.emberDeep, font: "700 8px/1 system-ui", letterSpacing: "0.12em", textTransform: "uppercase" }}>
               FORK · {beat.choices.length}
@@ -541,7 +631,7 @@ export default function Inspector({ beatId: any, draft: any, isDraft: any, onEdi
 
         <Section title="Lines" hint={beat.body && !Array.isArray(beat.lines) ? "(converted from legacy Body on edit)" : "(cards let you set speaker, reorder, add, remove)"}>
           <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
-            {(valLines || []).map((line: any, idx: any) => (
+            {(valLines || []).map((line, idx) => (
               <div key={`line-${idx}`} style={{ border: `1px solid ${C.border}99`, borderRadius: 8, background: "#fff", padding: 7 }}>
                 <div style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 6 }}>
                   <Portrait npcKey={line?.speaker} size={18} />
@@ -561,7 +651,7 @@ export default function Inspector({ beatId: any, draft: any, isDraft: any, onEdi
                     if (idx >= valLines.length - 1) return;
                     const next = valLines.slice(); [next[idx + 1], next[idx]] = [next[idx], next[idx + 1]]; updateLines(next);
                   }}>↓</Btn>
-                  <Btn tone="danger" onClick={() => updateLines(valLines.filter((_: any, i: any) => i !== idx))}>Remove</Btn>
+                  <Btn tone="danger" onClick={() => updateLines(valLines.filter((_, i) => i !== idx))}>Remove</Btn>
                 </div>
                 <textarea rows={2} value={line?.text || ""} placeholder="Dialogue text…"
                   onChange={(e) => { const next = valLines.slice(); next[idx] = { ...next[idx], text: e.target.value }; updateLines(next); }}
@@ -581,7 +671,7 @@ export default function Inspector({ beatId: any, draft: any, isDraft: any, onEdi
           <>
             <Section title="On complete · setFlag" hint="(flags marked true when this beat finishes)">
               <Row label="Flags"><FlagTags value={beat.onComplete?.setFlag} knownFlags={knownStoryFlagIds(draft)}
-                onChange={(v: any) => onEditBeat(beatId, { onComplete: v ? { setFlag: v } : null })} placeholder="flag_on_done" /></Row>
+                onChange={(v) => onEditBeat(beatId, { onComplete: v ? { setFlag: v } : undefined })} placeholder="flag_on_done" /></Row>
             </Section>
             <Section title="Danger zone">
               <Btn tone="danger" style={{ alignSelf: "flex-start" }}
@@ -614,15 +704,18 @@ export default function Inspector({ beatId: any, draft: any, isDraft: any, onEdi
         )}
 
         {/* speakers preview */}
-        {valLines && valLines.some((l: any) => l.speaker) && (
+        {valLines && valLines.some((l) => l && l.speaker) && (
           <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: -4 }}>
             <span style={{ font: "600 8px/1 system-ui", letterSpacing: "0.1em", textTransform: "uppercase", color: C.inkSubtle }}>Speakers</span>
-            {[...new Set(valLines.map((l: any) => l.speaker).filter(Boolean))].map((sp) => (
-              <span key={sp} style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
-                <Portrait npcKey={sp} size={16} />
-                <span style={{ font: "500 9px/1 system-ui", color: NPCS[sp]?.color || C.inkLight }}>{NPCS[sp]?.name || sp}</span>
-              </span>
-            ))}
+            {[...new Set(valLines.map((l) => l?.speaker).filter((s): s is string => Boolean(s)))].map((sp) => {
+              const info = npcByKey(sp);
+              return (
+                <span key={sp} style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+                  <Portrait npcKey={sp} size={16} />
+                  <span style={{ font: "500 9px/1 system-ui", color: info?.color || C.inkLight }}>{info?.name || sp}</span>
+                </span>
+              );
+            })}
           </div>
         )}
       </div>
