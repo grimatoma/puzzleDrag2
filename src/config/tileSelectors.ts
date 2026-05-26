@@ -7,32 +7,54 @@
  */
 import { BIOMES, COLS, ROWS } from "../constants.js";
 import { tilesInCategory } from "../utils.js";
-import { applyAreaBlast } from "../state/boardMutations.js";
+import { applyAreaBlast, type MutableCell, type MutableGrid } from "../state/boardMutations.js";
 
-const HAZARD_LOCKED = (cell: any) =>
+/** Result entry: the coordinate plus the original tile key at that cell. */
+export interface TileSelectorCell {
+  row: number;
+  col: number;
+  key: string;
+}
+
+/** A tap coordinate as supplied by the caller. */
+export interface TapPoint {
+  row: number;
+  col: number;
+}
+
+/** Caller-supplied context for biome-relative selectors. */
+export interface TileSelectorContext {
+  biomeKey?: string;
+  biomes?: Record<string, unknown>;
+  [extra: string]: unknown;
+}
+
+/** Param bag for power selectors. Each selector reads a subset; we type loosely so callers can pass any shape. */
+export type TileSelectorParams = Record<string, unknown> & {
+  target?: unknown;
+  from?: unknown;
+  to?: unknown;
+  count?: number;
+  rowSpan?: number;
+  colSpan?: number;
+  matchKey?: unknown;
+  radius?: number;
+};
+
+const HAZARD_LOCKED = (cell: MutableCell | null | undefined): boolean =>
   !!(cell && (cell.rubble || cell.gas || cell.frozen || cell.key === "rat"));
 
-const DIRS4 = [[0, 1], [0, -1], [1, 0], [-1, 0]];
+const DIRS4 = [[0, 1], [0, -1], [1, 0], [-1, 0]] as const;
 
-/**
- * @param {Array<Array<{ key?: string | null }>> | null | undefined} grid
- * @param {number} row
- * @param {number} col
- * @returns {{ row: number, col: number, key: string } | null}
- */
-function cellAt(grid: any, row: any, col: any) {
+function cellAt(grid: MutableGrid | null | undefined, row: number, col: number): TileSelectorCell | null {
   if (!grid) return null;
   const cell = grid[row]?.[col];
   if (!cell?.key || HAZARD_LOCKED(cell)) return null;
   return { row, col, key: cell.key };
 }
 
-/**
- * @param {Array<Array<{ key?: string | null }>> | null | undefined} grid
- * @param {boolean} [excludeSelected]
- */
-function allCells(grid: any, excludeSelected = false) {
-  const out: any[] = [];
+function allCells(grid: MutableGrid | null | undefined, excludeSelected = false): TileSelectorCell[] {
+  const out: TileSelectorCell[] = [];
   if (!grid) return out;
   for (let r = 0; r < ROWS; r++) {
     for (let c = 0; c < COLS; c++) {
@@ -46,7 +68,7 @@ function allCells(grid: any, excludeSelected = false) {
 }
 
 /** Fisher–Yates shuffle (in-place copy). */
-function shuffled(cells: any) {
+function shuffled<T>(cells: T[]): T[] {
   const arr = cells.slice();
   for (let i = arr.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
@@ -55,14 +77,8 @@ function shuffled(cells: any) {
   return arr;
 }
 
-/**
- * @param {Array<Array<{ key?: string | null }>>} grid
- * @param {number} tapRow
- * @param {number} tapCol
- * @param {number} rowSpan
- */
-function selectRow(grid: any, tapRow: any, tapCol: any, rowSpan = 1) {
-  const out: any[] = [];
+function selectRow(grid: MutableGrid | null | undefined, tapRow: number, tapCol: number, rowSpan = 1): TileSelectorCell[] {
+  const out: TileSelectorCell[] = [];
   const r0 = Math.max(0, tapRow);
   const r1 = Math.min(ROWS - 1, tapRow + rowSpan - 1);
   for (let r = r0; r <= r1; r++) {
@@ -74,14 +90,8 @@ function selectRow(grid: any, tapRow: any, tapCol: any, rowSpan = 1) {
   return out;
 }
 
-/**
- * @param {Array<Array<{ key?: string | null }>>} grid
- * @param {number} tapRow
- * @param {number} tapCol
- * @param {number} colSpan
- */
-function selectColumn(grid: any, tapRow: any, tapCol: any, colSpan = 1) {
-  const out: any[] = [];
+function selectColumn(grid: MutableGrid | null | undefined, tapRow: number, tapCol: number, colSpan = 1): TileSelectorCell[] {
+  const out: TileSelectorCell[] = [];
   const c0 = Math.max(0, tapCol);
   const c1 = Math.min(COLS - 1, tapCol + colSpan - 1);
   for (let c = c0; c <= c1; c++) {
@@ -93,14 +103,9 @@ function selectColumn(grid: any, tapRow: any, tapCol: any, colSpan = 1) {
   return out;
 }
 
-/**
- * @param {Array<Array<{ key?: string | null }>>} grid
- * @param {number} tapRow
- * @param {number} tapCol
- */
-function selectCross(grid: any, tapRow: any, tapCol: any) {
-  const seen = new Set();
-  const out: any[] = [];
+function selectCross(grid: MutableGrid | null | undefined, tapRow: number, tapCol: number): TileSelectorCell[] {
+  const seen = new Set<string>();
+  const out: TileSelectorCell[] = [];
   for (const cell of [...selectRow(grid, tapRow, tapCol), ...selectColumn(grid, tapRow, tapCol)]) {
     const id = `${cell.row},${cell.col}`;
     if (!seen.has(id)) {
@@ -114,13 +119,13 @@ function selectCross(grid: any, tapRow: any, tapCol: any) {
 /**
  * 4-connected flood from tap matching tapped key (or any key when matchKey false).
  */
-function selectComponent(grid: any, tapRow: any, tapCol: any, matchKey = true) {
+function selectComponent(grid: MutableGrid | null | undefined, tapRow: number, tapCol: number, matchKey = true): TileSelectorCell[] {
   const seed = cellAt(grid, tapRow, tapCol);
   if (!seed) return [];
   const targetKey = seed.key;
-  const out: any[] = [];
-  const visited = Array.from({ length: ROWS }, () => new Array(COLS).fill(false));
-  const queue: Array<{ row: any; col: any }> = [{ row: tapRow, col: tapCol }];
+  const out: TileSelectorCell[] = [];
+  const visited: boolean[][] = Array.from({ length: ROWS }, () => new Array(COLS).fill(false));
+  const queue: TapPoint[] = [{ row: tapRow, col: tapCol }];
   visited[tapRow][tapCol] = true;
   while (queue.length) {
     const { row: r, col: c } = queue.shift()!;
@@ -139,17 +144,14 @@ function selectComponent(grid: any, tapRow: any, tapCol: any, matchKey = true) {
   return out;
 }
 
-/**
- * @param {object} params
- * @param {string} [biomeKey]
- */
-export function resolveTransformKey(params: any, biomeKey = "farm") {
+export function resolveTransformKey(params: TileSelectorParams, biomeKey: string = "farm"): string | null {
   const to = params.to;
   if (to === "biome_base") {
-    return (BIOMES as any)[biomeKey]?.tiles?.[0]?.key ?? null;
+    const biome = (BIOMES as Record<string, { tiles?: Array<{ key?: string }> } | undefined>)[biomeKey];
+    return biome?.tiles?.[0]?.key ?? null;
   }
   if (to === "biome_rare") {
-    const biome = BIOMES[biomeKey];
+    const biome = (BIOMES as Record<string, { name?: string } | undefined>)[biomeKey];
     if (!biome) return null;
     if (biome.name === "Mine") return "tile_mine_gem";
     return "tile_fruit_blackberry";
@@ -157,53 +159,62 @@ export function resolveTransformKey(params: any, biomeKey = "farm") {
   return typeof to === "string" ? to : null;
 }
 
-/** @type {Record<string, (grid: any, params: any, tap?: { row: number, col: number }, ctx?: { biomeKey?: string, biomes?: any }) => Array<{ row: number, col: number, key: string }>>} */
-export const TILE_SELECTORS = Object.freeze({
-  clear_row(grid: any, params: any, tap?: any) {
+/** Selector function signature: takes the board + params + optional tap/ctx and returns matched cells. */
+export type TileSelectorFn = (
+  grid: MutableGrid | null | undefined,
+  params: TileSelectorParams,
+  tap?: TapPoint | null,
+  ctx?: TileSelectorContext,
+) => TileSelectorCell[];
+
+export const TILE_SELECTORS: Readonly<Record<string, TileSelectorFn>> = Object.freeze({
+  clear_row(grid, params, tap) {
     if (!tap || typeof tap.row !== "number") return [];
-    return selectRow(grid, tap.row, tap.col, params.rowSpan ?? 1);
+    return selectRow(grid, tap.row, tap.col, Number(params.rowSpan) || 1);
   },
-  clear_column(grid: any, params: any, tap?: any) {
+  clear_column(grid, params, tap) {
     if (!tap || typeof tap.row !== "number") return [];
-    return selectColumn(grid, tap.row, tap.col, params.colSpan ?? 1);
+    return selectColumn(grid, tap.row, tap.col, Number(params.colSpan) || 1);
   },
-  clear_cross(grid: any, _params: any, tap?: any) {
+  clear_cross(grid, _params, tap) {
     if (!tap || typeof tap.row !== "number") return [];
     return selectCross(grid, tap.row, tap.col);
   },
-  clear_component(grid: any, params: any, tap?: any) {
+  clear_component(grid, params, tap) {
     if (!tap || typeof tap.row !== "number") return [];
     return selectComponent(grid, tap.row, tap.col, params.matchKey !== false);
   },
-  clear_random_n(grid: any, params: any) {
-    const n = params.count ?? 6;
+  clear_random_n(grid, params) {
+    const n = Number(params.count) || 6;
     return shuffled(allCells(grid, true)).slice(0, n);
   },
-  transform_random_n(grid: any, params: any) {
-    const n = params.count ?? 5;
+  transform_random_n(grid, params) {
+    const n = Number(params.count) || 5;
     return shuffled(allCells(grid, true)).slice(0, n);
   },
-  area_blast(grid: any, params: any, tap?: any) {
+  area_blast(grid, params, tap) {
     if (!tap || typeof tap.row !== "number") return [];
-    const radius = params.radius ?? 1;
+    const radius = Number(params.radius) || 1;
     const { grid: blasted } = applyAreaBlast(grid, tap.row, tap.col, radius);
-    const out = [];
+    const out: TileSelectorCell[] = [];
+    if (!grid) return out;
     for (let r = 0; r < ROWS; r++) {
       for (let c = 0; c < COLS; c++) {
         const before = grid[r]?.[c];
         const after = blasted[r]?.[c];
-        if (before?.key && (!after?.key || after._emptied)) {
-          out.push({ row: r, col: c, key: before.key });
+        const beforeKey = before?.key;
+        if (beforeKey && (!after?.key || after._emptied)) {
+          out.push({ row: r, col: c, key: beforeKey });
         }
       }
     }
     return out;
   },
-  tap_clear_type(grid: any, _params: any, tap?: any) {
-    if (!tap || typeof tap.row !== "number") return [];
+  tap_clear_type(grid, _params, tap) {
+    if (!tap || typeof tap.row !== "number" || !grid) return [];
     const key = grid[tap.row]?.[tap.col]?.key;
     if (!key) return [];
-    const out = [];
+    const out: TileSelectorCell[] = [];
     for (let r = 0; r < ROWS; r++) {
       for (let c = 0; c < COLS; c++) {
         if (grid[r]?.[c]?.key === key) {
@@ -214,12 +225,12 @@ export const TILE_SELECTORS = Object.freeze({
     }
     return out;
   },
-  clear_category(grid: any, params: any) {
-    const keys = tilesInCategory(params.target);
+  clear_category(grid, params) {
+    const keys = tilesInCategory(params.target as string | string[]);
     const keySet = new Set(keys);
     return allCells(grid).filter((c) => keySet.has(c.key));
   },
-  clear_all(grid: any, params: any) {
+  clear_all(grid, params) {
     const target = params.target;
     if (target === "*") return allCells(grid);
     return allCells(grid).filter((c) => c.key === target);
@@ -230,18 +241,18 @@ export const TILE_SELECTORS = Object.freeze({
   arm_fill_bias() {
     return [];
   },
-  transform_tiles(grid: any, params: any) {
-    const fromCategory = tilesInCategory(params.from);
+  transform_tiles(grid, params) {
+    const fromCategory = tilesInCategory(params.from as string | string[]);
     const fromKeys = fromCategory.length > 0
       ? fromCategory
       : (typeof params.from === "string" ? [params.from] : []);
     const keySet = new Set(fromKeys);
     return allCells(grid).filter((c) => keySet.has(c.key));
   },
-  transform_adjacent(grid: any, params: any, tap?: any) {
+  transform_adjacent(grid, params, tap) {
     if (!tap || typeof tap.row !== "number") return [];
-    const radius = params.radius ?? 1;
-    const fromCategory = tilesInCategory(params.from);
+    const radius = Number(params.radius) || 1;
+    const fromCategory = tilesInCategory(params.from as string | string[]);
     const fromKeys = fromCategory.length > 0
       ? fromCategory
       : (typeof params.from === "string" ? [params.from] : []);
@@ -250,7 +261,7 @@ export const TILE_SELECTORS = Object.freeze({
     const r1 = Math.min(ROWS - 1, tap.row + radius);
     const c0 = Math.max(0, tap.col - radius);
     const c1 = Math.min(COLS - 1, tap.col + radius);
-    const out = [];
+    const out: TileSelectorCell[] = [];
     for (let r = r0; r <= r1; r++) {
       for (let c = c0; c <= c1; c++) {
         const cell = cellAt(grid, r, c);
@@ -261,15 +272,14 @@ export const TILE_SELECTORS = Object.freeze({
   },
 });
 
-/**
- * @param {string} powerId
- * @param {Array<Array<object>> | null | undefined} grid
- * @param {object} [params]
- * @param {{ row: number, col: number } | null | undefined} [tap]
- * @param {{ biomeKey?: string, biomes?: object }} [ctx]
- */
-export function selectTilesForPower(powerId: any, grid: any, params: any = {}, tap?: any, ctx: any = {}) {
-  const fn = (TILE_SELECTORS as any)[powerId];
+export function selectTilesForPower(
+  powerId: string,
+  grid: MutableGrid | null | undefined,
+  params: TileSelectorParams = {},
+  tap?: TapPoint | null,
+  ctx: TileSelectorContext = {},
+): TileSelectorCell[] {
+  const fn = TILE_SELECTORS[powerId];
   if (!fn) return [];
   return fn(grid ?? [], params ?? {}, tap ?? undefined, ctx); // ctx reserved for biome-relative selectors
 }

@@ -163,7 +163,7 @@ export function seasonIndexForTurns(turns: number): number {
 /** Returns the per-resource inventory cap: 500 with Granary, 200 otherwise. */
 export function currentCap(state: Record<string, unknown> | null | undefined): number {
   if (!state) return RESOURCE_CAP_BASE;
-  const agg = computeAggregatedAbilities(state) as Record<string, unknown>;
+  const agg = computeAggregatedAbilities(state as unknown as Parameters<typeof computeAggregatedAbilities>[0]) as Record<string, unknown>;
   const capBonus = (agg.inventoryCapBonus as number | undefined) ?? 0;
   if (capBonus > 0) return RESOURCE_CAP_BASE + capBonus;
   const built = state ? locBuilt(state) : {};

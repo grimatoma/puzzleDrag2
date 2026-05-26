@@ -1097,16 +1097,7 @@ interface PinActions {
   remove: (key: string) => void;
 }
 
-interface UseToolDragReturn {
-  /** Current drag state, or null when no drag is in progress.
-   *  Typed as `DragState & { ... } | null` so optional-chaining usages like
-   *  `drag?.key` from JS callers continue to typecheck. */
-  drag: (DragState & { [extra: string]: unknown }) | null;
-  /** Start a (potential) drag; promotes to drag on long-press or threshold movement. */
-  beginDrag: (key: string, fromHotbar: boolean, ev: React.PointerEvent<HTMLElement>) => void;
-}
-
-export function useToolDrag({ pins, pinActions, maxFitPins }: { pins: Array<string | null>; pinActions: PinActions; maxFitPins: number }): UseToolDragReturn {
+export function useToolDrag({ pins, pinActions, maxFitPins }: { pins: Array<string | null>; pinActions: PinActions; maxFitPins: number }) {
   // Active drag state.
   const [drag, setDrag] = useState<DragState | null>(null);
   const dragRef = useRef<DragState | null>(null);
@@ -1219,13 +1210,14 @@ export function useToolDrag({ pins, pinActions, maxFitPins }: { pins: Array<stri
     };
   }, [pinActions, pins, maxFitPins]);
 
-  // Cast widens drag's index signature so JS-style callers using
-  // `drag?.[someKey]` continue to typecheck.
-  return { drag: drag as (DragState & { [extra: string]: unknown }) | null, beginDrag: beginPress };
+  // Exported as a loose shape so JS-style callers' `state.tools?.[drag?.key]`
+  // expressions typecheck. Internally `drag` is strictly `DragState | null`;
+  // the public widening is only for the boundary with prototype.tsx.
+  return { drag: drag as (DragState & Record<string, unknown>) | null, beginDrag: beginPress };
 }
 
 // Floating tile that follows the cursor while a hotbar drag is active.
-export function DragGhost({ drag, tool }: { drag: DragState | null | undefined; tool: RuntimeTool | null | undefined }) {
+export function DragGhost({ drag, tool }: { drag: (DragState & Record<string, unknown>) | DragState | null | undefined; tool: RuntimeTool | null | undefined }) {
   if (!drag || !tool) return null;
   return (
     <div

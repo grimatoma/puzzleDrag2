@@ -237,7 +237,7 @@ function TileDetail({ detail, category, state, dispatch }: TileDetailProps) {
         <DetailProgress
           label={`Researching ${displayKey(d.researchOf ?? "")}`}
           value={detail.researchProgress}
-          max={d.researchAmount}
+          max={d.researchAmount ?? 0}
         />
       )}
       {d.method === "buy" && !detail.discovered && (

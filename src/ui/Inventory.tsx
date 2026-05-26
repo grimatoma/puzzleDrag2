@@ -48,7 +48,9 @@ interface RecipeRef { item?: string; [extra: string]: unknown }
 interface OrderLike {
   id: number;
   key: string;
-  need: number;
+  /** Canonical Order uses `amount` for the create path and `need` on turn-in; both are accepted. */
+  need?: number;
+  amount?: number;
   npc: string;
   reward: number;
   [extra: string]: unknown;
@@ -238,9 +240,10 @@ function orderStatusByKey(orders: OrderLike[], inventory: Record<string, number>
   const status: Record<string, "ready" | "needed"> = {};
   const totals: Record<string, number> = {};
   for (const o of orders) {
-    totals[o.key] = (totals[o.key] || 0) + o.need;
+    const need = o.need ?? 0;
+    totals[o.key] = (totals[o.key] || 0) + need;
     const have = inventory[o.key] || 0;
-    if (have >= o.need) status[o.key] = "ready";
+    if (have >= need) status[o.key] = "ready";
     else if (status[o.key] !== "ready") status[o.key] = "needed";
   }
   return { status, totals };
@@ -445,15 +448,16 @@ export function CompactOrders({ orders, inventory, dispatch }: { orders: OrderLi
   return (
     <div className="flex flex-col gap-1.5">
       {orders.map((o) => {
+        const need = o.need ?? 0;
         const have = inventory[o.key] || 0;
-        const done = have >= o.need;
+        const done = have >= need;
         const res = items[o.key];
         const label = res ? res.label : o.key;
         return (
           <button
             key={o.id}
             type="button"
-            onClick={() => dispatch({ type: "TURN_IN_ORDER", id: o.id, npc: o.npc, key: o.key, need: o.need, reward: o.reward })}
+            onClick={() => dispatch({ type: "TURN_IN_ORDER", id: o.id, npc: o.npc, key: o.key, need, reward: o.reward })}
             className={`flex items-center gap-1.5 rounded-lg px-2 py-2 text-left border min-h-tap transition-colors ${done ? "bg-moss/40 border-moss text-white" : "bg-parchment-soft border-iron text-ink"}`}
           >
             <span className="flex-shrink-0 grid place-items-center w-5 h-5">
@@ -461,7 +465,7 @@ export function CompactOrders({ orders, inventory, dispatch }: { orders: OrderLi
             </span>
             <span className="flex-1 min-w-0 text-[10px] font-bold truncate">{label}</span>
             <span className={`text-[10px] font-bold whitespace-nowrap tabular-nums ${done ? "text-white" : have > 0 ? "text-ink" : "text-ink-soft"}`}>
-              {Math.min(have, o.need)}/{o.need}
+              {Math.min(have, need)}/{need}
             </span>
             {done && (
               <span className="text-white" aria-label="ready">

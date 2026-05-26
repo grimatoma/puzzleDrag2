@@ -20,7 +20,7 @@
 
 import { MAP_NODES, type MapNode } from "../cartography/data.js";
 import { computeAggregatedAbilities } from "../workers/aggregate.js";
-import type { GameState } from "../../types/state.js";
+import type { GameState, HeirloomsState } from "../../types/state.js";
 
 export const ZONE_CATEGORIES = Object.freeze([
   "grass",
@@ -506,16 +506,16 @@ export function hearthTokenCount(state: GameState | null | undefined): number {
  * for every founded + completed settlement (idempotent — never removes one).
  * Returns the original reference if nothing changed.
  */
-export function grantEarnedHearthTokens(state: GameState | null | undefined): Record<string, number> {
+export function grantEarnedHearthTokens(state: GameState | null | undefined): HeirloomsState {
   const s = state as unknown as ZoneHostState | null | undefined;
   const map = s?.settlements ?? {};
-  const h: Record<string, number> = s?.heirlooms ?? {};
-  let next: Record<string, number> = h;
+  const h = (s?.heirlooms ?? { heirloomSeed: 0, pactIron: 0, tidesingerPearl: 0 }) as HeirloomsState;
+  let next: HeirloomsState = h;
   for (const zoneId of Object.keys(map)) {
     if (!map[zoneId]?.founded || !settlementCompleted(state, zoneId)) continue;
     const type = settlementTypeForZone(zoneId);
     const tok = type ? HEARTH_TOKEN_FOR_TYPE[type] : null;
-    if (!tok || (next[tok] ?? 0) >= 1) continue;
+    if (!tok || ((next[tok] as number | undefined) ?? 0) >= 1) continue;
     if (next === h) next = { ...h };
     next[tok] = 1;
   }

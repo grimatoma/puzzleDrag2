@@ -24,7 +24,7 @@ export default function IconCanvas({
   className = "",
   ...rest
 }: {
-  iconKey: string;
+  iconKey: string | null | undefined;
   size?: number;
   background?: string | null;
   rounded?: boolean;
@@ -55,7 +55,7 @@ export default function IconCanvas({
         ctx.fillRect(0, 0, size, size);
       }
     }
-    paintIcon(ctx, iconKey, size);
+    if (iconKey) paintIcon(ctx, iconKey, size);
     ctx.restore();
   }, [iconKey, size, background, rounded]);
 
@@ -65,7 +65,7 @@ export default function IconCanvas({
       width={size}
       height={size}
       style={{ width: size, height: size, display: "block" }}
-      title={title || iconKey}
+      title={title || iconKey || ""}
       className={className}
       {...rest}
     />

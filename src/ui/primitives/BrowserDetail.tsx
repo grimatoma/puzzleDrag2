@@ -235,14 +235,15 @@ export function AbilitySummary({ abilities, effects, empty = "No special bonus."
   );
 }
 
-export function DetailProgress({ value, max, label, tone = "moss" }: { value: number; max: number; label: React.ReactNode; tone?: "ember" | "moss" | "gold" }) {
+export function DetailProgress({ value, max, label, tone = "moss" }: { value: number; max: number | undefined; label: React.ReactNode; tone?: "ember" | "moss" | "gold" }) {
+  const safeMax = max ?? 0;
   return (
     <div className="flex flex-col gap-1">
       <div className="flex items-center justify-between gap-2 text-caption font-bold text-on-panel-dim">
         <span>{label}</span>
-        <span className="tabular-nums">{value}/{max}</span>
+        <span className="tabular-nums">{value}/{safeMax}</span>
       </div>
-      <ProgressTrack value={value} max={max} tone={tone} size="sm" />
+      <ProgressTrack value={value} max={safeMax} tone={tone} size="sm" />
     </div>
   );
 }

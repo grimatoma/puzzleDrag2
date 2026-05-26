@@ -78,9 +78,18 @@ interface BuildingDef {
   [extra: string]: unknown;
 }
 
+/**
+ * State subset read by the aggregator. Accepts both full GameState and the
+ * partial snapshot built by GameScene._syncWorkerEffects.
+ */
+type AggregatorState = Pick<GameState, "workers" | "built" | "tileCollection"> & {
+  mapCurrent?: unknown;
+  [extra: string]: unknown;
+};
+
 /** Source list for every BUILDINGS entry currently built in the active map. */
-export function builtBuildingSources(state: GameState): AbilitySource[] {
-  const built = (locBuilt(state) || {}) as Record<string, unknown>;
+export function builtBuildingSources(state: AggregatorState): AbilitySource[] {
+  const built = (locBuilt(state as unknown as Record<string, unknown>) || {}) as Record<string, unknown>;
   const out: AbilitySource[] = [];
   for (const b of (BUILDINGS as BuildingDef[])) {
     if (!built[b.id]) continue;
@@ -104,7 +113,7 @@ interface TileDef {
   [extra: string]: unknown;
 }
 
-export function discoveredTileSources(state: GameState): AbilitySource[] {
+export function discoveredTileSources(state: AggregatorState): AbilitySource[] {
   const discovered = (state?.tileCollection?.discovered ?? {}) as Record<string, boolean>;
   const activeByCategory = (state?.tileCollection?.activeByCategory ?? {}) as Record<string, string | null>;
   const out: AbilitySource[] = [];
@@ -142,7 +151,7 @@ export function discoveredTileSources(state: GameState): AbilitySource[] {
  *   seasonEndPoolStep    integer
  *   boardPreserveBiomes  Set<string>
  */
-export function computeAggregatedAbilities(state: GameState): ReturnType<typeof aggregateAbilities> {
+export function computeAggregatedAbilities(state: AggregatorState): ReturnType<typeof aggregateAbilities> {
   const typeHired = (state?.workers?.hired ?? {}) as Record<string, number>;
 
   const sources: AbilitySource[] = [];

@@ -249,7 +249,12 @@ export function resolveKeeperTrial(state: GameState, won: boolean | null | undef
 
 /** Per-turn patch supplied to {@link applyKeeperTrialChainProgress}. */
 export interface KeeperTrialTurnPatch {
-  farmRun?: { turnsRemaining?: number; [k: string]: unknown };
+  /**
+   * The next-turn farmRun snapshot (or null when not on a farm board).
+   * Allows either `turnsRemaining?: number` (looser internal patches) or
+   * `turnsRemaining: number` (the canonical FarmRun shape).
+   */
+  farmRun?: { turnsRemaining?: number; [k: string]: unknown } | null;
   ended?: boolean;
   [extra: string]: unknown;
 }

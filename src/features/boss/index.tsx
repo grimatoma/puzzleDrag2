@@ -59,7 +59,7 @@ function BossModal({ boss, year = 1, dispatch }: BossModalProps) {
               border: "3px solid #ff7a00", boxShadow: "0 0 22px rgba(255,122,0,0.45)",
               marginBottom: 4, background: "rgba(0,0,0,0.35)",
             }}>
-              <IconCanvas iconKey={bossPortraitKey(boss)} size={96} />
+              <IconCanvas iconKey={bossPortraitKey(boss) ?? ""} size={96} />
             </div>
           ) : (
             <div className="text-[48px] leading-none mb-1">{boss.emoji}</div>

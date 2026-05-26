@@ -211,7 +211,6 @@ export class GameScene extends Phaser.Scene {
     // `(parent, value, previous)` where value/previous depend on the data key.
     // Typing this further would require a discriminated union of every
     // registry key; the handlers below narrow each value at their use site.
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Phaser registry boundary
     type RegistryHandler = (...args: any[]) => void;
     const registryListeners: Array<[string, RegistryHandler]> = [];
     const onRegistry = (event: string, fn: RegistryHandler) => {
@@ -341,12 +340,14 @@ export class GameScene extends Phaser.Scene {
 
   _syncWorkerEffects() {
     const snapshot = {
-      workers: this.registry.get("workers") ?? { hired: {} },
-      built: this.registry.get("built") ?? {},
-      mapCurrent: this.registry.get("activeZone") ?? "home",
+      workers: (this.registry.get("workers") ?? { hired: {} }) as { hired: Record<string, number>; [k: string]: unknown },
+      built: (this.registry.get("built") ?? {}) as Record<string, Record<string, unknown>>,
+      mapCurrent: (this.registry.get("activeZone") ?? "home") as string,
       tileCollection: {
-        discovered: this.registry.get("tileCollectionDiscovered") ?? {},
-        activeByCategory: this.registry.get("tileCollectionActive") ?? {},
+        discovered: (this.registry.get("tileCollectionDiscovered") ?? {}) as Record<string, boolean>,
+        researchProgress: {} as Record<string, number>,
+        activeByCategory: (this.registry.get("tileCollectionActive") ?? {}) as Record<string, string | null>,
+        freeMoves: 0,
       },
     };
     // Aggregator returns a channel object (see src/config/abilitiesAggregate
