@@ -159,6 +159,7 @@ When you fix a bug found in a specific scenario, add or extend an entry in `src/
 
 ## Workflow
 
+- **Open pull requests ready for review** — do not leave PRs in draft. The maintainer reviews non-draft PRs only. When creating via GitHub MCP or `gh pr create`, pass non-draft / `draft: false`. If a tool creates a draft anyway, promote it immediately (`gh pr ready` or the host UI’s “Ready for review”).
 - Always merge any PR you open once it has been pushed and the PR exists. Use a **merge commit** — do NOT squash. Keeping the branch's real commits and the merge commit makes each branch visibly fork off and rejoin `main` in the commit tree.
 - **Run visual goldens before opening a PR whenever a change could affect UI** (any edit under `src/features/`, `src/ui/`, `src/textures/`, `src/GameScene.js`, or anything that renders). Run `npm run test:visual` and treat every diff it surfaces as something you must justify — each one must be intentional. If it is, refresh the goldens with `npm run test:visual:update` and commit them in the same PR. If it isn't, fix the regression before opening the PR. Pure non-UI changes (reducer logic with no rendering effect, build config, docs) may skip this step.
 - When surfacing many decisions for review (audits, post-merge reconciles, batched approvals), prefer multiple parallel `AskUserQuestion` calls in a single turn over sequential ones. Each call caps at 4 questions; firing 2–4 in parallel renders as one card and lets the user answer everything at once. Always print the full detailed report as text first, then ask.
