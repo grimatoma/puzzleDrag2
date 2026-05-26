@@ -3,6 +3,7 @@
 // filter by usage, and copy icon keys.
 
 import { useState, useMemo, useEffect, useRef, memo } from "react";
+import DOMPurify from "dompurify";
 // Local declaration lives in src/balanceManager/canvas2svg.d.ts.
 import C2S from "canvas2svg";
 import { ICON_REGISTRY } from "../../textures/iconRegistry.js";
@@ -280,7 +281,7 @@ const IconCell = memo(function IconCell({ entry, onClick, selected, mode }: Icon
       ) : mode === "svg" ? (
         <div
           style={{ width: ICON_SIZE, height: ICON_SIZE, display: "block" }}
-          dangerouslySetInnerHTML={{ __html: svgMarkup ?? "" }}
+          dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(svgMarkup ?? "") }}
         />
       ) : (
         <canvas
