@@ -3,6 +3,8 @@ import { MAP_NODES, MAP_EDGES, REGIONS, type MapNode } from "./data.js";
 import { ICON_DESIGN_BOX, paintIcon } from "../../textures/paintIcon.js";
 import { isAdjacent } from "./slice.js";
 
+const nodesById = new Map(MAP_NODES.map(n => [n.id, n]));
+
 interface NodeTerrain {
   kind: string;
   palette: [string, string];
@@ -508,8 +510,8 @@ export class MapScene extends Phaser.Scene {
 
   buildEdgeViews() {
     for (const [a, b] of MAP_EDGES) {
-      const na = MAP_NODES.find(n => n.id === a);
-      const nb = MAP_NODES.find(n => n.id === b);
+      const na = nodesById.get(a);
+      const nb = nodesById.get(b);
       if (!na || !nb) continue;
       const line = this.add.graphics();
       this.layers.paths.add(line);
