@@ -1095,11 +1095,12 @@ function coreReducer(state: GameState, action: Action): GameState {
       // doc §VI). Payload: { biomeKey: "mine"|"fish", supply: { foodKey: count } }.
       // Pack food before the round; each ration is worth a number of turns
       // (expeditionTurnsForFood, building-boosted); play until they run out.
-      const biomeKey = action.payload?.biomeKey;
+      const expPayload = action.payload as { biomeKey?: string; supply?: Record<string, number> } | undefined;
+      const biomeKey = expPayload?.biomeKey;
       if (biomeKey !== "mine" && biomeKey !== "fish") return state;
       const needLevel = biomeKey === "mine" ? 2 : 3;
       if ((state.level ?? 1) < needLevel) return state;
-      const zoneId = state.activeZone ?? state.mapCurrent ?? "home";
+      const zoneId = (state.activeZone as string | undefined) ?? (state.mapCurrent as string | undefined) ?? "home";
       // Founding gate (Phase 6a): can't depart on an expedition from an unfounded zone.
       if (!isSettlementFounded(state, zoneId)) {
         return {
@@ -1107,7 +1108,7 @@ function coreReducer(state: GameState, action: Action): GameState {
           bubble: { id: Date.now(), npc: "wren", text: `Found ${displayZoneName(state, zoneId)} before you depart from here.`, ms: 2400 },
         };
       }
-      const supply = action.payload?.supply ?? {};
+      const supply: Record<string, number> = expPayload?.supply ?? {};
       // Validate: every entry is a real ration the player has enough of.
       const inv = { ...(state.inventory ?? {}) };
       for (const [foodKey, rawCount] of Object.entries(supply)) {
@@ -1143,20 +1144,22 @@ function coreReducer(state: GameState, action: Action): GameState {
         view: "board",
         viewParams: {},
         craftingTab: null,
-        session: { expedition: { zoneId, supply, turns } },
+        session: { selectedTiles: [], fertilizerUsed: false, expedition: { zoneId, supply, turns } },
       };
     }
 
 
     case "CRAFT": {
-      const { id: craftId, qty: craftQty = 1 } = action.payload ?? {};
-      const recipe = RECIPES[craftId];
+      const craftPayload = action.payload as { id?: string; qty?: number } | undefined;
+      const { id: craftId, qty: craftQty = 1 } = craftPayload ?? {};
+      if (!craftId) return state;
+      const recipe = (RECIPES as Record<string, { station?: string; inputs: Record<string, number> } | undefined>)[craftId];
       if (!recipe) return state;
       // Check station is built (for workshop, check state.built.workshop)
-      if (recipe.station && !locBuilt(state)[recipe.station]) return state;
+      if (recipe.station && !(locBuilt(state) as Record<string, unknown>)[recipe.station]) return state;
       // Scale recipe inputs by craftQty so the shared helpers can do the
       // check + deduct without a qty-aware codepath.
-      const scaledInputs = craftQty === 1
+      const scaledInputs: Record<string, number> = craftQty === 1
         ? recipe.inputs
         : Object.fromEntries(Object.entries(recipe.inputs).map(([k, n]) => [k, (n as number) * craftQty]));
       if (!hasAllInventory(state, scaledInputs)) return state;
@@ -1167,14 +1170,16 @@ function coreReducer(state: GameState, action: Action): GameState {
     }
 
     case "GRANT_RUNES": {
-      const amt = Math.max(0, action.payload?.amount | 0);
+      const grPayload = action.payload as { amount?: number } | undefined;
+      const amt = Math.max(0, ((grPayload?.amount as number | undefined) ?? 0) | 0);
       return { ...state, runes: (state.runes ?? 0) + amt };
     }
 
     // Phase 10.3 — Sell a crafted item for its §10 sell price
     case "SELL_ITEM": {
-      const itemId = action.id ?? action.payload?.id;
-      const sellQty = Math.max(1, (action.qty ?? action.payload?.qty ?? 1) | 0);
+      const sellPayload = action.payload as { id?: string; qty?: number } | undefined;
+      const itemId = (action.id as string | undefined) ?? sellPayload?.id;
+      const sellQty = Math.max(1, ((action.qty as number | undefined) ?? sellPayload?.qty ?? 1) | 0);
       if (!itemId) return state;
       const owned = state.inventory?.[itemId] ?? 0;
       if (owned < sellQty) return state;
@@ -1199,8 +1204,9 @@ function coreReducer(state: GameState, action: Action): GameState {
     case "SET_BIOME": {
       // Reject mid-season switches; only allowed at a season boundary (turnsUsed === 0)
       if ((state.turnsUsed ?? 0) > 0) return state;
-      const biomeId = action.id ?? action.payload?.id;
-      if (!biomeId || !BIOMES[biomeId]) return state;
+      const sbPayload = action.payload as { id?: string } | undefined;
+      const biomeId = (action.id as string | undefined) ?? sbPayload?.id;
+      if (!biomeId || !(BIOMES as Record<string, unknown>)[biomeId]) return state;
       if (biomeId === state.biome) return state;
       // Mysterious ore is a mine-only mechanic — clear it whenever leaving mine.
       // Pearl is a fish-only mechanic — clear it whenever leaving fish.
@@ -1243,10 +1249,12 @@ function coreReducer(state: GameState, action: Action): GameState {
     }
 
     case "LOGIN_TICK": {
-      const today = action.payload.today;
+      type DailyReward = { coins?: number; runes?: number; tool?: string; amount?: number; unlockTile?: string };
+      const ltPayload = action.payload as { today?: string } | undefined;
+      const today = ltPayload?.today ?? "";
       const last = state.dailyStreak?.lastClaimedDate ?? null;
       if (last === today) return state; // idempotent
-      let nextDay;
+      let nextDay: number;
       if (!last) {
         nextDay = 1;
       } else {
@@ -1255,19 +1263,20 @@ function coreReducer(state: GameState, action: Action): GameState {
         const diff = Math.round((d2.getTime() - d1.getTime()) / 86400000);
         nextDay = diff === 1 ? Math.min((state.dailyStreak?.currentDay ?? 0) + 1, 30) : 1;
       }
-      const reward = DAILY_REWARDS[nextDay] ?? { coins: 25 };
+      const rewards = DAILY_REWARDS as unknown as Record<number, DailyReward>;
+      const reward: DailyReward = rewards[nextDay] ?? { coins: 25 };
       const rewardCoins = reward.coins ?? 0;
-      let next = {
+      let next: GameState = {
         ...state,
         dailyStreak: { lastClaimedDate: today, currentDay: nextDay },
         coins: (state.coins ?? 0) + rewardCoins,
         runes: (state.runes ?? 0) + (reward.runes ?? 0),
       };
       if (reward.tool) {
-        const cur = next.tools?.[reward.tool] ?? 0;
+        const cur = toolCount(next.tools, reward.tool);
         next = { ...next, tools: { ...next.tools, [reward.tool]: cur + (reward.amount ?? 1) } };
       }
-      if (reward.unlockTile && TILE_TYPES_MAP[reward.unlockTile]) {
+      if (reward.unlockTile && (TILE_TYPES_MAP as Record<string, unknown>)[reward.unlockTile]) {
         const tc = next.tileCollection ?? defaultTileCollectionSlice();
         if (!tc.discovered?.[reward.unlockTile]) {
           next = {
@@ -1279,7 +1288,9 @@ function coreReducer(state: GameState, action: Action): GameState {
           };
         }
       }
-      return { ...next, modal: { type: "daily_streak", day: nextDay, reward } };
+      // The daily-streak modal payload travels in modalParams so `state.modal`
+      // stays a simple string discriminator.
+      return { ...next, modal: "daily_streak", modalParams: { day: nextDay, reward } };
     }
 
     case "MIGRATE/APPLY_CAPS": {
@@ -1300,13 +1311,15 @@ function coreReducer(state: GameState, action: Action): GameState {
     // ─── Phase 5 Tile Collection ─────────────────────────────────────────────────
 
     case "SET_ACTIVE_TILE": {
-      const { category, tileId } = action.payload ?? {};
-      if (!CATEGORIES.includes(category)) return state;          // unknown category
+      const satPayload = action.payload as { category?: string; tileId?: string | null } | undefined;
+      const category = satPayload?.category ?? "";
+      const tileId = satPayload?.tileId ?? null;
+      if (!(CATEGORIES as readonly string[]).includes(category)) return state;
       const current = state.tileCollection?.activeByCategory?.[category];
       if (current === tileId) return state;                      // already active → no-op
 
       if (tileId !== null) {
-        const t = TILE_TYPES_MAP[tileId];
+        const t = (TILE_TYPES_MAP as Record<string, { category?: string } | undefined>)[tileId];
         if (!t) return state;                                    // unknown tile type
         if (t.category !== category) return state;               // cross-category
         if (!state.tileCollection?.discovered?.[tileId]) return state; // undiscovered
@@ -1322,12 +1335,13 @@ function coreReducer(state: GameState, action: Action): GameState {
     }
 
     case "TILE_DISCOVERED": {
-      const ids = action.payload?.ids ?? [];
+      const tdPayload = action.payload as { ids?: string[] } | undefined;
+      const ids = tdPayload?.ids ?? [];
       const known = state.tileCollection?.discovered ?? {};
       let changed = false;
-      const next = { ...known };
+      const next: Record<string, boolean> = { ...known };
       for (const id of ids) {
-        if (!TILE_TYPES_MAP[id]) continue;
+        if (!(TILE_TYPES_MAP as Record<string, unknown>)[id]) continue;
         if (!next[id]) { next[id] = true; changed = true; }
       }
       if (!changed) return state;
@@ -1347,12 +1361,13 @@ function coreReducer(state: GameState, action: Action): GameState {
     }
 
     case "BUY_TILE": {
-      const { id: buyId } = action.payload ?? {};
+      const btPayload = action.payload as { id?: string } | undefined;
+      const buyId = btPayload?.id;
       if (!buyId) return state;
-      const t = TILE_TYPES_MAP[buyId];
+      const t = (TILE_TYPES_MAP as Record<string, { discovery?: { method?: string; coinCost?: number } } | undefined>)[buyId];
       if (!t) return state;
-      if (t.discovery.method !== "buy") return state;
-      const cost = t.discovery.coinCost ?? 0;
+      if (t.discovery?.method !== "buy") return state;
+      const cost = t.discovery?.coinCost ?? 0;
       if ((state.coins ?? 0) < cost) return state;
       if (state.tileCollection?.discovered?.[buyId]) return state; // already discovered
       return {
@@ -1367,17 +1382,19 @@ function coreReducer(state: GameState, action: Action): GameState {
 
     case "GIVE_GIFT": {
       // Phase 6.2: pure gift application via applyGift helper
-      const { npcId, itemKey } = action.payload ?? {};
+      const ggPayload = action.payload as { npcId?: string; itemKey?: string } | undefined;
+      const npcId = ggPayload?.npcId;
+      const itemKey = ggPayload?.itemKey;
       if (!npcId || !itemKey) return state;
-      const giftResult = applyGift(state, npcId, itemKey);
-      if (!giftResult.ok) return state; // cooldown or empty inventory — silent no-op
+      const giftResult = applyGift(state, npcId, itemKey) as { ok: boolean; newState?: GameState; delta?: number };
+      if (!giftResult.ok || !giftResult.newState) return state; // cooldown or empty inventory — silent no-op
       // Phase 7 — calendar season removed; pickDialog falls back to a
       // season-agnostic line when given null.
       const giftDialog = pickDialog(npcId, null, giftResult.newState.npcs.bonds[npcId], Math.random, state);
       const giftBubble = {
         id: Date.now(),
         npc: npcId,
-        text: `${giftDialog} (+${giftResult.delta})`,
+        text: `${giftDialog} (+${giftResult.delta ?? 0})`,
         ms: 2200,
       };
       return { ...giftResult.newState, bubble: giftBubble };
@@ -1385,30 +1402,31 @@ function coreReducer(state: GameState, action: Action): GameState {
 
     default: {
       if (action.type === "DEV/ADD_GOLD") {
-        return { ...state, coins: state.coins + (action.amount ?? 1000) };
+        return { ...state, coins: state.coins + ((action.amount as number | undefined) ?? 1000) };
       }
       if (action.type === "DEV/FILL_STORAGE") {
         const inventory = { ...state.inventory };
-        for (const biome of Object.values(BIOMES)) {
-          for (const res of [...biome.tiles, ...biome.resources]) {
-            inventory[res.key] = (inventory[res.key] || 0) + (action.amount ?? 100);
+        const biomesMap = BIOMES as Record<string, { tiles?: Array<{ key: string }>; resources?: Array<{ key: string }> }>;
+        for (const biome of Object.values(biomesMap)) {
+          for (const res of [...(biome.tiles ?? []), ...(biome.resources ?? [])]) {
+            inventory[res.key] = (inventory[res.key] || 0) + ((action.amount as number | undefined) ?? 100);
           }
         }
         return { ...state, inventory };
       }
       if (action.type === "DEV/ADD_ITEM") {
-        const key = action.key;
+        const key = action.key as string | undefined;
         if (!key) return state;
         const inventory = { ...state.inventory };
-        inventory[key] = (inventory[key] || 0) + (action.amount ?? 50);
+        inventory[key] = (inventory[key] || 0) + ((action.amount as number | undefined) ?? 50);
         return { ...state, inventory };
       }
       if (action.type === "DEV/ADD_XP") {
-        const { newState } = applyAlmanacXp(state, action.amount ?? 100);
+        const { newState } = applyAlmanacXp(state, (action.amount as number | undefined) ?? 100);
         return { ...state, almanac: newState.almanac, xp: newState.almanac.xp, level: newState.almanac.level };
       }
       if (action.type === "DEV/ADD_LEVEL") {
-        const bump = action.amount ?? 1;
+        const bump = (action.amount as number | undefined) ?? 1;
         let s = state;
         for (let i = 0; i < bump; i++) {
           const { newState } = applyAlmanacXp(s, XP_PER_LEVEL);
@@ -1417,34 +1435,37 @@ function coreReducer(state: GameState, action: Action): GameState {
         return { ...s, xp: s.almanac.xp, level: s.almanac.level };
       }
       if (action.type === "DEV/ADD_ALMANAC_XP") {
-        const { newState } = applyAlmanacXp(state, action.amount ?? 50);
+        const { newState } = applyAlmanacXp(state, (action.amount as number | undefined) ?? 50);
         return newState;
       }
       if (action.type === "DEV/ADD_RUNES") {
-        return { ...state, runes: (state.runes ?? 0) + (action.amount ?? 10) };
+        return { ...state, runes: (state.runes ?? 0) + ((action.amount as number | undefined) ?? 10) };
       }
       if (action.type === "DEV/ADD_INFLUENCE") {
-        return { ...state, influence: (state.influence ?? 0) + (action.amount ?? 10) };
+        return { ...state, influence: (state.influence ?? 0) + ((action.amount as number | undefined) ?? 10) };
       }
       if (action.type === "DEV/FILL_TOOLS") {
-        const amt = action.amount ?? 5;
-        const tools = { ...state.tools };
+        const amt = (action.amount as number | undefined) ?? 5;
+        const tools = { ...state.tools } as Record<string, number | boolean | undefined>;
         for (const k of Object.keys(tools)) {
-          if (typeof tools[k] === "number") tools[k] = tools[k] + amt;
+          const v = tools[k];
+          if (typeof v === "number") tools[k] = v + amt;
         }
-        return { ...state, tools };
+        return { ...state, tools: tools as GameState["tools"] };
       }
       if (action.type === "DEV/ADD_SUPPLIES") {
         const inventory = { ...state.inventory };
-        inventory.supplies = (inventory.supplies || 0) + (action.amount ?? 10);
+        inventory.supplies = (inventory.supplies || 0) + ((action.amount as number | undefined) ?? 10);
         return { ...state, inventory };
       }
       if (action.type === "DEV/BUILD_ALL") {
-        const allIds = {};
-        const plots = { ...(locBuilt(state)._plots ?? {}) };
-        const occupied = (idx) => Object.prototype.hasOwnProperty.call(plots, String(idx));
+        const allIds: Record<string, boolean> = {};
+        const lb = locBuilt(state) as Record<string, unknown>;
+        const plots: Record<string, string> = { ...((lb._plots as Record<string, string> | undefined) ?? {}) };
+        const occupied = (idx: number) => Object.prototype.hasOwnProperty.call(plots, String(idx));
         let nextIdx = 0;
-        BUILDINGS.forEach((b) => {
+        const buildingList = BUILDINGS as readonly { id: string }[];
+        buildingList.forEach((b) => {
           allIds[b.id] = true;
           if (!Object.values(plots).includes(b.id)) {
             while (occupied(nextIdx)) nextIdx++;
@@ -1452,7 +1473,8 @@ function coreReducer(state: GameState, action: Action): GameState {
             nextIdx++;
           }
         });
-        return { ...state, built: { ...state.built, [state.mapCurrent]: { ...locBuilt(state), ...allIds, _plots: plots } } };
+        const currentZone = (state.mapCurrent as string | undefined) ?? "home";
+        return { ...state, built: { ...state.built, [currentZone]: { ...locBuilt(state), ...allIds, _plots: plots } } };
       }
       if (action.type === "DEV/RESET_GAME") {
         // Wipe all persisted state and reset to initial state, preserving settings.
@@ -1541,9 +1563,11 @@ const ALWAYS_RUN_SLICES = new Set([
   "USE_TOOL",  // magic tool variants (hourglass, magic_seed, magic_fertilizer) handled in portal/slice
 ]);
 
-function shouldAlwaysRunSlices(state, action) {
+function shouldAlwaysRunSlices(state: GameState, action: Action): boolean {
   if (action.type === "CRAFTING/CRAFT_RECIPE") {
-    const craftKey = action.recipeKey ?? action.payload?.key;
+    const cp = action.payload as { key?: string } | undefined;
+    const craftKey = (action.recipeKey as string | undefined) ?? cp?.key;
+    if (!craftKey) return false;
     return !!crafting.canPayForRecipe(state, craftKey);
   }
   return ALWAYS_RUN_SLICES.has(action.type);
@@ -1573,7 +1597,7 @@ function rawReducer(state: GameState, action: Action): GameState {
 // previously inlined inside slice reducers (which violated reducer purity);
 // pulling them out lets slices stay pure and lets test code call rawReducer
 // without touching localStorage.
-function runActionEffects(state, action) {
+function runActionEffects(state: GameState, action: Action): void {
   switch (action.type) {
     case "SETTINGS/TOGGLE":
       // Persist the settings sub-state to its own localStorage key so it

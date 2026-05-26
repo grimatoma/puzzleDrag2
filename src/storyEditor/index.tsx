@@ -15,7 +15,7 @@ import { STORY_BEATS, SIDE_BEATS } from "../story.js";
 import { readBalanceDraft, writeBalanceDraft } from "../config/applyOverrides.js";
 import { BALANCE_OVERRIDES } from "../constants.js";
 import {
-  C, NPCS, npcByKey, Portrait, actColor, hexAlpha, triggerSummary,
+  C, npcByKey, Portrait, actColor, hexAlpha, triggerSummary,
   effectiveBeat, effectiveChoices, findIncomingChoice, allBeatIds,
   draftBeats, draftBeatIndex, isDraftBeat,
   cloneDraft, deriveGraph, visibleSubset, focusedChainSubset, collapsibleIds,
@@ -24,7 +24,7 @@ import {
   collectStoryWarnings, renameDraftBeatInDraft, storySlicesEqual, DRAFT_BEAT_ID_RE,
 } from "./shared.jsx";
 import type {
-  StoryBeat, StoryChoice, StoryDraft, StoryEdge, StoryGraph, StoryNode, StoryNodePosition,
+  StoryBeat, StoryChoice, StoryDraft, StoryEdge, StoryNode, StoryNodePosition,
 } from "./types.js";
 import Inspector from "./Inspector.jsx";
 import PreviewModal from "./PreviewModal.jsx";

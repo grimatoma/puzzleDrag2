@@ -12,7 +12,7 @@
 // respected, the same as the visual preview).
 
 import { effectiveBeat, effectiveChoices } from "./shared.jsx";
-import type { PathChoiceCrumb, PathEffectAggregate, StoryBeat, StoryChoice, StoryDraft, StoryPath, TerminalReason } from "./types.js";
+import type { PathChoiceCrumb, StoryBeat, StoryChoice, StoryDraft, StoryPath, TerminalReason } from "./types.js";
 
 interface PathWalkerOpts { maxDepth: number; maxPaths: number }
 

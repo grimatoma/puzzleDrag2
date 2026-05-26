@@ -125,6 +125,7 @@ export function TileIcon({ tileId, size = 40, locked = false }: TileIconProps) {
     canvas.width = size * dpr;
     canvas.height = size * dpr;
     const ctx = canvas.getContext("2d");
+    if (!ctx) return;
     ctx.imageSmoothingEnabled = false;
     ctx.scale(dpr, dpr);
     ctx.clearRect(0, 0, size, size);
@@ -149,7 +150,7 @@ export function TileIcon({ tileId, size = 40, locked = false }: TileIconProps) {
     ctx.save();
     ctx.translate(size / 2, size / 2);
     ctx.scale(iconScale, iconScale);
-    drawTileIcon(ctx, key);
+    if (key) drawTileIcon(ctx, key);
     ctx.restore();
   }, [size, key, res]);
 
@@ -172,7 +173,8 @@ export function TileIcon({ tileId, size = 40, locked = false }: TileIconProps) {
   );
 }
 
-function TileListItem({ row, selected, onSelect }) {
+interface TileListItemProps { row: CategoryRowViewModel; selected: boolean; onSelect: () => void }
+function TileListItem({ row, selected, onSelect }: TileListItemProps) {
   return (
     <BrowserItemButton
       selected={selected}
@@ -187,7 +189,13 @@ function TileListItem({ row, selected, onSelect }) {
   );
 }
 
-function TileDetail({ detail, category, state, dispatch }) {
+interface TileDetailProps {
+  detail: TileDetailViewModel | null;
+  category: string | null;
+  state: GameState;
+  dispatch: Dispatch;
+}
+function TileDetail({ detail, category, state, dispatch }: TileDetailProps) {
   if (!detail) return <DetailPane empty="Select a tile to inspect it." />;
 
   const d = detail.discovery || {};
@@ -227,7 +235,7 @@ function TileDetail({ detail, category, state, dispatch }) {
     >
       {d.method === "research" && !detail.discovered && (
         <DetailProgress
-          label={`Researching ${displayKey(d.researchOf)}`}
+          label={`Researching ${displayKey(d.researchOf ?? "")}`}
           value={detail.researchProgress}
           max={d.researchAmount}
         />
@@ -236,7 +244,7 @@ function TileDetail({ detail, category, state, dispatch }) {
         <div className="hl-well">
           <div className="hl-section-label">Cost</div>
           <div className={`hl-heading tabular-nums ${canBuy ? "text-[#3a5410]" : "text-[#9c3a2a]"}`}>
-            {(state.coins ?? 0).toLocaleString()} / {(d.coinCost ?? 0).toLocaleString()} coins
+            {((state as GameState & { coins?: number }).coins ?? 0).toLocaleString()} / {(d.coinCost ?? 0).toLocaleString()} coins
           </div>
         </div>
       )}
@@ -244,7 +252,7 @@ function TileDetail({ detail, category, state, dispatch }) {
         <div className="hl-well">
           <div className="hl-section-label">Discovery</div>
           <div className="hl-text-dim">
-            Make a chain of {d.chainLength} {displayKey(d.chainLengthOf)}.
+            Make a chain of {d.chainLength} {displayKey(d.chainLengthOf ?? "")}.
           </div>
         </div>
       )}
@@ -256,7 +264,10 @@ function TileDetail({ detail, category, state, dispatch }) {
   );
 }
 
-function HazardCard({ hazard }) {
+interface HazardCardProps {
+  hazard: { id: string; name: string; description: string; clearInstruction?: string; biome?: string; icon?: string };
+}
+function HazardCard({ hazard }: HazardCardProps) {
   const hazKey = `hazard_${hazard.id}`;
   return (
     <div className="flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 border-[#b5503a] bg-[#f1ddc8]" style={{ minHeight: 130 }}>
@@ -294,38 +305,44 @@ function HazardCard({ hazard }) {
   );
 }
 
-export default function TileCollectionPanel({ state, dispatch }) {
+interface TileCollectionPanelProps {
+  state: GameState;
+  dispatch: Dispatch;
+}
+
+export default function TileCollectionPanel({ state, dispatch }: TileCollectionPanelProps) {
+  const s = state as GameState & { viewParams?: { sub?: string; cat?: string }; tileCollection?: { freeMoves?: number } };
   // Sub-category and active category tab live on state.viewParams so the URL
   // (managed by src/router.js) is the single source of truth — back/forward
   // and deep links land on the same wiki page they were copied from.
-  const subCategory = state?.viewParams?.sub ?? "farm";
-  const visibleCategories = useMemo(
-    () => categoriesForSubCategory(subCategory),
+  const subCategory: string = s?.viewParams?.sub ?? "farm";
+  const visibleCategories: string[] = useMemo(
+    () => categoriesForSubCategory(subCategory) as string[],
     [subCategory],
   );
-  const tabBarRef = useRef(null);
-  const [selectedTileId, setSelectedTileId] = useState(null);
+  const tabBarRef = useRef<HTMLDivElement | null>(null);
+  const [selectedTileId, setSelectedTileId] = useState<string | null>(null);
 
   // Visible tab: use the URL value when valid for the current sub-category,
   // otherwise fall back to the first available tab. We never write a default
   // back into state — the URL stays terse until the user explicitly picks one.
-  const requestedTab = state?.viewParams?.cat;
-  const activeTab = visibleCategories.includes(requestedTab)
+  const requestedTab = s?.viewParams?.cat;
+  const activeTab: string | null = requestedTab && visibleCategories.includes(requestedTab)
     ? requestedTab
     : (visibleCategories[0] ?? null);
 
-  const setSubCategory = (sub) => {
-    dispatch({ type: "SET_VIEW_PARAMS", params: { sub, cat: null } });
+  const setSubCategory = (sub: unknown) => {
+    dispatch({ type: "SET_VIEW_PARAMS", params: { sub: sub as string, cat: null } });
   };
-  const setActiveTab = (cat) => {
-    dispatch({ type: "SET_VIEW_PARAMS", params: { cat } });
+  const setActiveTab = (cat: unknown) => {
+    dispatch({ type: "SET_VIEW_PARAMS", params: { cat: cat as string } });
   };
 
-  const rows =
+  const rows: CategoryRowViewModel[] =
     subCategory !== "hazards" && activeTab
       ? getCategoryViewModel(state, activeTab)
       : [];
-  const selectedRow = rows.find((r) => r.id === selectedTileId) ?? rows[0] ?? null;
+  const selectedRow = rows.find((r: CategoryRowViewModel) => r.id === selectedTileId) ?? rows[0] ?? null;
   const detail = selectedRow ? getTileDetailViewModel(state, selectedRow.id) : null;
 
   return (
@@ -337,7 +354,8 @@ export default function TileCollectionPanel({ state, dispatch }) {
         onChange={setSubCategory}
         ariaLabel="Tile wiki section"
         className="flex border-b border-[var(--panel-divider)] flex-shrink-0 bg-[var(--panel-toolbar)]"
-        getButtonClassName={(sub, selected) => {
+        getButtonClassName={((subVal: unknown, selected: boolean) => {
+          const sub = subVal as string;
           const isHaz = sub === "hazards";
           return `flex-1 py-2 px-2 text-xs font-bold transition-colors flex flex-col items-center min-w-[60px] ${
             selected
@@ -348,13 +366,16 @@ export default function TileCollectionPanel({ state, dispatch }) {
                 ? "text-[#9c3a2a] hover:text-[#8a2a14]"
                 : "text-on-panel-dim hover:text-on-panel"
           }`;
-        }}
-        renderOption={(sub) => (
+        })}
+        renderOption={((subVal: unknown) => {
+          const sub = subVal as string;
+          return (
           <>
-            <span className="block text-base leading-none">{SUB_CATEGORY_ICONS[sub]}</span>
-            <span className="block text-center leading-tight mt-0.5">{SUB_CATEGORY_LABELS[sub]}</span>
+            <span className="block text-base leading-none">{(SUB_CATEGORY_ICONS as Record<string, string>)[sub]}</span>
+            <span className="block text-center leading-tight mt-0.5">{(SUB_CATEGORY_LABELS as Record<string, string>)[sub]}</span>
           </>
-        )}
+          );
+        })}
       />
 
       {/* Category tabs — scrollable row (hidden under Hazards) */}
@@ -367,12 +388,18 @@ export default function TileCollectionPanel({ state, dispatch }) {
           ariaLabel="Tile category"
           className="flex border-b border-[var(--panel-divider)] flex-shrink-0 overflow-x-auto"
           style={{ scrollbarWidth: "none" }}
-          getButtonClassName={(cat, selected) => `flex-shrink-0 py-2 px-2 text-xs font-bold transition-colors min-w-[52px] ${
-            selected
-              ? "bg-[var(--ember)] text-white border-b-2 border-[var(--ember-hot)]"
-              : "text-on-panel-dim hover:text-on-panel"
-          }`}
-          renderOption={(cat) => (
+          getButtonClassName={((catVal: unknown, selected: boolean) => {
+            const cat = catVal as string;
+            void cat;
+            return `flex-shrink-0 py-2 px-2 text-xs font-bold transition-colors min-w-[52px] ${
+              selected
+                ? "bg-[var(--ember)] text-white border-b-2 border-[var(--ember-hot)]"
+                : "text-on-panel-dim hover:text-on-panel"
+            }`;
+          })}
+          renderOption={((catVal: unknown) => {
+            const cat = catVal as string;
+            return (
             <>
               <span className="grid place-items-center mx-auto" style={{ width: 22, height: 22 }}>
                 {hasIcon(`cat_${cat}`)
@@ -381,7 +408,8 @@ export default function TileCollectionPanel({ state, dispatch }) {
               </span>
               <span className="block text-center leading-tight">{CATEGORY_LABELS[cat]}</span>
             </>
-          )}
+            );
+          })}
         />
       )}
 
@@ -396,7 +424,7 @@ export default function TileCollectionPanel({ state, dispatch }) {
               className="grid gap-2"
               style={{ gridTemplateColumns: "repeat(auto-fill, minmax(110px, 1fr))" }}
             >
-              {ALL_HAZARDS.map((h) => (
+              {ALL_HAZARDS.map((h: { id: string; name: string; description: string; clearInstruction?: string; biome?: string; icon?: string }) => (
                 <HazardCard key={h.id} hazard={h} />
               ))}
             </div>
@@ -411,7 +439,7 @@ export default function TileCollectionPanel({ state, dispatch }) {
               <div className="hl-empty text-sm py-8">No tiles in this category.</div>
             ) : (
               <BrowserGrid min={132}>
-                {rows.map((row) => (
+                {rows.map((row: CategoryRowViewModel) => (
                   <TileListItem
                     key={row.id}
                     row={row}
@@ -427,10 +455,10 @@ export default function TileCollectionPanel({ state, dispatch }) {
       </FeaturePanel.Body>
 
       {/* Free moves chip */}
-      {(state.tileCollection?.freeMoves ?? 0) > 0 && subCategory !== "hazards" && (
+      {(s.tileCollection?.freeMoves ?? 0) > 0 && subCategory !== "hazards" && (
         <div className="flex-shrink-0 mx-3 mb-3 px-3 py-2 rounded-xl bg-[#dfeecd] border-2 border-[#6a9a3a] text-center">
           <span className="text-[#2f5a14] font-bold">
-            +{state.tileCollection.freeMoves} free move{state.tileCollection.freeMoves !== 1 ? "s" : ""}
+            +{s.tileCollection?.freeMoves} free move{s.tileCollection?.freeMoves !== 1 ? "s" : ""}
           </span>
           <span className="text-[#4a6a20] text-xs ml-2">from chained tiles</span>
         </div>

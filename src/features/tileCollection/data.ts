@@ -59,12 +59,13 @@ export const CATEGORY_TO_SUBCATEGORY = {
 
 /** Categories belonging to a sub-category. Unmapped categories fall under
  *  "uncategorized" so the wiki always surfaces them. */
-export function categoriesForSubCategory(sub) {
+export function categoriesForSubCategory(sub: string): string[] {
   if (sub === "hazards") return [];
+  const catToSub = CATEGORY_TO_SUBCATEGORY as Record<string, string | undefined>;
   if (sub === "uncategorized") {
-    return CATEGORIES.filter((c) => !CATEGORY_TO_SUBCATEGORY[c]);
+    return CATEGORIES.filter((c: string) => !catToSub[c]);
   }
-  return CATEGORIES.filter((c) => CATEGORY_TO_SUBCATEGORY[c] === sub);
+  return CATEGORIES.filter((c: string) => catToSub[c] === sub);
 }
 
 export const TILE_TYPES = [
