@@ -277,9 +277,12 @@ export function TownView({ state, dispatch }: { state: AnyState; dispatch: Dispa
   // any legacy buildings that lack an entry (e.g. saves predating the plot
   // system, or tests that set { hearth: true } without _plots).
   const { plotById, slotRows, occupiedPlots, builtLotIndices } = useMemo(() => {
-    const builtIds = Object.keys(locationBuilt).filter(
-      (k) => !RESERVED_BUILDING_KEYS.has(k) && locationBuilt[k] && BUILDING_IDS.has(k),
-    );
+    const builtIds: string[] = [];
+    for (const k in locationBuilt) {
+      if (!RESERVED_BUILDING_KEYS.has(k) && locationBuilt[k] && BUILDING_IDS.has(k)) {
+        builtIds.push(k);
+      }
+    }
     const nextPlotById: Record<string, number> = {};
     Object.entries(storedPlots).forEach(([idx, id]) => { if (id != null) nextPlotById[String(id)] = Number(idx); });
     const nextPlotMap: Record<number, string | null> = {};
