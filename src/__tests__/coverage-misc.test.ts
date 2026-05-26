@@ -2,10 +2,22 @@
 // (spawnBoss + tickBossTurn paths), farm/pool seasonal modifier.
 
 import { describe, it, expect } from "vitest";
+import type { GameState } from "../types/state.js";
+import type { BossInstance } from "../features/bosses/data.js";
 import { sellPriceFor, SELL_RATE } from "../features/market/pricing.js";
 import { spawnBoss, tickBossTurn, BOSSES, BOSS_WINDOW_TURNS, bossReward } from "../features/bosses/data.js";
 import { getEffectivePool } from "../features/farm/pool.js";
 import { BIOMES } from "../constants.js";
+import { createFreshState } from "../state/init.js";
+import { mergeTestState } from "../testUtils/testState.js";
+
+function dataBoss(s: GameState): BossInstance | null {
+  return s.boss as BossInstance | null;
+}
+
+function storyFlags(s: GameState): Record<string, unknown> {
+  return ((s.story as { flags?: Record<string, unknown> })?.flags) ?? {};
+}
 
 describe("market/pricing", () => {
   it("SELL_RATE is 0.10", () => {
@@ -28,14 +40,15 @@ describe("market/pricing", () => {
 });
 
 describe("bosses/data — spawnBoss", () => {
-  const baseState = (over = {}) => ({
-    boss: null,
-    grid: Array.from({ length: 6 }, () =>
-      Array.from({ length: 6 }, () => ({ key: "x" })),
-    ),
-    story: { flags: {} },
-    ...over,
-  });
+  const baseState = (over: Record<string, unknown> = {}) =>
+    mergeTestState({
+      boss: null,
+      grid: Array.from({ length: 6 }, () =>
+        Array.from({ length: 6 }, () => ({ key: "x" })),
+      ),
+      story: { flags: {} },
+      ...over,
+    });
 
   it("spawnBoss is a no-op when a boss is already active", () => {
     const s = baseState({ boss: { id: "frostmaw" } });
@@ -57,71 +70,76 @@ describe("bosses/data — spawnBoss", () => {
     const seq = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6];
     const rng = () => seq[(i++) % seq.length];
     const r = spawnBoss(s, "ember_drake", 2, rng);
-    expect(r.boss?.id).toBe("ember_drake");
-    expect(r.boss?.year).toBe(2);
-    expect(r.boss?.turnsRemaining).toBe(BOSS_WINDOW_TURNS);
-    expect(r.boss?.progress).toBe(0);
-    expect(r.boss?.target?.amount).toBeGreaterThan(0);
-    expect(r.story.flags.ember_drake_active).toBe(true);
+    expect(dataBoss(r)?.id).toBe("ember_drake");
+    expect(dataBoss(r)?.year).toBe(2);
+    expect(dataBoss(r)?.turnsRemaining).toBe(BOSS_WINDOW_TURNS);
+    expect(dataBoss(r)?.progress).toBe(0);
+    expect(dataBoss(r)?.target?.amount).toBeGreaterThan(0);
+    expect(storyFlags(r).ember_drake_active).toBe(true);
   });
 
   it("spawnBoss with no grid uses an empty fallback grid", () => {
-    const s = { boss: null, story: { flags: {} } }; // no grid
+    const s = mergeTestState({ boss: null, story: { flags: {} }, grid: undefined });
     let i = 0;
     const seq = [0.1, 0.2, 0.3, 0.4];
     const rng = () => seq[(i++) % seq.length];
     const r = spawnBoss(s, "ember_drake", 1, rng);
-    expect(r.boss?.id).toBe("ember_drake");
+    expect(dataBoss(r)?.id).toBe("ember_drake");
   });
 });
 
 describe("bosses/data — tickBossTurn", () => {
-  const withBoss = (over = {}) => ({
-    boss: {
-      id: "frostmaw",
-      season: "winter",
-      year: 1,
-      turnsRemaining: 5,
-      progress: 0,
-      target: { resource: "tile_tree_oak", amount: 30 },
-      modifierState: {},
-    },
-    coins: 0,
-    runes: 0,
-    story: { flags: { frostmaw_active: true } },
-    ...over,
-  });
+  const withBoss = (over: Record<string, unknown> = {}) =>
+    mergeTestState({
+      boss: {
+        id: "frostmaw",
+        season: "winter",
+        year: 1,
+        turnsRemaining: 5,
+        progress: 0,
+        target: { resource: "tile_tree_oak", amount: 30 },
+        modifierState: {},
+      },
+      coins: 0,
+      runes: 0,
+      story: { flags: { frostmaw_active: true } },
+      ...over,
+    });
 
   it("no boss → unchanged", () => {
-    const s = { boss: null };
+    const s = mergeTestState({ boss: null });
     expect(tickBossTurn(s)).toBe(s);
   });
 
   it("boss with turns remaining decrements", () => {
     const s = withBoss();
     const r = tickBossTurn(s);
-    expect(r.boss.turnsRemaining).toBe(4);
+    expect(dataBoss(r)!.turnsRemaining).toBe(4);
   });
 
   it("boss with target met clears boss + grants reward (defeated)", () => {
-    const s = withBoss({
-      boss: { ...withBoss().boss, turnsRemaining: 1, progress: 30 },
+    const base = withBoss();
+    const b0 = dataBoss(base)!;
+    const s = mergeTestState(base, {
+      boss: { ...b0, turnsRemaining: 1, progress: 30 },
     });
     const r = tickBossTurn(s);
     expect(r.boss).toBeNull();
     expect(r.coins).toBeGreaterThan(0);
     expect(r.runes).toBe(1);
-    expect(r.story.flags.frostmaw_defeated).toBe(true);
+    expect(storyFlags(r).frostmaw_defeated).toBe(true);
   });
 
   it("boss expired without meeting target clears boss + no defeated flag", () => {
-    const s = withBoss({
-      boss: { ...withBoss().boss, turnsRemaining: 1, progress: 5 },
+    const base = withBoss();
+    const b0 = dataBoss(base)!;
+    const s = mergeTestState(base, {
+      boss: { ...b0, turnsRemaining: 1, progress: 5 },
     });
     const r = tickBossTurn(s);
     expect(r.boss).toBeNull();
     expect(r.coins).toBe(0); // no reward
-    expect(r.story.flags.frostmaw_defeated).toBeUndefined();
+    expect(storyFlags(r).frostmaw_defeated).toBeUndefined();
   });
 });
 
@@ -158,15 +176,18 @@ describe("bosses/data — bossReward", () => {
 });
 
 describe("farm/pool — getEffectivePool seasonal modifier", () => {
-  const baseState = (over = {}) => ({
-    biome: "farm",
-    season: "Spring",
-    tileCollection: {
-      activeByCategory: { grass: "tile_grass_hay", grain: "tile_grain_wheat", wood: "tile_tree_oak", fruits: "tile_fruit_blackberry", bird: "eggs" },
-    },
-    _workerEffects: { effectivePoolWeights: {} },
-    ...over,
-  });
+  const fresh = createFreshState();
+  const baseState = (over: Record<string, unknown> = {}) =>
+    mergeTestState(fresh, {
+      biome: "farm",
+      season: 0, // Spring (numeric index in GameState)
+      tileCollection: {
+        ...fresh.tileCollection,
+        activeByCategory: { grass: "tile_grass_hay", grain: "tile_grain_wheat", wood: "tile_tree_oak", fruits: "tile_fruit_blackberry", bird: "eggs" },
+      },
+      _workerEffects: { effectivePoolWeights: {} },
+      ...over,
+    });
 
   it("returns the base pool when no modifiers apply", () => {
     const r = getEffectivePool(baseState());
@@ -175,27 +196,27 @@ describe("farm/pool — getEffectivePool seasonal modifier", () => {
   });
 
   it("Spring season adds extra blackberry slots", () => {
-    const r = getEffectivePool(baseState({ season: "Spring" }));
+    const r = getEffectivePool(baseState({ season: 0 }));
     const baseBerry = BIOMES.farm.pool.filter((k) => k === "tile_fruit_blackberry").length;
     const newBerry = r.filter((k) => k === "tile_fruit_blackberry").length;
     expect(newBerry).toBe(baseBerry + 1);
   });
 
   it("Summer adds extra wheat slot", () => {
-    const r = getEffectivePool(baseState({ season: "Summer" }));
+    const r = getEffectivePool(baseState({ season: 1 }));
     const baseWheat = BIOMES.farm.pool.filter((k) => k === "tile_grain_wheat").length;
     expect(r.filter((k) => k === "tile_grain_wheat").length).toBe(baseWheat + 1);
   });
 
   it("Winter removes one hay (clamped — never the last)", () => {
-    const r = getEffectivePool(baseState({ season: "Winter" }));
+    const r = getEffectivePool(baseState({ season: 3 }));
     const baseHay = BIOMES.farm.pool.filter((k) => k === "tile_grass_hay").length;
     const newHay = r.filter((k) => k === "tile_grass_hay").length;
     expect(newHay).toBe(Math.max(1, baseHay - 1));
   });
 
   it("mine biome skips season modifier", () => {
-    const r = getEffectivePool(baseState({ biome: "mine", season: "Spring" }));
+    const r = getEffectivePool(baseState({ biome: "mine", season: 0 }));
     // Spring's blackberry mod should NOT apply on mine.
     const berryCount = r.filter((k) => k === "tile_fruit_blackberry").length;
     expect(berryCount).toBe(0);
@@ -212,6 +233,7 @@ describe("farm/pool — getEffectivePool seasonal modifier", () => {
   it("safety floor: pool never shorter than 9 entries", () => {
     const s = baseState({
       tileCollection: {
+        ...fresh.tileCollection,
         activeByCategory: { grass: null, wood: null, grain: null, berry: null, bird: null },
       },
     });
