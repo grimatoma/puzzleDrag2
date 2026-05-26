@@ -99,9 +99,8 @@ export class GameScene extends Phaser.Scene {
   bakeScale: number = 1;
 
   // Misc scene objects
-  // TODO(ts-migration): tighten emitter/vignette types
-  sparkEmitter: Phaser.GameObjects.Particles.ParticleEmitter | null = null; // TODO(ts-migration): tighten
-  hazardVignette: Phaser.GameObjects.Graphics | null = null;
+  sparkEmitter!: Phaser.GameObjects.Particles.ParticleEmitter;
+  hazardVignette!: Phaser.GameObjects.Graphics;
   // Hover badge shown while dragging
   grassHover: Phaser.GameObjects.Container | null = null;
   grassHoverIcon: Phaser.GameObjects.Image | null = null;
@@ -420,7 +419,6 @@ export class GameScene extends Phaser.Scene {
   }
 
   _updateHazardAtmosphere() {
-    if (!this.hazardVignette) return;
     const fire = this.registry.get("hazardFire");
     const rats = this.registry.get("hazardRats");
     const hasFire = !!(fire?.cells?.length);
@@ -436,7 +434,6 @@ export class GameScene extends Phaser.Scene {
     this._hazardTimer = this.time.addEvent({
       delay: 120,
       callback: () => {
-        if (!this.hazardVignette) return;
         this.hazardVignette.clear();
         const w = this.scale.width;
         const h = this.scale.height;
@@ -466,7 +463,7 @@ export class GameScene extends Phaser.Scene {
     const color = typeof colorInput === "string"
       ? Phaser.Display.Color.HexStringToColor(colorInput).color
       : (Number.isFinite(colorInput) ? (colorInput as number) : 0xffffff);
-    if (this.sparkEmitter?.active) {
+    if (this.sparkEmitter.active) {
       this.sparkEmitter.setParticleTint(color);
       this.sparkEmitter.explode(Math.min(25, count * 2), x, y);
     }
