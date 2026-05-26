@@ -37,6 +37,8 @@ interface NotifierApi {
   dismissBubble(id: string): void;
 }
 
+export type { NotifierApi };
+
 const NotifierCtx = createContext<NotifierApi | null>(null);
 
 const TOAST_MS = 3000;

@@ -17,4 +17,30 @@ describe("recipeCatalog", () => {
     expect(byOutput.rake[0].recId).toBe("rec_rake");
     expect(byOutput.axe).toHaveLength(1);
   });
+
+  it("buildRecipesByOutput does not duplicate draft overlays for alias recipe keys", () => {
+    const byOutput = buildRecipesByOutput({
+      draftRecipes: {
+        rake: { station: "workshop" },
+      },
+    });
+
+    expect(byOutput.rake).toHaveLength(1);
+    expect(byOutput.rake[0].recId).toBe("rec_rake");
+  });
+
+  it("buildRecipesByOutput filters invalid localStorage draft input quantities", () => {
+    const byOutput = buildRecipesByOutput({
+      recipes: {},
+      draftRecipes: {
+        rec_test: {
+          item: "bread",
+          station: "bakery",
+          inputs: { flour: 2, milk: 0, eggs: -1, soup: Number.POSITIVE_INFINITY },
+        },
+      },
+    });
+
+    expect(byOutput.bread[0].inputs).toEqual({ flour: 2 });
+  });
 });
