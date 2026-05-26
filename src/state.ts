@@ -887,7 +887,7 @@ function coreReducer(state: GameState, action: Action): GameState {
         turnsUsed: 0,
         farmRun: null,
         activeTrial: null,
-        boss: state.boss?.isKeeperTrial ? null : state.boss,
+        boss: (state.boss as { isKeeperTrial?: boolean } | null | undefined)?.isKeeperTrial ? null : state.boss,
         modal: null,
         view: "town",
         viewParams: {},
@@ -955,7 +955,8 @@ function coreReducer(state: GameState, action: Action): GameState {
     }
     case "CRAFTING/CRAFT_RECIPE": {
       // Story: crafted items can trigger story beats (forwarded to next action handlers below)
-      const craftKey = action.recipeKey ?? action.payload?.key;
+      const craftPayload = action.payload as { key?: string } | undefined;
+      const craftKey = (action.recipeKey as string | undefined) ?? craftPayload?.key;
       if (!craftKey) return state;
       if (!crafting.canPayForRecipe(state, craftKey)) return state;
       return evaluateAndApplyStoryBeat(state, { type: "craft_made", item: craftKey, count: 1 });
@@ -967,9 +968,11 @@ function coreReducer(state: GameState, action: Action): GameState {
       // (totalCrafted, distinct_crafts) all advance. The slice owns the
       // actual inventory mutation + queue removal; we only emit the event
       // when the action would succeed.
-      const station = action.payload?.station ?? action.station;
+      const claimPayload = action.payload as { station?: string } | undefined;
+      const station = claimPayload?.station ?? (action.station as string | undefined);
       if (!station) return state;
-      const queue = (state.craftQueues ?? {})[station] ?? [];
+      const queueMap = (state.craftQueues ?? {}) as Record<string, Array<{ key?: string; readyAt?: number }>>;
+      const queue = queueMap[station] ?? [];
       const entry = queue[0];
       if (!entry || (entry.readyAt ?? Infinity) > Date.now()) return state;
       return evaluateAndApplyStoryBeat(state, { type: "craft_made", item: entry.key, count: 1 });
@@ -977,9 +980,11 @@ function coreReducer(state: GameState, action: Action): GameState {
     case "CRAFTING/SKIP_CRAFT": {
       // Same idea as CLAIM_CRAFT but for gem-skip completions. Validate gem
       // cost so we don't fire the event on a rejected skip.
-      const station = action.payload?.station ?? action.station;
+      const skipPayload = action.payload as { station?: string } | undefined;
+      const station = skipPayload?.station ?? (action.station as string | undefined);
       if (!station) return state;
-      const queue = (state.craftQueues ?? {})[station] ?? [];
+      const queueMap = (state.craftQueues ?? {}) as Record<string, Array<{ key?: string }>>;
+      const queue = queueMap[station] ?? [];
       const entry = queue[0];
       if (!entry) return state;
       if ((state.gems ?? 0) < CRAFT_GEM_SKIP_COST) return state;
@@ -989,10 +994,12 @@ function coreReducer(state: GameState, action: Action): GameState {
     // ─── Phase 3 Economy ────────────────────────────────────────────────────────
 
     case "BUY_RESOURCE": {
-      const { key: buyKey, qty: buyQty } = action.payload;
+      const buyPayload = action.payload as { key: string; qty: number } | undefined;
+      if (!buyPayload) return state;
+      const { key: buyKey, qty: buyQty } = buyPayload;
       // Transitional: market still trades tile keys until PR 3 moves tiles out
       // of inventory. Cap-check against both lists.
-      if (CAPPED_INVENTORY_RESOURCES.includes(buyKey)) {
+      if ((CAPPED_INVENTORY_RESOURCES as readonly string[]).includes(buyKey)) {
         const buyingCap = currentCap(state);
         const currentAmt = state.inventory?.[buyKey] ?? 0;
         if (currentAmt + buyQty > buyingCap) return state; // cap reached — no debit
@@ -1004,7 +1011,8 @@ function coreReducer(state: GameState, action: Action): GameState {
     }
 
     case "CONVERT_TO_SUPPLY": {
-      const qty = Math.max(1, action.payload.qty | 0);
+      const convPayload = action.payload as { qty?: number } | undefined;
+      const qty = Math.max(1, ((convPayload?.qty as number | undefined) ?? 0) | 0);
       const cost = qty * 3;
       if ((state.inventory.flour ?? 0) < cost) return state;
       return {
@@ -1025,14 +1033,14 @@ function coreReducer(state: GameState, action: Action): GameState {
       //   and behaves as "no filter" (legacy entry path).
       // - useFertilizer: when true, consume one workshop-crafted fertilizer
       //   (state.tools.fertilizer) and double the session's turn budget.
-      const payload = action.payload ?? {};
-      const selectedTiles = Array.isArray(payload.selectedTiles)
-        ? payload.selectedTiles.slice(0, 8)
+      const farmPayload = (action.payload as { selectedTiles?: unknown; useFertilizer?: unknown } | undefined) ?? {};
+      const selectedTiles = Array.isArray(farmPayload.selectedTiles)
+        ? farmPayload.selectedTiles.slice(0, 8)
         : [];
-      const useFertilizer = !!payload.useFertilizer;
+      const useFertilizer = !!farmPayload.useFertilizer;
 
-      const zoneId = state.activeZone ?? state.mapCurrent ?? "home";
-      const zone = ZONES[zoneId];
+      const zoneId = ((state.activeZone as string | undefined) ?? (state.mapCurrent as string | undefined) ?? "home");
+      const zone = (ZONES as Record<string, { hasFarm?: boolean; entryCost?: { coins?: number } } | undefined>)[zoneId];
       if (!zone) return state;
       if (!zone.hasFarm) {
         return {
@@ -1050,7 +1058,7 @@ function coreReducer(state: GameState, action: Action): GameState {
 
       const entryCoins = zone.entryCost?.coins ?? 50;
       if ((state.coins ?? 0) < entryCoins) return state;
-      const fertilizerStock = state.tools?.fertilizer ?? 0;
+      const fertilizerStock = toolCount(state.tools, "fertilizer");
       if (useFertilizer && fertilizerStock < 1) return state;
 
       const turnBudget = turnBudgetForZone(state, zoneId, { useFertilizer });
@@ -1074,9 +1082,9 @@ function coreReducer(state: GameState, action: Action): GameState {
           mode: "normal",
         },
         activeTrial: null,
-        boss: state.boss?.isKeeperTrial ? null : state.boss,
+        boss: (state.boss as { isKeeperTrial?: boolean } | null | undefined)?.isKeeperTrial ? null : state.boss,
         session: {
-          selectedTiles,
+          selectedTiles: selectedTiles as unknown[],
           fertilizerUsed: useFertilizer,
         },
       };
@@ -1127,7 +1135,7 @@ function coreReducer(state: GameState, action: Action): GameState {
           mode: "expedition",
         },
         activeTrial: null,
-        boss: state.boss?.isKeeperTrial ? null : state.boss,
+        boss: (state.boss as { isKeeperTrial?: boolean } | null | undefined)?.isKeeperTrial ? null : state.boss,
       };
       const switched = coreReducer(staged, { type: "SWITCH_BIOME", key: biomeKey });
       return {

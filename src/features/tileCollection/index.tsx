@@ -6,14 +6,14 @@ import {
   SUB_CATEGORY_ICONS,
   categoriesForSubCategory,
 } from "./data.js";
-import { displayKey, getCategoryViewModel, getTileDetailViewModel } from "./effects.js";
+import { displayKey, getCategoryViewModel, getTileDetailViewModel, type CategoryRowViewModel, type TileDetailViewModel } from "./effects.js";
 import { drawTileIcon } from "../../textures.js";
 import { BIOMES } from "../../constants.js";
 import { hex } from "../../utils.js";
 import { FARM_HAZARD_META } from "../farm/hazards.js";
-import { HAZARDS } from "../mine/hazards.js";
+import { HAZARDS, type HazardDef } from "../mine/hazards.js";
 import IconCanvas, { hasIcon } from "../../ui/IconCanvas.jsx";
-import FeaturePanel from "../../ui/primitives/FeaturePanel.jsx";
+import { FeaturePanel } from "../_shared/uiTypes.js";
 import SegmentedControl from "../../ui/primitives/SegmentedControl.jsx";
 import {
   AbilitySummary,
@@ -24,10 +24,17 @@ import {
   DetailPane,
   DetailProgress,
 } from "../../ui/primitives/BrowserDetail.jsx";
+import type { GameState, Dispatch } from "../../types/state.js";
 
 export const viewKey = "tileCollection";
 
-const CATEGORY_LABELS = {
+interface TileTypeDef {
+  baseResource?: string;
+}
+
+interface Resource { key: string; color: number }
+
+const CATEGORY_LABELS: Record<string, string> = {
   grass: "Grass",
   grain: "Grain",
   wood: "Wood",
@@ -49,7 +56,7 @@ const CATEGORY_LABELS = {
   fish: "Fish",
 };
 
-const CATEGORY_ICONS = {
+const CATEGORY_ICONS: Record<string, string> = {
   grass: "🌾",
   grain: "🌽",
   wood: "🪵",
@@ -73,8 +80,9 @@ const CATEGORY_ICONS = {
 
 // Look up resources across every biome — mine and fish tiles also need
 // their colour/icon in the wiki, not just farm.
-const ALL_RESOURCES = Object.fromEntries(
-  Object.values(BIOMES).flatMap((b) => [...b.tiles, ...b.resources].map((r) => [r.key, r])),
+interface BiomeDef { tiles?: Resource[]; resources?: Resource[] }
+const ALL_RESOURCES: Record<string, Resource> = Object.fromEntries(
+  (Object.values(BIOMES) as BiomeDef[]).flatMap((b) => [...(b.tiles ?? []), ...(b.resources ?? [])].map((r: Resource) => [r.key, r])),
 );
 
 const FARM_HAZARD_LIST = [
@@ -83,15 +91,16 @@ const FARM_HAZARD_LIST = [
   { id: "wolf",  ...FARM_HAZARD_META.wolf, iconKey: "ui_star", biome: "Farm" },
 ];
 
-const MINE_HAZARD_LIST = HAZARDS.map((h) => ({
+const MINE_HAZARD_ICONS: Record<string, string> = { cave_in: "🪨", gas_vent: "💨", lava: "🌋", mole: "🐭" };
+const MINE_HAZARD_LIST = (HAZARDS as HazardDef[]).map((h: HazardDef) => ({
   ...h,
   biome: "Mine",
-  icon: { cave_in: "🪨", gas_vent: "💨", lava: "🌋", mole: "🐭" }[h.id] ?? "⚠️",
+  icon: MINE_HAZARD_ICONS[h.id] ?? "⚠️",
 }));
 
 const ALL_HAZARDS = [...FARM_HAZARD_LIST, ...MINE_HAZARD_LIST];
 
-function lighten(hexColor, amt) {
+function lighten(hexColor: string, amt: number): string {
   const r = parseInt(hexColor.slice(1, 3), 16);
   const g = parseInt(hexColor.slice(3, 5), 16);
   const b = parseInt(hexColor.slice(5, 7), 16);
@@ -101,11 +110,13 @@ function lighten(hexColor, amt) {
   return `#${lr.toString(16).padStart(2, "0")}${lg.toString(16).padStart(2, "0")}${lb.toString(16).padStart(2, "0")}`;
 }
 
-export function TileIcon({ tileId, size = 40, locked = false }) {
-  const ref = useRef(null);
-  const t = TILE_TYPES_MAP[tileId];
+interface TileIconProps { tileId: string; size?: number; locked?: boolean }
+
+export function TileIcon({ tileId, size = 40, locked = false }: TileIconProps) {
+  const ref = useRef<HTMLCanvasElement | null>(null);
+  const t = (TILE_TYPES_MAP as Record<string, TileTypeDef | undefined>)[tileId];
   const key = t?.baseResource;
-  const res = key ? ALL_RESOURCES[key] : null;
+  const res: Resource | null = key ? (ALL_RESOURCES[key] ?? null) : null;
 
   useEffect(() => {
     const canvas = ref.current;

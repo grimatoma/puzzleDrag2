@@ -8,7 +8,7 @@
  *
  * Shape: { [resourceKey]: string[] }
  */
-export const SPECIES_TAGS = Object.freeze({
+export const SPECIES_TAGS: Readonly<Record<string, string[]>> = Object.freeze({
   // ── Avoided by rats — rats won't eat these tiles ─────────────────────
   tile_grain_wheat:   ["avoids_rats"],
   tile_fruit_coconut: ["avoids_rats"],
@@ -44,7 +44,7 @@ export const SPECIES_TAGS = Object.freeze({
  * @param {string} tag
  * @returns {boolean}
  */
-export function hasTag(key, tag) {
+export function hasTag(key: string, tag: string): boolean {
   const tags = SPECIES_TAGS[key];
   return Array.isArray(tags) && tags.includes(tag);
 }
