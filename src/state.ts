@@ -1467,11 +1467,13 @@ function coreReducer(state: GameState, action: Action): GameState {
         const occupied = (idx: number) => Object.prototype.hasOwnProperty.call(plots, String(idx));
         let nextIdx = 0;
         const buildingList = BUILDINGS as readonly { id: string }[];
+        const builtPlots = new Set(Object.values(plots));
         buildingList.forEach((b) => {
           allIds[b.id] = true;
-          if (!Object.values(plots).includes(b.id)) {
+          if (!builtPlots.has(b.id)) {
             while (occupied(nextIdx)) nextIdx++;
             plots[nextIdx] = b.id;
+            builtPlots.add(b.id);
             nextIdx++;
           }
         });
