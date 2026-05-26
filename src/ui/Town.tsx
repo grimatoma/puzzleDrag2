@@ -52,6 +52,7 @@ const EMPTY_OBJECT = Object.freeze({});
 const RESERVED_BUILDING_KEYS = new Set(["decorations", "_plots"]);
 const BUILDING_IDS = new Set(BUILDINGS.map((b) => b.id));
 const ALL_BUILDING_IDS = BUILDINGS.map((b) => b.id);
+const BUILDINGS_BY_ID = new Map(BUILDINGS.map((b) => [b.id, b]));
 const CRAFTING_STATIONS = new Set(["bakery", "forge", "larder"]);
 const THEME_CROSSFADE_MS = 600;
 
@@ -457,7 +458,7 @@ export function TownView({ state, dispatch }: { state: AnyState; dispatch: Dispa
           {/* Townsfolk walking the streets (depth-sorted with buildings via z-index) */}
           <TownVillagers key={state.mapCurrent} plan={townPlan} buildings={plotById} workers={state.workers} />
           {slotRows.map((slot) => {
-            const b = slot.buildingId ? BUILDINGS.find((x) => x.id === slot.buildingId) : null;
+            const b = slot.buildingId ? BUILDINGS_BY_ID.get(slot.buildingId) : null;
             const isBuilt = !!b;
             const isPlacing = !!pendingBuilding && !isBuilt;
             // Empty plots are invisible until the player enters placement mode.
