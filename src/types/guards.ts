@@ -11,8 +11,6 @@
  * @see ./items.ts for the corresponding type declarations.
  */
 
-// @ts-ignore — constants.js is still untyped JS; gets a proper type when it
-// converts to .ts in Phase 3.
 import { ITEMS } from "../constants.js";
 import type { TileKey, ResourceKey, ToolKey } from "./items.js";
 

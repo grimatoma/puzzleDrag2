@@ -31,7 +31,8 @@ The body below covers commands, architecture, the core game mechanic, testing ha
 ```bash
 npm run dev                  # Start Vite dev server (game at /, Dev Panel at /b/, Story Editor at /story/)
 npm run build                # Production build (outputs to dist/, including dist/stats.html bundle analyzer)
-npm run lint                 # ESLint over src/ + prototype.jsx
+npm run lint                 # ESLint over src/ + prototype.tsx
+npm run typecheck            # tsc --noEmit (strict; run before PRs — also enforced in CI)
 npm test                     # Vitest unit tests (single run)
 npm run test:watch           # Vitest watch mode
 npm run test:coverage        # Vitest with coverage
@@ -169,7 +170,7 @@ When you fix a bug found in a specific scenario, add or extend an entry in `src/
 This is a fully client-side app — no backend, no database, no Docker required. The Vite dev server is the only service to run.
 
 - **Dev server**: `npm run dev` serves all three entries at `http://localhost:5173/puzzleDrag2/` (game), `/puzzleDrag2/b/` (Dev Panel), `/puzzleDrag2/story/` (Story Editor). The `base` path is `/puzzleDrag2/` (set in `vite.config.js`).
-- **Commands**: See the `## Commands` section above for lint/test/build/visual commands.
+- **Commands**: See the `## Commands` section above for lint/typecheck/test/build/visual commands.
 - **Playwright**: Chromium must be installed via `npx playwright install chromium` before running e2e or visual tests. The Playwright configs auto-start the dev server via `webServer`, so you don't need a separate running dev server for `npm run test:e2e` or `npm run test:visual`.
 - **State reset**: Clear `localStorage["hearth.save.v1"]` to start fresh. Also `hearth.settings`, `hearth.tutorial.seen`, `hearth.disableDialogs`.
 - **Visual testing in CI**: Visual regression snapshots are platform-sensitive. If goldens were captured on a different OS, expect diffs. Use `npm run test:visual:update` to refresh.
