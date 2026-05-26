@@ -209,6 +209,10 @@ describe("story editor draft utilities", () => {
     expect(validateDraftBeatId(d, "branch_b", "bad-id").ok).toBe(false);
     expect(validateDraftBeatId(d, "branch_b", "act1_arrival").ok).toBe(false);
 
+    // Test fallback scenarios with null/undefined draft
+    expect(validateDraftBeatId(undefined, "branch_b", "valid_id").ok).toBe(true);
+    expect(validateDraftBeatId(null, "branch_b", "act1_arrival").ok).toBe(false); // Built-in ids should still fail
+
     const result = renameDraftBeatInDraft(d, "branch_b", "branch_renamed");
     expect(result.ok).toBe(true);
     expect(isDraftBeat(result.draft, "branch_renamed")).toBe(true);
