@@ -2,14 +2,16 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { SEASONS } from "../constants.js";
 import { seasonIndexInSession } from "../features/zones/data.js";
+import type { GameState } from "../types/state.js";
 
 const HOLD_MS = 1100;
 
 interface ShownState { seasonIdx: number; key: number }
 
-export default function SeasonCinematic({ state }: { state: any }) {
+export default function SeasonCinematic({ state }: { state: GameState }) {
   const onBoard = state.view === "board";
-  const turnBudget = state.farmRun?.turnBudget ?? 0;
+  // farmRun.turnBudget is a dynamic field outside the canonical FarmRun shape.
+  const turnBudget = (state.farmRun?.turnBudget as number | undefined) ?? 0;
   const turnsUsed = state.turnsUsed ?? 0;
   const seasonIdx = onBoard ? seasonIndexInSession(turnsUsed, turnBudget || 1) : 0;
   const [shown, setShown] = useState<ShownState | null>(null);

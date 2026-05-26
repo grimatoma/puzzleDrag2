@@ -43,15 +43,15 @@ interface ButtonProps {
   tone?: string;
   size?: string;
   variant?: string;
-  leading?: any;
+  leading?: React.ReactNode;
   block?: boolean;
   loading?: boolean;
   disabled?: boolean;
   className?: string;
-  children?: any;
-  onClick?: any;
-  type?: any;
-  [x: string]: any;
+  children?: React.ReactNode;
+  onClick?: React.MouseEventHandler<HTMLButtonElement>;
+  type?: "button" | "submit" | "reset";
+  [x: string]: unknown;
 }
 export default function Button({
   tone = "iron",

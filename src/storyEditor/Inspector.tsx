@@ -604,13 +604,13 @@ export default function Inspector({ beatId, draft, isDraft, onEditBeat, onNewBra
         </div>
         <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
           <FieldLabel>Title</FieldLabel>
-          <TextInput value={valTitle} onChange={(e: any) => onEditBeat(beatId, { title: e.target.value })} />
+          <TextInput value={valTitle} onChange={(e) => onEditBeat(beatId, { title: e.target.value })} />
         </label>
 
         {isDraft && (
           <Section title="Draft id" hint="(saved id used by queueBeat links)">
             <div style={{ display: "flex", gap: 6 }}>
-              <TextInput value={draftId} onChange={(e: any) => setDraftId(e.target.value)} style={{ fontFamily: "ui-monospace,monospace" }} />
+              <TextInput value={draftId} onChange={(e) => setDraftId(e.target.value)} style={{ fontFamily: "ui-monospace,monospace" }} />
               <Btn tone="ghost" disabled={!idCheck.ok || draftId.trim() === beatId}
                 onClick={() => idCheck.ok && onRenameBeat && onRenameBeat(beatId, draftId.trim())}>Rename</Btn>
             </div>

@@ -1,11 +1,14 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import type { GameState } from "../types/state.js";
 
 const HOLD_MS = 1600;
 
-export default function LevelUpCinematic({ state }: { state: any }) {
+interface LevelUpShown { level: number; key: number }
+
+export default function LevelUpCinematic({ state }: { state: GameState }) {
   const level = state.level ?? 1;
-  const [shown, setShown] = useState<any>(null);
+  const [shown, setShown] = useState<LevelUpShown | null>(null);
   const prevLevelRef = useRef(level);
   const mountedRef = useRef(false);
 

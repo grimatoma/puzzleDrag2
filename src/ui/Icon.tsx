@@ -33,14 +33,14 @@ if (import.meta.hot) {
  * Mounts an off-screen canvas exactly once per unique (key, size, dpr) combination,
  * caches the resulting data URI, and renders as an <img> for maximum React performance.
  */
-export default function Icon({ iconKey, size = 24, className = "", style = {} as any, title }: { iconKey: any; size?: number; className?: string; style?: any; title?: any }) {
+export default function Icon({ iconKey, size = 24, className = "", style = {}, title }: { iconKey: string | null | undefined; size?: number; className?: string; style?: React.CSSProperties; title?: string }) {
   const [dataUri, setDataUri] = useState<string | null>(null);
 
   useEffect(() => {
     function getOrBake() {
       if (!iconKey) return null;
       
-      const entry = (ICON_REGISTRY as any)[iconKey];
+      const entry = (ICON_REGISTRY as Record<string, unknown>)[iconKey];
       if (!entry) return null;
 
       const dpr = (typeof window !== "undefined" ? window.devicePixelRatio : 1) || 1;
@@ -93,8 +93,8 @@ export default function Icon({ iconKey, size = 24, className = "", style = {} as
   return (
     <img
       src={dataUri}
-      alt={iconKey}
-      title={title || (ICON_REGISTRY as any)[iconKey]?.label || iconKey}
+      alt={iconKey ?? ""}
+      title={title || (iconKey ? (ICON_REGISTRY as Record<string, { label?: string }>)[iconKey]?.label : "") || iconKey || ""}
       className={`inline-block align-middle ${className}`}
       style={{
         width: size,

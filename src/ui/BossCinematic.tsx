@@ -1,12 +1,15 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { getPhaserScene } from "../phaserBridge.js";
+import type { GameState } from "../types/state.js";
 
 const HOLD_MS = 700;
 
-export default function BossCinematic({ state }: { state: any }) {
+interface BossShown { key: number }
+
+export default function BossCinematic({ state }: { state: GameState }) {
   const isBoss = state.modal === "boss";
-  const [shown, setShown] = useState<any>(null);
+  const [shown, setShown] = useState<BossShown | null>(null);
   const prevBossRef = useRef(isBoss);
   const mountedRef = useRef(false);
 
@@ -20,8 +23,8 @@ export default function BossCinematic({ state }: { state: any }) {
     if (!isBoss || wasBoss) return;
     const key = Math.random();
     setShown({ key });
-    const scene = getPhaserScene();
-    (scene as any)?._shake?.(360, 0.012);
+    const scene = getPhaserScene() as { _shake?: (duration: number, intensity: number) => void } | null;
+    scene?._shake?.(360, 0.012);
     const timer = setTimeout(() => setShown(null), HOLD_MS);
     return () => clearTimeout(timer);
   }, [isBoss]);

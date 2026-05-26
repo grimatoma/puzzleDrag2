@@ -9,7 +9,26 @@ import {
   beatIsContinueOnly,
   applyChoiceOutcome,
 } from "../../story.js";
+import type { Beat, BeatSideEffects, ChoiceOutcome } from "../../story.js";
 import { tickAchievement } from "../achievements/data.js";
+import type { Action, GameState } from "../../types/state.js";
+
+interface StorySubstate {
+  beatQueue?: unknown[];
+  queuedBeat?: { id?: string; [k: string]: unknown } | null;
+  sandbox?: boolean;
+  flags?: Record<string, boolean>;
+  choiceLog?: unknown[];
+  repeatCooldowns?: Record<string, unknown>;
+  [k: string]: unknown;
+}
+
+interface ChoiceLogEntry {
+  beatId: string;
+  choiceId: string;
+  ts: number;
+  value?: unknown;
+}
 
 export const initial = {
   // story state is initialised in src/state.js initialState() — see
@@ -23,24 +42,26 @@ export const initial = {
  * PICK_CHOICE. Handles the win → sandbox transition and the festival_won
  * achievement tick. Returns the new game state.
  */
-function dismissCurrentModal(state) {
-  const queue = state.story?.beatQueue ?? [];
+function dismissCurrentModal(state: GameState): GameState {
+  const story = (state.story ?? {}) as StorySubstate;
+  const queue = story.beatQueue ?? [];
   const nextBeat = queue.length > 0 ? queue[0] : null;
   const remaining = queue.slice(1);
 
-  const dismissedBeat = state.story?.queuedBeat;
-  const sandbox = dismissedBeat?.id === "act3_win" ? true : (state.story?.sandbox ?? false);
+  const dismissedBeat = story.queuedBeat;
+  const sandbox = dismissedBeat?.id === "act3_win" ? true : (story.sandbox ?? false);
 
-  let after = state;
+  let after: GameState = state;
   if (dismissedBeat?.id === "act3_win") {
-    const { newState } = tickAchievement(state, "festival_won", 1);
+    const { newState } = tickAchievement(state, "festival_won", 1) as { newState: GameState };
     after = newState;
   }
 
+  const afterStory = (after.story ?? {}) as StorySubstate;
   return {
     ...after,
     story: {
-      ...after.story,
+      ...afterStory,
       queuedBeat: nextBeat,
       beatQueue: remaining,
       sandbox,
@@ -48,29 +69,37 @@ function dismissCurrentModal(state) {
   };
 }
 
-export function reduce(state, action) {
+export function reduce(state: GameState, action: Action): GameState {
   switch (action.type) {
     case "STORY/BEAT_FIRED": {
-      const { firedBeat, newFlags, sideEffects, repeatCooldown } = action.payload;
+      const payload = (action.payload as {
+        firedBeat: Beat;
+        newFlags: Record<string, boolean>;
+        sideEffects: BeatSideEffects;
+        repeatCooldown?: unknown;
+      });
+      const { firedBeat, newFlags, sideEffects, repeatCooldown } = payload;
 
       // Update story state: advance flags and mark beat complete
       const flagKey = firedBeat.onComplete?.setFlag;
-      const completionFlags = { ...newFlags };
+      const completionFlags: Record<string, boolean> = { ...newFlags };
       if (!flagKey && !firedBeat.repeat) {
         completionFlags[firedFlagKey(firedBeat.id)] = true;
       }
 
       // Apply side effects to the rest of game state
-      const afterSideEffects = applyBeatResult(state, sideEffects);
+      const afterSideEffects = applyBeatResult(state, sideEffects) as GameState;
 
       // Queue the modal (or chain to existing queue)
-      const existingQueue = state.story?.beatQueue ?? [];
-      const isModalOpen = !!state.story?.queuedBeat;
+      const story = (state.story ?? {}) as StorySubstate;
+      const existingQueue = story.beatQueue ?? [];
+      const isModalOpen = !!story.queuedBeat;
 
-      const newStory = {
-        ...afterSideEffects.story,
+      const afterStory = (afterSideEffects.story ?? {}) as StorySubstate;
+      const newStory: StorySubstate = {
+        ...afterStory,
         flags: completionFlags,
-        queuedBeat: isModalOpen ? state.story.queuedBeat : firedBeat,
+        queuedBeat: isModalOpen ? story.queuedBeat : firedBeat,
         beatQueue: isModalOpen ? [...existingQueue, firedBeat] : existingQueue,
       };
       if (repeatCooldown) {
@@ -81,39 +110,44 @@ export function reduce(state, action) {
     }
 
     case "STORY/PICK_CHOICE": {
-      const beat = state.story?.queuedBeat;
+      const story = (state.story ?? {}) as StorySubstate;
+      const beat = story.queuedBeat as Beat | null | undefined;
       if (!beat) return state;
-      const choiceId = action.payload?.choiceId ?? action.choiceId;
-      const choice = beatChoices(beat).find((c) => c.id === choiceId);
+      const payload = action.payload as { choiceId?: string; value?: unknown } | undefined;
+      const choiceId = payload?.choiceId ?? (action.choiceId as string | undefined);
+      const choice = beatChoices(beat).find((c: { id: string }) => c.id === choiceId) as { id: string; outcome: ChoiceOutcome } | undefined;
       if (!choice) return state;
       // `value` is optional free-text supplied by prompt-style beats (e.g. the
       // settlement name) so the finale can read it back from the log.
-      const value = action.payload?.value ?? action.value;
+      const value = payload?.value ?? action.value;
 
       // Record the choice for the finale's "the Ember reads your record".
-      const entry = { beatId: beat.id, choiceId: choice.id, ts: Date.now() };
+      const entry: ChoiceLogEntry = { beatId: beat.id, choiceId: choice.id, ts: Date.now() };
       if (value !== undefined) entry.value = value;
-      const choiceLog = [...(state.story?.choiceLog ?? []), entry];
+      const choiceLog = [...(story.choiceLog ?? []), entry];
 
       // Apply the choice's outcome (flags / bonds / resources / queued beat),
       // then dismiss the current modal.
-      const afterOutcome = applyChoiceOutcome(state, choice.outcome);
+      const afterOutcome = applyChoiceOutcome(state, choice.outcome) as GameState;
       const afterDismiss = dismissCurrentModal(afterOutcome);
-      return { ...afterDismiss, story: { ...afterDismiss.story, choiceLog } };
+      const afterStory = (afterDismiss.story ?? {}) as StorySubstate;
+      return { ...afterDismiss, story: { ...afterStory, choiceLog } };
     }
 
     case "STORY/DISMISS_MODAL": {
       // ESC / backdrop dismissal — only for continue-only beats with no prompt
       // (a real choice, or an input prompt, needs an explicit submit).
-      const beat = state.story?.queuedBeat;
+      const story = (state.story ?? {}) as StorySubstate;
+      const beat = story.queuedBeat as Beat | null | undefined;
       if (beat && (beat.prompt || !beatIsContinueOnly(beat))) return state;
       // Record it as the implicit "continue" pick so the log stays consistent.
       const choiceLog = [
-        ...(state.story?.choiceLog ?? []),
+        ...(story.choiceLog ?? []),
         ...(beat ? [{ beatId: beat.id, choiceId: "continue", ts: Date.now() }] : []),
       ];
       const afterDismiss = dismissCurrentModal(state);
-      return { ...afterDismiss, story: { ...afterDismiss.story, choiceLog } };
+      const afterStory = (afterDismiss.story ?? {}) as StorySubstate;
+      return { ...afterDismiss, story: { ...afterStory, choiceLog } };
     }
 
     case "DEV/RESET_GAME": {

@@ -994,7 +994,7 @@ if ("craftQueueHours" in TUNING_OVERRIDES) CRAFT_QUEUE_HOURS = TUNING_OVERRIDES.
 if ("craftGemSkipCost" in TUNING_OVERRIDES) CRAFT_GEM_SKIP_COST = TUNING_OVERRIDES.craftGemSkipCost as number;
 if ("minExpeditionTurns" in TUNING_OVERRIDES) MIN_EXPEDITION_TURNS = TUNING_OVERRIDES.minExpeditionTurns as number;
 if ("homeBiome" in TUNING_OVERRIDES && (SETTLEMENT_BIOMES.farm ?? []).some((b) => b.id === TUNING_OVERRIDES.homeBiome)) {
-  DEFAULT_HOME_BIOME = TUNING_OVERRIDES.homeBiome;
+  DEFAULT_HOME_BIOME = TUNING_OVERRIDES.homeBiome as string;
 }
 
 // Recompute tile palette so default-palette renders pick up any color overrides.

@@ -43,27 +43,54 @@ function toolOptions() {
   ];
 }
 
-function ParamField({ param, value, onChange }: { param: any; value: any; onChange: any }) {
+interface AbilityParamDef {
+  key: string;
+  label: string;
+  type: string;
+  default?: unknown;
+  min?: number;
+  max?: number;
+}
+
+export interface AbilityInstance {
+  id: string;
+  params?: Record<string, unknown>;
+  trigger?: string;
+  [extra: string]: unknown;
+}
+
+interface AbilityDef {
+  id: string;
+  name: string;
+  desc: string;
+  icon?: string;
+  iconKey?: string;
+  params: AbilityParamDef[];
+  scope?: string[];
+  [extra: string]: unknown;
+}
+
+function ParamField({ param, value, onChange }: { param: AbilityParamDef; value: unknown; onChange: (v: unknown) => void }) {
   switch (param.type) {
     case "int":
       return (
         <NumberField
-          value={Number(value ?? param.default ?? 0)}
+          value={Number(value ?? (param.default as number | undefined) ?? 0)}
           min={param.min ?? 0}
           max={param.max ?? 9999}
           width={80}
-          onChange={(v: any) => onChange(Number(v))}
+          onChange={(v: number) => onChange(Number(v))}
         />
       );
     case "float":
       return (
         <NumberField
-          value={Number(value ?? param.default ?? 0)}
+          value={Number(value ?? (param.default as number | undefined) ?? 0)}
           min={param.min ?? 0}
           max={param.max ?? 1}
           step={0.05}
           width={80}
-          onChange={(v: any) => onChange(Number(v))}
+          onChange={(v: number) => onChange(Number(v))}
         />
       );
     case "resourceKey":
@@ -96,7 +123,7 @@ function ParamField({ param, value, onChange }: { param: any; value: any; onChan
         <input
           className="font-mono text-[11px] px-2 py-1 rounded border"
           style={{ background: "#fffaf1", borderColor: COLORS.border, color: COLORS.ink, minWidth: 120 }}
-          value={value ?? ""}
+          value={(value as string | number | undefined) ?? ""}
           onChange={(e) => onChange(e.target.value)}
         />
       );
@@ -109,11 +136,11 @@ function ParamField({ param, value, onChange }: { param: any; value: any; onChan
  *   abilities:  Array<{ id, params, trigger? }>
  *   onChange:   (newAbilities) => void
  */
-export default function AbilitiesEditor({ scope, abilities, onChange }: { scope: any; abilities: any; onChange: any }) {
-  const list = Array.isArray(abilities) ? abilities : [];
-  const catalog = abilitiesForScope(scope);
+export default function AbilitiesEditor({ scope, abilities, onChange }: { scope: "building" | "worker" | "tile"; abilities: AbilityInstance[] | unknown; onChange: (next: AbilityInstance[]) => void }) {
+  const list: AbilityInstance[] = Array.isArray(abilities) ? (abilities as AbilityInstance[]) : [];
+  const catalog = abilitiesForScope(scope) as unknown as AbilityDef[];
 
-  const pickerOptions = useMemo(() => catalog.map(def => ({
+  const pickerOptions = useMemo(() => catalog.map((def: AbilityDef) => ({
     id: def.id,
     searchText: `${def.id} ${def.name} ${def.desc}`,
     renderNode: (
@@ -132,17 +159,17 @@ export default function AbilitiesEditor({ scope, abilities, onChange }: { scope:
     )
   })), [catalog]);
 
-  function add(abilityId: any) {
+  function add(abilityId: string) {
     const def = getAbility(abilityId);
     if (!def) return;
-    onChange([...list, { id: abilityId, params: defaultParamsFor(abilityId) }]);
+    onChange([...list, { id: abilityId, params: defaultParamsFor(abilityId) as Record<string, unknown> }]);
   }
 
-  function removeAt(idx: any) {
+  function removeAt(idx: number) {
     onChange(list.filter((_, i) => i !== idx));
   }
 
-  function updateParam(idx: any, key: any, value: any) {
+  function updateParam(idx: number, key: string, value: unknown) {
     onChange(list.map((a, i) => i === idx ? { ...a, params: { ...(a.params || {}), [key]: value } } : a));
   }
 
@@ -161,8 +188,8 @@ export default function AbilitiesEditor({ scope, abilities, onChange }: { scope:
         </div>
       )}
 
-      {list.map((inst, idx) => {
-        const def = getAbility(inst?.id);
+      {list.map((inst: AbilityInstance, idx: number) => {
+        const def = getAbility(inst?.id) as unknown as AbilityDef | undefined;
         if (!def) {
           return (
             <Card key={idx}>
@@ -189,7 +216,7 @@ export default function AbilitiesEditor({ scope, abilities, onChange }: { scope:
               <SmallButton variant="danger" onClick={() => removeAt(idx)}>✕</SmallButton>
             </div>
             <div className="grid grid-cols-2 gap-x-3 gap-y-1.5">
-              {def.params.map((p: any) => (
+              {def.params.map((p: AbilityParamDef) => (
                 <div key={p.key} className="flex items-center gap-2">
                   <span className="text-[11px] font-bold flex-shrink-0" style={{ color: COLORS.ink }}>
                     {p.label}
@@ -197,7 +224,7 @@ export default function AbilitiesEditor({ scope, abilities, onChange }: { scope:
                   <ParamField
                     param={p}
                     value={inst.params?.[p.key]}
-                    onChange={(v: any) => updateParam(idx, p.key, v)}
+                    onChange={(v: unknown) => updateParam(idx, p.key, v)}
                   />
                 </div>
               ))}

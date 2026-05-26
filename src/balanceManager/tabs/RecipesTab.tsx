@@ -6,9 +6,24 @@ import {
   FilterBar, SegmentedFilter,
 } from "../shared.jsx";
 import Icon from "../../ui/Icon.jsx";
-import { traceRecipe, collectUpstreamRecipes, countRawInputs } from "../recipeGraph.js";
+import { traceRecipe, collectUpstreamRecipes, countRawInputs, type RecipeTreeIngredient, type RecipeTreeNode } from "../recipeGraph.js";
 import { focusHighlightProps, useScrollToFocus } from "../relational.jsx";
 import { useBalanceNav } from "../balanceNav.jsx";
+import type { BalanceDraft, TabProps } from "../index.jsx";
+
+interface RecipeData {
+  item: string;
+  station?: string;
+  tier?: number;
+  inputs?: Record<string, number>;
+  [extra: string]: unknown;
+}
+
+type RecipeOverride = Partial<RecipeData>;
+
+interface EffectiveRecipe extends RecipeData {
+  _isDraft: boolean;
+}
 
 const STATIONS = [
   { value: "bakery",   label: "Bakery" },
@@ -25,15 +40,15 @@ const STATION_FILTERS = [
   { id: "workshop", label: "Workshop", iconKey: "ui_devtools" },
 ];
 
-export default function RecipesTab({ draft, updateDraft, focus }: { draft: any; updateDraft: any; focus: any }) {
+export default function RecipesTab({ draft, updateDraft, focus }: TabProps) {
   const { focus: navFocus } = useBalanceNav();
   const activeFocus = focus ?? navFocus;
   useScrollToFocus(activeFocus);
 
   const [stationFilter, setStationFilter] = useState("all");
   const [search, setSearch] = useState("");
-  const [openTrees, setOpenTrees] = useState(new Set());
-  const toggleTree = (id: any) => setOpenTrees((prev) => {
+  const [openTrees, setOpenTrees] = useState<Set<string>>(new Set());
+  const toggleTree = (id: string) => setOpenTrees((prev) => {
     const next = new Set(prev);
     if (next.has(id)) next.delete(id); else next.add(id);
     return next;
@@ -43,17 +58,18 @@ export default function RecipesTab({ draft, updateDraft, focus }: { draft: any; 
     return Object.keys(ITEMS).sort();
   }, []);
 
-  const recipeEntries = useMemo(() => {
-    const out = [];
+  const recipeEntries = useMemo<Array<[string, EffectiveRecipe]>>(() => {
+    const out: Array<[string, EffectiveRecipe]> = [];
     // Collect from both RECIPES and draft
-    const allIds = new Set([...Object.keys(RECIPES), ...Object.keys(draft.recipes || {})]);
+    const draftRecipes = (draft.recipes || {}) as Record<string, RecipeOverride>;
+    const allIds = new Set([...Object.keys(RECIPES), ...Object.keys(draftRecipes)]);
     for (const recId of allIds) {
-      const r = RECIPES[recId] || {};
-      const draftR = draft.recipes[recId] || {};
+      const r = (RECIPES[recId] as RecipeData | undefined) || ({} as Partial<RecipeData>);
+      const draftR: RecipeOverride = draftRecipes[recId] || {};
       const effItem = draftR.item ?? r.item;
       // Skip if it somehow doesn't target an item (shouldn't happen)
       if (!effItem) continue;
-      out.push([recId, { ...r, ...draftR, _isDraft: !!draft.recipes[recId] }]);
+      out.push([recId, { ...r, ...draftR, item: effItem, _isDraft: !!draftRecipes[recId] }]);
     }
     return out.sort((a, b) => a[1].item.localeCompare(b[1].item));
   }, [draft.recipes]);
@@ -68,13 +84,17 @@ export default function RecipesTab({ draft, updateDraft, focus }: { draft: any; 
     return true;
   });
 
-  function patch(recId: string, fields: Record<string, unknown>) {
-    updateDraft((d: any) => {
-      const cur = d.recipes[recId] || {};
-      const next = { ...cur, ...fields };
-      for (const k of Object.keys(next)) if (next[k] === "" || next[k] === undefined) delete next[k];
-      if (Object.keys(next).length === 0) delete d.recipes[recId];
-      else d.recipes[recId] = next;
+  function patch(recId: string, fields: RecipeOverride) {
+    updateDraft((d: BalanceDraft) => {
+      const recipes = d.recipes as Record<string, RecipeOverride>;
+      const cur: RecipeOverride = recipes[recId] || {};
+      const next: RecipeOverride = { ...cur, ...fields };
+      for (const k of Object.keys(next)) {
+        const v = (next as Record<string, unknown>)[k];
+        if (v === "" || v === undefined) delete (next as Record<string, unknown>)[k];
+      }
+      if (Object.keys(next).length === 0) delete recipes[recId];
+      else recipes[recId] = next;
     });
   }
 
@@ -84,8 +104,8 @@ export default function RecipesTab({ draft, updateDraft, focus }: { draft: any; 
 
   function createNewRecipe() {
     const recId = `rec_new_${Date.now()}`;
-    updateDraft((d: any) => {
-      d.recipes[recId] = { item: "bread", station: "workshop", inputs: {}, tier: 1 };
+    updateDraft((d: BalanceDraft) => {
+      (d.recipes as Record<string, RecipeOverride>)[recId] = { item: "bread", station: "workshop", inputs: {}, tier: 1 };
     });
   }
 
@@ -131,7 +151,7 @@ export default function RecipesTab({ draft, updateDraft, focus }: { draft: any; 
                 {dirty && (
                   <SmallButton
                     variant="ghost"
-                    onClick={() => updateDraft((d: any) => { delete d.recipes[recId]; })}
+                    onClick={() => updateDraft((d: BalanceDraft) => { delete d.recipes[recId]; })}
                   >
                     {isNew ? "delete" : "revert"}
                   </SmallButton>
@@ -144,18 +164,18 @@ export default function RecipesTab({ draft, updateDraft, focus }: { draft: any; 
                   <Select
                     value={eff.item}
                     options={allItemKeys.map(k => ({ value: k, label: k }))}
-                    onChange={(v: any) => patch(recId, { item: v })}
+                    onChange={(v: string) => patch(recId, { item: v })}
                   />
                 </div>
                 <div>
                   <Label>Station</Label>
                   <Select value={eff.station} options={STATIONS}
-                    onChange={(v: any) => patch(recId, { station: v })} />
+                    onChange={(v: string) => patch(recId, { station: v })} />
                 </div>
                 <div>
                   <Label hint="Town-level gate. T2 recipes need town level 3 to craft.">Tier</Label>
                   <NumberField value={eff.tier} min={1} max={5} width={60}
-                    onChange={(v: any) => patch(recId, { tier: v })} />
+                    onChange={(v: number) => patch(recId, { tier: v })} />
                 </div>
               </div>
 
@@ -167,7 +187,7 @@ export default function RecipesTab({ draft, updateDraft, focus }: { draft: any; 
                 <IngredientsEditor
                   ingredients={eff.inputs || {}}
                   availableKeys={allItemKeys}
-                  onChange={(nextInputs: any) => patchInputs(recId, nextInputs)}
+                  onChange={(nextInputs: Record<string, number>) => patchInputs(recId, nextInputs)}
                 />
               </div>
 
@@ -256,7 +276,7 @@ function IngredientsEditor({ ingredients, availableKeys, onChange }: { ingredien
                 min={1}
                 max={9999}
                 width={70}
-                onChange={(v: any) => updateIngredient(resKey, v)}
+                onChange={(v: number) => updateIngredient(resKey, v)}
               />
               <SmallButton variant="danger" onClick={() => updateIngredient(resKey, null)}>
                 ✕
@@ -270,14 +290,14 @@ function IngredientsEditor({ ingredients, availableKeys, onChange }: { ingredien
         label="Add Ingredient"
         placeholder="Search items…"
         options={availableOptions}
-        onSelect={(k: any) => updateIngredient(k, 1)}
+        onSelect={(k: string) => updateIngredient(k, 1)}
         gridClass="grid-cols-2 md:grid-cols-3"
       />
     </div>
   );
 }
 
-function DependencyTrace({ recipeId, open, onToggle }: { recipeId: any; open: any; onToggle: any }) {
+function DependencyTrace({ recipeId, open, onToggle }: { recipeId: string; open: boolean; onToggle: () => void }) {
   const tree = useMemo(() => (open ? traceRecipe(recipeId) : null), [recipeId, open]);
   return (
     <div className="mt-2 pt-2" style={{ borderTop: `1px dashed ${COLORS.border}` }}>
@@ -298,7 +318,7 @@ function DependencyTrace({ recipeId, open, onToggle }: { recipeId: any; open: an
   );
 }
 
-function TreeNode({ node, depth }: { node: any; depth: any }) {
+function TreeNode({ node, depth }: { node: RecipeTreeNode | null; depth: number }) {
   if (!node) return null;
   return (
     <div style={{ marginLeft: depth * 14 }}>
@@ -310,7 +330,7 @@ function TreeNode({ node, depth }: { node: any; depth: any }) {
         {node.station && <Pill>{node.station}</Pill>}
         {node.cyclical && <span className="text-[10px] font-bold" style={{ color: COLORS.red }}>↻ cycle</span>}
       </div>
-      {node.ingredients?.map((ing: any, i: any) => (
+      {node.ingredients?.map((ing: RecipeTreeIngredient, i: number) => (
         <div key={`${ing.id}-${i}`} className="mt-0.5">
           <div className="flex items-center gap-1.5 text-[10px]" style={{ marginLeft: 12, color: COLORS.inkLight }}>
             <Icon iconKey={ing.id} size={12} />
@@ -319,7 +339,7 @@ function TreeNode({ node, depth }: { node: any; depth: any }) {
             {ing.raw && <span className="font-bold uppercase tracking-wide" style={{ color: COLORS.greenDeep, fontSize: 8 }}>RAW</span>}
             {ing.truncated && <span className="italic" style={{ color: COLORS.red }}>(truncated)</span>}
           </div>
-          {ing.sources.map((src: any, j: any) => (
+          {ing.sources.map((src: RecipeTreeNode, j: number) => (
             <TreeNode key={`${src.recipeId}-${j}`} node={src} depth={depth + 1} />
           ))}
         </div>

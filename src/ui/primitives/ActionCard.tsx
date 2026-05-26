@@ -1,4 +1,4 @@
-function cx(...parts: any[]) {
+function cx(...parts: Array<string | false | null | undefined>) {
   return parts.filter(Boolean).join(" ");
 }
 
@@ -16,7 +16,7 @@ export function ProgressBar({
   color,
   className = "",
   trackClassName = "",
-}: { value?: number; max?: number; tone?: string; color?: any; className?: string; trackClassName?: string }) {
+}: { value?: number; max?: number; tone?: string; color?: string; className?: string; trackClassName?: string }) {
   const pct = max > 0 ? Math.max(0, Math.min(100, (value / max) * 100)) : 0;
   return (
     <div className={cx("h-2.5 rounded-full overflow-hidden bg-[#2b2218]/25", trackClassName, className)}>
@@ -29,12 +29,12 @@ export function ProgressBar({
 }
 
 export default function ActionCard({
-  as: Component = "div" as any,
+  as: Component = "div",
   interactive = false,
   className = "",
   children,
   ...rest
-}: { as?: any; interactive?: boolean; className?: string; children?: any; [x: string]: any }) {
+}: { as?: React.ElementType; interactive?: boolean; className?: string; children?: React.ReactNode; [x: string]: unknown }) {
   return (
     <Component
       className={cx(
@@ -50,23 +50,23 @@ export default function ActionCard({
   );
 }
 
-function Row({ className = "", children }: { className?: string; children?: any }) {
+function Row({ className = "", children }: { className?: string; children?: React.ReactNode }) {
   return <div className={cx("flex items-center gap-2", className)}>{children}</div>;
 }
 
-function Content({ className = "", children }: { className?: string; children?: any }) {
+function Content({ className = "", children }: { className?: string; children?: React.ReactNode }) {
   return <div className={cx("flex-1 min-w-0", className)}>{children}</div>;
 }
 
-function Title({ className = "", children }: { className?: string; children?: any }) {
+function Title({ className = "", children }: { className?: string; children?: React.ReactNode }) {
   return <div className={cx("hl-card-title leading-tight", className)}>{children}</div>;
 }
 
-function Meta({ className = "", children }: { className?: string; children?: any }) {
+function Meta({ className = "", children }: { className?: string; children?: React.ReactNode }) {
   return <div className={cx("hl-card-meta leading-snug", className)}>{children}</div>;
 }
 
-function Actions({ className = "", children }: { className?: string; children?: any }) {
+function Actions({ className = "", children }: { className?: string; children?: React.ReactNode }) {
   return <div className={cx("flex-shrink-0 flex items-center gap-1.5", className)}>{children}</div>;
 }
 

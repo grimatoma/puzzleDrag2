@@ -1,3 +1,32 @@
+/** A single ability instance on a worker (or building / tile). */
+export interface WorkerAbility {
+  id: string;
+  params?: Record<string, unknown>;
+  trigger?: string;
+  [extra: string]: unknown;
+}
+
+export interface WorkerHireCost {
+  coins?: number;
+  coinsStep?: number;
+  coinsMult?: number;
+  resources?: Record<string, number>;
+  resourcesStepEvery?: number;
+}
+
+export interface WorkerDef {
+  id: string;
+  name: string;
+  role: string;
+  iconKey: string;
+  color: string;
+  hireCost: WorkerHireCost;
+  maxCount: number;
+  abilities: WorkerAbility[];
+  description: string;
+  [extra: string]: unknown;
+}
+
 // Type-tier workers — the game's worker system.
 //
 // Anonymous, generic roles (Farmer, Lumberjack, Miner, Baker) that the
@@ -20,7 +49,7 @@
 //
 // Designers can tune any individual worker's curve from here without
 // touching engine code. If both keys are present, `coinsMult` wins.
-export const TYPE_WORKERS = [
+export const TYPE_WORKERS: WorkerDef[] = [
   {
     id: "farmer",
     name: "Farmer",
@@ -94,7 +123,7 @@ export function defaultWorkersSlice() {
  *
  * `coinsMult` wins when both are present.
  */
-export function nextHireCost(worker: any, count: any) {
+export function nextHireCost(worker: WorkerDef | null | undefined, count: number): number {
   const c = Math.max(0, count | 0);
   const base = worker?.hireCost?.coins ?? 0;
   const mult = worker?.hireCost?.coinsMult;
@@ -110,12 +139,12 @@ export function nextHireCost(worker: any, count: any) {
 
 /** Resource bundle for the next hire. Multiplies every `resources` entry by
  *  1 + floor(currentCount / resourcesStepEvery). */
-export function nextHireResourceCost(worker: any, count: any) {
+export function nextHireResourceCost(worker: WorkerDef | null | undefined, count: number): Record<string, number> {
   const resources = worker?.hireCost?.resources;
   if (!resources || typeof resources !== "object") return {};
   const c = Math.max(0, count | 0);
   const stepEveryRaw = worker?.hireCost?.resourcesStepEvery;
-  const stepEvery = Number.isFinite(stepEveryRaw) && stepEveryRaw > 0 ? Math.floor(stepEveryRaw) : 3;
+  const stepEvery = Number.isFinite(stepEveryRaw) && (stepEveryRaw ?? 0) > 0 ? Math.floor(stepEveryRaw as number) : 3;
   const mult = 1 + Math.floor(c / stepEvery);
   const out: Record<string, number> = {};
   for (const [key, amount] of Object.entries(resources)) {

@@ -179,20 +179,30 @@ export function initialState(overrides?: { saveSeed?: string; tools?: Record<str
   const fresh = createFreshState(overrides);
   const raw = loadSavedState();
   if (raw && raw.version === SAVE_SCHEMA_VERSION) {
-    const saved = raw;
+    // Treat saved as the persisted (loose) shape of GameState. The save
+    // boundary is intrinsically untyped (JSON.parse), but inside this block
+    // we narrow individual reads via casts at each access point.
+    const saved = raw as Record<string, unknown>;
     seedOrderIdSeq(saved.orders);
-    quests.seedQuestIdSeq(saved.dailies);
-    
-    const mergedStory = saved.story
-      ? { ...INITIAL_STORY_STATE, queuedBeat: null, beatQueue: [], sandbox: false, ...saved.story }
+    quests.seedQuestIdSeq(saved.dailies as Parameters<typeof quests.seedQuestIdSeq>[0]);
+
+    const savedStory = saved.story as Record<string, unknown> | undefined;
+    const mergedStory = savedStory
+      ? { ...INITIAL_STORY_STATE, queuedBeat: null, beatQueue: [], sandbox: false, ...savedStory }
       : { ...INITIAL_STORY_STATE, flags: { ...initialFlagState() }, queuedBeat: null, beatQueue: [], sandbox: false };
     mergedStory.queuedBeat = null;
     mergedStory.beatQueue = [];
 
     const mergedTileCollection = (() => {
       const freshTC = defaultTileCollectionSlice();
-      const src = saved.tileCollection ?? saved.species;
-      if (!src || typeof src !== "object") return freshTC;
+      const srcRaw = saved.tileCollection ?? saved.species;
+      if (!srcRaw || typeof srcRaw !== "object") return freshTC;
+      const src = srcRaw as {
+        discovered?: Record<string, boolean>;
+        researchProgress?: Record<string, number>;
+        activeByCategory?: Record<string, string | null>;
+        freeMoves?: number;
+      };
       return {
         discovered: { ...freshTC.discovered, ...src.discovered },
         researchProgress: { ...freshTC.researchProgress, ...src.researchProgress },
@@ -201,35 +211,39 @@ export function initialState(overrides?: { saveSeed?: string; tools?: Record<str
       };
     })();
 
-    const savedWithoutLegacy = { ...saved };
+    const savedWithoutLegacy: Record<string, unknown> = { ...saved };
     delete savedWithoutLegacy.species;
-    if (!FIRE_HAZARD_ENABLED && savedWithoutLegacy.hazards?.fire) {
-      savedWithoutLegacy.hazards = { ...savedWithoutLegacy.hazards, fire: null };
+    const savedHazards = savedWithoutLegacy.hazards as { fire?: unknown; [k: string]: unknown } | undefined;
+    if (!FIRE_HAZARD_ENABLED && savedHazards?.fire) {
+      savedWithoutLegacy.hazards = { ...savedHazards, fire: null };
     }
 
     // Restore active run if it still has turns remaining so a reload mid-session
     // drops the player back onto their board instead of losing progress.
-    const restoredFarmRun = saved.farmRun?.turnsRemaining > 0 ? saved.farmRun : null;
+    const savedFarmRun = saved.farmRun as { turnsRemaining?: number; [k: string]: unknown } | null | undefined;
+    const restoredFarmRun = (savedFarmRun?.turnsRemaining ?? 0) > 0 ? savedFarmRun : null;
 
     // Load drops the player on town view, so any tool armed at save time must
     // deselect — the player isn't on the board to "directly use" it. Refund
     // fertilizer (its charge was spent on arm) and any instant-tool pending
     // arms (same). Tap-target arms (bomb/rake/axe/magic_wand) spent no charge,
     // so just clearing toolPending is enough.
-    const savedTools = savedWithoutLegacy.tools ?? {};
-    let restoredTools = savedTools;
+    const savedTools = (savedWithoutLegacy.tools as Record<string, number | boolean | undefined> | undefined) ?? {};
+    let restoredTools: Record<string, number | boolean | undefined> = { ...savedTools };
     if (savedWithoutLegacy.fertilizerActive || savedWithoutLegacy.fillBiasTarget) {
-      restoredTools = { ...restoredTools, fertilizer: (restoredTools.fertilizer ?? 0) + 1 };
+      restoredTools = { ...restoredTools, fertilizer: (Number(restoredTools.fertilizer) || 0) + 1 };
     }
-    const savedPending = savedWithoutLegacy.toolPending;
-    const pendingPower = savedWithoutLegacy.toolPendingPower ?? ITEMS[savedPending]?.power;
-    const pendingIsTap = pendingPower?.id && isTapTargetPower(pendingPower.id);
+    const savedPending = savedWithoutLegacy.toolPending as string | null | undefined;
+    const savedPendingPower = savedWithoutLegacy.toolPendingPower as { id?: string; [k: string]: unknown } | null | undefined;
+    const itemPower = savedPending ? (ITEMS[savedPending]?.power as { id?: string } | undefined) : undefined;
+    const pendingPower = savedPendingPower ?? itemPower;
+    const pendingIsTap = !!(pendingPower?.id && isTapTargetPower(pendingPower.id));
     if (savedPending && !pendingIsTap && savedPending !== "rune_wildcard") {
-      restoredTools = { ...restoredTools, [savedPending]: (restoredTools[savedPending] ?? 0) + 1 };
+      restoredTools = { ...restoredTools, [savedPending]: (Number(restoredTools[savedPending]) || 0) + 1 };
     }
     const restoredRuneStash = savedPending === "rune_wildcard"
-      ? (savedWithoutLegacy.runeStash ?? 0) + 1
-      : savedWithoutLegacy.runeStash;
+      ? ((savedWithoutLegacy.runeStash as number | undefined) ?? 0) + 1
+      : (savedWithoutLegacy.runeStash as number | undefined);
 
     return {
       ...fresh,
@@ -238,8 +252,8 @@ export function initialState(overrides?: { saveSeed?: string; tools?: Record<str
       tileCollection: mergedTileCollection,
       view: "town",   // router will restore "board" from the URL hash if appropriate
       viewParams: {},
-      turnsUsed: restoredFarmRun ? (saved.turnsUsed ?? 0) : 0,
-      farmRun: restoredFarmRun,
+      turnsUsed: restoredFarmRun ? ((saved.turnsUsed as number | undefined) ?? 0) : 0,
+      farmRun: (restoredFarmRun ?? null) as GameState["farmRun"],
       activeTrial: null,
       modal: null,
       bubble: null,
@@ -250,8 +264,8 @@ export function initialState(overrides?: { saveSeed?: string; tools?: Record<str
       // simply lack this field, and the merge sets it to null either way.
       toolPendingPower: null,
       fillBiasTarget: null,
-      tools: restoredTools,
-      runeStash: restoredRuneStash,
+      tools: restoredTools as GameState["tools"],
+      runeStash: restoredRuneStash ?? 0,
       seasonStats: { harvests: 0, upgrades: 0, ordersFilled: 0, coins: 0 }
     };
   }

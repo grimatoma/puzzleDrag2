@@ -13,8 +13,18 @@ import { ITEMS, RECIPES, BUILDINGS } from "../constants.js";
 import { STORY_BEATS, SIDE_BEATS } from "../story.js";
 import { canonicalRecipeEntries } from "./recipeCatalog.js";
 
-function asArrayValues(v: any) {
-  return Array.isArray(v) ? v : Object.values(v || {});
+export type ItemUsage =
+  | { kind: "recipe_input"; recipeId: string; qty: number; station?: string }
+  | { kind: "recipe_output"; recipeId: string; station?: string }
+  | { kind: "building_cost"; buildingId: string; qty: number }
+  | { kind: "chain_next"; fromId: string }
+  | { kind: "story_outcome"; beatId?: string; choiceId?: string; qty: number };
+
+interface BuildingLike { id?: string; cost?: Record<string, number>; [extra: string]: unknown }
+interface ItemLike { next?: string | null; [extra: string]: unknown }
+
+function asArrayValues<T>(v: readonly T[] | Record<string, T> | null | undefined): T[] {
+  return Array.isArray(v) ? (v as T[]) : Object.values(v || {});
 }
 
 /**
@@ -27,32 +37,37 @@ function asArrayValues(v: any) {
  *   { kind: 'story_outcome',   beatId, choiceId, qty }   (resources awarded by a choice)
  */
 export function buildItemReferenceIndex({
-  items = ITEMS, recipes = RECIPES, buildings = BUILDINGS,
+  items = ITEMS, recipes = RECIPES, buildings = BUILDINGS as unknown as BuildingLike[],
   storyBeats = STORY_BEATS, sideBeats = SIDE_BEATS,
-} = {}) {
-  const out = new Map();
-  const ensure = (id: any) => {
+}: {
+  items?: Record<string, ItemLike>;
+  recipes?: Record<string, unknown>;
+  buildings?: readonly BuildingLike[] | Record<string, BuildingLike>;
+  storyBeats?: readonly unknown[];
+  sideBeats?: readonly unknown[];
+} = {}): Map<string, ItemUsage[]> {
+  const out = new Map<string, ItemUsage[]>();
+  const ensure = (id: string): ItemUsage[] => {
     if (!out.has(id)) out.set(id, []);
-    return out.get(id);
+    return out.get(id)!;
   };
 
   for (const [recipeId, rawRecipe] of canonicalRecipeEntries(recipes)) {
-    // TODO(ts-migration): recipe entries are untyped; cast to any
-    const recipe = rawRecipe as Record<string, any>;
-    for (const [inputId, qty] of Object.entries(recipe?.["inputs"] || {})) {
-      ensure(inputId).push({ kind: "recipe_input", recipeId, qty, station: recipe["station"] });
+    const recipe = rawRecipe as Record<string, unknown>;
+    for (const [inputId, qty] of Object.entries((recipe?.["inputs"] as Record<string, number> | undefined) || {})) {
+      ensure(inputId).push({ kind: "recipe_input", recipeId, qty: qty as number, station: recipe["station"] as string | undefined });
     }
     if (typeof recipe?.["item"] === "string") {
-      ensure(recipe["item"]).push({ kind: "recipe_output", recipeId, station: recipe["station"] });
+      ensure(recipe["item"] as string).push({ kind: "recipe_output", recipeId, station: recipe["station"] as string | undefined });
     }
   }
 
-  for (const b of asArrayValues(buildings)) {
+  for (const b of asArrayValues<BuildingLike>(buildings)) {
     if (!b || !b.id) continue;
     const costs = b.cost || {};
     for (const [costId, qty] of Object.entries(costs)) {
       if (costId === "coins" || costId === "runes" || costId === "embers" || costId === "coreIngots" || costId === "gems") continue;
-      ensure(costId).push({ kind: "building_cost", buildingId: b.id, qty });
+      ensure(costId).push({ kind: "building_cost", buildingId: b.id, qty: qty as number });
     }
   }
 
@@ -73,7 +88,7 @@ export function buildItemReferenceIndex({
       if (!res || typeof res !== "object") continue;
       for (const [resourceId, qty] of Object.entries(res)) {
         if (!Number.isFinite(qty) || qty === 0) continue;
-        ensure(resourceId).push({ kind: "story_outcome", beatId: beat.id, choiceId: c.id, qty });
+        ensure(resourceId).push({ kind: "story_outcome", beatId: beat.id, choiceId: c.id, qty: qty as number });
       }
     }
   }
@@ -82,22 +97,22 @@ export function buildItemReferenceIndex({
 }
 
 /** Pretty-friendly grouping of an item's usages by `kind`. */
-export function groupUsagesByKind(usages: any) {
-  const groups = new Map();
+export function groupUsagesByKind(usages: ItemUsage[] | null | undefined): Map<string, ItemUsage[]> {
+  const groups = new Map<string, ItemUsage[]>();
   for (const u of usages || []) {
     if (!groups.has(u.kind)) groups.set(u.kind, []);
-    groups.get(u.kind).push(u);
+    groups.get(u.kind)!.push(u);
   }
   return groups;
 }
 
 /** Convenience: usages of a single item id (returns []). */
-export function usagesFor(itemId: any, index: any) {
+export function usagesFor(itemId: string, index?: Map<string, ItemUsage[]>): ItemUsage[] {
   const idx = index || buildItemReferenceIndex();
   return idx.get(itemId) || [];
 }
 
 /** Total usage count across every kind — handy for badges. */
-export function totalUsageCount(usages: any) {
+export function totalUsageCount(usages: ItemUsage[] | null | undefined): number {
   return (usages || []).length;
 }

@@ -5,6 +5,18 @@ import { defaultTileCollectionSlice } from "../state/helpers.js";
 import { TILE_TYPES, CATEGORIES } from "../features/tileCollection/data.js";
 import { findBeat, INITIAL_STORY_STATE } from "../story.js";
 import { initialFlagState } from "../flags.js";
+import type { GameState, Grid } from "../types/state.js";
+import type { VisualScenario } from "./matrix.js";
+
+/**
+ * Synthetic visual-test state. We deliberately keep this looser than the
+ * canonical `GameState`: the harness builds *fragments* of state (no save
+ * version, sometimes no biome, sometimes additional UI-only fields like
+ * `runSummary`, `bespokeSeasonWidget`, etc). Builders compose by spreading,
+ * so an open shape with an index signature is more practical than the
+ * full GameState surface.
+ */
+export type VisualStateTree = Partial<GameState> & { [k: string]: unknown };
 
 export const VISUAL_FIXED_NOW = 1_700_000_000_000;
 
@@ -45,9 +57,9 @@ const HARBOR_PLOTS = {
   7: "housing2",
 };
 
-function builtFromPlots(plots: any, extras: Record<string, any> = {}) {
-  const out: Record<string, any> = { decorations: {}, _plots: { ...plots }, ...extras };
-  for (const id of Object.values(plots) as string[]) out[id] = true;
+function builtFromPlots(plots: Record<string, string>, extras: Record<string, unknown> = {}): Record<string, unknown> {
+  const out: Record<string, unknown> = { decorations: {}, _plots: { ...plots }, ...extras };
+  for (const id of Object.values(plots)) out[id] = true;
   return out;
 }
 
@@ -86,15 +98,36 @@ function fullTileCollection(overrides = {}) {
   };
 }
 
-function order(id: any, npc: any, key: any, need: any, have: any, reward = 80) {
+/**
+ * Visual orders use stable string ids (so the harness can target them) and
+ * a `_visualHave` field that's read by builders to populate inventory; only
+ * the `_visualHave` is not on the canonical `Order` type. We expose the
+ * synthetic shape to builders, then store as `Order` once `_visualHave` has
+ * been consumed.
+ */
+interface VisualOrder {
+  id: string;
+  npc: string;
+  key: string;
+  need: number;
+  amount: number;
+  reward: number;
+  baseReward: number;
+  line: string;
+  _visualHave: number;
+  [extra: string]: unknown;
+}
+
+function order(id: string, npc: string, key: string, need: number, have: number, reward = 80): VisualOrder {
   return {
     id,
     npc,
     key,
     need,
+    amount: need,
     reward,
     baseReward: reward,
-    line: `Could you bring ${need} ${ITEMS[key]?.label ?? key}?`,
+    line: `Could you bring ${need} ${(ITEMS as Record<string, { label?: string } | undefined>)[key]?.label ?? key}?`,
     _visualHave: have,
   };
 }
@@ -140,18 +173,29 @@ function richInventory() {
   };
 }
 
-function applyRoute(state: any, scenario: any) {
+interface ParsedRoute {
+  view?: string;
+  modal?: string | null;
+  viewParams?: Record<string, unknown>;
+  modalParams?: Record<string, unknown>;
+}
+
+function applyRoute(state: VisualStateTree, scenario: VisualScenario): VisualStateTree {
   const hash = scenario.hash ?? null;
-  let next = { ...state };
+  let next: VisualStateTree = { ...state };
   if (hash) {
-    const route = parseHash(hash) as any;
+    const route = parseHash(hash) as ParsedRoute;
+    const modalParamsTab = (route.modalParams as { tab?: string } | undefined)?.tab;
+    const viewParamsTab = (route.viewParams as { tab?: string } | undefined)?.tab;
     next = {
       ...next,
-      view: route.view,
-      modal: route.modal,
+      view: route.view ?? next.view,
+      modal: route.modal ?? null,
       viewParams: route.viewParams ?? {},
-      settingsTab: route.modal === "menu" ? route.modalParams?.tab ?? "main" : next.settingsTab ?? "main",
-      craftingTab: route.view === "crafting" ? route.viewParams?.tab ?? next.craftingTab ?? null : next.craftingTab ?? null,
+      settingsTab: route.modal === "menu" ? modalParamsTab ?? "main" : (next as { settingsTab?: string }).settingsTab ?? "main",
+      craftingTab: route.view === "crafting"
+        ? viewParamsTab ?? (next as { craftingTab?: string | null }).craftingTab ?? null
+        : (next as { craftingTab?: string | null }).craftingTab ?? null,
     };
   }
   if (scenario.view) {
@@ -162,10 +206,10 @@ function applyRoute(state: any, scenario: any) {
   return next;
 }
 
-function baseState() {
+function baseState(): VisualStateTree {
   const state = createFreshState({ saveSeed: "visual-seed-0001" });
   const orders = visualOrders();
-  const inventory: Record<string, any> = { ...state.inventory };
+  const inventory: Record<string, number> = { ...state.inventory };
   for (const o of orders) inventory[o.key] = o._visualHave;
   return {
     ...state,
@@ -177,8 +221,11 @@ function baseState() {
     viewParams: {},
     modal: null,
     bubble: null,
-    orders,
-    quests: visualQuests(),
+    // The visual harness uses string order ids so DOM queries can target
+    // them; the canonical Order.id is numeric. We keep the structural shape
+    // loose at the state-tree boundary.
+    orders: orders as unknown as GameState["orders"],
+    quests: visualQuests() as unknown as GameState["quests"],
     inventory,
     story: quietStory(),
     market: { seed: 42, season: 0, prices: {}, prevPrices: null },
@@ -188,12 +235,12 @@ function baseState() {
     mapVisited: ["home", "meadow", "orchard"],
     mapDiscovered: ["home", "meadow", "orchard", "crossroads", "quarry", "harbor", "oldcapital"],
     settlements: { home: { founded: true, biome: "prairie" } },
-    tileCollection: defaultTileCollectionSlice(),
+    tileCollection: defaultTileCollectionSlice() as GameState["tileCollection"],
     runSummary: { open: false },
   };
 }
 
-function richState() {
+function richState(): VisualStateTree {
   const state = baseState();
   const unlocked = { ...(state.achievements?.unlocked ?? {}) };
   Object.keys(unlocked).slice(0, 4).forEach((key) => { unlocked[key] = true; });
@@ -255,9 +302,9 @@ function richState() {
     almanac: { xp: 260, level: 3, claimed: { 1: true, 2: false, 3: false, 4: false, 5: false } },
     almanacClaimed: [1],
     achievements: {
-      ...state.achievements,
+      ...(state.achievements ?? { counters: {}, unlocked: {}, seenResources: {}, seenBuildings: {} }),
       counters: {
-        ...state.achievements.counters,
+        ...(state.achievements?.counters ?? {}),
         chains_committed: 12,
         orders_fulfilled: 3,
         bosses_defeated: 1,
@@ -279,8 +326,10 @@ function richState() {
   };
 }
 
-function grid(rows: any) {
-  return rows.map((row: any) => row.map((cell: any) => (typeof cell === "string" ? { key: cell } : cell)));
+type GridCellInput = string | { key: string; [k: string]: unknown };
+
+function grid(rows: GridCellInput[][]): Grid {
+  return rows.map((row) => row.map((cell) => (typeof cell === "string" ? { key: cell } : { ...cell }))) as Grid;
 }
 
 const farmGrid = grid([
@@ -310,7 +359,7 @@ const fishGrid = grid([
   ["tile_fish_sardine", "tile_fish_mackerel", "tile_fish_mackerel", "tile_fish_clam", "tile_fish_kelp", "tile_fish_oyster"],
 ]);
 
-function boardState(kind = "farm") {
+function boardState(kind: "farm" | "mine" | "fish" = "farm"): VisualStateTree {
   const rich = richState();
   const biomeKey = kind === "mine" ? "mine" : kind === "fish" ? "fish" : "farm";
   const zoneId = kind === "mine" ? "quarry" : kind === "fish" ? "harbor" : "home";
@@ -332,9 +381,9 @@ function boardState(kind = "farm") {
       startedAt: VISUAL_FIXED_NOW,
       mode: kind === "farm" ? "normal" : "expedition",
     },
-    session: kind === "farm"
+    session: (kind === "farm"
       ? { selectedTiles: ["grass", "grain", "trees", "birds", "vegetables", "fruits"], fertilizerUsed: false }
-      : { expedition: { zoneId, supply: { supplies: 4 }, turns: 10 } },
+      : { selectedTiles: [], fertilizerUsed: false, expedition: { zoneId, supply: { supplies: 4 }, turns: 10 } }) as GameState["session"],
   };
 }
 
@@ -352,12 +401,13 @@ function boardWithSeason(turnsUsed: number, bespoke: boolean) {
   };
 }
 
-function withBeat(state: any, beatId: any) {
+function withBeat(state: VisualStateTree, beatId: string): VisualStateTree {
   const beat = findBeat(beatId);
+  const story = (state.story ?? {}) as Record<string, unknown>;
   return {
     ...state,
     story: {
-      ...state.story,
+      ...story,
       queuedBeat: beat ? { ...beat } : null,
       beatQueue: [],
     },
@@ -365,7 +415,7 @@ function withBeat(state: any, beatId: any) {
   };
 }
 
-function withRunSummary(state: any) {
+function withRunSummary(state: VisualStateTree): VisualStateTree {
   return {
     ...state,
     modal: "runSummary",
@@ -389,7 +439,7 @@ function withRunSummary(state: any) {
   };
 }
 
-function profileState(profile: any) {
+function profileState(profile: string): VisualStateTree {
   switch (profile) {
     case "fresh": return baseState();
     case "rich": return richState();
@@ -413,15 +463,16 @@ function profileState(profile: any) {
     case "boardFarmBomb": return { ...boardState("farm"), toolPending: "bomb", toolPendingPower: { id: "area_blast", params: { radius: 1 }, tint: 0xff4444 }, tools: { ...boardState("farm").tools, bomb: 3 } };
     case "boardFarmSickle": return { ...boardState("farm"), toolPending: "sickle", toolPendingPower: { id: "clear_row", params: {}, tint: 0xff9900 }, tools: { ...boardState("farm").tools, sickle: 2 } };
     case "boardFarmRake": return { ...boardState("farm"), toolPending: "rake", toolPendingPower: { id: "clear_component", params: {}, tint: 0x88ff88 }, tools: { ...boardState("farm").tools, rake: 2 } };
-    case "boardFarmFertilizer": return { ...boardState("farm"), fillBiasTarget: "tile_grain_wheat", magicFertilizerCharges: 3, session: { selectedTiles: ["grass", "grain"], fertilizerUsed: true } };
+    case "boardFarmFertilizer": return { ...boardState("farm"), fillBiasTarget: { key: "tile_grain_wheat" }, magicFertilizerCharges: 3, session: { selectedTiles: ["grass", "grain"], fertilizerUsed: true } };
     case "boardMine": return boardState("mine");
     case "boardMineHazards": {
       const st = boardState("mine");
-      const g = st.grid.map((row: any) => row.map((cell: any) => ({ ...cell })));
+      const grid0 = (st.grid ?? []) as Grid;
+      const g = grid0.map((row) => row.map((cell) => ({ ...cell }))) as Grid;
       g[1][1] = { key: "tile_mine_stone", rubble: true };
       g[2][2] = { key: "mysterious_ore" };
       g[3][3] = { key: "lava" };
-      return { ...st, grid: g, hazards: { ...st.hazards, caveIn: { row: 1, col: 1 }, gasVent: { row: 0, col: 3, turnsLeft: 3 }, lava: { cells: [{ row: 3, col: 3 }], turnsToSpread: 1 } }, mysteriousOre: { row: 2, col: 2 } };
+      return { ...st, grid: g, hazards: { ...(st.hazards ?? {}), caveIn: { row: 1, col: 1 }, gasVent: { row: 0, col: 3, turnsLeft: 3 }, lava: { cells: [{ row: 3, col: 3 }], turnsToSpread: 1 } }, mysteriousOre: { row: 2, col: 2 } };
     }
     case "boardFish": return boardState("fish");
     case "boardSeasonSpringWheel":   return boardWithSeason(1, false);
@@ -434,7 +485,8 @@ function profileState(profile: any) {
     case "boardSeasonWinterBespoke": return boardWithSeason(8, true);
     case "boardFishPearl": {
       const st = boardState("fish");
-      const g = st.grid.map((row: any) => row.map((cell: any) => ({ ...cell })));
+      const grid0 = (st.grid ?? []) as Grid;
+      const g = grid0.map((row) => row.map((cell) => ({ ...cell }))) as Grid;
       g[2][2] = { key: "tile_special_giant_pearl" };
       return { ...st, grid: g, fish: { tide: "low", tideTurn: 2 }, fishPearl: { row: 2, col: 2 } };
     }
@@ -469,7 +521,7 @@ function profileState(profile: any) {
       };
     }
     case "portalInsufficient": return { ...richState(), influence: 10, tools: { ...richState().tools, magic_wand: 0, hourglass: 0, magic_seed: 0, magic_fertilizer: 0 } };
-    case "marketNews": return { ...richState(), bubble: { id: 202, npc: "tomas", text: "Market News: Wood Shortage! Timber supplies are low. Logs and Planks are worth double!", ms: 10_000 }, market: { ...richState().market, season: 2, event: { id: "wood_shortage", label: "Wood Shortage", desc: "Timber supplies are low. Logs and Planks are worth double!", mults: { tile_tree_oak: 2, plank: 2 } } } };
+    case "marketNews": return { ...richState(), bubble: { id: 202, npc: "tomas", text: "Market News: Wood Shortage! Timber supplies are low. Logs and Planks are worth double!", ms: 10_000 }, market: { ...(richState().market ?? { seed: 0, season: 0, prices: {}, prevPrices: null }), season: 2, event: { id: "wood_shortage", label: "Wood Shortage", desc: "Timber supplies are low. Logs and Planks are worth double!", mults: { tile_tree_oak: 2, plank: 2 } } } };
     case "tileActivate": return { ...richState(), tileCollection: fullTileCollection({ activeByCategory: { ...fullTileCollection().activeByCategory, grass: "tile_grass_hay" } }) };
     case "tileBuy": {
       const tc = fullTileCollection();
@@ -493,7 +545,23 @@ function profileState(profile: any) {
     case "mapCapitalLocked": return { ...richState(), heirlooms: { heirloomSeed: 1, pactIron: 0, tidesingerPearl: 0 } };
     case "mapCapitalReady": return { ...richState(), heirlooms: { heirloomSeed: 1, pactIron: 1, tidesingerPearl: 1, seed: 1, iron: 1, pearl: 1 } };
     case "storyProgressed": return { ...richState(), story: quietStory({ first_harvest: true, hearth_lit: true, first_order: true, granary_built: true, bram_arrived: true }) };
-    case "charter": return { ...richState(), turnsUsed: 27, story: { ...richState().story, flags: { ...richState().story.flags, keeper_path_driveout: true, keeper_path_coexist: true }, choiceLog: [{ beatId: "act1_arrival", choiceId: "continue", ts: VISUAL_FIXED_NOW - 300_000, value: "Hearthwood Vale" }, { beatId: "frostmaw_keeper", choiceId: "drive_out", ts: VISUAL_FIXED_NOW - 200_000 }, { beatId: "mira_letter_1", choiceId: "send", ts: VISUAL_FIXED_NOW - 100_000 }] } };
+    case "charter": {
+      const r = richState();
+      const story = (r.story ?? {}) as { flags?: Record<string, unknown>; [k: string]: unknown };
+      return {
+        ...r,
+        turnsUsed: 27,
+        story: {
+          ...story,
+          flags: { ...(story.flags ?? {}), keeper_path_driveout: true, keeper_path_coexist: true },
+          choiceLog: [
+            { beatId: "act1_arrival", choiceId: "continue", ts: VISUAL_FIXED_NOW - 300_000, value: "Hearthwood Vale" },
+            { beatId: "frostmaw_keeper", choiceId: "drive_out", ts: VISUAL_FIXED_NOW - 200_000 },
+            { beatId: "mira_letter_1", choiceId: "send", ts: VISUAL_FIXED_NOW - 100_000 },
+          ],
+        },
+      };
+    }
     case "bossGallery": return { ...richState(), story: quietStory({ frostmaw_defeated: true, ember_drake_active: true }) };
     case "bossModal": return { ...richState(), modal: "boss", boss: { key: "frostmaw", name: "The Frostmaw", emoji: "❄️", resource: "tile_tree_oak", targetCount: 30, progress: 11, turnsLeft: 7, minChain: 5, goal: "Bring 30 logs in 10 turns to keep the hearth lit.", flavor: "A frozen titan stirs in the deep winter wood." } };
     case "runSummary": return withRunSummary(richState());
@@ -519,22 +587,23 @@ function profileState(profile: any) {
   }
 }
 
-export function buildVisualState(scenario: any) {
+export function buildVisualState(scenario: VisualScenario): VisualStateTree {
   const profile = scenario.state ?? "fresh";
   const state = profileState(profile);
   return applyRoute(state, scenario);
 }
 
-export function validateVisualState(state: any) {
+export function validateVisualState(state: VisualStateTree | null | undefined): string[] {
   if (!state || typeof state !== "object") return ["state is not an object"];
-  const errors = [];
+  const errors: string[] = [];
+  const story = state.story as { flags?: Record<string, unknown>; queuedBeat?: unknown } | undefined;
   if (!state.view) errors.push("state.view is missing");
-  if (!state.story?.flags?.intro_seen && !state.story?.queuedBeat) errors.push("quiet scenario is missing intro_seen");
+  if (!story?.flags?.intro_seen && !story?.queuedBeat) errors.push("quiet scenario is missing intro_seen");
   if (state.view === "board") {
     if (!state.farmRun?.turnsRemaining) errors.push("board scenario needs an active farmRun");
     if (!Array.isArray(state.grid) || state.grid.length !== 6) errors.push("board scenario needs a 6-row grid");
   }
-  const active = state.tileCollection?.activeByCategory ?? {};
+  const active = (state.tileCollection?.activeByCategory ?? {}) as Record<string, string | null>;
   for (const [category, tileId] of Object.entries(active)) {
     if (!CATEGORIES.includes(category)) errors.push(`unknown tile category ${category}`);
     if (tileId) {

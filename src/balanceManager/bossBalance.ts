@@ -35,7 +35,14 @@ const MODIFIER_LABEL: Record<string, ModifierInfo> = {
   min_chain:       { label: "Min chain length", hint: "Chains shorter than N produce nothing." },
 };
 
-function bandFor(perTurn: any) {
+export interface BossLike {
+  id?: string;
+  target?: { resource?: string; amount?: number };
+  modifier?: { type?: string; [extra: string]: unknown };
+  [extra: string]: unknown;
+}
+
+function bandFor(perTurn: number) {
   for (const tier of YIELD_TIERS) if (perTurn <= tier.max) return tier;
   return YIELD_TIERS[YIELD_TIERS.length - 1];
 }
@@ -45,12 +52,12 @@ function bandFor(perTurn: any) {
  *   - marginBands: a quick-glance triplet of "how much extra over target
  *     yields the +50% scaling bonus" — useful for tuning the reward curve.
  */
-export function assessBoss(boss: any, { windowTurns = BOSS_WINDOW_TURNS } = {}) {
+export function assessBoss(boss: BossLike, { windowTurns = BOSS_WINDOW_TURNS } = {}) {
   const amount = Number(boss?.target?.amount) || 0;
   const perTurnTarget = windowTurns > 0 ? amount / windowTurns : amount;
   const tier = bandFor(perTurnTarget);
   const modifierType = boss?.modifier?.type;
-  const modifier = MODIFIER_LABEL[modifierType] || { label: modifierType || "—", hint: "" };
+  const modifier = (modifierType ? MODIFIER_LABEL[modifierType] : undefined) || { label: modifierType || "—", hint: "" };
   return {
     boss,
     perTurnTarget: Number(perTurnTarget.toFixed(2)),
@@ -65,8 +72,8 @@ export function assessBoss(boss: any, { windowTurns = BOSS_WINDOW_TURNS } = {}) 
 }
 
 /** Assess every boss in the catalog. */
-export function assessAllBosses({ bosses = BOSSES, windowTurns = BOSS_WINDOW_TURNS } = {}) {
-  return (Array.isArray(bosses) ? bosses : []).map((b) => assessBoss(b, { windowTurns }));
+export function assessAllBosses({ bosses = BOSSES as unknown as BossLike[], windowTurns = BOSS_WINDOW_TURNS } = {}) {
+  return (Array.isArray(bosses) ? bosses : []).map((b) => assessBoss(b as BossLike, { windowTurns }));
 }
 
 export const BOSS_DIFFICULTY_TIERS = YIELD_TIERS.map((t) => t.id);

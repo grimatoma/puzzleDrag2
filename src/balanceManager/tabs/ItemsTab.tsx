@@ -6,6 +6,7 @@
 // resources + plain items + tools.
 
 import { useState, useMemo } from "react";
+import type { ReactNode } from "react";
 import { ITEMS } from "../../constants.js";
 import { buildRecipesByOutput } from "../recipeCatalog.js";
 import { tagsForItemKey, sourceTagsForItem } from "../../features/inventory/tags.js";
@@ -16,6 +17,25 @@ import {
 } from "../shared.jsx";
 import { TOOL_POWERS, getToolPower, defaultsForToolPower, defaultBoardAnimForPower } from "../../config/toolPowers.js";
 import { CardAttachmentFooter, RelationalFooter, CraftingRecipeLinks } from "../relational.jsx";
+import type { BalanceDraft, TabProps } from "../index.jsx";
+
+interface ItemRecord {
+  kind?: string;
+  label?: string;
+  color?: number;
+  value?: number;
+  sellable?: boolean;
+  desc?: string;
+  description?: string;
+  effect?: string;
+  target?: string;
+  anim?: string;
+  ms?: number;
+  power?: { id?: string };
+  [extra: string]: unknown;
+}
+
+type ItemOverride = Partial<ItemRecord>;
 
 const FILTERS = [
   { id: "all",      label: "All",       iconKey: "ui_build" },
@@ -24,21 +44,21 @@ const FILTERS = [
   { id: "item",     label: "Items",     iconKey: "ui_star"  },
 ];
 
-function isItem(r: any) {
+function isItem(r: ItemRecord) {
   return r.kind !== "tile";
 }
 
 // What makes an item a "tool" is that it has a tool power wired (stored as `effect` in data).
-function isTool(r: any) {
+function isTool(r: ItemRecord) {
   return r.kind === "tool" || !!r.effect;
 }
 
-export default function ItemsTab({ draft, updateDraft }: { draft: any; updateDraft: any }) {
+export default function ItemsTab({ draft, updateDraft }: TabProps) {
   const [filter, setFilter] = useState("all");
   const [search, setSearch] = useState("");
 
-  const itemEntries = useMemo(
-    () => Object.entries(ITEMS)
+  const itemEntries = useMemo<Array<[string, ItemRecord]>>(
+    () => (Object.entries(ITEMS) as Array<[string, ItemRecord]>)
       .filter(([, r]) => isItem(r))
       .sort((a, b) => a[0].localeCompare(b[0])),
     [],
@@ -55,16 +75,18 @@ export default function ItemsTab({ draft, updateDraft }: { draft: any; updateDra
     return true;
   });
 
-  function patchItem(key: any, fields: any) {
-    updateDraft((d: any) => {
-      const cur = d.items[key] || {};
-      const next = { ...cur, ...fields };
+  function patchItem(key: string, fields: ItemOverride & Record<string, unknown>) {
+    updateDraft((d: BalanceDraft) => {
+      const items = d.items as Record<string, ItemOverride>;
+      const cur: ItemOverride = items[key] || {};
+      const next: ItemOverride & Record<string, unknown> = { ...cur, ...fields };
       // Drop empty patches to keep the JSON tidy.
       for (const k of Object.keys(next)) {
-        if (next[k] === "" || next[k] === undefined) delete next[k];
+        const v = (next as Record<string, unknown>)[k];
+        if (v === "" || v === undefined) delete (next as Record<string, unknown>)[k];
       }
-      if (Object.keys(next).length === 0) delete d.items[key];
-      else d.items[key] = next;
+      if (Object.keys(next).length === 0) delete items[key];
+      else items[key] = next;
     });
   }
 
@@ -91,7 +113,7 @@ export default function ItemsTab({ draft, updateDraft }: { draft: any; updateDra
       {/* Items list */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
         {filtered.map(([key, r]) => {
-          const patch = draft.items[key] || {};
+          const patch: ItemOverride = (draft.items[key] as ItemOverride | undefined) || {};
           const eff = {
             label:       patch.label       ?? r.label,
             color:       patch.color       ?? r.color,
@@ -130,7 +152,7 @@ export default function ItemsTab({ draft, updateDraft }: { draft: any; updateDra
                     {sourceTags.map((tag) => <Pill key={`source-${tag}`}>{tag}</Pill>)}
                     {dirty && <Pill color="#fff" bg={COLORS.ember}>edited</Pill>}
                     {dirty && (
-                      <SmallButton variant="ghost" onClick={() => updateDraft((d: any) => { delete d.items[key]; })}>
+                      <SmallButton variant="ghost" onClick={() => updateDraft((d: BalanceDraft) => { delete d.items[key]; })}>
                         revert
                       </SmallButton>
                     )}
@@ -138,7 +160,7 @@ export default function ItemsTab({ draft, updateDraft }: { draft: any; updateDra
 
                   <div>
                     <Label>Label</Label>
-                    <TextField value={eff.label} onChange={(v: any) => patchItem(key, { label: v })} />
+                    <TextField value={eff.label} onChange={(v: string) => patchItem(key, { label: v })} />
                   </div>
                   <div className="col-span-2 flex items-end gap-3 flex-wrap">
                     <label className="text-[11px] flex items-center gap-2">
@@ -152,7 +174,7 @@ export default function ItemsTab({ draft, updateDraft }: { draft: any; updateDra
                     {eff.sellable && (
                       <div>
                         <Label>Sale value</Label>
-                        <NumberField value={eff.value} min={0} max={9999} onChange={(v: any) => patchItem(key, { value: v })} width={80} />
+                        <NumberField value={eff.value} min={0} max={9999} onChange={(v: number) => patchItem(key, { value: v })} width={80} />
                       </div>
                     )}
                   </div>
@@ -161,7 +183,7 @@ export default function ItemsTab({ draft, updateDraft }: { draft: any; updateDra
                   {!tool && (
                     <div>
                       <Label>Color</Label>
-                      <ColorField value={eff.color} onChange={(v: any) => patchItem(key, { color: v })} />
+                      <ColorField value={eff.color} onChange={(v: number) => patchItem(key, { color: v })} />
                     </div>
                   )}
 
@@ -171,7 +193,7 @@ export default function ItemsTab({ draft, updateDraft }: { draft: any; updateDra
                       rows={2}
                       value={eff.desc || eff.description}
                       placeholder="Short flavor text shown in tooltips."
-                      onChange={(v: any) => patchItem(key, { desc: v, description: v })}
+                      onChange={(v: string) => patchItem(key, { desc: v, description: v })}
                     />
                   </div>
                 </div>
@@ -188,9 +210,9 @@ export default function ItemsTab({ draft, updateDraft }: { draft: any; updateDra
                           { value: "", label: "— pick power —" },
                           ...TOOL_POWERS.map((p) => ({ value: p.id, label: `${p.name} — ${p.id}` })),
                         ]}
-                        onChange={(v: any) => {
-                          const defaults = defaultsForToolPower(v);
-                          patchItem(key, { effect: v, target: defaults.target ?? "", ...defaults });
+                        onChange={(v: string) => {
+                          const defaults = defaultsForToolPower(v) as Record<string, unknown>;
+                          patchItem(key, { effect: v, target: (defaults.target as string | undefined) ?? "", ...defaults });
                         }}
                       />
                       {getToolPower(eff.effect)?.desc && (
@@ -206,13 +228,13 @@ export default function ItemsTab({ draft, updateDraft }: { draft: any; updateDra
                           <Label>{p.label}</Label>
                           {p.type === "resourceKey" ? (
                             <Select value={effRec[p.key] ?? ""} options={resourceKeyOptions()}
-                              onChange={(v: any) => patchItem(key, { [p.key]: v })} />
+                              onChange={(v: string) => patchItem(key, { [p.key]: v })} />
                           ) : p.type === "tileKey" ? (
                             <Select value={effRec[p.key] ?? ""} options={tileKeyOptions()}
-                              onChange={(v: any) => patchItem(key, { [p.key]: v })} />
+                              onChange={(v: string) => patchItem(key, { [p.key]: v })} />
                           ) : p.type === "hazard" ? (
                             <Select value={effRec[p.key] ?? ""} options={hazardOptions()}
-                              onChange={(v: any) => patchItem(key, { [p.key]: v })} />
+                              onChange={(v: string) => patchItem(key, { [p.key]: v })} />
                           ) : null}
                         </div>
                       );
@@ -223,14 +245,14 @@ export default function ItemsTab({ draft, updateDraft }: { draft: any; updateDra
                         value={animMatchesDefault ? "" : eff.anim}
                         options={(() => {
                           const known = [...new Set(
-                            Object.values(ITEMS).filter((it) => it.kind === "tool" && it.anim).map((it) => it.anim),
+                            (Object.values(ITEMS) as ItemRecord[]).filter((it) => it.kind === "tool" && it.anim).map((it) => it.anim as string),
                           )].sort();
                           const emptyLabel = def ? "(use power default)" : "— none —";
-                          const opts = [{ value: "", label: emptyLabel }, ...known.map((a) => ({ value: a, label: a }))];
+                          const opts: Array<{ value: string; label: string }> = [{ value: "", label: emptyLabel }, ...known.map((a) => ({ value: a, label: a }))];
                           if (eff.anim && !known.includes(eff.anim) && !animMatchesDefault) opts.unshift({ value: eff.anim, label: `${eff.anim} (custom)` });
                           return opts;
                         })()}
-                        onChange={(v: any) => {
+                        onChange={(v: string) => {
                           if (v === "") {
                             patchItem(key, { anim: "", ms: 0 });
                           } else {
@@ -241,7 +263,7 @@ export default function ItemsTab({ draft, updateDraft }: { draft: any; updateDra
                     </div>
                     <div>
                       <Label>Anim MS</Label>
-                      <NumberField value={eff.ms} min={0} max={5000} onChange={(v: any) => patchItem(key, { ms: v })} width={80} />
+                      <NumberField value={eff.ms} min={0} max={5000} onChange={(v: number) => patchItem(key, { ms: v })} width={80} />
                     </div>
                     {def && (
                       <div className="col-span-2 text-[10px]" style={{ color: COLORS.inkSubtle }}>
@@ -272,7 +294,7 @@ export default function ItemsTab({ draft, updateDraft }: { draft: any; updateDra
   );
 }
 
-function Label({ children }: { children: any }) {
+function Label({ children }: { children: ReactNode }) {
   return (
     <div className="text-[10px] font-bold uppercase tracking-wide mb-0.5" style={{ color: COLORS.inkSubtle }}>
       {children}

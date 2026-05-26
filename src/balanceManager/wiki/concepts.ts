@@ -21,7 +21,7 @@ import { TILE_DISCOVERY_METHODS } from "../../config/tileDiscoveryMethods.js";
 import { KNOWN_VIEWS, KNOWN_MODALS } from "../../router.js";
 import { BOSSES } from "../../features/bosses/data.js";
 
-function byName(a: any, b: any) {
+function byName<T extends { name?: unknown }>(a: T, b: T): number {
   const an = String(a.name ?? "").toLowerCase();
   const bn = String(b.name ?? "").toLowerCase();
   if (an < bn) return -1;
@@ -29,9 +29,16 @@ function byName(a: any, b: any) {
   return 0;
 }
 
-function itemsOfKind(kind: any) {
-  const out = [];
-  for (const [key, item] of Object.entries(ITEMS)) {
+interface ItemKindEntry {
+  key: string;
+  name: string;
+  iconKey: string;
+  color?: number;
+}
+
+function itemsOfKind(kind: string): ItemKindEntry[] {
+  const out: ItemKindEntry[] = [];
+  for (const [key, item] of Object.entries(ITEMS) as Array<[string, { kind?: string; label?: string; color?: number }]>) {
     if (item?.kind !== kind) continue;
     out.push({
       key,

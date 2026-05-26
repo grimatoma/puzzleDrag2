@@ -9,12 +9,35 @@
 // src/config/applyOverrides.js.
 
 import { useMemo, useState } from "react";
-import { ZONES, ZONE_CATEGORIES, ZONE_UPGRADE_TARGET_GOLD } from "../../features/zones/data.js";
+import type { ReactNode } from "react";
+import { ZONES, ZONE_CATEGORIES, ZONE_UPGRADE_TARGET_GOLD, type Zone } from "../../features/zones/data.js";
 import { BUILDINGS } from "../../constants.js";
 import {
   COLORS, NumberField, Select, SmallButton, Pill, Card, SearchBar, SearchAndAddPicker,
 } from "../shared.jsx";
 import { BuildingIllustration } from "../../ui/Town.jsx";
+import type { BalanceDraft, TabProps } from "../index.jsx";
+
+interface BuildingDef {
+  id: string;
+  name: string;
+  desc?: string;
+  biome?: string;
+  [extra: string]: unknown;
+}
+
+interface ZoneOverride {
+  name?: string;
+  hasFarm?: boolean;
+  hasMine?: boolean;
+  hasWater?: boolean;
+  buildings?: string[];
+  baseTurns?: number;
+  entryCost?: { coins?: number };
+  upgradeMap?: Record<string, string>;
+  seasonDrops?: Record<string, Record<string, number>>;
+  [extra: string]: unknown;
+}
 
 const SEASON_NAMES = ["Spring", "Summer", "Autumn", "Winter"];
 
@@ -24,7 +47,7 @@ const TARGET_OPTIONS = [
   { value: ZONE_UPGRADE_TARGET_GOLD, label: "gold (board-only tile)" },
 ];
 
-function Label({ children }: { children: any }) {
+function Label({ children }: { children: ReactNode }) {
   return (
     <div className="text-[10px] font-bold uppercase tracking-wide mb-0.5" style={{ color: COLORS.inkSubtle }}>
       {children}
@@ -32,7 +55,7 @@ function Label({ children }: { children: any }) {
   );
 }
 
-function Toggle({ value, onChange, label }: { value: any; onChange: any; label: any }) {
+function Toggle({ value, onChange, label }: { value: boolean; onChange: (v: boolean) => void; label: ReactNode }) {
   return (
     <button
       onClick={() => onChange(!value)}
@@ -49,11 +72,11 @@ function Toggle({ value, onChange, label }: { value: any; onChange: any; label: 
   );
 }
 
-export default function ZonesTab({ draft, updateDraft }: { draft: any; updateDraft: any }) {
+export default function ZonesTab({ draft, updateDraft }: TabProps) {
   const [search, setSearch] = useState("");
-  const zoneList = useMemo(() => Object.values(ZONES), []);
-  const buildingById = useMemo(
-    () => Object.fromEntries(BUILDINGS.map((b) => [b.id, b])),
+  const zoneList = useMemo(() => Object.values(ZONES) as Zone[], []);
+  const buildingById = useMemo<Record<string, BuildingDef>>(
+    () => Object.fromEntries((BUILDINGS as unknown as BuildingDef[]).map((b) => [b.id, b])),
     [],
   );
   const filtered = useMemo(
@@ -65,17 +88,19 @@ export default function ZonesTab({ draft, updateDraft }: { draft: any; updateDra
     [search, zoneList],
   );
 
-  function patch(zoneId: any, fields: any) {
-    updateDraft((d: any) => {
+  function patch(zoneId: string, fields: ZoneOverride) {
+    updateDraft((d: BalanceDraft) => {
       d.zones ??= {};
-      const cur = d.zones[zoneId] || {};
-      const next = { ...cur, ...fields };
+      const zones = d.zones as Record<string, ZoneOverride>;
+      const cur: ZoneOverride = zones[zoneId] || {};
+      const next: ZoneOverride = { ...cur, ...fields };
       // Drop empty fields so the patch stays minimal.
       for (const k of Object.keys(next)) {
-        if (next[k] === "" || next[k] === undefined || next[k] === null) delete next[k];
+        const v = (next as Record<string, unknown>)[k];
+        if (v === "" || v === undefined || v === null) delete (next as Record<string, unknown>)[k];
       }
-      if (Object.keys(next).length === 0) delete d.zones[zoneId];
-      else d.zones[zoneId] = next;
+      if (Object.keys(next).length === 0) delete zones[zoneId];
+      else zones[zoneId] = next;
     });
   }
 
@@ -90,7 +115,7 @@ export default function ZonesTab({ draft, updateDraft }: { draft: any; updateDra
 
       <div className="grid grid-cols-1 gap-3">
         {filtered.map((z) => {
-          const p = (draft.zones || {})[z.id] || {};
+          const p: ZoneOverride = ((draft.zones || {})[z.id] as ZoneOverride | undefined) || {};
           const eff = {
             name:          p.name          ?? z.name          ?? z.id,
             hasFarm:       p.hasFarm       ?? z.hasFarm       ?? false,
@@ -124,7 +149,7 @@ export default function ZonesTab({ draft, updateDraft }: { draft: any; updateDra
                 {dirty && (
                   <SmallButton
                     variant="ghost"
-                    onClick={() => updateDraft((d: any) => { d.zones ??= {}; delete d.zones[z.id]; })}
+                    onClick={() => updateDraft((d: BalanceDraft) => { d.zones ??= {}; delete d.zones[z.id]; })}
                   >
                     revert
                   </SmallButton>
@@ -154,17 +179,17 @@ export default function ZonesTab({ draft, updateDraft }: { draft: any; updateDra
                   <Toggle
                     value={eff.hasFarm}
                     label="🌾 Farm"
-                    onChange={(v: any) => patch(z.id, { hasFarm: v })}
+                    onChange={(v: boolean) => patch(z.id, { hasFarm: v })}
                   />
                   <Toggle
                     value={eff.hasMine}
                     label="⛏ Mine"
-                    onChange={(v: any) => patch(z.id, { hasMine: v })}
+                    onChange={(v: boolean) => patch(z.id, { hasMine: v })}
                   />
                   <Toggle
                     value={eff.hasWater}
                     label="⚓ Harbor"
-                    onChange={(v: any) => patch(z.id, { hasWater: v })}
+                    onChange={(v: boolean) => patch(z.id, { hasWater: v })}
                   />
                 </div>
               </div>
@@ -175,7 +200,7 @@ export default function ZonesTab({ draft, updateDraft }: { draft: any; updateDra
                 <BuildingsPicker
                   selectedIds={eff.buildings}
                   buildingById={buildingById}
-                  onChange={(next: any) => patch(z.id, { buildings: next })}
+                  onChange={(next: string[]) => patch(z.id, { buildings: next })}
                 />
               </div>
 
@@ -188,7 +213,7 @@ export default function ZonesTab({ draft, updateDraft }: { draft: any; updateDra
                     min={4}
                     max={64}
                     width={70}
-                    onChange={(v: any) => patch(z.id, { baseTurns: v })}
+                    onChange={(v: number) => patch(z.id, { baseTurns: v })}
                   />
                 </div>
                 <div>
@@ -198,7 +223,7 @@ export default function ZonesTab({ draft, updateDraft }: { draft: any; updateDra
                     min={0}
                     max={9999}
                     width={80}
-                    onChange={(v: any) => patch(z.id, { entryCost: { coins: v } })}
+                    onChange={(v: number) => patch(z.id, { entryCost: { coins: v } })}
                   />
                 </div>
               </div>
@@ -220,8 +245,8 @@ export default function ZonesTab({ draft, updateDraft }: { draft: any; updateDra
                         value={eff.upgradeMap[src] ?? ""}
                         options={TARGET_OPTIONS}
                         width={180}
-                        onChange={(v: any) => {
-                          const next = { ...eff.upgradeMap };
+                        onChange={(v: string) => {
+                          const next: Record<string, string> = { ...eff.upgradeMap };
                           if (!v) delete next[src];
                           else next[src] = v;
                           patch(z.id, { upgradeMap: next });
@@ -281,11 +306,11 @@ export default function ZonesTab({ draft, updateDraft }: { draft: any; updateDra
                                   max={1}
                                   step={0.05}
                                   width={70}
-                                  onChange={(v: any) => {
-                                    const nextTable = { ...table };
+                                  onChange={(v: number) => {
+                                    const nextTable: Record<string, number> = { ...table };
                                     if (v <= 0) delete nextTable[cat];
                                     else nextTable[cat] = v;
-                                    const nextDrops = { ...eff.seasonDrops, [season]: nextTable };
+                                    const nextDrops: Record<string, Record<string, number>> = { ...eff.seasonDrops, [season]: nextTable };
                                     patch(z.id, { seasonDrops: nextDrops });
                                   }}
                                 />
@@ -328,7 +353,7 @@ export default function ZonesTab({ draft, updateDraft }: { draft: any; updateDra
   );
 }
 
-function BuildingIcon({ id, size = 28 }: { id: any; size?: any }) {
+function BuildingIcon({ id, size = 28 }: { id: string; size?: number }) {
   return (
     <div
       className="relative shrink-0 rounded border overflow-hidden"
@@ -340,15 +365,15 @@ function BuildingIcon({ id, size = 28 }: { id: any; size?: any }) {
   );
 }
 
-function BuildingsPicker({ selectedIds, buildingById, onChange }: { selectedIds: any; buildingById: any; onChange: any }) {
-  const selected = useMemo(
+function BuildingsPicker({ selectedIds, buildingById, onChange }: { selectedIds: string[] | undefined; buildingById: Record<string, BuildingDef>; onChange: (next: string[]) => void }) {
+  const selected: string[] = useMemo(
     () => (Array.isArray(selectedIds) ? selectedIds : []),
     [selectedIds],
   );
 
   const pickerOptions = useMemo(() => {
     const taken = new Set(selected);
-    return BUILDINGS
+    return (BUILDINGS as unknown as BuildingDef[])
       .filter((b) => !taken.has(b.id))
       .map((b) => ({
         id: b.id,
@@ -369,12 +394,12 @@ function BuildingsPicker({ selectedIds, buildingById, onChange }: { selectedIds:
       }));
   }, [selected]);
 
-  function addBuilding(id: any) {
+  function addBuilding(id: string) {
     if (selected.includes(id)) return;
     onChange([...selected, id]);
   }
 
-  function removeBuilding(id: any) {
+  function removeBuilding(id: string) {
     onChange(selected.filter((bid) => bid !== id));
   }
 

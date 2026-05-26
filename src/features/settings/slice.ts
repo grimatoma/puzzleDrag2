@@ -1,10 +1,11 @@
 import { STORAGE_KEYS } from "../../constants.js";
+import type { Action, GameState } from "../../types/state.js";
 const STORAGE_KEY = STORAGE_KEYS.settings;
 
-function loadSettings() {
+function loadSettings(): Record<string, unknown> | null {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return JSON.parse(raw);
+    if (raw) return JSON.parse(raw) as Record<string, unknown>;
   } catch (e) { console.warn("[hearth] settings data corrupt, using defaults:", e); }
   return null;
 }
@@ -14,7 +15,7 @@ function loadSettings() {
  * Called from state.runActionEffects after the reducer has run, so the
  * reducer itself stays pure.
  */
-export function persistSettings(settings) {
+export function persistSettings(settings: Record<string, unknown>): void {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
   } catch { /* storage unavailable */ }
@@ -48,18 +49,20 @@ export const initial = {
 
 // Reducer is pure: any localStorage writes/clears triggered by these actions
 // happen in state.runActionEffects after this returns.
-export function reduce(state, action) {
+export function reduce(state: GameState, action: Action): GameState {
   switch (action.type) {
     case 'SETTINGS/TOGGLE': {
+      const key = action.key as string;
+      const currentSettings = (state.settings ?? {}) as Record<string, unknown>;
       const settings = {
-        ...state.settings,
-        [action.key]: !state.settings[action.key],
+        ...currentSettings,
+        [key]: !currentSettings[key],
       };
       return { ...state, settings };
     }
 
     case 'SETTINGS/SET_TAB':
-      return { ...state, settingsTab: action.tab };
+      return { ...state, settingsTab: action.tab as string };
 
     case 'SETTINGS/OPEN_DEBUG':
       return { ...state, modal: 'debug' };
@@ -85,9 +88,10 @@ export function reduce(state, action) {
 
     case 'SETTINGS/SHOW_TUTORIAL': {
       // The persisted tutorial-seen flag is cleared by runActionEffects.
-      const next = { ...state, modal: 'tutorial' };
+      const next: GameState = { ...state, modal: 'tutorial' };
       if (state.tutorial) {
-        next.tutorial = { ...state.tutorial, active: true, step: 0, seen: false };
+        const tutorial = state.tutorial as Record<string, unknown>;
+        next.tutorial = { ...tutorial, active: true, step: 0, seen: false };
       }
       return next;
     }

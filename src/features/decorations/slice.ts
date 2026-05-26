@@ -1,7 +1,15 @@
 import { DECORATIONS } from "./data.js";
 import { locBuilt } from "../../locBuilt.js";
+import type { Action, GameState } from "../../types/state.js";
 
 export const initial = {};
+
+interface DecorationDef {
+  id: string;
+  name: string;
+  cost: Record<string, number>;
+  influence: number;
+}
 
 /**
  * BUILD_DECORATION reducer.
@@ -9,11 +17,14 @@ export const initial = {};
  * credits influence. Repeatable — same grant on every build.
  * Returns state unchanged if cost unmet.
  */
-export function reduce(state, action) {
+export function reduce(state: GameState, action: Action): GameState {
   if (action.type !== "BUILD_DECORATION") return state;
 
-  const { id } = action.payload ?? {};
-  const def = DECORATIONS[id];
+  const payload = (action.payload as { id?: string } | undefined) ?? {};
+  const id = payload.id;
+  if (!id) return state;
+  const decorationsMap = DECORATIONS as Record<string, DecorationDef | undefined>;
+  const def = decorationsMap[id];
   if (!def) return state;
 
   const { cost, influence } = def;
@@ -25,19 +36,20 @@ export function reduce(state, action) {
   const inv = state.inventory ?? {};
   for (const [k, v] of Object.entries(cost)) {
     if (k === "coins") continue;
-    if ((inv[k] ?? 0) < v) return state;
+    if ((inv[k] ?? 0) < (v as number)) return state;
   }
 
   // Deduct costs
-  const newInv = { ...inv };
+  const newInv: Record<string, number> = { ...inv };
   for (const [k, v] of Object.entries(cost)) {
     if (k === "coins") continue;
-    newInv[k] = (newInv[k] ?? 0) - v;
+    newInv[k] = (newInv[k] ?? 0) - (v as number);
   }
 
-  const loc = state.mapCurrent ?? "home";
-  const lb = locBuilt(state);
-  const prevCount = lb.decorations?.[id] ?? 0;
+  const loc = (state.mapCurrent as string | undefined) ?? "home";
+  const lb = locBuilt(state) as { decorations?: Record<string, number>; [k: string]: unknown };
+  const decorations: Record<string, number> = lb.decorations ?? {};
+  const prevCount = decorations[id] ?? 0;
 
   return {
     ...state,
@@ -49,7 +61,7 @@ export function reduce(state, action) {
       [loc]: {
         ...lb,
         decorations: {
-          ...(lb.decorations ?? {}),
+          ...decorations,
           [id]: prevCount + 1,
         },
       },

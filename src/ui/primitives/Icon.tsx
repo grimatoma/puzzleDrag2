@@ -2,17 +2,19 @@ import { useEffect, useRef } from "react";
 import { iconColor, iconLabel } from "../../textures/iconRegistry.js";
 import { paintIcon } from "../../textures/paintIcon.js";
 
-const SVG_REGISTRY: Record<string, any> = {};
+type SvgRender = (props: { size: number; fill: string }) => React.ReactNode;
+const SVG_REGISTRY: Record<string, SvgRender> = {};
 const WARNED = new Set<string>();
 
-export function registerSvgIcons(map: any) {
+export function registerSvgIcons(map: Record<string, unknown> | null | undefined) {
   if (!map || typeof map !== "object") return;
   for (const key of Object.keys(map)) {
-    if (typeof map[key] === "function") SVG_REGISTRY[key] = map[key];
+    const value = (map as Record<string, unknown>)[key];
+    if (typeof value === "function") SVG_REGISTRY[key] = value as SvgRender;
   }
 }
 
-export function hasIcon(key: any) {
+export function hasIcon(key: string | null | undefined) {
   if (!key) return false;
   if (SVG_REGISTRY[key]) return true;
   return iconColor(key) !== null;
@@ -34,23 +36,23 @@ const TONE_FILL: Record<string, string> = {
   moss:    "var(--moss)",
 };
 
-function placeholderLetter(key: any) {
+function placeholderLetter(key: string | null | undefined) {
   if (!key) return "?";
   const idx = key.indexOf("_");
   const seg = idx >= 0 ? key.slice(idx + 1) : key;
   return (seg.charAt(0) || "?").toUpperCase();
 }
 
-function labelForKey(key: any) {
+function labelForKey(key: string | null | undefined) {
+  if (!key) return "";
   const fromRegistry = iconLabel(key);
   if (fromRegistry) return fromRegistry;
-  if (!key) return "";
   const idx = key.lastIndexOf("_");
   const seg = idx >= 0 ? key.slice(idx + 1) : key;
   return seg.charAt(0).toUpperCase() + seg.slice(1);
 }
 
-function CanvasIcon({ iconKey, size, tone, title }: { iconKey: any; size: any; tone: any; title?: any }) {
+function CanvasIcon({ iconKey, size, tone, title }: { iconKey: string; size: number; tone: string; title?: string }) {
   const ref = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -89,7 +91,7 @@ function CanvasIcon({ iconKey, size, tone, title }: { iconKey: any; size: any; t
   );
 }
 
-function Placeholder({ iconKey, size, title }: { iconKey: any; size: any; title?: any }) {
+function Placeholder({ iconKey, size, title }: { iconKey: string | null | undefined; size: number; title?: string }) {
   const letter = placeholderLetter(iconKey);
   return (
     <span
@@ -110,10 +112,11 @@ function Placeholder({ iconKey, size, title }: { iconKey: any; size: any; title?
   );
 }
 
-export default function Icon({ iconKey, size = 20, tone = "inherit", title }: { iconKey: any; size?: number; tone?: string; title?: any }) {
+export default function Icon({ iconKey, size = 20, tone = "inherit", title }: { iconKey: string | null | undefined; size?: number; tone?: string; title?: string }) {
   const label = title != null ? title : labelForKey(iconKey);
+  const key = iconKey ?? "";
 
-  const svgRender = SVG_REGISTRY[iconKey];
+  const svgRender = key ? SVG_REGISTRY[key] : undefined;
   if (svgRender) {
     const fill = TONE_FILL[tone] || TONE_FILL.inherit;
     return (
@@ -136,8 +139,8 @@ export default function Icon({ iconKey, size = 20, tone = "inherit", title }: { 
     );
   }
 
-  if (iconColor(iconKey) !== null) {
-    return <CanvasIcon iconKey={iconKey} size={size} tone={tone} title={label} />;
+  if (key && iconColor(key) !== null) {
+    return <CanvasIcon iconKey={key} size={size} tone={tone} title={label} />;
   }
 
   if (iconKey && !WARNED.has(iconKey)) {

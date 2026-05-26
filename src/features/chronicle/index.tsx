@@ -1,18 +1,20 @@
 import Icon from "../../ui/Icon.jsx";
 import { STORY_BEATS } from "../../story.js";
 import FeaturePanel from "../../ui/primitives/FeaturePanel.jsx";
+import type { Dispatch, GameState } from "../../types/state";
 
 export const viewKey = "chronicle";
 
-export default function Chronicle({ state, dispatch }) {
-  const { flags = {} } = state.story || {};
-  
+export default function Chronicle({ state, dispatch }: { state: GameState; dispatch: Dispatch }) {
+  const story = (state.story || {}) as { flags?: Record<string, unknown> };
+  const flags: Record<string, unknown> = story.flags ?? {};
+
   // Combine completed beats and choiceLog into a single timeline
   // We identify a beat as "completed" if its onComplete flag is set.
   const completedBeats = STORY_BEATS.filter(b => {
     if (!b.onComplete) return false;
     const flag = b.onComplete.setFlag;
-    if (Array.isArray(flag)) return flag.some(f => flags[f]);
+    if (Array.isArray(flag)) return flag.some((f: string) => flags[f]);
     return flags[flag];
   });
 

@@ -4,16 +4,18 @@
 // per-type coin/resource cost and increments the hired count (capped at maxCount).
 // Fire decrements with no refund.
 import { TYPE_WORKER_MAP, defaultWorkersSlice, nextHireCost, nextHireResourceCost } from "./data.js";
+import type { Action, GameState } from "../../types/state.js";
 
 export const initial = defaultWorkersSlice();
 
-export function reduce(state: any, action: any) {
+export function reduce(state: GameState, action: Action): GameState {
   if (action.type === "WORKERS/HIRE") {
-    const id = action.payload?.id;
+    const payload = (action.payload ?? {}) as { id?: string };
+    const id = payload.id ?? "";
     const def = TYPE_WORKER_MAP[id];
     if (!def) return state;
 
-    const hired = state.workers?.hired ?? {};
+    const hired = (state.workers?.hired ?? {}) as Record<string, number>;
     const cur = hired[id] ?? 0;
     if (cur >= def.maxCount) return state;
 
@@ -44,10 +46,11 @@ export function reduce(state: any, action: any) {
   }
 
   if (action.type === "WORKERS/FIRE") {
-    const id = action.payload?.id;
+    const payload = (action.payload ?? {}) as { id?: string };
+    const id = payload.id ?? "";
     const def = TYPE_WORKER_MAP[id];
     if (!def) return state;
-    const hired = state.workers?.hired ?? {};
+    const hired = (state.workers?.hired ?? {}) as Record<string, number>;
     const cur = hired[id] ?? 0;
     if (cur <= 0) return state;
     return {

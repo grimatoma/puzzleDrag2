@@ -50,7 +50,7 @@ export default function WikiTab() {
         </div>
       </div>
 
-      <EntryGrid entries={entries} />
+      <EntryGrid entries={entries as unknown as import("../wiki/EntryGrid.jsx").WikiEntry[]} />
     </div>
   );
 }

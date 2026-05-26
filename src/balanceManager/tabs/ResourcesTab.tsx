@@ -12,6 +12,7 @@
 // concepts with their own tabs.
 
 import { useState, useMemo } from "react";
+import type { ReactNode } from "react";
 import { ITEMS } from "../../constants.js";
 import { buildRecipesByOutput } from "../recipeCatalog.js";
 import {
@@ -20,6 +21,20 @@ import {
 } from "../shared.jsx";
 import { buildItemReferenceIndex } from "../itemReferences.js";
 import { RelationalFooter, CraftingRecipeLinks, WhereUsedLinks } from "../relational.jsx";
+import type { BalanceDraft, TabProps } from "../index.jsx";
+
+interface ResourceRecord {
+  kind?: string;
+  biome?: string;
+  label?: string;
+  color?: number;
+  value?: number;
+  desc?: string;
+  description?: string;
+  [extra: string]: unknown;
+}
+
+type ResourceOverride = Partial<ResourceRecord>;
 
 const BIOME_FILTERS = [
   { value: "all",  label: "All biomes" },
@@ -41,12 +56,12 @@ const CURRENCIES = [
   { icon: "🏺", label: "Heirloom tokens", note: "Per-biome story tokens: Heirloom Seed · Pact Iron · Tidesinger Pearl." },
 ];
 
-export default function ResourcesTab({ draft, updateDraft }: { draft: any; updateDraft: any }) {
+export default function ResourcesTab({ draft, updateDraft }: TabProps) {
   const [biome, setBiome] = useState("all");
   const [search, setSearch] = useState("");
 
-  const resourceEntries = useMemo(
-    () => Object.entries(ITEMS)
+  const resourceEntries = useMemo<Array<[string, ResourceRecord]>>(
+    () => (Object.entries(ITEMS) as Array<[string, ResourceRecord]>)
       .filter(([, r]) => r.kind === "resource")
       .sort((a, b) => a[0].localeCompare(b[0])),
     [],
@@ -62,16 +77,18 @@ export default function ResourcesTab({ draft, updateDraft }: { draft: any; updat
     return true;
   });
 
-  function patchItem(key: any, fields: any) {
-    updateDraft((d: any) => {
-      const cur = d.items[key] || {};
-      const next = { ...cur, ...fields };
+  function patchItem(key: string, fields: ResourceOverride) {
+    updateDraft((d: BalanceDraft) => {
+      const items = d.items as Record<string, ResourceOverride>;
+      const cur: ResourceOverride = items[key] || {};
+      const next: ResourceOverride & Record<string, unknown> = { ...cur, ...fields };
       // Drop empty patches to keep the JSON tidy.
       for (const k of Object.keys(next)) {
-        if (next[k] === "" || next[k] === undefined) delete next[k];
+        const v = (next as Record<string, unknown>)[k];
+        if (v === "" || v === undefined) delete (next as Record<string, unknown>)[k];
       }
-      if (Object.keys(next).length === 0) delete d.items[key];
-      else d.items[key] = next;
+      if (Object.keys(next).length === 0) delete items[key];
+      else items[key] = next;
     });
   }
 
@@ -122,7 +139,7 @@ export default function ResourcesTab({ draft, updateDraft }: { draft: any; updat
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
         {filtered.map(([key, r]) => {
-          const patch = draft.items[key] || {};
+          const patch: ResourceOverride = (draft.items[key] as ResourceOverride | undefined) || {};
           const eff = {
             label:       patch.label       ?? r.label,
             color:       patch.color       ?? r.color,
@@ -146,7 +163,7 @@ export default function ResourcesTab({ draft, updateDraft }: { draft: any; updat
                     {r.biome && <Pill>{r.biome}</Pill>}
                     {dirty && <Pill color="#fff" bg={COLORS.ember}>edited</Pill>}
                     {dirty && (
-                      <SmallButton variant="ghost" onClick={() => updateDraft((d: any) => { delete d.items[key]; })}>
+                      <SmallButton variant="ghost" onClick={() => updateDraft((d: BalanceDraft) => { delete d.items[key]; })}>
                         revert
                       </SmallButton>
                     )}
@@ -154,15 +171,15 @@ export default function ResourcesTab({ draft, updateDraft }: { draft: any; updat
 
                   <div>
                     <Label>Label</Label>
-                    <TextField value={eff.label} onChange={(v: any) => patchItem(key, { label: v })} />
+                    <TextField value={eff.label} onChange={(v: string) => patchItem(key, { label: v })} />
                   </div>
                   <div>
                     <Label>Sale value</Label>
-                    <NumberField value={eff.value} min={0} max={9999} onChange={(v: any) => patchItem(key, { value: v })} width={80} />
+                    <NumberField value={eff.value} min={0} max={9999} onChange={(v: number) => patchItem(key, { value: v })} width={80} />
                   </div>
                   <div>
                     <Label>Color</Label>
-                    <ColorField value={eff.color} onChange={(v: any) => patchItem(key, { color: v })} />
+                    <ColorField value={eff.color} onChange={(v: number) => patchItem(key, { color: v })} />
                   </div>
                   <div className="col-span-2">
                     <Label>Description</Label>
@@ -170,7 +187,7 @@ export default function ResourcesTab({ draft, updateDraft }: { draft: any; updat
                       rows={2}
                       value={eff.desc || eff.description}
                       placeholder="Short flavor text shown in tooltips."
-                      onChange={(v: any) => patchItem(key, { desc: v, description: v })}
+                      onChange={(v: string) => patchItem(key, { desc: v, description: v })}
                     />
                   </div>
                 </div>
@@ -203,7 +220,7 @@ export default function ResourcesTab({ draft, updateDraft }: { draft: any; updat
   );
 }
 
-function Label({ children }: { children: any }) {
+function Label({ children }: { children: ReactNode }) {
   return (
     <div className="text-[10px] font-bold uppercase tracking-wide mb-0.5" style={{ color: COLORS.inkSubtle }}>
       {children}

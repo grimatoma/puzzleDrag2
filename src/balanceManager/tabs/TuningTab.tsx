@@ -10,20 +10,30 @@
 import { CRAFT_QUEUE_HOURS, CRAFT_GEM_SKIP_COST, MIN_EXPEDITION_TURNS, DEFAULT_HOME_BIOME, SETTLEMENT_BIOMES } from "../../constants.js";
 import { SETTLEMENT_FOUNDING_BASE_COINS, SETTLEMENT_FOUNDING_GROWTH } from "../../features/zones/data.js";
 import { COLORS, NumberField, Select, FieldRow, Card } from "../shared.jsx";
+import type { BalanceDraft, TabProps } from "../index.jsx";
+
+interface NumberFieldProps {
+  min?: number;
+  max?: number;
+  step?: number;
+  width?: number | string;
+}
 
 const HOME_BIOME_OPTIONS = (SETTLEMENT_BIOMES.farm ?? []).map((b) => ({ value: b.id, label: `${b.icon} ${b.name}` }));
 
-export default function TuningTab({ draft, updateDraft }: { draft: any; updateDraft: any }) {
-  const t = draft.tuning ?? {};
-  function patch(key: any, v: any) {
-    updateDraft((d: any) => {
-      d.tuning = { ...(d.tuning ?? {}), [key]: v };
-      if (v === "" || v === undefined || v === null) delete d.tuning[key];
-      if (Object.keys(d.tuning).length === 0) delete d.tuning;
+export default function TuningTab({ draft, updateDraft }: TabProps) {
+  const t = (draft.tuning ?? {}) as Record<string, unknown>;
+  function patch(key: string, v: number | string | null | undefined) {
+    updateDraft((d: BalanceDraft) => {
+      const tuning = (d.tuning ?? {}) as Record<string, unknown>;
+      tuning[key] = v as unknown;
+      if (v === "" || v === undefined || v === null) delete tuning[key];
+      d.tuning = tuning;
+      if (Object.keys(tuning).length === 0) delete (d as { tuning?: unknown }).tuning;
     });
   }
-  const num = (key: any, def: any, props = {}) => (
-    <NumberField value={t[key] ?? def} onChange={(v: any) => patch(key, v)} {...props} />
+  const num = (key: string, def: number, props: NumberFieldProps = {}) => (
+    <NumberField value={(t[key] as number | undefined) ?? def} onChange={(v: number) => patch(key, v)} {...props} />
   );
 
   return (
@@ -38,7 +48,7 @@ export default function TuningTab({ draft, updateDraft }: { draft: any; updateDr
         <FieldRow label="Founding cost — base coins" hint="SETTLEMENT_FOUNDING_BASE_COINS — cost of the 2nd settlement">{num("foundingBaseCoins", SETTLEMENT_FOUNDING_BASE_COINS, { min: 0, max: 999999 })}</FieldRow>
         <FieldRow label="Founding cost — growth ×" hint="SETTLEMENT_FOUNDING_GROWTH — multiplier per additional settlement">{num("foundingGrowth", SETTLEMENT_FOUNDING_GROWTH, { min: 1, max: 10, step: 0.1, width: 80 })}</FieldRow>
         <FieldRow label="Home biome" hint="DEFAULT_HOME_BIOME — the pre-founded Vale's biome">
-          <Select value={t.homeBiome ?? DEFAULT_HOME_BIOME} onChange={(v: any) => patch("homeBiome", v)} options={HOME_BIOME_OPTIONS} width={180} />
+          <Select value={(t.homeBiome as string | undefined) ?? DEFAULT_HOME_BIOME} onChange={(v: string) => patch("homeBiome", v)} options={HOME_BIOME_OPTIONS} width={180} />
         </FieldRow>
       </Card>
 

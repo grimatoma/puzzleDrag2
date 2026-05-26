@@ -1,9 +1,10 @@
 import Button from "../../ui/primitives/Button.jsx";
 import { ParchmentDialog } from "../../ui/primitives/Dialog.jsx";
+import type { Dispatch, GameState } from "../../types/state";
 
 export const modalKey = "festivals";
 
-export default function FestivalsModal({ state, dispatch }) {
+export default function FestivalsModal({ state, dispatch }: { state: GameState; dispatch: Dispatch }) {
   if (state.modal !== "festivals") return null;
   const close = () => dispatch({ type: "CLOSE_MODAL" });
   return (

@@ -43,13 +43,13 @@ interface PillProps {
   tone?: string;
   variant?: string;
   size?: string;
-  leading?: any;
-  trailing?: any;
-  anchor?: any;
+  leading?: React.ReactNode;
+  trailing?: React.ReactNode;
+  anchor?: string;
   interactive?: boolean;
   className?: string;
-  children?: any;
-  [x: string]: any;
+  children?: React.ReactNode;
+  [x: string]: unknown;
 }
 
 export default function Pill({

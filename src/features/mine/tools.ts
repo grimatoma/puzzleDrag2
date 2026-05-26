@@ -14,26 +14,28 @@ import {
   applyTransformAdjacent as _applyTransformAdjacent,
   applyTransformAll as _applyTransformAll,
 } from "../../state/boardMutations.js";
+import type { Grid } from "../../types/state";
 
-interface ToolGridCell { key?: string | null; [k: string]: unknown }
-type Board = ToolGridCell[][];
+type Board = Grid;
 
-interface BlastResult { grid: Board; collected: number }
+interface BlastResult { grid: Board; collected: Record<string, number> }
 
 /**
  * Clear every tile within `radius` (default 1) of `(row, col)`. Used by
  * `area_blast` (bomb / explosives). Pure — returns `{ grid, collected }`.
  */
 export function applyAreaBlast(board: Board, row: number, col: number, radius: number = 1): BlastResult {
-  return _applyAreaBlast(board, row, col, radius) as BlastResult;
+  return _applyAreaBlast(board, row, col, radius);
 }
 
 /**
  * Replace matching tiles inside an N-cell radius. Used by Coal Transmuter,
  * Silver Transmuter, Magnet, and other tap-target transforms.
  */
-export function applyTransformAdjacent(board: Board, row: number, col: number, radius: number, fromKeys: string[], toKey: string): Board {
-  return _applyTransformAdjacent(board, row, col, radius, fromKeys, toKey) as Board;
+interface TransformResult { grid: Board; transformed: number }
+
+export function applyTransformAdjacent(board: Board, row: number, col: number, radius: number, fromKeys: string[], toKey: string): TransformResult {
+  return _applyTransformAdjacent(board, row, col, radius, fromKeys, toKey);
 }
 
 /**
@@ -41,6 +43,6 @@ export function applyTransformAdjacent(board: Board, row: number, col: number, r
  * matching tile regardless of distance. Used by Drill (special_dirt →
  * tile_mine_stone) and Trimmer (trees → tile_grass_hay).
  */
-export function applyTransformAll(board: Board, fromKeys: string[], toKey: string): Board {
-  return _applyTransformAll(board, fromKeys, toKey) as Board;
+export function applyTransformAll(board: Board, fromKeys: string[], toKey: string): TransformResult {
+  return _applyTransformAll(board, fromKeys, toKey);
 }

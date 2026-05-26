@@ -184,8 +184,10 @@ interface NodeStatusChipProps {
   tokenCount?: number;
 }
 
+type ChipTone = "default" | "muted" | "success" | "warning" | "danger" | "ember" | "gold" | "slate" | "info";
+
 function NodeStatusChip({ status, target, tokenCount = 0 }: NodeStatusChipProps) {
-  let tone: string, text: string;
+  let tone: ChipTone, text: string;
   switch (status) {
     case "current":               tone = "gold"; text = "◉ You are here"; break;
     case "visited":               tone = "success"; text = "✓ Visited · fast-travel"; break;

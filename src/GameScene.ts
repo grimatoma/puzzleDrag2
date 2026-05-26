@@ -207,8 +207,14 @@ export class GameScene extends Phaser.Scene {
     // Registry and scale listeners — track each so they can be torn down on
     // shutdown. Otherwise scene recreation (HMR, tests, biome reload) leaks
     // handlers that fire against a destroyed scene.
-    const registryListeners: Array<[string, (...args: any[]) => void]> = []; // TODO(ts-migration): tighten registry callback types
-    const onRegistry = (event: string, fn: (...args: any[]) => void) => { // TODO(ts-migration): tighten
+    // Phaser's registry events are dynamic — `changedata-<key>` emits
+    // `(parent, value, previous)` where value/previous depend on the data key.
+    // Typing this further would require a discriminated union of every
+    // registry key; the handlers below narrow each value at their use site.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Phaser registry boundary
+    type RegistryHandler = (...args: any[]) => void;
+    const registryListeners: Array<[string, RegistryHandler]> = [];
+    const onRegistry = (event: string, fn: RegistryHandler) => {
       this.registry.events.on(event, fn);
       registryListeners.push([event, fn]);
     };
@@ -343,14 +349,23 @@ export class GameScene extends Phaser.Scene {
         activeByCategory: this.registry.get("tileCollectionActive") ?? {},
       },
     };
-    const agg = computeAggregatedAbilities(snapshot);
+    // Aggregator returns a channel object (see src/config/abilitiesAggregate
+    // `emptyChannels`); narrow the channels we read off it here.
+    interface AggregatedChannels {
+      thresholdReduce?: Record<string, number>;
+      poolWeight?: Record<string, number>;
+      effectivePoolWeights?: Record<string, number>;
+      bonusYield?: Record<string, number>;
+      seasonBonus?: Record<string, number>;
+    }
+    const agg = computeAggregatedAbilities(snapshot) as AggregatedChannels;
     const eff: Record<string, number> = {};
     for (const [k, v] of Object.entries(UPGRADE_THRESHOLDS)) {
-      eff[k] = Math.max(1, (v as number) - ((agg as any).thresholdReduce?.[k] ?? 0));
+      eff[k] = Math.max(1, (v as number) - (agg.thresholdReduce?.[k] ?? 0));
     }
     // Merge legacy poolWeight (Phase 4) + Phase-9 effectivePoolWeights
-    const mergedPoolWeights: Record<string, number> = { ...(agg as any).poolWeight };
-    for (const [k, v] of Object.entries((agg as any).effectivePoolWeights ?? {})) {
+    const mergedPoolWeights: Record<string, number> = { ...(agg.poolWeight ?? {}) };
+    for (const [k, v] of Object.entries(agg.effectivePoolWeights ?? {})) {
       mergedPoolWeights[k] = (mergedPoolWeights[k] ?? 0) + (v as number);
     }
     this.registry.set("effectiveThresholds",  eff);
@@ -1099,9 +1114,22 @@ export class GameScene extends Phaser.Scene {
    * later board reads.
    */
   playBoardAnimation(name: string, tiles: TileObj[], { tint, ms }: { tint?: number; ms?: number } = {}): void {
-    const animation = (BOARD_ANIMATIONS as Record<string, any>)[resolveBoardAnimName(name)];
+    const resolvedName = resolveBoardAnimName(name);
+    if (!resolvedName) return;
+    interface BoardAnimationDef {
+      kind: string;
+      duration: number;
+      staggerMs?: number;
+      rotationHalfDeg?: number;
+      settleMs?: number;
+      ease?: string;
+    }
+    const animation = (BOARD_ANIMATIONS as Record<string, BoardAnimationDef | undefined>)[resolvedName];
     if (!animation) return;
     if (!tiles || !tiles.length) return;
+
+    const rotHalf = animation.rotationHalfDeg ?? 0;
+    const stagger = animation.staggerMs ?? 0;
 
     if (animation.kind === "fadeOut") {
       tiles.forEach((tile, i) => {
@@ -1111,9 +1139,9 @@ export class GameScene extends Phaser.Scene {
           scaleX: 0,
           scaleY: 0,
           alpha: 0,
-          angle: Phaser.Math.Between(-animation.rotationHalfDeg, animation.rotationHalfDeg),
+          angle: Phaser.Math.Between(-rotHalf, rotHalf),
           duration: this._dur(ms ?? animation.duration),
-          delay: i * animation.staggerMs,
+          delay: i * stagger,
           ease: animation.ease,
           onComplete: () => tile.destroy(),
         });
@@ -1129,7 +1157,7 @@ export class GameScene extends Phaser.Scene {
           targets: tile.sprite,
           scale: this.tileSpriteScale,
           duration: this._dur(ms ?? animation.duration),
-          delay: i * animation.staggerMs,
+          delay: i * stagger,
           ease: animation.ease,
           onComplete: () => tile.sprite.clearTint(),
         });
@@ -1150,7 +1178,7 @@ export class GameScene extends Phaser.Scene {
             this.tweens.add({
               targets: tile.sprite,
               scale: this.tileSpriteScale,
-              duration: this._dur(animation.settleMs),
+              duration: this._dur(animation.settleMs ?? animation.duration),
               onComplete: () => tile.sprite.clearTint(),
             });
           },

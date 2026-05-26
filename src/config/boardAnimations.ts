@@ -39,9 +39,9 @@ export const BOARD_ANIM_ALIASES = Object.freeze({
   bark: "sweep",
 });
 
-export function resolveBoardAnimName(name: any) {
+export function resolveBoardAnimName(name: string | null | undefined): string | null | undefined {
   if (!name) return name;
-  return (BOARD_ANIM_ALIASES as any)[name] ?? name;
+  return (BOARD_ANIM_ALIASES as Record<string, string | undefined>)[name] ?? name;
 }
 
 /** Collapse + fill delays after a sweep in GameScene (ms, pre-_dur). */
@@ -51,14 +51,23 @@ export const SWEEP_COLLAPSE_PIPELINE_MS = 240 + 190 + 210 + 210;
  * How long the animations demo should wait before reloading the scenario.
  * Sweep includes the collapse/fill pipeline; popIn/goldenFlash are tween-only.
  */
-export function demoBoardAnimResetMs(name: any, tileCount = 1) {
-  const animation = (BOARD_ANIMATIONS as any)[name];
+interface BoardAnimationEntry {
+  kind: string;
+  duration: number;
+  staggerMs?: number;
+  settleMs?: number;
+  rotationHalfDeg?: number;
+  ease?: string;
+}
+
+export function demoBoardAnimResetMs(name: string | null | undefined, tileCount = 1): number {
+  const animation = (BOARD_ANIMATIONS as Record<string, BoardAnimationEntry | undefined>)[name ?? ""];
   if (!animation) return 600;
   if (animation.kind === "fadeOut") {
     return SWEEP_COLLAPSE_PIPELINE_MS + 100;
   }
   if (animation.kind === "twoStage") {
-    return animation.duration + animation.settleMs + 100;
+    return animation.duration + (animation.settleMs ?? 0) + 100;
   }
   const stagger = (animation.staggerMs ?? 0) * Math.max(0, tileCount - 1);
   return animation.duration + stagger + 100;

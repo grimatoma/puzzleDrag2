@@ -17,7 +17,26 @@
 import { getAbility } from "./abilities.js";
 
 /** Empty channel object — every consumer in the codebase reads from one of these keys. */
-export function emptyChannels() {
+export function emptyChannels(): {
+  thresholdReduce: Record<string, number>;
+  poolWeight: Record<string, number>;
+  bonusYield: Record<string, number>;
+  seasonBonus: Record<string, number>;
+  effectivePoolWeights: Record<string, number>;
+  hazardSpawnReduce: Record<string, number>;
+  hazardCoinMultiplier: Record<string, number>;
+  chainRedirect: Record<string, { toCategory: string; threshold: number; redirectShare: number }>;
+  recipeInputReduce: Record<string, Record<string, number>>;
+  freeMoves: number;
+  freeMovesIfChain: { minChain: number; count: number } | null;
+  coinBonusFlat: number;
+  coinBonusPerTile: number;
+  seasonEndTools: Record<string, number>;
+  seasonEndPoolStep: number;
+  boardPreserveBiomes: Set<string>;
+  turnBudgetBonus: number;
+  inventoryCapBonus: number;
+} {
   return {
     thresholdReduce: {},
     poolWeight: {},
@@ -38,7 +57,7 @@ export function emptyChannels() {
     // Building-only channels (new).
     seasonEndTools: {},
     seasonEndPoolStep: 0,
-    boardPreserveBiomes: new Set(),
+    boardPreserveBiomes: new Set<string>(),
     turnBudgetBonus: 0,
     inventoryCapBonus: 0,
   };
@@ -55,7 +74,40 @@ export function emptyChannels() {
  *                              Tiles/buildings (active/built): 1.
  * @param {object} ctx         Optional context: { speciesByCategory } for category expansion.
  */
-export function applyAbilityToChannels(out: any, ability: any, params: any, weight: number, ctx: any = {}) {
+/** Source descriptor entries passed to {@link aggregateAbilities}. */
+export interface AbilityInstance {
+  id: string;
+  params?: Record<string, unknown>;
+  trigger?: string;
+}
+
+/** Catalog entry as returned by {@link getAbility}. */
+export interface AbilityCatalogEntry {
+  id: string;
+  trigger?: string;
+  scope?: readonly string[];
+  channel?: string;
+  [extra: string]: unknown;
+}
+
+export interface AbilitySource {
+  abilities?: AbilityInstance[];
+  weight?: number;
+  kind?: string;
+  sourceId?: string;
+  [extra: string]: unknown;
+}
+
+/** Channel output object — see {@link emptyChannels} for the canonical shape. */
+export type AbilityChannels = ReturnType<typeof emptyChannels>;
+
+/** Optional context for the aggregator, e.g. category → tile list for category expansion. */
+export interface AbilityContext {
+  speciesByCategory?: Record<string, Array<{ baseResource?: string; [k: string]: unknown }>>;
+  [extra: string]: unknown;
+}
+
+export function applyAbilityToChannels(out: AbilityChannels, ability: AbilityCatalogEntry | null | undefined, params: Record<string, unknown> | null | undefined, weight: number, ctx: AbilityContext = {}): void {
   if (!ability || weight <= 0) return;
   const p = params || {};
 
@@ -68,7 +120,7 @@ export function applyAbilityToChannels(out: any, ability: any, params: any, weig
       break;
     }
     case "threshold_reduce_category": {
-      const list = ctx.speciesByCategory?.[p.category] ?? [];
+      const list = ctx.speciesByCategory?.[String(p.category ?? "")] ?? [];
       const amount = Number(p.amount) || 0;
       if (amount <= 0) break;
       for (const sp of list) {
@@ -233,7 +285,7 @@ export function applyAbilityToChannels(out: any, ability: any, params: any, weig
  * @param {object} ctx — { speciesByCategory } and any future context.
  * @returns {object} channel object (see `emptyChannels`).
  */
-export function aggregateAbilities(sources: any, ctx: any = {}) {
+export function aggregateAbilities(sources: AbilitySource[] | null | undefined, ctx: AbilityContext = {}): AbilityChannels {
   const out = emptyChannels();
   if (!Array.isArray(sources)) return out;
   for (const src of sources) {
@@ -255,7 +307,11 @@ export function aggregateAbilities(sources: any, ctx: any = {}) {
  * Useful for state.js call-sites that want to react per-source rather than
  * via aggregated channels (e.g. dispatching ABILITY_FIRED).
  */
-export function forEachAbilityWithTrigger(sources: any, trigger: any, fn: any) {
+export function forEachAbilityWithTrigger(
+  sources: AbilitySource[] | null | undefined,
+  trigger: string,
+  fn: (entry: { ability: AbilityCatalogEntry; params: Record<string, unknown>; weight: number; source: AbilitySource }) => void,
+): void {
   if (!Array.isArray(sources)) return;
   for (const src of sources) {
     if (!src || !Array.isArray(src.abilities)) continue;
@@ -293,7 +349,7 @@ export function forEachAbilityWithTrigger(sources: any, trigger: any, fn: any) {
  * being replaced wholesale. This function only ADDS — it never removes a
  * field that was on `baseEffects`.
  */
-export function expandAbilitiesToEffects(abilities: any, baseEffects: any = {}) {
+export function expandAbilitiesToEffects(abilities: AbilityInstance[] | null | undefined, baseEffects: Record<string, unknown> = {}): Record<string, unknown> {
   const out = { ...baseEffects };
   if (!Array.isArray(abilities)) return out;
 
@@ -303,10 +359,10 @@ export function expandAbilitiesToEffects(abilities: any, baseEffects: any = {}) 
   let freeMoves = 0;
   let coinBonusFlat = 0;
   let coinBonusPerTile = 0;
-  let freeMovesIfChain = null;
+  let freeMovesIfChain: { minChain: number; count: number } | null = null;
   // poolWeightDelta and thresholdReduce merge additively with base.
-  const poolWeightDelta = { ...(out.poolWeightDelta || {}) };
-  const thresholdReduce = { ...(out.thresholdReduce || {}) };
+  const poolWeightDelta: Record<string, number> = { ...((out.poolWeightDelta as Record<string, number> | undefined) || {}) };
+  const thresholdReduce: Record<string, number> = { ...((out.thresholdReduce as Record<string, number> | undefined) || {}) };
 
   for (const inst of abilities) {
     if (!inst || typeof inst !== "object") continue;

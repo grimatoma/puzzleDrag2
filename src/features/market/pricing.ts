@@ -14,8 +14,8 @@ export const SELL_RATE = 0.10;
  * @param {string} itemId  snake_case or camelCase recipe key
  * @returns {number}
  */
-export function sellPriceFor(itemId: any) {
-  const item = ITEMS[itemId];
+export function sellPriceFor(itemId: string): number {
+  const item = (ITEMS as Record<string, { value?: number; sellable?: boolean } | undefined>)[itemId];
   if (!item || !item.value || item.sellable === false) return 0;
   return Math.round(item.value * SELL_RATE);
 }

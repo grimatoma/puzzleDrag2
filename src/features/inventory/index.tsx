@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
+import type { Dispatch, GameState } from "../../types/state";
 import { InventoryGrid } from "../../ui/Inventory.jsx";
 import { INVENTORY_TAGS } from "./tags.js";
 import FeaturePanel from "../../ui/primitives/FeaturePanel.jsx";
@@ -29,7 +30,7 @@ function usePhoneViewport() {
   return isPhone;
 }
 
-function useDebounced(value, delay) {
+function useDebounced<T>(value: T, delay: number): T {
   const [debounced, setDebounced] = useState(value);
   useEffect(() => {
     const id = setTimeout(() => setDebounced(value), delay);
@@ -38,17 +39,17 @@ function useDebounced(value, delay) {
   return debounced;
 }
 
-function useRecentOrder(inventory) {
+function useRecentOrder(inventory: Record<string, number>) {
   const [state, setState] = useState(() => ({
     order: Object.keys(inventory || {}).filter((k) => (inventory[k] || 0) > 0),
-    snapshot: { ...(inventory || {}) },
+    snapshot: { ...(inventory || {}) } as Record<string, number>,
   }));
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- track inventory deltas for "recent" sort ordering
     setState((prev) => {
-      const seen = new Set();
-      const next = [];
+      const seen = new Set<string>();
+      const next: string[] = [];
       for (const key of Object.keys(inventory || {})) {
         const before = prev.snapshot[key] || 0;
         const after = inventory[key] || 0;
@@ -93,17 +94,17 @@ export function readViewMode() {
   }
 }
 
-export function saveViewMode(mode) {
+export function saveViewMode(mode: "grid" | "list") {
   try {
     localStorage.setItem(INV_VIEW_KEY, mode);
   } catch { /* storage unavailable */ }
 }
 
-function useViewMode() {
-  const [viewMode, setViewMode] = useState(readViewMode);
+function useViewMode(): ["grid" | "list", () => void] {
+  const [viewMode, setViewMode] = useState<"grid" | "list">(readViewMode);
   const toggle = useCallback(() => {
     setViewMode((prev) => {
-      const next = prev === "grid" ? "list" : "grid";
+      const next: "grid" | "list" = prev === "grid" ? "list" : "grid";
       saveViewMode(next);
       return next;
     });
@@ -132,7 +133,13 @@ function ListIcon() {
   );
 }
 
-export default function InventoryScreen({ state, dispatch, searchOpen: searchOpenProp }) {
+interface InventoryScreenProps {
+  state: GameState;
+  dispatch: Dispatch;
+  searchOpen?: boolean;
+}
+
+export default function InventoryScreen({ state, dispatch, searchOpen: searchOpenProp }: InventoryScreenProps) {
   const biomeKey = state.biomeKey ?? "farm";
   const isPhone = usePhoneViewport();
 

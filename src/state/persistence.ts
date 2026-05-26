@@ -1,9 +1,17 @@
 import { STORAGE_KEYS, SAVE_SCHEMA_VERSION } from "../constants.js";
+import type { GameState } from "../types/state.js";
 
 const SAVE_KEY = STORAGE_KEYS.save;
 const VOLATILE = new Set(["modal", "bubble", "view", "viewParams", "pendingView", "craftingTab"]);
 
-export function loadSavedState(): any {
+/**
+ * Loose record returned from JSON parse. Callers should narrow as needed —
+ * the save boundary is intrinsically untyped since older versions may be
+ * present on disk (the reducer guards via SAVE_SCHEMA_VERSION).
+ */
+export type SavedState = Record<string, unknown> & { version?: number };
+
+export function loadSavedState(): SavedState | null {
   try {
     const raw = localStorage.getItem(SAVE_KEY);
     if (!raw) return null;
@@ -16,19 +24,20 @@ export function loadSavedState(): any {
       try { localStorage.removeItem(SAVE_KEY); } catch { /* storage unavailable */ }
       return null;
     }
-    return parsed;
+    return parsed as SavedState;
   } catch (e) { console.warn("[hearth] save data corrupt, starting fresh:", e); return null; }
 }
 
-export function persistStateNow(state: any): void {
+export function persistStateNow(state: GameState): void {
   try {
-    const out: Record<string, any> = {};
-    for (const k of Object.keys(state)) if (!VOLATILE.has(k)) out[k] = state[k];
+    const out: Record<string, unknown> = {};
+    const src = state as unknown as Record<string, unknown>;
+    for (const k of Object.keys(src)) if (!VOLATILE.has(k)) out[k] = src[k];
     localStorage.setItem(SAVE_KEY, JSON.stringify(out));
   } catch { /* storage unavailable (private browsing / quota) */ }
 }
 
-let _pendingPersist: any = null;
+let _pendingPersist: GameState | null = null;
 let _persistScheduled = false;
 let _unloadHooked = false;
 
@@ -40,7 +49,7 @@ function _flushPersist() {
   persistStateNow(s);
 }
 
-export function persistState(state: any): void {
+export function persistState(state: GameState): void {
   _pendingPersist = state;
   if (!_persistScheduled) {
     _persistScheduled = true;

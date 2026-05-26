@@ -1,6 +1,6 @@
 import { RECIPES } from "../../constants.js";
 import { BOSSES, BOSS_WINDOW_TURNS, bossReward as bossRewardFn, spawnBoss } from "../bosses/data.js";
-import { tickModifier } from "../bosses/modifiers.js";
+import { tickModifier, type BossModifier } from "../bosses/modifiers.js";
 import { awardXp } from "../almanac/data.js";
 import { BOSS_UI } from "./uiMeta.js";
 import type { Action, GameState } from "../../types/state.js";
@@ -27,14 +27,7 @@ export interface BossState {
   id?: string;
 }
 
-export interface BossModifier {
-  type?: string;
-  params?: Record<string, unknown> & {
-    boost?: string[];
-    factor?: number;
-    length?: number;
-  };
-}
+export type { BossModifier };
 
 interface BossHostState {
   boss?: BossState | null;
@@ -67,7 +60,7 @@ export const initial = {
 function spawnBiasFromModifier(modifier: BossModifier | undefined): Record<string, number> | null {
   if (modifier?.type === "respawn_boost") {
     const boost: string[] = modifier.params?.boost ?? [];
-    const factor: number = modifier.params?.factor ?? 1.5;
+    const factor: number = (modifier.params?.factor as number | undefined) ?? 1.5;
     const out: Record<string, number> = {};
     for (const k of boost) out[k] = factor;
     return out;
@@ -76,7 +69,10 @@ function spawnBiasFromModifier(modifier: BossModifier | undefined): Record<strin
 }
 
 function minChainFromModifier(modifier: BossModifier | undefined): number | null {
-  if (modifier?.type === "min_chain") return modifier.params?.length ?? null;
+  if (modifier?.type === "min_chain") {
+    const length = (modifier.params as { length?: number } | undefined)?.length;
+    return length ?? null;
+  }
   return null;
 }
 
@@ -97,7 +93,7 @@ function triggerBoss(state: GameState, bossKey: string): GameState {
   const year = s.year ?? Math.max(1, Math.ceil(((s._bossSeasonCount ?? 0) / 4)));
   const spawned = spawnBoss(state, bossKey, year) as GameState & { boss?: BossState | null };
   if (!spawned.boss) return state;
-  const modifier: BossModifier = def.modifier ?? {};
+  const modifier: BossModifier = def.modifier ?? { type: "", params: {} };
   return {
     ...spawned,
     boss: {
@@ -190,7 +186,8 @@ export function reduce(state: GameState, action: Action): GameState {
           { id: s.boss?.key ?? "", target: { amount: s.boss?.targetCount ?? 1 } };
         const year = s.year ?? Math.max(1, Math.ceil(((s._bossSeasonCount ?? 0) / 4)));
         const progress = s.boss?.progress ?? 0;
-        const { coins: rewardCoins, runes: rewardRunes } = bossRewardFn(bossDef, progress, year) as { coins: number; runes: number };
+        const bossRewardInput = { target: { resource: bossDef.target.resource ?? "", amount: bossDef.target.amount } };
+        const { coins: rewardCoins, runes: rewardRunes } = bossRewardFn(bossRewardInput, progress, year) as { coins: number; runes: number };
         const earnedCoins = rewardCoins > 0 ? rewardCoins : 200 * year;
         const { newState: afterBossXp } = awardXp(base, 25);
         const bs = afterBossXp as GameState & { coins?: number; runes?: number; gems?: number };

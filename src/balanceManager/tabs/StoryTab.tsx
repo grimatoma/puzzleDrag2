@@ -18,7 +18,7 @@ import MetricCard, { MetricGrid } from "../../ui/primitives/MetricCard.jsx";
 
 const STORY_EDITOR_URL = import.meta.env.BASE_URL.replace(/\/$/, "") + "/story/";
 
-function downloadMarkdown(md: any, filename = "hearthlands-story.md") {
+function downloadMarkdown(md: string, filename = "hearthlands-story.md") {
   if (typeof document === "undefined") return;
   const blob = new Blob([md], { type: "text/markdown;charset=utf-8" });
   const url = URL.createObjectURL(blob);
@@ -31,9 +31,12 @@ function downloadMarkdown(md: any, filename = "hearthlands-story.md") {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-export default function StoryTab({ draft }: { draft: any }) {
+export default function StoryTab({ draft }: { draft: import("../index.jsx").BalanceDraft }) {
   const counts = `${STORY_BEATS.length} story beat${STORY_BEATS.length === 1 ? "" : "s"} · ${SIDE_BEATS.length} side event${SIDE_BEATS.length === 1 ? "" : "s"}`;
-  const { total: warningTotal } = useMemo(() => groupedStoryWarnings(draft), [draft]);
+  // The story-editor helpers expect a StoryDraft; BalanceDraft is a structural
+  // superset (extra config sections), so we cast through unknown.
+  const storyDraft = draft as unknown as import("../../storyEditor/types.js").StoryDraft;
+  const { total: warningTotal } = useMemo(() => groupedStoryWarnings(storyDraft), [storyDraft]);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [filterSpeaker, setFilterSpeaker] = useState("__all__");   // 'all' | '__narrator__' | npc key
   const exportOpts = useMemo(() => {
@@ -41,10 +44,11 @@ export default function StoryTab({ draft }: { draft: any }) {
     if (filterSpeaker === "__narrator__") return { speakerKey: null };
     return { speakerKey: filterSpeaker };
   }, [filterSpeaker]);
-  const markdown = useMemo(() => previewOpen ? renderStoryMarkdown(draft, exportOpts) : "", [draft, previewOpen, exportOpts]);
-  const draftBeats = Array.isArray(draft?.story?.newBeats) ? draft.story.newBeats.length : 0;
-  const draftBeatOverrides = Object.keys(draft?.story?.beats || {}).length;
-  const suppressed = Array.isArray(draft?.story?.suppressedBeats) ? draft.story.suppressedBeats.length : 0;
+  const markdown = useMemo(() => previewOpen ? renderStoryMarkdown(storyDraft, exportOpts) : "", [storyDraft, previewOpen, exportOpts]);
+  const storySlice = storyDraft?.story as { newBeats?: unknown[]; beats?: Record<string, unknown>; suppressedBeats?: unknown[] } | undefined;
+  const draftBeats = Array.isArray(storySlice?.newBeats) ? storySlice.newBeats.length : 0;
+  const draftBeatOverrides = Object.keys(storySlice?.beats || {}).length;
+  const suppressed = Array.isArray(storySlice?.suppressedBeats) ? storySlice.suppressedBeats.length : 0;
 
   return (
     <div className="flex flex-col gap-4 max-w-[720px]">
@@ -96,7 +100,7 @@ export default function StoryTab({ draft }: { draft: any }) {
         <div className="text-[12px] font-bold uppercase tracking-wide mb-2" style={{ color: COLORS.inkSubtle }}>
           Story analytics
         </div>
-        <StatsPanel draft={draft} />
+        <StatsPanel draft={storyDraft} />
       </div>
 
       <div className="rounded-xl border-2 p-4" style={{ background: COLORS.parchment, borderColor: COLORS.border }}>
@@ -107,7 +111,7 @@ export default function StoryTab({ draft }: { draft: any }) {
           Distribution of choice rewards across Act I, II, III, side beats, and drafts.
           Spot pacing imbalances at a glance — uneven ember drops, flag-setter concentration, NPC bond bias.
         </p>
-        <HeatmapPanel draft={draft} />
+        <HeatmapPanel draft={storyDraft} />
       </div>
 
       <div className="rounded-xl border-2 p-4" style={{ background: COLORS.parchment, borderColor: COLORS.border }}>
@@ -118,7 +122,7 @@ export default function StoryTab({ draft }: { draft: any }) {
           Every choice that nudges an NPC's bond, walked in story order with running totals.
           Spot relationships that swing too hard one way, or ones the player never gets a chance to repair.
         </p>
-        <BondTimelinePanel draft={draft} />
+        <BondTimelinePanel draft={storyDraft} />
       </div>
 
       <div className="rounded-xl border-2 p-4" style={{ background: COLORS.parchment, borderColor: COLORS.border }}>
@@ -130,7 +134,7 @@ export default function StoryTab({ draft }: { draft: any }) {
           — handy for proofreading the full arc, sharing with a writer in Google Docs, or diffing two drafts in plain text.
         </p>
         <div className="mt-3 flex items-center gap-2 flex-wrap">
-          <SmallButton variant="primary" onClick={() => downloadMarkdown(renderStoryMarkdown(draft, exportOpts))}>
+          <SmallButton variant="primary" onClick={() => downloadMarkdown(renderStoryMarkdown(storyDraft, exportOpts))}>
             ⬇ Download story.md
           </SmallButton>
           <SmallButton onClick={() => setPreviewOpen((v) => !v)}>

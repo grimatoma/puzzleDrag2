@@ -1,6 +1,7 @@
 // Shared UI primitives for the Balance Manager. Matches the parchment
 // ember-orange accents.
 import React, { useState } from "react";
+import type { ChangeEvent, ReactNode } from "react";
 import Icon from "../ui/Icon.jsx";
 import { BIOMES, ITEMS } from "../constants.js";
 import {
@@ -16,54 +17,60 @@ import StatusChip from "../ui/primitives/StatusChip.jsx";
 
 export const COLORS = UI_COLORS;
 
-export function NumberField({ value, onChange, min = 0, max = 9999, step = 1, width = 70 }: { value: any; onChange: any; min?: any; max?: any; step?: any; width?: any }) {
+export interface SelectOption {
+  value: string | number;
+  label: ReactNode;
+}
+
+export function NumberField({ value, onChange, min = 0, max = 9999, step = 1, width = 70 }: { value: number | null | undefined; onChange: (v: number) => void; min?: number; max?: number; step?: number; width?: number | string }) {
   return (
     <BaseNumberInput
       value={value ?? 0}
       min={min}
       max={max}
       step={step}
-      onChange={(e: any) => onChange(Number(e.target.value))}
+      onChange={(e: ChangeEvent<HTMLInputElement>) => onChange(Number(e.target.value))}
       className="!h-auto px-1.5 py-1 text-[12px]"
       style={{ width }}
     />
   );
 }
 
-export function TextField({ value, onChange, placeholder = "", width = "100%" }: { value: any; onChange: any; placeholder?: any; width?: any }) {
+export function TextField({ value, onChange, placeholder = "", width = "100%" }: { value: string | null | undefined; onChange: (v: string) => void; placeholder?: string; width?: number | string }) {
   return (
     <BaseTextInput
       value={value ?? ""}
       placeholder={placeholder}
-      onChange={(e: any) => onChange(e.target.value)}
+      onChange={(e: ChangeEvent<HTMLInputElement>) => onChange(e.target.value)}
       className="!h-auto px-2 py-1 text-[12px]"
       style={{ width }}
     />
   );
 }
 
-export function TextArea({ value, onChange, rows = 3, placeholder = "" }: { value: any; onChange: any; rows?: any; placeholder?: any }) {
+export function TextArea({ value, onChange, rows = 3, placeholder = "" }: { value: string | null | undefined; onChange: (v: string) => void; rows?: number; placeholder?: string }) {
   return (
     <BaseTextArea
       value={value ?? ""}
       placeholder={placeholder}
       rows={rows}
-      onChange={(e: any) => onChange(e.target.value)}
+      onChange={(e: ChangeEvent<HTMLTextAreaElement>) => onChange(e.target.value)}
       className="w-full px-2 py-1 text-[12px]"
     />
   );
 }
 
-export function Select({ value, onChange, options, width = "100%" }: { value: any; onChange: any; options: any; width?: any }) {
+export function Select({ value, onChange, options, width = "100%" }: { value: unknown; onChange: (v: string) => void; options: SelectOption[]; width?: number | string }) {
+  const selectValue = value == null ? "" : (typeof value === "string" || typeof value === "number" ? value : String(value));
   return (
     <BaseSelectField
-      value={value ?? ""}
-      onChange={(e: any) => onChange(e.target.value)}
+      value={selectValue}
+      onChange={(e: ChangeEvent<HTMLSelectElement>) => onChange(e.target.value)}
       className="!h-auto px-2 py-1 text-[12px]"
       style={{ width }}
     >
-      {options.map((opt: any) => (
-        <option key={opt.value ?? "_none"} value={opt.value ?? ""}>
+      {options.map((opt) => (
+        <option key={String(opt.value ?? "_none")} value={opt.value ?? ""}>
           {opt.label}
         </option>
       ))}
@@ -71,11 +78,11 @@ export function Select({ value, onChange, options, width = "100%" }: { value: an
   );
 }
 
-export function ColorField({ value, onChange }: { value: any; onChange: any }) {
+export function ColorField({ value, onChange }: { value: number | null | undefined; onChange: (v: number) => void }) {
   // value is a number (0xRRGGBB). Convert to/from hex string for <input type=color>.
-  const toHex = (n: any) =>
-    "#" + (Number.isFinite(n) ? n : 0).toString(16).padStart(6, "0").slice(-6);
-  const parse = (str: any) => parseInt(String(str).replace(/^#/, ""), 16);
+  const toHex = (n: number | null | undefined) =>
+    "#" + (Number.isFinite(n as number) ? (n as number) : 0).toString(16).padStart(6, "0").slice(-6);
+  const parse = (str: string) => parseInt(String(str).replace(/^#/, ""), 16);
   return (
     <div className="flex items-center gap-1">
       <input
@@ -115,7 +122,7 @@ export function SmallButton({ children, onClick, variant = "default", disabled =
   );
 }
 
-export function Pill({ children, color = COLORS.inkSubtle, bg = COLORS.parchmentDeep }: { children: any; color?: any; bg?: any }) {
+export function Pill({ children, color = COLORS.inkSubtle, bg = COLORS.parchmentDeep }: { children: ReactNode; color?: string; bg?: string }) {
   return (
     <StatusChip
       size="xs"
@@ -164,19 +171,21 @@ export function Card({ children, className = "", title, accent, id, cardRef, sty
   );
 }
 
-export function SearchBar({ value, onChange, placeholder = "Search…" }: { value: any; onChange: any; placeholder?: any }) {
+type SearchInputChangeEvent = ChangeEvent<HTMLInputElement> | { target: { value: string } };
+
+export function SearchBar({ value, onChange, placeholder = "Search…" }: { value: string; onChange: (v: string) => void; placeholder?: string }) {
   return (
     <BaseSearchInput
       value={value}
       placeholder={placeholder}
-      onChange={(e: any) => onChange(e.target.value)}
+      onChange={(e: SearchInputChangeEvent) => onChange(e.target.value)}
       onClear={() => onChange("")}
       inputClassName="!h-auto py-1.5 text-[12px]"
     />
   );
 }
 
-export function FilterBar({ children, className = "" }: { children: any; className?: any }) {
+export function FilterBar({ children, className = "" }: { children: ReactNode; className?: string }) {
   return (
     <div className={`flex items-center gap-2 flex-wrap ${className}`}>
       {children}
@@ -184,35 +193,47 @@ export function FilterBar({ children, className = "" }: { children: any; classNa
   );
 }
 
-export function SegmentedFilter({ options, value, onChange, ariaLabel, className = "" }: { options: any[]; value: any; onChange: any; ariaLabel?: string; className?: string }) {
-  // TODO(ts-migration): SegmentedControl is untyped JS; cast to any to pass extra props
-  const SC = SegmentedControl as any;
+export interface SegmentedFilterOption {
+  id?: string | number;
+  value?: string | number;
+  key?: string | number;
+  label?: ReactNode;
+  name?: ReactNode;
+  iconKey?: string;
+  icon?: ReactNode;
+  [extra: string]: unknown;
+}
+
+export function SegmentedFilter<TValue = string>({ options, value, onChange, ariaLabel, className = "" }: { options: SegmentedFilterOption[]; value: TValue; onChange: (v: TValue) => void; ariaLabel?: string; className?: string }) {
   return (
-    <SC
+    <SegmentedControl
       options={options}
       value={value}
-      onChange={onChange}
+      onChange={(v) => onChange(v as TValue)}
       ariaLabel={ariaLabel}
       role="group"
       className={`flex gap-1 flex-shrink-0 flex-wrap ${className}`}
       buttonClassName="px-3 py-1.5 text-[12px] font-bold rounded-lg border-2 transition-colors inline-flex items-center gap-1"
       activeStyle={{ background: COLORS.ember, borderColor: COLORS.emberDeep, color: "#fff" }}
       inactiveStyle={{ background: COLORS.parchmentDeep, borderColor: COLORS.border, color: COLORS.inkLight }}
-      renderOption={(option: any, { label }: { label: string }) => (
-        <>
-          {option.iconKey && <Icon iconKey={option.iconKey} size={16} title="" />}
-          {option.icon && <span aria-hidden>{option.icon}</span>}
-          <span>{label}</span>
-        </>
-      )}
+      renderOption={(option, { label }) => {
+        const opt = option as SegmentedFilterOption;
+        return (
+          <>
+            {opt.iconKey && <Icon iconKey={opt.iconKey} size={16} title="" />}
+            {opt.icon && <span aria-hidden>{opt.icon as ReactNode}</span>}
+            <span>{label}</span>
+          </>
+        );
+      }}
     />
   );
 }
 
 /** Hex (number) → CSS hex string. */
-export function hexToCss(n: any) {
-  if (!Number.isFinite(n)) return "#000000";
-  return "#" + n.toString(16).padStart(6, "0").slice(-6);
+export function hexToCss(n: number | null | undefined): string {
+  if (!Number.isFinite(n as number)) return "#000000";
+  return "#" + (n as number).toString(16).padStart(6, "0").slice(-6);
 }
 
 /** Inline tile preview swatch — circle with the resource's color + glyph. */
@@ -261,7 +282,7 @@ export function SearchAndAddPicker({ label = "Add Item", placeholder = "Search..
         <div className="flex flex-col gap-2">
           <BaseSearchInput
             value={query}
-            onChange={(e: any) => setQuery(e.target.value)}
+            onChange={(e: SearchInputChangeEvent) => setQuery(e.target.value)}
             onClear={() => setQuery("")}
             placeholder={placeholder}
             inputClassName="!h-auto py-1.5 text-[12px]"

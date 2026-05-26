@@ -10,24 +10,33 @@
 import { useState } from "react";
 import { EXPEDITION_FOOD_TURNS, EXPEDITION_MEAT_FOODS } from "../../constants.js";
 import { COLORS, NumberField, TextField, SmallButton, Card, FieldRow } from "../shared.jsx";
+import type { BalanceDraft, TabProps } from "../index.jsx";
 
-export default function RationsTab({ draft, updateDraft }: { draft: any; updateDraft: any }) {
+interface ExpeditionOverride {
+  foodTurns?: Record<string, number>;
+  meatFoods?: string[];
+  [extra: string]: unknown;
+}
+
+export default function RationsTab({ draft, updateDraft }: TabProps) {
   const [newKey, setNewKey] = useState("");
-  const exp = draft.expedition ?? {};
-  const foodTurns = { ...EXPEDITION_FOOD_TURNS, ...(exp.foodTurns ?? {}) };
-  const meatFoods = Array.isArray(exp.meatFoods) ? exp.meatFoods : EXPEDITION_MEAT_FOODS;
+  const exp: ExpeditionOverride = (draft.expedition ?? {}) as ExpeditionOverride;
+  const foodTurns: Record<string, number> = { ...EXPEDITION_FOOD_TURNS, ...(exp.foodTurns ?? {}) };
+  const meatFoods: string[] = Array.isArray(exp.meatFoods) ? exp.meatFoods : (EXPEDITION_MEAT_FOODS as readonly string[]).slice();
 
-  function patch(fields: any) {
-    updateDraft((d: any) => {
-      d.expedition = { ...(d.expedition ?? {}), ...fields };
-      if (d.expedition.foodTurns && Object.keys(d.expedition.foodTurns).length === 0) delete d.expedition.foodTurns;
-      if (d.expedition.meatFoods && d.expedition.meatFoods.length === 0) delete d.expedition.meatFoods;
-      if (Object.keys(d.expedition).length === 0) delete d.expedition;
+  function patch(fields: ExpeditionOverride) {
+    updateDraft((d: BalanceDraft) => {
+      const cur = (d.expedition ?? {}) as ExpeditionOverride;
+      const merged: ExpeditionOverride = { ...cur, ...fields };
+      if (merged.foodTurns && Object.keys(merged.foodTurns).length === 0) delete merged.foodTurns;
+      if (merged.meatFoods && merged.meatFoods.length === 0) delete merged.meatFoods;
+      d.expedition = merged as Record<string, unknown>;
+      if (Object.keys(merged).length === 0) delete (d as { expedition?: unknown }).expedition;
     });
   }
-  const setTurns = (key: any, v: any) => patch({ foodTurns: { ...(exp.foodTurns ?? {}), [key]: v } });
-  const toggleMeat = (key: any) => {
-    const next = meatFoods.includes(key) ? meatFoods.filter((k: any) => k !== key) : [...meatFoods, key];
+  const setTurns = (key: string, v: number) => patch({ foodTurns: { ...(exp.foodTurns ?? {}), [key]: v } });
+  const toggleMeat = (key: string) => {
+    const next = meatFoods.includes(key) ? meatFoods.filter((k: string) => k !== key) : [...meatFoods, key];
     patch({ meatFoods: next });
   };
   const addFood = () => {
@@ -45,7 +54,7 @@ export default function RationsTab({ draft, updateDraft }: { draft: any; updateD
         </div>
         {Object.keys(foodTurns).map((key) => (
           <FieldRow key={key} label={key} hint={meatFoods.includes(key) ? "🥩 meat — Smokehouse +1" : undefined}>
-            <NumberField value={foodTurns[key]} onChange={(v: any) => setTurns(key, v)} min={0} max={99} />
+            <NumberField value={foodTurns[key]} onChange={(v: number) => setTurns(key, v)} min={0} max={99} />
           </FieldRow>
         ))}
         <div className="flex items-center gap-2 mt-2 pt-2" style={{ borderTop: `1px dashed ${COLORS.border}` }}>

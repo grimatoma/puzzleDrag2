@@ -14,6 +14,7 @@
 
 import { FISH_TILE_POOL } from "../../constants.js";
 import { resourceByKey } from "../../state/helpers.js";
+import type { Action, GameState, Grid } from "../../types/state.js";
 
 export const TIDE_PERIOD = 3;
 
@@ -33,7 +34,12 @@ export const initial = {
  * we only update the `key` on existing bottom-row cells. The next collapse
  * pass in GameScene will rebuild the visual layer from `state.grid`.
  */
-function mutateBottomRow(grid, pool) {
+interface FishState {
+  tide: string;
+  tideTurn: number;
+}
+
+function mutateBottomRow(grid: Grid, pool: string[]): Grid {
   if (!Array.isArray(grid) || grid.length === 0) return grid;
   const rows = grid.length;
   const bottomIdx = rows - 1;
@@ -42,7 +48,7 @@ function mutateBottomRow(grid, pool) {
   const newRow = row.map((cell) => {
     if (!cell) return cell;
     const pickKey = pool[Math.floor(Math.random() * pool.length)];
-    const next = resourceByKey(pickKey);
+    const next = resourceByKey(pickKey) as { key: string } | null | undefined;
     if (!next) return cell;
     // Preserve any non-resource fields (selected, frozen, etc.) — we only
     // swap the resource. Cell shape varies between Phaser tiles and pure
@@ -52,14 +58,15 @@ function mutateBottomRow(grid, pool) {
   return grid.map((r, i) => (i === bottomIdx ? newRow : r));
 }
 
-export function reduce(state, action) {
-  if (!state.fish) return state;
+export function reduce(state: GameState, action: Action): GameState {
+  const fish = state.fish as FishState | undefined;
+  if (!fish) return state;
   if (action.type !== "END_TURN" && action.type !== "CHAIN_COLLECTED" && action.type !== "FISH/FORCE_TIDE_FLIP") {
     return state;
   }
   // FISH/FORCE_TIDE_FLIP is a debug/test affordance.
   if (action.type === "FISH/FORCE_TIDE_FLIP") {
-    const nextTide = state.fish.tide === "high" ? "low" : "high";
+    const nextTide = fish.tide === "high" ? "low" : "high";
     const pool = nextTide === "high" ? HIGH_TIDE_POOL : LOW_TIDE_POOL;
     return {
       ...state,
@@ -70,14 +77,15 @@ export function reduce(state, action) {
   // Only tick + maybe flip when the player is actively on the fish board.
   if (state.biomeKey !== "fish") return state;
   if (state.lastBoardActionConsumedFreeMove) return state;
-  if (action.type === "CHAIN_COLLECTED" && (action.payload?.noTurn || action.payload?.gains)) return state;
+  const chainPayload = action.payload as { noTurn?: boolean; gains?: unknown } | undefined;
+  if (action.type === "CHAIN_COLLECTED" && (chainPayload?.noTurn || chainPayload?.gains)) return state;
   // Tide bookkeeping ticks once per committed, turn-consuming board action.
-  const nextTideTurn = (state.fish.tideTurn ?? 0) + 1;
+  const nextTideTurn = (fish.tideTurn ?? 0) + 1;
   if (nextTideTurn < TIDE_PERIOD) {
-    return { ...state, fish: { ...state.fish, tideTurn: nextTideTurn } };
+    return { ...state, fish: { ...fish, tideTurn: nextTideTurn } };
   }
   // Tide flips. Mutate bottom row using the *new* tide's pool.
-  const nextTide = state.fish.tide === "high" ? "low" : "high";
+  const nextTide = fish.tide === "high" ? "low" : "high";
   const pool = nextTide === "high" ? HIGH_TIDE_POOL : LOW_TIDE_POOL;
   return {
     ...state,

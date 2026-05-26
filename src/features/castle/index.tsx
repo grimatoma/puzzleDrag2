@@ -1,10 +1,11 @@
 import { CASTLE_NEEDS } from "./data.js";
 import Icon from "../../ui/Icon.jsx";
 import FeaturePanel from "../../ui/primitives/FeaturePanel.jsx";
+import type { Dispatch, GameState } from "../../types/state.js";
 
 export const viewKey = "castle";
 
-function ProgressBar({ value, max }: { value: any; max: any }) {
+function ProgressBar({ value, max }: { value: number; max: number }) {
   const pct = max > 0 ? Math.min(100, Math.max(0, (value / max) * 100)) : 0;
   return (
     <div className="h-2 rounded-full bg-[#2b2218]/25 overflow-hidden border border-[#b28b62]/50">
@@ -16,9 +17,14 @@ function ProgressBar({ value, max }: { value: any; max: any }) {
   );
 }
 
-function CastleNeedsList({ state, dispatch }: { state: any; dispatch: any }) {
-  const contributed = state?.castle?.contributed ?? {};
-  const inventory = state?.inventory ?? {};
+interface CastleNeedsListProps {
+  state: GameState;
+  dispatch: Dispatch;
+}
+
+function CastleNeedsList({ state, dispatch }: CastleNeedsListProps) {
+  const contributed = (state?.castle as { contributed?: Record<string, number> } | undefined)?.contributed ?? {};
+  const inventory = (state?.inventory ?? {}) as Record<string, number>;
 
   return (
     <div className="hl-well">
@@ -75,9 +81,14 @@ function CastleNeedsList({ state, dispatch }: { state: any; dispatch: any }) {
   );
 }
 
-export default function CastleScreen({ state, dispatch }: { state: any; dispatch: any }) {
+interface CastleScreenProps {
+  state: GameState;
+  dispatch: Dispatch;
+}
+
+export default function CastleScreen({ state, dispatch }: CastleScreenProps) {
   return (
-    <FeaturePanel tone={undefined as any}>
+    <FeaturePanel>
       <FeaturePanel.Body>
         <CastleNeedsList state={state} dispatch={dispatch} />
       </FeaturePanel.Body>

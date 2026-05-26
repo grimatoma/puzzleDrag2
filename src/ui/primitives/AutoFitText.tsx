@@ -11,7 +11,7 @@ interface AutoFitTextProps {
   as?: keyof JSX.IntrinsicElements;
   title?: string;
   style?: CSSProperties;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 /**
@@ -63,10 +63,12 @@ export default function AutoFitText({
     return () => ro.disconnect();
   }, [children, maxFontSize, minFontSize]);
 
-  const TagAny = Tag as any;
+  // Casting to a concrete tag is needed because Tag is `keyof JSX.IntrinsicElements`
+  // — a generic dynamic component target that React's typings can't narrow further.
+  const TagAny = Tag as unknown as React.ComponentType<Record<string, unknown> & { ref?: React.Ref<HTMLElement> }>;
   return (
     <TagAny
-      ref={ref as any}
+      ref={ref}
       className={`block whitespace-nowrap overflow-hidden ${className}`}
       style={{ ...style, fontSize: `${fontSize}px` }}
       data-autofit="1"

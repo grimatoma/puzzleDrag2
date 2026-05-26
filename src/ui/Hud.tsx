@@ -10,10 +10,17 @@ import { useCountUp } from "./primitives/useCountUp.js";
 import { useReceiptChips } from "./primitives/useReceiptChips.js";
 import { setCoinAnchorEl } from "./rewardEvents.js";
 import { SeasonIndicator } from "./puzzleBoard.jsx";
+import type { Dispatch, GameState } from "../types/state.js";
 
 export const SEASON_EFFECTS = ["", "", "", ""];
 
-function TideContent({ fish }: { fish: any }) {
+interface FishLike {
+  tide?: string;
+  tideTurn?: number;
+  [key: string]: unknown;
+}
+
+function TideContent({ fish }: { fish: FishLike | null | undefined }) {
   const tide = fish?.tide ?? "high";
   const tideTurn = fish?.tideTurn ?? 0;
   const turnsUntilFlip = Math.max(0, 3 - tideTurn);
@@ -28,7 +35,7 @@ function TideContent({ fish }: { fish: any }) {
   );
 }
 
-function TideChip({ fish }: { fish: any }) {
+function TideChip({ fish }: { fish: FishLike | null | undefined }) {
   if (!fish) return null;
   const tide = fish.tide ?? "high";
   const tideTurn = fish.tideTurn ?? 0;
@@ -57,7 +64,7 @@ function TideChip({ fish }: { fish: any }) {
   );
 }
 
-function CurrencyContent({ state }: { state: any }) {
+function CurrencyContent({ state }: { state: GameState }) {
   const coins = state.coins ?? 0;
   const embers = state.embers ?? 0;
   const ingots = state.coreIngots ?? 0;
@@ -96,12 +103,20 @@ function SearchIcon({ size = 16 }) {
   );
 }
 
-export function Hud({ state, dispatch, inventorySearchOpen, onInventorySearchToggle }: { state: any; dispatch: any; inventorySearchOpen: any; onInventorySearchToggle: any }) {
+interface HudProps {
+  state: GameState;
+  dispatch: Dispatch;
+  inventorySearchOpen: boolean;
+  onInventorySearchToggle: (() => void) | undefined;
+}
+
+export function Hud({ state, dispatch, inventorySearchOpen, onInventorySearchToggle }: HudProps) {
   const { coins, turnsUsed, view } = state;
   const level = state.almanac?.level ?? state.level ?? 1;
   const totalXp = state.almanac?.xp ?? state.xp ?? 0;
   const onBoard = view === "board";
-  const turnBudget = state.farmRun?.turnBudget ?? 0;
+  // farmRun has additional dynamic fields beyond the canonical type (turnBudget).
+  const turnBudget = (state.farmRun?.turnBudget as number | undefined) ?? 0;
   const turnsRemaining = state.farmRun?.turnsRemaining ?? Math.max(0, turnBudget - (turnsUsed ?? 0));
   const seasonIdx = onBoard ? seasonIndexInSession(turnsUsed ?? 0, turnBudget || 1) : 0;
   const season = SEASONS[seasonIdx];
@@ -116,7 +131,8 @@ export function Hud({ state, dispatch, inventorySearchOpen, onInventorySearchTog
     setCoinAnchorEl(coinAnchorRef.current);
     return () => setCoinAnchorEl(null);
   });
-  const settlementName = state.settlement?.name ?? "Hearthwood Vale";
+  const settlement = state.settlement as { name?: string } | undefined;
+  const settlementName = settlement?.name ?? "Hearthwood Vale";
   const showTide = state.biomeKey === "fish" && (onBoard || view === "town");
 
   const seasonAccent = onBoard
@@ -161,11 +177,11 @@ export function Hud({ state, dispatch, inventorySearchOpen, onInventorySearchTog
             turnsRemaining={turnsRemaining}
             seasonIdx={seasonIdx}
             seasonName={season.name}
-            bespoke={!!state.settings?.bespokeSeasonWidget}
-            phaser={!!state.settings?.seasonStripPhaser}
+            bespoke={!!(state.settings as { bespokeSeasonWidget?: boolean } | undefined)?.bespokeSeasonWidget}
+            phaser={!!(state.settings as { seasonStripPhaser?: boolean } | undefined)?.seasonStripPhaser}
           />
         )}
-        {showTide && <TideChip fish={state.fish} />}
+        {showTide && <TideChip fish={state.fish as FishLike | null | undefined} />}
       </div>
 
       <div className="flex items-center gap-1.5 flex-shrink-0">
@@ -194,7 +210,7 @@ export function Hud({ state, dispatch, inventorySearchOpen, onInventorySearchTog
                   </Pill>
                 }
               />
-              {coinChips.map((c: any) => (
+              {coinChips.map((c: { id: number; delta: number }) => (
                 <span key={c.id} className="reward-chip text-gold-bright text-caption">
                   +{c.delta.toLocaleString()}
                 </span>

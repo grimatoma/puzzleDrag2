@@ -2,19 +2,25 @@ import { WorkersPanel } from "../workers/index.jsx";
 import { QuestsPanel } from "../quests/index.jsx";
 import Icon from "../../ui/Icon.jsx";
 import FeaturePanel from "../../ui/primitives/FeaturePanel.jsx";
+import type { Dispatch, GameState } from "../../types/state.js";
 
 export const viewKey = "townsfolk";
 
 const TABS = ["workers", "quests"];
 
-export default function TownsfolkScreen({ state, dispatch }: { state: any; dispatch: any }) {
+interface TownsfolkScreenProps {
+  state: GameState;
+  dispatch: Dispatch;
+}
+
+export default function TownsfolkScreen({ state, dispatch }: TownsfolkScreenProps) {
   // Tab lives in viewParams so the URL (src/router.js) is the single source
   // of truth — back/forward and deep links land on the same sub-tab.
-  const requested = state?.viewParams?.tab;
+  const requested = (state?.viewParams as { tab?: string } | undefined)?.tab ?? "";
   const tab = TABS.includes(requested) ? requested : "workers";
-  const setTab = (next: any) => dispatch({ type: "SET_VIEW_PARAMS", params: { tab: next } });
+  const setTab = (next: string) => dispatch({ type: "SET_VIEW_PARAMS", params: { tab: next } });
   return (
-    <FeaturePanel tone={undefined as any}>
+    <FeaturePanel>
       <FeaturePanel.Tabs>
         {[
           { key: "workers", label: "Workers", icon: "ui_build" },

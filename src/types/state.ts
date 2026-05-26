@@ -70,11 +70,11 @@ export interface FarmRun {
  * the result to a number safely.
  */
 export interface Tools {
-  clear: number;
-  basic: number;
-  rare: number;
-  shuffle: number;
-  bomb: number;
+  clear?: number;
+  basic?: number;
+  rare?: number;
+  shuffle?: number;
+  bomb?: number;
   startingExtraScythe?: boolean;
   extraBlueprintSlot?: boolean;
   goldSeal?: boolean;

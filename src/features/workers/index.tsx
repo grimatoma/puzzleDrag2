@@ -6,6 +6,7 @@
 import { useState } from "react";
 import { ITEMS } from "../../constants.js";
 import { TYPE_WORKERS, nextHireCost, nextHireResourceCost } from "./data.js";
+import type { WorkerAbility, WorkerDef } from "./data.js";
 import Icon from "../../ui/Icon.jsx";
 import DesignIcon from "../../ui/primitives/Icon.jsx";
 import {
@@ -17,12 +18,13 @@ import {
   DetailActionButton,
   DetailPane,
 } from "../../ui/primitives/BrowserDetail.jsx";
+import type { Dispatch, GameState } from "../../types/state.js";
 
-function effectSummary(abilities: any, count: any, maxCount: any) {
+function effectSummary(abilities: WorkerAbility[] | null | undefined, count: number, maxCount: number): string {
   if (!abilities || abilities.length === 0) return "";
   const safeCount = Math.max(0, Math.min(count | 0, maxCount));
-  const parts = abilities.map((ab: any) => {
-    const p = ab.params || {};
+  const parts = abilities.map((ab) => {
+    const p = (ab.params || {}) as Record<string, unknown>;
     const amount = Number(p.amount) || 0;
     switch (ab.id) {
       case "threshold_reduce_category": {
@@ -47,7 +49,14 @@ function effectSummary(abilities: any, count: any, maxCount: any) {
   return parts.join(" · ");
 }
 
-function WorkerBrowserItem({ worker, count, selected, onSelect }: { worker: any; count: any; selected: any; onSelect: any }) {
+interface WorkerBrowserItemProps {
+  worker: WorkerDef;
+  count: number;
+  selected: boolean;
+  onSelect: () => void;
+}
+
+function WorkerBrowserItem({ worker, count, selected, onSelect }: WorkerBrowserItemProps) {
   return (
     <BrowserItemButton
       selected={selected}
@@ -64,18 +73,35 @@ function WorkerBrowserItem({ worker, count, selected, onSelect }: { worker: any;
   );
 }
 
-function WorkerDetail({ worker, count, state, dispatch }: { worker: any; count: any; state: any; dispatch: any }) {
+interface WorkerDetailProps {
+  worker: WorkerDef | null;
+  count: number;
+  state: GameState;
+  dispatch: Dispatch;
+}
+
+function WorkerDetail({ worker, count, state, dispatch }: WorkerDetailProps) {
   if (!worker) return <DetailPane empty="Select a worker type to inspect it." title={undefined} eyebrow={undefined} icon={undefined} status={undefined} description={undefined} actions={undefined} headerActions={undefined}>{undefined}</DetailPane>;
   // Phase 6 — show the cost of the *next* hire so the player can see the
   // ramp build up. When the worker is already at maxCount the ramp call
   // is moot but we still pass `count` for a stable display.
   const coinCost = nextHireCost(worker, count);
-  const resourceCost = nextHireResourceCost(worker, count) as Record<string, number>;
-  const inv = state?.inventory ?? {};
+  const resourceCost = nextHireResourceCost(worker, count);
+  const inv = (state?.inventory ?? {}) as Record<string, number>;
   const canPayResources = Object.entries(resourceCost).every(([key, amount]) => (inv[key] ?? 0) >= amount);
   const canHire = (state?.coins ?? 0) >= coinCost && canPayResources && count < worker.maxCount;
   const canFire = count > 0;
-  const costEntries: any[] = [
+  interface CostEntry {
+    key: string;
+    label: string;
+    amount: number;
+    icon: JSX.Element;
+    have: number;
+    showHave: boolean;
+    check: boolean;
+    ok?: boolean;
+  }
+  const costEntries: CostEntry[] = [
     {
       key: "coins",
       label: "Coins",
@@ -87,7 +113,7 @@ function WorkerDetail({ worker, count, state, dispatch }: { worker: any; count: 
     },
     ...Object.entries(resourceCost).map(([key, amount]) => ({
       key,
-      label: (ITEMS as any)[key]?.label || key,
+      label: (ITEMS as Record<string, { label?: string } | undefined>)[key]?.label || key,
       amount,
       icon: <Icon iconKey={key} size={18} title="" />,
       have: inv[key] ?? 0,
@@ -140,9 +166,14 @@ function WorkerDetail({ worker, count, state, dispatch }: { worker: any; count: 
   );
 }
 
-export function WorkersPanel({ state, dispatch }: { state: any; dispatch: any }) {
-  const hired = state?.workers?.hired ?? {};
-  const [selectedId, setSelectedId] = useState(TYPE_WORKERS[0]?.id ?? null);
+interface WorkersPanelProps {
+  state: GameState;
+  dispatch: Dispatch;
+}
+
+export function WorkersPanel({ state, dispatch }: WorkersPanelProps) {
+  const hired = (state?.workers?.hired ?? {}) as Record<string, number>;
+  const [selectedId, setSelectedId] = useState<string | null>(TYPE_WORKERS[0]?.id ?? null);
   const selected = TYPE_WORKERS.find((w) => w.id === selectedId) ?? TYPE_WORKERS[0] ?? null;
 
   return (

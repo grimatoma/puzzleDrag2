@@ -1,10 +1,8 @@
-import type { GameState } from "./types/state.js";
-
 // Shared helper: get the built-buildings dict for the current location.
 // state.built is keyed by location id: { home: { hearth: true }, meadow: {} }.
 // Backward-compatible: also merges any flat-format (boolean) keys on the root
 // so existing tests that set `built: { bakery: true }` keep working.
-export function locBuilt(state: Pick<GameState, "built"> & { mapCurrent?: unknown }): Record<string, unknown> {
+export function locBuilt(state: Record<string, unknown>): Record<string, unknown> {
   const b: Record<string, unknown> = (state.built ?? {}) as Record<string, unknown>;
   const loc = (typeof state.mapCurrent === "string" ? state.mapCurrent : null) ?? "home";
   const locValue = b[loc];

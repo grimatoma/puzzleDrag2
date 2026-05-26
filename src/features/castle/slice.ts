@@ -4,6 +4,11 @@
  * One-way sink: there is no reset action.
  */
 import { CASTLE_NEEDS } from "./data.js";
+import type { Action, GameState } from "../../types/state.js";
+
+interface CastleSubstate {
+  contributed: Record<string, number>;
+}
 
 export const initial = {
   castle: {
@@ -12,8 +17,8 @@ export const initial = {
 };
 
 /** Defensive accessor — old saves may not have state.castle yet. */
-function castleOf(state: any) {
-  const c = state?.castle;
+function castleOf(state: GameState): CastleSubstate {
+  const c = state?.castle as CastleSubstate | undefined;
   if (c && c.contributed && typeof c.contributed === "object") {
     return {
       contributed: {
@@ -26,11 +31,13 @@ function castleOf(state: any) {
   return { contributed: { soup: 0, meat: 0, tile_mine_coal: 0 } };
 }
 
-export function reduce(state: any, action: any) {
+export function reduce(state: GameState, action: Action): GameState {
   if (action.type !== "CASTLE/CONTRIBUTE") return state;
 
-  const { key, amount } = action.payload ?? {};
-  const need = (CASTLE_NEEDS as any)[key];
+  const payload = (action.payload ?? {}) as { key?: string; amount?: number };
+  const key = payload.key ?? "";
+  const amount = payload.amount ?? 0;
+  const need = (CASTLE_NEEDS as Record<string, { target: number; resource: string; label: string } | undefined>)[key];
   if (!need) return state;
 
   const qty = amount | 0;
@@ -40,7 +47,7 @@ export function reduce(state: any, action: any) {
   if (have < qty) return state;
 
   const castle = castleOf(state);
-  const already = (castle.contributed as any)[key] ?? 0;
+  const already = castle.contributed[key] ?? 0;
   if (already + qty > need.target) return state;
 
   return {

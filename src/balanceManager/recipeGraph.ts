@@ -14,8 +14,38 @@
 
 import { RECIPES, ITEMS } from "../constants.js";
 
+export interface RecipeRecord {
+  item?: string;
+  station?: string;
+  inputs?: Record<string, number>;
+  tier?: number;
+  [extra: string]: unknown;
+}
+
+export interface ItemRecord {
+  label?: string;
+  [extra: string]: unknown;
+}
+
+export interface RecipeTreeIngredient {
+  id: string;
+  qty: number;
+  label: string;
+  raw: boolean;
+  sources: RecipeTreeNode[];
+  truncated: boolean;
+}
+
+export interface RecipeTreeNode {
+  recipeId: string;
+  station?: string;
+  output?: string;
+  cyclical?: boolean;
+  ingredients: RecipeTreeIngredient[];
+}
+
 /** Build a Map(outputItemId → recipeId[]) for fast producer lookup. */
-function producerIndex(recipes: Record<string, any>): Map<string, string[]> {
+function producerIndex(recipes: Record<string, RecipeRecord>): Map<string, string[]> {
   const out = new Map<string, string[]>();
   for (const [recipeId, recipe] of Object.entries(recipes || {})) {
     const item = recipe?.["item"];
@@ -34,23 +64,23 @@ function producerIndex(recipes: Record<string, any>): Map<string, string[]> {
  * Cycles are detected and short-circuited (a node carries `cyclical: true`).
  * Unknown / raw ingredients (no producing recipe) are marked `raw: true`.
  */
-export function traceRecipe(recipeId: string, { recipes = RECIPES, items = ITEMS, maxDepth = 6 }: { recipes?: Record<string, any>; items?: Record<string, any>; maxDepth?: number } = {}) {
+export function traceRecipe(recipeId: string, { recipes = RECIPES, items = ITEMS, maxDepth = 6 }: { recipes?: Record<string, RecipeRecord>; items?: Record<string, ItemRecord>; maxDepth?: number } = {}): RecipeTreeNode | null {
   const producers = producerIndex(recipes);
-  const visit = (rid: string, depth: number, stack: Set<string>): any => {
+  const visit = (rid: string, depth: number, stack: Set<string>): RecipeTreeNode | null => {
     const recipe = recipes?.[rid];
     if (!recipe) return null;
     if (stack.has(rid)) return { recipeId: rid, station: recipe["station"], output: recipe["item"], cyclical: true, ingredients: [] };
     const nextStack = new Set(stack);
     nextStack.add(rid);
-    const ingredients: any[] = [];
+    const ingredients: RecipeTreeIngredient[] = [];
     for (const [inputId, qty] of Object.entries(recipe["inputs"] || {})) {
       const sources = (producers.get(inputId) || []);
       const raw = sources.length === 0;
-      const expanded = (depth >= maxDepth) ? [] : sources.map((srcId: string) => visit(srcId, depth + 1, nextStack)).filter(Boolean);
+      const expanded: RecipeTreeNode[] = (depth >= maxDepth) ? [] : sources.map((srcId: string) => visit(srcId, depth + 1, nextStack)).filter((n): n is RecipeTreeNode => Boolean(n));
       ingredients.push({
         id: inputId,
-        qty,
-        label: items?.[inputId]?.["label"] || inputId,
+        qty: qty as number,
+        label: items?.[inputId]?.["label"] as string || inputId,
         raw,
         sources: expanded,
         truncated: depth >= maxDepth && sources.length > 0,
@@ -62,9 +92,9 @@ export function traceRecipe(recipeId: string, { recipes = RECIPES, items = ITEMS
 }
 
 /** Flatten the tree to a list of unique upstream recipe ids (for badges/lints). */
-export function collectUpstreamRecipes(tree: any): string[] {
+export function collectUpstreamRecipes(tree: RecipeTreeNode | null): string[] {
   const ids = new Set<string>();
-  const walk = (node: any) => {
+  const walk = (node: RecipeTreeNode | null) => {
     if (!node) return;
     for (const ing of (node.ingredients || [])) {
       for (const src of (ing.sources || [])) {
@@ -80,7 +110,7 @@ export function collectUpstreamRecipes(tree: any): string[] {
 }
 
 /** Count raw (non-craftable) inputs across the full tree. */
-export function countRawInputs(tree: any): number {
+export function countRawInputs(tree: RecipeTreeNode | null): number {
   if (!tree) return 0;
   let n = 0;
   for (const ing of (tree.ingredients || [])) {

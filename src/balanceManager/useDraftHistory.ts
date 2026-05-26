@@ -16,7 +16,13 @@ import { useState, useCallback, useRef } from "react";
 const DEFAULT_MAX_HISTORY = 60;
 const DEFAULT_COALESCE_MS = 700;
 
-export function emptyHistory(present: any) {
+export interface History<T> {
+  past: T[];
+  present: T;
+  future: T[];
+}
+
+export function emptyHistory<T>(present: T): History<T> {
   return { past: [], present, future: [] };
 }
 
@@ -26,7 +32,7 @@ export function emptyHistory(present: any) {
  * the past stack (used to merge rapid keystrokes into one entry).
  * Skips entirely if `next === h.present`.
  */
-export function pushHistoryEntry(h: any, next: any, { coalesce = false, maxHistory = DEFAULT_MAX_HISTORY } = {}) {
+export function pushHistoryEntry<T>(h: History<T>, next: T, { coalesce = false, maxHistory = DEFAULT_MAX_HISTORY } = {}): History<T> {
   if (Object.is(next, h.present)) return h;
   let past = h.past;
   if (!coalesce) {
@@ -36,7 +42,7 @@ export function pushHistoryEntry(h: any, next: any, { coalesce = false, maxHisto
   return { past, present: next, future: [] };
 }
 
-export function undoHistoryState(h: any) {
+export function undoHistoryState<T>(h: History<T>): History<T> {
   if (h.past.length === 0) return h;
   const previous = h.past[h.past.length - 1];
   return {
@@ -46,7 +52,7 @@ export function undoHistoryState(h: any) {
   };
 }
 
-export function redoHistoryState(h: any) {
+export function redoHistoryState<T>(h: History<T>): History<T> {
   if (h.future.length === 0) return h;
   return {
     past: [...h.past, h.present],
@@ -55,8 +61,8 @@ export function redoHistoryState(h: any) {
   };
 }
 
-function resolve(initial: any) {
-  return typeof initial === "function" ? initial() : initial;
+function resolve<T>(initial: T | (() => T)): T {
+  return typeof initial === "function" ? (initial as () => T)() : initial;
 }
 
 export function useDraftHistory<T>(initial: T | (() => T), options: { coalesceMs?: number; maxHistory?: number } = {}) {
@@ -101,7 +107,7 @@ export function useDraftHistory<T>(initial: T | (() => T), options: { coalesceMs
     return did;
   }, []);
 
-  const reset = useCallback((value: any) => {
+  const reset = useCallback((value: T | (() => T)) => {
     lastChangeAt.current = 0;
     setHistory(emptyHistory(resolve(value)));
   }, []);

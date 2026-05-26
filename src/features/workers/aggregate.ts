@@ -17,6 +17,7 @@
  */
 
 import { TYPE_WORKERS } from "./data.js";
+import type { WorkerAbility, WorkerDef } from "./data.js";
 import {
   TILE_TYPES,
   TILE_TYPES_BY_CATEGORY as SPECIES_BY_CATEGORY,
@@ -24,7 +25,17 @@ import {
 import { BUILDINGS } from "../../constants.js";
 import { locBuilt } from "../../locBuilt.js";
 import { aggregateAbilities } from "../../config/abilitiesAggregate.js";
+import type { AbilitySource as ConfigAbilitySource } from "../../config/abilitiesAggregate.js";
 import { getAbility } from "../../config/abilities.js";
+import type { GameState } from "../../types/state.js";
+
+/** A normalised ability source — workers, buildings or active tiles. */
+type AbilitySource = ConfigAbilitySource & {
+  kind: "worker" | "building" | "tile";
+  sourceId: string;
+  abilities: WorkerAbility[];
+  weight: number;
+};
 
 // Triggers whose contributions the global aggregator should expose as
 // channels. Chain-time triggers (`on_chain_collect`, `on_chain_commit`)
@@ -46,26 +57,32 @@ const PER_HIRE_DISCRETE_ABILITIES = new Set([
 ]);
 
 /** Source list for a worker entity (TYPE_WORKERS). */
-function workerSource(def: any, hiredCount: any) {
+function workerSource(def: WorkerDef, hiredCount: number): AbilitySource | null {
   const count = Math.max(0, Math.min(hiredCount | 0, def.maxCount));
   if (count === 0) return null;
   const weight = count / def.maxCount;
   const rawAbilities = Array.isArray(def.abilities) ? def.abilities : [];
   if (rawAbilities.length === 0) return null;
-  const abilities = rawAbilities.map((ab: any) => {
+  const abilities = rawAbilities.map((ab) => {
     if (!ab || !PER_HIRE_DISCRETE_ABILITIES.has(ab.id)) return ab;
-    const p = ab.params || {};
+    const p = (ab.params || {}) as Record<string, unknown>;
     const baseAmount = Number(p.amount) || 0;
     return { ...ab, params: { ...p, amount: baseAmount * def.maxCount } };
   });
   return { kind: "worker", sourceId: def.id, abilities, weight };
 }
 
+interface BuildingDef {
+  id: string;
+  abilities?: WorkerAbility[];
+  [extra: string]: unknown;
+}
+
 /** Source list for every BUILDINGS entry currently built in the active map. */
-export function builtBuildingSources(state: any) {
-  const built = locBuilt(state) || {};
-  const out = [];
-  for (const b of BUILDINGS) {
+export function builtBuildingSources(state: GameState): AbilitySource[] {
+  const built = (locBuilt(state) || {}) as Record<string, unknown>;
+  const out: AbilitySource[] = [];
+  for (const b of (BUILDINGS as BuildingDef[])) {
     if (!built[b.id]) continue;
     if (!Array.isArray(b.abilities) || b.abilities.length === 0) continue;
     out.push({ kind: "building", sourceId: b.id, abilities: b.abilities, weight: 1 });
@@ -80,18 +97,25 @@ export function builtBuildingSources(state: any) {
  * are read off the per-tile `effects` shape inside CHAIN_COLLECTED /
  * CHAIN_COMMIT, so feeding them through here would write to dead channels.
  */
-export function discoveredTileSources(state: any) {
-  const discovered = state?.tileCollection?.discovered ?? {};
-  const activeByCategory = state?.tileCollection?.activeByCategory ?? {};
-  const out = [];
-  for (const t of TILE_TYPES) {
+interface TileDef {
+  id: string;
+  category: string;
+  abilities?: WorkerAbility[];
+  [extra: string]: unknown;
+}
+
+export function discoveredTileSources(state: GameState): AbilitySource[] {
+  const discovered = (state?.tileCollection?.discovered ?? {}) as Record<string, boolean>;
+  const activeByCategory = (state?.tileCollection?.activeByCategory ?? {}) as Record<string, string | null>;
+  const out: AbilitySource[] = [];
+  for (const t of (TILE_TYPES as unknown as TileDef[])) {
     if (!Array.isArray(t.abilities) || t.abilities.length === 0) continue;
     if (!discovered[t.id]) continue;
     if (activeByCategory[t.category] !== t.id) continue;
     const passiveAbilities = t.abilities.filter((inst) => {
       const def = getAbility(inst?.id);
       if (!def) return false;
-      const trigger = (inst as any).trigger || def.trigger;
+      const trigger = inst.trigger || def.trigger;
       return TILE_AGGREGATOR_TRIGGERS.has(trigger);
     });
     if (passiveAbilities.length === 0) continue;
@@ -118,10 +142,10 @@ export function discoveredTileSources(state: any) {
  *   seasonEndPoolStep    integer
  *   boardPreserveBiomes  Set<string>
  */
-export function computeAggregatedAbilities(state: any) {
-  const typeHired = state?.workers?.hired ?? {};
+export function computeAggregatedAbilities(state: GameState): ReturnType<typeof aggregateAbilities> {
+  const typeHired = (state?.workers?.hired ?? {}) as Record<string, number>;
 
-  const sources = [];
+  const sources: AbilitySource[] = [];
   for (const w of TYPE_WORKERS) {
     const src = workerSource(w, typeHired[w.id] ?? 0);
     if (src) sources.push(src);

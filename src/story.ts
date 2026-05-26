@@ -246,7 +246,7 @@ export const STORY_BEATS = [
 // without blocking the main story. Resolution beats (queued via a choice's
 // `queueBeat` outcome) carry no `trigger`. `onComplete.setFlag` marks the
 // triggering beat as fired so it never re-queues.
-export const SIDE_BEATS = [
+export const SIDE_BEATS: Beat[] = [
   // ── Onboarding (Beat 4) ───────────────────────────────────────────────────
   {
     id: "tutorial_beat_4",
@@ -490,7 +490,12 @@ export function conditionMatches(
  * @param {object} totals — inventory snapshot (resource key → amount)
  * @returns {{ firedBeat, newFlags, sideEffects } | null}
  */
-export function evaluateStoryTriggers(state: any, event: any, totals: any = {}, opts: any = {}) {
+export function evaluateStoryTriggers(
+  state: StoryState,
+  event: StoryEvent,
+  totals: Record<string, number> = {},
+  opts: { onlyFlagConditions?: boolean } = {},
+): { firedBeat: Beat; newFlags: Record<string, boolean>; sideEffects: BeatSideEffects } | null {
   const next = nextPendingBeat(state);
   if (!next) return null;
   if (opts.onlyFlagConditions && next.trigger?.type !== "flag_set" && next.trigger?.type !== "flag_cleared") return null;
@@ -579,13 +584,17 @@ function fireSideBeat(beat: Beat, flags: Record<string, boolean>): { firedBeat: 
  * @param {object} event     — game event { type, ... }
  * @param {object} opts      — optional `{ onlyFlagConditions: true }`
  */
-export function evaluateSideBeats(gameState: any, event: any, opts: any = {}) {
-  const flags = gameState?.story?.flags ?? {};
-  let repeatCandidate: any = null;
+export function evaluateSideBeats(
+  gameState: SideBeatGameState,
+  event: StoryEvent,
+  opts: { onlyFlagConditions?: boolean } = {},
+): { firedBeat: Beat; newFlags: Record<string, boolean>; sideEffects: BeatSideEffects; repeatCooldown?: number } | null {
+  const flags = ((gameState?.story as { flags?: Record<string, boolean> } | undefined)?.flags) ?? {};
+  let repeatCandidate: Beat | null = null;
   for (const beat of SIDE_BEATS) {
-    if (opts.onlyFlagConditions && (beat as any).trigger?.type !== "flag_set" && (beat as any).trigger?.type !== "flag_cleared") continue;
+    if (opts.onlyFlagConditions && beat.trigger?.type !== "flag_set" && beat.trigger?.type !== "flag_cleared") continue;
     if (!sideTriggerMatches(beat, event, gameState)) continue;
-    if ((beat as any).repeat === true) { if (!repeatCandidate) repeatCandidate = beat; continue; }
+    if (beat.repeat === true) { if (!repeatCandidate) repeatCandidate = beat; continue; }
     if (sideBeatFired(flags, beat)) continue;
     return fireSideBeat(beat, flags);
   }

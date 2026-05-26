@@ -58,7 +58,7 @@ export default function BossesTab({ draft, updateDraft }: { draft: BalanceDraft;
         };
         const portraitKey = `boss_${b.id}`;
         const hasPortrait = !!iconRegistry[portraitKey];
-        const assessment = assessBoss({ ...b, target: { ...(b.target || {}), amount: eff.targetAmount } });
+        const assessment = assessBoss({ ...b, target: { ...(b.target || {}), amount: eff.targetAmount } } as unknown as Parameters<typeof assessBoss>[0]);
         const tone = TIER_TONE[assessment.tier.id] || TIER_TONE.steady;
         return (
           <Card key={b.id}>
@@ -90,13 +90,13 @@ export default function BossesTab({ draft, updateDraft }: { draft: BalanceDraft;
                 </div>
               </div>
             </div>
-            <FieldRow label="Name"><TextField value={eff.name} onChange={(v: any) => patch(b.id, { name: v })} width={200} /></FieldRow>
-            <FieldRow label="Season"><TextField value={eff.season} onChange={(v: any) => patch(b.id, { season: v })} width={120} /></FieldRow>
-            <FieldRow label="Target amount" hint={`resource: ${b.target?.resource ?? "?"}`}><NumberField value={eff.targetAmount} onChange={(v: any) => patch(b.id, { targetAmount: v })} min={1} max={99999} /></FieldRow>
+            <FieldRow label="Name"><TextField value={eff.name} onChange={(v: string) => patch(b.id, { name: v })} width={200} /></FieldRow>
+            <FieldRow label="Season"><TextField value={eff.season} onChange={(v: string) => patch(b.id, { season: v })} width={120} /></FieldRow>
+            <FieldRow label="Target amount" hint={`resource: ${b.target?.resource ?? "?"}`}><NumberField value={eff.targetAmount} onChange={(v: number) => patch(b.id, { targetAmount: v })} min={1} max={99999} /></FieldRow>
             <div className="text-[10px] font-bold uppercase tracking-wide mb-0.5 mt-1" style={{ color: COLORS.inkSubtle }}>Description</div>
-            <TextArea rows={2} value={eff.description} onChange={(v: any) => patch(b.id, { description: v })} />
+            <TextArea rows={2} value={eff.description} onChange={(v: string) => patch(b.id, { description: v })} />
             <div className="text-[10px] font-bold uppercase tracking-wide mb-0.5 mt-1" style={{ color: COLORS.inkSubtle }}>Modifier description <span className="opacity-60">(modifier: {b.modifier?.type ?? "?"})</span></div>
-            <TextArea rows={2} value={eff.modifierDescription} onChange={(v: any) => patch(b.id, { modifierDescription: v })} />
+            <TextArea rows={2} value={eff.modifierDescription} onChange={(v: string) => patch(b.id, { modifierDescription: v })} />
           </Card>
         );
       })}

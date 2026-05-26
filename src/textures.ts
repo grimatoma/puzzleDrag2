@@ -156,11 +156,13 @@ export function regenerateTextures(scene: Phaser.Scene) {
   // it still needs to track the current bake scale so resize-driven regens
   // keep it crisp alongside the resource tiles.
   bakeFireTile(scene, dpr);
-  // Refresh all on-board sprite frames so they pick up the new textures
-  // TODO(ts-migration): type once GameScene is converted
-  const scene_ = scene as any;
+  // Refresh all on-board sprite frames so they pick up the new textures.
+  // GameScene attaches `grid` (TileObj[][]) at runtime; each TileObj has
+  // `selected: boolean`, `res: { key: string }`, and a Phaser sprite.
+  interface BakedTile { selected?: boolean; res: { key: string }; sprite: { setTexture: (key: string) => void } }
+  const scene_ = scene as Phaser.Scene & { grid?: BakedTile[][] };
   if (scene_.grid) {
-    scene_.grid.flat().forEach((t: any) => {
+    scene_.grid.flat().forEach((t) => {
       if (!t) return;
       const sel = t.selected;
       const key = `tile_${t.res.key}${sel ? "_sel" : ""}`;

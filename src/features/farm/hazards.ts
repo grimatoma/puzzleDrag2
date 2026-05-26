@@ -92,7 +92,8 @@ export function rollFarmHazard(
 
   // Fire spawn gate
   if (isFireHazardEnabled() && allowedHazards.includes("fire") && !fire && (rats.length === 0) && !wolves) {
-    if ((fire?.cells?.length ?? 0) < FIRE_MAX_CELLS) {
+    const fireRead = fire as FireHazard | null | undefined;
+    if ((fireRead?.cells?.length ?? 0) < FIRE_MAX_CELLS) {
       if (rng() < FIRE_SPAWN_RATE) {
         const grid = s.grid;
         if (grid && grid.length > 0) {
@@ -110,7 +111,8 @@ export function rollFarmHazard(
     const inv: Record<string, number> = s.inventory ?? {};
     const birdRich = (inv.eggs ?? 0) > 30 || (inv.tile_bird_turkey ?? 0) > 5;
     if (birdRich) {
-      const wolvesCount = (wolves?.list?.length ?? 0);
+      const wolvesRead = wolves as WolfHazard | null | undefined;
+      const wolvesCount = (wolvesRead?.list?.length ?? 0);
       if (wolvesCount < WOLF_MAX_ACTIVE && rng() < WOLF_SPAWN_RATE) {
         const grid = s.grid;
         const row = grid ? Math.floor(rng() * grid.length) : 0;

@@ -6,7 +6,7 @@ export const TOOL_DISPATCH_ALIASES: Readonly<Record<string, string>> = Object.fr
   reshuffle: "shuffle",
 });
 
-export function resolveToolDispatchKey(rawKey: any): any {
+export function resolveToolDispatchKey(rawKey: string | null | undefined): string | null | undefined {
   if (!rawKey) return rawKey;
   return TOOL_DISPATCH_ALIASES[rawKey] ?? rawKey;
 }

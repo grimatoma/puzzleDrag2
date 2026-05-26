@@ -18,7 +18,7 @@ function BoardPresetTiming({ animName }: { animName: string | null | undefined }
   );
 }
 
-function DefaultBoardAnimBlock({ anim }: { anim: any }) {
+function DefaultBoardAnimBlock({ anim }: { anim: { anim: string; ms: number } | null | undefined }) {
   if (!anim) {
     return (
       <div className="text-[11px] italic" style={{ color: COLORS.inkSubtle }}>

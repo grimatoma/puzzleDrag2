@@ -58,8 +58,9 @@ export default function RewardChipsLayer() {
           style={{
             left: c.startX,
             top: c.startY,
-            ["--tx" as any]: `${c.dx}px`,
-            ["--ty" as any]: `${c.dy}px`,
+            // CSS custom properties aren't part of CSSProperties' index signature
+            ["--tx" as string]: `${c.dx}px`,
+            ["--ty" as string]: `${c.dy}px`,
           } as CSSProperties}
         >
           +{c.coins.toLocaleString()}

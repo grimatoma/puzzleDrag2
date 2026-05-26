@@ -1,7 +1,15 @@
+import type { CSSProperties, ReactNode } from "react";
 import Icon from "../../ui/Icon.jsx";
 import { COLORS, hexToCss } from "../shared.jsx";
 
-function colorBarStyle(color: any) {
+export interface WikiEntry {
+  key: string;
+  name?: ReactNode;
+  iconKey?: string;
+  color?: number | string | null;
+}
+
+function colorBarStyle(color: number | string | null | undefined): CSSProperties | null {
   if (color === undefined || color === null) return null;
   const css = typeof color === "number" ? hexToCss(color) : String(color);
   return {
@@ -12,7 +20,7 @@ function colorBarStyle(color: any) {
   };
 }
 
-export default function EntryGrid({ entries, emptyLabel = "No entries." }: { entries: any; emptyLabel?: any }) {
+export default function EntryGrid({ entries, emptyLabel = "No entries." }: { entries: WikiEntry[] | null | undefined; emptyLabel?: ReactNode }) {
   if (!entries || entries.length === 0) {
     return (
       <div
@@ -26,7 +34,7 @@ export default function EntryGrid({ entries, emptyLabel = "No entries." }: { ent
 
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
-      {entries.map((entry: any) => {
+      {entries.map((entry: WikiEntry) => {
         const bar = colorBarStyle(entry.color);
         return (
           <div

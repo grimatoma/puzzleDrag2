@@ -5,27 +5,35 @@ import IconCanvas, { hasIcon } from "../../ui/IconCanvas.jsx";
 import Icon from "../../ui/Icon.jsx";
 import FeaturePanel from "../../ui/primitives/FeaturePanel.jsx";
 import ActionCard, { ProgressBar } from "../../ui/primitives/ActionCard.jsx";
+import type { Dispatch, GameState, Order } from "../../types/state.js";
 
 export const viewKey = "orders";
 
-function cssFromHex(intHex: any) {
+function cssFromHex(intHex: number): string {
   return `#${intHex.toString(16).padStart(6, "0")}`;
 }
 
-export default function OrdersScreen({ state, dispatch }: { state: any; dispatch: any }) {
+interface OrdersScreenProps {
+  state: GameState;
+  dispatch: Dispatch;
+}
+
+export default function OrdersScreen({ state, dispatch }: OrdersScreenProps) {
   const { orders, inventory } = state;
 
   return (
-    <FeaturePanel tone={undefined as any}>
+    <FeaturePanel>
       <FeaturePanel.Body className="flex flex-col gap-2">
-        {orders.map((o: any) => {
+        {orders.map((o: Order) => {
           const have = inventory[o.key] || 0;
-          const done = have >= o.need;
-          const npc = (NPCS as any)[o.npc];
-          const itemDef = ITEMS[o.key] || {};
+          const needed = o.need ?? o.amount;
+          const done = have >= needed;
+          const npc = (NPCS as Record<string, { name: string; color: string } | undefined>)[o.npc];
+          if (!npc) return null;
+          const itemDef = (ITEMS as Record<string, { kind?: string; biome?: string; color?: number } | undefined>)[o.key] || {};
           const isCrafted = itemDef.kind === "resource" && !itemDef.biome;
           // Phase 6.1: bond chip
-          const bond = state.npcs?.bonds?.[o.npc] ?? 5;
+          const bond = (state.npcs?.bonds as Record<string, number> | undefined)?.[o.npc] ?? 5;
           const baseReward = o.baseReward ?? o.reward;
           const modifiedReward = payOrder({ baseReward }, bond);
           const modifier = bondModifier(bond);
@@ -51,7 +59,7 @@ export default function OrdersScreen({ state, dispatch }: { state: any; dispatch
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="font-bold text-[#a8431a] text-[13px] leading-tight truncate">{npc.name}{isCrafted && <span className="ml-1 text-[10px] text-[#7a5ab0] font-bold">🔨 craft</span>}</div>
-                  <div className="text-[#6a4b31] text-[11px] leading-snug">{o.line}</div>
+                  <div className="text-[#6a4b31] text-[11px] leading-snug">{String(o.line ?? "")}</div>
                 </div>
                 <div className="flex flex-col items-end gap-0.5">
                   <div className="text-[#c8923a] text-[12px] font-bold whitespace-nowrap">+{modifiedReward}◉</div>
@@ -78,13 +86,13 @@ export default function OrdersScreen({ state, dispatch }: { state: any; dispatch
                 )}
                 <ProgressBar
                   value={have}
-                  max={o.need}
+                  max={needed}
                   color={done ? "#4f6b3a" : "var(--ember)"}
                   className="flex-1"
                   trackClassName="bg-[#e0d2b0]"
                 />
                 <div className="text-[#6a4b31] text-[12px] font-bold whitespace-nowrap min-w-[44px] text-right">
-                  {have}/{o.need}
+                  {have}/{needed}
                 </div>
               </div>
               {done && (

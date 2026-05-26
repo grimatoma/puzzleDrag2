@@ -1,14 +1,36 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import Screen from "../../ui/primitives/Screen.jsx";
 import Pill from "../../ui/primitives/Pill.jsx";
 import Button from "../../ui/primitives/Button.jsx";
 import Icon from "../../ui/Icon.jsx";
 import { ParchmentDialog } from "../../ui/primitives/Dialog.jsx";
 import { findBeat, beatChoices } from "../../story.js";
+import type { GameState, Dispatch } from "../../types/state.js";
 
 export const viewKey = "charter";
 
-const PACT_TERMS = [
+interface PactTerm {
+  id: string;
+  roman: string;
+  title: string;
+  description: string;
+  relatedBeats: string[];
+  honoredFlags: string[];
+  violationFlags: string[];
+}
+
+interface ChoiceLogEntry {
+  beatId: string;
+  choiceId: string;
+  ts?: number;
+  value?: unknown;
+}
+
+type StoryFlags = Record<string, boolean | undefined>;
+
+type TermState = "honored" | "violated" | "pending";
+
+const PACT_TERMS: PactTerm[] = [
   {
     id: "found_first",
     roman: "I",
@@ -65,20 +87,20 @@ const PACT_TERMS = [
   },
 ];
 
-function termRelatedEntries(term: any, choiceLog: any) {
-  const set = new Set(term.relatedBeats);
-  return choiceLog.filter((e: any) => set.has(e.beatId));
+function termRelatedEntries(term: PactTerm, choiceLog: ChoiceLogEntry[]): ChoiceLogEntry[] {
+  const set = new Set<string>(term.relatedBeats);
+  return choiceLog.filter((e) => set.has(e.beatId));
 }
 
-function deriveTermState(term: any, choiceLog: any, flags: any) {
-  if (term.violationFlags.some((f: any) => flags[f])) return "violated";
+function deriveTermState(term: PactTerm, choiceLog: ChoiceLogEntry[], flags: StoryFlags): TermState {
+  if (term.violationFlags.some((f) => flags[f])) return "violated";
   const entries = termRelatedEntries(term, choiceLog);
-  if (term.honoredFlags.some((f: any) => flags[f])) return "honored";
+  if (term.honoredFlags.some((f) => flags[f])) return "honored";
   if (entries.length > 0) return "honored";
   return "pending";
 }
 
-function termCaption(term: any, choiceLog: any, flags: any) {
+function termCaption(term: PactTerm, choiceLog: ChoiceLogEntry[], flags: StoryFlags): string {
   const entries = termRelatedEntries(term, choiceLog);
   const state = deriveTermState(term, choiceLog, flags);
   if (state === "violated") return `Violated — ${entries.length || 1} recorded mark${entries.length === 1 ? "" : "s"}`;
@@ -86,19 +108,27 @@ function termCaption(term: any, choiceLog: any, flags: any) {
   return "Awaiting your hand";
 }
 
-function statePillTone(state: any) {
+function statePillTone(state: TermState): "moss" | "rose" | "iron" {
   if (state === "honored") return "moss";
   if (state === "violated") return "rose";
   return "iron";
 }
 
-function statePillLabel(state: any) {
+function statePillLabel(state: TermState): string {
   if (state === "honored") return "honored";
   if (state === "violated") return "violated";
   return "pending";
 }
 
-function formatChoiceEntry(entry: any) {
+interface FormattedChoiceEntry {
+  title: string;
+  choiceLabel: string;
+  act: number | null;
+  ts?: number;
+  value?: unknown;
+}
+
+function formatChoiceEntry(entry: ChoiceLogEntry): FormattedChoiceEntry {
   const beat = findBeat(entry.beatId);
   if (!beat) {
     return {
@@ -109,17 +139,17 @@ function formatChoiceEntry(entry: any) {
       value: entry.value,
     };
   }
-  const choice = beatChoices(beat).find((c: any) => c.id === entry.choiceId);
+  const choice = beatChoices(beat).find((c) => c.id === entry.choiceId);
   return {
     title: beat.title || entry.beatId,
     choiceLabel: choice?.label || entry.choiceId,
-    act: (beat as any).act,
+    act: typeof beat.act === "number" ? beat.act : null,
     ts: entry.ts,
     value: entry.value,
   };
 }
 
-function formatTimestamp(ts: any) {
+function formatTimestamp(ts: number | undefined): string {
   if (!ts) return "";
   try {
     const d = new Date(ts);
@@ -129,7 +159,14 @@ function formatTimestamp(ts: any) {
   }
 }
 
-function TermCard({ term, choiceLog, flags, onOpen }: { term: any; choiceLog: any; flags: any; onOpen: any }) {
+interface TermCardProps {
+  term: PactTerm;
+  choiceLog: ChoiceLogEntry[];
+  flags: StoryFlags;
+  onOpen: () => void;
+}
+
+function TermCard({ term, choiceLog, flags, onOpen }: TermCardProps) {
   const state = deriveTermState(term, choiceLog, flags);
   const tone = statePillTone(state);
   const label = statePillLabel(state);
@@ -150,7 +187,14 @@ function TermCard({ term, choiceLog, flags, onOpen }: { term: any; choiceLog: an
   );
 }
 
-function TermDialog({ term, choiceLog, flags, onClose }: { term: any; choiceLog: any; flags: any; onClose: any }) {
+interface TermDialogProps {
+  term: PactTerm | null;
+  choiceLog: ChoiceLogEntry[];
+  flags: StoryFlags;
+  onClose: () => void;
+}
+
+function TermDialog({ term, choiceLog, flags, onClose }: TermDialogProps) {
   if (!term) return null;
   const entries = termRelatedEntries(term, choiceLog);
   const state = deriveTermState(term, choiceLog, flags);
@@ -172,7 +216,7 @@ function TermDialog({ term, choiceLog, flags, onClose }: { term: any; choiceLog:
           </p>
         ) : (
           <ul className="flex flex-col gap-2">
-            {entries.map((e: any, i: any) => {
+            {entries.map((e, i) => {
               const f = formatChoiceEntry(e);
               return (
                 <li key={`${e.beatId}-${e.choiceId}-${e.ts ?? i}`} className="border-l-2 border-iron-edge pl-3 py-1">
@@ -194,7 +238,13 @@ function TermDialog({ term, choiceLog, flags, onClose }: { term: any; choiceLog:
   );
 }
 
-function FilterChip({ active, onClick, children }: { active: any; onClick: any; children: any }) {
+interface FilterChipProps {
+  active: boolean;
+  onClick: () => void;
+  children: ReactNode;
+}
+
+function FilterChip({ active, onClick, children }: FilterChipProps) {
   return (
     <Pill
       tone={active ? "gold" : "iron"}
@@ -211,7 +261,12 @@ function FilterChip({ active, onClick, children }: { active: any; onClick: any; 
   );
 }
 
-function SettlementRibbon({ name, dayCount }: { name: any; dayCount: any }) {
+interface SettlementRibbonProps {
+  name: string;
+  dayCount: number;
+}
+
+function SettlementRibbon({ name, dayCount }: SettlementRibbonProps) {
   return (
     <div className="flex items-center gap-3 bg-parchment-soft border border-iron rounded-lg px-4 py-3 mb-4">
       <div className="w-10 h-10 rounded-full bg-gold-soft/20 border border-gold-soft/40 grid place-items-center flex-shrink-0">
@@ -226,7 +281,11 @@ function SettlementRibbon({ name, dayCount }: { name: any; dayCount: any }) {
   );
 }
 
-function TimelineRow({ entry }: { entry: any }) {
+interface TimelineRowProps {
+  entry: ChoiceLogEntry;
+}
+
+function TimelineRow({ entry }: TimelineRowProps) {
   const f = formatChoiceEntry(entry);
   return (
     <li className="relative pl-6 py-2 border-l-2 border-panel-edge">
@@ -238,7 +297,7 @@ function TimelineRow({ entry }: { entry: any }) {
         )}
       </div>
       <div className="text-caption text-ink-soft mt-1">{f.choiceLabel}</div>
-      {f.value && (
+      {f.value != null && f.value !== "" && (
         <div className="text-caption text-ink-soft italic mt-1">"{String(f.value)}"</div>
       )}
       {f.ts && (
@@ -248,18 +307,25 @@ function TimelineRow({ entry }: { entry: any }) {
   );
 }
 
-export default function Charter({ state, dispatch }: { state: any; dispatch: any }) {
-  const [tab, setTab] = useState("terms");
+interface CharterProps {
+  state: GameState;
+  dispatch: Dispatch;
+}
+
+export default function Charter({ state, dispatch }: CharterProps) {
+  const [tab, setTab] = useState<"terms" | "all">("terms");
   const [openTermId, setOpenTermId] = useState<string | null>(null);
 
-  const flags = state?.story?.flags ?? {};
-  const settlementName = state?.settlement?.name ?? "Hearthwood Vale";
-  const dayCount = state?.turnsUsed ?? 0;
+  const story = (state?.story ?? {}) as { flags?: StoryFlags; choiceLog?: ChoiceLogEntry[] };
+  const flags: StoryFlags = story.flags ?? {};
+  const settlement = (state as { settlement?: { name?: string } })?.settlement;
+  const settlementName: string = settlement?.name ?? "Hearthwood Vale";
+  const dayCount: number = state?.turnsUsed ?? 0;
 
-  const sortedLog = useMemo(() => {
-    const log = state?.story?.choiceLog ?? [];
+  const sortedLog = useMemo<ChoiceLogEntry[]>(() => {
+    const log = story.choiceLog ?? [];
     return [...log].sort((a, b) => (a.ts ?? 0) - (b.ts ?? 0));
-  }, [state?.story?.choiceLog]);
+  }, [story.choiceLog]);
 
   const openTerm = PACT_TERMS.find((t) => t.id === openTermId) || null;
 

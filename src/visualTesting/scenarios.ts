@@ -1,8 +1,20 @@
 import { VISUAL_SCENARIOS, visualScenarioById } from "./matrix.js";
+import type { AnnotatedVisualScenario, DiffOptions, VisualAction } from "./matrix.js";
 import { buildVisualState, validateVisualState } from "./stateBuilders.js";
+import type { VisualStateTree } from "./stateBuilders.js";
 
-export function listVisualScenarios() {
-  return VISUAL_SCENARIOS.map((scenario: any) => ({
+export interface ListedVisualScenario {
+  id: string;
+  state: string | undefined;
+  hash: string | null;
+  view: string | null;
+  actions: VisualAction[];
+  diff: DiffOptions | null;
+  skipProjects: string[];
+}
+
+export function listVisualScenarios(): ListedVisualScenario[] {
+  return VISUAL_SCENARIOS.map((scenario) => ({
     id: scenario.id,
     state: scenario.state,
     hash: scenario.hash ?? null,
@@ -13,7 +25,11 @@ export function listVisualScenarios() {
   }));
 }
 
-export function buildVisualScenario(id: any) {
+export interface BuiltVisualScenario extends AnnotatedVisualScenario {
+  stateTree: VisualStateTree;
+}
+
+export function buildVisualScenario(id: string): BuiltVisualScenario {
   const scenario = visualScenarioById(id);
   if (!scenario) throw new Error(`Unknown visual scenario: ${id}`);
   const state = buildVisualState(scenario);
@@ -24,7 +40,7 @@ export function buildVisualScenario(id: any) {
   return { ...scenario, stateTree: state };
 }
 
-export function getVisualScenario(id: any) {
+export function getVisualScenario(id: string): BuiltVisualScenario {
   return buildVisualScenario(id);
 }
 

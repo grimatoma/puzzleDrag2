@@ -274,7 +274,7 @@ const FLAG_TRIGGER_TYPES = [
   { value: "session_start",        label: "Session start" },
   { value: "session_ended",        label: "Session end" },
 ];
-function defaultFlagTrigger(type: any) {
+function defaultFlagTrigger(type: string): FlagTrigger {
   switch (type) {
     case "flag_set":             return { type: "flag_set", flag: STORY_FLAGS[0]?.id || "hearth_lit" };
     case "resource_total":       return { type: "resource_total", key: "tile_tree_oak", amount: 10 };
@@ -298,12 +298,12 @@ function TriggerRow({ trigger, onChange, onRemove }: { trigger: FlagTrigger | nu
         {FLAG_TRIGGER_TYPES.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
       </select>
       {(t.type === "flag_set" || t.type === "flag_cleared") && (
-        <TextField value={t.flag || ""} onChange={(v: any) => onChange({ type: t.type, flag: v })} placeholder="flag_name" width={140} />
+        <TextField value={t.flag || ""} onChange={(v: string) => onChange({ type: t.type, flag: v })} placeholder="flag_name" width={140} />
       )}
       {t.type === "resource_total" && <>
-        <TextField value={t.key || ""} onChange={(v: any) => onChange({ ...t, key: v })} placeholder="resource id" width={120} />
+        <TextField value={t.key || ""} onChange={(v: string) => onChange({ ...t, key: v })} placeholder="resource id" width={120} />
         <span className="text-[11px]" style={{ color: COLORS.inkSubtle }}>≥</span>
-        <NumberField value={t.amount ?? 1} onChange={(v: any) => onChange({ ...t, amount: v })} min={1} max={99999} width={60} />
+        <NumberField value={t.amount ?? 1} onChange={(v: number) => onChange({ ...t, amount: v })} min={1} max={99999} width={60} />
       </>}
       {t.type === "resource_total_multi" && (
         <textarea rows={2} className="text-[10px] rounded border outline-none px-1.5 py-1 font-mono" style={{ borderColor: COLORS.border, color: COLORS.ink, flex: "1 1 160px" }}
@@ -311,19 +311,19 @@ function TriggerRow({ trigger, onChange, onRemove }: { trigger: FlagTrigger | nu
           onChange={(e) => { const req: Record<string, number> = {}; for (const line of e.target.value.split("\n")) { const m = line.trim().match(/^(\S+)\s+(\d+)$/); if (m) req[m[1]] = Number(m[2]); } onChange({ type: "resource_total_multi", req }); }} />
       )}
       {t.type === "craft_made" && <>
-        <TextField value={t.item || ""} onChange={(v: any) => onChange((t.count ?? 0) > 1 ? { type: "craft_made", item: v, count: t.count } : { type: "craft_made", item: v })} placeholder="recipe id" width={110} />
+        <TextField value={t.item || ""} onChange={(v: string) => onChange((t.count ?? 0) > 1 ? { type: "craft_made", item: v, count: t.count } : { type: "craft_made", item: v })} placeholder="recipe id" width={110} />
         <span className="text-[11px]" style={{ color: COLORS.inkSubtle }}>×</span>
-        <NumberField value={t.count ?? 1} onChange={(v: any) => onChange(v > 1 ? { type: "craft_made", item: t.item || "", count: v } : { type: "craft_made", item: t.item || "" })} min={1} max={999} width={50} />
+        <NumberField value={t.count ?? 1} onChange={(v: number) => onChange(v > 1 ? { type: "craft_made", item: t.item || "", count: v } : { type: "craft_made", item: t.item || "" })} min={1} max={999} width={50} />
       </>}
       {(t.type === "building_built" || t.type === "boss_defeated") && (
-        <TextField value={t.id || ""} onChange={(v: any) => onChange({ type: t.type, id: v })} placeholder={t.type === "boss_defeated" ? "boss id" : "building id"} width={130} />
+        <TextField value={t.id || ""} onChange={(v: string) => onChange({ type: t.type, id: v })} placeholder={t.type === "boss_defeated" ? "boss id" : "building id"} width={130} />
       )}
       {t.type === "bond_at_least" && <>
         <select value={t.npc || NPC_KEYS[0] || "wren"} onChange={(e) => onChange({ type: "bond_at_least", npc: e.target.value, amount: t.amount || 8 })} className={miniSel} style={{ borderColor: COLORS.border, color: COLORS.ink }}>
           {NPC_KEYS.map((k) => <option key={k} value={k}>{npcs[k]?.name || k}</option>)}
         </select>
         <span className="text-[11px]" style={{ color: COLORS.inkSubtle }}>≥</span>
-        <NumberField value={t.amount ?? 8} onChange={(v: any) => onChange({ type: "bond_at_least", npc: t.npc || NPC_KEYS[0] || "wren", amount: v })} min={1} max={999} width={50} />
+        <NumberField value={t.amount ?? 8} onChange={(v: number) => onChange({ type: "bond_at_least", npc: t.npc || NPC_KEYS[0] || "wren", amount: v })} min={1} max={999} width={50} />
       </>}
       {t.type === "act_entered" && (
         <select value={t.act || 2} onChange={(e) => onChange({ type: "act_entered", act: Number(e.target.value) })} className={miniSel} style={{ borderColor: COLORS.border, color: COLORS.ink }}>
@@ -475,11 +475,11 @@ function Inspector({ flag, draft, updateDraft, onSelect }: { flag: FlagInfo | nu
           )}
           <div>
             <div className="text-[10px] font-bold mb-1" style={{ color: COLORS.inkSubtle }}>Label</div>
-            <TextField value={def.label || ""} onChange={(v: any) => updateMeta({ label: v })} placeholder={flag.name} width="100%" />
+            <TextField value={def.label || ""} onChange={(v: string) => updateMeta({ label: v })} placeholder={flag.name} width="100%" />
           </div>
           <div>
             <div className="text-[10px] font-bold mb-1" style={{ color: COLORS.inkSubtle }}>Description</div>
-            <TextArea value={def.description || ""} onChange={(v: any) => updateMeta({ description: v })} rows={3} placeholder="What does this flag mean?" />
+            <TextArea value={def.description || ""} onChange={(v: string) => updateMeta({ description: v })} rows={3} placeholder="What does this flag mean?" />
           </div>
           <div className="flex items-center gap-2">
             <div className="flex-1 min-w-0">

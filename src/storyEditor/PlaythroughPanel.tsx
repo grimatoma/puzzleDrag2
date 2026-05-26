@@ -119,7 +119,7 @@ export default function PlaythroughPanel({ open, draft, anchorBeatId, onClose, o
 
   useEffect(() => {
     if (!open) return undefined;
-    const onKey = (e: any) => { if (e.key === "Escape") onClose(); };
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [open, onClose]);

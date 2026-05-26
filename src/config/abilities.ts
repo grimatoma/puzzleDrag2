@@ -289,20 +289,23 @@ export const ABILITIES = Object.freeze([
   },
 ]);
 
-const ABILITY_BY_ID = Object.freeze(
+type AbilityEntry = (typeof ABILITIES)[number];
+
+const ABILITY_BY_ID: Record<string, AbilityEntry | undefined> = Object.freeze(
   Object.fromEntries(ABILITIES.map((a) => [a.id, a])),
 );
 
-export function getAbility(id: any) {
-  return (ABILITY_BY_ID as any)[id] ?? null;
+export function getAbility(id: string | null | undefined): AbilityEntry | null {
+  if (!id) return null;
+  return ABILITY_BY_ID[id] ?? null;
 }
 
 /** Default param object for an ability id. */
-export function defaultParamsFor(abilityId: any) {
-  const a = (ABILITY_BY_ID as any)[abilityId];
+export function defaultParamsFor(abilityId: string | null | undefined): Record<string, unknown> {
+  const a = abilityId ? ABILITY_BY_ID[abilityId] : null;
   if (!a) return {};
-  const out: any = {};
-  for (const p of a.params) {
+  const out: Record<string, unknown> = {};
+  for (const p of a.params as ReadonlyArray<{ key: string; type: string; default?: unknown }>) {
     if (p.type === ABILITY_PARAM_TYPES.INT) out[p.key] = p.default ?? 0;
     else if (p.type === ABILITY_PARAM_TYPES.FLOAT) out[p.key] = p.default ?? 0;
     else out[p.key] = p.default ?? "";
@@ -311,12 +314,12 @@ export function defaultParamsFor(abilityId: any) {
 }
 
 /** Returns the catalog entries that may be attached to entities of the given scope. */
-export function abilitiesForScope(scope: any) {
-  return ABILITIES.filter((a) => a.scope.includes(scope));
+export function abilitiesForScope(scope: string): AbilityEntry[] {
+  return ABILITIES.filter((a) => (a.scope as readonly string[]).includes(scope));
 }
 
 /** True if the given ability id is allowed on the given scope. */
-export function abilityAllowedInScope(abilityId: any, scope: any) {
-  const a = (ABILITY_BY_ID as any)[abilityId];
-  return !!a && a.scope.includes(scope);
+export function abilityAllowedInScope(abilityId: string | null | undefined, scope: string): boolean {
+  const a = abilityId ? ABILITY_BY_ID[abilityId] : null;
+  return !!a && (a.scope as readonly string[]).includes(scope);
 }

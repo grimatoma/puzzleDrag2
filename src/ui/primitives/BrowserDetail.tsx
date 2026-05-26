@@ -3,11 +3,11 @@ import Button from "./Button.jsx";
 import { CostChip, RequirementChip } from "./Chip.jsx";
 import ProgressTrack from "./ProgressTrack.jsx";
 
-function cx(...parts: any[]) {
+function cx(...parts: Array<string | false | null | undefined>) {
   return parts.filter(Boolean).join(" ");
 }
 
-export function BrowserDetailLayout({ toolbar, browser, detail, className = "" }: { toolbar?: any; browser: any; detail: any; className?: string }) {
+export function BrowserDetailLayout({ toolbar, browser, detail, className = "" }: { toolbar?: React.ReactNode; browser: React.ReactNode; detail: React.ReactNode; className?: string }) {
   return (
     <div className={cx("hl-browser-detail", className)}>
       {toolbar && <div className="hl-browser-toolbar">{toolbar}</div>}
@@ -19,7 +19,7 @@ export function BrowserDetailLayout({ toolbar, browser, detail, className = "" }
   );
 }
 
-export function BrowserGrid({ children, min = 128, className = "" }: { children?: any; min?: number; className?: string }) {
+export function BrowserGrid({ children, min = 128, className = "" }: { children?: React.ReactNode; min?: number; className?: string }) {
   return (
     <div
       className={cx("grid gap-2", className)}
@@ -47,15 +47,15 @@ export function BrowserItemButton({
   selected?: boolean;
   muted?: boolean;
   active?: boolean;
-  icon: any;
-  title: any;
-  subtitle?: any;
-  count?: any;
-  status?: any;
-  onClick?: any;
+  icon: React.ReactNode;
+  title: React.ReactNode;
+  subtitle?: React.ReactNode;
+  count?: number | string | null;
+  status?: React.ReactNode;
+  onClick?: React.MouseEventHandler<HTMLButtonElement>;
   className?: string;
-  children?: any;
-  [x: string]: any;
+  children?: React.ReactNode;
+  [x: string]: unknown;
 }) {
   return (
     <button
@@ -101,15 +101,15 @@ export function DetailPane({
   empty,
   className = "",
 }: {
-  title?: any;
-  eyebrow?: any;
-  icon?: any;
-  status?: any;
-  description?: any;
-  children?: any;
-  actions?: any;
-  headerActions?: any;
-  empty?: any;
+  title?: React.ReactNode;
+  eyebrow?: React.ReactNode;
+  icon?: React.ReactNode;
+  status?: React.ReactNode;
+  description?: React.ReactNode;
+  children?: React.ReactNode;
+  actions?: React.ReactNode;
+  headerActions?: React.ReactNode;
+  empty?: React.ReactNode;
   className?: string;
 }) {
   if (empty) {
@@ -140,8 +140,19 @@ export function DetailPane({
   );
 }
 
-export function CostGrid({ entries = [], title = "Cost", empty = "No cost", className = "" }: { entries?: any[]; title?: string; empty?: string; className?: string }) {
-  const clean = entries.filter((e: any) => e && e.key && Number(e.amount) > 0);
+interface CostEntry {
+  key: string;
+  label?: string;
+  amount?: number;
+  have?: number;
+  ok?: boolean;
+  icon?: React.ReactNode;
+  showHave?: boolean;
+  check?: boolean;
+}
+
+export function CostGrid({ entries = [], title = "Cost", empty = "No cost", className = "" }: { entries?: CostEntry[]; title?: string; empty?: string; className?: string }) {
+  const clean = entries.filter((e) => e && e.key && Number(e.amount) > 0);
   return (
     <div className={cx("flex flex-col gap-1.5", className)}>
       {title && <div className="hl-section-label">{title}</div>}
@@ -149,7 +160,7 @@ export function CostGrid({ entries = [], title = "Cost", empty = "No cost", clas
         <div className="hl-text-faint italic">{empty}</div>
       ) : (
         <div className="grid grid-cols-[repeat(auto-fill,minmax(96px,1fr))] gap-1.5">
-          {clean.map((e: any) => {
+          {clean.map((e) => {
             const have = Number(e.have ?? 0);
             const amount = Number(e.amount ?? 0);
             const ok = e.ok ?? have >= amount;
@@ -168,11 +179,23 @@ export function CostGrid({ entries = [], title = "Cost", empty = "No cost", clas
   );
 }
 
-export function AbilitySummary({ abilities, effects, empty = "No special bonus." }: { abilities?: any; effects?: any; empty?: any }) {
-  const rows = [];
+interface AbilitySpec {
+  id?: string;
+  params?: Record<string, unknown>;
+}
+
+interface AbilityEffects {
+  freeMoves?: number;
+  coinBonusFlat?: number;
+  coinBonusPerTile?: number;
+  freeMovesIfChain?: { minChain?: number };
+}
+
+export function AbilitySummary({ abilities, effects, empty = "No special bonus." }: { abilities?: AbilitySpec[] | unknown; effects?: AbilityEffects; empty?: React.ReactNode }) {
+  const rows: string[] = [];
   if (Array.isArray(abilities)) {
-    for (const ab of (abilities as any[])) {
-      const p = ab?.params || {};
+    for (const ab of abilities as AbilitySpec[]) {
+      const p = (ab?.params ?? {}) as Record<string, unknown>;
       switch (ab?.id) {
         case "free_moves":
           rows.push(`${p.count ?? 1} free move${(p.count ?? 1) === 1 ? "" : "s"}`);
@@ -212,18 +235,18 @@ export function AbilitySummary({ abilities, effects, empty = "No special bonus."
   );
 }
 
-export function DetailProgress({ value, max, label, tone = "moss" }: { value: any; max: any; label: any; tone?: string }) {
+export function DetailProgress({ value, max, label, tone = "moss" }: { value: number; max: number; label: React.ReactNode; tone?: "ember" | "moss" | "gold" }) {
   return (
     <div className="flex flex-col gap-1">
       <div className="flex items-center justify-between gap-2 text-caption font-bold text-on-panel-dim">
         <span>{label}</span>
         <span className="tabular-nums">{value}/{max}</span>
       </div>
-      <ProgressTrack value={value} max={max} tone={tone as any} size="sm" />
+      <ProgressTrack value={value} max={max} tone={tone} size="sm" />
     </div>
   );
 }
 
-export function DetailActionButton(props: any) {
+export function DetailActionButton(props: Record<string, unknown>) {
   return <Button block size="md" {...props} />;
 }

@@ -14,7 +14,7 @@ import { COLORS, FilterBar, SearchBar, SegmentedFilter } from "../shared.jsx";
 // "ui_lock" → "ui"); SVG keys use `.` (e.g. "design.tile.grass" → "design.tile").
 // When an archived/legacy canvas entry has `replacedBy`, use that key's
 // category instead so the legacy entry sorts next to its active sibling.
-function categoryOf(key: any, replacedBy: any) {
+function categoryOf(key: string, replacedBy: string | null | undefined): string {
   const effective = replacedBy || key;
   if (effective.includes(".")) {
     const parts = effective.split(".");
@@ -26,9 +26,9 @@ function categoryOf(key: any, replacedBy: any) {
 
 // Light-weight stub label for SVG entries that just publishes the key tail
 // as a human label ("design.tile.grass" → "tile.grass").
-function deriveSvgLabel(key: any) {
+function deriveSvgLabel(key: string): string {
   const tail = key.startsWith("design.") ? key.slice("design.".length) : key;
-  return tail.replace(/[._]/g, " ").replace(/\b\w/g, (c: any) => c.toUpperCase());
+  return tail.replace(/[._]/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase());
 }
 
 const USED_KEYS = getUsedIconKeys();
@@ -85,7 +85,12 @@ const ICON_SIZE = 56; // px — canvas render size
 
 // Run an icon's draw function against any Canvas-2D-shaped context with the
 // same background tint and centering as the live game.
-function paintIconForCell(ctx: any, entry: any, size: any) {
+interface PaintableIconEntry {
+  color: string;
+  draw: (ctx: CanvasRenderingContext2D) => void;
+}
+
+function paintIconForCell(ctx: CanvasRenderingContext2D, entry: PaintableIconEntry, size: number) {
   ctx.save();
   ctx.beginPath();
   ctx.arc(size / 2, size / 2, size / 2 - 2, 0, Math.PI * 2);
@@ -113,7 +118,7 @@ function patchC2S() {
   c2sPatched = true;
   const proto = C2S.prototype;
   if (!proto.ellipse) {
-    proto.ellipse = function (cx: any, cy: any, rx: any, ry: any, rot: any, a0: any, a1: any, ccw: any) {
+    proto.ellipse = function (cx: number, cy: number, rx: number, ry: number, rot: number, a0: number, a1: number, ccw: boolean) {
       // Approximate the ellipse arc with cubic bezier segments (one per
       // ≤π/2 sweep). Output is in the same coord space as moveTo/lineTo,
       // so canvas2svg's path serialization handles it correctly.
@@ -125,7 +130,7 @@ function patchC2S() {
       const segDelta = delta / segments;
       const cosR = Math.cos(rot);
       const sinR = Math.sin(rot);
-      const xform = (px: any, py: any) => [cx + px * cosR - py * sinR, cy + px * sinR + py * cosR];
+      const xform = (px: number, py: number): [number, number] => [cx + px * cosR - py * sinR, cy + px * sinR + py * cosR];
       let theta = a0;
       const [sx, sy] = xform(rx * Math.cos(theta), ry * Math.sin(theta));
       this.lineTo(sx, sy);
@@ -148,7 +153,7 @@ function patchC2S() {
     };
   }
   if (!proto.roundRect) {
-    proto.roundRect = function (x: any, y: any, w: any, h: any, r: any) {
+    proto.roundRect = function (x: number, y: number, w: number, h: number, r: number | number[]) {
       const list = Array.isArray(r) ? r : [r, r, r, r];
       let tl, tr, br, bl;
       if (list.length === 1) [tl, tr, br, bl] = [list[0], list[0], list[0], list[0]];
@@ -174,7 +179,7 @@ function patchC2S() {
   }
 }
 
-function renderIconSvg(entry: any, size: number) {
+function renderIconSvg(entry: PaintableIconEntry, size: number) {
   patchC2S();
   const ctx = new C2S(size, size);
   paintIconForCell(ctx, entry, size);
@@ -310,7 +315,7 @@ export default function IconsTab() {
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("all");
   const [status, setStatus] = useState("all");
-  const [copiedKey, setCopiedKey] = useState(null);
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [mode, setMode] = useState<"canvas" | "svg">("canvas");
 
   const filtered = useMemo(() => {
@@ -335,7 +340,7 @@ export default function IconsTab() {
     });
   }, [search, category, status]);
 
-  function handleClick(key: any) {
+  function handleClick(key: string) {
     navigator.clipboard?.writeText(key).catch(() => {});
     setCopiedKey(key);
     setTimeout(() => setCopiedKey((k) => (k === key ? null : k)), 1800);

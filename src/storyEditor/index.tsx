@@ -437,7 +437,16 @@ const ACT_LABELS = [
 
 // ─── left rail ───────────────────────────────────────────────────────────────
 
-function RailRow({ beatId, draft, selectedId, onlineIds, onSelect, matchKind }: { beatId: any; draft: any; selectedId: any; onlineIds: any; onSelect: any; matchKind: any }) {
+interface RailRowProps {
+  beatId: string;
+  draft: import("./types.js").StoryDraft;
+  selectedId: string | null;
+  onlineIds: Set<string>;
+  onSelect: (id: string) => void;
+  matchKind?: string | null;
+}
+
+function RailRow({ beatId, draft, selectedId, onlineIds, onSelect, matchKind }: RailRowProps) {
   const beat = effectiveBeat(beatId, draft);
   const isSel = beatId === selectedId;
   const choices = beat?.choices || [];
@@ -464,7 +473,7 @@ function RailRow({ beatId, draft, selectedId, onlineIds, onSelect, matchKind }: 
   );
 }
 
-function GroupHeader({ color, label, count }: { color: any; label: any; count: any }) {
+function GroupHeader({ color, label, count }: { color: string; label: string; count: number }) {
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 7, padding: "7px 12px", font: "600 9px/1 system-ui",
       letterSpacing: "0.12em", textTransform: "uppercase", color: C.inkSubtle }}>
@@ -933,7 +942,7 @@ export default function StoryEditorApp() {
   useEffect(() => {
     const el = canvasRef.current;
     if (!el) return;
-    const clampZoom = (z: any) => Math.min(2, Math.max(0.3, z));
+    const clampZoom = (z: number) => Math.min(2, Math.max(0.3, z));
     const onTouchStart = (e: TouchEvent) => {
       if (e.touches.length === 1) {
         const t = e.touches[0];

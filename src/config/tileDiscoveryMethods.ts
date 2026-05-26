@@ -70,18 +70,22 @@ export const TILE_DISCOVERY_METHODS = Object.freeze([
   },
 ]);
 
-export const TILE_DISCOVERY_METHOD_BY_ID = Object.freeze(
+type TileDiscoveryMethod = (typeof TILE_DISCOVERY_METHODS)[number];
+
+export const TILE_DISCOVERY_METHOD_BY_ID: Record<string, TileDiscoveryMethod | undefined> = Object.freeze(
   Object.fromEntries(TILE_DISCOVERY_METHODS.map((m) => [m.id, m])),
 );
 
-export function getTileDiscoveryMethod(id: any) {
-  return (TILE_DISCOVERY_METHOD_BY_ID as any)[id] ?? null;
+export function getTileDiscoveryMethod(id: string | null | undefined): TileDiscoveryMethod | null {
+  if (!id) return null;
+  return TILE_DISCOVERY_METHOD_BY_ID[id] ?? null;
 }
 
-export function defaultsForTileDiscoveryMethod(id: any) {
-  const m = (TILE_DISCOVERY_METHOD_BY_ID as any)[id];
+export function defaultsForTileDiscoveryMethod(id: string | null | undefined): Record<string, unknown> {
+  const m = id ? TILE_DISCOVERY_METHOD_BY_ID[id] : null;
   if (!m) return {};
-  const out: any = {};
-  for (const p of (m as any).params) (out as any)[p.key] = (p as any).default ?? "";
+  const out: Record<string, unknown> = {};
+  const params = m.params as ReadonlyArray<{ key: string; type: string; default?: unknown }>;
+  for (const p of params) out[p.key] = p.default ?? "";
   return out;
 }

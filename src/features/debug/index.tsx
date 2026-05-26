@@ -1,12 +1,13 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { BIOMES } from "../../constants.js";
 import { ParchmentDialog } from "../../ui/primitives/Dialog.jsx";
 import FeaturePanel from "../../ui/primitives/FeaturePanel.jsx";
+import type { Dispatch, GameState } from "../../types/state";
 
 export const modalKey = "debug";
 
-function DebugBtn({ children, onClick, color = 'slate' }) {
-  const palettes = {
+function DebugBtn({ children, onClick, color = 'slate' }: { children: ReactNode; onClick: () => void; color?: string }) {
+  const palettes: Record<string, { background: string; borderColor: string }> = {
     mine_gold:   { background: '#7a6a10', borderColor: '#4a4008' },
     green:  { background: '#2a7a3a', borderColor: '#1a4a20' },
     blue:   { background: '#3a5a8a', borderColor: '#1a2e5a' },
@@ -40,12 +41,13 @@ const MENU_LINKS = [
   { view: "achievements",   label: "🏆 Trophies",     color: "mine_gold" },
 ];
 
-export default function DebugModal({ state, dispatch }) {
+export default function DebugModal({ state, dispatch }: { state: GameState; dispatch: Dispatch }) {
   const [itemBiome, setItemBiome] = useState('farm');
   const [itemKey, setItemKey] = useState('tile_grass_hay');
   const open = state.modal === 'debug';
   const close = () => dispatch({ type: 'CLOSE_MODAL' });
-  const gotoView = (view) => {
+  const settings = (state.settings ?? {}) as { bespokeSeasonWidget?: boolean; seasonStripPhaser?: boolean };
+  const gotoView = (view: string) => {
     dispatch({ type: 'CLOSE_MODAL' });
     dispatch({ type: 'SET_VIEW', view });
   };
@@ -160,19 +162,19 @@ export default function DebugModal({ state, dispatch }) {
             <div className="hl-section-label !text-[10px] mb-1.5">Display</div>
             <div className="grid grid-cols-1 gap-1.5">
               <DebugBtn
-                color={state.settings?.bespokeSeasonWidget ? 'teal' : 'slate'}
+                color={settings.bespokeSeasonWidget ? 'teal' : 'slate'}
                 onClick={() => dispatch({ type: 'SETTINGS/TOGGLE', key: 'bespokeSeasonWidget' })}
               >
-                {state.settings?.bespokeSeasonWidget ? '● ON' : '○ OFF'} — Bespoke season widget
+                {settings.bespokeSeasonWidget ? '● ON' : '○ OFF'} — Bespoke season widget
               </DebugBtn>
               <div className="text-[10px] italic text-on-panel-faint text-center">
                 Replaces the season wheel with a per-season mini-scene.
               </div>
               <DebugBtn
-                color={state.settings?.seasonStripPhaser ? 'purple' : 'slate'}
+                color={settings.seasonStripPhaser ? 'purple' : 'slate'}
                 onClick={() => dispatch({ type: 'SETTINGS/TOGGLE', key: 'seasonStripPhaser' })}
               >
-                {state.settings?.seasonStripPhaser ? '● ON' : '○ OFF'} — Phaser season strip (HQ)
+                {settings.seasonStripPhaser ? '● ON' : '○ OFF'} — Phaser season strip (HQ)
               </DebugBtn>
               <div className="text-[10px] italic text-on-panel-faint text-center">
                 High-fidelity Phaser version with parallax hills + dense particle effects.

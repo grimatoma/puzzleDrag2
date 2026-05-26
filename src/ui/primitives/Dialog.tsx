@@ -22,17 +22,17 @@ const SIZES: Record<string, string> = {
   xl: "max-w-xl",
 };
 
-function useDialogBehavior(open: any, onClose: any, panelRef: any) {
+function useDialogBehavior(open: boolean | undefined, onClose: (() => void) | undefined, panelRef: React.RefObject<HTMLDivElement>) {
   useEffect(() => {
     if (!open) return;
     const previouslyFocused = document.activeElement;
     const panel = panelRef.current;
     if (panel) {
-      const focusables = panel.querySelectorAll(FOCUSABLE);
+      const focusables = panel.querySelectorAll<HTMLElement>(FOCUSABLE);
       const first = focusables[0] || panel;
       first.focus?.();
     }
-    const onKey = (e: any) => {
+    const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape" && onClose) {
         e.stopPropagation();
         onClose();
@@ -68,8 +68,8 @@ function useDialogBehavior(open: any, onClose: any, panelRef: any) {
   }, [open, onClose, panelRef]);
 }
 
-function BackdropShell({ exiting, onClose, closeOnBackdrop = true, className = "", children }: { exiting: any; onClose: any; closeOnBackdrop?: boolean; className?: string; children?: any }) {
-  const onBackdrop = (e: any) => {
+function BackdropShell({ exiting, onClose, closeOnBackdrop = true, className = "", children }: { exiting: boolean; onClose?: (() => void) | undefined; closeOnBackdrop?: boolean; className?: string; children?: React.ReactNode }) {
+  const onBackdrop = (e: React.MouseEvent<HTMLDivElement>) => {
     if (closeOnBackdrop && e.target === e.currentTarget && onClose) onClose();
   };
   const anim = exiting
@@ -87,7 +87,7 @@ function BackdropShell({ exiting, onClose, closeOnBackdrop = true, className = "
   );
 }
 
-function PanelIn({ exiting, children, style }: { exiting: any; children?: any; style?: any }) {
+function PanelIn({ exiting, children, style }: { exiting: boolean; children?: React.ReactNode; style?: React.CSSProperties }) {
   const anim = exiting
     ? `dialogPanelOut ${DIALOG_EXIT_MS}ms cubic-bezier(.4,.0,.6,1) both`
     : "dialogPanelIn 200ms cubic-bezier(.2,.7,.2,1) both";
@@ -96,6 +96,18 @@ function PanelIn({ exiting, children, style }: { exiting: any; children?: any; s
       {children}
     </div>
   );
+}
+
+interface DialogProps {
+  open: boolean | undefined;
+  onClose: (() => void) | undefined;
+  size?: string;
+  tone?: string;
+  ariaLabel?: string;
+  backdropClassName?: string;
+  closeOnBackdrop?: boolean;
+  children?: React.ReactNode;
+  className?: string;
 }
 
 export function ParchmentDialog({
@@ -108,23 +120,13 @@ export function ParchmentDialog({
   closeOnBackdrop = true,
   children,
   className = "",
-}: {
-  open: any;
-  onClose: any;
-  size?: string;
-  tone?: string;
-  ariaLabel?: any;
-  backdropClassName?: string;
-  closeOnBackdrop?: boolean;
-  children?: any;
-  className?: string;
-}) {
-  const panelRef = useRef(null);
+}: DialogProps) {
+  const panelRef = useRef<HTMLDivElement>(null);
   const titleId = useId();
   const stickyRef = useRef(false);
   const sizeCls = SIZES[size] || SIZES.md;
   const bgCls = tone === "paper" ? "bg-paper-soft" : "bg-parchment-soft";
-  const { shouldRender, exiting } = useExitTransition(open, DIALOG_EXIT_MS);
+  const { shouldRender, exiting } = useExitTransition(!!open, DIALOG_EXIT_MS);
   useDialogBehavior(open, onClose, panelRef);
   if (!shouldRender) return null;
   return (
@@ -144,7 +146,7 @@ export function ParchmentDialog({
             value={{
               titleId,
               tone: "light",
-              setHasStickyActions: (v: any) => { stickyRef.current = v; },
+              setHasStickyActions: (v: boolean) => { stickyRef.current = v; },
             }}
           >
             {children}
@@ -164,20 +166,11 @@ export function StoryDialog({
   closeOnBackdrop = true,
   children,
   className = "",
-}: {
-  open: any;
-  onClose: any;
-  size?: string;
-  ariaLabel?: any;
-  backdropClassName?: string;
-  closeOnBackdrop?: boolean;
-  children?: any;
-  className?: string;
-}) {
-  const panelRef = useRef(null);
+}: Omit<DialogProps, "tone">) {
+  const panelRef = useRef<HTMLDivElement>(null);
   const titleId = useId();
   const sizeCls = SIZES[size] || SIZES.md;
-  const { shouldRender, exiting } = useExitTransition(open, DIALOG_EXIT_MS);
+  const { shouldRender, exiting } = useExitTransition(!!open, DIALOG_EXIT_MS);
   useDialogBehavior(open, onClose, panelRef);
   if (!shouldRender) return null;
   return (
@@ -205,8 +198,8 @@ export function StoryDialog({
   );
 }
 
-function Title({ children, className = "" }: { children?: any; className?: string }) {
-  const { titleId, tone } = useContext(DialogCtx) as any;
+function Title({ children, className = "" }: { children?: React.ReactNode; className?: string }) {
+  const { titleId, tone } = useContext(DialogCtx);
   const color = tone === "dark" ? "text-ink" : "text-ink-soft";
   return (
     <div className={`px-5 pt-4 pb-3 flex-shrink-0 ${className}`}>
@@ -230,7 +223,7 @@ function Title({ children, className = "" }: { children?: any; className?: strin
   );
 }
 
-function Portrait({ children, className = "" }: { children?: any; className?: string }) {
+function Portrait({ children, className = "" }: { children?: React.ReactNode; className?: string }) {
   return (
     <div className={`px-5 pt-1 pb-2 flex-shrink-0 flex justify-center ${className}`}>
       {children}
@@ -238,7 +231,7 @@ function Portrait({ children, className = "" }: { children?: any; className?: st
   );
 }
 
-function Body({ children, className = "" }: { children?: any; className?: string }) {
+function Body({ children, className = "" }: { children?: React.ReactNode; className?: string }) {
   const color = "text-ink";
   return (
     <div
@@ -250,7 +243,7 @@ function Body({ children, className = "" }: { children?: any; className?: string
   );
 }
 
-function Actions({ children, sticky = false, className = "" }: { children?: any; sticky?: boolean; className?: string }) {
+function Actions({ children, sticky = false, className = "" }: { children?: React.ReactNode; sticky?: boolean; className?: string }) {
   const { tone } = useContext(DialogCtx);
   const stickyCls = sticky
     ? `sticky bottom-0 flex-shrink-0 pb-safe-bottom ${tone === "dark" ? "bg-bg-darkest/95" : "bg-parchment-soft/95"} backdrop-blur-sm`

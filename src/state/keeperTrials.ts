@@ -7,17 +7,64 @@ import {
 } from "../features/zones/data.js";
 import { keeperForType, keeperPathInfo } from "../keepers.js";
 import { evaluateAndApplyStoryBeat } from "./storyEffects.js";
+import type { GameState } from "../types/state.js";
 
-function biomeForSettlementType(type: any): string {
+/** Settlement type → biome key. */
+function biomeForSettlementType(type: string | null | undefined): string {
   if (type === "mine") return "mine";
   if (type === "harbor") return "fish";
   return "farm";
 }
 
-export function keeperTrialDefinition(state: any, zoneId: any, path = "driveout"): any {
+/** A keeper trial definition. Embedded on `state.activeTrial` and per-zone in `state.keeperTrials`. */
+export interface KeeperTrial {
+  keeperKey: string;
+  keeperType: string;
+  keeperName: string;
+  zoneId: string;
+  path: string;
+  status: string;
+  pressure: number;
+  entryCost: Record<string, number>;
+  turnBudget: number;
+  turnsRemaining: number;
+  boardRules: { minChain: number; biomeKey: string };
+  goal: { resource: string; amount: number };
+  progress: number;
+  pressureRules: { lossPressure: number };
+  winReward: { embers?: number; coreIngots?: number };
+  lossPenalty: { pressure: number };
+  [extra: string]: unknown;
+}
+
+/** The boss-mirror payload synthesised from a keeper trial. */
+export interface KeeperBossMirror {
+  key: string;
+  name: string;
+  emoji: string;
+  resource: string;
+  targetCount: number;
+  progress: number;
+  turnsLeft: number;
+  minChain: number;
+  goal: string;
+  flavor: string;
+  description: string;
+  isKeeperTrial: true;
+}
+
+/** Shape of `keeperPathInfo` results — either coexist (embers) or driveout (coreIngots). */
+interface PathInfoReward {
+  embers?: number;
+  coreIngots?: number;
+  [extra: string]: unknown;
+}
+
+export function keeperTrialDefinition(state: GameState, zoneId: string | null | undefined, path: string = "driveout"): KeeperTrial | null {
+  if (!zoneId) return null;
   const type = settlementTypeForZone(zoneId);
   const keeper = keeperForType(type);
-  const info = keeperPathInfo(type, path);
+  const info = keeperPathInfo(type, path) as PathInfoReward | null;
   if (!keeper || !info || !type) return null;
   const biomeKey = biomeForSettlementType(type);
   const goalByType: Record<string, { resource: string; amount: number }> = {
@@ -27,6 +74,7 @@ export function keeperTrialDefinition(state: any, zoneId: any, path = "driveout"
   };
   const baseBudgetByType: Record<string, number> = { farm: 12, mine: 10, harbor: 10 };
   const goal = goalByType[type] ?? goalByType.farm;
+  const trialsState = state.keeperTrials as Record<string, { pressure?: number } | undefined> | undefined;
   return {
     keeperKey: keeper.id,
     keeperType: type,
@@ -34,7 +82,7 @@ export function keeperTrialDefinition(state: any, zoneId: any, path = "driveout"
     zoneId,
     path,
     status: "active",
-    pressure: state.keeperTrials?.[zoneId]?.pressure ?? 0,
+    pressure: trialsState?.[zoneId]?.pressure ?? 0,
     entryCost: {},
     turnBudget: baseBudgetByType[type] ?? 10,
     turnsRemaining: baseBudgetByType[type] ?? 10,
@@ -43,13 +91,13 @@ export function keeperTrialDefinition(state: any, zoneId: any, path = "driveout"
     progress: 0,
     pressureRules: { lossPressure: 1 },
     winReward: path === "coexist"
-      ? { embers: (info as any).embers ?? 0 }
-      : { coreIngots: (info as any).coreIngots ?? 0 },
+      ? { embers: info.embers ?? 0 }
+      : { coreIngots: info.coreIngots ?? 0 },
     lossPenalty: { pressure: 1 },
   };
 }
 
-export function bossMirrorForTrial(trial: any): any {
+export function bossMirrorForTrial(trial: KeeperTrial | null | undefined): KeeperBossMirror | null {
   if (!trial) return null;
   return {
     key: trial.keeperKey,
@@ -67,26 +115,31 @@ export function bossMirrorForTrial(trial: any): any {
   };
 }
 
-export function finalizeKeeperPath(state: any, zoneId: any, path: any): any {
+export function finalizeKeeperPath(state: GameState, zoneId: string | null | undefined, path: string | null | undefined): GameState {
   if (path !== "coexist" && path !== "driveout") return state;
   if (!zoneId || !keeperReadyFor(state, zoneId)) return state;
   const type = settlementTypeForZone(zoneId);
   const keeper = keeperForType(type);
-  const info = keeperPathInfo(type, path);
+  const info = keeperPathInfo(type, path) as PathInfoReward | null;
   if (!keeper || !info) return state;
-  const prevEntry = state.settlements?.[zoneId] ?? { founded: true };
+  const settlements: GameState["settlements"] = state.settlements ?? {};
+  const prevEntry = settlements[zoneId] ?? { founded: true };
   const where = displayZoneName(state, zoneId);
-  let next = {
+  const boss = state.boss as { isKeeperTrial?: boolean } | null | undefined;
+  const story = state.story as { flags?: Record<string, unknown>; [k: string]: unknown };
+  const trialsState = (state.keeperTrials ?? {}) as Record<string, Record<string, unknown> | undefined>;
+  const stateRec = state as unknown as Record<string, unknown>;
+  let next: GameState = {
     ...state,
     activeTrial: null,
-    boss: state.boss?.isKeeperTrial ? null : state.boss,
-    bossMinimized: state.boss?.isKeeperTrial ? false : state.bossMinimized,
-    settlements: { ...(state.settlements ?? {}), [zoneId]: { ...prevEntry, keeperPath: path } },
+    boss: boss?.isKeeperTrial ? null : state.boss,
+    bossMinimized: boss?.isKeeperTrial ? false : stateRec.bossMinimized,
+    settlements: { ...settlements, [zoneId]: { ...prevEntry, keeperPath: path } },
     keeperTrials: {
-      ...(state.keeperTrials ?? {}),
-      [zoneId]: { ...(state.keeperTrials?.[zoneId] ?? {}), status: "won", path, pressure: 0 },
+      ...trialsState,
+      [zoneId]: { ...(trialsState[zoneId] ?? {}), status: "won", path, pressure: 0 },
     },
-    story: { ...state.story, flags: { ...(state.story?.flags ?? {}), [`keeper_${zoneId}_${path}`]: true } },
+    story: { ...story, flags: { ...(story?.flags ?? {}), [`keeper_${zoneId}_${path}`]: true } },
     bubble: {
       id: Date.now(), npc: "wren", ms: 3000,
       text: path === "coexist"
@@ -95,17 +148,18 @@ export function finalizeKeeperPath(state: any, zoneId: any, path: any): any {
     },
   };
   if (path === "coexist") {
-    next = { ...next, embers: (state.embers ?? 0) + ((info as any).embers ?? 0) };
+    next = { ...next, embers: (state.embers ?? 0) + (info.embers ?? 0) };
   } else {
+    const achievementsRec = (state.achievements ?? {}) as GameState["achievements"];
     next = {
       ...next,
-      bossesDefeated: (state.bossesDefeated || 0) + 1,
-      coreIngots: (state.coreIngots ?? 0) + ((info as any).coreIngots ?? 0),
+      bossesDefeated: (Number(stateRec.bossesDefeated) || 0) + 1,
+      coreIngots: (state.coreIngots ?? 0) + (info.coreIngots ?? 0),
       achievements: {
-        ...(state.achievements ?? {}),
+        ...achievementsRec,
         counters: {
-          ...(state.achievements?.counters ?? {}),
-          bosses_defeated: (state.achievements?.counters?.bosses_defeated ?? 0) + 1,
+          ...(achievementsRec.counters ?? {}),
+          bosses_defeated: (achievementsRec.counters?.bosses_defeated ?? 0) + 1,
         },
       },
     };
@@ -113,10 +167,10 @@ export function finalizeKeeperPath(state: any, zoneId: any, path: any): any {
   const earnedHeirlooms = grantEarnedHearthTokens(next);
   if (earnedHeirlooms !== next.heirlooms) {
     const justUnlockedCapital = !isOldCapitalUnlocked(next) &&
-      isOldCapitalUnlocked({ ...next, heirlooms: earnedHeirlooms });
+      isOldCapitalUnlocked({ ...next, heirlooms: earnedHeirlooms } as GameState);
     next = {
       ...next,
-      heirlooms: earnedHeirlooms,
+      heirlooms: earnedHeirlooms as GameState["heirlooms"],
       bubble: justUnlockedCapital
         ? { id: Date.now(), npc: "tomas", text: "Three Hearth-Tokens. The old road to the Capital opens.", ms: 2800 }
         : next.bubble,
@@ -125,7 +179,7 @@ export function finalizeKeeperPath(state: any, zoneId: any, path: any): any {
   return evaluateAndApplyStoryBeat(next, { type: "keeper_confronted", zoneId, path, keeper: keeper.id });
 }
 
-export function startKeeperTrial(state: any, zoneId: any, path = "driveout"): any {
+export function startKeeperTrial(state: GameState, zoneId: string | null | undefined, path: string = "driveout"): GameState {
   if (path === "coexist") return finalizeKeeperPath(state, zoneId, path);
   if (!zoneId || !keeperReadyFor(state, zoneId)) return state;
   const trial = keeperTrialDefinition(state, zoneId, path);
@@ -139,10 +193,11 @@ export function startKeeperTrial(state: any, zoneId: any, path = "driveout"): an
     mode: "keeperTrial",
     trialKey: trial.keeperKey,
   };
+  const trialsState = (state.keeperTrials ?? {}) as Record<string, unknown>;
   return {
     ...state,
-    activeTrial: trial,
-    keeperTrials: { ...(state.keeperTrials ?? {}), [zoneId]: trial },
+    activeTrial: trial as unknown as GameState["activeTrial"],
+    keeperTrials: { ...trialsState, [zoneId]: trial },
     boss: bossMirrorForTrial(trial),
     bossMinimized: true,
     modal: null,
@@ -157,8 +212,8 @@ export function startKeeperTrial(state: any, zoneId: any, path = "driveout"): an
   };
 }
 
-export function resolveKeeperTrial(state: any, won: any): any {
-  const trial = state.activeTrial;
+export function resolveKeeperTrial(state: GameState, won: boolean | null | undefined): GameState {
+  const trial = state.activeTrial as KeeperTrial | null;
   if (!trial) return state;
   if (won) {
     return finalizeKeeperPath({
@@ -171,13 +226,16 @@ export function resolveKeeperTrial(state: any, won: any): any {
     }, trial.zoneId, trial.path);
   }
   const pressure = (trial.pressure ?? 0) + (trial.lossPenalty?.pressure ?? 1);
+  const boss = state.boss as { isKeeperTrial?: boolean } | null | undefined;
+  const stateRec = state as unknown as Record<string, unknown>;
+  const trialsState = (state.keeperTrials ?? {}) as Record<string, unknown>;
   return {
     ...state,
     activeTrial: null,
-    boss: state.boss?.isKeeperTrial ? null : state.boss,
-    bossMinimized: state.boss?.isKeeperTrial ? false : state.bossMinimized,
+    boss: boss?.isKeeperTrial ? null : state.boss,
+    bossMinimized: boss?.isKeeperTrial ? false : stateRec.bossMinimized,
     keeperTrials: {
-      ...(state.keeperTrials ?? {}),
+      ...trialsState,
       [trial.zoneId]: { ...trial, status: "lost", pressure, turnsRemaining: 0 },
     },
     farmRun: null,
@@ -189,10 +247,17 @@ export function resolveKeeperTrial(state: any, won: any): any {
   };
 }
 
-export function applyKeeperTrialChainProgress(state: any, resourceKey: any, amount: any, turnPatch: any): any {
-  const trial = state.activeTrial;
+/** Per-turn patch supplied to {@link applyKeeperTrialChainProgress}. */
+export interface KeeperTrialTurnPatch {
+  farmRun?: { turnsRemaining?: number; [k: string]: unknown };
+  ended?: boolean;
+  [extra: string]: unknown;
+}
+
+export function applyKeeperTrialChainProgress(state: GameState, resourceKey: string | null | undefined, amount: number, turnPatch: KeeperTrialTurnPatch): GameState {
+  const trial = state.activeTrial as KeeperTrial | null;
   if (!trial) return state;
-  let nextTrial = {
+  let nextTrial: KeeperTrial = {
     ...trial,
     turnsRemaining: turnPatch.farmRun?.turnsRemaining ?? trial.turnsRemaining,
   };
@@ -202,11 +267,13 @@ export function applyKeeperTrialChainProgress(state: any, resourceKey: any, amou
       progress: Math.min(trial.goal.amount, (trial.progress ?? 0) + amount),
     };
   }
-  let next = {
+  const trialsState = (state.keeperTrials ?? {}) as Record<string, unknown>;
+  const boss = state.boss as { isKeeperTrial?: boolean } | null | undefined;
+  let next: GameState = {
     ...state,
-    activeTrial: nextTrial,
-    keeperTrials: { ...(state.keeperTrials ?? {}), [trial.zoneId]: nextTrial },
-    boss: state.boss?.isKeeperTrial ? bossMirrorForTrial(nextTrial) : state.boss,
+    activeTrial: nextTrial as unknown as GameState["activeTrial"],
+    keeperTrials: { ...trialsState, [trial.zoneId]: nextTrial },
+    boss: boss?.isKeeperTrial ? bossMirrorForTrial(nextTrial) : state.boss,
   };
   if ((nextTrial.progress ?? 0) >= (nextTrial.goal?.amount ?? Infinity)) {
     return resolveKeeperTrial(next, true);

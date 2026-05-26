@@ -7,13 +7,36 @@ import {
   COLORS, NumberField, TextField, TextArea,
   SmallButton, Pill, Card, SearchBar, SearchAndAddPicker,
 } from "../shared.jsx";
-import AbilitiesEditor from "../AbilitiesEditor.jsx";
+import AbilitiesEditor, { type AbilityInstance } from "../AbilitiesEditor.jsx";
 import { CardAttachmentFooter, focusHighlightProps, useScrollToFocus } from "../relational.jsx";
 import { useBalanceNav } from "../balanceNav.jsx";
 import { BuildingIllustration } from "../../ui/Town.jsx";
 import Icon from "../../ui/Icon.jsx";
 import { analyseBuildingCosts } from "../buildingCosts.js";
 import MetricCard from "../../ui/primitives/MetricCard.jsx";
+import type { BalanceDraft, TabProps } from "../index.jsx";
+
+type CostMap = Record<string, number>;
+
+interface BuildingOverride {
+  name?: string;
+  desc?: string;
+  cost?: CostMap;
+  lv?: number;
+  abilities?: AbilityInstance[];
+  [extra: string]: unknown;
+}
+
+interface BuildingDef {
+  id: string;
+  name: string;
+  desc: string;
+  cost: CostMap;
+  lv: number;
+  biome?: string;
+  abilities?: AbilityInstance[];
+  [extra: string]: unknown;
+}
 
 // Canonical cost-key list, derived from the live data (every biome resource +
 // the two currencies) — never hardcoded. Feeds the CostEditor's add picker.
@@ -23,7 +46,7 @@ const COST_KEYS = (() => {
   return [...out].sort();
 })();
 
-export default function BuildingsTab({ draft, updateDraft, focus }: { draft: any; updateDraft: any; focus: any }) {
+export default function BuildingsTab({ draft, updateDraft, focus }: TabProps) {
   const { focus: navFocus } = useBalanceNav();
   const activeFocus = focus ?? navFocus;
   useScrollToFocus(activeFocus);
@@ -32,22 +55,28 @@ export default function BuildingsTab({ draft, updateDraft, focus }: { draft: any
   const [analysisOpen, setAnalysisOpen] = useState(false);
   const analysis = useMemo(() => analyseBuildingCosts(), []);
 
+  const buildings = BUILDINGS as unknown as readonly BuildingDef[];
+
   const filtered = useMemo(
-    () => BUILDINGS.filter((b) => {
+    () => buildings.filter((b) => {
       if (!search) return true;
       const q = search.toLowerCase();
       return b.id.toLowerCase().includes(q) || (b.name || "").toLowerCase().includes(q);
     }),
-    [search],
+    [search, buildings],
   );
 
-  function patch(id: any, fields: any) {
-    updateDraft((d: any) => {
-      const cur = d.buildings[id] || {};
-      const next = { ...cur, ...fields };
-      for (const k of Object.keys(next)) if (next[k] === "" || next[k] === undefined) delete next[k];
-      if (Object.keys(next).length === 0) delete d.buildings[id];
-      else d.buildings[id] = next;
+  function patch(id: string, fields: BuildingOverride) {
+    updateDraft((d: BalanceDraft) => {
+      const buildingsMap = d.buildings as Record<string, BuildingOverride>;
+      const cur: BuildingOverride = buildingsMap[id] || {};
+      const next: BuildingOverride = { ...cur, ...fields };
+      for (const k of Object.keys(next)) {
+        const v = (next as Record<string, unknown>)[k];
+        if (v === "" || v === undefined) delete (next as Record<string, unknown>)[k];
+      }
+      if (Object.keys(next).length === 0) delete buildingsMap[id];
+      else buildingsMap[id] = next;
     });
   }
 
@@ -91,7 +120,7 @@ export default function BuildingsTab({ draft, updateDraft, focus }: { draft: any
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
         {filtered.map((b) => {
-          const p = draft.buildings[b.id] || {};
+          const p: BuildingOverride = (draft.buildings[b.id] as BuildingOverride | undefined) || {};
           const eff = {
             name: p.name ?? b.name,
             desc: p.desc ?? b.desc,
@@ -125,7 +154,7 @@ export default function BuildingsTab({ draft, updateDraft, focus }: { draft: any
                 {dirty && (
                   <SmallButton
                     variant="ghost"
-                    onClick={() => updateDraft((d: any) => { delete d.buildings[b.id]; })}
+                    onClick={() => updateDraft((d: BalanceDraft) => { delete d.buildings[b.id]; })}
                   >
                     revert
                   </SmallButton>
@@ -135,12 +164,12 @@ export default function BuildingsTab({ draft, updateDraft, focus }: { draft: any
               <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 mb-2">
                 <div className="col-span-2">
                   <Label>Name</Label>
-                  <TextField value={eff.name} onChange={(v: any) => patch(b.id, { name: v })} />
+                  <TextField value={eff.name} onChange={(v: string) => patch(b.id, { name: v })} />
                 </div>
                 <div>
                   <Label>Required level</Label>
                   <NumberField value={eff.lv} min={1} max={20} width={60}
-                    onChange={(v: any) => patch(b.id, { lv: v })} />
+                    onChange={(v: number) => patch(b.id, { lv: v })} />
                 </div>
               </div>
 
@@ -150,7 +179,7 @@ export default function BuildingsTab({ draft, updateDraft, focus }: { draft: any
                 </div>
                 <CostEditor
                   cost={eff.cost}
-                  onChange={(nextCost: any) => patch(b.id, { cost: nextCost })}
+                  onChange={(nextCost: CostMap) => patch(b.id, { cost: nextCost })}
                 />
               </div>
 
@@ -159,7 +188,7 @@ export default function BuildingsTab({ draft, updateDraft, focus }: { draft: any
                 <TextArea
                   rows={2}
                   value={eff.desc}
-                  onChange={(v: any) => patch(b.id, { desc: v })}
+                  onChange={(v: string) => patch(b.id, { desc: v })}
                 />
               </div>
 
@@ -167,7 +196,7 @@ export default function BuildingsTab({ draft, updateDraft, focus }: { draft: any
                 <AbilitiesEditor
                   scope="building"
                   abilities={eff.abilities}
-                  onChange={(next: any) => patch(b.id, { abilities: next })}
+                  onChange={(next: AbilityInstance[]) => patch(b.id, { abilities: next })}
                 />
               </CardAttachmentFooter>
             </Card>
@@ -183,7 +212,7 @@ export default function BuildingsTab({ draft, updateDraft, focus }: { draft: any
   );
 }
 
-function Label({ children }: { children: any }) {
+function Label({ children }: { children: React.ReactNode }) {
   return (
     <div className="text-[10px] font-bold uppercase tracking-wide mb-0.5" style={{ color: COLORS.inkSubtle }}>
       {children}
@@ -191,7 +220,7 @@ function Label({ children }: { children: any }) {
   );
 }
 
-function CostEditor({ cost, onChange }: { cost: any; onChange: any }) {
+function CostEditor({ cost, onChange }: { cost: CostMap; onChange: (next: CostMap) => void }) {
   const availableOptions = useMemo(() => {
     return COST_KEYS.filter((k) => !(k in cost)).map((k) => ({
       id: k,
@@ -209,8 +238,8 @@ function CostEditor({ cost, onChange }: { cost: any; onChange: any }) {
     }));
   }, [cost]);
 
-  function updateCost(resKey: any, qty: any) {
-    const next = { ...cost };
+  function updateCost(resKey: string, qty: number | null) {
+    const next: CostMap = { ...cost };
     if (qty === null || qty === undefined || qty <= 0) {
       delete next[resKey];
     } else {
@@ -245,7 +274,7 @@ function CostEditor({ cost, onChange }: { cost: any; onChange: any }) {
                 min={1}
                 max={9999}
                 width={70}
-                onChange={(v: any) => updateCost(resKey, v)}
+                onChange={(v: number) => updateCost(resKey, v)}
               />
               <SmallButton variant="danger" onClick={() => updateCost(resKey, null)}>
                 ✕
@@ -259,7 +288,7 @@ function CostEditor({ cost, onChange }: { cost: any; onChange: any }) {
         label="Add Cost"
         placeholder="Search resources…"
         options={availableOptions}
-        onSelect={(k: any) => updateCost(k, 1)}
+        onSelect={(k: string) => updateCost(k, 1)}
         gridClass="grid-cols-2 md:grid-cols-3"
       />
     </div>

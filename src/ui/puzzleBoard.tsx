@@ -17,15 +17,46 @@
  */
 
 import { forwardRef, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-// Cast to any so callers don't need to supply the `title` prop (it's optional
+// Cast so callers don't need to supply the `title` prop (it's optional
 // in practice even though Icon.jsx's inferred sig marks it required).
 import _LegacyIconRaw from "./Icon.jsx";
-const LegacyIcon = _LegacyIconRaw as any;
+const LegacyIcon = _LegacyIconRaw as unknown as React.ComponentType<{ iconKey: string; size?: number; className?: string; title?: string }>;
 import { BIOMES } from "../constants.js";
 import { TOOL_BY_KEY, isTapTargetTool, visibleTools, TOOL_CATALOG } from "./toolRegistry.js";
+import type { ToolEntry } from "./toolRegistry.js";
 import { isFillBiasArmed } from "../state/fillBias.js";
 import { SeasonStrip } from "./seasonStrip.jsx";
 import { lazy, Suspense } from "react";
+import type { Dispatch, GameState } from "../types/state.js";
+
+// A runtime tool entry — TOOL_CATALOG entry augmented with player-facing
+// state. `armed` here is a boolean (is THIS tool currently the active one)
+// rather than the catalog's `"instant" | "passive" | "tap"` category, so we
+// shadow it by omitting the catalog field.
+interface RuntimeTool extends Omit<ToolEntry, "armed"> {
+  count: number;
+  armed?: boolean;
+}
+
+/** Spread a TOOL_BY_KEY entry into a RuntimeTool, dropping the catalog's
+ *  `armed: "instant"|"passive"|"tap"` so the runtime `armed?: boolean` slot
+ *  isn't structurally shadowed. */
+function runtimeFromEntry(entry: ToolEntry, count: number, armed?: boolean): RuntimeTool {
+  const { armed: _unused, ...rest } = entry;
+  return { ...rest, count, ...(armed != null ? { armed } : {}) };
+}
+
+// Subset of state the local helpers need; lets the helpers be called with a
+// projected `{ toolPending, fillBiasArmed }` object as well as the full state.
+// `fillBiasTarget`/`magicFertilizerCharges` are optional so passing the full
+// GameState through still satisfies the contract.
+interface ToolEnvState {
+  toolPending?: string | null;
+  fillBiasArmed?: boolean;
+  tools?: Record<string, number | boolean | undefined> | Record<string, number>;
+  fillBiasTarget?: unknown;
+  magicFertilizerCharges?: number;
+}
 
 // ─── Chain HUD types ─────────────────────────────────────────────────────────
 
@@ -70,7 +101,7 @@ const CHAIN_STAGES = [
   { top: "#ffb04a", bot: "#d62828", accent: "#e62828", label: "FRENZY!" },
 ];
 
-export function fieldGradientFor(seasonIdx: any) {
+export function fieldGradientFor(seasonIdx: number) {
   return FIELD_GRADIENTS[seasonIdx] ?? FIELD_GRADIENTS[0];
 }
 
@@ -84,7 +115,15 @@ export function SeasonIndicator({
   seasonName,
   bespoke,
   phaser,
-}: any) {
+}: {
+  turnsUsed: number;
+  turnBudget: number;
+  turnsRemaining: number;
+  seasonIdx: number;
+  seasonName: string;
+  bespoke?: boolean;
+  phaser?: boolean;
+}) {
   if (phaser) {
     return (
       <Suspense
@@ -123,7 +162,7 @@ export function SeasonIndicator({
 
 // ─── Action panel ────────────────────────────────────────────────────────
 
-function PanelHeader({ left, right, accent }: { left: any; right?: any; accent?: string | null }) {
+function PanelHeader({ left, right, accent }: { left: React.ReactNode; right?: React.ReactNode; accent?: string | null }) {
   return (
     <div className="flex items-center justify-between px-2.5 py-1.5 border-b border-dashed border-[color:var(--iron-edge)] relative">
       <div className="flex items-center gap-1.5 text-[9.5px] font-extrabold text-on-panel-label uppercase tracking-[0.15em]">
@@ -137,16 +176,25 @@ function PanelHeader({ left, right, accent }: { left: any; right?: any; accent?:
   );
 }
 
-function IdleView({ inventory, biomeKey, cap }: any) {
+interface BiomeResource {
+  key: string;
+  label?: string;
+  [extra: string]: unknown;
+}
+
+function IdleView({ inventory, biomeKey, cap }: { inventory: Inventory; biomeKey: string; cap: number }) {
   // The mock shows a 4-column grid of resource chips. Trim to the first 12
   // resources of the biome so the grid stays tight and predictable.
-  const list = useMemo(() => (BIOMES[biomeKey]?.resources ?? []).slice(0, 12), [biomeKey]);
-  const ownedCount = list.filter((r: any) => (inventory?.[r.key] ?? 0) > 0).length;
+  const list = useMemo<BiomeResource[]>(() => {
+    const biomes = BIOMES as Record<string, { resources?: BiomeResource[] }>;
+    return (biomes[biomeKey]?.resources ?? []).slice(0, 12);
+  }, [biomeKey]);
+  const ownedCount = list.filter((r) => (inventory?.[r.key] ?? 0) > 0).length;
   return (
     <>
       <PanelHeader left="Stockpile" right={`${ownedCount}/${list.length} kinds`} />
       <div className="grid grid-cols-4 gap-1.5 p-2 flex-1 min-h-0 overflow-y-auto content-start">
-        {list.map((r: any) => {
+        {list.map((r) => {
           const count = inventory?.[r.key] ?? 0;
           const empty = count === 0;
           const pct = Math.min(1, count / Math.max(1, cap));
@@ -427,7 +475,7 @@ function ChainView({ chainInfo, inventory }: { chainInfo: ChainInfo; inventory: 
   );
 }
 
-function ToolView({ tool, armedKey, fillBiasArmed, dispatch, onClose }: any) {
+function ToolView({ tool, armedKey, fillBiasArmed, dispatch, onClose }: { tool: RuntimeTool; armedKey: string | null | undefined; fillBiasArmed: boolean; dispatch: Dispatch; onClose: (() => void) | undefined }) {
   const targeted = isTapTargetTool(tool.key);
   const armed = armedKey === tool.key;
   const count = tool.count ?? 0;
@@ -631,7 +679,19 @@ export function PuzzleActionPanel({
   cap = 200,
   dispatch,
   onCloseInspect,
-}: any) {
+}: {
+  chainInfo: ChainInfo | null | undefined;
+  inspectedTool: RuntimeTool | null | undefined;
+  // We only read `armedTool?.key` here, so accept any key-bearing shape — the
+  // legacy JS-side caller sometimes provides only `{ key, count }`.
+  armedTool: { key: string; [extra: string]: unknown } | null | undefined;
+  fillBiasArmed: boolean;
+  inventory: Inventory;
+  biomeKey: string;
+  cap?: number;
+  dispatch: Dispatch;
+  onCloseInspect: (() => void) | undefined;
+}) {
   const hasChain = !!(chainInfo && chainInfo.count > 0 && chainInfo.resourceKey);
   const state = hasChain ? "chain" : inspectedTool ? "tool" : "idle";
   return (
@@ -661,8 +721,8 @@ export function PuzzleActionPanel({
       />
       <div className="relative flex flex-col flex-1 min-h-0 overflow-hidden">
         {state === "idle" && <IdleView inventory={inventory} biomeKey={biomeKey} cap={cap} />}
-        {state === "chain" && <ChainView chainInfo={chainInfo} inventory={inventory} />}
-        {state === "tool" && (
+        {state === "chain" && chainInfo && <ChainView chainInfo={chainInfo} inventory={inventory} />}
+        {state === "tool" && inspectedTool && (
           <ToolView
             tool={inspectedTool}
             armedKey={armedTool?.key}
@@ -684,7 +744,7 @@ export function PuzzleActionPanel({
 // arming, and (for non-tap-target tools) its consumed charge are all undone.
 // Fertilizer uses its own flag rather than toolPending; re-dispatching
 // USE_TOOL fertilizer is the canonical disarm + refund path for it.
-function disarmOtherTools(dispatch: any, key: any, state: any) {
+function disarmOtherTools(dispatch: Dispatch, key: string, state: ToolEnvState) {
   if (state?.toolPending && state.toolPending !== key) {
     dispatch({ type: "CANCEL_TOOL" });
   }
@@ -693,7 +753,7 @@ function disarmOtherTools(dispatch: any, key: any, state: any) {
   }
 }
 
-function dispatchUseTool(dispatch: any, key: any, state: any) {
+function dispatchUseTool(dispatch: Dispatch, key: string, state: ToolEnvState) {
   const isPending = state.toolPending === key;
   if (isPending) {
     dispatch({ type: "CANCEL_TOOL" });
@@ -718,9 +778,12 @@ function dispatchUseTool(dispatch: any, key: any, state: any) {
 // transfer the arming rather than leave nothing selected. When no tool is
 // armed, the two-tap inspect→activate pattern still applies. Returns true
 // when arming was transferred so the caller can skip the plain inspect path.
-function maybeTransferArming(dispatch: any, key: any, state: any) {
+function maybeTransferArming(dispatch: Dispatch, key: string, state: ToolEnvState) {
   const armedKey = state?.toolPending;
-  const fertilizerArmed = isFillBiasArmed(state);
+  // isFillBiasArmed reads fillBiasTarget/magicFertilizerCharges off the state;
+  // those may be missing on the trimmed ToolEnvState projection, so the cast
+  // lets us share the helper with the GameState callers.
+  const fertilizerArmed = isFillBiasArmed(state as GameState);
   const hasOtherArmed =
     (armedKey && armedKey !== key) ||
     (fertilizerArmed && key !== "fertilizer");
@@ -738,11 +801,11 @@ function maybeTransferArming(dispatch: any, key: any, state: any) {
 const DOUBLE_TAP_MS = 420;
 
 const ToolTile = forwardRef<HTMLButtonElement, {
-  tool: any;
+  tool: RuntimeTool;
   inspected?: boolean;
-  onClick?: (t: any) => void;
-  onActivate?: (t: any) => void;
-  onPointerDown?: (ev: any) => void;
+  onClick?: (t: RuntimeTool) => void;
+  onActivate?: (t: RuntimeTool) => void;
+  onPointerDown?: (ev: React.PointerEvent<HTMLButtonElement>) => void;
   size?: string;
   dragging?: boolean;
   hideArmed?: boolean;
@@ -833,10 +896,11 @@ const ToolTile = forwardRef<HTMLButtonElement, {
   );
 });
 
-function buildVisibleToolList(state: any) {
-  const tools = state.tools || {};
-  return visibleTools(tools).map((def) => ({
+function buildVisibleToolList(state: GameState): RuntimeTool[] {
+  const tools = (state.tools ?? {}) as Record<string, number>;
+  return visibleTools(tools).map((def): RuntimeTool => ({
     key: def.key,
+    category: def.category,
     iconKey: def.iconKey,
     name: def.name,
     desc: def.desc,
@@ -853,38 +917,41 @@ function buildVisibleToolList(state: any) {
 // a different tool than what's armed, leave the panel alone. Otherwise a
 // state.tools change (e.g. using an instant tool) would yank the panel back
 // to the armed tool that the player wasn't even looking at.
-function useAutoInspectArmed(state: any, onInspectChange: any, inspectedKey: any) {
+function useAutoInspectArmed(state: GameState, onInspectChange: ((tool: RuntimeTool | null) => void) | undefined, inspectedKey: string | null | undefined) {
   useEffect(() => {
     if (!onInspectChange) return;
     const pending = state.toolPending;
     if (!pending || !TOOL_BY_KEY[pending]) return;
     if (inspectedKey != null && inspectedKey !== pending) return;
-    onInspectChange({
-      ...TOOL_BY_KEY[pending],
-      count: state.tools?.[pending] ?? 0,
-    });
+    const rawCount = state.tools?.[pending];
+    onInspectChange(runtimeFromEntry(TOOL_BY_KEY[pending], typeof rawCount === "number" ? rawCount : 0));
   }, [state.toolPending, state.tools, onInspectChange, inspectedKey]);
 }
 
 // ─── Tool grid (side-by-side left column) ────────────────────────────────
 
-export function PuzzleToolGrid({ state, onInspectChange, inspectedKey, dispatch }: any) {
+export function PuzzleToolGrid({ state, onInspectChange, inspectedKey, dispatch }: {
+  state: GameState;
+  onInspectChange?: (tool: RuntimeTool | null) => void;
+  inspectedKey?: string | null;
+  dispatch: Dispatch;
+}) {
   const list = useMemo(() => buildVisibleToolList(state), [state]);
   useAutoInspectArmed(state, onInspectChange, inspectedKey);
   const toolPending = state.toolPending;
   const fillBiasArmed = isFillBiasArmed(state);
   const select = useCallback(
-    (t: any) => {
+    (t: RuntimeTool) => {
       if (dispatch && !maybeTransferArming(dispatch, t.key, { toolPending, fillBiasArmed })) {
         disarmOtherTools(dispatch, t.key, { toolPending, fillBiasArmed });
       }
-      onInspectChange?.({ ...TOOL_BY_KEY[t.key], count: t.count });
+      onInspectChange?.(runtimeFromEntry(TOOL_BY_KEY[t.key], t.count));
     },
     [dispatch, onInspectChange, toolPending, fillBiasArmed],
   );
   const activate = useCallback(
-    (t: any) => {
-      onInspectChange?.({ ...TOOL_BY_KEY[t.key], count: t.count });
+    (t: RuntimeTool) => {
+      onInspectChange?.(runtimeFromEntry(TOOL_BY_KEY[t.key], t.count));
       if (dispatch) dispatchUseTool(dispatch, t.key, { toolPending, fillBiasArmed });
     },
     [dispatch, onInspectChange, toolPending, fillBiasArmed],
@@ -922,9 +989,9 @@ const PIN_STORAGE_KEY = "hearthwood:hotbar-pins";
 // container width so adding more tools never forces horizontal scrolling.
 export const MAX_PINS = 8;
 const DEFAULT_PINS = TOOL_CATALOG
-  .filter((t: any) => t.category === "field")
+  .filter((t) => t.category === "field")
   .slice(0, 5)
-  .map((t: any) => t.key);
+  .map((t) => t.key);
 
 function readStoredPins() {
   try {
@@ -954,7 +1021,7 @@ export function usePinnedTools() {
   // tool was already pinned to a different slot, that slot becomes empty
   // (move semantics — never duplicates). Honors the supplied cap so the
   // hotbar never overflows the visible width.
-  const placeAt = useCallback((key: any, index: any, cap = MAX_PINS) => {
+  const placeAt = useCallback((key: string, index: number, cap = MAX_PINS) => {
     if (!TOOL_BY_KEY[key]) return;
     setPins((prev) => {
       const slotCap = Math.max(1, Math.min(MAX_PINS, cap));
@@ -968,11 +1035,11 @@ export function usePinnedTools() {
       return next.slice(0, slotCap);
     });
   }, []);
-  const remove = useCallback((key: any) => {
+  const remove = useCallback((key: string) => {
     if (!TOOL_BY_KEY[key]) return;
     setPins((prev) => prev.map((k) => (k === key ? null : k)));
   }, []);
-  return [pins, { placeAt, remove }];
+  return [pins, { placeAt, remove }] as const;
 }
 
 // Measure how many tool tiles fit in a container — used so the hotbar's
@@ -982,7 +1049,7 @@ export function usePinnedTools() {
 const HOTBAR_TILE_W = 48; // sm tile width
 const HOTBAR_MIN_GAP = 8;
 const HOTBAR_RESERVED = 8 + 8 + 48 + 4; // pl-2 + gap-2 + chevron width + pr-1
-export function useMaxFitPins(ref: any) {
+export function useMaxFitPins(ref: React.RefObject<HTMLElement | null>) {
   const [maxFit, setMaxFit] = useState(MAX_PINS);
   useLayoutEffect(() => {
     const el = ref.current;
@@ -1014,10 +1081,35 @@ export function useMaxFitPins(ref: any) {
 const DRAG_LONGPRESS_MS = 220;
 const DRAG_THRESHOLD_PX = 6;
 
-export function useToolDrag({ pins, pinActions, maxFitPins }: any) {
-  // Active drag state: { key, fromHotbar, x, y, suppressClick }
-  const [drag, setDrag] = useState<any>(null);
-  const dragRef = useRef<any>(null);
+interface DragState { key: string; fromHotbar: boolean; x: number; y: number; suppressClick: boolean }
+interface PressState {
+  key: string;
+  fromHotbar: boolean;
+  startX: number;
+  startY: number;
+  pointerId: number;
+  target: EventTarget & Element;
+  longPressTimer: ReturnType<typeof setTimeout>;
+}
+
+interface PinActions {
+  placeAt: (key: string, index: number, cap?: number) => void;
+  remove: (key: string) => void;
+}
+
+interface UseToolDragReturn {
+  /** Current drag state, or null when no drag is in progress.
+   *  Typed as `DragState & { ... } | null` so optional-chaining usages like
+   *  `drag?.key` from JS callers continue to typecheck. */
+  drag: (DragState & { [extra: string]: unknown }) | null;
+  /** Start a (potential) drag; promotes to drag on long-press or threshold movement. */
+  beginDrag: (key: string, fromHotbar: boolean, ev: React.PointerEvent<HTMLElement>) => void;
+}
+
+export function useToolDrag({ pins, pinActions, maxFitPins }: { pins: Array<string | null>; pinActions: PinActions; maxFitPins: number }): UseToolDragReturn {
+  // Active drag state.
+  const [drag, setDrag] = useState<DragState | null>(null);
+  const dragRef = useRef<DragState | null>(null);
   // Mirror the drag state into a ref via effect so window listeners (which
   // close over stale snapshots) can read the latest value without re-binding
   // every render. Updating refs during render is unsafe (lints as an error).
@@ -1025,10 +1117,10 @@ export function useToolDrag({ pins, pinActions, maxFitPins }: any) {
 
   // Track pending press without committing to drag yet — lets short taps
   // fall through to the normal click handler.
-  const pressRef = useRef<any>(null);
+  const pressRef = useRef<PressState | null>(null);
 
   const beginPress = useCallback(
-    (key: any, fromHotbar: any, ev: any) => {
+    (key: string, fromHotbar: boolean, ev: React.PointerEvent<HTMLElement>) => {
       if (ev.button != null && ev.button !== 0) return;
       ev.currentTarget?.setPointerCapture?.(ev.pointerId);
       pressRef.current = {
@@ -1055,7 +1147,7 @@ export function useToolDrag({ pins, pinActions, maxFitPins }: any) {
   );
 
   useEffect(() => {
-    const onMove = (e: any) => {
+    const onMove = (e: PointerEvent) => {
       const press = pressRef.current;
       if (!press) return;
       const dx = e.clientX - press.startX;
@@ -1074,10 +1166,10 @@ export function useToolDrag({ pins, pinActions, maxFitPins }: any) {
         return;
       }
       if (dragRef.current) {
-        setDrag((d: any) => (d ? { ...d, x: e.clientX, y: e.clientY } : d));
+        setDrag((d) => (d ? { ...d, x: e.clientX, y: e.clientY } : d));
       }
     };
-    const finish = (e: any) => {
+    const finish = (e: PointerEvent) => {
       const press = pressRef.current;
       if (press) {
         clearTimeout(press.longPressTimer);
@@ -1127,11 +1219,13 @@ export function useToolDrag({ pins, pinActions, maxFitPins }: any) {
     };
   }, [pinActions, pins, maxFitPins]);
 
-  return { drag, beginDrag: beginPress };
+  // Cast widens drag's index signature so JS-style callers using
+  // `drag?.[someKey]` continue to typecheck.
+  return { drag: drag as (DragState & { [extra: string]: unknown }) | null, beginDrag: beginPress };
 }
 
 // Floating tile that follows the cursor while a hotbar drag is active.
-export function DragGhost({ drag, tool }: any) {
+export function DragGhost({ drag, tool }: { drag: DragState | null | undefined; tool: RuntimeTool | null | undefined }) {
   if (!drag || !tool) return null;
   return (
     <div
@@ -1164,10 +1258,22 @@ export function PuzzleHotbar({
   dragKey,
   dragFromHotbar,
   onBeginDrag,
-}: any) {
+}: {
+  state: GameState;
+  dispatch: Dispatch;
+  onInspectChange?: (tool: RuntimeTool | null) => void;
+  inspectedKey?: string | null;
+  pins: Array<string | null>;
+  onOpenModal: () => void;
+  modalOpen: boolean;
+  maxFitPins: number;
+  dragKey?: string | null;
+  dragFromHotbar?: boolean | null;
+  onBeginDrag?: (key: string, fromHotbar: boolean, ev: React.PointerEvent<HTMLElement>) => void;
+}) {
   const list = useMemo(() => buildVisibleToolList(state), [state]);
   useAutoInspectArmed(state, onInspectChange, inspectedKey);
-  const byKey = useMemo(() => Object.fromEntries(list.map((t) => [t.key, t])), [list]);
+  const byKey = useMemo<Record<string, RuntimeTool>>(() => Object.fromEntries(list.map((t) => [t.key, t])), [list]);
   // Each pin slot is positional: slot `i` shows whatever tool sits at
   // `pins[i]`, or an empty placeholder when that entry is null / the
   // referenced tool isn't currently owned. The rail always renders
@@ -1182,17 +1288,17 @@ export function PuzzleHotbar({
   const toolPending = state.toolPending;
   const fillBiasArmed = isFillBiasArmed(state);
   const select = useCallback(
-    (t: any) => {
+    (t: RuntimeTool) => {
       if (dispatch && !maybeTransferArming(dispatch, t.key, { toolPending, fillBiasArmed })) {
         disarmOtherTools(dispatch, t.key, { toolPending, fillBiasArmed });
       }
-      onInspectChange?.({ ...TOOL_BY_KEY[t.key], count: t.count });
+      onInspectChange?.(runtimeFromEntry(TOOL_BY_KEY[t.key], t.count));
     },
     [dispatch, onInspectChange, toolPending, fillBiasArmed],
   );
   const activate = useCallback(
-    (t: any) => {
-      onInspectChange?.({ ...TOOL_BY_KEY[t.key], count: t.count });
+    (t: RuntimeTool) => {
+      onInspectChange?.(runtimeFromEntry(TOOL_BY_KEY[t.key], t.count));
       if (dispatch) dispatchUseTool(dispatch, t.key, { toolPending, fillBiasArmed });
     },
     [dispatch, onInspectChange, toolPending, fillBiasArmed],
@@ -1312,9 +1418,20 @@ export function PuzzleToolModal({
   dragKey,
   dragFromHotbar,
   onBeginDrag,
-}: any) {
+}: {
+  open: boolean;
+  onClose: () => void;
+  state: GameState;
+  dispatch: Dispatch;
+  pins: Array<string | null>;
+  inspectedTool?: RuntimeTool | null;
+  onInspectChange?: (tool: RuntimeTool | null) => void;
+  dragKey?: string | null;
+  dragFromHotbar?: boolean | null;
+  onBeginDrag?: (key: string, fromHotbar: boolean, ev: React.PointerEvent<HTMLElement>) => void;
+}) {
   const list = useMemo(() => buildVisibleToolList(state), [state]);
-  const byKey = useMemo(() => Object.fromEntries(list.map((t) => [t.key, t])), [list]);
+  const byKey = useMemo<Record<string, RuntimeTool>>(() => Object.fromEntries(list.map((t) => [t.key, t])), [list]);
   // The modal's selected tool defaults to whatever's already inspected;
   // otherwise the first visible tool so the detail area is never empty.
   // Derived: the modal mirrors whichever tool the player is inspecting in
@@ -1329,19 +1446,19 @@ export function PuzzleToolModal({
   if (!open) return null;
   const effectiveKey = localSelectedKey ?? inspectedTool?.key ?? list[0]?.key ?? null;
   const selectedTool = effectiveKey ? byKey[effectiveKey] : null;
-  const select = (t: any) => {
+  const select = (t: RuntimeTool) => {
     setLocalSelectedKey(t.key);
     if (!maybeTransferArming(dispatch, t.key, state)) {
       disarmOtherTools(dispatch, t.key, state);
     }
-    onInspectChange?.({ ...TOOL_BY_KEY[t.key], count: t.count });
+    onInspectChange?.(runtimeFromEntry(TOOL_BY_KEY[t.key], t.count));
   };
-  const activate = (t: any) => {
+  const activate = (t: RuntimeTool) => {
     setLocalSelectedKey(t.key);
     const willCancel = state.toolPending === t.key;
     const isArmable = isTapTargetTool(t.key);
     if (isArmable) {
-      onInspectChange?.({ ...TOOL_BY_KEY[t.key], count: t.count });
+      onInspectChange?.(runtimeFromEntry(TOOL_BY_KEY[t.key], t.count));
     }
     dispatchUseTool(dispatch, t.key, state);
     if (!willCancel) {
@@ -1582,7 +1699,7 @@ const BOARD_LAYOUT_CSS = `
 }
 `;
 
-export function BoardLayout({ hotbar, statusPanel, toolsGrid, board }: any) {
+export function BoardLayout({ hotbar, statusPanel, toolsGrid, board }: { hotbar: React.ReactNode; statusPanel: React.ReactNode; toolsGrid: React.ReactNode; board: React.ReactNode }) {
   return (
     <>
       <style>{BOARD_LAYOUT_CSS}</style>
@@ -1598,7 +1715,7 @@ export function BoardLayout({ hotbar, statusPanel, toolsGrid, board }: any) {
 
 // ─── Board frame ─────────────────────────────────────────────────────────
 
-export function BoardFrame({ children, seasonIdx, armed = false }: any) {
+export function BoardFrame({ children, seasonIdx, armed = false }: { children?: React.ReactNode; seasonIdx: number; armed?: boolean }) {
   // Single rounded card — the dark brown chrome frames the tiles directly,
   // no field-tint padding wrapper around it. The cell containing the frame
   // gets a thin drop shadow for depth.

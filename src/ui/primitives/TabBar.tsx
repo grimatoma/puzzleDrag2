@@ -17,7 +17,12 @@ function LockGlyph() {
   );
 }
 
-function Badge({ count, tone = "moss" }: { count: any; tone?: any }) {
+interface BadgeInfo {
+  count: number;
+  tone?: string;
+}
+
+function Badge({ count, tone = "moss" }: { count: number; tone?: string }) {
   const cls = BADGE_TONE[tone] || BADGE_TONE.moss;
   const { pulse, pulseKey } = useCountUp(count);
   return (
@@ -42,15 +47,15 @@ export function Tab({
   density = "nav",
   onSelect,
 }: {
-  itemKey: any;
-  iconKey: any;
-  label: any;
-  badge?: any;
+  itemKey: string;
+  iconKey: string;
+  label: React.ReactNode;
+  badge?: BadgeInfo;
   locked?: boolean;
-  unlockHint?: any;
+  unlockHint?: string;
   active?: boolean;
   density?: string;
-  onSelect?: any;
+  onSelect?: (key: string) => void;
 }) {
   const iconSize = density === "dock" ? 22 : 18;
   const labelCls = density === "dock" ? "text-caption" : "text-micro";
@@ -75,7 +80,7 @@ export function Tab({
     <button
       type="button"
       onClick={onClick}
-      aria-label={label}
+      aria-label={typeof label === "string" ? label : undefined}
       aria-current={active ? "page" : undefined}
       aria-disabled={locked || undefined}
       disabled={locked}
@@ -114,10 +119,10 @@ export default function TabBar({
   children,
 }: {
   density?: string;
-  current?: any;
-  onSelect?: any;
+  current?: string;
+  onSelect?: (key: string) => void;
   className?: string;
-  children?: any;
+  children?: React.ReactNode;
 }) {
   const containerCls =
     density === "dock"
@@ -126,10 +131,13 @@ export default function TabBar({
 
   const tabs = Children.map(children, (child) => {
     if (!isValidElement(child)) return child;
-    return cloneElement(child as any, {
+    // Tab's props match the signature we're cloneElement-ing in; the cast is the
+    // standard React API shape but TS can't infer it through Children.map.
+    const childProps = child.props as { itemKey?: string; onSelect?: (key: string) => void };
+    return cloneElement(child as React.ReactElement<{ density?: string; active?: boolean; onSelect?: (key: string) => void }>, {
       density,
-      active: (child.props as any).itemKey === current,
-      onSelect: (child.props as any).onSelect || onSelect,
+      active: childProps.itemKey === current,
+      onSelect: childProps.onSelect || onSelect,
     });
   });
 

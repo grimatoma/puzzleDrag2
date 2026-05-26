@@ -1,12 +1,45 @@
-const canvasDiff = { maxDiffPixelRatio: 0.05, threshold: 0.28 };
-const domDiff = { maxDiffPixelRatio: 0.025, threshold: 0.22 };
+export interface DiffOptions {
+  maxDiffPixelRatio: number;
+  threshold: number;
+}
 
-const click = (name: any) => ({ type: "clickRole", role: "button", name });
-const clickLast = (name: any) => ({ type: "clickRoleLast", role: "button", name });
-const clickText = (text: any) => ({ type: "clickText", text });
-const clickPattern = (pattern: any) => ({ type: "clickRole", role: "button", namePattern: pattern });
-const hoverText = (text: any) => ({ type: "hoverText", text });
-const api = (method: any, args: any) => ({ type: "api", method, args });
+/** One scripted interaction the visual harness performs on the loaded scene. */
+export type VisualAction =
+  | { type: "clickRole"; role: string; name?: string; namePattern?: RegExp | string }
+  | { type: "clickRoleLast"; role: string; name?: string }
+  | { type: "clickText"; text: string }
+  | { type: "hoverText"; text: string }
+  | { type: "fillPlaceholder"; placeholder: string; value: string }
+  | { type: "api"; method: string; args?: Record<string, unknown> };
+
+/** A row in the visual-regression matrix. */
+export interface VisualScenario {
+  id: string;
+  state?: string;
+  hash?: string;
+  view?: string;
+  viewParams?: Record<string, unknown>;
+  modal?: string | null;
+  actions?: VisualAction[];
+  diff?: DiffOptions;
+  skipProjects?: string[];
+}
+
+/** Result of decorating a scenario with derived expectation strings. */
+export interface AnnotatedVisualScenario extends VisualScenario {
+  expectation: string;
+  reviewChecklist: string[];
+}
+
+const canvasDiff: DiffOptions = { maxDiffPixelRatio: 0.05, threshold: 0.28 };
+const domDiff: DiffOptions = { maxDiffPixelRatio: 0.025, threshold: 0.22 };
+
+const click = (name: string): VisualAction => ({ type: "clickRole", role: "button", name });
+const clickLast = (name: string): VisualAction => ({ type: "clickRoleLast", role: "button", name });
+const clickText = (text: string): VisualAction => ({ type: "clickText", text });
+const clickPattern = (pattern: RegExp | string): VisualAction => ({ type: "clickRole", role: "button", namePattern: pattern });
+const hoverText = (text: string): VisualAction => ({ type: "hoverText", text });
+const api = (method: string, args?: Record<string, unknown>): VisualAction => ({ type: "api", method, args });
 
 const tileRoutes = [
   ["tiles-farm-grass", "#/tiles/farm/grass"],
@@ -14,7 +47,7 @@ const tileRoutes = [
   ["tiles-water-fish", "#/tiles/water/fish"],
 ].map(([id, hash]) => ({ id, state: "rich", hash, diff: domDiff }));
 
-const BASE_VISUAL_SCENARIOS = [
+const BASE_VISUAL_SCENARIOS: VisualScenario[] = [
   { id: "shell-town-fresh", state: "fresh", hash: "#/town", diff: domDiff },
   { id: "shell-menu-main", state: "fresh", hash: "#/town", actions: [click("Menu")], diff: domDiff },
   { id: "shell-menu-settings", state: "fresh", hash: "#/town", actions: [click("Menu"), clickText("Settings")], diff: domDiff },
@@ -123,21 +156,21 @@ const expectationOverrideById: Record<string, string> = {
   "town-build-picker-locked": "Build picker is open and a locked building option is shown.",
 };
 
-function buildExpectationForScenario(scenario: any) {
+function buildExpectationForScenario(scenario: VisualScenario): string {
   return expectationOverrideById[scenario.id] ?? `Scenario ${scenario.id} renders expected ${scenario.hash ?? scenario.view} UI state.`;
 }
 
-function buildChecklistForScenario(scenario: any) {
-  const checklist = [];
+function buildChecklistForScenario(scenario: VisualScenario): string[] {
+  const checklist: string[] = [];
   if (scenario.hash) checklist.push(`Hash route resolves to ${scenario.hash}.`);
   if (scenario.view) checklist.push(`Internal visual view is ${scenario.view}.`);
-  if (scenario.actions?.some((action: any) => action.type === "api" && action.method === "holdChain")) {
+  if (scenario.actions?.some((action) => action.type === "api" && action.method === "holdChain")) {
     checklist.push("Selected holdChain pattern is visible on the board.");
   }
-  if (scenario.actions?.some((action: any) => action.type === "clickRole" || action.type === "clickRoleLast")) {
+  if (scenario.actions?.some((action) => action.type === "clickRole" || action.type === "clickRoleLast")) {
     checklist.push("Triggered button-driven modal/panel state is visible.");
   }
-  if (scenario.actions?.some((action: any) => action.type === "clickText")) {
+  if (scenario.actions?.some((action) => action.type === "clickText")) {
     checklist.push("Clicked text target appears in the resulting focused panel.");
   }
   if (scenario.hash?.startsWith?.("#/board")) checklist.push("Board canvas is rendered with populated tiles.");
@@ -145,13 +178,13 @@ function buildChecklistForScenario(scenario: any) {
   return checklist;
 }
 
-export const VISUAL_SCENARIOS = BASE_VISUAL_SCENARIOS.map((scenario) => ({
+export const VISUAL_SCENARIOS: AnnotatedVisualScenario[] = BASE_VISUAL_SCENARIOS.map((scenario) => ({
   ...scenario,
   expectation: buildExpectationForScenario(scenario),
   reviewChecklist: buildChecklistForScenario(scenario),
 }));
 
-export function visualScenarioById(id: any) {
+export function visualScenarioById(id: string): AnnotatedVisualScenario | null {
   return VISUAL_SCENARIOS.find((scenario) => scenario.id === id) ?? null;
 }
 

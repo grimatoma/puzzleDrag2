@@ -1,13 +1,14 @@
 import { MAGIC_TOOLS } from "./data.js";
 import { locBuilt } from "../../locBuilt.js";
 import FeaturePanel from "../../ui/primitives/FeaturePanel.jsx";
+import type { Dispatch, GameState } from "../../types/state";
 
 export const viewKey = "portal";
 
 // Magic tools that auto-apply when used (no board tile selection needed)
 const AUTO_APPLY_TOOLS = new Set(["hourglass", "magic_seed", "magic_fertilizer"]);
 
-export default function PortalScreen({ state, dispatch }) {
+export default function PortalScreen({ state, dispatch }: { state: GameState; dispatch: Dispatch }) {
   const portalBuilt = !!locBuilt(state).portal;
   const influence = state.influence ?? 0;
   const tools = state.tools ?? {};
@@ -31,7 +32,8 @@ export default function PortalScreen({ state, dispatch }) {
         <FeaturePanel.Body className="p-2">
           <div className="flex flex-col gap-2">
             {MAGIC_TOOLS.map((tool) => {
-              const count = tools[tool.id] ?? 0;
+              const rawCount = tools[tool.id];
+              const count = typeof rawCount === "number" ? rawCount : 0;
               const canSummon = influence >= tool.influenceCost;
               const canUse = count > 0;
               const isAutoApply = AUTO_APPLY_TOOLS.has(tool.id);

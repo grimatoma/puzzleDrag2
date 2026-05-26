@@ -25,27 +25,29 @@ const STRUCTURAL_KEYS = new Set([
   "achievements", "dailyRewards",
 ]);
 
-function deepEqual(a: any, b: any) {
+function deepEqual(a: unknown, b: unknown): boolean {
   if (Object.is(a, b)) return true;
   if (!a || !b || typeof a !== "object" || typeof b !== "object") return false;
   if (Array.isArray(a) !== Array.isArray(b)) return false;
-  if (Array.isArray(a)) {
+  if (Array.isArray(a) && Array.isArray(b)) {
     if (a.length !== b.length) return false;
     for (let i = 0; i < a.length; i += 1) if (!deepEqual(a[i], b[i])) return false;
     return true;
   }
-  const ka = Object.keys(a);
-  const kb = Object.keys(b);
+  const oa = a as Record<string, unknown>;
+  const ob = b as Record<string, unknown>;
+  const ka = Object.keys(oa);
+  const kb = Object.keys(ob);
   if (ka.length !== kb.length) return false;
   for (const k of ka) {
-    if (!Object.prototype.hasOwnProperty.call(b, k)) return false;
-    if (!deepEqual(a[k], b[k])) return false;
+    if (!Object.prototype.hasOwnProperty.call(ob, k)) return false;
+    if (!deepEqual(oa[k], ob[k])) return false;
   }
   return true;
 }
 
-function isPlainObject(v: any) {
-  return v && typeof v === "object" && !Array.isArray(v);
+function isPlainObject(v: unknown): v is Record<string, unknown> {
+  return !!v && typeof v === "object" && !Array.isArray(v);
 }
 
 /**
@@ -85,7 +87,7 @@ export function sectionDiff(baseline: Record<string, unknown> = {}, draft: Recor
     else if (d.status === "removed") removed.push({ key: k, value: d.baseline });
     else modified.push({ key: k, baseline: d.baseline, draft: d.draft, sub: d.sub });
   }
-  const order = (a: any, b: any) => a.key.localeCompare(b.key);
+  const order = (a: { key: string }, b: { key: string }) => a.key.localeCompare(b.key);
   added.sort(order); removed.sort(order); modified.sort(order);
   return { added, removed, modified };
 }
@@ -128,13 +130,15 @@ export function draftDiff(baseline: Record<string, unknown> = {}, draft: Record<
 }
 
 /** True if the two drafts are deep-equal (no changes to commit). */
-export function draftEqual(a: any, b: any) {
+export function draftEqual(a: unknown, b: unknown): boolean {
   return deepEqual(a, b);
 }
 
+interface DiffTotals { added: number; modified: number; removed: number }
+
 /** Format the diff totals into a one-line summary ("3 added · 1 modified"). */
-export function summariseTotals(totals: any) {
-  const bits = [];
+export function summariseTotals(totals: DiffTotals): string {
+  const bits: string[] = [];
   if (totals.added) bits.push(`${totals.added} added`);
   if (totals.modified) bits.push(`${totals.modified} modified`);
   if (totals.removed) bits.push(`${totals.removed} removed`);

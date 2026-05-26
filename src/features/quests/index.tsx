@@ -3,6 +3,45 @@ import { ALMANAC_TIERS } from "../almanac/data.js";
 import { QUEST_TEMPLATES } from "./templates.js";
 import FeaturePanel from "../../ui/primitives/FeaturePanel.jsx";
 import ActionCard, { ProgressBar } from "../../ui/primitives/ActionCard.jsx";
+import type { Dispatch, GameState } from "../../types/state.js";
+import type { Quest } from "./data.js";
+
+interface DisplayReward {
+  coins?: number;
+  xp?: number;
+  almanacXp?: number;
+  tools?: Record<string, number>;
+  structural?: string;
+  tool?: string;
+  amt?: number;
+  [k: string]: unknown;
+}
+
+interface LegacyDaily {
+  id: string;
+  label?: string;
+  template?: string;
+  category?: string;
+  target: number;
+  progress: number;
+  done?: boolean;
+  claimed: boolean;
+  reward: DisplayReward;
+  key?: string;
+}
+
+// A quest as we render it. The deterministic system stores `Quest` shape, the
+// legacy system stores `LegacyDaily`. Their reward fields disagree (xp vs
+// almanacXp) — we look up both at the call site.
+type DisplayQuest = (Omit<Quest, "reward"> | LegacyDaily) & { reward: DisplayReward };
+
+interface AlmanacTierDef {
+  tier: number;
+  level: number;
+  name?: string;
+  description?: string;
+  reward: DisplayReward;
+}
 
 const TABS = ["daily", "almanac"];
 
@@ -23,9 +62,9 @@ function LockGlyph({ size = 14 }) {
   );
 }
 
-function rewardLabel(reward: any) {
+function rewardLabel(reward: DisplayReward | null | undefined): string {
   if (!reward) return "?";
-  const parts = [];
+  const parts: string[] = [];
   if (reward.coins) parts.push(`+${reward.coins}◉`);
   if (reward.tools) {
     for (const [k, v] of Object.entries(reward.tools)) {
@@ -33,13 +72,13 @@ function rewardLabel(reward: any) {
     }
   }
   if (reward.structural) {
-    const structuralLabels = {
+    const structuralLabels: Record<string, string> = {
       startingExtraScythe: "Extra Scythe (permanent)",
       extraBlueprintSlot: "Extra Blueprint Slot",
       extraTurn: "Extra Turn token",
       goldSeal: "Golden Seal",
     };
-    parts.push((structuralLabels as any)[reward.structural] ?? reward.structural);
+    parts.push(structuralLabels[reward.structural] ?? reward.structural);
   }
   if (reward.tool) {
     parts.push(`+${reward.amt ?? 1} ${reward.tool}`);
@@ -49,15 +88,22 @@ function rewardLabel(reward: any) {
 
 export const viewKey = "quests";
 
-function questLabel(q: any) {
-  if (q.label) return q.label;
-  const tpl = QUEST_TEMPLATES.find((t) => t.id === q.template);
-  if (tpl?.label) return tpl.label.replace("{n}", q.target);
-  return `Quest: ${q.category ?? "unknown"} (${q.target})`;
+function questLabel(q: DisplayQuest): string {
+  if ("label" in q && q.label) return q.label;
+  const tpl = QUEST_TEMPLATES.find((t) => t.id === (q as { template?: string }).template);
+  if (tpl?.label) return tpl.label.replace("{n}", String(q.target));
+  const cat = (q as { category?: string }).category;
+  return `Quest: ${cat ?? "unknown"} (${q.target})`;
 }
 
-function QuestCard({ q, dispatch }: { q: any; dispatch: any }) {
-  const isDone = q.done ?? (q.progress >= q.target);
+interface QuestCardProps {
+  q: DisplayQuest;
+  dispatch: Dispatch;
+}
+
+function QuestCard({ q, dispatch }: QuestCardProps) {
+  const done = (q as LegacyDaily).done;
+  const isDone = done ?? (q.progress >= q.target);
   const claimable = isDone && !q.claimed;
   const completed = isDone || q.claimed;
 
@@ -80,7 +126,7 @@ function QuestCard({ q, dispatch }: { q: any; dispatch: any }) {
         </span>
       </div>
       <div className="flex items-center gap-2">
-        <ProgressBar value={q.progress} max={q.target} className="flex-1" color={undefined as any} />
+        <ProgressBar value={q.progress} max={q.target} className="flex-1" />
         <span className="text-[11px] font-bold text-[#6a4b31] whitespace-nowrap">{q.progress}/{q.target}</span>
       </div>
       <button
@@ -94,7 +140,15 @@ function QuestCard({ q, dispatch }: { q: any; dispatch: any }) {
   );
 }
 
-function AlmanacTierCard({ idx, tierDef, almanacXp, almanacClaimed, dispatch }: { idx: any; tierDef: any; almanacXp: any; almanacClaimed: any; dispatch: any }) {
+interface AlmanacTierCardProps {
+  idx: number;
+  tierDef: AlmanacTierDef;
+  almanacXp: number;
+  almanacClaimed: number[];
+  dispatch: Dispatch;
+}
+
+function AlmanacTierCard({ idx, tierDef, almanacXp, almanacClaimed, dispatch }: AlmanacTierCardProps) {
   const tier = idx + 1;
   const cost = tier * 100;
   const claimed = almanacClaimed.includes(tier);
@@ -138,14 +192,19 @@ function AlmanacTierCard({ idx, tierDef, almanacXp, almanacClaimed, dispatch }: 
   );
 }
 
+interface QuestsPanelProps {
+  state: GameState;
+  dispatch: Dispatch;
+}
+
 // Embeddable panel (no screen chrome) — used inside the Townsfolk hub.
 // Uses local useState for tab so it doesn't conflict with the parent view's viewParams.
-export function QuestsPanel({ state, dispatch }: { state: any; dispatch: any }) {
-  const [tab, setTab] = useState("daily");
+export function QuestsPanel({ state, dispatch }: QuestsPanelProps) {
+  const [tab, setTab] = useState<"daily" | "almanac">("daily");
 
-  const quests = state.quests ?? state.dailies ?? [];
-  const almanacXp = state.almanac?.xp ?? state.almanacXp ?? 0;
-  const almanacClaimed = state.almanacClaimed ?? [];
+  const quests = ((state.quests ?? (state as { dailies?: DisplayQuest[] }).dailies ?? []) as DisplayQuest[]);
+  const almanacXp = state.almanac?.xp ?? (state as { almanacXp?: number }).almanacXp ?? 0;
+  const almanacClaimed = ((state as { almanacClaimed?: number[] }).almanacClaimed ?? []);
 
   const currentTier = Math.floor(almanacXp / 100);
   const nextCost = (currentTier + 1) * 100;
@@ -155,7 +214,7 @@ export function QuestsPanel({ state, dispatch }: { state: any; dispatch: any }) 
     <div className="flex flex-col gap-2">
       {/* Sub-tab toggle */}
       <div className="flex gap-2">
-        {["daily", "almanac"].map((t) => (
+        {(["daily", "almanac"] as const).map((t) => (
           <FeaturePanel.Tab
             key={t}
             onClick={() => setTab(t)}
@@ -169,8 +228,8 @@ export function QuestsPanel({ state, dispatch }: { state: any; dispatch: any }) 
       {tab === "daily" ? (
         <div className="flex flex-col gap-2">
           {[...quests].sort((a, b) => {
-            const aDone = a.done ?? (a.progress >= a.target);
-            const bDone = b.done ?? (b.progress >= b.target);
+            const aDone = (a as LegacyDaily).done ?? (a.progress >= a.target);
+            const bDone = (b as LegacyDaily).done ?? (b.progress >= b.target);
             return (bDone && !b.claimed ? 1 : 0) - (aDone && !a.claimed ? 1 : 0);
           }).map((q) => (
             <QuestCard key={q.id} q={q} dispatch={dispatch} />
@@ -179,7 +238,7 @@ export function QuestsPanel({ state, dispatch }: { state: any; dispatch: any }) 
       ) : (
         <div className="flex flex-col gap-2">
           <div className="flex items-center gap-2">
-            <ProgressBar value={xpIntoTier} max={100} className="flex-1 h-3" color={undefined as any} />
+            <ProgressBar value={xpIntoTier} max={100} className="flex-1 h-3" />
             <span className="text-[11px] font-bold text-[#2b2218] whitespace-nowrap">
               {almanacXp}✦ / {nextCost > 1000 ? "MAX" : nextCost}
             </span>
@@ -188,7 +247,7 @@ export function QuestsPanel({ state, dispatch }: { state: any; dispatch: any }) 
             <AlmanacTierCard
               key={idx}
               idx={idx}
-              tierDef={tierDef}
+              tierDef={tierDef as AlmanacTierDef}
               almanacXp={almanacXp}
               almanacClaimed={almanacClaimed}
               dispatch={dispatch}
@@ -200,22 +259,28 @@ export function QuestsPanel({ state, dispatch }: { state: any; dispatch: any }) 
   );
 }
 
-// Full-screen view (standalone, URL-routed tab).
-export default function QuestsScreen({ state, dispatch, initialTab }: { state: any; dispatch: any; initialTab: any }) {
-  const requested = state?.viewParams?.tab ?? initialTab;
-  const tab = TABS.includes(requested) ? requested : "daily";
-  const setTab = (next: any) => dispatch({ type: "SET_VIEW_PARAMS", params: { tab: next } });
+interface QuestsScreenProps {
+  state: GameState;
+  dispatch: Dispatch;
+  initialTab?: string;
+}
 
-  const quests = state.quests ?? state.dailies ?? [];
-  const almanacXp = state.almanac?.xp ?? state.almanacXp ?? 0;
-  const almanacClaimed = state.almanacClaimed ?? [];
+// Full-screen view (standalone, URL-routed tab).
+export default function QuestsScreen({ state, dispatch, initialTab }: QuestsScreenProps) {
+  const requested = (state?.viewParams as { tab?: string } | undefined)?.tab ?? initialTab;
+  const tab = TABS.includes(requested ?? "") ? (requested as string) : "daily";
+  const setTab = (next: string) => dispatch({ type: "SET_VIEW_PARAMS", params: { tab: next } });
+
+  const quests = ((state.quests ?? (state as { dailies?: DisplayQuest[] }).dailies ?? []) as DisplayQuest[]);
+  const almanacXp = state.almanac?.xp ?? (state as { almanacXp?: number }).almanacXp ?? 0;
+  const almanacClaimed = ((state as { almanacClaimed?: number[] }).almanacClaimed ?? []);
 
   const currentTier = Math.floor(almanacXp / 100);
   const nextCost = (currentTier + 1) * 100;
   const xpIntoTier = almanacXp - currentTier * 100;
 
   return (
-    <FeaturePanel tone={undefined as any}>
+    <FeaturePanel>
       <FeaturePanel.Tabs>
         {["daily", "almanac"].map((t) => (
           <FeaturePanel.Tab
@@ -231,8 +296,8 @@ export default function QuestsScreen({ state, dispatch, initialTab }: { state: a
       {tab === "daily" ? (
         <div className="flex-1 overflow-y-auto px-3 pb-3 flex flex-col gap-2">
           {[...quests].sort((a, b) => {
-            const aDone = a.done ?? (a.progress >= a.target);
-            const bDone = b.done ?? (b.progress >= b.target);
+            const aDone = (a as LegacyDaily).done ?? (a.progress >= a.target);
+            const bDone = (b as LegacyDaily).done ?? (b.progress >= b.target);
             return (bDone && !b.claimed ? 1 : 0) - (aDone && !a.claimed ? 1 : 0);
           }).map((q) => (
             <QuestCard key={q.id} q={q} dispatch={dispatch} />
@@ -241,7 +306,7 @@ export default function QuestsScreen({ state, dispatch, initialTab }: { state: a
       ) : (
         <div className="flex-1 flex flex-col overflow-hidden px-3 pb-3 gap-2">
           <div className="flex-shrink-0 flex items-center gap-2">
-            <ProgressBar value={xpIntoTier} max={100} className="flex-1 h-3" color={undefined as any} />
+            <ProgressBar value={xpIntoTier} max={100} className="flex-1 h-3" />
             <span className="text-[11px] font-bold text-[#2b2218] whitespace-nowrap">
               {almanacXp}✦ / {nextCost > 1000 ? "MAX" : nextCost}
             </span>
@@ -254,7 +319,7 @@ export default function QuestsScreen({ state, dispatch, initialTab }: { state: a
               <AlmanacTierCard
                 key={idx}
                 idx={idx}
-                tierDef={tierDef}
+                tierDef={tierDef as AlmanacTierDef}
                 almanacXp={almanacXp}
                 almanacClaimed={almanacClaimed}
                 dispatch={dispatch}

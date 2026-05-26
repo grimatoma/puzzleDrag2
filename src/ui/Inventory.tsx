@@ -19,28 +19,63 @@ import {
   BrowserItemButton,
   DetailPane,
 } from "./primitives/BrowserDetail.jsx";
+import type { Dispatch, GameState } from "../types/state.js";
 
-export function labelFor(key: any, fallback?: any) {
-  return iconLabel(key) || ITEMS[key]?.label || fallback || key;
+interface InventoryEntry {
+  key: string;
+  kind: "resource" | "item" | "tool";
+  tags: string[];
+  label: string;
+  count: number;
+  buyPrice: number;
+  sellPrice: number;
+  orderStatus: string | undefined;
+  orderTotal: number | undefined;
 }
 
-function sortKeys(keys: any, sort: any, inventory: any, recentOrder: any) {
+interface ProgressInfo { value: number; max: number }
+
+type SortMode = "alpha" | "recent" | "count" | string;
+
+interface BiomeResourceEntry {
+  key: string;
+  label?: string;
+  [extra: string]: unknown;
+}
+
+interface RecipeRef { item?: string; [extra: string]: unknown }
+
+interface OrderLike {
+  id: number;
+  key: string;
+  need: number;
+  npc: string;
+  reward: number;
+  [extra: string]: unknown;
+}
+
+export function labelFor(key: string, fallback?: string) {
+  const items = ITEMS as Record<string, { label?: string }>;
+  return iconLabel(key) || items[key]?.label || fallback || key;
+}
+
+function sortKeys(keys: string[], sort: SortMode, inventory: Record<string, number>, recentOrder: string[] | null | undefined) {
   const arr = [...keys];
   if (sort === "alpha") {
     arr.sort((a, b) => labelFor(a).localeCompare(labelFor(b)));
   } else if (sort === "recent") {
-    const rank = (k: any) => {
+    const rank = (k: string) => {
       const idx = recentOrder ? recentOrder.indexOf(k) : -1;
       return idx === -1 ? Number.POSITIVE_INFINITY : idx;
     };
-    arr.sort((a: any, b: any) => {
+    arr.sort((a, b) => {
       const ra = rank(a);
       const rb = rank(b);
       if (ra !== rb) return ra - rb;
       return labelFor(a).localeCompare(labelFor(b));
     });
   } else {
-    arr.sort((a: any, b: any) => {
+    arr.sort((a, b) => {
       const ca = inventory[a] || 0;
       const cb = inventory[b] || 0;
       if (cb !== ca) return cb - ca;
@@ -50,15 +85,26 @@ function sortKeys(keys: any, sort: any, inventory: any, recentOrder: any) {
   return arr;
 }
 
-function matchesQuery(key: any, label: any, query: any) {
+function matchesQuery(key: string, label: string, query: string) {
   if (!query) return true;
   const q = query.toLowerCase();
   return key.toLowerCase().includes(q) || label.toLowerCase().includes(q);
 }
 
-export const accordionInitialState = { displayedKey: null, isOpen: false, pendingKey: null };
+interface AccordionState {
+  displayedKey: string | null;
+  isOpen: boolean;
+  pendingKey: string | null;
+}
 
-export function accordionReducer(state: any, action: any) {
+interface AccordionAction {
+  type: "SELECT" | "SELECT_IN_PLACE" | "OPEN" | "CLOSE" | "TRANSITION_END";
+  key?: string;
+}
+
+export const accordionInitialState: AccordionState = { displayedKey: null, isOpen: false, pendingKey: null };
+
+export function accordionReducer(state: AccordionState, action: AccordionAction): AccordionState {
   switch (action.type) {
     case "SELECT": {
       const { key } = action;
@@ -66,19 +112,19 @@ export function accordionReducer(state: any, action: any) {
         return { ...state, isOpen: false, pendingKey: null };
       }
       if (state.displayedKey && state.isOpen) {
-        return { ...state, isOpen: false, pendingKey: key };
+        return { ...state, isOpen: false, pendingKey: key ?? null };
       }
       if (!state.displayedKey) {
-        return { displayedKey: key, isOpen: false, pendingKey: null };
+        return { displayedKey: key ?? null, isOpen: false, pendingKey: null };
       }
-      return { ...state, pendingKey: key };
+      return { ...state, pendingKey: key ?? null };
     }
     case "SELECT_IN_PLACE": {
       const { key } = action;
       if (key === state.displayedKey) {
         return { ...state, isOpen: false, pendingKey: null };
       }
-      return { displayedKey: key, isOpen: true, pendingKey: null };
+      return { displayedKey: key ?? null, isOpen: true, pendingKey: null };
     }
     case "OPEN":
       return { ...state, isOpen: true };
@@ -104,15 +150,15 @@ function useAccordion() {
     return () => cancelAnimationFrame(id);
   }, [state.displayedKey]);
 
-  const select = useCallback((key: any) => dispatch({ type: "SELECT", key }), []);
-  const selectInPlace = useCallback((key: any) => dispatch({ type: "SELECT_IN_PLACE", key }), []);
+  const select = useCallback((key: string) => dispatch({ type: "SELECT", key }), []);
+  const selectInPlace = useCallback((key: string) => dispatch({ type: "SELECT_IN_PLACE", key }), []);
   const close = useCallback(() => dispatch({ type: "CLOSE" }), []);
   const onClosed = useCallback(() => dispatch({ type: "TRANSITION_END" }), []);
 
   return { displayedKey: state.displayedKey, isOpen: state.isOpen, select, selectInPlace, close, onClosed };
 }
 
-const InventoryIconCell = forwardRef<HTMLButtonElement, { entry: any; selected: any; onSelect: any; progress: any }>(function InventoryIconCell(
+const InventoryIconCell = forwardRef<HTMLButtonElement, { entry: InventoryEntry; selected: boolean; onSelect: () => void; progress: ProgressInfo | null }>(function InventoryIconCell(
   { entry, selected, onSelect, progress },
   ref
 ) {
@@ -148,8 +194,8 @@ const InventoryIconCell = forwardRef<HTMLButtonElement, { entry: any; selected: 
   );
 });
 
-function InventoryAccordion({ entry, isOpen, arrowLeft, marketBuilt, dispatch, onClosed, style }: { entry: any; isOpen: any; arrowLeft: any; marketBuilt: any; dispatch: any; onClosed: any; style?: any }) {
-  const handleTransitionEnd = (e: any) => {
+function InventoryAccordion({ entry, isOpen, arrowLeft, marketBuilt, dispatch, onClosed, style }: { entry: InventoryEntry | null; isOpen: boolean; arrowLeft: number | null; marketBuilt: boolean; dispatch: Dispatch; onClosed: () => void; style?: React.CSSProperties }) {
+  const handleTransitionEnd = (e: React.TransitionEvent<HTMLDivElement>) => {
     if (e.propertyName === "max-height" && !isOpen) {
       onClosed?.();
     }
@@ -171,7 +217,7 @@ function InventoryAccordion({ entry, isOpen, arrowLeft, marketBuilt, dispatch, o
   );
 }
 
-export function Section({ title, titleColor = "#f8e7c6", children }: { title: any; titleColor?: string; children?: any }) {
+export function Section({ title, titleColor = "#f8e7c6", children }: { title: React.ReactNode; titleColor?: string; children?: React.ReactNode }) {
   return (
     <div className="flex flex-col gap-2 min-h-0">
       <div className="font-bold text-[14px] landscape:max-[1024px]:text-[11px] tracking-wide" style={{ color: titleColor }}>{title}</div>
@@ -188,9 +234,9 @@ function CheckGlyph({ size = 12 }) {
   );
 }
 
-function orderStatusByKey(orders: any, inventory: any) {
-  const status: any = {};
-  const totals: any = {};
+function orderStatusByKey(orders: OrderLike[], inventory: Record<string, number>) {
+  const status: Record<string, "ready" | "needed"> = {};
+  const totals: Record<string, number> = {};
   for (const o of orders) {
     totals[o.key] = (totals[o.key] || 0) + o.need;
     const have = inventory[o.key] || 0;
@@ -200,7 +246,7 @@ function orderStatusByKey(orders: any, inventory: any) {
   return { status, totals };
 }
 
-function StatusPill({ status, total }: { status: any; total?: any }) {
+function StatusPill({ status, total }: { status: string | undefined; total?: number | undefined }) {
   if (status === "ready") {
     return (
       <Pill tone="moss" variant="soft" size="sm" leading={<CheckGlyph size={10} />}>
@@ -225,7 +271,7 @@ function StatusPill({ status, total }: { status: any; total?: any }) {
   return null;
 }
 
-function InventoryBrowserItem({ entry, selected, onSelect, progress }: { entry: any; selected: any; onSelect: any; progress: any }) {
+function InventoryBrowserItem({ entry, selected, onSelect, progress }: { entry: InventoryEntry; selected: boolean; onSelect: () => void; progress: ProgressInfo | null }) {
   const { key, label, count, orderStatus } = entry;
   // List view: surface only meaningful order statuses (ready/needed). The
   // "Excess" badge and the redundant kind subtitle stay on the detail card.
@@ -249,7 +295,7 @@ function InventoryBrowserItem({ entry, selected, onSelect, progress }: { entry: 
   );
 }
 
-function InventoryListItemExpanded({ entry, marketBuilt, dispatch, onCollapse, progress }: { entry: any; marketBuilt: any; dispatch: any; onCollapse: any; progress: any }) {
+function InventoryListItemExpanded({ entry, marketBuilt, dispatch, onCollapse, progress }: { entry: InventoryEntry; marketBuilt: boolean; dispatch: Dispatch; onCollapse: () => void; progress: ProgressInfo | null }) {
   const { key, label, count, sellPrice, buyPrice, kind, orderStatus, orderTotal, tags = [] } = entry;
   const canBuy = kind === "resource" && marketBuilt && buyPrice > 0;
   const canSell = marketBuilt && sellPrice > 0 && count > 0;
@@ -326,7 +372,7 @@ function InventoryListItemExpanded({ entry, marketBuilt, dispatch, onCollapse, p
   );
 }
 
-function InventoryDetail({ entry, marketBuilt, dispatch }: { entry: any; marketBuilt: any; dispatch: any }) {
+function InventoryDetail({ entry, marketBuilt, dispatch }: { entry: InventoryEntry | null; marketBuilt: boolean; dispatch: Dispatch }) {
   if (!entry) return <DetailPane empty="Select a resource to inspect it." />;
   const { key, label, count, sellPrice, buyPrice, kind, orderStatus, orderTotal, tags = [] } = entry;
   const canBuy = kind === "resource" && marketBuilt && buyPrice > 0;
@@ -394,13 +440,14 @@ function InventoryDetail({ entry, marketBuilt, dispatch }: { entry: any; marketB
   );
 }
 
-export function CompactOrders({ orders, inventory, dispatch }: { orders: any; inventory: any; dispatch: any }) {
+export function CompactOrders({ orders, inventory, dispatch }: { orders: OrderLike[]; inventory: Record<string, number>; dispatch: Dispatch }) {
+  const items = ITEMS as Record<string, { label?: string }>;
   return (
     <div className="flex flex-col gap-1.5">
-      {orders.map((o: any) => {
+      {orders.map((o) => {
         const have = inventory[o.key] || 0;
         const done = have >= o.need;
-        const res = ITEMS[o.key];
+        const res = items[o.key];
         const label = res ? res.label : o.key;
         return (
           <button
@@ -428,6 +475,9 @@ export function CompactOrders({ orders, inventory, dispatch }: { orders: any; in
   );
 }
 
+interface ItemRow { kind?: string; label?: string; [extra: string]: unknown }
+type FilterMode = string | string[];
+
 export function InventoryGrid({
   inventory,
   biomeKey,
@@ -442,43 +492,45 @@ export function InventoryGrid({
   viewMode = "list",
   resourceProgress = {},
 }: {
-  inventory: any;
-  biomeKey: any;
-  compact?: any;
-  orders?: any[];
-  state: any;
-  dispatch: any;
-  filter?: any;
+  inventory: Record<string, number>;
+  biomeKey: string;
+  compact?: boolean;
+  orders?: OrderLike[];
+  state: GameState;
+  dispatch: Dispatch;
+  filter?: FilterMode;
   sort?: string;
   query?: string;
-  recentOrder?: any;
+  recentOrder?: string[] | null;
   viewMode?: string;
-  resourceProgress?: any;
+  resourceProgress?: Record<string, number>;
 }) {
-  const resources = BIOMES[biomeKey].resources; // already resource-only after data split
-  const items = (Object.entries(ITEMS) as [string, any][]).filter(([key, item]) =>
+  const biomes = BIOMES as Record<string, { resources: BiomeResourceEntry[] }>;
+  const itemsAll = ITEMS as Record<string, ItemRow>;
+  const resources = biomes[biomeKey].resources; // already resource-only after data split
+  const items = (Object.entries(itemsAll) as [string, ItemRow][]).filter(([key, item]) =>
     (inventory[key] || 0) > 0 &&
-    !resources.find((r: any) => r.key === key) &&
+    !resources.find((r) => r.key === key) &&
     item.kind !== "tile" &&
     item.kind !== "tool"
   );
-  const tools = (Object.entries(state?.tools ?? {}) as [string, any][]).filter(([key, count]) =>
-    (count || 0) > 0 && ITEMS[key]?.kind === "tool"
+  const tools = (Object.entries((state?.tools ?? {}) as Record<string, number>) as [string, number][]).filter(([key, count]) =>
+    (count || 0) > 0 && itemsAll[key]?.kind === "tool"
   );
   const { status, totals } = orderStatusByKey(orders, inventory);
   const marketBuilt = !!locBuilt(state).caravan_post;
-  const prices = state?.market?.prices ?? {};
-  const recipesByOutput = (Object.values(RECIPES) as any[]).reduce((acc: any, recipe: any) => {
+  const prices = (state?.market?.prices ?? {}) as Record<string, { buy?: number; sell?: number }>;
+  const recipesByOutput = (Object.values(RECIPES) as RecipeRef[]).reduce<Record<string, RecipeRef[]>>((acc, recipe) => {
     if (!recipe?.item) return acc;
     if (!acc[recipe.item]) acc[recipe.item] = [];
     acc[recipe.item].push(recipe);
     return acc;
-  }, {} as any);
+  }, {});
   // Returns { value, max } when a resource has non-zero fractional progress,
   // null otherwise (progress bar is hidden when nothing is accumulating).
-  const progressFor = (key: any) => {
+  const progressFor = (key: string): ProgressInfo | null => {
     const value = resourceProgress[key] ?? 0;
-    const max = RESOURCE_TO_THRESHOLD[key];
+    const max = (RESOURCE_TO_THRESHOLD as Record<string, number>)[key];
     return value > 0 && max ? { value, max } : null;
   };
 
@@ -488,7 +540,7 @@ export function InventoryGrid({
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [arrowLeft, setArrowLeft] = useState<number | null>(null);
   const [columnsPerRow, setColumnsPerRow] = useState(1);
-  const assignCellRef = useCallback((key: any, el: any) => {
+  const assignCellRef = useCallback((key: string, el: HTMLElement | null) => {
     if (el) cellRefs.current[key] = el;
     else delete cellRefs.current[key];
   }, []);
@@ -539,18 +591,18 @@ export function InventoryGrid({
           ? [INVENTORY_TAGS.ITEM]
           : [filter];
 
-  const matchesTags = (key: any) => {
+  const matchesTags = (key: string) => {
     if (!activeTags || activeTags.length === 0) return true;
     return activeTags.every((tag) => itemHasTag(key, tag) || sourceTagsForItem(key, { recipesByOutput }).includes(tag));
   };
 
-  const resourceCellsBy = new Map<string, any>(resources.map((r: any) => [r.key, r]));
-  const itemDefsByKey = new Map<string, any>(items.map(([key, item]) => [key, item]));
-  const toolDefsByKey = new Map<string, any>(tools.map(([key]) => [key, ITEMS[key]]));
+  const resourceCellsBy = new Map<string, BiomeResourceEntry>(resources.map((r) => [r.key, r]));
+  const itemDefsByKey = new Map<string, ItemRow>(items.map(([key, item]) => [key, item]));
+  const toolDefsByKey = new Map<string, ItemRow>(tools.map(([key]) => [key, itemsAll[key]]));
 
   const visibleResourceKeys = resources
-    .map((r: any) => r.key as string)
-    .filter((key: string) => {
+    .map((r) => r.key)
+    .filter((key) => {
       if (!matchesTags(key)) return false;
       if (!matchesQuery(key, labelFor(key, resourceCellsBy.get(key)?.label), query)) return false;
       if (filter === "sellable") {
@@ -578,9 +630,9 @@ export function InventoryGrid({
 
   const sortedResourceKeys = sortKeys(visibleResourceKeys, sort, inventory, recentOrder);
   const sortedItemKeys = sortKeys(visibleItemKeys, sort, inventory, recentOrder);
-  const toolCountByKey = Object.fromEntries(tools);
+  const toolCountByKey: Record<string, number> = Object.fromEntries(tools);
   const sortedToolKeys = sortKeys(visibleToolKeys, sort, toolCountByKey, recentOrder);
-  const entries = [];
+  const entries: InventoryEntry[] = [];
   for (const key of sortedResourceKeys) {
     const r = resourceCellsBy.get(key);
     const p = prices[key] ?? {};
@@ -631,7 +683,7 @@ export function InventoryGrid({
     sortedToolKeys.length === 0 &&
     (query.length > 0 || filter !== "all");
 
-  const makeRef = useCallback((key: any) => (el: any) => assignCellRef(key, el), [assignCellRef]);
+  const makeRef = useCallback((key: string) => (el: HTMLElement | null) => assignCellRef(key, el), [assignCellRef]);
 
   // ── Narrow mode: inline accordion, no side panel ─────────────────────────
   if (compact) {

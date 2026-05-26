@@ -1,5 +1,6 @@
 import { sellPriceFor } from "./pricing.js";
 import { locBuilt } from "../../locBuilt.js";
+import type { Action, GameState } from "../../types/state.js";
 
 export const initial = {};
 
@@ -9,10 +10,12 @@ export const initial = {};
  * Requires state.built.caravan_post === true.
  * Returns state unchanged if caravan_post not built or insufficient inventory.
  */
-export function reduce(state: any, action: any) {
+export function reduce(state: GameState, action: Action): GameState {
   if (action.type !== "MARKET/SELL") return state;
 
-  const { resource, qty = 1 } = action.payload ?? {};
+  const payload = (action.payload ?? {}) as { resource?: string; qty?: number };
+  const resource = payload.resource;
+  const qty = payload.qty ?? 1;
   if (!resource) return state;
   // Caravan Post must be built
   if (!locBuilt(state).caravan_post) return state;

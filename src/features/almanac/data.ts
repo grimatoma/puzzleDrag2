@@ -3,6 +3,8 @@
  * §17 locked: linear curve, 150 XP per level. Do not redesign.
  */
 
+import type { GameState } from "../../types/state.js";
+
 // §17 locked: 150 XP per level, linear. Do not redesign.
 export const XP_PER_LEVEL = 150;
 
@@ -72,22 +74,33 @@ export const ALMANAC_TIERS = [
   },
 ];
 
+interface AwardXpResult {
+  leveledTo: number | null;
+  newState: GameState;
+}
+
 /**
  * Pure: award XP to state.almanac.
  * Returns { newState, leveledTo } where leveledTo is the new level if
  * this gain crossed a threshold, else null.
  */
-export function awardXp(state, amount) {
-  const xp = (state.almanac?.xp ?? 0) + amount;
+export function awardXp(state: GameState, amount: number): AwardXpResult {
+  const almanac = (state.almanac ?? {}) as { xp?: number; level?: number; [k: string]: unknown };
+  const xp = (almanac.xp ?? 0) + amount;
   const level = Math.max(1, Math.floor(xp / XP_PER_LEVEL) + 1);
-  const prev = state.almanac?.level ?? 1;
+  const prev = almanac.level ?? 1;
   return {
     leveledTo: level > prev ? level : null,
     newState: {
       ...state,
-      almanac: { ...state.almanac, xp, level },
-    },
+      almanac: { ...almanac, xp, level },
+    } as GameState,
   };
+}
+
+interface ClaimTierResult {
+  ok: boolean;
+  newState: GameState;
 }
 
 /**
@@ -95,36 +108,52 @@ export function awardXp(state, amount) {
  * Returns { ok, newState }.
  * ok = false if tier doesn't exist, already claimed, or level < tier.level.
  */
-export function claimAlmanacTier(state, tier) {
+export function claimAlmanacTier(state: GameState, tier: number): ClaimTierResult {
   const def = ALMANAC_TIERS.find((t) => t.tier === tier);
   if (!def) return { ok: false, newState: state };
-  if (state.almanac.claimed[tier]) return { ok: false, newState: state };
-  if (state.almanac.level < def.level) return { ok: false, newState: state };
+  const almanac = state.almanac as {
+    claimed: Record<string | number, boolean>;
+    level: number;
+    [k: string]: unknown;
+  };
+  if (almanac.claimed[tier]) return { ok: false, newState: state };
+  if (almanac.level < def.level) return { ok: false, newState: state };
 
-  let next = {
+  let next: GameState = {
     ...state,
     almanac: {
-      ...state.almanac,
-      claimed: { ...state.almanac.claimed, [tier]: true },
+      ...almanac,
+      claimed: { ...almanac.claimed, [tier]: true },
     },
+  } as GameState;
+
+  const reward = def.reward as {
+    coins?: number;
+    tools?: Record<string, number>;
+    runes?: number;
+    structural?: string;
   };
 
-  if (def.reward.coins) {
-    next = { ...next, coins: (next.coins ?? 0) + def.reward.coins };
+  if (reward.coins) {
+    next = { ...next, coins: (next.coins ?? 0) + reward.coins };
   }
-  if (def.reward.tools) {
-    next = { ...next, tools: { ...next.tools } };
-    for (const [k, v] of Object.entries(def.reward.tools)) {
-      next.tools[k] = (next.tools[k] ?? 0) + v;
+  if (reward.tools) {
+    const nextTools = { ...(next.tools as Record<string, number | boolean | undefined>) };
+    for (const [k, v] of Object.entries(reward.tools)) {
+      nextTools[k] = ((nextTools[k] as number | undefined) ?? 0) + v;
     }
+    next = { ...next, tools: nextTools } as GameState;
   }
-  if (def.reward.runes) {
-    next = { ...next, runes: (next.runes ?? 0) + def.reward.runes };
+  if (reward.runes) {
+    next = { ...next, runes: (next.runes ?? 0) + reward.runes };
   }
-  if (def.reward.structural) {
+  if (reward.structural) {
     // Structural flags are latched in state.tools for now, or state directly.
     // extraTurn and goldSeal are flags the game logic can check.
-    next = { ...next, tools: { ...next.tools, [def.reward.structural]: true } };
+    next = {
+      ...next,
+      tools: { ...(next.tools as Record<string, number | boolean | undefined>), [reward.structural]: true },
+    } as GameState;
   }
 
   return { ok: true, newState: next };

@@ -203,9 +203,10 @@ function applyTileCollectionChainEffects(state: GameState, key: string, length: 
 
   const chainedTile = TILE_TYPES_MAP[key];
   let freeMoves = tcSlice.freeMoves ?? 0;
-  const grant = (chainedTile?.effects as any)?.freeMoves ?? 0;
+  const tileEffects = chainedTile?.effects as { freeMoves?: number; freeMovesIfChain?: { minChain?: number; count?: number } } | undefined;
+  const grant = tileEffects?.freeMoves ?? 0;
   if (grant > 0) freeMoves += grant;
-  const condHook = (chainedTile?.effects as any)?.freeMovesIfChain;
+  const condHook = tileEffects?.freeMovesIfChain;
   if (condHook && length >= (condHook.minChain ?? 999)) {
     freeMoves += condHook.count ?? 1;
   }
@@ -605,6 +606,7 @@ function coreReducer(state: GameState, action: Action): GameState {
       const payload = action.payload as { id?: string; key?: string; power?: { id?: string; [k: string]: unknown } } | undefined;
       const rawKey = payload?.id ?? payload?.key ?? (action.key as string | undefined);
       const key = resolveToolDispatchKey(rawKey);
+      if (!key) return state;
       const explicitPower = payload?.power;
       if (explicitPower?.id) {
         return applyToolPower(state, key, explicitPower);
@@ -869,7 +871,7 @@ function coreReducer(state: GameState, action: Action): GameState {
 
       // ── season_bonus — worker + building season_bonus abilities (which both
       // contribute to the same `seasonBonus.coins` channel) ────────────────
-      const bonusCoins = Math.round((seasonAgg.seasonBonus as any).coins ?? 0);
+      const bonusCoins = Math.round(((seasonAgg.seasonBonus as { coins?: number } | undefined)?.coins) ?? 0);
 
       // ── Phase 6.1: NPC bond decay (−0.1 above 5) + Phase 6.2: reset gift cooldowns ──
       const decayedNpcs = (() => {
@@ -1602,7 +1604,7 @@ function runActionEffects(state: GameState, action: Action): void {
     case "SETTINGS/TOGGLE":
       // Persist the settings sub-state to its own localStorage key so it
       // survives a SETTINGS/RESET_SAVE clearing of the main save slot.
-      settings.persistSettings(state.settings);
+      settings.persistSettings((state.settings ?? {}) as Record<string, unknown>);
       break;
     case "SETTINGS/RESET_SAVE":
       // Clears every hearth.* key. Runs after persistState above (which would

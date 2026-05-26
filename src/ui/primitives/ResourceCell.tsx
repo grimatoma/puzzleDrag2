@@ -94,7 +94,7 @@ interface ResourceCellProps {
   actions?: ReactNode;
   onTap?: () => void;
   className?: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export default function ResourceCell({
