@@ -7,44 +7,55 @@ import Button from "../../ui/primitives/Button.jsx";
 import Stepper from "../../ui/primitives/Stepper.jsx";
 import IconCanvas from "../../ui/IconCanvas.jsx";
 import Icon from "../../ui/Icon.jsx";
+import type { GameState, Dispatch } from "../../types/state.js";
 
-const FOOD_LABELS = {
+const FOOD_LABELS: Record<string, string> = {
   supplies: "Supplies", tile_fruit_apple: "Apple", bread: "Bread", cured_meat: "Cured Meat",
   festival_loaf: "Festival Loaf", wedding_pie: "Wedding Pie", iron_ration: "Iron Ration",
 };
 
-export default function BiomeEntryModal({ biomeKey, state, dispatch, onClose }) {
-  const biome = BIOMES[biomeKey];
-  const access = canEnterBiome(state, biomeKey);
+interface BiomeEntryModalProps {
+  biomeKey: string;
+  state: GameState;
+  dispatch: Dispatch;
+  onClose: () => void;
+}
+
+interface FoodEntry { key: string; have: number; per: number }
+
+export default function BiomeEntryModal({ biomeKey, state, dispatch, onClose }: BiomeEntryModalProps) {
+  const s = state as GameState & { activeZone?: string; mapCurrent?: string; inventory?: Record<string, number>; built?: Record<string, Record<string, boolean>> };
+  const biome = (BIOMES as Record<string, { name?: string }>)[biomeKey];
+  const access = canEnterBiome(state, biomeKey) as { ok: boolean; reason?: string };
   const locked = !access.ok;
-  const zoneId = state.activeZone ?? state.mapCurrent ?? "home";
-  const descriptions = {
+  const zoneId = s.activeZone ?? s.mapCurrent ?? "home";
+  const descriptions: Record<string, string> = {
     mine: "Descend into the depths. Stone, ore, and gems wait below — but you only stay as long as your provisions last.",
     fish: "Cast off from the harbor. Fish come in with the tide; longer trips land the rare catches. Pack enough food for the voyage.",
   };
   const portraitIcon = biomeKey === "mine" ? "biome_mine" : "biome_fish";
 
-  const available = Object.keys(EXPEDITION_FOOD_TURNS)
-    .map((key) => ({ key, have: state.inventory?.[key] ?? 0, per: expeditionTurnsForFood(state, key, zoneId) }))
-    .filter((f) => f.have > 0);
+  const available: FoodEntry[] = Object.keys(EXPEDITION_FOOD_TURNS)
+    .map((key: string) => ({ key, have: s.inventory?.[key] ?? 0, per: expeditionTurnsForFood(state, key, zoneId) }))
+    .filter((f: FoodEntry) => f.have > 0);
 
-  const [supply, setSupply] = useState({});
+  const [supply, setSupply] = useState<Record<string, number>>({});
   const totalTurns = expeditionTurnsFromSupply(state, supply, zoneId);
   const canDepart = !locked && totalTurns >= MIN_EXPEDITION_TURNS;
 
-  const built = state.built?.[zoneId] ?? {};
-  const bonuses = [];
+  const built: Record<string, boolean> = s.built?.[zoneId] ?? {};
+  const bonuses: string[] = [];
   if (built.larder) bonuses.push("Larder +1");
   if (biomeKey === "mine" && built.mining_camp) bonuses.push("Mining Camp +1");
   if (biomeKey === "fish" && (built.pier || built.harbor_dock)) bonuses.push("Pier +1");
 
-  const setCount = (key, n, max) => setSupply((s) => {
+  const setCount = (key: string, n: number, max: number) => setSupply((s: Record<string, number>) => {
     const v = Math.max(0, Math.min(n, max));
-    const next = { ...s };
+    const next: Record<string, number> = { ...s };
     if (v <= 0) delete next[key]; else next[key] = v;
     return next;
   });
-  const packAll = () => setSupply(Object.fromEntries(available.map((f) => [f.key, f.have])));
+  const packAll = () => setSupply(Object.fromEntries(available.map((f: FoodEntry) => [f.key, f.have])));
   const depart = () => { dispatch({ type: "EXPEDITION/DEPART", payload: { biomeKey, supply } }); onClose(); };
 
   return (

@@ -61,13 +61,13 @@ export interface FarmRun {
 
 /**
  * Per-tool counters. Numeric for tool-charge counts (clear, bomb, axe, …);
- * a few boolean upgrade flags (startingExtraScythe etc.) live alongside.
+ * a few boolean upgrade flags (startingExtraScythe etc.) live alongside under
+ * specific declared keys.
  *
- * The index signature is intentionally `number | undefined` (not
- * `number | boolean | undefined`) so arithmetic on `tools[someKey]` doesn't
- * need a cast at every call site — the legitimate boolean fields are listed
- * explicitly above. Boolean flag *reads* still happen safely against the
- * declared fields (TS picks the precise type for known keys).
+ * The index signature returns `number | boolean | undefined` so the boolean
+ * flag fields stay representable. Reducer arithmetic on dynamic keys should
+ * route through the `toolCount(tools, key)` helper in src/state.ts to coerce
+ * the result to a number safely.
  */
 export interface Tools {
   clear: number;

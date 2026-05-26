@@ -190,9 +190,10 @@ export function applyToolPower(state: any, key: any, power: any): any {
           targetKey === "*"
             ? "matching tiles"
             : ((ITEMS as any)[targetKey]?.label?.toLowerCase() ?? targetKey);
+        const curCharges = typeof cleared.tools?.[key] === "number" ? (cleared.tools[key] as number) : 0;
         return {
           ...cleared,
-          tools: { ...cleared.tools, [key]: (cleared.tools[key] ?? 0) + 1 },
+          tools: { ...cleared.tools, [key]: curCharges + 1 },
           bubble: {
             id: Date.now(),
             npc: "bram",

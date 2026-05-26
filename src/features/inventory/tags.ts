@@ -16,18 +16,20 @@ export const INVENTORY_SOURCE_TAGS = Object.freeze({
   NATURAL: "natural",
 });
 
-const FOOD_KEYS = new Set(Object.keys(EXPEDITION_FOOD_TURNS));
-const CARGO_KEYS = new Set(["supplies"]);
+const FOOD_KEYS = new Set<string>(Object.keys(EXPEDITION_FOOD_TURNS));
+const CARGO_KEYS = new Set<string>(["supplies"]);
 
-function baseTagForKind(kind) {
+interface ItemDef { kind?: string; biome?: string }
+
+function baseTagForKind(kind: string | undefined): string {
   if (kind === "resource") return INVENTORY_TAGS.RESOURCE;
   if (kind === "tool") return INVENTORY_TAGS.TOOL;
   return INVENTORY_TAGS.ITEM;
 }
 
-export function tagsForItemKey(key) {
-  const item = ITEMS[key];
-  const tags = new Set([baseTagForKind(item?.kind)]);
+export function tagsForItemKey(key: string): string[] {
+  const item: ItemDef | undefined = (ITEMS as Record<string, ItemDef | undefined>)[key];
+  const tags = new Set<string>([baseTagForKind(item?.kind)]);
 
   if (FOOD_KEYS.has(key)) tags.add(INVENTORY_TAGS.FOOD);
   if (CARGO_KEYS.has(key) || item?.biome === "fish" || key.startsWith("fish_")) {
@@ -36,13 +38,17 @@ export function tagsForItemKey(key) {
   return Array.from(tags);
 }
 
-export function itemHasTag(key, tag) {
+export function itemHasTag(key: string, tag: string): boolean {
   return tagsForItemKey(key).includes(tag);
 }
 
-export function sourceTagsForItem(key, { recipesByOutput = {} } = {}) {
-  const item = ITEMS[key];
-  const tags = new Set();
+export interface SourceTagsOpts {
+  recipesByOutput?: Record<string, unknown[]>;
+}
+
+export function sourceTagsForItem(key: string, { recipesByOutput = {} }: SourceTagsOpts = {}): string[] {
+  const item: ItemDef | undefined = (ITEMS as Record<string, ItemDef | undefined>)[key];
+  const tags = new Set<string>();
   const biome = item?.biome;
   if (biome === "farm") tags.add(INVENTORY_SOURCE_TAGS.FARM);
   if (biome === "mine") tags.add(INVENTORY_SOURCE_TAGS.MINE);

@@ -2,6 +2,16 @@ import { NPCS } from '../../constants.js';
 import Button from '../../ui/primitives/Button.jsx';
 import { ParchmentDialog } from '../../ui/primitives/Dialog.jsx';
 import { UI_COLORS } from '../../ui/primitives/palette.js';
+import type { ReactNode } from 'react';
+import type { GameState, Dispatch } from '../../types/state.js';
+
+interface StepDef {
+  npc: string;
+  title: string;
+  body: string;
+  cta: string;
+  anchor: 'center' | 'corner';
+}
 
 export const modalKey = 'tutorial';
 export const alwaysMounted = true;
@@ -16,7 +26,7 @@ const TUTORIAL_COLORS = {
   moss: 'var(--moss)',
 };
 
-const STEPS = [
+const STEPS: StepDef[] = [
   {
     npc: 'wren',
     title: 'Welcome to Hearthwood Vale',
@@ -61,8 +71,10 @@ const STEPS = [
   },
 ];
 
-function NpcAvatar({ npcKey, size = 36 }) {
-  const npc = NPCS[npcKey] || NPCS.wren;
+interface NpcDef { color: string; name: string }
+function NpcAvatar({ npcKey, size = 36 }: { npcKey: string; size?: number }) {
+  const npcs = NPCS as Record<string, NpcDef>;
+  const npc: NpcDef = npcs[npcKey] || npcs.wren;
   return (
     <div
       style={{
@@ -86,7 +98,7 @@ function NpcAvatar({ npcKey, size = 36 }) {
   );
 }
 
-function StepDots({ step, total }) {
+function StepDots({ step, total }: { step: number; total: number }) {
   return (
     <div style={{ display: 'flex', gap: 5, justifyContent: 'center' }}>
       {Array.from({ length: total }).map((_, i) => (
@@ -104,7 +116,7 @@ function StepDots({ step, total }) {
   );
 }
 
-function CenterCard({ step, stepData, dispatch }) {
+function CenterCard({ step, stepData, dispatch }: { step: number; stepData: StepDef; dispatch: Dispatch }) {
   const canGoBack = step > 0;
   return (
     <ParchmentDialog
@@ -161,7 +173,7 @@ function CenterCard({ step, stepData, dispatch }) {
   );
 }
 
-function CornerToastButton({ children, onClick, ariaLabel, primary = false }) {
+function CornerToastButton({ children, onClick, ariaLabel, primary = false }: { children: ReactNode; onClick?: () => void; ariaLabel?: string; primary?: boolean }) {
   return (
     <button
       onClick={onClick}
@@ -187,7 +199,7 @@ function CornerToastButton({ children, onClick, ariaLabel, primary = false }) {
   );
 }
 
-function CornerToast({ step, stepData, dispatch }) {
+function CornerToast({ step, stepData, dispatch }: { step: number; stepData: StepDef; dispatch: Dispatch }) {
   return (
     <div
       style={{
@@ -253,15 +265,18 @@ function CornerToast({ step, stepData, dispatch }) {
   );
 }
 
-export default function Tutorial({ state, dispatch }) {
-  const tut = state.tutorial;
+interface TutorialProps { state: GameState; dispatch: Dispatch }
+
+export default function Tutorial({ state, dispatch }: TutorialProps) {
+  const s = state as GameState & { tutorial?: { active?: boolean; step?: number }; story?: { queuedBeat?: unknown }; modal?: string | null };
+  const tut = s.tutorial;
   // Do not render while a story beat is queued — StoryModal must be clickable (fix #1)
-  if (state.story?.queuedBeat) return null;
+  if (s.story?.queuedBeat) return null;
   // Do not render while any modal is open — modals must be clickable above this overlay
-  if (state.modal) return null;
+  if (s.modal) return null;
   if (!tut || !tut.active) return null;
 
-  const step = Math.min(tut.step, STEPS.length - 1);
+  const step = Math.min(tut.step ?? 0, STEPS.length - 1);
   const stepData = STEPS[step];
 
   if (stepData.anchor === 'corner') {

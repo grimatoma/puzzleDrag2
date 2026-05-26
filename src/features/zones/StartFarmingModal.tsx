@@ -7,8 +7,21 @@ import { ParchmentDialog } from "../../ui/primitives/Dialog.jsx";
 import Button from "../../ui/primitives/Button.jsx";
 import { UPGRADE_THRESHOLDS } from "../../constants.js";
 import { AbilitySummary } from "../../ui/primitives/BrowserDetail.jsx";
+import type { GameState, Dispatch } from "../../types/state.js";
 
-const CATEGORY_LABEL = {
+interface TileTypeDef {
+  id: string;
+  displayName: string;
+  tier?: number;
+  baseResource?: string;
+  description?: string | null;
+  abilities?: Array<Record<string, unknown>>;
+  effects?: Record<string, unknown>;
+}
+
+interface UnlockedRow { tileCat: string; tile: TileTypeDef }
+
+const CATEGORY_LABEL: Record<string, string> = {
   grass: "Grass",
   grain: "Grain",
   trees: "Trees",
@@ -21,7 +34,7 @@ const CATEGORY_LABEL = {
   mounts: "Mounts",
 };
 
-const CATEGORY_GLYPH = {
+const CATEGORY_GLYPH: Record<string, string> = {
   grass: "🌿",
   grain: "🌾",
   trees: "🌳",
@@ -38,14 +51,25 @@ const MAX_SLOTS = 8;
 
 /** Tile-collection categories backing a zone-level category. Zone "trees"
  *  intentionally covers both the tile-collection `trees` and `wood` chains. */
-function tileCategoriesForZoneCategory(zoneCat) {
-  return ZONE_TO_TILE_CATEGORIES[zoneCat] ?? [zoneCat];
+function tileCategoriesForZoneCategory(zoneCat: string): string[] {
+  return (ZONE_TO_TILE_CATEGORIES as Record<string, string[] | undefined>)[zoneCat] ?? [zoneCat];
+}
+
+interface StartHostState {
+  tileCollection?: {
+    activeByCategory?: Record<string, string | null>;
+    discovered?: Record<string, boolean>;
+  };
+  activeZone?: string;
+  tools?: Record<string, number>;
+  coins?: number;
 }
 
 /** Returns the currently-active tile-type id for a zone category, or null. */
-function activeTileForZoneCategory(state, zoneCat) {
+function activeTileForZoneCategory(state: GameState, zoneCat: string): string | null {
+  const s = state as unknown as StartHostState;
   const tileCats = tileCategoriesForZoneCategory(zoneCat);
-  const active = state?.tileCollection?.activeByCategory ?? {};
+  const active = s?.tileCollection?.activeByCategory ?? {};
   for (const tc of tileCats) {
     const id = active[tc];
     if (id) return id;
@@ -55,11 +79,12 @@ function activeTileForZoneCategory(state, zoneCat) {
 
 /** All discovered (unlocked) tile-type rows for a zone category, grouped by
  *  their tile-collection category. */
-function unlockedRowsForZoneCategory(state, zoneCat) {
-  const discovered = state?.tileCollection?.discovered ?? {};
-  const out = [];
+function unlockedRowsForZoneCategory(state: GameState, zoneCat: string): UnlockedRow[] {
+  const s = state as unknown as StartHostState;
+  const discovered = s?.tileCollection?.discovered ?? {};
+  const out: UnlockedRow[] = [];
   for (const tc of tileCategoriesForZoneCategory(zoneCat)) {
-    const types = TILE_TYPES_BY_CATEGORY[tc] ?? [];
+    const types: TileTypeDef[] = (TILE_TYPES_BY_CATEGORY as Record<string, TileTypeDef[] | undefined>)[tc] ?? [];
     for (const t of types) {
       if (!discovered[t.id]) continue;
       out.push({ tileCat: tc, tile: t });
@@ -68,10 +93,19 @@ function unlockedRowsForZoneCategory(state, zoneCat) {
   return out;
 }
 
-function TileSlot({ category, selected, locked, activeTileId, onToggle, onChoose }) {
+interface TileSlotProps {
+  category: string;
+  selected: boolean;
+  locked: boolean;
+  activeTileId: string | null;
+  onToggle: () => void;
+  onChoose: () => void;
+}
+
+function TileSlot({ category, selected, locked, activeTileId, onToggle, onChoose }: TileSlotProps) {
   const label = CATEGORY_LABEL[category] ?? category;
   const fallbackGlyph = CATEGORY_GLYPH[category] ?? "•";
-  const activeTile = activeTileId ? TILE_TYPES_MAP[activeTileId] : null;
+  const activeTile: TileTypeDef | null = activeTileId ? ((TILE_TYPES_MAP as Record<string, TileTypeDef | undefined>)[activeTileId] ?? null) : null;
   const baseStyle = {
     background: selected ? "#fffaf1" : "#dbcfb6",
     color: "#2b2218",
@@ -122,17 +156,25 @@ function TileSlot({ category, selected, locked, activeTileId, onToggle, onChoose
   );
 }
 
-function TileChooserPopup({ zoneCategory, state, dispatch, onClose }) {
+interface TileChooserPopupProps {
+  zoneCategory: string;
+  state: GameState;
+  dispatch: Dispatch;
+  onClose: () => void;
+}
+
+function TileChooserPopup({ zoneCategory, state, dispatch, onClose }: TileChooserPopupProps) {
+  const s = state as unknown as StartHostState;
   const label = CATEGORY_LABEL[zoneCategory] ?? zoneCategory;
-  const rows = useMemo(
+  const rows: UnlockedRow[] = useMemo(
     () => unlockedRowsForZoneCategory(state, zoneCategory),
     [state, zoneCategory],
   );
-  const active = state?.tileCollection?.activeByCategory ?? {};
-  const panelRef = useRef(null);
+  const active = s?.tileCollection?.activeByCategory ?? {};
+  const panelRef = useRef<HTMLDivElement | null>(null);
   useFocusTrap(panelRef, true, onClose);
 
-  function pick(row) {
+  function pick(row: UnlockedRow) {
     // Clear sibling tile-collection categories that share this zone slot, so
     // the active tile is unambiguous (e.g. picking a "wood_*" tile clears any
     // active "tree_*" entry from the trees slot).
@@ -182,9 +224,9 @@ function TileChooserPopup({ zoneCategory, state, dispatch, onClose }) {
           </p>
         ) : (
           <div className="flex flex-col gap-1.5">
-            {rows.map(({ tile, tileCat }) => {
+            {rows.map(({ tile, tileCat }: UnlockedRow) => {
               const isActive = active[tileCat] === tile.id;
-              const chain = UPGRADE_THRESHOLDS[tile.baseResource];
+              const chain = tile.baseResource ? (UPGRADE_THRESHOLDS as Record<string, number | undefined>)[tile.baseResource] : undefined;
               return (
                 <button
                   key={tile.id}
@@ -205,7 +247,7 @@ function TileChooserPopup({ zoneCategory, state, dispatch, onClose }) {
                   <span className="flex-1 min-w-0 flex flex-col gap-0.5">
                     <span className="flex items-center gap-1.5 flex-wrap">
                       <span className="font-bold text-[13px] leading-tight">{tile.displayName}</span>
-                      {tile.tier > 0 && (
+                      {(tile.tier ?? 0) > 0 && (
                         <span className="rounded-full px-1.5 py-0.5 text-[10px] font-bold bg-[#8c7656]/20 text-on-panel-dim">
                           Tier {tile.tier}
                         </span>
@@ -238,27 +280,34 @@ function TileChooserPopup({ zoneCategory, state, dispatch, onClose }) {
   );
 }
 
-export default function StartFarmingModal({ state, dispatch, onClose }) {
-  const zoneId = state.activeZone ?? DEFAULT_ZONE;
+interface StartFarmingModalProps {
+  state: GameState;
+  dispatch: Dispatch;
+  onClose?: () => void;
+}
+
+export default function StartFarmingModal({ state, dispatch, onClose }: StartFarmingModalProps) {
+  const s = state as unknown as StartHostState;
+  const zoneId = s.activeZone ?? DEFAULT_ZONE;
   const zone = ZONES[zoneId];
-  const cats = useMemo(() => zoneCategories(zoneId), [zoneId]);
+  const cats: string[] = useMemo(() => zoneCategories(zoneId), [zoneId]);
 
   // When zone exposes <= 8 categories every slot is auto-selected and
   // locked. When it exposes more, the player picks 8.
   const mustPick = cats.length > MAX_SLOTS;
-  const [selected, setSelected] = useState(() =>
-    mustPick ? new Set(cats.slice(0, MAX_SLOTS)) : new Set(cats),
+  const [selected, setSelected] = useState<Set<string>>(() =>
+    mustPick ? new Set<string>(cats.slice(0, MAX_SLOTS)) : new Set<string>(cats),
   );
 
-  const [useFertilizer, setUseFertilizer] = useState(false);
-  const [chooserCat, setChooserCat] = useState(null);
+  const [useFertilizer, setUseFertilizer] = useState<boolean>(false);
+  const [chooserCat, setChooserCat] = useState<string | null>(null);
 
   if (!zone) return null;
 
-  const fertilizerStock = state.tools?.fertilizer ?? 0;
+  const fertilizerStock: number = s.tools?.fertilizer ?? 0;
   const fertilizerAvailable = fertilizerStock > 0;
   const cost = zone.entryCost?.coins ?? 50;
-  const canAfford = (state.coins ?? 0) >= cost;
+  const canAfford = (s.coins ?? 0) >= cost;
   const baseTurns = zoneBaseTurns(zone);
   const buildingTurns = turnBudgetAdditiveBonusForZone(state, zoneId);
   const turns = turnBudgetForZone(state, zoneId, { useFertilizer });
@@ -266,15 +315,15 @@ export default function StartFarmingModal({ state, dispatch, onClose }) {
     !mustPick || selected.size === MAX_SLOTS;
   const canStart = canAfford && okTileCount;
 
-  function toggleCategory(cat) {
+  function toggleCategory(cat: string) {
     if (!mustPick) {
       // Locked slots — clicking the slot opens the chooser instead of
       // toggling.
       setChooserCat(cat);
       return;
     }
-    setSelected((prev) => {
-      const next = new Set(prev);
+    setSelected((prev: Set<string>) => {
+      const next = new Set<string>(prev);
       if (next.has(cat)) {
         next.delete(cat);
       } else {
@@ -290,7 +339,7 @@ export default function StartFarmingModal({ state, dispatch, onClose }) {
     dispatch({
       type: "FARM/ENTER",
       payload: {
-        selectedTiles: cats.filter((c) => selected.has(c)),
+        selectedTiles: cats.filter((c: string) => selected.has(c)),
         useFertilizer,
       },
     });
@@ -310,7 +359,7 @@ export default function StartFarmingModal({ state, dispatch, onClose }) {
         </p>
 
         <div className="grid grid-cols-4 gap-2 mb-3">
-          {cats.map((cat) => (
+          {cats.map((cat: string) => (
             <TileSlot
               key={cat}
               category={cat}
@@ -338,7 +387,7 @@ export default function StartFarmingModal({ state, dispatch, onClose }) {
                 Active Dangers
               </div>
               <div className="flex flex-wrap gap-1.5">
-                {hazards.map((h) => (
+                {hazards.map((h: string) => (
                   <span key={h} className="text-[10px] font-bold bg-[#9a3a2a]/10 text-[#9a3a2a] border border-[#9a3a2a]/30 rounded-lg px-2 py-0.5 capitalize">
                     {h.replace("_", " ")}
                   </span>

@@ -8,40 +8,42 @@ import ProgressTrack from "../../ui/primitives/ProgressTrack.jsx";
 import ResourceCell from "../../ui/primitives/ResourceCell.jsx";
 import MetricCard, { MetricGrid } from "../../ui/primitives/MetricCard.jsx";
 import Icon from "../../ui/Icon.jsx";
+import type { GameState, Dispatch } from "../../types/state.js";
+import type { BeatTriggered, BiggestChainSnapshot, RunSummary as RunSummaryState } from "./slice.js";
 
 export const modalKey = "runSummary";
 export const alwaysMounted = true;
 
-const BIOME_TITLES = {
+const BIOME_TITLES: Record<string, string> = {
   farm: "Harvest complete",
   mine: "Mine sealed",
   fish: "Voyage returned",
 };
 
-const BIOME_TAGLINES = {
+const BIOME_TAGLINES: Record<string, string> = {
   farm: "The home vale kept its word.",
   mine: "The deep stones gave up their lode.",
   fish: "The boats came in heavy.",
 };
 
-function pickTitle(biome) {
+function pickTitle(biome: string): string {
   return BIOME_TITLES[biome] || "Run complete";
 }
 
-function pickTagline(biome) {
+function pickTagline(biome: string): string {
   return BIOME_TAGLINES[biome] || "The journey ended.";
 }
 
-function npcName(key) {
-  return NPCS[key]?.name || key;
+function npcName(key: string): string {
+  return (NPCS as Record<string, { name?: string } | undefined>)[key]?.name || key;
 }
 
-function formatDelta(n) {
+function formatDelta(n: number): string {
   if (n > 0) return `+${n}`;
   return `${n}`;
 }
 
-function BestMomentCard({ best }) {
+function BestMomentCard({ best }: { best: BiggestChainSnapshot | null }) {
   if (!best || !best.count) return null;
   const label = best.key ? (iconLabel(best.key) || best.key) : "Chain";
   return (
@@ -62,7 +64,7 @@ function BestMomentCard({ best }) {
   );
 }
 
-function ChainsHeadline({ chainsPlayed, biggest }) {
+function ChainsHeadline({ chainsPlayed, biggest }: { chainsPlayed: number; biggest: BiggestChainSnapshot | null }) {
   const longest = biggest?.count ?? 0;
   return (
     <MetricGrid className="!grid-cols-2 md:!grid-cols-2">
@@ -72,15 +74,15 @@ function ChainsHeadline({ chainsPlayed, biggest }) {
   );
 }
 
-function ResourceTally({ resources }) {
-  const entries = Object.entries(resources || {}).filter(([, v]) => v > 0);
+function ResourceTally({ resources }: { resources: Record<string, number> | null | undefined }) {
+  const entries = Object.entries(resources || {}).filter(([, v]: [string, number]) => v > 0);
   if (entries.length === 0) return null;
   entries.sort((a, b) => b[1] - a[1]);
   return (
     <div>
       <div className="uppercase tracking-widest text-micro text-ink-light mb-1.5">What you brought home</div>
       <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-4">
-        {entries.slice(0, 8).map(([k, n]) => (
+        {entries.slice(0, 8).map(([k, n]: [string, number]) => (
           <ResourceCell key={k} resourceKey={k} count={n} density="micro" />
         ))}
       </div>
@@ -88,7 +90,7 @@ function ResourceTally({ resources }) {
   );
 }
 
-function BondRow({ npc, delta }) {
+function BondRow({ npc, delta }: { npc: string; delta: number }) {
   const tone = delta > 0 ? "moss" : "ember";
   return (
     <div className="flex items-center gap-2 py-1.5 border-b border-iron-soft/30 last:border-b-0">
@@ -99,15 +101,15 @@ function BondRow({ npc, delta }) {
   );
 }
 
-function BondsBlock({ bondDeltas }) {
-  const entries = Object.entries(bondDeltas || {}).filter(([, v]) => Math.abs(v) >= 0.1);
+function BondsBlock({ bondDeltas }: { bondDeltas: Record<string, number> | null | undefined }) {
+  const entries = Object.entries(bondDeltas || {}).filter(([, v]: [string, number]) => Math.abs(v) >= 0.1);
   if (entries.length === 0) return null;
   entries.sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]));
   return (
     <div>
       <div className="uppercase tracking-widest text-micro text-ink-light mb-1.5">What the vale noticed</div>
       <div className="rounded-md border border-iron-soft/40 bg-paper/60 px-3 py-1">
-        {entries.map(([npc, delta]) => (
+        {entries.map(([npc, delta]: [string, number]) => (
           <BondRow key={npc} npc={npc} delta={delta} />
         ))}
       </div>
@@ -115,14 +117,14 @@ function BondsBlock({ bondDeltas }) {
   );
 }
 
-function BeatsBlock({ beats }) {
-  const list = (beats || []).filter((b) => b && b.title);
+function BeatsBlock({ beats }: { beats: BeatTriggered[] | null | undefined }) {
+  const list: BeatTriggered[] = (beats || []).filter((b: BeatTriggered) => !!b && !!b.title);
   if (list.length === 0) return null;
   return (
     <div>
       <div className="uppercase tracking-widest text-micro text-ink-light mb-1.5">Story beats</div>
       <div className="flex flex-wrap gap-1.5">
-        {list.slice(0, 6).map((b) => (
+        {list.slice(0, 6).map((b: BeatTriggered) => (
           <Pill key={b.id} tone="gold" size="sm">{b.title}</Pill>
         ))}
       </div>
@@ -130,13 +132,13 @@ function BeatsBlock({ beats }) {
   );
 }
 
-function SuppliesLine({ supply, fertilizerUsed }) {
-  const entries = Object.entries(supply || {}).filter(([, v]) => v > 0);
+function SuppliesLine({ supply, fertilizerUsed }: { supply: Record<string, number> | null | undefined; fertilizerUsed: boolean }) {
+  const entries = Object.entries(supply || {}).filter(([, v]: [string, number]) => v > 0);
   if (entries.length === 0 && !fertilizerUsed) return null;
   return (
     <div className="flex flex-wrap items-center gap-1.5 text-body text-ink-light">
       <span className="uppercase tracking-widest text-micro text-ink-light">Supplies consumed:</span>
-      {entries.map(([k, n]) => (
+      {entries.map(([k, n]: [string, number]) => (
         <Pill key={k} tone="iron" size="sm" leading={<Icon iconKey={k} size={14} />}>{`x${n}`}</Pill>
       ))}
       {fertilizerUsed ? <Pill tone="moss" size="sm">Fertilizer</Pill> : null}
@@ -144,11 +146,17 @@ function SuppliesLine({ supply, fertilizerUsed }) {
   );
 }
 
-export default function RunSummary({ state, dispatch }) {
-  const run = state.runSummary;
+interface RunSummaryProps {
+  state: GameState;
+  dispatch: Dispatch;
+}
+
+export default function RunSummary({ state, dispatch }: RunSummaryProps) {
+  const s = state as GameState & { runSummary?: RunSummaryState; biomeKey?: string };
+  const run = s.runSummary;
   if (!run || !run.open) return null;
 
-  const biome = run.biome || state.biomeKey || "farm";
+  const biome: string = run.biome || s.biomeKey || "farm";
   const title = pickTitle(biome);
   const tagline = pickTagline(biome);
   const turnsBudget = run.turnsAtStart || 0;

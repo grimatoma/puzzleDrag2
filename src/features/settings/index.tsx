@@ -1,12 +1,13 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, type ReactNode } from "react";
 import { ParchmentDialog } from "../../ui/primitives/Dialog.jsx";
-import FeaturePanel from "../../ui/primitives/FeaturePanel.jsx";
+import { FeaturePanel } from "../_shared/uiTypes.js";
+import type { GameState, Dispatch } from "../../types/state.js";
 
 export const modalKey = "menu";
 export const alwaysMounted = true;
 
 // --- Toggle switch ---
-function Toggle({ on, onToggle }) {
+function Toggle({ on, onToggle }: { on: boolean; onToggle: () => void }) {
   return (
     <button
       onClick={onToggle}
@@ -23,8 +24,14 @@ function Toggle({ on, onToggle }) {
 }
 
 // --- Action button ---
-function ActionBtn({ children, onClick, variant = 'default', className = '' }) {
-  const styles = {
+interface ActionBtnProps {
+  children: ReactNode;
+  onClick?: () => void;
+  variant?: 'primary' | 'danger' | 'default' | 'ember';
+  className?: string;
+}
+function ActionBtn({ children, onClick, variant = 'default', className = '' }: ActionBtnProps) {
+  const styles: Record<string, { background: string; borderColor: string; color: string }> = {
     primary:  { background: '#5a9e4b', borderColor: '#3e7236', color: '#fff' },
     danger:   { background: '#c23b22', borderColor: '#8f2a18', color: '#fff' },
     default:  { background: '#e8dcc4', borderColor: '#b28b62', color: '#5a3a20' },
@@ -43,26 +50,36 @@ function ActionBtn({ children, onClick, variant = 'default', className = '' }) {
 }
 
 // --- Main tab ---
-function isFullscreen() {
-  return !!(document.fullscreenElement || document.webkitFullscreenElement);
+interface DocWithLegacyFullscreen extends Document {
+  webkitFullscreenElement?: Element | null;
+  webkitExitFullscreen?: () => Promise<void>;
 }
-async function toggleFullscreen() {
+interface ElWithLegacyFullscreen extends HTMLElement {
+  webkitRequestFullscreen?: () => Promise<void>;
+}
+
+function isFullscreen(): boolean {
+  const d = document as DocWithLegacyFullscreen;
+  return !!(d.fullscreenElement || d.webkitFullscreenElement);
+}
+async function toggleFullscreen(): Promise<void> {
   try {
+    const d = document as DocWithLegacyFullscreen;
     if (isFullscreen()) {
-      const exit = document.exitFullscreen || document.webkitExitFullscreen;
-      await exit?.call(document);
+      const exit = d.exitFullscreen || d.webkitExitFullscreen;
+      await exit?.call(d);
     } else {
-      const el = document.documentElement;
+      const el = d.documentElement as ElWithLegacyFullscreen;
       const req = el.requestFullscreen || el.webkitRequestFullscreen;
       await req?.call(el);
       // Lock portrait if available (Android Chrome / TWA)
-      try { await screen.orientation?.lock?.("portrait"); } catch { /* orientation lock not supported */ }
+      try { await (screen.orientation as ScreenOrientation & { lock?: (o: string) => Promise<void> })?.lock?.("portrait"); } catch { /* orientation lock not supported */ }
     }
   } catch { /* fullscreen not supported or denied */ }
 }
 
-function MainTab({ dispatch }) {
-  const [fs, setFs] = useState(isFullscreen());
+function MainTab({ dispatch }: { dispatch: Dispatch }) {
+  const [fs, setFs] = useState<boolean>(isFullscreen());
   useEffect(() => {
     const sync = () => setFs(isFullscreen());
     document.addEventListener("fullscreenchange", sync);
@@ -124,8 +141,9 @@ const TOGGLE_ROWS = [
   { key: 'hapticsOn', label: 'Haptics' },
 ];
 
-function SettingsTab({ settings = {}, dispatch }) {
-  function handleToggle(key) {
+interface SettingsTabProps { settings?: Record<string, boolean>; dispatch: Dispatch }
+function SettingsTab({ settings = {}, dispatch }: SettingsTabProps) {
+  function handleToggle(key: string) {
     dispatch({ type: 'SETTINGS/TOGGLE', key });
   }
 
@@ -161,7 +179,7 @@ function SettingsTab({ settings = {}, dispatch }) {
 }
 
 // --- About tab ---
-function AboutTab({ dispatch }) {
+function AboutTab({ dispatch }: { dispatch: Dispatch }) {
   return (
     <div className="flex flex-col items-center gap-3 text-center">
       <button
@@ -185,14 +203,20 @@ function AboutTab({ dispatch }) {
 }
 
 // --- Root modal ---
-export default function SettingsModal({ state, dispatch }) {
-  const open = state.modal === 'menu' || state.modal === 'leaveBoard';
+interface SettingsModalProps {
+  state: GameState;
+  dispatch: Dispatch;
+}
+
+export default function SettingsModal({ state, dispatch }: SettingsModalProps) {
+  const s = state as GameState & { modal?: string | null; settingsTab?: string; settings?: Record<string, boolean> };
+  const open = s.modal === 'menu' || s.modal === 'leaveBoard';
   const close = () => dispatch({ type: 'CLOSE_MODAL' });
   if (!open) return null;
-  const leavingBoard = state.modal === 'leaveBoard';
+  const leavingBoard = s.modal === 'leaveBoard';
 
-  const tab = state.settingsTab || 'main';
-  const settings = state.settings || {};
+  const tab = s.settingsTab || 'main';
+  const settings: Record<string, boolean> = s.settings || {};
 
   return (
     <ParchmentDialog open={open} onClose={close} size="lg" ariaLabel="Menu" backdropClassName="z-[70]">
