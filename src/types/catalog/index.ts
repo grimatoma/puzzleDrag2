@@ -30,6 +30,8 @@ export { NpcId, NPC_ID_VALUES } from "./npcs.js";
 export { MineHazardId, MINE_HAZARD_ID_VALUES } from "./hazards.js";
 export { BossId, BOSS_ID_VALUES } from "./bosses.js";
 export { WorkerTypeId, WORKER_TYPE_ID_VALUES } from "./workers.js";
+export { DecorationId, DECORATION_ID_VALUES } from "./decorations.js";
+export { BoonId, BOON_ID_VALUES } from "./boons.js";
 export { AbilityId, ABILITY_ID_VALUES } from "./abilities.js";
 export { ToolPowerId, TOOL_POWER_ID_VALUES } from "./toolPowers.js";
 export {

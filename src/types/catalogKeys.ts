@@ -39,6 +39,12 @@ export {
   FEATURE_FLAG_ID_VALUES,
   TuningKey,
   TUNING_KEY_VALUES,
+  DecorationId,
+  DECORATION_ID_VALUES,
+  BoonId,
+  BOON_ID_VALUES,
+  WorkerTypeId,
+  WORKER_TYPE_ID_VALUES,
 } from "./catalog/index.js";
 
 /** Keys that may be written to `state.inventory`. */
