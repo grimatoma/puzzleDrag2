@@ -46,6 +46,7 @@ interface ChainCommit {
  * Returns { discoveredIds, newDiscoveredMap }.
  */
 export function discoverTileTypesFromChain(state: GameState, { resourceKey, chainLength }: ChainCommit): { discoveredIds: string[]; newDiscoveredMap: Record<string, boolean> } {
+  // eslint-disable-next-line no-restricted-syntax -- pre-existing HostState cast; tracked for follow-up cleanup
   const s = state as unknown as TcHostState;
   const known: Record<string, boolean> = s.tileCollection?.discovered ?? {};
   const ids: string[] = [];
@@ -77,6 +78,7 @@ export function discoverTileTypesFromChain(state: GameState, { resourceKey, chai
  * Returns the active tile type id for the category that contains `key`, or null.
  */
 function activeIdForKey(state: GameState, key: string): string | null {
+  // eslint-disable-next-line no-restricted-syntax -- pre-existing HostState cast; tracked for follow-up cleanup
   const s = state as unknown as TcHostState;
   const cat = (CATEGORY_OF as Record<string, string | undefined>)[key];
   if (!cat) return null;
@@ -88,6 +90,7 @@ function activeIdForKey(state: GameState, key: string): string | null {
  * as a flat array of resource keys.
  */
 export function getActivePool(state: GameState, biomeKey: string = "farm"): string[] {
+  // eslint-disable-next-line no-restricted-syntax -- pre-existing HostState cast; tracked for follow-up cleanup
   const s = state as unknown as TcHostState;
   const biomeMap = BIOMES as unknown as Record<string, { pool?: string[] } | undefined>;
   const base: string[] = biomeMap[biomeKey]?.pool ?? [];
@@ -136,6 +139,7 @@ export function displayKey(k: string): string {
 }
 
 function statusFor(state: GameState, t: TileTypeDef): string {
+  // eslint-disable-next-line no-restricted-syntax -- pre-existing HostState cast; tracked for follow-up cleanup
   const s = state as unknown as TcHostState;
   const disc = s.tileCollection?.discovered?.[t.id];
   const d: TileTypeDiscovery = t.discovery ?? {};
@@ -188,6 +192,7 @@ export interface CategoryRowViewModel {
  * Returns an array of view-model rows for the given category.
  */
 export function getCategoryViewModel(state: GameState, category: string): CategoryRowViewModel[] {
+  // eslint-disable-next-line no-restricted-syntax -- pre-existing HostState cast; tracked for follow-up cleanup
   const s = state as unknown as TcHostState;
   return (TILE_TYPES as TileTypeDef[]).filter((t) => t.category === category).map((t) => {
     const locked = !s.tileCollection?.discovered?.[t.id];
@@ -234,6 +239,7 @@ export interface TileDetailViewModel {
 }
 
 export function getTileDetailViewModel(state: GameState, tileId: string): TileDetailViewModel | null {
+  // eslint-disable-next-line no-restricted-syntax -- pre-existing HostState cast; tracked for follow-up cleanup
   const s = state as unknown as TcHostState;
   const t = (TILE_TYPES_MAP as Record<string, TileTypeDef | undefined>)[tileId];
   if (!t) return null;

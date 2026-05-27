@@ -34,6 +34,7 @@ function cellMatchesClearTarget(t: ToolGridCell, targetKey: string): boolean {
  * Clear every board cell matching targetKey (or all tile types when targetKey is "*").
  */
 export function clearTilesOfKey(state: GameState, targetKey: string): { state: GameState; collected: number } {
+  // eslint-disable-next-line no-restricted-syntax -- pre-existing HostState cast; tracked for follow-up cleanup
   const s = state as unknown as ToolHostState;
   if (!targetKey || !s.grid) {
     return { state, collected: 0 };
@@ -64,6 +65,7 @@ export function clearTilesOfKey(state: GameState, targetKey: string): { state: G
  * Apply a pending board tool — pure reducer helper (tests / legacy paths).
  */
 export function applyToolPending(state: GameState): GameState {
+  // eslint-disable-next-line no-restricted-syntax -- pre-existing HostState cast; tracked for follow-up cleanup
   const s = state as unknown as ToolHostState;
   const id = s.toolPending;
   if (!id) return state;

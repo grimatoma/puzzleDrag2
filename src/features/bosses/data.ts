@@ -136,6 +136,7 @@ export interface BossInstance {
 }
 
 export function spawnBoss(state: GameState, id: string, year: number, rng: () => number = Math.random): GameState {
+  // eslint-disable-next-line no-restricted-syntax -- pre-existing HostState cast; tracked for follow-up cleanup
   const s = state as unknown as BossesHostState;
   if (s.boss) return state;
   const def = BOSSES.find((b) => b.id === id);
@@ -164,11 +165,13 @@ export function spawnBoss(state: GameState, id: string, year: number, rng: () =>
 }
 
 export function tickBossTurn(state: GameState): GameState {
+  // eslint-disable-next-line no-restricted-syntax -- pre-existing HostState cast; tracked for follow-up cleanup
   const s = state as unknown as BossesHostState;
   if (!s.boss) return state;
   const next: BossInstance = { ...s.boss, turnsRemaining: s.boss.turnsRemaining - 1 };
   const targetMet = next.progress >= next.target.amount;
   const expired = next.turnsRemaining <= 0;
+  // eslint-disable-next-line no-restricted-syntax -- pre-existing HostState cast; tracked for follow-up cleanup
   if (!targetMet && !expired) return { ...state, boss: next as unknown as GameState["boss"] };
   const def = BOSSES.find((b) => b.id === s.boss?.id);
   if (!def) return state;

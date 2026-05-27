@@ -75,6 +75,7 @@ export interface ApplyGiftResult {
 }
 
 export function applyGift(state: GameState, npcId: string, itemKey: string): ApplyGiftResult {
+  // eslint-disable-next-line no-restricted-syntax -- pre-existing HostState cast; tracked for follow-up cleanup
   const s = state as unknown as NpcHostState;
   if ((s.inventory?.[itemKey] ?? 0) <= 0) return { ok: false };
   if (!s.npcs) return { ok: false };

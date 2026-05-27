@@ -687,6 +687,7 @@ interface CartoHostStateUI {
 }
 
 export default function CartographyScreen({ state, dispatch }: CartographyScreenProps) {
+  // eslint-disable-next-line no-restricted-syntax -- pre-existing HostState cast; tracked for follow-up cleanup
   const s = state as unknown as CartoHostStateUI;
   const mapCurrent = s.mapCurrent ?? "home";
   const mapVisited = s.mapVisited;

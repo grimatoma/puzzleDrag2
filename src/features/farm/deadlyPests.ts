@@ -44,6 +44,7 @@ export function isDeadlyToPests(key: string | null | undefined): boolean {
  * Pure — does not mutate state.
  */
 export function tryDeadlyPestsKill(state: GameState, chain: ChainCell[]): DeadlyPestsPatch | null {
+  // eslint-disable-next-line no-restricted-syntax -- pre-existing HostState cast; tracked for follow-up cleanup
   const s = state as unknown as DeadlyHostState;
   if (!Array.isArray(chain) || chain.length === 0) return null;
   const hasDeadly = chain.some((t: ChainCell) => isDeadlyToPests(t?.key));
