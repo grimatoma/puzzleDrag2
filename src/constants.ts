@@ -635,6 +635,34 @@ export const ITEMS = {
   gold_ring: ITEMS_DATA.goldring as ResourceItemEntry,
 } as ItemRecord;
 
+// ── Compile-time key-coverage check ─────────────────────────────────────────
+// Mirrors `src/__tests__/catalog-keys-invariants.test.ts` at the type level:
+// every `ItemKey` enum member must appear as a key of the literal ITEMS object,
+// and no extra keys may exist. Mismatches surface as a `tsc` error naming the
+// offending keys via the `_MissingItemKeys` / `_ExtraItemKeys` check rows below.
+//
+// `${ItemKey}` coerces the enum members to their underlying string-literal
+// values — TS treats enum singletons and structurally identical string
+// literals as mutually assignable but not type-equal, so a direct
+// `Exclude<ItemKey, "tile_grass_hay">` does *not* remove `TileKey.TileGrassHay`
+// and the check would spuriously report every literal key as "extra".
+const _ITEMS_KEY_LITERAL = {
+  ...ITEMS_DATA,
+  iron_frame: ITEMS_DATA.ironframe,
+  gem_crown: ITEMS_DATA.gemcrown,
+  gold_ring: ITEMS_DATA.goldring,
+};
+type _ItemKeyValue = `${ItemKey}`;
+type _MissingItemKeys = Exclude<_ItemKeyValue, keyof typeof _ITEMS_KEY_LITERAL>;
+type _ExtraItemKeys = Exclude<keyof typeof _ITEMS_KEY_LITERAL, _ItemKeyValue>;
+// Non-distributive `[T] extends [never]` so the check resolves to `true` only
+// when each side is empty (a bare `T extends never` distributes and collapses
+// to `never` on either side, defeating the assertion).
+const _MISSING_ITEM_KEYS_MUST_BE_NEVER: [_MissingItemKeys] extends [never] ? true : _MissingItemKeys = true;
+const _EXTRA_ITEM_KEYS_MUST_BE_NEVER: [_ExtraItemKeys] extends [never] ? true : _ExtraItemKeys = true;
+void _MISSING_ITEM_KEYS_MUST_BE_NEVER;
+void _EXTRA_ITEM_KEYS_MUST_BE_NEVER;
+
 /** Safe ITEMS lookup; returns undefined for unknown keys. */
 export function getItem(key: string): ItemEntry | undefined {
   if (!(key in ITEMS)) return undefined;
