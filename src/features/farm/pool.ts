@@ -30,6 +30,7 @@ interface AggregatedAbilities {
  * Pure function — no side effects.
  */
 export function getEffectivePool(state: GameState): string[] {
+  // eslint-disable-next-line no-restricted-syntax -- pre-existing HostState cast; tracked for follow-up cleanup
   const s = state as unknown as PoolHostState;
   const biomeMap = BIOMES as unknown as Record<string, BiomeDef>;
   const biome: BiomeDef = biomeMap[s.biome ?? ""] ?? biomeMap[s.biomeKey ?? ""] ?? biomeMap.farm;

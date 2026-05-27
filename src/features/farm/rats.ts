@@ -60,6 +60,7 @@ interface WorkerEffectsView {
  */
 export function rollRatSpawn(state: GameState, rng: () => number = Math.random): Rat | null {
   if (!RATS_HAZARD_ENABLED) return null;
+  // eslint-disable-next-line no-restricted-syntax -- pre-existing HostState cast; tracked for follow-up cleanup
   const s = state as unknown as RatHostState;
   if (s.biome !== "farm") return null;
   const inv: Record<string, number> = s.inventory ?? {};
@@ -94,6 +95,7 @@ export function rollRatSpawn(state: GameState, rng: () => number = Math.random):
  * Advance all rats by one turn: each eats one adjacent plant tile and ages +1.
  */
 export function tickRats(state: GameState): GameState {
+  // eslint-disable-next-line no-restricted-syntax -- pre-existing HostState cast; tracked for follow-up cleanup
   const s = state as unknown as RatHostState;
   if (!s.hazards?.rats?.length) return state;
   const grid: GridCell[][] | undefined = s.grid ? s.grid.map((r: GridCell[]) => r.map((t: GridCell) => ({ ...t }))) : s.grid;
@@ -135,6 +137,7 @@ export interface RatChainPatch {
  * if the chain is invalid (< 3 rats, or mixed tile types).
  */
 export function tryClearRatChain(state: GameState, chain: ChainCell[]): RatChainPatch | null {
+  // eslint-disable-next-line no-restricted-syntax -- pre-existing HostState cast; tracked for follow-up cleanup
   const s = state as unknown as RatHostState;
   if (chain.length < 3) return null;
   if (!chain.every((t: ChainCell) => t.key === "rat")) return null;

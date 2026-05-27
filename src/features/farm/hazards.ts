@@ -81,6 +81,7 @@ export function rollFarmHazard(
   rng: () => number = Math.random,
   allowedHazards: string[] = ["fire", "wolf", "rats"],
 ): FarmHazardSpawn | null {
+  // eslint-disable-next-line no-restricted-syntax -- pre-existing HostState cast; tracked for follow-up cleanup
   const s = state as unknown as FarmHostState;
   if (s.biome !== "farm") return null;
   if (s.boss) return null;
@@ -130,6 +131,7 @@ export function rollFarmHazard(
  * Each fire cell rolls 50% to spread to an orthogonal-adjacent free cell.
  */
 export function tickFire(state: GameState, rng: () => number = Math.random): GameState {
+  // eslint-disable-next-line no-restricted-syntax -- pre-existing HostState cast; tracked for follow-up cleanup
   const s = state as unknown as FarmHostState;
   if (!s.hazards?.fire) return state;
   const fire = s.hazards.fire;
@@ -179,6 +181,7 @@ export function tickFire(state: GameState, rng: () => number = Math.random): Gam
  * - Non-scared wolves consume one adjacent bird tile.
  */
 export function tickWolves(state: GameState): GameState {
+  // eslint-disable-next-line no-restricted-syntax -- pre-existing HostState cast; tracked for follow-up cleanup
   const s = state as unknown as FarmHostState;
   if (!s.hazards?.wolves) return state;
   const wolves = s.hazards.wolves;
@@ -237,6 +240,7 @@ interface ChainCell { key?: string | null; row: number; col: number }
  * Returns a state patch `{ hazards, coinsBonus }` or null if no fire in chain.
  */
 export function tryExtinguishFire(state: GameState, chain: ChainCell[]): { hazards: FarmHazardsState; coinsBonus: number } | null {
+  // eslint-disable-next-line no-restricted-syntax -- pre-existing HostState cast; tracked for follow-up cleanup
   const s = state as unknown as FarmHostState;
   const fireCells: FireCell[] = s.hazards?.fire?.cells ?? [];
   if (fireCells.length === 0) return null;

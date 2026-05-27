@@ -31,6 +31,7 @@ export function loadSavedState(): SavedState | null {
 export function persistStateNow(state: GameState): void {
   try {
     const out: Record<string, unknown> = {};
+    // eslint-disable-next-line no-restricted-syntax -- pre-existing HostState cast; tracked for follow-up cleanup
     const src = state as unknown as Record<string, unknown>;
     for (const k of Object.keys(src)) if (!VOLATILE.has(k)) out[k] = src[k];
     localStorage.setItem(SAVE_KEY, JSON.stringify(out));

@@ -55,6 +55,7 @@ interface ChainCell { key?: string | null }
  * No-op if a pearl is already active or the player isn't on the fish biome.
  */
 export function spawnPearl(state: GameState, rng: () => number = Math.random): GameState {
+  // eslint-disable-next-line no-restricted-syntax -- pre-existing HostState cast; tracked for follow-up cleanup
   const s = state as unknown as PearlHostState;
   if (s.biome !== "fish") return state;
   if (s.fishPearl) return state;
@@ -99,6 +100,7 @@ export function spawnPearl(state: GameState, rng: () => number = Math.random): G
  * and clear the pearl slot.
  */
 export function tickPearl(state: GameState): GameState {
+  // eslint-disable-next-line no-restricted-syntax -- pre-existing HostState cast; tracked for follow-up cleanup
   const s = state as unknown as PearlHostState;
   if (!s.fishPearl) return state;
   const next = s.fishPearl.turnsRemaining - 1;

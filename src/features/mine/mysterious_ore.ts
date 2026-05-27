@@ -39,6 +39,7 @@ interface ChainCell { key?: string | null }
  * No-op if already active or biome is not "mine".
  */
 export function spawnMysteriousOre(state: GameState, rng: () => number = Math.random): GameState {
+  // eslint-disable-next-line no-restricted-syntax -- pre-existing HostState cast; tracked for follow-up cleanup
   const s = state as unknown as OreHostState;
   if (s.biome !== "mine") return state;
   if (s.mysteriousOre) return state; // already active — one at a time
@@ -77,6 +78,7 @@ export function spawnMysteriousOre(state: GameState, rng: () => number = Math.ra
  * Tick the countdown by 1. At 0, degrade the tile to Dirt.
  */
 export function tickMysteriousOre(state: GameState): GameState {
+  // eslint-disable-next-line no-restricted-syntax -- pre-existing HostState cast; tracked for follow-up cleanup
   const s = state as unknown as OreHostState;
   if (!s.mysteriousOre) return state;
   const next = s.mysteriousOre.turnsRemaining - 1;

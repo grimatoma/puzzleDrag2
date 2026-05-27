@@ -112,6 +112,7 @@ export interface TickModifierResult { newState: GameState }
  */
 export function tickModifier(state: GameState, modifier: BossModifier): TickModifierResult {
   if (modifier.type !== "heat_tiles") return { newState: state };
+  // eslint-disable-next-line no-restricted-syntax -- pre-existing HostState cast; tracked for follow-up cleanup
   const s = state as unknown as ModifierHostState;
 
   const heat: HeatEntry[] = (s.boss?.modifierState?.heat ?? []).map((h: HeatEntry) => ({ ...h, age: h.age + 1 }));

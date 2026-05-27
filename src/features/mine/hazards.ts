@@ -108,6 +108,7 @@ export const HAZARDS: HazardDef[] = [
 ];
 
 function hazardsActive(state: GameState): number {
+  // eslint-disable-next-line no-restricted-syntax -- pre-existing HostState cast; tracked for follow-up cleanup
   const s = state as unknown as MineHostState;
   const h: MineHazardsState = s.hazards ?? {};
   return (h.caveIn ? 1 : 0) + (h.gasVent ? 1 : 0) + (h.lava ? 1 : 0) + (h.mole ? 1 : 0);
@@ -117,6 +118,7 @@ function hazardsActive(state: GameState): number {
  * Roll for a hazard spawn. Returns a hazard descriptor or null.
  */
 export function rollHazard(state: GameState, rng: () => number = Math.random, allowedHazards: string[] = ["cave_in", "gas_vent", "lava", "mole"]): Record<string, unknown> | null {
+  // eslint-disable-next-line no-restricted-syntax -- pre-existing HostState cast; tracked for follow-up cleanup
   const s = state as unknown as MineHostState;
   if (s.biome !== "mine") return null;
   if (s.boss) return null;
@@ -176,6 +178,7 @@ export function tickHazards(state: GameState, rng: () => number = Math.random): 
 }
 
 function _tickGasVent(state: GameState): GameState {
+  // eslint-disable-next-line no-restricted-syntax -- pre-existing HostState cast; tracked for follow-up cleanup
   const s = state as unknown as MineHostState;
   if (!s.hazards?.gasVent) return state;
   const v = s.hazards.gasVent;
@@ -198,6 +201,7 @@ function _tickGasVent(state: GameState): GameState {
 }
 
 function _tickLava(state: GameState, rng: () => number): GameState {
+  // eslint-disable-next-line no-restricted-syntax -- pre-existing HostState cast; tracked for follow-up cleanup
   const s = state as unknown as MineHostState;
   if (!s.hazards?.lava) return state;
   const lava = s.hazards.lava;
@@ -254,6 +258,7 @@ function _tickLava(state: GameState, rng: () => number): GameState {
 }
 
 function _tickMole(state: GameState, rng: () => number): GameState {
+  // eslint-disable-next-line no-restricted-syntax -- pre-existing HostState cast; tracked for follow-up cleanup
   const s = state as unknown as MineHostState;
   if (!s.hazards?.mole) return state;
   const mole = s.hazards.mole;
@@ -329,6 +334,7 @@ interface ChainCell { key?: string | null; row: number; col: number }
  * Attempt to clear a cave-in by chaining 3+ stone tiles in an adjacent row.
  */
 export function clearCaveIn(state: GameState, chain: ChainCell[]): GameState {
+  // eslint-disable-next-line no-restricted-syntax -- pre-existing HostState cast; tracked for follow-up cleanup
   const s = state as unknown as MineHostState;
   if (!s.hazards?.caveIn) return state;
   const targetRow = s.hazards.caveIn.row;

@@ -67,6 +67,7 @@ interface StartHostState {
 
 /** Returns the currently-active tile-type id for a zone category, or null. */
 function activeTileForZoneCategory(state: GameState, zoneCat: string): string | null {
+  // eslint-disable-next-line no-restricted-syntax -- pre-existing HostState cast; tracked for follow-up cleanup
   const s = state as unknown as StartHostState;
   const tileCats = tileCategoriesForZoneCategory(zoneCat);
   const active = s?.tileCollection?.activeByCategory ?? {};
@@ -80,6 +81,7 @@ function activeTileForZoneCategory(state: GameState, zoneCat: string): string | 
 /** All discovered (unlocked) tile-type rows for a zone category, grouped by
  *  their tile-collection category. */
 function unlockedRowsForZoneCategory(state: GameState, zoneCat: string): UnlockedRow[] {
+  // eslint-disable-next-line no-restricted-syntax -- pre-existing HostState cast; tracked for follow-up cleanup
   const s = state as unknown as StartHostState;
   const discovered = s?.tileCollection?.discovered ?? {};
   const out: UnlockedRow[] = [];
@@ -164,6 +166,7 @@ interface TileChooserPopupProps {
 }
 
 function TileChooserPopup({ zoneCategory, state, dispatch, onClose }: TileChooserPopupProps) {
+  // eslint-disable-next-line no-restricted-syntax -- pre-existing HostState cast; tracked for follow-up cleanup
   const s = state as unknown as StartHostState;
   const label = CATEGORY_LABEL[zoneCategory] ?? zoneCategory;
   const rows: UnlockedRow[] = useMemo(
@@ -287,6 +290,7 @@ interface StartFarmingModalProps {
 }
 
 export default function StartFarmingModal({ state, dispatch, onClose }: StartFarmingModalProps) {
+  // eslint-disable-next-line no-restricted-syntax -- pre-existing HostState cast; tracked for follow-up cleanup
   const s = state as unknown as StartHostState;
   const zoneId = s.activeZone ?? DEFAULT_ZONE;
   const zone = ZONES[zoneId];
