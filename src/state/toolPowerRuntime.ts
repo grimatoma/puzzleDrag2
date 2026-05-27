@@ -1,7 +1,7 @@
 /**
  * Tool power runtime — reducer-side handlers for ITEMS[key].power dispatch.
  */
-import { ITEMS } from "../constants.js";
+import { getItem } from "../constants.js";
 import { clearTilesOfKey } from "../features/farm/tools.js";
 import { isTapTargetPower } from "../config/toolPowers.js";
 import { selectTilesForPower, type TileSelectorCell } from "../config/tileSelectors.js";
@@ -210,7 +210,7 @@ export function applyToolPower(state: GameState, key: string | null | undefined,
     const tools = state.tools;
     const cur = key ? tools?.[key] : undefined;
     if (key && typeof cur === "number" && cur <= 0) return state;
-    const itemPower = key ? ITEMS[key]?.power : undefined;
+    const itemPower = key ? getItem(key)?.power : undefined;
     const bubbleText = (power.bubble ?? itemPower?.bubble) as string | null | undefined ?? null;
     let next: GameState = {
       ...state,
@@ -225,11 +225,11 @@ export function applyToolPower(state: GameState, key: string | null | undefined,
     case "clear_all": {
       const spent = _spendToolCharge(state, key);
       if (spent === null) return state;
-      const targetKey = (params.target as string | undefined) ?? (key ? ITEMS[key]?.target : undefined);
+      const targetKey = (params.target as string | undefined) ?? (key ? getItem(key)?.target : undefined);
       if (!targetKey) return spent;
       const { state: cleared, collected } = clearTilesOfKey(spent, targetKey);
       if (collected === 0) {
-        const targetItem = ITEMS[targetKey];
+        const targetItem = getItem(targetKey);
         const label =
           targetKey === "*"
             ? "matching tiles"

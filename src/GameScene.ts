@@ -1,5 +1,5 @@
 import Phaser from "phaser";
-import { TILE, COLS, ROWS, UPGRADE_THRESHOLDS, SEASONS, BIOMES, CAPPED_TILES, SCENE_EVENTS, ITEMS, tileFamilyResource, TILES_WITH_CUSTOM_OUTPUT } from "./constants.js";
+import { TILE, COLS, ROWS, UPGRADE_THRESHOLDS, SEASONS, BIOMES, CAPPED_TILES, SCENE_EVENTS, getItem, tileFamilyResource, TILES_WITH_CUSTOM_OUTPUT } from "./constants.js";
 import { upgradeCountForChain, rollResource } from "./utils.js";
 import { resourceByKey } from "./state/helpers.js";
 import { computeAggregatedAbilities } from "./features/workers/aggregate.js";
@@ -284,7 +284,7 @@ export class GameScene extends Phaser.Scene {
         return;
       }
       const power = registryToolPower(this.registry.get("toolPendingPower"))
-        ?? registryToolPower(ITEMS[toolKey]?.power)
+        ?? registryToolPower(getItem(toolKey)?.power)
         ?? null;
       if (!power) return;
       if (isTapTargetPower(power.id)) {
@@ -1014,7 +1014,7 @@ export class GameScene extends Phaser.Scene {
         // tiles should be dimmed so feedback stays accurate.
         const pending = this.registry.get("toolPending");
         const pendingPower = this.registry.get("toolPendingPower")
-          ?? (pending ? ITEMS[pending]?.power : null);
+          ?? (pending ? getItem(pending)?.power : null);
         if (pendingPower && pending && !this.dragging) this.applyToolDimForPower(pendingPower, pending);
       });
     } else {
@@ -1307,7 +1307,7 @@ export class GameScene extends Phaser.Scene {
     if (this.locked) return;
     const pendingKey = this.registry.get("toolPending");
     const armedPower = this.registry.get("toolPendingPower")
-      ?? (pendingKey ? ITEMS[pendingKey]?.power : null);
+      ?? (pendingKey ? getItem(pendingKey)?.power : null);
     if (pendingKey && armedPower?.id && isTapTargetPower(armedPower.id)) {
       this.applyToolPower(armedPower, tile);
       this.time.delayedCall(50, () => this.events.emit(SCENE_EVENTS.TOOL_FIRED, {
@@ -1687,7 +1687,7 @@ export class GameScene extends Phaser.Scene {
     // V.3 — Clamp the displayed gain to the inventory cap so float text matches what the player actually receives
     const cap = this.registry.get("inventoryCap") ?? 200;
     const inv: Record<string, number> = this.registry.get("inventory") ?? {};
-    const isCapped = CAPPED_TILES.includes(res.key);
+    const isCapped = (CAPPED_TILES as readonly string[]).includes(res.key);
     const currentAmt = inv[res.key] ?? 0;
     const wouldGain = gained + (bonusGains[res.key] ?? 0);
     const actualGain = isCapped ? Math.max(0, Math.min(cap - currentAmt, wouldGain)) : wouldGain;

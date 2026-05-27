@@ -4,7 +4,7 @@
  * so the compiler checks the shape against production types.
  */
 
-import type { Action, GameState } from "../types/state.js";
+import type { Action, BossState, GameState } from "../types/state.js";
 import { createFreshState } from "../state/init.js";
 
 /**
@@ -12,7 +12,7 @@ import { createFreshState } from "../state/init.js";
  * Later layers override earlier ones. Nested objects are **replaced wholesale** per key
  * (matching the common test pattern `baseState(over) => ({ ...defaults, ...over })`).
  */
-export function mergeTestState(...layers: Array<Partial<GameState> & Record<string, unknown>>): GameState {
+export function mergeTestState(...layers: Array<Partial<GameState>>): GameState {
   return Object.assign({}, createFreshState(), ...layers) as GameState;
 }
 
@@ -24,4 +24,24 @@ export function unsafeGameState(state: unknown): GameState {
 /** Cast a loose action object for slice tests that dispatch non-catalog types. */
 export function testAction(action: { type: string; [key: string]: unknown }): Action {
   return action as unknown as Action;
+}
+
+/** Read {@link GameState.boss} in tests without extra narrowing. */
+export function bossOf(state: GameState): BossState | null {
+  return state.boss;
+}
+
+/** Narrow {@link GameState.story} for flag / queue assertions in slice tests. */
+export function storyOf(state: GameState): Record<string, unknown> {
+  return state.story;
+}
+
+/** Read tutorial sub-state in tests. */
+export function tutorialOf(state: GameState): GameState["tutorial"] {
+  return state.tutorial;
+}
+
+/** Read castle sub-state in tests. */
+export function castleOf(state: GameState): GameState["castle"] {
+  return state.castle;
 }

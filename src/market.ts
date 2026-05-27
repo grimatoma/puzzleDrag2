@@ -1,4 +1,5 @@
 import { MARKET_PRICES } from "./constants.js";
+import { inventoryPut, inventoryQty } from "./types/inventory.js";
 import type { GameState, Action } from "./types/state.js";
 
 export interface MarketEvent {
@@ -71,16 +72,16 @@ export function applyTrade(state: GameState, action: Action): GameState {
     return {
       ...state,
       coins: state.coins - cost,
-      inventory: { ...state.inventory, [key]: (state.inventory[key] ?? 0) + qty },
+      inventory: inventoryPut({ ...state.inventory }, key, inventoryQty(state.inventory, key) + qty),
     };
   }
   if (action.type === "SELL_RESOURCE") {
-    const owned = state.inventory[key] ?? 0;
+    const owned = inventoryQty(state.inventory, key);
     if (owned < qty) return state;
     return {
       ...state,
       coins: state.coins + p.sell * qty,
-      inventory: { ...state.inventory, [key]: owned - qty },
+      inventory: inventoryPut({ ...state.inventory }, key, owned - qty),
     };
   }
   return state;

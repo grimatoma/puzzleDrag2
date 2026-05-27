@@ -100,10 +100,10 @@ export interface ToolItemEntry extends ItemEntryBase {
 }
 
 export type ItemEntry = TileItemEntry | ResourceItemEntry | ToolItemEntry;
-export type ItemRecord = Record<string, ItemEntry>;
-export type TileRecord = Record<string, TileItemEntry>;
-export type ResourceRecord = Record<string, ResourceItemEntry>;
-export type ToolRecord = Record<string, ToolItemEntry>;
+export type ItemRecord = Record<ItemKey, ItemEntry>;
+export type TileRecord = Record<TileKey, TileItemEntry>;
+export type ResourceRecord = Record<ResourceKey, ResourceItemEntry>;
+export type ToolRecord = Record<ToolKey, ToolItemEntry>;
 
 export type BiomeItemEntry<T extends ItemEntry = ItemEntry> = T & { key: string };
 
@@ -129,7 +129,10 @@ export interface BiomeDefinition {
 
 export type BiomeRecord = Record<BiomeId, BiomeDefinition> & Record<string, BiomeDefinition>;
 
-export type RecipeInputs = Record<string, number>;
+import type { ItemKey, RecipeInputKey, ResourceKey, TileKey, ToolKey } from "./types/catalogKeys.js";
+
+/** Closed input map — only keys from the ITEMS catalog. */
+export type RecipeInputs = Partial<Record<RecipeInputKey, number>>;
 
 export interface RecipeDefinition {
   [legacyField: string]: unknown;
@@ -430,7 +433,7 @@ export const RESOURCE_TO_THRESHOLD: Record<string, number> = (() => {
  * dynamic mutation (underscore aliases, recipe back-compat) continue to work.
  */
 
-export const ITEMS: ItemRecord = {
+const ITEMS_DATA = {
   // Farm tiles/resources
   tile_grass_hay:          { kind: "tile", biome: "farm", label: "Hay",          color: 0xa8c769, dark: 0x4f6b3a, value: 1, next: "hay_bundle", sway: { amp: 4.0, freq: 0.00060, gust: 0.20 } },
   tile_grass_meadow:       { kind: "tile", biome: "farm", label: "Meadow Grass", color: 0x7fb24a, dark: 0x3e5a18, value: 1, next: "hay_bundle", sway: { amp: 4.5, freq: 0.00058, gust: 0.22 } },
@@ -621,12 +624,22 @@ export const ITEMS: ItemRecord = {
   cured_meat:    { kind: "resource", biome: "farm", label: "Cured Meat",    color: 0x8a4a26, dark: 0x4a2618, value: 45,  desc: "Salted and dried meat that lasts for weeks. Each unit grants 2 turns on expeditions." },
   iron_ration:   { kind: "resource", biome: "mine", label: "Iron Ration",   color: 0x5a5a60, dark: 0x2a2a30, value: 120, desc: "A calorie-dense, hard-packed block of dried grain and fat. Each unit grants 4 turns on expeditions." },
   festival_loaf: { kind: "resource", biome: "farm", label: "Festival Loaf", color: 0xd49060, dark: 0x7a4a28, value: 60,  desc: "A rich, fruit-studded bread baked for seasonal feasts. Each unit grants 2 turns on expeditions." },
-  wedding_pie:   { kind: "resource", biome: "farm", label: "Wedding Pie",  color: 0xb05428, dark: 0x582818, value: 180, desc: "A massive, multi-layered berry pie traditionally served at Hearthwood weddings. Each unit grants 3 turns on expeditions." }
+  wedding_pie:   { kind: "resource", biome: "farm", label: "Wedding Pie",  color: 0xb05428, dark: 0x582818, value: 180, desc: "A massive, multi-layered berry pie traditionally served at Hearthwood weddings. Each unit grants 3 turns on expeditions." },
 };
-// Underscore-variant aliases for ITEMS (tests and orders use both forms).
-ITEMS.iron_frame = ITEMS.ironframe;
-ITEMS.gem_crown  = ITEMS.gemcrown;
-ITEMS.gold_ring  = ITEMS.goldring;
+
+/** Closed catalog — keys must exist in {@link ItemKey} enums in `types/catalog/itemKeys.ts`. */
+export const ITEMS = {
+  ...ITEMS_DATA,
+  iron_frame: ITEMS_DATA.ironframe as ResourceItemEntry,
+  gem_crown: ITEMS_DATA.gemcrown as ResourceItemEntry,
+  gold_ring: ITEMS_DATA.goldring as ResourceItemEntry,
+} as ItemRecord;
+
+/** Safe ITEMS lookup; returns undefined for unknown keys. */
+export function getItem(key: string): ItemEntry | undefined {
+  if (!(key in ITEMS)) return undefined;
+  return ITEMS[key as ItemKey];
+}
 
 // ── Phase 3a: split ITEMS into three kind-specific maps ───────────────────
 // These are the canonical home for tile/resource/tool data. ITEMS is kept as
@@ -712,7 +725,10 @@ for (const b of Object.values(BIOMES)) {
   b.resourceOrderPool = b.tiles
     .map((t) => t.next)
     .filter((k: string | null | undefined): k is string => k != null && !seen.has(k) && Boolean(seen.add(k)))
-    .filter((k: string) => isResourceItemEntry(ITEMS[k]));
+    .filter((k: string) => {
+      const item = getItem(k);
+      return item ? isResourceItemEntry(item) : false;
+    });
 }
 
 
@@ -942,7 +958,7 @@ for (const rec of Object.values(RECIPES)) {
 for (const rec of Object.values(RECIPES)) {
   if (!isRecipeDefinition(rec)) continue;
   if (!rec.item) continue;
-  const itemDef = ITEMS[rec.item];
+  const itemDef = getItem(rec.item);
   if (!isItemEntry(itemDef)) continue;
   // Legacy compat getters — only add if not already set by the recipe itself.
   if (rec.name === undefined)   rec.name   = itemDef.label;
@@ -1059,7 +1075,7 @@ export const CAPPED_TILES = [
   "tile_herd_sheep","tile_herd_alpaca","tile_herd_goat","tile_herd_ram",
   "tile_cattle_cow","tile_cattle_longhorn","tile_cattle_triceratops",
   "tile_mount_horse","tile_mount_donkey","tile_mount_moose","tile_mount_mammoth",
-];
+] as const;
 /**
  * Inventory resource keys (kind:"resource") subject to the inventory cap.
  * Used when checking whether buying or crediting a bare resource would exceed the cap.
@@ -1069,7 +1085,7 @@ export const CAPPED_INVENTORY_RESOURCES = [
   "flour","plank","jam","hay_bundle","soup",
   // Phase: wire-all-chains — terminal products.
   "pie","honey","meat","milk","horseshoe","eggs","bread",
-];
+] as const;
 
 // ─── Phase 3 Economy ──────────────────────────────────────────────────────────
 

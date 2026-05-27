@@ -4,7 +4,7 @@
 // shows the worker, hire / fire buttons, the per-hire effect summary, and
 // the current count out of maxCount.
 import { useState } from "react";
-import { ITEMS } from "../../constants.js";
+import { getItem } from "../../constants.js";
 import { TYPE_WORKERS, nextHireCost, nextHireResourceCost } from "./data.js";
 import type { WorkerAbility, WorkerDef } from "./data.js";
 import Icon from "../../ui/Icon.jsx";
@@ -113,7 +113,7 @@ function WorkerDetail({ worker, count, state, dispatch }: WorkerDetailProps) {
     },
     ...Object.entries(resourceCost).map(([key, amount]) => ({
       key,
-      label: ITEMS[key]?.label || key,
+      label: getItem(key)?.label || key,
       amount,
       icon: <Icon iconKey={key} size={18} title="" />,
       have: inv[key] ?? 0,

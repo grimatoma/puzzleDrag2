@@ -146,7 +146,8 @@ const BASE_VISUAL_SCENARIOS: VisualScenario[] = [
   { id: "story-prompt", state: "storyPrompt", hash: "#/town", diff: domDiff },
   { id: "story-win", state: "storyWin", hash: "#/town", diff: domDiff },
   { id: "tutorial-center", state: "tutorialCenter", hash: "#/town", diff: domDiff },
-  { id: "tutorial-corner", state: "tutorialCorner", hash: "#/board", diff: domDiff },
+  // This scenario includes the Phaser board canvas; use the more tolerant canvas diff.
+  { id: "tutorial-corner", state: "tutorialCorner", hash: "#/board", diff: canvasDiff },
   { id: "town-market-news", state: "marketNews", hash: "#/town", diff: domDiff },
 ];
 

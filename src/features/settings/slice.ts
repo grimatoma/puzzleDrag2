@@ -1,5 +1,6 @@
 import { STORAGE_KEYS } from "../../constants.js";
 import type { Action, GameState } from "../../types/state.js";
+import type { GameSettings } from "../../types/gameStateFields.js";
 const STORAGE_KEY = STORAGE_KEYS.settings;
 
 function loadSettings(): Record<string, unknown> | null {
@@ -56,11 +57,10 @@ export const initial = {
 export function reduce(state: GameState, action: Action): GameState {
   switch (action.type) {
     case "SETTINGS/TOGGLE": {
-      const key = action.key;
-      const currentSettings = (state.settings ?? {}) as Record<string, unknown>;
-      const settings = {
-        ...currentSettings,
-        [key]: !currentSettings[key],
+      const key = action.key as keyof GameState["settings"];
+      const settings: GameSettings = {
+        ...state.settings,
+        [key]: !state.settings[key],
       };
       return { ...state, settings };
     }
@@ -94,8 +94,7 @@ export function reduce(state: GameState, action: Action): GameState {
       // The persisted tutorial-seen flag is cleared by runActionEffects.
       const next: GameState = { ...state, modal: 'tutorial' };
       if (state.tutorial) {
-        const tutorial = state.tutorial as Record<string, unknown>;
-        next.tutorial = { ...tutorial, active: true, step: 0, seen: false };
+        next.tutorial = { ...state.tutorial, active: true, step: 0, seen: false };
       }
       return next;
     }

@@ -1,6 +1,8 @@
 import { describe, it, expect } from "vitest";
-import { reduce as achReduce, initial as achInitial } from "../features/achievements/slice.js";
+import type { Action } from "../types/state.js";
+import { reduce as achReduce } from "../features/achievements/slice.js";
 import { ACHIEVEMENTS } from "../features/achievements/data.js";
+import { mergeTestState } from "../testUtils/testState.js";
 
 const baseAchievements = () => ({
   counters: {
@@ -14,11 +16,11 @@ const baseAchievements = () => ({
   seenBuildings: {},
 });
 
-const baseState = (over = {}) => ({
-  ...achInitial,
-  achievements: baseAchievements(),
-  ...over,
-});
+const baseState = (over: Record<string, unknown> = {}) =>
+  mergeTestState({
+    achievements: baseAchievements(),
+    ...over,
+  });
 
 describe("fish-themed achievements", () => {
   it("registers first_catch / tide_runner / master_angler", () => {
@@ -33,7 +35,7 @@ describe("fish-themed achievements", () => {
     const s1 = achReduce(s0, {
       type: "CHAIN_COLLECTED",
       payload: { key: "tile_fish_sardine", gained: 4, chainLength: 4, upgrades: 0 },
-    });
+    } as Action);
     expect(s1.achievements.counters.fish_chained).toBe(4);
   });
 
@@ -42,7 +44,7 @@ describe("fish-themed achievements", () => {
     const s1 = achReduce(s0, {
       type: "CHAIN_COLLECTED",
       payload: { key: "tile_grass_hay", gained: 10, chainLength: 10, upgrades: 0 },
-    });
+    } as Action);
     expect(s1.achievements.counters.fish_chained).toBe(0);
   });
 
@@ -52,7 +54,7 @@ describe("fish-themed achievements", () => {
       s = achReduce(s, {
         type: "CHAIN_COLLECTED",
         payload: { key, gained: 3, chainLength: 3, upgrades: 0 },
-      });
+      } as Action);
     }
     expect(s.achievements.counters.fish_chained).toBe(3 * 5);
   });
@@ -62,7 +64,7 @@ describe("fish-themed achievements", () => {
     const s1 = achReduce(s0, {
       type: "CHAIN_COLLECTED",
       payload: { key: "tile_fish_sardine", gained: 0, chainLength: 4, upgrades: 0 },
-    });
+    } as Action);
     expect(s1.achievements.counters.fish_chained).toBe(0);
   });
 
@@ -70,11 +72,11 @@ describe("fish-themed achievements", () => {
     const fc = ACHIEVEMENTS.find((a) => a.id === "first_catch");
     const tr = ACHIEVEMENTS.find((a) => a.id === "tide_runner");
     const ma = ACHIEVEMENTS.find((a) => a.id === "master_angler");
-    expect(fc.threshold).toBe(1);
-    expect(tr.threshold).toBe(50);
-    expect(ma.threshold).toBe(200);
-    expect(fc.counter).toBe("fish_chained");
-    expect(tr.counter).toBe("fish_chained");
-    expect(ma.counter).toBe("fish_chained");
+    expect(fc?.threshold).toBe(1);
+    expect(tr?.threshold).toBe(50);
+    expect(ma?.threshold).toBe(200);
+    expect(fc?.counter).toBe("fish_chained");
+    expect(tr?.counter).toBe("fish_chained");
+    expect(ma?.counter).toBe("fish_chained");
   });
 });

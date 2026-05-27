@@ -160,7 +160,7 @@ interface RouterStateView {
   view?: string;
   modal?: string | null;
   viewParams?: Record<string, unknown>;
-  craftingTab?: string;
+  craftingTab?: string | null;
   settingsTab?: string;
   [k: string]: unknown;
 }

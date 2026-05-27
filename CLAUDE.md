@@ -120,6 +120,24 @@ These are tracked for PR 4 cleanup. **Do not introduce new conflations** — if 
 
 Until PR 3 lands, `tile.next` still names a resource that gets both placed on the board AND added to inventory (one entity, double duty). Don't lean on that behavior in new code — treat `next` as "the resource this tile produces" and let PR 3 split off the upgrade-tile side.
 
+## Catalog enums (ids vs attributes)
+
+**Ids are fixed at compile time** in hand-maintained enums under `src/types/catalog/` (re-exported from `src/types/catalogKeys.ts`). `ITEMS`, `RECIPES`, `ZONES`, etc. supply **attributes** keyed by those ids.
+
+| Layer | Defines membership | Defines attributes |
+|-------|-------------------|-------------------|
+| Enums + `ITEMS` / config maps in code | Yes | Defaults |
+| `balance.json` / Dev Panel draft | No (unknown keys skipped) | Yes |
+| Player save | No (`parseInventory` strips unknown) | Counts |
+
+**New item:** enum member in `catalog/itemKeys.ts` + `ITEMS` row → restart dev server. No emit/codegen step. See `docs/engineering/catalog-enums.md` for the full Wiki/Dev Panel enum inventory.
+
+**Dev Panel pickers** use `RESOURCE_KEYS` / `TILE_KEYS` from `catalogKeys.ts`, not free-text ids. `applyItemOverrides` / `applyRecipeOverrides` skip keys not in the live maps.
+
+**Story & tuning:** `StoryBeatId`, `StoryFlagId`, `StoryFlagCategoryId`, `StoryTriggerType`, and `TuningKey` cover `STORY_BEATS` / `SIDE_BEATS`, `STORY_FLAGS` (+ categories), trigger vocabulary, and `sanitizeTuning` keys — see `docs/engineering/catalog-enums.md`.
+
+**Feature flags:** compile-time toggles live in `src/featureFlags.ts` (`FIRE_HAZARD_ENABLED`, `RATS_HAZARD_ENABLED`) and their concept ids are enumerated by `FeatureFlagId` under `src/types/catalog/`. Runtime Dev Panel mirror uses `TuningKey.FireHazardEnabled` / `balance.json` `tuning.fireHazardEnabled`.
+
 ## Testing a specific UI
 
 Three layered ways to land on the exact screen you want to verify, without clicking through the game from a fresh save.

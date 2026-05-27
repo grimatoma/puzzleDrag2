@@ -1,10 +1,11 @@
-import { ITEMS } from "../constants.js";
+import { getItem } from "../constants.js";
 import { parseHash } from "../router.js";
 import { createFreshState } from "../state/init.js";
 import { defaultTileCollectionSlice } from "../state/helpers.js";
 import { TILE_TYPES, CATEGORIES } from "../features/tileCollection/data.js";
 import { findBeat, INITIAL_STORY_STATE } from "../story.js";
 import { initialFlagState } from "../flags.js";
+import * as runSummarySlice from "../features/runSummary/slice.js";
 import type { GameState, Grid } from "../types/state.js";
 import type { VisualScenario } from "./matrix.js";
 
@@ -127,7 +128,7 @@ function order(id: string, npc: string, key: string, need: number, have: number,
     amount: need,
     reward,
     baseReward: reward,
-    line: `Could you bring ${need} ${ITEMS[key]?.label ?? key}?`,
+    line: `Could you bring ${need} ${getItem(key)?.label ?? key}?`,
     _visualHave: have,
   };
 }
@@ -236,7 +237,7 @@ function baseState(): VisualStateTree {
     mapDiscovered: ["home", "meadow", "orchard", "crossroads", "quarry", "harbor", "oldcapital"],
     settlements: { home: { founded: true, biome: "prairie" } },
     tileCollection: defaultTileCollectionSlice() as GameState["tileCollection"],
-    runSummary: { open: false },
+    runSummary: runSummarySlice.initial.runSummary,
   };
 }
 

@@ -34,6 +34,17 @@ export default [
       "no-unused-vars": "off",
       "@typescript-eslint/no-unused-vars": ["error", { argsIgnorePattern: "^_", varsIgnorePattern: "^_" }],
       "@typescript-eslint/no-explicit-any": "error",
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector: "Identifier[name=/^(state|next|s|ns)$/] TSAsExpression TSAsExpression > TSUnknownKeyword",
+          message: "Do not cast reducer state through `unknown`; add the field to GameState instead.",
+        },
+        {
+          selector: "Identifier[name=/^(state|next|s|ns)$/] > TSAsExpression > TSUnknownKeyword",
+          message: "Do not cast reducer state through `unknown`; add the field to GameState instead.",
+        },
+      ],
       "no-undef": "off",
     },
   },

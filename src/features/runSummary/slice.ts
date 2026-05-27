@@ -55,21 +55,8 @@ export const initial = {
   runSummary: emptyRun(),
 };
 
-interface RunHostState {
-  runSummary?: RunSummary;
-  npcs?: { bonds?: Record<string, number> };
-  biome?: string;
-  biomeKey?: string;
-  activeZone?: string;
-  mapCurrent?: string;
-  modal?: string | null;
-  farmRun?: { turnBudget?: number; turnsRemaining?: number; zoneId?: string; mode?: string };
-  session?: { fertilizerUsed?: boolean; expedition?: { supply?: Record<string, number> } };
-}
-
 function snapshotBonds(state: GameState): Record<string, number> {
-  const s = state as unknown as RunHostState;
-  const bonds = s.npcs?.bonds;
+  const bonds = state.npcs.bonds;
   if (!bonds || typeof bonds !== "object") return {};
   return { ...bonds };
 }
@@ -88,15 +75,14 @@ function diffBonds(start: Record<string, number> | null | undefined, end: Record
 }
 
 function maybeAutoOpen(state: GameState): GameState {
-  const s = state as unknown as RunHostState;
-  const run = s.runSummary;
+  const run = state.runSummary;
   if (!run || run.open) return state;
-  if (s.modal !== "season") return state;
+  if (state.modal !== "season") return state;
   const bondDeltas = diffBonds(run.bondsAtStart, snapshotBonds(state));
   return {
     ...state,
     runSummary: { ...run, open: true, bondDeltas },
-  } as GameState;
+  };
 }
 
 interface StartArgs {
@@ -108,43 +94,41 @@ interface StartArgs {
 }
 
 function startFreshRun(state: GameState, { biome, zoneId, mode, supply, fertilizerUsed }: StartArgs): GameState {
-  const s = state as unknown as RunHostState;
   const fresh = emptyRun();
-  fresh.biome = biome ?? s.biomeKey ?? s.biome ?? null;
-  fresh.zoneId = zoneId ?? s.activeZone ?? s.mapCurrent ?? null;
+  fresh.biome = biome ?? state.biomeKey ?? state.biome ?? null;
+  fresh.zoneId = zoneId ?? state.activeZone ?? state.mapCurrent ?? null;
   fresh.mode = mode ?? null;
-  fresh.turnsAtStart = s.farmRun?.turnBudget ?? s.farmRun?.turnsRemaining ?? 0;
+  fresh.turnsAtStart = state.farmRun?.turnBudget ?? state.farmRun?.turnsRemaining ?? 0;
   fresh.bondsAtStart = snapshotBonds(state);
   fresh.suppliesConsumed = supply ? { ...supply } : {};
   fresh.fertilizerUsed = !!fertilizerUsed;
-  return { ...state, runSummary: fresh } as GameState;
+  return { ...state, runSummary: fresh };
 }
 
 export function reduce(state: GameState, action: Action): GameState {
-  const s = state as unknown as RunHostState;
   switch (action.type) {
     case "FARM/ENTER": {
-      if (!s.farmRun) return state;
+      if (!state.farmRun) return state;
       return startFreshRun(state, {
-        biome: s.biomeKey,
-        zoneId: s.farmRun.zoneId,
-        mode: s.farmRun.mode ?? "normal",
-        fertilizerUsed: !!s.session?.fertilizerUsed,
+        biome: state.biomeKey,
+        zoneId: state.farmRun.zoneId,
+        mode: state.farmRun.mode ?? "normal",
+        fertilizerUsed: !!state.session.fertilizerUsed,
       });
     }
 
     case "EXPEDITION/DEPART": {
-      if (!s.farmRun) return state;
+      if (!state.farmRun) return state;
       return startFreshRun(state, {
-        biome: s.biomeKey,
-        zoneId: s.farmRun.zoneId,
-        mode: s.farmRun.mode ?? "expedition",
-        supply: s.session?.expedition?.supply,
+        biome: state.biomeKey,
+        zoneId: state.farmRun.zoneId,
+        mode: state.farmRun.mode ?? "expedition",
+        supply: state.session.expedition?.supply,
       });
     }
 
     case "CHAIN_COLLECTED": {
-      const run = s.runSummary;
+      const run = state.runSummary;
       if (!run) return maybeAutoOpen(state);
       const payload = action.payload;
       if (payload.noTurn) return maybeAutoOpen(state);
@@ -153,7 +137,7 @@ export function reduce(state: GameState, action: Action): GameState {
         for (const [k, n] of Object.entries(payload.gains)) {
           gains[k] = (gains[k] ?? 0) + (Number(n) || 0);
         }
-        return maybeAutoOpen({ ...state, runSummary: { ...run, resourcesGained: gains } } as GameState);
+        return maybeAutoOpen({ ...state, runSummary: { ...run, resourcesGained: gains } });
       }
       const length = payload.chainLength || payload.gained || 0;
       if (length <= 0) return maybeAutoOpen(state);
@@ -173,7 +157,7 @@ export function reduce(state: GameState, action: Action): GameState {
         ? { count: length, key: key ?? null, coinGain, upgrades, gained }
         : biggest;
 
-      const updated = {
+      const updated: GameState = {
         ...state,
         runSummary: {
           ...run,
@@ -183,7 +167,7 @@ export function reduce(state: GameState, action: Action): GameState {
           resourcesGained,
           biggestChain: nextBiggest,
         },
-      } as GameState;
+      };
       return maybeAutoOpen(updated);
     }
 
@@ -192,7 +176,7 @@ export function reduce(state: GameState, action: Action): GameState {
     }
 
     case "STORY/BEAT_FIRED": {
-      const run = s.runSummary;
+      const run = state.runSummary;
       if (!run) return state;
       const fired = action.payload.firedBeat as { id?: string; title?: string | null } | undefined;
       if (!fired?.id) return state;
@@ -201,11 +185,11 @@ export function reduce(state: GameState, action: Action): GameState {
       return {
         ...state,
         runSummary: { ...run, beatsTriggered: [...run.beatsTriggered, entry] },
-      } as GameState;
+      };
     }
 
     case "RUN_SUMMARY/OPEN": {
-      const run: RunSummary = s.runSummary ?? emptyRun();
+      const run: RunSummary = state.runSummary ?? emptyRun();
       const bondDeltas = diffBonds(run.bondsAtStart, snapshotBonds(state));
       return {
         ...state,
@@ -214,15 +198,15 @@ export function reduce(state: GameState, action: Action): GameState {
           open: true,
           bondDeltas,
         },
-      } as GameState;
+      };
     }
 
     case "RUN_SUMMARY/CLOSE": {
-      return { ...state, runSummary: emptyRun() } as GameState;
+      return { ...state, runSummary: emptyRun() };
     }
 
     case "DEV/RESET_GAME": {
-      return { ...state, runSummary: emptyRun() } as GameState;
+      return { ...state, runSummary: emptyRun() };
     }
 
     default:

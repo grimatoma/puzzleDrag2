@@ -10,7 +10,7 @@
 // Used as an alignment artifact for the upcoming type-discipline refactor:
 // every distinct concept in the game shows up exactly once here.
 
-import { ITEMS, BUILDINGS, NPCS, RECIPES, SETTLEMENT_BIOMES, SEASONS } from "../../constants.js";
+import { ITEMS, getItem, BUILDINGS, NPCS, RECIPES, SETTLEMENT_BIOMES, SEASONS } from "../../constants.js";
 import { HAZARDS } from "../../features/mine/hazards.js";
 import { TYPE_WORKERS } from "../../features/workers/data.js";
 import { ZONES, ZONE_CATEGORIES } from "../../features/zones/data.js";
@@ -117,7 +117,7 @@ function recipeEntries() {
     if (!recipe || typeof recipe !== "object") continue;
     if (seen.has(recipe)) continue;
     seen.add(recipe);
-    const itemDef = recipe.item ? ITEMS[recipe.item] : null;
+    const itemDef = recipe.item ? getItem(recipe.item) : null;
     const iconKey = itemDef ? recipe.item : undefined;
     out.push({
       key,

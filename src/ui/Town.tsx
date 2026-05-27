@@ -1,6 +1,6 @@
 import { useState, useRef, useMemo, useEffect } from "react";
 import type { ReactNode } from "react";
-import { BUILDINGS, ITEMS } from "../constants.js";
+import { BUILDINGS, getItem } from "../constants.js";
 import { useTooltip, Tooltip } from "./Tooltip.jsx";
 import { ZONES, displayZoneName, isSettlementFounded, settlementFoundingCost, settlementTypeForZone, completedSettlementCount, DEFAULT_ZONE } from "../features/zones/data.js";
 import BiomePicker from "../features/zones/BiomePicker.jsx";
@@ -683,7 +683,7 @@ interface CostEntry {
 function buildingCostEntries(building: Building | null | undefined, state: GameState): CostEntry[] {
   return Object.entries(building?.cost ?? {}).map(([key, amount]) => ({
     key,
-    label: key === "coins" ? "Coins" : key === "runes" ? "Runes" : ITEMS[key]?.label || key,
+    label: key === "coins" ? "Coins" : key === "runes" ? "Runes" : getItem(key)?.label || key,
     amount: Number(amount),
     have: key === "coins" ? state.coins ?? 0 : key === "runes" ? state.runes ?? 0 : (state.inventory as Record<string, number> | undefined)?.[key] ?? 0,
     showHave: true,

@@ -76,11 +76,9 @@ export const BOONS: Readonly<Record<BoonCatalogKey, BoonDef[]>> = Object.freeze(
   ],
 });
 
-interface BoonHostState extends Record<string, unknown> {
-  embers?: number;
-  coreIngots?: number;
-  boons?: Record<string, boolean>;
-  story?: { flags?: Record<string, boolean> };
+function keeperFlags(state: GameState): Record<string, boolean> {
+  const flags = state.story?.flags;
+  return flags && typeof flags === "object" ? (flags as Record<string, boolean>) : {};
 }
 
 /** All boons as a flat list with their catalog key attached. */
@@ -99,10 +97,9 @@ export function boonById(id: string): BoonDef | null {
 
 /** True if the boon is purchaseable: not yet owned AND the keeper flag is set. */
 export function boonIsUnlocked(state: GameState, boon: BoonDef): boolean {
-  const s = state as unknown as BoonHostState;
   const [type, path] = boon.catalogKey?.split("_") ?? [];
   if (!type || !path) return false;
-  const flags = s?.story?.flags ?? {};
+  const flags = keeperFlags(state);
   const flagSet = !!flags[`keeper_anyzone_${path}`]
     || Object.keys(flags).some(
       (k) => k.startsWith("keeper_") && k.endsWith(`_${path}`) && !!flags[k],
@@ -115,17 +112,15 @@ export function boonIsUnlocked(state: GameState, boon: BoonDef): boolean {
 
 /** True if the boon's cost can be paid from the current state. */
 export function canAffordBoon(state: GameState, boon: BoonDef): boolean {
-  const s = state as unknown as BoonHostState;
   const c = boon.cost ?? {};
-  if ((c.embers ?? 0) > (s?.embers ?? 0)) return false;
-  if ((c.coreIngots ?? 0) > (s?.coreIngots ?? 0)) return false;
+  if ((c.embers ?? 0) > state.embers) return false;
+  if ((c.coreIngots ?? 0) > state.coreIngots) return false;
   return true;
 }
 
 /** True if the boon has been purchased. */
 export function boonOwned(state: GameState, boonId: string): boolean {
-  const s = state as unknown as BoonHostState;
-  return !!s?.boons?.[boonId];
+  return !!(state.boons && state.boons[boonId]);
 }
 
 /**
@@ -133,8 +128,7 @@ export function boonOwned(state: GameState, boonId: string): boolean {
  * (no effect). When several owned boons share a type, multipliers compose.
  */
 export function boonEffectMult(state: GameState, effectType: string): number {
-  const s = state as unknown as BoonHostState;
-  const owned = s?.boons ?? {};
+  const owned = state.boons ?? {};
   let mult = 1;
   for (const [boonId, isOwned] of Object.entries(owned)) {
     if (!isOwned) continue;

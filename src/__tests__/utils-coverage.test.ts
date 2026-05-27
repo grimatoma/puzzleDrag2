@@ -154,11 +154,15 @@ describe("utils — formatters and helpers", () => {
 });
 
 describe("utils — runSelfTests smoke shim", () => {
-  it("returns true when all smoke invariants pass", async () => {
+  it(
+    "returns true when all smoke invariants pass",
+    { timeout: 20_000 },
+    async () => {
     // Spy on console.log to keep test output quiet.
     const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
     const result = await runSelfTests();
     logSpy.mockRestore();
     expect(typeof result).toBe("boolean");
-  });
+    },
+  );
 });

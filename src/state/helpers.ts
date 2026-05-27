@@ -1,5 +1,8 @@
-import { BIOMES, ITEMS, NPCS, RECIPES, CAPPED_INVENTORY_RESOURCES, CAPPED_TILES } from "../constants.js";
+import { BIOMES, getItem, NPCS, RECIPES, CAPPED_INVENTORY_RESOURCES, CAPPED_TILES } from "../constants.js";
 import { TILE_TYPES, CATEGORIES } from "../features/tileCollection/data.js";
+import type { InventoryKey, RecipeInputKey } from "../types/catalogKeys.js";
+import type { Inventory } from "../types/inventory.js";
+import { inventoryPutMut, inventoryQty, parseInventory, quantityFor } from "../types/inventory.js";
 import type { GameState, Order } from "../types/state.js";
 
 // ─── Inventory helpers ─────────────────────────────────────────────────────
@@ -7,7 +10,7 @@ import type { GameState, Order } from "../types/state.js";
 // Until PR 3 moves tile-counts out of state.inventory, chain-collect still
 // writes tile keys into inventory and they need the same cap treatment as
 // resource keys. Once PR 3 lands, drop CAPPED_TILES from this union.
-const INVENTORY_CAPPED_KEYS = new Set([...CAPPED_INVENTORY_RESOURCES, ...CAPPED_TILES]);
+const INVENTORY_CAPPED_KEYS = new Set<string>([...CAPPED_INVENTORY_RESOURCES, ...CAPPED_TILES]);
 
 /** One element in the optional floaters draft passed to `addCappedResourceMut`. */
 export interface CapFloaterEntry {
@@ -27,7 +30,7 @@ export interface CapFloaterEntry {
  * (they're treated as locally-owned drafts).
  */
 export function addCappedResourceMut(
-  inv: Record<string, number>,
+  inv: Inventory,
   /**
    * Cap-hit flags keyed by inventory key. Values are coerced to boolean at
    * use; callers may pass a draft with mixed-shape values (the canonical
@@ -39,17 +42,17 @@ export function addCappedResourceMut(
    * floaters as `unknown[]`; we widen the parameter to match.
    */
   floaters: unknown[] | null | undefined,
-  key: string,
+  key: InventoryKey | string,
   amount: number,
   cap: number,
 ): void {
   if (!INVENTORY_CAPPED_KEYS.has(key)) {
-    inv[key] = (inv[key] ?? 0) + amount;
+    inventoryPutMut(inv, key, inventoryQty(inv, key) + amount);
     return;
   }
-  const cur = inv[key] ?? 0;
+  const cur = inventoryQty(inv, key);
   const next = Math.min(cap, cur + amount);
-  inv[key] = next;
+  inventoryPutMut(inv, key, next);
   if (next === cap && cur + amount > cap && !capFloaters[key]) {
     capFloaters[key] = true;
     if (floaters) floaters.push({ text: `${key} stash full`, ms: 1200 });
@@ -57,19 +60,23 @@ export function addCappedResourceMut(
 }
 
 /** Returns true if state.inventory has at least `needs[k]` of every key. */
-export function hasAllInventory(state: GameState | { inventory?: Record<string, number> } | null | undefined, needs: Record<string, number>): boolean {
+export function hasAllInventory(
+  state: GameState | { inventory?: Inventory } | null | undefined,
+  needs: Partial<Record<RecipeInputKey, number>>,
+): boolean {
   const inv = state?.inventory ?? {};
-  for (const [k, n] of Object.entries(needs)) {
-    if ((inv[k] ?? 0) < n) return false;
+  for (const [k, n] of Object.entries(needs) as [RecipeInputKey, number][]) {
+    if (quantityFor(inv, k) < n) return false;
   }
   return true;
 }
 
 /** Returns a new inventory with each `needs[k]` deducted from `inv[k]`. */
-export function deductInventory(inv: Record<string, number>, needs: Record<string, number>): Record<string, number> {
-  const next: Record<string, number> = { ...inv };
-  for (const [k, n] of Object.entries(needs)) {
-    next[k] = (next[k] ?? 0) - n;
+export function deductInventory(inv: Inventory, needs: Partial<Record<RecipeInputKey, number>>): Inventory {
+  let next: Inventory = { ...inv };
+  for (const [k, n] of Object.entries(needs) as [RecipeInputKey, number][]) {
+    const cur = quantityFor(next, k);
+    (next as Partial<Record<RecipeInputKey, number>>)[k] = cur - n;
   }
   return next;
 }
@@ -133,6 +140,9 @@ export function mergeLoadedState(saved: Record<string, unknown> | null | undefin
   }
   const out = { ...savedRec };
   delete out.species; // remove legacy key if present
+  if ("inventory" in out) {
+    out.inventory = parseInventory(out.inventory as Record<string, unknown>);
+  }
   return { ...out, tileCollection };
 }
 
@@ -148,7 +158,7 @@ export const xpForLevel = (l: number): number => 50 + l * 80;
  */
 export function resourceByKey(key: string | null | undefined): (Record<string, unknown> & { key: string }) | null {
   if (!key) return null;
-  const item = ITEMS[key];
+  const item = getItem(key);
   if (!item) return null;
   return { key, ...item };
 }
@@ -182,7 +192,7 @@ export function craftedOrderPoolForBiome(biomeKey: string): string[] {
   const keys = new Set<string>();
   for (const rec of Object.values(RECIPES) as RecipeEntry[]) {
     if (!rec?.item || !rec.station || !stations.has(rec.station)) continue;
-    const item = ITEMS[rec.item];
+    const item = getItem(rec.item);
     if (item?.kind === "resource") keys.add(rec.item);
   }
   return [...keys];
@@ -236,7 +246,7 @@ export function makeOrder(
     const craftedCandidates = craftedPool.filter((k) => !excludeOrderKeys.includes(k));
     const craftedPickPool = craftedCandidates.length ? craftedCandidates : craftedPool;
     key = craftedPickPool[Math.floor(Math.random() * craftedPickPool.length)];
-    const itemDef = ITEMS[key];
+    const itemDef = getItem(key);
     need = 1 + Math.floor(Math.random() * 3); // 1–3 crafted items
     reward = Math.round(need * (itemDef?.value || 100) * 1.5);
     resourceLabel = (itemDef?.label || key).toLowerCase();
@@ -263,5 +273,13 @@ export function makeOrder(
   // The runtime id is the string `o<seq>` (used as a stable React key); the
   // canonical Order.id is typed `number`. Cast at this single boundary so
   // callers (state.ts, init.ts) can treat the result as an Order directly.
-  return { id: `o${orderIdSeq++}` as unknown as number, npc, key, need, reward, line, amount: need };
+  return {
+    id: `o${orderIdSeq++}` as unknown as number,
+    npc,
+    key: key as import("../types/catalogKeys.js").ResourceKey,
+    need,
+    reward,
+    line,
+    amount: need,
+  };
 }
