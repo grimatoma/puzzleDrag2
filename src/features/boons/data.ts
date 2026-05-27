@@ -12,6 +12,7 @@
 // extra rations on expeditions) can be added once the boon trees prove out.
 
 import type { GameState } from "../../types/state.js";
+import { BoonId } from "../../types/catalogKeys.js";
 
 export const BOON_EFFECTS = Object.freeze([
   "coin_gain_mult",     // chain-collected coin reward × params.mult
@@ -31,7 +32,7 @@ export interface BoonEffect {
 }
 
 export interface BoonDef {
-  id: string;
+  id: BoonId;
   name: string;
   desc: string;
   cost: BoonCost;
@@ -51,28 +52,28 @@ export type BoonCatalogKey =
  */
 export const BOONS: Readonly<Record<BoonCatalogKey, BoonDef[]>> = Object.freeze({
   farm_coexist: [
-    { id: "deer_blessing",    name: "Deer-Blessing",        desc: "The herd remembers your name. Villager bonds rise 20% faster.", cost: { embers: 3 }, effect: { type: "bond_gain_mult", params: { mult: 1.2 } } },
-    { id: "hearth_thrift",    name: "Hearth-Thrift",        desc: "Bountiful seasons. Coin gains +15%.",                          cost: { embers: 8 }, effect: { type: "coin_gain_mult", params: { mult: 1.15 } } },
+    { id: BoonId.DeerBlessing,   name: "Deer-Blessing",        desc: "The herd remembers your name. Villager bonds rise 20% faster.", cost: { embers: 3 }, effect: { type: "bond_gain_mult", params: { mult: 1.2 } } },
+    { id: BoonId.HearthThrift,   name: "Hearth-Thrift",        desc: "Bountiful seasons. Coin gains +15%.",                          cost: { embers: 8 }, effect: { type: "coin_gain_mult", params: { mult: 1.15 } } },
   ],
   farm_driveout: [
-    { id: "iron_market",      name: "Iron Market",          desc: "Predictable trade. Coin gains +20%.",                          cost: { coreIngots: 5 }, effect: { type: "coin_gain_mult", params: { mult: 1.2 } } },
-    { id: "drilled_corps",    name: "Drilled Corps",        desc: "Loyal villagers. Bond gains +10%.",                            cost: { coreIngots: 8 }, effect: { type: "bond_gain_mult", params: { mult: 1.1 } } },
+    { id: BoonId.IronMarket,     name: "Iron Market",          desc: "Predictable trade. Coin gains +20%.",                          cost: { coreIngots: 5 }, effect: { type: "coin_gain_mult", params: { mult: 1.2 } } },
+    { id: BoonId.DrilledCorps,   name: "Drilled Corps",        desc: "Loyal villagers. Bond gains +10%.",                            cost: { coreIngots: 8 }, effect: { type: "bond_gain_mult", params: { mult: 1.1 } } },
   ],
   mine_coexist: [
-    { id: "deep_friendship",  name: "Deep Friendship",      desc: "Underground company. Bond gains +15%.",                        cost: { embers: 5 }, effect: { type: "bond_gain_mult", params: { mult: 1.15 } } },
-    { id: "vein_richness",    name: "Vein-Richness",        desc: "Generous earth. Coin gains +20%.",                             cost: { embers: 8 }, effect: { type: "coin_gain_mult", params: { mult: 1.2 } } },
+    { id: BoonId.DeepFriendship, name: "Deep Friendship",      desc: "Underground company. Bond gains +15%.",                        cost: { embers: 5 }, effect: { type: "bond_gain_mult", params: { mult: 1.15 } } },
+    { id: BoonId.VeinRichness,   name: "Vein-Richness",        desc: "Generous earth. Coin gains +20%.",                             cost: { embers: 8 }, effect: { type: "coin_gain_mult", params: { mult: 1.2 } } },
   ],
   mine_driveout: [
-    { id: "ingot_thrift",     name: "Ingot Thrift",         desc: "Efficient smelters. Coin gains +20%.",                         cost: { coreIngots: 5 }, effect: { type: "coin_gain_mult", params: { mult: 1.2 } } },
-    { id: "foreman_drills",   name: "Foreman's Drills",     desc: "Bond gains +10%.",                                             cost: { coreIngots: 8 }, effect: { type: "bond_gain_mult", params: { mult: 1.1 } } },
+    { id: BoonId.IngotThrift,    name: "Ingot Thrift",         desc: "Efficient smelters. Coin gains +20%.",                         cost: { coreIngots: 5 }, effect: { type: "coin_gain_mult", params: { mult: 1.2 } } },
+    { id: BoonId.ForemanDrills,  name: "Foreman's Drills",     desc: "Bond gains +10%.",                                             cost: { coreIngots: 8 }, effect: { type: "bond_gain_mult", params: { mult: 1.1 } } },
   ],
   harbor_coexist: [
-    { id: "sailor_amity",     name: "Sailor's Amity",       desc: "Friends in every port. Bond gains +20%.",                      cost: { embers: 5 }, effect: { type: "bond_gain_mult", params: { mult: 1.2 } } },
-    { id: "pearl_trove",      name: "Pearl Trove",          desc: "Lucky catches. Coin gains +15%.",                              cost: { embers: 8 }, effect: { type: "coin_gain_mult", params: { mult: 1.15 } } },
+    { id: BoonId.SailorAmity,    name: "Sailor's Amity",       desc: "Friends in every port. Bond gains +20%.",                      cost: { embers: 5 }, effect: { type: "bond_gain_mult", params: { mult: 1.2 } } },
+    { id: BoonId.PearlTrove,     name: "Pearl Trove",          desc: "Lucky catches. Coin gains +15%.",                              cost: { embers: 8 }, effect: { type: "coin_gain_mult", params: { mult: 1.15 } } },
   ],
   harbor_driveout: [
-    { id: "harbor_tariff",    name: "Harbor Tariff",        desc: "Tax on all comings. Coin gains +25%.",                         cost: { coreIngots: 5 }, effect: { type: "coin_gain_mult", params: { mult: 1.25 } } },
-    { id: "press_gang",       name: "Press-Gang",           desc: "Conscripted crews. Bond gains +5%.",                           cost: { coreIngots: 8 }, effect: { type: "bond_gain_mult", params: { mult: 1.05 } } },
+    { id: BoonId.HarborTariff,   name: "Harbor Tariff",        desc: "Tax on all comings. Coin gains +25%.",                         cost: { coreIngots: 5 }, effect: { type: "coin_gain_mult", params: { mult: 1.25 } } },
+    { id: BoonId.PressGang,      name: "Press-Gang",           desc: "Conscripted crews. Bond gains +5%.",                           cost: { coreIngots: 8 }, effect: { type: "bond_gain_mult", params: { mult: 1.05 } } },
   ],
 });
 

@@ -1,3 +1,5 @@
+import { WorkerTypeId } from "../../types/catalogKeys.js";
+
 /** A single ability instance on a worker (or building / tile). */
 export interface WorkerAbility {
   id: string;
@@ -15,7 +17,7 @@ export interface WorkerHireCost {
 }
 
 export interface WorkerDef {
-  id: string;
+  id: WorkerTypeId;
   name: string;
   role: string;
   iconKey: string;
@@ -51,7 +53,7 @@ export interface WorkerDef {
 // touching engine code. If both keys are present, `coinsMult` wins.
 export const TYPE_WORKERS: WorkerDef[] = [
   {
-    id: "farmer",
+    id: WorkerTypeId.Farmer,
     name: "Farmer",
     role: "Farmer",
     iconKey: "worker_farmer",
@@ -64,7 +66,7 @@ export const TYPE_WORKERS: WorkerDef[] = [
     description: "Each hired Farmer trims one tile off the grain chain.",
   },
   {
-    id: "lumberjack",
+    id: WorkerTypeId.Lumberjack,
     name: "Lumberjack",
     role: "Lumberjack",
     iconKey: "worker_lumberjack",
@@ -77,7 +79,7 @@ export const TYPE_WORKERS: WorkerDef[] = [
     description: "Each hired Lumberjack trims one tile off the tree-felling chain.",
   },
   {
-    id: "miner",
+    id: WorkerTypeId.Miner,
     name: "Miner",
     role: "Miner",
     iconKey: "worker_miner",
@@ -90,7 +92,7 @@ export const TYPE_WORKERS: WorkerDef[] = [
     description: "Each hired Miner trims one tile off the plank-and-beam chain.",
   },
   {
-    id: "baker",
+    id: WorkerTypeId.Baker,
     name: "Baker",
     role: "Baker",
     iconKey: "worker_baker",
