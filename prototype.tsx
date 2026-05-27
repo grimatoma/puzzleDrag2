@@ -18,6 +18,7 @@ import { BottomNav, FeatureModals, FeatureScreens } from "./src/ui.jsx";
 import { useAudio } from "./src/audio/useAudio.js";
 import { useRouter } from "./src/router.js";
 import { setPhaserScene } from "./src/phaserBridge.js";
+import { setRegistry, type FireHazardPayload } from "./src/types/phaserRegistry.js";
 import { emitBurst } from "./src/ui/rewardEvents.js";
 import { FIRE_HAZARD_ENABLED } from "./src/featureFlags.js";
 import { useNotifier } from "./src/ui/primitives/Toast.jsx";
@@ -163,24 +164,24 @@ function PhaserMount({ dispatch, biomeKey, turnsUsed, uiLocked, boardActive, sce
           audio: { noAudio: true },
           callbacks: {
             preBoot: (game: HearthPhaserGame) => {
-              game.registry.set("biomeKey", biomeKey);
-              game.registry.set("turnsUsed", turnsUsed);
-              game.registry.set("turnBudget", gameState?.farmRun?.turnBudget ?? null);
-              game.registry.set("uiLocked", uiLocked);
-              game.registry.set("dpr", dpr);
-              game.registry.set("renderResolution", dpr);
+              setRegistry(game.registry, "biomeKey", biomeKey);
+              setRegistry(game.registry, "turnsUsed", turnsUsed);
+              setRegistry(game.registry, "turnBudget", gameState?.farmRun?.turnBudget ?? null);
+              setRegistry(game.registry, "uiLocked", uiLocked);
+              setRegistry(game.registry, "dpr", dpr);
+              setRegistry(game.registry, "renderResolution", dpr);
               // Set before GameScene.create() so the initial fillBoard uses the
               // player's active tile selections instead of the raw base pool.
-              game.registry.set("tileCollectionActive", tileCollection?.activeByCategory ?? null);
+              setRegistry(game.registry, "tileCollectionActive", tileCollection?.activeByCategory ?? null);
               // Phase 2 — seed the session-selected tile categories so the
               // first fillBoard after preBoot honours the player's modal pick.
-              game.registry.set("sessionSelectedTiles", gameState?.session?.selectedTiles ?? []);
+              setRegistry(game.registry, "sessionSelectedTiles", (gameState?.session?.selectedTiles ?? []) as readonly string[]);
               // Phase 3 — seed the active zone for the chain-upgrade redirect.
-              game.registry.set("activeZone", gameState?.activeZone ?? gameState?.mapCurrent ?? "home");
+              setRegistry(game.registry, "activeZone", gameState?.activeZone ?? gameState?.mapCurrent ?? "home");
               // Reload restoration: pass the saved board grid so GameScene can
               // apply it over the initial random fill when continuing a session.
               if ((gameState?.farmRun?.turnsRemaining ?? 0) > 0) {
-                game.registry.set("boardRestoreGrid", gameState.grid ?? null);
+                setRegistry(game.registry, "boardRestoreGrid", gameState.grid ?? null);
               }
             },
             postBoot: (game: HearthPhaserGame) => {
@@ -249,47 +250,50 @@ function PhaserMount({ dispatch, biomeKey, turnsUsed, uiLocked, boardActive, sce
   // fillBoard / chain-update call sees the up-to-date player tile selection
   // and active zone.
   useEffect(() => {
-    gameRef.current?.registry.set("sessionSelectedTiles", gameState?.session?.selectedTiles ?? []);
+    setRegistry(gameRef.current?.registry, "sessionSelectedTiles", (gameState?.session?.selectedTiles ?? []) as readonly string[]);
   }, [gameState?.session?.selectedTiles]);
   useEffect(() => {
-    gameRef.current?.registry.set("activeZone", gameState?.activeZone ?? gameState?.mapCurrent ?? "home");
+    setRegistry(gameRef.current?.registry, "activeZone", gameState?.activeZone ?? gameState?.mapCurrent ?? "home");
   }, [gameState?.activeZone, gameState?.mapCurrent]);
   useEffect(() => { setBoardRuntimeActive(gameRef.current, boardActive); }, [boardActive]);
-  useEffect(() => { gameRef.current?.registry.set("biomeKey", biomeKey); }, [biomeKey]);
-  useEffect(() => { gameRef.current?.registry.set("turnsUsed", turnsUsed); }, [turnsUsed]);
+  useEffect(() => { setRegistry(gameRef.current?.registry, "biomeKey", biomeKey); }, [biomeKey]);
+  useEffect(() => { setRegistry(gameRef.current?.registry, "turnsUsed", turnsUsed); }, [turnsUsed]);
   // Phase 7.1 — atmospheric in-session season needs the active run's turn
   // budget alongside turnsUsed so GameScene.season() can pick the palette.
-  useEffect(() => { gameRef.current?.registry.set("turnBudget", gameState?.farmRun?.turnBudget ?? null); }, [gameState?.farmRun?.turnBudget]);
-  useEffect(() => { gameRef.current?.registry.set("uiLocked", uiLocked); }, [uiLocked]);
-  useEffect(() => { gameRef.current?.registry.set("toolPending", toolPending ?? null); }, [toolPending]);
-  useEffect(() => { gameRef.current?.registry.set("toolPendingPower", toolPendingPower ?? null); }, [toolPendingPower]);
-  useEffect(() => { gameRef.current?.registry.set("workers", workers ?? null); }, [workers]);
+  useEffect(() => { setRegistry(gameRef.current?.registry, "turnBudget", gameState?.farmRun?.turnBudget ?? null); }, [gameState?.farmRun?.turnBudget]);
+  useEffect(() => { setRegistry(gameRef.current?.registry, "uiLocked", uiLocked); }, [uiLocked]);
+  useEffect(() => { setRegistry(gameRef.current?.registry, "toolPending", toolPending ?? null); }, [toolPending]);
+  useEffect(() => { setRegistry(gameRef.current?.registry, "toolPendingPower", toolPendingPower ?? null); }, [toolPendingPower]);
+  useEffect(() => { setRegistry(gameRef.current?.registry, "workers", workers ?? null); }, [workers]);
   const settingsHapticsOn = (gameState as GameState & { settings?: { hapticsOn?: boolean } }).settings?.hapticsOn;
   useEffect(() => {
-    gameRef.current?.registry.set("hapticsOn", settingsHapticsOn ?? true);
+    setRegistry(gameRef.current?.registry, "hapticsOn", settingsHapticsOn ?? true);
   }, [settingsHapticsOn]);
-  useEffect(() => { gameRef.current?.registry.set("tileCollectionActive", tileCollection?.activeByCategory ?? null); }, [tileCollection?.activeByCategory]);
-  useEffect(() => { gameRef.current?.registry.set("tileCollectionDiscovered", tileCollection?.discovered ?? null); }, [tileCollection?.discovered]);
-  useEffect(() => { gameRef.current?.registry.set("built", gameState?.built ?? null); }, [gameState?.built]);
-  useEffect(() => { gameRef.current?.registry.set("fillBiasTarget", gameState?.fillBiasTarget ?? null); }, [gameState?.fillBiasTarget]);
+  useEffect(() => { setRegistry(gameRef.current?.registry, "tileCollectionActive", tileCollection?.activeByCategory ?? null); }, [tileCollection?.activeByCategory]);
+  useEffect(() => { setRegistry(gameRef.current?.registry, "tileCollectionDiscovered", tileCollection?.discovered ?? null); }, [tileCollection?.discovered]);
+  useEffect(() => { setRegistry(gameRef.current?.registry, "built", gameState?.built ?? null); }, [gameState?.built]);
+  useEffect(() => { setRegistry(gameRef.current?.registry, "fillBiasTarget", gameState?.fillBiasTarget ?? null); }, [gameState?.fillBiasTarget]);
   useEffect(() => {
     sceneRef.current?._syncWorkerEffects();
   }, [sceneRef, workers, gameState?.built, gameState?.activeZone, gameState?.mapCurrent, tileCollection?.activeByCategory, tileCollection?.discovered]);
   // Sync grid state → Phaser registry so hazard engines see real tile keys
-  useEffect(() => { gameRef.current?.registry.set("grid", grid ?? null); }, [grid]);
+  useEffect(() => { setRegistry(gameRef.current?.registry, "grid", grid ?? null); }, [grid]);
   // Sync biomeRestored flag so GameScene.handleBiomeChange can skip randomize when savedField restored
-  useEffect(() => { gameRef.current?.registry.set("biomeRestored", gameState?._biomeRestored ?? false); }, [gameState?._biomeRestored]);
+  useEffect(() => { setRegistry(gameRef.current?.registry, "biomeRestored", gameState?._biomeRestored ?? false); }, [gameState?._biomeRestored]);
   // Sync boss modifier flags so GameScene.fillBoard can apply spawnBias
-  useEffect(() => { gameRef.current?.registry.set("boss", gameState?.boss ?? null); }, [gameState?.boss]);
+  useEffect(() => { setRegistry(gameRef.current?.registry, "boss", gameState?.boss ?? null); }, [gameState?.boss]);
   // V.3 — Sync inventory and cap so GameScene.collectPath can compute actual gain for float text
-  useEffect(() => { gameRef.current?.registry.set("inventory", gameState?.inventory ?? {}); }, [gameState?.inventory]);
-  useEffect(() => { gameRef.current?.registry.set("inventoryCap", currentCap(gameState) ?? 200); }, [gameState]);
+  useEffect(() => { setRegistry(gameRef.current?.registry, "inventory", gameState?.inventory ?? {}); }, [gameState?.inventory]);
+  useEffect(() => { setRegistry(gameRef.current?.registry, "inventoryCap", currentCap(gameState) ?? 200); }, [gameState]);
   // Sync hazards.fire so GameScene.fillBoard can overlay fire tiles on the board
-  useEffect(() => { gameRef.current?.registry.set("hazardFire", FIRE_HAZARD_ENABLED ? (gameState?.hazards?.fire ?? null) : null); }, [gameState?.hazards?.fire]);
+  useEffect(() => {
+    const fire = FIRE_HAZARD_ENABLED ? (gameState?.hazards?.fire as FireHazardPayload | null | undefined) ?? null : null;
+    setRegistry(gameRef.current?.registry, "hazardFire", fire);
+  }, [gameState?.hazards?.fire]);
   // Sync hazards.rats so GameScene can render atmospheric mist
-  useEffect(() => { gameRef.current?.registry.set("hazardRats", gameState?.hazards?.rats ?? null); }, [gameState?.hazards?.rats]);
+  useEffect(() => { setRegistry(gameRef.current?.registry, "hazardRats", gameState?.hazards?.rats ?? null); }, [gameState?.hazards?.rats]);
   // Sync magicFertilizerCharges so GameScene.fillBoard can apply the bias for each fill charge
-  useEffect(() => { gameRef.current?.registry.set("magicFertilizerCharges", gameState?.magicFertilizerCharges ?? 0); }, [gameState?.magicFertilizerCharges]);
+  useEffect(() => { setRegistry(gameRef.current?.registry, "magicFertilizerCharges", gameState?.magicFertilizerCharges ?? 0); }, [gameState?.magicFertilizerCharges]);
 
   return (
     <div ref={hostRef} className="w-full h-full relative">

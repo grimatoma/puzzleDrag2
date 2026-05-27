@@ -28,8 +28,13 @@ import { BOARD_ANIMATIONS, SWEEP_COLLAPSE_PIPELINE_MS, resolveBoardAnimName } fr
 import { defaultBoardAnimForPower, dimStrategyForPower, isTapTargetPower } from "./config/toolPowers.js";
 import { selectTilesForPower, resolveTransformKey } from "./config/tileSelectors.js";
 import type { ToolPower } from "./state/toolPowerRuntime.js";
-
-type RegistryGrid = Array<Array<{ key: string; frozen?: boolean; rubble?: boolean } | null>> | null | undefined;
+import {
+  getRegistry,
+  setRegistry,
+  type GameRegistryKey,
+  type RegistryChangeHandler,
+  type RegistryGrid,
+} from "./types/phaserRegistry.js";
 
 function registryToolPower(value: unknown): ToolPower | null {
   if (!value || typeof value !== "object") return null;
@@ -130,22 +135,22 @@ export class GameScene extends Phaser.Scene {
 
   create() {
     this.input.topOnly = true;
-    this.dpr = this.registry.get("dpr") || 1;
-    const textResolution = this.registry.get("renderResolution") || 1;
+    this.dpr = getRegistry(this.registry, "dpr") || 1;
+    const textResolution = getRegistry(this.registry, "renderResolution") || 1;
     const addText = this.add.text.bind(this.add);
     this.add.text = (...args) => addText(...args).setResolution(textResolution);
     // Compute layout first so the initial bake can match the on-screen tile
     // size on big viewports — otherwise icons get upscaled past 1:1.
     this.layoutDims();
     this.bakeScale = computeBakeScale(this.dpr, this.tileSize);
-    this.registry.set("bakeScale", this.bakeScale);
+    setRegistry(this.registry, "bakeScale", this.bakeScale);
     makeTextures(this);
     this.layoutDims();
     this.drawBackground();
     this.fillBoard(true);
     // Reload restoration: if we're continuing a saved session, overwrite the
     // random tiles that fillBoard just generated with the persisted board state.
-    const boardRestoreGrid = this.registry.get("boardRestoreGrid");
+    const boardRestoreGrid = getRegistry(this.registry, "boardRestoreGrid");
     if (boardRestoreGrid) {
       this._applyGridFromState(boardRestoreGrid);
       this._syncGridToState();
@@ -218,20 +223,14 @@ export class GameScene extends Phaser.Scene {
 
     // Registry and scale listeners — track each so they can be torn down on
     // shutdown. Otherwise scene recreation (HMR, tests, biome reload) leaks
-    // handlers that fire against a destroyed scene.
-    // Phaser's registry events are dynamic — `changedata-<key>` emits
-    // `(parent, value, previous)` where value/previous depend on the data key.
-    // Typing this further would require a discriminated union of every
-    // registry key; the handlers below narrow each value at their use site.
-    type RegistryHandler = (
-      parent: Phaser.Data.DataManager,
-      value: unknown,
-      previousValue?: unknown,
-    ) => void;
-    const registryListeners: Array<[string, RegistryHandler]> = [];
-    const onRegistry = (event: string, fn: RegistryHandler) => {
+    // handlers that fire against a destroyed scene. Each `onRegistry(key, fn)`
+    // subscribes to Phaser's `changedata-<key>` event with the value/previous
+    // arguments typed by {@link GameRegistryContract}.
+    const registryListeners: Array<[string, (...args: unknown[]) => void]> = [];
+    const onRegistry = <K extends GameRegistryKey>(key: K, fn: RegistryChangeHandler<K>): void => {
+      const event = `changedata-${key}`;
       this.registry.events.on(event, fn);
-      registryListeners.push([event, fn]);
+      registryListeners.push([event, fn as (...args: unknown[]) => void]);
     };
     const onResize = () => this.handleResize();
     this.scale.on("resize", onResize);
@@ -252,28 +251,28 @@ export class GameScene extends Phaser.Scene {
     });
 
     // Apply state.grid → Phaser when Redux pushes a change back (hazard engines may mutate)
-    onRegistry("changedata-grid", (_p, value) => {
+    onRegistry("grid", (_p, value) => {
       if (this._suppressNextGridApply) return;
-      this._applyGridFromState(value as RegistryGrid);
+      this._applyGridFromState(value);
     });
 
-    onRegistry("changedata-biomeKey", (_p, value, prev) => {
+    onRegistry("biomeKey", (_p, value, prev) => {
       if (value !== prev) this.handleBiomeChange();
     });
-    onRegistry("changedata-turnsUsed", () => this.refreshSeasonTint());
-    onRegistry("changedata-uiLocked", (_p, value) => {
+    onRegistry("turnsUsed", () => this.refreshSeasonTint());
+    onRegistry("uiLocked", (_p, value) => {
       this.locked = !!value;
     });
-    onRegistry("changedata-toolPendingPower", (_p, value, prev) => {
+    onRegistry("toolPendingPower", (_p, value, prev) => {
       if (value === prev) return;
       const power = registryToolPower(value);
-      const key = registryToolKey(this.registry.get("toolPending"));
+      const key = registryToolKey(getRegistry(this.registry, "toolPending"));
       if (!power || !key) return;
       if (isTapTargetPower(power.id)) {
         this.applyToolDimForPower(power, key);
       }
     });
-    onRegistry("changedata-toolPending", (_p, value) => {
+    onRegistry("toolPending", (_p, value) => {
       const toolKey = registryToolKey(value);
       if (!toolKey) {
         this.clearToolDim();
@@ -283,7 +282,7 @@ export class GameScene extends Phaser.Scene {
         this._deferredTool = toolKey;
         return;
       }
-      const power = registryToolPower(this.registry.get("toolPendingPower"))
+      const power = registryToolPower(getRegistry(this.registry, "toolPendingPower"))
         ?? registryToolPower(getItem(toolKey)?.power)
         ?? null;
       if (!power) return;
@@ -296,13 +295,13 @@ export class GameScene extends Phaser.Scene {
     });
     // Sync worker effects on init and whenever state.workers changes
     this._syncWorkerEffects();
-    onRegistry("changedata-workers", () => this._syncWorkerEffects());
-    onRegistry("changedata-built", () => this._syncWorkerEffects());
-    onRegistry("changedata-tileCollectionActive", () => this._syncWorkerEffects());
-    onRegistry("changedata-tileCollectionDiscovered", () => this._syncWorkerEffects());
+    onRegistry("workers", () => this._syncWorkerEffects());
+    onRegistry("built", () => this._syncWorkerEffects());
+    onRegistry("tileCollectionActive", () => this._syncWorkerEffects());
+    onRegistry("tileCollectionDiscovered", () => this._syncWorkerEffects());
 
     // Swap on-board tiles to match the newly active tile type in their category
-    onRegistry("changedata-tileCollectionActive", (_p, value, prev) => {
+    onRegistry("tileCollectionActive", (_p, value, prev) => {
       this.handleActiveTileChange(
         (value ?? null) as Record<string, string> | null,
         (prev ?? null) as Record<string, string> | null,
@@ -322,8 +321,8 @@ export class GameScene extends Phaser.Scene {
 
     // AAA Juice: Hazard Atmospherics
     this.hazardVignette = this.add.graphics().setDepth(150);
-    onRegistry("changedata-hazardFire", () => this._updateHazardAtmosphere());
-    onRegistry("changedata-hazardRats", () => this._updateHazardAtmosphere());
+    onRegistry("hazardFire", () => this._updateHazardAtmosphere());
+    onRegistry("hazardRats", () => this._updateHazardAtmosphere());
     this._updateHazardAtmosphere();
   }
 
@@ -361,13 +360,13 @@ export class GameScene extends Phaser.Scene {
 
   _syncWorkerEffects() {
     const snapshot = {
-      workers: (this.registry.get("workers") ?? { hired: {} }) as { hired: Record<string, number>; [k: string]: unknown },
-      built: (this.registry.get("built") ?? {}) as Record<string, Record<string, unknown>>,
-      mapCurrent: (this.registry.get("activeZone") ?? "home") as string,
+      workers: getRegistry(this.registry, "workers") ?? { hired: {} },
+      built: getRegistry(this.registry, "built") ?? {},
+      mapCurrent: getRegistry(this.registry, "activeZone") ?? "home",
       tileCollection: {
-        discovered: (this.registry.get("tileCollectionDiscovered") ?? {}) as Record<string, boolean>,
+        discovered: getRegistry(this.registry, "tileCollectionDiscovered") ?? {},
         researchProgress: {} as Record<string, number>,
-        activeByCategory: (this.registry.get("tileCollectionActive") ?? {}) as Record<string, string | null>,
+        activeByCategory: getRegistry(this.registry, "tileCollectionActive") ?? {},
         freeMoves: 0,
       },
     };
@@ -390,10 +389,10 @@ export class GameScene extends Phaser.Scene {
     for (const [k, v] of Object.entries(agg.effectivePoolWeights ?? {})) {
       mergedPoolWeights[k] = (mergedPoolWeights[k] ?? 0) + (v as number);
     }
-    this.registry.set("effectiveThresholds",  eff);
-    this.registry.set("effectivePoolWeights", mergedPoolWeights);
-    this.registry.set("bonusYields",          agg.bonusYield);
-    this.registry.set("seasonBonus",          agg.seasonBonus);
+    setRegistry(this.registry, "effectiveThresholds",  eff);
+    setRegistry(this.registry, "effectivePoolWeights", mergedPoolWeights);
+    setRegistry(this.registry, "bonusYields",          agg.bonusYield);
+    setRegistry(this.registry, "seasonBonus",          agg.seasonBonus);
   }
 
   _shake(duration = 200, intensity = 0.005) {
@@ -442,8 +441,8 @@ export class GameScene extends Phaser.Scene {
 
   _updateHazardAtmosphere() {
     if (!this.hazardVignette) return;
-    const fire = this.registry.get("hazardFire");
-    const rats = this.registry.get("hazardRats");
+    const fire = getRegistry(this.registry, "hazardFire");
+    const rats = getRegistry(this.registry, "hazardRats");
     const hasFire = !!(fire?.cells?.length);
     const hasRats = !!(rats?.length);
 
@@ -510,7 +509,7 @@ export class GameScene extends Phaser.Scene {
   /** Returns the effective minimum chain length given the active boss only.
    *  Phase 7 — winter minimum-chain check was removed with the calendar season. */
   _effectiveMinChain() {
-    const bossMin = this.registry.get("boss")?.minChain ?? 0;
+    const bossMin = getRegistry(this.registry, "boss")?.minChain ?? 0;
     return Math.max(3, bossMin);
   }
 
@@ -554,7 +553,7 @@ export class GameScene extends Phaser.Scene {
     const requiredScale = computeBakeScale(this.dpr, this.tileSize);
     if (requiredScale > (this.bakeScale || this.dpr) * 1.05) {
       this.bakeScale = requiredScale;
-      this.registry.set("bakeScale", requiredScale);
+      setRegistry(this.registry, "bakeScale", requiredScale);
       regenerateTextures(this);
       this.layoutDims();
     }
@@ -585,15 +584,15 @@ export class GameScene extends Phaser.Scene {
     // Phase 7.1 — visual season rotates within the session. Pick the index
     // from turnsUsed/turnBudget so the board palette cycles
     // Spring -> Winter as the player burns turns.
-    const turnsUsed = this.registry.get("turnsUsed") ?? 0;
-    const turnBudget = this.registry.get("turnBudget") ?? null;
+    const turnsUsed = getRegistry(this.registry, "turnsUsed") ?? 0;
+    const turnBudget = getRegistry(this.registry, "turnBudget") ?? null;
     if (!turnBudget || turnBudget < 1) return SEASONS[0];
     const idx = seasonIndexInSession(turnsUsed, turnBudget);
     return SEASONS[idx];
   }
 
   biomeKey() {
-    return this.registry.get("biomeKey") || "farm";
+    return getRegistry(this.registry, "biomeKey") || "farm";
   }
 
   biome() {
@@ -649,10 +648,10 @@ export class GameScene extends Phaser.Scene {
 
   handleBiomeChange() {
     this.refreshSeasonTint();
-    const biomeRestored = this.registry.get("biomeRestored");
+    const biomeRestored = getRegistry(this.registry, "biomeRestored");
     if (biomeRestored) {
       // savedField was restored into state.grid — sync those keys onto the live tiles
-      const savedGrid = this.registry.get("grid");
+      const savedGrid = getRegistry(this.registry, "grid");
       this.grid.flat().forEach((t) => {
         if (!t) return;
         const cell = savedGrid?.[t.row]?.[t.col];
@@ -701,7 +700,7 @@ export class GameScene extends Phaser.Scene {
     if (!sourceZoneCat) return null;
 
     // Look up the zone's upgradeMap for this source category.
-    const zoneId = this.registry.get("activeZone") ?? null;
+    const zoneId = getRegistry(this.registry, "activeZone") ?? null;
     if (!zoneId) return null;
     const zone = ZONES[zoneId];
     if (!zone?.upgradeMap) return null;
@@ -717,7 +716,7 @@ export class GameScene extends Phaser.Scene {
 
     // Normal case: find the player's active tile in the target zone-category.
     const targetTileCats: string[] = (ZONE_TO_TILE_CATEGORIES as Record<string, string[]>)[targetZoneCat] ?? [];
-    const tileCollectionActive = this.registry.get("tileCollectionActive") ?? null;
+    const tileCollectionActive = getRegistry(this.registry, "tileCollectionActive") ?? null;
 
     if (tileCollectionActive) {
       for (const tc of targetTileCats) {
@@ -745,7 +744,7 @@ export class GameScene extends Phaser.Scene {
    */
   activePool() {
     const base = this.biome().pool;
-    const active = this.registry.get("tileCollectionActive") ?? null;
+    const active = getRegistry(this.registry, "tileCollectionActive") ?? null;
     if (!active) return [...base];
     const out = [];
     for (const baseKey of base) {
@@ -779,18 +778,18 @@ export class GameScene extends Phaser.Scene {
   // this returns null.
   _pickFromZoneSeasonDrops() {
     if (this.biomeKey() !== "farm") return null;
-    const zoneId = this.registry.get("activeZone") ?? null;
+    const zoneId = getRegistry(this.registry, "activeZone") ?? null;
     if (!zoneId || !ZONES[zoneId]) return null;
-    const turnsUsed = this.registry.get("turnsUsed") ?? 0;
+    const turnsUsed = getRegistry(this.registry, "turnsUsed") ?? 0;
     // Fall back to the existing seasonsCycled-based season name when no
     // session is active (e.g. tests that don't dispatch FARM/ENTER).
-    const turnBudget = this.registry.get("turnBudget") ?? ZONES[zoneId].baseTurns ?? 10;
+    const turnBudget = getRegistry(this.registry, "turnBudget") ?? ZONES[zoneId].baseTurns ?? 10;
     const seasonName = seasonNameInSession(turnsUsed, turnBudget);
     return pickByZoneSeasonDrops({
       zoneId,
       seasonName,
       biomeResources: [...this.biome().tiles, ...this.biome().resources],
-      tileCollectionActive: this.registry.get("tileCollectionActive") ?? null,
+      tileCollectionActive: getRegistry(this.registry, "tileCollectionActive") ?? undefined,
       categoryOf: CATEGORY_OF,
       rng: Math.random,
     });
@@ -820,7 +819,7 @@ export class GameScene extends Phaser.Scene {
     this.time.delayedCall(0, () => { this._suppressNextGridApply = false; });
   }
 
-  _applyGridFromState(stateGrid: Array<Array<{ key: string; frozen?: boolean; rubble?: boolean } | null>> | null | undefined): void {
+  _applyGridFromState(stateGrid: RegistryGrid | null | undefined): void {
     if (!stateGrid) return;
     for (let r = 0; r < ROWS; r++) {
       for (let c = 0; c < COLS; c++) {
@@ -838,7 +837,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   /** Replace every live tile from a serialized grid (visual demo reload). */
-  rebuildGridFromState(stateGrid: Array<Array<{ key: string; frozen?: boolean; rubble?: boolean } | null>> | null | undefined): void {
+  rebuildGridFromState(stateGrid: RegistryGrid | null | undefined): void {
     if (!stateGrid) return;
     this.endPath();
     this.clearPath(false);
@@ -878,15 +877,15 @@ export class GameScene extends Phaser.Scene {
     // Build worker-boosted, tile-collection-substituted pool. Worker boosts are gated
     // by the active tile type: a boost for key K only applies when K is the active
     // tile type in its category (matches getActivePool semantics).
-    const tileCollectionActive = this.registry.get("tileCollectionActive") ?? null;
+    const tileCollectionActive = getRegistry(this.registry, "tileCollectionActive") ?? null;
     let workerPool = this.activePool();
-    const poolWeights = this.registry.get("effectivePoolWeights") ?? {};
+    const poolWeights = getRegistry(this.registry, "effectivePoolWeights") ?? {};
     workerPool = applyPoolWeightAdds(workerPool, poolWeights, tileCollectionActive);
     // Phase 2 — restrict the spawn pool to the categories the player picked
     // in the Start Farming modal. Empty/missing list = no filter (legacy
     // entry path through SWITCH_BIOME / cartography). Mine and fish biomes
     // ignore this filter; it only applies on the farm board.
-    const sessionSelectedTiles = this.registry.get("sessionSelectedTiles") ?? [];
+    const sessionSelectedTiles = getRegistry(this.registry, "sessionSelectedTiles") ?? [];
     if (this.biomeKey() === "farm" && sessionSelectedTiles.length > 0) {
       const allowedCats = expandZoneCategories(sessionSelectedTiles);
       const filtered = workerPool.filter((k) => {
@@ -899,7 +898,7 @@ export class GameScene extends Phaser.Scene {
     }
     // Boss spawnBias: Quagmire pushes extra log/hay tiles into pool.
     // For each resource key, the bias factor adds (bias-1)*baseCount extra copies.
-    const boss = this.registry.get("boss");
+    const boss = getRegistry(this.registry, "boss");
     const spawnBias = boss?.spawnBias ?? null;
     if (spawnBias) {
       const baseCounts: Record<string, number> = {};
@@ -911,12 +910,12 @@ export class GameScene extends Phaser.Scene {
     }
     // Fertilizer bias: double seedling-tier resource copies in pool
     // Also activated by magic_fertilizer charges (one charge consumed per fill)
-    const fillBiasArmed = !!(this.registry.get("fillBiasTarget") ||
-                             (this.registry.get("magicFertilizerCharges") ?? 0) > 0);
+    const fillBiasArmed = !!(getRegistry(this.registry, "fillBiasTarget") ||
+                             (getRegistry(this.registry, "magicFertilizerCharges") ?? 0) > 0);
     if (fillBiasArmed) {
-      const biasTarget = this.registry.get("fillBiasTarget");
-      const biasKeys = biasTarget
-        ? [biasTarget, `tile_${biasTarget}`].filter((k) => resourceByKey(k) || this.biome().tiles.some((t: TileRes) => t.key === k))
+      const biasTargetKey = getRegistry(this.registry, "fillBiasTarget")?.key ?? null;
+      const biasKeys = biasTargetKey
+        ? [biasTargetKey, `tile_${biasTargetKey}`].filter((k) => resourceByKey(k) || this.biome().tiles.some((t: TileRes) => t.key === k))
         : ["seedling", "tile_grass_hay", "tile_grain_wheat"];
       const fBase: Record<string, number> = {};
       for (const k of workerPool) fBase[k] = (fBase[k] ?? 0) + 1;
@@ -927,8 +926,8 @@ export class GameScene extends Phaser.Scene {
       this.events.emit(SCENE_EVENTS.FERTILIZER_CONSUMED);
     }
     if (this.biomeKey() === "farm") {
-      const turnsUsed = this.registry.get("turnsUsed") ?? 0;
-      const turnBudget = this.registry.get("turnBudget") ?? 10;
+      const turnsUsed = getRegistry(this.registry, "turnsUsed") ?? 0;
+      const turnBudget = getRegistry(this.registry, "turnBudget") ?? 10;
       const seasonName = seasonNameInSession(turnsUsed, turnBudget);
       workerPool = applySeasonPoolMods(workerPool, seasonName);
     }
@@ -985,7 +984,7 @@ export class GameScene extends Phaser.Scene {
       }
     }
     // Fire hazard overlay: replace grid cells at fire positions with fire tiles
-    const hazardFire = this.registry.get("hazardFire");
+    const hazardFire = getRegistry(this.registry, "hazardFire");
     if (hazardFire?.cells?.length) {
       for (const { row: fr, col: fc } of hazardFire.cells) {
         if (fr < 0 || fr >= ROWS || fc < 0 || fc >= COLS) continue;
@@ -1012,8 +1011,8 @@ export class GameScene extends Phaser.Scene {
         this._syncGridToState();
         // The board just changed under an armed tool — re-evaluate which
         // tiles should be dimmed so feedback stays accurate.
-        const pending = this.registry.get("toolPending");
-        const pendingPower = this.registry.get("toolPendingPower")
+        const pending = getRegistry(this.registry, "toolPending");
+        const pendingPower = getRegistry(this.registry, "toolPendingPower")
           ?? (pending ? getItem(pending)?.power : null);
         if (pendingPower && pending && !this.dragging) this.applyToolDimForPower(pendingPower, pending);
       });
@@ -1261,7 +1260,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     const tap = tapTile ? { row: tapTile.row, col: tapTile.col } : null;
-    const biomeKey = this.registry.get("biomeKey") ?? "farm";
+    const biomeKey = getRegistry(this.registry, "biomeKey") ?? "farm";
     const cells: Array<{ row: number; col: number }> = selectTilesForPower(id, this._selectorGrid(), params, tap, { biomeKey });
 
     if (id === "transform_random_n") {
@@ -1305,8 +1304,8 @@ export class GameScene extends Phaser.Scene {
 
   startPath(tile: TileObj): void {
     if (this.locked) return;
-    const pendingKey = this.registry.get("toolPending");
-    const armedPower = this.registry.get("toolPendingPower")
+    const pendingKey = getRegistry(this.registry, "toolPending");
+    const armedPower = getRegistry(this.registry, "toolPendingPower")
       ?? (pendingKey ? getItem(pendingKey)?.power : null);
     if (pendingKey && armedPower?.id && isTapTargetPower(armedPower.id)) {
       this.applyToolPower(armedPower, tile);
@@ -1325,7 +1324,7 @@ export class GameScene extends Phaser.Scene {
     this.updateGrassHover();
     this._emitChainUpdate();
     // Subtle haptic tick on drag-start, gated by user setting.
-    if (this.registry.get("hapticsOn") && navigator.vibrate) {
+    if (getRegistry(this.registry, "hapticsOn") && navigator.vibrate) {
       try { navigator.vibrate(10); } catch { /* unsupported */ }
     }
   }
@@ -1461,7 +1460,7 @@ export class GameScene extends Phaser.Scene {
     // Display the TILE that will spawn on the board (nextUpgradeTile), so the
     // star preview matches what actually appears at the endpoint.
     const next = res0 ? this.nextUpgradeTile(res0) : null;
-    const effThresh = this.registry.get("effectiveThresholds") ?? UPGRADE_THRESHOLDS;
+    const effThresh: Record<string, number> = getRegistry(this.registry, "effectiveThresholds") ?? UPGRADE_THRESHOLDS;
     const threshold = res0 ? (effThresh[res0.key] || 0) : 0;
     const prevGroups = this._prevStarGroups;
     let groupCount = 0;
@@ -1577,8 +1576,8 @@ export class GameScene extends Phaser.Scene {
       // The registry already holds `tool`; the changedata handler fired but
       // we shortcircuited because of the drag. Re-poke the registry so the
       // handler runs cleanly now that dragging is over.
-      this.registry.set("toolPending", null);
-      this.time.delayedCall(60, () => this.registry.set("toolPending", tool));
+      setRegistry(this.registry, "toolPending", null);
+      this.time.delayedCall(60, () => setRegistry(this.registry, "toolPending", tool));
     }
   }
 
@@ -1675,18 +1674,18 @@ export class GameScene extends Phaser.Scene {
     // Resource progress: the resource key this chain's length contributes
     // toward (fractional accumulation in state.resourceProgress).
     const resourceKey = producedResource(res);
-    const effThresholds = this.registry.get("effectiveThresholds") ?? UPGRADE_THRESHOLDS;
+    const effThresholds: Record<string, number> = getRegistry(this.registry, "effectiveThresholds") ?? UPGRADE_THRESHOLDS;
     const upgrades = next ? upgradeCountForChain(this.path.length, res.key, effThresholds) : 0;
     const gained = this.path.length;
     // Bonus yields: add per-resource bonus if this chain contained that resource
-    const bonusYields = this.registry.get("bonusYields") ?? {};
+    const bonusYields: Record<string, number> = getRegistry(this.registry, "bonusYields") ?? {};
     const bonusGains: Record<string, number> = {};
-    if ((bonusYields as Record<string, number>)[res.key]) {
-      bonusGains[res.key] = Math.round((bonusYields as Record<string, number>)[res.key]);
+    if (bonusYields[res.key]) {
+      bonusGains[res.key] = Math.round(bonusYields[res.key]);
     }
     // V.3 — Clamp the displayed gain to the inventory cap so float text matches what the player actually receives
-    const cap = this.registry.get("inventoryCap") ?? 200;
-    const inv: Record<string, number> = this.registry.get("inventory") ?? {};
+    const cap = getRegistry(this.registry, "inventoryCap") ?? 200;
+    const inv: Record<string, number> = getRegistry(this.registry, "inventory") ?? {};
     const isCapped = (CAPPED_TILES as readonly string[]).includes(res.key);
     const currentAmt = inv[res.key] ?? 0;
     const wouldGain = gained + (bonusGains[res.key] ?? 0);
@@ -1799,7 +1798,7 @@ export class GameScene extends Phaser.Scene {
     const next = res ? this.nextUpgradeTile(res) : null;
     // No `next` means this resource can't upgrade — nothing will ever spawn.
     if (!next) { this.grassHover.setVisible(false); return; }
-    const effThresh = this.registry.get("effectiveThresholds") ?? UPGRADE_THRESHOLDS;
+    const effThresh: Record<string, number> = getRegistry(this.registry, "effectiveThresholds") ?? UPGRADE_THRESHOLDS;
     const k = upgradeCountForChain(n, res!.key, effThresh);
     // Stays visible (and trails the cursor) for the whole drag so the spawn
     // count can be watched ticking up from 0.
@@ -1835,7 +1834,7 @@ export class GameScene extends Phaser.Scene {
     const payload = buildChainUpdatePayload({
       path: this.path,
       nextUpgradeTile: (res: { key: string }) => this.nextUpgradeTile(res),
-      effectiveThresholds: this.registry.get("effectiveThresholds"),
+      effectiveThresholds: getRegistry(this.registry, "effectiveThresholds"),
       effectiveMinChain: this._effectiveMinChain(),
     });
     this.events.emit(SCENE_EVENTS.CHAIN_UPDATE, payload);
