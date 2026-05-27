@@ -128,12 +128,11 @@ export function finalizeKeeperPath(state: GameState, zoneId: string | null | und
   const boss = state.boss as { isKeeperTrial?: boolean } | null | undefined;
   const story = state.story as { flags?: Record<string, unknown>; [k: string]: unknown };
   const trialsState = (state.keeperTrials ?? {}) as Record<string, Record<string, unknown> | undefined>;
-  const stateRec = state as unknown as Record<string, unknown>;
   let next: GameState = {
     ...state,
     activeTrial: null,
     boss: boss?.isKeeperTrial ? null : state.boss,
-    bossMinimized: boss?.isKeeperTrial ? false : stateRec.bossMinimized,
+    bossMinimized: boss?.isKeeperTrial ? false : state.bossMinimized,
     settlements: { ...settlements, [zoneId]: { ...prevEntry, keeperPath: path } },
     keeperTrials: {
       ...trialsState,
@@ -153,7 +152,7 @@ export function finalizeKeeperPath(state: GameState, zoneId: string | null | und
     const achievementsRec = (state.achievements ?? {}) as GameState["achievements"];
     next = {
       ...next,
-      bossesDefeated: (Number(stateRec.bossesDefeated) || 0) + 1,
+      bossesDefeated: state.bossesDefeated + 1,
       coreIngots: (state.coreIngots ?? 0) + (info.coreIngots ?? 0),
       achievements: {
         ...achievementsRec,
@@ -227,13 +226,12 @@ export function resolveKeeperTrial(state: GameState, won: boolean | null | undef
   }
   const pressure = (trial.pressure ?? 0) + (trial.lossPenalty?.pressure ?? 1);
   const boss = state.boss as { isKeeperTrial?: boolean } | null | undefined;
-  const stateRec = state as unknown as Record<string, unknown>;
   const trialsState = (state.keeperTrials ?? {}) as Record<string, unknown>;
   return {
     ...state,
     activeTrial: null,
     boss: boss?.isKeeperTrial ? null : state.boss,
-    bossMinimized: boss?.isKeeperTrial ? false : stateRec.bossMinimized,
+    bossMinimized: boss?.isKeeperTrial ? false : state.bossMinimized,
     keeperTrials: {
       ...trialsState,
       [trial.zoneId]: { ...trial, status: "lost", pressure, turnsRemaining: 0 },

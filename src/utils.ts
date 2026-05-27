@@ -2,6 +2,7 @@ import {
   UPGRADE_THRESHOLDS,
   RESOURCE_CAP_BASE,
   RESOURCE_CAP_GRANARY,
+  getItem,
   ITEMS,
   tileFamily,
 } from "./constants.js";
@@ -126,7 +127,7 @@ export function tilesInCategory(category: string | string[]): string[] {
   if (families.size === 0) return [];
   const out: string[] = [];
   for (const key of Object.keys(ITEMS)) {
-    const item = ITEMS[key] as { kind?: string } | null | undefined;
+    const item = getItem(key) as { kind?: string } | null | undefined;
     if (!item || item.kind !== "tile") continue;
     const fam = _tileFamilyForCategory(key);
     if (fam && families.has(fam)) out.push(key);

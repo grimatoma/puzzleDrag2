@@ -12,6 +12,7 @@
 // them. Reassigning the bindings would not propagate.
 
 import { expandAbilitiesToEffects } from "./abilitiesAggregate.js";
+import { ALL_ITEM_KEY_VALUES, type ItemKey } from "../types/catalog/itemKeys.js";
 
 // Map legacy power-hook ids → unified ability ids. Some ids stayed the
 // same; a few were renamed during the abilities unification.
@@ -23,6 +24,12 @@ const LEGACY_HOOK_TO_ABILITY = Object.freeze({
   pool_weight_boost: "pool_weight",
   threshold_reduction: "threshold_reduce",
 });
+
+const ITEM_KEY_SET = new Set<string>(ALL_ITEM_KEY_VALUES);
+
+function isKnownRecipeInputKey(key: string): key is ItemKey {
+  return ITEM_KEY_SET.has(key);
+}
 
 interface LegacyHook { id: string; params?: Record<string, unknown> }
 interface AbilityShape { id: string; params: Record<string, unknown> }
@@ -137,11 +144,12 @@ export function applyRecipeOverrides(recipes: Record<string, AnyRecord> | unknow
     const patch = asRecord(patchRaw);
     const r = recipeMap[key];
     if (!r) continue;
-    if (typeof patch.item === "string") r.item = patch.item;
+    if (typeof patch.item === "string" && isKnownRecipeInputKey(patch.item)) r.item = patch.item;
     if (patch.inputs && typeof patch.inputs === "object") {
       // Replace inputs wholesale (rather than merge) so removed lines don't linger.
       const cleaned: Record<string, number> = {};
       for (const [resKey, qty] of Object.entries(patch.inputs as AnyRecord)) {
+        if (!isKnownRecipeInputKey(resKey)) continue;
         const n = Number(qty);
         if (Number.isFinite(n) && n > 0) cleaned[resKey] = Math.floor(n);
       }

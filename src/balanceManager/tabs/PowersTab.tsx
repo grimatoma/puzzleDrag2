@@ -13,7 +13,7 @@
 import { useState, useMemo } from "react";
 import type { ReactNode } from "react";
 import { TILE_TYPES, TILE_TYPES_MAP, CATEGORIES } from "../../features/tileCollection/data.js";
-import { BIOMES, ITEMS, tileFamilyResource } from "../../constants.js";
+import { BIOMES, ITEMS, getItem, tileFamilyResource } from "../../constants.js";
 import {
   COLORS, NumberField, TextField, TextArea, Select, ColorField,
   SmallButton, Pill, Card, SearchBar, TileSwatch,
@@ -100,7 +100,10 @@ export default function PowersTab({ draft, updateDraft }: TabProps) {
   // Base chain target — a tile chains into another tile or a resource.
   const chainTargetOptions = useMemo(() => {
     const keys = Object.keys(ITEMS)
-      .filter((k) => ITEMS[k].kind === "tile" || ITEMS[k].kind === "resource")
+      .filter((k) => {
+        const item = getItem(k);
+        return item?.kind === "tile" || item?.kind === "resource";
+      })
       .sort();
     return [{ value: "", label: "— none (terminal) —" }, ...keys.map((k) => ({ value: k, label: k }))];
   }, []);
@@ -145,7 +148,7 @@ export default function PowersTab({ draft, updateDraft }: TabProps) {
   // Basic per-tile metadata — label / colour / sale value / base chain target /
   // tiles-wiki blurb. These patch the shared ITEMS overrides + the
   // tileDescriptions map, the same plumbing as every other tile attribute here.
-  const itemRow = ITEMS[selectedTile];
+  const itemRow = getItem(selectedTile);
   const itemPatch = (draft.items[selectedTile] as TileItemOverride | undefined) || null;
   const descPatch = draft.tileDescriptions[selectedTile] as string | undefined;
   const metaDirty = !!itemPatch || descPatch !== undefined;

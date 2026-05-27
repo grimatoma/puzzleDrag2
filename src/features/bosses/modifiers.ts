@@ -141,7 +141,7 @@ export function tickModifier(state: GameState, modifier: BossModifier): TickModi
           heat: surviving,
         },
       },
-    } as GameState,
+    } as unknown as GameState,
   };
 }
 

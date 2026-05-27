@@ -12,31 +12,23 @@ import type { Action, GameState } from "../../types/state.js";
 
 export const initial = { boons: {} as Record<string, boolean> };
 
-interface BoonHostState {
-  embers?: number;
-  coreIngots?: number;
-  boons?: Record<string, boolean>;
-  bubble?: { id: number; npc: string; text: string; ms: number } | null;
-}
-
 export function reduce(state: GameState, action: Action): GameState {
-  const s = state as unknown as BoonHostState;
   switch (action.type) {
     case "BOON/PURCHASE": {
       const id = action.payload?.id ?? action.id;
       const boon = id ? boonById(id) : null;
       if (!boon || !id) return state;
-      if (s?.boons?.[id]) return state;            // already owned
-      if (!boonIsUnlocked(state, boon)) return state;  // wrong keeper path / no flag
-      if (!canAffordBoon(state, boon)) return state;   // can't afford
+      if (state.boons[id]) return state;
+      if (!boonIsUnlocked(state, boon)) return state;
+      if (!canAffordBoon(state, boon)) return state;
       const cost = boon.cost ?? {};
       return {
         ...state,
-        embers: (s.embers ?? 0) - (cost.embers ?? 0),
-        coreIngots: (s.coreIngots ?? 0) - (cost.coreIngots ?? 0),
-        boons: { ...(s.boons ?? {}), [id]: true },
+        embers: state.embers - (cost.embers ?? 0),
+        coreIngots: state.coreIngots - (cost.coreIngots ?? 0),
+        boons: { ...state.boons, [id]: true },
         bubble: { id: Date.now(), npc: "wren", text: `Boon claimed: ${boon.name}.`, ms: 2200 },
-      } as GameState;
+      };
     }
     default:
       return state;

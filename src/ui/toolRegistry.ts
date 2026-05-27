@@ -2,7 +2,7 @@
  * Player-facing tool catalog for the on-board Tools panel.
  * Generated from canonical `ITEMS` tool entries + `isTapTargetPower`.
  */
-import { ITEMS } from "../constants.js";
+import { ITEMS, getItem } from "../constants.js";
 import type { ToolPowerDefinition } from "../constants.js";
 import { isTapTargetPower } from "../config/toolPowers.js";
 
@@ -20,7 +20,7 @@ export interface ToolEntry {
 
 function toolCategory(key: string): "field" | "workshop" {
   if (FIELD_TOOLS.has(key)) return "field";
-  if (ITEMS[key]?.kind === "tool") return "workshop";
+  if (getItem(key)?.kind === "tool") return "workshop";
   return "workshop";
 }
 
@@ -31,7 +31,7 @@ function toolArmed(power: ToolPowerDefinition | undefined): "instant" | "passive
 }
 
 function entryFromItem(key: string): ToolEntry | null {
-  const item = ITEMS[key];
+  const item = getItem(key);
   if (!item || item.kind !== "tool") return null;
   const power = item.power;
   return {
@@ -56,7 +56,7 @@ export const TOOL_CATEGORIES = [
 ];
 
 export function isTapTargetTool(key: string): boolean {
-  const power = ITEMS[key]?.power;
+  const power = getItem(key)?.power;
   return !!(power?.id && isTapTargetPower(power.id));
 }
 

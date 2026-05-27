@@ -11,7 +11,7 @@
  * @see ./items.ts for the corresponding type declarations.
  */
 
-import { ITEMS } from "../constants.js";
+import { getItem } from "../constants.js";
 import type { TileKey, ResourceKey, ToolKey } from "./items.js";
 
 // Module-scoped set used to suppress duplicate prod warnings.
@@ -24,27 +24,27 @@ const _warnedPairs = new Set<string>();
  * Returns true when `key` refers to a tile entry.
  */
 export function isTile(key: string): key is TileKey {
-  return ITEMS[key]?.kind === "tile";
+  return getItem(key)?.kind === "tile";
 }
 
 /**
  * Returns true when `key` refers to a resource entry.
  */
 export function isResource(key: string): key is ResourceKey {
-  return ITEMS[key]?.kind === "resource";
+  return getItem(key)?.kind === "resource";
 }
 
 /**
  * Returns true when `key` refers to a tool entry.
  */
 export function isTool(key: string): key is ToolKey {
-  return ITEMS[key]?.kind === "tool";
+  return getItem(key)?.kind === "tool";
 }
 
 // ── Internal helper ───────────────────────────────────────────────────────
 
 function _assertKind(key: string, expected: "tile" | "resource" | "tool"): void {
-  const entry = ITEMS[key];
+  const entry = getItem(key);
   const actual = entry?.kind ?? "(missing)";
   if (actual === expected) return;
 

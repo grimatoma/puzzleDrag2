@@ -5,6 +5,7 @@
  */
 
 import type { ActionType } from "./actions.js";
+import type { ResourceKey, ToolKey } from "./catalogKeys.js";
 import type { Grid, Tile } from "./state.js";
 import type { ToolPower } from "../state/toolPowerRuntime.js";
 
@@ -25,14 +26,14 @@ export interface ChainCollectedPayload {
 }
 
 export interface ToolFiredFields {
-  key?: string;
+  key?: ToolKey | string;
   row?: number;
   col?: number;
 }
 
 export interface UseToolPayload {
   id?: string;
-  key?: string;
+  key?: ToolKey | string;
   power?: ToolPower;
 }
 
@@ -71,7 +72,7 @@ export interface BuildingPayload {
 }
 
 export interface MarketSellPayload {
-  resource?: string;
+  resource?: ResourceKey | string;
   qty?: number;
 }
 
@@ -116,14 +117,14 @@ export interface CraftToolAction {
 export interface ToolFiredAction {
   type: "TOOL_FIRED";
   payload?: ToolFiredFields;
-  key?: string;
+  key?: ToolKey | string;
   row?: number;
   col?: number;
 }
 
 export interface UseToolAction {
   type: "USE_TOOL";
-  key?: string;
+  key?: ToolKey | string;
   payload?: UseToolPayload;
 }
 
@@ -227,7 +228,7 @@ export interface CraftingSkipAction {
 }
 
 export interface TradeResourcePayload {
-  key: string;
+  key: ResourceKey | string;
   qty: number;
 }
 

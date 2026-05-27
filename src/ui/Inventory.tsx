@@ -1,5 +1,6 @@
 import { useState, useReducer, useCallback, useEffect, useLayoutEffect, useRef, forwardRef } from "react";
-import { BIOMES, ITEMS, RECIPES, RESOURCE_TO_THRESHOLD } from "../constants.js";
+import { BIOMES, getItem, ITEMS, RECIPES, RESOURCE_TO_THRESHOLD } from "../constants.js";
+import type { ResourceKey } from "../types/catalogKeys.js";
 import type { BiomeItemEntry, ItemEntry, ResourceItemEntry } from "../constants.js";
 import { ProgressBar } from "./primitives/ActionCard.jsx";
 import {
@@ -54,7 +55,7 @@ interface OrderLike {
 }
 
 export function labelFor(key: string, fallback?: string) {
-  return iconLabel(key) || ITEMS[key]?.label || fallback || key;
+  return iconLabel(key) || getItem(key)?.label || fallback || key;
 }
 
 function sortKeys(keys: string[], sort: SortMode, inventory: Record<string, number>, recentOrder: string[] | null | undefined) {
@@ -300,12 +301,12 @@ function InventoryListItemExpanded({ entry, marketBuilt, dispatch, onCollapse, p
   const canSell = marketBuilt && sellPrice > 0 && count > 0;
   const sell = () => {
     if (kind === "resource") {
-      dispatch({ type: "SELL_RESOURCE", payload: { key, qty: 1 } });
+      dispatch({ type: "SELL_RESOURCE", payload: { key: key as ResourceKey, qty: 1 } });
     } else {
       dispatch({ type: "SELL_ITEM", id: key, qty: 1 });
     }
   };
-  const buy = () => dispatch({ type: "BUY_RESOURCE", payload: { key, qty: 1 } });
+  const buy = () => dispatch({ type: "BUY_RESOURCE", payload: { key: key as ResourceKey, qty: 1 } });
   const listStatus = orderStatus === "ready" || orderStatus === "needed" ? orderStatus : undefined;
   const showActions = canSell || kind === "resource";
 
@@ -378,12 +379,12 @@ function InventoryDetail({ entry, marketBuilt, dispatch }: { entry: InventoryEnt
   const canSell = marketBuilt && sellPrice > 0 && count > 0;
   const sell = () => {
     if (kind === "resource") {
-      dispatch({ type: "SELL_RESOURCE", payload: { key, qty: 1 } });
+      dispatch({ type: "SELL_RESOURCE", payload: { key: key as ResourceKey, qty: 1 } });
     } else {
       dispatch({ type: "SELL_ITEM", id: key, qty: 1 });
     }
   };
-  const buy = () => dispatch({ type: "BUY_RESOURCE", payload: { key, qty: 1 } });
+  const buy = () => dispatch({ type: "BUY_RESOURCE", payload: { key: key as ResourceKey, qty: 1 } });
   const status = orderStatus ? <StatusPill status={orderStatus} total={orderTotal} /> : null;
 
   return (
@@ -446,7 +447,7 @@ export function CompactOrders({ orders, inventory, dispatch }: { orders: OrderLi
         const need = o.need ?? 0;
         const have = inventory[o.key] || 0;
         const done = have >= need;
-        const res = ITEMS[o.key];
+        const res = getItem(o.key);
         const label = res ? res.label : o.key;
         return (
           <button
@@ -504,14 +505,17 @@ export function InventoryGrid({
   resourceProgress?: Record<string, number>;
 }) {
   const resources = BIOMES[biomeKey].resources; // already resource-only after data split
-  const items = Object.entries(ITEMS).filter(([key, item]) =>
-    (inventory[key] || 0) > 0 &&
-    !resources.find((r) => r.key === key) &&
-    item.kind !== "tile" &&
-    item.kind !== "tool"
-  );
+  const items = (Object.keys(ITEMS) as string[]).filter((key) => {
+    const item = getItem(key);
+    return (
+      (inventory[key] || 0) > 0 &&
+      !resources.find((r) => r.key === key) &&
+      item?.kind !== "tile" &&
+      item?.kind !== "tool"
+    );
+  }).map((key) => [key, getItem(key)!] as [string, ItemRow]);
   const tools = (Object.entries((state?.tools ?? {}) as Record<string, number>) as [string, number][]).filter(([key, count]) =>
-    (count || 0) > 0 && ITEMS[key]?.kind === "tool"
+    (count || 0) > 0 && getItem(key)?.kind === "tool"
   );
   const { status, totals } = orderStatusByKey(orders, inventory);
   const marketBuilt = !!locBuilt(state).caravan_post;
@@ -594,7 +598,7 @@ export function InventoryGrid({
 
   const resourceCellsBy = new Map<string, BiomeResourceEntry>(resources.map((r) => [r.key, r]));
   const itemDefsByKey = new Map<string, ItemRow>(items.map(([key, item]) => [key, item]));
-  const toolDefsByKey = new Map<string, ItemRow>(tools.map(([key]) => [key, ITEMS[key]]));
+  const toolDefsByKey = new Map<string, ItemRow>(tools.map(([key]) => [key, getItem(key)!]));
 
   const visibleResourceKeys = resources
     .map((r) => r.key)

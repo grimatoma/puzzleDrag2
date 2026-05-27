@@ -1,6 +1,8 @@
 import { describe, it, expect } from "vitest";
-import { reduce as achReduce, initial as achInitial } from "../features/achievements/slice.js";
+import type { Action } from "../types/state.js";
+import { reduce as achReduce } from "../features/achievements/slice.js";
 import { ACHIEVEMENTS } from "../features/achievements/data.js";
+import { mergeTestState } from "../testUtils/testState.js";
 
 const baseAchievements = () => ({
   counters: {
@@ -15,11 +17,11 @@ const baseAchievements = () => ({
   seenBuildings: {},
 });
 
-const baseState = (over = {}) => ({
-  ...achInitial,
-  achievements: baseAchievements(),
-  ...over,
-});
+const baseState = (over: Record<string, unknown> = {}) =>
+  mergeTestState({
+    achievements: baseAchievements(),
+    ...over,
+  });
 
 describe("cattle / mount / tree / bird achievements", () => {
   it("registers dairyman / stable_hand / forester / fowler", () => {
@@ -35,7 +37,7 @@ describe("cattle / mount / tree / bird achievements", () => {
     const s1 = achReduce(s0, {
       type: "CHAIN_COLLECTED",
       payload: { key: "tile_cattle_cow", gained: 6, chainLength: 6, upgrades: 0 },
-    });
+    } as Action);
     expect(s1.achievements.counters.cattle_chained).toBe(6);
   });
 
@@ -44,7 +46,7 @@ describe("cattle / mount / tree / bird achievements", () => {
     const s1 = achReduce(s0, {
       type: "CHAIN_COLLECTED",
       payload: { key: "tile_mount_horse", gained: 4, chainLength: 4, upgrades: 0 },
-    });
+    } as Action);
     expect(s1.achievements.counters.mount_chained).toBe(4);
   });
 
@@ -53,7 +55,7 @@ describe("cattle / mount / tree / bird achievements", () => {
     const s1 = achReduce(s0, {
       type: "CHAIN_COLLECTED",
       payload: { key: "tile_tree_oak", gained: 5, chainLength: 5, upgrades: 0 },
-    });
+    } as Action);
     expect(s1.achievements.counters.tree_chained).toBe(5);
   });
 
@@ -62,7 +64,7 @@ describe("cattle / mount / tree / bird achievements", () => {
     const s1 = achReduce(s0, {
       type: "CHAIN_COLLECTED",
       payload: { key: "tile_bird_chicken", gained: 6, chainLength: 6, upgrades: 0 },
-    });
+    } as Action);
     expect(s1.achievements.counters.bird_chained).toBe(6);
   });
 
@@ -71,7 +73,7 @@ describe("cattle / mount / tree / bird achievements", () => {
     const s1 = achReduce(s0, {
       type: "CHAIN_COLLECTED",
       payload: { key: "tile_grass_hay", gained: 6, chainLength: 6, upgrades: 0 },
-    });
+    } as Action);
     expect(s1.achievements.counters.cattle_chained).toBe(0);
     expect(s1.achievements.counters.mount_chained).toBe(0);
     expect(s1.achievements.counters.tree_chained).toBe(0);
@@ -79,9 +81,9 @@ describe("cattle / mount / tree / bird achievements", () => {
   });
 
   it("threshold values: dairyman/stable_hand 30, forester/fowler 50", () => {
-    expect(ACHIEVEMENTS.find((a) => a.id === "dairyman").threshold).toBe(30);
-    expect(ACHIEVEMENTS.find((a) => a.id === "stable_hand").threshold).toBe(30);
-    expect(ACHIEVEMENTS.find((a) => a.id === "forester").threshold).toBe(50);
-    expect(ACHIEVEMENTS.find((a) => a.id === "fowler").threshold).toBe(50);
+    expect(ACHIEVEMENTS.find((a) => a.id === "dairyman")?.threshold).toBe(30);
+    expect(ACHIEVEMENTS.find((a) => a.id === "stable_hand")?.threshold).toBe(30);
+    expect(ACHIEVEMENTS.find((a) => a.id === "forester")?.threshold).toBe(50);
+    expect(ACHIEVEMENTS.find((a) => a.id === "fowler")?.threshold).toBe(50);
   });
 });

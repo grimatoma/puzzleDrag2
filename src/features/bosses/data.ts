@@ -169,7 +169,7 @@ export function tickBossTurn(state: GameState): GameState {
   const next: BossInstance = { ...s.boss, turnsRemaining: s.boss.turnsRemaining - 1 };
   const targetMet = next.progress >= next.target.amount;
   const expired = next.turnsRemaining <= 0;
-  if (!targetMet && !expired) return { ...state, boss: next } as GameState;
+  if (!targetMet && !expired) return { ...state, boss: next as unknown as GameState["boss"] };
   const def = BOSSES.find((b) => b.id === s.boss?.id);
   if (!def) return state;
   const reward = bossReward(def, next.progress, next.year ?? s.boss.year ?? 1);
