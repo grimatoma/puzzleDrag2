@@ -129,7 +129,6 @@ interface VisualStateLike {
   hazards?: { fire?: unknown; rats?: unknown };
   grid?: unknown;
   modal?: unknown;
-  [k: string]: unknown;
 }
 
 /**

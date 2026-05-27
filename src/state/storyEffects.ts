@@ -29,25 +29,22 @@ function tickStoryRepeatCooldowns(state: GameState): GameState {
 
 export function evaluateAndApplyStoryBeat(state: GameState, event: StoryEvent): GameState {
   let next = tickStoryRepeatCooldowns(state);
-  const storyBefore = next.story as { act?: unknown; [k: string]: unknown } | undefined;
-  const actBefore = storyBefore?.act;
+  const actBefore = next.story?.act;
   const totals = (next.inventory ?? {}) as Record<string, number>;
   const baseStory = (next.story ?? { ...INITIAL_STORY_STATE, flags: {} }) as Parameters<typeof evaluateStoryTriggers>[0];
   const result = evaluateStoryTriggers(baseStory, event, totals);
   if (result) next = storySlice.reduce(next, { type: "STORY/BEAT_FIRED", payload: result });
-  const nextRec = next as unknown as Record<string, unknown>;
-  if (nextRec.pendingBossKey) {
-    const bossKey = nextRec.pendingBossKey;
-    const withoutPendingBoss: Record<string, unknown> = { ...nextRec };
-    delete withoutPendingBoss.pendingBossKey;
-    next = boss.reduce(withoutPendingBoss as unknown as GameState, {
+  if (next.pendingBossKey) {
+    const bossKey = next.pendingBossKey;
+    const { pendingBossKey: _omit, ...withoutPendingBoss } = next;
+    next = boss.reduce(withoutPendingBoss as GameState, {
       type: "BOSS/TRIGGER",
-      bossKey: typeof bossKey === "string" ? bossKey : String(bossKey),
+      bossKey,
     });
   }
-  const storyAfter = next.story as { act?: unknown; [k: string]: unknown } | undefined;
-  if (result && storyAfter?.act !== actBefore) {
-    next = evaluateAndApplyStoryBeat(next, { type: "act_entered", act: storyAfter?.act });
+  const actAfter = next.story?.act;
+  if (result && actAfter !== actBefore) {
+    next = evaluateAndApplyStoryBeat(next, { type: "act_entered", act: actAfter });
   }
   const sideResult = evaluateSideBeats(next, event);
   if (sideResult) next = storySlice.reduce(next, { type: "STORY/BEAT_FIRED", payload: sideResult });
