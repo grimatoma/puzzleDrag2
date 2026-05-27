@@ -26,14 +26,14 @@ export interface ChainCollectedPayload {
 }
 
 export interface ToolFiredFields {
-  key?: ToolKey | string;
+  key?: ToolKey;
   row?: number;
   col?: number;
 }
 
 export interface UseToolPayload {
   id?: string;
-  key?: ToolKey | string;
+  key?: ToolKey;
   power?: ToolPower;
 }
 
@@ -72,7 +72,7 @@ export interface BuildingPayload {
 }
 
 export interface MarketSellPayload {
-  resource?: ResourceKey | string;
+  resource?: ResourceKey;
   qty?: number;
 }
 
@@ -117,14 +117,14 @@ export interface CraftToolAction {
 export interface ToolFiredAction {
   type: "TOOL_FIRED";
   payload?: ToolFiredFields;
-  key?: ToolKey | string;
+  key?: ToolKey;
   row?: number;
   col?: number;
 }
 
 export interface UseToolAction {
   type: "USE_TOOL";
-  key?: ToolKey | string;
+  key?: ToolKey;
   payload?: UseToolPayload;
 }
 
@@ -228,7 +228,7 @@ export interface CraftingSkipAction {
 }
 
 export interface TradeResourcePayload {
-  key: ResourceKey | string;
+  key: ResourceKey;
   qty: number;
 }
 

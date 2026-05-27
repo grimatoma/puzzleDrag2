@@ -45,7 +45,7 @@ import * as boons from "./features/boons/slice.js";
 import * as runSummary from "./features/runSummary/slice.js";
 import { boonEffectMult } from "./features/boons/data.js";
 import { ZONES, settlementFoundingCost, isSettlementFounded, displayZoneName, grantEarnedHearthTokens, isOldCapitalUnlocked, isExpeditionFood, expeditionTurnsFromSupply, settlementTypeForZone, resolveBiomeChoice, completedSettlementCount, DEFAULT_ZONE, turnBudgetForZone, settlementHazards } from "./features/zones/data.js";
-import type { ResourceKey } from "./types/catalogKeys.js";
+import { ResourceKey } from "./types/catalogKeys.js";
 import { inventoryPut, inventoryQty } from "./types/inventory.js";
 import type { Action, GameState, Grid, Order, Tile } from "./types/state";
 import { addCappedResourceMut, hasAllInventory, deductInventory, defaultTileCollectionSlice, mergeLoadedState, resourceByKey, pickNpcKey, makeOrder, seedOrderIdSeq, SEASON_END_BONUS_COINS, xpForLevel } from "./state/helpers.js";
@@ -998,13 +998,13 @@ function coreReducer(state: GameState, action: Action): GameState {
     case "CONVERT_TO_SUPPLY": {
       const qty = Math.max(1, (action.payload?.qty ?? 0) | 0);
       const cost = qty * 3;
-      if (inventoryQty(state.inventory, "flour") < cost) return state;
+      if (inventoryQty(state.inventory, ResourceKey.Flour) < cost) return state;
       return {
         ...state,
         inventory: inventoryPut(
-          inventoryPut({ ...state.inventory }, "flour", inventoryQty(state.inventory, "flour") - cost),
-          "supplies",
-          inventoryQty(state.inventory, "supplies") + qty,
+          inventoryPut({ ...state.inventory }, ResourceKey.Flour, inventoryQty(state.inventory, ResourceKey.Flour) - cost),
+          ResourceKey.Supplies,
+          inventoryQty(state.inventory, ResourceKey.Supplies) + qty,
         ),
       };
     }
@@ -1436,8 +1436,8 @@ function coreReducer(state: GameState, action: Action): GameState {
       if (action.type === "DEV/ADD_SUPPLIES") {
         const inventory = inventoryPut(
           { ...state.inventory },
-          "supplies",
-          inventoryQty(state.inventory, "supplies") + (action.amount ?? 10),
+          ResourceKey.Supplies,
+          inventoryQty(state.inventory, ResourceKey.Supplies) + (action.amount ?? 10),
         );
         return { ...state, inventory };
       }

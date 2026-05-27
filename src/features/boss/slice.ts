@@ -4,6 +4,7 @@ import { tickModifier, type BossModifier } from "../bosses/modifiers.js";
 import { awardXp } from "../almanac/data.js";
 import { BOSS_UI } from "./uiMeta.js";
 import type { Action, GameState } from "../../types/state.js";
+import { ResourceKey } from "../../types/catalogKeys.js";
 
 const YEAR_BOSS_ROTATION = ["frostmaw", "quagmire", "ember_drake", "old_stoneface", "mossback", "storm"];
 
@@ -222,11 +223,11 @@ export function reduce(state: GameState, action: Action): GameState {
 
     case "CRAFTING/CRAFT_RECIPE": {
       if (state.boss?.isKeeperTrial) return state;
-      if (!state.boss || state.boss.resource !== "iron_bar") return state;
+      if (!state.boss || state.boss.resource !== ResourceKey.IronBar) return state;
       const recipeKey = action.recipeKey ?? action.payload?.key;
       if (!recipeKey) return state;
       const recipe = RECIPES[recipeKey] ?? Object.values(RECIPES).find((r) => r?.item === recipeKey);
-      if (!recipe || !recipe.inputs?.iron_bar) return state;
+      if (!recipe || !recipe.inputs?.[ResourceKey.IronBar]) return state;
       const newProgress = Math.min(state.boss.targetCount, (state.boss.progress || 0) + 1);
       const updatedBoss: BossState = { ...state.boss, progress: newProgress };
       if (newProgress >= state.boss.targetCount) {

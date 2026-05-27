@@ -5,6 +5,7 @@ import BottomSheet from "./primitives/BottomSheet.jsx";
 import { TOOL_CATALOG, TOOL_BY_KEY, visibleTools, isTapTargetTool, type ToolEntry as CatalogToolEntry } from "./toolRegistry.js";
 import { isFillBiasArmed } from "../state/fillBias.js";
 import type { Dispatch, GameState } from "../types/state.js";
+import { ToolKey } from "../types/catalogKeys.js";
 
 interface ToolStripEntry {
   key: string;
@@ -98,7 +99,7 @@ function disarmOtherTools(dispatch: Dispatch, key: string, state: GameState) {
     dispatch({ type: "CANCEL_TOOL" });
   }
   if (isFillBiasArmed(state) && key !== "fertilizer") {
-    dispatch({ type: "USE_TOOL", key: "fertilizer" });
+    dispatch({ type: "USE_TOOL", key: ToolKey.Fertilizer });
   }
 }
 
@@ -113,7 +114,7 @@ function dispatchUseTool(dispatch: Dispatch, key: string, state: GameState) {
   if ((def?.category as string) === "magic") {
     dispatch({ type: "USE_TOOL", payload: { id: key } });
   } else {
-    dispatch({ type: "USE_TOOL", key });
+    dispatch({ type: "USE_TOOL", key: key as ToolKey });
   }
   if (key === "shuffle") {
     dispatch({ type: "USE_TOOL", payload: { id: "shuffle" } });
