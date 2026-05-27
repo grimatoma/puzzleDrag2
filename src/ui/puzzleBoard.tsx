@@ -28,6 +28,7 @@ import { isFillBiasArmed } from "../state/fillBias.js";
 import { SeasonStrip } from "./seasonStrip.jsx";
 import { lazy, Suspense } from "react";
 import type { Dispatch, GameState } from "../types/state.js";
+import { ToolKey } from "../types/catalogKeys.js";
 
 // A runtime tool entry — TOOL_CATALOG entry augmented with player-facing
 // state. `armed` here is a boolean (is THIS tool currently the active one)
@@ -748,7 +749,7 @@ function disarmOtherTools(dispatch: Dispatch, key: string, state: ToolEnvState) 
     dispatch({ type: "CANCEL_TOOL" });
   }
   if (state?.fillBiasArmed && key !== "fertilizer") {
-    dispatch({ type: "USE_TOOL", key: "fertilizer" });
+    dispatch({ type: "USE_TOOL", key: ToolKey.Fertilizer });
   }
 }
 
@@ -763,7 +764,7 @@ function dispatchUseTool(dispatch: Dispatch, key: string, state: ToolEnvState) {
   if ((def?.category as string) === "magic") {
     dispatch({ type: "USE_TOOL", payload: { id: key } });
   } else {
-    dispatch({ type: "USE_TOOL", key });
+    dispatch({ type: "USE_TOOL", key: key as ToolKey });
   }
   if (key === "shuffle") {
     dispatch({ type: "USE_TOOL", payload: { id: "shuffle" } });

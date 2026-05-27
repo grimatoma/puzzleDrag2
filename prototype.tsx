@@ -19,6 +19,7 @@ import { useAudio } from "./src/audio/useAudio.js";
 import { useRouter } from "./src/router.js";
 import { setPhaserScene } from "./src/phaserBridge.js";
 import { setRegistry, type FireHazardPayload } from "./src/types/phaserRegistry.js";
+import type { ToolKey } from "./src/types/catalogKeys.js";
 import { emitBurst } from "./src/ui/rewardEvents.js";
 import { FIRE_HAZARD_ENABLED } from "./src/featureFlags.js";
 import { useNotifier } from "./src/ui/primitives/Toast.jsx";
@@ -212,7 +213,7 @@ function PhaserMount({ dispatch, biomeKey, turnsUsed, uiLocked, boardActive, sce
                 t?.({ text, tone: "moss", duration: 1600 });
               });
               scene.events.on(SCENE_EVENTS.TOOL_FIRED, ({ key, row, col }: { key: string; row: number; col: number }) =>
-                dispatch({ type: "TOOL_FIRED", key, row, col }),
+                dispatch({ type: "TOOL_FIRED", key: key as ToolKey, row, col }),
               );
               scene.events.on(SCENE_EVENTS.REWARD_BURST, (data: RewardBurstPayload) => {
                 const canvas = scene?.game?.canvas;
