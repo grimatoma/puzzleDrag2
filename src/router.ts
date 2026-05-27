@@ -162,7 +162,6 @@ interface RouterStateView {
   viewParams?: Record<string, unknown>;
   craftingTab?: string | null;
   settingsTab?: string;
-  [k: string]: unknown;
 }
 
 /**

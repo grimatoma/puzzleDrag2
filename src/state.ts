@@ -623,8 +623,12 @@ function coreReducer(state: GameState, action: Action): GameState {
         return { ...state, bubble: { id: Date.now(), npc: "wren", text: access.reason ?? "", ms: 2200 } };
       }
       // Phase 12.5 — restore saved board if Silo/Barn built and snapshot exists
-      const biomeSlot = (state as Record<string, unknown>)[key] as { savedField?: { tiles?: Grid } | null } | undefined;
-      const savedField = biomeSlot?.savedField ?? null;
+      const biomeSlot =
+        key === "farm" ? state.farm :
+        key === "mine" ? state.mine :
+        key === "fish" ? state.fish :
+        undefined;
+      const savedField = (biomeSlot?.savedField ?? null) as { tiles?: Grid } | null;
       let boardPatch: { grid?: Grid } = {};
       if (savedField && savedField.tiles) {
         boardPatch = { grid: savedField.tiles };

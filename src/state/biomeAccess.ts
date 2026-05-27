@@ -7,22 +7,16 @@ import type { GameState } from "../types/state.js";
 export function canEnterBiome(state: GameState | null | undefined, biomeKey: string | null | undefined): { ok: boolean; reason?: string } {
   if (!biomeKey || biomeKey === "farm") return { ok: true };
   const level = state?.level ?? 1;
-  const stateRec = (state ?? {}) as Record<string, unknown>;
-  const story = (stateRec.story ?? {}) as { flags?: Record<string, unknown> };
-  const flags = (stateRec.flags ?? {}) as Record<string, unknown>;
-  const unlockedBiomes = (stateRec.unlockedBiomes ?? {}) as Record<string, unknown>;
-  const zoneIdRaw = stateRec.activeZone ?? stateRec.mapCurrent ?? "home";
-  const zoneId = typeof zoneIdRaw === "string" ? zoneIdRaw : "home";
+  const story = (state?.story ?? {}) as { flags?: Record<string, unknown> };
+  const unlockedBiomes = state?.unlockedBiomes ?? {};
+  const zoneId = state?.activeZone ?? state?.mapCurrent ?? "home";
   const zone = ZONES[zoneId] ?? null;
 
   if (biomeKey === "mine") {
     if (level < 2) {
       return { ok: false, reason: "Mine unlocks at Level 2." };
     }
-    const storyMine =
-      !!(story.flags?.mine_unlocked ||
-      flags.mine_unlocked ||
-      unlockedBiomes.mine);
+    const storyMine = !!(story.flags?.mine_unlocked || unlockedBiomes.mine);
     if (level < 2 && !storyMine) {
       return { ok: false, reason: "Mine unlocks at Level 2." };
     }

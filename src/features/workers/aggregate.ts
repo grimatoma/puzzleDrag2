@@ -84,7 +84,6 @@ interface BuildingDef {
  */
 type AggregatorState = Pick<GameState, "workers" | "built" | "tileCollection"> & {
   mapCurrent?: unknown;
-  [extra: string]: unknown;
 };
 
 /** Source list for every BUILDINGS entry currently built in the active map. */

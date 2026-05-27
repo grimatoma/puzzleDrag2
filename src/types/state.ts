@@ -315,8 +315,16 @@ export interface GameState {
   craftingTab?: string | null;
   /** Fish slice: free-move consumption flag for the last board action. */
   lastBoardActionConsumedFreeMove?: boolean;
-  /** Forward-compat for saves and slices not yet given explicit fields. */
-  [extra: string]: unknown;
+  /** Length of the last committed chain — read by `useAudio` for chain SFX. */
+  lastChainLength?: number;
+  /** Visual testing bridge: id of the currently loaded scenario, when set. */
+  _visualScenarioId?: string;
+  /** Extra payload for the current modal (e.g. daily-streak day/reward). */
+  modalParams?: Record<string, unknown>;
+  /** Story beat side-effect: biomes unlocked outside the `story.flags` channel. */
+  unlockedBiomes?: Record<string, boolean>;
+  /** Transient hand-off between `applyBeatResult` and the boss trigger; cleared by `evaluateAndApplyStoryBeat`. */
+  pendingBossKey?: string;
 }
 
 // ── Action (discriminated union in actionPayloads.ts) ─────────────────────

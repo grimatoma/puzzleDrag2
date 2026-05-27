@@ -131,8 +131,7 @@ export function Hud({ state, dispatch, inventorySearchOpen, onInventorySearchTog
     setCoinAnchorEl(coinAnchorRef.current);
     return () => setCoinAnchorEl(null);
   });
-  const settlement = state.settlement as { name?: string } | undefined;
-  const settlementName = settlement?.name ?? "Hearthwood Vale";
+  const settlementName = "Hearthwood Vale";
   const showTide = state.biomeKey === "fish" && (onBoard || view === "town");
 
   const seasonAccent = onBoard
