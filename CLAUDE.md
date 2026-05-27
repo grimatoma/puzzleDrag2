@@ -19,6 +19,7 @@ Phaser 3 + React game. **React owns state** — `useReducer` in `prototype.jsx`,
 | Tune balance values | `src/constants.js` (`UPGRADE_THRESHOLDS`, `ZONES[].entryCost`, `DAILY_REWARDS`) | Dev Panel at `/b/` |
 | Story beat content | `src/story.js`, `src/features/story/slice.js`, `src/state/storyEffects.js` | Story Editor at `/story/` |
 | Dispatched action silently does nothing | `SLICE_PRIMARY_ACTIONS` / `ALWAYS_RUN_SLICES` in `src/state.js` | `check-slice-action` skill |
+| TS migration Phases 1–2 (drop `GameState` index, Phaser bridge) | `docs/engineering/ts-migration-completion.md` | `catalog-enums.md`, `typed-tests.md` |
 | Persisted save shape changed | bump `SAVE_SCHEMA_VERSION` in `src/constants.js` | reducer discards mismatched saves |
 | Land on a specific screen for QA | "Testing a specific UI" section below | `?visual=<id>`, `window.__hearthVisual` |
 | Reset state during testing | `localStorage.removeItem("hearth.save.v1")` | also `hearth.settings`, `hearth.tutorial.seen`, `hearth.disableDialogs` |
@@ -34,6 +35,7 @@ npm run build                # Production build (outputs to dist/, including dis
 npm run lint                 # ESLint over src/ + prototype.tsx
 npm run typecheck            # tsc --noEmit over `src/` + entries (excludes `**/*.test.ts`; `src/testUtils/` is included)
 npm run typecheck:tests      # Playwright specs + Vitest setup; see `docs/engineering/typed-tests.md`
+npm run typecheck:test-files # Per-file strict tsc on src/__tests__/*.test.ts (CI gate)
 npm run action-types:check   # sanity-check ACTION_TYPES array (no dupes); use with typecheck — `src/types/actionCatalogCoverage.ts` asserts every catalog string has a TypedAction branch
 npm test                     # Vitest unit tests (single run)
 npm run test:watch           # Vitest watch mode
