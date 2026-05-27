@@ -36,3 +36,4 @@ rmSync(dir, { recursive: true, force: true });
 results.sort((a, b) => b.count - a.count);
 for (const r of results) console.log(`${r.count}\t${r.rel}`);
 console.error(`\n${results.length}/${files.length} files with test-local errors`);
+if (results.length > 0) process.exit(1);
