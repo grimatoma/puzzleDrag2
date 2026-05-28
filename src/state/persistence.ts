@@ -15,7 +15,9 @@ export function loadSavedState(): SavedState | null {
   try {
     const raw = localStorage.getItem(SAVE_KEY);
     if (!raw) return null;
-    const parsed = JSON.parse(raw);
+    const parsed = JSON.parse(raw, (k, v) =>
+      (k === "__proto__" || k === "constructor" || k === "prototype") ? undefined : v
+    );
     if (!parsed || typeof parsed !== "object") return null;
     if (parsed.version !== SAVE_SCHEMA_VERSION) {
       console.warn(
