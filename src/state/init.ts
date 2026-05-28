@@ -44,6 +44,22 @@ export function generateSaveSeed() {
 }
 
 /**
+ * Generates a market seed securely if possible, falling back to Math.random.
+ */
+export function generateMarketSeed() {
+  try {
+    const c = (typeof window !== "undefined" && window.crypto) || (typeof self !== "undefined" && self.crypto);
+    if (c && typeof c.getRandomValues === "function") {
+      const buf = new Uint32Array(1);
+      c.getRandomValues(buf);
+      // Ensure it stays within 0 to 1e9-1
+      return buf[0] % 1000000000;
+    }
+  } catch { /* fall through */ }
+  return Math.floor(Math.random() * 1e9);
+}
+
+/**
  * Build a fresh state object with no I/O. This is the side-effect-free core
  * of `initialState`. Callers that want the hydrated-from-save behaviour
  * should use `initialState` instead.
@@ -55,7 +71,7 @@ export function createFreshState(overrides?: { saveSeed?: string; tools?: Record
   const o1 = makeOrder(biomeKey, level, [], [], initialRoster);
   const o2 = makeOrder(biomeKey, level, [o1.npc], [o1.key], initialRoster);
   const o3 = makeOrder(biomeKey, level, [o1.npc, o2.npc], [o1.key, o2.key], initialRoster);
-  const marketSeed = Math.floor(Math.random() * 1e9);
+  const marketSeed = generateMarketSeed();
   
   const saveSeed = overrides?.saveSeed ?? generateSaveSeed();
   const extraScytheBonus = overrides?.tools?.startingExtraScythe ? 1 : 0;
