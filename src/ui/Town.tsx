@@ -501,18 +501,6 @@ export function TownView({ state, dispatch }: { state: GameState; dispatch: Disp
                     <BuildingIllustration id={b.id} isBuilt={true} />
                     {SMOKE_BUILDINGS.has(b.id) && <BuildingSmoke />}
                     {b.id === "hearth" && (state.story?.flags as Record<string, unknown> | undefined)?.hearth_lit && <HearthGlow />}
-                    <div
-                      className="absolute bottom-full left-0 right-0 text-center font-bold text-white truncate py-0.5 px-1"
-                      style={{
-                        background: "rgba(0,0,0,.55)",
-                        fontSize: "clamp(7px,0.8vw,10px)",
-                        textShadow: "0 1px 2px rgba(0,0,0,.8)",
-                        marginBottom: 2,
-                        borderRadius: "4px 4px 0 0",
-                      }}
-                    >
-                      {b.name}
-                    </div>
                   </>
                 ) : (
                   <div
