@@ -13,8 +13,13 @@ export function isFireHazardEnabled() {
 
 // Returns true when dialogs/modals should be suppressed — useful for testing
 // pages so that auto-triggered story beats and season modals don't interrupt
-// the test flow. globalThis.__HEARTH_DISABLE_DIALOGS__ can force on/off at
-// runtime (e.g. via page.addInitScript in Playwright).
+// the test flow. Precedence: the global override wins, then the persisted
+// localStorage flag, then a build-time default. globalThis.__HEARTH_DISABLE_DIALOGS__
+// can force on/off at runtime (e.g. via page.addInitScript in Playwright).
+//
+// Production builds (the GitHub Pages deploy) default to suppressed so the
+// public site doesn't pop story beats, season summaries, and NPC bubbles;
+// dev and test (Vite dev server, Vitest, Playwright) default to enabled.
 export function isDialogsDisabled() {
   const globalOverride = globalThis.__HEARTH_DISABLE_DIALOGS__;
   if (typeof globalOverride === 'boolean') return globalOverride;
@@ -27,5 +32,5 @@ export function isDialogsDisabled() {
     // Ignore storage access failures and fall through to the default.
   }
 
-  return false;
+  return import.meta.env.PROD === true;
 }
