@@ -64,7 +64,9 @@ export default function OrdersScreen({ state, dispatch }: OrdersScreenProps) {
                 </div>
                 <div className="flex flex-col items-end gap-0.5">
                   <div className="text-[#c8923a] text-[12px] font-bold whitespace-nowrap">+{modifiedReward}◉</div>
-                  <div className="text-[10px] font-bold whitespace-nowrap" style={{ color: bandName === "Sour" ? "#bb3b2f" : bandName === "Beloved" ? "#d4a017" : bandName === "Liked" ? "#4f6b3a" : "#7a6248" }}>
+                  <div className="text-[10px] font-bold whitespace-nowrap flex items-center gap-1" style={{ color: bandName === "Sour" ? "#bb3b2f" : bandName === "Beloved" ? "#d4a017" : bandName === "Liked" ? "#4f6b3a" : "#7a6248" }}>
+                    <Icon iconKey={`bond_rank_${Math.min(8, Math.max(1, Math.floor(bond)))}`} size={14} />
+                    {bond >= 8 && <Icon iconKey="bond_8_arc" size={14} />}
                     ×{modifier.toFixed(2)} · {bandName}
                   </div>
                 </div>

@@ -172,7 +172,7 @@ function RecipeDetail({ recipeKey, recipe, inventory, built, level, state, dispa
             title={`Queue — ready in ${fmtDuration(recipeCraftMs(recipeKey))} (or skip with a gem)`}
             onClick={() => dispatch({ type: "CRAFTING/QUEUE_RECIPE", payload: { key: recipeKey }, recipeKey })}
           >
-            Queue {fmtDuration(recipeCraftMs(recipeKey))}
+            <Icon iconKey="craft_queue" size={12} /> Queue {fmtDuration(recipeCraftMs(recipeKey))}
           </DetailActionButton>
         </>
       }
@@ -312,7 +312,7 @@ function StationQueueStrip({ station, queue, gems, dispatch, now }: StationQueue
             className="hl-btn hl-btn--sm hl-btn--ghost"
             aria-label={`Skip ${itemName} with a gem`}
           >
-            <span className="inline-flex items-center gap-1">Skip <DesignIcon iconKey="design.currency.gem" size={10} /></span>
+            <span className="inline-flex items-center gap-1"><Icon iconKey="craft_queue_skip" size={12} /> Skip <DesignIcon iconKey="design.currency.gem" size={10} /></span>
           </button>
         )}
       </div>
