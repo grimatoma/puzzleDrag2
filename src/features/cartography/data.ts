@@ -97,6 +97,8 @@ export const MAP_NODES: MapNode[] = [
       'hearth', 'mill', 'bakery', 'inn', 'granary', 'larder',
       'forge', 'caravan_post', 'kitchen', 'workshop', 'powder_store',
       'portal', 'housing', 'housing2', 'housing3', 'silo',
+      'clock_tower', 'apothecary', 'sawmill', 'watchtower', 'stable',
+      'apiary', 'chapel', 'brewery', 'observatory',
     ],
     plotCount: 12,
   },
@@ -118,6 +120,7 @@ export const MAP_NODES: MapNode[] = [
     buildings: [
       'hearth', 'mill', 'granary', 'silo', 'bakery', 'larder',
       'inn', 'housing', 'housing2', 'housing3',
+      'stable', 'apiary', 'sawmill', 'brewery', 'watchtower',
     ],
     plotCount: 8,
   },
@@ -140,6 +143,7 @@ export const MAP_NODES: MapNode[] = [
     buildings: [
       'hearth', 'mill', 'granary', 'silo', 'bakery', 'larder',
       'inn', 'caravan_post', 'housing', 'housing2', 'housing3',
+      'stable', 'apiary', 'sawmill', 'brewery', 'chapel',
     ],
     plotCount: 9,
   },
@@ -173,6 +177,7 @@ export const MAP_NODES: MapNode[] = [
     buildings: [
       'hearth', 'kitchen', 'workshop', 'forge', 'barn',
       'powder_store', 'inn', 'housing', 'housing2', 'housing3',
+      'watchtower', 'apothecary', 'observatory',
     ],
     plotCount: 8,
   },
@@ -191,6 +196,7 @@ export const MAP_NODES: MapNode[] = [
     buildings: [
       'hearth', 'kitchen', 'workshop', 'forge', 'barn',
       'powder_store', 'inn', 'caravan_post', 'housing', 'housing2', 'housing3',
+      'watchtower', 'apothecary', 'observatory', 'chapel',
     ],
     plotCount: 9,
   },
@@ -255,8 +261,8 @@ export const MAP_NODES: MapNode[] = [
     seasonDrops: empty4Seasons(),
     dangers: [],
     buildings: [
-      'hearth', 'harbor_dock', 'fishmonger', 'smokehouse',
-      'inn', 'caravan_post', 'housing', 'housing2', 'housing3',
+      'hearth', 'harbor_dock', 'fishmonger', 'smokehouse', 'lighthouse',
+      'inn', 'caravan_post', 'housing', 'housing2', 'housing3', 'watchtower',
     ],
     plotCount: 8,
   },
