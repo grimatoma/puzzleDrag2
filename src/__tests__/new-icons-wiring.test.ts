@@ -65,3 +65,11 @@ describe("region icons registered", () => {
     }
   });
 });
+
+describe("keeper icons registered", () => {
+  it("keeper_* keys exist", () => {
+    for (const k of ["keeper_deer_spirit","keeper_stone_knocker","keeper_tidesinger"]) {
+      expect(ICON_REGISTRY[k], k).toBeDefined();
+    }
+  });
+});
