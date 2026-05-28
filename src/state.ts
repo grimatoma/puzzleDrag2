@@ -759,9 +759,13 @@ function coreReducer(state: GameState, action: Action): GameState {
         };
       }
       const canCoin = state.coins >= (b.cost.coins || 0);
-      const canRes = Object.entries(b.cost).every(
-        ([k, v]) => k === "coins" || k === "runes" || inventoryQty(state.inventory, k) >= v,
-      );
+      let canRes = true;
+      for (const k in b.cost) {
+        if (k !== "coins" && k !== "runes" && inventoryQty(state.inventory, k) < b.cost[k]) {
+          canRes = false;
+          break;
+        }
+      }
       // Special gate: portal requires runes (not inventory)
       const runesNeeded = b.cost.runes ?? 0;
       const canRunes = (state.runes ?? 0) >= runesNeeded;
