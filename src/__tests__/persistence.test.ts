@@ -95,4 +95,20 @@ describe("persistence", () => {
     clearSave();
     expect(localStorage.getItem(SAVE_KEY)).toBeNull();
   });
+
+  test("loadSavedState prevents prototype pollution", () => {
+    // Malicious payload aiming to pollute the prototype
+    const maliciousPayload = `{"__proto__": {"polluted": true}, "constructor": {"prototype": {"polluted": true}}, "version": ${SAVE_SCHEMA_VERSION}}`;
+    localStorage.setItem(SAVE_KEY, maliciousPayload);
+
+    const state = loadSavedState();
+
+    // Check that state doesn't have __proto__ property accessible (it shouldn't be added)
+    expect(state).toEqual({ version: SAVE_SCHEMA_VERSION });
+
+    // Additionally verify object prototypes are not polluted
+    const emptyObj = {} as Record<string, unknown>;
+    expect(emptyObj.polluted).toBeUndefined();
+    expect((state as Record<string, unknown>).polluted).toBeUndefined();
+  });
 });
