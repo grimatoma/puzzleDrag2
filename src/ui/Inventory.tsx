@@ -619,7 +619,12 @@ export function InventoryGrid({
 
   const matchesTags = (key: string) => {
     if (!activeTags || activeTags.length === 0) return true;
-    return activeTags.every((tag) => itemHasTag(key, tag) || sourceTagsForItem(key, { recipesByOutput }).includes(tag));
+    let cachedSourceTags: string[] | undefined;
+    return activeTags.every((tag) => {
+      if (itemHasTag(key, tag)) return true;
+      if (!cachedSourceTags) cachedSourceTags = sourceTagsForItem(key, { recipesByOutput });
+      return cachedSourceTags.includes(tag);
+    });
   };
 
   const resourceCellsBy = new Map<string, BiomeResourceEntry>(resources.map((r) => [r.key, r]));
