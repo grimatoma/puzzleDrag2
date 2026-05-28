@@ -4,6 +4,13 @@ Handoff doc for **Phase 1–2** (Claude Code or Cursor). Phase 0 is tracked here
 
 **Related docs:** `catalog-enums.md`, `typed-tests.md`.
 
+> **Status: COMPLETE (2026-05-28).** Phases 1 and 2a–2d are merged to `main`
+> (PRs #680, #681, #682, #683, #684). Two follow-ups also landed: the
+> `no-restricted-syntax` rule that forbids `state as unknown as …` was fixed so
+> it actually fires (#685), and all 56 pre-existing `HostState` casts were
+> refactored out of `src/` (#686), leaving zero such casts. Remaining items
+> below are **Phase 3 guardrails** (non-blocking) and the documented deferrals.
+
 ---
 
 ## Executive summary
@@ -145,25 +152,41 @@ Remove `[key: string]: unknown` (and similar escape hatches) from `GameState` in
 
 ## Definition of “migration complete”
 
-1. PR #678 on `main`.  
-2. Phase 1 merged.  
-3. CI runs `typecheck` + `node tools/scan-test-tsc.mjs`.  
-4. `@typescript-eslint/no-explicit-any` holds in `src/`.  
-5. Board-only keys (`rat`, `lava`, `mysterious_ore`) documented or promoted to `BoardCellKey` union.
+1. PR #678 on `main`. ✅
+2. Phase 1 merged. ✅ (#680)
+3. CI runs `typecheck` + `node tools/scan-test-tsc.mjs`. ✅
+4. `@typescript-eslint/no-explicit-any` holds in `src/`. ✅
+5. Board-only keys (`rat`, `lava`, `mysterious_ore`) documented or promoted to `BoardCellKey` union. ⏳ still `string` on `Tile.key`; documented in `catalog-enums.md` "Board-only keys". Promotion to a `BoardCellKey` union is the one open item from this list.
+
+All five core criteria are met (#5 is documented rather than promoted — see Phase 3 / deferrals).
 
 ---
 
-## PR sequence
+## PR sequence (as shipped)
 
-| # | PR | Owner |
+| # | PR | Status |
 |---|-----|--------|
-| — | #678 merged | — |
-| 0 | `chore: CI scan-test-tsc` | Composer |
-| 1 | `refactor: drop GameState index signature` | Claude Code |
-| 2 | `refactor: type Phaser registry bridge` | Claude Code |
-| 3 | `refactor: tighten action payload keys` | Either |
-| 4 | `refactor: typed config maps (decorations/boons/workers)` | Either |
-| 5 | `chore: type test globals; widen typecheck:tests` | Either |
+| — | #678 `feat: catalog enums and typed keys` | merged |
+| 0 | #679 `docs: TS migration plan; CI typecheck:test-files` | merged |
+| 1 | #680 `refactor: drop GameState index signature` | merged |
+| 2a | #681 `refactor: type Phaser registry bridge` | merged |
+| 2b | #682 `refactor: tighten action payload catalog keys` | merged |
+| 2c | #683 `refactor: typed decorations/boons/workers config maps` | merged |
+| 2d | #684 `refactor: ITEMS satisfies Record<ItemKey, ItemEntry>` | merged |
+| follow-up | #685 `fix: actually enforce the no-state-as-unknown ESLint rule` | merged |
+| follow-up | #686 `refactor: drop all HostState state-as-unknown casts` | merged |
+
+---
+
+## Phase 3 — Guardrails (open, non-blocking)
+
+These were always scoped as follow-ups (see "Phase 3 — Guardrails" earlier in this doc) and remain open:
+
+- 3.1 — Replace test `Record<string, any>` with minimal interfaces (`tests/playwright-env.d.ts`, `tests/e2e/helpers.ts`).
+- 3.2 — Widen `npm run typecheck:tests` to the full Vitest tree (`typed-tests.md` roadmap).
+- 3.3 — Consider `allowJs: false` once no app JS remains under `src/`.
+- 3.4 — Optional CI "any-budget" script on `src/`.
+- Promote board-only keys (`rat`, `lava`, `mysterious_ore`) to a `BoardCellKey` union (criterion #5).
 
 ---
 

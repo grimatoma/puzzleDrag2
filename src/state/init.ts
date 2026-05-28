@@ -232,7 +232,7 @@ export function initialState(overrides?: { saveSeed?: string; tools?: Record<str
     // so just clearing toolPending is enough.
     const savedTools = (savedWithoutLegacy.tools as Record<string, number | boolean | undefined> | undefined) ?? {};
     let restoredTools: Record<string, number | boolean | undefined> = { ...savedTools };
-    if (savedWithoutLegacy.fertilizerActive || savedWithoutLegacy.fillBiasTarget) {
+    if (savedWithoutLegacy.fillBiasTarget) {
       restoredTools = { ...restoredTools, fertilizer: (Number(restoredTools.fertilizer) || 0) + 1 };
     }
     const savedPending = savedWithoutLegacy.toolPending as string | null | undefined;
