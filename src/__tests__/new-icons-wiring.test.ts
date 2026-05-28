@@ -42,3 +42,11 @@ describe("boon icons wired", () => {
     }
   });
 });
+
+describe("currency icons registered", () => {
+  it("cur_*/token_* keys exist", () => {
+    for (const k of ["cur_embers","cur_core_ingot","cur_gems","cur_heirloom","token_hearth_forest","token_hearth_stone","token_hearth_tide"]) {
+      expect(ICON_REGISTRY[k], k).toBeDefined();
+    }
+  });
+});

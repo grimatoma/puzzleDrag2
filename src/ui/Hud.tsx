@@ -1,6 +1,6 @@
 import { SEASONS } from "../constants.js";
 import { XP_PER_LEVEL } from "../features/almanac/data.js";
-import { seasonIndexInSession, hearthTokenCount } from "../features/zones/data.js";
+import { seasonIndexInSession } from "../features/zones/data.js";
 import LegacyIcon from "./Icon.jsx";
 import Icon from "./primitives/Icon.jsx";
 import Pill from "./primitives/Pill.jsx";
@@ -69,13 +69,15 @@ function CurrencyContent({ state }: { state: GameState }) {
   const embers = state.embers ?? 0;
   const ingots = state.coreIngots ?? 0;
   const gems = state.gems ?? 0;
-  const tokens = hearthTokenCount(state);
-  const rows = [
-    { iconKey: "design.currency.coin",          label: "Coins",         value: coins.toLocaleString(), show: true },
-    { iconKey: "design.currency.ember",         label: "Embers",        value: embers,                 show: embers > 0 },
-    { iconKey: "design.currency.ingot",         label: "Core Ingots",   value: ingots,                 show: ingots > 0 },
-    { iconKey: "design.currency.gem",           label: "Gems",          value: gems,                   show: gems > 0 },
-    { iconKey: "design.currency.hearth-token",  label: "Hearth-Tokens", value: `${tokens}/3`,          show: tokens > 0 },
+  const h = (state.heirlooms ?? {}) as Record<string, number>;
+  const rows: { iconKey: string; label: string; value: string | number; show: boolean }[] = [
+    { iconKey: "design.currency.coin", label: "Coins",        value: coins.toLocaleString(), show: true },
+    { iconKey: "cur_embers",           label: "Embers",       value: embers,                 show: embers > 0 },
+    { iconKey: "cur_core_ingot",       label: "Core Ingots",  value: ingots,                 show: ingots > 0 },
+    { iconKey: "cur_gems",             label: "Gems",         value: gems,                   show: gems > 0 },
+    { iconKey: "token_hearth_forest",  label: "Forest Token", value: "✓",                    show: (h.heirloomSeed ?? 0) >= 1 },
+    { iconKey: "token_hearth_stone",   label: "Stone Token",  value: "✓",                    show: (h.pactIron ?? 0) >= 1 },
+    { iconKey: "token_hearth_tide",    label: "Tide Token",   value: "✓",                    show: (h.tidesingerPearl ?? 0) >= 1 },
   ].filter((r) => r.show);
   return (
     <div className="flex flex-col gap-1 min-w-[200px]">
