@@ -31,8 +31,8 @@ export default function GranaryIllustration({ isBuilt }: { isBuilt?: boolean }) 
       {/* --- TOWER BODY (round, stone-banded) --- */}
       {/* main cylinder — left shadow half */}
       <ellipse cx="0" cy="-44" rx="34" ry="44" fill={PAL.wallShadow} />
-      {/* right lit half */}
-      <rect x="-34" y="-88" width="55" height="80" fill={PAL.wallLight} />
+      {/* lit face covers full diameter; left shadow strip re-darkens the left edge below */}
+      <rect x="-34" y="-88" width="68" height="80" fill={PAL.wallLight} />
       <ellipse cx="0" cy="-44" rx="34" ry="44" fill="none" stroke={PAL.stone} strokeWidth=".4" opacity=".4" />
 
       {/* horizontal stone banding (every 12 units up the tower) */}
