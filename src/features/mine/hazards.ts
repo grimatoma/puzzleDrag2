@@ -34,14 +34,6 @@ interface MineHazardsState {
   [k: string]: unknown;
 }
 
-interface MineHostState {
-  biome?: string;
-  boss?: unknown;
-  hazards?: MineHazardsState;
-  grid?: MineGridCell[][];
-  turnsUsed?: number;
-}
-
 interface WorkerEffectsView {
   hazardSpawnReduce?: Record<string, number>;
 }
@@ -108,9 +100,9 @@ export const HAZARDS: HazardDef[] = [
 ];
 
 function hazardsActive(state: GameState): number {
-  // eslint-disable-next-line no-restricted-syntax -- pre-existing HostState cast; tracked for follow-up cleanup
-  const s = state as unknown as MineHostState;
-  const h: MineHazardsState = s.hazards ?? {};
+  // `Hazards` on GameState has an open index sig; the narrow per-hazard fields
+  // we care about land on MineHazardsState — cast the value, not the state.
+  const h = (state.hazards ?? {}) as MineHazardsState;
   return (h.caveIn ? 1 : 0) + (h.gasVent ? 1 : 0) + (h.lava ? 1 : 0) + (h.mole ? 1 : 0);
 }
 
@@ -118,10 +110,8 @@ function hazardsActive(state: GameState): number {
  * Roll for a hazard spawn. Returns a hazard descriptor or null.
  */
 export function rollHazard(state: GameState, rng: () => number = Math.random, allowedHazards: string[] = ["cave_in", "gas_vent", "lava", "mole"]): Record<string, unknown> | null {
-  // eslint-disable-next-line no-restricted-syntax -- pre-existing HostState cast; tracked for follow-up cleanup
-  const s = state as unknown as MineHostState;
-  if (s.biome !== "mine") return null;
-  if (s.boss) return null;
+  if (state.biome !== "mine") return null;
+  if (state.boss) return null;
   if (hazardsActive(state) > 0) return null;
 
   // Apply base rate check
@@ -152,7 +142,7 @@ export function rollHazard(state: GameState, rng: () => number = Math.random, al
     if (reduceR && rng() < reduceR) return null;
   }
 
-  return { id: picked.id, ...picked.spawn(s.grid ?? [], rng) };
+  return { id: picked.id, ...picked.spawn((state.grid ?? []) as MineGridCell[][], rng) };
 }
 
 /**
@@ -178,15 +168,14 @@ export function tickHazards(state: GameState, rng: () => number = Math.random): 
 }
 
 function _tickGasVent(state: GameState): GameState {
-  // eslint-disable-next-line no-restricted-syntax -- pre-existing HostState cast; tracked for follow-up cleanup
-  const s = state as unknown as MineHostState;
-  if (!s.hazards?.gasVent) return state;
-  const v = s.hazards.gasVent;
+  const hazards = (state.hazards ?? {}) as MineHazardsState;
+  if (!hazards.gasVent) return state;
+  const v = hazards.gasVent;
   if (v.turnsRemaining > 1) {
     return {
       ...state,
       hazards: {
-        ...s.hazards,
+        ...hazards,
         gasVent: { ...v, turnsRemaining: v.turnsRemaining - 1 },
       },
     } as GameState;
@@ -194,23 +183,23 @@ function _tickGasVent(state: GameState): GameState {
   // Expired: costs 1 turn
   return {
     ...state,
-    hazards: { ...s.hazards, gasVent: null },
-    turnsUsed: (s.turnsUsed ?? 0) + 1,
+    hazards: { ...hazards, gasVent: null },
+    turnsUsed: (state.turnsUsed ?? 0) + 1,
     _hazardFloater: "You cough through it.",
   } as GameState;
 }
 
 function _tickLava(state: GameState, rng: () => number): GameState {
-  // eslint-disable-next-line no-restricted-syntax -- pre-existing HostState cast; tracked for follow-up cleanup
-  const s = state as unknown as MineHostState;
-  if (!s.hazards?.lava) return state;
-  const lava = s.hazards.lava;
+  const hazards = (state.hazards ?? {}) as MineHazardsState;
+  if (!hazards.lava) return state;
+  const lava = hazards.lava;
 
   // If no grid, bail
-  if (!s.grid) return state;
+  const gridRaw = state.grid as MineGridCell[][] | undefined;
+  if (!gridRaw) return state;
 
-  const rows = s.grid.length;
-  const cols = s.grid[0].length;
+  const rows = gridRaw.length;
+  const cols = gridRaw[0].length;
   const cells: LavaCell[] = lava.cells;
 
   // Build set of occupied lava cells
@@ -241,7 +230,7 @@ function _tickLava(state: GameState, rng: () => number): GameState {
   const newCells = [...cells, pick];
 
   // Clear the tile at the new lava position (destroy resource)
-  const grid: MineGridCell[][] = s.grid.map((row: MineGridCell[], ri: number) =>
+  const grid: MineGridCell[][] = gridRaw.map((row: MineGridCell[], ri: number) =>
     row.map((t: MineGridCell, ci: number) =>
       ri === pick.row && ci === pick.col ? { ...t, key: "lava" } : t,
     ),
@@ -251,21 +240,21 @@ function _tickLava(state: GameState, rng: () => number): GameState {
     ...state,
     grid,
     hazards: {
-      ...s.hazards,
+      ...hazards,
       lava: { ...lava, cells: newCells },
     },
   } as GameState;
 }
 
 function _tickMole(state: GameState, rng: () => number): GameState {
-  // eslint-disable-next-line no-restricted-syntax -- pre-existing HostState cast; tracked for follow-up cleanup
-  const s = state as unknown as MineHostState;
-  if (!s.hazards?.mole) return state;
-  const mole = s.hazards.mole;
+  const hazards = (state.hazards ?? {}) as MineHazardsState;
+  if (!hazards.mole) return state;
+  const mole = hazards.mole;
 
-  if (!s.grid) return state;
-  const rows = s.grid.length;
-  const cols = s.grid[0].length;
+  const gridRaw = state.grid as MineGridCell[][] | undefined;
+  if (!gridRaw) return state;
+  const rows = gridRaw.length;
+  const cols = gridRaw[0].length;
 
   // On timer > 0: decrement and consume one adjacent tile
   if (mole.turnsRemaining > 0) {
@@ -277,14 +266,14 @@ function _tickMole(state: GameState, rng: () => number): GameState {
       const nr = mole.row + dr;
       const nc = mole.col + dc;
       if (nr < 0 || nr >= rows || nc < 0 || nc >= cols) continue;
-      const t = s.grid[nr][nc];
+      const t = gridRaw[nr][nc];
       if (!t.consumed && !t.rubble) adj.push({ row: nr, col: nc });
     }
 
-    let grid: MineGridCell[][] = s.grid;
+    let grid: MineGridCell[][] = gridRaw;
     if (adj.length > 0) {
       const target = adj[Math.floor(rng() * adj.length)];
-      grid = s.grid.map((row: MineGridCell[], ri: number) =>
+      grid = gridRaw.map((row: MineGridCell[], ri: number) =>
         row.map((t: MineGridCell, ci: number) =>
           ri === target.row && ci === target.col ? { ...t, consumed: true } : t,
         ),
@@ -295,7 +284,7 @@ function _tickMole(state: GameState, rng: () => number): GameState {
       ...state,
       grid,
       hazards: {
-        ...s.hazards,
+        ...hazards,
         mole: { ...mole, turnsRemaining: newTurns },
       },
     } as GameState;
@@ -307,7 +296,7 @@ function _tickMole(state: GameState, rng: () => number): GameState {
     const nr = mole.row + dr;
     const nc = mole.col + dc;
     if (nr < 0 || nr >= rows || nc < 0 || nc >= cols) continue;
-    const t = s.grid[nr][nc];
+    const t = gridRaw[nr][nc];
     if (!t.rubble && !t.consumed) freeAdj.push({ row: nr, col: nc });
   }
 
@@ -322,7 +311,7 @@ function _tickMole(state: GameState, rng: () => number): GameState {
   return {
     ...state,
     hazards: {
-      ...s.hazards,
+      ...hazards,
       mole: { row: newPos.row, col: newPos.col, turnsRemaining: 3 },
     },
   } as GameState;
@@ -334,12 +323,11 @@ interface ChainCell { key?: string | null; row: number; col: number }
  * Attempt to clear a cave-in by chaining 3+ stone tiles in an adjacent row.
  */
 export function clearCaveIn(state: GameState, chain: ChainCell[]): GameState {
-  // eslint-disable-next-line no-restricted-syntax -- pre-existing HostState cast; tracked for follow-up cleanup
-  const s = state as unknown as MineHostState;
-  if (!s.hazards?.caveIn) return state;
-  const targetRow = s.hazards.caveIn.row;
+  const hazards = (state.hazards ?? {}) as MineHazardsState;
+  if (!hazards.caveIn) return state;
+  const targetRow = hazards.caveIn.row;
   const stoneCount = chain.filter((t: ChainCell) => t.key === "tile_mine_stone").length;
   const nearRow = chain.some((t: ChainCell) => Math.abs(t.row - targetRow) === 1);
   if (stoneCount < 3 || !nearRow) return state;
-  return { ...state, hazards: { ...s.hazards, caveIn: null } } as GameState;
+  return { ...state, hazards: { ...hazards, caveIn: null } } as GameState;
 }

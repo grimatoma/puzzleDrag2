@@ -362,17 +362,10 @@ function StationTabIndicator({ queue, now }: StationTabIndicatorProps) {
   );
 }
 
-interface DecorHostState {
-  coins?: number;
-  inventory?: Record<string, number>;
-}
-
 function canAffordDecor(decor: DecorDef, state: GameState): boolean {
-  // eslint-disable-next-line no-restricted-syntax -- pre-existing HostState cast; tracked for follow-up cleanup
-  const s = state as unknown as DecorHostState;
   const { cost } = decor;
-  if ((s.coins ?? 0) < (cost.coins ?? 0)) return false;
-  const inv: Record<string, number> = s.inventory ?? {};
+  if ((state.coins ?? 0) < (cost.coins ?? 0)) return false;
+  const inv: Record<string, number> = state.inventory ?? {};
   for (const [k, v] of Object.entries(cost)) {
     if (k === "coins") continue;
     if ((inv[k] ?? 0) < v) return false;
@@ -393,19 +386,17 @@ function DecorIcon({ decor, size = 42 }: { decor: DecorDef; size?: number }) {
 }
 
 function decorCostEntries(decor: DecorDef, state: GameState) {
-  // eslint-disable-next-line no-restricted-syntax -- pre-existing HostState cast; tracked for follow-up cleanup
-  const s = state as unknown as DecorHostState;
-  const inv: Record<string, number> = s.inventory ?? {};
+  const inv: Record<string, number> = state.inventory ?? {};
   const itemMap = ITEMS as unknown as Record<string, ItemDef | undefined>;
   return Object.entries(decor.cost ?? {}).map(([key, amount]: [string, number]) => ({
     key,
     label: key === "coins" ? "Coins" : itemMap[key]?.label || key,
     amount,
     icon: key === "coins" ? <DesignIcon iconKey="design.currency.coin" size={18} /> : <Icon iconKey={key} size={18} />,
-    have: key === "coins" ? (s.coins ?? 0) : (inv[key] ?? 0),
+    have: key === "coins" ? (state.coins ?? 0) : (inv[key] ?? 0),
     showHave: true,
     check: true,
-    ok: key === "coins" ? (s.coins ?? 0) >= amount : (inv[key] ?? 0) >= amount,
+    ok: key === "coins" ? (state.coins ?? 0) >= amount : (inv[key] ?? 0) >= amount,
   }));
 }
 
@@ -481,22 +472,11 @@ interface CraftingScreenProps {
   dispatch: Dispatch;
 }
 
-interface CraftingHostStateUI {
-  inventory?: Record<string, number>;
-  level?: number;
-  craftedTotals?: Record<string, number>;
-  craftingTab?: string;
-  craftQueues?: Record<string, CraftQueueEntry[]>;
-  gems?: number;
-}
-
 export default function CraftingScreen({ state, dispatch }: CraftingScreenProps) {
-  // eslint-disable-next-line no-restricted-syntax -- pre-existing HostState cast; tracked for follow-up cleanup
-  const s = state as unknown as CraftingHostStateUI;
-  const inventory: Record<string, number> = s.inventory ?? {};
-  const level: number = s.level ?? 1;
-  const craftedTotals: Record<string, number> = s.craftedTotals ?? {};
-  const craftingTab = s.craftingTab;
+  const inventory: Record<string, number> = state.inventory ?? {};
+  const level: number = state.level ?? 1;
+  const craftedTotals: Record<string, number> = state.craftedTotals ?? {};
+  const craftingTab = state.craftingTab;
   const built = locBuilt(state) as Record<string, unknown>;
 
   // Stations that exist (built or not) — always show all three tabs, but indicate built status
@@ -538,7 +518,7 @@ export default function CraftingScreen({ state, dispatch }: CraftingScreenProps)
   const decorations = Object.values(DECORATIONS) as DecorDef[];
   const selectedDecor = decorations.find((decor: DecorDef) => decor.id === selectedDecorId) ?? decorations[0] ?? null;
 
-  const craftQueues: Record<string, CraftQueueEntry[]> = s.craftQueues ?? {};
+  const craftQueues: Record<string, CraftQueueEntry[]> = state.craftQueues ?? {};
   const activeStationQueue = craftQueues[activeTab] ?? [];
   const hasAnyQueue = Object.values(craftQueues).some((q) => !!q && q.length > 0);
 
@@ -592,7 +572,7 @@ export default function CraftingScreen({ state, dispatch }: CraftingScreenProps)
         <StationQueueStrip
           station={activeTab}
           queue={activeStationQueue}
-          gems={s.gems}
+          gems={state.gems}
           dispatch={dispatch}
           now={now}
         />

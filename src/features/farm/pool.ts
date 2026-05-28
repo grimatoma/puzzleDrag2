@@ -10,16 +10,6 @@ interface BiomeDef {
   pool: string[];
 }
 
-interface PoolHostState {
-  biome?: string;
-  biomeKey?: string;
-  season?: string | number;
-  tileCollection?: {
-    activeFilter?: (k: string) => boolean;
-    activeByCategory?: Record<string, string | null>;
-  };
-  _workerEffects?: { effectivePoolWeights?: Record<string, number> };
-}
 
 interface AggregatedAbilities {
   effectivePoolWeights?: Record<string, number>;
@@ -30,29 +20,31 @@ interface AggregatedAbilities {
  * Pure function — no side effects.
  */
 export function getEffectivePool(state: GameState): string[] {
-  // eslint-disable-next-line no-restricted-syntax -- pre-existing HostState cast; tracked for follow-up cleanup
-  const s = state as unknown as PoolHostState;
   const biomeMap = BIOMES as unknown as Record<string, BiomeDef>;
-  const biome: BiomeDef = biomeMap[s.biome ?? ""] ?? biomeMap[s.biomeKey ?? ""] ?? biomeMap.farm;
+  const biome: BiomeDef = biomeMap[state.biome ?? ""] ?? biomeMap[state.biomeKey ?? ""] ?? biomeMap.farm;
   let bag: string[] = [...biome.pool];
 
-  if (typeof s.tileCollection?.activeFilter === "function") {
-    const filter = s.tileCollection.activeFilter;
+  if (typeof state.tileCollection?.activeFilter === "function") {
+    const filter = state.tileCollection.activeFilter;
     bag = bag.filter((k: string) => filter(k) !== false);
   }
 
   const agg = computeAggregatedAbilities(state) as AggregatedAbilities;
+  // `_workerEffects` is a test-only synthetic snapshot some tests pass on top
+  // of `state`; cast at the access boundary so production callers (no field)
+  // just fall through to the aggregator output.
+  const workerEffects = (state as { _workerEffects?: { effectivePoolWeights?: Record<string, number> } })._workerEffects;
   const poolWeights: Record<string, number> = {
-    ...(s._workerEffects?.effectivePoolWeights ?? {}),
+    ...(workerEffects?.effectivePoolWeights ?? {}),
     ...(agg.effectivePoolWeights ?? {}),
   };
-  bag = applyPoolWeightAdds(bag, poolWeights, s.tileCollection?.activeByCategory);
+  bag = applyPoolWeightAdds(bag, poolWeights, state.tileCollection?.activeByCategory);
 
-  if ((s.biome ?? s.biomeKey) === "farm") {
+  if ((state.biome ?? state.biomeKey) === "farm") {
     const seasonName: string =
-      typeof s.season === "string"
-        ? s.season
-        : (["Spring", "Summer", "Autumn", "Winter"][((s.season as number) ?? 0) % 4] ?? "Spring");
+      typeof state.season === "string"
+        ? state.season
+        : (["Spring", "Summer", "Autumn", "Winter"][((state.season as number) ?? 0) % 4] ?? "Spring");
     bag = applySeasonPoolMods(bag, seasonName);
   }
 
