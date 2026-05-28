@@ -15,18 +15,12 @@ import {
 } from "./data.js";
 import type { GameState, Dispatch } from "../../types/state.js";
 import Icon from "../../ui/Icon.jsx";
+import IconCanvas, { hasIcon } from "../../ui/IconCanvas.jsx";
 import DesignIcon from "../../ui/primitives/Icon.jsx";
 import ActionCard from "../../ui/primitives/ActionCard.jsx";
 import { RewardChip } from "../../ui/primitives/Chip.jsx";
 
 export const viewKey = "boons";
-
-export function boonIconFor(effectType: string): string {
-  if (effectType === "coin_gain_mult") return "boon_coin_mult";
-  if (effectType === "bond_gain_mult") return "boon_bond_mult";
-  if (effectType.startsWith("chain")) return "boon_chain_mult";
-  return "boon_coin_mult";
-}
 
 // Tabbing by zone-type keeps the catalog reasonable on small screens.
 const TYPE_LABELS: Record<string, string> = { farm: "Farm", mine: "Mine", harbor: "Harbor" };
@@ -77,6 +71,11 @@ function BoonCard({ state, dispatch, boon }: BoonCardProps) {
   const canBuy = !owned && unlocked && canAffordBoon(state, boon);
   const pathPart = boon.catalogKey?.split("_")[1] ?? "coexist";
   const color: PathColor = PATH_COLOR[pathPart] ?? PATH_COLOR.coexist;
+  const effectKey = boon.effect?.type === "coin_gain_mult"
+    ? "boon_coin_mult"
+    : boon.effect?.type === "bond_gain_mult"
+      ? "boon_bond_mult"
+      : null;
   return (
     <ActionCard
       className="gap-1"
@@ -88,7 +87,12 @@ function BoonCard({ state, dispatch, boon }: BoonCardProps) {
       }}
     >
       <div className="flex items-center justify-between gap-2">
-        <div className="font-bold text-[14px] flex items-center gap-1"><Icon iconKey={boonIconFor(boon.effect.type)} size={18} />{boon.name}</div>
+        <div className="flex items-center gap-1.5 min-w-0">
+          {effectKey && hasIcon(effectKey) && (
+            <IconCanvas iconKey={effectKey} size={20} background={null} rounded={false} title={boon.effect?.type} className="flex-shrink-0" />
+          )}
+          <span className="font-bold text-[14px]">{boon.name}</span>
+        </div>
         {owned ? (
           <RewardChip className="text-[10px] bg-[#a8d4a0] border-[#3a7a1a] text-[#1f3a10]">
             <CheckGlyph size={10} />
@@ -179,13 +183,23 @@ export default function BoonScreen({ state, dispatch }: BoonScreenProps) {
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div className="flex flex-col gap-2">
-            <div className="hl-heading"><Icon iconKey="boon_branch_coexist" size={16} /> {PATH_LABELS.coexist}</div>
+            <div className="hl-heading flex items-center gap-1.5">
+              {hasIcon("boon_branch_coexist") && (
+                <IconCanvas iconKey="boon_branch_coexist" size={20} background={null} rounded={false} title={PATH_LABELS.coexist} />
+              )}
+              {PATH_LABELS.coexist}
+            </div>
             {coexistList.map((b: BoonDef) => (
               <BoonCard key={b.id} state={state} dispatch={dispatch} boon={{ ...b, catalogKey: `${type}_coexist` }} />
             ))}
           </div>
           <div className="flex flex-col gap-2">
-            <div className="hl-heading"><Icon iconKey="boon_branch_drive_out" size={16} /> {PATH_LABELS.driveout}</div>
+            <div className="hl-heading flex items-center gap-1.5">
+              {hasIcon("boon_branch_drive_out") && (
+                <IconCanvas iconKey="boon_branch_drive_out" size={20} background={null} rounded={false} title={PATH_LABELS.driveout} />
+              )}
+              {PATH_LABELS.driveout}
+            </div>
             {driveoutList.map((b: BoonDef) => (
               <BoonCard key={b.id} state={state} dispatch={dispatch} boon={{ ...b, catalogKey: `${type}_driveout` }} />
             ))}

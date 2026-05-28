@@ -30,13 +30,8 @@ describe("quest icons registered", () => {
   });
 });
 
-import { boonIconFor } from "../features/boons/index.jsx";
-
-describe("boon icons wired", () => {
-  it("boonIconFor maps effect types to registered keys", () => {
-    expect(boonIconFor("coin_gain_mult")).toBe("boon_coin_mult");
-    expect(boonIconFor("bond_gain_mult")).toBe("boon_bond_mult");
-    expect(boonIconFor("chain_gain_mult")).toBe("boon_chain_mult");
+describe("boon icons registered", () => {
+  it("boon_* keys exist", () => {
     for (const k of ["boon_coin_mult","boon_bond_mult","boon_chain_mult","boon_branch_coexist","boon_branch_drive_out"]) {
       expect(ICON_REGISTRY[k], k).toBeDefined();
     }

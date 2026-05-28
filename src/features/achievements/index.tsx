@@ -9,6 +9,7 @@ const TABS = ["trophies", "collection"];
 import { ACHIEVEMENTS, type AchievementDef } from "./data.js";
 import { MAGIC_TOOLS } from "../portal/data.js";
 import Icon from "../../ui/Icon.jsx";
+import IconCanvas, { hasIcon } from "../../ui/IconCanvas.jsx";
 import { FeaturePanel } from "../_shared/uiTypes.js";
 
 interface GlyphProps { size?: number }
@@ -78,7 +79,8 @@ interface TrophyCardProps {
 function TrophyCard({ achievement, current, trophyState }: TrophyCardProps) {
   // canonical shape uses threshold; legacy shape uses target
   const { name, desc, threshold, target: targetLegacy } = achievement;
-  const icon: ReactNode | string = (achievement as AchievementDef & { icon?: ReactNode | string }).icon ?? null;
+  const icon: ReactNode = (achievement as AchievementDef & { icon?: ReactNode }).icon ?? null;
+  const iconKey = `ach_${achievement.id}`;
   const target = threshold ?? targetLegacy ?? 1;
   const unlocked = !!trophyState;
   const claimed  = trophyState === "claimed";
@@ -93,7 +95,7 @@ function TrophyCard({ achievement, current, trophyState }: TrophyCardProps) {
       {/* Icon */}
       <div className={`text-[22px] w-8 flex-shrink-0 text-center leading-none flex items-center justify-center ${!unlocked ? "grayscale opacity-40 text-on-panel-faint" : ""}`}>
         {unlocked
-          ? (typeof icon === "string" ? <Icon iconKey={icon} size={22} /> : icon)
+          ? (hasIcon(iconKey) ? <IconCanvas iconKey={iconKey} size={30} background={null} rounded={false} title={name} /> : icon)
           : <LockGlyph size={18} />}
       </div>
 
