@@ -9,10 +9,6 @@ export default function InnIllustration({ isBuilt }: { isBuilt?: boolean }) {
          preserveAspectRatio="xMidYMax meet" style={f}>
       <defs>
         <RoofTiles id="inn-tiles" color={PAL.terracotta} />
-        <pattern id="inn-timber-frame" patternUnits="userSpaceOnUse" width="20" height="20">
-          <rect width="20" height="20" fill={PAL.wallLight} />
-          <line x1="0" y1="0" x2="20" y2="20" stroke={PAL.timber} strokeWidth="1.2" opacity=".35" />
-        </pattern>
       </defs>
 
       {/* ground shadow */}

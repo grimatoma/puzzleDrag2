@@ -13,14 +13,6 @@ export default function GranaryIllustration({ isBuilt }: { isBuilt?: boolean }) 
           <rect x="0" y="0" width="8" height="4" fill="none" stroke={PAL.stoneShade} strokeWidth=".5" opacity=".55" />
           <rect x="8" y="4" width="8" height="4" fill="none" stroke={PAL.stoneShade} strokeWidth=".5" opacity=".55" />
         </pattern>
-        <radialGradient id="granary-wall-grad" cx="60%" cy="40%" r="70%">
-          <stop offset="0%" stopColor={PAL.wallLight} />
-          <stop offset="100%" stopColor={PAL.wallShadow} />
-        </radialGradient>
-        <clipPath id="granary-tower-clip">
-          <ellipse cx="0" cy="0" rx="34" ry="14" />
-          <rect x="-34" y="0" width="68" height="80" />
-        </clipPath>
       </defs>
 
       {/* ground shadow */}
