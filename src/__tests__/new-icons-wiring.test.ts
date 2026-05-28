@@ -21,3 +21,11 @@ describe("achievement icons wired", () => {
     }
   });
 });
+
+describe("quest icons registered", () => {
+  it("quest_<category> + quest_book keys all exist", () => {
+    for (const k of ["quest_collect","quest_craft","quest_order","quest_tool","quest_chain","quest_book"]) {
+      expect(ICON_REGISTRY[k], k).toBeDefined();
+    }
+  });
+});

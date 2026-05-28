@@ -5,6 +5,7 @@ import FeaturePanel from "../../ui/primitives/FeaturePanel.jsx";
 import ActionCard, { ProgressBar } from "../../ui/primitives/ActionCard.jsx";
 import type { Dispatch, GameState } from "../../types/state.js";
 import type { Quest } from "./data.js";
+import Icon from "../../ui/Icon.jsx";
 
 interface DisplayReward {
   coins?: number;
@@ -114,7 +115,10 @@ function QuestCard({ q, dispatch }: QuestCardProps) {
       }`}
     >
       <div className="flex items-start justify-between gap-2">
-        <ActionCard.Title className="text-[12px] flex-1">{questLabel(q)}</ActionCard.Title>
+        <ActionCard.Title className="text-[12px] flex-1 flex items-center gap-1">
+          <Icon iconKey={`quest_${(q as { category?: string }).category ?? "collect"}`} size={20} />
+          {questLabel(q)}
+        </ActionCard.Title>
         {claimable && (
           <span className="relative mr-1 mt-0.5">
             <span className="absolute inline-flex h-3 w-3 rounded-full bg-[#f1b34c] opacity-75 animate-ping" />
@@ -281,6 +285,11 @@ export default function QuestsScreen({ state, dispatch, initialTab }: QuestsScre
 
   return (
     <FeaturePanel>
+      <FeaturePanel.Header>
+        <div className="hl-title flex items-center gap-2">
+          <Icon iconKey="quest_book" size={22} /> Quests
+        </div>
+      </FeaturePanel.Header>
       <FeaturePanel.Tabs>
         {["daily", "almanac"].map((t) => (
           <FeaturePanel.Tab
