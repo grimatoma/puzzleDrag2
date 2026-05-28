@@ -1056,12 +1056,34 @@ export class GameScene extends Phaser.Scene {
     // completed before this one was triggered).
     if (this.board) { this.board.destroy(); this.board = null; }
 
-    // Create board container as tween target + visual spin overlay.
-    // Keep a local reference so cleanup doesn't race with nested reshuffles.
+    // Outer container holds the shuffle visuals. Kept on `this.board` so the
+    // weight-pulse in emitCollectParticles still finds a live target.
     const spinContainer = this.add.container(cx, cy).setDepth(18);
     this.board = spinContainer;
-    const spinOverlay = this.add.rectangle(0, 0, boardW, boardH, 0x2b2218, 0.35);
-    spinContainer.add(spinOverlay);
+
+    // Clip the whole effect to the board rect so nothing ever spills past the
+    // edges. Geometry-mask graphics stay off the display list (make.graphics).
+    const maskShape = this.make.graphics();
+    maskShape.fillStyle(0xffffff);
+    maskShape.fillRect(this.boardX, this.boardY, boardW, boardH);
+    spinContainer.setMask(maskShape.createGeometryMask());
+
+    // Static dim wash — covers the board edge-to-edge without rotating, so it
+    // no longer reads as a dark square wobbling past the border.
+    spinContainer.add(this.add.rectangle(0, 0, boardW, boardH, 0x17110a, 0.42));
+
+    // Rotating swirl of small tile-like chips — reads as tiles being shuffled.
+    const swirl = this.add.container(0, 0).setScale(0.35);
+    spinContainer.add(swirl);
+    const orbit = Math.min(boardW, boardH) * 0.22;
+    const chipSize = Math.max(10, ts * 0.46);
+    const chipColors = [0xe9cb8b, 0xcf8f57, 0x8fae66, 0xd47a68];
+    for (let i = 0; i < chipColors.length; i++) {
+      const ang = (Math.PI * 2 * i) / chipColors.length;
+      const chip = this.add.rectangle(Math.cos(ang) * orbit, Math.sin(ang) * orbit, chipSize, chipSize, chipColors[i], 0.96);
+      chip.setStrokeStyle(Math.max(2, ts * 0.045), 0x2a2014, 0.85);
+      swirl.add(chip);
+    }
 
     let cleanedUp = false;
     const finalizeShuffle = () => {
@@ -1069,6 +1091,7 @@ export class GameScene extends Phaser.Scene {
       cleanedUp = true;
       if (this.board === spinContainer) this.board = null;
       if (spinContainer.active) spinContainer.destroy();
+      if (maskShape.active) maskShape.destroy();
       this._performShuffleSwap();
       // Re-check after a brief delay to let the new tiles animate in
       this.time.delayedCall(320, () => {
@@ -1084,10 +1107,11 @@ export class GameScene extends Phaser.Scene {
     };
 
     this.tweens.add({
-      targets: spinContainer,
+      targets: swirl,
       rotation: Math.PI * 2,
+      scale: 1,
       duration: this._dur(600),
-      ease: "Sine.easeInOut",
+      ease: "Cubic.easeInOut",
       onComplete: finalizeShuffle,
       onStop: finalizeShuffle,
     });
