@@ -50,3 +50,10 @@ describe("currency icons registered", () => {
     }
   });
 });
+
+describe("bond icons registered", () => {
+  it("bond_rank_1..8 + bond_8_arc keys exist", () => {
+    for (let i = 1; i <= 8; i++) expect(ICON_REGISTRY[`bond_rank_${i}`], `bond_rank_${i}`).toBeDefined();
+    expect(ICON_REGISTRY["bond_8_arc"]).toBeDefined();
+  });
+});
