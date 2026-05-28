@@ -13,7 +13,7 @@ export default function PortalIllustration({ isBuilt }: { isBuilt?: boolean }) {
   const runeColor = isBuilt ? "#e0b0ff" : "#4a3a6a";
 
   return (
-    <svg viewBox="-52 -108 104 120" className="absolute inset-0 w-full h-full"
+    <svg viewBox="-52 -116 104 128" className="absolute inset-0 w-full h-full"
          preserveAspectRatio="xMidYMax meet" style={f}>
       {/* ground shadow */}
       <ellipse cx="0" cy="2" rx="46" ry="5.5" fill="rgba(0,0,0,.36)" />
@@ -186,6 +186,7 @@ export default function PortalIllustration({ isBuilt }: { isBuilt?: boolean }) {
               fill={runeGlow}
               opacity={0.72}
               style={{
+                "--px": `${cx < 0 ? -20 : 20}px`,
                 animation: `pollen ${dur}s ${delay}s ease-in-out infinite`,
                 transformOrigin: `${cx}px ${cy}px`,
               }}
@@ -194,11 +195,13 @@ export default function PortalIllustration({ isBuilt }: { isBuilt?: boolean }) {
         </g>
       )}
 
-      {/* === PILLAR EDGE OVERLAP (draw pillar front over portal) === */}
-      {/* left pillar front edge strip to cover portal overlap */}
-      <rect x="-38" y="-96" width="2" height="84" fill={pillarShade} opacity=".8" />
-      {/* right pillar front edge strip */}
-      <rect x="36" y="-96" width="2" height="84" fill={pillarShade} opacity=".8" />
+      {/* === REPAINT PILLAR FACES over portal oval and rune ring === */}
+      <rect x="-36" y="-96" width="16" height="84" fill={pillarStone} />
+      <rect x="-36" y="-96" width="5"  height="84" fill={pillarShade} opacity=".45" />
+      <rect x="-22" y="-96" width="2"  height="84" fill={pillarLight} opacity=".3" />
+      <rect x="20"  y="-96" width="16" height="84" fill={pillarStone} />
+      <rect x="20"  y="-96" width="5"  height="84" fill={pillarShade} opacity=".45" />
+      <rect x="34"  y="-96" width="2"  height="84" fill={pillarLight} opacity=".3" />
 
       {/* === GROUND-LEVEL GLOW UNDER PORTAL === */}
       {detail === 'high' && (
