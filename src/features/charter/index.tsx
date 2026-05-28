@@ -3,6 +3,7 @@ import Screen from "../../ui/primitives/Screen.jsx";
 import Pill from "../../ui/primitives/Pill.jsx";
 import Button from "../../ui/primitives/Button.jsx";
 import Icon from "../../ui/Icon.jsx";
+import IconCanvas, { hasIcon } from "../../ui/IconCanvas.jsx";
 import { ParchmentDialog } from "../../ui/primitives/Dialog.jsx";
 import { findBeat, beatChoices } from "../../story.js";
 import type { GameState, Dispatch } from "../../types/state.js";
@@ -270,7 +271,9 @@ function SettlementRibbon({ name, dayCount }: SettlementRibbonProps) {
   return (
     <div className="flex items-center gap-3 bg-parchment-soft border border-iron rounded-lg px-4 py-3 mb-4">
       <div className="w-10 h-10 rounded-full bg-gold-soft/20 border border-gold-soft/40 grid place-items-center flex-shrink-0">
-        <Icon iconKey="ui_star" size={20} title="" />
+        {hasIcon("pact_scroll")
+          ? <IconCanvas iconKey="pact_scroll" size={24} background={null} rounded={false} title="Hollow Pact" />
+          : <Icon iconKey="ui_star" size={20} title="" />}
       </div>
       <div className="flex-1 min-w-0">
         <div className="text-body-lg font-semibold text-ink truncate">{name}</div>

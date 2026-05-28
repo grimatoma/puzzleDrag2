@@ -143,9 +143,9 @@ function visualOrders() {
 
 function visualQuests() {
   return [
-    { id: "quest-incomplete", label: "Harvest 30 hay", progress: 12, target: 30, reward: { coins: 50, almanacXp: 10 }, claimed: false },
-    { id: "quest-claimable", label: "Deliver 1 order", progress: 1, target: 1, reward: { coins: 75, almanacXp: 20 }, claimed: false },
-    { id: "quest-claimed", label: "Chain 5 resources", progress: 5, target: 5, reward: { coins: 40, almanacXp: 10 }, claimed: true },
+    { id: "quest-incomplete", category: "collect", label: "Harvest 30 hay", progress: 12, target: 30, reward: { coins: 50, almanacXp: 10 }, claimed: false },
+    { id: "quest-claimable", category: "order", label: "Deliver 1 order", progress: 1, target: 1, reward: { coins: 75, almanacXp: 20 }, claimed: false },
+    { id: "quest-claimed", category: "chain", label: "Chain 5 resources", progress: 5, target: 5, reward: { coins: 40, almanacXp: 10 }, claimed: true },
   ];
 }
 

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { ALMANAC_TIERS } from "../almanac/data.js";
 import { QUEST_TEMPLATES } from "./templates.js";
 import FeaturePanel from "../../ui/primitives/FeaturePanel.jsx";
+import IconCanvas, { hasIcon } from "../../ui/IconCanvas.jsx";
 import ActionCard, { ProgressBar } from "../../ui/primitives/ActionCard.jsx";
 import type { Dispatch, GameState } from "../../types/state.js";
 import type { Quest } from "./data.js";
@@ -106,6 +107,8 @@ function QuestCard({ q, dispatch }: QuestCardProps) {
   const isDone = done ?? (q.progress >= q.target);
   const claimable = isDone && !q.claimed;
   const completed = isDone || q.claimed;
+  const category = (q as { category?: string }).category;
+  const catKey = category ? `quest_${category}` : null;
 
   return (
     <ActionCard
@@ -114,6 +117,9 @@ function QuestCard({ q, dispatch }: QuestCardProps) {
       }`}
     >
       <div className="flex items-start justify-between gap-2">
+        {catKey && hasIcon(catKey) && (
+          <IconCanvas iconKey={catKey} size={20} background={null} rounded={false} title={category} className="flex-shrink-0 mt-0.5" />
+        )}
         <ActionCard.Title className="text-[12px] flex-1">{questLabel(q)}</ActionCard.Title>
         {claimable && (
           <span className="relative mr-1 mt-0.5">
