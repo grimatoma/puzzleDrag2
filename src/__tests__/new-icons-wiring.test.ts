@@ -81,3 +81,23 @@ describe("misc panel icons registered", () => {
     }
   });
 });
+
+import { getUsedIconKeys } from "../balanceManager/iconUsage.js";
+
+describe("wired icons now report as used", () => {
+  it("seasons + achievements + a sample of each wired family are in the used set", () => {
+    const used = getUsedIconKeys();
+    const sample = [
+      "season_spring", "season_winter",
+      "ach_first_steps", "ach_ability_artisan",
+      "quest_collect", "quest_book",
+      "boon_coin_mult", "boon_branch_drive_out",
+      "cur_embers", "token_hearth_forest",
+      "bond_rank_1", "bond_rank_8", "bond_8_arc",
+      "region_forest", "region_tundra",
+      "keeper_deer_spirit", "keeper_tidesinger",
+      "craft_queue", "craft_queue_skip", "xp_levelup", "dangers_header",
+    ];
+    for (const k of sample) expect(used.has(k), k).toBe(true);
+  });
+});
