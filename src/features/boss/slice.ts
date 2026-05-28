@@ -264,29 +264,3 @@ export function reduce(state: GameState, action: Action): GameState {
       return state;
   }
 }
-
-/** @deprecated Use BOSS_UI + BOSSES; kept for UI fallbacks. */
-export const BOSS_META: Record<string, {
-  name: string | undefined;
-  emoji: string | undefined;
-  flavor: string | undefined;
-  goal: string | undefined;
-  resource: string | undefined;
-  targetCount: number | undefined;
-  turns: number;
-  minChain: number | null;
-}> = Object.fromEntries(
-  (BOSSES as BossDef[]).map((b) => {
-    const ui = (BOSS_UI as Record<string, { displayName?: string; emoji?: string; flavor?: string; goal?: string }>)[b.id] ?? {};
-    return [b.id, {
-      name: ui.displayName ?? b.name,
-      emoji: ui.emoji,
-      flavor: ui.flavor,
-      goal: ui.goal,
-      resource: b.target?.resource,
-      targetCount: b.target?.amount,
-      turns: BOSS_WINDOW_TURNS,
-      minChain: minChainFromModifier(b.modifier),
-    }];
-  }),
-);
