@@ -1,5 +1,4 @@
 import { svgState } from "./helpers.jsx";
-import { PAL } from "./v2kit.jsx";
 
 export default function PortalIllustration({ isBuilt }: { isBuilt?: boolean }) {
   const { f } = svgState(isBuilt);
