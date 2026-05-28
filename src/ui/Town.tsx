@@ -258,13 +258,24 @@ function ZoomControls() {
 // world inside a fixed-aspect box so it scales uniformly — never stretches.
 function TownStage({ children }: { children: ReactNode }) {
   const ref = useRef<HTMLDivElement>(null);
-  const [fit, setFit] = useState(1);
+  // `fit` is the fit-to-contain scale (whole town visible) used for minScale.
+  // `initial` is the on-load scale: clamped between fit and maxScale so wide
+  // screens open framing the whole town while tall/narrow screens open zoomed
+  // in to a usable building size (the player pans).
+  const [{ fit, initial }, setScales] = useState({ fit: 1, initial: 1 });
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
     const update = () => {
       const cw = el.clientWidth, ch = el.clientHeight;
-      if (cw && ch) setFit(Math.min(cw / STAGE_W, ch / STAGE_H));
+      if (cw && ch) {
+        const fit = Math.min(cw / STAGE_W, ch / STAGE_H);
+        const maxScale = fit * 3;
+        // Open so the town band fills ~78% of the viewport height, but never
+        // below fit (whole town) and never above maxScale.
+        const initial = Math.min(Math.max((0.78 * ch) / STAGE_H, fit), maxScale);
+        setScales({ fit, initial });
+      }
     };
     update();
     const ro = new ResizeObserver(update);
@@ -272,15 +283,17 @@ function TownStage({ children }: { children: ReactNode }) {
     return () => ro.disconnect();
   }, []);
   // Quantize so minor resizes don't thrash the remount that re-frames the town.
-  const fitKey = Math.round(fit * 200);
+  // `initial` derives from the same measurements as `fit`, so keying on fit
+  // alone tracks them; combine both to be safe against rounding edge cases.
+  const stageKey = `${Math.round(fit * 200)}-${Math.round(initial * 200)}`;
   return (
     <div ref={ref} className="absolute inset-0">
       {fit > 0 && (
         <TransformWrapper
-          key={fitKey}
+          key={stageKey}
           minScale={fit}
           maxScale={fit * 3}
-          initialScale={fit}
+          initialScale={initial}
           centerOnInit
           centerZoomedOut
           limitToBounds
@@ -449,11 +462,24 @@ export function TownView({ state, dispatch }: { state: GameState; dispatch: Disp
         {/* Hill art + terrain decor are authored for the old 0..1100 space;
             stretch them horizontally to fill the wider stage. */}
         <g transform={`scale(${STAGE_W / 1100}, 1)`}>
-          <path d={hill1Path} fill={theme.hill1} opacity="0.75" />
-          <path d={hill2Path} fill={theme.hill2} opacity="0.6" />
+          <path d={hill1Path} fill={theme.hill1} opacity="0.55" />
+          <path d={hill2Path} fill={theme.hill2} opacity="0.45" />
           {biomeVariant === "farm" && <FarmTerrainDecor />}
           {biomeVariant === "mine" && <MineTerrainDecor />}
         </g>
+        {/* Atmospheric haze straddling the hill bases — fades distant hills
+            into the floor so the horizon recedes rather than cutting a hard
+            band behind the rooftops. Sibling to the scaled <g> so it spans the
+            full STAGE_W un-stretched; sky-tinted low alpha reads OK on both the
+            warm (farm/home) and gray (mine) themes. */}
+        <defs>
+          <linearGradient id="town-horizon-haze" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="rgba(255,255,255,0)" />
+            <stop offset="50%" stopColor="rgba(255,255,255,0.28)" />
+            <stop offset="100%" stopColor="rgba(255,255,255,0)" />
+          </linearGradient>
+        </defs>
+        <rect x={0} y={230} width={STAGE_W} height={100} fill="url(#town-horizon-haze)" />
       </svg>
 
       {/* Town plan — paved plaza, street network, lot pads, street furniture.

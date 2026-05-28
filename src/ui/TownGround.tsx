@@ -39,7 +39,7 @@ function groundPalette(biomeVariant: string): GroundPal {
   if (biomeVariant === "mine") {
     return { floor: "#6f6a62", floorEdge: "#5a564f", pave: "#8a857c", paveEdge: "#6a655d", grass: "#5e6450", shadow: "rgba(20,18,14,0.30)" };
   }
-  return { floor: "#9a8c5e", floorEdge: "#7e7148", pave: "#b6aa80", paveEdge: "#8e8258", grass: "#6f9a44", shadow: "rgba(30,24,12,0.28)" };
+  return { floor: "#8f8458", floorEdge: "#6f6640", pave: "#b6aa80", paveEdge: "#8e8258", grass: "#6f9a44", shadow: "rgba(30,24,12,0.34)" };
 }
 
 interface PropPositionalProps { x: number; y: number; pal: GroundPal }
@@ -170,7 +170,16 @@ function TownGround({ plan, theme, biomeVariant, builtLots }: TownGroundProps) {
       {plan.lots.map((l) => {
         const baseY = l.cy + l.h / 2 - 4;
         if (built.has(l.index) || l.row === "plaza") {
-          return <ellipse key={`pad${l.index}`} cx={l.cx} cy={baseY} rx={l.w * 0.5} ry={Math.max(8, l.h * 0.12)} fill={pal.shadow} />;
+          // Two stacked ellipses: a wide soft pad plus a smaller, darker inner
+          // core for an ambient-occlusion feel so each building reads grounded.
+          const rx = l.w * 0.5;
+          const ry = Math.max(9, l.h * 0.14);
+          return (
+            <g key={`pad${l.index}`}>
+              <ellipse cx={l.cx} cy={baseY} rx={rx} ry={ry} fill={pal.shadow} />
+              <ellipse cx={l.cx} cy={baseY} rx={rx * 0.6} ry={ry * 0.62} fill={pal.shadow} />
+            </g>
+          );
         }
         const mw = l.w * 0.78, mh = Math.max(14, l.h * 0.22);
         return (
