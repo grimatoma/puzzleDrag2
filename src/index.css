@@ -502,3 +502,36 @@
   pointer-events: none;
   transition: width 1s linear;
 }
+
+/* ──────────────────────────────────────────────────────────────────
+   Painted-SVG town building animations.
+   Shared keyframes for the procedurally-drawn building illustrations
+   (mill sails, drifting smoke, flickering fire, swinging bells, …).
+   `v2spin` / `v2pulse` are namespaced to avoid clobbering Tailwind's
+   own `spin` / `pulse` utility keyframes.
+   ────────────────────────────────────────────────────────────────── */
+@keyframes smoke   { 0% { transform: translate(0, 0) scale(.6); opacity: 0; } 15% { opacity: .55; } 100% { transform: translate(var(--sx, 16px), -90px) scale(1.6); opacity: 0; } }
+@keyframes steam   { 0% { transform: translate(0, 0) scale(.5); opacity: 0; } 12% { opacity: .85; } 100% { transform: translate(var(--sx, 8px), -110px) scale(2); opacity: 0; } }
+@keyframes ember   { 0% { transform: translate(0, 0) scale(.4); opacity: 0; } 30% { opacity: 1; } 100% { transform: translate(var(--sx, 8px), -60px) scale(1.2); opacity: 0; } }
+@keyframes spark   { 0% { transform: translate(0, 0) scale(.2); opacity: 0; } 20% { opacity: 1; } 100% { transform: translate(var(--sx, 30px), var(--sy, -30px)) scale(1); opacity: 0; } }
+@keyframes flicker { 0%, 100% { opacity: .85; transform: scale(1); } 40% { opacity: 1; transform: scale(1.04); } 70% { opacity: .7; transform: scale(.96); } }
+@keyframes sway    { 0%, 100% { transform: rotate(-2deg); } 50% { transform: rotate(2deg); } }
+@keyframes bob     { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-2px); } }
+@keyframes wiggle  { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-1px); } }
+@keyframes pollen  { 0% { transform: translate(0, 0); opacity: 0; } 10% { opacity: .7; } 100% { transform: translate(var(--px, 80px), -40px); opacity: 0; } }
+@keyframes windmill { to { transform: rotate(360deg); } }
+@keyframes waterwheel { to { transform: rotate(360deg); } }
+@keyframes v2spin  { to { transform: rotate(360deg); } }
+@keyframes v2pulse { 0%, 100% { opacity: .85; transform: scale(1); } 50% { opacity: 1; transform: scale(1.06); } }
+@keyframes bell    { 0%, 100% { transform: rotate(-22deg); } 50% { transform: rotate(22deg); } }
+@keyframes splash  { 0%, 100% { transform: translateY(0) scaleY(1); opacity: .8; } 50% { transform: translateY(-3px) scaleY(1.3); opacity: 1; } }
+@keyframes grainfall { 0% { transform: translateY(-22px); opacity: 0; } 10% { opacity: 1; } 100% { transform: translateY(20px); opacity: 0; } }
+@keyframes note    { 0% { transform: translate(0, 0); opacity: 0; } 15% { opacity: 1; } 100% { transform: translate(var(--nx, 18px), -44px); opacity: 0; } }
+@keyframes scaleTip { 0%, 100% { transform: rotate(-4deg); } 50% { transform: rotate(4deg); } }
+@keyframes flap    { 0%, 100% { transform: scaleY(1); } 50% { transform: scaleY(.6) translateY(-1px); } }
+@keyframes wave    { 0%, 100% { transform: translateX(0); } 50% { transform: translateX(-4px); } }
+@keyframes drip    { 0% { transform: translateY(0) scale(1); opacity: .9; } 80% { opacity: .9; } 100% { transform: translateY(10px) scale(.4); opacity: 0; } }
+@keyframes walk    { 0% { transform: translateX(0); } 100% { transform: translateX(var(--end, 200px)); } }
+@keyframes pulse2  { 0%, 100% { opacity: .4; transform: scale(.9); } 50% { opacity: 1; transform: scale(1.15); } }
+@keyframes drip2   { 0% { transform: translateY(0); opacity: 0; } 20% { opacity: .9; } 100% { transform: translateY(10px); opacity: 0; } }
+

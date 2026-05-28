@@ -33,6 +33,10 @@ import { ICONS as G_FISH } from "./categories/fish.js";
 import { ICONS as G_RECIPES } from "./categories/recipes.js";
 import { ICONS as G_UI_ELEMENTS } from "./categories/uiElements.js";
 import { ICONS as G_MISSING_ITEMS } from "./categories/missingItems.js";
+import { ICONS as G_ACHIEVEMENTS } from "./categories/achievements.js";
+import { ICONS as G_QUESTS } from "./categories/quests.js";
+import { ICONS as G_CURRENCIES } from "./categories/currencies.js";
+import { ICONS as G_FIXED_ICONS } from "./categories/fixed-icons.js";
 import { ICONS as G_ARCHIVED } from "./categories/archivedIcons.js";
 
 export interface IconRegistryEntry {
@@ -104,6 +108,10 @@ const REGISTRY_DRAFT: IconRegistryDictionary = {
   ...G_RECIPES,
   ...G_UI_ELEMENTS,
   ...G_MISSING_ITEMS,
+  ...G_ACHIEVEMENTS,
+  ...G_QUESTS,
+  ...G_CURRENCIES,
+  ...G_FIXED_ICONS,
   // Archived legacy draws live under `legacy_<key>` keys. They render in the
   // Dev Panel's Icons tab but are never used in-game. Spread last so
   // they can never accidentally override an active key.
