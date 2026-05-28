@@ -893,13 +893,7 @@ function TownVillagers({ plan, buildings, workers }: TownVillagersProps) {
     entry[key] = el;
     if (!el) {
       // If every key is now null, drop the entry entirely.
-      const allNull = entry.wrap == null &&
-                      entry.torso == null &&
-                      entry.head == null &&
-                      entry.legL == null &&
-                      entry.legR == null &&
-                      entry.armL == null &&
-                      entry.armR == null;
+      const allNull = Object.values(entry).every((v) => v == null);
       if (allNull) map.delete(id);
     }
   };
