@@ -314,10 +314,10 @@ export const UPGRADE_THRESHOLDS = {
 };
 
 export const SEASONS = [
-  { name: "Spring", iconKey: "ui_star", bg: 0x7dbd48, fill: 0x8fd85a, accent: 0x5daa35 },
-  { name: "Summer", iconKey: "ui_star", bg: 0x8fca45, fill: 0xf6c342, accent: 0xe3a92f },
-  { name: "Autumn", iconKey: "ui_star", bg: 0xb77b3a, fill: 0xd9792d, accent: 0xa65722 },
-  { name: "Winter", iconKey: "ui_star", bg: 0x78aaca, fill: 0x91d9ff, accent: 0xd9f6ff },
+  { name: "Spring", iconKey: "season_spring", bg: 0x7dbd48, fill: 0x8fd85a, accent: 0x5daa35 },
+  { name: "Summer", iconKey: "season_summer", bg: 0x8fca45, fill: 0xf6c342, accent: 0xe3a92f },
+  { name: "Autumn", iconKey: "season_autumn", bg: 0xb77b3a, fill: 0xd9792d, accent: 0xa65722 },
+  { name: "Winter", iconKey: "season_winter", bg: 0x78aaca, fill: 0x91d9ff, accent: 0xd9f6ff },
 ];
 
 // Farm board tile pool. Each entry is one slot in the random fill rotation.

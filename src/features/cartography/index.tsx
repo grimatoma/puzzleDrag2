@@ -21,6 +21,7 @@ import Button from "../../ui/primitives/Button.jsx";
 import { ParchmentDialog } from "../../ui/primitives/Dialog.jsx";
 import { FeaturePanel } from "../_shared/uiTypes.js";
 import StatusChip from "../../ui/primitives/StatusChip.jsx";
+import IconCanvas, { hasIcon } from "../../ui/IconCanvas.jsx";
 import type { GameState, Dispatch } from "../../types/state.js";
 
 export const viewKey = "cartography";
@@ -30,6 +31,7 @@ export const viewKey = "cartography";
 const SETTLEABLE_KINDS = new Set<string>(["home", "farm", "mine", "fish"]);
 
 interface KeeperDef {
+  id?: string;
   name: string;
   title: string;
   icon: string;
@@ -108,7 +110,9 @@ function KeeperEncounterModal({ node, type, dispatch, onClose }: KeeperEncounter
     >
       <ParchmentDialog.Body className="!px-5 !py-4">
         <div className="flex items-center gap-2 mb-2">
-          <span className="text-[26px] leading-none">{keeper.icon}</span>
+          {keeper.id && hasIcon(`keeper_${keeper.id}`)
+            ? <IconCanvas iconKey={`keeper_${keeper.id}`} size={30} background={null} rounded={false} title={keeper.name} />
+            : <span className="text-[26px] leading-none">{keeper.icon}</span>}
           <div>
             <div className="font-bold text-[17px] text-[#744d2e] leading-tight">{keeper.name}</div>
             <div className="text-[11px] italic text-[#8a6a45]">{keeper.title} · at {node.name}</div>
