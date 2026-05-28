@@ -54,8 +54,6 @@ export default function BarnIllustration({ isBuilt }: { isBuilt?: boolean }) {
       <polygon points="-30,-88 0,-100 30,-88" fill="url(#barn-roof-shingle)" />
       {/* left upper slope shadow */}
       <polygon points="-30,-88 0,-100 -8,-88" fill="rgba(0,0,0,.26)" />
-      {/* right upper slope */}
-      <polygon points="30,-88 0,-100 30,-88" fill="url(#barn-roof-shingle)" />
       {/* eave beam across full width */}
       <rect x="-58" y="-72" width="116" height="4" fill={PAL.eave} />
       {/* break line between lower and upper slopes */}

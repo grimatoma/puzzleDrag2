@@ -81,7 +81,7 @@ export default function WorkshopIllustration({ isBuilt }: { isBuilt?: boolean })
       <circle cx="-3.6" cy="-24.6" r=".5" fill="rgba(255,255,255,.55)" />
       <circle cx="2.4" cy="-24.6" r=".5" fill="rgba(255,255,255,.55)" />
       {/* workshop interior darkness visible between doors */}
-      <rect x="-1" y="-41" width="2" height="33" fill="#10080400" />
+      <rect x="-1" y="-41" width="2" height="33" fill="#100804" opacity=".7" />
 
       {/* === WINDOWS flanking the doors === */}
       {/* left window surround */}
