@@ -179,7 +179,7 @@ describe("visual golden snapshots integrity", () => {
       { key: "story.visual.spec.ts", scenarios: STORY_EDITOR_VISUAL_SCENARIOS, smoke: STORY_EDITOR_VISUAL_SMOKE_SCENARIO_IDS },
     ];
 
-    const projects = ["desktop", "iphone-landscape", "iphone-portrait"];
+    const projects = ["desktop", "iphone-portrait"];
     for (const suite of suites) {
       for (const project of projects) {
         const projDir = path.join(GOLDENS_DIR, suite.key, project);

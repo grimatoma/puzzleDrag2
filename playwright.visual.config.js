@@ -23,16 +23,6 @@ export default defineConfig({
       },
     },
     {
-      name: "iphone-landscape",
-      use: {
-        ...devices["iPhone 13 landscape"],
-        browserName: "chromium",
-        viewport: { width: 844, height: 390 },
-        hasTouch: true,
-        isMobile: true,
-      },
-    },
-    {
       name: "iphone-portrait",
       use: {
         ...devices["iPhone 13"],

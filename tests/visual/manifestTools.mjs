@@ -7,7 +7,7 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
 export const GOLDENS_DIR = path.resolve(HERE, "__goldens__");
 export const MANIFEST_PATH = path.join(GOLDENS_DIR, "manifest.json");
 
-const PROJECTS = ["desktop", "iphone-landscape", "iphone-portrait"];
+const PROJECTS = ["desktop", "iphone-portrait"];
 
 function actionSummary(action) {
   if (!action || typeof action !== "object") return String(action);

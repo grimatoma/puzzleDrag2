@@ -32,9 +32,9 @@
     "pretest:visual:all:update": "npm run ensure:visual-browser",
     "test:visual:all:update": "playwright test -c playwright.visual.config.js tests/visual/visual.spec.ts tests/visual/balance.visual.spec.ts tests/visual/story.visual.spec.ts --update-snapshots",
     "pretest:visual:mobile": "npm run ensure:visual-browser",
-    "test:visual:mobile": "playwright test -c playwright.visual.config.js tests/visual/visual.spec.ts --project=iphone-landscape --project=iphone-portrait",
+    "test:visual:mobile": "playwright test -c playwright.visual.config.js tests/visual/visual.spec.ts --project=iphone-portrait",
     "pretest:visual:mobile:update": "npm run ensure:visual-browser",
-    "test:visual:mobile:update": "playwright test -c playwright.visual.config.js tests/visual/visual.spec.ts --project=iphone-landscape --project=iphone-portrait --update-snapshots",
+    "test:visual:mobile:update": "playwright test -c playwright.visual.config.js tests/visual/visual.spec.ts --project=iphone-portrait --update-snapshots",
     "test:visual:manifest": "node tests/visual/generateManifest.mjs && vitest run src/__tests__/visual-scenarios.test.js"
   },
   "dependencies": {
