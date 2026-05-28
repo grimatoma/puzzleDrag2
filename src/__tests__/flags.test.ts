@@ -4,8 +4,12 @@ import {
   STORY_FLAGS, FLAG_CATEGORIES, flagDef, isRegisteredFlag, flagCategory,
   initialFlagState, evaluateFlagTriggers, applyFlagTriggers, applyFlagTriggersWithResult,
 } from "../flags.js";
+import type { FlagDef } from "../flags.js";
 import { applyFlagOverrides } from "../config/applyOverrides.js";
 import { conditionMatches } from "../story.js";
+import { mergeTestState } from "../testUtils/testState.js";
+
+type FlagEvent = { type: string; [k: string]: unknown };
 
 describe("STORY_FLAGS registry", () => {
   it("has the progression + arc flags, each with a well-formed entry", () => {
@@ -18,7 +22,7 @@ describe("STORY_FLAGS registry", () => {
       expect(typeof f.id).toBe("string");
       expect(f.id.length).toBeGreaterThan(0);
       expect(typeof f.label).toBe("string");
-      expect(FLAG_CATEGORIES[f.category]).toBeTruthy();
+      expect(FLAG_CATEGORIES[f.category as keyof typeof FLAG_CATEGORIES]).toBeTruthy();
       expect(f.default).toBe(false);          // no current flag starts true
       expect(Array.isArray(f.triggers)).toBe(true);
     }
@@ -49,46 +53,55 @@ describe("STORY_FLAGS registry", () => {
 
 describe("evaluateFlagTriggers", () => {
   // Drive a synthetic flag through the engine without mutating the live registry.
-  const withFlag = (entry, gameState) => {
-    STORY_FLAGS.push(entry);
+  const withFlag = (entry: FlagDef, gameState: ReturnType<typeof mergeTestState> & { __event: FlagEvent }) => {
+    (STORY_FLAGS as FlagDef[]).push(entry);
     try { return evaluateFlagTriggers(gameState, gameState.__event); }
     finally { STORY_FLAGS.pop(); }
   };
-  const baseState = (flags = {}, extra = {}) => ({ story: { flags }, inventory: {}, npcs: { bonds: {} }, ...extra });
+  const baseState = (flags: Record<string, boolean> = {}, extra: Record<string, unknown> = {}) =>
+    mergeTestState({
+      story: { flags },
+      inventory: {},
+      ...extra,
+    });
+  const withBonds = (bonds: Record<string, number>) => {
+    const fresh = mergeTestState();
+    return { npcs: { ...fresh.npcs, bonds: { ...fresh.npcs.bonds, ...bonds } } };
+  };
 
   it("flips a flag when a trigger condition matches; idempotent once set", () => {
-    const def = { id: "test_built_mill", label: "x", category: "misc", default: false, triggers: [{ type: "building_built", id: "mill" }] };
+    const def: FlagDef = { id: "test_built_mill", label: "x", category: "misc", default: false, triggers: [{ type: "building_built", id: "mill" }] };
     const gs = baseState();
     expect(withFlag(def, { ...gs, __event: { type: "building_built", id: "mill" } })).toEqual({ changed: { test_built_mill: true } });
     expect(withFlag(def, { ...gs, __event: { type: "building_built", id: "well" } })).toBeNull();   // wrong building
     expect(withFlag(def, { ...baseState({ test_built_mill: true }), __event: { type: "building_built", id: "mill" } })).toBeNull(); // already set
   });
   it("supports resource_total / resource_total_multi / craft_made / act_entered / bond_at_least", () => {
-    const cases = [
+    const cases: Array<[Partial<FlagDef>, ReturnType<typeof baseState>, FlagEvent, boolean]> = [
       [{ triggers: [{ type: "resource_total", key: "tile_tree_oak", amount: 30 }] }, baseState({}, { inventory: { tile_tree_oak: 30 } }), { type: "resource_total", key: "tile_tree_oak", amount: 30 }, true],
       [{ triggers: [{ type: "resource_total", key: "tile_tree_oak", amount: 30 }] }, baseState({}, { inventory: { tile_tree_oak: 12 } }), { type: "resource_total", key: "tile_tree_oak", amount: 12 }, false],
       [{ triggers: [{ type: "resource_total_multi", req: { tile_mine_stone: 20, tile_mine_coal: 10 } }] }, baseState({}, { inventory: { tile_mine_stone: 25, tile_mine_coal: 10 } }), { type: "resource_total_multi" }, true],
       [{ triggers: [{ type: "craft_made", item: "bread", count: 1 }] }, baseState(), { type: "craft_made", item: "bread", count: 1 }, true],
       [{ triggers: [{ type: "act_entered", act: 3 }] }, baseState(), { type: "act_entered", act: 3 }, true],
-      [{ triggers: [{ type: "bond_at_least", npc: "mira", amount: 8 }] }, baseState({}, { npcs: { bonds: { mira: 8 } } }), { type: "session_start" }, true],
-      [{ triggers: [{ type: "bond_at_least", npc: "mira", amount: 8 }] }, baseState({}, { npcs: { bonds: { mira: 8 } } }), { type: "craft_made", item: "x" }, false], // bond is settle-only
+      [{ triggers: [{ type: "bond_at_least", npc: "mira", amount: 8 }] }, baseState({}, withBonds({ mira: 8 })), { type: "session_start" }, true],
+      [{ triggers: [{ type: "bond_at_least", npc: "mira", amount: 8 }] }, baseState({}, withBonds({ mira: 8 })), { type: "craft_made", item: "x" }, false], // bond is settle-only
     ];
     cases.forEach(([partial, gs, event, expectFlip], i) => {
-      const def = { id: `test_${i}`, label: "x", category: "misc", default: false, ...partial };
+      const def: FlagDef = { id: `test_${i}`, label: "x", category: "misc", default: false, ...partial };
       const out = withFlag(def, { ...gs, __event: event });
       if (expectFlip) expect(out).toEqual({ changed: { [`test_${i}`]: true } });
       else expect(out).toBeNull();
     });
   });
   it("the live registry declares no triggers yet → no-op on any event", () => {
-    expect(evaluateFlagTriggers({ story: { flags: {} }, inventory: {} }, { type: "session_start" })).toBeNull();
-    expect(evaluateFlagTriggers({ story: { flags: {} }, inventory: {} }, { type: "building_built", id: "mill" })).toBeNull();
+    expect(evaluateFlagTriggers(mergeTestState({ story: { flags: {} }, inventory: {} }), { type: "session_start" })).toBeNull();
+    expect(evaluateFlagTriggers(mergeTestState({ story: { flags: {} }, inventory: {} }), { type: "building_built", id: "mill" })).toBeNull();
   });
   it("applyFlagTriggers merges changes into story.flags without mutating", () => {
-    const def = { id: "test_apply", label: "x", category: "misc", default: false, triggers: [{ type: "session_start" }] };
-    STORY_FLAGS.push(def);
+    const def: FlagDef = { id: "test_apply", label: "x", category: "misc", default: false, triggers: [{ type: "session_start" }] };
+    (STORY_FLAGS as FlagDef[]).push(def);
     try {
-      const before = { story: { flags: { other: true }, act: 1 }, inventory: {} };
+      const before = mergeTestState({ story: { flags: { other: true }, act: 1 }, inventory: {} });
       const after = applyFlagTriggers(before, { type: "session_start" });
       expect(after.story.flags).toEqual({ other: true, test_apply: true });
       expect(before.story.flags).toEqual({ other: true });   // not mutated
@@ -98,12 +111,12 @@ describe("evaluateFlagTriggers", () => {
     } finally { STORY_FLAGS.pop(); }
   });
   it("flag triggers cascade through flag_set in the same dispatch", () => {
-    STORY_FLAGS.push(
+    (STORY_FLAGS as FlagDef[]).push(
       { id: "test_parent", label: "parent", category: "misc", default: false, triggers: [{ type: "session_start" }] },
       { id: "test_child", label: "child", category: "misc", default: false, triggers: [{ type: "flag_set", flag: "test_parent" }] },
     );
     try {
-      const before = { story: { flags: {} }, inventory: {}, npcs: { bonds: {} } };
+      const before = mergeTestState({ story: { flags: {} }, inventory: {} });
       const result = applyFlagTriggersWithResult(before, { type: "session_start" });
       expect(result.changed).toEqual({ test_parent: true, test_child: true });
       expect(result.state.story.flags).toEqual({ test_parent: true, test_child: true });

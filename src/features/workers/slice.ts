@@ -4,6 +4,7 @@
 // per-type coin/resource cost and increments the hired count (capped at maxCount).
 // Fire decrements with no refund.
 import { TYPE_WORKER_MAP, defaultWorkersSlice, nextHireCost, nextHireResourceCost } from "./data.js";
+import { inventoryPut, inventoryQty } from "../../types/inventory.js";
 import type { Action, GameState } from "../../types/state.js";
 
 export const initial = defaultWorkersSlice();
@@ -27,11 +28,11 @@ export function reduce(state: GameState, action: Action): GameState {
     const resourceCost = nextHireResourceCost(def, cur);
     const inv = state.inventory ?? {};
     for (const [key, amount] of Object.entries(resourceCost) as [string, number][]) {
-      if ((inv[key] ?? 0) < amount) return state;
+      if (inventoryQty(inv, key) < amount) return state;
     }
-    const nextInventory: Record<string, number> = { ...inv };
+    let nextInventory = { ...inv };
     for (const [key, amount] of Object.entries(resourceCost) as [string, number][]) {
-      nextInventory[key] = (nextInventory[key] ?? 0) - amount;
+      nextInventory = inventoryPut(nextInventory, key, inventoryQty(nextInventory, key) - amount);
     }
 
     return {

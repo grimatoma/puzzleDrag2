@@ -4,6 +4,7 @@
  * One-way sink: there is no reset action.
  */
 import { CASTLE_NEEDS } from "./data.js";
+import { inventoryQty } from "../../types/inventory.js";
 import type { Action, GameState } from "../../types/state.js";
 
 interface CastleSubstate {
@@ -43,7 +44,7 @@ export function reduce(state: GameState, action: Action): GameState {
   const qty = amount | 0;
   if (qty <= 0) return state;
 
-  const have = (state.inventory ?? {})[need.resource] ?? 0;
+  const have = inventoryQty(state.inventory, need.resource);
   if (have < qty) return state;
 
   const castle = castleOf(state);

@@ -19,6 +19,7 @@ Phaser 3 + React game. **React owns state** — `useReducer` in `prototype.jsx`,
 | Tune balance values | `src/constants.js` (`UPGRADE_THRESHOLDS`, `ZONES[].entryCost`, `DAILY_REWARDS`) | Dev Panel at `/b/` |
 | Story beat content | `src/story.js`, `src/features/story/slice.js`, `src/state/storyEffects.js` | Story Editor at `/story/` |
 | Dispatched action silently does nothing | `SLICE_PRIMARY_ACTIONS` / `ALWAYS_RUN_SLICES` in `src/state.js` | `check-slice-action` skill |
+| TS migration Phases 1–2 (drop `GameState` index, Phaser bridge) | `docs/engineering/ts-migration-completion.md` | `catalog-enums.md`, `typed-tests.md` |
 | Persisted save shape changed | bump `SAVE_SCHEMA_VERSION` in `src/constants.js` | reducer discards mismatched saves |
 | Land on a specific screen for QA | "Testing a specific UI" section below | `?visual=<id>`, `window.__hearthVisual` |
 | Reset state during testing | `localStorage.removeItem("hearth.save.v1")` | also `hearth.settings`, `hearth.tutorial.seen`, `hearth.disableDialogs` |
@@ -31,7 +32,11 @@ The body below covers commands, architecture, the core game mechanic, testing ha
 ```bash
 npm run dev                  # Start Vite dev server (game at /, Dev Panel at /b/, Story Editor at /story/)
 npm run build                # Production build (outputs to dist/, including dist/stats.html bundle analyzer)
-npm run lint                 # ESLint over src/ + prototype.jsx
+npm run lint                 # ESLint over src/ + prototype.tsx
+npm run typecheck            # tsc --noEmit over `src/` + entries (excludes `**/*.test.ts`; `src/testUtils/` is included)
+npm run typecheck:tests      # Playwright specs + Vitest setup; see `docs/engineering/typed-tests.md`
+npm run typecheck:test-files # Per-file strict tsc on src/__tests__/*.test.ts (CI gate)
+npm run action-types:check   # sanity-check ACTION_TYPES array (no dupes); use with typecheck — `src/types/actionCatalogCoverage.ts` asserts every catalog string has a TypedAction branch
 npm test                     # Vitest unit tests (single run)
 npm run test:watch           # Vitest watch mode
 npm run test:coverage        # Vitest with coverage
@@ -102,20 +107,33 @@ The game has three disjoint item kinds in `ITEMS` (`src/constants.js`), discrimi
 
 **Canonical inventory.** The Dev Panel Wiki tab (`/b/` → Wiki) iterates each concept (Tiles, Resources, Tools, Recipes, Hazards, Workers, Buildings, NPCs, Zones, Abilities, Tool Powers, …) from the live source maps. If you add a new tile/resource/tool, it appears there automatically — no manual registration. If something looks miscategorised in the wiki, fix the underlying `kind` field, not the wiki.
 
-**Known conflation (in-flight migration).** The codebase still has a few places where tile and resource keys are mixed:
-- `BIOMES[*].resources` (`src/constants.js`) contains both kinds — the dynamic builder filters by `biome`, not `kind`. Three `resourceByKey` helpers depend on this.
-- `CAPPED_RESOURCES` (`src/constants.js`) mixes tile and resource keys under one inventory cap.
-- Several recipes (`src/constants.js` RECIPES) consume `tile_*` keys as inputs; several building costs do the same.
-- Legacy tile-key inventory bonuses are removed; use resource keys and `resourceProgress` only.
-- Order generation in `src/state/helpers.js` (`makeOrder`) draws from `biome.pool` (tile keys) rather than a resource-only pool.
+**Tile / resource cleanup status (historical PR 3 / PR 4).** Earlier handoff notes called out a list of tile/resource conflations and an "upgrade pipeline split". Those have all landed:
+- `BIOMES[*].resources` is filtered by `kind: "resource"` (via `isResourceItemEntry`), `BIOMES[*].tiles` by `kind: "tile"`.
+- `CAPPED_RESOURCES` is split into `CAPPED_TILES` (62) + `CAPPED_INVENTORY_RESOURCES` (12) in `src/constants.ts`; the old combined symbol only survives in comments.
+- `RECIPES` inputs and `BUILDINGS` costs contain no `tile_*` keys.
+- `makeOrder` (`src/state/helpers.ts`) draws from `biome.resourceOrderPool`, not `biome.pool`.
+- The fractional `resourceProgress` accumulator is wired at the `CHAIN_COLLECTED` site in `src/state.ts`; tile keys no longer enter `state.inventory` directly.
+- Board-side upgrades are driven by `GameScene.nextUpgradeTile` reading `zone.upgradeMap`; `tile.next` only names "the resource this tile produces" and is consumed by `BIOMES[*].resourceOrderPool` + `features/achievements/slice.ts`.
 
-These are tracked for PR 4 cleanup. **Do not introduce new conflations** — if you're adding a recipe, building cost, or bonus, the input/cost/payout should be a resource key, not a tile key. Use `assertResource(key)` at any new write site that's supposed to receive a resource so regressions throw in dev.
+**Do not introduce new tile/resource conflations** — recipe inputs, building costs, and bonuses should still be resource keys, not tile keys. Use `assertResource(key)` at any new write site that's supposed to receive a resource so regressions throw in dev.
 
-**Upgrade pipeline (intended model, partially wired).** A completed chain does two things conceptually distinct:
-1. **Board-side:** spawns a higher-tier *tile* at the chain endpoint, driven by `zone.upgradeMap` in `src/features/zones/data.js` (category → category). The data exists; runtime wiring is PR 3 work.
-2. **Inventory-side:** accumulates progress toward one *resource* per tile family (`tileFamilyResource()` in `src/constants.js`). Today this rolls over in whole-tile increments; PR 3 introduces fractional `resourceProgress` state.
+## Catalog enums (ids vs attributes)
 
-Until PR 3 lands, `tile.next` still names a resource that gets both placed on the board AND added to inventory (one entity, double duty). Don't lean on that behavior in new code — treat `next` as "the resource this tile produces" and let PR 3 split off the upgrade-tile side.
+**Ids are fixed at compile time** in hand-maintained enums under `src/types/catalog/` (re-exported from `src/types/catalogKeys.ts`). `ITEMS`, `RECIPES`, `ZONES`, etc. supply **attributes** keyed by those ids.
+
+| Layer | Defines membership | Defines attributes |
+|-------|-------------------|-------------------|
+| Enums + `ITEMS` / config maps in code | Yes | Defaults |
+| `balance.json` / Dev Panel draft | No (unknown keys skipped) | Yes |
+| Player save | No (`parseInventory` strips unknown) | Counts |
+
+**New item:** enum member in `catalog/itemKeys.ts` + `ITEMS` row → restart dev server. No emit/codegen step. See `docs/engineering/catalog-enums.md` for the full Wiki/Dev Panel enum inventory.
+
+**Dev Panel pickers** use `RESOURCE_KEYS` / `TILE_KEYS` from `catalogKeys.ts`, not free-text ids. `applyItemOverrides` / `applyRecipeOverrides` skip keys not in the live maps.
+
+**Story & tuning:** `StoryBeatId`, `StoryFlagId`, `StoryFlagCategoryId`, `StoryTriggerType`, and `TuningKey` cover `STORY_BEATS` / `SIDE_BEATS`, `STORY_FLAGS` (+ categories), trigger vocabulary, and `sanitizeTuning` keys — see `docs/engineering/catalog-enums.md`.
+
+**Feature flags:** compile-time toggles live in `src/featureFlags.ts` (`FIRE_HAZARD_ENABLED`, `RATS_HAZARD_ENABLED`) and their concept ids are enumerated by `FeatureFlagId` under `src/types/catalog/`. Runtime Dev Panel mirror uses `TuningKey.FireHazardEnabled` / `balance.json` `tuning.fireHazardEnabled`.
 
 ## Testing a specific UI
 
@@ -140,8 +158,9 @@ Three layered ways to land on the exact screen you want to verify, without click
 - `window.__phaserScene` — direct handle to the live `GameScene` (`grid`, `registry`, `tweens`, etc.) for ad-hoc inspection.
 
 **Quieting auto-modals.** Tutorials, season prompts, and story beats can pop on top of the screen you're verifying. Suppress them via `isDialogsDisabled()` in `src/featureFlags.js`:
-- Console: `localStorage.setItem("hearth.disableDialogs", "1")` to suppress (dialogs are on by default).
+- Console: `localStorage.setItem("hearth.disableDialogs", "1")` to suppress (dialogs are on by default in dev/test). Set it to `"0"` to force them on.
 - Test fixtures: `window.__HEARTH_DISABLE_DIALOGS__ = true` before first render (Playwright sets this via `page.addInitScript`).
+- Default precedence: global override → localStorage flag → build-time default. Production builds (the GitHub Pages deploy, `import.meta.env.PROD`) default to suppressed; the Vite dev server, Vitest, and Playwright default to enabled.
 
 **Resetting state.** The save lives at `localStorage["hearth.save.v1"]` (`STORAGE_KEYS.save`). `localStorage.removeItem("hearth.save.v1")` forces a fresh start; the reducer also discards saves whose `version` mismatches `SAVE_SCHEMA_VERSION`. Other keys: `hearth.settings`, `hearth.tutorial.seen`, `hearth.disableDialogs`.
 
@@ -169,7 +188,7 @@ When you fix a bug found in a specific scenario, add or extend an entry in `src/
 This is a fully client-side app — no backend, no database, no Docker required. The Vite dev server is the only service to run.
 
 - **Dev server**: `npm run dev` serves all three entries at `http://localhost:5173/puzzleDrag2/` (game), `/puzzleDrag2/b/` (Dev Panel), `/puzzleDrag2/story/` (Story Editor). The `base` path is `/puzzleDrag2/` (set in `vite.config.js`).
-- **Commands**: See the `## Commands` section above for lint/test/build/visual commands.
+- **Commands**: See the `## Commands` section above for lint/typecheck/test/build/visual commands.
 - **Playwright**: Chromium must be installed via `npx playwright install chromium` before running e2e or visual tests. The Playwright configs auto-start the dev server via `webServer`, so you don't need a separate running dev server for `npm run test:e2e` or `npm run test:visual`.
 - **State reset**: Clear `localStorage["hearth.save.v1"]` to start fresh. Also `hearth.settings`, `hearth.tutorial.seen`, `hearth.disableDialogs`.
 - **Visual testing in CI**: Visual regression snapshots are platform-sensitive. If goldens were captured on a different OS, expect diffs. Use `npm run test:visual:update` to refresh.

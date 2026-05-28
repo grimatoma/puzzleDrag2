@@ -2,11 +2,13 @@ import {
   UPGRADE_THRESHOLDS,
   RESOURCE_CAP_BASE,
   RESOURCE_CAP_GRANARY,
+  getItem,
   ITEMS,
   tileFamily,
 } from "./constants.js";
 import { locBuilt } from "./locBuilt.js";
 import { computeAggregatedAbilities } from "./features/workers/aggregate.js";
+import type { GameState } from "./types/state.js";
 
 export function clamp(n: number, a: number, b: number): number {
   return Math.max(a, Math.min(b, n));
@@ -126,7 +128,7 @@ export function tilesInCategory(category: string | string[]): string[] {
   if (families.size === 0) return [];
   const out: string[] = [];
   for (const key of Object.keys(ITEMS)) {
-    const item = ITEMS[key] as { kind?: string } | null | undefined;
+    const item = getItem(key) as { kind?: string } | null | undefined;
     if (!item || item.kind !== "tile") continue;
     const fam = _tileFamilyForCategory(key);
     if (fam && families.has(fam)) out.push(key);
@@ -161,13 +163,13 @@ export function seasonIndexForTurns(turns: number): number {
 }
 
 /** Returns the per-resource inventory cap: 500 with Granary, 200 otherwise. */
-export function currentCap(state: Record<string, unknown> | null | undefined): number {
+export function currentCap(state: GameState | null | undefined): number {
   if (!state) return RESOURCE_CAP_BASE;
-  const agg = computeAggregatedAbilities(state as unknown as Parameters<typeof computeAggregatedAbilities>[0]) as Record<string, unknown>;
+  const agg = computeAggregatedAbilities(state) as Record<string, unknown>;
   const capBonus = (agg.inventoryCapBonus as number | undefined) ?? 0;
   if (capBonus > 0) return RESOURCE_CAP_BASE + capBonus;
-  const built = state ? locBuilt(state) : {};
-  return (built?.granary || (state?.built as Record<string, unknown> | undefined)?.granary) ? RESOURCE_CAP_GRANARY : RESOURCE_CAP_BASE;
+  const built = locBuilt(state);
+  return (built?.granary || state.built?.granary) ? RESOURCE_CAP_GRANARY : RESOURCE_CAP_BASE;
 }
 
 // runSelfTests — thin smoke shim for in-game console use (<50ms).

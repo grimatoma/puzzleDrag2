@@ -33,15 +33,29 @@ import { ICONS as G_FISH } from "./categories/fish.js";
 import { ICONS as G_RECIPES } from "./categories/recipes.js";
 import { ICONS as G_UI_ELEMENTS } from "./categories/uiElements.js";
 import { ICONS as G_MISSING_ITEMS } from "./categories/missingItems.js";
+import { ICONS as G_ACHIEVEMENTS } from "./categories/achievements.js";
+import { ICONS as G_QUESTS } from "./categories/quests.js";
+import { ICONS as G_CURRENCIES } from "./categories/currencies.js";
+import { ICONS as G_FIXED_ICONS } from "./categories/fixed-icons.js";
 import { ICONS as G_ARCHIVED } from "./categories/archivedIcons.js";
+
+export interface IconRegistryEntry {
+  label?: string;
+  color?: string;
+  draw: (ctx: CanvasRenderingContext2D) => void;
+  archive?: boolean;
+  replacedBy?: string;
+}
+
+export type IconRegistryDictionary = Record<string, IconRegistryEntry>;
 
 // Some items in constants.js carry both an underscore form and a
 // concatenated form (ITEMS.iron_frame === ITEMS.ironframe etc., see
 // src/constants.js:329-331). The active icons live under the
 // concatenated form; alias the underscore form so the game's lookup
 // `drawIcon("iron_frame")` resolves instead of falling back to "?".
-function aliasIconKeys(reg: Record<string, any>) {
-  const aliases = {
+function aliasIconKeys(reg: IconRegistryDictionary) {
+  const aliases: Record<string, IconRegistryEntry | undefined> = {
     iron_frame: reg.ironframe,
     gem_crown:  reg.gemcrown,
     gold_ring:  reg.goldring,
@@ -64,7 +78,7 @@ function aliasIconKeys(reg: Record<string, any>) {
   }
 }
 
-const REGISTRY_DRAFT = {
+const REGISTRY_DRAFT: IconRegistryDictionary = {
   ...G_GRASS,
   ...G_GRAIN,
   ...G_VEGETABLES,
@@ -94,20 +108,29 @@ const REGISTRY_DRAFT = {
   ...G_RECIPES,
   ...G_UI_ELEMENTS,
   ...G_MISSING_ITEMS,
+  ...G_ACHIEVEMENTS,
+  ...G_QUESTS,
+  ...G_CURRENCIES,
+  ...G_FIXED_ICONS,
   // Archived legacy draws live under `legacy_<key>` keys. They render in the
   // Dev Panel's Icons tab but are never used in-game. Spread last so
   // they can never accidentally override an active key.
   ...G_ARCHIVED,
 };
 aliasIconKeys(REGISTRY_DRAFT);
-export const ICON_REGISTRY = Object.freeze(REGISTRY_DRAFT);
+export const ICON_REGISTRY: Readonly<IconRegistryDictionary> = Object.freeze(REGISTRY_DRAFT);
 
 export const ICON_KEYS = new Set(Object.keys(ICON_REGISTRY));
+
+/** Get the full design entry for a key, or null if unregistered. */
+export function iconEntry(key: string): IconRegistryEntry | null {
+  return ICON_REGISTRY[key] ?? null;
+}
 
 /** Draw the registered icon for `key` at the canvas's current origin.
  *  Returns true if the key was found and drawn, false otherwise. */
 export function drawIcon(ctx: CanvasRenderingContext2D, key: string) {
-  const entry = (ICON_REGISTRY as Record<string, any>)[key];
+  const entry = iconEntry(key);
   if (!entry) return false;
   entry.draw(ctx);
   return true;
@@ -115,10 +138,10 @@ export function drawIcon(ctx: CanvasRenderingContext2D, key: string) {
 
 /** Get the design's display label for a key, or null if unregistered. */
 export function iconLabel(key: string) {
-  return (ICON_REGISTRY as Record<string, any>)[key]?.label ?? null;
+  return iconEntry(key)?.label ?? null;
 }
 
 /** Get the design's accent color hex string for a key, or null. */
 export function iconColor(key: string) {
-  return (ICON_REGISTRY as Record<string, any>)[key]?.color ?? null;
+  return iconEntry(key)?.color ?? null;
 }

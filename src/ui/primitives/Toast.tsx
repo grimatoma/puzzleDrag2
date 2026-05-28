@@ -20,6 +20,7 @@ interface ToastEntry {
   icon?: string;
   duration?: number;
   stagger?: number;
+  ariaLive?: "assertive" | "polite";
 }
 
 interface BubbleEntry {
@@ -36,6 +37,8 @@ interface NotifierApi {
   dismissToast(id: string): void;
   dismissBubble(id: string): void;
 }
+
+export type { NotifierApi };
 
 const NotifierCtx = createContext<NotifierApi | null>(null);
 

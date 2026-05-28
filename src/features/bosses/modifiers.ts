@@ -3,7 +3,7 @@
  * No Phaser references — state-side only.
  */
 
-import type { GameState } from "../../types/state.js";
+import type { GameState, BossState } from "../../types/state.js";
 
 export interface BossModifierParams {
   n?: number;
@@ -98,11 +98,6 @@ export function tileIsChainable(tile: ModifierGridCell | null | undefined): bool
   return !!tile && !(tile.frozen || tile.rubble || tile.hidden);
 }
 
-interface ModifierHostState {
-  inventory?: Record<string, number>;
-  boss?: { modifierState?: { heat?: HeatEntry[] } } | null;
-}
-
 export interface TickModifierResult { newState: GameState }
 
 /**
@@ -112,11 +107,13 @@ export interface TickModifierResult { newState: GameState }
  */
 export function tickModifier(state: GameState, modifier: BossModifier): TickModifierResult {
   if (modifier.type !== "heat_tiles") return { newState: state };
-  const s = state as unknown as ModifierHostState;
 
-  const heat: HeatEntry[] = (s.boss?.modifierState?.heat ?? []).map((h: HeatEntry) => ({ ...h, age: h.age + 1 }));
+  // `modifierState` is the runtime BossInstance side-channel that BossState
+  // doesn't declare; read it via a narrowing cast at the boundary.
+  const bossState = state.boss as (BossState & { modifierState?: { heat?: HeatEntry[] } }) | null | undefined;
+  const heat: HeatEntry[] = (bossState?.modifierState?.heat ?? []).map((h: HeatEntry) => ({ ...h, age: h.age + 1 }));
   const surviving: HeatEntry[] = [];
-  const inv: Record<string, number> = { ...(s.inventory ?? {}) };
+  const inv: Record<string, number> = { ...(state.inventory ?? {}) };
 
   for (const h of heat) {
     if (h.age > (modifier.params.burnAfter ?? Infinity)) {
@@ -135,13 +132,13 @@ export function tickModifier(state: GameState, modifier: BossModifier): TickModi
       ...state,
       inventory: inv,
       boss: {
-        ...(s.boss ?? {}),
+        ...(state.boss ?? {}),
         modifierState: {
-          ...(s.boss?.modifierState ?? {}),
+          ...(bossState?.modifierState ?? {}),
           heat: surviving,
         },
       },
-    } as GameState,
+    } as unknown as GameState,
   };
 }
 

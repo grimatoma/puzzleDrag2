@@ -21,7 +21,9 @@ import Button from "../../ui/primitives/Button.jsx";
 import { ParchmentDialog } from "../../ui/primitives/Dialog.jsx";
 import { FeaturePanel } from "../_shared/uiTypes.js";
 import StatusChip from "../../ui/primitives/StatusChip.jsx";
+import IconCanvas, { hasIcon } from "../../ui/IconCanvas.jsx";
 import type { GameState, Dispatch } from "../../types/state.js";
+import Icon from "../../ui/Icon.jsx";
 
 export const viewKey = "cartography";
 
@@ -29,7 +31,18 @@ export const viewKey = "cartography";
 // — never get a "Found settlement" affordance).
 const SETTLEABLE_KINDS = new Set<string>(["home", "farm", "mine", "fish"]);
 
+const REGION_ICON: Record<string, string> = {
+  hearth: "region_forest",
+  farm: "region_forest",
+  wilds: "region_moor",
+  mine: "region_mine",
+  coast: "region_harbor",
+  boss: "region_tundra",
+  capital: "region_tundra",
+};
+
 interface KeeperDef {
+  id?: string;
   name: string;
   title: string;
   icon: string;
@@ -108,7 +121,9 @@ function KeeperEncounterModal({ node, type, dispatch, onClose }: KeeperEncounter
     >
       <ParchmentDialog.Body className="!px-5 !py-4">
         <div className="flex items-center gap-2 mb-2">
-          <span className="text-[26px] leading-none">{keeper.icon}</span>
+          {keeper.id && hasIcon(`keeper_${keeper.id}`)
+            ? <IconCanvas iconKey={`keeper_${keeper.id}`} size={30} background={null} rounded={false} title={keeper.name} />
+            : <span className="text-[26px] leading-none">{keeper.icon}</span>}
           <div>
             <div className="font-bold text-[17px] text-[#744d2e] leading-tight">{keeper.name}</div>
             <div className="text-[11px] italic text-[#8a6a45]">{keeper.title} · at {node.name}</div>
@@ -282,8 +297,7 @@ function FoundSettlementBlock({ node, visitedSet, state, dispatch }: FoundSettle
   const type = settlementTypeForZone(node.id);
   if (!type) return null;
   const cost = settlementFoundingCost(state).coins;
-  const s = state as GameState & { coins?: number };
-  const canAfford = (s?.coins ?? 0) >= cost;
+  const canAfford = (state?.coins ?? 0) >= cost;
   return (
     <>
       <button
@@ -489,7 +503,8 @@ function NodePanel({ node, current, visited, discovered, playerLevel, dispatch, 
       style={{ ...cardStyle, color: "#2b2218" }}
     >
       <div className="flex flex-col gap-0.5">
-        <div className="text-[10px] uppercase tracking-[0.15em]" style={{ color: "#7c4f2c", fontWeight: 700 }}>
+        <div className="text-[10px] uppercase tracking-[0.15em] flex items-center gap-1" style={{ color: "#7c4f2c", fontWeight: 700 }}>
+          {!isHidden && <Icon iconKey={REGION_ICON[node.region] ?? "region_moor"} size={14} />}
           {isHidden ? "Unknown territory" : (KIND_LABELS[node.kind] || node.kind)}
         </div>
         <div className="text-[18px] font-bold leading-tight">
@@ -562,15 +577,15 @@ interface HearthTokenInfo {
 }
 
 function HearthTokensStrip({ state }: { state: GameState }) {
-  const s = state as GameState & { heirlooms?: Record<string, number> };
   const earned = useMemo(() => {
-    const h = s?.heirlooms ?? {};
+    // HeirloomsState's index sig is `unknown`; coerce per-key at the read site.
+    const h = (state?.heirlooms ?? {}) as Record<string, number>;
     return {
       seed:  (h.seed ?? 0) > 0,
       iron:  (h.iron ?? 0) > 0,
       pearl: (h.pearl ?? 0) > 0,
     } as Record<string, boolean>;
-  }, [s?.heirlooms]);
+  }, [state?.heirlooms]);
   return (
     <div className="flex items-center gap-2">
       {(HEARTH_TOKENS as HearthTokenInfo[]).map((t) => {
@@ -676,22 +691,12 @@ interface CartographyScreenProps {
   dispatch: Dispatch;
 }
 
-interface CartoHostStateUI {
-  mapCurrent?: string;
-  mapVisited?: string[];
-  mapDiscovered?: string[];
-  level?: number;
-  viewParams?: { zone?: string };
-  settlements?: Record<string, unknown>;
-  heirlooms?: Record<string, number>;
-}
 
 export default function CartographyScreen({ state, dispatch }: CartographyScreenProps) {
-  const s = state as unknown as CartoHostStateUI;
-  const mapCurrent = s.mapCurrent ?? "home";
-  const mapVisited = s.mapVisited;
-  const mapDiscovered = s.mapDiscovered ?? ["home", "meadow", "orchard"];
-  const level = s.level ?? 1;
+  const mapCurrent = state.mapCurrent ?? "home";
+  const mapVisited = state.mapVisited;
+  const mapDiscovered = state.mapDiscovered ?? ["home", "meadow", "orchard"];
+  const level = state.level ?? 1;
 
   // Save migration: older saves don't have mapVisited.
   const visited: string[] = mapVisited || mapDiscovered;
@@ -700,7 +705,9 @@ export default function CartographyScreen({ state, dispatch }: CartographyScreen
 
   // The "tapped" zone (panel target) lives in viewParams.zone so each zone
   // has its own URL path (`#/cartography/<zoneId>`). Bad ids are ignored.
-  const tappedFromUrl: string | null = s.viewParams?.zone ?? null;
+  // viewParams is the open `Record<string, unknown>` slot; narrow the lookup.
+  const zoneParam = state.viewParams?.zone;
+  const tappedFromUrl: string | null = typeof zoneParam === "string" ? zoneParam : null;
   const tapped = tappedFromUrl && MAP_NODES.some((n: MapNode) => n.id === tappedFromUrl) ? tappedFromUrl : null;
   const tappedNode = tapped ? MAP_NODES.find((n: MapNode) => n.id === tapped) : null;
   const currentNode = MAP_NODES.find((n: MapNode) => n.id === mapCurrent);
@@ -726,7 +733,7 @@ export default function CartographyScreen({ state, dispatch }: CartographyScreen
       oldCapitalUnlocked: isOldCapitalUnlocked(state),
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- state.settlements / heirlooms drive founded/keeperPaths/tokenCount
-  }, [mapCurrent, visited, mapDiscovered, level, s.settlements, s.heirlooms]);
+  }, [mapCurrent, visited, mapDiscovered, level, state.settlements, state.heirlooms]);
 
   function handleNodeTap(nodeId: string) {
     const next = nodeId === tapped ? null : nodeId;

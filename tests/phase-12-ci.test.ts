@@ -18,17 +18,24 @@ describe("Phase 12.3 — CI pipeline", () => {
     expect(yml).toMatch(/branches:\s*\[main\]/);
   });
 
-  it("has lint, test, build jobs", () => {
+  it("has lint, typecheck, typecheck-tests, test, build jobs", () => {
     const yml = readFileSync(ymlPath, "utf8");
     expect(yml).toMatch(/^\s{2}lint:/m);
+    expect(yml).toMatch(/^\s{2}typecheck:/m);
+    expect(yml).toMatch(/^\s{2}typecheck-tests:/m);
     expect(yml).toMatch(/^\s{2}test:/m);
     expect(yml).toMatch(/^\s{2}build:/m);
+  });
+
+  it("typecheck job runs action-types catalog check", () => {
+    const yml = readFileSync(ymlPath, "utf8");
+    expect(yml).toMatch(/action-types:check/);
   });
 
   it("uses Node 20 with npm cache in every job", () => {
     const yml = readFileSync(ymlPath, "utf8");
     const nodeBlocks = yml.match(/setup-node@v4[\s\S]+?(?=\n\s{0,6}-|\n\s{0,4}\w)/g);
-    expect(nodeBlocks?.length).toBeGreaterThanOrEqual(3);
+    expect(nodeBlocks?.length).toBeGreaterThanOrEqual(5);
     for (const b of nodeBlocks) {
       expect(b).toMatch(/node-version:\s*20/);
       expect(b).toMatch(/cache:\s*npm/);
@@ -44,6 +51,6 @@ describe("Phase 12.3 — CI pipeline", () => {
   it("every job has a timeout to fail fast on hangs", () => {
     const yml = readFileSync(ymlPath, "utf8");
     const matches = yml.match(/timeout-minutes:\s*\d+/g) ?? [];
-    expect(matches.length).toBeGreaterThanOrEqual(3);
+    expect(matches.length).toBeGreaterThanOrEqual(5);
   });
 });

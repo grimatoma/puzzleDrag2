@@ -42,12 +42,6 @@ export interface PearlState {
   turnsRemaining: number;
 }
 
-interface PearlHostState {
-  biome?: string;
-  fishPearl?: PearlState | null;
-  grid?: PearlGridCell[][];
-}
-
 interface ChainCell { key?: string | null }
 
 /**
@@ -55,15 +49,14 @@ interface ChainCell { key?: string | null }
  * No-op if a pearl is already active or the player isn't on the fish biome.
  */
 export function spawnPearl(state: GameState, rng: () => number = Math.random): GameState {
-  const s = state as unknown as PearlHostState;
-  if (s.biome !== "fish") return state;
-  if (s.fishPearl) return state;
-  if (!Array.isArray(s.grid) || s.grid.length === 0) return state;
+  if (state.biome !== "fish") return state;
+  if (state.fishPearl) return state;
+  if (!Array.isArray(state.grid) || state.grid.length === 0) return state;
 
-  const rows = s.grid.length;
-  const cols = s.grid[0]?.length ?? 0;
+  const rows = state.grid.length;
+  const cols = state.grid[0]?.length ?? 0;
   if (cols === 0) return state;
-  const grid = s.grid;
+  const grid = state.grid;
 
   const blocked = (r: number, c: number): boolean => {
     const t = grid[r]?.[c];
@@ -81,7 +74,7 @@ export function spawnPearl(state: GameState, rng: () => number = Math.random): G
 
   if (blocked(r, c)) return state; // gave up — no clear spot
 
-  const newGrid: PearlGridCell[][] = s.grid.map((row: PearlGridCell[], ri: number) =>
+  const newGrid: PearlGridCell[][] = state.grid.map((row: PearlGridCell[], ri: number) =>
     row.map((tile: PearlGridCell, ci: number) =>
       ri === r && ci === c ? { ...tile, key: PEARL_KEY } : tile,
     ),
@@ -99,24 +92,26 @@ export function spawnPearl(state: GameState, rng: () => number = Math.random): G
  * and clear the pearl slot.
  */
 export function tickPearl(state: GameState): GameState {
-  const s = state as unknown as PearlHostState;
-  if (!s.fishPearl) return state;
-  const next = s.fishPearl.turnsRemaining - 1;
+  if (!state.fishPearl) return state;
+  // GameState's `fishPearl` field has `turnsRemaining?: number`; the slice
+  // always seeds it on spawn, so default to 0 at the read boundary.
+  const fishPearl = state.fishPearl as unknown as PearlState;
+  const next = (fishPearl.turnsRemaining ?? 0) - 1;
   if (next > 0) {
     return {
       ...state,
-      fishPearl: { ...s.fishPearl, turnsRemaining: next },
+      fishPearl: { ...fishPearl, turnsRemaining: next },
     } as GameState;
   }
   // Expire — degrade tile to kelp.
-  const { row, col } = s.fishPearl;
-  const grid = Array.isArray(s.grid)
-    ? s.grid.map((rowArr: PearlGridCell[], ri: number) =>
+  const { row, col } = fishPearl;
+  const grid = Array.isArray(state.grid)
+    ? state.grid.map((rowArr: PearlGridCell[], ri: number) =>
         rowArr.map((t: PearlGridCell, ci: number) =>
           ri === row && ci === col ? { ...t, key: "tile_fish_kelp" } : t,
         ),
       )
-    : s.grid;
+    : state.grid;
   return { ...state, grid, fishPearl: null } as GameState;
 }
 

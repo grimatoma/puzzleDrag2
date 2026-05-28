@@ -24,7 +24,7 @@ export default function TownsfolkScreen({ state, dispatch }: TownsfolkScreenProp
       <FeaturePanel.Tabs>
         {[
           { key: "workers", label: "Workers", icon: "ui_build" },
-          { key: "quests", label: "Quests", icon: "ui_clipboard" },
+          { key: "quests", label: "Quests", icon: "quest_book" },
         ].map((item) => (
           <FeaturePanel.Tab
             key={item.key}

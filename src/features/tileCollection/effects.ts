@@ -24,16 +24,6 @@ interface TileTypeDef {
   abilities?: Array<Record<string, unknown>>;
 }
 
-interface TcHostState {
-  tileCollection?: {
-    discovered?: Record<string, boolean>;
-    activeByCategory?: Record<string, string | null>;
-    researchProgress?: Record<string, number>;
-  };
-  registry?: { effectivePoolWeights?: Record<string, number> };
-  coins?: number;
-}
-
 interface ChainCommit {
   resourceKey: string;
   chainLength: number;
@@ -46,8 +36,7 @@ interface ChainCommit {
  * Returns { discoveredIds, newDiscoveredMap }.
  */
 export function discoverTileTypesFromChain(state: GameState, { resourceKey, chainLength }: ChainCommit): { discoveredIds: string[]; newDiscoveredMap: Record<string, boolean> } {
-  const s = state as unknown as TcHostState;
-  const known: Record<string, boolean> = s.tileCollection?.discovered ?? {};
+  const known: Record<string, boolean> = state.tileCollection?.discovered ?? {};
   const ids: string[] = [];
   const typesMap = TILE_TYPES_MAP as Record<string, TileTypeDef>;
   for (const t of TILE_TYPES as TileTypeDef[]) {
@@ -77,10 +66,9 @@ export function discoverTileTypesFromChain(state: GameState, { resourceKey, chai
  * Returns the active tile type id for the category that contains `key`, or null.
  */
 function activeIdForKey(state: GameState, key: string): string | null {
-  const s = state as unknown as TcHostState;
   const cat = (CATEGORY_OF as Record<string, string | undefined>)[key];
   if (!cat) return null;
-  return s?.tileCollection?.activeByCategory?.[cat] ?? null;
+  return state.tileCollection?.activeByCategory?.[cat] ?? null;
 }
 
 /**
@@ -88,10 +76,9 @@ function activeIdForKey(state: GameState, key: string): string | null {
  * as a flat array of resource keys.
  */
 export function getActivePool(state: GameState, biomeKey: string = "farm"): string[] {
-  const s = state as unknown as TcHostState;
   const biomeMap = BIOMES as unknown as Record<string, { pool?: string[] } | undefined>;
   const base: string[] = biomeMap[biomeKey]?.pool ?? [];
-  const active: Record<string, string | null> = s?.tileCollection?.activeByCategory ?? {};
+  const active: Record<string, string | null> = state.tileCollection?.activeByCategory ?? {};
   const out: string[] = [];
 
   for (const baseKey of base) {
@@ -106,8 +93,12 @@ export function getActivePool(state: GameState, biomeKey: string = "farm"): stri
     out.push(a); // substitute the active tile type variant
   }
 
-  // Worker pool_weight boost — gated by active tile type
-  const boosts: Record<string, number> = s?.registry?.effectivePoolWeights ?? {};
+  // Worker pool_weight boost — gated by active tile type. `registry` is a
+  // test-only side channel for synthesised effective-pool-weights snapshots;
+  // production callers don't set it, in which case the default `{}` skips this
+  // branch entirely.
+  const registry = (state as { registry?: { effectivePoolWeights?: Record<string, number> } }).registry;
+  const boosts: Record<string, number> = registry?.effectivePoolWeights ?? {};
   for (const [k, n] of Object.entries(boosts)) {
     if (activeIdForKey(state, k) !== k) continue; // boost key must be the active tile type
     const copies = Math.max(0, Math.round(n));
@@ -136,8 +127,7 @@ export function displayKey(k: string): string {
 }
 
 function statusFor(state: GameState, t: TileTypeDef): string {
-  const s = state as unknown as TcHostState;
-  const disc = s.tileCollection?.discovered?.[t.id];
+  const disc = state.tileCollection?.discovered?.[t.id];
   const d: TileTypeDiscovery = t.discovery ?? {};
 
   if (d.method === "default") return "Default — always available";
@@ -153,7 +143,7 @@ function statusFor(state: GameState, t: TileTypeDef): string {
 
   // Not yet discovered
   if (d.method === "research") {
-    const p = s.tileCollection?.researchProgress?.[t.id] ?? 0;
+    const p = state.tileCollection?.researchProgress?.[t.id] ?? 0;
     return `Researching ${displayKey(d.researchOf ?? "")}: ${p} / ${d.researchAmount}`;
   }
   if (d.method === "chain") {
@@ -188,10 +178,9 @@ export interface CategoryRowViewModel {
  * Returns an array of view-model rows for the given category.
  */
 export function getCategoryViewModel(state: GameState, category: string): CategoryRowViewModel[] {
-  const s = state as unknown as TcHostState;
   return (TILE_TYPES as TileTypeDef[]).filter((t) => t.category === category).map((t) => {
-    const locked = !s.tileCollection?.discovered?.[t.id];
-    const active = !locked && s.tileCollection?.activeByCategory?.[category] === t.id;
+    const locked = !state.tileCollection?.discovered?.[t.id];
+    const active = !locked && state.tileCollection?.activeByCategory?.[category] === t.id;
     const action: "toggle" | "buy" | null = locked
       ? (t.discovery?.method === "buy" ? "buy" : null)
       : "toggle";
@@ -203,7 +192,7 @@ export function getCategoryViewModel(state: GameState, category: string): Catego
       status: statusFor(state, t),
       action,
       discovery: t.discovery ?? {},
-      researchProgress: s.tileCollection?.researchProgress?.[t.id] ?? 0,
+      researchProgress: state.tileCollection?.researchProgress?.[t.id] ?? 0,
       effects: t.effects ?? {},
       abilities: t.abilities ?? [],
       tier: t.tier ?? 0,
@@ -234,14 +223,13 @@ export interface TileDetailViewModel {
 }
 
 export function getTileDetailViewModel(state: GameState, tileId: string): TileDetailViewModel | null {
-  const s = state as unknown as TcHostState;
   const t = (TILE_TYPES_MAP as Record<string, TileTypeDef | undefined>)[tileId];
   if (!t) return null;
   const category = t.category;
-  const discovered = !!s.tileCollection?.discovered?.[t.id];
-  const active = discovered && s.tileCollection?.activeByCategory?.[category] === t.id;
+  const discovered = !!state.tileCollection?.discovered?.[t.id];
+  const active = discovered && state.tileCollection?.activeByCategory?.[category] === t.id;
   const d: TileTypeDiscovery = t.discovery ?? {};
-  const researchProgress = s.tileCollection?.researchProgress?.[t.id] ?? 0;
+  const researchProgress = state.tileCollection?.researchProgress?.[t.id] ?? 0;
   let action: string | null = null;
   let actionLabel = "Locked";
   let disabled = true;
@@ -252,7 +240,7 @@ export function getTileDetailViewModel(state: GameState, tileId: string): TileDe
   } else if (d.method === "buy") {
     action = "buy";
     actionLabel = `Buy ${d.coinCost ?? 0}◉`;
-    disabled = (s.coins ?? 0) < (d.coinCost ?? 0);
+    disabled = (state.coins ?? 0) < (d.coinCost ?? 0);
   } else if (d.method === "research") {
     action = "research";
     actionLabel = `Research ${researchProgress} / ${d.researchAmount}`;

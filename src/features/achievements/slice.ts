@@ -2,6 +2,7 @@ import { BIOMES, BUILDINGS } from "../../constants.js";
 import { tickAchievement } from "./data.js";
 import { getAbility } from "../../config/abilities.js";
 import { locBuilt } from "../../locBuilt.js";
+import { inventoryQty } from "../../types/inventory.js";
 import type { Action, GameState } from "../../types/state.js";
 
 export const initial = {
@@ -15,32 +16,6 @@ export const initial = {
   totalCrafted: 0,
 };
 
-type AchievementsHostState = GameState & {
-  collected?: Record<string, number>;
-  totalHarvested?: number;
-  totalChains?: number;
-  longestChain?: number;
-  chainsThisSeason?: number;
-  totalOrders?: number;
-  totalCrafted?: number;
-  orders?: Array<{ id: string; key: string; need: number }>;
-  inventory?: Record<string, number>;
-};
-
-interface ChainTile { key: string }
-interface ChainPayload {
-  chain?: ChainTile[];
-  key?: string;
-  gained?: number;
-  chainLength?: number;
-  upgrades?: number;
-}
-
-interface BuildPayload { key?: string }
-interface BossResolvePayload { won?: boolean }
-interface ConvertSupplyPayload { qty?: number }
-interface TurnInOrderAction { id?: string }
-
 // Tick one or more counters, accumulating into state.achievements canonical shape.
 function tick(state: GameState, counter: string, value: number = 1, key?: string): GameState {
   const { newState } = tickAchievement(state, counter, value, key);
@@ -50,11 +25,10 @@ function tick(state: GameState, counter: string, value: number = 1, key?: string
 interface BuildingAbilityInst { id?: string; trigger?: string }
 
 export function reduce(state: GameState, action: Action): GameState {
-  const s = state as unknown as AchievementsHostState;
   switch (action.type) {
     case "CHAIN_COLLECTED": {
-      const payload: ChainPayload = (action.payload as ChainPayload | undefined) ?? (action as unknown as ChainPayload);
-      if (Array.isArray(payload.chain) && payload.chain.length > 0 && payload.chain.every((t: ChainTile) => t.key === "rat")) {
+      const payload = action.payload;
+      if (Array.isArray(payload.chain) && payload.chain.length > 0 && payload.chain.every((t: { key?: string }) => t.key === "rat")) {
         return state;
       }
       const actualKey = payload.key;
@@ -62,7 +36,7 @@ export function reduce(state: GameState, action: Action): GameState {
       const actualChain = payload.chainLength || 0;
       const upgrades = payload.upgrades || 0;
 
-      const collected: Record<string, number> = { ...(s.collected ?? {}) };
+      const collected: Record<string, number> = { ...state.collected };
       if (actualKey) {
         collected[actualKey] = (collected[actualKey] || 0) + actualGained;
       }
@@ -74,10 +48,10 @@ export function reduce(state: GameState, action: Action): GameState {
         collected[res.next] = (collected[res.next] || 0) + upgrades;
       }
 
-      const totalHarvested = (s.totalHarvested || 0) + actualGained + upgrades;
-      const totalChains = (s.totalChains || 0) + 1;
-      const longestChain = Math.max(s.longestChain || 0, actualChain);
-      const chainsThisSeason = (s.chainsThisSeason || 0) + 1;
+      const totalHarvested = state.totalHarvested + actualGained + upgrades;
+      const totalChains = state.totalChains + 1;
+      const longestChain = Math.max(state.longestChain, actualChain);
+      const chainsThisSeason = state.chainsThisSeason + 1;
 
       let next: GameState = {
         ...state,
@@ -86,7 +60,7 @@ export function reduce(state: GameState, action: Action): GameState {
         totalChains,
         longestChain,
         chainsThisSeason,
-      } as GameState;
+      };
 
       // Tick canonical achievement counters
       next = tick(next, "chains_committed", 1);
@@ -117,22 +91,20 @@ export function reduce(state: GameState, action: Action): GameState {
     }
 
     case "TURN_IN_ORDER": {
-      const turnAction = action as unknown as TurnInOrderAction;
-      const order = (s.orders || []).find((o: { id: string; key: string; need: number }) => o.id === turnAction.id);
-      if (!order || ((s.inventory || {})[order.key] || 0) < order.need) return state;
-      const next: GameState = { ...state, totalOrders: (s.totalOrders || 0) + 1 } as GameState;
+      const order = state.orders.find((o) => o.id === action.id);
+      const needed = (order?.need ?? order?.amount) ?? 0;
+      if (!order || inventoryQty(state.inventory, order.key) < needed) return state;
+      const next: GameState = { ...state, totalOrders: state.totalOrders + 1 };
       return tick(next, "orders_fulfilled", 1);
     }
 
     case "BUILD": {
-      const payload = action.payload as BuildPayload | undefined;
-      const buildKey: string | undefined = payload?.key ?? (action as unknown as BuildPayload).key;
+      const buildKey = action.building?.id ?? action.payload?.id;
       return tick(state, "distinct_buildings_built", 1, buildKey);
     }
 
     case "BOSS/RESOLVE": {
-      const payload = action.payload as BossResolvePayload | undefined;
-      const won = payload?.won ?? (action as unknown as BossResolvePayload).won;
+      const won = action.won;
       if (won === true) return tick(state, "bosses_defeated", 1);
       return state;
     }
@@ -141,7 +113,7 @@ export function reduce(state: GameState, action: Action): GameState {
       let next: GameState = {
         ...state,
         chainsThisSeason: 0,
-      } as GameState;
+      };
       // Building abilities firing at season-end. The achievements slice
       // receives the post-core-reducer state, so `state` here already has the
       // right `built` map for the action. session_end fires at the same
@@ -171,12 +143,11 @@ export function reduce(state: GameState, action: Action): GameState {
       // succeeds (state.js's coreReducer + crafting slice both validate inputs).
       // Queued completions (CLAIM_CRAFT / SKIP_CRAFT) handle their own bump
       // in the crafting slice itself, where the validation lives.
-      return { ...state, totalCrafted: (s.totalCrafted || 0) + 1 } as GameState;
+      return { ...state, totalCrafted: state.totalCrafted + 1 };
     }
 
     case "CONVERT_TO_SUPPLY": {
-      const payload = action.payload as ConvertSupplyPayload | undefined;
-      const qty = Math.max(1, (payload?.qty ?? 0) | 0);
+      const qty = Math.max(1, (action.payload?.qty ?? 0) | 0);
       return tick(state, "supplies_converted", qty);
     }
 

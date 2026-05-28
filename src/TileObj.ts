@@ -1,5 +1,10 @@
 import Phaser from "phaser";
 
+// Global multiplier on the ambient sway frequency. >1 makes the wind sway play
+// faster across every tile without touching each per-resource `freq` in
+// constants — it preserves amplitude and the primary/gust frequency ratio.
+const SWAY_SPEED = 1.3;
+
 /** Minimal shape of a resource/tile definition that TileObj needs. */
 export interface TileRes {
   key: string;
@@ -135,7 +140,7 @@ export class TileObj {
       return;
     }
     if (this._tweenActive) return;
-    const t = time + this._phase;
+    const t = (time + this._phase) * SWAY_SPEED;
     // Primary sway plus a smaller higher-frequency gust component so the
     // motion isn't a perfect sine — closer to real wind / dangle.
     const a = Math.sin(t * sway.freq) * sway.amp

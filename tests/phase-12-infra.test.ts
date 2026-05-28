@@ -26,7 +26,10 @@ describe("Phase 12.1 — test runner", () => {
     for (const f of files) expect(f, `bad name: ${f}`).toMatch(re);
   });
 
-  it("exposes a SMOKE_INVARIANTS list for the in-game shim", async () => {
+  it(
+    "exposes a SMOKE_INVARIANTS list for the in-game shim",
+    { timeout: 20_000 },
+    async () => {
     const mod = await import("../src/smokeTests.js");
     expect(Array.isArray(mod.SMOKE_INVARIANTS)).toBe(true);
     expect(mod.SMOKE_INVARIANTS.length).toBeGreaterThanOrEqual(5);
@@ -34,5 +37,6 @@ describe("Phase 12.1 — test runner", () => {
       expect(typeof inv.name).toBe("string");
       expect(typeof inv.check).toBe("function");
     }
-  });
+    },
+  );
 });

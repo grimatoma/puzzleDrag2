@@ -33,6 +33,21 @@ export default [
       ...reactHooks.configs.recommended.rules,
       "no-unused-vars": "off",
       "@typescript-eslint/no-unused-vars": ["error", { argsIgnorePattern: "^_", varsIgnorePattern: "^_" }],
+      "@typescript-eslint/no-explicit-any": "error",
+      "no-restricted-syntax": [
+        "error",
+        {
+          // Catches `state as unknown as Foo` (and `next` / `s` / `ns`
+          // aliases). The outer TSAsExpression's `expression` is itself a
+          // TSAsExpression that asserts an Identifier through `unknown`; both
+          // casts are expressed via `>` (direct child) so the selector matches
+          // exactly that shape and nothing wider. The earlier `Identifier …
+          // TSAsExpression …` form was a descendant-of-Identifier query,
+          // which never matched (Identifiers have no children).
+          selector: "TSAsExpression > TSAsExpression[typeAnnotation.type='TSUnknownKeyword'] > Identifier[name=/^(state|next|s|ns)$/]",
+          message: "Do not cast reducer state through `unknown`; add the field to GameState instead.",
+        },
+      ],
       "no-undef": "off",
     },
   },

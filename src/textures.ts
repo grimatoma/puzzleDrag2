@@ -3,6 +3,7 @@ import { hex } from "./utils.js";
 import { drawFarmTileIcon } from "./textures/farmIcons.js";
 import { drawMineTileIcon } from "./textures/mineIcons.js";
 import { drawIcon as drawRegisteredIcon } from "./textures/iconRegistry.js";
+import { getRegistry } from "./types/phaserRegistry.js";
 
 export function rounded(scene: Phaser.Scene, x: number, y: number, w: number, h: number, r: number, fill: number, alpha = 1, stroke: number | null = null, sw = 0, sa = 1) {
   const g = scene.add.graphics();
@@ -95,9 +96,9 @@ export function drawTileIcon(ctx: CanvasRenderingContext2D, key: string) {
  * resize so on-screen tiles never exceed the baked texture's resolution.
  */
 function bakeScaleFor(scene: Phaser.Scene): number {
-  const bs = scene.registry.get("bakeScale");
+  const bs = getRegistry(scene.registry, "bakeScale");
   if (typeof bs === "number" && bs > 0) return bs;
-  return (scene.registry.get("dpr") as number) || 1;
+  return getRegistry(scene.registry, "dpr") || 1;
 }
 
 /**

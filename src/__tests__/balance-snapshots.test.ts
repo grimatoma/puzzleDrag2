@@ -10,18 +10,20 @@ import {
   renameSnapshot,
 } from "../balanceManager/snapshots.js";
 
-function makeFakeStorage() {
-  const data = new Map();
+function makeFakeStorage(): Storage {
+  const data = new Map<string, string>();
   return {
-    getItem: (k) => (data.has(k) ? data.get(k) : null),
-    setItem: (k, v) => data.set(k, String(v)),
-    removeItem: (k) => { data.delete(k); },
-    _data: data,
+    get length() { return data.size; },
+    clear: () => { data.clear(); },
+    key: (index: number) => [...data.keys()][index] ?? null,
+    getItem: (k: string) => (data.has(k) ? data.get(k)! : null),
+    setItem: (k: string, v: string) => { data.set(k, String(v)); },
+    removeItem: (k: string) => { data.delete(k); },
   };
 }
 
-let storage;
-let clock;
+let storage: Storage;
+let clock: number;
 
 beforeEach(() => {
   storage = makeFakeStorage();
@@ -52,16 +54,17 @@ describe("saveSnapshot / loadSnapshot / readSnapshots", () => {
     const result = saveSnapshot("  easy  ", { version: 1, tuning: { ringTurns: 14 } }, storage, now);
     expect(result).toEqual({ ok: true, name: "easy", message: "" });
     const map = readSnapshots(storage);
-    expect(map.easy.draft.tuning.ringTurns).toBe(14);
+    const draft = map.easy.draft as { tuning: { ringTurns: number }; version?: number };
+    expect(draft.tuning.ringTurns).toBe(14);
     expect(typeof map.easy.savedAt).toBe("string");
     expect(map.easy.version).toBe(1);
   });
 
   it("loadSnapshot returns a deep copy (mutating it doesn't change stored data)", () => {
     saveSnapshot("preset", { tuning: { ringTurns: 10 } }, storage, now);
-    const loaded = loadSnapshot("preset", storage);
+    const loaded = loadSnapshot("preset", storage) as { tuning: { ringTurns: number } };
     loaded.tuning.ringTurns = 999;
-    const reread = loadSnapshot("preset", storage);
+    const reread = loadSnapshot("preset", storage) as { tuning: { ringTurns: number } };
     expect(reread.tuning.ringTurns).toBe(10);
   });
 
@@ -76,7 +79,8 @@ describe("saveSnapshot / loadSnapshot / readSnapshots", () => {
   });
 
   it("saveSnapshot rejects non-serialisable drafts", () => {
-    const cycle = {}; cycle.self = cycle;
+    const cycle: Record<string, unknown> = {};
+    cycle.self = cycle;
     const out = saveSnapshot("ouroboros", cycle, storage, now);
     expect(out.ok).toBe(false);
     expect(out.message).toMatch(/serialised|JSON/i);
@@ -139,11 +143,11 @@ describe("renameSnapshot", () => {
     const out = renameSnapshot("a", "alpha", storage);
     expect(out).toEqual({ ok: true, name: "alpha", message: "" });
     expect(loadSnapshot("a", storage)).toBeNull();
-    expect(loadSnapshot("alpha", storage).v).toBe(1);
+    expect((loadSnapshot("alpha", storage) as { v: number }).v).toBe(1);
   });
   it("is a no-op when renaming to the same name", () => {
     expect(renameSnapshot("a", "a", storage).ok).toBe(true);
-    expect(loadSnapshot("a", storage).v).toBe(1);
+    expect((loadSnapshot("a", storage) as { v: number }).v).toBe(1);
   });
   it("rejects renames that would collide with an existing snapshot", () => {
     const out = renameSnapshot("a", "b", storage);

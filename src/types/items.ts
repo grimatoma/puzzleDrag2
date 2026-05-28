@@ -3,27 +3,14 @@
  * runtime exports) so they can be imported by name from any `.ts`/`.tsx`
  * caller. Runtime predicates live in `./guards.ts`.
  *
- * Branded string types use the "phantom brand" pattern so plain string
- * literals stay assignable in JS callers (no runtime cost) while `.ts`
- * callers and `tsc --noEmit` surface type mismatches at the call site.
+ * Catalog keys are hand-maintained enums in `./catalog/` (see `docs/engineering/catalog-enums.md`).
  */
 
-// ── Branded key types ─────────────────────────────────────────────────────
+export type { ItemKey, InventoryKey, RecipeInputKey } from "./catalogKeys.js";
 
-/**
- * A key for a tile entry. All tile keys start with `tile_`.
- */
-export type TileKey = `tile_${string}` & { readonly __brand: "Tile" };
+export { ItemAliasKey, ResourceKey, TileKey, ToolKey } from "./catalogKeys.js";
 
-/**
- * A key for a resource entry. Resource keys never start with `tile_`.
- */
-export type ResourceKey = string & { readonly __brand: "Resource" };
-
-/**
- * A key for a tool entry. Tool keys never start with `tile_`.
- */
-export type ToolKey = string & { readonly __brand: "Tool" };
+export type { Inventory } from "./inventory.js";
 
 // ── Sway sub-object ───────────────────────────────────────────────────────
 
@@ -34,6 +21,8 @@ export interface SwayParams {
 }
 
 // ── Item kinds ────────────────────────────────────────────────────────────
+
+import type { ResourceKey } from "./catalogKeys.js";
 
 /**
  * A tile lives on the board. Chained tiles credit progress toward the

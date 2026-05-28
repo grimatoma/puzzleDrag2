@@ -1,6 +1,8 @@
 import { describe, it, expect } from "vitest";
-import { reduce as achReduce, initial as achInitial } from "../features/achievements/slice.js";
+import type { Action } from "../types/state.js";
+import { reduce as achReduce } from "../features/achievements/slice.js";
 import { ACHIEVEMENTS } from "../features/achievements/data.js";
+import { mergeTestState } from "../testUtils/testState.js";
 
 const baseAchievements = () => ({
   counters: {
@@ -14,11 +16,11 @@ const baseAchievements = () => ({
   seenBuildings: {},
 });
 
-const baseState = (over = {}) => ({
-  ...achInitial,
-  achievements: baseAchievements(),
-  ...over,
-});
+const baseState = (over: Record<string, unknown> = {}) =>
+  mergeTestState({
+    achievements: baseAchievements(),
+    ...over,
+  });
 
 describe("mine-themed achievements", () => {
   it("registers first_strike / deep_digger / mine_master", () => {
@@ -33,7 +35,7 @@ describe("mine-themed achievements", () => {
     const s1 = achReduce(s0, {
       type: "CHAIN_COLLECTED",
       payload: { key: "tile_mine_stone", gained: 4, chainLength: 4, upgrades: 0 },
-    });
+    } as Action);
     expect(s1.achievements.counters.mine_chained).toBe(4);
   });
 
@@ -42,7 +44,7 @@ describe("mine-themed achievements", () => {
     const s1 = achReduce(s0, {
       type: "CHAIN_COLLECTED",
       payload: { key: "tile_grass_hay", gained: 10, chainLength: 10, upgrades: 0 },
-    });
+    } as Action);
     expect(s1.achievements.counters.mine_chained).toBe(0);
   });
 
@@ -53,7 +55,7 @@ describe("mine-themed achievements", () => {
       s = achReduce(s, {
         type: "CHAIN_COLLECTED",
         payload: { key, gained: 3, chainLength: 3, upgrades: 0 },
-      });
+      } as Action);
     }
     expect(s.achievements.counters.mine_chained).toBe(3 * mineKeys.length);
   });
@@ -63,7 +65,7 @@ describe("mine-themed achievements", () => {
     const s1 = achReduce(s0, {
       type: "CHAIN_COLLECTED",
       payload: { key: "tile_mine_stone", gained: 0, chainLength: 4, upgrades: 0 },
-    });
+    } as Action);
     expect(s1.achievements.counters.mine_chained).toBe(0);
   });
 
@@ -71,12 +73,12 @@ describe("mine-themed achievements", () => {
     const fs = ACHIEVEMENTS.find((a) => a.id === "first_strike");
     const dd = ACHIEVEMENTS.find((a) => a.id === "deep_digger");
     const mm = ACHIEVEMENTS.find((a) => a.id === "mine_master");
-    expect(fs.threshold).toBe(1);
-    expect(dd.threshold).toBe(50);
-    expect(mm.threshold).toBe(200);
-    expect(fs.counter).toBe("mine_chained");
-    expect(dd.counter).toBe("mine_chained");
-    expect(mm.counter).toBe("mine_chained");
+    expect(fs?.threshold).toBe(1);
+    expect(dd?.threshold).toBe(50);
+    expect(mm?.threshold).toBe(200);
+    expect(fs?.counter).toBe("mine_chained");
+    expect(dd?.counter).toBe("mine_chained");
+    expect(mm?.counter).toBe("mine_chained");
   });
 
   it("crossing first_strike threshold unlocks the achievement and grants its coin reward", () => {
@@ -84,7 +86,7 @@ describe("mine-themed achievements", () => {
     const s1 = achReduce(s0, {
       type: "CHAIN_COLLECTED",
       payload: { key: "tile_mine_stone", gained: 1, chainLength: 1, upgrades: 0 },
-    });
+    } as Action);
     expect(s1.achievements.unlocked.first_strike).toBe(true);
     // First chain also unlocks first_steps + naturalist could fire — total
     // coins is just verified to include first_strike's 25◉.
