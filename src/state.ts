@@ -1,4 +1,4 @@
-import { BIOMES, BUILDINGS, RECIPES, DAILY_REWARDS, MIN_EXPEDITION_TURNS, CAPPED_INVENTORY_RESOURCES, UPGRADE_THRESHOLDS, CRAFT_GEM_SKIP_COST, getItem, tileFamilyResource } from "./constants.js";
+import { BIOMES, BUILDINGS, RECIPES, WORKSHOP_RECIPES, DAILY_REWARDS, MIN_EXPEDITION_TURNS, CAPPED_INVENTORY_RESOURCES, UPGRADE_THRESHOLDS, CRAFT_GEM_SKIP_COST, getItem, tileFamilyResource } from "./constants.js";
 import { locBuilt as _locBuilt } from "./locBuilt.js";
 import { sellPriceFor as _sellPriceFor } from "./features/market/pricing.js";
 import { isTapTargetPower } from "./config/toolPowers.js";
@@ -540,7 +540,7 @@ function coreReducer(state: GameState, action: Action): GameState {
       // Phase 10.1 — craft a Workshop tool (rake / axe / fertilizer / cat / etc.)
       const toolId = action.id ?? action.payload?.id;
       if (!toolId) return state;
-      const toolRecipe = Object.values(RECIPES).find((r: { item: string; station: string }) => r.item === toolId && r.station === "workshop") as { inputs: Record<string, number> } | undefined;
+      const toolRecipe = WORKSHOP_RECIPES[toolId];
       if (!toolRecipe) return state;
       // Workshop must be built
       if (!locBuilt(state).workshop) return state;
