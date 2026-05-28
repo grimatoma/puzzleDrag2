@@ -10,7 +10,7 @@ describe("townLayout.js - buildTownPlan", () => {
     expect(plan1).toEqual(plan2);
 
     // Verify structural properties
-    expect(plan1.width).toBe(1100);
+    expect(plan1.width).toBe(1500);
     expect(plan1.height).toBe(600);
     expect(plan1.lots).toHaveLength(12); // default plotCount is 12
 
@@ -28,10 +28,10 @@ describe("townLayout.js - buildTownPlan", () => {
     expect(smallPlan.lots).toHaveLength(5);
 
     // Lots are capped at the sum of row caps
-    // ROWS[2] (front) cap=5, ROWS[1] (mid) cap=5, ROWS[0] (back) cap=4
-    // Total cap = 14 (lot 0 sits in the plaza, so we have 1 + 13)
+    // ROWS[2] (front) cap=6, ROWS[1] (mid) cap=6, ROWS[0] (back) cap=5
+    // Total cap = 17 (lot 0 sits in the plaza, so we have 1 + 16)
     const overPlan = buildTownPlan({ plotCount: 20 });
-    expect(overPlan.lots.length).toBeLessThanOrEqual(14);
+    expect(overPlan.lots.length).toBeLessThanOrEqual(17);
   });
 
   it("includes puzzle-board fixtures based on boardKinds", () => {
@@ -49,7 +49,7 @@ describe("townLayout.js - buildTownPlan", () => {
     ]);
 
     // Should have right board street
-    expect(minePlan.streets.some(s => s.x1 === 1100 - 116 && s.y1 === 398)).toBe(true);
+    expect(minePlan.streets.some(s => s.x1 === 1500 - 116 && s.y1 === 398)).toBe(true);
 
     const allPlan = buildTownPlan({ boardKinds: ["farm", "mine", "fish"] });
     expect(allPlan.boards.length).toBe(3);
