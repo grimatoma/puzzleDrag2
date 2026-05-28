@@ -21,6 +21,13 @@ import { RewardChip } from "../../ui/primitives/Chip.jsx";
 
 export const viewKey = "boons";
 
+export function boonIconFor(effectType: string): string {
+  if (effectType === "coin_gain_mult") return "boon_coin_mult";
+  if (effectType === "bond_gain_mult") return "boon_bond_mult";
+  if (effectType.startsWith("chain")) return "boon_chain_mult";
+  return "boon_coin_mult";
+}
+
 // Tabbing by zone-type keeps the catalog reasonable on small screens.
 const TYPE_LABELS: Record<string, string> = { farm: "Farm", mine: "Mine", harbor: "Harbor" };
 const PATH_LABELS: Record<string, string> = { coexist: "Coexist", driveout: "Drive Out" };
@@ -81,7 +88,7 @@ function BoonCard({ state, dispatch, boon }: BoonCardProps) {
       }}
     >
       <div className="flex items-center justify-between gap-2">
-        <div className="font-bold text-[14px]">{boon.name}</div>
+        <div className="font-bold text-[14px] flex items-center gap-1"><Icon iconKey={boonIconFor(boon.effect.type)} size={18} />{boon.name}</div>
         {owned ? (
           <RewardChip className="text-[10px] bg-[#a8d4a0] border-[#3a7a1a] text-[#1f3a10]">
             <CheckGlyph size={10} />
@@ -172,13 +179,13 @@ export default function BoonScreen({ state, dispatch }: BoonScreenProps) {
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div className="flex flex-col gap-2">
-            <div className="hl-heading">{PATH_LABELS.coexist}</div>
+            <div className="hl-heading"><Icon iconKey="boon_branch_coexist" size={16} /> {PATH_LABELS.coexist}</div>
             {coexistList.map((b: BoonDef) => (
               <BoonCard key={b.id} state={state} dispatch={dispatch} boon={{ ...b, catalogKey: `${type}_coexist` }} />
             ))}
           </div>
           <div className="flex flex-col gap-2">
-            <div className="hl-heading">{PATH_LABELS.driveout}</div>
+            <div className="hl-heading"><Icon iconKey="boon_branch_drive_out" size={16} /> {PATH_LABELS.driveout}</div>
             {driveoutList.map((b: BoonDef) => (
               <BoonCard key={b.id} state={state} dispatch={dispatch} boon={{ ...b, catalogKey: `${type}_driveout` }} />
             ))}
