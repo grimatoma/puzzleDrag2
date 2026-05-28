@@ -1,10 +1,16 @@
 import { describe, it, expect } from "vitest";
 import { BOSSES, bossReward } from "../features/bosses/data.js";
 
+function requireBoss(id: string) {
+  const boss = BOSSES.find((b) => b.id === id);
+  if (!boss) throw new Error(`missing boss ${id}`);
+  return boss;
+}
+
 describe("8.2 — Boss reward scaling", () => {
-  const fm = BOSSES.find((b) => b.id === "frostmaw");
-  const qm = BOSSES.find((b) => b.id === "quagmire");
-  const os = BOSSES.find((b) => b.id === "old_stoneface");
+  const fm = requireBoss("frostmaw");
+  const qm = requireBoss("quagmire");
+  const os = requireBoss("old_stoneface");
 
   it("failed boss: 0 coins, 0 runes, defeated false", () => {
     const r = bossReward(fm, 29, 1);

@@ -133,62 +133,78 @@ export default function BuildingsTab({ draft, updateDraft, focus }: TabProps) {
 
           return (
             <Card key={b.id} id={hi.id} style={hi.ringStyle} accent={dirty || hi.isFocused ? COLORS.ember : COLORS.border}>
-              <div className="flex items-start justify-between mb-2 gap-2">
-                <div className="flex items-center gap-2">
-                  <div
-                    className="relative shrink-0 rounded border overflow-hidden"
-                    style={{ width: 36, height: 36, borderColor: COLORS.border, background: COLORS.parchment }}
-                    title={`${eff.name} icon`}
-                  >
-                    <BuildingIllustration id={b.id} isBuilt />
+              {/* Header row: illustration + icon + meta + revert */}
+              <div className="flex gap-3 mb-2">
+                {/* Building illustration — large */}
+                <div
+                  className="relative shrink-0 rounded-lg border overflow-hidden"
+                  style={{ width: 96, height: 96, borderColor: COLORS.border, background: COLORS.parchment }}
+                  title={`${eff.name} illustration`}
+                >
+                  <BuildingIllustration id={b.id} isBuilt />
+                </div>
+
+                {/* Icon + meta stacked */}
+                <div className="flex flex-col gap-1 flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    {/* Small icon badge */}
+                    <div
+                      className="shrink-0 flex items-center justify-center rounded border"
+                      style={{ width: 24, height: 24, borderColor: COLORS.border, background: COLORS.parchmentDeep }}
+                      title={`${eff.name} icon`}
+                    >
+                      <Icon iconKey={b.id} size={18} />
+                    </div>
+                    <code
+                      className="font-mono text-[10px] px-1.5 py-0.5 rounded"
+                      style={{ background: COLORS.parchmentDeep, color: COLORS.ember }}
+                    >
+                      {b.id}
+                    </code>
+                    <Pill>lv ≥ {eff.lv}</Pill>
+                    {b.biome && <Pill>{b.biome}</Pill>}
+                    {dirty && (
+                      <SmallButton
+                        variant="ghost"
+                        onClick={() => updateDraft((d: BalanceDraft) => { delete d.buildings[b.id]; })}
+                      >
+                        revert
+                      </SmallButton>
+                    )}
                   </div>
-                  <code
-                    className="font-mono text-[10px] px-1.5 py-0.5 rounded"
-                    style={{ background: COLORS.parchmentDeep, color: COLORS.ember }}
-                  >
-                    {b.id}
-                  </code>
-                  <Pill>lv ≥ {eff.lv}</Pill>
-                  {b.biome && <Pill>{b.biome}</Pill>}
-                </div>
-                {dirty && (
-                  <SmallButton
-                    variant="ghost"
-                    onClick={() => updateDraft((d: BalanceDraft) => { delete d.buildings[b.id]; })}
-                  >
-                    revert
-                  </SmallButton>
-                )}
-              </div>
 
-              <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 mb-2">
-                <div className="col-span-2">
-                  <Label>Name</Label>
-                  <TextField value={eff.name} onChange={(v: string) => patch(b.id, { name: v })} />
-                </div>
-                <div>
-                  <Label>Required level</Label>
-                  <NumberField value={eff.lv} min={1} max={20} width={60}
-                    onChange={(v: number) => patch(b.id, { lv: v })} />
+                  {/* Name + level inline */}
+                  <div className="flex items-end gap-2">
+                    <div className="flex-1 min-w-0">
+                      <Label>Name</Label>
+                      <TextField value={eff.name} onChange={(v: string) => patch(b.id, { name: v })} />
+                    </div>
+                    <div className="shrink-0">
+                      <Label>Level</Label>
+                      <NumberField value={eff.lv} min={1} max={20} width={56}
+                        onChange={(v: number) => patch(b.id, { lv: v })} />
+                    </div>
+                  </div>
+
+                  {/* Description */}
+                  <div>
+                    <Label>Description</Label>
+                    <TextArea
+                      rows={2}
+                      value={eff.desc}
+                      onChange={(v: string) => patch(b.id, { desc: v })}
+                    />
+                  </div>
                 </div>
               </div>
 
-              <div className="mb-2">
+              <div className="mb-1">
                 <div className="text-[10px] font-bold uppercase tracking-wide mb-1" style={{ color: COLORS.inkSubtle }}>
                   Build cost
                 </div>
                 <CostEditor
                   cost={eff.cost}
                   onChange={(nextCost: CostMap) => patch(b.id, { cost: nextCost })}
-                />
-              </div>
-
-              <div>
-                <Label>Description</Label>
-                <TextArea
-                  rows={2}
-                  value={eff.desc}
-                  onChange={(v: string) => patch(b.id, { desc: v })}
                 />
               </div>
 

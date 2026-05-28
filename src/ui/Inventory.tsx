@@ -1,5 +1,7 @@
-import { useState, useReducer, useCallback, useEffect, useLayoutEffect, useRef, forwardRef } from "react";
-import { BIOMES, ITEMS, RECIPES, RESOURCE_TO_THRESHOLD } from "../constants.js";
+import { useState, useReducer, useCallback, useEffect, useLayoutEffect, useRef, forwardRef, memo } from "react";
+import { BIOMES, getItem, ITEMS, RECIPES, RESOURCE_TO_THRESHOLD } from "../constants.js";
+import type { ResourceKey } from "../types/catalogKeys.js";
+import type { BiomeItemEntry, ItemEntry, ResourceItemEntry } from "../constants.js";
 import { ProgressBar } from "./primitives/ActionCard.jsx";
 import {
   INVENTORY_TAGS,
@@ -33,17 +35,12 @@ interface InventoryEntry {
   orderTotal: number | undefined;
 }
 
-interface ProgressInfo { value: number; max: number }
 
 type SortMode = "alpha" | "recent" | "count" | string;
 
-interface BiomeResourceEntry {
-  key: string;
-  label?: string;
-  [extra: string]: unknown;
-}
-
 interface RecipeRef { item?: string; [extra: string]: unknown }
+type BiomeResourceEntry = BiomeItemEntry<ResourceItemEntry>;
+type ItemRow = ItemEntry;
 
 const cachedRecipesByOutput = (Object.values(RECIPES) as RecipeRef[]).reduce<Record<string, RecipeRef[]>>((acc, recipe) => {
   if (!recipe?.item) return acc;
@@ -64,8 +61,7 @@ interface OrderLike {
 }
 
 export function labelFor(key: string, fallback?: string) {
-  const items = ITEMS as Record<string, { label?: string }>;
-  return iconLabel(key) || items[key]?.label || fallback || key;
+  return iconLabel(key) || getItem(key)?.label || fallback || key;
 }
 
 function sortKeys(keys: string[], sort: SortMode, inventory: Record<string, number>, recentOrder: string[] | null | undefined) {
@@ -167,28 +163,33 @@ function useAccordion() {
   return { displayedKey: state.displayedKey, isOpen: state.isOpen, select, selectInPlace, close, onClosed };
 }
 
-const InventoryIconCell = forwardRef<HTMLButtonElement, { entry: InventoryEntry; selected: boolean; onSelect: () => void; progress: ProgressInfo | null }>(function InventoryIconCell(
-  { entry, selected, onSelect, progress },
+// Memoized via primitive props + stable `onSelect` (see InventoryGrid). The
+// parent rebuilds `entries`/closures every render, so we deliberately accept
+// scalar fields instead of the whole `entry` object and a stable
+// `(key, index) => void` handler — that lets React.memo's default shallow
+// compare skip re-rendering all cells when only the selection changes.
+const InventoryIconCell = memo(forwardRef<HTMLButtonElement, { itemKey: string; label: string; count: number; index: number; selected: boolean; onSelect: (key: string, index: number) => void; progressValue: number; progressMax: number }>(function InventoryIconCell(
+  { itemKey, label, count, index, selected, onSelect, progressValue, progressMax },
   ref
 ) {
-  const { key, label, count } = entry;
-  const pct = progress ? Math.max(0, Math.min(100, (progress.value / progress.max) * 100)) : 0;
+  const hasProgress = progressValue > 0 && progressMax > 0;
+  const pct = hasProgress ? Math.max(0, Math.min(100, (progressValue / progressMax) * 100)) : 0;
   return (
     <button
       ref={ref}
       type="button"
-      className={`inv-grid__cell${selected ? " is-selected" : ""}${count === 0 && !progress ? " is-muted" : ""}`}
+      className={`inv-grid__cell${selected ? " is-selected" : ""}${count === 0 && !hasProgress ? " is-muted" : ""}`}
       aria-pressed={selected}
-      aria-label={`${label}${count > 0 ? `, ${count}` : ""}${progress ? `, ${progress.value}/${progress.max} toward next` : ""}`}
-      onClick={onSelect}
+      aria-label={`${label}${count > 0 ? `, ${count}` : ""}${hasProgress ? `, ${progressValue}/${progressMax} toward next` : ""}`}
+      onClick={() => onSelect(itemKey, index)}
     >
-      <Icon iconKey={key} size={52} title={label} />
+      <Icon iconKey={itemKey} size={52} title={label} />
       {count > 0 && (
         <span className="inv-grid__badge" aria-hidden="true">
           {count > 999 ? "999+" : count}
         </span>
       )}
-      {progress && (
+      {hasProgress && (
         <div
           className="absolute bottom-0 left-0 right-0 h-1 rounded-b overflow-hidden bg-black/20"
           aria-hidden="true"
@@ -201,7 +202,7 @@ const InventoryIconCell = forwardRef<HTMLButtonElement, { entry: InventoryEntry;
       )}
     </button>
   );
-});
+}));
 
 function InventoryAccordion({ entry, isOpen, arrowLeft, marketBuilt, dispatch, onClosed, style }: { entry: InventoryEntry | null; isOpen: boolean; arrowLeft: number | null; marketBuilt: boolean; dispatch: Dispatch; onClosed: () => void; style?: React.CSSProperties }) {
   const handleTransitionEnd = (e: React.TransitionEvent<HTMLDivElement>) => {
@@ -281,42 +282,44 @@ function StatusPill({ status, total }: { status: string | undefined; total?: num
   return null;
 }
 
-function InventoryBrowserItem({ entry, selected, onSelect, progress }: { entry: InventoryEntry; selected: boolean; onSelect: () => void; progress: ProgressInfo | null }) {
-  const { key, label, count, orderStatus } = entry;
+// Memoized companion to InventoryIconCell — same primitive-props contract so
+// the default shallow compare keeps list cells from re-rendering on selection.
+const InventoryBrowserItem = memo(function InventoryBrowserItem({ itemKey, label, count, orderStatus, index, selected, onSelect, progressValue, progressMax }: { itemKey: string; label: string; count: number; orderStatus: string | undefined; index: number; selected: boolean; onSelect: (key: string, index: number) => void; progressValue: number; progressMax: number }) {
   // List view: surface only meaningful order statuses (ready/needed). The
   // "Excess" badge and the redundant kind subtitle stay on the detail card.
   const listStatus = orderStatus === "ready" || orderStatus === "needed" ? orderStatus : undefined;
+  const hasProgress = progressValue > 0 && progressMax > 0;
   return (
     <BrowserItemButton
       selected={selected}
-      icon={<Icon iconKey={key} size={40} title={label} />}
+      icon={<Icon iconKey={itemKey} size={40} title={label} />}
       title={label}
       count={count}
       status={listStatus}
-      onClick={onSelect}
+      onClick={() => onSelect(itemKey, index)}
       aria-label={`View ${label}`}
     >
-      {progress && (
-        <div aria-label={`${progress.value}/${progress.max} toward next ${label}`}>
-          <ProgressBar value={progress.value} max={progress.max} tone="gold" className="h-1.5 mt-1" />
+      {hasProgress && (
+        <div aria-label={`${progressValue}/${progressMax} toward next ${label}`}>
+          <ProgressBar value={progressValue} max={progressMax} tone="gold" className="h-1.5 mt-1" />
         </div>
       )}
     </BrowserItemButton>
   );
-}
+});
 
-function InventoryListItemExpanded({ entry, marketBuilt, dispatch, onCollapse, progress }: { entry: InventoryEntry; marketBuilt: boolean; dispatch: Dispatch; onCollapse: () => void; progress: ProgressInfo | null }) {
+function InventoryListItemExpanded({ entry, marketBuilt, dispatch, onCollapse, progressValue, progressMax }: { entry: InventoryEntry; marketBuilt: boolean; dispatch: Dispatch; onCollapse: () => void; progressValue: number; progressMax: number }) {
   const { key, label, count, sellPrice, buyPrice, kind, orderStatus, orderTotal, tags = [] } = entry;
   const canBuy = kind === "resource" && marketBuilt && buyPrice > 0;
   const canSell = marketBuilt && sellPrice > 0 && count > 0;
   const sell = () => {
     if (kind === "resource") {
-      dispatch({ type: "SELL_RESOURCE", payload: { key, qty: 1 } });
+      dispatch({ type: "SELL_RESOURCE", payload: { key: key as ResourceKey, qty: 1 } });
     } else {
       dispatch({ type: "SELL_ITEM", id: key, qty: 1 });
     }
   };
-  const buy = () => dispatch({ type: "BUY_RESOURCE", payload: { key, qty: 1 } });
+  const buy = () => dispatch({ type: "BUY_RESOURCE", payload: { key: key as ResourceKey, qty: 1 } });
   const listStatus = orderStatus === "ready" || orderStatus === "needed" ? orderStatus : undefined;
   const showActions = canSell || kind === "resource";
 
@@ -334,10 +337,10 @@ function InventoryListItemExpanded({ entry, marketBuilt, dispatch, onCollapse, p
         </span>
         <span className="hl-browser-item__main">
           <span className="hl-browser-item__title">{label}</span>
-          {progress && (
+          {progressValue > 0 && progressMax > 0 && (
             <ProgressBar
-              value={progress.value}
-              max={progress.max}
+              value={progressValue}
+              max={progressMax}
               tone="gold"
               className="h-1.5 mt-1"
             />
@@ -389,12 +392,12 @@ function InventoryDetail({ entry, marketBuilt, dispatch }: { entry: InventoryEnt
   const canSell = marketBuilt && sellPrice > 0 && count > 0;
   const sell = () => {
     if (kind === "resource") {
-      dispatch({ type: "SELL_RESOURCE", payload: { key, qty: 1 } });
+      dispatch({ type: "SELL_RESOURCE", payload: { key: key as ResourceKey, qty: 1 } });
     } else {
       dispatch({ type: "SELL_ITEM", id: key, qty: 1 });
     }
   };
-  const buy = () => dispatch({ type: "BUY_RESOURCE", payload: { key, qty: 1 } });
+  const buy = () => dispatch({ type: "BUY_RESOURCE", payload: { key: key as ResourceKey, qty: 1 } });
   const status = orderStatus ? <StatusPill status={orderStatus} total={orderTotal} /> : null;
 
   return (
@@ -451,20 +454,19 @@ function InventoryDetail({ entry, marketBuilt, dispatch }: { entry: InventoryEnt
 }
 
 export function CompactOrders({ orders, inventory, dispatch }: { orders: OrderLike[]; inventory: Record<string, number>; dispatch: Dispatch }) {
-  const items = ITEMS as Record<string, { label?: string }>;
   return (
     <div className="flex flex-col gap-1.5">
       {orders.map((o) => {
         const need = o.need ?? 0;
         const have = inventory[o.key] || 0;
         const done = have >= need;
-        const res = items[o.key];
+        const res = getItem(o.key);
         const label = res ? res.label : o.key;
         return (
           <button
             key={o.id}
             type="button"
-            onClick={() => dispatch({ type: "TURN_IN_ORDER", id: o.id, npc: o.npc, key: o.key, need, reward: o.reward })}
+            onClick={() => dispatch({ type: "TURN_IN_ORDER", id: o.id })}
             className={`flex items-center gap-1.5 rounded-lg px-2 py-2 text-left border min-h-tap transition-colors ${done ? "bg-moss/40 border-moss text-white" : "bg-parchment-soft border-iron text-ink"}`}
           >
             <span className="flex-shrink-0 grid place-items-center w-5 h-5">
@@ -486,7 +488,6 @@ export function CompactOrders({ orders, inventory, dispatch }: { orders: OrderLi
   );
 }
 
-interface ItemRow { kind?: string; label?: string; [extra: string]: unknown }
 type FilterMode = string | string[];
 
 export function InventoryGrid({
@@ -516,32 +517,33 @@ export function InventoryGrid({
   viewMode?: string;
   resourceProgress?: Record<string, number>;
 }) {
-  const biomes = BIOMES as Record<string, { resources: BiomeResourceEntry[] }>;
-  const itemsAll = ITEMS as Record<string, ItemRow>;
-  const resources = biomes[biomeKey].resources; // already resource-only after data split
-  const items = (Object.entries(itemsAll) as [string, ItemRow][]).filter(([key, item]) =>
-    (inventory[key] || 0) > 0 &&
-    !resources.find((r) => r.key === key) &&
-    item.kind !== "tile" &&
-    item.kind !== "tool"
-  );
+  const resources = BIOMES[biomeKey].resources; // already resource-only after data split
+  const items = (Object.keys(ITEMS) as string[]).filter((key) => {
+    const item = getItem(key);
+    return (
+      (inventory[key] || 0) > 0 &&
+      !resources.find((r) => r.key === key) &&
+      item?.kind !== "tile" &&
+      item?.kind !== "tool"
+    );
+  }).map((key) => [key, getItem(key)!] as [string, ItemRow]);
   const tools = (Object.entries((state?.tools ?? {}) as Record<string, number>) as [string, number][]).filter(([key, count]) =>
-    (count || 0) > 0 && itemsAll[key]?.kind === "tool"
+    (count || 0) > 0 && getItem(key)?.kind === "tool"
   );
   const { status, totals } = orderStatusByKey(orders, inventory);
   const marketBuilt = !!locBuilt(state).caravan_post;
   const prices = (state?.market?.prices ?? {}) as Record<string, { buy?: number; sell?: number }>;
   const recipesByOutput = cachedRecipesByOutput;
-  // Returns { value, max } when a resource has non-zero fractional progress,
-  // null otherwise (progress bar is hidden when nothing is accumulating).
-  const progressFor = (key: string): ProgressInfo | null => {
-    const value = resourceProgress[key] ?? 0;
-    const max = (RESOURCE_TO_THRESHOLD as Record<string, number>)[key];
-    return value > 0 && max ? { value, max } : null;
-  };
+  // Cells take fractional progress as two scalars (value, max) so they stay
+  // memoizable; the bar is hidden when value <= 0 or no threshold exists.
+  const progressValueFor = (key: string): number => resourceProgress[key] ?? 0;
+  const progressMaxFor = (key: string): number => (RESOURCE_TO_THRESHOLD as Record<string, number>)[key] ?? 0;
 
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const accordion = useAccordion();
+  // `select`/`selectInPlace` are stable (useCallback in useAccordion); pulling
+  // them out keeps the cell handlers below stable and lint-clean.
+  const { select: accSelect, selectInPlace: accSelectInPlace } = accordion;
   const cellRefs = useRef<Record<string, HTMLElement>>({});
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [arrowLeft, setArrowLeft] = useState<number | null>(null);
@@ -550,6 +552,24 @@ export function InventoryGrid({
     if (el) cellRefs.current[key] = el;
     else delete cellRefs.current[key];
   }, []);
+
+  // Stable cell-select handlers so memoized cells don't re-render just because
+  // the parent rebuilt a closure. The compact-grid handler depends on transient
+  // layout/accordion state, so it reads the latest values from a ref (populated
+  // in an effect below) at click time — keeping its identity constant without
+  // ever holding a stale closure.
+  const gridStateRef = useRef<{ viewMode: string; isOpen: boolean; displayedKey: string | null; cols: number; indexByKey: Record<string, number> }>({ viewMode, isOpen: false, displayedKey: null, cols: 1, indexByKey: {} });
+  const selectGridCompact = useCallback((key: string, idx: number) => {
+    const { viewMode: vm, isOpen, displayedKey, cols, indexByKey } = gridStateRef.current;
+    const selectedIndex = displayedKey != null ? indexByKey[displayedKey] ?? -1 : -1;
+    if (vm === "grid" && isOpen && selectedIndex >= 0 && Math.floor(selectedIndex / cols) === Math.floor(idx / cols)) {
+      accSelectInPlace(key);
+      return;
+    }
+    accSelect(key);
+  }, [accSelect, accSelectInPlace]);
+  const selectInPlaceStable = useCallback((key: string) => accSelectInPlace(key), [accSelectInPlace]);
+  const selectWide = useCallback((key: string) => setSelectedKey(key), []);
 
   useLayoutEffect(() => {
     let next: number | null = null;
@@ -604,7 +624,7 @@ export function InventoryGrid({
 
   const resourceCellsBy = new Map<string, BiomeResourceEntry>(resources.map((r) => [r.key, r]));
   const itemDefsByKey = new Map<string, ItemRow>(items.map(([key, item]) => [key, item]));
-  const toolDefsByKey = new Map<string, ItemRow>(tools.map(([key]) => [key, itemsAll[key]]));
+  const toolDefsByKey = new Map<string, ItemRow>(tools.map(([key]) => [key, getItem(key)!]));
 
   const visibleResourceKeys = resources
     .map((r) => r.key)
@@ -683,13 +703,20 @@ export function InventoryGrid({
     });
   }
 
+  // Publish the transient state that the stable selectGridCompact handler reads
+  // at click time. Runs after commit (no dep array) so the ref is always fresh
+  // without writing to a ref during render.
+  useEffect(() => {
+    const indexByKey: Record<string, number> = {};
+    entries.forEach((e, i) => { indexByKey[e.key] = i; });
+    gridStateRef.current = { viewMode, isOpen: accordion.isOpen, displayedKey: accordion.displayedKey, cols: Math.max(columnsPerRow, 1), indexByKey };
+  });
+
   const noResults =
     sortedResourceKeys.length === 0 &&
     sortedItemKeys.length === 0 &&
     sortedToolKeys.length === 0 &&
     (query.length > 0 || filter !== "all");
-
-  const makeRef = useCallback((key: string) => (el: HTMLElement | null) => assignCellRef(key, el), [assignCellRef]);
 
   // ── Narrow mode: inline accordion, no side panel ─────────────────────────
   if (compact) {
@@ -714,16 +741,6 @@ export function InventoryGrid({
         accordionInsertAfter = rowEnd;
       }
       const selectedEntry = selectedIndex >= 0 ? entries[selectedIndex] : null;
-      const cols = Math.max(columnsPerRow, 1);
-      const handleCellSelect = (key: string, idx: number) => {
-        if (viewMode === "grid" && accordion.isOpen && selectedIndex >= 0) {
-          if (Math.floor(selectedIndex / cols) === Math.floor(idx / cols)) {
-            accordion.selectInPlace(key);
-            return;
-          }
-        }
-        accordion.select(key);
-      };
       for (let i = 0; i < entries.length; i++) {
         const entry = entries[i];
         const isSelected = entry.key === accordion.displayedKey;
@@ -731,11 +748,15 @@ export function InventoryGrid({
           cells.push(
             <InventoryIconCell
               key={entry.key}
-              entry={entry}
+              itemKey={entry.key}
+              label={entry.label}
+              count={entry.count}
+              index={i}
               selected={isSelected}
-              onSelect={() => handleCellSelect(entry.key, i)}
-              ref={makeRef(entry.key)}
-              progress={progressFor(entry.key)}
+              onSelect={selectGridCompact}
+              ref={(el) => assignCellRef(entry.key, el)}
+              progressValue={progressValueFor(entry.key)}
+              progressMax={progressMaxFor(entry.key)}
             />
           );
         } else if (isSelected) {
@@ -746,17 +767,23 @@ export function InventoryGrid({
               marketBuilt={marketBuilt}
               dispatch={dispatch}
               onCollapse={() => accordion.selectInPlace(entry.key)}
-              progress={progressFor(entry.key)}
+              progressValue={progressValueFor(entry.key)}
+              progressMax={progressMaxFor(entry.key)}
             />
           );
         } else {
           cells.push(
             <InventoryBrowserItem
               key={entry.key}
-              entry={entry}
+              itemKey={entry.key}
+              label={entry.label}
+              count={entry.count}
+              orderStatus={entry.orderStatus}
+              index={i}
               selected={false}
-              onSelect={() => accordion.selectInPlace(entry.key)}
-              progress={progressFor(entry.key)}
+              onSelect={selectInPlaceStable}
+              progressValue={progressValueFor(entry.key)}
+              progressMax={progressMaxFor(entry.key)}
             />
           );
         }
@@ -796,25 +823,34 @@ export function InventoryGrid({
     <div className="hl-empty px-1">No resources yet.</div>
   ) : viewMode === "grid" ? (
     <div className="inv-grid">
-      {entries.map((entry) => (
+      {entries.map((entry, i) => (
         <InventoryIconCell
           key={entry.key}
-          entry={entry}
+          itemKey={entry.key}
+          label={entry.label}
+          count={entry.count}
+          index={i}
           selected={selected?.key === entry.key}
-          onSelect={() => setSelectedKey(entry.key)}
-          progress={progressFor(entry.key)}
+          onSelect={selectWide}
+          progressValue={progressValueFor(entry.key)}
+          progressMax={progressMaxFor(entry.key)}
         />
       ))}
     </div>
   ) : (
     <BrowserGrid min={180}>
-      {entries.map((entry) => (
+      {entries.map((entry, i) => (
         <InventoryBrowserItem
           key={entry.key}
-          entry={entry}
+          itemKey={entry.key}
+          label={entry.label}
+          count={entry.count}
+          orderStatus={entry.orderStatus}
+          index={i}
           selected={selected?.key === entry.key}
-          onSelect={() => setSelectedKey(entry.key)}
-          progress={progressFor(entry.key)}
+          onSelect={selectWide}
+          progressValue={progressValueFor(entry.key)}
+          progressMax={progressMaxFor(entry.key)}
         />
       ))}
     </BrowserGrid>

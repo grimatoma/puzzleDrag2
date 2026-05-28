@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import type { ChangeEvent, ReactNode } from "react";
 import Icon from "../ui/Icon.jsx";
-import { BIOMES, ITEMS } from "../constants.js";
+import { RESOURCE_KEYS, TILE_KEYS } from "../types/catalogKeys.js";
 import {
   NumberInput as BaseNumberInput,
   SearchInput as BaseSearchInput,
@@ -315,22 +315,15 @@ export function SearchAndAddPicker({ label = "Add Item", placeholder = "Search..
 
 /** Options for resource-key selects. Drawn from all biome resource lists (pre-filtered to kind:"resource"). */
 export function resourceKeyOptions() {
-  const set = new Set<string>();
-  for (const b of Object.values(BIOMES))
-    for (const r of b.resources)
-      set.add(r.key);
   return [
     { value: "", label: "— pick resource —" },
-    ...[...set].sort().map((k) => ({ value: k, label: k })),
+    ...RESOURCE_KEYS.map((k: string) => ({ value: k, label: k })),
   ];
 }
 
-/** Options for tile-key selects. Returns only entries from ITEMS where kind === "tile". */
+/** Options for tile-key selects from the compile-time TileKey catalog. */
 export function tileKeyOptions() {
-  const keys = Object.entries(ITEMS)
-    .filter(([, v]) => v.kind === "tile")
-    .map(([k]) => k)
-    .sort();
+  const keys = [...TILE_KEYS].sort();
   return [
     { value: "", label: "— pick tile —" },
     { value: "*", label: "All tile types" },

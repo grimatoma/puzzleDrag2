@@ -174,9 +174,9 @@ describe("visual golden snapshots integrity", () => {
     };
 
     const suites = [
-      { key: "visual.spec.js", scenarios: VISUAL_SCENARIOS, smoke: VISUAL_DESKTOP_SMOKE_SCENARIO_IDS },
-      { key: "balance.visual.spec.js", scenarios: BALANCE_VISUAL_SCENARIOS, smoke: BALANCE_VISUAL_SMOKE_SCENARIO_IDS },
-      { key: "story.visual.spec.js", scenarios: STORY_EDITOR_VISUAL_SCENARIOS, smoke: STORY_EDITOR_VISUAL_SMOKE_SCENARIO_IDS },
+      { key: "visual.spec.ts", scenarios: VISUAL_SCENARIOS, smoke: VISUAL_DESKTOP_SMOKE_SCENARIO_IDS },
+      { key: "balance.visual.spec.ts", scenarios: BALANCE_VISUAL_SCENARIOS, smoke: BALANCE_VISUAL_SMOKE_SCENARIO_IDS },
+      { key: "story.visual.spec.ts", scenarios: STORY_EDITOR_VISUAL_SCENARIOS, smoke: STORY_EDITOR_VISUAL_SMOKE_SCENARIO_IDS },
     ];
 
     const projects = ["desktop", "iphone-landscape", "iphone-portrait"];

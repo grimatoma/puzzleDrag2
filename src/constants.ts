@@ -25,6 +25,183 @@ export const SCENE_EVENTS = Object.freeze({
   REWARD_BURST: "reward-burst",
 });
 
+type Brand<T, Name extends string> = T & { readonly __brand: Name };
+
+export type TileId = Brand<`tile_${string}`, "TileId">;
+export type ResourceId = Brand<string, "ResourceId">;
+export type ToolId = Brand<string, "ToolId">;
+export type ItemId = TileId | ResourceId | ToolId;
+export type BiomeId = "farm" | "mine" | "fish";
+export type RecipeId = Brand<`rec_${string}`, "RecipeId"> | Brand<string, "RecipeAliasId">;
+export type StationId = "bakery" | "forge" | "kitchen" | "larder" | "smokehouse" | "workshop" | string;
+
+export interface SwayParams {
+  amp: number;
+  freq: number;
+  gust: number;
+}
+
+export interface ToolPowerDefinition {
+  [legacyField: string]: unknown;
+  id: string;
+  params?: Record<string, unknown>;
+  anim?: string;
+  ms?: number;
+  tint?: number;
+  bubble?: string;
+}
+
+interface ItemEntryBase {
+  [legacyField: string]: unknown;
+  kind: "tile" | "resource" | "tool";
+  label: string;
+  color?: number;
+  dark?: number;
+  value?: number;
+  desc?: string;
+  description?: string;
+  glyph?: string;
+  iconKey?: string;
+  biome?: BiomeId | string;
+  next?: string | null;
+  sellable?: boolean;
+  power?: ToolPowerDefinition;
+  effect?: string;
+  target?: string;
+  anim?: string;
+  ms?: number;
+}
+
+export interface TileItemEntry extends ItemEntryBase {
+  kind: "tile";
+  biome: BiomeId | string;
+  color: number;
+  dark: number;
+  value: number;
+  next?: string | null;
+  sway?: SwayParams;
+}
+
+export interface ResourceItemEntry extends ItemEntryBase {
+  kind: "resource";
+  color: number;
+  dark: number;
+  value: number;
+  next?: null;
+}
+
+export interface ToolItemEntry extends ItemEntryBase {
+  kind: "tool";
+  power?: ToolPowerDefinition;
+  effect?: string;
+  target?: string;
+  anim?: string;
+  ms?: number;
+}
+
+export type ItemEntry = TileItemEntry | ResourceItemEntry | ToolItemEntry;
+export type ItemRecord = Record<ItemKey, ItemEntry>;
+export type TileRecord = Record<TileKey, TileItemEntry>;
+export type ResourceRecord = Record<ResourceKey, ResourceItemEntry>;
+export type ToolRecord = Record<ToolKey, ToolItemEntry>;
+
+export type BiomeItemEntry<T extends ItemEntry = ItemEntry> = T & { key: string };
+
+export interface BiomePalette {
+  bg: number;
+  accent: number;
+  dim: number;
+}
+
+export interface BiomeDefinition {
+  [legacyField: string]: unknown;
+  name: string;
+  special_dirt: number;
+  dark: number;
+  dirtColor: number;
+  palette: BiomePalette;
+  tilePool: string[];
+  pool: string[];
+  tiles: Array<BiomeItemEntry<TileItemEntry>>;
+  resources: Array<BiomeItemEntry<ResourceItemEntry>>;
+  resourceOrderPool: string[];
+}
+
+export type BiomeRecord = Record<BiomeId, BiomeDefinition> & Record<string, BiomeDefinition>;
+
+import type { ItemKey, RecipeInputKey, ResourceKey, TileKey, ToolKey } from "./types/catalogKeys.js";
+
+/** Closed input map — only keys from the ITEMS catalog. */
+export type RecipeInputs = Partial<Record<RecipeInputKey, number>>;
+
+export interface RecipeDefinition {
+  [legacyField: string]: unknown;
+  item: string;
+  station: StationId;
+  inputs: RecipeInputs;
+  tier?: number;
+  craftMs?: number;
+  name?: string;
+  coins?: number;
+  tool?: string;
+  color?: number;
+  power?: ToolPowerDefinition;
+  anim?: string;
+  ms?: number;
+  desc?: string;
+}
+
+export type RecipeRecord = Record<string, RecipeDefinition>;
+export type WorkshopRecipeRecord = Record<string, RecipeDefinition>;
+
+function isObjectRecord(value: unknown): value is Record<string, unknown> {
+  return !!value && typeof value === "object" && !Array.isArray(value);
+}
+
+export function isItemEntry(value: unknown): value is ItemEntry {
+  return isObjectRecord(value)
+    && (value.kind === "tile" || value.kind === "resource" || value.kind === "tool")
+    && typeof value.label === "string";
+}
+
+export function isTileItemEntry(value: unknown): value is TileItemEntry {
+  return isItemEntry(value) && value.kind === "tile";
+}
+
+export function isResourceItemEntry(value: unknown): value is ResourceItemEntry {
+  return isItemEntry(value) && value.kind === "resource";
+}
+
+export function isToolItemEntry(value: unknown): value is ToolItemEntry {
+  return isItemEntry(value) && value.kind === "tool";
+}
+
+export function hasLegacyNext(value: unknown): value is ItemEntry & { next: string | null } {
+  return isItemEntry(value) && ("next" in value) && (typeof value.next === "string" || value.next === null);
+}
+
+export function hasToolPower(value: unknown): value is ItemEntry & { power: ToolPowerDefinition } {
+  return isItemEntry(value) && isObjectRecord(value.power) && typeof value.power.id === "string";
+}
+
+export function isRecipeDefinition(value: unknown): value is RecipeDefinition {
+  return isObjectRecord(value)
+    && typeof value.item === "string"
+    && typeof value.station === "string"
+    && isObjectRecord(value.inputs);
+}
+
+export function hasRecipeCraftMs(value: unknown): value is RecipeDefinition & { craftMs: number } {
+  return isRecipeDefinition(value) && typeof value.craftMs === "number" && value.craftMs > 0;
+}
+
+export function isBiomeDefinition(value: unknown): value is BiomeDefinition {
+  return isObjectRecord(value)
+    && typeof value.name === "string"
+    && Array.isArray(value.tilePool)
+    && Array.isArray(value.pool);
+}
+
 export const TILE = 74;
 export const COLS = 6;
 export const ROWS = 6;
@@ -41,8 +218,8 @@ export let CRAFT_GEM_SKIP_COST = 1;     // Dev Panel: tuning.craftGemSkipCost
 
 /** Wall-clock ms a queued craft of `recipeKey` takes (recipe override or default). */
 export function recipeCraftMs(recipeKey: string): number {
-  const r = (RECIPES as Record<string, { craftMs?: number }>)[recipeKey];
-  if (r && typeof r.craftMs === "number" && r.craftMs > 0) return r.craftMs;
+  const r = RECIPES[recipeKey];
+  if (hasRecipeCraftMs(r)) return r.craftMs;
   return CRAFT_QUEUE_HOURS * 60 * 60 * 1000;
 }
 
@@ -137,10 +314,10 @@ export const UPGRADE_THRESHOLDS = {
 };
 
 export const SEASONS = [
-  { name: "Spring", iconKey: "ui_star", bg: 0x7dbd48, fill: 0x8fd85a, accent: 0x5daa35 },
-  { name: "Summer", iconKey: "ui_star", bg: 0x8fca45, fill: 0xf6c342, accent: 0xe3a92f },
-  { name: "Autumn", iconKey: "ui_star", bg: 0xb77b3a, fill: 0xd9792d, accent: 0xa65722 },
-  { name: "Winter", iconKey: "ui_star", bg: 0x78aaca, fill: 0x91d9ff, accent: 0xd9f6ff },
+  { name: "Spring", iconKey: "season_spring", bg: 0x7dbd48, fill: 0x8fd85a, accent: 0x5daa35 },
+  { name: "Summer", iconKey: "season_summer", bg: 0x8fca45, fill: 0xf6c342, accent: 0xe3a92f },
+  { name: "Autumn", iconKey: "season_autumn", bg: 0xb77b3a, fill: 0xd9792d, accent: 0xa65722 },
+  { name: "Winter", iconKey: "season_winter", bg: 0x78aaca, fill: 0x91d9ff, accent: 0xd9f6ff },
 ];
 
 // Farm board tile pool. Each entry is one slot in the random fill rotation.
@@ -256,7 +433,7 @@ export const RESOURCE_TO_THRESHOLD: Record<string, number> = (() => {
  * dynamic mutation (underscore aliases, recipe back-compat) continue to work.
  */
 
-export const ITEMS: Record<string, any> = {
+const ITEMS_DATA = {
   // Farm tiles/resources
   tile_grass_hay:          { kind: "tile", biome: "farm", label: "Hay",          color: 0xa8c769, dark: 0x4f6b3a, value: 1, next: "hay_bundle", sway: { amp: 4.0, freq: 0.00060, gust: 0.20 } },
   tile_grass_meadow:       { kind: "tile", biome: "farm", label: "Meadow Grass", color: 0x7fb24a, dark: 0x3e5a18, value: 1, next: "hay_bundle", sway: { amp: 4.5, freq: 0.00058, gust: 0.22 } },
@@ -447,12 +624,50 @@ export const ITEMS: Record<string, any> = {
   cured_meat:    { kind: "resource", biome: "farm", label: "Cured Meat",    color: 0x8a4a26, dark: 0x4a2618, value: 45,  desc: "Salted and dried meat that lasts for weeks. Each unit grants 2 turns on expeditions." },
   iron_ration:   { kind: "resource", biome: "mine", label: "Iron Ration",   color: 0x5a5a60, dark: 0x2a2a30, value: 120, desc: "A calorie-dense, hard-packed block of dried grain and fat. Each unit grants 4 turns on expeditions." },
   festival_loaf: { kind: "resource", biome: "farm", label: "Festival Loaf", color: 0xd49060, dark: 0x7a4a28, value: 60,  desc: "A rich, fruit-studded bread baked for seasonal feasts. Each unit grants 2 turns on expeditions." },
-  wedding_pie:   { kind: "resource", biome: "farm", label: "Wedding Pie",  color: 0xb05428, dark: 0x582818, value: 180, desc: "A massive, multi-layered berry pie traditionally served at Hearthwood weddings. Each unit grants 3 turns on expeditions." }
+  wedding_pie:   { kind: "resource", biome: "farm", label: "Wedding Pie",  color: 0xb05428, dark: 0x582818, value: 180, desc: "A massive, multi-layered berry pie traditionally served at Hearthwood weddings. Each unit grants 3 turns on expeditions." },
 };
-// Underscore-variant aliases for ITEMS (tests and orders use both forms).
-ITEMS.iron_frame = ITEMS.ironframe;
-ITEMS.gem_crown  = ITEMS.gemcrown;
-ITEMS.gold_ring  = ITEMS.goldring;
+
+/** Closed catalog — keys must exist in {@link ItemKey} enums in `types/catalog/itemKeys.ts`. */
+export const ITEMS = {
+  ...ITEMS_DATA,
+  iron_frame: ITEMS_DATA.ironframe as ResourceItemEntry,
+  gem_crown: ITEMS_DATA.gemcrown as ResourceItemEntry,
+  gold_ring: ITEMS_DATA.goldring as ResourceItemEntry,
+} as ItemRecord;
+
+// ── Compile-time key-coverage check ─────────────────────────────────────────
+// Mirrors `src/__tests__/catalog-keys-invariants.test.ts` at the type level:
+// every `ItemKey` enum member must appear as a key of the literal ITEMS object,
+// and no extra keys may exist. Mismatches surface as a `tsc` error naming the
+// offending keys via the `_MissingItemKeys` / `_ExtraItemKeys` check rows below.
+//
+// `${ItemKey}` coerces the enum members to their underlying string-literal
+// values — TS treats enum singletons and structurally identical string
+// literals as mutually assignable but not type-equal, so a direct
+// `Exclude<ItemKey, "tile_grass_hay">` does *not* remove `TileKey.TileGrassHay`
+// and the check would spuriously report every literal key as "extra".
+const _ITEMS_KEY_LITERAL = {
+  ...ITEMS_DATA,
+  iron_frame: ITEMS_DATA.ironframe,
+  gem_crown: ITEMS_DATA.gemcrown,
+  gold_ring: ITEMS_DATA.goldring,
+};
+type _ItemKeyValue = `${ItemKey}`;
+type _MissingItemKeys = Exclude<_ItemKeyValue, keyof typeof _ITEMS_KEY_LITERAL>;
+type _ExtraItemKeys = Exclude<keyof typeof _ITEMS_KEY_LITERAL, _ItemKeyValue>;
+// Non-distributive `[T] extends [never]` so the check resolves to `true` only
+// when each side is empty (a bare `T extends never` distributes and collapses
+// to `never` on either side, defeating the assertion).
+const _MISSING_ITEM_KEYS_MUST_BE_NEVER: [_MissingItemKeys] extends [never] ? true : _MissingItemKeys = true;
+const _EXTRA_ITEM_KEYS_MUST_BE_NEVER: [_ExtraItemKeys] extends [never] ? true : _ExtraItemKeys = true;
+void _MISSING_ITEM_KEYS_MUST_BE_NEVER;
+void _EXTRA_ITEM_KEYS_MUST_BE_NEVER;
+
+/** Safe ITEMS lookup; returns undefined for unknown keys. */
+export function getItem(key: string): ItemEntry | undefined {
+  if (!(key in ITEMS)) return undefined;
+  return ITEMS[key as ItemKey];
+}
 
 // ── Phase 3a: split ITEMS into three kind-specific maps ───────────────────
 // These are the canonical home for tile/resource/tool data. ITEMS is kept as
@@ -460,19 +675,19 @@ ITEMS.gold_ring  = ITEMS.goldring;
 // reach for TILES / RESOURCES / TOOLS by kind.
 export const TILES = Object.freeze(
   Object.fromEntries(
-    Object.entries(ITEMS).filter(([, v]) => v && v.kind === "tile"),
+    Object.entries(ITEMS).filter((entry): entry is [string, TileItemEntry] => isTileItemEntry(entry[1])),
   ),
-);
+) as TileRecord;
 export const RESOURCES = Object.freeze(
   Object.fromEntries(
-    Object.entries(ITEMS).filter(([, v]) => v && v.kind === "resource"),
+    Object.entries(ITEMS).filter((entry): entry is [string, ResourceItemEntry] => isResourceItemEntry(entry[1])),
   ),
-);
+) as ResourceRecord;
 export const TOOLS = Object.freeze(
   Object.fromEntries(
-    Object.entries(ITEMS).filter(([, v]) => v && v.kind === "tool"),
+    Object.entries(ITEMS).filter((entry): entry is [string, ToolItemEntry] => isToolItemEntry(entry[1])),
   ),
-);
+) as ToolRecord;
 
 // Lifted palette: `palette.bg` is now the biome ACCENT strip color (drawn as
 // a thin top edge of the board, not the board fill). `tile_special_dirt` is the
@@ -481,7 +696,7 @@ export const TOOLS = Object.freeze(
 // `dirtColor` is the tile sprite's dirt/floor color (kept readable against
 // parchment without being a saturated brown).
 
-export const BIOMES: Record<string, any> = {
+export const BIOMES: BiomeRecord = {
   farm: {
     name: "Farm",
     special_dirt: 0xc9b993,
@@ -490,6 +705,9 @@ export const BIOMES: Record<string, any> = {
     palette: { bg: 0x7fa848, accent: 0x6f8a3a, dim: 0xc9b993 },
     tilePool: FARM_TILE_POOL,
     pool: FARM_TILE_POOL,
+    tiles: [],
+    resources: [],
+    resourceOrderPool: [],
   },
   mine: {
     name: "Mine",
@@ -499,6 +717,9 @@ export const BIOMES: Record<string, any> = {
     palette: { bg: 0x6a7d92, accent: 0x7a8ca0, dim: 0xc9b993 },
     tilePool: MINE_TILE_POOL,
     pool: MINE_TILE_POOL,
+    tiles: [],
+    resources: [],
+    resourceOrderPool: [],
   },
   fish: {
     name: "Harbor",
@@ -508,6 +729,9 @@ export const BIOMES: Record<string, any> = {
     palette: { bg: 0x4a8aa8, accent: 0x6aa0c0, dim: 0xc9b993 },
     tilePool: FISH_TILE_POOL,
     pool: FISH_TILE_POOL,
+    tiles: [],
+    resources: [],
+    resourceOrderPool: [],
   },
 };
 
@@ -517,18 +741,22 @@ export const BIOMES: Record<string, any> = {
 //   .resourceOrderPool — resource keys drawn from chain outputs of biome tiles
 //     (used by makeOrder; avoids the old bug where orders were keyed on tile keys)
 for (const b of Object.values(BIOMES)) {
+  if (!isBiomeDefinition(b)) continue;
   const biomeFilter = b.name === "Harbor" ? "fish" : b.name.toLowerCase();
   const allEntries = Object.entries(ITEMS)
-    .filter(([, item]) => item.biome === biomeFilter)
+    .filter((entry): entry is [string, ItemEntry] => isItemEntry(entry[1]) && entry[1].biome === biomeFilter)
     .map(([key, item]) => ({ key, ...item }));
-  b.tiles     = allEntries.filter((e) => e.kind === "tile");
-  b.resources = allEntries.filter((e) => e.kind === "resource");
+  b.tiles     = allEntries.filter((e): e is BiomeItemEntry<TileItemEntry> => e.kind === "tile");
+  b.resources = allEntries.filter((e): e is BiomeItemEntry<ResourceItemEntry> => e.kind === "resource");
   // Resource order pool: unique resource keys produced by chaining this biome's tiles.
   const seen = new Set<string>();
   b.resourceOrderPool = b.tiles
-    .map((t: { next?: string | null }) => t.next)
+    .map((t) => t.next)
     .filter((k: string | null | undefined): k is string => k != null && !seen.has(k) && Boolean(seen.add(k)))
-    .filter((k: string) => ITEMS[k]?.kind === "resource");
+    .filter((k: string) => {
+      const item = getItem(k);
+      return item ? isResourceItemEntry(item) : false;
+    });
 }
 
 
@@ -676,6 +904,48 @@ export const BUILDINGS = [
     desc: "A peat-fired smoking shed that turns excess fish and meat into long-keeping rations.",
     cost: { coins: 700, plank: 25, block: 15 }, lv: 4,
     x: 350, y: 150, w: 90, h: 100, color: "#5a4030" },
+  // Decorative flavour buildings — purely cosmetic town landmarks that count
+  // toward town-planning achievements. No gameplay abilities.
+  { id: "clock_tower", name: "Clock Tower",
+    desc: "A tall civic tower whose painted clock face keeps the whole village on time.",
+    cost: { coins: 900, plank: 40, block: 25 }, lv: 4,
+    x: 500, y: 150, w: 70, h: 130, color: "#6a5a8a" },
+  { id: "lighthouse", name: "Lighthouse",
+    desc: "A whitewashed coastal beacon whose lamp sweeps the night to guide boats home.",
+    cost: { coins: 1000, plank: 35, block: 30 }, lv: 4, biome: "fish",
+    x: 640, y: 150, w: 70, h: 130, color: "#c8d0d6" },
+  { id: "apothecary", name: "Apothecary",
+    desc: "A timber-framed shop of bottles and dried herbs where village remedies are mixed.",
+    cost: { coins: 700, plank: 30, block: 10 }, lv: 3,
+    x: 780, y: 150, w: 90, h: 100, color: "#4a7a5a" },
+  { id: "sawmill", name: "Sawmill",
+    desc: "A water-driven sawmill that rips logs into clean planks beside the millrace.",
+    cost: { coins: 800, plank: 20, block: 20 }, lv: 4,
+    x: 900, y: 150, w: 100, h: 95, color: "#7a5a34" },
+  { id: "watchtower", name: "Watchtower",
+    desc: "A timber lookout tower where a sentry keeps an eye on the roads and fields.",
+    cost: { coins: 600, plank: 35, block: 10 }, lv: 3,
+    x: 60, y: 60, w: 70, h: 130, color: "#5a6a4a" },
+  { id: "stable", name: "Stable",
+    desc: "A snug stable of stalls and a hayloft, home to the settlement's horses and ponies.",
+    cost: { coins: 750, plank: 40, block: 10 }, lv: 3,
+    x: 200, y: 60, w: 110, h: 95, color: "#8a5a34" },
+  { id: "apiary", name: "Apiary",
+    desc: "A tidy row of bee skeps among the flowers, humming with honeybees all season long.",
+    cost: { coins: 550, plank: 25 }, lv: 2,
+    x: 360, y: 60, w: 90, h: 90, color: "#d6a83a" },
+  { id: "chapel", name: "Chapel",
+    desc: "A small stone chapel with a bell-cote and stained glass, the village's quiet heart.",
+    cost: { coins: 1100, plank: 30, block: 40 }, lv: 5,
+    x: 500, y: 60, w: 90, h: 120, color: "#9a8e72" },
+  { id: "brewery", name: "Brewery",
+    desc: "A steamy brewhouse of copper kettles and oak casks that turns grain into ale.",
+    cost: { coins: 950, plank: 35, block: 20 }, lv: 4,
+    x: 640, y: 60, w: 100, h: 100, color: "#7a4a26" },
+  { id: "observatory", name: "Observatory",
+    desc: "A domed observatory whose brass telescope charts the stars over the rooftops.",
+    cost: { coins: 1400, plank: 30, block: 45, iron_bar: 10 }, lv: 6,
+    x: 780, y: 60, w: 90, h: 120, color: "#3a4a6a" },
 ];
 
 // `craftMs` is the wall-clock duration of a queued craft. When omitted, the
@@ -685,7 +955,7 @@ export const BUILDINGS = [
 const MIN = 60_000;
 const HOUR = 60 * MIN;
 
-export const RECIPES: Record<string, any> = {
+export const RECIPES: RecipeRecord = {
   // Workshop recipes (Tools)
   rec_rake:        { item: "rake",          station: "workshop", inputs: { plank: 1 },                            craftMs: 1 * MIN },
   rec_axe:         { item: "axe",           station: "workshop", inputs: { block: 1 },                            craftMs: 1 * MIN },
@@ -749,25 +1019,27 @@ export const RECIPES: Record<string, any> = {
 // Old code and tests reference RECIPES by item key (e.g. RECIPES["bread"]).
 // Generate aliases: for each recipe, RECIPES[recipe.item] → same object.
 for (const rec of Object.values(RECIPES)) {
+  if (!isRecipeDefinition(rec)) continue;
   if (rec.item && !RECIPES[rec.item]) RECIPES[rec.item] = rec;
 }
 // Add backward-compatible computed properties to each recipe. Old code reads
 // recipe.name, recipe.coins, recipe.tool, recipe.color, recipe.effect etc.
 // These are now sourced from ITEMS[recipe.item].
 for (const rec of Object.values(RECIPES)) {
+  if (!isRecipeDefinition(rec)) continue;
   if (!rec.item) continue;
-  const itemDef = ITEMS[rec.item];
-  if (!itemDef) continue;
+  const itemDef = getItem(rec.item);
+  if (!isItemEntry(itemDef)) continue;
   // Legacy compat getters — only add if not already set by the recipe itself.
   if (rec.name === undefined)   rec.name   = itemDef.label;
   if (rec.coins === undefined)  rec.coins  = itemDef.value ?? 0;
   if (rec.color === undefined)  rec.color  = itemDef.color;
-  if (rec.power === undefined && itemDef.power) rec.power = itemDef.power;
-  if (rec.anim === undefined)   rec.anim   = itemDef.power?.anim ?? itemDef.anim;
-  if (rec.ms === undefined)     rec.ms     = itemDef.power?.ms ?? itemDef.ms;
+  if (rec.power === undefined && hasToolPower(itemDef)) rec.power = itemDef.power;
+  if (rec.anim === undefined)   rec.anim   = (hasToolPower(itemDef) ? itemDef.power.anim : undefined) ?? (isToolItemEntry(itemDef) ? itemDef.anim : undefined);
+  if (rec.ms === undefined)     rec.ms     = (hasToolPower(itemDef) ? itemDef.power.ms : undefined) ?? (isToolItemEntry(itemDef) ? itemDef.ms : undefined);
   if (rec.desc === undefined)   rec.desc   = itemDef.desc;
   // tool property: if the item is a tool, set recipe.tool = item key
-  if (itemDef.kind === "tool" && rec.tool === undefined) rec.tool = rec.item;
+  if (isToolItemEntry(itemDef) && rec.tool === undefined) rec.tool = rec.item;
 }
 // Explicit retro-compatibility aliases for underscore variants.
 RECIPES.rec_iron_frame = RECIPES.rec_ironframe;
@@ -779,14 +1051,14 @@ RECIPES.gold_ring      = RECIPES.rec_goldring;
 
 // Legacy WORKSHOP_RECIPES export — a view keyed by item-name over workshop
 // recipes. Tests and a few call sites still import this.
-export const WORKSHOP_RECIPES = Object.fromEntries(
+export const WORKSHOP_RECIPES: WorkshopRecipeRecord = Object.fromEntries(
   Object.values(RECIPES)
-    .filter((r) => r.station === "workshop")
+    .filter((r): r is RecipeDefinition => isRecipeDefinition(r) && r.station === "workshop")
     .map((r) => [r.item, r])
 );
 
 // Legacy RECIPES.tools alias (tests reference RECIPES.tools.rake etc.)
-RECIPES.tools = WORKSHOP_RECIPES;
+Object.assign(RECIPES, { tools: WORKSHOP_RECIPES });
 
 
 export const MARKET_PRICES = {
@@ -873,7 +1145,7 @@ export const CAPPED_TILES = [
   "tile_herd_sheep","tile_herd_alpaca","tile_herd_goat","tile_herd_ram",
   "tile_cattle_cow","tile_cattle_longhorn","tile_cattle_triceratops",
   "tile_mount_horse","tile_mount_donkey","tile_mount_moose","tile_mount_mammoth",
-];
+] as const;
 /**
  * Inventory resource keys (kind:"resource") subject to the inventory cap.
  * Used when checking whether buying or crediting a bare resource would exceed the cap.
@@ -883,7 +1155,7 @@ export const CAPPED_INVENTORY_RESOURCES = [
   "flour","plank","jam","hay_bundle","soup",
   // Phase: wire-all-chains — terminal products.
   "pie","honey","meat","milk","horseshoe","eggs","bread",
-];
+] as const;
 
 // ─── Phase 3 Economy ──────────────────────────────────────────────────────────
 

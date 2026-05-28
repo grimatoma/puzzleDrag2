@@ -61,14 +61,6 @@ interface FarmGridCell {
   [k: string]: unknown;
 }
 
-interface FarmHostState {
-  biome?: string;
-  boss?: unknown;
-  hazards?: FarmHazardsState;
-  inventory?: Record<string, number>;
-  grid?: FarmGridCell[][];
-}
-
 export type FarmHazardSpawn =
   | { kind: "fire"; cells: FireCell[] }
   | { kind: "wolf"; row: number; col: number; scared: boolean };
@@ -81,21 +73,20 @@ export function rollFarmHazard(
   rng: () => number = Math.random,
   allowedHazards: string[] = ["fire", "wolf", "rats"],
 ): FarmHazardSpawn | null {
-  const s = state as unknown as FarmHostState;
-  if (s.biome !== "farm") return null;
-  if (s.boss) return null;
+  if (state.biome !== "farm") return null;
+  if (state.boss) return null;
 
   // Single-active cap: if any farm hazard is active, no new spawn
-  const rats = s.hazards?.rats ?? [];
-  const fire = s.hazards?.fire;
-  const wolves = s.hazards?.wolves;
+  const rats = state.hazards?.rats ?? [];
+  const fire = state.hazards?.fire;
+  const wolves = state.hazards?.wolves;
 
   // Fire spawn gate
   if (isFireHazardEnabled() && allowedHazards.includes("fire") && !fire && (rats.length === 0) && !wolves) {
     const fireRead = fire as FireHazard | null | undefined;
     if ((fireRead?.cells?.length ?? 0) < FIRE_MAX_CELLS) {
       if (rng() < FIRE_SPAWN_RATE) {
-        const grid = s.grid;
+        const grid = state.grid;
         if (grid && grid.length > 0) {
           const row = Math.floor(rng() * grid.length);
           const col = Math.floor(rng() * grid[0].length);
@@ -108,13 +99,13 @@ export function rollFarmHazard(
 
   // Wolf spawn gate (independent roll, but still single-active cap)
   if (allowedHazards.includes("wolf") && !wolves && rats.length === 0 && !fire) {
-    const inv: Record<string, number> = s.inventory ?? {};
+    const inv: Record<string, number> = state.inventory ?? {};
     const birdRich = (inv.eggs ?? 0) > 30 || (inv.tile_bird_turkey ?? 0) > 5;
     if (birdRich) {
       const wolvesRead = wolves as WolfHazard | null | undefined;
       const wolvesCount = (wolvesRead?.list?.length ?? 0);
       if (wolvesCount < WOLF_MAX_ACTIVE && rng() < WOLF_SPAWN_RATE) {
-        const grid = s.grid;
+        const grid = state.grid;
         const row = grid ? Math.floor(rng() * grid.length) : 0;
         const col = grid ? Math.floor(rng() * grid[0].length) : 0;
         return { kind: "wolf", row, col, scared: false };
@@ -130,14 +121,14 @@ export function rollFarmHazard(
  * Each fire cell rolls 50% to spread to an orthogonal-adjacent free cell.
  */
 export function tickFire(state: GameState, rng: () => number = Math.random): GameState {
-  const s = state as unknown as FarmHostState;
-  if (!s.hazards?.fire) return state;
-  const fire = s.hazards.fire;
+  const hazards = (state.hazards ?? {}) as FarmHazardsState;
+  if (!hazards.fire) return state;
+  const fire = hazards.fire;
   const cells = fire.cells ?? [];
   if (cells.length === 0) return state;
 
-  if (!s.grid) return state;
-  const grid: FarmGridCell[][] = s.grid.map((r: FarmGridCell[]) => r.map((t: FarmGridCell) => ({ ...t })));
+  if (!state.grid) return state;
+  const grid: FarmGridCell[][] = (state.grid as unknown as FarmGridCell[][]).map((r: FarmGridCell[]) => r.map((t: FarmGridCell) => ({ ...t })));
   const rows = grid.length;
   const cols = grid[0].length;
 
@@ -169,7 +160,7 @@ export function tickFire(state: GameState, rng: () => number = Math.random): Gam
   return {
     ...state,
     grid,
-    hazards: { ...s.hazards, fire: { ...fire, cells: newCells } },
+    hazards: { ...state.hazards, fire: { ...fire, cells: newCells } },
   } as GameState;
 }
 
@@ -179,9 +170,9 @@ export function tickFire(state: GameState, rng: () => number = Math.random): Gam
  * - Non-scared wolves consume one adjacent bird tile.
  */
 export function tickWolves(state: GameState): GameState {
-  const s = state as unknown as FarmHostState;
-  if (!s.hazards?.wolves) return state;
-  const wolves = s.hazards.wolves;
+  const hazards = (state.hazards ?? {}) as FarmHazardsState;
+  if (!hazards.wolves) return state;
+  const wolves = hazards.wolves;
   const list: Wolf[] = wolves.list ?? [];
 
   // Scared countdown
@@ -196,7 +187,7 @@ export function tickWolves(state: GameState): GameState {
   }
 
   // Non-scared wolves eat adjacent birds
-  const grid: FarmGridCell[][] | undefined = s.grid ? s.grid.map((r: FarmGridCell[]) => r.map((t: FarmGridCell) => ({ ...t }))) : s.grid;
+  const grid: FarmGridCell[][] | undefined = state.grid ? state.grid.map((r: FarmGridCell[]) => r.map((t: FarmGridCell) => ({ ...t }))) : state.grid;
   if (grid) {
     const rows = grid.length;
     const cols = grid[0].length;
@@ -222,9 +213,9 @@ export function tickWolves(state: GameState): GameState {
 
   return {
     ...state,
-    grid: grid ?? s.grid,
+    grid: grid ?? state.grid,
     hazards: {
-      ...s.hazards,
+      ...state.hazards,
       wolves: { ...wolves, list: newList, scaredTurnsRemaining: scaredTurns },
     },
   } as GameState;
@@ -237,8 +228,8 @@ interface ChainCell { key?: string | null; row: number; col: number }
  * Returns a state patch `{ hazards, coinsBonus }` or null if no fire in chain.
  */
 export function tryExtinguishFire(state: GameState, chain: ChainCell[]): { hazards: FarmHazardsState; coinsBonus: number } | null {
-  const s = state as unknown as FarmHostState;
-  const fireCells: FireCell[] = s.hazards?.fire?.cells ?? [];
+  const hazards = (state.hazards ?? {}) as FarmHazardsState;
+  const fireCells: FireCell[] = hazards.fire?.cells ?? [];
   if (fireCells.length === 0) return null;
 
   const fireTiles = chain.filter((t: ChainCell) => t.key === "fire");
@@ -250,8 +241,8 @@ export function tryExtinguishFire(state: GameState, chain: ChainCell[]): { hazar
 
   return {
     hazards: {
-      ...s.hazards,
-      fire: remaining.length > 0 && s.hazards?.fire ? { ...s.hazards.fire, cells: remaining } : null,
+      ...hazards,
+      fire: remaining.length > 0 && hazards.fire ? { ...hazards.fire, cells: remaining } : null,
     },
     coinsBonus: fireTiles.length * 2,
   };

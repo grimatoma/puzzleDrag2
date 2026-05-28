@@ -1,6 +1,7 @@
 import { expect, test, describe, vi, beforeEach, afterEach } from "vitest";
 import { loadSavedState, persistStateNow, clearSave } from "../state/persistence.js";
 import { STORAGE_KEYS, SAVE_SCHEMA_VERSION } from "../constants.js";
+import type { GameState } from "../types/state.js";
 
 describe("persistence", () => {
   const SAVE_KEY = STORAGE_KEYS.save;
@@ -69,12 +70,12 @@ describe("persistence", () => {
   });
 
   test("persistStateNow ignores VOLATILE fields", () => {
-    const mockState: any = {
+    const mockState = {
       version: SAVE_SCHEMA_VERSION,
       resources: { wood: 10 },
       modal: "should be ignored",
-      view: "should be ignored"
-    };
+      view: "should be ignored",
+    } as GameState;
     persistStateNow(mockState);
 
     const savedRaw = localStorage.getItem(SAVE_KEY);
@@ -93,5 +94,21 @@ describe("persistence", () => {
     localStorage.setItem(SAVE_KEY, "something");
     clearSave();
     expect(localStorage.getItem(SAVE_KEY)).toBeNull();
+  });
+
+  test("loadSavedState prevents prototype pollution", () => {
+    // Malicious payload aiming to pollute the prototype
+    const maliciousPayload = `{"__proto__": {"polluted": true}, "constructor": {"prototype": {"polluted": true}}, "version": ${SAVE_SCHEMA_VERSION}}`;
+    localStorage.setItem(SAVE_KEY, maliciousPayload);
+
+    const state = loadSavedState();
+
+    // Check that state doesn't have __proto__ property accessible (it shouldn't be added)
+    expect(state).toEqual({ version: SAVE_SCHEMA_VERSION });
+
+    // Additionally verify object prototypes are not polluted
+    const emptyObj = {} as Record<string, unknown>;
+    expect(emptyObj.polluted).toBeUndefined();
+    expect((state as Record<string, unknown>).polluted).toBeUndefined();
   });
 });

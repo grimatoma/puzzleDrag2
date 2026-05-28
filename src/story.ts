@@ -529,7 +529,6 @@ interface SideBeatGameState {
   story?: StoryState | { flags?: Record<string, boolean>; repeatCooldowns?: Record<string, number> };
   inventory?: Record<string, number>;
   npcs?: { bonds?: Record<string, number> };
-  [k: string]: unknown;
 }
 
 /** True if a side beat has already fired (by its onComplete.setFlag or fired marker). */
@@ -614,7 +613,23 @@ export function evaluateSideBeats(
  * @param {object} sideEffects — beat.onComplete (or a subset for testing)
  * @returns {object} new game state with side effects applied
  */
-interface AnyMap { [k: string]: unknown }
+/**
+ * Loose state shape accepted by `applyBeatResult` and `applyChoiceOutcome`.
+ * Lists every field the implementations read or write so callers can pass
+ * either a full `GameState` or the small partial stubs used by tests.
+ */
+interface AnyMap {
+  story?: unknown;
+  npcs?: unknown;
+  inventory?: unknown;
+  coins?: unknown;
+  embers?: unknown;
+  coreIngots?: unknown;
+  gems?: unknown;
+  heirlooms?: unknown;
+  unlockedBiomes?: unknown;
+  pendingBossKey?: unknown;
+}
 
 export function applyBeatResult<S extends AnyMap>(gameState: S, sideEffects: BeatSideEffects): S {
   let next: AnyMap = { ...gameState };
@@ -622,7 +637,7 @@ export function applyBeatResult<S extends AnyMap>(gameState: S, sideEffects: Bea
   // --- setFlag ---
   const setFlags = flagList(sideEffects.setFlag);
   if (setFlags.length > 0) {
-    const story = (next.story as AnyMap | undefined) ?? {};
+    const story = (next.story as Record<string, unknown> | undefined) ?? {};
     const flags = (story.flags as Record<string, boolean> | undefined) ?? {};
     next = {
       ...next,
@@ -639,7 +654,7 @@ export function applyBeatResult<S extends AnyMap>(gameState: S, sideEffects: Bea
   // --- spawnNPC ---
   if (sideEffects.spawnNPC) {
     const npc = sideEffects.spawnNPC;
-    const npcs = (next.npcs as AnyMap | undefined) ?? {};
+    const npcs = (next.npcs as Record<string, unknown> | undefined) ?? {};
     const roster = (npcs.roster as string[] | undefined) ?? [];
     if (!roster.includes(npc)) {
       const bonds = (npcs.bonds as Record<string, number> | undefined) ?? {};
@@ -668,7 +683,7 @@ export function applyBeatResult<S extends AnyMap>(gameState: S, sideEffects: Bea
 
   // --- advanceAct ---
   if (sideEffects.advanceAct) {
-    const story = (next.story as AnyMap | undefined) ?? {};
+    const story = (next.story as Record<string, unknown> | undefined) ?? {};
     next = {
       ...next,
       story: { ...story, act: sideEffects.advanceAct },
@@ -807,7 +822,7 @@ export function applyChoiceOutcome<S extends AnyMap>(gameState: S, outcome: Choi
 
   const setFlagsFn = (val: string | string[], on: boolean) => {
     const keys = Array.isArray(val) ? val : [val];
-    const story = (next.story as AnyMap | undefined) ?? {};
+    const story = (next.story as Record<string, unknown> | undefined) ?? {};
     const flags: Record<string, boolean> = { ...((story.flags as Record<string, boolean> | undefined) ?? {}) };
     for (const k of keys) if (typeof k === "string" && k) flags[k] = on;
     next = { ...next, story: { ...story, flags } };
@@ -818,7 +833,7 @@ export function applyChoiceOutcome<S extends AnyMap>(gameState: S, outcome: Choi
   if (outcome.bondDelta && typeof outcome.bondDelta === "object") {
     const { npc, amount } = outcome.bondDelta;
     if (typeof npc === "string" && Number.isFinite(amount)) {
-      const npcs = (next.npcs as AnyMap | undefined) ?? {};
+      const npcs = (next.npcs as Record<string, unknown> | undefined) ?? {};
       const bonds: Record<string, number> = { ...((npcs.bonds as Record<string, number> | undefined) ?? {}) };
       const cur = Number.isFinite(bonds[npc]) ? bonds[npc] : 5;
       bonds[npc] = Math.max(0, Math.min(10, cur + amount));
@@ -856,7 +871,7 @@ export function applyChoiceOutcome<S extends AnyMap>(gameState: S, outcome: Choi
   if (typeof outcome.queueBeat === "string") {
     const beat = findBeat(outcome.queueBeat);
     if (beat) {
-      const story = (next.story as AnyMap | undefined) ?? {};
+      const story = (next.story as Record<string, unknown> | undefined) ?? {};
       const queue = (story.beatQueue as Beat[] | undefined) ?? [];
       const open = !!story.queuedBeat;
       next = {

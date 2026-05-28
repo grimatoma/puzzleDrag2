@@ -25,6 +25,7 @@
 // on the desktop & mobile QA matrix).
 
 import { memo, useEffect, useMemo, useRef } from "react";
+import type { CSSProperties } from "react";
 
 interface TownPlan {
   waypoints?: Array<{ x: number; y: number }>;
@@ -466,7 +467,7 @@ const VillagerSprite = memo(function VillagerSprite({ villager, size, registerEl
 
   // Style helpers — every absolute position is bottom-anchored so the
   // figure's feet sit on the y coordinate the wrapper transform supplies.
-  const abs = (bottom: number, width: number, height: number, color: string, extra: Record<string, any> = {}) => ({
+  const abs = (bottom: number, width: number, height: number, color: string, extra: CSSProperties = {}) => ({
     position: "absolute" as const,
     left: "50%",
     bottom: figureH * bottom,

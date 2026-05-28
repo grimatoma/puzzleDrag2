@@ -214,7 +214,10 @@ function TileDetail({ detail, category, state, dispatch }: TileDetailProps) {
     <DetailActionButton
       tone="moss"
       disabled={!canActivate}
-      onClick={() => dispatch({ type: "SET_ACTIVE_TILE", payload: { category, tileId: detail.id } })}
+      onClick={() => {
+        if (!category) return;
+        dispatch({ type: "SET_ACTIVE_TILE", payload: { category, tileId: detail.id } });
+      }}
     >
       Activate
     </DetailActionButton>
