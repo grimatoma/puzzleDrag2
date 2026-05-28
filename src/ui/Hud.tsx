@@ -224,6 +224,7 @@ export function Hud({ state, dispatch, inventorySearchOpen, onInventorySearchTog
               title={`Level ${level} · ${xpInLevel} / ${xpNeed} XP`}
               className="!px-2 !gap-1.5"
             >
+              <LegacyIcon iconKey="xp_levelup" size={12} />
               <span
                 key={levelPulseKey}
                 className="text-caption font-semibold tabular-nums"

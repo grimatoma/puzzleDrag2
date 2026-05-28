@@ -73,3 +73,11 @@ describe("keeper icons registered", () => {
     }
   });
 });
+
+describe("misc panel icons registered", () => {
+  it("craft_queue/craft_queue_skip/xp_levelup/dangers_header keys exist", () => {
+    for (const k of ["craft_queue","craft_queue_skip","xp_levelup","dangers_header"]) {
+      expect(ICON_REGISTRY[k], k).toBeDefined();
+    }
+  });
+});
