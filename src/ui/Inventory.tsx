@@ -42,6 +42,13 @@ interface RecipeRef { item?: string; [extra: string]: unknown }
 type BiomeResourceEntry = BiomeItemEntry<ResourceItemEntry>;
 type ItemRow = ItemEntry;
 
+const cachedRecipesByOutput = (Object.values(RECIPES) as RecipeRef[]).reduce<Record<string, RecipeRef[]>>((acc, recipe) => {
+  if (!recipe?.item) return acc;
+  if (!acc[recipe.item]) acc[recipe.item] = [];
+  acc[recipe.item].push(recipe);
+  return acc;
+}, {});
+
 interface OrderLike {
   id: number;
   key: string;
@@ -526,12 +533,7 @@ export function InventoryGrid({
   const { status, totals } = orderStatusByKey(orders, inventory);
   const marketBuilt = !!locBuilt(state).caravan_post;
   const prices = (state?.market?.prices ?? {}) as Record<string, { buy?: number; sell?: number }>;
-  const recipesByOutput = (Object.values(RECIPES) as RecipeRef[]).reduce<Record<string, RecipeRef[]>>((acc, recipe) => {
-    if (!recipe?.item) return acc;
-    if (!acc[recipe.item]) acc[recipe.item] = [];
-    acc[recipe.item].push(recipe);
-    return acc;
-  }, {});
+  const recipesByOutput = cachedRecipesByOutput;
   // Cells take fractional progress as two scalars (value, max) so they stay
   // memoizable; the bar is hidden when value <= 0 or no threshold exists.
   const progressValueFor = (key: string): number => resourceProgress[key] ?? 0;
