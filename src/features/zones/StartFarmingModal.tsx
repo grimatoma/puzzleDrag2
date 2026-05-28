@@ -55,22 +55,11 @@ function tileCategoriesForZoneCategory(zoneCat: string): string[] {
   return (ZONE_TO_TILE_CATEGORIES as Record<string, string[] | undefined>)[zoneCat] ?? [zoneCat];
 }
 
-interface StartHostState {
-  tileCollection?: {
-    activeByCategory?: Record<string, string | null>;
-    discovered?: Record<string, boolean>;
-  };
-  activeZone?: string;
-  tools?: Record<string, number>;
-  coins?: number;
-}
 
 /** Returns the currently-active tile-type id for a zone category, or null. */
 function activeTileForZoneCategory(state: GameState, zoneCat: string): string | null {
-  // eslint-disable-next-line no-restricted-syntax -- pre-existing HostState cast; tracked for follow-up cleanup
-  const s = state as unknown as StartHostState;
   const tileCats = tileCategoriesForZoneCategory(zoneCat);
-  const active = s?.tileCollection?.activeByCategory ?? {};
+  const active = state?.tileCollection?.activeByCategory ?? {};
   for (const tc of tileCats) {
     const id = active[tc];
     if (id) return id;
@@ -81,9 +70,7 @@ function activeTileForZoneCategory(state: GameState, zoneCat: string): string | 
 /** All discovered (unlocked) tile-type rows for a zone category, grouped by
  *  their tile-collection category. */
 function unlockedRowsForZoneCategory(state: GameState, zoneCat: string): UnlockedRow[] {
-  // eslint-disable-next-line no-restricted-syntax -- pre-existing HostState cast; tracked for follow-up cleanup
-  const s = state as unknown as StartHostState;
-  const discovered = s?.tileCollection?.discovered ?? {};
+  const discovered = state?.tileCollection?.discovered ?? {};
   const out: UnlockedRow[] = [];
   for (const tc of tileCategoriesForZoneCategory(zoneCat)) {
     const types: TileTypeDef[] = (TILE_TYPES_BY_CATEGORY as Record<string, TileTypeDef[] | undefined>)[tc] ?? [];
@@ -166,14 +153,12 @@ interface TileChooserPopupProps {
 }
 
 function TileChooserPopup({ zoneCategory, state, dispatch, onClose }: TileChooserPopupProps) {
-  // eslint-disable-next-line no-restricted-syntax -- pre-existing HostState cast; tracked for follow-up cleanup
-  const s = state as unknown as StartHostState;
   const label = CATEGORY_LABEL[zoneCategory] ?? zoneCategory;
   const rows: UnlockedRow[] = useMemo(
     () => unlockedRowsForZoneCategory(state, zoneCategory),
     [state, zoneCategory],
   );
-  const active = s?.tileCollection?.activeByCategory ?? {};
+  const active = state?.tileCollection?.activeByCategory ?? {};
   const panelRef = useRef<HTMLDivElement | null>(null);
   useFocusTrap(panelRef, true, onClose);
 
@@ -290,9 +275,7 @@ interface StartFarmingModalProps {
 }
 
 export default function StartFarmingModal({ state, dispatch, onClose }: StartFarmingModalProps) {
-  // eslint-disable-next-line no-restricted-syntax -- pre-existing HostState cast; tracked for follow-up cleanup
-  const s = state as unknown as StartHostState;
-  const zoneId = s.activeZone ?? DEFAULT_ZONE;
+  const zoneId = state.activeZone ?? DEFAULT_ZONE;
   const zone = ZONES[zoneId];
   const cats: string[] = useMemo(() => zoneCategories(zoneId), [zoneId]);
 
@@ -308,10 +291,12 @@ export default function StartFarmingModal({ state, dispatch, onClose }: StartFar
 
   if (!zone) return null;
 
-  const fertilizerStock: number = s.tools?.fertilizer ?? 0;
+  // `Tools` mixes numeric charge counts and boolean upgrade flags; fertilizer
+  // is always numeric, but the index sig forces a narrowing read here.
+  const fertilizerStock: number = Number(state.tools?.fertilizer ?? 0) || 0;
   const fertilizerAvailable = fertilizerStock > 0;
   const cost = zone.entryCost?.coins ?? 50;
-  const canAfford = (s.coins ?? 0) >= cost;
+  const canAfford = (state.coins ?? 0) >= cost;
   const baseTurns = zoneBaseTurns(zone);
   const buildingTurns = turnBudgetAdditiveBonusForZone(state, zoneId);
   const turns = turnBudgetForZone(state, zoneId, { useFertilizer });

@@ -117,14 +117,6 @@ function makeEmptyGrid(rows: number, cols: number): BossesGridCell[][] {
   );
 }
 
-interface BossesHostState {
-  boss?: BossInstance | null;
-  grid?: BossesGridCell[][];
-  story?: { flags?: Record<string, boolean> };
-  coins?: number;
-  runes?: number;
-}
-
 export interface BossInstance {
   id: string;
   season: string;
@@ -136,13 +128,11 @@ export interface BossInstance {
 }
 
 export function spawnBoss(state: GameState, id: string, year: number, rng: () => number = Math.random): GameState {
-  // eslint-disable-next-line no-restricted-syntax -- pre-existing HostState cast; tracked for follow-up cleanup
-  const s = state as unknown as BossesHostState;
-  if (s.boss) return state;
+  if (state.boss) return state;
   const def = BOSSES.find((b) => b.id === id);
   if (!def) return state;
-  const grid = (s.grid && s.grid.length > 0)
-    ? s.grid
+  const grid = (state.grid && state.grid.length > 0)
+    ? state.grid
     : makeEmptyGrid(DEFAULT_ROWS, DEFAULT_COLS);
   const modifierState = applyModifierToFreshGrid(grid as Array<Array<Record<string, unknown>>>, def.modifier as { type: string; params: { boost?: string[]; factor?: number; n?: number; count?: number; hidden?: number; burnAfter?: number } }, rng);
   return {
@@ -158,34 +148,38 @@ export function spawnBoss(state: GameState, id: string, year: number, rng: () =>
       modifierState,
     },
     story: {
-      ...s.story,
-      flags: { ...(s.story?.flags ?? {}), [`${id}_active`]: true },
+      ...state.story,
+      flags: { ...(state.story?.flags ?? {}), [`${id}_active`]: true },
     },
   } as unknown as GameState;
 }
 
 export function tickBossTurn(state: GameState): GameState {
-  // eslint-disable-next-line no-restricted-syntax -- pre-existing HostState cast; tracked for follow-up cleanup
-  const s = state as unknown as BossesHostState;
-  if (!s.boss) return state;
-  const next: BossInstance = { ...s.boss, turnsRemaining: s.boss.turnsRemaining - 1 };
-  const targetMet = next.progress >= next.target.amount;
-  const expired = next.turnsRemaining <= 0;
-  // eslint-disable-next-line no-restricted-syntax -- pre-existing HostState cast; tracked for follow-up cleanup
-  if (!targetMet && !expired) return { ...state, boss: next as unknown as GameState["boss"] };
-  const def = BOSSES.find((b) => b.id === s.boss?.id);
+  if (!state.boss) return state;
+  // The slice carries the richer BossInstance shape (season/year/target/modifierState)
+  // at runtime; BossState in types/state.ts only declares the UI-facing subset.
+  const current = state.boss as unknown as BossInstance;
+  const advanced: BossInstance = { ...current, turnsRemaining: current.turnsRemaining - 1 };
+  const targetMet = advanced.progress >= advanced.target.amount;
+  const expired = advanced.turnsRemaining <= 0;
+  if (!targetMet && !expired) {
+    // Cast the structurally-richer BossInstance into the slot's typed `BossState`.
+    const writeBack = advanced as unknown as GameState["boss"];
+    return { ...state, boss: writeBack };
+  }
+  const def = BOSSES.find((b) => b.id === state.boss?.id);
   if (!def) return state;
-  const reward = bossReward(def, next.progress, next.year ?? s.boss.year ?? 1);
+  const reward = bossReward(def, advanced.progress, advanced.year ?? current.year ?? 1);
   const flags = {
-    ...(s.story?.flags ?? {}),
-    [`${s.boss.id}_active`]: false,
-    ...(reward.defeated ? { [`${s.boss.id}_defeated`]: true } : {}),
+    ...(state.story?.flags ?? {}),
+    [`${state.boss.id}_active`]: false,
+    ...(reward.defeated ? { [`${state.boss.id}_defeated`]: true } : {}),
   };
   return {
     ...state,
     boss: null,
-    coins: (s.coins ?? 0) + reward.coins,
-    runes: (s.runes ?? 0) + reward.runes,
-    story: { ...(s.story ?? {}), flags },
+    coins: (state.coins ?? 0) + reward.coins,
+    runes: (state.runes ?? 0) + reward.runes,
+    story: { ...(state.story ?? {}), flags },
   } as GameState;
 }

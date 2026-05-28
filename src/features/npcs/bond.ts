@@ -23,17 +23,6 @@ interface BondBand {
 
 interface OrderRef { baseReward: number }
 
-interface NpcsHostStateSlice {
-  bonds: Record<string, number>;
-  giftCooldown: Record<string, number>;
-}
-
-interface NpcHostState {
-  inventory?: Record<string, number>;
-  npcs?: NpcsHostStateSlice;
-  season?: number;
-}
-
 /** Which preference tier `itemKey` falls in for `npcId` ("loves" | "likes" | "neutral"). */
 export function giftTier(npcId: string, itemKey: string): GiftTier {
   const d: NpcDef | undefined = (NPC_DATA as Record<string, NpcDef | undefined>)[npcId];
@@ -75,23 +64,24 @@ export interface ApplyGiftResult {
 }
 
 export function applyGift(state: GameState, npcId: string, itemKey: string): ApplyGiftResult {
-  // eslint-disable-next-line no-restricted-syntax -- pre-existing HostState cast; tracked for follow-up cleanup
-  const s = state as unknown as NpcHostState;
-  if ((s.inventory?.[itemKey] ?? 0) <= 0) return { ok: false };
-  if (!s.npcs) return { ok: false };
-  if (s.npcs.giftCooldown[npcId] === s.season) return { ok: false };
+  // Inventory is `Partial<Record<InventoryKey, number>>`; gifts can be any
+  // catalog key the player carries, so widen indexing at the read boundary.
+  const inventory = state.inventory as Record<string, number> | undefined;
+  if ((inventory?.[itemKey] ?? 0) <= 0) return { ok: false };
+  if (!state.npcs) return { ok: false };
+  if (state.npcs.giftCooldown[npcId] === state.season) return { ok: false };
   const tier = giftTier(npcId, itemKey);
   const delta = GIFT_DELTAS[tier] * boonEffectMult(state, "bond_gain_mult");
   const newState: GameState = {
     ...state,
-    inventory: { ...s.inventory, [itemKey]: (s.inventory?.[itemKey] ?? 0) - 1 },
+    inventory: { ...state.inventory, [itemKey]: (inventory?.[itemKey] ?? 0) - 1 },
     npcs: {
-      ...s.npcs,
+      ...state.npcs,
       bonds: {
-        ...s.npcs.bonds,
-        [npcId]: gainBond(s.npcs.bonds[npcId], delta),
+        ...state.npcs.bonds,
+        [npcId]: gainBond(state.npcs.bonds[npcId], delta),
       },
-      giftCooldown: { ...s.npcs.giftCooldown, [npcId]: s.season ?? 0 },
+      giftCooldown: { ...state.npcs.giftCooldown, [npcId]: state.season ?? 0 },
     },
   } as GameState;
   // `isFavorite` retained for callers/tests predating the tiered prefs.

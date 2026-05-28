@@ -38,14 +38,6 @@ interface FarmHazardsState {
   [k: string]: unknown;
 }
 
-interface RatHostState {
-  biome?: string;
-  inventory?: Record<string, number>;
-  hazards?: FarmHazardsState;
-  grid?: GridCell[][];
-  coins?: number;
-}
-
 interface ChainCell { key?: string | null; row: number; col: number }
 
 interface WorkerEffectsView {
@@ -60,21 +52,19 @@ interface WorkerEffectsView {
  */
 export function rollRatSpawn(state: GameState, rng: () => number = Math.random): Rat | null {
   if (!RATS_HAZARD_ENABLED) return null;
-  // eslint-disable-next-line no-restricted-syntax -- pre-existing HostState cast; tracked for follow-up cleanup
-  const s = state as unknown as RatHostState;
-  if (s.biome !== "farm") return null;
-  const inv: Record<string, number> = s.inventory ?? {};
+  if (state.biome !== "farm") return null;
+  const inv: Record<string, number> = state.inventory ?? {};
   if ((inv.tile_grass_hay ?? 0) <= RAT_SPAWN_THRESHOLDS.tile_grass_hay) return null;
   if ((inv.tile_grain_wheat ?? 0) <= RAT_SPAWN_THRESHOLDS.tile_grain_wheat) return null;
-  const rats: Rat[] = s.hazards?.rats ?? [];
+  const rats: Rat[] = (state.hazards?.rats ?? []) as Rat[];
   if (rats.length >= RAT_SPAWN_THRESHOLDS.maxActive) return null;
   // Catalog §7: tiles tagged "attracts_rats" (Manna, Jackfruit) bump the
   // spawn rate by ATTRACT_RATE_BONUS each, capped at 1.0.
-  const rate = effectiveRatSpawnRate(RAT_SPAWN_THRESHOLDS.perFillRate, s.grid);
+  const rate = effectiveRatSpawnRate(RAT_SPAWN_THRESHOLDS.perFillRate, state.grid);
   if (rng() >= rate) return null;
 
   // Pick a random non-special, non-rat cell
-  const grid = s.grid;
+  const grid = state.grid;
   if (!grid || !grid.length) return { row: 0, col: 0, age: 0 };
   const rows = grid.length;
   const cols = grid[0].length;
@@ -95,11 +85,9 @@ export function rollRatSpawn(state: GameState, rng: () => number = Math.random):
  * Advance all rats by one turn: each eats one adjacent plant tile and ages +1.
  */
 export function tickRats(state: GameState): GameState {
-  // eslint-disable-next-line no-restricted-syntax -- pre-existing HostState cast; tracked for follow-up cleanup
-  const s = state as unknown as RatHostState;
-  if (!s.hazards?.rats?.length) return state;
-  const grid: GridCell[][] | undefined = s.grid ? s.grid.map((r: GridCell[]) => r.map((t: GridCell) => ({ ...t }))) : s.grid;
-  const rats: Rat[] = s.hazards.rats.map((rat: Rat) => {
+  if (!state.hazards?.rats?.length) return state;
+  const grid: GridCell[][] | undefined = state.grid ? state.grid.map((r: GridCell[]) => r.map((t: GridCell) => ({ ...t }))) : state.grid;
+  const rats: Rat[] = (state.hazards.rats as Rat[]).map((rat: Rat) => {
     if (!grid) return { ...rat, age: rat.age + 1 };
     const rows = grid.length;
     const cols = grid[0].length;
@@ -122,7 +110,7 @@ export function tickRats(state: GameState): GameState {
     }
     return { ...rat, age: rat.age + 1 };
   });
-  return { ...state, grid, hazards: { ...s.hazards, rats } } as GameState;
+  return { ...state, grid, hazards: { ...state.hazards, rats } } as GameState;
 }
 
 export interface RatChainPatch {
@@ -137,12 +125,10 @@ export interface RatChainPatch {
  * if the chain is invalid (< 3 rats, or mixed tile types).
  */
 export function tryClearRatChain(state: GameState, chain: ChainCell[]): RatChainPatch | null {
-  // eslint-disable-next-line no-restricted-syntax -- pre-existing HostState cast; tracked for follow-up cleanup
-  const s = state as unknown as RatHostState;
   if (chain.length < 3) return null;
   if (!chain.every((t: ChainCell) => t.key === "rat")) return null;
 
-  const existingRats: Rat[] = s.hazards?.rats ?? [];
+  const existingRats: Rat[] = (state.hazards?.rats ?? []) as Rat[];
   const cleared = chain.filter((c: ChainCell) =>
     existingRats.some((r: Rat) => r.row === c.row && r.col === c.col),
   );
@@ -160,8 +146,8 @@ export function tryClearRatChain(state: GameState, chain: ChainCell[]): RatChain
   } catch { /* aggregator unavailable — fall back to 1× */ }
   const reward = Math.round(baseReward * mult);
   return {
-    hazards: { ...s.hazards, rats: remaining },
-    coins: (s.coins ?? 0) + reward,
+    hazards: { ...state.hazards, rats: remaining },
+    coins: (state.coins ?? 0) + reward,
     _ratFloater: `Pest cleared! +${reward}◉`,
   };
 }
