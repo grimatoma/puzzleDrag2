@@ -1,5 +1,5 @@
 import { svgState } from "./helpers.jsx";
-import { PAL } from "./v2kit.jsx";
+import { PAL, RoofTiles } from "./v2kit.jsx";
 
 export default function GranaryIllustration({ isBuilt }: { isBuilt?: boolean }) {
   const { f } = svgState(isBuilt);
@@ -8,6 +8,7 @@ export default function GranaryIllustration({ isBuilt }: { isBuilt?: boolean }) 
     <svg viewBox="-50 -96 100 112" className="absolute inset-0 w-full h-full"
          preserveAspectRatio="xMidYMax meet" style={f}>
       <defs>
+        <RoofTiles id="granary-tiles" color={PAL.terracotta} />
         <pattern id="granary-stone-band" patternUnits="userSpaceOnUse" width="16" height="8">
           <rect width="16" height="8" fill={PAL.stone} />
           <rect x="0" y="0" width="8" height="4" fill="none" stroke={PAL.stoneShade} strokeWidth=".5" opacity=".55" />
@@ -50,7 +51,7 @@ export default function GranaryIllustration({ isBuilt }: { isBuilt?: boolean }) 
 
       {/* --- CONICAL ROOF --- */}
       {/* conical tiles */}
-      <polygon points="-36,-88 0,-96 36,-88" fill={PAL.terracotta} />
+      <polygon points="-36,-88 0,-96 36,-88" fill="url(#granary-tiles)" />
       {/* left slope shadow */}
       <polygon points="-36,-88 0,-96 -14,-88" fill="rgba(0,0,0,.24)" />
       {/* tile course lines on roof */}
