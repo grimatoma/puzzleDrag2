@@ -78,7 +78,7 @@ interface TrophyCardProps {
 function TrophyCard({ achievement, current, trophyState }: TrophyCardProps) {
   // canonical shape uses threshold; legacy shape uses target
   const { name, desc, threshold, target: targetLegacy } = achievement;
-  const icon: ReactNode = (achievement as AchievementDef & { icon?: ReactNode }).icon ?? null;
+  const icon: ReactNode | string = (achievement as AchievementDef & { icon?: ReactNode | string }).icon ?? null;
   const target = threshold ?? targetLegacy ?? 1;
   const unlocked = !!trophyState;
   const claimed  = trophyState === "claimed";
@@ -92,7 +92,9 @@ function TrophyCard({ achievement, current, trophyState }: TrophyCardProps) {
     <div className={`hl-card !flex-row gap-2 items-center min-h-[72px] transition-colors ${borderCls}`}>
       {/* Icon */}
       <div className={`text-[22px] w-8 flex-shrink-0 text-center leading-none flex items-center justify-center ${!unlocked ? "grayscale opacity-40 text-on-panel-faint" : ""}`}>
-        {unlocked ? icon : <LockGlyph size={18} />}
+        {unlocked
+          ? (typeof icon === "string" ? <Icon iconKey={icon} size={22} /> : icon)
+          : <LockGlyph size={18} />}
       </div>
 
       {/* Middle */}
