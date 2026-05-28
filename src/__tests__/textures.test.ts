@@ -1,16 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { rounded, drawCuteVine, canvasTexture, regenerateTextures, makeTextures, drawTileIcon } from "../textures.js";
-import { BIOMES } from "../constants.js";
 import * as farmIcons from "../textures/farmIcons.js";
 import * as mineIcons from "../textures/mineIcons.js";
 import * as iconRegistry from "../textures/iconRegistry.js";
 
 describe("textures", () => {
-  let mockGraphics: any;
-  let mockContext: any;
-  let mockTexture: any;
-  let mockTextures: any;
-  let mockScene: any;
+  let mockGraphics: Phaser.GameObjects.Graphics | unknown;
+  let mockContext: CanvasRenderingContext2D | unknown;
+  let mockTexture: Phaser.Textures.CanvasTexture | unknown;
+  let mockTextures: Phaser.Textures.TextureManager | unknown;
+  let mockScene: Phaser.Scene | unknown;
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -79,7 +78,7 @@ describe("textures", () => {
       grid: [
         [{ selected: false, res: { key: "stone" }, sprite: mockSprite }],
       ],
-    } as any;
+    } as unknown as Phaser.Scene;
   });
 
   describe("rounded", () => {
@@ -156,21 +155,21 @@ describe("textures", () => {
   describe("drawTileIcon", () => {
      it("routes to farmIcons for known farm items", () => {
        const spy = vi.spyOn(farmIcons, "drawFarmTileIcon").mockImplementation(() => {});
-       drawTileIcon(mockContext as any, "wheat");
+       drawTileIcon(mockContext as unknown as CanvasRenderingContext2D, "wheat");
        expect(spy).toHaveBeenCalledWith(mockContext, "wheat");
        spy.mockRestore();
      });
 
      it("routes to mineIcons for known mine items", () => {
        const spy = vi.spyOn(mineIcons, "drawMineTileIcon").mockImplementation(() => {});
-       drawTileIcon(mockContext as any, "stone");
+       drawTileIcon(mockContext as unknown as CanvasRenderingContext2D, "stone");
        expect(spy).toHaveBeenCalledWith(mockContext, "stone");
        spy.mockRestore();
      });
 
      it("routes to iconRegistry for unregistered icons", () => {
        const spy = vi.spyOn(iconRegistry, "drawIcon").mockImplementation(() => {});
-       drawTileIcon(mockContext as any, "something_else");
+       drawTileIcon(mockContext as unknown as CanvasRenderingContext2D, "something_else");
        expect(spy).toHaveBeenCalledWith(mockContext, "something_else");
        spy.mockRestore();
      });
