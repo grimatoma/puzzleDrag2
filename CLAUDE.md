@@ -43,7 +43,7 @@ npm run test:coverage        # Vitest with coverage
 npm run test:e2e             # Playwright browser flows (tests/e2e)
 npm run test:visual          # Playwright visual regression — desktop smoke set
 npm run test:visual:update   # Refresh visual goldens after intentional UI changes
-npm run test:visual:all      # Run desktop + iPhone landscape/portrait visual matrix
+npm run test:visual:all      # Run desktop + iPhone portrait visual matrix
 ```
 
 Every `test:visual*` script has a `pretest:visual*` hook that runs `tools/ensure-playwright-browser.mjs`. On restricted-network hosts (some sandboxes block `cdn.playwright.dev`), this bootstrap symlinks any pre-installed `/opt/pw-browsers/chromium_headless_shell-*` into the path the current Playwright revision expects, so visual tests work without a fresh download. No-op when the right browser is already present.
