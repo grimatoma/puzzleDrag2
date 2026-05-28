@@ -146,7 +146,7 @@ export default function InnIllustration({ isBuilt }: { isBuilt?: boolean }) {
         <g transform="translate(26 -40)">
           <rect x="0" y="-2" width="10" height="1.8" fill={PAL.timber} />
           <rect x="0" y="-2" width="1.8" height="10" fill={PAL.timber} />
-          <g style={{ animation: 'sway 3.2s ease-in-out infinite', transformOrigin: '11px 0px' }}>
+          <g style={{ animation: 'sway 3.2s ease-in-out infinite', transformOrigin: '10px 0px' }}>
             <line x1="10" y1="0" x2="10" y2="3" stroke={PAL.timber} strokeWidth=".8" />
             <rect x="5" y="3" width="16" height="10" rx="1.2" fill="#f0e0b0" />
             <rect x="5" y="3" width="16" height="10" rx="1.2" fill="none" stroke={PAL.timber} strokeWidth=".8" />
