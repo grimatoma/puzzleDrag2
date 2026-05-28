@@ -68,14 +68,25 @@ export function BldgScriptorium({ size = 32 }: IconProps) {
   );
 }
 
-export function BldgTea({ size = 32, fill = "#90c890" }) {
+export function BldgTea({ size = 32 }: IconProps) {
+  const u = useId().replace(/:/g, "");
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M3 22 L3 14 L21 14 L21 22 Z" fill="#4a3220"/>
-      <path d="M2 14 L12 6 L22 14 Z" fill={fill}/>
-      <path d="M2 14 L12 8 L22 14" stroke="#3a5030" strokeWidth="0.4"/>
-      <ellipse cx="12" cy="11" rx="0.7" ry="2" fill="#fff" opacity="0.5"/>
-      <rect x="10" y="17" width="4" height="5" fill="#1a0e08"/>
+      <defs>
+        <linearGradient id={`${u}roof`} x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#9ed18f"/><stop offset="1" stopColor="#5a9457"/></linearGradient>
+        <linearGradient id={`${u}wall`} x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#e8d2a0"/><stop offset="1" stopColor="#c39f63"/></linearGradient>
+        <radialGradient id={`${u}glow`} cx="50%" cy="72%" r="65%"><stop offset="0" stopColor="#ffe9b0"/><stop offset="100%" stopColor="#caa050" stopOpacity="0"/></radialGradient>
+      </defs>
+      <ellipse cx="12" cy="22.2" rx="8.5" ry="1.6" fill="#000" opacity="0.15"/>
+      <rect x="6.5" y="13" width="11" height="9" fill={`url(#${u}wall)`} stroke="#7a5a2e" strokeWidth="0.8"/>
+      <path d="M3 13.4 Q4.2 11.8 5.4 12 L7.2 8.8 L16.8 8.8 L18.6 12 Q19.8 11.8 21 13.4 Q12 12.4 3 13.4 Z" fill={`url(#${u}roof)`} stroke="#3f6b3c" strokeWidth="0.8" strokeLinejoin="round"/>
+      <path d="M7.5 8.6 Q8.6 7.4 9.4 7.6 L12 4.4 L14.6 7.6 Q15.4 7.4 16.5 8.6 Q12 7.8 7.5 8.6 Z" fill={`url(#${u}roof)`} stroke="#3f6b3c" strokeWidth="0.8" strokeLinejoin="round"/>
+      <circle cx="12" cy="3.8" r="0.9" fill="#caa050" stroke="#7a5a2e" strokeWidth="0.4"/>
+      <path d="M8.6 8.2 L12 5.2" stroke="#ffffff" strokeWidth="0.7" opacity="0.35" fill="none" strokeLinecap="round"/>
+      <rect x="9.5" y="14.6" width="5" height="7.4" rx="0.4" fill="#3a2412"/>
+      <rect x="10.2" y="15.3" width="3.6" height="6.7" rx="0.3" fill={`url(#${u}glow)`}/>
+      <line x1="12" y1="13" x2="12" y2="14.1" stroke="#7a5a2e" strokeWidth="0.5"/>
+      <ellipse cx="12" cy="15.1" rx="1" ry="1.3" fill="#ffcaa0" stroke="#b04a2a" strokeWidth="0.4"/>
     </svg>
   );
 }
