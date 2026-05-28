@@ -7,7 +7,7 @@ import Icon from "./Icon.jsx";
 export default function RichText({ text, iconSize = 16 }: { text: ReactNode; iconSize?: number }) {
   if (typeof text !== "string") return <>{text}</>;
 
-  const regex = /\[icon:([a-zA-Z0-9_]+)\]/g;
+  const regex = /\[icon:([a-zA-Z0-9_]{1,64})\]/g;
   const parts: ReactNode[] = [];
   let lastIndex = 0;
   let match;
