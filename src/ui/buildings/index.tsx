@@ -1,3 +1,4 @@
+import { memo } from "react";
 import HearthIllustration from "./hearth.jsx";
 import MillIllustration from "./mill.jsx";
 import BakeryIllustration from "./bakery.jsx";
@@ -28,6 +29,11 @@ import BreweryIllustration from "./brewery.jsx";
 import ObservatoryIllustration from "./observatory.jsx";
 
 type IllustrationComponent = (props: { isBuilt?: boolean }) => JSX.Element;
+// Each illustration is a large inline-SVG tree (some with CSS keyframe
+// animations). Town renders all of them in a .map(), so without memoization any
+// Town state change (hover, picker, setState) re-renders every building SVG and
+// restarts its animations. Props here are primitives, so React.memo is fully
+// effective.
 const ILLUSTRATIONS: Record<string, IllustrationComponent> = {
   hearth: HearthIllustration,
   mill: MillIllustration,
@@ -61,7 +67,10 @@ const ILLUSTRATIONS: Record<string, IllustrationComponent> = {
   observatory: ObservatoryIllustration,
 };
 
-export default function BuildingIllustration({ id, isBuilt }: { id: string; isBuilt?: boolean }) {
+function BuildingIllustrationImpl({ id, isBuilt }: { id: string; isBuilt?: boolean }) {
   const Component = ILLUSTRATIONS[id];
   return Component ? <Component isBuilt={isBuilt} /> : null;
 }
+
+const BuildingIllustration = memo(BuildingIllustrationImpl);
+export default BuildingIllustration;
