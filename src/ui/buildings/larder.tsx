@@ -80,8 +80,6 @@ export default function LarderIllustration({ isBuilt }: { isBuilt?: boolean }) {
       <rect x="-30" y="-46" width="14" height="18" rx="1" fill="#1a1410" />
       {/* cool interior (cold store) */}
       <rect x="-29" y="-45" width="12" height="16" fill="#2a2e36" />
-      {/* shelf line inside */}
-      <line x1="-29" y1="-37" x2="-17" y2="-37" stroke="#3a3020" strokeWidth=".8" />
       {/* jars on shelf (faint silhouettes) */}
       <g fill="#4a5060" opacity=".75">
         <ellipse cx="-26" cy="-38.5" rx="2" ry="2.8" />

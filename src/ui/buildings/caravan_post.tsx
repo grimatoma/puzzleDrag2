@@ -41,7 +41,7 @@ export default function CaravanPostIllustration({ isBuilt }: { isBuilt?: boolean
 
       {/* FLAG (waving animation) */}
       {detail !== 'low' && (
-        <g style={{ animation: 'wave 2.6s ease-in-out infinite', transformOrigin: '-42px -92px' }}>
+        <g style={{ animation: 'sway 2.6s ease-in-out infinite', transformOrigin: '-42px -92px' }}>
           <path d="M-42,-92 Q-28,-96 -20,-90 Q-28,-85 -42,-88 Z" fill="#c03020" />
           <line x1="-42" y1="-92" x2="-42" y2="-88" stroke="#900010" strokeWidth=".5" />
           {/* flag stripe highlight */}
@@ -77,8 +77,7 @@ export default function CaravanPostIllustration({ isBuilt }: { isBuilt?: boolean
       <g stroke={PAL.timber} strokeWidth="1.8" opacity=".85">
         <line x1="-36" y1="-40" x2="-36" y2="-52" />
         <line x1="-36" y1="-52" x2="-50" y2="-52" />
-        <line x1="0" y1="-40" x2="0" y2="-56" />
-        <line x1="0" y1="-56" x2="-2" y2="-56" />
+        <line x1="0" y1="-40" x2="0" y2="-52" />
         <line x1="34" y1="-40" x2="34" y2="-52" />
         <line x1="34" y1="-52" x2="50" y2="-52" />
       </g>
@@ -110,7 +109,7 @@ export default function CaravanPostIllustration({ isBuilt }: { isBuilt?: boolean
       <rect x="11" y="-16" width="6" height="7" rx=".8" fill="none" stroke="#6a4a28" strokeWidth=".8" opacity=".6" />
       <rect x="19" y="-16" width="6" height="7" rx=".8" fill="none" stroke="#6a4a28" strokeWidth=".8" opacity=".6" />
       {/* door handle */}
-      <circle cx="11" cy="-18" r="1.4" fill={PAL.brass} />
+      <circle cx="25" cy="-18" r="1.4" fill={PAL.brass} />
       {/* arch keystone */}
       <ellipse cx="18" cy="-30" rx="3" ry="2" fill={PAL.stone} />
 
@@ -138,7 +137,7 @@ export default function CaravanPostIllustration({ isBuilt }: { isBuilt?: boolean
 
       {/* === WAGON WHEEL (leaning against right wall) === */}
       {detail !== 'low' && (
-        <g transform="translate(48 -8) rotate(10)">
+        <g transform="translate(46 -8) rotate(10)">
           <circle cx="0" cy="0" r="13" fill="none" stroke={PAL.timber} strokeWidth="2" />
           <circle cx="0" cy="0" r="10.5" fill="none" stroke={PAL.timberSoft} strokeWidth=".7" opacity=".4" />
           <circle cx="0" cy="0" r="3.5" fill={PAL.timberSoft} />
