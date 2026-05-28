@@ -26,12 +26,6 @@ export interface MysteriousOreState {
   turnsRemaining: number;
 }
 
-interface OreHostState {
-  biome?: string;
-  grid?: OreGridCell[][];
-  mysteriousOre?: MysteriousOreState | null;
-}
-
 interface ChainCell { key?: string | null }
 
 /**
@@ -39,14 +33,13 @@ interface ChainCell { key?: string | null }
  * No-op if already active or biome is not "mine".
  */
 export function spawnMysteriousOre(state: GameState, rng: () => number = Math.random): GameState {
-  const s = state as unknown as OreHostState;
-  if (s.biome !== "mine") return state;
-  if (s.mysteriousOre) return state; // already active — one at a time
-  if (!s.grid) return state;
+  if (state.biome !== "mine") return state;
+  if (state.mysteriousOre) return state; // already active — one at a time
+  if (!state.grid) return state;
 
-  const rows = s.grid.length;
-  const cols = s.grid[0].length;
-  const grid = s.grid;
+  const rows = state.grid.length;
+  const cols = state.grid[0].length;
+  const grid = state.grid;
 
   const blocked = (r: number, c: number): boolean => {
     const t = grid[r][c];
@@ -60,7 +53,7 @@ export function spawnMysteriousOre(state: GameState, rng: () => number = Math.ra
     tries++;
   } while (blocked(r, c) && tries < 32);
 
-  const newGrid: OreGridCell[][] = s.grid.map((row: OreGridCell[], ri: number) =>
+  const newGrid: OreGridCell[][] = state.grid.map((row: OreGridCell[], ri: number) =>
     row.map((tile: OreGridCell, ci: number) =>
       ri === r && ci === c ? { ...tile, key: "mysterious_ore" } : tile,
     ),
@@ -77,19 +70,21 @@ export function spawnMysteriousOre(state: GameState, rng: () => number = Math.ra
  * Tick the countdown by 1. At 0, degrade the tile to Dirt.
  */
 export function tickMysteriousOre(state: GameState): GameState {
-  const s = state as unknown as OreHostState;
-  if (!s.mysteriousOre) return state;
-  const next = s.mysteriousOre.turnsRemaining - 1;
+  if (!state.mysteriousOre) return state;
+  // GameState's `mysteriousOre` field has `turnsRemaining?: number`; the slice
+  // always seeds it on spawn, so default to 0 at the read boundary.
+  const ore = state.mysteriousOre as unknown as MysteriousOreState;
+  const next = (ore.turnsRemaining ?? 0) - 1;
   if (next > 0) {
     return {
       ...state,
-      mysteriousOre: { ...s.mysteriousOre, turnsRemaining: next },
+      mysteriousOre: { ...ore, turnsRemaining: next },
     } as GameState;
   }
   // Expire — degrade tile to plain Dirt
-  const { row, col } = s.mysteriousOre;
-  if (!s.grid) return state;
-  const grid: OreGridCell[][] = s.grid.map((rowArr: OreGridCell[], ri: number) =>
+  const { row, col } = ore;
+  if (!state.grid) return state;
+  const grid: OreGridCell[][] = state.grid.map((rowArr: OreGridCell[], ri: number) =>
     rowArr.map((t: OreGridCell, ci: number) =>
       ri === row && ci === col ? { ...t, key: "tile_special_dirt" } : t,
     ),

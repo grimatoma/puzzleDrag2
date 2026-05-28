@@ -1,30 +1,19 @@
 import { useEffect, useRef } from 'react';
 import { play, setEnabled, unlock } from './index.js';
+import type { GameState } from "../types/state.js";
 
-/**
- * Minimal shape of the game state consumed by useAudio.
- * The full reducer state is typed in src/state.js (JS, allowJs), so we use
- * a structural subset here to avoid a circular TS dependency.
- * TODO(ts-migration): replace with the canonical GameState type once state.js is converted.
- */
-interface AudioGameState {
-  turnsUsed?: number;
+/** Subset of GameState fields read by the audio hook. */
+type AudioGameState = Partial<Pick<GameState, "turnsUsed" | "level" | "bubble" | "modal" | "coins" | "runes" | "biomeKey">> & {
   lastChainLength?: number;
-  level?: number;
-  bubble?: { id: string | number } | null;
-  modal?: string | null;
   built?: Record<string, unknown>;
-  coins?: number;
   craftedTotals?: Record<string, number>;
-  runes?: number;
-  biomeKey?: string;
   fish?: { tide?: string } | null;
   settings?: {
     sfxOn?: boolean;
     musicOn?: boolean;
     hapticsOn?: boolean;
   } | null;
-}
+};
 
 /**
  * React hook that watches game state and fires synthesized sounds.

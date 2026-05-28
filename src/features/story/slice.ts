@@ -72,23 +72,18 @@ function dismissCurrentModal(state: GameState): GameState {
 export function reduce(state: GameState, action: Action): GameState {
   switch (action.type) {
     case "STORY/BEAT_FIRED": {
-      const payload = (action.payload as {
-        firedBeat: Beat;
-        newFlags: Record<string, boolean>;
-        sideEffects: BeatSideEffects;
-        repeatCooldown?: unknown;
-      });
-      const { firedBeat, newFlags, sideEffects, repeatCooldown } = payload;
+      const { firedBeat, newFlags, sideEffects, repeatCooldown } = action.payload;
+      const beat = firedBeat as Beat;
 
       // Update story state: advance flags and mark beat complete
-      const flagKey = firedBeat.onComplete?.setFlag;
+      const flagKey = beat.onComplete?.setFlag;
       const completionFlags: Record<string, boolean> = { ...newFlags };
-      if (!flagKey && !firedBeat.repeat) {
-        completionFlags[firedFlagKey(firedBeat.id)] = true;
+      if (!flagKey && !beat.repeat) {
+        completionFlags[firedFlagKey(beat.id)] = true;
       }
 
       // Apply side effects to the rest of game state
-      const afterSideEffects = applyBeatResult(state, sideEffects) as GameState;
+      const afterSideEffects = applyBeatResult(state, sideEffects as BeatSideEffects) as GameState;
 
       // Queue the modal (or chain to existing queue)
       const story = (state.story ?? {}) as StorySubstate;
@@ -99,11 +94,11 @@ export function reduce(state: GameState, action: Action): GameState {
       const newStory: StorySubstate = {
         ...afterStory,
         flags: completionFlags,
-        queuedBeat: isModalOpen ? story.queuedBeat : firedBeat,
-        beatQueue: isModalOpen ? [...existingQueue, firedBeat] : existingQueue,
+        queuedBeat: isModalOpen ? story.queuedBeat : beat,
+        beatQueue: isModalOpen ? [...existingQueue, beat] : existingQueue,
       };
       if (repeatCooldown) {
-        newStory.repeatCooldowns = { ...(newStory.repeatCooldowns || {}), [firedBeat.id]: repeatCooldown };
+        newStory.repeatCooldowns = { ...(newStory.repeatCooldowns || {}), [beat.id]: repeatCooldown };
       }
 
       return { ...afterSideEffects, story: newStory };
@@ -113,13 +108,12 @@ export function reduce(state: GameState, action: Action): GameState {
       const story = (state.story ?? {}) as StorySubstate;
       const beat = story.queuedBeat as Beat | null | undefined;
       if (!beat) return state;
-      const payload = action.payload as { choiceId?: string; value?: unknown } | undefined;
-      const choiceId = payload?.choiceId ?? (action.choiceId as string | undefined);
+      const choiceId = action.payload?.choiceId ?? action.choiceId;
       const choice = beatChoices(beat).find((c: { id: string }) => c.id === choiceId) as { id: string; outcome: ChoiceOutcome } | undefined;
       if (!choice) return state;
       // `value` is optional free-text supplied by prompt-style beats (e.g. the
       // settlement name) so the finale can read it back from the log.
-      const value = payload?.value ?? action.value;
+      const value = action.payload?.value ?? action.value;
 
       // Record the choice for the finale's "the Ember reads your record".
       const entry: ChoiceLogEntry = { beatId: beat.id, choiceId: choice.id, ts: Date.now() };

@@ -55,6 +55,11 @@ describe("findInStory", () => {
     expect(out.matches).toEqual([]);
   });
 
+  it("returns zero matches for invalid case-sensitive regex (no throw)", () => {
+    const out = findInStory(emptyDraft(), "(", { regex: true, caseSensitive: true });
+    expect(out.matches).toEqual([]);
+  });
+
   it("snippet wraps the matched text with sentinel braces", () => {
     const d = draftWith({
       newBeats: [{ id: "x", title: "Phrase", lines: [{ speaker: null, text: "Look for the keyword right here." }] }],
@@ -139,6 +144,10 @@ describe("affectedBeatCount / isReplacementSafe", () => {
 
   it("isReplacementSafe blocks invalid regex", () => {
     expect(isReplacementSafe("(", "x", { regex: true })).toBe(false);
+  });
+
+  it("isReplacementSafe blocks invalid case-sensitive regex", () => {
+    expect(isReplacementSafe("(", "x", { regex: true, caseSensitive: true })).toBe(false);
   });
 
   it("isReplacementSafe allows distinct query / replacement", () => {

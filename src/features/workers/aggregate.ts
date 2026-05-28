@@ -84,12 +84,11 @@ interface BuildingDef {
  */
 type AggregatorState = Pick<GameState, "workers" | "built" | "tileCollection"> & {
   mapCurrent?: unknown;
-  [extra: string]: unknown;
 };
 
 /** Source list for every BUILDINGS entry currently built in the active map. */
 export function builtBuildingSources(state: AggregatorState): AbilitySource[] {
-  const built = (locBuilt(state as unknown as Record<string, unknown>) || {}) as Record<string, unknown>;
+  const built = (locBuilt(state) || {}) as Record<string, unknown>;
   const out: AbilitySource[] = [];
   for (const b of (BUILDINGS as BuildingDef[])) {
     if (!built[b.id]) continue;

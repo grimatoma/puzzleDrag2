@@ -17,7 +17,16 @@ import { FLAG_READS } from "../../flagReads.js";
 import { NPCS } from "../../constants.js";
 import { COLORS, TextField, TextArea, NumberField, SmallButton } from "../shared.jsx";
 import { allBeatIds, effectiveBeat, FLAG_ID_RE } from "../../storyEditor/shared.jsx";
+
 import StatusChip from "../../ui/primitives/StatusChip.jsx";
+
+export const validateNewFlagId = (id: string, currentId: string, allKnownIds: Set<string>): string => {
+  const next = String(id || "").trim();
+  if (!next) return "Flag id is required.";
+  if (!FLAG_ID_RE.test(next)) return "Use lowercase letters, numbers, and underscores.";
+  if (next !== currentId && allKnownIds.has(next)) return "That flag id is already in use.";
+  return "";
+};
 
 interface FlagTrigger {
   type: string;
@@ -389,13 +398,7 @@ function Inspector({ flag, draft, updateDraft, onSelect }: { flag: FlagInfo | nu
   const isNewFlag = newIndex >= 0 || def?.source === "override";
   const overridden = !isNewFlag && !!draft?.flags?.byId?.[flag.name]?.triggers;
   const allKnownIds = new Set([...storyFlags.map((f) => f.id), ...(draft?.flags?.new || []).map((f) => f?.id).filter(Boolean) as string[]]);
-  const validateNewId = (id: string) => {
-    const next = String(id || "").trim();
-    if (!next) return "Flag id is required.";
-    if (!FLAG_ID_RE.test(next)) return "Use lowercase letters, numbers, and underscores.";
-    if (next !== flag.name && allKnownIds.has(next)) return "That flag id is already in use.";
-    return "";
-  };
+  const validateNewId = (id: string) => validateNewFlagId(id, flag.name, allKnownIds);
   const updateNewFlag = (patch: Partial<FlagDef>) => updateDraft((d) => {
     d.flags ??= {}; d.flags.new ??= [];
     const idx = d.flags.new.findIndex((f) => f?.id === flag.name);

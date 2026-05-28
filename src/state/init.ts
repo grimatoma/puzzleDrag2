@@ -4,7 +4,7 @@ import { INITIAL_STORY_STATE } from "../story.js";
 import { initialFlagState } from "../flags.js";
 import { FIRE_HAZARD_ENABLED } from "../featureFlags.js";
 import { isTapTargetPower } from "../config/toolPowers.js";
-import { ITEMS } from "../constants.js";
+import { getItem } from "../constants.js";
 import { ACHIEVEMENTS as ACHIEVEMENT_LIST } from "../features/achievements/data.js";
 import * as crafting from "../features/crafting/slice.js";
 import * as quests from "../features/quests/slice.js";
@@ -17,6 +17,7 @@ import * as fish from "../features/fish/slice.js";
 import * as zones from "../features/zones/slice.js";
 import * as castle from "../features/castle/slice.js";
 import * as boons from "../features/boons/slice.js";
+import * as runSummary from "../features/runSummary/slice.js";
 import { driftPrices } from "../market.js";
 import { loadSavedState } from "./persistence.js";
 import {
@@ -170,6 +171,7 @@ export function createFreshState(overrides?: { saveSeed?: string; tools?: Record
     ...fish.initial,
     ...zones.initial,
     ...boons.initial,
+    ...runSummary.initial,
     farm: { savedField: null },
     mine: { savedField: null },
   };
@@ -230,12 +232,12 @@ export function initialState(overrides?: { saveSeed?: string; tools?: Record<str
     // so just clearing toolPending is enough.
     const savedTools = (savedWithoutLegacy.tools as Record<string, number | boolean | undefined> | undefined) ?? {};
     let restoredTools: Record<string, number | boolean | undefined> = { ...savedTools };
-    if (savedWithoutLegacy.fertilizerActive || savedWithoutLegacy.fillBiasTarget) {
+    if (savedWithoutLegacy.fillBiasTarget) {
       restoredTools = { ...restoredTools, fertilizer: (Number(restoredTools.fertilizer) || 0) + 1 };
     }
     const savedPending = savedWithoutLegacy.toolPending as string | null | undefined;
     const savedPendingPower = savedWithoutLegacy.toolPendingPower as { id?: string; [k: string]: unknown } | null | undefined;
-    const itemPower = savedPending ? (ITEMS[savedPending]?.power as { id?: string } | undefined) : undefined;
+    const itemPower = savedPending ? (getItem(savedPending)?.power as { id?: string } | undefined) : undefined;
     const pendingPower = savedPendingPower ?? itemPower;
     const pendingIsTap = !!(pendingPower?.id && isTapTargetPower(pendingPower.id));
     if (savedPending && !pendingIsTap && savedPending !== "rune_wildcard") {

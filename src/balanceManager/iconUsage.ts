@@ -10,6 +10,7 @@
 // SVG registry (`src/ui/icons/index.jsx`) since both can be unused.
 
 import { ITEMS, RECIPES, BUILDINGS, SEASONS } from "../constants.js";
+import { ACHIEVEMENTS } from "../features/achievements/data.js";
 import { ABILITIES } from "../config/abilities.js";
 import { TYPE_WORKERS } from "../features/workers/data.js";
 import { TOOL_CATALOG } from "../ui/toolRegistry.js";
@@ -68,6 +69,24 @@ const SVG_USAGE_LITERALS = [
   "design.tile.rune", "design.tile.stone", "design.tile.wheat",
   "design.tool.axe", "design.tool.firebreak", "design.tool.hoe",
   "design.tool.net",
+];
+
+// Newly-wired icon families (Buckets 1+2). Each key is referenced as a JSX
+// literal or template-lookup in a live card/panel: quest cards + header,
+// boon cards + branch headers, HUD treasury rows, order bond chips,
+// cartography zone/keeper UI, and crafting/HUD/zone panels. Achievement keys
+// are detected separately from ACHIEVEMENTS[].icon. (season_* are already
+// covered by the SEASONS scan above.)
+const WIRED_ICON_USAGE = [
+  "quest_collect", "quest_craft", "quest_order", "quest_tool", "quest_chain", "quest_book",
+  "boon_coin_mult", "boon_bond_mult", "boon_chain_mult", "boon_branch_coexist", "boon_branch_drive_out",
+  "cur_embers", "cur_core_ingot", "cur_gems",
+  "token_hearth_forest", "token_hearth_stone", "token_hearth_tide",
+  "bond_rank_1", "bond_rank_2", "bond_rank_3", "bond_rank_4",
+  "bond_rank_5", "bond_rank_6", "bond_rank_7", "bond_rank_8", "bond_8_arc",
+  "region_forest", "region_moor", "region_mine", "region_harbor", "region_tundra",
+  "keeper_deer_spirit", "keeper_stone_knocker", "keeper_tidesinger",
+  "craft_queue", "craft_queue_skip", "xp_levelup", "dangers_header",
 ];
 
 /**
@@ -147,6 +166,12 @@ export function getUsedIconKeys(): Set<string> {
   // this list will surface as "Unused" — that's the signal the Icons tab is
   // meant to provide.
   for (const key of SVG_USAGE_LITERALS) add(key);
+
+  // Wired icon families (Buckets 1+2): achievement badges carry their key in
+  // the `icon` field; the rest are referenced as JSX literals / template
+  // lookups in the cards listed in WIRED_ICON_USAGE below.
+  for (const a of ACHIEVEMENTS || []) add((a as { icon?: string }).icon);
+  for (const key of WIRED_ICON_USAGE) add(key);
 
   return used;
 }

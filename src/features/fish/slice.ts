@@ -77,8 +77,7 @@ export function reduce(state: GameState, action: Action): GameState {
   // Only tick + maybe flip when the player is actively on the fish board.
   if (state.biomeKey !== "fish") return state;
   if (state.lastBoardActionConsumedFreeMove) return state;
-  const chainPayload = action.payload as { noTurn?: boolean; gains?: unknown } | undefined;
-  if (action.type === "CHAIN_COLLECTED" && (chainPayload?.noTurn || chainPayload?.gains)) return state;
+  if (action.type === "CHAIN_COLLECTED" && (action.payload.noTurn || action.payload.gains)) return state;
   // Tide bookkeeping ticks once per committed, turn-consuming board action.
   const nextTideTurn = (fish.tideTurn ?? 0) + 1;
   if (nextTideTurn < TIDE_PERIOD) {

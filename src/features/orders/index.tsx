@@ -1,10 +1,11 @@
 
-import { NPCS, ITEMS } from "../../constants.js";
+import { NPCS, getItem } from "../../constants.js";
 import { bondBand, bondModifier, payOrder } from "../npcs/bond.js";
 import IconCanvas, { hasIcon } from "../../ui/IconCanvas.jsx";
 import Icon from "../../ui/Icon.jsx";
 import FeaturePanel from "../../ui/primitives/FeaturePanel.jsx";
 import ActionCard, { ProgressBar } from "../../ui/primitives/ActionCard.jsx";
+import { inventoryQty } from "../../types/inventory.js";
 import type { Dispatch, GameState, Order } from "../../types/state.js";
 
 export const viewKey = "orders";
@@ -25,13 +26,13 @@ export default function OrdersScreen({ state, dispatch }: OrdersScreenProps) {
     <FeaturePanel>
       <FeaturePanel.Body className="flex flex-col gap-2">
         {orders.map((o: Order) => {
-          const have = inventory[o.key] || 0;
+          const have = inventoryQty(inventory, o.key);
           const needed = o.need ?? o.amount;
           const done = have >= needed;
           const npc = (NPCS as Record<string, { name: string; color: string } | undefined>)[o.npc];
           if (!npc) return null;
-          const itemDef = (ITEMS as Record<string, { kind?: string; biome?: string; color?: number } | undefined>)[o.key] || {};
-          const isCrafted = itemDef.kind === "resource" && !itemDef.biome;
+          const itemDef = getItem(o.key);
+          const isCrafted = itemDef?.kind === "resource" && !itemDef?.biome;
           // Phase 6.1: bond chip
           const bond = (state.npcs?.bonds as Record<string, number> | undefined)?.[o.npc] ?? 5;
           const baseReward = o.baseReward ?? o.reward;
@@ -63,7 +64,9 @@ export default function OrdersScreen({ state, dispatch }: OrdersScreenProps) {
                 </div>
                 <div className="flex flex-col items-end gap-0.5">
                   <div className="text-[#c8923a] text-[12px] font-bold whitespace-nowrap">+{modifiedReward}◉</div>
-                  <div className="text-[10px] font-bold whitespace-nowrap" style={{ color: bandName === "Sour" ? "#bb3b2f" : bandName === "Beloved" ? "#d4a017" : bandName === "Liked" ? "#4f6b3a" : "#7a6248" }}>
+                  <div className="text-[10px] font-bold whitespace-nowrap flex items-center gap-1" style={{ color: bandName === "Sour" ? "#bb3b2f" : bandName === "Beloved" ? "#d4a017" : bandName === "Liked" ? "#4f6b3a" : "#7a6248" }}>
+                    <Icon iconKey={`bond_rank_${Math.min(8, Math.max(1, Math.floor(bond)))}`} size={14} />
+                    {bond >= 8 && <Icon iconKey="bond_8_arc" size={14} />}
                     ×{modifier.toFixed(2)} · {bandName}
                   </div>
                 </div>
@@ -72,14 +75,14 @@ export default function OrdersScreen({ state, dispatch }: OrdersScreenProps) {
                 {isCrafted ? (
                   <div
                     className="w-8 h-8 rounded-md flex-shrink-0 grid place-items-center text-[18px]"
-                    style={{ backgroundColor: cssFromHex(itemDef.color || 0xd49060), border: "2px solid rgba(255,255,255,.4)", overflow: "hidden" }}
+                    style={{ backgroundColor: cssFromHex(itemDef?.color || 0xd49060), border: "2px solid rgba(255,255,255,.4)", overflow: "hidden" }}
                   >
                     <Icon iconKey={o.key} size={32} title="" />
                   </div>
                 ) : (
                   <div
                     className="w-8 h-8 rounded-md flex-shrink-0 grid place-items-center text-[18px]"
-                    style={{ backgroundColor: cssFromHex(itemDef.color || 0x888888), border: "2px solid rgba(255,255,255,.4)", overflow: "hidden" }}
+                    style={{ backgroundColor: cssFromHex(itemDef?.color || 0x888888), border: "2px solid rgba(255,255,255,.4)", overflow: "hidden" }}
                   >
                     {hasIcon(o.key) && <IconCanvas iconKey={o.key} size={32} title="" />}
                   </div>

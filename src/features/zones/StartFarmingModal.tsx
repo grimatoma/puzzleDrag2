@@ -1,4 +1,5 @@
 import { useState, useMemo, useRef } from "react";
+import Icon from "../../ui/Icon.jsx";
 import { ZONES, zoneCategories, DEFAULT_ZONE, ZONE_TO_TILE_CATEGORIES, turnBudgetAdditiveBonusForZone, turnBudgetForZone, zoneBaseTurns, settlementHazards } from "./data.js";
 import { TILE_TYPES_BY_CATEGORY, TILE_TYPES_MAP } from "../tileCollection/data.js";
 import { TileIcon } from "../tileCollection/index.jsx";
@@ -55,21 +56,11 @@ function tileCategoriesForZoneCategory(zoneCat: string): string[] {
   return (ZONE_TO_TILE_CATEGORIES as Record<string, string[] | undefined>)[zoneCat] ?? [zoneCat];
 }
 
-interface StartHostState {
-  tileCollection?: {
-    activeByCategory?: Record<string, string | null>;
-    discovered?: Record<string, boolean>;
-  };
-  activeZone?: string;
-  tools?: Record<string, number>;
-  coins?: number;
-}
 
 /** Returns the currently-active tile-type id for a zone category, or null. */
 function activeTileForZoneCategory(state: GameState, zoneCat: string): string | null {
-  const s = state as unknown as StartHostState;
   const tileCats = tileCategoriesForZoneCategory(zoneCat);
-  const active = s?.tileCollection?.activeByCategory ?? {};
+  const active = state?.tileCollection?.activeByCategory ?? {};
   for (const tc of tileCats) {
     const id = active[tc];
     if (id) return id;
@@ -80,8 +71,7 @@ function activeTileForZoneCategory(state: GameState, zoneCat: string): string | 
 /** All discovered (unlocked) tile-type rows for a zone category, grouped by
  *  their tile-collection category. */
 function unlockedRowsForZoneCategory(state: GameState, zoneCat: string): UnlockedRow[] {
-  const s = state as unknown as StartHostState;
-  const discovered = s?.tileCollection?.discovered ?? {};
+  const discovered = state?.tileCollection?.discovered ?? {};
   const out: UnlockedRow[] = [];
   for (const tc of tileCategoriesForZoneCategory(zoneCat)) {
     const types: TileTypeDef[] = (TILE_TYPES_BY_CATEGORY as Record<string, TileTypeDef[] | undefined>)[tc] ?? [];
@@ -164,13 +154,12 @@ interface TileChooserPopupProps {
 }
 
 function TileChooserPopup({ zoneCategory, state, dispatch, onClose }: TileChooserPopupProps) {
-  const s = state as unknown as StartHostState;
   const label = CATEGORY_LABEL[zoneCategory] ?? zoneCategory;
   const rows: UnlockedRow[] = useMemo(
     () => unlockedRowsForZoneCategory(state, zoneCategory),
     [state, zoneCategory],
   );
-  const active = s?.tileCollection?.activeByCategory ?? {};
+  const active = state?.tileCollection?.activeByCategory ?? {};
   const panelRef = useRef<HTMLDivElement | null>(null);
   useFocusTrap(panelRef, true, onClose);
 
@@ -287,8 +276,7 @@ interface StartFarmingModalProps {
 }
 
 export default function StartFarmingModal({ state, dispatch, onClose }: StartFarmingModalProps) {
-  const s = state as unknown as StartHostState;
-  const zoneId = s.activeZone ?? DEFAULT_ZONE;
+  const zoneId = state.activeZone ?? DEFAULT_ZONE;
   const zone = ZONES[zoneId];
   const cats: string[] = useMemo(() => zoneCategories(zoneId), [zoneId]);
 
@@ -304,10 +292,12 @@ export default function StartFarmingModal({ state, dispatch, onClose }: StartFar
 
   if (!zone) return null;
 
-  const fertilizerStock: number = s.tools?.fertilizer ?? 0;
+  // `Tools` mixes numeric charge counts and boolean upgrade flags; fertilizer
+  // is always numeric, but the index sig forces a narrowing read here.
+  const fertilizerStock: number = Number(state.tools?.fertilizer ?? 0) || 0;
   const fertilizerAvailable = fertilizerStock > 0;
   const cost = zone.entryCost?.coins ?? 50;
-  const canAfford = (s.coins ?? 0) >= cost;
+  const canAfford = (state.coins ?? 0) >= cost;
   const baseTurns = zoneBaseTurns(zone);
   const buildingTurns = turnBudgetAdditiveBonusForZone(state, zoneId);
   const turns = turnBudgetForZone(state, zoneId, { useFertilizer });
@@ -379,11 +369,7 @@ export default function StartFarmingModal({ state, dispatch, onClose }: StartFar
           return (
             <div className="mb-3 flex flex-col gap-1">
               <div className="text-[10px] uppercase tracking-wider text-[#9a3a2a] font-bold flex items-center gap-1">
-                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                  <path d="M12 3 L22 20 H2 Z" stroke="currentColor" strokeWidth="2.4" strokeLinejoin="round" />
-                  <path d="M12 10 V14" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" />
-                  <circle cx="12" cy="17" r="1.2" fill="currentColor" />
-                </svg>
+                <Icon iconKey="dangers_header" size={14} />
                 Active Dangers
               </div>
               <div className="flex flex-wrap gap-1.5">

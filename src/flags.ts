@@ -151,7 +151,6 @@ interface FlagGameState {
   npcs?: { bonds?: Record<string, number> };
   inventory?: Record<string, number>;
   story?: { flags?: Record<string, boolean> };
-  [k: string]: unknown;
 }
 
 function flagTriggerMatches(trigger: FlagTrigger | null | undefined, event: FlagEvent, gameState: FlagGameState | undefined): boolean {

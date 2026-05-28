@@ -353,13 +353,15 @@ export default function IconsTab() {
         <div className="flex-1 min-w-[160px] max-w-[320px]">
           <SearchBar value={search} onChange={setSearch} placeholder="Search key or label…" />
         </div>
-        <SegmentedFilter
-          options={CATEGORY_OPTIONS}
-          value={category}
-          onChange={setCategory}
-          ariaLabel="Icon category filter"
-          className="[&>button]:!px-2 [&>button]:!py-1 [&>button]:!text-[10px] [&>button]:!rounded-md [&>button]:capitalize"
-        />
+        <div className="w-full">
+          <SegmentedFilter
+            options={CATEGORY_OPTIONS}
+            value={category}
+            onChange={setCategory}
+            ariaLabel="Icon category filter"
+            className="[&>button]:!px-2 [&>button]:!py-1 [&>button]:!text-[10px] [&>button]:!rounded-md [&>button]:capitalize"
+          />
+        </div>
         <div
           className="flex items-center gap-1 flex-shrink-0 px-2 py-1 rounded-lg border-2"
           role="group"

@@ -16,11 +16,6 @@ import type { GameState } from "../../types/state.js";
 
 interface Rat { row: number; col: number }
 
-interface DeadlyHostState {
-  hazards?: { rats?: Rat[]; [k: string]: unknown };
-  coins?: number;
-}
-
 interface ChainCell { key?: string | null; row: number; col: number }
 
 export interface DeadlyPestsPatch {
@@ -44,12 +39,12 @@ export function isDeadlyToPests(key: string | null | undefined): boolean {
  * Pure — does not mutate state.
  */
 export function tryDeadlyPestsKill(state: GameState, chain: ChainCell[]): DeadlyPestsPatch | null {
-  const s = state as unknown as DeadlyHostState;
   if (!Array.isArray(chain) || chain.length === 0) return null;
   const hasDeadly = chain.some((t: ChainCell) => isDeadlyToPests(t?.key));
   if (!hasDeadly) return null;
 
-  const rats: Rat[] = s.hazards?.rats ?? [];
+  // `Hazards.rats` on GameState is `unknown[]`; narrow at the read boundary.
+  const rats: Rat[] = (state.hazards?.rats ?? []) as Rat[];
   if (rats.length === 0) return null;
 
   // Build set of chain cells for O(1) lookup
@@ -68,8 +63,8 @@ export function tryDeadlyPestsKill(state: GameState, chain: ChainCell[]): Deadly
   const reward = killed.length * RAT_CLEAR_REWARD_PER;
 
   return {
-    hazards: { ...(s.hazards ?? {}), rats: remaining },
-    coins: (s.coins ?? 0) + reward,
+    hazards: { ...(state.hazards ?? {}), rats: remaining },
+    coins: (state.coins ?? 0) + reward,
     _deadlyKills: killed.length,
     _deadlyFloater: `Pest culled! +${reward}◉`,
   };

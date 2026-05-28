@@ -25,7 +25,7 @@ interface FoodEntry { key: string; have: number; per: number }
 
 export default function BiomeEntryModal({ biomeKey, state, dispatch, onClose }: BiomeEntryModalProps) {
   const s = state as GameState & { activeZone?: string; mapCurrent?: string; inventory?: Record<string, number>; built?: Record<string, Record<string, boolean>> };
-  const biome = (BIOMES as Record<string, { name?: string }>)[biomeKey];
+  const biome = BIOMES[biomeKey];
   const access = canEnterBiome(state, biomeKey) as { ok: boolean; reason?: string };
   const locked = !access.ok;
   const zoneId = s.activeZone ?? s.mapCurrent ?? "home";

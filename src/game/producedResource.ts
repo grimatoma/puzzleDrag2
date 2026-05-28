@@ -5,7 +5,7 @@
  * Phaser, which requires `window`.
  */
 
-import { tileFamilyResource, TILES_WITH_CUSTOM_OUTPUT, ITEMS, UPGRADE_THRESHOLDS } from "../constants.js";
+import { tileFamilyResource, TILES_WITH_CUSTOM_OUTPUT, getItem, UPGRADE_THRESHOLDS } from "../constants.js";
 import { TILE_TYPES_MAP } from "../features/tileCollection/data.js";
 import { upgradeCountForChain } from "../utils.js";
 
@@ -76,7 +76,7 @@ export function buildChainUpdatePayload(args: ChainUpdateArgs): ChainUpdatePaylo
     }
   }
   const producedKey = res ? producedResource(res) : null;
-  const producedDef = producedKey ? (ITEMS as Record<string, { label?: string } | undefined>)[producedKey] : null;
+  const producedDef = producedKey ? getItem(producedKey) : null;
   return {
     count: n,
     upgrades: k,

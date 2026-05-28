@@ -1,5 +1,6 @@
 import { DECORATIONS } from "./data.js";
 import { locBuilt } from "../../locBuilt.js";
+import { inventoryQty, inventoryPut } from "../../types/inventory.js";
 import type { Action, GameState } from "../../types/state.js";
 
 export const initial = {};
@@ -20,8 +21,7 @@ interface DecorationDef {
 export function reduce(state: GameState, action: Action): GameState {
   if (action.type !== "BUILD_DECORATION") return state;
 
-  const payload = (action.payload as { id?: string } | undefined) ?? {};
-  const id = payload.id;
+  const id = action.payload.id;
   if (!id) return state;
   const decorationsMap = DECORATIONS as Record<string, DecorationDef | undefined>;
   const def = decorationsMap[id];
@@ -36,14 +36,14 @@ export function reduce(state: GameState, action: Action): GameState {
   const inv = state.inventory ?? {};
   for (const [k, v] of Object.entries(cost)) {
     if (k === "coins") continue;
-    if ((inv[k] ?? 0) < (v as number)) return state;
+    if (inventoryQty(inv, k) < (v as number)) return state;
   }
 
   // Deduct costs
-  const newInv: Record<string, number> = { ...inv };
+  let newInv = { ...inv };
   for (const [k, v] of Object.entries(cost)) {
     if (k === "coins") continue;
-    newInv[k] = (newInv[k] ?? 0) - (v as number);
+    newInv = inventoryPut(newInv, k, inventoryQty(newInv, k) - (v as number));
   }
 
   const loc = (state.mapCurrent as string | undefined) ?? "home";

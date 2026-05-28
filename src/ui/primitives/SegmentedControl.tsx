@@ -5,7 +5,7 @@ function cx(...parts: Array<string | false | null | undefined>): string {
   return parts.filter(Boolean).join(" ");
 }
 
-type OptionLike = string | number | { id?: string | number; value?: string | number; key?: string | number; label?: ReactNode; name?: ReactNode } | Record<string, any>;
+type OptionLike = string | number | { id?: string | number; value?: string | number; key?: string | number; label?: ReactNode; name?: ReactNode } | Record<string, unknown>;
 
 function defaultValue(option: OptionLike) {
   if (option && typeof option === "object") return option.id ?? option.value ?? option.key;
@@ -13,7 +13,7 @@ function defaultValue(option: OptionLike) {
 }
 
 function defaultLabel(option: OptionLike): ReactNode {
-  if (option && typeof option === "object") return option.label ?? option.name ?? option.id ?? option.value;
+  if (option && typeof option === "object") return (option.label ?? option.name ?? option.id ?? option.value) as ReactNode;
   return option as ReactNode;
 }
 

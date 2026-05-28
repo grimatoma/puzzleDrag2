@@ -15,7 +15,9 @@ export function loadSavedState(): SavedState | null {
   try {
     const raw = localStorage.getItem(SAVE_KEY);
     if (!raw) return null;
-    const parsed = JSON.parse(raw);
+    const parsed = JSON.parse(raw, (k, v) =>
+      (k === "__proto__" || k === "constructor" || k === "prototype") ? undefined : v
+    );
     if (!parsed || typeof parsed !== "object") return null;
     if (parsed.version !== SAVE_SCHEMA_VERSION) {
       console.warn(
@@ -31,8 +33,9 @@ export function loadSavedState(): SavedState | null {
 export function persistStateNow(state: GameState): void {
   try {
     const out: Record<string, unknown> = {};
-    const src = state as unknown as Record<string, unknown>;
-    for (const k of Object.keys(src)) if (!VOLATILE.has(k)) out[k] = src[k];
+    // Iterate the GameState entries directly; Object.entries handles the
+    // string-indexed view without casting reducer state through `unknown`.
+    for (const [k, v] of Object.entries(state)) if (!VOLATILE.has(k)) out[k] = v;
     localStorage.setItem(SAVE_KEY, JSON.stringify(out));
   } catch { /* storage unavailable (private browsing / quota) */ }
 }

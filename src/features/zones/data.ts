@@ -122,20 +122,10 @@ export function zoneBaseTurns(zoneOrId: string | Zone | undefined | null): numbe
   return Math.max(0, Math.floor(Number(raw) || 0));
 }
 
-interface ZoneHostState {
-  mapCurrent?: string;
-  zoneNames?: Record<string, string>;
-  settlements?: Record<string, { founded?: boolean; biome?: string; keeperPath?: string }>;
-  built?: Record<string, Record<string, boolean>>;
-  heirlooms?: Record<string, number>;
-  tools?: Record<string, unknown>;
-}
-
 export function turnBudgetAdditiveBonusForZone(state: GameState, _zoneId?: string): number {
-  const s = state as unknown as ZoneHostState;
   const agg = computeAggregatedAbilities(state) as { turnBudgetBonus?: number } | undefined;
   let bonus = agg?.turnBudgetBonus ?? 0;
-  if (s?.tools?.extraTurn) bonus += 1;
+  if (state.tools?.extraTurn) bonus += 1;
   return bonus;
 }
 
@@ -326,9 +316,8 @@ export const DEFAULT_ZONE = "home";
  * Used wherever the settlement name is shown (Town header, etc).
  */
 export function displayZoneName(state: GameState | null | undefined, zoneId?: string): string {
-  const s = state as unknown as ZoneHostState | null | undefined;
-  const id = zoneId ?? s?.mapCurrent ?? DEFAULT_ZONE;
-  const custom = s?.zoneNames?.[id];
+  const id = zoneId ?? state?.mapCurrent ?? DEFAULT_ZONE;
+  const custom = state?.zoneNames?.[id];
   if (typeof custom === "string" && custom.trim()) return custom.trim();
   return ZONES[id]?.name ?? id;
 }
@@ -348,16 +337,14 @@ export let SETTLEMENT_FOUNDING_GROWTH = 1.7;   // Dev Panel: tuning.foundingGrow
 
 /** Number of zones the player has founded. */
 export function foundedSettlementCount(state: GameState | null | undefined): number {
-  const s = state as unknown as ZoneHostState | null | undefined;
-  const map = s?.settlements ?? {};
+  const map = state?.settlements ?? {};
   return Object.values(map).filter((s2) => !!s2 && !!s2.founded).length;
 }
 
 /** True if `zoneId` has been founded (or is `home`, which is always founded). */
 export function isSettlementFounded(state: GameState | null | undefined, zoneId: string): boolean {
-  const s = state as unknown as ZoneHostState | null | undefined;
   if (zoneId === DEFAULT_ZONE) return true;
-  return !!(s?.settlements?.[zoneId]?.founded);
+  return !!(state?.settlements?.[zoneId]?.founded);
 }
 
 /**
@@ -380,12 +367,11 @@ export function settlementFoundingCost(state: GameState | null | undefined): { c
  * map nodes) only need (1). Zones that have no buildings can never complete.
  */
 export function settlementCompleted(state: GameState | null | undefined, zoneId: string): boolean {
-  const s = state as unknown as ZoneHostState | null | undefined;
   const z = ZONES[zoneId];
   if (!z) return false;
   const need = (z.buildings ?? []).filter((b) => b !== "_plots");
   if (need.length === 0) return false;
-  const built = s?.built?.[zoneId] ?? {};
+  const built = state?.built?.[zoneId] ?? {};
   const have = need.filter((b) => built[b]).length;
   const type = settlementTypeForZone(zoneId);
   const keeper = type ? (keeperForType(type) as { appearsAfterBuildings?: number } | null) : null;
@@ -402,8 +388,7 @@ export function settlementCompleted(state: GameState | null | undefined, zoneId:
 
 /** Count of zones that are both founded and completed. */
 export function completedSettlementCount(state: GameState | null | undefined): number {
-  const s = state as unknown as ZoneHostState | null | undefined;
-  const map = s?.settlements ?? {};
+  const map = state?.settlements ?? {};
   return Object.keys(map).filter((id) => !!map[id]?.founded && settlementCompleted(state, id)).length;
 }
 
@@ -429,12 +414,11 @@ export function isExpeditionFood(foodKey: string): boolean {
  * including that zone's building bonuses (master doc §VI). 0 if it isn't food.
  */
 export function expeditionTurnsForFood(state: GameState | null | undefined, foodKey: string, zoneId?: string): number {
-  const s = state as unknown as ZoneHostState | null | undefined;
-  if (zoneId === undefined) zoneId = (s?.mapCurrent ?? DEFAULT_ZONE);
+  if (zoneId === undefined) zoneId = (state?.mapCurrent ?? DEFAULT_ZONE);
   const base = (EXPEDITION_FOOD_TURNS as Record<string, number>)[foodKey];
   if (base == null) return 0;
   let turns: number = base;
-  const built = s?.built?.[zoneId] ?? {};
+  const built = state?.built?.[zoneId] ?? {};
   if (built.larder) turns += 1;                                            // Larder: +1 (per tier — no tiers yet)
   if (built.smokehouse && (EXPEDITION_MEAT_FOODS as string[]).includes(foodKey)) turns += 1; // Smokehouse: +1 to meat
   const type = settlementTypeForZone(zoneId);
@@ -448,8 +432,7 @@ export function expeditionTurnsForFood(state: GameState | null | undefined, food
  * expedition from `zoneId` — the sum of per-food turns × counts.
  */
 export function expeditionTurnsFromSupply(state: GameState | null | undefined, supply: Record<string, number> | null | undefined, zoneId?: string): number {
-  const s = state as unknown as ZoneHostState | null | undefined;
-  if (zoneId === undefined) zoneId = (s?.mapCurrent ?? DEFAULT_ZONE);
+  if (zoneId === undefined) zoneId = (state?.mapCurrent ?? DEFAULT_ZONE);
   let total = 0;
   for (const [foodKey, count] of Object.entries(supply ?? {})) {
     total += expeditionTurnsForFood(state, foodKey, zoneId) * Math.max(0, Math.floor(count));
@@ -489,15 +472,14 @@ export const HEARTH_TOKEN_FOR_TYPE: Readonly<Record<SettlementType, string>> = O
 
 /** All three Hearth-Tokens collected → the Old Capital is reachable. */
 export function isOldCapitalUnlocked(state: GameState | null | undefined): boolean {
-  const s = state as unknown as ZoneHostState | null | undefined;
-  const h: Record<string, number> = s?.heirlooms ?? {};
+  // HeirloomsState's index sig is `unknown`; coerce per-key at the read site.
+  const h = (state?.heirlooms ?? {}) as Record<string, number>;
   return Object.values(HEARTH_TOKEN_FOR_TYPE).every((tok) => (h[tok] ?? 0) >= 1);
 }
 
 /** How many of the three Hearth-Tokens the player holds (0–3). */
 export function hearthTokenCount(state: GameState | null | undefined): number {
-  const s = state as unknown as ZoneHostState | null | undefined;
-  const h: Record<string, number> = s?.heirlooms ?? {};
+  const h = (state?.heirlooms ?? {}) as Record<string, number>;
   return Object.values(HEARTH_TOKEN_FOR_TYPE).filter((tok) => (h[tok] ?? 0) >= 1).length;
 }
 
@@ -507,9 +489,8 @@ export function hearthTokenCount(state: GameState | null | undefined): number {
  * Returns the original reference if nothing changed.
  */
 export function grantEarnedHearthTokens(state: GameState | null | undefined): HeirloomsState {
-  const s = state as unknown as ZoneHostState | null | undefined;
-  const map = s?.settlements ?? {};
-  const h = (s?.heirlooms ?? { heirloomSeed: 0, pactIron: 0, tidesingerPearl: 0 }) as HeirloomsState;
+  const map = state?.settlements ?? {};
+  const h = (state?.heirlooms ?? { heirloomSeed: 0, pactIron: 0, tidesingerPearl: 0 }) as HeirloomsState;
   let next: HeirloomsState = h;
   for (const zoneId of Object.keys(map)) {
     if (!map[zoneId]?.founded || !settlementCompleted(state, zoneId)) continue;
@@ -548,9 +529,10 @@ export function biomesForType(type: SettlementType | null | undefined): Settleme
 
 /** The biome id chosen for `zoneId` (or DEFAULT_HOME_BIOME for home), else null. */
 export function settlementBiomeId(state: GameState | null | undefined, zoneId: string): string | null {
-  const s = state as unknown as ZoneHostState | null | undefined;
-  const stored = s?.settlements?.[zoneId]?.biome;
-  if (stored) return stored;
+  // Settlement entries carry a `biome` field via their open index sig; narrow it
+  // to a string at the read boundary.
+  const stored = state?.settlements?.[zoneId]?.biome;
+  if (typeof stored === "string" && stored) return stored;
   return zoneId === DEFAULT_ZONE ? DEFAULT_HOME_BIOME : null;
 }
 
@@ -582,15 +564,13 @@ export function resolveBiomeChoice(type: SettlementType | null | undefined, want
 
 /** Count of "real" buildings at a zone (excludes _plots / decorations bookkeeping). */
 export function builtCountAt(state: GameState | null | undefined, zoneId: string): number {
-  const s = state as unknown as ZoneHostState | null | undefined;
-  const built = s?.built?.[zoneId] ?? {};
+  const built = state?.built?.[zoneId] ?? {};
   return Object.keys(built).filter((k) => k !== "_plots" && k !== "decorations" && built[k]).length;
 }
 
 /** The keeper path chosen at `zoneId` ('coexist' | 'driveout'), or null if unfaced. */
 export function settlementKeeperPath(state: GameState | null | undefined, zoneId: string): "coexist" | "driveout" | null {
-  const s = state as unknown as ZoneHostState | null | undefined;
-  const p = s?.settlements?.[zoneId]?.keeperPath;
+  const p = state?.settlements?.[zoneId]?.keeperPath;
   return p === "coexist" || p === "driveout" ? p : null;
 }
 

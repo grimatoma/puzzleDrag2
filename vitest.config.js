@@ -13,7 +13,7 @@ export default defineConfig({
       "src/**/*.test.tsx",
     ],
     exclude: ["tests/fixtures/**", "node_modules/**", "tests/e2e/**"],
-    setupFiles: ["src/__tests__/setup.js"],
+    setupFiles: ["src/__tests__/setup.ts"],
     coverage: {
       provider: "v8",
       reporter: ["text", "html", "json-summary"],

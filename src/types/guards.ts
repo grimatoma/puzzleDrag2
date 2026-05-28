@@ -11,12 +11,8 @@
  * @see ./items.ts for the corresponding type declarations.
  */
 
-// @ts-ignore — constants.js is still untyped JS; gets a proper type when it
-// converts to .ts in Phase 3.
-import { ITEMS } from "../constants.js";
+import { getItem } from "../constants.js";
 import type { TileKey, ResourceKey, ToolKey } from "./items.js";
-
-const _items = ITEMS as Record<string, { kind?: string } | undefined>;
 
 // Module-scoped set used to suppress duplicate prod warnings.
 // Key format: `${key}:${expectedKind}`
@@ -28,27 +24,27 @@ const _warnedPairs = new Set<string>();
  * Returns true when `key` refers to a tile entry.
  */
 export function isTile(key: string): key is TileKey {
-  return _items[key]?.kind === "tile";
+  return getItem(key)?.kind === "tile";
 }
 
 /**
  * Returns true when `key` refers to a resource entry.
  */
 export function isResource(key: string): key is ResourceKey {
-  return _items[key]?.kind === "resource";
+  return getItem(key)?.kind === "resource";
 }
 
 /**
  * Returns true when `key` refers to a tool entry.
  */
 export function isTool(key: string): key is ToolKey {
-  return _items[key]?.kind === "tool";
+  return getItem(key)?.kind === "tool";
 }
 
 // ── Internal helper ───────────────────────────────────────────────────────
 
 function _assertKind(key: string, expected: "tile" | "resource" | "tool"): void {
-  const entry = _items[key];
+  const entry = getItem(key);
   const actual = entry?.kind ?? "(missing)";
   if (actual === expected) return;
 

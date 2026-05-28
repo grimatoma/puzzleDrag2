@@ -13,8 +13,7 @@ export const initial = {};
 export function reduce(state: GameState, action: Action): GameState {
   switch (action.type) {
     case "SUMMON_MAGIC_TOOL": {
-      const payload = (action.payload as { id?: string } | undefined) ?? {};
-      const id = payload.id;
+      const id = action.payload?.id;
       if (!id) return state;
       const def = MAGIC_TOOLS.find((t) => t.id === id);
       if (!def) return state;
@@ -43,8 +42,7 @@ export function reduce(state: GameState, action: Action): GameState {
       const charges = state.magicFertilizerCharges ?? 0;
       if (charges <= 0) return state;
       const newCharges = charges - 1;
-      const itemsMap = ITEMS as Record<string, { power?: { params?: { target?: unknown } } } | undefined>;
-      const fallbackTarget = itemsMap.fertilizer?.power?.params?.target ?? null;
+      const fallbackTarget = ITEMS.fertilizer?.power?.params?.target ?? null;
       return {
         ...state,
         magicFertilizerCharges: newCharges,

@@ -3,14 +3,41 @@
  * prop in the codebase imports these so the shape stays consistent.
  *
  * GameState is an interface (not derived from ReturnType) so individual
- * fields can be typed precisely (a literal `null` initializer must still be
- * assignable as `Bubble | null`, etc.). The interface has an index signature
- * for forward-compatibility with feature slices that spread their own
- * `initial` block into the root state.
+ * fields can be typed precisely. Slice-owned root fields are listed explicitly
+ * (see {@link SliceRootFields} in `./gameStateFields.ts`) so reducers do not
+ * need `as unknown as HostState` bridges.
  */
+
+import type { ResourceKey } from "./catalogKeys.js";
+import type {
+  BossState,
+  CastleState,
+  CraftQueueEntry,
+  FishBiomeState,
+  GameSettings,
+  Quest,
+  QuestDailyLegacy,
+  RunSummary,
+  TutorialState,
+} from "./gameStateFields.js";
+import type { Inventory } from "./inventory.js";
+
+export type {
+  BossState,
+  CastleState,
+  CraftQueueEntry,
+  FishBiomeState,
+  GameSettings,
+  Quest,
+  QuestDailyLegacy,
+  RunSummary,
+  SliceRootFields,
+  TutorialState,
+} from "./gameStateFields.js";
 
 // ── Sub-types ─────────────────────────────────────────────────────────────
 
+/** Board cell id — catalog {@link TileKey} plus runtime spawns (`rat`, `mysterious_ore`, `lava`). */
 export interface Tile {
   key: string;
   // Optional decorations / runtime fields that the board may attach.
@@ -27,7 +54,7 @@ export type Grid = GridRow[];
 export interface Order {
   id: number;
   npc: string;
-  key: string;
+  key: ResourceKey;
   /**
    * Required quantity. The reducer reads `need` on the TURN_IN_ORDER path
    * and `amount` on the create path — both are accepted for compatibility.
@@ -56,6 +83,8 @@ export interface FarmRun {
   zoneId?: string;
   turnsRemaining: number;
   turnsTotal?: number;
+  turnBudget?: number;
+  mode?: string;
   [extra: string]: unknown;
 }
 
@@ -146,6 +175,7 @@ export interface HeirloomsState {
 export interface SessionState {
   selectedTiles: unknown[];
   fertilizerUsed: boolean;
+  expedition?: { supply?: Record<string, number>; zoneId?: string | null; turns?: number };
   [extra: string]: unknown;
 }
 
@@ -175,10 +205,8 @@ export interface AlmanacState {
 // ── Top-level GameState ───────────────────────────────────────────────────
 
 /**
- * The canonical game state shape. Known fields are typed precisely; an
- * index signature accommodates feature slices that spread their own
- * `initial` blocks into root state (see src/state/init.ts and the slices
- * under src/features/<name>/slice.js).
+ * The canonical game state shape. Slice-owned root keys match `...slice.initial`
+ * spreads in `src/state/init.ts`.
  */
 export interface GameState {
   version: number;
@@ -192,16 +220,16 @@ export interface GameState {
   xp: number;
   turnsUsed: number;
   farmRun: FarmRun | null;
-  inventory: Record<string, number>;
-  resourceProgress: Record<string, number>;
+  inventory: Inventory;
+  resourceProgress: Partial<Record<ResourceKey, number>>;
   orders: Order[];
-  quests: unknown;
+  quests: Quest[];
   tools: Tools;
   /** The currently-armed tool key (e.g. "axe", "bomb"), or null. */
   toolPending: string | null;
   /** Armed typed-power descriptor, or null. */
-  toolPendingPower: { id: string; key?: string; [k: string]: unknown } | null;
-  fillBiasTarget: { key?: string; [k: string]: unknown } | null;
+  toolPendingPower: { id: string; key?: string | null; [k: string]: unknown } | null;
+  fillBiasTarget: { key?: string | null; [k: string]: unknown } | null;
   mysteriousOre: { turnsRemaining?: number; [k: string]: unknown } | null;
   fishPearl: { turnsRemaining?: number; [k: string]: unknown } | null;
   hazards: Hazards;
@@ -244,34 +272,76 @@ export interface GameState {
   achievements: AchievementsState;
   farm: { savedField: unknown; [k: string]: unknown };
   mine: { savedField: unknown; [k: string]: unknown };
+  fish: FishBiomeState;
   // Floaters layer rendered above the board after a chain commit.
   floaters?: unknown[];
-  /**
-   * Boss-related extras (set when an encounter is active). The precise shape
-   * lives in src/features/boss/slice.ts as `BossState`; we keep it as
-   * `unknown` here so the canonical state type doesn't need to import a
-   * feature module, and so feature slices can attach extra fields freely.
-   * Callers should narrow with the BossState type when reading the field.
-   */
-  boss?: unknown | null;
-  // Anything else that feature slices spread in via `...slice.initial`.
-  [extra: string]: unknown;
+  boons: Record<string, boolean>;
+  runSummary: RunSummary;
+  mapCurrent: string;
+  mapVisited: string[];
+  mapDiscovered: string[];
+  activeZone: string;
+  craftedTotals: Record<string, number>;
+  craftQueues: Record<string, CraftQueueEntry[]>;
+  boss: BossState | null;
+  bossPending: boolean;
+  bossMinimized: boolean;
+  bossesDefeated: number;
+  _bossSeasonCount: number;
+  _bossResolvedThisSeason: boolean;
+  lastAuditBossAt: number;
+  auditBossSeq: number;
+  dailies: QuestDailyLegacy[];
+  dailyDay: number;
+  almanacXp: number;
+  almanacTier: number;
+  almanacClaimed: number[];
+  trophies: Record<string, unknown>;
+  collected: Record<string, number>;
+  totalHarvested: number;
+  totalChains: number;
+  longestChain: number;
+  chainsThisSeason: number;
+  totalOrders: number;
+  totalCrafted: number;
+  settings: GameSettings;
+  settingsTab: string;
+  tutorial: TutorialState;
+  castle: CastleState;
+  year?: number;
+  /** Dev Panel / settings flows (not persisted on every save). */
+  pendingReload?: boolean;
+  /** Crafting screen sub-tab (`src/features/crafting/index.tsx`). */
+  craftingTab?: string | null;
+  /** Fish slice: free-move consumption flag for the last board action. */
+  lastBoardActionConsumedFreeMove?: boolean;
+  /** Length of the last committed chain — read by `useAudio` for chain SFX. */
+  lastChainLength?: number;
+  /** Visual testing bridge: id of the currently loaded scenario, when set. */
+  _visualScenarioId?: string;
+  /** Extra payload for the current modal (e.g. daily-streak day/reward). */
+  modalParams?: Record<string, unknown>;
+  /** Story beat side-effect: biomes unlocked outside the `story.flags` channel. */
+  unlockedBiomes?: Record<string, boolean>;
+  /** Transient hand-off between `applyBeatResult` and the boss trigger; cleared by `evaluateAndApplyStoryBeat`. */
+  pendingBossKey?: string;
 }
 
-// ── Action ────────────────────────────────────────────────────────────────
+// ── Action (discriminated union in actionPayloads.ts) ─────────────────────
 
-/**
- * Generic action shape. Each action has a `type` discriminator (86 distinct
- * types across the codebase, e.g. "CHAIN_COLLECTED", "BOSS/TRIGGER",
- * "CARTO/TRAVEL"). Per-action payload fields are accessed by narrowing on
- * `type` or via property access; `unknown` keeps call sites honest.
- */
-export interface Action {
-  type: string;
-  readonly [key: string]: unknown;
-}
+export type { Action, TypedAction, GenericAction, TypedActionType } from "./actionPayloads.js";
+export type {
+  ChainCollectedPayload,
+  ChainCollectedAction,
+  ToolFiredAction,
+  UseToolAction,
+  GridSyncAction,
+  SetViewAction,
+} from "./actionPayloads.js";
 
 // ── Reducer + dispatch ────────────────────────────────────────────────────
+
+import type { Action } from "./actionPayloads.js";
 
 export type Reducer<S = GameState> = (state: S, action: Action) => S;
 

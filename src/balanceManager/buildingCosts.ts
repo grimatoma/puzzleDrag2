@@ -9,6 +9,37 @@
 
 import { BUILDINGS, ITEMS } from "../constants.js";
 
+export interface BuildingCostRow {
+  id: string;
+  name?: string;
+  label?: string;
+  lv?: number;
+  biome?: string;
+  cost?: Record<string, unknown>;
+  [extra: string]: unknown;
+}
+
+interface BuildingCostItem {
+  label?: string;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return !!value && typeof value === "object" && !Array.isArray(value);
+}
+
+function parseBuildingCostRow(value: unknown): BuildingCostRow | null {
+  if (!isRecord(value) || typeof value.id !== "string") return null;
+  return {
+    ...value,
+    id: value.id,
+    name: typeof value.name === "string" ? value.name : undefined,
+    label: typeof value.label === "string" ? value.label : undefined,
+    lv: typeof value.lv === "number" ? value.lv : undefined,
+    biome: typeof value.biome === "string" ? value.biome : undefined,
+    cost: isRecord(value.cost) ? value.cost : {},
+  };
+}
+
 function isPureCurrency(key: string): boolean {
   return key === "coins" || key === "runes" || key === "embers" || key === "coreIngots" || key === "gems";
 }
@@ -29,37 +60,35 @@ export function analyseBuildingCosts({ buildings = BUILDINGS, items = ITEMS }: {
   const usedBy = new Map<string, Set<string>>();       // resourceKey → Set<buildingId>
   const totals: Record<string, number> = { coins: 0, runes: 0, embers: 0, coreIngots: 0, gems: 0, resourceCount: 0 };
 
-  const buildingList: unknown[] = Array.isArray(buildings) ? buildings : Object.values((buildings as Record<string, unknown>) || {});
+  const buildingList: unknown[] = Array.isArray(buildings) ? buildings : Object.values(isRecord(buildings) ? buildings : {});
   for (const rawB of buildingList) {
-    // TODO(ts-migration): BUILDINGS is untyped; use Record<string, any>
-    const b = rawB as Record<string, any>;
-    if (!b || !b["id"]) continue;
-    const costs: Record<string, number> = b["cost"] || {};
+    const b = parseBuildingCostRow(rawB);
+    if (!b) continue;
+    const costs = b.cost || {};
     const flattened: Record<string, number> = {};
     for (const [key, qty] of Object.entries(costs)) {
-      const n = qty as number;
-      if (!Number.isFinite(n) || n <= 0) continue;
-      flattened[key] = n;
+      if (typeof qty !== "number" || !Number.isFinite(qty) || qty <= 0) continue;
+      flattened[key] = qty;
       if (isPureCurrency(key)) {
-        totals[key] = (totals[key] || 0) + n;
+        totals[key] = (totals[key] || 0) + qty;
       } else {
-        resourceTotals.set(key, (resourceTotals.get(key) || 0) + n);
+        resourceTotals.set(key, (resourceTotals.get(key) || 0) + qty);
         if (!usedBy.has(key)) usedBy.set(key, new Set());
-        usedBy.get(key)!.add(b["id"]);
+        usedBy.get(key)!.add(b.id);
       }
     }
     perBuilding.push({
-      id: b["id"],
-      name: b["name"] || b["label"] || b["id"],
-      level: Number.isFinite(b["lv"]) ? b["lv"] : null,
-      biome: b["biome"] || null,
+      id: b.id,
+      name: b.name || b.label || b.id,
+      level: typeof b.lv === "number" && Number.isFinite(b.lv) ? b.lv : null,
+      biome: b.biome || null,
       costs: flattened,
-      coins: Number.isFinite(costs["coins"]) ? costs["coins"] : 0,
+      coins: typeof costs.coins === "number" && Number.isFinite(costs.coins) ? costs.coins : 0,
     });
   }
   perBuilding.sort((a, b) => ((a.level ?? 0) - (b.level ?? 0)) || a.id.localeCompare(b.id));
 
-  const itemsMap = items as Record<string, { label?: string }>;
+  const itemsMap = isRecord(items) ? items as Record<string, BuildingCostItem> : {};
   const perResource = [...resourceTotals.entries()]
     .map(([key, qty]) => ({
       key, qty,

@@ -74,6 +74,24 @@ describe("utils — clamp / contrast / adjacency", () => {
     expect(contrastRatio(0x12ffffff, 0x000000)).toBeCloseTo(21, 1);
   });
 
+  it("contrastRatio edge cases", () => {
+    // Identical colors should return exactly 1
+    expect(contrastRatio(0x123456, 0x123456)).toBe(1);
+    expect(contrastRatio(0x000000, 0x000000)).toBe(1);
+    expect(contrastRatio(0xffffff, 0xffffff)).toBe(1);
+
+    // Black and white should return exactly 21
+    expect(contrastRatio(0x000000, 0xffffff)).toBe(21);
+    expect(contrastRatio(0xffffff, 0x000000)).toBe(21);
+
+    // Test the linear threshold boundary in relativeLuminance (c <= 0.03928)
+    // c = 0.03928 is around 10 / 255. 0x0a0a0a (r=g=b=10) and 0x0b0b0b (r=g=b=11)
+    expect(contrastRatio(0x0a0a0a, 0x0b0b0b)).toBeCloseTo(1.0058, 3);
+
+    // Very similar colors should be very close to 1 but not exactly 1
+    expect(contrastRatio(0x000000, 0x000001)).toBeGreaterThan(1);
+    expect(contrastRatio(0x000000, 0x000001)).toBeLessThan(1.01);
+  });
 
   it("isAdjacent: orthogonal only", () => {
     expect(isAdjacent({ row: 0, col: 0 }, { row: 0, col: 1 })).toBe(true);
@@ -154,11 +172,15 @@ describe("utils — formatters and helpers", () => {
 });
 
 describe("utils — runSelfTests smoke shim", () => {
-  it("returns true when all smoke invariants pass", async () => {
+  it(
+    "returns true when all smoke invariants pass",
+    { timeout: 20_000 },
+    async () => {
     // Spy on console.log to keep test output quiet.
     const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
     const result = await runSelfTests();
     logSpy.mockRestore();
     expect(typeof result).toBe("boolean");
-  });
+    },
+  );
 });

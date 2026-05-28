@@ -19,18 +19,6 @@ export const initial = {
   activeZone:    'home',
 };
 
-interface CartoHostState {
-  mapCurrent?: string;
-  mapVisited?: string[];
-  mapDiscovered?: string[];
-  activeZone?: string;
-  biomeKey?: string;
-  view?: string;
-  modal?: string | null;
-  level?: number;
-  bubble?: { id: number; npc: string; text: string; ms: number } | null;
-}
-
 function edgeSet(): Set<string> {
   const set = new Set<string>();
   for (const [a, b] of MAP_EDGES) {
@@ -60,60 +48,62 @@ function recomputeDiscovered(visited: string[]): string[] {
   return [...next];
 }
 
-interface TravelAction extends Action {
+interface TravelAction {
+  type: Action["type"];
   nodeId?: string;
+  payload?: { nodeId?: string };
+  readonly [key: string]: unknown;
 }
 
 export function reduce(state: GameState, action: Action): GameState {
-  const s = state as unknown as CartoHostState;
   const a = action as TravelAction;
   switch (action.type) {
     case 'CARTO/TRAVEL': {
       const nodeId = a.nodeId;
-      if (!nodeId || nodeId === s.mapCurrent) return state;
+      if (!nodeId || nodeId === state.mapCurrent) return state;
 
       const target = MAP_NODES.find((n: MapNode) => n.id === nodeId);
       if (!target) return state;
 
       // Backwards-compatible visited list: if the save predates `mapVisited`,
       // fall back to mapDiscovered (everything previously revealed counts as visited).
-      const visited: string[] = s.mapVisited || s.mapDiscovered || ['home'];
-      const playerLevel = s.level || 1;
+      const visited: string[] = state.mapVisited.length ? state.mapVisited : state.mapDiscovered;
+      const playerLevel = state.level || 1;
       const alreadyVisited = visited.includes(nodeId);
 
       // Fast-travel: any visited node, from anywhere on the map.
       // First-visit: must be adjacent to current AND meet the level requirement.
       if (!alreadyVisited) {
-        if (!isAdjacent(s.mapCurrent ?? '', nodeId)) return state;
+        if (!isAdjacent(state.mapCurrent, nodeId)) return state;
         if (target.level > playerLevel) return state;
       }
 
       const nextVisited = alreadyVisited ? visited : [...visited, nodeId];
       const nextDiscovered = recomputeDiscovered(nextVisited);
 
-      const base = {
+      const base: GameState = {
         ...state,
         mapCurrent: nodeId,
         mapVisited: nextVisited,
         mapDiscovered: nextDiscovered,
         activeZone: nodeId,
-      } as GameState;
+      };
 
       switch (target.kind) {
         case 'farm':
-          return { ...base, biomeKey: 'farm', view: 'town' } as GameState;
+          return { ...base, biomeKey: 'farm', view: 'town' };
         case 'mine':
-          return { ...base, biomeKey: 'mine', view: 'town' } as GameState;
+          return { ...base, biomeKey: 'mine', view: 'town' };
         case 'fish':
-          return { ...base, biomeKey: 'fish', view: 'town' } as GameState;
+          return { ...base, biomeKey: 'fish', view: 'town' };
         case 'home':
-          return { ...base, view: 'town' } as GameState;
+          return { ...base, view: 'town' };
         case 'festival':
-          return { ...base, modal: 'festivals' } as GameState;
+          return { ...base, modal: 'festivals' };
         case 'boss':
-          return { ...base, modal: 'boss' } as GameState;
+          return { ...base, modal: 'boss' };
         case 'event':
-          return { ...base, bubble: { id: Date.now(), npc: 'wren', text: '🎲 You meet a stranger at the Crossroads…', ms: 2200 } } as GameState;
+          return { ...base, bubble: { id: Date.now(), npc: 'wren', text: '🎲 You meet a stranger at the Crossroads…', ms: 2200 } };
         default:
           return base;
       }

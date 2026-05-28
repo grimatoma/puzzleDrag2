@@ -2,7 +2,11 @@
 // state.built is keyed by location id: { home: { hearth: true }, meadow: {} }.
 // Backward-compatible: also merges any flat-format (boolean) keys on the root
 // so existing tests that set `built: { bakery: true }` keep working.
-export function locBuilt(state: Record<string, unknown>): Record<string, unknown> {
+import type { GameState } from "./types/state.js";
+
+export function locBuilt(
+  state: Pick<GameState, "built" | "mapCurrent"> | GameState | Record<string, unknown>,
+): Record<string, unknown> {
   const b: Record<string, unknown> = (state.built ?? {}) as Record<string, unknown>;
   const loc = (typeof state.mapCurrent === "string" ? state.mapCurrent : null) ?? "home";
   const locValue = b[loc];

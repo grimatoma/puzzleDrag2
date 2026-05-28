@@ -1,4 +1,38 @@
-export const TOWN_THEMES = {
+export interface TownTheme {
+  bg: string;
+  hill1: string;
+  hill2: string;
+  road: string;
+  roadLine: string;
+  sunColor: string;
+  sunGlow: string;
+  textColor: string;
+}
+
+export interface TownPlotRect {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+export interface TownBiomeConfig {
+  name: string;
+  plots: TownPlotRect[];
+  hill1Path: string;
+  hill2Path: string;
+  cloudOpacity: string;
+}
+
+export interface LocationTownConfig {
+  themeKey: string;
+  biomeVariant: string;
+  hill1Path?: string;
+  hill2Path?: string;
+  cloudOpacity?: string;
+}
+
+export const TOWN_THEMES: Record<string, TownTheme> = {
   home: {
     bg: "linear-gradient(180deg, #dbe5e0 0%, #e8dfc6 55%, #b8c096 100%)",
     hill1: "#a8b58a", hill2: "#86996a", road: "#d8c79c", roadLine: "#b8a578",
@@ -55,7 +89,7 @@ export const SMOKE_BUILDINGS = new Set(["hearth", "bakery", "forge", "kitchen", 
 // `plots` are indexed slots a player can build into. Plot order within each
 // array determines z-stacking (later = on top). Zones declare a `plotCount`
 // in cartography/data.js to cap how many of these positions are exposed.
-export const TOWN_BIOME_CONFIGS = {
+export const TOWN_BIOME_CONFIGS: Record<string, TownBiomeConfig> = {
   farm: {
     name: "Hearthwood Vale",
     plots: [
@@ -101,7 +135,7 @@ export const TOWN_BIOME_CONFIGS = {
 // Per-location visual overrides keyed by MAP_NODES id.
 // `biomeVariant` controls which building layout + terrain decorations to use.
 // `themeKey` picks the colour scheme from TOWN_THEMES.
-export const LOCATION_TOWN_CONFIGS = {
+export const LOCATION_TOWN_CONFIGS: Record<string, LocationTownConfig> = {
   home: {
     themeKey: 'home', biomeVariant: 'farm',
     hill1Path: "M0,318 C100,292 230,275 400,282 C570,289 720,268 900,274 C980,270 1050,266 1100,262 L1100,600 L0,600 Z",
