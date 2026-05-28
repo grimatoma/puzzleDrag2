@@ -158,8 +158,9 @@ Three layered ways to land on the exact screen you want to verify, without click
 - `window.__phaserScene` — direct handle to the live `GameScene` (`grid`, `registry`, `tweens`, etc.) for ad-hoc inspection.
 
 **Quieting auto-modals.** Tutorials, season prompts, and story beats can pop on top of the screen you're verifying. Suppress them via `isDialogsDisabled()` in `src/featureFlags.js`:
-- Console: `localStorage.setItem("hearth.disableDialogs", "1")` to suppress (dialogs are on by default).
+- Console: `localStorage.setItem("hearth.disableDialogs", "1")` to suppress (dialogs are on by default in dev/test). Set it to `"0"` to force them on.
 - Test fixtures: `window.__HEARTH_DISABLE_DIALOGS__ = true` before first render (Playwright sets this via `page.addInitScript`).
+- Default precedence: global override → localStorage flag → build-time default. Production builds (the GitHub Pages deploy, `import.meta.env.PROD`) default to suppressed; the Vite dev server, Vitest, and Playwright default to enabled.
 
 **Resetting state.** The save lives at `localStorage["hearth.save.v1"]` (`STORAGE_KEYS.save`). `localStorage.removeItem("hearth.save.v1")` forces a fresh start; the reducer also discards saves whose `version` mismatches `SAVE_SCHEMA_VERSION`. Other keys: `hearth.settings`, `hearth.tutorial.seen`, `hearth.disableDialogs`.
 
