@@ -7,6 +7,13 @@ export default function ForgeIllustration({ isBuilt }: { isBuilt?: boolean }) {
   return (
     <svg viewBox="-64 -100 128 116" className="absolute inset-0 w-full h-full"
          preserveAspectRatio="xMidYMax meet" style={f}>
+      <defs>
+        <pattern id="forge-slate" patternUnits="userSpaceOnUse" width="12" height="5">
+          <rect width="12" height="5" fill="#5b5346" />
+          <path d="M0,4.5 Q3,3 6,4.5 T12,4.5" fill="none" stroke="rgba(0,0,0,.22)" strokeWidth="1" />
+          <ellipse cx="3" cy="2" rx="3.2" ry="1" fill="rgba(255,255,255,.06)" />
+        </pattern>
+      </defs>
       {/* ground shadow */}
       <ellipse cx="0" cy="2" rx="52" ry="6" fill="rgba(0,0,0,.32)" />
       <ellipse cx="0" cy="-1" rx="44" ry="4" fill="rgba(255,130,40,.14)" />
@@ -58,7 +65,7 @@ export default function ForgeIllustration({ isBuilt }: { isBuilt?: boolean }) {
       </g>
       {/* mortar vertical joints — odd / even rows staggered */}
       <g stroke={PAL.brickDark} strokeWidth=".4" opacity=".35">
-        {[-46, -34, -22].map((rowY, ri) => (
+        {[-46, -34, -22].map((rowY) => (
           [-36, -24, -12, 0, 12, 24, 36].map((px) => (
             <line key={`${rowY}-${px}`} x1={px} y1={rowY} x2={px} y2={rowY + 6} />
           ))
@@ -73,13 +80,6 @@ export default function ForgeIllustration({ isBuilt }: { isBuilt?: boolean }) {
       <rect x="-42" y="-46" width="84" height="3" fill={PAL.wallTop} />
 
       {/* --- ROOF (shallow pitched) --- */}
-      <defs>
-        <pattern id="forge-slate" patternUnits="userSpaceOnUse" width="12" height="5">
-          <rect width="12" height="5" fill="#5b5346" />
-          <path d="M0,4.5 Q3,3 6,4.5 T12,4.5" fill="none" stroke="rgba(0,0,0,.22)" strokeWidth="1" />
-          <ellipse cx="3" cy="2" rx="3.2" ry="1" fill="rgba(255,255,255,.06)" />
-        </pattern>
-      </defs>
       <polygon points="-46,-46 0,-64 46,-46" fill="url(#forge-slate)" />
       <polygon points="-46,-46 0,-64 -24,-46" fill="rgba(0,0,0,.28)" />
       {/* eave beam */}
@@ -132,7 +132,7 @@ export default function ForgeIllustration({ isBuilt }: { isBuilt?: boolean }) {
           {/* embers from furnace arch */}
           {[0, 0.6, 1.2, 1.8, 2.4].map((d, i) => (
             <circle key={i} cx={i % 2 ? 4 : -4} cy={-32} r=".7" fill="#ffb14a"
-              style={{ '--sx': `${(i % 2 ? 6 : -6)}px`, animation: `ember 2.8s ${d}s ease-out infinite`, transformOrigin: `${i % 2 ? 4 : -4}px -32px`, opacity: 0.9 } as React.CSSProperties} />
+              style={{ "--sx": `${(i % 2 ? 6 : -6)}px`, animation: `ember 2.8s ${d}s ease-out infinite`, transformOrigin: `${i % 2 ? 4 : -4}px -32px`, opacity: 0.9 }} />
           ))}
         </g>
       )}
@@ -196,6 +196,26 @@ export default function ForgeIllustration({ isBuilt }: { isBuilt?: boolean }) {
             <circle cx="-2" cy="-9.5" r="1" /><circle cx="1" cy="-10" r="1.2" />
             <circle cx="3" cy="-9" r=".9" />
           </g>
+        </g>
+      )}
+
+      {/* --- BELLOWS (wall-mounted below left window) --- */}
+      {detail === 'high' && (
+        <g transform="translate(-30 -16)">
+          {/* warm air-glow toward furnace */}
+          <ellipse cx="10" cy="0" rx="5" ry="3" fill={glow} opacity=".35"
+            style={{ animation: 'v2pulse 2.4s ease-in-out infinite', transformOrigin: '10px 0px' }} />
+          {/* bellows body */}
+          <ellipse cx="0" cy="0" rx="6" ry="4" fill="#6a4a28" />
+          <ellipse cx="0" cy="0" rx="4.5" ry="2.8" fill="#4a2e14" />
+          {/* accordion folds */}
+          <g stroke="#7a5c34" strokeWidth=".6" opacity=".6">
+            <line x1="-3" y1="-3" x2="-3" y2="3" />
+            <line x1="0" y1="-3.5" x2="0" y2="3.5" />
+            <line x1="3" y1="-3" x2="3" y2="3" />
+          </g>
+          {/* nozzle pointing toward furnace */}
+          <rect x="5" y="-1.2" width="5" height="2.4" rx=".8" fill="#5b5346" />
         </g>
       )}
     </svg>
