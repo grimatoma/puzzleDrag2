@@ -57,3 +57,11 @@ describe("bond icons registered", () => {
     expect(ICON_REGISTRY["bond_8_arc"]).toBeDefined();
   });
 });
+
+describe("region icons registered", () => {
+  it("region_* keys exist", () => {
+    for (const k of ["region_forest","region_moor","region_mine","region_harbor","region_tundra"]) {
+      expect(ICON_REGISTRY[k], k).toBeDefined();
+    }
+  });
+});

@@ -22,12 +22,23 @@ import { ParchmentDialog } from "../../ui/primitives/Dialog.jsx";
 import { FeaturePanel } from "../_shared/uiTypes.js";
 import StatusChip from "../../ui/primitives/StatusChip.jsx";
 import type { GameState, Dispatch } from "../../types/state.js";
+import Icon from "../../ui/Icon.jsx";
 
 export const viewKey = "cartography";
 
 // Zone kinds that can be founded (the rest — boss, event, festival, capital
 // — never get a "Found settlement" affordance).
 const SETTLEABLE_KINDS = new Set<string>(["home", "farm", "mine", "fish"]);
+
+const REGION_ICON: Record<string, string> = {
+  hearth: "region_forest",
+  farm: "region_forest",
+  wilds: "region_moor",
+  mine: "region_mine",
+  coast: "region_harbor",
+  boss: "region_tundra",
+  capital: "region_tundra",
+};
 
 interface KeeperDef {
   name: string;
@@ -488,7 +499,8 @@ function NodePanel({ node, current, visited, discovered, playerLevel, dispatch, 
       style={{ ...cardStyle, color: "#2b2218" }}
     >
       <div className="flex flex-col gap-0.5">
-        <div className="text-[10px] uppercase tracking-[0.15em]" style={{ color: "#7c4f2c", fontWeight: 700 }}>
+        <div className="text-[10px] uppercase tracking-[0.15em] flex items-center gap-1" style={{ color: "#7c4f2c", fontWeight: 700 }}>
+          {!isHidden && <Icon iconKey={REGION_ICON[node.region] ?? "region_moor"} size={14} />}
           {isHidden ? "Unknown territory" : (KIND_LABELS[node.kind] || node.kind)}
         </div>
         <div className="text-[18px] font-bold leading-tight">
