@@ -33,9 +33,7 @@
     "test:visual:manifest": "node tests/visual/generateManifest.mjs && vitest run src/__tests__/visual-scenarios.test.js"
   },
   "dependencies": {
-    "@types/dompurify": "^3.0.5",
     "canvas2svg": "^1.0.16",
-    "dompurify": "^3.4.6",
     "phaser": "^3.87.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
