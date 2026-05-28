@@ -18,6 +18,8 @@ interface GroundPal {
 }
 
 interface TownPlan {
+  width?: number;
+  height?: number;
   ground: { top: number };
   streets: Array<{ x1: number; y1: number; x2: number; y2: number; width: number }>;
   plaza: { cx: number; cy: number; rx: number; ry: number };
@@ -121,21 +123,27 @@ function TownGround({ plan, theme, biomeVariant, builtLots }: TownGroundProps) {
   const road = theme?.road || pal.pave;
   const roadLine = theme?.roadLine || pal.paveEdge;
   const built: Set<number> = builtLots instanceof Set ? (builtLots as Set<number>) : new Set();
+  const w = plan.width ?? 1500;
+  const h = plan.height ?? 600;
+  const top = plan.ground.top;
+  // Wavy floor control points expressed as fractions of the stage width so the
+  // packed-earth floor spans the full design space whatever its width.
+  const xA = 0.2 * w, xB = 0.44 * w, xC = 0.64 * w, xD = 0.82 * w, xE = 0.91 * w;
 
   return (
     <svg
-      viewBox="0 0 1100 600"
-      preserveAspectRatio="none"
+      viewBox={`0 0 ${w} ${h}`}
+      preserveAspectRatio="xMidYMid meet"
       className="absolute inset-0 w-full h-full pointer-events-none"
       aria-hidden="true"
     >
       {/* Town floor — packed earth that the streets and buildings sit on. */}
       <path
-        d={`M0,${plan.ground.top + 14} C220,${plan.ground.top - 6} 480,${plan.ground.top + 4} 700,${plan.ground.top + 10} C900,${plan.ground.top + 16} 1000,${plan.ground.top + 6} 1100,${plan.ground.top + 2} L1100,600 L0,600 Z`}
+        d={`M0,${top + 14} C${xA},${top - 6} ${xB},${top + 4} ${xC},${top + 10} C${xD},${top + 16} ${xE},${top + 6} ${w},${top + 2} L${w},${h} L0,${h} Z`}
         fill={pal.floor}
       />
       <path
-        d={`M0,${plan.ground.top + 14} C220,${plan.ground.top - 6} 480,${plan.ground.top + 4} 700,${plan.ground.top + 10} C900,${plan.ground.top + 16} 1000,${plan.ground.top + 6} 1100,${plan.ground.top + 2} L1100,${plan.ground.top + 30} C900,${plan.ground.top + 24} 700,${plan.ground.top + 28} 480,${plan.ground.top + 22} C220,${plan.ground.top + 12} 0,${plan.ground.top + 32} 0,${plan.ground.top + 32} Z`}
+        d={`M0,${top + 14} C${xA},${top - 6} ${xB},${top + 4} ${xC},${top + 10} C${xD},${top + 16} ${xE},${top + 6} ${w},${top + 2} L${w},${top + 30} C${xD},${top + 24} ${xC},${top + 28} ${xB},${top + 22} C${xA},${top + 12} 0,${top + 32} 0,${top + 32} Z`}
         fill={pal.floorEdge}
         opacity="0.5"
       />
