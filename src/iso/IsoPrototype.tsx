@@ -11,6 +11,7 @@ import { toScreen, toGrid, depthOf, tileDiamond, TILE_W, TILE_H } from "./isoMat
 import IsoForgeDetailed from "./variants/IsoForgeDetailed.jsx";
 import IsoForgeBillboard from "./variants/IsoForgeBillboard.jsx";
 import IsoForgePremium from "./variants/IsoForgePremium.jsx";
+import IsoForgeDeluxe from "./variants/IsoForgeDeluxe.jsx";
 import IsoCharacter from "./IsoCharacter.jsx";
 import IsoInterior from "./IsoInterior.jsx";
 
@@ -22,7 +23,7 @@ type Building = {
   center: Pt;
 };
 
-const GRID = 13; // 13×13 plot
+const GRID = 15; // 15×15 plot
 const PAD = 90;
 const SPEED = 3.4;
 const FOOT = 1.25; // footprint half-extent (collision)
@@ -32,9 +33,10 @@ const ENTER_RADIUS = 0.5;
 // The three forges sit on the same anti-diagonal (constant gx+gy) so they line
 // up across the screen at the same depth without occluding each other.
 const BUILDINGS: Building[] = [
-  { id: "detailed", label: "1 · Iso redraw (v2)", Comp: IsoForgeDetailed, center: { gx: 2, gy: 10 } },
-  { id: "billboard", label: "2 · Direct transfer", Comp: IsoForgeBillboard, center: { gx: 6, gy: 6 } },
-  { id: "premium", label: "3 · Premium true-iso", Comp: IsoForgePremium, center: { gx: 10, gy: 2 } },
+  { id: "detailed", label: "1 · Iso redraw (v2)", Comp: IsoForgeDetailed, center: { gx: 1, gy: 13 } },
+  { id: "billboard", label: "2 · Direct transfer", Comp: IsoForgeBillboard, center: { gx: 5, gy: 9 } },
+  { id: "premium", label: "3 · Premium true-iso", Comp: IsoForgePremium, center: { gx: 9, gy: 5 } },
+  { id: "deluxe", label: "4 · Deluxe smithy", Comp: IsoForgeDeluxe, center: { gx: 13, gy: 1 } },
 ];
 
 const doorOf = (b: Building): Pt => ({ gx: b.center.gx, gy: b.center.gy + 2.2 });
@@ -44,7 +46,7 @@ const boxOf = (b: Building) => ({
   minGy: b.center.gy - FOOT, maxGy: b.center.gy + FOOT,
 });
 
-const CHAR_START: Pt = { gx: 6, gy: 11 };
+const CHAR_START: Pt = { gx: 7, gy: 12 };
 
 const MOVE_KEYS = new Set(["arrowup", "arrowdown", "arrowleft", "arrowright", "w", "a", "s", "d"]);
 
