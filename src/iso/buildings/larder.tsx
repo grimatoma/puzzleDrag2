@@ -1,101 +1,103 @@
-// larder — stone cold-store (SMALL plot).
-// A squat coursed-stone store with quoins under a terracotta hip roof. A heavy
-// arched timber door with iron strap-hinges + a ring handle sits on the lit
-// face; a narrow window shows a cold blue interior lined with preserve jars; and
-// a hook bar by the door hangs bundles of drying herbs that sway.
+// larder — earth-banked root cellar / cold store (SMALL plot).
+// Shape tells the story: a squat, thick stone cold-store half-buried under a
+// rounded GRASS-TURF mound (earth-sheltered = naturally cold), with a deep
+// recessed stone-ARCHED doorway down a couple of steps showing a cool-blue
+// interior hung with preserves, a stubby stone vent, and crocks + a herb bundle
+// outside. No box + hip roof in sight.
 
 import { useId } from "react";
-import { type P, add, pts, panelMatrix, shingles } from "../isoKit.jsx";
-import { PAL } from "../../ui/buildings/v2kit.jsx";
+import { type P, makeGp } from "../isoKit.jsx";
 import type { IsoBuildingMeta } from "../buildingMeta.js";
 
 export const meta: IsoBuildingMeta = {
   status: "approved",
   plot: "small",
-  notes: "Stone cold-store; coursed stone + quoins, terracotta hip roof, heavy arched iron-strap door (hero), cold blue jar window, swaying hung herb bundles. Small tier.",
+  notes: "Earth-banked root cellar: stone cold-store under a rounded grass-turf mound, deep recessed stone-arched doorway + steps + cool-blue jar interior, stone vent, crocks + herbs.",
 };
-
-const HALF_W = 50, HALF_H = 25, WALL_H = 54, ROOF_RISE = 40, EAVE = 8, LW = 120, LH = 92;
 
 export default function IsoLarder({ originX, originY, nearDoor = false }: { originX: number; originY: number; nearDoor?: boolean }) {
   const uid = useId().replace(/:/g, "");
   const id = (s: string) => `${uid}-${s}`;
   const o: P = { x: originX, y: originY };
-  const right = add(o, { x: HALF_W, y: 0 }), bottom = add(o, { x: 0, y: HALF_H });
-  const topT = { x: o.x, y: o.y - HALF_H - WALL_H }, rightT = { x: right.x, y: right.y - WALL_H };
-  const bottomT = { x: bottom.x, y: bottom.y - WALL_H }, leftT = { x: o.x - HALF_W, y: o.y - WALL_H };
-  const apex = { x: o.x, y: o.y - WALL_H - ROOF_RISE };
-  const eY = (EAVE * HALF_H) / HALF_W;
-  const topE = { x: topT.x, y: topT.y - eY }, rightE = { x: rightT.x + EAVE, y: rightT.y };
-  const bottomE = { x: bottomT.x, y: bottomT.y + eY }, leftE = { x: leftT.x - EAVE, y: leftT.y };
-  const seMatrix = panelMatrix(bottomT, { x: HALF_W, y: -HALF_H }, { x: 0, y: WALL_H });
-  const swMatrix = panelMatrix(leftT, { x: HALF_W, y: HALF_H }, { x: 0, y: WALL_H });
-  const fc = LW / 2;
-
-  const coursing = (lit: boolean) => (
-    <g stroke={lit ? "rgba(0,0,0,.12)" : "rgba(0,0,0,.2)"} strokeWidth={0.6} vectorEffect="non-scaling-stroke">
-      {[20, 38, 56, 74].map((y) => <line key={y} x1={0} y1={y} x2={LW} y2={y} vectorEffect="non-scaling-stroke" />)}
-      {[20, 56].map((y) => [30, 60, 90].map((x) => <line key={`${y}-${x}`} x1={x} y1={y} x2={x} y2={y + 18} vectorEffect="non-scaling-stroke" />))}
-    </g>
-  );
+  const gp = makeGp(o);
+  const yOf = (h: number) => o.y - h;
+  // stone face (the +gx,+gy facing front built into the bank) is a low arched wall
+  const fc = o.x;
 
   return (
     <g>
       <defs>
-        <linearGradient id={id("stoneLit")} x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#b2a888" /><stop offset="1" stopColor="#928768" /></linearGradient>
-        <linearGradient id={id("stoneShade")} x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#867a5e" /><stop offset="1" stopColor="#665b44" /></linearGradient>
-        <linearGradient id={id("terraLit")} x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#c0623f" /><stop offset="1" stopColor="#853620" /></linearGradient>
-        <linearGradient id={id("terraShade")} x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#933f26" /><stop offset="1" stopColor="#5e2415" /></linearGradient>
+        <linearGradient id={id("turfLit")} x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#7ba24e" /><stop offset="1" stopColor="#577a34" /></linearGradient>
+        <linearGradient id={id("turfShade")} x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#5c7d3a" /><stop offset="1" stopColor="#3e5626" /></linearGradient>
+        <linearGradient id={id("stone")} x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#b2a888" /><stop offset="1" stopColor="#857a5e" /></linearGradient>
+        <radialGradient id={id("cold")} cx="0.5" cy="0.4" r="0.7"><stop offset="0" stopColor="#cfe0e8" /><stop offset="0.6" stopColor="#5a7282" /><stop offset="1" stopColor="#26323c" /></radialGradient>
       </defs>
 
-      <ellipse cx={o.x} cy={o.y + 3} rx={HALF_W + 14} ry={HALF_H + 5} fill="rgba(0,0,0,.28)" />
+      <ellipse cx={o.x} cy={o.y + 3} rx={52} ry={20} fill="rgba(0,0,0,.3)" />
 
-      {/* SW wall (shade) — cold jar window + hanging herbs */}
-      <g transform={swMatrix}>
-        <rect x={0} y={0} width={LW} height={LH} fill={`url(#${id("stoneShade")})`} />
-        {coursing(false)}
-        <rect x={0} y={LH - 9} width={LW} height={9} fill="#665b44" />
-        {/* cold window with jars */}
-        <rect x={20} y={28} width={26} height={30} fill="#1a1410" /><rect x={22} y={30} width={22} height={26} fill="#2a2e36" />
-        <g fill="#4a5060"><ellipse cx={28} cy={46} rx={3} ry={4.2} /><ellipse cx={34} cy={46} rx={2.7} ry={4.8} /><ellipse cx={40} cy={46} rx={3} ry={3.8} /></g>
-        <g fill="#e0a83a" opacity={0.5} style={{ animation: "bob 4s ease-in-out infinite", transformOrigin: "34px 40px" }}><rect x={25} y={40} width={6} height={1.8} rx={0.5} /><rect x={31} y={39} width={5} height={1.8} rx={0.5} /><rect x={37} y={40.5} width={6} height={1.8} rx={0.5} /></g>
-        <line x1={33} y1={30} x2={33} y2={56} stroke="#1a1410" strokeWidth={1} /><line x1={22} y1={43} x2={44} y2={43} stroke="#1a1410" strokeWidth={1} />
-        {/* hook bar + hanging herb bundles */}
-        <rect x={70} y={20} width={36} height={2} rx={0.5} fill="#2a2a2a" />
-        {[{ x: 78, c: "#9060a8", l: "#aab050", d: 3.6 }, { x: 90, c: "#788840", l: "#607030", d: 4.2 }, { x: 100, c: "#c08040", l: "#a07840", d: 3.2 }].map((b, i) => (
-          <g key={i} style={{ animation: `sway ${b.d}s ${i * 0.5}s ease-in-out infinite`, transformOrigin: `${b.x}px 22px` }}>
-            <line x1={b.x} y1={22} x2={b.x} y2={34} stroke="#5a6820" strokeWidth={0.9} />
-            <ellipse cx={b.x} cy={40} rx={3.5} ry={6} fill={b.l} /><ellipse cx={b.x} cy={39} rx={2.4} ry={4.4} fill={b.c} opacity={0.8} />
+      {/* ===== EARTH BANK / TURF MOUND (the body) ===== */}
+      {(() => {
+        // a fat rounded mound: an ellipse dome rising behind/over the stone front
+        const mTop = yOf(58);
+        return (
+          <g>
+            {/* mound mass */}
+            <path d={`M${o.x - 56},${o.y + 4} Q${o.x - 60},${mTop + 6} ${o.x - 18},${mTop} Q${o.x + 6},${mTop - 6} ${o.x + 40},${mTop + 10} Q${o.x + 62},${o.y + 2} ${o.x + 40},${o.y + 8} Q${o.x},${o.y + 14} ${o.x - 56},${o.y + 4} Z`} fill={`url(#${id("turfShade")})`} />
+            <path d={`M${o.x - 56},${o.y + 2} Q${o.x - 60},${mTop + 6} ${o.x - 18},${mTop} Q${o.x + 6},${mTop - 6} ${o.x + 40},${mTop + 10} Q${o.x + 30},${o.y - 6} ${o.x - 20},${o.y - 4} Q${o.x - 44},${o.y - 2} ${o.x - 56},${o.y + 2} Z`} fill={`url(#${id("turfLit")})`} />
+            {/* grass tufts + a couple of flowers on the mound */}
+            {[[-34, -16], [-12, -30], [14, -26], [30, -14], [-2, -36], [22, -36]].map(([dx, dy], i) => (
+              <g key={i} transform={`translate(${o.x + dx} ${o.y + dy})`}>
+                <path d="M0,0 L-1.5,-5 M0,0 L0,-6 M0,0 L1.5,-5" stroke="#6a8a3a" strokeWidth={0.8} />
+                {i % 3 === 0 && <circle cx={0} cy={-6} r={1.2} fill={i % 2 ? "#f4d262" : "#dba7c4"} />}
+              </g>
+            ))}
           </g>
-        ))}
-      </g>
+        );
+      })()}
 
-      {/* SE wall (lit) — heavy arched iron-strap door (hero) */}
-      <g transform={seMatrix}>
-        <rect x={0} y={0} width={LW} height={LH} fill={`url(#${id("stoneLit")})`} />
-        {coursing(true)}
-        <rect x={0} y={0} width={LW} height={4} fill="rgba(255,235,200,.14)" />
-        <rect x={0} y={LH - 9} width={LW} height={9} fill="#665b44" />
-        <g data-door="entry">
-          {nearDoor && <ellipse cx={fc + 16} cy={LH - 26} rx={18} ry={24} fill="#ff8a28" opacity={0.3} style={{ animation: "v2pulse 1.4s ease-in-out infinite", transformOrigin: `${fc + 16}px ${LH - 26}px` }} />}
-          <path d={`M${fc + 2},${LH} L${fc + 2},${LH - 44} a14,14 0 0 1 28,0 L${fc + 30},${LH} Z`} fill="#5b5346" />
-          <path d={`M${fc + 5},${LH} L${fc + 5},${LH - 42} a11,11 0 0 1 22,0 L${fc + 27},${LH} Z`} fill={PAL.timber} />
-          <g stroke="#3a2010" strokeWidth={0.7} opacity={0.5}>{[LH - 30, LH - 18].map((y) => <line key={y} x1={fc + 5} y1={y} x2={fc + 27} y2={y} />)}</g>
-          {/* iron straps */}
-          <g fill="#2a2a2a">{[LH - 38, LH - 26, LH - 14].map((y) => <rect key={y} x={fc + 5} y={y} width={9} height={2} rx={0.5} />)}</g>
-          <circle cx={fc + 22} cy={LH - 22} r={2.4} fill="none" stroke="#2a2a2a" strokeWidth={1.4} />
-          <ellipse cx={fc + 16} cy={LH - 44} rx={3} ry={1.8} fill={PAL.stone} />
+      {/* ===== STONE FRONT built into the bank: retaining wall + recessed arched door ===== */}
+      {(() => {
+        const wL = o.x - 30, wR = o.x + 30, wTop = yOf(34), wBase = o.y + 4;
+        return (
+          <g>
+            {/* battered stone retaining wall around the entrance */}
+            <path d={`M${wL},${wBase} L${wL + 4},${wTop} Q${o.x},${wTop - 8} ${wR - 4},${wTop} L${wR},${wBase} Z`} fill={`url(#${id("stone")})`} />
+            {/* coursing */}
+            {[8, 18, 28].map((h) => <path key={h} d={`M${wL + 3},${yOf(h)} Q${o.x},${yOf(h) - 4} ${wR - 3},${yOf(h)}`} fill="none" stroke="rgba(0,0,0,.16)" strokeWidth={0.8} />)}
+            {/* big keystoned arch surround */}
+            <path d={`M${fc - 16},${wBase} L${fc - 16},${yOf(20)} a16,16 0 0 1 32,0 L${fc + 16},${wBase} Z`} fill="#6a6048" />
+            {/* recessed cold interior */}
+            <path d={`M${fc - 12},${wBase} L${fc - 12},${yOf(18)} a12,12 0 0 1 24,0 L${fc + 12},${wBase} Z`} fill={`url(#${id("cold")})`} />
+            {nearDoor && <ellipse cx={fc} cy={yOf(14)} rx={13} ry={16} fill="#aed3e8" opacity={0.3} style={{ animation: "v2pulse 1.4s ease-in-out infinite", transformOrigin: `${fc}px ${yOf(14)}px` }} />}
+            {/* keystone */}
+            <path d={`M${fc - 4},${yOf(30)} L${fc + 4},${yOf(30)} L${fc + 3},${yOf(36)} L${fc - 3},${yOf(36)} Z`} fill="#cabfa0" />
+            {/* preserve jars on a shelf inside (cool silhouettes) */}
+            <rect x={fc - 11} y={yOf(12)} width={22} height={1.6} fill="#3a4650" />
+            {[[-7, "#5a8a72"], [-1, "#4a7088"], [5, "#6a7a4a"]].map(([dx, c], i) => <g key={i}><rect x={fc + (dx as number) - 2} y={yOf(20)} width={4} height={8} rx={1} fill={c as string} /><circle cx={fc + (dx as number)} cy={yOf(17)} r={1} fill="#cfe4ee" opacity={0.5} /></g>)}
+            {/* a hanging ham deeper in */}
+            <ellipse cx={fc + 8} cy={yOf(24)} rx={2.4} ry={4} fill="#7a3d24" opacity={0.85} />
+            {/* heavy plank door, ajar */}
+            <g data-door="entry"><path d={`M${fc - 12},${wBase} L${fc - 12},${yOf(18)} a12,12 0 0 1 6,-10 L${fc - 3},${yOf(10)} L${fc - 3},${wBase} Z`} fill="#4a2e14" /><g stroke="#2c1a0c" strokeWidth={0.6}><line x1={fc - 10} y1={yOf(8)} x2={fc - 10} y2={wBase} /><line x1={fc - 6} y1={yOf(12)} x2={fc - 6} y2={wBase} /></g></g>
+            {/* worn stone steps down to the door */}
+            <ellipse cx={fc} cy={wBase + 5} rx={20} ry={5} fill="#9a8e72" /><ellipse cx={fc} cy={wBase + 8} rx={14} ry={3.5} fill="#867a5e" />
+          </g>
+        );
+      })()}
+
+      {/* stubby stone vent on the mound */}
+      {(() => { const v = { x: o.x + 26, y: yOf(50) }; return (
+        <g><rect x={v.x - 4} y={v.y - 10} width={8} height={14} rx={1} fill={`url(#${id("stone")})`} stroke="rgba(0,0,0,.2)" strokeWidth={0.6} /><ellipse cx={v.x} cy={v.y - 10} rx={5} ry={1.6} fill="#3a3530" /><ellipse cx={v.x} cy={v.y - 10} rx={3.4} ry={1} fill="#1a1410" /></g>
+      ); })()}
+
+      {/* crocks + herb bundle outside the door */}
+      {(() => { const cl = gp(-1.4, 0.5, 0), cr = gp(1.45, 0.45, 0); return (
+        <g>
+          <g transform={`translate(${cl.x} ${cl.y})`}><ellipse cx={0} cy={1} rx={7} ry={2} fill="rgba(0,0,0,.28)" /><path d="M-6,0 Q-7,-9 -3,-11 L3,-11 Q7,-9 6,0 Z" fill="#8a6a4a" /><ellipse cx={0} cy={-11} rx={4} ry={1.3} fill="#5a4530" /><ellipse cx={0} cy={-11} rx={3} ry={0.9} fill="#3a2c1c" /></g>
+          <g transform={`translate(${cr.x} ${cr.y})`}><ellipse cx={0} cy={1} rx={6} ry={1.8} fill="rgba(0,0,0,.28)" /><path d="M-5,0 Q-6,-7 0,-8 Q6,-7 5,0 Z" fill="#9a7458" /><ellipse cx={0} cy={-8} rx={3.4} ry={1.1} fill="#5a4530" />
+            {/* herb bundle leaning */}
+            <line x1={5} y1={-2} x2={9} y2={-16} stroke="#5a6820" strokeWidth={1} /><ellipse cx={9.5} cy={-18} rx={2.4} ry={4.5} fill="#788840" transform="rotate(12 9.5 -18)" /></g>
         </g>
-      </g>
-
-      {/* eave + terracotta hip roof */}
-      <polyline points={pts(leftT, bottomT, rightT)} fill="none" stroke={PAL.eave} strokeWidth={3} />
-      <polygon points={pts(topE, leftE, apex)} fill="#5e2415" />
-      <polygon points={pts(topE, rightE, apex)} fill="#5e2415" />
-      {shingles(leftE, bottomE, apex, `url(#${id("terraShade")})`, "rgba(0,0,0,.22)", "rsw", 5)}
-      {shingles(rightE, bottomE, apex, `url(#${id("terraLit")})`, "rgba(0,0,0,.18)", "rse", 5)}
-      <polyline points={pts(leftE, bottomE, rightE)} fill="none" stroke="#3a160a" strokeWidth={3} />
-      <g fill="none" strokeLinecap="round"><g stroke="rgba(0,0,0,.4)" strokeWidth={2.4}><line x1={apex.x} y1={apex.y} x2={bottomE.x} y2={bottomE.y} /><line x1={apex.x} y1={apex.y} x2={rightE.x} y2={rightE.y} /><line x1={apex.x} y1={apex.y} x2={leftE.x} y2={leftE.y} /></g><g stroke={PAL.ridge} strokeWidth={1.2} opacity={0.8}><line x1={apex.x} y1={apex.y} x2={bottomE.x} y2={bottomE.y} /><line x1={apex.x} y1={apex.y} x2={rightE.x} y2={rightE.y} /><line x1={apex.x} y1={apex.y} x2={leftE.x} y2={leftE.y} /></g></g>
+      ); })()}
     </g>
   );
 }
