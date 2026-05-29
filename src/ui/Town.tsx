@@ -258,24 +258,18 @@ function ZoomControls() {
 // world inside a fixed-aspect box so it scales uniformly — never stretches.
 function TownStage({ children }: { children: ReactNode }) {
   const ref = useRef<HTMLDivElement>(null);
-  // `fit` is the fit-to-contain scale (whole town visible) used for minScale.
-  // `initial` is the on-load scale: clamped between fit and maxScale so wide
-  // screens open framing the whole town while tall/narrow screens open zoomed
-  // in to a usable building size (the player pans).
-  const [{ fit, initial }, setScales] = useState({ fit: 1, initial: 1 });
+  // `fit` is the fit-to-contain scale (whole town visible). We open at `fit`
+  // so the entire settlement — including the farm/mine/harbor fixtures in the
+  // far wings — is framed and tappable on load; the player zooms in (up to
+  // maxScale) to inspect individual buildings. Opening pre-zoomed would centre
+  // the wider stage and push those edge fixtures off-screen.
+  const [fit, setFit] = useState(0);
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
     const update = () => {
       const cw = el.clientWidth, ch = el.clientHeight;
-      if (cw && ch) {
-        const fit = Math.min(cw / STAGE_W, ch / STAGE_H);
-        const maxScale = fit * 3;
-        // Open so the town band fills ~78% of the viewport height, but never
-        // below fit (whole town) and never above maxScale.
-        const initial = Math.min(Math.max((0.78 * ch) / STAGE_H, fit), maxScale);
-        setScales({ fit, initial });
-      }
+      if (cw && ch) setFit(Math.min(cw / STAGE_W, ch / STAGE_H));
     };
     update();
     const ro = new ResizeObserver(update);
@@ -283,9 +277,7 @@ function TownStage({ children }: { children: ReactNode }) {
     return () => ro.disconnect();
   }, []);
   // Quantize so minor resizes don't thrash the remount that re-frames the town.
-  // `initial` derives from the same measurements as `fit`, so keying on fit
-  // alone tracks them; combine both to be safe against rounding edge cases.
-  const stageKey = `${Math.round(fit * 200)}-${Math.round(initial * 200)}`;
+  const stageKey = Math.round(fit * 200);
   return (
     <div ref={ref} className="absolute inset-0">
       {fit > 0 && (
@@ -293,7 +285,7 @@ function TownStage({ children }: { children: ReactNode }) {
           key={stageKey}
           minScale={fit}
           maxScale={fit * 3}
-          initialScale={initial}
+          initialScale={fit}
           centerOnInit
           centerZoomedOut
           limitToBounds
