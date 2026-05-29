@@ -7,8 +7,8 @@
 // <foreignObject> so it stays inside IsoPrototype's <svg> and depth-sorts
 // against the character correctly.
 
-import ForgeIllustration from "../ui/buildings/forge.jsx";
-import { TILE_W, TILE_H } from "./isoMath.js";
+import ForgeIllustration from "../../ui/buildings/forge.jsx";
+import { TILE_W, TILE_H } from "../isoMath.js";
 
 // Billboard footprint (screen px). The building art is bottom-anchored
 // (forge.tsx uses preserveAspectRatio="xMidYMax meet"), so the box bottom sits
@@ -17,7 +17,7 @@ const BILLBOARD_W = 168;
 const BILLBOARD_H = Math.round(BILLBOARD_W * (116 / 128)); // match forge.tsx viewBox aspect
 const BASE_DROP = 20; // how far below the anchor the building base sits (toward the front of the footprint)
 
-export default function IsoForge({
+export default function IsoForgeBillboard({
   originX,
   originY,
   nearDoor = false,
