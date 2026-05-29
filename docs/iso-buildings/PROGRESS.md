@@ -3,47 +3,56 @@
 Per-building status for the isometric replacement set (see
 `.claude/skills/iso-building/SKILL.md`). One file per building under
 `src/iso/buildings/<key>.tsx`, auto-discovered by the gallery
-(`/iso/`, default tab). Keep this table in sync with each file's `meta`.
+(`/iso/`, default tab). Each file's `meta` is the source of truth; this table
+mirrors it.
 
 **Status:** `todo` → `in_progress` → `review` → `approved`
 **Plot tiers:** `S` ≈ 2×2 · `N` ≈ 3×3 (forge) · `L` ≈ 4×4 tiles.
 
-The reference quality bar is the **forge** (`/iso/?building=forge`). Match it.
+🎉 **The set is complete — all 28 town buildings have an approved iso replacement.**
+The reference quality bar is the **forge** (`/iso/?building=forge`).
 
-| Building | Plot | Original viewBox | Hero details / signature animations | Status | PR | Notes |
-|---|---|---|---|---|---|---|
-| forge | N | -64 -100 128 116 | brick smithy, glowing furnace + anvil, slate hip roof; furnace flicker, embers, lantern, smoke | **approved** | #714/#715 | Reference building. |
-| lighthouse | S | -80 -144 160 160 | tall tapered tower + lamp room, rotating beam, sea; beam sweep, waves/splash, lamp glow | **approved** | #721 | Calibration (tall). Cylinder = curved stripe bands + lit/shade roundness gradient; rotating beam, ripple rings, foam, portholes, bobbing dinghy. |
-| barn | L | -64 -108 128 124 | big gambrel roof, hayloft door, red boards; doors, hay, weather-vane | **approved** | #722 | Calibration (large). Ridge along +gx so the gambrel gable (X-brace doors + loft) faces lit SE; steep-lower/shallow-upper pitch break. Hay-dust bob, weather-vane spin, fence. |
-| bakery | N | -54 -90 108 106 | oven mouth glow, bread sign, chimney; oven flicker, steam/smoke | **approved** | #723 | Calibration (normal). Same footprint/scale as forge; differentiated by plaster walls + terracotta hip roof + glowing oven hero, bread sill, pretzel sign, chimney smoke, oven steam. |
-| hearth | S | -50 -88 100 104 | central fireplace/hearth glow; fire flicker, smoke | todo | — | |
-| mill | L | -70 -124 140 140 | watermill/windmill with rotating sails; windmill, pollen, smoke | todo | — | |
-| inn | N | -60 -108 120 124 | multi-storey lodge, sign, warm windows; sign sway, smoke | todo | — | |
-| granary | N | -50 -96 100 112 | tall grain store, vents; grainfall, dust | todo | — | |
-| larder | S | -50 -88 100 104 | cold store, shutters; subtle steam | todo | — | |
-| caravan_post | N | -60 -100 120 116 | tent/wagon + post, banner; banner sway, lantern | todo | — | |
-| kitchen | N | -58 -100 116 116 | cooking range, pots, chimney; steam, fire flicker | todo | — | |
-| workshop | N | -64 -104 128 120 | open workbench, tools, gears; gear turn, sparks | todo | — | |
-| powder_store | N | -59 -102 118 118 | reinforced magazine, barrels; lantern, warning glow | todo | — | |
-| portal | N | -52 -116 104 128 | arch with swirling energy; portal swirl/pulse, particles | todo | — | |
-| housing | S | -46 -76 92 92 | cottage, chimney, garden; smoke, window glow | todo | — | Shared by housing2/housing3. |
-| silo | S | -62 -108 124 124 | tall cylinder + conical cap; grainfall, vent | todo | — | |
-| harbor_dock | L | -68 -120 136 136 | pier over water, moored boat, crane; waves/splash, boat bob, net sway | todo | — | |
-| fishmonger | N | -58 -100 116 116 | stall, fish display, awning; awning sway, gull | todo | — | |
-| smokehouse | S | -53 -90 106 106 | smoking hut, vent smoke; heavy smoke, ember glow | todo | — | |
-| clock_tower | N | -69 -122 138 138 | tall tower + clock face + bell; hands sweep, bell swing, sway | todo | — | |
-| apothecary | N | -53 -90 106 106 | shop with bottles, mortar sign; bubbling, glow | todo | — | |
-| sawmill | N | -62 -108 124 124 | mill + saw blade, log ramp; blade spin, sawdust | todo | — | |
-| watchtower | N | -61 -106 122 122 | timber tower + brazier + banner; torch flicker, guard walk, banner sway | todo | — | |
-| stable | N | -56 -96 112 112 | long stable, dutch doors, hay; horse, hay sway | todo | — | |
-| apiary | S | -44 -72 88 88 | hives, flowers; bees/pollen drift, sway | todo | — | |
-| chapel | N | -68 -120 136 136 | nave + steeple + bell + stained glass; bell sway, candle glow | todo | — | |
-| brewery | N | -56 -96 112 112 | brewhouse, vats, barrels; steam, drip, fire | todo | — | |
-| observatory | L | -62 -108 124 124 | domed roof + telescope; dome/telescope rotate, star twinkle | todo | — | |
+| Building | Plot | Hero details / signature animations | Status | PR |
+|---|---|---|---|---|
+| forge | N | brick smithy, glowing furnace + anvil, slate hip roof; furnace flicker, embers, lantern, smoke | **approved** | #714/#715 |
+| hearth | N | wide stone home; two warm windows flank an arched iron-ring door, big smoking chimney; flagstone path, wiggling garden bushes, warm spill | **approved** | #749 |
+| lighthouse | S | tapered striped tower + lamp room; rotating beam, waves/splash, lamp + portholes, bobbing dinghy | **approved** | #721 |
+| barn | L | gambrel roof, X-brace doors + loft on lit gable; hay-dust bob, weather-vane, fence | **approved** | #722 |
+| bakery | N | plaster + terracotta; glowing oven hero, bread sill, pretzel sign; oven flicker, steam, smoke | **approved** | #723 |
+| mill | L | tower windmill — stone cylinder + conical cap; turning lattice sails, flour pollen, sacks | **approved** | #725 |
+| inn | N | two-storey timber frame; arched double-door, warm windows; mug sign sway, chimney smoke | **approved** | #726 |
+| chapel | N | bell tower (rose window + swinging bell + spire/cross), nave; lancet candle glow, ♪ notes | **approved** | #727 |
+| silo | S | corrugated metal cylinder + dome; GRAIN band, ladder; grainfall chute, sacks | **approved** | #728 |
+| watchtower | N | round keep + crenellated battlement; patrolling guard, pennant, torches + brazier; curtain stubs | **approved** | #729 |
+| observatory | L | stone drum + slit dome + tilted telescope; twinkling stars, shooting star, ringed planet | **approved** | #730 |
+| clock_tower | N | square tower + legible clock (sweeping hands) + belfry bell; pyramid roof + weathervane, doves | **approved** | #731 |
+| brewery | N | Tudor brewhouse; copper kettle bay over fire + steam; hops vine, barrels + dripping tap, tankard sign | **approved** | #732 |
+| stable | N | long stable; Dutch-door stalls with bobbing horse heads + sliding door; trough ripple, hay, swallow | **approved** | #733 |
+| housing | S | thatch cottage; round door, flower-box window; swaying laundry, chimney smoke, garden bush | **approved** | #734 |
+| harbor_dock | L | plank pier on pilings over water; harbor shack, bobbing sailboat, crane + crate, gulls | **approved** | #735 |
+| portal | N | rune pillars + arch + glowing portal; spinning rune ring, floating motes, pulsing core | **approved** | #736 |
+| apothecary | N | teal timber frame; glowing bottle bay-window; mortar/pestle sign + bubbles, dormer, cat, mist | **approved** | #737 |
+| kitchen | N | cook-house; open hearth bay + hanging cauldron + steam; pots, herb bundles, chimney smoke | **approved** | #738 |
+| workshop | N | carpenter's; plank walls + frame, open workbench; wiggling hung tools, sawdust pollen, logs | **approved** | #739 |
+| fishmonger | N | fish stall; striped awning over iced fish counter; swaying hung fish, scale, price board, gull | **approved** | #740 |
+| smokehouse | S | charred hut; roof vents puffing smoke + embers; iron-door glow slot, hanging meats, woodpile | **approved** | #741 |
+| granary | N | round stone-banded tower + conical terracotta roof; grain dust sift, stacked sacks | **approved** | #742 |
+| sawmill | N | riverside shed; spinning saw blade through log + sparks; turning water-wheel + splash, lumber | **approved** | #743 |
+| apiary | S | beekeeper cottage + green roof; row of beehive boxes; bee pollen drift, sunflower, honey jar | **approved** | #744 |
+| larder | S | stone cold-store + quoins; iron-strap arched door; cold jar window, swaying herb bundles | **approved** | #745 |
+| caravan_post | N | trading post; striped awning + hanging lantern, shop window; waving flag, crates, wagon wheel | **approved** | #746 |
+| powder_store | N | block-stone magazine + berm + lead vault; iron blast door + hazard chevrons + skull; lightning spark, X-barrels | **approved** | #747 |
+
+`housing2` / `housing3` reuse the `housing` iso asset (same as the originals).
 
 ## Log
 
-- **Infra (this branch):** isoKit + auto-discovery + Gallery tab + skill +
-  tracker stood up. Forge wired as the approved reference. Calibration batch:
-  lighthouse (tall) / barn (large) / bakery (normal) — to lock scale + tiers,
-  then refine the skill.
+- **Infra (#720):** isoKit + auto-discovery + Gallery tab + skill + tracker.
+- **Calibration batch (#721–#723):** lighthouse / barn / bakery locked the scale,
+  the plot tiers, the cylinder + gambrel techniques, and the
+  differentiate-by-material rule; folded into the skill (v2, #724).
+- **Production (#725–#747):** the remaining 23 buildings, each its own
+  auto-discovered file (parallel-safe, no shared-registry edits), screenshot-
+  verified against the quality bar and merged with a merge commit.
+- **Set complete:** open `/iso/` (Gallery) to see all 28 before/after pairs at a
+  consistent scale.
