@@ -10,6 +10,7 @@ interface TileTypeDiscovery {
   researchAmount?: number;
   coinCost?: number;
   day?: number;
+  buildingId?: string;
 }
 
 interface TileTypeDef {
@@ -139,6 +140,7 @@ function statusFor(state: GameState, t: TileTypeDef): string {
     if (d.method === "research") return `Discovered — researched ${displayKey(d.researchOf ?? "")}`;
     if (d.method === "buy") return "Discovered — purchased";
     if (d.method === "daily") return `Discovered — Day ${d.day} daily reward`;
+    if (d.method === "building") return `Discovered — built ${d.buildingId ?? ""}`;
   }
 
   // Not yet discovered
@@ -154,6 +156,9 @@ function statusFor(state: GameState, t: TileTypeDef): string {
   }
   if (d.method === "daily") {
     return `Locked — Day ${d.day} daily reward`;
+  }
+  if (d.method === "building") {
+    return `Locked — build ${d.buildingId ?? "a building"} to discover`;
   }
   return "Locked";
 }
@@ -250,6 +255,9 @@ export function getTileDetailViewModel(state: GameState, tileId: string): TileDe
   } else if (d.method === "daily") {
     action = "daily";
     actionLabel = `Day ${d.day} reward`;
+  } else if (d.method === "building") {
+    action = "building";
+    actionLabel = `Build ${d.buildingId ?? "a building"}`;
   }
 
   return {

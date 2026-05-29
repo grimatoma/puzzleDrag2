@@ -4,6 +4,7 @@
 
 /** Tile discovery method ids. */
 export enum TileDiscoveryMethodId {
+  Building = "building",
   Buy = "buy",
   Chain = "chain",
   Daily = "daily",

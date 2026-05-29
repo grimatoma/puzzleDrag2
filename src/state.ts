@@ -837,6 +837,23 @@ function coreReducer(state: GameState, action: Action): GameState {
             : { id: Date.now(), npc: "wren", text: "A Hearth-Token — the kingdom remembers this place.", ms: 2400 },
         };
       }
+      // Discover any tiles gated on owning this building
+      const builtId = b.id;
+      const tcAfterBuild = afterBuildStory.tileCollection ?? defaultTileCollectionSlice();
+      const prevDiscovered = tcAfterBuild.discovered ?? {};
+      const buildingUnlocked: Record<string, boolean> = {};
+      for (const t of TILE_TYPES as Array<{ id: string; discovery?: { method?: string; buildingId?: string } }>) {
+        if (t.discovery?.method !== "building") continue;
+        if (t.discovery.buildingId !== builtId) continue;
+        if (prevDiscovered[t.id]) continue;
+        buildingUnlocked[t.id] = true;
+      }
+      if (Object.keys(buildingUnlocked).length > 0) {
+        afterBuildStory = {
+          ...afterBuildStory,
+          tileCollection: { ...tcAfterBuild, discovered: { ...prevDiscovered, ...buildingUnlocked } },
+        };
+      }
       return afterBuildStory;
     }
     case "POP_NPC":

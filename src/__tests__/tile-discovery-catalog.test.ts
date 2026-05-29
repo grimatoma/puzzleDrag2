@@ -8,9 +8,9 @@ import {
 import { TILE_TYPES } from "../features/tileCollection/data.js";
 
 describe("tileDiscoveryMethods catalog", () => {
-  it("exposes the 5 expected methods", () => {
+  it("exposes the expected methods", () => {
     const ids = TILE_DISCOVERY_METHODS.map((m) => m.id).sort();
-    expect(ids).toEqual(["buy", "chain", "daily", "default", "research"]);
+    expect(ids).toEqual(["building", "buy", "chain", "daily", "default", "research"]);
   });
 
   it("every entry has id, name, desc, params array", () => {

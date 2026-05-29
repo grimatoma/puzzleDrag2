@@ -25,6 +25,7 @@ export const TILE_DISCOVERY_PARAM_TYPES = Object.freeze({
   // iterates BIOMES[*].resources, which contains both kinds. Matches existing
   // behavior; do not introduce a separate "tileKey" type here.
   RESOURCE_KEY: "resourceKey",
+  BUILDING_KEY: "buildingKey",
 });
 
 export const TILE_DISCOVERY_METHODS = Object.freeze([
@@ -66,6 +67,14 @@ export const TILE_DISCOVERY_METHODS = Object.freeze([
     desc: "Granted as a daily login reward on a specific day of the 30-day track.",
     params: [
       { key: "day", label: "Day", type: "int", default: 1, min: 1, max: 30 },
+    ],
+  },
+  {
+    id: "building",
+    name: "Own Building",
+    desc: "Unlocks automatically when the player builds the specified building.",
+    params: [
+      { key: "buildingId", label: "Building", type: "buildingKey" },
     ],
   },
 ]);
