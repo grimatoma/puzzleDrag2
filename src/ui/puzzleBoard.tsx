@@ -820,6 +820,8 @@ const ToolTile = forwardRef<HTMLButtonElement, {
   const empty = tool.count === 0 && !armed;
   const dims = size === "sm"
     ? { w: 48, h: 52, icon: 42, badge: 9, badgeMin: 14 }
+    : size === "lg"
+    ? { w: 120, h: 126, icon: 96, badge: 11, badgeMin: 18 }
     : { w: 58, h: 62, icon: 48, badge: 10, badgeMin: 15 };
   const lastTapAt = useRef(0);
   const handleClick = () => {
@@ -970,12 +972,12 @@ export function PuzzleToolGrid({ state, onInspectChange, inspectedKey, dispatch 
         className="px-2 pt-3 pb-2"
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fill, minmax(58px, 1fr))",
+          gridTemplateColumns: "repeat(auto-fill, minmax(110px, 1fr))",
           gap: 8,
         }}
       >
         {list.map((t) => (
-          <ToolTile key={t.key} tool={t} inspected={inspectedKey === t.key} onClick={select} onActivate={activate} />
+          <ToolTile key={t.key} tool={t} size="lg" inspected={inspectedKey === t.key} onClick={select} onActivate={activate} />
         ))}
       </div>
     </div>
