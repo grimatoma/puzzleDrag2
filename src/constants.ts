@@ -522,6 +522,12 @@ const ITEMS_DATA = {
   tile_mine_coal:         { kind: "tile", biome: "mine", label: "Coal",       color: 0x333333, dark: 0x000000, value: 2, next: "coke" },
   tile_mine_gem:          { kind: "tile", biome: "mine", label: "Gem",        color: 0x65e5ff, dark: 0x1686a3, value: 7, next: "cut_gem", sway: { amp: 1.2, freq: 0.00028, gust: 0.04 } },
   tile_mine_gold:         { kind: "tile", biome: "mine", label: "Gold",       color: 0xffd34c, dark: 0x946b11, value: 5, next: "gold_bar", sway: { amp: 1.0, freq: 0.00024, gust: 0.04 } },
+  // Golden Coin — a treasure tile that pays out coins directly when chained
+  // (no resource output: next is null, and "coin" has no TILE_FAMILY_RESOURCE
+  // family, so producedResource() returns null). The coin payout comes from the
+  // coin_bonus_per_tile ability on its TILE_TYPES entry. Not in MINE_TILE_POOL,
+  // so it never spawns naturally.
+  tile_coin_golden:       { kind: "tile", biome: "mine", label: "Golden Coin", color: 0xffd34c, dark: 0x8a5a0c, value: 5, next: null, sway: { amp: 0.6, freq: 0.00022, gust: 0.03 } },
   // Special family (custom mechanics — dirt feeds rune countdown with mysterious ore).
   tile_special_dirt:      { kind: "tile", biome: "mine", label: "Dirt", color: 0x7a6850, dark: 0x3e3a36, value: 1, next: "dirt" },
   // Terminal mine resources.
