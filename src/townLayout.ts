@@ -122,13 +122,22 @@ export function buildTownPlan(
   const STREET = 30;   // ordinary street gutter width
   const blocksNeeded = n + 4; // plaza + up to 3 boards + slack
 
-  // Analytic upper bound on how many lots a c×r grid can yield: each interior
+  // Analytic UPPER bound on how many lots a c×r grid can yield: each interior
   // block subdivides into up to 4 lots, and we reserve ≤4 blocks (plaza+boards).
+  // This is only an upper bound — the realised count is usually lower because
+  // (a) at high plotCount blocks shrink below the subdivision thresholds and
+  // yield just 1 lot each (see the lot loop's graceful-degradation branch), and
+  // (b) the diagonal river excludes whatever blocks it crosses. So this sizing
+  // does NOT promise exactly n lots at extreme plotCount; it sizes the grid so
+  // there is ample block area to draw from, and `lots.slice(0, n)` trims any
+  // surplus. The lot loop's "≥1 lot per non-excluded block" rule (added so a
+  // whole block is never discarded to zero) keeps the realised count far above
+  // the old failure mode (a single plaza lot) across the full range.
   const capacityOf = (cols: number, rows: number) => Math.max(0, (cols * rows - 4) * 4);
 
   // Start from a roughly square grid biased to the 4:3 design ratio, then grow
-  // (cols first, then rows) until capacity ≥ n. Capacity grows fast (×4/block),
-  // so this loop almost never iterates — but it keeps the guarantee explicit.
+  // (cols first, then rows) until the upper-bound capacity ≥ n. Capacity grows
+  // fast (×4/block), so this loop almost never iterates.
   type Block = { x: number; y: number; w: number; h: number };
   let cols = Math.max(3, Math.round(Math.sqrt(blocksNeeded * (W / H))));
   let rows = Math.max(3, Math.ceil(blocksNeeded / cols));
@@ -172,8 +181,12 @@ export function buildTownPlan(
   // but never at the cost of overflowing the usable span — at very high
   // plotCount a hard 90px floor would push block/lot centers off-canvas. So the
   // floor is itself clamped to span/count: blocks shrink below 90px rather than
-  // escape the design space. Pure arithmetic on the already-drawn weights — no
-  // new rng draws, so determinism and consumption order are unchanged.
+  // escape the design space. This floor governs block SIZE/bounds only, not the
+  // lot COUNT — once blocks shrink past the subdivision thresholds the lot loop
+  // emits a single lot per block (graceful degradation), so shrinking blocks
+  // reduce lots-per-block toward 1 rather than producing exactly n. Pure
+  // arithmetic on the already-drawn weights — no new rng draws, so determinism
+  // and consumption order are unchanged.
   const colFloor = Math.min(90, colSpace / cols);
   const rowFloor = Math.min(90, rowSpace / rows);
   const colW = colWeights.map((w) => Math.max(colFloor, (w / colWeightSum) * colSpace));
@@ -365,6 +378,18 @@ export function buildTownPlan(
   });
 
   const LOT_INSET = 12;
+  const LOT_FLOOR = 56; // readable mini-grid cell floor (after inset)
+  // Emit a single inset, aspect-clamped lot centred in a rectangle. Shared by
+  // the mini-grid path and the graceful-degradation (whole-block) fallback so
+  // both honour the same inset/aspect rules. Pure arithmetic — no rng draws.
+  const pushLot = (cx0: number, cy0: number, cw: number, ch: number, tag: string) => {
+    let w = cw - LOT_INSET * 2;
+    let h = ch - LOT_INSET * 2;
+    // Keep buildings roughly square (renderer anchors aspectRatio:1).
+    if (w > h * 1.3) w = h * 1.3;
+    if (h > w * 1.3) h = w * 1.3;
+    lots.push({ index: lotIndex++, cx: cx0 + cw / 2, cy: cy0 + ch / 2, w, h, row: tag });
+  };
   let lotIndex = 1;
   for (let r = 0; r < rows; r++) {
     for (let c = 0; c < cols; c++) {
@@ -375,17 +400,18 @@ export function buildTownPlan(
       const cellW = blk.w / bc;
       const cellH = blk.h / brn;
       const tag = (r < pr ? "n" : "s") + (c < pc ? "w" : "e");
+      // If the mini-grid cells would fall below the readable floor, don't drop
+      // the whole block to zero lots — degrade gracefully to a SINGLE lot that
+      // fills the block (inset + aspect-clamped). This keeps total lot capacity
+      // ≥ n at any plotCount; the 56px floor only governs whether we subdivide,
+      // never whether a non-excluded block contributes at all.
+      if (cellW - LOT_INSET * 2 < LOT_FLOOR || cellH - LOT_INSET * 2 < LOT_FLOOR) {
+        pushLot(blk.x, blk.y, blk.w, blk.h, tag);
+        continue;
+      }
       for (let mr = 0; mr < brn; mr++) {
         for (let mc = 0; mc < bc; mc++) {
-          let w = cellW - LOT_INSET * 2;
-          let h = cellH - LOT_INSET * 2;
-          if (w < 56 || h < 56) continue;
-          // Keep buildings roughly square (renderer anchors aspectRatio:1).
-          if (w > h * 1.3) w = h * 1.3;
-          if (h > w * 1.3) h = w * 1.3;
-          const cx = blk.x + cellW * mc + cellW / 2;
-          const cy = blk.y + cellH * mr + cellH / 2;
-          lots.push({ index: lotIndex++, cx, cy, w, h, row: tag });
+          pushLot(blk.x + cellW * mc, blk.y + cellH * mr, cellW, cellH, tag);
         }
       }
     }
