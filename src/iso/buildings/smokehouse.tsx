@@ -1,122 +1,109 @@
-// smokehouse — meat-curing hut (SMALL plot).
-// A squat charred-timber hut with a dark hip roof topped by roof VENTS that
-// puff heavy grey smoke + spitting embers (the hero), an iron door with a
-// glowing inspection slot, racks of hanging meats swaying inside the eave, and a
-// woodpile feeding the fire.
+// smokehouse — tapering smoke-hut (SMALL plot).
+// Shape tells the story: a tall, steeply TAPERING charred-plank hut (a smoking
+// "kiln cone") that funnels all its smoke out of a capped vent at the narrow
+// top — billowing heavy smoke + embers. A low ember-glowing door shows fish &
+// meat hung in the haze; a fish/flitch hangs curing outside on a rack and a
+// woodpile feeds the fire.
 
 import { useId } from "react";
-import { type P, add, pts, panelMatrix, shingles, planks } from "../isoKit.jsx";
+import { type P, makeGp, pts, lerp } from "../isoKit.jsx";
 import { Smoke } from "../../ui/buildings/v2kit.jsx";
 import type { IsoBuildingMeta } from "../buildingMeta.js";
 
 export const meta: IsoBuildingMeta = {
   status: "approved",
   plot: "small",
-  notes: "Charred-timber smoking hut; dark hip roof with smoke-puffing vents + embers (hero), iron door with glowing slot, swaying hanging meats, woodpile. Small/dark to vary the set.",
+  notes: "Tapering charred smoke-hut (kiln cone) venting heavy smoke + embers from a capped top, ember-glow door with hung fish/meat, outdoor curing rack, woodpile. Distinct tapering silhouette.",
 };
-
-const HALF_W = 50, HALF_H = 25, WALL_H = 50, ROOF_RISE = 38, EAVE = 8, LW = 120, LH = 92;
 
 export default function IsoSmokehouse({ originX, originY, nearDoor = false }: { originX: number; originY: number; nearDoor?: boolean }) {
   const uid = useId().replace(/:/g, "");
   const id = (s: string) => `${uid}-${s}`;
   const o: P = { x: originX, y: originY };
-  const right = add(o, { x: HALF_W, y: 0 }), bottom = add(o, { x: 0, y: HALF_H });
-  const topT = { x: o.x, y: o.y - HALF_H - WALL_H }, rightT = { x: right.x, y: right.y - WALL_H };
-  const bottomT = { x: bottom.x, y: bottom.y - WALL_H }, leftT = { x: o.x - HALF_W, y: o.y - WALL_H };
-  const apex = { x: o.x, y: o.y - WALL_H - ROOF_RISE };
-  const eY = (EAVE * HALF_H) / HALF_W;
-  const topE = { x: topT.x, y: topT.y - eY }, rightE = { x: rightT.x + EAVE, y: rightT.y };
-  const bottomE = { x: bottomT.x, y: bottomT.y + eY }, leftE = { x: leftT.x - EAVE, y: leftT.y };
-  const seMatrix = panelMatrix(bottomT, { x: HALF_W, y: -HALF_H }, { x: 0, y: WALL_H });
-  const swMatrix = panelMatrix(leftT, { x: HALF_W, y: HALF_H }, { x: 0, y: WALL_H });
-  const fc = LW / 2;
+  const gp = makeGp(o);
+  const bx0 = -0.62, bx1 = 0.62, by0 = -0.62, by1 = 0.62;     // base
+  const tx0 = -0.16, tx1 = 0.16, ty0 = -0.16, ty1 = 0.16;     // narrow top
+  const H = 74;
 
-  const vent = (vx: number, vy: number, i: number) => {
-    const p = { x: apex.x + vx, y: apex.y + vy };
-    return (
-      <g key={i}>
-        <g transform={`translate(${p.x} ${p.y})`}>
-          <rect x={-4} y={0} width={8} height={6} fill="#1a1410" />
-          <path d="M-6,0 L0,-6 L6,0 Z" fill="#5b5346" />
-          <ellipse cx={0} cy={3} rx={2.4} ry={0.7} fill="#ffb14a" opacity={0.7} style={{ animation: `flicker ${1.6 + i * 0.2}s ease-in-out infinite`, transformOrigin: "0px 3px" }} />
-        </g>
-        <Smoke x={p.x} y={p.y - 4} scale={1.4} color="#5b5346" count={3} dur={3.6 + i * 0.6} />
-        <Smoke x={p.x + 2} y={p.y - 4} scale={0.95} color="#3a3530" count={2} dur={4.2 + i * 0.3} />
-        {[0, 1.2, 2.4].map((d, k) => (
-          <circle key={k} cx={p.x} cy={p.y - 4} r={0.7} fill="#ffb14a" style={{ "--sx": `${k % 2 ? 3 : -3}px`, animation: `ember 2.4s ${d + i * 0.4}s ease-out infinite`, transformOrigin: `${p.x}px ${p.y - 4}px` } as React.CSSProperties} />
-        ))}
-      </g>
-    );
-  };
+  // plank lines on a trapezoid face: base edge a0..a1 (ground), top edge b0..b1
+  const planks = (a0: P, a1: P, b0: P, b1: P) => { const out: JSX.Element[] = [];
+    for (let i = 1; i < 7; i++) { const t = i / 7; out.push(<line key={i} x1={lerp(a0, a1, t).x} y1={lerp(a0, a1, t).y} x2={lerp(b0, b1, t).x} y2={lerp(b0, b1, t).y} stroke="rgba(0,0,0,.28)" strokeWidth={0.8} />); }
+    return <g>{out}</g>; };
 
   return (
     <g>
       <defs>
-        <linearGradient id={id("woodLit")} x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#4a3324" /><stop offset="1" stopColor="#2c1d12" /></linearGradient>
-        <linearGradient id={id("woodShade")} x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#2c1d12" /><stop offset="1" stopColor="#160e08" /></linearGradient>
-        <linearGradient id={id("roofLit")} x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#4a3022" /><stop offset="1" stopColor="#2a1a10" /></linearGradient>
-        <linearGradient id={id("roofShade")} x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#33221688" /><stop offset="1" stopColor="#1a1008" /></linearGradient>
+        <linearGradient id={id("charLit")} x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#4a3324" /><stop offset="1" stopColor="#2a1c12" /></linearGradient>
+        <linearGradient id={id("charShade")} x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#2c1d12" /><stop offset="1" stopColor="#160e08" /></linearGradient>
+        <radialGradient id={id("ember")} cx="0.5" cy="0.7" r="0.7"><stop offset="0" stopColor="#ffd98a" /><stop offset="0.5" stopColor="#e0701c" /><stop offset="1" stopColor="#5a1c08" /></radialGradient>
       </defs>
 
-      <ellipse cx={o.x} cy={o.y + 3} rx={HALF_W + 14} ry={HALF_H + 5} fill="rgba(0,0,0,.34)" />
+      <ellipse cx={o.x} cy={o.y + 3} rx={50} ry={20} fill="rgba(0,0,0,.34)" />
 
-      {/* SW wall (shade) — hanging meats on a rod under the eave */}
-      <g transform={swMatrix}>
-        <rect x={0} y={0} width={LW} height={LH} fill={`url(#${id("woodShade")})`} />
-        {planks("sw", LW, LH, 13)}
-        <rect x={0} y={LH - 9} width={LW} height={9} fill="#1a1410" />
-        {/* meat rod */}
-        <rect x={20} y={16} width={80} height={2} fill="#3a2715" />
-        {[30, 50, 70, 90].map((x, i) => (
-          <g key={x} transform={`translate(${x} 18)`} style={{ animation: `sway ${3 + i * 0.3}s ${i * 0.15}s ease-in-out infinite`, transformOrigin: "0px 0px" }}>
-            <line x1={0} y1={0} x2={0} y2={4} stroke="#3a2715" strokeWidth={0.7} />
-            {i % 2 === 0
-              ? <ellipse cx={0} cy={10} rx={4} ry={6} fill="#7a3d24" stroke="#3a160a" strokeWidth={0.6} />
-              : <g><ellipse cx={0} cy={9} rx={3} ry={5} fill="#c89570" stroke="#3a160a" strokeWidth={0.5} /><path d="M0,13 L-2,16 L2,16 Z" fill="#c89570" /></g>}
+      {/* +gy (shade) tapering face */}
+      {(() => { const a0 = gp(bx0, by1, 0), a1 = gp(bx1, by1, 0), b1 = gp(tx1, ty1, H), b0 = gp(tx0, ty1, H); return (
+        <g><polygon points={pts(a0, a1, b1, b0)} fill={`url(#${id("charShade")})`} />{planks(a0, a1, b0, b1)}</g>
+      ); })()}
+      {/* +gx (lit) tapering face — ember door + hung curing */}
+      {(() => { const a0 = gp(bx1, by0, 0), a1 = gp(bx1, by1, 0), b1 = gp(tx1, ty1, H), b0 = gp(tx1, ty0, H); const fc = (a0.x + a1.x) / 2, fb = (a0.y + a1.y) / 2; return (
+        <g>
+          <polygon points={pts(a0, a1, b1, b0)} fill={`url(#${id("charLit")})`} />{planks(a0, a1, b0, b1)}
+          {/* ember-glow door */}
+          <g data-door="entry">
+            {nearDoor && <ellipse cx={fc} cy={fb - 14} rx={13} ry={16} fill="#ff8a28" opacity={0.3} style={{ animation: "v2pulse 1.4s ease-in-out infinite", transformOrigin: `${fc}px ${fb - 14}px` }} />}
+            <path d={`M${fc - 11},${fb} L${fc - 11},${fb - 22} a11,11 0 0 1 22,0 L${fc + 11},${fb} Z`} fill="#0e0a06" />
+            <ellipse cx={fc} cy={fb - 9} rx={8} ry={9} fill={`url(#${id("ember")})`} style={{ animation: "flicker 1.8s ease-in-out infinite", transformOrigin: `${fc}px ${fb - 9}px` }} opacity={0.85} />
+            {/* a fish + a flitch hung in the doorway haze */}
+            <ellipse cx={fc - 4} cy={fb - 16} rx={2} ry={4.5} fill="#3a2c20" opacity={0.8} /><ellipse cx={fc + 4} cy={fb - 14} rx={2.6} ry={4} fill="#3a2c20" opacity={0.8} />
+            {/* charred timber door-frame */}
+            <path d={`M${fc - 11},${fb} L${fc - 11},${fb - 22} a11,11 0 0 1 22,0 L${fc + 11},${fb}`} fill="none" stroke="#2a1c12" strokeWidth={2} />
           </g>
-        ))}
-      </g>
-
-      {/* SE wall (lit) — iron door with glowing slot */}
-      <g transform={seMatrix}>
-        <rect x={0} y={0} width={LW} height={LH} fill={`url(#${id("woodLit")})`} />
-        {planks("se", LW, LH, 13)}
-        <rect x={0} y={0} width={LW} height={4} fill="rgba(120,90,60,.16)" />
-        <rect x={0} y={LH - 9} width={LW} height={9} fill="#1a1410" />
-        <g data-door="entry">
-          <rect x={fc - 16} y={LH - 46} width={32} height={46} fill="#0e0a06" />
-          <rect x={fc - 16} y={LH - 46} width={32} height={3} fill="#3a3530" /><rect x={fc - 16} y={LH - 12} width={32} height={3} fill="#3a3530" />
-          {/* rivets */}
-          <g fill="#3a3530">{[-12, -6, 0, 6, 12].map((dx) => <circle key={`a${dx}`} cx={fc + dx} cy={LH - 42} r={1} />)}{[-12, -6, 0, 6, 12].map((dx) => <circle key={`b${dx}`} cx={fc + dx} cy={LH - 8} r={1} />)}</g>
-          {/* glowing inspection slot */}
-          <rect x={fc - 6} y={LH - 30} width={12} height={5} fill="#ffb14a" style={{ animation: "flicker 1.6s ease-in-out infinite", transformOrigin: `${fc}px ${LH - 27}px` }} />
-          <rect x={fc - 6} y={LH - 30} width={12} height={5} fill="none" stroke="#3a3530" strokeWidth={0.8} />
-          {nearDoor && <rect x={fc - 16} y={LH - 46} width={32} height={46} fill="#ff8a28" opacity={0.18} style={{ animation: "v2pulse 1.4s ease-in-out infinite", transformOrigin: `${fc}px ${LH - 23}px` }} />}
         </g>
-      </g>
+      ); })()}
 
-      {/* eave + dark hip roof */}
-      <polyline points={pts(leftT, bottomT, rightT)} fill="none" stroke="#1a1008" strokeWidth={3.5} />
-      <polygon points={pts(topE, leftE, apex)} fill="#1a1008" />
-      <polygon points={pts(topE, rightE, apex)} fill="#1a1008" />
-      {shingles(leftE, bottomE, apex, `url(#${id("roofShade")})`, "rgba(0,0,0,.3)", "rsw", 6)}
-      {shingles(rightE, bottomE, apex, `url(#${id("roofLit")})`, "rgba(0,0,0,.26)", "rse", 6)}
-      <polyline points={pts(leftE, bottomE, rightE)} fill="none" stroke="#0e0a06" strokeWidth={3.5} />
+      {/* charred corner posts (the arrises) for crisp edges */}
+      <polyline points={pts(gp(bx1, by1, 0), gp(tx1, ty1, H))} fill="none" stroke="#1a1008" strokeWidth={2.5} />
+      <polyline points={pts(gp(bx1, by0, 0), gp(tx1, ty0, H))} fill="none" stroke="#241710" strokeWidth={2} />
+      <polyline points={pts(gp(bx0, by1, 0), gp(tx0, ty1, H))} fill="none" stroke="#241710" strokeWidth={2} />
 
-      {/* roof vents puffing smoke (hero) */}
-      {vent(-16, 14, 0)}
-      {vent(2, 8, 1)}
-      {vent(18, 16, 2)}
+      {/* ===== capped top + vent + heavy smoke (hero) ===== */}
+      {(() => {
+        const tN = gp(tx0, ty0, H), tE = gp(tx1, ty0, H), tS = gp(tx1, ty1, H), tW = gp(tx0, ty1, H);
+        const cap = gp(0, 0, H + 8); const vent = gp(0, 0, H + 4);
+        return (
+          <g>
+            {/* small roof cap (low pyramid) */}
+            <polygon points={pts(tN, tE, cap)} fill="#3a2715" /><polygon points={pts(tE, tS, cap)} fill="#2c1d12" /><polygon points={pts(tW, tS, cap)} fill="#241710" />
+            {/* louvre vent gap glowing faintly */}
+            <ellipse cx={vent.x} cy={vent.y} rx={9} ry={4} fill="#1a1008" /><ellipse cx={vent.x} cy={vent.y} rx={6} ry={2.4} fill="#5a3416" opacity={0.7} />
+            {/* embers spitting */}
+            {[0, 0.8, 1.6].map((d, i) => <circle key={i} cx={vent.x} cy={vent.y - 2} r={0.8} fill="#ffb14a" style={{ "--sx": `${i % 2 ? 4 : -4}px`, animation: `ember 2.6s ${d}s ease-out infinite`, transformOrigin: `${vent.x}px ${vent.y - 2}px` } as React.CSSProperties} />)}
+            {/* heavy smoke */}
+            <Smoke x={vent.x} y={vent.y - 4} scale={1.5} count={4} dur={3.4} color="#6a625a" />
+            <Smoke x={vent.x + 3} y={vent.y - 4} scale={1.1} count={3} dur={4.2} color="#48423c" />
+            <Smoke x={vent.x - 2} y={vent.y - 6} scale={0.8} count={3} dur={3.0} color="#7a7066" />
+          </g>
+        );
+      })()}
+
+      {/* outdoor curing rack (front-left) — hung fish/flitch swaying */}
+      {(() => { const pL = gp(-1.5, 0.2, 0), pR = gp(-1.5, 1.1, 0); return (
+        <g>
+          <line x1={pL.x} y1={pL.y} x2={pL.x} y2={pL.y - 30} stroke="#3a2715" strokeWidth={3} strokeLinecap="round" />
+          <line x1={pR.x} y1={pR.y} x2={pR.x} y2={pR.y - 26} stroke="#3a2715" strokeWidth={3} strokeLinecap="round" />
+          <line x1={pL.x} y1={pL.y - 29} x2={pR.x} y2={pR.y - 25} stroke="#2c2012" strokeWidth={2} />
+          {[0.3, 0.6, 0.85].map((t, i) => { const a = lerp({ x: pL.x, y: pL.y - 29 }, { x: pR.x, y: pR.y - 25 }, t); return (
+            <g key={i} style={{ animation: `sway ${3.2 + i * 0.3}s ${i * 0.2}s ease-in-out infinite`, transformOrigin: `${a.x}px ${a.y}px` }}>
+              <line x1={a.x} y1={a.y} x2={a.x} y2={a.y + 3} stroke="#2c2012" strokeWidth={0.6} />
+              {i === 1 ? <path d={`M${a.x - 3},${a.y + 5} L${a.x + 3},${a.y + 5} L${a.x},${a.y + 14} Z`} fill="#9a6a4a" /> : <g><ellipse cx={a.x} cy={a.y + 9} rx={2.4} ry={5} fill="#a8825a" /><path d={`M${a.x - 2.4},${a.y + 9} L${a.x - 4.6},${a.y + 11} L${a.x - 2.4},${a.y + 7} Z`} fill="#8a6a45" /></g>}
+            </g>
+          ); })}
+        </g>
+      ); })()}
 
       {/* woodpile (front-right) */}
-      {(() => { const b = add(right, { x: 6, y: 8 }); return (
-        <g transform={`translate(${b.x} ${b.y})`}>
-          <ellipse cx={0} cy={2} rx={11} ry={2.4} fill="rgba(0,0,0,.3)" />
-          {[-2, -6, -10].map((yy, r) => (
-            <g key={r}>{[-8, 8].map((dx) => <g key={dx} transform={`translate(${dx} ${yy})`}><ellipse cx={0} cy={0} rx={4.5} ry={3} fill="#7a5c34" /><ellipse cx={0} cy={0} rx={3} ry={1.8} fill="#5a3a1f" /><circle cx={0} cy={0} r={1} fill="#bda268" /></g>)}</g>
-          ))}
-        </g>
+      {(() => { const b = gp(1.45, 0.6, 0); return (
+        <g transform={`translate(${b.x} ${b.y})`}><ellipse cx={0} cy={2} rx={12} ry={3} fill="rgba(0,0,0,.28)" />{[-2, -6, -10].map((yy, r) => <g key={r}>{[-6, 6].map((dx) => <g key={dx} transform={`translate(${dx} ${yy})`}><ellipse cx={0} cy={0} rx={4.5} ry={3} fill="#7a5c34" /><ellipse cx={0} cy={0} rx={3} ry={1.8} fill="#a4824e" /><circle cx={0} cy={0} r={1} fill="#5a3a1f" /></g>)}</g>)}</g>
       ); })()}
     </g>
   );
