@@ -114,7 +114,7 @@ export function buildTownPlan(
   const n = Math.max(1, Math.floor(plotCount));
   const kinds = Array.isArray(boardKinds) ? boardKinds : [];
 
-  // ── 1a. Block-grid sizing ────────────────────────────────────────────────
+  // ── 1. Block-grid sizing ─────────────────────────────────────────────────
   // Usable interior region (everything inside the outer border lanes).
   const border = 40;
   const gx0 = 40, gy0 = 40, gw = 1200, gh = 880;
@@ -129,16 +129,16 @@ export function buildTownPlan(
   // Start from a roughly square grid biased to the 4:3 design ratio, then grow
   // (cols first, then rows) until capacity ≥ n. Capacity grows fast (×4/block),
   // so this loop almost never iterates — but it keeps the guarantee explicit.
+  type Block = { x: number; y: number; w: number; h: number };
   let cols = Math.max(3, Math.round(Math.sqrt(blocksNeeded * (W / H))));
   let rows = Math.max(3, Math.ceil(blocksNeeded / cols));
   while (capacityOf(cols, rows) < n) {
     if (cols <= rows) cols++; else rows++;
   }
 
-  // Reusable jitter sequence: re-seeding before every grid attempt keeps the
-  // rng consumption order fixed for the FINAL accepted grid regardless of how
-  // many sizing iterations ran above (here: zero, but documented for safety).
-  type Block = { x: number; y: number; w: number; h: number };
+  // Grid sizing above consumes no rng (pure arithmetic on n), so the first rng
+  // draw (colWeights, below) always starts from the same PRNG state — the
+  // consumption order is fixed for given args regardless of the grid shape.
 
   const pc = Math.floor(cols / 2); // central column index → avenue
   const pr = Math.floor(rows / 2); // central row index → avenue
@@ -162,12 +162,22 @@ export function buildTownPlan(
 
   const colWeightSum = colWeights.reduce((a, b) => a + b, 0) || 1;
   const rowWeightSum = rowWeights.reduce((a, b) => a + b, 0) || 1;
-  const colSpace = Math.max(cols * 90, gw - colGutterTotal);
-  const rowSpace = Math.max(rows * 90, gh - rowGutterTotal);
+  // Usable span left for blocks once gutters are removed. Blocks fill exactly
+  // this span (never more), so the grid can never escape the usable region at
+  // any plotCount.
+  const colSpace = Math.max(0, gw - colGutterTotal);
+  const rowSpace = Math.max(0, gh - rowGutterTotal);
 
-  // Block dimensions (gutters excluded), clamped to a readable minimum.
-  const colW = colWeights.map((w) => Math.max(90, (w / colWeightSum) * colSpace));
-  const rowH = rowWeights.map((w) => Math.max(90, (w / rowWeightSum) * rowSpace));
+  // Block dimensions (gutters excluded). We'd LIKE a 90px readable block floor,
+  // but never at the cost of overflowing the usable span — at very high
+  // plotCount a hard 90px floor would push block/lot centers off-canvas. So the
+  // floor is itself clamped to span/count: blocks shrink below 90px rather than
+  // escape the design space. Pure arithmetic on the already-drawn weights — no
+  // new rng draws, so determinism and consumption order are unchanged.
+  const colFloor = Math.min(90, colSpace / cols);
+  const rowFloor = Math.min(90, rowSpace / rows);
+  const colW = colWeights.map((w) => Math.max(colFloor, (w / colWeightSum) * colSpace));
+  const rowH = rowWeights.map((w) => Math.max(rowFloor, (w / rowWeightSum) * rowSpace));
 
   // Block interiors + gutter centerlines (vertical = streetX, horizontal = streetY).
   // streetX/streetY include the two outer border lanes so streets span edge-to-edge.
@@ -205,7 +215,7 @@ export function buildTownPlan(
     streetY.push(H - border / 2);
   }
 
-  // ── 1b. Streets → roads (axis-aligned, 3-pt colinear polylines) ──────────
+  // ── 2. Streets → roads (axis-aligned, 3-pt colinear polylines) ───────────
   const roads: TownPlanRoad[] = [];
   // The wide central avenue is the gutter to the LEFT of central column index
   // pc: streetX has the left border lane at index 0, so the gutter between block
@@ -225,7 +235,7 @@ export function buildTownPlan(
     pushRoad({ x: 0, y }, { x: W, y }, isAvenue ? AVENUE : STREET, isAvenue ? "main" : "branch");
   }
 
-  // ── 1c. Central plaza block ───────────────────────────────────────────────
+  // ── 3. Central plaza block ────────────────────────────────────────────────
   const plazaBlk = block[pr][pc];
   const plaza = {
     cx: plazaBlk.x + plazaBlk.w / 2,
@@ -239,7 +249,7 @@ export function buildTownPlan(
   const excluded: boolean[][] = Array.from({ length: rows }, () => Array(cols).fill(false));
   excluded[pr][pc] = true; // plaza block never subdivides
 
-  // ── 1e. Boards = reserved perimeter blocks ────────────────────────────────
+  // ── 4. Boards = reserved perimeter blocks ─────────────────────────────────
   const boardPrefForKind = (k: BoardKind): [number, number] => {
     if (k === "farm") return [Math.floor(rows / 2), 0];
     if (k === "mine") return [0, cols - 1];
@@ -271,7 +281,7 @@ export function buildTownPlan(
     });
   }
 
-  // ── 1f. River (always) + shore (when fish) ────────────────────────────────
+  // ── 5. River (always) + shore (when fish) ─────────────────────────────────
   // Route an off-centre diagonal that misses the plaza and reserved board
   // blocks: anchor it through the upper-left / lower-right organic band so the
   // central square stays clear. 4 jittered points.
@@ -317,7 +327,7 @@ export function buildTownPlan(
     }
   }
 
-  // ── Obstacle helpers (reused by trees/fences) ─────────────────────────────
+  // ── 6. Obstacle helpers (reused by trees/fences) ──────────────────────────
   const hitsRoad = (p: Pt, pad: number) => roads.some((rd) => {
     for (let i = 0; i < rd.points.length - 1; i++) {
       if (segDist(p, rd.points[i], rd.points[i + 1]) < rd.width / 2 + pad) return true;
@@ -345,7 +355,7 @@ export function buildTownPlan(
   const aabbOverlap = (a: { cx: number; cy: number; w: number; h: number }, b: typeof a, gap: number) =>
     Math.abs(a.cx - b.cx) < (a.w + b.w) / 2 + gap && Math.abs(a.cy - b.cy) < (a.h + b.h) / 2 + gap;
 
-  // ── 1c/1d. Lots: plaza hearth FIRST, then subdivide remaining blocks ──────
+  // ── 7. Lots: plaza hearth FIRST, then subdivide remaining blocks ──────────
   const lots: TownPlanLot[] = [];
   lots.push({
     index: 0,
@@ -381,7 +391,7 @@ export function buildTownPlan(
     }
   }
 
-  // ── 1g. Trees (biased toward leftover/dropped blocks, margins, corners) ───
+  // ── 8. Trees (biased toward leftover/dropped blocks, margins, corners) ────
   const trees: TownPlanTree[] = [];
   const clusterN = 3 + Math.floor(rng() * 4); // 3..6
   for (let cl = 0; cl < clusterN; cl++) {
@@ -404,7 +414,7 @@ export function buildTownPlan(
     if (trees.length >= 40) break;
   }
 
-  // ── 1g. Fields (in/adjacent to the farm board block) ──────────────────────
+  // ── 9. Fields (in/adjacent to the farm board block) ───────────────────────
   const fields: TownPlanField[] = [];
   if (kinds.includes("farm")) {
     const farmBoard = boards.find((b) => b.kind === "farm");
@@ -422,7 +432,7 @@ export function buildTownPlan(
     }
   }
 
-  // ── 1g. Fences (border a field or cluster) ────────────────────────────────
+  // ── 10. Fences (border a field or cluster) ────────────────────────────────
   const fences: TownPlanFence[] = [];
   const fenceN = 1 + Math.floor(rng() * 2); // 1..2
   const anchors: Pt[] = fields.length
@@ -436,7 +446,7 @@ export function buildTownPlan(
     fences.push({ points: pts });
   }
 
-  // ── 1i. streets (back-compat 2-pt segments from road polylines) ───────────
+  // ── 11. streets (back-compat 2-pt segments from road polylines) ───────────
   const streets: TownPlanStreet[] = [];
   for (const rd of roads) {
     for (let i = 0; i < rd.points.length - 1; i++) {
@@ -444,7 +454,7 @@ export function buildTownPlan(
     }
   }
 
-  // ── 1h. Waypoints / edges = 4-connected grid lattice at intersections ─────
+  // ── 12. Waypoints / edges = 4-connected grid lattice at intersections ─────
   const waypoints: TownPlanWaypoint[] = [];
   const edges: Array<[number, number]> = [];
   const wp = (x: number, y: number): number => { waypoints.push({ x, y }); return waypoints.length - 1; };
@@ -478,7 +488,7 @@ export function buildTownPlan(
     edges.push([plazaWp, near]);
   }
 
-  // ── 1i. Props ─────────────────────────────────────────────────────────────
+  // ── 13. Props ─────────────────────────────────────────────────────────────
   const props: TownPlanProp[] = [
     { kind: "well", x: well.cx, y: well.cy },
     { kind: "signpost", x: plaza.cx + 70 + j(10), y: plaza.cy - plaza.ry - 20 },
@@ -501,7 +511,7 @@ export function buildTownPlan(
     }
   }
 
-  // ── 1j. Return ────────────────────────────────────────────────────────────
+  // ── 14. Return ────────────────────────────────────────────────────────────
   return {
     width: W, height: H,
     ground: { top: 0 },

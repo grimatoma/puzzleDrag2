@@ -77,17 +77,18 @@ describe("townLayout.ts - buildTownPlan (top-down map)", () => {
     expect(plan.boards).toEqual([]);
   });
 
-  it("always emits at least one water body and curved roads", () => {
+  it("always emits at least one water body and straight grid streets", () => {
     const plan = buildTownPlan({ plotCount: 12 });
     expect(plan.water.length).toBeGreaterThan(0);
     expect(plan.roads.length).toBeGreaterThan(0);
-    // Roads are polylines with >=3 points; streets mirror them as 2-pt segments.
+    // Roads are straight grid streets stored as 3-pt polylines (endpoint, midpoint,
+    // endpoint); streets mirror them as 2-pt segments.
     expect(plan.roads.every((r) => r.points.length >= 3)).toBe(true);
     expect(plan.streets.length).toBeGreaterThan(0);
     expect(plan.streets.every((s) => typeof s.width === "number")).toBe(true);
   });
 
-  it("emits a city grid: every road segment is axis-aligned", () => {
+  it("emits a city grid: every road segment is axis-aligned and colinear", () => {
     const EPS = 0.001;
     for (const args of [
       { plotCount: 12 },
@@ -96,12 +97,20 @@ describe("townLayout.ts - buildTownPlan (top-down map)", () => {
     ]) {
       const plan = buildTownPlan(args);
       for (const road of plan.roads) {
+        // Per-segment: each segment runs purely vertically or horizontally.
         for (let i = 0; i < road.points.length - 1; i++) {
           const a = road.points[i], b = road.points[i + 1];
           const sharesX = Math.abs(a.x - b.x) < EPS;
           const sharesY = Math.abs(a.y - b.y) < EPS;
           expect(sharesX || sharesY).toBe(true);
         }
+        // Whole-polyline: a straight street is colinear — every point shares the
+        // same x (vertical road) or the same y (horizontal road).
+        const xs = road.points.map((p) => p.x);
+        const ys = road.points.map((p) => p.y);
+        const sameX = Math.max(...xs) - Math.min(...xs) < EPS;
+        const sameY = Math.max(...ys) - Math.min(...ys) < EPS;
+        expect(sameX || sameY).toBe(true);
       }
     }
   });
