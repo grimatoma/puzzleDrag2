@@ -61,6 +61,8 @@ export interface TownPlanWater { kind: "pond" | "river" | "shore"; polygon?: Pt[
 export interface TownPlanTree { x: number; y: number; r: number; cluster: number; front?: boolean }
 export interface TownPlanField { cx: number; cy: number; w: number; h: number; rows: number; angle: number }
 export interface TownPlanFence { points: Pt[] }
+export interface TownPlanBridge { x: number; y: number; angle: number; width: number }
+export interface TownPlanPath { x1: number; y1: number; x2: number; y2: number; width: number }
 
 export interface TownPlan {
   width: number;
@@ -79,6 +81,8 @@ export interface TownPlan {
   trees: TownPlanTree[];
   fields: TownPlanField[];
   fences: TownPlanFence[];
+  bridges: TownPlanBridge[];
+  paths: TownPlanPath[];
 }
 
 // ── Geometry helpers ────────────────────────────────────────────────────────
@@ -88,6 +92,18 @@ function segDist(p: Pt, a: Pt, b: Pt): number {
   let t = ((p.x - a.x) * dx + (p.y - a.y) * dy) / len2;
   t = Math.max(0, Math.min(1, t));
   return Math.hypot(p.x - (a.x + t * dx), p.y - (a.y + t * dy));
+}
+// Segment a→b intersected with segment c→d. Returns the crossing point, or null
+// when they are parallel/collinear or don't overlap within both segments.
+function segIntersect(a: Pt, b: Pt, c: Pt, d: Pt): Pt | null {
+  const r = { x: b.x - a.x, y: b.y - a.y };
+  const s = { x: d.x - c.x, y: d.y - c.y };
+  const denom = r.x * s.y - r.y * s.x;
+  if (denom === 0) return null; // parallel/collinear
+  const t = ((c.x - a.x) * s.y - (c.y - a.y) * s.x) / denom;
+  const u = ((c.x - a.x) * r.y - (c.y - a.y) * r.x) / denom;
+  if (t < 0 || t > 1 || u < 0 || u > 1) return null;
+  return { x: a.x + t * r.x, y: a.y + t * r.y };
 }
 function pointInPoly(p: Pt, poly: Pt[]): boolean {
   let inside = false;
@@ -366,6 +382,31 @@ export function buildTownPlan(
   const aabbOverlap = (a: { cx: number; cy: number; w: number; h: number }, b: typeof a, gap: number) =>
     Math.abs(a.cx - b.cx) < (a.w + b.w) / 2 + gap && Math.abs(a.cy - b.cy) < (a.h + b.h) / 2 + gap;
 
+  // ── 6b. Bridges (a span wherever a road crosses the river) ─────────────────
+  // Pure arithmetic on the already-built roads + riverPath — no rng draws. Each
+  // road is an axis-aligned polyline, so a crossing angle is always 0 or ±π/2.
+  const bridges: TownPlanBridge[] = [];
+  {
+    const seen = new Set<string>();
+    for (const rd of roads) {
+      for (let i = 0; i < rd.points.length - 1; i++) {
+        const segA = rd.points[i], segB = rd.points[i + 1];
+        const angle = Math.atan2(segB.y - segA.y, segB.x - segA.x);
+        for (let k = 0; k < riverPath.length - 1; k++) {
+          const p = segIntersect(segA, segB, riverPath[k], riverPath[k + 1]);
+          if (!p) continue;
+          // Defensive: the river already avoids these blocks, but never bridge
+          // straight through a board or the plaza.
+          if (hitsBoard(p.x, p.y, 1, 1) || hitsPlaza(p.x, p.y)) continue;
+          const key = `${Math.round(p.x)}:${Math.round(p.y)}`;
+          if (seen.has(key)) continue;
+          seen.add(key);
+          bridges.push({ x: p.x, y: p.y, angle, width: rd.width });
+        }
+      }
+    }
+  }
+
   // ── 7. Lots: plaza hearth FIRST, then ONE uniform lot per non-excluded block ─
   // Every building lot is the SAME size. We pick a single global lot size that
   // fits the SMALLEST non-excluded cell (minus a grass-verge MARGIN to each
@@ -534,6 +575,40 @@ export function buildTownPlan(
     }
   }
 
+  // ── 13b. Front paths (stub from each kept lot to its nearest gutter) ───────
+  // Built from the lots actually RETURNED (after the slice), so a path never
+  // refers to a trimmed surplus lot. Each path runs straight from a lot edge
+  // midpoint to the nearest adjoining street centerline — pure arithmetic on the
+  // already-computed lots + gutter centerlines, no rng draws.
+  const keptLots = lots.slice(0, n);
+  const paths: TownPlanPath[] = [];
+  const PATH_W = 14;
+  for (const l of keptLots) {
+    if (l.row === "plaza") continue;
+    const { cx, cy, w, h } = l;
+    // Nearest gutter centerline on each of the lot's four sides (Infinity when
+    // there is no gutter on that side).
+    let gxL = -Infinity, gxR = Infinity, gyT = -Infinity, gyB = Infinity;
+    for (const sx of streetX) {
+      if (sx < cx && sx > gxL) gxL = sx;
+      if (sx > cx && sx < gxR) gxR = sx;
+    }
+    for (const sy of streetY) {
+      if (sy < cy && sy > gyT) gyT = sy;
+      if (sy > cy && sy < gyB) gyB = sy;
+    }
+    const dL = Number.isFinite(gxL) ? cx - gxL : Infinity;
+    const dR = Number.isFinite(gxR) ? gxR - cx : Infinity;
+    const dT = Number.isFinite(gyT) ? cy - gyT : Infinity;
+    const dB = Number.isFinite(gyB) ? gyB - cy : Infinity;
+    const best = Math.min(dL, dR, dT, dB);
+    if (!Number.isFinite(best)) continue;
+    if (best === dB) paths.push({ x1: cx, y1: cy + h / 2, x2: cx, y2: gyB, width: PATH_W });
+    else if (best === dT) paths.push({ x1: cx, y1: cy - h / 2, x2: cx, y2: gyT, width: PATH_W });
+    else if (best === dR) paths.push({ x1: cx + w / 2, y1: cy, x2: gxR, y2: cy, width: PATH_W });
+    else paths.push({ x1: cx - w / 2, y1: cy, x2: gxL, y2: cy, width: PATH_W });
+  }
+
   // ── 14. Return ────────────────────────────────────────────────────────────
   return {
     width: W, height: H,
@@ -541,10 +616,11 @@ export function buildTownPlan(
     plaza,
     well,
     streets,
-    lots: lots.slice(0, n),
+    lots: keptLots,
     boards,
     props,
     waypoints, edges,
     roads, water, trees, fields, fences,
+    bridges, paths,
   };
 }

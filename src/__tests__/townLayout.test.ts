@@ -177,4 +177,29 @@ describe("townLayout.ts - buildTownPlan (top-down map)", () => {
     const plan = buildTownPlan({ zoneId: "verdant", plotCount: 6 });
     expect(plan.trees.length).toBeLessThanOrEqual(40);
   });
+
+  it("places a bridge at every road×river crossing (axis-aligned spans)", () => {
+    for (const args of [
+      { plotCount: 12 },
+      { zoneId: "harbor", plotCount: 16, boardKinds: ["farm", "mine", "fish"] as const },
+    ]) {
+      const plan = buildTownPlan(args);
+      expect(plan.bridges.length).toBeGreaterThan(0);
+      for (const b of plan.bridges) {
+        expect(b.width).toBeGreaterThan(0);
+        // Roads are axis-aligned, so every crossing angle is a multiple of π/2.
+        expect(Math.abs(Math.sin(2 * b.angle))).toBeLessThan(1e-6);
+      }
+    }
+  });
+
+  it("emits an axis-aligned front path from each non-plaza lot to its street", () => {
+    const plan = buildTownPlan({ plotCount: 12 });
+    expect(plan.paths.length).toBeGreaterThan(0);
+    for (const p of plan.paths) {
+      const axisAligned = Math.abs(p.x1 - p.x2) < 1e-6 || Math.abs(p.y1 - p.y2) < 1e-6;
+      expect(axisAligned).toBe(true);
+      expect(p.width).toBeGreaterThan(0);
+    }
+  });
 });
