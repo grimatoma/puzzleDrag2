@@ -152,7 +152,24 @@ export default function IsoForgeDeluxe({
       </defs>
 
       {/* ground shadow over the whole compound */}
-      <ellipse cx={o.x} cy={o.y + TH * (FR + 0.4)} rx={150} ry={64} fill="rgba(0,0,0,.28)" />
+      <ellipse cx={o.x} cy={o.y + TH * (FR + 0.4)} rx={158} ry={66} fill="rgba(0,0,0,.28)" />
+
+      {/* cobbled yard apron under the whole compound */}
+      {(() => {
+        const a = gp(LX - 0.8, BK - 0.4), b = gp(RX + 2.0, BK - 0.4), c = gp(RX + 2.0, pyFront + 0.5), d = gp(LX - 1.0, pyFront + 0.7);
+        const joints: JSX.Element[] = [];
+        for (let t = 0.18; t < 1; t += 0.18) {
+          joints.push(<line key={`jx${t}`} x1={lerp(a, d, t).x} y1={lerp(a, d, t).y} x2={lerp(b, c, t).x} y2={lerp(b, c, t).y} stroke="rgba(0,0,0,.14)" strokeWidth={1} />);
+          joints.push(<line key={`jy${t}`} x1={lerp(a, b, t).x} y1={lerp(a, b, t).y} x2={lerp(d, c, t).x} y2={lerp(d, c, t).y} stroke="rgba(0,0,0,.14)" strokeWidth={1} />);
+        }
+        return (
+          <g>
+            <polygon points={str(a, b, c, d)} fill="#9a8e72" />
+            <polygon points={str(a, b, c, d)} fill="rgba(255,210,150,.05)" />
+            {joints}
+          </g>
+        );
+      })()}
 
       {/* ===== MAIN HALL ===== */}
       {/* SW (shade) wall */}
@@ -223,6 +240,37 @@ export default function IsoForgeDeluxe({
         );
       })()}
 
+      {/* ===== SIDE WING (lower lean-to on the back-right) ===== */}
+      {(() => {
+        const x0 = RX, x1 = RX + 1.45, y0 = BK + 0.05, y1 = BK + 1.4;
+        const hw = 42, rIn = hw + 16, rOut = hw - 2;
+        const B = gp(x1, y0), C = gp(x1, y1), D = gp(x0, y1);
+        const Bt = gp(x1, y0, hw), Ct = gp(x1, y1, hw), Dt = gp(x0, y1, hw);
+        const Ar = gp(x0, y0, rIn), Dr = gp(x0, y1, rIn), Br = gp(x1, y0, rOut), Cr = gp(x1, y1, rOut);
+        // a windowed lit pane on the +gy (front) face
+        const fb0 = lerp(D, C, 0.34), fb1 = lerp(D, C, 0.66);
+        const ft0 = lerp(Dt, Ct, 0.34), ft1 = lerp(Dt, Ct, 0.66);
+        const wbl = lerp(fb0, ft0, 0.28), wbr = lerp(fb1, ft1, 0.28), wtr = lerp(fb1, ft1, 0.66), wtl = lerp(fb0, ft0, 0.66);
+        return (
+          <g>
+            {/* right (+gx) face */}
+            <polygon points={str(B, C, Ct, Bt)} fill={`url(#${id("brickLit")})`} />
+            <polygon points={str(B, C, Ct, Bt)} fill="rgba(0,0,0,.06)" />
+            {/* front (+gy) face (shaded) */}
+            <polygon points={str(C, D, Dt, Ct)} fill={`url(#${id("brickShade")})`} />
+            {/* lit window on the front face */}
+            <polygon points={str(wbl, wbr, wtr, wtl)} fill={`url(#${id("pane")})`} stroke="#2c1c0e" strokeWidth={2} style={{ animation: "flicker 2.7s ease-in-out infinite", transformOrigin: `${(wbl.x + wtr.x) / 2}px ${(wbl.y + wtr.y) / 2}px` }} />
+            {/* mono-pitch slate roof */}
+            <polygon points={str(Ar, Br, Cr, Dr)} fill={`url(#${id("slateLit")})`} />
+            {[0.33, 0.66].map((s) => (
+              <line key={s} x1={lerp(Ar, Br, s).x} y1={lerp(Ar, Br, s).y} x2={lerp(Dr, Cr, s).x} y2={lerp(Dr, Cr, s).y} stroke="rgba(0,0,0,.26)" strokeWidth={1} vectorEffect="non-scaling-stroke" />
+            ))}
+            <polyline points={str(Dr, Cr)} fill="none" stroke="#241f19" strokeWidth={2.5} />
+            <polyline points={str(Ar, Dr)} fill="none" stroke={PAL.ridge} strokeWidth={1.4} opacity={0.7} />
+          </g>
+        );
+      })()}
+
       {/* ===== OPEN FORGE PORCH (front) ===== */}
       {/* warm glow spilling onto the ground under the porch */}
       <ellipse cx={hearthC.x} cy={hearthC.y + 6} rx={46} ry={20} fill="rgba(255,140,40,.18)" />
@@ -286,8 +334,53 @@ export default function IsoForgeDeluxe({
       <polygon points={str(awBL, awBR, awFR, awFL)} fill={`url(#${id("slateLit")})`} />
       {quadShingles(awFL, awFR, awBR, awBL, `url(#${id("slateLit")})`, "aw")}
       <polyline points={str(awFL, awFR)} fill="none" stroke="#241f19" strokeWidth={3} />
-      {/* tie beam between front posts */}
+      {/* tie beam between front posts + back posts */}
       <line x1={postFLt.x} y1={postFLt.y} x2={postFRt.x} y2={postFRt.y} stroke="#3a2715" strokeWidth={3} />
+      <line x1={postBLt.x} y1={postBLt.y} x2={postBRt.x} y2={postBRt.y} stroke="#3a2715" strokeWidth={2.5} opacity={0.8} />
+      {/* knee braces under the front tie beam */}
+      {(() => {
+        const flLo = { x: postFL.x, y: postFLt.y + 13 };
+        const frLo = { x: postFR.x, y: postFRt.y + 13 };
+        return (
+          <g stroke="#3a2715" strokeWidth={2.6} strokeLinecap="round">
+            <line x1={flLo.x} y1={flLo.y} x2={lerp(postFLt, postFRt, 0.16).x} y2={lerp(postFLt, postFRt, 0.16).y} />
+            <line x1={frLo.x} y1={frLo.y} x2={lerp(postFRt, postFLt, 0.16).x} y2={lerp(postFRt, postFLt, 0.16).y} />
+          </g>
+        );
+      })()}
+      {/* tools hung on the front-right post: tongs + hammer */}
+      {(() => {
+        const px = postFR.x, py = postFRt.y + 16;
+        return (
+          <g>
+            <line x1={px - 4} y1={py} x2={px + 5} y2={py} stroke="#2c2012" strokeWidth={1.6} strokeLinecap="round" />
+            {/* tongs */}
+            <g stroke="#5b5346" strokeWidth={1.6} strokeLinecap="round" fill="none">
+              <line x1={px - 3} y1={py} x2={px - 5} y2={py + 16} />
+              <line x1={px - 3} y1={py} x2={px - 1} y2={py + 16} />
+            </g>
+            {/* hammer */}
+            <line x1={px + 3} y1={py} x2={px + 3} y2={py + 15} stroke="#7a5c34" strokeWidth={2} strokeLinecap="round" />
+            <rect x={px} y={py + 13} width={7} height={4} rx={1} fill="#3a3530" />
+          </g>
+        );
+      })()}
+      {/* grindstone wheel beside the porch */}
+      {(() => {
+        const b = gp(-1.25, pyBack + 1.2);
+        return (
+          <g transform={`translate(${b.x} ${b.y})`}>
+            <ellipse cx={0} cy={2} rx={12} ry={3} fill="rgba(0,0,0,.28)" />
+            {/* frame legs */}
+            <line x1={-8} y1={1} x2={-5} y2={-11} stroke="#4a2e14" strokeWidth={2.4} strokeLinecap="round" />
+            <line x1={8} y1={1} x2={5} y2={-11} stroke="#4a2e14" strokeWidth={2.4} strokeLinecap="round" />
+            {/* stone wheel */}
+            <circle cx={0} cy={-12} r={9} fill="#8a8276" stroke="#5b5346" strokeWidth={1.5} />
+            <circle cx={0} cy={-12} r={9} fill="none" stroke="rgba(0,0,0,.25)" strokeWidth={1} />
+            <circle cx={0} cy={-12} r={1.6} fill="#3a3530" />
+          </g>
+        );
+      })()}
 
       {/* ===== YARD PROPS ===== */}
       {/* hanging sign (front-left) */}
@@ -339,6 +432,25 @@ export default function IsoForgeDeluxe({
             ))}
           </g>
         );
+      })()}
+
+      {/* low post-and-rail fence around the front-left of the yard (gap at the entrance) */}
+      {(() => {
+        const Hf = 16;
+        const run = [
+          gp(LX - 0.9, BK - 0.1),
+          gp(LX - 0.9, FR),
+          gp(LX - 0.9, pyFront),
+          gp(-0.4, pyFront + 0.45),
+        ];
+        const rails: JSX.Element[] = [];
+        for (let i = 0; i < run.length - 1; i++) {
+          const a = run[i], b = run[i + 1];
+          rails.push(<line key={`rt${i}`} x1={a.x} y1={a.y - Hf + 3} x2={b.x} y2={b.y - Hf + 3} stroke="#6a4a28" strokeWidth={2.4} strokeLinecap="round" />);
+          rails.push(<line key={`rb${i}`} x1={a.x} y1={a.y - 5} x2={b.x} y2={b.y - 5} stroke="#6a4a28" strokeWidth={2.4} strokeLinecap="round" />);
+        }
+        const posts = run.map((p, i) => <line key={`p${i}`} x1={p.x} y1={p.y} x2={p.x} y2={p.y - Hf} stroke="#5a3a1f" strokeWidth={3} strokeLinecap="round" />);
+        return <g>{rails}{posts}</g>;
       })()}
     </g>
   );
