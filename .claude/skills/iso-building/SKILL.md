@@ -154,6 +154,44 @@ must read visibly bigger than a Small one. Draw around `o = {x:0,y:0}`.
   the forge at the same gallery viewBox.
 - **CSS custom props in `style`** need `as React.CSSProperties` (e.g. `--sx`).
 
+## Calibration learnings (v2 — confirmed on forge/lighthouse/barn/bakery)
+
+The first batch proved the system. Bake these in:
+
+- **Confirmed reference footprint.** A **Normal** building uses `HALF_W = 64`,
+  `HALF_H = 32` (a 1-tile-radius diamond), `WALL_H ≈ 72–74`, `ROOF_RISE ≈ 50–58`,
+  `EAVE 9`, local panel `120×92`. The forge and bakery share this exactly and
+  read as the same size — **copy the forge's wall/roof scaffold for any Normal
+  building** and change only material + hero detail. **Small** ≈ scale that down
+  / tighter footprint; **Large** ≈ footprint half ~1.35 tiles (the barn) and it
+  visibly out-sizes Normal in the gallery. Towers (lighthouse) keep a Small/Normal
+  footprint but rise well above one storey.
+- **Differentiate by MATERIAL + HERO, not size.** The bakery is the forge's twin
+  in scale yet unmistakable: plaster+terracotta vs brick+slate, oven vs furnace,
+  bread/pretzel vs anvil. Pick a distinct wall material (brick / plaster+timber /
+  board-and-batten / stone), a distinct roof (slate hip / terracotta hip / gambrel
+  / cone / dome / thatch), and a single unobstructed glowing hero.
+- **Round towers = curved stacked bands + a roundness gradient.** A cylinder
+  reads the same from any angle, so don't panel-project it. Draw it as a vertical
+  taper and lay horizontal **bands whose top & bottom rims are quadratic arcs
+  bulging toward the viewer** (`Q cx,(y+r*0.5*1.25) …`), then overlay one
+  horizontal `linearGradient` (dark left → light center-right → dark right) for
+  volume. Stripes/seams reuse the same arc. (lighthouse.tsx)
+- **Gambrel / multi-pitch roofs:** make the lower slope **steep (near-vertical,
+  small Δgy, large Δh)** and the upper **shallow (large Δgy, small Δh)** — if the
+  two pitches are similar it reads as one plane. Orient the ridge along **+gx** so
+  the gambrel **gable end faces the lit SE** as the hero (doors + loft below it).
+  Build slopes with `quadShingles`, draw a bold knee break-line + barge boards on
+  the gable rake. (barn.tsx)
+- **Mechanical pitfalls that bit us:** the import path from `src/iso/buildings/`
+  to the palette is `../../ui/buildings/v2kit.jsx` (two dots-two). Remove unused
+  kit imports (lint is strict, `no-unused-vars`). Don't hand-type hex inside
+  `stopColor` from memory mid-flow — typos slip in; copy known palette values.
+  Seat steam/smoke emitters at the *source* (oven mouth / chimney top), not up in
+  the air. CSS custom props (`--sx`) need `as React.CSSProperties`.
+- **CI gate:** an obsolete vitest snapshot fails CI under `CI=true` even though it
+  passes locally — run `CI=true npx vitest run <file>` if a `test` job goes red.
+
 ## Animation map (reimagine each in iso; preserve the intent)
 
 | Building | Signature animations (source keyframes) |
