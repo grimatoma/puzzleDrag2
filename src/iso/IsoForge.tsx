@@ -37,7 +37,15 @@ function Chimney({ cx, cy }: { cx: number; cy: number }) {
   );
 }
 
-export default function IsoForge({ originX, originY }: { originX: number; originY: number }) {
+export default function IsoForge({
+  originX,
+  originY,
+  nearDoor = false,
+}: {
+  originX: number;
+  originY: number;
+  nearDoor?: boolean;
+}) {
   const ox = originX;
   const oy = originY;
 
@@ -94,6 +102,9 @@ export default function IsoForge({ originX, originY }: { originX: number; origin
   // space anchored near the bottom-right wall, roughly centered on that face.
   const faceMidX = (right.x + bottom.x) / 2;
   const faceMidY = (right.y + bottom.y) / 2;
+  // SW (front-left) face midpoint — where the door + approach path live.
+  const leftMidX = (left.x + bottom.x) / 2;
+  const leftMidY = (left.y + bottom.y) / 2;
 
   // One chimney sitting on the SE roof slope, partway from apex toward the
   // right eave so it visibly rests on the roof rather than floating.
@@ -185,15 +196,29 @@ export default function IsoForge({ originX, originY }: { originX: number; origin
       <Chimney cx={chim.x} cy={chim.y} />
       <Smoke x={chim.x} y={chim.y - CHIM_H} scale={1} count={3} dur={4} color="#c8b898" />
 
-      {/* 6. Door — arched doorway on the front face at ground level.
-            Wrapped in a <g> so a later task can add a proximity highlight. */}
-      <g data-door="forge-entry" transform={`translate(${faceMidX + 30} ${faceMidY + 12}) skewY(26.57)`}>
-        {/* static faint warm glow behind the door */}
-        <ellipse cx="0" cy="-6" rx="13" ry="16" fill="#ff8a28" opacity="0.16" />
+      {/* 6. Door — arched doorway on the SW (front-left) face, where the cobble
+            path leads. The warm glow pulses when the character is near. */}
+      <g data-door="forge-entry" transform={`translate(${leftMidX} ${leftMidY + 8}) skewY(-26.57)`}>
+        {/* warm glow behind the door — pulses on approach */}
+        <ellipse
+          cx="0"
+          cy="-6"
+          rx="13"
+          ry="16"
+          fill="#ff8a28"
+          opacity={nearDoor ? 0.34 : 0.16}
+          style={
+            nearDoor
+              ? { animation: "v2pulse 1.4s ease-in-out infinite", transformOrigin: "0px -6px" }
+              : undefined
+          }
+        />
         {/* timber frame */}
         <path d="M-10,2 L-10,-12 a10,12 0 0 1 20,0 L10,2 Z" fill="#5a3a1f" />
         {/* dark interior */}
         <path d="M-7,2 L-7,-11 a7,9 0 0 1 14,0 L7,2 Z" fill="#160d06" />
+        {/* warm interior sliver */}
+        <path d="M-3.5,2 L-3.5,-9 a3.5,5 0 0 1 7,0 L3.5,2 Z" fill="#a8521f" opacity="0.55" />
       </g>
 
       {/* small anvil prop beside the door (on the ground, screen space) */}

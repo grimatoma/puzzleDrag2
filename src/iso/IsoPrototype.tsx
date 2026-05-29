@@ -10,6 +10,7 @@ import { useEffect, useRef, useState } from "react";
 import { toScreen, toGrid, depthOf, tileDiamond, TILE_W, TILE_H } from "./isoMath.js";
 import IsoForge from "./IsoForge.jsx";
 import IsoCharacter from "./IsoCharacter.jsx";
+import IsoInterior from "./IsoInterior.jsx";
 
 const GRID = 8; // 8×8 plot
 const PAD = 80; // viewbox padding in px
@@ -23,11 +24,23 @@ const FORGE_DEPTH = 4.5 + 3.5;
 // Blocked region the character cannot walk through (slightly inset footprint).
 const FORGE_BOX = { minGx: 2.4, maxGx: 4.6, minGy: 1.4, maxGy: 3.6 };
 
-// The door faces front; the tile the character stands on to enter (used next task).
+// The door faces front; the tile the character stands on to enter.
 const DOOR_TILE = { gx: 4, gy: 4 };
+// Where the character is placed after leaving — one step out on the path, so
+// stepping back onto the door tile is required to re-enter (no instant re-entry).
+const DOORSTEP_TILE = { gx: 4, gy: 5 };
 
 // Where the character starts (on the cobble path, in front of the forge).
 const CHAR_START = { gx: 4, gy: 6 };
+
+// Door proximity radii (in grid tiles): show the prompt within NEAR, and
+// auto-enter when the character actually steps onto the door tile.
+const NEAR_RADIUS = 0.85;
+const ENTER_RADIUS = 0.4;
+
+function distToDoor(gx: number, gy: number): number {
+  return Math.hypot(gx - DOOR_TILE.gx, gy - DOOR_TILE.gy);
+}
 
 // Cobble path tiles leading from the front edge up to the door tile.
 const PATH_TILES: ReadonlyArray<readonly [number, number]> = [
@@ -91,10 +104,40 @@ export default function IsoPrototype() {
   const target = useRef<{ gx: number; gy: number } | null>(null);
   const [pos, setPos] = useState(CHAR_START);
   const [walking, setWalking] = useState(false);
+  const [near, setNear] = useState(false);
+  const [inside, setInside] = useState(false);
+  const nearRef = useRef(false);
+  const insideRef = useRef(false);
+
+  const enterForge = () => {
+    insideRef.current = true;
+    setInside(true);
+    keys.current.clear();
+    target.current = null;
+  };
+  const leaveForge = () => {
+    insideRef.current = false;
+    setInside(false);
+    // step back out onto the doorstep (one tile out), not the door itself,
+    // so the auto-enter check doesn't immediately fire again.
+    posRef.current = { ...DOORSTEP_TILE };
+    setPos({ ...DOORSTEP_TILE });
+    keys.current.clear();
+    target.current = null;
+  };
 
   useEffect(() => {
     const onDown = (e: KeyboardEvent) => {
       const k = e.key.toLowerCase();
+      if (k === "escape" && insideRef.current) {
+        leaveForge();
+        return;
+      }
+      if ((k === "enter" || k === " ") && nearRef.current && !insideRef.current) {
+        enterForge();
+        e.preventDefault();
+        return;
+      }
       if (MOVE_KEYS.has(k)) {
         keys.current.add(k);
         target.current = null; // keyboard cancels click-to-walk
@@ -112,6 +155,11 @@ export default function IsoPrototype() {
     const tick = (t: number) => {
       const dt = Math.min(0.05, (t - last) / 1000);
       last = t;
+      // While inside, freeze the overworld (the overlay covers it).
+      if (insideRef.current) {
+        raf = requestAnimationFrame(tick);
+        return;
+      }
       let { gx, gy } = posRef.current;
       let moving = false;
 
@@ -148,6 +196,16 @@ export default function IsoPrototype() {
       posRef.current = { gx, gy };
       setPos({ gx, gy });
       setWalking(moving);
+
+      // Door proximity: prompt within NEAR, auto-enter when stepping onto it.
+      const d = distToDoor(gx, gy);
+      const isNear = d <= NEAR_RADIUS;
+      if (isNear !== nearRef.current) {
+        nearRef.current = isNear;
+        setNear(isNear);
+      }
+      if (d <= ENTER_RADIUS) enterForge();
+
       raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
@@ -198,7 +256,7 @@ export default function IsoPrototype() {
     {
       key: "forge",
       depth: FORGE_DEPTH,
-      el: <IsoForge originX={forgeAnchor.x} originY={forgeAnchor.y} />,
+      el: <IsoForge originX={forgeAnchor.x} originY={forgeAnchor.y} nearDoor={near} />,
     },
     {
       key: "char",
@@ -216,8 +274,26 @@ export default function IsoPrototype() {
           background: "rgba(0,0,0,.35)", padding: "6px 10px", borderRadius: "6px",
         }}
       >
-        Isometric Forge Prototype — Task 2: arrow keys / WASD or click to walk
+        Isometric Forge Prototype — arrow keys / WASD or click to walk
       </div>
+
+      {/* Enter prompt when standing near the door */}
+      {near && !inside && (
+        <div
+          style={{
+            position: "fixed", bottom: 28, left: "50%", transform: "translateX(-50%)",
+            zIndex: 10, color: "#fff2dc",
+            fontFamily: "system-ui, sans-serif", fontSize: "15px", fontWeight: 600,
+            background: "rgba(40,20,8,.8)", padding: "10px 18px", borderRadius: "8px",
+            border: "1px solid rgba(255,170,80,.5)", boxShadow: "0 4px 14px rgba(0,0,0,.4)",
+            animation: "fadeIn 0.2s ease-out",
+          }}
+        >
+          ↵ Enter Forge
+        </div>
+      )}
+
+      {inside && <IsoInterior onLeave={leaveForge} />}
       <svg
         ref={svgRef}
         viewBox={`${minX} ${minY} ${vbW} ${vbH}`}
