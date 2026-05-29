@@ -160,11 +160,11 @@ function ZoomControls() {
 // world inside a fixed-aspect box so it scales uniformly — never stretches.
 function TownStage({ children }: { children: ReactNode }) {
   const ref = useRef<HTMLDivElement>(null);
-  // `fit` is the fit-to-contain scale (whole town visible). We open at `fit`
-  // so the entire settlement — including the farm/mine/harbor fixtures in the
-  // far wings — is framed and tappable on load; the player zooms in (up to
-  // maxScale) to inspect individual buildings. Opening pre-zoomed would centre
-  // the wider stage and push those edge fixtures off-screen.
+  // `fit` is the fit-to-contain scale (whole town visible) — the zoomed-OUT
+  // floor (minScale). We open slightly zoomed IN from there (`initial`) so a
+  // one-finger drag has room to pan the map around; the player can pinch / use
+  // the −/⟳ controls to zoom back out to the whole town. Opening exactly at fit
+  // left no pannable slack, which read as "pan is broken".
   const [fit, setFit] = useState(0);
   useEffect(() => {
     const el = ref.current;
@@ -178,6 +178,7 @@ function TownStage({ children }: { children: ReactNode }) {
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
+  const initial = fit * 1.35; // open a touch zoomed-in so panning has slack
   // Quantize so minor resizes don't thrash the remount that re-frames the town.
   const stageKey = Math.round(fit * 200);
   return (
@@ -186,12 +187,13 @@ function TownStage({ children }: { children: ReactNode }) {
         <TransformWrapper
           key={stageKey}
           minScale={fit}
-          maxScale={fit * 3}
-          initialScale={fit}
+          maxScale={fit * 3.5}
+          initialScale={initial}
           centerOnInit
           centerZoomedOut
           limitToBounds
-          doubleClick={{ mode: "zoomIn", step: 0.7 }}
+          doubleClick={{ disabled: true }}
+          pinch={{ step: 5 }}
           wheel={{ step: 0.12 }}
         >
           <TransformComponent
