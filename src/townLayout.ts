@@ -414,15 +414,18 @@ export function buildTownPlan(
     }
   }
 
-  // ── 7. Lots: plaza hearth FIRST, then ONE uniform lot per non-excluded block ─
-  // Every building lot is the SAME size. We pick a single global lot size that
-  // fits the SMALLEST non-excluded cell (minus a grass-verge MARGIN to each
-  // street), capped at MAX_LOT, then centre that identical lot in every cell.
-  // Centering means even cells smaller than the lot stay in bounds (only the
-  // centre must be inside the design space), so determinism and bounds hold at
-  // any plotCount. Pure arithmetic — no rng draws here.
-  const MARGIN = 10;    // grass verge kept between a lot and its surrounding streets
-  const MAX_LOT = 88;   // hard cap on a building lot's width/height
+  // ── 7. Lots: ONE uniform building lot per non-excluded block (no plaza lot) ──
+  // Every building lot is the SAME size and SQUARE. We pick a single global side
+  // that fits the SMALLEST non-excluded cell in BOTH axes (minus a grass-verge
+  // MARGIN to each street), capped at MAX_LOT, then centre that identical lot in
+  // every cell so a building fills most of its grid square. Centering means even
+  // cells smaller than the lot stay in bounds (only the centre must be inside the
+  // design space), so determinism and bounds hold at any plotCount. The empty-lot
+  // foundation is drawn smaller than this footprint (see TownGround) so an open
+  // plot reads as a small marker while a built building fills the block. Pure
+  // arithmetic — no rng draws here.
+  const MARGIN = 10;     // grass verge kept between a lot and its surrounding streets
+  const MAX_LOT = 150;   // hard cap on a building lot's side
   const clampLot = (v: number) => Math.max(40, Math.min(MAX_LOT, v));
 
   let minCellW = Infinity, minCellH = Infinity;
@@ -436,18 +439,19 @@ export function buildTownPlan(
   }
   if (!Number.isFinite(minCellW)) minCellW = MAX_LOT + 2 * MARGIN;
   if (!Number.isFinite(minCellH)) minCellH = MAX_LOT + 2 * MARGIN;
-  const LOT_W = clampLot(Math.min(MAX_LOT, minCellW - 2 * MARGIN));
-  const LOT_H = clampLot(Math.min(MAX_LOT, minCellH - 2 * MARGIN));
+  // Single square side: fits the smallest cell in both axes (so a square building
+  // never overflows its block), giving big lots at typical plotCounts and
+  // shrinking uniformly only when the grid is dense.
+  const LOT = clampLot(Math.min(minCellW - 2 * MARGIN, minCellH - 2 * MARGIN));
+  const LOT_W = LOT, LOT_H = LOT;
 
+  // The town centre is civic space — the cobbled plaza + well only, with NO
+  // building lot. (Consume the two jitter values the old central hearth lot drew
+  // so the downstream rng stream — trees/fields/fences/lamps — stays aligned.)
+  j(8); j(6);
   const lots: TownPlanLot[] = [];
-  lots.push({
-    index: 0,
-    cx: plaza.cx + j(8),
-    cy: plaza.cy + plaza.ry * 0.5 + j(6),
-    w: 104, h: 112, row: "plaza",
-  });
 
-  let lotIndex = 1;
+  let lotIndex = 0;
   for (let r = 0; r < rows; r++) {
     for (let c = 0; c < cols; c++) {
       if (excluded[r][c]) continue;

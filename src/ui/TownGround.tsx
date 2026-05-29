@@ -371,40 +371,34 @@ function TownGround({ plan, theme, biomeVariant, builtLots }: TownGroundProps) {
         );
       })}
 
-      {/* ── 6. Lot pads — filled plot pad (built/plaza) or fenced foundation
-              (empty buildable) + board pads ── */}
+      {/* ── 6. Empty-lot foundations + board pads. Built lots get NO ground
+              floor — the building illustration carries its own shadow, so it
+              sits straight on the grass; the plaza keeps its cobbled oval. Only
+              OPEN buildable lots show a small fenced foundation marker, drawn
+              well inside the (block-sized) lot so an empty plot reads as a tidy
+              footprint rather than a paved block. ── */}
       {plan.lots.map((l) => {
-        // Built lots + the plaza lot: a consistent rounded plot pad so the
-        // building reads as placed on a parcel.
-        if (built.has(l.index) || l.row === "plaza") {
-          return (
-            <g key={`pad${l.index}`}>
-              <ellipse cx={l.cx} cy={l.cy + l.h / 2 - 4} rx={l.w * 0.5} ry={Math.max(8, l.h * 0.12)} fill={pal.shadow} />
-              <rect x={l.cx - l.w / 2 + 4} y={l.cy - l.h / 2 + 4} width={l.w - 8} height={l.h - 8} rx={8} fill={pal.pad} stroke={pal.padEdge} strokeWidth={1.5} />
-              <rect x={l.cx - l.w / 2 + 8} y={l.cy - l.h / 2 + 6} width={l.w - 16} height={4} rx={2} fill="#ffffff" opacity={0.1} />
-            </g>
-          );
-        }
-        // Empty buildable lots: a tidy fenced foundation, all kept inside the
-        // lot bounds via insets so adjacent lots' fences never touch.
-        const fx0 = l.cx - l.w / 2 + 6, fy0 = l.cy - l.h / 2 + 6;
-        const fx1 = l.cx + l.w / 2 - 6, fy1 = l.cy + l.h / 2 - 6;
+        if (built.has(l.index) || l.row === "plaza") return null;
+        // Small foundation footprint, bottom-anchored within the lot.
+        const fw = l.w * 0.6, fh = l.h * 0.6;
+        const fx0 = l.cx - fw / 2, fx1 = l.cx + fw / 2;
+        const fy1 = l.cy + l.h / 2 - 4, fy0 = fy1 - fh;
         const mx = (fx0 + fx1) / 2, my = (fy0 + fy1) / 2;
         return (
           <g key={`pad${l.index}`}>
             {/* foundation pad */}
-            <rect x={l.cx - l.w / 2 + 10} y={l.cy - l.h / 2 + 10} width={l.w - 20} height={l.h - 20} rx={6} fill={pal.dirt} opacity={0.5} />
-            <ellipse cx={l.cx - l.w * 0.16} cy={l.cy + l.h * 0.1} rx={5} ry={3} fill={pal.dirtEdge} opacity={0.3} />
-            <ellipse cx={l.cx + l.w * 0.14} cy={l.cy - l.h * 0.08} rx={4} ry={2.5} fill={pal.dirtEdge} opacity={0.3} />
-            {/* post-and-rail fence around the lot perimeter (inset ~6px) */}
-            <rect x={fx0} y={fy0} width={fx1 - fx0} height={fy1 - fy0} rx={2} fill="none" stroke="#7a5630" strokeWidth={2.5} />
-            <rect x={fx0} y={fy0} width={fx1 - fx0} height={fy1 - fy0} rx={2} fill="none" stroke="#9a784a" strokeWidth={1} opacity={0.7} />
+            <rect x={fx0 + 4} y={fy0 + 4} width={fw - 8} height={fh - 8} rx={6} fill={pal.dirt} opacity={0.5} />
+            <ellipse cx={fx0 + fw * 0.34} cy={fy0 + fh * 0.62} rx={5} ry={3} fill={pal.dirtEdge} opacity={0.3} />
+            <ellipse cx={fx0 + fw * 0.64} cy={fy0 + fh * 0.4} rx={4} ry={2.5} fill={pal.dirtEdge} opacity={0.3} />
+            {/* post-and-rail fence around the foundation */}
+            <rect x={fx0} y={fy0} width={fw} height={fh} rx={2} fill="none" stroke="#7a5630" strokeWidth={2.5} />
+            <rect x={fx0} y={fy0} width={fw} height={fh} rx={2} fill="none" stroke="#9a784a" strokeWidth={1} opacity={0.7} />
             {[[fx0, fy0], [fx1, fy0], [fx0, fy1], [fx1, fy1], [mx, fy0], [mx, fy1], [fx0, my], [fx1, my]].map(([px, py], k) => (
               <circle key={`fp${l.index}_${k}`} cx={px} cy={py} r={2.4} fill="#5a3e1e" />
             ))}
-            {/* "build here" stake near the front-center, on the pad */}
-            <rect x={l.cx - 1.25} y={l.cy + l.h * 0.16} width={2.5} height={12} fill="#6a4a26" />
-            <rect x={l.cx - 2} y={l.cy + l.h * 0.12} width={12} height={6} rx={1} fill="#8a6a3a" stroke="#5a3a18" strokeWidth={1} />
+            {/* "build here" stake at the front of the foundation */}
+            <rect x={l.cx - 1.25} y={fy1 - 14} width={2.5} height={12} fill="#6a4a26" />
+            <rect x={l.cx - 2} y={fy1 - 18} width={12} height={6} rx={1} fill="#8a6a3a" stroke="#5a3a18" strokeWidth={1} />
           </g>
         );
       })}
