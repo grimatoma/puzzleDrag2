@@ -118,7 +118,7 @@ export default function IsoStable({ originX, originY, nearDoor = false }: { orig
 
       {/* horse heads poking over the two stalls (bob) */}
       {horse(-0.74, "#a55a3a", "#5a3a1f", 4, 0)}
-      {horse(0.74, "#3a2715", "#1a1410", 4.4, 0.6)}
+      {horse(0.74, "#c9c2b4", "#8a8276", 4.4, 0.6)}
 
       {/* ===== YARD PROPS ===== */}
       {/* hay bale (front-left) */}
@@ -139,9 +139,10 @@ export default function IsoStable({ originX, originY, nearDoor = false }: { orig
         </g>
       ); })()}
       {/* horseshoe sign + pitchfork near the door */}
-      {(() => { const s = gp(gx1, gy0 + 0.1, H + 6); const pf = gp(gx1 + 0.35, gy0 + 0.5, 0); return (
+      {(() => { const s = gp(gx1, 0, 40); const pf = gp(gx1 + 0.35, gy0 + 0.5, 0); return (
         <g>
-          <g transform={`translate(${s.x} ${s.y})`}>
+          {/* horseshoe nailed above the central door */}
+          <g transform={`translate(${s.x} ${s.y}) scale(1.5)`}>
             <path d="M-4,0 a4,4 0 0 1 8,0 L2.2,2 L2.2,5 L-2.2,5 L-2.2,2 Z" fill="#7c858d" stroke="#3a3530" strokeWidth={0.5} />
             <g fill="#3a3530"><circle cx={-2.6} cy={0} r={0.4} /><circle cx={2.6} cy={0} r={0.4} /><circle cx={-1.4} cy={-2} r={0.4} /><circle cx={1.4} cy={-2} r={0.4} /></g>
           </g>
