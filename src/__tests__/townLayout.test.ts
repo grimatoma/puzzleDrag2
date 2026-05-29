@@ -55,6 +55,17 @@ describe("townLayout.ts - buildTownPlan (top-down map)", () => {
     expect(big.lots.slice(1).every((l) => ["nw", "ne", "sw", "se"].includes(l.row))).toBe(true);
   });
 
+  it("emits uniform equal-size building lots (all non-plaza lots share w and h)", () => {
+    for (const plotCount of [12, 40]) {
+      const plan = buildTownPlan({ plotCount });
+      const building = plan.lots.slice(1); // drop the plaza hearth (lot 0)
+      expect(building.length).toBeGreaterThan(0);
+      const { w, h } = building[0];
+      expect(building.every((l) => l.w === w)).toBe(true);
+      expect(building.every((l) => l.h === h)).toBe(true);
+    }
+  });
+
   it("does not collapse to a single lot at extreme plotCount (graceful degradation)", () => {
     // Regression: the lot loop once discarded any subdivided cell below a 56px
     // floor. At very high plotCount every cell fell below it, so EVERY block was
