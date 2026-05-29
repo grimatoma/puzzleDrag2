@@ -87,6 +87,25 @@ describe("townLayout.ts - buildTownPlan (top-down map)", () => {
     expect(plan.streets.every((s) => typeof s.width === "number")).toBe(true);
   });
 
+  it("emits a city grid: every road segment is axis-aligned", () => {
+    const EPS = 0.001;
+    for (const args of [
+      { plotCount: 12 },
+      { plotCount: 40 },
+      { zoneId: "harbor", plotCount: 16, boardKinds: ["farm", "mine", "fish"] as const },
+    ]) {
+      const plan = buildTownPlan(args);
+      for (const road of plan.roads) {
+        for (let i = 0; i < road.points.length - 1; i++) {
+          const a = road.points[i], b = road.points[i + 1];
+          const sharesX = Math.abs(a.x - b.x) < EPS;
+          const sharesY = Math.abs(a.y - b.y) < EPS;
+          expect(sharesX || sharesY).toBe(true);
+        }
+      }
+    }
+  });
+
   it("builds a connected waypoint graph (BFS from node 0 reaches all)", () => {
     const plan = buildTownPlan({ plotCount: 16, boardKinds: ["farm", "mine"] });
     const n = plan.waypoints.length;
