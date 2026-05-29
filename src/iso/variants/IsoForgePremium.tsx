@@ -10,8 +10,7 @@
 import { useId } from "react";
 import { PAL, Smoke } from "../../ui/buildings/v2kit.jsx";
 import { TILE_W, TILE_H } from "../isoMath.js";
-
-type P = { x: number; y: number };
+import { type P, add, pts, panelMatrix, brick, shingles, Chimney } from "../isoKit.jsx";
 
 const HALF_W = TILE_W; // center → left/right footprint corner (x)
 const HALF_H = TILE_H; // center → front/back footprint corner (y)
@@ -20,87 +19,6 @@ const ROOF_RISE = 58; // apex height above eave
 const EAVE = 9; // roof overhang past walls (px)
 const LW = 120; // wall panel local width
 const LH = 92; // wall panel local height
-
-const add = (a: P, b: P): P => ({ x: a.x + b.x, y: a.y + b.y });
-const lerp = (a: P, b: P, t: number): P => ({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t });
-const pts = (...ps: P[]): string => ps.map((p) => `${p.x},${p.y}`).join(" ");
-
-function panelMatrix(origin: P, U: P, V: P): string {
-  return `matrix(${U.x / LW} ${U.y / LW} ${V.x / LH} ${V.y / LH} ${origin.x} ${origin.y})`;
-}
-
-// Beveled, staggered brick courses (local space): a dark mortar line with a
-// thin highlight just beneath each, plus a scatter of slightly darker bricks.
-function brick(prefix: string): JSX.Element {
-  const courses: JSX.Element[] = [];
-  const ch = 8;
-  let row = 0;
-  for (let y = ch; y < LH; y += ch) {
-    courses.push(<line key={`${prefix}m${y}`} x1={0} y1={y} x2={LW} y2={y} stroke={PAL.brickDark} strokeWidth={1} opacity={0.5} vectorEffect="non-scaling-stroke" />);
-    courses.push(<line key={`${prefix}h${y}`} x1={0} y1={y + 1} x2={LW} y2={y + 1} stroke="#a8633f" strokeWidth={0.8} opacity={0.4} vectorEffect="non-scaling-stroke" />);
-    const off = row % 2 ? 0 : 7;
-    for (let x = off; x <= LW; x += 14) {
-      courses.push(<line key={`${prefix}j${y}-${x}`} x1={x} y1={y} x2={x} y2={y + ch} stroke={PAL.brickDark} strokeWidth={0.8} opacity={0.4} vectorEffect="non-scaling-stroke" />);
-    }
-    row++;
-  }
-  // a few darker / lighter bricks for texture
-  const tint = [
-    [10, 12], [38, 4], [92, 20], [22, 52], [70, 60], [102, 44], [50, 28], [82, 76], [14, 70],
-  ];
-  const tiles = tint.map(([x, y], i) => (
-    <rect key={`${prefix}t${i}`} x={x} y={y} width={12} height={6} fill={i % 2 ? "#7a3a24" : "#9a5230"} opacity={0.35} />
-  ));
-  return <g>{courses}{tiles}</g>;
-}
-
-// Individually-shingled hip-roof slope (triangle eaveA-eaveB-apex). Rows run
-// parallel to the eave, converging toward the apex; each row is split into
-// overlapping slate tabs with a top highlight + bottom shadow.
-function shingles(eaveA: P, eaveB: P, apex: P, fill: string, edge: string, key: string): JSX.Element {
-  const rows = 7;
-  const out: JSX.Element[] = [];
-  for (let i = 0; i < rows; i++) {
-    const t0 = i / rows;
-    const t1 = (i + 1) / rows;
-    const lA = lerp(eaveA, apex, t0);
-    const lB = lerp(eaveB, apex, t0);
-    const uA = lerp(eaveA, apex, t1);
-    const uB = lerp(eaveB, apex, t1);
-    const n = Math.max(2, Math.round(9 * (1 - t0)));
-    const stag = (i % 2) * (0.5 / n);
-    for (let j = 0; j < n; j++) {
-      const s0 = Math.min(1, j / n + stag);
-      const s1 = Math.min(1, (j + 1) / n + stag);
-      const p1 = lerp(lA, lB, s0);
-      const p2 = lerp(lA, lB, s1);
-      const p3 = lerp(uA, uB, s1);
-      const p4 = lerp(uA, uB, s0);
-      out.push(<polygon key={`${key}${i}-${j}`} points={pts(p1, p2, p3, p4)} fill={fill} stroke={edge} strokeWidth={0.6} vectorEffect="non-scaling-stroke" />);
-      // bottom shadow lip
-      out.push(<line key={`${key}s${i}-${j}`} x1={p1.x} y1={p1.y} x2={p2.x} y2={p2.y} stroke="rgba(0,0,0,.32)" strokeWidth={1} vectorEffect="non-scaling-stroke" />);
-    }
-  }
-  return <g>{out}</g>;
-}
-
-function Chimney({ cx, cy, h, half, gid }: { cx: number; cy: number; h: number; half: number; gid: string }) {
-  const hh = half * (TILE_H / TILE_W);
-  const top = cy - h;
-  const fRight = `${cx + half},${cy + hh} ${cx},${cy + 2 * hh} ${cx},${cy + 2 * hh - h} ${cx + half},${cy + hh - h}`;
-  const fLeft = `${cx - half},${cy + hh} ${cx},${cy + 2 * hh} ${cx},${cy + 2 * hh - h} ${cx - half},${cy + hh - h}`;
-  const cap = `${cx},${top} ${cx + half},${top + hh} ${cx},${top + 2 * hh} ${cx - half},${top + hh}`;
-  return (
-    <g>
-      <polygon points={fLeft} fill={PAL.brickDark} />
-      <polygon points={fRight} fill={`url(#${gid})`} />
-      <line x1={cx} y1={cy + 2 * hh - h * 0.66} x2={cx + half} y2={cy + hh - h * 0.66} stroke={PAL.brickDark} strokeWidth={0.6} opacity={0.6} />
-      <line x1={cx} y1={cy + 2 * hh - h * 0.33} x2={cx + half} y2={cy + hh - h * 0.33} stroke={PAL.brickDark} strokeWidth={0.6} opacity={0.6} />
-      <polygon points={cap} fill="#6a3320" />
-      <polygon points={`${cx},${top + 1.5} ${cx + half * 0.8},${top + hh} ${cx},${top + 2 * hh - 1.5} ${cx - half * 0.8},${top + hh}`} fill="#4a2014" />
-    </g>
-  );
-}
 
 export default function IsoForgePremium({
   originX,

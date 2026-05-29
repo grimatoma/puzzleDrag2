@@ -535,3 +535,9 @@
 @keyframes pulse2  { 0%, 100% { opacity: .4; transform: scale(.9); } 50% { opacity: 1; transform: scale(1.15); } }
 @keyframes drip2   { 0% { transform: translateY(0); opacity: 0; } 20% { opacity: .9; } 100% { transform: translateY(10px); opacity: 0; } }
 
+
+/* Iso gallery: the original building illustrations use `absolute inset-0
+   w-full h-full`, so they need a positioned, definitely-sized parent to fit
+   into (otherwise they escape to the page and render full-bleed). */
+.iso-before-art { position: relative; }
+.iso-before-art svg { width: 100%; height: 100%; display: block; }
