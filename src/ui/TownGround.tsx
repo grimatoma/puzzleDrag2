@@ -1,22 +1,41 @@
 // ─── TownGround ─────────────────────────────────────────────────────────────
-// The town's *plan* layer: a paved ground over the hills, the street network, a
-// central plaza with a well, faint pads under each building lot, and a little
-// street furniture (lampposts, a cart, a signpost, planters). Rendered as an
-// SVG in the same STAGE_W×STAGE_H design space (plan.width/plan.height) as the
-// rest of the Town view, sitting
-// between the hills/decor backdrop and the building illustrations so the town
-// reads as a planned settlement in a valley rather than scattered buildings.
+// The town's top-down *terrain* layer: a grassy ground, water bodies, the dirt
+// road network, tilled fields, a central cobbled plaza with a well, faint pads
+// under each building lot, fences, the back layer of trees (+ all tree ground
+// shadows), and a little top-down street furniture (lampposts, a cart, a
+// signpost, planters). Rendered as an SVG in the same STAGE_W×STAGE_H design
+// space (plan.width/plan.height) as the rest of the Town view, sitting between
+// the backdrop and the building illustrations so the town reads as a planned
+// settlement seen from above.
+//
+// Layer order, back → front:
+//   1. grass base + soft organic blobs
+//   2. water (pond/shore polygons, river polylines) — under roads so a road
+//      crossing reads as a bridge
+//   3. roads (dirt polylines: edge underlay, body, dashed centerline)
+//   4. fields (rotated soil rects with crop rows)
+//   5. plaza (cobbled oval)
+//   6. lot shadow pads / empty-lot dashed markers + board pads
+//   7. fences (post-and-rail)
+//   8. trees: shadow for EVERY tree, canopy only for back-layer (!front) trees
+//   9. props (street furniture)
 
 import { memo } from "react";
 
 interface GroundPal {
-  floor: string;
-  floorEdge: string;
-  pave: string;
-  paveEdge: string;
   grass: string;
+  grassDark: string;
+  grassLight: string;
+  dirt: string;
+  dirtEdge: string;
+  water: string;
+  waterEdge: string;
+  rock: string;
+  sand: string;
   shadow: string;
 }
+
+interface Pt { x: number; y: number }
 
 interface TownPlan {
   width?: number;
@@ -24,23 +43,51 @@ interface TownPlan {
   ground: { top: number };
   streets: Array<{ x1: number; y1: number; x2: number; y2: number; width: number }>;
   plaza: { cx: number; cy: number; rx: number; ry: number };
+  well?: { cx: number; cy: number; r: number };
   lots: Array<{ index: number; cx: number; cy: number; w: number; h: number; row?: string }>;
-  boards?: Array<{ cx: number; cy: number; w: number; h: number }>;
+  boards?: Array<{ kind?: string; cx: number; cy: number; w: number; h: number }>;
   props: Array<{ kind: string; x: number; y: number }>;
+  roads?: Array<{ points: Pt[]; width: number; kind?: string }>;
+  water?: Array<{ kind: string; polygon?: Pt[]; path?: Pt[]; width?: number }>;
+  trees?: Array<{ x: number; y: number; r: number; cluster?: number; front?: boolean }>;
+  fields?: Array<{ cx: number; cy: number; w: number; h: number; rows: number; angle: number }>;
+  fences?: Array<{ points: Pt[] }>;
 }
 
 interface Theme {
   road?: string;
   roadLine?: string;
+  groundTint?: string;
+  waterTint?: string;
+  dirtTint?: string;
 }
 
-// Floor / pavement colours per biome family (the streets themselves use the
-// theme's `road` / `roadLine` so they tie into the existing palette).
-function groundPalette(biomeVariant: string): GroundPal {
+// Top-down terrain palette per biome family. Streets/dirt still respect the
+// theme's `road` / `roadLine` so they tie into the existing colour scheme, and
+// optional theme tints (groundTint/waterTint/dirtTint) override the family base.
+function groundPalette(biomeVariant: string, theme?: Theme): GroundPal {
+  let pal: GroundPal;
   if (biomeVariant === "mine") {
-    return { floor: "#6f6a62", floorEdge: "#5a564f", pave: "#8a857c", paveEdge: "#6a655d", grass: "#5e6450", shadow: "rgba(20,18,14,0.30)" };
+    pal = {
+      grass: "#6a6e58", grassDark: "#565a48", grassLight: "#7c8068",
+      dirt: "#8a857c", dirtEdge: "#6a655d",
+      water: "#3a5a66", waterEdge: "#2a444e",
+      rock: "#5a5e62", sand: "#9a9484",
+      shadow: "rgba(20,18,14,0.32)",
+    };
+  } else {
+    pal = {
+      grass: "#6f9a44", grassDark: "#5a7f36", grassLight: "#83ad52",
+      dirt: "#b08a52", dirtEdge: "#8a6a3a",
+      water: "#4f8fb0", waterEdge: "#3a6f8a",
+      rock: "#8a8478", sand: "#d8c89a",
+      shadow: "rgba(30,24,12,0.30)",
+    };
   }
-  return { floor: "#8f8458", floorEdge: "#6f6640", pave: "#b6aa80", paveEdge: "#8e8258", grass: "#6f9a44", shadow: "rgba(30,24,12,0.34)" };
+  if (theme?.groundTint) pal.grass = theme.groundTint;
+  if (theme?.waterTint) pal.water = theme.waterTint;
+  if (theme?.dirtTint) pal.dirt = theme.dirtTint;
+  return pal;
 }
 
 interface PropPositionalProps { x: number; y: number; pal: GroundPal }
@@ -111,6 +158,8 @@ function Planter({ x, y, pal }: PropPositionalProps) {
 
 const PROP_COMPONENTS: Record<string, ((p: PropPositionalProps) => JSX.Element) | undefined> = { well: Well, lamppost: Lamppost, signpost: Signpost, cart: Cart, planter: Planter };
 
+const ptsStr = (pts: Pt[]): string => pts.map((p) => `${p.x},${p.y}`).join(" ");
+
 interface TownGroundProps {
   plan: TownPlan | null | undefined;
   theme?: Theme;
@@ -120,16 +169,18 @@ interface TownGroundProps {
 
 function TownGround({ plan, theme, biomeVariant, builtLots }: TownGroundProps) {
   if (!plan) return null;
-  const pal = groundPalette(biomeVariant);
-  const road = theme?.road || pal.pave;
-  const roadLine = theme?.roadLine || pal.paveEdge;
+  const pal = groundPalette(biomeVariant, theme);
+  const road = theme?.road || pal.dirt;
+  const roadLine = theme?.roadLine || pal.dirtEdge;
   const built: Set<number> = builtLots instanceof Set ? (builtLots as Set<number>) : new Set();
-  const w = plan.width ?? 1500;
-  const h = plan.height ?? 600;
-  const top = plan.ground.top;
-  // Wavy floor control points expressed as fractions of the stage width so the
-  // packed-earth floor spans the full design space whatever its width.
-  const xA = 0.2 * w, xB = 0.44 * w, xC = 0.64 * w, xD = 0.82 * w, xE = 0.91 * w;
+  const w = plan.width ?? 1280;
+  const h = plan.height ?? 960;
+
+  // Roads: prefer polyline roads, fall back to flat 2-pt streets.
+  const roads: Array<{ points: Pt[]; width: number }> =
+    plan.roads && plan.roads.length
+      ? plan.roads.map((r) => ({ points: r.points, width: r.width }))
+      : plan.streets.map((s) => ({ points: [{ x: s.x1, y: s.y1 }, { x: s.x2, y: s.y2 }], width: s.width }));
 
   return (
     <svg
@@ -138,41 +189,103 @@ function TownGround({ plan, theme, biomeVariant, builtLots }: TownGroundProps) {
       className="absolute inset-0 w-full h-full pointer-events-none"
       aria-hidden="true"
     >
-      {/* Town floor — packed earth that the streets and buildings sit on. */}
+      {/* ── 1. Grass base + soft organic texture blobs ── */}
+      <rect x={0} y={0} width={w} height={h} fill={pal.grass} />
       <path
-        d={`M0,${top + 14} C${xA},${top - 6} ${xB},${top + 4} ${xC},${top + 10} C${xD},${top + 16} ${xE},${top + 6} ${w},${top + 2} L${w},${h} L0,${h} Z`}
-        fill={pal.floor}
+        d={`M${-0.05 * w},${0.18 * h} C${0.18 * w},${0.04 * h} ${0.42 * w},${0.12 * h} ${0.5 * w},${0.3 * h} C${0.58 * w},${0.48 * h} ${0.3 * w},${0.5 * h} ${0.16 * w},${0.42 * h} C${0.04 * w},${0.35 * h} ${-0.05 * w},${0.34 * h} ${-0.05 * w},${0.18 * h} Z`}
+        fill={pal.grassDark}
+        opacity="0.28"
       />
       <path
-        d={`M0,${top + 14} C${xA},${top - 6} ${xB},${top + 4} ${xC},${top + 10} C${xD},${top + 16} ${xE},${top + 6} ${w},${top + 2} L${w},${top + 30} C${xD},${top + 24} ${xC},${top + 28} ${xB},${top + 22} C${xA},${top + 12} 0,${top + 32} 0,${top + 32} Z`}
-        fill={pal.floorEdge}
-        opacity="0.5"
+        d={`M${0.6 * w},${0.06 * h} C${0.82 * w},${0.0 * h} ${1.05 * w},${0.12 * h} ${1.05 * w},${0.32 * h} C${1.05 * w},${0.5 * h} ${0.78 * w},${0.46 * h} ${0.66 * w},${0.36 * h} C${0.56 * w},${0.27 * h} ${0.46 * w},${0.12 * h} ${0.6 * w},${0.06 * h} Z`}
+        fill={pal.grassLight}
+        opacity="0.3"
       />
+      <ellipse cx={0.34 * w} cy={0.84 * h} rx={0.3 * w} ry={0.18 * h} fill={pal.grassDark} opacity="0.26" />
+      <ellipse cx={0.82 * w} cy={0.78 * h} rx={0.26 * w} ry={0.16 * h} fill={pal.grassLight} opacity="0.26" />
 
-      {/* Streets — paved bands with a faint centre line. */}
-      {plan.streets.map((s, i) => (
-        <g key={`s${i}`}>
-          <line x1={s.x1} y1={s.y1} x2={s.x2} y2={s.y2} stroke={pal.paveEdge} strokeWidth={s.width + 5} strokeLinecap="round" opacity="0.55" />
-          <line x1={s.x1} y1={s.y1} x2={s.x2} y2={s.y2} stroke={road} strokeWidth={s.width} strokeLinecap="round" opacity="0.92" />
-          <line x1={s.x1} y1={s.y1} x2={s.x2} y2={s.y2} stroke={roadLine} strokeWidth="1.5" strokeDasharray="6 7" opacity="0.5" />
-        </g>
-      ))}
+      {/* ── 2. Water — drawn before roads so crossings read as bridges ── */}
+      {(plan.water || []).map((wb, i) => {
+        if (wb.kind === "river" && wb.path && wb.path.length > 1) {
+          const d = ptsStr(wb.path);
+          const bw = wb.width ?? 18;
+          return (
+            <g key={`wr${i}`}>
+              <polyline points={d} fill="none" stroke={pal.sand} strokeWidth={bw + 10} strokeLinecap="round" strokeLinejoin="round" opacity="0.7" />
+              <polyline points={d} fill="none" stroke={pal.water} strokeWidth={bw} strokeLinecap="round" strokeLinejoin="round" />
+              <polyline points={d} fill="none" stroke={pal.waterEdge} strokeWidth={bw} strokeLinecap="round" strokeLinejoin="round" opacity="0.25" />
+            </g>
+          );
+        }
+        if (wb.polygon && wb.polygon.length > 2) {
+          const bb = wb.polygon.reduce(
+            (a, p) => ({ x0: Math.min(a.x0, p.x), y0: Math.min(a.y0, p.y), x1: Math.max(a.x1, p.x), y1: Math.max(a.y1, p.y) }),
+            { x0: Infinity, y0: Infinity, x1: -Infinity, y1: -Infinity },
+          );
+          const cx = (bb.x0 + bb.x1) / 2, cy = (bb.y0 + bb.y1) / 2;
+          return (
+            <g key={`wp${i}`}>
+              <polygon points={ptsStr(wb.polygon)} fill={pal.water} stroke={pal.waterEdge} strokeWidth={3} strokeLinejoin="round" />
+              <ellipse cx={cx} cy={cy - (bb.y1 - bb.y0) * 0.12} rx={(bb.x1 - bb.x0) * 0.28} ry={(bb.y1 - bb.y0) * 0.18} fill="#ffffff" opacity="0.14" />
+            </g>
+          );
+        }
+        return null;
+      })}
 
-      {/* Central plaza — cobbled oval ringed in stone, with the well. */}
-      <ellipse cx={plan.plaza.cx} cy={plan.plaza.cy} rx={plan.plaza.rx + 6} ry={plan.plaza.ry + 5} fill={pal.paveEdge} opacity="0.7" />
-      <ellipse cx={plan.plaza.cx} cy={plan.plaza.cy} rx={plan.plaza.rx} ry={plan.plaza.ry} fill={pal.pave} />
-      <ellipse cx={plan.plaza.cx} cy={plan.plaza.cy} rx={plan.plaza.rx} ry={plan.plaza.ry} fill="none" stroke={pal.paveEdge} strokeWidth="2" />
-      {/* a hint of cobble rings */}
-      <ellipse cx={plan.plaza.cx} cy={plan.plaza.cy} rx={plan.plaza.rx * 0.62} ry={plan.plaza.ry * 0.62} fill="none" stroke={pal.paveEdge} strokeWidth="1" opacity="0.4" />
+      {/* ── 3. Roads — dirt polylines: edge underlay, body, dashed centerline ── */}
+      {roads.map((r, i) => {
+        if (r.points.length < 2) return null;
+        const d = ptsStr(r.points);
+        return (
+          <g key={`r${i}`}>
+            <polyline points={d} fill="none" stroke={roadLine} strokeWidth={r.width + 6} strokeLinecap="round" strokeLinejoin="round" opacity="0.55" />
+            <polyline points={d} fill="none" stroke={road} strokeWidth={r.width} strokeLinecap="round" strokeLinejoin="round" />
+            <polyline points={d} fill="none" stroke={roadLine} strokeWidth={1.5} strokeDasharray="7 8" strokeLinecap="round" strokeLinejoin="round" opacity="0.4" />
+          </g>
+        );
+      })}
 
-      {/* Built lots get a soft shadow pad; empty lots get a faint dashed
-          marker so the town reads as planned-but-not-yet-built rather than
-          a field of dark patches. */}
+      {/* ── 4. Fields — rotated soil rects with alternating crop rows ── */}
+      {(plan.fields || []).map((f, i) => {
+        const x0 = f.cx - f.w / 2, y0 = f.cy - f.h / 2;
+        const rows = Math.max(1, Math.floor(f.rows));
+        const gap = f.h / rows;
+        const rowLines = [];
+        for (let k = 0; k < rows; k++) {
+          const ry = y0 + gap * (k + 0.5);
+          rowLines.push(
+            <line
+              key={`fr${i}_${k}`}
+              x1={x0 + 4}
+              y1={ry}
+              x2={x0 + f.w - 4}
+              y2={ry}
+              stroke={k % 2 === 0 ? "#7fae4a" : "#7a5a30"}
+              strokeWidth={Math.max(2, gap * 0.38)}
+              strokeLinecap="round"
+              opacity="0.85"
+            />,
+          );
+        }
+        return (
+          <g key={`f${i}`} transform={`rotate(${(f.angle * 180) / Math.PI} ${f.cx} ${f.cy})`}>
+            <rect x={x0} y={y0} width={f.w} height={f.h} rx={6} fill="#9a6f3e" stroke="#6f4f28" strokeWidth={2} />
+            {rowLines}
+          </g>
+        );
+      })}
+
+      {/* ── 5. Central plaza — cobbled oval ringed in stone ── */}
+      <ellipse cx={plan.plaza.cx} cy={plan.plaza.cy} rx={plan.plaza.rx + 6} ry={plan.plaza.ry + 5} fill={pal.dirtEdge} opacity="0.7" />
+      <ellipse cx={plan.plaza.cx} cy={plan.plaza.cy} rx={plan.plaza.rx} ry={plan.plaza.ry} fill={pal.dirt} />
+      <ellipse cx={plan.plaza.cx} cy={plan.plaza.cy} rx={plan.plaza.rx} ry={plan.plaza.ry} fill="none" stroke={pal.dirtEdge} strokeWidth="2" />
+      <ellipse cx={plan.plaza.cx} cy={plan.plaza.cy} rx={plan.plaza.rx * 0.62} ry={plan.plaza.ry * 0.62} fill="none" stroke={pal.dirtEdge} strokeWidth="1" opacity="0.4" />
+
+      {/* ── 6. Lot shadow pads (built) / dashed markers (empty) + board pads ── */}
       {plan.lots.map((l) => {
         const baseY = l.cy + l.h / 2 - 4;
         if (built.has(l.index) || l.row === "plaza") {
-          // Two stacked ellipses: a wide soft pad plus a smaller, darker inner
-          // core for an ambient-occlusion feel so each building reads grounded.
           const rx = l.w * 0.5;
           const ry = Math.max(9, l.h * 0.14);
           return (
@@ -185,18 +298,42 @@ function TownGround({ plan, theme, biomeVariant, builtLots }: TownGroundProps) {
         const mw = l.w * 0.78, mh = Math.max(14, l.h * 0.22);
         return (
           <g key={`pad${l.index}`} opacity="0.55">
-            <rect x={l.cx - mw / 2} y={baseY - mh} width={mw} height={mh} rx={4} fill={pal.pave} opacity="0.4" />
-            <rect x={l.cx - mw / 2} y={baseY - mh} width={mw} height={mh} rx={4} fill="none" stroke={pal.paveEdge} strokeWidth="1.5" strokeDasharray="5 4" />
+            <rect x={l.cx - mw / 2} y={baseY - mh} width={mw} height={mh} rx={4} fill={pal.dirt} opacity="0.4" />
+            <rect x={l.cx - mw / 2} y={baseY - mh} width={mw} height={mh} rx={4} fill="none" stroke={pal.dirtEdge} strokeWidth="1.5" strokeDasharray="5 4" />
           </g>
         );
       })}
-      {/* Puzzle-board fixtures (farm field / mine entrance / harbor) get a
-          solid shadow pad — they're permanent parts of the settlement. */}
       {(plan.boards || []).map((b, i) => (
         <ellipse key={`bpad${i}`} cx={b.cx} cy={b.cy + b.h / 2 - 4} rx={b.w * 0.5} ry={Math.max(8, b.h * 0.12)} fill={pal.shadow} />
       ))}
 
-      {/* Street furniture. */}
+      {/* ── 7. Fences — post-and-rail polylines ── */}
+      {(plan.fences || []).map((fc, i) => {
+        if (!fc.points || fc.points.length < 2) return null;
+        return (
+          <g key={`fence${i}`}>
+            <polyline points={ptsStr(fc.points)} fill="none" stroke="#7a5630" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
+            <polyline points={ptsStr(fc.points)} fill="none" stroke="#9a784a" strokeWidth={1} strokeLinecap="round" strokeLinejoin="round" opacity="0.7" />
+            {fc.points.map((p, k) => (
+              <circle key={`fp${i}_${k}`} cx={p.x} cy={p.y} r={2.6} fill="#5a3e1e" />
+            ))}
+          </g>
+        );
+      })}
+
+      {/* ── 8. Trees — shadow for EVERY tree; canopy only for back-layer (!front) ── */}
+      {(plan.trees || []).map((t, i) => (
+        <ellipse key={`tsh${i}`} cx={t.x + t.r * 0.18} cy={t.y + t.r * 0.55} rx={t.r * 0.85} ry={t.r * 0.4} fill={pal.shadow} opacity="0.5" />
+      ))}
+      {(plan.trees || []).filter((t) => !t.front).map((t, i) => (
+        <g key={`tc${i}`}>
+          <circle cx={t.x} cy={t.y} r={t.r} fill="#3f6a2c" />
+          <circle cx={t.x - t.r * 0.22} cy={t.y - t.r * 0.24} r={t.r * 0.62} fill="#5a8a3a" />
+          <circle cx={t.x - t.r * 0.3} cy={t.y - t.r * 0.32} r={t.r * 0.32} fill="#7fae52" opacity="0.85" />
+        </g>
+      ))}
+
+      {/* ── 9. Street furniture ── */}
       {plan.props.map((p, i) => {
         const C = PROP_COMPONENTS[p.kind];
         return C ? <C key={`p${i}`} x={p.x} y={p.y} pal={pal} /> : null;

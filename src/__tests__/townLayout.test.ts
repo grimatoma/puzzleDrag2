@@ -1,76 +1,113 @@
 import { describe, it, expect } from "vitest";
-import { buildTownPlan } from "../townLayout.js";
+import { buildTownPlan, STAGE_W, STAGE_H } from "../townLayout.js";
 
-describe("townLayout.js - buildTownPlan", () => {
+const W = 1280, H = 960;
+
+describe("townLayout.ts - buildTownPlan (top-down map)", () => {
+  it("exports the design-space dimensions", () => {
+    expect(STAGE_W).toBe(W);
+    expect(STAGE_H).toBe(H);
+  });
+
   it("generates a deterministic plan with default arguments", () => {
     const plan1 = buildTownPlan();
     const plan2 = buildTownPlan();
-
-    // The outputs should be exactly the same for default arguments
     expect(plan1).toEqual(plan2);
 
-    // Verify structural properties
-    expect(plan1.width).toBe(1500);
-    expect(plan1.height).toBe(600);
-    expect(plan1.lots).toHaveLength(12); // default plotCount is 12
-
-    // Using snapshot for a comprehensive check of the base shape
-    expect(plan1).toMatchSnapshot();
+    expect(plan1.width).toBe(W);
+    expect(plan1.height).toBe(H);
+    expect(plan1.lots).toHaveLength(12); // default plotCount
+    expect(plan1.ground.top).toBe(0);
   });
 
-  it("adjusts to different plotCounts", () => {
-    // Edge case: plotCount less than 1
-    const minPlan = buildTownPlan({ plotCount: 0 });
-    expect(minPlan.lots).toHaveLength(1); // capped at min 1
+  it("is deterministic with explicit (non-default) args too", () => {
+    const args = { zoneId: "harbor", plotCount: 14, boardKinds: ["fish", "farm"] } as const;
+    expect(buildTownPlan(args)).toEqual(buildTownPlan(args));
+  });
 
-    // A small number of lots
-    const smallPlan = buildTownPlan({ plotCount: 5 });
-    expect(smallPlan.lots).toHaveLength(5);
+  it("produces different layouts for different zoneIds", () => {
+    const home = buildTownPlan({ zoneId: "home" });
+    const forest = buildTownPlan({ zoneId: "forest" });
+    const mountain = buildTownPlan({ zoneId: "mountain" });
+    expect(home.lots).not.toEqual(forest.lots);
+    expect(home.lots).not.toEqual(mountain.lots);
+    expect(forest.lots).not.toEqual(mountain.lots);
+  });
 
-    // Lots are capped at the sum of row caps
-    // ROWS[2] (front) cap=6, ROWS[1] (mid) cap=6, ROWS[0] (back) cap=5
-    // Total cap = 17 (lot 0 sits in the plaza, so we have 1 + 16)
-    const overPlan = buildTownPlan({ plotCount: 20 });
-    expect(overPlan.lots.length).toBeLessThanOrEqual(17);
+  it("adjusts lot count and keeps every lot in-bounds; lot0 is the plaza hearth", () => {
+    expect(buildTownPlan({ plotCount: 0 }).lots).toHaveLength(1); // clamped to >=1
+    expect(buildTownPlan({ plotCount: 1 }).lots).toHaveLength(1);
+    expect(buildTownPlan({ plotCount: 12 }).lots).toHaveLength(12);
+
+    const big = buildTownPlan({ plotCount: 40 });
+    expect(big.lots).toHaveLength(40);
+    expect(big.lots[0].row).toBe("plaza");
+
+    for (const plan of [buildTownPlan({ plotCount: 1 }), big]) {
+      for (const lot of plan.lots) {
+        expect(lot.cx).toBeGreaterThanOrEqual(0);
+        expect(lot.cx).toBeLessThanOrEqual(W);
+        expect(lot.cy).toBeGreaterThanOrEqual(0);
+        expect(lot.cy).toBeLessThanOrEqual(H);
+      }
+    }
+    // Non-hearth lots carry a quarter tag.
+    expect(big.lots.slice(1).every((l) => ["nw", "ne", "sw", "se"].includes(l.row))).toBe(true);
   });
 
   it("includes puzzle-board fixtures based on boardKinds", () => {
     const farmPlan = buildTownPlan({ boardKinds: ["farm"] });
-    expect(farmPlan.boards).toEqual([
-      expect.objectContaining({ kind: "farm" })
-    ]);
-
-    // Should have left board street
-    expect(farmPlan.streets.some(s => s.x1 === 118 && s.y1 === 398)).toBe(true);
+    expect(farmPlan.boards.map((b) => b.kind)).toEqual(["farm"]);
+    expect(farmPlan.fields.length).toBeGreaterThan(0); // farm board → tilled fields
 
     const minePlan = buildTownPlan({ boardKinds: ["mine"] });
-    expect(minePlan.boards).toEqual([
-      expect.objectContaining({ kind: "mine" })
-    ]);
+    expect(minePlan.boards.map((b) => b.kind)).toEqual(["mine"]);
 
-    // Should have right board street
-    expect(minePlan.streets.some(s => s.x1 === 1500 - 116 && s.y1 === 398)).toBe(true);
+    const fishPlan = buildTownPlan({ boardKinds: ["fish"] });
+    expect(fishPlan.boards.map((b) => b.kind)).toEqual(["fish"]);
+    expect(fishPlan.water.some((w) => w.kind === "shore")).toBe(true); // fish → shoreline
 
     const allPlan = buildTownPlan({ boardKinds: ["farm", "mine", "fish"] });
-    expect(allPlan.boards.length).toBe(3);
-    expect(allPlan.boards.map(b => b.kind)).toContain("farm");
-    expect(allPlan.boards.map(b => b.kind)).toContain("mine");
-    expect(allPlan.boards.map(b => b.kind)).toContain("fish");
-  });
-
-  it("produces different layouts for different zoneIds (seeded PRNG)", () => {
-    const homePlan = buildTownPlan({ zoneId: "home" });
-    const forestPlan = buildTownPlan({ zoneId: "forest" });
-    const mountainPlan = buildTownPlan({ zoneId: "mountain" });
-
-    // The lots should be placed differently due to PRNG jitter
-    expect(homePlan.lots).not.toEqual(forestPlan.lots);
-    expect(homePlan.lots).not.toEqual(mountainPlan.lots);
-    expect(forestPlan.lots).not.toEqual(mountainPlan.lots);
+    expect(allPlan.boards.map((b) => b.kind).sort()).toEqual(["farm", "fish", "mine"]);
   });
 
   it("handles non-array boardKinds gracefully", () => {
-    const plan = buildTownPlan({ boardKinds: "farm" }); // Incorrect type
-    expect(plan.boards).toEqual([]); // Should default to empty array
+    // @ts-expect-error intentionally wrong type
+    const plan = buildTownPlan({ boardKinds: "farm" });
+    expect(plan.boards).toEqual([]);
+  });
+
+  it("always emits at least one water body and curved roads", () => {
+    const plan = buildTownPlan({ plotCount: 12 });
+    expect(plan.water.length).toBeGreaterThan(0);
+    expect(plan.roads.length).toBeGreaterThan(0);
+    // Roads are polylines with >=3 points; streets mirror them as 2-pt segments.
+    expect(plan.roads.every((r) => r.points.length >= 3)).toBe(true);
+    expect(plan.streets.length).toBeGreaterThan(0);
+    expect(plan.streets.every((s) => typeof s.width === "number")).toBe(true);
+  });
+
+  it("builds a connected waypoint graph (BFS from node 0 reaches all)", () => {
+    const plan = buildTownPlan({ plotCount: 16, boardKinds: ["farm", "mine"] });
+    const n = plan.waypoints.length;
+    expect(n).toBeGreaterThan(0);
+
+    const adj: number[][] = Array.from({ length: n }, () => []);
+    for (const [a, b] of plan.edges) {
+      adj[a].push(b);
+      adj[b].push(a);
+    }
+    const seen = new Set<number>([0]);
+    const queue: number[] = [0];
+    while (queue.length) {
+      const cur = queue.shift()!;
+      for (const nx of adj[cur]) if (!seen.has(nx)) { seen.add(nx); queue.push(nx); }
+    }
+    expect(seen.size).toBe(n);
+  });
+
+  it("caps total tree canopy entries", () => {
+    const plan = buildTownPlan({ zoneId: "verdant", plotCount: 6 });
+    expect(plan.trees.length).toBeLessThanOrEqual(40);
   });
 });

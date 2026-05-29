@@ -7,6 +7,12 @@ export interface TownTheme {
   sunColor: string;
   sunGlow: string;
   textColor: string;
+  // Optional top-down terrain tints read by TownGround to nudge the procedural
+  // palette toward a location's mood. All optional — palette falls back to its
+  // biome-family defaults when absent.
+  groundTint?: string;
+  waterTint?: string;
+  dirtTint?: string;
 }
 
 export interface TownPlotRect {
@@ -74,12 +80,14 @@ export const TOWN_THEMES: Record<string, TownTheme> = {
     hill1: "#1e1a22", hill2: "#120e16", road: "#5a4a32", roadLine: "#7a6850",
     sunColor: "#d4a830", sunGlow: "rgba(212,168,48,.5)",
     textColor: "#e0c878",
+    groundTint: "#3a3346", waterTint: "#2c3a52", dirtTint: "#5a4a32",
   },
   forge: {
     bg: "linear-gradient(180deg, #180808 0%, #380e08 55%, #0c0804 100%)",
     hill1: "#200808", hill2: "#100402", road: "#3a1208", roadLine: "#7a2808",
     sunColor: "#ff4010", sunGlow: "rgba(255,64,16,.7)",
     textColor: "#ff8050",
+    groundTint: "#3a221a", waterTint: "#4a221a", dirtTint: "#3a1208",
   },
 };
 
