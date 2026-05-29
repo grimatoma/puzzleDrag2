@@ -280,9 +280,12 @@ export function buildTownPlan(
   const excluded: boolean[][] = Array.from({ length: rows }, () => Array(cols).fill(false));
   excluded[pr][pc] = true; // plaza block never subdivides
 
-  // ── 4. Boards = reserved perimeter blocks ─────────────────────────────────
+  // ── 4. Boards = reserved blocks ───────────────────────────────────────────
+  // Farm sits directly ABOVE the town centre (the block just north of the plaza,
+  // same column); mine/fish stay on the perimeter. The fallback below relocates
+  // any board whose preferred block is unavailable (collision / river).
   const boardPrefForKind = (k: BoardKind): [number, number] => {
-    if (k === "farm") return [Math.floor(rows / 2), 0];
+    if (k === "farm") return [Math.max(0, pr - 1), pc];
     if (k === "mine") return [0, cols - 1];
     return [rows - 1, Math.floor(cols / 2)]; // fish
   };
