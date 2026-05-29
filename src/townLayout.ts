@@ -63,6 +63,8 @@ export interface TownPlanField { cx: number; cy: number; w: number; h: number; r
 export interface TownPlanFence { points: Pt[] }
 export interface TownPlanBridge { x: number; y: number; angle: number; width: number }
 export interface TownPlanPath { x1: number; y1: number; x2: number; y2: number; width: number }
+export interface TownPlanLotDecor { lot: number; x: number; y: number; kind: "bed" | "pots" | "shrub" }
+export interface TownPlanStreetTree { x: number; y: number; r: number }
 
 export interface TownPlan {
   width: number;
@@ -83,6 +85,8 @@ export interface TownPlan {
   fences: TownPlanFence[];
   bridges: TownPlanBridge[];
   paths: TownPlanPath[];
+  lotDecor: TownPlanLotDecor[];
+  streetTrees: TownPlanStreetTree[];
 }
 
 // ── Geometry helpers ────────────────────────────────────────────────────────
@@ -655,6 +659,47 @@ export function buildTownPlan(
     else paths.push({ x1: cx - w / 2, y1: cy, x2: gxL, y2: cy, width: PATH_W });
   }
 
+  // ── 13c. Lush decoration (separate decor RNG) ─────────────────────────────
+  // Purely-additive greenery driven by an INDEPENDENT sub-RNG seeded off the
+  // zone id, so it never touches the main `rng` stream (trees/fields/fences/
+  // props stay byte-identical). lotDecor dresses the FRONT of each built home;
+  // streetTrees scatter small trees on the grass verges between lots & streets,
+  // fully bounds-checked off roads/water/plaza/boards/lots.
+  const decorRng = seededRng(zoneId + ":decor");
+  const dj = (amt: number) => (decorRng() - 0.5) * 2 * amt; // ±amt jitter (decor stream)
+
+  const lotDecor: TownPlanLotDecor[] = [];
+  for (const l of keptLots) {
+    if (l.row === "plaza") continue;
+    const cnt = Math.floor(decorRng() * 3); // 0..2 accents
+    const left = { x: l.cx - l.w * 0.32, y: l.cy + l.h * 0.30 };
+    const right = { x: l.cx + l.w * 0.32, y: l.cy + l.h * 0.30 };
+    for (let k = 0; k < cnt; k++) {
+      const anchor = k === 0 ? left : right;
+      const kind = (["bed", "pots", "shrub"] as const)[Math.floor(decorRng() * 3)];
+      lotDecor.push({ lot: l.index, x: anchor.x + dj(3), y: anchor.y + dj(2), kind });
+    }
+  }
+
+  // Street-verge trees: ~40 deterministic candidate attempts, capped at 22,
+  // rejecting any candidate that would sit on a road/water/plaza/board/lot or
+  // collide with an already-placed verge tree.
+  const STREET_TREE_CAP = 22;
+  const streetTrees: TownPlanStreetTree[] = [];
+  for (let i = 0; i < 40 && streetTrees.length < STREET_TREE_CAP; i++) {
+    const x = 40 + decorRng() * (W - 80);
+    const y = 40 + decorRng() * (H - 80);
+    const r = 8 + Math.floor(decorRng() * 6); // 8..13 (smaller than the main trees)
+    const ok =
+      !hitsRoad({ x, y }, r + 4) &&
+      !hitsWater(x, y, r * 2, r * 2) &&
+      !hitsPlaza(x, y) &&
+      !hitsBoard(x, y, r * 2, r * 2) &&
+      !keptLots.some((l) => aabbOverlap({ cx: x, cy: y, w: r * 2, h: r * 2 }, l, 6)) &&
+      !streetTrees.some((t) => Math.hypot(t.x - x, t.y - y) < (t.r + r + 10));
+    if (ok) streetTrees.push({ x, y, r });
+  }
+
   // ── 14. Return ────────────────────────────────────────────────────────────
   return {
     width: W, height: H,
@@ -668,5 +713,6 @@ export function buildTownPlan(
     waypoints, edges,
     roads, water, trees, fields, fences,
     bridges, paths,
+    lotDecor, streetTrees,
   };
 }

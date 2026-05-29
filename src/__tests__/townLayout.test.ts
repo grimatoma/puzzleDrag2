@@ -228,6 +228,62 @@ describe("townLayout.ts - buildTownPlan (top-down map)", () => {
     }
   });
 
+  it("scatters street-verge trees that never sit on a road and stay in-bounds", () => {
+    // Point-to-segment distance (local copy of the generator's geometry helper).
+    const segDist = (p: { x: number; y: number }, a: { x: number; y: number }, b: { x: number; y: number }) => {
+      const dx = b.x - a.x, dy = b.y - a.y;
+      const len2 = dx * dx + dy * dy || 1;
+      let t = ((p.x - a.x) * dx + (p.y - a.y) * dy) / len2;
+      t = Math.max(0, Math.min(1, t));
+      return Math.hypot(p.x - (a.x + t * dx), p.y - (a.y + t * dy));
+    };
+    const plan = buildTownPlan({ plotCount: 16, boardKinds: ["farm", "mine", "fish"] });
+    expect(plan.streetTrees.length).toBeLessThanOrEqual(22); // STREET_TREE_CAP
+    for (const t of plan.streetTrees) {
+      // In-bounds.
+      expect(t.x).toBeGreaterThanOrEqual(0);
+      expect(t.x).toBeLessThanOrEqual(W);
+      expect(t.y).toBeGreaterThanOrEqual(0);
+      expect(t.y).toBeLessThanOrEqual(H);
+      // Off every road body (clearance to the nearest road centerline exceeds
+      // that road's half-width).
+      for (const road of plan.roads) {
+        for (let i = 0; i < road.points.length - 1; i++) {
+          const d = segDist(t, road.points[i], road.points[i + 1]);
+          expect(d).toBeGreaterThan(road.width / 2);
+        }
+      }
+    }
+  });
+
+  it("keeps every lot decor accent within its matching lot's bounds", () => {
+    const plan = buildTownPlan({ plotCount: 16, boardKinds: ["farm", "mine", "fish"] });
+    const lotByIndex = new Map(plan.lots.map((l) => [l.index, l]));
+    for (const d of plan.lotDecor) {
+      const lot = lotByIndex.get(d.lot);
+      expect(lot).toBeDefined();
+      expect(Math.abs(d.x - lot!.cx)).toBeLessThanOrEqual(lot!.w / 2);
+      expect(Math.abs(d.y - lot!.cy)).toBeLessThanOrEqual(lot!.h / 2);
+    }
+  });
+
+  it("leaves the main rng stream untouched (decor uses a separate seed)", () => {
+    // The decor sub-RNG is seeded independently, so existing arrays are still
+    // populated and the whole plan is still deterministic across calls.
+    const plan = buildTownPlan({ plotCount: 12 });
+    expect(plan.trees.length).toBeGreaterThan(0);
+    expect(plan.fields.length).toBeGreaterThanOrEqual(0); // home zone has no farm board → may be 0
+    expect(plan.props.length).toBeGreaterThan(0);
+    expect(buildTownPlan({ plotCount: 12 })).toEqual(plan);
+
+    // With a farm board, fields are non-empty; determinism still holds.
+    const farm = buildTownPlan({ plotCount: 12, boardKinds: ["farm"] });
+    expect(farm.fields.length).toBeGreaterThan(0);
+    expect(farm.trees.length).toBeGreaterThan(0);
+    expect(farm.props.length).toBeGreaterThan(0);
+    expect(buildTownPlan({ plotCount: 12, boardKinds: ["farm"] })).toEqual(farm);
+  });
+
   it("locks the field inside the farm board's footprint", () => {
     const plan = buildTownPlan({ plotCount: 16, boardKinds: ["farm"] });
     const farm = plan.boards.find((b) => b.kind === "farm");

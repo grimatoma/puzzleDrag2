@@ -22,7 +22,10 @@
 //   6. lot pads (built/plaza = filled plot pad + shadow; empty buildable =
 //      tidy fenced foundation with a "build here" stake) + board pads
 //   7. fences (post-and-rail)
-//   8. trees: shadow for EVERY tree, canopy only for back-layer (!front) trees
+//   8. trees: shadow for EVERY tree, canopy only for back-layer (!front) trees,
+//      plus small street-verge trees (additive greenery in the grass gaps)
+//   8b. lush lot decor (garden beds / flower pots / shrubs at the front of each
+//       BUILT home) — behind the building illustrations
 //   9. props (street furniture)
 
 import { memo } from "react";
@@ -62,6 +65,8 @@ interface TownPlan {
   fences?: Array<{ points: Pt[] }>;
   paths?: Array<{ x1: number; y1: number; x2: number; y2: number; width: number }>;
   bridges?: Array<{ x: number; y: number; angle: number; width: number }>;
+  lotDecor?: Array<{ lot: number; x: number; y: number; kind: string }>;
+  streetTrees?: Array<{ x: number; y: number; r: number }>;
 }
 
 interface Theme {
@@ -432,6 +437,51 @@ function TownGround({ plan, theme, biomeVariant, builtLots }: TownGroundProps) {
           <circle cx={t.x - t.r * 0.3} cy={t.y - t.r * 0.32} r={t.r * 0.32} fill="#7fae52" opacity="0.85" />
         </g>
       ))}
+      {/* Small street-verge trees: additive greenery in the grass gaps. */}
+      {(plan.streetTrees || []).map((t, i) => (
+        <g key={`st${i}`}>
+          <ellipse cx={t.x + t.r * 0.18} cy={t.y + t.r * 0.5} rx={t.r * 0.8} ry={t.r * 0.38} fill={pal.shadow} opacity={0.45} />
+          <circle cx={t.x} cy={t.y} r={t.r} fill="#3f6a2c" />
+          <circle cx={t.x - t.r * 0.22} cy={t.y - t.r * 0.24} r={t.r * 0.6} fill="#5a8a3a" />
+          <circle cx={t.x - t.r * 0.3} cy={t.y - t.r * 0.3} r={t.r * 0.3} fill="#7fae52" opacity={0.85} />
+        </g>
+      ))}
+
+      {/* ── 8b. Lush lot decor — garden beds / flower pots / shrubs at the front
+              of each BUILT home (behind the building illustrations) ── */}
+      {(plan.lotDecor || []).filter((d) => built.has(d.lot)).map((d, i) => {
+        if (d.kind === "bed") {
+          return (
+            <g key={`decor${i}`}>
+              <rect x={d.x - 7} y={d.y - 3} width={14} height={6} rx={3} fill={pal.dirt} stroke={pal.dirtEdge} strokeWidth={0.8} />
+              <circle cx={d.x - 4} cy={d.y - 3} r={1.3} fill="#f0c84a" />
+              <circle cx={d.x} cy={d.y - 3} r={1.3} fill="#e87878" />
+              <circle cx={d.x + 4} cy={d.y - 3} r={1.3} fill="#ffffff" />
+            </g>
+          );
+        }
+        if (d.kind === "pots") {
+          return (
+            <g key={`decor${i}`}>
+              {[-4, 4].map((dx, k) => (
+                <g key={`pot${i}_${k}`}>
+                  <rect x={d.x + dx - 2.5} y={d.y - 1} width={5} height={5} rx={1} fill="#6a4a28" />
+                  <circle cx={d.x + dx} cy={d.y - 2} r={2.5} fill={pal.grass} />
+                  <circle cx={d.x + dx} cy={d.y - 2} r={1} fill="#f0c84a" />
+                </g>
+              ))}
+            </g>
+          );
+        }
+        // shrub
+        return (
+          <g key={`decor${i}`}>
+            <ellipse cx={d.x} cy={d.y + 1} rx={6} ry={2} fill={pal.shadow} opacity={0.4} />
+            <circle cx={d.x} cy={d.y} r={5} fill="#4a7a32" />
+            <circle cx={d.x - 1.5} cy={d.y - 1.5} r={3} fill="#6a9a48" />
+          </g>
+        );
+      })}
 
       {/* ── 9. Street furniture ── */}
       {plan.props.map((p, i) => {
