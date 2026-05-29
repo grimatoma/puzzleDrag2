@@ -24,6 +24,10 @@ export async function runPoll({ db, config, llm, market, now = Date.now() }) {
       const { rawText, model } = await llm.recommend({
         promptText: prompt.text,
         model: config.llm.model,
+        // Thread the run's clock through so providers that are time-sensitive
+        // (e.g. the mock, which varies picks by hour) stay consistent with the
+        // run timestamp. Real providers ignore `now`.
+        now: startedAt,
       });
 
       db.insertResponse({

@@ -32,7 +32,7 @@ src/
   poller.js                 runPoll(deps): one full poll cycle (LLM -> parse -> diff -> prices)
   scheduler.js              node-cron jobs (poll cron + dense price-watch cron)
   server.js                 express JSON API + static dashboard
-  cli.js                    `poll` and `serve` commands
+  cli.js                    `poll`, `serve`, and `simulate` commands
   parser/tickerParser.js    extractTickers(rawText, {universe})
   analysis/
     mindChange.js           diffRecommendations(prev, curr) -> events  (pure)
@@ -91,6 +91,26 @@ variation between back-to-back runs (so mind-changes appear immediately):
 MOCK_SEED_SALT=a npm run poll
 MOCK_SEED_SALT=b npm run poll
 ```
+
+**Populate a demo timeline (fastest way to see the dashboard with data):**
+
+Real hourly polling takes days to surface trends, so `simulate` backfills the
+store by running the *real* pipeline (LLM → parse → mind-change diff → prices)
+at stepped timestamps, with dense intra-step price sampling so the `+1h/+4h/+24h`
+spike windows have data:
+
+```bash
+# 72h of hourly polls, 15-min price sampling, with injected post-event spikes
+npm run simulate -- --hours=72 --step=1 --dense=15 --spikes
+# then explore it:
+npm run serve   # dashboard at http://localhost:4321
+```
+
+Flags: `--hours` (range to backfill), `--step` (hours between polls), `--dense`
+(minutes between intra-step price samples), `--spikes` (turn on the mock's
+post-recommendation bump so spike detection has something to find — off by
+default to keep prices an honest random walk). With real providers configured,
+`simulate` replays against whatever they return for each timestamp.
 
 **Server + scheduler (dashboard):**
 

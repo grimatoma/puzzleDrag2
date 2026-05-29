@@ -8,6 +8,7 @@
     "start": "node src/cli.js serve",
     "serve": "node src/cli.js serve",
     "poll": "node src/cli.js poll",
+    "simulate": "node src/cli.js simulate",
     "test": "node --test"
   },
   "dependencies": {
