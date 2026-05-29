@@ -63,6 +63,10 @@ export interface GameRegistryContract {
   // the one-shot save-load handoff read once at `create()` time.
   grid: Grid | null;
   boardRestoreGrid: Grid | null;
+  // Monotonic board-regeneration signal. Bumped by the reducer on every fresh
+  // (non-restored) puzzle entry; the scene regenerates its tiles whenever the
+  // value changes. Seeded at preBoot so a save-restore mount doesn't fire it.
+  newBoardNonce: number;
   inventory: Inventory;
   inventoryCap: number;
 

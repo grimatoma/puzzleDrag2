@@ -325,6 +325,14 @@ export interface GameState {
   unlockedBiomes?: Record<string, boolean>;
   /** Transient hand-off between `applyBeatResult` and the boss trigger; cleared by `evaluateAndApplyStoryBeat`. */
   pendingBossKey?: string;
+  /**
+   * Monotonic counter bumped whenever a brand-new (non-restored) puzzle board
+   * should be generated — FARM/ENTER and SWITCH_BIOME without a saved field.
+   * Mirrored to the Phaser registry as `newBoardNonce`; the scene regenerates
+   * its tiles when the value changes. Lets a same-biome re-entry (farm → farm)
+   * trigger a fresh board even though `biomeKey` is unchanged.
+   */
+  _boardNonce?: number;
 }
 
 // ── Action (discriminated union in actionPayloads.ts) ─────────────────────
