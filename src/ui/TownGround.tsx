@@ -2,7 +2,8 @@
 // The town's *plan* layer: a paved ground over the hills, the street network, a
 // central plaza with a well, faint pads under each building lot, and a little
 // street furniture (lampposts, a cart, a signpost, planters). Rendered as an
-// SVG in the same 1100×600 design space as the rest of the Town view, sitting
+// SVG in the same STAGE_W×STAGE_H design space (plan.width/plan.height) as the
+// rest of the Town view, sitting
 // between the hills/decor backdrop and the building illustrations so the town
 // reads as a planned settlement in a valley rather than scattered buildings.
 
