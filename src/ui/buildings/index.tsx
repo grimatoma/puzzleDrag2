@@ -14,6 +14,7 @@ import PortalIllustration from "./portal.jsx";
 import HousingIllustration from "./housing.jsx";
 import SiloIllustration from "./silo.jsx";
 import BarnIllustration from "./barn.jsx";
+import MiningCampIllustration from "./mining_camp.jsx";
 import HarborDockIllustration from "./harbor_dock.jsx";
 import FishmongerIllustration from "./fishmonger.jsx";
 import SmokehouseIllustration from "./smokehouse.jsx";
@@ -52,6 +53,7 @@ const ILLUSTRATIONS: Record<string, IllustrationComponent> = {
   housing3: HousingIllustration,
   silo: SiloIllustration,
   barn: BarnIllustration,
+  mining_camp: MiningCampIllustration,
   harbor_dock: HarborDockIllustration,
   fishmonger: FishmongerIllustration,
   smokehouse: SmokehouseIllustration,
