@@ -145,21 +145,22 @@ export function buildTownPlan(
   const nBoards = kinds.filter((k) => k in BOARD_SPOTS).length;
   const reserved = 1 + nBoards; // plaza + the actual puzzle boards
   const slack = Math.ceil(n * 0.25); // headroom so the river never starves us below n
-  const blocksNeeded = n + reserved + slack;
 
-  // Every non-reserved block yields exactly ONE uniform building lot, and we do
-  // NOT trim surplus — every buildable cell becomes a plot, so there are no dead
-  // grid squares (e.g. an empty bottom row). Capacity is linear in block count.
-  // The grid is sized so capacity comfortably covers n even after the diagonal
-  // river excludes a few cells; the realised plot count is therefore the full
-  // set of buildable cells (≈ n, a little more for sparse zones).
+  // Each non-reserved block yields exactly ONE uniform building lot; capacity is
+  // linear in block count. The realised plot count is then capped to exactly n
+  // (the requested plotCount), so the town shows the configured number of plots.
+  // To keep that cap from blanking whole rows, the grid is sized as TIGHTLY as
+  // possible: start from a compact grid just covering n + reserved, then grow
+  // ONLY enough to clear the river slack. So buildable cells land just above n
+  // and the cap trims at most a cell or two.
   const capacityOf = (cols: number, rows: number) => Math.max(0, cols * rows - reserved);
 
-  // Start from a roughly square grid biased to the 4:3 design ratio, then grow
-  // (cols first, then rows) until linear capacity covers n plus the river slack.
+  // Compact initial grid biased to the 4:3 design ratio, then grow (cols first,
+  // then rows) until linear capacity covers n plus the river slack.
   type Block = { x: number; y: number; w: number; h: number };
-  let cols = Math.max(3, Math.round(Math.sqrt(blocksNeeded * (W / H))));
-  let rows = Math.max(3, Math.ceil(blocksNeeded / cols));
+  const seed = n + reserved;
+  let cols = Math.max(3, Math.round(Math.sqrt(seed * (W / H))));
+  let rows = Math.max(3, Math.ceil(seed / cols));
   while (capacityOf(cols, rows) < n + slack) {
     if (cols <= rows) cols++; else rows++;
   }
@@ -638,11 +639,10 @@ export function buildTownPlan(
   // refers to a trimmed surplus lot. Each path runs straight from a lot edge
   // midpoint to the nearest adjoining street centerline — pure arithmetic on the
   // already-computed lots + gutter centerlines, no rng draws.
-  // Every non-excluded grid cell is a buildable lot — no surplus is trimmed, so
-  // there are no dead grid squares (e.g. an empty bottom row). The plot count
-  // therefore equals the number of buildable cells (≈ the requested plotCount,
-  // which sizes the grid).
-  const keptLots = lots;
+  // Cap to exactly the requested plotCount so the town shows the configured
+  // number of plots. The tight grid sizing above keeps buildable cells just
+  // above n, so this trims at most a cell or two (never a whole row).
+  const keptLots = lots.slice(0, n);
   const paths: TownPlanPath[] = [];
   const PATH_W = 14;
   for (const l of keptLots) {
