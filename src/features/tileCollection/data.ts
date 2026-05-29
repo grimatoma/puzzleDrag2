@@ -10,6 +10,8 @@ export const CATEGORIES = [
   // Mine tile species — stone/cobble/block, ore/ingot, coal/coke, gem/cutgem,
   // gold (singleton), dirt (singleton).
   "mine_stone", "mine_iron_ore", "mine_coal", "mine_gem", "mine_gold", "special_dirt",
+  // Treasure — coin tiles that pay out coins directly instead of a resource.
+  "treasure",
   // Fish biome category — sardine / mackerel / clam / oyster / kelp.
   "fish",
 ];
@@ -54,6 +56,7 @@ export const CATEGORY_TO_SUBCATEGORY = {
   mine_gem: "mining",
   mine_gold: "mining",
   special_dirt: "mining",
+  treasure: "mining",
   fish: "water",
 };
 
@@ -666,6 +669,16 @@ export const TILE_TYPES = [
     discovery: { method: "default" },
     effects: {},
     description: "Crumbly dirt that backfills tunnels — needed to clear mysterious ore.",
+  },
+  {
+    id: "tile_coin_golden", category: "treasure", displayName: "Golden Coin",
+    baseResource: "tile_coin_golden", tier: 0,
+    discovery: { method: "default" },
+    abilities: [
+      { id: "coin_bonus_per_tile", params: { amount: 20 } },
+    ],
+    effects: {},
+    description: "A struck gold coin. Chaining it pays out coins directly — it produces no resource of its own.",
   },
 ];
 

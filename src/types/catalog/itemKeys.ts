@@ -73,6 +73,7 @@ export enum TileKey {
   TileMineCoal = "tile_mine_coal",
   TileMineGem = "tile_mine_gem",
   TileMineGold = "tile_mine_gold",
+  TileCoinGolden = "tile_coin_golden",
   TileSpecialDirt = "tile_special_dirt",
   TileFishSardine = "tile_fish_sardine",
   TileFishMackerel = "tile_fish_mackerel",
