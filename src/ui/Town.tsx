@@ -15,7 +15,6 @@ import Icon from "./Icon.jsx";
 import BuildingIllustration from "./buildings/index.jsx";
 import { TOWN_THEMES, SMOKE_BUILDINGS, TOWN_BIOME_CONFIGS, LOCATION_TOWN_CONFIGS, type TownBiomeConfig } from "./town/config.js";
 import { FarmFieldArt, MineEntranceArt } from "./town/decor.jsx";
-import { FarmTerrainDecor, MineTerrainDecor } from "./town/terrain.jsx";
 import {
   BrowserDetailLayout,
   BrowserGrid,
@@ -59,7 +58,6 @@ const BUILDING_IDS = new Set(BUILDINGS.map((b) => b.id));
 const ALL_BUILDING_IDS = BUILDINGS.map((b) => b.id);
 const BUILDINGS_BY_ID = new Map(BUILDINGS.map((b) => [b.id, b]));
 const CRAFTING_STATIONS = new Set(["bakery", "forge", "larder"]);
-const THEME_CROSSFADE_MS = 600;
 
 // Puzzle-board fixtures placed on lots in the town (see townLayout.js
 // `boards`): label / nav icon / lot border / the art that fills the tile.
@@ -69,48 +67,6 @@ const BOARD_META: Record<string, BoardMetaEntry> = {
   mine: { label: "Mine",       icon: "ui_build",  border: "#1a1e22", art: (locked) => <MineEntranceArt locked={!!locked} /> },
   fish: { label: "Harbor",     icon: "ui_enter",  border: "#1a3a5a", art: () => <div className="w-full h-full" style={{ background: "linear-gradient(180deg, #4a8aaa 0%, #2a5a7a 55%, #1a3a5a 100%)" }} /> },
 };
-
-// 600ms crossfade between gradient backgrounds. CSS `transition` can't
-// interpolate linear-gradient stops, so each theme is its own stacked layer;
-// new layers mount with opacity 0 (animated to 1), prior layers unmount once
-// covered.
-interface BackdropLayer {
-  bg: string;
-  id: number;
-}
-
-function ThemeBackdrop({ bg }: { bg: string }) {
-  const [layers, setLayers] = useState<BackdropLayer[]>(() => [{ bg, id: 0 }]);
-  const prevBg = useRef(bg);
-  const nextId = useRef(1);
-  useEffect(() => {
-    if (bg === prevBg.current) return;
-    prevBg.current = bg;
-    const newId = nextId.current++;
-    setLayers((prev) => [...prev, { bg, id: newId }]);
-    const t = setTimeout(() => {
-      setLayers((prev) => prev.filter((l) => l.id === newId));
-    }, THEME_CROSSFADE_MS);
-    return () => clearTimeout(t);
-  }, [bg]);
-  return (
-    <>
-      {layers.map((l, i) => (
-        <div
-          key={l.id}
-          className="absolute inset-0 pointer-events-none"
-          style={{
-            background: l.bg,
-            opacity: 1,
-            animation: i > 0
-              ? `townThemeFade ${THEME_CROSSFADE_MS}ms cubic-bezier(0.4, 0, 0.2, 1) forwards`
-              : undefined,
-          }}
-        />
-      ))}
-    </>
-  );
-}
 
 // Phase 6a — Town-view "Found this settlement" CTA. Mirrors the map-side
 // FoundSettlementControl: when the player is in the Town view of a settleable
@@ -181,60 +137,6 @@ function FoundSettlementBanner({ state, dispatch }: { state: GameState; dispatch
         />
       )}
     </>
-  );
-}
-
-// Soft cloud silhouette as a single SVG path — multiple lobes on top, a
-// gently rounded base, and an inner highlight gradient. The aspect ratio
-// is locked to the viewBox so a cloud sized 96×26 looks identical to one
-// at 128×34, just scaled.
-interface CloudProps {
-  top: number;
-  w: number;
-  h: number;
-  color: string;
-  anim: string;
-  breatheDur?: number;
-}
-
-function Cloud({ top, w, h, color, anim, breatheDur }: CloudProps) {
-  const animation = breatheDur ? `${anim}, cloudBreathe ${breatheDur}s cubic-bezier(0.4, 0, 0.2, 1) infinite` : anim;
-  // Stable per-instance id for the gradient defs (so multiple Cloud
-  // instances don't collide). Derived from the rendered width — sufficient
-  // for the half-dozen clouds the town backdrop has.
-  const gradId = `cloud-grad-${Math.round(w)}-${Math.round(h)}`;
-  return (
-    <div style={{ position: 'absolute', top, width: w, height: h, animation }}>
-      <svg
-        width="100%"
-        height="100%"
-        viewBox="0 0 100 60"
-        preserveAspectRatio="none"
-        style={{ display: 'block', overflow: 'visible' }}
-      >
-        <defs>
-          <radialGradient id={gradId} cx="0.35" cy="0.25" r="0.85">
-            <stop offset="0%" stopColor="#ffffff" stopOpacity="0.95" />
-            <stop offset="55%" stopColor={color} stopOpacity="1" />
-            <stop offset="100%" stopColor={color} stopOpacity="0.85" />
-          </radialGradient>
-        </defs>
-        <path
-          d="M 8 42
-             C 2 42, 0 32, 8 28
-             C 6 18, 16 14, 24 18
-             C 26 6, 42 4, 48 14
-             C 54 6, 70 6, 74 18
-             C 84 14, 94 22, 90 32
-             C 98 34, 98 44, 88 46
-             C 88 52, 78 54, 72 50
-             C 66 54, 52 54, 46 50
-             C 40 54, 26 54, 20 50
-             C 14 54, 6 50, 8 42 Z"
-          fill={`url(#${gradId})`}
-        />
-      </svg>
-    </div>
   );
 }
 
@@ -322,11 +224,10 @@ export function TownView({ state, dispatch }: { state: GameState; dispatch: Disp
   const theme = TOWN_THEMES[themeKey] || TOWN_THEMES.farm;
   const townConfig: TownBiomeConfig = TOWN_BIOME_CONFIGS[biomeVariant] ?? TOWN_BIOME_CONFIGS.farm;
   const locationName = displayZoneName(state, mapCurrent) || townConfig.name;
-  const hill1Path = locConfig?.hill1Path ?? townConfig.hill1Path;
-  const hill2Path = locConfig?.hill2Path ?? townConfig.hill2Path;
-  const cc = (a: number) => biomeVariant === 'mine'
-    ? `rgba(180,190,200,${(a * 0.55).toFixed(2)})`
-    : `rgba(255,255,255,${a})`;
+  // Extended grass colour for the widescreen margins around the 4:3 map, so the
+  // letterboxed area reads as terrain rather than a black box. Mine-family towns
+  // get a cooler, greyer ground; farm-family a warmer green.
+  const marginGrass = biomeVariant === "mine" ? "#565a48" : "#5a7f36";
   // Zone config for this location controls which puzzle boards and buildings are available.
   const zoneConfig = ZONES[mapCurrent];
   const locationBuilt = (state.built?.[mapCurrent] ?? EMPTY_OBJECT) as LocationBuiltState;
@@ -432,51 +333,14 @@ export function TownView({ state, dispatch }: { state: GameState; dispatch: Disp
     };
   };
   return (
-    <div className="absolute inset-0 overflow-hidden">
-      <ThemeBackdrop bg={theme.bg} />
-      {/* Sun/light source */}
-      <div className="absolute top-12 right-20 w-16 h-16 rounded-full" style={{ background: theme.sunColor, boxShadow: `0 0 60px ${theme.sunGlow}` }} />
-      {/* Clouds */}
-      <Cloud top={48}  w={64}  h={18} color={cc(0.38)} anim="townCloudC 180s linear -60s infinite"  breatheDur={12} />
-      <Cloud top={64}  w={96}  h={26} color={cc(0.62)} anim="townCloudA 95s linear 0s infinite"     breatheDur={9}  />
-      <Cloud top={96}  w={112} h={30} color={cc(0.55)} anim="townCloudB 130s linear -22s infinite"  breatheDur={14} />
-      <Cloud top={40}  w={80}  h={22} color={cc(0.45)} anim="townCloudA 160s linear -40s infinite"  breatheDur={11} />
-      <Cloud top={112} w={128} h={34} color={cc(0.40)} anim="townCloudB 210s linear -95s infinite"  breatheDur={16} />
-      <Cloud top={76}  w={72}  h={20} color={cc(0.50)} anim="townCloudC 145s linear -115s infinite" breatheDur={10} />
-      <Cloud top={52}  w={104} h={28} color={cc(0.42)} anim="townCloudA 240s linear -170s infinite" breatheDur={13} />
-
-      {/* Pan/zoom world — hills, ground plan, board fixtures and buildings all
-          scale uniformly together inside a fixed-aspect stage box. The sky
-          layers above and the UI overlays below stay fixed. */}
+    <div className="absolute inset-0 overflow-hidden" style={{ background: marginGrass }}>
+      {/* Pan/zoom world — the top-down map (terrain, roads, fields, plaza, board
+          fixtures, buildings and trees) scales uniformly together inside a
+          fixed-aspect stage box. The grass margins above and the UI overlays
+          below stay fixed. */}
       <TownStage>
-      {/* Biome-specific terrain */}
-      <svg className="absolute inset-0 w-full h-full" viewBox={`0 0 ${STAGE_W} ${STAGE_H}`} preserveAspectRatio="xMidYMid meet">
-        {/* Hill art + terrain decor are authored for the old 0..1100 space;
-            stretch them horizontally to fill the wider stage. */}
-        <g transform={`scale(${STAGE_W / 1100}, 1)`}>
-          <path d={hill1Path} fill={theme.hill1} opacity="0.55" />
-          <path d={hill2Path} fill={theme.hill2} opacity="0.45" />
-          {biomeVariant === "farm" && <FarmTerrainDecor />}
-          {biomeVariant === "mine" && <MineTerrainDecor />}
-        </g>
-        {/* Atmospheric haze straddling the hill bases — fades distant hills
-            into the floor so the horizon recedes rather than cutting a hard
-            band behind the rooftops. Sibling to the scaled <g> so it spans the
-            full STAGE_W un-stretched; sky-tinted low alpha reads OK on both the
-            warm (farm/home) and gray (mine) themes. */}
-        <defs>
-          <linearGradient id="town-horizon-haze" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="rgba(255,255,255,0)" />
-            <stop offset="50%" stopColor="rgba(255,255,255,0.28)" />
-            <stop offset="100%" stopColor="rgba(255,255,255,0)" />
-          </linearGradient>
-        </defs>
-        <rect x={0} y={230} width={STAGE_W} height={100} fill="url(#town-horizon-haze)" />
-      </svg>
-
-      {/* Town plan — paved plaza, street network, lot pads, street furniture.
-          Sits over the hills/decor backdrop so the place reads as a planned
-          settlement in a valley. Buildings (below) are positioned onto its lots. */}
+      {/* Top-down terrain plan — grass, water, roads, fields, plaza, back-trees
+          and props. Buildings + front trees (below) are positioned onto its lots. */}
       <TownGround plan={townPlan} theme={theme} biomeVariant={biomeVariant} builtLots={builtLotIndices} />
 
       {/* Puzzle-board fixtures — the farm field, mine entrance and harbor now
@@ -530,6 +394,34 @@ export function TownView({ state, dispatch }: { state: GameState; dispatch: Disp
         <div className="absolute pointer-events-none" style={{ left: 0, right: 0, top: 0, bottom: 0 }}>
           {/* Townsfolk walking the streets (depth-sorted with buildings via z-index) */}
           <TownVillagers key={mapCurrent} plan={townPlan} buildings={plotById} workers={state.workers} />
+          {/* Front trees — drawn in the SAME stacking context as buildings so a
+              tree with a higher base-y can occlude a building rooftop in front of
+              it (and vice-versa). Back trees live in <TownGround>; these are the
+              ones flagged front:true by the plan generator. */}
+          {((townPlan.trees ?? []) as Array<{ x: number; y: number; r: number; front?: boolean }>)
+            .filter((t) => t.front === true)
+            .map((t, i) => (
+              <div
+                key={`ft-${i}`}
+                className="absolute pointer-events-none"
+                style={{
+                  left: `${((t.x - t.r) / STAGE_W) * 100}%`,
+                  top: `${((t.y - t.r) / STAGE_H) * 100}%`,
+                  width: `${((2 * t.r) / STAGE_W) * 100}%`,
+                  height: `${((2 * t.r) / STAGE_H) * 100}%`,
+                  zIndex: Math.floor(t.y),
+                }}
+              >
+                <div
+                  className="w-full h-full"
+                  style={{
+                    borderRadius: "50%",
+                    background: "radial-gradient(circle at 38% 32%, #83ad52, #4a7028 70%)",
+                    boxShadow: "0 6px 14px rgba(0,0,0,.32)",
+                  }}
+                />
+              </div>
+            ))}
           {slotRows.map((slot) => {
             const b = slot.buildingId ? BUILDINGS_BY_ID.get(slot.buildingId) : null;
             const isBuilt = !!b;
@@ -589,6 +481,14 @@ export function TownView({ state, dispatch }: { state: GameState; dispatch: Disp
         </div>
       </div>
       </TownStage>
+
+      {/* Vignette — softly darkens the screen edges so the finite 4:3 map fades
+          into the grass margins rather than ending in a hard box. Above the
+          panning world, below the z-30 UI overlays; never eats pointer events. */}
+      <div
+        className="absolute inset-0 pointer-events-none z-20"
+        style={{ background: "radial-gradient(120% 120% at 50% 45%, transparent 55%, rgba(0,0,0,0.28) 100%)" }}
+      />
 
       {/* Header — fixed overlay, not part of the pan/zoom world. */}
       <div className="absolute top-3 left-4 landscape:max-[1024px]:top-2 landscape:max-[1024px]:left-3 font-bold text-[20px] landscape:max-[1024px]:text-[15px] z-10" style={{ color: theme.textColor }}>{locationName}</div>
