@@ -15,6 +15,7 @@ The reference quality bar is the **forge** (`/iso/?building=forge`).
 | Building | Plot | Hero details / signature animations | Status | PR |
 |---|---|---|---|---|
 | forge | N | brick smithy, glowing furnace + anvil, slate hip roof; furnace flicker, embers, lantern, smoke | **approved** | #714/#715 |
+| hearth | N | wide stone home; two warm windows flank an arched iron-ring door, big smoking chimney; flagstone path, wiggling garden bushes, warm spill | **approved** | #749 |
 | lighthouse | S | tapered striped tower + lamp room; rotating beam, waves/splash, lamp + portholes, bobbing dinghy | **approved** | #721 |
 | barn | L | gambrel roof, X-brace doors + loft on lit gable; hay-dust bob, weather-vane, fence | **approved** | #722 |
 | bakery | N | plaster + terracotta; glowing oven hero, bread sill, pretzel sign; oven flicker, steam, smoke | **approved** | #723 |
