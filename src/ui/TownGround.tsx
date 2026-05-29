@@ -15,7 +15,8 @@
 //   3. roads (dirt polylines: edge underlay, body, dashed centerline)
 //   4. fields (rotated soil rects with crop rows)
 //   5. plaza (cobbled oval)
-//   6. lot shadow pads / empty-lot dashed markers + board pads
+//   6a. lot parcels (framed earth plots under every non-plaza lot)
+//   6b. lot shadow pads / empty-lot dashed markers + board pads
 //   7. fences (post-and-rail)
 //   8. trees: shadow for EVERY tree, canopy only for back-layer (!front) trees
 //   9. props (street furniture)
@@ -177,10 +178,10 @@ function TownGround({ plan, theme, biomeVariant, builtLots }: TownGroundProps) {
   const h = plan.height ?? 960;
 
   // Roads: prefer polyline roads, fall back to flat 2-pt streets.
-  const roads: Array<{ points: Pt[]; width: number }> =
+  const roads: Array<{ points: Pt[]; width: number; kind?: string }> =
     plan.roads && plan.roads.length
-      ? plan.roads.map((r) => ({ points: r.points, width: r.width }))
-      : plan.streets.map((s) => ({ points: [{ x: s.x1, y: s.y1 }, { x: s.x2, y: s.y2 }], width: s.width }));
+      ? plan.roads.map((r) => ({ points: r.points, width: r.width, kind: r.kind }))
+      : plan.streets.map((s) => ({ points: [{ x: s.x1, y: s.y1 }, { x: s.x2, y: s.y2 }], width: s.width, kind: "branch" }));
 
   return (
     <svg
@@ -239,9 +240,11 @@ function TownGround({ plan, theme, biomeVariant, builtLots }: TownGroundProps) {
         const d = ptsStr(r.points);
         return (
           <g key={`r${i}`}>
-            <polyline points={d} fill="none" stroke={roadLine} strokeWidth={r.width + 6} strokeLinecap="round" strokeLinejoin="round" opacity="0.55" />
-            <polyline points={d} fill="none" stroke={road} strokeWidth={r.width} strokeLinecap="round" strokeLinejoin="round" />
-            <polyline points={d} fill="none" stroke={roadLine} strokeWidth={1.5} strokeDasharray="7 8" strokeLinecap="round" strokeLinejoin="round" opacity="0.4" />
+            <polyline points={d} fill="none" stroke={roadLine} strokeWidth={r.width + 6} strokeLinecap="square" strokeLinejoin="miter" opacity="0.55" />
+            <polyline points={d} fill="none" stroke={road} strokeWidth={r.width} strokeLinecap="square" strokeLinejoin="miter" />
+            {r.kind === "main" && (
+              <polyline points={d} fill="none" stroke={roadLine} strokeWidth={1.5} strokeDasharray="7 8" strokeLinecap="square" strokeLinejoin="miter" opacity="0.4" />
+            )}
           </g>
         );
       })}
@@ -282,7 +285,16 @@ function TownGround({ plan, theme, biomeVariant, builtLots }: TownGroundProps) {
       <ellipse cx={plan.plaza.cx} cy={plan.plaza.cy} rx={plan.plaza.rx} ry={plan.plaza.ry} fill="none" stroke={pal.dirtEdge} strokeWidth="2" />
       <ellipse cx={plan.plaza.cx} cy={plan.plaza.cy} rx={plan.plaza.rx * 0.62} ry={plan.plaza.ry * 0.62} fill="none" stroke={pal.dirtEdge} strokeWidth="1" opacity="0.4" />
 
-      {/* ── 6. Lot shadow pads (built) / dashed markers (empty) + board pads ── */}
+      {/* ── 6a. Lot parcels — a framed earth plot under every non-plaza lot so
+              each lot reads as a bounded parcel within its city block ── */}
+      {plan.lots.filter((l) => l.row !== "plaza").map((l) => (
+        <g key={`parcel${l.index}`}>
+          <rect x={l.cx - l.w / 2} y={l.cy - l.h / 2} width={l.w} height={l.h} rx={4} fill={pal.dirt} opacity={0.18} />
+          <rect x={l.cx - l.w / 2} y={l.cy - l.h / 2} width={l.w} height={l.h} rx={4} fill="none" stroke={pal.dirtEdge} strokeWidth={1.5} opacity={0.6} />
+        </g>
+      ))}
+
+      {/* ── 6b. Lot shadow pads (built) / dashed markers (empty) + board pads ── */}
       {plan.lots.map((l) => {
         const baseY = l.cy + l.h / 2 - 4;
         if (built.has(l.index) || l.row === "plaza") {

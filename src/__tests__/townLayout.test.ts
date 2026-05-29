@@ -55,6 +55,34 @@ describe("townLayout.ts - buildTownPlan (top-down map)", () => {
     expect(big.lots.slice(1).every((l) => ["nw", "ne", "sw", "se"].includes(l.row))).toBe(true);
   });
 
+  it("does not collapse to a single lot at extreme plotCount (graceful degradation)", () => {
+    // Regression: the lot loop once discarded any subdivided cell below a 56px
+    // floor. At very high plotCount every cell fell below it, so EVERY block was
+    // dropped and the plan collapsed to just the 1 plaza lot. The fix degrades a
+    // too-small block to a SINGLE whole-block lot instead of discarding it, so
+    // every non-excluded block still contributes. Exact n is not guaranteed at
+    // the extreme (the diagonal river excludes whole blocks, and slice(0,n) only
+    // trims surplus), but the count must stay far above the old failure of 1.
+    for (const n of [90, 100, 120, 150, 200]) {
+      const plan = buildTownPlan({ plotCount: n });
+      // Never collapses; for these grids the realised count sits just under n.
+      expect(plan.lots.length).toBeGreaterThan(n * 0.8);
+      expect(plan.lots.length).toBeLessThanOrEqual(n);
+      // Lot 0 is still the plaza hearth; the rest carry quarter tags.
+      expect(plan.lots[0].row).toBe("plaza");
+      expect(plan.lots.slice(1).every((l) => ["nw", "ne", "sw", "se"].includes(l.row))).toBe(true);
+      // Every lot stays inside the design space at the extreme too.
+      for (const lot of plan.lots) {
+        expect(lot.cx).toBeGreaterThanOrEqual(0);
+        expect(lot.cx).toBeLessThanOrEqual(W);
+        expect(lot.cy).toBeGreaterThanOrEqual(0);
+        expect(lot.cy).toBeLessThanOrEqual(H);
+      }
+      // Determinism holds at extreme plotCount too.
+      expect(buildTownPlan({ plotCount: n })).toEqual(plan);
+    }
+  });
+
   it("includes puzzle-board fixtures based on boardKinds", () => {
     const farmPlan = buildTownPlan({ boardKinds: ["farm"] });
     expect(farmPlan.boards.map((b) => b.kind)).toEqual(["farm"]);
@@ -77,14 +105,42 @@ describe("townLayout.ts - buildTownPlan (top-down map)", () => {
     expect(plan.boards).toEqual([]);
   });
 
-  it("always emits at least one water body and curved roads", () => {
+  it("always emits at least one water body and straight grid streets", () => {
     const plan = buildTownPlan({ plotCount: 12 });
     expect(plan.water.length).toBeGreaterThan(0);
     expect(plan.roads.length).toBeGreaterThan(0);
-    // Roads are polylines with >=3 points; streets mirror them as 2-pt segments.
+    // Roads are straight grid streets stored as 3-pt polylines (endpoint, midpoint,
+    // endpoint); streets mirror them as 2-pt segments.
     expect(plan.roads.every((r) => r.points.length >= 3)).toBe(true);
     expect(plan.streets.length).toBeGreaterThan(0);
     expect(plan.streets.every((s) => typeof s.width === "number")).toBe(true);
+  });
+
+  it("emits a city grid: every road segment is axis-aligned and colinear", () => {
+    const EPS = 0.001;
+    for (const args of [
+      { plotCount: 12 },
+      { plotCount: 40 },
+      { zoneId: "harbor", plotCount: 16, boardKinds: ["farm", "mine", "fish"] as const },
+    ]) {
+      const plan = buildTownPlan(args);
+      for (const road of plan.roads) {
+        // Per-segment: each segment runs purely vertically or horizontally.
+        for (let i = 0; i < road.points.length - 1; i++) {
+          const a = road.points[i], b = road.points[i + 1];
+          const sharesX = Math.abs(a.x - b.x) < EPS;
+          const sharesY = Math.abs(a.y - b.y) < EPS;
+          expect(sharesX || sharesY).toBe(true);
+        }
+        // Whole-polyline: a straight street is colinear — every point shares the
+        // same x (vertical road) or the same y (horizontal road).
+        const xs = road.points.map((p) => p.x);
+        const ys = road.points.map((p) => p.y);
+        const sameX = Math.max(...xs) - Math.min(...xs) < EPS;
+        const sameY = Math.max(...ys) - Math.min(...ys) < EPS;
+        expect(sameX || sameY).toBe(true);
+      }
+    }
   });
 
   it("builds a connected waypoint graph (BFS from node 0 reaches all)", () => {

@@ -1,13 +1,16 @@
 // ─── Procedural town plan (Phase: Town top-down map) ────────────────────────
 // Turns a zone's plot count into a *planned* town rendered as a compact 2D
 // TOP-DOWN map (1280×960 design space the Town view scales to the viewport).
-// A central plaza with a well sits near the middle; curved roads sweep
-// corner-to-corner through it; building lots fill the four quarters (nw/ne/sw/
-// se) around the plaza without overlapping roads, water, boards or each other;
-// trees, fields, fences and water bodies dress the open ground. Everything is
-// deterministic per zone: a single seeded mulberry32 PRNG drives all jitter and
-// rejection-retry loops in a fixed consumption order, so identical args always
-// yield an identical plan.
+// The generator lays out a realistic CITY GRID: rectangular blocks separated
+// by straight axis-aligned streets (a wide central avenue both ways, narrower
+// streets elsewhere). One central block is reserved as the town square (plaza +
+// well + hearth lot); a handful of perimeter blocks are reserved for puzzle
+// boards; the remaining blocks subdivide into 1–4 building lots whose insets
+// make the surrounding streets visibly delineate them. A river cuts a diagonal
+// organic break across an off-centre quadrant, and trees/fields/fences dress the
+// leftover ground. Everything is deterministic per zone: a single seeded
+// mulberry32 PRNG drives all jitter in a FIXED consumption order, so identical
+// args always yield an identical plan.
 //
 // Returned shape (see TownPlan): width/height, ground.top, plaza, well,
 // streets (back-compat 2-pt segments), lots, boards, props, waypoints, edges,
@@ -111,16 +114,199 @@ export function buildTownPlan(
   const n = Math.max(1, Math.floor(plotCount));
   const kinds = Array.isArray(boardKinds) ? boardKinds : [];
 
-  const plaza = { cx: W / 2 + j(40), cy: H * 0.46 + j(30), rx: 120, ry: 96 };
+  // ── 1. Block-grid sizing ─────────────────────────────────────────────────
+  // Usable interior region (everything inside the outer border lanes).
+  const border = 40;
+  const gx0 = 40, gy0 = 40, gw = 1200, gh = 880;
+  const AVENUE = 46;   // central avenue gutter width
+  const STREET = 30;   // ordinary street gutter width
+  const blocksNeeded = n + 4; // plaza + up to 3 boards + slack
+
+  // Analytic UPPER bound on how many lots a c×r grid can yield: each interior
+  // block subdivides into up to 4 lots, and we reserve ≤4 blocks (plaza+boards).
+  // This is only an upper bound — the realised count is usually lower because
+  // (a) at high plotCount blocks shrink below the subdivision thresholds and
+  // yield just 1 lot each (see the lot loop's graceful-degradation branch), and
+  // (b) the diagonal river excludes whatever blocks it crosses. So this sizing
+  // does NOT promise exactly n lots at extreme plotCount; it sizes the grid so
+  // there is ample block area to draw from, and `lots.slice(0, n)` trims any
+  // surplus. The lot loop's "≥1 lot per non-excluded block" rule (added so a
+  // whole block is never discarded to zero) keeps the realised count far above
+  // the old failure mode (a single plaza lot) across the full range.
+  const capacityOf = (cols: number, rows: number) => Math.max(0, (cols * rows - 4) * 4);
+
+  // Start from a roughly square grid biased to the 4:3 design ratio, then grow
+  // (cols first, then rows) until the upper-bound capacity ≥ n. Capacity grows
+  // fast (×4/block), so this loop almost never iterates.
+  type Block = { x: number; y: number; w: number; h: number };
+  let cols = Math.max(3, Math.round(Math.sqrt(blocksNeeded * (W / H))));
+  let rows = Math.max(3, Math.ceil(blocksNeeded / cols));
+  while (capacityOf(cols, rows) < n) {
+    if (cols <= rows) cols++; else rows++;
+  }
+
+  // Grid sizing above consumes no rng (pure arithmetic on n), so the first rng
+  // draw (colWeights, below) always starts from the same PRNG state — the
+  // consumption order is fixed for given args regardless of the grid shape.
+
+  const pc = Math.floor(cols / 2); // central column index → avenue
+  const pr = Math.floor(rows / 2); // central row index → avenue
+
+  // Partition each axis among blocks using seeded weights. Consumption order is
+  // FIXED: all column weights first, then all row weights.
+  const colWeights = Array.from({ length: cols }, () => 1 + j(0.18));
+  const rowWeights = Array.from({ length: rows }, () => 1 + j(0.18));
+
+  // Gutter widths per axis: outer border lanes + one gutter between each pair of
+  // blocks; the gutter at the central index is an avenue, the rest are streets.
+  const colGutter = (i: number) => (i === pc ? AVENUE : STREET); // gutter to the LEFT of block i (i in 1..cols-1)
+  const rowGutter = (i: number) => (i === pr ? AVENUE : STREET);
+
+  // Total interior gutter width = sum of inner gutters; outer border lanes are
+  // the `border` margin already excluded from gw/gh.
+  let colGutterTotal = 0;
+  for (let c = 1; c < cols; c++) colGutterTotal += colGutter(c);
+  let rowGutterTotal = 0;
+  for (let r = 1; r < rows; r++) rowGutterTotal += rowGutter(r);
+
+  const colWeightSum = colWeights.reduce((a, b) => a + b, 0) || 1;
+  const rowWeightSum = rowWeights.reduce((a, b) => a + b, 0) || 1;
+  // Usable span left for blocks once gutters are removed. Blocks fill exactly
+  // this span (never more), so the grid can never escape the usable region at
+  // any plotCount.
+  const colSpace = Math.max(0, gw - colGutterTotal);
+  const rowSpace = Math.max(0, gh - rowGutterTotal);
+
+  // Block dimensions (gutters excluded). We'd LIKE a 90px readable block floor,
+  // but never at the cost of overflowing the usable span — at very high
+  // plotCount a hard 90px floor would push block/lot centers off-canvas. So the
+  // floor is itself clamped to span/count: blocks shrink below 90px rather than
+  // escape the design space. This floor governs block SIZE/bounds only, not the
+  // lot COUNT — once blocks shrink past the subdivision thresholds the lot loop
+  // emits a single lot per block (graceful degradation), so shrinking blocks
+  // reduce lots-per-block toward 1 rather than producing exactly n. Pure
+  // arithmetic on the already-drawn weights — no new rng draws, so determinism
+  // and consumption order are unchanged.
+  const colFloor = Math.min(90, colSpace / cols);
+  const rowFloor = Math.min(90, rowSpace / rows);
+  const colW = colWeights.map((w) => Math.max(colFloor, (w / colWeightSum) * colSpace));
+  const rowH = rowWeights.map((w) => Math.max(rowFloor, (w / rowWeightSum) * rowSpace));
+
+  // Block interiors + gutter centerlines (vertical = streetX, horizontal = streetY).
+  // streetX/streetY include the two outer border lanes so streets span edge-to-edge.
+  const block: Block[][] = Array.from({ length: rows }, () => []);
+  const streetX: number[] = [];
+  const streetY: number[] = [];
+  {
+    // Left outer border lane centerline.
+    streetX.push(border / 2);
+    let x = gx0;
+    for (let c = 0; c < cols; c++) {
+      const bx = x;
+      for (let r = 0; r < rows; r++) block[r][c] = { x: bx, y: 0, w: colW[c], h: 0 };
+      x += colW[c];
+      if (c < cols - 1) {
+        const g = colGutter(c + 1);
+        streetX.push(x + g / 2); // gutter centerline between block c and c+1
+        x += g;
+      }
+    }
+    // Right outer border lane centerline.
+    streetX.push(W - border / 2);
+
+    streetY.push(border / 2);
+    let y = gy0;
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) { block[r][c].y = y; block[r][c].h = rowH[r]; }
+      y += rowH[r];
+      if (r < rows - 1) {
+        const g = rowGutter(r + 1);
+        streetY.push(y + g / 2);
+        y += g;
+      }
+    }
+    streetY.push(H - border / 2);
+  }
+
+  // ── 2. Streets → roads (axis-aligned, 3-pt colinear polylines) ───────────
+  const roads: TownPlanRoad[] = [];
+  // The wide central avenue is the gutter to the LEFT of central column index
+  // pc: streetX has the left border lane at index 0, so the gutter between block
+  // columns (pc-1) and pc lives at streetX index pc. Same logic for rows.
+  const avenueXIndex = pc;     // streetX[pc] is the gutter left of block column pc
+  const avenueYIndex = pr;
+  const pushRoad = (a: Pt, b: Pt, width: number, kind: TownPlanRoad["kind"]) =>
+    roads.push({ points: [a, { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }, b], width, kind });
+  for (let i = 0; i < streetX.length; i++) {
+    const x = streetX[i];
+    const isAvenue = i === avenueXIndex;
+    pushRoad({ x, y: 0 }, { x, y: H }, isAvenue ? AVENUE : STREET, isAvenue ? "main" : "branch");
+  }
+  for (let i = 0; i < streetY.length; i++) {
+    const y = streetY[i];
+    const isAvenue = i === avenueYIndex;
+    pushRoad({ x: 0, y }, { x: W, y }, isAvenue ? AVENUE : STREET, isAvenue ? "main" : "branch");
+  }
+
+  // ── 3. Central plaza block ────────────────────────────────────────────────
+  const plazaBlk = block[pr][pc];
+  const plaza = {
+    cx: plazaBlk.x + plazaBlk.w / 2,
+    cy: plazaBlk.y + plazaBlk.h / 2,
+    rx: Math.min(120, plazaBlk.w * 0.42),
+    ry: Math.min(96, plazaBlk.h * 0.42),
+  };
   const well = { cx: plaza.cx, cy: plaza.cy - 8, r: 16 };
 
-  // Boards FIRST so they act as obstacles for lots/trees.
-  const boards: TownPlanBoard[] = kinds
-    .filter((k): k is BoardKind => k in BOARD_SPOTS)
-    .map((k) => ({ kind: k, ...BOARD_SPOTS[k] }));
+  // Per-block exclusion flags (plaza, boards, water-covered).
+  const excluded: boolean[][] = Array.from({ length: rows }, () => Array(cols).fill(false));
+  excluded[pr][pc] = true; // plaza block never subdivides
 
-  // ── Water ──────────────────────────────────────────────────────────────
+  // ── 4. Boards = reserved perimeter blocks ─────────────────────────────────
+  const boardPrefForKind = (k: BoardKind): [number, number] => {
+    if (k === "farm") return [Math.floor(rows / 2), 0];
+    if (k === "mine") return [0, cols - 1];
+    return [rows - 1, Math.floor(cols / 2)]; // fish
+  };
+  // Deterministic perimeter scan order for fallbacks (collision on tiny grids).
+  const perimScan: Array<[number, number]> = [];
+  for (let c = 0; c < cols; c++) perimScan.push([0, c]);
+  for (let r = 1; r < rows; r++) perimScan.push([r, cols - 1]);
+  for (let c = cols - 2; c >= 0; c--) perimScan.push([rows - 1, c]);
+  for (let r = rows - 2; r >= 1; r--) perimScan.push([r, 0]);
+
+  const validKinds = kinds.filter((k): k is BoardKind => k in BOARD_SPOTS);
+  const boards: TownPlanBoard[] = [];
+  for (const k of validKinds) {
+    let [br, bc] = boardPrefForKind(k);
+    if (excluded[br][bc] || (br === pr && bc === pc)) {
+      const free = perimScan.find(([r, c]) => !excluded[r][c] && !(r === pr && c === pc));
+      if (free) [br, bc] = free;
+    }
+    excluded[br][bc] = true;
+    const blk = block[br][bc];
+    boards.push({
+      kind: k,
+      cx: blk.x + blk.w / 2,
+      cy: blk.y + blk.h / 2,
+      w: Math.min(150, blk.w - 16),
+      h: Math.min(140, blk.h - 16),
+    });
+  }
+
+  // ── 5. River (always) + shore (when fish) ─────────────────────────────────
+  // Route an off-centre diagonal that misses the plaza and reserved board
+  // blocks: anchor it through the upper-left / lower-right organic band so the
+  // central square stays clear. 4 jittered points.
   const water: TownPlanWater[] = [];
+  const riverPath: Pt[] = [
+    { x: W * 0.08 + j(24), y: -10 },
+    { x: W * 0.26 + j(30), y: H * 0.30 + j(24) },
+    { x: W * 0.40 + j(30), y: H * 0.64 + j(24) },
+    { x: W * 0.58 + j(24), y: H + 10 },
+  ];
+  const RIVER_W = 42;
+  water.push({ kind: "river", path: riverPath, width: RIVER_W });
   if (kinds.includes("fish")) {
     const top = H * 0.82;
     const notch = j(40);
@@ -135,53 +321,26 @@ export function buildTownPlan(
         { x: W, y: H }, { x: 0, y: H },
       ],
     });
-  } else if (rng() < 0.5) {
-    const corner = { x: W * 0.82 + j(30), y: H * 0.18 + j(30) };
-    const poly: Pt[] = [];
-    for (let i = 0; i < 8; i++) {
-      const a = (i / 8) * Math.PI * 2;
-      poly.push({ x: corner.x + Math.cos(a) * (75 + j(14)), y: corner.y + Math.sin(a) * (55 + j(12)) });
-    }
-    water.push({ kind: "pond", polygon: poly });
-  } else {
-    water.push({
-      kind: "river",
-      path: [
-        { x: W + 10, y: H * 0.04 + j(20) },
-        { x: W * 0.78 + j(30), y: H * 0.16 + j(20) },
-        { x: W * 0.9 + j(30), y: H * 0.02 + j(10) },
-      ],
-      width: 42,
-    });
   }
   const waterPolys = water.filter((w) => w.polygon).map((w) => w.polygon!);
   const waterPaths = water.filter((w) => w.path).map((w) => w);
 
-  // ── Roads (curved polylines, ≥3 jittered points) ─────────────────────────
-  const roads: TownPlanRoad[] = [];
-  const mid = (a: Pt, b: Pt, amt: number): Pt => ({ x: (a.x + b.x) / 2 + j(amt), y: (a.y + b.y) / 2 + j(amt) });
-  const road3 = (a: Pt, b: Pt, width: number, kind: TownPlanRoad["kind"]) =>
-    roads.push({ points: [a, mid(a, b, 60), b], width, kind });
-  road3({ x: 30, y: 40 }, { x: W - 30, y: H - 40 }, 46, "main");                 // diagonal main through plaza
-  road3({ x: W - 30, y: 40 }, { x: 30, y: H - 40 }, 38, "branch");              // cross diagonal
-  road3({ x: plaza.cx, y: plaza.cy }, { x: W - 60, y: H * 0.2 }, 26, "branch"); // branch toward top-right
-  if (n >= 6) road3({ x: plaza.cx, y: plaza.cy }, { x: 60, y: H * 0.5 }, 26, "branch");
-  if (n >= 9) {
-    roads.push({
-      kind: "loop",
-      width: 24,
-      points: [
-        { x: plaza.cx - 200 + j(20), y: plaza.cy - 160 + j(20) },
-        { x: plaza.cx + 220 + j(20), y: plaza.cy - 150 + j(20) },
-        { x: plaza.cx + 200 + j(20), y: plaza.cy + 180 + j(20) },
-        { x: plaza.cx - 210 + j(20), y: plaza.cy + 170 + j(20) },
-        { x: plaza.cx - 200 + j(20), y: plaza.cy - 160 },
-      ],
-    });
+  // Exclude blocks whose centre the river runs through.
+  const riverHitsBlock = (blk: Block) => {
+    const c = { x: blk.x + blk.w / 2, y: blk.y + blk.h / 2 };
+    for (let i = 0; i < riverPath.length - 1; i++) {
+      if (segDist(c, riverPath[i], riverPath[i + 1]) < RIVER_W / 2 + 24) return true;
+    }
+    return false;
+  };
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      if (excluded[r][c]) continue;
+      if (riverHitsBlock(block[r][c])) excluded[r][c] = true;
+    }
   }
 
-  // ── Obstacle test for a candidate footprint ──────────────────────────────
-  const border = 40;
+  // ── 6. Obstacle helpers (reused by trees/fences) ──────────────────────────
   const hitsRoad = (p: Pt, pad: number) => roads.some((rd) => {
     for (let i = 0; i < rd.points.length - 1; i++) {
       if (segDist(p, rd.points[i], rd.points[i + 1]) < rd.width / 2 + pad) return true;
@@ -209,39 +368,59 @@ export function buildTownPlan(
   const aabbOverlap = (a: { cx: number; cy: number; w: number; h: number }, b: typeof a, gap: number) =>
     Math.abs(a.cx - b.cx) < (a.w + b.w) / 2 + gap && Math.abs(a.cy - b.cy) < (a.h + b.h) / 2 + gap;
 
-  // ── Lots ─────────────────────────────────────────────────────────────────
+  // ── 7. Lots: plaza hearth FIRST, then subdivide remaining blocks ──────────
   const lots: TownPlanLot[] = [];
-  lots.push({ index: 0, cx: plaza.cx + j(8), cy: plaza.cy + plaza.ry * 0.5 + j(6), w: 104, h: 112, row: "plaza" });
+  lots.push({
+    index: 0,
+    cx: plaza.cx + j(8),
+    cy: plaza.cy + plaza.ry * 0.5 + j(6),
+    w: 104, h: 112, row: "plaza",
+  });
 
-  const quarters: Array<{ tag: string; x0: number; x1: number; y0: number; y1: number }> = [
-    { tag: "nw", x0: border + 80, x1: plaza.cx - 80, y0: border + 60, y1: plaza.cy - 60 },
-    { tag: "ne", x0: plaza.cx + 80, x1: W - border - 80, y0: border + 60, y1: plaza.cy - 60 },
-    { tag: "sw", x0: border + 80, x1: plaza.cx - 80, y0: plaza.cy + 60, y1: H - border - 80 },
-    { tag: "se", x0: plaza.cx + 80, x1: W - border - 80, y0: plaza.cy + 60, y1: H - border - 80 },
-  ];
-
-  for (let i = 1; i < n; i++) {
-    const q = quarters[(i - 1) % 4];
-    const w = 72 + Math.floor(rng() * 48);
-    const h = Math.max(72, Math.min(120, w + Math.floor(j(16))));
-    let best: TownPlanLot = { index: i, cx: (q.x0 + q.x1) / 2, cy: (q.y0 + q.y1) / 2, w, h, row: q.tag };
-    for (let attempt = 0; attempt < 24; attempt++) {
-      const cx = q.x0 + rng() * (q.x1 - q.x0);
-      const cy = q.y0 + rng() * (q.y1 - q.y0);
-      best = { index: i, cx, cy, w, h, row: q.tag };
-      const inBorder = cx - w / 2 > border && cx + w / 2 < W - border && cy - h / 2 > border && cy + h / 2 < H - border;
-      const ok = inBorder && !hitsRoad({ x: cx, y: cy }, w / 2) && !hitsWater(cx, cy, w, h)
-        && !hitsPlaza(cx, cy) && !hitsBoard(cx, cy, w, h)
-        && !lots.some((l) => aabbOverlap(best, l, 12));
-      if (ok) break;
+  const LOT_INSET = 12;
+  const LOT_FLOOR = 56; // readable mini-grid cell floor (after inset)
+  // Emit a single inset, aspect-clamped lot centred in a rectangle. Shared by
+  // the mini-grid path and the graceful-degradation (whole-block) fallback so
+  // both honour the same inset/aspect rules. Pure arithmetic — no rng draws.
+  const pushLot = (cx0: number, cy0: number, cw: number, ch: number, tag: string) => {
+    let w = cw - LOT_INSET * 2;
+    let h = ch - LOT_INSET * 2;
+    // Keep buildings roughly square (renderer anchors aspectRatio:1).
+    if (w > h * 1.3) w = h * 1.3;
+    if (h > w * 1.3) h = w * 1.3;
+    lots.push({ index: lotIndex++, cx: cx0 + cw / 2, cy: cy0 + ch / 2, w, h, row: tag });
+  };
+  let lotIndex = 1;
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      if (excluded[r][c]) continue;
+      const blk = block[r][c];
+      const bc = blk.w > 220 ? 2 : 1;
+      const brn = blk.h > 200 ? 2 : 1;
+      const cellW = blk.w / bc;
+      const cellH = blk.h / brn;
+      const tag = (r < pr ? "n" : "s") + (c < pc ? "w" : "e");
+      // If the mini-grid cells would fall below the readable floor, don't drop
+      // the whole block to zero lots — degrade gracefully to a SINGLE lot that
+      // fills the block (inset + aspect-clamped). This keeps total lot capacity
+      // ≥ n at any plotCount; the 56px floor only governs whether we subdivide,
+      // never whether a non-excluded block contributes at all.
+      if (cellW - LOT_INSET * 2 < LOT_FLOOR || cellH - LOT_INSET * 2 < LOT_FLOOR) {
+        pushLot(blk.x, blk.y, blk.w, blk.h, tag);
+        continue;
+      }
+      for (let mr = 0; mr < brn; mr++) {
+        for (let mc = 0; mc < bc; mc++) {
+          pushLot(blk.x + cellW * mc, blk.y + cellH * mr, cellW, cellH, tag);
+        }
+      }
     }
-    lots.push(best);
   }
 
-  // ── Trees ──────────────────────────────────────────────────────────────
+  // ── 8. Trees (biased toward leftover/dropped blocks, margins, corners) ────
   const trees: TownPlanTree[] = [];
   const clusterN = 3 + Math.floor(rng() * 4); // 3..6
-  for (let c = 0; c < clusterN; c++) {
+  for (let cl = 0; cl < clusterN; cl++) {
     let center: Pt = { x: W / 2, y: H / 2 };
     for (let attempt = 0; attempt < 16; attempt++) {
       const cx = border + rng() * (W - 2 * border);
@@ -256,15 +435,16 @@ export function buildTownPlan(
       if (trees.length >= 40) break;
       const x = center.x + j(40), y = center.y + j(40), r = 14 + Math.floor(rng() * 13);
       const front = lots.some((l) => Math.abs(x - l.cx) < l.w * 0.7 && l.cy <= y && y <= l.cy + l.h * 0.8);
-      trees.push({ x, y, r, cluster: c, front });
+      trees.push({ x, y, r, cluster: cl, front });
     }
     if (trees.length >= 40) break;
   }
 
-  // ── Fields (near farm board) ─────────────────────────────────────────────
+  // ── 9. Fields (in/adjacent to the farm board block) ───────────────────────
   const fields: TownPlanField[] = [];
   if (kinds.includes("farm")) {
-    const fb = BOARD_SPOTS.farm;
+    const farmBoard = boards.find((b) => b.kind === "farm");
+    const fb = farmBoard ?? { cx: W * 0.16, cy: H * 0.5 };
     const fieldN = 1 + Math.floor(rng() * 3); // 1..3
     for (let f = 0; f < fieldN; f++) {
       fields.push({
@@ -278,7 +458,7 @@ export function buildTownPlan(
     }
   }
 
-  // ── Fences (border a field or cluster) ───────────────────────────────────
+  // ── 10. Fences (border a field or cluster) ────────────────────────────────
   const fences: TownPlanFence[] = [];
   const fenceN = 1 + Math.floor(rng() * 2); // 1..2
   const anchors: Pt[] = fields.length
@@ -292,7 +472,7 @@ export function buildTownPlan(
     fences.push({ points: pts });
   }
 
-  // ── streets (back-compat 2-pt segments from road polylines) ──────────────
+  // ── 11. streets (back-compat 2-pt segments from road polylines) ───────────
   const streets: TownPlanStreet[] = [];
   for (const rd of roads) {
     for (let i = 0; i < rd.points.length - 1; i++) {
@@ -300,43 +480,64 @@ export function buildTownPlan(
     }
   }
 
-  // ── Waypoints / edges (connected graph) ──────────────────────────────────
+  // ── 12. Waypoints / edges = 4-connected grid lattice at intersections ─────
   const waypoints: TownPlanWaypoint[] = [];
   const edges: Array<[number, number]> = [];
   const wp = (x: number, y: number): number => { waypoints.push({ x, y }); return waypoints.length - 1; };
-  const plazaWp = wp(plaza.cx, plaza.cy + 6);
-  for (const rd of roads) {
-    const samples: number[] = [];
-    for (let i = 0; i < rd.points.length - 1; i++) {
-      const a = rd.points[i], b = rd.points[i + 1];
-      const dist = Math.hypot(b.x - a.x, b.y - a.y);
-      const steps = Math.max(1, Math.round(dist / 140));
-      for (let s = 0; s < steps; s++) {
-        const t = s / steps;
-        samples.push(wp(a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t));
-      }
+  // Lattice node at every (streetX[i] × streetY[k]) intersection. Index 0 lives
+  // at the top-left intersection and is part of the connected component.
+  const nx = streetX.length, ny = streetY.length;
+  const nodeAt: number[][] = Array.from({ length: ny }, () => Array(nx).fill(-1));
+  for (let yi = 0; yi < ny; yi++) {
+    for (let xi = 0; xi < nx; xi++) {
+      nodeAt[yi][xi] = wp(streetX[xi], streetY[yi]);
     }
-    samples.push(wp(rd.points[rd.points.length - 1].x, rd.points[rd.points.length - 1].y));
-    for (let i = 0; i < samples.length - 1; i++) edges.push([samples[i], samples[i + 1]]);
-    // Connect plaza to the nearest sample of this road.
-    let near = samples[0], bestD = Infinity;
-    for (const s of samples) {
-      const d = Math.hypot(waypoints[s].x - plaza.cx, waypoints[s].y - plaza.cy);
-      if (d < bestD) { bestD = d; near = s; }
+  }
+  // Connect each node to its right and down neighbour (4-connected lattice).
+  for (let yi = 0; yi < ny; yi++) {
+    for (let xi = 0; xi < nx; xi++) {
+      if (xi + 1 < nx) edges.push([nodeAt[yi][xi], nodeAt[yi][xi + 1]]);
+      if (yi + 1 < ny) edges.push([nodeAt[yi][xi], nodeAt[yi + 1][xi]]);
+    }
+  }
+  // Plaza waypoint connected to its nearest lattice intersection.
+  const plazaWp = wp(plaza.cx, plaza.cy + 6);
+  {
+    let near = nodeAt[0][0], bestD = Infinity;
+    for (let yi = 0; yi < ny; yi++) {
+      for (let xi = 0; xi < nx; xi++) {
+        const node = nodeAt[yi][xi];
+        const d = Math.hypot(waypoints[node].x - plaza.cx, waypoints[node].y - plaza.cy);
+        if (d < bestD) { bestD = d; near = node; }
+      }
     }
     edges.push([plazaWp, near]);
   }
 
-  // ── Props ────────────────────────────────────────────────────────────────
+  // ── 13. Props ─────────────────────────────────────────────────────────────
   const props: TownPlanProp[] = [
     { kind: "well", x: well.cx, y: well.cy },
-    { kind: "lamppost", x: plaza.cx - plaza.rx + 6, y: plaza.cy + 10 },
-    { kind: "lamppost", x: plaza.cx + plaza.rx - 6, y: plaza.cy + 10 },
     { kind: "signpost", x: plaza.cx + 70 + j(10), y: plaza.cy - plaza.ry - 20 },
     { kind: "cart", x: plaza.cx - 160 + j(20), y: plaza.cy + 140 },
     { kind: "planter", x: plaza.cx + 150 + j(20), y: plaza.cy - 120 },
   ];
+  // Lampposts at plaza-adjacent street intersections (2..4, deterministic).
+  {
+    const lampN = 2 + Math.floor(rng() * 3); // 2..4
+    const ordered: Array<{ x: number; y: number; d: number }> = [];
+    for (let yi = 0; yi < ny; yi++) {
+      for (let xi = 0; xi < nx; xi++) {
+        const x = streetX[xi], y = streetY[yi];
+        ordered.push({ x, y, d: Math.hypot(x - plaza.cx, y - plaza.cy) });
+      }
+    }
+    ordered.sort((a, b) => a.d - b.d);
+    for (let i = 0; i < Math.min(lampN, ordered.length); i++) {
+      props.push({ kind: "lamppost", x: ordered[i].x, y: ordered[i].y });
+    }
+  }
 
+  // ── 14. Return ────────────────────────────────────────────────────────────
   return {
     width: W, height: H,
     ground: { top: 0 },
