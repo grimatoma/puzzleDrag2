@@ -111,6 +111,7 @@ export function createFreshState(overrides?: { saveSeed?: string; tools?: Record
     },
     grid: Array.from({ length: 6 }, () => Array.from({ length: 6 }, () => ({ key: "tile_grass_hay" }))),
     _biomeRestored: false,
+    _boardNonce: 0,
     lastChainSnapshot: null,
     magicFertilizerCharges: 0,
     built: { home: { decorations: {}, _plots: {} } },

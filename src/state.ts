@@ -629,10 +629,12 @@ function coreReducer(state: GameState, action: Action): GameState {
         key === "fish" ? state.fish :
         undefined;
       const savedField = (biomeSlot?.savedField ?? null) as { tiles?: Grid } | null;
-      let boardPatch: { grid?: Grid } = {};
-      if (savedField && savedField.tiles) {
-        boardPatch = { grid: savedField.tiles };
-      }
+      const restoring = !!(savedField && savedField.tiles);
+      // Restoring a saved field reinstates its tiles; otherwise bump the
+      // board-regen nonce so the scene generates a fresh board for this biome.
+      const boardPatch: { grid?: Grid; _boardNonce?: number } = restoring
+        ? { grid: savedField!.tiles }
+        : { _boardNonce: (state._boardNonce ?? 0) + 1 };
       const excludeNpcs: string[] = [];
       const excludeKeys: string[] = [];
       const replacements = (state.orders ?? []).map(() => {
@@ -641,7 +643,7 @@ function coreReducer(state: GameState, action: Action): GameState {
         excludeKeys.push(o.key);
         return o;
       });
-      return { ...state, biome: key, biomeKey: key, orders: replacements, turnsUsed: 0, _biomeRestored: !!(savedField && savedField.tiles), ...boardPatch };
+      return { ...state, biome: key, biomeKey: key, orders: replacements, turnsUsed: 0, _biomeRestored: restoring, ...boardPatch };
     }
     case "SET_VIEW": {
       const next = action.view;
@@ -1053,6 +1055,11 @@ function coreReducer(state: GameState, action: Action): GameState {
         biome: "farm",
         view: "board",
         viewParams: {},
+        // A new farm session always starts on a fresh board. biomeKey stays
+        // "farm" so the scene's biomeKey-change regen never fires here — bump
+        // the board nonce to signal "generate a new board" instead.
+        _boardNonce: (state._boardNonce ?? 0) + 1,
+        _biomeRestored: false,
         coins: state.coins - entryCoins,
         tools: useFertilizer
           ? { ...state.tools, fertilizer: fertilizerStock - 1 }

@@ -179,6 +179,10 @@ function PhaserMount({ dispatch, biomeKey, turnsUsed, uiLocked, boardActive, sce
               setRegistry(game.registry, "sessionSelectedTiles", (gameState?.session?.selectedTiles ?? []) as readonly string[]);
               // Phase 3 — seed the active zone for the chain-upgrade redirect.
               setRegistry(game.registry, "activeZone", gameState?.activeZone ?? gameState?.mapCurrent ?? "home");
+              // Seed the board-regen nonce so the first React sync below sets
+              // the same value (no changedata event) — a save-restore mount
+              // must NOT trigger a regenerate over the restored board.
+              setRegistry(game.registry, "newBoardNonce", gameState?._boardNonce ?? 0);
               // Reload restoration: pass the saved board grid so GameScene can
               // apply it over the initial random fill when continuing a session.
               if ((gameState?.farmRun?.turnsRemaining ?? 0) > 0) {
@@ -281,6 +285,10 @@ function PhaserMount({ dispatch, biomeKey, turnsUsed, uiLocked, boardActive, sce
   useEffect(() => { setRegistry(gameRef.current?.registry, "grid", grid ?? null); }, [grid]);
   // Sync biomeRestored flag so GameScene.handleBiomeChange can skip randomize when savedField restored
   useEffect(() => { setRegistry(gameRef.current?.registry, "biomeRestored", gameState?._biomeRestored ?? false); }, [gameState?._biomeRestored]);
+  // Sync the board-regen nonce. Placed after the biomeKey / activeZone /
+  // sessionSelectedTiles / tileCollection effects so the scene's regenerate
+  // (fired synchronously when this value changes) sees an up-to-date pool.
+  useEffect(() => { setRegistry(gameRef.current?.registry, "newBoardNonce", gameState?._boardNonce ?? 0); }, [gameState?._boardNonce]);
   // Sync boss modifier flags so GameScene.fillBoard can apply spawnBias
   useEffect(() => { setRegistry(gameRef.current?.registry, "boss", gameState?.boss ?? null); }, [gameState?.boss]);
   // V.3 — Sync inventory and cap so GameScene.collectPath can compute actual gain for float text
