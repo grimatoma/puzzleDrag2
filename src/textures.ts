@@ -128,8 +128,8 @@ export function regenerateTextures(scene: Phaser.Scene) {
           rr(ctx, 7, 5, w - 14, h - 14, 14);
           const baseColor = hex(tileColor);
           const tileGrad = ctx.createRadialGradient(w / 2 - 8, h / 2 - 12, 4, w / 2, h / 2, w / 2);
-          tileGrad.addColorStop(0, lighten(baseColor, 0.25));
-          tileGrad.addColorStop(1, baseColor);
+          tileGrad.addColorStop(0, lighten(baseColor, 0.50));
+          tileGrad.addColorStop(1, lighten(baseColor, 0.18));
           ctx.fillStyle = tileGrad;
           ctx.fill();
           if (selected) {
@@ -256,8 +256,8 @@ export function makeTextures(scene: Phaser.Scene) {
           // Subtle radial backing for the icon tile
           const tileGrad = ctx.createRadialGradient(w / 2 - 8, h / 2 - 12, 4, w / 2, h / 2, w / 2);
           const baseColor = hex(tileColor);
-          tileGrad.addColorStop(0, lighten(baseColor, 0.25));
-          tileGrad.addColorStop(1, baseColor);
+          tileGrad.addColorStop(0, lighten(baseColor, 0.50));
+          tileGrad.addColorStop(1, lighten(baseColor, 0.18));
           ctx.fillStyle = tileGrad;
           ctx.fill();
           if (selected) {
