@@ -15,7 +15,7 @@ The reference quality bar is the **forge** (`/iso/?building=forge`). Match it.
 | forge | N | -64 -100 128 116 | brick smithy, glowing furnace + anvil, slate hip roof; furnace flicker, embers, lantern, smoke | **approved** | #714/#715 | Reference building. |
 | lighthouse | S | -80 -144 160 160 | tall tapered tower + lamp room, rotating beam, sea; beam sweep, waves/splash, lamp glow | **approved** | #721 | Calibration (tall). Cylinder = curved stripe bands + lit/shade roundness gradient; rotating beam, ripple rings, foam, portholes, bobbing dinghy. |
 | barn | L | -64 -108 128 124 | big gambrel roof, hayloft door, red boards; doors, hay, weather-vane | **approved** | #722 | Calibration (large). Ridge along +gx so the gambrel gable (X-brace doors + loft) faces lit SE; steep-lower/shallow-upper pitch break. Hay-dust bob, weather-vane spin, fence. |
-| bakery | N | -54 -90 108 106 | oven mouth glow, bread sign, chimney; oven flicker, steam/smoke | todo | — | Calibration batch (normal). |
+| bakery | N | -54 -90 108 106 | oven mouth glow, bread sign, chimney; oven flicker, steam/smoke | **approved** | #723 | Calibration (normal). Same footprint/scale as forge; differentiated by plaster walls + terracotta hip roof + glowing oven hero, bread sill, pretzel sign, chimney smoke, oven steam. |
 | hearth | S | -50 -88 100 104 | central fireplace/hearth glow; fire flicker, smoke | todo | — | |
 | mill | L | -70 -124 140 140 | watermill/windmill with rotating sails; windmill, pollen, smoke | todo | — | |
 | inn | N | -60 -108 120 124 | multi-storey lodge, sign, warm windows; sign sway, smoke | todo | — | |
