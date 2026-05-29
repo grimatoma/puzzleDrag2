@@ -16,7 +16,9 @@ describe("townLayout.ts - buildTownPlan (top-down map)", () => {
 
     expect(plan1.width).toBe(W);
     expect(plan1.height).toBe(H);
-    expect(plan1.lots).toHaveLength(12); // default plotCount
+    // Every buildable grid cell is a plot, so the count is at least the
+    // requested plotCount (a little more for the surplus cells the grid yields).
+    expect(plan1.lots.length).toBeGreaterThanOrEqual(12); // default plotCount
     expect(plan1.ground.top).toBe(0);
   });
 
@@ -34,13 +36,15 @@ describe("townLayout.ts - buildTownPlan (top-down map)", () => {
     expect(forest.lots).not.toEqual(mountain.lots);
   });
 
-  it("adjusts lot count and keeps every lot in-bounds; the town centre has no building lot", () => {
-    expect(buildTownPlan({ plotCount: 0 }).lots).toHaveLength(1); // clamped to >=1
-    expect(buildTownPlan({ plotCount: 1 }).lots).toHaveLength(1);
-    expect(buildTownPlan({ plotCount: 12 }).lots).toHaveLength(12);
+  it("makes every buildable grid cell a plot (no trimmed/dead cells) and keeps them in-bounds", () => {
+    // Plot count = number of buildable cells (≥ the requested plotCount); every
+    // grid square is buildable, so no row is left empty.
+    expect(buildTownPlan({ plotCount: 0 }).lots.length).toBeGreaterThanOrEqual(1); // clamped to >=1
+    expect(buildTownPlan({ plotCount: 1 }).lots.length).toBeGreaterThanOrEqual(1);
+    expect(buildTownPlan({ plotCount: 12 }).lots.length).toBeGreaterThanOrEqual(12);
 
     const big = buildTownPlan({ plotCount: 40 });
-    expect(big.lots).toHaveLength(40);
+    expect(big.lots.length).toBeGreaterThanOrEqual(40);
 
     for (const plan of [buildTownPlan({ plotCount: 1 }), big]) {
       for (const lot of plan.lots) {
@@ -64,15 +68,14 @@ describe("townLayout.ts - buildTownPlan (top-down map)", () => {
     }
   });
 
-  it("does not collapse to a single lot at extreme plotCount (graceful degradation)", () => {
-    // One uniform building lot per non-excluded block. Exact n is not guaranteed
-    // at the extreme (the diagonal river excludes whole blocks, and slice(0,n)
-    // only trims surplus), but the realised count must stay well above 1.
+  it("scales to extreme plotCount without collapsing or ballooning (graceful degradation)", () => {
+    // One uniform building lot per non-excluded block, every cell buildable. The
+    // count tracks n (a little above, since the grid carries surplus cells) and
+    // never collapses to a handful.
     for (const n of [90, 100, 120, 150, 200]) {
       const plan = buildTownPlan({ plotCount: n });
-      // Never collapses; for these grids the realised count sits just under n.
-      expect(plan.lots.length).toBeGreaterThan(n * 0.8);
-      expect(plan.lots.length).toBeLessThanOrEqual(n);
+      expect(plan.lots.length).toBeGreaterThanOrEqual(n);
+      expect(plan.lots.length).toBeLessThan(n * 1.6);
       // Every lot is a building lot carrying a quarter tag (no plaza lot).
       expect(plan.lots.every((l) => ["nw", "ne", "sw", "se"].includes(l.row))).toBe(true);
       // Every lot stays inside the design space at the extreme too.
@@ -186,13 +189,16 @@ describe("townLayout.ts - buildTownPlan (top-down map)", () => {
     }
   });
 
-  it("emits an axis-aligned front path from each non-plaza lot to its street", () => {
+  it("emits an axis-aligned front path that never exits above the building", () => {
     const plan = buildTownPlan({ plotCount: 12 });
     expect(plan.paths.length).toBeGreaterThan(0);
     for (const p of plan.paths) {
       const axisAligned = Math.abs(p.x1 - p.x2) < 1e-6 || Math.abs(p.y1 - p.y2) < 1e-6;
       expect(axisAligned).toBe(true);
       expect(p.width).toBeGreaterThan(0);
+      // Buildings grow upward from their lot base, so a path must run downward
+      // (front) or sideways — never up toward a street above the roof.
+      expect(p.y2).toBeGreaterThanOrEqual(p.y1 - 1e-6);
     }
   });
 
