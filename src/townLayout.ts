@@ -414,7 +414,7 @@ export function buildTownPlan(
     }
   }
 
-  // ── 7. Lots: plaza hearth FIRST, then ONE uniform lot per non-excluded block ─
+  // ── 7. Lots: ONE uniform building lot per non-excluded block (no plaza lot) ──
   // Every building lot is the SAME size and SQUARE. We pick a single global side
   // that fits the SMALLEST non-excluded cell in BOTH axes (minus a grass-verge
   // MARGIN to each street), capped at MAX_LOT, then centre that identical lot in
@@ -445,15 +445,13 @@ export function buildTownPlan(
   const LOT = clampLot(Math.min(minCellW - 2 * MARGIN, minCellH - 2 * MARGIN));
   const LOT_W = LOT, LOT_H = LOT;
 
+  // The town centre is civic space — the cobbled plaza + well only, with NO
+  // building lot. (Consume the two jitter values the old central hearth lot drew
+  // so the downstream rng stream — trees/fields/fences/lamps — stays aligned.)
+  j(8); j(6);
   const lots: TownPlanLot[] = [];
-  lots.push({
-    index: 0,
-    cx: plaza.cx + j(8),
-    cy: plaza.cy + plaza.ry * 0.5 + j(6),
-    w: 104, h: 112, row: "plaza",
-  });
 
-  let lotIndex = 1;
+  let lotIndex = 0;
   for (let r = 0; r < rows; r++) {
     for (let c = 0; c < cols; c++) {
       if (excluded[r][c]) continue;

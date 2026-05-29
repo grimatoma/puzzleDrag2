@@ -34,14 +34,13 @@ describe("townLayout.ts - buildTownPlan (top-down map)", () => {
     expect(forest.lots).not.toEqual(mountain.lots);
   });
 
-  it("adjusts lot count and keeps every lot in-bounds; lot0 is the plaza hearth", () => {
+  it("adjusts lot count and keeps every lot in-bounds; the town centre has no building lot", () => {
     expect(buildTownPlan({ plotCount: 0 }).lots).toHaveLength(1); // clamped to >=1
     expect(buildTownPlan({ plotCount: 1 }).lots).toHaveLength(1);
     expect(buildTownPlan({ plotCount: 12 }).lots).toHaveLength(12);
 
     const big = buildTownPlan({ plotCount: 40 });
     expect(big.lots).toHaveLength(40);
-    expect(big.lots[0].row).toBe("plaza");
 
     for (const plan of [buildTownPlan({ plotCount: 1 }), big]) {
       for (const lot of plan.lots) {
@@ -51,14 +50,13 @@ describe("townLayout.ts - buildTownPlan (top-down map)", () => {
         expect(lot.cy).toBeLessThanOrEqual(H);
       }
     }
-    // Non-hearth lots carry a quarter tag.
-    expect(big.lots.slice(1).every((l) => ["nw", "ne", "sw", "se"].includes(l.row))).toBe(true);
+    // Every lot is a building lot carrying a quarter tag (no plaza lot).
+    expect(big.lots.every((l) => ["nw", "ne", "sw", "se"].includes(l.row))).toBe(true);
   });
 
-  it("emits uniform equal-size building lots (all non-plaza lots share w and h)", () => {
+  it("emits uniform equal-size building lots (all lots share w and h)", () => {
     for (const plotCount of [12, 40]) {
-      const plan = buildTownPlan({ plotCount });
-      const building = plan.lots.slice(1); // drop the plaza hearth (lot 0)
+      const building = buildTownPlan({ plotCount }).lots;
       expect(building.length).toBeGreaterThan(0);
       const { w, h } = building[0];
       expect(building.every((l) => l.w === w)).toBe(true);
@@ -67,21 +65,16 @@ describe("townLayout.ts - buildTownPlan (top-down map)", () => {
   });
 
   it("does not collapse to a single lot at extreme plotCount (graceful degradation)", () => {
-    // Regression: the lot loop once discarded any subdivided cell below a 56px
-    // floor. At very high plotCount every cell fell below it, so EVERY block was
-    // dropped and the plan collapsed to just the 1 plaza lot. The fix degrades a
-    // too-small block to a SINGLE whole-block lot instead of discarding it, so
-    // every non-excluded block still contributes. Exact n is not guaranteed at
-    // the extreme (the diagonal river excludes whole blocks, and slice(0,n) only
-    // trims surplus), but the count must stay far above the old failure of 1.
+    // One uniform building lot per non-excluded block. Exact n is not guaranteed
+    // at the extreme (the diagonal river excludes whole blocks, and slice(0,n)
+    // only trims surplus), but the realised count must stay well above 1.
     for (const n of [90, 100, 120, 150, 200]) {
       const plan = buildTownPlan({ plotCount: n });
       // Never collapses; for these grids the realised count sits just under n.
       expect(plan.lots.length).toBeGreaterThan(n * 0.8);
       expect(plan.lots.length).toBeLessThanOrEqual(n);
-      // Lot 0 is still the plaza hearth; the rest carry quarter tags.
-      expect(plan.lots[0].row).toBe("plaza");
-      expect(plan.lots.slice(1).every((l) => ["nw", "ne", "sw", "se"].includes(l.row))).toBe(true);
+      // Every lot is a building lot carrying a quarter tag (no plaza lot).
+      expect(plan.lots.every((l) => ["nw", "ne", "sw", "se"].includes(l.row))).toBe(true);
       // Every lot stays inside the design space at the extreme too.
       for (const lot of plan.lots) {
         expect(lot.cx).toBeGreaterThanOrEqual(0);
