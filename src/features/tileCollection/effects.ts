@@ -1,5 +1,5 @@
 import { TILE_TYPES, TILE_TYPES_MAP, CATEGORY_OF } from "./data.js";
-import { BIOMES } from "../../constants.js";
+import { BIOMES, BUILDINGS } from "../../constants.js";
 import type { GameState } from "../../types/state.js";
 
 interface TileTypeDiscovery {
@@ -10,6 +10,14 @@ interface TileTypeDiscovery {
   researchAmount?: number;
   coinCost?: number;
   day?: number;
+  buildingId?: string;
+}
+
+/** Human-readable building name for a building id (falls back to the id). */
+function buildingName(id: string | undefined): string {
+  if (!id) return "a building";
+  const b = (BUILDINGS as ReadonlyArray<{ id: string; name: string }>).find((x) => x.id === id);
+  return b?.name ?? id;
 }
 
 interface TileTypeDef {
@@ -50,6 +58,38 @@ export function discoverTileTypesFromChain(state: GameState, { resourceKey, chai
     return { discoveredIds: [], newDiscoveredMap: known };
   }
   // Stable order: tier ascending, then id alphabetical
+  ids.sort((a, b) => {
+    const ta = typesMap[a];
+    const tb = typesMap[b];
+    return ((ta?.tier ?? 0) - (tb?.tier ?? 0)) || (a < b ? -1 : a > b ? 1 : 0);
+  });
+  const newDiscoveredMap: Record<string, boolean> = { ...known };
+  for (const id of ids) newDiscoveredMap[id] = true;
+  return { discoveredIds: ids, newDiscoveredMap };
+}
+
+// ─── Own-a-building discovery ──────────────────────────────────────────────
+
+/**
+ * Pure function: checks every `building`-method tile type against the building
+ * the player just built (or owns). Returns the same shape as
+ * `discoverTileTypesFromChain` so the BUILD reducer can fold it in identically.
+ */
+export function discoverTileTypesFromBuilding(state: GameState, buildingId: string): { discoveredIds: string[]; newDiscoveredMap: Record<string, boolean> } {
+  const known: Record<string, boolean> = state.tileCollection?.discovered ?? {};
+  if (!buildingId) return { discoveredIds: [], newDiscoveredMap: known };
+  const ids: string[] = [];
+  const typesMap = TILE_TYPES_MAP as Record<string, TileTypeDef>;
+  for (const t of TILE_TYPES as TileTypeDef[]) {
+    if (t.discovery?.method !== "building") continue;
+    if (t.discovery.buildingId !== buildingId) continue;
+    if (known[t.id]) continue;
+    ids.push(t.id);
+  }
+  if (ids.length === 0) {
+    return { discoveredIds: [], newDiscoveredMap: known };
+  }
+  // Stable order: tier ascending, then id alphabetical (mirrors chain discovery).
   ids.sort((a, b) => {
     const ta = typesMap[a];
     const tb = typesMap[b];
@@ -139,6 +179,7 @@ function statusFor(state: GameState, t: TileTypeDef): string {
     if (d.method === "research") return `Discovered — researched ${displayKey(d.researchOf ?? "")}`;
     if (d.method === "buy") return "Discovered — purchased";
     if (d.method === "daily") return `Discovered — Day ${d.day} daily reward`;
+    if (d.method === "building") return `Discovered — built the ${buildingName(d.buildingId)}`;
   }
 
   // Not yet discovered
@@ -154,6 +195,9 @@ function statusFor(state: GameState, t: TileTypeDef): string {
   }
   if (d.method === "daily") {
     return `Locked — Day ${d.day} daily reward`;
+  }
+  if (d.method === "building") {
+    return `Locked — build the ${buildingName(d.buildingId)}`;
   }
   return "Locked";
 }
@@ -250,6 +294,9 @@ export function getTileDetailViewModel(state: GameState, tileId: string): TileDe
   } else if (d.method === "daily") {
     action = "daily";
     actionLabel = `Day ${d.day} reward`;
+  } else if (d.method === "building") {
+    action = "building";
+    actionLabel = `Build the ${buildingName(d.buildingId)}`;
   }
 
   return {

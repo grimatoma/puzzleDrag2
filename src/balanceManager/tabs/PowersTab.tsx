@@ -13,7 +13,7 @@
 import { useState, useMemo } from "react";
 import type { ReactNode } from "react";
 import { TILE_TYPES, TILE_TYPES_MAP, CATEGORIES } from "../../features/tileCollection/data.js";
-import { BIOMES, ITEMS, getItem, tileFamilyResource } from "../../constants.js";
+import { BIOMES, BUILDINGS, ITEMS, getItem, tileFamilyResource } from "../../constants.js";
 import {
   COLORS, NumberField, TextField, TextArea, Select, ColorField,
   SmallButton, Pill, Card, SearchBar, TileSwatch,
@@ -64,6 +64,12 @@ function resourceKeyOptions(includeNone = false) {
   return [{ value: "", label: "— pick resource —" }, ...opts];
 }
 
+function buildingKeyOptions() {
+  const opts = (BUILDINGS as ReadonlyArray<{ id: string; name: string }>)
+    .map((b) => ({ value: b.id, label: `${b.name} (${b.id})` }));
+  return [{ value: "", label: "— pick building —" }, ...opts];
+}
+
 // Build the produces-resource options for a specific tile. The empty-value
 // (no override) entry is labelled with that tile's family-default resource so
 // the user can see what "leave unset" actually produces.
@@ -97,6 +103,7 @@ export default function PowersTab({ draft, updateDraft }: TabProps) {
   const [selectedTile, setSelectedTile] = useState<string>(TILE_TYPES[0]?.id);
 
   const sourceOptions = useMemo(() => resourceKeyOptions(), []);
+  const buildingOptions = useMemo(() => buildingKeyOptions(), []);
   // Base chain target — a tile chains into another tile or a resource.
   const chainTargetOptions = useMemo(() => {
     const keys = Object.keys(ITEMS)
@@ -412,6 +419,18 @@ export default function PowersTab({ draft, updateDraft }: TabProps) {
                           <Select
                             value={effDiscovery[p.key] ?? ""}
                             options={sourceOptions}
+                            onChange={(v: string) => patchUnlock(selected.id, { [p.key]: v })}
+                          />
+                        </div>
+                      );
+                    }
+                    if (p.type === "buildingKey") {
+                      return (
+                        <div key={p.key}>
+                          <Label>{p.label}</Label>
+                          <Select
+                            value={effDiscovery[p.key] ?? ""}
+                            options={buildingOptions}
                             onChange={(v: string) => patchUnlock(selected.id, { [p.key]: v })}
                           />
                         </div>
