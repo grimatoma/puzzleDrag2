@@ -7,7 +7,8 @@ import BiomePicker from "../features/zones/BiomePicker.jsx";
 import StartFarmingModal from "../features/zones/StartFarmingModal.jsx";
 import BiomeEntryModal from "../features/zones/BiomeEntryModal.jsx";
 import { canEnterBiome } from "../state/biomeAccess.js";
-import { buildTownPlan } from "../townLayout.js";
+import { buildTownPlan, STAGE_W, STAGE_H } from "../townLayout.js";
+import { TransformWrapper, TransformComponent, useControls } from "react-zoom-pan-pinch";
 import TownGround from "./TownGround.jsx";
 import TownVillagers from "./TownVillagers.jsx";
 import Icon from "./Icon.jsx";
@@ -237,6 +238,73 @@ function Cloud({ top, w, h, color, anim, breatheDur }: CloudProps) {
   );
 }
 
+// Vertical cluster of zoom controls. Rendered inside <TransformWrapper> but
+// OUTSIDE <TransformComponent>, so it stays fixed over the panning world.
+function ZoomControls() {
+  const { zoomIn, zoomOut, resetTransform } = useControls();
+  const btn =
+    "w-9 h-9 grid place-items-center rounded-full font-bold text-[18px] leading-none bg-white/90 text-[#2b2218] border-2 border-white shadow-lg hover:bg-white transition-colors";
+  return (
+    <div className="absolute left-4 bottom-[10%] z-30 flex flex-col gap-2">
+      <button type="button" className={btn} aria-label="Zoom in" onClick={() => zoomIn()}>＋</button>
+      <button type="button" className={btn} aria-label="Zoom out" onClick={() => zoomOut()}>−</button>
+      <button type="button" className={btn} aria-label="Reset view" onClick={() => resetTransform()}>⟳</button>
+    </div>
+  );
+}
+
+// The pan/zoom "stage". Measures its container to compute a fit-to-viewport
+// scale (so the whole STAGE_W×STAGE_H town frames on load), then renders the
+// world inside a fixed-aspect box so it scales uniformly — never stretches.
+function TownStage({ children }: { children: ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null);
+  // `fit` is the fit-to-contain scale (whole town visible). We open at `fit`
+  // so the entire settlement — including the farm/mine/harbor fixtures in the
+  // far wings — is framed and tappable on load; the player zooms in (up to
+  // maxScale) to inspect individual buildings. Opening pre-zoomed would centre
+  // the wider stage and push those edge fixtures off-screen.
+  const [fit, setFit] = useState(0);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const update = () => {
+      const cw = el.clientWidth, ch = el.clientHeight;
+      if (cw && ch) setFit(Math.min(cw / STAGE_W, ch / STAGE_H));
+    };
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  // Quantize so minor resizes don't thrash the remount that re-frames the town.
+  const stageKey = Math.round(fit * 200);
+  return (
+    <div ref={ref} className="absolute inset-0">
+      {fit > 0 && (
+        <TransformWrapper
+          key={stageKey}
+          minScale={fit}
+          maxScale={fit * 3}
+          initialScale={fit}
+          centerOnInit
+          centerZoomedOut
+          limitToBounds
+          doubleClick={{ mode: "zoomIn", step: 0.7 }}
+          wheel={{ step: 0.12 }}
+        >
+          <TransformComponent
+            wrapperStyle={{ width: "100%", height: "100%" }}
+            contentStyle={{ width: STAGE_W, height: STAGE_H, position: "relative" }}
+          >
+            {children}
+          </TransformComponent>
+          <ZoomControls />
+        </TransformWrapper>
+      )}
+    </div>
+  );
+}
+
 export function TownView({ state, dispatch }: { state: GameState; dispatch: Dispatch }) {
   const [entryBiome, setEntryBiome] = useState<string | null>(null);
   const [purchaseBuilding, setPurchaseBuilding] = useState<PendingBuilding | null>(null);
@@ -377,14 +445,33 @@ export function TownView({ state, dispatch }: { state: GameState; dispatch: Disp
       <Cloud top={76}  w={72}  h={20} color={cc(0.50)} anim="townCloudC 145s linear -115s infinite" breatheDur={10} />
       <Cloud top={52}  w={104} h={28} color={cc(0.42)} anim="townCloudA 240s linear -170s infinite" breatheDur={13} />
 
+      {/* Pan/zoom world — hills, ground plan, board fixtures and buildings all
+          scale uniformly together inside a fixed-aspect stage box. The sky
+          layers above and the UI overlays below stay fixed. */}
+      <TownStage>
       {/* Biome-specific terrain */}
-      <svg className="absolute inset-0 w-full h-full" viewBox="0 0 1100 600" preserveAspectRatio="none">
-        <path d={hill1Path} fill={theme.hill1} opacity="0.75" />
-        <path d={hill2Path} fill={theme.hill2} opacity="0.6" />
-
-        {biomeVariant === "farm" && <FarmTerrainDecor />}
-        {biomeVariant === "mine" && <MineTerrainDecor />}
-
+      <svg className="absolute inset-0 w-full h-full" viewBox={`0 0 ${STAGE_W} ${STAGE_H}`} preserveAspectRatio="xMidYMid meet">
+        {/* Hill art + terrain decor are authored for the old 0..1100 space;
+            stretch them horizontally to fill the wider stage. */}
+        <g transform={`scale(${STAGE_W / 1100}, 1)`}>
+          <path d={hill1Path} fill={theme.hill1} opacity="0.55" />
+          <path d={hill2Path} fill={theme.hill2} opacity="0.45" />
+          {biomeVariant === "farm" && <FarmTerrainDecor />}
+          {biomeVariant === "mine" && <MineTerrainDecor />}
+        </g>
+        {/* Atmospheric haze straddling the hill bases — fades distant hills
+            into the floor so the horizon recedes rather than cutting a hard
+            band behind the rooftops. Sibling to the scaled <g> so it spans the
+            full STAGE_W un-stretched; sky-tinted low alpha reads OK on both the
+            warm (farm/home) and gray (mine) themes. */}
+        <defs>
+          <linearGradient id="town-horizon-haze" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="rgba(255,255,255,0)" />
+            <stop offset="50%" stopColor="rgba(255,255,255,0.28)" />
+            <stop offset="100%" stopColor="rgba(255,255,255,0)" />
+          </linearGradient>
+        </defs>
+        <rect x={0} y={230} width={STAGE_W} height={100} fill="url(#town-horizon-haze)" />
       </svg>
 
       {/* Town plan — paved plaza, street network, lot pads, street furniture.
@@ -392,29 +479,10 @@ export function TownView({ state, dispatch }: { state: GameState; dispatch: Disp
           settlement in a valley. Buildings (below) are positioned onto its lots. */}
       <TownGround plan={townPlan} theme={theme} biomeVariant={biomeVariant} builtLots={builtLotIndices} />
 
-      {/* Header */}
-      <div className="absolute top-3 left-4 landscape:max-[1024px]:top-2 landscape:max-[1024px]:left-3 font-bold text-[20px] landscape:max-[1024px]:text-[15px]" style={{ color: theme.textColor }}>{locationName}</div>
-      <div className="absolute top-3 right-4 landscape:max-[1024px]:top-2 landscape:max-[1024px]:right-3 flex items-center gap-2 z-10">
-        {/* Boons shortcut — only visible once the player has faced any keeper. */}
-        {Object.keys(state.story?.flags ?? {}).some((k) => k.startsWith("keeper_") && (k.endsWith("_coexist") || k.endsWith("_driveout")) && (state.story.flags as Record<string, unknown>)[k]) && (
-          <button
-            type="button"
-            onClick={() => dispatch({ type: "SET_VIEW", view: "boons" })}
-            className="bg-white/85 px-3 py-1.5 landscape:max-[1024px]:px-2 landscape:max-[1024px]:py-1 rounded-full font-bold text-[#2b2218] landscape:max-[1024px]:text-[13px] hover:bg-white transition-colors"
-            title="Spend Embers / Core Ingots on per-path boons"
-          >
-            ✨ Boons
-          </button>
-        )}
-      </div>
-
-      {/* "Found this settlement" CTA — only renders for visited-but-unfounded settleable zones. */}
-      <FoundSettlementBanner state={state} dispatch={dispatch} />
-
       {/* Puzzle-board fixtures — the farm field, mine entrance and harbor now
           sit on lots in the town's wings (from townPlan.boards) rather than
-          floating in the corners. Same 1100×600 placement convention as the
-          building illustrations below. */}
+          floating in the corners. Same STAGE_W×STAGE_H placement convention as
+          the building illustrations below. */}
       <div className="absolute inset-0 pointer-events-none">
         {(townPlan.boards || []).map((b) => {
           const meta = BOARD_META[b.kind];
@@ -430,9 +498,9 @@ export function TownView({ state, dispatch }: { state: GameState; dispatch: Disp
               disabled={locked}
               className="absolute cursor-pointer group pointer-events-auto flex flex-col items-center bg-transparent border-0 p-0 focus-visible:outline-2 focus-visible:outline-[#ffd248] focus-visible:rounded disabled:cursor-not-allowed"
               style={{
-                left: `${((b.cx - b.w / 2) / 1100) * 100}%`,
-                bottom: `${((600 - (b.cy + b.h / 2)) / 600) * 100}%`,
-                width: `${(b.w / 1100) * 100}%`,
+                left: `${((b.cx - b.w / 2) / STAGE_W) * 100}%`,
+                bottom: `${((STAGE_H - (b.cy + b.h / 2)) / STAGE_H) * 100}%`,
+                width: `${(b.w / STAGE_W) * 100}%`,
                 aspectRatio: "1",
                 opacity: locked ? 0.7 : 1,
               }}
@@ -455,10 +523,10 @@ export function TownView({ state, dispatch }: { state: GameState; dispatch: Disp
         })}
       </div>
 
-      {/* Plots + buildings positioned in the 1100x600 design space, scaled to viewport */}
+      {/* Plots + buildings positioned in the STAGE_W×STAGE_H design space, scaled to viewport */}
       {/* isolation:isolate creates a stacking context so per-building zIndex (derived from y, up to ~700) doesn't escape and cover modals/tooltips. */}
       <div className="absolute inset-0 pointer-events-none" style={{ isolation: "isolate" }}>
-        <svg viewBox="0 0 1100 600" preserveAspectRatio="none" className="w-full h-full" style={{ position: "absolute", inset: 0, pointerEvents: "none" }} />
+        <svg viewBox={`0 0 ${STAGE_W} ${STAGE_H}`} preserveAspectRatio="xMidYMid meet" className="w-full h-full" style={{ position: "absolute", inset: 0, pointerEvents: "none" }} />
         <div className="absolute pointer-events-none" style={{ left: 0, right: 0, top: 0, bottom: 0 }}>
           {/* Townsfolk walking the streets (depth-sorted with buildings via z-index) */}
           <TownVillagers key={mapCurrent} plan={townPlan} buildings={plotById} workers={state.workers} />
@@ -486,9 +554,9 @@ export function TownView({ state, dispatch }: { state: GameState; dispatch: Disp
                 key={slot.idx}
                 className="absolute pointer-events-auto"
                 style={{
-                  left: `${(slot.x / 1100) * 100}%`,
-                  bottom: `${((600 - slot.y - slot.h) / 600) * 100}%`,
-                  width: `${(slot.w / 1100) * 100}%`,
+                  left: `${(slot.x / STAGE_W) * 100}%`,
+                  bottom: `${((STAGE_H - slot.y - slot.h) / STAGE_H) * 100}%`,
+                  width: `${(slot.w / STAGE_W) * 100}%`,
                   aspectRatio: "1",
                   cursor: isBuilt && CRAFTING_STATIONS.has(b.id) ? "pointer" : isPlacing ? "pointer" : "default",
                   zIndex: Math.floor(slot.y + slot.h),
@@ -520,6 +588,26 @@ export function TownView({ state, dispatch }: { state: GameState; dispatch: Disp
           })}
         </div>
       </div>
+      </TownStage>
+
+      {/* Header — fixed overlay, not part of the pan/zoom world. */}
+      <div className="absolute top-3 left-4 landscape:max-[1024px]:top-2 landscape:max-[1024px]:left-3 font-bold text-[20px] landscape:max-[1024px]:text-[15px] z-10" style={{ color: theme.textColor }}>{locationName}</div>
+      <div className="absolute top-3 right-4 landscape:max-[1024px]:top-2 landscape:max-[1024px]:right-3 flex items-center gap-2 z-10">
+        {/* Boons shortcut — only visible once the player has faced any keeper. */}
+        {Object.keys(state.story?.flags ?? {}).some((k) => k.startsWith("keeper_") && (k.endsWith("_coexist") || k.endsWith("_driveout")) && (state.story.flags as Record<string, unknown>)[k]) && (
+          <button
+            type="button"
+            onClick={() => dispatch({ type: "SET_VIEW", view: "boons" })}
+            className="bg-white/85 px-3 py-1.5 landscape:max-[1024px]:px-2 landscape:max-[1024px]:py-1 rounded-full font-bold text-[#2b2218] landscape:max-[1024px]:text-[13px] hover:bg-white transition-colors"
+            title="Spend Embers / Core Ingots on per-path boons"
+          >
+            ✨ Boons
+          </button>
+        )}
+      </div>
+
+      {/* "Found this settlement" CTA — only renders for visited-but-unfounded settleable zones. */}
+      <FoundSettlementBanner state={state} dispatch={dispatch} />
 
       {/* Build button — opens the building picker. Hidden when zone has no plots. */}
       {plotCount > 0 && (

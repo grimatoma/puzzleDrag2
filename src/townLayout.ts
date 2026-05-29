@@ -3,7 +3,7 @@
 // well, a main street and a couple of cross-lanes, and building lots arranged
 // in tidy rows along the lanes (instead of being scattered). Deterministic per
 // zone — a tiny seeded PRNG adds a little jitter so each town feels distinct
-// without being chaotic. All coordinates live in the same 1100×600 design space
+// without being chaotic. All coordinates live in the same 1500×600 design space
 // the Town view scales to the viewport.
 //
 // Returned shape:
@@ -13,7 +13,12 @@
 //     props: [{ kind, x, y }],                // lampposts / cart / signpost / planter
 //     waypoints: [{x,y}], edges: [[i,j]] }    // street graph for walking villagers
 
-const W = 1100, H = 600;
+const W = 1500, H = 600;
+
+/** Design-space dimensions of the town stage, exported for consumers
+ *  (Town view, villagers) that need to project plan coordinates. */
+export const STAGE_W = W;
+export const STAGE_H = H;
 
 // Deterministic 32-bit string hash → seeded mulberry32 PRNG.
 function seededRng(str: string): () => number {
@@ -36,15 +41,15 @@ function seededRng(str: string): () => number {
 // derive the lot centre from `streetY` and the lot height. Depth-sorting by
 // bottom edge in Town.jsx then keeps far cottages behind near shopfronts.
 const ROWS = [
-  { streetY: 256, w: 76,  h: 88,  cap: 4, name: "back"  },  // distant cottages (smallest)
-  { streetY: 322, w: 96,  h: 104, cap: 5, name: "mid"   },  // second street
-  { streetY: 398, w: 116, h: 120, cap: 5, name: "front" },  // main-street shopfronts (largest)
+  { streetY: 256, w: 76,  h: 88,  cap: 5, name: "back"  },  // distant cottages (smallest)
+  { streetY: 322, w: 96,  h: 104, cap: 6, name: "mid"   },  // second street
+  { streetY: 398, w: 116, h: 120, cap: 6, name: "front" },  // main-street shopfronts (largest)
 ];
 interface RowSpec { streetY: number; w: number; h: number; cap: number; name: string }
 // Where a lot in row `r` sits so its drawn base lands ~6px behind the street.
 const rowLotCy = (row: RowSpec) => row.streetY - 6 - row.h / 2;
 
-const PLAZA = { cx: 552, cy: 350, rx: 134, ry: 84 };
+const PLAZA = { cx: W / 2, cy: 350, rx: 134, ry: 84 };
 
 interface BoardSpot { cx: number; cy: number; w: number; h: number }
 type BoardKind = keyof typeof BOARD_SPOTS_BASE;
@@ -111,8 +116,11 @@ export function buildTownPlan(
     .map((k) => ({ kind: k, ...BOARD_SPOTS[k] }));
   const hasLeftBoard = kinds.includes("farm") || kinds.includes("fish");
   const hasRightBoard = kinds.includes("mine");
-  const leftStart = hasLeftBoard ? 210 : 100;   // building rows' left clusters start here
-  const rightEnd = hasRightBoard ? W - 210 : W - 100;
+  // Left/right clusters spread across the wider canvas. When a wing holds a
+  // puzzle-board fixture (farm/fish on the left, mine on the right), the rows
+  // start further in so buildings clear the fixture.
+  const leftStart = hasLeftBoard ? 240 : 140;   // building rows' left clusters start here
+  const rightEnd = hasRightBoard ? W - 240 : W - 140;
 
   // Decide how many lots land in each row. Front row gets the lion's share;
   // mid next; back last — but never more than each row's cap.
@@ -174,11 +182,11 @@ export function buildTownPlan(
     { kind: "lamppost", x: PLAZA.cx - PLAZA.rx + 6, y: PLAZA.cy + 10 },
     { kind: "lamppost", x: PLAZA.cx + PLAZA.rx - 6, y: PLAZA.cy + 10 },
     { kind: "signpost", x: PLAZA.cx + 70,       y: H - 30 },
-    { kind: "cart",     x: 220 + j(20),         y: ROWS[2].streetY + 6 },
-    { kind: "planter",  x: 770 + j(30),         y: ROWS[1].streetY - 4 },
-    { kind: "planter",  x: 340 + j(30),         y: ROWS[1].streetY - 4 },
-    { kind: "lamppost", x: 130,                 y: ROWS[2].streetY - 8 },
-    { kind: "lamppost", x: W - 130,             y: ROWS[2].streetY - 8 },
+    { kind: "cart",     x: 300 + j(20),         y: ROWS[2].streetY + 6 },
+    { kind: "planter",  x: PLAZA.cx + 230 + j(30), y: ROWS[1].streetY - 4 },
+    { kind: "planter",  x: PLAZA.cx - 230 + j(30), y: ROWS[1].streetY - 4 },
+    { kind: "lamppost", x: 170,                 y: ROWS[2].streetY - 8 },
+    { kind: "lamppost", x: W - 170,             y: ROWS[2].streetY - 8 },
   ];
 
   // Walking-villager graph: a waypoint at each row's left end, centre (on the
@@ -188,7 +196,7 @@ export function buildTownPlan(
   const waypoints: TownPlanWaypoint[] = [];
   const wp = (x: number, y: number): number => { waypoints.push({ x, y }); return waypoints.length - 1; };
   const rowYs = [ROWS[0].streetY, ROWS[1].streetY, ROWS[2].streetY];
-  const cols = [hasLeftBoard ? 215 : 120, PLAZA.cx, hasRightBoard ? W - 215 : W - 120];
+  const cols = [hasLeftBoard ? 245 : 160, PLAZA.cx, hasRightBoard ? W - 245 : W - 160];
   const grid = rowYs.map((y) => cols.map((x) => wp(x, y)));
   const plazaWp = wp(PLAZA.cx, PLAZA.cy + 6);
   const edges: Array<[number, number]> = [];

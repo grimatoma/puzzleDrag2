@@ -2,7 +2,8 @@
 // The town's *plan* layer: a paved ground over the hills, the street network, a
 // central plaza with a well, faint pads under each building lot, and a little
 // street furniture (lampposts, a cart, a signpost, planters). Rendered as an
-// SVG in the same 1100×600 design space as the rest of the Town view, sitting
+// SVG in the same STAGE_W×STAGE_H design space (plan.width/plan.height) as the
+// rest of the Town view, sitting
 // between the hills/decor backdrop and the building illustrations so the town
 // reads as a planned settlement in a valley rather than scattered buildings.
 
@@ -18,6 +19,8 @@ interface GroundPal {
 }
 
 interface TownPlan {
+  width?: number;
+  height?: number;
   ground: { top: number };
   streets: Array<{ x1: number; y1: number; x2: number; y2: number; width: number }>;
   plaza: { cx: number; cy: number; rx: number; ry: number };
@@ -37,7 +40,7 @@ function groundPalette(biomeVariant: string): GroundPal {
   if (biomeVariant === "mine") {
     return { floor: "#6f6a62", floorEdge: "#5a564f", pave: "#8a857c", paveEdge: "#6a655d", grass: "#5e6450", shadow: "rgba(20,18,14,0.30)" };
   }
-  return { floor: "#9a8c5e", floorEdge: "#7e7148", pave: "#b6aa80", paveEdge: "#8e8258", grass: "#6f9a44", shadow: "rgba(30,24,12,0.28)" };
+  return { floor: "#8f8458", floorEdge: "#6f6640", pave: "#b6aa80", paveEdge: "#8e8258", grass: "#6f9a44", shadow: "rgba(30,24,12,0.34)" };
 }
 
 interface PropPositionalProps { x: number; y: number; pal: GroundPal }
@@ -121,21 +124,27 @@ function TownGround({ plan, theme, biomeVariant, builtLots }: TownGroundProps) {
   const road = theme?.road || pal.pave;
   const roadLine = theme?.roadLine || pal.paveEdge;
   const built: Set<number> = builtLots instanceof Set ? (builtLots as Set<number>) : new Set();
+  const w = plan.width ?? 1500;
+  const h = plan.height ?? 600;
+  const top = plan.ground.top;
+  // Wavy floor control points expressed as fractions of the stage width so the
+  // packed-earth floor spans the full design space whatever its width.
+  const xA = 0.2 * w, xB = 0.44 * w, xC = 0.64 * w, xD = 0.82 * w, xE = 0.91 * w;
 
   return (
     <svg
-      viewBox="0 0 1100 600"
-      preserveAspectRatio="none"
+      viewBox={`0 0 ${w} ${h}`}
+      preserveAspectRatio="xMidYMid meet"
       className="absolute inset-0 w-full h-full pointer-events-none"
       aria-hidden="true"
     >
       {/* Town floor — packed earth that the streets and buildings sit on. */}
       <path
-        d={`M0,${plan.ground.top + 14} C220,${plan.ground.top - 6} 480,${plan.ground.top + 4} 700,${plan.ground.top + 10} C900,${plan.ground.top + 16} 1000,${plan.ground.top + 6} 1100,${plan.ground.top + 2} L1100,600 L0,600 Z`}
+        d={`M0,${top + 14} C${xA},${top - 6} ${xB},${top + 4} ${xC},${top + 10} C${xD},${top + 16} ${xE},${top + 6} ${w},${top + 2} L${w},${h} L0,${h} Z`}
         fill={pal.floor}
       />
       <path
-        d={`M0,${plan.ground.top + 14} C220,${plan.ground.top - 6} 480,${plan.ground.top + 4} 700,${plan.ground.top + 10} C900,${plan.ground.top + 16} 1000,${plan.ground.top + 6} 1100,${plan.ground.top + 2} L1100,${plan.ground.top + 30} C900,${plan.ground.top + 24} 700,${plan.ground.top + 28} 480,${plan.ground.top + 22} C220,${plan.ground.top + 12} 0,${plan.ground.top + 32} 0,${plan.ground.top + 32} Z`}
+        d={`M0,${top + 14} C${xA},${top - 6} ${xB},${top + 4} ${xC},${top + 10} C${xD},${top + 16} ${xE},${top + 6} ${w},${top + 2} L${w},${top + 30} C${xD},${top + 24} ${xC},${top + 28} ${xB},${top + 22} C${xA},${top + 12} 0,${top + 32} 0,${top + 32} Z`}
         fill={pal.floorEdge}
         opacity="0.5"
       />
@@ -162,7 +171,16 @@ function TownGround({ plan, theme, biomeVariant, builtLots }: TownGroundProps) {
       {plan.lots.map((l) => {
         const baseY = l.cy + l.h / 2 - 4;
         if (built.has(l.index) || l.row === "plaza") {
-          return <ellipse key={`pad${l.index}`} cx={l.cx} cy={baseY} rx={l.w * 0.5} ry={Math.max(8, l.h * 0.12)} fill={pal.shadow} />;
+          // Two stacked ellipses: a wide soft pad plus a smaller, darker inner
+          // core for an ambient-occlusion feel so each building reads grounded.
+          const rx = l.w * 0.5;
+          const ry = Math.max(9, l.h * 0.14);
+          return (
+            <g key={`pad${l.index}`}>
+              <ellipse cx={l.cx} cy={baseY} rx={rx} ry={ry} fill={pal.shadow} />
+              <ellipse cx={l.cx} cy={baseY} rx={rx * 0.6} ry={ry * 0.62} fill={pal.shadow} />
+            </g>
+          );
         }
         const mw = l.w * 0.78, mh = Math.max(14, l.h * 0.22);
         return (

@@ -28,6 +28,8 @@ import { memo, useEffect, useMemo, useRef } from "react";
 import type { CSSProperties } from "react";
 
 interface TownPlan {
+  width?: number;
+  height?: number;
   waypoints?: Array<{ x: number; y: number }>;
   edges?: Array<[number, number]>;
   lots?: Array<{ index: number; cx: number; cy: number; w: number; h: number }>;
@@ -91,7 +93,6 @@ interface VillagerRefs {
   armR: HTMLDivElement | null;
 }
 
-const W = 1100, H = 600;
 const TOTAL_FIGURE_BUDGET = 14; // soft cap on simultaneous walking figures
 const WORKER_CAP_PER_TYPE = 3;
 
@@ -859,6 +860,10 @@ interface TownVillagersProps {
 }
 
 function TownVillagers({ plan, buildings, workers }: TownVillagersProps) {
+  // Design-space dimensions come from the plan so villager screen positions
+  // track the real (now wider) town layout; fall back to the legacy size.
+  const W = plan?.width ?? 1100;
+  const H = plan?.height ?? 600;
   const { wps, adj } = useMemo(() => makeGraph(plan), [plan]);
   const hiredWorkers: Record<string, number> = workers?.hired || {};
   // Re-seed the population whenever the build set changes (so a new building
@@ -1007,7 +1012,7 @@ function TownVillagers({ plan, buildings, workers }: TownVillagersProps) {
     };
     step(performance.now());
     return () => cancelAnimationFrame(raf);
-  }, [wps, adj, villagers]);
+  }, [wps, adj, villagers, W, H]);
 
   if (!plan || !villagers.length) return null;
 
