@@ -15,6 +15,8 @@ const DEFAULTS = {
   watchlist: [],
   tickerUniverse: [],
   spike: { thresholdPct: 2, windowsHours: [1, 4, 24] },
+  consensus: { threshold: 3, strongAddPrompts: 2 },
+  alerts: { webhookUrl: null, cooldownHours: 6 },
   prompts: [],
 };
 
@@ -67,6 +69,27 @@ export function normalizeConfig(raw) {
         : [...DEFAULTS.spike.windowsHours],
   };
 
+  const cons = raw?.consensus || {};
+  cfg.consensus = {
+    threshold:
+      Number.isFinite(cons.threshold) && cons.threshold >= 1
+        ? Math.floor(cons.threshold)
+        : DEFAULTS.consensus.threshold,
+    strongAddPrompts:
+      Number.isFinite(cons.strongAddPrompts) && cons.strongAddPrompts >= 1
+        ? Math.floor(cons.strongAddPrompts)
+        : DEFAULTS.consensus.strongAddPrompts,
+  };
+
+  const al = raw?.alerts || {};
+  cfg.alerts = {
+    webhookUrl: typeof al.webhookUrl === "string" && al.webhookUrl.trim() ? al.webhookUrl.trim() : null,
+    cooldownHours:
+      Number.isFinite(al.cooldownHours) && al.cooldownHours >= 0
+        ? al.cooldownHours
+        : DEFAULTS.alerts.cooldownHours,
+  };
+
   const seenKeys = new Set();
   cfg.prompts = asArray(raw?.prompts)
     .map((p, i) => {
@@ -109,8 +132,15 @@ export function saveConfig(cfg, path = cfg.__path || CONFIG_PATH) {
  */
 export function redactConfig(cfg) {
   const { __path, ...rest } = cfg;
+  // The webhook URL may embed a token/secret — never leak it; report presence.
+  const alerts = {
+    ...(rest.alerts || {}),
+    webhookConfigured: Boolean(rest.alerts?.webhookUrl),
+  };
+  delete alerts.webhookUrl;
   return {
     ...rest,
+    alerts,
     secrets: {
       openaiKeyPresent: Boolean(process.env.OPENAI_API_KEY),
       alphavantageKeyPresent: Boolean(process.env.ALPHAVANTAGE_API_KEY),

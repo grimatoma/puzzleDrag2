@@ -12,7 +12,32 @@ import {
   buildLeaderboard,
   buildTickerDetail,
   buildMindChangeTimeline,
+  buildAnalysis,
 } from "./analysis/report.js";
+
+const SERVER_START = Date.now();
+
+// Fallback CSV headers for empty tables (so an export of an empty table still
+// returns a header row).
+const EXPORT_HEADERS = {
+  recommendations: ["id", "run_id", "prompt_key", "ticker", "stance", "confidence", "rank", "excerpt", "created_at"],
+  prices: ["id", "ticker", "price", "ts", "source"],
+  signals: ["id", "run_id", "ts", "ticker", "signal_type", "prompt_count", "active_prompt_count", "net_stance", "prompt_keys", "fresh_pick", "detail", "created_at"],
+};
+
+// CSV-escape a single field: wrap in quotes and double internal quotes when the
+// value contains a comma, quote, CR, or LF.
+function csvEscape(v) {
+  const s = v === null || v === undefined ? "" : String(v);
+  if (/[",\r\n]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
+  return s;
+}
+
+function toCsv(header, rows) {
+  const lines = [header.map(csvEscape).join(",")];
+  for (const row of rows) lines.push(row.map(csvEscape).join(","));
+  return lines.join("\n") + "\n";
+}
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PUBLIC_DIR = join(__dirname, "..", "public");
@@ -49,6 +74,48 @@ export function createServer({ db, config, llm, market, scheduler }) {
   app.get("/api/mind-changes", (req, res) => {
     const limit = Math.min(2000, Number(req.query.limit) || 200);
     res.json(buildMindChangeTimeline(db, limit));
+  });
+
+  app.get("/api/signals", (req, res) => {
+    const limit = Math.min(2000, Number(req.query.limit) || 200);
+    const type = req.query.type ? String(req.query.type) : null;
+    const since = req.query.since != null ? Number(req.query.since) : null;
+    res.json(db.recentSignals(limit, { type, since }));
+  });
+
+  app.get("/api/analysis", (req, res) => {
+    res.json(buildAnalysis(db, config, { simulated: market.name === "mock" }));
+  });
+
+  app.get("/api/runs", (req, res) => {
+    const limit = Math.min(500, Number(req.query.limit) || 20);
+    res.json(db.recentRuns(limit));
+  });
+
+  app.get("/api/health", (req, res) => {
+    res.json({
+      status: "ok",
+      db: db.pingOk(),
+      lastRun: db.lastRunRow(),
+      lastError: scheduler ? scheduler.status().lastError : null,
+      providers: { llm: llm.name, market: market.name },
+      uptimeMs: Date.now() - SERVER_START,
+    });
+  });
+
+  app.get("/api/export", (req, res) => {
+    const table = String(req.query.table || "");
+    if (!["recommendations", "prices", "signals"].includes(table)) {
+      return res.status(400).json({ error: "table must be recommendations|prices|signals" });
+    }
+    const rows = db.exportRows(table, 100000) || [];
+    const header = rows.length
+      ? Object.keys(rows[0])
+      : EXPORT_HEADERS[table];
+    const csv = toCsv(header, rows.map((r) => header.map((h) => r[h])));
+    res.setHeader("Content-Type", "text/csv; charset=utf-8");
+    res.setHeader("Content-Disposition", `attachment; filename="${table}.csv"`);
+    res.send(csv);
   });
 
   app.get("/api/prompts", (req, res) => {

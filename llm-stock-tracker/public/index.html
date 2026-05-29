@@ -18,8 +18,10 @@
 
   <nav class="tabs" id="tabs">
     <button data-tab="overview" class="active">Overview</button>
+    <button data-tab="signals">Signals</button>
     <button data-tab="leaderboard">Leaderboard</button>
     <button data-tab="mindchanges">Mind Changes</button>
+    <button data-tab="analysis">Analysis</button>
     <button data-tab="ticker">Ticker Detail</button>
     <button data-tab="prompts">Prompts</button>
   </nav>
@@ -32,6 +34,20 @@
       </div>
       <div id="statusBar" class="muted"></div>
       <div id="cards" class="cards"></div>
+    </section>
+
+    <section id="tab-signals" class="tab-panel">
+      <h2>Actionable signals</h2>
+      <p class="muted">Cross-prompt consensus + strong-add alerts, newest first.</p>
+      <ul id="signalList" class="timeline"></ul>
+    </section>
+
+    <section id="tab-analysis" class="tab-panel">
+      <h2>Forward-return / thesis analysis</h2>
+      <div class="disclaimer" id="analysisDisclaimer">
+        Descriptive only; small-n; mock prices unless real keys configured; not financial advice.
+      </div>
+      <div id="analysisBody"></div>
     </section>
 
     <section id="tab-leaderboard" class="tab-panel">

@@ -11,15 +11,21 @@ const HOUR_MS = 60 * 60 * 1000;
  */
 export function priceAt(series, ts, toleranceMs = 24 * HOUR_MS) {
   if (!Array.isArray(series) || series.length === 0) return null;
-  let after = null;
-  let before = null;
-  for (const s of series) {
-    if (s.ts >= ts) {
-      if (after === null || s.ts < after.ts) after = s;
-    } else {
-      if (before === null || s.ts > before.ts) before = s;
-    }
+  // Binary search for the first index whose ts >= target ("after"); the element
+  // immediately preceding it is the nearest sample strictly before ("before").
+  // The series is sorted ascending by ts. Preserves the exact original
+  // semantics: nearest at/after within tolerance, else nearest before within
+  // tolerance, else closest available, else null.
+  let lo = 0;
+  let hi = series.length; // [lo, hi) candidate range for first ts >= target
+  while (lo < hi) {
+    const mid = (lo + hi) >>> 1;
+    if (series[mid].ts >= ts) hi = mid;
+    else lo = mid + 1;
   }
+  const after = lo < series.length ? series[lo] : null;
+  const before = lo > 0 ? series[lo - 1] : null;
+
   if (after && after.ts - ts <= toleranceMs) return after.price;
   if (before && ts - before.ts <= toleranceMs) return before.price;
   // Beyond tolerance: still return the closest available rather than null only
@@ -27,6 +33,32 @@ export function priceAt(series, ts, toleranceMs = 24 * HOUR_MS) {
   if (after) return after.price;
   if (before) return before.price;
   return null;
+}
+
+/**
+ * downsample(series, maxPoints) -> series
+ * Reduce a sorted series to at most maxPoints using a uniform stride. The first
+ * and last points are always retained so the chart endpoints are accurate.
+ * Pure; does not mutate the input.
+ */
+export function downsample(series, maxPoints = 600) {
+  if (!Array.isArray(series)) return [];
+  const n = series.length;
+  if (maxPoints < 2) return n ? [series[0]] : [];
+  if (n <= maxPoints) return series.slice();
+  const stride = (n - 1) / (maxPoints - 1);
+  const out = [];
+  let lastIdx = -1;
+  for (let i = 0; i < maxPoints; i++) {
+    const idx = i === maxPoints - 1 ? n - 1 : Math.round(i * stride);
+    if (idx !== lastIdx) {
+      out.push(series[idx]);
+      lastIdx = idx;
+    }
+  }
+  // Guarantee the final point is the true last sample.
+  if (out[out.length - 1] !== series[n - 1]) out.push(series[n - 1]);
+  return out;
 }
 
 /**

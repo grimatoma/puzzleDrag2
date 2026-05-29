@@ -3,6 +3,8 @@
 
 import { extractTickers } from "./parser/tickerParser.js";
 import { diffRecommendations } from "./analysis/mindChange.js";
+import { computeSignals } from "./analysis/signals.js";
+import { dispatchSignals } from "./alerts.js";
 
 /**
  * runPoll({ db, config, llm, market, now? }) -> summary
@@ -61,13 +63,40 @@ export async function runPoll({ db, config, llm, market, now = Date.now() }) {
     // Mind-change events vs the previous successful run.
     let mindChangeEvents = [];
     const prevRunId = db.previousOkRunId(runId);
+    const currByPrompt = db.recommendationsByPromptForRun(runId);
+    let prevByPrompt = null;
     if (prevRunId) {
-      const prevByPrompt = db.recommendationsByPromptForRun(prevRunId);
-      const currByPrompt = db.recommendationsByPromptForRun(runId);
+      prevByPrompt = db.recommendationsByPromptForRun(prevRunId);
       mindChangeEvents = diffRecommendations(prevByPrompt, currByPrompt);
       for (const ev of mindChangeEvents) {
         db.insertMindChangeEvent({ ...ev, run_id: runId, ts: startedAt });
       }
+    }
+
+    // Cross-prompt CONSENSUS signals (reuses the diff inputs above — no extra
+    // queries beyond the first-seen lookup). Webhook/network failures here must
+    // never fail the poll, so the whole block is guarded.
+    let signalsEmitted = 0;
+    try {
+      const addedEventsForRun = mindChangeEvents.filter((e) => e.change_type === "added");
+      // A ticker is a "fresh pick" when its first-ever appearance is this run.
+      const firstSeen = db.firstSeenTickerSet();
+      const firstEverTickers = new Set();
+      for (const t of tickerSet) {
+        if (firstSeen.get(t) === startedAt) firstEverTickers.add(t);
+      }
+      const signals = computeSignals({
+        byPromptForRun: currByPrompt,
+        prevByPromptForRun: prevByPrompt,
+        addedEventsForRun,
+        config,
+        now: startedAt,
+        firstEverTickers,
+      });
+      for (const s of signals) s.runId = runId;
+      signalsEmitted = dispatchSignals(db, config, signals, { now: startedAt });
+    } catch (err) {
+      console.error(`[poll] signal dispatch failed (non-fatal): ${err?.message || err}`);
     }
 
     // Fetch + store current prices for union(recommended, watchlist).
@@ -94,6 +123,7 @@ export async function runPoll({ db, config, llm, market, now = Date.now() }) {
       uniqueTickers: tickerSet.size,
       mindChanges: mindChangeEvents.length,
       mindChangeBreakdown: countBy(mindChangeEvents, "change_type"),
+      signalsEmitted,
       pricesStored,
       tickers,
       status: "ok",

@@ -6,6 +6,7 @@ import {
   detectSpike,
   leaderboard,
   summary,
+  downsample,
 } from "../src/analysis/metrics.js";
 
 const HOUR = 60 * 60 * 1000;
@@ -86,4 +87,41 @@ test("summary computes spike hit-rate", () => {
 test("summary hit-rate is null with no evaluated events", () => {
   const s = summary({ runs: 1 }, []);
   assert.equal(s.spikeHitRate, null);
+});
+
+test("binary-search priceAt matches nearest at/after, before fallback, and closest-beyond-tolerance", () => {
+  const s = series([[0, 100], [1, 110], [2, 120], [10, 200]]);
+  // at/after within tolerance
+  assert.equal(priceAt(s, T0 + 0.5 * HOUR), 110);
+  // exact hit
+  assert.equal(priceAt(s, T0 + 2 * HOUR), 120);
+  // no later sample within range but a before exists, tiny tolerance -> closest available
+  assert.equal(priceAt(s, T0 + 11 * HOUR, HOUR), 200);
+  // before-fallback: target after last sample, generous tolerance
+  assert.equal(priceAt(s, T0 + 10.5 * HOUR), 200);
+});
+
+test("downsample caps to maxPoints and always keeps first + last", () => {
+  const pts = [];
+  for (let h = 0; h < 5000; h++) pts.push([h, 100 + h]);
+  const s = series(pts);
+  const ds = downsample(s, 600);
+  assert.ok(ds.length <= 600, `expected <=600, got ${ds.length}`);
+  assert.equal(ds[0].ts, s[0].ts);
+  assert.equal(ds[ds.length - 1].ts, s[s.length - 1].ts);
+  // strictly ascending ts preserved
+  for (let i = 1; i < ds.length; i++) assert.ok(ds[i].ts > ds[i - 1].ts);
+});
+
+test("downsample returns the series unchanged when already small", () => {
+  const s = series([[0, 100], [1, 101], [2, 102]]);
+  const ds = downsample(s, 600);
+  assert.deepEqual(ds, s);
+});
+
+test("downsample handles empty + tiny maxPoints", () => {
+  assert.deepEqual(downsample([], 600), []);
+  const s = series([[0, 100], [1, 101]]);
+  assert.equal(downsample(s, 1).length, 1);
+  assert.equal(downsample(s, 1)[0].ts, s[0].ts);
 });

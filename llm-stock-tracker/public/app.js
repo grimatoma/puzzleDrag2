@@ -44,8 +44,10 @@ $$("#tabs button").forEach((btn) => {
     btn.classList.add("active");
     $("#tab-" + btn.dataset.tab).classList.add("active");
     if (btn.dataset.tab === "overview") loadOverview();
+    if (btn.dataset.tab === "signals") loadSignals();
     if (btn.dataset.tab === "leaderboard") loadLeaderboard();
     if (btn.dataset.tab === "mindchanges") loadMindChanges();
+    if (btn.dataset.tab === "analysis") loadAnalysis();
     if (btn.dataset.tab === "prompts") loadPrompts();
   });
 });
@@ -70,13 +72,98 @@ async function loadOverview() {
       .map(([lbl, val]) => `<div class="card"><div class="val">${val}</div><div class="lbl">${lbl}</div></div>`)
       .join("");
     const s = status.scheduler || {};
-    $("#statusBar").textContent =
+    let txt =
       `Providers: LLM=${(status.providers||{}).llm}, market=${(status.providers||{}).market}. ` +
       `Scheduler ${s.running ? "running" : "stopped"}. ` +
       `Last run: ${s.lastRun ? fmtTs(s.lastRun.at) + " (" + s.lastRun.type + ")" : "none"}.`;
+    if (s.lastError) {
+      txt += ` Last error: ${s.lastError.message} (${fmtTs(s.lastError.at)}).`;
+    }
+    $("#statusBar").textContent = txt;
   } catch (e) {
     $("#statusBar").textContent = "Error: " + e.message;
   }
+}
+
+// ---- Signals ----
+async function loadSignals() {
+  const list = $("#signalList");
+  try {
+    const sigs = await api("/api/signals?limit=300");
+    if (!sigs.length) {
+      list.innerHTML = `<li class="muted">No signals yet. Consensus/strong-add alerts appear after enough polls.</li>`;
+      return;
+    }
+    list.innerHTML = sigs
+      .map((s) => {
+        const badge = s.signal_type === "NEW_CONSENSUS" ? "spike" : "nospike";
+        const fresh = s.fresh_pick ? ` <span class="badge spike">FRESH</span>` : "";
+        return `<li><span class="badge ${badge}">${esc(s.signal_type)}</span> <strong>${esc(s.ticker)}</strong>${fresh} ` +
+          `— ${s.prompt_count}/${s.active_prompt_count} prompts, <em>${esc(s.net_stance)}</em> ` +
+          `<span class="muted">${fmtTs(s.ts)}</span>` +
+          (s.detail ? `<div class="ptext">${esc(s.detail)}</div>` : "") +
+          `</li>`;
+      })
+      .join("");
+  } catch (e) {
+    list.innerHTML = `<li class="muted">Error: ${esc(e.message)}</li>`;
+  }
+}
+
+// ---- Analysis ----
+async function loadAnalysis() {
+  const body = $("#analysisBody");
+  try {
+    const a = await api("/api/analysis");
+    const windows = a.windows || [];
+    if (a.simulated) {
+      $("#analysisDisclaimer").textContent =
+        "SIMULATED prices (mock provider). Descriptive only; small-n; not financial advice.";
+    }
+    let html = "";
+
+    // Per-prompt lift table
+    html += `<h3>Per-prompt lift vs. baseline</h3>`;
+    if (a.perPrompt && a.perPrompt.length) {
+      html += `<table><thead><tr><th>Prompt</th><th>n</th>` +
+        windows.map((w) => `<th>lift @${w}h</th>`).join("") + `</tr></thead><tbody>`;
+      for (const p of a.perPrompt) {
+        html += `<tr><td><code>${esc(p.promptKey)}</code></td><td>${p.n}</td>` +
+          windows.map((w) => {
+            const v = (p.liftVsBaseline || {})[w];
+            const cls = v === null || v === undefined ? "" : v >= 0 ? "pos" : "neg";
+            return `<td class="${cls}">${fmtPct(v)}</td>`;
+          }).join("") + `</tr>`;
+      }
+      html += `</tbody></table>`;
+    } else {
+      html += `<p class="muted">No measurable events yet.</p>`;
+    }
+
+    // Overall byWindow + baseline
+    html += `<h3>Overall forward return</h3>`;
+    html += `<table><thead><tr><th>Window</th><th>avg event %</th><th>n</th><th>baseline %</th></tr></thead><tbody>`;
+    for (const w of windows) {
+      const ow = (a.overall && a.overall.byWindow && a.overall.byWindow[w]) || {};
+      const bl = (a.baseline && a.baseline.byWindow && a.baseline.byWindow[w]);
+      html += `<tr><td>+${w}h</td><td>${fmtPct(ow.avgPct)}</td><td>${ow.n ?? 0}</td><td>${fmtPct(bl)}</td></tr>`;
+    }
+    html += `</tbody></table>`;
+
+    // Lead time
+    const lt = a.leadTime || {};
+    html += `<h3>Lead time to peak</h3>`;
+    html += `<p>Median ${fmtHours(lt.medianHours)}, p25 ${fmtHours(lt.p25)}, p75 ${fmtHours(lt.p75)} (n=${lt.n ?? 0}).</p>`;
+
+    body.innerHTML = html;
+  } catch (e) {
+    body.innerHTML = `<p class="muted">Error: ${esc(e.message)}</p>`;
+  }
+}
+
+function fmtHours(h) {
+  if (h === null || h === undefined) return "—";
+  return `${h.toFixed(1)}h`;
 }
 
 $("#runNowBtn").addEventListener("click", async () => {
@@ -84,7 +171,7 @@ $("#runNowBtn").addEventListener("click", async () => {
   try {
     const r = await api("/api/run-now", { method: "POST" });
     $("#runNowResult").textContent =
-      `Run #${r.runId}: ${r.recommendations} recs, ${r.uniqueTickers} tickers, ${r.mindChanges} mind-changes, ${r.pricesStored} prices.`;
+      `Run #${r.runId}: ${r.recommendations} recs, ${r.uniqueTickers} tickers, ${r.mindChanges} mind-changes, ${r.signalsEmitted ?? 0} signals, ${r.pricesStored} prices.`;
     loadOverview();
   } catch (e) {
     $("#runNowResult").textContent = "Error: " + e.message;

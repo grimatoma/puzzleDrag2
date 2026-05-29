@@ -137,6 +137,10 @@ price series fill in between polls.
 | `tickerUniverse` | allowlist the parser validates bare symbols against |
 | `spike.thresholdPct` | spike threshold (default `2`) |
 | `spike.windowsHours` | windows to evaluate (default `[1, 4, 24]`) |
+| `consensus.threshold` | min # of prompts agreeing to fire a NEW_CONSENSUS signal (default `3`) |
+| `consensus.strongAddPrompts` | min # of prompts an `added` must span to fire STRONG_ADD (default `2`) |
+| `alerts.webhookUrl` | optional URL POSTed (fire-and-forget) on each emitted signal (default `null`) |
+| `alerts.cooldownHours` | per-(ticker, signal-type) cooldown to avoid alert spam (default `6`) |
 | `prompts[]` | `{ key, label, text, active }` — the phrasings polled |
 
 Edit prompts in the file, or via the dashboard **Prompts** tab / the API
@@ -166,6 +170,7 @@ Secrets are read from env only and **never** committed or returned by the API
 | `recommendations` | parsed `{ticker, stance, confidence, rank, excerpt}` per prompt per run |
 | `prices` | `{ticker, price, ts, source}`, indexed on `(ticker, ts)` |
 | `mind_change_events` | `{prompt_key, ticker, change_type, prev_stance, new_stance, run_id, ts}` |
+| `signals` | actionable consensus signals: `{ticker, signal_type, prompt_count, active_prompt_count, net_stance, prompt_keys, fresh_pick, detail, run_id, ts}` |
 
 ## Metrics definitions
 
@@ -177,6 +182,28 @@ Secrets are read from env only and **never** committed or returned by the API
 - **Spike** — an upward move `≥ spike.thresholdPct` in *any* window.
 - **Spike hit-rate** — `spikes / events-with-a-measurable-window`. Only events
   that have at least one usable price window are counted.
+- **Consensus signal** — cross-prompt agreement, the core "ask many ways" payoff:
+  - `NEW_CONSENSUS` — a ticker reaches `consensus.threshold` agreeing prompts
+    *this run* having been below it last run (edge-triggered, so it doesn't
+    re-fire while consensus persists).
+  - `STRONG_ADD` — a single run `added` a ticker across `≥ strongAddPrompts`
+    distinct prompts.
+  - `freshPick` — the ticker's first-ever appearance across all history.
+  - Each signal carries a per-(ticker, type) **cooldown** (`alerts.cooldownHours`)
+    so the feed/webhook can't spam the same event hourly.
+- **Forward return (thesis test)** — average percent price change at `+Nh` after
+  each `added` event, using a **strict no-look-ahead** rule: an event only counts
+  for window `N` when there are *genuine* price samples within 1h of both the
+  event time and `event + Nh` (no fabricating a return for an event whose window
+  hasn't elapsed). Negative moves are included.
+- **Baseline & lift** — the same forward-return measure sampled across the series
+  at points *not* within `maxWindow` hours after a real event (so the control
+  isn't contaminated by the effect). **Lift = event return − baseline**, reported
+  per prompt so you can see *which phrasing is most predictive*. Results are
+  labelled `simulated` when running on mock prices, and are descriptive only
+  (small-n, not significant) — **not financial advice**.
+- **Lead time to peak** — median/p25/p75 hours from an event to the max forward
+  price within the largest window: roughly *how long you'd have before the move*.
 
 ## API
 
@@ -190,6 +217,11 @@ Secrets are read from env only and **never** committed or returned by the API
 | `GET /api/mind-changes` | timeline |
 | `GET/POST /api/prompts`, `PUT/DELETE /api/prompts/:key` | manage prompts |
 | `POST /api/run-now` | trigger a poll, return its summary |
+| `GET /api/signals?limit=&since=&type=` | actionable consensus signal feed |
+| `GET /api/analysis` | forward-return / per-prompt lift / lead-time analysis |
+| `GET /api/runs?limit=` | recent run history (incl. error runs) |
+| `GET /api/health` | liveness: db check, last run, last scheduler error, uptime |
+| `GET /api/export?table=recommendations\|prices\|signals` | CSV export |
 
 ## Tests
 
@@ -198,4 +230,7 @@ npm test    # node --test, runs fully offline with the mocks
 ```
 
 Covers the high-risk pure logic: ticker parsing (false-positive defenses,
-stance, dedupe/rank), mind-change diffing, and the metric/aggregation functions.
+stance, dedupe/rank), mind-change diffing, the metric/aggregation functions
+(incl. binary-search `priceAt` and chart `downsample`), consensus-signal
+detection (edge-trigger, cooldown, net stance, fresh-pick), and the strict
+no-look-ahead forward-return / baseline / lead-time helpers.
