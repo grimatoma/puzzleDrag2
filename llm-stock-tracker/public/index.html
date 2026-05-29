@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LLM Stock Tracker</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header>
+    <h1>LLM Stock Tracker</h1>
+    <p class="sub">Does the market move when an LLM changes its mind?</p>
+  </header>
+
+  <div class="disclaimer">
+    Educational/research tool. NOT financial advice. Mock providers are used unless real API keys are configured.
+  </div>
+
+  <nav class="tabs" id="tabs">
+    <button data-tab="overview" class="active">Overview</button>
+    <button data-tab="leaderboard">Leaderboard</button>
+    <button data-tab="mindchanges">Mind Changes</button>
+    <button data-tab="ticker">Ticker Detail</button>
+    <button data-tab="prompts">Prompts</button>
+  </nav>
+
+  <main>
+    <section id="tab-overview" class="tab-panel active">
+      <div class="toolbar">
+        <button id="runNowBtn">Run poll now</button>
+        <span id="runNowResult" class="muted"></span>
+      </div>
+      <div id="statusBar" class="muted"></div>
+      <div id="cards" class="cards"></div>
+    </section>
+
+    <section id="tab-leaderboard" class="tab-panel">
+      <h2>Recommendation leaderboard</h2>
+      <table id="leaderboardTable"><thead><tr>
+        <th>Ticker</th><th>Rec count</th><th>Prompts</th><th>First seen</th><th>Last seen</th>
+      </tr></thead><tbody></tbody></table>
+    </section>
+
+    <section id="tab-mindchanges" class="tab-panel">
+      <h2>Mind-change timeline</h2>
+      <ul id="mindChangeList" class="timeline"></ul>
+    </section>
+
+    <section id="tab-ticker" class="tab-panel">
+      <h2>Ticker detail</h2>
+      <div class="toolbar">
+        <input id="tickerInput" placeholder="e.g. NVDA" />
+        <button id="loadTickerBtn">Load</button>
+      </div>
+      <div id="tickerDetail"></div>
+    </section>
+
+    <section id="tab-prompts" class="tab-panel">
+      <h2>Prompts</h2>
+      <div id="promptList"></div>
+      <h3>Add prompt</h3>
+      <div class="form">
+        <input id="newKey" placeholder="key (unique)" />
+        <input id="newLabel" placeholder="label" />
+        <input id="newText" placeholder="prompt text" />
+        <label><input type="checkbox" id="newActive" checked /> active</label>
+        <button id="addPromptBtn">Add</button>
+      </div>
+      <p id="promptMsg" class="muted"></p>
+    </section>
+  </main>
+
+  <footer>
+    <span class="muted">LLM Stock Tracker — offline-first mock providers. Not financial advice.</span>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
