@@ -67,6 +67,15 @@ const ILLUSTRATIONS: Record<string, IllustrationComponent> = {
   observatory: ObservatoryIllustration,
 };
 
+/** All building keys with an illustration (includes housing2/housing3 aliases). */
+export const BUILDING_KEYS = Object.keys(ILLUSTRATIONS);
+
+/**
+ * Canonical building keys for the iso set — one entry per distinct illustration
+ * (housing2/housing3 reuse the housing art, so they collapse to `housing`).
+ */
+export const CANONICAL_BUILDING_KEYS = BUILDING_KEYS.filter((k) => k !== "housing2" && k !== "housing3");
+
 function BuildingIllustrationImpl({ id, isBuilt }: { id: string; isBuilt?: boolean }) {
   const Component = ILLUSTRATIONS[id];
   return Component ? <Component isBuilt={isBuilt} /> : null;

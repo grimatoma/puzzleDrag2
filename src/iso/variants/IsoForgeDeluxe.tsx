@@ -8,78 +8,18 @@
 
 import { useId } from "react";
 import { PAL, Smoke } from "../../ui/buildings/v2kit.jsx";
-import { TILE_W, TILE_H } from "../isoMath.js";
+import { type P, T, TH, lerp, pts as str, panelMatrix, brick, shingles as kitShingles, quadShingles } from "../isoKit.jsx";
 
-type P = { x: number; y: number };
-
-const T = TILE_W / 2; // 32 — iso half-width per tile
-const TH = TILE_H / 2; // 16 — iso half-height per tile
 const H1 = 70; // main hall wall height
 const RISE = 52; // main roof apex rise
 const EAVE = 9;
-const LW = 120; // wall panel local space
+const LW = 120; // wall panel local space (matches isoKit PANEL)
 const LH = 92;
 
-const lerp = (a: P, b: P, t: number): P => ({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t });
-const str = (...ps: P[]) => ps.map((p) => `${p.x},${p.y}`).join(" ");
-
-function panelMatrix(origin: P, U: P, V: P): string {
-  return `matrix(${U.x / LW} ${U.y / LW} ${V.x / LH} ${V.y / LH} ${origin.x} ${origin.y})`;
-}
-
-function brick(prefix: string): JSX.Element {
-  const out: JSX.Element[] = [];
-  const ch = 8;
-  let row = 0;
-  for (let y = ch; y < LH; y += ch) {
-    out.push(<line key={`${prefix}m${y}`} x1={0} y1={y} x2={LW} y2={y} stroke={PAL.brickDark} strokeWidth={1} opacity={0.5} vectorEffect="non-scaling-stroke" />);
-    out.push(<line key={`${prefix}h${y}`} x1={0} y1={y + 1} x2={LW} y2={y + 1} stroke="#a8633f" strokeWidth={0.8} opacity={0.4} vectorEffect="non-scaling-stroke" />);
-    const off = row % 2 ? 0 : 7;
-    for (let x = off; x <= LW; x += 14) out.push(<line key={`${prefix}j${y}-${x}`} x1={x} y1={y} x2={x} y2={y + ch} stroke={PAL.brickDark} strokeWidth={0.8} opacity={0.4} vectorEffect="non-scaling-stroke" />);
-    row++;
-  }
-  [[10, 12], [40, 4], [92, 22], [24, 52], [70, 62], [102, 44], [54, 30], [16, 74]].forEach(([x, y], i) => {
-    out.push(<rect key={`${prefix}t${i}`} x={x} y={y} width={12} height={6} fill={i % 2 ? "#7a3a24" : "#9a5230"} opacity={0.35} />);
-  });
-  return <g>{out}</g>;
-}
-
-// Triangular hip slope, shingled.
-function shingles(eaveA: P, eaveB: P, apex: P, fill: string, key: string): JSX.Element {
-  const rows = 6;
-  const out: JSX.Element[] = [];
-  for (let i = 0; i < rows; i++) {
-    const t0 = i / rows;
-    const t1 = (i + 1) / rows;
-    const lA = lerp(eaveA, apex, t0); const lB = lerp(eaveB, apex, t0);
-    const uA = lerp(eaveA, apex, t1); const uB = lerp(eaveB, apex, t1);
-    const n = Math.max(2, Math.round(8 * (1 - t0)));
-    const stag = (i % 2) * (0.5 / n);
-    for (let j = 0; j < n; j++) {
-      const s0 = Math.min(1, j / n + stag); const s1 = Math.min(1, (j + 1) / n + stag);
-      out.push(<polygon key={`${key}${i}-${j}`} points={str(lerp(lA, lB, s0), lerp(lA, lB, s1), lerp(uA, uB, s1), lerp(uA, uB, s0))} fill={fill} stroke="rgba(0,0,0,.22)" strokeWidth={0.6} vectorEffect="non-scaling-stroke" />);
-      out.push(<line key={`${key}s${i}-${j}`} x1={lerp(lA, lB, s0).x} y1={lerp(lA, lB, s0).y} x2={lerp(lA, lB, s1).x} y2={lerp(lA, lB, s1).y} stroke="rgba(0,0,0,.3)" strokeWidth={1} vectorEffect="non-scaling-stroke" />);
-    }
-  }
-  return <g>{out}</g>;
-}
-
-// Quadrilateral (mono-pitch) shingled panel: low edge p1→p2, high edge p4→p3.
-function quadShingles(p1: P, p2: P, p3: P, p4: P, fill: string, key: string): JSX.Element {
-  const rows = 5;
-  const out: JSX.Element[] = [];
-  for (let i = 0; i < rows; i++) {
-    const t0 = i / rows; const t1 = (i + 1) / rows;
-    const lA = lerp(p1, p4, t0); const lB = lerp(p2, p3, t0);
-    const uA = lerp(p1, p4, t1); const uB = lerp(p2, p3, t1);
-    const n = 6; const stag = (i % 2) * (0.5 / n);
-    for (let j = 0; j < n; j++) {
-      const s0 = Math.min(1, j / n + stag); const s1 = Math.min(1, (j + 1) / n + stag);
-      out.push(<polygon key={`${key}${i}-${j}`} points={str(lerp(lA, lB, s0), lerp(lA, lB, s1), lerp(uA, uB, s1), lerp(uA, uB, s0))} fill={fill} stroke="rgba(0,0,0,.22)" strokeWidth={0.6} vectorEffect="non-scaling-stroke" />);
-    }
-  }
-  return <g>{out}</g>;
-}
+// Deluxe uses a slightly shallower 6-row slope; wrap the kit shingles to keep
+// the original edge tint + row count.
+const shingles = (eaveA: P, eaveB: P, apex: P, fill: string, key: string): JSX.Element =>
+  kitShingles(eaveA, eaveB, apex, fill, "rgba(0,0,0,.22)", key, 6);
 
 export default function IsoForgeDeluxe({
   originX,

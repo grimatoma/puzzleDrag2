@@ -6,6 +6,7 @@
 
 import { useState } from "react";
 import IsoWorld, { type WorldBuilding, type WorldConfig } from "./IsoWorld.jsx";
+import BuildingGallery from "./BuildingGallery.jsx";
 import IsoForgeDetailed from "./variants/IsoForgeDetailed.jsx";
 import IsoForgeBillboard from "./variants/IsoForgeBillboard.jsx";
 import IsoForgePremium from "./variants/IsoForgePremium.jsx";
@@ -53,10 +54,11 @@ const STREET: WorldConfig = {
   },
 };
 
+type Mode = "gallery" | "compare" | "street";
+
 export default function IsoPrototype() {
-  const [mode, setMode] = useState<"compare" | "street">("compare");
-  const cfg = mode === "compare" ? COMPARE : STREET;
-  const btn = (m: "compare" | "street", label: string) => (
+  const [mode, setMode] = useState<Mode>("gallery");
+  const btn = (m: Mode, label: string) => (
     <button
       onClick={() => setMode(m)}
       style={{
@@ -70,12 +72,13 @@ export default function IsoPrototype() {
     </button>
   );
   return (
-    <div style={{ width: "100%", minHeight: "100vh", background: "#1c2530", overflow: "hidden" }}>
+    <div style={{ width: "100%", minHeight: "100vh", background: "#1c2530", overflow: mode === "gallery" ? "auto" : "hidden" }}>
       <div style={{ position: "fixed", top: 12, right: 12, zIndex: 11, display: "flex", gap: "8px" }}>
+        {btn("gallery", "Gallery")}
         {btn("compare", "Comparison")}
         {btn("street", "Street")}
       </div>
-      <IsoWorld key={mode} {...cfg} />
+      {mode === "gallery" ? <BuildingGallery /> : <IsoWorld key={mode} {...(mode === "compare" ? COMPARE : STREET)} />}
     </div>
   );
 }
