@@ -4,7 +4,7 @@ export default function PowderStoreIllustration({ isBuilt }: { isBuilt?: boolean
   const { f } = svgState(isBuilt);
   const detail: string = "high";
   return (
-    <svg viewBox="-59 -102 118 118" className="absolute inset-0 w-full h-full" preserveAspectRatio="xMidYMax meet" style={f}>
+    <svg viewBox="-54 -66 108 82" className="absolute inset-0 w-full h-full" preserveAspectRatio="xMidYMax meet" style={f}>
       <ellipse cx="0" cy="2" rx="44" ry="5" fill="rgba(0,0,0,.34)" />
       {/* berm */}
       <path d="M-44,0 Q-38,-6 -30,-6 L30,-6 Q38,-6 44,0 Z" fill="#7a6038" />

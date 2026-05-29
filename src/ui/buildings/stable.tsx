@@ -5,7 +5,7 @@ export default function StableIllustration({ isBuilt }: { isBuilt?: boolean }) {
   const { f } = svgState(isBuilt);
   const detail: string = "high";
   return (
-    <svg viewBox="-56 -96 112 112" className="absolute inset-0 w-full h-full" preserveAspectRatio="xMidYMax meet" style={f}>
+    <svg viewBox="-53 -52 106 68" className="absolute inset-0 w-full h-full" preserveAspectRatio="xMidYMax meet" style={f}>
       <ellipse cx="0" cy="2" rx="48" ry="5" fill="rgba(0,0,0,.28)" />
       {/* foundation */}
       <rect x="-40" y="-6" width="80" height="6" fill={PAL.stone} />

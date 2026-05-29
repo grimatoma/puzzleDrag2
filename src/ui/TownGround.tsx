@@ -1,24 +1,31 @@
 // ─── TownGround ─────────────────────────────────────────────────────────────
 // The town's top-down *terrain* layer: a grassy ground, water bodies, the dirt
-// road network, tilled fields, a central cobbled plaza with a well, faint pads
-// under each building lot, fences, the back layer of trees (+ all tree ground
-// shadows), and a little top-down street furniture (lampposts, a cart, a
-// signpost, planters). Rendered as an SVG in the same STAGE_W×STAGE_H design
-// space (plan.width/plan.height) as the rest of the Town view, sitting between
-// the backdrop and the building illustrations so the town reads as a planned
-// settlement seen from above.
+// road network, front paths from each lot to its street, tilled fields, a
+// central cobbled plaza (with a stippled cobble ring) and well, plot pads under
+// built/plaza lots, tidy fenced foundations on empty buildable lots, fences, the
+// back layer of trees (+ all tree ground shadows), and a little top-down street
+// furniture (lampposts, a cart, a signpost, planters). Rendered as an SVG in the
+// same STAGE_W×STAGE_H design space (plan.width/plan.height) as the rest of the
+// Town view, sitting between the backdrop and the building illustrations so the
+// town reads as a planned settlement seen from above.
 //
 // Layer order, back → front:
 //   1. grass base + soft organic blobs
 //   2. water (pond/shore polygons, river polylines) — under roads so a road
 //      crossing reads as a bridge
 //   3. roads (dirt polylines: edge underlay, body, dashed centerline)
+//   3c. bridges (wooden plank decks at road×river crossings; drawn ABOVE both
+//      water and roads so a crossing reads as a real bridge over the river)
+//   3b. front paths (short stubs connecting each lot to its nearest street)
 //   4. fields (rotated soil rects with crop rows)
-//   5. plaza (cobbled oval)
-//   6a. lot parcels (framed earth plots under every non-plaza lot)
-//   6b. lot shadow pads / empty-lot dashed markers + board pads
+//   5. plaza (cobbled oval + stippled cobble ring)
+//   6. lot pads (built/plaza = filled plot pad + shadow; empty buildable =
+//      tidy fenced foundation with a "build here" stake) + board pads
 //   7. fences (post-and-rail)
-//   8. trees: shadow for EVERY tree, canopy only for back-layer (!front) trees
+//   8. trees: shadow for EVERY tree, canopy only for back-layer (!front) trees,
+//      plus small street-verge trees (additive greenery in the grass gaps)
+//   8b. lush lot decor (garden beds / flower pots / shrubs at the front of each
+//       BUILT home) — behind the building illustrations
 //   9. props (street furniture)
 
 import { memo } from "react";
@@ -34,6 +41,9 @@ interface GroundPal {
   rock: string;
   sand: string;
   shadow: string;
+  pad: string;
+  padEdge: string;
+  path: string;
 }
 
 interface Pt { x: number; y: number }
@@ -53,6 +63,10 @@ interface TownPlan {
   trees?: Array<{ x: number; y: number; r: number; cluster?: number; front?: boolean }>;
   fields?: Array<{ cx: number; cy: number; w: number; h: number; rows: number; angle: number }>;
   fences?: Array<{ points: Pt[] }>;
+  paths?: Array<{ x1: number; y1: number; x2: number; y2: number; width: number }>;
+  bridges?: Array<{ x: number; y: number; angle: number; width: number }>;
+  lotDecor?: Array<{ lot: number; x: number; y: number; kind: string }>;
+  streetTrees?: Array<{ x: number; y: number; r: number }>;
 }
 
 interface Theme {
@@ -75,6 +89,7 @@ function groundPalette(biomeVariant: string, theme?: Theme): GroundPal {
       water: "#3a5a66", waterEdge: "#2a444e",
       rock: "#5a5e62", sand: "#9a9484",
       shadow: "rgba(20,18,14,0.32)",
+      pad: "#9a948a", padEdge: "#6e685e", path: "#8a857c",
     };
   } else {
     pal = {
@@ -83,6 +98,7 @@ function groundPalette(biomeVariant: string, theme?: Theme): GroundPal {
       water: "#4f8fb0", waterEdge: "#3a6f8a",
       rock: "#8a8478", sand: "#d8c89a",
       shadow: "rgba(30,24,12,0.30)",
+      pad: "#c8a972", padEdge: "#94703c", path: "#b08a52",
     };
   }
   if (theme?.groundTint) pal.grass = theme.groundTint;
@@ -249,6 +265,63 @@ function TownGround({ plan, theme, biomeVariant, builtLots }: TownGroundProps) {
         );
       })}
 
+      {/* ── 3c. Bridges — wooden plank decks where roads cross the river.
+              Rendered AFTER water AND roads so each crossing reads as a real
+              bridge sitting over the river. Drawn from a horizontal template in
+              a frame rotated by the road's angle about the crossing centre. ── */}
+      {(plan.bridges || []).map((b, i) => {
+        const deckLen = 42 + 24; // river width + overhang ≈ 66
+        const half = b.width / 2; // deck half-height = road half-width
+        const plankCount = Math.floor(deckLen / 8) - 1;
+        return (
+          <g key={`bridge${i}`} transform={`rotate(${(b.angle * 180) / Math.PI} ${b.x} ${b.y})`}>
+            {/* shadow under the deck */}
+            <ellipse cx={b.x} cy={b.y + 3} rx={deckLen / 2} ry={half + 2} fill={pal.shadow} opacity={0.35} />
+            {/* deck base (warm plank wood) */}
+            <rect x={b.x - deckLen / 2} y={b.y - half} width={deckLen} height={b.width} rx={3} fill="#9a6f3e" stroke="#6f4f28" strokeWidth={1.5} />
+            {/* cross-plank lines (perpendicular to the road direction) */}
+            {Array.from({ length: plankCount }, (_, k) => {
+              const x = b.x - deckLen / 2 + 8 * (k + 1);
+              return (
+                <line key={`bp${i}_${k}`} x1={x} y1={b.y - half + 1} x2={x} y2={b.y + half - 1} stroke="#6f4f28" strokeWidth={1} opacity={0.6} />
+              );
+            })}
+            {/* side rails along the two long edges */}
+            <rect x={b.x - deckLen / 2} y={b.y - half - 2} width={deckLen} height={2.5} rx={1} fill="#7a5630" />
+            <rect x={b.x - deckLen / 2} y={b.y + half - 0.5} width={deckLen} height={2.5} rx={1} fill="#7a5630" />
+            {/* rail posts at the 4 corners */}
+            {[[b.x - deckLen / 2, b.y - half], [b.x + deckLen / 2, b.y - half], [b.x - deckLen / 2, b.y + half], [b.x + deckLen / 2, b.y + half]].map(([px, py], k) => (
+              <circle key={`brp${i}_${k}`} cx={px} cy={py} r={1.8} fill="#5a3e1e" />
+            ))}
+          </g>
+        );
+      })}
+
+      {/* ── 3b. Front paths — short stubs from each lot to its nearest street ── */}
+      {(plan.paths || []).map((p, i) => (
+        <g key={`path${i}`}>
+          <line
+            x1={p.x1}
+            y1={p.y1}
+            x2={p.x2}
+            y2={p.y2}
+            stroke={pal.padEdge}
+            strokeWidth={p.width + 4}
+            strokeLinecap="round"
+            opacity="0.4"
+          />
+          <line
+            x1={p.x1}
+            y1={p.y1}
+            x2={p.x2}
+            y2={p.y2}
+            stroke={pal.path}
+            strokeWidth={p.width}
+            strokeLinecap="round"
+          />
+        </g>
+      ))}
+
       {/* ── 4. Fields — rotated soil rects with alternating crop rows ── */}
       {(plan.fields || []).map((f, i) => {
         const x0 = f.cx - f.w / 2, y0 = f.cy - f.h / 2;
@@ -284,34 +357,54 @@ function TownGround({ plan, theme, biomeVariant, builtLots }: TownGroundProps) {
       <ellipse cx={plan.plaza.cx} cy={plan.plaza.cy} rx={plan.plaza.rx} ry={plan.plaza.ry} fill={pal.dirt} />
       <ellipse cx={plan.plaza.cx} cy={plan.plaza.cy} rx={plan.plaza.rx} ry={plan.plaza.ry} fill="none" stroke={pal.dirtEdge} strokeWidth="2" />
       <ellipse cx={plan.plaza.cx} cy={plan.plaza.cy} rx={plan.plaza.rx * 0.62} ry={plan.plaza.ry * 0.62} fill="none" stroke={pal.dirtEdge} strokeWidth="1" opacity="0.4" />
+      {/* Stippled cobble ring — 16 evenly-spaced dots on the plaza rim. */}
+      {Array.from({ length: 16 }, (_, i) => {
+        const a = (i / 16) * Math.PI * 2;
+        return (
+          <circle
+            key={`cobble${i}`}
+            cx={plan.plaza.cx + Math.cos(a) * plan.plaza.rx}
+            cy={plan.plaza.cy + Math.sin(a) * plan.plaza.ry}
+            r={2}
+            fill={pal.padEdge}
+          />
+        );
+      })}
 
-      {/* ── 6a. Lot parcels — a framed earth plot under every non-plaza lot so
-              each lot reads as a bounded parcel within its city block ── */}
-      {plan.lots.filter((l) => l.row !== "plaza").map((l) => (
-        <g key={`parcel${l.index}`}>
-          <rect x={l.cx - l.w / 2} y={l.cy - l.h / 2} width={l.w} height={l.h} rx={4} fill={pal.dirt} opacity={0.18} />
-          <rect x={l.cx - l.w / 2} y={l.cy - l.h / 2} width={l.w} height={l.h} rx={4} fill="none" stroke={pal.dirtEdge} strokeWidth={1.5} opacity={0.6} />
-        </g>
-      ))}
-
-      {/* ── 6b. Lot shadow pads (built) / dashed markers (empty) + board pads ── */}
+      {/* ── 6. Lot pads — filled plot pad (built/plaza) or fenced foundation
+              (empty buildable) + board pads ── */}
       {plan.lots.map((l) => {
-        const baseY = l.cy + l.h / 2 - 4;
+        // Built lots + the plaza lot: a consistent rounded plot pad so the
+        // building reads as placed on a parcel.
         if (built.has(l.index) || l.row === "plaza") {
-          const rx = l.w * 0.5;
-          const ry = Math.max(9, l.h * 0.14);
           return (
             <g key={`pad${l.index}`}>
-              <ellipse cx={l.cx} cy={baseY} rx={rx} ry={ry} fill={pal.shadow} />
-              <ellipse cx={l.cx} cy={baseY} rx={rx * 0.6} ry={ry * 0.62} fill={pal.shadow} />
+              <ellipse cx={l.cx} cy={l.cy + l.h / 2 - 4} rx={l.w * 0.5} ry={Math.max(8, l.h * 0.12)} fill={pal.shadow} />
+              <rect x={l.cx - l.w / 2 + 4} y={l.cy - l.h / 2 + 4} width={l.w - 8} height={l.h - 8} rx={8} fill={pal.pad} stroke={pal.padEdge} strokeWidth={1.5} />
+              <rect x={l.cx - l.w / 2 + 8} y={l.cy - l.h / 2 + 6} width={l.w - 16} height={4} rx={2} fill="#ffffff" opacity={0.1} />
             </g>
           );
         }
-        const mw = l.w * 0.78, mh = Math.max(14, l.h * 0.22);
+        // Empty buildable lots: a tidy fenced foundation, all kept inside the
+        // lot bounds via insets so adjacent lots' fences never touch.
+        const fx0 = l.cx - l.w / 2 + 6, fy0 = l.cy - l.h / 2 + 6;
+        const fx1 = l.cx + l.w / 2 - 6, fy1 = l.cy + l.h / 2 - 6;
+        const mx = (fx0 + fx1) / 2, my = (fy0 + fy1) / 2;
         return (
-          <g key={`pad${l.index}`} opacity="0.55">
-            <rect x={l.cx - mw / 2} y={baseY - mh} width={mw} height={mh} rx={4} fill={pal.dirt} opacity="0.4" />
-            <rect x={l.cx - mw / 2} y={baseY - mh} width={mw} height={mh} rx={4} fill="none" stroke={pal.dirtEdge} strokeWidth="1.5" strokeDasharray="5 4" />
+          <g key={`pad${l.index}`}>
+            {/* foundation pad */}
+            <rect x={l.cx - l.w / 2 + 10} y={l.cy - l.h / 2 + 10} width={l.w - 20} height={l.h - 20} rx={6} fill={pal.dirt} opacity={0.5} />
+            <ellipse cx={l.cx - l.w * 0.16} cy={l.cy + l.h * 0.1} rx={5} ry={3} fill={pal.dirtEdge} opacity={0.3} />
+            <ellipse cx={l.cx + l.w * 0.14} cy={l.cy - l.h * 0.08} rx={4} ry={2.5} fill={pal.dirtEdge} opacity={0.3} />
+            {/* post-and-rail fence around the lot perimeter (inset ~6px) */}
+            <rect x={fx0} y={fy0} width={fx1 - fx0} height={fy1 - fy0} rx={2} fill="none" stroke="#7a5630" strokeWidth={2.5} />
+            <rect x={fx0} y={fy0} width={fx1 - fx0} height={fy1 - fy0} rx={2} fill="none" stroke="#9a784a" strokeWidth={1} opacity={0.7} />
+            {[[fx0, fy0], [fx1, fy0], [fx0, fy1], [fx1, fy1], [mx, fy0], [mx, fy1], [fx0, my], [fx1, my]].map(([px, py], k) => (
+              <circle key={`fp${l.index}_${k}`} cx={px} cy={py} r={2.4} fill="#5a3e1e" />
+            ))}
+            {/* "build here" stake near the front-center, on the pad */}
+            <rect x={l.cx - 1.25} y={l.cy + l.h * 0.16} width={2.5} height={12} fill="#6a4a26" />
+            <rect x={l.cx - 2} y={l.cy + l.h * 0.12} width={12} height={6} rx={1} fill="#8a6a3a" stroke="#5a3a18" strokeWidth={1} />
           </g>
         );
       })}
@@ -344,6 +437,51 @@ function TownGround({ plan, theme, biomeVariant, builtLots }: TownGroundProps) {
           <circle cx={t.x - t.r * 0.3} cy={t.y - t.r * 0.32} r={t.r * 0.32} fill="#7fae52" opacity="0.85" />
         </g>
       ))}
+      {/* Small street-verge trees: additive greenery in the grass gaps. */}
+      {(plan.streetTrees || []).map((t, i) => (
+        <g key={`st${i}`}>
+          <ellipse cx={t.x + t.r * 0.18} cy={t.y + t.r * 0.5} rx={t.r * 0.8} ry={t.r * 0.38} fill={pal.shadow} opacity={0.45} />
+          <circle cx={t.x} cy={t.y} r={t.r} fill="#3f6a2c" />
+          <circle cx={t.x - t.r * 0.22} cy={t.y - t.r * 0.24} r={t.r * 0.6} fill="#5a8a3a" />
+          <circle cx={t.x - t.r * 0.3} cy={t.y - t.r * 0.3} r={t.r * 0.3} fill="#7fae52" opacity={0.85} />
+        </g>
+      ))}
+
+      {/* ── 8b. Lush lot decor — garden beds / flower pots / shrubs at the front
+              of each BUILT home (behind the building illustrations) ── */}
+      {(plan.lotDecor || []).filter((d) => built.has(d.lot)).map((d, i) => {
+        if (d.kind === "bed") {
+          return (
+            <g key={`decor${i}`}>
+              <rect x={d.x - 7} y={d.y - 3} width={14} height={6} rx={3} fill={pal.dirt} stroke={pal.dirtEdge} strokeWidth={0.8} />
+              <circle cx={d.x - 4} cy={d.y - 3} r={1.3} fill="#f0c84a" />
+              <circle cx={d.x} cy={d.y - 3} r={1.3} fill="#e87878" />
+              <circle cx={d.x + 4} cy={d.y - 3} r={1.3} fill="#ffffff" />
+            </g>
+          );
+        }
+        if (d.kind === "pots") {
+          return (
+            <g key={`decor${i}`}>
+              {[-4, 4].map((dx, k) => (
+                <g key={`pot${i}_${k}`}>
+                  <rect x={d.x + dx - 2.5} y={d.y - 1} width={5} height={5} rx={1} fill="#6a4a28" />
+                  <circle cx={d.x + dx} cy={d.y - 2} r={2.5} fill={pal.grass} />
+                  <circle cx={d.x + dx} cy={d.y - 2} r={1} fill="#f0c84a" />
+                </g>
+              ))}
+            </g>
+          );
+        }
+        // shrub
+        return (
+          <g key={`decor${i}`}>
+            <ellipse cx={d.x} cy={d.y + 1} rx={6} ry={2} fill={pal.shadow} opacity={0.4} />
+            <circle cx={d.x} cy={d.y} r={5} fill="#4a7a32" />
+            <circle cx={d.x - 1.5} cy={d.y - 1.5} r={3} fill="#6a9a48" />
+          </g>
+        );
+      })}
 
       {/* ── 9. Street furniture ── */}
       {plan.props.map((p, i) => {

@@ -5,8 +5,10 @@
 // by straight axis-aligned streets (a wide central avenue both ways, narrower
 // streets elsewhere). One central block is reserved as the town square (plaza +
 // well + hearth lot); a handful of perimeter blocks are reserved for puzzle
-// boards; the remaining blocks subdivide into 1–4 building lots whose insets
-// make the surrounding streets visibly delineate them. A river cuts a diagonal
+// boards; every remaining non-excluded block yields exactly ONE building lot,
+// and all non-plaza lots share a single global width/height so the town reads as
+// a uniform grid of equal-size lots (a grass verge margin keeps each lot clear
+// of the surrounding streets). A river cuts a diagonal
 // organic break across an off-centre quadrant, and trees/fields/fences dress the
 // leftover ground. Everything is deterministic per zone: a single seeded
 // mulberry32 PRNG drives all jitter in a FIXED consumption order, so identical
@@ -59,6 +61,10 @@ export interface TownPlanWater { kind: "pond" | "river" | "shore"; polygon?: Pt[
 export interface TownPlanTree { x: number; y: number; r: number; cluster: number; front?: boolean }
 export interface TownPlanField { cx: number; cy: number; w: number; h: number; rows: number; angle: number }
 export interface TownPlanFence { points: Pt[] }
+export interface TownPlanBridge { x: number; y: number; angle: number; width: number }
+export interface TownPlanPath { x1: number; y1: number; x2: number; y2: number; width: number }
+export interface TownPlanLotDecor { lot: number; x: number; y: number; kind: "bed" | "pots" | "shrub" }
+export interface TownPlanStreetTree { x: number; y: number; r: number }
 
 export interface TownPlan {
   width: number;
@@ -77,6 +83,10 @@ export interface TownPlan {
   trees: TownPlanTree[];
   fields: TownPlanField[];
   fences: TownPlanFence[];
+  bridges: TownPlanBridge[];
+  paths: TownPlanPath[];
+  lotDecor: TownPlanLotDecor[];
+  streetTrees: TownPlanStreetTree[];
 }
 
 // ── Geometry helpers ────────────────────────────────────────────────────────
@@ -86,6 +96,18 @@ function segDist(p: Pt, a: Pt, b: Pt): number {
   let t = ((p.x - a.x) * dx + (p.y - a.y) * dy) / len2;
   t = Math.max(0, Math.min(1, t));
   return Math.hypot(p.x - (a.x + t * dx), p.y - (a.y + t * dy));
+}
+// Segment a→b intersected with segment c→d. Returns the crossing point, or null
+// when they are parallel/collinear or don't overlap within both segments.
+function segIntersect(a: Pt, b: Pt, c: Pt, d: Pt): Pt | null {
+  const r = { x: b.x - a.x, y: b.y - a.y };
+  const s = { x: d.x - c.x, y: d.y - c.y };
+  const denom = r.x * s.y - r.y * s.x;
+  if (denom === 0) return null; // parallel/collinear
+  const t = ((c.x - a.x) * s.y - (c.y - a.y) * s.x) / denom;
+  const u = ((c.x - a.x) * r.y - (c.y - a.y) * r.x) / denom;
+  if (t < 0 || t > 1 || u < 0 || u > 1) return null;
+  return { x: a.x + t * r.x, y: a.y + t * r.y };
 }
 function pointInPoly(p: Pt, poly: Pt[]): boolean {
   let inside = false;
@@ -120,28 +142,24 @@ export function buildTownPlan(
   const gx0 = 40, gy0 = 40, gw = 1200, gh = 880;
   const AVENUE = 46;   // central avenue gutter width
   const STREET = 30;   // ordinary street gutter width
-  const blocksNeeded = n + 4; // plaza + up to 3 boards + slack
+  const slack = Math.ceil(n * 0.25); // headroom for cells the diagonal river excludes
+  const blocksNeeded = n + 4 + slack; // plaza + up to 3 boards + river slack
 
-  // Analytic UPPER bound on how many lots a c×r grid can yield: each interior
-  // block subdivides into up to 4 lots, and we reserve ≤4 blocks (plaza+boards).
-  // This is only an upper bound — the realised count is usually lower because
-  // (a) at high plotCount blocks shrink below the subdivision thresholds and
-  // yield just 1 lot each (see the lot loop's graceful-degradation branch), and
-  // (b) the diagonal river excludes whatever blocks it crosses. So this sizing
-  // does NOT promise exactly n lots at extreme plotCount; it sizes the grid so
-  // there is ample block area to draw from, and `lots.slice(0, n)` trims any
-  // surplus. The lot loop's "≥1 lot per non-excluded block" rule (added so a
-  // whole block is never discarded to zero) keeps the realised count far above
-  // the old failure mode (a single plaza lot) across the full range.
-  const capacityOf = (cols: number, rows: number) => Math.max(0, (cols * rows - 4) * 4);
+  // Analytic UPPER bound on how many lots a c×r grid can yield: each non-reserved
+  // block now yields exactly ONE uniform lot, and we reserve ≤4 blocks
+  // (plaza+boards). So capacity is LINEAR in block count. This is still only an
+  // upper bound on realised lots because the diagonal river excludes whatever
+  // blocks it crosses; the `slack` term above sizes in extra cells to cover that.
+  // `lots.slice(0, n)` trims any surplus. The "exactly one lot per non-excluded
+  // block" rule keeps the realised count just under n across the full range.
+  const capacityOf = (cols: number, rows: number) => Math.max(0, cols * rows - 4);
 
   // Start from a roughly square grid biased to the 4:3 design ratio, then grow
-  // (cols first, then rows) until the upper-bound capacity ≥ n. Capacity grows
-  // fast (×4/block), so this loop almost never iterates.
+  // (cols first, then rows) until linear capacity covers n plus the river slack.
   type Block = { x: number; y: number; w: number; h: number };
   let cols = Math.max(3, Math.round(Math.sqrt(blocksNeeded * (W / H))));
   let rows = Math.max(3, Math.ceil(blocksNeeded / cols));
-  while (capacityOf(cols, rows) < n) {
+  while (capacityOf(cols, rows) < n + slack) {
     if (cols <= rows) cols++; else rows++;
   }
 
@@ -182,11 +200,11 @@ export function buildTownPlan(
   // plotCount a hard 90px floor would push block/lot centers off-canvas. So the
   // floor is itself clamped to span/count: blocks shrink below 90px rather than
   // escape the design space. This floor governs block SIZE/bounds only, not the
-  // lot COUNT — once blocks shrink past the subdivision thresholds the lot loop
-  // emits a single lot per block (graceful degradation), so shrinking blocks
-  // reduce lots-per-block toward 1 rather than producing exactly n. Pure
-  // arithmetic on the already-drawn weights — no new rng draws, so determinism
-  // and consumption order are unchanged.
+  // lot COUNT — every non-excluded block always contributes exactly one uniform
+  // lot, so shrinking blocks just shrink the global lot size (down to its 40px
+  // clamp), never the per-block lot count. Pure arithmetic on the already-drawn
+  // weights — no new rng draws, so determinism and consumption order are
+  // unchanged.
   const colFloor = Math.min(90, colSpace / cols);
   const rowFloor = Math.min(90, rowSpace / rows);
   const colW = colWeights.map((w) => Math.max(colFloor, (w / colWeightSum) * colSpace));
@@ -262,9 +280,12 @@ export function buildTownPlan(
   const excluded: boolean[][] = Array.from({ length: rows }, () => Array(cols).fill(false));
   excluded[pr][pc] = true; // plaza block never subdivides
 
-  // ── 4. Boards = reserved perimeter blocks ─────────────────────────────────
+  // ── 4. Boards = reserved blocks ───────────────────────────────────────────
+  // Farm sits directly ABOVE the town centre (the block just north of the plaza,
+  // same column); mine/fish stay on the perimeter. The fallback below relocates
+  // any board whose preferred block is unavailable (collision / river).
   const boardPrefForKind = (k: BoardKind): [number, number] => {
-    if (k === "farm") return [Math.floor(rows / 2), 0];
+    if (k === "farm") return [Math.max(0, pr - 1), pc];
     if (k === "mine") return [0, cols - 1];
     return [rows - 1, Math.floor(cols / 2)]; // fish
   };
@@ -368,7 +389,56 @@ export function buildTownPlan(
   const aabbOverlap = (a: { cx: number; cy: number; w: number; h: number }, b: typeof a, gap: number) =>
     Math.abs(a.cx - b.cx) < (a.w + b.w) / 2 + gap && Math.abs(a.cy - b.cy) < (a.h + b.h) / 2 + gap;
 
-  // ── 7. Lots: plaza hearth FIRST, then subdivide remaining blocks ──────────
+  // ── 6b. Bridges (a span wherever a road crosses the river) ─────────────────
+  // Pure arithmetic on the already-built roads + riverPath — no rng draws. Each
+  // road is an axis-aligned polyline, so a crossing angle is always 0 or ±π/2.
+  const bridges: TownPlanBridge[] = [];
+  {
+    const seen = new Set<string>();
+    for (const rd of roads) {
+      for (let i = 0; i < rd.points.length - 1; i++) {
+        const segA = rd.points[i], segB = rd.points[i + 1];
+        const angle = Math.atan2(segB.y - segA.y, segB.x - segA.x);
+        for (let k = 0; k < riverPath.length - 1; k++) {
+          const p = segIntersect(segA, segB, riverPath[k], riverPath[k + 1]);
+          if (!p) continue;
+          // Defensive: the river already avoids these blocks, but never bridge
+          // straight through a board or the plaza.
+          if (hitsBoard(p.x, p.y, 1, 1) || hitsPlaza(p.x, p.y)) continue;
+          const key = `${Math.round(p.x)}:${Math.round(p.y)}`;
+          if (seen.has(key)) continue;
+          seen.add(key);
+          bridges.push({ x: p.x, y: p.y, angle, width: rd.width });
+        }
+      }
+    }
+  }
+
+  // ── 7. Lots: plaza hearth FIRST, then ONE uniform lot per non-excluded block ─
+  // Every building lot is the SAME size. We pick a single global lot size that
+  // fits the SMALLEST non-excluded cell (minus a grass-verge MARGIN to each
+  // street), capped at MAX_LOT, then centre that identical lot in every cell.
+  // Centering means even cells smaller than the lot stay in bounds (only the
+  // centre must be inside the design space), so determinism and bounds hold at
+  // any plotCount. Pure arithmetic — no rng draws here.
+  const MARGIN = 10;    // grass verge kept between a lot and its surrounding streets
+  const MAX_LOT = 88;   // hard cap on a building lot's width/height
+  const clampLot = (v: number) => Math.max(40, Math.min(MAX_LOT, v));
+
+  let minCellW = Infinity, minCellH = Infinity;
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      if (excluded[r][c]) continue;
+      const blk = block[r][c];
+      if (blk.w < minCellW) minCellW = blk.w;
+      if (blk.h < minCellH) minCellH = blk.h;
+    }
+  }
+  if (!Number.isFinite(minCellW)) minCellW = MAX_LOT + 2 * MARGIN;
+  if (!Number.isFinite(minCellH)) minCellH = MAX_LOT + 2 * MARGIN;
+  const LOT_W = clampLot(Math.min(MAX_LOT, minCellW - 2 * MARGIN));
+  const LOT_H = clampLot(Math.min(MAX_LOT, minCellH - 2 * MARGIN));
+
   const lots: TownPlanLot[] = [];
   lots.push({
     index: 0,
@@ -377,43 +447,18 @@ export function buildTownPlan(
     w: 104, h: 112, row: "plaza",
   });
 
-  const LOT_INSET = 12;
-  const LOT_FLOOR = 56; // readable mini-grid cell floor (after inset)
-  // Emit a single inset, aspect-clamped lot centred in a rectangle. Shared by
-  // the mini-grid path and the graceful-degradation (whole-block) fallback so
-  // both honour the same inset/aspect rules. Pure arithmetic — no rng draws.
-  const pushLot = (cx0: number, cy0: number, cw: number, ch: number, tag: string) => {
-    let w = cw - LOT_INSET * 2;
-    let h = ch - LOT_INSET * 2;
-    // Keep buildings roughly square (renderer anchors aspectRatio:1).
-    if (w > h * 1.3) w = h * 1.3;
-    if (h > w * 1.3) h = w * 1.3;
-    lots.push({ index: lotIndex++, cx: cx0 + cw / 2, cy: cy0 + ch / 2, w, h, row: tag });
-  };
   let lotIndex = 1;
   for (let r = 0; r < rows; r++) {
     for (let c = 0; c < cols; c++) {
       if (excluded[r][c]) continue;
       const blk = block[r][c];
-      const bc = blk.w > 220 ? 2 : 1;
-      const brn = blk.h > 200 ? 2 : 1;
-      const cellW = blk.w / bc;
-      const cellH = blk.h / brn;
       const tag = (r < pr ? "n" : "s") + (c < pc ? "w" : "e");
-      // If the mini-grid cells would fall below the readable floor, don't drop
-      // the whole block to zero lots — degrade gracefully to a SINGLE lot that
-      // fills the block (inset + aspect-clamped). This keeps total lot capacity
-      // ≥ n at any plotCount; the 56px floor only governs whether we subdivide,
-      // never whether a non-excluded block contributes at all.
-      if (cellW - LOT_INSET * 2 < LOT_FLOOR || cellH - LOT_INSET * 2 < LOT_FLOOR) {
-        pushLot(blk.x, blk.y, blk.w, blk.h, tag);
-        continue;
-      }
-      for (let mr = 0; mr < brn; mr++) {
-        for (let mc = 0; mc < bc; mc++) {
-          pushLot(blk.x + cellW * mc, blk.y + cellH * mr, cellW, cellH, tag);
-        }
-      }
+      lots.push({
+        index: lotIndex++,
+        cx: blk.x + blk.w / 2,
+        cy: blk.y + blk.h / 2,
+        w: LOT_W, h: LOT_H, row: tag,
+      });
     }
   }
 
@@ -440,21 +485,38 @@ export function buildTownPlan(
     if (trees.length >= 40) break;
   }
 
-  // ── 9. Fields (in/adjacent to the farm board block) ───────────────────────
+  // ── 9. Fields (bound to the farm board block) ─────────────────────────────
+  // Emit a SINGLE tilled-soil field locked to the farm board's footprint (0.9×
+  // the card, centred on it, angle 0) so it can never float free of the card or
+  // overlap roads/other lots. We still walk the original 1..3 iteration loop and
+  // consume the same per-iteration rng()/j() draws so the downstream PRNG stream
+  // (fences, lampposts, …) is unchanged — only the first iteration pushes, and
+  // its geometry comes from the board, not the (still-drawn) jitter values.
   const fields: TownPlanField[] = [];
   if (kinds.includes("farm")) {
     const farmBoard = boards.find((b) => b.kind === "farm");
-    const fb = farmBoard ?? { cx: W * 0.16, cy: H * 0.5 };
+    const fb = farmBoard ?? { cx: W * 0.16, cy: H * 0.5, w: 150, h: 140 };
     const fieldN = 1 + Math.floor(rng() * 3); // 1..3
     for (let f = 0; f < fieldN; f++) {
-      fields.push({
-        cx: fb.cx + j(60),
-        cy: fb.cy + (f - fieldN / 2) * 130 + j(20),
-        w: 120 + Math.floor(rng() * 80),
-        h: 80 + Math.floor(rng() * 60),
-        rows: 4 + Math.floor(rng() * 4),
-        angle: j(0.15),
-      });
+      // Keep consuming every draw the original code made each iteration so the
+      // consumption order / count is identical; only `rows` (an rng draw) is
+      // actually used by the single emitted field.
+      j(60);
+      j(20);
+      Math.floor(rng() * 80);
+      Math.floor(rng() * 60);
+      const rows = 4 + Math.floor(rng() * 4); // 4..7
+      j(0.15);
+      if (f === 0) {
+        fields.push({
+          cx: fb.cx,
+          cy: fb.cy,
+          w: fb.w * 0.9,
+          h: fb.h * 0.9,
+          rows,
+          angle: 0, // no rotation → bounding box can't overflow the board cell
+        });
+      }
     }
   }
 
@@ -521,7 +583,26 @@ export function buildTownPlan(
     { kind: "cart", x: plaza.cx - 160 + j(20), y: plaza.cy + 140 },
     { kind: "planter", x: plaza.cx + 150 + j(20), y: plaza.cy - 120 },
   ];
-  // Lampposts at plaza-adjacent street intersections (2..4, deterministic).
+  // Nudge any plaza-decoration prop (not the well) that landed on a road back
+  // toward the plaza centre. Pure geometry on already-drawn positions — no rng
+  // draws. Lerp toward the centre up to 3 times; if still on a road, snap to a
+  // point on the plaza ellipse in the prop's original direction.
+  const settleProp = (p: TownPlanProp) => {
+    if (!hitsRoad({ x: p.x, y: p.y }, 2)) return;
+    let x = p.x, y = p.y;
+    for (let i = 0; i < 3; i++) {
+      x = (x + plaza.cx) / 2;
+      y = (y + plaza.cy) / 2;
+      if (!hitsRoad({ x, y }, 2)) { p.x = x; p.y = y; return; }
+    }
+    const theta = Math.atan2(p.y - plaza.cy, p.x - plaza.cx);
+    p.x = plaza.cx + Math.cos(theta) * plaza.rx * 0.8;
+    p.y = plaza.cy + Math.sin(theta) * plaza.ry * 0.8;
+  };
+  for (const p of props) if (p.kind !== "well") settleProp(p);
+  // Lampposts near plaza-adjacent street intersections (2..4, deterministic),
+  // offset diagonally off the road onto the nearest free grass corner so they
+  // never sit on a road body.
   {
     const lampN = 2 + Math.floor(rng() * 3); // 2..4
     const ordered: Array<{ x: number; y: number; d: number }> = [];
@@ -532,9 +613,94 @@ export function buildTownPlan(
       }
     }
     ordered.sort((a, b) => a.d - b.d);
+    const LAMP_OFF = AVENUE / 2 + 12; // clears even the widest road
+    const CORNERS: Array<[number, number]> = [[1, 1], [1, -1], [-1, 1], [-1, -1]];
     for (let i = 0; i < Math.min(lampN, ordered.length); i++) {
-      props.push({ kind: "lamppost", x: ordered[i].x, y: ordered[i].y });
+      const { x, y } = ordered[i];
+      for (const [dx, dy] of CORNERS) {
+        const c = { x: x + dx * LAMP_OFF, y: y + dy * LAMP_OFF };
+        const free = !hitsRoad(c, 2) && !hitsPlaza(c.x, c.y)
+          && !lots.some((l) => aabbOverlap({ cx: c.x, cy: c.y, w: 10, h: 10 }, l, 4))
+          && c.x > 0 && c.x < W && c.y > 0 && c.y < H;
+        if (free) { props.push({ kind: "lamppost", x: c.x, y: c.y }); break; }
+      }
+      // If no corner is free, skip this lamppost rather than place it on a road.
     }
+  }
+
+  // ── 13b. Front paths (stub from each kept lot to its nearest gutter) ───────
+  // Built from the lots actually RETURNED (after the slice), so a path never
+  // refers to a trimmed surplus lot. Each path runs straight from a lot edge
+  // midpoint to the nearest adjoining street centerline — pure arithmetic on the
+  // already-computed lots + gutter centerlines, no rng draws.
+  const keptLots = lots.slice(0, n);
+  const paths: TownPlanPath[] = [];
+  const PATH_W = 14;
+  for (const l of keptLots) {
+    if (l.row === "plaza") continue;
+    const { cx, cy, w, h } = l;
+    // Nearest gutter centerline on each of the lot's four sides (Infinity when
+    // there is no gutter on that side).
+    let gxL = -Infinity, gxR = Infinity, gyT = -Infinity, gyB = Infinity;
+    for (const sx of streetX) {
+      if (sx < cx && sx > gxL) gxL = sx;
+      if (sx > cx && sx < gxR) gxR = sx;
+    }
+    for (const sy of streetY) {
+      if (sy < cy && sy > gyT) gyT = sy;
+      if (sy > cy && sy < gyB) gyB = sy;
+    }
+    const dL = Number.isFinite(gxL) ? cx - gxL : Infinity;
+    const dR = Number.isFinite(gxR) ? gxR - cx : Infinity;
+    const dT = Number.isFinite(gyT) ? cy - gyT : Infinity;
+    const dB = Number.isFinite(gyB) ? gyB - cy : Infinity;
+    const best = Math.min(dL, dR, dT, dB);
+    if (!Number.isFinite(best)) continue;
+    if (best === dB) paths.push({ x1: cx, y1: cy + h / 2, x2: cx, y2: gyB, width: PATH_W });
+    else if (best === dT) paths.push({ x1: cx, y1: cy - h / 2, x2: cx, y2: gyT, width: PATH_W });
+    else if (best === dR) paths.push({ x1: cx + w / 2, y1: cy, x2: gxR, y2: cy, width: PATH_W });
+    else paths.push({ x1: cx - w / 2, y1: cy, x2: gxL, y2: cy, width: PATH_W });
+  }
+
+  // ── 13c. Lush decoration (separate decor RNG) ─────────────────────────────
+  // Purely-additive greenery driven by an INDEPENDENT sub-RNG seeded off the
+  // zone id, so it never touches the main `rng` stream (trees/fields/fences/
+  // props stay byte-identical). lotDecor dresses the FRONT of each built home;
+  // streetTrees scatter small trees on the grass verges between lots & streets,
+  // fully bounds-checked off roads/water/plaza/boards/lots.
+  const decorRng = seededRng(zoneId + ":decor");
+  const dj = (amt: number) => (decorRng() - 0.5) * 2 * amt; // ±amt jitter (decor stream)
+
+  const lotDecor: TownPlanLotDecor[] = [];
+  for (const l of keptLots) {
+    if (l.row === "plaza") continue;
+    const cnt = Math.floor(decorRng() * 3); // 0..2 accents
+    const left = { x: l.cx - l.w * 0.32, y: l.cy + l.h * 0.30 };
+    const right = { x: l.cx + l.w * 0.32, y: l.cy + l.h * 0.30 };
+    for (let k = 0; k < cnt; k++) {
+      const anchor = k === 0 ? left : right;
+      const kind = (["bed", "pots", "shrub"] as const)[Math.floor(decorRng() * 3)];
+      lotDecor.push({ lot: l.index, x: anchor.x + dj(3), y: anchor.y + dj(2), kind });
+    }
+  }
+
+  // Street-verge trees: ~40 deterministic candidate attempts, capped at 22,
+  // rejecting any candidate that would sit on a road/water/plaza/board/lot or
+  // collide with an already-placed verge tree.
+  const STREET_TREE_CAP = 22;
+  const streetTrees: TownPlanStreetTree[] = [];
+  for (let i = 0; i < 40 && streetTrees.length < STREET_TREE_CAP; i++) {
+    const x = 40 + decorRng() * (W - 80);
+    const y = 40 + decorRng() * (H - 80);
+    const r = 8 + Math.floor(decorRng() * 6); // 8..13 (smaller than the main trees)
+    const ok =
+      !hitsRoad({ x, y }, r + 4) &&
+      !hitsWater(x, y, r * 2, r * 2) &&
+      !hitsPlaza(x, y) &&
+      !hitsBoard(x, y, r * 2, r * 2) &&
+      !keptLots.some((l) => aabbOverlap({ cx: x, cy: y, w: r * 2, h: r * 2 }, l, 6)) &&
+      !streetTrees.some((t) => Math.hypot(t.x - x, t.y - y) < (t.r + r + 10));
+    if (ok) streetTrees.push({ x, y, r });
   }
 
   // ── 14. Return ────────────────────────────────────────────────────────────
@@ -544,10 +710,12 @@ export function buildTownPlan(
     plaza,
     well,
     streets,
-    lots: lots.slice(0, n),
+    lots: keptLots,
     boards,
     props,
     waypoints, edges,
     roads, water, trees, fields, fences,
+    bridges, paths,
+    lotDecor, streetTrees,
   };
 }

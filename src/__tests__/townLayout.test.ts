@@ -55,6 +55,17 @@ describe("townLayout.ts - buildTownPlan (top-down map)", () => {
     expect(big.lots.slice(1).every((l) => ["nw", "ne", "sw", "se"].includes(l.row))).toBe(true);
   });
 
+  it("emits uniform equal-size building lots (all non-plaza lots share w and h)", () => {
+    for (const plotCount of [12, 40]) {
+      const plan = buildTownPlan({ plotCount });
+      const building = plan.lots.slice(1); // drop the plaza hearth (lot 0)
+      expect(building.length).toBeGreaterThan(0);
+      const { w, h } = building[0];
+      expect(building.every((l) => l.w === w)).toBe(true);
+      expect(building.every((l) => l.h === h)).toBe(true);
+    }
+  });
+
   it("does not collapse to a single lot at extreme plotCount (graceful degradation)", () => {
     // Regression: the lot loop once discarded any subdivided cell below a 56px
     // floor. At very high plotCount every cell fell below it, so EVERY block was
@@ -165,5 +176,126 @@ describe("townLayout.ts - buildTownPlan (top-down map)", () => {
   it("caps total tree canopy entries", () => {
     const plan = buildTownPlan({ zoneId: "verdant", plotCount: 6 });
     expect(plan.trees.length).toBeLessThanOrEqual(40);
+  });
+
+  it("places a bridge at every road×river crossing (axis-aligned spans)", () => {
+    for (const args of [
+      { plotCount: 12 },
+      { zoneId: "harbor", plotCount: 16, boardKinds: ["farm", "mine", "fish"] as const },
+    ]) {
+      const plan = buildTownPlan(args);
+      expect(plan.bridges.length).toBeGreaterThan(0);
+      for (const b of plan.bridges) {
+        expect(b.width).toBeGreaterThan(0);
+        // Roads are axis-aligned, so every crossing angle is a multiple of π/2.
+        expect(Math.abs(Math.sin(2 * b.angle))).toBeLessThan(1e-6);
+      }
+    }
+  });
+
+  it("emits an axis-aligned front path from each non-plaza lot to its street", () => {
+    const plan = buildTownPlan({ plotCount: 12 });
+    expect(plan.paths.length).toBeGreaterThan(0);
+    for (const p of plan.paths) {
+      const axisAligned = Math.abs(p.x1 - p.x2) < 1e-6 || Math.abs(p.y1 - p.y2) < 1e-6;
+      expect(axisAligned).toBe(true);
+      expect(p.width).toBeGreaterThan(0);
+    }
+  });
+
+  it("keeps every lamppost off the road bodies", () => {
+    // Point-to-segment distance (local copy of the generator's geometry helper).
+    const segDist = (p: { x: number; y: number }, a: { x: number; y: number }, b: { x: number; y: number }) => {
+      const dx = b.x - a.x, dy = b.y - a.y;
+      const len2 = dx * dx + dy * dy || 1;
+      let t = ((p.x - a.x) * dx + (p.y - a.y) * dy) / len2;
+      t = Math.max(0, Math.min(1, t));
+      return Math.hypot(p.x - (a.x + t * dx), p.y - (a.y + t * dy));
+    };
+    const plan = buildTownPlan({ plotCount: 16, boardKinds: ["farm", "mine", "fish"] });
+    const lamps = plan.props.filter((p) => p.kind === "lamppost");
+    expect(lamps.length).toBeGreaterThan(0);
+    for (const lamp of lamps) {
+      let minClearance = Infinity; // (dist to nearest road centerline) - (road half-width)
+      for (const road of plan.roads) {
+        for (let i = 0; i < road.points.length - 1; i++) {
+          const d = segDist(lamp, road.points[i], road.points[i + 1]);
+          minClearance = Math.min(minClearance, d - road.width / 2);
+        }
+      }
+      // A lamp on the road body would have negative clearance; assert it's clear.
+      expect(minClearance).toBeGreaterThanOrEqual(-1e-6);
+    }
+  });
+
+  it("scatters street-verge trees that never sit on a road and stay in-bounds", () => {
+    // Point-to-segment distance (local copy of the generator's geometry helper).
+    const segDist = (p: { x: number; y: number }, a: { x: number; y: number }, b: { x: number; y: number }) => {
+      const dx = b.x - a.x, dy = b.y - a.y;
+      const len2 = dx * dx + dy * dy || 1;
+      let t = ((p.x - a.x) * dx + (p.y - a.y) * dy) / len2;
+      t = Math.max(0, Math.min(1, t));
+      return Math.hypot(p.x - (a.x + t * dx), p.y - (a.y + t * dy));
+    };
+    const plan = buildTownPlan({ plotCount: 16, boardKinds: ["farm", "mine", "fish"] });
+    expect(plan.streetTrees.length).toBeLessThanOrEqual(22); // STREET_TREE_CAP
+    for (const t of plan.streetTrees) {
+      // In-bounds.
+      expect(t.x).toBeGreaterThanOrEqual(0);
+      expect(t.x).toBeLessThanOrEqual(W);
+      expect(t.y).toBeGreaterThanOrEqual(0);
+      expect(t.y).toBeLessThanOrEqual(H);
+      // Off every road body (clearance to the nearest road centerline exceeds
+      // that road's half-width).
+      for (const road of plan.roads) {
+        for (let i = 0; i < road.points.length - 1; i++) {
+          const d = segDist(t, road.points[i], road.points[i + 1]);
+          expect(d).toBeGreaterThan(road.width / 2);
+        }
+      }
+    }
+  });
+
+  it("keeps every lot decor accent within its matching lot's bounds", () => {
+    const plan = buildTownPlan({ plotCount: 16, boardKinds: ["farm", "mine", "fish"] });
+    const lotByIndex = new Map(plan.lots.map((l) => [l.index, l]));
+    for (const d of plan.lotDecor) {
+      const lot = lotByIndex.get(d.lot);
+      expect(lot).toBeDefined();
+      expect(Math.abs(d.x - lot!.cx)).toBeLessThanOrEqual(lot!.w / 2);
+      expect(Math.abs(d.y - lot!.cy)).toBeLessThanOrEqual(lot!.h / 2);
+    }
+  });
+
+  it("leaves the main rng stream untouched (decor uses a separate seed)", () => {
+    // The decor sub-RNG is seeded independently, so existing arrays are still
+    // populated and the whole plan is still deterministic across calls.
+    const plan = buildTownPlan({ plotCount: 12 });
+    expect(plan.trees.length).toBeGreaterThan(0);
+    expect(plan.fields.length).toBeGreaterThanOrEqual(0); // home zone has no farm board → may be 0
+    expect(plan.props.length).toBeGreaterThan(0);
+    expect(buildTownPlan({ plotCount: 12 })).toEqual(plan);
+
+    // With a farm board, fields are non-empty; determinism still holds.
+    const farm = buildTownPlan({ plotCount: 12, boardKinds: ["farm"] });
+    expect(farm.fields.length).toBeGreaterThan(0);
+    expect(farm.trees.length).toBeGreaterThan(0);
+    expect(farm.props.length).toBeGreaterThan(0);
+    expect(buildTownPlan({ plotCount: 12, boardKinds: ["farm"] })).toEqual(farm);
+  });
+
+  it("locks the field inside the farm board's footprint", () => {
+    const plan = buildTownPlan({ plotCount: 16, boardKinds: ["farm"] });
+    const farm = plan.boards.find((b) => b.kind === "farm");
+    expect(farm).toBeDefined();
+    expect(plan.fields.length).toBeGreaterThan(0);
+    const TOL = 1; // field is 0.9× the card so strictly inside; small float tolerance
+    for (const f of plan.fields) {
+      expect(f.angle).toBe(0);
+      expect(f.cx - f.w / 2).toBeGreaterThanOrEqual(farm!.cx - farm!.w / 2 - TOL);
+      expect(f.cx + f.w / 2).toBeLessThanOrEqual(farm!.cx + farm!.w / 2 + TOL);
+      expect(f.cy - f.h / 2).toBeGreaterThanOrEqual(farm!.cy - farm!.h / 2 - TOL);
+      expect(f.cy + f.h / 2).toBeLessThanOrEqual(farm!.cy + farm!.h / 2 + TOL);
+    }
   });
 });

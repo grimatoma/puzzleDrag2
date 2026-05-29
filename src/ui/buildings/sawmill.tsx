@@ -5,7 +5,7 @@ export default function SawmillIllustration({ isBuilt }: { isBuilt?: boolean }) 
   const { f } = svgState(isBuilt);
   const detail: string = "high";
   return (
-    <svg viewBox="-62 -108 124 124" className="absolute inset-0 w-full h-full" preserveAspectRatio="xMidYMax meet" style={f}>
+    <svg viewBox="-58 -56 116 72" className="absolute inset-0 w-full h-full" preserveAspectRatio="xMidYMax meet" style={f}>
       <ellipse cx="-6" cy="2" rx="46" ry="5" fill="rgba(0,0,0,.3)" />
       {/* RIVER strip on the right side */}
       <rect x="22" y="0" width="32" height="14" fill={PAL.sea} />

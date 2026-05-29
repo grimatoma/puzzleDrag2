@@ -810,7 +810,7 @@ export const NPCS = {
 };
 
 export const BUILDINGS = [
-  { id: "hearth", name: "Hearth", desc: "The heart of the village. Keeps folk warm and anchors the community.", cost: { coins: 0 }, lv: 1, x: 60, y: 360, w: 90, h: 110, color: "#a8431a", built: true },
+  { id: "hearth", name: "Hearth", desc: "The heart of the village. Keeps folk warm and anchors the community.", cost: { coins: 0 }, lv: 1, x: 60, y: 360, w: 90, h: 110, color: "#a8431a" },
   { id: "mill", name: "Mill", desc: "Grinds and sorts harvest goods for better town recipes.", cost: { coins: 200, plank: 30 }, lv: 1, x: 200, y: 380, w: 80, h: 90, color: "#c8923a" },
   { id: "bakery", name: "Bakery", desc: "Craft baked goods — bread, honey rolls, harvest pies — to sell for coins.", cost: { coins: 500, plank: 40, block: 10 }, lv: 1, x: 320, y: 360, w: 100, h: 110, color: "#8a4a26" },
   { id: "inn", name: "Inn", desc: "Lodgings for helpers and travelling traders.", cost: { coins: 250, plank: 15 }, lv: 2, x: 470, y: 350, w: 110, h: 130, color: "#4f6b3a" },
