@@ -14,6 +14,8 @@
 //   2. water (pond/shore polygons, river polylines) — under roads so a road
 //      crossing reads as a bridge
 //   3. roads (dirt polylines: edge underlay, body, dashed centerline)
+//   3c. bridges (wooden plank decks at road×river crossings; drawn ABOVE both
+//      water and roads so a crossing reads as a real bridge over the river)
 //   3b. front paths (short stubs connecting each lot to its nearest street)
 //   4. fields (rotated soil rects with crop rows)
 //   5. plaza (cobbled oval + stippled cobble ring)
@@ -254,6 +256,38 @@ function TownGround({ plan, theme, biomeVariant, builtLots }: TownGroundProps) {
             {r.kind === "main" && (
               <polyline points={d} fill="none" stroke={roadLine} strokeWidth={1.5} strokeDasharray="7 8" strokeLinecap="square" strokeLinejoin="miter" opacity="0.4" />
             )}
+          </g>
+        );
+      })}
+
+      {/* ── 3c. Bridges — wooden plank decks where roads cross the river.
+              Rendered AFTER water AND roads so each crossing reads as a real
+              bridge sitting over the river. Drawn from a horizontal template in
+              a frame rotated by the road's angle about the crossing centre. ── */}
+      {(plan.bridges || []).map((b, i) => {
+        const deckLen = 42 + 24; // river width + overhang ≈ 66
+        const half = b.width / 2; // deck half-height = road half-width
+        const plankCount = Math.floor(deckLen / 8) - 1;
+        return (
+          <g key={`bridge${i}`} transform={`rotate(${(b.angle * 180) / Math.PI} ${b.x} ${b.y})`}>
+            {/* shadow under the deck */}
+            <ellipse cx={b.x} cy={b.y + 3} rx={deckLen / 2} ry={half + 2} fill={pal.shadow} opacity={0.35} />
+            {/* deck base (warm plank wood) */}
+            <rect x={b.x - deckLen / 2} y={b.y - half} width={deckLen} height={b.width} rx={3} fill="#9a6f3e" stroke="#6f4f28" strokeWidth={1.5} />
+            {/* cross-plank lines (perpendicular to the road direction) */}
+            {Array.from({ length: plankCount }, (_, k) => {
+              const x = b.x - deckLen / 2 + 8 * (k + 1);
+              return (
+                <line key={`bp${i}_${k}`} x1={x} y1={b.y - half + 1} x2={x} y2={b.y + half - 1} stroke="#6f4f28" strokeWidth={1} opacity={0.6} />
+              );
+            })}
+            {/* side rails along the two long edges */}
+            <rect x={b.x - deckLen / 2} y={b.y - half - 2} width={deckLen} height={2.5} rx={1} fill="#7a5630" />
+            <rect x={b.x - deckLen / 2} y={b.y + half - 0.5} width={deckLen} height={2.5} rx={1} fill="#7a5630" />
+            {/* rail posts at the 4 corners */}
+            {[[b.x - deckLen / 2, b.y - half], [b.x + deckLen / 2, b.y - half], [b.x - deckLen / 2, b.y + half], [b.x + deckLen / 2, b.y + half]].map(([px, py], k) => (
+              <circle key={`brp${i}_${k}`} cx={px} cy={py} r={1.8} fill="#5a3e1e" />
+            ))}
           </g>
         );
       })}
