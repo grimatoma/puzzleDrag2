@@ -142,17 +142,18 @@ export function buildTownPlan(
   const gx0 = 40, gy0 = 40, gw = 1200, gh = 880;
   const AVENUE = 46;   // central avenue gutter width
   const STREET = 30;   // ordinary street gutter width
-  const slack = Math.ceil(n * 0.25); // headroom for cells the diagonal river excludes
-  const blocksNeeded = n + 4 + slack; // plaza + up to 3 boards + river slack
+  const nBoards = kinds.filter((k) => k in BOARD_SPOTS).length;
+  const reserved = 1 + nBoards; // plaza + the actual puzzle boards
+  const slack = Math.ceil(n * 0.25); // headroom so the river never starves us below n
+  const blocksNeeded = n + reserved + slack;
 
-  // Analytic UPPER bound on how many lots a c×r grid can yield: each non-reserved
-  // block now yields exactly ONE uniform lot, and we reserve ≤4 blocks
-  // (plaza+boards). So capacity is LINEAR in block count. This is still only an
-  // upper bound on realised lots because the diagonal river excludes whatever
-  // blocks it crosses; the `slack` term above sizes in extra cells to cover that.
-  // `lots.slice(0, n)` trims any surplus. The "exactly one lot per non-excluded
-  // block" rule keeps the realised count just under n across the full range.
-  const capacityOf = (cols: number, rows: number) => Math.max(0, cols * rows - 4);
+  // Every non-reserved block yields exactly ONE uniform building lot, and we do
+  // NOT trim surplus — every buildable cell becomes a plot, so there are no dead
+  // grid squares (e.g. an empty bottom row). Capacity is linear in block count.
+  // The grid is sized so capacity comfortably covers n even after the diagonal
+  // river excludes a few cells; the realised plot count is therefore the full
+  // set of buildable cells (≈ n, a little more for sparse zones).
+  const capacityOf = (cols: number, rows: number) => Math.max(0, cols * rows - reserved);
 
   // Start from a roughly square grid biased to the 4:3 design ratio, then grow
   // (cols first, then rows) until linear capacity covers n plus the river slack.
@@ -637,31 +638,34 @@ export function buildTownPlan(
   // refers to a trimmed surplus lot. Each path runs straight from a lot edge
   // midpoint to the nearest adjoining street centerline — pure arithmetic on the
   // already-computed lots + gutter centerlines, no rng draws.
-  const keptLots = lots.slice(0, n);
+  // Every non-excluded grid cell is a buildable lot — no surplus is trimmed, so
+  // there are no dead grid squares (e.g. an empty bottom row). The plot count
+  // therefore equals the number of buildable cells (≈ the requested plotCount,
+  // which sizes the grid).
+  const keptLots = lots;
   const paths: TownPlanPath[] = [];
   const PATH_W = 14;
   for (const l of keptLots) {
     if (l.row === "plaza") continue;
     const { cx, cy, w, h } = l;
-    // Nearest gutter centerline on each of the lot's four sides (Infinity when
-    // there is no gutter on that side).
-    let gxL = -Infinity, gxR = Infinity, gyT = -Infinity, gyB = Infinity;
+    // Nearest gutter centerline to the left, right, and BELOW the lot. The top
+    // (north) side is deliberately excluded: buildings are drawn growing upward
+    // from their lot base, so a path leaving the top would appear to come out of
+    // the roof. Paths only exit the front (below) or a side.
+    let gxL = -Infinity, gxR = Infinity, gyB = Infinity;
     for (const sx of streetX) {
       if (sx < cx && sx > gxL) gxL = sx;
       if (sx > cx && sx < gxR) gxR = sx;
     }
     for (const sy of streetY) {
-      if (sy < cy && sy > gyT) gyT = sy;
       if (sy > cy && sy < gyB) gyB = sy;
     }
     const dL = Number.isFinite(gxL) ? cx - gxL : Infinity;
     const dR = Number.isFinite(gxR) ? gxR - cx : Infinity;
-    const dT = Number.isFinite(gyT) ? cy - gyT : Infinity;
     const dB = Number.isFinite(gyB) ? gyB - cy : Infinity;
-    const best = Math.min(dL, dR, dT, dB);
+    const best = Math.min(dL, dR, dB);
     if (!Number.isFinite(best)) continue;
     if (best === dB) paths.push({ x1: cx, y1: cy + h / 2, x2: cx, y2: gyB, width: PATH_W });
-    else if (best === dT) paths.push({ x1: cx, y1: cy - h / 2, x2: cx, y2: gyT, width: PATH_W });
     else if (best === dR) paths.push({ x1: cx + w / 2, y1: cy, x2: gxR, y2: cy, width: PATH_W });
     else paths.push({ x1: cx - w / 2, y1: cy, x2: gxL, y2: cy, width: PATH_W });
   }
