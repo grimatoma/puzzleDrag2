@@ -478,21 +478,38 @@ export function buildTownPlan(
     if (trees.length >= 40) break;
   }
 
-  // ── 9. Fields (in/adjacent to the farm board block) ───────────────────────
+  // ── 9. Fields (bound to the farm board block) ─────────────────────────────
+  // Emit a SINGLE tilled-soil field locked to the farm board's footprint (0.9×
+  // the card, centred on it, angle 0) so it can never float free of the card or
+  // overlap roads/other lots. We still walk the original 1..3 iteration loop and
+  // consume the same per-iteration rng()/j() draws so the downstream PRNG stream
+  // (fences, lampposts, …) is unchanged — only the first iteration pushes, and
+  // its geometry comes from the board, not the (still-drawn) jitter values.
   const fields: TownPlanField[] = [];
   if (kinds.includes("farm")) {
     const farmBoard = boards.find((b) => b.kind === "farm");
-    const fb = farmBoard ?? { cx: W * 0.16, cy: H * 0.5 };
+    const fb = farmBoard ?? { cx: W * 0.16, cy: H * 0.5, w: 150, h: 140 };
     const fieldN = 1 + Math.floor(rng() * 3); // 1..3
     for (let f = 0; f < fieldN; f++) {
-      fields.push({
-        cx: fb.cx + j(60),
-        cy: fb.cy + (f - fieldN / 2) * 130 + j(20),
-        w: 120 + Math.floor(rng() * 80),
-        h: 80 + Math.floor(rng() * 60),
-        rows: 4 + Math.floor(rng() * 4),
-        angle: j(0.15),
-      });
+      // Keep consuming every draw the original code made each iteration so the
+      // consumption order / count is identical; only `rows` (an rng draw) is
+      // actually used by the single emitted field.
+      j(60);
+      j(20);
+      Math.floor(rng() * 80);
+      Math.floor(rng() * 60);
+      const rows = 4 + Math.floor(rng() * 4); // 4..7
+      j(0.15);
+      if (f === 0) {
+        fields.push({
+          cx: fb.cx,
+          cy: fb.cy,
+          w: fb.w * 0.9,
+          h: fb.h * 0.9,
+          rows,
+          angle: 0, // no rotation → bounding box can't overflow the board cell
+        });
+      }
     }
   }
 
@@ -559,7 +576,26 @@ export function buildTownPlan(
     { kind: "cart", x: plaza.cx - 160 + j(20), y: plaza.cy + 140 },
     { kind: "planter", x: plaza.cx + 150 + j(20), y: plaza.cy - 120 },
   ];
-  // Lampposts at plaza-adjacent street intersections (2..4, deterministic).
+  // Nudge any plaza-decoration prop (not the well) that landed on a road back
+  // toward the plaza centre. Pure geometry on already-drawn positions — no rng
+  // draws. Lerp toward the centre up to 3 times; if still on a road, snap to a
+  // point on the plaza ellipse in the prop's original direction.
+  const settleProp = (p: TownPlanProp) => {
+    if (!hitsRoad({ x: p.x, y: p.y }, 2)) return;
+    let x = p.x, y = p.y;
+    for (let i = 0; i < 3; i++) {
+      x = (x + plaza.cx) / 2;
+      y = (y + plaza.cy) / 2;
+      if (!hitsRoad({ x, y }, 2)) { p.x = x; p.y = y; return; }
+    }
+    const theta = Math.atan2(p.y - plaza.cy, p.x - plaza.cx);
+    p.x = plaza.cx + Math.cos(theta) * plaza.rx * 0.8;
+    p.y = plaza.cy + Math.sin(theta) * plaza.ry * 0.8;
+  };
+  for (const p of props) if (p.kind !== "well") settleProp(p);
+  // Lampposts near plaza-adjacent street intersections (2..4, deterministic),
+  // offset diagonally off the road onto the nearest free grass corner so they
+  // never sit on a road body.
   {
     const lampN = 2 + Math.floor(rng() * 3); // 2..4
     const ordered: Array<{ x: number; y: number; d: number }> = [];
@@ -570,8 +606,18 @@ export function buildTownPlan(
       }
     }
     ordered.sort((a, b) => a.d - b.d);
+    const LAMP_OFF = AVENUE / 2 + 12; // clears even the widest road
+    const CORNERS: Array<[number, number]> = [[1, 1], [1, -1], [-1, 1], [-1, -1]];
     for (let i = 0; i < Math.min(lampN, ordered.length); i++) {
-      props.push({ kind: "lamppost", x: ordered[i].x, y: ordered[i].y });
+      const { x, y } = ordered[i];
+      for (const [dx, dy] of CORNERS) {
+        const c = { x: x + dx * LAMP_OFF, y: y + dy * LAMP_OFF };
+        const free = !hitsRoad(c, 2) && !hitsPlaza(c.x, c.y)
+          && !lots.some((l) => aabbOverlap({ cx: c.x, cy: c.y, w: 10, h: 10 }, l, 4))
+          && c.x > 0 && c.x < W && c.y > 0 && c.y < H;
+        if (free) { props.push({ kind: "lamppost", x: c.x, y: c.y }); break; }
+      }
+      // If no corner is free, skip this lamppost rather than place it on a road.
     }
   }
 

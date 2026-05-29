@@ -202,4 +202,44 @@ describe("townLayout.ts - buildTownPlan (top-down map)", () => {
       expect(p.width).toBeGreaterThan(0);
     }
   });
+
+  it("keeps every lamppost off the road bodies", () => {
+    // Point-to-segment distance (local copy of the generator's geometry helper).
+    const segDist = (p: { x: number; y: number }, a: { x: number; y: number }, b: { x: number; y: number }) => {
+      const dx = b.x - a.x, dy = b.y - a.y;
+      const len2 = dx * dx + dy * dy || 1;
+      let t = ((p.x - a.x) * dx + (p.y - a.y) * dy) / len2;
+      t = Math.max(0, Math.min(1, t));
+      return Math.hypot(p.x - (a.x + t * dx), p.y - (a.y + t * dy));
+    };
+    const plan = buildTownPlan({ plotCount: 16, boardKinds: ["farm", "mine", "fish"] });
+    const lamps = plan.props.filter((p) => p.kind === "lamppost");
+    expect(lamps.length).toBeGreaterThan(0);
+    for (const lamp of lamps) {
+      let minClearance = Infinity; // (dist to nearest road centerline) - (road half-width)
+      for (const road of plan.roads) {
+        for (let i = 0; i < road.points.length - 1; i++) {
+          const d = segDist(lamp, road.points[i], road.points[i + 1]);
+          minClearance = Math.min(minClearance, d - road.width / 2);
+        }
+      }
+      // A lamp on the road body would have negative clearance; assert it's clear.
+      expect(minClearance).toBeGreaterThanOrEqual(-1e-6);
+    }
+  });
+
+  it("locks the field inside the farm board's footprint", () => {
+    const plan = buildTownPlan({ plotCount: 16, boardKinds: ["farm"] });
+    const farm = plan.boards.find((b) => b.kind === "farm");
+    expect(farm).toBeDefined();
+    expect(plan.fields.length).toBeGreaterThan(0);
+    const TOL = 1; // field is 0.9× the card so strictly inside; small float tolerance
+    for (const f of plan.fields) {
+      expect(f.angle).toBe(0);
+      expect(f.cx - f.w / 2).toBeGreaterThanOrEqual(farm!.cx - farm!.w / 2 - TOL);
+      expect(f.cx + f.w / 2).toBeLessThanOrEqual(farm!.cx + farm!.w / 2 + TOL);
+      expect(f.cy - f.h / 2).toBeGreaterThanOrEqual(farm!.cy - farm!.h / 2 - TOL);
+      expect(f.cy + f.h / 2).toBeLessThanOrEqual(farm!.cy + farm!.h / 2 + TOL);
+    }
+  });
 });
