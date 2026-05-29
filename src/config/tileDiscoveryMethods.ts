@@ -11,10 +11,10 @@
 // discovery method:
 //   1. Add an entry below.
 //   2. Wire the runtime — grep for `discovery.method` and handle the new id
-//      everywhere it's read. Today that's three files:
-//        - src/features/tileCollection/effects.js (chain trigger, status
-//          + detail labels)
-//        - src/state.js (research accumulator, BUY_TILE reducer)
+//      everywhere it's read. Today that's:
+//        - src/features/tileCollection/effects.js (chain/building triggers,
+//          status + detail labels)
+//        - src/state.js (research accumulator, BUY_TILE + BUILD reducers)
 //        - src/state/helpers.js (initial tile-collection slice)
 //   3. The Wiki, Tile Discovery Methods reference tab, and Tiles editor
 //      pick it up automatically.
@@ -25,6 +25,9 @@ export const TILE_DISCOVERY_PARAM_TYPES = Object.freeze({
   // iterates BIOMES[*].resources, which contains both kinds. Matches existing
   // behavior; do not introduce a separate "tileKey" type here.
   RESOURCE_KEY: "resourceKey",
+  // A building id from BUILDINGS — rendered as a building picker in the
+  // Dev Panel Tiles editor.
+  BUILDING_KEY: "buildingKey",
 });
 
 export const TILE_DISCOVERY_METHODS = Object.freeze([
@@ -66,6 +69,14 @@ export const TILE_DISCOVERY_METHODS = Object.freeze([
     desc: "Granted as a daily login reward on a specific day of the 30-day track.",
     params: [
       { key: "day", label: "Day", type: "int", default: 1, min: 1, max: 30 },
+    ],
+  },
+  {
+    id: "building",
+    name: "Own a Building",
+    desc: "Unlocks the moment the player builds (and thereafter owns) a specific building.",
+    params: [
+      { key: "buildingId", label: "Required building", type: "buildingKey" },
     ],
   },
 ]);

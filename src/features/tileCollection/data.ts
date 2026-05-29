@@ -199,9 +199,9 @@ export const TILE_TYPES = [
   {
     id: "tile_veg_broccoli", category: "vegetables", displayName: "Broccoli",
     baseResource: "tile_veg_broccoli", tier: 3,
-    discovery: { method: "buy", coinCost: 250 },
+    discovery: { method: "building", buildingId: "kitchen" },
     effects: {},
-    description: "A long chain gives flowers. Not the best choice for a bouquet. This tile type can only be bought.",
+    description: "A hearty brassica that earns its place once you own a Kitchen — build one to add broccoli to the board.",
   },
 
   // ─── Placeholder catalog-import tiers ────────────────────────────────────
