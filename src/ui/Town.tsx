@@ -58,6 +58,10 @@ const BUILDING_IDS = new Set(BUILDINGS.map((b) => b.id));
 const ALL_BUILDING_IDS = BUILDINGS.map((b) => b.id);
 const BUILDINGS_BY_ID = new Map(BUILDINGS.map((b) => [b.id, b]));
 const CRAFTING_STATIONS = new Set(["bakery", "forge", "larder"]);
+// Built buildings have intrinsic SVG padding, so scale the box up to fill more
+// of its lot. Bottom-center anchored, so we widen and re-center; only applies to
+// BUILT buildings (not board buttons or the placement overlay).
+const BUILD_FILL = 1.2;
 
 // Puzzle-board fixtures placed on lots in the town (see townLayout.js
 // `boards`): label / nav icon / lot border / the art that fills the tile.
@@ -448,9 +452,13 @@ export function TownView({ state, dispatch }: { state: GameState; dispatch: Disp
                 key={slot.idx}
                 className="absolute pointer-events-auto"
                 style={{
-                  left: `${(slot.x / STAGE_W) * 100}%`,
+                  left: isBuilt
+                    ? `${((slot.x - slot.w * (BUILD_FILL - 1) / 2) / STAGE_W) * 100}%`
+                    : `${(slot.x / STAGE_W) * 100}%`,
                   bottom: `${((STAGE_H - slot.y - slot.h) / STAGE_H) * 100}%`,
-                  width: `${(slot.w / STAGE_W) * 100}%`,
+                  width: isBuilt
+                    ? `${(slot.w * BUILD_FILL / STAGE_W) * 100}%`
+                    : `${(slot.w / STAGE_W) * 100}%`,
                   aspectRatio: "1",
                   cursor: isBuilt && CRAFTING_STATIONS.has(b.id) ? "pointer" : isPlacing ? "pointer" : "default",
                   zIndex: Math.floor(slot.y + slot.h),
