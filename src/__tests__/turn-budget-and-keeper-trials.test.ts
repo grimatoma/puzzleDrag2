@@ -49,7 +49,7 @@ describe("keeper trials", () => {
       mergeTestState(base, {
         built: {
           ...base.built,
-          home: { ...base.built.home, granary: true, larder: true, inn: true },
+          home: { ...base.built.home, hearth: true, granary: true, larder: true, inn: true },
         },
         settlements: { home: { founded: true } },
       }),

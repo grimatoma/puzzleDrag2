@@ -113,7 +113,7 @@ export function createFreshState(overrides?: { saveSeed?: string; tools?: Record
     _biomeRestored: false,
     lastChainSnapshot: null,
     magicFertilizerCharges: 0,
-    built: { home: { hearth: true, decorations: {}, _plots: { 0: "hearth" } } },
+    built: { home: { decorations: {}, _plots: {} } },
     zoneNames: { home: "" },
     settlements: { home: { founded: true } },
     influence: 0,
