@@ -3,6 +3,7 @@ import { describe, it, expect, vi, afterEach } from "vitest";
 import { render, screen, fireEvent, within, cleanup } from "@testing-library/react";
 import React from "react";
 import { BottomNav } from "../ui";
+import { TownBuildingTooltipContent } from "../ui/Town";
 import type { GameState } from "../types/state";
 
 describe("BottomNav", () => {
@@ -89,5 +90,28 @@ describe("BottomNav", () => {
     const inventoryTab = screen.getByRole("button", { name: "Inventory" });
     const badgeText = within(inventoryTab).queryByText("1");
     expect(badgeText).toBeNull();
+  });
+});
+
+describe("TownBuildingTooltipContent", () => {
+  afterEach(() => {
+    cleanup();
+  });
+
+  it("uses the standard high-contrast game tooltip text treatment for building names", () => {
+    render(
+      <TownBuildingTooltipContent
+        data={{
+          label: "Workshop",
+          desc: "Crafts tools from raw materials.",
+          color: "#3a2a1a",
+        }}
+      />,
+    );
+
+    const title = screen.getByText("Workshop");
+    expect(Array.from(title.classList)).toContain("text-cream");
+    expect(title.getAttribute("style") ?? "").not.toContain("#3a2a1a");
+    expect(Array.from(screen.getByText("Crafts tools from raw materials.").classList)).toContain("text-cream/80");
   });
 });

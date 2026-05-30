@@ -215,6 +215,21 @@ function TownStage({ children }: { children: ReactNode }) {
   );
 }
 
+export function TownBuildingTooltipContent({ data }: { data: BuildingTipData }) {
+  return (
+    <>
+      <div className="font-semibold text-cream text-caption leading-snug whitespace-nowrap">
+        {data.label}
+      </div>
+      {data.desc && (
+        <div className="mt-0.5 block text-cream/80 text-caption leading-snug whitespace-normal">
+          {data.desc}
+        </div>
+      )}
+    </>
+  );
+}
+
 export function TownView({ state, dispatch }: { state: GameState; dispatch: Dispatch }) {
   const [entryBiome, setEntryBiome] = useState<string | null>(null);
   const [purchaseBuilding, setPurchaseBuilding] = useState<PendingBuilding | null>(null);
@@ -596,16 +611,14 @@ export function TownView({ state, dispatch }: { state: GameState; dispatch: Disp
         <Tooltip
           anchorX={buildingTip.x}
           anchorY={buildingTip.y}
-          className="z-[9999] pointer-events-none px-3 py-2 rounded-lg border border-white/20"
+          className="z-[9999] pointer-events-none bg-ink text-cream text-caption rounded-md px-2 py-1.5 shadow-lg border border-iron/60"
           style={{
-            background: "rgba(10,10,14,.92)",
             maxWidth: 240,
             minWidth: 150,
           }}
-          arrowClassName="border-4 border-transparent border-t-[rgba(10,10,14,0.92)]"
+          arrowClassName="border-4 border-transparent border-t-ink"
         >
-          <div className="font-bold" style={{ color: buildingTip.data.color, fontSize: "clamp(9px,1.1vw,13px)", whiteSpace: "nowrap" }}>{buildingTip.data.label}</div>
-          {buildingTip.data.desc && <div className="mt-0.5 leading-snug text-white/75" style={{ fontSize: "clamp(8px,0.9vw,11px)", whiteSpace: "normal" }}>{buildingTip.data.desc}</div>}
+          <TownBuildingTooltipContent data={buildingTip.data} />
         </Tooltip>
       )}
 
