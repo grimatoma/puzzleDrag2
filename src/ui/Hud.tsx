@@ -135,6 +135,14 @@ export function Hud({ state, dispatch, inventorySearchOpen, onInventorySearchTog
   });
   const settlementName = "Hearthwood Vale";
   const showTide = state.biomeKey === "fish" && (onBoard || view === "town");
+  const VIEW_LABELS: Record<string, string> = {
+    town: "Town",
+    inventory: "Inventory",
+    crafting: "Craft",
+    cartography: "Map",
+    townsfolk: "Townsfolk",
+  };
+  const viewLabel = !onBoard ? (VIEW_LABELS[view] ?? null) : null;
 
   const seasonAccent = onBoard
     ? `#${(season.fill ?? 0xe2b24a).toString(16).padStart(6, "0")}`
@@ -153,6 +161,9 @@ export function Hud({ state, dispatch, inventorySearchOpen, onInventorySearchTog
           aria-label={onBoard ? "Leave board" : "Menu"}
           title={onBoard ? `Leave board · ${settlementName}` : settlementName}
         >{onBoard ? "←" : "≡"}</button>
+        {viewLabel && (
+          <span className="text-body font-semibold text-ink leading-none flex-shrink-0">{viewLabel}</span>
+        )}
         {view === "inventory" && onInventorySearchToggle && (
           <button
             type="button"

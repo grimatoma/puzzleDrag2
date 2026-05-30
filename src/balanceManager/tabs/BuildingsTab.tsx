@@ -147,13 +147,29 @@ export default function BuildingsTab({ draft, updateDraft, focus }: TabProps) {
                 {/* Icon + meta stacked */}
                 <div className="flex flex-col gap-1 flex-1 min-w-0">
                   <div className="flex items-center gap-1.5 flex-wrap">
-                    {/* Small icon badge */}
+                    {/* Icon vs SVG: the canvas/raster icon badge next to the
+                        small-rendered illustration SVG, for side-by-side compare. */}
                     <div
-                      className="shrink-0 flex items-center justify-center rounded border"
-                      style={{ width: 24, height: 24, borderColor: COLORS.border, background: COLORS.parchmentDeep }}
-                      title={`${eff.name} icon`}
+                      className="shrink-0 flex items-center gap-0.5 rounded border p-0.5"
+                      style={{ borderColor: COLORS.border, background: COLORS.parchmentDeep }}
+                      title={`${eff.name}: canvas icon vs SVG illustration`}
                     >
-                      <Icon iconKey={b.id} size={18} />
+                      {/* Canvas icon */}
+                      <div
+                        className="flex items-center justify-center"
+                        style={{ width: 24, height: 24 }}
+                        title={`${eff.name} icon`}
+                      >
+                        <Icon iconKey={b.id} size={18} />
+                      </div>
+                      {/* SVG illustration, rendered at the same small size */}
+                      <div
+                        className="relative overflow-hidden rounded"
+                        style={{ width: 24, height: 24, background: COLORS.parchment }}
+                        title={`${eff.name} SVG`}
+                      >
+                        <BuildingIllustration id={b.id} isBuilt />
+                      </div>
                     </div>
                     <code
                       className="font-mono text-[10px] px-1.5 py-0.5 rounded"

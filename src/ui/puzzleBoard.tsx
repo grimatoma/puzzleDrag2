@@ -703,7 +703,9 @@ export function PuzzleActionPanel({
       style={{
         height: 148,
         background:
-          "linear-gradient(180deg, var(--panel-top) 0%, var(--panel-bottom) 100%)",
+          state === "tool"
+            ? "linear-gradient(180deg, #fffefa 0%, #faf3e4 100%)"
+            : "linear-gradient(180deg, var(--panel-top) 0%, var(--panel-bottom) 100%)",
         border: "1.5px solid var(--card-border-strong)",
         boxShadow: "var(--card-shadow-strong), inset 0 0 0 1px rgba(255,255,255,0.55)",
       }}
@@ -713,7 +715,7 @@ export function PuzzleActionPanel({
       <div
         className="absolute inset-0 pointer-events-none"
         style={{
-          opacity: 0.12,
+          opacity: state === "tool" ? 0.05 : 0.12,
           backgroundImage:
             "radial-gradient(rgba(138,100,40,0.25) 0.7px, transparent 0.7px)",
           backgroundSize: "8px 8px",

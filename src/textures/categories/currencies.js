@@ -401,7 +401,69 @@ function drawHearthTokenTide(ctx) {
   ctx.fill();
 }
 
+// ── Golden Coin — a treasure board tile. A struck gold coin, face-on. ─────
+function drawGoldenCoin(ctx) {
+  drawShadow(ctx, 14, 3);
+  // Outer rim
+  const rim = ctx.createRadialGradient(-4, -4, 2, 0, 0, 14);
+  rim.addColorStop(0, "#fff1a8");
+  rim.addColorStop(0.55, "#f0b81c");
+  rim.addColorStop(1, "#8a5a0c");
+  ctx.fillStyle = rim;
+  ctx.beginPath();
+  ctx.arc(0, 0, 13, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = "#5e3c06";
+  ctx.lineWidth = 1.4;
+  ctx.stroke();
+  // Reeded edge ticks
+  ctx.strokeStyle = "rgba(94,60,6,0.55)";
+  ctx.lineWidth = 0.8;
+  for (let i = 0; i < 24; i++) {
+    const a = (i / 24) * Math.PI * 2;
+    ctx.beginPath();
+    ctx.moveTo(Math.cos(a) * 11.5, Math.sin(a) * 11.5);
+    ctx.lineTo(Math.cos(a) * 13, Math.sin(a) * 13);
+    ctx.stroke();
+  }
+  // Inner face
+  const face = ctx.createRadialGradient(-3, -3, 1, 0, 0, 10);
+  face.addColorStop(0, "#ffe27a");
+  face.addColorStop(0.6, "#f4c430");
+  face.addColorStop(1, "#b8860b");
+  ctx.fillStyle = face;
+  ctx.beginPath();
+  ctx.arc(0, 0, 9.5, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = "rgba(94,60,6,0.7)";
+  ctx.lineWidth = 1;
+  ctx.stroke();
+  // Embossed coin mark — a struck star/sun motif
+  ctx.fillStyle = "rgba(94,60,6,0.8)";
+  ctx.beginPath();
+  for (let i = 0; i < 8; i++) {
+    const a = (i / 8) * Math.PI * 2 - Math.PI / 2;
+    const r = i % 2 === 0 ? 6 : 2.6;
+    const x = Math.cos(a) * r;
+    const y = Math.sin(a) * r;
+    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  }
+  ctx.closePath();
+  ctx.fill();
+  // Center pip
+  ctx.fillStyle = "#fff1a8";
+  ctx.beginPath();
+  ctx.arc(0, 0, 1.6, 0, Math.PI * 2);
+  ctx.fill();
+  // Specular gleam
+  ctx.fillStyle = "rgba(255,255,255,0.6)";
+  ctx.beginPath();
+  ctx.ellipse(-5, -6, 3.2, 1.3, -0.5, 0, Math.PI * 2);
+  ctx.fill();
+}
+
 export const ICONS = {
+  tile_coin_golden:     { label: "Golden Coin",      color: "#f4c430", draw: drawGoldenCoin },
   cur_embers:           { label: "Embers",           color: "#d6612a", draw: drawEmbers },
   cur_core_ingot:       { label: "Core Ingot",       color: "#2a4878", draw: drawCoreIngot },
   cur_gems:             { label: "Gems",             color: "#e85aa8", draw: drawGems },

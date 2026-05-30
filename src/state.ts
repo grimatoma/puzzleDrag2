@@ -18,7 +18,7 @@ import { driftPrices, applyTrade, pickMarketEvent } from "./market.js";
 import { currentCap } from "./utils.js";
 import { computeWorkerEffects } from "./features/workers/aggregate.js";
 import { TILE_TYPES, CATEGORIES, TILE_TYPES_MAP } from "./features/tileCollection/data.js";
-import { discoverTileTypesFromChain } from "./features/tileCollection/effects.js";
+import { discoverTileTypesFromChain, discoverTileTypesFromBuilding } from "./features/tileCollection/effects.js";
 import { rollQuests } from "./features/quests/data.js";
 import { awardXp, XP_PER_LEVEL } from "./features/almanac/data.js";
 import * as crafting from "./features/crafting/slice.js";
@@ -840,8 +840,28 @@ function coreReducer(state: GameState, action: Action): GameState {
         bubble,
         _hintsShown: newHintsShown,
       };
+      // Own-a-building tile discovery: building (and thereafter owning) a
+      // building unlocks any tile types whose discovery is gated on it.
+      const buildDiscovery = discoverTileTypesFromBuilding(afterBuild, b.id);
+      let afterBuildDiscovery: GameState = afterBuild;
+      if (buildDiscovery.discoveredIds.length > 0) {
+        const tc = afterBuild.tileCollection ?? defaultTileCollectionSlice();
+        const activeByCategory = { ...(tc.activeByCategory ?? {}) };
+        for (const id of buildDiscovery.discoveredIds) {
+          const t = TILE_TYPES_MAP[id];
+          if (t && activeByCategory[t.category] == null) activeByCategory[t.category] = id;
+        }
+        const firstTile = TILE_TYPES_MAP[buildDiscovery.discoveredIds[0]];
+        afterBuildDiscovery = {
+          ...afterBuild,
+          tileCollection: { ...tc, discovered: buildDiscovery.newDiscoveredMap, activeByCategory },
+          bubble: firstTile
+            ? { id: Date.now() + firstTile.id.length, npc: "wren", text: `New tile type: ${firstTile.displayName}`, ms: 2400 }
+            : afterBuild.bubble,
+        };
+      }
       // Story: fire building_built trigger
-      let afterBuildStory = evaluateAndApplyStoryBeat(afterBuild, { type: "building_built", id: b.id });
+      let afterBuildStory = evaluateAndApplyStoryBeat(afterBuildDiscovery, { type: "building_built", id: b.id });
       // Check if all 8 story-required buildings are now built
       const homeBuilt = afterBuildStory.built?.home ?? {};
       const allBuilt = STORY_BUILDING_IDS.every((id) => homeBuilt[id]);
