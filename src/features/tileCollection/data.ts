@@ -201,7 +201,7 @@ export const TILE_TYPES = [
     baseResource: "tile_veg_broccoli", tier: 3,
     discovery: { method: "buy", coinCost: 250 },
     effects: {},
-    description: "A long chain gives flowers. Not the best choice for a bouquet. This tile type can only be bought.",
+    description: "Not the best choice for a bouquet. This tile type can only be bought.",
   },
 
   // ─── Placeholder catalog-import tiers ────────────────────────────────────
@@ -233,14 +233,14 @@ export const TILE_TYPES = [
     baseResource: "tile_grain_buckwheat", tier: 1,
     discovery: { method: "default" },
     effects: {},
-    description: "A long chain gives herd animals. Some do like it. Really.",
+    description: "Some do like it. Really.",
   },
   {
     id: "tile_grain_manna", category: "grain", displayName: "Manna",
     baseResource: "tile_grain_manna", tier: 2,
     discovery: { method: "research", researchOf: "tile_grain_wheat", researchAmount: 200 },
     effects: {},
-    description: "Three stars when collected. Attracts rats. Extremely nutritious.",
+    description: "Attracts rats. Extremely nutritious.",
   },
   {
     id: "tile_grain_rice", category: "grain", displayName: "Rice",
@@ -269,15 +269,16 @@ export const TILE_TYPES = [
     id: "tile_fruit_golden_apple", category: "fruits", displayName: "Golden Apple",
     baseResource: "tile_fruit_golden_apple", tier: 2,
     discovery: { method: "default" },
+    abilities: [{ id: "coin_bonus_flat", params: { amount: 5 } }],
     effects: {},
-    description: "Twelve stars when collected. Five coins per harvest. For the most beautiful.",
+    description: "Five coins per harvest. For the most beautiful.",
   },
   {
     id: "tile_fruit_blackberry", category: "fruits", displayName: "Blackberry",
     baseResource: "tile_fruit_blackberry", tier: 0,
     discovery: { method: "default" },
     effects: {},
-    description: "Six stars when collected. Easy to collect. It's ironic that it replaces the apple.",
+    description: "Easy to collect. It's ironic that it replaces the apple.",
   },
   {
     id: "tile_fruit_rambutan", category: "fruits", displayName: "Rambutan",
@@ -311,6 +312,7 @@ export const TILE_TYPES = [
     id: "tile_fruit_jackfruit", category: "fruits", displayName: "Jackfruit",
     baseResource: "tile_fruit_jackfruit", tier: 1,
     discovery: { method: "chain", chainLengthOf: "tile_fruit_lemon", chainLength: 6 },
+    abilities: [{ id: "bonus_yield", params: { target: "pie", amount: 1 } }],
     effects: {},
     description: "Gives two times more pie. A long chain attracts rats. Doesn't know jack.",
   },
@@ -328,7 +330,7 @@ export const TILE_TYPES = [
     baseResource: "tile_flower_water_lily", tier: 1,
     discovery: { method: "research", researchOf: "tile_flower_pansy", researchAmount: 15 },
     effects: {},
-    description: "Twenty-four stars when collected. Resistant to swamp. Leaves a lasting impression.",
+    description: "Resistant to swamp. Leaves a lasting impression.",
   },
 
   // Trees (new category — distinct from existing `wood` chain)
@@ -351,7 +353,7 @@ export const TILE_TYPES = [
     baseResource: "tile_tree_willow", tier: 0,
     discovery: { method: "default" },
     effects: {},
-    description: "Two stars when collected. A long chain gives vegetables. Listen to the wind in its boughs.",
+    description: "Listen to the wind in its boughs.",
   },
   {
     id: "tile_tree_fir", category: "trees", displayName: "Fir",
@@ -405,7 +407,7 @@ export const TILE_TYPES = [
     baseResource: "tile_bird_rooster", tier: 1,
     discovery: { method: "default" },
     effects: {},
-    description: "Four stars when collected. Avoided by wolves. Can spell cock-a-doodle-doo.",
+    description: "Avoided by wolves. Can spell cock-a-doodle-doo.",
   },
   {
     id: "tile_bird_wild_goose", category: "bird", displayName: "Wild Goose",
@@ -419,35 +421,35 @@ export const TILE_TYPES = [
     baseResource: "tile_bird_goose", tier: 2,
     discovery: { method: "research", researchOf: "tile_bird_chicken", researchAmount: 200 },
     effects: {},
-    description: "A long chain gives vegetables. Its quill is said to be quite dangerous.",
+    description: "Its quill is said to be quite dangerous.",
   },
   {
     id: "tile_bird_parrot", category: "bird", displayName: "Parrot",
     baseResource: "tile_bird_parrot", tier: 1,
     discovery: { method: "default" },
     effects: {},
-    description: "Three stars when collected. Can be collected with trees. Polly wants a cracker.",
+    description: "Can be collected with trees. Polly wants a cracker.",
   },
   {
     id: "tile_bird_phoenix", category: "bird", displayName: "Phoenix",
     baseResource: "tile_bird_phoenix", tier: 2,
     discovery: { method: "default" },
     effects: {},
-    description: "Two stars when collected. Attracts wolves. Deadly to pests. Can light your fire.",
+    description: "Attracts wolves. Deadly to pests. Can light your fire.",
   },
   {
     id: "tile_bird_dodo", category: "bird", displayName: "Dodo",
     baseResource: "tile_bird_dodo", tier: 3,
     discovery: { method: "buy", coinCost: 250 },
     effects: {},
-    description: "All are auto-collected when you make any chain. A proactive bird, always says \"do, do!\". Buy-only.",
+    description: "A proactive bird, always says \"do, do!\". Buy-only.",
   },
   {
     id: "tile_bird_pig_in_disguise", category: "bird", displayName: "Pig in Disguise",
     baseResource: "tile_bird_pig_in_disguise", tier: 3,
     discovery: { method: "buy", coinCost: 100000 },
     effects: {},
-    description: "Two stars when collected. Copies the last long-chain bonus. \"Day 236: They still think I'm a bird.\" Buy-only.",
+    description: "\"Day 236: They still think I'm a bird.\" Buy-only.",
   },
 
   // Herd Animals (new category)
@@ -455,8 +457,9 @@ export const TILE_TYPES = [
     id: "tile_herd_pig", category: "herd_animals", displayName: "Pig",
     baseResource: "tile_herd_pig", tier: 0,
     discovery: { method: "default" },
+    abilities: [{ id: "free_turn_if_chain", params: { minChain: 6 } }],
     effects: {},
-    description: "More experience for long chains. Surprisingly tidy.",
+    description: "Chains of 6 or more grant a free move. Surprisingly tidy.",
   },
   {
     id: "tile_herd_hog", category: "herd_animals", displayName: "Hog",
@@ -477,7 +480,7 @@ export const TILE_TYPES = [
     baseResource: "tile_herd_warthog", tier: 2,
     discovery: { method: "buy", coinCost: 250 },
     effects: {},
-    description: "Avoided by wolves. A long chain gives mounts. A savage pig from a savage age. Buy-only.",
+    description: "Avoided by wolves. A savage pig from a savage age. Buy-only.",
   },
   {
     id: "tile_herd_sheep", category: "herd_animals", displayName: "Sheep",
@@ -521,12 +524,13 @@ export const TILE_TYPES = [
     baseResource: "tile_cattle_longhorn", tier: 1,
     discovery: { method: "default" },
     effects: {},
-    description: "Twenty-four stars when collected. Hardcore vegan.",
+    description: "Hardcore vegan.",
   },
   {
     id: "tile_cattle_triceratops", category: "cattle", displayName: "Triceratops",
     baseResource: "tile_cattle_triceratops", tier: 3,
     discovery: { method: "daily", day: 30 },
+    abilities: [{ id: "bonus_yield", params: { target: "milk", amount: 1 } }],
     effects: {},
     description: "Avoided by wolves. Gives two times more milk. Granted by the Day-30 daily login reward.",
   },
@@ -551,14 +555,14 @@ export const TILE_TYPES = [
     baseResource: "tile_mount_moose", tier: 1,
     discovery: { method: "default" },
     effects: {},
-    description: "Twenty-nine stars when collected. Resistant to swamp. Loves chocolate mousse.",
+    description: "Resistant to swamp. Loves chocolate mousse.",
   },
   {
     id: "tile_mount_mammoth", category: "mounts", displayName: "Mammoth",
     baseResource: "tile_mount_mammoth", tier: 3,
     discovery: { method: "buy", coinCost: 300 },
     effects: {},
-    description: "Fifty-eight stars when collected. Single-tile collect. A mean mammoth is just a woolly bully. Buy-only.",
+    description: "A mean mammoth is just a woolly bully. Buy-only.",
   },
   // ── Fish biome (chain reducer category) ────────────────────────────────
   {
