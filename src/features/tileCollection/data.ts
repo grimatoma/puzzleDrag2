@@ -204,11 +204,7 @@ export const TILE_TYPES = [
     baseResource: "tile_veg_broccoli", tier: 3,
     discovery: { method: "building", buildingId: "kitchen" },
     effects: {},
-<<<<<<< HEAD
-    description: "Not the best choice for a bouquet. This tile type can only be bought.",
-=======
     description: "A hearty brassica that earns its place once you own a Kitchen — build one to add broccoli to the board.",
->>>>>>> origin/main
   },
 
   // ─── Placeholder catalog-import tiers ────────────────────────────────────
