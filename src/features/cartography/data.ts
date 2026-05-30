@@ -100,7 +100,7 @@ export const MAP_NODES: MapNode[] = [
       'clock_tower', 'apothecary', 'sawmill', 'watchtower', 'stable',
       'apiary', 'chapel', 'brewery', 'observatory',
     ],
-    plotCount: 12,
+    plotCount: 20,
   },
   {
     id: 'meadow', name: 'Greenmeadow', kind: 'farm', icon: '🌾',
