@@ -4,9 +4,8 @@ import {
   findCrossCollectTargets,
   buildCrossCollectedCredits,
 } from "../game/crossCollect.js";
-import { rootReducer } from "../state.js";
+import { initialState, rootReducer } from "../state.js";
 import { UPGRADE_THRESHOLDS } from "../constants.js";
-import { createBaseState } from "./helpers/baseState.js";
 
 /**
  * Build a ROWSxCOLS grid of loose cells from a 2D array of tile keys
@@ -151,15 +150,15 @@ describe("findCrossCollectTargets", () => {
 });
 
 describe("buildCrossCollectedCredits", () => {
-  it("credits +1 per partner, keyed by produced resource", () => {
+  it("credits +1 per partner, keyed by TILE KEY", () => {
     const credits = buildCrossCollectedCredits([
       { row: 0, col: 2, key: GRAIN },
       { row: 1, col: 0, key: GRAIN },
       { row: 0, col: 0, key: TREE },
     ]);
-    // GRAIN appears twice, TREE once. Keys resolve via producedResource (fallback to tile key).
-    const total = Object.values(credits).reduce((a, b) => a + b, 0);
-    expect(total).toBe(3);
+    // The map is keyed by TILE KEY (so the reducer can look up
+    // UPGRADE_THRESHOLDS[tileKey]). GRAIN appears twice, TREE once.
+    expect(credits).toEqual({ [GRAIN]: 2, [TREE]: 1 });
   });
 
   it("returns {} for no targets", () => {
@@ -190,7 +189,7 @@ describe("CHAIN_COLLECTED — cross-collect credits at the partner tile's thresh
     // Sanity: grain's real threshold is > 1 (so threshold-1 would be a clear bug).
     expect(GRAIN_THRESH).toBeGreaterThan(1);
 
-    const base = createBaseState();
+    const base = initialState();
     // Main chain credits hay; cross-collect credits 3 grain tiles (< threshold 5).
     const s1 = rootReducer(base, {
       type: "CHAIN_COLLECTED",
@@ -229,7 +228,7 @@ describe("CHAIN_COLLECTED — cross-collect credits at the partner tile's thresh
   });
 
   it("a partner count >= threshold mints the right whole-unit count", () => {
-    const base = createBaseState();
+    const base = initialState();
     // 11 grain with threshold 5 → floor(11/5) = 2 flour minted, carry 1.
     const s1 = rootReducer(base, {
       type: "CHAIN_COLLECTED",

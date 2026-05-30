@@ -1,4 +1,5 @@
 import { BIOMES, BUILDINGS, RECIPES, WORKSHOP_RECIPES, DAILY_REWARDS, MIN_EXPEDITION_TURNS, CAPPED_INVENTORY_RESOURCES, UPGRADE_THRESHOLDS, CRAFT_GEM_SKIP_COST, getItem, tileFamilyResource } from "./constants.js";
+import { producedResource } from "./game/producedResource.js";
 import { locBuilt as _locBuilt } from "./locBuilt.js";
 import { sellPriceFor as _sellPriceFor } from "./features/market/pricing.js";
 import { isTapTargetPower } from "./config/toolPowers.js";
