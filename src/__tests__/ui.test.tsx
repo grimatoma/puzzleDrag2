@@ -111,6 +111,8 @@ describe("TownBuildingTooltipContent", () => {
 
     const title = screen.getByText("Workshop");
     expect(Array.from(title.classList)).toContain("text-cream");
+    expect(Array.from(title.classList)).toContain("text-body");
+    expect(Array.from(title.classList)).toContain("font-bold");
     expect(title.getAttribute("style") ?? "").not.toContain("#3a2a1a");
     expect(Array.from(screen.getByText("Crafts tools from raw materials.").classList)).toContain("text-cream/80");
   });

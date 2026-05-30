@@ -218,7 +218,7 @@ function TownStage({ children }: { children: ReactNode }) {
 export function TownBuildingTooltipContent({ data }: { data: BuildingTipData }) {
   return (
     <>
-      <div className="font-semibold text-cream text-caption leading-snug whitespace-nowrap">
+      <div className="font-bold text-cream text-body leading-snug whitespace-nowrap">
         {data.label}
       </div>
       {data.desc && (
