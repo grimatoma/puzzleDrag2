@@ -673,6 +673,128 @@ function drawPearls(ctx: CanvasRenderingContext2D) {
   }
 }
 
+// ── auger — helical drill-bit boring a vertical column ────────────────────
+function drawAuger(ctx: CanvasRenderingContext2D) {
+  drawShadow(ctx, 14, 4);
+  // Handle at top
+  ctx.save();
+  const handleGrad = ctx.createLinearGradient(-3, -22, 3, -22);
+  handleGrad.addColorStop(0, "#a87838");
+  handleGrad.addColorStop(0.5, "#7a5028");
+  handleGrad.addColorStop(1, "#3a2008");
+  ctx.fillStyle = handleGrad;
+  rr(ctx, -3, -22, 6, 14, 2);
+  ctx.fill();
+  ctx.strokeStyle = "#1a0e04";
+  ctx.lineWidth = 1.2;
+  ctx.stroke();
+  ctx.restore();
+  // Shaft (central vertical rod)
+  const shaftGrad = ctx.createLinearGradient(-3, -8, 3, -8);
+  shaftGrad.addColorStop(0, "#c8ccd4");
+  shaftGrad.addColorStop(0.5, "#9da3a8");
+  shaftGrad.addColorStop(1, "#5a6070");
+  ctx.fillStyle = shaftGrad;
+  rr(ctx, -2, -8, 4, 30, 1);
+  ctx.fill();
+  ctx.strokeStyle = "#3a4048";
+  ctx.lineWidth = 1.0;
+  ctx.stroke();
+  // Helical flutes — angled bands crossing the shaft
+  ctx.save();
+  ctx.beginPath();
+  rr(ctx, -2, -8, 4, 30, 1);
+  ctx.clip();
+  ctx.strokeStyle = "#5a6070";
+  ctx.lineWidth = 2.2;
+  for (let i = 0; i < 7; i++) {
+    const y = -6 + i * 5;
+    ctx.beginPath();
+    ctx.moveTo(-8, y); ctx.lineTo(8, y + 3);
+    ctx.stroke();
+  }
+  ctx.restore();
+  // Tip — sharp triangular point
+  const tipGrad = ctx.createLinearGradient(-4, 20, 4, 22);
+  tipGrad.addColorStop(0, "#dde2e8");
+  tipGrad.addColorStop(1, "#6a7280");
+  ctx.fillStyle = tipGrad;
+  ctx.beginPath();
+  ctx.moveTo(-4, 20); ctx.lineTo(4, 20); ctx.lineTo(0, 26);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = "#1a1e24";
+  ctx.lineWidth = 1.2;
+  ctx.stroke();
+  // Collar between handle and shaft
+  ctx.fillStyle = "#c89030";
+  ctx.fillRect(-4, -9, 8, 3);
+  ctx.strokeStyle = "#3a1808";
+  ctx.lineWidth = 0.8;
+  ctx.strokeRect(-4, -9, 8, 3);
+  // Tip gleam
+  ctx.fillStyle = "rgba(255,255,255,0.9)";
+  ctx.beginPath();
+  ctx.arc(-1, 21, 0.8, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+// ── blast_charge — dynamite bundle with cross-blast motif ─────────────────
+function drawBlastCharge(ctx: CanvasRenderingContext2D) {
+  drawShadow(ctx, 18, 4);
+  // Orange cross-blast lines behind the charge
+  ctx.strokeStyle = "rgba(255,136,68,0.55)";
+  ctx.lineWidth = 3;
+  ctx.lineCap = "round";
+  ctx.beginPath();
+  ctx.moveTo(-22, 0); ctx.lineTo(22, 0);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(0, -22); ctx.lineTo(0, 22);
+  ctx.stroke();
+  ctx.strokeStyle = "rgba(255,200,120,0.35)";
+  ctx.lineWidth = 1.2;
+  ctx.beginPath();
+  ctx.moveTo(-20, 0); ctx.lineTo(20, 0);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(0, -20); ctx.lineTo(0, 20);
+  ctx.stroke();
+  // Charge body (two red sticks)
+  const drawStick = (x: number) => {
+    const g = ctx.createLinearGradient(x - 4, 0, x + 4, 0);
+    g.addColorStop(0, "#a82018"); g.addColorStop(0.5, "#e83a08"); g.addColorStop(1, "#5a0808");
+    ctx.fillStyle = g;
+    ctx.fillRect(x - 4, -10, 8, 22);
+    ctx.strokeStyle = "#1a0408"; ctx.lineWidth = 1.4;
+    ctx.strokeRect(x - 4, -10, 8, 22);
+    ctx.fillStyle = "#fffce0";
+    ctx.fillRect(x - 4, -2, 8, 3);
+    ctx.strokeStyle = "#3a0808"; ctx.lineWidth = 0.7;
+    ctx.strokeRect(x - 4, -2, 8, 3);
+    ctx.fillStyle = "#3a0808"; ctx.font = "bold 5px sans-serif"; ctx.textAlign = "center";
+    ctx.fillText("BLT", x, 1);
+  };
+  drawStick(-5); drawStick(5);
+  // Binding cord
+  ctx.strokeStyle = "#5a3814"; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(-9, 4); ctx.lineTo(9, 4); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(-9, 6); ctx.lineTo(9, 6); ctx.stroke();
+  // Fuse
+  ctx.strokeStyle = "#3a2008"; ctx.lineWidth = 1.6;
+  ctx.beginPath(); ctx.moveTo(0, -10); ctx.bezierCurveTo(-3, -15, 5, -17, 3, -21); ctx.stroke();
+  // Spark
+  ctx.fillStyle = "#fff4a0";
+  ctx.beginPath();
+  for (let i = 0; i < 10; i++) {
+    const a = (i * Math.PI) / 5;
+    const r = i % 2 === 0 ? 2.8 : 1;
+    const px = 3 + Math.cos(a) * r; const py = -21 + Math.sin(a) * r;
+    if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+  }
+  ctx.closePath(); ctx.fill();
+}
+
 export const ICONS = {
   scythe_full:  { label: "Scythe (full)", color: "#c0c8d4", draw: drawScytheFull },
   iron_pick:    { label: "Iron Pick",     color: "#8a929c", draw: drawIronPick },
@@ -685,4 +807,6 @@ export const ICONS = {
   gold_bar:     { label: "Gold Bar",      color: "#f4c430", draw: drawGoldBar },
   sea_shells:   { label: "Sea Shells",    color: "#f4ead0", draw: drawSeaShells },
   pearls:       { label: "Pearls",        color: "#e8e0e8", draw: drawPearls },
+  auger:        { label: "Auger",         color: "#9da3a8", draw: drawAuger },
+  blast_charge: { label: "Blast Charge",  color: "#ff8844", draw: drawBlastCharge },
 };

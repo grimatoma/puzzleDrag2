@@ -172,17 +172,6 @@ function _applyFillBias(state: GameState, key: string | null | undefined, params
   return { ...spent, fillBiasTarget: target };
 }
 
-function _applyArmFillBias(state: GameState, key: string | null | undefined, params: Record<string, unknown>): GameState {
-  const spent = _spendToolCharge(state, key);
-  if (spent === null) return state;
-  const turns = (params.turns as number | undefined) ?? 1;
-  const target = (params.target as { key?: string; [k: string]: unknown } | null | undefined) ?? null;
-  if (key === "magic_fertilizer") {
-    return { ...spent, magicFertilizerCharges: turns, fillBiasTarget: target };
-  }
-  return { ...spent, fillBiasTarget: target };
-}
-
 function _sweepSelected(state: GameState, cells: TileSelectorCell[]): GameState {
   if (!cells.length) return state;
   const { grid, collected } = sweepAtCoords(state.grid, cells);
@@ -276,8 +265,6 @@ export function applyToolPower(state: GameState, key: string | null | undefined,
       if (power.bubble) next = _bubble(next, power.bubble);
       return next;
     }
-    case "arm_fill_bias":
-      return _applyArmFillBias(state, key, params);
     case "fill_bias":
       return _applyFillBias(state, key, params);
     case "transform_tiles": {

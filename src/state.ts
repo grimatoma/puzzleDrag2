@@ -1,4 +1,5 @@
 import { BIOMES, BUILDINGS, RECIPES, WORKSHOP_RECIPES, DAILY_REWARDS, MIN_EXPEDITION_TURNS, CAPPED_INVENTORY_RESOURCES, UPGRADE_THRESHOLDS, CRAFT_GEM_SKIP_COST, getItem, tileFamilyResource } from "./constants.js";
+import { producedResource } from "./game/producedResource.js";
 import { locBuilt as _locBuilt } from "./locBuilt.js";
 import { sellPriceFor as _sellPriceFor } from "./features/market/pricing.js";
 import { isTapTargetPower } from "./config/toolPowers.js";
@@ -351,6 +352,32 @@ function coreReducer(state: GameState, action: Action): GameState {
         progress[rk] = threshold === Infinity ? newProgress : newProgress % threshold;
         if (wholeUnits > 0) {
           addCappedResourceMut(inventory, chainCf, chainFloaters, resourceKey, wholeUnits, chainCap);
+        }
+      }
+
+      // Cross-collect: partner-category tiles cleared on the board (computed in
+      // GameScene) each credit +1 toward their produced resource. Routed through
+      // the SAME fractional-progress + threshold path as the main chain so
+      // partners produce at their normal thresholds.
+      // The map is keyed by TILE KEY (e.g. tile_grain_wheat). We resolve the
+      // produced resource for inventory/progress and look up the threshold by
+      // TILE KEY in UPGRADE_THRESHOLDS — exactly like the main chain above.
+      // Processing is sequential against the SAME `progress`/`inventory` the
+      // main chain produced, so a partner whose resource equals the chain's
+      // resourceKey stacks correctly.
+      const crossCollected = (payload?.crossCollected ?? null) as Record<string, number> | null;
+      if (crossCollected) {
+        const thresholds = UPGRADE_THRESHOLDS as Record<string, number>;
+        for (const [tileKey, count] of Object.entries(crossCollected)) {
+          if (!count) continue;
+          const rk = (producedResource({ key: tileKey }) ?? tileKey) as ResourceKey;
+          const threshold = thresholds[tileKey] ?? Infinity;
+          const newProgress = (progress[rk] ?? 0) + count;
+          const wholeUnits = threshold === Infinity ? 0 : Math.floor(newProgress / threshold);
+          progress[rk] = threshold === Infinity ? newProgress : newProgress % threshold;
+          if (wholeUnits > 0) {
+            addCappedResourceMut(inventory, chainCf, chainFloaters, rk, wholeUnits, chainCap);
+          }
         }
       }
 

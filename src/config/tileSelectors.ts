@@ -238,7 +238,7 @@ export const TILE_SELECTORS: Readonly<Record<string, TileSelectorFn>> = Object.f
   reshuffle_board() {
     return [];
   },
-  arm_fill_bias() {
+  fill_bias() {
     return [];
   },
   transform_tiles(grid, params) {

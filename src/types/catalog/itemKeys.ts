@@ -172,6 +172,8 @@ export enum ToolKey {
   GoldenSheep = "golden_sheep",
   PhilosophersStone = "philosophers_stone",
   MinersHat = "miners_hat",
+  Auger = "auger",
+  BlastCharge = "blast_charge",
 }
 
 export enum ItemAliasKey {

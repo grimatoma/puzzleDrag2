@@ -50,6 +50,7 @@ export const TOOL_POWERS = Object.freeze([
     defaultBoardAnim: Object.freeze({ anim: "sweep", ms: 220 }),
   },
   {
+    // Implemented and reserved — upcoming tool will use this power.
     id: "clear_column",
     name: "Clear Column",
     desc: "Tap-target: clear every tile in the column(s) containing the tapped cell.",
@@ -59,6 +60,7 @@ export const TOOL_POWERS = Object.freeze([
     defaultBoardAnim: Object.freeze({ anim: "sweep", ms: 220 }),
   },
   {
+    // Implemented and reserved — upcoming tool will use this power.
     id: "clear_cross",
     name: "Clear Cross",
     desc: "Tap-target: clear the row and column through the tapped cell (plus shape).",
@@ -102,18 +104,6 @@ export const TOOL_POWERS = Object.freeze([
     params: [],
     isTapTarget: false,
     defaultBoardAnim: Object.freeze({ anim: "shimmer", ms: 200 }),
-  },
-  {
-    id: "arm_fill_bias",
-    name: "Arm Fill Bias",
-    desc: "Biases the next board fill toward the target tile key for N fills.",
-    params: [
-      { key: "target", label: "Target Tile", type: "tileKey" },
-      { key: "turns", label: "Fills biased", type: "number", default: 1 },
-    ],
-    isTapTarget: false,
-    dimStrategy: "none",
-    defaultBoardAnim: Object.freeze({ anim: "shimmer", ms: 600 }),
   },
   {
     id: "fill_bias",
