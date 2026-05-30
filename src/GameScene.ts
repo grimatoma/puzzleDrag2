@@ -1798,12 +1798,15 @@ export class GameScene extends Phaser.Scene {
     // destroy / particle pattern as the path tiles, and accumulate +1 toward
     // each partner's produced resource. Cross-collected tiles do NOT spawn
     // upgrade tiles and do NOT trigger further cross-collects.
-    const crossCollected: Record<string, number> = {};
+    // crossCollected is keyed by TILE KEY (not produced resource). The reducer
+    // resolves the produced resource + the tile's UPGRADE_THRESHOLDS entry from
+    // the tile key, so partners roll up at their real threshold (mirroring the
+    // main chain). buildCrossCollectedCredits is the single source of truth for
+    // this tile-keyed count map.
+    const crossCollected = buildCrossCollectedCredits(crossTargets);
     crossTargets.forEach((target, i) => {
       const tileObj = this.grid[target.row]?.[target.col];
       this.grid[target.row][target.col] = null;
-      const rk = producedResource({ key: target.key }) ?? target.key;
-      crossCollected[rk] = (crossCollected[rk] ?? 0) + 1;
       if (tileObj) {
         this.tweens.add({
           targets: tileObj.sprite,

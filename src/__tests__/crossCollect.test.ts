@@ -4,6 +4,9 @@ import {
   findCrossCollectTargets,
   buildCrossCollectedCredits,
 } from "../game/crossCollect.js";
+import { rootReducer } from "../state.js";
+import { UPGRADE_THRESHOLDS } from "../constants.js";
+import { createBaseState } from "./helpers/baseState.js";
 
 /**
  * Build a ROWSxCOLS grid of loose cells from a 2D array of tile keys
@@ -166,5 +169,81 @@ describe("buildCrossCollectedCredits", () => {
   // touch unused vars to keep them meaningful in case of future edits
   it("category constants are distinct", () => {
     expect(new Set([GRASS, GRAIN, FRUIT, TREE, VEG, HERD, FISH]).size).toBe(7);
+  });
+});
+
+/**
+ * Reducer-level integration: CHAIN_COLLECTED with a TILE-KEYED `crossCollected`
+ * map must credit each partner through the SAME fractional-progress + threshold
+ * path as the main chain. This is the regression guard for the bug where the
+ * payload was keyed by produced resource and the reducer's
+ * UPGRADE_THRESHOLDS[resourceKey] lookup missed (→ fell back to 1), minting a
+ * whole unit per partner tile instead of 1/threshold.
+ *
+ * GRAIN tile (tile_grain_wheat) produces `flour` at threshold 5. We drive the
+ * main chain with a DIFFERENT resource (hay) so the partner accrual is isolated.
+ */
+describe("CHAIN_COLLECTED — cross-collect credits at the partner tile's threshold", () => {
+  const GRAIN_THRESH = (UPGRADE_THRESHOLDS as Record<string, number>)[GRAIN];
+
+  it("honors the tile-keyed threshold (NOT 1): below threshold accrues, no mint", () => {
+    // Sanity: grain's real threshold is > 1 (so threshold-1 would be a clear bug).
+    expect(GRAIN_THRESH).toBeGreaterThan(1);
+
+    const base = createBaseState();
+    // Main chain credits hay; cross-collect credits 3 grain tiles (< threshold 5).
+    const s1 = rootReducer(base, {
+      type: "CHAIN_COLLECTED",
+      payload: {
+        key: GRASS,
+        gained: 3,
+        chainLength: 3,
+        upgrades: 0,
+        value: 1,
+        resourceKey: "hay_bundle",
+        crossCollected: { [GRAIN]: 3 },
+      },
+    });
+
+    // 3 < 5 → flour progress accrues, NO flour minted. (If the bug were present,
+    // threshold would fall back to 1 and mint 3 flour immediately.)
+    expect(s1.resourceProgress?.flour).toBe(3);
+    expect(s1.inventory.flour ?? 0).toBe(0);
+
+    // A second dispatch of 3 more grain pushes total to 6 → crosses threshold 5
+    // exactly once: mint 1 flour, carry 1.
+    const s2 = rootReducer(s1, {
+      type: "CHAIN_COLLECTED",
+      payload: {
+        key: GRASS,
+        gained: 3,
+        chainLength: 3,
+        upgrades: 0,
+        value: 1,
+        resourceKey: "hay_bundle",
+        crossCollected: { [GRAIN]: 3 },
+      },
+    });
+    expect(s2.inventory.flour ?? 0).toBe(1);
+    expect(s2.resourceProgress?.flour).toBe(6 % GRAIN_THRESH);
+  });
+
+  it("a partner count >= threshold mints the right whole-unit count", () => {
+    const base = createBaseState();
+    // 11 grain with threshold 5 → floor(11/5) = 2 flour minted, carry 1.
+    const s1 = rootReducer(base, {
+      type: "CHAIN_COLLECTED",
+      payload: {
+        key: GRASS,
+        gained: 3,
+        chainLength: 3,
+        upgrades: 0,
+        value: 1,
+        resourceKey: "hay_bundle",
+        crossCollected: { [GRAIN]: 11 },
+      },
+    });
+    expect(s1.inventory.flour ?? 0).toBe(Math.floor(11 / GRAIN_THRESH));
+    expect(s1.resourceProgress?.flour).toBe(11 % GRAIN_THRESH);
   });
 });

@@ -11,7 +11,6 @@
  * `src/config/tileSelectors.ts` (`cellAt`, `HAZARD_LOCKED`, `DIRS4`).
  */
 import { CATEGORY_OF } from "../features/tileCollection/data.js";
-import { producedResource } from "./producedResource.js";
 
 /**
  * Fixed, bidirectional, GLOBAL partner map. Both directions of each pair are
@@ -30,7 +29,12 @@ export const CROSS_COLLECT_PAIRINGS: Record<string, string> = Object.freeze({
   mounts: "cattle",
 });
 
-/** Orthogonal neighbours only (no diagonals) — matches tileSelectors.DIRS4. */
+/**
+ * Orthogonal neighbours only (no diagonals). Intentional local copy: this
+ * module is kept Phaser/React-free and self-contained, and the order is
+ * irrelevant here (we dedupe by row,col). tileSelectors.DIRS4 carries the same
+ * four offsets in a different order.
+ */
 const DIRS4 = [[0, 1], [0, -1], [1, 0], [-1, 0]] as const;
 
 /** A board cell as seen by this helper — either `.key` or `.res.key` carries the tile key. */
@@ -123,18 +127,21 @@ export function findCrossCollectTargets(
 }
 
 /**
- * Build the `crossCollected` payload map (resourceKey → +count) for a set of
- * cross-collect targets. Each partner credits +1 toward its produced resource
- * (falling back to the tile key itself when it has no distinct produced
- * resource), so partners roll up at their normal thresholds.
+ * Build the `crossCollected` payload map (TILE KEY → +count) for a set of
+ * cross-collect targets. Each partner contributes +1 keyed by its TILE KEY.
+ *
+ * Keying by tile key (rather than produced resource) is deliberate: the reducer
+ * needs the tile key to look up the partner's `UPGRADE_THRESHOLDS[tileKey]` —
+ * thresholds are keyed by tile key, not resource key. The reducer resolves the
+ * produced resource (via `producedResource`) for progress + inventory. This
+ * mirrors the main chain, which also carries the tile key for its threshold.
  */
 export function buildCrossCollectedCredits(
   targets: ReadonlyArray<CrossCollectTarget>,
 ): Record<string, number> {
   const credits: Record<string, number> = {};
   for (const t of targets) {
-    const rk = producedResource({ key: t.key }) ?? t.key;
-    credits[rk] = (credits[rk] ?? 0) + 1;
+    credits[t.key] = (credits[t.key] ?? 0) + 1;
   }
   return credits;
 }
