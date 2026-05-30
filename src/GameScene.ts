@@ -1727,6 +1727,13 @@ export class GameScene extends Phaser.Scene {
     // Resource progress: the resource key this chain's length contributes
     // toward (fractional accumulation in state.resourceProgress).
     const resourceKey = producedResource(res);
+    // Cross-collect: partner-category tiles orthogonally adjacent to the chain
+    // are also collected. Compute BEFORE we null out the path tiles below — the
+    // helper needs the grid intact to inspect chain-cell neighbours.
+    const crossTargets = findCrossCollectTargets(
+      this.grid,
+      this.path.map((t) => ({ row: t.row, col: t.col, key: t.res.key })),
+    );
     const effThresholds: Record<string, number> = getRegistry(this.registry, "effectiveThresholds") ?? UPGRADE_THRESHOLDS;
     const upgrades = next ? upgradeCountForChain(this.path.length, res.key, effThresholds) : 0;
     const gained = this.path.length;
@@ -1787,12 +1794,37 @@ export class GameScene extends Phaser.Scene {
       });
     });
 
+    // Cross-collect partner tiles: clear + animate using the SAME tween /
+    // destroy / particle pattern as the path tiles, and accumulate +1 toward
+    // each partner's produced resource. Cross-collected tiles do NOT spawn
+    // upgrade tiles and do NOT trigger further cross-collects.
+    const crossCollected: Record<string, number> = {};
+    crossTargets.forEach((target, i) => {
+      const tileObj = this.grid[target.row]?.[target.col];
+      this.grid[target.row][target.col] = null;
+      const rk = producedResource({ key: target.key }) ?? target.key;
+      crossCollected[rk] = (crossCollected[rk] ?? 0) + 1;
+      if (tileObj) {
+        this.tweens.add({
+          targets: tileObj.sprite,
+          scale: 0,
+          angle: Phaser.Math.Between(-25, 25),
+          alpha: 0,
+          duration: this._dur(180 + i * 15),
+          onComplete: () => {
+            this.emitCollectParticles(tileObj.x, tileObj.y, tileObj.res?.color || "#ffffff", 2);
+            tileObj.destroy();
+          }
+        });
+      }
+    });
+
     // Emit to React — gained is the full amount (state.js caps it).
     // resourceKey tells the reducer which resource to accumulate progress for.
     const totalGained = gained + ((bonusGains as Record<string, number>)[res.key] ?? 0);
     // Include tile positions so the reducer can extinguish fire/hazard cells
     const chainTiles = this.path.map(t => ({ key: t.res.key, row: t.row, col: t.col }));
-    this.events.emit(SCENE_EVENTS.CHAIN_COLLECTED, { key: res.key, gained: totalGained, upgrades, chainLength: this.path.length, value: res.value, chain: chainTiles, resourceKey });
+    this.events.emit(SCENE_EVENTS.CHAIN_COLLECTED, { key: res.key, gained: totalGained, upgrades, chainLength: this.path.length, value: res.value, chain: chainTiles, resourceKey, crossCollected });
 
     // Reward burst — emit chain center in canvas-local coords so the React
     // layer can spawn a "+N" chip from the board → HUD coin pill.

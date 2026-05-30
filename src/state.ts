@@ -354,6 +354,26 @@ function coreReducer(state: GameState, action: Action): GameState {
         }
       }
 
+      // Cross-collect: partner-category tiles cleared on the board (computed in
+      // GameScene) each credit +1 toward their produced resource. Routed through
+      // the SAME fractional-progress + threshold path as the main chain so
+      // partners produce at their normal thresholds.
+      const crossCollected = (payload?.crossCollected ?? null) as Record<string, number> | null;
+      if (crossCollected) {
+        const thresholds = UPGRADE_THRESHOLDS as Record<string, number>;
+        for (const [crk, count] of Object.entries(crossCollected)) {
+          if (!count) continue;
+          const rk = crk as ResourceKey;
+          const threshold = thresholds[crk] ?? Infinity;
+          const newProgress = (progress[rk] ?? 0) + count;
+          const wholeUnits = threshold === Infinity ? 0 : Math.floor(newProgress / threshold);
+          progress[rk] = threshold === Infinity ? newProgress : newProgress % threshold;
+          if (wholeUnits > 0) {
+            addCappedResourceMut(inventory, chainCf, chainFloaters, crk, wholeUnits, chainCap);
+          }
+        }
+      }
+
       // Power-hook coin bonuses (set via Dev Panel → Tile Powers).
       const chainTileEffects = (TILE_TYPES_MAP[key]?.effects ?? {}) as { coinBonusFlat?: number; coinBonusPerTile?: number };
       const hookFlat = chainTileEffects.coinBonusFlat || 0;
