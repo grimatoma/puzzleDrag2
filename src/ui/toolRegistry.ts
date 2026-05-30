@@ -26,7 +26,7 @@ function toolCategory(key: string): "field" | "workshop" {
 
 function toolArmed(power: ToolPowerDefinition | undefined): "instant" | "passive" | "tap" {
   if (!power?.id) return "instant";
-  if (power.id === "arm_fill_bias" || power.id === "fill_bias") return "passive";
+  if (power.id === "fill_bias") return "passive";
   return isTapTargetPower(power.id) ? "tap" : "instant";
 }
 

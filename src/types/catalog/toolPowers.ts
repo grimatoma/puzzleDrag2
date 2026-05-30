@@ -5,7 +5,6 @@
 /** Active tool power ids. */
 export enum ToolPowerId {
   AreaBlast = "area_blast",
-  ArmFillBias = "arm_fill_bias",
   Barometer = "barometer",
   ClearAll = "clear_all",
   ClearCategory = "clear_category",

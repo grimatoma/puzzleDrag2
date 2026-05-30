@@ -178,7 +178,7 @@ describe("10.1 — USE_TOOL (no turn cost)", () => {
     expect(s1.grid.flat().every((t) => t.key !== "tile_tree_oak")).toBe(true);
   });
 
-  it("fertilizer: arms fill bias for the next board fill (arm_fill_bias)", () => {
+  it("fertilizer: arms fill bias for the next board fill (fill_bias)", () => {
     const base = createInitialState();
     const s0 = { ...base, tools: { ...base.tools, fertilizer: 1 }, turnsUsed: 4 };
     const s1 = rootReducer(s0, { type: "USE_TOOL", key: "fertilizer" });
