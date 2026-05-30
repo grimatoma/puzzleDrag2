@@ -564,6 +564,8 @@ const ITEMS_DATA = {
   hoe:         { kind: "tool", label: "Hoe", power: { id: "clear_all", params: { target: "tile_veg_carrot" }, anim: "till", ms: 300 }, desc: "Tills the soil — clears every veg-carrot tile from the board so a fresh fill can roll." },
   stone_hammer:{ kind: "tool", label: "Stone Hammer", power: { id: "clear_all", params: { target: "tile_mine_stone" }, anim: "smash", ms: 350 }, desc: "Smashes every stone tile on the board — a fast way to feed the chain into block tier." },
   iron_pick:   { kind: "tool", label: "Iron Pick", power: { id: "clear_all", params: { target: "tile_mine_iron_ore" }, anim: "pick", ms: 320 }, desc: "Bites into iron ore veins — clears every iron ore tile so the chain can be re-spawned cleanly." },
+  auger: { kind: "tool", label: "Auger", power: { id: "clear_column", params: {}, tint: 0x9da3a8, anim: "pick", ms: 280, bubble: "Auger armed — tap a column to bore!" }, desc: "Tap a column — bores straight down, clearing every tile in it." },
+  blast_charge: { kind: "tool", label: "Blast Charge", power: { id: "clear_cross", params: {}, tint: 0xff8844, anim: "sweep", ms: 300, bubble: "Blast Charge armed — tap to blast a cross!" }, desc: "Tap a tile — clears its entire row and column in a cross-shaped blast." },
   bird_feed:   { kind: "tool", label: "Bird Feed", power: { id: "fill_bias", params: { target: "tile_bird_chicken" }, anim: "scatter", ms: 500 }, desc: "Scatters feed across the field so the next board fill is biased toward bird tiles." },
   sapling:     { kind: "tool", label: "Sapling", power: { id: "fill_bias", params: { target: "tile_tree_oak" }, anim: "shimmer", ms: 600 }, desc: "Plants a sapling that biases the next fill toward oak (and other tree) tiles." },
   water_pump:  { kind: "tool", label: "Water Pump", power: { id: "water_pump", params: {} }, desc: "Lava Damper — floods all lava cells on the mine board, converting them to stone rubble. PC2's water-collector Water Pump is deferred (no water tile family)." },
@@ -975,6 +977,8 @@ export const RECIPES: RecipeRecord = {
   rec_hoe:         { item: "hoe",           station: "workshop", inputs: { plank: 1, block: 1 },             craftMs: 2 * MIN },
   rec_stone_hammer:{ item: "stone_hammer",  station: "workshop", inputs: { block: 2, plank: 1 },             craftMs: 5 * MIN },
   rec_iron_pick:   { item: "iron_pick",     station: "workshop", inputs: { iron_bar: 1, plank: 1 },             craftMs: 8 * MIN },
+  rec_auger:       { item: "auger",         station: "workshop", inputs: { iron_bar: 1, plank: 1 },               craftMs: 5 * MIN },
+  rec_blast_charge:{ item: "blast_charge",  station: "workshop", inputs: { iron_bar: 1, coke: 1 },                craftMs: 8 * MIN },
   rec_bird_feed:   { item: "bird_feed",     station: "workshop", inputs: { flour: 1, hay_bundle: 2 },                   craftMs: 3 * MIN },
   rec_sapling:     { item: "sapling",       station: "workshop", inputs: { plank: 1, hay_bundle: 2 },                craftMs: 5 * MIN },
 
