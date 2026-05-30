@@ -312,9 +312,8 @@ export const TILE_TYPES = [
     id: "tile_fruit_jackfruit", category: "fruits", displayName: "Jackfruit",
     baseResource: "tile_fruit_jackfruit", tier: 1,
     discovery: { method: "chain", chainLengthOf: "tile_fruit_lemon", chainLength: 6 },
-    abilities: [{ id: "bonus_yield", params: { target: "pie", amount: 1 } }],
     effects: {},
-    description: "Gives two times more pie. A long chain attracts rats. Doesn't know jack.",
+    description: "A long chain attracts rats. Doesn't know jack.",
   },
 
   // Flowers (new category)
@@ -530,9 +529,8 @@ export const TILE_TYPES = [
     id: "tile_cattle_triceratops", category: "cattle", displayName: "Triceratops",
     baseResource: "tile_cattle_triceratops", tier: 3,
     discovery: { method: "daily", day: 30 },
-    abilities: [{ id: "bonus_yield", params: { target: "milk", amount: 1 } }],
     effects: {},
-    description: "Avoided by wolves. Gives two times more milk. Granted by the Day-30 daily login reward.",
+    description: "Avoided by wolves. Granted by the Day-30 daily login reward.",
   },
 
   // Mounts (new category)
