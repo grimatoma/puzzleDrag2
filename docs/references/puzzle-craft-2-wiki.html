@@ -270,6 +270,7 @@ footer .mono{font-family:"JetBrains Mono",monospace}
       <li><a href="#castle">Castle Upgrades</a></li>
       <li><a href="#trophies">Trophies &amp; Badges</a></li>
       <li><a href="#strategy">Tips &amp; Strategies</a></li>
+      <li><a href="#meta">Meta-Progression &amp; Premium Economy <span class="badge unverified">Unverified</span></a></li>
       <li><a href="#faq">FAQ</a></li>
       <li><a href="#glossary">Currencies &amp; Glossary</a></li>
     </ol>
@@ -1372,8 +1373,106 @@ footer .mono{font-family:"JetBrains Mono",monospace}
   </section>
 
   <!-- 11. FAQ -->
+  <!-- 11. META-PROGRESSION (UNVERIFIED) -->
+  <section id="meta">
+    <h2><span class="num">11</span>Meta-Progression &amp; Premium Economy <span class="badge unverified">Unverified</span></h2>
+    <div class="callout unverified">
+      <strong>&#9888; Unverified section &mdash; pending manual review.</strong> Everything below comes from a secondary
+      AI-authored design doc and supplementary notes, <em>not</em> from the authoritative
+      <a class="inline" href="https://atgamespl.fandom.com/">ATGamesPL Fandom wiki</a> that the rest of this reference is
+      reconciled against. Treat it as leads to confirm, not fact. Items also tagged
+      <span class="badge dubious">Dubious</span> are ones I judge likely embellished or possibly invented &mdash; verify
+      these first. Nothing here has been cross-checked against in-game behaviour.
+    </div>
+
+    <h4>Engine minutiae &amp; edge cases <span class="cat">plausible &middot; unverified</span></h4>
+    <div class="grid two">
+      <div class="card">
+        <h4>No self-intersecting chains</h4>
+        <p class="stat">A chain reportedly cannot cross itself or re-enter a tile already used in the current path. Adjacency is horizontal, vertical <em>and</em> diagonal.</p>
+      </div>
+      <div class="card">
+        <h4>Auto-shuffle on dead boards</h4>
+        <p class="stat">If zero valid 3-chains remain, the board is said to flash &ldquo;No Moves!&rdquo; and auto-scramble without costing a turn.</p>
+      </div>
+      <div class="card">
+        <h4>Chain-3 hard floor</h4>
+        <p class="stat">Worker bonuses stack but reportedly can never drop a requirement below the engine minimum of 3 tiles.</p>
+      </div>
+      <div class="card">
+        <h4>Overchaining &rarr; multi-yields</h4>
+        <p class="stat">Chaining well past a tier-up threshold (e.g. 12&ndash;18 grass) is said to leave <em>multiple</em> tier-2 items at the chain&rsquo;s end &mdash; route to group them.</p>
+      </div>
+      <div class="card">
+        <h4>&ldquo;Last day&rdquo; clutch</h4>
+        <p class="stat">On the final turn (red pulsing calendar), a chain that grants a free move reportedly extends the year &mdash; a save right at the buzzer.</p>
+      </div>
+      <div class="card">
+        <h4>Tool crafting limits</h4>
+        <p class="stat">Workshop level is said to cap how many of one tool you can hold; tools craft in small batches, making prep a deliberate step.</p>
+      </div>
+    </div>
+
+    <h4>Progression systems <span class="cat">plausible &middot; unverified</span></h4>
+    <div class="grid two">
+      <div class="card">
+        <h4>Daily login rewards</h4>
+        <p class="stat">Consecutive logins reportedly grant Gold, Runes and Influence on a streak.</p>
+      </div>
+      <div class="card">
+        <h4>Level-up reward wheel</h4>
+        <p class="stat">Filling the XP bar is said to present a randomized wheel/chest &mdash; free high-tier tools, gold, or runes.</p>
+      </div>
+      <div class="card">
+        <h4>End-of-session summary</h4>
+        <p class="stat">Each expedition reportedly ends on a breakdown screen itemizing base yield plus worker/building multipliers (&ldquo;+5 Wood from Lumberjack&rdquo;).</p>
+      </div>
+      <div class="card">
+        <h4>Taxes / passive income</h4>
+        <p class="stat">Later buildings are said to generate gold over real time, collected by tapping the main overworld building.</p>
+      </div>
+      <div class="card">
+        <h4>Villager thought bubbles</h4>
+        <p class="stat">Tapping bubbles over townsfolk reportedly yields small XP/gold or triggers minor objectives.</p>
+      </div>
+      <div class="card">
+        <h4>Royal Quests</h4>
+        <p class="stat">High-requirement quests (e.g. &ldquo;10,000 Wheat&rdquo;) said to be managed via the Embassy for large Influence rewards.</p>
+      </div>
+      <div class="card">
+        <h4>Overworld grid &amp; footprints</h4>
+        <p class="stat">Buildings reportedly occupy fixed footprints (1&times;1, 2&times;2, 3&times;3); you spend gold/resources to clear trees and rocks to expand the buildable grid.</p>
+      </div>
+      <div class="card">
+        <h4>Restoration nodes</h4>
+        <p class="stat">Major landmarks (ruined castles, abandoned mines) said to act as large resource sinks that unlock new rules or territory when rebuilt.</p>
+      </div>
+    </div>
+
+    <h4>Premium (freemium) economy <span class="cat">plausible &middot; unverified</span></h4>
+    <div class="callout unverified">
+      <ul class="clean" style="margin:0">
+        <li><strong>&ldquo;Continue?&rdquo; screen</strong> &mdash; running out of supplies mid-haul reportedly offers a rune buy of 5&ndash;10 extra moves to save the run.</li>
+        <li><strong>Instant market buyout</strong> &mdash; runes said to instantly synthesize missing build materials at the Market, skipping the grind.</li>
+        <li><strong>Destructive tools (Powder Keg / Dynamite)</strong> &mdash; reported deep-mine explosives clearing a ~3&times;3 radius indiscriminately, to bypass lava walls or gas clusters.</li>
+      </ul>
+    </div>
+
+    <h4>Likely embellished &mdash; verify first <span class="cat">low confidence</span></h4>
+    <div class="callout dubious">
+      <ul class="clean" style="margin:0">
+        <li><span class="badge dubious">Dubious</span> <strong>Tiered worker mastery</strong> &mdash; claim of &ldquo;Master / Grandmaster Peasant&rdquo; upgrade tiers with exponential bonuses. Not seen in the wiki&rsquo;s worker list.</li>
+        <li><span class="badge dubious">Dubious</span> <strong>Master Keys</strong> &mdash; claim of a rare tool that opens any on-board chest instantly without chaining around it.</li>
+        <li><span class="badge dubious">Dubious</span> <strong>Relics / prestige monuments</strong> &mdash; claim that completing an artifact places a permanent statue in the town centre as an end-game prestige display.</li>
+        <li><span class="badge dubious">Dubious</span> <strong>Artifact-book &ldquo;Hero&rdquo; workers</strong> &mdash; claim that completing puzzle-piece collections unlocks unique non-hireable workers / game-altering passives.</li>
+      </ul>
+    </div>
+    <p class="stat" style="color:var(--faint)">Sources: secondary AI-authored &ldquo;Gameplay and Features Documentation (Final)&rdquo; Google Doc + supplementary notes. None reconciled against the Fandom wiki or in-game behaviour &mdash; flagged for manual verification.</p>
+  </section>
+
+  <!-- 12. FAQ -->
   <section id="faq">
-    <h2><span class="num">11</span>Frequently Asked Questions</h2>
+    <h2><span class="num">12</span>Frequently Asked Questions</h2>
     <details open>
       <summary>How can I find fish in the sea?</summary>
       <div class="details-body"><p>Two steps: (1) connect Deep Water tiles &mdash; a <em>navigation move</em>; the number of Deep Water tiles needed per fish depends on how many <strong>Fisherman</strong> workers you&rsquo;ve hired. (2) Move your ship onto the fish &mdash; a <em>ship move</em>. Earn fish in a long enough chain and you get an <strong>octopus</strong> instead (scaled by <strong>Trawlerman</strong> workers).</p></div>
@@ -1390,7 +1489,7 @@ footer .mono{font-family:"JetBrains Mono",monospace}
 
   <!-- 12. GLOSSARY -->
   <section id="glossary">
-    <h2><span class="num">12</span>Currencies &amp; Glossary</h2>
+    <h2><span class="num">13</span>Currencies &amp; Glossary</h2>
     <div class="grid three">
       <div class="card">
         <h4>Coins</h4>
