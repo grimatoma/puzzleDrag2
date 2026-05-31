@@ -162,7 +162,7 @@
 <tr><td>12</td><td><strong>Capacity ladder</strong> (rising tool/worker caps) — confirmed</td><td>The mid-game "what do I keep improving" sink</td></tr>
 <tr><td>13</td><td><strong>PC2-controlled progression</strong> for towns 1–3 now; novel twist later</td><td>Prove the baseline before innovating</td></tr>
 <tr><td>14</td><td><strong>Advancement = the wagon</strong> — build the advancement structure at the top tier to unlock the next ruin</td><td>One obvious "what's next"</td></tr>
-<tr><td>15</td><td><strong>Phase 1 = vanilla PC2:</strong> pause hearth-tokens, keepers, coexist/drive-out, boons, bosses, Old-Capital finale</td><td>All return later as a net-new layer</td></tr>
+<tr><td>15</td><td><strong>Phase 1 = vanilla PC2:</strong> pause hearth-tokens, keepers, coexist/drive-out, boons, bosses, Old-Capital finale</td><td>All return later as a net-new layer</td></tr><tr><td>16</td><td><strong>Building-gated tile spawners</strong> — beyond a settlement's two staples, each new tile category spawns when its <em>producing building</em> is built (Coop → birds, Lumber Camp → trees), not at tier-up</td><td>Free build order; a forcing function (each tile's resource feeds a later build cost or the next settlement's found cost) makes every spawner eventually required</td></tr>
 </tbody>
 </table>
 <div class="box warn"><strong>Town 1 has no mine.</strong> Following PC2 (village 1 = farm only; the mine appears at village 2): <strong>Town 1 = Farm only</strong> · <strong>Town 2 = Farm + Mine</strong> · <strong>Town 3 = Farm + Mine (deeper)</strong> · sea later. The mine board, Kitchen/supplies, the food→mine gate, metal buildings, and the capacity ladder are all <strong>Town 2</strong> introductions.</div>
@@ -208,13 +208,13 @@
 <tbody>
 <tr><td>0</td><td><strong>Rubble</strong></td><td>—</td><td>Arrival; board is debris + the two staple tiles</td><td>—</td></tr>
 <tr><td>1</td><td><strong>Camp</strong></td><td>Hearth (free)</td><td>Farm board (hay + wheat only), Orders, the Market</td><td>cap 200 · 3 plots</td></tr>
-<tr><td>2</td><td><strong>Hamlet</strong></td><td><span class="num">120c + 8 hay_bundle</span></td><td>Trees (plank), Granary, first Worker (Farmer)</td><td>cap 300 · 5 plots</td></tr>
-<tr><td>3</td><td><strong>Village</strong></td><td><span class="num">300c + 15 plank</span></td><td>Birds (eggs), Veg (soup), Mill, Bakery, Quests/XP surfaced, Lumberjack</td><td>cap 400 · 7 plots</td></tr>
+<tr><td>2</td><td><strong>Hamlet</strong></td><td><span class="num">120c + 8 hay_bundle</span></td><td>Lumber Camp → Trees (plank); Granary; first Worker (Farmer)</td><td>cap 300 · 5 plots</td></tr>
+<tr><td>3</td><td><strong>Village</strong></td><td><span class="num">300c + 15 plank</span></td><td>Coop → Birds (eggs); Garden → Veg (soup); Mill, Bakery; Quests/XP surfaced; Lumberjack</td><td>cap 400 · 7 plots</td></tr>
 <tr><td>4</td><td><strong>Town</strong></td><td><span class="num">600c + 25 plank</span></td><td>Workshop + farm tools (rake/axe/scythe), more farm workers, Caravan Post (trade)</td><td>cap 500 · 9 plots</td></tr>
 <tr><td>5</td><td><strong>City</strong></td><td><span class="num">1000c + 40 plank + 12 soup</span></td><td>Top farm buildings; <strong>the Wagon</strong> → Town 2</td><td>cap 600 · 11 plots</td></tr>
 </tbody>
 </table>
-<p class="legend">Town-1 tier costs are <strong>farm-only</strong> — there's no block/iron because there's no mine here. Costs are first-pass proposals for the sim (§9); they escalate per-town index. Decorative buildings (clock tower, watchtower, brewery…) are plot-gated cosmetics, never on the critical path.</p>
+<p class="legend">Town-1 tier costs are <strong>farm-only</strong> — there's no block/iron because there's no mine here. Costs are first-pass proposals for the sim (§9); they escalate per-town index. Decorative buildings (clock tower, watchtower, brewery…) are plot-gated cosmetics, never on the critical path. <strong>Productive buildings double as tile spawners</strong> — a category only enters the board once its building stands, so the tier ladder gates which spawners are <em>available</em> while construction gates which tiles actually appear (see §4).</p>
 
 <div class="box"><strong>Why tiers replace <code>lv</code> gates.</strong> Today the Forge is gated <code>lv:8</code> ≈ <span class="num">1,050+</span> chains at ~1 XP/chain — an opaque grind (see <a href="#current">§15</a>). Tier gates are <em>legible</em> ("upgrade your town center") and <em>local</em> (paid from this settlement's economy) — exactly the rebuild fantasy. Player level is retained only for the slow <strong>Almanac perk</strong> drip, never to gate buildings.</div>
 </section>
@@ -223,14 +223,15 @@
 <section id="schedule">
 <h2>4 · Unlock schedule — what's available when &amp; how</h2>
 <p>Everything is gated through one mechanism (the unlock registry, §10). <strong>Town 1 teaches the farm; Town 2 introduces the mine.</strong></p>
+<div class="box note"><strong>Building-gated tile spawners — how new tiles reach the board.</strong> Beyond each settlement's two staple tiles, a new tile category does <em>not</em> appear at tier-up — it appears when you <strong>build the structure that produces it</strong>. Raise the <strong>Coop</strong> and pheasants (eggs) start spawning; raise the <strong>Lumber Camp</strong> and oak (plank) appears; raise the <strong>Garden</strong> and carrots (soup) join the pool. The town you construct literally reshapes the board you play on. <strong>The forcing function:</strong> each tile's resource is consumed by a later building cost or the next settlement's found cost — plank gates the Mill/Bakery and every tier-up, eggs gate bread, the 12 soup is part of the City→Wagon cost — so every spawner is eventually <em>required</em>. But the player picks the order (Coop-first or Lumber-Camp-first, your call), so the board grows the way they choose. <strong>Town 2 follows the same rule</strong> — each ore tier (stone, iron, copper, coal, gem, gold) surfaces only when its matching mine structure is built. <span class="muted">Spawner building names should match the live configs; where a category lacks a dedicated building today, add one (e.g. Coop, Garden) as part of the §10 backbone work.</span></div>
 
 <h3>Town 1 (farm only) — reveal order</h3>
 <table>
 <thead><tr><th>Tier</th><th>Tiles</th><th>Resources</th><th>Buildings</th><th>Workers / Tools</th><th>Gate (how)</th></tr></thead>
 <tbody>
 <tr><td><b>1 Camp</b></td><td>hay, wheat</td><td>hay_bundle, flour, coins</td><td>Hearth, Market</td><td>—</td><td>new save</td></tr>
-<tr><td><b>2 Hamlet</b></td><td>+ oak (tree)</td><td>+ plank</td><td>+ Granary</td><td>+ Farmer</td><td>objective "3 chains of 5+"</td></tr>
-<tr><td><b>3 Village</b></td><td>+ pheasant (bird), carrot (veg)</td><td>+ eggs, soup, bread</td><td>+ Mill, Bakery</td><td>+ Lumberjack</td><td>build Granary + "store 10 plank"</td></tr>
+<tr><td><b>2 Hamlet</b></td><td>+ oak (tree, via Lumber Camp)</td><td>+ plank</td><td>+ Lumber Camp, Granary</td><td>+ Farmer</td><td>objective "3 chains of 5+"; build the Lumber Camp to spawn trees</td></tr>
+<tr><td><b>3 Village</b></td><td>+ pheasant (bird, via Coop), carrot (veg, via Garden)</td><td>+ eggs, soup, bread</td><td>+ Coop, Garden, Mill, Bakery</td><td>+ Lumberjack</td><td>build Granary + "store 10 plank"; build the Coop/Garden to spawn birds/veg</td></tr>
 <tr><td><b>4 Town</b></td><td>(farm roster set)</td><td>(refined goods)</td><td>+ Workshop, Caravan Post</td><td>+ farm tools (rake/axe/scythe); more farm workers</td><td>tier-up</td></tr>
 <tr><td><b>5 City</b></td><td>—</td><td>—</td><td>+ <b>Wagon</b></td><td>—</td><td>tier-up → restored → unlocks Town 2</td></tr>
 </tbody>
@@ -466,7 +467,7 @@
 </table>
 <h4>Change</h4>
 <ul>
-<li><span class="pill chg">CHANGE</span> Building gates: <code>lv</code> → tier/flag. Re-cost early farm buildings to farm-only resources; Town 2+ tiers cost mine resources.</li>
+<li><span class="pill chg">CHANGE</span> Building gates: <code>lv</code> → tier/flag. Re-cost early farm buildings to farm-only resources; Town 2+ tiers cost mine resources.</li><li><span class="pill add">ADD</span> <strong>Tile-spawner buildings:</strong> wire each non-staple tile category to spawn only once its producing building is built (Lumber Camp → trees, Coop → birds, Garden → veg; mine structures → each ore tier). Add Coop/Garden where a category lacks a dedicated building. The reveal is building-gated, not tier-gated (§4).</li>
 <li><span class="pill chg">CHANGE</span> <code>FARM_TILE_POOL</code> trimmed to hay+wheat at start; categories added on unlock.</li>
 <li><span class="pill chg">CHANGE</span> Mine gate: <code>lv2</code> → <code>kitchen_built &amp;&amp; supplies≥3</code> + 3 starter supplies; food gate made hard (Town 2).</li>
 <li><span class="pill chg">CHANGE</span> Fix the two worker bugs + the bread market-price bug (§6).</li>
