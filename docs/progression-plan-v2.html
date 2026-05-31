@@ -295,6 +295,44 @@
 </tbody>
 </table>
 
+<h3>PC2 reconciliation — the canonical balance base</h3>
+<p>The agreed balance base is PC2's ladder (per the wiki reference). Reconciling PC2's sell values against the current configs gives an asymmetric result: <strong>the farm terminal ladder already matches PC2</strong>, while <strong>the mine ladder is flat and must adopt PC2's steepness</strong>.</p>
+
+<h4>Farm — already aligned (keep current)</h4>
+<table>
+<thead><tr><th>Resource</th><th>PC2 sell</th><th>Current</th><th>Canonical</th><th>Note</th></tr></thead>
+<tbody>
+<tr><td>Hay</td><td class="num">1</td><td class="num">6</td><td class="num">6</td><td>keep — early chains should pay a little</td></tr>
+<tr><td>Plank (wood)</td><td class="num">5</td><td class="num">6</td><td class="num">6</td><td>✓ match</td></tr>
+<tr><td>Flour</td><td class="num">—</td><td class="num">8</td><td class="num">8</td><td>intermediate</td></tr>
+<tr><td>Eggs</td><td class="num">12</td><td class="num">5</td><td class="num">8</td><td>bump — underpriced vs PC2</td></tr>
+<tr><td>Bread</td><td class="num">5</td><td class="num">125</td><td class="num">125</td><td><strong>keep</strong> — intentional crafted-good engine (the 5× inflection)</td></tr>
+<tr><td>Soup / Meat / Pie</td><td class="num">20/21/90</td><td class="num">20/21/90</td><td class="num">20/21/90</td><td>✓ match</td></tr>
+<tr><td>Milk / Honey / Horseshoe</td><td class="num">100/300/400</td><td class="num">100/300/400</td><td class="num">100/300/400</td><td>✓ match</td></tr>
+</tbody>
+</table>
+
+<h4>Mine — flat today; adopt PC2's steep ladder <span style="font-size:.8em;color:var(--cur)">(the big change)</span></h4>
+<table>
+<thead><tr><th>Tier (PC2 name)</th><th>PC2 sell</th><th>Current (resource)</th><th>Canonical proposal</th></tr></thead>
+<tbody>
+<tr><td>Stone → block</td><td class="num">10</td><td class="num">6</td><td class="num">9</td></tr>
+<tr><td>Iron → iron_bar</td><td class="num">11</td><td class="num">8</td><td class="num">12</td></tr>
+<tr><td>Copper → copper_bar</td><td class="num">—</td><td class="num">8</td><td class="num">14</td></tr>
+<tr><td>Coal → coke</td><td class="num">40</td><td class="num">9</td><td class="num">40</td></tr>
+<tr><td>Gem / Diamond → cut_gem</td><td class="num">110</td><td class="num">14</td><td class="num">110</td></tr>
+<tr><td>Gold → gold_bar</td><td class="num">110</td><td class="num">16</td><td class="num">120</td></tr>
+<tr><td>Ruby / Platinum (deep — later)</td><td class="num">450</td><td class="num">—</td><td class="num">~450</td></tr>
+</tbody>
+</table>
+<div class="box note"><strong>The finding.</strong> The current mine spans <span class="num">6→16</span> (flat); PC2 spans <span class="num">10→450</span> (steep, roughly geometric ×2–3 per tier). Flat means "dig deeper" is unrewarding — fatal now that the mine is a co-equal pillar. Adopt PC2's shape: each tier ~2–3× the last. Safe for construction (build costs are quantities, not value); it drives <em>market income</em> and the deep-mine fantasy. <strong>The sim (§9) must confirm the steeper ladder doesn't out-pace the farm and trivialize coins.</strong> <span class="muted">Also folds in the <code>bread</code> 125-vs-4 market-row fix from below.</span></div>
+
+<h4>Workers &amp; entry (PC2 reference)</h4>
+<ul>
+<li><strong>Worker effect (canonical)</strong> = PC2's <strong>−1 per chain step, per hire</strong>, one worker type per transition (e.g. Stonecutter trims the stone→block chain). Hire #1 must be a clean −1 (the inert-hire fix).</li>
+<li><strong>Per-session entry-cost shape (PC2 reference)</strong>: PC2 villages cost <span class="num">10 → 30 → 70 → 100 → 150 → 210</span> coins to enter — a curve to mirror for per-session board entry (distinct from per-settlement founding cost).</li>
+</ul>
+
 <h3>Worked economy (the inflection points)</h3>
 <ul>
 <li><strong>1 flour</strong> = 5 wheat tiles (T=5) → sells 8. A chain of 5 wheat (v=2) also pays <code>floor(5×2/2)=5</code> coins.</li>
