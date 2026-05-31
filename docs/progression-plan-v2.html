@@ -92,7 +92,7 @@
     <span class="chip">v2 · supersedes progression-plan.html</span>
     <span class="chip">Linear unlock + revisit</span>
     <span class="chip">Per-zone resources</span>
-    <span class="chip">Per-settlement tier ladder</span>
+    <span class="chip">Town 1 = farm only</span>
     <span class="chip">Instant crafting</span>
     <span class="chip warn">Paused: keepers · boons · bosses · sea</span>
   </div>
@@ -113,6 +113,8 @@
   <a href="#deferred">11 · Deferred layer</a>
   <a href="#roadmap">12 · Roadmap</a>
   <a href="#log">13 · Decision log</a>
+  <a href="#sources">14 · Source of truth (data map)</a>
+  <a href="#current">15 · Current coded state</a>
 </nav>
 
 <main>
@@ -122,6 +124,7 @@
 <h2>1 · Vision &amp; locked decisions</h2>
 <p><strong>The fantasy:</strong> you arrive at a fallen kingdom and rebuild it <em>one ruin at a time</em>. Each settlement is a from-scratch restoration: clear the rubble, climb its town-tier ladder by chaining → refining → building, then raise the wagon that opens the next ruin. The whole arc culminates — much later — in restoring the Old Capital.</p>
 <p><strong>The problem this fixes (from v1):</strong> ~25 of 31 systems are visible from the first screen. The cure is PC2's: <strong>sequence, gate, hide, and connect</strong> — reveal one major system at a time along the rebuild ladder.</p>
+<div class="box note"><strong>New session / cold start?</strong> Read <a href="#current">§15 (current coded state)</a> and <a href="#sources">§14 (where the data lives)</a> first — they capture exactly what's implemented today and where every number is, so this doc is self-contained.</div>
 
 <div class="diagram">
 <h3 style="margin-top:.2rem">The core loop &amp; the supply chain</h3>
@@ -136,7 +139,7 @@
     <line x1="390" y1="65" x2="448" y2="65" stroke="#33485e" marker-end="url(#ah)"/>
     <line x1="610" y1="65" x2="674" y2="65" stroke="#33485e" marker-end="url(#ah)"/>
     <path d="M766,90 C766,128 89,128 89,92" fill="none" stroke="#33485e" stroke-dasharray="5 4" marker-end="url(#ah)"/>
-    <text x="430" y="124" fill="#697077" font-size="11">farm food gates the mine · mine metal builds higher tiers + better tools · better tools → both boards faster</text>
+    <text x="430" y="124" fill="#697077" font-size="11">Town 2+ adds the mine: farm food gates the mine · mine metal builds higher tiers + better tools</text>
   </g>
 </svg>
 </div>
@@ -158,10 +161,11 @@
 <tr><td>11</td><td><strong>Narrative meta PAUSED</strong>; when revisited, the keeper choice is a <em>qualitative</em> fork, not a multiplicative boon</td><td>Boons-as-power = creep on already-strong perks</td></tr>
 <tr><td>12</td><td><strong>Capacity ladder</strong> (rising tool/worker caps) — confirmed</td><td>The mid-game "what do I keep improving" sink</td></tr>
 <tr><td>13</td><td><strong>PC2-controlled progression</strong> for towns 1–3 now; novel twist later</td><td>Prove the baseline before innovating</td></tr>
-<tr><td>14</td><td><strong>Advancement = the wagon</strong> — build the advancement structure at a tier threshold to unlock the next ruin</td><td>One obvious "what's next"</td></tr>
+<tr><td>14</td><td><strong>Advancement = the wagon</strong> — build the advancement structure at the top tier to unlock the next ruin</td><td>One obvious "what's next"</td></tr>
 <tr><td>15</td><td><strong>Phase 1 = vanilla PC2:</strong> pause hearth-tokens, keepers, coexist/drive-out, boons, bosses, Old-Capital finale</td><td>All return later as a net-new layer</td></tr>
 </tbody>
 </table>
+<div class="box warn"><strong>Town 1 has no mine.</strong> Following PC2 (village 1 = farm only; the mine appears at village 2): <strong>Town 1 = Farm only</strong> · <strong>Town 2 = Farm + Mine</strong> · <strong>Town 3 = Farm + Mine (deeper)</strong> · sea later. The mine board, Kitchen/supplies, the food→mine gate, metal buildings, and the capacity ladder are all <strong>Town 2</strong> introductions.</div>
 </section>
 
 <!-- 2 -->
@@ -182,12 +186,12 @@
 <tr><td>Workers (hired once, help everywhere) + runes</td><td>—</td></tr>
 </tbody>
 </table>
-<div class="box note"><strong>Biggest engineering change in the structure.</strong> Today <code>state.inventory</code> is a single global pool. Per-zone resources means <strong>re-keying inventory by settlement</strong> (<code>state.zones[zoneId].inventory</code>) while keeping coins/tools/workers/level/knowledge global. The unlock registry (below) and the Market (global coins → local resources) are the two systems that make this not feel like a soft-lock. <span class="muted">This is the load-bearing refactor of Phase 1; the balance sim (§9) should explicitly test "can a fresh ruin bootstrap from coins alone."</span></div>
+<div class="box note"><strong>Biggest engineering change in the structure.</strong> Today <code>state.inventory</code> is a single global pool (see <a href="#current">§15</a>). Per-zone resources means <strong>re-keying inventory by settlement</strong> while keeping coins/tools/workers/level/knowledge global. The unlock registry and the Market (global coins → local resources) are what keep it from feeling like a soft-lock. <span class="muted">This is the load-bearing refactor of Phase 1; the balance sim (§9) should explicitly test "can a fresh ruin bootstrap from coins alone."</span></div>
 
-<h3>The three bridges (PC2's connective tissue — currently weak)</h3>
+<h3>The three bridges (PC2's connective tissue — Town 2+)</h3>
 <ul>
-<li><strong>Farm food → mine turns.</strong> <span class="pill keep">KEEP</span> The expedition model exists (<code>EXPEDITION_FOOD_TURNS</code>, <code>MIN_EXPEDITION_TURNS=3</code>). Make it the <em>hard</em> gate: a mine session's turns = packed food; out of food → session ends. <span class="pill chg">CHANGE</span> Replace the mine's <code>lv2</code> unlock with a deterministic flag (<code>kitchen_built &amp;&amp; supplies ≥ 3</code>), grant 3 starter supplies for trip 1.</li>
-<li><strong>Mine metal → higher tiers + tools.</strong> <span class="pill chg">CHANGE</span> Town-tier upgrades and the Workshop/Forge cost mine resources (<code>block</code>, <code>iron_bar</code>) — so the mine has a purpose beyond selling.</li>
+<li><strong>Farm food → mine turns.</strong> <span class="pill keep">KEEP</span> The expedition model exists (<code>EXPEDITION_FOOD_TURNS</code>, <code>MIN_EXPEDITION_TURNS=3</code>). Make it the <em>hard</em> gate at Town 2: a mine session's turns = packed food; out of food → session ends. <span class="pill chg">CHANGE</span> Replace the mine's <code>lv2</code> unlock with a deterministic flag (<code>kitchen_built &amp;&amp; supplies ≥ 3</code>) + 3 starter supplies for trip 1.</li>
+<li><strong>Mine metal → higher tiers + tools.</strong> <span class="pill chg">CHANGE</span> From Town 2, town-tier upgrades and the Workshop/Forge cost mine resources (<code>block</code>, <code>iron_bar</code>) — so the mine has a purpose beyond selling.</li>
 <li><strong>Better tools → both boards faster.</strong> <span class="pill keep">KEEP</span> Tools are global; crafting one at a metal-rich town speeds chaining everywhere.</li>
 </ul>
 </section>
@@ -195,69 +199,73 @@
 <!-- 3 -->
 <section id="ladder">
 <h2>3 · The town-tier ladder</h2>
-<p>Each ruin climbs the same ladder. A tier-up is a single <strong>town-center upgrade</strong> (PC2's Camp→…→Manor) that costs escalating <em>local</em> resources and (a) unlocks the next batch of tiles/buildings/workers, (b) raises caps, (c) adds building plots. The top tier builds the <strong>wagon</strong> → next ruin. We map your existing 40 buildings onto these tiers instead of the scattered <code>lv1…lv8</code> gates.</p>
+<p>Each ruin climbs the same <strong>rank ladder</strong> (Camp → City). A tier-up is a single <strong>town-center upgrade</strong> that costs escalating <em>local</em> resources and (a) unlocks the next batch of that settlement's content, (b) raises caps, (c) adds building plots. The top tier builds the <strong>wagon</strong> → next ruin. We map your existing 40 buildings onto these tiers instead of the scattered <code>lv</code> gates.</p>
+<div class="box warn"><strong>Boards are per-settlement — the table below is Town 1 (farm only).</strong> The same rank ladder gates every settlement, but the <em>content</em> it unlocks is drawn from that settlement's boards. <strong>Town 2</strong> folds the mine board, Kitchen/supplies, the food→mine gate, metal buildings (Forge), the Miner + mine workers, and the capacity ladder into these same tiers — and its higher tiers then cost mine resources (block/iron_bar). See §7.</div>
 
+<h4>Town 1 — farm-only rank ladder</h4>
 <table>
-<thead><tr><th>Tier</th><th>Name</th><th>Town-center cost (local, proposed)</th><th>Unlocks at this tier</th><th>Caps / plots</th></tr></thead>
+<thead><tr><th>Tier</th><th>Name</th><th>Town-center cost (farm-local, proposed)</th><th>Unlocks (Town 1)</th><th>Caps / plots</th></tr></thead>
 <tbody>
-<tr><td>0</td><td><strong>Rubble</strong></td><td>—</td><td>Arrival cinematic; board is debris + the two staple tiles</td><td>—</td></tr>
+<tr><td>0</td><td><strong>Rubble</strong></td><td>—</td><td>Arrival; board is debris + the two staple tiles</td><td>—</td></tr>
 <tr><td>1</td><td><strong>Camp</strong></td><td>Hearth (free)</td><td>Farm board (hay + wheat only), Orders, the Market</td><td>cap 200 · 3 plots</td></tr>
 <tr><td>2</td><td><strong>Hamlet</strong></td><td><span class="num">120c + 8 hay_bundle</span></td><td>Trees (plank), Granary, first Worker (Farmer)</td><td>cap 300 · 5 plots</td></tr>
-<tr><td>3</td><td><strong>Village</strong></td><td><span class="num">300c + 15 plank</span></td><td>Birds (eggs), Veg (soup), Mill, Bakery, Kitchen, Workshop + basic tools, Quests/XP surfaced</td><td>cap 400 · 7 plots</td></tr>
-<tr><td>4</td><td><strong>Town</strong></td><td><span class="num">600c + 20 plank + 10 block</span></td><td>Mine board (food-gated), Mining Camp, Miner worker, more tools; capacity ladder begins</td><td>cap 500 · 9 plots</td></tr>
-<tr><td>5</td><td><strong>City</strong></td><td><span class="num">1200c + 30 block + 12 iron_bar</span></td><td>Forge + metal goods, Caravan Post (trade), <strong>the Wagon</strong></td><td>cap 600 · 11 plots</td></tr>
+<tr><td>3</td><td><strong>Village</strong></td><td><span class="num">300c + 15 plank</span></td><td>Birds (eggs), Veg (soup), Mill, Bakery, Quests/XP surfaced, Lumberjack</td><td>cap 400 · 7 plots</td></tr>
+<tr><td>4</td><td><strong>Town</strong></td><td><span class="num">600c + 25 plank</span></td><td>Workshop + farm tools (rake/axe/scythe), more farm workers, Caravan Post (trade)</td><td>cap 500 · 9 plots</td></tr>
+<tr><td>5</td><td><strong>City</strong></td><td><span class="num">1000c + 40 plank + 12 soup</span></td><td>Top farm buildings; <strong>the Wagon</strong> → Town 2</td><td>cap 600 · 11 plots</td></tr>
 </tbody>
 </table>
-<p class="legend">Costs are first-pass proposals to be validated by the sim (§9). Tier-up costs escalate per-town index (town 2's Hamlet costs more than town 1's). Decorative/flavour buildings (clock tower, watchtower, brewery…) are free-floating cosmetics gated only by plots, never on the critical path.</p>
+<p class="legend">Town-1 tier costs are <strong>farm-only</strong> — there's no block/iron because there's no mine here. Costs are first-pass proposals for the sim (§9); they escalate per-town index. Decorative buildings (clock tower, watchtower, brewery…) are plot-gated cosmetics, never on the critical path.</p>
 
-<div class="box"><strong>Why tiers replace <code>lv</code> gates.</strong> Today a building like the Forge is gated <code>lv:8</code> ≈ <span class="num">1,050+</span> chains at ~1 XP/chain — an opaque grind. Tier gates are <em>legible</em> ("upgrade your town center") and <em>local</em> (paid from this settlement's economy), which is exactly the rebuild fantasy. Player level is retained only for the slow <strong>Almanac perk</strong> drip, never to gate buildings.</p></div>
+<div class="box"><strong>Why tiers replace <code>lv</code> gates.</strong> Today the Forge is gated <code>lv:8</code> ≈ <span class="num">1,050+</span> chains at ~1 XP/chain — an opaque grind (see <a href="#current">§15</a>). Tier gates are <em>legible</em> ("upgrade your town center") and <em>local</em> (paid from this settlement's economy) — exactly the rebuild fantasy. Player level is retained only for the slow <strong>Almanac perk</strong> drip, never to gate buildings.</div>
 </section>
 
 <!-- 4 -->
 <section id="schedule">
 <h2>4 · Unlock schedule — what's available when &amp; how</h2>
-<p>Everything is gated through one mechanism (see §10, the unlock registry). This is the Town-1 reveal order; towns 2–3 deltas follow.</p>
+<p>Everything is gated through one mechanism (the unlock registry, §10). <strong>Town 1 teaches the farm; Town 2 introduces the mine.</strong></p>
 
-<h3>Town 1 (the teaching ruin) — reveal order</h3>
+<h3>Town 1 (farm only) — reveal order</h3>
 <table>
 <thead><tr><th>Tier</th><th>Tiles</th><th>Resources</th><th>Buildings</th><th>Workers / Tools</th><th>Gate (how)</th></tr></thead>
 <tbody>
-<tr><td><b>1 Camp</b></td><td><code>tile_grass_hay</code>, <code>tile_grain_wheat</code></td><td>hay_bundle, flour, coins</td><td>Hearth, Market</td><td>—</td><td>new save</td></tr>
-<tr><td><b>2 Hamlet</b></td><td>+ <code>tile_tree_oak</code></td><td>+ plank</td><td>+ Granary</td><td>+ Farmer worker</td><td>objective "3 chains of 5+"</td></tr>
-<tr><td><b>3 Village</b></td><td>+ <code>tile_bird_pheasant</code>, <code>tile_veg_carrot</code></td><td>+ eggs, soup, bread, supplies</td><td>+ Mill, Bakery, Kitchen, Workshop</td><td>+ Lumberjack; rake/axe/scythe/sickle/fertilizer</td><td>build Granary + objective "store 10 plank"</td></tr>
-<tr><td><b>4 Town</b></td><td>+ mine: <code>stone</code>, <code>iron_ore</code>, <code>special_dirt</code></td><td>+ block, iron_bar</td><td>+ Mining Camp</td><td>+ Miner; stone_hammer, iron_pick</td><td>flag <code>kitchen_built &amp;&amp; supplies≥3</code> → found mine</td></tr>
-<tr><td><b>5 City</b></td><td>+ mine: <code>coal</code>, <code>gem</code></td><td>+ coke, cut_gem</td><td>+ Forge, Caravan Post, <b>Wagon</b></td><td>+ Smith; drill, blast_charge; capacity ladder</td><td>mine research + town-center → City</td></tr>
+<tr><td><b>1 Camp</b></td><td>hay, wheat</td><td>hay_bundle, flour, coins</td><td>Hearth, Market</td><td>—</td><td>new save</td></tr>
+<tr><td><b>2 Hamlet</b></td><td>+ oak (tree)</td><td>+ plank</td><td>+ Granary</td><td>+ Farmer</td><td>objective "3 chains of 5+"</td></tr>
+<tr><td><b>3 Village</b></td><td>+ pheasant (bird), carrot (veg)</td><td>+ eggs, soup, bread</td><td>+ Mill, Bakery</td><td>+ Lumberjack</td><td>build Granary + "store 10 plank"</td></tr>
+<tr><td><b>4 Town</b></td><td>(farm roster set)</td><td>(refined goods)</td><td>+ Workshop, Caravan Post</td><td>+ farm tools (rake/axe/scythe); more farm workers</td><td>tier-up</td></tr>
+<tr><td><b>5 City</b></td><td>—</td><td>—</td><td>+ <b>Wagon</b></td><td>—</td><td>tier-up → restored → unlocks Town 2</td></tr>
 </tbody>
 </table>
-<p class="legend">Tiles like fruit/flower/herd/cattle/mount and the upper mine tiers (copper, gold) are <strong>held for towns 2–3</strong> — they exist in the configs but stay hidden behind the registry in town 1.</p>
+<p class="legend">No mine, Kitchen, supplies, or metal in Town 1. Fruit/flower/herd/cattle/mount stay hidden for later towns (they exist in the configs — see §15).</p>
 
-<h3>Towns 2–3 deltas</h3>
+<h3>Town 2 (first mine) — new content folded into the same tiers</h3>
 <table>
-<thead><tr><th>Town</th><th>Primary board</th><th>New this town</th><th>Why</th></tr></thead>
+<thead><tr><th>Phase</th><th>New tiles</th><th>Resources</th><th>Buildings</th><th>Workers / Tools</th><th>Gate</th></tr></thead>
 <tbody>
-<tr><td><b>Town 2</b> — first mine settlement</td><td>Mine-forward (farm support)</td><td>Mine is the main act from the start; copper + gold tiers; first <strong>capacity ladder</strong> rung; herd→meat for cured-meat rations</td><td>Player already knows the loop; now the mine leads and food logistics matter</td></tr>
-<tr><td><b>Town 3</b> — mixed</td><td>Farm + mine, larger</td><td>Fruit (pie), flower (honey) high-value chains; more worker types per step; Observatory (gem −1); deeper tier costs</td><td>Introduces the high-value/low-frequency end of the chain; the economy widens</td></tr>
+<tr><td>early</td><td>stone, iron_ore, special_dirt</td><td>block, iron_bar</td><td>Kitchen (supplies), Mining Camp</td><td>Miner, Stonecutter; stone_hammer, iron_pick</td><td><b>found the mine</b>: flag <code>kitchen_built &amp;&amp; supplies≥3</code> + 3 starter supplies</td></tr>
+<tr><td>mid</td><td>copper_ore, coal</td><td>copper_bar, coke</td><td>Smokehouse (cured_meat)</td><td>Smelter, Collier; drill</td><td>mine research</td></tr>
+<tr><td>late</td><td>gem, gold</td><td>cut_gem, gold_bar</td><td><b>Forge</b> + metal goods; <b>Stronghold I</b> (capacity)</td><td>Smith; blast_charge, gold_pick</td><td>town-center → City; food→mine bridge taught here</td></tr>
 </tbody>
 </table>
+<p class="legend">The <strong>farm food → mine turns</strong> bridge is introduced at Town 2 (it has both boards): farm grain → Kitchen → supplies → packed for mine trips. <strong>Town 3</strong> widens both boards — high-value fruit (pie) / flower (honey) on the farm, deeper mine tiers + Observatory, more per-step workers, capacity rungs 2–3.</p>
 </section>
 
 <!-- 5 -->
 <section id="stages">
 <h2>5 · Per-stage player experience &amp; pacing</h2>
-<p>What the player sees, their goal, what they're literally doing, and how long it should take. Durations assume a first-time player; times are <em>active play</em>, not real-time.</p>
+<p>What the player sees, their goal, what they're doing, and how long it takes. Durations assume a first-time player; times are <em>active play</em>. <strong>Town mapping:</strong> Town 1 (farm) = Stages 0–2 → its Wagon → Town 2 (mine) = Stages 3–4 → its Wagon → Town 3 (depth).</p>
 
 <table>
-<thead><tr><th>Stage</th><th>Player sees</th><th>Goal ("why")</th><th>Doing</th><th>Est. time</th></tr></thead>
+<thead><tr><th>Stage</th><th>Town</th><th>Player sees</th><th>Goal ("why")</th><th>Doing</th><th>Est. time</th></tr></thead>
 <tbody>
-<tr><td><b>0 · First chains</b></td><td>A debris board with only hay + wheat; threshold stars while dragging</td><td>Learn the drag; feel the farm respond</td><td>Drag 3+ chains; watch the 6th hay become a bundle + upgrade tile</td><td>3–5 min</td></tr>
-<tr><td><b>1 · First harvest</b></td><td>The first Order card; a coin total; the Hamlet upgrade prompt</td><td>"What are resources for?" Orders give targets</td><td>Fill 2–3 orders; chain trees for plank; upgrade Camp→Hamlet; build Granary</td><td>8–12 min</td></tr>
-<tr><td><b>2 · A working farm</b></td><td>Mill/Bakery/Kitchen plots; the Workers panel; bread recipe</td><td>The farm becomes an engine; bread is the first real coin source</td><td>Build Mill→Bakery→Kitchen; bake bread (flour×3+eggs×1→125c); hire a Farmer; pack supplies</td><td>15–25 min</td></tr>
-<tr><td><b>3 · Smoke on the ridge</b></td><td>The map; the mine ruin; "Pack provisions"</td><td>Stockpiled food gains a purpose; new board + resources</td><td>Found the mine; run food-gated expeditions; chain stone→block, iron→iron_bar</td><td>15–30 min</td></tr>
-<tr><td><b>4 · Iron &amp; stone</b></td><td>Forge plot; metal-cost buildings; capacity ladder</td><td>Metal → better tools → both boards faster — the payoff</td><td>Build Workshop/Forge; craft metal tools; upgrade Town→City; first capacity rung</td><td>20–40 min</td></tr>
-<tr><td><b>5 · The wagon</b></td><td>The covered wagon at City tier; the next ruin glowing on the map</td><td>This place is restored; a new one calls</td><td>Build the Wagon; travel; arrive at Town 2's rubble (resources stay behind)</td><td>5 min + Town 2</td></tr>
+<tr><td><b>0 · First chains</b></td><td>1</td><td>A debris board with only hay + wheat; threshold stars while dragging</td><td>Learn the drag; feel the farm respond</td><td>Drag 3+ chains; watch the 6th hay become a bundle + upgrade tile</td><td>3–5 min</td></tr>
+<tr><td><b>1 · First harvest</b></td><td>1</td><td>The first Order card; a coin total; the Hamlet upgrade prompt</td><td>"What are resources for?" Orders give targets</td><td>Fill 2–3 orders; chain trees for plank; upgrade Camp→Hamlet; build Granary</td><td>8–12 min</td></tr>
+<tr><td><b>2 · A working farm</b></td><td>1</td><td>Mill/Bakery plots; the Workers panel; bread recipe; the Wagon at City</td><td>The farm becomes an engine; bread is the first real coin source</td><td>Build Mill→Bakery; bake bread (flour×3+eggs×1→125c); hire a Farmer; climb to City; <strong>build the Wagon</strong></td><td>20–35 min</td></tr>
+<tr><td><b>3 · Smoke on the ridge</b></td><td>2</td><td>Town 2's rubble, then a mine ruin; "Pack provisions"</td><td>New board; stockpiled food gains a purpose</td><td>Rebuild Town 2's farm support; Kitchen→supplies; found the mine; food-gated trips; chain stone→block, iron→iron_bar</td><td>20–40 min</td></tr>
+<tr><td><b>4 · Iron &amp; stone</b></td><td>2</td><td>Forge plot; metal-cost buildings; capacity ladder</td><td>Metal → better tools → both boards faster — the payoff</td><td>Build Workshop/Forge; craft metal tools; climb to City; first capacity rung; <strong>build the Wagon</strong></td><td>25–45 min</td></tr>
+<tr><td><b>Advancement</b></td><td>every</td><td>The covered wagon at City tier; the next ruin glowing on the map</td><td>This place is restored; a new one calls</td><td>Build the Wagon; travel; arrive at the next rubble (resources stay behind)</td><td>~5 min</td></tr>
 </tbody>
 </table>
-<p class="muted"><strong>Town 1 total ≈ 60–115 min</strong> of active play across many short sessions. Town 2 is faster (loop known) but deeper; Town 3 wider. The whole 3-town Phase-1 arc ≈ 3–5 hours — matching PC2's "a settlement is a multi-hour arc."</p>
+<p class="muted"><strong>Town 1 (farm) ≈ 45–75 min</strong>; <strong>Town 2 (mine) ≈ 50–90 min</strong>; Town 3 wider. The 3-town Phase-1 arc ≈ 3–5 hours of active play across many short sessions — matching PC2's "a settlement is a multi-hour arc."</p>
 </section>
 
 <!-- 6 -->
@@ -271,7 +279,7 @@
 <li><strong>Resource credited</strong> = every <code>T</code> tiles → 1 inventory resource (fractional carryover in <code>resourceProgress</code>)</li>
 <li><strong>Coins</strong> = <code>floor(L × v / 2)</code></li>
 </ul>
-<p class="muted" style="margin:.2rem 0">So <code>T</code> does double duty (upgrade + resource) — you confirmed both outcomes already fire, and we keep them unified.</p>
+<p class="muted" style="margin:.2rem 0">So <code>T</code> does double duty (upgrade + resource) — both outcomes already fire in code, and we keep them unified.</p>
 </div>
 
 <h3>The real numbers (read from <code>src/constants.ts</code>)</h3>
@@ -280,36 +288,66 @@
 <tbody>
 <tr><td><code>tile_grass_hay</code></td><td>grass</td><td class="num">6</td><td class="num">1</td><td>hay_bundle → 6</td><td>T1</td></tr>
 <tr><td><code>tile_grain_wheat</code></td><td>grain</td><td class="num">5</td><td class="num">2</td><td>flour → 8</td><td>T1</td></tr>
-<tr><td><code>tile_tree_oak</code></td><td>tree</td><td class="num">6</td><td class="num">1</td><td>plank → 6</td><td>T2</td></tr>
-<tr><td><code>tile_bird_pheasant</code></td><td>bird</td><td class="num">6</td><td class="num">1</td><td>eggs → 5</td><td>T3</td></tr>
-<tr><td><code>tile_veg_carrot</code></td><td>veg</td><td class="num">6</td><td class="num">4</td><td>soup → 20</td><td>T3</td></tr>
-<tr><td><code>tile_mine_stone</code></td><td>stone</td><td class="num">8</td><td class="num">1</td><td>block → 6</td><td>T4</td></tr>
-<tr><td><code>tile_mine_iron_ore</code></td><td>iron</td><td class="num">6</td><td class="num">3</td><td>iron_bar → 8</td><td>T4</td></tr>
-<tr><td><code>tile_mine_coal</code></td><td>coal</td><td class="num">7</td><td class="num">2</td><td>coke → 9</td><td>T5</td></tr>
-<tr><td><code>tile_mine_gem</code></td><td>gem</td><td class="num">5</td><td class="num">7</td><td>cut_gem → 14</td><td>T5</td></tr>
-<tr><td><code>tile_mine_copper_ore</code></td><td>copper</td><td class="num">6</td><td class="num">3</td><td>copper_bar → 8</td><td>Town 2</td></tr>
-<tr><td><code>tile_mine_gold</code></td><td>gold</td><td class="num">6</td><td class="num">5</td><td>gold_bar → 16</td><td>Town 2</td></tr>
+<tr><td><code>tile_tree_oak</code></td><td>tree</td><td class="num">6</td><td class="num">1</td><td>plank → 6</td><td>T1 (Hamlet)</td></tr>
+<tr><td><code>tile_bird_pheasant</code></td><td>bird</td><td class="num">6</td><td class="num">1</td><td>eggs → 5 (→8 canonical)</td><td>T1 (Village)</td></tr>
+<tr><td><code>tile_veg_carrot</code></td><td>veg</td><td class="num">6</td><td class="num">4</td><td>soup → 20</td><td>T1 (Village)</td></tr>
+<tr><td><code>tile_mine_stone</code></td><td>stone</td><td class="num">8</td><td class="num">1</td><td>block → 6 (→9 canonical)</td><td>Town 2</td></tr>
+<tr><td><code>tile_mine_iron_ore</code></td><td>iron</td><td class="num">6</td><td class="num">3</td><td>iron_bar → 8 (→12)</td><td>Town 2</td></tr>
+<tr><td><code>tile_mine_coal</code></td><td>coal</td><td class="num">7</td><td class="num">2</td><td>coke → 9 (→40)</td><td>Town 2</td></tr>
+<tr><td><code>tile_mine_gem</code></td><td>gem</td><td class="num">5</td><td class="num">7</td><td>cut_gem → 14 (→110)</td><td>Town 2</td></tr>
+<tr><td><code>tile_mine_gold</code></td><td>gold</td><td class="num">6</td><td class="num">5</td><td>gold_bar → 16 (→120)</td><td>Town 2</td></tr>
 <tr><td><code>tile_fruit_apple</code></td><td>fruit</td><td class="num">7</td><td class="num">1</td><td>pie → 90</td><td>Town 3</td></tr>
 <tr><td><code>tile_flower_pansy</code></td><td>flower</td><td class="num">10</td><td class="num">1</td><td>honey → 300</td><td>Town 3</td></tr>
-<tr><td><code>tile_herd_pig</code></td><td>herd</td><td class="num">5</td><td class="num">1</td><td>meat → 21</td><td>Town 2</td></tr>
 </tbody>
 </table>
+
+<h3>PC2 reconciliation — the canonical balance base</h3>
+<p>The agreed balance base is PC2's ladder (per the wiki reference). Reconciling PC2's sell values against the current configs gives an asymmetric result: <strong>the farm terminal ladder already matches PC2</strong>, while <strong>the mine ladder is flat and must adopt PC2's steepness</strong>.</p>
+
+<h4>Farm — already aligned (keep current)</h4>
+<table>
+<thead><tr><th>Resource</th><th>PC2 sell</th><th>Current</th><th>Canonical</th><th>Note</th></tr></thead>
+<tbody>
+<tr><td>Hay</td><td class="num">1</td><td class="num">6</td><td class="num">6</td><td>keep — early chains should pay a little</td></tr>
+<tr><td>Plank (wood)</td><td class="num">5</td><td class="num">6</td><td class="num">6</td><td>✓ match</td></tr>
+<tr><td>Flour</td><td class="num">—</td><td class="num">8</td><td class="num">8</td><td>intermediate</td></tr>
+<tr><td>Eggs</td><td class="num">12</td><td class="num">5</td><td class="num">8</td><td>bump — underpriced vs PC2</td></tr>
+<tr><td>Bread</td><td class="num">5</td><td class="num">125</td><td class="num">125</td><td><strong>keep</strong> — intentional crafted-good engine (the 5× inflection)</td></tr>
+<tr><td>Soup / Meat / Pie</td><td class="num">20/21/90</td><td class="num">20/21/90</td><td class="num">20/21/90</td><td>✓ match</td></tr>
+<tr><td>Milk / Honey / Horseshoe</td><td class="num">100/300/400</td><td class="num">100/300/400</td><td class="num">100/300/400</td><td>✓ match</td></tr>
+</tbody>
+</table>
+
+<h4>Mine — flat today; adopt PC2's steep ladder <span style="font-size:.8em;color:var(--cur)">(the big change, Town 2+)</span></h4>
+<table>
+<thead><tr><th>Tier (PC2 name)</th><th>PC2 sell</th><th>Current (resource)</th><th>Canonical proposal</th></tr></thead>
+<tbody>
+<tr><td>Stone → block</td><td class="num">10</td><td class="num">6</td><td class="num">9</td></tr>
+<tr><td>Iron → iron_bar</td><td class="num">11</td><td class="num">8</td><td class="num">12</td></tr>
+<tr><td>Copper → copper_bar</td><td class="num">—</td><td class="num">8</td><td class="num">14</td></tr>
+<tr><td>Coal → coke</td><td class="num">40</td><td class="num">9</td><td class="num">40</td></tr>
+<tr><td>Gem / Diamond → cut_gem</td><td class="num">110</td><td class="num">14</td><td class="num">110</td></tr>
+<tr><td>Gold → gold_bar</td><td class="num">110</td><td class="num">16</td><td class="num">120</td></tr>
+<tr><td>Ruby / Platinum (deep — later)</td><td class="num">450</td><td class="num">—</td><td class="num">~450</td></tr>
+</tbody>
+</table>
+<div class="box note"><strong>The finding.</strong> The current mine spans <span class="num">6→16</span> (flat); PC2 spans <span class="num">10→450</span> (steep, roughly ×2–3 per tier). Flat means "dig deeper" is unrewarding — fatal once the mine is a co-equal pillar at Town 2. Adopt PC2's shape. Safe for construction (build costs are quantities, not value); it drives <em>market income</em> and the deep-mine fantasy. <strong>The sim (§9) must confirm the steeper ladder doesn't out-pace the farm and trivialize coins.</strong></div>
 
 <h3>Worked economy (the inflection points)</h3>
 <ul>
 <li><strong>1 flour</strong> = 5 wheat tiles (T=5) → sells 8. A chain of 5 wheat (v=2) also pays <code>floor(5×2/2)=5</code> coins.</li>
-<li><strong>1 bread</strong> = 3 flour + 1 egg = 15 wheat + 6 bird tiles → sells <strong>125</strong>. Raw 3 flour = 24c, so the <strong>Bakery ≈ 5× multiplier</strong> — the first big economic inflection.</li>
-<li><strong>1 supplies</strong> = 5 flour = 25 wheat tiles → 1 expedition turn. <strong>1 mine trip (3 turns)</strong> = 3 supplies = 15 flour = <strong>75 wheat tiles</strong>. That's the throttle; the sim will tell us if 75 is too steep (candidate: <code>supplies = flour×3</code> = 45 tiles).</li>
+<li><strong>1 bread</strong> = 3 flour + 1 egg = 15 wheat + 6 bird tiles → sells <strong>125</strong>. Raw 3 flour = 24c, so the <strong>Bakery ≈ 5× multiplier</strong> — the first big economic inflection (Town 1).</li>
+<li><strong>1 supplies</strong> = 5 flour = 25 wheat tiles → 1 expedition turn (Town 2). <strong>1 mine trip (3 turns)</strong> = 3 supplies = 15 flour = <strong>75 wheat tiles</strong>. That's the throttle; the sim will say if 75 is too steep (candidate: <code>supplies = flour×3</code> = 45 tiles).</li>
 </ul>
 
-<div class="box warn"><strong>Concrete balance fixes to make (grounded in the configs):</strong>
+<div class="box warn"><strong>Concrete balance bugs to fix (grounded in the configs — see §15):</strong>
 <ul style="margin:.3rem 0">
-<li><span class="pill rm">BUG</span> <strong><code>bread</code> sells 125 in <code>ITEMS</code> but 4 in <code>MARKET_PRICES</code></strong> — a stale market row. Pick one source of truth (proposal: market sell = item value; bread = 125).</li>
-<li><span class="pill rm">BUG</span> <strong>Miner worker</strong> reduces category <code>"wood"</code> (constants/workers line 90) — should target a mine category (e.g. <code>mine_stone</code>).</li>
+<li><span class="pill rm">BUG</span> <strong><code>bread</code> sells 125 in <code>ITEMS</code> but 4 in <code>MARKET_PRICES</code></strong> — a stale market row. Make market sell = item value (bread = 125).</li>
+<li><span class="pill rm">BUG</span> <strong>Miner worker</strong> reduces category <code>"wood"</code> (workers/data.ts) — should target a mine category (e.g. <code>mine_stone</code>).</li>
 <li><span class="pill rm">BUG</span> <strong>First hire ≈ inert.</strong> Reductions fold as <code>amount × hired / maxCount</code> with <code>maxCount:10</code>, so hire #1 = <span class="num">0.1</span> tiles. Fix: lower <code>maxCount</code> to ~5, or floor per-hire so hire #1 = a clean <strong>−1</strong>.</li>
 <li><span class="pill chg">CHANGE</span> <strong>Trim <code>FARM_TILE_POOL</code></strong> — today it's 10 categories from the first board (hay×3 + 9 singles). Stage-0 pool = <code>hay×4, wheat×2</code>; add a category as its tier unlocks.</li>
-<li><span class="pill chg">CHANGE</span> <strong>Drop <code>block</code> from early farm buildings</strong> (Bakery's 10 block) — it's a mine resource; the farm-first opening must cost farm-only resources. Conversely, Town/City tier-ups <em>should</em> cost block/iron_bar (the bridge).</li>
-<li><span class="pill chg">CHANGE</span> <strong>Re-gate buildings from <code>lv</code> to tier/flag</strong> (see §3).</li>
+<li><span class="pill chg">CHANGE</span> <strong>Drop <code>block</code> from early farm buildings</strong> (Bakery's 10 block) — it's a mine resource; Town 1 has no mine.</li>
+<li><span class="pill chg">CHANGE</span> <strong>Re-gate buildings from <code>lv</code> to tier/flag</strong> (§3).</li>
 </ul></div>
 </section>
 
@@ -319,22 +357,23 @@
 <p>Concrete first-pass numbers for the three teaching towns. These are <em>starting points for the simulator</em>, not final.</p>
 
 <table>
-<thead><tr><th>&nbsp;</th><th>Town 1 — Hearthwood (farm)</th><th>Town 2 — the Ridge (mine)</th><th>Town 3 — the Vale (mixed)</th></tr></thead>
+<thead><tr><th>&nbsp;</th><th>Town 1 — Hearthwood (FARM ONLY)</th><th>Town 2 — the Ridge (farm + mine)</th><th>Town 3 — the Vale (deeper)</th></tr></thead>
 <tbody>
-<tr><td><b>Boards</b></td><td>Farm (6×6); small mine at City tier</td><td>Mine-forward + farm support</td><td>Farm + mine, both full</td></tr>
-<tr><td><b>Base turns / session</b></td><td>10 (farm) · 3 (mine trip)</td><td>10 · 5 (mine, longer trips)</td><td>12 · 6</td></tr>
-<tr><td><b>Found cost</b> (global coins)</td><td>free (start)</td><td><span class="num">~250c</span> + prior town restored</td><td><span class="num">~600c</span> (1.5× escalation)</td></tr>
-<tr><td><b>Categories live</b></td><td>grass, grain, tree, bird, veg, + mine stone/iron/coal/gem</td><td>+ copper, gold, herd</td><td>+ fruit, flower (high-value)</td></tr>
-<tr><td><b>Worker types</b></td><td>Farmer, Lumberjack, Miner (fixed)</td><td>+ Stonecutter, Smelter, Collier (per-step)</td><td>+ Orchardist, Beekeeper, Drover</td></tr>
-<tr><td><b>Tier-up costs</b></td><td>120c+8hay → 300c+15plank → 600c+20plank+10block → 1200c+30block+12iron</td><td>×~1.4 town-index escalation</td><td>×~1.4 again</td></tr>
+<tr><td><b>Boards</b></td><td><strong>Farm only (6×6)</strong></td><td>Farm + Mine (mine is the new act)</td><td>Farm + mine, both full</td></tr>
+<tr><td><b>Base turns / session</b></td><td>10 (farm)</td><td>10 farm · 5 mine trip</td><td>12 · 6</td></tr>
+<tr><td><b>Found cost</b> (global coins)</td><td>free (start)</td><td><span class="num">~250c</span> + Town 1 restored</td><td><span class="num">~600c</span> (1.5× escalation)</td></tr>
+<tr><td><b>Categories live</b></td><td>grass, grain, tree, bird, veg</td><td>+ mine: stone, iron, copper, coal, gem, gold; + herd</td><td>+ fruit, flower (high-value)</td></tr>
+<tr><td><b>Worker types</b></td><td>Farmer, Lumberjack (+ veg/bird)</td><td>+ Miner, Stonecutter, Smelter, Collier</td><td>+ Orchardist, Beekeeper, Drover</td></tr>
+<tr><td><b>Tier-up costs</b></td><td>farm-only: 120c+8hay → 300c+15plank → 600c+25plank → 1000c+40plank+12soup</td><td>higher tiers add block/iron; ×~1.4 town-index</td><td>×~1.4 again</td></tr>
+<tr><td><b>Food→mine gate</b></td><td>n/a (no mine)</td><td><strong>introduced here</strong> (Kitchen→supplies)</td><td>active</td></tr>
 <tr><td><b>Capacity ladder</b></td><td>not yet</td><td>rung 1 (tool max 5→7, worker max +2)</td><td>rungs 2–3</td></tr>
-<tr><td><b>Target play time</b></td><td>~60–115 min</td><td>~45–90 min</td><td>~60–120 min</td></tr>
+<tr><td><b>Target play time</b></td><td>~45–75 min</td><td>~50–90 min</td><td>~60–120 min</td></tr>
 <tr><td><b>"Done" =</b></td><td>build the Wagon (City tier)</td><td>Wagon</td><td>Wagon → (Phase-1 ends; Capital deferred)</td></tr>
 </tbody>
 </table>
 
 <details>
-<summary>Worked first-session walkthrough (Town 1, deterministic spine)</summary>
+<summary>Worked first-session walkthrough (Town 1 — farm only, deterministic spine)</summary>
 <ol>
 <li><strong>Open:</strong> hay+wheat board, 150 starting coins, 3 orders, 2 scythes. Drag a 3+ chain. <span class="muted">(card: what/how/why + threshold stars)</span></li>
 <li>Chain to the <strong>6th hay</strong> → first upgrade tile + 1 hay_bundle. <span class="muted">(card)</span></li>
@@ -342,19 +381,19 @@
 <li>Objective <strong>"3 chains of 5+"</strong> → reveals <strong>trees</strong> (oak→plank) + the <strong>Hamlet</strong> upgrade.</li>
 <li>Upgrade <strong>Camp→Hamlet</strong> (120c + 8 hay_bundle) → +plots, Granary unlocked, first <strong>Farmer</strong>.</li>
 <li>Build <strong>Granary</strong> (150c + 10 plank) → +1 turn, cap→300.</li>
-<li>Objective <strong>"store 10 plank"</strong> → <strong>Village</strong> tier: Mill, Bakery, Kitchen, birds, veg, Workshop, Workers panel.</li>
+<li>Objective <strong>"store 10 plank"</strong> → <strong>Village</strong> tier: Mill, Bakery, birds, veg, Workers panel.</li>
 <li>Build <strong>Mill</strong> → <strong>Bakery</strong> → bake <strong>bread</strong> (flour×3+eggs×1 → 125c). <em>First real coin engine.</em></li>
-<li>Build <strong>Kitchen</strong> → craft <strong>supplies</strong> (flour×5). Objective <strong>"pack 3 supplies"</strong>.</li>
-<li>Flag <code>kitchen_built &amp;&amp; supplies≥3</code> → <strong>found the Mine</strong> (Town tier). Run a food-gated trip; chain stone→block, iron→iron_bar.</li>
-<li>Build <strong>Workshop</strong> → tools; upgrade <strong>Town→City</strong> (needs block+iron) → <strong>Forge</strong> + the <strong>Wagon</strong>. Restore complete.</li>
+<li>Tier up <strong>Village→Town</strong> → <strong>Workshop</strong> + farm tools; Caravan Post.</li>
+<li>Tier up <strong>Town→City</strong> → build the <strong>Wagon</strong> → travel to Town 2 (resources stay behind). <strong>Town 1 restored.</strong></li>
 </ol>
+<p class="muted">Town 2's first session is where the mine arrives: rebuild a farm base, build the <strong>Kitchen</strong> → craft <strong>supplies</strong> (flour×5) → objective "pack 3 supplies" → <strong>found the mine</strong> → food-gated trips → chain stone→block, iron→iron_bar → Forge + metal goods.</p>
 </details>
 </section>
 
 <!-- 8 -->
 <section id="sink">
 <h2>8 · The long-term sink — capacity ladder</h2>
-<p>The Old Capital is the <em>endgame</em> sink (deferred with the meta). The <strong>mid-game</strong> sink — active from Town 2 — is a rising capacity ladder, a clean PC2-Castle analog that answers "what do I keep improving?"</p>
+<p>The Old Capital is the <em>endgame</em> sink (deferred with the meta). The <strong>mid-game</strong> sink — active from Town 2 (the first mine) — is a rising capacity ladder, a clean PC2-Castle analog that answers "what do I keep improving?"</p>
 <table>
 <thead><tr><th>Rung</th><th>Building (global, one per kingdom)</th><th>Cost (top-tier mine goods)</th><th>Effect</th></tr></thead>
 <tbody>
@@ -379,9 +418,9 @@
 <span class="c">//    "novice" ≈ mostly 3–4; "average" ≈ 4–6; "skilled" ≈ 6–9 w/ occasional 12+.</span>
 <span class="k">function</span> drawChainLen(model, rng) { <span class="c">/* sample from the model */</span> }
 
-<span class="c">// 2. Simulate one settlement: for each turn, pick the highest-value</span>
-<span class="c">//    available tile, dispatch a synthetic CHAIN_COLLECTED, then let the</span>
-<span class="c">//    "AI buyer" build/upgrade/hire whenever it can afford the next goal.</span>
+<span class="c">// 2. Simulate one settlement: each turn pick the highest-value available</span>
+<span class="c">//    tile, dispatch a synthetic CHAIN_COLLECTED, then let the "AI buyer"</span>
+<span class="c">//    build / upgrade / hire whenever it can afford the next goal.</span>
 <span class="k">function</span> simulateTown(state, model, opts) { <span class="c">/* loop turns + sessions */</span> }
 
 <span class="c">// 3. Emit pacing metrics per stage.</span>
@@ -393,10 +432,10 @@
 <tbody>
 <tr><td>Chains to first building (Granary)</td><td>15–40</td><td>Opening too slow / too fast</td></tr>
 <tr><td>Coins/turn curve (per stage)</td><td>monotonic, no cliffs</td><td>Dead economies, runaway inflation</td></tr>
-<tr><td>Turns to found the mine</td><td>≤ ~3 sessions of farm</td><td>The food gate being too steep (the 75-wheat question)</td></tr>
+<tr><td>Turns to found the mine (Town 2)</td><td>≤ ~3 farm sessions</td><td>The food gate being too steep (the 75-wheat question)</td></tr>
 <tr><td>Time-to-each-tier (chains)</td><td>rising but bounded</td><td>A tier wall (the old <code>lv8</code> Forge problem)</td></tr>
 <tr><td>"Bootstrap a fresh ruin from coins only"</td><td>solvable in ≤ N turns</td><td>Per-zone resources soft-locking Town 2</td></tr>
-<tr><td>Any resource caps out unused</td><td>none on critical path</td><td>Stockpiles with no sink</td></tr>
+<tr><td>Mine vs farm income ratio</td><td>mine competitive, not dominant</td><td>The steeper mine ladder out-pacing the farm</td></tr>
 <tr><td>Worker payback (chains saved vs hire cost)</td><td>positive within a session</td><td>The "first hire inert" bug, numerically</td></tr>
 </tbody>
 </table>
@@ -404,9 +443,9 @@
 <h3>Two deliverables</h3>
 <ul>
 <li><strong>CLI explorer</strong> (<code>node tools/balance-sim.mjs --model average --towns 3</code>) — prints the curves + a stage table; a <code>--sweep T,cost,coinDivisor</code> mode varies one knob and reports its effect on pacing, so we can <em>search</em> for balanced values instead of guessing.</li>
-<li><strong>Vitest pacing test</strong> (<code>src/__tests__/pacing-invariants.test.ts</code>) — asserts the healthy bands above so a future balance edit that breaks pacing fails CI.</li>
+<li><strong>Vitest pacing test</strong> (<code>src/__tests__/pacing-invariants.test.ts</code>) — asserts the healthy bands so a future balance edit that breaks pacing fails CI.</li>
 </ul>
-<div class="box note"><strong>Honest caveat.</strong> A sim is only as good as its player model and its "AI buyer" heuristic; it validates <em>economy pacing</em> (are the ratios reachable, is anything a wall or a flood), not <em>feel</em>. It's a guardrail and a search tool, not a substitute for playtesting — but it lets us iterate tuning in seconds and lock the result behind CI. It reuses the real reducer, satisfying the repo's "no fakes" rule.</div>
+<div class="box note"><strong>Honest caveat.</strong> A sim is only as good as its player model and "AI buyer" heuristic; it validates <em>economy pacing</em> (are the ratios reachable, is anything a wall or a flood), not <em>feel</em>. It's a guardrail and a search tool, not a substitute for playtesting — but it lets us iterate tuning in seconds and lock the result behind CI. It reuses the real reducer, satisfying the repo's "no fakes" rule. <strong>Risk to check first:</strong> the reducer may pull browser/Phaser deps; if it isn't cleanly importable in Node, the sim imports the core/raw reducer directly or adds a thin headless shim (report the blocker, don't rabbit-hole).</div>
 </section>
 
 <!-- 10 -->
@@ -416,7 +455,7 @@
 <table>
 <thead><tr><th>System</th><th>What</th></tr></thead>
 <tbody>
-<tr><td><span class="pill add">ADD</span> Unlock registry</td><td><code>src/progression/unlocks.*</code> + <code>isUnlocked(state,key)</code> — the backbone that hides everything-at-once. Every gateable thing (views, tiles, buildings, workers, recipes, tools) maps to a condition (tier / flag / buildingBuilt / resourceCount / priorUnlock). UI layers consult it. <strong>Build first.</strong></td></tr>
+<tr><td><span class="pill add">ADD</span> Unlock registry</td><td><code>src/progression/unlocks.*</code> + <code>isUnlocked(state,key)</code> — the backbone that hides everything-at-once. Every gateable thing maps to a condition (tier / flag / buildingBuilt / resourceCount / priorUnlock). UI layers consult it. <strong>Build first.</strong></td></tr>
 <tr><td><span class="pill add">ADD</span> Town-tier ladder</td><td>The Camp→City town-center upgrade chain (§3) + the Wagon advancement.</td></tr>
 <tr><td><span class="pill add">ADD</span> Per-zone inventory</td><td>Re-key resources by settlement; keep coins/tools/workers/level/knowledge global (§2).</td></tr>
 <tr><td><span class="pill add">ADD</span> More worker types</td><td>Per-chain-step workers (Stonecutter, Smelter, Collier, Orchardist…). The 4 current types are placeholders.</td></tr>
@@ -427,10 +466,11 @@
 </table>
 <h4>Change</h4>
 <ul>
-<li><span class="pill chg">CHANGE</span> Building gates: <code>lv</code> → tier/flag. Re-cost early farm buildings to farm-only resources; Town/City tiers cost mine resources.</li>
+<li><span class="pill chg">CHANGE</span> Building gates: <code>lv</code> → tier/flag. Re-cost early farm buildings to farm-only resources; Town 2+ tiers cost mine resources.</li>
 <li><span class="pill chg">CHANGE</span> <code>FARM_TILE_POOL</code> trimmed to hay+wheat at start; categories added on unlock.</li>
-<li><span class="pill chg">CHANGE</span> Mine gate: <code>lv2</code> → <code>kitchen_built &amp;&amp; supplies≥3</code> + 3 starter supplies; food gate made hard.</li>
+<li><span class="pill chg">CHANGE</span> Mine gate: <code>lv2</code> → <code>kitchen_built &amp;&amp; supplies≥3</code> + 3 starter supplies; food gate made hard (Town 2).</li>
 <li><span class="pill chg">CHANGE</span> Fix the two worker bugs + the bread market-price bug (§6).</li>
+<li><span class="pill chg">CHANGE</span> Mine resource sell values → PC2's steep ladder (§6).</li>
 <li><span class="pill chg">CHANGE</span> Cartography trimmed/sequenced to linear-unlock + revisit.</li>
 </ul>
 <h4>Remove / pause</h4>
@@ -447,7 +487,7 @@
 <div class="box"><strong>The principle that unblocks the meta.</strong> "What's the reward for keepers/bosses, when global rewards are already strong?" is a <em>supply</em> problem: the power economy (workers, free turns, tools, tiers, capacity ladder) is saturated, so any new <em>power</em> reward is redundant or game-breaking. The fix is to add new <strong>demand</strong>, not more supply — build a net-new system the player wants to feed, and the meta rewards have a home that's impossible to get elsewhere. <strong>Don't run a parallel multiplier economy.</strong></div>
 <ul>
 <li><strong>The "third pillar" slot</strong> (where PC2 puts its sea puzzle) is reserved for <em>our own thing</em> — most likely a <strong>collection / curation pillar</strong>. The Coexist/Drive-Out choice then becomes <em>which collection you build</em>: a living <strong>menagerie</strong> of spared spirits vs a <strong>trophy hall</strong> of bested ones. Bosses each drop a unique specimen/trophy. The reward is prestige &amp; completion — non-breaking by construction.</li>
-<li><strong>Keepers</strong> return as the settlement capstone (build later, surface only after town 1) → a qualitative board-rule fork + the Hearth-Token (pure progression).</li>
+<li><strong>Keepers</strong> return as the settlement capstone (surface only after town 1) → a qualitative board-rule fork + the Hearth-Token (pure progression).</li>
 <li><strong>Old Capital</strong> = the endgame restoration sink; Charter "reads your record" of choices.</li>
 <li><strong>Progression innovation</strong> (parked seeds): settlements that buff each other once both restored; a kingdom map that visibly reconnects; a "pick which ruin next" menu. Revisit after towns 1–3 play.</li>
 </ul>
@@ -458,20 +498,20 @@
 <h2>12 · Work roadmap (phased)</h2>
 <div class="tl">
 <a style="background:var(--s3)" href="#acr"><b>A · Backbone</b>unlock registry + per-zone inventory + instant crafting</a>
-<a style="background:var(--s1)" href="#stages"><b>B · Town 1</b>tier ladder, pool trim, re-cost, objective spine, tutorial cards</a>
-<a style="background:var(--s4)" href="#math"><b>C · Bridges</b>hard food gate, mine reveal, worker fixes + new types</a>
+<a style="background:var(--s1)" href="#stages"><b>B · Town 1</b>farm-only tier ladder, pool trim, re-cost, objective spine, cards</a>
+<a style="background:var(--s4)" href="#math"><b>C · Town 2 mine</b>hard food gate, mine reveal, steep ladder, worker fixes + new types</a>
 <a style="background:var(--s5)" href="#sim"><b>D · Sim + tune</b>balance-sim, pacing test, tune towns 1–3</a>
-<a style="background:var(--s2)" href="#towns"><b>E · Towns 2–3</b>capacity ladder, deeper categories</a>
+<a style="background:var(--s2)" href="#towns"><b>E · Town 3</b>capacity rungs, deeper categories</a>
 <a style="background:var(--sE)" href="#deferred"><b>Later</b>curation pillar → keepers/bosses/sea</a>
 </div>
 <table>
 <thead><tr><th>Phase</th><th>Delivers</th><th>Definition of done</th></tr></thead>
 <tbody>
 <tr><td><b>A · Backbone</b></td><td>Unlock registry + <code>isUnlocked()</code>; per-zone inventory; instant crafting; bump <code>SAVE_SCHEMA_VERSION</code></td><td>Everything registers as unlocked first (no behaviour change), then gates move; crafting is instant; saves migrate</td></tr>
-<tr><td><b>B · Town 1</b></td><td>Tier ladder + Wagon; trimmed pool; re-costed/re-gated buildings; objective spine + what/how/why cards</td><td>A fresh save plays the §5 spine; only each stage's surfaces are visible</td></tr>
-<tr><td><b>C · Bridges</b></td><td>Hard food→mine gate; mine board reveal; worker bug fixes + first new per-step workers</td><td>Mine is food-gated; hire #1 = a clean −1; Miner targets the mine</td></tr>
+<tr><td><b>B · Town 1 (farm)</b></td><td>Farm-only tier ladder + Wagon; trimmed pool; re-costed/re-gated farm buildings; objective spine + what/how/why cards</td><td>A fresh save plays the §5 Town-1 spine; only each stage's surfaces are visible; no mine in Town 1</td></tr>
+<tr><td><b>C · Town 2 (mine)</b></td><td>Hard food→mine gate; mine board reveal; PC2 steep mine ladder; worker bug fixes + first new per-step workers</td><td>Mine is food-gated and Town-2-only; hire #1 = a clean −1; Miner targets the mine</td></tr>
 <tr><td><b>D · Sim + tune</b></td><td>Balance simulator + pacing-invariants test; tune towns 1–3 numbers</td><td>Pacing bands green in CI; the §6/§7 numbers validated/adjusted</td></tr>
-<tr><td><b>E · Towns 2–3</b></td><td>Capacity ladder; copper/gold/fruit/flower; more worker types; town escalation</td><td>3-town arc playable end-to-end</td></tr>
+<tr><td><b>E · Town 3</b></td><td>Capacity rungs; fruit/flower; more worker types; town escalation</td><td>3-town arc playable end-to-end</td></tr>
 <tr><td><b>Later</b></td><td>Curation pillar → re-introduce keepers/bosses/boons; sea; progression twist</td><td>Out of Phase 1</td></tr>
 </tbody>
 </table>
@@ -486,9 +526,83 @@
 <li><strong>Supplies ratio</strong> — flour×5 (75 wheat/trip) vs flour×3 (45). Sim decides.</li>
 <li><strong>Tier-up cost curve</strong> and the town-index escalation factor (~1.4?). Sim decides.</li>
 <li><strong>Worker fix shape</strong> — lower <code>maxCount</code> vs floor-per-hire vs step curve. Pick the one that makes hire #1 = −1 cleanly.</li>
-<li><strong>Bread source of truth</strong> — market sell = item value (125), confirm no double-sell path.</li>
 <li><strong>Exact new worker roster</strong> per chain step (how many, names).</li>
+<li><strong>How many tiers does Town 1 need?</strong> 5 (Camp→City) may be long for a farm-only teaching town; the sim/playtest may trim to 4.</li>
 <li><strong>Net-new "third pillar"</strong> — curation vs monument vs network. Design after towns 1–3 play.</li>
+</ul>
+</section>
+
+<!-- 14 -->
+<section id="sources">
+<h2>14 · Source of truth — where the data lives</h2>
+<p>Every number in this plan is read from these files. A fresh session should treat <strong>code as truth</strong> over this doc where they drift.</p>
+<table>
+<thead><tr><th>File</th><th>Holds (symbol · approx line)</th></tr></thead>
+<tbody>
+<tr><td><code>src/constants.ts</code></td><td><code>UPGRADE_THRESHOLDS</code> (~282) · <code>ITEMS_DATA</code>/<code>ITEMS</code> (~436) · <code>FARM/MINE/FISH_TILE_POOL</code> (~328) · <code>TILE_FAMILY_RESOURCE</code> (~358) · <code>BUILDINGS</code> (~820) · <code>RECIPES</code> (~972) · <code>MARKET_PRICES</code> (~1080) · <code>EXPEDITION_FOOD_TURNS</code>/<code>MIN_EXPEDITION_TURNS</code> (~234) · <code>SETTLEMENT_BIOMES</code> (~255) · <code>RESOURCE_CAP_BASE/GRANARY</code> (~1141) · <code>SAVE_SCHEMA_VERSION</code> (~280)</td></tr>
+<tr><td><code>src/features/workers/data.ts</code></td><td><code>TYPE_WORKERS</code> (4 types) · <code>nextHireCost</code> / <code>nextHireResourceCost</code> (cost ramps) · <code>TYPE_WORKER_MAP</code></td></tr>
+<tr><td><code>src/features/workers/aggregate.ts</code></td><td>Worker + building + active-tile ability folding (the <code>amount × hired / maxCount</code> reduction math — the inert-hire bug)</td></tr>
+<tr><td><code>src/features/zones/data.ts</code></td><td><code>ZONES</code>, zone config shape (baseTurns, entryCost, upgradeMap, seasonDrops, plotCount), <code>turnBudgetForZone</code>, <code>seasonIndexInSession</code></td></tr>
+<tr><td><code>src/features/cartography/data.ts</code></td><td><code>MAP_NODES</code> (25+ map nodes; each node IS a zone)</td></tr>
+<tr><td><code>src/state.ts</code></td><td><code>coreReducer</code> + <code>rawReducer</code> + <code>initialState</code>; <code>SLICE_PRIMARY_ACTIONS</code> / <code>ALWAYS_RUN_SLICES</code>; the <code>CHAIN_COLLECTED</code> → <code>resourceProgress</code> wiring</td></tr>
+<tr><td><code>src/features/*/slice.ts</code> + <code>index.jsx</code></td><td>29 feature slices, auto-discovered via <code>import.meta.glob</code> in <code>src/ui.jsx</code></td></tr>
+<tr><td><code>src/config/abilities.js</code> · <code>toolPowers.js</code> · <code>tileSelectors.js</code></td><td>Ability catalog · tool-power catalog (20+ typed powers) · tile selection for powers</td></tr>
+<tr><td><code>src/types/catalog/*</code> + <code>catalogKeys.ts</code></td><td>Hand-maintained id enums (ItemKey, TileKey, ResourceKey, ToolKey, WorkerTypeId, …) — membership is fixed here; <code>ITEMS</code>/config maps supply attributes</td></tr>
+<tr><td><code>src/GameScene.ts</code> + <code>src/game/chain.js</code></td><td>Board render, drag input, collapse; chain validity (8-direction adjacency incl. diagonals)</td></tr>
+<tr><td>Dev Panel <code>/b/</code></td><td>Live editor for every data table → writes <code>src/config/balance.json</code> overrides (the post-greybox tuning surface)</td></tr>
+<tr><td><code>CLAUDE.md</code></td><td>Canonical agent guide (architecture, commands, slice-action footguns, PR workflow)</td></tr>
+<tr><td><code>docs/references/puzzle-craft-2-wiki.html</code></td><td>The PC2 reference this plan reconciles against (price ladders, workers, buildings, villages)</td></tr>
+</tbody>
+</table>
+</section>
+
+<!-- 15 -->
+<section id="current">
+<h2>15 · Current coded state — the starting point</h2>
+<p>What is <strong>actually implemented today</strong> (so a new session knows the baseline), and what the plan changes it to. The game is currently themed "The Long Return / Hearthwood Vale."</p>
+
+<h3>Architecture (as-is)</h3>
+<p>Phaser 3 + React. React owns state (<code>useReducer</code> in <code>prototype.jsx</code>; store logic in <code>src/state.ts</code>; 29 feature slices). Phaser owns the canvas (<code>src/GameScene.ts</code>) via a registry bridge (<code>src/phaserBridge.js</code>). Three Vite entries share state via localStorage: <code>/</code> game · <code>/b/</code> Dev Panel · <code>/story/</code> Story Editor. <code>SAVE_SCHEMA_VERSION = 42</code> (mismatched saves are discarded — bump it for the per-zone inventory change).</p>
+
+<h3>Current vs planned (the deltas)</h3>
+<table>
+<thead><tr><th>System</th><th>Currently coded</th><th>Plan changes to</th></tr></thead>
+<tbody>
+<tr><td>Inventory</td><td><strong>Global</strong> single pool (<code>state.inventory</code>)</td><td>Per-zone (decision #1) — the load-bearing refactor</td></tr>
+<tr><td>Map / world</td><td>Open <strong>network</strong> of 25+ nodes; founding-based (<code>FOUND_SETTLEMENT</code>, escalating cost); Hearth-Tokens → Old-Capital gate</td><td>Linear unlock + revisit (#8); tier ladder added</td></tr>
+<tr><td>Town progression</td><td><strong>None</strong> — founding + per-zone plots; no tier ladder</td><td>Camp→City per-settlement tier ladder + Wagon (#5, #9, #14)</td></tr>
+<tr><td>Boards</td><td>farm, mine, <strong>fish</strong> all present; every town can access all (no farm-only gating)</td><td>Town 1 farm-only; mine at Town 2; fish/sea later (#7)</td></tr>
+<tr><td>Crafting</td><td><strong>Real-time queue</strong> (4h default <code>craftMs</code>) + gem-skip</td><td>Instant (#2) — remove the queue</td></tr>
+<tr><td>Workers</td><td><strong>4 types</strong> (Farmer/Lumberjack/Miner/Baker); <em>Miner targets "wood" (bug)</em>; hire #1 ≈ 0.1 tiles (bug)</td><td>More per-step types (#3); both bugs fixed</td></tr>
+<tr><td>Narrative meta</td><td><strong>Wired:</strong> keepers, Coexist/Drive-Out, boons (Embers/Core Ingots), Charter stub, NPC bonds, 6 bosses + keeper trials</td><td>Paused for Phase 1 (#11, #15); curation pillar later</td></tr>
+<tr><td>Unlock gates</td><td><strong>Scattered:</strong> <code>lv</code> on buildings, story flags, <code>canEnterBiome</code></td><td>One unified registry (<code>isUnlocked</code>)</td></tr>
+<tr><td>Currencies</td><td>coins, xp, runes, embers, coreIngots, gems (6)</td><td>Coins-first; others gated to their stage</td></tr>
+<tr><td>Seasons</td><td>In-session 4-way split (Spring/Summer/Autumn/Winter) via <code>seasonIndexInSession</code>; per-zone season drop tables</td><td>Keep (already present)</td></tr>
+</tbody>
+</table>
+
+<h3>Current content counts (live in configs)</h3>
+<table>
+<thead><tr><th>Tiles</th><th>Resources</th><th>Tools</th><th>Buildings</th><th>Recipes</th><th>Workers</th><th>NPCs</th><th>Bosses</th><th>Slices</th><th>Achievements</th></tr></thead>
+<tbody>
+<tr><td class="num">74<br><span class="muted" style="font-size:.85em">60 farm /10 cats · ~8 mine · 6 fish</span></td><td class="num">~45</td><td class="num">63</td><td class="num">40</td><td class="num">60+</td><td class="num">4 types</td><td class="num">5</td><td class="num">6</td><td class="num">29</td><td class="num">29</td></tr>
+</tbody>
+</table>
+
+<h3>Known bugs to fix in Phase 1</h3>
+<ul>
+<li><code>bread</code> sell = 125 in <code>ITEMS</code> but 4 in <code>MARKET_PRICES</code> (stale row).</li>
+<li>Miner worker reduces category <code>"wood"</code> — should be a mine category.</li>
+<li>First worker hire ≈ inert (<code>amount × hired / maxCount</code>, <code>maxCount:10</code> → 0.1).</li>
+<li>(Resolved on main: the cross-collect import/typecheck break in <code>GameScene.ts</code>.)</li>
+</ul>
+
+<h3>Run / reset / inspect</h3>
+<ul>
+<li><strong>Run:</strong> <code>npm run dev</code> → game at <code>/puzzleDrag2/</code>, Dev Panel <code>/b/</code>, Story Editor <code>/story/</code>.</li>
+<li><strong>Reset save:</strong> <code>localStorage.removeItem("hearth.save.v1")</code> (also <code>hearth.settings</code>, <code>hearth.tutorial.seen</code>, <code>hearth.disableDialogs</code>).</li>
+<li><strong>Land on a screen:</strong> <code>?visual=&lt;id&gt;</code> (scenarios in <code>src/visualTesting/matrix.js</code>); <code>window.__hearthVisual</code> console API; hash routes (<code>#/town</code>, <code>#/board</code>, …).</li>
+<li><strong>Gates:</strong> <code>npm run lint · typecheck · test · build</code>; visual goldens via <code>npm run test:visual</code>.</li>
 </ul>
 </section>
 
