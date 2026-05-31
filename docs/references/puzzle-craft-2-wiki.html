@@ -1225,22 +1225,86 @@ footer .mono{font-family:"JetBrains Mono",monospace}
     <h2><span class="num">10</span>Tips, Tricks &amp; Advanced Strategies</h2>
     <p class="section-sub">Beginner fundamentals followed by community-sourced grinding loops (Darin Kaplan, Nathaniel Stapleton, et al.).</p>
 
-    <h4>Getting started <span class="cat">fundamentals</span></h4>
+    <h4>Getting started <span class="cat">fundamentals &middot; Gamezebo</span></h4>
     <div class="grid three">
       <div class="card">
         <h4>Pick one goal</h4>
-        <p class="stat">Focus each session on a single target &mdash; a building, a challenge, or a puzzle tile to unlock &mdash; and work toward it rather than spreading thin.</p>
+        <p class="stat">Focus each session on a single target &mdash; a building, a challenge, or a tile to unlock. Chasing several at once litters the board with mixed tiles and makes long chains harder.</p>
       </div>
       <div class="card">
         <h4>Choose your active tile</h4>
-        <p class="stat">Each category has several tile types (e.g. Chicken / Turkey / Pheasant). Pick the active one <em>between</em> boards to match your goal; it&rsquo;s what appears on the next board.</p>
+        <p class="stat">Each category has several types (Chicken / Turkey / Pheasant&hellip;), each with a strength. Set the active one <em>between</em> boards to match your goal &mdash; e.g. Chickens for eggs, Turkeys for herd animals.</p>
+      </div>
+      <div class="card">
+        <h4>Read the exact tile cost</h4>
+        <p class="stat">Activate a tile, open the Workers menu, tap the related worker &mdash; its icon shows tiles-per-item (e.g. Poultryman: 9 turkeys vs 7 chickens per egg). On the board, <strong>tap</strong> a tile for its normal-item count, <strong>tap-and-hold</strong> for the long-chain bonus count.</p>
       </div>
       <div class="card">
         <h4>Craft tools before you enter</h4>
-        <p class="stat"><strong>Crafting is far cheaper than buying.</strong> Stock the tools you want before a board &mdash; running out mid-board forces you to buy more for gold (the doubled in-board cost). Revisit completed towns to craft from their stockpiles and replay their boards for cheaper resources.</p>
+        <p class="stat"><strong>Crafting is far cheaper than buying.</strong> A shovel costs ~1 wood to craft vs 40 gold to buy mid-board if you run out. Revisit completed towns to craft from their stockpiles (you can craft any tool you know) and replay their boards for cheaper resources.</p>
+      </div>
+      <div class="card">
+        <h4>Free moves stack</h4>
+        <p class="stat">Many tiles/buildings grant moves that don&rsquo;t cost a turn. They add up &mdash; Turkeys (2) + Small Animal Pen (3) = 5 free bird moves &mdash; and apply to multi-collection too. The only way to see how many remain is the pop-up at the top of the board, so watch it.</p>
+      </div>
+      <div class="card">
+        <h4>Collect building &amp; friend gifts</h4>
+        <p class="stat">Buildings dispense tools on timers &mdash; tap them often, but drop below max first or the overflow is wasted. Embassy <strong>friend gifts</strong> are free to send (3 messengers/24h, respawn every 8h), can include magic tools, and <em>exceed</em> the tool cap (6/5).</p>
       </div>
     </div>
-    <p class="stat" style="color:var(--faint)">Fundamentals from the <a class="inline" href="https://www.gamezebo.com/walkthroughs/puzzle-craft-2-tips-cheats-and-strategies/">Gamezebo guide</a>.</p>
+
+    <h4>The long-chain &amp; research mechanic <span class="cat">why workers matter</span></h4>
+    <div class="callout">
+      Unlocking a new species needs a number of <strong>long chains</strong> &mdash; a &ldquo;long chain&rdquo; is however many
+      tiles produce that tile&rsquo;s <em>bonus</em> item (default 10). Workers that cut the tiles-needed (say 10&rarr;8)
+      cut the long-chain requirement too, so species get easier to unlock as you hire. After unlocking, a tile must be
+      <strong>researched</strong> (magnifying-glass phase) before it receives full worker bonuses. Hire to the per-job cap
+      whenever you can &mdash; workers are permanent across towns &mdash; and spend runes at the Magic Portal to call workers
+      (<strong>3 runes each</strong>, one of the best rune uses).
+    </div>
+
+    <h4>Moving to the next town <span class="cat">don&rsquo;t lose progress</span></h4>
+    <div class="callout">
+      You advance by building the structure marked with a <strong>covered wagon + green arrow</strong>. When you move on
+      you pack your <strong>gold, tools, workers and level</strong> &mdash; but <strong>leave all resources behind</strong> and
+      <strong>lose EXP banked toward the next level</strong>, so <strong>level up first</strong> if you&rsquo;re close. Three
+      en-route challenges follow (no tile control, no resources kept). Build everything before leaving: skipped buildings
+      remain available later but at a much higher level requirement.
+    </div>
+
+    <h4>On the sea <span class="cat">tactics</span></h4>
+    <div class="grid two">
+      <div class="card">
+        <h4>Place islands where you want them</h4>
+        <p class="stat">An island/fish spawns on the <em>last</em> water tile of the chain that forms it &mdash; so end chains near your ship and near each other.</p>
+      </div>
+      <div class="card">
+        <h4>Chests first; use every move</h4>
+        <p class="stat">Treasure chests give 1&ndash;3 finished items &mdash; prioritise them even if you abandon islands. Use all moves to bank salt/water; you only need to <em>touch</em> an island/fish/chest, so move <em>through</em> it to water.</p>
+      </div>
+    </div>
+
+    <h4>Mine hazards &amp; chaining <span class="cat">tactics</span></h4>
+    <div class="grid two">
+      <div class="card">
+        <h4>Countdown tiles tick on tool use</h4>
+        <p class="stat">Rats, lava and hidden runes count down even when you use a <em>tool</em> (tools don&rsquo;t cost a move, but they do advance these). A single gas tile can be tapped to clear it for one turn if you&rsquo;re out of lamps.</p>
+      </div>
+      <div class="card">
+        <h4>Lava &amp; the corner turn</h4>
+        <p class="stat">Clear a lava tile&rsquo;s whole column below it to drop it straight to the bottom row instead of letting it drip and ruin rocks. And turn at <strong>diagonals</strong> &mdash; corners let one chain reach tiles that look unreachable.</p>
+      </div>
+    </div>
+
+    <div class="callout">
+      <strong>Economy &amp; XP.</strong> Build the <strong>Witch&rsquo;s Hut</strong> to watch short ads (when the blue
+      <span aria-hidden="true">!</span> shows) for 1 rune / 30&ndash;80 coins / 10&ndash;20 influence, ~20/day. Spend gold
+      on <em>playing boards</em>, not buying resources outright (a single run usually recoups its cost). The biggest XP
+      source is <strong>challenges</strong> &mdash; villager quests and the always-available pair &mdash; not raw chaining.
+      Watch for bouncing menu icons (rewards waiting). It&rsquo;s a long game by design &mdash; don&rsquo;t rush.
+    </div>
+    <p class="stat" style="color:var(--faint)">Fundamentals, town-move, sea/mine tactics and economy notes above are from the
+      <a class="inline" href="https://www.gamezebo.com/walkthroughs/puzzle-craft-2-tips-cheats-and-strategies/">Gamezebo guide</a> (Jillian Werner).</p>
 
     <h4>1 &middot; Darin Kaplan&rsquo;s Rune Farming Loop</h4>
     <div class="callout">
