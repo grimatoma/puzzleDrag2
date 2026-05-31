@@ -176,6 +176,12 @@ When you fix a bug found in a specific scenario, add or extend an entry in `src/
 
 - **No fakes or mocks in production code.** Wire real implementations end-to-end. `vi.mock` and stub state shapes are fine *inside test files only* (under `tests/` or `src/__tests__/`). If you find yourself adding a fake hook, a fake worker, or a stub data row in `src/` to make something compile or "demonstrate" a mechanic, stop and wire the real thing instead — or surface it to the user before shipping.
 
+## Document format
+
+- **Author repo docs as self-contained HTML, not Markdown.** Design docs, specs, plans, and reports saved into the repo should be single-file `.html` with inline CSS (and a little JS where it helps). Leverage HTML's strengths — tables, SVG diagrams, color-coding, a table-of-contents/nav, collapsible `<details>`, and light interactivity (filters/tabs) — so a long spec stays navigable rather than a wall of text. Rationale: https://claude.com/blog/using-claude-code-the-unreasonable-effectiveness-of-html
+- **Plan-mode plans stay Markdown.** The Claude Code plan reviewer renders Markdown, not HTML, so the in-review plan file is `.md`. When a plan is saved/checked into the repo, **migrate it to a styled HTML file** (e.g. `docs/<name>.html`) — see `docs/progression-plan.html` for the house style.
+- Like everything under `docs/`, these are allowed to drift from code; date/scope them and trust code over older docs.
+
 ## Workflow
 
 - **Open pull requests ready for review** — do not leave PRs in draft. The maintainer reviews non-draft PRs only. When creating via GitHub MCP or `gh pr create`, pass non-draft / `draft: false`. If a tool creates a draft anyway, promote it immediately (`gh pr ready` or the host UI’s “Ready for review”).
