@@ -280,7 +280,7 @@
 <li><strong>Resource credited</strong> = every <code>T</code> tiles → 1 inventory resource (fractional carryover in <code>resourceProgress</code>)</li>
 <li><strong>Coins</strong> = <code>floor(L × v / 2)</code></li>
 </ul>
-<p class="muted" style="margin:.2rem 0">So <code>T</code> does double duty (upgrade + resource) — both outcomes already fire in code, and we keep them unified.</p>
+<p class="muted" style="margin:.2rem 0">So <code>T</code> does double duty (upgrade + resource) — both outcomes already fire in code, and we keep them unified. <strong><code>T</code> is also the giant-chain throttle</strong>: because output scales as <code>L/T</code>, a huge early chain on a 2-type board feels great but pays little — see "Spawn weights &amp; the early-board chain problem" below.</p>
 </div>
 
 <h3>The real numbers (read from <code>src/constants.ts</code>)</h3>
@@ -333,6 +333,24 @@
 </tbody>
 </table>
 <div class="box note"><strong>The finding.</strong> The current mine spans <span class="num">6→16</span> (flat); PC2 spans <span class="num">10→450</span> (steep, roughly ×2–3 per tier). Flat means "dig deeper" is unrewarding — fatal once the mine is a co-equal pillar at Town 2. Adopt PC2's shape. Safe for construction (build costs are quantities, not value); it drives <em>market income</em> and the deep-mine fantasy. <strong>The sim (§9) must confirm the steeper ladder doesn't out-pace the farm and trivialize coins.</strong></div>
+
+<h3>Spawn weights &amp; the early-board chain problem</h3>
+<p><strong>What the wiki actually specifies.</strong> Puzzle&nbsp;Craft&nbsp;2 has <em>no numeric spawn-rate table</em> — spawn frequency is purely qualitative. Tiles are "Common / Uncommon / Rare," buildings make a species "appear" or "even more appear," and the load-bearing rule is one sentence: <em>"Categories follow the farm production chain — each tier's <strong>long chains procure the next tier's species</strong>."</em> So in PC2 a new tile category doesn't arrive from a rising spawn weight; it arrives because you <strong>chain the tier below it</strong> (long grass chains drop birds, long grain chains drop veg, …) <em>and</em> because you built the structure that enables it. That's the same building-gated model as decision #16 — the wiki backs it.</p>
+<p><strong>What our code does today</strong> (no wiki number to copy, so this is our own knob): the board fills by uniform-random pick from a <strong>pool array</strong> where weight = how many times a key is listed. <code>FARM_TILE_POOL</code> = <code>hay×3</code> + one slot each for ~9 other categories; <code>MINE_TILE_POOL</code> = <code>stone×3, dirt×2, iron, copper, coal, gem</code>; <code>SEASON_POOL_MODS</code> nudges a few (+2 oak in Autumn, +1 stone / −1 hay in Winter). This is the real spawn-rate surface — and the place to set per-zone weights.</p>
+<table>
+<thead><tr><th>Zone</th><th>Staple (heaviest)</th><th>Proposed opening weights</th><th>Wiki basis</th></tr></thead>
+<tbody>
+<tr><td>Farm (Town 1)</td><td>grass / hay</td><td><span class="num">hay×4, wheat×2</span> at Camp; <span class="num">+1 slot per category</span> as its spawner building is built (bird, veg, tree…)</td><td>"Common" staple + "long chains procure the next tier"</td></tr>
+<tr><td>Mine (Town 2)</td><td>stone</td><td><span class="num">stone×4, dirt×2, iron×1</span> at the Mining Camp; ore tiers added on their structures (copper, coal, gem, gold ×1)</td><td>Stone is the mine's "Common"; deeper ores are "Rare"</td></tr>
+</tbody>
+</table>
+<div class="box warn"><strong>The giant-chain problem you flagged — and why the turn limit doesn't solve it.</strong> A 6×6 board is <strong>36 cells</strong>; the bottom-of-screen counter limits <em>how many turns</em> a session has (~10 farm / 5 mine), <strong>not how long a single chain can be</strong>. So if Stage&nbsp;0 really is "2 tile types" (the §1 vision + the <code>hay×4, wheat×2</code> trim), ~⅔ of the board is one colour and a single drag can sweep 15–20 tiles. The turn limit makes that <em>worse</em>, not better: fewer, bigger sweeps. Three real levers keep it sane — note the turn counter is none of them:
+<ul style="margin:.3rem 0">
+<li><strong>Threshold <code>T</code> is the actual sink.</strong> A chain of length <code>L</code> yields only <code>floor(L/T)</code> upgrade tiles + <code>L/T</code> resources. A 20-hay sweep on <code>T=6</code> = just 3 bundles + 3 upgrades + <code>floor(20×1/2)=10</code> coins — big-feeling, small-paying. The giant chain is a <em>fantasy</em> moment, not an economy break, <strong>because of <code>T</code></strong>. This is the answer to the question, and the doc should state it where it currently only states the formula (§6 top).</li>
+<li><strong>Pool width sets the <em>natural</em> chain length.</strong> 2 types → trivially long chains; 3–4 types → chains taper to 4–7 without any cap. <strong>Open recommendation:</strong> seed Stage&nbsp;0 with <strong>hay + wheat + one filler the player can't yet refine</strong> (or <code>hay×3, wheat×2</code> rather than <code>×4</code>) so the very first board isn't a one-drag clear. The sim (§9) already samples "a distribution of chain lengths per turn" — add a <em>max natural chain on the Stage-0 pool</em> assertion to the pacing test.</li>
+<li><strong>Min chain length</strong> (≥3 default; bosses raise it via <code>boss.minChain</code>) sets the floor, never the ceiling. We have no <em>ceiling</em> mechanic and deliberately want none — capping chain length would fight the core fantasy. The ceiling is economic (<code>T</code>), not mechanical.</li>
+</ul>
+<span class="muted">Net: "limited turns + few tile types" does not produce a balance bug as long as <code>T</code> stays the throttle and the opening pool is ≥3 effective colours. Decision needed: exact Stage-0 pool width (2 vs 3 types) — flagged in §13.</span></div>
 
 <h3>Worked economy (the inflection points)</h3>
 <ul>
@@ -438,6 +456,7 @@
 <tr><td>"Bootstrap a fresh ruin from coins only"</td><td>solvable in ≤ N turns</td><td>Per-zone resources soft-locking Town 2</td></tr>
 <tr><td>Mine vs farm income ratio</td><td>mine competitive, not dominant</td><td>The steeper mine ladder out-pacing the farm</td></tr>
 <tr><td>Worker payback (chains saved vs hire cost)</td><td>positive within a session</td><td>The "first hire inert" bug, numerically</td></tr>
+<tr><td>Max natural chain on the Stage-0 pool</td><td>≤ ~8 tiles</td><td>A too-narrow opening pool (2 types) making the first board a one-drag sweep (§6 spawn-weights)</td></tr>
 </tbody>
 </table>
 
@@ -522,8 +541,10 @@
 <!-- 13 -->
 <section id="log">
 <h2>13 · Decision log &amp; open questions</h2>
-<p>The 15 locks are in §1. Still open (post-greybox / sim-driven):</p>
+<p>The 16 locks are in §1. Still open (post-greybox / sim-driven):</p>
 <ul>
+<li><strong>Stage-0 pool width</strong> — 2 tile types (<code>hay×4, wheat×2</code>) vs 3 (add one unrefinable filler). 2 makes the first board a one-drag sweep; 3–4 tapers natural chains to 4–7. Add a "max natural chain on the Stage-0 pool" assertion to the §9 pacing test. See the §6 spawn-weights box.</li>
+<li><strong>Per-zone spawn-weight tables</strong> — the wiki gives <em>no</em> numbers (only Common/Uncommon/Rare + "long chains procure the next tier"), so the pool weights are our own knob. Lock the farm/mine opening weights (§6) once the sim runs.</li>
 <li><strong>Supplies ratio</strong> — flour×5 (75 wheat/trip) vs flour×3 (45). Sim decides.</li>
 <li><strong>Tier-up cost curve</strong> and the town-index escalation factor (~1.4?). Sim decides.</li>
 <li><strong>Worker fix shape</strong> — lower <code>maxCount</code> vs floor-per-hire vs step curve. Pick the one that makes hire #1 = −1 cleanly.</li>
@@ -540,7 +561,7 @@
 <table>
 <thead><tr><th>File</th><th>Holds (symbol · approx line)</th></tr></thead>
 <tbody>
-<tr><td><code>src/constants.ts</code></td><td><code>UPGRADE_THRESHOLDS</code> (~282) · <code>ITEMS_DATA</code>/<code>ITEMS</code> (~436) · <code>FARM/MINE/FISH_TILE_POOL</code> (~328) · <code>TILE_FAMILY_RESOURCE</code> (~358) · <code>BUILDINGS</code> (~820) · <code>RECIPES</code> (~972) · <code>MARKET_PRICES</code> (~1080) · <code>EXPEDITION_FOOD_TURNS</code>/<code>MIN_EXPEDITION_TURNS</code> (~234) · <code>SETTLEMENT_BIOMES</code> (~255) · <code>RESOURCE_CAP_BASE/GRANARY</code> (~1141) · <code>SAVE_SCHEMA_VERSION</code> (~280)</td></tr>
+<tr><td><code>src/constants.ts</code></td><td><code>UPGRADE_THRESHOLDS</code> (~282) · <code>ITEMS_DATA</code>/<code>ITEMS</code> (~436) · <code>FARM/MINE/FISH_TILE_POOL</code> (~328, the spawn-weight pools) · <code>SEASON_POOL_MODS</code> (~1200, per-season weight nudges) · <code>TILE_FAMILY_RESOURCE</code> (~358) · <code>BUILDINGS</code> (~820) · <code>RECIPES</code> (~972) · <code>MARKET_PRICES</code> (~1080) · <code>EXPEDITION_FOOD_TURNS</code>/<code>MIN_EXPEDITION_TURNS</code> (~234) · <code>SETTLEMENT_BIOMES</code> (~255) · <code>RESOURCE_CAP_BASE/GRANARY</code> (~1141) · <code>SAVE_SCHEMA_VERSION</code> (~280)</td></tr>
 <tr><td><code>src/features/workers/data.ts</code></td><td><code>TYPE_WORKERS</code> (4 types) · <code>nextHireCost</code> / <code>nextHireResourceCost</code> (cost ramps) · <code>TYPE_WORKER_MAP</code></td></tr>
 <tr><td><code>src/features/workers/aggregate.ts</code></td><td>Worker + building + active-tile ability folding (the <code>amount × hired / maxCount</code> reduction math — the inert-hire bug)</td></tr>
 <tr><td><code>src/features/zones/data.ts</code></td><td><code>ZONES</code>, zone config shape (baseTurns, entryCost, upgradeMap, seasonDrops, plotCount), <code>turnBudgetForZone</code>, <code>seasonIndexInSession</code></td></tr>
