@@ -24,6 +24,7 @@ import { computeBakeScale, hasValidChain } from "./game/chain.js";
 export { computeBakeScale, hasValidChain } from "./game/chain.js";
 import { producedResource, buildChainUpdatePayload } from "./game/producedResource.js";
 export { producedResource, buildChainUpdatePayload } from "./game/producedResource.js";
+import { findCrossCollectTargets, buildCrossCollectedCredits } from "./game/crossCollect.js";
 import { BOARD_ANIMATIONS, SWEEP_COLLAPSE_PIPELINE_MS, resolveBoardAnimName } from "./config/boardAnimations.js";
 import { defaultBoardAnimForPower, dimStrategyForPower, isTapTargetPower } from "./config/toolPowers.js";
 import { selectTilesForPower, resolveTransformKey } from "./config/tileSelectors.js";

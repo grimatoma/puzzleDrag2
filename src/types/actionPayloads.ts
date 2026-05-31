@@ -23,6 +23,8 @@ export interface ChainCollectedPayload {
   resource?: string;
   resourceKey?: string;
   chain?: Tile[];
+  /** Cross-collect partner tiles cleared alongside the chain, keyed by TILE KEY -> +count. */
+  crossCollected?: Record<string, number> | null;
 }
 
 export interface ToolFiredFields {
