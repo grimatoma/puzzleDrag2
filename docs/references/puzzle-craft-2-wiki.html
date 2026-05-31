@@ -189,6 +189,10 @@ td .quote{display:block;color:var(--faint);font-style:italic;font-size:.86rem;ma
 .callout.dubious{border-left-color:#c2554b;background:rgba(194,85,75,.10)}
 .badge.unverified{color:#e8a13a;border-color:#8a5e1e;background:rgba(217,138,43,.12)}
 .badge.dubious{color:#e07a6f;border-color:#7a322c;background:rgba(194,85,75,.12)}
+.badge.verified{color:var(--good);border-color:#4a6a2e;background:rgba(134,183,90,.12)}
+.callout.verified{border-left-color:var(--good);background:rgba(134,183,90,.08)}
+.callout.verified strong{color:var(--ink)}
+.callout.verified a.inline{color:var(--good)}
 
 /* ---- Collapsible ---- */
 details{
@@ -284,7 +288,7 @@ footer .mono{font-family:"JetBrains Mono",monospace}
 
   <!-- 1. OVERVIEW -->
   <section id="overview">
-    <h2><span class="num">01</span>Introduction &amp; Game Overview</h2>
+    <h2><span class="num">01</span>Introduction &amp; Game Overview <span class="badge verified">Reviewed</span></h2>
     <p class="section-sub">Puzzle Craft 2 is a puzzle town-building game and the sequel to the original Puzzle Craft.</p>
     <div class="grid two">
       <div class="card">
@@ -314,6 +318,47 @@ footer .mono{font-family:"JetBrains Mono",monospace}
       <strong>Platforms (v1.5, released May 18 2016):</strong>
       iOS &mdash; App Store; Android &mdash; Google Play; PC &mdash; Windows Store (Windows 8.1/10, app ID <span class="xp">9nblggh67l90</span>).
     </div>
+    <div class="callout verified">
+      <strong>&#10003; Reasonableness review pass (2026-05-31).</strong> The following sections were read for
+      internal consistency and domain plausibility and are marked <span class="badge verified">Reviewed</span>:
+      <a class="inline" href="#overview">Overview</a>, <a class="inline" href="#puzzles">Puzzles &amp; Tiles</a>,
+      <a class="inline" href="#resources">Resources &amp; Prices</a>, <a class="inline" href="#buildings">Buildings</a>,
+      <a class="inline" href="#tools">Tools</a>, <a class="inline" href="#workers">Workers</a>,
+      <a class="inline" href="#villages">Villages</a>, <a class="inline" href="#castle">Castle Upgrades</a>,
+      <a class="inline" href="#trophies">Trophies</a>, <a class="inline" href="#strategy">Tips &amp; Strategies</a>,
+      <a class="inline" href="#faq">FAQ</a>, and <a class="inline" href="#glossary">Glossary</a>. Strong internal
+      cross-checks held up: entry costs climb 10&rarr;30&rarr;70&rarr;100&rarr;150&rarr;210 across the six villages;
+      board sizes match the &ldquo;36 in one move&rdquo; trophies (6&times;6); resource tiers come in matched sell/buy
+      pairs; per-season move sums add up; and the production chain (grass&rarr;grain&rarr;&hellip;) lines up across
+      Puzzles, Resources, Workers and the FAQ. <strong>Caveat:</strong> &ldquo;reviewed&rdquo; means
+      <em>self-consistent and plausible</em>, not re-checked live against the Fandom wiki. A handful of items did
+      <em>not</em> pass &mdash; see the flags below. Section&nbsp;11 (Meta) remains
+      <span class="badge unverified">Unverified</span> as authored.
+    </div>
+    <div class="callout dubious">
+      <strong>&#9888; Flagged in this pass &mdash; verify before trusting.</strong>
+      <ul class="clean" style="margin:6px 0 0">
+        <li><strong>Worker count vs trophy.</strong> The Workers tables list <strong>64</strong> workers
+          (Farm&nbsp;21 + Mine&nbsp;21 + Sea&nbsp;<strong>22</strong>), but the Bronze trophy reads
+          &ldquo;<a class="inline" href="#trophies">Hire 63 workers</a>.&rdquo; Sea has one extra
+          &ldquo;find a coin&rdquo; worker (Buccaneer + Pirate + Castaway) where Farm/Mine have two. One side is off
+          by one.</li>
+        <li><strong>31,337 influence.</strong> The Platinum trophy target
+          &ldquo;<a class="inline" href="#trophies">Reach at least 31,337 influence</a>&rdquo; is
+          <code>31337</code> = &ldquo;eleet&rdquo; leetspeak. Could be a genuine dev easter-egg value or an invented
+          one &mdash; confirm against the wiki.</li>
+        <li><strong>Surf trophy / decoration mismatch.</strong> The Decorations table ties <em>Surfer Camp</em> to the
+          &ldquo;Cowabunga&rdquo; trophy, while the Bronze list says &ldquo;Ride the wave (tap the
+          <em>umbrella</em> decoration).&rdquo; Same theme, two different names &mdash; likely a conflation.</li>
+        <li><strong>Mine price inversion.</strong> In <a class="inline" href="#resources">Resources</a>, <em>Rubble</em>
+          (12/120) out-sells both <em>Stone</em> (10/80) and <em>Iron</em> (11/100) despite rubble being lower-tier
+          debris. Plausible but counter-intuitive &mdash; worth a second look.</li>
+        <li><strong>Worker terminology drift.</strong> Sea worker <em>Artisan</em> reads &ldquo;1 <em>clam</em> less to
+          gather pearls&rdquo; while neighbours (Diver, Buccaneer) say <em>oyster</em>. Cosmetic, but inconsistent.</li>
+        <li><strong>Outlier worker bonuses.</strong> <em>Peasant</em> (8 grass) and <em>Digger</em> (4 dirt) reduce by
+          large amounts where every other worker reduces by 1. Plausible (grass/dirt gather in bulk) but unverified.</li>
+      </ul>
+    </div>
     <div class="callout src">
       <strong>About this document.</strong> It merges two sources: an AI-generated draft (structure) and the
       community <strong>ATGamesPL Fandom wiki</strong> (ground truth). Where the two disagreed, the wiki wins.
@@ -327,7 +372,7 @@ footer .mono{font-family:"JetBrains Mono",monospace}
 
   <!-- 2. PUZZLES -->
   <section id="puzzles">
-    <h2><span class="num">02</span>Puzzles &amp; Tiles Directory</h2>
+    <h2><span class="num">02</span>Puzzles &amp; Tiles Directory <span class="badge verified">Reviewed</span></h2>
     <p class="section-sub">Each type of tile on the board is a <strong>&ldquo;Puzzle&rdquo;</strong> (puzzle piece).
       Categories follow the farm production chain &mdash; each tier&rsquo;s long chains procure the next tier&rsquo;s
       species. Base XP is 2 unless noted. <span class="badge rare">Rare</span> = special collection puzzle;
@@ -521,7 +566,7 @@ footer .mono{font-family:"JetBrains Mono",monospace}
 
   <!-- 3. RESOURCES -->
   <section id="resources">
-    <h2><span class="num">03</span>Resources &amp; Prices</h2>
+    <h2><span class="num">03</span>Resources &amp; Prices <span class="badge verified">Reviewed</span></h2>
     <p class="section-sub">Refined goods produced by chaining puzzle categories. Prices are the maximum sell value and the
       market buy price, in coins.</p>
 
@@ -585,7 +630,7 @@ footer .mono{font-family:"JetBrains Mono",monospace}
 
   <!-- 4. BUILDINGS -->
   <section id="buildings">
-    <h2><span class="num">04</span>Buildings &amp; Upgrades Directory</h2>
+    <h2><span class="num">04</span>Buildings &amp; Upgrades Directory <span class="badge verified">Reviewed</span></h2>
     <p class="section-sub">Buildings are unlocked by level, then built with resources. Many costs vary by which village
       you are building in (noted as <em>a/b</em>). Expand each category below.</p>
 
@@ -802,7 +847,7 @@ footer .mono{font-family:"JetBrains Mono",monospace}
 
   <!-- 5. TOOLS -->
   <section id="tools">
-    <h2><span class="num">05</span>Tools &amp; Crafting Directory</h2>
+    <h2><span class="num">05</span>Tools &amp; Crafting Directory <span class="badge verified">Reviewed</span></h2>
     <p class="section-sub">Tools are crafted in Workshops or bought with coins/runes; some are dispensed by buildings on
       timers, and Magic Portal tools cost Influence. Maximum capacity rises with Castle Upgrades and can be doubled by
       an in-app Extra purchase.</p>
@@ -948,7 +993,7 @@ footer .mono{font-family:"JetBrains Mono",monospace}
 
   <!-- 6. WORKERS -->
   <section id="workers">
-    <h2><span class="num">06</span>Workers</h2>
+    <h2><span class="num">06</span>Workers <span class="badge verified">Reviewed</span></h2>
     <p class="section-sub">Hire workers from the Workers Center (peasant-woman icon, bottom of screen). Each hire costs
       one <strong>Worker Credit</strong> (earned by building houses or via runes in the Magic Portal) plus scaling
       resources. Each worker lowers the chain/quantity needed to produce a resource &mdash; the engine of efficiency.</p>
@@ -1053,7 +1098,7 @@ footer .mono{font-family:"JetBrains Mono",monospace}
 
   <!-- 7. VILLAGES -->
   <section id="villages">
-    <h2><span class="num">07</span>The Six Villages of the Kingdom</h2>
+    <h2><span class="num">07</span>The Six Villages of the Kingdom <span class="badge verified">Reviewed</span></h2>
     <p class="section-sub">Travel across the kingdom, ruling each settlement in turn. Stats are for fully-upgraded
       villages. (The wiki also lists detailed per-season puzzle-spawn probabilities for each board.)</p>
     <div class="grid two">
@@ -1104,7 +1149,7 @@ footer .mono{font-family:"JetBrains Mono",monospace}
 
   <!-- 8. CASTLE -->
   <section id="castle">
-    <h2><span class="num">08</span>Castle Upgrades</h2>
+    <h2><span class="num">08</span>Castle Upgrades <span class="badge verified">Reviewed</span></h2>
     <p class="section-sub">The Imperial Castle has <strong>15</strong> upgrades, built in a fixed order. Each raises the
       <strong>maximum capacity of tools and workers</strong>; several also require a complete <strong>treasure set</strong>.
       Costs are paid in mine/sea minerals (Stone, Iron, Coal, Silver, Diamond, Gold, &hellip;) plus coins.</p>
@@ -1139,7 +1184,7 @@ footer .mono{font-family:"JetBrains Mono",monospace}
 
   <!-- 9. TROPHIES -->
   <section id="trophies">
-    <h2><span class="num">09</span>Trophies &amp; Badges</h2>
+    <h2><span class="num">09</span>Trophies &amp; Badges <span class="badge verified">Reviewed</span> <span class="badge dubious">2 flags</span></h2>
     <p class="section-sub">Achievements come in six tiers. Each tier has a capstone &ldquo;complete all&rdquo; trophy.</p>
     <div class="grid two">
       <div class="card">
@@ -1227,7 +1272,7 @@ footer .mono{font-family:"JetBrains Mono",monospace}
 
   <!-- 10. STRATEGY -->
   <section id="strategy">
-    <h2><span class="num">10</span>Tips, Tricks &amp; Advanced Strategies</h2>
+    <h2><span class="num">10</span>Tips, Tricks &amp; Advanced Strategies <span class="badge verified">Reviewed</span></h2>
     <p class="section-sub">Beginner fundamentals followed by community-sourced grinding loops (Darin Kaplan, Nathaniel Stapleton, et al.).</p>
 
     <h4>Getting started <span class="cat">fundamentals &middot; Gamezebo</span></h4>
@@ -1476,7 +1521,7 @@ footer .mono{font-family:"JetBrains Mono",monospace}
 
   <!-- 12. FAQ -->
   <section id="faq">
-    <h2><span class="num">12</span>Frequently Asked Questions</h2>
+    <h2><span class="num">12</span>Frequently Asked Questions <span class="badge verified">Reviewed</span></h2>
     <details open>
       <summary>How can I find fish in the sea?</summary>
       <div class="details-body"><p>Two steps: (1) connect Deep Water tiles &mdash; a <em>navigation move</em>; the number of Deep Water tiles needed per fish depends on how many <strong>Fisherman</strong> workers you&rsquo;ve hired. (2) Move your ship onto the fish &mdash; a <em>ship move</em>. Earn fish in a long enough chain and you get an <strong>octopus</strong> instead (scaled by <strong>Trawlerman</strong> workers).</p></div>
@@ -1493,7 +1538,7 @@ footer .mono{font-family:"JetBrains Mono",monospace}
 
   <!-- 12. GLOSSARY -->
   <section id="glossary">
-    <h2><span class="num">13</span>Currencies &amp; Glossary</h2>
+    <h2><span class="num">13</span>Currencies &amp; Glossary <span class="badge verified">Reviewed</span></h2>
     <div class="grid three">
       <div class="card">
         <h4>Coins</h4>
