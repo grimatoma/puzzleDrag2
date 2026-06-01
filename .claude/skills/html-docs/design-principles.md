@@ -16,6 +16,18 @@ Default fonts read as "AI generated". Pick a deliberate trio and load it from a 
 - **Clean sans for body** — IBM Plex Sans, Source Sans, Public Sans, Work Sans. Not Inter/Roboto/Arial.
 - **Real monospace for code** — JetBrains Mono, IBM Plex Mono, Space Mono.
 
+**Pick by aesthetic** (from the cookbook's menus):
+
+| Aesthetic | Try |
+|---|---|
+| Editorial | Playfair Display, Crimson Pro, **Fraunces**, Newsreader |
+| Technical | **IBM Plex** family, Source Sans 3 |
+| Code / terminal | **JetBrains Mono**, Fira Code |
+| Startup | Clash Display, Satoshi, Cabinet Grotesk |
+| Distinctive | Bricolage Grotesque, Obviously |
+
+**Never default to** Inter, Roboto, Open Sans, Lato, Arial, or raw system fonts — and note **Space Grotesk**, which Claude reaches for reflexively. Pairing rule: **high contrast wins** — display + monospace, or serif + geometric sans.
+
 **Bold hierarchy beats timid hierarchy.** Make the jumps obvious:
 
 ```css
@@ -104,3 +116,29 @@ These are requirements, not nice-to-haves:
 - **Filters / tabs** — a dozen lines of vanilla JS toggling a class or `hidden` attribute to filter rows or switch panes; degrade gracefully (content visible if JS is off).
 
 The `template.html` in this skill folder ships all of these wired up — start from it rather than from scratch.
+
+## Avoid the "AI slop" look
+
+The tells that make a page read as machine-generated — actively design against each:
+
+- Overused fonts: Inter / Roboto / Open Sans / Lato / Arial / system fonts (and Space Grotesk).
+- Clichéd color: a purple gradient on a white background.
+- Predictable, cookie-cutter layouts and components with no context-specific character.
+- Plain white background used as a default instead of building atmosphere.
+
+Draw inspiration from **IDE themes and cultural aesthetics**, and **vary** between light and dark across docs rather than converging on one safe look.
+
+## Self-prompt block (drop into generation context for a bespoke doc)
+
+When generating a one-off doc with a strong visual identity, paste this constraint block (from the Anthropic frontend-aesthetics cookbook) into your working context to push away from generic output:
+
+```
+<frontend_aesthetics>
+You tend to converge toward generic, "on distribution" outputs — the "AI slop" aesthetic. Avoid it: make distinctive frontends that surprise and delight.
+- Typography: beautiful, unique fonts. Avoid Arial/Inter; pick distinctive faces.
+- Color & Theme: commit to a cohesive aesthetic via CSS variables. Dominant colors + sharp accents beat timid, evenly-distributed palettes. Draw from IDE themes and cultural aesthetics.
+- Motion: CSS-only for HTML. One well-orchestrated page-load with staggered reveals (animation-delay) beats scattered micro-interactions.
+- Backgrounds: create atmosphere and depth, not solid fills — layer gradients, patterns, contextual effects.
+Avoid: overused fonts (Inter/Roboto/Arial/system/Space Grotesk), purple-gradient-on-white, predictable layouts, cookie-cutter design. Make unexpected choices that feel genuinely designed for the context; vary light/dark and fonts across generations.
+</frontend_aesthetics>
+```
