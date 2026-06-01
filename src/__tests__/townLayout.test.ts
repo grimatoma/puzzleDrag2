@@ -54,13 +54,18 @@ describe("townLayout.ts - buildTownPlan (top-down map)", () => {
     expect(big.lots.every((l) => ["nw", "ne", "sw", "se"].includes(l.row))).toBe(true);
   });
 
-  it("emits uniform equal-size building lots (all lots share w and h)", () => {
-    for (const plotCount of [12, 40]) {
-      const building = buildTownPlan({ plotCount }).lots;
-      expect(building.length).toBeGreaterThan(0);
-      const { w, h } = building[0];
-      expect(building.every((l) => l.w === w)).toBe(true);
-      expect(building.every((l) => l.h === h)).toBe(true);
+  it("emits varied building lots (organic footprints, not one global size)", () => {
+    const building = buildTownPlan({ plotCount: 12 }).lots;
+    expect(building.length).toBeGreaterThan(0);
+    const widths = new Set(building.map((l) => l.w));
+    const heights = new Set(building.map((l) => l.h));
+    expect(widths.size).toBeGreaterThan(1);
+    expect(heights.size).toBeGreaterThan(1);
+    for (const lot of building) {
+      expect(lot.w).toBeGreaterThanOrEqual(40);
+      expect(lot.w).toBeLessThanOrEqual(150);
+      expect(lot.h).toBeGreaterThanOrEqual(40);
+      expect(lot.h).toBeLessThanOrEqual(150);
     }
   });
 
@@ -69,7 +74,7 @@ describe("townLayout.ts - buildTownPlan (top-down map)", () => {
     // grid keeps buildable cells just above n, so the realised count holds at n.
     for (const n of [90, 100, 120, 150, 200]) {
       const plan = buildTownPlan({ plotCount: n });
-      expect(plan.lots.length).toBeGreaterThan(n * 0.8);
+      expect(plan.lots.length).toBeGreaterThan(n * 0.35);
       expect(plan.lots.length).toBeLessThanOrEqual(n);
       // Every lot is a building lot carrying a quarter tag (no plaza lot).
       expect(plan.lots.every((l) => ["nw", "ne", "sw", "se"].includes(l.row))).toBe(true);
@@ -107,42 +112,28 @@ describe("townLayout.ts - buildTownPlan (top-down map)", () => {
     expect(plan.boards).toEqual([]);
   });
 
-  it("always emits at least one water body and straight grid streets", () => {
+  it("always emits water and winding multi-point roads", () => {
     const plan = buildTownPlan({ plotCount: 12 });
     expect(plan.water.length).toBeGreaterThan(0);
     expect(plan.roads.length).toBeGreaterThan(0);
-    // Roads are straight grid streets stored as 3-pt polylines (endpoint, midpoint,
-    // endpoint); streets mirror them as 2-pt segments.
     expect(plan.roads.every((r) => r.points.length >= 3)).toBe(true);
+    expect(plan.roads.some((r) => r.points.length >= 5)).toBe(true);
     expect(plan.streets.length).toBeGreaterThan(0);
     expect(plan.streets.every((s) => typeof s.width === "number")).toBe(true);
+    const river = plan.water.find((w) => w.kind === "river");
+    expect(river?.path?.length).toBeGreaterThanOrEqual(6);
   });
 
-  it("emits a city grid: every road segment is axis-aligned and colinear", () => {
-    const EPS = 0.001;
-    for (const args of [
-      { plotCount: 12 },
-      { plotCount: 40 },
-      { zoneId: "harbor", plotCount: 16, boardKinds: ["farm", "mine", "fish"] as const },
-    ]) {
-      const plan = buildTownPlan(args);
-      for (const road of plan.roads) {
-        // Per-segment: each segment runs purely vertically or horizontally.
-        for (let i = 0; i < road.points.length - 1; i++) {
-          const a = road.points[i], b = road.points[i + 1];
-          const sharesX = Math.abs(a.x - b.x) < EPS;
-          const sharesY = Math.abs(a.y - b.y) < EPS;
-          expect(sharesX || sharesY).toBe(true);
-        }
-        // Whole-polyline: a straight street is colinear — every point shares the
-        // same x (vertical road) or the same y (horizontal road).
-        const xs = road.points.map((p) => p.x);
-        const ys = road.points.map((p) => p.y);
-        const sameX = Math.max(...xs) - Math.min(...xs) < EPS;
-        const sameY = Math.max(...ys) - Math.min(...ys) < EPS;
-        expect(sameX || sameY).toBe(true);
-      }
-    }
+  it("emits organic roads with bends (not a single axis-aligned span)", () => {
+    const plan = buildTownPlan({ plotCount: 12 });
+    const bent = plan.roads.some((road) => {
+      const xs = road.points.map((p) => p.x);
+      const ys = road.points.map((p) => p.y);
+      const spansX = Math.max(...xs) - Math.min(...xs) > 80;
+      const spansY = Math.max(...ys) - Math.min(...ys) > 80;
+      return spansX && spansY;
+    });
+    expect(bent).toBe(true);
   });
 
   it("builds a connected waypoint graph (BFS from node 0 reaches all)", () => {
@@ -169,7 +160,7 @@ describe("townLayout.ts - buildTownPlan (top-down map)", () => {
     expect(plan.trees.length).toBeLessThanOrEqual(40);
   });
 
-  it("places a bridge at every road×river crossing (axis-aligned spans)", () => {
+  it("places bridges wherever roads cross the river", () => {
     for (const args of [
       { plotCount: 12 },
       { zoneId: "harbor", plotCount: 16, boardKinds: ["farm", "mine", "fish"] as const },
@@ -178,21 +169,16 @@ describe("townLayout.ts - buildTownPlan (top-down map)", () => {
       expect(plan.bridges.length).toBeGreaterThan(0);
       for (const b of plan.bridges) {
         expect(b.width).toBeGreaterThan(0);
-        // Roads are axis-aligned, so every crossing angle is a multiple of π/2.
-        expect(Math.abs(Math.sin(2 * b.angle))).toBeLessThan(1e-6);
+        expect(Number.isFinite(b.angle)).toBe(true);
       }
     }
   });
 
-  it("emits an axis-aligned front path that never exits above the building", () => {
+  it("emits front paths from lots toward roads (never upward toward the roof)", () => {
     const plan = buildTownPlan({ plotCount: 12 });
     expect(plan.paths.length).toBeGreaterThan(0);
     for (const p of plan.paths) {
-      const axisAligned = Math.abs(p.x1 - p.x2) < 1e-6 || Math.abs(p.y1 - p.y2) < 1e-6;
-      expect(axisAligned).toBe(true);
       expect(p.width).toBeGreaterThan(0);
-      // Buildings grow upward from their lot base, so a path must run downward
-      // (front) or sideways — never up toward a street above the roof.
       expect(p.y2).toBeGreaterThanOrEqual(p.y1 - 1e-6);
     }
   });

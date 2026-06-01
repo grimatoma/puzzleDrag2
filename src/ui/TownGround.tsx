@@ -228,9 +228,9 @@ function TownGround({ plan, theme, biomeVariant, builtLots }: TownGroundProps) {
           const bw = wb.width ?? 18;
           return (
             <g key={`wr${i}`}>
-              <polyline points={d} fill="none" stroke={pal.sand} strokeWidth={bw + 10} strokeLinecap="round" strokeLinejoin="round" opacity="0.7" />
+              <polyline points={d} fill="none" stroke={pal.sand} strokeWidth={bw + 14} strokeLinecap="round" strokeLinejoin="round" opacity="0.65" />
               <polyline points={d} fill="none" stroke={pal.water} strokeWidth={bw} strokeLinecap="round" strokeLinejoin="round" />
-              <polyline points={d} fill="none" stroke={pal.waterEdge} strokeWidth={bw} strokeLinecap="round" strokeLinejoin="round" opacity="0.25" />
+              <polyline points={d} fill="none" stroke={pal.waterEdge} strokeWidth={Math.max(2, bw * 0.35)} strokeLinecap="round" strokeLinejoin="round" opacity="0.45" />
             </g>
           );
         }
@@ -250,16 +250,16 @@ function TownGround({ plan, theme, biomeVariant, builtLots }: TownGroundProps) {
         return null;
       })}
 
-      {/* ── 3. Roads — dirt polylines: edge underlay, body, dashed centerline ── */}
+      {/* ── 3. Roads — winding dirt paths (rounded joins for an organic map) ── */}
       {roads.map((r, i) => {
         if (r.points.length < 2) return null;
         const d = ptsStr(r.points);
         return (
           <g key={`r${i}`}>
-            <polyline points={d} fill="none" stroke={roadLine} strokeWidth={r.width + 6} strokeLinecap="square" strokeLinejoin="miter" opacity="0.55" />
-            <polyline points={d} fill="none" stroke={road} strokeWidth={r.width} strokeLinecap="square" strokeLinejoin="miter" />
+            <polyline points={d} fill="none" stroke={roadLine} strokeWidth={r.width + 8} strokeLinecap="round" strokeLinejoin="round" opacity="0.5" />
+            <polyline points={d} fill="none" stroke={road} strokeWidth={r.width} strokeLinecap="round" strokeLinejoin="round" />
             {r.kind === "main" && (
-              <polyline points={d} fill="none" stroke={roadLine} strokeWidth={1.5} strokeDasharray="7 8" strokeLinecap="square" strokeLinejoin="miter" opacity="0.4" />
+              <polyline points={d} fill="none" stroke={roadLine} strokeWidth={1.5} strokeDasharray="6 10" strokeLinecap="round" strokeLinejoin="round" opacity="0.35" />
             )}
           </g>
         );
