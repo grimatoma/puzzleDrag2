@@ -81,6 +81,24 @@ const STATUS_OPTIONS = [
   { id: "legacy", label: "Legacy" },
 ];
 
+const TAGS_EXPANDED_KEY = "hearth.balance.iconsTagsExpanded";
+
+function readTagsExpanded(): boolean {
+  try {
+    return localStorage.getItem(TAGS_EXPANDED_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function writeTagsExpanded(expanded: boolean) {
+  try {
+    localStorage.setItem(TAGS_EXPANDED_KEY, expanded ? "1" : "0");
+  } catch {
+    // Ignore quota / private-mode failures in dev panel.
+  }
+}
+
 const ICON_SIZE = 56; // px — canvas render size
 
 // Run an icon's draw function against any Canvas-2D-shaped context with the
@@ -317,6 +335,15 @@ export default function IconsTab() {
   const [status, setStatus] = useState("all");
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [mode, setMode] = useState<"canvas" | "svg">("canvas");
+  const [tagsExpanded, setTagsExpanded] = useState(readTagsExpanded);
+
+  function toggleTagsExpanded() {
+    setTagsExpanded((prev) => {
+      const next = !prev;
+      writeTagsExpanded(next);
+      return next;
+    });
+  }
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
@@ -352,15 +379,6 @@ export default function IconsTab() {
       <FilterBar className="gap-3 flex-shrink-0">
         <div className="flex-1 min-w-[160px] max-w-[320px]">
           <SearchBar value={search} onChange={setSearch} placeholder="Search key or label…" />
-        </div>
-        <div className="w-full">
-          <SegmentedFilter
-            options={CATEGORY_OPTIONS}
-            value={category}
-            onChange={setCategory}
-            ariaLabel="Icon category filter"
-            className="[&>button]:!px-2 [&>button]:!py-1 [&>button]:!text-[10px] [&>button]:!rounded-md [&>button]:capitalize"
-          />
         </div>
         <div
           className="flex items-center gap-1 flex-shrink-0 px-2 py-1 rounded-lg border-2"
@@ -406,6 +424,38 @@ export default function IconsTab() {
           {filtered.length} / {ALL_ENTRIES.length} icons
         </div>
       </FilterBar>
+
+      <div className="flex-shrink-0">
+        <button
+          type="button"
+          onClick={toggleTagsExpanded}
+          aria-expanded={tagsExpanded}
+          aria-controls="icons-category-tags"
+          className="w-full flex items-center gap-2 px-2 py-1 rounded-lg border-2 text-left transition-colors hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-ember/50"
+          style={{ background: COLORS.parchmentDeep, borderColor: COLORS.border, color: COLORS.ink }}
+        >
+          <span className="text-[10px] font-bold uppercase tracking-wide" style={{ color: COLORS.inkSubtle }}>
+            Tags
+          </span>
+          <span className="text-[11px] font-mono capitalize flex-1 truncate" title={category}>
+            {category}
+          </span>
+          <span className="text-[10px] flex-shrink-0" style={{ color: COLORS.inkSubtle }} aria-hidden>
+            {tagsExpanded ? "▲" : "▼"}
+          </span>
+        </button>
+        {tagsExpanded && (
+          <div id="icons-category-tags" className="mt-2">
+            <SegmentedFilter
+              options={CATEGORY_OPTIONS}
+              value={category}
+              onChange={setCategory}
+              ariaLabel="Icon category filter"
+              className="[&>button]:!px-2 [&>button]:!py-1 [&>button]:!text-[10px] [&>button]:!rounded-md [&>button]:capitalize"
+            />
+          </div>
+        )}
+      </div>
 
       {/* Copy notice */}
       {copiedKey && (
