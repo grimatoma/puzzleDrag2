@@ -1,14 +1,13 @@
 // ─── Procedural town plan (Phase: Town top-down map) ────────────────────────
 // Turns a zone's plot count into a *planned* town rendered as a compact 2D
 // TOP-DOWN map (1280×960 design space the Town view scales to the viewport).
-// The generator lays out an ORGANIC settlement map: winding dirt roads (a main
-// avenue plus branches and loops), a meandering river, and scattered building
-// lots of varied size tucked between paths and water. The town square (plaza +
-// well) sits near the centre; puzzle boards claim a few perimeter anchors; every
-// other valid slot becomes a buildable lot. Trees/fields/fences dress leftover
-// ground. Everything is deterministic per zone: a single seeded mulberry32 PRNG
-// drives all jitter in a FIXED consumption order, so identical args always yield
-// an identical plan.
+// The generator lays out a VILLAGE MAP: a readable block grid of streets and
+// building plots (irregular block sizes via seeded weights), a town square at
+// the crossing of two main avenues, and a gentle river along the west edge.
+// Puzzle boards occupy perimeter blocks; every other buildable block yields one
+// lot. Rounded road rendering in TownGround softens the grid without breaking
+// coherence. Everything is deterministic per zone: a single seeded mulberry32
+// PRNG drives all jitter in a FIXED consumption order.
 //
 // Returned shape (see TownPlan): width/height, ground.top, plaza, well,
 // streets (back-compat 2-pt segments), lots, boards, props, waypoints, edges,
@@ -119,28 +118,6 @@ function polyBbox(poly: Pt[]) {
   for (const p of poly) { x0 = Math.min(x0, p.x); y0 = Math.min(y0, p.y); x1 = Math.max(x1, p.x); y1 = Math.max(y1, p.y); }
   return { x0, y0, x1, y1 };
 }
-function lerpPt(a: Pt, b: Pt, t: number): Pt {
-  return { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t };
-}
-function nearestOnPolyline(p: Pt, poly: Pt[]): { pt: Pt; dist: number } {
-  let best = { pt: poly[0], dist: Infinity };
-  for (let i = 0; i < poly.length - 1; i++) {
-    const a = poly[i], b = poly[i + 1];
-    const d = segDist(p, a, b);
-    if (d < best.dist) {
-      const dx = b.x - a.x, dy = b.y - a.y;
-      const len2 = dx * dx + dy * dy || 1;
-      let t = ((p.x - a.x) * dx + (p.y - a.y) * dy) / len2;
-      t = Math.max(0, Math.min(1, t));
-      best = { pt: { x: a.x + t * dx, y: a.y + t * dy }, dist: d };
-    }
-  }
-  return best;
-}
-function quarterTag(cx: number, cy: number, px: number, py: number): string {
-  return (cy < py ? "n" : "s") + (cx < px ? "w" : "e");
-}
-
 export function buildTownPlan(
   { zoneId = "home", plotCount = 12, boardKinds = [] }: {
     zoneId?: string;
@@ -153,36 +130,141 @@ export function buildTownPlan(
   const n = Math.max(1, Math.floor(plotCount));
   const kinds = Array.isArray(boardKinds) ? boardKinds : [];
 
-  const border = 48;
-  const gx0 = border, gy0 = border, gw = W - 2 * border, gh = H - 2 * border;
+  const border = 40;
+  const gx0 = 40, gy0 = 40, gw = 1200, gh = 880;
   const AVENUE = 46;
   const STREET = 30;
-  const pushRoad = (points: Pt[], width: number, kind: TownPlanRoad["kind"]) => {
-    if (points.length >= 2) roads.push({ points, width, kind });
-  };
+  const nBoards = kinds.filter((k) => k in BOARD_SPOTS).length;
+  const reserved = 1 + nBoards;
+  const slack = Math.ceil(n * 0.25);
+  const capacityOf = (cols: number, rows: number) => Math.max(0, cols * rows - reserved);
 
-  // ── 1. Plaza (organic centre, slight zone jitter) ─────────────────────────
+  type Block = { x: number; y: number; w: number; h: number };
+  const seed = n + reserved;
+  let cols = Math.max(3, Math.round(Math.sqrt(seed * (W / H))));
+  let rows = Math.max(3, Math.ceil(seed / cols));
+  while (capacityOf(cols, rows) < n + slack) {
+    if (cols <= rows) cols++; else rows++;
+  }
+
+  const pc = Math.floor(cols / 2);
+  const pr = Math.floor(rows / 2);
+  const colWeights = Array.from({ length: cols }, () => 1 + j(0.22));
+  const rowWeights = Array.from({ length: rows }, () => 1 + j(0.22));
+  const colGutter = (i: number) => (i === pc ? AVENUE : STREET);
+  const rowGutter = (i: number) => (i === pr ? AVENUE : STREET);
+
+  let colGutterTotal = 0;
+  for (let c = 1; c < cols; c++) colGutterTotal += colGutter(c);
+  let rowGutterTotal = 0;
+  for (let r = 1; r < rows; r++) rowGutterTotal += rowGutter(r);
+
+  const colWeightSum = colWeights.reduce((a, b) => a + b, 0) || 1;
+  const rowWeightSum = rowWeights.reduce((a, b) => a + b, 0) || 1;
+  const colSpace = Math.max(0, gw - colGutterTotal);
+  const rowSpace = Math.max(0, gh - rowGutterTotal);
+  const colFloor = Math.min(90, colSpace / cols);
+  const rowFloor = Math.min(90, rowSpace / rows);
+  const colW = colWeights.map((w) => Math.max(colFloor, (w / colWeightSum) * colSpace));
+  const rowH = rowWeights.map((w) => Math.max(rowFloor, (w / rowWeightSum) * rowSpace));
+
+  const block: Block[][] = Array.from({ length: rows }, () => []);
+  const streetX: number[] = [];
+  const streetY: number[] = [];
+  {
+    streetX.push(border / 2);
+    let x = gx0;
+    for (let c = 0; c < cols; c++) {
+      const bx = x;
+      for (let r = 0; r < rows; r++) block[r][c] = { x: bx, y: 0, w: colW[c], h: 0 };
+      x += colW[c];
+      if (c < cols - 1) {
+        const g = colGutter(c + 1);
+        streetX.push(x + g / 2);
+        x += g;
+      }
+    }
+    streetX.push(W - border / 2);
+
+    streetY.push(border / 2);
+    let y = gy0;
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) { block[r][c].y = y; block[r][c].h = rowH[r]; }
+      y += rowH[r];
+      if (r < rows - 1) {
+        const g = rowGutter(r + 1);
+        streetY.push(y + g / 2);
+        y += g;
+      }
+    }
+    streetY.push(H - border / 2);
+  }
+
+  const roads: TownPlanRoad[] = [];
+  const avenueXIndex = pc;
+  const avenueYIndex = pr;
+  const pushRoad = (a: Pt, b: Pt, width: number, kind: TownPlanRoad["kind"]) =>
+    roads.push({ points: [a, { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }, b], width, kind });
+  for (let i = 0; i < streetX.length; i++) {
+    const x = streetX[i];
+    pushRoad({ x, y: 0 }, { x, y: H }, i === avenueXIndex ? AVENUE : STREET, i === avenueXIndex ? "main" : "branch");
+  }
+  for (let i = 0; i < streetY.length; i++) {
+    const y = streetY[i];
+    pushRoad({ x: 0, y }, { x: W, y }, i === avenueYIndex ? AVENUE : STREET, i === avenueYIndex ? "main" : "branch");
+  }
+
+  const plazaBlk = block[pr][pc];
   const plaza = {
-    cx: W * 0.52 + j(38),
-    cy: H * 0.46 + j(30),
-    rx: 108 + j(14),
-    ry: 86 + j(12),
+    cx: plazaBlk.x + plazaBlk.w / 2,
+    cy: plazaBlk.y + plazaBlk.h / 2,
+    rx: Math.min(120, plazaBlk.w * 0.42),
+    ry: Math.min(96, plazaBlk.h * 0.42),
   };
   const well = { cx: plaza.cx, cy: plaza.cy - 8, r: 16 };
 
-  // ── 2. Winding river ─────────────────────────────────────────────────────
+  const excluded: boolean[][] = Array.from({ length: rows }, () => Array(cols).fill(false));
+  excluded[pr][pc] = true;
+
+  const boardPrefForKind = (k: BoardKind): [number, number] => {
+    if (k === "farm") return [Math.max(0, pr - 1), pc];
+    if (k === "mine") return [0, cols - 1];
+    return [rows - 1, Math.floor(cols / 2)];
+  };
+  const perimScan: Array<[number, number]> = [];
+  for (let c = 0; c < cols; c++) perimScan.push([0, c]);
+  for (let r = 1; r < rows; r++) perimScan.push([r, cols - 1]);
+  for (let c = cols - 2; c >= 0; c--) perimScan.push([rows - 1, c]);
+  for (let r = rows - 2; r >= 1; r--) perimScan.push([r, 0]);
+
+  const validKinds = kinds.filter((k): k is BoardKind => k in BOARD_SPOTS);
+  const boards: TownPlanBoard[] = [];
+  for (const k of validKinds) {
+    let [br, bc] = boardPrefForKind(k);
+    if (excluded[br][bc] || (br === pr && bc === pc)) {
+      const free = perimScan.find(([r, c]) => !excluded[r][c] && !(r === pr && c === pc));
+      if (free) [br, bc] = free;
+    }
+    excluded[br][bc] = true;
+    const blk = block[br][bc];
+    boards.push({
+      kind: k,
+      cx: blk.x + blk.w / 2,
+      cy: blk.y + blk.h / 2,
+      w: Math.min(150, blk.w - 16),
+      h: Math.min(140, blk.h - 16),
+    });
+  }
+
   const water: TownPlanWater[] = [];
   const riverPath: Pt[] = [
-    { x: -12 + j(18), y: H * 0.10 + j(22) },
-    { x: W * 0.10 + j(32), y: H * 0.20 + j(26) },
-    { x: W * 0.20 + j(38), y: H * 0.34 + j(28) },
-    { x: W * 0.30 + j(34), y: H * 0.48 + j(24) },
-    { x: W * 0.42 + j(36), y: H * 0.58 + j(26) },
-    { x: W * 0.54 + j(32), y: H * 0.70 + j(24) },
-    { x: W * 0.66 + j(30), y: H * 0.80 + j(22) },
-    { x: W * 0.80 + j(26), y: H + 12 },
+    { x: -10 + j(10), y: H * 0.12 + j(12) },
+    { x: W * 0.10 + j(14), y: H * 0.28 + j(12) },
+    { x: W * 0.18 + j(14), y: H * 0.50 + j(12) },
+    { x: W * 0.30 + j(14), y: H * 0.72 + j(12) },
+    { x: W * 0.44 + j(12), y: H + 10 },
   ];
-  const RIVER_W = 44;
+  const RIVER_W = 42;
   water.push({ kind: "river", path: riverPath, width: RIVER_W });
   if (kinds.includes("fish")) {
     const top = H * 0.82;
@@ -202,85 +284,18 @@ export function buildTownPlan(
   const waterPolys = water.filter((w) => w.polygon).map((w) => w.polygon!);
   const waterPaths = water.filter((w) => w.path).map((w) => w);
 
-  // ── 3. Organic road network (curved polylines, not a uniform grid) ───────
-  const roads: TownPlanRoad[] = [];
-  pushRoad([
-    { x: 58 + j(18), y: 52 + j(14) },
-    { x: W * 0.20 + j(36), y: H * 0.16 + j(28) },
-    { x: W * 0.36 + j(32), y: H * 0.28 + j(24) },
-    { x: plaza.cx - 48 + j(28), y: plaza.cy - 72 + j(22) },
-    { x: plaza.cx + 42 + j(26), y: plaza.cy + 24 + j(24) },
-    { x: W * 0.60 + j(34), y: H * 0.54 + j(28) },
-    { x: W * 0.76 + j(30), y: H * 0.70 + j(24) },
-    { x: W - 54 + j(16), y: H - 50 + j(14) },
-  ], AVENUE, "main");
-  pushRoad([
-    { x: W * 0.06 + j(22), y: H * 0.50 + j(28) },
-    { x: W * 0.24 + j(34), y: H * 0.42 + j(24) },
-    { x: W * 0.44 + j(30), y: H * 0.36 + j(20) },
-    { x: W * 0.64 + j(32), y: H * 0.44 + j(24) },
-    { x: W * 0.90 + j(18), y: H * 0.52 + j(26) },
-  ], AVENUE, "main");
-  pushRoad([
-    { x: W * 0.48 + j(28), y: H * 0.22 + j(18) },
-    { x: W * 0.50 + j(24), y: H * 0.12 + j(14) },
-    { x: W * 0.52 + j(20), y: 62 + j(12) },
-  ], STREET, "branch");
-  pushRoad([
-    { x: W * 0.70 + j(28), y: H * 0.32 + j(22) },
-    { x: W * 0.84 + j(24), y: H * 0.40 + j(18) },
-    { x: W * 0.86 + j(20), y: H * 0.56 + j(22) },
-    { x: W * 0.74 + j(28), y: H * 0.66 + j(18) },
-  ], STREET, "loop");
-  pushRoad([
-    { x: W * 0.16 + j(24), y: H * 0.36 + j(20) },
-    { x: 88 + j(14), y: H * 0.44 + j(24) },
-    { x: 68 + j(12), y: H * 0.56 + j(20) },
-  ], STREET, "branch");
-  pushRoad([
-    { x: W * 0.38 + j(26), y: H * 0.78 + j(20) },
-    { x: W * 0.52 + j(24), y: H * 0.84 + j(16) },
-    { x: W * 0.66 + j(28), y: H * 0.80 + j(18) },
-  ], STREET, "branch");
-
-  // ── 4. Puzzle boards at organic anchor points ─────────────────────────────
-  const boardAnchorForKind = (k: BoardKind): Pt => {
-    if (k === "farm") return { x: plaza.cx + j(50), y: plaza.cy - 130 + j(28) };
-    if (k === "mine") return { x: W * 0.84 + j(32), y: H * 0.14 + j(26) };
-    return { x: W * 0.50 + j(40), y: H * 0.86 + j(22) };
-  };
-  const fallbackBoardSpots: Pt[] = [
-    { x: W * 0.12 + j(24), y: H * 0.18 + j(20) },
-    { x: W * 0.88 + j(22), y: H * 0.22 + j(22) },
-    { x: W * 0.14 + j(26), y: H * 0.82 + j(20) },
-    { x: W * 0.86 + j(24), y: H * 0.78 + j(22) },
-  ];
-  const validKinds = kinds.filter((k): k is BoardKind => k in BOARD_SPOTS);
-  const boards: TownPlanBoard[] = [];
-  let fallbackIdx = 0;
-  const inPlaza = (cx: number, cy: number) =>
-    ((cx - plaza.cx) ** 2) / ((plaza.rx + 24) ** 2) + ((cy - plaza.cy) ** 2) / ((plaza.ry + 24) ** 2) < 1;
-  const inRiver = (cx: number, cy: number) => {
-    const c = { x: cx, y: cy };
+  const riverHitsBlock = (blk: Block) => {
+    const c = { x: blk.x + blk.w / 2, y: blk.y + blk.h / 2 };
     for (let i = 0; i < riverPath.length - 1; i++) {
-      if (segDist(c, riverPath[i], riverPath[i + 1]) < RIVER_W / 2 + 36) return true;
+      if (segDist(c, riverPath[i], riverPath[i + 1]) < RIVER_W / 2 + 24) return true;
     }
     return false;
   };
-  for (const k of validKinds) {
-    let spot = boardAnchorForKind(k);
-    const spotFree = (pt: Pt) => !inPlaza(pt.x, pt.y) && !inRiver(pt.x, pt.y);
-    if (!spotFree(spot) && fallbackIdx < fallbackBoardSpots.length) {
-      spot = fallbackBoardSpots[fallbackIdx++];
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      if (excluded[r][c]) continue;
+      if (riverHitsBlock(block[r][c])) excluded[r][c] = true;
     }
-    const spotRef = BOARD_SPOTS[k];
-    boards.push({
-      kind: k,
-      cx: spot.x,
-      cy: spot.y,
-      w: spotRef.w,
-      h: spotRef.h,
-    });
   }
 
   // ── 6. Obstacle helpers (reused by trees/fences) ──────────────────────────
@@ -335,62 +350,38 @@ export function buildTownPlan(
     }
   }
 
-  // ── 7. Scattered building lots (varied footprints, organic placement) ─────
-  const ROAD_PAD = n > 60 ? 10 : n > 24 ? 14 : 20;
-  const LOT_MIN = n > 80 ? 32 : n > 40 ? 36 : 40;
+  // ── 7. Lots: one uniform building lot per buildable block ─────────────────
+  const MARGIN = 10;
   const MAX_LOT = 150;
-  const densityScale = n > 80 ? 0.68 : n > 40 ? 0.78 : n > 20 ? 0.88 : 1;
-  const clampLot = (v: number) => Math.max(LOT_MIN, Math.min(MAX_LOT, v * densityScale));
-  const lotGap = n > 60 ? 6 : n > 24 ? 10 : 14;
-  const lotFits = (cx: number, cy: number, w: number, h: number, placed: TownPlanLot[]) => {
-    if (cx - w / 2 < border || cx + w / 2 > W - border || cy - h / 2 < border || cy + h / 2 > H - border) return false;
-    if (inPlaza(cx, cy) || hitsWater(cx, cy, w, h)) return false;
-    if (hitsBoard(cx, cy, w, h)) return false;
-    if (hitsRoad({ x: cx, y: cy }, ROAD_PAD + Math.max(w, h) * 0.12)) return false;
-    return !placed.some((l) => aabbOverlap({ cx, cy, w, h }, l, lotGap));
-  };
+  const clampLot = (v: number) => Math.max(40, Math.min(MAX_LOT, v));
 
-  j(8); j(6); // preserve rng stream alignment for trees/fields/fences
-  const lots: TownPlanLot[] = [];
-  const colN = Math.max(5, Math.ceil(Math.sqrt(n * 3.6)));
-  const rowN = Math.max(5, Math.ceil((n * 3.6) / colN));
-  const candidates: TownPlanLot[] = [];
-  for (let r = 0; r < rowN; r++) {
-    for (let c = 0; c < colN; c++) {
-      const cx = gx0 + ((c + 0.5) / colN) * gw + j(42);
-      const cy = gy0 + ((r + 0.5) / rowN) * gh + j(42);
-      const base = 92 + rng() * 52;
-      const aspect = 0.88 + rng() * 0.28;
-      const w = clampLot(base);
-      const h = clampLot(base * aspect);
-      if (lotFits(cx, cy, w, h, candidates)) {
-        candidates.push({
-          index: 0,
-          cx, cy, w, h,
-          row: quarterTag(cx, cy, plaza.cx, plaza.cy),
-        });
-      }
+  let minCellW = Infinity, minCellH = Infinity;
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      if (excluded[r][c]) continue;
+      const blk = block[r][c];
+      if (blk.w < minCellW) minCellW = blk.w;
+      if (blk.h < minCellH) minCellH = blk.h;
     }
   }
-  candidates.sort((a, b) => {
-    const da = Math.hypot(a.cx - plaza.cx, a.cy - plaza.cy);
-    const db = Math.hypot(b.cx - plaza.cx, b.cy - plaza.cy);
-    return da - db;
-  });
-  for (let i = 0; i < Math.min(n, candidates.length); i++) {
-    lots.push({ ...candidates[i], index: i });
-  }
-  // Fallback: random probes if the jittered grid did not yield enough lots.
-  for (let attempt = 0; lots.length < n && attempt < n * 150; attempt++) {
-    const cx = gx0 + 60 + rng() * (gw - 120);
-    const cy = gy0 + 60 + rng() * (gh - 120);
-    const w = clampLot(88 + rng() * 56);
-    const h = clampLot(84 + rng() * 58);
-    if (lotFits(cx, cy, w, h, lots)) {
+  if (!Number.isFinite(minCellW)) minCellW = MAX_LOT + 2 * MARGIN;
+  if (!Number.isFinite(minCellH)) minCellH = MAX_LOT + 2 * MARGIN;
+  const LOT = clampLot(Math.min(minCellW - 2 * MARGIN, minCellH - 2 * MARGIN));
+  const LOT_W = LOT, LOT_H = LOT;
+
+  j(8); j(6);
+  const lots: TownPlanLot[] = [];
+  let lotIndex = 0;
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      if (excluded[r][c]) continue;
+      const blk = block[r][c];
+      const tag = (r < pr ? "n" : "s") + (c < pc ? "w" : "e");
       lots.push({
-        index: lots.length,
-        cx, cy, w, h,
-        row: quarterTag(cx, cy, plaza.cx, plaza.cy),
+        index: lotIndex++,
+        cx: blk.x + blk.w / 2,
+        cy: blk.y + blk.h / 2,
+        w: LOT_W, h: LOT_H, row: tag,
       });
     }
   }
@@ -475,85 +466,34 @@ export function buildTownPlan(
     }
   }
 
-  // ── 12. Waypoints along winding roads (for villager paths) ───────────────
+  // ── 12. Waypoints / edges = street-intersection lattice ───────────────────
   const waypoints: TownPlanWaypoint[] = [];
   const edges: Array<[number, number]> = [];
-  const nodeIndex = new Map<string, number>();
-  const addNode = (p: Pt): number => {
-    for (const [key, idx] of nodeIndex) {
-      const [ox, oy] = key.split(":").map(Number);
-      if (Math.hypot(ox - p.x, oy - p.y) < 38) return idx;
-    }
-    const idx = waypoints.length;
-    waypoints.push({ x: p.x, y: p.y });
-    nodeIndex.set(`${Math.round(p.x)}:${Math.round(p.y)}`, idx);
-    return idx;
-  };
-  const link = (a: number, b: number) => {
-    if (a !== b && !edges.some(([x, y]) => (x === a && y === b) || (x === b && y === a))) {
-      edges.push([a, b]);
-    }
-  };
-  for (const road of roads) {
-    let prev = -1;
-    const spacing = 72;
-    for (let i = 0; i < road.points.length - 1; i++) {
-      const a = road.points[i], b = road.points[i + 1];
-      const len = Math.hypot(b.x - a.x, b.y - a.y);
-      const steps = Math.max(1, Math.ceil(len / spacing));
-      for (let s = 0; s <= steps; s++) {
-        const idx = addNode(lerpPt(a, b, s / steps));
-        if (prev >= 0) link(prev, idx);
-        prev = idx;
-      }
+  const wp = (x: number, y: number): number => { waypoints.push({ x, y }); return waypoints.length - 1; };
+  const nx = streetX.length, ny = streetY.length;
+  const nodeAt: number[][] = Array.from({ length: ny }, () => Array(nx).fill(-1));
+  for (let yi = 0; yi < ny; yi++) {
+    for (let xi = 0; xi < nx; xi++) {
+      nodeAt[yi][xi] = wp(streetX[xi], streetY[yi]);
     }
   }
-  const plazaWp = addNode({ x: plaza.cx, y: plaza.cy + 6 });
-  let nearWp = 0, bestPlazaD = Infinity;
-  for (let i = 0; i < waypoints.length; i++) {
-    const d = Math.hypot(waypoints[i].x - plaza.cx, waypoints[i].y - plaza.cy);
-    if (d < bestPlazaD) { bestPlazaD = d; nearWp = i; }
-  }
-  link(plazaWp, nearWp);
-  for (let i = 0; i < waypoints.length; i++) {
-    for (let k = i + 1; k < waypoints.length; k++) {
-      if (Math.hypot(waypoints[i].x - waypoints[k].x, waypoints[i].y - waypoints[k].y) < 52) {
-        link(i, k);
-      }
+  for (let yi = 0; yi < ny; yi++) {
+    for (let xi = 0; xi < nx; xi++) {
+      if (xi + 1 < nx) edges.push([nodeAt[yi][xi], nodeAt[yi][xi + 1]]);
+      if (yi + 1 < ny) edges.push([nodeAt[yi][xi], nodeAt[yi + 1][xi]]);
     }
   }
+  const plazaWp = wp(plaza.cx, plaza.cy + 6);
   {
-    const parent = waypoints.map((_, i) => i);
-    const find = (i: number): number => {
-      while (parent[i] !== i) { parent[i] = parent[parent[i]]; i = parent[i]; }
-      return i;
-    };
-    const unite = (a: number, b: number) => {
-      const ra = find(a), rb = find(b);
-      if (ra !== rb) parent[rb] = ra;
-    };
-    for (const [a, b] of edges) unite(a, b);
-    const groups = new Map<number, number[]>();
-    for (let i = 0; i < waypoints.length; i++) {
-      const r = find(i);
-      if (!groups.has(r)) groups.set(r, []);
-      groups.get(r)!.push(i);
-    }
-    const roots = [...groups.keys()];
-    for (let g = 1; g < roots.length; g++) {
-      const aNodes = groups.get(roots[0])!;
-      const bNodes = groups.get(roots[g])!;
-      let bestA = aNodes[0], bestB = bNodes[0], bestD = Infinity;
-      for (const i of aNodes) {
-        for (const k of bNodes) {
-          const d = Math.hypot(waypoints[i].x - waypoints[k].x, waypoints[i].y - waypoints[k].y);
-          if (d < bestD) { bestD = d; bestA = i; bestB = k; }
-        }
+    let near = nodeAt[0][0], bestD = Infinity;
+    for (let yi = 0; yi < ny; yi++) {
+      for (let xi = 0; xi < nx; xi++) {
+        const node = nodeAt[yi][xi];
+        const d = Math.hypot(waypoints[node].x - plaza.cx, waypoints[node].y - plaza.cy);
+        if (d < bestD) { bestD = d; near = node; }
       }
-      link(bestA, bestB);
-      unite(bestA, bestB);
-      for (const k of bNodes) groups.get(roots[0])!.push(k);
     }
+    edges.push([plazaWp, near]);
   }
 
   // ── 13. Props ─────────────────────────────────────────────────────────────
@@ -580,13 +520,17 @@ export function buildTownPlan(
     p.y = plaza.cy + Math.sin(theta) * plaza.ry * 0.8;
   };
   for (const p of props) if (p.kind !== "well") settleProp(p);
-  // Lampposts beside road bends near the plaza (2..4).
   {
     const lampN = 2 + Math.floor(rng() * 3);
-    const ordered = waypoints
-      .map((p, i) => ({ i, x: p.x, y: p.y, d: Math.hypot(p.x - plaza.cx, p.y - plaza.cy) }))
-      .sort((a, b) => a.d - b.d);
-    const LAMP_OFF = AVENUE / 2 + 14;
+    const ordered: Array<{ x: number; y: number; d: number }> = [];
+    for (let yi = 0; yi < ny; yi++) {
+      for (let xi = 0; xi < nx; xi++) {
+        const x = streetX[xi], y = streetY[yi];
+        ordered.push({ x, y, d: Math.hypot(x - plaza.cx, y - plaza.cy) });
+      }
+    }
+    ordered.sort((a, b) => a.d - b.d);
+    const LAMP_OFF = AVENUE / 2 + 12;
     const CORNERS: Array<[number, number]> = [[1, 1], [1, -1], [-1, 1], [-1, -1]];
     for (let i = 0; i < Math.min(lampN, ordered.length); i++) {
       const { x, y } = ordered[i];
@@ -600,22 +544,28 @@ export function buildTownPlan(
     }
   }
 
-  // ── 13b. Front paths (lot → nearest point on the road network) ────────────
   const keptLots = lots.slice(0, n);
   const paths: TownPlanPath[] = [];
   const PATH_W = 14;
-  const allRoadPts: Pt[] = roads.flatMap((rd) => rd.points);
   for (const l of keptLots) {
-    const { cx, cy, h } = l;
-    const start = { x: cx, y: cy + h / 2 };
-    let best = { pt: allRoadPts[0] ?? start, dist: Infinity };
-    for (const rd of roads) {
-      const hit = nearestOnPolyline(start, rd.points);
-      if (hit.dist < best.dist) best = hit;
+    if (l.row === "plaza") continue;
+    const { cx, cy, w, h } = l;
+    let gxL = -Infinity, gxR = Infinity, gyB = Infinity;
+    for (const sx of streetX) {
+      if (sx < cx && sx > gxL) gxL = sx;
+      if (sx > cx && sx < gxR) gxR = sx;
     }
-    if (!Number.isFinite(best.dist) || best.dist > 220) continue;
-    if (best.pt.y < start.y - 2) continue;
-    paths.push({ x1: start.x, y1: start.y, x2: best.pt.x, y2: best.pt.y, width: PATH_W });
+    for (const sy of streetY) {
+      if (sy > cy && sy < gyB) gyB = sy;
+    }
+    const dL = Number.isFinite(gxL) ? cx - gxL : Infinity;
+    const dR = Number.isFinite(gxR) ? gxR - cx : Infinity;
+    const dB = Number.isFinite(gyB) ? gyB - cy : Infinity;
+    const best = Math.min(dL, dR, dB);
+    if (!Number.isFinite(best)) continue;
+    if (best === dB) paths.push({ x1: cx, y1: cy + h / 2, x2: cx, y2: gyB, width: PATH_W });
+    else if (best === dR) paths.push({ x1: cx + w / 2, y1: cy, x2: gxR, y2: cy, width: PATH_W });
+    else paths.push({ x1: cx - w / 2, y1: cy, x2: gxL, y2: cy, width: PATH_W });
   }
 
   // ── 13c. Lush decoration (separate decor RNG) ─────────────────────────────
