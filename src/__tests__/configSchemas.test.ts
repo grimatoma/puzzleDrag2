@@ -76,6 +76,7 @@ describe("configSchemas — balance overrides", () => {
   it("tuningSchema accepts fireHazardEnabled boolean", () => {
     expect(tuningSchema.safeParse({ fireHazardEnabled: true }).success).toBe(true);
   });
+
 });
 
 describe("parseBalanceOverrides", () => {

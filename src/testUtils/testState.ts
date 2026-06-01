@@ -21,6 +21,18 @@ export function unsafeGameState(state: unknown): GameState {
   return state as GameState;
 }
 
+/** Run a callback with `import.meta.env.DEV` temporarily set (restore after). */
+export function withImportMetaDev(dev: boolean, fn: () => void): void {
+  const env = import.meta.env as { DEV: boolean };
+  const prev = env.DEV;
+  env.DEV = dev;
+  try {
+    fn();
+  } finally {
+    env.DEV = prev;
+  }
+}
+
 /** Cast a loose action object for slice tests that dispatch non-catalog types. */
 export function testAction(action: { type: string; [key: string]: unknown }): Action {
   return action as unknown as Action;

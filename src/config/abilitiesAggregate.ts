@@ -272,8 +272,9 @@ export function applyAbilityToChannels(out: AbilityChannels, ability: AbilityCat
       break;
     }
     default:
-      // Unknown ability id — silently ignored. Tests assert catalog/aggregator
-      // alignment so this shouldn't happen in practice.
+      if (import.meta.env.DEV) {
+        throw new Error(`Unknown ability id (no channel handler): "${ability.id}"`);
+      }
       break;
   }
 }
@@ -294,8 +295,12 @@ export function aggregateAbilities(sources: AbilitySource[] | null | undefined, 
     if (weight <= 0) continue;
     for (const inst of src.abilities) {
       if (!inst || typeof inst !== "object") continue;
+      if (typeof inst.id !== "string" || inst.id.length === 0) continue;
       const def = getAbility(inst.id);
-      if (!def) continue;
+      if (!def) {
+        if (import.meta.env.DEV) throw new Error(`Unknown ability id: "${inst.id}"`);
+        continue;
+      }
       applyAbilityToChannels(out, def, inst.params || {}, weight, ctx);
     }
   }
@@ -317,8 +322,12 @@ export function forEachAbilityWithTrigger(
     if (!src || !Array.isArray(src.abilities)) continue;
     for (const inst of src.abilities) {
       if (!inst || typeof inst !== "object") continue;
+      if (typeof inst.id !== "string" || inst.id.length === 0) continue;
       const def = getAbility(inst.id);
-      if (!def) continue;
+      if (!def) {
+        if (import.meta.env.DEV) throw new Error(`Unknown ability id: "${inst.id}"`);
+        continue;
+      }
       // The instance's `trigger` overrides the catalog default when present.
       const t = inst.trigger || def.trigger;
       if (t !== trigger) continue;
@@ -366,8 +375,12 @@ export function expandAbilitiesToEffects(abilities: AbilityInstance[] | null | u
 
   for (const inst of abilities) {
     if (!inst || typeof inst !== "object") continue;
+    if (typeof inst.id !== "string" || inst.id.length === 0) continue;
     const def = getAbility(inst.id);
-    if (!def) continue;
+    if (!def) {
+      if (import.meta.env.DEV) throw new Error(`Unknown ability id: "${inst.id}"`);
+      continue;
+    }
     const p = inst.params || {};
     switch (def.id) {
       case "free_moves":

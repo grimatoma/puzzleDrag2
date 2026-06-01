@@ -16,7 +16,9 @@
 - `BOSS_META` duplicate display struct — deleted; no callers remained.
 - `BiomeEntryModal.tsx` + `Town.tsx` both use `canEnterBiome` for unlock gating.
 
-**Triage:** Only **Open** rows remain. Deferred migration work (tile/resource conflation, `DEFERRED_TOOL_POWERS`) is tracked in `CLAUDE.md` and PR-06 of `docs/superpowers/plans/2026-05-25-config-override-execution.md`.
+**Triage:** Only **Open** rows remain. Tile/resource conflation tail is tracked in `CLAUDE.md` and PR-06 of `docs/superpowers/plans/2026-05-25-config-override-execution.md`.
+
+**Resolved (2026-06):** Removed `DEFERRED_TOOL_POWERS` from `src/config/toolPowers.ts`. Unshipped PC2 tools are **not** in `ITEMS` and do not get a placeholder power id — when a tool ships, add a real `TOOL_POWERS` entry + `ITEMS` row + runtime handler. Product backlog notes remain in `docs/progression-plan-v2.html` (design doc only).
 
 ---
 
@@ -117,7 +119,7 @@ _All previously-listed items now resolved — `BiomeEntryModal.tsx` and `Town.ts
 | **Quests slice cleanup** | Drop legacy `almanacXp` path |
 | **Single source of effective pool weights** | Scene vs reducer authority |
 | **Auto-discover `KNOWN_VIEWS`** | `router.ts` import.meta.glob sweep |
-| **Optional backlog (PR-06)** | `DEFERRED_TOOL_POWERS`, fish tide config, wolf prey tags, achievement fish pool, portal `MAGIC_TOOLS` dedup — see execution plan § PR-06 |
+| **Optional backlog (PR-06)** | fish tide config, wolf prey tags, achievement fish pool, portal `MAGIC_TOOLS` dedup — see execution plan § PR-06 |
 
 ---
 

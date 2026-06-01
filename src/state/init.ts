@@ -23,7 +23,8 @@ import { loadSavedState } from "./persistence.js";
 import {
   makeOrder,
   seedOrderIdSeq,
-  defaultTileCollectionSlice
+  defaultTileCollectionSlice,
+  mergeLoadedState,
 } from "./helpers.js";
 import type { GameState } from "../types/state";
 
@@ -185,7 +186,7 @@ export function initialState(overrides?: { saveSeed?: string; tools?: Record<str
     // Treat saved as the persisted (loose) shape of GameState. The save
     // boundary is intrinsically untyped (JSON.parse), but inside this block
     // we narrow individual reads via casts at each access point.
-    const saved = raw as Record<string, unknown>;
+    const saved = mergeLoadedState(raw as Record<string, unknown>);
     seedOrderIdSeq(saved.orders);
     quests.seedQuestIdSeq(saved.dailies as Parameters<typeof quests.seedQuestIdSeq>[0]);
 

@@ -1,5 +1,6 @@
 import { expect, test, describe, vi, beforeEach, afterEach } from "vitest";
 import { loadSavedState, persistStateNow, clearSave } from "../state/persistence.js";
+import { initialState } from "../state.js";
 import { STORAGE_KEYS, SAVE_SCHEMA_VERSION } from "../constants.js";
 import type { GameState } from "../types/state.js";
 
@@ -67,6 +68,28 @@ describe("persistence", () => {
       expect.stringContaining("[hearth] save data corrupt"),
       expect.any(Error)
     );
+  });
+
+  test("persistStateNow strips unknown inventory keys", () => {
+    const mockState = {
+      version: SAVE_SCHEMA_VERSION,
+      inventory: { flour: 2, totally_fake_resource: 99 },
+    } as GameState;
+    persistStateNow(mockState);
+    const saved = JSON.parse(localStorage.getItem(SAVE_KEY)!);
+    expect(saved.inventory).toEqual({ flour: 2 });
+    expect(saved.inventory.totally_fake_resource).toBeUndefined();
+  });
+
+  test("initialState strips unknown inventory keys from saves", () => {
+    localStorage.setItem(SAVE_KEY, JSON.stringify({
+      version: SAVE_SCHEMA_VERSION,
+      inventory: { supplies: 1, junk_tile_key: 5 },
+      coins: 200,
+    }));
+    const state = initialState();
+    expect(state.inventory?.supplies).toBe(1);
+    expect((state.inventory as Record<string, number>).junk_tile_key).toBeUndefined();
   });
 
   test("persistStateNow ignores VOLATILE fields", () => {

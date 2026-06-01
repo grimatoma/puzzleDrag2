@@ -12,6 +12,7 @@
 // them. Reassigning the bindings would not propagate.
 
 import { expandAbilitiesToEffects } from "./abilitiesAggregate.js";
+import { rejectUnknownOverrideKeys, rejectUnknownOverrideTarget } from "./overrideStrict.js";
 import { ALL_ITEM_KEY_VALUES, type ItemKey } from "../types/catalog/itemKeys.js";
 import type { BalanceOverrides } from "./schemas/balance.js";
 import { upgradeThresholdsOverridesSchema } from "./schemas/balance.js";
@@ -66,7 +67,10 @@ function hooksToAbilities(hooks: unknown): AbilityShape[] {
   for (const h of hooks as LegacyHook[]) {
     if (!h || typeof h !== "object") continue;
     const newId = map[h.id];
-    if (!newId) continue;
+    if (!newId) {
+      rejectUnknownOverrideTarget("tilePowers.hooks", h.id);
+      continue;
+    }
     const params = { ...(h.params || {}) };
     // Param renames: pool_weight_boost / threshold_reduction used `target` already.
     out.push({ id: newId, params });
@@ -88,8 +92,9 @@ type Overrides = BalanceOverrides | Record<string, unknown> | null | undefined;
 export function applyUpgradeThresholdOverrides(target: Record<string, number>, overrides: Overrides): void {
   const parsed = parseOptionalOverrideSection("upgradeThresholds", upgradeThresholdsOverridesSchema, overrides);
   if (!parsed) return;
+  rejectUnknownOverrideKeys("upgradeThresholds", Object.keys(parsed), new Set(Object.keys(target)));
   for (const [key, value] of Object.entries(parsed)) {
-    if (key in target) target[key] = value;
+    target[key] = value;
   }
 }
 
@@ -110,7 +115,10 @@ export function applyItemOverrides(items: Record<string, AnyRecord> | unknown, o
   const itemMap = (items ?? {}) as Record<string, AnyRecord | undefined>;
   for (const [key, patch] of Object.entries(parsed)) {
     const item = itemMap[key];
-    if (!item) continue;
+    if (!item) {
+      rejectUnknownOverrideTarget("items", key);
+      continue;
+    }
     if (patch.label !== undefined) item.label = patch.label;
     if (patch.color !== undefined) item.color = patch.color;
     if (patch.dark !== undefined) item.dark = patch.dark;
@@ -133,12 +141,18 @@ export function applyRecipeOverrides(recipes: Record<string, AnyRecord> | unknow
   const recipeMap = (recipes ?? {}) as Record<string, AnyRecord | undefined>;
   for (const [key, patch] of Object.entries(parsed)) {
     const r = recipeMap[key];
-    if (!r) continue;
+    if (!r) {
+      rejectUnknownOverrideTarget("recipes", key);
+      continue;
+    }
     if (patch.item !== undefined && isKnownRecipeInputKey(patch.item)) r.item = patch.item;
     if (patch.inputs !== undefined) {
       const cleaned: Record<string, number> = {};
       for (const [resKey, qty] of Object.entries(patch.inputs)) {
-        if (!isKnownRecipeInputKey(resKey)) continue;
+        if (!isKnownRecipeInputKey(resKey)) {
+          rejectUnknownOverrideTarget(`recipes.${key}.inputs`, resKey);
+          continue;
+        }
         cleaned[resKey] = qty;
       }
       r.inputs = cleaned;
@@ -155,6 +169,8 @@ export function applyBuildingOverrides(buildings: AnyRecord[] | unknown, overrid
   const parsed = parseOptionalOverrideSection("buildings", buildingsOverridesSchema, overrides);
   if (!parsed) return;
   const list = Array.isArray(buildings) ? buildings as AnyRecord[] : [];
+  const buildingIds = new Set(list.map((b) => b.id as string));
+  rejectUnknownOverrideKeys("buildings", Object.keys(parsed), buildingIds);
   for (const b of list) {
     const patch = parsed[b.id as string];
     if (!patch) continue;
@@ -184,6 +200,10 @@ export function applyTileOverrides(tileTypes: unknown, overrides: Overrides): vo
   const powers = parseOptionalOverrideSection("tilePowers", tilePowersOverridesSchema, o.tilePowers) ?? {};
   const unlocks = parseOptionalOverrideSection("tileUnlocks", tileUnlocksOverridesSchema, o.tileUnlocks) ?? {};
   const descs = parseOptionalOverrideSection("tileDescriptions", tileDescriptionsOverridesSchema, o.tileDescriptions) ?? {};
+  const tileIds = new Set((tileTypes as AnyRecord[]).map((t) => t.id as string));
+  rejectUnknownOverrideKeys("tilePowers", Object.keys(powers), tileIds);
+  rejectUnknownOverrideKeys("tileUnlocks", Object.keys(unlocks), tileIds);
+  rejectUnknownOverrideKeys("tileDescriptions", Object.keys(descs), tileIds);
 
   for (const tile of tileTypes as AnyRecord[]) {
     const id = tile.id as string;
@@ -249,7 +269,10 @@ export function applyZoneOverrides(zones: unknown, overrides: Overrides): void {
   const zoneMap = asRecord(zones) as Record<string, AnyRecord | undefined>;
   for (const [zoneId, patch] of Object.entries(parsed)) {
     const zone = zoneMap[zoneId];
-    if (!zone) continue;
+    if (!zone) {
+      rejectUnknownOverrideTarget("zones", zoneId);
+      continue;
+    }
     if (patch.name !== undefined) zone.name = patch.name;
     if (patch.hasFarm !== undefined) zone.hasFarm = patch.hasFarm;
     if (patch.hasMine !== undefined) zone.hasMine = patch.hasMine;
@@ -289,6 +312,8 @@ export function applyWorkerOverrides(workers: unknown, overrides: Overrides): vo
   if (!Array.isArray(workers)) return;
   const parsed = parseOptionalOverrideSection("workers", workersOverridesSchema, overrides);
   if (!parsed) return;
+  const workerIds = new Set((workers as AnyRecord[]).map((w) => w.id as string));
+  rejectUnknownOverrideKeys("workers", Object.keys(parsed), workerIds);
   for (const w of workers as AnyRecord[]) {
     const patch = parsed[w.id as string];
     if (!patch) continue;
@@ -336,7 +361,10 @@ export function applyKeeperOverrides(keepers: unknown, overrides: Overrides): vo
   };
   for (const [type, patch] of Object.entries(parsed)) {
     const k = keeperMap[type];
-    if (!k) continue;
+    if (!k) {
+      rejectUnknownOverrideTarget("keepers", type);
+      continue;
+    }
     if (patch.name !== undefined) k.name = patch.name;
     if (patch.title !== undefined) k.title = patch.title;
     if (patch.icon !== undefined) k.icon = patch.icon;
@@ -363,6 +391,8 @@ export function applyExpeditionOverrides(
   if (!parsed) return;
   if (parsed.foodTurns && foodTurns) {
     const ft = foodTurns as Record<string, number>;
+    const knownFood = new Set(Object.keys(ft));
+    rejectUnknownOverrideKeys("expedition.foodTurns", Object.keys(parsed.foodTurns), knownFood);
     for (const [key, val] of Object.entries(parsed.foodTurns)) {
       ft[key] = val;
     }
@@ -388,7 +418,12 @@ export function applyBiomeOverrides(
   const biomeMap = settlementBiomes as Record<string, AnyRecord[] | undefined>;
   for (const [type, byId] of Object.entries(parsed)) {
     const list = biomeMap[type];
-    if (!Array.isArray(list)) continue;
+    if (!Array.isArray(list)) {
+      rejectUnknownOverrideTarget("biomes", type);
+      continue;
+    }
+    const biomeIds = new Set(list.map((x) => x.id as string));
+    rejectUnknownOverrideKeys(`biomes.${type}`, Object.keys(byId), biomeIds);
     for (const [biomeId, patch] of Object.entries(byId)) {
       const b = list.find((x) => x.id === biomeId);
       if (!b) continue;
@@ -429,7 +464,10 @@ export function applyNpcOverrides(npcData: unknown, bondBands: unknown, override
     const npcMap = npcData as Record<string, AnyRecord | undefined>;
     for (const [id, patch] of Object.entries(parsed.byId)) {
       const d = npcMap[id];
-      if (!d) continue;
+      if (!d) {
+        rejectUnknownOverrideTarget("npcs.byId", id);
+        continue;
+      }
       if (patch.displayName !== undefined) d.displayName = patch.displayName;
       if (patch.loves !== undefined) d.loves = [...patch.loves];
       if (patch.likes !== undefined) d.likes = [...patch.likes];
@@ -683,7 +721,11 @@ export function applyStoryOverrides(storyBeats: unknown, sideBeats: unknown, ove
     for (const [beatId, patchRaw] of Object.entries(o.beats as AnyRecord)) {
       const patch = asRecord(patchRaw);
       const beat = all.find((b) => b && b.id === beatId);
-      if (!beat || !patch || typeof patch !== "object") continue;
+      if (!beat) {
+        rejectUnknownOverrideTarget("story.beats", beatId);
+        continue;
+      }
+      if (!patch || typeof patch !== "object") continue;
       if (typeof patch.title === "string" && (patch.title as string).length > 0) beat.title = patch.title;
       if (typeof patch.scene === "string") beat.scene = (patch.scene as string).length > 0 ? patch.scene : undefined;
       if (typeof patch.body === "string") beat.body = (patch.body as string).length > 0 ? patch.body : undefined;
@@ -748,7 +790,11 @@ export function applyFlagOverrides(flags: unknown, overrides: Overrides): void {
   if (o.byId) {
     for (const [id, patch] of Object.entries(o.byId)) {
       const def = flagList.find((f) => f && f.id === id);
-      if (def) patchOne(def, patch);
+      if (!def) {
+        rejectUnknownOverrideTarget("flags.byId", id);
+        continue;
+      }
+      patchOne(def, patch);
     }
   }
   if (o.new) {
@@ -780,6 +826,8 @@ export function applyBossOverrides(bosses: unknown, overrides: Overrides): void 
   if (!Array.isArray(bosses)) return;
   const parsed = parseOptionalOverrideSection("bosses", bossesOverridesSchema, overrides);
   if (!parsed) return;
+  const bossIds = new Set((bosses as AnyRecord[]).map((b) => b.id as string));
+  rejectUnknownOverrideKeys("bosses", Object.keys(parsed), bossIds);
   for (const b of bosses as AnyRecord[]) {
     const patch = parsed[b.id as string];
     if (!patch) continue;
@@ -800,6 +848,8 @@ export function applyAchievementOverrides(achievements: unknown, overrides: Over
   if (!Array.isArray(achievements)) return;
   const parsed = parseOptionalOverrideSection("achievements", achievementsOverridesSchema, overrides);
   if (!parsed) return;
+  const achIds = new Set((achievements as AnyRecord[]).map((a) => a.id as string));
+  rejectUnknownOverrideKeys("achievements", Object.keys(parsed), achIds);
   for (const a of achievements as AnyRecord[]) {
     const patch = parsed[a.id as string];
     if (!patch) continue;
@@ -820,6 +870,7 @@ export function applyDailyRewardOverrides(dailyRewards: unknown, overrides: Over
   const parsed = parseOptionalOverrideSection("dailyRewards", dailyRewardsOverridesSchema, overrides);
   if (!parsed || !dailyRewards || typeof dailyRewards !== "object") return;
   const rewardMap = dailyRewards as Record<string, AnyRecord | undefined>;
+  rejectUnknownOverrideKeys("dailyRewards", Object.keys(parsed), new Set(Object.keys(rewardMap)));
   for (const [day, patch] of Object.entries(parsed)) {
     const entry = rewardMap[day];
     if (!entry) continue;
