@@ -66,7 +66,7 @@ export function refreshDefaultTilePalette(): void {
  * Call once after all canonical data modules have loaded.
  */
 export function applyAllBalanceOverrides(overrides: BalanceOverrides): TuningOverrides {
-  const o = overrides ?? {};
+  const o = overrides;
 
   applyDailyRewardOverrides(DAILY_REWARDS, o.dailyRewards);
   applyUpgradeThresholdOverrides(UPGRADE_THRESHOLDS, o.upgradeThresholds);
