@@ -9,6 +9,20 @@ export const MANIFEST_PATH = path.join(GOLDENS_DIR, "manifest.json");
 
 const PROJECTS = ["desktop", "iphone-portrait"];
 
+// Goldens are stored by Playwright under {testFilePath}/{projectName}/ (see
+// snapshotPathTemplate in playwright.visual.config.js). The manifest tracks the
+// main visual set: the full mobile matrix lives in visual.spec.ts/iphone-portrait,
+// and the desktop smoke subset in desktop-smoke.spec.ts/desktop. Map each logical
+// project to its on-disk golden directory.
+const PROJECT_GOLDEN_DIRS = {
+  desktop: path.join(GOLDENS_DIR, "desktop-smoke.spec.ts", "desktop"),
+  "iphone-portrait": path.join(GOLDENS_DIR, "visual.spec.ts", "iphone-portrait"),
+};
+
+function projectGoldenDir(project) {
+  return PROJECT_GOLDEN_DIRS[project] ?? path.join(GOLDENS_DIR, project);
+}
+
 function actionSummary(action) {
   if (!action || typeof action !== "object") return String(action);
   if (action.type === "api") return `${action.type}:${action.method}`;
@@ -46,7 +60,7 @@ export function buildManifestFromGoldens() {
   const manifest = {};
 
   for (const project of PROJECTS) {
-    const dir = path.join(GOLDENS_DIR, project);
+    const dir = projectGoldenDir(project);
     if (!fs.existsSync(dir)) continue;
     for (const file of fs.readdirSync(dir).filter((name) => name.endsWith(".png")).sort()) {
       const scenarioId = file.replace(/\.png$/, "");
@@ -77,7 +91,7 @@ export function validateManifest(manifest) {
       errors.push(`Unknown project in manifest key: ${key}`);
       continue;
     }
-    const fullPath = path.join(GOLDENS_DIR, project, fileName);
+    const fullPath = path.join(projectGoldenDir(project), fileName);
     if (!fs.existsSync(fullPath)) {
       errors.push(`Manifest entry references missing golden: ${key}`);
     }
@@ -87,7 +101,7 @@ export function validateManifest(manifest) {
   }
 
   for (const project of PROJECTS) {
-    const dir = path.join(GOLDENS_DIR, project);
+    const dir = projectGoldenDir(project);
     if (!fs.existsSync(dir)) continue;
     const expected = expectedScenarioIds(project);
     for (const scenarioId of expected) {

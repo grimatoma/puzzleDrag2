@@ -286,6 +286,28 @@
       "Compare UI and canvas output to the golden image."
     ]
   },
+  "iphone-portrait/board-farm-tool-rake.png": {
+    "scenarioId": "board-farm-tool-rake",
+    "routeHash": "#/board",
+    "view": null,
+    "actions": [],
+    "expectation": "Scenario board-farm-tool-rake renders correctly at #/board.",
+    "checklist": [
+      "Open #/board.",
+      "Compare UI and canvas output to the golden image."
+    ]
+  },
+  "iphone-portrait/board-farm-tool-sickle.png": {
+    "scenarioId": "board-farm-tool-sickle",
+    "routeHash": "#/board",
+    "view": null,
+    "actions": [],
+    "expectation": "Scenario board-farm-tool-sickle renders correctly at #/board.",
+    "checklist": [
+      "Open #/board.",
+      "Compare UI and canvas output to the golden image."
+    ]
+  },
   "iphone-portrait/board-fish-idle-high-tide.png": {
     "scenarioId": "board-fish-idle-high-tide",
     "routeHash": "#/board",
@@ -475,6 +497,17 @@
       "Compare UI and canvas output to the golden image."
     ]
   },
+  "iphone-portrait/inventory-full-with-progress.png": {
+    "scenarioId": "inventory-full-with-progress",
+    "routeHash": "#/inventory",
+    "view": null,
+    "actions": [],
+    "expectation": "Scenario inventory-full-with-progress renders correctly at #/inventory.",
+    "checklist": [
+      "Open #/inventory.",
+      "Compare UI and canvas output to the golden image."
+    ]
+  },
   "iphone-portrait/inventory-grid-all.png": {
     "scenarioId": "inventory-grid-all",
     "routeHash": "#/inventory",
@@ -492,6 +525,17 @@
     "view": null,
     "actions": [],
     "expectation": "Scenario inventory-list-mode renders correctly at #/inventory.",
+    "checklist": [
+      "Open #/inventory.",
+      "Compare UI and canvas output to the golden image."
+    ]
+  },
+  "iphone-portrait/inventory-mid-progress.png": {
+    "scenarioId": "inventory-mid-progress",
+    "routeHash": "#/inventory",
+    "view": null,
+    "actions": [],
+    "expectation": "Scenario inventory-mid-progress renders correctly at #/inventory.",
     "checklist": [
       "Open #/inventory.",
       "Compare UI and canvas output to the golden image."
