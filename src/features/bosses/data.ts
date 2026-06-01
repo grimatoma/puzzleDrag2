@@ -144,7 +144,7 @@ export function spawnBoss(state: GameState, id: string, year: number, rng: () =>
     },
     story: {
       ...state.story,
-      flags: { ...(state.story?.flags ?? {}), [`${id}_active`]: true },
+      flags: { ...((state.story?.flags ?? {}) as Record<string, boolean>), [`${id}_active`]: true },
     },
   } as unknown as GameState;
 }
@@ -166,7 +166,7 @@ export function tickBossTurn(state: GameState): GameState {
   if (!def) return state;
   const reward = bossReward(def, advanced.progress, advanced.year ?? current.year ?? 1);
   const flags = {
-    ...(state.story?.flags ?? {}),
+    ...((state.story?.flags ?? {}) as Record<string, boolean>),
     [`${state.boss.id}_active`]: false,
     ...(reward.defeated ? { [`${state.boss.id}_defeated`]: true } : {}),
   };
