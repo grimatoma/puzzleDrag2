@@ -8,6 +8,7 @@ import { ParchmentDialog } from "../../ui/primitives/Dialog.jsx";
 import Button from "../../ui/primitives/Button.jsx";
 import { UPGRADE_THRESHOLDS } from "../../constants.js";
 import { AbilitySummary } from "../../ui/primitives/BrowserDetail.jsx";
+import ZoneEntryCostInfo from "./ZoneEntryCostInfo.jsx";
 import type { GameState, Dispatch } from "../../types/state.js";
 
 interface TileTypeDef {
@@ -404,13 +405,16 @@ export default function StartFarmingModal({ state, dispatch, onClose }: StartFar
           </label>
         </div>
 
-        <div className="flex items-center justify-between mb-3 text-[13px]">
+        <div className="flex items-center justify-between mb-3 text-[13px] gap-2">
           <span className="text-on-panel font-bold">Cost to start</span>
-          <span
-            className={`font-mono font-bold text-[15px] ${canAfford ? "text-[#2a5010]" : "text-[#a02020]"}`}
-          >
-            {cost}◉
-          </span>
+          <div className="flex items-center gap-2">
+            <span
+              className={`font-mono font-bold text-[15px] ${canAfford ? "text-[#2a5010]" : "text-[#a02020]"}`}
+            >
+              {cost}◉
+            </span>
+            <ZoneEntryCostInfo zoneId={zoneId} state={state} infoOnly />
+          </div>
         </div>
 
         <Button

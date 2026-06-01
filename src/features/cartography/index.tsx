@@ -24,6 +24,7 @@ import StatusChip from "../../ui/primitives/StatusChip.jsx";
 import IconCanvas, { hasIcon } from "../../ui/IconCanvas.jsx";
 import type { GameState, Dispatch } from "../../types/state.js";
 import Icon from "../../ui/Icon.jsx";
+import ZoneEntryCostInfo from "../zones/ZoneEntryCostInfo.jsx";
 
 export const viewKey = "cartography";
 
@@ -513,6 +514,11 @@ function NodePanel({ node, current, visited, discovered, playerLevel, dispatch, 
         {!isHidden && lore?.subtitle && (
           <div className="text-[11px] italic" style={{ color: "#5a3a20" }}>
             {lore.subtitle}
+          </div>
+        )}
+        {!isHidden && (
+          <div className="mt-1">
+            <ZoneEntryCostInfo zoneId={node.id} state={state} />
           </div>
         )}
       </div>

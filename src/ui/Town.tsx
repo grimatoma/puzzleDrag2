@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { BUILDINGS, getItem } from "../constants.js";
 import { useTooltip, Tooltip } from "./Tooltip.jsx";
 import { ZONES, displayZoneName, isSettlementFounded, settlementFoundingCost, settlementTypeForZone, completedSettlementCount, DEFAULT_ZONE } from "../features/zones/data.js";
+import ZoneEntryCostInfo from "../features/zones/ZoneEntryCostInfo.jsx";
 import BiomePicker from "../features/zones/BiomePicker.jsx";
 import StartFarmingModal from "../features/zones/StartFarmingModal.jsx";
 import BiomeEntryModal from "../features/zones/BiomeEntryModal.jsx";
@@ -520,6 +521,7 @@ export function TownView({ state, dispatch }: { state: GameState; dispatch: Disp
       {/* Header — fixed overlay, not part of the pan/zoom world. */}
       <div className="absolute top-3 left-4 landscape:max-[1024px]:top-2 landscape:max-[1024px]:left-3 font-bold text-[20px] landscape:max-[1024px]:text-[15px] z-10" style={{ color: theme.textColor }}>{locationName}</div>
       <div className="absolute top-3 right-4 landscape:max-[1024px]:top-2 landscape:max-[1024px]:right-3 flex items-center gap-2 z-10">
+        <ZoneEntryCostInfo zoneId={mapCurrent} state={state} />
         {/* Boons shortcut — only visible once the player has faced any keeper. */}
         {Object.keys(state.story?.flags ?? {}).some((k) => k.startsWith("keeper_") && (k.endsWith("_coexist") || k.endsWith("_driveout")) && (state.story.flags as Record<string, unknown>)[k]) && (
           <button
