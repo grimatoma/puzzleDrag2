@@ -1,5 +1,5 @@
 import { QUEST_TEMPLATES } from "./templates.js";
-import { claimQuest, tickQuest } from "./data.js";
+import { QUEST_CLAIM_XP, claimQuest, tickQuest } from "./data.js";
 import type { Quest, QuestEvent, QuestTemplate } from "./data.js";
 import { awardXp, claimAlmanacTier } from "../almanac/data.js";
 import { inventoryQty } from "../../types/inventory.js";
@@ -37,7 +37,7 @@ function rollFresh(): QuestDailyLegacy[] {
       progress: 0,
       done: false,
       claimed: false,
-      reward: { coins: tpl.coinBase, almanacXp: 0 },
+      reward: { coins: tpl.coinBase },
       key,
     });
   }
@@ -86,17 +86,13 @@ export function reduce(state: GameState, action: Action): GameState {
       const dailies = dailiesIn.map((x) =>
         x.id === id ? { ...x, claimed: true } : x
       );
-      const legacyXp = q.reward.almanacXp || 0;
-      let afterLegacy: GameState = {
+      const afterCoins: GameState = {
         ...state,
         dailies,
         coins: (state.coins || 0) + (q.reward.coins || 0),
       };
-      if (typeof legacyXp === "number" && legacyXp > 0) {
-        const { newState: afterXp } = awardXp(afterLegacy, legacyXp);
-        afterLegacy = afterXp;
-      }
-      return afterLegacy;
+      const { newState: afterXp } = awardXp(afterCoins, QUEST_CLAIM_XP);
+      return afterXp;
     }
     case "QUESTS/CLAIM_ALMANAC": {
       const { tier } = action;

@@ -88,7 +88,7 @@ export function rollQuests(saveSeed: string, year: number, season: number | stri
       claimed: false,
       reward: {
         coins: tpl.coinBase + Math.floor(target * tpl.coinPerUnit),
-        xp: 20, // §17 locked: 20 XP per quest claim
+        xp: QUEST_CLAIM_XP,
       },
     });
   }
@@ -123,6 +123,9 @@ export function tickQuest(quest: Quest, event: QuestEvent): Quest {
   if (!inc) return quest;
   return { ...quest, progress: Math.min(quest.target, quest.progress + inc) };
 }
+
+/** §17 locked: 20 almanac XP per quest claim (legacy dailies + deterministic quests). */
+export const QUEST_CLAIM_XP = 20;
 
 export interface ClaimQuestResult {
   ok: boolean;

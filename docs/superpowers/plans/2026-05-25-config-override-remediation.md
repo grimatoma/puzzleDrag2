@@ -219,7 +219,7 @@ Core PR-3 chain split is **done**. This phase finishes edges that still write or
 
 ## Phase 6 — Lower priority / follow-on
 
-- [ ] `DEFERRED_TOOL_POWERS` (22) — separate product spec.
+- [x] `DEFERRED_TOOL_POWERS` — removed 2026-06; unshipped tools stay out of `ITEMS` (see `progression-plan-v2.html` backlog).
 - [ ] Achievement counters via `CATEGORY_OF` + fish resources.
 - [ ] Pig-in-disguise / unwired tile tag behaviors.
 - [ ] Fertilizer armed state fully on `toolPendingPower` (remove `fertilizerActive`).

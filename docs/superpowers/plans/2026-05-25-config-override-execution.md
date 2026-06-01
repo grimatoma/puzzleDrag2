@@ -479,7 +479,7 @@ Not required to close this program. Open separate PRs if prioritized.
 
 | Item | Files | Notes |
 |------|-------|-------|
-| `DEFERRED_TOOL_POWERS` (22) | `toolPowers.js` | Product spec required |
+| ~~`DEFERRED_TOOL_POWERS`~~ | — | Removed 2026-06; no placeholder powers |
 | `fertilizerActive` → `toolPendingPower` only | `state.js`, UI | Remove parallel flag |
 | `playBoardAnimation` + `power.ms` | `GameScene.js` | Cosmetic |
 | Achievement fish in upgrade credit | `achievements/slice.js` | Include `BIOMES.fish.resources` |

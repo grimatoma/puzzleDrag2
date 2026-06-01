@@ -3,7 +3,7 @@ import { TILE, COLS, ROWS, UPGRADE_THRESHOLDS, SEASONS, BIOMES, CAPPED_TILES, SC
 import { upgradeCountForChain, rollResource } from "./utils.js";
 import { resourceByKey } from "./state/helpers.js";
 import { computeAggregatedAbilities } from "./features/workers/aggregate.js";
-import { applyPoolWeightAdds, applySeasonPoolMods } from "./features/farm/poolMath.js";
+import { applySpawnPoolModifiers } from "./features/farm/poolMath.js";
 import { CATEGORY_OF } from "./features/tileCollection/data.js";
 import {
   expandZoneCategories,
@@ -910,7 +910,6 @@ export class GameScene extends Phaser.Scene {
     const tileCollectionActive = getRegistry(this.registry, "tileCollectionActive") ?? null;
     let workerPool = this.activePool();
     const poolWeights = getRegistry(this.registry, "effectivePoolWeights") ?? {};
-    workerPool = applyPoolWeightAdds(workerPool, poolWeights, tileCollectionActive);
     // Phase 2 — restrict the spawn pool to the categories the player picked
     // in the Start Farming modal. Empty/missing list = no filter (legacy
     // entry path through SWITCH_BIOME / cartography). Mine and fish biomes
@@ -955,12 +954,19 @@ export class GameScene extends Phaser.Scene {
       }
       this.events.emit(SCENE_EVENTS.FERTILIZER_CONSUMED);
     }
-    if (this.biomeKey() === "farm") {
-      const turnsUsed = getRegistry(this.registry, "turnsUsed") ?? 0;
-      const turnBudget = getRegistry(this.registry, "turnBudget") ?? 10;
-      const seasonName = seasonNameInSession(turnsUsed, turnBudget);
-      workerPool = applySeasonPoolMods(workerPool, seasonName);
-    }
+    const farmSeasonName =
+      this.biomeKey() === "farm"
+        ? seasonNameInSession(
+            getRegistry(this.registry, "turnsUsed") ?? 0,
+            getRegistry(this.registry, "turnBudget") ?? 10,
+          )
+        : null;
+    workerPool = applySpawnPoolModifiers(workerPool, {
+      poolWeights,
+      tileCollectionActive,
+      biomeKey: this.biomeKey(),
+      seasonName: farmSeasonName,
+    });
     for (let r = 0; r < ROWS; r++) {
       this.grid[r] = this.grid[r] || [];
       for (let c = 0; c < COLS; c++) {

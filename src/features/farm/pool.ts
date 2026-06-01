@@ -3,7 +3,7 @@
  */
 import { BIOMES } from "../../constants.js";
 import { computeAggregatedAbilities } from "../workers/aggregate.js";
-import { applyPoolWeightAdds, applySeasonPoolMods } from "./poolMath.js";
+import { applySpawnPoolModifiers } from "./poolMath.js";
 import type { GameState } from "../../types/state.js";
 
 interface BiomeDef {
@@ -16,8 +16,8 @@ interface AggregatedAbilities {
 }
 
 /**
- * Returns the effective spawn pool for the current board state.
- * Pure function — no side effects.
+ * Test-facing mirror of GameScene.fillBoard pool math (weights + farm seasons).
+ * Production fill authority is GameScene + registry effectivePoolWeights.
  */
 export function getEffectivePool(state: GameState): string[] {
   const biomeMap = BIOMES as unknown as Record<string, BiomeDef>;
@@ -38,15 +38,19 @@ export function getEffectivePool(state: GameState): string[] {
     ...(workerEffects?.effectivePoolWeights ?? {}),
     ...(agg.effectivePoolWeights ?? {}),
   };
-  bag = applyPoolWeightAdds(bag, poolWeights, state.tileCollection?.activeByCategory);
-
-  if ((state.biome ?? state.biomeKey) === "farm") {
-    const seasonName: string =
-      typeof state.season === "string"
+  const biomeKey = (state.biome ?? state.biomeKey ?? "farm") as string;
+  const seasonName: string | null =
+    biomeKey === "farm"
+      ? typeof state.season === "string"
         ? state.season
-        : (["Spring", "Summer", "Autumn", "Winter"][((state.season as number) ?? 0) % 4] ?? "Spring");
-    bag = applySeasonPoolMods(bag, seasonName);
-  }
+        : (["Spring", "Summer", "Autumn", "Winter"][((state.season as number) ?? 0) % 4] ?? "Spring")
+      : null;
+  bag = applySpawnPoolModifiers(bag, {
+    poolWeights,
+    tileCollectionActive: state.tileCollection?.activeByCategory,
+    biomeKey,
+    seasonName,
+  });
 
   const fallback = biome.pool;
   while (bag.length < 9) {
@@ -56,4 +60,4 @@ export function getEffectivePool(state: GameState): string[] {
   return bag;
 }
 
-export { applyPoolWeightAdds, applySeasonPoolMods } from "./poolMath.js";
+export { applyPoolWeightAdds, applySeasonPoolMods, applySpawnPoolModifiers } from "./poolMath.js";

@@ -1,9 +1,9 @@
 import { RECIPES } from "../../constants.js";
 import { BOSSES, BOSS_WINDOW_TURNS, bossReward as bossRewardFn, spawnBoss } from "../bosses/data.js";
-import { tickModifier, type BossModifier } from "../bosses/modifiers.js";
+import { clearModifier, tickModifier, type BossModifier } from "../bosses/modifiers.js";
 import { awardXp } from "../almanac/data.js";
 import { BOSS_UI } from "./uiMeta.js";
-import type { Action, GameState } from "../../types/state.js";
+import type { Action, GameState, Grid } from "../../types/state.js";
 import { ResourceKey } from "../../types/catalogKeys.js";
 
 const YEAR_BOSS_ROTATION = ["frostmaw", "quagmire", "ember_drake", "old_stoneface", "mossback", "storm"];
@@ -139,6 +139,7 @@ export function reduce(state: GameState, action: Action): GameState {
       if (state.boss.isKeeperTrial) return state;
       return {
         ...state,
+        grid: (clearModifier(state.grid) ?? state.grid) as Grid,
         boss: null,
         bossMinimized: false,
         modal: state.modal === "boss" ? null : state.modal,
@@ -156,6 +157,7 @@ export function reduce(state: GameState, action: Action): GameState {
       const activeBoss = state.boss;
       const base: GameState = {
         ...state,
+        grid: (clearModifier(state.grid) ?? state.grid) as Grid,
         boss: null,
         bossMinimized: false,
         modal: state.modal === "boss" ? null : state.modal,
