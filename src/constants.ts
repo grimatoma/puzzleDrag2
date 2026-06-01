@@ -1087,19 +1087,8 @@ export const MARKET_PRICES = {
   wedding_pie:      { buy: 1800, sell: 180 },
 };
 
-// LEGACY — only used by features/quests/slice.js's `dailies` system. The
-// canonical seasonal-quest pool lives in features/quests/templates.js with
-// a different shape (category/min/max). Don't mix the two; consumers should
-// import from the feature module unless they specifically want the legacy
-// dailies pool.
-export const QUEST_TEMPLATES = [
-  { key: "harvest", label: "Harvest 30 hay", target: 30, reward: { coins: 50, almanacXp: 20 } },
-  { key: "chain5",  label: "Make 3 chains of 5+", target: 3, reward: { coins: 75, almanacXp: 30 } },
-  { key: "deliver", label: "Deliver 4 orders", target: 4, reward: { coins: 60, almanacXp: 25 } },
-  { key: "build",   label: "Build 1 building", target: 1, reward: { coins: 100, almanacXp: 40 } },
-  { key: "craft",   label: "Craft 2 recipes", target: 2, reward: { coins: 80, almanacXp: 35 } },
-  { key: "coins",   label: "Earn 200 coins this season", target: 200, reward: { coins: 50, almanacXp: 20 } },
-];
+// Legacy 3-slot dailies roll from features/quests/templates.js (not here).
+// Almanac XP on claim is QUEST_CLAIM_XP in features/quests/data.ts.
 
 // ─── Phase 4 — Inventory soft caps ───────────────────────────────────────────
 export const RESOURCE_CAP_BASE = 200;

@@ -1661,6 +1661,7 @@ export function gameReducer(state: GameState, action: Action): GameState {
     // and any external monitoring can catch it; return the previous state so
     // the next render is consistent with the last good state.
     console.error("[hearth] reducer threw on action", action?.type, e);
+    if (import.meta.env.DEV) throw e;
     return state;
   }
   if (next !== state) {

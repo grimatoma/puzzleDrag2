@@ -29,3 +29,23 @@ export function applySeasonPoolMods(pool: string[], seasonName: string): string[
   }
   return workerPool;
 }
+
+export interface SpawnPoolModifierInput {
+  poolWeights: Record<string, number>;
+  tileCollectionActive?: Record<string, string | null> | null;
+  biomeKey?: string;
+  seasonName?: string | null;
+}
+
+/**
+ * Weight adds + farm seasonal mods — shared by GameScene.fillBoard (live board)
+ * and getEffectivePool in pool.ts (Vitest fixture). Live play reads pool weights
+ * from the Phaser registry (_syncWorkerEffects); tests pass weights on state.
+ */
+export function applySpawnPoolModifiers(pool: string[], input: SpawnPoolModifierInput): string[] {
+  let bag = applyPoolWeightAdds(pool, input.poolWeights, input.tileCollectionActive ?? null);
+  if (input.biomeKey === "farm" && input.seasonName) {
+    bag = applySeasonPoolMods(bag, input.seasonName);
+  }
+  return bag;
+}

@@ -99,6 +99,15 @@ describe("boss slice — RESOLVE (win / loss)", () => {
       ...over,
     });
 
+  it("BOSS/RESOLVE strips frozen/rubble/hidden flags from the grid", () => {
+    const grid = [[{ key: "tile_grass_hay", frozen: true, rubble: true }]];
+    const s0 = withBoss({ grid, progress: 5, targetCount: 30 });
+    const s1 = bossReduce(s0, { type: "BOSS/RESOLVE", won: false } as Action);
+    expect(s1.boss).toBeNull();
+    expect((s1.grid as Array<Array<Record<string, unknown>>>)[0][0].frozen).toBeUndefined();
+    expect((s1.grid as Array<Array<Record<string, unknown>>>)[0][0].rubble).toBeUndefined();
+  });
+
   it("BOSS/RESOLVE won: clears boss, awards coins, increments bossesDefeated", () => {
     const s0 = withBoss({ coins: 100, bossesDefeated: 1 });
     const s1 = bossReduce(s0, { type: "BOSS/RESOLVE", won: true } as Action);

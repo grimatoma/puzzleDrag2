@@ -1,16 +1,23 @@
 // Phase 6 — Dev Panel override functions for the new config sections.
 import { describe, it, expect } from "vitest";
-import { applyExpeditionOverrides, applyBiomeOverrides, sanitizeTuning, applyNpcOverrides, applyStoryOverrides, applyBossOverrides, applyAchievementOverrides, applyDailyRewardOverrides, sanitizeChoiceOutcome, sanitizeChoiceArray, sanitizeBeatTrigger, sanitizeBeatOnComplete, sanitizeBeatRepeatCooldown, applyFlagOverrides, sanitizeFlagTrigger, sanitizeFlagTriggerArray } from "../config/applyOverrides.js";
+import { applyExpeditionOverrides, applyBiomeOverrides, applyUpgradeThresholdOverrides, sanitizeTuning, applyNpcOverrides, applyStoryOverrides, applyBossOverrides, applyAchievementOverrides, applyDailyRewardOverrides, sanitizeChoiceOutcome, sanitizeChoiceArray, sanitizeBeatTrigger, sanitizeBeatOnComplete, sanitizeBeatRepeatCooldown, applyFlagOverrides, sanitizeFlagTrigger, sanitizeFlagTriggerArray } from "../config/applyOverrides.js";
+import { withImportMetaDev } from "../testUtils/testState.js";
 
 describe("applyExpeditionOverrides", () => {
-  it("merges foodTurns (tune + add) and replaces meatFoods wholesale", () => {
+  it("merges foodTurns (tune existing keys) and replaces meatFoods wholesale", () => {
     const ft = { bread: 1, apple: 1 };
     const mf = ["cured_meat"];
-    applyExpeditionOverrides(ft, mf, { foodTurns: { bread: 5, newfood: 3 }, meatFoods: ["ham", "stew"] });
+    applyExpeditionOverrides(ft, mf, { foodTurns: { bread: 5, apple: 3 }, meatFoods: ["ham", "stew"] });
     expect(ft.bread).toBe(5);
-    expect(ft.apple).toBe(1);     // untouched
-    expect(ft.newfood).toBe(3);   // added
+    expect(ft.apple).toBe(3);
     expect(mf).toEqual(["ham", "stew"]);
+  });
+
+  it("throws in DEV on unknown expedition foodTurns key", () => {
+    const ft = { bread: 1 };
+    expect(() => applyExpeditionOverrides(ft, [], { foodTurns: { newfood: 3 } }))
+      .toThrow(/Unknown balance override target: expedition\.foodTurns\.newfood/);
+    expect(ft).toEqual({ bread: 1 });
   });
   it("throws on invalid foodTurns (all-or-nothing)", () => {
     const ft = { bread: 1 };
@@ -28,14 +35,13 @@ describe("applyExpeditionOverrides", () => {
 });
 
 describe("applyBiomeOverrides", () => {
-  it("patches a matched biome in place; ignores unknown type / biome", () => {
+  it("patches a matched biome in place", () => {
     const biomes = {
       farm: [{ id: "prairie", name: "Prairie", icon: "🌾", hazards: ["fire", "locusts"], bonus: "grain yield" }],
       mine: [{ id: "mountain", name: "Mountain", icon: "🏔️", hazards: ["cave_in", "gas_pocket"], bonus: "iron" }],
     };
     applyBiomeOverrides(biomes, {
-      farm: { prairie: { name: "Sunfield", icon: "☀️", hazards: ["drought", "locusts"], bonus: "wheat" }, nope: { name: "x" } },
-      harbor: { coastal: { name: "x" } }, // no harbor list → ignored
+      farm: { prairie: { name: "Sunfield", icon: "☀️", hazards: ["drought", "locusts"], bonus: "wheat" } },
     });
     expect(biomes.farm[0].name).toBe("Sunfield");
     expect(biomes.farm[0].icon).toBe("☀️");
@@ -45,6 +51,28 @@ describe("applyBiomeOverrides", () => {
     const before = JSON.stringify(biomes);
     applyBiomeOverrides(biomes, undefined);
     expect(JSON.stringify(biomes)).toBe(before);
+  });
+
+  it("skips unknown biome type / id in production builds", () => {
+    withImportMetaDev(false, () => {
+      const biomes = {
+        farm: [{ id: "prairie", name: "Prairie", icon: "🌾", hazards: ["fire"], bonus: "grain" }],
+      };
+      applyBiomeOverrides(biomes, {
+        farm: { nope: { name: "x" } },
+        harbor: { coastal: { name: "x" } },
+      });
+      expect(biomes.farm[0].name).toBe("Prairie");
+    });
+  });
+});
+
+describe("applyUpgradeThresholdOverrides", () => {
+  it("throws in DEV on unknown threshold keys", () => {
+    const target = { flour: 5 };
+    expect(() => applyUpgradeThresholdOverrides(target, { not_a_real_resource: 8 }))
+      .toThrow(/Unknown balance override target: upgradeThresholds\.not_a_real_resource/);
+    expect(target).toEqual({ flour: 5 });
   });
 });
 
@@ -66,7 +94,7 @@ describe("sanitizeTuning", () => {
 });
 
 describe("applyNpcOverrides", () => {
-  it("patches gift prefs (re-deriving favoriteGift) and bond bands; ignores unknowns", () => {
+  it("patches gift prefs (re-deriving favoriteGift) and bond bands", () => {
     const npcData = {
       mira: { id: "mira", displayName: "Mira", loves: ["bread"], likes: ["honey"], favoriteGift: "bread" },
     };
@@ -75,16 +103,23 @@ describe("applyNpcOverrides", () => {
       { lo: 5, hi: 6, name: "Warm", modifier: 1.0 },
     ];
     applyNpcOverrides(npcData, bondBands, {
-      byId: { mira: { displayName: "Mira the Baker", loves: ["cake", "bread"], likes: ["jam"] }, ghost: { loves: ["x"] } },
+      byId: { mira: { displayName: "Mira the Baker", loves: ["cake", "bread"], likes: ["jam"] } },
       bands: [{ name: "Bitter", modifier: 0.5 }, { modifier: 1.1 }],
     });
     expect(npcData.mira.displayName).toBe("Mira the Baker");
     expect(npcData.mira.loves).toEqual(["cake", "bread"]);
     expect(npcData.mira.likes).toEqual(["jam"]);
     expect(npcData.mira.favoriteGift).toBe("cake");   // re-derived
-    expect(npcData.ghost).toBeUndefined();            // unknown id ignored
     expect(bondBands[0]).toMatchObject({ name: "Bitter", modifier: 0.5 });
     expect(bondBands[1]).toMatchObject({ name: "Warm", modifier: 1.1 }); // name untouched
+  });
+
+  it("skips unknown npc ids in production builds", () => {
+    withImportMetaDev(false, () => {
+      const npcData = { mira: { loves: ["bread"], favoriteGift: "bread" } };
+      applyNpcOverrides(npcData, [], { byId: { ghost: { loves: ["x"] } } });
+      expect(npcData.ghost).toBeUndefined();
+    });
   });
   it("is a no-op on a missing override object", () => {
     const npcData = { mira: { loves: ["bread"], favoriteGift: "bread" } };
@@ -100,9 +135,8 @@ describe("applyStoryOverrides", () => {
     const sideBeats = [{ id: "s1", title: "Side", lines: [{ speaker: "wren", text: "hi" }] }];
     applyStoryOverrides(storyBeats, sideBeats, {
       beats: {
-        a1: { title: "New", scene: "dawn", body: "new body", choices: { x: { label: "Pick me" }, ghost: { label: "ignored" } } },
+        a1: { title: "New", scene: "dawn", body: "new body", choices: { x: { label: "Pick me" } } },
         s1: { lines: [{ speaker: "mira", text: "line one" }, { text: "narration" }, { speaker: "bram", text: "" }] },
-        nope: { title: "no such beat" },
       },
     });
     expect(storyBeats[0].title).toBe("New");
@@ -261,11 +295,10 @@ describe("applyFlagOverrides", () => {
     { id: "f1", label: "F1", description: "d1", category: "story", default: false, source: "beat:x", triggers: [] },
     { id: "f2", label: "F2", category: "mira", default: false, source: "choice:y", triggers: [{ type: "session_start" }] },
   ];
-  it("patches metadata + replaces triggers; ignores unknown ids", () => {
+  it("patches metadata + replaces triggers", () => {
     const flags = reg();
     applyFlagOverrides(flags, { byId: {
       f1: { label: "Renamed", description: "new", category: "frostmaw", default: true, triggers: [{ type: "building_built", id: "mill" }] },
-      ghost: { label: "ignored" },
     } });
     expect(flags[0]).toMatchObject({ id: "f1", label: "Renamed", description: "new", category: "frostmaw", default: true, triggers: [{ type: "building_built", id: "mill" }] });
     expect(flags[1]).toMatchObject({ id: "f2", category: "mira", triggers: [{ type: "session_start" }] });
@@ -301,7 +334,7 @@ describe("applyFlagOverrides", () => {
 describe("applyBossOverrides", () => {
   it("patches name/season/descriptions/target.amount; modifier untouched", () => {
     const bosses = [{ id: "frostmaw", name: "Frostmaw", season: "winter", target: { resource: "tile_tree_oak", amount: 30 }, modifier: { type: "freeze_columns", params: { n: 2 } }, description: "old", modifierDescription: "old mod" }];
-    applyBossOverrides(bosses, { frostmaw: { name: "The Frostmaw", season: "spring", targetAmount: 45, description: "new", modifierDescription: "new mod" }, ghost: { name: "x" } });
+    applyBossOverrides(bosses, { frostmaw: { name: "The Frostmaw", season: "spring", targetAmount: 45, description: "new", modifierDescription: "new mod" } });
     expect(bosses[0]).toMatchObject({ name: "The Frostmaw", season: "spring", description: "new", modifierDescription: "new mod" });
     expect(bosses[0].target).toEqual({ resource: "tile_tree_oak", amount: 45 });
     expect(bosses[0].modifier).toEqual({ type: "freeze_columns", params: { n: 2 } });
@@ -311,7 +344,7 @@ describe("applyBossOverrides", () => {
 describe("applyAchievementOverrides", () => {
   it("patches name/desc/threshold/target/reward.coins; counter untouched", () => {
     const ach = [{ id: "first_steps", name: "First Steps", desc: "old", counter: "chains_committed", threshold: 1, target: 1, reward: { coins: 25 } }];
-    applyAchievementOverrides(ach, { first_steps: { name: "Baby Steps", desc: "new", threshold: 2, target: 5, rewardCoins: 50 }, ghost: { name: "x" } });
+    applyAchievementOverrides(ach, { first_steps: { name: "Baby Steps", desc: "new", threshold: 2, target: 5, rewardCoins: 50 } });
     expect(ach[0]).toMatchObject({ name: "Baby Steps", desc: "new", threshold: 2, target: 5, counter: "chains_committed" });
     expect(ach[0].reward).toEqual({ coins: 50 });
   });
@@ -320,11 +353,10 @@ describe("applyAchievementOverrides", () => {
 describe("applyDailyRewardOverrides", () => {
   it("patches coins/runes per day (adding runes if absent); leaves tool drops alone", () => {
     const rewards = { 1: { coins: 25 }, 5: { tool: "rare", amount: 1 }, 14: { coins: 300, runes: 1 } };
-    applyDailyRewardOverrides(rewards, { 1: { coins: 40, runes: 1 }, 5: { coins: 60 }, 14: { runes: 3 }, 99: { coins: 1 } });
+    applyDailyRewardOverrides(rewards, { 1: { coins: 40, runes: 1 }, 5: { coins: 60 }, 14: { runes: 3 } });
     expect(rewards[1]).toEqual({ coins: 40, runes: 1 });
     expect(rewards[5]).toEqual({ tool: "rare", amount: 1, coins: 60 });
     expect(rewards[14]).toEqual({ coins: 300, runes: 3 });
-    expect(rewards[99]).toBeUndefined(); // no such day
     const before = JSON.stringify(rewards);
     applyDailyRewardOverrides(rewards, undefined);
     expect(JSON.stringify(rewards)).toBe(before);

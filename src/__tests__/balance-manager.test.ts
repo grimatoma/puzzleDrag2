@@ -47,15 +47,24 @@ describe("Dev Panel — override merge layer", () => {
     expect(items.tile_grass_hay.next).toBeNull();
   });
 
-  it("applyRecipeOverrides replaces inputs wholesale and rejects bad qty", () => {
+  it("applyRecipeOverrides replaces inputs wholesale", () => {
     const recipes = {
       bread: { name: "Bread", inputs: { flour: 3, eggs: 1 }, coins: 125, station: "bakery" },
     };
     applyRecipeOverrides(recipes, {
-      bread: { coins: 200, inputs: { flour: 4, bogus: -1 } },
+      bread: { coins: 200, inputs: { flour: 4 } },
     });
     expect(recipes.bread.coins).toBe(200);
     expect(recipes.bread.inputs).toEqual({ flour: 4 });
+  });
+
+  it("applyRecipeOverrides throws in DEV on unknown input keys", () => {
+    const recipes = {
+      bread: { name: "Bread", inputs: { flour: 3 }, coins: 125, station: "bakery" },
+    };
+    expect(() => applyRecipeOverrides(recipes, {
+      bread: { inputs: { flour: 4, bogus: 1 } },
+    })).toThrow(/Unknown balance override target: recipes\.bread\.inputs\.bogus/);
   });
 
   it("applyBuildingOverrides patches matched ids", () => {

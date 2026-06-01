@@ -7,6 +7,7 @@ import {
   applyZoneOverrides,
   applyWorkerOverrides,
 } from "../src/config/applyOverrides.js";
+import { withImportMetaDev } from "../src/testUtils/testState.js";
 
 function freshZones() {
   return {
@@ -116,10 +117,12 @@ describe("Phase 37 — applyZoneOverrides", () => {
       .toThrow(/Invalid balance overrides \(zones\)/);
   });
 
-  it("ignores patches for unknown zone ids", () => {
-    const z = freshZones();
-    applyZoneOverrides(z, { zoneX: { baseTurns: 99 } });
-    expect(z.zone1.baseTurns).toBe(16);
+  it("skips patches for unknown zone ids in production builds", () => {
+    withImportMetaDev(false, () => {
+      const z = freshZones();
+      applyZoneOverrides(z, { zoneX: { baseTurns: 99 } });
+      expect(z.zone1.baseTurns).toBe(16);
+    });
   });
 });
 
@@ -199,10 +202,12 @@ describe("Phase 37 — applyWorkerOverrides", () => {
     ]);
   });
 
-  it("ignores patches for unknown worker ids", () => {
-    const w = freshWorkers();
-    applyWorkerOverrides(w, { wizard: { maxCount: 5 } });
-    expect(w[0].maxCount).toBe(10);
-    expect(w[1].maxCount).toBe(10);
+  it("skips patches for unknown worker ids in production builds", () => {
+    withImportMetaDev(false, () => {
+      const w = freshWorkers();
+      applyWorkerOverrides(w, { wizard: { maxCount: 5 } });
+      expect(w[0].maxCount).toBe(10);
+      expect(w[1].maxCount).toBe(10);
+    });
   });
 });

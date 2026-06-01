@@ -142,10 +142,9 @@ describe("aggregateAbilities — empty / no-op cases", () => {
     expect(out.freeMoves).toBe(0);
   });
 
-  it("ignores unknown ability ids", () => {
-    const out = aggregateAbilities([
+  it("throws in DEV on unknown ability ids", () => {
+    expect(() => aggregateAbilities([
       { abilities: [{ id: "nonsense", params: {} }], weight: 1 },
-    ]);
-    expect(out.thresholdReduce).toEqual({});
+    ])).toThrow(/Unknown ability id: "nonsense"/);
   });
 });

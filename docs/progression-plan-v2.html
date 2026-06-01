@@ -384,7 +384,7 @@ The "Bakery ≈ 5× multiplier" still holds as a <em>ratio</em> (bread value 125
 <p><strong>47</strong> <code>kind:"tool"</code> entries (<code>constants.ts:554</code>), fully data-driven via a <code>power:{id,params,anim,ms,tint,bubble}</code> referencing the <strong>22-power catalog</strong> <code>TOOL_POWERS</code> (<code>config/toolPowers.ts:26</code>): <code>clear_all, clear_category, clear_row, clear_column, clear_cross, clear_component, clear_random_n, transform_random_n, reshuffle_board, fill_bias, transform_tiles, transform_adjacent, area_blast, tap_clear_type, undo_move, restore_turns, reveal_tiles, clear_hazard, scatter_hazard, water_pump, explosives</code>.</p>
 <ul>
 <li><strong>Consumption:</strong> instant tools decrement <code>tools[key]</code> on <code>USE_TOOL</code>; tap-target tools only <em>arm</em> (set <code>toolPendingPower</code>) and spend the charge on <code>TOOL_FIRED</code>; navigating away refunds armed charges (<code>disarmAllTools</code>).</li>
-<li><strong>Deferred backlog:</strong> <code>DEFERRED_TOOL_POWERS</code> lists 24 PC2 tools not wired, each with a blocker (e.g. silver/diamond/gas/water tile families absent; chest pipeline absent; the <code>iron_ration</code> tool key collides with the resource key).</li>
+<li><strong>PC2 tool backlog (design only, 2026-06):</strong> Unshipped tools are omitted from <code>ITEMS</code> until tile families and runtime handlers exist — no placeholder power ids. Historical blocker notes (silver/diamond/gas/water families, chest pipeline, <code>iron_ration</code> key collision) live in git history / this doc, not executable config.</li>
 </ul>
 </section>
 

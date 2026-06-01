@@ -86,11 +86,10 @@ describe("Combination — boundary cases", () => {
     expect(out.thresholdReduce).toEqual({});
   });
 
-  it("an unknown ability id is silently skipped", () => {
-    const out = aggregateAbilities([
+  it("throws in DEV on unknown ability id", () => {
+    expect(() => aggregateAbilities([
       { abilities: [{ id: "totally_made_up", params: {} }], weight: 1 },
-    ], ctx());
-    expect(out.thresholdReduce).toEqual({});
+    ], ctx())).toThrow(/Unknown ability id: "totally_made_up"/);
   });
 
   it("weight clamps to [0, 1]", () => {

@@ -115,7 +115,7 @@ describe("quests slice — coverage gaps", () => {
     expect(s1).toBe(s0);
   });
 
-  it("QUESTS/CLAIM_QUEST routes legacy almanacXp into the canonical almanac slice", () => {
+  it("QUESTS/CLAIM_QUEST awards fixed almanac XP for legacy dailies", () => {
     const s0 = baseState({
       coins: 0,
       almanac: { xp: 0, level: 1, claimed: {} },
@@ -128,7 +128,7 @@ describe("quests slice — coverage gaps", () => {
       id: "q1",
     } as Action);
     expect(s1.coins).toBe(50);
-    expect(s1.almanac?.xp ?? 0).toBeGreaterThanOrEqual(30);
+    expect(s1.almanac?.xp ?? 0).toBe(20);
   });
 
   it("CHAIN_COLLECTED progresses 'harvest' and 'chain5' on long chains", () => {

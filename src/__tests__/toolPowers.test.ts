@@ -2,7 +2,6 @@ import { describe, it, expect } from "vitest";
 import {
   TOOL_POWERS,
   TOOL_POWER_PARAM_TYPES,
-  DEFERRED_TOOL_POWERS,
   defaultsForToolPower,
   defaultBoardAnimForPower,
   getToolPower,
@@ -140,25 +139,3 @@ describe("defaultsForToolPower", () => {
   });
 });
 
-describe("DEFERRED_TOOL_POWERS", () => {
-  it("is a non-empty array", () => {
-    expect(Array.isArray(DEFERRED_TOOL_POWERS)).toBe(true);
-    expect(DEFERRED_TOOL_POWERS.length).toBeGreaterThan(0);
-  });
-
-  it("every entry has { id, pc2Name, intendedPower, blocker, dependsOn }", () => {
-    for (const d of DEFERRED_TOOL_POWERS) {
-      expect(typeof d.id).toBe("string");
-      expect(d.id.length).toBeGreaterThan(0);
-      expect(typeof d.pc2Name).toBe("string");
-      expect(typeof d.intendedPower).toBe("string");
-      expect(typeof d.blocker).toBe("string");
-      expect(typeof d.dependsOn).toBe("string");
-    }
-  });
-
-  it("ids are unique", () => {
-    const ids = DEFERRED_TOOL_POWERS.map((d) => d.id);
-    expect(ids.length).toBe(new Set(ids).size);
-  });
-});
