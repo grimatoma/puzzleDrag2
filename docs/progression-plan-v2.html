@@ -79,7 +79,7 @@
   main>section:nth-child(3){animation-delay:.12s;} main>section:nth-child(n+4){animation-delay:.16s;}
   @media (max-width:820px){.layout{grid-template-columns:1fr;}header.hero h1{font-size:2rem;}nav.toc{position:static;border-left:0;padding-left:0;max-height:none;}}
   @media (prefers-reduced-motion:reduce){html{scroll-behavior:auto;}*{animation:none!important;transition:none!important;}}
-  @media print{nav.toc,.tabbar,.subnav{display:none;}body{background:#fff;}header.hero,table,.box,.diagram,details,pre{box-shadow:none;}.tabpanel{display:block!important;}}
+  @media print{nav.toc,.tabbar,.subnav,.modetoggle,.navbar{display:none;}body{background:#fff;}header.hero,table,.box,.diagram,details,pre{box-shadow:none;}.tabpanel{display:block!important;}}
 
   /* ── Tabbed layout ──────────────────────────────────────────── */
   .tabbar{
@@ -114,7 +114,30 @@
   .subnav a{font-size:.8rem;font-weight:600;color:var(--muted);background:var(--paper);border:1px solid var(--line);padding:.32rem .7rem;border-radius:999px;transition:color .15s,border-color .15s,background .15s;}
   .subnav a:hover{color:var(--accent);border-color:#bcdcc6;background:#eef4ee;text-decoration:none;}
   .subnav a.active{color:#fff;background:var(--accent);border-color:#256941;}
-  @media (max-width:820px){.tabbar{top:0;border-radius:0 0 14px 14px;}.tabbar button{flex:1 1 40%;}.tabbar button .tsub{display:none;}}
+  /* sticky nav container: tab bar + mode toggle */
+  .navbar{position:sticky;top:.5rem;z-index:30;display:flex;gap:.5rem;align-items:stretch;margin:0 0 1.8rem;}
+  .navbar .tabbar{position:static;margin:0;flex:1 1 auto;}
+  .modetoggle{
+    appearance:none;cursor:pointer;font:600 .82rem/1.1 var(--sans);color:var(--muted);
+    background:linear-gradient(180deg,rgba(255,253,248,.92),rgba(247,241,230,.88));
+    -webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);
+    border:1px solid var(--line);border-radius:16px;padding:.5rem .85rem;box-shadow:var(--shadow);
+    white-space:nowrap;display:inline-flex;align-items:center;gap:.4rem;transition:color .15s,background .15s,border-color .15s;
+  }
+  .modetoggle:hover{color:var(--accent);border-color:#bcdcc6;}
+  .modetoggle:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+  .modetoggle .ico{font:700 1rem/1 var(--sans);}
+  .modetoggle[aria-pressed="true"]{background:linear-gradient(135deg,var(--accent),#256941);color:#fff;border-color:#1f5836;}
+  /* linear / read-as-one-page mode */
+  main.linear .tabpanel{display:block;border-top:1px solid var(--line);margin-top:1.6rem;padding-top:.4rem;}
+  main.linear .tabpanel:first-of-type{border-top:0;margin-top:0;}
+  main.linear .tabpanel .subnav{display:none;}
+  main.linear .tabbar button[aria-selected="true"]{box-shadow:none;transform:none;}
+  @media (max-width:820px){
+    .navbar{top:0;flex-wrap:wrap;}
+    .tabbar{top:0;border-radius:0 0 14px 14px;}.tabbar button{flex:1 1 40%;}.tabbar button .tsub{display:none;}
+    .modetoggle{flex:1 1 100%;justify-content:center;}
+  }
 </style>
 </head>
 <body>
@@ -133,13 +156,16 @@
   </div>
 </header>
 
-<div class="tabbar" role="tablist" aria-label="Plan sections">
-  <button role="tab" data-tab="tab-overview" aria-selected="true"><span class="tnum">1–3</span> Overview <span class="tsub">vision · structure · ladder</span></button>
-  <button role="tab" data-tab="tab-unlocks" aria-selected="false"><span class="tnum">4–5</span> Unlocks <span class="tsub">schedule · pacing</span></button>
-  <button role="tab" data-tab="tab-balance" aria-selected="false"><span class="tnum">6–8</span> Balance <span class="tsub">math · towns · sink</span></button>
-  <button role="tab" data-tab="tab-sim" aria-selected="false"><span class="tnum">9</span> Simulator</button>
-  <button role="tab" data-tab="tab-plan" aria-selected="false"><span class="tnum">10–12</span> Build Plan <span class="tsub">ACR · deferred · roadmap</span></button>
-  <button role="tab" data-tab="tab-ref" aria-selected="false"><span class="tnum">13–15</span> Reference <span class="tsub">log · sources · code</span></button>
+<div class="navbar">
+  <div class="tabbar" role="tablist" aria-label="Plan sections">
+    <button role="tab" data-tab="tab-overview" aria-selected="true"><span class="tnum">1–3</span> Overview <span class="tsub">vision · structure · ladder</span></button>
+    <button role="tab" data-tab="tab-unlocks" aria-selected="false"><span class="tnum">4–5</span> Unlocks <span class="tsub">schedule · pacing</span></button>
+    <button role="tab" data-tab="tab-balance" aria-selected="false"><span class="tnum">6–8</span> Balance <span class="tsub">math · towns · sink</span></button>
+    <button role="tab" data-tab="tab-sim" aria-selected="false"><span class="tnum">9</span> Simulator</button>
+    <button role="tab" data-tab="tab-plan" aria-selected="false"><span class="tnum">10–12</span> Build Plan <span class="tsub">ACR · deferred · roadmap</span></button>
+    <button role="tab" data-tab="tab-ref" aria-selected="false"><span class="tnum">13–15</span> Reference <span class="tsub">log · sources · code</span></button>
+  </div>
+  <button class="modetoggle" id="modeToggle" aria-pressed="false" title="Show every section on one page (Ctrl/⌘-F also expands so find-in-page works)"><span class="ico">⤢</span><span class="lbl">Expand all</span></button>
 </div>
 
 <main>
@@ -684,6 +710,9 @@
     p.querySelectorAll('section[id]').forEach(function(s){ sectionToTab[s.id] = p.id; });
   });
   var spy = null;
+  var main = document.querySelector('main');
+  var toggle = document.getElementById('modeToggle');
+  var linear = false;
 
   function buildSubnav(tabId){
     var panel = document.getElementById(tabId);
@@ -723,10 +752,32 @@
       t.setAttribute('aria-selected', on ? 'true' : 'false');
       t.tabIndex = on ? 0 : -1;
     });
+    if(linear){
+      // every panel is already visible; a "tab" just scrolls to its group
+      var panel = document.getElementById(tabId);
+      if(opts.scrollTop && panel) panel.scrollIntoView({ behavior: opts.smooth ? 'smooth' : 'auto', block:'start' });
+      return tabId;
+    }
     panels.forEach(function(p){ p.classList.toggle('active', p.id === tabId); });
     buildSubnav(tabId);
     if(opts.scrollTop) window.scrollTo({ top:0, behavior: opts.smooth ? 'smooth' : 'auto' });
     return tabId;
+  }
+
+  function setLinear(on, focusId){
+    linear = on;
+    main.classList.toggle('linear', on);
+    toggle.setAttribute('aria-pressed', on ? 'true' : 'false');
+    toggle.querySelector('.lbl').textContent = on ? 'Tab view' : 'Expand all';
+    toggle.querySelector('.ico').textContent = on ? '⤡' : '⤢';
+    if(on){
+      if(spy) spy.disconnect();
+      document.querySelectorAll('.subnav').forEach(function(n){ n.remove(); });
+    } else {
+      var act = tabs.filter(function(t){ return t.getAttribute('aria-selected') === 'true'; })[0] || tabs[0];
+      activate(act.getAttribute('data-tab'), {});
+    }
+    if(focusId){ var el = document.getElementById(focusId); if(el) el.scrollIntoView({ block:'start' }); }
   }
 
   function goToSection(id, smooth){
@@ -769,6 +820,16 @@
       e.preventDefault();
       goToSection(id, true);
       history.replaceState(null, '', '#' + id);
+    }
+  });
+
+  // Expand-all / tab-view toggle
+  toggle.addEventListener('click', function(){ setLinear(!linear); });
+
+  // Find-in-page should never miss hidden tabs: Ctrl/Cmd-F expands everything first.
+  document.addEventListener('keydown', function(e){
+    if((e.ctrlKey || e.metaKey) && (e.key === 'f' || e.key === 'F') && !linear){
+      setLinear(true); // do NOT preventDefault — let the native find bar open over the now-full page
     }
   });
 
