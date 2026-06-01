@@ -984,7 +984,7 @@ function coreReducer(state: GameState, action: Action): GameState {
       // calendar was deleted). Story content keyed on season names should be
       // re-keyed in a follow-up; for now we pass null so calendar-bound beats
       // simply don't fire.
-      return evaluateAndApplyStoryBeat(afterSeasonWithFields, { type: "session_ended", season: null });
+      return evaluateAndApplyStoryBeat(afterSeasonWithFields as GameState, { type: "session_ended", season: null });
     }
     case "SESSION_START": {
       // Always evaluate story beats on session start — each beat checks its own first-time
