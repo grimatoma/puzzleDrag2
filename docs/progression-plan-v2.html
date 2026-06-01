@@ -270,11 +270,19 @@
 <p>Phaser 3 + React. <strong>React owns state</strong> (<code>useReducer</code> in <code>prototype.tsx</code>; store logic in <code>src/state.ts</code>). <strong>Phaser owns the canvas</strong> (<code>src/GameScene.ts</code>) and mirrors needed fields via a registry bridge (<code>src/phaserBridge.js</code>); the scene dispatches actions back to the reducer. Three Vite entries share state only via <code>localStorage</code>: <code>/</code> game · <code>/b/</code> Dev Panel (Phaser-free) · <code>/story/</code> Story Editor.</p>
 <div class="box warn"><strong>Correction to CLAUDE.md / older docs.</strong> The reducer composes <strong>17 slices</strong>, not 29, and there is <strong>no <code>import.meta.glob</code> slice auto-discovery</strong> — they're a hand-written array at <code>src/state.ts:63</code>: <code>crafting, quests, achievements, tutorial, settings, boss, cartography, story, decorations, portal, market, castle, fish, zones, workers, boons, runSummary</code>. There are <strong>32 directories</strong> under <code>src/features/</code>, but 15 are data-only / pure-UI / helper modules with no composed reducer (e.g. <code>almanac</code>, <code>bosses</code>, <code>npcs</code>, <code>tileCollection</code> are data; <code>charter</code>, <code>chronicle</code>, <code>festivals</code>, <code>inventory</code>, <code>orders</code>, <code>townsfolk</code>, <code>wiki</code>, <code>debug</code> are UI; <code>farm</code>, <code>mine</code> are hazard/pool helpers).</div>
 <ul>
-<li><strong><code>SAVE_SCHEMA_VERSION = 42</code></strong> (<code>src/constants.ts:280</code>). No forward migrations — a mismatched save is discarded and the player restarts (<code>src/state/init.ts:184</code>). <strong>Bump it for the per-zone-inventory change.</strong></li>
+<li><strong><code>SAVE_SCHEMA_VERSION = 42</code></strong> (<code>src/constants.ts:244</code>). No forward migrations — a mismatched save is discarded and the player restarts (<code>src/state/init.ts:184</code>). <strong>Bump it for the per-zone-inventory change.</strong></li>
 <li>Starting state (<code>src/state/init.ts</code>): <strong>coins 150</strong>; embers/coreIngots/gems/runes 0; bonds start at 5; <code>home</code> auto-founded.</li>
 <li>The codebase migrated <code>.js</code>→<code>.ts</code>; CLAUDE.md still says <code>.js</code> in places — files are <code>.ts</code>/<code>.tsx</code>.</li>
 <li>Slice-action footguns: <code>SLICE_PRIMARY_ACTIONS</code> (24 actions handled only by slices) + <code>ALWAYS_RUN_SLICES</code> (<code>CRAFTING/CRAFT_RECIPE</code>, <code>USE_TOOL</code>) at <code>src/state.ts:1540-1601</code>.</li>
 </ul>
+
+<h3>Config system — parse · validate · apply <span class="pill add">WIRED</span> <span class="muted">(strict, since #807)</span></h3>
+<p>Canonical data is defined in TypeScript; <code>balance.json</code> (committed overrides + the Dev-Panel draft) only <em>patches existing ids</em>. #807 split loading into a two-phase, fail-loud pipeline under <code>src/config/</code>:</p>
+<ol>
+<li><strong>Parse (pure):</strong> <code>constants.ts</code> calls <code>loadBalanceOverrides()</code> (<code>config/balance/load.ts</code>) → merges <code>balance.json</code> + the localStorage Dev-Panel draft → validates the whole document via <code>parseBalanceOverrides</code> (<code>config/schemas/parseBalance.ts</code>). No live table is mutated here.</li>
+<li><strong>Apply (once, explicit):</strong> every entry (<code>main.tsx</code>, <code>balanceEntry</code>, <code>storyEditorEntry</code>) and the vitest setup import <code>config/balance/bootstrap.ts</code> first → <code>initBalanceOverrides()</code> → <code>applyAllBalanceOverrides</code> (<code>config/balance/applyAll.ts</code>) feeds each section to a pure <code>apply*Overrides</code> (<code>config/applyOverrides.ts</code>), then <code>applyTuningToRuntime</code>.</li>
+</ol>
+<p><strong>Strict boundaries:</strong> the whole-document <code>balanceSchema</code> and nearly every section schema are <code>.strict()</code> — <strong>unknown keys are rejected</strong>; <code>parseOverrideSection</code> is all-or-nothing (a bad patch can't partially mutate a table); <code>overrideStrict.ts</code> + a hardened <code>abilitiesAggregate.ts</code> <strong>throw in DEV / warn-once in PROD</strong> on unknown ids. <strong>21 Zod schemas</strong> in <code>src/config/schemas/*</code> (one per concept) define the shapes; <code>config/balance.schema.md</code> documents the <code>balance.json</code> keys. The loop: <em>Dev Panel writes draft → load merges → parse validates (strict) → applyAll patches live tables on next boot</em>. Live values: the generated <a href="#configref">§37 Config reference</a>.</p>
 </section>
 
 <section id="board">
@@ -340,10 +348,10 @@ The throttle is <strong>T, not the turn counter</strong>: a 20-hay sweep (T=6) c
 
 <section id="tiles">
 <h2>6 · Tiles <span class="pill add">WIRED</span></h2>
-<p><strong>77</strong> <code>kind:"tile"</code> entries in <code>ITEMS_DATA</code> (<code>constants.ts:436</code>): <strong>63 farm · 8 mine · 6 fish</strong>, across <strong>18 categories</strong> (<code>category</code> field in <code>tileCollection/data.ts</code>): grass, grain, tree, bird, herd_animals, cattle, mounts, flowers, fruits, vegetables, mine_stone, mine_iron_ore, mine_coal, mine_gem, mine_gold, fish, special_dirt, treasure.</p>
+<p><strong>77</strong> <code>kind:"tile"</code> entries in <code>ITEMS_DATA</code> (<code>constants.ts</code>): <strong>63 farm · 8 mine · 6 fish</strong>, across <strong>18 categories</strong> (<code>category</code> field in <code>tileCollection/data.ts</code>): grass, grain, tree, bird, herd_animals, cattle, mounts, flowers, fruits, vegetables, mine_stone, mine_iron_ore, mine_coal, mine_gem, mine_gold, fish, special_dirt, treasure.</p>
 <div class="box note"><strong>Tile <em>definitions</em> ≠ tile <em>spawn pool</em>.</strong> 77 tiles are defined, but only a curated subset spawns: the base <code>FARM_TILE_POOL</code> is ~12 slots / <strong>10 distinct</strong> (hay×3 + 9 singles). Per category the player's <em>active</em> tile is swapped in by <code>activePool()</code>, and which categories are even eligible is gated by player choice + discovery (see §9 / §11). So "63 farm tiles" is the catalog; "10 farm tiles on the board" is the live pool.</p></div>
 <details>
-<summary>Tile family → produced resource (<code>TILE_FAMILY_RESOURCE</code>, constants.ts:358) + thresholds</summary>
+<summary>Tile family → produced resource (<code>TILE_FAMILY_RESOURCE</code>) + thresholds</summary>
 <div class="scrollx"><table>
 <thead><tr><th>Family</th><th>→ resource</th><th>T</th><th>Family</th><th>→ resource</th><th>T</th></tr></thead>
 <tbody>
@@ -365,8 +373,8 @@ The throttle is <strong>T, not the turn counter</strong>: a 20-hay sweep (T=6) c
 
 <section id="resources">
 <h2>7 · Resources &amp; the sell rule <span class="pill add">WIRED</span></h2>
-<p><strong>42</strong> <code>kind:"resource"</code> entries. Each has a catalog <code>value</code> in <code>ITEMS</code>.</p>
-<div class="box warn"><strong>How selling actually works — and the bread inconsistency.</strong> The Market sell payout is <strong><code>round(value × 0.10)</code></strong> (<code>SELL_RATE = 0.10</code>, <code>market/pricing.ts:18</code>) — <em>not</em> the raw <code>value</code>, and <em>not</em> <code>MARKET_PRICES</code>. So:
+<p><strong>41</strong> canonical <code>kind:"resource"</code> entries (<strong>44</strong> keys in the live <code>ITEMS</code> map, incl. 3 display aliases — see §37). Each has a catalog <code>value</code> in <code>ITEMS</code>.</p>
+<div class="box warn"><strong>How selling actually works — and the bread inconsistency.</strong> The Market sell payout is <strong><code>round(value × 0.10)</code></strong> (<code>SELL_RATE = 0.10</code>, <code>features/market/pricing.ts</code>) — <em>not</em> the raw <code>value</code>, and <em>not</em> <code>MARKET_PRICES</code>. So:
 <ul style="margin:.3rem 0">
 <li><code>bread.value = 125</code> → sells for <strong>round(125×0.10) = 13 coins</strong>. The item description "sold for 125 coins at the Bakery" is <strong>misleading</strong>.</li>
 <li><code>MARKET_PRICES.bread = {buy:60, sell:4}</code> is <strong>not</strong> the payout — it's only the baseline that <code>driftPrices</code> (<code>market.ts:44</code>) jitters ±15% for the buy/sell <em>display</em>. It's inconsistent with the value-based payout and should be reconciled.</li>
@@ -381,7 +389,7 @@ The "Bakery ≈ 5× multiplier" still holds as a <em>ratio</em> (bread value 125
 
 <section id="tools">
 <h2>8 · Tools &amp; tool-powers <span class="pill add">WIRED</span></h2>
-<p><strong>47</strong> <code>kind:"tool"</code> entries (<code>constants.ts:554</code>), fully data-driven via a <code>power:{id,params,anim,ms,tint,bubble}</code> referencing the <strong>22-power catalog</strong> <code>TOOL_POWERS</code> (<code>config/toolPowers.ts:26</code>): <code>clear_all, clear_category, clear_row, clear_column, clear_cross, clear_component, clear_random_n, transform_random_n, reshuffle_board, fill_bias, transform_tiles, transform_adjacent, area_blast, tap_clear_type, undo_move, restore_turns, reveal_tiles, clear_hazard, scatter_hazard, water_pump, explosives</code>.</p>
+<p><strong>46</strong> <code>kind:"tool"</code> entries (<code>constants.ts</code>), fully data-driven via a <code>power:{id,params,anim,ms,tint,bubble}</code> referencing the <strong>21-power catalog</strong> <code>TOOL_POWERS</code> (<code>config/toolPowers.ts:26</code>): <code>clear_all, clear_category, clear_row, clear_column, clear_cross, clear_component, clear_random_n, transform_random_n, reshuffle_board, fill_bias, transform_tiles, transform_adjacent, area_blast, tap_clear_type, undo_move, restore_turns, reveal_tiles, clear_hazard, scatter_hazard, water_pump, explosives</code>.</p>
 <ul>
 <li><strong>Consumption:</strong> instant tools decrement <code>tools[key]</code> on <code>USE_TOOL</code>; tap-target tools only <em>arm</em> (set <code>toolPendingPower</code>) and spend the charge on <code>TOOL_FIRED</code>; navigating away refunds armed charges (<code>disarmAllTools</code>).</li>
 <li><strong>PC2 tool backlog (design only, 2026-06):</strong> Unshipped tools are omitted from <code>ITEMS</code> until tile families and runtime handlers exist — no placeholder power ids. Historical blocker notes (silver/diamond/gas/water families, chest pipeline, <code>iron_ration</code> key collision) live in git history / this doc, not executable config.</li>
@@ -390,7 +398,7 @@ The "Bakery ≈ 5× multiplier" still holds as a <em>ratio</em> (bread value 125
 
 <section id="buildings">
 <h2>9 · Buildings <span class="pill add">WIRED</span> · spawner gating <span class="pill keep">PLANNED</span></h2>
-<p><strong>33</strong> entries in <code>BUILDINGS</code> (<code>constants.ts:820</code>). Each: <code>cost</code>, <code>lv</code> gate, plot rect, optional <code>biome/requires/hidden</code>, <code>abilities[]</code>. Build handler at <code>state.ts:696+</code>; abilities fold via the aggregator.</p>
+<p><strong>31</strong> entries in <code>BUILDINGS</code> (<code>constants.ts</code>). Each: <code>cost</code>, <code>lv</code> gate, plot rect, optional <code>biome/requires/hidden</code>, <code>abilities[]</code>. Build handler at <code>state.ts:696+</code>; abilities fold via the aggregator.</p>
 <div class="scrollx"><table>
 <thead><tr><th>Building</th><th>lv</th><th>Cost (sample)</th><th>Effect / ability</th></tr></thead>
 <tbody>
@@ -418,7 +426,7 @@ The "Bakery ≈ 5× multiplier" still holds as a <em>ratio</em> (bread value 125
 
 <section id="recipes">
 <h2>10 · Recipes &amp; craft chains <span class="pill add">WIRED</span></h2>
-<p><strong>~40</strong> base recipes (<code>RECIPES</code>, <code>constants.ts:972</code>) + auto-generated item-key aliases. Verified: <strong>no recipe input contains a <code>tile_*</code> key</strong> (inputs are all resource keys — the kind-disjointness invariant holds).</p>
+<p><strong>53</strong> base <code>rec_*</code> recipes (<code>RECIPES</code>, <code>constants.ts</code>) + item-key aliases (≈107 total keys — see §37). Verified: <strong>no recipe input contains a <code>tile_*</code> key</strong> (inputs are all resource keys — the kind-disjointness invariant holds).</p>
 <table>
 <thead><tr><th>Station</th><th>Key chains</th></tr></thead>
 <tbody>
@@ -529,7 +537,7 @@ The "Bakery ≈ 5× multiplier" still holds as a <em>ratio</em> (bread value 125
 <tr><td>Boons</td><td><span class="pill chg">PARTIAL</span></td><td>12 boons (2 per catalog). <strong>Only 2 effect types exist</strong> (<code>coin_gain_mult</code>, <code>bond_gain_mult</code>) — TODO's <code>chain_yield_mult</code> <strong>does not exist</strong>. Stack multiplicatively, kingdom-wide.</td></tr>
 <tr><td>Charter / Hollow Pact</td><td><span class="pill defer">STUB</span></td><td>6 PACT_TERMS rendered honored/violated/pending from flags — informational only; no tithes, no finale renewal.</td></tr>
 <tr><td>Old Capital</td><td><span class="pill defer">STUB</span></td><td>map node + unlock gate work; no travel flow, no finale.</td></tr>
-<tr><td>Almanac / Achievements / Decorations / Chronicle</td><td><span class="pill add">WIRED</span></td><td>Almanac XP tiers 1–10; <strong>28</strong> achievements; <strong>9</strong> decorations; Chronicle = read-only timeline.</td></tr>
+<tr><td>Almanac / Achievements / Decorations / Chronicle</td><td><span class="pill add">WIRED</span></td><td>Almanac XP tiers 1–10; <strong>27</strong> achievements; <strong>9</strong> decorations; Chronicle = read-only timeline.</td></tr>
 <tr><td>Festivals</td><td><span class="pill defer">STUB</span></td><td>modal literally says "coming soon"; recurring festivals <span class="pill rm">DOC-ONLY</span>.</td></tr>
 </tbody>
 </table></div>
@@ -548,7 +556,7 @@ The "Bakery ≈ 5× multiplier" still holds as a <em>ratio</em> (bread value 125
 </tr>
 </tbody>
 </table></div>
-<div class="box"><strong>Accuracy corrections a fresh session must inherit</strong> (these tripped up a prior session): 17 slices not 29 · 11 map nodes not 25+ · 77 tile defs / 18 categories (pool = 10) · 42 resources · 47 tools · 33 buildings · ~40 recipes · 28 achievements · sell = value×0.10 (bread sells 13, not 125) · first-hire-inert is fixed (Miner→"wood" is the live bug) · calendar seasons removed · <code>chain_yield_mult</code> doesn't exist · no max-chain cap · 1 chain = 1 turn.</div>
+<div class="box"><strong>Accuracy corrections a fresh session must inherit</strong> (these tripped up a prior session): 17 slices not 29 · 11 map nodes not 25+ · 77 tile defs / 18 categories (pool = 10) · 41 resources (44 keys w/ aliases) · 46 tools (21 powers) · 31 buildings · 53 base recipes · 27 achievements · sell = value×0.10 (bread sells 13, not 125) · first-hire-inert is fixed (Miner→"wood" is the live bug) · calendar seasons removed · <code>chain_yield_mult</code> doesn't exist · no max-chain cap · 1 chain = 1 turn.</div>
 </section>
 
 </div>
@@ -607,7 +615,7 @@ The "Bakery ≈ 5× multiplier" still holds as a <em>ratio</em> (bread value 125
 
 <section id="ladder">
 <h2>21 · The town-tier ladder</h2>
-<p>Each ruin climbs the same <strong>rank ladder</strong> (Camp → City). A tier-up is one <strong>town-center upgrade</strong> costing escalating <em>local</em> resources that (a) unlocks the next batch of content, (b) raises caps, (c) adds plots. The top tier builds the <strong>wagon</strong> → next ruin. We map the 33 buildings onto these tiers instead of the scattered <code>lv</code> gates.</p>
+<p>Each ruin climbs the same <strong>rank ladder</strong> (Camp → City). A tier-up is one <strong>town-center upgrade</strong> costing escalating <em>local</em> resources that (a) unlocks the next batch of content, (b) raises caps, (c) adds plots. The top tier builds the <strong>wagon</strong> → next ruin. We map the 31 buildings onto these tiers instead of the scattered <code>lv</code> gates.</p>
 <div class="box warn"><strong>The table below is Town 1 (farm only).</strong> The same ladder gates every settlement; the <em>content</em> is drawn from that settlement's boards. <strong>Town 2</strong> folds the mine board, Kitchen/supplies, the food→mine gate, metal buildings (Forge), the Miner + mine workers, and the capacity ladder into these same tiers, and its higher tiers cost mine resources (block/iron_bar).</p></div>
 <div class="scrollx"><table>
 <thead><tr><th>Tier</th><th>Name</th><th>Town-center cost (farm-local, proposed)</th><th>Unlocks (Town 1)</th><th>Caps / plots</th></tr></thead>
@@ -945,16 +953,17 @@ The "Bakery ≈ 5× multiplier" still holds as a <em>ratio</em> (bread value 125
 <div class="scrollx"><table>
 <thead><tr><th>File</th><th>Holds</th></tr></thead>
 <tbody>
-<tr><td><code>src/constants.ts</code></td><td><code>UPGRADE_THRESHOLDS</code> (282) · <code>ITEMS_DATA</code>/<code>ITEMS</code> (436) · <code>FARM/MINE/FISH_TILE_POOL</code> (328) · <code>SEASON_POOL_MODS</code> (1201) · <code>TILE_FAMILY_RESOURCE</code> (358) · <code>BUILDINGS</code> (820) · <code>RECIPES</code> (972) · <code>MARKET_PRICES</code> (1110) · <code>EXPEDITION_FOOD_TURNS</code>/<code>MIN_EXPEDITION_TURNS</code> (234/248) · <code>SETTLEMENT_BIOMES</code> (255) · <code>RESOURCE_CAP_BASE/GRANARY</code> (1140) · <code>SAVE_SCHEMA_VERSION</code> (280)</td></tr>
+<tr><td><code>src/constants.ts</code></td><td><code>UPGRADE_THRESHOLDS</code> · <code>ITEMS_DATA</code>/<code>ITEMS</code> · <code>FARM/MINE/FISH_TILE_POOL</code> · <code>SEASON_POOL_MODS</code> · <code>TILE_FAMILY_RESOURCE</code> · <code>BUILDINGS</code> · <code>RECIPES</code> · <code>MARKET_PRICES</code> · <code>EXPEDITION_FOOD_TURNS</code>/<code>MIN_EXPEDITION_TURNS</code> · <code>SETTLEMENT_BIOMES</code> · <code>RESOURCE_CAP_BASE/GRANARY</code> · <code>SAVE_SCHEMA_VERSION</code> <span class="muted">(grep the symbol — exact lines drift; live values in §37)</span></td></tr>
 <tr><td><code>src/GameScene.ts</code></td><td><code>fillBoard</code> (905) — the spawn truth · collapse · 8-dir chain (1401)</td></tr>
 <tr><td><code>src/features/cartography/data.ts</code></td><td><code>MAP_NODES</code> (11) · <code>FARM_SEASON_DROPS_*</code> (65/73) · <code>MAP_REGIONS</code> (7)</td></tr>
 <tr><td><code>src/features/zones/data.ts</code></td><td><code>ZONES</code> · <code>turnBudgetForZone</code> · <code>seasonIndexInSession</code> · founding cost · <code>ZoneInfoModal</code> source · <code>pickByZoneSeasonDrops</code></td></tr>
 <tr><td><code>src/features/workers/{data,aggregate}.ts</code></td><td>4 worker types · the per-hire discrete-ability pre-multiply · the Miner "wood" bug (data.ts:90)</td></tr>
 <tr><td><code>src/features/{boons,bosses,npcs,keepers},keepers.ts,state/keeperTrials.ts</code></td><td>the paused meta (see §17)</td></tr>
-<tr><td><code>src/config/{abilities,toolPowers,abilitiesAggregate}.ts</code></td><td>ability catalog (incl. <code>pool_weight</code> scope "building") · 22 tool powers + 24 deferred · ability folding</td></tr>
+<tr><td><code>src/config/{abilities,toolPowers,abilitiesAggregate}.ts</code></td><td>ability catalog (incl. <code>pool_weight</code> scope "building") · 21 tool powers (deferred set removed in #807) · ability folding</td></tr>
 <tr><td><code>src/market/pricing.ts</code> · <code>src/market.ts</code></td><td><code>sellPriceFor</code> = value×0.10 · <code>driftPrices</code> uses MARKET_PRICES for display</td></tr>
 <tr><td><code>src/state.ts</code></td><td>17-slice array (63) · <code>boardTurnPatch</code> (146) · <code>CHAIN_COLLECTED</code> (237) · <code>SLICE_PRIMARY_ACTIONS</code>/<code>ALWAYS_RUN_SLICES</code> (1540)</td></tr>
 <tr><td>Dev Panel <code>/b/</code></td><td>live editor → <code>src/config/balance.json</code> overrides (post-greybox tuning)</td></tr>
+<tr><td><code>src/config/schemas/*</code> · <code>config/balance/*</code> · <code>config/balance.schema.md</code></td><td>Zod config schemas + the parse→validate→apply override pipeline (#807); documented in §4, live values in §37</td></tr>
 <tr><td><code>docs/the_long_return_master_doc_v3.md</code> · <code>docs/references/puzzle-craft-2-wiki.html</code> · <code>docs/{config-hardcoded-audit,hardcoded-special-cases-audit,TODO}.md</code></td><td>narrative bible · PC2 reference · the open-issue audits</td></tr>
 </tbody>
 </table></div>
@@ -965,6 +974,337 @@ The "Bakery ≈ 5× multiplier" still holds as a <em>ratio</em> (bread value 125
 <li><strong>Land on a screen:</strong> <code>?visual=&lt;id&gt;</code> (<code>visualTesting/matrix.js</code>); <code>window.__hearthVisual</code>; hash routes (<code>#/town</code>, <code>#/board</code>).</li>
 <li><strong>Gates:</strong> <code>npm run lint · typecheck · test · build</code>; <code>npm run test:visual</code>.</li>
 </ul>
+</section>
+
+<section id="configref">
+<h2>37 · Config reference <span class="muted">(live, generated)</span></h2>
+<p>Canonical game data lives in TypeScript; this section is <strong>generated from it</strong> by <code>npm run gen:config-doc</code> (which loads the real config through vitest — plain esbuild / vite-SSR can't, due to a <code>constants</code>↔<code>balance</code> import cycle — and rewrites the block below between markers). Counts here are <strong>computed</strong>, so they can't drift; when they disagree with prose elsewhere, trust this section.</p>
+<div class="box note"><strong>Reference surfaces (always live):</strong>
+<ul style="margin:.3rem 0">
+<li><strong>Zod schemas</strong> — <code>src/config/schemas/*.ts</code> (item, recipe, building, zone, worker, boss, npc, keeper, tuning, … + <code>balance.ts</code> for the whole <code>balance.json</code> document).</li>
+<li><strong><code>src/config/balance.schema.md</code></strong> — human-readable <code>balance.json</code> key reference (published on the docs site by <code>build-docs</code>).</li>
+<li><strong>Dev Panel</strong> <code>/b/</code> — live editor; writes the <code>balance.json</code> draft the pipeline consumes.</li>
+<li><strong>Canonical maps</strong> — <code>ITEMS</code>/<code>RECIPES</code>/<code>BUILDINGS</code>/<code>TYPE_WORKERS</code> in <code>src/constants.ts</code> + feature <code>data.ts</code>.</li>
+</ul></div>
+<!-- GEN:config-reference START — generated by `npm run gen:config-doc`; do not hand-edit -->
+<p class="legend">Generated from the canonical TypeScript by <code>npm run gen:config-doc</code> · source commit <code>680fd13</code> · 2026-06-01. Re-run after editing configs; never hand-edit between these markers.</p>
+
+<h3>Live counts</h3>
+<div class="scrollx"><table>
+<thead><tr><th>Concept</th><th>Live count</th><th>Note</th></tr></thead>
+<tbody>
+<tr><td>Tiles</td><td class="num">77</td><td>farm 63 · mine 8 · fish 6</td></tr>
+<tr><td>Resources</td><td class="num">44</td><td>41 canonical + 3 display aliases</td></tr>
+<tr><td>Tools</td><td class="num">46</td><td>each driven by a tool-power id</td></tr>
+<tr><td>Tool powers</td><td class="num">21</td><td>live TOOL_POWERS (deferred set removed in #807)</td></tr>
+<tr><td>Buildings</td><td class="num">31</td><td>housing/housing2/housing3 are 3 rows</td></tr>
+<tr><td>Recipes</td><td class="num">53</td><td>base rec_* keys (+54 item-name aliases = 107 total)</td></tr>
+<tr><td>Upgrade thresholds</td><td class="num">74</td><td>per-tile chain length</td></tr>
+<tr><td>Map nodes</td><td class="num">11</td><td>across 7 regions</td></tr>
+<tr><td>Bosses</td><td class="num">6</td><td>paused in Phase 1</td></tr>
+<tr><td>NPCs</td><td class="num">5</td><td>bonds 0–10</td></tr>
+<tr><td>Achievements</td><td class="num">27</td><td class="num"></td></tr>
+<tr><td>Worker types</td><td class="num">4</td><td>placeholders; expand per chain step</td></tr>
+<tr><td>SAVE_SCHEMA_VERSION</td><td class="num">42</td><td>mismatched saves discarded</td></tr>
+</tbody></table></div>
+
+<h3>Resources <span class="muted">(catalog value · Market sell = round(value × 0.10))</span></h3>
+<div class="scrollx"><table>
+<thead><tr><th>key</th><th>label</th><th>value</th><th>sell ×0.10</th></tr></thead>
+<tbody>
+<tr><td><code>dirt</code></td><td>Dirt</td><td class="num">2</td><td class="num">0</td></tr>
+<tr><td><code>jam</code></td><td>Jam</td><td class="num">5</td><td class="num">1</td></tr>
+<tr><td><code>eggs</code></td><td>Eggs</td><td class="num">5</td><td class="num">1</td></tr>
+<tr><td><code>sea_shells</code></td><td>Sea Shells</td><td class="num">5</td><td class="num">1</td></tr>
+<tr><td><code>plank</code></td><td>Plank</td><td class="num">6</td><td class="num">1</td></tr>
+<tr><td><code>hay_bundle</code></td><td>Hay Bundle</td><td class="num">6</td><td class="num">1</td></tr>
+<tr><td><code>block</code></td><td>Block</td><td class="num">6</td><td class="num">1</td></tr>
+<tr><td><code>fish_oil</code></td><td>Fish Oil</td><td class="num">6</td><td class="num">1</td></tr>
+<tr><td><code>flour</code></td><td>Flour</td><td class="num">8</td><td class="num">1</td></tr>
+<tr><td><code>iron_bar</code></td><td>Iron Bar</td><td class="num">8</td><td class="num">1</td></tr>
+<tr><td><code>copper_bar</code></td><td>Copper Bar</td><td class="num">8</td><td class="num">1</td></tr>
+<tr><td><code>fish_fillet</code></td><td>Fillet</td><td class="num">8</td><td class="num">1</td></tr>
+<tr><td><code>coke</code></td><td>Coke</td><td class="num">9</td><td class="num">1</td></tr>
+<tr><td><code>pearls</code></td><td>Pearls</td><td class="num">12</td><td class="num">1</td></tr>
+<tr><td><code>cut_gem</code></td><td>Cut Gem</td><td class="num">14</td><td class="num">1</td></tr>
+<tr><td><code>gold_bar</code></td><td>Gold Bar</td><td class="num">16</td><td class="num">2</td></tr>
+<tr><td><code>soup</code></td><td>Soup</td><td class="num">20</td><td class="num">2</td></tr>
+<tr><td><code>meat</code></td><td>Meat</td><td class="num">21</td><td class="num">2</td></tr>
+<tr><td><code>supplies</code></td><td>Supplies</td><td class="num">30</td><td class="num">3</td></tr>
+<tr><td><code>cured_meat</code></td><td>Cured Meat</td><td class="num">45</td><td class="num">5</td></tr>
+<tr><td><code>festival_loaf</code></td><td>Festival Loaf</td><td class="num">60</td><td class="num">6</td></tr>
+<tr><td><code>fish_oil_bottled</code></td><td>Fish Oil (Bottled)</td><td class="num">80</td><td class="num">8</td></tr>
+<tr><td><code>pie</code></td><td>Pie</td><td class="num">90</td><td class="num">9</td></tr>
+<tr><td><code>milk</code></td><td>Milk</td><td class="num">100</td><td class="num">10</td></tr>
+<tr><td><code>preserve</code></td><td>Preserve Jar</td><td class="num">100</td><td class="num">10</td></tr>
+<tr><td><code>iron_ration</code></td><td>Iron Ration</td><td class="num">120</td><td class="num">12</td></tr>
+<tr><td><code>bread</code></td><td>Bread Loaf</td><td class="num">125</td><td class="num">13</td></tr>
+<tr><td><code>tincture</code></td><td>Berry Tincture</td><td class="num">125</td><td class="num">13</td></tr>
+<tr><td><code>lantern</code></td><td>Iron Lantern</td><td class="num">150</td><td class="num">15</td></tr>
+<tr><td><code>honeyroll</code></td><td>Honey Roll</td><td class="num">175</td><td class="num">18</td></tr>
+<tr><td><code>harvestpie</code></td><td>Harvest Pie</td><td class="num">175</td><td class="num">18</td></tr>
+<tr><td><code>iron_hinge</code></td><td>Iron Hinge</td><td class="num">175</td><td class="num">18</td></tr>
+<tr><td><code>wedding_pie</code></td><td>Wedding Pie</td><td class="num">180</td><td class="num">18</td></tr>
+<tr><td><code>cobblepath</code></td><td>Cobble Path</td><td class="num">200</td><td class="num">20</td></tr>
+<tr><td><code>goldring</code></td><td>Gold Ring</td><td class="num">225</td><td class="num">23</td></tr>
+<tr><td><code>gold_ring</code></td><td>Gold Ring</td><td class="num">225</td><td class="num">23</td></tr>
+<tr><td><code>ironframe</code></td><td>Iron Frame</td><td class="num">275</td><td class="num">28</td></tr>
+<tr><td><code>iron_frame</code></td><td>Iron Frame</td><td class="num">275</td><td class="num">28</td></tr>
+<tr><td><code>chowder</code></td><td>Chowder</td><td class="num">280</td><td class="num">28</td></tr>
+<tr><td><code>honey</code></td><td>Honey</td><td class="num">300</td><td class="num">30</td></tr>
+<tr><td><code>stonework</code></td><td>Stonework</td><td class="num">300</td><td class="num">30</td></tr>
+<tr><td><code>gemcrown</code></td><td>Gem Crown</td><td class="num">325</td><td class="num">33</td></tr>
+<tr><td><code>gem_crown</code></td><td>Gem Crown</td><td class="num">325</td><td class="num">33</td></tr>
+<tr><td><code>horseshoe</code></td><td>Horseshoe</td><td class="num">400</td><td class="num">40</td></tr>
+</tbody></table></div>
+
+<h3>Buildings</h3>
+<div class="scrollx"><table>
+<thead><tr><th>id</th><th>lv</th><th>cost</th><th>abilities</th></tr></thead>
+<tbody>
+<tr><td><code>hearth</code></td><td class="num">1</td><td>free</td><td class="num">—</td></tr>
+<tr><td><code>mill</code></td><td class="num">1</td><td>200c + 30 plank</td><td>recipe_input_reduce</td></tr>
+<tr><td><code>bakery</code></td><td class="num">1</td><td>500c + 40 plank + 10 block</td><td class="num">—</td></tr>
+<tr><td><code>inn</code></td><td class="num">2</td><td>250c + 15 plank</td><td class="num">—</td></tr>
+<tr><td><code>granary</code></td><td class="num">1</td><td>150c + 10 plank</td><td>turn_budget_bonus, inventory_cap_bonus</td></tr>
+<tr><td><code>mining_camp</code></td><td class="num">1</td><td>200c + 15 plank</td><td>turn_budget_bonus</td></tr>
+<tr><td><code>larder</code></td><td class="num">2</td><td>250c + 15 plank</td><td class="num">—</td></tr>
+<tr><td><code>forge</code></td><td class="num">8</td><td>1200c + 60 block + 20 iron_bar</td><td class="num">—</td></tr>
+<tr><td><code>caravan_post</code></td><td class="num">8</td><td>800c + 40 plank</td><td class="num">—</td></tr>
+<tr><td><code>kitchen</code></td><td class="num">2</td><td>400c + 20 plank</td><td class="num">—</td></tr>
+<tr><td><code>workshop</code></td><td class="num">3</td><td>500c + 20 plank + 10 block</td><td class="num">—</td></tr>
+<tr><td><code>powder_store</code></td><td class="num">5</td><td>600c + 30 block + 5 iron_bar</td><td>grant_tool</td></tr>
+<tr><td><code>portal</code></td><td class="num">8</td><td>2000c + 5 runes</td><td class="num">—</td></tr>
+<tr><td><code>housing</code></td><td class="num">2</td><td>300c + 25 plank</td><td>worker_pool_step</td></tr>
+<tr><td><code>housing2</code></td><td class="num">2</td><td>300c + 25 plank</td><td>worker_pool_step</td></tr>
+<tr><td><code>housing3</code></td><td class="num">2</td><td>300c + 25 plank</td><td>worker_pool_step</td></tr>
+<tr><td><code>silo</code></td><td class="num">4</td><td>250c + 15 plank</td><td>preserve_board</td></tr>
+<tr><td><code>barn</code></td><td class="num">5</td><td>400c + 25 plank + 5 block</td><td>preserve_board</td></tr>
+<tr><td><code>harbor_dock</code></td><td class="num">3</td><td>600c + 30 plank + 10 block</td><td class="num">—</td></tr>
+<tr><td><code>fishmonger</code></td><td class="num">4</td><td>800c + 30 plank + 6 fish_fillet</td><td class="num">—</td></tr>
+<tr><td><code>smokehouse</code></td><td class="num">4</td><td>700c + 25 plank + 15 block</td><td class="num">—</td></tr>
+<tr><td><code>clock_tower</code></td><td class="num">4</td><td>900c + 40 plank + 25 block</td><td class="num">—</td></tr>
+<tr><td><code>lighthouse</code></td><td class="num">4</td><td>1000c + 35 plank + 30 block</td><td class="num">—</td></tr>
+<tr><td><code>apothecary</code></td><td class="num">3</td><td>700c + 30 plank + 10 block</td><td class="num">—</td></tr>
+<tr><td><code>sawmill</code></td><td class="num">4</td><td>800c + 20 plank + 20 block</td><td>bonus_yield</td></tr>
+<tr><td><code>watchtower</code></td><td class="num">3</td><td>600c + 35 plank + 10 block</td><td class="num">—</td></tr>
+<tr><td><code>stable</code></td><td class="num">3</td><td>750c + 40 plank + 10 block</td><td>bonus_yield</td></tr>
+<tr><td><code>apiary</code></td><td class="num">2</td><td>550c + 25 plank</td><td>bonus_yield</td></tr>
+<tr><td><code>chapel</code></td><td class="num">5</td><td>1100c + 30 plank + 40 block</td><td>season_bonus</td></tr>
+<tr><td><code>brewery</code></td><td class="num">4</td><td>950c + 35 plank + 20 block</td><td class="num">—</td></tr>
+<tr><td><code>observatory</code></td><td class="num">6</td><td>1400c + 30 plank + 45 block + 10 iron_bar</td><td>threshold_reduce_category</td></tr>
+</tbody></table></div>
+
+<h3>Tile spawn pools &amp; thresholds</h3>
+<div class="scrollx"><table>
+<thead><tr><th>pool</th><th>slots (tile×count)</th></tr></thead>
+<tbody>
+<tr><td>FARM_TILE_POOL</td><td>grass_hay×3, grain_wheat×1, bird_pheasant×1, veg_carrot×1, fruit_apple×1, flower_pansy×1, tree_oak×1, herd_pig×1, cattle_cow×1, mount_horse×1</td></tr>
+<tr><td>MINE_TILE_POOL</td><td>mine_stone×3, mine_iron_ore×1, mine_copper_ore×1, mine_coal×1, special_dirt×2, mine_gem×1</td></tr>
+<tr><td>FISH_TILE_POOL</td><td>fish_sardine×3, fish_mackerel×2, fish_clam×2, fish_kelp×2, fish_oyster×1</td></tr>
+</tbody></table></div>
+
+<h3>Workers</h3>
+<div class="scrollx"><table>
+<thead><tr><th>id</th><th>name</th><th>ability</th><th>effect</th></tr></thead>
+<tbody>
+<tr><td><code>farmer</code></td><td>Farmer</td><td><code>threshold_reduce_category</code></td><td>grain −1</td></tr>
+<tr><td><code>lumberjack</code></td><td>Lumberjack</td><td><code>threshold_reduce_category</code></td><td>trees −1</td></tr>
+<tr><td><code>miner</code></td><td>Miner</td><td><code>threshold_reduce_category</code></td><td>wood −1</td></tr>
+<tr><td><code>baker</code></td><td>Baker</td><td><code>recipe_input_reduce</code></td><td>bread −1</td></tr>
+</tbody></table></div>
+
+<details><summary>Recipes (53 base) · Tools (46) · Upgrade thresholds (74)</summary>
+<h4>Recipes (base <code>rec_*</code>)</h4>
+<div class="scrollx"><table>
+<thead><tr><th>item</th><th>station</th><th>inputs</th><th>coins</th></tr></thead>
+<tbody>
+<tr><td><code>rake</code></td><td>workshop</td><td>plank×1</td><td class="num">0</td></tr>
+<tr><td><code>axe</code></td><td>workshop</td><td>block×1</td><td class="num">0</td></tr>
+<tr><td><code>sickle</code></td><td>workshop</td><td>plank×1, iron_bar×1</td><td class="num">0</td></tr>
+<tr><td><code>fertilizer</code></td><td>workshop</td><td>hay_bundle×1, dirt×1</td><td class="num">0</td></tr>
+<tr><td><code>cat</code></td><td>workshop</td><td>block×2, dirt×1</td><td class="num">0</td></tr>
+<tr><td><code>bird_cage</code></td><td>workshop</td><td>hay_bundle×1</td><td class="num">0</td></tr>
+<tr><td><code>scythe_full</code></td><td>workshop</td><td>block×1</td><td class="num">0</td></tr>
+<tr><td><code>rifle</code></td><td>workshop</td><td>plank×1, block×1, iron_bar×1</td><td class="num">0</td></tr>
+<tr><td><code>hound</code></td><td>workshop</td><td>bread×1, block×3</td><td class="num">0</td></tr>
+<tr><td><code>hoe</code></td><td>workshop</td><td>plank×1, block×1</td><td class="num">0</td></tr>
+<tr><td><code>stone_hammer</code></td><td>workshop</td><td>block×2, plank×1</td><td class="num">0</td></tr>
+<tr><td><code>iron_pick</code></td><td>workshop</td><td>iron_bar×1, plank×1</td><td class="num">0</td></tr>
+<tr><td><code>auger</code></td><td>workshop</td><td>iron_bar×1, plank×1</td><td class="num">0</td></tr>
+<tr><td><code>blast_charge</code></td><td>workshop</td><td>iron_bar×1, coke×1</td><td class="num">0</td></tr>
+<tr><td><code>bird_feed</code></td><td>workshop</td><td>flour×1, hay_bundle×2</td><td class="num">0</td></tr>
+<tr><td><code>sapling</code></td><td>workshop</td><td>plank×1, hay_bundle×2</td><td class="num">0</td></tr>
+<tr><td><code>water_pump</code></td><td>workshop</td><td>plank×1, block×1</td><td class="num">0</td></tr>
+<tr><td><code>explosives</code></td><td>workshop</td><td>hay_bundle×1, dirt×1</td><td class="num">0</td></tr>
+<tr><td><code>trimmer</code></td><td>workshop</td><td>iron_bar×1, plank×1</td><td class="num">0</td></tr>
+<tr><td><code>plough</code></td><td>workshop</td><td>iron_bar×1, plank×2</td><td class="num">0</td></tr>
+<tr><td><code>fruit_picker</code></td><td>workshop</td><td>plank×2</td><td class="num">0</td></tr>
+<tr><td><code>herders_crook</code></td><td>workshop</td><td>plank×1, hay_bundle×1</td><td class="num">0</td></tr>
+<tr><td><code>milk_churn</code></td><td>workshop</td><td>plank×2, iron_bar×1</td><td class="num">0</td></tr>
+<tr><td><code>saddle</code></td><td>workshop</td><td>plank×1, iron_bar×1, hay_bundle×2</td><td class="num">0</td></tr>
+<tr><td><code>bee</code></td><td>workshop</td><td>honey×1, hay_bundle×1</td><td class="num">0</td></tr>
+<tr><td><code>terrier</code></td><td>workshop</td><td>bread×1, block×2</td><td class="num">0</td></tr>
+<tr><td><code>drill</code></td><td>workshop</td><td>iron_bar×2, coke×1, plank×1</td><td class="num">0</td></tr>
+<tr><td><code>coal_hammer</code></td><td>workshop</td><td>iron_bar×1, plank×1</td><td class="num">0</td></tr>
+<tr><td><code>gold_pick</code></td><td>workshop</td><td>iron_bar×2, gold_bar×1, plank×1</td><td class="num">0</td></tr>
+<tr><td><code>magnet</code></td><td>workshop</td><td>iron_bar×2, coke×1</td><td class="num">0</td></tr>
+<tr><td><code>coal_transmuter</code></td><td>workshop</td><td>iron_bar×2, coke×2, block×1</td><td class="num">0</td></tr>
+<tr><td><code>bread</code></td><td>bakery</td><td>flour×3, eggs×1</td><td class="num">125</td></tr>
+<tr><td><code>honeyroll</code></td><td>bakery</td><td>flour×2, eggs×1, jam×1</td><td class="num">175</td></tr>
+<tr><td><code>harvestpie</code></td><td>bakery</td><td>flour×2, jam×1, eggs×1</td><td class="num">175</td></tr>
+<tr><td><code>preserve</code></td><td>larder</td><td>jam×2, eggs×1</td><td class="num">100</td></tr>
+<tr><td><code>tincture</code></td><td>larder</td><td>jam×3</td><td class="num">125</td></tr>
+<tr><td><code>iron_hinge</code></td><td>forge</td><td>iron_bar×2, coke×1</td><td class="num">175</td></tr>
+<tr><td><code>cobblepath</code></td><td>forge</td><td>block×5, plank×2</td><td class="num">200</td></tr>
+<tr><td><code>lantern</code></td><td>forge</td><td>iron_bar×1, coke×1, plank×1</td><td class="num">150</td></tr>
+<tr><td><code>goldring</code></td><td>forge</td><td>gold_bar×1, iron_bar×2</td><td class="num">225</td></tr>
+<tr><td><code>gemcrown</code></td><td>forge</td><td>cut_gem×1, gold_bar×2</td><td class="num">325</td></tr>
+<tr><td><code>ironframe</code></td><td>forge</td><td>plank×2, iron_bar×1</td><td class="num">275</td></tr>
+<tr><td><code>stonework</code></td><td>forge</td><td>block×2, coke×1</td><td class="num">300</td></tr>
+<tr><td><code>chowder</code></td><td>larder</td><td>fish_fillet×2, milk×1, soup×1</td><td class="num">280</td></tr>
+<tr><td><code>fish_oil_bottled</code></td><td>workshop</td><td>fish_oil×1, plank×1</td><td class="num">80</td></tr>
+<tr><td><code>cured_meat</code></td><td>smokehouse</td><td>meat×2, coke×1</td><td class="num">45</td></tr>
+<tr><td><code>festival_loaf</code></td><td>bakery</td><td>flour×3, jam×2, eggs×1</td><td class="num">60</td></tr>
+<tr><td><code>wedding_pie</code></td><td>bakery</td><td>pie×1, honey×1, jam×2</td><td class="num">180</td></tr>
+<tr><td><code>iron_ration</code></td><td>kitchen</td><td>flour×5, meat×1, iron_bar×1</td><td class="num">120</td></tr>
+<tr><td><code>supplies</code></td><td>kitchen</td><td>flour×5</td><td class="num">30</td></tr>
+<tr><td><code>ironframe</code></td><td>forge</td><td>plank×2, iron_bar×1</td><td class="num">275</td></tr>
+<tr><td><code>gemcrown</code></td><td>forge</td><td>cut_gem×1, gold_bar×2</td><td class="num">325</td></tr>
+<tr><td><code>goldring</code></td><td>forge</td><td>gold_bar×1, iron_bar×2</td><td class="num">225</td></tr>
+</tbody></table></div>
+<h4>Tools</h4>
+<div class="scrollx"><table>
+<thead><tr><th>key</th><th>label</th><th>power</th></tr></thead>
+<tbody>
+<tr><td><code>clear</code></td><td>Scythe</td><td><code>clear_random_n</code></td></tr>
+<tr><td><code>basic</code></td><td>Seedpack</td><td><code>transform_random_n</code></td></tr>
+<tr><td><code>rare</code></td><td>Lockbox</td><td><code>transform_random_n</code></td></tr>
+<tr><td><code>shuffle</code></td><td>Reshuffle Horn</td><td><code>reshuffle_board</code></td></tr>
+<tr><td><code>bomb</code></td><td>Bomb</td><td><code>area_blast</code></td></tr>
+<tr><td><code>rake</code></td><td>Rake</td><td><code>clear_component</code></td></tr>
+<tr><td><code>axe</code></td><td>Axe</td><td><code>clear_category</code></td></tr>
+<tr><td><code>sickle</code></td><td>Sickle</td><td><code>clear_row</code></td></tr>
+<tr><td><code>fertilizer</code></td><td>Fertilizer</td><td><code>fill_bias</code></td></tr>
+<tr><td><code>cat</code></td><td>Cat</td><td><code>clear_hazard</code></td></tr>
+<tr><td><code>bird_cage</code></td><td>Bird Cage</td><td><code>clear_all</code></td></tr>
+<tr><td><code>scythe_full</code></td><td>Scythe (full)</td><td><code>clear_all</code></td></tr>
+<tr><td><code>rifle</code></td><td>Rifle</td><td><code>clear_hazard</code></td></tr>
+<tr><td><code>hound</code></td><td>Hound</td><td><code>scatter_hazard</code></td></tr>
+<tr><td><code>hoe</code></td><td>Hoe</td><td><code>clear_all</code></td></tr>
+<tr><td><code>stone_hammer</code></td><td>Stone Hammer</td><td><code>clear_all</code></td></tr>
+<tr><td><code>iron_pick</code></td><td>Iron Pick</td><td><code>clear_all</code></td></tr>
+<tr><td><code>auger</code></td><td>Auger</td><td><code>clear_column</code></td></tr>
+<tr><td><code>blast_charge</code></td><td>Blast Charge</td><td><code>clear_cross</code></td></tr>
+<tr><td><code>bird_feed</code></td><td>Bird Feed</td><td><code>fill_bias</code></td></tr>
+<tr><td><code>sapling</code></td><td>Sapling</td><td><code>fill_bias</code></td></tr>
+<tr><td><code>water_pump</code></td><td>Water Pump</td><td><code>water_pump</code></td></tr>
+<tr><td><code>explosives</code></td><td>Explosives</td><td><code>explosives</code></td></tr>
+<tr><td><code>trimmer</code></td><td>Trimmer</td><td><code>transform_tiles</code></td></tr>
+<tr><td><code>plough</code></td><td>Plough</td><td><code>clear_category</code></td></tr>
+<tr><td><code>fruit_picker</code></td><td>Fruit Picker</td><td><code>clear_category</code></td></tr>
+<tr><td><code>herders_crook</code></td><td>Herder's Crook</td><td><code>clear_category</code></td></tr>
+<tr><td><code>milk_churn</code></td><td>Milk Churn</td><td><code>clear_category</code></td></tr>
+<tr><td><code>saddle</code></td><td>Saddle</td><td><code>clear_category</code></td></tr>
+<tr><td><code>bee</code></td><td>Bee</td><td><code>transform_tiles</code></td></tr>
+<tr><td><code>terrier</code></td><td>Terrier</td><td><code>clear_hazard</code></td></tr>
+<tr><td><code>drill</code></td><td>Drill</td><td><code>transform_tiles</code></td></tr>
+<tr><td><code>coal_hammer</code></td><td>Coal Hammer</td><td><code>clear_category</code></td></tr>
+<tr><td><code>gold_pick</code></td><td>Gold Pick</td><td><code>clear_category</code></td></tr>
+<tr><td><code>magnet</code></td><td>Magnet</td><td><code>transform_adjacent</code></td></tr>
+<tr><td><code>coal_transmuter</code></td><td>Coal Transmuter</td><td><code>transform_adjacent</code></td></tr>
+<tr><td><code>magic_wand</code></td><td>Magic Wand</td><td><code>tap_clear_type</code></td></tr>
+<tr><td><code>hourglass</code></td><td>Hourglass</td><td><code>undo_move</code></td></tr>
+<tr><td><code>magic_seed</code></td><td>Magic Seed</td><td><code>restore_turns</code></td></tr>
+<tr><td><code>magic_fertilizer</code></td><td>Magic Fertilizer</td><td><code>fill_bias</code></td></tr>
+<tr><td><code>golden_apple</code></td><td>Golden Apple</td><td><code>transform_tiles</code></td></tr>
+<tr><td><code>golden_carrot</code></td><td>Golden Carrot</td><td><code>transform_tiles</code></td></tr>
+<tr><td><code>golden_idol</code></td><td>Golden Idol</td><td><code>transform_tiles</code></td></tr>
+<tr><td><code>golden_sheep</code></td><td>Golden Sheep</td><td><code>transform_tiles</code></td></tr>
+<tr><td><code>philosophers_stone</code></td><td>Philosopher's Stone</td><td><code>transform_tiles</code></td></tr>
+<tr><td><code>miners_hat</code></td><td>Miner's Hat</td><td><code>reveal_tiles</code></td></tr>
+</tbody></table></div>
+<h4>Upgrade thresholds</h4>
+<div class="scrollx"><table>
+<thead><tr><th>tile</th><th>T</th></tr></thead>
+<tbody>
+<tr><td><code>grass_hay</code></td><td class="num">6</td></tr>
+<tr><td><code>grass_meadow</code></td><td class="num">6</td></tr>
+<tr><td><code>grass_spiky</code></td><td class="num">6</td></tr>
+<tr><td><code>grain_wheat</code></td><td class="num">5</td></tr>
+<tr><td><code>mine_stone</code></td><td class="num">8</td></tr>
+<tr><td><code>mine_iron_ore</code></td><td class="num">6</td></tr>
+<tr><td><code>mine_copper_ore</code></td><td class="num">6</td></tr>
+<tr><td><code>mine_coal</code></td><td class="num">7</td></tr>
+<tr><td><code>mine_gem</code></td><td class="num">5</td></tr>
+<tr><td><code>mine_gold</code></td><td class="num">6</td></tr>
+<tr><td><code>bird_turkey</code></td><td class="num">6</td></tr>
+<tr><td><code>bird_clover</code></td><td class="num">6</td></tr>
+<tr><td><code>bird_melon</code></td><td class="num">6</td></tr>
+<tr><td><code>veg_carrot</code></td><td class="num">6</td></tr>
+<tr><td><code>veg_eggplant</code></td><td class="num">6</td></tr>
+<tr><td><code>veg_turnip</code></td><td class="num">6</td></tr>
+<tr><td><code>veg_beet</code></td><td class="num">6</td></tr>
+<tr><td><code>veg_cucumber</code></td><td class="num">6</td></tr>
+<tr><td><code>veg_squash</code></td><td class="num">6</td></tr>
+<tr><td><code>veg_mushroom</code></td><td class="num">6</td></tr>
+<tr><td><code>veg_pepper</code></td><td class="num">6</td></tr>
+<tr><td><code>veg_broccoli</code></td><td class="num">6</td></tr>
+<tr><td><code>grass_heather</code></td><td class="num">6</td></tr>
+<tr><td><code>grain_corn</code></td><td class="num">6</td></tr>
+<tr><td><code>grain_buckwheat</code></td><td class="num">6</td></tr>
+<tr><td><code>grain_manna</code></td><td class="num">6</td></tr>
+<tr><td><code>grain_rice</code></td><td class="num">6</td></tr>
+<tr><td><code>fruit_apple</code></td><td class="num">7</td></tr>
+<tr><td><code>fruit_pear</code></td><td class="num">7</td></tr>
+<tr><td><code>fruit_golden_apple</code></td><td class="num">7</td></tr>
+<tr><td><code>fruit_blackberry</code></td><td class="num">7</td></tr>
+<tr><td><code>fruit_rambutan</code></td><td class="num">7</td></tr>
+<tr><td><code>fruit_starfruit</code></td><td class="num">7</td></tr>
+<tr><td><code>fruit_coconut</code></td><td class="num">7</td></tr>
+<tr><td><code>fruit_lemon</code></td><td class="num">7</td></tr>
+<tr><td><code>fruit_jackfruit</code></td><td class="num">7</td></tr>
+<tr><td><code>flower_pansy</code></td><td class="num">10</td></tr>
+<tr><td><code>flower_water_lily</code></td><td class="num">10</td></tr>
+<tr><td><code>tree_oak</code></td><td class="num">6</td></tr>
+<tr><td><code>tree_birch</code></td><td class="num">6</td></tr>
+<tr><td><code>tree_willow</code></td><td class="num">6</td></tr>
+<tr><td><code>tree_fir</code></td><td class="num">6</td></tr>
+<tr><td><code>tree_cypress</code></td><td class="num">6</td></tr>
+<tr><td><code>tree_palm</code></td><td class="num">6</td></tr>
+<tr><td><code>bird_pheasant</code></td><td class="num">6</td></tr>
+<tr><td><code>bird_chicken</code></td><td class="num">6</td></tr>
+<tr><td><code>bird_hen</code></td><td class="num">6</td></tr>
+<tr><td><code>bird_rooster</code></td><td class="num">6</td></tr>
+<tr><td><code>bird_wild_goose</code></td><td class="num">6</td></tr>
+<tr><td><code>bird_goose</code></td><td class="num">6</td></tr>
+<tr><td><code>bird_parrot</code></td><td class="num">6</td></tr>
+<tr><td><code>bird_phoenix</code></td><td class="num">6</td></tr>
+<tr><td><code>bird_dodo</code></td><td class="num">6</td></tr>
+<tr><td><code>bird_pig_in_disguise</code></td><td class="num">6</td></tr>
+<tr><td><code>herd_pig</code></td><td class="num">5</td></tr>
+<tr><td><code>herd_hog</code></td><td class="num">5</td></tr>
+<tr><td><code>herd_boar</code></td><td class="num">5</td></tr>
+<tr><td><code>herd_warthog</code></td><td class="num">5</td></tr>
+<tr><td><code>herd_sheep</code></td><td class="num">5</td></tr>
+<tr><td><code>herd_alpaca</code></td><td class="num">5</td></tr>
+<tr><td><code>herd_goat</code></td><td class="num">5</td></tr>
+<tr><td><code>herd_ram</code></td><td class="num">5</td></tr>
+<tr><td><code>cattle_cow</code></td><td class="num">6</td></tr>
+<tr><td><code>cattle_longhorn</code></td><td class="num">6</td></tr>
+<tr><td><code>cattle_triceratops</code></td><td class="num">6</td></tr>
+<tr><td><code>mount_horse</code></td><td class="num">10</td></tr>
+<tr><td><code>mount_donkey</code></td><td class="num">10</td></tr>
+<tr><td><code>mount_moose</code></td><td class="num">10</td></tr>
+<tr><td><code>mount_mammoth</code></td><td class="num">10</td></tr>
+<tr><td><code>fish_sardine</code></td><td class="num">5</td></tr>
+<tr><td><code>fish_mackerel</code></td><td class="num">5</td></tr>
+<tr><td><code>fish_clam</code></td><td class="num">5</td></tr>
+<tr><td><code>fish_kelp</code></td><td class="num">6</td></tr>
+<tr><td><code>fish_oyster</code></td><td class="num">5</td></tr>
+</tbody></table></div>
+</details>
+<!-- GEN:config-reference END -->
 </section>
 
 </div>
