@@ -14,9 +14,29 @@
 import { expandAbilitiesToEffects } from "./abilitiesAggregate.js";
 import { ALL_ITEM_KEY_VALUES, type ItemKey } from "../types/catalog/itemKeys.js";
 import type { BalanceOverrides } from "./schemas/balance.js";
-import { itemOverrideSchema } from "./schemas/itemOverride.js";
-import { recipeOverrideSchema } from "./schemas/recipe.js";
+import { upgradeThresholdsOverridesSchema } from "./schemas/balance.js";
+import { achievementsOverridesSchema } from "./schemas/achievement.js";
+import { biomesOverridesSchema } from "./schemas/biome.js";
+import { bossesOverridesSchema } from "./schemas/boss.js";
+import { buildingsOverridesSchema } from "./schemas/building.js";
+import { dailyRewardsOverridesSchema } from "./schemas/dailyReward.js";
+import { expeditionOverrideSchema } from "./schemas/expedition.js";
+import { flagsOverridesSchema, type FlagPatch } from "./schemas/flags.js";
+import { itemsOverridesSchema } from "./schemas/itemOverride.js";
+import { keepersOverridesSchema } from "./schemas/keeper.js";
+import { npcsOverridesSchema } from "./schemas/npc.js";
+import { parseOptionalOverrideSection } from "./schemas/parseOverrideSection.js";
+import { recipesOverridesSchema } from "./schemas/recipe.js";
+import { storyOverridesSchema } from "./schemas/story.js";
+import {
+  tileDescriptionsOverridesSchema,
+  tilePowersOverridesSchema,
+  tileUnlocksOverridesSchema,
+} from "./schemas/tilePower.js";
 import { tuningSchema } from "./schemas/tuning.js";
+import type { TuningOverrides } from "./schemas/tuning.js";
+import { workersOverridesSchema } from "./schemas/worker.js";
+import { zonesOverridesSchema } from "./schemas/zone.js";
 
 // Map legacy power-hook ids → unified ability ids. Some ids stayed the
 // same; a few were renamed during the abilities unification.
@@ -54,55 +74,22 @@ function hooksToAbilities(hooks: unknown): AbilityShape[] {
   return out;
 }
 
-const BALANCE_DRAFT_KEY = "hearth.balance.draft";
+export {
+  BALANCE_DRAFT_KEY,
+  readBalanceDraft,
+  writeBalanceDraft,
+  mergeOverrides,
+} from "./balance/load.js";
 
 /** @deprecated Use BalanceOverrides from config/schemas */
 type Overrides = BalanceOverrides | Record<string, unknown> | null | undefined;
 
-/** Read the localStorage draft, if any. Safe in non-browser environments. */
-export function readBalanceDraft(): Record<string, unknown> | null {
-  try {
-    if (typeof localStorage === "undefined") return null;
-    const raw = localStorage.getItem(BALANCE_DRAFT_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw);
-    return parsed && typeof parsed === "object" ? parsed as Record<string, unknown> : null;
-  } catch { return null; }
-}
-
-export function writeBalanceDraft(draft: unknown): void {
-  try {
-    if (typeof localStorage === "undefined") return;
-    if (draft == null) localStorage.removeItem(BALANCE_DRAFT_KEY);
-    else localStorage.setItem(BALANCE_DRAFT_KEY, JSON.stringify(draft));
-  } catch { /* storage unavailable */ }
-}
-
-/** Shallow-merge two override objects. Values from `b` win. */
-export function mergeOverrides(a: Overrides, b: Overrides): Record<string, unknown> {
-  if (!a) return (b ?? {}) as Record<string, unknown>;
-  if (!b) return (a ?? {}) as Record<string, unknown>;
-  const out: Record<string, unknown> = { ...a };
-  for (const k of Object.keys(b)) {
-    const av = (a as Record<string, unknown>)[k];
-    const bv = (b as Record<string, unknown>)[k];
-    if (av && typeof av === "object" && !Array.isArray(av)
-        && bv && typeof bv === "object" && !Array.isArray(bv)) {
-      out[k] = { ...(av as Record<string, unknown>), ...(bv as Record<string, unknown>) };
-    } else {
-      out[k] = bv;
-    }
-  }
-  return out;
-}
-
 /** Apply numeric upgrade-threshold overrides in place. */
 export function applyUpgradeThresholdOverrides(target: Record<string, number>, overrides: Overrides): void {
-  if (!overrides || typeof overrides !== "object") return;
-  for (const [key, value] of Object.entries(overrides)) {
-    const n = Number(value);
-    if (!Number.isFinite(n) || n < 1) continue;
-    target[key] = Math.floor(n);
+  const parsed = parseOptionalOverrideSection("upgradeThresholds", upgradeThresholdsOverridesSchema, overrides);
+  if (!parsed) return;
+  for (const [key, value] of Object.entries(parsed)) {
+    if (key in target) target[key] = value;
   }
 }
 
@@ -118,14 +105,12 @@ function asRecord(v: unknown): AnyRecord {
  * The item is patched in place.
  */
 export function applyItemOverrides(items: Record<string, AnyRecord> | unknown, overrides: Overrides): void {
-  if (!overrides || typeof overrides !== "object") return;
+  const parsed = parseOptionalOverrideSection("items", itemsOverridesSchema, overrides);
+  if (!parsed) return;
   const itemMap = (items ?? {}) as Record<string, AnyRecord | undefined>;
-  for (const [key, patchRaw] of Object.entries(overrides)) {
+  for (const [key, patch] of Object.entries(parsed)) {
     const item = itemMap[key];
     if (!item) continue;
-    const parsed = itemOverrideSchema.safeParse(patchRaw);
-    if (!parsed.success) continue;
-    const patch = parsed.data;
     if (patch.label !== undefined) item.label = patch.label;
     if (patch.color !== undefined) item.color = patch.color;
     if (patch.dark !== undefined) item.dark = patch.dark;
@@ -143,21 +128,18 @@ export function applyItemOverrides(items: Record<string, AnyRecord> | unknown, o
 
 /** Apply patches to RECIPES entries. Fields: item, inputs, tier, station, coins. */
 export function applyRecipeOverrides(recipes: Record<string, AnyRecord> | unknown, overrides: Overrides): void {
-  if (!overrides || typeof overrides !== "object") return;
+  const parsed = parseOptionalOverrideSection("recipes", recipesOverridesSchema, overrides);
+  if (!parsed) return;
   const recipeMap = (recipes ?? {}) as Record<string, AnyRecord | undefined>;
-  for (const [key, patchRaw] of Object.entries(overrides)) {
+  for (const [key, patch] of Object.entries(parsed)) {
     const r = recipeMap[key];
     if (!r) continue;
-    const parsed = recipeOverrideSchema.safeParse(patchRaw);
-    if (!parsed.success) continue;
-    const patch = parsed.data;
     if (patch.item !== undefined && isKnownRecipeInputKey(patch.item)) r.item = patch.item;
     if (patch.inputs !== undefined) {
       const cleaned: Record<string, number> = {};
       for (const [resKey, qty] of Object.entries(patch.inputs)) {
         if (!isKnownRecipeInputKey(resKey)) continue;
-        const n = Number(qty);
-        if (Number.isFinite(n) && n > 0) cleaned[resKey] = Math.floor(n);
+        cleaned[resKey] = qty;
       }
       r.inputs = cleaned;
     }
@@ -170,30 +152,18 @@ export function applyRecipeOverrides(recipes: Record<string, AnyRecord> | unknow
 /** Apply patches to BUILDINGS entries (matched by id). Fields: name, desc,
  *  cost, lv, color, abilities. */
 export function applyBuildingOverrides(buildings: AnyRecord[] | unknown, overrides: Overrides): void {
-  if (!overrides || typeof overrides !== "object") return;
+  const parsed = parseOptionalOverrideSection("buildings", buildingsOverridesSchema, overrides);
+  if (!parsed) return;
   const list = Array.isArray(buildings) ? buildings as AnyRecord[] : [];
-  const overrideMap = overrides as AnyRecord;
   for (const b of list) {
-    const patchRaw = overrideMap[b.id as string];
-    if (!patchRaw) continue;
-    const patch = asRecord(patchRaw);
-    if (typeof patch.name === "string") b.name = patch.name;
-    if (typeof patch.desc === "string") b.desc = patch.desc;
-    if (patch.cost && typeof patch.cost === "object") {
-      const cleaned: Record<string, number> = {};
-      for (const [k, v] of Object.entries(patch.cost as AnyRecord)) {
-        const n = Number(v);
-        if (Number.isFinite(n) && n >= 0) cleaned[k] = Math.floor(n);
-      }
-      b.cost = cleaned;
-    }
-    if (Number.isFinite(patch.lv as number)) b.lv = patch.lv;
-    if (typeof patch.color === "string") b.color = patch.color;
-    // Abilities replace wholesale (rather than merge) so designers can
-    // remove an ability by leaving it out of the override.
-    if (Array.isArray(patch.abilities)) {
-      b.abilities = patch.abilities.filter((a: unknown): a is AnyRecord => !!a && typeof a === "object" && typeof (a as AnyRecord).id === "string");
-    }
+    const patch = parsed[b.id as string];
+    if (!patch) continue;
+    if (patch.name !== undefined) b.name = patch.name;
+    if (patch.desc !== undefined) b.desc = patch.desc;
+    if (patch.cost !== undefined) b.cost = { ...patch.cost };
+    if (patch.lv !== undefined) b.lv = patch.lv;
+    if (patch.color !== undefined) b.color = patch.color;
+    if (patch.abilities !== undefined) b.abilities = [...patch.abilities];
   }
 }
 
@@ -211,9 +181,9 @@ export function applyBuildingOverrides(buildings: AnyRecord[] | unknown, overrid
 export function applyTileOverrides(tileTypes: unknown, overrides: Overrides): void {
   if (!tileTypes || !Array.isArray(tileTypes)) return;
   const o = asRecord(overrides);
-  const powers = (o.tilePowers as Record<string, AnyRecord | undefined> | undefined) || {};
-  const unlocks = (o.tileUnlocks as Record<string, AnyRecord | undefined> | undefined) || {};
-  const descs = (o.tileDescriptions as Record<string, string | undefined> | undefined) || {};
+  const powers = parseOptionalOverrideSection("tilePowers", tilePowersOverridesSchema, o.tilePowers) ?? {};
+  const unlocks = parseOptionalOverrideSection("tileUnlocks", tileUnlocksOverridesSchema, o.tileUnlocks) ?? {};
+  const descs = parseOptionalOverrideSection("tileDescriptions", tileDescriptionsOverridesSchema, o.tileDescriptions) ?? {};
 
   for (const tile of tileTypes as AnyRecord[]) {
     const id = tile.id as string;
@@ -274,52 +244,28 @@ export function applyTileOverrides(tileTypes: unknown, overrides: Overrides): vo
  * per-season so a partial patch only clobbers the named seasons.
  */
 export function applyZoneOverrides(zones: unknown, overrides: Overrides): void {
-  if (!overrides || typeof overrides !== "object") return;
+  const parsed = parseOptionalOverrideSection("zones", zonesOverridesSchema, overrides);
+  if (!parsed) return;
   const zoneMap = asRecord(zones) as Record<string, AnyRecord | undefined>;
-  for (const [zoneId, patchRaw] of Object.entries(overrides)) {
-    const patch = asRecord(patchRaw);
+  for (const [zoneId, patch] of Object.entries(parsed)) {
     const zone = zoneMap[zoneId];
     if (!zone) continue;
-
-    if (typeof patch.name === "string" && (patch.name as string).length > 0) {
-      zone.name = patch.name;
+    if (patch.name !== undefined) zone.name = patch.name;
+    if (patch.hasFarm !== undefined) zone.hasFarm = patch.hasFarm;
+    if (patch.hasMine !== undefined) zone.hasMine = patch.hasMine;
+    if (patch.hasWater !== undefined) zone.hasWater = patch.hasWater;
+    if (patch.buildings !== undefined) zone.buildings = [...patch.buildings];
+    if (patch.baseTurns !== undefined) zone.baseTurns = patch.baseTurns;
+    if (patch.entryCost !== undefined) {
+      zone.entryCost = { ...asRecord(zone.entryCost), coins: patch.entryCost.coins };
     }
-    if (typeof patch.hasFarm === "boolean") zone.hasFarm = patch.hasFarm;
-    if (typeof patch.hasMine === "boolean") zone.hasMine = patch.hasMine;
-    if (typeof patch.hasWater === "boolean") zone.hasWater = patch.hasWater;
-    if (Array.isArray(patch.buildings)) {
-      zone.buildings = (patch.buildings as unknown[]).filter(
-        (id): id is string => typeof id === "string" && id.length > 0,
-      );
-    }
-    if (Number.isFinite(patch.baseTurns as number) && (patch.baseTurns as number) >= 1) {
-      zone.baseTurns = Math.floor(patch.baseTurns as number);
-    }
-    if (patch.entryCost && typeof patch.entryCost === "object") {
-      const coins = Number((patch.entryCost as AnyRecord).coins);
-      if (Number.isFinite(coins) && coins >= 0) {
-        zone.entryCost = { ...asRecord(zone.entryCost), coins: Math.floor(coins) };
-      }
-    }
-    if (patch.upgradeMap && typeof patch.upgradeMap === "object") {
-      const cleaned: Record<string, string> = {};
-      for (const [src, target] of Object.entries(patch.upgradeMap as AnyRecord)) {
-        if (typeof target === "string" && target.length > 0) cleaned[src] = target;
-      }
-      zone.upgradeMap = cleaned;
-    }
-    if (patch.seasonDrops && typeof patch.seasonDrops === "object") {
+    if (patch.upgradeMap !== undefined) zone.upgradeMap = { ...patch.upgradeMap };
+    if (patch.seasonDrops !== undefined) {
       const out: Record<string, Record<string, number>> = {
         ...(asRecord(zone.seasonDrops) as Record<string, Record<string, number>>),
       };
-      for (const [seasonName, table] of Object.entries(patch.seasonDrops as AnyRecord)) {
-        if (!table || typeof table !== "object") continue;
-        const cleaned: Record<string, number> = {};
-        for (const [cat, pct] of Object.entries(table as AnyRecord)) {
-          const n = Number(pct);
-          if (Number.isFinite(n) && n >= 0) cleaned[cat] = n;
-        }
-        out[seasonName] = cleaned;
+      for (const [seasonName, table] of Object.entries(patch.seasonDrops)) {
+        out[seasonName] = { ...table };
       }
       zone.seasonDrops = out;
     }
@@ -340,64 +286,32 @@ export function applyZoneOverrides(zones: unknown, overrides: Overrides): void {
  * Mutates the supplied workers array in place.
  */
 export function applyWorkerOverrides(workers: unknown, overrides: Overrides): void {
-  if (!Array.isArray(workers) || !overrides || typeof overrides !== "object") return;
-  const overrideMap = overrides as AnyRecord;
+  if (!Array.isArray(workers)) return;
+  const parsed = parseOptionalOverrideSection("workers", workersOverridesSchema, overrides);
+  if (!parsed) return;
   for (const w of workers as AnyRecord[]) {
-    const patchRaw = overrideMap[w.id as string];
-    if (!patchRaw) continue;
-    const patch = asRecord(patchRaw);
-    if (patch.hireCost && typeof patch.hireCost === "object") {
-      const hc = patch.hireCost as AnyRecord;
+    const patch = parsed[w.id as string];
+    if (!patch) continue;
+    if (patch.hireCost !== undefined) {
+      const hc = patch.hireCost;
       const next: AnyRecord = { ...asRecord(w.hireCost) };
-
-      // Explicit-null sentinel removes a ramp field entirely. Null must be
-      // checked before any Number() coercion (Number(null) === 0).
-      if (Object.prototype.hasOwnProperty.call(hc, "coinsStep")
-          && hc.coinsStep === null) {
+      if (Object.prototype.hasOwnProperty.call(hc, "coinsStep") && hc.coinsStep === null) {
         delete next.coinsStep;
       } else if (hc.coinsStep != null) {
-        const step = Number(hc.coinsStep);
-        if (Number.isFinite(step) && step >= 0) next.coinsStep = step;
+        next.coinsStep = hc.coinsStep;
       }
-
-      if (Object.prototype.hasOwnProperty.call(hc, "coinsMult")
-          && hc.coinsMult === null) {
+      if (Object.prototype.hasOwnProperty.call(hc, "coinsMult") && hc.coinsMult === null) {
         delete next.coinsMult;
       } else if (hc.coinsMult != null) {
-        const mult = Number(hc.coinsMult);
-        if (Number.isFinite(mult) && mult > 0) next.coinsMult = mult;
+        next.coinsMult = hc.coinsMult;
       }
-
-      if (hc.coins != null) {
-        const coins = Number(hc.coins);
-        if (Number.isFinite(coins) && coins >= 0) next.coins = Math.floor(coins);
-      }
-
-      if (hc.resources && typeof hc.resources === "object") {
-        const resources: Record<string, number> = {};
-        for (const [key, value] of Object.entries(hc.resources as AnyRecord)) {
-          const amount = Number(value);
-          if (key && Number.isFinite(amount) && amount > 0) resources[key] = Math.floor(amount);
-        }
-        next.resources = resources;
-      }
-
-      if (hc.resourcesStepEvery != null) {
-        const step = Number(hc.resourcesStepEvery);
-        if (Number.isFinite(step) && step >= 1) next.resourcesStepEvery = Math.floor(step);
-      }
-
+      if (hc.coins != null) next.coins = hc.coins;
+      if (hc.resources != null) next.resources = { ...hc.resources };
+      if (hc.resourcesStepEvery != null) next.resourcesStepEvery = hc.resourcesStepEvery;
       w.hireCost = next;
     }
-    if (Number.isFinite(patch.maxCount as number) && (patch.maxCount as number) >= 1) {
-      w.maxCount = Math.floor(patch.maxCount as number);
-    }
-    if (Array.isArray(patch.abilities)) {
-      // Replace wholesale — designers may swap or remove abilities.
-      w.abilities = (patch.abilities as unknown[]).filter(
-        (a): a is AnyRecord => !!a && typeof a === "object" && typeof (a as AnyRecord).id === "string",
-      );
-    }
+    if (patch.maxCount !== undefined) w.maxCount = patch.maxCount;
+    if (patch.abilities !== undefined) w.abilities = [...patch.abilities];
   }
 }
 
@@ -410,31 +324,26 @@ export function applyWorkerOverrides(workers: unknown, overrides: Overrides): vo
  * Mutates the supplied keepers object in place.
  */
 export function applyKeeperOverrides(keepers: unknown, overrides: Overrides): void {
-  if (!keepers || !overrides || typeof overrides !== "object") return;
+  const parsed = parseOptionalOverrideSection("keepers", keepersOverridesSchema, overrides);
+  if (!parsed || !keepers) return;
   const keeperMap = keepers as Record<string, AnyRecord | undefined>;
-  const strArray = (v: unknown): string[] | null => (Array.isArray(v) ? (v as unknown[]).map((x) => String(x)).filter((s) => s.length > 0) : null);
-  const patchPath = (target: AnyRecord | undefined, patch: AnyRecord) => {
-    if (!target || !patch || typeof patch !== "object") return;
-    if (typeof patch.label === "string") target.label = patch.label;
-    const pitch = strArray(patch.pitch);
-    if (pitch) target.pitch = pitch;
-    if (Number.isFinite(patch.embers as number) && (patch.embers as number) >= 0) target.embers = Math.floor(patch.embers as number);
-    if (Number.isFinite(patch.coreIngots as number) && (patch.coreIngots as number) >= 0) target.coreIngots = Math.floor(patch.coreIngots as number);
+  const patchPath = (target: AnyRecord | undefined, patch: NonNullable<typeof parsed[string]["coexist"]>) => {
+    if (!target || !patch) return;
+    if (patch.label !== undefined) target.label = patch.label;
+    if (patch.pitch !== undefined) target.pitch = [...patch.pitch];
+    if (patch.embers !== undefined) target.embers = patch.embers;
+    if (patch.coreIngots !== undefined) target.coreIngots = patch.coreIngots;
   };
-  for (const [type, patchRaw] of Object.entries(overrides)) {
-    const patch = asRecord(patchRaw);
+  for (const [type, patch] of Object.entries(parsed)) {
     const k = keeperMap[type];
     if (!k) continue;
-    if (typeof patch.name === "string") k.name = patch.name;
-    if (typeof patch.title === "string") k.title = patch.title;
-    if (typeof patch.icon === "string") k.icon = patch.icon;
-    if (Number.isFinite(patch.appearsAfterBuildings as number) && (patch.appearsAfterBuildings as number) >= 0) {
-      k.appearsAfterBuildings = Math.floor(patch.appearsAfterBuildings as number);
-    }
-    const intro = strArray(patch.intro);
-    if (intro) k.intro = intro;
-    if (patch.coexist) patchPath(k.coexist as AnyRecord, asRecord(patch.coexist));
-    if (patch.driveout) patchPath(k.driveout as AnyRecord, asRecord(patch.driveout));
+    if (patch.name !== undefined) k.name = patch.name;
+    if (patch.title !== undefined) k.title = patch.title;
+    if (patch.icon !== undefined) k.icon = patch.icon;
+    if (patch.appearsAfterBuildings !== undefined) k.appearsAfterBuildings = patch.appearsAfterBuildings;
+    if (patch.intro !== undefined) k.intro = [...patch.intro];
+    if (patch.coexist !== undefined) patchPath(k.coexist as AnyRecord, patch.coexist);
+    if (patch.driveout !== undefined) patchPath(k.driveout as AnyRecord, patch.driveout);
   }
 }
 
@@ -450,19 +359,17 @@ export function applyExpeditionOverrides(
   meatFoods: string[] | unknown,
   overrides: Overrides,
 ): void {
-  if (!overrides || typeof overrides !== "object") return;
-  const o = overrides as AnyRecord;
-  if (o.foodTurns && typeof o.foodTurns === "object" && foodTurns) {
+  const parsed = parseOptionalOverrideSection("expedition", expeditionOverrideSchema, overrides);
+  if (!parsed) return;
+  if (parsed.foodTurns && foodTurns) {
     const ft = foodTurns as Record<string, number>;
-    for (const [key, val] of Object.entries(o.foodTurns as AnyRecord)) {
-      const n = Number(val);
-      if (typeof key === "string" && key.length > 0 && Number.isFinite(n) && n >= 0) ft[key] = Math.floor(n);
+    for (const [key, val] of Object.entries(parsed.foodTurns)) {
+      ft[key] = val;
     }
   }
-  if (Array.isArray(o.meatFoods) && Array.isArray(meatFoods)) {
-    const cleaned = (o.meatFoods as unknown[]).filter((k): k is string => typeof k === "string" && k.length > 0);
+  if (parsed.meatFoods && Array.isArray(meatFoods)) {
     (meatFoods as string[]).length = 0;
-    (meatFoods as string[]).push(...cleaned);
+    (meatFoods as string[]).push(...parsed.meatFoods);
   }
 }
 
@@ -476,22 +383,19 @@ export function applyBiomeOverrides(
   settlementBiomes: Record<string, AnyRecord[]> | unknown,
   overrides: Overrides,
 ): void {
-  if (!settlementBiomes || !overrides || typeof overrides !== "object") return;
+  const parsed = parseOptionalOverrideSection("biomes", biomesOverridesSchema, overrides);
+  if (!parsed || !settlementBiomes) return;
   const biomeMap = settlementBiomes as Record<string, AnyRecord[] | undefined>;
-  for (const [type, byIdRaw] of Object.entries(overrides)) {
+  for (const [type, byId] of Object.entries(parsed)) {
     const list = biomeMap[type];
-    if (!Array.isArray(list) || !byIdRaw || typeof byIdRaw !== "object") continue;
-    for (const [biomeId, patchRaw] of Object.entries(byIdRaw as AnyRecord)) {
-      const patch = asRecord(patchRaw);
+    if (!Array.isArray(list)) continue;
+    for (const [biomeId, patch] of Object.entries(byId)) {
       const b = list.find((x) => x.id === biomeId);
-      if (!b || !patch || typeof patch !== "object") continue;
-      if (typeof patch.name === "string" && (patch.name as string).length > 0) b.name = patch.name;
-      if (typeof patch.icon === "string" && (patch.icon as string).length > 0) b.icon = patch.icon;
-      if (typeof patch.bonus === "string" && (patch.bonus as string).length > 0) b.bonus = patch.bonus;
-      if (Array.isArray(patch.hazards)) {
-        const cleaned = (patch.hazards as unknown[]).filter((h): h is string => typeof h === "string" && h.length > 0);
-        if (cleaned.length > 0) b.hazards = cleaned;
-      }
+      if (!b) continue;
+      if (patch.name !== undefined) b.name = patch.name;
+      if (patch.icon !== undefined) b.icon = patch.icon;
+      if (patch.bonus !== undefined) b.bonus = patch.bonus;
+      if (patch.hazards !== undefined && patch.hazards.length > 0) b.hazards = [...patch.hazards];
     }
   }
 }
@@ -505,10 +409,9 @@ export function applyBiomeOverrides(
  *   foundingGrowth                         — positive number
  *   homeBiome                              — non-empty string
  */
-export function sanitizeTuning(raw: unknown): AnyRecord {
-  const parsed = tuningSchema.safeParse(raw);
-  if (!parsed.success) return {};
-  return { ...parsed.data } as AnyRecord;
+/** Validate tuning section; throws if invalid. Returns `{}` when absent. */
+export function sanitizeTuning(raw: unknown): TuningOverrides {
+  return parseOptionalOverrideSection("tuning", tuningSchema, raw) ?? {};
 }
 
 /**
@@ -520,29 +423,25 @@ export function sanitizeTuning(raw: unknown): AnyRecord {
  * passed-in `npcData` / `bondBands` in place.
  */
 export function applyNpcOverrides(npcData: unknown, bondBands: unknown, overrides: Overrides): void {
-  if (!overrides || typeof overrides !== "object") return;
-  const o = overrides as AnyRecord;
-  const strArr = (v: unknown): string[] | null => (Array.isArray(v) ? (v as unknown[]).filter((x): x is string => typeof x === "string" && x.length > 0) : null);
-  if (o.byId && typeof o.byId === "object" && npcData) {
+  const parsed = parseOptionalOverrideSection("npcs", npcsOverridesSchema, overrides);
+  if (!parsed) return;
+  if (parsed.byId && npcData) {
     const npcMap = npcData as Record<string, AnyRecord | undefined>;
-    for (const [id, patchRaw] of Object.entries(o.byId as AnyRecord)) {
-      const patch = asRecord(patchRaw);
+    for (const [id, patch] of Object.entries(parsed.byId)) {
       const d = npcMap[id];
       if (!d) continue;
-      if (typeof patch.displayName === "string" && (patch.displayName as string).length > 0) d.displayName = patch.displayName;
-      const loves = strArr(patch.loves); if (loves) d.loves = loves;
-      const likes = strArr(patch.likes); if (likes) d.likes = likes;
-      if (Array.isArray(d.loves) && (d.loves as unknown[]).length > 0) d.favoriteGift = (d.loves as string[])[0];
+      if (patch.displayName !== undefined) d.displayName = patch.displayName;
+      if (patch.loves !== undefined) d.loves = [...patch.loves];
+      if (patch.likes !== undefined) d.likes = [...patch.likes];
+      if (Array.isArray(d.loves) && d.loves.length > 0) d.favoriteGift = d.loves[0];
     }
   }
-  if (Array.isArray(o.bands) && Array.isArray(bondBands)) {
-    (o.bands as unknown[]).forEach((patchRaw, i) => {
+  if (parsed.bands && Array.isArray(bondBands)) {
+    parsed.bands.forEach((patch, i) => {
       const band = (bondBands as AnyRecord[])[i];
-      const patch = asRecord(patchRaw);
-      if (!band || !patch) return;
-      if (typeof patch.name === "string" && (patch.name as string).length > 0) band.name = patch.name;
-      const m = Number(patch.modifier);
-      if (Number.isFinite(m) && m > 0) band.modifier = m;
+      if (!band) return;
+      if (patch.name !== undefined) band.name = patch.name;
+      if (patch.modifier !== undefined) band.modifier = patch.modifier;
     });
   }
 }
@@ -736,8 +635,8 @@ export function sanitizeBeatOnComplete(raw: unknown): { setFlag: string | string
  * Searches both STORY_BEATS and SIDE_BEATS. Mutates beats in place.
  */
 export function applyStoryOverrides(storyBeats: unknown, sideBeats: unknown, overrides: Overrides): void {
-  if (!overrides || typeof overrides !== "object") return;
-  const o = overrides as AnyRecord;
+  const o = parseOptionalOverrideSection("story", storyOverridesSchema, overrides);
+  if (!o) return;
   const story = Array.isArray(storyBeats) ? storyBeats as AnyRecord[] : [];
   const side = Array.isArray(sideBeats) ? sideBeats as AnyRecord[] : [];
   const suppressed = new Set(Array.isArray(o.suppressedBeats)
@@ -815,8 +714,6 @@ export function applyStoryOverrides(storyBeats: unknown, sideBeats: unknown, ove
   }
 }
 
-const FLAG_CATEGORY_KEYS = new Set(["story", "frostmaw", "mira", "misc"]);
-
 /**
  * Apply patches to the STORY_FLAGS registry. `overrides`:
  *   {
@@ -829,36 +726,45 @@ const FLAG_CATEGORY_KEYS = new Set(["story", "frostmaw", "mira", "misc"]);
  * `id`s and `source` are not editable here. Mutates the registry array in place.
  */
 export function applyFlagOverrides(flags: unknown, overrides: Overrides): void {
-  if (!Array.isArray(flags) || !overrides || typeof overrides !== "object") return;
-  const o = overrides as AnyRecord;
+  if (!Array.isArray(flags)) return;
+  const o = parseOptionalOverrideSection("flags", flagsOverridesSchema, overrides);
+  if (!o) return;
   const flagList = flags as AnyRecord[];
-  const patchOne = (def: AnyRecord | undefined, patchRaw: unknown) => {
+  const patchOne = (def: AnyRecord | undefined, patch: FlagPatch) => {
     if (!def) return;
-    const patch = asRecord(patchRaw);
-    if (!patch || typeof patch !== "object") return;
-    if (typeof patch.label === "string" && (patch.label as string).length > 0) def.label = patch.label;
-    if (typeof patch.description === "string") def.description = patch.description;
-    if (typeof patch.category === "string" && FLAG_CATEGORY_KEYS.has(patch.category as string)) def.category = patch.category;
-    if (typeof patch.default === "boolean") def.default = patch.default;
-    if ("triggers" in patch) { const t = sanitizeFlagTriggerArray(patch.triggers); if (t) def.triggers = t; }
+    if (patch.label !== undefined) def.label = patch.label;
+    if (patch.description !== undefined) def.description = patch.description;
+    if (patch.category !== undefined) def.category = patch.category;
+    if (patch.default !== undefined) def.default = patch.default;
+    if (patch.triggers !== undefined) {
+      const t = sanitizeFlagTriggerArray(patch.triggers);
+      if (!t || t.length !== patch.triggers.length) {
+        throw new Error("Invalid balance overrides (flags): unrecognized trigger shape in triggers");
+      }
+      def.triggers = t;
+    }
     if (!Array.isArray(def.triggers)) def.triggers = [];
   };
-  if (o.byId && typeof o.byId === "object") {
-    for (const [id, patch] of Object.entries(o.byId as AnyRecord)) {
+  if (o.byId) {
+    for (const [id, patch] of Object.entries(o.byId)) {
       const def = flagList.find((f) => f && f.id === id);
       if (def) patchOne(def, patch);
     }
   }
-  if (Array.isArray(o.new)) {
+  if (o.new) {
     const taken = new Set(flagList.map((f) => f && f.id).filter((x): x is string => typeof x === "string"));
-    for (const rawRaw of o.new as unknown[]) {
-      if (!rawRaw || typeof rawRaw !== "object") continue;
-      const raw = rawRaw as AnyRecord;
-      const id = typeof raw.id === "string" ? (raw.id as string).trim() : "";
+    for (const raw of o.new) {
+      const id = raw.id.trim();
       if (!id || taken.has(id)) continue;
       taken.add(id);
-      const def: AnyRecord = { id, label: (typeof raw.label === "string" && (raw.label as string).length > 0) ? raw.label : id,
-        category: "misc", default: false, source: "override", triggers: [] };
+      const def: AnyRecord = {
+        id,
+        label: raw.label ?? id,
+        category: raw.category ?? "misc",
+        default: raw.default ?? false,
+        source: "override",
+        triggers: [],
+      };
       patchOne(def, raw);
       flagList.push(def);
     }
@@ -871,18 +777,17 @@ export function applyFlagOverrides(flags: unknown, overrides: Overrides): void {
  * (→ target.amount). The modifier type/params drive board logic — left alone.
  */
 export function applyBossOverrides(bosses: unknown, overrides: Overrides): void {
-  if (!Array.isArray(bosses) || !overrides || typeof overrides !== "object") return;
-  const overrideMap = overrides as AnyRecord;
+  if (!Array.isArray(bosses)) return;
+  const parsed = parseOptionalOverrideSection("bosses", bossesOverridesSchema, overrides);
+  if (!parsed) return;
   for (const b of bosses as AnyRecord[]) {
-    const patchRaw = overrideMap[b.id as string];
-    if (!patchRaw || typeof patchRaw !== "object") continue;
-    const patch = patchRaw as AnyRecord;
-    if (typeof patch.name === "string" && (patch.name as string).length > 0) b.name = patch.name;
-    if (typeof patch.season === "string" && (patch.season as string).length > 0) b.season = patch.season;
-    if (typeof patch.description === "string") b.description = patch.description;
-    if (typeof patch.modifierDescription === "string") b.modifierDescription = patch.modifierDescription;
-    const ta = Number(patch.targetAmount);
-    if (Number.isFinite(ta) && ta >= 1) b.target = { ...asRecord(b.target), amount: Math.floor(ta) };
+    const patch = parsed[b.id as string];
+    if (!patch) continue;
+    if (patch.name !== undefined) b.name = patch.name;
+    if (patch.season !== undefined) b.season = patch.season;
+    if (patch.description !== undefined) b.description = patch.description;
+    if (patch.modifierDescription !== undefined) b.modifierDescription = patch.modifierDescription;
+    if (patch.targetAmount !== undefined) b.target = { ...asRecord(b.target), amount: patch.targetAmount };
   }
 }
 
@@ -892,18 +797,17 @@ export function applyBossOverrides(bosses: unknown, overrides: Overrides): void 
  * (→ reward.coins). The `counter` it watches is left alone.
  */
 export function applyAchievementOverrides(achievements: unknown, overrides: Overrides): void {
-  if (!Array.isArray(achievements) || !overrides || typeof overrides !== "object") return;
-  const overrideMap = overrides as AnyRecord;
+  if (!Array.isArray(achievements)) return;
+  const parsed = parseOptionalOverrideSection("achievements", achievementsOverridesSchema, overrides);
+  if (!parsed) return;
   for (const a of achievements as AnyRecord[]) {
-    const patchRaw = overrideMap[a.id as string];
-    if (!patchRaw || typeof patchRaw !== "object") continue;
-    const patch = patchRaw as AnyRecord;
-    if (typeof patch.name === "string" && (patch.name as string).length > 0) a.name = patch.name;
-    if (typeof patch.desc === "string") a.desc = patch.desc;
-    const th = Number(patch.threshold), tg = Number(patch.target), rc = Number(patch.rewardCoins);
-    if (Number.isFinite(th) && th >= 1) a.threshold = Math.floor(th);
-    if (Number.isFinite(tg) && tg >= 1) a.target = Math.floor(tg);
-    if (Number.isFinite(rc) && rc >= 0) a.reward = { ...asRecord(a.reward), coins: Math.floor(rc) };
+    const patch = parsed[a.id as string];
+    if (!patch) continue;
+    if (patch.name !== undefined) a.name = patch.name;
+    if (patch.desc !== undefined) a.desc = patch.desc;
+    if (patch.threshold !== undefined) a.threshold = patch.threshold;
+    if (patch.target !== undefined) a.target = patch.target;
+    if (patch.rewardCoins !== undefined) a.reward = { ...asRecord(a.reward), coins: patch.rewardCoins };
   }
 }
 
@@ -913,14 +817,14 @@ export function applyAchievementOverrides(achievements: unknown, overrides: Over
  * Tool / unlockTile drops are left alone.
  */
 export function applyDailyRewardOverrides(dailyRewards: unknown, overrides: Overrides): void {
-  if (!dailyRewards || typeof dailyRewards !== "object" || !overrides || typeof overrides !== "object") return;
+  const parsed = parseOptionalOverrideSection("dailyRewards", dailyRewardsOverridesSchema, overrides);
+  if (!parsed || !dailyRewards || typeof dailyRewards !== "object") return;
   const rewardMap = dailyRewards as Record<string, AnyRecord | undefined>;
-  for (const [day, patchRaw] of Object.entries(overrides as AnyRecord)) {
+  for (const [day, patch] of Object.entries(parsed)) {
     const entry = rewardMap[day];
-    if (!entry || typeof entry !== "object" || !patchRaw || typeof patchRaw !== "object") continue;
-    const patch = patchRaw as AnyRecord;
-    if ("coins" in patch) { const n = Number(patch.coins); if (Number.isFinite(n) && n >= 0) entry.coins = Math.floor(n); }
-    if ("runes" in patch) { const n = Number(patch.runes); if (Number.isFinite(n) && n >= 0) entry.runes = Math.floor(n); }
+    if (!entry) continue;
+    if (patch.coins !== undefined) entry.coins = patch.coins;
+    if (patch.runes !== undefined) entry.runes = patch.runes;
   }
 }
 

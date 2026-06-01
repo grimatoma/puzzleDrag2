@@ -1,14 +1,14 @@
 // Feature flags — set to true to enable the feature.
 // Fire and rats hazards are gated here so they can be turned on independently.
 
-import { TUNING_OVERRIDES } from "./constants.js";
+import { getTuningOverrides } from "./config/balance/init.js";
 
 export const FIRE_HAZARD_ENABLED = false;
 export const RATS_HAZARD_ENABLED = true;
 
 /** Dev Panel tuning (`balance.json` → `tuning.fireHazardEnabled`). */
 export function isFireHazardEnabled() {
-  return TUNING_OVERRIDES?.fireHazardEnabled === true;
+  return getTuningOverrides().fireHazardEnabled === true;
 }
 
 // Returns true when dialogs/modals should be suppressed — useful for testing

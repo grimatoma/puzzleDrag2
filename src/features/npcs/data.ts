@@ -23,8 +23,3 @@ export const NPC_DATA = Object.fromEntries(
 );
 
 export const NPC_IDS = Object.freeze(["wren", "mira", "tomas", "bram", "liss"]);
-
-// Phase 6 — Dev Panel "NPCs" tab: gift prefs + bond bands.
-import { BALANCE_OVERRIDES } from "../../constants.js";
-import { applyNpcOverrides } from "../../config/applyOverrides.js";
-applyNpcOverrides(NPC_DATA, BOND_BANDS, BALANCE_OVERRIDES.npcs);

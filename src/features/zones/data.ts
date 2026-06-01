@@ -20,6 +20,14 @@
 
 import { MAP_NODES, type MapNode } from "../cartography/data.js";
 import { computeAggregatedAbilities } from "../workers/aggregate.js";
+import { keeperForType } from "../../keepers.js";
+import {
+  DEFAULT_HOME_BIOME,
+  EXPEDITION_FOOD_TURNS,
+  EXPEDITION_MEAT_FOODS,
+  SETTLEMENT_BIOMES,
+} from "../../constants.js";
+import type { TuningOverrides } from "../../config/schemas/tuning.js";
 import type { GameState, HeirloomsState } from "../../types/state.js";
 
 export const ZONE_CATEGORIES = Object.freeze([
@@ -335,6 +343,12 @@ export function displayZoneName(state: GameState | null | undefined, zoneId?: st
 export let SETTLEMENT_FOUNDING_BASE_COINS = 300; // Dev Panel: tuning.foundingBaseCoins
 export let SETTLEMENT_FOUNDING_GROWTH = 1.7;   // Dev Panel: tuning.foundingGrowth
 
+/** Apply Dev Panel tuning fields owned by this module. */
+export function applySettlementFoundingTuning(tuning: TuningOverrides): void {
+  if (tuning.foundingBaseCoins !== undefined) SETTLEMENT_FOUNDING_BASE_COINS = tuning.foundingBaseCoins;
+  if (tuning.foundingGrowth !== undefined) SETTLEMENT_FOUNDING_GROWTH = tuning.foundingGrowth;
+}
+
 /** Number of zones the player has founded. */
 export function foundedSettlementCount(state: GameState | null | undefined): number {
   const map = state?.settlements ?? {};
@@ -587,14 +601,3 @@ export function keeperReadyFor(state: GameState | null | undefined, zoneId: stri
   if (!keeper) return false;
   return builtCountAt(state, zoneId) >= (keeper.appearsAfterBuildings ?? 4);
 }
-
-// Phase 6 — Dev Panel hook. Apply any committed/draft overrides from
-// `src/config/balance.json` + the localStorage draft to the live ZONES table.
-import { BALANCE_OVERRIDES, EXPEDITION_FOOD_TURNS, EXPEDITION_MEAT_FOODS, SETTLEMENT_BIOMES, DEFAULT_HOME_BIOME, TUNING_OVERRIDES } from "../../constants.js";
-import { keeperForType } from "../../keepers.js";
-import { applyZoneOverrides } from "../../config/applyOverrides.js";
-applyZoneOverrides(ZONES, BALANCE_OVERRIDES.zones);
-// Phase 6 — Dev Panel "Tuning" section: the founding-cost constants.
-const tuning = TUNING_OVERRIDES as Record<string, number>;
-if ("foundingBaseCoins" in tuning) SETTLEMENT_FOUNDING_BASE_COINS = tuning.foundingBaseCoins;
-if ("foundingGrowth" in tuning) SETTLEMENT_FOUNDING_GROWTH = tuning.foundingGrowth;

@@ -52,15 +52,23 @@ describe("Phase 37 — applyZoneOverrides", () => {
     expect(z.zone1.entryCost.coins).toBe(50);
   });
 
-  it("patches baseTurns and floors fractional input", () => {
+  it("patches baseTurns when valid", () => {
     const z = freshZones();
-    applyZoneOverrides(z, { zone1: { baseTurns: 12.7 } });
+    applyZoneOverrides(z, { zone1: { baseTurns: 12 } });
     expect(z.zone1.baseTurns).toBe(12);
   });
 
-  it("rejects base turns < 1", () => {
+  it("throws on fractional baseTurns (all-or-nothing)", () => {
     const z = freshZones();
-    applyZoneOverrides(z, { zone1: { baseTurns: 0 } });
+    expect(() => applyZoneOverrides(z, { zone1: { baseTurns: 12.7 } }))
+      .toThrow(/Invalid balance overrides \(zones\)/);
+    expect(z.zone1.baseTurns).toBe(16);
+  });
+
+  it("throws when base turns < 1", () => {
+    const z = freshZones();
+    expect(() => applyZoneOverrides(z, { zone1: { baseTurns: 0 } }))
+      .toThrow(/Invalid balance overrides \(zones\)/);
     expect(z.zone1.baseTurns).toBe(16);
   });
 
@@ -72,12 +80,18 @@ describe("Phase 37 — applyZoneOverrides", () => {
     expect(z.zone1.entryCost.runes).toBe(1);
   });
 
-  it("replaces upgradeMap wholesale and drops empty/non-string targets", () => {
+  it("replaces upgradeMap wholesale when valid", () => {
     const z = freshZones();
     applyZoneOverrides(z, {
-      zone1: { upgradeMap: { grass: "trees", grain: "", trees: null, vegetables: "fruits" } },
+      zone1: { upgradeMap: { grass: "trees", vegetables: "fruits" } },
     });
     expect(z.zone1.upgradeMap).toEqual({ grass: "trees", vegetables: "fruits" });
+  });
+
+  it("throws when upgradeMap has empty targets", () => {
+    const z = freshZones();
+    expect(() => applyZoneOverrides(z, { zone1: { upgradeMap: { grass: "trees", grain: "" } } }))
+      .toThrow(/Invalid balance overrides \(zones\)/);
   });
 
   it("merges seasonDrops by season; cleared seasons are replaced wholesale", () => {
@@ -96,10 +110,10 @@ describe("Phase 37 — applyZoneOverrides", () => {
     expect(z.zone1.seasonDrops.Winter).toEqual({ trees: 0.70 }); // unchanged
   });
 
-  it("clamps negative seasonDrops percentages out", () => {
+  it("throws on negative seasonDrops percentages", () => {
     const z = freshZones();
-    applyZoneOverrides(z, { zone1: { seasonDrops: { Spring: { trees: -1, grass: 0.2 } } } });
-    expect(z.zone1.seasonDrops.Spring).toEqual({ grass: 0.2 });
+    expect(() => applyZoneOverrides(z, { zone1: { seasonDrops: { Spring: { trees: -1, grass: 0.2 } } } }))
+      .toThrow(/Invalid balance overrides \(zones\)/);
   });
 
   it("ignores patches for unknown zone ids", () => {
@@ -116,9 +130,9 @@ describe("Phase 37 — applyWorkerOverrides", () => {
     expect(w[0].hireCost.coins).toBe(50);
   });
 
-  it("patches hireCost.coins (floored)", () => {
+  it("patches hireCost.coins", () => {
     const w = freshWorkers();
-    applyWorkerOverrides(w, { farmer: { hireCost: { coins: 60.9 } } });
+    applyWorkerOverrides(w, { farmer: { hireCost: { coins: 60 } } });
     expect(w[0].hireCost.coins).toBe(60);
     // Sibling step preserved.
     expect(w[0].hireCost.coinsStep).toBe(25);
@@ -127,9 +141,15 @@ describe("Phase 37 — applyWorkerOverrides", () => {
 
   it("patches resource costs and resource step", () => {
     const w = freshWorkers();
-    applyWorkerOverrides(w, { farmer: { hireCost: { resources: { tile_tree_oak: 2.9, nope: 0 }, resourcesStepEvery: 4.8 } } });
+    applyWorkerOverrides(w, { farmer: { hireCost: { resources: { tile_tree_oak: 2 }, resourcesStepEvery: 4 } } });
     expect(w[0].hireCost.resources).toEqual({ tile_tree_oak: 2 });
     expect(w[0].hireCost.resourcesStepEvery).toBe(4);
+  });
+
+  it("throws on invalid hireCost.resources", () => {
+    const w = freshWorkers();
+    expect(() => applyWorkerOverrides(w, { farmer: { hireCost: { resources: { nope: 0 } } } }))
+      .toThrow(/Invalid balance overrides \(workers\)/);
   });
 
   it("can replace coinsStep with a new positive value", () => {
@@ -152,12 +172,17 @@ describe("Phase 37 — applyWorkerOverrides", () => {
     expect(w[1].hireCost.coinsMult).toBeUndefined();
   });
 
-  it("patches maxCount (floored, clamped to >=1)", () => {
+  it("patches maxCount when valid", () => {
     const w = freshWorkers();
-    applyWorkerOverrides(w, { farmer: { maxCount: 15.7 } });
+    applyWorkerOverrides(w, { farmer: { maxCount: 15 } });
     expect(w[0].maxCount).toBe(15);
-    applyWorkerOverrides(w, { farmer: { maxCount: 0 } });
-    expect(w[0].maxCount).toBe(15); // unchanged because <1 rejected
+  });
+
+  it("throws when maxCount < 1", () => {
+    const w = freshWorkers();
+    expect(() => applyWorkerOverrides(w, { farmer: { maxCount: 0 } }))
+      .toThrow(/Invalid balance overrides \(workers\)/);
+    expect(w[0].maxCount).toBe(10);
   });
 
   it("replaces abilities wholesale", () => {

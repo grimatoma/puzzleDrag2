@@ -35,6 +35,7 @@ export type BiomeId = "farm" | "mine" | "fish";
 export type RecipeId = Brand<`rec_${string}`, "RecipeId"> | Brand<string, "RecipeAliasId">;
 export type StationId = "bakery" | "forge" | "kitchen" | "larder" | "smokehouse" | "workshop" | string;
 
+import type { TuningOverrides } from "./config/schemas/tuning.js";
 import type { ToolPowerDefinition } from "./config/schemas/shared.js";
 import type {
   TileItemEntry,
@@ -224,6 +225,19 @@ export const SETTLEMENT_BIOMES = Object.freeze({
 });
 // The biome `home` is treated as (it's pre-founded, never goes through the picker).
 export let DEFAULT_HOME_BIOME = "prairie"; // Dev Panel: tuning.homeBiome
+
+/** Apply Dev Panel tuning fields owned by this module (`export let` bindings). */
+export function applyConstantsTuning(tuning: TuningOverrides): void {
+  if (tuning.craftQueueHours !== undefined) CRAFT_QUEUE_HOURS = tuning.craftQueueHours;
+  if (tuning.craftGemSkipCost !== undefined) CRAFT_GEM_SKIP_COST = tuning.craftGemSkipCost;
+  if (tuning.minExpeditionTurns !== undefined) MIN_EXPEDITION_TURNS = tuning.minExpeditionTurns;
+  if (
+    tuning.homeBiome !== undefined
+    && (SETTLEMENT_BIOMES.farm ?? []).some((b) => b.id === tuning.homeBiome)
+  ) {
+    DEFAULT_HOME_BIOME = tuning.homeBiome;
+  }
+}
 
 // Save schema version. Forward migrations are not maintained — bump this
 // whenever persisted state changes shape and existing saves will be discarded.
@@ -1191,54 +1205,11 @@ export function dayKeyForDate(d: Date): string {
 }
 
 // ─── Dev Panel overrides ─────────────────────────────────────────────
-// The committed `src/config/balance.json` file is merged onto the constants
-// above at module-load time. A localStorage draft (written by the in-game
-// Dev Panel) is layered on top so designers can preview changes
-// without committing. Both layers are optional — the defaults above remain
-// the source of truth in production builds when balance.json is empty.
-import balanceFile from "./config/balance.json";
-import {
-  mergeOverrides,
-  readBalanceDraft,
-  applyUpgradeThresholdOverrides,
-  applyItemOverrides,
-  applyRecipeOverrides,
-  applyBuildingOverrides,
-  applyExpeditionOverrides,
-  applyBiomeOverrides,
-  applyDailyRewardOverrides,
-  sanitizeTuning,
-} from "./config/applyOverrides.js";
-import { parseBalanceOverrides } from "./config/schemas/index.js";
+// Parsed balance.json + optional localStorage draft (no merge onto live tables here).
+// Call `initBalanceOverrides()` from app entry / Vitest setup to apply patches.
+import { loadBalanceOverrides } from "./config/balance/load.js";
 
-const _balanceRaw = mergeOverrides(balanceFile, readBalanceDraft());
-if (_balanceRaw.resources && !_balanceRaw.items) {
-  _balanceRaw.items = _balanceRaw.resources;
-}
-export const BALANCE_OVERRIDES = parseBalanceOverrides(_balanceRaw);
-applyDailyRewardOverrides(DAILY_REWARDS, BALANCE_OVERRIDES.dailyRewards);
+export const BALANCE_OVERRIDES = loadBalanceOverrides();
 
-applyUpgradeThresholdOverrides(UPGRADE_THRESHOLDS, BALANCE_OVERRIDES.upgradeThresholds);
-applyItemOverrides(ITEMS, BALANCE_OVERRIDES.items);
-applyRecipeOverrides(RECIPES, BALANCE_OVERRIDES.recipes);
-applyBuildingOverrides(BUILDINGS, BALANCE_OVERRIDES.buildings);
-applyExpeditionOverrides(EXPEDITION_FOOD_TURNS, EXPEDITION_MEAT_FOODS, BALANCE_OVERRIDES.expedition);
-applyBiomeOverrides(SETTLEMENT_BIOMES, BALANCE_OVERRIDES.biomes);
-
-// Phase 6 — the Dev Panel "Tuning" section: loose top-level constants.
-// `TUNING_OVERRIDES` is the validated subset; the `export let`s above (and the
-// SETTLEMENT_FOUNDING_* ones in features/zones/data.js) are reassigned from it.
-export const TUNING_OVERRIDES = sanitizeTuning(BALANCE_OVERRIDES.tuning);
-if ("craftQueueHours" in TUNING_OVERRIDES) CRAFT_QUEUE_HOURS = TUNING_OVERRIDES.craftQueueHours as number;
-if ("craftGemSkipCost" in TUNING_OVERRIDES) CRAFT_GEM_SKIP_COST = TUNING_OVERRIDES.craftGemSkipCost as number;
-if ("minExpeditionTurns" in TUNING_OVERRIDES) MIN_EXPEDITION_TURNS = TUNING_OVERRIDES.minExpeditionTurns as number;
-if ("homeBiome" in TUNING_OVERRIDES && (SETTLEMENT_BIOMES.farm ?? []).some((b) => b.id === TUNING_OVERRIDES.homeBiome)) {
-  DEFAULT_HOME_BIOME = TUNING_OVERRIDES.homeBiome as string;
-}
-
-// Recompute tile palette so default-palette renders pick up any color overrides.
-for (const r of [...BIOMES.farm.resources, ...BIOMES.mine.resources, ...BIOMES.fish.resources]) {
-  if (PALETTES.default.tiles[r.key] !== r.color) {
-    PALETTES.default.tiles[r.key] = r.color;
-  }
-}
+export { getTuningOverrides } from "./config/balance/init.js";
+export type { TuningOverrides } from "./config/balance/applyAll.js";

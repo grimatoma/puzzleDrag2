@@ -12,12 +12,15 @@ describe("applyExpeditionOverrides", () => {
     expect(ft.newfood).toBe(3);   // added
     expect(mf).toEqual(["ham", "stew"]);
   });
-  it("rejects bad values and a missing override object", () => {
+  it("throws on invalid foodTurns (all-or-nothing)", () => {
     const ft = { bread: 1 };
-    applyExpeditionOverrides(ft, [], { foodTurns: { bad: -1, "": 2, frac: 2.7 } });
-    expect(ft.bad).toBeUndefined();
-    expect(ft[""]).toBeUndefined();
-    expect(ft.frac).toBe(2);      // floored
+    expect(() => applyExpeditionOverrides(ft, [], { foodTurns: { bad: -1 } }))
+      .toThrow(/Invalid balance overrides \(expedition\)/);
+    expect(ft).toEqual({ bread: 1 });
+  });
+
+  it("is a no-op when overrides is undefined", () => {
+    const ft = { bread: 1 };
     const before = JSON.stringify(ft);
     applyExpeditionOverrides(ft, [], undefined);
     expect(JSON.stringify(ft)).toBe(before);
@@ -55,10 +58,10 @@ describe("sanitizeTuning", () => {
       minExpeditionTurns: 4, foundingBaseCoins: 500, foundingGrowth: 1.6, homeBiome: "marsh",
     });
   });
-  it("drops invalid values and a non-object input", () => {
-    expect(sanitizeTuning({ retiredAuditBossCooldownDays: 5, foundingGrowth: 0, homeBiome: "", craftGemSkipCost: "x" })).toEqual({});
+  it("throws on invalid tuning", () => {
+    expect(() => sanitizeTuning({ foundingGrowth: 0, homeBiome: "", craftGemSkipCost: "x" }))
+      .toThrow(/Invalid balance overrides \(tuning\)/);
     expect(sanitizeTuning(undefined)).toEqual({});
-    expect(sanitizeTuning("nope")).toEqual({});
   });
 });
 
@@ -136,20 +139,22 @@ describe("applyStoryOverrides", () => {
     applyStoryOverrides(beats, [], { beats: { a1: { choices: [] } } });
     expect(beats[0].choices).toBeUndefined();
   });
-  it("newBeats append to the side list as draft side beats; dup / blank ids skipped", () => {
+  it("newBeats append to the side list as draft side beats; dup ids skipped at apply", () => {
     const story = [{ id: "a1", title: "A1" }];
     const side = [{ id: "s1", title: "S1" }];
     applyStoryOverrides(story, side, { newBeats: [
       { id: "branch_a", title: "Branch A", lines: [{ speaker: "wren", text: "hi" }, { text: "" }], choices: [{ id: "go", label: "Go", outcome: { setFlag: "did_a", queueBeat: "branch_b" } }] },
       { id: "branch_b", body: "Wren: 'done.'", trigger: { type: "bond_at_least", npc: "mira", amount: 6 }, onComplete: { setFlag: ["done_b"] } },
       { id: "a1", title: "dup — ignored" },
-      { id: "  ", title: "blank — ignored" },
-      "not an object",
     ] });
     expect(side).toHaveLength(3);
     expect(side[1]).toEqual({ id: "branch_a", side: true, draft: true, title: "Branch A", lines: [{ speaker: "wren", text: "hi" }], choices: [{ id: "go", label: "Go", outcome: { setFlag: "did_a", queueBeat: "branch_b" } }] });
     expect(side[2]).toEqual({ id: "branch_b", side: true, draft: true, title: "branch_b", body: "Wren: 'done.'", trigger: { type: "bond_at_least", npc: "mira", amount: 6 }, onComplete: { setFlag: "done_b" } });
     expect(story).toHaveLength(1); // dup id didn't overwrite the built-in
+  });
+  it("throws when newBeats contains non-objects", () => {
+    expect(() => applyStoryOverrides([], [], { newBeats: [{ id: "x", title: "X" }, "nope"] }))
+      .toThrow(/Invalid balance overrides \(story\)/);
   });
   it("a beats[] patch can target a just-created newBeat", () => {
     const side = [];
@@ -256,27 +261,34 @@ describe("applyFlagOverrides", () => {
     { id: "f1", label: "F1", description: "d1", category: "story", default: false, source: "beat:x", triggers: [] },
     { id: "f2", label: "F2", category: "mira", default: false, source: "choice:y", triggers: [{ type: "session_start" }] },
   ];
-  it("patches metadata + replaces triggers; ignores unknown ids / bad category", () => {
+  it("patches metadata + replaces triggers; ignores unknown ids", () => {
     const flags = reg();
     applyFlagOverrides(flags, { byId: {
-      f1: { label: "Renamed", description: "new", category: "frostmaw", default: true, triggers: [{ type: "building_built", id: "mill" }, { type: "junk" }] },
-      f2: { category: "not-a-cat", triggers: "not-an-array" },
+      f1: { label: "Renamed", description: "new", category: "frostmaw", default: true, triggers: [{ type: "building_built", id: "mill" }] },
       ghost: { label: "ignored" },
     } });
     expect(flags[0]).toMatchObject({ id: "f1", label: "Renamed", description: "new", category: "frostmaw", default: true, triggers: [{ type: "building_built", id: "mill" }] });
-    expect(flags[1]).toMatchObject({ id: "f2", category: "mira", triggers: [{ type: "session_start" }] }); // unchanged
+    expect(flags[1]).toMatchObject({ id: "f2", category: "mira", triggers: [{ type: "session_start" }] });
     expect(flags).toHaveLength(2);
   });
-  it("appends new flags from flags.new (dup / blank ids skipped)", () => {
+  it("throws on invalid byId patch", () => {
+    const flags = reg();
+    expect(() => applyFlagOverrides(flags, { byId: { f2: { category: "not-a-cat" } } }))
+      .toThrow(/Invalid balance overrides \(flags\)/);
+  });
+  it("appends new flags from flags.new (dup ids skipped at apply)", () => {
     const flags = reg();
     applyFlagOverrides(flags, { new: [
       { id: "f3", label: "F3", category: "story", triggers: [{ type: "act_entered", act: 2 }] },
       { id: "f1", label: "dup — ignored" },
-      { id: "  ", label: "blank — ignored" },
-      "nope",
     ] });
     expect(flags).toHaveLength(3);
     expect(flags[2]).toEqual({ id: "f3", label: "F3", category: "story", default: false, source: "override", triggers: [{ type: "act_entered", act: 2 }] });
+  });
+  it("throws when flags.new contains invalid entries", () => {
+    const flags = reg();
+    expect(() => applyFlagOverrides(flags, { new: [{ id: "f3", label: "F3" }, "nope"] }))
+      .toThrow(/Invalid balance overrides \(flags\)/);
   });
   it("no-op on a non-array registry or falsy overrides", () => {
     const flags = reg(); const before = JSON.stringify(flags);

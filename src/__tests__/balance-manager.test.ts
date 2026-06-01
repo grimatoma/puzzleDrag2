@@ -18,11 +18,13 @@ describe("Dev Panel — override merge layer", () => {
     expect(out.resources).toEqual({});
   });
 
-  it("applyUpgradeThresholdOverrides mutates in place and rejects bad values", () => {
+  it("applyUpgradeThresholdOverrides mutates in place; invalid section throws", () => {
     const target = { tile_grass_hay: 6, tile_tree_oak: 5 };
-    applyUpgradeThresholdOverrides(target, { tile_grass_hay: 8, tile_tree_oak: 0, bogus: -1, also_bogus: "abc" });
+    applyUpgradeThresholdOverrides(target, { tile_grass_hay: 8 });
     expect(target.tile_grass_hay).toBe(8);
-    expect(target.tile_tree_oak).toBe(5); // < 1 rejected
+    expect(() => applyUpgradeThresholdOverrides(target, { tile_tree_oak: 0 }))
+      .toThrow(/Invalid balance overrides \(upgradeThresholds\)/);
+    expect(target.tile_tree_oak).toBe(5);
   });
 
   it("applyItemOverrides patches ITEMS entries by key", () => {

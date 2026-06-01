@@ -8,8 +8,6 @@
 // dialogue and rewards, and is overridable via `balance.json`'s `keepers`
 // section (the Dev Panel exposes it for editing).
 
-import { BALANCE_OVERRIDES } from "./constants.js";
-import { applyKeeperOverrides } from "./config/applyOverrides.js";
 
 export const KEEPERS = {
   farm: {
@@ -98,8 +96,6 @@ export const KEEPERS = {
     },
   },
 };
-
-applyKeeperOverrides(KEEPERS, BALANCE_OVERRIDES.keepers);
 
 export type KeeperType = keyof typeof KEEPERS;
 export type KeeperPath = "coexist" | "driveout";

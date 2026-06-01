@@ -155,10 +155,3 @@ export function nextHireResourceCost(worker: WorkerDef | null | undefined, count
   }
   return out;
 }
-
-// Phase 6 — Dev Panel hook. Apply any committed/draft overrides from
-// `src/config/balance.json` + the localStorage draft to the live TYPE_WORKERS
-// array at module load time.
-import { BALANCE_OVERRIDES } from "../../constants.js";
-import { applyWorkerOverrides } from "../../config/applyOverrides.js";
-applyWorkerOverrides(TYPE_WORKERS, BALANCE_OVERRIDES.workers);

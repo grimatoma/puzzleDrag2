@@ -96,3 +96,5 @@ export {
   parseBalanceOverrides,
   _resetBalanceParseWarningsForTests,
 } from "./parseBalance.js";
+
+export { parseOverrideSection, parseOptionalOverrideSection } from "./parseOverrideSection.js";

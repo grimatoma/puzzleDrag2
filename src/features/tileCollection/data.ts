@@ -1,5 +1,4 @@
-import { UPGRADE_THRESHOLDS, BALANCE_OVERRIDES } from "../../constants.js";
-import { applyTileOverrides } from "../../config/applyOverrides.js";
+import { UPGRADE_THRESHOLDS } from "../../constants.js";
 import { expandAbilitiesToEffects } from "../../config/abilitiesAggregate.js";
 
 export const CATEGORIES = [
@@ -693,11 +692,6 @@ for (const t of TILE_TYPES) {
     t.effects = expandAbilitiesToEffects(t.abilities, t.effects || {});
   }
 }
-
-// Dev Panel: apply tile-power, unlock and description overrides in
-// place before the lookup maps below are built, so consumers see the
-// merged data.
-applyTileOverrides(TILE_TYPES, BALANCE_OVERRIDES);
 
 export const TILE_TYPES_MAP = Object.fromEntries(TILE_TYPES.map((t) => [t.id, t]));
 

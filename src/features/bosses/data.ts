@@ -77,11 +77,6 @@ export const BOSSES: BossDef[] = [
   },
 ];
 
-// Phase 6 — Dev Panel "Bosses" tab: presentation + target-amount patches.
-import { BALANCE_OVERRIDES as _BO_BOSSES } from "../../constants.js";
-import { applyBossOverrides } from "../../config/applyOverrides.js";
-applyBossOverrides(BOSSES, _BO_BOSSES.bosses);
-
 // §9 locked: base = 200◉ × year_number; +1 rune (Phase 3 flat drop).
 // Margin scaling: 0% → 1.0×, +100% (cap) → 1.5×.
 export interface BossRewardResult {

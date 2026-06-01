@@ -34,8 +34,6 @@
 //   flag_set / flag_cleared { flag }                (a flag flipped by a flag)
 
 import { conditionMatches } from "./story.js";
-import { BALANCE_OVERRIDES } from "./constants.js";
-import { applyFlagOverrides } from "./config/applyOverrides.js";
 
 export const FLAG_CATEGORIES = Object.freeze({
   story:    { label: "Progression", color: "#a84010" },
@@ -97,11 +95,6 @@ export const STORY_FLAGS = [
   { id: "keeper_path_driveout", label: "Keeper path — drive out",   category: "frostmaw", default: false, source: "choice:frostmaw_keeper#drive_out",
     description: "Break the Frostmaw's hold — the hearth is ours; grants Core Ingots.", triggers: [] },
 ];
-
-// Self-apply Dev Panel / `/story/`-editor overrides (label / description /
-// category / default / triggers patches, plus author-created flags). Mutates
-// STORY_FLAGS in place — same pattern as applyStoryOverrides in src/story.js.
-applyFlagOverrides(STORY_FLAGS, BALANCE_OVERRIDES.flags);
 
 // ─── lookups ─────────────────────────────────────────────────────────────────
 

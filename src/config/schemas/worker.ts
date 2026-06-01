@@ -3,10 +3,10 @@ import { abilityInstanceSchema } from "./shared.js";
 
 const hireCostPatchSchema = z
   .object({
-    coins: z.number().min(0).optional(),
-    coinsStep: z.union([z.number().min(0), z.null()]).optional(),
+    coins: z.number().int().min(0).optional(),
+    coinsStep: z.union([z.number().int().min(0), z.null()]).optional(),
     coinsMult: z.union([z.number().positive(), z.null()]).optional(),
-    resources: z.record(z.string(), z.number()).optional(),
+    resources: z.record(z.string().min(1), z.number().int().positive()).optional(),
     resourcesStepEvery: z.number().int().min(1).optional(),
   })
   .strict();

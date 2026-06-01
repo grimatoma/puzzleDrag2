@@ -4,6 +4,7 @@
 // Both apps share an origin and therefore share localStorage — drafts saved
 // here are picked up by the game on its next load.
 
+import "./config/balance/bootstrap.js";
 import "./index.css";
 import React from "react";
 import { createRoot } from "react-dom/client";
