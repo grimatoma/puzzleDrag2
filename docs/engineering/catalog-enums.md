@@ -2,6 +2,16 @@
 
 Hand-maintained string enums under `src/types/catalog/` define **what exists** in the game. Config maps (`ITEMS`, `RECIPES`, `ZONES`, …) hold **attributes** keyed by those ids. The Dev Panel and `balance.json` may patch attributes only; unknown keys are skipped at load.
 
+## Zod schema layer (`src/config/schemas/`)
+
+**Attributes** are documented and validated with Zod:
+
+- **Catalog ids** stay in `src/types/catalog/` (enums) — membership SSOT.
+- **Item shapes** use a `discriminatedUnion` on `kind` (`tile` | `resource` | `tool`), not a single id enum.
+- **`balance.json`** is validated at game load (`parseBalanceOverrides`); canonical `ITEMS` / `RECIPES` conformance is checked in CI via `src/__tests__/configSchemas.test.ts` (not on every page load).
+
+See [`src/config/balance.schema.md`](../../src/config/balance.schema.md) for override keys.
+
 ## Workflow: add a new item
 
 1. Add enum member(s) in `src/types/catalog/itemKeys.ts` (`TileKey`, `ResourceKey`, `ToolKey`, or `ItemAliasKey`).
@@ -11,6 +21,8 @@ Hand-maintained string enums under `src/types/catalog/` define **what exists** i
 ## Parity
 
 `src/__tests__/catalog-keys-invariants.test.ts` asserts enum values ↔ `Object.keys(ITEMS)` (plus aliases). Run with `npm test -- src/__tests__/catalog-keys-invariants.test.ts`.
+
+`src/__tests__/configSchemas.test.ts` asserts each `ITEMS` / `RECIPES` / catalog row matches the Zod canonical schema. Run with `npm run config:validate` or `npm test -- src/__tests__/configSchemas.test.ts`.
 
 ## Inventory typing
 

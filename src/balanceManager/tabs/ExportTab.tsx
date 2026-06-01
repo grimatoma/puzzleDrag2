@@ -12,18 +12,7 @@ import MetricCard, { MetricGrid } from "../../ui/primitives/MetricCard.jsx";
 import StatusChip from "../../ui/primitives/StatusChip.jsx";
 import { z } from "zod";
 import type { BalanceDraft } from "../index.jsx";
-
-const sectionSchema = z.record(z.string(), z.unknown());
-const importSchema = z.object({
-  version: z.number().finite().optional(),
-  upgradeThresholds: sectionSchema.optional(),
-  resources: sectionSchema.optional(),
-  recipes: sectionSchema.optional(),
-  buildings: sectionSchema.optional(),
-  tilePowers: sectionSchema.optional(),
-  tileUnlocks: sectionSchema.optional(),
-  tileDescriptions: sectionSchema.optional(),
-}).strip();
+import { balanceSchema } from "../../config/schemas/index.js";
 
 function pruneEmpty(obj: unknown): unknown {
   if (!obj || typeof obj !== "object") return obj;
@@ -145,7 +134,7 @@ export default function ExportTab({ draft, updateDraft }: { draft: BalanceDraft;
     setImportError("");
     try {
       const parsedRaw = JSON.parse(importText);
-      const parsed = importSchema.parse(parsedRaw) as Record<string, unknown> & { version?: number };
+      const parsed = balanceSchema.parse(parsedRaw);
       updateDraft((d) => {
         // Replace each known section if present in the import, else leave it.
         const sections = [

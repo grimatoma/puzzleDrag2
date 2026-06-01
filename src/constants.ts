@@ -35,71 +35,21 @@ export type BiomeId = "farm" | "mine" | "fish";
 export type RecipeId = Brand<`rec_${string}`, "RecipeId"> | Brand<string, "RecipeAliasId">;
 export type StationId = "bakery" | "forge" | "kitchen" | "larder" | "smokehouse" | "workshop" | string;
 
-export interface SwayParams {
-  amp: number;
-  freq: number;
-  gust: number;
-}
+import type { ToolPowerDefinition } from "./config/schemas/shared.js";
+import type {
+  TileItemEntry,
+  ResourceItemEntry,
+  ToolItemEntry,
+  ItemEntry,
+} from "./config/schemas/item.js";
 
-export interface ToolPowerDefinition {
-  [legacyField: string]: unknown;
-  id: string;
-  params?: Record<string, unknown>;
-  anim?: string;
-  ms?: number;
-  tint?: number;
-  bubble?: string;
-}
-
-interface ItemEntryBase {
-  [legacyField: string]: unknown;
-  kind: "tile" | "resource" | "tool";
-  label: string;
-  color?: number;
-  dark?: number;
-  value?: number;
-  desc?: string;
-  description?: string;
-  glyph?: string;
-  iconKey?: string;
-  biome?: BiomeId | string;
-  next?: string | null;
-  sellable?: boolean;
-  power?: ToolPowerDefinition;
-  effect?: string;
-  target?: string;
-  anim?: string;
-  ms?: number;
-}
-
-export interface TileItemEntry extends ItemEntryBase {
-  kind: "tile";
-  biome: BiomeId | string;
-  color: number;
-  dark: number;
-  value: number;
-  next?: string | null;
-  sway?: SwayParams;
-}
-
-export interface ResourceItemEntry extends ItemEntryBase {
-  kind: "resource";
-  color: number;
-  dark: number;
-  value: number;
-  next?: null;
-}
-
-export interface ToolItemEntry extends ItemEntryBase {
-  kind: "tool";
-  power?: ToolPowerDefinition;
-  effect?: string;
-  target?: string;
-  anim?: string;
-  ms?: number;
-}
-
-export type ItemEntry = TileItemEntry | ResourceItemEntry | ToolItemEntry;
+export type { SwayParams, ToolPowerDefinition } from "./config/schemas/shared.js";
+export type {
+  TileItemEntry,
+  ResourceItemEntry,
+  ToolItemEntry,
+  ItemEntry,
+} from "./config/schemas/item.js";
 export type ItemRecord = Record<ItemKey, ItemEntry>;
 export type TileRecord = Record<TileKey, TileItemEntry>;
 export type ResourceRecord = Record<ResourceKey, ResourceItemEntry>;
@@ -1259,12 +1209,13 @@ import {
   applyDailyRewardOverrides,
   sanitizeTuning,
 } from "./config/applyOverrides.js";
+import { parseBalanceOverrides } from "./config/schemas/index.js";
 
-const _balanceMerged = mergeOverrides(balanceFile, readBalanceDraft());
-if (_balanceMerged.resources && !_balanceMerged.items) {
-  _balanceMerged.items = _balanceMerged.resources;
+const _balanceRaw = mergeOverrides(balanceFile, readBalanceDraft());
+if (_balanceRaw.resources && !_balanceRaw.items) {
+  _balanceRaw.items = _balanceRaw.resources;
 }
-export const BALANCE_OVERRIDES = _balanceMerged;
+export const BALANCE_OVERRIDES = parseBalanceOverrides(_balanceRaw);
 applyDailyRewardOverrides(DAILY_REWARDS, BALANCE_OVERRIDES.dailyRewards);
 
 applyUpgradeThresholdOverrides(UPGRADE_THRESHOLDS, BALANCE_OVERRIDES.upgradeThresholds);

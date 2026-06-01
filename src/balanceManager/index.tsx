@@ -19,32 +19,10 @@ import { useDraftHistory } from "./useDraftHistory.js";
 import CommandPalette from "./CommandPalette.jsx";
 import { BalanceNavProvider } from "./balanceNav.jsx";
 import type { CommandEntry } from "./commandPalette.js";
+import type { BalanceDraft as BalanceDraftSchema } from "../config/schemas/index.js";
 
-// The shape of the editable balance draft. All section fields are dictionaries
-// of overrides keyed by id. Casting through Partial reflects that any section
-// can hold arbitrary override shapes (different tabs target different leaves).
-export interface BalanceDraft {
-  version: number;
-  upgradeThresholds: Record<string, unknown>;
-  items: Record<string, unknown>;
-  recipes: Record<string, unknown>;
-  buildings: Record<string, unknown>;
-  tilePowers: Record<string, unknown>;
-  tileUnlocks: Record<string, unknown>;
-  tileDescriptions: Record<string, unknown>;
-  zones: Record<string, unknown>;
-  workers: Record<string, unknown>;
-  keepers: Record<string, unknown>;
-  expedition: Record<string, unknown>;
-  biomes: Record<string, unknown>;
-  tuning: Record<string, unknown>;
-  npcs: Record<string, unknown>;
-  story: Record<string, unknown>;
-  flags: Record<string, unknown>;
-  bosses: Record<string, unknown>;
-  achievements: Record<string, unknown>;
-  dailyRewards: Record<string, unknown>;
-}
+/** Dev Panel draft — validated by `balanceSchema` on game load. */
+export type BalanceDraft = BalanceDraftSchema;
 
 // Props passed to every lazy tab. Individual tabs destructure only the fields
 // they need (e.g. RationsTab ignores focus); typing them uniformly lets us

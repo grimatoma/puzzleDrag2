@@ -13,6 +13,10 @@
 
 import { expandAbilitiesToEffects } from "./abilitiesAggregate.js";
 import { ALL_ITEM_KEY_VALUES, type ItemKey } from "../types/catalog/itemKeys.js";
+import type { BalanceOverrides } from "./schemas/balance.js";
+import { itemOverrideSchema } from "./schemas/itemOverride.js";
+import { recipeOverrideSchema } from "./schemas/recipe.js";
+import { tuningSchema } from "./schemas/tuning.js";
 
 // Map legacy power-hook ids → unified ability ids. Some ids stayed the
 // same; a few were renamed during the abilities unification.
@@ -52,7 +56,8 @@ function hooksToAbilities(hooks: unknown): AbilityShape[] {
 
 const BALANCE_DRAFT_KEY = "hearth.balance.draft";
 
-type Overrides = unknown;
+/** @deprecated Use BalanceOverrides from config/schemas */
+type Overrides = BalanceOverrides | Record<string, unknown> | null | undefined;
 
 /** Read the localStorage draft, if any. Safe in non-browser environments. */
 export function readBalanceDraft(): Record<string, unknown> | null {
@@ -116,23 +121,23 @@ export function applyItemOverrides(items: Record<string, AnyRecord> | unknown, o
   if (!overrides || typeof overrides !== "object") return;
   const itemMap = (items ?? {}) as Record<string, AnyRecord | undefined>;
   for (const [key, patchRaw] of Object.entries(overrides)) {
-    const patch = asRecord(patchRaw);
     const item = itemMap[key];
     if (!item) continue;
-    if (typeof patch.label === "string") item.label = patch.label;
-    if (Number.isFinite(patch.color as number)) item.color = patch.color;
-    if (Number.isFinite(patch.dark as number)) item.dark = patch.dark;
-    if (Number.isFinite(patch.value as number)) item.value = patch.value;
-    if (Object.prototype.hasOwnProperty.call(patch, "next")) {
-      item.next = patch.next || null;
-    }
-    if (typeof patch.glyph === "string") item.glyph = patch.glyph;
-    if (typeof patch.description === "string") item.description = patch.description;
-    if (typeof patch.desc === "string") item.desc = patch.desc;
-    if (typeof patch.effect === "string") item.effect = patch.effect;
-    if (typeof patch.target === "string") item.target = patch.target;
-    if (typeof patch.anim === "string") item.anim = patch.anim;
-    if (Number.isFinite(patch.ms as number)) item.ms = patch.ms;
+    const parsed = itemOverrideSchema.safeParse(patchRaw);
+    if (!parsed.success) continue;
+    const patch = parsed.data;
+    if (patch.label !== undefined) item.label = patch.label;
+    if (patch.color !== undefined) item.color = patch.color;
+    if (patch.dark !== undefined) item.dark = patch.dark;
+    if (patch.value !== undefined) item.value = patch.value;
+    if (patch.next !== undefined) item.next = patch.next ?? null;
+    if (patch.glyph !== undefined) item.glyph = patch.glyph;
+    if (patch.description !== undefined) item.description = patch.description;
+    if (patch.desc !== undefined) item.desc = patch.desc;
+    if (patch.effect !== undefined) item.effect = patch.effect;
+    if (patch.target !== undefined) item.target = patch.target;
+    if (patch.anim !== undefined) item.anim = patch.anim;
+    if (patch.ms !== undefined) item.ms = patch.ms;
   }
 }
 
@@ -141,24 +146,24 @@ export function applyRecipeOverrides(recipes: Record<string, AnyRecord> | unknow
   if (!overrides || typeof overrides !== "object") return;
   const recipeMap = (recipes ?? {}) as Record<string, AnyRecord | undefined>;
   for (const [key, patchRaw] of Object.entries(overrides)) {
-    const patch = asRecord(patchRaw);
     const r = recipeMap[key];
     if (!r) continue;
-    if (typeof patch.item === "string" && isKnownRecipeInputKey(patch.item)) r.item = patch.item;
-    if (patch.inputs && typeof patch.inputs === "object") {
-      // Replace inputs wholesale (rather than merge) so removed lines don't linger.
+    const parsed = recipeOverrideSchema.safeParse(patchRaw);
+    if (!parsed.success) continue;
+    const patch = parsed.data;
+    if (patch.item !== undefined && isKnownRecipeInputKey(patch.item)) r.item = patch.item;
+    if (patch.inputs !== undefined) {
       const cleaned: Record<string, number> = {};
-      for (const [resKey, qty] of Object.entries(patch.inputs as AnyRecord)) {
+      for (const [resKey, qty] of Object.entries(patch.inputs)) {
         if (!isKnownRecipeInputKey(resKey)) continue;
         const n = Number(qty);
         if (Number.isFinite(n) && n > 0) cleaned[resKey] = Math.floor(n);
       }
       r.inputs = cleaned;
     }
-    if (Number.isFinite(patch.tier as number)) r.tier = patch.tier;
-    if (typeof patch.station === "string") r.station = patch.station;
-    // Legacy compat: coins can be patched directly on the recipe object.
-    if (Number.isFinite(patch.coins as number)) r.coins = patch.coins;
+    if (patch.tier !== undefined) r.tier = patch.tier;
+    if (patch.station !== undefined) r.station = patch.station;
+    if (patch.coins !== undefined) r.coins = patch.coins;
   }
 }
 
@@ -501,28 +506,9 @@ export function applyBiomeOverrides(
  *   homeBiome                              — non-empty string
  */
 export function sanitizeTuning(raw: unknown): AnyRecord {
-  const out: AnyRecord = {};
-  if (!raw || typeof raw !== "object") return out;
-  const o = raw as AnyRecord;
-  const posInt = (v: unknown) => (Number.isFinite(Number(v)) && Number(v) >= 1 ? Math.floor(Number(v)) : undefined);
-  const intFields: Record<string, string> = {
-    craftQueueHours: "craftQueueHours", craftGemSkipCost: "craftGemSkipCost",
-    minExpeditionTurns: "minExpeditionTurns", foundingBaseCoins: "foundingBaseCoins",
-  };
-  for (const k of Object.keys(intFields)) {
-    const n = posInt(o[k]);
-    if (n !== undefined) out[k] = n;
-  }
-  // craftGemSkipCost may be 0 (free skip); allow it explicitly.
-  if (Number.isFinite(Number(o.craftGemSkipCost)) && Number(o.craftGemSkipCost) >= 0) {
-    out.craftGemSkipCost = Math.floor(Number(o.craftGemSkipCost));
-  }
-  if (Number.isFinite(Number(o.foundingGrowth)) && Number(o.foundingGrowth) > 0) out.foundingGrowth = Number(o.foundingGrowth);
-  if (typeof o.homeBiome === "string" && (o.homeBiome as string).length > 0) out.homeBiome = o.homeBiome;
-  if (o.fireHazardEnabled === true || o.fireHazardEnabled === false) {
-    out.fireHazardEnabled = o.fireHazardEnabled;
-  }
-  return out;
+  const parsed = tuningSchema.safeParse(raw);
+  if (!parsed.success) return {};
+  return { ...parsed.data } as AnyRecord;
 }
 
 /**

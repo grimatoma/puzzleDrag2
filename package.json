@@ -14,6 +14,7 @@
     "action-types:list": "node tools/list-action-types.mjs",
     "action-types:emit": "node tools/list-action-types.mjs --emit",
     "action-types:check": "node tools/list-action-types.mjs --check",
+    "config:validate": "vitest run src/__tests__/configSchemas.test.ts",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:ui": "vitest --ui",

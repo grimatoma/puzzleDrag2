@@ -1,7 +1,7 @@
 /**
- * Canonical type declarations for game concepts. These live in `.ts` (no
- * runtime exports) so they can be imported by name from any `.ts`/`.tsx`
- * caller. Runtime predicates live in `./guards.ts`.
+ * Canonical type declarations for game concepts.
+ * Item shapes are inferred from Zod schemas (config/schemas/item.ts).
+ * Runtime predicates live in `./guards.ts`.
  *
  * Catalog keys are hand-maintained enums in `./catalog/` (see `docs/engineering/catalog-enums.md`).
  */
@@ -12,83 +12,30 @@ export { ItemAliasKey, ResourceKey, TileKey, ToolKey } from "./catalogKeys.js";
 
 export type { Inventory } from "./inventory.js";
 
-// ── Sway sub-object ───────────────────────────────────────────────────────
+export type {
+  SwayParams,
+  ToolPowerDefinition,
+} from "../config/schemas/shared.js";
 
-export interface SwayParams {
-  amp: number;
-  freq: number;
-  gust: number;
-}
+export type {
+  TileItemEntry as Tile,
+  ResourceItemEntry as Resource,
+  ToolItemEntry as Tool,
+  ItemEntry,
+  TileItemEntry,
+  ResourceItemEntry,
+  ToolItemEntry,
+} from "../config/schemas/item.js";
 
-// ── Item kinds ────────────────────────────────────────────────────────────
+/** @deprecated Use `Tile | Resource | Tool` or kind-specific types. */
+export type Item = import("../config/schemas/item.js").ItemEntry;
 
-import type { ResourceKey } from "./catalogKeys.js";
-
-/**
- * A tile lives on the board. Chained tiles credit progress toward the
- * tile-family's produced resource (see TILE_FAMILY_RESOURCE in constants).
- * The legacy `next` field is kept optional during the migration; new code
- * should use the producedResource helper instead.
- */
-export interface Tile {
-  kind: "tile";
-  biome: string;
-  label: string;
-  color: number;
-  dark: number;
-  value: number;
-  /** @deprecated Will be removed in Phase 6 — read produced resource via tileFamilyResource */
-  next?: ResourceKey | string | null;
-  sway?: SwayParams;
-  desc?: string;
-  effects?: Record<string, unknown>;
-}
-
-/**
- * A terminal resource lives in the player's inventory after chain collection.
- */
-export interface Resource {
-  kind: "resource";
-  biome?: string;
-  label: string;
-  color: number;
-  dark: number;
-  value: number;
-  /** @deprecated For schema parity with Tile during migration; resources never produce another resource */
-  next?: null;
-  desc?: string;
-}
-
-/**
- * A consumable tool — crafted and spent to trigger a tool power.
- * `effect` is the tool-power id from TOOL_POWERS.
- */
-export interface Tool {
-  kind: "tool";
-  label: string;
-  color?: number;
-  dark?: number;
-  value?: number;
-  desc?: string;
-  effect?: string;
-  target?: string;
-  anim?: string;
-  ms?: number;
-}
-
-/**
- * Legacy alias kept for callers still using the union shape.
- * @deprecated Phase 6 will remove this. Use `Tile | Resource | Tool` directly,
- * or — better — the specific kind your function actually accepts.
- */
-export type Item = Tile | Resource | Tool;
-
-/** @deprecated Phase 6 will remove. Use `Tile`. */
-export type TileItem = Tile;
-/** @deprecated Phase 6 will remove. Use `Resource`. */
-export type ResourceItem = Resource;
-/** @deprecated Phase 6 will remove. Use `Tool`. */
-export type ToolItem = Tool;
+/** @deprecated Use `Tile`. */
+export type TileItem = import("../config/schemas/item.js").TileItemEntry;
+/** @deprecated Use `Resource`. */
+export type ResourceItem = import("../config/schemas/item.js").ResourceItemEntry;
+/** @deprecated Use `Tool`. */
+export type ToolItem = import("../config/schemas/item.js").ToolItemEntry;
 
 // ── Ability ───────────────────────────────────────────────────────────────
 
