@@ -95,6 +95,13 @@ describe("WikiArticle — at-a-glance cost chips (bakery)", () => {
     const body = document.body.textContent ?? "";
     expect(body).toContain("Cost to build");
   });
+
+  it("renders visual recipe cards for bakery station recipes", () => {
+    const { container } = renderArticle("buildings", "bakery");
+    expect(document.body.textContent).toContain("Recipes crafted here");
+    expect(container.querySelectorAll(".wiki-concept-ref-card").length).toBeGreaterThanOrEqual(3);
+    expect(document.body.textContent).toMatch(/flour/i);
+  });
 });
 
 // ─── Test 2: Backlinks present ────────────────────────────────────────────────

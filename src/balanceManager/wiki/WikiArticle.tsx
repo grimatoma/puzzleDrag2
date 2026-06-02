@@ -21,8 +21,8 @@ import { Card, SmallButton, COLORS } from "../shared.jsx";
 import { describeSchema } from "../schemaDoc.js";
 import { schemaForConcept } from "./conceptSchemas.js";
 import { getEntity } from "./conceptEntities.js";
-import { useBalanceNav } from "../balanceNav.jsx";
-import { RefButton, RelationalFooter } from "../relational.jsx";
+import { RelationalFooter } from "../relational.jsx";
+import { RelationRefGrid } from "./ConceptRefCard.jsx";
 import { relationsFor } from "./relations.js";
 import { backlinksFor } from "./backlinks.js";
 import { ledeFor } from "./lede.js";
@@ -31,12 +31,10 @@ import HtmlBody from "./HtmlBody.jsx";
 import { Infobox } from "./Infobox.jsx";
 import { TableOfContents } from "./TableOfContents.jsx";
 import type { TocItem } from "./TableOfContents.jsx";
-import { wikiNavTarget } from "./WikiLinkButton.jsx";
 import StatusChip from "../../ui/primitives/StatusChip.jsx";
 import { statusForEntity, WIKI_STATUS_LEGEND } from "./status.js";
 import { FieldsTable, AdditionalFieldsSection, LiveConfigFallback } from "./FieldsTable.jsx";
-import Icon from "../../ui/Icon.jsx";
-import { AmountChips, RecipeIO, entityIconKey } from "./EntityVisual.jsx";
+import { AmountChips, RecipeIO } from "./EntityVisual.jsx";
 import { WhereUsed, hasWhereUsed } from "./sections/WhereUsed.jsx";
 import { CraftTree, hasCraftTree, recipeIdProducing } from "./sections/CraftTree.jsx";
 import { BossDifficulty, hasBossDifficulty } from "./sections/BossDifficulty.jsx";
@@ -50,6 +48,7 @@ import { KeeperEncounter, hasKeeperEncounter } from "./sections/KeeperEncounter.
 import { BoonCard, hasBoonCard } from "./sections/BoonCard.jsx";
 import { DailyRewardsTrack, hasDailyReward } from "./sections/DailyRewardsTrack.jsx";
 import { AchievementCard, hasAchievementCard } from "./sections/AchievementCard.jsx";
+import { BuildingRecipes, hasBuildingRecipes } from "./sections/BuildingRecipes.jsx";
 
 // ─── At-a-glance visual ────────────────────────────────────────────────────────
 
@@ -114,8 +113,6 @@ export interface WikiArticleProps {
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export default function WikiArticle({ conceptId, entityKey, onBack }: WikiArticleProps) {
-  const { navigate } = useBalanceNav();
-
   // Entity + schema
   const entity = getEntity(conceptId, entityKey);
   const cs = schemaForConcept(conceptId);
@@ -197,6 +194,11 @@ export default function WikiArticle({ conceptId, entityKey, onBack }: WikiArticl
   const showAchievementCard =
     conceptId === "achievements" &&
     hasAchievementCard(entity as Parameters<typeof hasAchievementCard>[0]);
+  const showBuildingRecipes = conceptId === "buildings" && hasBuildingRecipes(entityKey);
+
+  const relationGroups = showBuildingRecipes
+    ? rels.filter((g) => g.title !== "Recipes crafted here")
+    : rels;
 
   // Build TOC items — only sections that actually render
   const tocItems: TocItem[] = [
@@ -213,11 +215,12 @@ export default function WikiArticle({ conceptId, entityKey, onBack }: WikiArticl
     ...(showZoneDetail ? [{ id: "zone-detail", label: "Drop rates & upgrades" }] : []),
     ...(showBoardKindDetail ? [{ id: "board-kind-detail", label: "Tiles, dangers & seasons" }] : []),
     ...(showNpcGifts ? [{ id: "npc-gifts", label: "Gift preferences" }] : []),
+    ...(showBuildingRecipes ? [{ id: "building-recipes", label: "Recipes crafted here" }] : []),
     ...(showCraftTree ? [{ id: "crafting-tree", label: "Crafting tree" }] : []),
     ...(showWhereUsed ? [{ id: "used-in", label: "Used in" }] : []),
     ...(body != null ? [{ id: "about", label: "About" }] : []),
     { id: "properties", label: "Properties" },
-    ...(rels.length > 0 ? [{ id: "relations", label: "Related" }] : []),
+    ...(relationGroups.length > 0 ? [{ id: "relations", label: "Related" }] : []),
     ...(back.length > 0 ? [{ id: "backlinks", label: "What links here" }] : []),
   ];
 
@@ -339,6 +342,8 @@ export default function WikiArticle({ conceptId, entityKey, onBack }: WikiArticl
           {/* NPC gift preferences (npc articles) */}
           {showNpcGifts && <NpcGifts npcId={entityKey} npc={entity} />}
 
+          {showBuildingRecipes && <BuildingRecipes buildingId={entityKey} />}
+
           {/* Crafting dependency tree (recipes + craftable items) */}
           {showCraftTree && craftTreeRecipeId != null && (
             <CraftTree recipeId={craftTreeRecipeId} />
@@ -442,42 +447,18 @@ export default function WikiArticle({ conceptId, entityKey, onBack }: WikiArticl
           </section>
 
           {/* Forward relations */}
-          {rels.length > 0 && (
+          {relationGroups.length > 0 && (
             <section id="relations">
               <RelationalFooter standalone title="Related" hint="Derived · click to open">
-                {rels.map((group) => (
-                  <div key={group.title} className="mb-2 last:mb-0">
+                {relationGroups.map((group) => (
+                  <div key={group.title} className="mb-3 last:mb-0">
                     <div
-                      className="text-[9px] font-bold uppercase tracking-wide mb-1"
+                      className="text-[9px] font-bold uppercase tracking-wide mb-2"
                       style={{ color: COLORS.inkSubtle }}
                     >
                       {group.title}
                     </div>
-                    <div className="flex flex-wrap gap-1">
-                      {group.links.map((link) => {
-                        const ik = entityIconKey(link.conceptId, link.key, null);
-                        return (
-                          <RefButton
-                            key={`${link.conceptId}:${link.key}`}
-                            title={`${link.conceptId}:${link.key}`}
-                            onClick={() => navigate(wikiNavTarget(link.conceptId, link.key))}
-                          >
-                            {ik != null && (
-                              <Icon iconKey={ik} size={14} style={{ marginRight: 3, verticalAlign: "middle" }} />
-                            )}
-                            <span className="wiki-mono text-[10px]">{link.label}</span>
-                            {link.label !== link.key && (
-                              <span
-                                className="wiki-mono text-[9px] opacity-60 ml-0.5"
-                                style={{ color: COLORS.inkSubtle }}
-                              >
-                                {link.key}
-                              </span>
-                            )}
-                          </RefButton>
-                        );
-                      })}
-                    </div>
+                    <RelationRefGrid links={group.links} />
                   </div>
                 ))}
               </RelationalFooter>
@@ -489,38 +470,14 @@ export default function WikiArticle({ conceptId, entityKey, onBack }: WikiArticl
             <section id="backlinks">
               <RelationalFooter standalone title="What links here" hint="Referenced by">
                 {back.map((group) => (
-                  <div key={group.title} className="mb-2 last:mb-0">
+                  <div key={group.title} className="mb-3 last:mb-0">
                     <div
-                      className="text-[9px] font-bold uppercase tracking-wide mb-1"
+                      className="text-[9px] font-bold uppercase tracking-wide mb-2"
                       style={{ color: COLORS.inkSubtle }}
                     >
                       {group.title}
                     </div>
-                    <div className="flex flex-wrap gap-1">
-                      {group.links.map((link) => {
-                        const ik = entityIconKey(link.conceptId, link.key, null);
-                        return (
-                          <RefButton
-                            key={`${link.conceptId}:${link.key}`}
-                            title={`${link.conceptId}:${link.key}`}
-                            onClick={() => navigate(wikiNavTarget(link.conceptId, link.key))}
-                          >
-                            {ik != null && (
-                              <Icon iconKey={ik} size={14} style={{ marginRight: 3, verticalAlign: "middle" }} />
-                            )}
-                            <span className="wiki-mono text-[10px]">{link.label}</span>
-                            {link.label !== link.key && (
-                              <span
-                                className="wiki-mono text-[9px] opacity-60 ml-0.5"
-                                style={{ color: COLORS.inkSubtle }}
-                              >
-                                {link.key}
-                              </span>
-                            )}
-                          </RefButton>
-                        );
-                      })}
-                    </div>
+                    <RelationRefGrid links={group.links} />
                   </div>
                 ))}
               </RelationalFooter>
