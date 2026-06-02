@@ -235,6 +235,48 @@ describe("HtmlBody — SVG passthrough", () => {
     // The svg should exist inside the container
     expect(container.querySelector("svg")).not.toBeNull();
   });
+
+  it("strips <script> inside SVG but preserves other SVG children", () => {
+    const { container } = renderHtml(
+      '<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script><circle r="5"/></svg>',
+    );
+    // The SVG span wrapper should still be rendered
+    expect(container.querySelector("span")).not.toBeNull();
+    // No <script> should survive inside the rendered output
+    expect(container.querySelector("script")).toBeNull();
+    // The raw text "alert(1)" must not appear anywhere in the output
+    expect(container.innerHTML).not.toContain("alert(1)");
+    // The <circle> element should be preserved
+    expect(container.querySelector("circle")).not.toBeNull();
+  });
+});
+
+// ─── Security: javascript:/vbscript: URL blocking ────────────────────────────
+
+describe("HtmlBody — javascript:/vbscript: URL blocking", () => {
+  it("strips javascript: href from anchor elements", () => {
+    const { container } = renderHtml('<a href="javascript:alert(1)">x</a>');
+    const a = container.querySelector("a");
+    expect(a).not.toBeNull();
+    // The href must either be absent or not start with javascript:
+    const href = a!.getAttribute("href");
+    expect(href === null || !href.toLowerCase().startsWith("javascript:")).toBe(true);
+  });
+
+  it("strips vbscript: href from anchor elements", () => {
+    const { container } = renderHtml('<a href="vbscript:MsgBox(1)">x</a>');
+    const a = container.querySelector("a");
+    expect(a).not.toBeNull();
+    const href = a!.getAttribute("href");
+    expect(href === null || !href.toLowerCase().startsWith("vbscript:")).toBe(true);
+  });
+
+  it("preserves a normal https: href on anchor elements", () => {
+    const { container } = renderHtml('<a href="https://example.com">link</a>');
+    const a = container.querySelector("a");
+    expect(a).not.toBeNull();
+    expect(a!.getAttribute("href")).toBe("https://example.com");
+  });
 });
 
 // ─── Empty source ─────────────────────────────────────────────────────────────

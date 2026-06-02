@@ -15,8 +15,10 @@
  *      - Everything else             → React.createElement with safe props.
  *
  * Security:
- *   - <script> and <style> nodes are dropped entirely.
+ *   - <script> and <style> nodes are dropped entirely, including inside <svg>.
  *   - Any attribute whose name begins with "on" is stripped.
+ *   - `href`, `src`, and `xlink:href` values starting with `javascript:` or
+ *     `vbscript:` are dropped.
  *   - Only the node tree produced by DOMParser is processed; no eval.
  */
 
@@ -96,6 +98,12 @@ function convertAttributes(
 
     // Security: strip all event-handler attributes.
     if (name.startsWith("on")) continue;
+
+    // Security: block javascript: and vbscript: URL schemes.
+    if (name === "href" || name === "src" || name === "xlink:href") {
+      const v = attr.value.trim().toLowerCase();
+      if (v.startsWith("javascript:") || v.startsWith("vbscript:")) continue;
+    }
 
     // Parse inline styles into a React style object.
     if (name === "style") {
@@ -188,10 +196,12 @@ function convertNode(node: Node, keyPrefix: string): React.ReactNode {
 
   // ── <svg> subtree → dangerouslySetInnerHTML (preserves exact SVG attrs) ──
   if (tag === "svg") {
+    const clone = el.cloneNode(true) as Element;
+    clone.querySelectorAll("script, style").forEach((n) => n.remove());
     return (
       <span
         key={keyPrefix}
-        dangerouslySetInnerHTML={{ __html: el.outerHTML }}
+        dangerouslySetInnerHTML={{ __html: clone.outerHTML }}
       />
     );
   }
@@ -254,10 +264,13 @@ export interface HtmlBodyProps {
  * respective interactive components.
  *
  * Security invariants:
- *   - `<script>` and `<style>` elements are dropped.
- *   - `on*` event-handler attributes are stripped.
- *   - SVG subtrees are inlined via `dangerouslySetInnerHTML` (outerHTML only —
- *     no external loads, no script execution path).
+ *   - `<script>` and `<style>` elements are dropped everywhere, including
+ *     inside `<svg>` subtrees (clone + querySelectorAll before serialising).
+ *   - `on*` event-handler attributes are stripped from all elements.
+ *   - `href`, `src`, and `xlink:href` values beginning with `javascript:` or
+ *     `vbscript:` are silently dropped.
+ *   - SVG subtrees are cloned and sanitised before inlining via
+ *     `dangerouslySetInnerHTML`; no external loads, no script execution path.
  *   - DOMParser runs in the browser's parser sandbox; no eval occurs.
  */
 export default function HtmlBody({ source }: HtmlBodyProps) {
