@@ -126,7 +126,7 @@ export default function WikiArticle({ conceptId, entityKey, onBack }: WikiArticl
           </span>
           <span style={{ color: COLORS.inkSubtle }}>›</span>
           {/* Entity title — display serif, big */}
-          <span className="wiki-title" style={{ fontSize: "clamp(18px, 2.5vw, 26px)" }}>
+          <span className="wiki-title wiki-title--article">
             {title}
           </span>
           {/* Entity key — mono */}

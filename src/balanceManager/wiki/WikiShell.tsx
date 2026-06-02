@@ -206,8 +206,7 @@ export default function WikiShell() {
             {isSmallScreen && (
               <button
                 onClick={() => setMobileNavOpen((v) => !v)}
-                className="wiki-toggle-btn"
-                style={{ width: 36, height: 36, fontSize: 18 }}
+                className="wiki-toggle-btn wiki-toggle-btn--lg"
                 title={overlayOpen ? "Close navigation" : "Open navigation"}
                 aria-label={overlayOpen ? "Close navigation" : "Open navigation"}
                 aria-expanded={overlayOpen}
