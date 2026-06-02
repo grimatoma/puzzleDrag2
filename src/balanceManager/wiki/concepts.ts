@@ -161,17 +161,19 @@ function settlementBiomeEntries() {
   return out;
 }
 
-// Display order: Farm, Mine, Harbor (progression order, not alphabetical).
+// Entries are sorted alphabetically by name (Farm, Harbor, Mine) to satisfy the
+// shared wiki-concepts sort invariant; progression order (Farm → Mine → Harbor)
+// lives in the article bodies, not the nav list.
 const BOARD_KIND_ORDER = ["farm", "mine", "fish"] as const;
 
 function boardKindEntries() {
-  return BOARD_KIND_ORDER.filter((k) => (BIOMES as Record<string, unknown>)[k] != null).map(
-    (k) => ({
+  return BOARD_KIND_ORDER.filter((k) => (BIOMES as Record<string, unknown>)[k] != null)
+    .map((k) => ({
       key: k,
       name: String((BIOMES as Record<string, { name?: string }>)[k].name ?? k),
       iconKey: `biome_${k}`,
-    }),
-  );
+    }))
+    .sort(byName);
 }
 
 function categoryEntries() {
