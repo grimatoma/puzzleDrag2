@@ -177,7 +177,7 @@ export function applyBuildingOverrides(buildings: AnyRecord[] | unknown, overrid
     if (patch.desc !== undefined) b.desc = patch.desc;
     if (patch.cost !== undefined) b.cost = { ...patch.cost };
     if (patch.lv !== undefined) b.lv = patch.lv;
-    if (patch.look?.color != null) b.look = { ...(b.look ?? {}), color: patch.look.color };
+    if (patch.look?.color != null) b.look = { ...asRecord(b.look), color: patch.look.color };
     if (patch.abilities !== undefined) b.abilities = [...patch.abilities];
   }
 }
@@ -366,7 +366,7 @@ export function applyKeeperOverrides(keepers: unknown, overrides: Overrides): vo
     }
     if (patch.name !== undefined) k.name = patch.name;
     if (patch.title !== undefined) k.title = patch.title;
-    if (patch.look?.icon != null) k.look = { ...(k.look ?? {}), icon: patch.look.icon };
+    if (patch.look?.icon != null) k.look = { ...asRecord(k.look), icon: patch.look.icon };
     if (patch.appearsAfterBuildings !== undefined) k.appearsAfterBuildings = patch.appearsAfterBuildings;
     if (patch.intro !== undefined) k.intro = [...patch.intro];
     if (patch.coexist !== undefined) patchPath(k.coexist as AnyRecord, patch.coexist);
@@ -427,7 +427,7 @@ export function applyBiomeOverrides(
       const b = list.find((x) => x.id === biomeId);
       if (!b) continue;
       if (patch.name !== undefined) b.name = patch.name;
-      if (patch.look?.icon != null) b.look = { ...(b.look ?? {}), icon: patch.look.icon };
+      if (patch.look?.icon != null) b.look = { ...asRecord(b.look), icon: patch.look.icon };
       if (patch.bonus !== undefined) b.bonus = patch.bonus;
       if (patch.hazards !== undefined && patch.hazards.length > 0) b.hazards = [...patch.hazards];
     }
