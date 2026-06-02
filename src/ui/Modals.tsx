@@ -16,7 +16,7 @@ import type { Bubble, Dispatch, GameState } from "../types/state.js";
 interface NpcRecord {
   name: string;
   role?: string;
-  color?: string;
+  look?: { color?: string };
   [extra: string]: unknown;
 }
 
@@ -96,7 +96,7 @@ const SC = {
 const NPCS_BY_KEY = NPCS as Record<string, NpcRecord>;
 function speakerName(key: string | null | undefined) { return key && NPCS_BY_KEY[key] ? NPCS_BY_KEY[key].name : null; }
 function speakerRole(key: string | null | undefined) { return key && NPCS_BY_KEY[key] ? NPCS_BY_KEY[key].role : null; }
-function speakerColor(key: string | null | undefined) { return key && NPCS_BY_KEY[key] ? NPCS_BY_KEY[key].color : SC.iron; }
+function speakerColor(key: string | null | undefined) { return key && NPCS_BY_KEY[key] ? NPCS_BY_KEY[key].look?.color : SC.iron; }
 function speakerIconKey(key: string | null | undefined) { return key ? `char_${key}` : null; }
 
 /** A small uppercase pill — outcome badges and beat meta tags. */
@@ -132,7 +132,7 @@ export function StoryPortrait({ npcKey, size = 56 }: { npcKey: string | null | u
       </div>
     );
   }
-  const base = npc ? npc.color : "#5a4a30";
+  const base = npc ? npc.look?.color : "#5a4a30";
   return (
     <div
       className="rounded-full grid place-items-center text-white flex-shrink-0"
@@ -390,7 +390,7 @@ export function StoryStagePanel({ beat, lines, footer, footKind, sceneLabel, onC
 
 /** Bottom-anchored dialogue bar — lightweight one-line milestones. Tap (anywhere
  *  on the bar), Enter/Space, or ESC advances. */
-interface NpcWithKey { key: string | null; name: string; role?: string; color?: string }
+interface NpcWithKey { key: string | null; name: string; role?: string; look?: { color?: string } }
 function StoryBar({ line, npc, onContinue }: { line: BeatLine; npc: NpcWithKey | null; onContinue: () => void }) {
   const advance = (e: React.MouseEvent | React.KeyboardEvent) => {
     if ("type" in e && e.type === "keydown" && "key" in e && e.key !== "Enter" && e.key !== " ") return;
@@ -427,7 +427,7 @@ function StoryBar({ line, npc, onContinue }: { line: BeatLine; npc: NpcWithKey |
           {npc && (
             <div className="absolute inline-flex items-center gap-2 rounded-full" style={{ top: -12, left: 14, padding: "4px 12px 4px 4px", background: "#221710", border: `1px solid ${SC.panelEdge}` }}>
               <StoryPortrait npcKey={npc.key} size={22} />
-              <span style={{ fontWeight: 600, fontSize: 11, letterSpacing: "0.06em", textTransform: "uppercase", color: npc.color }}>{npc.name}</span>
+              <span style={{ fontWeight: 600, fontSize: 11, letterSpacing: "0.06em", textTransform: "uppercase", color: npc.look?.color }}>{npc.name}</span>
               {npc.role && <span style={{ fontSize: 10, color: SC.parchmentFaint, letterSpacing: "0.03em" }}>· {npc.role}</span>}
             </div>
           )}

@@ -60,7 +60,7 @@ function WorkerBrowserItem({ worker, count, selected, onSelect }: WorkerBrowserI
   return (
     <BrowserItemButton
       selected={selected}
-      icon={<Icon iconKey={worker.iconKey} size={32} title="" />}
+      icon={<Icon iconKey={worker.look?.iconKey} size={32} title="" />}
       title={worker.name}
       subtitle={worker.description}
       count={`${count}/${worker.maxCount}`}
@@ -128,7 +128,7 @@ function WorkerDetail({ worker, count, state, dispatch }: WorkerDetailProps) {
       title={worker.name}
       status={`${count} / ${worker.maxCount} hired`}
       description={worker.description}
-      icon={<Icon iconKey={worker.iconKey} size={64} title="" />}
+      icon={<Icon iconKey={worker.look?.iconKey} size={64} title="" />}
       headerActions={undefined}
       empty={undefined}
       actions={

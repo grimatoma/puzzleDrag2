@@ -88,7 +88,7 @@ export default function StatsPanel({ draft }: { draft: StoryDraft }) {
                 <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
                   <span style={{ flex: 1, height: 6, background: C.parchmentDeep, borderRadius: 999 }}>
                     <span style={{ display: "block", height: "100%", width: `${Math.max(2, Math.round(pct * 100))}%`,
-                      borderRadius: 999, background: isNar ? "#7a6a50" : (npc?.color || C.ember) }} />
+                      borderRadius: 999, background: isNar ? "#7a6a50" : (npc?.look?.color || C.ember) }} />
                   </span>
                   <span style={{ font: "600 10px/1 ui-monospace,monospace", color: C.inkSubtle, width: 26, textAlign: "right" }}>{n.lines}</span>
                 </span>

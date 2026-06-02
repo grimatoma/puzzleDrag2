@@ -62,6 +62,8 @@ export {
 
 export { npcsOverridesSchema } from "./npc.js";
 
+export { seasonEntrySchema, type SeasonEntry } from "./season.js";
+
 export { storyOverridesSchema } from "./story.js";
 
 export { flagsOverridesSchema } from "./flags.js";

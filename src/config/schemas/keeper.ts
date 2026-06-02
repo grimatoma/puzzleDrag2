@@ -13,7 +13,7 @@ export const keeperOverrideSchema = z
   .object({
     name: z.string().optional(),
     title: z.string().optional(),
-    icon: z.string().optional(),
+    look: z.object({ icon: z.string().optional() }).strict().optional().describe("Appearance overrides"),
     appearsAfterBuildings: z.number().int().min(0).optional(),
     intro: z.array(z.string()).optional(),
     coexist: keeperPathPatchSchema.optional(),

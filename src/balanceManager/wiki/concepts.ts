@@ -42,13 +42,13 @@ interface ItemKindEntry {
 
 function itemsOfKind(kind: string): ItemKindEntry[] {
   const out: ItemKindEntry[] = [];
-  for (const [key, item] of Object.entries(ITEMS) as Array<[string, { kind?: string; label?: string; color?: number }]>) {
+  for (const [key, item] of Object.entries(ITEMS) as Array<[string, { kind?: string; label?: string; look?: { color?: number } }]>) {
     if (item?.kind !== kind) continue;
     out.push({
       key,
       name: item.label ?? key,
       iconKey: key,
-      color: item.color,
+      color: item.look?.color,
     });
   }
   out.sort(byName);
@@ -75,8 +75,8 @@ function workerEntries() {
   return TYPE_WORKERS.map((w) => ({
     key: w.id,
     name: w.name,
-    iconKey: w.iconKey,
-    color: w.color,
+    iconKey: w.look?.iconKey,
+    color: w.look?.color,
   })).sort(byName);
 }
 
@@ -93,7 +93,7 @@ function buildingEntries() {
     key: b.id,
     name: b.name,
     iconKey: BUILDING_ICON_KEYS[b.id],
-    color: b.color,
+    color: b.look?.color,
   })).sort(byName);
 }
 
@@ -104,7 +104,7 @@ function npcEntries() {
       key: id,
       name: npc.name ?? id,
       iconKey: `char_${id}`,
-      color: npc.color,
+      color: npc.look?.color,
     });
   }
   out.sort(byName);
@@ -175,7 +175,7 @@ function abilityEntries() {
   return ABILITIES.map((a) => ({
     key: a.id,
     name: a.name,
-    iconKey: a.iconKey,
+    iconKey: a.look?.iconKey,
   })).sort(byName);
 }
 
@@ -197,8 +197,8 @@ function seasonEntries() {
   return SEASONS.map((s) => ({
     key: s.name,
     name: s.name,
-    iconKey: s.iconKey,
-    color: s.bg,
+    iconKey: s.look.iconKey,
+    color: s.look.bg,
   })).sort(byName);
 }
 

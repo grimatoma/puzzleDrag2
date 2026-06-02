@@ -329,7 +329,7 @@ export function TownView({ state, dispatch }: { state: GameState; dispatch: Disp
   const freePlots = plotCount - occupiedPlots;
 
   const builtTipHandlers = (b: Building) => {
-    const data: BuildingTipData = { label: b.name, desc: b.desc, color: b.color };
+    const data: BuildingTipData = { label: b.name, desc: b.desc, color: b.look.color };
     return {
       onMouseEnter: (e: React.MouseEvent<HTMLElement>) => { if (Date.now() - lastTouchTime.current > 600) showBuildingTip(data, e.currentTarget); },
       onMouseLeave: () => { if (Date.now() - lastTouchTime.current > 600) hideBuildingTip(); },

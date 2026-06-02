@@ -22,7 +22,7 @@ function NpcRow({ row, onJumpToBeat }: { row: BondTimelineRow; onJumpToBeat?: (i
       <div style={{ padding: "9px 12px", display: "flex", alignItems: "center", gap: 8,
         background: C.parchmentDeep, borderBottom: `1px solid ${C.border}` }}>
         <Portrait npcKey={row.npc} size={20} />
-        <span style={{ font: "700 12px/1 system-ui", color: npc?.color || C.ink }}>
+        <span style={{ font: "700 12px/1 system-ui", color: npc?.look?.color || C.ink }}>
           {npc?.name || row.npc}
         </span>
         <span style={{ font: "600 10px/1 system-ui", color: C.inkSubtle, marginLeft: 4 }}>

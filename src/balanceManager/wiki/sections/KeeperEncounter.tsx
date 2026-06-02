@@ -32,7 +32,7 @@ interface KeeperPath {
 interface KeeperLike {
   name?: string;
   title?: string;
-  icon?: string;
+  look?: { icon?: string };
   appearsAfterBuildings?: number;
   coexist?: KeeperPath | null;
   driveout?: KeeperPath | null;
@@ -169,9 +169,9 @@ export function KeeperEncounter({ keeper }: KeeperEncounterProps) {
           marginBottom: 12,
         }}
       >
-        {keeper.icon != null && (
+        {keeper.look?.icon != null && (
           <span style={{ fontSize: 28, lineHeight: 1 }} aria-hidden="true">
-            {keeper.icon}
+            {keeper.look.icon}
           </span>
         )}
         <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>

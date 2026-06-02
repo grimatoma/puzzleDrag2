@@ -712,7 +712,7 @@ export default function Inspector({ beatId, draft, isDraft, onEditBeat, onNewBra
               return (
                 <span key={sp} style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
                   <Portrait npcKey={sp} size={16} />
-                  <span style={{ font: "500 9px/1 system-ui", color: info?.color || C.inkLight }}>{info?.name || sp}</span>
+                  <span style={{ font: "500 9px/1 system-ui", color: info?.look?.color || C.inkLight }}>{info?.name || sp}</span>
                 </span>
               );
             })}

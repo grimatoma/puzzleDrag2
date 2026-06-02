@@ -20,8 +20,7 @@ export interface WorkerDef {
   id: WorkerTypeId;
   name: string;
   role: string;
-  iconKey: string;
-  color: string;
+  look: { iconKey: string; color: string };
   hireCost: WorkerHireCost;
   maxCount: number;
   abilities: WorkerAbility[];
@@ -56,8 +55,7 @@ export const TYPE_WORKERS: WorkerDef[] = [
     id: WorkerTypeId.Farmer,
     name: "Farmer",
     role: "Farmer",
-    iconKey: "worker_farmer",
-    color: "#4f8c3a",
+    look: { iconKey: "worker_farmer", color: "#4f8c3a" },
     hireCost: { coins: 50, coinsStep: 25, resources: { tile_grass_hay: 2 }, resourcesStepEvery: 3 },
     maxCount: 10,
     abilities: [
@@ -69,8 +67,7 @@ export const TYPE_WORKERS: WorkerDef[] = [
     id: WorkerTypeId.Lumberjack,
     name: "Lumberjack",
     role: "Lumberjack",
-    iconKey: "worker_lumberjack",
-    color: "#7a4f1f",
+    look: { iconKey: "worker_lumberjack", color: "#7a4f1f" },
     hireCost: { coins: 60, coinsStep: 30, resources: { tile_tree_oak: 2 }, resourcesStepEvery: 3 },
     maxCount: 10,
     abilities: [
@@ -82,8 +79,7 @@ export const TYPE_WORKERS: WorkerDef[] = [
     id: WorkerTypeId.Miner,
     name: "Miner",
     role: "Miner",
-    iconKey: "worker_miner",
-    color: "#7a8490",
+    look: { iconKey: "worker_miner", color: "#7a8490" },
     hireCost: { coins: 75, coinsStep: 35, resources: { tile_mine_stone: 2 }, resourcesStepEvery: 3 },
     maxCount: 10,
     abilities: [
@@ -95,8 +91,7 @@ export const TYPE_WORKERS: WorkerDef[] = [
     id: WorkerTypeId.Baker,
     name: "Baker",
     role: "Baker",
-    iconKey: "worker_baker",
-    color: "#c89b6a",
+    look: { iconKey: "worker_baker", color: "#c89b6a" },
     hireCost: { coins: 75, coinsMult: 1.4, resources: { flour: 1, eggs: 1 }, resourcesStepEvery: 3 },
     maxCount: 10,
     abilities: [

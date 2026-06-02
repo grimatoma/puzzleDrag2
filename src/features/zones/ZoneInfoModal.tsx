@@ -146,7 +146,7 @@ export default function ZoneInfoModal({ zoneId, state, onClose, highlightSeason 
                 <div className="hl-section-label">Modifiers</div>
                 {biome && (
                   <div className="text-[12px] text-on-panel leading-snug">
-                    <span className="font-bold">{biome.icon ?? ""} {biome.name}</span>
+                    <span className="font-bold">{biome.look?.icon ?? ""} {biome.name}</span>
                     {biome.bonus && (
                       <span className="text-on-panel-faint"> — {biome.bonus}</span>
                     )}

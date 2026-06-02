@@ -54,8 +54,9 @@ export function entityIconKey(
     case "workers":
     case "abilities":
     case "seasons": {
-      // These store their own iconKey string.
-      const k = entity?.iconKey;
+      // These store their own iconKey string under `look`.
+      const look = entity?.look as { iconKey?: unknown } | undefined;
+      const k = look?.iconKey;
       return typeof k === "string" && k.length > 0 ? k : null;
     }
     case "recipes": {

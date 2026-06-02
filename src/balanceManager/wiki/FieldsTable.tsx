@@ -99,6 +99,67 @@ export function formatDefault(fieldName: string, value: unknown): React.ReactNod
 // ─── FieldsTable ──────────────────────────────────────────────────────────────
 
 /**
+ * Render a field's own row followed by indented sub-rows for any nested-object
+ * children (recursive, one extra indent level per depth).
+ */
+function renderRows(
+  f: FieldDoc,
+  i: number,
+  depth: number,
+  entity: Record<string, unknown> | null,
+  showValue: boolean,
+  keyPath: string = "",
+): React.ReactNode[] {
+  const liveParent = entity != null ? entity[f.field] : undefined;
+  const fieldKey = keyPath ? `${keyPath}.${f.field}` : f.field;
+  const rows: React.ReactNode[] = [
+    <tr
+      key={fieldKey}
+      style={{
+        background: i % 2 === 0 ? COLORS.parchment : COLORS.parchmentDeep,
+        borderBottom: `1px solid ${COLORS.border}`,
+      }}
+    >
+      <td
+        className="py-1.5 px-2 font-mono font-bold whitespace-nowrap align-top"
+        style={{ paddingLeft: `${0.5 + depth * 1}rem` }}
+      >
+        {depth > 0 ? "↳ " : ""}{f.field}
+      </td>
+      <td className="py-1.5 px-2 font-mono whitespace-nowrap align-top" style={{ color: COLORS.inkSubtle }}>
+        {f.children ? "object" : f.type}
+      </td>
+      <td className="py-1.5 px-2 whitespace-nowrap align-top">
+        {f.optional ? (
+          <span style={{ color: COLORS.inkSubtle }}>optional</span>
+        ) : (
+          <span style={{ color: COLORS.ember }} className="font-bold">required</span>
+        )}
+      </td>
+      <td className="py-1.5 px-2 align-top">{formatDefault(f.field, f.default)}</td>
+      {showValue && (
+        <td className="py-1.5 px-2 align-top">
+          {f.children ? <span style={{ color: COLORS.inkSubtle }}>—</span> : formatValue(f.field, liveParent)}
+        </td>
+      )}
+      <td className="py-1.5 px-2 align-top" style={{ color: COLORS.inkSubtle }}>
+        {f.description ?? "—"}
+      </td>
+    </tr>,
+  ];
+  if (f.children) {
+    const childEntity =
+      liveParent != null && typeof liveParent === "object"
+        ? (liveParent as Record<string, unknown>)
+        : null;
+    f.children.forEach((c, ci) =>
+      rows.push(...renderRows(c, i + ci + 1, depth + 1, childEntity, showValue, fieldKey)),
+    );
+  }
+  return rows;
+}
+
+/**
  * Schema field table.
  *
  * - `entity`    — when provided, a live "Value" column is rendered for each field.
@@ -138,55 +199,7 @@ export function FieldsTable({
           </tr>
         </thead>
         <tbody>
-          {fields.map((f, i) => {
-            const liveVal = entity != null ? entity[f.field] : undefined;
-            return (
-              <tr
-                key={f.field}
-                style={{
-                  background: i % 2 === 0 ? COLORS.parchment : COLORS.parchmentDeep,
-                  borderBottom: `1px solid ${COLORS.border}`,
-                }}
-              >
-                {/* Field */}
-                <td className="py-1.5 px-2 font-mono font-bold whitespace-nowrap align-top">
-                  {f.field}
-                </td>
-                {/* Type */}
-                <td
-                  className="py-1.5 px-2 font-mono whitespace-nowrap align-top"
-                  style={{ color: COLORS.inkSubtle }}
-                >
-                  {f.type}
-                </td>
-                {/* Req */}
-                <td className="py-1.5 px-2 whitespace-nowrap align-top">
-                  {f.optional ? (
-                    <span style={{ color: COLORS.inkSubtle }}>optional</span>
-                  ) : (
-                    <span style={{ color: COLORS.ember }} className="font-bold">required</span>
-                  )}
-                </td>
-                {/* Default */}
-                <td className="py-1.5 px-2 align-top">
-                  {formatDefault(f.field, f.default)}
-                </td>
-                {/* Value — only when showValue is true */}
-                {showValue && (
-                  <td className="py-1.5 px-2 align-top">
-                    {formatValue(f.field, liveVal)}
-                  </td>
-                )}
-                {/* Description */}
-                <td
-                  className="py-1.5 px-2 align-top"
-                  style={{ color: COLORS.inkSubtle }}
-                >
-                  {f.description ?? "—"}
-                </td>
-              </tr>
-            );
-          })}
+          {fields.flatMap((f, i) => renderRows(f, i, 0, entity, showValue))}
         </tbody>
       </table>
     </div>

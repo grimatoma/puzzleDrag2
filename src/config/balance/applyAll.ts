@@ -55,8 +55,8 @@ export function applyTuningToRuntime(tuningRaw: BalanceOverrides["tuning"]) {
 /** Recompute default tile palette after item color overrides. */
 export function refreshDefaultTilePalette(): void {
   for (const r of [...BIOMES.farm.resources, ...BIOMES.mine.resources, ...BIOMES.fish.resources]) {
-    if (PALETTES.default.tiles[r.key] !== r.color) {
-      PALETTES.default.tiles[r.key] = r.color;
+    if (PALETTES.default.tiles[r.key] !== r.look?.color) {
+      PALETTES.default.tiles[r.key] = r.look?.color;
     }
   }
 }

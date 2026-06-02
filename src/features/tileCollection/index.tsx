@@ -32,7 +32,7 @@ interface TileTypeDef {
   baseResource?: string;
 }
 
-interface Resource { key: string; color: number }
+interface Resource { key: string; look: { color: number } }
 
 const CATEGORY_LABELS: Record<string, string> = {
   grass: "Grass",
@@ -129,7 +129,7 @@ export function TileIcon({ tileId, size = 40, locked = false }: TileIconProps) {
     ctx.imageSmoothingEnabled = false;
     ctx.scale(dpr, dpr);
     ctx.clearRect(0, 0, size, size);
-    const baseColor = hex(res.color);
+    const baseColor = hex(res.look.color);
     const grad = ctx.createRadialGradient(size * 0.4, size * 0.35, 2, size / 2, size / 2, size * 0.6);
     grad.addColorStop(0, lighten(baseColor, 0.25));
     grad.addColorStop(1, baseColor);

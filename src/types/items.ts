@@ -52,7 +52,7 @@ export interface Ability {
   id: string;
   name: string;
   desc: string;
-  iconKey: string;
+  look: { iconKey: string };
   scope: string[];
   trigger: string;
   channel: string;
@@ -107,7 +107,7 @@ export interface Building {
   y: number;
   w: number;
   h: number;
-  color: string;
+  look: { color: string };
   built?: boolean;
   biome?: string;
   requires?: string;
@@ -119,7 +119,7 @@ export interface Building {
 export interface NPC {
   name: string;
   role: string;
-  color: string;
+  look: { color: string };
   lines: string[];
 }
 
@@ -142,7 +142,7 @@ export interface Hazard {
 export interface SettlementBiome {
   id: string;
   name: string;
-  icon: string;
+  look: { icon: string };
   hazards: [string, string];
   bonus: string;
 }

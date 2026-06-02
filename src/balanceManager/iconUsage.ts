@@ -45,7 +45,7 @@ const DYNAMIC_PREFIXES_CANVAS = [
   "hazard_",     // mine/zone hazards looked up by id
   "boss_",       // BOSSES.id → boss_<id> (also explicitly added below)
   "decor_",      // DECORATIONS.id → decor_<id> (also explicitly added below)
-  "worker_",     // TYPE_WORKERS.iconKey (also explicitly added below)
+  "worker_",     // TYPE_WORKERS.look.iconKey (also explicitly added below)
   "player_",     // player tools — TOOL_CATALOG.iconKey (also covered below)
   "tile_",       // baked Phaser texture keys (tile_<resource>)
 ];
@@ -137,13 +137,13 @@ export function getUsedIconKeys(): Set<string> {
   }
 
   // Abilities — most carry an explicit iconKey.
-  for (const ability of ABILITIES || []) add(ability?.iconKey);
+  for (const ability of ABILITIES || []) add(ability?.look?.iconKey);
 
   // Type-workers — farmer, lumberjack, miner, baker each carry iconKey.
-  for (const worker of TYPE_WORKERS || []) add(worker?.iconKey);
+  for (const worker of TYPE_WORKERS || []) add(worker?.look?.iconKey);
 
   // Seasons (spring/summer/autumn/winter) — currently all share ui_star.
-  for (const season of SEASONS || []) add(season?.iconKey);
+  for (const season of SEASONS || []) add(season?.look?.iconKey);
 
   // Tool catalog — every tool has an iconKey pointing at a resource icon.
   for (const tool of TOOL_CATALOG || []) add(tool?.iconKey);

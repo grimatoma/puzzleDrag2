@@ -37,14 +37,14 @@ describe("applyExpeditionOverrides", () => {
 describe("applyBiomeOverrides", () => {
   it("patches a matched biome in place", () => {
     const biomes = {
-      farm: [{ id: "prairie", name: "Prairie", icon: "🌾", hazards: ["fire", "locusts"], bonus: "grain yield" }],
-      mine: [{ id: "mountain", name: "Mountain", icon: "🏔️", hazards: ["cave_in", "gas_pocket"], bonus: "iron" }],
+      farm: [{ id: "prairie", name: "Prairie", look: { icon: "🌾" }, hazards: ["fire", "locusts"], bonus: "grain yield" }],
+      mine: [{ id: "mountain", name: "Mountain", look: { icon: "🏔️" }, hazards: ["cave_in", "gas_pocket"], bonus: "iron" }],
     };
     applyBiomeOverrides(biomes, {
-      farm: { prairie: { name: "Sunfield", icon: "☀️", hazards: ["drought", "locusts"], bonus: "wheat" } },
+      farm: { prairie: { name: "Sunfield", look: { icon: "☀️" }, hazards: ["drought", "locusts"], bonus: "wheat" } },
     });
     expect(biomes.farm[0].name).toBe("Sunfield");
-    expect(biomes.farm[0].icon).toBe("☀️");
+    expect(biomes.farm[0].look.icon).toBe("☀️");
     expect(biomes.farm[0].hazards).toEqual(["drought", "locusts"]);
     expect(biomes.farm[0].bonus).toBe("wheat");
     expect(biomes.mine[0].name).toBe("Mountain"); // untouched
@@ -56,7 +56,7 @@ describe("applyBiomeOverrides", () => {
   it("skips unknown biome type / id in production builds", () => {
     withImportMetaDev(false, () => {
       const biomes = {
-        farm: [{ id: "prairie", name: "Prairie", icon: "🌾", hazards: ["fire"], bonus: "grain" }],
+        farm: [{ id: "prairie", name: "Prairie", look: { icon: "🌾" }, hazards: ["fire"], bonus: "grain" }],
       };
       applyBiomeOverrides(biomes, {
         farm: { nope: { name: "x" } },

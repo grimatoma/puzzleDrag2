@@ -22,7 +22,7 @@ describe("SETTLEMENT_BIOMES config", () => {
       for (const b of list) {
         expect(typeof b.id).toBe("string");
         expect(typeof b.name).toBe("string");
-        expect(typeof b.icon).toBe("string");
+        expect(typeof b.look.icon).toBe("string");
         expect(b.hazards).toHaveLength(2);
         expect(typeof b.bonus).toBe("string");
       }

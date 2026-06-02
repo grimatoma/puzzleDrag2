@@ -12,7 +12,7 @@ export const buildingDefinitionSchema = z
     y: z.number().describe("Vertical plot position on the town layout stage"),
     w: z.number().describe("Plot width in layout units"),
     h: z.number().describe("Plot height in layout units"),
-    color: z.string().describe("Accent color used for the building illustration"),
+    look: z.object({ color: z.string().describe("Accent color used for the building illustration") }).describe("Building visual appearance"),
     built: z.boolean().optional().describe("True if the building starts pre-constructed (e.g. the Hearth)"),
     biome: z.string().optional().describe("Biome id that must be active at the zone for this building to appear"),
     requires: z.string().optional().describe("Building id that must already be constructed before this one unlocks"),
@@ -26,7 +26,7 @@ export const buildingOverrideSchema = z
     desc: z.string().optional(),
     cost: z.record(z.string(), z.number()).optional(),
     lv: z.number().optional(),
-    color: z.string().optional(),
+    look: z.object({ color: z.string().optional() }).strict().optional().describe("Appearance overrides"),
     abilities: z.array(abilityInstanceSchema).optional().describe("Replaces abilities wholesale"),
   })
   .strict();

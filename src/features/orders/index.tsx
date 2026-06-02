@@ -29,7 +29,7 @@ export default function OrdersScreen({ state, dispatch }: OrdersScreenProps) {
           const have = inventoryQty(inventory, o.key);
           const needed = o.need ?? o.amount;
           const done = have >= needed;
-          const npc = (NPCS as Record<string, { name: string; color: string } | undefined>)[o.npc];
+          const npc = (NPCS as Record<string, { name: string; look?: { color?: string } } | undefined>)[o.npc];
           if (!npc) return null;
           const itemDef = getItem(o.key);
           const isCrafted = itemDef?.kind === "resource" && !itemDef?.biome;
@@ -54,7 +54,7 @@ export default function OrdersScreen({ state, dispatch }: OrdersScreenProps) {
               <div className="flex items-center gap-2.5">
                 <div
                   className="w-9 h-9 rounded-full grid place-items-center text-white font-bold text-[14px] flex-shrink-0"
-                  style={{ backgroundColor: npc.color, border: "2px solid #fff" }}
+                  style={{ backgroundColor: npc.look?.color, border: "2px solid #fff" }}
                 >
                   {npc.name[0]}
                 </div>
@@ -75,14 +75,14 @@ export default function OrdersScreen({ state, dispatch }: OrdersScreenProps) {
                 {isCrafted ? (
                   <div
                     className="w-8 h-8 rounded-md flex-shrink-0 grid place-items-center text-[18px]"
-                    style={{ backgroundColor: cssFromHex(itemDef?.color || 0xd49060), border: "2px solid rgba(255,255,255,.4)", overflow: "hidden" }}
+                    style={{ backgroundColor: cssFromHex(itemDef?.look?.color || 0xd49060), border: "2px solid rgba(255,255,255,.4)", overflow: "hidden" }}
                   >
                     <Icon iconKey={o.key} size={32} title="" />
                   </div>
                 ) : (
                   <div
                     className="w-8 h-8 rounded-md flex-shrink-0 grid place-items-center text-[18px]"
-                    style={{ backgroundColor: cssFromHex(itemDef?.color || 0x888888), border: "2px solid rgba(255,255,255,.4)", overflow: "hidden" }}
+                    style={{ backgroundColor: cssFromHex(itemDef?.look?.color || 0x888888), border: "2px solid rgba(255,255,255,.4)", overflow: "hidden" }}
                   >
                     {hasIcon(o.key) && <IconCanvas iconKey={o.key} size={32} title="" />}
                   </div>

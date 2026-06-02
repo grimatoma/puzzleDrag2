@@ -4,11 +4,30 @@ import {
   effectiveBeat, effectiveChoices, allBeatIds, findIncomingChoice, isDraftBeat,
   deriveGraph, visibleSubset, focusedChainSubset, collapsibleIds, cloneDraft, emptyDraft,
   collectStoryWarnings, renameDraftBeatInDraft, storySlicesEqual, validateDraftBeatId,
-  isBeatSuppressed, directionalNodeId, knownStoryFlagIds,
+  isBeatSuppressed, directionalNodeId, knownStoryFlagIds, NPCS,
 } from "../storyEditor/shared.jsx";
 import { applyPreviewEffects, blankPreviewState, firstTriggeredByPreviewState, previewStateSummary } from "../storyEditor/previewModel.js";
 
 const draftWith = (story) => ({ ...emptyDraft(), story });
+
+describe("story editor NPCS look grouping", () => {
+  it("nests visual appearance fields under look and keeps identity top-level", () => {
+    for (const [key, npc] of Object.entries(NPCS)) {
+      // identity stays flat
+      expect(typeof npc.name).toBe("string");
+      expect(typeof npc.initial).toBe("string");
+      // visual appearance moved into look
+      expect(typeof npc.look).toBe("object");
+      expect(typeof npc.look.color).toBe("string");
+      expect(typeof npc.look.bg).toBe("string");
+      expect(typeof npc.look.iconKey).toBe("string");
+      // no stale flat appearance fields
+      expect(npc.color, `${key} should not have a flat color`).toBeUndefined();
+      expect(npc.bg, `${key} should not have a flat bg`).toBeUndefined();
+      expect(npc.iconKey, `${key} should not have a flat iconKey`).toBeUndefined();
+    }
+  });
+});
 
 describe("effectiveBeat", () => {
   it("layers a beats[] override onto a built-in beat", () => {

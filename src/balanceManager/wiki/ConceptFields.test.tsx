@@ -116,16 +116,32 @@ describe("ConceptFields — hazards (no schema)", () => {
   });
 });
 
-describe("ConceptFields — seasons (no schema)", () => {
-  it("renders the graceful no-schema note", () => {
+describe("ConceptFields — seasons (definition schema)", () => {
+  it("renders the 'Fields' heading", () => {
     render(<ConceptFields conceptId="seasons" />);
-    expect(screen.getByText(/Fields for this concept come straight from live config/i)).toBeDefined();
+    const headings = screen.queryAllByText(/^Fields/i);
+    expect(headings.length).toBeGreaterThan(0);
   });
 
-  it("does NOT render a fields table", () => {
+  it("renders a fields table including the grouped 'look' field", () => {
     render(<ConceptFields conceptId="seasons" />);
     const tables = document.querySelectorAll("table");
-    expect(tables.length).toBe(0);
+    expect(tables.length).toBeGreaterThan(0);
+    const cells = screen.queryAllByText("look");
+    expect(cells.length).toBeGreaterThan(0);
+  });
+
+  it("renders the nested 'look' sub-fields (grouping not collapsed)", () => {
+    render(<ConceptFields conceptId="seasons" />);
+    // The grouped `look` object should expand into its sub-rows
+    // (iconKey / bg / fill / accent). Assert a representative one renders so a
+    // regression that collapses the grouping is caught. Sub-rows render their
+    // field name in the cell with a "↳ " indent prefix (parent rows do not), so
+    // matching the prefixed text targets the expanded sub-row specifically.
+    expect(
+      screen.queryAllByText(/↳\s*accent/).length,
+      "Expected the nested 'look.accent' sub-field row to render",
+    ).toBeGreaterThan(0);
   });
 });
 

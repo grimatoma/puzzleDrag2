@@ -17,9 +17,9 @@ describe("icon audit (Round 3)", () => {
       for (const ik of Object.keys(r.inputs || {})) if (!REG[ik]) missing.push(`RECIPE_IN ${ik} (${rid})`);
     }
     for (const t of TOOL_CATALOG || []) if (t.iconKey && !REG[t.iconKey]) missing.push(`TOOL ${t.iconKey} (${t.key})`);
-    for (const w of TYPE_WORKERS || []) if (w.iconKey && !REG[w.iconKey]) missing.push(`WORKER ${w.iconKey} (${w.id})`);
-    for (const a of ABILITIES || []) if (a.iconKey && !REG[a.iconKey]) missing.push(`ABILITY ${a.iconKey} (${a.id})`);
-    for (const s of SEASONS || []) if (s.iconKey && !REG[s.iconKey]) missing.push(`SEASON ${s.iconKey} (${s.key})`);
+    for (const w of TYPE_WORKERS || []) if (w.look?.iconKey && !REG[w.look.iconKey]) missing.push(`WORKER ${w.look.iconKey} (${w.id})`);
+    for (const a of ABILITIES || []) if (a.look?.iconKey && !REG[a.look.iconKey]) missing.push(`ABILITY ${a.look.iconKey} (${a.id})`);
+    for (const s of SEASONS || []) if (s.look?.iconKey && !REG[s.look.iconKey]) missing.push(`SEASON ${s.look.iconKey} (${s.name})`);
     for (const b of BOSSES || []) { const k = `boss_${b.id}`; if (!REG[k]) missing.push(`BOSS ${k}`); }
     for (const d of Object.values(DECORATIONS || {})) { const k = `decor_${d.id}`; if (!REG[k]) missing.push(`DECOR ${k}`); }
     for (const b of BUILDINGS || []) {
@@ -30,5 +30,21 @@ describe("icon audit (Round 3)", () => {
     }
     if (missing.length > 0) console.log("Missing:\n  " + missing.join("\n  "));
     expect(missing).toEqual([]);
+  });
+
+  it("abilities carry appearance under look.iconKey, not flat iconKey", () => {
+    for (const a of ABILITIES || []) {
+      expect(typeof a.look?.iconKey, a.id).toBe("string");
+      expect((a as Record<string, unknown>).iconKey, a.id).toBeUndefined();
+    }
+  });
+
+  it("workers carry appearance under look (iconKey + color), not flat", () => {
+    for (const w of TYPE_WORKERS || []) {
+      expect(typeof w.look?.iconKey, w.id).toBe("string");
+      expect(typeof w.look?.color, w.id).toBe("string");
+      expect((w as Record<string, unknown>).iconKey, w.id).toBeUndefined();
+      expect((w as Record<string, unknown>).color, w.id).toBeUndefined();
+    }
   });
 });

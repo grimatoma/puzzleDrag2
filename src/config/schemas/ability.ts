@@ -13,7 +13,7 @@ export const abilityCatalogEntrySchema = z
   .object({
     id: z.string().describe("Stable ability key used in building/worker/tile data"),
     name: z.string().describe("Human-readable name shown in the Dev Panel"),
-    iconKey: z.string().describe("Icon registry key used to render the ability badge"),
+    look: z.object({ iconKey: z.string().describe("Icon registry key used to render the ability badge") }).describe("Ability visual appearance"),
     desc: z.string().describe("Short description of what the ability does"),
     scope: z.array(z.string()).describe("Entity kinds that may attach this ability (building, worker, tile)"),
     trigger: z.string().describe("Lifecycle moment when the ability fires (e.g. passive, on_chain_collect, season_end)"),

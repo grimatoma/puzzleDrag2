@@ -106,7 +106,7 @@ function asRecord(v: unknown): AnyRecord {
 
 /**
  * Apply per-item overrides to ITEMS. Allowed fields:
- * label, color, dark, value, next, glyph, description, effect, target, anim, ms, desc
+ * label, value, next, glyph, description, effect, target, desc, look ({ color, dark, iconKey, anim, ms })
  * The item is patched in place.
  */
 export function applyItemOverrides(items: Record<string, AnyRecord> | unknown, overrides: Overrides): void {
@@ -120,8 +120,6 @@ export function applyItemOverrides(items: Record<string, AnyRecord> | unknown, o
       continue;
     }
     if (patch.label !== undefined) item.label = patch.label;
-    if (patch.color !== undefined) item.color = patch.color;
-    if (patch.dark !== undefined) item.dark = patch.dark;
     if (patch.value !== undefined) item.value = patch.value;
     if (patch.next !== undefined) item.next = patch.next ?? null;
     if (patch.glyph !== undefined) item.glyph = patch.glyph;
@@ -129,8 +127,9 @@ export function applyItemOverrides(items: Record<string, AnyRecord> | unknown, o
     if (patch.desc !== undefined) item.desc = patch.desc;
     if (patch.effect !== undefined) item.effect = patch.effect;
     if (patch.target !== undefined) item.target = patch.target;
-    if (patch.anim !== undefined) item.anim = patch.anim;
-    if (patch.ms !== undefined) item.ms = patch.ms;
+    if (patch.look) {
+      item.look = { ...asRecord(item.look), ...patch.look };
+    }
   }
 }
 
@@ -164,7 +163,7 @@ export function applyRecipeOverrides(recipes: Record<string, AnyRecord> | unknow
 }
 
 /** Apply patches to BUILDINGS entries (matched by id). Fields: name, desc,
- *  cost, lv, color, abilities. */
+ *  cost, lv, look.color, abilities. */
 export function applyBuildingOverrides(buildings: AnyRecord[] | unknown, overrides: Overrides): void {
   const parsed = parseOptionalOverrideSection("buildings", buildingsOverridesSchema, overrides);
   if (!parsed) return;
@@ -178,7 +177,7 @@ export function applyBuildingOverrides(buildings: AnyRecord[] | unknown, overrid
     if (patch.desc !== undefined) b.desc = patch.desc;
     if (patch.cost !== undefined) b.cost = { ...patch.cost };
     if (patch.lv !== undefined) b.lv = patch.lv;
-    if (patch.color !== undefined) b.color = patch.color;
+    if (patch.look?.color != null) b.look = { ...asRecord(b.look), color: patch.look.color };
     if (patch.abilities !== undefined) b.abilities = [...patch.abilities];
   }
 }
@@ -367,7 +366,7 @@ export function applyKeeperOverrides(keepers: unknown, overrides: Overrides): vo
     }
     if (patch.name !== undefined) k.name = patch.name;
     if (patch.title !== undefined) k.title = patch.title;
-    if (patch.icon !== undefined) k.icon = patch.icon;
+    if (patch.look?.icon != null) k.look = { ...asRecord(k.look), icon: patch.look.icon };
     if (patch.appearsAfterBuildings !== undefined) k.appearsAfterBuildings = patch.appearsAfterBuildings;
     if (patch.intro !== undefined) k.intro = [...patch.intro];
     if (patch.coexist !== undefined) patchPath(k.coexist as AnyRecord, patch.coexist);
@@ -428,7 +427,7 @@ export function applyBiomeOverrides(
       const b = list.find((x) => x.id === biomeId);
       if (!b) continue;
       if (patch.name !== undefined) b.name = patch.name;
-      if (patch.icon !== undefined) b.icon = patch.icon;
+      if (patch.look?.icon != null) b.look = { ...asRecord(b.look), icon: patch.look.icon };
       if (patch.bonus !== undefined) b.bonus = patch.bonus;
       if (patch.hazards !== undefined && patch.hazards.length > 0) b.hazards = [...patch.hazards];
     }

@@ -46,7 +46,7 @@ interface KeeperDef {
   id?: string;
   name: string;
   title: string;
-  icon: string;
+  look?: { icon?: string };
   intro: string[];
   coexist: { label: string; embers?: number; pitch?: string[] };
   driveout: { label: string; coreIngots?: number; pitch?: string[] };
@@ -124,7 +124,7 @@ function KeeperEncounterModal({ node, type, dispatch, onClose }: KeeperEncounter
         <div className="flex items-center gap-2 mb-2">
           {keeper.id && hasIcon(`keeper_${keeper.id}`)
             ? <IconCanvas iconKey={`keeper_${keeper.id}`} size={30} background={null} rounded={false} title={keeper.name} />
-            : <span className="text-[26px] leading-none">{keeper.icon}</span>}
+            : <span className="text-[26px] leading-none">{keeper.look?.icon}</span>}
           <div>
             <div className="font-bold text-[17px] text-[#744d2e] leading-tight">{keeper.name}</div>
             <div className="text-[11px] italic text-[#8a6a45]">{keeper.title} · at {node.name}</div>
@@ -258,7 +258,7 @@ function FoundSettlementBlock({ node, visitedSet, state, dispatch }: FoundSettle
             color: "#1f3a10",
           }}
         >
-          ✓ Settled{b ? ` · ${b.icon} ${b.name}` : ""}{done ? " · Complete" : ""}
+          ✓ Settled{b ? ` · ${b.look?.icon ?? ""} ${b.name}` : ""}{done ? " · Complete" : ""}
         </div>
         {path && keeper && (
           <div

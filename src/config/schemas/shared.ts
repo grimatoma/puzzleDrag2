@@ -41,3 +41,38 @@ export const legacyHookSchema = z
     params: looseParamsSchema.optional(),
   })
   .describe("Deprecated hooks[] form; translated to abilities at apply time");
+
+const itemLookCommon = {
+  iconKey: z.string().optional().describe("Icon registry key"),
+  anim: z.string().optional().describe("Board animation name played for this item"),
+  ms: z.number().optional().describe("Animation duration override in ms"),
+};
+
+export const tileLookSchema = z
+  .object({
+    color: z.number().describe("Primary fill color (0xRRGGBB)"),
+    dark: z.number().describe("Dark/outline color (0xRRGGBB)"),
+    sway: swayParamsSchema.optional(),
+    ...itemLookCommon,
+  })
+  .describe("Visual appearance of a board tile");
+
+export const resourceLookSchema = z
+  .object({
+    color: z.number().describe("Primary fill color (0xRRGGBB)"),
+    dark: z.number().describe("Dark/outline color (0xRRGGBB)"),
+    ...itemLookCommon,
+  })
+  .describe("Visual appearance of an inventory resource");
+
+export const toolLookSchema = z
+  .object({
+    color: z.number().optional().describe("Primary fill color (0xRRGGBB)"),
+    dark: z.number().optional().describe("Dark/outline color (0xRRGGBB)"),
+    ...itemLookCommon,
+  })
+  .describe("Visual appearance of a tool");
+
+export type TileLook = z.infer<typeof tileLookSchema>;
+export type ResourceLook = z.infer<typeof resourceLookSchema>;
+export type ToolLook = z.infer<typeof toolLookSchema>;

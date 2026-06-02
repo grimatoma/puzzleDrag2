@@ -29,13 +29,13 @@ describe("entityIconKey", () => {
     expect(entityIconKey("hazards", "fire", null)).toBe("hazard_fire");
   });
 
-  it("uses entity.iconKey for workers / abilities / seasons (and null when absent)", () => {
-    expect(entityIconKey("workers", "w1", { iconKey: "char_farmer" })).toBe("char_farmer");
-    expect(entityIconKey("abilities", "a1", { iconKey: "ui_star" })).toBe("ui_star");
-    expect(entityIconKey("seasons", "spring", { iconKey: "season_spring" })).toBe("season_spring");
+  it("uses entity.look.iconKey for workers / abilities / seasons (and null when absent)", () => {
+    expect(entityIconKey("workers", "w1", { look: { iconKey: "char_farmer" } })).toBe("char_farmer");
+    expect(entityIconKey("abilities", "a1", { look: { iconKey: "ui_star" } })).toBe("ui_star");
+    expect(entityIconKey("seasons", "spring", { look: { iconKey: "season_spring" } })).toBe("season_spring");
     expect(entityIconKey("workers", "w1", {})).toBeNull();
     expect(entityIconKey("abilities", "a1", null)).toBeNull();
-    expect(entityIconKey("seasons", "spring", { iconKey: "" })).toBeNull();
+    expect(entityIconKey("seasons", "spring", { look: { iconKey: "" } })).toBeNull();
   });
 
   it("returns the output item for recipes (and null when absent)", () => {
@@ -59,7 +59,7 @@ describe("entityIconKey", () => {
   });
 
   it("returns null for keepers / boons / dailyRewards (no procedural icon)", () => {
-    expect(entityIconKey("keepers", "deer_spirit", { icon: "🦌" })).toBeNull();
+    expect(entityIconKey("keepers", "deer_spirit", { look: { icon: "🦌" } })).toBeNull();
     expect(entityIconKey("boons", "deer_blessing", null)).toBeNull();
     expect(entityIconKey("dailyRewards", "7", null)).toBeNull();
   });

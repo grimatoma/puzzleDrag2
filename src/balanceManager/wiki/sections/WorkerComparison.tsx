@@ -103,7 +103,7 @@ export function WorkerComparison() {
                         fontWeight: 700,
                       }}
                     >
-                      <Icon iconKey={w.iconKey} size={22} style={{ verticalAlign: "middle" }} />
+                      <Icon iconKey={w.look?.iconKey} size={22} style={{ verticalAlign: "middle" }} />
                       <span>{w.name}</span>
                     </button>
                   </td>
