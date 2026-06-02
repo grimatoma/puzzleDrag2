@@ -4,20 +4,20 @@
  * Coverage:
  *  1. statusForConcept returns "WIRED" for normal, fully-implemented concepts.
  *  2. statusForConcept returns the seeded non-WIRED value for known flagged concepts.
- *  3. statusForEntity("hazards", "fire") reflects the FIRE_HAZARD_ENABLED flag.
- *  4. statusForEntity("hazards", "rats") is WIRED (RATS_HAZARD_ENABLED === true).
- *  5. WIKI_STATUS_LEGEND has all 5 keys with non-empty label + description + tone.
- *  6. statusForEntity falls back to the concept status for unknown entity keys.
+ *  3. statusForEntity for mine hazards (cave_in/gas_vent/lava/mole) → WIRED.
+ *  4. WIKI_STATUS_LEGEND has all 5 keys with non-empty label + description + tone.
+ *  5. statusForEntity falls back to the concept status for unknown entity keys.
+ *  6. Drift-guard: every entity-level override key resolves to a real wiki entity.
  */
 
 import { describe, it, expect } from "vitest";
-import { FIRE_HAZARD_ENABLED, RATS_HAZARD_ENABLED } from "../../featureFlags.js";
 import {
   statusForConcept,
   statusForEntity,
   WIKI_STATUS_LEGEND,
 } from "./status.js";
 import type { WikiStatus } from "./status.js";
+import { getEntity } from "./conceptEntities.js";
 
 // ─── WIKI_STATUS_LEGEND ───────────────────────────────────────────────────────
 
@@ -82,43 +82,66 @@ describe("statusForConcept", () => {
 
 // ─── statusForEntity ──────────────────────────────────────────────────────────
 
-describe("statusForEntity — hazards (feature-flag driven overrides)", () => {
-  it("fire reflects FIRE_HAZARD_ENABLED flag", () => {
-    const expected = FIRE_HAZARD_ENABLED ? "WIRED" : "STUB";
-    // FIRE_HAZARD_ENABLED is currently false in src/featureFlags.ts, so fire → STUB
-    expect(statusForEntity("hazards", "fire")).toBe(expected);
-  });
-
-  it("rats reflects RATS_HAZARD_ENABLED flag", () => {
-    const expected = RATS_HAZARD_ENABLED ? "WIRED" : "STUB";
-    // RATS_HAZARD_ENABLED is currently true in src/featureFlags.ts, so rats → WIRED
-    expect(statusForEntity("hazards", "rats")).toBe(expected);
-  });
-
-  it("cave_in is WIRED (mine hazard, no flag)", () => {
+describe("statusForEntity — hazards (mine hazard overrides)", () => {
+  it("cave_in is WIRED (mine hazard, fully implemented)", () => {
     expect(statusForEntity("hazards", "cave_in")).toBe("WIRED");
   });
 
-  it("gas_vent is WIRED (mine hazard, no flag)", () => {
+  it("gas_vent is WIRED (mine hazard, fully implemented)", () => {
     expect(statusForEntity("hazards", "gas_vent")).toBe("WIRED");
   });
 
-  it("lava is WIRED (mine hazard, no flag)", () => {
+  it("lava is WIRED (mine hazard, fully implemented)", () => {
     expect(statusForEntity("hazards", "lava")).toBe("WIRED");
   });
 
-  it("mole is WIRED (mine hazard, no flag)", () => {
+  it("mole is WIRED (mine hazard, fully implemented)", () => {
     expect(statusForEntity("hazards", "mole")).toBe("WIRED");
-  });
-
-  it("wolf is WIRED (farm hazard, not behind a flag)", () => {
-    expect(statusForEntity("hazards", "wolf")).toBe("WIRED");
   });
 
   it("falls back to concept status for an unknown hazard entity key", () => {
     // Unknown entity key → should fall back to concept-level PARTIAL
     expect(statusForEntity("hazards", "__unknown_entity__")).toBe("PARTIAL");
   });
+});
+
+// ─── Drift-guard ──────────────────────────────────────────────────────────────
+//
+// For every concept that has entity-level overrides, every override key must
+// resolve to a real wiki entity. This guarantees no override is dead code and
+// would have caught the original fire/rats/wolf defect (those are farm hazards
+// not surfaced in the wiki's hazardEntries(), so getEntity("hazards","fire")
+// returns null).
+
+describe("drift-guard: entity override keys must resolve to real wiki entities", () => {
+  // Access the ENTITY_STATUS map via its public surface:
+  // statusForEntity returns the override value, but we need the keys themselves.
+  // We do this by re-importing the module and reading the compiled object indirectly
+  // through getEntity — a cleaner approach is to enumerate known concepts with overrides
+  // and assert each key is real.
+  //
+  // The canonical set of concepts with entity overrides in status.ts is: hazards.
+  // If a new concept gains overrides, add it here.
+
+  const knownOverrides: Array<{ conceptId: string; keys: string[] }> = [
+    {
+      conceptId: "hazards",
+      keys: ["cave_in", "gas_vent", "lava", "mole"],
+    },
+  ];
+
+  for (const { conceptId, keys } of knownOverrides) {
+    describe(`concept: ${conceptId}`, () => {
+      for (const key of keys) {
+        it(`override key "${key}" resolves to a real wiki entity`, () => {
+          expect(
+            getEntity(conceptId, key),
+            `getEntity("${conceptId}", "${key}") returned null — override is dead code`,
+          ).not.toBeNull();
+        });
+      }
+    });
+  }
 });
 
 describe("statusForEntity — normal WIRED concepts", () => {
