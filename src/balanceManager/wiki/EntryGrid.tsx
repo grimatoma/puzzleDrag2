@@ -20,7 +20,15 @@ function colorBarStyle(color: number | string | null | undefined): CSSProperties
   };
 }
 
-export default function EntryGrid({ entries, emptyLabel = "No entries." }: { entries: WikiEntry[] | null | undefined; emptyLabel?: ReactNode }) {
+export default function EntryGrid({
+  entries,
+  emptyLabel = "No entries.",
+  onSelect,
+}: {
+  entries: WikiEntry[] | null | undefined;
+  emptyLabel?: ReactNode;
+  onSelect?: (key: string) => void;
+}) {
   if (!entries || entries.length === 0) {
     return (
       <div
@@ -36,17 +44,9 @@ export default function EntryGrid({ entries, emptyLabel = "No entries." }: { ent
     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
       {entries.map((entry: WikiEntry) => {
         const bar = colorBarStyle(entry.color);
-        return (
-          <div
-            key={entry.key}
-            className="rounded-lg border flex flex-col items-center transition-shadow hover:shadow-md"
-            style={{
-              background: COLORS.parchment,
-              borderColor: COLORS.border,
-              minHeight: 96,
-            }}
-            title={entry.key}
-          >
+        const isSelectable = onSelect != null;
+        const cardInner = (
+          <>
             {bar && <div style={{ ...bar, width: "100%" }} />}
             <div className="flex flex-col items-center justify-center gap-1 px-2 pt-2 pb-2 w-full">
               <Icon iconKey={entry.iconKey} size={36} />
@@ -63,6 +63,41 @@ export default function EntryGrid({ entries, emptyLabel = "No entries." }: { ent
                 {entry.key}
               </div>
             </div>
+          </>
+        );
+
+        if (isSelectable) {
+          return (
+            <button
+              key={entry.key}
+              type="button"
+              className="rounded-lg border flex flex-col items-center transition-shadow hover:shadow-md cursor-pointer text-left w-full p-0 focus-visible:outline-2 focus-visible:outline-offset-2"
+              style={{
+                background: COLORS.parchment,
+                borderColor: COLORS.border,
+                minHeight: 96,
+                outlineColor: COLORS.ember,
+              }}
+              title={entry.key}
+              onClick={() => onSelect(entry.key)}
+            >
+              {cardInner}
+            </button>
+          );
+        }
+
+        return (
+          <div
+            key={entry.key}
+            className="rounded-lg border flex flex-col items-center transition-shadow hover:shadow-md"
+            style={{
+              background: COLORS.parchment,
+              borderColor: COLORS.border,
+              minHeight: 96,
+            }}
+            title={entry.key}
+          >
+            {cardInner}
           </div>
         );
       })}

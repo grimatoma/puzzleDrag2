@@ -12,12 +12,14 @@
 import { useState, useMemo } from "react";
 import { CONCEPTS } from "../wiki/concepts.js";
 import EntryGrid from "../wiki/EntryGrid.jsx";
+import EntityDetail from "../wiki/EntityDetail.jsx";
 import { COLORS, SegmentedFilter } from "../shared.jsx";
 
 const CONCEPT_OPTIONS = CONCEPTS.map((c) => ({ value: c.id, label: c.label }));
 
 export default function WikiTab() {
   const [conceptId, setConceptId] = useState(CONCEPTS[0].id);
+  const [selectedKey, setSelectedKey] = useState<string | null>(null);
 
   const concept = useMemo(
     () => CONCEPTS.find((c) => c.id === conceptId) ?? CONCEPTS[0],
@@ -26,12 +28,17 @@ export default function WikiTab() {
 
   const entries = useMemo(() => concept.getEntries(), [concept]);
 
+  function handleConceptChange(id: string) {
+    setConceptId(id);
+    setSelectedKey(null);
+  }
+
   return (
     <div className="flex flex-col gap-3">
       <SegmentedFilter
         options={CONCEPT_OPTIONS}
         value={concept.id}
-        onChange={setConceptId}
+        onChange={handleConceptChange}
         ariaLabel="Wiki concept"
       />
 
@@ -50,7 +57,18 @@ export default function WikiTab() {
         </div>
       </div>
 
-      <EntryGrid entries={entries as unknown as import("../wiki/EntryGrid.jsx").WikiEntry[]} />
+      {selectedKey != null ? (
+        <EntityDetail
+          conceptId={concept.id}
+          entityKey={selectedKey}
+          onBack={() => setSelectedKey(null)}
+        />
+      ) : (
+        <EntryGrid
+          entries={entries as unknown as import("../wiki/EntryGrid.jsx").WikiEntry[]}
+          onSelect={setSelectedKey}
+        />
+      )}
     </div>
   );
 }
