@@ -39,6 +39,9 @@ import Icon from "../../ui/Icon.jsx";
 import { AmountChips, RecipeIO, entityIconKey } from "./EntityVisual.jsx";
 import { WhereUsed, hasWhereUsed } from "./sections/WhereUsed.jsx";
 import { CraftTree, hasCraftTree, recipeIdProducing } from "./sections/CraftTree.jsx";
+import { BossDifficulty, hasBossDifficulty } from "./sections/BossDifficulty.jsx";
+import { NpcGifts, hasNpcGifts } from "./sections/NpcGifts.jsx";
+import { TileUnlock, hasTileUnlock } from "./sections/TileUnlock.jsx";
 
 // ─── At-a-glance visual ────────────────────────────────────────────────────────
 
@@ -159,10 +162,22 @@ export default function WikiArticle({ conceptId, entityKey, onBack }: WikiArticl
         : null;
   const showCraftTree = hasCraftTree(craftTreeRecipeId);
 
+  // Concept-specific enrichment sections.
+  // - BossDifficulty (boss articles): derived difficulty assessment.
+  // - NpcGifts (npc articles): loves/likes gift preferences.
+  // - TileUnlock (tile articles): how the tile is discovered + its tier.
+  const showBossDifficulty =
+    conceptId === "bosses" && hasBossDifficulty(entity as Parameters<typeof hasBossDifficulty>[0]);
+  const showNpcGifts = conceptId === "npcs" && hasNpcGifts(entityKey);
+  const showTileUnlock = conceptId === "tiles" && hasTileUnlock(entityKey);
+
   // Build TOC items — only sections that actually render
   const tocItems: TocItem[] = [
     { id: "overview", label: "Overview" },
+    ...(showBossDifficulty ? [{ id: "boss-difficulty", label: "Difficulty" }] : []),
     ...(atAGlance != null ? [{ id: "at-a-glance", label: "At a glance" }] : []),
+    ...(showTileUnlock ? [{ id: "tile-unlock", label: "How to unlock" }] : []),
+    ...(showNpcGifts ? [{ id: "npc-gifts", label: "Gift preferences" }] : []),
     ...(showCraftTree ? [{ id: "crafting-tree", label: "Crafting tree" }] : []),
     ...(showWhereUsed ? [{ id: "used-in", label: "Used in" }] : []),
     ...(body != null ? [{ id: "about", label: "About" }] : []),
@@ -229,6 +244,11 @@ export default function WikiArticle({ conceptId, entityKey, onBack }: WikiArticl
             {ledeFor(conceptId, entityKey, entity)}
           </p>
 
+          {/* Boss difficulty assessment (boss articles) — near the top */}
+          {showBossDifficulty && entity != null && (
+            <BossDifficulty boss={entity as React.ComponentProps<typeof BossDifficulty>["boss"]} />
+          )}
+
           {/* At-a-glance visual summary (recipes/buildings/zones/workers) */}
           {atAGlance != null && (
             <section id="at-a-glance">
@@ -236,6 +256,12 @@ export default function WikiArticle({ conceptId, entityKey, onBack }: WikiArticl
               {atAGlance.node}
             </section>
           )}
+
+          {/* Tile unlock requirement (tile articles) */}
+          {showTileUnlock && <TileUnlock tileId={entityKey} />}
+
+          {/* NPC gift preferences (npc articles) */}
+          {showNpcGifts && <NpcGifts npcId={entityKey} npc={entity} />}
 
           {/* Crafting dependency tree (recipes + craftable items) */}
           {showCraftTree && craftTreeRecipeId != null && (

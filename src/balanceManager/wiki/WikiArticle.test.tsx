@@ -156,6 +156,27 @@ describe("WikiArticle — used-in section (resource article)", () => {
   });
 });
 
+// ─── Concept-specific enrichment sections (boss / tile) ──────────────────────
+
+describe("WikiArticle — boss difficulty (boss article)", () => {
+  it("renders a Difficulty section with the tier for frostmaw", () => {
+    renderArticle("bosses", "frostmaw");
+    const body = document.body.textContent ?? "";
+    expect(body).toContain("Difficulty");
+    // frostmaw: 30 / 10 = 3 per turn → Gentle tier
+    expect(body).toMatch(/gentle/i);
+  });
+});
+
+describe("WikiArticle — tile unlock (tile article)", () => {
+  it("renders a 'How to unlock' section for tile_grain_wheat", () => {
+    renderArticle("tiles", "tile_grain_wheat");
+    const body = document.body.textContent ?? "";
+    expect(body).toContain("How to unlock");
+    expect(body).toMatch(/chain/i);
+  });
+});
+
 // ─── Test 4: Back button ──────────────────────────────────────────────────────
 
 describe("WikiArticle — back button", () => {
