@@ -646,7 +646,7 @@ export class GameScene extends Phaser.Scene {
     // Lightly tint the bottom of the parchment card with the current season's
     // accent so seasons still register on the board. Drawn at low alpha so
     // it never competes with tile readability.
-    tag(this.add.rectangle(this.boardX - frame * 0.6, this.boardY + boardH + frame * 0.6 - stripH, boardW + frame * 1.2, stripH, s.bg, 0.55).setOrigin(0, 0).setDepth(-1));
+    tag(this.add.rectangle(this.boardX - frame * 0.6, this.boardY + boardH + frame * 0.6 - stripH, boardW + frame * 1.2, stripH, s.look.bg, 0.55).setOrigin(0, 0).setDepth(-1));
   }
 
   refreshSeasonTint() {

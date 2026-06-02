@@ -19,7 +19,7 @@ describe("icon audit (Round 3)", () => {
     for (const t of TOOL_CATALOG || []) if (t.iconKey && !REG[t.iconKey]) missing.push(`TOOL ${t.iconKey} (${t.key})`);
     for (const w of TYPE_WORKERS || []) if (w.iconKey && !REG[w.iconKey]) missing.push(`WORKER ${w.iconKey} (${w.id})`);
     for (const a of ABILITIES || []) if (a.iconKey && !REG[a.iconKey]) missing.push(`ABILITY ${a.iconKey} (${a.id})`);
-    for (const s of SEASONS || []) if (s.iconKey && !REG[s.iconKey]) missing.push(`SEASON ${s.iconKey} (${s.key})`);
+    for (const s of SEASONS || []) if (s.look?.iconKey && !REG[s.look.iconKey]) missing.push(`SEASON ${s.look.iconKey} (${s.name})`);
     for (const b of BOSSES || []) { const k = `boss_${b.id}`; if (!REG[k]) missing.push(`BOSS ${k}`); }
     for (const d of Object.values(DECORATIONS || {})) { const k = `decor_${d.id}`; if (!REG[k]) missing.push(`DECOR ${k}`); }
     for (const b of BUILDINGS || []) {

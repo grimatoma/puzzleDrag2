@@ -145,7 +145,7 @@ export function Hud({ state, dispatch, inventorySearchOpen, onInventorySearchTog
   const viewLabel = !onBoard ? (VIEW_LABELS[view] ?? null) : null;
 
   const seasonAccent = onBoard
-    ? `#${(season.fill ?? 0xe2b24a).toString(16).padStart(6, "0")}`
+    ? `#${(season.look?.fill ?? 0xe2b24a).toString(16).padStart(6, "0")}`
     : "var(--ember)";
   return (
     <div

@@ -7,9 +7,14 @@ describe("season icons wired", () => {
   it("each season uses its season_<name> icon and the key is registered", () => {
     const expected = ["season_spring", "season_summer", "season_autumn", "season_winter"];
     SEASONS.forEach((s, i) => {
-      expect(s.iconKey).toBe(expected[i]);
+      expect(s.look.iconKey).toBe(expected[i]);
       expect(ICON_REGISTRY[expected[i]]).toBeDefined();
     });
+  });
+
+  it("season appearance fields live under look, not top-level", () => {
+    expect(typeof SEASONS[0].look.bg).toBe("number");
+    expect((SEASONS[0] as unknown as { bg?: number }).bg).toBeUndefined();
   });
 });
 

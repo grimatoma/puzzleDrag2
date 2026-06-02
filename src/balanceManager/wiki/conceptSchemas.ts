@@ -8,7 +8,7 @@
  * "definition" schemas describe the full canonical shape of an entry.
  * "override"   schemas describe partial patches accepted via balance.json.
  *
- * Concepts with no Zod schema (live-config-only: categories, hazards, seasons,
+ * Concepts with no Zod schema (live-config-only: categories, hazards,
  * views, modals, tileDiscoveryMethods) return null.
  */
 
@@ -24,6 +24,7 @@ import {
   workerOverrideSchema,
   abilityCatalogEntrySchema,
   toolPowerCatalogEntrySchema,
+  seasonEntrySchema,
 } from "../../config/schemas/index.js";
 
 // npcOverrideSchema is not re-exported from index.ts — import directly.
@@ -55,6 +56,8 @@ export function schemaForConcept(conceptId: string): ConceptSchema | null {
     // ── world structure ──────────────────────────────────────────────────
     case "settlementBiomes":
       return { schema: settlementBiomeEntrySchema, kind: "definition" };
+    case "seasons":
+      return { schema: seasonEntrySchema, kind: "definition" };
     case "recipes":
       return { schema: recipeDefinitionSchema, kind: "definition" };
     case "buildings":
@@ -79,7 +82,6 @@ export function schemaForConcept(conceptId: string): ConceptSchema | null {
     // ── live-config-only concepts (no Zod schema) ─────────────────────────
     case "categories":
     case "hazards":
-    case "seasons":
     case "views":
     case "modals":
     case "tileDiscoveryMethods":

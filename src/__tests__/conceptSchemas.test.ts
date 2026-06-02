@@ -114,8 +114,14 @@ describe("conceptSchemas — spot checks", () => {
     expect(schemaForConcept("categories")).toBeNull();
   });
 
-  it("'seasons' → null (no schema)", () => {
-    expect(schemaForConcept("seasons")).toBeNull();
+  it("'seasons' → kind: 'definition', schema introspects with grouped look fields", () => {
+    const cs = schemaForConcept("seasons");
+    expect(cs).not.toBeNull();
+    expect(cs!.kind).toBe("definition");
+    const doc = describeSchema(cs!.schema);
+    const fieldNames = doc.fields.map((f) => f.field);
+    expect(fieldNames).toContain("name");
+    expect(fieldNames).toContain("look");
   });
 
   it("'views' → null (no schema)", () => {
@@ -146,7 +152,6 @@ describe("conceptSchemas — spot checks", () => {
 const KNOWN_NULL_CONCEPTS: ReadonlySet<string> = new Set([
   "categories",
   "hazards",
-  "seasons",
   "views",
   "modals",
   "tileDiscoveryMethods",

@@ -35,8 +35,8 @@ export default function SeasonCinematic({ state }: { state: GameState }) {
   if (!shown) return null;
   if (typeof document === "undefined") return null;
   const season = SEASONS[shown.seasonIdx] ?? SEASONS[0];
-  const tint = `#${season.bg.toString(16).padStart(6, "0")}`;
-  const accent = `#${season.fill.toString(16).padStart(6, "0")}`;
+  const tint = `#${season.look.bg.toString(16).padStart(6, "0")}`;
+  const accent = `#${season.look.fill.toString(16).padStart(6, "0")}`;
 
   return createPortal(
     <div

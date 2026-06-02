@@ -193,8 +193,8 @@ function seasonEntries() {
   return SEASONS.map((s) => ({
     key: s.name,
     name: s.name,
-    iconKey: s.iconKey,
-    color: s.bg,
+    iconKey: s.look.iconKey,
+    color: s.look.bg,
   })).sort(byName);
 }
 

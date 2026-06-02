@@ -278,10 +278,10 @@ export const UPGRADE_THRESHOLDS = {
 };
 
 export const SEASONS = [
-  { name: "Spring", iconKey: "season_spring", bg: 0x7dbd48, fill: 0x8fd85a, accent: 0x5daa35 },
-  { name: "Summer", iconKey: "season_summer", bg: 0x8fca45, fill: 0xf6c342, accent: 0xe3a92f },
-  { name: "Autumn", iconKey: "season_autumn", bg: 0xb77b3a, fill: 0xd9792d, accent: 0xa65722 },
-  { name: "Winter", iconKey: "season_winter", bg: 0x78aaca, fill: 0x91d9ff, accent: 0xd9f6ff },
+  { name: "Spring", look: { iconKey: "season_spring", bg: 0x7dbd48, fill: 0x8fd85a, accent: 0x5daa35 } },
+  { name: "Summer", look: { iconKey: "season_summer", bg: 0x8fca45, fill: 0xf6c342, accent: 0xe3a92f } },
+  { name: "Autumn", look: { iconKey: "season_autumn", bg: 0xb77b3a, fill: 0xd9792d, accent: 0xa65722 } },
+  { name: "Winter", look: { iconKey: "season_winter", bg: 0x78aaca, fill: 0x91d9ff, accent: 0xd9f6ff } },
 ];
 
 // Farm board tile pool. Each entry is one slot in the random fill rotation.
@@ -1174,7 +1174,7 @@ const _defaultTiles = Object.fromEntries(
   [...BIOMES.farm.resources, ...BIOMES.mine.resources, ...BIOMES.fish.resources].map((r) => [r.key, r.look?.color]),
 );
 const _defaultSeasons = Object.fromEntries(
-  SEASONS.map((s) => [s.name, { bg: s.bg, fill: s.fill, accent: s.accent }]),
+  SEASONS.map((s) => [s.name, { bg: s.look.bg, fill: s.look.fill, accent: s.look.accent }]),
 );
 
 // Only the `default` palette remains (the colour-blind variants were removed).

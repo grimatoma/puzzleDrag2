@@ -192,15 +192,15 @@ describe("CategoryPage — hazards (no-schema concept)", () => {
   });
 });
 
-describe("CategoryPage — seasons (no-schema concept)", () => {
+describe("CategoryPage — seasons (definition schema concept)", () => {
   it("renders without throwing", () => {
     expect(() => renderPage("seasons")).not.toThrow();
   });
 
-  it("renders ConceptFields graceful no-schema note", () => {
+  it("renders a ConceptFields fields table (seasons now has a schema)", () => {
     renderPage("seasons");
-    const body = document.body.textContent ?? "";
-    expect(body).toMatch(/Fields for this concept come straight from live config/i);
+    const tables = document.querySelectorAll("table");
+    expect(tables.length).toBeGreaterThan(0);
   });
 
   it("renders at least one season entry", () => {

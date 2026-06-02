@@ -143,7 +143,7 @@ export function getUsedIconKeys(): Set<string> {
   for (const worker of TYPE_WORKERS || []) add(worker?.iconKey);
 
   // Seasons (spring/summer/autumn/winter) — currently all share ui_star.
-  for (const season of SEASONS || []) add(season?.iconKey);
+  for (const season of SEASONS || []) add(season?.look?.iconKey);
 
   // Tool catalog — every tool has an iconKey pointing at a resource icon.
   for (const tool of TOOL_CATALOG || []) add(tool?.iconKey);
