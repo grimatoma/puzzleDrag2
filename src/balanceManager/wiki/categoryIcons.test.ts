@@ -18,10 +18,17 @@ describe("wiki categories — tile type metadata and cat_ icons", () => {
     expect(tile!.discovery).toEqual({ method: "default" });
   });
 
-  it("category entities expose their cat_ icon key and sub-category group", () => {
+  it("category entities expose registered cat_ icon keys and sub-category groups", () => {
     const category = getEntity("categories", "grass");
     expect(category).not.toBeNull();
     expect(category!.iconKey).toBe("cat_grass");
     expect(category!.subCategory).toBe("farm");
+  });
+
+  it("category entities omit missing cat_ icon keys instead of advertising broken icons", () => {
+    const category = getEntity("categories", "mine_stone");
+    expect(category).not.toBeNull();
+    expect(category!.subCategory).toBe("mining");
+    expect(category!.iconKey).toBeUndefined();
   });
 });

@@ -25,6 +25,7 @@ import { allBoons } from "../../features/boons/data.js";
 import { DAILY_REWARDS } from "../../constants.js";
 import { ACHIEVEMENTS } from "../../features/achievements/data.js";
 import { CONCEPTS } from "./concepts.js";
+import { iconColor } from "../../textures/iconRegistry.js";
 
 /** Coerce a value to Record<string, unknown> if it is a non-null object, else null. */
 function toRecord(value: unknown): Record<string, unknown> | null {
@@ -159,7 +160,7 @@ export function getEntity(conceptId: string, key: string): Record<string, unknow
         id: key,
         name: key,
         ...(subCategory != null ? { subCategory } : {}),
-        iconKey,
+        ...(iconColor(iconKey) != null ? { iconKey } : {}),
       };
     }
 
