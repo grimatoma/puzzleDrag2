@@ -19,6 +19,10 @@ import { HAZARDS } from "../../features/mine/hazards.js";
 import { TILE_DISCOVERY_METHODS } from "../../config/tileDiscoveryMethods.js";
 import { KNOWN_VIEWS, KNOWN_MODALS } from "../../router.js";
 import { CATEGORIES as TILE_CATEGORIES } from "../../features/tileCollection/data.js";
+import { KEEPERS } from "../../keepers.js";
+import { allBoons } from "../../features/boons/data.js";
+import { DAILY_REWARDS } from "../../constants.js";
+import { ACHIEVEMENTS } from "../../features/achievements/data.js";
 import { CONCEPTS } from "./concepts.js";
 
 /** Coerce a value to Record<string, unknown> if it is a non-null object, else null. */
@@ -146,6 +150,33 @@ export function getEntity(conceptId: string, key: string): Record<string, unknow
 
     case "modals": {
       return KNOWN_MODALS.has(key) ? { id: key, name: key } : null;
+    }
+
+    // ── post-keeper progression concepts ─────────────────────────────────────
+    case "keepers": {
+      // KEEPERS is keyed by biome type; find the keeper whose `id` matches.
+      for (const keeper of Object.values(KEEPERS)) {
+        const rec = toRecord(keeper);
+        if (rec?.["id"] === key) return rec;
+      }
+      return null;
+    }
+
+    case "boons": {
+      // Search every catalog for a boon whose id matches.
+      return findById(allBoons(), key);
+    }
+
+    case "dailyRewards": {
+      const day = Number(key);
+      if (!Number.isInteger(day)) return null;
+      const reward = toRecord((DAILY_REWARDS as Record<string, unknown>)[String(day)]);
+      if (reward === null) return null;
+      return { day, ...reward };
+    }
+
+    case "achievements": {
+      return findById(ACHIEVEMENTS, key);
     }
 
     default:

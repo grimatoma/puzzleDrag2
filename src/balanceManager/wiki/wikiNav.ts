@@ -16,6 +16,7 @@ export const WIKI_SECTIONS: WikiSection[] = [
   { id: "economy", label: "Economy", conceptIds: ["resources", "tools", "recipes", "buildings"] },
   { id: "world",   label: "World",   conceptIds: ["npcs", "workers", "bosses", "hazards"] },
   { id: "systems", label: "Systems", conceptIds: ["abilities", "toolPowers", "tileDiscoveryMethods", "seasons"] },
+  { id: "progression", label: "Progression", conceptIds: ["keepers", "boons", "dailyRewards", "achievements"] },
   { id: "screens", label: "Screens", conceptIds: ["views", "modals"] },
 ];
 

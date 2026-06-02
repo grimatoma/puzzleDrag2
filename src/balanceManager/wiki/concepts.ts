@@ -20,6 +20,10 @@ import { TOOL_POWERS } from "../../config/toolPowers.js";
 import { TILE_DISCOVERY_METHODS } from "../../config/tileDiscoveryMethods.js";
 import { KNOWN_VIEWS, KNOWN_MODALS } from "../../router.js";
 import { BOSSES } from "../../features/bosses/data.js";
+import { KEEPERS } from "../../keepers.js";
+import { allBoons } from "../../features/boons/data.js";
+import { DAILY_REWARDS } from "../../constants.js";
+import { ACHIEVEMENTS } from "../../features/achievements/data.js";
 
 function byName<T extends { name?: unknown }>(a: T, b: T): number {
   const an = String(a.name ?? "").toLowerCase();
@@ -198,6 +202,50 @@ function seasonEntries() {
   })).sort(byName);
 }
 
+function keeperEntries() {
+  // One entry per keeper (the values of the biome-keyed KEEPERS object).
+  // The keeper `icon` is an emoji, not an icon-registry key, so no iconKey.
+  return Object.values(KEEPERS)
+    .map((k) => ({
+      key: k.id,
+      name: k.name,
+    }))
+    .sort(byName);
+}
+
+function boonEntries() {
+  // Flatten boons across every catalog; dedupe by id.
+  const seen = new Set<string>();
+  const out: Array<{ key: string; name: string }> = [];
+  for (const b of allBoons()) {
+    if (seen.has(b.id)) continue;
+    seen.add(b.id);
+    out.push({ key: b.id, name: b.name });
+  }
+  out.sort(byName);
+  return out;
+}
+
+function dailyRewardEntries() {
+  // One entry per reward day, sorted numerically (Day 2 before Day 10).
+  return Object.keys(DAILY_REWARDS)
+    .map((day) => ({
+      key: String(day),
+      name: `Day ${day}`,
+      day: Number(day),
+    }))
+    .sort((a, b) => a.day - b.day)
+    .map(({ key, name }) => ({ key, name }));
+}
+
+function achievementEntries() {
+  return ACHIEVEMENTS.map((a) => ({
+    key: a.id,
+    name: a.name,
+    iconKey: a.icon,
+  })).sort(byName);
+}
+
 function viewEntries() {
   return [...KNOWN_VIEWS]
     .map((v) => ({ key: v, name: v }))
@@ -318,5 +366,31 @@ export const CONCEPTS = [
     label: "Modals",
     blurb: "Modal surfaces (hash routes in src/router.js).",
     getEntries: modalEntries,
+  },
+  // ── Appended at the END so their keys can't hijack resolution of existing
+  //    concepts (conceptForKey iterates CONCEPTS in order). ──
+  {
+    id: "keepers",
+    label: "Keepers",
+    blurb: "Biome guardians — Coexist for Embers or Drive Out for Core Ingots.",
+    getEntries: keeperEntries,
+  },
+  {
+    id: "boons",
+    label: "Boons",
+    blurb: "Post-keeper purchases bought with Embers / Core Ingots.",
+    getEntries: boonEntries,
+  },
+  {
+    id: "dailyRewards",
+    label: "Daily rewards",
+    blurb: "The 30-day login reward track.",
+    getEntries: dailyRewardEntries,
+  },
+  {
+    id: "achievements",
+    label: "Achievements",
+    blurb: "Milestones that grant coins, tools, or unlocks.",
+    getEntries: achievementEntries,
   },
 ];

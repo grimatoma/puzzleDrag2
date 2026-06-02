@@ -35,7 +35,11 @@ describe("Dev Panel Wiki — CONCEPTS", () => {
   });
 
   it("entries within each concept are sorted alphabetically by name (case-insensitive)", () => {
+    // `dailyRewards` is intentionally sorted numerically (Day 2 before Day 10),
+    // so an alphabetical comparison would mis-order "Day 10" before "Day 2".
+    const NUMERIC_SORTED = new Set(["dailyRewards"]);
     for (const concept of CONCEPTS) {
+      if (NUMERIC_SORTED.has(concept.id)) continue;
       const entries = concept.getEntries();
       const names = entries.map((e) => String(e.name ?? "").toLowerCase());
       const sorted = [...names].sort();
