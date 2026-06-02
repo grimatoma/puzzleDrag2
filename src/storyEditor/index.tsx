@@ -320,7 +320,7 @@ function ExpandedCard({ node, beat, selected, draft }: NodeCommonProps & { draft
           return (
             <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 2 }}>
               <Portrait npcKey={speaker} size={18} />
-              <span style={{ font: "600 9px/1 system-ui", color: speakerInfo?.color || "#d4b896", letterSpacing: "0.06em", textTransform: "uppercase" }}>{speakerInfo?.name}</span>
+              <span style={{ font: "600 9px/1 system-ui", color: speakerInfo?.look?.color || "#d4b896", letterSpacing: "0.06em", textTransform: "uppercase" }}>{speakerInfo?.name}</span>
             </div>
           );
         })()}

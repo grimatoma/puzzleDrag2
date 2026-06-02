@@ -112,7 +112,7 @@ export default function HeatmapPanel({ draft }: { draft: StoryDraft }) {
                 <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "5px 8px",
                   borderRight: `1px solid ${C.border}66` }}>
                   <Portrait npcKey={npc} size={16} />
-                  <span style={{ font: "600 11px/1.2 system-ui", color: npcInfo?.color || C.ink }}>
+                  <span style={{ font: "600 11px/1.2 system-ui", color: npcInfo?.look?.color || C.ink }}>
                     {npcInfo?.name || npc}
                   </span>
                 </div>

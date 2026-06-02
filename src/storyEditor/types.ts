@@ -15,10 +15,12 @@ export type NpcKey = "wren" | "mira" | "tomas" | "bram" | "liss";
 
 export interface NpcInfo {
   name: string;
-  color: string;
   initial: string;
-  bg: string;
-  iconKey: string;
+  look: {
+    color: string;
+    bg: string;
+    iconKey: string;
+  };
 }
 
 export type NpcRegistry = Record<NpcKey, NpcInfo>;

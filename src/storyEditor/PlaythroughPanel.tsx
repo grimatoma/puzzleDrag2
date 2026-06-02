@@ -86,7 +86,7 @@ function StrategyColumn({ result }: { result: PlaythroughResult }) {
             <div key={npc} style={{ display: "flex", alignItems: "center", gap: 6,
               padding: "3px 8px", font: "500 11px/1.3 system-ui", color: C.ink }}>
               <Portrait npcKey={npc} size={14} />
-              <span style={{ flex: 1, color: npcInfo?.color || C.ink }}>{npcInfo?.name || npc}</span>
+              <span style={{ flex: 1, color: npcInfo?.look?.color || C.ink }}>{npcInfo?.name || npc}</span>
               <span style={{ font: "700 11px/1 ui-monospace,monospace",
                 color: value > 0 ? C.greenDeep : (value < 0 ? C.redDeep : C.inkSubtle) }}>
                 {value > 0 ? `+${value}` : value}

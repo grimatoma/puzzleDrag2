@@ -39,11 +39,11 @@ export const C = UI_COLORS;
 // ─── NPC data ────────────────────────────────────────────────────────────────
 
 export const NPCS: NpcRegistry = {
-  wren:  { name: "Wren",        color: "#7a8b5e", initial: "W", bg: "linear-gradient(160deg,#8a9d6b,#4a5638)", iconKey: "char_wren" },
-  mira:  { name: "Mira",        color: "#c9863a", initial: "M", bg: "linear-gradient(160deg,#e0a364,#7a4a1f)", iconKey: "char_mira" },
-  tomas: { name: "Old Tomas",   color: "#a36a6a", initial: "T", bg: "linear-gradient(160deg,#b88080,#5a3232)", iconKey: "char_tomas" },
-  bram:  { name: "Bram",        color: "#8a5040", initial: "B", bg: "linear-gradient(160deg,#a45a3a,#3a1a0e)", iconKey: "char_bram" },
-  liss:  { name: "Sister Liss", color: "#7e7aa6", initial: "L", bg: "linear-gradient(160deg,#948fc4,#3e3a5e)", iconKey: "char_liss" },
+  wren:  { name: "Wren",        initial: "W", look: { color: "#7a8b5e", bg: "linear-gradient(160deg,#8a9d6b,#4a5638)", iconKey: "char_wren" } },
+  mira:  { name: "Mira",        initial: "M", look: { color: "#c9863a", bg: "linear-gradient(160deg,#e0a364,#7a4a1f)", iconKey: "char_mira" } },
+  tomas: { name: "Old Tomas",   initial: "T", look: { color: "#a36a6a", bg: "linear-gradient(160deg,#b88080,#5a3232)", iconKey: "char_tomas" } },
+  bram:  { name: "Bram",        initial: "B", look: { color: "#8a5040", bg: "linear-gradient(160deg,#a45a3a,#3a1a0e)", iconKey: "char_bram" } },
+  liss:  { name: "Sister Liss", initial: "L", look: { color: "#7e7aa6", bg: "linear-gradient(160deg,#948fc4,#3e3a5e)", iconKey: "char_liss" } },
 };
 export const NPC_KEYS: NpcKey[] = Object.keys(NPCS) as NpcKey[];
 
@@ -120,10 +120,10 @@ export interface PortraitProps {
 
 export function Portrait({ npcKey, size = 24 }: PortraitProps) {
   const npc = isNpcKey(npcKey) ? NPCS[npcKey] : undefined;
-  if (npc?.iconKey && hasIcon(npc.iconKey)) {
+  if (npc?.look.iconKey && hasIcon(npc.look.iconKey)) {
     return (
       <div style={{ width: size, height: size, borderRadius: "50%", overflow: "hidden", border: "1.5px solid rgba(255,255,255,0.4)", flexShrink: 0 }} title={npc.name}>
-        <IconCanvas iconKey={npc.iconKey} size={size} rounded background="#2a1e10" />
+        <IconCanvas iconKey={npc.look.iconKey} size={size} rounded background="#2a1e10" />
       </div>
     );
   }
@@ -131,7 +131,7 @@ export function Portrait({ npcKey, size = 24 }: PortraitProps) {
     width: size, height: size, borderRadius: "50%", flexShrink: 0,
     display: "grid", placeItems: "center",
     fontSize: Math.floor(size * 0.4), fontWeight: 700, color: "#fff",
-    background: npc ? npc.bg : "linear-gradient(160deg,#6a5a40,#2a1e10)",
+    background: npc ? npc.look.bg : "linear-gradient(160deg,#6a5a40,#2a1e10)",
     border: "1.5px solid rgba(255,255,255,0.4)",
   };
   return <div style={style} title={npc?.name}>{npc ? npc.initial : "✦"}</div>;
